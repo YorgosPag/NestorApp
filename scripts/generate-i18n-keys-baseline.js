@@ -25,6 +25,7 @@ const {
   extractTCalls,
   extractExplicitTCalls,
 } = require('./lib/i18n-namespace-extract');
+const { collectMissingKeys } = require('./lib/i18n-missing-keys-ratchet');
 
 const REPO_ROOT = path.join(__dirname, '..');
 const SRC_DIR = path.join(REPO_ROOT, 'src');
@@ -35,6 +36,18 @@ const BASELINE_FILE = path.join(REPO_ROOT, '.i18n-missing-keys-baseline.json');
 // useTranslation(<CONST>) call sites are scanned, not silently skipped.
 const NAMESPACE_BUNDLES = loadNamespaceBundles(REPO_ROOT);
 const COMPAT_NAMESPACES = loadCompatNamespaces(REPO_ROOT);
+
+// MIA MHXANH: i idia synartisi metraei kai gia tin pyli kai gia ti baseline.
+const DEPS = {
+  bundles: NAMESPACE_BUNDLES,
+  compat: COMPAT_NAMESPACES,
+  loadLocale: (ns) => loadLocaleJson(ns),
+  extractNamespaces,
+  extractTCalls,
+  extractExplicitTCalls,
+  withCompatNamespaces,
+  keyExists,
+};
 
 const jsonCache = new Map();
 
@@ -81,30 +94,10 @@ let total = 0;
 
 for (const file of files) {
   const content = fs.readFileSync(file, 'utf8');
-  const declared = extractNamespaces(content, NAMESPACE_BUNDLES);
-  if (declared.length === 0) continue;
-  const namespaces = withCompatNamespaces(declared, COMPAT_NAMESPACES);
-
-  const tCalls = extractTCalls(content);
-  const explicitCalls = extractExplicitTCalls(content);
-  if (tCalls.length === 0 && explicitCalls.length === 0) continue;
-
-  let missing = 0;
-  let missingExplicit = 0;
-  // Το ρητό `t('ns:key')` κρίνεται στο namespace που ΟΝΟΜΑΖΕΙ — ό,τι ακριβώς κάνει
-  // και η πύλη· χωρίς compat, γιατί ο προγραμματιστής έχει ήδη απαντήσει ο ίδιος.
-  for (const { ns, key } of explicitCalls) {
-    const json = loadLocaleJson(ns);
-    if (!(json && keyExists(json, key))) missingExplicit++;
-  }
-  for (const { key } of tCalls) {
-    let found = false;
-    for (const ns of namespaces) {
-      const json = loadLocaleJson(ns);
-      if (json && keyExists(json, key)) { found = true; break; }
-    }
-    if (!found) missing++;
-  }
+  const found = collectMissingKeys(content, DEPS);
+  if (!found) continue;
+  const missing = found.missingKeys.filter(k => k.bucket === 'bare').length;
+  const missingExplicit = found.missingKeys.filter(k => k.bucket === 'explicit').length;
 
   if (missing > 0 || missingExplicit > 0) {
     const relPath = path.relative(path.join(__dirname, '..'), file).replace(/\\/g, '/');

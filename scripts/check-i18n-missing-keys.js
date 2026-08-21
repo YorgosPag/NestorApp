@@ -32,7 +32,7 @@ const {
   extractTCalls,
   extractExplicitTCalls,
 } = require('./lib/i18n-namespace-extract');
-const { judgeAgainstBaseline } = require('./lib/i18n-missing-keys-ratchet');
+const { judgeAgainstBaseline, collectMissingKeys } = require('./lib/i18n-missing-keys-ratchet');
 
 const REPO_ROOT = path.join(__dirname, '..');
 const LOCALE_DIR = path.join(REPO_ROOT, 'src', 'i18n', 'locales', 'el');
@@ -49,6 +49,17 @@ const NAMESPACE_BUNDLES = loadNamespaceBundles(REPO_ROOT);
 // COPY the keys back into the parent namespace, undoing the ADR-280 split. See
 // scripts/lib/i18n-namespace-extract.js → loadCompatNamespaces (ADR-744 §12).
 const COMPAT_NAMESPACES = loadCompatNamespaces(REPO_ROOT);
+
+const DEPS = {
+  bundles: NAMESPACE_BUNDLES,
+  compat: COMPAT_NAMESPACES,
+  loadLocale: (ns) => loadLocaleJson(ns),
+  extractNamespaces,
+  extractTCalls,
+  extractExplicitTCalls,
+  withCompatNamespaces,
+  keyExists,
+};
 
 // Colors
 const RED = '\x1b[0;31m';
@@ -138,46 +149,14 @@ for (const file of files) {
   if (/(__tests__|\.test\.|\.spec\.|\.stories\.|scripts\/|\.config\.)/.test(file)) continue;
 
   const content = fs.readFileSync(file, 'utf8');
-  const declaredNamespaces = extractNamespaces(content, NAMESPACE_BUNDLES);
-
-  if (declaredNamespaces.length === 0) continue;
-
-  const namespaces = withCompatNamespaces(declaredNamespaces, COMPAT_NAMESPACES);
-
-  const tCalls = extractTCalls(content);
-  const explicitCalls = extractExplicitTCalls(content);
-  if (tCalls.length === 0 && explicitCalls.length === 0) continue;
-
-  const missingKeys = [];
-
-  // 🔴 ΤΟ ΡΗΤΟ NAMESPACE ΕΙΝΑΙ ΙΣΧΥΡΙΣΜΟΣ, ΟΧΙ ΑΠΟΔΕΙΞΗ (ADR-777 §8.41).
-  // Το `t('ns:key')` δεν ρωτά τα δηλωμένα namespaces — ρωτά **ένα**, αυτό που
-  // ονομάζει. Άρα κρίνεται κι αυτό εκεί, και **μόνο** εκεί: το `src/i18n/config.ts`
-  // δεν ορίζει `fallbackNS`, οπότε αστοχία σημαίνει **ωμό κλειδί στην οθόνη**.
-  // ⚠️ ΧΩΡΙΣ compat: το compat απαντά «ποια namespaces βλέπει ΤΟ ΑΡΧΕΙΟ», ενώ εδώ
-  // ο προγραμματιστής έχει ήδη απαντήσει ο ίδιος — και αυτή είναι η απάντηση που
-  // κρίνεται.
-  for (const { ns, key, index } of explicitCalls) {
-    const json = loadLocaleJson(ns);
-    if (json && keyExists(json, key)) continue;
-    missingKeys.push({ key: `${ns}:${key}`, line: getLineNumber(content, index), bucket: 'explicit' });
-  }
-
-  for (const { key, index } of tCalls) {
-    // Check in each namespace — if found in ANY, it's valid
-    let found = false;
-    for (const ns of namespaces) {
-      const json = loadLocaleJson(ns);
-      if (json && keyExists(json, key)) {
-        found = true;
-        break;
-      }
-    }
-    if (!found) {
-      const line = getLineNumber(content, index);
-      missingKeys.push({ key, line, bucket: 'bare' });
-    }
-  }
+  // MIA MHXANH gia tin pyli KAI ti baseline (ADR-777 8.41). Dyo klhseis ths idias
+  // metrisis apeklinan gia mines: 114 enanti 6 sto idio dentro.
+  const found = collectMissingKeys(content, DEPS);
+  if (!found) continue;
+  const namespaces = found.namespaces;
+  const missingKeys = found.missingKeys.map(k => ({
+    key: k.key, bucket: k.bucket, line: getLineNumber(content, k.index),
+  }));
 
   if (missingKeys.length === 0) continue;
 

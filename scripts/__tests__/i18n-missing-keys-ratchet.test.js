@@ -58,27 +58,77 @@ describe('Κ — το ratchet κρίνει ΑΝΑ ΚΑΔΟ', () => {
   });
 });
 
-describe('Β — η baseline είναι γραμμένη στη ΔΙΑΛΕΚΤΟ ΤΗΣ ΠΥΛΗΣ', () => {
+describe('Β — ΜΙΑ μηχανή μετράει, όχι δύο', () => {
   const REPO = path.join(__dirname, '..', '..');
+  const { collectMissingKeys } = require('../lib/i18n-missing-keys-ratchet');
+  const L = require('../lib/i18n-namespace-extract');
 
-  // ⚠️ Ο γεννήτορας ΚΑΙ η πύλη οφείλουν να διαβάζουν το ίδιο SSoT. Αν ξαναγραφτεί
-  // τοπικό αντίγραφο εξαγωγής, η baseline ξαναγίνεται «άλλη μηχανή» — και το
-  // ratchet ξανασυγκρίνει `τρέχον(Α)` με `baseline(Β)`.
-  it('Β1 — ο γεννήτορας ΔΕΝ έχει δικό του extractTCalls', () => {
-    const src = fs.readFileSync(path.join(REPO, 'scripts', 'generate-i18n-keys-baseline.js'), 'utf8');
-    expect(src).not.toMatch(/function\s+extractTCalls\s*\(/);
-    expect(src).toMatch(/withCompatNamespaces/);
-    expect(src).toMatch(/extractExplicitTCalls/);
+  const keyExists = (obj, dotted) => {
+    let cur = obj;
+    for (const part of String(dotted).split('.')) {
+      if (!cur || typeof cur !== 'object' || !(part in cur)) return false;
+      cur = cur[part];
+    }
+    return true;
+  };
+  const deps = (localeMap) => ({
+    bundles: new Map(),
+    compat: new Map([['parent', ['child']]]),
+    loadLocale: (ns) => localeMap[ns] || null,
+    extractNamespaces: L.extractNamespaces,
+    extractTCalls: L.extractTCalls,
+    extractExplicitTCalls: L.extractExplicitTCalls,
+    withCompatNamespaces: L.withCompatNamespaces,
+    keyExists,
   });
 
-  it('Β2 — η baseline είναι σε σχήμα δύο κάδων', () => {
+  // 🔴 Η ΑΓΚΥΡΑ ΠΟΥ ΕΓΡΑΨΕ Η ΜΕΤΑΛΛΑΞΗ Μ6. Η πρώτη εκδοχή έκρινε το **κείμενο** του
+  // γεννήτορα («αναφέρει `withCompatNamespaces`;») και έμεινε ΠΡΑΣΙΝΗ όταν η
+  // μετάλλαξη έσβησε τη **χρήση** κρατώντας την εισαγωγή. Πλέον κρίνεται η
+  // συμπεριφορά: κλειδί που ζει ΜΟΝΟ στο compat namespace ΔΕΝ είναι παραβίαση.
+  it('Β1 — το compat namespace λύνει, αλλιώς η baseline φουσκώνει σιωπηλά', () => {
+    const src = "useTranslation('parent'); t('lives.in.child');";
+    const out = collectMissingKeys(src, deps({ parent: {}, child: { lives: { in: { child: 'ok' } } } }));
+    expect(out.missingKeys).toEqual([]);
+  });
+
+  // ⚠️ Ο ΠΑΡΟΝΟΜΑΣΤΗΣ: χωρίς αυτό, το Β1 θα ήταν πράσινο ακόμα κι αν ο σαρωτής
+  // δεν έβλεπε ΚΑΜΙΑ κλήση — «μηδέν παραβιάσεις» επειδή μηδέν μετρήθηκαν.
+  it('Β2 — και το ίδιο κλειδί ΧΩΡΙΣ το compat locale ΕΙΝΑΙ παραβίαση', () => {
+    const src = "useTranslation('parent'); t('lives.in.child');";
+    const out = collectMissingKeys(src, deps({ parent: {}, child: {} }));
+    expect(out.missingKeys.map(k => k.key)).toEqual(['lives.in.child']);
+    expect(out.missingKeys[0].bucket).toBe('bare');
+  });
+
+  it('Β3 — το ρητό κρίνεται ΜΟΝΟ στο namespace που ονομάζει, ποτέ στο compat', () => {
+    const src = "useTranslation('parent'); t('parent:only.in.child');";
+    const out = collectMissingKeys(src, deps({ parent: {}, child: { only: { in: { child: 'x' } } } }));
+    expect(out.missingKeys.map(k => k.key)).toEqual(['parent:only.in.child']);
+    expect(out.missingKeys[0].bucket).toBe('explicit');
+  });
+
+  it('Β4 — αρχείο χωρίς δηλωμένο namespace δεν κρίνεται καθόλου', () => {
+    expect(collectMissingKeys("t('x.y');", deps({}))).toBeNull();
+  });
+
+  it('Β5 — η baseline είναι σε σχήμα δύο κάδων', () => {
     const b = JSON.parse(fs.readFileSync(path.join(REPO, '.i18n-missing-keys-baseline.json'), 'utf8'));
     const entries = Object.values(b.files);
     expect(entries.length).toBeGreaterThan(0);
     for (const e of entries) {
-      expect(typeof e).toBe('object');
       expect(typeof e.bare).toBe('number');
       expect(typeof e.explicit).toBe('number');
+    }
+  });
+
+  // 🔑 ΔΟΜΙΚΗ ΑΓΚΥΡΑ: αν κάποιος ξαναγράψει τοπικό αντίγραφο μέτρησης, η μηχανή
+  // ξαναγίνεται δύο — και η baseline ξαναγίνεται «άλλη μηχανή» (ADR-749).
+  it('Β6 — και οι ΔΥΟ καταναλωτές καλούν την ίδια collectMissingKeys', () => {
+    for (const f of ['check-i18n-missing-keys.js', 'generate-i18n-keys-baseline.js']) {
+      const src = fs.readFileSync(path.join(REPO, 'scripts', f), 'utf8');
+      expect(src).toMatch(/collectMissingKeys\(content, DEPS\)/);
+      expect(src).not.toMatch(/function\s+extractTCalls\s*\(/);
     }
   });
 });
