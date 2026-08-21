@@ -208,6 +208,42 @@ function extractNamespaces(content, bundles) {
  * @param {string} content source of a .ts/.tsx file
  * @returns {Array<{key: string, index: number}>}
  */
+/**
+ * Τα `t('ns:key')` — δηλαδή **ακριβώς ό,τι πετάει** η {@link extractTCalls}.
+ *
+ * 🔴 ΓΙΑΤΙ ΞΕΧΩΡΙΣΤΗ ΣΥΝΑΡΤΗΣΗ ΚΑΙ ΟΧΙ ΣΗΜΑΙΑ. Το `extractTCalls` το καταναλώνει
+ * **και το shell slice** (`plan.js`), που χαρτογραφεί κάθε αποτέλεσμα σε
+ * `{ns: null, key}` — δηλαδή «λύσε το στα namespaces του αρχείου». Αν η ίδια
+ * συνάρτηση άρχιζε να επιστρέφει και τα ρητά, το slice θα ζητούσε κλειδί με όνομα
+ * `properties:toolbar.export.title` **μέσα** στα δικά του namespaces. Επιφάνεια
+ * αμετάβλητη ⇒ **καμία άγκυρα δεν ξαναγράφεται για να περάσει**.
+ *
+ * 🔑 ΓΙΑΤΙ ΤΟ «ΡΗΤΟ» ΔΕΝ ΣΗΜΑΙΝΕΙ «ΣΩΣΤΟ». Η {@link extractTCalls} τα παραλείπει με
+ * τον λόγο «these are explicitly scoped» — δηλαδή θεωρεί τη **δήλωση** απόδειξη.
+ * Ένα ρητό namespace είναι **ισχυρισμός**, και ο ισχυρισμός ελέγχεται: μετρημένο
+ * 2026-08-21, **39** τέτοιες κλήσεις σε 14 αρχεία δείχνουν σε κλειδί που **δεν
+ * υπάρχει** στο namespace που ονομάζουν (`common-actions:actions.delete_loading`
+ * — το locale έχει `save_loading`, όχι `delete_loading`). Το `src/i18n/config.ts`
+ * **δεν ορίζει `fallbackNS`**, άρα δεν υπάρχει δεύτερη ευκαιρία: ωμό κλειδί.
+ *
+ * ⚠️ ΕΔΩ ΤΑ ΣΧΟΛΙΑ ΚΟΒΟΝΤΑΙ, σε αντίθεση με την {@link extractTCalls}: εκεί ένα
+ * `t('x')` σε σχόλιο είναι ένα παραπάνω αβλαβές string, εδώ θα ήταν **παραβίαση**
+ * — και ένα ADR που τεκμηριώνει τη βλάβη θα γινόταν το ίδιο βλάβη (CHECK 3.36).
+ *
+ * @param {string} content source of a .ts/.tsx file
+ * @returns {Array<{ns: string, key: string, index: number}>}
+ */
+function extractExplicitTCalls(content) {
+  const out = [];
+  const source = stripComments(content);
+  const regex = /\bt\(\s*['"]([a-zA-Z0-9_.\-]+):([a-zA-Z0-9_.\-]+)['"]\s*[,)]/g;
+  let match;
+  while ((match = regex.exec(source)) !== null) {
+    out.push({ ns: match[1], key: match[2], index: match.index });
+  }
+  return out;
+}
+
 function extractTCalls(content) {
   const keys = [];
   // Match t('key') or t('key', ...) — only single-quoted or double-quoted static strings
@@ -271,5 +307,6 @@ module.exports = {
   withCompatNamespaces,
   extractNamespaces,
   extractTCalls,
+  extractExplicitTCalls,
   stripComments,
 };

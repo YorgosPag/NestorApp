@@ -19,6 +19,8 @@ const {
   loadCompatNamespaces,
   withCompatNamespaces,
   extractNamespaces,
+  extractTCalls,
+  extractExplicitTCalls,
 } = require('../lib/i18n-namespace-extract');
 
 const REPO_ROOT = path.join(__dirname, '..', '..');
@@ -196,5 +198,64 @@ describe('withCompatNamespaces', () => {
   test('χωρίς χάρτη compat είναι ταυτοτική (back-compat)', () => {
     expect(withCompatNamespaces(['geo-canvas'], undefined)).toEqual(['geo-canvas']);
     expect(withCompatNamespaces(['geo-canvas'], new Map())).toEqual(['geo-canvas']);
+  });
+});
+
+// ─── Ρ: το ρητό `t('ns:key')` είναι ΙΣΧΥΡΙΣΜΟΣ, όχι απόδειξη ────────────────────
+//
+// 🔴 ΤΙ ΑΠΟΔΕΙΚΝΥΕΙ. Η `extractTCalls` πετάει κάθε κλήση με `:` — «these are
+// explicitly scoped» — δηλαδή θεωρεί τη **δήλωση** απόδειξη ορθότητας. Μετρημένο
+// 2026-08-21 (ADR-777 §8.41): **19** τέτοιες κλήσεις σε 7 αρχεία δείχνουν σε κλειδί
+// που ΔΕΝ υπάρχει στο namespace που ονομάζουν, και το `src/i18n/config.ts` **δεν
+// ορίζει `fallbackNS`** ⇒ ωμό κλειδί στην οθόνη. Ήταν το **76%** της αλήθειας.
+
+describe('Ρ — extractExplicitTCalls: ό,τι πετάει η extractTCalls', () => {
+  it('Ρ1 — το ρητό `ns:key` επιστρέφεται χωρισμένο σε ns + κλειδί', () => {
+    const out = extractExplicitTCalls("t('common-actions:actions.delete_loading')");
+    expect(out).toHaveLength(1);
+    expect(out[0].ns).toBe('common-actions');
+    expect(out[0].key).toBe('actions.delete_loading');
+  });
+
+  // 🔑 ΟΙ ΔΥΟ ΣΥΝΑΡΤΗΣΕΙΣ ΕΙΝΑΙ ΣΥΜΠΛΗΡΩΜΑΤΙΚΕΣ, ΠΟΤΕ ΕΠΙΚΑΛΥΠΤΟΜΕΝΕΣ — αλλιώς η
+  // ίδια κλήση θα μετριόταν δύο φορές και η baseline θα ήταν διπλάσια της αλήθειας.
+  it('Ρ2 — καμία κλήση δεν πιάνεται ΚΑΙ από τις δύο', () => {
+    const src = "t('bare.key'); t('ns:scoped.key');";
+    expect(extractTCalls(src).map(c => c.key)).toEqual(['bare.key']);
+    expect(extractExplicitTCalls(src).map(c => `${c.ns}:${c.key}`)).toEqual(['ns:scoped.key']);
+  });
+
+  // 🔴 ΕΔΩ ΤΑ ΣΧΟΛΙΑ ΚΟΒΟΝΤΑΙ (CHECK 3.36): ένα ADR που τεκμηριώνει τη βλάβη δεν
+  // επιτρέπεται να γίνει το ίδιο βλάβη. Η `extractTCalls` ΔΕΝ τα κόβει — εκεί ένα
+  // παραπάνω string είναι αβλαβές, εδώ θα ήταν **παραβίαση**.
+  it('Ρ3 — παράδειγμα σε σχόλιο ΔΕΝ είναι θέση κλήσης', () => {
+    const src = [
+      "// κακό παράδειγμα: t('common-actions:actions.delete_loading')",
+      "const x = 1;",
+    ].join('\n');
+    expect(extractExplicitTCalls(src)).toHaveLength(0);
+  });
+
+  it('Ρ4 — η θέση επιστρέφεται, ώστε η αναφορά να δείχνει γραμμή', () => {
+    const out = extractExplicitTCalls("const a=1;\nt('ns:k.v')");
+    expect(out[0].index).toBeGreaterThan(0);
+  });
+
+  // ⚠️ ΤΟ ΠΡΑΓΜΑΤΙΚΟ ΠΕΡΙΣΤΑΤΙΚΟ, ΩΣ ΠΑΡΟΝΟΜΑΣΤΗΣ: το locale έχει `save_loading`
+  // και ΟΧΙ `delete_loading`. Αν αυτό αλλάξει, η άγκυρα πρέπει να το πει — γιατί
+  // τότε το εύρημα θεραπεύτηκε και η baseline οφείλει να πέσει.
+  it('Ρ5 — το κλειδί που γέννησε την επέκταση όντως λείπει από το locale', () => {
+    const locale = JSON.parse(fs.readFileSync(
+      path.join(REPO_ROOT, 'src', 'i18n', 'locales', 'el', 'common-actions.json'), 'utf8'));
+    expect(locale.actions.save_loading).toBeDefined();
+    expect(locale.actions.delete_loading).toBeUndefined();
+  });
+
+  // 🔴 ΤΟ `fallbackNS` ΕΙΝΑΙ Ο ΛΟΓΟΣ ΠΟΥ Η ΑΣΤΟΧΙΑ ΕΙΝΑΙ ΟΡΑΤΗ ΣΤΗΝ ΟΘΟΝΗ.
+  // Αν κάποιος το προσθέσει, το κριτήριο «μόνο στο namespace που ονομάζει» παύει
+  // να είναι σωστό — και αυτή η άγκυρα είναι που θα το πει.
+  it('Ρ6 — το i18next ΔΕΝ έχει fallbackNS, άρα δεν υπάρχει δεύτερη ευκαιρία', () => {
+    const config = fs.readFileSync(path.join(REPO_ROOT, 'src', 'i18n', 'config.ts'), 'utf8');
+    expect(config).not.toMatch(/\bfallbackNS\s*:/);
   });
 });
