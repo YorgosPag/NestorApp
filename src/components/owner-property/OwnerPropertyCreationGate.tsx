@@ -24,9 +24,29 @@
 import React from 'react';
 import dynamic from 'next/dynamic';
 
+// 🧩 ADR-744 §15 (Φ4) — PER-ROUTE SLICE ΤΗΣ ΔΙΑΔΡΟΜΗΣ `/offers/new` (ADR-777 §8.36).
+//
+// Το dropdown είδους ακινήτου βάφεται από το `PROPERTY_TYPE_I18N_KEYS`, δηλαδή από το
+// namespace `properties-enums` — που **δεν** ανήκει στο κέλυφος και φορτώνεται
+// **ασύγχρονα**. Χωρίς αυτή την εγγραφή το πρώτο καρέ δείχνει **14 ωμά κλειδιά**
+// (`types.studio` · `types.apartment` · …) εκεί ακριβώς όπου ο άνθρωπος διαλέγει.
+//
+// 🔴 **ΕΔΩ, ΚΑΙ ΟΧΙ ΣΤΟ `page.tsx`**: εκείνο είναι Server Component και τα Server/Client
+// δέντρα έχουν **ΞΕΧΩΡΙΣΤΟΥΣ γράφους module** — εγγραφή από εκεί θα έγραφε σε **άλλο**
+// στιγμιότυπο i18next, δηλαδή πράσινη κλήση που δεν κάνει τίποτα.
+//
+// ⚠️ **Στατική εισαγωγή, εμβέλεια MODULE**: με `import()` το κλειδί θα ήταν ωμό για ένα
+// καρέ και **κρυμμένο** από το CHECK 3.51 — μετακίνηση του ελαττώματος, όχι διόρθωση.
+// Το Next κόβει ήδη chunk ανά διαδρομή, άρα τα 577 bytes δεν ταξιδεύουν αλλού.
+import routeSlice from '@/i18n/generated/routes/offers__new.el.json';
+import { registerRouteSlice } from '@/i18n/route-slice';
+
 import { DesktopOnlyGate, DesktopOnlyNotice } from '@/components/shared/DesktopOnlyGate';
 import { MY_OFFERS_ROUTE } from '@/lib/owner-property/owner-property-routes';
 import type { OwnerPropertyFormContentProps } from './OwnerPropertyFormContent';
+
+// ⚠️ Εμβέλεια MODULE, όχι render και όχι effect: τρέχει **πριν** αποδοθεί οτιδήποτε.
+registerRouteSlice(routeSlice);
 
 /**
  * Η φόρμα, **ζητούμενη κατ' απαίτηση**.
@@ -37,6 +57,7 @@ import type { OwnerPropertyFormContentProps } from './OwnerPropertyFormContent';
  * σε κάθε πάτημα πλήκτρου. **Και εδώ θα έχανε και την ταυτότητα του προσχεδίου**,
  * δηλαδή τα ανεβασμένα αρχεία θα σκορπίζονταν σε φακέλους που κανείς δεν ξαναβρίσκει.
  */
+
 const OwnerPropertyFormContent = dynamic<OwnerPropertyFormContentProps>(
   () =>
     import('./OwnerPropertyFormContent').then((module) => module.OwnerPropertyFormContent),

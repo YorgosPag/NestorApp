@@ -53,7 +53,7 @@ import { CoverageStatement } from './CoverageStatement';
 import { PlaceSearchBox } from './PlaceSearchBox';
 
 export function SearchLandingContent() {
-  const { t } = useTranslation(['search-results']);
+  const { t } = useTranslation(['search-results', 'property-market', 'search-results', 'search-results']);
   const { listings, loading, error } = usePublicListings();
 
   // ⚠️ **Μία** ανάγνωση, **μία** λογιστική — η ίδια που τυπώνει η οθόνη 2. Οι δύο
@@ -107,10 +107,10 @@ export function SearchLandingContent() {
             href={MY_DEMANDS_ROUTE}
             className="inline-block w-fit rounded-md border border-border bg-card px-4 py-2 font-medium text-foreground"
           >
-            {t('search-results:demand.door.label')}
+            {t('property-market:demand.door.label')}
           </Link>
           <p className="text-sm text-muted-foreground">
-            {t('search-results:demand.door.hint')}
+            {t('property-market:demand.door.hint')}
           </p>
         </div>
 
@@ -136,10 +136,10 @@ export function SearchLandingContent() {
             href={MY_OFFERS_ROUTE}
             className="inline-block w-fit rounded-md border border-border bg-card px-4 py-2 font-medium text-foreground"
           >
-            {t('search-results:offer.door.label')}
+            {t('property-market:offer.door.label')}
           </Link>
           <p className="text-sm text-muted-foreground">
-            {t('search-results:offer.door.hint')}
+            {t('property-market:offer.door.hint')}
           </p>
         </div>
       </nav>

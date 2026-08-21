@@ -27,6 +27,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 import { withAuth } from '@/lib/auth/middleware';
 import type { AuthContext } from '@/lib/auth/types';
+import type { ListingActor } from '@/lib/owner-property/listing-custody';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { ownerPropertyDraftFromRequest } from '@/lib/owner-property/owner-property-draft-schema';
@@ -59,6 +60,21 @@ type RouteContext = { params: Promise<{ ownerPropertyId: string }> };
  * το ακίνητό του τον κλειδώνει έξω από την έξοδο»*). Αντίστροφη σειρά θα σήμαινε ότι
  * μια άκυρη αγγελία **δεν μπορεί να αποσυρθεί**.
  */
+/**
+ * **Ποιος ρωτά** — και **τα δύο** σκέλη της ταυτότητας, όχι μόνο το uid.
+ *
+ * 🔴 ADR-777 §8.39: το `ctx.companyId` υπήρχε πάντα εδώ και **δεν το ζητούσε κανείς**,
+ * οπότε η διαδρομή μπορούσε να κρίνει μόνο «είναι δική σου;» — ποτέ «είναι του
+ * γραφείου σου;». Η {@link mayAdminister} απαντά και τα δύο, **χωρίς** να διευρύνει τον
+ * ιδιωτικό χώρο.
+ */
+function actorOf(ctx: AuthContext): ListingActor {
+  // ⚠️ Το `companyId` είναι **υποχρεωτικό** στο `AuthContext`: το `extractCustomClaims` απορρίπτει
+  // (fail-closed, ADR-657 §3.5) κάθε token χωρίς αυτό — άρα κανένα `?? null` εδώ: θα ήταν
+  // νεκρός κλάδος που μοιάζει με φρουρός.
+  return { uid: ctx.uid, companyId: ctx.companyId };
+}
+
 async function handler(
   request: NextRequest,
   ctx: AuthContext,
@@ -80,7 +96,7 @@ async function handler(
       return respondToMalformed(['lifecycle']);
     }
     return respondToWrite(
-      await setOwnerPropertyLifecycle(adminDb, ownerPropertyId, lifecycle, ctx.uid),
+      await setOwnerPropertyLifecycle(adminDb, ownerPropertyId, lifecycle, actorOf(ctx)),
     );
   }
 
@@ -88,7 +104,7 @@ async function handler(
   if (!parsed.ok) return respondToMalformed(parsed.malformed);
 
   return respondToWrite(
-    await updateOwnerProperty(adminDb, ownerPropertyId, parsed.draft, ctx.uid),
+    await updateOwnerProperty(adminDb, ownerPropertyId, parsed.draft, actorOf(ctx)),
   );
 }
 

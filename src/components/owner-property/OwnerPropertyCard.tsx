@@ -38,7 +38,7 @@ import { offerDetailHref } from '@/lib/owner-property/owner-property-routes';
 import { isPubliclyListed } from '@/services/listings/public-listing-projection';
 import { ownerPropertyOfferKinds, type OwnerProperty } from '@/types/owner-property';
 
-const NS = 'search-results';
+const NS = 'property-market';
 const K = `${NS}:offer`;
 
 export function OwnerPropertyCard({

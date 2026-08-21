@@ -53,6 +53,7 @@ export const SUPPORTED_NAMESPACES = [
   'properties-enums',
   'properties-viewer',
   'search-results',   // ADR-777 A3 — δημοσια οθονη 2 (χαρτης + λιστα)
+  'property-market',  // ADR-777 8.38 — ζητηση + προσφορα + εντολη (ο,τι συντασσει ο ανθρωπος)
   'crm',
   'navigation',
   'auth',

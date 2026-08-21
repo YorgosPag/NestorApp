@@ -1,0 +1,526 @@
+{
+  "demand": {
+    "door": {
+      "label": "I am looking",
+      "hint": "Tell us what you are looking for — and we will tell you what exists nearby, even when nothing matches."
+    },
+    "list": {
+      "title": "My requests",
+      "lead": "Each request is a standing order: it waits for the match — and tells you what exists nearby while it waits.",
+      "create": "New request",
+      "empty": "You have no requests yet.",
+      "emptyHint": "A request is worth making even when nothing matches today: you learn what exists nearby, what blocks it, and how many others are looking for the same.",
+      "loading": "Loading your requests…",
+      "error": "Your requests could not be loaded. Please try again shortly.",
+      "open": "Open",
+      "countLabel": "{count, plural, one {# request} other {# requests}}"
+    },
+    "affirm": {
+      "action": "Still looking",
+      "busy": "Recording…",
+      "done": "Recorded. Your request counts in the anonymous total again.",
+      "failed": "The confirmation was not recorded. Please try again.",
+      "fresh": "Recently confirmed.",
+      "stale": "Over {days} days without confirmation — it does not count in the anonymous total.",
+      "staleWhy": "The request stays yours forever. What goes stale is our claim to third parties that someone is looking — and it comes back with one click."
+    },
+    "lifecycle": {
+      "label": "Status",
+      "active": "Looking",
+      "paused": "Paused",
+      "fulfilled": "Found it",
+      "withdrawn": "Withdrawn",
+      "pause": "Pause",
+      "resume": "Resume",
+      "fulfil": "Found it",
+      "withdraw": "Withdraw",
+      "withdrawNote": "Withdrawing deletes nothing — the request stays in your list and stops looking.",
+      "failed": "The status did not change. Please try again."
+    },
+    "form": {
+      "title": "What are you looking for?",
+      "lead": "We only ask what the matching needs. Anything you leave empty means “not a condition” — not “zero”.",
+      "editTitle": "Edit request",
+      "submit": "Submit request",
+      "save": "Save",
+      "saving": "Saving…",
+      "cancel": "Cancel",
+      "failed": "The request was not saved. Please try again shortly.",
+      "optional": "optional",
+      "notEditableHere": "This request defines its area in a way this screen does not yet compose ({placeKind}). Its remaining details are shown normally.",
+      "seeks": {
+        "legend": "What kind of transaction?",
+        "help": "Pick at least one. Without it, the request would match everything.",
+        "sell": "I want to buy",
+        "leaseOut": "I want to rent",
+        "exchange": "I am looking for land for a build-to-share deal"
+      },
+      "place": {
+        "legend": "Where?",
+        "anywhere": "Anywhere — I care about what, not where",
+        "near": "In this area",
+        "queryLabel": "Area",
+        "queryPlaceholder": "City, area, or street with number",
+        "resolve": "Locate",
+        "resolving": "Locating…",
+        "resolved": "Located: {label}",
+        "notFound": "We could not locate that area. Try a city, or a street with a number.",
+        "failed": "The lookup did not respond. Please try again shortly.",
+        "radiusLabel": "Radius (km)",
+        "place": "This building or plot",
+        "area": "This area on the map"
+      },
+      "timing": {
+        "legend": "When do you need it?",
+        "help": "No property portal asks this. We know what is being built — so we can meet supply that does not exist yet.",
+        "now": "Now",
+        "window": "In a specific period",
+        "whenever": "Whenever it comes up",
+        "wheneverHint": "The request never expires. We will only ask you to confirm that you are still looking.",
+        "fromLabel": "From",
+        "toLabel": "To"
+      },
+      "features": {
+        "legend": "What property?",
+        "typesLabel": "Property types",
+        "typesHelp": "None selected means “any type”.",
+        "priceLegend": "Amount (€)",
+        "priceMin": "From",
+        "priceMax": "To",
+        "priceHelp": "The amount is judged against the price that applies to each listing — sale or rent.",
+        "areaLegend": "Area (m²)",
+        "areaMin": "From",
+        "areaMax": "To",
+        "bedroomsMin": "Bedrooms, at least",
+        "bedroomsHelp": "0 means “a studio is fine”.",
+        "floorLegend": "Floor",
+        "floorMin": "From",
+        "floorMax": "To",
+        "floorHelp": "0 is the ground floor — a real value, not “any”."
+      },
+      "proximity": {
+        "legend": "What do you want nearby?",
+        "help": "Points of interest are not sourced yet. Your requirement is recorded now and will be judged as soon as the measurements exist.",
+        "add": "Add requirement",
+        "remove": "Remove",
+        "distanceLabel": "Within (metres)",
+        "kindLabel": "What"
+      },
+      "lifeContext": {
+        "legend": "Who is it for?",
+        "help": "Optional. It is never judged in the matching — it only fills the blanks below, and you can change all of them.",
+        "none": "I would rather not say",
+        "family": "Family",
+        "workRelocation": "Relocating for work",
+        "student": "Student",
+        "filled": "{count, plural, one {# field was filled in} other {# fields were filled in}} — change them freely.",
+        "filledNone": "Nothing changed: you had already filled them in."
+      }
+    },
+    "lifeContextName": {
+      "family": "Family",
+      "workRelocation": "Relocating for work",
+      "student": "Student"
+    },
+    "proximityKind": {
+      "school": "School",
+      "supermarket": "Supermarket",
+      "busStop": "Bus stop",
+      "trainStation": "Train station"
+    },
+    "invariant": {
+      "heading": "The request cannot be saved yet:",
+      "seeks-empty": "Pick at least one kind of transaction — otherwise the request matches everything.",
+      "seeks-duplicated": "The same kind of transaction was declared twice.",
+      "window-inverted": "The “to” date is before the “from” date.",
+      "range-inverted": "A range has its lower bound above its upper bound.",
+      "radius-not-positive": "The radius must be greater than zero.",
+      "outline-degenerate": "The drawn area encloses nothing.",
+      "proximity-not-positive": "A neighbourhood distance is zero or negative.",
+      "proximity-duplicated": "The same kind of neighbourhood requirement was declared twice."
+    },
+    "formBlocker": {
+      "place-unresolved": "Press “Locate” so the area resolves to a point on the map.",
+      "window-incomplete": "Fill in both ends of the period.",
+      "place-not-identified": "Show on the map which building or plot you mean.",
+      "area-not-drawn": "Draw the area — at least three vertices."
+    },
+    "answer": {
+      "heading": "What exists today",
+      "checking": "Searching…",
+      "matched": "{count, plural, one {# listing matches} other {# listings match}}.",
+      "seeResults": "See the results",
+      "none": "No listing matches today.",
+      "nothingToJudge": "There is no published listing to judge yet. Your request is waiting — and it will meet the first one that matches.",
+      "nearButUnreachable": "There {count, plural, one {is # listing close} other {are # listings close}} to your request, but none within a distance worth suggesting.",
+      "noMatch": "{count, plural, one {# listing was judged} other {# listings were judged}} and none comes close. The request stays open.",
+      "blockedByUnknowns": "We cannot judge yet — and that is not the same as “nothing exists”.",
+      "blockedByUnknownsWhy": "What is missing is our data, not properties.",
+      "axesLostHeading": "The link above is broader than your request — it ignores:",
+      "balanceError": "The results ledger does not balance. We do not show a number we cannot stand behind."
+    },
+    "axisLost": {
+      "timing": "the timing you asked for",
+      "area-outline": "the exact shape of the area",
+      "place-identity": "the specific property",
+      "floor-range": "the floor",
+      "proximity": "the neighbourhood requirements"
+    },
+    "concession": {
+      "heading": "How much is missing",
+      "lead": "We do not just say “no” — we say how much.",
+      "sentence": "With {amount} there {count, plural, one {is # listing} other {are # listings}}.",
+      "amount": {
+        "price-ceiling": "+{value}",
+        "price-floor": "{value} lower minimum",
+        "area-floor": "{value} m² less",
+        "area-ceiling": "{value} m² more",
+        "bedrooms-floor": "{value, plural, one {# bedroom} other {# bedrooms}} fewer",
+        "search-radius": "{value} m more radius"
+      },
+      "more": "{count, plural, one {# more suggestion} other {# more suggestions}}",
+      "unreachable": "There are close ones, but the concession needed is large — we are not suggesting it.",
+      "multiAxis": "{count, plural, one {# listing differs} other {# listings differ}} in two things at once — one change is not enough.",
+      "unquantified": "{count, plural, one {# listing is close} other {# listings are close}} on an axis that is not measured in an amount."
+    },
+    "blocker": {
+      "heading": "What stopped them",
+      "offer-kind": "A different kind of transaction",
+      "property-type": "A different property type",
+      "other-place": "A different property than the one you asked for",
+      "place-unresolved": "We do not know yet which building they belong to",
+      "position-unknown": "They have no declared position on the map",
+      "availability-unknown": "We do not know yet when they become available",
+      "proximity-unknown": "We have not measured what is around them yet",
+      "price-above": "Above your amount",
+      "price-below": "Below the minimum you set",
+      "area-below": "Smaller than the minimum",
+      "area-above": "Larger than the maximum",
+      "bedrooms-below": "Fewer bedrooms",
+      "floor-outside": "Floor outside the range",
+      "outside-radius": "Outside the radius",
+      "outside-area": "Outside the area you drew",
+      "not-available-then": "Not available in the period you asked for",
+      "proximity-too-far": "Farther away than you asked",
+      "count": "{count}"
+    },
+    "competition": {
+      "heading": "How many others want the same",
+      "count": "{count, plural, one {# more person is looking} other {# more people are looking}} for something similar.",
+      "none": "Nobody else is looking for something similar right now.",
+      "hidden": "We do not give a number when it describes fewer than {minCount} people.",
+      "hiddenWhy": "A small number describes individuals. Anonymity is not a hope — it is a threshold."
+    },
+    "desktopOnly": {
+      "title": "Creating a request happens on a computer",
+      "body": "The form asks four axes at once — place, time, features and neighbourhood. On a narrow screen it would be half a form, and half a request meets nothing.",
+      "what": "From here you can view and manage the ones you already have.",
+      "back": "My requests"
+    },
+    "detail": {
+      "createdAt": "Created",
+      "updatedAt": "Updated",
+      "notFound": "This request does not exist.",
+      "notFoundHint": "Either it does not exist, or it is not yours. Requests are strictly private.",
+      "loading": "Loading the request…",
+      "error": "The request could not be loaded. Please try again shortly.",
+      "criteria": "Your criteria",
+      "edit": "Edit"
+    },
+    "summary": {
+      "anywhere": "Anywhere",
+      "near": "Within {radiusKm} km",
+      "area": "In a drawn area",
+      "place": "At a specific property",
+      "now": "Now",
+      "window": "From {fromDate} to {toDate}",
+      "whenever": "Whenever it comes up",
+      "anyType": "Any type",
+      "noPriceLimit": "No amount limit",
+      "priceUpTo": "Up to {priceMax} €",
+      "priceFrom": "From {priceMin} €",
+      "priceRange": "{priceMin} – {priceMax} €"
+    },
+    "space": {
+      "title": "My space",
+      "checking": "Checking your identity…",
+      "signInNeeded": "Sign in to see your requests."
+    },
+    "interest": {
+      "heading": "Who is looking for something like this",
+      "offered": "{count, plural, one {# person wants} other {# people want}} exactly this property.",
+      "dormant": "{count, plural, one {# person is looking} other {# people are looking}} for a property like yours, here.",
+      "dormantWhy": "You have not listed it for sale or rent, so we compared only what it is and where it is — not price or deal type.",
+      "partialWhy": "You have not stated a deal type, so the price was compared but not whether you sell or rent.",
+      "none": "Nobody is looking for something like this right now.",
+      "hidden": "We do not show a number below {minCount}.",
+      "loading": "Checking who is looking…",
+      "unavailable": "We could not read demand right now. Please try again shortly.",
+      "privacy": "You never learn who they are or exactly what they want — only how many."
+    }
+  },
+  "offer": {
+    "door": {
+      "label": "Offer",
+      "hint": "Own a property? List it with a few structured details — and the people looking for it will find it."
+    },
+    "list": {
+      "title": "My properties",
+      "lead": "Every listing reaches the public map as soon as it has the basics. Whatever is missing, we tell you here.",
+      "create": "New listing",
+      "empty": "You have not listed a property yet.",
+      "emptyHint": "A few structured details are needed — type, area, price, location. Without them the property exists in the database and never meets anyone.",
+      "loading": "Loading your properties…",
+      "error": "Your properties could not be loaded. Please try again shortly.",
+      "open": "Open",
+      "countLabel": "{count, plural, one {# property} other {# properties}}"
+    },
+    "mandates": {
+      "title": "Office mandates",
+      "lead": "Every property you listed on behalf of a client, and what became of their approval. The ones waiting on you come first.",
+      "create": "New listing for a client",
+      "backToCatalog": "← All mandates",
+      "loading": "Loading your mandates",
+      "error": "The mandates could not be loaded. Please try again shortly.",
+      "retry": "Try again",
+      "empty": "You have not yet listed a property on behalf of a client.",
+      "emptyHint": "When you list a client property we send them a link to approve it. Here you will see who answered, who never even opened the message, and which mandate is close to expiring.",
+      "truncated": "Showing the first {count} mandates. There are more.",
+      "clientUnknown": "Contact not found",
+      "clientLabel": "Client",
+      "expiresIn": "{count, plural, one {Expires in # day} other {Expires in # days}}",
+      "expiredLabel": "Expired",
+      "onTheMarket": "On the map",
+      "offTheMarket": "Off the map",
+      "notifiedNever": "No message ever sent",
+      "viewedNever": "Not opened",
+      "group": {
+        "needs-us": "Waiting on you",
+        "waiting-client": "Waiting on the client",
+        "expiring": "Expiring soon",
+        "settled": "Active",
+        "closed": "Closed"
+      },
+      "groupCount": "{count, plural, one {# mandate} other {# mandates}}",
+      "standing": {
+        "unannounced-live": "Published without notice",
+        "never-notified": "Never sent",
+        "link-revoked": "Link revoked",
+        "expiring-soon": "Expiring soon",
+        "awaiting-decision": "Read, no answer",
+        "awaiting-view": "Not opened yet",
+        "declined": "Owner declined",
+        "expired": "Expired",
+        "expired-unanswered": "Expired unanswered",
+        "live": "Active"
+      },
+      "standingHint": {
+        "unannounced-live": "The listing is already on the map, but the owner has never received a notice. Send it to them.",
+        "never-notified": "The contact had no email address when the listing was created. Add one and send again.",
+        "link-revoked": "You revoked the link, so the client can no longer answer. Send a new one if you want them to continue.",
+        "expiring-soon": "The agreement is ending. Renewal needs a new written mandate, not an extension.",
+        "awaiting-decision": "They opened the link and have not decided yet. A phone call usually does it.",
+        "awaiting-view": "The message was sent and has not been opened. Check whether it landed in spam.",
+        "declined": "The listing is not published. The owner can change their mind from the same link.",
+        "expired": "The mandate ended and the listing came off the map. A new agreement is needed.",
+        "expired-unanswered": "The deadline passed without the owner ever answering.",
+        "live": "All good. The listing is on the map."
+      },
+      "proof": {
+        "owner-consent": "Owner approval",
+        "agency-attestation": "Office attestation"
+      },
+      "action": {
+        "resend": "Resend the link",
+        "revoke": "Revoke the link",
+        "working": "Please wait…"
+      },
+      "actionDone": {
+        "resend": "The message was sent to {to}.",
+        "revoke": "The link was revoked. The client can no longer answer."
+      },
+      "reject": {
+        "absent": "The mandate was not found.",
+        "not-brokered": "This listing was not made on behalf of a client.",
+        "declined": "The owner has already declined.",
+        "expired": "The mandate has expired. A new agreement is needed.",
+        "not-pending": "Revoking is only possible while the owner answer is pending.",
+        "already-revoked": "The link is already revoked.",
+        "no-address": "The contact has no email address. Add one on their record and try again.",
+        "write-failed": "It did not go through. Please try again shortly.",
+        "network": "No answer received. Check your connection and try again."
+      },
+      "presence": {
+        "withdraw": "Take the listing down",
+        "restore": "Put it back up"
+      },
+      "presenceDone": {
+        "withdraw": "The listing is off the map. The mandate is unchanged.",
+        "restore": "The listing is back on the map."
+      }
+    },
+    "desktopOnly": {
+      "title": "Listing a property is done on a computer",
+      "body": "The form asks about type, area, location and what you want to do with the property, all together. On a narrow screen it would be half a form — and a property without fields is found by no one.",
+      "what": "From here you can view and manage what you have already listed.",
+      "back": "My properties"
+    },
+    "offerKind": {
+      "label": "What do you want to do with the property?",
+      "help": "You can pick more than one — for example both for sale and for rent.",
+      "sell": "Sale",
+      "leaseOut": "Rent",
+      "exchange": "Land-for-flats exchange"
+    },
+    "placeAnswer": {
+      "label": "Where is it?",
+      "help": "Location is not mandatory. Without it, though, the property does not appear on the map — only in the list.",
+      "declared": "I will state the location",
+      "declined": "I would rather not say for now"
+    },
+    "form": {
+      "title": "List a property",
+      "editTitle": "Edit listing",
+      "lead": "We only ask what is needed for people to find you. Whatever we can compute, we do not ask.",
+      "identity": "What it is",
+      "basics": "Size and layout",
+      "submit": "Publish",
+      "save": "Save",
+      "saving": "Saving…",
+      "cancel": "Cancel",
+      "failed": "The listing was not saved. Please try again.",
+      "optional": "optional",
+      "titleLabel": "Listing title",
+      "titlePlaceholder": "e.g. 92 sqm apartment in the centre",
+      "typeLabel": "Property type",
+      "areaLabel": "Area (sqm)",
+      "floorLabel": "Floor",
+      "floorHelp": "0 means ground floor.",
+      "bedroomsLabel": "Bedrooms",
+      "bedroomsHelp": "0 means studio.",
+      "askingPriceLabel": "Asking price (EUR)",
+      "rentPriceLabel": "Monthly rent (EUR)",
+      "exchangePercentageLabel": "Landowner share (%)",
+      "priceHelp": "Without a price the listing is not published — that is the rule of every serious marketplace.",
+      "placeQueryLabel": "Address or area",
+      "placeQueryPlaceholder": "e.g. Egnatia 147, Thessaloniki",
+      "placeResolve": "Locate",
+      "placeResolving": "Locating…",
+      "placeResolved": "Located: {label}",
+      "placeNotFound": "No such address was found. Try writing it differently.",
+      "placeFailed": "Locating did not complete. Please try again shortly.",
+      "placeDeclinedNote": "The property will appear in the list marked as having no stated location.",
+      "placeLinkLegend": "Which building or plot?",
+      "placeLinkHelp": "Optional. If you point at it, your listing meets the people searching for THIS building — not just the area.",
+      "landAreaLabel": "Land area (m²)"
+    },
+    "media": {
+      "label": "Photos and floor plans",
+      "help": "Upload whatever you have — photos, a floor plan, a PDF. Not mandatory.",
+      "add": "Add file",
+      "uploading": "Uploading {fileName} — {percent}%",
+      "rejected": "{fileName} was not accepted: {reason}",
+      "failed": "{fileName} was not uploaded. Please try again.",
+      "empty": "You have not uploaded any files.",
+      "remove": "Remove",
+      "privateNote": "Your files are private and are not published in the listing. The card image is produced from the property model."
+    },
+    "invariant": {
+      "heading": "The listing is not saved yet:",
+      "no-live-offer": "Choose what you want to do with the property — sale, rent or land-for-flats exchange.",
+      "duplicate-offer-kind": "The same kind of offer was declared twice.",
+      "offer-amount-missing": "An offer is missing its amount: price for sale, rent for renting, share for exchange.",
+      "exchange-percentage-out-of-range": "The landowner share must be between 1 and 100.",
+      "type-missing": "Choose a property type.",
+      "area-not-positive": "Enter an area greater than zero.",
+      "title-missing": "Give the listing a title.",
+      "bedrooms-negative": "Bedrooms cannot be negative.",
+      "exchange-requires-land": "An exchange (antiparochi) applies only to land. Choose «Plot» or «Parcel» as the property type, or remove the exchange.",
+      "mandate-client-missing": "The mandate does not name a client.",
+      "mandate-expiry-invalid": "The expiry date cannot be read.",
+      "mandate-expiry-past": "The expiry date is in the past.",
+      "mandate-attestation-not-confirmed": "The mandate attestation was not recorded correctly."
+    },
+    "formBlocker": {
+      "place-unresolved": "Press Locate so the address resolves to a point on the map.",
+      "mandate-client-unset": "Choose the client you are listing for.",
+      "mandate-expiry-unset": "State the date the mandate runs until."
+    },
+    "lifecycle": {
+      "label": "Status",
+      "listed": "On the market",
+      "withdrawn": "Withdrawn",
+      "withdraw": "Withdraw",
+      "restore": "Restore",
+      "withdrawNote": "Withdrawing deletes nothing — the listing leaves the public map and stays in your list.",
+      "failed": "The status did not change. Please try again."
+    },
+    "publish": {
+      "published": "The listing is on the public map.",
+      "withdrawn": "The listing is not on the public map.",
+      "failed": "Saved, but the public listing was not updated. We will retry automatically.",
+      "view": "View the public listing"
+    },
+    "detail": {
+      "back": "My properties",
+      "loading": "Loading the property…",
+      "absent": "This property does not exist — or it is not yours.",
+      "error": "The property could not be loaded. Please try again shortly.",
+      "edit": "Edit"
+    },
+    "card": {
+      "noPlace": "No stated location",
+      "area": "{area} sqm",
+      "floor": "Floor {floor}",
+      "bedrooms": "{count, plural, one {# bedroom} other {# bedrooms}}"
+    }
+  },
+  "mandate": {
+    "consent": {
+      "title": "Mandate approval",
+      "introWithAgency": "The agency “{agency}” is asking to market your property.",
+      "introNoAgency": "A real-estate agency is asking to market your property.",
+      "listingLabel": "Property",
+      "untilLabel": "The mandate will run until",
+      "explain": "If you agree, the listing will be published marked as coming from an agency. If not, it will not be published.",
+      "approve": "Yes, I grant the mandate",
+      "decline": "No, I do not grant it",
+      "sending": "Recording…",
+      "approvedTitle": "Mandate recorded",
+      "approvedBody": "Thank you. The listing can now be published.",
+      "declinedTitle": "Your refusal was recorded",
+      "declinedBody": "The listing will not be published.",
+      "changeMind": "You can change your answer at any time, from the same link.",
+      "currentlyApproved": "You have already granted the mandate.",
+      "currentlyDeclined": "You have already refused.",
+      "reason": {
+        "link-invalid": "This link is not valid.",
+        "link-expired": "This link has expired. Ask the agency for a new one.",
+        "listing-absent": "This listing no longer exists.",
+        "not-brokered": "This listing has no agency mandate.",
+        "client-mismatch": "This link does not match this mandate.",
+        "superseded": "There is a newer message from the agency. Please use the most recent link.",
+        "write-failed": "Your answer was not recorded. Please try again."
+      }
+    },
+    "office": {
+      "newTitle": "New listing for a client",
+      "newSubtitle": "You are listing a client's property. The owner will be notified.",
+      "clientLabel": "Client",
+      "clientPlaceholder": "Search contacts…",
+      "clientHint": "The property owner, as held in your contacts.",
+      "untilLabel": "The mandate runs until",
+      "untilHint": "The law gives twelve months when no other term is agreed.",
+      "viaLabel": "How you hold the mandate",
+      "viaOwnerConsent": "Ask the owner now",
+      "viaOwnerConsentHint": "We send them a link. The listing goes live once they answer yes.",
+      "viaAgencyAttestation": "I hold a signed mandate",
+      "viaAgencyAttestationHint": "The listing goes live at once. The owner is notified and can stop it.",
+      "notify": {
+        "sent": "A notice was sent to the owner ({to}).",
+        "no-address": "The contact has no email — the owner was NOT notified.",
+        "failed": "The notice to the owner was not sent."
+      }
+    }
+  }
+}

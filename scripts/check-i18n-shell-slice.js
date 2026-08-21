@@ -72,6 +72,7 @@ const {
 const { buildSlices, stableStringify, sha256, fingerprintShellFile } = require('./lib/i18n-shell-slice/slice-build');
 const { loadNamespaceBundles } = require('./lib/i18n-namespace-extract');
 const { loadKeyConstants } = require('./lib/i18n-shell-slice/key-extract');
+const { auditLedger, describeFailures } = require('./lib/i18n-shell-slice/ledger');
 const { parseModule } = require('./lib/module-graph/parse-module');
 const { readTsPathAliases, resolveSpecifier, toPosix } = require('./lib/module-graph/resolve-specifier');
 
@@ -153,6 +154,31 @@ function checkLocaleDrift(config, manifest) {
   return null;
 }
 
+/**
+ * B2. ADR-777 §8.38 — **ΤΟ ΜΗΤΡΩΟ ΜΕΣΑ ΣΤΟΝ ΠΡΟΫΠΟΛΟΓΙΣΜΟ ΤΟΥ.**
+ *
+ * Διαβάζει το **δεσμευμένο** artifact (όχι τον γράφο), οπότε δουλεύει και στο Layer 1
+ * χωρίς κόστος. Ο λόγος που δεν αρκεί το άθροισμα είναι μετρημένος: ένα σύνολο που
+ * ξεχειλίζει **δεν λέει ποια εγγραφή** φούσκωσε — και το `search-results` φούσκωσε 30×.
+ */
+function checkLedgerBudget(config, manifest) {
+  const [language] = manifest.languages;
+  const file = path.join(PROJECT_ROOT, toPosix(path.join(config.outputDir, `shell-slice.${language}.json`)));
+  if (!fs.existsSync(file)) return null;   // το checkArtifactIntegrity το λέει καλύτερα
+  let resources;
+  try {
+    resources = JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch {
+    return `shell-slice.${language}.json is not valid JSON.`;
+  }
+  const whole = Object.entries(manifest.wants || {})
+    .filter(([, want]) => want && want.whole === true)
+    .map(([namespace]) => namespace);
+  const audit = auditLedger(config.guaranteedNamespaces, resources, whole);
+  if (audit.failures.length === 0) return null;
+  return `migration ledger over budget — ${describeFailures(audit.failures)}`;
+}
+
 /** C. a staged shell module whose i18n surface or import edges moved. */
 function checkStagedShellFiles(config, manifest, stagedFiles) {
   const context = {
@@ -206,6 +232,7 @@ function runLayerOne(config, stagedFiles) {
   }
   const reason =
     checkArtifactIntegrity(manifest) ||
+    checkLedgerBudget(config, manifest) ||
     checkLocaleDrift(config, manifest) ||
     checkStagedShellFiles(config, manifest, stagedFiles) ||
     checkNewlyResolvableSpecs(manifest, stagedFiles);
@@ -306,6 +333,7 @@ module.exports = {
   normalize,
   readManifest,
   checkArtifactIntegrity,
+  checkLedgerBudget,
   checkLocaleDrift,
   checkStagedShellFiles,
   checkNewlyResolvableSpecs,

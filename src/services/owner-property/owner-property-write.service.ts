@@ -46,6 +46,11 @@ import 'server-only';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
+import {
+  custodyOf,
+  mayAdminister,
+  type ListingActor,
+} from '@/lib/owner-property/listing-custody';
 import { nowISO } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
 import { readCompanyPublicName } from '@/services/company/company-public-name.reader';
@@ -236,17 +241,24 @@ export async function createOwnerProperty(
 // =============================================================================
 
 /**
- * Διαβάζει την καταχώρηση **και αποδεικνύει ότι είναι του αιτούντος**.
+ * Διαβάζει την καταχώρηση **και αποδεικνύει ότι ο αιτών έχει δικαίωμα στον ΧΩΡΟ της**.
  *
  * 🔴 **«Δεν υπάρχει» και «δεν είναι δική σου» απαντώνται ΤΟ ΙΔΙΟ, επίτηδες.** Μια
  * ξεχωριστή άρνηση θα **επιβεβαίωνε** ότι η ταυτότητα υπάρχει — δηλαδή θα διέρρεε το
  * επίπεδο Β μέσω του κωδικού λάθους. Ίδιο συμβόλαιο με τη διαδρομή `demand/competition`
  * και με το `MyDemandLookup.absent` στον πελάτη.
+ *
+ * 🔴 **ADR-777 §8.39 — ΤΟ ΚΡΙΤΗΡΙΟ ΗΤΑΝ `authorUserId === uid`, ΚΑΙ ΗΤΑΝ ΜΙΣΟ.** Μια
+ * αγγελία με `authorCompanyId` ανήκει στο **γραφείο** («*listings belong to the broker,
+ * not the agent*»), οπότε ο έλεγχος κατά **χρήστη** κλείδωνε το γραφείο έξω από τη
+ * **δική του** εγγραφή: κανείς δεν μπορούσε να αποσύρει την αγγελία συναδέλφου που
+ * έφυγε. Πλέον η ερώτηση είναι **μία** και ζει στο {@link mayAdminister}: *«έχεις
+ * δικαίωμα στον χώρο όπου ζει;»*. Ο **ιδιωτικός** χώρος δεν διευρύνεται ποτέ.
  */
-async function loadOwned(
+async function loadAdministrable(
   adminDb: AdminFirestore,
   ownerPropertyId: string,
-  authorUserId: string,
+  actor: ListingActor,
 ): Promise<OwnerProperty | null> {
   const snapshot = await adminDb
     .collection(COLLECTIONS.OWNER_PROPERTIES)
@@ -254,7 +266,7 @@ async function loadOwned(
     .get();
 
   const property = snapshot.data() as OwnerProperty | undefined;
-  if (property === undefined || property.authorUserId !== authorUserId) return null;
+  if (property === undefined || !mayAdminister(custodyOf(property), actor)) return null;
   return property;
 }
 
@@ -275,12 +287,12 @@ export async function updateOwnerProperty(
   adminDb: AdminFirestore,
   ownerPropertyId: string,
   draft: OwnerPropertyDraft,
-  authorUserId: string,
+  actor: ListingActor,
 ): Promise<OwnerPropertyWriteResult> {
   const violations = ownerPropertyInvariantViolations(draft);
   if (violations.length > 0) return { kind: 'invalid', violations };
 
-  const existing = await loadOwned(adminDb, ownerPropertyId, authorUserId);
+  const existing = await loadAdministrable(adminDb, ownerPropertyId, actor);
   if (existing === null) return { kind: 'absent' };
 
   return persist(adminDb, { ...existing, ...draft, updatedAt: nowISO() }, 'overwrite');
@@ -304,9 +316,9 @@ export async function setOwnerPropertyLifecycle(
   adminDb: AdminFirestore,
   ownerPropertyId: string,
   lifecycle: OwnerPropertyLifecycle,
-  authorUserId: string,
+  actor: ListingActor,
 ): Promise<OwnerPropertyWriteResult> {
-  const existing = await loadOwned(adminDb, ownerPropertyId, authorUserId);
+  const existing = await loadAdministrable(adminDb, ownerPropertyId, actor);
   if (existing === null) return { kind: 'absent' };
 
   return persist(adminDb, { ...existing, lifecycle, updatedAt: nowISO() }, 'overwrite');

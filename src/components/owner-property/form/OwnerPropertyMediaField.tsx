@@ -39,7 +39,7 @@ import { FormFieldset } from '@/components/shared/forms/form-field-primitives';
 import { useOwnerPropertyMedia } from '@/hooks/owner-property/useOwnerPropertyMedia';
 import type { OwnerPropertyFormValues } from '@/lib/owner-property/owner-property-form-values';
 
-const NS = 'search-results';
+const NS = 'property-market';
 const K = `${NS}:offer.media`;
 
 export function OwnerPropertyMediaField({

@@ -34,7 +34,7 @@ import { usePlaceResolver } from '@/hooks/geo/usePlaceResolver';
 import type { DemandFormValues } from '@/lib/demand/demand-form-values';
 import { DemandNumberField } from './demand-field-primitives';
 
-const NS = 'search-results';
+const NS = 'property-market';
 
 export function DemandPlaceResolver(): React.ReactElement {
   const { t } = useTranslation([NS]);

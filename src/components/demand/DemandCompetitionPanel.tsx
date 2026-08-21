@@ -44,7 +44,7 @@ export function DemandCompetitionPanel({
 }: {
   competition: CompetitionState;
 }): React.ReactElement | null {
-  const { t } = useTranslation(['search-results']);
+  const { t } = useTranslation(['property-market']);
 
   // ⚠️ **Η αποτυχία δεν ζωγραφίζει τίποτα, ΠΟΤΕ «0».** Μια πεσμένη κλήση δεν είναι
   // μέτρηση της αγοράς, και ένα «κανένας άλλος» εκεί θα ήταν ψέμα με σιγουριά — το
@@ -55,27 +55,27 @@ export function DemandCompetitionPanel({
 
   return (
     <section
-      aria-label={t('search-results:demand.competition.heading')}
+      aria-label={t('property-market:demand.competition.heading')}
       className="rounded-md border border-border bg-card p-4"
     >
       <h3 className="text-sm font-semibold text-foreground">
-        {t('search-results:demand.competition.heading')}
+        {t('property-market:demand.competition.heading')}
       </h3>
 
       {count === null ? (
         <>
           <p className="mt-2 text-sm text-foreground">
-            {t('search-results:demand.competition.hidden', { minCount })}
+            {t('property-market:demand.competition.hidden', { minCount })}
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            {t('search-results:demand.competition.hiddenWhy')}
+            {t('property-market:demand.competition.hiddenWhy')}
           </p>
         </>
       ) : (
         <p className="mt-2 text-sm text-foreground">
           {count === 0
-            ? t('search-results:demand.competition.none')
-            : t('search-results:demand.competition.count', { count })}
+            ? t('property-market:demand.competition.none')
+            : t('property-market:demand.competition.count', { count })}
         </p>
       )}
     </section>

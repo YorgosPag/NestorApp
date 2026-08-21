@@ -29,11 +29,14 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { allowedActionsFor, type MandateAction } from '@/lib/mandate/mandate-actions';
+import { presenceActionFor, type PresenceAction } from '@/lib/owner-property/listing-presence';
 import type { MandateCatalogRow as CatalogRow } from '@/services/mandate/mandate-catalog.service';
 
 import {
   ACTION_DONE_KEYS,
   ACTION_LABEL_KEYS,
+  PRESENCE_DONE_KEYS,
+  PRESENCE_LABEL_KEYS,
   CATALOG_KEYS,
   CATALOG_NS,
   PROOF_LABEL_KEYS,
@@ -48,6 +51,8 @@ export interface MandateCatalogRowProps {
   readonly busy: boolean;
   readonly feedback: CatalogFeedback | null;
   readonly onAct: (ownerPropertyId: string, action: MandateAction) => void;
+  /** ADR-777 §8.39 — «κατέβασέ το» / «ανέβασέ το», στον χώρο του γραφείου. */
+  readonly onSetPresence: (ownerPropertyId: string, action: PresenceAction) => void;
 }
 
 /**
@@ -60,6 +65,14 @@ function FeedbackLine({ feedback }: { readonly feedback: CatalogFeedback }): Rea
   const { t } = useTranslation([CATALOG_NS]);
   const { result } = feedback;
 
+  // ADR-777 §8.39 — η πράξη **παρουσίας** έχει δικό της λεξιλόγιο: δεν μπορεί να
+  // αρνηθεί για λόγους πρόσκλησης, άρα δεν δανείζεται τα `REJECTION_KEYS`.
+  if (result.kind === 'presence-done') {
+    return <p className="text-sm text-muted-foreground">{t(PRESENCE_DONE_KEYS[result.action])}</p>;
+  }
+  if (result.kind === 'presence-failed') {
+    return <p className="text-sm text-muted-foreground">{t(CATALOG_KEYS.networkFailure)}</p>;
+  }
   if (result.kind === 'failed') {
     return <p className="text-sm text-muted-foreground">{t(CATALOG_KEYS.networkFailure)}</p>;
   }
@@ -133,9 +146,11 @@ export function MandateCatalogRow({
   busy,
   feedback,
   onAct,
+  onSetPresence,
 }: MandateCatalogRowProps): React.ReactElement {
   const { t } = useTranslation([CATALOG_NS]);
   const actions = allowedActionsFor(row.standing);
+  const presence = presenceActionFor(row.onTheMarket);
 
   return (
     <article className="flex flex-col gap-3 rounded-md border border-border bg-card p-4">
@@ -151,22 +166,41 @@ export function MandateCatalogRow({
 
       <RowFacts row={row} />
 
-      {actions.length === 0 ? null : (
-        <footer className="flex flex-wrap gap-2">
-          {actions.map((action) => (
-            <Button
-              key={action}
-              type="button"
-              size="sm"
-              variant={action === 'revoke' ? 'destructive' : 'secondary'}
-              disabled={busy}
-              onClick={() => onAct(row.ownerPropertyId, action)}
-            >
-              {busy ? t(CATALOG_KEYS.working) : t(ACTION_LABEL_KEYS[action])}
-            </Button>
-          ))}
-        </footer>
-      )}
+      <footer className="flex flex-wrap gap-2">
+        {actions.map((action) => (
+          <Button
+            key={action}
+            type="button"
+            size="sm"
+            variant={action === 'revoke' ? 'destructive' : 'secondary'}
+            disabled={busy}
+            onClick={() => onAct(row.ownerPropertyId, action)}
+          >
+            {busy ? t(CATALOG_KEYS.working) : t(ACTION_LABEL_KEYS[action])}
+          </Button>
+        ))}
+
+        {/*
+          🔴 ADR-777 §8.39 — ΤΟ ΚΟΥΜΠΙ ΠΟΥ ΕΛΕΙΠΕ. Η απόσυρση ζούσε **μόνο** στην οθόνη
+          του ιδιώτη, πίσω από κριτήριο `authorUserId === uid`: μια αγγελία που ανήκει
+          στο **γραφείο** δεν μπορούσε να κατέβει από κανέναν άλλον — ούτε όταν ο
+          υπάλληλος που την καταχώρησε είχε φύγει.
+
+          ⚠️ **Πάντα ορατό, ποτέ υπό όρους κατάστασης εντολής**: η έξοδος από την αγορά
+          δεν επιτρέπεται να εξαρτάται από το αν η πρόσκληση είναι `pending` ή `expired`
+          — «*μια πύλη που εμποδίζει τον άνθρωπο να αποσύρει το ακίνητό του τον κλειδώνει
+          έξω από την έξοδο*» (setOwnerPropertyLifecycle).
+        */}
+        <Button
+          type="button"
+          size="sm"
+          variant={presence === 'withdraw' ? 'destructive' : 'secondary'}
+          disabled={busy}
+          onClick={() => onSetPresence(row.ownerPropertyId, presence)}
+        >
+          {busy ? t(CATALOG_KEYS.working) : t(PRESENCE_LABEL_KEYS[presence])}
+        </Button>
+      </footer>
 
       {feedback === null ? null : <FeedbackLine feedback={feedback} />}
     </article>

@@ -46,9 +46,27 @@
 
 'use strict';
 
-const fs = require('node:fs');
-const path = require('node:path');
 const ts = require('typescript');
+
+// ADR-777 §8.37 — η **επίλυση τιμών** ζει δίπλα, ως ξεχωριστή ευθύνη (N.7.1).
+const {
+  foldObjectLiteral,
+  loadKeyConstants,
+  resolveAccessChain,
+  forEachModuleConstant,
+  collectLocalConstants,
+  lookupTable,
+  isScopeNode,
+  readConstantDeclaration,
+  collectScopeDeclarations,
+  makeConstantScope,
+  collectStringConstants,
+  expandTemplate,
+  spanValues,
+  expandTemplateKeys,
+  harvestPropertyValues,
+  leavesUnder,
+} = require('./constant-resolution');
 
 /** `ns:key` — i18next's explicit-namespace form. */
 const EXPLICIT_NS = /^([a-zA-Z0-9_-]+):(.+)$/;
@@ -61,249 +79,6 @@ function scriptKindFor(file) {
 function splitKey(raw) {
   const match = EXPLICIT_NS.exec(raw);
   return match ? { ns: match[1], key: match[2] } : { ns: null, key: raw };
-}
-
-// ─── Key-constant SSoTs (e.g. src/config/notification-keys.ts) ────────────────
-
-/** Folds an object-literal AST into dottedPath → string leaf. Non-literal values are skipped. */
-function foldObjectLiteral(node, prefix, out) {
-  for (const prop of node.properties) {
-    if (!ts.isPropertyAssignment(prop)) continue;
-    const name = ts.isIdentifier(prop.name) || ts.isStringLiteral(prop.name) ? prop.name.text : null;
-    if (name === null) continue;
-    const dotted = prefix ? `${prefix}.${name}` : name;
-    if (ts.isObjectLiteralExpression(prop.initializer)) foldObjectLiteral(prop.initializer, dotted, out);
-    else if (ts.isStringLiteral(prop.initializer) || ts.isNoSubstitutionTemplateLiteral(prop.initializer)) {
-      out.set(dotted, prop.initializer.text);
-    }
-  }
-  return out;
-}
-
-/**
- * Reads the registered key-constant modules into `name → Map<dottedPath, key>`.
- * These constants exist precisely so keys are not hardcoded at call sites
- * (`src/config/notification-keys.ts`, `.ssot-registry.json → notification-keys`);
- * without this the shell would fall back to whole namespaces for every
- * notification hook it touches.
- *
- * @param {string} projectRoot
- * @param {Array<{file: string, exportName: string}>} specs
- */
-function loadKeyConstants(projectRoot, specs) {
-  const constants = new Map();
-  for (const spec of specs) {
-    const abs = path.join(projectRoot, spec.file);
-    if (!fs.existsSync(abs)) continue;
-    const source = ts.createSourceFile(abs, fs.readFileSync(abs, 'utf8'), ts.ScriptTarget.Latest, true);
-    for (const statement of source.statements) {
-      if (!ts.isVariableStatement(statement)) continue;
-      for (const decl of statement.declarationList.declarations) {
-        if (!ts.isIdentifier(decl.name) || decl.name.text !== spec.exportName) continue;
-        const init = decl.initializer && ts.isAsExpression(decl.initializer)
-          ? decl.initializer.expression
-          : decl.initializer;
-        if (init && ts.isObjectLiteralExpression(init)) {
-          constants.set(spec.exportName, foldObjectLiteral(init, '', new Map()));
-        }
-      }
-    }
-  }
-  return constants;
-}
-
-/**
- * Walks `NOTIFICATION_KEYS.files.upload` or `PHOTO_TYPE_I18N_MAP[photoType]`
- * back to its root identifier.
- *
- * `wildcard` marks a COMPUTED index: the call selects one of the table's values
- * but which one is a runtime decision, so every value under that point is a
- * possible key and all of them must travel. That is the fail-safe direction —
- * a map of 5 labels costs 5 strings, a missing one costs a raw key on screen.
- *
- * @returns {?{root: string, path: string, wildcard: boolean}}
- */
-function resolveAccessChain(node) {
-  const parts = [];
-  let wildcard = false;
-  let current = node;
-  for (;;) {
-    if (ts.isPropertyAccessExpression(current)) { parts.unshift(current.name.text); current = current.expression; continue; }
-    if (ts.isElementAccessExpression(current)) {
-      const index = current.argumentExpression;
-      if (index && (ts.isStringLiteral(index) || ts.isNoSubstitutionTemplateLiteral(index))) parts.unshift(index.text);
-      else wildcard = true;
-      current = current.expression;
-      continue;
-    }
-    break;
-  }
-  if (!ts.isIdentifier(current)) return null;
-  return { root: current.text, path: parts.join('.'), wildcard };
-}
-
-/**
- * Module-level `const NAME = { … }` object literals in the file being analysed.
- *
- * WHY: `t(PHOTO_TYPE_I18N_MAP[photoType] ?? 'photoPreview.titles.photo')` is a
- * local lookup table, not a registered SSoT, and it is a common enough shape
- * that sending it to the manual escape hatch would make the hatch the norm. The
- * table is right there in the AST — read it.
- */
-/**
- * `visit(name, initializer)` for every module-level `const NAME = …`, with `as const`
- * already unwrapped.
- *
- * Εξήχθη γιατί το **CHECK 3.28 το έπιασε ως κλώνο μέσα στο ίδιο commit** (ADR-777
- * §8.36): οι δύο συλλέκτες σταθερών έγραφαν το ίδιο επτάγραμμο πρόλογο. Ίδια
- * ερώτηση («ποιες είναι οι σταθερές αυτού του module;»), μία απάντηση.
- */
-function forEachModuleConstant(source, visit) {
-  for (const statement of source.statements) {
-    if (!ts.isVariableStatement(statement)) continue;
-    for (const decl of statement.declarationList.declarations) {
-      if (!ts.isIdentifier(decl.name) || !decl.initializer) continue;
-      const init = ts.isAsExpression(decl.initializer) ? decl.initializer.expression : decl.initializer;
-      visit(decl.name.text, init);
-    }
-  }
-}
-
-function collectLocalConstants(source) {
-  const tables = new Map();
-  forEachModuleConstant(source, (name, init) => {
-    if (!ts.isObjectLiteralExpression(init)) return;
-    const folded = foldObjectLiteral(init, '', new Map());
-    if (folded.size > 0) tables.set(name, folded);
-  });
-  return tables;
-}
-
-/**
- * Module-level `const NAME = 'literal'` **and** `` const NAME = `${OTHER}:suffix` ``,
- * resolved TRANSITIVELY.
- *
- * 🔴 WHY — MEASURED, ADR-777 §8.36. All **76** unresolved calls that made the
- * generator refuse a route slice for the three property forms had ONE shape:
- *
- *     const NS = 'search-results';
- *     const K  = `${NS}:mandate.office`;
- *     …t(`${K}.newTitle`)
- *
- * Not one of them is dynamic. Every part is a module constant with a literal at
- * the bottom — the call `t(\`${K}.newTitle\`)` denotes exactly
- * `search-results:mandate.office.newTitle` and nothing else. The generator called
- * them "unresolved" only because it never followed the chain, and the cost of
- * that gap was three screens painting raw keys on first frame plus a namespace
- * shipping WHOLE to 141 routes.
- *
- * ⚠️ **Bottom-up by fixpoint, not one pass**: `K` cannot resolve before `NS`
- * does, and source order is no guarantee (hoisting, reordering). The loop runs
- * until nothing new resolves — so a chain of any depth works, and a cycle simply
- * stops resolving instead of hanging.
- *
- * ⚠️ **A constant that does not fully resolve is NOT recorded.** Half a value is
- * a guess, and a guess here ships the wrong keys — silently.
- */
-function collectStringConstants(source) {
-  const pending = new Map();
-  forEachModuleConstant(source, (name, init) => {
-    if (ts.isStringLiteral(init) || ts.isNoSubstitutionTemplateLiteral(init)) {
-      pending.set(name, { literal: init.text });
-    } else if (ts.isTemplateExpression(init)) {
-      pending.set(name, { template: init });
-    }
-  });
-
-  const resolved = new Map();
-  for (const [name, entry] of pending) {
-    if (entry.literal !== undefined) resolved.set(name, entry.literal);
-  }
-
-  let progressed = true;
-  while (progressed) {
-    progressed = false;
-    for (const [name, entry] of pending) {
-      if (resolved.has(name) || entry.template === undefined) continue;
-      const value = expandTemplate(entry.template, resolved);
-      if (value.complete) {
-        resolved.set(name, value.text);
-        progressed = true;
-      }
-    }
-  }
-  return resolved;
-}
-
-/**
- * Rebuilds a template literal from a constant table.
- *
- * Returns `{ text, complete }`: `complete` is true only when EVERY `${…}` was a
- * known constant. When it is false, `text` is the statically knowable head —
- * everything up to the first hole — which is still strictly more than the raw
- * `head` the caller had before (for `` `${K}.notify.${kind}` `` the raw head is
- * the empty string, i.e. nothing at all).
- */
-function expandTemplate(node, constants) {
-  let text = node.head.text;
-  for (const span of node.templateSpans) {
-    const name = ts.isIdentifier(span.expression) ? span.expression.text : null;
-    const value = name === null ? undefined : constants.get(name);
-    if (value === undefined) return { text, complete: false };
-    text += value + span.literal.text;
-  }
-  return { text, complete: true };
-}
-
-/**
- * Harvests `propertyName → every string literal assigned to it` from all
- * module-level literals in the file (objects AND arrays, at any depth).
- *
- * WHY THIS RUNG EXISTS. The commonest unresolvable shape is not an opaque
- * variable — it is a config row walked by `.map()`:
- *
- *   const ACCOUNT_NAV = [{ href: …, labelKey: 'account.nav.profile' }, …]
- *   …ACCOUNT_NAV.map(item => <span>{t(item.labelKey)}</span>)
- *
- * `item` is a loop binding, so the access chain has no resolvable root and the
- * table lookup fails. But the answer is sitting in the same file: every value
- * `labelKey` can hold is a literal a few lines above. Asking "what strings does
- * this property ever hold here?" resolves it exactly.
- *
- * Over-collection is harmless by construction: a property that is not an i18n
- * key yields strings no locale defines, and `pruneNamespace` drops them. The
- * lookup only ever fires for a property that an actual `t()` call reads.
- */
-function harvestPropertyValues(source) {
-  const values = new Map();
-  const remember = (name, text) => {
-    if (!values.has(name)) values.set(name, new Set());
-    values.get(name).add(text);
-  };
-  const walk = (node) => {
-    if (ts.isPropertyAssignment(node)) {
-      const name = ts.isIdentifier(node.name) || ts.isStringLiteral(node.name) ? node.name.text : null;
-      const init = node.initializer;
-      if (name !== null && (ts.isStringLiteral(init) || ts.isNoSubstitutionTemplateLiteral(init))) {
-        remember(name, init.text);
-      }
-    }
-    ts.forEachChild(node, walk);
-  };
-  for (const statement of source.statements) {
-    if (ts.isVariableStatement(statement)) walk(statement);
-  }
-  return values;
-}
-
-/** Every leaf at or below `dotted` — a call may reference a whole subtree. */
-function leavesUnder(table, dotted) {
-  const exact = table.get(dotted);
-  if (exact !== undefined) return [exact];
-  const prefix = `${dotted}.`;
-  const out = [];
-  for (const [key, value] of table) if (key.startsWith(prefix)) out.push(value);
-  return out;
 }
 
 // ─── Call-site classification ────────────────────────────────────────────────
@@ -388,12 +163,12 @@ function classifyArgument(arg, ctx, sink) {
     // is the EMPTY string, so `staticPrefixOf` returned null and the call fell through
     // to `unresolved`. Nothing that resolved before resolves more narrowly now — the
     // only movement is unresolved → prefix → exact key.
-    const expanded = expandTemplate(arg, ctx.stringConstants || new Map());
+    const expanded = expandTemplateKeys(arg, ctx);
     if (expanded.complete) {
-      sink.keys.push(splitKey(expanded.text));
+      expanded.texts.forEach(text => sink.keys.push(splitKey(text)));
       return true;
     }
-    const prefix = staticPrefixOf(expanded.text);
+    const prefix = staticPrefixOf(expanded.head);
     if (prefix === null) return false;
     sink.prefixes.push(splitKey(prefix));
     return true;
@@ -404,6 +179,23 @@ function classifyArgument(arg, ctx, sink) {
   }
   if (ts.isParenthesizedExpression(arg) || ts.isAsExpression(arg) || ts.isNonNullExpression(arg)) {
     return classifyArgument(arg.expression, ctx, sink);
+  }
+  // 🔴 ADR-777 §8.39 — ΤΟ ΣΚΑΛΙ ΤΟΥ ΑΝΑΓΝΩΡΙΣΤΙΚΟΥ, ΤΕΛΕΥΤΑΙΟ.
+  //
+  // `const key = \`ns:ρίζα.${x}\`; … t(key, { value })` ήταν **ανεπίλυτη ολόκληρη**,
+  // ενώ η ίδια έκφραση **μέσα** στο `t(...)` έδινε πρόθεμα: το ίδιο ερώτημα με δύο
+  // απαντήσεις, ανάλογα με το αν ο άνθρωπος έβαλε ενδιάμεση μεταβλητή (ADR-749).
+  // Πλέον η κλήση κρίνεται πάνω στον **αρχικοποιητή** της σταθεράς, με την ίδια σκάλα.
+  //
+  // ⚠️ **Φρουρός κύκλου**: `const a = b; const b = a;` δεν επιτρέπεται να κρεμάσει.
+  if (ts.isIdentifier(arg)) {
+    if (ctx.resolvingNames.has(arg.text)) return false;
+    const initializer = ctx.constants.initializerOf(arg.text);
+    if (initializer === undefined) return false;
+    ctx.resolvingNames.add(arg.text);
+    const resolved = classifyArgument(initializer, ctx, sink);
+    ctx.resolvingNames.delete(arg.text);
+    return resolved;
   }
   return false;
 }
@@ -427,7 +219,7 @@ function classifyBinary(arg, ctx, sink) {
 
 function classifyConstantAccess(arg, ctx, sink) {
   const access = resolveAccessChain(arg);
-  const table = access === null ? null : (ctx.keyConstants.get(access.root) || ctx.localConstants.get(access.root));
+  const table = access === null ? null : lookupTable(ctx, access.root);
   if (table) {
     // A computed index means "any value at or below this path".
     const leaves = access.wildcard ? [...table.values()] : leavesUnder(table, access.path);
@@ -569,28 +361,40 @@ function extractSurface(content, { file }) {
  *   ever adds keys no locale defines, which are dropped when the slice is cut.
  * @returns {{keys, prefixes, unresolved, defaulted}}
  */
-function classifyTranslateCalls(content, { file, keyConstants, propertyValues }) {
+function classifyTranslateCalls(content, { file, keyConstants, propertyValues, closureConstants }) {
   const source = parseSource(file, content);
   const local = harvestPropertyValues(source);
   const sink = { keys: [], prefixes: [], unresolved: [], defaulted: 0 };
   const ctx = {
     keyConstants: keyConstants || new Map(),
     localConstants: collectLocalConstants(source),
-    stringConstants: collectStringConstants(source),
+    // ADR-777 §8.39 — οι εξαγόμενοι πίνακες ΟΛΗΣ της κλειστότητας. Είναι εισαγωγή
+    // **επίλυσης**, όχι επιφάνειας: το fingerprint (`extractSurface`) δεν τη βλέπει,
+    // ακριβώς όπως και το `propertyValues` — αλλιώς η φθηνή πύλη θα ήταν μονίμως κόκκινη.
+    closureConstants: closureConstants || new Map(),
+    /** Ο φρουρός κύκλου του σκαλιού αναγνωριστικού — ένας ανά αρχείο. */
+    resolvingNames: new Set(),
+    constants: collectStringConstants(source),
     lookupProperty: (name) => [
       ...(local.get(name) || []),
       ...((propertyValues && propertyValues.get(name)) || []),
     ],
   };
   const aliases = collectTranslateAliases(source);
-  const visit = (node) => {
-    if (isTranslateCall(node, aliases)) recordCall(node, source, ctx, sink);
-    ts.forEachChild(node, visit);
+  // Η σκάλα εμβέλειας χτίζεται ΚΑΤΑ ΤΗΝ ΚΑΤΑΒΑΣΗ: κάθε κλήση `t()` κρίνεται με τις
+  // σταθερές που ΒΛΕΠΕΙ από τη θέση της — βλ. {@link makeConstantScope}.
+  const visit = (node, scope) => {
+    const inner = isScopeNode(node) ? makeConstantScope(node, scope) : scope;
+    if (isTranslateCall(node, aliases)) recordCall(node, source, { ...ctx, constants: inner }, sink);
+    ts.forEachChild(node, child => visit(child, inner));
   };
-  ts.forEachChild(source, visit);
+  ts.forEachChild(source, child => visit(child, ctx.constants));
   return sink;
 }
 
+// ⚠️ Η επιφάνεια εισαγωγής μένει **ΙΔΙΑ**: η διάσπαση είναι κατά ευθύνη, όχι κατά
+// συμβόλαιο — κανένας καταναλωτής δεν αλλάζει, άρα καμία άγκυρα δεν ξαναγράφεται
+// για να περάσει.
 module.exports = {
   EXPLICIT_NS,
   splitKey,
@@ -600,6 +404,11 @@ module.exports = {
   collectLocalConstants,
   collectStringConstants,
   expandTemplate,
+  isScopeNode,
+  collectScopeDeclarations,
+  makeConstantScope,
+  spanValues,
+  expandTemplateKeys,
   harvestPropertyValues,
   leavesUnder,
   staticPrefixOf,

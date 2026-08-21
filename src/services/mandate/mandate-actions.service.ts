@@ -55,6 +55,7 @@ import 'server-only';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { custodyOf } from '@/lib/owner-property/listing-custody';
 import { nowISO } from '@/lib/date-local';
 import {
   verdictFor,
@@ -115,8 +116,15 @@ async function prepare(
     .doc(ownerPropertyId)
     .get();
 
+  // ⚠️ ADR-777 §8.39 — Η ΙΔΙΑ ΑΥΘΕΝΤΙΑ ΜΕ ΤΗ ΔΙΑΔΡΟΜΗ ΤΟΥ ΠΕΡΙΕΧΟΜΕΝΟΥ. Ήταν
+  // `stored.authorCompanyId !== companyId`, γραμμένο εδώ — δηλαδή δεύτερη υλοποίηση
+  // του ίδιου ερωτήματος, που μπορούσε να αποκλίνει από την πρώτη χωρίς να το δει
+  // κανείς. Ο έλεγχος «είναι όντως εντολή;» μένει ΞΕΧΩΡΙΣΤΟΣ από κάτω, γιατί είναι
+  // **άλλη** ερώτηση: η θεματοφυλακή λέει ποιος διαχειρίζεται, το `mandate.kind` τι.
   const stored = snapshot.data() as OwnerProperty | undefined;
-  if (stored === undefined || stored.authorCompanyId !== companyId) {
+  if (stored === undefined) return { ok: false, reason: 'absent' };
+  const custody = custodyOf(stored);
+  if (custody.kind !== 'company' || custody.companyId !== companyId) {
     return { ok: false, reason: 'absent' };
   }
   if (stored.mandate.kind !== 'brokered') return { ok: false, reason: 'not-brokered' };

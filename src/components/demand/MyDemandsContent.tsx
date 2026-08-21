@@ -35,12 +35,12 @@ import { DemandCard } from './DemandCard';
 
 /** Η κενή κατάσταση — **λέει τι κερδίζει**, όχι μόνο ότι είναι κενή. */
 function EmptyState(): React.ReactElement {
-  const { t } = useTranslation(['search-results']);
+  const { t } = useTranslation(['property-market']);
   return (
     <div className="rounded-md border border-border bg-card p-4">
-      <p className="font-medium text-foreground">{t('search-results:demand.list.empty')}</p>
+      <p className="font-medium text-foreground">{t('property-market:demand.list.empty')}</p>
       <p className="mt-1 text-sm text-muted-foreground">
-        {t('search-results:demand.list.emptyHint')}
+        {t('property-market:demand.list.emptyHint')}
       </p>
     </div>
   );
@@ -54,17 +54,17 @@ function EmptyState(): React.ReactElement {
  * σιωπηλή παράλειψη, και μια κατάσταση χωρίς κλάδο θα ζωγράφιζε **λευκή οθόνη**.
  */
 function DemandsBody(): React.ReactElement {
-  const { t } = useTranslation(['search-results']);
+  const { t } = useTranslation(['property-market']);
   const { user } = useAuth();
   const state = useMyDemands(user?.uid ?? null);
 
   switch (state.state) {
     case 'anonymous':
-      return <p className="text-foreground">{t('search-results:demand.space.signInNeeded')}</p>;
+      return <p className="text-foreground">{t('property-market:demand.space.signInNeeded')}</p>;
     case 'loading':
-      return <p className="text-muted-foreground">{t('search-results:demand.list.loading')}</p>;
+      return <p className="text-muted-foreground">{t('property-market:demand.list.loading')}</p>;
     case 'error':
-      return <p className="text-foreground">{t('search-results:demand.list.error')}</p>;
+      return <p className="text-foreground">{t('property-market:demand.list.error')}</p>;
     case 'ready':
       return state.demands.length === 0 ? (
         <EmptyState />
@@ -81,7 +81,7 @@ function DemandsBody(): React.ReactElement {
 }
 
 export function MyDemandsContent(): React.ReactElement {
-  const { t } = useTranslation(['search-results']);
+  const { t } = useTranslation(['property-market']);
 
   return (
     // `flex-1`, ΟΧΙ `min-h-screen`: το ύψος το κατέχει το `(me)/layout.tsx`, που
@@ -89,9 +89,9 @@ export function MyDemandsContent(): React.ReactElement {
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 p-6">
       <header className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold text-foreground">
-          {t('search-results:demand.list.title')}
+          {t('property-market:demand.list.title')}
         </h1>
-        <p className="text-sm text-muted-foreground">{t('search-results:demand.list.lead')}</p>
+        <p className="text-sm text-muted-foreground">{t('property-market:demand.list.lead')}</p>
       </header>
 
       {/*
@@ -105,7 +105,7 @@ export function MyDemandsContent(): React.ReactElement {
           href={NEW_DEMAND_ROUTE}
           className="inline-block rounded-md border border-border bg-card px-4 py-2 font-medium text-foreground"
         >
-          {t('search-results:demand.list.create')}
+          {t('property-market:demand.list.create')}
         </Link>
       </nav>
 

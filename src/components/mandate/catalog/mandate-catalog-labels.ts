@@ -33,11 +33,24 @@ import type {
 } from '@/lib/mandate/mandate-standing';
 import type { MandateActionRejection } from '@/lib/mandate/mandate-actions';
 import type { MandateProofVia } from '@/types/owner-property-mandate';
+import type { PresenceAction } from '@/lib/owner-property/listing-presence';
 
-/** Το namespace που ταξιδεύει **ολόκληρο** στο κέλυφος — δες ADR-744 / CHECK 3.34. */
-export const CATALOG_NS = 'search-results';
+/**
+ * Το namespace του καταλόγου — **`property-market`** από το ADR-777 §8.38.
+ *
+ * 🔴 ΣΤΗ ΜΕΤΑΚΟΜΙΣΗ ΑΥΤΗ Η ΣΤΑΘΕΡΑ ΕΜΕΙΝΕ ΠΙΣΩ, ΚΑΙ ΤΟ ΕΔΕΙΞΕ ΤΟ TEST. Ο
+ * μετασχηματιστής αναγνώριζε `const NS = …` και **όχι** `const CATALOG_NS = …`, οπότε το
+ * `K` μετακόμισε και το πρόθεμα **όχι**: κάθε ετικέτα του καταλόγου θα ζητούσε
+ * `search-results:offer.mandates.*` από namespace που **δεν έχει πια** τη ρίζα `offer`.
+ * Το έπιασε το `mandate-catalog-labels.test.ts`, που κρίνει **και το πρόθεμα** και όχι
+ * μόνο τη διαδρομή — ακριβώς ο λόγος για τον οποίο γράφτηκε έτσι.
+ *
+ * ⚠️ **ΔΕΝ ταξιδεύει πια ολόκληρο στο κέλυφος** (αυτό έλεγε το παλιό σχόλιο): το
+ * `property-market` φτάνει με **per-route slice** στις διαδρομές που το ζητούν.
+ */
+export const CATALOG_NS = 'property-market';
 
-const K = 'search-results:offer.mandates';
+const K = 'property-market:offer.mandates';
 
 /** Το κοινό κλειδί, ώστε οι σταθερές παρακάτω να διαβάζονται σαν πρόταση. */
 export const CATALOG_KEYS = {
@@ -123,6 +136,23 @@ export const ACTION_DONE_KEYS = {
   resend: `${K}.actionDone.resend`,
   revoke: `${K}.actionDone.revoke`,
 } as const;
+
+/**
+ * **Η πράξη παρουσίας** — «κατέβασέ το» / «ανέβασέ το» (ADR-777 §8.39).
+ *
+ * 🔑 Ξεχωριστό `Record` από το {@link ACTION_LABEL_KEYS}, γιατί είναι **άλλη μηχανή
+ * καταστάσεων**: εκείνο μιλά για την **πρόσκληση**, αυτό για την **αγγελία**.
+ */
+export const PRESENCE_LABEL_KEYS: Record<PresenceAction, string> = {
+  withdraw: `${K}.presence.withdraw`,
+  restore: `${K}.presence.restore`,
+};
+
+/** Τι λέμε όταν **πέτυχε** η πράξη παρουσίας. */
+export const PRESENCE_DONE_KEYS: Record<PresenceAction, string> = {
+  withdraw: `${K}.presenceDone.withdraw`,
+  restore: `${K}.presenceDone.restore`,
+};
 
 /** Τι λέμε όταν ο διακομιστής **αρνήθηκε** — κάθε λόγος με δικό του κείμενο. */
 export const REJECTION_KEYS: Record<MandateActionRejection, string> = {

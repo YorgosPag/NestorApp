@@ -33,7 +33,7 @@ import { useMyOwnerProperties } from '@/services/realtime/hooks/useMyOwnerProper
 
 import { OwnerPropertyCard } from './OwnerPropertyCard';
 
-const NS = 'search-results';
+const NS = 'property-market';
 const K = `${NS}:offer.list`;
 
 /** Η κενή κατάσταση — **λέει το §17.1**, όχι μόνο ότι είναι κενή. */

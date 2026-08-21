@@ -30,7 +30,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { setDemandLifecycle } from '@/services/demand/property-demand.service';
 import type { DemandLifecycle, PropertyDemand } from '@/types/property-demand';
 
-const NS = 'search-results';
+const NS = 'property-market';
 
 /**
  * Ποιες μεταβάσεις προσφέρονται σε κάθε κατάσταση.

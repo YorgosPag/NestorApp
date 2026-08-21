@@ -47,7 +47,7 @@ type AffirmState = 'idle' | 'busy' | 'affirmed' | 'failed';
 
 /** Το κουμπί «ψάχνω ακόμη» — και η εξήγηση της παλαίωσης δίπλα του. */
 function AffirmButton({ demand }: { demand: PropertyDemand }): React.ReactElement {
-  const { t } = useTranslation(['search-results']);
+  const { t } = useTranslation(['property-market']);
   const [state, setState] = React.useState<AffirmState>('idle');
 
   // ⚠️ Το ρολόι διαβάζεται **μία φορά ανά απόδοση**, από το SSoT — και περνιέται στη
@@ -63,7 +63,7 @@ function AffirmButton({ demand }: { demand: PropertyDemand }): React.ReactElemen
     setState(outcome.kind === 'done' ? 'affirmed' : 'failed');
   }
 
-  const K = 'search-results:demand.affirm';
+  const K = 'property-market:demand.affirm';
 
   return (
     <div className="flex flex-col items-start gap-1">
@@ -91,19 +91,19 @@ function AffirmButton({ demand }: { demand: PropertyDemand }): React.ReactElemen
 }
 
 export function DemandCard({ demand }: { demand: PropertyDemand }): React.ReactElement {
-  const { t } = useTranslation(['search-results']);
+  const { t } = useTranslation(['property-market']);
 
   return (
     <article className="flex flex-col gap-3 rounded-md border border-border bg-card p-4">
       <header className="flex flex-wrap items-baseline justify-between gap-2">
         <h3 className="text-sm font-semibold text-foreground">
-          {t(`search-results:demand.lifecycle.${demand.lifecycle}`)}
+          {t(`property-market:demand.lifecycle.${demand.lifecycle}`)}
         </h3>
         <Link
           href={demandDetailHref(demand.id)}
           className="text-sm font-medium text-foreground underline"
         >
-          {t('search-results:demand.list.open')}
+          {t('property-market:demand.list.open')}
         </Link>
       </header>
 

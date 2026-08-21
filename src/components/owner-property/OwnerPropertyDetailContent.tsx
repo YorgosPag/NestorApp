@@ -48,7 +48,7 @@ import { usePlaceInterest } from '@/hooks/demand/usePlaceInterest';
 import { OwnerPropertyCard } from './OwnerPropertyCard';
 import { OwnerPropertyFormContent } from './OwnerPropertyFormContent';
 
-const NS = 'search-results';
+const NS = 'property-market';
 const K = `${NS}:offer`;
 
 /** Οι τρεις καταστάσεις του κουμπιού κύκλου ζωής. **Ποτέ** `boolean` + `string`. */

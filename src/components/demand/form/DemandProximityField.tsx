@@ -38,7 +38,7 @@ import type { DemandProximityKind } from '@/types/property-demand';
 import type { DemandFormValues } from '@/lib/demand/demand-form-values';
 import { TRANSIT_STOP_METRES } from '@/lib/demand/demand-life-presets';
 
-const NS = 'search-results';
+const NS = 'property-market';
 
 /** Μία απαίτηση, όπως ζει στη φόρμα. */
 type Requirement = { kind: DemandProximityKind; maxMetres: number };

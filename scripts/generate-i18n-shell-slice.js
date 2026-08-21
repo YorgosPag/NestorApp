@@ -51,6 +51,7 @@ const {
 const { stableStringify } = require('./lib/i18n-shell-slice/slice-build');
 const RS = require('./lib/i18n-shell-slice/route-slices');
 const MG = require('./lib/module-graph');
+const { auditLedger, describeFailures } = require('./lib/i18n-shell-slice/ledger');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const GREEN = '\x1b[0;32m';
@@ -112,7 +113,22 @@ function reportPlan(plan, rendered, config, explain, routeUnusedPolicy = []) {
   console.log(`  keys sliced     : ${stats.matchedKeys}`);
   console.log(`  languages       : ${config.languages.join(', ')}`);
   if (rendered.manifest.guaranteedNamespaces.length > 0) {
-    console.log(`${YELLOW}  whole (migration ledger, should reach zero): ${rendered.manifest.guaranteedNamespaces.join(', ')}${NC}`);
+    console.log(`${YELLOW}  whole (migration ledger, should reach zero):${NC}`);
+    const audit = auditLedger(
+      config.guaranteedNamespaces,
+      rendered.slices.resources[config.languages[0]] || {},
+      wholeNamespacesOf(plan),
+    );
+    for (const entry of audit.entries) {
+      const mark = entry.verdict === 'within-budget' ? ' ' : '🔴';
+      console.log(
+        `${YELLOW}   ${mark} ${entry.namespace.padEnd(22)} ${String(entry.actual).padStart(7)} / ` +
+        `${String(entry.budget).padStart(7)} bytes${NC}`,
+      );
+    }
+    console.log(
+      `${YELLOW}      ${'ΣΥΝΟΛΟ'.padEnd(24)} ${String(audit.total).padStart(7)} / ${String(audit.limit).padStart(7)}${NC}`,
+    );
   }
   console.log(`  ${GREEN}slice bytes     : ${stats.sliceBytes}${NC}  ${DIM}(was 295.093 synchronous, el+en)${NC}`);
 
@@ -186,6 +202,21 @@ function main() {
   // `manifest.artifacts`, οπότε ένα χειρόγραφα πειραγμένο ή μισο-παραγμένο route
   // slice μπλοκάρει **δωρεάν**. Ένα artifact που κανείς δεν υπογράφει είναι
   // ακριβώς το σχήμα που το ADR-744 υπάρχει για να καταργήσει.
+  // 🔴 ADR-777 §8.38 — Η ΑΡΝΗΣΗ ΤΟΥ ΜΗΤΡΩΟΥ, ΠΡΙΝ ΓΡΑΦΤΕΙ ΤΙΠΟΤΑ. Ένα artifact που
+  // ξεπερνά το ταβάνι μιας εγγραφής δεν επιτρέπεται να προσγειωθεί: αυτό ακριβώς
+  // συνέβη με το `search-results` (1,6 KB δηλωμένα → 47,8 KB πραγματικά, 11 μέρες).
+  const ledger = auditLedger(
+    config.guaranteedNamespaces,
+    rendered.slices.resources[config.languages[0]] || {},
+    wholeNamespacesOf(plan),
+  );
+  if (ledger.failures.length > 0) {
+    console.error(`\n${RED}❌ Το μητρώο μετανάστευσης ξεπέρασε τον προϋπολογισμό του:${NC}`);
+    console.error(`${RED}   ${describeFailures(ledger.failures)}${NC}`);
+    console.error(`${DIM}   Η θεραπεία είναι ΜΕΤΑΚΟΜΙΣΗ σε σωστό namespace ή per-route slice — όχι μεγαλύτερος αριθμός.${NC}`);
+    process.exit(1);
+  }
+
   const merged = mergeRouteArtifacts({ rendered, routes, config, plan });
   if (!args.dryRun) writeArtifacts(config, merged);
   if (routes.length > 0) reportRoutes(routes, config.languages[0]);

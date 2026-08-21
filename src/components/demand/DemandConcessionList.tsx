@@ -47,11 +47,11 @@ import type {
  * αριθμό που ο αναγνώστης πρέπει να μετρήσει με το δάχτυλο.
  */
 function useAmountPhrase(): (ladder: ConcessionLadder, step: ConcessionStep) => string {
-  const { t } = useTranslation(['search-results']);
+  const { t } = useTranslation(['property-market']);
 
   return React.useCallback(
     (ladder, step) => {
-      const key = `search-results:demand.concession.amount.${ladder.concession}`;
+      const key = `property-market:demand.concession.amount.${ladder.concession}`;
       // Τα `rooms` περνούν τον **ωμό** αριθμό: η φράση τους είναι ICU plural και
       // πρέπει να δει `number`, όχι μορφοποιημένο κείμενο.
       if (ladder.unit === 'rooms') return t(key, { value: step.amount });
@@ -67,14 +67,14 @@ function useAmountPhrase(): (ladder: ConcessionLadder, step: ConcessionStep) => 
 
 /** Μία πρόταση υποχώρησης. */
 function ConcessionSentence({ ladder }: { ladder: ConcessionLadder }): React.ReactElement | null {
-  const { t } = useTranslation(['search-results']);
+  const { t } = useTranslation(['property-market']);
   const phraseOf = useAmountPhrase();
 
   if (ladder.headline === null) return null;
 
   return (
     <li className="text-foreground">
-      {t('search-results:demand.concession.sentence', {
+      {t('property-market:demand.concession.sentence', {
         amount: phraseOf(ladder, ladder.headline),
         count: ladder.headline.unlocks,
       })}
@@ -96,7 +96,7 @@ export function DemandConcessionList({
 }: {
   report: DemandConcessionReport;
 }): React.ReactElement | null {
-  const { t } = useTranslation(['search-results']);
+  const { t } = useTranslation(['property-market']);
 
   const suggested = report.ladders.filter((ladder) => ladder.headline !== null);
   const { multiAxis, unquantified } = report.census;
@@ -105,14 +105,14 @@ export function DemandConcessionList({
 
   return (
     <section
-      aria-label={t('search-results:demand.concession.heading')}
+      aria-label={t('property-market:demand.concession.heading')}
       className="rounded-md border border-border bg-card p-4"
     >
       <h3 className="text-sm font-semibold text-foreground">
-        {t('search-results:demand.concession.heading')}
+        {t('property-market:demand.concession.heading')}
       </h3>
       <p className="mt-1 text-sm text-muted-foreground">
-        {t('search-results:demand.concession.lead')}
+        {t('property-market:demand.concession.lead')}
       </p>
 
       {suggested.length > 0 && (
@@ -125,18 +125,18 @@ export function DemandConcessionList({
 
       {suggested.length === 0 && (
         <p className="mt-3 text-sm text-foreground">
-          {t('search-results:demand.concession.unreachable')}
+          {t('property-market:demand.concession.unreachable')}
         </p>
       )}
 
       {(multiAxis > 0 || unquantified > 0) && (
         <ul className="mt-3 flex flex-col gap-1 text-sm text-muted-foreground">
           {multiAxis > 0 && (
-            <li>{t('search-results:demand.concession.multiAxis', { count: multiAxis })}</li>
+            <li>{t('property-market:demand.concession.multiAxis', { count: multiAxis })}</li>
           )}
           {unquantified > 0 && (
             <li>
-              {t('search-results:demand.concession.unquantified', { count: unquantified })}
+              {t('property-market:demand.concession.unquantified', { count: unquantified })}
             </li>
           )}
         </ul>

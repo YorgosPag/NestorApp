@@ -4,18 +4,48 @@
   "extraShellRoots": [
     "src/components/search/GlobalSearchDialog.tsx"
   ],
-  "$guaranteedNamespaces": "THE NINE NAMESPACES THAT WERE 100% SYNCHRONOUS BEFORE ADR-744 (src/i18n/config.ts:41-44), kept whole. This is not caution — it is the correction of a measured regression. The first cut of this ADR key-sliced them down to what the SHELL asks for, which silently dropped every key a PAGE asks for: `/dxf/viewer` painted the raw key `dxfViewer.checkingPermissions` (src/app/dxf/viewer/page.tsx:43) because that key lives in common.json, which had gone from 34.201 bytes to 5.076. A page is a route boundary and therefore outside the shell closure by design — but on a COLD LOAD the page renders in the SAME FRAME as the layout, with no transition to hide behind. Until per-route slices exist (ADR-744 §8, Φ4), whole is the only answer that is provably no worse than before. Cost: 173.720 bytes (el) against 295.093 (el+en) — still −41%, and the 63-namespace shell drift stays fixed. Each entry below states what it costs and what would let it go.",
+  "$guaranteedNamespaces": "THE NINE NAMESPACES THAT WERE 100% SYNCHRONOUS BEFORE ADR-744 (src/i18n/config.ts:41-44), kept whole. This is not caution — it is the correction of a measured regression. The first cut of this ADR key-sliced them down to what the SHELL asks for, which silently dropped every key a PAGE asks for: `/dxf/viewer` painted the raw key `dxfViewer.checkingPermissions` (src/app/dxf/viewer/page.tsx:43) because that key lives in common.json, which had gone from 34.201 bytes to 5.076. A page is a route boundary and therefore outside the shell closure by design — but on a COLD LOAD the page renders in the SAME FRAME as the layout, with no transition to hide behind. Until per-route slices exist (ADR-744 §8, Φ4), whole is the only answer that is provably no worse than before. Cost: 173.720 bytes (el) against 295.093 (el+en) — still −41%, and the 63-namespace shell drift stays fixed. Each entry below states what it costs and what would let it go. 🔴 ADR-777 §8.38 — ΚΑΘΕ ΕΓΓΡΑΦΗ ΔΗΛΩΝΕΙ ΠΛΕΟΝ ΤΑΒΑΝΙ ΣΕ BYTES, ΚΑΙ ΕΛΕΓΧΕΤΑΙ. Το `search-results` μπήκε εδώ με δηλωμένο κόστος «~1,6 KB» και έγινε 47.837 — 30× — χωρίς τίποτα να κοκκινίσει, γιατί ο μόνος φρουρός μετρούσε το ΑΘΡΟΙΣΜΑ και η δηλωμένη τιμή ήταν ΠΡΟΖΑ. Πλέον: { \"budget\": <bytes>, \"reason\": \"…\" }, με τον `budget` να είναι ΤΑΒΑΝΙ και όχι στόχο. Ο έλεγχος ζει στο scripts/lib/i18n-shell-slice/ledger.js και τον επιβάλλουν ο generator ΚΑΙ το CHECK 3.34 — όχι μόνο ένα test. ⚠️ ΜΗΝ ανεβάσεις αριθμό για να γίνει πράσινο: μια εγγραφή που ξεπερνά το ταβάνι της λέει ότι κάτι μπήκε σε ΛΑΘΟΣ namespace, και η θεραπεία είναι μετακόμιση (§8.38), όχι μεγαλύτερος αριθμός.",
   "guaranteedNamespaces": {
-    "common": "67.761 bytes — the big one. Reachable from essentially every page; `src/app/dxf/viewer/page.tsx:43` alone needs `dxfViewer.checkingPermissions`, `dxfViewer.loading`, `dxfViewer.accessDeniedAriaLabel`, none of which the shell closure sees. Releases when the route that uses each key carries its own slice.",
-    "admin": "70.689 bytes — the other big one, and the one this ADR originally set out to delete from the synchronous path. `src/app/admin/layout.tsx` IS a shell root, so the admin chrome is key-sliced correctly; the admin PAGES underneath it are not. Releases with per-route slices for /admin/*.",
-    "navigation": "21.321 bytes — sidebar/topbar labels plus per-page navigation copy.",
-    "common-actions": "874 bytes — generic button labels, used by every form on every page.",
-    "common-status": "649 bytes — status pills, rendered inside already-mounted tables.",
-    "common-navigation": "1.547 bytes.",
-    "common-validation": "4.499 bytes — form-validation strings render inside already-mounted forms, where ADR-279 §9 forbids a loading gate.",
-    "common-empty-states": "2.111 bytes — empty-state copy paints on first data render, with no boundary of its own.",
-    "landing": "4.269 bytes. Measured: its only consumer (src/components/landing/LandingPage.tsx) is reachable solely through a dynamic import in src/utils/lazyRoutes.tsx, so this one probably IS droppable — it is kept only because 'probably' is not the standard this ADR is held to, and 4 KB is not worth being wrong about. Cheapest entry to retire first.",
-    "search-results": "~1.6 KB — ADR-777 Α3, η ΔΗΜΟΣΙΑ οθόνη 2 (/search/results). ΜΕΤΡΗΜΕΝΟ ΖΩΝΤΑΝΑ 2026-08-10: χωρίς αυτή την εγγραφή το SSR βάφει `page.title` ωμό, με `bundles: [search-results=absent]` — δηλαδή ακριβώς η κλάση ελαττώματος της CHECK 3.51, σε σελίδα που είναι Η ΠΡΩΤΗ ΕΠΑΦΗ ανώνυμου επισκέπτη. Ο λόγος που ΔΕΝ λύνεται με πύλη φόρτωσης είναι γραμμένος αλλού και δεσμεύει: ADR-777 Α19 κανόνας 30 — «κάτι ΑΛΗΘΙΝΟ ζωγραφίζεται στο πρώτο καρέ· κενό με spinner ΔΕΝ είναι πρώτος καρές», και ένα ωμό κλειδί είναι ΧΕΙΡΟΤΕΡΟ από spinner: δεν είναι κενό, είναι ψέμα. Είναι επίσης route boundary εξ ορισμού (σελίδα, όχι layout), άρα δομικά εκτός shell closure. Απελευθερώνεται με per-route slices (§8, Φ4) — αυτή η διαδρομή είναι από τις ΚΑΘΑΡΟΤΕΡΕΣ υποψήφιες, γιατί το namespace έχει ΕΝΑΝ καταναλωτή."
+    "common": {
+      "budget": 53500,
+      "reason": "67.761 bytes — the big one. Reachable from essentially every page; `src/app/dxf/viewer/page.tsx:43` alone needs `dxfViewer.checkingPermissions`, `dxfViewer.loading`, `dxfViewer.accessDeniedAriaLabel`, none of which the shell closure sees. Releases when the route that uses each key carries its own slice."
+    },
+    "admin": {
+      "budget": 67000,
+      "reason": "70.689 bytes — the other big one, and the one this ADR originally set out to delete from the synchronous path. `src/app/admin/layout.tsx` IS a shell root, so the admin chrome is key-sliced correctly; the admin PAGES underneath it are not. Releases with per-route slices for /admin/*."
+    },
+    "navigation": {
+      "budget": 22800,
+      "reason": "21.321 bytes — sidebar/topbar labels plus per-page navigation copy."
+    },
+    "common-actions": {
+      "budget": 900,
+      "reason": "874 bytes — generic button labels, used by every form on every page."
+    },
+    "common-status": {
+      "budget": 600,
+      "reason": "649 bytes — status pills, rendered inside already-mounted tables."
+    },
+    "common-navigation": {
+      "budget": 1300,
+      "reason": "Η ομάδα `common-*` ταξιδεύει μαζί: τα 8 αδέλφια ζητούνται σχεδόν πάντα ως πλήρης λίστα στο ίδιο `useTranslation([...])` (μετρημένο: 8 αρχεία το κάνουν αυτούσιο, από `obligations/rich-text/parts/Toolbar.tsx` μέχρι `features/property-details/PropertyDetailsContent.tsx`), και το περιεχόμενό τους βάφεται μέσα σε ήδη προσαρτημένες επιφάνειες, όπου το ADR-279 §9 απαγορεύει πύλη φόρτωσης. Απελευθερώνεται μαζί με τα υπόλοιπα `common-*`, όχι μόνο του. ⚠️ Η παλιά διατύπωση ήταν σκέτο «1.547 bytes.» — αριθμός χωρίς λόγο, που σημαίνει εγγραφή που κανείς δεν μπορεί να αποσύρει — το έπιασε η άγκυρα Λ1 (ADR-777 §8.38)."
+    },
+    "common-validation": {
+      "budget": 3800,
+      "reason": "4.499 bytes — form-validation strings render inside already-mounted forms, where ADR-279 §9 forbids a loading gate."
+    },
+    "common-empty-states": {
+      "budget": 2000,
+      "reason": "2.111 bytes — empty-state copy paints on first data render, with no boundary of its own."
+    },
+    "landing": {
+      "budget": 4100,
+      "reason": "4.269 bytes. Measured: its only consumer (src/components/landing/LandingPage.tsx) is reachable solely through a dynamic import in src/utils/lazyRoutes.tsx, so this one probably IS droppable — it is kept only because 'probably' is not the standard this ADR is held to, and 4 KB is not worth being wrong about. Cheapest entry to retire first."
+    },
+    "search-results": {
+      "budget": 14400,
+      "reason": "~1.6 KB — ADR-777 Α3, η ΔΗΜΟΣΙΑ οθόνη 2 (/search/results). ΜΕΤΡΗΜΕΝΟ ΖΩΝΤΑΝΑ 2026-08-10: χωρίς αυτή την εγγραφή το SSR βάφει `page.title` ωμό, με `bundles: [search-results=absent]` — δηλαδή ακριβώς η κλάση ελαττώματος της CHECK 3.51, σε σελίδα που είναι Η ΠΡΩΤΗ ΕΠΑΦΗ ανώνυμου επισκέπτη. Ο λόγος που ΔΕΝ λύνεται με πύλη φόρτωσης είναι γραμμένος αλλού και δεσμεύει: ADR-777 Α19 κανόνας 30 — «κάτι ΑΛΗΘΙΝΟ ζωγραφίζεται στο πρώτο καρέ· κενό με spinner ΔΕΝ είναι πρώτος καρές», και ένα ωμό κλειδί είναι ΧΕΙΡΟΤΕΡΟ από spinner: δεν είναι κενό, είναι ψέμα. Είναι επίσης route boundary εξ ορισμού (σελίδα, όχι layout), άρα δομικά εκτός shell closure. Απελευθερώνεται με per-route slices (§8, Φ4) — αυτή η διαδρομή είναι από τις ΚΑΘΑΡΟΤΕΡΕΣ υποψήφιες, γιατί το namespace έχει ΕΝΑΝ καταναλωτή."
+    }
   },
   "$dynamicKeyPolicy": "Every entry below answers ONE unresolvable `t(...)` call site in a shell module. The generator REFUSES to emit a slice while any such call is unclassified — that refusal is the guarantee. Each `reason` states a fact measured on 2026-07-31, not an assumption; re-verify it when you touch the file.",
   "dynamicKeyPolicy": {
@@ -61,12 +91,6 @@
     "src/core/badges/UnifiedBadgeSystem.tsx": {
       "reason": "CommonBadge only calls t() when badgeConfig.label starts with 'common.' — and no badge configuration in the tree defines such a label (grep for `label: 'common.` across src/, 0 hits on 2026-07-31). The branch is unreachable defensive code. If a 'common.'-prefixed badge label is ever introduced, its keys must be added here."
     },
-    "src/components/listing-detail/ListingAttributeList.tsx": {
-      "prefixes": [
-        "properties-enums:types"
-      ],
-      "reason": "ADR-744 §15 — μπήκε στην κλειστότητα με το per-route slice του /listing/[id] (2026-08-20). ΕΠΑΛΗΘΕΥΣΙΜΟΣ ΙΣΧΥΡΙΣΜΟΣ: η μόνη δυναμική κλήση είναι `t(`properties-enums:${PROPERTY_TYPE_I18N_KEYS[canonical]}`)` (γρ. 58) και το PROPERTY_TYPE_I18N_KEYS (src/constants/property-types.ts:130-143) είναι `Record<PropertyTypeCanonical, string>` — ΟΧΙ Partial — με 12 ΚΥΡΙΟΛΕΚΤΙΚΕΣ τιμές, ΟΛΕΣ κάτω από `types.`. Επειδή ο τύπος είναι πλήρες Record πάνω σε union, νέο κανονικό είδος ΣΠΑΕΙ ΤΗ ΜΕΤΑΓΛΩΤΤΙΣΗ αν δεν πάρει γραμμή — άρα η λίστα δεν μπορεί να αποκλίνει σιωπηλά (ίδιο επιχείρημα με το SearchResultItem.tsx). ⚠️ Το `canonical` προκύπτει από `normalizePropertyType` και η κλήση φρουρείται με `canonical === null ? '' : …`, οπότε ΔΕΝ υπάρχει διαδρομή που να δεικτοδοτεί με μη-κανονικό είδος."
-    },
     "src/components/listing-detail/ListingDetailContent.tsx": {
       "prefixes": [
         "search-results:detail.absent",
@@ -87,6 +111,29 @@
         "search-results:card.priceMissing"
       ],
       "reason": "ADR-744 §15 — δύο δυναμικές κλήσεις, δύο πλήρη Record στο `src/lib/listings/listing-price-keys.ts`: `PRICE_ROLE_KEY` (4 κυριολεκτικά κάτω από `detail.price.role.`) και `MISSING_PRICE_KEY` (3 κυριολεκτικά κάτω από `card.priceMissing.`). Και τα δύο είναι πλήρη Record πάνω σε union (`ResolvedPrice['source']` · `MissingPriceReason`), άρα νέα πηγή ή νέα αιτία ΣΠΑΕΙ ΤΗ ΜΕΤΑΓΛΩΤΤΙΣΗ αν δεν πάρει γραμμή. 🔑 Τα δύο προθέματα ζουν σε ΔΙΑΦΟΡΕΤΙΚΑ υποδέντρα (`detail.` έναντι `card.`) επίτηδες: το ίδιο λεξιλόγιο απουσίας τιμής χρησιμοποιείται ΚΑΙ στην κάρτα ΚΑΙ στη λεπτομέρεια, και η κάρτα το είχε πρώτη — μια αντιγραφή κάτω από `detail.` θα ήταν δεύτερη αλήθεια (ADR-749)."
+    },
+    "src/components/shared/forms/DraftFormShell.tsx": {
+      "prefixes": [
+        "property-market:demand.form",
+        "property-market:offer.form"
+      ],
+      "reason": "ADR-777 §8.36 βήμα 2 — ΓΝΗΣΙΑ ΔΥΝΑΜΙΚΟ, και γι' αυτό εδώ. Οι έξι κλήσεις (γρ. 110-140) χτίζονται από `const K = `${NS}:${keyBase}.form`` (γρ. 103), όπου το `keyBase` είναι **prop** — δηλαδή δεν λύνεται από καμία εμβέλεια αυτού του αρχείου, όσο βαθιά κι αν ακολουθήσει ο generator την αλυσίδα σταθερών (§8.36 βήμα 3). Οι **καταλήξεις** είναι κυριολεκτικές (`title`·`editTitle`·`lead`·`failed`·`saving`·`save`·`submit`·`cancel`), άρα ΟΛΕΣ ζουν κάτω από `<βάση>.form`. 🔑 ΤΟ ΣΥΝΟΛΟ ΤΩΝ ΒΑΣΕΩΝ ΕΙΝΑΙ ΚΛΕΙΣΤΟ ΚΑΙ ΜΕΤΡΗΜΕΝΟ (2026-08-21): `grep -rn 'keyBase=\"' src --include=*.tsx` δίνει **ΤΕΣΣΕΡΙΣ** θέσεις και **ΔΥΟ** τιμές — `demand` (DemandFormContent.tsx:136 · DemandCreationGate.tsx:44) και `offer` (OwnerPropertyFormContent.tsx:212 · OwnerPropertyCreationGate.tsx:52). ⚠️ ΔΙΟΡΘΩΣΗ ΤΟΥ HANDOFF: το §8.36 έγραφε «τρία προθέματα (demand·offer·mandate)» — **δεν υπάρχει base `mandate`**. Η σελίδα `/listings/mandates/new` αποδίδει το ΙΔΙΟ `OwnerPropertyFormContent` με `keyBase=\"offer\"` (BrokeredListingPageContent.tsx:140), και οι κωδικοί της εντολής ζουν κάτω από `offer.formBlocker.*` — αυτό το κλειδώνει ήδη το `lib/mandate/__tests__/form-issue-keys.test.ts` (`KEY_BASE = 'offer'`). Ένα τρίτο πρόθεμα θα ήταν φρουρός που ΔΕΝ μπορεί να πυροδοτήσει (ADR-749 §5). ⚠️ ΠΡΟΘΕΜΑΤΑ ΚΑΙ ΟΧΙ `keys`, ΜΕ ΜΕΤΡΗΜΕΝΟ ΚΟΣΤΟΣ: οι κυριολεκτικές καταλήξεις είναι ορατές στον AST, οπότε μια λίστα `keys` θα ήταν ακριβής **σήμερα** — και θα ΑΠΕΚΛΙΝΕ ΣΙΩΠΗΛΑ αύριο, γιατί μια νέα `t(`${K}.κάτι`)` σε αρχείο που ΕΧΕΙ εγγραφή πολιτικής θεωρείται απαντημένη και δεν ξανακοκκινίζει. Το τίμημα του προθέματος είναι η **διασταυρούμενη** βάση (η διαδρομή της προσφοράς κουβαλά και το λεξιλόγιο της ζήτησης) και μετρήθηκε: `demand.form` 2.885 bytes / 66 κλειδιά · `offer.form` 1.549 / 34 · τα `formBlocker`+`invariant` κάτω από 1,1 KB ανά βάση. Είναι η **ασφαλής** κατεύθυνση: ένα περιττό κλειδί κοστίζει bytes, ένα χαμένο κοστίζει **ωμό κλειδί στην οθόνη**."
+    },
+    "src/components/shared/forms/FormIssues.tsx": {
+      "prefixes": [
+        "property-market:demand.formBlocker",
+        "property-market:demand.invariant",
+        "property-market:offer.formBlocker",
+        "property-market:offer.invariant"
+      ],
+      "reason": "ADR-777 §8.36 βήμα 2 — ΔΥΟ ΤΡΥΠΕΣ, ΚΑΙ Η ΔΕΥΤΕΡΗ ΕΙΝΑΙ ΑΛΗΘΙΝΑ ΑΝΟΙΧΤΗ. Οι τρεις κλήσεις (γρ. 57·58·70) είναι `t(`${NS}:${keyBase}.formBlocker.${blocker}`)` και `…invariant.${violation}`: το `keyBase` είναι prop (βλ. DraftFormShell.tsx) και οι `blocker`/`violation` είναι **κωδικοί χρόνου εκτέλεσης** από τέσσερα κλειστά σύνολα που ζουν σε ΑΛΛΑ modules (`OWNER_PROPERTY_FORM_BLOCKERS` · `MANDATE_FORM_BLOCKERS` · `OWNER_PROPERTY_INVARIANTS` · `MANDATE_INVARIANTS`) — άρα ούτε πλήρες `Record` υπάρχει εδώ για να διαβαστεί. 🔴 ΚΑΙ ΤΑ ΤΕΣΣΕΡΑ ΣΥΝΟΛΑ ΦΥΛΑΓΟΝΤΑΙ ΗΔΗ: το `lib/mandate/__tests__/form-issue-keys.test.ts` απαιτεί λέξεις σε el+en για **κάθε** κωδικό (γεννήθηκε επειδή ο μεσίτης είδε στην οθόνη `offer.formBlocker.mandate-client-unset`), οπότε το πρόθεμα δεν καλύπτει άγνωστο πλήθος: καλύπτει **ακριβώς** ό,τι εκείνη η άγκυρα εγγυάται ότι υπάρχει. 🔑 ΤΟ ΣΥΝΟΛΟ ΤΩΝ ΒΑΣΕΩΝ ΕΙΝΑΙ ΚΛΕΙΣΤΟ ΚΑΙ ΜΕΤΡΗΜΕΝΟ (2026-08-21): `grep -rn 'keyBase=\"' src --include=*.tsx` δίνει **ΤΕΣΣΕΡΙΣ** θέσεις και **ΔΥΟ** τιμές — `demand` (DemandFormContent.tsx:136 · DemandCreationGate.tsx:44) και `offer` (OwnerPropertyFormContent.tsx:212 · OwnerPropertyCreationGate.tsx:52). ⚠️ ΔΙΟΡΘΩΣΗ ΤΟΥ HANDOFF: το §8.36 έγραφε «τρία προθέματα (demand·offer·mandate)» — **δεν υπάρχει base `mandate`**. Η σελίδα `/listings/mandates/new` αποδίδει το ΙΔΙΟ `OwnerPropertyFormContent` με `keyBase=\"offer\"` (BrokeredListingPageContent.tsx:140), και οι κωδικοί της εντολής ζουν κάτω από `offer.formBlocker.*` — αυτό το κλειδώνει ήδη το `lib/mandate/__tests__/form-issue-keys.test.ts` (`KEY_BASE = 'offer'`). Ένα τρίτο πρόθεμα θα ήταν φρουρός που ΔΕΝ μπορεί να πυροδοτήσει (ADR-749 §5)."
+    },
+    "src/components/shared/DesktopOnlyGate.tsx": {
+      "prefixes": [
+        "property-market:demand.desktopOnly",
+        "property-market:offer.desktopOnly"
+      ],
+      "reason": "ADR-777 §8.36 βήμα 2 — ίδιο σχήμα με το DraftFormShell, άλλη ρίζα: `const K = `${NS}:${keyBase}.desktopOnly`` (γρ. 76) και τέσσερις κυριολεκτικές καταλήξεις (`title`·`body`·`what`·`back`, γρ. 80-88). 🔑 ΔΕΝ ΕΙΝΑΙ ΠΕΡΙΤΤΟ ΕΠΕΙΔΗ «ΦΑΙΝΕΤΑΙ ΜΟΝΟ ΣΕ ΣΤΕΝΗ ΟΘΟΝΗ»: αυτή είναι Η ΜΟΝΗ οθόνη που βλέπει ο άνθρωπος σε κινητό στις διαδρομές `/offers/new` και `/demands/new` — ένα ωμό κλειδί εκεί δεν είναι ατέλεια, είναι **ολόκληρη η σελίδα**. Το `desktopOnly` κοστίζει 316+348 bytes. 🔑 ΤΟ ΣΥΝΟΛΟ ΤΩΝ ΒΑΣΕΩΝ ΕΙΝΑΙ ΚΛΕΙΣΤΟ ΚΑΙ ΜΕΤΡΗΜΕΝΟ (2026-08-21): `grep -rn 'keyBase=\"' src --include=*.tsx` δίνει **ΤΕΣΣΕΡΙΣ** θέσεις και **ΔΥΟ** τιμές — `demand` (DemandFormContent.tsx:136 · DemandCreationGate.tsx:44) και `offer` (OwnerPropertyFormContent.tsx:212 · OwnerPropertyCreationGate.tsx:52). ⚠️ ΔΙΟΡΘΩΣΗ ΤΟΥ HANDOFF: το §8.36 έγραφε «τρία προθέματα (demand·offer·mandate)» — **δεν υπάρχει base `mandate`**. Η σελίδα `/listings/mandates/new` αποδίδει το ΙΔΙΟ `OwnerPropertyFormContent` με `keyBase=\"offer\"` (BrokeredListingPageContent.tsx:140), και οι κωδικοί της εντολής ζουν κάτω από `offer.formBlocker.*` — αυτό το κλειδώνει ήδη το `lib/mandate/__tests__/form-issue-keys.test.ts` (`KEY_BASE = 'offer'`). Ένα τρίτο πρόθεμα θα ήταν φρουρός που ΔΕΝ μπορεί να πυροδοτήσει (ADR-749 §5)."
     }
   },
   "$routeSlices": "ADR-744 §8 Φ4 — PER-ROUTE SLICES. Κλειστό σύνολο δηλώσεων: κάθε εγγραφή είναι διαδρομή που ζητά κλειδιά τα οποία το ΚΕΛΥΦΟΣ δεν έχει, και το artifact της οφείλει να μένει φρέσκο. 🏆 ΠΟΥ ΞΕΠΕΡΝΑΜΕ ΤΟΥΣ ΜΕΓΑΛΟΥΣ: το next-i18next ζητά `serverSideTranslations(locale, [...])` και το next-intl `pick(messages, [...])` — ΧΕΙΡΟΓΡΑΦΗ λίστα ανά σελίδα σε κάθε περίπτωση· το πειραματικό `useExtracted` του next-intl εξάγει αυτόματα αλλά δηλώνει ρητά ότι ΔΕΝ υποστηρίζει `t(variable)` ούτε `t` περασμένο σε άλλη συνάρτηση, δηλαδή σιωπά ακριβώς εκεί που αυτό το repo έχει 131 τέτοιες κλήσεις. Εδώ ΚΑΝΕΙΣ ΔΕΝ ΓΡΑΦΕΙ ΛΙΣΤΑ: το σύνολο παράγεται από τη στατική κλειστότητα εισαγωγών της σελίδας, και ο generator ΑΡΝΕΙΤΑΙ να εκπέμψει όσο υπάρχει ανεπίλυτη δυναμική κλήση. ⚠️ Η αυτόματη σάρωση «όλες οι σελίδες» απορρίφθηκε ΜΕ ΜΕΤΡΗΣΗ: η ένωσή τους δίνει 131 ανεπίλυτες `t()` που θα έπρεπε να δικαιολογηθούν μία-μία. ⚠️ ΤΟ ROUTE SLICE ΕΙΝΑΙ ΑΦΑΙΡΕΣΗ, ΟΧΙ ΕΝΩΣΗ: κρατά μόνο ό,τι το κέλυφος δεν απαντά ήδη — αλλιώς κάθε σελίδα θα ξανακουβαλούσε τα κοινά κλειδιά και το «per-route» θα ήταν ΜΕΓΑΛΥΤΕΡΟ από το σημερινό. ⚠️ ΚΑΝΕΝΑ guaranteedNamespaces σε route slice: το μητρώο μετανάστευσης είναι του ΚΕΛΥΦΟΥΣ και οφείλει να φτάσει στο μηδέν.",
@@ -96,6 +143,15 @@
     },
     "src/app/(light)/listing/[id]/page.tsx": {
       "reason": "ADR-744 §15 — Η ΠΡΑΓΜΑΤΙΚΗ ΔΗΜΟΣΙΑ ΣΕΛΙΔΑ ΠΡΟΪΟΝΤΟΣ (ADR-777 Α3, οθόνη 3). Δείχνει τον ΙΔΙΟ χάρτη με το /test-harness/listing-shapes (ResultsMap ← InteractiveMapContainer ← GeoCoordinateDisplay, που ζητά το lazy namespace `geo-canvas`), άρα κουβαλά ΤΟ ΙΔΙΟ ελάττωμα — με τη διαφορά ότι εδώ το βλέπει ΑΝΩΝΥΜΟΣ ΕΠΙΣΚΕΠΤΗΣ του nestorconstruct.gr, όχι εσωτερικός πάγκος δοκιμών. ⚠️ Ο χρησμός ΔΕΝ το επιβεβαίωσε ζωντανά και ο λόγος είναι δομικός, όχι παράλειψη: η διαδρομή είναι ΔΥΝΑΜΙΚΗ και ο χρησμός χτυπά συνθετικό τμήμα, οπότε παίρνει την οθόνη «δεν βρέθηκε» — ο χάρτης δεν ζωγραφίζεται καν. Η στατική κλειστότητα όμως τον βλέπει, και το per-route slice τον καλύπτει. Απαίτησε ΤΕΣΣΕΡΙΣ νέες εγγραφές dynamicKeyPolicy (8 ανεπίλυτες `t()` σε 4 αρχεία) — αυτό ΔΕΝ είναι κόστος, είναι ο μηχανισμός: ο generator αρνήθηκε μέχρι να απαντηθούν."
+    },
+    "src/app/(me)/offers/new/page.tsx": {
+      "reason": "ADR-777 §8.36 βήμα 3. 🔴 ΤΟ ΕΛΑΤΤΩΜΑ ΕΙΝΑΙ ΤΑ 14 `properties-enums:types.*`: το `PROPERTY_TYPE_I18N_KEYS` βάφει το dropdown είδους, το `properties-enums` **δεν** είναι σε κανένα από τα 17 namespaces του κελύφους, και το `useTranslation([NS,'properties-enums'])` το φορτώνει **ασύγχρονα** ⇒ πρώτο καρέ με ωμά κλειδιά. Το route slice τα φέρνει **σύγχρονα, μόνο εδώ**: 331 bytes, έναντι 4.657 του πλήρους `properties-enums` σε 141 διαδρομές. ⚠️ ΜΕΤΡΗΘΗΚΕ ΟΤΙ ΤΟ SLICE ΔΕΝ ΓΕΝΝΙΕΤΑΙ ΚΕΝΟ (η ρητή προειδοποίηση του handoff): παρότι η φόρμα περνά από `dynamic(..., {ssr:false})`, η κλειστότητα τη φτάνει μέσω της **στατικής** εισαγωγής τύπου `import type { …Props } from './…FormContent'` που κάνει η ίδια η πύλη — και αυτό είναι σωστό ως προς την ΕΡΩΤΗΣΗ («ζωγραφίζεται εδώ;»), όχι μόνο ως προς το bundle. — Η ΦΟΡΜΑ ΤΟΥ ΙΔΙΩΤΗ (Α8/Α14): `/offers/new`."
+    },
+    "src/app/(me)/demands/new/page.tsx": {
+      "reason": "ADR-777 §8.36 βήμα 3. 🔴 ΤΟ ΕΛΑΤΤΩΜΑ ΕΙΝΑΙ ΤΑ 14 `properties-enums:types.*`: το `PROPERTY_TYPE_I18N_KEYS` βάφει το dropdown είδους, το `properties-enums` **δεν** είναι σε κανένα από τα 17 namespaces του κελύφους, και το `useTranslation([NS,'properties-enums'])` το φορτώνει **ασύγχρονα** ⇒ πρώτο καρέ με ωμά κλειδιά. Το route slice τα φέρνει **σύγχρονα, μόνο εδώ**: 331 bytes, έναντι 4.657 του πλήρους `properties-enums` σε 141 διαδρομές. ⚠️ ΜΕΤΡΗΘΗΚΕ ΟΤΙ ΤΟ SLICE ΔΕΝ ΓΕΝΝΙΕΤΑΙ ΚΕΝΟ (η ρητή προειδοποίηση του handoff): παρότι η φόρμα περνά από `dynamic(..., {ssr:false})`, η κλειστότητα τη φτάνει μέσω της **στατικής** εισαγωγής τύπου `import type { …Props } from './…FormContent'` που κάνει η ίδια η πύλη — και αυτό είναι σωστό ως προς την ΕΡΩΤΗΣΗ («ζωγραφίζεται εδώ;»), όχι μόνο ως προς το bundle. — Η ΦΟΡΜΑ ΖΗΤΗΣΗΣ: `/demands/new`. Εδώ οι ανεπίλυτες ήταν **45** και έπεσαν σε **13** χωρίς καμία χειρόγραφη λίστα: οι 32 ήταν `const K = `${NS}:demand.form.…`` σε **εμβέλεια συνάρτησης** (§8.36 βήμα 3), όχι δυναμικές."
+    },
+    "src/app/(app)/listings/mandates/new/page.tsx": {
+      "reason": "ADR-777 §8.36 βήμα 3. 🔴 ΤΟ ΕΛΑΤΤΩΜΑ ΕΙΝΑΙ ΤΑ 14 `properties-enums:types.*`: το `PROPERTY_TYPE_I18N_KEYS` βάφει το dropdown είδους, το `properties-enums` **δεν** είναι σε κανένα από τα 17 namespaces του κελύφους, και το `useTranslation([NS,'properties-enums'])` το φορτώνει **ασύγχρονα** ⇒ πρώτο καρέ με ωμά κλειδιά. Το route slice τα φέρνει **σύγχρονα, μόνο εδώ**: 331 bytes, έναντι 4.657 του πλήρους `properties-enums` σε 141 διαδρομές. ⚠️ ΜΕΤΡΗΘΗΚΕ ΟΤΙ ΤΟ SLICE ΔΕΝ ΓΕΝΝΙΕΤΑΙ ΚΕΝΟ (η ρητή προειδοποίηση του handoff): παρότι η φόρμα περνά από `dynamic(..., {ssr:false})`, η κλειστότητα τη φτάνει μέσω της **στατικής** εισαγωγής τύπου `import type { …Props } from './…FormContent'` που κάνει η ίδια η πύλη — και αυτό είναι σωστό ως προς την ΕΡΩΤΗΣΗ («ζωγραφίζεται εδώ;»), όχι μόνο ως προς το bundle. — Η ΕΝΤΟΛΗ ΤΟΥ ΓΡΑΦΕΙΟΥ (§8.33): `/listings/mandates/new`. Αποδίδει το **ίδιο** `OwnerPropertyFormContent` με `keyBase=\"offer\"`, άρα κουβαλά το ίδιο ελάττωμα με το `/offers/new` — σε διαδρομή που ζει στον χώρο του γραφείου, όχι του ιδιώτη."
     }
   }
 }

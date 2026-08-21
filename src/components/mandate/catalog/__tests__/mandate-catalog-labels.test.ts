@@ -15,7 +15,7 @@
  * η ίδια θεραπεία: **η άγκυρα είναι η πύλη**.
  *
  * 🔴 Χωρίς αυτό, μια ξεχασμένη μετάφραση βγάζει στην οθόνη
- * `search-results:offer.mandates.standing.link-revoked` — και το ξέρουμε ότι συμβαίνει,
+ * `property-market:offer.mandates.standing.link-revoked` — και το ξέρουμε ότι συμβαίνει,
  * γιατί **συνέβη** στο §8.33 και το βρήκε άνθρωπος σε στιγμιότυπο (μάθημα Μ-Η).
  */
 
@@ -26,12 +26,14 @@ import {
   CATALOG_NS,
   GROUP_LABEL_KEYS,
   PROOF_LABEL_KEYS,
+  PRESENCE_DONE_KEYS,
+  PRESENCE_LABEL_KEYS,
   REJECTION_KEYS,
   STANDING_HINT_KEYS,
   STANDING_LABEL_KEYS,
 } from '@/components/mandate/catalog/mandate-catalog-labels';
-import el from '@/i18n/locales/el/search-results.json';
-import en from '@/i18n/locales/en/search-results.json';
+import el from '@/i18n/locales/el/property-market.json';
+import en from '@/i18n/locales/en/property-market.json';
 import { MANDATE_ACTIONS } from '@/lib/mandate/mandate-actions';
 import {
   MANDATE_STANDING_GROUPS,
@@ -73,6 +75,10 @@ const ALL_KEYS: ReadonlyArray<readonly [string, string]> = [
   ...Object.entries(ACTION_LABEL_KEYS).map(([name, key]) => [`action.${name}`, key] as const),
   ...Object.entries(ACTION_DONE_KEYS).map(([name, key]) => [`done.${name}`, key] as const),
   ...Object.entries(REJECTION_KEYS).map(([name, key]) => [`reject.${name}`, key] as const),
+  // ADR-777 §8.39 — η πράξη **παρουσίας** μπαίνει στο ΙΔΙΟ κλειστό σύνολο: μια ετικέτα
+  // χωρίς λέξεις είναι ωμό κλειδί στην οθόνη, ό,τι μηχανή καταστάσεων κι αν υπηρετεί.
+  ...Object.entries(PRESENCE_LABEL_KEYS).map(([name, key]) => [`presence.${name}`, key] as const),
+  ...Object.entries(PRESENCE_DONE_KEYS).map(([name, key]) => [`presenceDone.${name}`, key] as const),
 ];
 
 describe('🔑 Π — ο ΠΑΡΟΝΟΜΑΣΤΗΣ: τα κλειστά σύνολα δεν είναι κενά', () => {

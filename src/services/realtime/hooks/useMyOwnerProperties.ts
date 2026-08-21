@@ -10,6 +10,18 @@
  * ιδιωτικά ανά **άνθρωπο**. Ό,τι διαφέρει ζει εδώ — δύο σταθερές και δύο ονόματα
  * πεδίων.
  *
+ * 🔴 **ADR-777 §8.39 — Ο ΚΑΤΑΛΟΓΟΣ ΦΙΛΤΡΑΡΕΙ ΚΑΤΑ ΧΩΡΟ, ΟΧΙ ΜΟΝΟ ΚΑΤΑ ΚΑΤΟΧΟ.**
+ * Το ερώτημα ρωτά `authorUserId === uid`, που είναι η **απομόνωση** («ποιος επιτρέπεται
+ * να το δει»). Ο **χώρος** είναι άλλη ερώτηση: μια αγγελία που ο μεσίτης κατέγραψε **για
+ * πελάτη** έχει `authorCompanyId`, ανήκει στο **γραφείο**, και εμφανιζόταν μέσα στον
+ * χώρο που το `.shell-boundary.json` δηλώνει «**ο ΙΔΙΩΤΙΚΟΣ ΧΩΡΟΣ ΤΟΥ ΙΔΙΩΤΗ**».
+ *
+ * ⚠️ **ΓΙΑΤΙ ΦΙΛΤΡΟ ΚΑΙ ΟΧΙ ΔΕΥΤΕΡΟ `where()`:** ένα `where(authorCompanyId == null)` θα
+ * έμοιαζε με **δεύτερο άξονα απομόνωσης** — και το `types/owner-property.ts` γράφει ρητά
+ * ότι *«δύο άξονες απομόνωσης για ένα έγγραφο σημαίνει δύο απαντήσεις στο ποιος το
+ * βλέπει»*. Η απομόνωση μένει **μία** (`authorUserId`, όπως και ο κανόνας Firestore)· ο
+ * χώρος είναι απόφαση **παρουσίασης** και κρίνεται εδώ, καθαρά, χωρίς νέο index.
+ *
  * ⚠️ **Ο πελάτης ΔΙΑΒΑΖΕΙ, ποτέ δεν γράφει.** Ο κανόνας δίνει `read` στα δικά του και
  * `if false` σε κάθε εγγραφή — η γραφή περνά από τον διακομιστή, γιατί η αγγελία έχει
  * **δημόσιο παράγωγο** (`public_listings`). Δες `owner-property.service.ts`.
@@ -20,6 +32,7 @@ import { collection, query, where } from 'firebase/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { db } from '@/lib/firebase';
+import { isPersonalCustody } from '@/lib/owner-property/listing-custody';
 import type { OwnerProperty } from '@/types/owner-property';
 
 import {
@@ -62,7 +75,8 @@ export type MyOwnerPropertiesState =
  */
 export function useMyOwnerProperties(userId: string | null): MyOwnerPropertiesState {
   const state = useOwnedList<OwnerProperty>(OWNER_PROPERTIES, userId);
-  return state.state === 'ready' ? { state: 'ready', properties: state.items } : state;
+  if (state.state !== 'ready') return state;
+  return { state: 'ready', properties: state.items.filter(isPersonalCustody) };
 }
 
 /** Οι πέντε καταστάσεις της μίας αγγελίας. */
@@ -79,5 +93,10 @@ export function useMyOwnerProperty(
   userId: string | null,
 ): MyOwnerPropertyLookup {
   const lookup = useOwnedDocument<OwnerProperty>(OWNER_PROPERTIES, ownerPropertyId, userId);
-  return lookup.state === 'found' ? { state: 'found', property: lookup.item } : lookup;
+  if (lookup.state !== 'found') return lookup;
+  // ⚠️ **`absent`, όχι σφάλμα** — ίδιο συμβόλαιο με τον κανόνα Firestore: «δεν υπάρχει
+  // **εδώ**». Μια εταιρική αγγελία ζει στον χώρο του γραφείου, και η οθόνη της είναι
+  // ο κατάλογος εντολών, όχι ο ιδιωτικός χώρος.
+  if (!isPersonalCustody(lookup.item)) return { state: 'absent' };
+  return { state: 'found', property: lookup.item };
 }

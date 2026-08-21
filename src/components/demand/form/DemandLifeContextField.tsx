@@ -39,7 +39,7 @@ import { applyLifePreset, type SuggestibleField } from '@/lib/demand/demand-life
 import type { DemandFormValues } from '@/lib/demand/demand-form-values';
 import { DemandFieldset } from './demand-field-primitives';
 
-const NS = 'search-results';
+const NS = 'property-market';
 
 /** Τι έγινε στην τελευταία εφαρμογή — `null` = δεν έχει διαλέξει ακόμη. */
 type LastApplied = { readonly filled: readonly SuggestibleField[] } | null;

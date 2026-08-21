@@ -46,15 +46,15 @@ import type { PlaceInterestState } from '@/hooks/demand/usePlaceInterest';
  */
 const WHY_KEY: Readonly<Record<InterestStance, string | null>> = {
   offered: null,
-  partial: 'search-results:demand.interest.partialWhy',
-  dormant: 'search-results:demand.interest.dormantWhy',
+  partial: 'property-market:demand.interest.partialWhy',
+  dormant: 'property-market:demand.interest.dormantWhy',
 };
 
 /** Ποια πρόταση λέει το πλήθος — «αυτό ακριβώς» ή «κάτι σαν αυτό». */
 const COUNT_KEY: Readonly<Record<InterestStance, string>> = {
-  offered: 'search-results:demand.interest.offered',
-  partial: 'search-results:demand.interest.dormant',
-  dormant: 'search-results:demand.interest.dormant',
+  offered: 'property-market:demand.interest.offered',
+  partial: 'property-market:demand.interest.dormant',
+  dormant: 'property-market:demand.interest.dormant',
 };
 
 export function PlaceInterestPanel({
@@ -62,7 +62,7 @@ export function PlaceInterestPanel({
 }: {
   interest: PlaceInterestState;
 }): React.ReactElement | null {
-  const { t } = useTranslation(['search-results']);
+  const { t } = useTranslation(['property-market']);
 
   // ⚠️ **Η αποτυχία δεν ζωγραφίζει «0».** Δες {@link PlaceInterestState}: μια πεσμένη
   // κλήση δεν είναι μέτρηση της αγοράς. Η φόρτωση λέει ότι φορτώνει· η αποτυχία λέει
@@ -70,7 +70,7 @@ export function PlaceInterestPanel({
   if (interest.state === 'loading') {
     return (
       <p className="text-sm text-muted-foreground">
-        {t('search-results:demand.interest.loading')}
+        {t('property-market:demand.interest.loading')}
       </p>
     );
   }
@@ -78,7 +78,7 @@ export function PlaceInterestPanel({
   if (interest.state === 'unavailable') {
     return (
       <p className="text-sm text-muted-foreground">
-        {t('search-results:demand.interest.unavailable')}
+        {t('property-market:demand.interest.unavailable')}
       </p>
     );
   }
@@ -89,20 +89,20 @@ export function PlaceInterestPanel({
 
   return (
     <section
-      aria-label={t('search-results:demand.interest.heading')}
+      aria-label={t('property-market:demand.interest.heading')}
       className="rounded-md border border-border bg-card p-4"
     >
       <h3 className="text-sm font-semibold text-foreground">
-        {t('search-results:demand.interest.heading')}
+        {t('property-market:demand.interest.heading')}
       </h3>
 
       {count === null ? (
         <p className="mt-2 text-sm text-foreground">
-          {t('search-results:demand.interest.hidden', { minCount })}
+          {t('property-market:demand.interest.hidden', { minCount })}
         </p>
       ) : count === 0 ? (
         <p className="mt-2 text-sm text-foreground">
-          {t('search-results:demand.interest.none')}
+          {t('property-market:demand.interest.none')}
         </p>
       ) : (
         <p className="mt-2 text-sm text-foreground">{t(COUNT_KEY[stance], { count })}</p>
@@ -115,7 +115,7 @@ export function PlaceInterestPanel({
       ) : null}
 
       <p className="mt-3 text-xs text-muted-foreground">
-        {t('search-results:demand.interest.privacy')}
+        {t('property-market:demand.interest.privacy')}
       </p>
     </section>
   );

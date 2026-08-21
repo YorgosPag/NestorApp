@@ -29,8 +29,8 @@
  * φτάσει σε οθόνη.
  */
 
-import el from '@/i18n/locales/el/search-results.json';
-import en from '@/i18n/locales/en/search-results.json';
+import el from '@/i18n/locales/el/property-market.json';
+import en from '@/i18n/locales/en/property-market.json';
 import { OWNER_PROPERTY_FORM_BLOCKERS } from '@/lib/owner-property/owner-property-form-values';
 import { MANDATE_FORM_BLOCKERS } from '@/lib/mandate/mandate-form-values';
 import { OWNER_PROPERTY_INVARIANTS } from '@/types/owner-property-invariants';

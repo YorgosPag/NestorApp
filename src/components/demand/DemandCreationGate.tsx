@@ -24,6 +24,26 @@ import { DesktopOnlyGate, DesktopOnlyNotice } from '@/components/shared/DesktopO
 import { MY_DEMANDS_ROUTE } from '@/lib/demand/demand-routes';
 import type { DemandFormContentProps } from './DemandFormContent';
 
+// 🧩 ADR-744 §15 (Φ4) — PER-ROUTE SLICE ΤΗΣ ΔΙΑΔΡΟΜΗΣ `/demands/new` (ADR-777 §8.36).
+//
+// Το dropdown είδους ακινήτου βάφεται από το `PROPERTY_TYPE_I18N_KEYS`, δηλαδή από το
+// namespace `properties-enums` — που **δεν** ανήκει στο κέλυφος και φορτώνεται
+// **ασύγχρονα**. Χωρίς αυτή την εγγραφή το πρώτο καρέ δείχνει **14 ωμά κλειδιά**
+// (`types.studio` · `types.apartment` · …) εκεί ακριβώς όπου ο άνθρωπος διαλέγει.
+//
+// 🔴 **ΕΔΩ, ΚΑΙ ΟΧΙ ΣΤΟ `page.tsx`**: εκείνο είναι Server Component και τα Server/Client
+// δέντρα έχουν **ΞΕΧΩΡΙΣΤΟΥΣ γράφους module** — εγγραφή από εκεί θα έγραφε σε **άλλο**
+// στιγμιότυπο i18next, δηλαδή πράσινη κλήση που δεν κάνει τίποτα.
+//
+// ⚠️ **Στατική εισαγωγή, εμβέλεια MODULE**: με `import()` το κλειδί θα ήταν ωμό για ένα
+// καρέ και **κρυμμένο** από το CHECK 3.51 — μετακίνηση του ελαττώματος, όχι διόρθωση.
+// Το Next κόβει ήδη chunk ανά διαδρομή, άρα τα 577 bytes δεν ταξιδεύουν αλλού.
+import routeSlice from '@/i18n/generated/routes/demands__new.el.json';
+import { registerRouteSlice } from '@/i18n/route-slice';
+
+// ⚠️ Εμβέλεια MODULE, όχι render και όχι effect: τρέχει **πριν** αποδοθεί οτιδήποτε.
+registerRouteSlice(routeSlice);
+
 /**
  * Η φόρμα, **ζητούμενη κατ' απαίτηση**.
  *
@@ -32,6 +52,7 @@ import type { DemandFormContentProps } from './DemandFormContent';
  * αποσυναρμολογεί και το ξαναφτιάχνει — και η φόρμα θα έχανε ό,τι έγραψε ο άνθρωπος
  * σε κάθε πάτημα πλήκτρου.
  */
+
 const DemandFormContent = dynamic<DemandFormContentProps>(
   () => import('./DemandFormContent').then((module) => module.DemandFormContent),
   { ssr: false },

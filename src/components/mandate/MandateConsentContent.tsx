@@ -31,7 +31,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { formatDate } from '@/lib/intl-formatting';
 
-const NS = 'search-results';
+const NS = 'property-market';
 const K = `${NS}:mandate.consent`;
 
 /** Ό,τι έλυσε ο διακομιστής — **τίποτα δεν ξαναρωτιέται από τον πελάτη**. */

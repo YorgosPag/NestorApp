@@ -41,25 +41,25 @@ export function DemandBlockerList({
 }: {
   blockedBy: ReadonlyMap<DemandBlocker, number>;
 }): React.ReactElement | null {
-  const { t } = useTranslation(['search-results']);
+  const { t } = useTranslation(['property-market']);
 
   const entries = orderedEntries(blockedBy);
   if (entries.length === 0) return null;
 
   return (
     <section
-      aria-label={t('search-results:demand.blocker.heading')}
+      aria-label={t('property-market:demand.blocker.heading')}
       className="rounded-md border border-border bg-card p-4"
     >
       <h3 className="text-sm font-semibold text-foreground">
-        {t('search-results:demand.blocker.heading')}
+        {t('property-market:demand.blocker.heading')}
       </h3>
 
       <dl className="mt-2 flex flex-col gap-1 text-sm">
         {entries.map(([blocker, count]) => (
           <div key={blocker} className="flex items-baseline justify-between gap-4">
             <dt className="text-muted-foreground">
-              {t(`search-results:demand.blocker.${blocker}`)}
+              {t(`property-market:demand.blocker.${blocker}`)}
             </dt>
             {/*
               Ο αριθμός περνά από κλειδί i18n αντί να γραφτεί ωμός στο JSX: ο
@@ -67,7 +67,7 @@ export function DemandBlockerList({
               διαφέρει ανά γλώσσα — κάτι που θα φαινόταν μόνο στην πρώτη τετραψήφια.
             */}
             <dd className="font-medium tabular-nums text-foreground">
-              {t('search-results:demand.blocker.count', { count })}
+              {t('property-market:demand.blocker.count', { count })}
             </dd>
           </div>
         ))}

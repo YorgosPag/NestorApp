@@ -35,6 +35,8 @@ const path = require('node:path');
 
 const LIB = path.resolve(__dirname, '..', 'lib', 'i18n-shell-slice');
 const { computeShellClosure } = require(path.join(LIB, 'shell-closure'));
+const { auditLedger, describeFailures, LEDGER_LIMIT_BYTES } = require(path.join(LIB, 'ledger'));
+const CONFIG = require(path.join(LIB, 'config')).loadConfig(path.resolve(__dirname, '..', '..'));
 const {
   splitKey,
   staticPrefixOf,
@@ -589,11 +591,47 @@ describe('Group 12 — the committed slice is sane', () => {
     // Το ADR το λέει «should reach zero» — άρα κάθε νόμιμη κίνηση είναι ΠΡΟΣ ΤΑ ΚΑΤΩ.
     expect(wholeNs.length).toBeLessThanOrEqual(10);
 
-    // Και σε bytes, για την περίπτωση που ένα ΥΠΑΡΧΟΝ whole namespace φουσκώσει.
+    // Και σε bytes — αλλά **ΑΝΑ ΕΓΓΡΑΦΗ**, με την ίδια μηχανή που επιβάλλει ο generator
+    // και το CHECK 3.34. Το όριο ΔΕΝ ζει πια εδώ: ζει στο `ledger.js` (SSoT), γιατί ένα
+    // νούμερο που το ξέρει μόνο ένα test είναι νούμερο που δεν το επιβάλλει κανείς.
     const slice = JSON.parse(fs.readFileSync(slicePath, 'utf8'));
-    const ledgerBytes = wholeNs.reduce(
-      (sum, ns) => sum + (slice[ns] ? Buffer.byteLength(JSON.stringify(slice[ns]), 'utf8') : 0), 0);
-    expect(ledgerBytes).toBeLessThan(185_000);
+    const audit = auditLedger(CONFIG.guaranteedNamespaces, slice, wholeNs);
+    expect(describeFailures(audit.failures)).toBe('');
+    expect(audit.total).toBeLessThan(LEDGER_LIMIT_BYTES);
+  });
+
+  // 🔴 ADR-777 §8.38 — Ο ΦΡΟΥΡΟΣ ΠΟΥ ΕΛΕΙΠΕ, ΚΑΙ Η ΑΠΟΔΕΙΞΗ ΟΤΙ ΔΑΓΚΩΝΕΙ.
+  // Το `search-results` μπήκε στο μητρώο με δηλωμένο κόστος «~1,6 KB» και έφτασε τα
+  // **47.837** — 30× — με τον φρουρό ΠΡΑΣΙΝΟ, γιατί μετρούσε μόνο το ΑΘΡΟΙΣΜΑ.
+  it('Λ1 — κάθε εγγραφή του μητρώου έχει ΕΛΕΓΞΙΜΟ ταβάνι, όχι πρόζα', () => {
+    const entries = Object.entries(CONFIG.guaranteedNamespaces);
+    expect(entries.length).toBeGreaterThan(0);
+    for (const [ns, value] of entries) {
+      expect(typeof value).toBe('object');
+      expect(Number.isInteger(value.budget)).toBe(true);
+      expect(String(value.reason).length).toBeGreaterThan(20);
+      expect(ns).not.toMatch(/\s/);
+    }
+  });
+
+  it('Λ2 — μια εγγραφή που ΔΙΠΛΑΣΙΑΖΕΤΑΙ μπλοκάρει ΚΑΙ ΟΝΟΜΑΖΕΤΑΙ', () => {
+    const slice = JSON.parse(fs.readFileSync(slicePath, 'utf8'));
+    const whole = JSON.parse(fs.readFileSync(
+      path.join(REPO, 'src', 'i18n', 'generated', 'shell-slice.whole.json'), 'utf8'));
+    const wholeNs = Array.isArray(whole) ? whole : Object.keys(whole);
+    // Ο ΠΑΡΟΝΟΜΑΣΤΗΣ: σήμερα καθαρό.
+    expect(auditLedger(CONFIG.guaranteedNamespaces, slice, wholeNs).failures).toHaveLength(0);
+    // Η ΜΕΤΑΛΛΑΞΗ: το namespace που όντως φούσκωσε, ξαναφουσκωμένο.
+    const swollen = { ...slice, 'search-results': { ...slice['search-results'], bloat: 'x'.repeat(50_000) } };
+    const audit = auditLedger(CONFIG.guaranteedNamespaces, swollen, wholeNs);
+    expect(audit.failures.length).toBeGreaterThan(0);
+    expect(describeFailures(audit.failures)).toContain('search-results');
+  });
+
+  it('Λ3 — namespace που ταξιδεύει ΟΛΟΚΛΗΡΟ ΧΩΡΙΣ δήλωση μπλοκάρει', () => {
+    const slice = JSON.parse(fs.readFileSync(slicePath, 'utf8'));
+    const audit = auditLedger(CONFIG.guaranteedNamespaces, slice, ['properties-enums']);
+    expect(describeFailures(audit.failures)).toContain('properties-enums');
   });
 
   it('exists, and is materially smaller than the 295.093 bytes it replaced', () => {
@@ -781,5 +819,128 @@ describe('Group 14 — `t(`${K}.x`)` όπου K είναι σταθερά ΔΕΝ
       .initializer;
     expect(expandTemplate(tpl, new Map())).toEqual({ text: '', complete: false });
     expect(expandTemplate(tpl, new Map([['A', 'a.b']]))).toEqual({ text: 'a.b.x', complete: true });
+  });
+
+  // ─── §8.36 βήματα 1+3: ΜΗΤΡΩΟ ΣΤΑΘΕΡΩΝ ΜΕΣΑ ΣΕ TEMPLATE · ΛΕΞΙΛΟΓΙΚΗ ΕΜΒΕΛΕΙΑ ───
+
+  const TYPES = new Map([['T', new Map([['a', 'types.a'], ['b', 'types.b']])]]);
+  const classifyWith = (src, keyConstants) =>
+    classifyTranslateCalls(src, { file: '/x/C.tsx', keyConstants, propertyValues: null });
+
+  // 🔴 ΤΟ ΙΔΙΟ ΕΡΩΤΗΜΑ ΕΙΧΕ ΔΥΟ ΑΠΑΝΤΗΣΕΙΣ (ADR-749). Το `t(T[x])` το έλυνε ήδη ο
+  // `classifyConstantAccess` («υπολογισμένος δείκτης ⇒ κάθε τιμή»)· το ΙΔΙΟ μέσα σε
+  // template έπεφτε στο `unresolved`, επειδή το `expandTemplate` δεχόταν μόνο Identifier.
+  it('Γ10 — πίνακας σταθερών ΜΕΣΑ σε template ⇒ ΟΛΕΣ οι τιμές του, ακριβείς', () => {
+    const sink = classifyWith(
+      L(
+        "import { useTranslation } from 'react-i18next';",
+        'export function C({ x }) {',
+        "  const { t } = useTranslation('n');",
+        '  return t(`properties-enums:${T[x]}`);',
+        '}',
+      ),
+      TYPES,
+    );
+    expect(sink.unresolved).toHaveLength(0);
+    expect(sink.keys).toContainEqual({ ns: 'properties-enums', key: 'types.a' });
+    expect(sink.keys).toContainEqual({ ns: 'properties-enums', key: 'types.b' });
+  });
+
+  it('Γ11 — και δίνει ΤΗΝ ΙΔΙΑ απάντηση με το σκέτο `t(T[x])`', () => {
+    const bare = classifyWith(
+      L("import { useTranslation } from 'react-i18next';",
+        'export function C({ x }) {',
+        "  const { t } = useTranslation('properties-enums');",
+        '  return t(T[x]);',
+        '}'),
+      TYPES,
+    );
+    expect(bare.keys.map(k => k.key).sort()).toEqual(['types.a', 'types.b']);
+  });
+
+  // 🔴 Η ΑΓΚΥΡΑ ΠΟΥ ΚΡΑΤΑΕΙ ΤΗΝ ΕΜΒΕΛΕΙΑ. Ένας ΕΠΙΠΕΔΟΣ πίνακας ονομάτων θα έδινε
+  // στη μία κλήση το κλειδί της ΑΛΛΗΣ: όχι «λιγότερα κλειδιά», αλλά ΛΑΘΟΣ κλειδιά,
+  // σιωπηλά — η μόνη αστοχία που αυτή η μηχανή δεν επιτρέπεται να κάνει.
+  it('Γ12 — δύο αδελφά components με ΤΟ ΙΔΙΟ όνομα σταθεράς δεν ανακατεύονται', () => {
+    const sink = classify(
+      L(
+        "import { useTranslation } from 'react-i18next';",
+        "const NS = 'search-results';",
+        'export function A() {',
+        "  const { t } = useTranslation(NS);",
+        '  const K = `${NS}:demand.form.place`;',
+        '  return t(`${K}.legend`);',
+        '}',
+        'export function B() {',
+        "  const { t } = useTranslation(NS);",
+        '  const K = `${NS}:offer.form.media`;',
+        '  return t(`${K}.legend`);',
+        '}',
+      ),
+    );
+    expect(sink.unresolved).toHaveLength(0);
+    expect(sink.keys).toContainEqual({ ns: 'search-results', key: 'demand.form.place.legend' });
+    expect(sink.keys).toContainEqual({ ns: 'search-results', key: 'offer.form.media.legend' });
+    expect(sink.keys).toHaveLength(2);
+  });
+
+  it('Γ13 — σταθερά εμβέλειας ΣΥΝΑΡΤΗΣΗΣ δένεται με σταθερά του MODULE', () => {
+    const sink = classify(
+      L(
+        "import { useTranslation } from 'react-i18next';",
+        "const NS = 'search-results';",
+        'export function C() {',
+        '  const { t } = useTranslation(NS);',
+        '  const K = `${NS}:demand.form.features`;',
+        '  return t(`${K}.legend`);',
+        '}',
+      ),
+    );
+    expect(sink.unresolved).toHaveLength(0);
+    expect(sink.keys).toContainEqual({ ns: 'search-results', key: 'demand.form.features.legend' });
+  });
+
+  // 🔑 Ο ΠΑΡΟΝΟΜΑΣΤΗΣ ΤΟΥ ΒΗΜΑΤΟΣ 2: ό,τι είναι ΑΛΗΘΙΝΑ prop ΜΕΝΕΙ άλυτο, ώστε ο
+  // generator να εξακολουθεί να ΑΡΝΕΙΤΑΙ και να ζητά `dynamicKeyPolicy` με λόγο.
+  it('Γ14 — `keyBase` ως prop ΔΕΝ λύνεται από καμία εμβέλεια', () => {
+    const sink = classify(
+      L(
+        "import { useTranslation } from 'react-i18next';",
+        "const NS = 'search-results';",
+        'export function C({ keyBase }) {',
+        '  const { t } = useTranslation(NS);',
+        '  const K = `${NS}:${keyBase}.form`;',
+        '  return t(`${K}.title`);',
+        '}',
+      ),
+    );
+    expect(sink.unresolved).toHaveLength(1);
+    expect(sink.keys).toHaveLength(0);
+  });
+
+  it('Γ15 — σταθερά που λύνεται σε ΠΟΛΛΕΣ τιμές δεν γίνεται «σταθερά»', () => {
+    // Μια `const` έχει ΜΙΑ τιμή. Αν η σκάλα δεχόταν πίνακα εδώ, το `K` θα «ήταν» ένα
+    // από τα δύο — δηλαδή μαντεψιά με σχήμα γεγονότος.
+    expect(collectStringConstants(parse('const K = `x.${T[i]}`;')).has('K')).toBe(false);
+  });
+
+  // 🔴 ΑΓΚΥΡΑ ΠΡΑΓΜΑΤΙΚΟΥ ΚΩΔΙΚΑ + ΠΑΡΑΓΟΜΕΝΟΥ ARTIFACT: τα 14 ωμά κλειδιά των τριών
+  // οθονών ακινήτου. Ο παρονομαστής είναι το ΜΗΤΡΩΟ σταθερών (`property-types.ts`),
+  // ΟΧΙ το ίδιο το slice — αλλιώς σβήνοντας ένα κλειδί θα άλλαζαν και τα δύο σκέλη.
+  it('Γ16 — και οι τρεις φόρμες κουβαλούν ΚΑΘΕ κανονικό είδος ακινήτου', () => {
+    const source = fs.readFileSync(
+      path.join(__dirname, '..', '..', 'src', 'constants', 'property-types.ts'), 'utf8');
+    const canonical = [...source.matchAll(/^\s{2}(\w+): '(types\.\w+)',$/gm)].map(m => m[2]);
+    expect(canonical.length).toBeGreaterThanOrEqual(14);
+
+    for (const route of ['offers__new', 'demands__new', 'listings__mandates__new']) {
+      const slice = JSON.parse(fs.readFileSync(
+        path.join(__dirname, '..', '..', 'src', 'i18n', 'generated', 'routes', `${route}.el.json`),
+        'utf8'));
+      const types = slice['properties-enums'].types;
+      for (const key of canonical) {
+        expect(typeof types[key.slice('types.'.length)]).toBe('string');
+      }
+    }
   });
 });

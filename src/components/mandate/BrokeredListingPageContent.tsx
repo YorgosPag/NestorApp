@@ -38,7 +38,28 @@ import type { BrokeredNotifyOutcome } from '@/services/owner-property/owner-prop
 import { getContactDisplayName } from '@/types/contacts';
 import { createModuleLogger } from '@/lib/telemetry';
 
-const NS = 'search-results';
+// 🧩 ADR-744 §15 (Φ4) — PER-ROUTE SLICE ΤΗΣ ΔΙΑΔΡΟΜΗΣ `/listings/mandates/new` (ADR-777 §8.36).
+//
+// Το dropdown είδους ακινήτου βάφεται από το `PROPERTY_TYPE_I18N_KEYS`, δηλαδή από το
+// namespace `properties-enums` — που **δεν** ανήκει στο κέλυφος και φορτώνεται
+// **ασύγχρονα**. Χωρίς αυτή την εγγραφή το πρώτο καρέ δείχνει **14 ωμά κλειδιά**
+// (`types.studio` · `types.apartment` · …) εκεί ακριβώς όπου ο άνθρωπος διαλέγει.
+//
+// 🔴 **ΕΔΩ, ΚΑΙ ΟΧΙ ΣΤΟ `page.tsx`**: εκείνο είναι Server Component και τα Server/Client
+// δέντρα έχουν **ΞΕΧΩΡΙΣΤΟΥΣ γράφους module** — εγγραφή από εκεί θα έγραφε σε **άλλο**
+// στιγμιότυπο i18next, δηλαδή πράσινη κλήση που δεν κάνει τίποτα.
+//
+// ⚠️ **Στατική εισαγωγή, εμβέλεια MODULE**: με `import()` το κλειδί θα ήταν ωμό για ένα
+// καρέ και **κρυμμένο** από το CHECK 3.51 — μετακίνηση του ελαττώματος, όχι διόρθωση.
+// Το Next κόβει ήδη chunk ανά διαδρομή, άρα τα 577 bytes δεν ταξιδεύουν αλλού.
+import routeSlice from '@/i18n/generated/routes/listings__mandates__new.el.json';
+import { registerRouteSlice } from '@/i18n/route-slice';
+
+// ⚠️ Εμβέλεια MODULE, όχι render και όχι effect: τρέχει **πριν** αποδοθεί οτιδήποτε.
+registerRouteSlice(routeSlice);
+
+
+const NS = 'property-market';
 const K = `${NS}:mandate.office`;
 
 const logger = createModuleLogger('BrokeredListingPageContent');
@@ -113,7 +134,7 @@ export function BrokeredListingPageContent(): React.ReactElement {
       */}
       <nav>
         <Link href={MANDATE_CATALOG_ROUTE} className="text-sm text-muted-foreground">
-          {t('search-results:offer.mandates.backToCatalog')}
+          {t('property-market:offer.mandates.backToCatalog')}
         </Link>
       </nav>
 

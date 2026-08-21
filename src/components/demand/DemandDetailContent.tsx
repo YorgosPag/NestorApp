@@ -37,7 +37,7 @@ import { DemandAnswerPanel } from './DemandAnswerPanel';
 import { DemandLifecycleActions } from './DemandLifecycleActions';
 import { DemandSummary } from './DemandSummary';
 
-const NS = 'search-results';
+const NS = 'property-market';
 
 /** Τα κριτήρια + οι πράξεις + η απάντηση. */
 function DemandBody({ demand }: { demand: PropertyDemand }): React.ReactElement {

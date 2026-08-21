@@ -42,7 +42,7 @@ import type { DraftFormValidation } from '@/lib/forms/draft-validation';
 
 import { FormIssues } from './FormIssues';
 
-const NS = 'search-results';
+const NS = 'property-market';
 
 /**
  * Οι τρεις καταστάσεις υποβολής. **Ποτέ** `boolean` + `string`.

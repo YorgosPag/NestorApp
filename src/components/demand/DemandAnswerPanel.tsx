@@ -65,8 +65,8 @@ function HeadlineSentence({
   shape: DemandAnswerShape;
   answer: DemandAnswer;
 }): React.ReactElement {
-  const { t } = useTranslation(['search-results']);
-  const K = 'search-results:demand.answer';
+  const { t } = useTranslation(['property-market']);
+  const K = 'property-market:demand.answer';
 
   switch (shape) {
     case 'has-matches':
@@ -106,13 +106,13 @@ function HeadlineSentence({
  * απάντηση σε **χαλαρότερο** αίτημα από το δικό του.
  */
 function AxesLostNote({ answer }: { answer: DemandAnswer }): React.ReactElement | null {
-  const { t } = useTranslation(['search-results']);
+  const { t } = useTranslation(['property-market']);
   if (answer.axesLost.length === 0) return null;
 
   return (
     <p className="text-sm text-muted-foreground">
-      {t('search-results:demand.answer.axesLostHeading')}{' '}
-      {answer.axesLost.map((axis) => t(`search-results:demand.axisLost.${axis}`)).join(' · ')}
+      {t('property-market:demand.answer.axesLostHeading')}{' '}
+      {answer.axesLost.map((axis) => t(`property-market:demand.axisLost.${axis}`)).join(' · ')}
     </p>
   );
 }
@@ -126,15 +126,15 @@ export function DemandAnswerPanel({
   answer: DemandAnswer;
   competition: CompetitionState;
 }): React.ReactElement {
-  const { t } = useTranslation(['search-results']);
+  const { t } = useTranslation(['property-market']);
 
   // 🔴 **Fail-closed.** Αν το άθροισμα δεν κλείνει, κάποια αγγελία χάθηκε ανάμεσα
   // στους κάδους — δηλαδή κάθε αριθμός παρακάτω είναι αναπόδεικτος. Δεν δείχνουμε
   // «περίπου»: το λέμε.
   if (!demandAnswerBalances(answer)) {
     return (
-      <section aria-label={t('search-results:demand.answer.heading')}>
-        <p className="text-foreground">{t('search-results:demand.answer.balanceError')}</p>
+      <section aria-label={t('property-market:demand.answer.heading')}>
+        <p className="text-foreground">{t('property-market:demand.answer.balanceError')}</p>
       </section>
     );
   }
@@ -143,11 +143,11 @@ export function DemandAnswerPanel({
 
   return (
     <section
-      aria-label={t('search-results:demand.answer.heading')}
+      aria-label={t('property-market:demand.answer.heading')}
       className="flex flex-col gap-4"
     >
       <h2 className="text-lg font-semibold text-foreground">
-        {t('search-results:demand.answer.heading')}
+        {t('property-market:demand.answer.heading')}
       </h2>
 
       <HeadlineSentence shape={shape} answer={answer} />
@@ -164,7 +164,7 @@ export function DemandAnswerPanel({
             href={demandResultsHref(demand)}
             className="inline-block w-fit rounded-md border border-border bg-card px-4 py-2 font-medium text-foreground"
           >
-            {t('search-results:demand.answer.seeResults')}
+            {t('property-market:demand.answer.seeResults')}
           </Link>
           <AxesLostNote answer={answer} />
         </nav>

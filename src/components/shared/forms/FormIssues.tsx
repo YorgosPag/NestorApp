@@ -33,7 +33,7 @@ import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { DraftFormValidation } from '@/lib/forms/draft-validation';
 
-const NS = 'search-results';
+const NS = 'property-market';
 
 /**
  * **Οι κωδικοί γίνονται κλειδιά i18n** (N.11) — δεν υπάρχει ωμό κείμενο πουθενά.

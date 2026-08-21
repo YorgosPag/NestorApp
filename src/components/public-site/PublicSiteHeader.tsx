@@ -50,7 +50,7 @@ import { MY_DEMANDS_ROUTE } from '@/lib/demand/demand-routes';
 import { MY_OFFERS_ROUTE } from '@/lib/owner-property/owner-property-routes';
 
 export function PublicSiteHeader() {
-  const { t } = useTranslation(['search-results']);
+  const { t } = useTranslation(['search-results', 'property-market', 'search-results', 'search-results']);
 
   return (
     <header className="w-full border-b border-border bg-card">
@@ -78,7 +78,7 @@ export function PublicSiteHeader() {
             href={MY_DEMANDS_ROUTE}
             className="rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground"
           >
-            {t('search-results:demand.door.label')}
+            {t('property-market:demand.door.label')}
           </Link>
 
           {/*
@@ -96,7 +96,7 @@ export function PublicSiteHeader() {
             href={MY_OFFERS_ROUTE}
             className="rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground"
           >
-            {t('search-results:offer.door.label')}
+            {t('property-market:offer.door.label')}
           </Link>
 
           {/*

@@ -1,9 +1,12 @@
 {
   "adr": "ADR-744",
   "artifacts": {
-    "src/i18n/generated/routes/listing__id.el.json": "520c677e6a2f2ad0b004ecfe9badf7c219ccdd49e4ec172cfe2047b43b28de47",
+    "src/i18n/generated/routes/demands__new.el.json": "c26c152cfa965f6705f620123bed6cdac9593fe60ba234b529a9a3d5a1e9cc27",
+    "src/i18n/generated/routes/listing__id.el.json": "1f5bb80734871a98e9c0f08d8457a0d00871069ea36dfc90239a02e77749647e",
+    "src/i18n/generated/routes/listings__mandates__new.el.json": "631c2427fe552f0fa7891c928ab32f84497b8b8e2654cf6ae300dd04c6faca84",
+    "src/i18n/generated/routes/offers__new.el.json": "263f9d17389ea5750578efbb4d4224fc777aa5972c8675fc049e437255da27ff",
     "src/i18n/generated/routes/test-harness__listing-shapes.el.json": "9b6aaaa831492e24807a1c83e0b505dc865c03afbd5638abf8ea2b990422b037",
-    "src/i18n/generated/shell-slice.el.json": "a2921fe24d415b51a0386d014e9b569510a087d154e173e1e7e1d76d2f2e3772",
+    "src/i18n/generated/shell-slice.el.json": "88a5801e408195844ccc9e3a8d9f827c66aec8aab8c3b2b2565da0f8dfefd875",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "boundaries": {
@@ -42,7 +45,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "944a84c772751a5aaee0acaa402ee6cd8cf0d5d82273111267f0692ccfebe700",
+  "inputsSha256": "eb854d9b705d9a19d5b3b735882ad4056358e4ca1c5bcf34c0f37f96f6645333",
   "languages": [
     "el"
   ],
@@ -63,6 +66,7 @@
     "navigation",
     "parking",
     "projects",
+    "property-market",
     "search-results"
   ],
   "shellFiles": {
@@ -126,11 +130,11 @@
     "src/components/projects/procurement/ProjectProcurementTabs.tsx": "9fc7a77d5fc8b542183887c10158877a46fcd55ca8cc23542e05bcdc1d9ae7c1",
     "src/components/property-viewer/Logo_Pagonis.tsx": "abe960984e1f408862eae2ad7eb305b93edb6ba4f7fdcf375ef29f992c3b98ce",
     "src/components/providers/I18nProvider.tsx": "bb82ce64bdb15f688d8d20467bde1357c6e5b71afb367cf015ade7f691d841f2",
-    "src/components/public-site/PublicSiteHeader.tsx": "6ba818f1219c2d37951e07fc793c14c6d41051dd54ef39d18727e0d6e5da65bf",
+    "src/components/public-site/PublicSiteHeader.tsx": "de804f1476f0ccba399ef8ac15ecadbb62ee96a994c8f42fbecc648f333cab0f",
     "src/components/search/CoverageStatement.tsx": "3a99e80c975df088c325a5e156c3a2fa949cfcd115294297d502991a8b44eb3f",
     "src/components/search/GlobalSearchDialog.tsx": "f2f938184d386db2f647a6566216185b8544c55eda4219daa7a6215be9061761",
     "src/components/search/PlaceSearchBox.tsx": "1b2ebb01216debbd92e0fdd301bc0bdf7806b714ff04d311107867e3b45be661",
-    "src/components/search/SearchLandingContent.tsx": "e00adf69aec3c7928b5b318cf1774cedd907a583935cee1177a0c962a5dd0a8c",
+    "src/components/search/SearchLandingContent.tsx": "9563b06bcc4f89a11f42f60ce462add065be1a0f02e6ad641fe8e70d44177fc8",
     "src/components/search/SearchResultItem.tsx": "80ee2b7f6c6c27b43e214d06a2f612932738075b7de16a09059953a9fb0aeee9",
     "src/components/search/global-search-config.ts": "098d196bbb7b3b2c493d3a6dbe47e0b818ba6ef06267665da1c90d88a561efb2",
     "src/components/shared/ModuleBreadcrumb.tsx": "018703ae49a65aa2e4a34a6905373964f25cb7b4b2832e05dea6617b91a4dbc7",
@@ -306,7 +310,7 @@
     "src/i18n/lazy-config.ts": "d924cd25c0a5e70b517818a3627d59eda6d6619f288c009def40abb220572454",
     "src/i18n/namespace-bundles.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/i18n/namespace-compat.ts": "54fa081677bd35c50b24ed5914d8c0a343b23f82fa50f33ac0ac931e011a165c",
-    "src/i18n/namespace-loaders.ts": "c9cac37d10ac9fbbab3a20ea363f42c783d1ebed75e6887e3dc66c2ef5fe2e49",
+    "src/i18n/namespace-loaders.ts": "186bbe9aea70521b07a05527149e4606f0e7e4c7f560e442e580f4e1b009534d",
     "src/i18n/pseudo-post-processor.ts": "36b77ab41d90b6545bac0a64f6a17336374a4cfa6fdde89b961b7bc48a5cd5e3",
     "src/lib/a11y/keyboard-scope.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/a11y/use-dialog-focus-restore.ts": "8fd6edd13dfa0351fa57df3a923d8a5bbcf9c8887d24ad13f6a7654922c08b47",
@@ -547,10 +551,10 @@
   ],
   "stats": {
     "dynamicBoundaries": 18,
-    "matchedKeys": 118,
+    "matchedKeys": 122,
     "routeBoundaries": 0,
     "shellFiles": 463,
-    "sliceBytes": 248390
+    "sliceBytes": 254109
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
@@ -803,6 +807,7 @@
     "src/i18n/namespace-loaders.ts → ./locales/el/properties-enums.json",
     "src/i18n/namespace-loaders.ts → ./locales/el/properties-viewer.json",
     "src/i18n/namespace-loaders.ts → ./locales/el/properties.json",
+    "src/i18n/namespace-loaders.ts → ./locales/el/property-market.json",
     "src/i18n/namespace-loaders.ts → ./locales/el/quotes.json",
     "src/i18n/namespace-loaders.ts → ./locales/el/report-builder-domains.json",
     "src/i18n/namespace-loaders.ts → ./locales/el/report-builder.json",
@@ -905,6 +910,7 @@
     "src/i18n/namespace-loaders.ts → ./locales/en/properties-enums.json",
     "src/i18n/namespace-loaders.ts → ./locales/en/properties-viewer.json",
     "src/i18n/namespace-loaders.ts → ./locales/en/properties.json",
+    "src/i18n/namespace-loaders.ts → ./locales/en/property-market.json",
     "src/i18n/namespace-loaders.ts → ./locales/en/quotes.json",
     "src/i18n/namespace-loaders.ts → ./locales/en/report-builder-domains.json",
     "src/i18n/namespace-loaders.ts → ./locales/en/report-builder.json",
@@ -3735,10 +3741,18 @@
       "prefixes": [],
       "whole": false
     },
-    "search-results": {
+    "property-market": {
       "keys": [
         "demand.door.hint",
         "demand.door.label",
+        "offer.door.hint",
+        "offer.door.label"
+      ],
+      "prefixes": [],
+      "whole": false
+    },
+    "search-results": {
+      "keys": [
         "landing.browseAll",
         "landing.coverage.error",
         "landing.coverage.heading",
@@ -3750,8 +3764,6 @@
         "landing.search.searching",
         "landing.search.submit",
         "landing.title",
-        "offer.door.hint",
-        "offer.door.label",
         "site.brand",
         "site.home",
         "site.nav",

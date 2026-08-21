@@ -44,7 +44,7 @@ import type { OwnerPropertyFormValues } from '@/lib/owner-property/owner-propert
 
 import { OwnerPlaceAnswerField } from './OwnerPropertyFields';
 
-const NS = 'search-results';
+const NS = 'property-market';
 const K = `${NS}:offer`;
 
 export function OwnerPropertyPlaceField(): React.ReactElement {

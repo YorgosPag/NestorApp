@@ -61,6 +61,7 @@ function EmptyState(): React.ReactElement {
  */
 type RowFeedback = React.ComponentProps<typeof MandateCatalogRow>['feedback'];
 type RowAct = React.ComponentProps<typeof MandateCatalogRow>['onAct'];
+type RowPresence = React.ComponentProps<typeof MandateCatalogRow>['onSetPresence'];
 
 interface GroupSectionProps {
   readonly group: MandateStandingGroup;
@@ -68,6 +69,7 @@ interface GroupSectionProps {
   readonly busyId: string | null;
   readonly feedbackFor: (ownerPropertyId: string) => RowFeedback;
   readonly onAct: RowAct;
+  readonly onSetPresence: RowPresence;
 }
 
 function GroupSection({
@@ -76,6 +78,7 @@ function GroupSection({
   busyId,
   feedbackFor,
   onAct,
+  onSetPresence,
 }: GroupSectionProps): React.ReactElement {
   const { t } = useTranslation([CATALOG_NS]);
 
@@ -95,6 +98,7 @@ function GroupSection({
               busy={busyId === row.ownerPropertyId}
               feedback={feedbackFor(row.ownerPropertyId)}
               onAct={onAct}
+              onSetPresence={onSetPresence}
             />
           </li>
         ))}
@@ -113,10 +117,12 @@ function CatalogBody({
   view,
   reload,
   act,
+  setPresence,
 }: {
   readonly view: MandateCatalogState;
   readonly reload: () => void;
   readonly act: RowAct;
+  readonly setPresence: RowPresence;
 }): React.ReactElement {
   const { t } = useTranslation([CATALOG_NS]);
 
@@ -160,6 +166,7 @@ function CatalogBody({
             busyId={busyId}
             feedbackFor={feedbackFor}
             onAct={act}
+            onSetPresence={setPresence}
           />
         );
       })}
@@ -169,7 +176,7 @@ function CatalogBody({
 
 export function MandateCatalogContent(): React.ReactElement {
   const { t } = useTranslation([CATALOG_NS]);
-  const { view, reload, act } = useMandateCatalog();
+  const { view, reload, act, setPresence } = useMandateCatalog();
 
   return (
     // 🔴 **`section`, ΟΧΙ `main` — και `w-full`, ΟΧΙ κεντραρισμένη στήλη.** Και τα δύο
@@ -214,7 +221,7 @@ export function MandateCatalogContent(): React.ReactElement {
         </Link>
       </nav>
 
-      <CatalogBody view={view} reload={reload} act={act} />
+      <CatalogBody view={view} reload={reload} act={act} setPresence={setPresence} />
     </section>
   );
 }

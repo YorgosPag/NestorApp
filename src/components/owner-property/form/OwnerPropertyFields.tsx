@@ -38,7 +38,7 @@ import {
 import { isLandPropertyType, PROPERTY_TYPE_I18N_KEYS } from '@/constants/property-types';
 import { OFFER_KINDS, type OfferKind } from '@/types/property-offers';
 
-const NS = 'search-results';
+const NS = 'property-market';
 const K = `${NS}:offer`;
 
 /** Ο έλεγχος της φόρμας — **ένα** σημείο ανάγνωσης ανά component. */

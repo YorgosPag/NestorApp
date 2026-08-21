@@ -30,8 +30,8 @@ import type { DemandPlace, DemandTiming, PropertyDemand } from '@/types/property
 
 /** Ο χωρικός άξονας ως φράση. */
 function usePlacePhrase(): (place: DemandPlace) => string {
-  const { t } = useTranslation(['search-results']);
-  const K = 'search-results:demand.summary';
+  const { t } = useTranslation(['property-market']);
+  const K = 'property-market:demand.summary';
 
   return React.useCallback(
     (place) => {
@@ -52,8 +52,8 @@ function usePlacePhrase(): (place: DemandPlace) => string {
 
 /** Ο χρονικός άξονας ως φράση. */
 function useTimingPhrase(): (timing: DemandTiming) => string {
-  const { t } = useTranslation(['search-results']);
-  const K = 'search-results:demand.summary';
+  const { t } = useTranslation(['property-market']);
+  const K = 'property-market:demand.summary';
 
   return React.useCallback(
     (timing) => {
@@ -80,8 +80,8 @@ function useTimingPhrase(): (timing: DemandTiming) => string {
  * του λέμε ότι έθεσε.
  */
 function usePricePhrase(): (features: PropertyDemand['features']) => string {
-  const { t } = useTranslation(['search-results']);
-  const K = 'search-results:demand.summary';
+  const { t } = useTranslation(['property-market']);
+  const K = 'property-market:demand.summary';
   const money = React.useCallback(
     (value: number) => formatCurrency(value, 'EUR', { maximumFractionDigits: 0 }),
     [],
@@ -102,11 +102,11 @@ function usePricePhrase(): (features: PropertyDemand['features']) => string {
 
 /** Τα είδη ακινήτου — από το **SSoT ετικετών**, ποτέ χειρόγραφη λίστα. */
 function useTypesPhrase(): (types: readonly string[]) => string {
-  const { t } = useTranslation(['search-results', 'properties-enums']);
+  const { t } = useTranslation(['property-market', 'properties-enums']);
 
   return React.useCallback(
     (types) => {
-      if (types.length === 0) return t('search-results:demand.summary.anyType');
+      if (types.length === 0) return t('property-market:demand.summary.anyType');
       return types
         .map((type) => {
           const key = PROPERTY_TYPE_I18N_KEYS[type as PropertyTypeCanonical];
@@ -123,17 +123,17 @@ function useTypesPhrase(): (types: readonly string[]) => string {
 
 /** Η ζήτηση ως τέσσερις φράσεις. */
 export function DemandSummary({ demand }: { demand: PropertyDemand }): React.ReactElement {
-  const { t } = useTranslation(['search-results']);
+  const { t } = useTranslation(['property-market']);
   const placeOf = usePlacePhrase();
   const timingOf = useTimingPhrase();
   const priceOf = usePricePhrase();
   const typesOf = useTypesPhrase();
 
   const rows: readonly (readonly [string, string])[] = [
-    [t('search-results:demand.form.place.legend'), placeOf(demand.place)],
-    [t('search-results:demand.form.timing.legend'), timingOf(demand.timing)],
-    [t('search-results:demand.form.features.typesLabel'), typesOf(demand.features.types)],
-    [t('search-results:demand.form.features.priceLegend'), priceOf(demand.features)],
+    [t('property-market:demand.form.place.legend'), placeOf(demand.place)],
+    [t('property-market:demand.form.timing.legend'), timingOf(demand.timing)],
+    [t('property-market:demand.form.features.typesLabel'), typesOf(demand.features.types)],
+    [t('property-market:demand.form.features.priceLegend'), priceOf(demand.features)],
   ];
 
   return (

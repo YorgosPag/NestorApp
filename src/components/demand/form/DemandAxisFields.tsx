@@ -39,7 +39,7 @@ import { PlaceIdentityField } from '@/components/geo/PlaceIdentityField';
 import { DemandAreaOutline } from './DemandAreaOutline';
 import { DemandProximityField } from './DemandProximityField';
 
-const NS = 'search-results';
+const NS = 'property-market';
 
 /**
  * **Ο άξονας διάθεσης** — `schema.org/Demand`: *«the very same properties used for

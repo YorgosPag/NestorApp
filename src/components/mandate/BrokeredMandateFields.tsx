@@ -37,7 +37,7 @@ import {
 } from '@/types/owner-property-mandate';
 import type { MandateFormValues } from '@/lib/mandate/mandate-form-values';
 
-const NS = 'search-results';
+const NS = 'property-market';
 const K = `${NS}:mandate.office`;
 
 /** Τα κλειδιά κάθε δρόμου — **παράγονται από το κλειστό σύνολο**, ποτέ χειρόγραφη λίστα. */

@@ -26,6 +26,8 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
+const { parseDeclaration } = require('./ledger');
+
 const CONFIG_FILE = '.i18n-shell-slice.json';
 
 const DEFAULTS = Object.freeze({
@@ -88,7 +90,24 @@ const DEFAULTS = Object.freeze({
 
   // Registered constant trees whose leaves ARE i18n keys, so `t(CONST.a.b)`
   // resolves instead of forcing a whole-namespace fallback.
-  keyConstants: [{ file: 'src/config/notification-keys.ts', exportName: 'NOTIFICATION_KEYS' }],
+  //
+  // ⚠️ ΖΕΙ ΕΔΩ, ΟΧΙ ΣΤΟ JSON, ΚΑΙ ΕΙΝΑΙ ΣΚΟΠΙΜΟ: το `loadConfig` κάνει **ρηχή**
+  // συγχώνευση, οπότε ένα `keyConstants` στο `.i18n-shell-slice.json` θα ΑΝΤΙΚΑΘΙΣΤΟΥΣΕ
+  // αυτόν τον πίνακα — δηλαδή θα έσβηνε σιωπηλά τις υπόλοιπες εγγραφές. Μια δεύτερη
+  // λίστα που αποκλίνει από την πρώτη είναι ακριβώς το σχήμα των δύο λιστών namespace
+  // (CHECK 3.34, απόκλιση 63). Μία λίστα, εδώ.
+  //
+  // 🔴 PROPERTY_TYPE_I18N_KEYS — ADR-777 §8.36 βήμα 1. Είναι
+  // `Record<PropertyTypeCanonical, string>` (ΟΧΙ Partial) με **14 ΚΥΡΙΟΛΕΚΤΙΚΕΣ** τιμές,
+  // όλες κάτω από `types.`· νέο κανονικό είδος **ΣΠΑΕΙ ΤΗ ΜΕΤΑΓΛΩΤΤΙΣΗ** αν δεν πάρει
+  // γραμμή, άρα ο πίνακας δεν μπορεί να αποκλίνει σιωπηλά από το union. Ο μοναδικός
+  // δυναμικός καταναλωτής του στο κέλυφος/τις φόρμες είναι το
+  // `t(\`properties-enums:${PROPERTY_TYPE_I18N_KEYS[type]}\`)` — τα **14 ωμά κλειδιά**
+  // που βάφουν οι τρεις οθόνες ακινήτου στο πρώτο καρέ.
+  keyConstants: [
+    { file: 'src/config/notification-keys.ts', exportName: 'NOTIFICATION_KEYS' },
+    { file: 'src/constants/property-types.ts', exportName: 'PROPERTY_TYPE_I18N_KEYS' },
+  ],
 
   // The i18n plumbing forwards `t(key, options)`; it is not a consumer, and its
   // doc comments contain example `useTranslation([...])` calls.
@@ -129,7 +148,14 @@ function assertKnownFields(raw) {
 function loadConfig(projectRoot) {
   const raw = readJsonIfPresent(path.join(projectRoot, CONFIG_FILE));
   assertKnownFields(raw);
-  return { ...DEFAULTS, ...raw };
+  const config = { ...DEFAULTS, ...raw };
+  // ⚠️ ADR-777 §8.38 — το σχήμα του μητρώου κρίνεται ΕΔΩ, στη φόρτωση, ώστε ΚΑΘΕ
+  // καταναλωτής (generator · CHECK 3.34 · tests) να παίρνει την ίδια άρνηση. Μια
+  // δήλωση-συμβολοσειρά («~1,6 KB») δεν είναι προϋπολογισμός· βλ. ledger.js.
+  for (const [namespace, value] of Object.entries(config.guaranteedNamespaces)) {
+    parseDeclaration(namespace, value);
+  }
+  return config;
 }
 
 /** `{ns: 'x', key: 'a.b'}` from either `'x:a.b'` or a bare `'a.b'` (which means "every namespace the file declares"). */

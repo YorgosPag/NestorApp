@@ -24,12 +24,29 @@ import {
   type ActionResult,
 } from '@/services/mandate/mandate-catalog.client';
 import type { MandateAction } from '@/lib/mandate/mandate-actions';
+import {
+  PRESENCE_LIFECYCLE,
+  type PresenceAction,
+} from '@/lib/owner-property/listing-presence';
+import { setOwnerListingLifecycle } from '@/services/owner-property/owner-property.service';
 import type { MandateCatalog } from '@/services/mandate/mandate-catalog.service';
+
+/**
+ * Το αποτέλεσμα μιας πράξης **παρουσίας** (ADR-777 §8.39).
+ *
+ * ⚠️ **Δικό του σχήμα και όχι `ActionResult`**: εκείνο κουβαλά `MandateActionRejection`
+ * (`declined`·`expired`·`not-pending`), λεξιλόγιο της **πρόσκλησης**. Η απόσυρση δεν
+ * μπορεί να αρνηθεί για κανέναν από αυτούς τους λόγους — δανεικό λεξιλόγιο θα
+ * υποσχόταν αρνήσεις που δεν συμβαίνουν.
+ */
+export type PresenceResult =
+  | { readonly kind: 'presence-done'; readonly action: PresenceAction }
+  | { readonly kind: 'presence-failed' };
 
 /** Το αποτέλεσμα της **τελευταίας** πράξης, όπως το δείχνει η οθόνη. */
 export interface CatalogFeedback {
   readonly ownerPropertyId: string;
-  readonly result: ActionResult;
+  readonly result: ActionResult | PresenceResult;
 }
 
 export type MandateCatalogState =
@@ -46,6 +63,8 @@ export interface MandateCatalogApi {
   readonly view: MandateCatalogState;
   readonly reload: () => void;
   readonly act: (ownerPropertyId: string, action: MandateAction) => void;
+  /** ADR-777 §8.39 — «κατέβασέ το» / «ανέβασέ το», για αγγελία **του γραφείου**. */
+  readonly setPresence: (ownerPropertyId: string, action: PresenceAction) => void;
 }
 
 export function useMandateCatalog(): MandateCatalogApi {
@@ -89,7 +108,29 @@ export function useMandateCatalog(): MandateCatalogApi {
     [reload],
   );
 
-  if (loadFailed) return { view: { state: 'failed' }, reload, act };
-  if (catalog === null) return { view: { state: 'loading' }, reload, act };
-  return { view: { state: 'ready', catalog, busyId, feedback }, reload, act };
+  const setPresence = useCallback(
+    (ownerPropertyId: string, action: PresenceAction) => {
+      setBusyId(ownerPropertyId);
+      setFeedback(null);
+
+      // 🔑 ΚΑΜΙΑ ΝΕΑ ΔΙΑΔΡΟΜΗ ΚΑΙ ΚΑΝΕΝΑΣ ΝΕΟΣ ΠΕΛΑΤΗΣ: το `setOwnerListingLifecycle`
+      // υπάρχει από την οθόνη του ιδιώτη και χτυπά **την ίδια** πύλη. Ό,τι άλλαξε είναι
+      // ότι η πύλη κρίνει πλέον **χώρο** (`mayAdminister`) και όχι μόνο συγγραφέα, άρα
+      // ο συνάδελφος περνά. Δεύτερος πελάτης θα ήταν δεύτερη αλήθεια (ADR-749).
+      void setOwnerListingLifecycle(ownerPropertyId, PRESENCE_LIFECYCLE[action]).then((result) => {
+        setBusyId(null);
+        const ok = result.kind === 'saved';
+        setFeedback({
+          ownerPropertyId,
+          result: ok ? { kind: 'presence-done', action } : { kind: 'presence-failed' },
+        });
+        if (ok) reload();
+      });
+    },
+    [reload],
+  );
+
+  if (loadFailed) return { view: { state: 'failed' }, reload, act, setPresence };
+  if (catalog === null) return { view: { state: 'loading' }, reload, act, setPresence };
+  return { view: { state: 'ready', catalog, busyId, feedback }, reload, act, setPresence };
 }

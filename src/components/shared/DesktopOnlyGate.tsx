@@ -44,7 +44,7 @@ import Link from 'next/link';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useViewportClass } from '@/hooks/media/useViewportClass';
 
-const NS = 'search-results';
+const NS = 'property-market';
 
 /**
  * Τι *μπορεί* να κάνει εδώ ο άνθρωπος με στενή οθόνη — **ποτέ σκέτη άρνηση**.
