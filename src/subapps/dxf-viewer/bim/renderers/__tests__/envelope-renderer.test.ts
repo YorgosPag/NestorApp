@@ -12,7 +12,7 @@ import {
   buildSlabHatchPlan,
   buildRevealJambPlans,
 } from '../EnvelopeRenderer';
-import type { Point3D } from '../../types/bim-base';
+import type { BimPoint } from '../../types/bim-base';
 import type { EnvelopeChain } from '../../geometry/envelope-perimeter';
 import type { EnvelopeOpeningCut } from '../../geometry/envelope-opening-cuts';
 import type { ViewTransform } from '../../../rendering/types/Types';
@@ -64,7 +64,7 @@ describe('buildEnvelopeRenderPlan', () => {
 });
 
 describe('buildSlabHatchPlan (Z2/Z3 εκτεθειμένη πλάκα)', () => {
-  const footprint: Point3D[] = [
+  const footprint: BimPoint[] = [
     { x: 0, y: 0 }, { x: 2000, y: 0 }, { x: 2000, y: 1500 }, { x: 0, y: 1500 },
   ];
 
@@ -81,7 +81,7 @@ describe('buildSlabHatchPlan (Z2/Z3 εκτεθειμένη πλάκα)', () => {
 });
 
 describe('buildRevealJambPlans (Z4 περβάζια — 2 παραστάδες)', () => {
-  const outline: Point3D[] = [
+  const outline: BimPoint[] = [
     { x: 0, y: 0 }, { x: 1000, y: 0 }, { x: 1000, y: 250 }, { x: 0, y: 250 },
   ];
 

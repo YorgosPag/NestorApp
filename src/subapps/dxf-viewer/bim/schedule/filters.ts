@@ -19,7 +19,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §6 Phase 8
  */
 
-import type { BimEntity, BoundingBox3D } from '../types/bim-base';
+import type { BimEntity, BimBounds } from '../types/bim-base';
 import type { ScheduleFilterCriteria } from './types';
 
 // ─── Generic entity shape consumed by filters ───────────────────────────────
@@ -36,7 +36,7 @@ export interface FilterableBimEntity {
   /** ADR-369 §9.2 Q2.4 — building FK for building-filter axis. */
   readonly buildingId?: string;
   readonly kind: string;
-  readonly geometry: { readonly bbox: BoundingBox3D };
+  readonly geometry: { readonly bbox: BimBounds };
   readonly params: Readonly<{
     readonly material?: string;
     readonly kind?: string;
@@ -99,7 +99,7 @@ export function passesCategoryFilter(
  * 2D AABB intersection (XY plane, z ignored — schedules are plan-view).
  * Inclusive at boundaries: touching boxes count as intersecting.
  */
-function bboxesIntersect2D(a: BoundingBox3D, b: BoundingBox3D): boolean {
+function bboxesIntersect2D(a: BimBounds, b: BimBounds): boolean {
   if (a.max.x < b.min.x || b.max.x < a.min.x) return false;
   if (a.max.y < b.min.y || b.max.y < a.min.y) return false;
   return true;
@@ -111,7 +111,7 @@ function bboxesIntersect2D(a: BoundingBox3D, b: BoundingBox3D): boolean {
  */
 export function passesRegionFilter(
   entity: FilterableBimEntity,
-  region: BoundingBox3D | undefined,
+  region: BimBounds | undefined,
 ): boolean {
   if (region === undefined) return true;
   return bboxesIntersect2D(entity.geometry.bbox, region);
@@ -172,7 +172,7 @@ export function applyScheduleFilters<E extends FilterableBimEntity>(
  * builder when iterating heterogeneous `BimEntity<string, unknown, ...>[]`.
  */
 export function asFilterable(
-  entity: BimEntity<string, unknown, { bbox: BoundingBox3D }>,
+  entity: BimEntity<string, unknown, { bbox: BimBounds }>,
 ): FilterableBimEntity {
   return entity as unknown as FilterableBimEntity;
 }

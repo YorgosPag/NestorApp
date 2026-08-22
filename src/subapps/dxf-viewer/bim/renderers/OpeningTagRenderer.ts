@@ -26,7 +26,7 @@
 import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import type { OpeningEntity } from '../types/opening-types';
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import { OPENING_KIND_STROKE } from './opening-kind-style';
 import {
   contrastTextColor,
@@ -142,7 +142,7 @@ export function shouldRenderTag(
  * The outline vertex order is `[start-outer, end-outer, end-inner, start-inner]`
  * (see `computeOpeningGeometry`).
  */
-export function computeTagCenter(opening: OpeningEntity): Point3D {
+export function computeTagCenter(opening: OpeningEntity): BimPoint {
   const verts = opening.geometry.outline.vertices;
   if (verts.length < 4) return opening.geometry.position;
   return {

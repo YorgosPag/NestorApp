@@ -11,7 +11,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import type { PlanLineSeg } from '../walls/wall-plan-line-segments';
 
 /** Projects a world-space point to screen (canvas) space. */
@@ -21,8 +21,8 @@ type WorldToScreen = (p: Point2D) => Point2D;
 export function traceFootprintRing(
   ctx: CanvasRenderingContext2D,
   toScreen: WorldToScreen,
-  outer: readonly Point3D[],
-  inner: readonly Point3D[],
+  outer: readonly BimPoint[],
+  inner: readonly BimPoint[],
 ): void {
   ctx.beginPath();
   const first = toScreen({ x: outer[0].x, y: outer[0].y });
@@ -46,9 +46,9 @@ export function traceFootprintRing(
 export function traceWallBody(
   ctx: CanvasRenderingContext2D,
   toScreen: WorldToScreen,
-  outer: readonly Point3D[],
-  inner: readonly Point3D[],
-  pieces?: readonly (readonly Point3D[])[],
+  outer: readonly BimPoint[],
+  inner: readonly BimPoint[],
+  pieces?: readonly (readonly BimPoint[])[],
 ): void {
   if (pieces === undefined) {
     traceFootprintRing(ctx, toScreen, outer, inner);
@@ -76,8 +76,8 @@ export function traceWallBody(
 export function strokePerimeterOutline(
   ctx: CanvasRenderingContext2D,
   toScreen: WorldToScreen,
-  outer: readonly Point3D[],
-  inner: readonly Point3D[],
+  outer: readonly BimPoint[],
+  inner: readonly BimPoint[],
 ): void {
   if (outer.length < 2 || inner.length < 2) return;
   traceFootprintRing(ctx, toScreen, outer, inner);
@@ -108,7 +108,7 @@ export function strokePlanLineSegments(
 export function strokePolyline(
   ctx: CanvasRenderingContext2D,
   toScreen: WorldToScreen,
-  points: ReadonlyArray<Point3D>,
+  points: ReadonlyArray<BimPoint>,
 ): void {
   if (points.length < 2) return;
   ctx.beginPath();

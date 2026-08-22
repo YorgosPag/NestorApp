@@ -14,7 +14,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-407-bim-railings.md
  */
 
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import type {
   RailingGeometry,
   RailingParams,
@@ -28,20 +28,20 @@ const CIRCLE_MARK_SEGMENTS = 12;
 
 export interface RailingSymbolGeometry {
   /** The path centreline polyline (canvas units). */
-  readonly pathStroke: readonly Point3D[];
+  readonly pathStroke: readonly BimPoint[];
   /** Closed plan outlines of the posts (rotated squares / circles). */
-  readonly postMarks: readonly (readonly Point3D[])[];
+  readonly postMarks: readonly (readonly BimPoint[])[];
   /** Plan centres of the balusters (rendered as dots). */
-  readonly balusterMarks: readonly Point3D[];
+  readonly balusterMarks: readonly BimPoint[];
 }
 
 /** Plan outline of a single member footprint at its base point (canvas units). */
-function memberOutline(member: RailMemberSolid, s: number): readonly Point3D[] {
+function memberOutline(member: RailMemberSolid, s: number): readonly BimPoint[] {
   const { basePoint: c, profile } = member;
   const z = c.z ?? 0;
   if (profile.shape === 'round') {
     const r = (profile.widthMm * s) / 2;
-    const out: Point3D[] = [];
+    const out: BimPoint[] = [];
     for (let i = 0; i < CIRCLE_MARK_SEGMENTS; i++) {
       const a = (i / CIRCLE_MARK_SEGMENTS) * 2 * Math.PI;
       out.push({ x: c.x + r * Math.cos(a), y: c.y + r * Math.sin(a), z });

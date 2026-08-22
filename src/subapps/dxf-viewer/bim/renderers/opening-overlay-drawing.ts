@@ -19,7 +19,7 @@
 
 import type { OpeningEntity } from '../types/opening-types';
 import { OPENING_PLAN_SYMBOL } from '../types/opening-types';
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import { HINGE_ARC_SUBDIVISIONS } from '../geometry/opening-geometry';
 
 const HINGE_DASH: readonly number[] = [4, 3];
@@ -58,7 +58,7 @@ interface OutlineFrame {
   readonly px: number; readonly py: number; // perp (−perp side→+perp side)
   readonly halfLen: number;
   readonly halfThk: number;
-  readonly v: readonly Point3D[];
+  readonly v: readonly BimPoint[];
 }
 
 // ─── Public dispatch ─────────────────────────────────────────────────────────
@@ -127,7 +127,7 @@ function frameOf(opening: OpeningEntity): OutlineFrame | null {
   };
 }
 
-function mid(a: Point3D, b: Point3D): Pt {
+function mid(a: BimPoint, b: BimPoint): Pt {
   return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
 }
 

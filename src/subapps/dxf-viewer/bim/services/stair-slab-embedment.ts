@@ -27,7 +27,7 @@
 import type { SceneModel, SlabEntity } from '../../types/entities';
 import { isSlabEntity } from '../../types/entities';
 import type { StairEntity } from '../types/stair-types';
-import type { Point3D, Polygon3D } from '../types/bim-base';
+import type { BimPoint, BimPolygon } from '../types/bim-base';
 import type { StairVerticalContext } from '../geometry/stair-vertical-profile';
 import { resolveEffectiveStairParams } from '../geometry/stairs/stair-effective-params';
 import {
@@ -44,9 +44,9 @@ import { DEFAULT_WAIST_SLAB_THICKNESS_MM } from '../stairs/stair-boq-quantities'
  * `stairwell-opening-inputs.bboxFootprint` (ίδια coarse overlap gate γεωμετρία,
  * private εκεί· επαναλαμβάνεται εδώ ως single-expression adapter, όχι formula).
  */
-function stairBboxFootprint(stair: StairEntity): Polygon3D {
+function stairBboxFootprint(stair: StairEntity): BimPolygon {
   const { min, max } = stair.geometry.bbox;
-  const vertices: Point3D[] = [
+  const vertices: BimPoint[] = [
     { x: min.x, y: min.y, z: 0 },
     { x: max.x, y: min.y, z: 0 },
     { x: max.x, y: max.y, z: 0 },

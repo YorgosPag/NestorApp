@@ -26,18 +26,18 @@
 import { applyRoofGripDrag, getRoofGrips, removeVertexFromRoof } from '../roof-grips';
 import { applyRoofShapePreset } from '../../geometry/roof-geometry';
 import { gripKindOf } from '../../../hooks/grip-kinds';
-import type { Point3D, Polygon3D } from '../../types/bim-base';
+import type { BimPoint, BimPolygon } from '../../types/bim-base';
 import type { RoofEntity, RoofParams } from '../../types/roof-types';
 
-const RECT: Point3D[] = [
+const RECT: BimPoint[] = [
   { x: 0, y: 0, z: 0 },
   { x: 4000, y: 0, z: 0 },
   { x: 4000, y: 3000, z: 0 },
   { x: 0, y: 3000, z: 0 },
 ];
 
-function makeParams(verts: Point3D[] = RECT, shape: 'flat' | 'mono-pitch' | 'gable' = 'gable'): RoofParams {
-  const outline: Polygon3D = { vertices: verts };
+function makeParams(verts: BimPoint[] = RECT, shape: 'flat' | 'mono-pitch' | 'gable' = 'gable'): RoofParams {
+  const outline: BimPolygon = { vertices: verts };
   return {
     outline,
     edges: applyRoofShapePreset(outline, shape, 30, 'deg'),
@@ -48,7 +48,7 @@ function makeParams(verts: Point3D[] = RECT, shape: 'flat' | 'mono-pitch' | 'gab
   };
 }
 
-function makeRoof(verts: Point3D[] = RECT): RoofEntity {
+function makeRoof(verts: BimPoint[] = RECT): RoofEntity {
   return { id: 'roof-1', type: 'roof', params: makeParams(verts) } as unknown as RoofEntity;
 }
 
@@ -86,7 +86,7 @@ describe('roof-grips (ADR-417 Φ1-part-2 #2)', () => {
   });
 
   it('3. degenerate polygon (<3 vertices) → no grips', () => {
-    const roof = makeRoof([{ x: 0, y: 0 }, { x: 1000, y: 0 }] as Point3D[]);
+    const roof = makeRoof([{ x: 0, y: 0 }, { x: 1000, y: 0 }] as BimPoint[]);
     expect(getRoofGrips(roof)).toHaveLength(0);
   });
 
@@ -155,7 +155,7 @@ describe('roof-grips (ADR-417 Φ1-part-2 #2)', () => {
 
   it('10. removeVertexFromRoof drops vertex AND its parallel edge (lockstep length-1)', () => {
     // 5-gon so we are above the triangle floor.
-    const penta: Point3D[] = [...RECT, { x: 2000, y: 4000, z: 0 }];
+    const penta: BimPoint[] = [...RECT, { x: 2000, y: 4000, z: 0 }];
     const params = makeParams(penta);
     const next = removeVertexFromRoof(params, 2);
     expect(next.outline.vertices).toHaveLength(4);
@@ -166,7 +166,7 @@ describe('roof-grips (ADR-417 Φ1-part-2 #2)', () => {
   });
 
   it('11. removeVertexFromRoof guards the minimum triangle (length<=3 → identity)', () => {
-    const tri: Point3D[] = [
+    const tri: BimPoint[] = [
       { x: 0, y: 0, z: 0 },
       { x: 4000, y: 0, z: 0 },
       { x: 2000, y: 3000, z: 0 },
@@ -176,7 +176,7 @@ describe('roof-grips (ADR-417 Φ1-part-2 #2)', () => {
   });
 
   it('12. removeVertexFromRoof out-of-range index → identity', () => {
-    const penta: Point3D[] = [...RECT, { x: 2000, y: 4000, z: 0 }];
+    const penta: BimPoint[] = [...RECT, { x: 2000, y: 4000, z: 0 }];
     const params = makeParams(penta);
     expect(removeVertexFromRoof(params, 99)).toBe(params);
   });

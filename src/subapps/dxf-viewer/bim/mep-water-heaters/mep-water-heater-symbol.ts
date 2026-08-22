@@ -26,7 +26,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md
  */
 
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import type {
   MepWaterHeaterGeometry,
   MepWaterHeaterParams,
@@ -34,11 +34,11 @@ import type {
 import { mmToSceneUnits } from '../../utils/scene-units';
 
 /** A polyline of world-space points (canvas units). */
-export type WaterHeaterStroke = readonly Point3D[];
+export type WaterHeaterStroke = readonly BimPoint[];
 
 export interface WaterHeaterSymbolGeometry {
   /** Closed outline polygon (= the footprint). */
-  readonly outline: readonly Point3D[];
+  readonly outline: readonly BimPoint[];
   /** Connector stub strokes — cold inlet (first, −X) + hot outlet (second, +X). */
   readonly strokes: readonly WaterHeaterStroke[];
   /**
@@ -65,7 +65,7 @@ const ELEMENT_HALF_WIDTH_FRAC = 0.20;
 /** Fractional position of the heating element from the bottom edge (lower quarter). */
 const ELEMENT_CENTRE_FRAC = 0.20;
 
-function lerp(a: Point3D, b: Point3D, t: number): Point3D {
+function lerp(a: BimPoint, b: BimPoint, t: number): BimPoint {
   return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: 0 };
 }
 
@@ -82,7 +82,7 @@ function unit(dx: number, dy: number): { x: number; y: number } {
  * Rotation-aware for free (centroid is in world space).
  */
 function buildTankCircleStrokes(
-  v0: Point3D, v1: Point3D, v2: Point3D, v3: Point3D,
+  v0: BimPoint, v1: BimPoint, v2: BimPoint, v3: BimPoint,
 ): WaterHeaterStroke[] {
   const cx = (v0.x + v1.x + v2.x + v3.x) / 4;
   const cy = (v0.y + v1.y + v2.y + v3.y) / 4;
@@ -91,7 +91,7 @@ function buildTankCircleStrokes(
   const bodyDepth = Math.hypot(v3.x - v0.x, v3.y - v0.y);
   const radius = TANK_RADIUS_FRAC * Math.min(bodyWidth, bodyDepth);
 
-  const pts: Point3D[] = [];
+  const pts: BimPoint[] = [];
   for (let i = 0; i <= TANK_CIRCLE_SEGMENTS; i++) {
     const angle = (2 * Math.PI * i) / TANK_CIRCLE_SEGMENTS;
     pts.push({ x: cx + radius * Math.cos(angle), y: cy + radius * Math.sin(angle), z: 0 });
@@ -108,7 +108,7 @@ function buildTankCircleStrokes(
  * bottom (−X edge) toward the top (+X edge). Rotation-aware: verts are in world space.
  */
 function buildWaterLevelStroke(
-  v0: Point3D, v1: Point3D, v2: Point3D, v3: Point3D,
+  v0: BimPoint, v1: BimPoint, v2: BimPoint, v3: BimPoint,
 ): WaterHeaterStroke {
   // Depth-axis edge interpolation: left wall v0→v3, right wall v1→v2.
   const leftPt  = lerp(v0, v3, WATER_LEVEL_FRAC);
@@ -125,7 +125,7 @@ function buildWaterLevelStroke(
  * Width and height are parametric / rotation-aware.
  */
 function buildHeatingElementStrokes(
-  v0: Point3D, v1: Point3D, v2: Point3D, v3: Point3D,
+  v0: BimPoint, v1: BimPoint, v2: BimPoint, v3: BimPoint,
 ): WaterHeaterStroke[] {
   const depthDir = unit(v3.x - v0.x, v3.y - v0.y);  // local Y in world
   const widthDir = unit(v1.x - v0.x, v1.y - v0.y);  // local X in world
@@ -145,18 +145,18 @@ function buildHeatingElementStrokes(
   const peakOffset = hw * 0.7;                         // peak amplitude perpendicular to depth
 
   // 4 vertices: left-end → upper-peak → lower-peak → right-end (along depth axis)
-  const left:  Point3D = { x: eCx - depthDir.x * hw,        y: eCy - depthDir.y * hw,        z: 0 };
-  const upperP: Point3D = {
+  const left:  BimPoint = { x: eCx - depthDir.x * hw,        y: eCy - depthDir.y * hw,        z: 0 };
+  const upperP: BimPoint = {
     x: eCx - depthDir.x * (hw / 3) + widthDir.x * peakOffset,
     y: eCy - depthDir.y * (hw / 3) + widthDir.y * peakOffset,
     z: 0,
   };
-  const lowerP: Point3D = {
+  const lowerP: BimPoint = {
     x: eCx + depthDir.x * (hw / 3) - widthDir.x * peakOffset,
     y: eCy + depthDir.y * (hw / 3) - widthDir.y * peakOffset,
     z: 0,
   };
-  const right: Point3D = { x: eCx + depthDir.x * hw,        y: eCy + depthDir.y * hw,        z: 0 };
+  const right: BimPoint = { x: eCx + depthDir.x * hw,        y: eCy + depthDir.y * hw,        z: 0 };
 
   return [
     [left, upperP],   // first zag

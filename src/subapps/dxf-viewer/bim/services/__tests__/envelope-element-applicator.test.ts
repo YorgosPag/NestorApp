@@ -11,7 +11,7 @@ import {
   applyAssignmentsToEntities,
 } from '../envelope-element-applicator';
 import type { AnySceneEntity } from '../../../types/entities';
-import type { Point3D } from '../../types/bim-base';
+import type { BimPoint } from '../../types/bim-base';
 import type { WallParams } from '../../types/wall-types';
 import type { ThermalEnvelopeSpec } from '../../types/thermal-envelope-types';
 import type { StoreyRef } from '../../utils/bim-floor-utils';
@@ -30,7 +30,7 @@ function spec(overrides: Partial<ThermalEnvelopeSpec> = {}): ThermalEnvelopeSpec
 
 // ─── Entity builders (cast — guards only check `.type`) ───────────────────────
 
-function wallParams(start: Point3D, end: Point3D): WallParams {
+function wallParams(start: BimPoint, end: BimPoint): WallParams {
   return {
     category: 'exterior', start, end, height: 3000, thickness: 200, flip: false,
     sceneUnits: 'mm', baseBinding: 'storey-floor', topBinding: 'storey-ceiling',
@@ -38,13 +38,13 @@ function wallParams(start: Point3D, end: Point3D): WallParams {
   };
 }
 
-function wallEntity(id: string, start: Point3D, end: Point3D): AnySceneEntity {
+function wallEntity(id: string, start: BimPoint, end: BimPoint): AnySceneEntity {
   return { id, type: 'wall', kind: 'straight', params: wallParams(start, end) } as unknown as AnySceneEntity;
 }
 
 /** Κλειστό τετράγωνο 10000×10000 (mm), 4 τοίχοι w1..w4. */
 function squareWalls(): AnySceneEntity[] {
-  const p = (x: number, y: number): Point3D => ({ x, y, z: 0 });
+  const p = (x: number, y: number): BimPoint => ({ x, y, z: 0 });
   return [
     wallEntity('w1', p(0, 0), p(10000, 0)),
     wallEntity('w2', p(10000, 0), p(10000, 10000)),
@@ -67,7 +67,7 @@ function columnAt(id: string, cx: number, cy: number, envelopeLayer?: unknown): 
   } as unknown as AnySceneEntity;
 }
 
-function beamAt(id: string, a: Point3D, b: Point3D): AnySceneEntity {
+function beamAt(id: string, a: BimPoint, b: BimPoint): AnySceneEntity {
   return {
     id, type: 'beam', kind: 'straight',
     params: {

@@ -22,7 +22,7 @@
 
 import { nowTimestamp } from '@/lib/firestore-now';
 import type { BimValidation } from '../types/bim-base';
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import type {
   RailingGeometry,
   RailingHostContext,
@@ -40,8 +40,8 @@ import {
 import { mmToSceneUnits } from '../../utils/scene-units';
 // ADR-471 Slice 6 — arc-length sampling από το ΕΝΑ SSoT (`polyline-frame`)· πρώην
 // private `pathLength`/`pointAtDistance`/`angleAtDistance` εδώ (ratchet item — δες
-// pending-ratchet-work). Το railing δουλεύει σε Point3D (xy + datum z): ο sampler
-// τρέχει στην xy προβολή (Point3D ⊂ Point2D) και ο caller ξαναβάζει το z.
+// pending-ratchet-work). Το railing δουλεύει σε BimPoint (xy + datum z): ο sampler
+// τρέχει στην xy προβολή (BimPoint ⊂ Point2D) και ο caller ξαναβάζει το z.
 import { samplePolylineFrame, polylineLength } from '../geometry/shared/polyline-frame';
 
 const MM_TO_M = 1 / 1000;
@@ -69,12 +69,12 @@ function pathLength(path: RailingPath): number {
 }
 
 /** Plan angle (deg CCW) of the segment a→b. */
-function segmentAngleDeg(a: Point3D, b: Point3D): number {
+function segmentAngleDeg(a: BimPoint, b: BimPoint): number {
   return Math.atan2(b.y - a.y, b.x - a.x) * RAD_TO_DEG;
 }
 
 /** Point at running distance `d` (canvas units) along the path, at elevation `z`. */
-function pointAtDistance(path: RailingPath, d: number, z: number): Point3D {
+function pointAtDistance(path: RailingPath, d: number, z: number): BimPoint {
   const frame = samplePolylineFrame(path, d);
   if (!frame) return { ...path[path.length - 1], z };
   return { x: frame.point.x, y: frame.point.y, z };
@@ -114,7 +114,7 @@ function zAtDistance(path: RailingPath, d: number): number {
  * slope z (mm). SSoT for along-path placement — shared by the baluster spacing pattern AND the
  * stair host builder's «Baluster Per Tread» anchor sampling (N.0.2 — one walk, no sibling clone).
  */
-export function sampleRailingPath(path: RailingPath, d: number): Point3D {
+export function sampleRailingPath(path: RailingPath, d: number): BimPoint {
   return pointAtDistance(path, d, zAtDistance(path, d));
 }
 
@@ -152,7 +152,7 @@ function nearestOnPath(
  * a baluster on the railing line at each tread; the engine uses it to find the smooth rail z above
  * a baluster so the member reaches the (sloped) rail underside from its stepped tread base.
  */
-export function projectOntoPath(path: RailingPath, x: number, y: number): Point3D {
+export function projectOntoPath(path: RailingPath, x: number, y: number): BimPoint {
   const n = nearestOnPath(path, x, y);
   if (!n) return path.length === 1 ? { x: path[0]!.x, y: path[0]!.y, z: path[0]!.z ?? 0 } : { x, y, z: 0 };
   const a = path[n.i - 1]!;
@@ -161,7 +161,7 @@ export function projectOntoPath(path: RailingPath, x: number, y: number): Point3
 }
 
 /** Plan angle (deg CCW) of the path segment nearest to `p` — aligns a member profile at a baked anchor. */
-function nearestSegmentAngleDeg(path: RailingPath, p: Point3D): number {
+function nearestSegmentAngleDeg(path: RailingPath, p: BimPoint): number {
   const n = nearestOnPath(path, p.x, p.y);
   if (!n) return 0;
   const a = path[n.i - 1]!;
@@ -231,7 +231,7 @@ type BalusterPattern = RailingType['balusterPlacement']['pattern'];
  * («η κουπαστή ακολουθεί τις κορυφές») — impossible with even/along-path spacing on a stepped run.
  */
 function treadBalusters(
-  anchors: readonly Point3D[],
+  anchors: readonly BimPoint[],
   path: RailingPath,
   params: RailingParams,
   pattern: BalusterPattern,

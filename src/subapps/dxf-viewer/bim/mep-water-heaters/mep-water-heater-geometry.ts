@@ -18,7 +18,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md
  */
 
-import type { BimValidation, Point3D } from '../types/bim-base';
+import type { BimValidation, BimPoint } from '../types/bim-base';
 import type {
   MepWaterHeaterGeometry,
   MepWaterHeaterParams,
@@ -60,8 +60,8 @@ export function computeMepWaterHeaterGeometry(
 export function buildWaterHeaterConnectors(params: MepWaterHeaterParams): MepConnector[] {
   const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
   const hw = (params.width * s) / 2;
-  const cold: Point3D = { x: -hw, y: 0, z: 0 };
-  const hot: Point3D = { x: hw, y: 0, z: 0 };
+  const cold: BimPoint = { x: -hw, y: 0, z: 0 };
+  const hot: BimPoint = { x: hw, y: 0, z: 0 };
   return [
     buildWaterHeaterColdInletConnector(cold, params.connectorDiameterMm),
     buildWaterHeaterHotOutletConnector(hot, params.connectorDiameterMm),

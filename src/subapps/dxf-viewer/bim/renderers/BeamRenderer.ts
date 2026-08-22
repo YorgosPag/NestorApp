@@ -27,7 +27,7 @@
 
 import { BaseEntityRenderer } from '../../rendering/entities/BaseEntityRenderer';
 import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../rendering/types/Types';
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import type { Entity } from '../../types/entities';
 import { isBeamEntity } from '../../types/entities';
 import type { BeamEntity, BeamKind } from '../types/beam-types';
@@ -81,7 +81,7 @@ const AXIS_DASH: readonly [number, number] = [4, 3];
  * ΕΝΑ κομμάτι (byte-for-byte προ-ADR-458). `displayOutline === []` → εξ ολοκλήρου μέσα
  * σε κολόνα → κανένα κομμάτι (δεν σχεδιάζεται / δεν επιλέγεται).
  */
-function resolveBeamOutlinePieces(beam: BeamEntity): ReadonlyArray<readonly Point3D[]> {
+function resolveBeamOutlinePieces(beam: BeamEntity): ReadonlyArray<readonly BimPoint[]> {
   return beam.geometry.displayOutline ?? [beam.geometry.outline.vertices];
 }
 

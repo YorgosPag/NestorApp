@@ -29,7 +29,7 @@ import type { EntityModel, GripInfo, RenderOptions, Point2D } from '../../render
 import type { Entity } from '../../types/entities';
 import { isRoofEntity } from '../../types/entities';
 import type { RoofEntity } from '../types/roof-types';
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import { getRoofGrips } from '../roofs/roof-grips';
 import { getSelectedRoofEdge } from '../roofs/roof-edge-selection-store';
 import { paintPolygonHoverHalo, polygonBboxHitTest, tracePolygonScreenPath, mapBimGrips } from './bim-polygon-render';
@@ -151,9 +151,9 @@ export class RoofRenderer extends BaseEntityRenderer {
 
   /**
    * Fills + strokes a single face outline polygon.
-   * Vertices are Point3D (canvas-unit xy, mm z) — only xy used for 2D.
+   * Vertices are BimPoint (canvas-unit xy, mm z) — only xy used for 2D.
    */
-  private drawFace(vertices: readonly Point3D[]): void {
+  private drawFace(vertices: readonly BimPoint[]): void {
     tracePolygonScreenPath(this.ctx, (p) => this.worldToScreen(p), vertices);
     // FULL SSoT (bim-body-fill) — κοινό adaptive layer με όλα τα BIM body fills.
     this.ctx.fillStyle = adaptFillTintForCanvas(ROOF_FACE_FILL);

@@ -14,7 +14,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-396-bim-external-thermal-envelope-etics.md §3, §5, §7 (P4)
  */
 
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import { closedRingFromEdges } from '../geometry/shared/polygon-utils';
 import type { EnvelopeChain } from '../geometry/envelope-perimeter';
 import type { EnvelopeMaterialId } from '../types/thermal-envelope-types';
@@ -29,9 +29,9 @@ const ENVELOPE_HATCH_MATERIAL = 'insulation';
 
 export interface EnvelopeRenderPlan {
   /** Κλειστό δαχτυλίδι πάχους μόνωσης (outer forward + exterior face reversed). */
-  readonly bandRing: readonly Point3D[];
+  readonly bandRing: readonly BimPoint[];
   /** Η εξωτ. όψη της μόνωσης (συνεχής offset polyline). */
-  readonly outerLoop: readonly Point3D[];
+  readonly outerLoop: readonly BimPoint[];
   readonly outerClosed: boolean;
   /** Hatch segments (canvas units· ADR-507 Φ7 INSUL batting μέσω MATERIAL_HATCH_MAP). */
   readonly hatch: readonly HatchLineSegment[];
@@ -50,7 +50,7 @@ export function buildEnvelopeRenderPlan(
   const inner = chain.exteriorFaceLoop.points;
   if (outer.length < 2 || inner.length < 2) return null;
 
-  const bandRing: Point3D[] = closedRingFromEdges(outer, inner);
+  const bandRing: BimPoint[] = closedRingFromEdges(outer, inner);
   const hatch = computeMaterialHatchSegments([bandRing], ENVELOPE_HATCH_MATERIAL, 'cut', spacingScale);
   return { bandRing, outerLoop: outer, outerClosed: chain.closed, hatch };
 }
@@ -64,7 +64,7 @@ export function buildEnvelopeRenderPlan(
  */
 export interface EnvelopeSlabHatchPlan {
   /** Κλειστό polygon footprint πλάκας (canvas units) — clip + stroke. */
-  readonly polygon: readonly Point3D[];
+  readonly polygon: readonly BimPoint[];
   /** Hatch segments (canvas units· ADR-507 Φ7 INSUL batting). */
   readonly hatch: readonly HatchLineSegment[];
 }
@@ -74,7 +74,7 @@ export interface EnvelopeSlabHatchPlan {
  * δεν είναι έγκυρο polygon (< 3 κορυφές).
  */
 export function buildSlabHatchPlan(
-  footprint: readonly Point3D[],
+  footprint: readonly BimPoint[],
   _materialId: EnvelopeMaterialId,
   spacingScale = 1,
 ): EnvelopeSlabHatchPlan | null {
@@ -99,7 +99,7 @@ export function buildSlabHatchPlan(
  * @returns άδειο array αν degenerate (caller κάνει iterate, ασφαλές).
  */
 export function buildRevealJambPlans(
-  outline: readonly Point3D[],
+  outline: readonly BimPoint[],
   insetCanvas: number,
   _materialId: EnvelopeMaterialId,
   spacingScale = 1,

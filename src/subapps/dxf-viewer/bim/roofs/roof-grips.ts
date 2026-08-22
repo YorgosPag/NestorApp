@@ -41,7 +41,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { GripInfo, RoofGripKind } from '../../hooks/useGripMovement';
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import type { RoofEntity, RoofParams, RoofEdgeSlope } from '../types/roof-types';
 import {
   buildPolygonOutlineGrips,
@@ -127,7 +127,7 @@ function insertRoofVertexOnEdge(
     verts[(edgeIndex + 1) % verts.length],
     delta,
   );
-  const nextVerts: Point3D[] = [];
+  const nextVerts: BimPoint[] = [];
   const nextEdges: RoofEdgeSlope[] = [];
   for (let i = 0; i < verts.length; i++) {
     nextVerts.push(cloneOutlineVertex(verts[i]));

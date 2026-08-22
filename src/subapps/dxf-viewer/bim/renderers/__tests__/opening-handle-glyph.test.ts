@@ -14,7 +14,7 @@ import { drawOpeningPlanOverlay } from '../opening-overlay-drawing';
 import type { OverlayDrawContext } from '../opening-overlay-drawing';
 import { HINGE_ARC_SUBDIVISIONS } from '../../geometry/opening-geometry';
 import type { OpeningEntity } from '../../types/opening-types';
-import type { Point3D } from '../../types/bim-base';
+import type { BimPoint } from '../../types/bim-base';
 
 interface RecordedSegment {
   a: { x: number; y: number };
@@ -46,11 +46,11 @@ function createMockDc(): { dc: OverlayDrawContext; segments: RecordedSegment[] }
   return { dc, segments };
 }
 
-function zeroPt(): Point3D {
+function zeroPt(): BimPoint {
   return { x: 0, y: 0, z: 0 };
 }
 
-const OUTLINE_VERTICES: readonly Point3D[] = [
+const OUTLINE_VERTICES: readonly BimPoint[] = [
   { x: 0, y: -50, z: 0 },
   { x: 1000, y: -50, z: 0 },
   { x: 1000, y: 50, z: 0 },
@@ -58,7 +58,7 @@ const OUTLINE_VERTICES: readonly Point3D[] = [
 ];
 
 function makeSwingDoor(): OpeningEntity {
-  const points: Point3D[] = [];
+  const points: BimPoint[] = [];
   for (let i = 0; i < HINGE_ARC_SUBDIVISIONS + 2; i++) {
     points.push(i === HINGE_ARC_SUBDIVISIONS ? { x: 1000, y: 0, z: 0 } : zeroPt());
   }
