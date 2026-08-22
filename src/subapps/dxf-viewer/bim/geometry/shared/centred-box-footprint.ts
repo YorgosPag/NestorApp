@@ -18,9 +18,10 @@
  * @see ../../entities/imported-mesh/imported-mesh-geometry — καλών #2 (ADR-683, measured διαστάσεις)
  */
 
-import type { BimBounds, BimPoint, BimPolygon } from '../../types/bim-base';
-import { polygonArea, polygonBbox } from './polygon-utils';
+import type { PlanBounds, BimPoint, BimPolygon } from '../../types/bim-base';
+import { polygonArea } from './polygon-utils';
 import { mmToSceneUnits, type SceneUnits } from '../../../utils/scene-units';
+import { planBoundsOf } from './xy-bounds';
 
 const MM_TO_M = 1 / 1000;
 const DEG_TO_RAD = Math.PI / 180;
@@ -44,7 +45,7 @@ export interface CentredBoxFootprintInput {
 /** Έξοδος — το κοινό σχήμα γεωμετρίας των mesh-based οντοτήτων. */
 export interface CentredBoxFootprintResult {
   readonly footprint: BimPolygon;
-  readonly bbox: BimBounds;
+  readonly bbox: PlanBounds;
   /** m². Εμβαδόν ίχνους (ανεξάρτητο μονάδας καμβά). */
   readonly area: number;
   /** mm. Ύψος, clamped σε μη-αρνητικό. */
@@ -63,7 +64,7 @@ export function computeCentredBoxFootprint(
 
   return {
     footprint: { vertices: transformed },
-    bbox: polygonBbox(transformed),
+    bbox: planBoundsOf(transformed),
     area: areaM2,
     height: Math.max(0, input.heightMm),
   };

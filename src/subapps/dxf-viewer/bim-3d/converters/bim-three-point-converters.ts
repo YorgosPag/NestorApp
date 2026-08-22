@@ -15,7 +15,7 @@ import type { MepManifoldEntity } from '../../bim/types/mep-manifold-types';
 import type { MepRadiatorEntity } from '../../bim/types/mep-radiator-types';
 import type { MepBoilerEntity } from '../../bim/types/mep-boiler-types';
 import type { MepWaterHeaterEntity } from '../../bim/types/mep-water-heater-types';
-import type { Point3D } from '../../bim/types/bim-base';
+import type { BimPoint } from '../../bim/types/bim-base';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
 import { getElementMaterial3D, getSystemTintedMaterial3D } from '../materials/MaterialCatalog3D';
 import { buildDrainageGratingStrokes } from '../../bim/mep-manifolds/mep-manifold-symbol';
@@ -50,7 +50,7 @@ const GRATING_LIFT_M = 0.0005;
  * point (x, y) in scene units maps to mesh-local (x·sceneToM, topY, −y·sceneToM).
  */
 function buildDrainageGrating3D(
-  verts: readonly Point3D[],
+  verts: readonly BimPoint[],
   sceneToM: number,
   topYm: number,
 ): THREE.LineSegments | null {
@@ -67,6 +67,38 @@ function buildDrainageGrating3D(
   const lines = new THREE.LineSegments(geo, DRAINAGE_GRATING_MATERIAL);
   lines.raycast = () => {}; // never a pick target — the basin box owns selection.
   return lines;
+}
+
+/**
+ * ADR-408 — ο ΚΟΙΝΟΣ πυρήνας των branches του `fixtureToMesh`: ίχνος σε canvas units
+ * → μέτρα → `Shape` → εξώθηση κατά το ύψος σώματος.
+ *
+ * **Γιατί υπάρχει (N.18):** τα σχόλια το έλεγαν ήδη — «*identical to the floor-drain /
+ * sanitary / socket branches above*» — αλλά ο κώδικας ήταν **αντιγραμμένος** τρεις φορές.
+ * Και η αντιγραφή είχε **ήδη κοστίσει**: το ίδιο σχόλιο καταγράφει ότι ο κλάδος του
+ * φωτιστικού ήταν ο **μόνος** που κατανάλωνε το ίχνος **ΑΚΛΙΜΑΚΩΤΟ**, οπότε σε σκηνή mm
+ * το σώμα προσγειωνόταν **1000× μακριά** από το καλώδιό του. Ένας πυρήνας ⇒ η επόμενη
+ * διόρθωση δεν μπορεί να ξεχάσει κλάδο.
+ *
+ * ⚠️ Ό,τι **διαφέρει** ανά κλάδο (υλικό, απόχρωση, κατακόρυφη αγκύρωση, παρελκόμενα)
+ * μένει ΕΞΩ — αυτές είναι πραγματικές διαφορές, όχι επανάληψη.
+ *
+ * @returns `null` όταν το ίχνος δεν δίνει έγκυρο `Shape` — ο καλών επιστρέφει `null`.
+ */
+function buildFixtureBody(
+  fixture: MepFixtureEntity,
+  verts: readonly BimPoint[],
+): { readonly geo: THREE.ExtrudeGeometry; readonly bodyHeightM: number; readonly matId: string; readonly sceneToM: number } | null {
+  const sceneToM = sceneUnitsToMeters(fixture.params.sceneUnits ?? 'mm');
+  const shape = buildShape(verts.map((v) => ({ x: v.x * sceneToM, y: v.y * sceneToM, z: 0 })));
+  if (!shape) return null;
+  const bodyHeightM = fixture.params.bodyHeightMm * MM_TO_M;
+  return {
+    geo: extrudeAndRotate(shape, bodyHeightM),
+    bodyHeightM,
+    matId: fixture.params.material ?? 'elem-mep-fixture',
+    sceneToM,
+  };
 }
 
 /**
@@ -91,13 +123,9 @@ export function fixtureToMesh(
   // as a brown recessed basin with the catch-basin grating on its TOP face (floor
   // level). Reuses the 2D grating SSoT via buildDrainageGrating3D (zero duplication).
   if (fixture.params.kind === 'floor-drain') {
-    const sceneToM = sceneUnitsToMeters(fixture.params.sceneUnits ?? 'mm');
-    const shape = buildShape(verts.map((v) => ({ x: v.x * sceneToM, y: v.y * sceneToM, z: 0 })));
-    if (!shape) return null;
-
-    const bodyHeightM = fixture.params.bodyHeightMm * MM_TO_M;
-    const geo = extrudeAndRotate(shape, bodyHeightM);
-    const matId = fixture.params.material ?? 'elem-mep-fixture';
+    const body = buildFixtureBody(fixture, verts);
+    if (!body) return null;
+    const { geo, bodyHeightM, matId, sceneToM } = body;
     const mesh = new THREE.Mesh(geo, getSystemTintedMaterial3D('mep-fixture', systemColor ?? DRAINAGE_TINT_HEX));
     // Top face flush with the floor (mountingElevation = FFL = 0); basin recessed DOWN.
     // ADR-448 §4.1 — floor-relative anchor via the SSoT `hangDownMeshY`.
@@ -117,13 +145,9 @@ export function fixtureToMesh(
   // sanitary-drainage brown by default (a System membership colour still wins). v1
   // is a simple solid box — no CC0 fixture mesh exists yet.
   if (isSanitaryKind(fixture.params.kind)) {
-    const sceneToM = sceneUnitsToMeters(fixture.params.sceneUnits ?? 'mm');
-    const shape = buildShape(verts.map((v) => ({ x: v.x * sceneToM, y: v.y * sceneToM, z: 0 })));
-    if (!shape) return null;
-
-    const bodyHeightM = fixture.params.bodyHeightMm * MM_TO_M;
-    const geo = extrudeAndRotate(shape, bodyHeightM);
-    const matId = fixture.params.material ?? 'elem-mep-fixture';
+    const body = buildFixtureBody(fixture, verts);
+    if (!body) return null;
+    const { geo, bodyHeightM, matId } = body;
     const mesh = new THREE.Mesh(geo, getSystemTintedMaterial3D('mep-fixture', systemColor ?? DRAINAGE_TINT_HEX));
     // Floor-standing: bottom face at FFL; the extrusion (local y 0→bodyHeightM) grows UP.
     // ADR-448 §4.1 — floor-relative anchor via the SSoT `floorBaseMeshY`.
@@ -139,13 +163,12 @@ export function fixtureToMesh(
   // bodyHeight. Identical wall-box geometry — only the 2D glyph + connector differ.
   // Tinted by a System membership colour when wired to a circuit/channel.
   if (isElectricalDeviceKind(fixture.params.kind)) {
-    const sceneToM = sceneUnitsToMeters(fixture.params.sceneUnits ?? 'mm');
-    const socketShape = buildShape(verts.map((v) => ({ x: v.x * sceneToM, y: v.y * sceneToM, z: 0 })));
-    if (!socketShape) return null;
-
-    const socketBodyM = fixture.params.bodyHeightMm * MM_TO_M;
-    const socketGeo = extrudeAndRotate(socketShape, socketBodyM);
-    const socketMatId = fixture.params.material ?? 'elem-mep-fixture';
+    // ⚠️ Τα ονόματα ήταν άλλα (`socketShape`/`socketBodyM`/…) αλλά ο κώδικας ΙΔΙΟΣ —
+    // ακριβώς ο κλώνος που πιάνει το token-based jscpd και ΔΕΝ πιάνει κανένας
+    // name-based έλεγχος (ADR-584, CHECK 3.28).
+    const body = buildFixtureBody(fixture, verts);
+    if (!body) return null;
+    const { geo: socketGeo, bodyHeightM: socketBodyM, matId: socketMatId } = body;
     const socketMat =
       systemColor !== undefined
         ? getSystemTintedMaterial3D('mep-fixture', systemColor)
@@ -163,13 +186,9 @@ export function fixtureToMesh(
   // fallback was the ONLY branch consuming the footprint UNSCALED, so in an mm scene the
   // body landed 1000× away from its (correctly-scaled) home-run wire → "wires don't reach
   // the light fixture" in 3D. Scaling here aligns the body with the wire endpoint.
-  const sceneToM = sceneUnitsToMeters(fixture.params.sceneUnits ?? 'mm');
-  const shape = buildShape(verts.map((v) => ({ x: v.x * sceneToM, y: v.y * sceneToM, z: 0 })));
-  if (!shape) return null;
-
-  const bodyHeightM = fixture.params.bodyHeightMm * MM_TO_M;
-  const geo = extrudeAndRotate(shape, bodyHeightM);
-  const matId = fixture.params.material ?? 'elem-mep-fixture';
+  const body = buildFixtureBody(fixture, verts);
+  if (!body) return null;
+  const { geo, bodyHeightM, matId } = body;
   // ADR-408 Φ5 — colour-by-system: tint when the fixture is wired to a circuit.
   const material = systemColor !== undefined
     ? getSystemTintedMaterial3D('mep-fixture', systemColor)

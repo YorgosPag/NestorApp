@@ -19,9 +19,10 @@
  */
 
 import { nowTimestamp } from '@/lib/firestore-now';
-import type { BimValidation, BimBounds, BimPoint, BimPolygon } from '../../types/bim-base';
-import { polygonArea, polygonBbox } from './polygon-utils';
+import type { BimValidation, PlanBounds, BimPoint, BimPolygon } from '../../types/bim-base';
+import { polygonArea } from './polygon-utils';
 import { mmToSceneUnits, type SceneUnits } from '../../../utils/scene-units';
+import { planBoundsOf } from './xy-bounds';
 
 /** mm → m scalar (area conversion applies this squared). */
 export const MM_TO_M = 1 / 1000;
@@ -73,7 +74,7 @@ export function transformFootprintToWorld(
 export interface RectangularBodyGeometry {
   /** BimPolygon — horizontal footprint at the mounting plane. Closed CCW. */
   readonly footprint: BimPolygon;
-  readonly bbox: BimBounds;
+  readonly bbox: PlanBounds;
   /** m². Footprint area. */
   readonly area: number;
   /** mm. Mirror of `params.bodyHeightMm` for downstream convenience. */
@@ -101,7 +102,7 @@ export function computeFootprintBodyGeometry(
   bodyHeightMm: number,
   s: number,
 ): RectangularBodyGeometry {
-  const bbox = polygonBbox(worldVertices);
+  const bbox = planBoundsOf(worldVertices);
   const areaCanvas2 = polygonArea(worldVertices);
   const canvasToM = (1 / s) * MM_TO_M;
   const areaM2 = areaCanvas2 * canvasToM * canvasToM;

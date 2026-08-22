@@ -11,17 +11,13 @@
  */
 
 import { nowTimestamp } from '@/lib/firestore-now';
-import type { BimValidation, BimPoint } from '../types/bim-base';
+import type { BimValidation } from '../types/bim-base';
 import type {
   FloorplanSymbolGeometry,
   FloorplanSymbolParams,
 } from '../types/floorplan-symbol-types';
 import { MIN_FLOORPLAN_SYMBOL_DIMENSION_MM } from '../types/floorplan-symbol-types';
-import { polygonArea, polygonBbox } from '../geometry/shared/polygon-utils';
-import { mmToSceneUnits } from '../../utils/scene-units';
-
-const MM_TO_M = 1 / 1000;
-const DEG_TO_RAD = Math.PI / 180;
+import { computeCentredBoxFootprint } from '../geometry/shared/centred-box-footprint';
 
 /**
  * Compute `FloorplanSymbolGeometry` from `FloorplanSymbolParams`. Pure SSoT.
@@ -31,48 +27,20 @@ const DEG_TO_RAD = Math.PI / 180;
 export function computeFloorplanSymbolGeometry(
   params: FloorplanSymbolParams,
 ): FloorplanSymbolGeometry {
-  const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
-  const local = buildRectangularLocal(params.widthMm, params.depthMm, s);
-  const transformed = transformFootprint(local, params);
-
-  const bbox = polygonBbox(transformed);
-  const areaCanvas2 = polygonArea(transformed);
-  const canvasToM = (1 / s) * MM_TO_M;
-  const areaM2 = areaCanvas2 * canvasToM * canvasToM;
-
-  return {
-    footprint: { vertices: transformed },
-    bbox,
-    area: areaM2,
-  };
-}
-
-// ─── Local footprint builder ──────────────────────────────────────────────────
-
-function buildRectangularLocal(widthMm: number, depthMm: number, s: number): BimPoint[] {
-  const hw = (widthMm * s) / 2;
-  const hd = (depthMm * s) / 2;
-  return [
-    { x: -hw, y: -hd, z: 0 },
-    { x: hw, y: -hd, z: 0 },
-    { x: hw, y: hd, z: 0 },
-    { x: -hw, y: hd, z: 0 },
-  ];
-}
-
-/**
- * Translate local-frame vertices to world coords (anchor = centre on
- * `position`) and rotate around `position` by `rotationDeg`.
- */
-function transformFootprint(local: readonly BimPoint[], params: FloorplanSymbolParams): BimPoint[] {
-  const { position } = params;
-  const cos = Math.cos(params.rotationDeg * DEG_TO_RAD);
-  const sin = Math.sin(params.rotationDeg * DEG_TO_RAD);
-  return local.map((v) => {
-    const rx = v.x * cos - v.y * sin;
-    const ry = v.x * sin + v.y * cos;
-    return { x: position.x + rx, y: position.y + ry, z: 0 };
+  // N.18 — ΕΝΑΣ πυρήνας: ίδιο ερώτημα με έπιπλο/imported-mesh («κεντραρισμένο ορθογώνιο,
+  // περιστραμμένο, σε canvas units»). Το docstring από πάνω το έλεγε ήδη — «Mirrors
+  // furniture-geometry.ts» — αλλά ο τύπος από κάτω ήταν ΑΝΤΙΓΡΑΜΜΕΝΟΣ, όχι κοινός.
+  // ⚠️ Το `height` του SSoT αγνοείται εδώ σκόπιμα: το σύμβολο κάτοψης ΔΕΝ έχει ύψος
+  // (ADR-415 — είναι 2Δ σύμβολο), γι' αυτό περνιέται 0 και δεν διαβάζεται πίσω.
+  const { footprint, bbox, area } = computeCentredBoxFootprint({
+    widthMm: params.widthMm,
+    depthMm: params.depthMm,
+    heightMm: 0,
+    position: params.position,
+    rotationDeg: params.rotationDeg,
+    sceneUnits: params.sceneUnits,
   });
+  return { footprint, bbox, area };
 }
 
 // ─── Validation ───────────────────────────────────────────────────────────────

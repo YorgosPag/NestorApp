@@ -33,10 +33,15 @@ import type {
 import { ANCHOR_OFFSETS } from '../types/foundation-types';
 import type { BimPoint } from '../types/bim-base';
 import type { Point2D } from '../../rendering/types/Types';
-import { polygonArea, polygonBbox } from './shared/polygon-utils';
+import { polygonArea } from './shared/polygon-utils';
+// N.18 — το τοπικό `buildRectLocal` ήταν ΤΑΥΤΟΣΗΜΟ με το SSoT (ίδιο κεντραρισμένο
+// ορθογώνιο, ίδια φορά CCW). Ο μετασχηματισμός ΔΕΝ ενοποιείται: το θεμέλιο έχει
+// `anchor` (γωνία/κέντρο) που το γενικό MEP σώμα δεν ξέρει — άλλο ερώτημα, μένει εδώ.
+import { buildRectangularLocalFootprint } from './shared/rectangular-body-geometry';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { canonicalAxisNormal } from '../grid/axis-normal';
 import { justifyAxisPoints, unjustifyAxisPoints } from '../grid/axis-justify';
+import { planBoundsOf } from './shared/xy-bounds';
 
 const MM_TO_M = 1 / 1000;
 const DEG_TO_RAD = Math.PI / 180;
@@ -54,7 +59,7 @@ export function computeFoundationGeometry(params: FoundationParams): FoundationG
     ? buildPadFootprint(params, s)
     : buildBandFootprint(params, s);
 
-  const bbox = polygonBbox(footprint);
+  const bbox = planBoundsOf(footprint);
   // Polygon vertices are in canvas units → convert area to m².
   const areaCanvas2 = polygonArea(footprint);
   const canvasToM = (1 / s) * MM_TO_M;
@@ -79,19 +84,8 @@ export function computeFoundationGeometry(params: FoundationParams): FoundationG
  * `position` (mirror της rectangular κολώνας — visual stability με Tab cycle).
  */
 function buildPadFootprint(params: PadFootingParams, s: number): BimPoint[] {
-  const local = buildRectLocal(params.width, params.length, s);
+  const local = buildRectangularLocalFootprint(params.width, params.length, s);
   return transformPad(local, params.position, params.anchor, params.width, params.length, params.rotation, s);
-}
-
-function buildRectLocal(width: number, length: number, s: number): BimPoint[] {
-  const hw = (width * s) / 2;  // mm → canvas units
-  const hl = (length * s) / 2;
-  return [
-    { x: -hw, y: -hl, z: 0 },
-    { x:  hw, y: -hl, z: 0 },
-    { x:  hw, y:  hl, z: 0 },
-    { x: -hw, y:  hl, z: 0 },
-  ];
 }
 
 function transformPad(
