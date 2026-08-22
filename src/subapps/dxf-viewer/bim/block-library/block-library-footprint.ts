@@ -11,7 +11,7 @@
  * @see ../../systems/zoom/utils/bounds-entity.ts — getEntityBounds (case 'block')
  */
 
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import { getEntityBounds, type BoundsEntity } from '../../systems/zoom/utils/bounds-entity';
 import type { InSessionBlockDef } from './block-library-types';
 import { buildGhostBlockEntity, type BlockPlacementParams } from './place-block-from-library';
@@ -23,7 +23,7 @@ import { buildGhostBlockEntity, type BlockPlacementParams } from './place-block-
 export function computeBlockFootprint(
   def: InSessionBlockDef,
   params: BlockPlacementParams,
-): Point3D[] {
+): BimPoint[] {
   const ghost = buildGhostBlockEntity(def, params);
   const b = getEntityBounds(ghost as unknown as BoundsEntity);
   if (!b) return [];

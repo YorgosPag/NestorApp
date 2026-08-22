@@ -12,7 +12,7 @@ import { computeEnvelopeOpeningCuts, type OpeningForCut } from '../envelope-open
 import type { WallForEnvelope, ColumnForEnvelope } from '../envelope-perimeter';
 import type { BeamForFootprint } from '../building-footprint';
 import type { SlabRegionFootprint } from '../footprint-region-classifier';
-import type { Point3D, Polyline3D } from '../../types/bim-base';
+import type { BimPoint, BimPolyline } from '../../types/bim-base';
 import type { WallParams } from '../../types/wall-types';
 import type { ColumnParams } from '../../types/column-types';
 import type { BeamParams } from '../../types/beam-types';
@@ -21,9 +21,9 @@ import { createExterior25EpsDna } from '../../types/wall-dna-types';
 
 // ─── Builders ────────────────────────────────────────────────────────────────
 
-const p = (x: number, y: number): Point3D => ({ x, y, z: 0 });
+const p = (x: number, y: number): BimPoint => ({ x, y, z: 0 });
 
-function wallParams(start: Point3D, end: Point3D, thickness = 200): WallParams {
+function wallParams(start: BimPoint, end: BimPoint, thickness = 200): WallParams {
   return {
     category: 'exterior', start, end, height: 3000, thickness, flip: false,
     sceneUnits: 'mm', baseBinding: 'storey-floor', topBinding: 'storey-ceiling',
@@ -31,13 +31,13 @@ function wallParams(start: Point3D, end: Point3D, thickness = 200): WallParams {
   };
 }
 
-function wall(id: string, start: Point3D, end: Point3D, thickness = 200): WallForEnvelope {
+function wall(id: string, start: BimPoint, end: BimPoint, thickness = 200): WallForEnvelope {
   return { id, kind: 'straight', params: wallParams(start, end, thickness) };
 }
 
 /** Κλειστό τετράγωνο `size`×`size` με origin (ox,oy). 4 τοίχοι. */
 function square(prefix: string, ox: number, oy: number, size: number): WallForEnvelope[] {
-  const q = (x: number, y: number): Point3D => ({ x: ox + x, y: oy + y, z: 0 });
+  const q = (x: number, y: number): BimPoint => ({ x: ox + x, y: oy + y, z: 0 });
   return [
     wall(`${prefix}1`, q(0, 0), q(size, 0)),
     wall(`${prefix}2`, q(size, 0), q(size, size)),
@@ -57,7 +57,7 @@ function column(id: string, x: number, y: number, size = 200): ColumnForEnvelope
   };
 }
 
-function beam(id: string, start: Point3D, end: Point3D, width = 400): BeamForFootprint {
+function beam(id: string, start: BimPoint, end: BimPoint, width = 400): BeamForFootprint {
   return {
     id,
     params: {
@@ -85,25 +85,25 @@ const overrides = (e: Array<[string, EnvelopeFunction]>): ReadonlyMap<string, En
 
 // ─── Geometry assertion helpers ────────────────────────────────────────────────
 
-function centroidOf(pts: readonly Point3D[]): { x: number; y: number } {
+function centroidOf(pts: readonly BimPoint[]): { x: number; y: number } {
   let sx = 0, sy = 0;
   for (const v of pts) { sx += v.x; sy += v.y; }
   return { x: sx / pts.length, y: sy / pts.length };
 }
 
-function meanDist(pts: readonly Point3D[], c: { x: number; y: number }): number {
+function meanDist(pts: readonly BimPoint[], c: { x: number; y: number }): number {
   let s = 0;
   for (const v of pts) s += Math.hypot(v.x - c.x, v.y - c.y);
   return s / pts.length;
 }
 
 /** >0 = το offset «μεγαλώνει» (έξω)· <0 = «μικραίνει» (μέσα), ως προς το ίδιο κέντρο. */
-function expansion(face: Polyline3D, offset: Polyline3D): number {
+function expansion(face: BimPolyline, offset: BimPolyline): number {
   const c = centroidOf(face.points);
   return meanDist(offset.points, c) - meanDist(face.points, c);
 }
 
-const allFinite = (pts: readonly Point3D[]): boolean =>
+const allFinite = (pts: readonly BimPoint[]): boolean =>
   pts.every((v) => Number.isFinite(v.x) && Number.isFinite(v.y));
 
 // ─── 1. Empty input ─────────────────────────────────────────────────────────

@@ -20,7 +20,7 @@
  */
 
 import type { Point2D } from '../../../rendering/types/Types';
-import type { Point3D } from '../../types/bim-base';
+import type { BimPoint } from '../../types/bim-base';
 import { mmToSceneUnits, type SceneUnits } from '../../../utils/scene-units';
 import { computeCentredBoxFootprint } from '../../geometry/shared/centred-box-footprint';
 import { rotateVector } from '../../grips/grip-math';
@@ -33,7 +33,7 @@ const CIRCLE_SEGMENTS = 64;
 const PRISM_FIRST_VERTEX_DEG = 90;
 
 /** Μια εσωτερική χαρακτηριστική ακμή κάτοψης — προβολή πραγματικής 3Δ ακμής, σε canvas units. */
-export type GenericSolidPlanEdge = readonly [Point3D, Point3D];
+export type GenericSolidPlanEdge = readonly [BimPoint, BimPoint];
 
 /** Καμία εσωτερική ακμή — μοιραζόμενη σταθερά για τα σχήματα που το περίγραμμα τα περιγράφει πλήρως. */
 const NO_EDGES: readonly GenericSolidPlanEdge[] = [];
@@ -41,7 +41,7 @@ const NO_EDGES: readonly GenericSolidPlanEdge[] = [];
 /** Το περίγραμμα κάτοψης ως κλειστά δαχτυλίδια σε **canvas units**. */
 export interface GenericSolidPlanOutline {
   /** `rings[0]` = εξωτερικό όριο· τυχόν επόμενα = τρύπες (μόνο ο torus έχει έναν εσωτερικό δακτύλιο). */
-  readonly rings: readonly (readonly Point3D[])[];
+  readonly rings: readonly (readonly BimPoint[])[];
   /**
    * Εσωτερικές χαρακτηριστικές ακμές (top-view feature edges) — π.χ. οι 4 ακμές γωνία→κορυφή της
    * πυραμίδας που, ειδωμένες από πάνω, σχηματίζουν το «Χ» (Revit/ArchiCAD/C4D κάτοψη). Κενό για τα
@@ -53,9 +53,9 @@ export interface GenericSolidPlanOutline {
 /** Περιστροφή (CCW, μοίρες) περί την αρχή + μεταφορά στο `position` — τοπικό → world. */
 function placeRing(
   local: readonly Point2D[],
-  position: Readonly<Point3D>,
+  position: Readonly<BimPoint>,
   rotationDeg: number,
-): Point3D[] {
+): BimPoint[] {
   return local.map((v) => {
     const r = rotateVector(v, rotationDeg);
     return { x: position.x + r.x, y: position.y + r.y, z: 0 };
@@ -78,9 +78,9 @@ function regularPolygonLocal(radiusCanvas: number, sides: number, firstVertexDeg
 function circleRing(
   radiusMm: number,
   s: number,
-  position: Readonly<Point3D>,
+  position: Readonly<BimPoint>,
   rotationDeg: number,
-): Point3D[] {
+): BimPoint[] {
   return placeRing(regularPolygonLocal(radiusMm * s, CIRCLE_SEGMENTS, 0), position, rotationDeg);
 }
 
@@ -88,10 +88,10 @@ function circleRing(
 function rectangleRing(
   widthMm: number,
   depthMm: number,
-  position: Readonly<Point3D>,
+  position: Readonly<BimPoint>,
   rotationDeg: number,
   sceneUnits: SceneUnits | undefined,
-): readonly Point3D[] {
+): readonly BimPoint[] {
   return computeCentredBoxFootprint({
     widthMm,
     depthMm,
@@ -107,7 +107,7 @@ function rectangleRing(
  */
 export function computeGenericSolidPlanOutline(
   shape: GenericSolidShape,
-  position: Readonly<Point3D>,
+  position: Readonly<BimPoint>,
   rotationDeg: number,
   sceneUnits: SceneUnits | undefined,
 ): GenericSolidPlanOutline {
@@ -147,7 +147,7 @@ export function computeGenericSolidPlanOutline(
  * το κέντρο βάσης (= `position`), άρα κάθε ακμή γωνία→κορυφή προβάλλεται σε γωνία→κέντρο. Τα 4 τμήματα
  * (2 πλήρεις διαγώνιοι) = το «Χ» που δείχνει η C4D/Revit όταν κοιτάς την πυραμίδα από πάνω.
  */
-function pyramidApexEdges(base: readonly Point3D[], position: Readonly<Point3D>): GenericSolidPlanEdge[] {
-  const apex: Point3D = { x: position.x, y: position.y, z: 0 };
+function pyramidApexEdges(base: readonly BimPoint[], position: Readonly<BimPoint>): GenericSolidPlanEdge[] {
+  const apex: BimPoint = { x: position.x, y: position.y, z: 0 };
   return base.map((corner) => [corner, apex] as const);
 }

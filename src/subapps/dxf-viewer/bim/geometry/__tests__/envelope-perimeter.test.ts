@@ -21,13 +21,13 @@ import {
 } from '../exposed-slab-classifier';
 import { offsetPolyline, polygonCentroid, insetClosedPolygon, stripClosingDuplicate } from '../shared/polygon-utils';
 import { computeWallGeometry } from '../wall-geometry';
-import type { Point3D } from '../../types/bim-base';
+import type { BimPoint } from '../../types/bim-base';
 import type { WallParams } from '../../types/wall-types';
 import type { StoreyRef } from '../../utils/bim-floor-utils';
 
 // ─── Builders ────────────────────────────────────────────────────────────────
 
-function wallParams(start: Point3D, end: Point3D, units: 'mm' | 'm' = 'mm'): WallParams {
+function wallParams(start: BimPoint, end: BimPoint, units: 'mm' | 'm' = 'mm'): WallParams {
   return {
     category: 'exterior',
     start,
@@ -43,7 +43,7 @@ function wallParams(start: Point3D, end: Point3D, units: 'mm' | 'm' = 'mm'): Wal
   };
 }
 
-function wall(id: string, start: Point3D, end: Point3D, units: 'mm' | 'm' = 'mm'): WallForEnvelope {
+function wall(id: string, start: BimPoint, end: BimPoint, units: 'mm' | 'm' = 'mm'): WallForEnvelope {
   return { id, kind: 'straight', params: wallParams(start, end, units) };
 }
 
@@ -73,7 +73,7 @@ function column(id: string, x: number, y: number, size = 400, units: 'mm' | 'm' 
  * γωνία (4 ελεύθερα ζεύγη άκρων). 4 τοίχοι CCW — κλείνει ΜΟΝΟ αν γεφυρωθεί.
  */
 function squareWithGaps(prefix: string, size: number, gap: number): WallForEnvelope[] {
-  const p = (x: number, y: number): Point3D => ({ x, y, z: 0 });
+  const p = (x: number, y: number): BimPoint => ({ x, y, z: 0 });
   const lo = gap;
   const hi = size - gap;
   return [
@@ -86,7 +86,7 @@ function squareWithGaps(prefix: string, size: number, gap: number): WallForEnvel
 
 /** Κλειστό τετράγωνο `size`×`size` με origin (ox,oy). 4 τοίχοι CCW. */
 function square(prefix: string, ox: number, oy: number, size: number, units: 'mm' | 'm' = 'mm'): WallForEnvelope[] {
-  const p = (x: number, y: number): Point3D => ({ x: ox + x, y: oy + y, z: 0 });
+  const p = (x: number, y: number): BimPoint => ({ x: ox + x, y: oy + y, z: 0 });
   return [
     wall(`${prefix}1`, p(0, 0), p(size, 0), units),
     wall(`${prefix}2`, p(size, 0), p(size, size), units),
@@ -103,7 +103,7 @@ function square(prefix: string, ox: number, oy: number, size: number, units: 'mm
  * ΔΕΝ εκθέτει το bug. Ref ADR-363 §12 diagonal-corner fix.
  */
 function naturalRect(prefix: string, w: number, h: number): WallForEnvelope[] {
-  const p = (x: number, y: number): Point3D => ({ x, y, z: 0 });
+  const p = (x: number, y: number): BimPoint => ({ x, y, z: 0 });
   return [
     wall(`${prefix}B`, p(0, 0), p(w, 0)),  // bottom  L→R
     wall(`${prefix}T`, p(0, h), p(w, h)),  // top     L→R  (ίδια φορά)
@@ -137,7 +137,7 @@ function withMiters(walls: WallForEnvelope[]): WallForEnvelope[] {
 }
 
 /** Μέγιστη απόκλιση ακμής από axis-aligned (0 = τέλεια οριζόντια/κάθετη). */
-function maxDiagonalJog(loop: readonly Point3D[], closed: boolean): number {
+function maxDiagonalJog(loop: readonly BimPoint[], closed: boolean): number {
   const n = loop.length;
   if (n < 2) return 0;
   let worst = 0;
@@ -161,7 +161,7 @@ function slab(levelElevation: number, extra: Partial<SlabForZoneClassification['
 
 describe('polygon-utils — offsetPolyline / polygonCentroid (ADR-396 P3 SSoT)', () => {
   it('offsets a horizontal axis +y (CCW) and −y', () => {
-    const axis: Point3D[] = [{ x: 0, y: 0, z: 0 }, { x: 1000, y: 0, z: 0 }];
+    const axis: BimPoint[] = [{ x: 0, y: 0, z: 0 }, { x: 1000, y: 0, z: 0 }];
     const plus = offsetPolyline(axis, 100);
     expect(plus[0].y).toBeCloseTo(100, 6);
     expect(plus[1].y).toBeCloseTo(100, 6);
@@ -170,7 +170,7 @@ describe('polygon-utils — offsetPolyline / polygonCentroid (ADR-396 P3 SSoT)',
   });
 
   it('ΓΝΗΣΙΟ miter σε ορθή γωνία — η παρειά κρατά ΑΚΡΙΒΩΣ την απόσταση (ADR-791)', () => {
-    const axis: Point3D[] = [{ x: 0, y: 0, z: 0 }, { x: 1000, y: 0, z: 0 }, { x: 1000, y: 1000, z: 0 }];
+    const axis: BimPoint[] = [{ x: 0, y: 0, z: 0 }, { x: 1000, y: 0, z: 0 }, { x: 1000, y: 1000, z: 0 }];
     const out = offsetPolyline(axis, 100);
     // ⚠️ Μέχρι το ADR-791 αυτό το test ΑΠΑΙΤΟΥΣΕ (950, 50) και λεγόταν «via averaged
     // vertex normal» — κλείδωνε το σφάλμα: η κάθετη απόσταση από το 2ο σκέλος έβγαινε
@@ -183,9 +183,9 @@ describe('polygon-utils — offsetPolyline / polygonCentroid (ADR-396 P3 SSoT)',
   });
 
   it('computes arithmetic-mean centroid', () => {
-    const square4: Point3D[] = [{ x: 0, y: 0 }, { x: 1000, y: 0 }, { x: 1000, y: 1000 }, { x: 0, y: 1000 }];
+    const square4: BimPoint[] = [{ x: 0, y: 0 }, { x: 1000, y: 0 }, { x: 1000, y: 1000 }, { x: 0, y: 1000 }];
     expect(polygonCentroid(square4)).toEqual({ x: 500, y: 500 });
-    const tri: Point3D[] = [{ x: 0, y: 0 }, { x: 3, y: 0 }, { x: 0, y: 3 }];
+    const tri: BimPoint[] = [{ x: 0, y: 0 }, { x: 3, y: 0 }, { x: 0, y: 3 }];
     const c = polygonCentroid(tri);
     expect(c.x).toBeCloseTo(1, 6);
     expect(c.y).toBeCloseTo(1, 6);
@@ -196,7 +196,7 @@ describe('polygon-utils — offsetPolyline / polygonCentroid (ADR-396 P3 SSoT)',
   });
 
   // ── closed-ring offset (seam-mitre fix, ADR-396) ────────────────────────────
-  const sq: Point3D[] = [
+  const sq: BimPoint[] = [
     { x: 0, y: 0, z: 0 }, { x: 1000, y: 0, z: 0 },
     { x: 1000, y: 1000, z: 0 }, { x: 0, y: 1000, z: 0 },
   ];
@@ -275,7 +275,7 @@ describe('computeEnvelopePerimeter — closed loops', () => {
   });
 
   it('chains an L-shaped building (6 walls) into one closed loop', () => {
-    const p = (x: number, y: number): Point3D => ({ x, y, z: 0 });
+    const p = (x: number, y: number): BimPoint => ({ x, y, z: 0 });
     const ring = [p(0, 0), p(6000, 0), p(6000, 3000), p(3000, 3000), p(3000, 6000), p(0, 6000)];
     const walls: WallForEnvelope[] = ring.map((s, i) => wall(`L${i}`, s, ring[(i + 1) % ring.length]));
     const r = computeEnvelopePerimeter(walls, 0.1);
@@ -356,7 +356,7 @@ describe('computeEnvelopePerimeter — enclosesRegion gate (Phase 1)', () => {
   });
 
   it('L-shaped closed building encloses a region', () => {
-    const p = (x: number, y: number): Point3D => ({ x, y, z: 0 });
+    const p = (x: number, y: number): BimPoint => ({ x, y, z: 0 });
     const ring = [p(0, 0), p(6000, 0), p(6000, 3000), p(3000, 3000), p(3000, 6000), p(0, 6000)];
     const walls: WallForEnvelope[] = ring.map((s, i) => wall(`L${i}`, s, ring[(i + 1) % ring.length]));
     expect(computeEnvelopePerimeter(walls, 0.1).chains[0].enclosesRegion).toBe(true);

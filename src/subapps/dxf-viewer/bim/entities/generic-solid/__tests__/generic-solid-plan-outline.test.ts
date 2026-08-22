@@ -7,14 +7,14 @@
  */
 
 import { computeGenericSolidPlanOutline } from '../generic-solid-plan-outline';
-import type { Point3D } from '../../../types/bim-base';
+import type { BimPoint } from '../../../types/bim-base';
 import type { GenericSolidShape } from '../generic-solid-types';
 
-const ORIGIN: Point3D = { x: 0, y: 0, z: 0 };
+const ORIGIN: BimPoint = { x: 0, y: 0, z: 0 };
 const outline = (shape: GenericSolidShape) => computeGenericSolidPlanOutline(shape, ORIGIN, 0, 'mm');
 
 /** Μέγιστη ακτίνα (απόσταση από το κέντρο) ενός δαχτυλιδιού. */
-function maxRadius(ring: readonly Point3D[]): number {
+function maxRadius(ring: readonly BimPoint[]): number {
   return Math.max(...ring.map((p) => Math.hypot(p.x, p.y)));
 }
 

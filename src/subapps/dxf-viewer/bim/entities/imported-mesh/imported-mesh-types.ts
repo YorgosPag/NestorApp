@@ -40,7 +40,7 @@
  */
 
 import type { BOQMeasurementUnit } from '@/types/boq/units';
-import type { BimEntity, BoundingBox3D, Point3D, Polygon3D } from '../../types/bim-base';
+import type { BimEntity, BimBounds, BimPoint, BimPolygon } from '../../types/bim-base';
 import type { SceneUnits } from '../../../utils/scene-units';
 import type { IfcEntityMixin } from '../../types/ifc-entity-mixin';
 
@@ -183,7 +183,7 @@ export interface ImportedMeshParams {
    */
   readonly embeddedMaterialIds?: readonly string[];
   /** Σημείο εισαγωγής (κάτοψη). Το `z` προκύπτει από το `mountingElevationMm`. */
-  readonly position: Point3D;
+  readonly position: BimPoint;
   /** Μοίρες CCW γύρω από το `position` (κάτοψη, περί τον κατακόρυφο άξονα). */
   readonly rotationDeg: number;
   /**
@@ -237,9 +237,9 @@ export interface ImportedMeshParams {
  * δουλεύουν **αμέσως**, χωρίς δίκτυο — ίδιο μοτίβο με το `furniture`.
  */
 export interface ImportedMeshGeometry {
-  /** Polygon3D — οριζόντιο ίχνος στο επίπεδο τοποθέτησης. Κλειστό CCW. */
-  readonly footprint: Polygon3D;
-  readonly bbox: BoundingBox3D;
+  /** BimPolygon — οριζόντιο ίχνος στο επίπεδο τοποθέτησης. Κλειστό CCW. */
+  readonly footprint: BimPolygon;
+  readonly bbox: BimBounds;
   /** m². Εμβαδόν ίχνους. */
   readonly area: number;
   /** mm. Καθρέφτης του `params.measuredHeightMm` για ευκολία downstream. */

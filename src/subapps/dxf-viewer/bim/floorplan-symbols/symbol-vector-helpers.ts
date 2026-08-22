@@ -18,16 +18,16 @@
  * @see docs/centralized-systems/reference/adrs/ADR-415-2d-floorplan-symbol-library.md
  */
 
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 
 /** A polyline of world-space points (canvas units). */
-export type SymbolStroke = readonly Point3D[];
+export type SymbolStroke = readonly BimPoint[];
 
 /** Footprint corner vertices (already rotated/scaled world points). */
-export type FootprintBasis = readonly Point3D[];
+export type FootprintBasis = readonly BimPoint[];
 
 /** Map normalized `(u, v) ∈ [0,1]²` to world space via the footprint basis. */
-function mapNorm(fp: FootprintBasis, u: number, v: number): Point3D {
+function mapNorm(fp: FootprintBasis, u: number, v: number): BimPoint {
   const [c0, c1, , c3] = fp; // c0=(-hw,-hd) c1=(hw,-hd) c2=(hw,hd) c3=(-hw,hd)
   return {
     x: c0.x + (c1.x - c0.x) * u + (c3.x - c0.x) * v,
@@ -48,7 +48,7 @@ export function line(fp: FootprintBasis, u0: number, v0: number, u1: number, v1:
 
 /** Sampled ellipse (closed) centred at `(cu, cv)`, half-extents `(ru, rv)`. */
 export function ellipse(fp: FootprintBasis, cu: number, cv: number, ru: number, rv: number, seg = 28): SymbolStroke {
-  const pts: Point3D[] = [];
+  const pts: BimPoint[] = [];
   for (let i = 0; i <= seg; i++) {
     const a = (i / seg) * Math.PI * 2;
     pts.push(mapNorm(fp, cu + ru * Math.cos(a), cv + rv * Math.sin(a)));

@@ -14,18 +14,18 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md
  */
 
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import type {
   ElectricalPanelGeometry,
   ElectricalPanelParams,
 } from '../types/electrical-panel-types';
 
 /** A polyline of world-space points (canvas units). */
-export type PanelStroke = readonly Point3D[];
+export type PanelStroke = readonly BimPoint[];
 
 export interface PanelSymbolGeometry {
   /** Closed outline polygon (= the footprint). */
-  readonly outline: readonly Point3D[];
+  readonly outline: readonly BimPoint[];
   /** Internal divider strokes (breaker rows) identifying the panel. */
   readonly strokes: readonly PanelStroke[];
 }
@@ -40,7 +40,7 @@ const RACK_PORT_BAND: readonly [number, number] = [0.55, 0.85];
 /** Length-fraction of the comms-rack mid divider (separates the rack header row). */
 const RACK_DIVIDER_FRACTION = 0.4;
 
-function lerp(a: Point3D, b: Point3D, t: number): Point3D {
+function lerp(a: BimPoint, b: BimPoint, t: number): BimPoint {
   return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: 0 };
 }
 
@@ -49,7 +49,7 @@ function lerp(a: Point3D, b: Point3D, t: number): Point3D {
  * bottom edge) — the panelboard breaker-rows convention. v0=(-hw,-hl) v1=(hw,-hl)
  * v2=(hw,hl) v3=(-hw,hl); dividers run left→right edge (v0→v3 to v1→v2).
  */
-function buildBoardStrokes(corners: readonly Point3D[]): PanelStroke[] {
+function buildBoardStrokes(corners: readonly BimPoint[]): PanelStroke[] {
   const [v0, v1, v2, v3] = corners;
   return DIVIDER_FRACTIONS.map((t) => [lerp(v0, v3, t), lerp(v1, v2, t)]);
 }
@@ -59,7 +59,7 @@ function buildBoardStrokes(corners: readonly Point3D[]): PanelStroke[] {
  * — the structured-cabling patch-panel convention, visually distinct from the
  * board's breaker rows. Rotation-aware (built on the already-rotated footprint).
  */
-function buildRackStrokes(corners: readonly Point3D[]): PanelStroke[] {
+function buildRackStrokes(corners: readonly BimPoint[]): PanelStroke[] {
   const [v0, v1, v2, v3] = corners;
   const strokes: PanelStroke[] = [[lerp(v0, v3, RACK_DIVIDER_FRACTION), lerp(v1, v2, RACK_DIVIDER_FRACTION)]];
   const [t0, t1] = RACK_PORT_BAND;

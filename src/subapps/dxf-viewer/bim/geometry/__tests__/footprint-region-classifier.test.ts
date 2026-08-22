@@ -13,20 +13,20 @@ import {
   type SlabForRegionCoverage,
 } from '../footprint-region-classifier';
 import type { BuildingFootprintResult, FootprintRing } from '../building-footprint';
-import type { Point3D } from '../../types/bim-base';
+import type { BimPoint } from '../../types/bim-base';
 import type { StoreyRef } from '../../utils/bim-floor-utils';
 import { polygonArea } from '../shared/polygon-utils';
 
 // ─── Builders ──────────────────────────────────────────────────────────────
 
-const p = (x: number, y: number): Point3D => ({ x, y, z: 0 });
+const p = (x: number, y: number): BimPoint => ({ x, y, z: 0 });
 
 /** Ορθογώνιο ring [ox,oy] → [ox+w, oy+h] (CCW). */
-function rect(ox: number, oy: number, w: number, h: number): Point3D[] {
+function rect(ox: number, oy: number, w: number, h: number): BimPoint[] {
   return [p(ox, oy), p(ox + w, oy), p(ox + w, oy + h), p(ox, oy + h)];
 }
 
-function ring(points: Point3D[], isHole: boolean): FootprintRing {
+function ring(points: BimPoint[], isHole: boolean): FootprintRing {
   return {
     points: { points, closed: true },
     edges: [],
@@ -42,7 +42,7 @@ function footprint(outer: FootprintRing[], holes: FootprintRing[]): BuildingFoot
   return { components, outerRings: outer, holes };
 }
 
-const slab = (poly: Point3D[]): SlabRegionFootprint => ({ polygon: poly });
+const slab = (poly: BimPoint[]): SlabRegionFootprint => ({ polygon: poly });
 
 // ─── Στρ.1: εξώτατο όριο ─────────────────────────────────────────────────────
 
@@ -172,7 +172,7 @@ describe('selectSlabsAboveFloor', () => {
     { id: 'f2', elevation: 6 },     // 2ος (top-face 6000mm)
   ];
 
-  function coverageSlab(id: string, storeyId: string, poly: Point3D[]): SlabForRegionCoverage {
+  function coverageSlab(id: string, storeyId: string, poly: BimPoint[]): SlabForRegionCoverage {
     return {
       floorId: storeyId,
       params: {

@@ -32,7 +32,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-684-generic-solid-primitive-entity.md
  */
 
-import type { BimEntity, BoundingBox3D, Point3D, Polygon3D } from '../../types/bim-base';
+import type { BimEntity, BimBounds, BimPoint, BimPolygon } from '../../types/bim-base';
 import type { SceneUnits } from '../../../utils/scene-units';
 import type { IfcEntityMixin } from '../../types/ifc-entity-mixin';
 
@@ -106,7 +106,7 @@ export interface GenericSolidParams {
   /** Το σχήμα + οι διαστάσεις του (nested discriminated union). */
   readonly shape: GenericSolidShape;
   /** Σημείο εισαγωγής (κάτοψη, canvas units) — το κέντρο του ίχνους. Το `z` προκύπτει από το elevation. */
-  readonly position: Point3D;
+  readonly position: BimPoint;
   /** Μοίρες CCW περί τον κατακόρυφο άξονα. */
   readonly rotationDeg: number;
   /** mm. Υψόμετρο τοποθέτησης πάνω από το FFL του ορόφου. `0` → πατά στο δάπεδο. */
@@ -132,9 +132,9 @@ export interface GenericSolidParams {
  * ίχνος με έπιπλο/imported-mesh) ώστε hit-test + bounds να δουλεύουν αμέσως, χωρίς 3D build.
  */
 export interface GenericSolidGeometry {
-  /** Polygon3D — οριζόντιο ίχνος στο επίπεδο τοποθέτησης. Κλειστό CCW. */
-  readonly footprint: Polygon3D;
-  readonly bbox: BoundingBox3D;
+  /** BimPolygon — οριζόντιο ίχνος στο επίπεδο τοποθέτησης. Κλειστό CCW. */
+  readonly footprint: BimPolygon;
+  readonly bbox: BimBounds;
   /** m². Εμβαδόν ίχνους. */
   readonly area: number;
   /** mm. Συνολικό ύψος (bbox Z). */

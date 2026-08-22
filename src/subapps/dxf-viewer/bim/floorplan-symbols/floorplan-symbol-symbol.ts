@@ -20,7 +20,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-415-2d-floorplan-symbol-library.md
  */
 
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import type {
   FloorplanSymbolGeometry,
   FloorplanSymbolKind,
@@ -40,7 +40,7 @@ export type { SymbolStroke };
 
 export interface FloorplanSymbolSymbolGeometry {
   /** Closed outline polygon (= the footprint). */
-  readonly outline: readonly Point3D[];
+  readonly outline: readonly BimPoint[];
   /** Decorative inner strokes identifying the symbol kind. */
   readonly strokes: readonly SymbolStroke[];
 }

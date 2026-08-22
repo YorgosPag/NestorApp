@@ -11,7 +11,7 @@
  */
 
 import { nowTimestamp } from '@/lib/firestore-now';
-import type { BimValidation, Point3D } from '../types/bim-base';
+import type { BimValidation, BimPoint } from '../types/bim-base';
 import type {
   FloorplanSymbolGeometry,
   FloorplanSymbolParams,
@@ -49,7 +49,7 @@ export function computeFloorplanSymbolGeometry(
 
 // ─── Local footprint builder ──────────────────────────────────────────────────
 
-function buildRectangularLocal(widthMm: number, depthMm: number, s: number): Point3D[] {
+function buildRectangularLocal(widthMm: number, depthMm: number, s: number): BimPoint[] {
   const hw = (widthMm * s) / 2;
   const hd = (depthMm * s) / 2;
   return [
@@ -64,7 +64,7 @@ function buildRectangularLocal(widthMm: number, depthMm: number, s: number): Poi
  * Translate local-frame vertices to world coords (anchor = centre on
  * `position`) and rotate around `position` by `rotationDeg`.
  */
-function transformFootprint(local: readonly Point3D[], params: FloorplanSymbolParams): Point3D[] {
+function transformFootprint(local: readonly BimPoint[], params: FloorplanSymbolParams): BimPoint[] {
   const { position } = params;
   const cos = Math.cos(params.rotationDeg * DEG_TO_RAD);
   const sin = Math.sin(params.rotationDeg * DEG_TO_RAD);

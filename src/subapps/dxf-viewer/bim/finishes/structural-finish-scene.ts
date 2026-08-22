@@ -22,7 +22,7 @@ import { isWallEntity, isColumnEntity, isBeamEntity } from '../../types/entities
 import type { ColumnEntity, ColumnGeometry, ColumnParams } from '../types/column-types';
 import type { BeamEntity, BeamParams } from '../types/beam-types';
 import type { WallEntity } from '../types/wall-types';
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { resolveStructuralFinishFaces } from './structural-finish-resolver';
 // ADR-449 — ο exterior/interior classifier ζει σε ξεχωριστό SSoT module (Google file-size, N.7.1).
@@ -131,8 +131,8 @@ export interface BeamFinishObstacle {
   // ADR-449 Slice 9 — `startPoint`/`endPoint` → άξονας δοκαριού για **directional**
   // dilation (γεφύρωμα flush μόνο κατά τον άξονα). BIM `BeamEntity` + canvas `DxfBeam`
   // τα έχουν ήδη (ίδιο pattern με `BeamFinishSource`) → μηδέν cast.
-  readonly params: { readonly depth: number; readonly startPoint: Point3D; readonly endPoint: Point3D };
-  readonly geometry: { readonly outline: { readonly vertices: readonly Point3D[] } };
+  readonly params: { readonly depth: number; readonly startPoint: BimPoint; readonly endPoint: BimPoint };
+  readonly geometry: { readonly outline: { readonly vertices: readonly BimPoint[] } };
 }
 
 /**
@@ -142,7 +142,7 @@ export interface BeamFinishObstacle {
  */
 export interface ColumnFinishObstacle {
   readonly id: string;
-  readonly geometry: { readonly footprint: { readonly vertices: readonly Point3D[] } };
+  readonly geometry: { readonly footprint: { readonly vertices: readonly BimPoint[] } };
 }
 
 /** Minimal structural shape μιας κολόνας για face-resolution (BIM + Dxf entity). */

@@ -32,7 +32,7 @@
 import type { SceneEntity } from '../../core/commands/interfaces';
 // ADR-049 Phase 2 — receives the FULL 3D move delta; slab-openings track the slab
 // plane via x/y only (no own vertical field), so `z` is harmlessly ignored here.
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import type { Entity } from '../../types/entities';
 import { calculateBimMovedGeometry } from '../utils/bim-move-geometry';
 import {
@@ -48,7 +48,7 @@ import {
  */
 export function cascadeMovedSlabOpenings(
   movedIds: readonly string[],
-  delta: Point3D,
+  delta: BimPoint,
   sceneManager: SlabOpeningCascadeSceneManager,
 ): SceneEntity[] {
   return cascadeTransformedSlabOpenings(

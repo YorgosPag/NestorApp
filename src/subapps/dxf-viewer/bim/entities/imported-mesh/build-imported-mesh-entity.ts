@@ -20,7 +20,7 @@
 import { generateImportedMeshId } from '@/services/enterprise-id.service';
 import type { GeometrySignature } from '../../../io/mesh3d-roundtrip/geometry-hash';
 import type { MeshSolidMeasure } from '../../../io/mesh3d-roundtrip/mesh-solid-measure';
-import type { Point3D } from '../../types/bim-base';
+import type { BimPoint } from '../../types/bim-base';
 import type { SceneUnits } from '../../../utils/scene-units';
 import type { ImportedMeshEntity, ImportedMeshParams } from './imported-mesh-types';
 import {
@@ -76,7 +76,7 @@ export interface ImportedMeshSource {
    */
   readonly solid: MeshSolidMeasure;
   /** Θέση εισαγωγής σε canvas units. */
-  readonly position: Point3D;
+  readonly position: BimPoint;
   /**
    * ADR-683 Φ3β — υψόμετρο έδρασης πάνω από το δάπεδο του ορόφου (mm). Παραλείπεται όταν ο καλών
    * δεν ξέρει τη θέση καθ' ύψος (π.χ. χειροκίνητη τοποθέτηση) → πατά στο δάπεδο.

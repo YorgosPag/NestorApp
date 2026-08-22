@@ -12,7 +12,7 @@
 import { z } from 'zod';
 import { IfcGuidSchema, IfcPropertySetSchema } from '../../types/ifc-entity-mixin';
 import { GuideBindingsSchema } from '../../types/guide-binding.schemas';
-import { Point3DSchema } from '../../types/geometry.schemas';
+import { BimPointSchema } from '../../types/geometry.schemas';
 
 // ─── Point3D ──────────────────────────────────────────────────────────────────
 
@@ -107,7 +107,7 @@ export const GenericSolidParamsSchema = z
   .object({
     kind: z.literal('generic'),
     shape: GenericSolidShapeSchema,
-    position: Point3DSchema,
+    position: BimPointSchema,
     rotationDeg: z.number().finite(),
     mountingElevationMm: z.number().finite(),
     material: z.string().min(1).optional(),

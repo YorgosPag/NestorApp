@@ -10,16 +10,16 @@ import {
   type BeamForFootprint,
 } from '../building-footprint';
 import type { WallForEnvelope, ColumnForEnvelope } from '../envelope-perimeter';
-import type { Point3D } from '../../types/bim-base';
+import type { BimPoint } from '../../types/bim-base';
 import type { WallParams } from '../../types/wall-types';
 import type { ColumnParams } from '../../types/column-types';
 import type { BeamParams } from '../../types/beam-types';
 
 // ─── Builders ────────────────────────────────────────────────────────────────
 
-const p = (x: number, y: number): Point3D => ({ x, y, z: 0 });
+const p = (x: number, y: number): BimPoint => ({ x, y, z: 0 });
 
-function wallParams(start: Point3D, end: Point3D, thickness = 200): WallParams {
+function wallParams(start: BimPoint, end: BimPoint, thickness = 200): WallParams {
   return {
     category: 'exterior',
     start,
@@ -35,13 +35,13 @@ function wallParams(start: Point3D, end: Point3D, thickness = 200): WallParams {
   };
 }
 
-function wall(id: string, start: Point3D, end: Point3D, thickness = 200): WallForEnvelope {
+function wall(id: string, start: BimPoint, end: BimPoint, thickness = 200): WallForEnvelope {
   return { id, kind: 'straight', params: wallParams(start, end, thickness) };
 }
 
 /** Κλειστό τετράγωνο `size`×`size` με origin (ox,oy). 4 τοίχοι CCW. */
 function square(prefix: string, ox: number, oy: number, size: number): WallForEnvelope[] {
-  const q = (x: number, y: number): Point3D => ({ x: ox + x, y: oy + y, z: 0 });
+  const q = (x: number, y: number): BimPoint => ({ x: ox + x, y: oy + y, z: 0 });
   return [
     wall(`${prefix}1`, q(0, 0), q(size, 0)),
     wall(`${prefix}2`, q(size, 0), q(size, size)),
@@ -70,7 +70,7 @@ function column(id: string, x: number, y: number, size = 400): ColumnForEnvelope
   };
 }
 
-function beam(id: string, start: Point3D, end: Point3D, width = 400): BeamForFootprint {
+function beam(id: string, start: BimPoint, end: BimPoint, width = 400): BeamForFootprint {
   return {
     id,
     params: {

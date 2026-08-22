@@ -12,10 +12,10 @@ import {
   extendBeamOutlineIntoFramingColumns,
 } from '../beam-column-cutback';
 import type { Pt2 } from '../shared/segment-polygon-coverage';
-import type { Point3D } from '../../types/bim-base';
+import type { BimPoint } from '../../types/bim-base';
 
-/** Pt2[] → Point3D[] (z=0) — column footprints δίνονται ως Point3D στον caller. */
-const fp = (pts: Pt2[]): Point3D[] => pts.map((p) => ({ x: p.x, y: p.y, z: 0 }));
+/** Pt2[] → BimPoint[] (z=0) — column footprints δίνονται ως BimPoint στον caller. */
+const fp = (pts: Pt2[]): BimPoint[] => pts.map((p) => ({ x: p.x, y: p.y, z: 0 }));
 
 /** Δοκάρι 1000×250 (x∈[0,1000], y∈[0,250]), CCW. */
 const BEAM: Pt2[] = [
