@@ -2,6 +2,32 @@
 
 **STATUS: ACTIVE**
 
+- 🔶 **23/08 — τα params των MEP/παραμετρικών οικογενειών: ΕΙΚΟΣΙ ΤΡΙΑ αρχεία, ένα σχήμα** *(ADR-793 Φ.6)*
+  Μετρημένο με `jscpd`: `types/electrical-panel-types.ts:64-95` ↔ `types/mep-fixture-types.ts:118-149`
+  = **32 γρ. / 50 tokens** ταυτόσημα (`position`·`rotation`·`width`·`length`·`bodyHeightMm`·
+  `mountingElevationMm`·`sceneUnits`·`storeyId`·`material`·`hostId`). Το ίδιο συμπλέγμα ζει
+  σε **23** αρχεία του `bim/types/` (κριτήριο: δηλώνουν `readonly sceneUnits?: SceneUnits;`)
+  — beam · column · floor-finish · floorplan-symbol · foundation · furniture · mep-boiler ·
+  mep-fitting · mep-manifold · mep-radiator · mep-segment · mep-underfloor · mep-water-heater ·
+  railing · roof · slab · slab-opening · space-separator · thermal-space · wall · wall-covering.
+
+  ⚠️ **ΠΡΟΫΠΑΡΧΕΙ — αυτός ο γύρος ΔΕΝ το γέννησε**: επαληθεύτηκε τρέχοντας `jscpd` στις
+  εκδοχές `git show HEAD:` των δύο αρχείων ⇒ **ίδιος κλώνος, ίδια 50 tokens**. Το CHECK 3.28
+  τον είδε τώρα μόνο επειδή η μετάβαση `BimBounds → PlanBounds` έφερε **και τα δύο** στο ίδιο
+  staged σύνολο — γι' αυτό το `mep-fixture-types.ts` πήγε σε **ξεχωριστό commit** (σπλιτ, όχι `SKIP_`).
+
+  ⚠️ **Γιατί ΔΕΝ έγινε τώρα — και δεν είναι μόνο μέγεθος**: το σχήμα είναι ταυτόσημο,
+  **η σημασία όχι**. Το `mountingElevationMm` είναι το **κέντρο** του κιβωτίου στον πίνακα και η
+  **άνω έδρα** στο φωτιστικό· το `width` είναι **διάμετρος** όταν `shape === 'circular'`· το
+  `bodyHeightMm` είναι **ύψος κιβωτίου** εκεί, **πάχος σώματος** εδώ. Ένα κοινό `interface` με
+  **ένα** docblock θα έβαζε **μία** περιγραφή πάνω σε πεδίο με **τέσσερις** σημασίες —
+  δηλαδή το σχήμα του ADR-749 (μία αλήθεια που δεν είναι αλήθεια πουθενά), με μεταγλωττιστή
+  πράσινο. Η σωστή πράξη είναι **βάση τοποθέτησης** (πρότυπο Revit `Transform` + χωριστά extents,
+  όπως ήδη κάνει το νέο `geometry/shared/plan-frame.ts`) με **ρητό datum ανά οικογένεια**,
+  όχι σκέτο `extends` πάνω στα ονόματα των πεδίων. Υπάρχον σημείο αγκύρωσης:
+  `types/mep-component-types.ts` (το `MepConnectorHostParams` κάνει **ήδη** ακριβώς αυτή τη δουλειά
+  για τους connectors). **>1h, 23 αρχεία, απόφαση τομέα ανά πεδίο** ⇒ N.0.2 ⇒ pending.
+
 - 🔶 **23/08 — `stripComments` + χειρόγραφη `REPO_ROOT`: ΕΝΤΕΚΑ κλώνοι** *(ADR-660 §5.13)*
   Μετρημένο: **12** αρχεία test δηλώνουν δικό τους `stripComments` (και τα περισσότερα δική τους
   `REPO_ROOT` ως N διαδοχικά `..`). Το SSoT **υπάρχει πλέον**: `src/test-utils/read-source.ts`, και
