@@ -28,9 +28,9 @@
 
 import type {
   BimEntity,
-  BoundingBox3D,
-  Point3D,
-  Polygon3D,
+  BimBounds,
+  BimPoint,
+  BimPolygon,
 } from './bim-base';
 import type { SceneUnits } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
@@ -133,7 +133,7 @@ export interface FoundationCommonParams {
 export interface PadFootingParams extends FoundationCommonParams {
   readonly kind: 'pad';
   /** Clicked point σε world coords (mm). Anchor offset εφαρμόζεται στο geometry. */
-  readonly position: Point3D;
+  readonly position: BimPoint;
   /** mm. Πλάτος βάσης (X-axis). */
   readonly width: number;
   /** mm. Μήκος βάσης (Y-axis). */
@@ -168,9 +168,9 @@ export interface PadFootingParams extends FoundationCommonParams {
 export interface StripFootingParams extends FoundationCommonParams {
   readonly kind: 'strip';
   /** Άξονας αρχή (mm world). */
-  readonly start: Point3D;
+  readonly start: BimPoint;
   /** Άξονας τέλος (mm world). */
-  readonly end: Point3D;
+  readonly end: BimPoint;
   /** mm. Πλάτος band κάθετα στον άξονα. */
   readonly width: number;
   /** Location Line ως προς τον άξονα (default 'center', ADR-441 Slice 5a). */
@@ -194,8 +194,8 @@ export interface StripFootingParams extends FoundationCommonParams {
  */
 export interface TieBeamParams extends FoundationCommonParams {
   readonly kind: 'tie-beam';
-  readonly start: Point3D;
-  readonly end: Point3D;
+  readonly start: BimPoint;
+  readonly end: BimPoint;
   /** mm. Πλάτος διατομής κάθετα στον άξονα. */
   readonly width: number;
   /** Location Line ως προς τον άξονα (default 'center', ADR-441 Slice 5a). */
@@ -231,9 +231,9 @@ export type FoundationParams =
  * `thickness` σε mm (BOQ-ready).
  */
 export interface FoundationGeometry {
-  /** Polygon3D — οριζόντιο ίχνος (closed CCW). */
-  readonly footprint: Polygon3D;
-  readonly bbox: BoundingBox3D;
+  /** BimPolygon — οριζόντιο ίχνος (closed CCW). */
+  readonly footprint: BimPolygon;
+  readonly bbox: BimBounds;
   /** m². Εμβαδό ίχνους. */
   readonly area: number;
   /** m³. area × thickness / 1000. */
@@ -341,8 +341,8 @@ export const ANCHOR_OFFSETS: Readonly<Record<FoundationAnchor, { dx: number; dy:
 
 // ─── Default params factory (pure — μηδέν enterprise-id) ──────────────────────
 
-const ORIGIN: Point3D = { x: 0, y: 0, z: 0 };
-const DEFAULT_AXIS_END: Point3D = { x: 1000, y: 0, z: 0 };
+const ORIGIN: BimPoint = { x: 0, y: 0, z: 0 };
+const DEFAULT_AXIS_END: BimPoint = { x: 1000, y: 0, z: 0 };
 
 /**
  * SSoT default στάθμης άνω παρειάς ανά kind. Συνδετήρια → ψηλότερα ώστε να κάθεται

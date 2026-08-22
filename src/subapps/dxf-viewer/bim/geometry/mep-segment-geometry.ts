@@ -13,7 +13,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md §Φ8
  */
 
-import type { Point3D, Polyline3D, Polygon3D, BoundingBox3D } from '../types/bim-base';
+import type { BimPoint, BimPolyline, BimPolygon, BimBounds } from '../types/bim-base';
 import type { MepSegmentGeometry, MepSegmentParams } from '../types/mep-segment-types';
 import {
   resolveSegmentSection,
@@ -43,14 +43,14 @@ export function computeMepSegmentGeometry(params: MepSegmentParams): MepSegmentG
   const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
   const section = resolveSegmentSection(params);
 
-  const axisVertices: readonly Point3D[] = [params.startPoint, params.endPoint];
-  const axisPolyline: Polyline3D = { points: axisVertices, closed: false };
+  const axisVertices: readonly BimPoint[] = [params.startPoint, params.endPoint];
+  const axisPolyline: BimPolyline = { points: axisVertices, closed: false };
 
   // Plan footprint width = the section's HORIZONTAL extent (round ⇒ diameter,
   // rectangular ⇒ width). Height is the out-of-plan (vertical) extent.
   const planWidthMm = section.widthMm;
   const outlineVertices = buildOutlineRect(axisVertices, planWidthMm, s);
-  const outline: Polygon3D = { vertices: outlineVertices };
+  const outline: BimPolygon = { vertices: outlineVertices };
 
   // Per-endpoint elevations (ADR-408 Φ-A) — drive BOTH the true-3D BOQ length
   // (below) and the bbox z-range (further down).
@@ -165,7 +165,7 @@ export function validateMepSegmentParams(params: MepSegmentParams): MepSegmentVa
  * **ΚΑΤΑ ΜΗΚΟΣ**: τετραγωνάκι πλάτους διατομής γύρω από το σημείο. Κάθε άλλη περίπτωση
  * πάει στο SSoT `buildAxisStripOutline` (ADR-791) — κοινό με τη δοκό.
  */
-function buildOutlineRect(axis: readonly Point3D[], widthMm: number, s: number): Point3D[] {
+function buildOutlineRect(axis: readonly BimPoint[], widthMm: number, s: number): BimPoint[] {
   const n = axis.length;
   if (n >= 2 && widthMm > 0) {
     const half = (widthMm * s) / 2;
@@ -183,7 +183,7 @@ function buildOutlineRect(axis: readonly Point3D[], widthMm: number, s: number):
   return buildAxisStripOutline(axis, widthMm, s);
 }
 
-function computePolylineLengthMm(vertices: readonly Point3D[]): number {
+function computePolylineLengthMm(vertices: readonly BimPoint[]): number {
   let len = 0;
   for (let i = 1; i < vertices.length; i++) {
     const a = vertices[i - 1];
@@ -199,15 +199,15 @@ function computePolylineLengthMm(vertices: readonly Point3D[]): number {
  * [min(startMm,endMm) − h/2, max(startMm,endMm) + h/2] (mm → m).
  */
 function computeBbox(
-  axis: readonly Point3D[],
-  outline: readonly Point3D[],
+  axis: readonly BimPoint[],
+  outline: readonly BimPoint[],
   startElevMm: number,
   endElevMm: number,
   heightMm: number,
-): BoundingBox3D {
+): BimBounds {
   let minX = Infinity, minY = Infinity;
   let maxX = -Infinity, maxY = -Infinity;
-  const fold = (p: Point3D): void => {
+  const fold = (p: BimPoint): void => {
     if (p.x < minX) minX = p.x;
     if (p.x > maxX) maxX = p.x;
     if (p.y < minY) minY = p.y;

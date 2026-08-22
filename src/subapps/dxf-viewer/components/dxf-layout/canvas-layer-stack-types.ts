@@ -244,14 +244,14 @@ export interface CanvasLayerStackProps {
     isAwaitingPosition: boolean;
     getGhostFootprint: (
       cursorPos: Readonly<Point2D> | null,
-    ) => readonly import('../../bim/types/bim-base').Point3D[] | null;
+    ) => readonly import('../../bim/types/bim-base').BimPoint[] | null;
   };
   // === ADR-415: floorplan-symbol 2D placement ghost preview payload ===
   floorplanSymbolGhostPreview: {
     isAwaitingPosition: boolean;
     getGhostFootprint: (
       cursorPos: Readonly<Point2D> | null,
-    ) => readonly import('../../bim/types/bim-base').Point3D[] | null;
+    ) => readonly import('../../bim/types/bim-base').BimPoint[] | null;
   };
   // === ADR-736 §6: «Εικόνα» (user raster) 2D placement ghost preview payload ===
   attachImageGhostPreview: {
@@ -262,28 +262,28 @@ export interface CanvasLayerStackProps {
     isAwaitingPosition: boolean;
     getGhostFootprint: (
       cursorPos: Readonly<Point2D> | null,
-    ) => readonly import('../../bim/types/bim-base').Point3D[] | null;
+    ) => readonly import('../../bim/types/bim-base').BimPoint[] | null;
   };
   // === ADR-408 Φ12: MEP manifold (plumbing) 2D placement ghost preview payload ===
   mepManifoldGhostPreview: {
     isAwaitingPosition: boolean;
     getGhostFootprint: (
       cursorPos: Readonly<Point2D> | null,
-    ) => readonly import('../../bim/types/bim-base').Point3D[] | null;
+    ) => readonly import('../../bim/types/bim-base').BimPoint[] | null;
   };
   // === ADR-408 Εύρος Β: heating radiator 2D placement ghost preview payload ===
   mepRadiatorGhostPreview: {
     isAwaitingPosition: boolean;
     getGhostFootprint: (
       cursorPos: Readonly<Point2D> | null,
-    ) => readonly import('../../bim/types/bim-base').Point3D[] | null;
+    ) => readonly import('../../bim/types/bim-base').BimPoint[] | null;
   };
   // === ADR-408 Εύρος Β #2: heating boiler 2D placement ghost preview payload ===
   mepBoilerGhostPreview: {
     isAwaitingPosition: boolean;
     getGhostFootprint: (
       cursorPos: Readonly<Point2D> | null,
-    ) => readonly import('../../bim/types/bim-base').Point3D[] | null;
+    ) => readonly import('../../bim/types/bim-base').BimPoint[] | null;
     getGhostSymbol: (
       cursorPos: Readonly<Point2D> | null,
     ) => import('../../bim/mep-boilers/mep-boiler-symbol').BoilerSymbolGeometry | null;
@@ -293,7 +293,7 @@ export interface CanvasLayerStackProps {
     isAwaitingPosition: boolean;
     getGhostFootprint: (
       cursorPos: Readonly<Point2D> | null,
-    ) => readonly import('../../bim/types/bim-base').Point3D[] | null;
+    ) => readonly import('../../bim/types/bim-base').BimPoint[] | null;
   };
   // === ADR-408 Φ8: MEP segment (duct/pipe) 2-click ghost preview payload ===
   mepSegmentGhostPreview: Omit<

@@ -21,7 +21,7 @@
 
 import { useCallback, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
-import type { Point3D } from '../../bim/types/bim-base';
+import type { BimPoint } from '../../bim/types/bim-base';
 import { DEFAULT_BEAM_WIDTH_MM } from '../../bim/types/beam-types';
 import type { BeamParams } from '../../bim/types/beam-types';
 import type { StripJustification } from '../../bim/types/foundation-types';
@@ -34,6 +34,7 @@ import {
   buildBeamEntity,
   buildDefaultBeamParams,
 } from './beam-completion';
+import type { BuildBeamEntityResult } from './beam-completion';
 import { sceneSnapTargetsStore, selectGhostMembers } from '../../bim/framing/scene-snap-targets';
 import { resolveBeamSpanChain, collectSpanSupportOutlines } from '../../bim/framing/beam-span-snap';
 import { beamPreviewStore } from '../../bim/beams/beam-preview-store';
@@ -75,6 +76,28 @@ export function useBeamCommit(deps: UseBeamCommitDeps): UseBeamCommitResult {
     setState({ ...INITIAL_STATE, kind: s.kind, placementMode: s.placementMode, overrides: s.overrides, phase: 'awaitingStart' });
   }, [setState]);
 
+  // SSoT commit tail (N.0.2 dedup): hard error -> state.error· επιτυχία -> append + συνέχεια
+  // αλυσίδας. Ο τρόπος συνέχειας διαφέρει ανά διαδρομή (2-click/curved κάνουν πλήρες reset·
+  // from-wall μένει σε awaitingStart κρατώντας το state), γι' αυτό περνιέται ως παράμετρος —
+  // ΕΝΑ σημείο για το «τι σημαίνει επιτυχία», χωρίς να ισοπεδώνει τη διαφορά.
+  const finishBeamCommit = useCallback(
+    (s: BeamToolState, result: BuildBeamEntityResult, continueChain: (s: BeamToolState) => void): boolean => {
+      if (!result.ok) {
+        setState({ ...s, error: result.hardErrors[0] ?? null });
+        return false;
+      }
+      onBeamCreated?.(result.entity);
+      continueChain(s);
+      return true;
+    },
+    [onBeamCreated, setState],
+  );
+
+  // from-wall: συνεχής αλυσίδα ΧΩΡΙΣ reset του preview store (ο χρήστης διαλέγει επόμενο τοίχο).
+  const stayAwaitingStart = useCallback((s: BeamToolState) => {
+    setState({ ...s, phase: 'awaitingStart', startPoint: null, endPoint: null, error: null });
+  }, [setState]);
+
   const commitTwoClickFromState = useCallback(
     (s: BeamToolState, endPoint: Readonly<Point2D>): boolean => {
       if (s.startPoint === null) return false;
@@ -99,15 +122,9 @@ export function useBeamCommit(deps: UseBeamCommitDeps): UseBeamCommitResult {
         ? buildDefaultBeamParams(s.startPoint, endPoint, s.kind, s.overrides, sceneUnits)
         : buildAnchoredBeamParams(s.startPoint, endPoint, s.kind, s.overrides, sceneUnits, targets.footprints);
       const result = buildBeamEntity(params, currentLevelId, sceneUnits);
-      if (!result.ok) {
-        setState({ ...s, error: result.hardErrors[0] ?? null });
-        return false;
-      }
-      onBeamCreated?.(result.entity);
-      resetToAwaitingStart(s); // SSoT: cursor dot στο επόμενο mousemove (όχι stale ghost) + awaitingStart
-      return true;
+      return finishBeamCommit(s, result, resetToAwaitingStart);
     },
-    [currentLevelId, getSceneUnits, onBeamCreated, resetToAwaitingStart, setState],
+    [currentLevelId, finishBeamCommit, getSceneUnits, resetToAwaitingStart],
   );
 
   const commitCurvedFromState = useCallback(
@@ -115,18 +132,12 @@ export function useBeamCommit(deps: UseBeamCommitDeps): UseBeamCommitResult {
       if (s.startPoint === null || s.endPoint === null) return false;
       const sceneUnits = getSceneUnits?.() ?? 'mm';
       const base = buildDefaultBeamParams(s.startPoint, s.endPoint, 'curved', s.overrides, sceneUnits);
-      const curveControl: Point3D = { x: controlPoint.x, y: controlPoint.y, z: 0 };
+      const curveControl: BimPoint = { x: controlPoint.x, y: controlPoint.y, z: 0 };
       const params: BeamParams = { ...base, kind: 'curved', curveControl };
       const result = buildBeamEntity(params, currentLevelId, sceneUnits);
-      if (!result.ok) {
-        setState({ ...s, error: result.hardErrors[0] ?? null });
-        return false;
-      }
-      onBeamCreated?.(result.entity);
-      resetToAwaitingStart(s); // SSoT: cursor dot στο επόμενο mousemove (όχι stale ghost) + awaitingStart
-      return true;
+      return finishBeamCommit(s, result, resetToAwaitingStart);
     },
-    [currentLevelId, getSceneUnits, onBeamCreated, resetToAwaitingStart, setState],
+    [currentLevelId, finishBeamCommit, getSceneUnits, resetToAwaitingStart],
   );
 
   // ── from-wall commit core (shared by 2D point-pick + 3D mesh-pick) ────────
@@ -138,16 +149,9 @@ export function useBeamCommit(deps: UseBeamCommitDeps): UseBeamCommitResult {
     (s: BeamToolState, wall: WallEntity): boolean => {
       const sceneUnits = getSceneUnits?.() ?? 'mm';
       const result = buildBeamFromWall(wall, s.overrides, currentLevelId, sceneUnits);
-      if (!result.ok) {
-        setState({ ...s, error: result.hardErrors[0] ?? null });
-        return false;
-      }
-      onBeamCreated?.(result.entity);
-      // Continuous: stay in awaitingStart for the next wall pick.
-      setState({ ...s, phase: 'awaitingStart', startPoint: null, endPoint: null, error: null });
-      return true;
+      return finishBeamCommit(s, result, stayAwaitingStart);
     },
-    [currentLevelId, getSceneUnits, onBeamCreated, setState],
+    [currentLevelId, finishBeamCommit, getSceneUnits, stayAwaitingStart],
   );
 
   // ── from-wall commit (2D: 1-click pick a wall → beam on its axis) ─────────

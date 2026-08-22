@@ -20,7 +20,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.4
  */
 
-import type { Point3D, Polyline3D, Polygon3D, BoundingBox3D } from '../types/bim-base';
+import type { BimPoint, BimPolyline, BimPolygon, BimBounds } from '../types/bim-base';
 import type { OpeningParams, OpeningGeometry, OpeningKind } from '../types/opening-types';
 import { isHingedKind, isDoubleLeafKind } from '../types/opening-types';
 import type { WallEntity } from '../types/wall-types';
@@ -94,7 +94,7 @@ export function computeOpeningGeometry(
   // μετατοπισμένα axis points → κάθετες παρειές στις ΠΡΑΓΜΑΤΙΚΕΣ ακμές. Present μόνο
   // όταν υπάρχει reveal (αλλιώς undefined → οι consumers πέφτουν στο free outline).
   const revealThkScene = (params.revealInsulation?.thickness_m ?? 0) * 1000 * mmFactor;
-  let revealOutline: Polygon3D | undefined;
+  let revealOutline: BimPolygon | undefined;
   if (revealThkScene > 0) {
     const sStart = { x: startAxis.x - ux * revealThkScene, y: startAxis.y - uy * revealThkScene };
     const sEnd = { x: endAxis.x + ux * revealThkScene, y: endAxis.y + uy * revealThkScene };
@@ -120,7 +120,7 @@ export function computeOpeningGeometry(
   // bay projection) so the spatial pre-filter (BoundsCalculator) includes the
   // entity when the cursor is over the swing arc / leaf line / projecting bay,
   // not just the cutout.
-  const extraBboxPts: Point3D[] = [];
+  const extraBboxPts: BimPoint[] = [];
   if (hingeResult) extraBboxPts.push(...hingeResult.arc.points);
   if (params.kind === 'bay-window') {
     // Bay projects past the +perp (exterior) face — mirror the 2D/3D ratio.
@@ -131,8 +131,8 @@ export function computeOpeningGeometry(
       { x: vtx[3].x + px * proj, y: vtx[3].y + py * proj, z: 0 },
     );
   }
-  const bboxPoints: readonly Point3D[] = extraBboxPts.length
-    ? ([...outline.vertices, ...extraBboxPts] as Point3D[])
+  const bboxPoints: readonly BimPoint[] = extraBboxPts.length
+    ? ([...outline.vertices, ...extraBboxPts] as BimPoint[])
     : outline.vertices;
   const bbox = computeBbox(bboxPoints, params.sillHeight, params.height);
 
@@ -203,9 +203,9 @@ function buildOutline(
   px: number,
   py: number,
   halfT: number,
-  outerPts: readonly Point3D[] | undefined,
-  innerPts: readonly Point3D[] | undefined,
-): Polygon3D {
+  outerPts: readonly BimPoint[] | undefined,
+  innerPts: readonly BimPoint[] | undefined,
+): BimPolygon {
   const start = jambCorners(startAxis, px, py, halfT, outerPts, innerPts);
   const end = jambCorners(endAxis, px, py, halfT, outerPts, innerPts);
   return { vertices: [start.minus, end.minus, end.plus, start.plus] };
@@ -221,12 +221,12 @@ function jambCorners(
   px: number,
   py: number,
   halfT: number,
-  outerPts: readonly Point3D[] | undefined,
-  innerPts: readonly Point3D[] | undefined,
-): { plus: Point3D; minus: Point3D } {
-  let plus: Point3D | null = null, plusProj = 0;
-  let minus: Point3D | null = null, minusProj = 0;
-  const consider = (h: Point3D | null): void => {
+  outerPts: readonly BimPoint[] | undefined,
+  innerPts: readonly BimPoint[] | undefined,
+): { plus: BimPoint; minus: BimPoint } {
+  let plus: BimPoint | null = null, plusProj = 0;
+  let minus: BimPoint | null = null, minusProj = 0;
+  const consider = (h: BimPoint | null): void => {
     if (!h) return;
     const proj = (h.x - origin.x) * px + (h.y - origin.y) * py;
     if (Math.abs(proj) > halfT * MAX_JAMB_REACH) return;
@@ -247,9 +247,9 @@ function jambCorners(
  * δεν τέμνεται εντός τμήματος.
  */
 function lineHitPolyline(
-  ox: number, oy: number, dx: number, dy: number, pts: readonly Point3D[],
-): Point3D | null {
-  let best: Point3D | null = null;
+  ox: number, oy: number, dx: number, dy: number, pts: readonly BimPoint[],
+): BimPoint | null {
+  let best: BimPoint | null = null;
   let bestAbsT = Infinity;
   for (let i = 0; i < pts.length - 1; i++) {
     const ax = pts[i].x, ay = pts[i].y;
@@ -271,10 +271,10 @@ function lineHitPolyline(
  * sill = sillHeight / 1000 m, head = (sillHeight + height) / 1000 m.
  */
 function computeBbox(
-  vertices: readonly Point3D[],
+  vertices: readonly BimPoint[],
   sillHeightMm: number,
   heightMm: number,
-): BoundingBox3D {
+): BimBounds {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (const v of vertices) {
     if (v.x < minX) minX = v.x;
@@ -298,14 +298,14 @@ function computeBbox(
  * the arc rotates toward the correct face.
  */
 interface HingeArcResult {
-  readonly arc: Polyline3D;
-  readonly hingeAnchor: Point3D;
-  readonly hingeAnchor2?: Point3D;
+  readonly arc: BimPolyline;
+  readonly hingeAnchor: BimPoint;
+  readonly hingeAnchor2?: BimPoint;
 }
 
 function buildHingeArc(
   kind: OpeningKind,
-  center: Point3D,
+  center: BimPoint,
   ux: number,
   uy: number,
   px: number,
@@ -318,7 +318,7 @@ function buildHingeArc(
   const swingSign = params.openDirection === 'outward' ? -1 : 1;
 
   // Hinge point sits on the wall axis at the start/end of the opening.
-  const hinge: Point3D = {
+  const hinge: BimPoint = {
     x: center.x + ux * (handingSign * halfW),
     y: center.y + uy * (handingSign * halfW),
     z: 0,
@@ -331,7 +331,7 @@ function buildHingeArc(
   const perpX = swingSign * px;
   const perpY = swingSign * py;
 
-  const points: Point3D[] = [];
+  const points: BimPoint[] = [];
   for (let i = 0; i <= HINGE_ARC_SUBDIVISIONS; i++) {
     const t = (i / HINGE_ARC_SUBDIVISIONS) * HALF_PI;
     const cos = Math.cos(t);
@@ -344,7 +344,7 @@ function buildHingeArc(
   }
 
   // double-leaf (french-door / double-door) = mirror arc on the opposite jamb.
-  let hinge2: Point3D | undefined;
+  let hinge2: BimPoint | undefined;
   if (isDoubleLeafKind(kind)) {
     hinge2 = {
       x: center.x + ux * (-handingSign * halfW),
@@ -376,7 +376,7 @@ function buildHingeArc(
  * Consumed by the 3D temporary-dimension overlay (ADR-363 Φ1G.5 Slice 2f) to anchor
  * witness lines on the wall axis without re-deriving the walk.
  */
-export function wallAxisPointAtOffsetMm(hostOrWall: WallEntity | OpeningHost, offsetMm: number): Point3D {
+export function wallAxisPointAtOffsetMm(hostOrWall: WallEntity | OpeningHost, offsetMm: number): BimPoint {
   const host = resolveOpeningHost(hostOrWall);
   const mmFactor = mmToSceneUnits(host.sceneUnits);
   return walkPolylineToDistance(host.axisVerticesScene, Math.max(0, offsetMm) * mmFactor).point;

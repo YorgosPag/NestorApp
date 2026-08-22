@@ -28,6 +28,7 @@
  */
 
 import { azimuthToOrientation, getOverhangShadingFactor } from './annual-gains-config';
+import type { PlanarPoint } from '../../types/bim-base';
 
 const RAD_TO_DEG = 180 / Math.PI;
 const DEG_TO_RAD = Math.PI / 180;
@@ -36,24 +37,18 @@ const MM_TO_M = 0.001;
 /** Κάτω από αυτό το μήκος μια απόσταση/γωνία θεωρείται μηδενική (degenerate). */
 const PROJECTION_EPS = 1e-6;
 
-/** Σημείο XY (world coords, μονάδα σκηνής). */
-export interface Point2DLike {
-  readonly x: number;
-  readonly y: number;
-}
-
 /** Ένας οριζόντιος πρόβολος (πλάκα/οροφή/μπαλκόνι) ως κλειστό πολύγωνο XY. */
 export interface OverhangOutline {
   /** Closed polygon XY (world coords, μονάδα σκηνής). Min 3 κορυφές. */
-  readonly polygonXY: readonly Point2DLike[];
+  readonly polygonXY: readonly PlanarPoint[];
 }
 
 /** Παράμετροι του βάθους προβόλου `d_ov` (ray-cast από το facade προς τα έξω). */
 export interface OverhangProjectionInput {
   /** Εξωτ. πρόσωπο τοίχου στη θέση του παραθύρου (αρχή της ακτίνας). */
-  readonly facadePoint: Point2DLike;
+  readonly facadePoint: PlanarPoint;
   /** **Μοναδιαίος** outward normal του παραθύρου (από `azimuthDeg`). */
-  readonly outwardNormal: Point2DLike;
+  readonly outwardNormal: PlanarPoint;
   /** Τα candidate overhang outlines (πλάκες πάνω από το παράθυρο). */
   readonly outlines: readonly OverhangOutline[];
 }
@@ -64,10 +59,10 @@ export interface OverhangProjectionInput {
  * είναι μοναδιαίο ⇒ `t` = πραγματική απόσταση. Cramer επί `[n, −d]·[t,u]ᵀ = a−F`.
  */
 function raySegmentExitDistance(
-  f: Point2DLike,
-  n: Point2DLike,
-  a: Point2DLike,
-  b: Point2DLike,
+  f: PlanarPoint,
+  n: PlanarPoint,
+  a: PlanarPoint,
+  b: PlanarPoint,
 ): number | null {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
@@ -82,24 +77,42 @@ function raySegmentExitDistance(
 }
 
 /**
+ * **Ο κοινός σκελετός** των δύο αναζητήσεων παρακάτω: διατρέχει κάθε ακμή κάθε outline,
+ * ρωτά την **ΙΔΙΑ** `raySegmentExitDistance`, και διπλώνει τα χτυπήματα με τον `fold` του
+ * καλούντος. Οι δύο συναρτήσεις διαφέρουν **μόνο** στο αρχικό στοιχείο και στο κριτήριο
+ * επιλογής (max exit έναντι min θετικής τομής) — τα πάντα άλλα ήταν token-ταυτόσημα, και
+ * το CHECK 3.28 (jscpd) το ανέφερε μόλις το αρχείο ξανα-αγγίχθηκε (ADR-792 Boy Scout).
+ *
+ * `0` επιστρέφεται από τους καλούντες όταν ο normal είναι degenerate — ο έλεγχος ζει εδώ,
+ * ώστε να μην ξεχαστεί στον **τρίτο** καλούντα.
+ */
+function foldRayHits(
+  input: OverhangProjectionInput,
+  seed: number,
+  fold: (best: number, hit: number) => number,
+): number {
+  const { facadePoint: f, outwardNormal: n, outlines } = input;
+  if (Math.hypot(n.x, n.y) < PROJECTION_EPS) return 0;
+
+  let best = seed;
+  for (const outline of outlines) {
+    const poly = outline.polygonXY;
+    if (poly.length < 3) continue;
+    for (let i = 0; i < poly.length; i++) {
+      const hit = raySegmentExitDistance(f, n, poly[i], poly[(i + 1) % poly.length]);
+      if (hit !== null) best = fold(best, hit);
+    }
+  }
+  return best;
+}
+
+/**
  * Βάθος προβόλου `d_ov` (ίδια μονάδα με τα inputs): η μέγιστη απόσταση κατά μήκος
  * του outward normal που η ακτίνα από το facade διασχίζει κάποιο overhang outline.
  * `0` αν δεν υπάρχει πρόβολος ή ο normal είναι degenerate. Idempotent.
  */
 export function computeOverhangProjection(input: OverhangProjectionInput): number {
-  const { facadePoint: f, outwardNormal: n, outlines } = input;
-  if (Math.hypot(n.x, n.y) < PROJECTION_EPS) return 0;
-
-  let maxDist = 0;
-  for (const outline of outlines) {
-    const poly = outline.polygonXY;
-    if (poly.length < 3) continue;
-    for (let i = 0; i < poly.length; i++) {
-      const dist = raySegmentExitDistance(f, n, poly[i], poly[(i + 1) % poly.length]);
-      if (dist !== null && dist > maxDist) maxDist = dist;
-    }
-  }
-  return maxDist;
+  return foldRayHits(input, 0, (best, d) => (d > best ? d : best));
 }
 
 /**
@@ -112,19 +125,8 @@ export function computeOverhangProjection(input: OverhangProjectionInput): numbe
  * Idempotent.
  */
 export function computeNearestObstacleDistance(input: OverhangProjectionInput): number {
-  const { facadePoint: f, outwardNormal: n, outlines } = input;
-  if (Math.hypot(n.x, n.y) < PROJECTION_EPS) return 0;
-
-  let minDist = Infinity;
-  for (const outline of outlines) {
-    const poly = outline.polygonXY;
-    if (poly.length < 3) continue;
-    for (let i = 0; i < poly.length; i++) {
-      const dist = raySegmentExitDistance(f, n, poly[i], poly[(i + 1) % poly.length]);
-      if (dist !== null && dist >= 0 && dist < minDist) minDist = dist;
-    }
-  }
-  return Number.isFinite(minDist) ? minDist : 0;
+  const nearest = foldRayHits(input, Infinity, (best, d) => (d >= 0 && d < best ? d : best));
+  return Number.isFinite(nearest) ? nearest : 0;
 }
 
 /** Παράμετροι της γωνίας προβόλου `β` (ίδια μονάδα για `d_ov` και `height`). */
@@ -149,7 +151,7 @@ export function computeOverhangAngleDeg(input: OverhangAngleInput): number {
 /** Per-window inputs για το end-to-end `F_ov` (assembled από τον resolver). */
 export interface WindowOverhangInput {
   /** Θέση κουφώματος στο όριο του χώρου (world XY, μονάδα σκηνής). */
-  readonly openingPos: Point2DLike;
+  readonly openingPos: PlanarPoint;
   /** Αζιμούθιο outward normal του παραθύρου (deg, 0°=Βορράς, clockwise). */
   readonly azimuthDeg: number;
   /** mm — ύψος ποδιάς πάνω από το δάπεδο. */
@@ -178,9 +180,9 @@ export interface WindowOverhangInput {
 export function resolveWindowOverhangFactor(input: WindowOverhangInput): number | undefined {
   if (input.outlines.length === 0) return undefined;
   const azRad = input.azimuthDeg * DEG_TO_RAD;
-  const normal: Point2DLike = { x: Math.sin(azRad), y: Math.cos(azRad) };
+  const normal: PlanarPoint = { x: Math.sin(azRad), y: Math.cos(azRad) };
   const thicknessScene = (input.wallThicknessMm * MM_TO_M) / input.sceneToM;
-  const facadePoint: Point2DLike = {
+  const facadePoint: PlanarPoint = {
     x: input.openingPos.x + normal.x * thicknessScene,
     y: input.openingPos.y + normal.y * thicknessScene,
   };

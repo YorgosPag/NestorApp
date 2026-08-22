@@ -14,7 +14,7 @@
  * @see ./envelope-perimeter (consumer — computeEnvelopePerimeter)
  */
 
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import type { ColumnParams } from '../types/column-types';
 import { computeColumnGeometry } from './column-geometry';
 import { pointInPolygon, polygonCentroid } from './shared/polygon-utils';
@@ -33,7 +33,7 @@ export interface ColumnForEnvelope {
 /** Προ-υπολογισμένη κολώνα: footprint (canvas units, CCW) + κέντρο. */
 export interface PreparedColumn {
   readonly id: string;
-  readonly footprint: readonly Point3D[];
+  readonly footprint: readonly BimPoint[];
   readonly center: { readonly x: number; readonly y: number };
 }
 
@@ -67,11 +67,11 @@ export function columnIdFromNodeKey(key: string): string {
  * test stubs χωρίς anchor/kind) → skip gracefully (empty footprint = δεν γεφυρώνει).
  */
 export function prepareColumns(
-  columns: readonly (ColumnForEnvelope & { geometry?: { footprint?: { vertices?: readonly Point3D[] } } })[],
+  columns: readonly (ColumnForEnvelope & { geometry?: { footprint?: { vertices?: readonly BimPoint[] } } })[],
 ): PreparedColumn[] {
   const result: PreparedColumn[] = [];
   for (const c of columns) {
-    let footprint: readonly Point3D[] | undefined = c.geometry?.footprint?.vertices;
+    let footprint: readonly BimPoint[] | undefined = c.geometry?.footprint?.vertices;
     if (!footprint || footprint.length < 3) {
       if (!c.params.anchor || !c.params.kind || !c.params.position) continue;
       try {
@@ -88,7 +88,7 @@ export function prepareColumns(
 }
 
 /** Απόσταση σημείου από footprint (0 αν είναι μέσα). */
-function distanceToFootprint(point: Point3D, footprint: readonly Point3D[]): number {
+function distanceToFootprint(point: BimPoint, footprint: readonly BimPoint[]): number {
   const n = footprint.length;
   if (n < 3) return Number.POSITIVE_INFINITY;
   if (pointInPolygon(point, footprint)) return 0;
@@ -105,7 +105,7 @@ function distanceToFootprint(point: Point3D, footprint: readonly Point3D[]): num
  * `tolCanvas` (ή το περικλείει), αλλιώς `null`.
  */
 export function captureColumnId(
-  point: Point3D,
+  point: BimPoint,
   columns: readonly PreparedColumn[],
   tolCanvas: number,
 ): string | null {
@@ -131,7 +131,7 @@ function dist2(a: { x: number; y: number }, b: { x: number; y: number }): number
   return dx * dx + dy * dy;
 }
 
-function nearestVertexIdx(footprint: readonly Point3D[], target: { x: number; y: number }): number {
+function nearestVertexIdx(footprint: readonly BimPoint[], target: { x: number; y: number }): number {
   let idx = 0;
   let best = Number.POSITIVE_INFINITY;
   for (let i = 0; i < footprint.length; i++) {
@@ -153,7 +153,7 @@ function pathIndices(from: number, to: number, n: number, dir: 1 | -1): number[]
   return out;
 }
 
-function meanDistToCentroid(pts: readonly Point3D[], c: { x: number; y: number }): number {
+function meanDistToCentroid(pts: readonly BimPoint[], c: { x: number; y: number }): number {
   if (pts.length === 0) return 0;
   let sum = 0;
   for (const p of pts) sum += Math.sqrt(dist2(p, c));
@@ -167,11 +167,11 @@ function meanDistToCentroid(pts: readonly Point3D[], c: { x: number; y: number }
  * `centroid` (= η εξωτερική). Επιστρέφει τις κορυφές του τόξου (inclusive).
  */
 export function columnExteriorArc(
-  footprint: readonly Point3D[],
+  footprint: readonly BimPoint[],
   fromPoint: { x: number; y: number },
   toPoint: { x: number; y: number },
   centroid: { x: number; y: number },
-): Point3D[] {
+): BimPoint[] {
   const n = footprint.length;
   if (n < 3) return [];
   const entry = nearestVertexIdx(footprint, fromPoint);

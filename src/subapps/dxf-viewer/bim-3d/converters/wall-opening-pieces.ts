@@ -23,7 +23,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-396-bim-external-thermal-envelope-etics.md §3
  */
 
-import type { Point3D } from '../../bim/types/bim-base';
+import type { BimPoint } from '../../bim/types/bim-base';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
 import { mmToSceneUnits } from '../../utils/scene-units';
@@ -49,7 +49,7 @@ const MM_TO_M = 0.001;
  */
 export interface WallOpeningPiece {
   /** 4 plan κορυφές `[outer@a, outer@b, inner@b, inner@a]` (ίδιο winding με buildWallShape). */
-  readonly quad: readonly [Point3D, Point3D, Point3D, Point3D];
+  readonly quad: readonly [BimPoint, BimPoint, BimPoint, BimPoint];
   /** Base (ΜΕΤΡΑ) στη boundary `a`. Flat πάτος → `zBotAM === zBotBM`. */
   readonly zBotAM: number;
   /** Base (ΜΕΤΡΑ) στη boundary `b`. */
@@ -100,16 +100,16 @@ export interface WallBaseLocalFn {
 
 interface Boundary {
   readonly f: number;
-  readonly outer: Point3D;
-  readonly inner: Point3D;
+  readonly outer: BimPoint;
+  readonly inner: BimPoint;
 }
 
-function lerpPt(p: Point3D, q: Point3D, t: number): Point3D {
+function lerpPt(p: BimPoint, q: BimPoint, t: number): BimPoint {
   return { x: p.x + (q.x - p.x) * t, y: p.y + (q.y - p.y) * t, z: 0 };
 }
 
 /** Απόσταση² σημείου `p` από την άπειρη γραμμή `a→b`. */
-function distToLine2(p: Point3D, a: Point3D, b: Point3D): number {
+function distToLine2(p: BimPoint, a: BimPoint, b: BimPoint): number {
   const dx = b.x - a.x, dy = b.y - a.y;
   const len2 = dx * dx + dy * dy;
   if (len2 < 1e-12) { const ex = p.x - a.x, ey = p.y - a.y; return ex * ex + ey * ey; }
@@ -149,7 +149,7 @@ export function computeWallOpeningPieces(
   const lerpBoundary = (f: number): Boundary => ({ f, outer: lerpPt(oS, oE, f), inner: lerpPt(iS, iE, f) });
 
   // Από δύο jamb γωνίες outline → ποια είναι στην εξωτ. (πλησιέστερη στη γραμμή outer).
-  const classify = (cA: Point3D, cB: Point3D): { outer: Point3D; inner: Point3D } =>
+  const classify = (cA: BimPoint, cB: BimPoint): { outer: BimPoint; inner: BimPoint } =>
     distToLine2(cA, oS, oE) <= distToLine2(cB, oS, oE)
       ? { outer: cA, inner: cB }
       : { outer: cB, inner: cA };

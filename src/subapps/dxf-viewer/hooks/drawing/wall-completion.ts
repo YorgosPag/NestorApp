@@ -16,7 +16,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { Point3D } from '../../bim/types/bim-base';
+import type { BimPoint } from '../../bim/types/bim-base';
 import { translatePoint3D } from '../../rendering/entities/shared/geometry-vector-utils';
 import type {
   WallCategory,
@@ -143,8 +143,8 @@ export function buildDefaultWallParams(
   const offset = alignmentPoint
     ? computeWallAlignmentOffset(startPoint, endPoint, alignmentPoint, thickness, sceneUnits)
     : { x: 0, y: 0 };
-  const start: Point3D = translatePoint3D(startPoint, offset);
-  const end: Point3D = translatePoint3D(endPoint, offset);
+  const start: BimPoint = translatePoint3D(startPoint, offset);
+  const end: BimPoint = translatePoint3D(endPoint, offset);
 
   const base = {
     category,
@@ -223,13 +223,10 @@ export function defaultEdgeAlignmentPoint(
   startPoint: Readonly<Point2D>,
   endPoint: Readonly<Point2D>,
 ): Point2D | null {
-  const dx = endPoint.x - startPoint.x;
-  const dy = endPoint.y - startPoint.y;
-  const len = Math.hypot(dx, dy);
-  if (len < 1e-9) return null;
-  // +n_ccw (left of A→B direction): any positive distance picks the left side
-  // in `computeWallAlignmentOffset` (cross > 0).
-  return { x: startPoint.x + (-dy / len), y: startPoint.y + (dx / len) };
+  // +n_ccw (left of A→B direction) = ΑΚΡΙΒΩΣ το justification 'left' — μία μηχανή, όχι δύο
+  // (N.0.2 dedup): το σχόλιο του `edgeAlignmentPointForJustification` το δήλωνε ήδη ρητά,
+  // ενώ ο τύπος από κάτω ήταν αντιγραμμένος.
+  return edgeAlignmentPointForJustification(startPoint, endPoint, 'left');
 }
 
 /**

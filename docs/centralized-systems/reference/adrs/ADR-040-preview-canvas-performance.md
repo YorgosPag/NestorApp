@@ -6247,3 +6247,17 @@ pan/zoom ⇒ χρειάζονται `transform`, που είναι **υψηλή�
 `components/dxf-layout/BasemapPlacementLeaf.tsx` (+1 mount, +1 prop)· NEW
 `components/dxf-layout/BasemapCorrespondenceMarksLeaf.tsx`,
 `components/dxf-layout/basemap-correspondence-marks.ts` (καθαρή γεωμετρία, μηδέν React).
+
+## 2026-08-22 — ADR-792: `Point3D` → `BimPoint` στο συμβόλαιο των leaves (CHECK 6B stage, μηδέν αρχιτεκτονική αλλαγή)
+
+Καθαρή μετονομασία τύπου, **καμία** αλλαγή στο μοντέλο συνδρομών: το `canvas-layer-stack-types.ts`
+δηλώνει το συμβόλαιο props των micro-leaves και ανέφερε το `Point3D` του `bim/types/bim-base`, που
+το ADR-792 μετονόμασε σε `BimPoint`. Το όνομα δηλώνει πλέον τι **εγγυάται** ο τύπος (προαιρετικό `z`)
+αντί να διεκδικεί διάσταση που δεν διαβάζεται — και σταματά να συγκρούεται με το ομώνυμο `Point3D`
+του `rendering/types/Types`, όπου το `z` είναι **υποχρεωτικό**.
+
+⚠️ Κανένας leaf δεν άλλαξε συνδρομή, κανένα prop δεν προστέθηκε/αφαιρέθηκε, καμία τιμή δεν άλλαξε
+νόημα. Η καταχώριση υπάρχει επειδή το CHECK 6B φυλάει το **αρχείο**, όχι το είδος της αλλαγής —
+και αυτό είναι σωστό: ο φρουρός δεν επιτρέπεται να κρίνει μόνος του τι είναι «αθώο».
+
+**Files**: MOD `components/dxf-layout/canvas-layer-stack-types.ts` (import type only).
