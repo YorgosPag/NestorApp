@@ -26,10 +26,13 @@ import { withAuth, logPermissionGranted, logPermissionRevoked, getAllPermissionS
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
-import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
-import { getErrorMessage } from '@/lib/error-utils';
 import { extractUidFromPath } from '@/lib/api/route-helpers';
+import {
+  failWithLoggedError,
+  loadWorkspaceMember,
+  parseJsonBody,
+} from '@/lib/api/role-management-helpers';
 
 const logger = createModuleLogger('RoleManagement:PermissionSets');
 
@@ -85,23 +88,10 @@ export const PATCH = withSensitiveRateLimit(
       }
 
       try {
-        // Parse and validate request body
-        let body: UpdatePermissionSetsInput;
-        try {
-          const rawBody: unknown = await request.json();
-          body = UpdatePermissionSetsSchema.parse(rawBody);
-        } catch (validationError) {
-          if (validationError instanceof z.ZodError) {
-            return NextResponse.json(
-              { success: false, error: 'Validation failed', details: validationError.errors },
-              { status: 400 }
-            );
-          }
-          return NextResponse.json(
-            { success: false, error: 'Invalid JSON body' },
-            { status: 400 }
-          );
-        }
+        // Parse + validate (SSoT: lib/api/role-management-helpers).
+        const parsed = await parseJsonBody(request, UpdatePermissionSetsSchema);
+        if (!parsed.ok) return parsed.response;
+        const body = parsed.value;
 
         // Validate all permission set IDs exist in the registry
         const validIds = getAllPermissionSetIds();
@@ -121,18 +111,11 @@ export const PATCH = withSensitiveRateLimit(
 
         const db = getAdminFirestore();
 
-        // Tenant isolation: verify target exists in company members
-        const memberPath = `${COLLECTIONS.COMPANIES}/${ctx.companyId}/${SUBCOLLECTIONS.COMPANY_MEMBERS}/${targetUid}`;
-        const memberSnap = await db.doc(memberPath).get();
+        // Tenant isolation: verify target exists in company members.
+        const member = await loadWorkspaceMember(db, ctx.companyId, targetUid);
+        if (!member.ok) return member.response;
 
-        if (!memberSnap.exists) {
-          return NextResponse.json(
-            { success: false, error: 'User not found in this company' },
-            { status: 404 }
-          );
-        }
-
-        const memberData = memberSnap.data();
+        const memberData = member.value.data;
         const currentSetIds: string[] = Array.isArray(memberData?.permissionSetIds)
           ? memberData.permissionSetIds as string[]
           : [];
@@ -149,7 +132,7 @@ export const PATCH = withSensitiveRateLimit(
         }
 
         // Update Firestore member document
-        await db.doc(memberPath).update({
+        await member.value.ref.update({
           permissionSetIds: body.permissionSetIds,
           updatedAt: FieldValue.serverTimestamp(),
           updatedBy: ctx.uid,
@@ -184,13 +167,10 @@ export const PATCH = withSensitiveRateLimit(
           },
         });
       } catch (error) {
-        const message = getErrorMessage(error, 'Failed to update permission sets');
-        logger.error('Permission sets update failed', {
-          error: message,
+        return failWithLoggedError(logger, 'Permission sets update failed', error, 'Failed to update permission sets', {
           targetUid,
           companyId: ctx.companyId,
         });
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
       }
     },
     { requiredGlobalRoles: ['super_admin'] }

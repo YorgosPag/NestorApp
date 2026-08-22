@@ -27,12 +27,15 @@ import { z } from 'zod';
 import { withAuth, logRoleChange, logClaimsUpdated } from '@/lib/auth';
 import type { AuthContext, PermissionCache, GlobalRole } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
-import { getAdminAuth, getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
+import { FieldValue } from '@/lib/firebaseAdmin';
 import { setClaimsWithMirror } from '@/lib/auth/set-claims-with-mirror';
-import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
-import { getErrorMessage } from '@/lib/error-utils';
 import { extractUidFromPath } from '@/lib/api/route-helpers';
+import {
+  failWithLoggedError,
+  parseJsonBody,
+  prepareMemberMutation,
+} from '@/lib/api/role-management-helpers';
 
 const logger = createModuleLogger('RoleManagement:ChangeRole');
 
@@ -72,47 +75,18 @@ export const PATCH = withSensitiveRateLimit(
       }
 
       try {
-        // Parse and validate request body
-        let body: ChangeRoleInput;
-        try {
-          const rawBody: unknown = await request.json();
-          body = ChangeRoleSchema.parse(rawBody);
-        } catch (validationError) {
-          if (validationError instanceof z.ZodError) {
-            return NextResponse.json(
-              { success: false, error: 'Validation failed', details: validationError.errors },
-              { status: 400 }
-            );
-          }
-          return NextResponse.json(
-            { success: false, error: 'Invalid JSON body' },
-            { status: 400 }
-          );
-        }
+        // Parse + validate (SSoT: lib/api/role-management-helpers).
+        const parsed = await parseJsonBody(request, ChangeRoleSchema);
+        if (!parsed.ok) return parsed.response;
+        const body = parsed.value;
 
-        // Self-protection: cannot change own role
-        if (targetUid === ctx.uid) {
-          return NextResponse.json(
-            { success: false, error: 'Cannot change your own role' },
-            { status: 403 }
-          );
-        }
+        // Self-protection: cannot change own role + tenant isolation, σε ΕΝΑ βήμα
+        // (SSoT: lib/api/role-management-helpers).
+        const prepared = await prepareMemberMutation(ctx, targetUid, 'Cannot change your own role');
+        if (!prepared.ok) return prepared.response;
+        const { auth, member } = prepared.value;
 
-        const db = getAdminFirestore();
-        const auth = getAdminAuth();
-
-        // Tenant isolation: verify target exists in company members
-        const memberPath = `${COLLECTIONS.COMPANIES}/${ctx.companyId}/${SUBCOLLECTIONS.COMPANY_MEMBERS}/${targetUid}`;
-        const memberSnap = await db.doc(memberPath).get();
-
-        if (!memberSnap.exists) {
-          return NextResponse.json(
-            { success: false, error: 'User not found in this company' },
-            { status: 404 }
-          );
-        }
-
-        const memberData = memberSnap.data();
+        const memberData = member.data;
         const existingRole = (memberData?.globalRole as GlobalRole) ?? 'internal_user';
 
         // Prevent no-op
@@ -125,7 +99,7 @@ export const PATCH = withSensitiveRateLimit(
 
         // Atomic dual-write: Firestore + Firebase Auth custom claims
         // 1. Update Firestore member document
-        await db.doc(memberPath).update({
+        await member.ref.update({
           globalRole: body.newRole,
           updatedAt: FieldValue.serverTimestamp(),
           updatedBy: ctx.uid,
@@ -166,13 +140,10 @@ export const PATCH = withSensitiveRateLimit(
           },
         });
       } catch (error) {
-        const message = getErrorMessage(error, 'Failed to change user role');
-        logger.error('Role change failed', {
-          error: message,
+        return failWithLoggedError(logger, 'Role change failed', error, 'Failed to change user role', {
           targetUid,
           companyId: ctx.companyId,
         });
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
       }
     },
     { requiredGlobalRoles: ['super_admin'] }

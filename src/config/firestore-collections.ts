@@ -150,9 +150,16 @@ export const COLLECTIONS = {
   ROLES: process.env.NEXT_PUBLIC_ROLES_COLLECTION || 'roles',
   PERMISSIONS: process.env.NEXT_PUBLIC_PERMISSIONS_COLLECTION || 'permissions',
 
-  // 🏢 WORKSPACES (ADR-032: Workspace-based Multi-Tenancy)
+  // 🏢 WORKSPACES (ADR-787 — η πολυ-οργανισμική πλατφόρμα)
+  //
+  // ⛔ ΤΟ top-level `WORKSPACE_MEMBERS` ΔΙΑΓΡΑΦΗΚΕ (ADR-787 §5.1 γ, 2026-08-22).
+  //    Μετρημένο: **0 έγγραφα · 0 καταναλωτές · 0 κανόνες ασφαλείας**· η μόνη
+  //    αναφορά του σε όλο το `src/` ήταν **σχόλιο TODO**. Ήταν τρίτο σχήμα για
+  //    ερώτηση που έχει ήδη απάντηση.
+  //    ⚠️ Το **όνομα** δεν χάθηκε — **ΚΑΤΕΒΗΚΕ** στο επίπεδο όπου είναι σωστό:
+  //    υποσυλλογή `SUBCOLLECTIONS.WORKSPACE_MEMBERS` κάτω από τον χώρο.
+  //    ⛔ ΜΗΝ το ξαναφτιάξεις εδώ ως top-level.
   WORKSPACES: process.env.NEXT_PUBLIC_WORKSPACES_COLLECTION || 'workspaces',
-  WORKSPACE_MEMBERS: process.env.NEXT_PUBLIC_WORKSPACE_MEMBERS_COLLECTION || 'workspace_members',
 
   // 🔄 RELATIONSHIPS
   RELATIONSHIPS: process.env.NEXT_PUBLIC_RELATIONSHIPS_COLLECTION || 'relationships',
@@ -710,8 +717,25 @@ export const SUBCOLLECTIONS = {
   // Project subcollections (RBAC: /companies/{id}/projects/{id}/members)
   PROJECT_MEMBERS: process.env.NEXT_PUBLIC_PROJECT_MEMBERS_SUBCOL || 'members',
 
-  // Company member subcollections (ADR-244: Role Management — /companies/{id}/members/{uid})
-  COMPANY_MEMBERS: process.env.NEXT_PUBLIC_COMPANY_MEMBERS_SUBCOL || 'members',
+  // 🔴 ΜΕΛΟΣ ΧΩΡΟΥ — /companies/{id}/workspace_members/{uid}
+  //    (ADR-244 Role Management · ADR-787 Κ-2 §5.1 γ)
+  //
+  //    ⚠️ ΤΟ ΟΝΟΜΑ ΕΙΝΑΙ ΜΗΧΑΝΙΣΜΟΣ, ΟΧΙ ΓΟΥΣΤΟ. Μέχρι 2026-08-22 λεγόταν
+  //    `COMPANY_MEMBERS: 'members'` — **ταυτόσημο με το `PROJECT_MEMBERS`
+  //    ακριβώς από πάνω**. Το Firestore απαντά το «σε ποιους χώρους ανήκω;» με
+  //    collection group query, που σαρώνει **κατά όνομα συλλογής** ⇒ με το ίδιο
+  //    όνομα και στα δύο επίπεδα, ένας συνεργάτης καλεσμένος σε **ΕΝΑ ΕΡΓΟ** θα
+  //    επιστρεφόταν ως **μέλος ΟΛΟΚΛΗΡΟΥ ΤΟΥ ΓΡΑΦΕΙΟΥ** — σιωπηλά, με κάθε
+  //    πύλη πράσινη (το Κ-3 φτάνοντας ως **σφάλμα** αντί ως λειτουργία).
+  //
+  //    ⛔ ΜΗΝ το επαναφέρεις σε `'members'`, και ⛔ ΜΗΝ «λύσεις» τη σύγκρουση με
+  //    φίλτρο τύπου «αγνόησε όσα έχουν projectId»: φίλτρο που πρέπει να
+  //    **θυμάσαι** είναι το σχήμα που το repo έχει ήδη πληρώσει στα CHECK 3.34
+  //    (δύο λίστες namespace, απόκλιση 63) και 3.37 (λίστα 18 έναντι δέντρου 26).
+  //
+  //    ✅ Μετρημένο πριν την αλλαγή: **0 έγγραφα** στη ζωντανή συλλογή
+  //       ⇒ μηδενική μετανάστευση (ADR-787 §5.1 α).
+  WORKSPACE_MEMBERS: process.env.NEXT_PUBLIC_WORKSPACE_MEMBERS_SUBCOL || 'workspace_members',
 
   // Property subcollections (RBAC: /companies/{id}/properties/{id}/grants)
   PROPERTY_GRANTS: process.env.NEXT_PUBLIC_PROPERTY_GRANTS_SUBCOL || 'grants',
@@ -857,7 +881,7 @@ export const SUBCOLLECTION_PARENTS: Record<string, string> = {
   // Company subcollections → COMPANIES
   COMPANY_PROJECTS: 'COMPANIES',
   COMPANY_PROPERTIES: 'COMPANIES',
-  COMPANY_MEMBERS: 'COMPANIES',
+  WORKSPACE_MEMBERS: 'COMPANIES',
   COMPANY_AUDIT_LOGS: 'COMPANIES',
 
   // File subcollections → FILES

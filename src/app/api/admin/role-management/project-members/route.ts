@@ -25,7 +25,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 import { PROJECT_NOT_FOUND_MESSAGE } from '@/app/api/projects/_shared/project-ownership';
-import type { MemberDoc, UserProfileDoc, PostBody } from './types';
+import type { ProjectMemberDoc, UserProfileDoc, PostBody } from './types';
 import {
   assignMember,
   updateMember,
@@ -140,7 +140,7 @@ export const GET = withSensitiveRateLimit(
 
         // Collect UIDs for enrichment (uid is a field, doc ID is enterprise ID)
         const memberDocs = membersSnap.docs.map((doc) => {
-          const data = doc.data() as MemberDoc;
+          const data = doc.data() as ProjectMemberDoc;
           return {
             ...data,
             uid: data.uid ?? doc.id, // Backward compat: old docs may use doc.id as uid

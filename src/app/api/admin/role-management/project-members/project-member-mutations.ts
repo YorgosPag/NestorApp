@@ -23,7 +23,7 @@ import { logAuditEvent } from '@/lib/auth';
 import type { AuthContext } from '@/lib/auth';
 import { FieldValue } from '@/lib/firebaseAdmin';
 import { generateMemberId } from '@/services/enterprise-id.service';
-import type { MemberDoc, PostBody } from './types';
+import type { ProjectMemberDoc, PostBody } from './types';
 
 /** Η συλλογή μελών ενός έργου, ήδη περιορισμένη στον μισθωτή του καλούντος. */
 type MembersCollection = FirebaseFirestore.CollectionReference;
@@ -48,7 +48,7 @@ async function findMemberByUid(
 async function loadExistingMember(
   membersCol: MembersCollection,
   uid: string,
-): Promise<{ doc: MemberSnapshot; prev: MemberDoc } | { missing: NextResponse }> {
+): Promise<{ doc: MemberSnapshot; prev: ProjectMemberDoc } | { missing: NextResponse }> {
   const doc = await findMemberByUid(membersCol, uid);
 
   if (!doc) {
@@ -60,7 +60,7 @@ async function loadExistingMember(
     };
   }
 
-  return { doc, prev: doc.data() as MemberDoc };
+  return { doc, prev: doc.data() as ProjectMemberDoc };
 }
 
 export interface MutationContext {

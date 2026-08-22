@@ -32,28 +32,92 @@ import type {
 import { isValidGlobalRole } from './types';
 import { getDevCompanyId } from '@/config/dev-environment';
 import { SESSION_COOKIE_CONFIG } from '@/lib/auth/security-policy';
-import { isRoleBypass } from '@/lib/auth/roles';
+// 🎫 ADR-787 Κ-2 — ο ΕΝΑΣ απαντητής του «είναι μέλος;».
+// ⚠️ Το `isRoleBypass` έφυγε από εδώ επίτηδες: ο έλεγχος ρόλου έπαψε να είναι
+//    *η απόφαση* και έγινε **μία από τις επτά ετυμηγορίες** μέσα στον απαντητή
+//    (`platform-bypass`). Δεύτερος έλεγχος ρόλου εδώ θα ήταν δεύτερη αυθεντία.
+import { decideMembership } from '@/lib/auth/workspace-membership';
+import { isAllowed, orgWorkspace, type MembershipVerdict } from '@/types/workspace-membership';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('auth-context');
 
 const SUPER_ADMIN_COMPANY_HEADER = 'x-super-admin-company-id';
 
-function resolveEffectiveCompanyId(
+/**
+ * Το αποτέλεσμα του *«σε ποιον χώρο ενεργεί αυτό το αίτημα;»*.
+ *
+ * ⚠️ Διακριτή ένωση, **όχι** `{ companyId, overridden }` με «ασφαλή» επιστροφή
+ * στον χώρο του token σε περίπτωση άρνησης. Η σιωπηλή επιστροφή θα ήταν
+ * ακριβώς η βλάβη που απέρριψε το **ADR-787 Ε-5 §7**: *«δύο καρτέλες μαλώνουν
+ * σιωπηλά — αλλάζεις χώρο στη μία, η άλλη αρχίζει να **γράφει αλλού** χωρίς να
+ * το πει»*. Σε εργαλείο όπου ανεβαίνουν **παραδόσεις μελετών**, αυτό είναι
+ * λάθος φάκελος, και η **αρχή Α4 #3** λέει πού καταλήγει.
+ * ⇒ Αίτημα που ονομάζει χώρο όπου δεν επιτρέπεσαι **δεν εξυπηρετείται αλλού·
+ *   απορρίπτεται**.
+ */
+type WorkspaceResolution =
+  | {
+      readonly ok: true;
+      readonly companyId: string;
+      readonly overridden: boolean;
+      readonly verdict: MembershipVerdict;
+    }
+  | { readonly ok: false; readonly reason: 'workspace_forbidden' | 'workspace_unavailable' };
+
+/**
+ * 🔴 ΤΟ ΣΗΜΕΙΟ ΟΠΟΥ Ο ΔΙΑΚΟΜΙΣΤΗΣ ΑΠΟΦΑΣΙΖΕΙ (ADR-787 Κ-2 · Ε-5)
+ *
+ * Μέχρι 2026-08-22 αυτή η συνάρτηση ρωτούσε **τον ρόλο** (`isRoleBypass`) και
+ * μετά δεχόταν **οποιαδήποτε** τιμή κεφαλίδας — δηλαδή *«ο πελάτης ζητά → ο
+ * διακομιστής **επικυρώνει τον ρόλο**»*, όχι *«→ αποφασίζει»*. Ο έλεγχος
+ * *«είναι μέλος;»* **δεν υπήρχε πουθενά στην πλατφόρμα** (ADR-787 §5.1 α #3).
+ *
+ * Πλέον ρωτά τον **έναν** απαντητή. Είναι το **μοναδικό** σημείο επέμβασης:
+ * ζει μέσα στο `buildRequestContext`, που ζει μέσα στο `withAuth`, που
+ * χρησιμοποιούν **352 αρχεία διαδρομών**.
+ *
+ * ⚠️ Η κεφαλίδα **δεν γενικεύεται** εδώ σε όλους τους ρόλους: το **Ε-5 §5**
+ * αποφάσισε ότι ο μεταφορέας γίνεται η **διεύθυνση** (Φάση 3) — μια κεφαλίδα
+ * είναι αόρατη, δεν στέλνεται σε σύνδεσμο, και δεν ξεχωρίζει δύο καρτέλες.
+ * Άλλαξε **ποιος απαντά** πίσω της, όχι ποιος επιτρέπεται να ρωτήσει.
+ */
+async function resolveEffectiveCompanyId(
   request: NextRequest,
   claims: CustomClaims,
   uid: string,
-): { companyId: string; overridden: boolean } {
-  if (!isRoleBypass(claims.globalRole)) {
-    return { companyId: claims.companyId, overridden: false };
+): Promise<WorkspaceResolution> {
+  const requestedId = request.headers.get(SUPER_ADMIN_COMPANY_HEADER);
+
+  // Κανένα αίτημα για άλλον χώρο ⇒ ο χώρος του υπογεγραμμένου token.
+  // ⚡ **Μηδέν αναγνώσεις** — η συνήθης περίπτωση κάθε αιτήματος (Ε-5 §2).
+  if (!requestedId || requestedId === claims.companyId) {
+    return { ok: true, companyId: claims.companyId, overridden: false, verdict: 'home' };
   }
-  const override = request.headers.get(SUPER_ADMIN_COMPANY_HEADER);
-  if (!override || typeof override !== 'string' || override === claims.companyId) {
-    return { companyId: claims.companyId, overridden: false };
-  }
-  logger.info('[AUTH_CONTEXT] Super admin company override', {
-    uid, original: claims.companyId, override,
+
+  const decision = await decideMembership({
+    uid,
+    claimCompanyId: claims.companyId,
+    globalRole: claims.globalRole,
+    requested: orgWorkspace(requestedId),
   });
-  return { companyId: override, overridden: true };
+
+  if (isAllowed(decision.verdict)) {
+    logger.info('[AUTH_CONTEXT] Ενεργός χώρος διαφορετικός από το token — επιτράπηκε', {
+      uid, original: claims.companyId, requested: requestedId, verdict: decision.verdict,
+    });
+    return { ok: true, companyId: requestedId, overridden: true, verdict: decision.verdict };
+  }
+
+  // ⚠️ Η αιτία κρατιέται **στα ίχνη ακέραιη** (`not-a-member` vs `suspended` vs
+  //    `unknown`)· προς τα **έξω** φεύγει μόνο η αδιάκριτη μορφή της.
+  logger.warn('[AUTH_CONTEXT] Ενεργός χώρος διαφορετικός από το token — απορρίφθηκε', {
+    uid, original: claims.companyId, requested: requestedId, verdict: decision.verdict,
+  });
+
+  return {
+    ok: false,
+    reason: decision.verdict === 'unknown' ? 'workspace_unavailable' : 'workspace_forbidden',
+  };
 }
 
 // =============================================================================
@@ -215,10 +279,10 @@ function extractCustomClaims(token: DecodedIdToken): CustomClaims | null {
  * @param request - the incoming request (for super-admin company override)
  * @returns AuthContext on valid claims, else the matching UnauthenticatedContext
  */
-function contextFromDecodedToken(
+async function contextFromDecodedToken(
   decodedToken: DecodedIdToken | null,
   request: NextRequest,
-): RequestContext {
+): Promise<RequestContext> {
   if (!decodedToken) {
     return createUnauthenticatedContext('invalid_token');
   }
@@ -228,7 +292,11 @@ function contextFromDecodedToken(
     return createUnauthenticatedContext('missing_claims');
   }
 
-  const effective = resolveEffectiveCompanyId(request, claims, decodedToken.uid);
+  const effective = await resolveEffectiveCompanyId(request, claims, decodedToken.uid);
+  if (!effective.ok) {
+    return createUnauthenticatedContext(effective.reason);
+  }
+
   return {
     uid: decodedToken.uid,
     email: decodedToken.email || '',
@@ -237,6 +305,7 @@ function contextFromDecodedToken(
     mfaEnrolled: claims.mfaEnrolled ?? false,
     isAuthenticated: true,
     superAdminOverride: effective.overridden,
+    membershipVerdict: effective.verdict,
   };
 }
 

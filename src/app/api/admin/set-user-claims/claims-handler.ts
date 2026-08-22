@@ -98,7 +98,7 @@ async function syncFirestoreRecords(
   try {
     const memberRef = getAdminFirestore()
       .collection(COLLECTIONS.COMPANIES).doc(companyId)
-      .collection(SUBCOLLECTIONS.COMPANY_MEMBERS).doc(uid);
+      .collection(SUBCOLLECTIONS.WORKSPACE_MEMBERS).doc(uid);
     await memberRef.set({
       uid, globalRole, status: 'active',
       joinedAt: AdminFieldValue.serverTimestamp(),

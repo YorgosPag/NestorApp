@@ -26,11 +26,14 @@ import { z } from 'zod';
 import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
-import { getAdminAuth, getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
-import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
+import { FieldValue } from '@/lib/firebaseAdmin';
 import { createModuleLogger } from '@/lib/telemetry';
-import { getErrorMessage } from '@/lib/error-utils';
 import { extractUidFromPath } from '@/lib/api/route-helpers';
+import {
+  failWithLoggedError,
+  parseJsonBody,
+  prepareMemberMutation,
+} from '@/lib/api/role-management-helpers';
 
 const logger = createModuleLogger('RoleManagement:UserStatus');
 
@@ -70,49 +73,20 @@ export const PATCH = withSensitiveRateLimit(
       }
 
       try {
-        // Parse and validate request body
-        let body: StatusChangeInput;
-        try {
-          const rawBody: unknown = await request.json();
-          body = StatusChangeSchema.parse(rawBody);
-        } catch (validationError) {
-          if (validationError instanceof z.ZodError) {
-            return NextResponse.json(
-              { success: false, error: 'Validation failed', details: validationError.errors },
-              { status: 400 }
-            );
-          }
-          return NextResponse.json(
-            { success: false, error: 'Invalid JSON body' },
-            { status: 400 }
-          );
-        }
+        // Parse + validate (SSoT: lib/api/role-management-helpers).
+        const parsed = await parseJsonBody(request, StatusChangeSchema);
+        if (!parsed.ok) return parsed.response;
+        const body = parsed.value;
 
-        // Self-protection: cannot suspend yourself
-        if (targetUid === ctx.uid) {
-          return NextResponse.json(
-            { success: false, error: 'Cannot change your own account status' },
-            { status: 403 }
-          );
-        }
-
-        const db = getAdminFirestore();
-        const auth = getAdminAuth();
-
-        // Tenant isolation: verify target exists in company members
-        const memberPath = `${COLLECTIONS.COMPANIES}/${ctx.companyId}/${SUBCOLLECTIONS.COMPANY_MEMBERS}/${targetUid}`;
-        const memberSnap = await db.doc(memberPath).get();
-
-        if (!memberSnap.exists) {
-          return NextResponse.json(
-            { success: false, error: 'User not found in this company' },
-            { status: 404 }
-          );
-        }
+        // Self-protection: cannot suspend yourself + tenant isolation, σε ΕΝΑ βήμα
+        // (SSoT: lib/api/role-management-helpers).
+        const prepared = await prepareMemberMutation(ctx, targetUid, 'Cannot change your own account status');
+        if (!prepared.ok) return prepared.response;
+        const { auth, member } = prepared.value;
 
         const isSuspend = body.action === 'suspend';
         const newStatus = isSuspend ? 'suspended' : 'active';
-        const memberData = memberSnap.data();
+        const memberData = member.data;
         const currentStatus = (memberData?.status as string) ?? 'active';
 
         // Prevent no-op
@@ -127,7 +101,7 @@ export const PATCH = withSensitiveRateLimit(
         await auth.updateUser(targetUid, { disabled: isSuspend });
 
         // 2. Update Firestore member document
-        await db.doc(memberPath).update({
+        await member.ref.update({
           status: newStatus,
           updatedAt: FieldValue.serverTimestamp(),
           updatedBy: ctx.uid,
@@ -159,13 +133,10 @@ export const PATCH = withSensitiveRateLimit(
           },
         });
       } catch (error) {
-        const message = getErrorMessage(error, 'Failed to change user status');
-        logger.error('User status change failed', {
-          error: message,
+        return failWithLoggedError(logger, 'User status change failed', error, 'Failed to change user status', {
           targetUid,
           companyId: ctx.companyId,
         });
-        return NextResponse.json({ success: false, error: message }, { status: 500 });
       }
     },
     { requiredGlobalRoles: ['super_admin'] }

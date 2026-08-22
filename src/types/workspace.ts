@@ -7,7 +7,7 @@
  * Based on ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ από ChatGPT.
  *
  * @module types/workspace
- * @enterprise ADR-032 - Workspace-based Multi-Tenancy
+ * @enterprise ADR-787 — Η πολυ-οργανισμική πλατφόρμα (Κ-2: το συμβόλαιο του μέλους)
  *
  * Workspace Types:
  * - company: Μια εταιρεία

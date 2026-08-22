@@ -3,6 +3,8 @@
  * @see docs/rfc/authorization-rbac.md
  */
 
+import type { MembershipVerdict } from "@/types/workspace-membership";
+
 // =============================================================================
 // GLOBAL ROLES (Coarse-grained, stored in Custom Claims)
 // =============================================================================
@@ -272,12 +274,45 @@ export interface AuthContext {
    * to the effective company instead of returning cross-tenant data.
    */
   superAdminOverride?: boolean;
+
+  /**
+   * **Γιατί** επιτρέπεται αυτός ο άνθρωπος σε αυτόν τον χώρο (ADR-787 Κ-2).
+   *
+   * ⚠️ Δεν είναι διακοσμητικό: χωρίς αυτό, ένα `companyId` στο context δεν λέει
+   * **αν** κρίθηκε ή **απλώς αντιγράφηκε από το claim** — και αυτή ακριβώς η
+   * σύγχυση ήταν το κενό που έκλεισε το Κ-2 (το §2.8 διάβασε το σχήμα ως
+   * απόφαση). Με τη ρητή ετυμηγορία, η αιτία **ταξιδεύει** μέχρι τα ίχνη.
+   *
+   * Πάντα μία από τις **επιτρεπτικές** (`home` · `self` · `platform-bypass` ·
+   * `member`) — οι αρνητικές δεν φτάνουν ποτέ εδώ, γιατί δεν παράγουν
+   * `AuthContext`.
+   */
+  membershipVerdict?: MembershipVerdict;
 }
 
 /** Unauthenticated context with reason. */
 export interface UnauthenticatedContext {
   isAuthenticated: false;
-  reason: "missing_token" | "invalid_token" | "missing_claims";
+  /**
+   * ⚠️ Αυτή η τιμή **φεύγει στο σύρμα** (`details.reason` του 401). Κάθε νέα
+   * τιμή πρέπει να είναι **αδιάκριτη** ως προς την ύπαρξη ξένου χώρου —
+   * αλλιώς η άρνηση γίνεται **όργανο απαρίθμησης** (ADR-787 Ε-5 §4 #1).
+   *
+   * - `workspace_forbidden`  — ζήτησες χώρο στον οποίο δεν μπορείς να ενεργήσεις.
+   *   ⚠️ Δεν μαρτυρά **αν υπάρχει**: ο απαντητής δίνει την ίδια ετυμηγορία
+   *   (`not-a-member`) και όταν ο χώρος δεν υπάρχει και όταν υπάρχει χωρίς εσένα —
+   *   γιατί και στις δύο περιπτώσεις **λείπει το ίδιο έγγραφο**. Η συγκάλυψη
+   *   είναι **δομική**, όχι πρόσθετη.
+   * - `workspace_unavailable` — **δεν μπορέσαμε να ρωτήσουμε.**
+   *   ⛔ ΜΗΝ το συγχωνεύσεις με το προηγούμενο: *άγνωστο ≠ κενό* (N.12 ·
+   *   ADR-787 Ε-5 §4 #3). Το ένα λέει «όχι», το άλλο «δεν ξέρω».
+   */
+  reason:
+    | "missing_token"
+    | "invalid_token"
+    | "missing_claims"
+    | "workspace_forbidden"
+    | "workspace_unavailable";
 }
 
 /** Union type for request context. */

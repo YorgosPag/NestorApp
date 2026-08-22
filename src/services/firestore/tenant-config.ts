@@ -27,7 +27,13 @@ const TENANT_OVERRIDES: Partial<Record<CollectionKey, TenantFieldConfig>> = {
   ROLES:            { mode: 'tenantId', fieldName: 'tenantId' },
   USER_PREFERENCES: { mode: 'tenantId', fieldName: 'tenantId' },
   WORKSPACES:       { mode: 'companyId', fieldName: 'companyId' },
-  WORKSPACE_MEMBERS:{ mode: 'companyId', fieldName: 'companyId' },
+  // ⛔ Η γραμμή `WORKSPACE_MEMBERS` ΑΦΑΙΡΕΘΗΚΕ (ADR-787 §5.1 γ, 2026-08-22).
+  //    Δεν έγινε «unscoped» — **έπαψε να είναι top-level συλλογή**. Το μέλος
+  //    χώρου ζει πλέον ως υποσυλλογή `companies/{W}/workspace_members/{uid}`,
+  //    άρα η απομόνωσή του είναι **η ίδια η διαδρομή** και όχι πεδίο: ο χώρος
+  //    δεν είναι ετικέτα πάνω στο έγγραφο, είναι ο **γονέας** του.
+  //    ⛔ ΜΗΝ ξαναγράψεις εγγραφή εδώ γι' αυτό — θα δήλωνε φίλτρο για συλλογή
+  //    που δεν υπάρχει, δηλαδή φρουρό που δεν μπορεί να πυροδοτήσει.
   PERMISSIONS:      { mode: 'tenantId', fieldName: 'tenantId' },
 
   // --- userId collections ---

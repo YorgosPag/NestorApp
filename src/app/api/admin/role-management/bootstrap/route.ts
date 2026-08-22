@@ -94,7 +94,7 @@ export const POST = withSensitiveRateLimit(
 
           try {
             // Check if member doc already exists
-            const memberPath = `${COLLECTIONS.COMPANIES}/${ctx.companyId}/${SUBCOLLECTIONS.COMPANY_MEMBERS}/${uid}`;
+            const memberPath = `${COLLECTIONS.COMPANIES}/${ctx.companyId}/${SUBCOLLECTIONS.WORKSPACE_MEMBERS}/${uid}`;
             const memberSnap = await db.doc(memberPath).get();
 
             if (memberSnap.exists) {

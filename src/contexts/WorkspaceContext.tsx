@@ -8,7 +8,7 @@
  * "Κάθε δημιουργία/ανέβασμα χρησιμοποιεί το active workspaceId"
  *
  * @module contexts/WorkspaceContext
- * @enterprise ADR-032 - Workspace-based Multi-Tenancy
+ * @enterprise ADR-787 — Η πολυ-οργανισμική πλατφόρμα (Κ-2: το συμβόλαιο του μέλους)
  *
  * @example
  * ```typescript
@@ -114,28 +114,41 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
         }
       }
 
-      // Fallback: Auto-select first workspace if available
-      if (workspaces.length > 0) {
-        setActiveWorkspace(workspaces[0]);
-        safeSetItem(STORAGE_KEYS.ACTIVE_WORKSPACE, workspaces[0].id);
-        logger.info(`[WorkspaceContext] Auto-selected first workspace: ${workspaces[0].id}`);
+      // ⛔ ΠΟΤΕ `workspaces[0]` (ADR-787 Ε-3 §7 β).
+      // Ήταν **αλφαβητική σειρά**: ο κατάλογος ταξινομείται κατά `displayName`,
+      // άρα «ο πρώτος» σήμαινε *«όποιος τυχαίνει να αρχίζει από Α»*. Ο άνθρωπος
+      // προσγειώνεται στον **δικό του** χώρο — το γραφείο αν έχει, αλλιώς ο
+      // ιδιωτικός, που **υπάρχει πάντα** (Ε-3 §2).
+      const landing =
+        workspaces.find((w) => w.type === 'company') ??
+        workspaces.find((w) => w.type === 'personal') ??
+        null;
+
+      if (landing) {
+        setActiveWorkspace(landing);
+        safeSetItem(STORAGE_KEYS.ACTIVE_WORKSPACE, landing.id);
+        logger.info(`[WorkspaceContext] Landing workspace: ${landing.id} (${landing.type})`);
       } else {
         logger.debug('[WorkspaceContext] No workspaces available for user');
       }
     } catch (err) {
-      // 🔧 FIX: Downgrade to warn — workspaces are non-critical, don't block the app
+      // ─────────────────────────────────────────────────────────────────────
+      // 🔴 ΑΓΝΩΣΤΟ ≠ ΚΕΝΟ (N.12 · ADR-787 Ε-5 §4 #3 · §2.7)
+      // ─────────────────────────────────────────────────────────────────────
+      // Εδώ ζούσε το ζωντανό ελάττωμα: η αποτυχία υποβαθμιζόταν σε `warn`, το
+      // `error` **δεν** τιθόταν *«γιατί τα workspaces είναι προαιρετικά»*, και ο
+      // κατάλογος γινόταν **κενός** ⇒ ο άνθρωπος διάβαζε **«δεν έχεις χώρους»**
+      // ενώ η αλήθεια ήταν **«δεν μπόρεσα να ρωτήσω»**.
+      //
+      // ⛔ ΜΗΝ ξανακρύψεις αυτό το σφάλμα. Το να μη ρίχνει την εφαρμογή είναι
+      //    σωστό· το να **παριστάνει άδειο αποτέλεσμα** δεν είναι. Η οθόνη
+      //    οφείλει να μπορεί να ξεχωρίσει τα δύο — γι' αυτό μπαίνει το `error`.
       const message = err instanceof Error ? err.message : String(err);
-      const isIndexOrPermission = message.includes('requires an index') ||
-        message.includes('FAILED_PRECONDITION') ||
-        message.includes('PERMISSION_DENIED') ||
-        message.includes('not-found');
+      logger.error('[WorkspaceContext] Ο κατάλογος χώρων δεν απαντήθηκε — άγνωστο, όχι κενό', {
+        error: message,
+      });
 
-      if (isIndexOrPermission) {
-        logger.warn('[WorkspaceContext] Workspaces not available (index/collection missing) — continuing without workspaces');
-      } else {
-        logger.warn('[WorkspaceContext] Failed to load workspaces — continuing without workspaces', { error: message });
-      }
-      // Don't set error state — workspaces are optional, don't block UI
+      setError(err instanceof Error ? err : new Error(message));
       setAvailableWorkspaces([]);
       setActiveWorkspace(null);
     } finally {

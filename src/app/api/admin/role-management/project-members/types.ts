@@ -4,7 +4,19 @@
  * Εξήχθησαν από το `route.ts` (386 γρ. έναντι ορίου 300 για API route, N.7.1).
  */
 
-export interface MemberDoc {
+/**
+ * Μέλος **ΕΡΓΟΥ** — `companies/{W}/projects/{P}/members/{mbr_…}`.
+ *
+ * ⚠️ **Λεγόταν `MemberDoc` μέχρι 2026-08-22, και υπήρχε ΔΕΥΤΕΡΟ `MemberDoc` με
+ * ΑΛΛΑ ΠΕΔΙΑ** σε αδελφό αρχείο (`../users/route.ts`), για το μέλος **ΧΩΡΟΥ**.
+ * Ίδιο όνομα, δύο έγγραφα, δύο συλλογές — και το Κ-2 θα γεννούσε **τρίτο**
+ * (ADR-787 §5.1 γ · ADR-749).
+ *
+ * ⛔ ΜΗΝ το ξαναπείς `MemberDoc`. Το μέλος **χώρου** λέγεται
+ *    `WorkspaceMembership` (`@/types/workspace-membership`) — άλλο ερώτημα,
+ *    άλλο έγγραφο, άλλο όνομα.
+ */
+export interface ProjectMemberDoc {
   uid: string;
   companyId: string;
   projectId: string;

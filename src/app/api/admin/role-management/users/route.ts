@@ -18,8 +18,11 @@
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth, logAuditEvent } from '@/lib/auth';
+import { withAuth, logAuditEvent, isValidGlobalRole } from '@/lib/auth';
 import type { AuthContext, PermissionCache, GlobalRole } from '@/lib/auth';
+// 🎫 ADR-787 Κ-2 — η ΜΙΑ μετάφραση του εγγράφου μέλους χώρου.
+import { normalizeMembership } from '@/lib/auth/workspace-membership';
+import type { WorkspaceMembership } from '@/types/workspace-membership';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminAuth, getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
@@ -32,15 +35,17 @@ const logger = createModuleLogger('RoleManagement:Users');
 // TYPES
 // =============================================================================
 
-interface MemberDoc {
-  uid: string;
-  globalRole: GlobalRole;
-  status: 'active' | 'suspended' | 'pending';
-  joinedAt: FirebaseFirestore.Timestamp | null;
-  permissionSetIds: string[];
-  addedBy: string | null;
-  updatedAt: FirebaseFirestore.Timestamp | null;
-}
+// 🔴 Ο τοπικός `MemberDoc` ΔΙΑΓΡΑΦΗΚΕ (ADR-787 §5.1 γ, 2026-08-22).
+//
+// Ήταν το **δεύτερο** `MemberDoc` του δέντρου: αδελφό αρχείο
+// (`../project-members/types.ts`) όριζε **άλλο** `MemberDoc`, με **άλλα πεδία**,
+// για **άλλη συλλογή**. Ίδιο όνομα, δύο έγγραφα — και το Κ-2 θα γεννούσε τρίτο.
+//
+// ⚠️ Δεν ήταν μόνο το όνομα: εδώ ζούσε και **δεύτερη ΜΕΤΑΦΡΑΣΗ** του ίδιου
+//    εγγράφου, με **αντίθετη** προεπιλογή — `status ?? 'active'`, δηλαδή ένα
+//    χαλασμένο ή άγνωστο `status` γινόταν σιωπηλά **ενεργό μέλος**. Η μία
+//    μετάφραση ζει πλέον στο `normalizeMembership` και είναι **fail-closed**.
+//    ⛔ ΜΗΝ ξαναγράψεις τοπική μετάφραση αυτού του εγγράφου (ADR-749).
 
 interface UserProfileDoc {
   email?: string;
@@ -79,21 +84,12 @@ export const GET = withSensitiveRateLimit(
         const auth = getAdminAuth();
 
         // 1. Fetch all members from companies/{companyId}/members
-        const membersPath = `${COLLECTIONS.COMPANIES}/${ctx.companyId}/${SUBCOLLECTIONS.COMPANY_MEMBERS}`;
+        const membersPath = `${COLLECTIONS.COMPANIES}/${ctx.companyId}/${SUBCOLLECTIONS.WORKSPACE_MEMBERS}`;
         const membersSnap = await db.collection(membersPath).get();
 
-        const memberDocs: MemberDoc[] = membersSnap.empty ? [] : membersSnap.docs.map((doc) => {
-          const d = doc.data();
-          return {
-            uid: doc.id,
-            globalRole: (d.globalRole as GlobalRole) ?? 'internal_user',
-            status: (d.status as 'active' | 'suspended' | 'pending') ?? 'active',
-            joinedAt: d.joinedAt ?? null,
-            permissionSetIds: Array.isArray(d.permissionSetIds) ? d.permissionSetIds as string[] : [],
-            addedBy: (d.addedBy as string) ?? null,
-            updatedAt: d.updatedAt ?? null,
-          };
-        });
+        const memberDocs: WorkspaceMembership[] = membersSnap.empty
+          ? []
+          : membersSnap.docs.map((doc) => normalizeMembership(doc.id, doc.data()));
 
         const uids = memberDocs.map((m) => m.uid);
 
@@ -144,12 +140,15 @@ export const GET = withSensitiveRateLimit(
             email: profile?.email ?? authInfo?.email ?? '',
             displayName: profile?.displayName ?? null,
             photoURL: profile?.photoURL ?? null,
-            globalRole: member.globalRole,
+            // ⚠️ Το `globalRole` του εγγράφου είναι **συμβολοσειρά από τη βάση**,
+            //    όχι εγγυημένος ρόλος: στενεύει **εδώ, στο σύνορο**, με ρητό
+            //    έλεγχο. Ένα `as GlobalRole` θα ήταν ισχυρισμός, όχι απόδειξη.
+            globalRole: isValidGlobalRole(member.globalRole) ? member.globalRole : 'internal_user',
             status: member.status,
             joinedAt: member.joinedAt
               ? (member.joinedAt as FirebaseFirestore.Timestamp).toDate?.()?.toISOString() ?? null
               : null,
-            permissionSetIds: member.permissionSetIds,
+            permissionSetIds: [...member.permissionSetIds],
             lastSignIn: authInfo?.lastSignIn ?? null,
             disabled: authInfo?.disabled ?? false,
             mfaEnrolled: authInfo?.mfaEnrolled ?? false,

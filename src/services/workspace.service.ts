@@ -7,7 +7,7 @@
  * Implements ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ workspace requirements.
  *
  * @module services/workspace.service
- * @enterprise ADR-032 - Workspace-based Multi-Tenancy
+ * @enterprise ADR-787 — Η πολυ-οργανισμική πλατφόρμα (Κ-2: το συμβόλαιο του μέλους)
  * @migration ADR-214 Phase 2 — reads/writes via FirestoreQueryService
  *
  * @example
@@ -26,7 +26,7 @@
  * ```
  */
 
-import { where, orderBy, type QueryConstraint } from 'firebase/firestore';
+import { where } from 'firebase/firestore';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import {
   SPECIAL_WORKSPACE_IDS,
@@ -37,11 +37,12 @@ import type {
   WorkspaceType,
   CreateWorkspaceInput,
   UpdateWorkspaceInput,
-  ListWorkspacesParams,
 } from '@/types/workspace';
 import type { DocumentData } from 'firebase/firestore';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
+import { apiClient } from '@/lib/api/enterprise-api-client';
+import { API_ROUTES } from '@/config/domain-constants';
 import { generateWorkspaceId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { normalizeToISO, nowISO } from '@/lib/date-local';
@@ -178,39 +179,49 @@ export class WorkspaceService {
     return raw ? toWorkspace(raw) : null;
   }
 
-  /**
-   * List all workspaces (with optional filters)
-   *
-   * @param params - Query parameters
-   * @returns Array of workspaces
-   */
-  static async listWorkspaces(params: ListWorkspacesParams = {}): Promise<Workspace[]> {
-    const { type, status, limit: limitParam } = params;
-
-    const constraints: QueryConstraint[] = [orderBy('displayName', 'asc')];
-    if (type) constraints.push(where('type', '==', type));
-    if (status) constraints.push(where('status', '==', status));
-
-    const result = await firestoreQueryService.getAll<DocumentData>('WORKSPACES', {
-      constraints,
-      maxResults: limitParam,
-    });
-
-    return result.documents.map(toWorkspace);
-  }
+  // ⛔ Η `listWorkspaces()` ΔΙΑΓΡΑΦΗΚΕ (ADR-787 Κ-2, 2026-08-22).
+  //
+  // Ήταν *«όλοι οι χώροι»*, χωρίς καμία ερώτηση για το **ποιος ρωτά** — και ο
+  // **μοναδικός** της καλών ήταν η `listWorkspacesForUser`, που την τύλιγε
+  // αγνοώντας το `userId`. Δηλαδή ήταν **ο ίδιος ο μηχανισμός** του ελαττώματος
+  // που καταγράφει το ADR-787 §2.7 β: *«όλοι οι οργανισμοί της πλατφόρμας»*.
+  //
+  // Μόλις η `listWorkspacesForUser` έμαθε να ρωτά τον διακομιστή, αυτή έμεινε
+  // με **μηδέν καλούντες**. ⚠️ Δεν αφήνεται «μήπως χρειαστεί»: ένα αφιλτράριστο
+  // `getAll('WORKSPACES')` με φιλικό όνομα είναι πρόσκληση στον επόμενο —
+  // και το φίλτρο μισθωτή που το «έσωζε» **δεν το έσωζε** (§5.1 α #2: το
+  // έσωζε η απουσία δεδομένων).
+  //
+  // ⛔ ΜΗΝ την επαναφέρεις. «Ποιους χώρους βλέπω;» απαντιέται από τον
+  //    διακομιστή, μέσω `GET /api/workspaces`.
 
   /**
-   * List workspaces for a specific user
+   * Οι χώροι **αυτού** του ανθρώπου — απαντημένοι από τον **διακομιστή**.
    *
-   * @param userId - User ID
-   * @returns Array of workspaces accessible by this user
+   * ─────────────────────────────────────────────────────────────────────────
+   * 🔴 ΤΙ ΑΛΛΑΞΕ ΚΑΙ ΓΙΑΤΙ (ADR-787 Κ-2 · §2.7 β, 2026-08-22)
+   * ─────────────────────────────────────────────────────────────────────────
+   * Μέχρι σήμερα αυτή η μέθοδος **έπαιρνε το `userId` και δεν το χρησιμοποιούσε
+   * πουθενά**: γύριζε *«όλοι οι ενεργοί χώροι»*, με σχόλιο *«TODO: Implement
+   * workspace membership check»*. Ήταν ακίνδυνο **μόνο** επειδή η συλλογή
+   * `workspaces` δεν υπάρχει· την ημέρα που θα υπήρχε δεύτερος χώρος, γινόταν
+   * *«όλοι οι οργανισμοί της πλατφόρμας»* **χωρίς καμία αλλαγή κώδικα**.
+   *
+   * ⛔ **ΜΗΝ την ξαναγυρίσεις σε ερώτημα Firestore από τον φυλλομετρητή** — ούτε
+   *    «με φίλτρο αυτή τη φορά». Ένα collection-group ερώτημα πάνω στα μέλη,
+   *    εκτελεσμένο από τον πελάτη, σαρώνει **όλα τα γραφεία**: απαρίθμηση που
+   *    απαγορεύει ρητά το **ADR-787 Ε-5 §4 #1**. Γι' αυτό δεν υπάρχει κανόνας
+   *    collection-group στο `firestore.rules` — η απουσία του **είναι** η
+   *    απόφαση.
+   *
+   * @throws Σφάλμα δικτύου/διακομιστή. ⚠️ **Ο καλών ΔΕΝ επιτρέπεται να το
+   *   μεταφράσει σε κενή λίστα**: *άγνωστο ≠ κενό* (N.12 · Ε-5 §4 #3).
    */
-  static async listWorkspacesForUser(userId: string): Promise<Workspace[]> {
-    // TODO: Implement workspace membership check
-    // For now, return all active workspaces
-    // In production, this should query WORKSPACE_MEMBERS collection
-
-    return this.listWorkspaces({ status: 'active' });
+  static async listWorkspacesForUser(_userId: string): Promise<Workspace[]> {
+    const response = await apiClient.get<{ data?: { workspaces?: Workspace[] } }>(
+      API_ROUTES.WORKSPACES.MINE,
+    );
+    return response?.data?.workspaces ?? [];
   }
 
   /**
