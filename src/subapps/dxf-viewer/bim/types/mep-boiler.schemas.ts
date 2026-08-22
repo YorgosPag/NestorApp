@@ -12,16 +12,10 @@
 import { z } from 'zod';
 import { IfcGuidSchema, IfcPropertySetSchema } from './ifc-entity-mixin';
 import { MepConnectorSchema } from './mep-connector.schemas';
+import { Point3DSchema } from './geometry.schemas';
+import { PLACED_BODY_FIELDS, SCENE_HOST_FIELDS } from './shared-params.schemas';
 
 // ─── Point3D ──────────────────────────────────────────────────────────────────
-
-const Point3DSchema = z
-  .object({
-    x: z.number().finite(),
-    y: z.number().finite(),
-    z: z.number().finite().optional(),
-  })
-  .strict();
 
 // ─── Enums (mirror mep-boiler-types.ts unions) ────────────────────────────────
 
@@ -46,12 +40,7 @@ export const MepBoilerParamsSchema = z
   .object({
     kind: MepBoilerKindSchema,
     shape: MepBoilerShapeSchema,
-    position: Point3DSchema,
-    rotation: z.number().finite(),
-    width: z.number().positive(),
-    length: z.number().positive(),
-    bodyHeightMm: z.number().positive(),
-    mountingElevationMm: z.number().finite(),
+    ...PLACED_BODY_FIELDS,
     connectorDiameterMm: z.number().positive(),
     // The hydronic classification the boiler sources (network inherits it).
     systemClassification: SystemClassificationSchema.optional(),
@@ -101,10 +90,7 @@ export const MepBoilerParamsSchema = z
     noxMgKwh: z.number().positive().optional(),
     // Measured sound power level L_WA (dB(A)) — drives the placement-suitability band. Optional/additive.
     soundPowerDbA: z.number().positive().optional(),
-    sceneUnits: z.string().optional(),
-    storeyId: z.string().min(1).optional(),
-    material: z.string().min(1).optional(),
-    hostId: z.string().min(1).optional(),
+    ...SCENE_HOST_FIELDS,
     // ADR-408 Type Catalog — persisted catalog model id (kebab). Optional/additive.
     modelId: z.string().min(1).optional(),
     // Heating fuel / energy source discriminator (populated by catalog picker).

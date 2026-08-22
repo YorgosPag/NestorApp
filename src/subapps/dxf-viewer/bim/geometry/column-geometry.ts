@@ -39,7 +39,6 @@ import {
   MAX_POLYGON_SIDES,
   MIN_POLYGON_SIDES,
 } from '../types/column-types';
-import type { Point3D } from '../types/bim-base';
 import type { Point2D } from '../../rendering/types/Types';
 import type { ColumnTopProfile, ColumnBaseProfile } from './column-vertical-profile';
 import { polygonArea, polygonBbox } from './shared/polygon-utils';
@@ -127,7 +126,7 @@ export function computeColumnGeometry(
  * Build the column footprint in LOCAL coordinates centred at origin (0,0),
  * BEFORE anchor offset + rotation. All variants emit CCW vertex order.
  */
-function buildLocalFootprint(params: ColumnParams, s: number): Point3D[] {
+function buildLocalFootprint(params: ColumnParams, s: number): Point2D[] {
   switch (params.kind) {
     case 'rectangular': return buildRectangularLocal(params.width, params.depth, s);
     case 'circular':    return buildCircularLocal(params.width, s);
@@ -144,24 +143,24 @@ function buildLocalFootprint(params: ColumnParams, s: number): Point3D[] {
   }
 }
 
-function buildRectangularLocal(width: number, depth: number, s: number): Point3D[] {
+function buildRectangularLocal(width: number, depth: number, s: number): Point2D[] {
   const hw = (width * s) / 2;  // mm → canvas units
   const hd = (depth * s) / 2;
   return [
-    { x: -hw, y: -hd, z: 0 },
-    { x:  hw, y: -hd, z: 0 },
-    { x:  hw, y:  hd, z: 0 },
-    { x: -hw, y:  hd, z: 0 },
+    { x: -hw, y: -hd },
+    { x:  hw, y: -hd },
+    { x:  hw, y:  hd },
+    { x: -hw, y:  hd },
   ];
 }
 
-function buildCircularLocal(diameter: number, s: number): Point3D[] {
+function buildCircularLocal(diameter: number, s: number): Point2D[] {
   const r = (diameter * s) / 2;  // mm → canvas units
-  const verts: Point3D[] = [];
+  const verts: Point2D[] = [];
   const step = (2 * Math.PI) / CIRCULAR_COLUMN_SEGMENTS;
   for (let i = 0; i < CIRCULAR_COLUMN_SEGMENTS; i++) {
     const a = i * step;
-    verts.push({ x: r * Math.cos(a), y: r * Math.sin(a), z: 0 });
+    verts.push({ x: r * Math.cos(a), y: r * Math.sin(a) });
   }
   return verts;
 }
@@ -194,15 +193,15 @@ export function lshapeMetrics(width: number, depth: number, s: number, override?
   };
 }
 
-function buildLshapeLocal(width: number, depth: number, s: number, override?: ColumnLshapeParams): Point3D[] {
+function buildLshapeLocal(width: number, depth: number, s: number, override?: ColumnLshapeParams): Point2D[] {
   const { armWidth, armLength, hw, hd, ys } = lshapeMetrics(width, depth, s, override);
-  const verts: Point3D[] = [
-    { x: -hw,            y: ys * -hd,              z: 0 },
-    { x:  hw,            y: ys * -hd,              z: 0 },
-    { x:  hw,            y: ys * (-hd + armLength), z: 0 },
-    { x: -hw + armWidth, y: ys * (-hd + armLength), z: 0 },
-    { x: -hw + armWidth, y: ys * hd,               z: 0 },
-    { x: -hw,            y: ys * hd,               z: 0 },
+  const verts: Point2D[] = [
+    { x: -hw,            y: ys * -hd },
+    { x:  hw,            y: ys * -hd },
+    { x:  hw,            y: ys * (-hd + armLength) },
+    { x: -hw + armWidth, y: ys * (-hd + armLength) },
+    { x: -hw + armWidth, y: ys * hd },
+    { x: -hw,            y: ys * hd },
   ];
   return override?.flipY ? [...verts].reverse() : verts;
 }
@@ -241,17 +240,17 @@ export function tshapeMetrics(width: number, depth: number, s: number, override?
   };
 }
 
-function buildTshapeLocal(width: number, depth: number, s: number, override?: ColumnTshapeParams): Point3D[] {
+function buildTshapeLocal(width: number, depth: number, s: number, override?: ColumnTshapeParams): Point2D[] {
   const { flangeDepth, hd, halfFlange, halfWeb, ys } = tshapeMetrics(width, depth, s, override);
-  const verts: Point3D[] = [
-    { x: -halfWeb,    y: ys * -hd,               z: 0 },
-    { x:  halfWeb,    y: ys * -hd,               z: 0 },
-    { x:  halfWeb,    y: ys * (hd - flangeDepth), z: 0 },
-    { x:  halfFlange, y: ys * (hd - flangeDepth), z: 0 },
-    { x:  halfFlange, y: ys * hd,                z: 0 },
-    { x: -halfFlange, y: ys * hd,                z: 0 },
-    { x: -halfFlange, y: ys * (hd - flangeDepth), z: 0 },
-    { x: -halfWeb,    y: ys * (hd - flangeDepth), z: 0 },
+  const verts: Point2D[] = [
+    { x: -halfWeb,    y: ys * -hd },
+    { x:  halfWeb,    y: ys * -hd },
+    { x:  halfWeb,    y: ys * (hd - flangeDepth) },
+    { x:  halfFlange, y: ys * (hd - flangeDepth) },
+    { x:  halfFlange, y: ys * hd },
+    { x: -halfFlange, y: ys * hd },
+    { x: -halfFlange, y: ys * (hd - flangeDepth) },
+    { x: -halfWeb,    y: ys * (hd - flangeDepth) },
   ];
   return ys === -1 ? [...verts].reverse() : verts;
 }
@@ -262,16 +261,16 @@ function buildTshapeLocal(width: number, depth: number, s: number, override?: Co
  * Vertex 0 points up (math +Y) per AutoCAD/Revit convention so even-sided
  * polygons render flat-bottom and odd-sided ones point-up out of the box.
  */
-function buildPolygonLocal(diameter: number, s: number, override?: ColumnPolygonParams): Point3D[] {
+function buildPolygonLocal(diameter: number, s: number, override?: ColumnPolygonParams): Point2D[] {
   const r = (diameter * s) / 2;
   const raw = override?.sides ?? DEFAULT_POLYGON_SIDES;
   const n = Math.max(MIN_POLYGON_SIDES, Math.min(MAX_POLYGON_SIDES, Math.round(raw)));
-  const verts: Point3D[] = [];
+  const verts: Point2D[] = [];
   const step = (2 * Math.PI) / n;
   const startAngle = Math.PI / 2;
   for (let i = 0; i < n; i++) {
     const a = startAngle + i * step;
-    verts.push({ x: r * Math.cos(a), y: r * Math.sin(a), z: 0 });
+    verts.push({ x: r * Math.cos(a), y: r * Math.sin(a) });
   }
   return verts;
 }
@@ -282,17 +281,17 @@ function buildPolygonLocal(diameter: number, s: number, override?: ColumnPolygon
  * extrude-άρει αυτό το footprint κατακόρυφα· το δοκάρι σαρώνει το ίδιο προφίλ ως
  * κάθετη τομή κατά τον άξονα.
  */
-function buildIShapeLocal(width: number, depth: number, s: number, override?: ColumnIShapeParams): Point3D[] {
+function buildIShapeLocal(width: number, depth: number, s: number, override?: ColumnIShapeParams): Point2D[] {
   return buildIShapeProfile(width, depth, s, override);
 }
 
 /**
  * Map ένα polygon-backed footprint (LOCAL mm, κεντραρισμένο στο bbox-center)
- * σε canvas-unit `Point3D[]`. Pure scale × `s`. Χρησιμοποιείται από U-shape
+ * σε canvas-unit `Point2D[]`. Pure scale × `s`. Χρησιμοποιείται από U-shape
  * (explicit polygon) + composite (ADR-363 Phase 2 «από περίγραμμα»).
  */
-function polygonToLocal(poly: readonly Point2D[], s: number): Point3D[] {
-  return poly.map((p) => ({ x: p.x * s, y: p.y * s, z: 0 }));
+function polygonToLocal(poly: readonly Point2D[], s: number): Point2D[] {
+  return poly.map((p) => ({ x: p.x * s, y: p.y * s }));
 }
 
 /**
@@ -306,7 +305,7 @@ function polygonToLocal(poly: readonly Point2D[], s: number): Point3D[] {
  *
  * flipY=true: άνοιγμα προς τα κάτω· y-flip reverses CCW winding (mirror L/T).
  */
-function buildUshapeLocal(width: number, depth: number, s: number, override?: ColumnUshapeParams): Point3D[] {
+function buildUshapeLocal(width: number, depth: number, s: number, override?: ColumnUshapeParams): Point2D[] {
   if (override?.polygon && override.polygon.length >= 3) {
     return polygonToLocal(override.polygon, s);
   }
@@ -318,15 +317,15 @@ function buildUshapeLocal(width: number, depth: number, s: number, override?: Co
   const leg = Math.min(Math.max(s, (override?.legThickness ?? width / 4) * s), hw);
   const base = Math.min(Math.max(s, (override?.baseThickness ?? depth / 3) * s), 2 * hd);
   const ys = flipY ? -1 : 1;
-  const verts: Point3D[] = [
-    { x: -hw,       y: ys * -hd,          z: 0 },  // v0 bottom-left
-    { x:  hw,       y: ys * -hd,          z: 0 },  // v1 bottom-right
-    { x:  hw,       y: ys *  hd,          z: 0 },  // v2 top-right (right leg outer)
-    { x:  hw - leg, y: ys *  hd,          z: 0 },  // v3 right leg inner top
-    { x:  hw - leg, y: ys * (-hd + base), z: 0 },  // v4 notch right
-    { x: -hw + leg, y: ys * (-hd + base), z: 0 },  // v5 notch left
-    { x: -hw + leg, y: ys *  hd,          z: 0 },  // v6 left leg inner top
-    { x: -hw,       y: ys *  hd,          z: 0 },  // v7 top-left (left leg outer)
+  const verts: Point2D[] = [
+    { x: -hw,       y: ys * -hd },  // v0 bottom-left
+    { x:  hw,       y: ys * -hd },  // v1 bottom-right
+    { x:  hw,       y: ys *  hd },  // v2 top-right (right leg outer)
+    { x:  hw - leg, y: ys *  hd },  // v3 right leg inner top
+    { x:  hw - leg, y: ys * (-hd + base) },  // v4 notch right
+    { x: -hw + leg, y: ys * (-hd + base) },  // v5 notch left
+    { x: -hw + leg, y: ys *  hd },  // v6 left leg inner top
+    { x: -hw,       y: ys *  hd },  // v7 top-left (left leg outer)
   ];
   return flipY ? [...verts].reverse() : verts;
 }
@@ -337,15 +336,15 @@ function buildUshapeLocal(width: number, depth: number, s: number, override?: Co
  * SSoT. Degenerate guard (<3 κορυφές) → μικρό τετράγωνο 100mm (ο validator
  * μπλοκάρει κανονικά τέτοια params πριν φτάσουμε εδώ).
  */
-function buildCompositeLocal(s: number, composite?: ColumnCompositeParams): Point3D[] {
+function buildCompositeLocal(s: number, composite?: ColumnCompositeParams): Point2D[] {
   const poly = composite?.polygon;
   if (!poly || poly.length < 3) {
     const h = 50 * s; // 100mm × 100mm fallback
     return [
-      { x: -h, y: -h, z: 0 },
-      { x:  h, y: -h, z: 0 },
-      { x:  h, y:  h, z: 0 },
-      { x: -h, y:  h, z: 0 },
+      { x: -h, y: -h },
+      { x:  h, y: -h },
+      { x:  h, y:  h },
+      { x: -h, y:  h },
     ];
   }
   return polygonToLocal(poly, s);
@@ -382,14 +381,14 @@ export function columnLocalMmToWorld(params: ColumnParams, localMm: readonly Poi
  * per-engine raw cos/sin. The local vertices are already canvas units (mm × s);
  * only `dimX`/`dimY` (mm) get scaled internally for the anchor shift.
  */
-function transformFootprint(local: readonly Point3D[], params: ColumnParams): Point3D[] {
+function transformFootprint(local: readonly Point2D[], params: ColumnParams): Point2D[] {
   if (params.kind === 'circular') {
-    // Circular: κάθε local vertex (z=0 από τους builders) μετατοπίζεται κατά `position`.
-    // `translatePoints` (SSoT) διατηρεί το z=0 του source — byte-identical με το πρώην `z: 0`.
+    // Circular: κάθε local vertex μετατοπίζεται κατά `position`. Το `translatePoints`
+    // (SSoT) είναι generic ⇒ διατηρεί τον τύπο εισόδου (2Δ προφίλ, ADR-789 Φάση Δ).
     return translatePoints(local, params.position);
   }
   const frame = columnAnchorFrame(params);
-  return centredPolyToWorld(frame, local).map((p) => ({ x: p.x, y: p.y, z: 0 }));
+  return centredPolyToWorld(frame, local);
 }
 
 /**

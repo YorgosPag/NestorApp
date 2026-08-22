@@ -16,7 +16,7 @@
  */
 
 import type { ImageEntity } from '../../types/image';
-import type { Point3D } from '../../bim/types/bim-base';
+import type { Point2D } from '../../rendering/types/Types';
 import type { SceneUnits } from '../../utils/scene-units';
 import type {
   EntourageSelection,
@@ -65,10 +65,9 @@ export interface EntourageToolDescriptor<T extends EntourageSelection = Entourag
 }
 
 /** Οι 4 γωνίες του (περιστραμμένου) ορθογωνίου → ghost footprint. Reuse του SSoT. */
-function footprintOf(entity: ImageEntity | null): readonly Point3D[] {
+function footprintOf(entity: ImageEntity | null): readonly Point2D[] {
   if (!entity) return [];
-  const vertices = imageEntityRectVertices(entity);
-  return vertices ? vertices.map((v) => ({ x: v.x, y: v.y, z: 0 })) : [];
+  return imageEntityRectVertices(entity) ?? [];
 }
 
 /**

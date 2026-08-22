@@ -33,7 +33,7 @@ import type {
   BimEntity,
   BoundingBox3D,
   Point3D,
-  Polygon3D,
+  PlanProfile,
 } from './bim-base';
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneUnits } from '../../utils/scene-units';
@@ -395,8 +395,9 @@ export interface ColumnParams {
  * (BOQ-ready για volume calc).
  */
 export interface ColumnGeometry {
-  /** Polygon3D — οριζόντια τομή σε z = elevation (currently 0). Closed CCW. */
-  readonly footprint: Polygon3D;
+  /** **2Δ προφίλ** οριζόντιας τομής (ADR-789 Φάση Δ). Closed CCW. Το υψόμετρο της
+   *  τομής ΔΕΝ ζει στις κορυφές — ζει στο `elevation` της στήλης. */
+  readonly footprint: PlanProfile;
   readonly bbox: BoundingBox3D;
   /** m². Εμβαδό τομής. */
   readonly area: number;

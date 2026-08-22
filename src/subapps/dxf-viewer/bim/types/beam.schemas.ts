@@ -20,16 +20,8 @@ import {
   EnvelopeFunctionSchema,
   EnvelopeLayerSchema,
 } from './thermal-envelope.schemas';
-
-// ─── Primitive schemas ──────────────────────────────────────────────────────
-
-const Point3DSchema = z
-  .object({
-    x: z.number().finite(),
-    y: z.number().finite(),
-    z: z.number().finite().optional(),
-  })
-  .strict();
+import { Point3DSchema } from './geometry.schemas';
+import { I_SHAPE_PROFILE_FIELDS, STOREY_PLACEMENT_FIELDS } from './shared-params.schemas';
 
 // ─── Enums (mirror beam-types.ts unions) ─────────────────────────────────────
 
@@ -45,9 +37,7 @@ export const BeamSectionKindSchema = z.enum(['rectangular', 'I-shape']);
 /** ADR-363 Φ2 — I-shape override (mirror ColumnIShapeParams). */
 export const BeamIShapeParamsSchema = z
   .object({
-    flangeThickness: z.number().positive().optional(),
-    webThickness: z.number().positive().optional(),
-    flipY: z.boolean().optional(),
+    ...I_SHAPE_PROFILE_FIELDS,
   })
   .strict();
 
@@ -106,9 +96,7 @@ export const BeamParamsSchema = z
     ishape: BeamIShapeParamsSchema.optional(),
     catalogProfile: z.string().min(1).optional(),
     profileDesignation: z.string().min(1).optional(),
-    sceneUnits: z.string().optional(),
-    storeyId: z.string().min(1).optional(),
-    offsetFromStorey: z.number().finite().optional(),
+    ...STOREY_PLACEMENT_FIELDS,
     // ─── ADR-396 P7 — ETICS exterior insulation layer (Z1) ───────────────────
     envelopeLayer: EnvelopeLayerSchema.optional(),
     // ─── ADR-396 v2 Φάση 4 — ETICS classification override (Στρ.3) ─────────────

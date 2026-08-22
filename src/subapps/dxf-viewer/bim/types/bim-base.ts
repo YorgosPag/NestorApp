@@ -12,6 +12,7 @@ import type { BaseEntity } from '../../types/base-entity';
 import type { BimElementStyleOverride } from '../../config/bim-object-styles';
 import type { GuideBinding } from '../hosting/guide-binding-types';
 import type { FaceAppearanceMap } from './face-appearance-types';
+import type { Point2D } from '../../rendering/types/Types';
 
 // ─── Plan (XY) geometry vocabulary ────────────────────────────────────────────
 
@@ -46,6 +47,51 @@ import type { FaceAppearanceMap } from './face-appearance-types';
 export interface PlanarPoint {
   readonly x: number;
   readonly y: number;
+}
+
+/**
+ * **Αποθηκευμένο προφίλ κάτοψης** — 2Δ κορυφές, ΧΩΡΙΣ υψόμετρο (ADR-789 Φάση Δ).
+ *
+ * 🔑 Το υψόμετρο **δεν λείπει· ζει αλλού** — στον όροφο (`levelElevation`), στο
+ * `basePivotZ`, στο `floorElevationMm`. Μια κορυφή προφίλ δεν έχει γνώμη για το ύψος,
+ * και μέχρι το ADR-789 το δήλωνε ψευδώς ως `z: 0` σε **12** σημεία εγγραφής — αριθμό
+ * που **κανένας αναγνώστης δεν διάβαζε ποτέ** (μετρημένο: 0 αναγνώσεις `.z` σε
+ * `footprint`/`outline`/`polylineVertices` σε όλο το δέντρο).
+ *
+ * 🏆 **Ομόφωνη πρακτική του κλάδου** — προφίλ σε τοπικό 2Δ επίπεδο + **ξεχωριστός**
+ * μετασχηματισμός τοποθέτησης:
+ * - **IFC** `IfcArbitraryClosedProfileDef` (2Δ) + `IfcAxis2Placement`
+ * - **Revit**: *«Profiles must lie in the XY plane and will be transformed to the
+ *   profile plane automatically»* + `SketchPlane`/`Level`
+ * - **ArchiCAD** `API_Polygon` = πίνακας `API_Coord` (2Δ)· το `API_Coord3D` είναι **άλλος τύπος**
+ * - **MAXON Cinema 4D**: spline points σε **τοπικές** συντεταγμένες + object matrix
+ * - **Figma** `vectorNetwork.vertices` = `{x, y}` + `relativeTransform`
+ *
+ * 🏆 **Πού τους ξεπερνάμε**: και οι πέντε κρατούν τη σχέση «προφίλ ↔ επίπεδο» στην
+ * **τεκμηρίωση** — γι' αυτό το Revit χρειάζεται τη φράση «*must* lie in the XY plane»
+ * και το C4D το «*ideally* oriented». Δεν **μπορούν** να την επιβάλουν: C++/C# είναι
+ * ονομαστικές. Εδώ το λέει ο **τύπος**, και ο μεταγλωττιστής απορρίπτει το `z: 0` στο
+ * σημείο εγγραφής (excess property check σε object literal) — **η ακριβής μορφή** και
+ * των 12 παραβιάσεων. Το ίδιο το δέντρο είχε ήδη το αποτύπωμα της αποτυχίας τους:
+ * το `wall-covering-strip-geometry.ts` έγραφε στο σχόλιο «Optional cached **2D** strip
+ * outline» ενώ ο τύπος από κάτω έλεγε `Point3D[]`.
+ *
+ * ⚠️ **ΔΕΝ αντικαθιστά το {@link Polygon3D}**: εκείνο μένει για ό,τι είναι **γνήσια
+ * χωρικό**, και είναι μετρημένο ποιο — κάγκελα (`baseElevationMm`), σκάλες (`baseZ`,
+ * μεταβάλλεται ανά πατούσα), φρεάτιο σκάλας (`outlineZ` = πάνω παρειά πλάκας).
+ * Καθολική στένωση του `Polygon3D` θα έσπαγε **ακριβώς** αυτά.
+ *
+ * ⚠️ **Το Zod schema ΔΕΝ στενεύει μαζί του — και είναι αποδεδειγμένο γιατί.** Το
+ * `Point3DSchema` είναι `.strict()`, οπότε αφαίρεση του `z` κάνει **κάθε παλιό έγγραφο
+ * να απορρίπτεται** (`unrecognized_keys`, επαληθεύτηκε εκτελώντας σε zod 3.25.76).
+ * Κρατάμε `z: z.number().finite().optional()` στην ανάγνωση και γράφουμε 2Δ — αυτός
+ * είναι ο **νόμος του Postel** («conservative in what you send, liberal in what you
+ * accept»), όχι απόκλιση: «τι δέχομαι» και «τι γράφω» είναι δύο ερωτήματα (ADR-749).
+ *
+ * @see docs/centralized-systems/reference/adrs/ADR-789-planar-point-vocabulary.md §8
+ */
+export interface PlanProfile {
+  readonly vertices: readonly Point2D[];
 }
 
 // ─── 3D Geometry primitives ───────────────────────────────────────────────────

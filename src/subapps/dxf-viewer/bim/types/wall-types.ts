@@ -170,8 +170,9 @@ export interface WallParams {
    * wins; ties → deterministic id tiebreak. User-overridable via the wall properties panel.
    */
   readonly joinPriority?: number;
-  /** Defined when `kind === 'polyline'`. mm. */
-  readonly polylineVertices?: readonly Point3D[];
+  /** Defined when `kind === 'polyline'`. mm. **2Δ προφίλ κάτοψης** (ADR-789 Φάση Δ):
+   *  το υψόμετρο της βάσης ζει στο `baseBinding`/όροφο, ΟΧΙ στις κορυφές. */
+  readonly polylineVertices?: readonly Point2D[];
   /**
    * Defined when `kind === 'curved'` and the wall is a TRUE circular arc
    * (ADR-565). Canonical DXF **bulge** = tan(sweep/4) of the arc spanning

@@ -10,15 +10,9 @@
  */
 
 import { z } from 'zod';
-import { MepConnectorSchema, PlumbingSystemClassificationSchema } from './mep-connector.schemas';
-
-const Point3DSchema = z
-  .object({
-    x: z.number().finite(),
-    y: z.number().finite(),
-    z: z.number().finite().optional(),
-  })
-  .strict();
+import { PlumbingSystemClassificationSchema } from './mep-connector.schemas';
+import { MEP_ELEMENT_TAIL_FIELDS } from './shared-params.schemas';
+import { Point3DSchema } from './geometry.schemas';
 
 export const MepFittingDomainSchema = z.enum(['pipe', 'duct']);
 
@@ -35,7 +29,6 @@ export const ElbowStyleSchema = z.enum(['radiused', 'mitered']);
 
 export const MepFittingIfcTypeSchema = z.enum(['IfcPipeFitting', 'IfcDuctFitting']);
 
-const SceneUnitsSchema = z.enum(['mm', 'cm', 'm']);
 
 const MepFittingIncidentSchema = z
   .object({
@@ -69,10 +62,7 @@ export const MepFittingParamsSchema = z
     // category + standalone colour). Mirror of MepSegmentParamsSchema.classification.
     classification: PlumbingSystemClassificationSchema.optional(),
     elbowStyle: ElbowStyleSchema.optional(),
-    sceneUnits: SceneUnitsSchema.optional(),
-    storeyId: z.string().min(1).optional(),
-    // Forward hook (downstream system routing) — empty in the foundation slice.
-    connectors: z.array(MepConnectorSchema).optional(),
+    ...MEP_ELEMENT_TAIL_FIELDS,
   })
   .strict()
   .superRefine((params, ctx) => {

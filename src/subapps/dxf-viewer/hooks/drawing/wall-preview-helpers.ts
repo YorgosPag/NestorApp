@@ -393,8 +393,7 @@ function makeWallPolylineGhost(
   const startPt = vertices[0];
   const endPt = vertices[vertices.length - 1];
   const base = buildDefaultWallParams(startPt, endPt, overrides, sceneUnits);
-  const polylineVertices: Point3D[] = vertices.map((v) => ({ x: v.x, y: v.y, z: 0 }));
-  const params = { ...base, polylineVertices };
+  const params = { ...base, polylineVertices: vertices };
   // Polyline: multi-segment → no single-segment overlap check (isOverlap=false). Same SSoT build.
   return buildWallGhostEntity(id, params, kind, sceneUnits, false);
 }

@@ -9,16 +9,10 @@
 
 import { z } from 'zod';
 import { IfcGuidSchema, IfcPropertySetSchema } from './ifc-entity-mixin';
+import { Point3DSchema } from './geometry.schemas';
+import { SCENE_HOST_FIELDS } from './shared-params.schemas';
 
 // ─── Point3D ──────────────────────────────────────────────────────────────────
-
-const Point3DSchema = z
-  .object({
-    x: z.number().finite(),
-    y: z.number().finite(),
-    z: z.number().finite().optional(),
-  })
-  .strict();
 
 // ─── Enums (mirror furniture-types.ts unions) ─────────────────────────────────
 
@@ -54,10 +48,7 @@ export const FurnitureParamsSchema = z
     heightMm: z.number().positive(),
     mountingElevationMm: z.number().finite(),
     scaleOverride: z.number().positive().optional(),
-    sceneUnits: z.string().optional(),
-    storeyId: z.string().min(1).optional(),
-    material: z.string().min(1).optional(),
-    hostId: z.string().min(1).optional(),
+    ...SCENE_HOST_FIELDS,
   })
   .strict();
 

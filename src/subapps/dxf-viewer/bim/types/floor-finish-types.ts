@@ -11,7 +11,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-419-floor-finish-per-room.md
  */
 
-import type { BimEntity, BoundingBox3D, Polygon3D } from './bim-base';
+import type { BimEntity, BoundingBox3D, PlanProfile } from './bim-base';
 import type { SceneUnits } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
 import { polygonArea, polygonPerimeter, polygonBbox } from '../geometry/shared/polygon-utils';
@@ -59,7 +59,8 @@ export type FloorFinishHatchType = 'wood' | 'tile' | 'dot' | 'solid';
  *   - `floorId?` — FK → Floor.id (storey reference).
  */
 export interface FloorFinishParams {
-  readonly footprint: Polygon3D;
+  /** ADR-789 Φάση Δ: **2Δ προφίλ** — το υψόμετρο ζει στο `finishLevel`/όροφο. */
+  readonly footprint: PlanProfile;
   readonly materialId: FloorFinishMaterialId;
   readonly thicknessMm: number;
   readonly finishLevel: number;

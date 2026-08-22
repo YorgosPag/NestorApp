@@ -29,7 +29,6 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
-import type { Point3D } from '../../bim/types/bim-base';
 import type { ColumnAnchor } from '../../bim/types/column-types';
 import { EventBus } from '../../systems/events/EventBus';
 import {
@@ -88,7 +87,7 @@ export interface CorePlacementResult<TState, TOverrides> {
   onCanvasClick(point: Readonly<Point2D>): boolean;
   getStatusText(): string;
   /** Footprint preview at `cursorPos` (world units) — pure projection (ADR-040). */
-  getGhostFootprint(cursorPos: Readonly<Point2D> | null): readonly Point3D[] | null;
+  getGhostFootprint(cursorPos: Readonly<Point2D> | null): readonly Point2D[] | null;
   readonly isActive: boolean;
   readonly isAwaitingPosition: boolean;
 }
@@ -131,7 +130,9 @@ export interface PlacementToolConfig<
   readonly initialExtra?: TExtra;
   buildParams(clickPoint: Readonly<Point2D>, overrides: TOverrides, sceneUnits: TUnits): TParams;
   buildEntity(params: TParams, levelId: string): PlacementBuildResult<TEntity>;
-  computeFootprint(params: TParams): readonly Point3D[];
+  /** **2Δ προφίλ** ghost (ADR-789 Φάση Δ). Οι καταναλωτές (`clearance-dims`,
+   *  `neighbor-clearance-dims`) δήλωναν ΗΔΗ `readonly Point2D[]`. */
+  computeFootprint(params: TParams): readonly Point2D[];
   /** Merge extra state into overrides for commit + ghost (default: `s.overrides`). */
   resolveCommitOverrides?(state: CorePlacementState<TOverrides> & TExtra): TOverrides;
   getStatusText(state: CorePlacementState<TOverrides> & TExtra): string;
@@ -282,7 +283,7 @@ export function createSingleClickPlacementTool<
     const getStatusText = useCallback((): string => config.getStatusText(stateRef.current), []);
 
     const getGhostFootprint = useCallback(
-      (cursorPos: Readonly<Point2D> | null): readonly Point3D[] | null => {
+      (cursorPos: Readonly<Point2D> | null): readonly Point2D[] | null => {
         const s = stateRef.current;
         if (s.phase !== 'awaitingPosition' || cursorPos === null) return null;
         const params = config.buildParams(cursorPos, resolveOverrides(s), resolveSceneUnits());

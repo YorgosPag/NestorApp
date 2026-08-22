@@ -121,14 +121,20 @@ describe('slab-grips (Phase 3.5 + 3.6)', () => {
     expect(verts[3].x).toBe(0);
   });
 
-  it('7. preserves z when present, omits when absent', () => {
+  it('7. το προφίλ ΔΕΝ αποκτά υψόμετρο κατά το drag (ADR-789 Φάση Δ)', () => {
     const slab = makeRectSlab();
-    // buildDefaultSlabParams lifts to z=0 explicitly.
+    // ⚠️ Μέχρι το ADR-789 αυτό το test απαιτούσε `z === 0` — κλείδωνε το ψέμα.
+    // Το `outline` είναι πλέον `PlanProfile` (2Δ): το υψόμετρο ζει στο
+    // `levelElevation`. Ελέγχουμε την ΑΠΟΥΣΙΑ του κλειδιού, όχι την τιμή του —
+    // ένα `z: undefined` θα περνούσε το `toBeUndefined()` και θα έσπαγε το
+    // Firestore (απορρίπτει undefined). Η απουσία είναι το συμβόλαιο.
     const next = applySlabGripDrag('slab-vertex-1', {
       originalParams: slab.params,
       delta: { x: 10, y: 0 },
     });
-    expect(next.outline.vertices[1].z).toBe(0);
+    const moved = next.outline.vertices[1];
+    expect(Object.keys(moved).sort()).toEqual(['x', 'y']);
+    expect('z' in moved).toBe(false);
   });
 
   it('8. zero delta → returns originalParams referentially', () => {
@@ -191,7 +197,8 @@ describe('slab-grips (Phase 3.5 + 3.6)', () => {
     expect(verts[0]).toEqual(slab.params.outline.vertices[0]);
     expect(verts[1].x).toBeCloseTo(2000, 3);
     expect(verts[1].y).toBeCloseTo(-500, 3);
-    expect(verts[1].z).toBe(0);
+    // ADR-789 Φάση Δ — η νέα κορυφή γεννιέται 2Δ, όπως και οι γειτονικές της.
+    expect(Object.keys(verts[1]).sort()).toEqual(['x', 'y']);
     expect(verts[2]).toEqual(slab.params.outline.vertices[1]);
     expect(verts[3]).toEqual(slab.params.outline.vertices[2]);
     expect(verts[4]).toEqual(slab.params.outline.vertices[3]);

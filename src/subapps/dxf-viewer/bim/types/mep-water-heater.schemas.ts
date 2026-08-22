@@ -13,16 +13,10 @@
 import { z } from 'zod';
 import { IfcGuidSchema, IfcPropertySetSchema } from './ifc-entity-mixin';
 import { MepConnectorSchema } from './mep-connector.schemas';
+import { Point3DSchema } from './geometry.schemas';
+import { PLACED_BODY_FIELDS, SCENE_HOST_FIELDS } from './shared-params.schemas';
 
 // ─── Point3D ──────────────────────────────────────────────────────────────────
-
-const Point3DSchema = z
-  .object({
-    x: z.number().finite(),
-    y: z.number().finite(),
-    z: z.number().finite().optional(),
-  })
-  .strict();
 
 // ─── Enums (mirror mep-water-heater-types.ts unions) ──────────────────────────
 
@@ -47,12 +41,7 @@ export const MepWaterHeaterParamsSchema = z
   .object({
     kind: MepWaterHeaterKindSchema,
     shape: MepWaterHeaterShapeSchema,
-    position: Point3DSchema,
-    rotation: z.number().finite(),
-    width: z.number().positive(),
-    length: z.number().positive(),
-    bodyHeightMm: z.number().positive(),
-    mountingElevationMm: z.number().finite(),
+    ...PLACED_BODY_FIELDS,
     connectorDiameterMm: z.number().positive(),
     // The domestic-hot-water classification the heater sources (network inherits it).
     systemClassification: SystemClassificationSchema.optional(),
@@ -60,10 +49,7 @@ export const MepWaterHeaterParamsSchema = z
     thermalOutputW: z.number().positive().optional(),
     // Optional catalogue storage tank capacity (L) — DHW-specific.
     tankCapacityL: z.number().positive().optional(),
-    sceneUnits: z.string().optional(),
-    storeyId: z.string().min(1).optional(),
-    material: z.string().min(1).optional(),
-    hostId: z.string().min(1).optional(),
+    ...SCENE_HOST_FIELDS,
     // ADR-408 Φ1 — embedded MEP connectors (host-local). Optional/additive.
     connectors: z.array(MepConnectorSchema).optional(),
   })

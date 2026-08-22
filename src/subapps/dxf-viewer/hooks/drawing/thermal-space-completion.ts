@@ -19,7 +19,6 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { Point3D } from '../../bim/types/bim-base';
 import {
   DEFAULT_THERMAL_SPACE_USE_TYPE,
   DEFAULT_THERMAL_SPACE_CEILING_HEIGHT_MM,
@@ -70,10 +69,8 @@ export function buildDefaultThermalSpaceParams(
   const useType = overrides.useType ?? DEFAULT_THERMAL_SPACE_USE_TYPE;
   const resolvedHeight = overrides.ceilingHeightMm ?? ceilingHeightMm;
 
-  const lifted: Point3D[] = vertices.map((v) => ({ x: v.x, y: v.y, z: 0 }));
-
   const params: ThermalSpaceParams = {
-    footprint: { vertices: lifted },
+    footprint: { vertices },
     useType,
     ceilingHeightMm: resolvedHeight,
     sceneUnits,

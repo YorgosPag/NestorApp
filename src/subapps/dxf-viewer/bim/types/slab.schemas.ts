@@ -23,22 +23,8 @@ import {
 } from './ifc-entity-mixin';
 import { EnvelopeLayerSchema } from './thermal-envelope.schemas';
 import { StructuralFinishSpecSchema } from '../finishes/structural-finish.schemas';
-
-// ─── Primitive schemas ──────────────────────────────────────────────────────
-
-const Point3DSchema = z
-  .object({
-    x: z.number().finite(),
-    y: z.number().finite(),
-    z: z.number().finite().optional(),
-  })
-  .strict();
-
-const Polygon3DSchema = z
-  .object({
-    vertices: z.array(Point3DSchema).min(3),
-  })
-  .strict();
+import { Point3DSchema, PlanProfileSchema } from './geometry.schemas';
+import { STOREY_PLACEMENT_FIELDS, addDnaThicknessIssue } from './shared-params.schemas';
 
 // ─── Enums (mirror slab-types.ts unions) ─────────────────────────────────────
 
@@ -102,7 +88,7 @@ export const SlabSlopeSchema = z
 const SlabParamsBaseSchema = z
   .object({
     kind: SlabKindSchema,
-    outline: Polygon3DSchema,
+    outline: PlanProfileSchema,
     levelElevation: z.number().finite(),
     heightOffsetFromLevel: z.number().finite().optional(),
     thickness: z.number().positive(),
@@ -112,9 +98,7 @@ const SlabParamsBaseSchema = z
     reinforcement: SlabReinforcementSchema.optional(),
     material: z.string().min(1).optional(),
     dna: SlabDnaSchema.optional(),
-    sceneUnits: z.string().optional(),
-    storeyId: z.string().min(1).optional(),
-    offsetFromStorey: z.number().finite().optional(),
+    ...STOREY_PLACEMENT_FIELDS,
     // ─── ADR-396 P7 — ETICS exposed-slab insulation layer (Z2 soffit / Z3 top)
     envelopeLayer: EnvelopeLayerSchema.optional(),
     // ─── ADR-534 Φ4 — soffit finish (ceiling paint/plaster, references wall-covering catalog)
@@ -150,17 +134,7 @@ export const SlabParamsSchema = SlabParamsBaseSchema.superRefine((data, ctx) => 
   }
   // SSoT: όταν υπάρχει dna, το thickness παράγεται από το totalThickness
   // (μηδέν διπλο-καταχώρηση — ίδιος κανόνας με WallParams.thickness).
-  if (
-    data.dna !== undefined &&
-    Math.abs(data.thickness - data.dna.totalThickness) > 1e-3
-  ) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['thickness'],
-      message:
-        'SlabParams: όταν υπάρχει dna, thickness πρέπει να ισούται με dna.totalThickness.',
-    });
-  }
+  addDnaThicknessIssue('SlabParams', data, ctx);
 });
 
 export type SlabParamsParsed = z.infer<typeof SlabParamsSchema>;

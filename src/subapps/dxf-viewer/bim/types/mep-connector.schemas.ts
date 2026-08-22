@@ -10,14 +10,7 @@
  */
 
 import { z } from 'zod';
-
-const Point3DSchema = z
-  .object({
-    x: z.number().finite(),
-    y: z.number().finite(),
-    z: z.number().finite().optional(),
-  })
-  .strict();
+import { Point3DSchema } from './geometry.schemas';
 
 export const MepConnectorDomainSchema = z.enum(['electrical', 'duct', 'pipe', 'fuel']);
 

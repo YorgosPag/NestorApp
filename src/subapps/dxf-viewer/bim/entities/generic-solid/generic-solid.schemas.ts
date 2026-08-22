@@ -12,16 +12,9 @@
 import { z } from 'zod';
 import { IfcGuidSchema, IfcPropertySetSchema } from '../../types/ifc-entity-mixin';
 import { GuideBindingsSchema } from '../../types/guide-binding.schemas';
+import { Point3DSchema } from '../../types/geometry.schemas';
 
 // ─── Point3D ──────────────────────────────────────────────────────────────────
-
-const Point3DSchema = z
-  .object({
-    x: z.number().finite(),
-    y: z.number().finite(),
-    z: z.number().finite().optional(),
-  })
-  .strict();
 
 // ─── Per-shape schemas (plain objects — required by discriminatedUnion) ───────
 

@@ -32,7 +32,7 @@
 import type {
   BimEntity,
   BoundingBox3D,
-  Polygon3D,
+  PlanProfile,
 } from './bim-base';
 import type { SceneUnits } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
@@ -110,8 +110,9 @@ export interface SoffitFinish {
  */
 export interface SlabParams {
   readonly kind: SlabKind;
-  /** Closed polygon (CCW). World coords σε mm. Min MIN_POLYGON_VERTICES (3). */
-  readonly outline: Polygon3D;
+  /** Closed polygon (CCW). World coords σε mm. Min MIN_POLYGON_VERTICES (3).
+   *  ADR-789 Φάση Δ: **2Δ προφίλ** — το υψόμετρο ζει στο `levelElevation`. */
+  readonly outline: PlanProfile;
   /** mm. Top face z από project origin (FFL). ADR-369 §2.1 canonical. */
   readonly levelElevation: number;
   /** mm. Optional offset από FFL (default 0). Raises/drops top-face. */
@@ -215,8 +216,8 @@ export interface SlabParams {
  * Phase 3: `netArea === area` (slab-openings subtraction lands Phase 3.5).
  */
 export interface SlabGeometry {
-  /** Polygon3D — re-export του outline (closed, CCW). */
-  readonly polygon: Polygon3D;
+  /** **2Δ προφίλ** — re-export του outline (closed, CCW). ADR-789 Φάση Δ. */
+  readonly polygon: PlanProfile;
   readonly bbox: BoundingBox3D;
   /** m². Ακαθάριστο εμβαδό περιγράμματος. */
   readonly area: number;

@@ -19,7 +19,6 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { Point3D } from '../../bim/types/bim-base';
 import {
   DEFAULT_SLAB_GEOMETRY_TYPE,
   DEFAULT_SLAB_THICKNESS_MM,
@@ -81,7 +80,8 @@ export interface SlabParamOverrides {
  *   2. Resolve thickness (override → DEFAULT_SLAB_THICKNESS_MM).
  *   3. Resolve levelElevation (override → SLAB_KIND_DEFAULT_LEVEL_ELEVATION_MM[kind]).
  *   4. Resolve geometryType (override → 'box').
- *   5. Lift 2D vertices σε Point3D (z=0).
+ *   5. Το 2Δ προφίλ περνά ΑΥΤΟΥΣΙΟ στο `outline` (ADR-789 Φάση Δ — το υψόμετρο
+ *      ζει στο `levelElevation`, ΟΧΙ στις κορυφές).
  *
  * Vertices αναμένονται σε scene units (mm convention — caller responsible
  * για conversion αν χρειάζεται). Δεν κάνει copy/normalize — caller passes
@@ -109,8 +109,6 @@ export function buildDefaultSlabParams(
       : overrides.levelElevation ?? SLAB_KIND_DEFAULT_LEVEL_ELEVATION_MM[kind];
   const geometryType = overrides.geometryType ?? DEFAULT_SLAB_GEOMETRY_TYPE;
 
-  const lifted: Point3D[] = vertices.map((v) => ({ x: v.x, y: v.y, z: 0 }));
-
   // ADR-534 Φ5 — additive σοβάς ως finish skin (mirror τοίχου: `categoryGetsFinishSkin` →
   // `createDefaultStructuralFinishSpec`). Δίνεται σε ΟΛΕΣ τις finish-kinds πλάκες (floor/
   // ceiling/roof)· ground/foundation → undefined. Πλάκα με DNA-σοβά (roof buildup «Plaster
@@ -120,7 +118,7 @@ export function buildDefaultSlabParams(
 
   const params: SlabParams = {
     kind,
-    outline: { vertices: lifted },
+    outline: { vertices },
     levelElevation,
     thickness,
     geometryType,

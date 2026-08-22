@@ -29,7 +29,7 @@ import type {
   BimEntity,
   BoundingBox3D,
   Point3D,
-  Polygon3D,
+  PlanProfile,
 } from './bim-base';
 import type { SceneUnits } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
@@ -105,7 +105,8 @@ export interface RoofEdgeSlope {
  *   - `dna?` — στρωματική σύνθεση (reuse `SlabDna` SSoT). Συνήθως από το RoofType.
  */
 export interface RoofParams {
-  readonly outline: Polygon3D;
+  /** ADR-789 Φάση Δ: **2Δ προφίλ** — το υψόμετρο ζει στο `basePivotZ`. */
+  readonly outline: PlanProfile;
   readonly edges: readonly RoofEdgeSlope[];
   readonly slopeUnit: RoofSlopeUnit;
   /** mm. Στάθμη γείσου (eaves datum). */
@@ -184,8 +185,8 @@ export interface RoofRidgeLine {
  * τροφοδοτούν το BOQ (ADR-417 Q7: επικάλυψη = GrossArea).
  */
 export interface RoofGeometry {
-  /** Footprint (closed, CCW) — re-export του outline. */
-  readonly footprint: Polygon3D;
+  /** Footprint (closed, CCW) — re-export του outline. ADR-789 Φάση Δ: 2Δ προφίλ. */
+  readonly footprint: PlanProfile;
   /** Τα κεκλιμένα «νερά» της στέγης (≥1). */
   readonly faces: readonly RoofFace[];
   /** Κορφιάδες / λούκια / hip ακμές (Φ1: ridge για gable). */

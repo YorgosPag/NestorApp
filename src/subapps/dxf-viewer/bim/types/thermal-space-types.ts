@@ -27,7 +27,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-422-bim-heating-mechanical-study.md
  */
 
-import type { BimEntity, BoundingBox3D, Polygon3D } from './bim-base';
+import type { BimEntity, BoundingBox3D, PlanProfile } from './bim-base';
 import type { SceneUnits } from '../../utils/scene-units';
 import { mmScaleFor } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
@@ -101,7 +101,8 @@ export const THERMAL_SPACE_USE_TYPES: readonly ThermalSpaceUseType[] = [
  *   - `floorId?` — FK → Floor.id (storey reference, ADR-420 floor-scope).
  */
 export interface ThermalSpaceParams {
-  readonly footprint: Polygon3D;
+  /** ADR-789 Φάση Δ: **2Δ προφίλ** — το ύψος ζει στο `ceilingHeightMm`/όροφο. */
+  readonly footprint: PlanProfile;
   readonly useType: ThermalSpaceUseType;
   readonly setpointTempC?: number;
   readonly airChangesPerHour?: number;

@@ -24,16 +24,15 @@ import {
   EnvelopeFunctionSchema,
   EnvelopeLayerSchema,
 } from './thermal-envelope.schemas';
+import { Point3DSchema } from './geometry.schemas';
+import {
+  I_SHAPE_PROFILE_FIELDS,
+  STOREY_PLACEMENT_FIELDS,
+  STRUCTURAL_BINDING_FIELDS,
+  addBindingIssues,
+} from './shared-params.schemas';
 
 // ─── Point3D ────────────────────────────────────────────────────────────────
-
-const Point3DSchema = z
-  .object({
-    x: z.number().finite(),
-    y: z.number().finite(),
-    z: z.number().finite().optional(),
-  })
-  .strict();
 
 // ─── Enums (mirror column-types.ts unions) ───────────────────────────────────
 
@@ -94,9 +93,7 @@ const ColumnPolygonParamsSchema = z
 
 const ColumnIShapeParamsSchema = z
   .object({
-    flangeThickness: z.number().positive().optional(),
-    webThickness: z.number().positive().optional(),
-    flipY: z.boolean().optional(),
+    ...I_SHAPE_PROFILE_FIELDS,
   })
   .strict();
 
@@ -201,18 +198,12 @@ const ColumnParamsBaseSchema = z
     ishape: ColumnIShapeParamsSchema.optional(),
     ushape: ColumnUshapeParamsSchema.optional(),
     composite: ColumnCompositeParamsSchema.optional(),
-    sceneUnits: z.string().optional(),
-    storeyId: z.string().min(1).optional(),
-    offsetFromStorey: z.number().finite().optional(),
+    ...STOREY_PLACEMENT_FIELDS,
     // ─── ADR-369 §9 Q5 binding ──────────────────────────────────────────────
     baseBinding: ColumnBaseBindingSchema,
     topBinding: ColumnTopBindingSchema,
-    baseOffset: z.number().finite(),
-    topOffset: z.number().finite(),
-    unconnectedHeight: z.number().positive().optional(),
-    // ─── ADR-401 Phase F — Attach-to-structural (mirror wall.schemas.ts) ───────
-    attachTopToIds: z.array(z.string().min(1)).optional(),
-    attachBaseToIds: z.array(z.string().min(1)).optional(),
+    // ─── ADR-369 §9 Q5 · ADR-401 — offsets + attach-to-structural ─────────
+    ...STRUCTURAL_BINDING_FIELDS,
     // ─── ADR-459 Phase 2 — αναλυτικό FK πεδίλου (Structural Connectivity) ───────
     footingId: z.string().min(1).optional(),
     // ─── ADR-396 P7 — ETICS exterior insulation layer (Z1) ───────────────────
@@ -227,52 +218,7 @@ const ColumnParamsBaseSchema = z
 
 export const ColumnParamsSchema = ColumnParamsBaseSchema.superRefine(
   (data, ctx) => {
-    if (data.topBinding === 'unconnected' && data.unconnectedHeight === undefined) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['unconnectedHeight'],
-        message:
-          "ColumnParams: topBinding='unconnected' απαιτεί unconnectedHeight (mm > 0).",
-      });
-    }
-    if (data.topBinding !== 'unconnected' && data.unconnectedHeight !== undefined) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['unconnectedHeight'],
-        message:
-          "ColumnParams: unconnectedHeight επιτρέπεται μόνο όταν topBinding='unconnected'.",
-      });
-    }
-    // ─── ADR-401 Phase F — top attach refinement ──────────────────────────────
-    if (data.topBinding === 'attached' && (data.attachTopToIds === undefined || data.attachTopToIds.length === 0)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['attachTopToIds'],
-        message: "ColumnParams: topBinding='attached' απαιτεί ≥1 attachTopToIds (host FK).",
-      });
-    }
-    if (data.topBinding !== 'attached' && data.attachTopToIds !== undefined) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['attachTopToIds'],
-        message: "ColumnParams: attachTopToIds επιτρέπεται μόνο όταν topBinding='attached'.",
-      });
-    }
-    // ─── ADR-401 Phase F (base) — base attach refinement ──────────────────────
-    if (data.baseBinding === 'attached' && (data.attachBaseToIds === undefined || data.attachBaseToIds.length === 0)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['attachBaseToIds'],
-        message: "ColumnParams: baseBinding='attached' απαιτεί ≥1 attachBaseToIds (host FK).",
-      });
-    }
-    if (data.baseBinding !== 'attached' && data.attachBaseToIds !== undefined) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['attachBaseToIds'],
-        message: "ColumnParams: attachBaseToIds επιτρέπεται μόνο όταν baseBinding='attached'.",
-      });
-    }
+    addBindingIssues('ColumnParams', data, ctx);
   },
 );
 

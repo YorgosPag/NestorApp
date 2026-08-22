@@ -208,6 +208,7 @@ export function computeWallCoveringRenderGeometry(
   const strip = computeWallCoveringStrip(wall, params);
   if (!strip) return {};
   const bbox = stripBounds(strip.quad);
-  const outline = strip.quad.map((p) => ({ x: p.x, y: p.y, z: 0 }));
-  return { outline, bbox };
+  // ADR-789 Φάση Δ — το `quad` ΕΙΝΑΙ ήδη 2Δ· το σχόλιο του τύπου το έλεγε («cached 2D
+  // strip outline») ενώ ο τύπος έλεγε Point3D[]. Περνά αυτούσιο.
+  return { outline: strip.quad, bbox };
 }

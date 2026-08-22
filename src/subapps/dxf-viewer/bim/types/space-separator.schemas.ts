@@ -14,16 +14,9 @@ import {
   IfcGuidSchema,
   IfcPropertySetSchema,
 } from './ifc-entity-mixin';
+import { Point3DSchema } from './geometry.schemas';
 
 // ─── Point3D ──────────────────────────────────────────────────────────────────
-
-const Point3DSchema = z
-  .object({
-    x: z.number().finite(),
-    y: z.number().finite(),
-    z: z.number().finite().optional(),
-  })
-  .strict();
 
 // ─── Enums (mirror space-separator-types.ts unions) ──────────────────────────
 

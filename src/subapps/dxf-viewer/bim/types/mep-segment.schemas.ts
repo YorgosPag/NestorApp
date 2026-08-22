@@ -10,15 +10,9 @@
  */
 
 import { z } from 'zod';
-import { MepConnectorSchema, PlumbingSystemClassificationSchema } from './mep-connector.schemas';
-
-const Point3DSchema = z
-  .object({
-    x: z.number().finite(),
-    y: z.number().finite(),
-    z: z.number().finite().optional(),
-  })
-  .strict();
+import { PlumbingSystemClassificationSchema } from './mep-connector.schemas';
+import { MEP_ELEMENT_TAIL_FIELDS } from './shared-params.schemas';
+import { Point3DSchema } from './geometry.schemas';
 
 export const MepSegmentDomainSchema = z.enum(['duct', 'pipe', 'fuel']);
 
@@ -26,7 +20,6 @@ export const MepSegmentSectionKindSchema = z.enum(['rectangular', 'round']);
 
 export const MepSegmentIfcTypeSchema = z.enum(['IfcDuctSegment', 'IfcPipeSegment']);
 
-const SceneUnitsSchema = z.enum(['mm', 'cm', 'm']);
 
 export const MepSegmentParamsSchema = z
   .object({
@@ -43,10 +36,7 @@ export const MepSegmentParamsSchema = z
     // ADR-408 Φ14 — drainage/plumbing instance hints (System owns classification once joined).
     classification: PlumbingSystemClassificationSchema.optional(),
     slopePercent: z.number().finite().optional(),
-    sceneUnits: SceneUnitsSchema.optional(),
-    storeyId: z.string().min(1).optional(),
-    // Forward hook (duct/pipe systems) — empty in the element-only slice.
-    connectors: z.array(MepConnectorSchema).optional(),
+    ...MEP_ELEMENT_TAIL_FIELDS,
   })
   .strict()
   .superRefine((params, ctx) => {

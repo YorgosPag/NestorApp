@@ -22,16 +22,10 @@ import {
   BeamReinforcementSchema,
   BeamStirrupsSchema,
 } from './beam.schemas';
+import { Point3DSchema } from './geometry.schemas';
+import { STOREY_PLACEMENT_FIELDS } from './shared-params.schemas';
 
 // ─── Point3D ──────────────────────────────────────────────────────────────────
-
-const Point3DSchema = z
-  .object({
-    x: z.number().finite(),
-    y: z.number().finite(),
-    z: z.number().finite().optional(),
-  })
-  .strict();
 
 // ─── Enums (mirror foundation-types.ts unions) ───────────────────────────────
 
@@ -112,9 +106,7 @@ const CommonParamsShape = {
   topElevationMm: z.number().finite(),
   thicknessMm: z.number().positive(),
   material: z.string().min(1).optional(),
-  sceneUnits: z.string().optional(),
-  storeyId: z.string().min(1).optional(),
-  offsetFromStorey: z.number().finite().optional(),
+  ...STOREY_PLACEMENT_FIELDS,
   catalogProfile: z.string().min(1).optional(),
   // ADR-459 Phase 7 — provenance flag (auto-foundation reconciler ownership).
   autoDesigned: z.boolean().optional(),

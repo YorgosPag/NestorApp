@@ -15,22 +15,8 @@ import { z } from 'zod';
 import { IfcGuidSchema, IfcPropertySetSchema } from './ifc-entity-mixin';
 import { SlabDnaSchema } from './slab.schemas';
 import { RoofTypeParamsSchema } from './bim-family-type.schemas';
-
-// ─── Primitive schemas ──────────────────────────────────────────────────────
-
-const Point3DSchema = z
-  .object({
-    x: z.number().finite(),
-    y: z.number().finite(),
-    z: z.number().finite().optional(),
-  })
-  .strict();
-
-const Polygon3DSchema = z
-  .object({
-    vertices: z.array(Point3DSchema).min(3),
-  })
-  .strict();
+import { Point3DSchema, PlanProfileSchema } from './geometry.schemas';
+import { addDnaThicknessIssue } from './shared-params.schemas';
 
 // ─── Enums ──────────────────────────────────────────────────────────────────
 
@@ -52,7 +38,7 @@ export const RoofEdgeSlopeSchema = z
 
 const RoofParamsBaseSchema = z
   .object({
-    outline: Polygon3DSchema,
+    outline: PlanProfileSchema,
     edges: z.array(RoofEdgeSlopeSchema),
     slopeUnit: RoofSlopeUnitSchema,
     basePivotZ: z.number().finite(),
@@ -89,13 +75,7 @@ export const RoofParamsSchema = RoofParamsBaseSchema.superRefine((data, ctx) => 
       message: 'RoofParams: edges.length πρέπει να ισούται με outline.vertices.length.',
     });
   }
-  if (data.dna !== undefined && Math.abs(data.thickness - data.dna.totalThickness) > 1e-3) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['thickness'],
-      message: 'RoofParams: όταν υπάρχει dna, thickness πρέπει να ισούται με dna.totalThickness.',
-    });
-  }
+  addDnaThicknessIssue('RoofParams', data, ctx);
 });
 
 export type RoofParamsParsed = z.infer<typeof RoofParamsSchema>;

@@ -18,7 +18,6 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { Point3D } from '../../bim/types/bim-base';
 import type { SceneUnits } from '../../utils/scene-units';
 import type {
   MepUnderfloorEntity,
@@ -73,7 +72,7 @@ export interface MepUnderfloorParamOverrides {
 
 /**
  * Build `MepUnderfloorParams` from a vertex list + optional overrides. Lifts the 2D
- * vertices to a `Point3D` footprint (z=0, world mm) and seeds the two entry connectors
+ * vertices to a **2Δ** `footprint` (world mm· ADR-789 Φάση Δ) and seeds the two entry connectors
  * via the `buildUnderfloorConnectors` SSoT. Vertices are in scene units (mm convention).
  */
 export function buildDefaultMepUnderfloorParams(
@@ -81,11 +80,9 @@ export function buildDefaultMepUnderfloorParams(
   overrides: MepUnderfloorParamOverrides = {},
   sceneUnits: SceneUnits = 'mm',
 ): MepUnderfloorParams {
-  const lifted: Point3D[] = vertices.map((v) => ({ x: v.x, y: v.y, z: 0 }));
-
   const base: MepUnderfloorParams = {
     kind: 'hydronic-loop',
-    footprint: { vertices: lifted },
+    footprint: { vertices },
     pipeSpacingMm: overrides.pipeSpacingMm ?? DEFAULT_UNDERFLOOR_SPACING_MM,
     edgeClearanceMm: overrides.edgeClearanceMm ?? DEFAULT_UNDERFLOOR_EDGE_CLEARANCE_MM,
     patternType: overrides.patternType ?? DEFAULT_UNDERFLOOR_PATTERN,

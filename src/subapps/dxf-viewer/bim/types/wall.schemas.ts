@@ -31,16 +31,10 @@ import {
 } from './ifc-entity-mixin';
 import { EnvelopeFunctionSchema } from './thermal-envelope.schemas';
 import { WallTypeParamsSchema } from './bim-family-type.schemas';
+import { Point3DSchema } from './geometry.schemas';
+import { STOREY_PLACEMENT_FIELDS, STRUCTURAL_BINDING_FIELDS, addBindingIssues } from './shared-params.schemas';
 
 // ─── Primitive schemas (Point3D) ─────────────────────────────────────────────
-
-const Point3DSchema = z
-  .object({
-    x: z.number().finite(),
-    y: z.number().finite(),
-    z: z.number().finite().optional(),
-  })
-  .strict();
 
 // ─── Enums (mirror wall-types.ts unions) ─────────────────────────────────────
 
@@ -97,18 +91,12 @@ const WallParamsBaseSchema = z
     arc: z.number().finite().optional(),
     curveControl: Point3DSchema.optional(),
     material: z.string().min(1).optional(),
-    sceneUnits: z.string().optional(),
-    storeyId: z.string().min(1).optional(),
-    offsetFromStorey: z.number().finite().optional(),
+    ...STOREY_PLACEMENT_FIELDS,
     // ─── ADR-369 §9 Q5 binding ──────────────────────────────────────────────
     baseBinding: WallBaseBindingSchema,
     topBinding: WallTopBindingSchema,
-    baseOffset: z.number().finite(),
-    topOffset: z.number().finite(),
-    unconnectedHeight: z.number().positive().optional(),
-    // ─── ADR-401 — Attach-to-structural ───────────────────────────────────────
-    attachTopToIds: z.array(z.string().min(1)).optional(),
-    attachBaseToIds: z.array(z.string().min(1)).optional(),
+    // ─── ADR-369 §9 Q5 · ADR-401 — offsets + attach-to-structural ─────────
+    ...STRUCTURAL_BINDING_FIELDS,
     // ─── ADR-396 v2 Φάση 4 — ETICS classification override (Στρ.3) ─────────────
     envelopeFunction: EnvelopeFunctionSchema.optional(),
   })
@@ -129,52 +117,7 @@ export const WallParamsSchema = WallParamsBaseSchema.superRefine((data, ctx) => 
       message: 'WallParams: arc (circular) και polylineVertices αλληλοαποκλείονται.',
     });
   }
-  if (data.topBinding === 'unconnected' && data.unconnectedHeight === undefined) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['unconnectedHeight'],
-      message:
-        "WallParams: topBinding='unconnected' απαιτεί unconnectedHeight (mm > 0).",
-    });
-  }
-  if (data.topBinding !== 'unconnected' && data.unconnectedHeight !== undefined) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['unconnectedHeight'],
-      message:
-        "WallParams: unconnectedHeight επιτρέπεται μόνο όταν topBinding='unconnected'.",
-    });
-  }
-  // ─── ADR-401 — attach refinement ──────────────────────────────────────────
-  if (data.topBinding === 'attached' && (data.attachTopToIds === undefined || data.attachTopToIds.length === 0)) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['attachTopToIds'],
-      message: "WallParams: topBinding='attached' απαιτεί ≥1 attachTopToIds (host FK).",
-    });
-  }
-  if (data.topBinding !== 'attached' && data.attachTopToIds !== undefined) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['attachTopToIds'],
-      message: "WallParams: attachTopToIds επιτρέπεται μόνο όταν topBinding='attached'.",
-    });
-  }
-  // ─── ADR-401 (γ) — base attach refinement ─────────────────────────────────
-  if (data.baseBinding === 'attached' && (data.attachBaseToIds === undefined || data.attachBaseToIds.length === 0)) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['attachBaseToIds'],
-      message: "WallParams: baseBinding='attached' απαιτεί ≥1 attachBaseToIds (host FK).",
-    });
-  }
-  if (data.baseBinding !== 'attached' && data.attachBaseToIds !== undefined) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['attachBaseToIds'],
-      message: "WallParams: attachBaseToIds επιτρέπεται μόνο όταν baseBinding='attached'.",
-    });
-  }
+  addBindingIssues('WallParams', data, ctx);
 });
 
 export type WallParamsParsed = z.infer<typeof WallParamsSchema>;

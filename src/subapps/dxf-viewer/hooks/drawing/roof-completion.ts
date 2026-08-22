@@ -21,7 +21,6 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { Point3D } from '../../bim/types/bim-base';
 import {
   DEFAULT_ROOF_BASE_PIVOT_Z_MM,
   DEFAULT_ROOF_SLOPE_DEG,
@@ -82,7 +81,8 @@ export interface RoofParamOverrides {
  *   2. Resolve thickness (dna.totalThickness → override → DEFAULT_ROOF_THICKNESS_MM).
  *   3. Resolve basePivotZ (override → DEFAULT_ROOF_BASE_PIVOT_Z_MM).
  *   4. Resolve slopeUnit (override → 'deg').
- *   5. Lift 2D vertices σε Point3D (z=0) για outline.
+ *   5. Το 2Δ προφίλ περνά ΑΥΤΟΥΣΙΟ στο `outline` (ADR-789 Φάση Δ — το υψόμετρο
+ *      ζει στο `basePivotZ`, ΟΧΙ στις κορυφές).
  *   6. Build flat edges via buildDefaultRoofEdges (user αλλάζει μέσω contextual tab).
  *
  * Vertices αναμένονται σε scene units (mm convention — caller responsible για conversion).
@@ -97,8 +97,7 @@ export function buildDefaultRoofParams(
   const basePivotZ = overrides.basePivotZ ?? DEFAULT_ROOF_BASE_PIVOT_Z_MM;
   const slopeUnit = overrides.slopeUnit ?? DEFAULT_ROOF_SLOPE_UNIT;
 
-  const lifted: Point3D[] = vertices.map((v) => ({ x: v.x, y: v.y, z: 0 }));
-  const outline = { vertices: lifted };
+  const outline = { vertices };
   // ADR-417 — default σε δίρριχτη (gable) ώστε η νέα στέγη να βγαίνει κεκλιμένη·
   // 'flat' → επίπεδο δώμα (buildDefaultRoofEdges). Το per-roof contextual tab
   // (Φ1-part-2) θα οδηγεί αυτά τα overrides.

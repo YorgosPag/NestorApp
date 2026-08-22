@@ -5460,11 +5460,12 @@
     "planar-point-lift": {
       "tier": 1,
       "typeFile": "src/subapps/dxf-viewer/bim/types/bim-base.ts",
-      "description": "ADR-789 — ΜΗΝ λιφτάρεις 2Δ κορυφές σε ψεύτικο z=0. Η επιφάνεια κάτοψης (polygon-utils / polygon-clip-utils / xy-bounds / buildShape) δηλώνει `PlanarPoint` και ΔΕΝ διαβάζει ποτέ .z — το lift είναι round-trip που δεν κάνει τίποτα. Πέρασε το 2Δ πολύγωνο αυτούσιο. Γνήσιο z ⇒ γράψε την πραγματική τιμή, όχι 0.",
+      "description": "ADR-789 — ΜΗΝ λιφτάρεις 2Δ κορυφές σε ψεύτικο z=0. Η επιφάνεια κάτοψης (polygon-utils / polygon-clip-utils / xy-bounds / buildShape) δηλώνει `PlanarPoint` και ΔΕΝ διαβάζει ποτέ .z — το lift είναι round-trip που δεν κάνει τίποτα. Πέρασε το 2Δ πολύγωνο αυτούσιο. Γνήσιο z ⇒ γράψε την πραγματική τιμή, όχι 0. ΤΕΤΑΡΤΟ pattern (ADR-789 Φάση Δ): το ΙΔΙΟ array-lift με ΔΕΙΚΤΟΔΟΤΗΣΗ (`{ x: pr[0], y: pr[1], z: 0 }`) — τα τρία πρώτα απαιτούν `ΟΝΟΜΑ.x`, άρα ήταν δομικά τυφλά· μετρημένο 1 ζωντανό (stairwell-opening-outline) που ο φρουρός ανέφερε ΚΑΘΑΡΟ.",
       "forbiddenPatterns": [
         "\\.map\\(.*=>\\s*\\(?\\s*\\{\\s*x:\\s*[A-Za-z_$][\\w$]*\\.x\\s*,\\s*y:\\s*[A-Za-z_$][\\w$]*\\.y\\s*,\\s*z:\\s*0\\s*\\}",
         ":\\s*Point3D\\s*=>\\s*\\(\\s*\\{\\s*x:\\s*[A-Za-z_$][\\w$]*\\.x\\s*,\\s*y:\\s*[A-Za-z_$][\\w$]*\\.y\\s*,\\s*z:\\s*0\\s*\\}",
-        "^\\s*return\\s*\\{\\s*x:\\s*[A-Za-z_$][\\w$]*\\.x\\s*,\\s*y:\\s*[A-Za-z_$][\\w$]*\\.y\\s*,\\s*z:\\s*0\\s*\\}\\s*;?\\s*$"
+        "^\\s*return\\s*\\{\\s*x:\\s*[A-Za-z_$][\\w$]*\\.x\\s*,\\s*y:\\s*[A-Za-z_$][\\w$]*\\.y\\s*,\\s*z:\\s*0\\s*\\}\\s*;?\\s*$",
+        "\\.map\\(.*=>\\s*\\(?\\s*\\{\\s*x:\\s*[A-Za-z_$][\\w$]*\\[\\d+\\]\\s*,\\s*y:\\s*[A-Za-z_$][\\w$]*\\[\\d+\\]\\s*,\\s*z:\\s*0\\s*\\}"
       ],
       "allowlist": [],
       "addedByAdr": "ADR-789",

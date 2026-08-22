@@ -33,7 +33,7 @@ import type {
   BimEntity,
   BoundingBox3D,
   Point3D,
-  Polygon3D,
+  PlanProfile,
 } from './bim-base';
 import type { SceneUnits } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
@@ -67,8 +67,9 @@ export type MepUnderfloorPattern = 'boustrophedon' | 'counterflow-spiral' | 'spi
 
 export interface MepUnderfloorParams extends MepConnectorHostParams {
   readonly kind: MepUnderfloorKind;
-  /** Closed polygon (CCW), world coords mm. The heating area. Min 3 vertices. */
-  readonly footprint: Polygon3D;
+  /** Closed polygon (CCW), world coords mm. The heating area. Min 3 vertices.
+   *  ADR-789 Φάση Δ: **2Δ προφίλ** — το υψόμετρο ζει στον όροφο. */
+  readonly footprint: PlanProfile;
   /** mm. Centre-to-centre pipe spacing of the serpentine rows (typical 100–200mm). */
   readonly pipeSpacingMm: number;
   /** mm. Inset from the room walls before the field starts (typical 100mm). */

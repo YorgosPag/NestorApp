@@ -10,22 +10,9 @@
 import { z } from 'zod';
 import { IfcGuidSchema, IfcPropertySetSchema } from './ifc-entity-mixin';
 import { MepConnectorSchema } from './mep-connector.schemas';
+import { Point3DSchema, PlanProfileSchema } from './geometry.schemas';
 
 // ─── Point3D / Polygon3D ──────────────────────────────────────────────────────
-
-const Point3DSchema = z
-  .object({
-    x: z.number().finite(),
-    y: z.number().finite(),
-    z: z.number().finite().optional(),
-  })
-  .strict();
-
-const Polygon3DSchema = z
-  .object({
-    vertices: z.array(Point3DSchema).min(3),
-  })
-  .strict();
 
 // ─── Enums (mirror mep-underfloor-types.ts unions) ────────────────────────────
 
@@ -44,7 +31,7 @@ export const MepUnderfloorIfcTypeSchema = z.literal('IfcSpaceHeater');
 export const MepUnderfloorParamsSchema = z
   .object({
     kind: MepUnderfloorKindSchema,
-    footprint: Polygon3DSchema,
+    footprint: PlanProfileSchema,
     pipeSpacingMm: z.number().positive(),
     edgeClearanceMm: z.number().nonnegative(),
     patternType: MepUnderfloorPatternSchema,

@@ -766,7 +766,11 @@ const to3d = (q: Point2D): Point3D => ({ x: q.x, y: q.y, z: 0 });
 // pattern ο φρουρός ήταν τυφλός στο point-free \`ring.map(lift)\`, που δεν έχει arrow στο
 // σημείο κλήσης· η δήλωση είναι η ΜΟΝΗ γραμμή που τον προδίδει (μετρημένο: 2 στιγμιότυπα
 // στο \`stair-region-classifier\` που ο σαρωτής δεν έβλεπε, ADR-789 §11):
-  return { x: v.x, y: v.y, z: 0 };`,
+  return { x: v.x, y: v.y, z: 0 };
+// (δ) Η ΙΔΙΑ κλάση με ΔΕΙΚΤΟΔΟΤΗΣΗ αντί για ιδιότητα. Τα (α)-(γ) απαιτούν \`ΟΝΟΜΑ.x\`,
+// άρα ήταν ΔΟΜΙΚΑ τυφλά σε ζεύγη-πίνακες (polygon-clipping \`Pair = [number, number]\`).
+// Μετρημένο: 1 ζωντανό στο \`stairwell-opening-outline\` που ο φρουρός έλεγε ΚΑΘΑΡΟ:
+const area = polygonArea(outer.map((pr) => ({ x: pr[0], y: pr[1], z: 0 })));`,
     shouldSkip: `// Κανονική χρήση — το 2Δ πολύγωνο μπαίνει ΑΥΤΟΥΣΙΟ στην επιφάνεια κάτοψης:
 import { polygonArea, polygonCentroid, projectVerticesTo2D } from './polygon-utils';
 const area = polygonArea(verts2d);

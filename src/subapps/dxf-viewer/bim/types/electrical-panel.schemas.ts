@@ -11,16 +11,10 @@
 import { z } from 'zod';
 import { IfcGuidSchema, IfcPropertySetSchema } from './ifc-entity-mixin';
 import { MepConnectorSchema } from './mep-connector.schemas';
+import { Point3DSchema } from './geometry.schemas';
+import { PLACED_BODY_FIELDS, SCENE_HOST_FIELDS } from './shared-params.schemas';
 
 // ─── Point3D ──────────────────────────────────────────────────────────────────
-
-const Point3DSchema = z
-  .object({
-    x: z.number().finite(),
-    y: z.number().finite(),
-    z: z.number().finite().optional(),
-  })
-  .strict();
 
 // ─── Enums (mirror electrical-panel-types.ts unions) ──────────────────────────
 
@@ -36,16 +30,8 @@ export const ElectricalPanelParamsSchema = z
   .object({
     kind: ElectricalPanelKindSchema,
     shape: ElectricalPanelShapeSchema,
-    position: Point3DSchema,
-    rotation: z.number().finite(),
-    width: z.number().positive(),
-    length: z.number().positive(),
-    bodyHeightMm: z.number().positive(),
-    mountingElevationMm: z.number().finite(),
-    sceneUnits: z.string().optional(),
-    storeyId: z.string().min(1).optional(),
-    material: z.string().min(1).optional(),
-    hostId: z.string().min(1).optional(),
+    ...PLACED_BODY_FIELDS,
+    ...SCENE_HOST_FIELDS,
     // ADR-408 Φ1 — embedded MEP connectors (host-local). Optional/additive.
     connectors: z.array(MepConnectorSchema).optional(),
   })

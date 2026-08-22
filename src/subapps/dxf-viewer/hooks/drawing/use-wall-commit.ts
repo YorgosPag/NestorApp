@@ -179,10 +179,17 @@ export function useWallCommit(ctx: WallCommitContext): WallCommitApi {
   );
 
   // ── commit (curved, ADR-565 §12 Φ1.x — variant-aware) ────────────────────
-  // Shared tail: build via the SSoT `buildWallEntity('curved')`, validate, emit, continue chain.
-  const finishCurvedCommit = useCallback(
-    (s: WallToolState, params: WallParams, sceneUnits: SceneUnits): boolean => {
-      const result = buildWallEntity(params, currentLevelId, 'curved', sceneUnits);
+  // Κοινή ουρά καμπύλης ΚΑΙ πολυγραμμικού: build μέσω του SSoT `buildWallEntity`, επικύρωση,
+  // εκπομπή, συνέχεια αλυσίδας. Το `kind` είναι όρισμα ακριβώς επειδή ήταν η ΜΟΝΗ διαφορά
+  // ανάμεσα στις δύο ουρές (το βρήκε το CHECK 3.28 ως κλώνο στο ίδιο αρχείο).
+  const finishCommit = useCallback(
+    (
+      s: WallToolState,
+      params: WallParams,
+      kind: 'curved' | 'polyline',
+      sceneUnits: SceneUnits,
+    ): boolean => {
+      const result = buildWallEntity(params, currentLevelId, kind, sceneUnits);
       if (!result.ok) {
         setState({ ...s, error: result.hardErrors[0] ?? null });
         return false;
@@ -214,7 +221,7 @@ export function useWallCommit(ctx: WallCommitContext): WallCommitApi {
           bulge != null
             ? { ...base, arc: bulge }
             : { ...base, curveControl: { x: controlPoint.x, y: controlPoint.y, z: 0 } as Point3D };
-        return finishCurvedCommit(s, params, sceneUnits);
+        return finishCommit(s, params, 'curved', sceneUnits);
       }
 
       // center-ends / tangent → the shared pure resolver (preview ≡ commit).
@@ -230,9 +237,9 @@ export function useWallCommit(ctx: WallCommitContext): WallCommitApi {
       if (!resolved) return false;
       const base = buildDefaultWallParams(resolved.start, resolved.end, s.overrides, sceneUnits);
       const params = resolved.bulge != null ? { ...base, arc: resolved.bulge } : base;
-      return finishCurvedCommit(s, params, sceneUnits);
+      return finishCommit(s, params, 'curved', sceneUnits);
     },
-    [getSceneUnits, getSceneEntities, finishCurvedCommit],
+    [getSceneUnits, getSceneEntities, finishCommit],
   );
 
   // ── commit (curved «αρχή-τέλος-ακτίνα» — typed radius) ────────────────────
@@ -250,9 +257,9 @@ export function useWallCommit(ctx: WallCommitContext): WallCommitApi {
         return false;
       }
       const base = buildDefaultWallParams(s.startPoint, s.endPoint, s.overrides, sceneUnits);
-      return finishCurvedCommit(s, { ...base, arc: bulge }, sceneUnits);
+      return finishCommit(s, { ...base, arc: bulge }, 'curved', sceneUnits);
     },
-    [getSceneUnits, setState, finishCurvedCommit],
+    [getSceneUnits, setState, finishCommit],
   );
 
   // ── commit (polyline) ────────────────────────────────────────────────────
@@ -264,18 +271,10 @@ export function useWallCommit(ctx: WallCommitContext): WallCommitApi {
       const startPt = verts[0];
       const endPt = verts[verts.length - 1];
       const base = buildDefaultWallParams(startPt, endPt, s.overrides, sceneUnits);
-      const polylineVertices: Point3D[] = verts.map((v) => ({ x: v.x, y: v.y, z: 0 }));
-      const params = { ...base, polylineVertices };
-      const result = buildWallEntity(params, currentLevelId, 'polyline', sceneUnits);
-      if (!result.ok) {
-        setState({ ...s, error: result.hardErrors[0] ?? null });
-        return false;
-      }
-      onWallCreated?.(result.entity);
-      setState(continueChain(s));
-      return true;
+      const params = { ...base, polylineVertices: verts };
+      return finishCommit(s, params, 'polyline', sceneUnits);
     },
-    [currentLevelId, onWallCreated, getSceneUnits, setState],
+    [getSceneUnits, finishCommit],
   );
 
   // ── commit (on-entity, ADR-363 Phase 1J) ─────────────────────────────────

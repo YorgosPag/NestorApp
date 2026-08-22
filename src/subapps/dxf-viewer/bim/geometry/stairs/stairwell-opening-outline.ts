@@ -62,7 +62,8 @@ function largestOuterRing(mp: MultiPolygon, z: number): Polygon3D | null {
   for (const polygon of mp) {
     const outer = polygon[0];
     if (!outer || outer.length < 3) continue;
-    const area = polygonArea(outer.map((pr) => ({ x: pr[0], y: pr[1], z: 0 })));
+    // ADR-789 — το `polygonArea` δέχεται `PlanarPoint`: κανένα lift σε ψεύτικο z.
+    const area = polygonArea(outer.map((pr) => ({ x: pr[0], y: pr[1] })));
     if (area > bestArea) {
       bestArea = area;
       best = outer;
