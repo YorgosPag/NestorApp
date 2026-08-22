@@ -62,7 +62,7 @@ function fakeStair(id = 'stair-1'): StairEntity {
     type: 'stair',
     geometry: {
       treads: GEOM_TREADS,
-      bbox: { min: { x: 0, y: 0, z: 0 }, max: { x: 1200, y: 1000, z: 1200 } },
+      bbox: { min: { x: 0, y: 0 }, max: { x: 1200, y: 1000 } },
     },
     params: {
       basePoint: { x: 0, y: 0, z: 0 },

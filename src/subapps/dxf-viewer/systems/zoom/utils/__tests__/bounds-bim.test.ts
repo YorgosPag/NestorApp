@@ -45,7 +45,7 @@ describe('ADR-436 — createBoundsFromDxfScene includes BIM entities', () => {
 
   it('drops the z component (XY plan projection)', () => {
     const scene = sceneOf([
-      { id: 'c1', type: 'column', geometry: { bbox: { min: { x: 0, y: 0, z: 0 }, max: { x: 400, y: 400, z: 3000 } } } },
+      { id: 'c1', type: 'column', geometry: { bbox: { min: { x: 0, y: 0 }, max: { x: 400, y: 400 } } } },
     ]);
     expect(createBoundsFromDxfScene(scene, true)).toEqual({
       min: { x: 0, y: 0 },

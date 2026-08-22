@@ -62,7 +62,7 @@ const polygonColumn = {
     baseOffset: 0,
     topOffset: 0,
   },
-  geometry: { footprint: { vertices: [] }, bbox: { min: { x: 0, y: 0, z: 0 }, max: { x: 0, y: 0, z: 0 } }, area: 0, volume: 0, height: 3000 },
+  geometry: { footprint: { vertices: [] }, bbox: { min: { x: 0, y: 0 }, max: { x: 0, y: 0 } }, area: 0, volume: 0, height: 3000 },
   validation: { isValid: true, hardErrors: [], softWarnings: [], hasCodeViolations: false },
 };
 

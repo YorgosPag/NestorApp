@@ -95,7 +95,7 @@ const scene: Entity[] = [
   {
     id: 'wallK', type: 'wall', kind: 'straight', layerId: 'lyr', visible: true,
     params: { category: 'exterior', start: { x: 2600, y: 0 }, end: { x: 2640, y: 0 }, height: 3000, thickness: 20, flip: false },
-    geometry: { bbox: { min: { x: 2600, y: -10, z: 0 }, max: { x: 2640, y: 10, z: 3000 } } },
+    geometry: { bbox: { min: { x: 2600, y: -10 }, max: { x: 2640, y: 10 }, minZm: 0, maxZm: 3000 } },
   },
 ] as unknown as Entity[];
 

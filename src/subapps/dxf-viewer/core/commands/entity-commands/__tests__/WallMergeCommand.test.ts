@@ -38,7 +38,7 @@ function makeOpening(id: string, wallId: string, offsetFromStart: number): Openi
     params: { kind: 'door', wallId, offsetFromStart, width: 900, height: 2100, sillHeight: 0 },
     geometry: {
       position: { x: 0, y: 0, z: 0 }, rotation: 0, outline: { vertices: [] },
-      bbox: { min: { x: 0, y: 0, z: 0 }, max: { x: 1, y: 1, z: 1 } }, area: 0, perimeter: 0,
+      bbox: { min: { x: 0, y: 0 }, max: { x: 1, y: 1 }, minZm: 0, maxZm: 1 }, area: 0, perimeter: 0,
     },
     visible: true,
   } as unknown as OpeningEntity;

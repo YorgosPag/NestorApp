@@ -39,7 +39,7 @@ describe('space-separator-completion', () => {
     it('derives length in metres + bbox spanning both endpoints', () => {
       const geom = computeSpaceSeparatorGeometry({ start: A, end: B, sceneUnits: 'mm' });
       expect(geom.length).toBeCloseTo(5, 6);
-      expect(geom.bbox.min).toEqual({ x: 0, y: 0, z: 0 });
+      expect(geom.bbox.min).toEqual({ x: 0, y: 0 }); // ADR-793 — ίχνος, χωρίς z
       expect(geom.bbox.max.x).toBe(3000);
       expect(geom.bbox.max.y).toBe(4000);
     });

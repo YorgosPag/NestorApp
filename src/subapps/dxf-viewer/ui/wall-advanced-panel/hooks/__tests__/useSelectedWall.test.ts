@@ -27,7 +27,7 @@ const wallEntity: WallEntity = {
     axisPolyline: { points: [] },
     outerEdge: { points: [] },
     innerEdge: { points: [] },
-    bbox: { min: { x: 0, y: 0, z: 0 }, max: { x: 0, y: 0, z: 0 } },
+    bbox: { min: { x: 0, y: 0 }, max: { x: 0, y: 0 }, minZm: 0, maxZm: 0 },
     length: 1,
     area: 3,
     volume: 0.75,

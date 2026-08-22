@@ -33,7 +33,7 @@ function makeOpeningEntity(): Entity {
           { x: 1000, y: 125, z: 0 },
         ],
       },
-      bbox: { min: { x: 1000, y: -125, z: 0 }, max: { x: 1900, y: 125, z: 2.1 } },
+      bbox: { min: { x: 1000, y: -125 }, max: { x: 1900, y: 125 }, minZm: 0, maxZm: 2.1 },
       area: 1.89,
       perimeter: 6.0,
     },
@@ -53,7 +53,7 @@ function makeWallEntity(): Entity {
       axisPolyline: { points: [{ x: 0, y: 0, z: 0 }, { x: 5000, y: 0, z: 0 }], closed: false },
       outerEdge: { points: [{ x: 0, y: -125, z: 0 }, { x: 5000, y: -125, z: 0 }], closed: false },
       innerEdge: { points: [{ x: 0, y: 125, z: 0 }, { x: 5000, y: 125, z: 0 }], closed: false },
-      bbox: { min: { x: 0, y: -125, z: 0 }, max: { x: 5000, y: 125, z: 3 } },
+      bbox: { min: { x: 0, y: -125 }, max: { x: 5000, y: 125 }, minZm: 0, maxZm: 3 },
       length: 5,
       area: 15,
       volume: 3.75,
@@ -81,7 +81,7 @@ function makeSlabEntity(): Entity {
       thickness: 200,
       levelElevation: 0,
     },
-    geometry: { footprint: { vertices: [] }, bbox: { min: { x: 0, y: 0, z: 0 }, max: { x: 4000, y: 3000, z: 0.2 } }, area: 12, perimeter: 14 },
+    geometry: { footprint: { vertices: [] }, bbox: { min: { x: 0, y: 0 }, max: { x: 4000, y: 3000 }, minZm: 0, maxZm: 0.2 }, area: 12, perimeter: 14 },
     validation: { hasCodeViolations: false, violationKeys: [], lastValidatedAt: null },
   } as unknown as Entity;
 }
@@ -164,7 +164,7 @@ function makeOpeningWithArc(): Entity {
       },
       hingeArc: { points: arcPoints, closed: false },
       hingeAnchor: { x: 1000, y: 0, z: 0 },
-      bbox: { min: { x: 1000, y: -125, z: 0 }, max: { x: 1900, y: 125, z: 2.1 } },
+      bbox: { min: { x: 1000, y: -125 }, max: { x: 1900, y: 125 }, minZm: 0, maxZm: 2.1 },
       area: 1.89,
       perimeter: 6.0,
     },
@@ -208,7 +208,7 @@ function makeFrenchDoorOpening(): Entity {
       hingeArc: { points: arcPoints, closed: false },
       hingeAnchor: { x: 1000, y: 0, z: 0 },
       hingeAnchor2: { x: 1900, y: 0, z: 0 },
-      bbox: { min: { x: 1000, y: -125, z: 0 }, max: { x: 1900, y: 125, z: 2.1 } },
+      bbox: { min: { x: 1000, y: -125 }, max: { x: 1900, y: 125 }, minZm: 0, maxZm: 2.1 },
       area: 1.89,
       perimeter: 6.0,
     },
@@ -312,7 +312,7 @@ describe('calculatePriority — child-over-parent (ADR-363 Bug 1)', () => {
       layerId: '0',
       visible: true,
       params: { slabId: 's_1', outline: { vertices: [] } },
-      geometry: { polygon: { vertices: [] }, bbox: { min: { x: 0, y: 0, z: 0 }, max: { x: 0, y: 0, z: 0 } }, area: 0, perimeter: 0 },
+      geometry: { polygon: { vertices: [] }, bbox: { min: { x: 0, y: 0 }, max: { x: 0, y: 0 } }, area: 0, perimeter: 0 },
       validation: { hasCodeViolations: false, violationKeys: [], lastValidatedAt: null },
     } as unknown as Entity;
     expect(calculatePriority(slabOpening)).toBe(75);

@@ -33,7 +33,7 @@ function stair(basePointZ: number): StairEntity {
     id: 'stair-1',
     type: 'stair',
     geometry: {
-      bbox: { min: { x: 0, y: 0, z: 0 }, max: { x: 1000, y: 1000, z: 1750 } },
+      bbox: { min: { x: 0, y: 0 }, max: { x: 1000, y: 1000 } },
     },
     params: stairParams(basePointZ),
   } as unknown as StairEntity;

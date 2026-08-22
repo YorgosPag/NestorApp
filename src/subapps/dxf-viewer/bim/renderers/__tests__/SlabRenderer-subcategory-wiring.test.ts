@@ -102,7 +102,7 @@ function makeSlab(): SlabEntity {
     params: { kind: 'floor', levelElevation: 1400, thickness: 400, geometryType: 'box', outline: { vertices: [] } },
     geometry: {
       polygon: { vertices: [{ x: 0, y: 0 }, { x: 5000, y: 0 }, { x: 5000, y: 5000 }, { x: 0, y: 5000 }] },
-      bbox: { min: { x: 0, y: 0, z: 0 }, max: { x: 5000, y: 5000, z: 400 } },
+      bbox: { min: { x: 0, y: 0 }, max: { x: 5000, y: 5000 }, minZm: 0, maxZm: 400 },
     },
     validation: { hasCodeViolations: false, violationKeys: [], lastValidatedAt: null },
     visible: true,

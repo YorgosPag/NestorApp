@@ -85,7 +85,7 @@ const stripFoundation = {
     width: 600,
     sceneUnits: 'mm' as const,
   },
-  geometry: { footprint: { vertices: [] }, bbox: { min: { x: 0, y: 0, z: 0 }, max: { x: 0, y: 0, z: 0 } }, area: 0, volume: 0, thickness: 400 },
+  geometry: { footprint: { vertices: [] }, bbox: { min: { x: 0, y: 0 }, max: { x: 0, y: 0 } }, area: 0, volume: 0, thickness: 400 },
   validation: { isValid: true, hardErrors: [], softWarnings: [], hasCodeViolations: false },
 };
 

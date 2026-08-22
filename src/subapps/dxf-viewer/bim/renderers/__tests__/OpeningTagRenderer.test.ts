@@ -49,7 +49,7 @@ function makeOpening(overrides: {
       position: { x: 50, y: 50, z: 0 },
       rotation: 0,
       outline: { vertices: outline.map((v) => ({ x: v.x, y: v.y, z: 0 })) },
-      bbox: { min: { x: 0, y: 0, z: 0 }, max: { x: 100, y: 100, z: 0 } },
+      bbox: { min: { x: 0, y: 0 }, max: { x: 100, y: 100 }, minZm: 0, maxZm: 0 },
       area: 0.02,
       perimeter: 0.6,
     },

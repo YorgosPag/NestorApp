@@ -22,7 +22,7 @@ const wall = (id: string, minX: number, minY: number, maxX: number, maxY: number
   ({
     id,
     type: 'wall',
-    geometry: { bbox: { min: { x: minX, y: minY, z: 0 }, max: { x: maxX, y: maxY, z: 3 } } },
+    geometry: { bbox: { min: { x: minX, y: minY }, max: { x: maxX, y: maxY }, minZm: 0, maxZm: 3 } },
   }) as unknown as AnySceneEntity;
 
 /** Minimal single-run textNode (AST) as produced by CreateTextCommand. */

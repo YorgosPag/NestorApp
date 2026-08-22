@@ -28,7 +28,7 @@ function column(over: Partial<ColumnEntity['params']> = {}): ColumnEntity {
     },
     geometry: {
       footprint: { vertices: [{ x: 0, y: 0, z: 0 }, { x: 500, y: 0, z: 0 }, { x: 500, y: 500, z: 0 }, { x: 0, y: 500, z: 0 }] },
-      bbox: { min: { x: 0, y: 0, z: 0 }, max: { x: 500, y: 500, z: 0 } }, area: 0.25, volume: 0.675, height: 2700,
+      bbox: { min: { x: 0, y: 0 }, max: { x: 500, y: 500 } }, area: 0.25, volume: 0.675, height: 2700,
     },
     validation: { isValid: true, hardErrors: [], softWarnings: [], hasCodeViolations: false },
   } as unknown as ColumnEntity;

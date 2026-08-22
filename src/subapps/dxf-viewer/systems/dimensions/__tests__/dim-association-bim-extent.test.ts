@@ -11,7 +11,7 @@ function wallAt(minX: number, minY: number, maxX: number, maxY: number): SceneEn
   return {
     id: 'w1',
     type: 'wall',
-    geometry: { bbox: { min: { x: minX, y: minY, z: 0 }, max: { x: maxX, y: maxY, z: 0 } } },
+    geometry: { bbox: { min: { x: minX, y: minY }, max: { x: maxX, y: maxY }, minZm: 0, maxZm: 0 } },
   } as unknown as SceneEntity;
 }
 

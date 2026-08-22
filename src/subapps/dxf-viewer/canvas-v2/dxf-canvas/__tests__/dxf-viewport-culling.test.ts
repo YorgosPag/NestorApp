@@ -17,7 +17,7 @@ import { quarantinedCount, resetBBoxQuarantine } from '../dxf-bbox-quarantine';
 function bimEntity(type: string, minX: number, minY: number, maxX: number, maxY: number): DxfEntityUnion {
   return {
     type,
-    geometry: { bbox: { min: { x: minX, y: minY, z: 0 }, max: { x: maxX, y: maxY, z: 3 } } },
+    geometry: { bbox: { min: { x: minX, y: minY }, max: { x: maxX, y: maxY } } },
   } as unknown as DxfEntityUnion;
 }
 
@@ -49,7 +49,7 @@ describe('getEntityBBox — BIM direct-entities use geometry.bbox', () => {
 function openingEntity(minX: number, minY: number, maxX: number, maxY: number): DxfEntityUnion {
   return {
     type: 'opening',
-    openingEntity: { geometry: { bbox: { min: { x: minX, y: minY, z: 0 }, max: { x: maxX, y: maxY, z: 3 } } } },
+    openingEntity: { geometry: { bbox: { min: { x: minX, y: minY }, max: { x: maxX, y: maxY } } } },
   } as unknown as DxfEntityUnion;
 }
 

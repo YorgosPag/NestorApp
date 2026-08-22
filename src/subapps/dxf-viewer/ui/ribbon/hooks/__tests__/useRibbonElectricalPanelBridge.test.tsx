@@ -60,7 +60,7 @@ const panel = {
     sceneUnits: 'mm' as const,
     connectors: [],
   },
-  geometry: { footprint: { vertices: [] }, bbox: { min: { x: 0, y: 0, z: 0 }, max: { x: 0, y: 0, z: 0 } }, area: 0, height: 700 },
+  geometry: { footprint: { vertices: [] }, bbox: { min: { x: 0, y: 0 }, max: { x: 0, y: 0 } }, area: 0, height: 700 },
   validation: { isValid: true, hardErrors: [], softWarnings: [], hasCodeViolations: false },
 };
 

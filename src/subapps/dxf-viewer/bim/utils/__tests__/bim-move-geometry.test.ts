@@ -193,7 +193,7 @@ function makeRoof(): RoofEntity {
       basePivotZ: 3000,
       thickness: 200,
     },
-    geometry: { bbox: { min: { x: 0, y: 0, z: 2.8 }, max: { x: 4000, y: 3000, z: 3 } } },
+    geometry: { bbox: { min: { x: 0, y: 0 }, max: { x: 4000, y: 3000 }, minZm: 2.8, maxZm: 3 } },
     validation: { hasCodeViolations: false, violationKeys: [], lastValidatedAt: null },
   } as unknown as RoofEntity;
 }

@@ -105,8 +105,11 @@ describe('ADR-408 Φ15 — vertical riser', () => {
       for (const corner of [geo.bbox.min, geo.bbox.max]) {
         expect(Number.isFinite(corner.x)).toBe(true);
         expect(Number.isFinite(corner.y)).toBe(true);
-        expect(Number.isFinite(corner.z)).toBe(true);
       }
+      // ADR-793 — `SolidBounds`: το κατακόρυφο εύρος ζει σε ΔΙΚΑ ΤΟΥ πεδία, σε μέτρα.
+      // Ο riser είναι ΑΚΡΙΒΩΣ η περίπτωση όπου το z πρέπει να είναι πεπερασμένο.
+      expect(Number.isFinite(geo.bbox.minZm)).toBe(true);
+      expect(Number.isFinite(geo.bbox.maxZm)).toBe(true);
       // 3D length ≈ the rise (plan run is ~0).
       expect(geo.length).toBeCloseTo(3, 5); // 3000mm → 3m
     });

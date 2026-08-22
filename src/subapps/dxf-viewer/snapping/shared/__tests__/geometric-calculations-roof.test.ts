@@ -44,7 +44,7 @@ const roof = (
       footprint: { vertices: outline.map((v) => ({ x: v.x, y: v.y, z: 0 })) },
       faces: [],
       ridges,
-      bbox: { min: { x: 0, y: 0, z: 0 }, max: { x: 10, y: 10, z: 3000 } },
+      bbox: { min: { x: 0, y: 0 }, max: { x: 10, y: 10 }, minZm: 0, maxZm: 3000 },
       projectedAreaM2: 0, grossAreaM2: 0, perimeterM: 0, volumeM3: 0,
       area: 0, volume: 0, shape: 'flat', ridgeHeightMm: 0,
     },

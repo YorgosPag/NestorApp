@@ -16,7 +16,7 @@ function wall(id: string, min: [number, number], max: [number, number]): Entity 
   return {
     id,
     type: 'wall',
-    geometry: { bbox: { min: { x: min[0], y: min[1], z: 0 }, max: { x: max[0], y: max[1], z: 0 } } },
+    geometry: { bbox: { min: { x: min[0], y: min[1] }, max: { x: max[0], y: max[1] }, minZm: 0, maxZm: 0 } },
   } as unknown as Entity;
 }
 

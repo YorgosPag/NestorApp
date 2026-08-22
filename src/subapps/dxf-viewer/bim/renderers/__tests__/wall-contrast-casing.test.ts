@@ -92,7 +92,7 @@ function makeWall(): WallEntity {
       outerEdge: { points: [{ x: 0, y: -100, z: 0 }, { x: 5000, y: -100, z: 0 }] },
       innerEdge: { points: [{ x: 0, y: 100, z: 0 }, { x: 5000, y: 100, z: 0 }] },
       axisPolyline: { points: [{ x: 0, y: 0, z: 0 }, { x: 5000, y: 0, z: 0 }] },
-      bbox: { min: { x: 0, y: -100, z: 0 }, max: { x: 5000, y: 100, z: 3000 } },
+      bbox: { min: { x: 0, y: -100 }, max: { x: 5000, y: 100 }, minZm: 0, maxZm: 3000 },
     },
     validation: { hasCodeViolations: false, violationKeys: [], lastValidatedAt: null },
     visible: true,

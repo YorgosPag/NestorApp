@@ -105,7 +105,7 @@ function makeOpening(kind: SlabOpeningKind = 'shaft'): SlabOpeningEntity {
     params: { kind, slabId: 'slab_test', outline: { vertices: [] }, elevationOverride: 1300 },
     geometry: {
       polygon: { vertices: [{ x: 0, y: 0 }, { x: 1000, y: 0 }, { x: 1000, y: 1000 }, { x: 0, y: 1000 }] },
-      bbox: { min: { x: 0, y: 0, z: 0 }, max: { x: 1000, y: 1000, z: 200 } },
+      bbox: { min: { x: 0, y: 0 }, max: { x: 1000, y: 1000 } },
     },
     validation: { hasCodeViolations: false, violationKeys: [], lastValidatedAt: null },
     visible: true,

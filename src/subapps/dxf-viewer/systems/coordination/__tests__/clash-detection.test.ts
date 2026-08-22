@@ -12,6 +12,7 @@ import type { MepSegmentEntity } from '../../../bim/types/mep-segment-types';
 import type { MepSystemEntity } from '../../../bim/types/mep-system-types';
 import type { PlumbingSystemClassification } from '../../../bim/types/mep-connector-types';
 import type { Aabb3, ClashEntity } from '../clash-types';
+import type { PlanBounds, SolidBounds } from '../../../bim/types/bim-base';
 import { aabbOverlap, aabbOverlapVolumeM3, aabbFromPoints } from '../aabb';
 import { closestDistanceBetweenSegments, segmentAabbHit } from '../clash-narrow-phase';
 import { broadPhasePairs } from '../broad-phase';
@@ -23,6 +24,19 @@ import { detectClashes } from '../detect-clashes';
 const box = (min: [number, number, number], max: [number, number, number]): Aabb3 => ({
   min: { x: min[0], y: min[1], z: min[2] },
   max: { x: max[0], y: max[1], z: max[2] },
+});
+
+/**
+ * ADR-793 — το **αποθηκευμένο** κουτί μιας οντότητας ΔΕΝ είναι `Aabb3`. Δύο builders,
+ * γιατί δύο τύποι: το στερεό κουβαλά το ύψος του (`minZm`/`maxZm`, ΜΕΤΡΑ)· το ίχνος ΟΧΙ —
+ * εκεί το ύψος έρχεται από τα params, και αυτό ακριβώς ελέγχουν τα δύο τεστ παρακάτω.
+ */
+const solidBox = (min: [number, number, number], max: [number, number, number]): SolidBounds => ({
+  min: { x: min[0], y: min[1] }, max: { x: max[0], y: max[1] },
+  minZm: min[2], maxZm: max[2],
+});
+const planBox = (min: [number, number], max: [number, number]): PlanBounds => ({
+  min: { x: min[0], y: min[1] }, max: { x: max[0], y: max[1] },
 });
 
 /** Pipe in metres scene units (plan coords = metres directly). */
@@ -51,11 +65,11 @@ function pipe(
   } as unknown as MepSegmentEntity;
 }
 
-function beam(id: string, bbox: Aabb3): Entity {
+function beam(id: string, bbox: SolidBounds): Entity {
   return { id, type: 'beam', layerId: 'struct', params: {}, geometry: { bbox } } as unknown as Entity;
 }
 
-function fitting(id: string, bbox: Aabb3): Entity {
+function fitting(id: string, bbox: SolidBounds): Entity {
   return { id, type: 'mep-fitting', layerId: 'mep', params: {}, geometry: { bbox } } as unknown as Entity;
 }
 
@@ -154,10 +168,10 @@ describe('entityWorldAABB', () => {
     expect(ce?.capsule?.a.z).toBeCloseTo(1); // 1000mm → 1m
   });
 
-  it('applies column height to the z=0 footprint bbox', () => {
+  it('applies column height to the PlanBounds footprint (ADR-793 — δεν υπάρχει z να αγνοηθεί)', () => {
     const column = {
       id: 'col', type: 'column', layerId: 's', params: { height: 3000 },
-      geometry: { bbox: box([0, 0, 0], [0.3, 0.3, 0]) },
+      geometry: { bbox: planBox([0, 0], [0.3, 0.3]) },
     } as unknown as Entity;
     const ce = entityWorldAABB(column, 'm', []);
     expect(ce?.aabb.min.z).toBeCloseTo(0);
@@ -168,7 +182,7 @@ describe('entityWorldAABB', () => {
     const radiator = {
       id: 'rad', type: 'mep-radiator', layerId: 'm',
       params: { mountingElevationMm: 1000, bodyHeightMm: 600 },
-      geometry: { bbox: box([0, 0, 0], [1, 0.1, 0]) },
+      geometry: { bbox: planBox([0, 0], [1, 0.1]) },
     } as unknown as Entity;
     const ce = entityWorldAABB(radiator, 'm', []);
     expect(ce?.aabb.min.z).toBeCloseTo(0.7);
@@ -192,7 +206,7 @@ describe('detectClashes', () => {
   });
 
   it('flags a pipe passing through a beam as a high-severity hard clash', () => {
-    const report = run([pipe('p', [0, 0], [2, 0]), beam('bm', box([0.9, -0.1, 0.5], [1.1, 0.1, 1.5]))]);
+    const report = run([pipe('p', [0, 0], [2, 0]), beam('bm', solidBox([0.9, -0.1, 0.5], [1.1, 0.1, 1.5]))]);
     expect(report.clashes).toHaveLength(1);
     expect(report.clashes[0].severity).toBe('high');
   });
@@ -209,13 +223,13 @@ describe('detectClashes', () => {
 
   it('does NOT flag a fitting sitting on its own pipe end (connection, not a clash)', () => {
     // Fitting box covers the pipe's end at (2, 0, 1) → connected → skipped.
-    const report = run([pipe('p', [0, 0], [2, 0]), fitting('f', box([1.9, -0.1, 0.9], [2.1, 0.1, 1.1]))]);
+    const report = run([pipe('p', [0, 0], [2, 0]), fitting('f', solidBox([1.9, -0.1, 0.9], [2.1, 0.1, 1.1]))]);
     expect(report.clashes).toHaveLength(0);
   });
 
   it('still flags a pipe passing THROUGH an unrelated fitting (no endpoint inside)', () => {
     // Pipe ends at (0,0,1) and (4,0,1); the fitting sits mid-span at (2,0,1) → real clash.
-    const report = run([pipe('p', [0, 0], [4, 0]), fitting('f', box([1.9, -0.1, 0.9], [2.1, 0.1, 1.1]))]);
+    const report = run([pipe('p', [0, 0], [4, 0]), fitting('f', solidBox([1.9, -0.1, 0.9], [2.1, 0.1, 1.1]))]);
     expect(report.clashes).toHaveLength(1);
     expect(report.clashes[0].bKind === 'mep-fitting' || report.clashes[0].aKind === 'mep-fitting').toBe(true);
   });

@@ -118,7 +118,9 @@ describe('computeWallCoveringRenderGeometry', () => {
       sceneUnits: 'mm',
     });
     expect(geom.outline).toHaveLength(4);
-    expect(geom.bbox).toEqual({ min: { x: 200, y: 100, z: 0 }, max: { x: 600, y: 125, z: 0 } });
+    // ADR-793 — `PlanBounds`: το ίχνος της λωρίδας ΔΕΝ έχει z. Το `toEqual` αποδεικνύει ΚΑΙ
+    // ότι το πεδίο έφυγε από το σχήμα (ταξιδεύει στο Firestore — δες ADR-793 §3.2).
+    expect(geom.bbox).toEqual({ min: { x: 200, y: 100 }, max: { x: 600, y: 125 } });
   });
 });
 

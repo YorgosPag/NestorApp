@@ -306,7 +306,7 @@ function makeStair(): StairEntity {
         end: { x: 0, y: 0, z: 0 },
         label: 'UP',
       },
-      bbox: { min: { x: 0, y: 0, z: 0 }, max: { x: 0, y: 0, z: 0 } },
+      bbox: { min: { x: 0, y: 0 }, max: { x: 0, y: 0 } },
     },
     validation: {
       hasCodeViolations: false,

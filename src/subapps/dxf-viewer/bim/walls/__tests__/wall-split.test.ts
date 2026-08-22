@@ -69,7 +69,7 @@ function makeOpening(
       position: { x: 0, y: 0, z: 0 },
       rotation: 0,
       outline: { vertices: [] },
-      bbox: { min: { x: 0, y: 0, z: 0 }, max: { x: 1, y: 1, z: 1 } },
+      bbox: { min: { x: 0, y: 0 }, max: { x: 1, y: 1 }, minZm: 0, maxZm: 1 },
       area: 0,
       perimeter: 0,
     },

@@ -40,6 +40,9 @@ describe('ADR-363 Phase 7A — calculateBimEntity2DBounds', () => {
     });
   });
 
+  // ADR-793 — ΤΩΡΑ ΕΙΝΑΙ ΤΕΣΤ ΣΥΜΒΑΤΟΤΗΤΑΣ: ο τύπος `PlanBounds` δεν έχει πια `z`, αλλά τα
+  // ΑΠΟΘΗΚΕΥΜΕΝΑ έγγραφα Firestore εξακολουθούν να κουβαλούν ένα `z` που κανείς δεν διαβάζει
+  // (ADR-793 §3.2 — μηδενική μετανάστευση). Αυτό αποδεικνύει ότι ο αναγνώστης το αγνοεί.
   it('drops z component (XY plan view projection)', () => {
     const e = makeBimEntity('wall', {
       min: { x: 0, y: 0, z: 0 },
