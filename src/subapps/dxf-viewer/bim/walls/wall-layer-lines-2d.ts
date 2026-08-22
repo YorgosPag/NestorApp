@@ -20,11 +20,11 @@
  * @see docs/centralized-systems/reference/adrs/ADR-413-pbr-textures.md
  */
 
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import { buildupBoundaryFractions, type BuildupThicknessSource } from '../types/layered-buildup';
 
 /** Γραμμικό interp δύο plan σημείων (z=0 — οι παρειές είναι 2Δ footprints). */
-function lerpPt(o: Point3D, i: Point3D, t: number): Point3D {
+function lerpPt(o: BimPoint, i: BimPoint, t: number): BimPoint {
   return { x: o.x + (i.x - o.x) * t, y: o.y + (i.y - o.y) * t, z: 0 };
 }
 
@@ -39,18 +39,18 @@ function lerpPt(o: Point3D, i: Point3D, t: number): Point3D {
  * Επιστρέφει `[]` όταν ο τοίχος είναι μονόστρωτος (≤1 σύνορο) ή εκφυλισμένος.
  */
 export function wallLayerBoundaryPolylines(
-  outer: readonly Point3D[],
-  inner: readonly Point3D[],
+  outer: readonly BimPoint[],
+  inner: readonly BimPoint[],
   dna: BuildupThicknessSource,
-): Point3D[][] {
+): BimPoint[][] {
   const n = Math.min(outer.length, inner.length);
   if (n < 2) return [];
   const fracs = buildupBoundaryFractions(dna); // [0, f1, …, 1]
-  const lines: Point3D[][] = [];
+  const lines: BimPoint[][] = [];
   for (let k = 1; k < fracs.length - 1; k++) {
     const f = fracs[k];
     if (f <= 1e-6 || f >= 1 - 1e-6) continue; // σύνορο πάνω σε παρειά → ήδη ζωγραφισμένο
-    const poly: Point3D[] = [];
+    const poly: BimPoint[] = [];
     for (let i = 0; i < n; i++) poly.push(lerpPt(outer[i], inner[i], f));
     lines.push(poly);
   }

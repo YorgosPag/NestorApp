@@ -15,7 +15,7 @@
 
 import type { WallParams } from '../types/wall-types';
 import { MIN_WALL_LENGTH_MM } from '../types/wall-types';
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import { mmScaleFor } from '../../utils/scene-units';
 import { unitAxis } from './wall-grip-math';
 
@@ -51,7 +51,7 @@ export function setWallLengthMeters(
   const s = mmScaleFor(params);
   const lengthMm = Math.max(MIN_WALL_LENGTH_MM, meters * MM_PER_M);
   const lengthCanvas = lengthMm * s;
-  const end: Point3D = {
+  const end: BimPoint = {
     x: params.start.x + u.x * lengthCanvas,
     y: params.start.y + u.y * lengthCanvas,
     z: params.end.z,

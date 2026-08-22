@@ -31,7 +31,7 @@
 
 import type {
   BimEntity,
-  BoundingBox3D,
+  BimBounds,
   PlanProfile,
 } from './bim-base';
 import type { SceneUnits } from '../../utils/scene-units';
@@ -218,7 +218,7 @@ export interface SlabParams {
 export interface SlabGeometry {
   /** **2Δ προφίλ** — re-export του outline (closed, CCW). ADR-789 Φάση Δ. */
   readonly polygon: PlanProfile;
-  readonly bbox: BoundingBox3D;
+  readonly bbox: BimBounds;
   /** m². Ακαθάριστο εμβαδό περιγράμματος. */
   readonly area: number;
   /** m². area μείον slab-openings (Phase 3: == area). */

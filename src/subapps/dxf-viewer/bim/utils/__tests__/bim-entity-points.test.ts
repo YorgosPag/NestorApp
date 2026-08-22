@@ -14,7 +14,7 @@ import type { ColumnEntity, ColumnParams, ColumnKind } from '../../types/column-
 import type { SlabEntity } from '../../types/slab-types';
 import type { WallEntity, WallParams } from '../../types/wall-types';
 import type { BeamEntity, BeamParams } from '../../types/beam-types';
-import type { Polygon3D } from '../../types/bim-base';
+import type { BimPolygon } from '../../types/bim-base';
 import { buildDefaultColumnParams } from '../../../hooks/drawing/column-completion';
 
 function makeColumn(kind: ColumnKind, overrides: Partial<ColumnParams> = {}): ColumnEntity {
@@ -29,7 +29,7 @@ function makeColumn(kind: ColumnKind, overrides: Partial<ColumnParams> = {}): Co
 const L_SLAB = [{ x: 0, y: 0 }, { x: 1000, y: 0 }, { x: 1000, y: 400 }, { x: 400, y: 400 }, { x: 400, y: 1000 }, { x: 0, y: 1000 }];
 
 function makeSlab(vertices = L_SLAB): SlabEntity {
-  const polygon: Polygon3D = { vertices: vertices.map(v => ({ x: v.x, y: v.y })) };
+  const polygon: BimPolygon = { vertices: vertices.map(v => ({ x: v.x, y: v.y })) };
   return {
     id: 'slab_1', type: 'slab', kind: 'floor', layerId: '0',
     params: { outline: { vertices: vertices.map(v => ({ x: v.x, y: v.y })) } } as never,

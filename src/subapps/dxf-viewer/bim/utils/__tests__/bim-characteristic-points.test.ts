@@ -19,7 +19,7 @@ import type { WallEntity, WallParams, WallKind } from '../../types/wall-types';
 import type { BeamEntity, BeamParams } from '../../types/beam-types';
 import type { SlabEntity } from '../../types/slab-types';
 import type { OpeningEntity } from '../../types/opening-types';
-import type { Polygon3D } from '../../types/bim-base';
+import type { BimPolygon } from '../../types/bim-base';
 import type { ColumnEntity, ColumnParams, ColumnKind } from '../../types/column-types';
 import { buildDefaultColumnParams } from '../../../hooks/drawing/column-completion';
 
@@ -58,7 +58,7 @@ function makeBeam(overrides: Partial<BeamParams> = {}): BeamEntity {
 const SQUARE = [{ x: 0, y: 0 }, { x: 1000, y: 0 }, { x: 1000, y: 1000 }, { x: 0, y: 1000 }];
 
 function makeSlab(vertices = SQUARE, type: 'slab' | 'slab-opening' = 'slab'): SlabEntity {
-  const polygon: Polygon3D = { vertices: vertices.map(v => ({ x: v.x, y: v.y })) };
+  const polygon: BimPolygon = { vertices: vertices.map(v => ({ x: v.x, y: v.y })) };
   return {
     id: 'slab_1', type, kind: 'floor', layerId: '0',
     params: { outline: { vertices: vertices.map(v => ({ x: v.x, y: v.y })) } } as never,
@@ -72,7 +72,7 @@ const OPENING_RECT = [
 ];
 
 function makeOpening(vertices = OPENING_RECT): OpeningEntity {
-  const outline: Polygon3D = { vertices: vertices.map(v => ({ x: v.x, y: v.y })) };
+  const outline: BimPolygon = { vertices: vertices.map(v => ({ x: v.x, y: v.y })) };
   return {
     id: 'opening_1', type: 'opening', kind: 'door', ifcType: 'IfcDoor', layerId: '0',
     params: { kind: 'door', wallId: 'wall_1', offsetFromStart: 500, width: 900, height: 2100, sillHeight: 0 },

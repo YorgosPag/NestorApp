@@ -3,13 +3,13 @@
  */
 
 import { wallLayerBoundaryPolylines } from '../wall-layer-lines-2d';
-import type { Point3D } from '../../types/bim-base';
+import type { BimPoint } from '../../types/bim-base';
 
-const pt = (x: number, y: number): Point3D => ({ x, y, z: 0 });
+const pt = (x: number, y: number): BimPoint => ({ x, y, z: 0 });
 
 // Straight wall κατά μήκος X, πάχος 1 (outer@y=0, inner@y=1).
-const OUTER: Point3D[] = [pt(0, 0), pt(10, 0)];
-const INNER: Point3D[] = [pt(0, 1), pt(10, 1)];
+const OUTER: BimPoint[] = [pt(0, 0), pt(10, 0)];
+const INNER: BimPoint[] = [pt(0, 1), pt(10, 1)];
 
 describe('wallLayerBoundaryPolylines', () => {
   it('3 στρώσεις (σοβάς|πυρήνας|σοβάς) → 2 εσωτερικές γραμμές στα σωστά βάθη', () => {
@@ -42,8 +42,8 @@ describe('wallLayerBoundaryPolylines', () => {
       layers: [{ thickness: 25 }, { thickness: 210 }, { thickness: 15 }],
       totalThickness: 250,
     };
-    const outer: Point3D[] = [pt(0, 0), pt(3.298, 0)];
-    const inner: Point3D[] = [pt(0, 0.25), pt(3.298, 0.25)]; // 250mm = 0.25 canvas units
+    const outer: BimPoint[] = [pt(0, 0), pt(3.298, 0)];
+    const inner: BimPoint[] = [pt(0, 0.25), pt(3.298, 0.25)]; // 250mm = 0.25 canvas units
     const lines = wallLayerBoundaryPolylines(outer, inner, dna);
     expect(lines).toHaveLength(2);
     // 25/250=0.1 → y=0.025· 235/250=0.94 → y=0.235.

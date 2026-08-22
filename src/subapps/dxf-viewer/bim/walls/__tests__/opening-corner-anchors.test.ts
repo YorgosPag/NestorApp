@@ -10,10 +10,10 @@
 
 import { getOpeningCornerWorldPoints } from '../opening-corner-anchors';
 import type { OpeningEntity } from '../../types/opening-types';
-import type { Polygon3D } from '../../types/bim-base';
+import type { BimPolygon } from '../../types/bim-base';
 
 function makeOpeningEntity(vertices: { x: number; y: number }[], id = 'opening_test'): OpeningEntity {
-  const outline: Polygon3D = { vertices: vertices.map(v => ({ x: v.x, y: v.y })) };
+  const outline: BimPolygon = { vertices: vertices.map(v => ({ x: v.x, y: v.y })) };
   return {
     id,
     type: 'opening',

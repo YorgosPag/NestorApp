@@ -31,7 +31,7 @@ import {
 } from './ifc-entity-mixin';
 import { EnvelopeFunctionSchema } from './thermal-envelope.schemas';
 import { WallTypeParamsSchema } from './bim-family-type.schemas';
-import { Point3DSchema } from './geometry.schemas';
+import { BimPointSchema } from './geometry.schemas';
 import { STOREY_PLACEMENT_FIELDS, STRUCTURAL_BINDING_FIELDS, addBindingIssues } from './shared-params.schemas';
 
 // ─── Primitive schemas (Point3D) ─────────────────────────────────────────────
@@ -69,8 +69,8 @@ const WallTiltSchema = z
 const WallParamsBaseSchema = z
   .object({
     category: WallCategorySchema,
-    start: Point3DSchema,
-    end: Point3DSchema,
+    start: BimPointSchema,
+    end: BimPointSchema,
     height: z.number().positive(),
     thickness: z.number().positive(),
     flip: z.boolean(),
@@ -86,10 +86,10 @@ const WallParamsBaseSchema = z
     endJoin: WallJoinModeSchema.optional(),
     // ─── ADR-458 (wall↔wall cross) — join priority (higher wins at X-crossings) ─
     joinPriority: z.number().finite().optional(),
-    polylineVertices: z.array(Point3DSchema).optional(),
+    polylineVertices: z.array(BimPointSchema).optional(),
     // ADR-565 — canonical circular-arc bulge (tan(sweep/4)); curved kind only.
     arc: z.number().finite().optional(),
-    curveControl: Point3DSchema.optional(),
+    curveControl: BimPointSchema.optional(),
     material: z.string().min(1).optional(),
     ...STOREY_PLACEMENT_FIELDS,
     // ─── ADR-369 §9 Q5 binding ──────────────────────────────────────────────

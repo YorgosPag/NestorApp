@@ -17,7 +17,7 @@
  * θερμικός χώρος κλείνει/υποδιαιρεί περιοχές πάνω σε διαχωριστές ΟΠΩΣ πάνω σε τοίχους.
  *
  * SSoT:
- *   - `start`/`end` (Point3D, world scene-units) = τα δύο άκρα της γραμμής.
+ *   - `start`/`end` (BimPoint, world scene-units) = τα δύο άκρα της γραμμής.
  *   - `SpaceSeparatorGeometry` (bbox/length) = cache, re-derivable από params —
  *     ΠΟΤΕ mutated by consumers.
  *
@@ -26,7 +26,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-437-space-separation-lines.md
  */
 
-import type { BimEntity, BoundingBox3D, Point3D } from './bim-base';
+import type { BimEntity, BimBounds, BimPoint } from './bim-base';
 import type { SceneUnits } from '../../utils/scene-units';
 import { mmScaleFor } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
@@ -54,8 +54,8 @@ export const DEFAULT_SPACE_SEPARATOR_KIND: SpaceSeparatorKind = 'room-bounding';
  *   - `floorId?` — FK → Floor.id (storey reference, ADR-420 floor-scope).
  */
 export interface SpaceSeparatorParams {
-  readonly start: Point3D;
-  readonly end: Point3D;
+  readonly start: BimPoint;
+  readonly end: BimPoint;
   readonly name?: string;
   readonly sceneUnits?: SceneUnits;
   readonly floorId?: string;
@@ -68,7 +68,7 @@ export interface SpaceSeparatorParams {
  * ΠΟΤΕ mutated by consumers. SSoT = params.
  */
 export interface SpaceSeparatorGeometry {
-  readonly bbox: BoundingBox3D;
+  readonly bbox: BimBounds;
   /** m. Μήκος του τμήματος start→end. */
   readonly length: number;
 }

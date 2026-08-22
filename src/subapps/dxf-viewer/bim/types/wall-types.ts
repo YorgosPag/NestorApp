@@ -7,7 +7,7 @@
  * Port από `C:/genarc/src/types/wall.types.ts` με:
  *   - μετατροπή μονάδων m → mm (Nestor convention, ADR-358 §5.0 ίδιο με stair)
  *   - επέκταση `WallCategory` σε 5 τιμές (genarc: 3 → Nestor: +parapet +fence)
- *   - 3D-readiness: `Point3D` με optional z (G11)
+ *   - 3D-readiness: `BimPoint` με optional z (G11)
  *   - WallDna σε ξεχωριστό module (`wall-dna-types.ts`) per N.7.1 SRP
  *
  * SSoT:
@@ -21,9 +21,9 @@
 
 import type {
   BimEntity,
-  Point3D,
-  Polyline3D,
-  BoundingBox3D,
+  BimPoint,
+  BimPolyline,
+  BimBounds,
 } from './bim-base';
 import type { Point2D } from '../../rendering/types/Types';
 import type { WallDna } from './wall-dna-types';
@@ -117,9 +117,9 @@ export const WALL_JOIN_PRIORITY_BY_CATEGORY: Readonly<Record<WallCategory, numbe
 export interface WallParams {
   readonly category: WallCategory;
   /** Canvas world coordinates (DXF scene units). */
-  readonly start: Point3D;
+  readonly start: BimPoint;
   /** Canvas world coordinates (DXF scene units). */
-  readonly end: Point3D;
+  readonly end: BimPoint;
   /** mm. Physical height — always mm regardless of sceneUnits. Default 3000. */
   readonly height: number;
   /** mm. Cross-section depth — always mm. Equals dna.totalThickness when dna present. */
@@ -183,7 +183,7 @@ export interface WallParams {
    */
   readonly arc?: number;
   /** Defined when `kind === 'curved'`. mm. Legacy quadratic Bezier control point. */
-  readonly curveControl?: Point3D;
+  readonly curveControl?: BimPoint;
   /** Material key for wall-level hatch (rc/masonry/aerated-concrete/gypsum).
    *  Ignored when `dna` is present — DNA layers govern per-layer materials. */
   readonly material?: string;
@@ -256,12 +256,12 @@ export interface WallParams {
  */
 export interface WallGeometry {
   /** Centerline (start → end, or polyline vertices when polyline kind). */
-  readonly axisPolyline: Polyline3D;
+  readonly axisPolyline: BimPolyline;
   /** Outer face (offset +thickness/2 along normal, accounting for `flip`). */
-  readonly outerEdge: Polyline3D;
+  readonly outerEdge: BimPolyline;
   /** Inner face (offset -thickness/2). */
-  readonly innerEdge: Polyline3D;
-  readonly bbox: BoundingBox3D;
+  readonly innerEdge: BimPolyline;
+  readonly bbox: BimBounds;
   /** m — geometric axis length. */
   readonly length: number;
   /** m² — `length × height`, net of openings when computed with the opening

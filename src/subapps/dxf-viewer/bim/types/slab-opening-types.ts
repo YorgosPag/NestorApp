@@ -9,7 +9,7 @@
  * delete → orphan warning, όχι cascade (soft-orphan, mirror opening-on-wall).
  *
  * SSoT:
- *   - `SlabOpeningParams.outline` (Polygon3D, world coords mm, CCW) ορίζει
+ *   - `SlabOpeningParams.outline` (BimPolygon, world coords mm, CCW) ορίζει
  *     το cutout footprint.
  *   - `SlabOpeningGeometry` cache από `computeSlabOpeningGeometry()` —
  *     re-derivable από params (πάντα).
@@ -21,8 +21,8 @@
 
 import type {
   BimEntity,
-  BoundingBox3D,
-  Polygon3D,
+  BimBounds,
+  BimPolygon,
 } from './bim-base';
 import type { SceneUnits } from '../../utils/scene-units';
 
@@ -62,7 +62,7 @@ export interface SlabOpeningParams {
   /** Foreign key — host slab id (required). */
   readonly slabId: string;
   /** Closed polygon (CCW). World coords σε mm. Min MIN_SLAB_OPENING_VERTICES (3). */
-  readonly outline: Polygon3D;
+  readonly outline: BimPolygon;
   /** mm. z override; default = hostSlab.params.levelElevation όταν undefined. ADR-369 §2.1. */
   readonly elevationOverride?: number;
   /** Bulk-edit group id για multi-storey stacked openings. */
@@ -111,9 +111,9 @@ export interface SlabOpeningParams {
  * `polygon` / `bbox` σε mm.
  */
 export interface SlabOpeningGeometry {
-  /** Polygon3D — re-export του outline (closed, CCW). */
-  readonly polygon: Polygon3D;
-  readonly bbox: BoundingBox3D;
+  /** BimPolygon — re-export του outline (closed, CCW). */
+  readonly polygon: BimPolygon;
+  readonly bbox: BimBounds;
   /** m². Εμβαδό cutout (αφαιρείται από slab.netArea). */
   readonly area: number;
   /** m. Περίμετρος cutout. */

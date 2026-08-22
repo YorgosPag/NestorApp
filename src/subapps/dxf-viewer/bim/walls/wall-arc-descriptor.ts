@@ -16,7 +16,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import { circleFrom3Points } from '../../rendering/entities/shared/geometry-circle-utils';
 import { bulgeToArc, type BulgeArc } from '../../rendering/entities/shared/geometry-bulge-utils';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
@@ -134,6 +134,6 @@ export function bulgeFromTangent(start: Point2D, end: Point2D, tangentDirRad: nu
  * directrix → `IfcRevolvedAreaSolid`). Thin wrapper over `bulgeToArc`; returns
  * `null` for a (near-)straight segment.
  */
-export function arcCurveFromBulge(start: Point3D, end: Point3D, bulge: number): BulgeArc | null {
+export function arcCurveFromBulge(start: BimPoint, end: BimPoint, bulge: number): BulgeArc | null {
   return bulgeToArc({ x: start.x, y: start.y }, { x: end.x, y: end.y }, bulge);
 }

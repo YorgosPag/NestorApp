@@ -14,7 +14,7 @@ import {
   IfcGuidSchema,
   IfcPropertySetSchema,
 } from './ifc-entity-mixin';
-import { Point3DSchema } from './geometry.schemas';
+import { BimPointSchema } from './geometry.schemas';
 
 // ─── Point3D ──────────────────────────────────────────────────────────────────
 
@@ -28,8 +28,8 @@ export const SpaceSeparatorIfcTypeSchema = z.literal('IfcVirtualElement');
 
 export const SpaceSeparatorParamsSchema = z
   .object({
-    start: Point3DSchema,
-    end: Point3DSchema,
+    start: BimPointSchema,
+    end: BimPointSchema,
     name: z.string().optional(),
     sceneUnits: z.string().optional(),
     floorId: z.string().min(1).optional(),

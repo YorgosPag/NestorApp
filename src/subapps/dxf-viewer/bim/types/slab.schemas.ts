@@ -23,7 +23,7 @@ import {
 } from './ifc-entity-mixin';
 import { EnvelopeLayerSchema } from './thermal-envelope.schemas';
 import { StructuralFinishSpecSchema } from '../finishes/structural-finish.schemas';
-import { Point3DSchema, PlanProfileSchema } from './geometry.schemas';
+import { BimPointSchema, PlanProfileSchema } from './geometry.schemas';
 import { STOREY_PLACEMENT_FIELDS, addDnaThicknessIssue } from './shared-params.schemas';
 
 // ─── Enums (mirror slab-types.ts unions) ─────────────────────────────────────

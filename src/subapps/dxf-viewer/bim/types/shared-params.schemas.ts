@@ -20,7 +20,7 @@
 
 import { z } from 'zod';
 
-import { Point3DSchema } from './geometry.schemas';
+import { BimPointSchema } from './geometry.schemas';
 import { MepConnectorSchema } from './mep-connector.schemas';
 
 /**
@@ -57,7 +57,7 @@ export const SCENE_HOST_FIELDS = {
  * — **άλλο λεξιλόγιο**, και η ενοποίηση θα ήταν μετονομασία αποθηκευμένων πεδίων.
  */
 export const PLACED_BODY_FIELDS = {
-  position: Point3DSchema,
+  position: BimPointSchema,
   rotation: z.number().finite(),
   width: z.number().positive(),
   length: z.number().positive(),

@@ -27,7 +27,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-422-bim-heating-mechanical-study.md
  */
 
-import type { BimEntity, BoundingBox3D, PlanProfile } from './bim-base';
+import type { BimEntity, BimBounds, PlanProfile } from './bim-base';
 import type { SceneUnits } from '../../utils/scene-units';
 import { mmScaleFor } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
@@ -139,7 +139,7 @@ export interface ThermalSpaceParams {
  * ΠΟΤΕ mutated by consumers. SSoT = params.
  */
 export interface ThermalSpaceGeometry {
-  readonly bbox: BoundingBox3D;
+  readonly bbox: BimBounds;
   /** m². Εμβαδό polygon (Shoelace). */
   readonly area: number;
   /** m. Περίμετρος polygon. */

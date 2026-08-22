@@ -19,7 +19,7 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { WallGripKind } from '../../hooks/useGripMovement';
 import type { WallParams } from '../types/wall-types';
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import { mmScaleFor } from '../../utils/scene-units';
 import {
   unitAxis,
@@ -134,7 +134,7 @@ export function applyWallGripDrag(
 
 function moveStart(input: Readonly<WallGripDragInput>): WallParams {
   const { originalParams, delta } = input;
-  const newStart: Point3D = translatePoint(originalParams.start, delta);
+  const newStart: BimPoint = translatePoint(originalParams.start, delta);
   // startMiter is an absolute world-coord junction point — moving the start
   // endpoint breaks the junction, so clear it (recomputed on commit).
   return { ...originalParams, start: newStart, startMiter: undefined };
@@ -142,7 +142,7 @@ function moveStart(input: Readonly<WallGripDragInput>): WallParams {
 
 function moveEnd(input: Readonly<WallGripDragInput>): WallParams {
   const { originalParams, delta } = input;
-  const newEnd: Point3D = translatePoint(originalParams.end, delta);
+  const newEnd: BimPoint = translatePoint(originalParams.end, delta);
   // endMiter is an absolute world-coord junction point — moving the end
   // endpoint breaks the junction, so clear it (recomputed on commit).
   return { ...originalParams, end: newEnd, endMiter: undefined };
@@ -246,14 +246,14 @@ function moveCurveControl(input: Readonly<WallGripDragInput>): WallParams {
   const existing = originalParams.curveControl;
   if (!existing) {
     // Seed from current cursor: handle was implicitly at axis midpoint.
-    const mid: Point3D = {
+    const mid: BimPoint = {
       x: (originalParams.start.x + originalParams.end.x) / 2 + delta.x,
       y: (originalParams.start.y + originalParams.end.y) / 2 + delta.y,
       z: 0,
     };
     return { ...originalParams, curveControl: mid };
   }
-  const next: Point3D = translatePoint(existing, delta);
+  const next: BimPoint = translatePoint(existing, delta);
   return { ...originalParams, curveControl: next };
 }
 
@@ -264,7 +264,7 @@ function movePolylineVertex(
   const { originalParams, delta } = input;
   const verts = originalParams.polylineVertices;
   if (!verts || index < 1 || index >= verts.length - 1) return originalParams;
-  const next: Point3D[] = verts.map((v, i) =>
+  const next: BimPoint[] = verts.map((v, i) =>
     i === index
       ? translatePoint(v, delta)
       : { x: v.x, y: v.y, z: v.z },
