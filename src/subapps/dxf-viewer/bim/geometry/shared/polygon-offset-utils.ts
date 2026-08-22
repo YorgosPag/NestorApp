@@ -13,7 +13,8 @@
  */
 
 import type { PlanarPoint, Point3D } from '../../types/bim-base';
-import { polygonArea, projectVerticesTo2D } from './polygon-utils';
+import { polygonArea, projectVerticesTo2D, shoelaceArea } from './polygon-utils';
+import { offsetPolyline } from '../../../rendering/entities/shared/geometry-offset-utils';
 
 /** Below this segment length (mm/canvas) a segment is treated as degenerate. */
 const DEGENERATE_LENGTH_EPS = 0.001;
@@ -99,41 +100,45 @@ export function stripClosingDuplicate<T extends PlanarPoint>(
 }
 
 /**
- * Offset a polyline by `distance` along the per-vertex normals, scaled by
- * `sign` (+1 = CCW outward, -1 = inward). Returns a new array of the same
- * length; corners are mitred via the averaged vertex normal. `distance` is in
- * the same unit as the vertex coordinates (caller scales mm→canvas).
+ * **Parallel offset** — re-export της ΜΙΑΣ μηχανής (ADR-791).
  *
- * `closed = true` treats the input as a ring (vertex 0 and n-1 are corners that
- * wrap around), so a closed loop offsets without a seam jog. Callers offsetting a
- * ring MUST first drop any trailing closing-duplicate (`stripClosingDuplicate`),
- * otherwise the zero-length seam segment defeats the wrap-around.
+ * 🔴 **Εδώ ζούσε δεύτερη υλοποίηση, και ήταν ΓΕΩΜΕΤΡΙΚΑ ΛΑΘΟΣ.** Χρησιμοποιούσε τον
+ * **μέσο όρο** των γειτονικών normals (`vertexNormal`) αντί για γνήσιο miter, οπότε σε
+ * ορθή γωνία η παρειά έπεφτε στο **μισό** της ζητούμενης απόστασης — μετρημένο:
+ * offset 10 σε γωνία 90° έδινε **5,000** αντί για 10,000 (−50%). Επηρέαζε πάχος τοίχου ·
+ * πλάτος δοκού · πάχη μόνωσης κελύφους · διατομές MEP, δηλαδή **και το BOQ**.
+ *
+ * ⚠️ Το ελάττωμα ήταν **ήδη τεκμηριωμένο** στο docblock του {@link insetPolygonMiter}
+ * («averaged-normal, που υπο-εισάγει τις γωνίες ~cos45°») — κάποιος το βρήκε, έγραψε τη
+ * σωστή λύση, και την εφάρμοσε σε **έναν** καλούντα. *Η γνώση υπήρχε· έλειπε η εφαρμογή.*
+ *
+ * 🏆 Η κανονική μηχανή κάνει αληθινό miter με `miterLimit = 4` και πτώση σε bevel —
+ * η πρακτική του **Clipper2** (`JoinType.Miter` + fallback) και η προεπιλογή του SVG
+ * `stroke-miterlimit`.
+ *
+ * ⚠️ **Άλλαξε η υπογραφή**: `(v, d, sign, closed)` → `(v, sign·d, { closed })`.
  */
-export function offsetPolyline(
-  vertices: readonly Point3D[],
-  distance: number,
-  sign: number,
-  closed = false,
-): Point3D[] {
-  const out: Point3D[] = [];
-  for (let i = 0; i < vertices.length; i++) {
-    const nrm = vertexNormal(vertices, i, closed);
-    const v = vertices[i];
-    out.push({
-      x: v.x + sign * distance * nrm.x,
-      y: v.y + sign * distance * nrm.y,
-      z: v.z ?? 0,
-    });
-  }
-  return out;
-}
+export { offsetPolyline };
 
 /**
  * Inset ενός κλειστού polygon κατά `distance` προς τα ΜΕΣΑ, winding-agnostic:
  * δοκιμάζει και τα δύο πρόσημα του `offsetPolyline` και κρατά αυτό με το ΜΙΚΡΟΤΕΡΟ
  * εμβαδόν (= προς τα μέσα). Επιστρέφει `null` αν το polygon είναι μη-έγκυρο
- * (< 3 κορυφές, `distance ≤ 0`) ή το inset καταρρέει (degenerate). Χρήση: ETICS
+ * (< 3 κορυφές, `distance ≤ 0`) ή το inset **κατέρρευσε**. Χρήση: ETICS
  * περβάζια (ADR-396 Z4 — frame γύρω από την τρύπα ανοίγματος, 2D + 3D).
+ *
+ * 🔴 **Η ανίχνευση κατάρρευσης είναι ΑΠΑΡΑΙΤΗΤΗ, όχι πολυτέλεια** (ADR-791). Όταν το
+ * πολύγωνο γίνει στενότερο από `2·distance`, το inset **περνά το κέντρο και αναστρέφεται**:
+ * η φορά διάσχισης γυρίζει και το **απόλυτο** εμβαδόν ξαναμεγαλώνει. Με κριτήριο
+ * απόλυτου εμβαδού το ανεστραμμένο μπορεί να **κερδίσει** τη σύγκριση, οπότε ένας
+ * επαναληπτικός καλών (σπείρα ενδοδαπέδιου) **ταλαντώνεται αιώνια**: μετρημένο ζωντανά
+ * σε δωμάτιο 5×4 m με βήμα 250 mm → 300×300 → 200×200 → 300×300 → … Ο μόνος που το
+ * σταματούσε ήταν το `MAX_SPIRAL_RINGS = 200`, δηλαδή ένα **ταβάνι ασφαλείας που
+ * κρατούσε ζωντανό ένα λάθος αποτέλεσμα**.
+ *
+ * ⚠️ Κριτήριο = **προσημασμένο** εμβαδόν: ίδια φορά ΚΑΙ γνησίως μικρότερο. Το «> 0» του
+ * απόλυτου δεν μπορεί να πυροδοτήσει ποτέ, γιατί ένα ανεστραμμένο πολύγωνο έχει
+ * απολύτως θετικό εμβαδόν.
  */
 export function insetClosedPolygon(
   vertices: readonly Point3D[],
@@ -144,10 +149,15 @@ export function insetClosedPolygon(
   // does not produce a diagonal jog (same fix as the envelope insulation loop).
   const ring = stripClosingDuplicate(vertices);
   if (ring.length < 3) return null;
-  const plus = offsetPolyline(ring, distance, 1, true);
-  const minus = offsetPolyline(ring, distance, -1, true);
+  const plus = offsetPolyline(ring, distance, { closed: true });
+  const minus = offsetPolyline(ring, -distance, { closed: true });
   const inner = polygonArea(plus) <= polygonArea(minus) ? plus : minus;
-  if (inner.length < 3 || polygonArea(inner) <= 0) return null;
+  if (inner.length < 3) return null;
+  // Κατάρρευση: αντιστροφή φοράς (πέρασε το κέντρο) ή μη-συρρίκνωση.
+  const before = shoelaceArea(ring);
+  const after = shoelaceArea(inner);
+  if (after === 0 || Math.sign(after) !== Math.sign(before)) return null;
+  if (Math.abs(after) >= Math.abs(before)) return null;
   return inner;
 }
 
@@ -212,4 +222,45 @@ export function insetPolygonMiter(
     out.push({ x: v.x + mx, y: v.y + my });
   }
   return polygonArea(out.map((p) => ({ ...p, z: 0 }))) > 0 ? out : null;
+}
+
+/**
+ * **Λωρίδα γύρω από άξονα** — το κλειστό πολύγωνο που προκύπτει μετατοπίζοντας τον άξονα
+ * κατά `±half` και κλείνοντας CCW (+offset αρχή→τέλος, μετά −offset τέλος→αρχή).
+ *
+ * 🔑 SSoT των «γραμμικών» οντοτήτων που έχουν **πλάτος γύρω από άξονα**: δοκός · τμήμα MEP
+ * (σωλήνας/αεραγωγός). Μέχρι το ADR-791 ήταν γραμμένο **δύο φορές**, και το ίδιο το σχόλιο
+ * του δεύτερου το δήλωνε («*Internal helpers (**mirror beam-geometry**)*») — δήλωση
+ * αντιγράφου αντί για εξαγωγή.
+ *
+ * ⚠️ Δεν κρίνει εκφυλισμούς: ο καλών ελέγχει `axis.length ≥ 2` και μη-μηδενικό πλάτος, και
+ * χειρίζεται τις **δικές του** ειδικές περιπτώσεις (π.χ. κατακόρυφη στήλη MEP με ταυτόσημα
+ * XY άκρα, όπου οι κάθετες είναι απροσδιόριστες).
+ */
+export function stripPolygonAroundAxis(
+  axis: readonly Point3D[],
+  half: number,
+): Point3D[] {
+  const plus = offsetPolyline(axis, half);
+  const minus = offsetPolyline(axis, -half);
+  const polygon: Point3D[] = [...plus];
+  for (let i = minus.length - 1; i >= 0; i--) polygon.push(minus[i]);
+  return polygon;
+}
+
+/**
+ * **Περίγραμμα γραμμικής οντότητας** — άξονας + πλάτος σε mm ⇒ κλειστό πολύγωνο κάτοψης.
+ *
+ * Ο κοινός πρόλογος (φύλαξη εκφυλισμού + mm → canvas units) των δοκών και των τμημάτων MEP.
+ * `axis.length < 2` ή `widthMm ≤ 0` ⇒ επιστρέφεται ο άξονας αυτούσιος (ο καλών αποφασίζει).
+ *
+ * @param s canvas units ανά 1 mm (`mmScaleFor`) — το πλάτος είναι mm, ο άξονας canvas units.
+ */
+export function buildAxisStripOutline(
+  axis: readonly Point3D[],
+  widthMm: number,
+  s: number,
+): Point3D[] {
+  if (axis.length < 2 || widthMm <= 0) return [...axis];
+  return stripPolygonAroundAxis(axis, (widthMm * s) / 2);
 }

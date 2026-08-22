@@ -226,8 +226,8 @@ function offsetFace(
   if (thicknessCanvas <= 0 || face.length < 2) {
     return face.map((p) => ({ x: p.x, y: p.y, z: p.z ?? 0 }));
   }
-  const plus = offsetPolyline(face, thicknessCanvas, 1, closed);
-  const minus = offsetPolyline(face, thicknessCanvas, -1, closed);
+  const plus = offsetPolyline(face, thicknessCanvas, { closed });
+  const minus = offsetPolyline(face, -thicknessCanvas, { closed });
   const farther = meanDistToRef(plus, reference) >= meanDistToRef(minus, reference) ? plus : minus;
   const closer = farther === plus ? minus : plus;
   return outward ? farther : closer;

@@ -162,19 +162,24 @@ function slab(levelElevation: number, extra: Partial<SlabForZoneClassification['
 describe('polygon-utils — offsetPolyline / polygonCentroid (ADR-396 P3 SSoT)', () => {
   it('offsets a horizontal axis +y (CCW) and −y', () => {
     const axis: Point3D[] = [{ x: 0, y: 0, z: 0 }, { x: 1000, y: 0, z: 0 }];
-    const plus = offsetPolyline(axis, 100, 1);
+    const plus = offsetPolyline(axis, 100);
     expect(plus[0].y).toBeCloseTo(100, 6);
     expect(plus[1].y).toBeCloseTo(100, 6);
-    const minus = offsetPolyline(axis, 100, -1);
+    const minus = offsetPolyline(axis, -100);
     expect(minus[0].y).toBeCloseTo(-100, 6);
   });
 
-  it('mitres an L-corner via averaged vertex normal', () => {
+  it('ΓΝΗΣΙΟ miter σε ορθή γωνία — η παρειά κρατά ΑΚΡΙΒΩΣ την απόσταση (ADR-791)', () => {
     const axis: Point3D[] = [{ x: 0, y: 0, z: 0 }, { x: 1000, y: 0, z: 0 }, { x: 1000, y: 1000, z: 0 }];
-    const out = offsetPolyline(axis, 100, 1);
-    // Corner vertex normal = avg((0,1),(-1,0)) → (-0.5, 0.5).
-    expect(out[1].x).toBeCloseTo(950, 6);
-    expect(out[1].y).toBeCloseTo(50, 6);
+    const out = offsetPolyline(axis, 100);
+    // ⚠️ Μέχρι το ADR-791 αυτό το test ΑΠΑΙΤΟΥΣΕ (950, 50) και λεγόταν «via averaged
+    // vertex normal» — κλείδωνε το σφάλμα: η κάθετη απόσταση από το 2ο σκέλος έβγαινε
+    // **50** αντί για 100 (−50%). Το γνήσιο miter δίνει (900, 100): και τα δύο σκέλη
+    // απέχουν ΑΚΡΙΒΩΣ 100. Αυτή είναι η ιδιότητα που ΟΡΙΖΕΙ το miter join.
+    expect(out[1].x).toBeCloseTo(900, 6);
+    expect(out[1].y).toBeCloseTo(100, 6);
+    expect(Math.abs(out[1].x - 1000)).toBeCloseTo(100, 6); // απόσταση από το 2ο σκέλος
+    expect(Math.abs(out[1].y - 0)).toBeCloseTo(100, 6);    // απόσταση από το 1ο σκέλος
   });
 
   it('computes arithmetic-mean centroid', () => {
@@ -198,17 +203,17 @@ describe('polygon-utils — offsetPolyline / polygonCentroid (ADR-396 P3 SSoT)',
 
   it('closed=false MIS-mitres the seam vertex (i=0 uses one edge only) — the bug', () => {
     // Open-polyline offset: vertex 0 is offset perpendicular to edge 0→1 only,
-    // while the other corners use the averaged normal → seam corner is different.
-    const open = offsetPolyline(sq, 100, 1, false);
+    // while the other corners get a true miter (ADR-791) → the seam corner differs.
+    const open = offsetPolyline(sq, 100, { closed: false });
     const v0 = open[0];          // seam (single-edge normal)
-    const v1 = open[1];          // interior corner (averaged normal)
+    const v1 = open[1];          // interior corner (true miter)
     // v1 moved diagonally (both components), v0 did not → they differ in pattern.
     expect(Math.min(Math.abs(v1.x - 1000), Math.abs(v1.y))).toBeGreaterThan(1); // v1 diagonal
     expect(Math.abs(v0.x - 0)).toBeLessThan(1e-6); // v0 moved only in y (single edge)
   });
 
   it('closed=true mitres EVERY corner identically — no seam jog', () => {
-    const ring = offsetPolyline(sq, 100, 1, true);
+    const ring = offsetPolyline(sq, 100, { closed: true });
     const c = { x: 500, y: 500 };
     // All 4 offset corners equidistant from centre → still a square (no jog).
     const d = ring.map(p => Math.hypot(p.x - c.x, p.y - c.y));

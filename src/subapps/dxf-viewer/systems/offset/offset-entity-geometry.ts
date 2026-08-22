@@ -21,13 +21,11 @@ import {
   isPolylineEntity,
   isLWPolylineEntity,
 } from '../../types/entities';
-import type { Point3D } from '../../rendering/types/Types';
 import { getPerpendicularUnitVector, offsetPoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import { offsetPolyline } from '../../rendering/entities/shared/geometry-offset-utils';
 import { isStraightSegment } from '../../rendering/entities/shared/geometry-bulge-utils';
 import { offsetPolylineWithBulges } from './offset-polyline';
 import { OFFSET_MIN_DIMENSION } from './offset-types';
-import { projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
 
 /** True when `entity` is a type the OFFSET tool can produce a parallel copy of. */
 export function isOffsettable(entity: Entity): boolean {
@@ -65,15 +63,12 @@ function offsetPolylineEntity(src: PolylineEntity | LWPolylineEntity, d: number,
     return { ...rest, id: newId, selected: false, vertices: res.vertices, bulges: res.bulges };
   }
 
-  // Straight polyline → reuse the proven miter offset. Wrap closed rings with a
-  // duplicate first vertex (its detection contract), then strip it back off.
-  const pts3d: Point3D[] = src.vertices.map((v) => ({ x: v.x, y: v.y, z: 0 }));
-  const ring: Point3D[] = closed && pts3d.length > 0 ? [...pts3d, { ...pts3d[0] }] : pts3d;
-  const out = offsetPolyline(ring, d, { join: 'miter' });
+  // Straight polyline → reuse the proven miter offset. Η μηχανή είναι γενική στον τύπο
+  // σημείου (ADR-791) και δέχεται ρητό `closed`, οπότε το 2Δ πολύγωνο περνά ΑΥΤΟΥΣΙΟ:
+  // κανένα lift σε ψεύτικο z, καμία τεχνητή διπλή κορυφή, καμία επαναπροβολή.
+  const out = offsetPolyline(src.vertices, d, { join: 'miter', closed });
   if (out.length < 2) return null;
-  let verts = projectVerticesTo2D(out);
-  if (closed && verts.length > 1) verts = verts.slice(0, -1);
-  return { ...rest, id: newId, selected: false, vertices: verts };
+  return { ...rest, id: newId, selected: false, vertices: [...out] };
 }
 
 /**

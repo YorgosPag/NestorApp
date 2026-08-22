@@ -41,13 +41,12 @@
  * @see ../../../rendering/entities/shared/geometry-utils.ts (getNearestPointOnLine)
  */
 
-import type { Point2D, Point3D } from '../../../rendering/types/Types';
+import type { Point2D } from '../../../rendering/types/Types';
 import { offsetPolyline } from '../../../rendering/entities/shared/geometry-offset-utils';
 import { getNearestPointOnLine } from '../../../rendering/entities/shared/geometry-utils';
 import { findOrthogonalPath, type AStarOptions } from './astar-grid';
 import { segmentHitsObstacles } from './wall-obstacles';
 import type { Rect2D } from './routing-constants';
-import { projectVerticesTo2D } from '../../../bim/geometry/shared/polygon-utils';
 
 const COINCIDENT_EPS = 1e-6;
 
@@ -89,8 +88,6 @@ function near(a: Point2D, b: Point2D): boolean {
   return Math.abs(a.x - b.x) < COINCIDENT_EPS && Math.abs(a.y - b.y) < COINCIDENT_EPS;
 }
 
-const to3d = (p: Point2D): Point3D => ({ x: p.x, y: p.y, z: 0 });
-
 /**
  * Chain the trunk runs head-to-tail from `sourcePoint` outward into ≤2 arms (the Manhattan
  * router splits at most into a left + right arm; an A\* detour is just extra collinear runs in
@@ -129,8 +126,8 @@ function buildArmOffset(
 ): { readonly stub: OffsetStubRun | null; readonly armTrunks: readonly OffsetTrunkRun[] } {
   const arm = armIndices.map((idx) => referenceTrunks[idx]);
   const pts: Point2D[] = [arm[0].start, ...arm.map((s) => s.end)];
-  // offsetPolyline returns Point3D (z preserved); drop z back to clean Point2D for the runs.
-  const offsetPts: Point2D[] = projectVerticesTo2D(offsetPolyline(pts.map(to3d), offsetMm, { join: 'miter' }));
+  // ADR-791 — η μηχανή offset είναι γενική: 2Δ μέσα, 2Δ έξω. Κανένα lift, καμία επαναπροβολή.
+  const offsetPts: readonly Point2D[] = offsetPolyline(pts, offsetMm, { join: 'miter' });
   if (offsetPts.length < 2) return { stub: null, armTrunks: [] };
   const stub: OffsetStubRun | null = near(root, offsetPts[0])
     ? null

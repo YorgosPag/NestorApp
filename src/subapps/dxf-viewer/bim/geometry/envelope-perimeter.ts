@@ -353,8 +353,8 @@ function offsetLoopOutward(
   // jog at one corner. Strip the duplicate, offset with closed-mitre, then restore
   // the closing duplicate so the loop representation matches `exteriorFaceLoop`.
   const ring = closed ? stripClosingDuplicate(loop) : loop;
-  const a = offsetPolyline(ring, thicknessCanvas, 1, closed);
-  const b = offsetPolyline(ring, thicknessCanvas, -1, closed);
+  const a = offsetPolyline(ring, thicknessCanvas, { closed });
+  const b = offsetPolyline(ring, -thicknessCanvas, { closed });
   const chosen = meanDistToCentroid(a, centroid) >= meanDistToCentroid(b, centroid) ? a : b;
   if (closed && chosen.length > 0 && ring.length < loop.length) {
     chosen.push({ ...chosen[0] });

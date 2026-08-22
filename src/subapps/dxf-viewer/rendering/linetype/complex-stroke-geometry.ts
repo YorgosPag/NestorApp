@@ -10,6 +10,9 @@
  * native setLineDash· εδώ διασχίζουμε το path) — διαφορετική δουλειά, κανένα clone.
  */
 
+import { offsetPolyline as offsetPath } from '../entities/shared/geometry-offset-utils';
+
+
 export interface Point {
   readonly x: number;
   readonly y: number;
@@ -226,24 +229,18 @@ export function walkCyclePlacements(
 }
 
 /**
- * Parallel offset της polyline κατά `distPx` (προσημασμένο — κάθετο +90°). Ανά κορυφή
- * miter join (μέσος όρος γειτονικών normals). Χρησιμοποιείται από τα compound layers
- * (#9): διπλή γραμμή δρόμου / σιδηρόδρομος. Degenerate normals → passthrough.
+ * Parallel offset της polyline κατά `distPx` (προσημασμένο — κάθετο +90°). Λεπτός
+ * προσαρμογέας πάνω στη **ΜΙΑ** μηχανή offset (ADR-791).
+ *
+ * 🔴 **Εδώ ζούσε ΤΕΤΑΡΤΗ υλοποίηση, γεωμετρικά λάθος.** Κανονικοποιούσε τον μέσο όρο των
+ * γειτονικών normals αντί για γνήσιο miter ⇒ σε ορθή γωνία η γραμμή έπεφτε στα **7,071**
+ * αντί για 10,000 (**−29%**). Το ίδιο το σχόλιο του `complex-linetype-snap-geometry`
+ * δήλωνε «reuse `offsetPolyline`, **the SAME** parallel-offset» — ενώ ήταν αντίγραφο.
+ *
+ * ⚠️ Ο προσαρμογέας διατηρεί τα **εκφυλισμένα άκρα** της παλιάς συμπεριφοράς
+ * (`distPx === 0` ή `< 2` σημεία ⇒ αντίγραφα), που η μηχανή απαντά με `[]`.
  */
 export function offsetPolyline(points: readonly Point[], distPx: number): Point[] {
   if (distPx === 0 || points.length < 2) return points.map((p) => ({ x: p.x, y: p.y }));
-  const segs = buildSegments(points);
-  const normals = segs.map((s) => ({ nx: -s.uy, ny: s.ux }));
-  const out: Point[] = [];
-  for (let i = 0; i < points.length; i++) {
-    const inN = normals[i - 1];
-    const outN = normals[i];
-    const nx = (inN?.nx ?? outN?.nx ?? 0) + (outN?.nx ?? inN?.nx ?? 0);
-    const ny = (inN?.ny ?? outN?.ny ?? 0) + (outN?.ny ?? inN?.ny ?? 0);
-    const mag = Math.hypot(nx, ny);
-    const ax = mag > 0 ? nx / mag : 0;
-    const ay = mag > 0 ? ny / mag : 0;
-    out.push({ x: points[i].x + ax * distPx, y: points[i].y + ay * distPx });
-  }
-  return out;
+  return [...offsetPath(points, distPx)];
 }

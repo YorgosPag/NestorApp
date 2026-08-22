@@ -208,12 +208,6 @@
     "src/subapps/dxf-viewer/systems/group/ActiveGroupStore.ts": {
       "create-external-store": 1
     },
-    "src/subapps/dxf-viewer/systems/mep-design/routing/offset-pairing.ts": {
-      "planar-point-lift": 1
-    },
-    "src/subapps/dxf-viewer/systems/offset/offset-entity-geometry.ts": {
-      "planar-point-lift": 1
-    },
     "src/subapps/dxf-viewer/ui/components/DxfSettingsPanel.tsx": {
       "tabs-primitive": 1
     },

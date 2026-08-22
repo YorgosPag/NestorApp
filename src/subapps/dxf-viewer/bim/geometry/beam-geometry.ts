@@ -26,7 +26,7 @@ import type { Point3D, Polyline3D, Polygon3D, BoundingBox3D } from '../types/bim
 import type { BeamGeometry, BeamParams } from '../types/beam-types';
 import { CURVED_BEAM_SUBDIVISIONS } from '../types/beam-types';
 import { mmScaleFor } from '../../utils/scene-units';
-import { offsetPolyline } from './shared/polygon-utils';
+import { buildAxisStripOutline } from './shared/polygon-offset-utils';
 import { subdivideQuadraticBezier } from './shared/curve-tessellation';
 import { iShapeCrossSectionAreaMm2 } from './shared/i-shape-profile';
 import { justifyAxisPoints } from '../grid/axis-justify';
@@ -47,7 +47,7 @@ export function computeBeamGeometry(params: BeamParams): BeamGeometry {
   const axisVertices = pickAxisVertices(params);
   const axisPolyline: Polyline3D = { points: axisVertices, closed: false };
 
-  const outlineVertices = buildOutlineRect(axisVertices, params.width, s);
+  const outlineVertices = buildAxisStripOutline(axisVertices, params.width, s);
   const outline: Polygon3D = { vertices: outlineVertices };
 
   // BOQ: axis length is in canvas units → convert to m via (1/s) * MM_TO_M.
@@ -139,33 +139,6 @@ function pickAxisVertices(params: BeamParams): readonly Point3D[] {
   return [startB, endB];
 }
 
-/**
- * Build a closed outline polygon by offsetting the axis σε ±width/2 along
- * the local perpendicular normal. For straight beams (2 vertices) the result
- * is a 4-vertex rectangle. For curved beams the result is a 2(N+1)-vertex
- * polygon, CCW οriented:
- *
- *   [+offset 0..N, -offset N..0]
- *
- * Per-vertex normal averages adjacent segment normals (mirrors wall-geometry
- * vertex-normal pattern). Degenerate segments (length < 1µm) are skipped from
- * the normal average.
- */
-function buildOutlineRect(axis: readonly Point3D[], widthMm: number, s: number): Point3D[] {
-  const n = axis.length;
-  if (n < 2 || widthMm <= 0) {
-    return [...axis];
-  }
-  // Convert mm scalar → canvas units for correct 2D offset. SSoT offset-with-
-  // mitre (shared/polygon-utils): +half and −half sides around the axis.
-  const half = (widthMm * s) / 2;
-  const plus = offsetPolyline(axis, half, 1);
-  const minus = offsetPolyline(axis, half, -1);
-  // CCW: +offset start→end, then -offset end→start
-  const polygon: Point3D[] = [...plus];
-  for (let i = minus.length - 1; i >= 0; i--) polygon.push(minus[i]);
-  return polygon;
-}
 
 /**
  * Axis-aligned 3D bounding box. Phase B: z in metres (ADR-369 §2.2 Phase B).

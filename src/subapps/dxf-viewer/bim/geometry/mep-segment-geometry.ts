@@ -22,7 +22,7 @@ import {
   MIN_SEGMENT_LENGTH_MM,
 } from '../types/mep-segment-types';
 import { mmToSceneUnits } from '../../utils/scene-units';
-import { offsetPolyline } from './shared/polygon-utils';
+import { buildAxisStripOutline } from './shared/polygon-offset-utils';
 import { roundCrossSectionAreaMm2, roundPerimeterMm, rectPerimeterMm } from './shared/round-profile';
 
 const MM_TO_M = 1 / 1000;
@@ -157,32 +157,30 @@ export function validateMepSegmentParams(params: MepSegmentParams): MepSegmentVa
   return { errors, warnings: [] };
 }
 
-// ─── Internal helpers (mirror beam-geometry) ─────────────────────────────────────
+// ─── Internal helpers ────────────────────────────────────────────────────────────
 
+/**
+ * ADR-408 Φ15 — μια **ΚΑΤΑΚΟΡΥΦΗ** στήλη έχει ταυτόσημα XY άκρα: οι κάθετες του mitre είναι
+ * απροσδιόριστες (το offset θα έβγαζε NaN → NaN bbox). Η κάτοψή της είναι ο σωλήνας
+ * **ΚΑΤΑ ΜΗΚΟΣ**: τετραγωνάκι πλάτους διατομής γύρω από το σημείο. Κάθε άλλη περίπτωση
+ * πάει στο SSoT `buildAxisStripOutline` (ADR-791) — κοινό με τη δοκό.
+ */
 function buildOutlineRect(axis: readonly Point3D[], widthMm: number, s: number): Point3D[] {
   const n = axis.length;
-  if (n < 2 || widthMm <= 0) {
-    return [...axis];
+  if (n >= 2 && widthMm > 0) {
+    const half = (widthMm * s) / 2;
+    const a = axis[0];
+    const b = axis[n - 1];
+    if (Math.hypot(b.x - a.x, b.y - a.y) < 1e-6) {
+      return [
+        { x: a.x - half, y: a.y - half, z: 0 },
+        { x: a.x + half, y: a.y - half, z: 0 },
+        { x: a.x + half, y: a.y + half, z: 0 },
+        { x: a.x - half, y: a.y + half, z: 0 },
+      ];
+    }
   }
-  const half = (widthMm * s) / 2;
-  // ADR-408 Φ15 — a VERTICAL riser has coincident-XY endpoints: the mitre normals
-  // are undefined (offsetPolyline would emit NaN → NaN bbox). Its plan footprint is
-  // the pipe seen END-ON: a small square of the section width centred on the point.
-  const a = axis[0];
-  const b = axis[n - 1];
-  if (Math.hypot(b.x - a.x, b.y - a.y) < 1e-6) {
-    return [
-      { x: a.x - half, y: a.y - half, z: 0 },
-      { x: a.x + half, y: a.y - half, z: 0 },
-      { x: a.x + half, y: a.y + half, z: 0 },
-      { x: a.x - half, y: a.y + half, z: 0 },
-    ];
-  }
-  const plus = offsetPolyline(axis, half, 1);
-  const minus = offsetPolyline(axis, half, -1);
-  const polygon: Point3D[] = [...plus];
-  for (let i = minus.length - 1; i >= 0; i--) polygon.push(minus[i]);
-  return polygon;
+  return buildAxisStripOutline(axis, widthMm, s);
 }
 
 function computePolylineLengthMm(vertices: readonly Point3D[]): number {

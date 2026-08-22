@@ -400,8 +400,8 @@ function offsetAxisToEdges(
   // SSoT offset-with-mitre (shared/polygon-utils). outer = +sign side,
   // inner = −sign side. halfThicknessMm is already in canvas units here.
   return {
-    outerEdge: { points: offsetPolyline(vertices, halfThicknessMm, sign), closed: false },
-    innerEdge: { points: offsetPolyline(vertices, halfThicknessMm, -sign), closed: false },
+    outerEdge: { points: offsetPolyline(vertices, halfThicknessMm * sign), closed: false },
+    innerEdge: { points: offsetPolyline(vertices, -halfThicknessMm * sign), closed: false },
   };
 }
 
