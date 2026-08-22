@@ -43,6 +43,9 @@ import Link from 'next/link';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useViewportClass } from '@/hooks/media/useViewportClass';
+import { useAuth } from '@/auth/hooks/useAuth';
+import { hasDraftIdentity } from '@/lib/forms/draft-identity';
+import { SEARCH_LANDING_ROUTE } from '@/lib/listings/listing-routes';
 
 const NS = 'property-market';
 
@@ -54,7 +57,7 @@ const NS = 'property-market';
  */
 export function DesktopOnlyNotice({
   keyBase,
-  backHref,
+  privateHref,
 }: {
   /**
    * Η ρίζα του λεξιλογίου, π.χ. `demand` ή `offer`. Από αυτήν παράγονται **και τα
@@ -70,22 +73,55 @@ export function DesktopOnlyNotice({
    * ορίσματα, μια πέμπτη πρόταση αύριο θα έπρεπε να τη θυμηθεί **κάθε** καλών.
    */
   keyBase: string;
-  backHref: string;
+  /**
+   * Η έξοδος για κάποιον που **ΕΧΕΙ χώρο** («τα ακίνητά μου» · «οι ζητήσεις μου»).
+   *
+   * ⚠️ **Το όνομα λέει την προϋπόθεση επίτηδες.** Λεγόταν `backHref` — και αυτό ήταν
+   * ακριβώς που έκρυβε το ελάττωμα: μοιάζει με *«πού γυρνάει ο καθένας»*, ενώ είναι
+   * *«πού γυρνάει όποιος έχει λογαριασμό»*.
+   */
+  privateHref: string;
 }): React.ReactElement {
   const { t } = useTranslation([NS]);
+  const { user } = useAuth();
   const K = `${NS}:${keyBase}.desktopOnly`;
+
+  /**
+   * 🔴 **Η ΕΞΟΔΟΣ ΞΕΡΕΙ ΑΝ ΥΠΑΡΧΕΙ ΧΩΡΟΣ ΝΑ ΓΥΡΙΣΕΙ — ADR-660 §5.11.**
+   *
+   * Μέχρι 2026-08-23 η έξοδος ήταν **πάντα** η ιδιωτική διαδρομή. Όσο η φόρμα ζούσε
+   * πίσω από τον `ProtectedRoute` αυτό ήταν αληθές **κατά τύχη**: ανώνυμος δεν
+   * έφτανε ποτέ εδώ. Μόλις το §5.10 άνοιξε την πόρτα, η ίδια γραμμή έγινε
+   * **αδιέξοδο**: ανώνυμος σε στενή οθόνη έβλεπε «δεν γίνεται εδώ» και η **μοναδική**
+   * έξοδος τον πήγαινε σε διαδρομή που **απαιτεί σύνδεση**.
+   *
+   * 🔑 **Η γνώση ζει ΕΔΩ, όχι στους καλούντες**, και το επιχείρημα το γράφει ήδη το
+   * `keyBase` από πάνω: *«με τέσσερα ορίσματα, μια πέμπτη πρόταση αύριο θα έπρεπε να
+   * τη θυμηθεί **κάθε** καλών»*. Το ίδιο ισχύει για τη **σύνδεση**: έτσι η δεύτερη
+   * πύλη (ζήτηση) είναι σωστή **δομικά**, την ημέρα που θα ανοίξει κι εκείνη — και
+   * όχι επειδή κάποιος θυμήθηκε.
+   *
+   * ⚠️ **Αλλάζει ΚΑΙ το κείμενο, όχι μόνο ο σύνδεσμος.** Το `what` λέει *«όσα έχεις
+   * ήδη καταχωρήσει»* και το `back` *«τα ακίνητά μου»* — **και τα δύο ψευδή** για
+   * κάποιον χωρίς λογαριασμό. Σωστός προορισμός με λάθος ετικέτα είναι το ίδιο
+   * αδιέξοδο, απλώς πιο ευγενικό.
+   */
+  const identified = hasDraftIdentity(user?.uid ?? null);
+  const exitHref = identified ? privateHref : SEARCH_LANDING_ROUTE;
+  const whatKey = identified ? 'what' : 'whatAnonymous';
+  const backKey = identified ? 'back' : 'backAnonymous';
 
   return (
     <section className="flex flex-col gap-3 rounded-md border border-border bg-card p-4">
       <h1 className="text-xl font-semibold text-foreground">{t(`${K}.title`)}</h1>
       <p className="text-sm text-foreground">{t(`${K}.body`)}</p>
-      <p className="text-sm text-muted-foreground">{t(`${K}.what`)}</p>
+      <p className="text-sm text-muted-foreground">{t(`${K}.${whatKey}`)}</p>
       <nav>
         <Link
-          href={backHref}
+          href={exitHref}
           className="inline-block rounded-md border border-border px-4 py-2 font-medium text-foreground"
         >
-          {t(`${K}.back`)}
+          {t(`${K}.${backKey}`)}
         </Link>
       </nav>
     </section>

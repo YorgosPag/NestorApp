@@ -70,7 +70,7 @@ export function OwnerPropertyCreationGate(
   return (
     <DesktopOnlyGate
       wide={() => <OwnerPropertyFormContent {...props} />}
-      narrow={<DesktopOnlyNotice keyBase="offer" backHref={MY_OFFERS_ROUTE} />}
+      narrow={<DesktopOnlyNotice keyBase="offer" privateHref={MY_OFFERS_ROUTE} />}
     />
   );
 }

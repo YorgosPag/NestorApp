@@ -215,7 +215,9 @@
       "title": "Creating a request happens on a computer",
       "body": "The form asks four axes at once — place, time, features and neighbourhood. On a narrow screen it would be half a form, and half a request meets nothing.",
       "what": "From here you can view and manage the ones you already have.",
-      "back": "My requests"
+      "back": "My requests",
+      "whatAnonymous": "You can browse what is already on the market, and post your request when you are at a computer.",
+      "backAnonymous": "Browse the market"
     },
     "detail": {
       "createdAt": "Created",
@@ -262,7 +264,8 @@
   "offer": {
     "door": {
       "label": "Offer",
-      "hint": "Own a property? List it with a few structured details — and the people looking for it will find it."
+      "hint": "Own a property? List it with a few structured details — and the people looking for it will find it.",
+      "cta": "List a property"
     },
     "list": {
       "title": "My properties",
@@ -363,7 +366,9 @@
       "title": "Listing a property is done on a computer",
       "body": "The form asks about type, area, location and what you want to do with the property, all together. On a narrow screen it would be half a form — and a property without fields is found by no one.",
       "what": "From here you can view and manage what you have already listed.",
-      "back": "My properties"
+      "back": "My properties",
+      "whatAnonymous": "You can browse what is already on the market, and list your property when you are at a computer.",
+      "backAnonymous": "Browse the market"
     },
     "offerKind": {
       "label": "What do you want to do with the property?",

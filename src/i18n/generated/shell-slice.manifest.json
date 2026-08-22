@@ -4,19 +4,19 @@
     "src/i18n/generated/routes/data-deletion.el.json": "50365f50ff77003a6cb3602a0863d0dc674b3f215b30e55bfd88d21aa793807b",
     "src/i18n/generated/routes/demands.el.json": "41368086189cfdb5ef568de8e811404ebcea9d13f89bd756e76ac0f99a185932",
     "src/i18n/generated/routes/demands__demandId.el.json": "7959c1e9aa579a2b4fe1b39e65a4e0232c6928e497d52cc86389d0df3b159ad8",
-    "src/i18n/generated/routes/demands__new.el.json": "350b5f43148496330275688be04d3358cd8986cc366d2ba27cdff9ce64cd84f2",
+    "src/i18n/generated/routes/demands__new.el.json": "383ce0eedd908e243eb01c208f730d5b5d6f8699899ae3e31c290cec5899224e",
     "src/i18n/generated/routes/listing__id.el.json": "1f5bb80734871a98e9c0f08d8457a0d00871069ea36dfc90239a02e77749647e",
     "src/i18n/generated/routes/listings__mandates.el.json": "acc74d03857daa50427b8bff88d2bcd40e9d1952a442b9e7577c34eedf95c83a",
     "src/i18n/generated/routes/listings__mandates__new.el.json": "dd5a37e4dd6d0b4f33a2f8dbd4f7306dde97d013dfa8a2b1cf8ab492c4f6ca7d",
     "src/i18n/generated/routes/login.el.json": "3572a0681e12dd71bda049c2221dc6f8874d4c79c3f6883e5e8562f2bd11214a",
     "src/i18n/generated/routes/mandate__token.el.json": "6e75cdb41998a3f76bb88840249c7b197754548563acc1de2269b9e88099531c",
     "src/i18n/generated/routes/offers.el.json": "e74e6070885e06c96933615c08311d0c65dd8a25338e08a572e58f2d92e7914d",
-    "src/i18n/generated/routes/offers__new.el.json": "704abf94bd3b1def2767def2becec0b4584e5e8d675247a066cc77e10233598b",
+    "src/i18n/generated/routes/offers__new.el.json": "9c3448585ef6de08e32debf3524300938bc1cdf473d1646683851d7b7f151b1c",
     "src/i18n/generated/routes/offers__offerId.el.json": "3d9ed05450c675f8aac86bf5e8d3b78ffacfd3e57c43ebc94d6144e7bba52bd3",
     "src/i18n/generated/routes/privacy-policy.el.json": "181e3b315e8ac63a3e927fa8bf073863b2aa706fd66a06f38d936dce70b0cee0",
     "src/i18n/generated/routes/terms.el.json": "481f837696b407553f56de16128778617a86f72cf7b27471d61cd5793cf7d288",
     "src/i18n/generated/routes/test-harness__listing-shapes.el.json": "9b6aaaa831492e24807a1c83e0b505dc865c03afbd5638abf8ea2b990422b037",
-    "src/i18n/generated/shell-slice.el.json": "db89d8037c666c31d4e97d11d3c86c7162531e9bd6c3e1d8b3ee68f529b4f03e",
+    "src/i18n/generated/shell-slice.el.json": "42a110d8647f2667a85c3358004a9f7b0deb197cfab99516ee0e89b22e3a7b57",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "boundaries": {
@@ -55,7 +55,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "fd078215568ca53816bb996a8f4381af23a26e54b0c85fac1fce0a99e779e433",
+  "inputsSha256": "be4d960bbd9890a73fa0e86b05aad08cec2f3e7d8592a73d3472e6d1412dd8a5",
   "languages": [
     "el"
   ],
@@ -140,7 +140,7 @@
     "src/components/projects/procurement/ProjectProcurementTabs.tsx": "9fc7a77d5fc8b542183887c10158877a46fcd55ca8cc23542e05bcdc1d9ae7c1",
     "src/components/property-viewer/Logo_Pagonis.tsx": "abe960984e1f408862eae2ad7eb305b93edb6ba4f7fdcf375ef29f992c3b98ce",
     "src/components/providers/I18nProvider.tsx": "bb82ce64bdb15f688d8d20467bde1357c6e5b71afb367cf015ade7f691d841f2",
-    "src/components/public-site/PublicSiteHeader.tsx": "de804f1476f0ccba399ef8ac15ecadbb62ee96a994c8f42fbecc648f333cab0f",
+    "src/components/public-site/PublicSiteHeader.tsx": "f78795366458eb552b935bc6fc9efde38b52eacb7107055cee914f0f239b36d5",
     "src/components/search/CoverageStatement.tsx": "3a99e80c975df088c325a5e156c3a2fa949cfcd115294297d502991a8b44eb3f",
     "src/components/search/GlobalSearchDialog.tsx": "f2f938184d386db2f647a6566216185b8544c55eda4219daa7a6215be9061761",
     "src/components/search/PlaceSearchBox.tsx": "1b2ebb01216debbd92e0fdd301bc0bdf7806b714ff04d311107867e3b45be661",
@@ -563,10 +563,10 @@
   ],
   "stats": {
     "dynamicBoundaries": 18,
-    "matchedKeys": 131,
+    "matchedKeys": 132,
     "routeBoundaries": 0,
     "shellFiles": 465,
-    "sliceBytes": 311125
+    "sliceBytes": 312357
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
@@ -3869,6 +3869,7 @@
       "keys": [
         "demand.door.hint",
         "demand.door.label",
+        "offer.door.cta",
         "offer.door.hint",
         "offer.door.label"
       ],

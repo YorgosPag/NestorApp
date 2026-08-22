@@ -62,7 +62,7 @@ export function DemandCreationGate(props: DemandFormContentProps): React.ReactEl
   return (
     <DesktopOnlyGate
       wide={() => <DemandFormContent {...props} />}
-      narrow={<DesktopOnlyNotice keyBase="demand" backHref={MY_DEMANDS_ROUTE} />}
+      narrow={<DesktopOnlyNotice keyBase="demand" privateHref={MY_DEMANDS_ROUTE} />}
     />
   );
 }
