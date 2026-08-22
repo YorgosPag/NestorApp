@@ -1,0 +1,12 @@
+{
+  "_doc": "CHECK 3.58 — ADR-787 §5.2. violations = ομωνυμία (Κ3) · declarations = κλειστό σύνολο αναγνωστών (Κ2).",
+  "_warning": "Ο Κ1 (κανάλι χωρίς κριτή) είναι ZERO-TOLERANCE και ΔΕΝ μπαίνει ΠΟΤΕ εδώ.",
+  "generatedAt": "2026-08-22",
+  "violations": [
+    "resolveEffectiveCompanyId@src/services/firestore/auth-context.ts"
+  ],
+  "declarations": [
+    "http-header@src/lib/auth/auth-context.ts",
+    "user-doc-active-company@src/services/ai-pipeline/shared/super-admin-resolver.ts"
+  ]
+}

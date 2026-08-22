@@ -27,6 +27,7 @@
  *   SKIP_EMPTY_SELECT_ITEM                                  bypass CHECK 3.48
  *   SKIP_PRERENDER_BAILOUT                                  bypass CHECK 3.55
  *   SKIP_LISTING_CUSTODY                                    bypass CHECK 3.56
+ *   SKIP_WORKSPACE_AUTHORITY                                bypass CHECK 3.58
  *   SKIP_I18N_TYPES                '1' = bypass CHECK 3.33 (generated-types freshness)
  *   SKIP_I18N_SHELL_SLICE          '1' = bypass CHECK 3.34 (i18n shell-slice freshness)
  *   SKIP_I18N_NAMESPACE_WIRING     '1' = bypass CHECK 3.36 (i18n namespace reachability)
@@ -486,6 +487,21 @@ if (!process.env.SKIP_ADR_SECTION_REFS && allFiles.length > 0)
 // ⚠️ ZERO-TOL, ΚΑΜΙΑ baseline: δεν υπάρχει «λιγότερες αυθεντίες εξουσιοδότησης από χθες».
 if (!process.env.SKIP_LISTING_CUSTODY && allFiles.length > 0)
   addThread('3.56', 'Listing custody', 'scripts/check-listing-custody.js', allFiles);
+
+// CHECK 3.58 (ADR-787 §5.2) — «ποιος αποφασίζει ότι επιτρέπεσαι σε ΞΕΝΟ χώρο, και ρώτησε
+// τον κριτή;». Η Φάση 1 (Κ-2) έδωσε τον απαντητή του «είναι μέλος;» και έκλεισε ΕΝΑ κανάλι
+// (την κεφαλίδα HTTP). Η μέτρηση της 22/08 βρήκε ΔΕΥΤΕΡΟ, ζωντανό, ΜΕ ΔΕΔΟΜΕΝΑ ΣΤΗ ΒΑΣΗ:
+// ο Telegram adapter δρομολογούσε στο `users/{uid}.activeCompanyId` — πεδίο που ΓΡΑΦΕΙ ο
+// φυλλομετρητής και που τα `firestore.rules` επιτρέπουν σε κάθε χρήστη ΧΩΡΙΣ field allowlist
+// ⇒ *confused deputy* με την τεχνική σημασία του όρου.
+// 🔑 ΤΟ ΚΡΙΤΗΡΙΟ ΕΙΝΑΙ ΤΟ ΚΑΝΑΛΙ, ΟΧΙ ΤΟ ΟΝΟΜΑ: το ονοματολογικό μετρήθηκε σε >60% ψευδώς
+// θετικά (`resolveWorkspaceLayout` του DXF dock, `decideEmailDelivery`, …) — πήχης <10%.
+// ⚠️ Η ΣΚΑΝΔΑΛΗ ΖΕΙ ΜΕΣΑ ΣΤΗΝ ΠΥΛΗ (`triggers()`): νέος αναγνώστης καναλιού προσγειώνεται
+// σε ΟΠΟΙΟΔΗΠΟΤΕ αρχείο του `src/`, άρα λίστα μονοπατιών εδώ θα απέκλινε σιωπηλά (3.34/3.37).
+// ⚠️ ΔΥΟ ΜΗΧΑΝΙΣΜΟΙ: ZERO-TOL για το «κανάλι χωρίς κριτή» (ΔΕΝ μπαίνει ΠΟΤΕ σε baseline —
+// το `buildPayload` ρίχνει) + RATCHET κατά ταυτότητα για την ομωνυμία.
+if (!process.env.SKIP_WORKSPACE_AUTHORITY && allFiles.length > 0)
+  addThread('3.58', 'Workspace authority', 'scripts/check-workspace-authority.js', allFiles);
 
 // CHECK 3.54 — πύλη εκτέλεσης των αγκυρών (ADR-783). «Μπορεί αυτό το test να κοκκινίσει
 // κάτι;» — το επόμενο ερώτημα μετά το 3.47, με άλλη απάντηση: μετρημένο 11/08, **3.289 από

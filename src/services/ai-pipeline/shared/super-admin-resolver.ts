@@ -13,11 +13,14 @@
 
 import 'server-only';
 
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { getAdminAuth, getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS, SYSTEM_DOCS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
+import { decideMembership } from '@/lib/auth/workspace-membership';
+import { isAllowed, orgWorkspace } from '@/types/workspace-membership';
 import type {
+  SuperAdminIdentity,
   SuperAdminRegistryDoc,
   SuperAdminResolution,
 } from '@/types/super-admin';
@@ -89,6 +92,46 @@ async function getRegistry(): Promise<SuperAdminRegistryDoc | null> {
 // ============================================================================
 
 /**
+ * Ο ΕΝΑΣ βρόχος αναγνώρισης — έξι κανάλια, μία υλοποίηση.
+ *
+ * 🔴 ΕΞΗΧΘΗ ΕΠΕΙΔΗ ΤΟ ΕΠΙΑΣΕ ΤΟ CHECK 3.28 (jscpd, N.18): οι έξι `isSuperAdmin*`
+ * ήταν **token-ταυτόσημες** — 4 κλώνοι / 28 γραμμές, μετρημένοι και στο `7ccfc4fd`,
+ * δηλαδή **προϋπήρχαν**. Το μοτίβο ήταν πάντα το ίδιο: «διάβασε το μητρώο · βρες
+ * **ενεργό** διαχειριστή που ταιριάζει · κατάγραψε · επίστρεψε». Ό,τι διέφερε ήταν
+ * **δεδομένα** (πώς ταιριάζει · πώς λέγεται · τι καταγράφεται), άρα παράμετροι.
+ *
+ * ⚠️ Το `if (!admin.isActive) continue` ζει **εδώ**, μία φορά: ήταν το είδος γραμμής
+ * που, αντιγραμμένη έξι φορές, ξεχνιέται στην έβδομη — και τότε ένας **ανενεργός**
+ * διαχειριστής θα αναγνωριζόταν κανονικά.
+ *
+ * @param matches   το κριτήριο του καναλιού
+ * @param resolvedVia  πώς αναγνωρίστηκε (μέρος του συμβολαίου `SuperAdminResolution`)
+ * @param channelLabel  ανθρώπινο όνομα καναλιού, μόνο για τα ίχνη
+ * @param logFields  ό,τι επιπλέον θέλει να δει ο άνθρωπος στα ίχνη
+ */
+async function findActiveAdmin(
+  matches: (admin: SuperAdminIdentity) => boolean,
+  resolvedVia: SuperAdminResolution['resolvedVia'],
+  channelLabel: string,
+  logFields: Record<string, unknown>,
+): Promise<SuperAdminResolution | null> {
+  const registry = await getRegistry();
+  if (!registry?.admins) return null;
+
+  for (const admin of registry.admins) {
+    if (!admin.isActive) continue;
+    if (!matches(admin)) continue;
+    logger.info(`Super admin identified via ${channelLabel}`, {
+      displayName: admin.displayName,
+      ...logFields,
+    });
+    return { identity: admin, resolvedVia };
+  }
+
+  return null;
+}
+
+/**
  * Check if a Telegram user is a super admin.
  *
  * @param telegramUserId - Telegram user ID (from webhook)
@@ -97,24 +140,12 @@ async function getRegistry(): Promise<SuperAdminRegistryDoc | null> {
 export async function isSuperAdminTelegram(
   telegramUserId: string
 ): Promise<SuperAdminResolution | null> {
-  const registry = await getRegistry();
-  if (!registry?.admins) return null;
-
-  for (const admin of registry.admins) {
-    if (!admin.isActive) continue;
-    if (admin.channels.telegram?.userId === telegramUserId) {
-      logger.info('Super admin identified via Telegram', {
-        displayName: admin.displayName,
-        telegramUserId,
-      });
-      return {
-        identity: admin,
-        resolvedVia: 'telegram_user_id',
-      };
-    }
-  }
-
-  return null;
+  return findActiveAdmin(
+    (admin) => admin.channels.telegram?.userId === telegramUserId,
+    'telegram_user_id',
+    'Telegram',
+    { telegramUserId },
+  );
 }
 
 /**
@@ -126,27 +157,15 @@ export async function isSuperAdminTelegram(
 export async function isSuperAdminEmail(
   emailAddress: string
 ): Promise<SuperAdminResolution | null> {
-  const registry = await getRegistry();
-  if (!registry?.admins) return null;
-
+  // ⚠️ ΜΟΝΟ αυτό το κανάλι κανονικοποιεί — τα email συγκρίνονται case-insensitive.
   const normalizedEmail = emailAddress.toLowerCase().trim();
-
-  for (const admin of registry.admins) {
-    if (!admin.isActive) continue;
-    const addresses = admin.channels.email?.addresses ?? [];
-    if (addresses.some(addr => addr.toLowerCase().trim() === normalizedEmail)) {
-      logger.info('Super admin identified via Email', {
-        displayName: admin.displayName,
-        email: normalizedEmail,
-      });
-      return {
-        identity: admin,
-        resolvedVia: 'email_address',
-      };
-    }
-  }
-
-  return null;
+  return findActiveAdmin(
+    (admin) => (admin.channels.email?.addresses ?? [])
+      .some((addr) => addr.toLowerCase().trim() === normalizedEmail),
+    'email_address',
+    'Email',
+    { email: normalizedEmail },
+  );
 }
 
 /**
@@ -158,24 +177,12 @@ export async function isSuperAdminEmail(
 export async function isSuperAdminWhatsApp(
   phoneNumber: string
 ): Promise<SuperAdminResolution | null> {
-  const registry = await getRegistry();
-  if (!registry?.admins) return null;
-
-  for (const admin of registry.admins) {
-    if (!admin.isActive) continue;
-    if (admin.channels.whatsapp?.phoneNumber === phoneNumber) {
-      logger.info('Super admin identified via WhatsApp', {
-        displayName: admin.displayName,
-        phoneNumber,
-      });
-      return {
-        identity: admin,
-        resolvedVia: 'whatsapp_phone',
-      };
-    }
-  }
-
-  return null;
+  return findActiveAdmin(
+    (admin) => admin.channels.whatsapp?.phoneNumber === phoneNumber,
+    'whatsapp_phone',
+    'WhatsApp',
+    { phoneNumber },
+  );
 }
 
 /**
@@ -187,24 +194,12 @@ export async function isSuperAdminWhatsApp(
 export async function isSuperAdminMessenger(
   psid: string
 ): Promise<SuperAdminResolution | null> {
-  const registry = await getRegistry();
-  if (!registry?.admins) return null;
-
-  for (const admin of registry.admins) {
-    if (!admin.isActive) continue;
-    if (admin.channels.messenger?.psid === psid) {
-      logger.info('Super admin identified via Messenger', {
-        displayName: admin.displayName,
-        psid,
-      });
-      return {
-        identity: admin,
-        resolvedVia: 'messenger_psid',
-      };
-    }
-  }
-
-  return null;
+  return findActiveAdmin(
+    (admin) => admin.channels.messenger?.psid === psid,
+    'messenger_psid',
+    'Messenger',
+    { psid },
+  );
 }
 
 /**
@@ -216,24 +211,12 @@ export async function isSuperAdminMessenger(
 export async function isSuperAdminInstagram(
   igsid: string
 ): Promise<SuperAdminResolution | null> {
-  const registry = await getRegistry();
-  if (!registry?.admins) return null;
-
-  for (const admin of registry.admins) {
-    if (!admin.isActive) continue;
-    if (admin.channels.instagram?.igsid === igsid) {
-      logger.info('Super admin identified via Instagram', {
-        displayName: admin.displayName,
-        igsid,
-      });
-      return {
-        identity: admin,
-        resolvedVia: 'instagram_igsid',
-      };
-    }
-  }
-
-  return null;
+  return findActiveAdmin(
+    (admin) => admin.channels.instagram?.igsid === igsid,
+    'instagram_igsid',
+    'Instagram',
+    { igsid },
+  );
 }
 
 /**
@@ -245,24 +228,12 @@ export async function isSuperAdminInstagram(
 export async function isSuperAdminFirebaseUid(
   firebaseUid: string
 ): Promise<SuperAdminResolution | null> {
-  const registry = await getRegistry();
-  if (!registry?.admins) return null;
-
-  for (const admin of registry.admins) {
-    if (!admin.isActive) continue;
-    if (admin.firebaseUid === firebaseUid) {
-      logger.info('Super admin identified via Firebase UID', {
-        displayName: admin.displayName,
-        firebaseUid,
-      });
-      return {
-        identity: admin,
-        resolvedVia: 'firebase_uid',
-      };
-    }
-  }
-
-  return null;
+  return findActiveAdmin(
+    (admin) => admin.firebaseUid === firebaseUid,
+    'firebase_uid',
+    'Firebase UID',
+    { firebaseUid },
+  );
 }
 
 /**
@@ -281,16 +252,31 @@ export async function getAdminTelegramChatId(): Promise<string | null> {
 }
 
 /**
- * Read the active company selected in the super admin UI switcher.
- * Written to Firestore by SuperAdminCompanyContext on every switcher change.
+ * Ο χώρος που δήλωσε ο διαχειριστής στον επιλογέα — **αφού κριθεί** (ADR-787 §5.2 στ).
  *
- * Used by Telegram channel adapter (Option B — ADR-145) to route bot commands
- * to whichever company the admin has active in the dashboard.
+ * Το `users/{uid}.activeCompanyId` είναι **κανάλι ελεγχόμενο από τον πελάτη**: το
+ * γράφει ο φυλλομετρητής (`SuperAdminCompanyContext.tsx`, `setDoc`) και ο κανόνας
+ * `firestore.rules` (`allow update: request.auth.uid == userId`) το επιτρέπει σε
+ * **κάθε** χρήστη, **χωρίς field allowlist**.
  *
- * @param firebaseUid - Firebase Auth UID of the super admin
- * @returns Active company ID, or null if not set / read fails
+ * 🔴 ΓΙΑΤΙ ΑΛΛΑΞΕ. Μέχρι 2026-08-22 αυτή η συνάρτηση **επέστρεφε την τιμή ωμή**, και ο
+ * Telegram adapter δρομολογούσε εκεί τις εντολές του bot. Ένα πρόγραμμα με **αυθεντία
+ * διακομιστή** που εμπιστεύεται είσοδο γραμμένη από τον πελάτη είναι *confused deputy*
+ * με την τεχνική σημασία του όρου — και ήταν η **ίδια** βλάβη που η Φάση 1 έκλεισε στην
+ * κεφαλίδα HTTP (§2.8 #3), ζωντανή σε **δεύτερο** κανάλι.
+ *
+ * ⚠️ Ο ΚΡΙΤΗΣ ΖΕΙ ΕΔΩ, ΟΧΙ ΣΤΟΝ ΚΑΛΟΥΝΤΑ. Αν έμπαινε στον `telegram-channel-adapter`,
+ * θα ήταν κανόνας που ο **επόμενος** καλών πρέπει να θυμάται — το σχήμα που έχει
+ * αποτύχει μετρημένα (CHECK 3.34: **63** · 3.37: **18 vs 26**). Εδώ είναι **αδύνατο**
+ * να επιστραφεί ακρίτητη τιμή.
+ *
+ * ⚠️ ΤΟ ΑΙΤΗΜΑ ΕΙΝΑΙ ΠΑΝΤΑ `orgWorkspace(...)`: το κανάλι κρατά `companyId`, άρα δεν
+ * μπορεί να ζητήσει τον **ιδιωτικό** χώρο άλλου ανθρώπου (ADR-787 Ε-3 §3).
+ *
+ * @param firebaseUid - Firebase Auth UID του διαχειριστή
+ * @returns Ο χώρος **αν** ο άνθρωπος επιτρέπεται εκεί· αλλιώς `null` (fail-closed)
  */
-export async function getSuperAdminActiveCompanyId(
+export async function resolveVerifiedActiveWorkspace(
   firebaseUid: string | null
 ): Promise<string | null> {
   if (!firebaseUid) return null;
@@ -299,9 +285,33 @@ export async function getSuperAdminActiveCompanyId(
     const snap = await adminDb.collection(COLLECTIONS.USERS).doc(firebaseUid).get();
     if (!snap.exists) return null;
     const data = snap.data() as { activeCompanyId?: string };
-    return data.activeCompanyId ?? null;
+    const requestedId = data.activeCompanyId;
+    if (!requestedId) return null;
+
+    // Η αυθεντία είναι τα **claims**, ποτέ το έγγραφο που μόλις διαβάσαμε.
+    const user = await getAdminAuth().getUser(firebaseUid);
+    const claims = (user.customClaims ?? {}) as { companyId?: string; globalRole?: string };
+    if (!claims.companyId) return null;
+
+    const decision = await decideMembership({
+      uid: firebaseUid,
+      claimCompanyId: claims.companyId,
+      globalRole: claims.globalRole ?? '',
+      requested: orgWorkspace(requestedId),
+    });
+
+    if (isAllowed(decision.verdict)) return requestedId;
+
+    logger.warn('Ο δηλωμένος ενεργός χώρος απορρίφθηκε — δεν είναι μέλος', {
+      firebaseUid,
+      requested: requestedId,
+      verdict: decision.verdict,
+    });
+    return null;
   } catch (error) {
-    logger.warn('Failed to read activeCompanyId for super admin', {
+    // ⛔ ΑΓΝΩΣΤΟ ≠ ΕΠΙΤΡΕΠΤΟ (N.12): αποτυχία ανάγνωσης ⇒ **καμία** παράκαμψη
+    //    δρομολόγησης· ο καλών πέφτει πίσω στον χώρο του ίδιου του μηνύματος.
+    logger.warn('Failed to resolve verified active workspace', {
       firebaseUid,
       error: getErrorMessage(error),
     });

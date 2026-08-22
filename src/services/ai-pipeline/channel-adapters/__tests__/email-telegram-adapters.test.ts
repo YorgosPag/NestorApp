@@ -39,11 +39,11 @@ const mockIsSuperAdminTelegram = jest.fn<
   Promise<{ identity: { displayName: string; firebaseUid: string }; resolvedVia: string } | null>,
   [string]
 >();
-const mockGetSuperAdminActiveCompanyId = jest.fn<Promise<string | null>, [string | null]>();
+const mockResolveVerifiedActiveWorkspace = jest.fn<Promise<string | null>, [string | null]>();
 jest.mock('../../shared/super-admin-resolver', () => ({
   isSuperAdminEmail: (...args: [string]) => mockIsSuperAdminEmail(...args),
   isSuperAdminTelegram: (...args: [string]) => mockIsSuperAdminTelegram(...args),
-  getSuperAdminActiveCompanyId: (...args: [string | null]) => mockGetSuperAdminActiveCompanyId(...args),
+  resolveVerifiedActiveWorkspace: (...args: [string | null]) => mockResolveVerifiedActiveWorkspace(...args),
 }));
 
 // ── Imports ──
@@ -301,7 +301,7 @@ describe('TelegramChannelAdapter', () => {
     jest.clearAllMocks();
     mockEnqueue.mockResolvedValue({ queueId: 'pq_002', requestId: 'req_002' });
     mockIsSuperAdminTelegram.mockResolvedValue(null);
-    mockGetSuperAdminActiveCompanyId.mockResolvedValue(null);
+    mockResolveVerifiedActiveWorkspace.mockResolvedValue(null);
   });
 
   // ── feedToPipeline ──
@@ -373,13 +373,13 @@ describe('TelegramChannelAdapter', () => {
         ...ADMIN_RESOLUTION,
         resolvedVia: 'telegram',
       });
-      mockGetSuperAdminActiveCompanyId.mockResolvedValue('comp_active_switcher');
+      mockResolveVerifiedActiveWorkspace.mockResolvedValue('comp_active_switcher');
 
       await TelegramChannelAdapter.feedToPipeline(
         createTelegramParams({ userId: '5618410820', companyId: 'comp_pagonis' })
       );
 
-      expect(mockGetSuperAdminActiveCompanyId).toHaveBeenCalledWith('uid_admin_001');
+      expect(mockResolveVerifiedActiveWorkspace).toHaveBeenCalledWith('uid_admin_001');
       expect(mockEnqueue).toHaveBeenCalledWith(
         expect.objectContaining({ companyId: 'comp_active_switcher' })
       );
@@ -390,7 +390,7 @@ describe('TelegramChannelAdapter', () => {
         ...ADMIN_RESOLUTION,
         resolvedVia: 'telegram',
       });
-      mockGetSuperAdminActiveCompanyId.mockResolvedValue(null);
+      mockResolveVerifiedActiveWorkspace.mockResolvedValue(null);
 
       await TelegramChannelAdapter.feedToPipeline(
         createTelegramParams({ companyId: 'comp_pagonis' })

@@ -23,7 +23,7 @@ import type { MessageAttachment } from '@/types/conversations';
 import { PipelineChannel } from '@/types/ai-pipeline';
 import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { enqueuePipelineItem } from '../pipeline-queue-service';
-import { isSuperAdminTelegram, getSuperAdminActiveCompanyId } from '../shared/super-admin-resolver';
+import { isSuperAdminTelegram, resolveVerifiedActiveWorkspace } from '../shared/super-admin-resolver';
 import { nowISO } from '@/lib/date-local';
 
 // ============================================================================
@@ -103,7 +103,10 @@ export class TelegramChannelAdapter {
           };
           // Route bot commands to whichever company is active in the UI switcher.
           // SuperAdminCompanyContext persists the selection to users/{uid}.activeCompanyId.
-          const adminActiveCompany = await getSuperAdminActiveCompanyId(
+          // ⚠️ Η τιμή έρχεται **κριμένη** (ADR-787 §5.2 στ): ο απαντητής του
+          //    «είναι μέλος;» ζει ΜΕΣΑ στον αναγνώστη του καναλιού, άρα ακρίτητη
+          //    τιμή είναι αδύνατο να φτάσει εδώ. ⦸ ΜΗΝ ξαναγράψεις τον έλεγχο εδώ.
+          const adminActiveCompany = await resolveVerifiedActiveWorkspace(
             adminResolution.identity.firebaseUid
           );
           if (adminActiveCompany) effectiveCompanyId = adminActiveCompany;

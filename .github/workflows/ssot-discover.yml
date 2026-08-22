@@ -50,6 +50,14 @@ on:
       - 'scripts/check-shell-boundary.js'
       - 'scripts/check-listing-custody.js'
       - 'src/lib/owner-property/listing-custody.ts'
+      # CHECK 3.58 (ADR-787 §5.2) — η αρχή του ενεργού χώρου. Το μητρώο των καναλιών
+      # και η ίδια η πύλη είναι ΕΙΣΟΔΟΙ: νέο κανάλι ή νέος αναγνώστης ξανακρίνει
+      # ΟΛΟ το δέντρο, αλλιώς το job μένει πράσινο πάνω στην αλλαγή του κριτηρίου.
+      - 'scripts/check-workspace-authority.js'
+      - '.workspace-authority.json'
+      - '.workspace-authority-baseline.json'
+      - 'src/lib/auth/workspace-membership.ts'
+      - 'src/types/workspace-membership.ts'
       - 'scripts/lib/shell-boundary/**'
       - '.shell-boundary.json'
       # CHECK 3.53 (ADR-739 §0.3 / ADR-777 §0.4) — ταυτότητα ενοτήτων ADR. Τα ίδια τα
@@ -97,6 +105,14 @@ on:
       - 'scripts/check-shell-boundary.js'
       - 'scripts/check-listing-custody.js'
       - 'src/lib/owner-property/listing-custody.ts'
+      # CHECK 3.58 (ADR-787 §5.2) — η αρχή του ενεργού χώρου. Το μητρώο των καναλιών
+      # και η ίδια η πύλη είναι ΕΙΣΟΔΟΙ: νέο κανάλι ή νέος αναγνώστης ξανακρίνει
+      # ΟΛΟ το δέντρο, αλλιώς το job μένει πράσινο πάνω στην αλλαγή του κριτηρίου.
+      - 'scripts/check-workspace-authority.js'
+      - '.workspace-authority.json'
+      - '.workspace-authority-baseline.json'
+      - 'src/lib/auth/workspace-membership.ts'
+      - 'src/types/workspace-membership.ts'
       - 'scripts/lib/shell-boundary/**'
       - '.shell-boundary.json'
       # CHECK 3.53 (ADR-739 §0.3 / ADR-777 §0.4) — ταυτότητα ενοτήτων ADR. Τα ίδια τα
@@ -643,4 +659,56 @@ jobs:
             echo ""
             echo "Απογραφή: \`npm run adr-section-refs:report\`"
             echo "Reseed ΜΟΝΟ μετά από νόμιμο καθάρισμα: \`npm run adr-section-refs:baseline\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  workspace-authority:
+    name: 🏢 Workspace Authority Gate (CHECK 3.58)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Πάκετα (jest για τις άγκυρες)
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # Layer 2 — ΑΝΕΥ ΟΡΩΝ και ΠΛΗΡΕΣ. Ένας νέος αναγνώστης καναλιού
+      # προσγειώνεται σε ΟΠΟΙΟΔΗΠΟΤΕ αρχείο, και μια αλλαγή στο μητρώο
+      # ξανα-ταξινομεί αρχεία ΠΟΥ ΚΑΝΕΙΣ ΔΕΝ ΕΣΤΕΙΛΕ — μερική ανάλυση θα ήταν αναληθής.
+      - name: 🏢 CHECK 3.58 — κανένα κανάλι ενεργού χώρου χωρίς κριτή
+        run: pnpm run workspace-authority:check
+
+      - name: "🧪 Σουίτα μετάλλαξης — CHECK 3.58"
+        run: pnpm run test:workspace-authority
+
+      - name: 🧭 How to resolve
+        if: failure()
+        run: |
+          {
+            echo "### CHECK 3.58 — ADR-787 §5.2 (η αρχή του ενεργού χώρου)"
+            echo "Η ερώτηση «επιτρέπεσαι σε αυτόν τον χώρο;» έχει **ΕΝΑ** σπίτι:"
+            echo '`src/lib/auth/workspace-membership.ts`.'
+            echo ""
+            echo "**κανάλι χωρίς κριτή** (zero-tolerance) → κάλεσε τον απαντητή ΣΤΟ ΙΔΙΟ ΑΡΧΕΙΟ:"
+            echo '`decideMembership({ uid, claimCompanyId, globalRole, requested: orgWorkspace(id) })`'
+            echo "⛔ ΜΗΝ τον βάλεις στον καλούντα — θα ήταν κανόνας που ο επόμενος πρέπει να θυμάται."
+            echo ""
+            echo "**νέος αναγνώστης καναλιού** → μπλοκάρει ΑΚΟΜΑ ΚΙ ΑΝ καλεί σωστά τον κριτή."
+            echo "Αυτό ΕΙΝΑΙ το σημείο: δεύτερος σωστός αναγνώστης είναι αρχιτεκτονικό γεγονός."
+            echo "Δήλωσέ τον στο \`.workspace-authority.json\` → \`readers[]\`, ΜΕ ΛΟΓΟ."
+            echo ""
+            echo "Απογραφή: \`npm run workspace-authority:report\`"
+            echo "Reseed ΜΟΝΟ μετά από νόμιμο καθάρισμα: \`npm run workspace-authority:baseline\`"
           } >> "$GITHUB_STEP_SUMMARY"
