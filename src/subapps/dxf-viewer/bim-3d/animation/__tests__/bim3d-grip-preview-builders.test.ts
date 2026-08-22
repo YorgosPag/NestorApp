@@ -30,7 +30,7 @@ import { slabToMesh, beamToMesh } from '../../converters/BimToThreeConverter';
 import type { BeamEntity } from '../../../bim/types/beam-types';
 import { useBim3DEntitiesStore } from '../../stores/Bim3DEntitiesStore';
 import { useViewMode3DStore } from '../../stores/ViewMode3DStore';
-import type { Point3D, Polygon3D } from '../../../bim/types/bim-base';
+import type { BimPoint, BimPolygon } from '../../../bim/types/bim-base';
 import type { RoofEntity, RoofParams } from '../../../bim/types/roof-types';
 import type { FloorFinishEntity, FloorFinishParams } from '../../../bim/types/floor-finish-types';
 import type { SlabEntity, SlabParams } from '../../../bim/types/slab-types';
@@ -40,15 +40,15 @@ import {
   DEFAULT_FLOOR_FINISH_MATERIAL_ID,
 } from '../../../bim/types/floor-finish-types';
 
-const RECT: Point3D[] = [
+const RECT: BimPoint[] = [
   { x: 0, y: 0, z: 0 },
   { x: 4000, y: 0, z: 0 },
   { x: 4000, y: 3000, z: 0 },
   { x: 0, y: 3000, z: 0 },
 ];
 
-function roofParams(verts: Point3D[] = RECT): RoofParams {
-  const outline: Polygon3D = { vertices: verts };
+function roofParams(verts: BimPoint[] = RECT): RoofParams {
+  const outline: BimPolygon = { vertices: verts };
   return {
     outline,
     edges: applyRoofShapePreset(outline, 'gable', 30, 'deg'),

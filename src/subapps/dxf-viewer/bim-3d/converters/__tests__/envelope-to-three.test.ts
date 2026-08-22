@@ -12,7 +12,7 @@ import {
   revealLiningToMesh,
 } from '../EnvelopeToThree';
 import type { EnvelopeChain } from '../../../bim/geometry/envelope-perimeter';
-import type { Point3D } from '../../../bim/types/bim-base';
+import type { BimPoint } from '../../../bim/types/bim-base';
 import { GRAPHITE_EPS_MATERIAL_ID } from '../../../bim/types/thermal-envelope-types';
 
 function pt(x: number, y: number) {
@@ -133,7 +133,7 @@ describe('envelopeChainToMesh (ADR-396 P5)', () => {
   });
 });
 
-const SQUARE: Point3D[] = [pt(0, 0), pt(2, 0), pt(2, 2), pt(0, 2)];
+const SQUARE: BimPoint[] = [pt(0, 0), pt(2, 0), pt(2, 2), pt(0, 2)];
 
 describe('slabFlatLayerToMesh (ADR-396 Z2/Z3)', () => {
   it('Z3 (δώμα): η στρώση κάθεται ΠΑΝΩ από την άνω παρειά (posY = slabTop)', () => {
@@ -165,8 +165,8 @@ describe('slabFlatLayerToMesh (ADR-396 Z2/Z3)', () => {
 describe('revealLiningToMesh (ADR-396 Z4 — λωρίδες περβαζιού, structural)', () => {
   // free outline (width 1m άξονας x, depth 0.25m)· structural = +0.05 σε κάθε άκρο
   // (η μόνωση τρώει τον τοίχο, ΕΞΩ από το ελεύθερο άνοιγμα).
-  const FREE: Point3D[] = [pt(0, 0), pt(1, 0), pt(1, 0.25), pt(0, 0.25)];
-  const STRUCT: Point3D[] = [pt(-0.05, 0), pt(1.05, 0), pt(1.05, 0.25), pt(-0.05, 0.25)];
+  const FREE: BimPoint[] = [pt(0, 0), pt(1, 0), pt(1, 0.25), pt(0, 0.25)];
+  const STRUCT: BimPoint[] = [pt(-0.05, 0), pt(1.05, 0), pt(1.05, 0.25), pt(-0.05, 0.25)];
 
   it('παράθυρο (sill>0) → 4 λωρίδες (2 παραστάδες + πρέκι + ποδιά)', () => {
     const grp = revealLiningToMesh(FREE, STRUCT, 0.05, 900, 1100, 0, 0, GRAPHITE_EPS_MATERIAL_ID, 'lvl-1');

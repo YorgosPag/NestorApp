@@ -16,7 +16,7 @@
 import * as THREE from 'three';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
-import type { PlanarPoint, Point3D } from '../../bim/types/bim-base';
+import type { PlanarPoint, BimPoint } from '../../bim/types/bim-base';
 import { getMaterial3D } from '../materials/MaterialCatalog3D';
 import { buildWallMeshWithOpenings } from './wall-opening-extrude';
 import { computeWallOpeningPieces, type WallTopLocalFn, type WallBaseLocalFn, type WallOpeningPiece } from './wall-opening-pieces';
@@ -208,7 +208,7 @@ export function buildStraightWallWithOpenings(
   // prisms). Επιστρέφει `true` αν έκοψε (handled), αλλιώς `false` (fast path κάτω).
   const tryEmitClip = (
     pc: WallOpeningPiece,
-    quad: readonly [Point3D, Point3D, Point3D, Point3D],
+    quad: readonly [BimPoint, BimPoint, BimPoint, BimPoint],
     mat: THREE.Material,
     layerId?: string,
   ): boolean => {
@@ -235,13 +235,13 @@ export function buildStraightWallWithOpenings(
   // or a layer sub-quad in multi-layer mode) with all the slope/clip branching.
   const emitPieceQuad = (
     pc: WallOpeningPiece,
-    quad: readonly [Point3D, Point3D, Point3D, Point3D],
+    quad: readonly [BimPoint, BimPoint, BimPoint, BimPoint],
     mat: THREE.Material,
     layerId?: string,
   ): void => {
     // ADR-462 — plan quad (canvas units) → world metres ΠΡΙΝ τη γεωμετρία· τα z-fields
     // του `pc` (zBotAM/zTopAM…) είναι ήδη μέτρα (από wallTop/wallBase `.at()` × MM_TO_M).
-    const quadM = scalePoints(quad, sceneToM) as [Point3D, Point3D, Point3D, Point3D];
+    const quadM = scalePoints(quad, sceneToM) as [BimPoint, BimPoint, BimPoint, BimPoint];
     const flatBase = Math.abs(pc.zBotAM - pc.zBotBM) < 1e-6;
     if (pc.topFollowsProfile && flatBase && tryEmitClip(pc, quadM, mat, layerId)) return;
 
@@ -290,8 +290,8 @@ export function buildStraightWallWithOpenings(
 function buildWallCoreBody(
   wall: WallEntity,
   renderWall: WallEntity,
-  outer: readonly Point3D[],
-  inner: readonly Point3D[],
+  outer: readonly BimPoint[],
+  inner: readonly BimPoint[],
   heightM: number,
   material: THREE.Material,
   columnFootprintsM: readonly (readonly { readonly x: number; readonly y: number }[])[] = [],
@@ -427,7 +427,7 @@ export function wallToMesh(
   // χώρος μέτρων με το wall ring), για την πραγματική τομή 3Δ στον flat solid path. Cutters =
   // κολόνες («η κολόνα νικάει») + τοίχοι-νικητές σε διασταύρωση Χ (priority, wall↔wall extension).
   // Τα cross footprints ΔΕΝ μπαίνουν στο `columns` (το pullback είναι column-specific).
-  const scaleFootprints = (fps: readonly (readonly Point3D[])[]): { x: number; y: number }[][] =>
+  const scaleFootprints = (fps: readonly (readonly BimPoint[])[]): { x: number; y: number }[][] =>
     fps.filter((c) => c.length >= 3).map((c) => projectVerticesTo2D(scalePoints(c, sceneToM)));
   const columnFootprintsM = scaleFootprints(columns);
   const crossFootprintsM = scaleFootprints(wallCrossFootprints);

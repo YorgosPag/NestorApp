@@ -3,7 +3,7 @@
  * Unified Portal Management για όλα τα dropdown/modal components
  *
  * ✅ ENTERPRISE REFACTORED: SINGLE SOURCE OF TRUTH για Portal Management
- * ✅ Integrates με precision-positioning.ts
+ * ✅ Self-contained positioning math (δεν εξαρτάται από το subapp)
  * ✅ Centralized z-index management
  * ✅ Smart positioning με viewport awareness
  * ✅ Animation & transition support
@@ -70,7 +70,7 @@ export interface EnterprisePortalProps {
 // ============================================================================
 
 /**
- * Smart positioning hook που combines precision-positioning με portal logic
+ * Smart positioning hook — viewport-aware τοποθέτηση + portal logic.
  */
 export const useSmartPortalPositioning = (
   config: EnterprisePortalConfig,
@@ -337,7 +337,7 @@ export const usePhotoPreviewStyles = (hasPhoto: boolean, uploadState?: 'uploadin
  * Features:
  * 1. ✅ Unified portal management για όλα τα dropdown/modal patterns
  * 2. ✅ Smart positioning με viewport awareness & collision detection
- * 3. ✅ Integration με existing precision-positioning.ts
+ * 3. ✅ Self-contained positioning math (καμία εξάρτηση από το dxf-viewer)
  * 4. ✅ Centralized z-index hierarchy από design tokens
  * 5. ✅ Keyboard & mouse interaction handling (escape, click outside)
  * 6. ✅ Animation support με entrance/exit transitions

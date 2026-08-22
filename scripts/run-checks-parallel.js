@@ -503,6 +503,20 @@ if (!process.env.SKIP_LISTING_CUSTODY && allFiles.length > 0)
 if (!process.env.SKIP_WORKSPACE_AUTHORITY && allFiles.length > 0)
   addThread('3.58', 'Workspace authority', 'scripts/check-workspace-authority.js', allFiles);
 
+// CHECK 3.59 — πύλη ενικού λεξιλογίου σημείου (ADR-792). «Δηλώνεται κάθε όνομα του
+// λεξιλογίου σε ΑΚΡΙΒΩΣ ΕΝΑ αρχείο;» Μετρημένο 22/08: ΤΕΣΣΕΡΑ ζεύγη ομώνυμων τύπων με
+// ασύμβατο συμβόλαιο (`Point3D` 216 vs 49 · `Polygon3D` 54 vs 56 — αντικείμενο έναντι
+// σκέτου πίνακα · `Polyline3D` 13 vs 14 · `BoundingBox3D` 45 vs 1) και ΕΞΙ `Point2D`.
+// ⚠️ ΤΟ ΚΟΙΝΟ ΟΝΟΜΑ ΤΥΦΛΩΝΕΙ ΤΟ CHECK 3.30: `OWNER_SAMPLE = 8` ⇒ overflow ⇒ κάδος
+// `suspect`, που το ratchet δεν μετρά. Απόδειξη: το `precision-positioning.ts` είχε 4/5
+// exports στη baseline του 3.30 — έλειπε ακριβώς το `Point2D`.
+// ⚠️ Η ΣΚΑΝΔΑΛΗ ΖΕΙ ΜΕΣΑ ΣΤΗΝ ΠΥΛΗ: ένας δεύτερος ορισμός προσγειώνεται σε ΟΠΟΙΟΔΗΠΟΤΕ
+// αρχείο του `src/`, άρα λίστα μονοπατιών εδώ θα απέκλινε σιωπηλά (3.34/3.37).
+// ⚠️ ΔΥΟ ΜΗΧΑΝΙΣΜΟΙ: ZERO-TOL για αδήλωτη ρίζα + ορφανή δήλωση (ΔΕΝ μπαίνουν ΠΟΤΕ σε
+// baseline — το `buildPayload` ρίχνει) + RATCHET κατά ταυτότητα για το κοινό όνομα.
+if (!process.env.SKIP_POINT_VOCABULARY && allFiles.length > 0)
+  addThread('3.59', 'Point vocabulary', 'scripts/check-point-vocabulary.js', allFiles);
+
 // CHECK 3.54 — πύλη εκτέλεσης των αγκυρών (ADR-783). «Μπορεί αυτό το test να κοκκινίσει
 // κάτι;» — το επόμενο ερώτημα μετά το 3.47, με άλλη απάντηση: μετρημένο 11/08, **3.289 από
 // τα 3.458** κρινόμενα αρχεία test εκτελούνταν σε κάθε PR και **κανένα δεν μπορούσε να κοκκινίσει

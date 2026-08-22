@@ -21,7 +21,7 @@
  */
 
 import * as THREE from 'three';
-import type { Point3D } from '../../bim/types/bim-base';
+import type { BimPoint } from '../../bim/types/bim-base';
 import type { EnvelopeChain } from '../../bim/geometry/envelope-perimeter';
 import type { EnvelopeOpeningCut } from '../../bim/geometry/envelope-opening-cuts';
 import { envelopeFaceEdges, lerp } from '../../bim/geometry/envelope-opening-cuts';
@@ -99,7 +99,7 @@ function bandBreakpoints(top: EdgeProfile, bottom: EdgeProfile | null, sStart: n
  */
 function addProfiledBand(
   group: THREE.Group,
-  oStart: Point3D, oEnd: Point3D, fStart: Point3D, fEnd: Point3D,
+  oStart: BimPoint, oEnd: BimPoint, fStart: BimPoint, fEnd: BimPoint,
   sStart: number, sEnd: number,
   top: EdgeProfile,
   bottom: EdgeProfile | number,
@@ -151,10 +151,10 @@ function addProfiledBand(
  * + τελικό tail `[cursor,1]`. Ο caller εκπέμπει τη geometry (prism ή profiled band).
  */
 function walkEdgeCuts(
-  o0: Point3D, o1: Point3D, f0: Point3D, f1: Point3D,
+  o0: BimPoint, o1: BimPoint, f0: BimPoint, f1: BimPoint,
   edgeCuts: readonly EnvelopeOpeningCut[],
-  onGap: (oL: Point3D, oR: Point3D, fL: Point3D, fR: Point3D, sStart: number, sEnd: number) => void,
-  onSpan: (cut: EnvelopeOpeningCut, oA: Point3D, oB: Point3D, fA: Point3D, fB: Point3D, a: number, b: number) => void,
+  onGap: (oL: BimPoint, oR: BimPoint, fL: BimPoint, fR: BimPoint, sStart: number, sEnd: number) => void,
+  onSpan: (cut: EnvelopeOpeningCut, oA: BimPoint, oB: BimPoint, fA: BimPoint, fB: BimPoint, a: number, b: number) => void,
 ): void {
   const sorted = [...edgeCuts].sort((x, y) => x.tStart - y.tStart);
   let cursor = 0;
@@ -182,7 +182,7 @@ function walkEdgeCuts(
  */
 function addFlatEdge(
   group: THREE.Group,
-  f0: Point3D, f1: Point3D, o0: Point3D, o1: Point3D,
+  f0: BimPoint, f1: BimPoint, o0: BimPoint, o1: BimPoint,
   heightM: number,
   baseY: number,
   edgeCuts: readonly EnvelopeOpeningCut[],
@@ -217,7 +217,7 @@ function addFlatEdge(
  */
 function addEdge(
   group: THREE.Group,
-  f0: Point3D, f1: Point3D, o0: Point3D, o1: Point3D,
+  f0: BimPoint, f1: BimPoint, o0: BimPoint, o1: BimPoint,
   heightM: number,
   baseY: number,
   edgeCuts: readonly EnvelopeOpeningCut[],
@@ -327,7 +327,7 @@ export function envelopeChainToMesh(
  * @returns null αν degenerate footprint ή `layerThicknessM <= 0`.
  */
 export function slabFlatLayerToMesh(
-  footprint: readonly Point3D[],
+  footprint: readonly BimPoint[],
   zone: 'Z2' | 'Z3',
   slabTopMm: number,
   slabThicknessMm: number,
@@ -377,8 +377,8 @@ export function slabFlatLayerToMesh(
  * @returns `THREE.Group` με τις λωρίδες, ή null αν degenerate.
  */
 export function revealLiningToMesh(
-  freeOutline: readonly Point3D[],
-  structuralOutline: readonly Point3D[],
+  freeOutline: readonly BimPoint[],
+  structuralOutline: readonly BimPoint[],
   revealThicknessM: number,
   sillHeightMm: number,
   openingHeightMm: number,
@@ -409,7 +409,7 @@ export function revealLiningToMesh(
   const group = new THREE.Group();
   group.userData['bimType'] = 'envelope';
   if (levelId !== undefined) group.userData['levelId'] = levelId;
-  const addStrip = (quad: readonly Point3D[], depthM: number, posY: number): void => {
+  const addStrip = (quad: readonly BimPoint[], depthM: number, posY: number): void => {
     if (depthM <= 1e-6) return;
     const geo = stripPrismGeometry(quad, depthM);
     if (geo) group.add(makeEnvelopeMesh(geo, materialId, posY, levelId));

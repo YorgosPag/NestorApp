@@ -18,29 +18,10 @@ export interface Point2D {
   y: number;
 }
 
-export interface Point3D extends Point2D {
-  z: number;
-}
-
 export interface Vector2D {
   x: number;
   y: number;
 }
-
-export interface Vector3D extends Vector2D {
-  z: number;
-}
-
-/**
- * 🗺️ COORDINATE SPACES
- * Different coordinate system types
- */
-export type CoordinateSpace =
-  | 'screen'      // Screen/viewport coordinates (pixels)
-  | 'canvas'      // Canvas logical coordinates
-  | 'world'       // World/document coordinates
-  | 'geographic'  // Geographic coordinates (lat/lng)
-  | 'cad';        // CAD/engineering coordinates
 
 /**
  * 🎯 COORDINATE TRANSFORMATION MATRIX
@@ -82,13 +63,6 @@ export class CoordinateUtils {
    */
   static point2D(x: number, y: number): Point2D {
     return { x, y };
-  }
-
-  /**
-   * Create 3D point
-   */
-  static point3D(x: number, y: number, z: number = 0): Point3D {
-    return { x, y, z };
   }
 
   /**

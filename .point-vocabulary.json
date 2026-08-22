@@ -1,0 +1,51 @@
+{
+  "adr": "ADR-792",
+  "note": "Κλειστό σύνολο ΡΙΖΩΝ του λεξιλογίου σημείου/γεωμετρίας. Κάθε όνομα εδώ επιτρέπεται να δηλώνεται σε ΑΚΡΙΒΩΣ ΕΝΑ αρχείο. Νέα ρίζα ΜΠΛΟΚΑΡΕΙ — ακόμα κι αν είναι σωστή — ώστε να τη δει άνθρωπος. Ο λόγος είναι ΥΠΟΧΡΕΩΤΙΚΟΣ.",
+  "owners": [
+    {
+      "file": "src/subapps/dxf-viewer/rendering/types/Types.ts",
+      "names": [
+        "Point2D",
+        "Point3D"
+      ],
+      "reason": "Κανονικό λεξιλόγιο του DXF Viewer. `Point2D` = αποθηκευμένο σημείο κάτοψης (1.538 καταναλωτές). `Point3D` = ΓΝΗΣΙΑ ΧΩΡΙΚΟ, `z` ΥΠΟΧΡΕΩΤΙΚΟ — σκάλες (41/49 αρχεία), έλικες, σπείρες, mline. Το όνομα εγγυάται τη διάσταση (Rhino Point3d · Revit XYZ · ArchiCAD API_Coord3D · three.js Vector3)."
+    },
+    {
+      "file": "src/subapps/dxf-viewer/bim/types/bim-base.ts",
+      "names": [
+        "PlanarPoint",
+        "PlanProfile",
+        "BimPoint",
+        "BimPolyline",
+        "BimPolygon",
+        "BimBounds"
+      ],
+      "reason": "Λεξιλόγιο οντοτήτων BIM. `PlanarPoint` = ΠΑΡΑΛΗΠΤΗΣ («ό,τι εκθέτει x/y», ADR-789). `PlanProfile` = αποθηκευμένο 2Δ προφίλ. `BimPoint`/`BimPolyline`/`BimPolygon`/`BimBounds` ΜΠΟΡΕΙ να κουβαλούν `z` — γι' αυτό ΔΕΝ λένε «3D» στο όνομά τους (ADR-792· πρότυπο JTS `Coordinate` έναντι `CoordinateXY`)."
+    },
+    {
+      "file": "src/subapps/dxf-viewer/bim/types/stair-types.ts",
+      "names": [
+        "Polygon3D",
+        "Polyline3D",
+        "BoundingBox3D",
+        "Segment3D"
+      ],
+      "reason": "Σύνθετα ΓΝΗΣΙΑ ΧΩΡΙΚΑ σχήματα πάνω στο `Point3D` (z εγγυημένο): κάθε πατούσα σκάλας σε άλλο ύψος. Είναι σκέτοι πίνακες κορυφών — ΔΕΝ είναι το ίδιο με τα `BimPolygon`/`BimPolyline`, που είναι αντικείμενα `{vertices}`/`{points}`."
+    },
+    {
+      "file": "src/types/floorplan-overlays.ts",
+      "names": [
+        "Point2D"
+      ],
+      "reason": "ΡΙΖΑ ΤΗΣ ΕΦΑΡΜΟΓΗΣ, όχι του subapp — 13 `src/components` + 1 `src/hooks` (επικαλύψεις μέτρησης σε φωτογραφίες/κατόψεις). ΜΗΝ την ενώσεις με το λεξιλόγιο του DXF Viewer: θα δημιουργούσε εξάρτηση `src/components → src/subapps/dxf-viewer` που σήμερα ΔΕΝ υπάρχει. Μετρημένο, ADR-792 §5."
+    },
+    {
+      "file": "src/core/canvas/primitives/coordinates.ts",
+      "names": [
+        "Point2D",
+        "Vector2D"
+      ],
+      "reason": "ΡΙΖΑ ΤΟΥ geo-adapter — 2 καταναλωτές, αμφότεροι `src/adapters/canvas/geo-adapter`. Απομονωμένο υποσύστημα. 🔶 ΑΝΟΙΧΤΟ (ADR-792 §7): το barrel `src/core/canvas/index.ts` έχει ΜΗΔΕΝ καταναλωτές και είναι ΕΚΤΟΣ εμβέλειας του CHECK 3.30 (`scopes: [\"src/subapps/dxf-viewer\"]`) — απόφαση Giorgio."
+    }
+  ]
+}

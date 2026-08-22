@@ -56,6 +56,11 @@ on:
       - 'scripts/check-workspace-authority.js'
       - '.workspace-authority.json'
       - '.workspace-authority-baseline.json'
+      # CHECK 3.59 (ADR-792) — το λεξιλόγιο σημείου. Το μητρώο ριζών και η ίδια η πύλη
+      # είναι ΕΙΣΟΔΟΙ: νέα ρίζα ή αλλαγή κριτηρίου ξανακρίνει ΟΛΟ το δέντρο.
+      - 'scripts/check-point-vocabulary.js'
+      - '.point-vocabulary.json'
+      - '.point-vocabulary-baseline.json'
       - 'src/lib/auth/workspace-membership.ts'
       - 'src/types/workspace-membership.ts'
       - 'scripts/lib/shell-boundary/**'
@@ -111,6 +116,11 @@ on:
       - 'scripts/check-workspace-authority.js'
       - '.workspace-authority.json'
       - '.workspace-authority-baseline.json'
+      # CHECK 3.59 (ADR-792) — το λεξιλόγιο σημείου. Το μητρώο ριζών και η ίδια η πύλη
+      # είναι ΕΙΣΟΔΟΙ: νέα ρίζα ή αλλαγή κριτηρίου ξανακρίνει ΟΛΟ το δέντρο.
+      - 'scripts/check-point-vocabulary.js'
+      - '.point-vocabulary.json'
+      - '.point-vocabulary-baseline.json'
       - 'src/lib/auth/workspace-membership.ts'
       - 'src/types/workspace-membership.ts'
       - 'scripts/lib/shell-boundary/**'
@@ -659,6 +669,57 @@ jobs:
             echo ""
             echo "Απογραφή: \`npm run adr-section-refs:report\`"
             echo "Reseed ΜΟΝΟ μετά από νόμιμο καθάρισμα: \`npm run adr-section-refs:baseline\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  point-vocabulary:
+    name: 📐 Point Vocabulary Gate (CHECK 3.59)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Πάκετα (jest για τις άγκυρες)
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # Layer 2 — ΑΝΕΥ ΟΡΩΝ και ΠΛΗΡΕΣ. Ένας δεύτερος ορισμός προσγειώνεται σε
+      # ΟΠΟΙΟΔΗΠΟΤΕ αρχείο, και μια αλλαγή στο μητρώο ξανα-ταξινομεί αρχεία ΠΟΥ
+      # ΚΑΝΕΙΣ ΔΕΝ ΕΣΤΕΙΛΕ — μερική ανάλυση θα ήταν αναληθής.
+      - name: 📐 CHECK 3.59 — ένα όνομα, μία ρίζα
+        run: pnpm run point-vocabulary:check
+
+      - name: "🧪 Σουίτα μετάλλαξης — CHECK 3.59"
+        run: pnpm run test:point-vocabulary
+
+      - name: 🧭 How to resolve
+        if: failure()
+        run: |
+          {
+            echo "### CHECK 3.59 — ADR-792 (ενικό λεξιλόγιο σημείου)"
+            echo ""
+            echo "Ένα όνομα του λεξιλογίου σημείου δηλώνεται σε **ακριβώς ένα** αρχείο."
+            echo ""
+            echo "- **αδήλωτη ρίζα** ⇒ κάνε \`import\` από την υπάρχουσα ρίζα· ΜΗΝ ορίσεις δεύτερη."
+            echo "- **ορφανή δήλωση** ⇒ σβήσε τη γραμμή από το \`.point-vocabulary.json\`."
+            echo "- **νέα ρίζα** ⇒ μπλοκάρει ΑΚΟΜΑ ΚΙ ΑΝ είναι σωστή· δήλωσέ τη ΜΕ ΛΟΓΟ."
+            echo ""
+            echo "⛔ ΜΗΝ σβήσεις όνομα από το μητρώο για να περάσει: βγαίνει από την εμβέλεια"
+            echo "και ο δεύτερος ορισμός γίνεται ΑΟΡΑΤΟΣ (ADR-792 §6)."
+            echo ""
+            echo "Απογραφή: \`npm run point-vocabulary:report\`"
+            echo "Reseed ΜΟΝΟ μετά από νόμιμο καθάρισμα: \`npm run point-vocabulary:baseline\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
   workspace-authority:

@@ -19,7 +19,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 // ADR-049 Phase 2 — the unified move delta is 3D (optional `z` = elevation in mm).
-import type { Point3D } from '../../bim/types/bim-base';
+import type { BimPoint } from '../../bim/types/bim-base';
 import type { Entity } from '../../types/entities';
 import { isMepSegmentEntity, isWallEntity } from '../../types/entities';
 import type { MepSegmentParams } from '../../bim/types/mep-segment-types';
@@ -187,7 +187,7 @@ export function buildEditCommand(outcome: BridgeOutcome, c: CommandBuildCtx): Ed
     const primary = entitiesAll.find((e) => e.id === c.entityId);
     // ADR-688 — SSoT plan delta (axis-lock + native-units scaling), shared with copy-drag.
     const plan = resolveMovePlanDeltaCanvas(outcome, primary, c.edit.axisLock);
-    const delta: Point3D = {
+    const delta: BimPoint = {
       x: plan.x,
       y: plan.y,
       ...(outcome.deltaUpMm !== 0 ? { z: outcome.deltaUpMm } : {}),

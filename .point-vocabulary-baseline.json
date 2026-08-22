@@ -1,0 +1,27 @@
+{
+  "generated": "2026-08-22",
+  "adr": "ADR-792 (CHECK 3.59)",
+  "note": "Κοινά ονόματα λεξιλογίου. Τα zero-tolerance ΔΕΝ μπαίνουν ΠΟΤΕ εδώ.",
+  "violations": [
+    "Point2D@src/core/canvas/primitives/coordinates.ts",
+    "Point2D@src/subapps/dxf-viewer/rendering/types/Types.ts",
+    "Point2D@src/types/floorplan-overlays.ts"
+  ],
+  "declarations": [
+    "src/core/canvas/primitives/coordinates.ts#Point2D",
+    "src/core/canvas/primitives/coordinates.ts#Vector2D",
+    "src/subapps/dxf-viewer/bim/types/bim-base.ts#BimBounds",
+    "src/subapps/dxf-viewer/bim/types/bim-base.ts#BimPoint",
+    "src/subapps/dxf-viewer/bim/types/bim-base.ts#BimPolygon",
+    "src/subapps/dxf-viewer/bim/types/bim-base.ts#BimPolyline",
+    "src/subapps/dxf-viewer/bim/types/bim-base.ts#PlanProfile",
+    "src/subapps/dxf-viewer/bim/types/bim-base.ts#PlanarPoint",
+    "src/subapps/dxf-viewer/bim/types/stair-types.ts#BoundingBox3D",
+    "src/subapps/dxf-viewer/bim/types/stair-types.ts#Polygon3D",
+    "src/subapps/dxf-viewer/bim/types/stair-types.ts#Polyline3D",
+    "src/subapps/dxf-viewer/bim/types/stair-types.ts#Segment3D",
+    "src/subapps/dxf-viewer/rendering/types/Types.ts#Point2D",
+    "src/subapps/dxf-viewer/rendering/types/Types.ts#Point3D",
+    "src/types/floorplan-overlays.ts#Point2D"
+  ]
+}

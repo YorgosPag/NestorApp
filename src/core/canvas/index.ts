@@ -81,10 +81,7 @@ export {
 
 export type {
   Point2D,
-  Point3D,
   Vector2D,
-  Vector3D,
-  CoordinateSpace,
   TransformMatrix,
   CoordinateBounds
 } from './primitives/coordinates';
