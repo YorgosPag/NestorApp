@@ -3240,7 +3240,7 @@
         "src/components/settings/company/",
         "src/components/contacts/tabs/",
         "src/app/api/org-structure/",
-        "src/app/(app)/settings/company/",
+        "src/app/(app)/o/[workspace]/settings/company/",
         "src/config/firestore-schema-map.ts"
       ],
       "tier": 3

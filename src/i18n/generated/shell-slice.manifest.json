@@ -6,10 +6,10 @@
     "src/i18n/generated/routes/demands__demandId.el.json": "7959c1e9aa579a2b4fe1b39e65a4e0232c6928e497d52cc86389d0df3b159ad8",
     "src/i18n/generated/routes/demands__new.el.json": "383ce0eedd908e243eb01c208f730d5b5d6f8699899ae3e31c290cec5899224e",
     "src/i18n/generated/routes/listing__id.el.json": "1f5bb80734871a98e9c0f08d8457a0d00871069ea36dfc90239a02e77749647e",
-    "src/i18n/generated/routes/listings__mandates.el.json": "acc74d03857daa50427b8bff88d2bcd40e9d1952a442b9e7577c34eedf95c83a",
-    "src/i18n/generated/routes/listings__mandates__new.el.json": "dd5a37e4dd6d0b4f33a2f8dbd4f7306dde97d013dfa8a2b1cf8ab492c4f6ca7d",
     "src/i18n/generated/routes/login.el.json": "3572a0681e12dd71bda049c2221dc6f8874d4c79c3f6883e5e8562f2bd11214a",
     "src/i18n/generated/routes/mandate__token.el.json": "6e75cdb41998a3f76bb88840249c7b197754548563acc1de2269b9e88099531c",
+    "src/i18n/generated/routes/o__workspace__listings__mandates.el.json": "acc74d03857daa50427b8bff88d2bcd40e9d1952a442b9e7577c34eedf95c83a",
+    "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "dd5a37e4dd6d0b4f33a2f8dbd4f7306dde97d013dfa8a2b1cf8ab492c4f6ca7d",
     "src/i18n/generated/routes/offers.el.json": "e74e6070885e06c96933615c08311d0c65dd8a25338e08a572e58f2d92e7914d",
     "src/i18n/generated/routes/offers__new.el.json": "9c3448585ef6de08e32debf3524300938bc1cdf473d1646683851d7b7f151b1c",
     "src/i18n/generated/routes/offers__offerId.el.json": "3d9ed05450c675f8aac86bf5e8d3b78ffacfd3e57c43ebc94d6144e7bba52bd3",
@@ -55,7 +55,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "be4d960bbd9890a73fa0e86b05aad08cec2f3e7d8592a73d3472e6d1412dd8a5",
+  "inputsSha256": "09ff91115a9ee8bb5f8e02070bc02e22674f211f5ae6b1e5050e33703f0e213b",
   "languages": [
     "el"
   ],
@@ -81,12 +81,12 @@
   ],
   "shellFiles": {
     "src/api/notificationClient.ts": "048d34aa4acec745ae14aa31a61c903866077d4d9a46ab8a90629d340aea38a0",
-    "src/app/(app)/account/layout.tsx": "d1376ab8a14ece47f533ce7217bcee1ff1019fcd629aede776c8a8682127309c",
     "src/app/(app)/admin/layout.tsx": "f32631e240f9572a87fbaad86622e2730dada7877d258dfdebb340eada2c2516",
-    "src/app/(app)/dxf/viewer/layout.tsx": "5d8006221c9a546e995faff3a451269dd788fb8feb4a320e620d2790aa41aabc",
     "src/app/(app)/layout.tsx": "b2b82d8a8c715afc8e8f9f5751ae7da0367a9a8b55658542d41e940bfca3cf2f",
-    "src/app/(app)/projects/[id]/procurement/layout.tsx": "027d8caaef44164d814c6ef84558a2e05c9583057f2b5d69f75013960330e8d0",
-    "src/app/(app)/settings/layout.tsx": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
+    "src/app/(app)/o/[workspace]/account/layout.tsx": "d1376ab8a14ece47f533ce7217bcee1ff1019fcd629aede776c8a8682127309c",
+    "src/app/(app)/o/[workspace]/dxf/viewer/layout.tsx": "5d8006221c9a546e995faff3a451269dd788fb8feb4a320e620d2790aa41aabc",
+    "src/app/(app)/o/[workspace]/projects/[id]/procurement/layout.tsx": "027d8caaef44164d814c6ef84558a2e05c9583057f2b5d69f75013960330e8d0",
+    "src/app/(app)/o/[workspace]/settings/layout.tsx": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
     "src/app/(auth)/layout.tsx": "af086ffccdedc8e92a619ff08c6b5477bce392ebe0f79316d5362f4199233115",
     "src/app/(bare)/layout.tsx": "d8d5e14aafe05d5f4e38db737cd7a168263b583637b6206dfb97e3b6ec286e52",
     "src/app/(light)/layout.tsx": "48a0bcae1089959baa32e0190b675f3ce61cddc69b08b4920754e1e1241fbe5f",
@@ -547,12 +547,12 @@
     "src/utils/preloadRoutes.ts": "abf75a95040cffe88cc0f8872ae323ec711810800a5c5bcc12eff3b7a936aec0"
   },
   "shellRoots": [
-    "src/app/(app)/account/layout.tsx",
     "src/app/(app)/admin/layout.tsx",
-    "src/app/(app)/dxf/viewer/layout.tsx",
     "src/app/(app)/layout.tsx",
-    "src/app/(app)/projects/[id]/procurement/layout.tsx",
-    "src/app/(app)/settings/layout.tsx",
+    "src/app/(app)/o/[workspace]/account/layout.tsx",
+    "src/app/(app)/o/[workspace]/dxf/viewer/layout.tsx",
+    "src/app/(app)/o/[workspace]/projects/[id]/procurement/layout.tsx",
+    "src/app/(app)/o/[workspace]/settings/layout.tsx",
     "src/app/(auth)/layout.tsx",
     "src/app/(bare)/layout.tsx",
     "src/app/(light)/layout.tsx",
@@ -741,7 +741,7 @@
     "theme.toggle"
   ],
   "unresolvedSpecs": [
-    "src/app/(app)/dxf/viewer/layout.tsx → @/subapps/dxf-viewer/ui/ribbon/styles/ribbon-tokens.css",
+    "src/app/(app)/o/[workspace]/dxf/viewer/layout.tsx → @/subapps/dxf-viewer/ui/ribbon/styles/ribbon-tokens.css",
     "src/app/layout.tsx → ./globals.css",
     "src/i18n/config.ts → ./generated/shell-slice.el.json",
     "src/i18n/config.ts → ./generated/shell-slice.whole.json",
