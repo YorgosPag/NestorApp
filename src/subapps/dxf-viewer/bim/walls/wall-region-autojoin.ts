@@ -19,7 +19,7 @@
  * @see ./wall-trims.ts (junction trim that consumes the joined endpoints)
  */
 
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import type { WallEntity, WallParams } from '../types/wall-types';
 import { computeWallGeometry } from '../geometry/wall-geometry';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
@@ -100,8 +100,8 @@ export function extendFillingWallToNeighbors(
   const newEnd = resolveExtension(end.x, end.y, ux, uy, neighbours, wall.id, scale);
   if (!newStart && !newEnd) return wall;
 
-  const nextStart: Point3D = newStart ? { x: newStart.x, y: newStart.y, z: start.z } : start;
-  const nextEnd: Point3D = newEnd ? { x: newEnd.x, y: newEnd.y, z: end.z } : end;
+  const nextStart: BimPoint = newStart ? { x: newStart.x, y: newStart.y, z: start.z } : start;
+  const nextEnd: BimPoint = newEnd ? { x: newEnd.x, y: newEnd.y, z: end.z } : end;
   const nextParams: WallParams = { ...wall.params, start: nextStart, end: nextEnd };
   return { ...wall, params: nextParams, geometry: computeWallGeometry(nextParams, wall.kind) };
 }

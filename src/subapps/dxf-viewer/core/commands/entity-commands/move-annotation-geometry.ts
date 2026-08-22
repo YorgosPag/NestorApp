@@ -30,7 +30,7 @@
 
 import type { SceneEntity } from '../interfaces';
 import type { Point2D } from '../../../rendering/types/Types';
-import type { Point3D } from '../../../bim/types/bim-base';
+import type { BimPoint } from '../../../bim/types/bim-base';
 import type { Entity } from '../../../types/entities';
 // SSoT — canonical point translation (ADR-577 consolidation).
 import { translatePoint } from '../../../rendering/entities/shared/geometry-vector-utils';
@@ -48,7 +48,7 @@ export const ANNOTATION_MOVABLE_TYPES: ReadonlySet<string> = new Set([
  */
 export function calculateAnnotationMovedGeometry(
   entity: SceneEntity,
-  delta: Point3D,
+  delta: BimPoint,
 ): Partial<SceneEntity> | null {
   const e = entity as unknown as Entity;
   const at = (p: Point2D): Point2D => translatePoint(p, delta);

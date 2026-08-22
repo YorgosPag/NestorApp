@@ -25,7 +25,7 @@ import {
   computeBeamCutbackOutline,
   computeBeamAxisToColumnContact,
   extendBeamOutlineIntoFramingColumns } from '../../bim/geometry/beam-column-cutback';
-import type { Polyline3D } from '../../bim/types/bim-base';
+import type { BimPolyline } from '../../bim/types/bim-base';
 import type { Point2D } from '../../rendering/types/Types';
 import { projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
 import { scanColumnCutters } from './dxf-scene-column-cutters';
@@ -64,7 +64,7 @@ export interface BeamCutbackDisplay {
   /** Κομμένο outline (outer rings)· `[]` = δοκάρι εξ ολοκλήρου μέσα σε κολόνα. */
   readonly displayOutline: Point2D[][];
   /** Άξονας προσαρμοσμένος στην παρειά κολόνας (location-line contact). */
-  readonly displayAxisPolyline?: Polyline3D;
+  readonly displayAxisPolyline?: BimPolyline;
 }
 
 /**
@@ -99,7 +99,7 @@ export function buildBeamCutbackDisplay(
   if (pieces === null) return null;
   const displayOutline = pieces;
 
-  let displayAxisPolyline: Polyline3D | undefined;
+  let displayAxisPolyline: BimPolyline | undefined;
   if (pieces.length > 0 && axisPts.length === 2) {
     const adj = computeBeamAxisToColumnContact(
       { x: axisPts[0].x, y: axisPts[0].y },

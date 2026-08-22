@@ -12,12 +12,12 @@
 
 import React from 'react';
 import { useMepWaterHeaterGhostPreview } from '../../hooks/tools/useMepWaterHeaterGhostPreview';
-import type { Point3D } from '../../bim/types/bim-base';
+import type { BimPoint } from '../../bim/types/bim-base';
 import type { Point2D } from '../../rendering/types/Types';
 
 export interface MepWaterHeaterGhostPreviewMountProps {
   isAwaitingPosition: boolean;
-  getGhostFootprint: (cursorPos: Readonly<Point2D> | null) => readonly Point3D[] | null;
+  getGhostFootprint: (cursorPos: Readonly<Point2D> | null) => readonly BimPoint[] | null;
   // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement: () => HTMLElement | null;

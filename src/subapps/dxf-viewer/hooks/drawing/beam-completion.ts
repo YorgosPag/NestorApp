@@ -17,7 +17,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { Point3D } from '../../bim/types/bim-base';
+import type { BimPoint } from '../../bim/types/bim-base';
 import {
   DEFAULT_BEAM_DEPTH_MM,
   DEFAULT_BEAM_TOP_ELEVATION_MM,
@@ -80,7 +80,7 @@ function defaultSupportType(kind: BeamKind): BeamSupportType {
  * Build `BeamParams` από 2 click points + optional overrides.
  *
  *   1. Resolve kind (override → 'straight' default).
- *   2. Lift 2D points σε Point3D (z=0).
+ *   2. Lift 2D points σε BimPoint (z=0).
  *   3. Resolve width / depth / topElevation / zOffset / supportType.
  */
 export function buildDefaultBeamParams(
@@ -91,8 +91,8 @@ export function buildDefaultBeamParams(
   sceneUnits: SceneUnits = 'mm',
 ): BeamParams {
   const kind = overrides.kind ?? kindArg ?? 'straight';
-  const start: Point3D = { x: startPoint.x, y: startPoint.y, z: 0 };
-  const end: Point3D = { x: endPoint.x, y: endPoint.y, z: 0 };
+  const start: BimPoint = { x: startPoint.x, y: startPoint.y, z: 0 };
+  const end: BimPoint = { x: endPoint.x, y: endPoint.y, z: 0 };
   const width = overrides.width ?? DEFAULT_BEAM_WIDTH_MM;
   const depth = overrides.depth ?? DEFAULT_BEAM_DEPTH_MM;
   // ADR-448 Phase 2 (beam seam) — top-of-beam = storey ceiling: override → active
@@ -254,7 +254,7 @@ export function completeBeamFromThreeClicks(
   sceneUnits: SceneUnits = 'mm',
 ): BuildBeamEntityResult {
   const base = buildDefaultBeamParams(startPoint, endPoint, 'curved', overrides, sceneUnits);
-  const curveControl: Point3D = { x: curveControlPoint.x, y: curveControlPoint.y, z: 0 };
+  const curveControl: BimPoint = { x: curveControlPoint.x, y: curveControlPoint.y, z: 0 };
   const params: BeamParams = { ...base, kind: 'curved', curveControl };
   return buildBeamEntity(params, layerId, sceneUnits);
 }

@@ -28,7 +28,7 @@
 import type { ICommand, ISceneManager, SceneEntity, SerializedCommand } from '../interfaces';
 // ADR-049 Phase 2 — the move delta is 3D (optional `z` = elevation in mm); a 2D `{x,y}`
 // caller is unchanged (z absent → pure plan move). Per-type `z` lives in `calculateBimMovedGeometry`.
-import type { Point3D } from '../../../bim/types/bim-base';
+import type { BimPoint } from '../../../bim/types/bim-base';
 import { calculateMovedGeometry } from './move-entity-geometry';
 import { SnapshotTransformCommand } from './SnapshotTransformCommand';
 // SSoT sweep — canonical 3D component-wise sum (ADR-090).
@@ -39,7 +39,7 @@ import { addPoint3D } from '../../../rendering/entities/shared/geometry-vector-u
  * the combined elevation is non-zero, so a pure-plan merge stays 2D and never
  * serialises a spurious `z: 0` (ADR-049 Phase 2).
  */
-function mergeMoveDelta(a: Point3D, b: Point3D): Point3D {
+function mergeMoveDelta(a: BimPoint, b: BimPoint): BimPoint {
   // SSoT sweep — sum via addPoint3D (z: (a.z??0)+(b.z??0)), then strip a zero `z`
   // so a pure-plan merge stays 2D (Firestore never sees a spurious `z: 0`).
   const summed = addPoint3D(a, b);
@@ -53,7 +53,7 @@ function mergeMoveDelta(a: Point3D, b: Point3D): Point3D {
 abstract class MoveCommandBase extends SnapshotTransformCommand {
   constructor(
     entityIds: string[],
-    protected readonly delta: Point3D,
+    protected readonly delta: BimPoint,
     sceneManager: ISceneManager,
     isDragging: boolean = false,
   ) {
@@ -65,7 +65,7 @@ abstract class MoveCommandBase extends SnapshotTransformCommand {
     return calculateMovedGeometry(entity, this.delta);
   }
 
-  getDelta(): Point3D {
+  getDelta(): BimPoint {
     return { ...this.delta };
   }
 
@@ -87,7 +87,7 @@ export class MoveEntityCommand extends MoveCommandBase {
 
   constructor(
     private readonly entityId: string,
-    delta: Point3D,
+    delta: BimPoint,
     sceneManager: ISceneManager,
     /** Optional: mark as a drag sample so consecutive samples coalesce into one undo step. */
     isDragging: boolean = false,
@@ -156,7 +156,7 @@ export class MoveMultipleEntitiesCommand extends MoveCommandBase {
 
   constructor(
     entityIds: string[],
-    delta: Point3D,
+    delta: BimPoint,
     sceneManager: ISceneManager,
     /** Optional: mark as a drag sample so consecutive samples coalesce into one undo step. */
     isDragging: boolean = false,

@@ -18,7 +18,7 @@
  */
 
 import { sceneUnitsToMeters, type SceneUnits } from '../../../utils/scene-units';
-import type { Point3D } from '../../../bim/types/bim-base';
+import type { BimPoint } from '../../../bim/types/bim-base';
 import type { Point2D } from '../../../rendering/types/Types';
 import type { TekXMatrix, TekPlanePoint, TekRoofPoint } from './tek-types';
 
@@ -175,7 +175,7 @@ export function decodePillarXMatrix(
  * κατά το ύψος γίνεται από το `<width>` του plane. Γενικό: έπιπλα (Φ2b) + structural slabs (Φ3).
  */
 export function footprintRingToMeters(
-  ring: readonly Point3D[], metersPerSceneUnit: number, elevationM: number,
+  ring: readonly BimPoint[], metersPerSceneUnit: number, elevationM: number,
 ): TekPlanePoint[] {
   return ring.map((v) => {
     const p = sceneXYToTekMeters(v.x, v.y, metersPerSceneUnit); // Y-flip SSoT
@@ -249,7 +249,7 @@ export function reverseRoofFootprint(points: readonly TekRoofPoint[]): TekRoofPo
  * περνά από `dedupeFaceRing` (αφαίρεση degenerate επαναλήψεων — απαραίτητο για να το δεχτεί ο Τέκτων).
  */
 export function roofFaceRingToMeters(
-  ring: readonly Point3D[], metersPerSceneUnit: number,
+  ring: readonly BimPoint[], metersPerSceneUnit: number,
 ): TekPlanePoint[] {
   return dedupeFaceRing(
     ring.map((v) => {
@@ -280,13 +280,13 @@ const GABLE_ON_EDGE_FRACTION = 0.02;
 export function buildGableFaces(
   vertices: readonly { x: number; y: number }[],
   edges: readonly ({ definesSlope?: boolean } | undefined)[],
-  ridges: readonly { a: Point3D; b: Point3D }[] | undefined,
+  ridges: readonly { a: BimPoint; b: BimPoint }[] | undefined,
   basePivotZmm: number,
   metersPerSceneUnit: number,
 ): TekPlanePoint[][] {
   if (!ridges || ridges.length === 0) return []; // χωρίς κορυφογραμμή → κανένα αέτωμα
   if (!edges.some((e) => e?.definesSlope)) return [];
-  const ridgePts: Point3D[] = ridges.flatMap((r) => [r.a, r.b]);
+  const ridgePts: BimPoint[] = ridges.flatMap((r) => [r.a, r.b]);
   const n = vertices.length;
   const out: TekPlanePoint[][] = [];
   for (let i = 0; i < n; i++) {
@@ -309,7 +309,7 @@ export function buildGableFaces(
       .map((u) => u.p);
     if (apexes.length === 0) continue;
     // Κατακόρυφο αέτωμα: A(base) → B(base) → apex(es) σε φθίνον t (κλείνει το πολύγωνο).
-    const ring: Point3D[] = [
+    const ring: BimPoint[] = [
       { x: a.x, y: a.y, z: basePivotZmm },
       { x: b.x, y: b.y, z: basePivotZmm },
       ...[...apexes].reverse(),

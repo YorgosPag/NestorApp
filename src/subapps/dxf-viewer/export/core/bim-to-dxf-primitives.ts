@@ -20,7 +20,7 @@
 
 import type { Entity, LWPolylineEntity } from '../../types/entities';
 import { isBimEntity } from '../../types/entities';
-import type { Point3D } from '../../bim/types/bim-base';
+import type { BimPoint } from '../../bim/types/bim-base';
 import { closedRingFromEdges, projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
 import type { DxfFlattenResult, DxfMeshDetailMode } from '../types';
 import { resolveDxfBodyLayer } from './dxf-category-layers';
@@ -132,7 +132,7 @@ function readGeometry(entity: Entity): unknown {
  * names the codebase uses (`footprint`, `outline`, `polygon`). Returns null when
  * none is present (e.g. path-based railings, stair stringers — future work).
  */
-function extractFootprintVertices(geometry: unknown): readonly Point3D[] | null {
+function extractFootprintVertices(geometry: unknown): readonly BimPoint[] | null {
   if (!geometry || typeof geometry !== 'object') return null;
   const g = geometry as Record<string, unknown>;
   return (
@@ -148,15 +148,15 @@ function extractFootprintVertices(geometry: unknown): readonly Point3D[] | null 
  * (`footprint`/`outline`/`polygon`), ΙΔΙΟ με αυτό που γίνεται outline. `null` όταν
  * δεν υπάρχει (π.χ. path-based). Ο overlay collector το καταναλώνει για το γέμισμα.
  */
-export function extractEntityFootprintRing(entity: Entity): readonly Point3D[] | null {
+export function extractEntityFootprintRing(entity: Entity): readonly BimPoint[] | null {
   return extractFootprintVertices(readGeometry(entity));
 }
 
 /** Extract `.vertices` (≥2 points) from a `Polygon3D`-shaped value. */
-function polygonVertices(value: unknown): readonly Point3D[] | null {
+function polygonVertices(value: unknown): readonly BimPoint[] | null {
   if (!value || typeof value !== 'object' || !('vertices' in value)) return null;
   const verts = (value as { vertices: unknown }).vertices;
-  if (Array.isArray(verts) && verts.length >= 2) return verts as readonly Point3D[];
+  if (Array.isArray(verts) && verts.length >= 2) return verts as readonly BimPoint[];
   return null;
 }
 
@@ -174,7 +174,7 @@ export interface ExtrudedLwpolyline extends LWPolylineEntity {
  *  it so the writer can extrude the polyline into pseudo-3D (AutoCAD polyline mode). */
 function makeClosedLwpolyline(
   source: Entity,
-  ring: readonly Point3D[],
+  ring: readonly BimPoint[],
   suffix: string,
   thicknessMm = 0,
 ): ExtrudedLwpolyline {

@@ -11,7 +11,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import type { WallEntity } from '../types/wall-types';
 import type { OpeningEntity } from '../types/opening-types';
 import { clamp01 } from '../../rendering/entities/shared/geometry-utils';
@@ -23,7 +23,7 @@ export interface PlanLineSeg {
 }
 
 /** Παραμετρικό σημείο κατά μήκος μιας ευθείας ακμής 2 κορυφών (t∈[0,1]). */
-function lerpEdge(edge: readonly Point3D[], t: number): Point2D {
+function lerpEdge(edge: readonly BimPoint[], t: number): Point2D {
   const a = edge[0];
   const b = edge[edge.length - 1];
   return { x: a.x + t * (b.x - a.x), y: a.y + t * (b.y - a.y) };
@@ -47,7 +47,7 @@ function openingIntervals(
 }
 
 /** Μία παρειά (edge) κομμένη στα διαστήματα ανοιγμάτων → τα ορατά τμήματά της. */
-function cutEdge(edge: readonly Point3D[], intervals: readonly [number, number][]): PlanLineSeg[] {
+function cutEdge(edge: readonly BimPoint[], intervals: readonly [number, number][]): PlanLineSeg[] {
   const out: PlanLineSeg[] = [];
   let cursor = 0;
   for (const [t0, t1] of intervals) {
@@ -59,8 +59,8 @@ function cutEdge(edge: readonly Point3D[], intervals: readonly [number, number][
 }
 
 /** Το πλήρες (μη κομμένο) κλειστό περίγραμμα outer+inner + caps — fallback για μη-straight. */
-function fullOutline(outer: readonly Point3D[], inner: readonly Point3D[]): PlanLineSeg[] {
-  const to2 = (p: Point3D): Point2D => ({ x: p.x, y: p.y });
+function fullOutline(outer: readonly BimPoint[], inner: readonly BimPoint[]): PlanLineSeg[] {
+  const to2 = (p: BimPoint): Point2D => ({ x: p.x, y: p.y });
   const segs: PlanLineSeg[] = [];
   for (let i = 0; i < outer.length - 1; i++) segs.push({ a: to2(outer[i]), b: to2(outer[i + 1]) });
   for (let i = 0; i < inner.length - 1; i++) segs.push({ a: to2(inner[i]), b: to2(inner[i + 1]) });

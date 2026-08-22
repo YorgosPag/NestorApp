@@ -21,14 +21,7 @@ import type { Overlay } from '../../../overlays/types';
 import { DragVertexEditCommand } from '../drag-vertex-edit-command';
 import { deepClone } from '../../../utils/clone-utils';
 import { dlog, dwarn, derr } from '../../../debug';
-
-/**
- * Point2D interface for delta calculation
- */
-export interface Point2D {
-  x: number;
-  y: number;
-}
+import type { Point2D } from '../../../rendering/types/Types';
 
 /**
  * Overlay store interface for move operations

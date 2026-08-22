@@ -48,10 +48,10 @@ import {
 } from '../../../../rendering/contract/renderable-entity-type';
 import type { SceneEntity } from '../../interfaces';
 import type { Point2D } from '../../../../rendering/types/Types';
-import type { Point3D } from '../../../../bim/types/bim-base';
+import type { BimPoint } from '../../../../bim/types/bim-base';
 
 const asSorted = (xs: readonly string[]): string[] => [...xs].sort();
-const DELTA: Point3D = { x: 1000, y: 500 };
+const DELTA: BimPoint = { x: 1000, y: 500 };
 const renderableSet = new Set<string>(RENDERABLE_ENTITY_TYPES);
 
 /** Renderable types που παράγουν μη-κενό move patch (CAD guard match ή BIM switch case). */
@@ -140,7 +140,7 @@ describe('Move capability coverage — ζωντανό seam ↔ descriptor domain
 
   it('BIM move πιν: wall → μη-κενό {params, geometry} patch (start/end μετατοπισμένα)', () => {
     const patch = calculateMovedGeometry(makeWall(), DELTA) as {
-      params?: { start: Point3D; end: Point3D };
+      params?: { start: BimPoint; end: BimPoint };
       geometry?: unknown;
     };
     expect(patch).not.toEqual({});
