@@ -23,7 +23,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { Point3D } from '../../bim/types/bim-base';
+import type { BimPoint } from '../../bim/types/bim-base';
 import type { Entity } from '../../types/entities';
 import { isOpeningEntity, isWallEntity } from '../../types/entities';
 import { isFinishActive } from '../../bim/finishes/structural-finish-types';
@@ -51,7 +51,7 @@ export interface DoorConstraints {
 }
 
 /** Scale a scene-space point to millimetres. */
-function toMmPoint(p: Point3D, toMm: number): Point2D {
+function toMmPoint(p: BimPoint, toMm: number): Point2D {
   return { x: p.x * toMm, y: p.y * toMm };
 }
 

@@ -1,7 +1,7 @@
 /**
  * USE SCHEDULE REGION-PICK TOOL — 2-click BBox FSM (ADR-363 §6 Phase 8 / M5).
  *
- * 2-click FSM που εκπέμπει `BoundingBox3D` (mm, z-agnostic) μέσω `onCommit`
+ * 2-click FSM που εκπέμπει `BimBounds` (mm, z-agnostic) μέσω `onCommit`
  * callback. Καταναλώνεται από το BimScheduleDialog parent: όταν ο χρήστης
  * πατάει το «Επιλογή περιοχής» CTA, το parent κλείνει το dialog +
  * activate-ει αυτό το tool. Στο 2ο click το tool εκπέμπει BBox και
@@ -24,7 +24,7 @@
  * Escape handler:
  *   - Reset σε idle, call `onCancel` (αν δοθεί), `onToolChange('select')`.
  *
- * BoundingBox3D produced:
+ * BimBounds produced:
  *   - `min.{x,y}` = min(first.x, second.x), min(first.y, second.y)
  *   - `max.{x,y}` = max(first.x, second.x), max(first.y, second.y)
  *   - `z = 0` σε min+max (filter pipeline ignores z per ADR-363 §6 Phase 8)
@@ -49,7 +49,7 @@ import { useCallback, useState } from 'react';
 import i18next from 'i18next';
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { BoundingBox3D } from '../../bim/types/bim-base';
+import type { BimBounds } from '../../bim/types/bim-base';
 import {
   getRegionPickFirstCorner,
   resetRegionPickStore,
@@ -67,7 +67,7 @@ export type ScheduleRegionPickToolName = typeof SCHEDULE_REGION_PICK_TOOL;
 
 // ─── BBox builder ────────────────────────────────────────────────────────────
 
-function bboxFromTwoCorners(a: Point2D, b: Point2D): BoundingBox3D {
+function bboxFromTwoCorners(a: Point2D, b: Point2D): BimBounds {
   return {
     min: {
       x: Math.min(a.x, b.x),
@@ -88,7 +88,7 @@ export interface UseScheduleRegionPickToolProps {
   /** Current active tool name (matches against `SCHEDULE_REGION_PICK_TOOL`). */
   readonly activeTool: string;
   /** Fired με την BBox όταν ο χρήστης κάνει το 2ο click. */
-  readonly onCommit: (bbox: BoundingBox3D) => void;
+  readonly onCommit: (bbox: BimBounds) => void;
   /** Fired όταν ο χρήστης κάνει Escape πριν ολοκληρωθεί το pick. */
   readonly onCancel?: () => void;
   /** Tool-switch callback — αυτο-επιστρέφει στο 'select' μετά από commit ή cancel. */

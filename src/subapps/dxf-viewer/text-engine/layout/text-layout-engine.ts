@@ -18,7 +18,8 @@ import type { DxfTextNode } from '../types/text-ast.types';
 import { DxfDocumentVersion, versionAtLeast } from '../types/text-toolbar.types';
 import { formatParagraph, type FormattedParagraph, type ParagraphOptions } from './paragraph-formatter';
 import { layoutColumns, type ColumnLayout, type ColumnConfig } from './column-layout';
-import { offsetForJustification, type Rect, type Point2D } from './attachment-point';
+import { offsetForJustification, type Rect } from './attachment-point';
+import type { Point2D } from '../../rendering/types/Types';
 
 // ── Public types ──────────────────────────────────────────────────────────────
 

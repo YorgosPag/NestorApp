@@ -401,7 +401,7 @@ export {
 import type {
   BimEntity,
   BimElementKind,
-  BoundingBox3D,
+  BimBounds,
 } from '../bim/types/bim-base';
 
 // ─── BIM entity concrete types ──────────────────────────────────────────────
@@ -416,7 +416,7 @@ export type SlabOpeningKind = 'shaft' | 'well' | 'duct' | 'chimney';
 
 // Minimal geometry stub — full geometry types in bim/types/*-types.ts (Phase 2+)
 interface BimGeometryStub {
-  readonly bbox: BoundingBox3D;
+  readonly bbox: BimBounds;
 }
 
 // Minimal params stubs — full params in bim/types/*-types.ts (Phase 2+)
@@ -684,7 +684,7 @@ export type {
 import type { SlabOpeningEntity } from '../bim/types/slab-opening-types';
 
 // Re-export BIM base types for downstream consumers
-export type { BimEntity, BimElementKind, BimValidation, SoftLock, Point3D, AtoeCategoryCode } from '../bim/types/bim-base';
+export type { BimEntity, BimElementKind, BimValidation, SoftLock, BimPoint, AtoeCategoryCode } from '../bim/types/bim-base';
 
 // ADR-362 Phase A1: standalone Center Mark + Centerline (D13).
 import type { CenterMarkEntity, CenterLineEntity } from './center-mark';

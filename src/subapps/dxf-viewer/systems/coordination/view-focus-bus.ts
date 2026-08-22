@@ -29,13 +29,13 @@
  * @see ../../bim-3d/coordination/topo-world-point-math.ts (survey producers' conversion)
  */
 
-import type { Point3D } from '../../bim/types/bim-base';
+import type { BimPoint } from '../../bim/types/bim-base';
 import { createExternalStore } from '../../stores/createExternalStore';
 
 /** What a panel row click asks the active 3D view to do. */
 export interface ViewFocusRequest {
   /** The spot to frame, in three-world metres (Y-up) — already out of any domain frame. */
-  readonly point: Point3D;
+  readonly point: BimPoint;
   /** Half-size (metres) of the box framed around it — the domain's idea of «close enough». */
   readonly halfExtentM: number;
   /**

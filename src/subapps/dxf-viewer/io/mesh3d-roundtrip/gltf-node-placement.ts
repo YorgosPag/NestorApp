@@ -30,7 +30,7 @@
  */
 
 import { sceneUnitsToMeters, type SceneUnits } from '../../utils/scene-units';
-import type { Point3D } from '../../bim/types/bim-base';
+import type { BimPoint } from '../../bim/types/bim-base';
 
 const M_TO_MM = 1000;
 
@@ -57,7 +57,7 @@ export interface GltfPlacementContext {
 
 /** Ό,τι χρειάζεται το `ImportedMeshParams` για να ξανα-τοποθετήσει τον κόμβο στην ίδια θέση. */
 export interface GltfNodePlacement {
-  readonly position: Point3D;
+  readonly position: BimPoint;
   readonly mountingElevationMm: number;
 }
 

@@ -10,6 +10,7 @@ import { CanvasNumericInputStore } from '../../systems/canvas-numeric-input/Canv
 import { toolHintOverrideStore } from '../toolHintOverrideStore';
 import type { ToolType } from '../../ui/toolbar/types';
 import type { UseGuideStateReturn } from '../state/useGuideState';
+import type { Point2D } from '../../rendering/types/Types';
 import type { GuideWorkflowState, ArcPickableEntity, LinePickableEntity } from './guide-workflow-types';
 
 interface UseGuideWorkflowStateParams {
@@ -188,5 +189,3 @@ export function useGuideWorkflowState({
   };
 }
 
-// Private — Point2D re-import for useState generics
-type Point2D = import('../../rendering/types/Types').Point2D;

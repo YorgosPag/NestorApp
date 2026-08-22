@@ -15,12 +15,12 @@ import { createMockSceneManager } from '../../../core/commands/__tests__/mock-sc
 import { applyRoofShapePreset } from '../../../bim/geometry/roof-geometry';
 import type { SceneEntity } from '../../../core/commands/interfaces';
 import type { UnifiedGripInfo } from '../../../hooks/grips/unified-grip-types';
-import type { Point3D, Polygon3D } from '../../../bim/types/bim-base';
+import type { BimPoint, BimPolygon } from '../../../bim/types/bim-base';
 
-const QUAD: Point3D[] = [
+const QUAD: BimPoint[] = [
   { x: 0, y: 0, z: 0 }, { x: 4000, y: 0, z: 0 }, { x: 4000, y: 3000, z: 0 }, { x: 0, y: 3000, z: 0 },
 ];
-const TRI: Point3D[] = [{ x: 0, y: 0, z: 0 }, { x: 4000, y: 0, z: 0 }, { x: 2000, y: 3000, z: 0 }];
+const TRI: BimPoint[] = [{ x: 0, y: 0, z: 0 }, { x: 4000, y: 0, z: 0 }, { x: 2000, y: 3000, z: 0 }];
 
 function grip(over: Partial<UnifiedGripInfo>): UnifiedGripInfo {
   return {
@@ -29,22 +29,22 @@ function grip(over: Partial<UnifiedGripInfo>): UnifiedGripInfo {
   } as UnifiedGripInfo;
 }
 
-function slabEntity(verts: Point3D[] = QUAD): SceneEntity {
+function slabEntity(verts: BimPoint[] = QUAD): SceneEntity {
   return { id: 'e', type: 'slab', params: { kind: 'floor', outline: { vertices: verts }, thickness: 200, levelElevation: 0, sceneUnits: 'mm' } } as unknown as SceneEntity;
 }
-function roofEntity(verts: Point3D[] = QUAD): SceneEntity {
-  const outline: Polygon3D = { vertices: verts };
+function roofEntity(verts: BimPoint[] = QUAD): SceneEntity {
+  const outline: BimPolygon = { vertices: verts };
   return { id: 'e', type: 'roof', params: { outline, edges: applyRoofShapePreset(outline, 'gable', 30, 'deg'), slopeUnit: 'deg', basePivotZ: 3000, thickness: 200, sceneUnits: 'mm' } } as unknown as SceneEntity;
 }
-function floorFinishEntity(verts: Point3D[] = QUAD): SceneEntity {
+function floorFinishEntity(verts: BimPoint[] = QUAD): SceneEntity {
   return { id: 'e', type: 'floor-finish', params: { footprint: { vertices: verts }, materialId: 'm', thicknessMm: 20, finishLevel: 0, sceneUnits: 'mm' } } as unknown as SceneEntity;
 }
-function slabOpeningEntity(verts: Point3D[] = QUAD): SceneEntity {
+function slabOpeningEntity(verts: BimPoint[] = QUAD): SceneEntity {
   return { id: 'e', type: 'slab-opening', params: { kind: 'shaft', slabId: 'sl', outline: { vertices: verts }, sceneUnits: 'mm' } } as unknown as SceneEntity;
 }
 
 describe('buildFootprintVertexOpCommand (ADR-535 Φ4)', () => {
-  const cases: { name: string; entity: (v?: Point3D[]) => SceneEntity; type: string }[] = [
+  const cases: { name: string; entity: (v?: BimPoint[]) => SceneEntity; type: string }[] = [
     { name: 'slab', entity: slabEntity, type: 'update-slab-params' },
     { name: 'roof', entity: roofEntity, type: 'update-roof-params' },
     { name: 'floor-finish', entity: floorFinishEntity, type: 'update-floor-finish-params' },

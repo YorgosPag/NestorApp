@@ -29,7 +29,7 @@ import {
   type RoofParams,
   type RoofSlopeUnit,
 } from '../../../../bim/types/roof-types';
-import type { Point3D } from '../../../../bim/types/bim-base';
+import type { BimPoint } from '../../../../bim/types/bim-base';
 import {
   roofSlopeFromRatio,
   roofSlopeToRatio,
@@ -67,7 +67,7 @@ export function clampEdgeIndex(index: number, edgeCount: number): number {
  * υπολογισμός (κοινός με `nearestEdgeOutwardAzimuthDeg` του thermal resolver).
  */
 export function roofEdgeCompass(
-  outline: readonly Point3D[],
+  outline: readonly BimPoint[],
   edgeIndex: number,
 ): RoofEdgeCompass | null {
   const az = edgeOutwardAzimuthDeg(outline, edgeIndex);

@@ -24,7 +24,7 @@ import {
 } from '../../types/entities';
 import type { SceneUnits } from '../../utils/scene-units';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
-import type { BoundingBox3D } from '../../bim/types/bim-base';
+import type { BimBounds } from '../../bim/types/bim-base';
 import type { MepSegmentEntity } from '../../bim/types/mep-segment-types';
 import { resolveSegmentSection, resolveSegmentEndpointElevationsMm } from '../../bim/types/mep-segment-types';
 import type { Aabb3, ClashEntity, Vec3 } from './clash-types';
@@ -41,7 +41,7 @@ function inflate(box: Aabb3, r: number): Aabb3 {
 }
 
 /** Cached bbox → metres, taking XY from the (canvas-unit) bbox and Z from caller. */
-function bboxToAabb(bbox: BoundingBox3D, sceneToM: number, zMinM: number, zMaxM: number): Aabb3 {
+function bboxToAabb(bbox: BimBounds, sceneToM: number, zMinM: number, zMaxM: number): Aabb3 {
   return {
     min: { x: bbox.min.x * sceneToM, y: bbox.min.y * sceneToM, z: zMinM },
     max: { x: bbox.max.x * sceneToM, y: bbox.max.y * sceneToM, z: zMaxM },

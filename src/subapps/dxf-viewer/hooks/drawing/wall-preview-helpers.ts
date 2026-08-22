@@ -27,7 +27,7 @@ import { sceneSnapTargetsStore, selectGhostMembers, type SceneSnapTargets } from
 import type { WallKind, WallParams } from '../../bim/types/wall-types';
 // ADR-513 — ελάχιστο μήκος για clamp του PREVIEW (το commit μένει αυστηρό μέσω validator).
 import { MIN_WALL_LENGTH_MM } from '../../bim/types/wall-types';
-import type { Point3D } from '../../bim/types/bim-base';
+import type { BimPoint } from '../../bim/types/bim-base';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { worldPerPixel } from '../../rendering/utils/viewport-scale';
@@ -279,7 +279,7 @@ function makeWallWysiwygGhost(
   if (kind === 'curved') {
     const base = buildDefaultWallParams(startPt, endPt, overrides, sceneUnits);
     params = curveControl
-      ? { ...base, curveControl: { x: curveControl.x, y: curveControl.y, z: 0 } as Point3D }
+      ? { ...base, curveControl: { x: curveControl.x, y: curveControl.y, z: 0 } as BimPoint }
       : base;
   } else if (startAnchored) {
     // ADR-508 §end-reference — κορυφή 3-tier: το σώμα «κρέμεται» στη σωστή παρειά (justification →
@@ -324,7 +324,7 @@ function makeWallFootprintGhost(
 ): ExtendedSceneEntity | null {
   const params = buildDefaultWallParams(startPt, endPt, overrides, sceneUnits, alignmentPoint);
   const finalParams = curveControl
-    ? { ...params, curveControl: { x: curveControl.x, y: curveControl.y, z: 0 } as Point3D }
+    ? { ...params, curveControl: { x: curveControl.x, y: curveControl.y, z: 0 } as BimPoint }
     : params;
   const isOverlap = isWallGhostOverlap(startPt, endPt, memberTargets, overrides, sceneUnits, kind);
   // ADR-508 §opening-conflict — straight μόνο· host = locked snapped reference.
@@ -355,7 +355,7 @@ function makeWallArcGhost(
   const params: WallParams =
     bulge != null
       ? { ...base, arc: bulge }
-      : { ...base, curveControl: { x: throughPt.x, y: throughPt.y, z: 0 } as Point3D };
+      : { ...base, curveControl: { x: throughPt.x, y: throughPt.y, z: 0 } as BimPoint };
   return buildWallGhostEntity(id, params, 'curved', sceneUnits, false);
 }
 

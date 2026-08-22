@@ -20,10 +20,11 @@
  * Architecture: Tier-3 micro-leaf SSoT (ADR-040). No React imports.
  */
 
+import type { Point2D } from '../../rendering/types/Types';
+
 export type SpecialOverride = 'from' | 'm2p' | 'app';
 export type SnapOverrideMode = SpecialOverride | string; // string = ExtendedSnapType value
 
-type Point2D = { x: number; y: number };
 type FromState = { phase: 'idle' } | { phase: 'has-reference'; ref: Point2D };
 type M2PState = { phase: 'idle' } | { phase: 'waiting-second'; firstPoint: Point2D };
 type Listener = () => void;

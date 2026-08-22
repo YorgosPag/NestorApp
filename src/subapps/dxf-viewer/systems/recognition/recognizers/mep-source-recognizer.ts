@@ -18,7 +18,7 @@ import {
   isMepWaterHeaterEntity,
   isElectricalPanelEntity,
 } from '../../../types/entities';
-import type { Point3D } from '../../../bim/types/bim-base';
+import type { BimPoint } from '../../../bim/types/bim-base';
 import type {
   RecognitionContext,
   Recognizer,
@@ -35,7 +35,7 @@ function sourceKindOf(entity: Entity): MepSourceKind | null {
 }
 
 /** Plan position of a source entity (all source params carry `position`). */
-function sourcePosition(entity: Entity): Point3D | null {
+function sourcePosition(entity: Entity): BimPoint | null {
   if (isMepManifoldEntity(entity)) return entity.params.position;
   if (isMepBoilerEntity(entity)) return entity.params.position;
   if (isMepWaterHeaterEntity(entity)) return entity.params.position;
@@ -46,7 +46,7 @@ function sourcePosition(entity: Entity): Point3D | null {
 function buildSource(
   entity: Entity,
   kind: MepSourceKind,
-  position: Point3D,
+  position: BimPoint,
   storeyId: string,
 ): RecognizedSource {
   return {

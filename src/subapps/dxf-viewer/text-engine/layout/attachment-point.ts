@@ -12,6 +12,7 @@
  */
 
 import type { TextJustification } from '../types/text-ast.types';
+import type { Point2D } from '../../rendering/types/Types';
 
 // ── Shared geometry types (exported for use by text-layout-engine) ─────────────
 
@@ -20,11 +21,6 @@ export interface Rect {
   readonly y: number;
   readonly width: number;
   readonly height: number;
-}
-
-export interface Point2D {
-  readonly x: number;
-  readonly y: number;
 }
 
 // ── Attachment point resolution ───────────────────────────────────────────────

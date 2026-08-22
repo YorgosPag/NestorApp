@@ -22,7 +22,7 @@ import type { ColumnEntity, ColumnParams } from '../../../bim/types/column-types
 import type { OpeningEntity } from '../../../bim/types/opening-types';
 import type { SnapEngineContext } from '../../shared/BaseSnapEngine';
 import type { EntityModel, Point2D } from '../../../rendering/types/Types';
-import type { Polygon3D } from '../../../bim/types/bim-base';
+import type { BimPolygon } from '../../../bim/types/bim-base';
 
 // ─── Entity factories ─────────────────────────────────────────────────────────
 
@@ -47,7 +47,7 @@ function makeColumn(x: number, y: number, overrides: Partial<ColumnParams> = {},
 }
 
 function makeOpening(vertices: { x: number; y: number }[], id = 'opening_1'): OpeningEntity {
-  const outline: Polygon3D = { vertices: vertices.map((v) => ({ x: v.x, y: v.y })) };
+  const outline: BimPolygon = { vertices: vertices.map((v) => ({ x: v.x, y: v.y })) };
   return {
     id, type: 'opening', kind: 'door', ifcType: 'IfcDoor', layerId: '0',
     params: { kind: 'door', wallId: 'wall_1', offsetFromStart: 500, width: 900, height: 2100, sillHeight: 0 },
@@ -215,7 +215,7 @@ describe('BIM_MIDPOINT — wall edge midpoints (all sides)', () => {
 describe('BIM_CENTER — slab centroid', () => {
   it('snaps to the slab centroid with description bim-slab-center', () => {
     const SQUARE = [{ x: 0, y: 0 }, { x: 1000, y: 0 }, { x: 1000, y: 1000 }, { x: 0, y: 1000 }];
-    const polygon: Polygon3D = { vertices: SQUARE.map((v) => ({ x: v.x, y: v.y })) };
+    const polygon: BimPolygon = { vertices: SQUARE.map((v) => ({ x: v.x, y: v.y })) };
     const slab = {
       id: 'slab_1', type: 'slab', kind: 'floor', layerId: '0',
       params: { outline: { vertices: SQUARE } },
