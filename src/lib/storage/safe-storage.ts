@@ -54,6 +54,13 @@ export const STORAGE_KEYS = {
 
   // Social platform analytics (ADR-209 Phase 8)
   SOCIAL_PLATFORM_ANALYTICS: 'social_platform_analytics',
+
+  // ADR-660 Sec.5.10 - the unfinished listing of an anonymous owner.
+  // NOT per-uid (unlike AUTH_PROFILE_COMPLETE_PREFIX): the whole point is that this
+  // is written BEFORE any uid exists. Declared limit, not an oversight - see
+  // `lib/owner-property/owner-property-draft-memory.ts` for what that costs and why
+  // it is acceptable here but would not be for anything already owned.
+  OWNER_PROPERTY_DRAFT: 'nestor_owner_property_draft',
 } as const;
 
 export type StorageKeyValue = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];

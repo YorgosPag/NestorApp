@@ -45,6 +45,7 @@ import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
 
 import { storage } from '@/lib/firebase';
 import { nowISO } from '@/lib/date-local';
+import { hasDraftIdentity } from '@/lib/forms/draft-identity';
 import { createModuleLogger } from '@/lib/telemetry';
 import { validateFile } from '@/utils/file-validation';
 import type { OwnerPropertyMedia } from '@/types/owner-property';
@@ -78,7 +79,22 @@ export type MediaUploadState =
   | { readonly state: 'idle' }
   | { readonly state: 'uploading'; readonly fileName: string; readonly percent: number }
   | { readonly state: 'rejected'; readonly fileName: string; readonly reason: string }
-  | { readonly state: 'failed'; readonly fileName: string; readonly message: string };
+  | { readonly state: 'failed'; readonly fileName: string; readonly message: string }
+  /**
+   * 🔴 **ΤΕΤΑΡΤΗ ΡΗΤΗ ΚΑΤΑΣΤΑΣΗ — ΔΕΝ ΛΕΙΠΕΙ ΤΟ ΑΡΧΕΙΟ, ΛΕΙΠΕΙ Ο ΑΝΘΡΩΠΟΣ** (ADR-660 §5.9).
+   *
+   * Μέχρι 2026-08-23 η απουσία ταυτότητας αναφερόταν ως
+   * `{ state: 'failed', message: 'NO_IDENTITY' }` — δηλαδή με τη λέξη που αυτό ακριβώς
+   * το σχόλιο ορίζει ως *«δεν φτάσαμε — **ξαναδοκίμασε το ίδιο**»*. Και τα δύο σκέλη
+   * ήταν ψευδή: το αρχείο **έφτασε μια χαρά**, και η επανάληψη **δεν πρόκειται** να
+   * πετύχει όσο δεν υπάρχει λογαριασμός. Ο άνθρωπος στελνόταν να ψάξει λάθος πράγμα —
+   * ακριβώς η βλάβη που η διάκριση `rejected`/`failed` υπάρχει για να αποτρέψει.
+   *
+   * ⚠️ **ΧΩΡΙΣ `fileName`, ΚΑΙ ΕΙΝΑΙ ΤΟ ΝΟΗΜΑ**: το εμπόδιο δεν αφορά κανένα
+   * συγκεκριμένο αρχείο — αφορά **όλα**, τώρα και μετά. Ένα όνομα αρχείου εδώ θα
+   * υπαινισσόταν ότι *εκείνο* το αρχείο φταίει, και ο άνθρωπος θα δοκίμαζε άλλο.
+   */
+  | { readonly state: 'accountRequired' };
 
 export interface OwnerPropertyMediaActions {
   readonly state: MediaUploadState;
@@ -111,8 +127,12 @@ export function useOwnerPropertyMedia(
 
   const upload = useCallback(
     async (file: File): Promise<OwnerPropertyMedia | null> => {
-      if (authorUserId === null) {
-        setState({ state: 'failed', fileName: file.name, message: 'NO_IDENTITY' });
+      // 🔑 **Ο κριτής της ταυτότητας είναι ΕΝΑΣ** ({@link hasDraftIdentity}), ο ίδιος
+      // που παράγει το ορατό εμπόδιο της φόρμας. Ένα τοπικό `=== null` εδώ θα ήταν
+      // δεύτερη απάντηση στην ίδια ερώτηση, και θα απέκλινε μόλις ο ένας από τους δύο
+      // μάθαινε για την κενή συμβολοσειρά.
+      if (!hasDraftIdentity(authorUserId)) {
+        setState({ state: 'accountRequired' });
         return null;
       }
 

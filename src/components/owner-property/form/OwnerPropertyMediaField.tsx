@@ -32,11 +32,14 @@
  */
 
 import React from 'react';
+import Link from 'next/link';
 import { useFormContext } from 'react-hook-form';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { FormFieldset } from '@/components/shared/forms/form-field-primitives';
 import { useOwnerPropertyMedia } from '@/hooks/owner-property/useOwnerPropertyMedia';
+import { hasDraftIdentity } from '@/lib/forms/draft-identity';
+import { AUTH_ROUTES } from '@/lib/routes';
 import type { OwnerPropertyFormValues } from '@/lib/owner-property/owner-property-form-values';
 
 const NS = 'property-market';
@@ -53,6 +56,20 @@ export function OwnerPropertyMediaField({
   const form = useFormContext<OwnerPropertyFormValues>();
   const inputId = React.useId();
   const { state, upload } = useOwnerPropertyMedia(authorUserId, ownerPropertyId);
+
+  /**
+   * 🔴 **ΕΝΑ ΜΗΝΥΜΑ, ΔΥΟ ΣΚΑΝΔΑΛΕΣ** (ADR-660 §5.9) — και οι δύο χρειάζονται.
+   *
+   * Η **πρώτη** είναι *προληπτική*: ο άνθρωπος το μαθαίνει **πριν** διαλέξει αρχείο,
+   * όπως ακριβώς η φόρμα δείχνει «τι λείπει» χωρίς να περιμένει υποβολή (Α14 §17.2).
+   * Η **δεύτερη** είναι το *fail-closed* του ίδιου του ανεβάσματος: αν η ταυτότητα
+   * χαθεί **ανάμεσα** στην απόδοση και στην επιλογή αρχείου (λήξη συνεδρίας), η
+   * προληπτική δεν έχει προλάβει να εμφανιστεί.
+   *
+   * ⚠️ **Ένα `<p>`, όχι δύο**: είναι το **ίδιο γεγονός**. Δύο μηνύματα που λένε το
+   * ίδιο πράγμα διαβάζονται ως δύο διαφορετικά προβλήματα.
+   */
+  const accountMissing = !hasDraftIdentity(authorUserId) || state.state === 'accountRequired';
 
   const media = form.watch('media') ?? [];
 
@@ -118,6 +135,21 @@ export function OwnerPropertyMediaField({
         {state.state === 'failed' && (
           <p aria-live="polite" className="text-sm text-foreground">
             {t(`${K}.failed`, { fileName: state.fileName })}
+          </p>
+        )}
+        {accountMissing && (
+          <p aria-live="polite" className="text-sm text-foreground">
+            {t(`${K}.accountRequired`)}{' '}
+            {/*
+              🔑 **Σύνδεσμος, ΟΧΙ διάλογος** (ADR-660 §5.10). Ένα `<form>` σύνδεσης
+              φωλιασμένο μέσα σε αυτό το `<form>` είναι **άκυρο HTML**· και ο
+              `AuthForm` είναι **οθόνη** (δικό της toolbar, σήμα, ανακατεύθυνση), όχι
+              χειριστήριο πεδίου. Η φυγή είναι ασφαλής επειδή το προσχέδιο
+              **επιβιώνει**: δες `owner-property-draft-memory.ts`.
+            */}
+            <Link href={AUTH_ROUTES.login} className="font-medium text-foreground underline">
+              {t(`${K}.signIn`)}
+            </Link>
           </p>
         )}
 

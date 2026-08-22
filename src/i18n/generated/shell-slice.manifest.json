@@ -4,15 +4,15 @@
     "src/i18n/generated/routes/data-deletion.el.json": "50365f50ff77003a6cb3602a0863d0dc674b3f215b30e55bfd88d21aa793807b",
     "src/i18n/generated/routes/demands.el.json": "41368086189cfdb5ef568de8e811404ebcea9d13f89bd756e76ac0f99a185932",
     "src/i18n/generated/routes/demands__demandId.el.json": "7959c1e9aa579a2b4fe1b39e65a4e0232c6928e497d52cc86389d0df3b159ad8",
-    "src/i18n/generated/routes/demands__new.el.json": "c26c152cfa965f6705f620123bed6cdac9593fe60ba234b529a9a3d5a1e9cc27",
+    "src/i18n/generated/routes/demands__new.el.json": "350b5f43148496330275688be04d3358cd8986cc366d2ba27cdff9ce64cd84f2",
     "src/i18n/generated/routes/listing__id.el.json": "1f5bb80734871a98e9c0f08d8457a0d00871069ea36dfc90239a02e77749647e",
     "src/i18n/generated/routes/listings__mandates.el.json": "acc74d03857daa50427b8bff88d2bcd40e9d1952a442b9e7577c34eedf95c83a",
-    "src/i18n/generated/routes/listings__mandates__new.el.json": "631c2427fe552f0fa7891c928ab32f84497b8b8e2654cf6ae300dd04c6faca84",
+    "src/i18n/generated/routes/listings__mandates__new.el.json": "dd5a37e4dd6d0b4f33a2f8dbd4f7306dde97d013dfa8a2b1cf8ab492c4f6ca7d",
     "src/i18n/generated/routes/login.el.json": "3572a0681e12dd71bda049c2221dc6f8874d4c79c3f6883e5e8562f2bd11214a",
     "src/i18n/generated/routes/mandate__token.el.json": "6e75cdb41998a3f76bb88840249c7b197754548563acc1de2269b9e88099531c",
     "src/i18n/generated/routes/offers.el.json": "e74e6070885e06c96933615c08311d0c65dd8a25338e08a572e58f2d92e7914d",
-    "src/i18n/generated/routes/offers__new.el.json": "263f9d17389ea5750578efbb4d4224fc777aa5972c8675fc049e437255da27ff",
-    "src/i18n/generated/routes/offers__offerId.el.json": "3f07367482f3f72c0d76505e5ea36900df45eabe816f9ddd8e125e68304efe20",
+    "src/i18n/generated/routes/offers__new.el.json": "704abf94bd3b1def2767def2becec0b4584e5e8d675247a066cc77e10233598b",
+    "src/i18n/generated/routes/offers__offerId.el.json": "3d9ed05450c675f8aac86bf5e8d3b78ffacfd3e57c43ebc94d6144e7bba52bd3",
     "src/i18n/generated/routes/privacy-policy.el.json": "181e3b315e8ac63a3e927fa8bf073863b2aa706fd66a06f38d936dce70b0cee0",
     "src/i18n/generated/routes/terms.el.json": "481f837696b407553f56de16128778617a86f72cf7b27471d61cd5793cf7d288",
     "src/i18n/generated/routes/test-harness__listing-shapes.el.json": "9b6aaaa831492e24807a1c83e0b505dc865c03afbd5638abf8ea2b990422b037",
@@ -55,7 +55,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "b19203d5ca9a88fd315b2d246032ca822980450d0627effa8a3252e0f7e1ccad",
+  "inputsSha256": "fd078215568ca53816bb996a8f4381af23a26e54b0c85fac1fce0a99e779e433",
   "languages": [
     "el"
   ],
@@ -373,7 +373,7 @@
     "src/lib/sidebar-utils.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/social-sharing/SocialSharingPlatforms.tsx": "0fbec2423b4140ef043cb7375a7fc39473b87aae1153ac349a8581196a58872f",
     "src/lib/state/createExternalStore.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
-    "src/lib/storage/safe-storage.ts": "ae8892f405739c6f2efe3f70dce3ce9856f7471d7dcd159d923b2b1eb13a46e0",
+    "src/lib/storage/safe-storage.ts": "879d2197935e76a9e9ff074ebd3bf5689f3bbb45166d26fab1cbe7f4c68153de",
     "src/lib/telegram/chat-id-validator.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/telemetry/Logger.ts": "8cea2ea4dca81ce41893b77846b2b927e64552429df5d13b1f77c6e758dc518d",
     "src/lib/telemetry/log-outputs.ts": "8b97eba8e9086103ebb6feaf7ab49f6d4afa12b736ed541472ace15dd4154b97",
@@ -566,7 +566,7 @@
     "matchedKeys": 131,
     "routeBoundaries": 0,
     "shellFiles": 465,
-    "sliceBytes": 308513
+    "sliceBytes": 311125
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

@@ -63,9 +63,15 @@ import {
   updateOwnerListing,
   type BrokeredNotifyOutcome,
 } from '@/services/owner-property/owner-property.service';
+import { useOwnerPropertyDraftMemory } from '@/hooks/owner-property/useOwnerPropertyDraftMemory';
+import { draftIdentityBlockers } from '@/lib/forms/draft-identity';
+import { withExtraBlockers } from '@/lib/forms/draft-validation';
+import type { OwnerPropertyDraft } from '@/types/owner-property';
+import type { OwnerPropertyInvariant } from '@/types/owner-property-invariants';
 import type { PropertyOffer } from '@/types/property-offers';
 
 import { OwnerPropertyMediaField } from './form/OwnerPropertyMediaField';
+import { RestoredDraftNotice } from './form/RestoredDraftNotice';
 import { OwnerPropertyPlaceField } from './form/OwnerPropertyPlaceField';
 import {
   OwnerBasicsFields,
@@ -125,17 +131,44 @@ export function OwnerPropertyFormContent({
   const { user } = useAuth();
   const [submitState, setSubmitState] = React.useState<DraftSubmitState>('idle');
 
+  const memory = useOwnerPropertyDraftMemory(editingId);
+
   // 🔑 **Αρχικοποιητής συνάρτησης**: εκτελείται σε μία απόδοση και ποτέ ξανά. Ένα
   // `useState(newOwnerPropertyId())` θα καλούσε τη γεννήτρια σε **κάθε** απόδοση
   // (πετώντας το αποτέλεσμα) — δουλειά χωρίς καταναλωτή, και εύκολο να γίνει σφάλμα.
-  const [draftId] = React.useState<string>(() => editingId ?? newOwnerPropertyId());
+  //
+  // 🔴 **Η ΣΕΙΡΑ ΤΩΝ ΤΡΙΩΝ ΕΙΝΑΙ ΣΥΜΒΟΛΑΙΟ** (ADR-660 §5.10): επεξεργασία → η
+  // υπάρχουσα ταυτότητα· επαναφορά → **η ίδια** που είχε κοπεί πριν φύγει ο άνθρωπος
+  // να συνδεθεί· αλλιώς → καινούργια. Αν η επαναφορά έκοβε νέα, τα αρχεία του θα
+  // κατέληγαν σε **άλλον φάκελο** από αυτόν που δηλώνει η αγγελία, και η σταθερότητα
+  // της ταυτότητας — που είναι όλη η θέση του §5.9 — θα ίσχυε μέχρι το πρώτο login.
+  const [draftId] = React.useState<string>(
+    () => editingId ?? memory.restored?.draftId ?? newOwnerPropertyId(),
+  );
 
-  const form = useForm<OwnerPropertyFormValues>({ defaultValues: initialValues });
+  const form = useForm<OwnerPropertyFormValues>({
+    defaultValues: memory.restored?.values ?? initialValues,
+  });
 
   // ⚠️ `watch()` χωρίς όνομα επιστρέφει **όλες** τις τιμές και ξαναποδίδει σε κάθε
   // αλλαγή — που είναι **ακριβώς** το ζητούμενο: η λίστα «τι λείπει» οφείλει να είναι
   // ζωντανή, όχι στιγμιότυπο υποβολής.
   const values = form.watch();
+
+  /**
+   * 🔑 **Γράφεται ΜΟΝΟ όταν ο άνθρωπος έχει αγγίξει τη φόρμα** (`isDirty`).
+   *
+   * ⚠️ Χωρίς αυτό, το **άνοιγμα** της σελίδας θα αποθήκευε **κενό** προσχέδιο, και
+   * την επόμενη φορά ο άνθρωπος θα έβλεπε «επαναφέραμε το προσχέδιό σου» πάνω σε
+   * άδεια φόρμα — υπόσχεση που δεν έχει αντικείμενο.
+   *
+   * ⚠️ **Ποτέ στην επεξεργασία**: εκεί υπάρχει ήδη αποθηκευμένη αγγελία, και η μνήμη
+   * του περιηγητή δεν έχει καμία δουλειά να συναγωνίζεται τον διακομιστή.
+   */
+  React.useEffect(() => {
+    if (editingId !== null || !form.formState.isDirty) return;
+    memory.remember(draftId, values);
+  }, [editingId, form.formState.isDirty, memory, draftId, values]);
 
   const propertyValidation = React.useMemo(
     () =>
@@ -147,7 +180,7 @@ export function OwnerPropertyFormContent({
   );
 
   /**
-   * 🔴 **ΤΑ ΕΜΠΟΔΙΑ ΤΗΣ ΕΝΤΟΛΗΣ ΜΠΑΙΝΟΥΝ ΣΤΗΝ ΙΔΙΑ ΛΙΣΤΑ, ΟΧΙ ΣΕ ΔΕΥΤΕΡΗ.**
+   * 🔴 **ΤΑ ΕΜΠΟΔΙΑ ΤΟΥ ΠΕΡΙΒΑΛΛΟΝΤΟΣ ΜΠΑΙΝΟΥΝ ΣΤΗΝ ΙΔΙΑ ΛΙΣΤΑ, ΟΧΙ ΣΕ ΔΕΥΤΕΡΗ.**
    *
    * Η **Α14 §17.2** δεσμεύτηκε ότι ο άνθρωπος βλέπει **πόσο κοντά είναι** — και δύο
    * λίστες «τι λείπει» σε μία οθόνη σημαίνουν ότι μπορεί να διορθώσει τη μία, να δει
@@ -155,26 +188,50 @@ export function OwnerPropertyFormContent({
    *
    * ⚠️ Μια πλήρης φόρμα ακινήτου με **ελλιπή** εντολή δεν είναι `ready`: το `draft`
    * υπάρχει, αλλά δεν υπάρχει **πράξη** να γίνει με αυτό.
+   *
+   * ✅ **ΔΕΥΤΕΡΗ ΠΗΓΗ — Η ΤΑΥΤΟΤΗΤΑ (2026-08-23, ADR-660 §5.9).** Ισχύει γι' αυτήν
+   * **κατά λέξη** ό,τι ίσχυε για την εντολή: δεν προκύπτει από ό,τι πληκτρολόγησε ο
+   * άνθρωπος, άρα δεν μπορεί να ζει στο `blockersOf` — και η θέση της είναι η **ίδια**
+   * λίστα, όχι δεύτερη.
+   *
+   * ⚠️ **Μπαίνει ΤΕΛΕΥΤΑΙΑ**, και είναι σειρά-συμβόλαιο: όλα τα άλλα λένε *«συμπλήρωσε
+   * κάτι»*, ενώ ο λογαριασμός λέει *«σώσε ό,τι συμπλήρωσες»* — το βήμα που έρχεται
+   * **αφού** δοθεί η αξία, ποτέ πριν (§5.2, «useful screen»).
    */
-  const validation = React.useMemo(() => {
-    if (mandate === undefined || mandate.blockers.length === 0) return propertyValidation;
-    if (propertyValidation.kind === 'ready') {
-      return {
-        kind: 'incomplete' as const,
-        malformed: [] as readonly string[],
-        blockers: mandate.blockers,
-        violations: [] as readonly never[],
-      };
-    }
-    return {
-      ...propertyValidation,
-      blockers: [...propertyValidation.blockers, ...mandate.blockers],
-    };
-  }, [propertyValidation, mandate]);
+  const contextBlockers = React.useMemo<readonly string[]>(
+    () => [...(mandate?.blockers ?? []), ...draftIdentityBlockers(user?.uid ?? null)],
+    [mandate, user],
+  );
+
+  /**
+   * 🔑 **Η συγχώνευση ζει στο SSoT** ({@link withExtraBlockers}), όχι εδώ: ήταν
+   * γραμμένη σε αυτό το αρχείο όσο η πηγή ήταν **μία**, και με τη δεύτερη θα γινόταν
+   * δίδυμο **σειράς** — ποιο εμπόδιο πρώτο, τι γίνεται όταν η φόρμα είναι `ready`
+   * αλλά το περιβάλλον όχι.
+   *
+   * ⚠️ **Τα ρητά γενικά ορίσματα δεν είναι διακόσμηση**: πλατύνουν το λεξιλόγιο
+   * εμποδίων σε `string`, ώστε τρία ανεξάρτητα λεξιλόγια (`offer` · `mandate` ·
+   * `identity`) να συνυπάρχουν σε μία λίστα οθόνης χωρίς κανένα να «μάθει» τα άλλα.
+   */
+  const validation = React.useMemo(
+    () =>
+      withExtraBlockers<OwnerPropertyDraft, string, OwnerPropertyInvariant>(
+        propertyValidation,
+        contextBlockers,
+      ),
+    [propertyValidation, contextBlockers],
+  );
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
-    if (validation.kind !== 'ready' || user === null) return;
+    // 🔴 **ΕΝΑΣ ΦΡΟΥΡΟΣ, ΟΧΙ ΔΥΟ** (ADR-660 §5.9). Μέχρι 2026-08-23 εδώ υπήρχε και
+    // `|| user === null`, και ήταν **σιωπηλό αδιέξοδο**: το κουμπί ενεργοποιείται από
+    // το `validation.kind === 'ready'`, οπότε μια πλήρης φόρμα χωρίς λογαριασμό
+    // έδειχνε **ενεργό** κουμπί που δεν έκανε **τίποτα** — καμία αλλαγή κατάστασης,
+    // κανένα μήνυμα. Πλέον η απουσία ταυτότητας είναι **ορατό εμπόδιο** παραπάνω,
+    // άρα το `ready` το αποκλείει ήδη· δεύτερος έλεγχος εδώ θα ήταν δεύτερη απάντηση
+    // στην ίδια ερώτηση, με τη μία από τις δύο αόρατη (ο καθρέφτης του ADR-749).
+    if (validation.kind !== 'ready') return;
 
     setSubmitState('saving');
 
@@ -204,7 +261,24 @@ export function OwnerPropertyFormContent({
       setSubmitState('failed');
       return;
     }
+    // ⚠️ **Πρώτα η λήθη, μετά η πλοήγηση.** Ένα προσχέδιο που επιβιώνει της υποβολής
+    // του θα επανερχόταν ως «ημιτελές» πάνω σε αγγελία που **δημοσιεύτηκε**.
+    memory.forget();
     router.push(offerDetailHref(outcome.property.id));
+  }
+
+  /**
+   * ⚠️ **Η απόρριψη κάνει ΔΥΟ πράγματα, και τα δύο είναι απαραίτητα**: καθαρίζει την
+   * οθόνη **και** σβήνει τη μνήμη. Μόνο το πρώτο θα άφηνε το προσχέδιο να επανέλθει
+   * στην επόμενη επίσκεψη — δηλαδή «ξεκίνα από την αρχή» που δεν ξεκινά από την αρχή.
+   *
+   * ⚠️ **Το `draftId` ΔΕΝ ξανακόβεται**, και είναι σωστό: μια ταυτότητα που δεν
+   * χρησιμοποιήθηκε ποτέ δεν είναι «λερωμένη», ενώ η αλλαγή της μέσα στη ζωή της
+   * φόρμας θα σκόρπιζε ό,τι είχε ήδη ανέβει (αν ο άνθρωπος είχε συνδεθεί εν τω μεταξύ).
+   */
+  function discardRestoredDraft(): void {
+    form.reset(initialValues);
+    memory.forget();
   }
 
   return (
@@ -217,6 +291,9 @@ export function OwnerPropertyFormContent({
       onSubmit={handleSubmit}
       onCancel={() => router.push(MY_OFFERS_ROUTE)}
     >
+      {memory.noticeVisible && (
+        <RestoredDraftNotice onKeep={memory.acknowledge} onDiscard={discardRestoredDraft} />
+      )}
       {mandate?.section}
       <OwnerIdentityFields />
       <OwnerBasicsFields />

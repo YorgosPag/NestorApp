@@ -414,6 +414,12 @@
       "placeLinkHelp": "Optional. If you point at it, your listing meets the people searching for THIS building — not just the area.",
       "landAreaLabel": "Land area (m²)"
     },
+    "draftMemory": {
+      "title": "We restored your draft",
+      "help": "We found the listing you had started in this browser. If it is not yours, start over.",
+      "keep": "Continue from there",
+      "discard": "Start over"
+    },
     "media": {
       "label": "Photos and floor plans",
       "help": "Upload whatever you have — photos, a floor plan, a PDF. Not mandatory.",
@@ -421,9 +427,11 @@
       "uploading": "Uploading {fileName} — {percent}%",
       "rejected": "{fileName} was not accepted: {reason}",
       "failed": "{fileName} was not uploaded. Please try again.",
+      "accountRequired": "Files upload once you sign in. Fill in the rest now — the account is asked for at the end.",
       "empty": "You have not uploaded any files.",
       "remove": "Remove",
-      "privateNote": "Your files are private and are not published in the listing. The card image is produced from the property model."
+      "privateNote": "Your files are private and are not published in the listing. The card image is produced from the property model.",
+      "signIn": "Sign in"
     },
     "invariant": {
       "heading": "The listing is not saved yet:",
@@ -444,7 +452,8 @@
     "formBlocker": {
       "place-unresolved": "Press Locate so the address resolves to a point on the map.",
       "mandate-client-unset": "Choose the client you are listing for.",
-      "mandate-expiry-unset": "State the date the mandate runs until."
+      "mandate-expiry-unset": "State the date the mandate runs until.",
+      "account-required": "Sign in or create an account so your listing can be saved."
     },
     "lifecycle": {
       "label": "Status",

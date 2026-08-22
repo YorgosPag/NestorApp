@@ -98,6 +98,11 @@ const TENANT_OVERRIDES: Partial<Record<CollectionKey, TenantFieldConfig>> = {
   // υπάρχει ακόμη κι αν σβήσουν όλοι οι λογαριασμοί· η αγγελία σβήνει μαζί με την
   // απόσυρσή της. Βλ. `UnscopedCategory.published-projection`.
   PUBLIC_LISTINGS:  { mode: 'none', fieldName: '', unscopedCategory: 'published-projection', unscopedReason: 'ADR-777 Α3/Α5/Α20 — προβολή ανάγνωσης της δημοσιευμένης αγγελίας, με κλειστό σχήμα ΧΩΡΙΣ καμία ταυτότητα πελάτη. Το Firestore δεν φιλτράρει πεδία στην ανάγνωση, οπότε η απομόνωση επιτυγχάνεται με ΤΟ ΤΙ ΓΡΑΦΕΤΑΙ, όχι με where(). Read-only από τον πελάτη· γράφει μόνο ο διακομιστής.' },
+
+  // --- ADR-787 §5.3 δ: ΚΑΘΟΛΙΚΟ ΕΥΡΕΤΗΡΙΟ ΑΝΤΙΣΤΡΟΦΗΣ ΑΝΑΖΗΤΗΣΗΣ -------------
+  // 🔴 ΔΕΝ είναι `system`: κάθε εγγραφή ΑΝΗΚΕΙ σε χώρο (φέρει `companyId`). Αυτό που
+  // λείπει είναι η δυνατότητα να φιλτράρεις με αυτόν — η ερώτηση είναι ΑΝΤΙΣΤΡΟΦΗ.
+  WORKSPACE_ALIASES: { mode: 'none', fieldName: '', unscopedCategory: 'global-index', unscopedReason: 'ADR-787 §5.3 δ / Ε-5 §8 — το κλειδί εγγράφου ΕΙΝΑΙ ο σκελετός UTS #39, και η ερώτηση είναι «ποιος χώρος έχει αυτό το ψευδώνυμο;»: ένα where(companyId) θα απαιτούσε να ξέρεις ήδη την απάντηση. Σημειακή ανάγνωση κατά κλειδί, ΠΟΤΕ σάρωση — ένας κατάλογος ψευδωνύμων είναι απαρίθμηση γραφείων, που απαγορεύει το Ε-5 §4 #1. Γράφει μόνο ο διακομιστής.' },
 } as const;
 
 /** Default tenant configuration for collections not in the override map */
