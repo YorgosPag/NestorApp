@@ -773,3 +773,63 @@ jobs:
             echo "Απογραφή: \`npm run workspace-authority:report\`"
             echo "Reseed ΜΟΝΟ μετά από νόμιμο καθάρισμα: \`npm run workspace-authority:baseline\`"
           } >> "$GITHUB_STEP_SUMMARY"
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # CHECK 3.60 — Η ΕΜΒΕΛΕΙΑ ΤΟΥ ΧΩΡΟΥ (ADR-787 §5.3 γ)
+  # ⚠️ ΕΔΩ ΚΑΙ ΟΧΙ ΣΕ ΝΕΟ WORKFLOW: το μητρώο του CHECK 3.37 παρακολουθεί ΑΡΧΕΙΑ
+  #    workflow, όχι jobs ⇒ το πλήθος πυλών μένει ΑΜΕΤΑΒΛΗΤΟ.
+  # ═══════════════════════════════════════════════════════════════════════════
+  workspace-scope:
+    name: 🗺️ Workspace Scope Gate (CHECK 3.60)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Πάκετα (jest για τις άγκυρες)
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # Layer 2 — ΑΝΕΥ ΟΡΩΝ και ΠΛΗΡΕΣ. Μια αλλαγή στο πρόθεμα ή στο κλειστό σύνολο
+      # ξανα-ταξινομεί ΚΑΘΕ σελίδα του (app) — αρχεία που κανείς δεν έστειλε.
+      # ⚡ Κοστίζει 41ms: το πλήρες είναι φθηνότερο από κάθε σκανδάλη.
+      - name: 🗺️ CHECK 3.60 — καμία σελίδα εκτός χώρου χωρίς δηλωμένο λόγο
+        run: pnpm run workspace-scope:check
+
+      - name: "🧪 Σουίτα μετάλλαξης — CHECK 3.60 (21 άγκυρες, μεταλλάξεις στις ΕΙΣΟΔΟΥΣ)"
+        run: pnpm run test:workspace-scope
+
+      - name: 🧭 How to resolve
+        if: failure()
+        run: |
+          {
+            echo "### CHECK 3.60 — ADR-787 §5.3 γ (η εμβέλεια του χώρου)"
+            echo "**Η ΠΡΟΕΠΙΛΟΓΗ ΕΙΝΑΙ «ΜΠΑΙΝΕΙ»**: κάθε σελίδα του (app) ζει πίσω από"
+            echo "το πρόθεμα χώρου, εκτός αν δηλωθεί ρητά εξαίρεση **με λόγο**."
+            echo ""
+            echo "**ορφανή δήλωση** (zero-tolerance) → εξαίρεση για φάκελο που δεν υπάρχει."
+            echo "Σβήσε τη γραμμή από .workspace-scope.json. Κάθε νεκρή γραμμή είναι"
+            echo "ένα όνομα που ο χρήστης δεν μπορεί να πάρει ΧΩΡΙΣ ΛΟΓΟ."
+            echo ""
+            echo "**νέα εξαίρεση** → μπλοκάρει ΑΚΟΜΑ ΚΙ ΑΝ είναι σωστή: βγάζει σελίδα ΕΞΩ"
+            echo "από τον χώρο, δηλαδή την κάνει κοινή για όλους — απόφαση ασφαλείας."
+            echo ""
+            echo "**σελίδα χωρίς πρόθεμα** (ratchet) → ο αριθμός ΜΟΝΟ μειώνεται."
+            echo "⚠️ ΔΕΝ είναι δείκτης υγείας: είναι το μέτρο μιας εκστρατείας που"
+            echo "τελειώνει στο μηδέν (ADR-787 §5.3, Βήμα 3)."
+            echo ""
+            echo "Απογραφή: npm run workspace-scope:report"
+            echo "⛔ ΜΗΝ κάνεις μαζικό reseed: πρώτα ο ισομορφισμός (§5.3 στ)."
+          } >> "$GITHUB_STEP_SUMMARY"

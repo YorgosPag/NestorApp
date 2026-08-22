@@ -7,6 +7,7 @@
   ],
   "declarations": [
     "http-header@src/lib/auth/auth-context.ts",
+    "url-segment@src/lib/auth/workspace-from-path.ts",
     "user-doc-active-company@src/services/ai-pipeline/shared/super-admin-resolver.ts"
   ]
 }
