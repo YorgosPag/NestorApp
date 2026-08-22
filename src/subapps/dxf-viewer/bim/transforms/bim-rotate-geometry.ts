@@ -64,8 +64,8 @@ import type {
 import type { BeamEntity, BeamParams } from '../types/beam-types';
 import type { StairEntity, StairParams } from '../types/stair-types';
 import type { MepSegmentEntity, MepSegmentParams } from '../types/mep-segment-types';
-import type { Polygon3D as BimPolygon3D, Point3D as BimPoint3D } from '../types/bim-base';
-import type { Point3D as RenderPoint3D } from '../../rendering/types/Types';
+import type { BimPolygon, BimPoint } from '../types/bim-base';
+import type { Point3D } from '../../rendering/types/Types';
 import { computeWallGeometry } from '../geometry/wall-geometry';
 import { computeSlabGeometry } from '../geometry/slab-geometry';
 import { computeSlabOpeningGeometry } from '../geometry/slab-opening-geometry';
@@ -102,10 +102,10 @@ function rotatePoint3D<P extends { x: number; y: number; z?: number }>(
 }
 
 function rotatePolygon3D(
-  poly: BimPolygon3D,
+  poly: BimPolygon,
   pivot: Point2D,
   angleDeg: number,
-): BimPolygon3D {
+): BimPolygon {
   return { vertices: poly.vertices.map((v) => rotatePoint3D(v, pivot, angleDeg)) };
 }
 
@@ -203,7 +203,7 @@ function rotateColumn(
  * sibling clone (αδελφός του `rotateMepPointHost`, που καλύπτει την οικογένεια
  * `{position, rotation?}` των MEP hosts — εδώ η οικογένεια είναι `{position, rotationDeg}`).
  */
-function rotateOrientedSolidHost<P extends { position: BimPoint3D; rotationDeg: number }>(
+function rotateOrientedSolidHost<P extends { position: BimPoint; rotationDeg: number }>(
   params: P,
   pivot: Point2D,
   angleDeg: number,
@@ -239,7 +239,7 @@ function rotateStair(
   pivot: Point2D,
   angleDeg: number,
 ): Partial<SceneEntity> {
-  const newBasePoint: RenderPoint3D = rotatePoint3D(
+  const newBasePoint: Point3D = rotatePoint3D(
     entity.params.basePoint,
     pivot,
     angleDeg,
@@ -281,7 +281,7 @@ function rotateMepSegment(
  * transform for free — only the geometry cache is recomputed. Generic over the
  * host's `compute*Geometry`, so a new connector host opts in with one switch row.
  */
-function rotateMepPointHost<P extends { position: BimPoint3D; rotation?: number }>(
+function rotateMepPointHost<P extends { position: BimPoint; rotation?: number }>(
   params: P,
   pivot: Point2D,
   angleDeg: number,

@@ -31,10 +31,10 @@
 
 import type {
   BimEntity,
-  BoundingBox3D,
-  Point3D,
-  Polygon3D,
-  Polyline3D,
+  BimBounds,
+  BimPoint,
+  BimPolygon,
+  BimPolyline,
 } from './bim-base';
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneUnits } from '../../utils/scene-units';
@@ -120,10 +120,10 @@ export interface BeamIShapeParams {
  */
 export interface BeamParams {
   readonly kind: BeamKind;
-  readonly startPoint: Point3D;
-  readonly endPoint: Point3D;
+  readonly startPoint: BimPoint;
+  readonly endPoint: BimPoint;
   /** Defined when `kind === 'curved'`. mm. Quadratic Bezier control point. */
-  readonly curveControl?: Point3D;
+  readonly curveControl?: BimPoint;
   /** mm. Cross-section X (Eurocode min 150mm — code violation αν μικρότερο). */
   readonly width: number;
   /** mm. Cross-section Y / structural depth. */
@@ -268,9 +268,9 @@ export interface BeamParams {
  *   - `bbox` — folds outline + axis vertices, z extends σε topElevation.
  */
 export interface BeamGeometry {
-  readonly axisPolyline: Polyline3D;
-  readonly outline: Polygon3D;
-  readonly bbox: BoundingBox3D;
+  readonly axisPolyline: BimPolyline;
+  readonly outline: BimPolygon;
+  readonly bbox: BimBounds;
   /** m — geometric axis length (sum-of-edges). */
   readonly length: number;
   /** m² — top surface (length × width). */
@@ -298,7 +298,7 @@ export interface BeamGeometry {
    * Υπολογίζεται στο ίδιο scene-conversion post-pass με το `displayOutline`
    * (`applyBeamColumnCutback2D`) από τα live column footprints — μηδέν stale persisted.
    */
-  readonly displayAxisPolyline?: Polyline3D;
+  readonly displayAxisPolyline?: BimPolyline;
 }
 
 // ─── Entity (BIM generic instantiation) ─────────────────────────────────────

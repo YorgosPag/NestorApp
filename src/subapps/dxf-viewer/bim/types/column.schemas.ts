@@ -24,7 +24,7 @@ import {
   EnvelopeFunctionSchema,
   EnvelopeLayerSchema,
 } from './thermal-envelope.schemas';
-import { Point3DSchema } from './geometry.schemas';
+import { BimPointSchema } from './geometry.schemas';
 import {
   I_SHAPE_PROFILE_FIELDS,
   STOREY_PLACEMENT_FIELDS,
@@ -183,7 +183,7 @@ const ColumnReinforcementSchema = z
 const ColumnParamsBaseSchema = z
   .object({
     kind: ColumnKindSchema,
-    position: Point3DSchema,
+    position: BimPointSchema,
     anchor: ColumnAnchorSchema,
     width: z.number().positive(),
     depth: z.number().positive(),

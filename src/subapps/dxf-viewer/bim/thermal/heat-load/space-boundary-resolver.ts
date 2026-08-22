@@ -30,7 +30,7 @@ import { findBestSlabMatch, type SlabMatchCandidate } from './slab-space-match';
 import { getGlazingSolarFactor, resolveOpeningUValue } from '../glazing-u-catalog';
 import { isWindowKind } from '../../types/opening-types';
 import { sceneUnitsToMeters, type SceneUnits } from '../../../utils/scene-units';
-import type { Point3D } from '../../types/bim-base';
+import type { BimPoint } from '../../types/bim-base';
 import { nearestEdgeOutwardAzimuthDeg } from '../../geometry/shared/polygon-azimuth-utils';
 import { projectVerticesTo2D } from '../../geometry/shared/polygon-utils';
 import type { OverhangOutline } from './solar-overhang-geometry';
@@ -134,7 +134,7 @@ export interface SpaceBoundaryContext {
  * κατηγορίας, zero-regression). Best-match με footprint containment.
  */
 function resolveSlabArealHeatCapacity(
-  footprint: readonly Point3D[],
+  footprint: readonly BimPoint[],
   candidates: readonly SlabMatchCandidate[] | undefined,
 ): number | undefined {
   if (!candidates || candidates.length === 0) return undefined;
@@ -204,7 +204,7 @@ function openingsOnSpaceWall(
  */
 function buildOpeningBoundary(
   op: OpeningEntity,
-  polygon: readonly Point3D[],
+  polygon: readonly BimPoint[],
   ceilingHeightMm: number,
   sceneToM: number,
   wallThicknessMm: number,
@@ -245,11 +245,11 @@ function buildOpeningBoundary(
 }
 
 /** Boundaries ενός τοίχου: το παράθυρο/πόρτα + ο καθαρός τοίχος. `polygon` = το
- * footprint του χώρου (Point3D, CCW) — πηγή του προσανατολισμού των κουφωμάτων. */
+ * footprint του χώρου (BimPoint, CCW) — πηγή του προσανατολισμού των κουφωμάτων. */
 function resolveWallBoundaries(
   wall: WallEntity,
   matchedLenScene: number,
-  polygon: readonly Point3D[],
+  polygon: readonly BimPoint[],
   ceilingHeightMm: number,
   sceneToM: number,
   ctx: SpaceBoundaryContext,

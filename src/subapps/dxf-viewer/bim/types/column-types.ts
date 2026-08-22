@@ -31,8 +31,8 @@
 
 import type {
   BimEntity,
-  BoundingBox3D,
-  Point3D,
+  BimBounds,
+  BimPoint,
   PlanProfile,
 } from './bim-base';
 import type { Point2D } from '../../rendering/types/Types';
@@ -239,7 +239,7 @@ export interface ColumnTilt {
 
 export interface ColumnParams {
   readonly kind: ColumnKind;
-  readonly position: Point3D;
+  readonly position: BimPoint;
   readonly anchor: ColumnAnchor;
   readonly width: number;
   readonly depth: number;
@@ -398,7 +398,7 @@ export interface ColumnGeometry {
   /** **2Δ προφίλ** οριζόντιας τομής (ADR-789 Φάση Δ). Closed CCW. Το υψόμετρο της
    *  τομής ΔΕΝ ζει στις κορυφές — ζει στο `elevation` της στήλης. */
   readonly footprint: PlanProfile;
-  readonly bbox: BoundingBox3D;
+  readonly bbox: BimBounds;
   /** m². Εμβαδό τομής. */
   readonly area: number;
   /** m³. area × height / 1000. */

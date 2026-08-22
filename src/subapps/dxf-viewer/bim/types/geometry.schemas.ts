@@ -2,7 +2,7 @@
  * BIM geometry primitives — **ΤΟ ΕΝΑ** Zod λεξιλόγιο σημείου/πολυγώνου (ADR-789 Φάση Δ).
  *
  * 🔴 **Γιατί υπάρχει**: μέχρι 2026-08-22 ο ΙΔΙΟΣ ορισμός ήταν γραμμένος **20 φορές**
- * (`Point3DSchema`, ένα ανά `*.schemas.ts`) και **3 φορές** (`Polygon3DSchema`, σε
+ * (`BimPointSchema`, ένα ανά `*.schemas.ts`) και **3 φορές** (`BimPolygonSchema`, σε
  * `slab` · `roof` · `mep-underfloor`) — **23 αντίγραφα, byte-ταυτόσημα** (επαληθεύτηκε
  * με hash και των 20). Καμία πύλη δεν τα συνέκρινε, άρα διόρθωση στο ένα θα άφηνε τα
  * υπόλοιπα 22 να αποκλίνουν σιωπηλά — το σχήμα του ADR-749.
@@ -13,7 +13,7 @@
  * Postel** («conservative in what you send, liberal in what you accept»): γράφουμε 2Δ,
  * δεχόμαστε ό,τι έγραψε το παρελθόν.
  *
- * ⚠️ **ΜΗΝ αφαιρέσεις το `z` από το {@link Point3DSchema}.** Είναι `.strict()`, και η
+ * ⚠️ **ΜΗΝ αφαιρέσεις το `z` από το {@link BimPointSchema}.** Είναι `.strict()`, και η
  * αφαίρεση κάνει **κάθε παλιό έγγραφο να ΑΠΟΡΡΙΠΤΕΤΑΙ** με `unrecognized_keys` —
  * αποδεδειγμένο **εκτελώντας** (zod 3.25.76, ADR-789 §8). Δεν υπάρχει migration, και
  * δεν πρέπει να χρειαστεί: το `z` αυτών των πεδίων δεν το διαβάζει κανείς (μετρημένο:
@@ -31,7 +31,7 @@ import { z } from 'zod';
  * Για γνήσια χωρικά δεδομένα (σκάλες · MEP routing · στέγες · κάγκελα) το `z` είναι
  * πραγματικό· για προφίλ κάτοψης είναι **κατάλοιπο** που ανεχόμαστε στην ανάγνωση.
  */
-export const Point3DSchema = z
+export const BimPointSchema = z
   .object({
     x: z.number().finite(),
     y: z.number().finite(),
@@ -39,19 +39,19 @@ export const Point3DSchema = z
   })
   .strict();
 
-/** Κλειστό πολύγωνο ≥3 κορυφών. Η ανοχή στο `z` κληρονομείται από το {@link Point3DSchema}. */
-export const Polygon3DSchema = z
+/** Κλειστό πολύγωνο ≥3 κορυφών. Η ανοχή στο `z` κληρονομείται από το {@link BimPointSchema}. */
+export const BimPolygonSchema = z
   .object({
-    vertices: z.array(Point3DSchema).min(3),
+    vertices: z.array(BimPointSchema).min(3),
   })
   .strict();
 
 /**
  * **Αποθηκευμένο προφίλ κάτοψης** — το schema ανάγνωσης του TS τύπου `PlanProfile`.
  *
- * Σκόπιμα **ταυτόσημο** με το {@link Polygon3DSchema}: η στένωση ζει στον **τύπο**
+ * Σκόπιμα **ταυτόσημο** με το {@link BimPolygonSchema}: η στένωση ζει στον **τύπο**
  * (τι γράφουμε), όχι στο schema (τι δεχόμαστε). Υπάρχει ως ξεχωριστό όνομα ώστε το
  * σημείο χρήσης να **δηλώνει τον ρόλο** — ένα `outline: PlanProfileSchema` λέει
- * «προφίλ κάτοψης», ενώ `outline: Polygon3DSchema` λέει «πολύγωνο στον χώρο».
+ * «προφίλ κάτοψης», ενώ `outline: BimPolygonSchema` λέει «πολύγωνο στον χώρο».
  */
-export const PlanProfileSchema = Polygon3DSchema;
+export const PlanProfileSchema = BimPolygonSchema;

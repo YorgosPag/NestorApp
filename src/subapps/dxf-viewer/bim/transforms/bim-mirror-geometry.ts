@@ -76,8 +76,8 @@ import {
 } from '../types/column-types';
 import type { BeamEntity, BeamParams } from '../types/beam-types';
 import type { StairEntity, StairParams } from '../types/stair-types';
-import type { Point3D as BimPoint3D, Polygon3D as BimPolygon3D } from '../types/bim-base';
-import type { Point2D, Point3D as RenderPoint3D } from '../../rendering/types/Types';
+import type { BimPoint, BimPolygon } from '../types/bim-base';
+import type { Point2D, Point3D } from '../../rendering/types/Types';
 import { computeWallGeometry } from '../geometry/wall-geometry';
 import { computeSlabGeometry } from '../geometry/slab-geometry';
 import { computeSlabOpeningGeometry } from '../geometry/slab-opening-geometry';
@@ -96,8 +96,8 @@ import {
 /**
  * Reflect a 3D point across the 2D `axis` (plan view). The z component is
  * preserved verbatim — mirror is a horizontal operation and never affects
- * elevation. Works for both `bim-base` Point3D (z?: optional) and
- * `rendering/types/Types` Point3D (z: required) via generic preservation.
+ * elevation. Works for both `BimPoint` (z?: optional) and `Point3D`
+ * (z: required) via generic preservation — ADR-792.
  */
 function mirrorPoint3D<P extends { x: number; y: number; z?: number }>(
   p: P,
@@ -107,7 +107,7 @@ function mirrorPoint3D<P extends { x: number; y: number; z?: number }>(
   return { ...p, x: m.x, y: m.y };
 }
 
-function mirrorPolygon3D(poly: BimPolygon3D, axis: MirrorAxis): BimPolygon3D {
+function mirrorPolygon3D(poly: BimPolygon, axis: MirrorAxis): BimPolygon {
   return { vertices: poly.vertices.map((v) => mirrorPoint3D(v, axis)) };
 }
 
@@ -270,7 +270,7 @@ function mirrorBeam(entity: BeamEntity, axis: MirrorAxis): Partial<SceneEntity> 
 
 function mirrorStair(entity: StairEntity, axis: MirrorAxis): Partial<SceneEntity> {
   const axisAngle = getAxisAngleDeg(axis);
-  const newBasePoint: RenderPoint3D = mirrorPoint3D(entity.params.basePoint, axis);
+  const newBasePoint: Point3D = mirrorPoint3D(entity.params.basePoint, axis);
   const newParams: StairParams = {
     ...entity.params,
     basePoint: newBasePoint,

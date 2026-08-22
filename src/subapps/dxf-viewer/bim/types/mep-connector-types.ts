@@ -28,7 +28,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md
  */
 
-import type { Point3D } from './bim-base';
+import type { BimPoint } from './bim-base';
 
 // ─── Domain + flow ───────────────────────────────────────────────────────────
 
@@ -186,9 +186,9 @@ export interface MepConnector {
   readonly domain: MepConnectorDomain;
   readonly flow: MepFlowDirection;
   /** Offset from the host origin, host-local frame (mm × sceneUnits, pre-rotation). */
-  readonly localPosition: Point3D;
+  readonly localPosition: BimPoint;
   /** Unit direction the connector faces, host-local frame. Optional for point loads. */
-  readonly localDirection?: Point3D;
+  readonly localDirection?: BimPoint;
   /** Domain-specific payload — present when `domain === 'electrical'`. */
   readonly electrical?: MepElectricalConnectorParams;
   /** Domain-specific payload — present when `domain === 'pipe'` (ADR-408 Φ9). */
@@ -219,9 +219,9 @@ const DEG_TO_RAD = Math.PI / 180;
  */
 export function connectorWorldPosition(
   connector: MepConnector,
-  hostPosition: Point3D,
+  hostPosition: BimPoint,
   hostRotationDeg: number,
-): Point3D {
+): BimPoint {
   const { x, y, z = 0 } = connector.localPosition;
   const a = hostRotationDeg * DEG_TO_RAD;
   const cos = Math.cos(a);
@@ -350,7 +350,7 @@ export const MANIFOLD_BRANCH_INLET_CONNECTOR_ID_PREFIX = 'm-in-';
  * unchanged.
  */
 export function buildManifoldInletConnector(
-  localPosition: Point3D,
+  localPosition: BimPoint,
   diameterMm: number,
   classification: PlumbingSystemClassification = 'domestic-cold-water',
 ): MepConnector {
@@ -371,7 +371,7 @@ export function buildManifoldInletConnector(
  */
 export function buildManifoldOutletConnector(
   index: number,
-  localPosition: Point3D,
+  localPosition: BimPoint,
   diameterMm: number,
   classification: PlumbingSystemClassification = 'domestic-cold-water',
 ): MepConnector {
@@ -393,7 +393,7 @@ export function buildManifoldOutletConnector(
  */
 export function buildManifoldBranchInletConnector(
   index: number,
-  localPosition: Point3D,
+  localPosition: BimPoint,
   diameterMm: number,
   classification: PlumbingSystemClassification = 'sanitary-drainage',
 ): MepConnector {
@@ -455,7 +455,7 @@ export const RADIATOR_RETURN_CONNECTOR_ID = 'rad-return';
  * from the body geometry (see `buildRadiatorConnectors`).
  */
 export function buildRadiatorSupplyConnector(
-  localPosition: Point3D,
+  localPosition: BimPoint,
   diameterMm: number,
 ): MepConnector {
   return {
@@ -475,7 +475,7 @@ export function buildRadiatorSupplyConnector(
  * per connector (membership is per-(entity, connector), so no special handling).
  */
 export function buildRadiatorReturnConnector(
-  localPosition: Point3D,
+  localPosition: BimPoint,
   diameterMm: number,
 ): MepConnector {
   return {
@@ -515,7 +515,7 @@ export const BOILER_FUEL_CONNECTOR_ID = 'boiler-fuel';
  * from the body geometry (see `buildBoilerConnectors`).
  */
 export function buildBoilerSupplyConnector(
-  localPosition: Point3D,
+  localPosition: BimPoint,
   diameterMm: number,
 ): MepConnector {
   return {
@@ -535,7 +535,7 @@ export function buildBoilerSupplyConnector(
  * hydronic-return network (return inlet) — membership is per-(entity, connector).
  */
 export function buildBoilerReturnConnector(
-  localPosition: Point3D,
+  localPosition: BimPoint,
   diameterMm: number,
 ): MepConnector {
   return {
@@ -567,7 +567,7 @@ export function buildBoilerReturnConnector(
  * (see `buildBoilerConnectors`).
  */
 export function buildBoilerDhwHotOutletConnector(
-  localPosition: Point3D,
+  localPosition: BimPoint,
   diameterMm: number,
 ): MepConnector {
   return {
@@ -591,7 +591,7 @@ export function buildBoilerDhwHotOutletConnector(
  * cold/hot/supply/return do not coincide (see `buildBoilerConnectors`).
  */
 export function buildBoilerDhwColdInletConnector(
-  localPosition: Point3D,
+  localPosition: BimPoint,
   diameterMm: number,
 ): MepConnector {
   return {
@@ -617,7 +617,7 @@ export function buildBoilerDhwColdInletConnector(
  * coincides with the supply/return/hot/cold ports (see `buildBoilerConnectors`).
  */
 export function buildBoilerDhwRecircInletConnector(
-  localPosition: Point3D,
+  localPosition: BimPoint,
   diameterMm: number,
 ): MepConnector {
   return {
@@ -647,7 +647,7 @@ export function buildBoilerDhwRecircInletConnector(
  * back-centre, distinct from the supply/return/DHW ports (see `buildBoilerConnectors`).
  */
 export function buildBoilerFlueConnector(
-  localPosition: Point3D,
+  localPosition: BimPoint,
   diameterMm: number,
 ): MepConnector {
   return {
@@ -680,7 +680,7 @@ export function buildBoilerFlueConnector(
  * stays free of any boiler-catalog import.
  */
 export function buildBoilerFuelConnector(
-  localPosition: Point3D,
+  localPosition: BimPoint,
   diameterMm: number,
   classification: FuelSystemClassification,
 ): MepConnector {
@@ -710,7 +710,7 @@ export const WATER_HEATER_HOT_CONNECTOR_ID = 'wh-hot';
  * from the body geometry (see `buildWaterHeaterConnectors`).
  */
 export function buildWaterHeaterColdInletConnector(
-  localPosition: Point3D,
+  localPosition: BimPoint,
   diameterMm: number,
 ): MepConnector {
   return {
@@ -731,7 +731,7 @@ export function buildWaterHeaterColdInletConnector(
  * outlet is the missing SOURCE that finally feeds the fixtures' hot-water inlets.
  */
 export function buildWaterHeaterHotOutletConnector(
-  localPosition: Point3D,
+  localPosition: BimPoint,
   diameterMm: number,
 ): MepConnector {
   return {
@@ -763,7 +763,7 @@ export const UNDERFLOOR_RETURN_CONNECTOR_ID = 'uf-return';
  * transform — the same opt-out the `mep-segment` connectors use.
  */
 export function buildUnderfloorSupplyConnector(
-  localPosition: Point3D,
+  localPosition: BimPoint,
   diameterMm: number,
 ): MepConnector {
   return {
@@ -784,7 +784,7 @@ export function buildUnderfloorSupplyConnector(
  * like the radiator. `localPosition` is in WORLD coords (identity host, see above).
  */
 export function buildUnderfloorReturnConnector(
-  localPosition: Point3D,
+  localPosition: BimPoint,
   diameterMm: number,
 ): MepConnector {
   return {
@@ -814,7 +814,7 @@ export const FLOOR_DRAIN_CONNECTOR_ID = 'fd-drain';
  * from the body geometry (the drain centre, z=0 at floor level).
  */
 export function buildFloorDrainConnector(
-  localPosition: Point3D,
+  localPosition: BimPoint,
   diameterMm: number,
 ): MepConnector {
   return {
@@ -844,7 +844,7 @@ export const SANITARY_DRAIN_CONNECTOR_ID = 'san-drain';
  * from the body geometry (the fixture centre, z=0 at floor level).
  */
 export function buildSanitaryDrainConnector(
-  localPosition: Point3D,
+  localPosition: BimPoint,
   diameterMm: number,
 ): MepConnector {
   return {
@@ -874,7 +874,7 @@ export const SANITARY_HOT_CONNECTOR_ID = 'san-hot';
  * the fixture body so cold/hot/drain do not coincide (see `buildSanitaryFixtureConnectors`).
  */
 export function buildSanitaryColdWaterConnector(
-  localPosition: Point3D,
+  localPosition: BimPoint,
   diameterMm: number,
 ): MepConnector {
   return {
@@ -893,7 +893,7 @@ export function buildSanitaryColdWaterConnector(
  * bidet; a WC is cold-only).
  */
 export function buildSanitaryHotWaterConnector(
-  localPosition: Point3D,
+  localPosition: BimPoint,
   diameterMm: number,
 ): MepConnector {
   return {
@@ -927,7 +927,7 @@ export const AHU_SUPPLY_CONNECTOR_ID = 'ahu-supply';
  * from the terminal body geometry (see the air-terminal connector seed).
  */
 export function buildAirTerminalSupplyConnector(
-  localPosition: Point3D,
+  localPosition: BimPoint,
   diameterMm: number,
 ): MepConnector {
   return {
@@ -952,7 +952,7 @@ export function buildAirTerminalSupplyConnector(
  * from the AHU body geometry (see the AHU connector seed).
  */
 export function buildAhuSupplyAirConnector(
-  localPosition: Point3D,
+  localPosition: BimPoint,
   diameterMm: number,
 ): MepConnector {
   return {
@@ -986,7 +986,7 @@ export const FIRE_RISER_SUPPLY_CONNECTOR_ID = 'fire-riser-supply';
  * from the head body geometry (the head centre, ceiling-mounted).
  */
 export function buildSprinklerSupplyConnector(
-  localPosition: Point3D,
+  localPosition: BimPoint,
   diameterMm: number,
 ): MepConnector {
   return {
@@ -1013,7 +1013,7 @@ export function buildSprinklerSupplyConnector(
  * from the riser body geometry.
  */
 export function buildFireRiserSupplyConnector(
-  localPosition: Point3D,
+  localPosition: BimPoint,
   diameterMm: number,
 ): MepConnector {
   return {
@@ -1047,7 +1047,7 @@ export const GAS_COOKER_SUPPLY_CONNECTOR_ID = 'gas-cooker-supply';
  * from the meter body geometry.
  */
 export function buildGasMeterOutletConnector(
-  localPosition: Point3D,
+  localPosition: BimPoint,
   diameterMm: number,
 ): MepConnector {
   return {
@@ -1074,7 +1074,7 @@ export function buildGasMeterOutletConnector(
  * cooker body geometry.
  */
 export function buildGasCookerSupplyConnector(
-  localPosition: Point3D,
+  localPosition: BimPoint,
   diameterMm: number,
 ): MepConnector {
   return {

@@ -22,7 +22,7 @@ import {
   BeamReinforcementSchema,
   BeamStirrupsSchema,
 } from './beam.schemas';
-import { Point3DSchema } from './geometry.schemas';
+import { BimPointSchema } from './geometry.schemas';
 import { STOREY_PLACEMENT_FIELDS } from './shared-params.schemas';
 
 // ─── Point3D ──────────────────────────────────────────────────────────────────
@@ -118,7 +118,7 @@ const PadFootingParamsSchema = z
   .object({
     kind: z.literal('pad'),
     ...CommonParamsShape,
-    position: Point3DSchema,
+    position: BimPointSchema,
     width: z.number().positive(),
     length: z.number().positive(),
     rotation: z.number().finite(),
@@ -134,8 +134,8 @@ const StripFootingParamsSchema = z
   .object({
     kind: z.literal('strip'),
     ...CommonParamsShape,
-    start: Point3DSchema,
-    end: Point3DSchema,
+    start: BimPointSchema,
+    end: BimPointSchema,
     width: z.number().positive(),
     justification: StripJustificationSchema.optional(),
     justificationManual: z.boolean().optional(),
@@ -147,8 +147,8 @@ const TieBeamParamsSchema = z
   .object({
     kind: z.literal('tie-beam'),
     ...CommonParamsShape,
-    start: Point3DSchema,
-    end: Point3DSchema,
+    start: BimPointSchema,
+    end: BimPointSchema,
     width: z.number().positive(),
     justification: StripJustificationSchema.optional(),
     justificationManual: z.boolean().optional(),

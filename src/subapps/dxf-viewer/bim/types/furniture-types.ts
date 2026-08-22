@@ -31,9 +31,9 @@
 
 import type {
   BimEntity,
-  BoundingBox3D,
-  Point3D,
-  Polygon3D,
+  BimBounds,
+  BimPoint,
+  BimPolygon,
 } from './bim-base';
 import type { SceneUnits } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
@@ -71,7 +71,7 @@ export interface FurnitureParams {
    */
   readonly assetId: string;
   /** Insertion point (plan). `z` is derived from `mountingElevationMm`. */
-  readonly position: Point3D;
+  readonly position: BimPoint;
   /** Degrees CCW about `position` (plan, about the vertical axis). */
   readonly rotationDeg: number;
   /** mm. Footprint width (X before rotation). Authored catalog default. */
@@ -114,9 +114,9 @@ export interface FurnitureParams {
  * NEVER mutated by consumers. `area` in m², `height` (= overall height) in mm.
  */
 export interface FurnitureGeometry {
-  /** Polygon3D — horizontal footprint at the mounting plane. Closed CCW. */
-  readonly footprint: Polygon3D;
-  readonly bbox: BoundingBox3D;
+  /** BimPolygon — horizontal footprint at the mounting plane. Closed CCW. */
+  readonly footprint: BimPolygon;
+  readonly bbox: BimBounds;
   /** m². Footprint area. */
   readonly area: number;
   /** mm. Mirror of `params.heightMm` for downstream convenience. */

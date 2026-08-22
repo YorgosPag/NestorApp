@@ -31,9 +31,9 @@
 
 import type {
   BimEntity,
-  BoundingBox3D,
-  Polygon3D,
-  Point3D,
+  BimBounds,
+  BimPolygon,
+  BimPoint,
 } from './bim-base';
 import type { SceneUnits } from '../../utils/scene-units';
 import type { IfcEntityMixin, IfcEntityType } from './ifc-entity-mixin';
@@ -86,7 +86,7 @@ export interface FloorplanSymbolParams {
   /** Catalog preset id (FK → `floorplan-symbol-catalog.ts`). */
   readonly assetId: string;
   /** Insertion point (plan). `z` always 0 — pure 2D symbol. */
-  readonly position: Point3D;
+  readonly position: BimPoint;
   /** Degrees CCW about `position` (plan, about the vertical axis). */
   readonly rotationDeg: number;
   /** mm. Footprint width (X before rotation). Authored catalog default. */
@@ -116,9 +116,9 @@ export interface FloorplanSymbolParams {
  * `area` in m². No `height` — a floorplan symbol is a pure 2D plan annotation.
  */
 export interface FloorplanSymbolGeometry {
-  /** Polygon3D — horizontal footprint (closed CCW, plan). */
-  readonly footprint: Polygon3D;
-  readonly bbox: BoundingBox3D;
+  /** BimPolygon — horizontal footprint (closed CCW, plan). */
+  readonly footprint: BimPolygon;
+  readonly bbox: BimBounds;
   /** m². Footprint area. */
   readonly area: number;
 }

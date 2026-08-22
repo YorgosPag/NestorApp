@@ -20,7 +20,7 @@ import {
   EnvelopeFunctionSchema,
   EnvelopeLayerSchema,
 } from './thermal-envelope.schemas';
-import { Point3DSchema } from './geometry.schemas';
+import { BimPointSchema } from './geometry.schemas';
 import { I_SHAPE_PROFILE_FIELDS, STOREY_PLACEMENT_FIELDS } from './shared-params.schemas';
 
 // ─── Enums (mirror beam-types.ts unions) ─────────────────────────────────────
@@ -79,9 +79,9 @@ export const BeamReinforcementSchema = z
 export const BeamParamsSchema = z
   .object({
     kind: BeamKindSchema,
-    startPoint: Point3DSchema,
-    endPoint: Point3DSchema,
-    curveControl: Point3DSchema.optional(),
+    startPoint: BimPointSchema,
+    endPoint: BimPointSchema,
+    curveControl: BimPointSchema.optional(),
     width: z.number().positive(),
     depth: z.number().positive(),
     topElevation: z.number().finite(),

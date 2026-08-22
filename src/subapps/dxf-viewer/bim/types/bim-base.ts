@@ -4,7 +4,7 @@
  *
  * Pattern mirrors ADR-358 StairEntity: kind + params + geometry cache + validation.
  * All geometry stored in mm (same as stair §5.0).
- * Point3D has optional z for 3D-readiness (G11).
+ * BimPoint has optional z for 3D-readiness (G11) — και το ΟΝΟΜΑ του το λέει (ADR-792).
  */
 
 import type { Timestamp } from 'firebase/firestore';
@@ -20,15 +20,15 @@ import type { Point2D } from '../../rendering/types/Types';
  * **Ό,τι εκθέτει `x`/`y`** — το λεξιλόγιο ΕΙΣΟΔΟΥ κάθε αλγορίθμου κάτοψης (ADR-730 → ADR-789).
  *
  * 🔑 Είναι ο **παραλήπτης**, όχι ο αποθηκευμένος τύπος. Τον ικανοποιούν ταυτόχρονα
- * {@link Point3D}, `Point2D`, μια κορυφή, μια λαβή, ένα snap target — **χωρίς καμία
+ * {@link BimPoint}, `Point2D`, μια κορυφή, μια λαβή, ένα snap target — **χωρίς καμία
  * μετατροπή**. Γι' αυτό μια συνάρτηση που δεν διαβάζει `z` δηλώνει `PlanarPoint`,
- * ΠΟΤΕ `Point3D`.
+ * ΠΟΤΕ `BimPoint`.
  *
  * **Γιατί υπάρχει** (ADR-789): μέχρι 2026-08-22 το `polygon-utils` και τα αδέλφια του
- * δήλωναν `readonly Point3D[]` ενώ **δεν διάβαζαν `.z` ούτε μία φορά** (μετρημένο: 0
+ * δήλωναν `readonly BimPoint[]` ενώ **δεν διάβαζαν `.z` ούτε μία φορά** (μετρημένο: 0
  * αναγνώσεις σε 460 γραμμές). Η υπογραφή έλεγε ψέματα, και οι καλούντες πλήρωναν το
  * ψέμα με **89 ωμά `{ x: p.x, y: p.y, z: 0 }` σε 67 αρχεία** — plus πέντε ιδιωτικά
- * `lift`/`toXY`, δύο `polygon2D*` wrappers, ένα `as readonly Point3D[]` cast και **δύο**
+ * `lift`/`toXY`, δύο `polygon2D*` wrappers, ένα `as readonly BimPoint[]` cast και **δύο**
  * διπλότυπα `polygonBbox(readonly Point2D[])` που νίκησαν την εκστρατεία min/max του
  * ADR-716/583 **ακριβώς επειδή** το κοινό απαιτούσε 3D.
  *
@@ -39,7 +39,7 @@ import type { Point2D } from '../../rendering/types/Types';
  *
  * ⚠️ **ΜΗΝ** το χρησιμοποιήσεις ως τύπο **αποθήκευσης** — για αυτό υπάρχουν το `Point2D`
  * (προφίλ κάτοψης· το υψόμετρο ζει στον όροφο/επίπεδο, όπως `API_Coord` του ArchiCAD και
- * το «profiles must lie in the XY plane» του Revit) και το {@link Point3D} (γνήσια χωρικά
+ * το «profiles must lie in the XY plane» του Revit) και το {@link BimPoint} (γνήσια χωρικά
  * δεδομένα: σκάλες, MEP routing, στέγες, breaklines).
  *
  * @see docs/centralized-systems/reference/adrs/ADR-789-planar-point-vocabulary.md
@@ -74,15 +74,15 @@ export interface PlanarPoint {
  * σημείο εγγραφής (excess property check σε object literal) — **η ακριβής μορφή** και
  * των 12 παραβιάσεων. Το ίδιο το δέντρο είχε ήδη το αποτύπωμα της αποτυχίας τους:
  * το `wall-covering-strip-geometry.ts` έγραφε στο σχόλιο «Optional cached **2D** strip
- * outline» ενώ ο τύπος από κάτω έλεγε `Point3D[]`.
+ * outline» ενώ ο τύπος από κάτω έλεγε `BimPoint[]`.
  *
- * ⚠️ **ΔΕΝ αντικαθιστά το {@link Polygon3D}**: εκείνο μένει για ό,τι είναι **γνήσια
+ * ⚠️ **ΔΕΝ αντικαθιστά το {@link BimPolygon}**: εκείνο μένει για ό,τι είναι **γνήσια
  * χωρικό**, και είναι μετρημένο ποιο — κάγκελα (`baseElevationMm`), σκάλες (`baseZ`,
  * μεταβάλλεται ανά πατούσα), φρεάτιο σκάλας (`outlineZ` = πάνω παρειά πλάκας).
- * Καθολική στένωση του `Polygon3D` θα έσπαγε **ακριβώς** αυτά.
+ * Καθολική στένωση του `BimPolygon` θα έσπαγε **ακριβώς** αυτά.
  *
  * ⚠️ **Το Zod schema ΔΕΝ στενεύει μαζί του — και είναι αποδεδειγμένο γιατί.** Το
- * `Point3DSchema` είναι `.strict()`, οπότε αφαίρεση του `z` κάνει **κάθε παλιό έγγραφο
+ * `BimPointSchema` είναι `.strict()`, οπότε αφαίρεση του `z` κάνει **κάθε παλιό έγγραφο
  * να απορρίπτεται** (`unrecognized_keys`, επαληθεύτηκε εκτελώντας σε zod 3.25.76).
  * Κρατάμε `z: z.number().finite().optional()` στην ανάγνωση και γράφουμε 2Δ — αυτός
  * είναι ο **νόμος του Postel** («conservative in what you send, liberal in what you
@@ -94,27 +94,70 @@ export interface PlanProfile {
   readonly vertices: readonly Point2D[];
 }
 
-// ─── 3D Geometry primitives ───────────────────────────────────────────────────
+// ─── BIM entity geometry vocabulary (ΜΠΟΡΕΙ να κουβαλά υψόμετρο) ─────────────
 
-export interface Point3D {
-  readonly x: number;
-  readonly y: number;
-  readonly z?: number; // mm, optional — 3D-readiness G11
+/**
+ * **Σημείο οντότητας BIM** — `x`/`y` στην κάτοψη, με υψόμετρο που **μπορεί** να
+ * ταξιδεύει μαζί του (ADR-792).
+ *
+ * 🔑 **Το όνομα ΔΕΝ λέει «3D», και αυτό είναι το συμβόλαιο.** Μέχρι το ADR-792
+ * λεγόταν `Point3D` — ίδιο όνομα με το {@link Point3D} του `rendering/types/Types`,
+ * που εγγυάται `z`. Μετρημένο τότε: **77% των 216 καταναλωτών του δεν διάβαζαν
+ * ΠΟΤΕ `.z`**, και **46%** των αναγνώσεων που υπήρχαν ήταν `z ?? 0` — δηλαδή «υπόθεσε
+ * ότι δεν είναι εκεί». Ένα όνομα που υπόσχεται τρίτη διάσταση την οποία δεν εγγυάται
+ * είναι ψέμα, και το ψέμα το πλήρωναν οι αναγνώστες.
+ *
+ * 🏆 **Ο κανόνας είναι ομόφωνος στον κλάδο: το όνομα δηλώνει τι ΕΓΓΥΑΤΑΙ.**
+ * Rhino `Point2d`/`Point3d` · Revit `UV`/`XYZ` · ArchiCAD `API_Coord`/`API_Coord3D` ·
+ * three.js `Vector2`/`Vector3` · Cinema 4D `Vector`/`Vector4d`. **Κανένας** δεν βάζει
+ * διάσταση σε όνομα που δεν την εγγυάται.
+ *
+ * 🔑 Το ακριβές μας ανάλογο είναι το **JTS**: το `Coordinate` του κουβαλά `z` που
+ * **μπορεί να είναι `NaN`** («*If a Z-ordinate value is not specified or not defined,
+ * constructed coordinates have a Z-ordinate of NaN*») — ίδιο πρόβλημα. Η λύση τους
+ * είναι **όνομα χωρίς αξίωση διάστασης**, και κρατούν το ρητό `CoordinateXY` για ό,τι
+ * εγγυάται δύο. **Πού τους ξεπερνάμε**: το JTS αφήνει τον αναγνώστη να θυμηθεί
+ * `isNaN(z)` σε χρόνο εκτέλεσης· εδώ το `z?` το επιβάλλει ο **μεταγλωττιστής**.
+ *
+ * ⚠️ **Γνήσια χωρικά δεδομένα** (σκάλες: κάθε πατούσα σε άλλο ύψος· έλικες· σπείρες)
+ * χρησιμοποιούν το {@link Point3D} του `rendering/types/Types` — **`z` υποχρεωτικό**.
+ * ΜΗΝ τα ενώσεις: δύο ερωτήματα ⇒ δύο ονόματα (ADR-749).
+ *
+ * ⚠️ Για **παράμετρο** που δεν διαβάζει `z`, δήλωσε {@link PlanarPoint} — ΠΟΤΕ αυτό.
+ *
+ * @see docs/centralized-systems/reference/adrs/ADR-792-bim-point-vocabulary.md
+ */
+export interface BimPoint extends PlanarPoint {
+  readonly z?: number; // mm — προαιρετικό· το υψόμετρο ζει κανονικά στον όροφο
 }
 
-export interface Polyline3D {
-  readonly points: readonly Point3D[];
+/** Ανοιχτή/κλειστή πολυγραμμή οντότητας BIM. Οι κορυφές **μπορεί** να έχουν `z`. */
+export interface BimPolyline {
+  readonly points: readonly BimPoint[];
   readonly closed?: boolean;
 }
 
-export interface Polygon3D {
-  readonly vertices: readonly Point3D[];
-  // Vertices form a closed polygon (last point connects to first)
+/**
+ * Κλειστό πολύγωνο οντότητας BIM (η τελευταία κορυφή ενώνεται με την πρώτη).
+ *
+ * ⚠️ Δεν είναι το ίδιο με το `Polygon3D` του `stair-types`, που είναι **σκέτος
+ * πίνακας** κορυφών με **εγγυημένο** `z`. Μέχρι το ADR-792 και τα δύο λέγονταν
+ * `Polygon3D` — **54 έναντι 56** αρχεία, ένα αντικείμενο κι ένας πίνακας.
+ */
+export interface BimPolygon {
+  readonly vertices: readonly BimPoint[];
 }
 
-export interface BoundingBox3D {
-  readonly min: Point3D;
-  readonly max: Point3D;
+/**
+ * Περιβάλλον κουτί οντότητας BIM.
+ *
+ * ⚠️ Επειδή το `z` του {@link BimPoint} είναι προαιρετικό, ένα `BimBounds` **δεν
+ * αποδεικνύει ύψος**. Δες ADR-789 §9 #3: το `polygonBbox` επιστρέφει `z: 0` σε `min`
+ * ΚΑΙ σε `max`, δηλαδή κουτί με μηδενικό ύψος — ανοιχτό, με όνομα και αριθμό.
+ */
+export interface BimBounds {
+  readonly min: BimPoint;
+  readonly max: BimPoint;
 }
 
 // ─── BIM Element taxonomy ────────────────────────────────────────────────────

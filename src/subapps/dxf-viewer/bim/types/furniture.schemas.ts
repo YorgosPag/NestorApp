@@ -9,7 +9,7 @@
 
 import { z } from 'zod';
 import { IfcGuidSchema, IfcPropertySetSchema } from './ifc-entity-mixin';
-import { Point3DSchema } from './geometry.schemas';
+import { BimPointSchema } from './geometry.schemas';
 import { SCENE_HOST_FIELDS } from './shared-params.schemas';
 
 // ─── Point3D ──────────────────────────────────────────────────────────────────
@@ -41,7 +41,7 @@ export const FurnitureParamsSchema = z
   .object({
     kind: FurnitureKindSchema,
     assetId: z.string().min(1),
-    position: Point3DSchema,
+    position: BimPointSchema,
     rotationDeg: z.number().finite(),
     widthMm: z.number().positive(),
     depthMm: z.number().positive(),
