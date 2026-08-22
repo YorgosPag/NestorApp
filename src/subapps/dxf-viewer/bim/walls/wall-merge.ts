@@ -22,7 +22,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import type { WallEntity, WallParams } from '../types/wall-types';
 import type { OpeningEntity } from '../types/opening-types';
 import type { OpeningUpdate } from './wall-split';
@@ -223,7 +223,7 @@ function extendWallEndpointTo(params: WallParams, target: Point2D): WallParams {
   const {
     startMiter: _sm, endMiter: _em, measurementLength: _ml, ...rest
   } = params;
-  const tgt: Point3D = { x: target.x, y: target.y, z: 0 };
+  const tgt: BimPoint = { x: target.x, y: target.y, z: 0 };
   return dStart <= dEnd ? { ...rest, start: tgt } : { ...rest, end: tgt };
 }
 
@@ -237,7 +237,7 @@ interface Endpoint {
 
 /** The four wall endpoints projected on the primary axis, with owning bevel. */
 function collectEndpoints(a: WallEntity, b: WallEntity, axis: Axis): Endpoint[] {
-  const mk = (p: Point3D, bevel?: number): Endpoint => {
+  const mk = (p: BimPoint, bevel?: number): Endpoint => {
     const pt = { x: p.x, y: p.y };
     return { pt, scalar: scalarAlong(axis, pt), bevel };
   };
@@ -250,19 +250,43 @@ function collectEndpoints(a: WallEntity, b: WallEntity, axis: Axis): Endpoint[] 
 }
 
 /**
+ * Τα ΔΥΟ ΑΚΡΑΙΑ άκρα των δύο τοίχων προβεβλημένα στον πρωτεύοντα άξονα (outer-to-outer,
+ * το κενό γεφυρώνεται).
+ *
+ * **Γιατί υπάρχει (N.18):** ο ίδιος βρόχος ήταν γραμμένος δύο φορές — μία για το ghost
+ * (`computeMergedGhostAxis`) και μία για το commit (`buildMergedWallParams`). Είναι
+ * **ακριβώς** το ζεύγος όπου η απόκλιση δεν φαίνεται ως σφάλμα αλλά ως *«το preview
+ * έδειχνε αλλού από ό,τι έγινε»* — η κλάση βλάβης που ολόκληρο το ADR-398 υπάρχει για
+ * να αποκλείσει (preview ≡ commit).
+ *
+ * ⚠️ Ο **τύπος επιστροφής** των δύο καλούντων μένει διαφορετικός σκόπιμα: το ghost θέλει
+ * `Point2D` (γραμμή στην οθόνη), το commit `BimPoint` (αποθηκευμένη γεωμετρία). Αυτό
+ * είναι πραγματική διαφορά — γι' αυτό μοιράζονται το **ποια** άκρα, όχι το **σε τι
+ * σχήμα** τα γράφουν.
+ */
+function axisExtremes(
+  a: WallEntity,
+  b: WallEntity,
+  axis: NonNullable<ReturnType<typeof wallAxis>>,
+): { readonly lo: Endpoint; readonly hi: Endpoint } {
+  const eps = collectEndpoints(a, b, axis);
+  let lo = eps[0]!;
+  let hi = eps[0]!;
+  for (const e of eps) {
+    if (e.scalar < lo.scalar) lo = e;
+    if (e.scalar > hi.scalar) hi = e;
+  }
+  return { lo, hi };
+}
+
+/**
  * World-space endpoints of the merged wall axis: the two extreme projections of
  * both walls' endpoints on the primary axis (outer-to-outer, gap bridged).
  */
 export function computeMergedGhostAxis(a: WallEntity, b: WallEntity): readonly [Point2D, Point2D] | null {
   const axis = wallAxis(a);
   if (!axis) return null;
-  const eps = collectEndpoints(a, b, axis);
-  let lo = eps[0];
-  let hi = eps[0];
-  for (const e of eps) {
-    if (e.scalar < lo.scalar) lo = e;
-    if (e.scalar > hi.scalar) hi = e;
-  }
+  const { lo, hi } = axisExtremes(a, b, axis);
   const at = (s: number): Point2D => ({ x: axis.origin.x + axis.u.x * s, y: axis.origin.y + axis.u.y * s });
   return [at(lo.scalar), at(hi.scalar)];
 }
@@ -336,14 +360,8 @@ export function computeWallGap(a: WallEntity, b: WallEntity): WallGap | null {
 export function buildMergedWallParams(a: WallEntity, b: WallEntity): WallParams {
   const axis = wallAxis(a);
   if (!axis) return a.params;
-  const eps = collectEndpoints(a, b, axis);
-  let lo = eps[0];
-  let hi = eps[0];
-  for (const e of eps) {
-    if (e.scalar < lo.scalar) lo = e;
-    if (e.scalar > hi.scalar) hi = e;
-  }
-  const at = (s: number): Point3D => ({
+  const { lo, hi } = axisExtremes(a, b, axis);
+  const at = (s: number): BimPoint => ({
     x: axis.origin.x + axis.u.x * s,
     y: axis.origin.y + axis.u.y * s,
     z: 0,
