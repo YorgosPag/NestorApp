@@ -28,11 +28,16 @@
 
 import type {
   BimEntity,
-  BimBounds,
+  PlanBounds,
   BimPoint,
   BimPolygon,
 } from './bim-base';
 import type { SceneUnits } from '../../utils/scene-units';
+// N.18 / CHECK 3.28 — ο πίνακας ζούσε ΔΥΟ φορές με το ΙΔΙΟ όνομα (column + foundation)
+// και τα σχόλια το παραδέχονταν («mirror κολώνας») χωρίς να το διορθώνουν. Μία τιμή πλέον·
+// το όνομα του τομέα μένει ως ψευδώνυμο ώστε κανένας καταναλωτής να μην αλλάξει.
+import type { BoxAnchor } from './anchor-offsets';
+export { ANCHOR_OFFSETS } from './anchor-offsets';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
 import type {
   PadReinforcement,
@@ -53,10 +58,7 @@ export type FoundationProfile = 'flat' | 'stepped' | 'sloped';
  * 9-position anchor — ποιο σημείο της βάσης του πεδίλου εδράζεται στο
  * `position` (mirror κολώνας). Μόνο για `pad`.
  */
-export type FoundationAnchor =
-  | 'center'
-  | 'n' | 's' | 'e' | 'w'
-  | 'nw' | 'ne' | 'sw' | 'se';
+export type FoundationAnchor = BoxAnchor;
 
 /**
  * Justification (Location Line) γραμμικού πεδίλου/συνδετήριας — ΠΟΥ κάθεται το band
@@ -233,7 +235,7 @@ export type FoundationParams =
 export interface FoundationGeometry {
   /** BimPolygon — οριζόντιο ίχνος (closed CCW). */
   readonly footprint: BimPolygon;
-  readonly bbox: BimBounds;
+  readonly bbox: PlanBounds;
   /** m². Εμβαδό ίχνους. */
   readonly area: number;
   /** m³. area × thickness / 1000. */
@@ -322,22 +324,6 @@ export const JUSTIFICATION_NORMAL_SIGN: Readonly<Record<StripJustification, numb
 export const FOUNDATION_ANCHOR_CYCLE_ORDER: readonly FoundationAnchor[] = [
   'center', 'n', 'e', 's', 'w', 'ne', 'se', 'sw', 'nw',
 ];
-
-/**
- * Anchor → unit-fraction offset within the (width × length) bounding box,
- * BEFORE rotation. `dx`/`dy` ∈ {-0.5, 0, +0.5} (mirror κολώνας ANCHOR_OFFSETS).
- */
-export const ANCHOR_OFFSETS: Readonly<Record<FoundationAnchor, { dx: number; dy: number }>> = {
-  'center': { dx:  0,    dy:  0    },
-  'n':      { dx:  0,    dy:  0.5  },
-  's':      { dx:  0,    dy: -0.5  },
-  'e':      { dx:  0.5,  dy:  0    },
-  'w':      { dx: -0.5,  dy:  0    },
-  'nw':     { dx: -0.5,  dy:  0.5  },
-  'ne':     { dx:  0.5,  dy:  0.5  },
-  'sw':     { dx: -0.5,  dy: -0.5  },
-  'se':     { dx:  0.5,  dy: -0.5  },
-};
 
 // ─── Default params factory (pure — μηδέν enterprise-id) ──────────────────────
 

@@ -31,11 +31,16 @@
 
 import type {
   BimEntity,
-  BimBounds,
+  PlanBounds,
   BimPoint,
   PlanProfile,
 } from './bim-base';
 import type { Point2D } from '../../rendering/types/Types';
+// N.18 / CHECK 3.28 — ο πίνακας ζούσε ΔΥΟ φορές με το ΙΔΙΟ όνομα (column + foundation)
+// και τα σχόλια το παραδέχονταν («mirror κολώνας») χωρίς να το διορθώνουν. Μία τιμή πλέον·
+// το όνομα του τομέα μένει ως ψευδώνυμο ώστε κανένας καταναλωτής να μην αλλάξει.
+import type { BoxAnchor } from './anchor-offsets';
+export { ANCHOR_OFFSETS } from './anchor-offsets';
 import type { SceneUnits } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
 import type { ColumnBaseBinding, ColumnTopBinding } from './bim-binding';
@@ -65,10 +70,7 @@ export type ColumnKind =
  * 9-position anchor — ποιο σημείο της διατομής εδράζεται στο `position`.
  *   center | n | s | e | w | nw | ne | sw | se
  */
-export type ColumnAnchor =
-  | 'center'
-  | 'n' | 's' | 'e' | 'w'
-  | 'nw' | 'ne' | 'sw' | 'se';
+export type ColumnAnchor = BoxAnchor;
 
 // ─── Variant-specific param blocks ───────────────────────────────────────────
 
@@ -398,7 +400,7 @@ export interface ColumnGeometry {
   /** **2Δ προφίλ** οριζόντιας τομής (ADR-789 Φάση Δ). Closed CCW. Το υψόμετρο της
    *  τομής ΔΕΝ ζει στις κορυφές — ζει στο `elevation` της στήλης. */
   readonly footprint: PlanProfile;
-  readonly bbox: BimBounds;
+  readonly bbox: PlanBounds;
   /** m². Εμβαδό τομής. */
   readonly area: number;
   /** m³. area × height / 1000. */
@@ -529,28 +531,6 @@ export const MIN_I_PLATE_THICKNESS_MM = 5;
  */
 export const DEFAULT_U_LEG_THICKNESS_MM = 100;
 export const DEFAULT_U_BASE_THICKNESS_MM = 130;
-
-/**
- * Anchor → unit-fraction offset within the (width × depth) bounding box,
- * BEFORE rotation. `dx`/`dy` ∈ {-0.5, 0, +0.5}. Geometry pipeline εφαρμόζει
- * `position - (dx × width, dy × depth)` ώστε το anchor σημείο να συμπίπτει
- * με το clicked `position`.
- *
- *   nw  n  ne
- *   w   c  e
- *   sw  s  se
- */
-export const ANCHOR_OFFSETS: Readonly<Record<ColumnAnchor, { dx: number; dy: number }>> = {
-  'center': { dx:  0,    dy:  0    },
-  'n':      { dx:  0,    dy:  0.5  },
-  's':      { dx:  0,    dy: -0.5  },
-  'e':      { dx:  0.5,  dy:  0    },
-  'w':      { dx: -0.5,  dy:  0    },
-  'nw':     { dx: -0.5,  dy:  0.5  },
-  'ne':     { dx:  0.5,  dy:  0.5  },
-  'sw':     { dx: -0.5,  dy: -0.5  },
-  'se':     { dx:  0.5,  dy: -0.5  },
-};
 
 /** Ring order για Tab cycling στο column-tool (9-state). */
 export const ANCHOR_CYCLE_ORDER: readonly ColumnAnchor[] = [
