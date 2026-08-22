@@ -8,12 +8,12 @@
  */
 
 import { computeRevealJambQuads } from '../reveal-lining-geometry';
-import type { Point3D } from '../../types/bim-base';
+import type { BimPoint } from '../../types/bim-base';
 
 /** Outline ανοίγματος (CCW: start-outer, end-outer, end-inner, start-inner). */
 function buildOutline(
   cx: number, cy: number, angle: number, width: number, thickness: number,
-): Point3D[] {
+): BimPoint[] {
   const ux = Math.cos(angle), uy = Math.sin(angle);
   const px = -uy, py = ux;
   const hw = width / 2, ht = thickness / 2;
@@ -26,7 +26,7 @@ function buildOutline(
 }
 
 /** Μοναδιαίος άξονας ανοίγματος (μέσο start-πλευράς → μέσο end-πλευράς). */
-function axisOf(outline: Point3D[]): { ax: number; ay: number } {
+function axisOf(outline: BimPoint[]): { ax: number; ay: number } {
   const [v0, v1, v2, v3] = outline;
   const sx = (v0.x + v3.x) / 2, sy = (v0.y + v3.y) / 2;
   const ex = (v1.x + v2.x) / 2, ey = (v1.y + v2.y) / 2;
@@ -82,7 +82,7 @@ describe('computeRevealJambQuads (ADR-396 Z4 — παραστάδες, κάθε�
   it('null guards (λίγες κορυφές / μηδέν πάχος / degenerate άξονας)', () => {
     expect(computeRevealJambQuads([{ x: 0, y: 0, z: 0 }], 50)).toBeNull();
     expect(computeRevealJambQuads(buildOutline(0, 0, 0, 1000, 250), 0)).toBeNull();
-    const deg: Point3D[] = [
+    const deg: BimPoint[] = [
       { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 },
     ];
     expect(computeRevealJambQuads(deg, 50)).toBeNull();

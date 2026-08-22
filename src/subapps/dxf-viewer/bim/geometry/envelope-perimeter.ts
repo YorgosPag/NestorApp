@@ -6,7 +6,7 @@
  * endpoint· 2 κλειδιά/άκρο βρίσκουν πάντα το shared corner. @see ADR-396 §3.1
  */
 
-import type { Point3D, Polyline3D } from '../types/bim-base';
+import type { BimPoint, BimPolyline } from '../types/bim-base';
 import type { WallGeometry, WallKind, WallParams } from '../types/wall-types';
 import type { SceneUnits } from '../../utils/scene-units';
 import { mmToSceneUnits } from '../../utils/scene-units';
@@ -48,8 +48,8 @@ export interface WallForEnvelope {
 }
 
 export interface EnvelopeChain {
-  readonly exteriorFaceLoop: Polyline3D;
-  readonly insulationOuterLoop: Polyline3D;
+  readonly exteriorFaceLoop: BimPolyline;
+  readonly insulationOuterLoop: BimPolyline;
   readonly closed: boolean;
   /**
    * ADR-396 v2 (Phase 1) — true όταν το component **περικλείει χώρο** (κύκλος στο
@@ -109,7 +109,7 @@ function dist2(a: { x: number; y: number }, b: { x: number; y: number }): number
   return dx * dx + dy * dy;
 }
 
-function meanPoint(points: readonly Point3D[]): { x: number; y: number } {
+function meanPoint(points: readonly BimPoint[]): { x: number; y: number } {
   return polygonCentroid(points);
 }
 
@@ -129,9 +129,9 @@ export function selectExteriorFace(
  *   - Beveled walls (real BIM data) → match μέσω face corner key.
  */
 function wallEndKeys(
-  axisPoint: Point3D,
-  outerCorner: Point3D,
-  innerCorner: Point3D,
+  axisPoint: BimPoint,
+  outerCorner: BimPoint,
+  innerCorner: BimPoint,
   snap: number,
 ): string[] {
   const k1 = quantizeKey(axisPoint, snap);
@@ -146,8 +146,8 @@ function wallEndKeys(
 
 function allEndKeys(
   geometry: WallGeometry,
-  axisStart: Point3D,
-  axisEnd: Point3D,
+  axisStart: BimPoint,
+  axisEnd: BimPoint,
   snap: number,
 ): { startKeys: string[]; endKeys: string[] } {
   const ol = geometry.outerEdge.points;
@@ -211,7 +211,7 @@ function assignNodeKeys(
 }
 
 /** Raw endpoints (ΟΧΙ trimmed) για column bridge distance check. */
-function endpointsOf(params: WallParams, kind: WallKind): { start: Point3D; end: Point3D } {
+function endpointsOf(params: WallParams, kind: WallKind): { start: BimPoint; end: BimPoint } {
   if (kind === 'polyline' && params.polylineVertices && params.polylineVertices.length >= 2) {
     const pv = params.polylineVertices;
     return { start: pv[0], end: pv[pv.length - 1] };
@@ -228,7 +228,7 @@ function componentCentroid(
   byId: Map<string, KeyedWall>,
   colById: Map<string, PreparedColumn>,
 ): { x: number; y: number } {
-  const pts: Point3D[] = [];
+  const pts: BimPoint[] = [];
   const seenCols = new Set<string>();
   for (const id of ids) {
     const k = byId.get(id);
@@ -266,7 +266,7 @@ function collectColumnIds(ids: readonly string[], byId: Map<string, KeyedWall>):
 // FACE LOOP ASSEMBLY
 // ============================================================================
 
-function appendDeduped(loop: Point3D[], pts: readonly Point3D[], snap: number): void {
+function appendDeduped(loop: BimPoint[], pts: readonly BimPoint[], snap: number): void {
   const snap2 = snap * snap;
   for (const p of pts) {
     const last = loop[loop.length - 1];
@@ -279,7 +279,7 @@ function orientedFace(
   k: KeyedWall,
   centroid: { x: number; y: number },
   forward: boolean,
-): Point3D[] {
+): BimPoint[] {
   const faceKind = selectExteriorFace(k.geometry, centroid);
   const face = (faceKind === 'outer' ? k.geometry.outerEdge : k.geometry.innerEdge).points;
   return forward ? [...face] : [...face].reverse();
@@ -293,11 +293,11 @@ function assembleFaceLoop(
   colById: Map<string, PreparedColumn>,
   centroid: { x: number; y: number },
   snap: number,
-): Point3D[] {
+): BimPoint[] {
   const n = ids.length;
 
   // Pass A — orientation: forward = endKeys contains the exitKey.
-  const oriented: Point3D[][] = [];
+  const oriented: BimPoint[][] = [];
   for (let i = 0; i < n; i++) {
     const k = byId.get(ids[i]);
     if (!k) { oriented.push([]); continue; }
@@ -314,7 +314,7 @@ function assembleFaceLoop(
   }
 
   // Pass B — concat with column arcs at bridged junctions.
-  const loop: Point3D[] = [];
+  const loop: BimPoint[] = [];
   for (let i = 0; i < n; i++) {
     appendDeduped(loop, oriented[i], snap);
     const nextIdx = i < n - 1 ? i + 1 : (closed ? 0 : -1);
@@ -334,7 +334,7 @@ function assembleFaceLoop(
 // OFFSET + PERIMETER
 // ============================================================================
 
-function meanDistToCentroid(pts: readonly Point3D[], c: { x: number; y: number }): number {
+function meanDistToCentroid(pts: readonly BimPoint[], c: { x: number; y: number }): number {
   if (pts.length === 0) return 0;
   let sum = 0;
   for (const p of pts) sum += Math.sqrt(dist2(p, c));
@@ -342,11 +342,11 @@ function meanDistToCentroid(pts: readonly Point3D[], c: { x: number; y: number }
 }
 
 function offsetLoopOutward(
-  loop: readonly Point3D[],
+  loop: readonly BimPoint[],
   thicknessCanvas: number,
   centroid: { x: number; y: number },
   closed: boolean,
-): Point3D[] {
+): BimPoint[] {
   if (thicknessCanvas <= 0 || loop.length < 2) return [...loop];
   // A closed face loop carries its first point repeated at the end. Offsetting it
   // as an open polyline mis-mitres that seam vertex → a `thickness`-long diagonal

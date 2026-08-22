@@ -13,7 +13,7 @@
  * @see bim/geometry/foundation-grid-boq.ts — `foundationStripNetGeometry` (net-volume precedent)
  */
 
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import {
   pointInPolygon,
   projectPolygonOnAxis,
@@ -97,7 +97,7 @@ function lineEdgeT(a: Pt2, b: Pt2, p: { x: number; y: number }, q: { x: number; 
 }
 
 /** Όλα τα crossings (unclamped t) της ευθείας `a→b` με τις ακμές ΟΛΩΝ των cutters. */
-function allLineCrossings(a: Pt2, b: Pt2, cutters: readonly (readonly Point3D[])[]): number[] {
+function allLineCrossings(a: Pt2, b: Pt2, cutters: readonly (readonly BimPoint[])[]): number[] {
   const ts: number[] = [];
   for (const poly of cutters) {
     const n = poly.length;
@@ -116,7 +116,7 @@ function allLineCrossings(a: Pt2, b: Pt2, cutters: readonly (readonly Point3D[])
  *  - `b` έξω, κολόνα πιο πέρα → extend στην κοντινή παρειά (μικρότερο crossing με t>1,
  *    εντός `AXIS_EXT_CAP`).
  */
-function contactT(a: Pt2, b: Pt2, cutters: readonly (readonly Point3D[])[]): number | null {
+function contactT(a: Pt2, b: Pt2, cutters: readonly (readonly BimPoint[])[]): number | null {
   const ts = allLineCrossings(a, b, cutters);
   if (ts.length === 0) return null;
   const bInside = cutters.some((poly) => pointInPolygon(b, poly));
@@ -146,7 +146,7 @@ export function computeBeamAxisToColumnContact(
   axisStart: Pt2,
   axisEnd: Pt2,
   beamOutline: readonly Pt2[],
-  columnFootprints: readonly (readonly Point3D[])[],
+  columnFootprints: readonly (readonly BimPoint[])[],
 ): [Pt2, Pt2] | null {
   if (beamOutline.length < 3 || columnFootprints.length === 0) return null;
   const beamBbox = bboxOf(beamOutline);

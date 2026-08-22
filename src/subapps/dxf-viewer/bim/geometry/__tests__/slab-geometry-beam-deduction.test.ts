@@ -22,7 +22,7 @@ import { computeSlabOpeningGeometry } from '../slab-opening-geometry';
 import { polygonIntersectionAreaMm2, clipPolygonBySH } from '../shared/polygon-utils';
 import type { SlabParams } from '../../types/slab-types';
 import type { SlabOpeningEntity, SlabOpeningParams } from '../../types/slab-opening-types';
-import type { Point3D, Polygon3D } from '../../types/bim-base';
+import type { BimPoint, BimPolygon } from '../../types/bim-base';
 
 // ─── Test fixtures ────────────────────────────────────────────────────────────
 
@@ -81,7 +81,7 @@ const beamOutside = (): BeamFootprintForDeduction => ({
   depthMm: 400,
 });
 
-function makeRectVertices(x0: number, y0: number, x1: number, y1: number): Point3D[] {
+function makeRectVertices(x0: number, y0: number, x1: number, y1: number): BimPoint[] {
   return [
     { x: x0, y: y0, z: 0 },
     { x: x1, y: y0, z: 0 },
@@ -314,8 +314,8 @@ describe('computeSlabMaxFreeSpanM — analytical free span (Phase 3.8)', () => {
   it('21. two parallel walls on opposite sides → clear span = slab height − wall widths', () => {
     // 4m × 4m slab. Bottom wall y:[-300, 0], top wall y:[4000, 4300].
     // Slab spans between them: 4000 - 0 = 4000mm → 4m clear span.
-    const bottomWall: Polygon3D = { vertices: makeRectVertices(0, -300, 4000, 0) };
-    const topWall: Polygon3D = { vertices: makeRectVertices(0, 4000, 4000, 4300) };
+    const bottomWall: BimPolygon = { vertices: makeRectVertices(0, -300, 4000, 0) };
+    const topWall: BimPolygon = { vertices: makeRectVertices(0, 4000, 4000, 4300) };
     const span = computeSlabMaxFreeSpanM(SLAB_VERTS, [bottomWall, topWall]);
     expect(span).toBeCloseTo(4, 2); // clear span between inner faces (y=0 to y=4000) = 4m
   });
@@ -323,8 +323,8 @@ describe('computeSlabMaxFreeSpanM — analytical free span (Phase 3.8)', () => {
   it('22. walls partially inside slab — inner face at slab edge', () => {
     // Bottom wall at y:[-200, 200] (inner face y=200), top at y:[3800, 4200] (inner face y=3800).
     // Clear span = 3800 - 200 = 3600mm = 3.6m.
-    const bottomWall: Polygon3D = { vertices: makeRectVertices(0, -200, 4000, 200) };
-    const topWall: Polygon3D = { vertices: makeRectVertices(0, 3800, 4000, 4200) };
+    const bottomWall: BimPolygon = { vertices: makeRectVertices(0, -200, 4000, 200) };
+    const topWall: BimPolygon = { vertices: makeRectVertices(0, 3800, 4000, 4200) };
     const span = computeSlabMaxFreeSpanM(SLAB_VERTS, [bottomWall, topWall]);
     expect(span).toBeCloseTo(3.6, 2);
   });
@@ -332,8 +332,8 @@ describe('computeSlabMaxFreeSpanM — analytical free span (Phase 3.8)', () => {
   it('23. two parallel beams as supports → uses beam inner faces', () => {
     // Beam A fully inside at y:200–450 (inner face 450), Beam B at y:3550–3800 (inner face 3550).
     // Clear span = 3550 - 450 = 3100mm = 3.1m.
-    const beamA: Polygon3D = { vertices: makeRectVertices(500, 200, 3500, 450) };
-    const beamB: Polygon3D = { vertices: makeRectVertices(500, 3550, 3500, 3800) };
+    const beamA: BimPolygon = { vertices: makeRectVertices(500, 200, 3500, 450) };
+    const beamB: BimPolygon = { vertices: makeRectVertices(500, 3550, 3500, 3800) };
     const span = computeSlabMaxFreeSpanM(SLAB_VERTS, [beamA, beamB]);
     expect(span).toBeCloseTo(3.1, 2);
   });
@@ -341,8 +341,8 @@ describe('computeSlabMaxFreeSpanM — analytical free span (Phase 3.8)', () => {
   it('24. span clamped to directional slab extent (never exceeds Feret diameter)', () => {
     // Supports far outside slab → span = full slab extent in optimum direction.
     // For 4m×4m square: max Feret (diagonal) ≈ 5.657m.
-    const farBelow: Polygon3D = { vertices: makeRectVertices(-10000, -10000, 4000, -5000) };
-    const farAbove: Polygon3D = { vertices: makeRectVertices(-10000, 9000, 4000, 10000) };
+    const farBelow: BimPolygon = { vertices: makeRectVertices(-10000, -10000, 4000, -5000) };
+    const farAbove: BimPolygon = { vertices: makeRectVertices(-10000, 9000, 4000, 10000) };
     const span = computeSlabMaxFreeSpanM(SLAB_VERTS, [farBelow, farAbove]);
     const maxFeret = Math.hypot(4, 4); // 4m×4m diagonal ≈ 5.657m
     expect(span).toBeLessThanOrEqual(maxFeret + 0.01);

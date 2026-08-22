@@ -14,10 +14,10 @@ import {
 } from '../roof-eave-detail';
 import { roofOverhangOffsetLines } from '../roof-eave-plan-geom';
 import { mmToSceneUnits } from '../../../utils/scene-units';
-import type { Point3D } from '../../types/bim-base';
+import type { BimPoint } from '../../types/bim-base';
 import type { RoofEdgeSlope, RoofRidgeLine, RoofSoffitMode } from '../../types/roof-types';
 
-const RECT: Point3D[] = [
+const RECT: BimPoint[] = [
   { x: 0, y: 0, z: 0 },
   { x: 4000, y: 0, z: 0 },
   { x: 4000, y: 3000, z: 0 },
@@ -116,7 +116,7 @@ describe('buildRoofEaveDetail — geometry', () => {
 
 describe('buildRoofEaveDetail — mitered γωνίες (τετράρριχτη/hip)', () => {
   // Τετράγωνο footprint· και οι 4 ακμές eaves ίσης κλίσης → συμμετρική πυραμίδα.
-  const SQUARE: Point3D[] = [
+  const SQUARE: BimPoint[] = [
     { x: 0, y: 0, z: 0 },
     { x: 4000, y: 0, z: 0 },
     { x: 4000, y: 4000, z: 0 },
@@ -192,7 +192,7 @@ describe('buildRoofEaveDetail — rake split στον κορφιά (δίρριχ
 });
 
 describe('extendRidgeToOverhang — κορφιάδες πάνω στην προέκταση (#4)', () => {
-  const SQUARE: Point3D[] = [
+  const SQUARE: BimPoint[] = [
     { x: 0, y: 0, z: 0 },
     { x: 4000, y: 0, z: 0 },
     { x: 4000, y: 4000, z: 0 },

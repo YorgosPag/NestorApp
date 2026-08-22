@@ -26,7 +26,7 @@ import type { MultiPolygon, Ring, Pair } from 'polygon-clipping';
 
 import { safeUnion } from './shared/safe-polygon-boolean';
 import { closedRingFromEdges } from './shared/polygon-utils';
-import type { Point3D, Polyline3D } from '../types/bim-base';
+import type { BimPoint, BimPolyline } from '../types/bim-base';
 import type { BeamParams } from '../types/beam-types';
 import type { SceneUnits } from '../../utils/scene-units';
 import { mmToSceneUnits } from '../../utils/scene-units';
@@ -51,8 +51,8 @@ export interface BeamForFootprint {
 
 /** Μία ακμή του περιγράμματος + ποια οντότητα την έδωσε (null = νέα κορυφή τομής). */
 export interface FootprintEdge {
-  readonly a: Point3D;
-  readonly b: Point3D;
+  readonly a: BimPoint;
+  readonly b: BimPoint;
   readonly sourceEntityId: string | null;
   readonly sourceEntityType: FootprintSourceType | null;
 }
@@ -60,7 +60,7 @@ export interface FootprintEdge {
 /** Ένα κλειστό δαχτυλίδι του περιγράμματος (εξώτατο όριο ή τρύπα). */
 export interface FootprintRing {
   /** Κλειστό ring (canvas units· χωρίς διπλή κλείνουσα κορυφή). */
-  readonly points: Polyline3D;
+  readonly points: BimPolyline;
   /** 1:1 με τις ακμές του ring (edge i = points[i] → points[i+1], wrap-around). */
   readonly edges: readonly FootprintEdge[];
   /** true = τρύπα (αίθριο/δωμάτιο)· false = εξώτατο όριο. */
@@ -88,15 +88,15 @@ export interface BuildingFootprintResult {
 // ============================================================================
 
 interface InputEdge {
-  readonly a: Point3D;
-  readonly b: Point3D;
+  readonly a: BimPoint;
+  readonly b: BimPoint;
   readonly entityId: string;
   readonly entityType: FootprintSourceType;
 }
 
 interface CollectedFootprints {
   /** Κάθε στοιχείο = ένα closed polygon (translated σε local origin). */
-  readonly polygons: Point3D[][];
+  readonly polygons: BimPoint[][];
   /** Όλες οι ακμές εισόδου (translated) για το per-edge attribution. */
   readonly inputEdges: InputEdge[];
   /** Local-origin offset που αφαιρέθηκε (για επαναφορά στην έξοδο). */
@@ -110,7 +110,7 @@ const EMPTY_RESULT: BuildingFootprintResult = { components: [], outerRings: [], 
 // ============================================================================
 
 /** Τοίχος → κλειστό footprint = outerEdge (forward) + innerEdge (reversed). */
-function wallFootprint(w: WallForEnvelope): Point3D[] {
+function wallFootprint(w: WallForEnvelope): BimPoint[] {
   const g = computeWallGeometry(w.params, w.kind);
   const outer = g.outerEdge.points;
   const inner = g.innerEdge.points;
@@ -119,7 +119,7 @@ function wallFootprint(w: WallForEnvelope): Point3D[] {
 }
 
 /** Δοκάρι → κλειστό footprint = το plan-view outline (width × length). */
-function beamFootprint(b: BeamForFootprint): Point3D[] {
+function beamFootprint(b: BeamForFootprint): BimPoint[] {
   try {
     return [...computeBeamGeometry(b.params).outline.vertices];
   } catch {
@@ -129,7 +129,7 @@ function beamFootprint(b: BeamForFootprint): Point3D[] {
 
 /** Σπρώχνει τις ακμές ενός κλειστού polygon στη λίστα input edges. */
 function pushEdges(
-  poly: readonly Point3D[],
+  poly: readonly BimPoint[],
   entityId: string,
   entityType: FootprintSourceType,
   sink: InputEdge[],
@@ -141,7 +141,7 @@ function pushEdges(
 }
 
 /** Είναι έγκυρο polygon (≥3 κορυφές, μη μηδενικό εμβαδόν). */
-function isValidPolygon(poly: readonly Point3D[]): boolean {
+function isValidPolygon(poly: readonly BimPoint[]): boolean {
   return poly.length >= 3 && polygonArea(poly) > 0;
 }
 
@@ -154,7 +154,7 @@ function collectFootprints(
   columns: readonly ColumnForEnvelope[],
   beams: readonly BeamForFootprint[],
 ): CollectedFootprints {
-  const raw: Array<{ poly: Point3D[]; id: string; type: FootprintSourceType }> = [];
+  const raw: Array<{ poly: BimPoint[]; id: string; type: FootprintSourceType }> = [];
 
   for (const w of walls) {
     const poly = wallFootprint(w);
@@ -181,7 +181,7 @@ function collectFootprints(
   }
   const offset = { x: minX, y: minY };
 
-  const polygons: Point3D[][] = [];
+  const polygons: BimPoint[][] = [];
   const inputEdges: InputEdge[] = [];
   for (const r of raw) {
     const shifted = r.poly.map((p) => ({ x: p.x - offset.x, y: p.y - offset.y, z: 0 }));
@@ -211,12 +211,12 @@ const LEN_EPS = 1e-9;
  * γωνία. Κανένα match → null (νέα κορυφή από τομή). O(inputEdges) ανά output edge.
  */
 function attributeEdge(
-  a: Point3D,
-  b: Point3D,
+  a: BimPoint,
+  b: BimPoint,
   inputEdges: readonly InputEdge[],
   tol: number,
 ): { id: string | null; type: FootprintSourceType | null } {
-  const mid: Point3D = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, z: 0 };
+  const mid: BimPoint = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, z: 0 };
   const odx = b.x - a.x;
   const ody = b.y - a.y;
   const oLen = Math.hypot(odx, ody);
@@ -247,8 +247,8 @@ function attributeEdge(
 // ============================================================================
 
 /** polygon-clipping ring → κλειστό ring χωρίς διπλή κλείνουσα κορυφή. */
-function ringPairsToPoints(ring: Ring, offset: { x: number; y: number }): Point3D[] {
-  const pts: Point3D[] = ring.map((pr: Pair) => ({ x: pr[0] + offset.x, y: pr[1] + offset.y, z: 0 }));
+function ringPairsToPoints(ring: Ring, offset: { x: number; y: number }): BimPoint[] {
+  const pts: BimPoint[] = ring.map((pr: Pair) => ({ x: pr[0] + offset.x, y: pr[1] + offset.y, z: 0 }));
   // polygon-clipping επαναλαμβάνει την πρώτη κορυφή στο τέλος — αφαίρεσέ την.
   if (pts.length >= 2) {
     const first = pts[0];

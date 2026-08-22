@@ -9,13 +9,13 @@
 import { computeRoofGeometry } from '../roof-geometry';
 import { solveRoofByStraightSkeleton } from '../roof-skeleton-solver';
 import { resolveEavePlanes } from '../roof-lower-envelope';
-import type { Point3D } from '../../types/bim-base';
+import type { BimPoint } from '../../types/bim-base';
 import type { RoofEdgeSlope, RoofParams } from '../../types/roof-types';
 
 const hipEdges = (n: number, slopeDeg = 30): RoofEdgeSlope[] =>
   Array.from({ length: n }, () => ({ definesSlope: true, slope: slopeDeg, overhangMm: 0 }));
 
-const roofParams = (verts: readonly Point3D[], slopeDeg = 30): RoofParams => ({
+const roofParams = (verts: readonly BimPoint[], slopeDeg = 30): RoofParams => ({
   outline: { vertices: verts },
   edges: hipEdges(verts.length, slopeDeg),
   slopeUnit: 'deg',
@@ -25,7 +25,7 @@ const roofParams = (verts: readonly Point3D[], slopeDeg = 30): RoofParams => ({
 });
 
 // canvas units (mm domain): L-shape footprint, 1 reflex corner.
-const L_SHAPE: Point3D[] = [
+const L_SHAPE: BimPoint[] = [
   { x: 0, y: 0, z: 0 }, { x: 4000, y: 0, z: 0 }, { x: 4000, y: 2000, z: 0 },
   { x: 2000, y: 2000, z: 0 }, { x: 2000, y: 4000, z: 0 }, { x: 0, y: 4000, z: 0 },
 ];
@@ -78,7 +78,7 @@ describe('computeRoofGeometry — Φ2 integration', () => {
   });
 
   it('parity: convex rectangle hip unchanged (lower-envelope, 4 faces, no valley)', () => {
-    const rect: Point3D[] = [
+    const rect: BimPoint[] = [
       { x: 0, y: 0, z: 0 }, { x: 6000, y: 0, z: 0 },
       { x: 6000, y: 4000, z: 0 }, { x: 0, y: 4000, z: 0 },
     ];

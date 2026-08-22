@@ -13,10 +13,10 @@ import {
   type Vec2,
 } from '../roof-lower-envelope';
 import { mmToSceneUnits } from '../../../utils/scene-units';
-import type { Point3D } from '../../types/bim-base';
+import type { BimPoint } from '../../types/bim-base';
 import type { RoofEdgeSlope } from '../../types/roof-types';
 
-const RECT: Point3D[] = [
+const RECT: BimPoint[] = [
   { x: 0, y: 0, z: 0 },
   { x: 4000, y: 0, z: 0 },
   { x: 4000, y: 3000, z: 0 },

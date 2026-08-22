@@ -31,7 +31,7 @@ import type {
   StripJustification,
 } from '../types/foundation-types';
 import { ANCHOR_OFFSETS } from '../types/foundation-types';
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import type { Point2D } from '../../rendering/types/Types';
 import { polygonArea, polygonBbox } from './shared/polygon-utils';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
@@ -78,12 +78,12 @@ export function computeFoundationGeometry(params: FoundationParams): FoundationG
  * shifted so the chosen anchor sits on `position`, then rotated around
  * `position` (mirror της rectangular κολώνας — visual stability με Tab cycle).
  */
-function buildPadFootprint(params: PadFootingParams, s: number): Point3D[] {
+function buildPadFootprint(params: PadFootingParams, s: number): BimPoint[] {
   const local = buildRectLocal(params.width, params.length, s);
   return transformPad(local, params.position, params.anchor, params.width, params.length, params.rotation, s);
 }
 
-function buildRectLocal(width: number, length: number, s: number): Point3D[] {
+function buildRectLocal(width: number, length: number, s: number): BimPoint[] {
   const hw = (width * s) / 2;  // mm → canvas units
   const hl = (length * s) / 2;
   return [
@@ -95,14 +95,14 @@ function buildRectLocal(width: number, length: number, s: number): Point3D[] {
 }
 
 function transformPad(
-  local: readonly Point3D[],
-  position: Point3D,
+  local: readonly BimPoint[],
+  position: BimPoint,
   anchor: FoundationAnchor,
   width: number,
   length: number,
   rotationDeg: number,
   s: number,
-): Point3D[] {
+): BimPoint[] {
   const { dx, dy } = ANCHOR_OFFSETS[anchor];
   // dx/dy are unit fractions of width/length. Convert mm → canvas units via s.
   const shiftX = -dx * (width * s);
@@ -163,7 +163,7 @@ export function unjustifyStripAxis(
  * the shared {@link stripJustifiedAxis} SSoT so one face falls on the axis
  * (eccentric growth). `center` → identical footprint.
  */
-function buildBandFootprint(params: StripFootingParams | TieBeamParams, s: number): Point3D[] {
+function buildBandFootprint(params: StripFootingParams | TieBeamParams, s: number): BimPoint[] {
   const { start, end } = params;
   const hw = (params.width * s) / 2;
   const n = canonicalAxisNormal(start, end);

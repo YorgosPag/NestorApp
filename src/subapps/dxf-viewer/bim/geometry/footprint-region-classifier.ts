@@ -29,7 +29,7 @@
 import type { Pair, Polygon, Ring } from 'polygon-clipping';
 
 import { safeIntersection, safeUnion } from './shared/safe-polygon-boolean';
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import { ATRIUM_COVERAGE_THRESHOLD } from '../types/thermal-envelope-types';
 import { multiPolygonArea } from './shared/polygon-utils';
 import type { BuildingFootprintResult, FootprintRing } from './building-footprint';
@@ -72,7 +72,7 @@ export interface FootprintClassificationResult {
 
 /** Ελάχιστο σχήμα πλάκας για τον coverage έλεγχο (footprint σε canvas units). */
 export interface SlabRegionFootprint {
-  readonly polygon: readonly Point3D[];
+  readonly polygon: readonly BimPoint[];
 }
 
 /**
@@ -81,7 +81,7 @@ export interface SlabRegionFootprint {
  */
 export interface SlabForRegionCoverage extends SlabForZoneClassification {
   readonly params: SlabForZoneClassification['params'] & {
-    readonly outline: { readonly vertices: readonly Point3D[] };
+    readonly outline: { readonly vertices: readonly BimPoint[] };
   };
 }
 
@@ -105,8 +105,8 @@ const EMPTY_RESULT: FootprintClassificationResult = {
 // GEOMETRIC COVERAGE (polygon-clipping intersection)
 // ============================================================================
 
-/** `Point3D` ring → `polygon-clipping` Ring (translated κατά offset). */
-function toRing(points: readonly Point3D[], ox: number, oy: number): Ring {
+/** `BimPoint` ring → `polygon-clipping` Ring (translated κατά offset). */
+function toRing(points: readonly BimPoint[], ox: number, oy: number): Ring {
   return points.map((p): Pair => [p.x - ox, p.y - oy]);
 }
 

@@ -12,7 +12,7 @@
 
 import { computeWallGeometry, type OpeningFootprintForDeduction } from '../wall-geometry';
 import type { WallParams } from '../../types/wall-types';
-import type { Point3D } from '../../types/bim-base';
+import type { BimPoint } from '../../types/bim-base';
 import type { WallTopProfile, WallTopSegment } from '../wall-top-profile';
 
 const FLOAT_TOL = 1e-9;
@@ -205,7 +205,7 @@ describe('computeWallGeometry — degenerate input', () => {
 
 describe('computeWallGeometry — polyline kind', () => {
   it('uses polylineVertices when kind=polyline and 3+ vertices present', () => {
-    const vertices: readonly Point3D[] = [
+    const vertices: readonly BimPoint[] = [
       { x: 0, y: 0, z: 0 },
       { x: 1000, y: 0, z: 0 },
       { x: 1000, y: 1000, z: 0 },
@@ -220,7 +220,7 @@ describe('computeWallGeometry — polyline kind', () => {
   });
 
   it('polyline length is sum of segment lengths', () => {
-    const vertices: readonly Point3D[] = [
+    const vertices: readonly BimPoint[] = [
       { x: 0, y: 0, z: 0 },
       { x: 1000, y: 0, z: 0 },
       { x: 1000, y: 1000, z: 0 },
@@ -263,7 +263,7 @@ describe('computeWallGeometry — geometry sanity', () => {
 // ─── ADR-363 Phase 1C — curved kind ──────────────────────────────────────────
 
 describe('computeWallGeometry — curved kind (Phase 1C)', () => {
-  function makeCurvedParams(curveControl: Point3D | undefined = { x: 500, y: 300, z: 0 }): WallParams {
+  function makeCurvedParams(curveControl: BimPoint | undefined = { x: 500, y: 300, z: 0 }): WallParams {
     return makeParams({ curveControl });
   }
 

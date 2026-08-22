@@ -32,7 +32,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-396-bim-external-thermal-envelope-etics.md §3.1
  */
 
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import type { EnvelopeFunction, ThermalEnvelopeSpec } from '../types/thermal-envelope-types';
 import type { SceneUnits } from '../../utils/scene-units';
 import { mmToSceneUnits } from '../../utils/scene-units';
@@ -99,8 +99,8 @@ type Ref = { readonly x: number; readonly y: number };
 
 /** Μία ακμή ring με την effective απόφαση μόνωσης + provenance. */
 interface ShellEdge {
-  readonly a: Point3D;
-  readonly b: Point3D;
+  readonly a: BimPoint;
+  readonly b: BimPoint;
   readonly insulated: boolean;
   readonly sourceEntityId: string | null;
   readonly sourceEntityType: FootprintSourceType | null;
@@ -182,7 +182,7 @@ function extractRuns(edges: readonly ShellEdge[]): ShellRun[] {
 }
 
 /** Polyline ενός run: closed → οι αρχές των ακμών· open → +η τελευταία απόληξη. */
-function runPolyline(run: ShellRun): Point3D[] {
+function runPolyline(run: ShellRun): BimPoint[] {
   const pts = run.edges.map((e) => e.a);
   if (!run.closed) pts.push(run.edges[run.edges.length - 1].b);
   return pts;
@@ -205,7 +205,7 @@ function runEntityIds(edges: readonly ShellEdge[]): ShellIds {
 // OFFSET (try both signs, pick by distance to ring centroid)
 // ============================================================================
 
-function meanDistToRef(pts: readonly Point3D[], ref: Ref): number {
+function meanDistToRef(pts: readonly BimPoint[], ref: Ref): number {
   let s = 0;
   for (const v of pts) s += Math.hypot(v.x - ref.x, v.y - ref.y);
   return pts.length > 0 ? s / pts.length : 0;
@@ -217,12 +217,12 @@ function meanDistToRef(pts: readonly Point3D[], ref: Ref): number {
  * `reference` (= κέντρο του ring). Δουλεύει για closed rings ΚΑΙ open runs.
  */
 function offsetFace(
-  face: readonly Point3D[],
+  face: readonly BimPoint[],
   thicknessCanvas: number,
   closed: boolean,
   outward: boolean,
   reference: Ref,
-): Point3D[] {
+): BimPoint[] {
   if (thicknessCanvas <= 0 || face.length < 2) {
     return face.map((p) => ({ x: p.x, y: p.y, z: p.z ?? 0 }));
   }
@@ -238,7 +238,7 @@ function offsetFace(
 // ============================================================================
 
 function buildChain(
-  facePts: readonly Point3D[],
+  facePts: readonly BimPoint[],
   closed: boolean,
   outward: boolean,
   reference: Ref,

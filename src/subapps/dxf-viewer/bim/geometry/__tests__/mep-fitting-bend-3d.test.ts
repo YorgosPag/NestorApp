@@ -8,15 +8,15 @@
  */
 
 import { computeBend3DArcPoints } from '../mep-fitting-bend-3d';
-import type { Point3D } from '../../types/bim-base';
+import type { BimPoint } from '../../types/bim-base';
 
-const RIGHT: Point3D = { x: 1, y: 0, z: 0 };
-const UP: Point3D = { x: 0, y: 1, z: 0 };
-const LEFT: Point3D = { x: -1, y: 0, z: 0 };
+const RIGHT: BimPoint = { x: 1, y: 0, z: 0 };
+const UP: BimPoint = { x: 0, y: 1, z: 0 };
+const LEFT: BimPoint = { x: -1, y: 0, z: 0 };
 const T = 15;
 const SEG = 16;
 
-const len = (p: Point3D): number => Math.hypot(p.x, p.y, p.z ?? 0);
+const len = (p: BimPoint): number => Math.hypot(p.x, p.y, p.z ?? 0);
 
 describe('computeBend3DArcPoints — planar 90° bend', () => {
   const pts = computeBend3DArcPoints(RIGHT, UP, T, SEG);
@@ -48,7 +48,7 @@ describe('computeBend3DArcPoints — planar 90° bend', () => {
 
 describe('computeBend3DArcPoints — sloped bend (lifts out of plane)', () => {
   // Leg B rises out of the plan plane: (0,1,1) normalised.
-  const upSlope: Point3D = { x: 0, y: 1 / Math.SQRT2, z: 1 / Math.SQRT2 };
+  const upSlope: BimPoint = { x: 0, y: 1 / Math.SQRT2, z: 1 / Math.SQRT2 };
   const pts = computeBend3DArcPoints(RIGHT, upSlope, T, SEG);
 
   it('lands endpoints on the 3D legs (dir·tangentLen, including z)', () => {

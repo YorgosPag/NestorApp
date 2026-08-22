@@ -22,7 +22,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.7
  */
 
-import type { Point3D, Polyline3D, Polygon3D, BoundingBox3D } from '../types/bim-base';
+import type { BimPoint, BimPolyline, BimPolygon, BimBounds } from '../types/bim-base';
 import type { BeamGeometry, BeamParams } from '../types/beam-types';
 import { CURVED_BEAM_SUBDIVISIONS } from '../types/beam-types';
 import { mmScaleFor } from '../../utils/scene-units';
@@ -45,10 +45,10 @@ export function computeBeamGeometry(params: BeamParams): BeamGeometry {
   // for the 2D plan-view outline. Axis vertices are always in canvas units.
   const s = mmScaleFor(params);
   const axisVertices = pickAxisVertices(params);
-  const axisPolyline: Polyline3D = { points: axisVertices, closed: false };
+  const axisPolyline: BimPolyline = { points: axisVertices, closed: false };
 
   const outlineVertices = buildAxisStripOutline(axisVertices, params.width, s);
-  const outline: Polygon3D = { vertices: outlineVertices };
+  const outline: BimPolygon = { vertices: outlineVertices };
 
   // BOQ: axis length is in canvas units → convert to m via (1/s) * MM_TO_M.
   // width/depth are always mm → convert directly with MM_TO_M.
@@ -121,15 +121,15 @@ export function getBeamSpanDepthRatio(params: BeamParams): number {
  * back-compat με υπάρχοντα beams). Η μετατόπιση είναι ομοιόμορφη παράλληλη → εφαρμόζεται ΚΑΙ στο
  * `curveControl` (ίδιο διάνυσμα) ώστε η καμπύλη να μετακινείται ακέραια.
  */
-function pickAxisVertices(params: BeamParams): readonly Point3D[] {
+function pickAxisVertices(params: BeamParams): readonly BimPoint[] {
   const { startPoint, endPoint } = params;
   const body = justifyAxisPoints(startPoint, endPoint, params.width, params.justification, params.sceneUnits);
   const offX = body.start.x - startPoint.x; // ομοιόμορφο perpendicular offset (0 αν center/degenerate)
   const offY = body.start.y - startPoint.y;
-  const startB: Point3D = { x: body.start.x, y: body.start.y, z: startPoint.z ?? 0 };
-  const endB: Point3D = { x: body.end.x, y: body.end.y, z: endPoint.z ?? 0 };
+  const startB: BimPoint = { x: body.start.x, y: body.start.y, z: startPoint.z ?? 0 };
+  const endB: BimPoint = { x: body.end.x, y: body.end.y, z: endPoint.z ?? 0 };
   if (params.kind === 'curved' && params.curveControl) {
-    const ctrlB: Point3D = {
+    const ctrlB: BimPoint = {
       x: params.curveControl.x + offX,
       y: params.curveControl.y + offY,
       z: params.curveControl.z ?? 0,
@@ -146,13 +146,13 @@ function pickAxisVertices(params: BeamParams): readonly Point3D[] {
  * Για οριζόντια δοκό topMaxMm === topMinMm === topElevation (ADR-401 Phase E/(β)).
  */
 function computeBbox(
-  axis: readonly Point3D[],
-  outline: readonly Point3D[],
+  axis: readonly BimPoint[],
+  outline: readonly BimPoint[],
   topMaxMm: number,
   topMinMm: number,
   zOffsetMm: number,
   depthMm: number,
-): BoundingBox3D {
+): BimBounds {
   const { minX, maxX, minY, maxY } = bboxOfAll(axis, outline);
   const topFaceM = (topMaxMm + zOffsetMm) / 1000;
   const botFaceM = (topMinMm + zOffsetMm - depthMm) / 1000;

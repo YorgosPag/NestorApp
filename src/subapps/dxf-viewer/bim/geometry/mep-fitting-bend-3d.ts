@@ -26,7 +26,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md §Φ-B2b
  */
 
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import { addPoint3D } from '../../rendering/entities/shared/geometry-vector-utils';
 import { clamp } from '../../utils/scalar-math';
 
@@ -62,7 +62,7 @@ function slerp(a: V3, b: V3, t: number): V3 {
   return add(scale(a, Math.sin((1 - t) * omega) / so), scale(b, Math.sin(t * omega) / so));
 }
 
-const toPoint = (a: V3): Point3D => ({ x: a.x, y: a.y, z: a.z });
+const toPoint = (a: V3): BimPoint => ({ x: a.x, y: a.y, z: a.z });
 
 /**
  * Sample the 3D bend centreline (node at the origin) between two outward unit
@@ -71,11 +71,11 @@ const toPoint = (a: V3): Point3D => ({ x: a.x, y: a.y, z: a.z });
  * (`tangentA → tangentB`) so the caller still sweeps a valid tube.
  */
 export function computeBend3DArcPoints(
-  dirAIn: Point3D,
-  dirBIn: Point3D,
+  dirAIn: BimPoint,
+  dirBIn: BimPoint,
   tangentLen: number,
   segments = 16,
-): Point3D[] {
+): BimPoint[] {
   const dirA = normalize(v3(dirAIn));
   const dirB = normalize(v3(dirBIn));
   if (!dirA || !dirB || tangentLen <= 0) {
@@ -99,7 +99,7 @@ export function computeBend3DArcPoints(
   const vA = sub(tangentA, center);
   const vB = sub(tangentB, center);
 
-  const pts: Point3D[] = [];
+  const pts: BimPoint[] = [];
   for (let i = 0; i <= segments; i++) {
     pts.push(toPoint(add(center, slerp(vA, vB, i / segments))));
   }

@@ -8,12 +8,12 @@
  */
 
 import { computeRoofGeometry, applyRoofShapePreset } from '../roof-geometry';
-import type { Point3D, Polygon3D } from '../../types/bim-base';
+import type { BimPoint, BimPolygon } from '../../types/bim-base';
 import type { RoofParams } from '../../types/roof-types';
 
-const rect = (cw: boolean): Polygon3D => {
+const rect = (cw: boolean): BimPolygon => {
   // CCW (y-up math): (0,0)→(4000,0)→(4000,3000)→(0,3000). CW = reversed.
-  const ccw: Point3D[] = [
+  const ccw: BimPoint[] = [
     { x: 0, y: 0, z: 0 },
     { x: 4000, y: 0, z: 0 },
     { x: 4000, y: 3000, z: 0 },
@@ -22,8 +22,8 @@ const rect = (cw: boolean): Polygon3D => {
   return { vertices: cw ? [...ccw].reverse() : ccw };
 };
 
-const square = (cw: boolean): Polygon3D => {
-  const ccw: Point3D[] = [
+const square = (cw: boolean): BimPolygon => {
+  const ccw: BimPoint[] = [
     { x: 0, y: 0, z: 0 },
     { x: 3000, y: 0, z: 0 },
     { x: 3000, y: 3000, z: 0 },
@@ -33,7 +33,7 @@ const square = (cw: boolean): Polygon3D => {
 };
 
 const buildParams = (
-  outline: Polygon3D,
+  outline: BimPolygon,
   shape: 'flat' | 'mono-pitch' | 'gable' | 'hip',
 ): RoofParams => ({
   outline,

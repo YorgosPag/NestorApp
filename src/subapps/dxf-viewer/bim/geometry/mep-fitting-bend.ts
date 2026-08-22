@@ -24,7 +24,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md §Φ11
  */
 
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 
 /** Revit long-radius default: centreline bend radius = 1.5 × pipe diameter. */
 export const DEFAULT_BEND_FACTOR = 1.5;
@@ -142,15 +142,15 @@ export function computeElbowBend(
  * inner arc back). Used as the 2D footprint so the existing fill/outline path and
  * the hit-test/bbox treat the real bend shape — not an axis-aligned box.
  */
-export function tessellateBendFootprint(bend: ElbowBend, segments = 16): Point3D[] {
+export function tessellateBendFootprint(bend: ElbowBend, segments = 16): BimPoint[] {
   const { center, centerRadius, radiusStart, radiusEnd, startAngle, endAngle, anticlockwise } = bend;
   let sweep = endAngle - startAngle;
   // Normalise the sweep to the same (minor) direction the arc is drawn in.
   if (anticlockwise && sweep > 0) sweep -= 2 * Math.PI;
   if (!anticlockwise && sweep < 0) sweep += 2 * Math.PI;
 
-  const outer: Point3D[] = [];
-  const inner: Point3D[] = [];
+  const outer: BimPoint[] = [];
+  const inner: BimPoint[] = [];
   for (let i = 0; i <= segments; i++) {
     const t = startAngle + (sweep * i) / segments;
     const c = Math.cos(t);

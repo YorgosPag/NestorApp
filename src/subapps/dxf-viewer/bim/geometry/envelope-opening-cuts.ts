@@ -25,7 +25,7 @@
  * @see ./envelope-perimeter (EnvelopeChain — geometry SSoT)
  */
 
-import type { Point3D, Polyline3D } from '../types/bim-base';
+import type { BimPoint, BimPolyline } from '../types/bim-base';
 import type { SceneUnits } from '../../utils/scene-units';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { clamp01 } from '../../utils/scalar-math';
@@ -44,7 +44,7 @@ const CLOSE_EPS = 1e-6;
  * cuts (`computeEnvelopeOpeningCuts`) + 3D builder (`envelopeChainToMesh`) ώστε
  * το `edgeIndex` να ευθυγραμμίζεται απόλυτα.
  */
-export function envelopeFaceEdges(loop: Polyline3D): Array<[number, number]> {
+export function envelopeFaceEdges(loop: BimPolyline): Array<[number, number]> {
   const pts = loop.points;
   const n = pts.length;
   const edges: Array<[number, number]> = [];
@@ -81,11 +81,11 @@ export interface OpeningForCut {
   };
   readonly geometry?: {
     /** mm. Κέντρο cutout στον άξονα τοίχου (world). */
-    readonly position?: Point3D;
+    readonly position?: BimPoint;
     /** rad. Διεύθυνση άξονα τοίχου. */
     readonly rotation?: number;
     /** mm. Ορθογώνιο cutout (4 κορυφές, world) — fallback όταν λείπει position/rotation. */
-    readonly outline?: { readonly vertices: readonly Point3D[] };
+    readonly outline?: { readonly vertices: readonly BimPoint[] };
   };
 }
 
@@ -105,7 +105,7 @@ export interface EnvelopeOpeningCut {
    * `O_a/O_b` = **κάθετη** προβολή των `F_a/F_b` προς τα έξω → απολήξεις [O_a→F_a]
    * και [O_b→F_b] κάθετες στην παρειά (collinear με Z4). Κοινό SSoT 2D punch+cap & 3D.
    */
-  readonly bandQuad: readonly Point3D[];
+  readonly bandQuad: readonly BimPoint[];
 }
 
 // ============================================================================
@@ -113,7 +113,7 @@ export interface EnvelopeOpeningCut {
 // ============================================================================
 
 /** Corner lerp προς `z=0` — SSoT (κοινό με τον 3D envelope builder). */
-export function lerp(a: Point3D, b: Point3D, t: number): Point3D {
+export function lerp(a: BimPoint, b: BimPoint, t: number): BimPoint {
   return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: 0 };
 }
 
@@ -123,7 +123,7 @@ interface Projection {
 }
 
 /** Προβολή σημείου σε ευθύγραμμο τμήμα [a,b] — clamped param + απόσταση². */
-function projectOnEdge(p: { x: number; y: number }, a: Point3D, b: Point3D): Projection {
+function projectOnEdge(p: { x: number; y: number }, a: BimPoint, b: BimPoint): Projection {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const len2 = dx * dx + dy * dy;
@@ -203,7 +203,7 @@ function openingEndpoints(op: OpeningForCut, mmFactor: number): OpeningEndpoints
  * Η exterior-face γωνία πέφτει πάνω στην ακμή (dist²≈0) → η προβολή είναι ταυτοτική
  * → το cut boundary ευθυγραμμίζεται με την παρειά τοίχου/Z4.
  */
-function projectExteriorCorner(corners: readonly XY[], a: Point3D, b: Point3D): number {
+function projectExteriorCorner(corners: readonly XY[], a: BimPoint, b: BimPoint): number {
   let bestT = 0;
   let bestDist2 = Infinity;
   for (const c of corners) {
@@ -218,7 +218,7 @@ function projectExteriorCorner(corners: readonly XY[], a: Point3D, b: Point3D): 
  * το σημείο `ref` (που κείτεται στην εξωτ. πλευρά, π.χ. κορυφή του outer loop).
  * @returns `null` αν η ακμή είναι degenerate.
  */
-function outwardNormal(a: Point3D, b: Point3D, ref: Point3D): { nx: number; ny: number } | null {
+function outwardNormal(a: BimPoint, b: BimPoint, ref: BimPoint): { nx: number; ny: number } | null {
   let ex = b.x - a.x, ey = b.y - a.y;
   const len = Math.hypot(ex, ey);
   if (len < 1e-9) return null;
@@ -300,8 +300,8 @@ export function computeEnvelopeOpeningCuts(
     const n = outwardNormal(F0, F1, O0);
     if (!n) continue;
     const d = (O0.x - F0.x) * n.nx + (O0.y - F0.y) * n.ny;
-    const O_a: Point3D = { x: F_a.x + n.nx * d, y: F_a.y + n.ny * d, z: 0 };
-    const O_b: Point3D = { x: F_b.x + n.nx * d, y: F_b.y + n.ny * d, z: 0 };
+    const O_a: BimPoint = { x: F_a.x + n.nx * d, y: F_a.y + n.ny * d, z: 0 };
+    const O_b: BimPoint = { x: F_b.x + n.nx * d, y: F_b.y + n.ny * d, z: 0 };
 
     cuts.push({
       edgeIndex: bestEdge,

@@ -21,7 +21,7 @@
  * @see ./envelope-wall-base (base/upper-envelope wrapper — χωρίς clamp)
  */
 
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import type { EnvelopeChain } from './envelope-perimeter';
 import { envelopeFaceEdges } from './envelope-opening-cuts';
 import { clamp01 } from '../../rendering/entities/shared/geometry-utils';
@@ -117,8 +117,8 @@ function zOfSegment(seg: ProfileSegment, t: number): number {
  * «λοξεύει» στο breakpoint). Το `zMap` κάνει mm→μέτρα (top clamp≥0 / base χωρίς).
  */
 export function resolveEdgeProfile(
-  fa: Point3D,
-  fb: Point3D,
+  fa: BimPoint,
+  fb: BimPoint,
   ref: WallProfileRef,
   floorElevationMm: number,
   zMap: ZToMeters,
