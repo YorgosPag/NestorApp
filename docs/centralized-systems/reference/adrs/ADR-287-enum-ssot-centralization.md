@@ -63,6 +63,12 @@
 - **ADR-145** — PropertyType SSoT (αρχικό pattern reference)
 - **ADR-197** — Sales Pages Implementation (canonical origin του `CommercialStatus`)
 - **ADR-043** — Transform Constants Consolidation (ίδιο `typeof ARRAY[number]` derivation pattern)
+- 🔴 **ADR-787** — Η πολυ-οργανισμική πλατφόρμα, **απόφαση Ε-4** (2026-08-22): το derived subset
+  `IN_PROGRESS_PROJECT_STATUSES` του `project-statuses.ts` **επιλέχθηκε ως η βάση της χρέωσης**
+  (*«πληρώνει αυτός που ανοίγει το έργο»*). ⚠️ **Συνέπεια**: προσθήκη ή αφαίρεση τιμής από αυτό το
+  σύνολο **μετακινεί τιμολόγηση**, δεν αλλάζει μόνο ένα dropdown. ⚠️ Το αδελφό
+  `ACTIVE_PROJECT_STATUSES` σημαίνει *«όχι στον κάδο»* — **ΟΧΙ** «ενεργό προς χρέωση»· τα δύο
+  ονόματα διαφωνούσαν και η σύγχυσή τους ήταν το εύρημα που γέννησε το Ε-4.
 
 ## Changelog
 
