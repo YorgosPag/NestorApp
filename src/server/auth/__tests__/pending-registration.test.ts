@@ -116,13 +116,19 @@ describe('ensurePendingRegistration', () => {
     expect(setCalls).toHaveLength(1);
     expect(setCalls[0].data).toMatchObject({
       status: 'pending',
-      registrationStatus: 'pending',
       companyId: null,
       globalRole: null,
       pendingNotifiedAt: 'TS',
       requestedAt: 'TS',
       uid: 'uid_new',
     });
+    // 🔴 ADR-660 (2026-08-23) — ΕΝΑ πεδίο κατάστασης, ΠΟΤΕ δύο.
+    // Το `registrationStatus` ήταν δεύτερη αυθεντία για το ίδιο ερώτημα (ADR-749):
+    // γραφόταν εδώ και δεν το διάβαζε **κανείς** — 0 αναγνώστες στο `src/`, 0
+    // έγγραφα στη βάση. ⚠️ Άγκυρα ΑΠΟΥΣΙΑΣ, όχι παρουσίας: το `toMatchObject`
+    // αγνοεί τα πεδία που δεν ονομάζει, οπότε χωρίς αυτή τη γραμμή η επιστροφή
+    // του πεδίου θα περνούσε **πράσινη**.
+    expect(setCalls[0].data).not.toHaveProperty('registrationStatus');
     // Ο external_user φιλτραρίστηκε — μόνο ο admin παραλήπτης.
     expect(sendReplyViaMailgunMock).toHaveBeenCalledTimes(1);
     expect(sendReplyViaMailgunMock).toHaveBeenCalledWith(

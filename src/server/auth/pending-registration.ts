@@ -9,9 +9,19 @@
  * doc. Το fail-closed (ADR-657 §3.5) κόβει έτσι τον χρήστη μέχρι να τον εγκρίνει
  * ρητά ένας διαχειριστής μέσω της υπάρχουσας κονσόλας (set-user-claims).
  *
- * Καλείται από ΔΥΟ σημεία (και τα δύο συγκλίνουν εδώ — μηδέν διπλότυπο):
- *  - `POST /api/auth/session` (universal login chokepoint, κάθε provider)
- *  - `POST /api/auth/complete-registration` (client onboarding, email/password)
+ * Καλείται από **ΕΝΑ** σημείο: `POST /api/auth/session` — το universal login
+ * chokepoint, που πυροδοτείται από το `onAuthStateChanged` για **κάθε** provider.
+ *
+ * 🔴 **ΔΙΟΡΘΩΣΗ 2026-08-23 (ADR-660).** Αυτές οι γραμμές έλεγαν «ΔΥΟ σημεία» και
+ * ονόμαζαν και το `POST /api/auth/complete-registration`. Εκείνο ήταν **νεκρό ΚΑΙ
+ * δομικά αδύνατο**: τυλιγμένο σε `withAuth`, επέστρεφε **401 ακριβώς στους χρήστες
+ * που υπήρχε για να εξυπηρετήσει** (κανένα claim ⇒ `missing_claims`), και ο πελάτης
+ * το είχε εγκαταλείψει ρητά (`useAuthActions.ts`).
+ * ⚠️ Δηλαδή **η περιγραφή ήταν η απόκλιση** — το σχήμα των CHECK 3.34 / 3.57.
+ *
+ * 🔶 **ΕΚΚΡΕΜΕΙ Η ΔΙΑΓΡΑΦΗ ΤΟΥ ΑΡΧΕΙΟΥ** `src/app/api/auth/complete-registration/`
+ * — απόφαση Giorgio. Όσο υπάρχει, είναι διαδρομή που **δεν καλεί κανείς** και που
+ * **δεν μπορεί να πετύχει**· δεν βλάπτει, αλλά διαβάζεται ως ζωντανή.
  *
  * Notify-once: η ειδοποίηση των admin γίνεται ΜΙΑ φορά ανά χρήστη, μέσω
  * transaction-guarded `pendingNotifiedAt` — zero race ακόμη κι αν τα δύο σημεία
@@ -99,8 +109,11 @@ export async function ensurePendingRegistration(
       displayName,
       companyId: null,
       globalRole: null,
+      // ⚠️ ΕΝΑ πεδίο κατάστασης, ΠΟΤΕ δύο. Μέχρι 2026-08-23 γραφόταν δίπλα και
+      // `registrationStatus: 'pending'` — δεύτερη αυθεντία για το ΙΔΙΟ ερώτημα
+      // (ADR-749), με **μηδέν αναγνώστες** σε όλο το `src/` και **μηδέν έγγραφα**
+      // στη βάση που να το φέρουν. Αφαιρέθηκε· άγκυρα στο test του αρχείου.
       status: 'pending',
-      registrationStatus: 'pending',
       authProvider,
       updatedAt: AdminFieldValue.serverTimestamp(),
     };
