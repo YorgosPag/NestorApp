@@ -187,6 +187,12 @@
     "src/subapps/dxf-viewer/bim-3d/comments/bim-comments.service.ts": {
       "firestore-realtime": 1
     },
+    "src/subapps/dxf-viewer/bim/geometry/column-geometry.ts": {
+      "planar-point-lift": 1
+    },
+    "src/subapps/dxf-viewer/bim/wall-coverings/wall-covering-strip-geometry.ts": {
+      "planar-point-lift": 1
+    },
     "src/subapps/dxf-viewer/config/keyboard-shortcuts.ts": {
       "escape-command-bus": 1
     },
@@ -195,6 +201,30 @@
     },
     "src/subapps/dxf-viewer/hooks/dimensions/useDimensionCreate.ts": {
       "escape-command-bus": 1
+    },
+    "src/subapps/dxf-viewer/hooks/drawing/create-entourage-tool.ts": {
+      "planar-point-lift": 1
+    },
+    "src/subapps/dxf-viewer/hooks/drawing/floor-finish-completion.ts": {
+      "planar-point-lift": 1
+    },
+    "src/subapps/dxf-viewer/hooks/drawing/mep-underfloor-completion.ts": {
+      "planar-point-lift": 1
+    },
+    "src/subapps/dxf-viewer/hooks/drawing/roof-completion.ts": {
+      "planar-point-lift": 1
+    },
+    "src/subapps/dxf-viewer/hooks/drawing/slab-completion.ts": {
+      "planar-point-lift": 1
+    },
+    "src/subapps/dxf-viewer/hooks/drawing/thermal-space-completion.ts": {
+      "planar-point-lift": 1
+    },
+    "src/subapps/dxf-viewer/hooks/drawing/use-wall-commit.ts": {
+      "planar-point-lift": 1
+    },
+    "src/subapps/dxf-viewer/hooks/drawing/wall-preview-helpers.ts": {
+      "planar-point-lift": 1
     },
     "src/subapps/dxf-viewer/snapping/engines/IntersectionSnapEngine.ts": {
       "point-hash-grid": 4
@@ -207,6 +237,12 @@
     },
     "src/subapps/dxf-viewer/systems/group/ActiveGroupStore.ts": {
       "create-external-store": 1
+    },
+    "src/subapps/dxf-viewer/systems/mep-design/routing/offset-pairing.ts": {
+      "planar-point-lift": 1
+    },
+    "src/subapps/dxf-viewer/systems/offset/offset-entity-geometry.ts": {
+      "planar-point-lift": 1
     },
     "src/subapps/dxf-viewer/ui/components/DxfSettingsPanel.tsx": {
       "tabs-primitive": 1

@@ -25,6 +25,7 @@ import type {
   Polyline3D,
   BoundingBox3D,
 } from './bim-base';
+import type { Point2D } from '../../rendering/types/Types';
 import type { WallDna } from './wall-dna-types';
 import type { StructuralFinishSpec } from '../finishes/structural-finish-types';
 import type { SceneUnits } from '../../utils/scene-units';
@@ -273,7 +274,7 @@ export interface WallGeometry {
    * (mirror του beam `displayOutline`). Πολλά rings = κολόνα που χωρίζει τον τοίχο· `[]` =
    * τοίχος εξ ολοκλήρου μέσα σε κολόνα (δεν σχεδιάζεται). Απών → πλήρες outer+inner ring.
    */
-  readonly displayFootprint?: readonly (readonly Point3D[])[];
+  readonly displayFootprint?: readonly (readonly Point2D[])[];
 }
 
 // ─── Entity (BIM generic instantiation) ─────────────────────────────────────

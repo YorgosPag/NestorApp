@@ -14,7 +14,7 @@
  * SSoT reuse (μηδέν διπλότυπα):
  *   - μετατροπή κλίσης deg↔ratio → `roof-slope-units.ts` (default seeding μόνο).
  *   - outward azimuth ακμής → `polygon-azimuth-utils` (`directionAzimuthDeg`) +
- *     `polygon-utils` (`segmentNormalX/Y`, `isPolygonCCW`) — ΟΧΙ νέα γεωμετρία.
+ *     `polygon-utils` (`segmentNormal`, `isPolygonCCW`) — ΟΧΙ νέα γεωμετρία.
  *
  * Pure module: zero React/DOM. Ο bridge (`useRibbonRoofBridge`) χτίζει τα option
  * labels (compass words μέσω `t()` — N.11) και κάνει το dispatch/store-set.

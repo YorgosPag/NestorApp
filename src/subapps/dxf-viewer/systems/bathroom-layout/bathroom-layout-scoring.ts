@@ -8,7 +8,6 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { Point3D } from '../../bim/types/bim-base';
 import type { FixturePlacement, LayoutScoreBreakdown } from './bathroom-layout-types';
 import { resolveFixtureSpec } from './sanitary-clearance-spec';
 import { areaOf, cornerInsideFraction, rectOverlapMm2, roomDiagonalMm } from './layout-geometry';
@@ -67,12 +66,12 @@ function scoreTidiness(placements: readonly FixturePlacement[]): number {
 /** Ergonomics with the room polygon in scope (obstruction = another footprint in my use-zone). */
 function ergonomicsWithRoom(
   placements: readonly FixturePlacement[],
-  roomLifted: readonly Point3D[],
+  room: readonly Point2D[],
 ): number {
   if (placements.length === 0) return 1;
   let sum = 0;
   for (const p of placements) {
-    const inside = cornerInsideFraction(p.useZone, roomLifted);
+    const inside = cornerInsideFraction(p.useZone, room);
     const zoneArea = areaOf(p.useZone) || 1;
     let obstruction = 0;
     for (const other of placements) {
@@ -88,16 +87,16 @@ function ergonomicsWithRoom(
 export function scoreLayout(args: {
   readonly placements: readonly FixturePlacement[];
   readonly requestedCount: number;
-  readonly roomLifted: readonly Point3D[];
+  readonly room: readonly Point2D[];
   readonly roomAreaMm2: number;
   readonly doorKeepClears: readonly (readonly Point2D[])[];
   readonly wetWallHintIndex: number | undefined;
 }): { score: number; breakdown: LayoutScoreBreakdown } {
-  const { placements, requestedCount, roomLifted, roomAreaMm2, doorKeepClears, wetWallHintIndex } = args;
+  const { placements, requestedCount, room, roomAreaMm2, doorKeepClears, wetWallHintIndex } = args;
   const completeness = requestedCount > 0 ? placements.length / requestedCount : 1;
   const breakdown: LayoutScoreBreakdown = {
-    ergonomics: ergonomicsWithRoom(placements, roomLifted),
-    plumbing: scorePlumbing(placements, roomDiagonalMm(roomLifted), wetWallHintIndex),
+    ergonomics: ergonomicsWithRoom(placements, room),
+    plumbing: scorePlumbing(placements, roomDiagonalMm(room), wetWallHintIndex),
     circulation: scoreCirculation(placements, roomAreaMm2, doorKeepClears),
     tidiness: scoreTidiness(placements),
     completeness: clamp01(completeness),

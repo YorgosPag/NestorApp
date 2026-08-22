@@ -102,8 +102,7 @@ function normalizePolygon(polygon: readonly SkPoint[]): SkPoint[] {
     const b = dedup[dedup.length - 1];
     if (Math.hypot(a.x - b.x, a.y - b.y) <= EPS) dedup.pop();
   }
-  const ring3 = dedup.map((p) => ({ x: p.x, y: p.y, z: 0 }));
-  return isPolygonCCW(ring3) ? dedup : dedup.reverse();
+  return isPolygonCCW(dedup) ? dedup : dedup.reverse();
 }
 
 /** Κατασκευή ακμών (διεύθυνση + εσωτερικό κάθετο για CCW = rotate +90°). */

@@ -15,7 +15,7 @@ import {
   type LayoutFixtureKind,
 } from '../index';
 import { SANITARY_SPEC } from '../../../bim/sanitary/sanitary-symbol-spec';
-import { allCornersInside, lift, rectOverlapMm2 } from '../layout-geometry';
+import { allCornersInside, rectOverlapMm2 } from '../layout-geometry';
 
 /** CCW rectangle room (mm) at origin. */
 function rectRoom(widthMm: number, depthMm: number): Point2D[] {
@@ -46,21 +46,21 @@ describe('segmentRoomWalls', () => {
   it('yields one oriented wall per rectangle edge with inward normals pointing inside', () => {
     const walls = segmentRoomWalls(rectRoom(2000, 2200));
     expect(walls).toHaveLength(4);
-    const roomLifted = lift(rectRoom(2000, 2200));
+    const roomPoly = rectRoom(2000, 2200);
     for (const w of walls) {
       const mid = { x: (w.a.x + w.b.x) / 2, y: (w.a.y + w.b.y) / 2 };
-      const probe = [{ x: mid.x + w.inward.x * 10, y: mid.y + w.inward.y * 10, z: 0 }];
-      expect(allCornersInside([{ x: probe[0].x, y: probe[0].y }], roomLifted)).toBe(true);
+      const probe = [{ x: mid.x + w.inward.x * 10, y: mid.y + w.inward.y * 10 }];
+      expect(allCornersInside([{ x: probe[0].x, y: probe[0].y }], roomPoly)).toBe(true);
     }
   });
 
   it('normalises CW input to CCW (inward normals still point inside)', () => {
     const cw = [...rectRoom(2000, 2200)].reverse();
     const walls = segmentRoomWalls(cw);
-    const roomLifted = lift(cw);
+    const roomPoly = cw;
     for (const w of walls) {
       const mid = { x: (w.a.x + w.b.x) / 2 + w.inward.x * 10, y: (w.a.y + w.b.y) / 2 + w.inward.y * 10 };
-      expect(allCornersInside([mid], roomLifted)).toBe(true);
+      expect(allCornersInside([mid], roomPoly)).toBe(true);
     }
   });
 });
@@ -70,7 +70,7 @@ describe('buildFixtureRects', () => {
     const walls = segmentRoomWalls(rectRoom(2000, 2200));
     const bottom = walls[0];
     const rects = buildFixtureRects(bottom, 1000, 600, 460, 550);
-    expect(allCornersInside(rects.footprint, lift(rectRoom(2000, 2200)))).toBe(true);
+    expect(allCornersInside(rects.footprint, rectRoom(2000, 2200))).toBe(true);
     expect(rects.footprint).toHaveLength(4);
     expect(rects.useZone).toHaveLength(4);
   });
@@ -89,9 +89,9 @@ describe('solveBathroomLayout — core solver', () => {
   it('places every fixture inside the room with no footprint collisions (best solution)', () => {
     const [best] = solveBathroomLayout({ polygonMm: room, fixtures: basics });
     expect(best).toBeDefined();
-    const roomLifted = lift(room);
+
     for (const p of best.placements) {
-      expect(allCornersInside(p.footprint, roomLifted)).toBe(true);
+      expect(allCornersInside(p.footprint, room)).toBe(true);
     }
     for (let i = 0; i < best.placements.length; i++) {
       for (let j = i + 1; j < best.placements.length; j++) {

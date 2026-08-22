@@ -27,8 +27,7 @@ export interface RoomWall {
 
 /** Ensure CCW winding (interior on the left of each directed edge). */
 function ensureCCW(polygon: readonly Point2D[]): Point2D[] {
-  const lifted = polygon.map((p) => ({ x: p.x, y: p.y, z: 0 }));
-  return isPolygonCCW(lifted) ? [...polygon] : [...polygon].reverse();
+  return isPolygonCCW(polygon) ? [...polygon] : [...polygon].reverse();
 }
 
 /**

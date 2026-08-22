@@ -59,7 +59,7 @@ export const MAX_TEK_FILL_LINES_TOTAL = 120_000;
 export function estimateHatchFillLines(h: HatchEntity): number {
   const spacing = hatchMinWorldSpacing(h);
   if (spacing <= 0) return 0;
-  const verts = (h.boundaryPaths ?? []).flat().map((v) => ({ x: v.x, y: v.y, z: 0 }));
+  const verts = (h.boundaryPaths ?? []).flat();
   if (verts.length < 3) return 0;
   const bbox = polygonBbox(verts);
   const w = Math.abs(bbox.max.x - bbox.min.x);

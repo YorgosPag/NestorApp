@@ -19,12 +19,10 @@
  */
 
 import type { DxfEntityUnion, DxfWall } from '../../canvas-v2/dxf-canvas/dxf-types';
-import type { Point3D } from '../../bim/types/bim-base';
 import type { Pt2 } from '../../bim/geometry/shared/segment-polygon-coverage';
 import { computeMemberCutbackOutline } from '../../bim/geometry/member-column-cutback';
 import { buildWallFootprintRing } from '../../bim/geometry/wall-geometry';
 import { computeWallCrossCutters, type WallCrossInput } from '../../bim/walls/wall-cross-cutback';
-import { projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
 
 /**
  * Εφαρμόζει το wall-to-wall cross cutback. Επιστρέφει το ίδιο array (by-reference) όταν καμία
@@ -52,9 +50,10 @@ export function applyWallWallCrossCutback2D(entities: DxfEntityUnion[]): DxfEnti
     const wall = e as DxfWall;
 
     // Base rings = ήδη-κομμένα κομμάτια από το column pass, αλλιώς ο raw footprint ring.
-    const existing = wall.geometry.displayFootprint as Point3D[][] | undefined;
+    // ADR-789 — το column pass αφήνει ήδη 2Δ δακτυλίους· μηδέν cast, μηδέν επαναπροβολή.
+    const existing = wall.geometry.displayFootprint;
     const baseRings: Pt2[][] = existing
-      ? existing.map((r) => projectVerticesTo2D(r))
+      ? existing.map((r) => [...r])
       : [buildWallFootprintRing(wall.geometry.outerEdge.points, wall.geometry.innerEdge.points)];
 
     let changed = false;
@@ -68,7 +67,7 @@ export function applyWallWallCrossCutback2D(entities: DxfEntityUnion[]): DxfEnti
     }
     if (!changed) return e; // wall cutters δεν τεμαχίζουν → κράτα ό,τι έδωσε το column pass
 
-    const displayFootprint: Point3D[][] = out.map((r) => r.map((p) => ({ x: p.x, y: p.y, z: 0 })));
+    const displayFootprint = out;
     return { ...wall, geometry: { ...wall.geometry, displayFootprint } } as DxfEntityUnion;
   });
 }

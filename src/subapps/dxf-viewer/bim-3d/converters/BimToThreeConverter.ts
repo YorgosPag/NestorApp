@@ -16,7 +16,7 @@
 import * as THREE from 'three';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { OpeningEntity } from '../../bim/types/opening-types';
-import type { Point3D } from '../../bim/types/bim-base';
+import type { PlanarPoint, Point3D } from '../../bim/types/bim-base';
 import { getMaterial3D } from '../materials/MaterialCatalog3D';
 import { buildWallMeshWithOpenings } from './wall-opening-extrude';
 import { computeWallOpeningPieces, type WallTopLocalFn, type WallBaseLocalFn, type WallOpeningPiece } from './wall-opening-pieces';
@@ -318,7 +318,7 @@ function buildWallCoreBody(
   if (trimmed !== null) {
     if (trimmed.length === 0) return null;
     const shapes = trimmed
-      .map((r) => buildShape(r.map((p) => ({ x: p.x, y: p.y, z: 0 }))))
+      .map((r) => buildShape(r))
       .filter((s): s is NonNullable<typeof s> => s !== null);
     const geo = extrudeShapesAndRotate(shapes, heightM);
     if (!geo) return null;
@@ -344,8 +344,8 @@ export function wallToMesh(
   baseProfile?: WallBaseProfile,
   topClip?: WallTopClipContext,
   nominalHeightMm?: number,
-  columns: readonly (readonly Point3D[])[] = [],
-  wallCrossFootprints: readonly (readonly Point3D[])[] = [],
+  columns: readonly (readonly PlanarPoint[])[] = [],
+  wallCrossFootprints: readonly (readonly PlanarPoint[])[] = [],
 ): THREE.Object3D | null {
   // ADR-448 Phase 1b — when `topBinding='storey-ceiling'` resolves a real storey
   // ceiling, render at that height (Revit «Top: Up to Level»). Stored `params.height`

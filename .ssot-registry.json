@@ -5456,6 +5456,19 @@
       "allowlist": [
         "src/lib/hash/sha256.ts"
       ]
+    },
+    "planar-point-lift": {
+      "tier": 1,
+      "typeFile": "src/subapps/dxf-viewer/bim/types/bim-base.ts",
+      "description": "ADR-789 — ΜΗΝ λιφτάρεις 2Δ κορυφές σε ψεύτικο z=0. Η επιφάνεια κάτοψης (polygon-utils / polygon-clip-utils / xy-bounds / buildShape) δηλώνει `PlanarPoint` και ΔΕΝ διαβάζει ποτέ .z — το lift είναι round-trip που δεν κάνει τίποτα. Πέρασε το 2Δ πολύγωνο αυτούσιο. Γνήσιο z ⇒ γράψε την πραγματική τιμή, όχι 0.",
+      "forbiddenPatterns": [
+        "\\.map\\(.*=>\\s*\\(?\\s*\\{\\s*x:\\s*[A-Za-z_$][\\w$]*\\.x\\s*,\\s*y:\\s*[A-Za-z_$][\\w$]*\\.y\\s*,\\s*z:\\s*0\\s*\\}",
+        ":\\s*Point3D\\s*=>\\s*\\(\\s*\\{\\s*x:\\s*[A-Za-z_$][\\w$]*\\.x\\s*,\\s*y:\\s*[A-Za-z_$][\\w$]*\\.y\\s*,\\s*z:\\s*0\\s*\\}",
+        "^\\s*return\\s*\\{\\s*x:\\s*[A-Za-z_$][\\w$]*\\.x\\s*,\\s*y:\\s*[A-Za-z_$][\\w$]*\\.y\\s*,\\s*z:\\s*0\\s*\\}\\s*;?\\s*$"
+      ],
+      "allowlist": [],
+      "addedByAdr": "ADR-789",
+      "addedDate": "2026-08-22"
     }
   }
 }

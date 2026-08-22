@@ -13,7 +13,6 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.6
  */
 
-import type { Point3D } from '../../types/bim-base';
 import type { Point2D } from '../../../rendering/types/Types';
 import { pointInPolygon, polygonCentroid } from './polygon-utils';
 // REUSE του κανονικού SSoT απόστασης σημείου↔τμήματος (systems/guides) — το ΙΔΙΟ που χρησιμοποιούν
@@ -45,8 +44,7 @@ function clearanceToBoundary(p: XY, verts: readonly XY[]): number {
  */
 export function interiorAnchorPointWithClearance(verts: readonly XY[]): { point: XY; clearance: number } {
   const n = verts.length;
-  const poly3: Point3D[] = verts.map((v) => ({ x: v.x, y: v.y, z: 0 }));
-  const centroid = polygonCentroid(poly3);
+  const centroid = polygonCentroid(verts);
   if (n < 3) return { point: centroid, clearance: 0 };
 
   const candidates: XY[] = [centroid];
@@ -58,7 +56,7 @@ export function interiorAnchorPointWithClearance(verts: readonly XY[]): { point:
   let best: XY = centroid;
   let bestClearance = -1;
   for (const c of candidates) {
-    if (!pointInPolygon(c, poly3)) continue;
+    if (!pointInPolygon(c, verts)) continue;
     const cl = clearanceToBoundary(c, verts);
     if (cl > bestClearance) {
       bestClearance = cl;

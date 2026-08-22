@@ -22,7 +22,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-619-stair-from-region.md
  */
 
-import type { Point2D, Point3D } from '../../../rendering/types/Types';
+import type { Point2D } from '../../../rendering/types/Types';
 import type { SceneUnits } from '../../../utils/scene-units';
 import { mmToSceneUnits } from '../../../utils/scene-units';
 import type { Vec2 } from './stair-geometry-shared';
@@ -83,10 +83,6 @@ function dedupe(vertices: readonly Point2D[], eps: number): Point2D[] {
   return out;
 }
 
-function lift(v: Point2D): Point3D {
-  return { x: v.x, y: v.y, z: 0 };
-}
-
 /** True όταν η κορυφή `i` είναι ~συγγραμμική (μοναδιαίο cross < sinTol). */
 function isCollinear(a: Point2D, b: Point2D, c: Point2D, sinTol: number): boolean {
   const ux = b.x - a.x;
@@ -122,11 +118,11 @@ function simplifyCollinear(pts: readonly Point2D[]): Point2D[] {
 
 /** Εξασφαλίζει CCW winding (θετικό signed area) — απαιτείται από reflex detection. */
 function ensureCCW(ring: readonly Point2D[]): Point2D[] {
-  const v3 = ring.map(lift);
+  // ADR-789 — το shoelace δουλεύει σε `PlanarPoint`· κανένα lift δεν χρειάζεται.
   let signed = 0;
-  for (let i = 0; i < v3.length; i++) {
-    const a = v3[i];
-    const b = v3[(i + 1) % v3.length];
+  for (let i = 0; i < ring.length; i++) {
+    const a = ring[i];
+    const b = ring[(i + 1) % ring.length];
     signed += a.x * b.y - b.x * a.y;
   }
   return signed < 0 ? [...ring].reverse() : [...ring];
@@ -140,7 +136,7 @@ function degenerateFallback(
   ring: readonly Point2D[],
   reason: string,
 ): StairRegionClassification {
-  const bbox = polygonBbox(ring.map(lift));
+  const bbox = polygonBbox(ring);
   const w = bbox.max.x - bbox.min.x;
   const h = bbox.max.y - bbox.min.y;
   const alongX = w >= h;
@@ -181,7 +177,7 @@ export function classifyStairRegion(
     return degenerateFallback(footprint, ring.length ? ring : [{ x: 0, y: 0 }], WARNING_DEGENERATE);
   }
   const ccw = ensureCCW(simplifyCollinear(ring));
-  if (polygonArea(ccw.map(lift)) <= eps * eps) {
+  if (polygonArea(ccw) <= eps * eps) {
     return degenerateFallback(footprint, ccw, WARNING_DEGENERATE);
   }
 

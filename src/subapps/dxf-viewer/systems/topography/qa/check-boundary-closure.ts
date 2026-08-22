@@ -14,39 +14,43 @@
  */
 
 import type { Point2D } from '../../../rendering/types/Types';
-import type { Point3D } from '../../../bim/types/bim-base';
 import type { TopoBoundary, Breakline } from '../topo-types';
 import type { TopoQaFlag } from './topo-qa-types';
 import { TOPO_QA_CONFIG } from './topo-qa-config';
-import { isPolygonSelfIntersecting, polygonArea, polygon2DCentroid } from '../../../bim/geometry/shared/polygon-utils';
+import { isPolygonSelfIntersecting, polygonArea, polygonCentroid } from '../../../bim/geometry/shared/polygon-utils';
 import { areaMm2ToM2 } from '../../../utils/scene-units';
 
 /** A ring to validate, with the message-key suffix that names it (`Boundary` / `Breakline`). */
 interface Ring {
   readonly suffix: 'Boundary' | 'Breakline';
   readonly index: number;
-  readonly verts2d: readonly Point2D[];
-  readonly verts3d: readonly Point3D[];
+  /**
+   * ADR-789 — **ΕΝΑ** σχήμα. Μέχρι 2026-08-22 η δομή κρατούσε δεύτερο πεδίο με το ΙΔΙΟ
+   * πολύγωνο λιφταρισμένο σε z=0, δηλαδή τον φραγμό τύπου ως **κατάσταση** — επειδή τα
+   * `polygonArea`/`isPolygonSelfIntersecting` απαιτούσαν 3Δ κορυφές χωρίς να διαβάζουν
+   * ποτέ το z. Πλέον δηλώνουν `PlanarPoint[]` και το δεύτερο αντίγραφο έσβησε.
+   */
+  readonly verts: readonly Point2D[];
 }
 
 function toRing(suffix: Ring['suffix'], index: number, verts: readonly Point2D[]): Ring {
-  return { suffix, index, verts2d: verts, verts3d: verts.map((p) => ({ x: p.x, y: p.y, z: 0 })) };
+  return { suffix, index, verts };
 }
 
 /** Flags for ONE ring: self-intersection (high) and degenerate area (high). */
 function checkRing(ring: Ring): TopoQaFlag[] {
-  if (ring.verts2d.length < 3) return [];
-  const at = polygon2DCentroid(ring.verts2d);
+  if (ring.verts.length < 3) return [];
+  const at = polygonCentroid(ring.verts);
   const params = { ring: ring.index + 1 };
   const flags: TopoQaFlag[] = [];
-  if (isPolygonSelfIntersecting(ring.verts3d)) {
+  if (isPolygonSelfIntersecting(ring.verts)) {
     flags.push({
       id: `self-intersection:${ring.suffix}:${ring.index}`,
       kind: 'self-intersection', severity: 'high', at,
       messageKey: `topography.qa.flag.selfIntersection${ring.suffix}`, messageParams: params,
     });
   }
-  const area = polygonArea(ring.verts3d);
+  const area = polygonArea(ring.verts);
   if (area < TOPO_QA_CONFIG.RING_MIN_AREA_MM2) {
     flags.push({
       id: `boundary-closure:${ring.suffix}:${ring.index}`,

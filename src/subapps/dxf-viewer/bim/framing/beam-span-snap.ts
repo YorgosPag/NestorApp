@@ -16,7 +16,7 @@
  *
  * **Γεωμετρία (Revit «centerline trimmed-to-face»):** άξονας = νοητή ευθεία **κέντρο→κέντρο** (`u`)· τα
  * centerline άκρα = η ακραία προβολή κάθε outline στον `u`, **προς** το άλλο μέλος (`projectPolygonOnAxis`).
- * Orientation-agnostic. **FULL SSoT reuse:** κέντρο = `polygon2DCentroid`· προβολές = `projectPolygonOnAxis`/
+ * Orientation-agnostic. **FULL SSoT reuse:** κέντρο = `polygonCentroid`· προβολές = `projectPolygonOnAxis`/
  * `projectPointOnAxis`· vector-math = `geometry-vector-utils` (ΟΧΙ inline math)· guide = `PlacementAlignmentGuide`.
  * Pure (zero React/DOM/store). Ένα μέλος = το **κλειστό outline του** (κολόνα → footprint· τοίχος → ring).
  *
@@ -55,7 +55,7 @@
  * @see ../columns/column-beam-corner-snap.ts — το αντίστροφο πρότυπο (L-κολόνα γεμίζει γωνιακό κενό)
  * @see ../columns/column-beam-promote-junction.ts — ADR-529 Φ2 (δοκάρι ΠΡΟΑΓΕΙ Ι-κολόνα σε Γ)
  * @see ../geometry/shared/polygon-axis-projection.ts — projectPolygonOnAxis/projectPointOnAxis (SSoT)
- * @see ../geometry/shared/polygon-utils.ts — polygon2DCentroid (SSoT κέντρο 2D πολυγώνου)
+ * @see ../geometry/shared/polygon-utils.ts — polygonCentroid (SSoT κέντρο 2D πολυγώνου)
  * @see ./placement-alignment-guide.ts — PlacementAlignmentGuide (canonical SSoT, paint pipeline)
  * @see ../../placement/bim-cursor-snap.ts — ο εγκέφαλος (beam branch, gated `beamSpanGhost`)
  * @see docs/centralized-systems/reference/adrs/ADR-528-beam-auto-span-between-structural-members.md
@@ -64,7 +64,8 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
-import { polygon2DCentroid } from '../geometry/shared/polygon-utils';
+import { polygonCentroid } from '../geometry/shared/polygon-utils';
+import { closestEdgeOnPolygonOutline } from '../geometry/shared/polygon-nearest';
 import { projectPolygonOnAxis, projectPointOnAxis } from '../geometry/shared/polygon-axis-projection';
 import { MEMBER_GHOST_CAPTURE_MM } from './member-column-face-snap';
 import { pickThird } from './member-face-third';
@@ -152,21 +153,7 @@ export function collectSpanSupportOutlines(targets: Readonly<SceneSnapTargets>):
 function buildSupports(supportOutlines: readonly (readonly Point2D[])[]): SpanSupport[] {
   return supportOutlines
     .filter((o) => o.length >= 3)
-    .map((outline) => ({ center: polygon2DCentroid(outline), outline }));
-}
-
-/**
- * Πλησιέστερο σημείο ευθυγράμμου τμήματος `[a,b]` στο `p` (clamped στα άκρα). Pure SSoT-local (ADR-529 Φ1):
- * δεν εισάγουμε το `systems/guides/projectPointOnSegment` (λάθος layer — θα έσπαγε το bim→systems decoupling,
- * όπως ο cross2D στο `column-beam-corner-snap`). Μικρό, καθαρό, single-consumer.
- */
-function closestPointOnSegment(p: Point2D, a: Point2D, b: Point2D): Point2D {
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const l2 = dx * dx + dy * dy;
-  if (l2 < EPS) return { x: a.x, y: a.y };
-  const t = clamp01(((p.x - a.x) * dx + (p.y - a.y) * dy) / l2);
-  return { x: a.x + t * dx, y: a.y + t * dy };
+    .map((outline) => ({ center: polygonCentroid(outline), outline }));
 }
 
 /** Πλησιέστερο σημείο του περιγράμματος + η ακμή (unit dir + άκρα) πάνω στην οποία πέφτει. */
@@ -176,26 +163,23 @@ interface OutlineHit {
   readonly seg: readonly [Point2D, Point2D]; // άκρα της ακμής (για το justified third-alignment)
 }
 
-/** Πλησιέστερο σημείο του **περιγράμματος** (κλειστού πολυγώνου) στο `target` — η παρειά που «κοιτάζει». */
+/**
+ * Πλησιέστερο σημείο του **περιγράμματος** στο `target`, μαζί με την ακμή πάνω στην
+ * οποία πέφτει.
+ *
+ * ⚠️ ADR-789 / N.0.2 — ήταν **ιδιωτικό δίδυμο** του `closestEdgeOnPolygonOutline`, το
+ * οποίο ο ίδιος του ο docblock δηλώνει «ΕΝΑ edge-walk SSoT». Ο κλώνος (87 tokens) ήταν
+ * μετρήσιμος από το CHECK 3.28 και οι δύο εκδοχές είχαν ήδη **διαφορετικό** πυρήνα
+ * απόστασης (`closestPointOnSegment` έναντι `getNearestPointOnLine`) — δύο απαντήσεις
+ * σε ένα ερώτημα, ακριβώς το σχήμα του ADR-749. Πλέον delegate, μηδέν δεύτερος βρόχος.
+ *
+ * Κενό outline → εκφυλισμένο hit στο `target` (ο καλών ήδη φιλτράρει `< 3` κορυφές).
+ */
 function closestPointOnOutline(outline: readonly Point2D[], target: Point2D): OutlineHit {
-  let best = outline[0];
-  let bestEdge: Point2D = { x: 1, y: 0 };
-  let bestSeg: readonly [Point2D, Point2D] = [outline[0], outline[0]];
-  let bestD = Infinity;
-  for (let i = 0; i < outline.length; i++) {
-    const a = outline[i];
-    const b = outline[(i + 1) % outline.length];
-    const q = closestPointOnSegment(target, a, b);
-    const d = (q.x - target.x) ** 2 + (q.y - target.y) ** 2;
-    if (d < bestD) {
-      bestD = d;
-      best = q;
-      const len = Math.hypot(b.x - a.x, b.y - a.y);
-      bestEdge = len > EPS ? { x: (b.x - a.x) / len, y: (b.y - a.y) / len } : { x: 1, y: 0 };
-      bestSeg = [a, b];
-    }
-  }
-  return { point: best, edge: bestEdge, seg: bestSeg };
+  const hit = closestEdgeOnPolygonOutline(outline, target);
+  if (hit) return { point: hit.point, edge: hit.edge, seg: hit.seg };
+  const fallback = outline[0] ?? target;
+  return { point: fallback, edge: { x: 1, y: 0 }, seg: [fallback, fallback] };
 }
 
 /**

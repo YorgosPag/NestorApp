@@ -19,7 +19,7 @@
 
 import type { Point2D } from '../../../rendering/types/Types';
 import { getNearestPointOnLine } from '../../../rendering/entities/shared/geometry-utils';
-import { polygon2DCentroid } from './polygon-utils';
+import { polygonCentroid } from './polygon-utils';
 
 const EPS = 1e-6;
 
@@ -175,8 +175,8 @@ export function closestFacingEdgeBetweenPolygons(
   polyB: readonly Point2D[],
 ): FacingEdgePair | null {
   if (polyA.length < 3 || polyB.length < 3) return null;
-  const cA = polygon2DCentroid(polyA);
-  const cB = polygon2DCentroid(polyB);
+  const cA = polygonCentroid(polyA);
+  const cB = polygonCentroid(polyB);
   // Centroid-probing + refinement → οι facing-παρειές πέφτουν σε εσωτερικό ακμής (όχι κορυφή).
   const fA0 = closestEdgeOnPolygonOutline(polyA, cB);
   if (!fA0) return null;

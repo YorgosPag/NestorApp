@@ -32,7 +32,7 @@ import { isColumnEntity, isWallEntity } from '../../types/entities';
 import type { BeamEntity } from '../types/beam-types';
 import { DEFAULT_BEAM_WIDTH_MM } from '../types/beam-types';
 import { resolveMemberFootprintVertices } from '../structural/member-footprint-2d';
-import { closedRingFromEdges, polygon2DCentroid, projectVerticesTo2D } from '../geometry/shared/polygon-utils';
+import { closedRingFromEdges, polygonCentroid, projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 import { projectPolygonOnAxis } from '../geometry/shared/polygon-axis-projection';
 import {
   shortestSegmentBetweenPolygons,
@@ -191,7 +191,7 @@ function resolveFlushJustification(
  *     κεντραρισμένος και όταν αλλάξει το πλάτος (associative), αντί να ξεκολλήσει νότια.
  *
  * `halfWidthScene` = μισό πλάτος δοκαριού σε scene units (ώστε το centerline να μετατοπιστεί σωστά).
- * FULL SSoT reuse: `closestFacingEdgeBetweenPolygons` (facing-ακμή) + `polygon2DCentroid` +
+ * FULL SSoT reuse: `closestFacingEdgeBetweenPolygons` (facing-ακμή) + `polygonCentroid` +
  * `projectPolygonOnAxis` (ίδιο με ADR-528 auto-span). `{u,n}` ορθοκανονική βάση → ανακατασκευή σημείου
  * `P = O + s·u + t·n`. `null` αν τα μέλη εφάπτονται/επικαλύπτονται (καμία καθαρή facing-ακμή).
  *
@@ -204,8 +204,8 @@ export function computeBeamAxisBetweenMembers(
   footprintB: readonly Point2D[],
   halfWidthScene: number,
 ): { a: Point2D; b: Point2D; justification: StripJustification } | null {
-  const cA = polygon2DCentroid(footprintA);
-  const cB = polygon2DCentroid(footprintB);
+  const cA = polygonCentroid(footprintA);
+  const cB = polygonCentroid(footprintB);
   // Διεύθυνση δοκαριού = κάθετος της facing-ακμής του πιο κοντινού σκέλους (ADR-569 — ποτέ λοξό).
   const facing = closestFacingEdgeBetweenPolygons(footprintA, footprintB);
   if (!facing) return null;

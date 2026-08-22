@@ -59,24 +59,19 @@ function distinctSorted(values: readonly number[]): number[] {
   return out;
 }
 
-/** Pseudo-3D για το pointInPolygon (που δουλεύει σε XY). */
-function toXY(poly: readonly Point2D[]): { x: number; y: number; z: number }[] {
-  return poly.map((p) => ({ x: p.x, y: p.y, z: 0 }));
-}
-
 /** true αν η κυψέλη [xs[c],xs[c+1]] × [ys[b],ys[b+1]] είναι εσωτερική (έλεγχος κέντρου). */
-function cellInside(xs: number[], ys: number[], c: number, b: number, poly3: { x: number; y: number; z: number }[]): boolean {
+function cellInside(xs: number[], ys: number[], c: number, b: number, poly: readonly Point2D[]): boolean {
   const mx = (xs[c] + xs[c + 1]) / 2;
   const my = (ys[b] + ys[b + 1]) / 2;
-  return pointInPolygon({ x: mx, y: my }, poly3);
+  return pointInPolygon({ x: mx, y: my }, poly);
 }
 
 /** Συνεχόμενα εσωτερικά x-διαστήματα ενός band ως ζεύγη στηλών [cLo, cHi]. */
-function bandIntervals(xs: number[], ys: number[], b: number, poly3: { x: number; y: number; z: number }[]): [number, number][] {
+function bandIntervals(xs: number[], ys: number[], b: number, poly: readonly Point2D[]): [number, number][] {
   const intervals: [number, number][] = [];
   let start = -1;
   for (let c = 0; c < xs.length - 1; c++) {
-    const inside = cellInside(xs, ys, c, b, poly3);
+    const inside = cellInside(xs, ys, c, b, poly);
     if (inside && start < 0) start = c;
     if ((!inside || c === xs.length - 2) && start >= 0) {
       intervals.push([start, inside ? c : c - 1]);
@@ -87,19 +82,19 @@ function bandIntervals(xs: number[], ys: number[], b: number, poly3: { x: number
 }
 
 /** true αν, στο band `b`, ΟΛΕΣ οι στήλες [cLo,cHi] είναι εσωτερικές. */
-function bandCoversCols(xs: number[], ys: number[], b: number, cLo: number, cHi: number, poly3: { x: number; y: number; z: number }[]): boolean {
+function bandCoversCols(xs: number[], ys: number[], b: number, cLo: number, cHi: number, poly: readonly Point2D[]): boolean {
   for (let c = cLo; c <= cHi; c++) {
-    if (!cellInside(xs, ys, c, b, poly3)) return false;
+    if (!cellInside(xs, ys, c, b, poly)) return false;
   }
   return true;
 }
 
 /** Μεγιστοποίηση κατακόρυφης έκτασης ενός x-διαστήματος [cLo,cHi] γύρω από το band `b0`. */
-function growBand(xs: number[], ys: number[], b0: number, cLo: number, cHi: number, poly3: { x: number; y: number; z: number }[]): [number, number] {
+function growBand(xs: number[], ys: number[], b0: number, cLo: number, cHi: number, poly: readonly Point2D[]): [number, number] {
   let lo = b0;
   let hi = b0;
-  while (lo - 1 >= 0 && bandCoversCols(xs, ys, lo - 1, cLo, cHi, poly3)) lo--;
-  while (hi + 1 < ys.length - 1 && bandCoversCols(xs, ys, hi + 1, cLo, cHi, poly3)) hi++;
+  while (lo - 1 >= 0 && bandCoversCols(xs, ys, lo - 1, cLo, cHi, poly)) lo--;
+  while (hi + 1 < ys.length - 1 && bandCoversCols(xs, ys, hi + 1, cLo, cHi, poly)) hi++;
   return [lo, hi];
 }
 
@@ -136,12 +131,12 @@ export function decomposeColumnSectionRects(outlineMm: readonly Point2D[]): Sect
   const xs = distinctSorted(outlineMm.map((p) => p.x));
   const ys = distinctSorted(outlineMm.map((p) => p.y));
   if (xs.length < 2 || ys.length < 2) return [];
-  const poly3 = toXY(outlineMm);
+  // ADR-789 — μηδέν lift: το `pointInPolygon` δέχεται `PlanarPoint`, άρα το 2D outline μπαίνει αυτούσιο.
 
   const byKey = new Map<string, SectionRectMm>();
   for (let b = 0; b < ys.length - 1; b++) {
-    for (const [cLo, cHi] of bandIntervals(xs, ys, b, poly3)) {
-      const [b0, b1] = growBand(xs, ys, b, cLo, cHi, poly3);
+    for (const [cLo, cHi] of bandIntervals(xs, ys, b, outlineMm)) {
+      const [b0, b1] = growBand(xs, ys, b, cLo, cHi, outlineMm);
       const x0 = xs[cLo];
       const x1 = xs[cHi + 1];
       const y0 = ys[b0];

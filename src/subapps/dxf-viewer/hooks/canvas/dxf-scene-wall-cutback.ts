@@ -22,10 +22,10 @@
  * @see bim/renderers/WallRenderer.ts — displayFootprint consumer
  */
 
-import type { DxfEntityUnion, DxfColumn, DxfWall } from '../../canvas-v2/dxf-canvas/dxf-types';
-import type { Point3D } from '../../bim/types/bim-base';
+import type { DxfEntityUnion, DxfWall } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { computeMemberCutbackOutline } from '../../bim/geometry/member-column-cutback';
 import { buildWallFootprintRing } from '../../bim/geometry/wall-geometry';
+import { scanColumnCutters } from './dxf-scene-column-cutters';
 
 /**
  * Εφαρμόζει το wall-to-column cutback στους τοίχους του DxfScene. Επιστρέφει το ίδιο array
@@ -33,15 +33,7 @@ import { buildWallFootprintRing } from '../../bim/geometry/wall-geometry';
  * τοίχους ανανεωμένους (υπόλοιπα entities by-reference).
  */
 export function applyWallColumnCutback2D(entities: DxfEntityUnion[]): DxfEntityUnion[] {
-  let hasWall = false;
-  const columnFootprints: Point3D[][] = [];
-  for (const e of entities) {
-    if (e.type === 'wall') hasWall = true;
-    else if (e.type === 'column') {
-      const verts = (e as DxfColumn).geometry?.footprint?.vertices;
-      if (verts && verts.length >= 3) columnFootprints.push(verts.map((v) => ({ x: v.x, y: v.y, z: 0 })));
-    }
-  }
+  const { columnFootprints, hasMember: hasWall } = scanColumnCutters(entities, 'wall');
   if (!hasWall || columnFootprints.length === 0) return entities;
 
   return entities.map((e) => {
@@ -51,10 +43,9 @@ export function applyWallColumnCutback2D(entities: DxfEntityUnion[]): DxfEntityU
     if (ring.length < 3) return e;
     const pieces = computeMemberCutbackOutline(ring, columnFootprints);
     if (pieces === null) return e; // καμία τομή → αυτούσιο (zero regression)
-    const displayFootprint: Point3D[][] = pieces.map((r) => r.map((p) => ({ x: p.x, y: p.y, z: 0 })));
+    const displayFootprint = pieces;
     return {
       ...wall,
-      geometry: { ...wall.geometry, displayFootprint },
-    } as DxfEntityUnion;
+      geometry: { ...wall.geometry, displayFootprint } } as DxfEntityUnion;
   });
 }

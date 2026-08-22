@@ -14,7 +14,7 @@ import * as THREE from 'three';
 import type { ColumnEntity } from '../../bim/types/column-types';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { BeamEntity } from '../../bim/types/beam-types';
-import type { Point3D } from '../../bim/types/bim-base';
+import type { PlanarPoint, Point3D } from '../../bim/types/bim-base';
 import { getElementMaterial3D } from '../materials/MaterialCatalog3D';
 import { buildShape, extrudeAndRotate, extrudeShapesAndRotate, tagMesh, hangDownMeshY, stampBimIdentity, attachElementComponent } from './bim-three-shape-helpers';
 import { scalePoints } from '../../rendering/entities/shared/geometry-vector-utils';
@@ -436,8 +436,8 @@ export function beamToMesh(
     const carveVerts = buildBeam3DCarveOutline(beam, verts, hostFootprints, sceneToM);
     const trimmed = computeBeamCutbackOutline(carveVerts, hostFootprints);
     // ADR-539 Φ3d — faced multi-material μόνο στο box single-piece (full ή single trimmed ring).
-    const singleRing: readonly Point3D[] | null =
-      trimmed === null ? verts : trimmed.length === 1 ? trimmed[0].map((p) => ({ x: p.x, y: p.y, z: 0 })) : null;
+    const singleRing: readonly PlanarPoint[] | null =
+      trimmed === null ? verts : trimmed.length === 1 ? trimmed[0] : null;
     if (singleRing) facedMesh = buildBeamCoreBody(beam, singleRing, renderHeightM);
     if (!facedMesh && trimmed === null) {
       const shape = buildShape(verts);
@@ -446,7 +446,7 @@ export function beamToMesh(
     } else if (!facedMesh && trimmed !== null) {
       // `[]` = δοκάρι εξ ολοκλήρου μέσα στην κολόνα → δεν σχεδιάζεται.
       const shapes = trimmed
-        .map((ring) => buildShape(ring.map((p) => ({ x: p.x, y: p.y, z: 0 }))))
+        .map((ring) => buildShape(ring))
         .filter((s): s is NonNullable<typeof s> => s !== null);
       const trimmedGeo = extrudeShapesAndRotate(shapes, renderHeightM);
       if (!trimmedGeo) return null;

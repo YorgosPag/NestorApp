@@ -743,4 +743,112 @@ const totalRevenue = sumBy(sold, u => u.commercial?.finalPrice ?? 0);
 // Και ΣΧΟΛΙΟ που περιγράφει την παλιά αλυσίδα — δεν είναι η αλυσίδα:
 // ADR-777 Α5/Α6 — το \`s.price || 0\` αγνοούσε το commercial.askingPrice.`,
   },
+
+  // ADR-789 — το ωμό identity lift `{ x: p.x, y: p.y, z: 0 }`. Η απόδειξη μετράει ΙΔΙΑΙΤΕΡΑ
+  // εδώ: η επιφάνεια κάτοψης δηλώνει πλέον `PlanarPoint` και ΔΕΝ διαβάζει ποτέ `.z`, οπότε
+  // ένας μελλοντικός αναγνώστης βλέπει μια «καθαρή» πύλη και δεν ξέρει αν είναι καθαρή ή
+  // νεκρή. Τα fixtures είναι η διαφορά (N.12 — 606 από τους 671 φρουρούς είναι αδρανείς).
+  //
+  // 🔑 Το `shouldSkip` κωδικοποιεί ΤΙΣ ΤΡΕΙΣ κλάσεις που ΔΕΝ είναι lift, όλες μετρημένες
+  // στο πραγματικό δέντρο 2026-08-22: (α) γνήσιο z, (β) κλιμάκωση/μετατόπιση μαζί με το z,
+  // (γ) μονήρης δήλωση τομέα (άγκυρα οντότητας στη βάση ορόφου) — η οικογένεια Γ2 των **49**
+  // σημείων, που ΔΕΝ είναι το ίδιο ερώτημα και θα ήταν 100% ψευδώς θετικά (ADR-749).
+  'planar-point-lift': {
+    shouldMatch: `// (α) Το ωμό identity array-lift — 40 αντίγραφα σε 35 αρχεία πριν το ADR-789:
+const poly3 = verts.map((p) => ({ x: p.x, y: p.y, z: 0 }));
+return centredPolyToWorld(frame, local).map((p) => ({ x: p.x, y: p.y, z: 0 }));
+const rings = paths.map((p) => p.map((pt) => ({ x: pt.x, y: pt.y, z: 0 })));
+const lifted: Point3D[] = vertices.map((v) => ({ x: v.x, y: v.y, z: 0 }));
+// (β) Ο μονοσήμαντος lift που ΔΗΛΩΝΕΙ Point3D επιστροφή (ιδιωτικό SSoT σε λάθος εμβέλεια):
+const lift = (p: Point2D): Point3D => ({ x: p.x, y: p.y, z: 0 });
+const to3d = (q: Point2D): Point3D => ({ x: q.x, y: q.y, z: 0 });
+// (γ) Η ΙΔΙΑ κλάση σε μορφή \`function\` — το σώμα είναι το ταυτοτικό lift. Χωρίς αυτό το
+// pattern ο φρουρός ήταν τυφλός στο point-free \`ring.map(lift)\`, που δεν έχει arrow στο
+// σημείο κλήσης· η δήλωση είναι η ΜΟΝΗ γραμμή που τον προδίδει (μετρημένο: 2 στιγμιότυπα
+// στο \`stair-region-classifier\` που ο σαρωτής δεν έβλεπε, ADR-789 §11):
+  return { x: v.x, y: v.y, z: 0 };`,
+    shouldSkip: `// Κανονική χρήση — το 2Δ πολύγωνο μπαίνει ΑΥΤΟΥΣΙΟ στην επιφάνεια κάτοψης:
+import { polygonArea, polygonCentroid, projectVerticesTo2D } from './polygon-utils';
+const area = polygonArea(verts2d);
+const c = polygonCentroid(footprint);
+const flat = pts.map(projectPointTo2D);
+
+// (α) ΓΝΗΣΙΟ z — αυτό είναι γεωμετρία, όχι γέμισμα τύπου:
+const ring = poly.map((p) => ({ x: p.x, y: p.y, z: roofZmm(planes, basePivotZ, s, p) }));
+const kept = pts.map((v) => ({ x: v.x, y: v.y, z: v.z ?? 0 }));
+const treads = row.map((p) => ({ x: p.x, y: p.y, z: p.z }));
+
+// (β) Κλιμάκωση/μετατόπιση — άλλη πράξη, το z δεν είναι το θέμα:
+const scaled = verts.map((v) => ({ x: v.x * sceneToM, y: v.y * sceneToM, z: 0 }));
+const moved = verts.map((v) => ({ x: v.x + dx, y: v.y + dy, z: 0 }));
+
+// (γ) Οικογένεια Γ2 — ΔΗΛΩΣΗ ΤΟΜΕΑ, όχι μετατροπή τύπου (49 σημεία, ADR-789 §6):
+const position: Point3D = { x: clickPoint.x, y: clickPoint.y, z: 0 };
+const anchor: Point3D = { x: pt.x, y: pt.y, z: 0 };
+calculateMovedGeometry(entity, { x: delta.x, y: delta.y, z: 0 });
+// ⚠️ Το Π3 αγκυρώνεται στην ΑΡΧΗ της γραμμής (\`^\s*return\`): μια επιστροφή δήλωσης τομέα
+// που κουβαλά και άλλα πεδία, ή που δεν είναι ολόκληρη η γραμμή, ΔΕΝ πιάνεται:
+const built = { id, outline, origin: { x: p.x, y: p.y, z: 0 } };
+
+// ⚠️ ΔΕΝ μπαίνει εδώ σχόλιο που περιέχει ΑΥΤΟΥΣΙΟ το idiom: η ίδια η πύλη παραλείπει
+// γραμμές σχολίων (\`COMMENT_RE\` στο scan.js), αλλά το golden harness ελέγχει ΩΜΕΣ
+// γραμμές — άρα ένα τέτοιο σχόλιο θα φαινόταν ψευδώς θετικό που η παραγωγή δεν έχει.`,
+  },
+
+  // ── Boy Scout (N.0.2), 2026-08-22 ────────────────────────────────────────────
+  // Το `UNPROVEN_CEILING` ήταν **ήδη ξεπερασμένο** όταν ξεκίνησε το ADR-789: 604 στο
+  // `0cd00c02` και 605 μόλις προστέθηκε το `browser-sha256` (`9ca294ec`) χωρίς απόδειξη.
+  // Δηλαδή ο έλεγχος ήταν κόκκινος στο main και θα μπλόκαρε το επόμενο commit — ακριβώς
+  // το σχήμα «νέο pattern ΧΩΡΙΣ την απόδειξή του» που η ίδια η γραμμή του ταβανιού
+  // απαγορεύει. Τα τρία που ακολουθούν το ξεχρεώνουν· τα δύο τελευταία επιλέχθηκαν
+  // επειδή φρουρούν **ακριβώς** την επιφάνεια που άγγιξε το ADR-789.
+
+  'browser-sha256': {
+    shouldMatch: `// Άμεση κλήση Web Crypto εκτός του SSoT — έξι φορές γραμμένη πριν το ADR-749:
+const buf = await crypto.subtle.digest('SHA-256', bytes);
+const digest = await window.crypto.subtle.digest("SHA-256", enc.encode(text));`,
+    shouldSkip: `// Κανονική χρήση — πάντα μέσα από τον έναν SSoT:
+import { sha256Hex, sha256HexOfText, isWebCryptoAvailable } from '@/lib/hash/sha256';
+const hex = await sha256HexOfText(content);
+const fileHash = await sha256Hex(await file.arrayBuffer());
+
+// ΑΛΛΟ περιβάλλον (Node, σύγχρονο) — ρητά εκτός εμβέλειας του module:
+const nodeHash = createHash('sha256').update(buf).digest('hex');
+// Και ΑΛΛΟΣ αλγόριθμος:
+await crypto.subtle.digest('SHA-1', bytes);`,
+  },
+
+  // ADR-730 — η σημασιολογία «μέσα/σύνορο/έξω» ζει ΜΙΑ φορά. Το ADR-789 διεύρυνε την
+  // υπογραφή του `pointInPolygon` σε `PlanarPoint`· ένας φρουρός χωρίς απόδειξη πάνω σε
+  // API που μόλις άλλαξε είναι ακριβώς η περίπτωση όπου το «0 ευρήματα» δεν λέει τίποτα.
+  'point-in-polygon-semantics': {
+    shouldMatch: `// Ξαναγραμμένο crossing-number αντί για τον SSoT:
+function pointInPolygon(p: Point2D, poly: readonly Point2D[]): boolean {
+export function locatePointInPolygon(p, verts, opts) {
+const pointInPolygon = (p, poly) => { let inside = false; return inside; };`,
+    shouldSkip: `// Κανονική χρήση — εισαγωγή, ποτέ επανυλοποίηση:
+import { pointInPolygon } from '../geometry/shared/polygon-utils';
+import { locatePointInPolygon, pointInPolygonCovers } from './polygon-point-location';
+const inside = pointInPolygon({ x: mx, y: my }, outlineMm);
+if (pointInPolygonCovers(p, ring, { toleranceMm: 1 })) return true;
+const location = locatePointInPolygon(p, verts);
+
+// Ονόματα που απλώς ΑΝΑΦΕΡΟΥΝ τον SSoT (πεδία, props, μεταβλητές):
+const pointInPolygonResult = inside;
+props.onPointInPolygon = handler;`,
+  },
+
+  'geometry': {
+    shouldMatch: `// Δεύτερη υλοποίηση των κοινών γεωμετρικών βοηθών:
+export const getCentroid = (pts: Point2D[]) => ({ x: 0, y: 0 });
+export const distanceToLineSegment = (p, a, b) => 0;`,
+    shouldSkip: `// Κανονική χρήση — από το ΕΝΑ σπίτι:
+import { getCentroid, distanceToLineSegment } from '@/lib/geometry';
+const c = getCentroid(polygon);
+const d = distanceToLineSegment(cursor, seg.a, seg.b);
+
+// Τοπικές μεταβλητές / πεδία με το ίδιο όνομα δεν είναι δεύτερη υλοποίηση:
+const centroid = getCentroid(pts);
+handlers.distanceToLineSegment = distanceToLineSegment;`,
+  },
 };

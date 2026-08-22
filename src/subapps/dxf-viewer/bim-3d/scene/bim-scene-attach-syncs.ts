@@ -101,8 +101,7 @@ export function syncWalls(
     // Degenerate params (missing height/offset) → undefined → legacy fallback.
     const rawWallTop = resolveWallNominalTopZmm(wall.params, topBase) - resolveWallBaseZmm(wall.params, topBase);
     const nominalHeightMm = Number.isFinite(rawWallTop) ? rawWallTop : undefined;
-    const wallCrossFootprints = (wallCrossCutterMap.get(wall.id) ?? [])
-      .map((r2) => r2.map((p) => ({ x: p.x, y: p.y, z: 0 })));
+    const wallCrossFootprints = wallCrossCutterMap.get(wall.id) ?? [];
     const mesh = wallToMesh(
       wall, openingsForWall, ctx.floorElevationMm, ctx.activeLevelId, r.baseElevation, profile, baseProfile, topClip, nominalHeightMm,
       columnFootprints, wallCrossFootprints,

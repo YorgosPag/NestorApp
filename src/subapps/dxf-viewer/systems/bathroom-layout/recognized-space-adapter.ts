@@ -5,13 +5,13 @@
  * solver's {@link RoomInput} (millimetres): converts the room polygon scene→mm and
  * turns door markers into a keep-clear polygon the solver routes fixtures around.
  * Pure & unit-testable — the messy entity access (opening → door marker) lives in
- * the thin ribbon layer that calls this. Reuses `polygon2DCentroid` (no new math).
+ * the thin ribbon layer that calls this. Reuses `polygonCentroid` (no new math).
  *
  * @see docs/centralized-systems/reference/adrs/ADR-638-bathroom-auto-layout-generator.md
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import { polygon2DCentroid } from '../../bim/geometry/shared/polygon-utils';
+import { polygonCentroid } from '../../bim/geometry/shared/polygon-utils';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import type { LayoutFixtureKind, RoomInput } from './bathroom-layout-types';
 
@@ -89,7 +89,7 @@ export function recognizedSpaceToRoomInput(
   options: SpaceToRoomInputOptions = {},
 ): RoomInput {
   const polygonMm = spacePolygonToMm(spacePolygonScene, units);
-  const centroid = polygon2DCentroid(polygonMm);
+  const centroid = polygonCentroid(polygonMm);
   const doors = options.doorsMm ?? [];
   const primary = doors.reduce<DoorMarker | null>(
     (best, d) => (best === null || d.widthMm > best.widthMm ? d : best),

@@ -20,15 +20,15 @@
  * @see bim/renderers/BeamRenderer.ts — displayOutline ?? outline consumer
  */
 
-import type { DxfEntityUnion, DxfBeam, DxfColumn } from '../../canvas-v2/dxf-canvas/dxf-types';
-import type { Point3D } from '../../bim/types/bim-base';
+import type { DxfEntityUnion, DxfBeam } from '../../canvas-v2/dxf-canvas/dxf-types';
 import {
   computeBeamCutbackOutline,
   computeBeamAxisToColumnContact,
-  extendBeamOutlineIntoFramingColumns,
-} from '../../bim/geometry/beam-column-cutback';
+  extendBeamOutlineIntoFramingColumns } from '../../bim/geometry/beam-column-cutback';
 import type { Polyline3D } from '../../bim/types/bim-base';
+import type { Point2D } from '../../rendering/types/Types';
 import { projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
+import { scanColumnCutters } from './dxf-scene-column-cutters';
 
 /**
  * Εφαρμόζει το beam-to-column cutback στα δοκάρια του DxfScene. Επιστρέφει το ίδιο array
@@ -36,15 +36,7 @@ import { projectVerticesTo2D } from '../../bim/geometry/shared/polygon-utils';
  * δοκάρια ανανεωμένα (υπόλοιπα entities by-reference).
  */
 export function applyBeamColumnCutback2D(entities: DxfEntityUnion[]): DxfEntityUnion[] {
-  let hasBeam = false;
-  const columnFootprints: Point3D[][] = [];
-  for (const e of entities) {
-    if (e.type === 'beam') hasBeam = true;
-    else if (e.type === 'column') {
-      const verts = (e as DxfColumn).geometry?.footprint?.vertices;
-      if (verts && verts.length >= 3) columnFootprints.push(verts.map((v) => ({ x: v.x, y: v.y, z: 0 })));
-    }
-  }
+  const { columnFootprints, hasMember: hasBeam } = scanColumnCutters(entities, 'beam');
   if (!hasBeam || columnFootprints.length === 0) return entities;
 
   return entities.map((e) => {
@@ -61,9 +53,7 @@ export function applyBeamColumnCutback2D(entities: DxfEntityUnion[]): DxfEntityU
       geometry: {
         ...beam.geometry,
         displayOutline: display.displayOutline,
-        ...(display.displayAxisPolyline ? { displayAxisPolyline: display.displayAxisPolyline } : {}),
-      },
-    } as DxfEntityUnion;
+        ...(display.displayAxisPolyline ? { displayAxisPolyline: display.displayAxisPolyline } : {}) } } as DxfEntityUnion;
   });
 }
 
@@ -72,7 +62,7 @@ export function applyBeamColumnCutback2D(entities: DxfEntityUnion[]): DxfEntityU
 /** DERIVED beam display geometry μετά το beam-to-column cutback (ADR-458). */
 export interface BeamCutbackDisplay {
   /** Κομμένο outline (outer rings)· `[]` = δοκάρι εξ ολοκλήρου μέσα σε κολόνα. */
-  readonly displayOutline: Point3D[][];
+  readonly displayOutline: Point2D[][];
   /** Άξονας προσαρμοσμένος στην παρειά κολόνας (location-line contact). */
   readonly displayAxisPolyline?: Polyline3D;
 }
@@ -107,7 +97,7 @@ export function buildBeamCutbackDisplay(
     : outline2D;
   const pieces = computeBeamCutbackOutline(carveOutline, columnFootprints);
   if (pieces === null) return null;
-  const displayOutline: Point3D[][] = pieces.map((ring) => ring.map((p) => ({ x: p.x, y: p.y, z: 0 })));
+  const displayOutline = pieces;
 
   let displayAxisPolyline: Polyline3D | undefined;
   if (pieces.length > 0 && axisPts.length === 2) {
@@ -123,8 +113,7 @@ export function buildBeamCutbackDisplay(
           { x: adj[0].x, y: adj[0].y, z: axisPts[0].z ?? 0 },
           { x: adj[1].x, y: adj[1].y, z: axisPts[1].z ?? 0 },
         ],
-        closed: false,
-      };
+        closed: false };
     }
   }
   return { displayOutline, displayAxisPolyline };

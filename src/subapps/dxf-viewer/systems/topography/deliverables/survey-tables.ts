@@ -151,7 +151,6 @@ export function buildPlotMeasurements(
   vertices: readonly Point2D[],
   sampler: TinSampler,
 ): PlotMeasurements {
-  const asPolygon = vertices.map((v) => ({ x: v.x, y: v.y, z: 0 }));
   const rows: ExportableTableRow[] = vertices.map((v, i) => {
     const next = vertices[(i + 1) % vertices.length];
     return {
@@ -167,8 +166,8 @@ export function buildPlotMeasurements(
   });
 
   return {
-    areaM2: areaMm2ToM2(polygonArea(asPolygon)),
-    perimeterM: lengthMmToM(polygonPerimeter(asPolygon)),
+    areaM2: areaMm2ToM2(polygonArea(vertices)),
+    perimeterM: lengthMmToM(polygonPerimeter(vertices)),
     table: { columns: BOUNDARY_COLUMNS, rows },
   };
 }

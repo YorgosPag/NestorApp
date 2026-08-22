@@ -9,18 +9,18 @@
  * άλλο ύψος από αυτό που τιμολογείται. Ένα σημείο, μία απάντηση.
  *
  * Δύο βήματα, το καθένα delegate σε υπάρχον SSoT — μηδέν νέα μαθηματικά:
- *   1. **κέντρο** — `polygon2DCentroid` (vertex-mean). Το area-centroid δεν χρειάζεται: το
+ *   1. **κέντρο** — `polygonCentroid` (vertex-mean). Το area-centroid δεν χρειάζεται: το
  *      ζητούμενο είναι «κάπου κάτω από το στοιχείο», όχι κέντρο μάζας, και για κοίλα
  *      αποτυπώματα (Γ/Τ) και τα δύο πέφτουν μέσα στο ίδιο τρίγωνο του τοπογραφικού.
  *   2. **μονάδες** — canvas units → canonical mm μέσω `mmToSceneUnits` (ADR-462): ο TIN
  *      sampler δουλεύει σε canonical mm, τα footprints σε canvas units.
  *
- * @see ./shared/polygon-utils — polygon2DCentroid
+ * @see ./shared/polygon-utils — polygonCentroid
  * @see ../../systems/topography/grade-at-plan-point — ο τελικός καταναλωτής
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import { polygon2DCentroid } from './shared/polygon-utils';
+import { polygonCentroid } from './shared/polygon-utils';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 
 /**
@@ -35,7 +35,7 @@ export function footprintGradeSamplePointMm(
   if (vertices.length < 3) return null;
   const perMm = mmToSceneUnits(sceneUnits ?? 'mm');
   if (!Number.isFinite(perMm) || perMm === 0) return null;
-  const c = polygon2DCentroid(vertices);
+  const c = polygonCentroid(vertices);
   const x = c.x / perMm;
   const y = c.y / perMm;
   return Number.isFinite(x) && Number.isFinite(y) ? { x, y } : null;

@@ -7,9 +7,9 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.5
  */
 
-import type { Point3D } from '../../types/bim-base';
+import type { PlanarPoint } from '../../types/bim-base';
 import type { Point2D } from '../../../rendering/types/Types';
-import { polygonArea, polygonBbox, shoelaceArea } from './polygon-utils';
+import { polygonArea, polygonBbox, projectVerticesTo2D, shoelaceArea } from './polygon-utils';
 
 /**
  * Sutherland-Hodgman polygon clip. Clips `subject` against a **convex** `clip`
@@ -26,11 +26,11 @@ import { polygonArea, polygonBbox, shoelaceArea } from './polygon-utils';
  * "Inside" = left of the directed edge (CCW convention).
  */
 export function clipPolygonBySH(
-  subject: readonly Point3D[],
-  clip: readonly Point3D[],
-): Point3D[] {
+  subject: readonly PlanarPoint[],
+  clip: readonly PlanarPoint[],
+): PlanarPoint[] {
   if (subject.length < 3 || clip.length < 3) return [];
-  let output: Point3D[] = subject.slice() as Point3D[];
+  let output: PlanarPoint[] = subject.slice();
   const n = clip.length;
 
   for (let i = 0; i < n; i++) {
@@ -65,8 +65,8 @@ export function clipPolygonBySH(
  * rejection applied first — returns 0 when bbox do not overlap.
  */
 export function polygonIntersectionAreaMm2(
-  slabVertices: readonly Point3D[],
-  beamVertices: readonly Point3D[],
+  slabVertices: readonly PlanarPoint[],
+  beamVertices: readonly PlanarPoint[],
 ): number {
   if (slabVertices.length < 3 || beamVertices.length < 3) return 0;
 
@@ -103,27 +103,26 @@ export function clipPolygonByConvex2D(
   convexClipper: readonly Point2D[],
 ): Point2D[] {
   if (subject.length < 3 || convexClipper.length < 3) return [];
-  const lift = (p: Point2D): Point3D => ({ x: p.x, y: p.y, z: 0 });
-  const lifted = convexClipper.map(lift);
-  const ccwClipper = shoelaceArea(lifted) >= 0 ? lifted : [...lifted].reverse();
-  return clipPolygonBySH(subject.map(lift), ccwClipper).map((p) => ({ x: p.x, y: p.y }));
+  // ADR-789 — μηδέν lift: ο S-H δέχεται `PlanarPoint`, άρα το 2D πολύγωνο μπαίνει αυτούσιο.
+  const ccwClipper = shoelaceArea(convexClipper) >= 0 ? convexClipper : [...convexClipper].reverse();
+  return projectVerticesTo2D(clipPolygonBySH(subject, ccwClipper));
 }
 
 // ─── S-H internal helpers ─────────────────────────────────────────────────────
 
 /** True when `pt` is on the left side of directed edge A→B (CCW = inside). */
-function shIsInside(pt: Point3D, a: Point3D, b: Point3D): boolean {
+function shIsInside(pt: PlanarPoint, a: PlanarPoint, b: PlanarPoint): boolean {
   return (b.x - a.x) * (pt.y - a.y) - (b.y - a.y) * (pt.x - a.x) >= 0;
 }
 
 /** Intersection of segment p1→p2 with infinite line through a→b. */
-function shIntersect(p1: Point3D, p2: Point3D, a: Point3D, b: Point3D): Point3D {
+function shIntersect(p1: PlanarPoint, p2: PlanarPoint, a: PlanarPoint, b: PlanarPoint): PlanarPoint {
   const dx1 = p2.x - p1.x;
   const dy1 = p2.y - p1.y;
   const dx2 = b.x - a.x;
   const dy2 = b.y - a.y;
   const denom = dx1 * dy2 - dy1 * dx2;
-  if (Math.abs(denom) < 1e-10) return { x: p1.x, y: p1.y, z: 0 };
+  if (Math.abs(denom) < 1e-10) return { x: p1.x, y: p1.y };
   const t = ((a.x - p1.x) * dy2 - (a.y - p1.y) * dx2) / denom;
-  return { x: p1.x + t * dx1, y: p1.y + t * dy1, z: 0 };
+  return { x: p1.x + t * dx1, y: p1.y + t * dy1 };
 }

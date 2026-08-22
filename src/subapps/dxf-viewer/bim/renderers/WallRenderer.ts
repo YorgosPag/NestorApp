@@ -28,7 +28,7 @@ import { isWallEntity } from '../../types/entities';
 import type { WallEntity } from '../types/wall-types';
 import { WALL_CATEGORY_FILL, WALL_LINE_CONTRAST, wallFootprintSubcategory } from '../walls/wall-render-palette';
 import type { OpeningEntity } from '../types/opening-types';
-import type { Point3D } from '../types/bim-base';
+import type { PlanarPoint } from '../types/bim-base';
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
 import { resolveSubcategoryStyle, type BimLayerOverride } from '../../config/bim-line-weight-resolver';
 import { resolveBimPlanVisibility } from '../visibility/bim-plan-visibility';
@@ -436,9 +436,7 @@ export class WallRenderer extends BaseEntityRenderer {
     // αλλιώς το hatch θα γέμιζε την περιοχή της κολόνας και θα έκρυβε το cut. `[]` = πλήρης
     // κατανάλωση → κανένα hatch.
     const pieces = wall.geometry.displayFootprint;
-    const boundary: Point3D[][] = pieces
-      ? pieces.map((r) => r.map((p) => ({ x: p.x, y: p.y, z: 0 })))
-      : [closedRingFromEdges(outer, inner)];
+    const boundary: ReadonlyArray<readonly PlanarPoint[]> = pieces ?? [closedRingFromEdges(outer, inner)];
     if (boundary.length === 0) return;
     const segments = computeMaterialHatchSegments(boundary, wall.params.material, _hatchCutState);
     if (segments.length === 0) return;

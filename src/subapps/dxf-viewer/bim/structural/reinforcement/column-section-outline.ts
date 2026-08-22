@@ -81,19 +81,14 @@ export interface ColumnReinforcementSection {
   readonly wallAxis?: Point2D;
 }
 
-/** Point2D → ψευδο-Point3D (z=0) για τα polygon-utils (που δουλεύουν σε XY). */
-function toXY(p: readonly Point2D[]): { x: number; y: number; z: number }[] {
-  return p.map((q) => ({ x: q.x, y: q.y, z: 0 }));
-}
-
 /**
  * Ανάλυση διατομής κολώνας → outline + mode + χαρακτηριστικά μεγέθη. SSoT entry
  * point για ΟΛΗ την αλυσίδα οπλισμού.
  */
 export function resolveColumnReinforcementSection(params: ColumnParams): ColumnReinforcementSection {
   const outlineMm = materializeColumnLocalPolygonMm(params);
-  const xy = toXY(outlineMm);
-  const bbox = polygonBbox(xy);
+  // ADR-789 — μηδέν lift: τα `polygon-utils` δέχονται `PlanarPoint`, άρα το 2D outline μπαίνει αυτούσιο.
+  const bbox = polygonBbox(outlineMm);
   const bboxWidthMm = Math.max(0, bbox.max.x - bbox.min.x);
   const bboxDepthMm = Math.max(0, bbox.max.y - bbox.min.y);
   const minThicknessMm = Math.min(bboxWidthMm, bboxDepthMm);
@@ -104,8 +99,8 @@ export function resolveColumnReinforcementSection(params: ColumnParams): ColumnR
   // Εμβαδόν: κυκλική → ακριβές π(d/2)² (το 32-γωνο outline υποεκτιμά)· αλλιώς shoelace.
   const grossAreaMm2 = isCircular
     ? Math.PI * (diameterMm! / 2) ** 2
-    : polygonArea(xy);
-  const perimeterMm = isCircular ? Math.PI * diameterMm! : polygonPerimeter(xy);
+    : polygonArea(outlineMm);
+  const perimeterMm = isCircular ? Math.PI * diameterMm! : polygonPerimeter(outlineMm);
 
   const mode = resolveMode(params, bboxWidthMm, bboxDepthMm, isCircular);
   const wallAxis = isWallReinforcementMode(mode)

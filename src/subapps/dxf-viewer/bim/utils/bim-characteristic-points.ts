@@ -65,7 +65,7 @@ import { getBlockBoxGrips } from '../../systems/block/block-box-grips';
 import { computeBlockSelectionBounds } from '../../systems/block/block-selection-bounds';
 import { gripKindOf } from '../../hooks/grip-kinds';
 import { getCentredBoxGrips, type CentredBoxParams } from '../grips/centred-box-grips';
-import { polygon2DCentroid, polygon2DAreaCentroid, footprintEdgeMidpoints, projectVerticesTo2D } from '../geometry/shared/polygon-utils';
+import { polygonCentroid, polygonAreaCentroid, footprintEdgeMidpoints, projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 import { isSegmentVertical } from '../types/mep-segment-types';
 
 // ─── Public types ────────────────────────────────────────────────────────────
@@ -379,11 +379,11 @@ function edgeMidpointsFromCorners(corners: readonly Point2D[], preOrdered = fals
 
 /** Arithmetic-mean centroid (XY) — convex/unordered sources (vertex-mean = area-centroid εκεί). */
 function centroid2D(pts: readonly Point2D[]): Point2D {
-  return polygon2DCentroid(pts);
+  return polygonCentroid(pts);
 }
 
 /** Area (mass) centroid (XY) για ordered polygon footprints — μένει ΜΕΣΑ στο υλικό για κοίλα
  *  L/Γ/T/U (όπου ο μέσος όρος κορυφών πέφτει στο notch). §non-convex-fix (ADR-597). */
 function centroidOrdered2D(pts: readonly Point2D[]): Point2D {
-  return polygon2DAreaCentroid(pts);
+  return polygonAreaCentroid(pts);
 }

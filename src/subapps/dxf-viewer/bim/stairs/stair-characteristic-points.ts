@@ -19,7 +19,7 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { StairEntity, Polygon3D } from '../types/stair-types';
 import { getStairGrips } from './stair-grips';
-import { projectVerticesTo2D, footprintEdgeMidpoints, polygon2DAreaCentroid } from '../geometry/shared/polygon-utils';
+import { projectVerticesTo2D, footprintEdgeMidpoints, polygonAreaCentroid } from '../geometry/shared/polygon-utils';
 
 /**
  * Οι χαρακτηριστικές θέσεις έλξης μιας σκάλας. Σε αντίθεση με τα single-footprint entities,
@@ -63,7 +63,7 @@ export function getStairCharacteristicPoints(entity: StairEntity): StairCharPoin
     corners.push(...verts2d);
     midpoints.push(...footprintEdgeMidpoints(verts2d, { preOrdered: true }));
     // Area-centroid (όχι vertex-mean) → σωστό «κέντρο» και για κοίλα L/Γ πλατύσκαλα.
-    centers.push(polygon2DAreaCentroid(verts2d));
+    centers.push(polygonAreaCentroid(verts2d));
   }
   return { corners, midpoints, centers };
 }

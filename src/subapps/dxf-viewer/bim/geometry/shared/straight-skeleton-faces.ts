@@ -136,8 +136,7 @@ export function assembleEdgeFaces(
     const segs = segmentsForEdge(polygon, arcs, i);
     const loop = walkLoop(segs, polygon[i], polygon[(i + 1) % n], eps);
     if (!loop || loop.length < 3) continue;
-    const poly3 = loop.map((p) => ({ x: p.x, y: p.y, z: 0 }));
-    const polygonCcw = isPolygonCCW(poly3) ? loop : [...loop].reverse();
+    const polygonCcw = isPolygonCCW(loop) ? loop : [...loop].reverse();
     faces.push({ edgeIndex: i, polygon: polygonCcw });
   }
   return faces;

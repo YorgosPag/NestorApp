@@ -176,7 +176,7 @@ export function makeFace(
   s: number,
   canvasToM: number,
 ): RoofFace {
-  const projectedAreaM2 = polygonArea(poly2D as readonly Point3D[]) * canvasToM * canvasToM;
+  const projectedAreaM2 = polygonArea(poly2D) * canvasToM * canvasToM;
   return {
     outline: liftVertices(poly2D, planes, basePivotZ, s),
     slopeRatio: ratio,

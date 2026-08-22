@@ -13,6 +13,41 @@ import type { BimElementStyleOverride } from '../../config/bim-object-styles';
 import type { GuideBinding } from '../hosting/guide-binding-types';
 import type { FaceAppearanceMap } from './face-appearance-types';
 
+// ─── Plan (XY) geometry vocabulary ────────────────────────────────────────────
+
+/**
+ * **Ό,τι εκθέτει `x`/`y`** — το λεξιλόγιο ΕΙΣΟΔΟΥ κάθε αλγορίθμου κάτοψης (ADR-730 → ADR-789).
+ *
+ * 🔑 Είναι ο **παραλήπτης**, όχι ο αποθηκευμένος τύπος. Τον ικανοποιούν ταυτόχρονα
+ * {@link Point3D}, `Point2D`, μια κορυφή, μια λαβή, ένα snap target — **χωρίς καμία
+ * μετατροπή**. Γι' αυτό μια συνάρτηση που δεν διαβάζει `z` δηλώνει `PlanarPoint`,
+ * ΠΟΤΕ `Point3D`.
+ *
+ * **Γιατί υπάρχει** (ADR-789): μέχρι 2026-08-22 το `polygon-utils` και τα αδέλφια του
+ * δήλωναν `readonly Point3D[]` ενώ **δεν διάβαζαν `.z` ούτε μία φορά** (μετρημένο: 0
+ * αναγνώσεις σε 460 γραμμές). Η υπογραφή έλεγε ψέματα, και οι καλούντες πλήρωναν το
+ * ψέμα με **89 ωμά `{ x: p.x, y: p.y, z: 0 }` σε 67 αρχεία** — plus πέντε ιδιωτικά
+ * `lift`/`toXY`, δύο `polygon2D*` wrappers, ένα `as readonly Point3D[]` cast και **δύο**
+ * διπλότυπα `polygonBbox(readonly Point2D[])` που νίκησαν την εκστρατεία min/max του
+ * ADR-716/583 **ακριβώς επειδή** το κοινό απαιτούσε 3D.
+ *
+ * 🏆 **Πρότυπο**: το CGAL λύνει το ίδιο με `Projection_traits_xy_3` (adapter ώστε 2D
+ * αλγόριθμοι να τρέχουν πάνω σε 3D δεδομένα) και το JTS με **νέα κλάση** `CoordinateXY`.
+ * Και τα δύο πληρώνουν μηχανισμό επειδή η C++/Java είναι **ονομαστικές**. Η δομική
+ * τυποποίηση της TypeScript δίνει το ίδιο αποτέλεσμα με **έναν τύπο και μηδέν adapter**.
+ *
+ * ⚠️ **ΜΗΝ** το χρησιμοποιήσεις ως τύπο **αποθήκευσης** — για αυτό υπάρχουν το `Point2D`
+ * (προφίλ κάτοψης· το υψόμετρο ζει στον όροφο/επίπεδο, όπως `API_Coord` του ArchiCAD και
+ * το «profiles must lie in the XY plane» του Revit) και το {@link Point3D} (γνήσια χωρικά
+ * δεδομένα: σκάλες, MEP routing, στέγες, breaklines).
+ *
+ * @see docs/centralized-systems/reference/adrs/ADR-789-planar-point-vocabulary.md
+ */
+export interface PlanarPoint {
+  readonly x: number;
+  readonly y: number;
+}
+
 // ─── 3D Geometry primitives ───────────────────────────────────────────────────
 
 export interface Point3D {

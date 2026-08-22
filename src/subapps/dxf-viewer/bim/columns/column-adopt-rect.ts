@@ -32,6 +32,7 @@ import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { REGION_PERIMETER_LIMITS } from '../../config/tolerance-config';
 import { rectFrameFromCorners, rectLocalToWorld, type RectFrame } from '../framing/rect-frame';
 import { findRectContaining } from './rect-cartesian-snap';
+import { bboxOf } from '../geometry/shared/xy-bounds';
 import {
   extractLineSegments,
   findRectanglesFromSegments,
@@ -179,18 +180,6 @@ function rectToPerimeter(rect: DetectedRectangle): ClosedPerimeter {
   return { polygon: [...rect.polygon], shape: 'rectangle', rects: [rect] };
 }
 
-/** Axis-aligned bbox (πλάτος/ύψος, scene units) ενός πολυγώνου. */
-function polygonBbox(poly: readonly Point2D[]): { readonly w: number; readonly h: number } {
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (const p of poly) {
-    if (p.x < minX) minX = p.x;
-    if (p.x > maxX) maxX = p.x;
-    if (p.y < minY) minY = p.y;
-    if (p.y > maxY) maxY = p.y;
-  }
-  return { w: maxX - minX, h: maxY - minY };
-}
-
 /**
  * FULL SSoT — το **υιοθετήσιμο κλειστό σχήμα** κάτω από το `point` για τον σκέτο
  * «Κολόνα»: πρώτα robust ορθογώνιο (corner-graph `findAdoptableRectUnderPoint`,
@@ -247,7 +236,11 @@ export function resolvePerimeterAdoptInfo(
     };
   }
   const s = mmToSceneUnits(sceneUnits) || 1;
-  const { w, h } = polygonBbox(perimeter.polygon);
+  // ADR-789/583 — ο βρόχος min/max ζει ΜΙΑ φορά, στο `xy-bounds`. Το ιδιωτικό αντίγραφο
+  // εδώ επέζησε της εκστρατείας ADR-716 μόνο επειδή το κοινό `polygonBbox` απαιτούσε `Point3D`.
+  const bb = bboxOf(perimeter.polygon);
+  const w = bb.maxX - bb.minX;
+  const h = bb.maxY - bb.minY;
   return {
     isRectangle: false,
     widthMm: w / s,

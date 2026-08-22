@@ -14,7 +14,7 @@ import {
 import { getStairGrips } from '../stair-grips';
 import { getStairCharacteristicPoints } from '../stair-characteristic-points';
 import { getBimCharacteristicPointsOfCategory } from '../../utils/bim-characteristic-points';
-import { projectVerticesTo2D, polygon2DAreaCentroid } from '../../geometry/shared/polygon-utils';
+import { projectVerticesTo2D, polygonAreaCentroid } from '../../geometry/shared/polygon-utils';
 import type { StairEntity, StairParams } from '../../../bim/types/stair-types';
 
 const basePoint = { x: 0, y: 0 };
@@ -103,7 +103,7 @@ describe('getStairCharacteristicPoints (ADR-597 §stair)', () => {
     expect(landings.length).toBeGreaterThan(0);
     const centerKeys = new Set(getStairCharacteristicPoints(stair).centers.map(key));
     for (const landing of landings) {
-      expect(centerKeys.has(key(polygon2DAreaCentroid(projectVerticesTo2D(landing))))).toBe(true);
+      expect(centerKeys.has(key(polygonAreaCentroid(projectVerticesTo2D(landing))))).toBe(true);
     }
   });
 

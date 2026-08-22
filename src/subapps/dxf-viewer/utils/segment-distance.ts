@@ -26,14 +26,17 @@
  * `__tests__/segment-distance.test.ts` γράφτηκε **πριν** τη μετακίνηση, εισάγει από το **παλιό**
  * μονοπάτι και μένει **αναλλοίωτο** — αυτό, όχι η δήλωσή μου, είναι η απόδειξη.
  *
- * ⚠️ **Τι ΔΕΝ ενοποιήθηκε εδώ (μετρημένο, όχι παραλειφθέν)**: υπάρχουν άλλα πέντε σώματα που
- * απαντούν την ίδια ερώτηση (`geometry-utils.pointToLineDistance`,
+ * ⚠️ **Τι ΔΕΝ ενοποιήθηκε εδώ (μετρημένο, όχι παραλειφθέν)**: υπάρχουν άλλα **τέσσερα** σώματα
+ * που απαντούν την ίδια ερώτηση (`geometry-utils.pointToLineDistance`,
  * `geometry-polyline-utils.pointToSegmentDistance`, `geometry-rendering-utils.
- * pointToSegmentDistanceSq`, `GeometricCalculations.distancePointToLine`,
- * `beam-span-snap.closestPointOnSegment`). Το τελευταίο έχει **διαφορετικό κατώφλι
- * εκφυλισμού** (`l2 < EPS` αντί `lenSq === 0`) ⇒ ενοποίηση = **αλλαγή συμπεριφοράς**, όχι
- * μετακίνηση. Καταγράφηκε στο `.claude-rules/pending-ratchet-work.md` αντί να κλειδωθεί
- * σιωπηλά σε SSoT.
+ * pointToSegmentDistanceSq`, `GeometricCalculations.distancePointToLine`).
+ *
+ * ✅ **ΗΤΑΝ πέντε** — το `beam-span-snap.closestPointOnSegment` **διαγράφηκε 2026-08-22**
+ * (ADR-789): ο μοναδικός του καταναλωτής, το ιδιωτικό `closestPointOnOutline`, έγινε delegate
+ * στο SSoT `closestEdgeOnPolygonOutline`, οπότε το σώμα έμεινε νεκρό. ⚠️ Η **διαφορά
+ * κατωφλίου εκφυλισμού** που κατέγραφε αυτή η σημείωση (`l2 < EPS` αντί `lenSq === 0`) ήταν
+ * ακριβώς ο λόγος που η ενοποίηση ήταν **αλλαγή συμπεριφοράς**: δύο απαντήσεις σε ένα
+ * ερώτημα (ADR-749). Έφυγε με τον καταναλωτή, όχι με σιωπηλή εξίσωση.
  *
  * Το module μένει **χωρίς εξαρτήσεις εκτέλεσης** πέρα από το `scalar-math` (και αυτό είναι
  * dependency-free): κάθε νέα εισαγωγή εδώ ξαναγεννά τη δυνατότητα κύκλου.

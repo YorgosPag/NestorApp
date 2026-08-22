@@ -13,7 +13,8 @@
  */
 
 import * as THREE from 'three';
-import type { Point3D } from '../../bim/types/bim-base';
+import { buildClosedShape } from './bim-three-shape-helpers';
+import type { PlanarPoint, Point3D } from '../../bim/types/bim-base';
 import type { EnvelopeMaterialId } from '../../bim/types/thermal-envelope-types';
 import { resolveEnvelopeMaterial } from '../materials/envelope-material-resolver';
 import { resolve3DEdgeStyle } from '../edges/bim-3d-edge-resolver';
@@ -86,23 +87,18 @@ export function addBandPrism(
 ): void {
   const depth = z1 - z0;
   if (depth <= POS_EPS) return;
-  const shape = new THREE.Shape();
-  shape.moveTo(quad[0].x, quad[0].y);
-  for (let i = 1; i < quad.length; i++) shape.lineTo(quad[i].x, quad[i].y);
-  shape.closePath();
-
-  const geo = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false });
-  geo.applyMatrix4(ROT_X_NEG_90);
+  // ADR-676/788 — ΕΝΑ «ring → extruded prism» μονοπάτι· δεν ξαναγράφεται εδώ.
+  const geo = stripPrismGeometry(quad, depth);
+  if (!geo) return;
   group.add(makeEnvelopeMesh(geo, materialId, baseY + z0, levelId));
 }
 
 /** Prism από ένα plan quad (scene/meter units) εξωθημένο κατά `depthM` (Y-up). */
-export function stripPrismGeometry(quad: readonly Point3D[], depthM: number): THREE.BufferGeometry | null {
-  if (quad.length < 3 || depthM <= 0) return null;
-  const shape = new THREE.Shape();
-  shape.moveTo(quad[0].x, quad[0].y);
-  for (let i = 1; i < quad.length; i++) shape.lineTo(quad[i].x, quad[i].y);
-  shape.closePath();
+export function stripPrismGeometry(quad: readonly PlanarPoint[], depthM: number): THREE.BufferGeometry | null {
+  if (depthM <= 0) return null;
+  // ADR-676 — το `moveTo → lineTo* → closePath` ζει ΜΙΑ φορά στο `buildClosedShape`.
+  const shape = buildClosedShape(quad);
+  if (!shape) return null;
   const geo = new THREE.ExtrudeGeometry(shape, { depth: depthM, bevelEnabled: false });
   geo.applyMatrix4(ROT_X_NEG_90);
   return geo;

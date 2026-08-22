@@ -6,7 +6,7 @@
  *   - εμβαδά    → `entityMeasurementFacts` (ανά τύπο· γραμμοσκίαση = outer−islands, TIN = τρίγωνα)
  *   - όριο      → `entityClosedRings` (ΙΔΙΟ SSoT με τις έλξεις, ADR-662 §11)
  *   - μορφή     → `formatAreaForDisplay` (ενεργή display-μονάδα, «25,00 m²»)
- *   - κέντρο    → `polygon2DAreaCentroid` (area-weighted, σωστό σε κοίλα L/T/U)
+ *   - κέντρο    → `polygonAreaCentroid` (area-weighted, σωστό σε κοίλα L/T/U)
  *   - «μέσα;»   → `performDetailedHitTest` (σωστή σημασιολογία ανά τύπο)
  *   - bbox      → `boundsOfPoints` (fit-to-shape ύψος κειμένου)
  *   - υλικό     → `HATCH_PATTERN_CATALOG[patternName].labelKey` → genitive i18n
@@ -38,7 +38,7 @@ import { entityMeasurementFacts } from './entity-measurement-facts';
 import { entityClosedRings, type ClosedRings } from '../../snapping/shared/entity-closed-rings';
 import { performDetailedHitTest } from '../../rendering/hitTesting/hit-test-entity-tests';
 import { formatAreaForDisplay } from '../../config/display-length-format';
-import { polygon2DAreaCentroid } from '../../bim/geometry/shared/polygon-utils';
+import { polygonAreaCentroid } from '../../bim/geometry/shared/polygon-utils';
 import { calculatePolygonArea } from '../../rendering/entities/shared/geometry-polyline-utils';
 import { boundsOfPoints } from '../../services/clip/clip-geometry';
 import { HATCH_PATTERN_CATALOG } from '../../data/hatch-pattern-catalog';
@@ -127,7 +127,7 @@ export function resolveAreaLabelAnchor(entity: Entity, clickPoint: Point2D): Poi
   const inside = performDetailedHitTest(entity, clickPoint, 0) !== null;
   if (!inside) return clickPoint;
   const outer = largestRing(entityClosedRings(entity));
-  return outer ? polygon2DAreaCentroid(outer as Point2D[]) : clickPoint;
+  return outer ? polygonAreaCentroid(outer as Point2D[]) : clickPoint;
 }
 
 /**

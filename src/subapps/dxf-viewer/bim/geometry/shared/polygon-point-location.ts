@@ -56,13 +56,19 @@
  * @see ./polygon-utils — `pointInPolygon` (ωμό crossing-number, fill rules)
  */
 
+import type { PlanarPoint } from '../../types/bim-base';
 import { pointToSegmentDistance } from '../../../utils/segment-distance';
 
-/** Ελάχιστο read-only επίπεδο σημείο — ό,τι εκθέτει `x`/`y` (Point2D, Point3D, κορυφή, λαβή). */
-export interface PlanarPoint {
-  readonly x: number;
-  readonly y: number;
-}
+/**
+ * Ελάχιστο read-only επίπεδο σημείο — ό,τι εκθέτει `x`/`y` (Point2D, Point3D, κορυφή, λαβή).
+ *
+ * 🏠 **Ο ορισμός μετακόμισε στο `bim/types/bim-base.ts`** (ADR-789): έγινε το λεξιλόγιο
+ * ΟΛΗΣ της επιφάνειας κάτοψης, οπότε το να ζει μέσα σε ένα module point-in-polygon
+ * ανάγκαζε κάθε καταναλωτή του `polygonArea` να εξαρτάται από αλγόριθμο εντοπισμού
+ * σημείου — **λάθος κατεύθυνση εξάρτησης**. Re-export ώστε οι υπάρχοντες importers να
+ * μείνουν αμετάβλητοι (μηδέν churn).
+ */
+export type { PlanarPoint } from '../../types/bim-base';
 
 /**
  * Τοπολογική θέση σημείου ως προς πολύγωνο — το ισοδύναμο του JTS `Location`.

@@ -14,7 +14,7 @@
  * **FULL SSoT reuse** — ΜΗΝ ξαναγραφτεί boolean/point-in-slab:
  *   · `hostUndersideAt` (`host-footprint-eval`) — point-in-footprint → soffit, η ΙΔΙΑ
  *     που κόβει τα attached μέλη στο soffit (§monolithic-cut)·
- *   · `polygon2DCentroid` (`polygon-utils`) — δειγματοληψία κέντρου footprint.
+ *   · `polygonCentroid` (`polygon-utils`) — δειγματοληψία κέντρου footprint.
  * Ο caller (scene access) χτίζει τα `coveringHosts` μέσω `buildCeilingSlabHosts`
  * (`monolithic-slab-clip`) ώστε αυτό το module να μένει pure (zero scene/bim-3d import).
  *
@@ -27,7 +27,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { BeamEntity, BeamSupportType } from '../types/beam-types';
 import type { HostFootprintInput, Pt2 } from '../geometry/wall-host-plan-builder';
 import { hostUndersideAt } from '../geometry/host-footprint-eval';
-import { polygon2DCentroid, projectVerticesTo2D } from '../geometry/shared/polygon-utils';
+import { polygonCentroid, projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 import {
   buildMemberAxisFrame,
   type MemberAxisFrame,
@@ -47,7 +47,7 @@ function isFootprintCoveredBySlab(
   footprint: readonly Pt2[],
   coveringHosts: readonly HostFootprintInput[],
 ): boolean {
-  const samples: Pt2[] = [polygon2DCentroid(footprint), ...footprint];
+  const samples: Pt2[] = [polygonCentroid(footprint), ...footprint];
   for (const h of coveringHosts) {
     for (const pt of samples) {
       if (hostUndersideAt(h, pt) !== null) return true;
@@ -62,7 +62,7 @@ function isFootprintCoveredBySlab(
  * → ορθό και για λοξές/justified δοκούς, ίδιο coordinate space με τους hosts.
  */
 function deriveBeamAxis2D(footprint: readonly Pt2[]): Point2D[] {
-  const c = polygon2DCentroid(footprint);
+  const c = polygonCentroid(footprint);
   let bestLen = -1;
   let ux = 1;
   let uy = 0;

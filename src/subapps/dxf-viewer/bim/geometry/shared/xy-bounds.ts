@@ -19,6 +19,8 @@
  * CHECK 3.28 (jscpd, token-based) το πιάνει ανεξάρτητα από το όνομα που θα του δώσεις.
  */
 
+import type { PlanarPoint } from '../../types/bim-base';
+
 /** Άξονο-ευθυγραμμισμένο όριο στο επίπεδο XY. Το z **δεν** συμμετέχει ποτέ. */
 export interface Bbox {
   readonly minX: number;
@@ -31,7 +33,7 @@ export interface Bbox {
  * Όριο που χωράει **όλα** τα σημεία. Κενή είσοδος ⇒ `±Infinity` — **σκόπιμα ωμό**:
  * ο καλών ξέρει αν το κενό σύνολο είναι νόμιμο στο δικό του πλαίσιο, το όριο όχι.
  */
-export function bboxOf(pts: readonly { readonly x: number; readonly y: number }[]): Bbox {
+export function bboxOf(pts: readonly PlanarPoint[]): Bbox {
   return bboxOfAll(pts);
 }
 
@@ -40,9 +42,7 @@ export function bboxOf(pts: readonly { readonly x: number; readonly y: number }[
  * χωρίς ενδιάμεσο `concat`. Ένα πέρασμα ανά σύνολο — και **η μόνη** θέση όπου ζει
  * ο βρόχος: ο {@link bboxOf} είναι η εκφυλισμένη περίπτωση ενός συνόλου, όχι δίδυμο.
  */
-export function bboxOfAll(
-  ...sets: readonly (readonly { readonly x: number; readonly y: number }[])[]
-): Bbox {
+export function bboxOfAll(...sets: readonly (readonly PlanarPoint[])[]): Bbox {
   let minX = Infinity;
   let maxX = -Infinity;
   let minY = Infinity;

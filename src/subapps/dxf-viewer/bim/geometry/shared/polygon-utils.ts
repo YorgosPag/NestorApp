@@ -15,7 +15,7 @@
 import type { MultiPolygon, Pair, Polygon } from 'polygon-clipping';
 import type { BoundingBox3D, Point3D, Polygon3D } from '../../types/bim-base';
 import type { Point2D } from '../../../rendering/types/Types';
-import type { PlanarPoint } from './polygon-point-location';
+import type { PlanarPoint } from '../../types/bim-base';
 import { segmentsIntersect } from '../../../utils/geometry/GeometryUtils';
 import { angleBetweenVectors } from '../../../rendering/entities/shared/geometry-vector-utils';
 import { radToDeg } from '../../../rendering/entities/shared/geometry-angle-utils';
@@ -28,7 +28,7 @@ import { bboxOfAll } from './xy-bounds';
  *
  * Returns 0 για < 3 vertices (degenerate polygon).
  */
-export function shoelaceArea(vertices: readonly Point3D[]): number {
+export function shoelaceArea(vertices: readonly PlanarPoint[]): number {
   const n = vertices.length;
   if (n < 3) return 0;
   let sum = 0;
@@ -41,7 +41,7 @@ export function shoelaceArea(vertices: readonly Point3D[]): number {
 }
 
 /** Unsigned area — always ≥ 0. */
-export function polygonArea(vertices: readonly Point3D[]): number {
+export function polygonArea(vertices: readonly PlanarPoint[]): number {
   return Math.abs(shoelaceArea(vertices));
 }
 
@@ -55,7 +55,7 @@ export function multiPolygonArea(mp: MultiPolygon): number {
   let total = 0;
   for (const polygon of mp) {
     for (let i = 0; i < polygon.length; i++) {
-      const verts: Point3D[] = polygon[i].map((pr: Pair) => ({ x: pr[0], y: pr[1], z: 0 }));
+      const verts: PlanarPoint[] = polygon[i].map((pr: Pair) => ({ x: pr[0], y: pr[1] }));
       const a = polygonArea(verts);
       total += i === 0 ? a : -a; // ring[0] = outer, υπόλοιπα = holes
     }
@@ -76,12 +76,12 @@ export function polygon3dToClipPolygon(poly: Polygon3D): Polygon | null {
 }
 
 /** True αν το πολύγωνο είναι CCW (positive signed area). */
-export function isPolygonCCW(vertices: readonly Point3D[]): boolean {
+export function isPolygonCCW(vertices: readonly PlanarPoint[]): boolean {
   return shoelaceArea(vertices) > 0;
 }
 
 /** Sum-of-edges perimeter (mm). Closes με implicit edge από last → first. */
-export function polygonPerimeter(vertices: readonly Point3D[]): number {
+export function polygonPerimeter(vertices: readonly PlanarPoint[]): number {
   const n = vertices.length;
   if (n < 2) return 0;
   let total = 0;
@@ -97,9 +97,7 @@ export function polygonPerimeter(vertices: readonly Point3D[]): number {
  * Ελάχιστη (μη-προσημασμένη) γωνία κορυφής πολυγώνου σε μοίρες [0,180], winding/convexity-agnostic
  * (reflex 270°→90°). REUSE `angleBetweenVectors` (ADR-072)+`radToDeg` (ADR-067)· ADR-449 sliver guard· <3→180.
  */
-export function minPolygonInteriorAngleDeg(
-  vertices: readonly { readonly x: number; readonly y: number }[],
-): number {
+export function minPolygonInteriorAngleDeg(vertices: readonly PlanarPoint[]): number {
   const n = vertices.length;
   if (n < 3) return 180;
   let min = 180;
@@ -119,9 +117,7 @@ export function minPolygonInteriorAngleDeg(
  * (συγγραμμικές κορυφές αγνοούνται). Τρίγωνο πάντα κυρτό. Winding-agnostic. SSoT
  * για το routing κυρτό vs κοίλο (ADR-417 Φ2: κοίλο → straight skeleton).
  */
-export function isConvexPolygon(
-  vertices: readonly { readonly x: number; readonly y: number }[],
-): boolean {
+export function isConvexPolygon(vertices: readonly PlanarPoint[]): boolean {
   const n = vertices.length;
   if (n < 4) return true;
   let sign = 0;
@@ -139,7 +135,7 @@ export function isConvexPolygon(
 }
 
 /** Axis-aligned bounding box (XY plane, z=0). */
-export function polygonBbox(vertices: readonly Point3D[]): BoundingBox3D {
+export function polygonBbox(vertices: readonly PlanarPoint[]): BoundingBox3D {
   if (vertices.length === 0) {
     return { min: { x: 0, y: 0, z: 0 }, max: { x: 0, y: 0, z: 0 } };
   }
@@ -189,10 +185,7 @@ export function closedRingFromEdges<T>(outer: readonly T[], inner: readonly T[])
  * ακριβώς τον λόγο αυτή η συνάρτηση **διατηρείται αμετάβλητη** — είναι το σωστό εργαλείο εκεί,
  * όχι απλώς το παλιό.
  */
-export function pointInPolygon(
-  point: { readonly x: number; readonly y: number },
-  vertices: readonly PlanarPoint[],
-): boolean {
+export function pointInPolygon(point: PlanarPoint, vertices: readonly PlanarPoint[]): boolean {
   const n = vertices.length;
   if (n < 3) return false;
   let inside = false;
@@ -230,7 +223,7 @@ export {
  * όταν δύο μη-γειτονικές ακμές τέμνονται. Phase 3 sufficient (μικρά polygons).
  * Phase 3.5 αναβάθμιση σε sweep-line αν χρειαστεί.
  */
-export function isPolygonSelfIntersecting(vertices: readonly Point3D[]): boolean {
+export function isPolygonSelfIntersecting(vertices: readonly PlanarPoint[]): boolean {
   const n = vertices.length;
   if (n < 4) return false;
   for (let i = 0; i < n; i++) {
@@ -259,7 +252,7 @@ export function makePolygon3D(vertices: readonly Point3D[]): Polygon3D {
  * hit-test-entity-tests, bim-to-dxf-primitives). Generic επί οποιουδήποτε `{x,y}` source
  * (Point3D geometry vertices, grips), pure & zero-dep (ADR-597 §17.11).
  */
-export function projectPointTo2D(p: { readonly x: number; readonly y: number }): Point2D {
+export function projectPointTo2D(p: PlanarPoint): Point2D {
   return { x: p.x, y: p.y };
 }
 
@@ -273,9 +266,7 @@ export function projectPointTo2D(p: { readonly x: number; readonly y: number }):
  * Array mirror του {@link projectPointTo2D}. Generic επί οποιουδήποτε `{x,y}` πηγής,
  * pure & zero-dep. Winding order διατηρείται — μηδέν αναδιάταξη κορυφών (ADR-597 §17.11).
  */
-export function projectVerticesTo2D(
-  vertices: readonly { readonly x: number; readonly y: number }[],
-): Point2D[] {
+export function projectVerticesTo2D(vertices: readonly PlanarPoint[]): Point2D[] {
   return vertices.map(projectPointTo2D);
 }
 
@@ -296,10 +287,8 @@ export {
 // Re-exported here so all existing importers keep working unchanged.
 
 export {
-  segmentNormalX,
-  segmentNormalY,
-  vertexNormalX,
-  vertexNormalY,
+  segmentNormal,
+  vertexNormal,
   stripClosingDuplicate,
   offsetPolyline,
   insetClosedPolygon,
@@ -313,7 +302,7 @@ export {
  * `envelope-perimeter.ts` και από `envelope-shell.ts` (μηδέν duplication, N.12).
  */
 export function polylinePerimeterMeters(
-  points: readonly Point3D[],
+  points: readonly PlanarPoint[],
   closed: boolean,
   sceneScale: number,
 ): number {
@@ -332,7 +321,7 @@ export function polylinePerimeterMeters(
  * Sufficient for near-convex building outlines (ADR-396 D2 exterior-face
  * selection). Returns `{x:0, y:0}` for an empty vertex list.
  */
-export function polygonCentroid(vertices: readonly Point3D[]): { x: number; y: number } {
+export function polygonCentroid(vertices: readonly PlanarPoint[]): Point2D {
   const n = vertices.length;
   if (n === 0) return { x: 0, y: 0 };
   let sumX = 0;
@@ -344,15 +333,6 @@ export function polygonCentroid(vertices: readonly Point3D[]): { x: number; y: n
   return { x: sumX / n, y: sumY / n };
 }
 
-/**
- * Vertex-mean centroid ενός **2D** πολυγώνου (Point2D) — SSoT wrapper του {@link polygonCentroid} (z=0
- * lift εσωτερικά). Ώστε οι 2D callers (footprints/outlines) να ΜΗΝ επαναλαμβάνουν το inline
- * `verts.map((p) => ({ x: p.x, y: p.y, z: 0 }))` (N.0.2 dedup). Καταναλώνεται από `beam-span-snap`
- * (κέντρο μέλους-στηρίγματος, ADR-528) + `bim-characteristic-points.centroid2D` (πρώην inline αντίγραφο).
- */
-export function polygon2DCentroid(verts: readonly Point2D[]): Point2D {
-  return polygonCentroid(verts.map((p) => ({ x: p.x, y: p.y, z: 0 })));
-}
 
 /**
  * **Area** centroid (κέντρο βάρους εμβαδού) ενός πολυγώνου μέσω του shoelace SSoT
@@ -365,7 +345,7 @@ export function polygon2DCentroid(verts: readonly Point2D[]): Point2D {
  * Degenerate (< 3 κορυφές ή μηδενικό εμβαδόν) → fallback στον vertex-mean
  * {@link polygonCentroid} (well-defined αντί διαίρεση με το μηδέν).
  */
-export function polygonAreaCentroid(vertices: readonly Point3D[]): { x: number; y: number } {
+export function polygonAreaCentroid(vertices: readonly PlanarPoint[]): Point2D {
   const n = vertices.length;
   if (n < 3) return polygonCentroid(vertices);
   const signedArea = shoelaceArea(vertices);
@@ -383,15 +363,6 @@ export function polygonAreaCentroid(vertices: readonly Point3D[]): { x: number; 
   return { x: cx * factor, y: cy * factor };
 }
 
-/**
- * **Area** centroid ενός **2D** πολυγώνου (Point2D) — SSoT wrapper του {@link polygonAreaCentroid}
- * (z=0 lift εσωτερικά), mirror του {@link polygon2DCentroid}. Για κοίλα/μη-συμμετρικά footprints
- * (L/Γ/T/U) δίνει σημείο ΜΕΣΑ στο υλικό, σε αντίθεση με τον μέσο όρο κορυφών που πέφτει στο notch.
- * Απαιτεί winding order (τα polygon footprints το έχουν). Καταναλώνεται από `bim-characteristic-points`.
- */
-export function polygon2DAreaCentroid(verts: readonly Point2D[]): Point2D {
-  return polygonAreaCentroid(verts.map((p) => ({ x: p.x, y: p.y, z: 0 })));
-}
 
 // ─── Polygon ↔ axis projection (SSoT) ─────────────────────────────────────────
 //

@@ -48,13 +48,12 @@
  */
 
 import type { Point2D } from '../../../rendering/types/Types';
-import type { Point3D } from '../../../bim/types/bim-base';
 import type { TinSurface, TopoBoundary, TopoPoint } from '../topo-types';
 import type { TopoQaFlag, TopoQaSeverity } from './topo-qa-types';
 import { TOPO_QA_CONFIG } from './topo-qa-config';
 import { bridgingTrianglesOnly } from './topo-qa-topology';
 import {
-  pointInPolygonCovers, polygonArea, polygon2DAreaCentroid,
+  pointInPolygonCovers, polygonArea, polygonAreaCentroid,
   DEFAULT_BOUNDARY_TOLERANCE_MM,
 } from '../../../bim/geometry/shared/polygon-utils';
 import { clipTinToBoundary } from '../tin-clip-to-boundary';
@@ -66,11 +65,6 @@ const {
   COVERAGE_GAP_MIN_FRACTION, COVERAGE_GAP_HIGH_FRACTION,
   INTERPOLATED_MIN_FRACTION, INTERPOLATED_HIGH_FRACTION,
 } = TOPO_QA_CONFIG;
-
-/** Ο δακτύλιος ως `Point3D` — το `polygon-utils` δουλεύει σε 3Δ κορυφές με αδιάφορο z. */
-function lift(verts: readonly Point2D[]): Point3D[] {
-  return verts.map((p) => ({ x: p.x, y: p.y, z: 0 }));
-}
 
 /** Το plan εμβαδόν της `surface` **μέσα** στον δακτύλιο, μέσω των δύο υπαρχουσών SSoT. */
 function planAreaInsideMm2(surface: TinSurface, ring: readonly Point2D[]): number {
@@ -98,7 +92,7 @@ function planAreaInsideMm2(surface: TinSurface, ring: readonly Point2D[]): numbe
  * mm** και στα δύο ορίσματα.
  */
 function measuredPointsInside(
-  points: readonly TopoPoint[], ringLocal: readonly Point3D[], origin: TinSurface['origin'],
+  points: readonly TopoPoint[], ringLocal: readonly Point2D[], origin: TinSurface['origin'],
 ): number {
   let inside = 0;
   for (const point of points) {
@@ -163,7 +157,7 @@ export function checkBoundaryElevationCoverage(
   // «μέσα ή έξω» τρέχουν εκεί. Το `topoSurfaceAreas` ήδη μετρά σε LOCAL· ένα shoelace σε ΕΓΣΑ
   // canonical mm (x~4e8, y~4,5e9 ⇒ γινόμενα ~1,8e18) θα έδινε ένα εμβαδόν 2e8 mm² από καταστροφική
   // ακύρωση όρων 10 τάξεις μεγαλύτερων — δηλαδή θα σύγκρινα δύο αριθμούς μετρημένους αλλιώς.
-  const ringLocal = lift(ring.map((p) => worldToLocal(p, surface.origin)));
+  const ringLocal = ring.map((p) => worldToLocal(p, surface.origin));
   const plotAreaMm2 = polygonArea(ringLocal);
   if (!(plotAreaMm2 > 0)) return [];
 
@@ -176,7 +170,7 @@ export function checkBoundaryElevationCoverage(
   const gapFraction = Math.min(1, Math.max(0, (plotAreaMm2 - coveredMm2) / plotAreaMm2));
   const bridgedFraction = Math.min(1, Math.max(0, bridgedMm2 / plotAreaMm2));
 
-  const at = polygon2DAreaCentroid(ring);
+  const at = polygonAreaCentroid(ring);
   const flags: TopoQaFlag[] = [];
   if (gapFraction >= COVERAGE_GAP_MIN_FRACTION) flags.push(coverageGapFlag(gapFraction, at));
   if (bridgedFraction >= INTERPOLATED_MIN_FRACTION) {

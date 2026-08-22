@@ -103,11 +103,10 @@ export function pieceVolumeMm3(piece: readonly DzVertex[], plane: DzPlane): {
 } {
   if (piece.length < 3) return { areaMm2: 0, volumeMm3: 0 };
 
-  const lifted = piece.map((p) => ({ x: p.x, y: p.y, z: 0 }));
-  const areaMm2 = polygonArea(lifted);
+  const areaMm2 = polygonArea(piece);
   if (!(areaMm2 > MIN_AREA_MM2)) return { areaMm2: 0, volumeMm3: 0 };
 
-  const centroid = polygonAreaCentroid(lifted);
+  const centroid = polygonAreaCentroid(piece);
   const volumeMm3 = Math.abs(areaMm2 * dzAt(plane, centroid));
   return { areaMm2, volumeMm3: Number.isFinite(volumeMm3) ? volumeMm3 : 0 };
 }

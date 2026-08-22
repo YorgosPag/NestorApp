@@ -124,10 +124,9 @@ function collectTiles(
 function makeInsideBoundary(
   paths: ReadonlyArray<ReadonlyArray<Point2D>>,
 ): (w: Point2D) => boolean {
-  const rings = paths.map((p) => p.map((pt) => ({ x: pt.x, y: pt.y, z: 0 })));
   return (w: Point2D): boolean => {
     let c = false;
-    for (const r of rings) if (pointInPolygon(w, r)) c = !c;
+    for (const r of paths) if (pointInPolygon(w, r)) c = !c;
     return c;
   };
 }

@@ -58,9 +58,7 @@ export function crossCheckCutFill(
   const cellW = width / GRID_CELLS_PER_AXIS;
   const cellH = height / GRID_CELLS_PER_AXIS;
   const cellAreaMm2 = cellW * cellH;
-  const ring = boundary && boundary.vertices.length >= 3
-    ? boundary.vertices.map((p) => ({ x: p.x, y: p.y, z: 0 }))
-    : null;
+  const ring = boundary && boundary.vertices.length >= 3 ? boundary.vertices : null;
 
   let cut = 0;
   let fill = 0;

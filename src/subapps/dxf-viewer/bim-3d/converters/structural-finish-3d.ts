@@ -21,7 +21,7 @@ import * as THREE from 'three';
 import type { ColumnEntity } from '../../bim/types/column-types';
 import type { BeamEntity } from '../../bim/types/beam-types';
 import type { WallEntity } from '../../bim/types/wall-types';
-import type { Point3D } from '../../bim/types/bim-base';
+import type { PlanarPoint } from '../../bim/types/bim-base';
 import { stripPrismGeometry } from './envelope-three-mesh';
 import { scalePoints } from '../../rendering/entities/shared/geometry-vector-utils';
 import { getMaterial3D, getFinishColorOverrideMaterial3D } from '../materials/MaterialCatalog3D';
@@ -77,7 +77,7 @@ function finalizeFinishMesh(
 /** Χτίζει ΕΝΑ band prism από plan quad και το προσθέτει στο group (tagged). */
 function addFinishPrism(
   group: THREE.Group,
-  quad: Point3D[],
+  quad: readonly PlanarPoint[],
   heightM: number,
   baseY: number,
   id: string,
@@ -143,12 +143,11 @@ export function buildFinishSkinFromFaces(
 }
 
 /**
- * ADR-449 — mitered plan-quad (canvas units) → world-metre `Point3D[]` (order aCore→bCore→
+ * ADR-449 — mitered plan-quad (canvas units) → world-metre `PlanarPoint[]` (order aCore→bCore→
  * bOuter→aOuter, ίδιο με τον πυρήνα του prism). Reuse `scalePoints` (ΕΝΑ scale SSoT).
  */
-function quadToScenePoints(q: BandFinishQuad | FinishStrip, sceneToM: number): Point3D[] {
-  const m = scalePoints([q.aCore, q.bCore, q.bOuter, q.aOuter], sceneToM);
-  return m.map((p) => ({ x: p.x, y: p.y, z: 0 }));
+function quadToScenePoints(q: BandFinishQuad | FinishStrip, sceneToM: number): PlanarPoint[] {
+  return scalePoints([q.aCore, q.bCore, q.bOuter, q.aOuter], sceneToM);
 }
 
 /** FaceProfile (t,z) πολύγωνα (m) → THREE.Shape[] (outer + τρύπες = ανοίγματα). */

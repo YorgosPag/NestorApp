@@ -12,8 +12,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-422-bim-heating-mechanical-study.md
  */
 
-import type { Point3D } from '../../types/bim-base';
-import { segmentNormalX, segmentNormalY, isPolygonCCW } from './polygon-utils';
+import type { PlanarPoint } from '../../types/bim-base';
+import { segmentNormal, isPolygonCCW } from './polygon-utils';
 import { normalizeAngleDeg } from '../../../rendering/entities/shared/geometry-angle-utils';
 import { clamp01 } from '../../../utils/scalar-math';
 
@@ -61,7 +61,7 @@ function pointSegmentDistanceSq(
  * Outward-facing azimuth (deg — see {@link directionAzimuthDeg}) of polygon edge
  * `edgeIndex` (vertex i → i+1). **"Outward"** = the edge-normal side pointing
  * **away from the polygon interior**, resolved from the polygon **winding** (no
- * centroid → robust for concave rings). `segmentNormalX/Y` is the CCW (+90°)
+ * centroid → robust for concave rings). `segmentNormal (Y` is the CCW (+90°)
  * normal, which points *inward* for a CCW ring, so it is flipped accordingly.
  *
  * Returns `null` for `<3` vertices or a degenerate edge. **SSoT** for «outward
@@ -70,18 +70,17 @@ function pointSegmentDistanceSq(
  * (ADR-417 Φ-per-edge).
  */
 export function edgeOutwardAzimuthDeg(
-  polygon: readonly Point3D[],
+  polygon: readonly PlanarPoint[],
   edgeIndex: number,
 ): number | null {
   const n = polygon.length;
   if (n < 3) return null;
   const a = polygon[edgeIndex % n];
   const b = polygon[(edgeIndex + 1) % n];
-  const nx = segmentNormalX(a, b);
-  const ny = segmentNormalY(a, b);
-  if (nx === null || ny === null) return null;
+  const nrm = segmentNormal(a, b);
+  if (nrm === null) return null;
   const outwardSign = isPolygonCCW(polygon) ? -1 : 1;
-  return directionAzimuthDeg(outwardSign * nx, outwardSign * ny);
+  return directionAzimuthDeg(outwardSign * nrm.x, outwardSign * nrm.y);
 }
 
 /**
@@ -92,8 +91,8 @@ export function edgeOutwardAzimuthDeg(
  * footprint (ADR-422 L7.2 orientation-aware solar gains).
  */
 export function nearestEdgeOutwardAzimuthDeg(
-  polygon: readonly Point3D[],
-  p: { readonly x: number; readonly y: number },
+  polygon: readonly PlanarPoint[],
+  p: PlanarPoint,
 ): number | null {
   const n = polygon.length;
   if (n < 3) return null;

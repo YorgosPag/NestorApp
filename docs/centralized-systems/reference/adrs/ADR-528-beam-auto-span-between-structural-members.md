@@ -158,3 +158,18 @@ sweep → καταγράφηκε στο `.claude-rules/pending-ratchet-work.md` 
   (Shift = όλη η σειρά, N δοκάρια)· NEW `collectSpanSupportOutlines` SSoT (στηρίξεις, reuse brain+tool)·
   guide (νοητή ευθεία) μέσω `alignmentGuide` (reuse paint pipeline). Shift forwarded `useCanvasClickHandler`
   →`useBeamTool`. 11 jest (incl. σενάριο στιγμιότυπου), 126/126 framing+placement GREEN.
+
+- **2026-08-22 (ADR-789 — η σημαία του §Flagged έκλεισε, με ΑΛΛΗ απάντηση από την προτεινόμενη)**
+  Το §Flagged αυτού του ADR σήμανε το `verts.map(p=>({x,y,z:0}))` ως «large scattered pattern →
+  pending-ratchet» και πρότεινε SSoT `liftTo3D` δίπλα στο `polygon2DCentroid`. **Το `liftTo3D` δεν
+  γράφτηκε ποτέ**, και η μέτρηση εξηγεί γιατί: τα `polygon-utils` και τα αδέλφια τους **δεν
+  διαβάζουν `.z` ούτε μία φορά** (0 αναγνώσεις σε 460 γραμμές) — το lift ήταν round-trip που
+  αποδεδειγμένα δεν κάνει τίποτα. Οι υπογραφές δηλώνουν πλέον `PlanarPoint` (ADR-730) και το
+  2Δ πολύγωνο μπαίνει **αυτούσιο**: **Γ1 40 → 12**, δέκα workarounds διαγράφηκαν.
+  ⚠️ **Τα `polygon2DCentroid`/`polygon2DAreaCentroid` που δημιούργησε αυτό το ADR ΔΙΑΓΡΑΦΗΚΑΝ**:
+  μετά τη διεύρυνση έγιναν **ταυτόσημα** με τους γονείς τους, άρα δύο ονόματα για ένα ερώτημα
+  (ADR-749). Οι **17** καλούντες μετανάστευσαν σε `polygonCentroid`/`polygonAreaCentroid`.
+  🔑 Το μάθημα για την επόμενη φορά: η στρατηγική «ένα 2D wrapper ανά 3D συνάρτηση» είναι
+  **O(συναρτήσεων)** και σταμάτησε στα **2 από ~11** — τα υπόλοιπα 9 τα πλήρωσαν 89 inline lift.
+  Βλ. `ADR-789-planar-point-vocabulary.md`.
+

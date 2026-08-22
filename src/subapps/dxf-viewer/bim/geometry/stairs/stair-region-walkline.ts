@@ -20,6 +20,7 @@
  */
 
 import type { Point2D, Point3D } from '../../../rendering/types/Types';
+import type { PlanarPoint } from '../../types/bim-base';
 import type { Vec2 } from './stair-geometry-shared';
 import { perp } from './stair-geometry-shared';
 import { pointInPolygon } from '../shared/polygon-utils';
@@ -214,7 +215,7 @@ function centerlineInside(c: CorridorSegment, ring: readonly Point3D[]): boolean
  */
 function findCorridorSegments(
   edges: readonly Edge[],
-  ring: readonly Point3D[],
+  ring: readonly PlanarPoint[],
   eps: number,
 ): CorridorSegment[] {
   const candidates: CorridorSegment[] = [];
@@ -376,8 +377,7 @@ export function traceCorridorWalkline(
   eps: number,
 ): CorridorWalkline | null {
   const edges = buildEdges(ring);
-  const ring3D: Point3D[] = ring.map((p) => ({ x: p.x, y: p.y, z: 0 }));
-  const segs = findCorridorSegments(edges, ring3D, eps);
+  const segs = findCorridorSegments(edges, ring, eps);
   if (segs.length === 0) return null;
   const reflexes = reflexVertices(ring);
   const refs = buildEndRefs(segs, reflexes, eps);

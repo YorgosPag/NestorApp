@@ -23,7 +23,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { SlabEntity } from '../../bim/types/slab-types';
 import { slabHostInput, type HostFootprintInput } from '../../bim/geometry/wall-host-plan-builder';
 import { hostUndersideAt, hostTopsideAt, HOST_Z_EPS } from '../../bim/geometry/host-footprint-eval';
-import { polygon2DCentroid } from '../../bim/geometry/shared/polygon-utils';
+import { polygonCentroid } from '../../bim/geometry/shared/polygon-utils';
 
 /** Πλάκες **πάνω** από τον όροφο (καλύπτουν δοκάρια/κολόνες). `ground`/`foundation` (κάτω) εξαιρούνται. */
 const ABOVE_SLAB_KINDS: ReadonlySet<string> = new Set(['ceiling', 'floor', 'roof']);
@@ -59,7 +59,7 @@ export function resolveMemberTopClipZmm(
   hosts: readonly HostFootprintInput[],
 ): number {
   if (hosts.length === 0 || footprint.length < 3) return ownTopZmm;
-  const samples: Point2D[] = [polygon2DCentroid(footprint), ...footprint];
+  const samples: Point2D[] = [polygonCentroid(footprint), ...footprint];
   let clip = ownTopZmm;
   for (const h of hosts) {
     for (const pt of samples) {

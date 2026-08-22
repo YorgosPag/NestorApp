@@ -36,6 +36,7 @@ import type {
   Polygon3D,
   Polyline3D,
 } from './bim-base';
+import type { Point2D } from '../../rendering/types/Types';
 import type { SceneUnits } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
 import type { EnvelopeFunction, EnvelopeLayer } from './thermal-envelope-types';
@@ -288,7 +289,7 @@ export interface BeamGeometry {
    * διαβάζει το `outline` (byte-for-byte). Υπολογίζεται στο scene-conversion post-pass
    * (`applyBeamColumnCutback2D`) από τα live column footprints — μηδέν stale persisted γεωμετρία.
    */
-  readonly displayOutline?: readonly (readonly Point3D[])[];
+  readonly displayOutline?: readonly (readonly Point2D[])[];
   /**
    * ADR-458 — DERIVED (ΠΟΤΕ persisted) άξονας (centerline) προσαρμοσμένος ώστε κάθε άκρο
    * που πλαισιώνεται από κολόνα να καταλήγει ΑΚΡΙΒΩΣ στην παρειά της (σημείο επαφής —

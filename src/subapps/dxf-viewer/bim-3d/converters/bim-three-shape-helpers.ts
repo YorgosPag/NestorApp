@@ -12,7 +12,8 @@
  */
 
 import * as THREE from 'three';
-import type { Point3D } from '../../bim/types/bim-base';
+import type { PlanarPoint } from '../../bim/types/bim-base';
+import type { Point2D } from '../../rendering/types/Types';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 import { scalePoints } from '../../rendering/entities/shared/geometry-vector-utils';
 // ADR-458 — ο pure footprint-ring builder ζει στο `wall-geometry` (χωρίς THREE dep· κοινός
@@ -75,11 +76,19 @@ export function centeredMeshY(
   return (floorElevationMm + relCentreMm) * MM_TO_M - bodyHeightM / 2 + buildingBaseElevationM;
 }
 
-export function toShapePoints(pts: readonly Point3D[]): { x: number; y: number }[] {
+export function toShapePoints(pts: readonly PlanarPoint[]): Point2D[] {
   return projectVerticesTo2D(pts);
 }
 
-export function buildShape(outer: readonly Point3D[], inner?: readonly Point3D[]): THREE.Shape | null {
+/**
+ * Κλειστό `THREE.Shape` από έναν δακτύλιο κάτοψης.
+ *
+ * ⚠️ ADR-789 — δέχεται `PlanarPoint`, **ΟΧΙ** `Point3D`: το πρώτο πράγμα που κάνει είναι
+ * {@link toShapePoints} → `projectVerticesTo2D`, δηλαδή **πετά το z**. Όσο η υπογραφή
+ * ζητούσε 3Δ, κάθε 2Δ καλών έγραφε `{ …, z: 0 }` για να το δει να σβήνεται μία γραμμή
+ * παρακάτω — round-trip που αποδεδειγμένα δεν έκανε τίποτα.
+ */
+export function buildShape(outer: readonly PlanarPoint[], inner?: readonly PlanarPoint[]): THREE.Shape | null {
   if (outer.length < 2) return null;
   const shape = new THREE.Shape();
   const [first, ...rest] = toShapePoints(outer);
@@ -229,7 +238,7 @@ export function pushHoles(
 // SSoT for BOTH the THREE.Shape cross-section (legacy solid) AND the faced prism ring
 // (`buildFacedSolidBody`), so a faced wall's per-face `side:i` indices match the legacy
 // solid exactly (outer faces first, then the closing end + inner faces).
-export function buildWallShape(outer: readonly Point3D[], inner: readonly Point3D[]): THREE.Shape | null {
+export function buildWallShape(outer: readonly PlanarPoint[], inner: readonly PlanarPoint[]): THREE.Shape | null {
   if (outer.length < 2 || inner.length < 2) return null;
   const ring = buildWallFootprintRing(outer, inner);
   const shape = new THREE.Shape();

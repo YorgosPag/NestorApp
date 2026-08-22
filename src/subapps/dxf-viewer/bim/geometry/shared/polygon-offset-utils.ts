@@ -12,80 +12,66 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.5
  */
 
-import type { Point3D } from '../../types/bim-base';
+import type { PlanarPoint, Point3D } from '../../types/bim-base';
 import { polygonArea, projectVerticesTo2D } from './polygon-utils';
 
 /** Below this segment length (mm/canvas) a segment is treated as degenerate. */
 const DEGENERATE_LENGTH_EPS = 0.001;
 
 /**
- * CCW 90° unit segment normal X component (rotate tangent (dx,dy) → (-dy,dx)).
- * Returns `null` for degenerate (near-zero-length) segments.
+ * CCW 90° μοναδιαία **κάθετος** ακμής (στροφή της εφαπτομένης (dx,dy) → (-dy,dx)).
+ * `null` για εκφυλισμένο (σχεδόν μηδενικού μήκους) τμήμα.
+ *
+ * ⚠️ ADR-789 / CHECK 3.28 — ΜΙΑ συνάρτηση, όχι ζεύγος `…X`/`…Y`. Το ζεύγος ήταν
+ * **δύο ονόματα για έναν υπολογισμό** και ο κλώνος ήταν μετρήσιμος (58 tokens):
+ * κάθε καλών πλήρωνε **δύο** `Math.hypot` για το ίδιο τμήμα, και ο δεύτερος έλεγχος
+ * εκφυλισμού μπορούσε να αποκλίνει από τον πρώτο χωρίς κανένα σήμα.
  */
-export function segmentNormalX(a: Point3D, b: Point3D): number | null {
+export function segmentNormal(a: PlanarPoint, b: PlanarPoint): PlanarPoint | null {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const len = Math.hypot(dx, dy);
   if (len < DEGENERATE_LENGTH_EPS) return null;
-  return -dy / len;
-}
-
-/** CCW 90° unit segment normal Y component. Returns `null` for degenerate. */
-export function segmentNormalY(a: Point3D, b: Point3D): number | null {
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const len = Math.hypot(dx, dy);
-  if (len < DEGENERATE_LENGTH_EPS) return null;
-  return dx / len;
+  return { x: -dy / len, y: dx / len };
 }
 
 /**
- * Vertex normal X — averages the adjacent segment normals (CCW 90°).
+ * **Κάθετος κορυφής** — μέσος όρος των κάθετων των γειτονικών ακμών (CCW 90°).
  *
- * `closed = false` (open polyline): endpoint vertices use their single adjacent
- * segment (walls/beams — the free ends are square-cut, not mitred).
+ * `closed = false` (ανοιχτή polyline): οι ακραίες κορυφές χρησιμοποιούν τη ΜΙΑ γειτονική
+ * τους ακμή (τοίχοι/δοκοί — τα ελεύθερα άκρα κόβονται ίσια, χωρίς φαλτσογωνιά).
  *
- * `closed = true` (ring): EVERY vertex — including index 0 and n-1 — averages
- * BOTH adjacent segments with wrap-around. Without this, the seam vertex of a
- * closed loop is offset perpendicular to only one edge, splitting the corner into
- * a `distance`-long diagonal jog (ADR-396 insulation-loop + Z4 reveal-frame bug).
+ * `closed = true` (δακτύλιος): **ΚΑΘΕ** κορυφή — μαζί με την 0 και την n-1 — παίρνει τον
+ * μέσο όρο **ΚΑΙ ΤΩΝ ΔΥΟ** γειτονικών ακμών με wrap-around. Χωρίς αυτό, η κορυφή της
+ * ραφής μετατοπίζεται κάθετα σε μία μόνο ακμή και η γωνία σπάει σε διαγώνιο σκαλοπάτι
+ * μήκους `distance` (ADR-396 insulation-loop + Z4 reveal-frame bug).
  *
- * Degenerate segments are skipped. The averaging is the mitre approximation at
- * internal corners (shared by all callers — consistent across every corner).
+ * Οι εκφυλισμένες ακμές παραλείπονται. Ο μέσος όρος **είναι** η προσέγγιση φαλτσογωνιάς
+ * στις εσωτερικές γωνίες — κοινή σε όλους τους καλούντες, άρα συνεπής σε κάθε γωνία.
+ *
+ * ⚠️ ADR-789 / CHECK 3.28 — ΜΙΑ συνάρτηση αντί για `vertexNormalX`/`vertexNormalY`: ο
+ * βρόχος ήταν γραμμένος **δύο φορές** (63 + 58 tokens κλώνος) και διέτρεχε τους ίδιους
+ * γείτονες δύο φορές για να επιστρέψει έναν βαθμωτό αριθμό τη φορά.
  */
-export function vertexNormalX(vertices: readonly Point3D[], i: number, closed = false): number {
+export function vertexNormal(
+  vertices: readonly PlanarPoint[],
+  i: number,
+  closed = false,
+): PlanarPoint {
   const n = vertices.length;
-  let acc = 0;
+  let accX = 0;
+  let accY = 0;
   let count = 0;
-  if (i > 0 || closed) {
-    const prev = i > 0 ? i - 1 : n - 1;
-    const seg = segmentNormalX(vertices[prev], vertices[i]);
-    if (seg !== null) { acc += seg; count += 1; }
-  }
-  if (i < n - 1 || closed) {
-    const next = i < n - 1 ? i + 1 : 0;
-    const seg = segmentNormalX(vertices[i], vertices[next]);
-    if (seg !== null) { acc += seg; count += 1; }
-  }
-  return count > 0 ? acc / count : 0;
-}
-
-/** Vertex normal Y — averages adjacent segment normals (mitre at corners). See `vertexNormalX` for `closed`. */
-export function vertexNormalY(vertices: readonly Point3D[], i: number, closed = false): number {
-  const n = vertices.length;
-  let acc = 0;
-  let count = 0;
-  if (i > 0 || closed) {
-    const prev = i > 0 ? i - 1 : n - 1;
-    const seg = segmentNormalY(vertices[prev], vertices[i]);
-    if (seg !== null) { acc += seg; count += 1; }
-  }
-  if (i < n - 1 || closed) {
-    const next = i < n - 1 ? i + 1 : 0;
-    const seg = segmentNormalY(vertices[i], vertices[next]);
-    if (seg !== null) { acc += seg; count += 1; }
-  }
-  return count > 0 ? acc / count : 0;
+  const add = (from: number, to: number): void => {
+    const seg = segmentNormal(vertices[from], vertices[to]);
+    if (seg === null) return;
+    accX += seg.x;
+    accY += seg.y;
+    count += 1;
+  };
+  if (i > 0 || closed) add(i > 0 ? i - 1 : n - 1, i);
+  if (i < n - 1 || closed) add(i, i < n - 1 ? i + 1 : 0);
+  return count > 0 ? { x: accX / count, y: accY / count } : { x: 0, y: 0 };
 }
 
 /**
@@ -94,8 +80,14 @@ export function vertexNormalY(vertices: readonly Point3D[], i: number, closed = 
  * assembled envelope face loop); that duplicate creates a zero-length wrap-around
  * segment that breaks the closed-mitre at the seam. Returns the input unchanged
  * when there is no such duplicate.
+ *
+ * Generic ώστε ο καλών να παίρνει πίσω **τον τύπο του** (2Δ ή 3Δ) — η συνάρτηση
+ * κρίνει μόνο x/y και δεν κατασκευάζει τίποτα (ADR-789).
  */
-export function stripClosingDuplicate(vertices: readonly Point3D[], eps = 1e-6): readonly Point3D[] {
+export function stripClosingDuplicate<T extends PlanarPoint>(
+  vertices: readonly T[],
+  eps = 1e-6,
+): readonly T[] {
   const n = vertices.length;
   if (n < 2) return vertices;
   const a = vertices[0];
@@ -125,12 +117,11 @@ export function offsetPolyline(
 ): Point3D[] {
   const out: Point3D[] = [];
   for (let i = 0; i < vertices.length; i++) {
-    const nx = vertexNormalX(vertices, i, closed);
-    const ny = vertexNormalY(vertices, i, closed);
+    const nrm = vertexNormal(vertices, i, closed);
     const v = vertices[i];
     out.push({
-      x: v.x + sign * distance * nx,
-      y: v.y + sign * distance * ny,
+      x: v.x + sign * distance * nrm.x,
+      y: v.y + sign * distance * nrm.y,
       z: v.z ?? 0,
     });
   }

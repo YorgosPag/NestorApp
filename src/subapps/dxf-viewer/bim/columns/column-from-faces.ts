@@ -40,6 +40,7 @@ import {
 } from '../walls/perimeter-from-faces';
 import type { DetectedRectangle } from '../walls/wall-in-region';
 import { REGION_PERIMETER_LIMITS } from '../../config/tolerance-config';
+import { bboxOf } from '../geometry/shared/xy-bounds';
 import {
   completeColumnFromClick,
   type ColumnParamOverrides,
@@ -73,18 +74,9 @@ interface PolyBbox {
   readonly cy: number;
 }
 
-/** Axis-aligned bounding box + κέντρο ενός πολυγώνου (world scene units). */
-function polygonBbox(poly: readonly Point2D[]): PolyBbox {
-  let minX = Number.POSITIVE_INFINITY;
-  let minY = Number.POSITIVE_INFINITY;
-  let maxX = Number.NEGATIVE_INFINITY;
-  let maxY = Number.NEGATIVE_INFINITY;
-  for (const p of poly) {
-    if (p.x < minX) minX = p.x;
-    if (p.x > maxX) maxX = p.x;
-    if (p.y < minY) minY = p.y;
-    if (p.y > maxY) maxY = p.y;
-  }
+/** {@link bboxOf} + το κέντρο του — **παράγωγο**, όχι δεύτερος βρόχος (ADR-583/788). */
+function polyBboxWithCentre(poly: readonly Point2D[]): PolyBbox {
+  const { minX, minY, maxX, maxY } = bboxOf(poly);
   return { minX, minY, maxX, maxY, cx: (minX + maxX) / 2, cy: (minY + maxY) / 2 };
 }
 
@@ -199,7 +191,8 @@ export function rectColumnPlacement(rect: DetectedRectangle, s: number): ColumnP
  * όλα τα υπόλοιπα → `composite`. polygon = LOCAL mm bbox-centered, CCW.
  */
 function polygonColumnPlacement(perimeter: ClosedPerimeter, s: number): ColumnPlacement {
-  const bbox = polygonBbox(perimeter.polygon);
+  // ADR-789/583 — ο βρόχος min/max ζει ΜΙΑ φορά, στο `xy-bounds`· το κέντρο παράγεται από αυτόν.
+  const bbox = polyBboxWithCentre(perimeter.polygon);
   const localMm = polygonToLocalMm(perimeter.polygon, bbox.cx, bbox.cy, s);
   const center: Point2D = { x: bbox.cx, y: bbox.cy };
   const width = (bbox.maxX - bbox.minX) / s;

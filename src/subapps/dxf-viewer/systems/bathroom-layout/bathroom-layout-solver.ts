@@ -12,7 +12,6 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { Point3D } from '../../bim/types/bim-base';
 import type {
   BathroomLayoutSolution,
   FixtureFootprintSpec,
@@ -23,7 +22,7 @@ import type {
 } from './bathroom-layout-types';
 import { resolveFixtureSpecs } from './sanitary-clearance-spec';
 import { buildFixtureRects, segmentRoomWalls, type PlacedRects, type RoomWall } from './room-walls';
-import { allCornersInside, areaOf, lift, rectOverlapMm2 } from './layout-geometry';
+import { allCornersInside, areaOf, rectOverlapMm2 } from './layout-geometry';
 import { scoreLayout } from './bathroom-layout-scoring';
 import { compareStrings } from '@/lib/array-utils';
 
@@ -72,11 +71,11 @@ function deriveDoorWallIndex(
 function isPlacementValid(
   rects: PlacedRects,
   placed: readonly FixturePlacement[],
-  roomLifted: readonly Point3D[],
+  room: readonly Point2D[],
   keeps: KeepClearZones,
   fixtureAreaMm2: number,
 ): boolean {
-  if (!allCornersInside(rects.footprint, roomLifted)) return false;
+  if (!allCornersInside(rects.footprint, room)) return false;
   const tol = 0.02 * fixtureAreaMm2;
   for (const p of placed) {
     if (rectOverlapMm2(rects.footprint, p.footprint) > tol) return false;
@@ -95,7 +94,7 @@ function tryPlaceOnWall(
   spec: FixtureFootprintSpec,
   cursor: number,
   placed: readonly FixturePlacement[],
-  roomLifted: readonly Point3D[],
+  room: readonly Point2D[],
   keeps: KeepClearZones,
   opts: ResolvedOpts,
 ): { placement: FixturePlacement; nextCursor: number } | null {
@@ -104,7 +103,7 @@ function tryPlaceOnWall(
   let s = cursor + spec.widthMm / 2;
   while (s <= maxS) {
     const rects = buildFixtureRects(wall, s, spec.widthMm, spec.depthMm, spec.frontClearanceMm);
-    if (isPlacementValid(rects, placed, roomLifted, keeps, area)) {
+    if (isPlacementValid(rects, placed, room, keeps, area)) {
       const gap = Math.max(opts.gapMm, spec.sideClearanceMm);
       return {
         placement: {
@@ -129,7 +128,7 @@ function tryPlaceOnWall(
 function packLayout(
   walls: readonly RoomWall[],
   specs: readonly FixtureFootprintSpec[],
-  roomLifted: readonly Point3D[],
+  room: readonly Point2D[],
   keeps: KeepClearZones,
   params: PackParams,
   opts: ResolvedOpts,
@@ -143,7 +142,7 @@ function packLayout(
       if (wi === params.excludeDoorWallIndex) continue;
       const wall = walls[wi];
       if (!wall || wall.lengthMm < spec.widthMm + 2 * opts.wallMarginMm) continue;
-      const res = tryPlaceOnWall(wall, spec, cursors.get(wi) ?? opts.wallMarginMm, placements, roomLifted, keeps, opts);
+      const res = tryPlaceOnWall(wall, spec, cursors.get(wi) ?? opts.wallMarginMm, placements, room, keeps, opts);
       if (res) {
         placements.push(res.placement);
         cursors.set(wi, res.nextCursor);
@@ -203,7 +202,7 @@ export function solveBathroomLayout(
   const specs = resolveFixtureSpecs(input.fixtures);
   if (walls.length < 3 || specs.length === 0) return [];
 
-  const roomLifted = lift(input.polygonMm);
+  const room = input.polygonMm;
   const roomAreaMm2 = areaOf(input.polygonMm);
   // ADR-638 Στάδιο 3 — accurate hinged-door swing sectors + legacy single rect, unified.
   const keeps: KeepClearZones = [
@@ -216,14 +215,14 @@ export function solveBathroomLayout(
   const seen = new Set<string>();
   const solutions: BathroomLayoutSolution[] = [];
   for (const params of paramSets) {
-    const { placements, unplaced } = packLayout(walls, specs, roomLifted, keeps, params, opts);
+    const { placements, unplaced } = packLayout(walls, specs, room, keeps, params, opts);
     const sig = signatureOf(placements);
     if (seen.has(sig)) continue;
     seen.add(sig);
     const { score, breakdown } = scoreLayout({
       placements,
       requestedCount: specs.length,
-      roomLifted,
+      room,
       roomAreaMm2,
       doorKeepClears: keeps,
       wetWallHintIndex: input.wetWallHintIndex,
