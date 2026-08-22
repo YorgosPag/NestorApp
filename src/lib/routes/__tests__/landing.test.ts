@@ -27,26 +27,43 @@ import { join, relative, sep } from 'node:path';
 
 import { MY_OFFERS_ROUTE } from '@/lib/owner-property/owner-property-routes';
 import { AUTH_ROUTES, PRIVATE_SPACE_HOME, resolvePostLoginRoute } from '@/lib/routes';
-
-const REPO_ROOT = join(__dirname, '..', '..', '..', '..');
-
-const read = (relative: string): string => readFileSync(join(REPO_ROOT, relative), 'utf8');
+import { REPO_ROOT, readRepoCode, readRepoFile, stripComments } from '@/test-utils/read-source';
 
 /**
- * Κώδικας **χωρίς σχόλια** — και είναι απαίτηση ορθότητας, όχι καθαριότητα.
- *
- * 🔴 **Το έμαθε αυτό το ίδιο το test.** Η πρώτη του γραφή απαιτούσε να μην υπάρχει
- * `'/login'` στο ταμπλό και **κοκκίνιζε πάνω στο σχόλιο** που τεκμηριώνει γιατί η
- * ωμή διεύθυνση ήταν λάθος. Ένας φρουρός που τιμωρεί την **τεκμηρίωση της
- * θεραπείας** σπρώχνει τον επόμενο να σβήσει το σχόλιο — δηλαδή τη γνώση (ίδιο
- * σχήμα με την άγκυρα `Κ7β` της CHECK 3.50).
+ * ⚠️ **Η ανάγνωση πηγαίου ζει σε SSoT** (ADR-660 §5.13). Μέχρι 2026-08-23 αυτές οι
+ * γραμμές δήλωναν εδώ δική τους `REPO_ROOT` + `stripComments` — μία από **δώδεκα**
+ * ταυτόσημες γραφές στο δέντρο (N.18 / CHECK 3.28). Το «γιατί κόβονται τα σχόλια»
+ * —που το έμαθε **αυτό** το test, κοκκινίζοντας πάνω στην τεκμηρίωση της θεραπείας—
+ * μετακόμισε μαζί του και ζει πλέον στο `test-utils/read-source.ts`.
  */
-const stripComments = (src: string): string =>
-  src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+const read = readRepoFile;
+const readCode = readRepoCode;
 
-const readCode = (relative: string): string => stripComments(read(relative));
+/**
+ * 🔴 **Η ΔΙΕΥΘΥΝΣΗ ΤΟΥ ΤΑΜΠΛΟ ΔΕΝ ΚΑΡΦΩΝΕΤΑΙ — ΤΟ ΕΜΑΘΕ ΜΕ ΤΟΝ ΔΥΣΚΟΛΟ ΤΡΟΠΟ.**
+ *
+ * Μέχρι 2026-08-23 εδώ ζούσε η σταθερά `'src/app/(app)/dashboard/page.tsx'`. Η
+ * **Φάση 3 του ADR-787** μετακόμισε τη σελίδα σε `(app)/o/[workspace]/dashboard/`
+ * (ο χώρος μπαίνει στη ΔΙΕΥΘΥΝΣΗ) και η άγκυρα έγινε **κόκκινη με `ENOENT`** — και
+ * μαζί της, μέσω της CHECK 3.54, ολόκληρη η μπλοκάρουσα σουίτα.
+ *
+ * ⚠️ **Το ξανακάρφωμα στη νέα θέση θα ήταν λάθος διόρθωση**: η ίδια εκστρατεία έχει
+ * **104 σελίδες ακόμη** να μετακινήσει (baseline CHECK 3.60), άρα μια σταθερά εδώ
+ * είναι **προγραμματισμένο** επόμενο σπάσιμο. Η άγκυρα **ψάχνει** τη σελίδα, όπως
+ * και το ίδιο το CHECK 3.60 παράγει τις διαδρομές αντί να τις απαριθμεί.
+ *
+ * ⚠️ **Και απαιτεί ΑΚΡΙΒΩΣ ΜΙΑ**: με «η πρώτη που θα βρω» θα σιωπούσε την ημέρα που
+ * γεννιέται δεύτερο ταμπλό, δηλαδή ακριβώς όταν το ερώτημα «ποιο αποφασίζει;»
+ * αποκτά νόημα. Το `/crm/dashboard` είναι **άλλη** σελίδα και εξαιρείται ονομαστικά.
+ */
+const findDashboardPage = (): string => {
+  const matches = collectTsFiles(join(REPO_ROOT, 'src', 'app'))
+    .map((file) => relative(REPO_ROOT, file).split(sep).join('/'))
+    .filter((file) => file.endsWith('/dashboard/page.tsx') && !file.includes('/crm/'));
+  expect(matches).toHaveLength(1);
+  return matches[0];
+};
 
-const DASHBOARD = 'src/app/(app)/dashboard/page.tsx';
 const PENDING = 'src/app/(app)/pending-approval/page.tsx';
 const AUTH_CONTEXT = 'src/lib/auth/auth-context.ts';
 
@@ -100,7 +117,7 @@ describe('Κ — ο επιλυτής προσγείωσης', () => {
 
 describe('Π — οι σελίδες όντως τον καλούν', () => {
   it('Π1: το ταμπλό ΔΕΝ αποφασίζει πια μόνο του, και δεν έχει ωμή διεύθυνση αναμονής', () => {
-    const src = readCode(DASHBOARD);
+    const src = readCode(findDashboardPage());
     expect(src).toContain('resolvePostLoginRoute');
     // Η ωμή συμβολοσειρά ήταν το σημείο που κανένας φρουρός δεν έβλεπε.
     expect(src).not.toContain("'/pending-approval'");

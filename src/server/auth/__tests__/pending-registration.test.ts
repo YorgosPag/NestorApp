@@ -37,8 +37,12 @@ jest.mock('@/lib/firebaseAdmin', () => ({
   getAdminFirestore: () => getAdminFirestoreMock(),
 }));
 
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { ensurePendingRegistration } from '../pending-registration';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { REPO_ROOT, listRepoSourceFiles, readRepoCode } from '@/test-utils/read-source';
 
 // =============================================================================
 // HARNESS
@@ -198,5 +202,97 @@ describe('ensurePendingRegistration', () => {
     expect(sendReplyViaMailgunMock).toHaveBeenCalledWith(
       expect.objectContaining({ to: 'active-admin@example.com' }),
     );
+  });
+});
+
+// =============================================================================
+// Χ — Η ΝΕΚΡΗ ΠΟΡΤΑ: ΚΛΕΙΣΤΟ ΣΥΝΟΛΟ ΚΑΛΟΥΝΤΩΝ + Η ΚΛΑΣΗ ΤΟΥ ΕΛΑΤΤΩΜΑΤΟΣ
+// (ADR-660 §5.13)
+// =============================================================================
+//
+// 🔴 ΤΙ ΣΥΝΕΒΗ: το `POST /api/auth/complete-registration` ήταν τυλιγμένο σε
+// `withAuth`, που απαιτεί **ακριβώς τα claims** (`companyId` + `globalRole`) των
+// οποίων την **απουσία** αυτή η υπηρεσία υπάρχει για να εξυπηρετήσει. Δηλαδή
+// επέστρεφε **401 σε ολόκληρο τον πληθυσμό του**, και ο **μόνος** κλάδος του που
+// έγραφε κάτι ήταν ο κλάδος που **υποβαθμίζει** τον ίδιο τον καλούντα.
+//
+// 🔑 ΟΙ ΑΓΚΥΡΕΣ ΦΥΛΑΝΕ ΤΗΝ **ΚΛΑΣΗ**, ΟΧΙ ΤΟ ΔΕΙΓΜΑ. Μια άγκυρα «μην ξαναφτιάξεις
+// το αρχείο Χ» φυλά ένα όνομα· εδώ φυλιέται η **ιδιότητα** «αυτο-αναιρούμενος
+// φρουρός», που πιάνει και τη μορφή που δεν έχει ακόμη όνομα.
+//
+// ⚠️ Ο **ΠΑΡΟΝΟΜΑΣΤΗΣ ΔΕΝ ΞΑΝΑΓΡΑΦΕΤΑΙ ΕΔΩ.** Ολόκληρο το επιχείρημα στέκει στο
+// «το `withAuth` απαιτεί claims» — και αυτό το αποδεικνύει ήδη το `Δ1` του
+// `lib/routes/__tests__/landing.test.ts` (ADR-657 §3.5, fail-closed). Δεύτερη
+// διατύπωσή του εδώ θα ήταν **δεύτερη αυθεντία** (ADR-749): την ημέρα που η μία
+// χαλάρωνε, η άλλη θα έμενε πράσινη. Και οι δύο τρέχουν στην **ίδια μπλοκάρουσα
+// σουίτα** (CHECK 3.54), άρα η απόδειξη υπάρχει — απλώς ζει στο σωστό αρχείο.
+
+/**
+ * **Το κλειστό σύνολο καλούντων, με υποχρεωτικό λόγο** (πρότυπο CHECK 3.35/3.50/3.58).
+ *
+ * ⚠️ Κοκκινίζει **και στις δύο** κατευθύνσεις: αδήλωτος καλών **και** δήλωση
+ * χωρίς αντικείμενο (νεκρός φρουρός). Με έναν μόνο κανόνα, η **ανταλλαγή**
+ * —φεύγει ο νόμιμος, έρχεται άλλος— θα περνούσε αθόρυβα.
+ */
+const DECLARED_CALLERS: Readonly<Record<string, string>> = {
+  'src/app/api/auth/session/route.ts':
+    'Το universal login chokepoint — πυροδοτείται από onAuthStateChanged για ΚΑΘΕ provider, ' +
+    'και ΔΕΝ είναι κάτω από withAuth (μόνο rate limit), άρα φτάνει και σε χρήστη χωρίς claims.',
+};
+
+/** Η αποσυρμένη διεύθυνση (ADR-660 §5.13) — δεν επιτρέπεται να επιστρέψει. */
+const RETIRED_ROUTE_DIR = 'src/app/api/auth/complete-registration';
+
+/**
+ * ⚠️ **Το pattern ΔΕΝ γράφεται σε template literal.** Ένα `\b` μέσα σε backticks
+ * είναι **backspace** πριν καν το δει η `RegExp` — η ακριβής παγίδα που η CHECK
+ * 3.56 τεκμηριώνει ως *«γεννήθηκε ΜΟΝΙΜΩΣ ΠΡΑΣΙΝΗ»*. Εδώ πληρώθηκε ζωντανά.
+ */
+function callerFilesOf(symbol: string): string[] {
+  const callSite = new RegExp('\\b' + symbol + '\\s*\\(');
+  return listRepoSourceFiles('src/app')
+    .filter((file) => !file.includes('__tests__'))
+    .filter((file) => callSite.test(readRepoCode(file)));
+}
+
+describe('Χ — η νεκρή πόρτα (ADR-660 §5.13)', () => {
+  // Χ1: κλειστό σύνολο — καμία αδήλωτη διαδρομή δεν καλεί το SSoT.
+  it('Χ1 — κάθε καλών του ensurePendingRegistration είναι ΔΗΛΩΜΕΝΟΣ', () => {
+    const actual = callerFilesOf('ensurePendingRegistration');
+    const undeclared = actual.filter((file) => !(file in DECLARED_CALLERS));
+    expect(undeclared).toEqual([]);
+  });
+
+  // Χ1β: η άλλη κατεύθυνση — δήλωση χωρίς αντικείμενο είναι νεκρός φρουρός.
+  it('Χ1β — καμία δήλωση δεν είναι ορφανή, και κάθε μία φέρει λόγο', () => {
+    const actual = new Set(callerFilesOf('ensurePendingRegistration'));
+    for (const [file, reason] of Object.entries(DECLARED_CALLERS)) {
+      expect({ file, present: actual.has(file) }).toEqual({ file, present: true });
+      expect(reason.trim().length).toBeGreaterThan(20);
+    }
+  });
+
+  // Χ2: Η ΚΛΑΣΗ. Ένας φρουρός που απαιτεί ό,τι η συνάρτηση υπάρχει να δημιουργήσει
+  //     είναι αυτο-αναιρούμενος — 401 σε ακριβώς τον πληθυσμό που εξυπηρετεί.
+  it('Χ2 — κανένας καλών δεν τυλίγεται σε withAuth (αυτο-αναιρούμενος φρουρός)', () => {
+    const selfDefeating = callerFilesOf('ensurePendingRegistration').filter((file) =>
+      /\bwithAuth\s*\(/.test(readRepoCode(file)),
+    );
+    expect(selfDefeating).toEqual([]);
+  });
+
+  // Χ3: η αποσυρμένη διεύθυνση δεν ξαναγεννιέται (OWASP API9 — zombie endpoint).
+  it('Χ3 — η αποσυρμένη διαδρομή complete-registration δεν επανέρχεται', () => {
+    expect(existsSync(join(REPO_ROOT, ...RETIRED_ROUTE_DIR.split('/')))).toBe(false);
+  });
+
+  // Χ4: ο μετρητής της ίδιας της άγκυρας. Χωρίς αυτόν, ένα σφάλμα στο
+  //     `callerFilesOf` (λάθος ρίζα, backslash σε Windows, φίλτρο που τα κόβει
+  //     όλα) θα έβγαζε ΟΛΕΣ τις παραπάνω πράσινες επειδή **δεν κοίταξαν τίποτα**.
+  it('Χ4 — ο σαρωτής όντως βλέπει το δέντρο (αλλιώς το «0» σημαίνει «δεν κοίταξα»)', () => {
+    const scanned = listRepoSourceFiles('src/app').filter((f) => !f.includes('__tests__'));
+    expect(scanned.length).toBeGreaterThan(100);
+    expect(scanned).toContain('src/app/api/auth/session/route.ts');
+    expect(callerFilesOf('ensurePendingRegistration').length).toBe(1);
   });
 });

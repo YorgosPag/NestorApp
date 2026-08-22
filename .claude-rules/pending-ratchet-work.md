@@ -2,6 +2,21 @@
 
 **STATUS: ACTIVE**
 
+- 🔶 **23/08 — `stripComments` + χειρόγραφη `REPO_ROOT`: ΕΝΤΕΚΑ κλώνοι** *(ADR-660 §5.13)*
+  Μετρημένο: **12** αρχεία test δηλώνουν δικό τους `stripComments` (και τα περισσότερα δική τους
+  `REPO_ROOT` ως N διαδοχικά `..`). Το SSoT **υπάρχει πλέον**: `src/test-utils/read-source.ts`, και
+  μετανάστευσε **ένα** (`lib/routes/__tests__/landing.test.ts`, αδελφός του ίδιου ADR). Μένουν **11**:
+  `lib/forms/__tests__/draft-identity.test.tsx` · `lib/cron/__tests__/cron-route-contract.test.ts` ·
+  `features/property-grid/__tests__/catalog-grid-ssot.test.ts` ·
+  `lib/auth/__tests__/resource-concealment-anchor.test.ts` ·
+  `lib/firestore/__tests__/dependency-tenant-scope.test.ts` + **6** στο `subapps/dxf-viewer/`.
+
+  ⚠️ **Γιατί δεν έγινε τώρα**: >1h σε **τέσσερις** τομείς, σε **κοινό working tree** με άλλον
+  πράκτορα (κανόνας N.0.2 ⇒ pending, όχι επιτόπου). ⚠️ **Ο αριθμός `..` είναι το επικίνδυνο μέρος**,
+  όχι το regex: εξαρτάται από το **βάθος του αρχείου** ⇒ σιωπηλά λάθος μόλις μετακινηθεί ένα test.
+  ⚠️ Και **μην αγγίξεις** τον δεύτερο περιπατητή αρχείων του `landing.test.ts` (`collectTsFiles`):
+  έχει **δική του** σημασιολογία αποκλεισμού (`node_modules` · `__tests__`), δεν είναι ίδιο ερώτημα.
+
 - 🔶 **20/08 — `useContactsState` (321 γρ.): ΝΕΚΡΟ, και με παραπλανητικό όνομα** *(ADR-777 §8.31)*
   Το `src/hooks/useContactsState.ts` διαβάζει σωστά `searchParams.get('contactId')` και έχει
   **μηδέν καλούντες**. Ο ζωντανός είναι ο **σχεδόν ομώνυμος** `useContactsPageState`
