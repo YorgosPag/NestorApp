@@ -16,7 +16,7 @@
  * @see bim/geometry/shared/polygon-axis-projection.ts — `lineIntersectionPoint` SSoT
  */
 
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import type { RoofEdgeSlope, RoofRidgeLine } from '../types/roof-types';
 import { inwardNormal, windingSign, type Vec2 } from './roof-lower-envelope';
 import { lineIntersectionPoint } from './shared/polygon-axis-projection';
@@ -25,7 +25,7 @@ import { lineIntersectionPoint } from './shared/polygon-axis-projection';
  * Παράμετρος `t∈[0,1]` του `p` πάνω στο τμήμα `a→b`, ή `null` αν δεν κάθεται
  * πάνω του (κάθετη απόσταση > `tol`).
  */
-function paramOnSegment(a: Point3D, b: Point3D, p: Vec2, tol: number): number | null {
+function paramOnSegment(a: BimPoint, b: BimPoint, p: Vec2, tol: number): number | null {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const lenSq = dx * dx + dy * dy;
@@ -46,10 +46,10 @@ function paramOnSegment(a: Point3D, b: Point3D, p: Vec2, tol: number): number | 
  * ridges (ή κανένα crossing) → επιστρέφει τα αρχικά. Pure.
  */
 export function splitOutlineAtRidges(
-  verts: readonly Point3D[],
+  verts: readonly BimPoint[],
   edges: readonly RoofEdgeSlope[],
   ridges: readonly RoofRidgeLine[],
-): { verts: Point3D[]; edges: RoofEdgeSlope[] } {
+): { verts: BimPoint[]; edges: RoofEdgeSlope[] } {
   if (ridges.length === 0) return { verts: verts.slice(), edges: edges.slice() };
   const n = verts.length;
   // Κλίμακα ανοχής από τη διαγώνιο του bbox (mirror roof-lower-envelope BOUNDARY_EPS).
@@ -65,7 +65,7 @@ export function splitOutlineAtRidges(
     candidates.push({ x: r.a.x, y: r.a.y }, { x: r.b.x, y: r.b.y });
   }
 
-  const outVerts: Point3D[] = [];
+  const outVerts: BimPoint[] = [];
   const outEdges: RoofEdgeSlope[] = [];
   for (let i = 0; i < n; i++) {
     const a = verts[i];
@@ -100,7 +100,7 @@ export interface RoofOverhangOffsetLine {
  * (mitered δαχτυλίδι, επέκταση κορφιάδων/hips πάνω στην προέκταση). Pure.
  */
 export function roofOverhangOffsetLines(
-  verts: readonly Point3D[],
+  verts: readonly BimPoint[],
   edges: readonly RoofEdgeSlope[],
   s: number,
 ): RoofOverhangOffsetLine[] {
@@ -130,7 +130,7 @@ export function roofOverhangOffsetLines(
  * renderer). Κενό όταν footprint < 3 κορυφές ή edges/verts mismatch. Pure / idempotent.
  */
 export function roofEaveOuterRing(
-  verts: readonly Point3D[],
+  verts: readonly BimPoint[],
   edges: readonly RoofEdgeSlope[],
   s: number,
   ridges: readonly RoofRidgeLine[] = [],

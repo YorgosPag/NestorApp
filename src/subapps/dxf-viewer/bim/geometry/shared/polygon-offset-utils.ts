@@ -12,7 +12,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.5
  */
 
-import type { PlanarPoint, Point3D } from '../../types/bim-base';
+import type { PlanarPoint, BimPoint } from '../../types/bim-base';
 import { polygonArea, projectVerticesTo2D, shoelaceArea } from './polygon-utils';
 import { offsetPolyline } from '../../../rendering/entities/shared/geometry-offset-utils';
 
@@ -141,9 +141,9 @@ export { offsetPolyline };
  * απολύτως θετικό εμβαδόν.
  */
 export function insetClosedPolygon(
-  vertices: readonly Point3D[],
+  vertices: readonly BimPoint[],
   distance: number,
-): Point3D[] | null {
+): BimPoint[] | null {
   if (vertices.length < 3 || distance <= 0) return null;
   // Ring offset: strip any closing-duplicate + closed-mitre so the seam vertex
   // does not produce a diagonal jog (same fix as the envelope insulation loop).
@@ -238,12 +238,12 @@ export function insetPolygonMiter(
  * XY άκρα, όπου οι κάθετες είναι απροσδιόριστες).
  */
 export function stripPolygonAroundAxis(
-  axis: readonly Point3D[],
+  axis: readonly BimPoint[],
   half: number,
-): Point3D[] {
+): BimPoint[] {
   const plus = offsetPolyline(axis, half);
   const minus = offsetPolyline(axis, -half);
-  const polygon: Point3D[] = [...plus];
+  const polygon: BimPoint[] = [...plus];
   for (let i = minus.length - 1; i >= 0; i--) polygon.push(minus[i]);
   return polygon;
 }
@@ -257,10 +257,10 @@ export function stripPolygonAroundAxis(
  * @param s canvas units ανά 1 mm (`mmScaleFor`) — το πλάτος είναι mm, ο άξονας canvas units.
  */
 export function buildAxisStripOutline(
-  axis: readonly Point3D[],
+  axis: readonly BimPoint[],
   widthMm: number,
   s: number,
-): Point3D[] {
+): BimPoint[] {
   if (axis.length < 2 || widthMm <= 0) return [...axis];
   return stripPolygonAroundAxis(axis, (widthMm * s) / 2);
 }

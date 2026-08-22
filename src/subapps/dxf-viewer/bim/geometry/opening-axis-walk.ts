@@ -7,12 +7,12 @@
  * "project a point onto a polyline axis, return arc-length offset". Works
  * identically for straight / curved / L-shaped host walls AND the synthetic
  * 2-vertex axis a self-hosted opening synthesizes (`selfOpeningHost`,
- * ADR-615) — both are just `readonly Point3D[]`.
+ * ADR-615) — both are just `readonly BimPoint[]`.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-615-free-standing-self-hosted-opening.md
  */
 
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 
 /**
  * One non-degenerate polyline segment with its precomputed direction. SSoT for
@@ -21,8 +21,8 @@ import type { Point3D } from '../types/bim-base';
  * (and the degenerate-segment skip) lives in ONE place, not two twins.
  */
 interface PolylineSegment {
-  readonly a: Point3D;
-  readonly b: Point3D;
+  readonly a: BimPoint;
+  readonly b: BimPoint;
   readonly dx: number;
   readonly dy: number;
   readonly segLen: number;
@@ -31,7 +31,7 @@ interface PolylineSegment {
 }
 
 /** Split `vertices` into its non-degenerate segments (skips `segLen < 1e-6`). */
-function polylineSegments(vertices: readonly Point3D[]): PolylineSegment[] {
+function polylineSegments(vertices: readonly BimPoint[]): PolylineSegment[] {
   const segs: PolylineSegment[] = [];
   for (let i = 0; i < vertices.length - 1; i++) {
     const a = vertices[i];
@@ -50,9 +50,9 @@ function polylineSegments(vertices: readonly Point3D[]): PolylineSegment[] {
  * position + local tangent direction at that point. Clamps past the end.
  */
 export function walkPolylineToDistance(
-  vertices: readonly Point3D[],
+  vertices: readonly BimPoint[],
   distanceMm: number,
-): { point: Point3D; ux: number; uy: number; rotation: number } {
+): { point: BimPoint; ux: number; uy: number; rotation: number } {
   let remaining = distanceMm;
   for (const s of polylineSegments(vertices)) {
     if (remaining <= s.segLen) {
@@ -87,7 +87,7 @@ export function walkPolylineToDistance(
  */
 export function projectPointToPolylineOffset(
   point: { readonly x: number; readonly y: number },
-  vertices: readonly Point3D[],
+  vertices: readonly BimPoint[],
 ): number {
   let arcOffset = 0;
   let bestOffset = 0;

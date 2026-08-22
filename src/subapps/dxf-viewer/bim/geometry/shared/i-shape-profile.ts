@@ -17,7 +17,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.6, §5.7
  */
 
-import type { Point3D } from '../../types/bim-base';
+import type { BimPoint } from '../../types/bim-base';
 import {
   DEFAULT_I_FLANGE_THICKNESS_MM,
   DEFAULT_I_WEB_THICKNESS_MM,
@@ -48,7 +48,7 @@ export function buildIShapeProfile(
   depth: number,
   s: number,
   override?: IShapeProfileOverride,
-): Point3D[] {
+): BimPoint[] {
   const tfMm = override?.flangeThickness ?? DEFAULT_I_FLANGE_THICKNESS_MM;
   const twMm = override?.webThickness ?? DEFAULT_I_WEB_THICKNESS_MM;
   const tfRaw = Math.max(MIN_I_PLATE_THICKNESS_MM, tfMm) * s;
@@ -60,7 +60,7 @@ export function buildIShapeProfile(
   const halfWeb = Math.min(twRaw / 2, hb);
   const flipY = override?.flipY ?? false;
   const ys = flipY ? -1 : 1;
-  const verts: Point3D[] = [
+  const verts: BimPoint[] = [
     { x: -hb,      y: ys * -hh,        z: 0 },  // v0  bottom flange BL
     { x:  hb,      y: ys * -hh,        z: 0 },  // v1  bottom flange BR
     { x:  hb,      y: ys * (-hh + tf), z: 0 },  // v2  top of BR corner

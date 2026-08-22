@@ -26,7 +26,7 @@
  * @see bim/geometry/roof-geometry.ts — orchestrator/validation/presets
  */
 
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import type {
   RoofEdgeSlope,
   RoofFace,
@@ -56,7 +56,7 @@ export interface EavePlane {
  * Signed area (shoelace) στο xy επίπεδο των κορυφών. >0 = CCW στο σύστημα των
  * verts, <0 = CW. Καθαρά αλγεβρικό — ανεξάρτητο από y-up/y-down.
  */
-function polygonSignedAreaXY(verts: readonly Point3D[]): number {
+function polygonSignedAreaXY(verts: readonly BimPoint[]): number {
   let a = 0;
   const n = verts.length;
   for (let i = 0; i < n; i++) {
@@ -68,7 +68,7 @@ function polygonSignedAreaXY(verts: readonly Point3D[]): number {
 }
 
 /** Πρόσημο winding: +1 αν CCW στο σύστημα των verts, −1 αν CW. */
-export function windingSign(verts: readonly Point3D[]): 1 | -1 {
+export function windingSign(verts: readonly BimPoint[]): 1 | -1 {
   return polygonSignedAreaXY(verts) >= 0 ? 1 : -1;
 }
 
@@ -76,7 +76,7 @@ export function windingSign(verts: readonly Point3D[]): 1 | -1 {
  * Εσωτερικό κάθετο της ακμής v0→v1. Το αριστερό κάθετο (−dy, dx) δείχνει μέσα για
  * CCW· για CW πολλαπλασιάζουμε επί `sign = −1`. Έτσι winding-agnostic.
  */
-export function inwardNormal(v0: Point3D, v1: Point3D, sign: 1 | -1): Vec2 {
+export function inwardNormal(v0: BimPoint, v1: BimPoint, sign: 1 | -1): Vec2 {
   const dx = v1.x - v0.x;
   const dy = v1.y - v0.y;
   const len = Math.hypot(dx, dy) || 1;
@@ -90,7 +90,7 @@ export function eaveDistance(plane: EavePlane, p: Vec2): number {
 
 /** Συλλέγει τα κεκλιμένα επίπεδα + τους δείκτες των slope-defining ακμών. */
 export function resolveEavePlanes(
-  verts: readonly Point3D[],
+  verts: readonly BimPoint[],
   edges: readonly RoofEdgeSlope[],
   unit: RoofSlopeUnit,
 ): { planes: EavePlane[]; slopeEdgeIndices: number[] } {
@@ -136,7 +136,7 @@ function liftVertices(
   planes: readonly EavePlane[],
   basePivotZ: number,
   s: number,
-): Point3D[] {
+): BimPoint[] {
   return poly2D.map((v) => ({ x: v.x, y: v.y, z: roofZmm(planes, basePivotZ, s, v) }));
 }
 
@@ -195,7 +195,7 @@ const HORIZONTAL_Z_EPS = 1;
 /** True όταν το midpoint της face-ακμής a→b είναι ΕΣΩΤΕΡΙΚΟ (όχι σε footprint edge). */
 function isInteriorEdge(a: Vec2, b: Vec2, footprint: readonly Vec2[]): boolean {
   const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-  if (!pointInPolygon(mid, footprint as readonly Point3D[])) return false;
+  if (!pointInPolygon(mid, footprint as readonly BimPoint[])) return false;
   const n = footprint.length;
   for (let i = 0; i < n; i++) {
     if (pointToLineDistance(mid, footprint[i], footprint[(i + 1) % n]) <= BOUNDARY_EPS) return false;

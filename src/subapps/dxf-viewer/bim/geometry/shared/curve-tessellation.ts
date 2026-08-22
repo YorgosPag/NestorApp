@@ -15,7 +15,7 @@
  */
 
 import type { Point2D } from '../../../rendering/types/Types';
-import type { Point3D } from '../../types/bim-base';
+import type { BimPoint } from '../../types/bim-base';
 import {
   bulgeToArc,
   bulgeToPolyline,
@@ -32,12 +32,12 @@ const RAD_TO_DEG = 180 / Math.PI;
  * start/end (control point Z is ignored — members are 2D-extruded in plan).
  */
 export function subdivideQuadraticBezier(
-  start: Point3D,
-  control: Point3D,
-  end: Point3D,
+  start: BimPoint,
+  control: BimPoint,
+  end: BimPoint,
   segments: number,
-): Point3D[] {
-  const pts: Point3D[] = [];
+): BimPoint[] {
+  const pts: BimPoint[] = [];
   for (let i = 0; i <= segments; i++) {
     const t = i / segments;
     const oneMinusT = 1 - t;
@@ -92,11 +92,11 @@ export function adaptiveArcSegDeg(
  * feeds BOQ / 3D / snap / hit-test.
  */
 export function tessellateArcAxis(
-  start: Point3D,
-  end: Point3D,
+  start: BimPoint,
+  end: BimPoint,
   bulge: number,
   sceneUnits: SceneUnits = 'mm',
-): Point3D[] {
+): BimPoint[] {
   if (Math.abs(bulge) < BULGE_STRAIGHT_EPS) {
     return [{ ...start }, { ...end }];
   }

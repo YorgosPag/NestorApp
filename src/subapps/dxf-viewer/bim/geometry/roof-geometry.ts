@@ -24,7 +24,7 @@
  */
 
 import { nowTimestamp } from '@/lib/firestore-now';
-import type { BimValidation, Polygon3D, Point3D } from '../types/bim-base';
+import type { BimValidation, BimPolygon, BimPoint } from '../types/bim-base';
 import type {
   RoofEdgeSlope,
   RoofGeometry,
@@ -175,14 +175,14 @@ export function computeRoofGeometry(params: RoofParams): RoofGeometry {
 // ─── Edge presets (UI / completion helper) ───────────────────────────────────
 
 /** Μήκος ακμής i (canvas) σε CCW footprint. */
-function edgeLength(verts: readonly Point3D[], i: number): number {
+function edgeLength(verts: readonly BimPoint[], i: number): number {
   const v0 = verts[i];
   const v1 = verts[(i + 1) % verts.length];
   return Math.hypot(v1.x - v0.x, v1.y - v0.y);
 }
 
 /** Όλες οι ακμές flat (αρχικό default — επίπεδο δώμα). */
-export function buildDefaultRoofEdges(outline: Polygon3D): RoofEdgeSlope[] {
+export function buildDefaultRoofEdges(outline: BimPolygon): RoofEdgeSlope[] {
   return outline.vertices.map(() => ({ definesSlope: false, slope: 0, overhangMm: 0 }));
 }
 
@@ -197,7 +197,7 @@ export function buildDefaultRoofEdges(outline: Polygon3D): RoofEdgeSlope[] {
  *   - hip → ΟΛΕΣ οι ακμές κλίνουν (τετράρριχτη — όλα τα γείσα ανηφορίζουν).
  */
 export function applyRoofShapePreset(
-  outline: Polygon3D,
+  outline: BimPolygon,
   shape: 'flat' | 'mono-pitch' | 'gable' | 'hip',
   slope: number,
   unit: RoofSlopeUnit,

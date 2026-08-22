@@ -8,14 +8,14 @@
  * robust και για κοίλα) της ακμής που είναι πλησιέστερη σε ένα σημείο.
  */
 
-import type { Point3D } from '../../../types/bim-base';
+import type { BimPoint } from '../../../types/bim-base';
 import {
   directionAzimuthDeg,
   nearestEdgeOutwardAzimuthDeg,
 } from '../polygon-azimuth-utils';
 
 /** CCW μοναδιαίο τετράγωνο [0,4]² — εσωτερικό στο κέντρο (2,2). */
-const SQUARE_CCW: readonly Point3D[] = [
+const SQUARE_CCW: readonly BimPoint[] = [
   { x: 0, y: 0 },
   { x: 4, y: 0 },
   { x: 4, y: 4 },

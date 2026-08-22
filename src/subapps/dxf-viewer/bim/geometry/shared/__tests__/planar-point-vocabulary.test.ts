@@ -2,13 +2,13 @@
  * ADR-789 — **Το λεξιλόγιο της κάτοψης δέχεται ό,τι εκθέτει x/y, χωρίς μετατροπή.**
  *
  * Γιατί υπάρχει αυτή η άγκυρα: μέχρι 2026-08-22 όλη η επιφάνεια `polygon-utils` δήλωνε
- * `readonly Point3D[]` ενώ **δεν διάβαζε `.z` ούτε μία φορά**. Το ψέμα της υπογραφής το
+ * `readonly BimPoint[]` ενώ **δεν διάβαζε `.z` ούτε μία φορά**. Το ψέμα της υπογραφής το
  * πλήρωναν οι καλούντες με **89 ωμά `{ x: p.x, y: p.y, z: 0 }` σε 67 αρχεία**, πέντε
- * ιδιωτικά `lift`/`toXY`, δύο `polygon2D*` wrappers, ένα `as readonly Point3D[]` cast και
+ * ιδιωτικά `lift`/`toXY`, δύο `polygon2D*` wrappers, ένα `as readonly BimPoint[]` cast και
  * δύο διπλότυπα `polygonBbox(readonly Point2D[])`.
  *
- * ⚠️ Χωρίς αυτό το αρχείο, η επιστροφή στο `Point3D[]` **δεν σπάει τίποτα**: κάθε
- * υπάρχων καλών περνά `Point3D`, άρα όλα τα άλλα tests μένουν πράσινα και η ρύθμιση
+ * ⚠️ Χωρίς αυτό το αρχείο, η επιστροφή στο `BimPoint[]` **δεν σπάει τίποτα**: κάθε
+ * υπάρχων καλών περνά `BimPoint`, άρα όλα τα άλλα tests μένουν πράσινα και η ρύθμιση
  * ξαναγυρίζει σιωπηλά. Η άγκυρα ασκεί την **αντίθετη** κατεύθυνση — 2Δ είσοδο — που
  * είναι ακριβώς η κατεύθυνση που ήταν κλειστή.
  *
@@ -16,7 +16,7 @@
  * στενέψει ξανά την υπογραφή, ο μεταγλωττιστής κοκκινίζει εδώ πριν κοκκινίσει το runtime.
  */
 import type { Point2D } from '../../../../rendering/types/Types';
-import type { PlanarPoint, Point3D } from '../../../types/bim-base';
+import type { PlanarPoint, BimPoint } from '../../../types/bim-base';
 import {
   isConvexPolygon,
   isPolygonCCW,
@@ -40,7 +40,7 @@ const AS_2D: readonly Point2D[] = [
 ];
 const AS_PLANAR: readonly PlanarPoint[] = AS_2D;
 /** Το ίδιο σχήμα ΜΕ z — και μάλιστα z ≠ 0, ώστε να αποδειχθεί ότι το z αγνοείται. */
-const AS_3D_NONZERO: readonly Point3D[] = AS_2D.map((p) => ({ ...p, z: 4242 }));
+const AS_3D_NONZERO: readonly BimPoint[] = AS_2D.map((p) => ({ ...p, z: 4242 }));
 
 describe('ADR-789 — Α. το 2Δ σχήμα περνά ΧΩΡΙΣ lift', () => {
   it('Α1. εμβαδόν / περίμετρος / winding δέχονται readonly Point2D[]', () => {
@@ -73,7 +73,7 @@ describe('ADR-789 — Α. το 2Δ σχήμα περνά ΧΩΡΙΣ lift', () =>
 });
 
 describe('ADR-789 — Β. το 3Δ σχήμα ΕΞΑΚΟΛΟΥΘΕΙ να περνά (μηδέν regression για 223 importers)', () => {
-  it('Β1. τα ίδια αποτελέσματα με Point3D είσοδο', () => {
+  it('Β1. τα ίδια αποτελέσματα με BimPoint είσοδο', () => {
     expect(polygonArea(AS_3D_NONZERO)).toBe(10_000);
     expect(polygonCentroid(AS_3D_NONZERO)).toEqual({ x: 50, y: 50 });
     expect(isPolygonCCW(AS_3D_NONZERO)).toBe(true);
@@ -98,7 +98,7 @@ describe('ADR-789 — Β. το 3Δ σχήμα ΕΞΑΚΟΛΟΥΘΕΙ να περ
  * 🔑 Ο **ζωντανός** φρουρός.
  *
  * ⚠️ Τα Α1-Α4 παραπάνω είναι άγκυρες **χρόνου μεταγλώττισης**: το jest σβήνει τους τύπους,
- * άρα θα έμεναν πράσινα ακόμα κι αν κάποιος ξαναστένευε την υπογραφή σε `Point3D[]`.
+ * άρα θα έμεναν πράσινα ακόμα κι αν κάποιος ξαναστένευε την υπογραφή σε `BimPoint[]`.
  * Πράσινο test που δεν μπορεί να κοκκινίσει είναι σχόλιο.
  *
  * Αυτό το block κλείνει το κενό χωρίς μεταγλωττιστή: περνά κορυφές των οποίων το `z` είναι

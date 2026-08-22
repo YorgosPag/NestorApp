@@ -21,7 +21,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md §Φ11
  */
 
-import type { Point3D, Polygon3D, BoundingBox3D } from '../types/bim-base';
+import type { BimPoint, BimPolygon, BimBounds } from '../types/bim-base';
 import type { MepFittingGeometry, MepFittingParams } from '../types/mep-fitting-types';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import {
@@ -62,7 +62,7 @@ export function computeMepFittingGeometry(params: MepFittingParams): MepFittingG
   // Elbow: the footprint is the real swept BEND BODY (concentric wall arcs),
   // tangent to both legs — a Revit long-radius elbow, NOT an axis-aligned box.
   // Falls back to the centred square for a degenerate/straight node.
-  const footprint: Polygon3D = { vertices: buildFootprint(params, s, halfCanvas) };
+  const footprint: BimPolygon = { vertices: buildFootprint(params, s, halfCanvas) };
   const bbox = computeBbox(footprint.vertices, params.centerlineElevationMm, sizeMm);
   const volumeM3 = computeVolumeM3(params, sizeMm);
   const length = inlineLengthM(params, sizeMm);
@@ -81,7 +81,7 @@ export function computeMepFittingGeometry(params: MepFittingParams): MepFittingG
  * square only for a degenerate node. `s` = canvas units per mm; `half` = square
  * half-side fallback.
  */
-function buildFootprint(params: MepFittingParams, s: number, half: number): Point3D[] {
+function buildFootprint(params: MepFittingParams, s: number, half: number): BimPoint[] {
   const body = computeFittingBody(toBodyInput(params, s));
   if (body) return tessellateFittingFootprint(body);
   return buildSquare(params.position, half);
@@ -109,7 +109,7 @@ function toBodyInput(params: MepFittingParams, s: number): FittingBodyInput {
 }
 
 /** CCW square centred on `centre`, half-side `half` (canvas units). */
-function buildSquare(centre: Point3D, half: number): Point3D[] {
+function buildSquare(centre: BimPoint, half: number): BimPoint[] {
   const { x, y } = centre;
   return [
     { x: x - half, y: y - half, z: 0 },
@@ -124,10 +124,10 @@ function buildSquare(centre: Point3D, half: number): Point3D[] {
  * [centerline − size/2, centerline + size/2] (mm → m), matching the segment.
  */
 function computeBbox(
-  outline: readonly Point3D[],
+  outline: readonly BimPoint[],
   centerlineMm: number,
   sizeMm: number,
-): BoundingBox3D {
+): BimBounds {
   let minX = Infinity;
   let minY = Infinity;
   let maxX = -Infinity;

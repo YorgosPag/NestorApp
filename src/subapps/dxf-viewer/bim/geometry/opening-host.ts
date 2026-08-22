@@ -11,7 +11,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-615-free-standing-self-hosted-opening.md §Decision 1
  */
 
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import type { WallEntity } from '../types/wall-types';
 import type { OpeningParams } from '../types/opening-types';
 import { getWallAxisVertices } from './wall-geometry';
@@ -33,7 +33,7 @@ export const DEFAULT_SELF_HOST_THICKNESS_MM = 100;
  */
 export interface OpeningHost {
   /** Host/opening axis polyline, ALREADY expressed in SCENE units. */
-  readonly axisVerticesScene: readonly Point3D[];
+  readonly axisVerticesScene: readonly BimPoint[];
   /** mm — cross-section thickness the opening cuts through. */
   readonly thicknessMm: number;
   readonly sceneUnits: SceneUnits;
@@ -41,9 +41,9 @@ export interface OpeningHost {
    * Miter-accurate outer face points. Absent (self-host) ⇒ callers fall back
    * to the existing `axis ± thickness/2` outline construction.
    */
-  readonly outerEdgePoints?: readonly Point3D[];
+  readonly outerEdgePoints?: readonly BimPoint[];
   /** Miter-accurate inner face points. Absent ⇒ same axis±t/2 fallback. */
-  readonly innerEdgePoints?: readonly Point3D[];
+  readonly innerEdgePoints?: readonly BimPoint[];
   /** mm — host length along the axis (offset clamp / grip bounds). */
   readonly lengthMm: number;
   /** Host wall id, or `null` when self-hosted (no BIM wall backs this opening). */
@@ -76,7 +76,7 @@ export function wallAsOpeningHost(wall: WallEntity): OpeningHost {
 }
 
 /** Polyline length (scene units) of an axis vertex list. */
-function axisLengthScene(vertices: readonly Point3D[]): number {
+function axisLengthScene(vertices: readonly BimPoint[]): number {
   let total = 0;
   for (let i = 1; i < vertices.length; i += 1) {
     total += Math.hypot(vertices[i].x - vertices[i - 1].x, vertices[i].y - vertices[i - 1].y);
@@ -103,8 +103,8 @@ export function selfOpeningHost(params: OpeningParams, sceneUnits: SceneUnits): 
   const halfScene = (params.width / 2) * mmFactor;
   const anchorX = selfHost.anchor.x * mmFactor;
   const anchorY = selfHost.anchor.y * mmFactor;
-  const v0: Point3D = { x: anchorX - dirX * halfScene, y: anchorY - dirY * halfScene };
-  const v1: Point3D = { x: anchorX + dirX * halfScene, y: anchorY + dirY * halfScene };
+  const v0: BimPoint = { x: anchorX - dirX * halfScene, y: anchorY - dirY * halfScene };
+  const v1: BimPoint = { x: anchorX + dirX * halfScene, y: anchorY + dirY * halfScene };
 
   return {
     axisVerticesScene: [v0, v1],

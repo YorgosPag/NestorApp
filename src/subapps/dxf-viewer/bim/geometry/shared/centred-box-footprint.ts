@@ -18,7 +18,7 @@
  * @see ../../entities/imported-mesh/imported-mesh-geometry — καλών #2 (ADR-683, measured διαστάσεις)
  */
 
-import type { BoundingBox3D, Point3D, Polygon3D } from '../../types/bim-base';
+import type { BimBounds, BimPoint, BimPolygon } from '../../types/bim-base';
 import { polygonArea, polygonBbox } from './polygon-utils';
 import { mmToSceneUnits, type SceneUnits } from '../../../utils/scene-units';
 
@@ -34,7 +34,7 @@ export interface CentredBoxFootprintInput {
   /** mm. Συνολικό ύψος (bbox Z) — περνά ατόφιο στο αποτέλεσμα. */
   readonly heightMm: number;
   /** Σημείο εισαγωγής σε canvas units — το κέντρο του ορθογωνίου. */
-  readonly position: Point3D;
+  readonly position: BimPoint;
   /** Μοίρες CCW περί τον κατακόρυφο άξονα. */
   readonly rotationDeg: number;
   /** Μονάδα καμβά· απούσα → `'mm'`. */
@@ -43,8 +43,8 @@ export interface CentredBoxFootprintInput {
 
 /** Έξοδος — το κοινό σχήμα γεωμετρίας των mesh-based οντοτήτων. */
 export interface CentredBoxFootprintResult {
-  readonly footprint: Polygon3D;
-  readonly bbox: BoundingBox3D;
+  readonly footprint: BimPolygon;
+  readonly bbox: BimBounds;
   /** m². Εμβαδόν ίχνους (ανεξάρτητο μονάδας καμβά). */
   readonly area: number;
   /** mm. Ύψος, clamped σε μη-αρνητικό. */
@@ -70,7 +70,7 @@ export function computeCentredBoxFootprint(
 }
 
 /** Κορυφές στο τοπικό σύστημα (κέντρο στην αρχή), σε canvas units. */
-function buildRectangularLocal(widthMm: number, depthMm: number, s: number): Point3D[] {
+function buildRectangularLocal(widthMm: number, depthMm: number, s: number): BimPoint[] {
   const hw = (widthMm * s) / 2;
   const hd = (depthMm * s) / 2;
   return [
@@ -83,9 +83,9 @@ function buildRectangularLocal(widthMm: number, depthMm: number, s: number): Poi
 
 /** Περιστροφή περί την αρχή, μετά μεταφορά στο `position` (κέντρο = σημείο εισαγωγής). */
 function transformFootprint(
-  local: readonly Point3D[],
+  local: readonly BimPoint[],
   input: Pick<CentredBoxFootprintInput, 'position' | 'rotationDeg'>,
-): Point3D[] {
+): BimPoint[] {
   const { position } = input;
   const cos = Math.cos(input.rotationDeg * DEG_TO_RAD);
   const sin = Math.sin(input.rotationDeg * DEG_TO_RAD);

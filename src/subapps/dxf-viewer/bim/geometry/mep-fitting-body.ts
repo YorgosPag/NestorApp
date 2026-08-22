@@ -30,7 +30,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md §Φ11
  */
 
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import type { MepFittingKind } from '../types/mep-fitting-types';
 import type { ElbowBend } from './mep-fitting-bend';
 import { computeElbowBend, tessellateBendFootprint, DEFAULT_BEND_FACTOR } from './mep-fitting-bend';
@@ -226,14 +226,14 @@ export function computeFittingBody(input: FittingBodyInput): FittingBody | null 
 
 // ─── 2D footprint tessellation ──────────────────────────────────────────────────
 
-function pt(x: number, y: number): Point3D {
+function pt(x: number, y: number): BimPoint {
   return { x, y, z: 0 };
 }
 
 /** Inline body → a closed CCW quad (rectangle for coupling, trapezoid for reducer). */
 function tessellateInlineFootprint(
   body: Extract<FittingBody, { form: 'inline' }>,
-): Point3D[] {
+): BimPoint[] {
   const { node, axis, halfLength, radiusPos, radiusNeg } = body;
   const perp = { x: -axis.y, y: axis.x };
   const posX = node.x + axis.x * halfLength;
@@ -289,12 +289,12 @@ function lineIntersect2D(p: Vec2, dp: Vec2, q: Vec2, dq: Vec2): Vec2 | null {
  */
 function tessellateLegsFootprint(
   body: Extract<FittingBody, { form: 'legs' }>,
-): Point3D[] {
+): BimPoint[] {
   const sorted = [...body.legs].sort(
     (a, b) => Math.atan2(a.dir.y, a.dir.x) - Math.atan2(b.dir.y, b.dir.x),
   );
   const edges = sorted.map((leg) => legEdges(body.node, leg));
-  const out: Point3D[] = [];
+  const out: BimPoint[] = [];
   for (let i = 0; i < edges.length; i++) {
     const cur = edges[i]!;
     const next = edges[(i + 1) % edges.length]!;
@@ -310,10 +310,10 @@ function tessellateLegsFootprint(
 function tessellateCapFootprint(
   body: Extract<FittingBody, { form: 'cap' }>,
   segments: number,
-): Point3D[] {
+): BimPoint[] {
   const { node, dir, radius } = body;
   const theta = Math.atan2(dir.y, dir.x);
-  const pts: Point3D[] = [];
+  const pts: BimPoint[] = [];
   for (let i = 0; i <= segments; i++) {
     const a = theta + Math.PI / 2 - (Math.PI * i) / segments;
     pts.push(pt(node.x + radius * Math.cos(a), node.y + radius * Math.sin(a)));
@@ -326,7 +326,7 @@ function tessellateCapFootprint(
  * footprint IS the real body shape — used for the fill, dashed outline, hit-test and
  * bbox, so no per-kind glyph is needed.
  */
-export function tessellateFittingFootprint(body: FittingBody, segments = 16): Point3D[] {
+export function tessellateFittingFootprint(body: FittingBody, segments = 16): BimPoint[] {
   switch (body.form) {
     case 'bend':
       return tessellateBendFootprint(body.bend, segments);

@@ -33,7 +33,7 @@
  * @see bim-3d/converters/roof-eave-detail-mesh.ts — ο 3D consumer
  */
 
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import type {
   RoofEdgeSlope,
   RoofRidgeLine,
@@ -71,15 +71,15 @@ export interface RoofEaveQuad {
   readonly role: RoofEaveQuadRole;
   readonly materialId: string;
   /** 4 κορυφές (canvas-unit xy, mm z). */
-  readonly outline: readonly [Point3D, Point3D, Point3D, Point3D];
+  readonly outline: readonly [BimPoint, BimPoint, BimPoint, BimPoint];
   /** Επιθυμητή κατεύθυνση κανονικού (roof-coord: canvas xy + mm z). */
-  readonly normalHint: Point3D;
+  readonly normalHint: BimPoint;
 }
 
 /** Εξωτερικά plan-σημεία ΜΙΑΣ ακμής (για 2D κάτοψη — z αγνοείται). */
 export interface RoofEaveEdgeOutline {
-  readonly o0: Point3D;
-  readonly o1: Point3D;
+  readonly o0: BimPoint;
+  readonly o1: BimPoint;
 }
 
 /** Πλήρες γείσο: 3D quads + 2D περίγραμμα προεξοχής. */
@@ -91,7 +91,7 @@ export interface RoofEaveDetail {
 
 /** Είσοδος του `buildRoofEaveDetail` (όλα τα appearance fields resolved). */
 export interface RoofEaveDetailInput {
-  readonly outline: readonly Point3D[];
+  readonly outline: readonly BimPoint[];
   readonly edges: readonly RoofEdgeSlope[];
   /**
    * Κορφιάδες/hips (από `geometry.ridges`) — προαιρετικά. Όταν δίνονται, ένα
@@ -122,8 +122,8 @@ export interface RoofEaveDetailInput {
 /** Κάτω από αυτό (canvas) η προεξοχή θεωρείται μηδενική (καμία strip/soffit). */
 const OVERHANG_EPS = 1e-6;
 
-const v2 = (p: Point3D): Vec2 => projectPointTo2D(p);
-const pt = (x: number, y: number, z: number): Point3D => ({ x, y, z });
+const v2 = (p: BimPoint): Vec2 => projectPointTo2D(p);
+const pt = (x: number, y: number, z: number): BimPoint => ({ x, y, z });
 
 /**
  * Το «κυρίαρχο» (χαμηλότερο) κεκλιμένο επίπεδο ακριβώς εσωτερικά της ακμής. Για
@@ -153,8 +153,8 @@ function topZmm(plane: EavePlane | null, basePivotZ: number, s: number, p: Vec2)
 function quad(
   role: RoofEaveQuadRole,
   materialId: string,
-  outline: [Point3D, Point3D, Point3D, Point3D],
-  normalHint: Point3D,
+  outline: [BimPoint, BimPoint, BimPoint, BimPoint],
+  normalHint: BimPoint,
 ): RoofEaveQuad {
   return { role, materialId, outline, normalHint };
 }
@@ -169,7 +169,7 @@ interface EdgeFrame {
 
 /** Γεωμετρικό πλαίσιο μιας ακμής: κορυφές, εξωτερικό κάθετο, κυρίαρχο επίπεδο. */
 function buildEdgeFrame(
-  outline: readonly Point3D[],
+  outline: readonly BimPoint[],
   i: number,
   sign: 1 | -1,
   planes: readonly EavePlane[],
@@ -261,7 +261,7 @@ function buildEdgeQuads(
  */
 export function extendRidgeToOverhang(
   ridge: RoofRidgeLine,
-  footprint: readonly Point3D[],
+  footprint: readonly BimPoint[],
   offLines: readonly RoofOverhangOffsetLine[],
 ): RoofRidgeLine {
   const eps = Math.max(1e-6, 1e-3 * footprintDiagonal(footprint));
@@ -273,7 +273,7 @@ export function extendRidgeToOverhang(
     return false;
   };
 
-  const extend = (end: Point3D, other: Point3D): Point3D => {
+  const extend = (end: BimPoint, other: BimPoint): BimPoint => {
     if (!onBoundary(end)) return end; // εσωτερικό άκρο (κορφιάς) → καμία επέκταση
     const d: Vec2 = { x: end.x - other.x, y: end.y - other.y };
     const dd = d.x * d.x + d.y * d.y;

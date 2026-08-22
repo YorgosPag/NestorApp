@@ -18,7 +18,7 @@
  * @see bim/geometry/shared/polygon-hatch-utils.ts (buildAxisAlignedHatch SSoT)
  */
 
-import type { Point3D } from '../../types/bim-base';
+import type { BimPoint } from '../../types/bim-base';
 import {
   buildAxisAlignedHatch,
   clipLineToBbox,
@@ -92,7 +92,7 @@ function segmentCrossParam(
  *   - 'normal'/'outer' → even-odd: μέσα σε μονό πλήθος paths
  */
 function insideRegion(
-  point: HatchPoint2D, paths: readonly Point3D[][], islandStyle: HatchIslandStyle,
+  point: HatchPoint2D, paths: readonly BimPoint[][], islandStyle: HatchIslandStyle,
 ): boolean {
   if (islandStyle === 'ignore') return pointInPolygon(point, paths[0]);
   let count = 0;
@@ -102,7 +102,7 @@ function insideRegion(
 
 /** Κόψε ένα bbox-segment στα όρια — επιστρέφει τα υπο-τμήματα εντός περιοχής. */
 function clipSegmentToRegion(
-  seg: HatchLineSegment, paths: readonly Point3D[][], islandStyle: HatchIslandStyle,
+  seg: HatchLineSegment, paths: readonly BimPoint[][], islandStyle: HatchIslandStyle,
 ): HatchLineSegment[] {
   const relevant = islandStyle === 'ignore' ? [paths[0]] : paths;
   const ts: number[] = [0, 1];
@@ -131,7 +131,7 @@ function clipSegmentToRegion(
 
 /** Ένα set παράλληλων κομμένων γραμμών σε δεδομένη γωνία. */
 function buildClippedSet(
-  paths: readonly Point3D[][], spacingMm: number, angleDeg: number, islandStyle: HatchIslandStyle,
+  paths: readonly BimPoint[][], spacingMm: number, angleDeg: number, islandStyle: HatchIslandStyle,
 ): HatchLineSegment[] {
   const allVerts = paths.flat();
   const bbox = polygonBbox(allVerts);
@@ -154,7 +154,7 @@ function buildClippedSet(
  */
 function usableShiftedPaths(
   boundaryPaths: ReadonlyArray<ReadonlyArray<HatchPoint2D>>, origin: { x: number; y: number },
-): Point3D[][] {
+): BimPoint[][] {
   return boundaryPaths
     .filter((p) => p.length >= 3)
     .map((path) => path.map((v) => ({ x: v.x - origin.x, y: v.y - origin.y, z: 0 })));

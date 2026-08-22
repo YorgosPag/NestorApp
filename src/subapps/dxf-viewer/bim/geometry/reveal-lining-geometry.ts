@@ -18,7 +18,7 @@
  * @see ./opening-geometry (buildOutline — η κάθετη CCW διάταξη κορυφών)
  */
 
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 
 /** Ελάχιστο μήκος άξονα ανοίγματος για να μη «σκάει» degenerate quad. */
 const AXIS_EPS = 1e-9;
@@ -26,9 +26,9 @@ const AXIS_EPS = 1e-9;
 /** Οι δύο παραστάδες ενός ανοίγματος (plan quads, ίδιες μονάδες με το outline). */
 export interface RevealJambQuads {
   /** Παραστάδα στην πλευρά start του ανοίγματος (κορυφές v0/v3). */
-  readonly startJamb: Point3D[];
+  readonly startJamb: BimPoint[];
   /** Παραστάδα στην πλευρά end του ανοίγματος (κορυφές v1/v2). */
-  readonly endJamb: Point3D[];
+  readonly endJamb: BimPoint[];
 }
 
 /**
@@ -44,7 +44,7 @@ export interface RevealJambQuads {
  * @returns null αν `outline` < 4 κορυφές, `revealThickness <= 0`, ή degenerate άξονας.
  */
 export function computeRevealJambQuads(
-  outline: readonly Point3D[],
+  outline: readonly BimPoint[],
   revealThickness: number,
 ): RevealJambQuads | null {
   if (outline.length < 4 || revealThickness <= 0) return null;
@@ -63,7 +63,7 @@ export function computeRevealJambQuads(
   // κούφωμα. start side → −axis (μακριά από end)· end side → +axis. Πλάτος = πάχος
   // μόνωσης (το structural cutout στον τοίχο φιλοξενεί τη λωρίδα· κανένα crossing).
   const jambD = revealThickness;
-  const along = (p: Point3D, d: number): Point3D => ({ x: p.x + ax * d, y: p.y + ay * d, z: 0 });
+  const along = (p: BimPoint, d: number): BimPoint => ({ x: p.x + ax * d, y: p.y + ay * d, z: 0 });
 
   return {
     startJamb: [v0, v3, along(v3, -jambD), along(v0, -jambD)],

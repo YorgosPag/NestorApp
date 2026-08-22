@@ -16,7 +16,7 @@
  * @see bim/geometry/opening-geometry.ts — sole consumer
  */
 
-import type { Polygon3D } from '../types/bim-base';
+import type { BimPolygon } from '../types/bim-base';
 
 /** Minimal 2D point contract (the axis endpoints handed by the caller). */
 interface Vec2 {
@@ -47,9 +47,9 @@ export function buildFrameJambOutlines(
   py: number,
   faceWidthScene: number,
   depthScene: number,
-): Polygon3D[] {
+): BimPolygon[] {
   const halfDepth = depthScene / 2;
-  const rect = (a: Vec2, b: Vec2): Polygon3D => ({
+  const rect = (a: Vec2, b: Vec2): BimPolygon => ({
     vertices: [
       { x: a.x - px * halfDepth, y: a.y - py * halfDepth, z: 0 },
       { x: b.x - px * halfDepth, y: b.y - py * halfDepth, z: 0 },
