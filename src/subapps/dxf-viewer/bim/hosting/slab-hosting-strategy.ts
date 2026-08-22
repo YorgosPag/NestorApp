@@ -20,7 +20,7 @@
  */
 
 import type { SlabGeometry, SlabParams } from '../types/slab-types';
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import { isSlabEntity } from '../../types/entities';
 import { computeSlabGeometry } from '../geometry/slab-geometry';
 import { validateSlabParams } from '../validators/slab-validator';
@@ -36,7 +36,7 @@ const RECT_EQ_TOL = 1e-6;
 /** Τα 4 corners ενός ορθογωνίου (CCW), διατηρώντας το z της πλάκας. */
 function rectCorners(
   r: { x0: number; x1: number; y0: number; y1: number }, z: number,
-): Point3D[] {
+): BimPoint[] {
   return [
     { x: r.x0, y: r.y0, z },
     { x: r.x1, y: r.y0, z },
@@ -46,7 +46,7 @@ function rectCorners(
 }
 
 /** Είναι το τρέχον outline ήδη ακριβώς αυτές οι 4 κορυφές (→ καμία αλλαγή); */
-function outlineEqualsRect(current: readonly Point3D[], rect: readonly Point3D[]): boolean {
+function outlineEqualsRect(current: readonly BimPoint[], rect: readonly BimPoint[]): boolean {
   if (current.length !== rect.length) return false;
   for (let i = 0; i < rect.length; i++) {
     if (Math.abs(current[i].x - rect[i].x) > RECT_EQ_TOL) return false;

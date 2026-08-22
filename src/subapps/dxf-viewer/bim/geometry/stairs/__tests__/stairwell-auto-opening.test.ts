@@ -6,7 +6,7 @@
  * συναρτήσεις — καμία scene/React εξάρτηση.
  */
 
-import type { Polygon3D } from '../../../types/bim-base';
+import type { BimPolygon } from '../../../types/bim-base';
 import { computeStairNosings } from '../stair-nosing-line';
 import {
   evaluateStairHeadroom,
@@ -25,7 +25,7 @@ import {
 } from '../stair-slab-overlap';
 
 /** Ορθογώνιο tread CCW: [x0,x0+depth] × [y0,y0+width] στο ύψος z. */
-function makeTread(x0: number, y0: number, depth: number, width: number, z: number): Polygon3D {
+function makeTread(x0: number, y0: number, depth: number, width: number, z: number): BimPolygon {
   return {
     vertices: [
       { x: x0, y: y0, z },
@@ -60,7 +60,7 @@ describe('computeStairNosings', () => {
   });
 
   it('αγνοεί degenerate tread (<3 κορυφές)', () => {
-    const degenerate: Polygon3D = { vertices: [{ x: 0, y: 0, z: 0 }, { x: 1, y: 1, z: 0 }] };
+    const degenerate: BimPolygon = { vertices: [{ x: 0, y: 0, z: 0 }, { x: 1, y: 1, z: 0 }] };
     expect(computeStairNosings([degenerate], 0)).toHaveLength(0);
   });
 });
@@ -119,7 +119,7 @@ describe('expandViolatingRange', () => {
 });
 
 describe('computeStairwellOpeningOutline', () => {
-  const slab: Polygon3D = {
+  const slab: BimPolygon = {
     vertices: [
       { x: 0, y: 0, z: 3000 },
       { x: 1000, y: 0, z: 3000 },
@@ -153,7 +153,7 @@ describe('computeStairwellOpeningOutline', () => {
 // ─── Φάση 2 — ανίχνευση ζεύγους σκάλα ↔ πλάκα-από-πάνω ──────────────────────────
 
 /** Τετράγωνο footprint [x0,x0+size] × [y0,y0+size] (z=0, κάτοψη). */
-function makeFootprint(x0: number, y0: number, size: number): Polygon3D {
+function makeFootprint(x0: number, y0: number, size: number): BimPolygon {
   return {
     vertices: [
       { x: x0, y: y0, z: 0 },
@@ -166,7 +166,7 @@ function makeFootprint(x0: number, y0: number, size: number): Polygon3D {
 
 function makeSlab(
   slabId: string,
-  outline: Polygon3D,
+  outline: BimPolygon,
   topZmm: number,
   thickness: number,
 ): StairwellSlabCandidate {
@@ -193,7 +193,7 @@ describe('footprintOverlapArea', () => {
 
   it('degenerate polygon (<3 κορυφές) → 0', () => {
     const a = makeFootprint(0, 0, 1000);
-    const bad: Polygon3D = { vertices: [{ x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }] };
+    const bad: BimPolygon = { vertices: [{ x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }] };
     expect(footprintOverlapArea(a, bad)).toBe(0);
   });
 });

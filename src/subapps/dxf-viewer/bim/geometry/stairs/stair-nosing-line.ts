@@ -12,14 +12,14 @@
  * units), όπως το `StairGeometry` (ADR-358 §9.2 Q22).
  */
 
-import type { Point3D, Polygon3D } from '../../types/bim-base';
+import type { BimPoint, BimPolygon } from '../../types/bim-base';
 import { directionToUnitVector, type Vec2 } from './stair-geometry-shared';
 
 export interface StairNosing {
   /** Global tread index (0-based) στη σειρά ανόδου. */
   readonly treadIndex: number;
   /** Μέσο της εμπρός (nosing) ακμής του σκαλοπατιού· z = επιφάνεια πατήματος. */
-  readonly point: Point3D;
+  readonly point: BimPoint;
 }
 
 /**
@@ -33,7 +33,7 @@ export interface StairNosing {
  * @param directionDeg φορά ανόδου (μοίρες, 0 = +X) — `StairParams.direction`.
  */
 export function computeStairNosings(
-  treads: readonly Polygon3D[],
+  treads: readonly BimPolygon[],
   directionDeg: number,
 ): StairNosing[] {
   const u = directionToUnitVector(directionDeg);
@@ -46,7 +46,7 @@ export function computeStairNosings(
 }
 
 /** Μέσο των 2 κορυφών με max προβολή κατά `u` (εμπρός/nosing ακμή). */
-function leadingEdgeMidpoint(tread: Polygon3D, u: Vec2): Point3D | null {
+function leadingEdgeMidpoint(tread: BimPolygon, u: Vec2): BimPoint | null {
   const vs = tread.vertices;
   if (vs.length < 3) return null;
   let i1 = 0;

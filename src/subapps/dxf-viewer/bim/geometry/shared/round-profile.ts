@@ -13,7 +13,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md §Φ8
  */
 
-import type { Point3D } from '../../types/bim-base';
+import type { BimPoint } from '../../types/bim-base';
 
 /** Polygon segment count for a circular section (smooth at typical zoom). */
 export const ROUND_PROFILE_SEGMENTS = 32;
@@ -26,10 +26,10 @@ export function buildRoundProfile(
   diameter: number,
   s: number,
   segments: number = ROUND_PROFILE_SEGMENTS,
-): Point3D[] {
+): BimPoint[] {
   const r = (Math.max(0, diameter) * s) / 2;
   const n = Math.max(3, segments);
-  const verts: Point3D[] = [];
+  const verts: BimPoint[] = [];
   for (let i = 0; i < n; i++) {
     const a = (i / n) * Math.PI * 2;
     verts.push({ x: Math.cos(a) * r, y: Math.sin(a) * r, z: 0 });

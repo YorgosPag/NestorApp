@@ -28,7 +28,7 @@
  * @see bim/walls/wall-opening-coordinator.ts — το pattern coordinator που mirror-άρει ο coordinator
  */
 
-import type { Polygon3D } from '../../types/bim-base';
+import type { BimPolygon } from '../../types/bim-base';
 import {
   findSlabsAboveStair,
   type StairFootprintInput,
@@ -55,13 +55,13 @@ import { STAIRWELL_OPENING_MARGIN_TREADS } from './stairwell-opening-config';
 export interface StairwellPlanStair {
   readonly stairId: string;
   /** Footprint κάτοψης (μονάδες σκηνής) — coarse overlap gate. */
-  readonly footprint: Polygon3D;
+  readonly footprint: BimPolygon;
   /** Απόλυτο Z βάσης (mm) — `resolveStairVerticalProfile.baseZmm`. */
   readonly baseZmm: number;
   /** Απόλυτο Z κορυφής (mm) — `resolveStairVerticalProfile.topZmm`. */
   readonly topZmm: number;
   /** Tread polygons (μονάδες σκηνής, x/y) — προβάλλονται για το outline. */
-  readonly treads: readonly Polygon3D[];
+  readonly treads: readonly BimPolygon[];
   /** Ύψος μύτης ανά σκαλοπάτι σε απόλυτα mm (converted από τον coordinator). */
   readonly nosingsZmm: readonly TreadNosingZ[];
   /** Ελάχιστο ελεύθερο ύψος (mm) — `effectiveMinHeadroomMm(codeProfile)`. */
@@ -73,7 +73,7 @@ export interface StairwellManagedOpening {
   readonly openingId: string;
   readonly autoStairId: string;
   readonly slabId: string;
-  readonly outline: Polygon3D;
+  readonly outline: BimPolygon;
   /**
    * ADR-632 Φ5 — true αν ο χρήστης έκανε **Override** (detached). Μετρά ακόμη ως
    * «υπάρχον» για το pair identity (ο planner ΔΕΝ regenerate διπλό opening), αλλά
@@ -88,7 +88,7 @@ export interface StairwellManagedOpening {
 export interface StairwellDesiredOpening {
   readonly autoStairId: string;
   readonly slabId: string;
-  readonly outline: Polygon3D;
+  readonly outline: BimPolygon;
   /** Εμβαδόν τρύπας (μονάδες σκηνής², unsigned) — diagnostics/ordering. */
   readonly areaSceneUnits2: number;
 }
@@ -96,7 +96,7 @@ export interface StairwellDesiredOpening {
 /** Diff plan: τι να δημιουργηθεί / ενημερωθεί / σβηστεί (managed openings μόνο). */
 export interface StairwellOpeningPlan {
   readonly creates: readonly StairwellDesiredOpening[];
-  readonly updates: readonly { readonly openingId: string; readonly outline: Polygon3D }[];
+  readonly updates: readonly { readonly openingId: string; readonly outline: BimPolygon }[];
   readonly deletes: readonly { readonly openingId: string }[];
 }
 
@@ -136,7 +136,7 @@ function computeOpeningForPair(
   const indices = expandViolatingRange(ev.violatingTreadIndices, marginTreads, stair.treads.length);
   const violatingTreads = indices
     .map((i) => stair.treads[i])
-    .filter((t): t is Polygon3D => t !== undefined);
+    .filter((t): t is BimPolygon => t !== undefined);
   if (violatingTreads.length === 0) return null;
 
   const res = computeStairwellOpeningOutline(violatingTreads, overlap.slab.outline, overlap.slab.topZmm);
@@ -175,7 +175,7 @@ function computeDesiredOpenings(
 // ─── Diff (desired vs existing managed) ──────────────────────────────────────
 
 /** True αν δύο outlines ταυτίζονται (ίδιο πλήθος κορυφών + x/y εντός `eps`). */
-function sameOutline(a: Polygon3D, b: Polygon3D, eps: number): boolean {
+function sameOutline(a: BimPolygon, b: BimPolygon, eps: number): boolean {
   const va = a.vertices;
   const vb = b.vertices;
   if (va.length !== vb.length) return false;
@@ -211,7 +211,7 @@ function diffPlan(
   }
 
   const creates: StairwellDesiredOpening[] = [];
-  const updates: { openingId: string; outline: Polygon3D }[] = [];
+  const updates: { openingId: string; outline: BimPolygon }[] = [];
   for (const [key, want] of desired) {
     const have = existingByKey.get(key);
     if (!have) creates.push(want);

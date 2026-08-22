@@ -3,7 +3,7 @@
  * BOQ embedment volume. Pure (μηδέν scene/React).
  */
 
-import type { Polygon3D } from '../../../types/bim-base';
+import type { BimPolygon } from '../../../types/bim-base';
 import type {
   StairFootprintInput,
   StairwellSlabCandidate,
@@ -16,7 +16,7 @@ import {
 } from '../stair-base-slab';
 
 /** Τετράγωνο footprint [0,size]² στο z=0. */
-function square(size: number): Polygon3D {
+function square(size: number): BimPolygon {
   return {
     vertices: [
       { x: 0, y: 0, z: 0 },

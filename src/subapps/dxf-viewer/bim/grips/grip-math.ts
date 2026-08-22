@@ -19,7 +19,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import { rotatePoint } from '../../utils/rotation-math';
 import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 
@@ -63,7 +63,7 @@ export function projectToLocalFrame(v: Point2D, angleDeg: number): Point2D {
 }
 
 /** Drop the Z component — BIM plan grips operate in the 2D footprint plane. */
-export function project2D(p: Point3D): Point2D {
+export function project2D(p: BimPoint): Point2D {
   return { x: p.x, y: p.y };
 }
 

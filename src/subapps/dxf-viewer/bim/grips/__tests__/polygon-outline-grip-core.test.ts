@@ -14,9 +14,9 @@ import {
   removeOutlineVertexInList,
   applyPolygonOutlineGripDrag,
 } from '../polygon-outline-grip-core';
-import type { Point3D } from '../../types/bim-base';
+import type { BimPoint } from '../../types/bim-base';
 
-const square: Point3D[] = [
+const square: BimPoint[] = [
   { x: 0, y: 0 },
   { x: 10, y: 0 },
   { x: 10, y: 10 },
@@ -100,12 +100,12 @@ describe('removeOutlineVertexInList', () => {
 
 describe('applyPolygonOutlineGripDrag', () => {
   interface Slabish {
-    readonly outline: { readonly vertices: Point3D[] };
+    readonly outline: { readonly vertices: BimPoint[] };
     readonly tag: string;
   }
   const params: Slabish = { outline: { vertices: square }, tag: 'keep-me' };
   const getVerts = (p: Slabish) => p.outline.vertices;
-  const withVerts = (p: Slabish, vertices: Point3D[]): Slabish => ({ ...p, outline: { vertices } });
+  const withVerts = (p: Slabish, vertices: BimPoint[]): Slabish => ({ ...p, outline: { vertices } });
 
   it('routes `${on}-vertex-N` → move and preserves the rest of params', () => {
     const out = applyPolygonOutlineGripDrag(

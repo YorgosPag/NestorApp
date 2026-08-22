@@ -17,7 +17,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md
  */
 
-import type { BimValidation, Point3D } from '../types/bim-base';
+import type { BimValidation, BimPoint } from '../types/bim-base';
 import type {
   MepBoilerGeometry,
   MepBoilerParams,
@@ -86,7 +86,7 @@ export const BOILER_CONDENSATE_CONNECTOR_ID = 'boiler-condensate';
  * `buildBoilerConnectors`).
  */
 export function buildBoilerCondensateConnector(
-  localPosition: Point3D,
+  localPosition: BimPoint,
   diameterMm: number,
 ): MepConnector {
   return {
@@ -135,8 +135,8 @@ export function buildBoilerConnectors(params: MepBoilerParams): MepConnector[] {
   const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
   const hw = (params.width * s) / 2;
   const hl = (params.length * s) / 2;
-  const supply: Point3D = { x: hw, y: 0, z: 0 };
-  const ret: Point3D = { x: -hw, y: 0, z: 0 };
+  const supply: BimPoint = { x: hw, y: 0, z: 0 };
+  const ret: BimPoint = { x: -hw, y: 0, z: 0 };
   const connectors: MepConnector[] = [
     buildBoilerSupplyConnector(supply, params.connectorDiameterMm),
     buildBoilerReturnConnector(ret, params.connectorDiameterMm),
@@ -144,8 +144,8 @@ export function buildBoilerConnectors(params: MepBoilerParams): MepConnector[] {
   if (params.producesDhw) {
     const dhwDiameter = params.dhwConnectorDiameterMm ?? params.connectorDiameterMm;
     // DHW hot outlet at +X/+Y, cold inlet at −X/+Y — distinct from supply/return on y=0.
-    const dhwHot: Point3D = { x: hw, y: hl, z: 0 };
-    const dhwCold: Point3D = { x: -hw, y: hl, z: 0 };
+    const dhwHot: BimPoint = { x: hw, y: hl, z: 0 };
+    const dhwCold: BimPoint = { x: -hw, y: hl, z: 0 };
     connectors.push(
       buildBoilerDhwHotOutletConnector(dhwHot, dhwDiameter),
       buildBoilerDhwColdInletConnector(dhwCold, dhwDiameter),
@@ -154,7 +154,7 @@ export function buildBoilerConnectors(params: MepBoilerParams): MepConnector[] {
       // Recirculation return inlet at the −X/−Y (back-left) corner — distinct from all
       // four other ports. The cooled DHW returns here; reuses `domestic-hot-water` so it
       // re-joins the SAME DHW network the hot outlet sources (gated by producesDhw).
-      const dhwRecirc: Point3D = { x: -hw, y: -hl, z: 0 };
+      const dhwRecirc: BimPoint = { x: -hw, y: -hl, z: 0 };
       connectors.push(buildBoilerDhwRecircInletConnector(dhwRecirc, dhwDiameter));
     }
   }
@@ -163,7 +163,7 @@ export function buildBoilerConnectors(params: MepBoilerParams): MepConnector[] {
   // gate: a plain gas boiler with no DHW still vents. Placed at the back-centre `{0,-hl}`,
   // free of the supply/return (y=0) and the four DHW corners. Founds the `duct` domain.
   if (params.fuelType === 'gas' || params.fuelType === 'oil') {
-    const flue: Point3D = { x: 0, y: -hl, z: 0 };
+    const flue: BimPoint = { x: 0, y: -hl, z: 0 };
     const flueDiameter = params.flueDiameterMm ?? defaultBoilerFlueDiameterMm(params.fuelType);
     connectors.push(buildBoilerFlueConnector(flue, flueDiameter));
     // Combustion fuel SUPPLY inlet (τροφοδοσία καυσίμου) — the gas/oil line FEEDS the
@@ -171,7 +171,7 @@ export function buildBoilerConnectors(params: MepBoilerParams): MepConnector[] {
     // electricity, not a piped fuel line). Placed at the front-centre `{0,+hl}`, free of
     // the supply/return (y=0), the four DHW corners, and the back-centre flue `{0,-hl}`.
     // `domain:'fuel'` (founds the fuel domain). Classification = the supplied medium.
-    const fuel: Point3D = { x: 0, y: hl, z: 0 };
+    const fuel: BimPoint = { x: 0, y: hl, z: 0 };
     const fuelDiameter = params.fuelConnectorDiameterMm ?? defaultBoilerFuelDiameterMm(params.fuelType);
     const fuelClassification: FuelSystemClassification =
       params.fuelType === 'oil' ? 'fuel-oil' : 'fuel-gas';
@@ -185,7 +185,7 @@ export function buildBoilerConnectors(params: MepBoilerParams): MepConnector[] {
   // the `sanitary-drainage` classification (no new union member) so it joins the same
   // drainage network a floor drain does.
   if (params.condensing) {
-    const condensate: Point3D = { x: hw, y: -hl, z: 0 };
+    const condensate: BimPoint = { x: hw, y: -hl, z: 0 };
     const condensateDiameter =
       params.condensateConnectorDiameterMm ?? DEFAULT_BOILER_CONDENSATE_DIAMETER_MM;
     connectors.push(buildBoilerCondensateConnector(condensate, condensateDiameter));

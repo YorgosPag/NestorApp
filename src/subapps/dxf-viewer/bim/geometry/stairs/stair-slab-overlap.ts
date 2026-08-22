@@ -25,7 +25,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-632-stairwell-auto-opening-ssot.md §4-5
  */
 
-import type { Polygon3D } from '../../types/bim-base';
+import type { BimPolygon } from '../../types/bim-base';
 import { safeIntersection } from '../shared/safe-polygon-boolean';
 import { multiPolygonArea, polygon3dToClipPolygon } from '../shared/polygon-utils';
 import { HOST_Z_EPS } from '../host-footprint-eval';
@@ -34,7 +34,7 @@ import { HOST_Z_EPS } from '../host-footprint-eval';
 export interface StairFootprintInput {
   readonly stairId: string;
   /** Footprint κάτοψης (κλειστό) στις μονάδες σκηνής — π.χ. ένωση treads. */
-  readonly footprint: Polygon3D;
+  readonly footprint: BimPolygon;
   /** Απόλυτο Z βάσης (mm) — `resolveStairVerticalProfile.baseZmm`. */
   readonly baseZmm: number;
   /** Απόλυτο Z κορυφής/άφιξης (mm) — `resolveStairVerticalProfile.topZmm`. */
@@ -43,14 +43,14 @@ export interface StairFootprintInput {
 
 /**
  * Υποψήφια υπερκείμενη πλάκα. Δομικά συμβατή με ό,τι δίνει ο engine (Φ3) από τα
- * slab entities: `outline` (Polygon3D, ίδιος χώρος με τη σκάλα) για την τρύπα,
+ * slab entities: `outline` (BimPolygon, ίδιος χώρος με τη σκάλα) για την τρύπα,
  * `undersideZmm` για τον headroom έλεγχο. Οριζόντια πλάκα (levelElevation) → μία
  * τιμή underside αρκεί (κεκλιμένες: ο engine δειγματοληπτεί, εκτός Φ2 scope).
  */
 export interface StairwellSlabCandidate {
   readonly slabId: string;
   /** Footprint κάτοψης πλάκας (κλειστό), ίδιες μονάδες με το stair footprint. */
-  readonly outline: Polygon3D;
+  readonly outline: BimPolygon;
   /** Απόλυτο Z άνω παρειάς (mm). */
   readonly topZmm: number;
   /** Απόλυτο Z κάτω παρειάς (mm) = `topZmm − thickness`. */
@@ -79,7 +79,7 @@ export interface StairSlabOverlapOptions {
  * Εμβαδόν οριζόντιας επικάλυψης δύο footprints (μονάδες²). `0` όταν κάποιο είναι
  * degenerate ή η τομή κενή. Reuse `safeIntersection` + `multiPolygonArea`.
  */
-export function footprintOverlapArea(a: Polygon3D, b: Polygon3D): number {
+export function footprintOverlapArea(a: BimPolygon, b: BimPolygon): number {
   const ga = polygon3dToClipPolygon(a);
   const gb = polygon3dToClipPolygon(b);
   if (!ga || !gb) return 0;

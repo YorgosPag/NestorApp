@@ -7,7 +7,7 @@
  * τον coordinator apply (`cascadeStairwellOpenings` — lifecycle σε mock σκηνή).
  */
 
-import type { Polygon3D } from '../../../types/bim-base';
+import type { BimPolygon } from '../../../types/bim-base';
 import type { Entity } from '../../../../types/entities';
 import type { SlabEntity } from '../../../types/slab-types';
 import type { StairEntity } from '../../../types/stair-types';
@@ -29,7 +29,7 @@ import { EventBus } from '../../../../systems/events/EventBus';
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
 /** Tread CCW: [x0,x0+depth] × [y0,y0+width] στο ύψος z. */
-function makeTread(x0: number, depth: number, z: number, y0 = 0, width = 1000): Polygon3D {
+function makeTread(x0: number, depth: number, z: number, y0 = 0, width = 1000): BimPolygon {
   return {
     vertices: [
       { x: x0, y: y0, z },
@@ -40,7 +40,7 @@ function makeTread(x0: number, depth: number, z: number, y0 = 0, width = 1000): 
   };
 }
 
-function makeRect(x0: number, y0: number, x1: number, y1: number, z = 0): Polygon3D {
+function makeRect(x0: number, y0: number, x1: number, y1: number, z = 0): BimPolygon {
   return {
     vertices: [
       { x: x0, y: y0, z },
@@ -52,8 +52,8 @@ function makeRect(x0: number, y0: number, x1: number, y1: number, z = 0): Polygo
 }
 
 /** 4 ανοδικά treads (z 300/600/900/1200), footprint [0,1200]×[0,1000]. Planner
- * (`StairwellPlanStair.treads`) shape = `{ vertices }` Polygon3D. */
-const TREADS: Polygon3D[] = [
+ * (`StairwellPlanStair.treads`) shape = `{ vertices }` BimPolygon. */
+const TREADS: BimPolygon[] = [
   makeTread(0, 300, 300),
   makeTread(300, 300, 600),
   makeTread(600, 300, 900),

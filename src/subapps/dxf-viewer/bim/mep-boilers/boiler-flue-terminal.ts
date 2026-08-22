@@ -23,10 +23,10 @@
  * @see ./mep-boiler-symbol
  */
 
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 
 /** A polyline of world-space points (canvas units) — mirrors `BoilerStroke`. */
-export type FlueTerminalStroke = readonly Point3D[];
+export type FlueTerminalStroke = readonly BimPoint[];
 
 /** Flue termination kind (Revit Vent Terminal type). Persisted as a kebab-case string. */
 export type FlueTerminationType = 'roof-cowl' | 'wall-horizontal' | 'balanced-concentric';
@@ -58,7 +58,7 @@ const TERMINAL_SIZE_FRAC = 0.28;
  * world-space polylines (the renderer strokes them with the vent weight).
  */
 export function buildFlueTerminalGlyph(
-  tip: Point3D,
+  tip: BimPoint,
   outward: { x: number; y: number },
   stubLen: number,
   termination: FlueTerminationType,
@@ -80,12 +80,12 @@ export function buildFlueTerminalGlyph(
 // ─── Glyph builders (pure, rotation-aware) ─────────────────────────────────────
 
 function pt(
-  origin: Point3D,
+  origin: BimPoint,
   outward: { x: number; y: number },
   perp: { x: number; y: number },
   alongOut: number,
   alongPerp: number,
-): Point3D {
+): BimPoint {
   return {
     x: origin.x + outward.x * alongOut + perp.x * alongPerp,
     y: origin.y + outward.y * alongOut + perp.y * alongPerp,
@@ -98,7 +98,7 @@ function pt(
  * a hood projecting outward, three sides drawn so it reads as a downturned cowl.
  */
 function buildRoofCowl(
-  tip: Point3D,
+  tip: BimPoint,
   outward: { x: number; y: number },
   perp: { x: number; y: number },
   size: number,
@@ -122,7 +122,7 @@ function buildRoofCowl(
  * projecting beyond the wall, and a small cap plate at the outlet end.
  */
 function buildWallHorizontal(
-  tip: Point3D,
+  tip: BimPoint,
   outward: { x: number; y: number },
   perp: { x: number; y: number },
   size: number,
@@ -147,7 +147,7 @@ function buildWallHorizontal(
  * reading as an air-intake/exhaust ring.
  */
 function buildBalancedConcentric(
-  tip: Point3D,
+  tip: BimPoint,
   outward: { x: number; y: number },
   perp: { x: number; y: number },
   size: number,
@@ -157,7 +157,7 @@ function buildBalancedConcentric(
 
 /** A closed diamond (4 corners on the outward/perp axes) centred on `c`, radius `r`. */
 function diamond(
-  c: Point3D,
+  c: BimPoint,
   outward: { x: number; y: number },
   perp: { x: number; y: number },
   r: number,

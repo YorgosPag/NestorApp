@@ -19,7 +19,7 @@
  */
 
 import { nowTimestamp } from '@/lib/firestore-now';
-import type { BimValidation, BoundingBox3D, Point3D, Polygon3D } from '../../types/bim-base';
+import type { BimValidation, BimBounds, BimPoint, BimPolygon } from '../../types/bim-base';
 import { polygonArea, polygonBbox } from './polygon-utils';
 import { mmToSceneUnits, type SceneUnits } from '../../../utils/scene-units';
 
@@ -38,7 +38,7 @@ export function buildRectangularLocalFootprint(
   width: number,
   length: number,
   s: number,
-): Point3D[] {
+): BimPoint[] {
   const hw = (width * s) / 2;
   const hl = (length * s) / 2;
   return [
@@ -54,10 +54,10 @@ export function buildRectangularLocalFootprint(
  * and translate to world coords anchored at `position` (footprint centre).
  */
 export function transformFootprintToWorld(
-  local: readonly Point3D[],
-  position: Point3D,
+  local: readonly BimPoint[],
+  position: BimPoint,
   rotationDeg: number,
-): Point3D[] {
+): BimPoint[] {
   const cos = Math.cos(rotationDeg * DEG_TO_RAD);
   const sin = Math.sin(rotationDeg * DEG_TO_RAD);
   return local.map((v) => {
@@ -71,9 +71,9 @@ export function transformFootprintToWorld(
 
 /** Common shape of every point-placed rectangular MEP body's geometry cache. */
 export interface RectangularBodyGeometry {
-  /** Polygon3D — horizontal footprint at the mounting plane. Closed CCW. */
-  readonly footprint: Polygon3D;
-  readonly bbox: BoundingBox3D;
+  /** BimPolygon — horizontal footprint at the mounting plane. Closed CCW. */
+  readonly footprint: BimPolygon;
+  readonly bbox: BimBounds;
   /** m². Footprint area. */
   readonly area: number;
   /** mm. Mirror of `params.bodyHeightMm` for downstream convenience. */
@@ -84,7 +84,7 @@ export interface RectangularBodyGeometry {
 export interface RectangularBodyGeometryParams {
   readonly width: number;
   readonly length: number;
-  readonly position: Point3D;
+  readonly position: BimPoint;
   readonly rotation: number;
   readonly bodyHeightMm: number;
   readonly sceneUnits?: SceneUnits | null;
@@ -97,7 +97,7 @@ export interface RectangularBodyGeometryParams {
  * rotation — can reuse this tail without re-deriving the area/bbox formula.
  */
 export function computeFootprintBodyGeometry(
-  worldVertices: readonly Point3D[],
+  worldVertices: readonly BimPoint[],
   bodyHeightMm: number,
   s: number,
 ): RectangularBodyGeometry {

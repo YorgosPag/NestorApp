@@ -18,7 +18,7 @@
 
 import type { SlabGeometry, SlabParams } from '../types/slab-types';
 import type { SlabOpeningEntity } from '../types/slab-opening-types';
-import type { BoundingBox3D, Point3D, Polygon3D } from '../types/bim-base';
+import type { BimBounds, BimPoint, BimPolygon } from '../types/bim-base';
 import {
   polygonArea,
   polygonBbox,
@@ -38,7 +38,7 @@ import { canvasToMmScaleFor, type SceneUnits } from '../../utils/scene-units';
  */
 export interface BeamFootprintForDeduction {
   /** Plan-view beam outline (convex polygon, CCW, mm world coords). */
-  readonly outline: Polygon3D;
+  readonly outline: BimPolygon;
   /** Structural depth (mm) — how deep the beam cuts into the slab. */
   readonly depthMm: number;
 }
@@ -53,7 +53,7 @@ export interface BeamFootprintForDeduction {
  */
 export interface WallFootprintForSpan {
   /** Plan-view wall footprint polygon (CCW, mm world coords). */
-  readonly outline: Polygon3D;
+  readonly outline: BimPolygon;
 }
 
 const MM_TO_M = 1 / 1000;
@@ -103,7 +103,7 @@ export function computeSlabGeometry(
   // Phase B: 3D z extent in metres (ADR-369 §2.1: top face = FFL, hangs DOWN by thickness).
   const topFaceM = (params.levelElevation + (params.heightOffsetFromLevel ?? 0)) / 1000;
   const botFaceM = topFaceM - thicknessMm / 1000;
-  const bbox: BoundingBox3D = {
+  const bbox: BimBounds = {
     min: { x: xyBbox.min.x, y: xyBbox.min.y, z: botFaceM },
     max: { x: xyBbox.max.x, y: xyBbox.max.y, z: topFaceM },
   };
@@ -159,8 +159,8 @@ export function getSlabMaxBboxDimensionM(params: SlabParams): number {
 function collectSupportOutlines(
   beamFootprints: readonly BeamFootprintForDeduction[] | undefined,
   wallFootprints: readonly WallFootprintForSpan[] | undefined,
-): readonly Polygon3D[] {
-  const result: Polygon3D[] = [];
+): readonly BimPolygon[] {
+  const result: BimPolygon[] = [];
   if (beamFootprints) {
     for (const b of beamFootprints) result.push(b.outline);
   }
@@ -174,7 +174,7 @@ function collectSupportOutlines(
  * Centroid of a polygon (arithmetic mean of vertices — sufficient for
  * symmetric/near-symmetric structural slabs).
  */
-function computePolygonCentroid(vertices: readonly Point3D[]): { x: number; y: number } {
+function computePolygonCentroid(vertices: readonly BimPoint[]): { x: number; y: number } {
   let sumX = 0;
   let sumY = 0;
   for (const v of vertices) {
@@ -199,8 +199,8 @@ function computePolygonCentroid(vertices: readonly Point3D[]): { x: number; y: n
  * < 20 for a floor plan level).
  */
 export function computeSlabMaxFreeSpanM(
-  slabVertices: readonly Point3D[],
-  supportOutlines: readonly Polygon3D[],
+  slabVertices: readonly BimPoint[],
+  supportOutlines: readonly BimPolygon[],
   sceneUnits: SceneUnits = 'mm',
 ): number {
   const canvasToM = canvasToMmScaleFor({ sceneUnits }) * MM_TO_M;
@@ -271,7 +271,7 @@ export function computeSlabMaxFreeSpanM(
  * both deduct beam footprint × min(beam depth, slab thickness) from slab volume.
  */
 function sumBeamDeductionsM3(
-  slabVertices: readonly Point3D[],
+  slabVertices: readonly BimPoint[],
   slabThicknessMm: number,
   beamFootprints: readonly BeamFootprintForDeduction[] | undefined,
 ): number {

@@ -2,18 +2,18 @@
  * Polygon utility helpers (ADR-363 Phase 3, shared).
  *
  * Re-usable pure functions για slab + future column footprint + beam
- * cross-section. Operates σε `Polygon3D` (XY plane — z ignored).
+ * cross-section. Operates σε `BimPolygon` (XY plane — z ignored).
  *
  * All inputs σε mm world coords; outputs:
  *   - shoelaceArea  → mm² (signed)
  *   - polygonPerimeter → mm (sum-of-edges)
- *   - polygonBbox → BoundingBox3D (z=0 plane)
+ *   - polygonBbox → BimBounds (z=0 plane)
  *
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.5
  */
 
 import type { MultiPolygon, Pair, Polygon } from 'polygon-clipping';
-import type { BoundingBox3D, Point3D, Polygon3D } from '../../types/bim-base';
+import type { BimBounds, BimPoint, BimPolygon } from '../../types/bim-base';
 import type { Point2D } from '../../../rendering/types/Types';
 import type { PlanarPoint } from '../../types/bim-base';
 import { segmentsIntersect } from '../../../utils/geometry/GeometryUtils';
@@ -64,12 +64,12 @@ export function multiPolygonArea(mp: MultiPolygon): number {
 }
 
 /**
- * `Polygon3D` → single-ring `polygon-clipping` `Polygon` (XY μόνο, z αγνοείται).
+ * `BimPolygon` → single-ring `polygon-clipping` `Polygon` (XY μόνο, z αγνοείται).
  * SSoT converter για boolean ops σε footprints — πριν ήταν private duplicate στο
  * `stairs/stairwell-opening-outline.ts` (N.0.2/N.18 dedup). Επιστρέφει `null` για
  * degenerate (<3 κορυφές) polygon.
  */
-export function polygon3dToClipPolygon(poly: Polygon3D): Polygon | null {
+export function polygon3dToClipPolygon(poly: BimPolygon): Polygon | null {
   const vs = poly.vertices;
   if (vs.length < 3) return null;
   return [vs.map((p): Pair => [p.x, p.y])];
@@ -135,7 +135,7 @@ export function isConvexPolygon(vertices: readonly PlanarPoint[]): boolean {
 }
 
 /** Axis-aligned bounding box (XY plane, z=0). */
-export function polygonBbox(vertices: readonly PlanarPoint[]): BoundingBox3D {
+export function polygonBbox(vertices: readonly PlanarPoint[]): BimBounds {
   if (vertices.length === 0) {
     return { min: { x: 0, y: 0, z: 0 }, max: { x: 0, y: 0, z: 0 } };
   }
@@ -152,7 +152,7 @@ export function polygonBbox(vertices: readonly PlanarPoint[]): BoundingBox3D {
  * ακμή ευθεία + η εσωτερική **αντεστραμμένη** → ενιαίο κλειστό πολύγωνο. SSoT για το idiom
  * `[...outer, ...[...inner].reverse()]` που ήταν διάσπαρτο (WallRenderer, building-footprint,
  * hit-test, slab-boq, bim-to-dxf, envelope, mep-fitting, framing snap-targets). Generic επί
- * `T` (Point2D ή Point3D)· non-mutating (αντιγράφει πριν το `reverse`).
+ * `T` (Point2D ή BimPoint)· non-mutating (αντιγράφει πριν το `reverse`).
  */
 export function closedRingFromEdges<T>(outer: readonly T[], inner: readonly T[]): T[] {
   return [...outer, ...[...inner].reverse()];
@@ -240,8 +240,8 @@ export function isPolygonSelfIntersecting(vertices: readonly PlanarPoint[]): boo
   return false;
 }
 
-/** Convenience: re-export polygon vertices as a closed Polygon3D. */
-export function makePolygon3D(vertices: readonly Point3D[]): Polygon3D {
+/** Convenience: re-export polygon vertices as a closed BimPolygon. */
+export function makePolygon3D(vertices: readonly BimPoint[]): BimPolygon {
   return { vertices };
 }
 
@@ -250,7 +250,7 @@ export function makePolygon3D(vertices: readonly Point3D[]): Polygon3D {
  * (z dropped, fresh object — never aliases the input). SSoT για το ubiquitous idiom
  * `{ x: p.x, y: p.y }` (πρώην private `to2D` σε wall/opening/slab/beam-corner-anchors,
  * hit-test-entity-tests, bim-to-dxf-primitives). Generic επί οποιουδήποτε `{x,y}` source
- * (Point3D geometry vertices, grips), pure & zero-dep (ADR-597 §17.11).
+ * (BimPoint geometry vertices, grips), pure & zero-dep (ADR-597 §17.11).
  */
 export function projectPointTo2D(p: PlanarPoint): Point2D {
   return { x: p.x, y: p.y };

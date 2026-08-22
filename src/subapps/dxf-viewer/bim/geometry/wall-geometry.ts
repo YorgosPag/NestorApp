@@ -8,7 +8,7 @@
  *   - μονάδες mm (internal) → m (length/area/volume output, BOQ-ready)
  *   - απλοποίηση: Phase 1 υποστηρίζει μόνο `straight` kind. Curved/polyline
  *     land Phase 1.5 — οι signature θέσεις διατηρούνται για μέλλον.
- *   - 3D-readiness: `Point3D` με optional z (G11). Phase 1 z παραμένει 0.
+ *   - 3D-readiness: `BimPoint` με optional z (G11). Phase 1 z παραμένει 0.
  *   - openings subtraction (ADR-395 G6): όταν δοθεί `openings`, το `area` (και
  *     κατ' επέκταση το `volume`) είναι net = gross − Σ(opening width × height),
  *     clamped ≥ 0. Παραλείπεται → gross (display/render/3D path — ίδιο με slab).
@@ -20,7 +20,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.3
  */
 
-import type { Point3D, Polyline3D, BoundingBox3D } from '../types/bim-base';
+import type { BimPoint, BimPolyline, BimBounds } from '../types/bim-base';
 import type { WallParams, WallGeometry, WallKind } from '../types/wall-types';
 import type { WallTopProfile } from './wall-top-profile';
 import type { WallBaseProfile } from './wall-base-profile';
@@ -106,7 +106,7 @@ export function computeWallGeometry(
   // to the axis polyline only; the body edges keep their exact miter points, and
   // length/bbox stay on the nominal `vertices` (no BOQ ripple).
   const axisVertices = applyMiterAxisJoin(vertices, params.startMiter, params.endMiter);
-  const axisPolyline: Polyline3D = { points: axisVertices, closed: false };
+  const axisPolyline: BimPolyline = { points: axisVertices, closed: false };
 
   const halfThicknessCanvas = (params.thickness / 2) * s;
   const sign = params.flip ? -1 : 1;
@@ -133,8 +133,8 @@ export function computeWallGeometry(
     innerPts[last] = { x: params.endMiter.inner.x, y: params.endMiter.inner.y, z };
     edgesModified = true;
   }
-  const finalOuter: Polyline3D = edgesModified ? { points: outerPts, closed: false } : outerEdge;
-  const finalInner: Polyline3D = edgesModified ? { points: innerPts, closed: false } : innerEdge;
+  const finalOuter: BimPolyline = edgesModified ? { points: outerPts, closed: false } : outerEdge;
+  const finalInner: BimPolyline = edgesModified ? { points: innerPts, closed: false } : innerEdge;
 
   // ADR-401 B3a/(γ): attached τοίχος → bbox από τα πραγματικά προφίλ. Top =
   // `maxTopZmm` (top-attach) ή nominal `baseOffset + height`. Bottom =
@@ -184,8 +184,8 @@ export function computeWallGeometry(
  * όταν κάποια ακμή έχει <2 σημεία.
  */
 export function buildWallFootprintRing(
-  outer: readonly Point3D[],
-  inner: readonly Point3D[],
+  outer: readonly BimPoint[],
+  inner: readonly BimPoint[],
 ): { x: number; y: number }[] {
   if (outer.length < 2 || inner.length < 2) return [];
   const ring: { x: number; y: number }[] = [];
@@ -287,7 +287,7 @@ function sumOpeningAreasM2(
  * `arc` (canonical DXF bulge) takes precedence over the legacy Bézier
  * `curveControl` when both are somehow present.
  */
-function pickAxisVertices(params: WallParams, kind: WallKind): readonly Point3D[] {
+function pickAxisVertices(params: WallParams, kind: WallKind): readonly BimPoint[] {
   if (kind === 'polyline' && params.polylineVertices && params.polylineVertices.length >= 2) {
     return params.polylineVertices;
   }
@@ -315,7 +315,7 @@ function pickAxisVertices(params: WallParams, kind: WallKind): readonly Point3D[
 /** ADR-363 Phase 1O — a corner miter's axis-join point J = midpoint(outer, inner). */
 type WallMiterPoints = { readonly outer: { readonly x: number; readonly y: number }; readonly inner: { readonly x: number; readonly y: number } };
 
-function miterAxisPoint(m: WallMiterPoints, z: number): Point3D {
+function miterAxisPoint(m: WallMiterPoints, z: number): BimPoint {
   return { x: (m.outer.x + m.inner.x) / 2, y: (m.outer.y + m.inner.y) / 2, z };
 }
 
@@ -326,10 +326,10 @@ function miterAxisPoint(m: WallMiterPoints, z: number): Point3D {
  * ends are untouched (returns the same array reference when there is nothing to do).
  */
 function applyMiterAxisJoin(
-  pts: readonly Point3D[],
+  pts: readonly BimPoint[],
   startMiter: WallMiterPoints | undefined,
   endMiter: WallMiterPoints | undefined,
-): readonly Point3D[] {
+): readonly BimPoint[] {
   if (pts.length < 1 || (!startMiter && !endMiter)) return pts;
   const result = [...pts];
   if (startMiter) result[0] = miterAxisPoint(startMiter, result[0].z ?? 0);
@@ -341,11 +341,11 @@ function applyMiterAxisJoin(
 }
 
 function applyAxisBevels(
-  pts: readonly Point3D[],
+  pts: readonly BimPoint[],
   startBevelMm: number,
   endBevelMm: number,
   minAxis: number,
-): readonly Point3D[] {
+): readonly BimPoint[] {
   if (pts.length < 2 || (startBevelMm <= 0 && endBevelMm <= 0)) return pts;
   const result = [...pts];
   const n = result.length;
@@ -386,10 +386,10 @@ function applyAxisBevels(
  * Straight wall (2 vertices) is the common path — runs in 2 cross products.
  */
 function offsetAxisToEdges(
-  vertices: readonly Point3D[],
+  vertices: readonly BimPoint[],
   halfThicknessMm: number,
   sign: number,
-): { outerEdge: Polyline3D; innerEdge: Polyline3D } {
+): { outerEdge: BimPolyline; innerEdge: BimPolyline } {
   if (vertices.length < 2) {
     return {
       outerEdge: { points: vertices, closed: false },
@@ -410,12 +410,12 @@ function offsetAxisToEdges(
  * base = baseOffset / 1000 m, top = base + height / 1000 m.
  */
 function computeBbox(
-  axis: readonly Point3D[],
-  outer: readonly Point3D[],
-  inner: readonly Point3D[],
+  axis: readonly BimPoint[],
+  outer: readonly BimPoint[],
+  inner: readonly BimPoint[],
   heightMm: number,
   baseOffsetMm: number = 0,
-): BoundingBox3D {
+): BimBounds {
   const { minX, maxX, minY, maxY } = bboxOfAll(axis, outer, inner);
   const baseM = baseOffsetMm / 1000;
   return {
@@ -429,13 +429,13 @@ function computeBbox(
  * or curved (CURVED_SUBDIVISIONS+1 pts after Bezier subdivision). Bevel trim
  * applied. Exported for opening-geometry and wall-opening-coordinator.
  */
-export function getWallAxisVertices(params: WallParams, kind: WallKind): readonly Point3D[] {
+export function getWallAxisVertices(params: WallParams, kind: WallKind): readonly BimPoint[] {
   const raw = pickAxisVertices(params, kind);
   const s = mmScaleFor(params);
   return applyAxisBevels(raw, params.startBevel ?? 0, params.endBevel ?? 0, s);
 }
 
 /** Polyline length in mm (sum of segment lengths). Exported for coordinators. */
-export function computePolylineLengthMm(vertices: readonly Point3D[]): number {
+export function computePolylineLengthMm(vertices: readonly BimPoint[]): number {
   return polylineLength(vertices);
 }

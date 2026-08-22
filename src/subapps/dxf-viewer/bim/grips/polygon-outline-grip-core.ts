@@ -12,7 +12,7 @@
  * — the exact `BaseEntityRenderer.finalizeRender()`-class duplication N.0.2 warns about
  * (jscpd CHECK 3.28: 15 clone pairs across the 4 outline files, +floor-finish).
  *
- * The list-level helpers here work on a bare `Point3D[]` so they are **container-agnostic**:
+ * The list-level helpers here work on a bare `BimPoint[]` so they are **container-agnostic**:
  * each caller supplies its own container (`outline.vertices` vs `footprint.vertices`) and its
  * own post-process (roof keeps `edges` in lockstep, mep-underfloor re-derives `connectors`).
  * All helpers return `null` to signal a no-op so the caller can keep `originalParams`
@@ -23,7 +23,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import type { GripInfo } from '../../hooks/grip-types';
 import type { EntityGripKind, GripKindByEntity } from '../../hooks/grip-kinds';
 import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
@@ -31,7 +31,7 @@ import { constrainDeltaToDominantAxis } from './ortho-delta';
 import { parseGripKindIndex } from '../../systems/grip/grip-kind-index';
 
 /** Structural clone of an outline vertex — preserves the optional `z` exactly. */
-export function cloneOutlineVertex(v: Point3D): Point3D {
+export function cloneOutlineVertex(v: BimPoint): BimPoint {
   return v.z !== undefined ? { x: v.x, y: v.y, z: v.z } : { x: v.x, y: v.y };
 }
 
@@ -40,7 +40,7 @@ export function cloneOutlineVertex(v: Point3D): Point3D {
  * `z` is carried through only when either endpoint has one (averaged), matching the
  * per-file originals byte-for-byte.
  */
-export function outlineEdgeInsertedVertex(a: Point3D, b: Point3D, delta: Point2D): Point3D {
+export function outlineEdgeInsertedVertex(a: BimPoint, b: BimPoint, delta: Point2D): BimPoint {
   return {
     x: (a.x + b.x) / 2 + delta.x,
     y: (a.y + b.y) / 2 + delta.y,
@@ -109,10 +109,10 @@ export function buildPolygonOutlineGrips<K extends keyof GripKindByEntity & stri
  * out-of-range index OR zero delta — so the caller keeps `originalParams` unchanged.
  */
 export function moveOutlineVertexInList(
-  verts: readonly Point3D[],
+  verts: readonly BimPoint[],
   index: number,
   delta: Point2D,
-): Point3D[] | null {
+): BimPoint[] | null {
   if (index >= verts.length) return null;
   if (delta.x === 0 && delta.y === 0) return null;
   return verts.map((v, i) => (i === index ? translatePoint(v, delta) : cloneOutlineVertex(v)));
@@ -124,17 +124,17 @@ export function moveOutlineVertexInList(
  * exact midpoint is a legitimate edit (matches the per-file originals).
  */
 export function insertOutlineVertexInList(
-  verts: readonly Point3D[],
+  verts: readonly BimPoint[],
   edgeIndex: number,
   delta: Point2D,
-): Point3D[] | null {
+): BimPoint[] | null {
   if (edgeIndex >= verts.length) return null;
   const inserted = outlineEdgeInsertedVertex(
     verts[edgeIndex],
     verts[(edgeIndex + 1) % verts.length],
     delta,
   );
-  const next: Point3D[] = [];
+  const next: BimPoint[] = [];
   for (let i = 0; i < verts.length; i++) {
     next.push(cloneOutlineVertex(verts[i]));
     if (i === edgeIndex) next.push(inserted);
@@ -149,9 +149,9 @@ export function insertOutlineVertexInList(
  * their sibling array at the SAME index after a non-null result.
  */
 export function removeOutlineVertexInList(
-  verts: readonly Point3D[],
+  verts: readonly BimPoint[],
   vertexIndex: number,
-): Point3D[] | null {
+): BimPoint[] | null {
   if (verts.length <= 3) return null;
   if (vertexIndex < 0 || vertexIndex >= verts.length) return null;
   return verts.filter((_, i) => i !== vertexIndex);
@@ -181,8 +181,8 @@ export function applyPolygonOutlineGripDrag<P>(
   gripKind: string,
   on: string,
   input: PolygonOutlineDragInput<P>,
-  getVerts: (params: P) => readonly Point3D[],
-  withVerts: (params: P, verts: Point3D[]) => P,
+  getVerts: (params: P) => readonly BimPoint[],
+  withVerts: (params: P, verts: BimPoint[]) => P,
   insertOverride?: (params: P, edgeIndex: number, delta: Point2D) => P,
 ): P {
   const delta = input.rectilinear ? constrainDeltaToDominantAxis(input.delta) : input.delta;
