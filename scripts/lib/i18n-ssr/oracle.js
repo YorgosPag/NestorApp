@@ -12,8 +12,8 @@
  * για ό,τι η στατική ανάλυση αρνείται.
  *
  * ┌───────────────────────────────────────────────────────────────────────────┐
- * │ 🔴 ΤΕΣΣΕΡΙΣ ΤΡΟΠΟΙ ΝΑ ΓΕΝΝΗΘΕΙ ΑΥΤΟΣ Ο ΧΡΗΣΜΟΣ ΜΟΝΙΜΩΣ ΠΡΑΣΙΝΟΣ.          │
- * │ Και οι τέσσερις είναι ΜΕΤΡΗΜΕΝΟΙ σε αυτό το repo, όχι υποθετικοί.        │
+ * │ 🔴 ΕΞΙ ΤΡΟΠΟΙ ΝΑ ΓΕΝΝΗΘΕΙ ΑΥΤΟΣ Ο ΧΡΗΣΜΟΣ ΜΟΝΙΜΩΣ ΠΡΑΣΙΝΟΣ.               │
+ * │ Και οι έξι είναι ΜΕΤΡΗΜΕΝΟΙ σε αυτό το repo, όχι υποθετικοί.             │
  * └───────────────────────────────────────────────────────────────────────────┘
  *
  * 1. **ΤΟ ΠΛΑΣΤΟ USER-AGENT ΕΙΝΑΙ ΥΠΟΧΡΕΩΤΙΚΟ.** Το `src/middleware.ts` έχει
@@ -27,12 +27,23 @@
  *    όργανο που την κυνηγά. Γι' αυτό το UA είναι **παράμετρος χωρίς προεπιλογή**
  *    και ο κατασκευαστής **σκάει** αν λείπει.
  *
- * 2. **ΘΕΤΙΚΟ CONTROL ΑΝΑ ΔΙΑΔΡΟΜΗ.** Ένα «0» χωρίς απόδειξη ότι κοιτάχτηκε
- *    σελίδα είναι «0» από άδεια απάντηση. Το control **δεν είναι χειρόγραφο**:
- *    είναι «περιέχει η σελίδα **έστω μία τιμή που μόνο το i18n μπορούσε να
- *    παραγάγει**;» — δηλαδή μια ελληνική συμβολοσειρά που **υπάρχει
- *    κυριολεκτικά μέσα στο αποστελλόμενο slice**. Παράγεται από τα ίδια τα
- *    δεδομένα ⇒ δεν παλιώνει, δεν αποκλίνει.
+ * 2. **ΘΕΤΙΚΟ CONTROL.** Ένα «0» χωρίς απόδειξη ότι κοιτάχτηκε σελίδα είναι
+ *    «0» από άδεια απάντηση. Το control **δεν είναι χειρόγραφο**: είναι
+ *    «περιέχει η σελίδα **έστω μία τιμή που μόνο το i18n μπορούσε να
+ *    παραγάγει**;». Παράγεται από τα ίδια τα δεδομένα ⇒ δεν παλιώνει.
+ *
+ * 5. 🔴 **ΤΟ CONTROL ΤΟΥ ΚΕΛΥΦΟΥΣ ΔΕΝ ΕΙΝΑΙ CONTROL ΤΗΣ ΣΕΛΙΔΑΣ** (ADR-788).
+ *    Μέχρι τις 2026-08-22 το §2 παραγόταν **αποκλειστικά** από το shell slice —
+ *    και το κέλυφος ζωγραφίζεται σε **κάθε** διαδρομή. Άρα η κατάσταση
+ *    `probe-unproven` ήταν **δομικά αδύνατο** να πυροδοτήσει: ο χρησμός
+ *    αποδείκνυε ότι **η διαδρομή κοιτάχτηκε**, ποτέ ότι **η επιφάνεια
+ *    αποδόθηκε**. Πλέον **δύο** σύνολα (`controls.js`), και η σελίδα έχει το
+ *    δικό της: μετρημένα **16.538** τιμές έναντι **2.119** του κελύφους.
+ *
+ * 6. 🔴 **ΤΟ ΣΥΝΘΕΤΙΚΟ `[param]` ΔΕΝ ΕΙΝΑΙ Η ΣΕΛΙΔΑ** (ADR-788). Οι **33**
+ *    δυναμικές διαδρομές χτυπιούνται με id που **δεν υπάρχει**, οπότε βάφουν
+ *    το «δεν βρέθηκε» τους. Ένα «clean» εκεί είναι ψέμα με άλλο όνομα. Πλέον
+ *    ρητή κατάσταση `surface-synthetic-id` — **μετριέται, δεν απαριθμείται**.
  *
  * 3. **ΚΛΕΙΣΤΟ ΣΥΜΠΑΝ ΚΛΕΙΔΙΩΝ.** Το ευρετικό `/\w+(\.\w+)+/` πιάνει
  *    `nestorconstruct.gr`, `report.pdf`, `v1.2.3`. Ένα κλειδί είναι κλειδί
@@ -67,13 +78,31 @@ const X_STATES = Object.freeze({
   PROBE_UNPROVEN: 'probe-unproven',
   RAW_KEY: 'raw-key',
   SKIPPED: 'route-skipped',
+  SHELL_ONLY: 'surface-shell-only',
+  SYNTHETIC_ID: 'surface-synthetic-id',
   CLEAN: 'clean',
 });
 
 /** ⛔ ΠΟΤΕ σε baseline: ένας χρησμός που δεν απέδειξε ότι κοίταξε δεν έχει «πρόοδο». */
 const X_ZERO_TOLERANCE = Object.freeze([X_STATES.UNREACHABLE, X_STATES.PROBE_UNPROVEN]);
-/** 🔴 ratchet κατά ταυτότητα `διαδρομή|κλειδί` — ανταλλαγή ⇒ μπλοκ (ADR-749). */
-const X_RATCHETED = Object.freeze([X_STATES.RAW_KEY, X_STATES.SKIPPED]);
+/** 🔴 ratchet κατά ταυτότητα `διαδρομή|επιφάνεια|κλειδί` — ανταλλαγή ⇒ μπλοκ (ADR-749). */
+const X_RATCHETED = Object.freeze([X_STATES.RAW_KEY, X_STATES.SKIPPED, X_STATES.SHELL_ONLY]);
+/**
+ * 🔶 ΜΕΤΡΙΕΤΑΙ, ΔΕΝ ΑΠΑΡΙΘΜΕΙΤΑΙ — και **δεν** μπλοκάρει (πρότυπο
+ * `unanalyzable-heritage`, CHECK 3.44).
+ *
+ * Μια δυναμική διαδρομή χτυπιέται με **συνθετικό** τμήμα, δηλαδή με id που δεν
+ * υπάρχει. Ό,τι κι αν βάψει, **δεν είναι η σελίδα**: είναι το «δεν βρέθηκε» της.
+ * Το να τη λέγαμε `clean` θα ήταν ψέμα· το να τη λέγαμε ⛔ θα έκανε **33 από τις
+ * 154** διαδρομές μονίμως κόκκινες ⇒ `SKIP_` ⇒ διακοσμητική πύλη (η παγίδα που
+ * το CHECK 3.39 δοκίμασε και απέρριψε). Μένει **ονομασμένη**.
+ *
+ * ⚠️ Η ασυμμετρία είναι σκόπιμη: πάνω σε **ακρίτη** επιφάνεια ένα «βρήκα ωμό
+ * κλειδί» παραμένει **αληθές** (το κλειδί ζωγραφίστηκε όντως), ενώ ένα «δεν
+ * βρήκα» δεν αποδεικνύει τίποτα. Γι' αυτό το `raw-key` κρίνεται **πριν** από
+ * αυτή την κατάσταση, όχι μετά.
+ */
+const X_COUNTED = Object.freeze([X_STATES.SYNTHETIC_ID]);
 
 /** Το τμήμα που μπαίνει στη θέση ενός `[param]`. Σκόπιμα αναγνωρίσιμο στα logs. */
 const SYNTHETIC_SEGMENT = 'ssr-probe';
@@ -127,29 +156,15 @@ function buildUniverse(localeDir) {
   return { universe, unreadable };
 }
 
-const GREEK = /[Ͱ-Ͽἀ-῿]/;
-
 /**
- * Το θετικό control: τιμές που **μόνο το i18n** μπορούσε να βάλει στη σελίδα.
- * Ελληνικές, μήκους ≥ 4, από το **αποστελλόμενο** slice.
- *
- * ⚠️ Χρησιμοποιούμε **τιμές**, όχι κλειδιά: το ζητούμενο είναι «μεταφράστηκε
- * κάτι», όχι «υπάρχει κάτι».
+ * ⚠️ **Η ΚΡΙΣΗ ΤΩΝ CONTROLS ΖΕΙ ΣΤΟ `controls.js`, ΟΧΙ ΕΔΩ.** Εδώ μένει μόνο
+ * η επανεξαγωγή, ώστε να μην υπάρχουν **δύο** ορισμοί του «τι είναι απόδειξη»
+ * (ADR-749). Το παλιό όνομα `buildPositiveControls` διατηρείται γιατί το
+ * καταναλώνουν οι άγκυρες — αλλά **δείχνει στην ίδια συνάρτηση**.
  */
-function buildPositiveControls(slice) {
-  const controls = new Set();
-  const walk = (node) => {
-    if (typeof node === 'string') {
-      const value = node.trim();
-      if (value.length >= 4 && GREEK.test(value) && !value.includes('{')) controls.add(value);
-      return;
-    }
-    if (Array.isArray(node)) return node.forEach(walk);
-    if (node && typeof node === 'object') return Object.values(node).forEach(walk);
-  };
-  walk(slice);
-  return controls;
-}
+const { GREEK, greekValuesIn, buildControlUniverse, anyControlRendered } = require('./controls');
+
+const buildPositiveControls = (slice) => greekValuesIn(slice);
 
 // ---------------------------------------------------------------------------
 // 3. Η εξαγωγή — δύο επιφάνειες
@@ -205,9 +220,18 @@ function extractSurfaces(html) {
 // ---------------------------------------------------------------------------
 
 /**
+ * **ΔΥΟ ΑΠΟΔΕΙΞΕΙΣ, ΟΧΙ ΜΙΑ** — και ποτέ μία με «ή» (μάθημα CHECK 3.41):
+ *
+ *   `shellProven` «απάντησε ο server με μεταφρασμένη εφαρμογή;»
+ *   `pageProven`  «αποδόθηκε περιεχόμενο **πέρα από το κέλυφος**;»
+ *
+ * Μέχρι το ADR-788 υπήρχε **μόνο** το πρώτο, με το όνομα του δεύτερου. Το
+ * κέλυφος ζωγραφίζεται σε **κάθε** διαδρομή, άρα το πρώτο ήταν πάντα `true`
+ * και το δεύτερο **δεν ρωτήθηκε ποτέ** (βλ. `controls.js`).
+ *
  * @param {string} html
- * @param {{universe: Set<string>, controls: Set<string>}} oracle
- * @returns {{proven: boolean, hits: Array<{key: string, surface: string}>}}
+ * @param {{universe: Set<string>, shellControls: Set<string>, pageControls: Set<string>}} oracle
+ * @returns {{shellProven: boolean, pageProven: boolean, hits: Array<{key: string, surface: string}>}}
  */
 function judgeHtml(html, oracle) {
   const { texts, attributes } = extractSurfaces(html);
@@ -220,25 +244,49 @@ function judgeHtml(html, oracle) {
     if (oracle.universe.has(value)) hits.set(`${attribute}|${value}`, { key: value, surface: attribute });
   }
 
-  // Το control ψάχνεται σε ΟΛΕΣ τις επιφάνειες: μια σελίδα μπορεί κάλλιστα να
-  // έχει όλο της το μεταφρασμένο κείμενο μέσα σε `aria-label`.
+  // Οι αποδείξεις ψάχνονται σε ΟΛΕΣ τις επιφάνειες: μια σελίδα μπορεί κάλλιστα
+  // να έχει όλο της το μεταφρασμένο κείμενο μέσα σε `aria-label`.
   const haystack = texts.concat(attributes.map((item) => item.value));
-  let proven = false;
-  for (const candidate of haystack) {
-    if (oracle.controls.has(candidate)) { proven = true; break; }
-  }
-  if (!proven) {
-    // Δεύτερη ευκαιρία: υπο-συμβολοσειρά (το κείμενο μπορεί να συντίθεται με
-    // interpolation ή να ενώνεται με γειτονικούς κόμβους).
-    const joined = haystack.join('');
-    for (const control of oracle.controls) {
-      if (joined.includes(control)) { proven = true; break; }
-    }
-  }
 
-  return { proven, hits: [...hits.values()] };
+  return {
+    shellProven: anyControlRendered(oracle.shellControls, haystack),
+    pageProven: anyControlRendered(oracle.pageControls, haystack),
+    hits: [...hits.values()],
+  };
 }
 
+/**
+ * Η ΜΗΧΑΝΗ ΚΑΤΑΣΤΑΣΕΩΝ ΜΙΑΣ ΣΕΛΙΔΑΣ ΠΟΥ ΑΠΑΝΤΗΣΕ 200.
+ *
+ * ⚠️ **Η ΣΕΙΡΑ ΕΙΝΑΙ ΤΟ ΣΥΜΒΟΛΑΙΟ**, όχι στυλ: πάνω σε ακρίτη επιφάνεια το
+ * «**βρήκα** ωμό κλειδί» παραμένει αληθές, ενώ το «**δεν** βρήκα» δεν αποδεικνύει
+ * τίποτα. Γι΄ αυτό το `raw-key` κρίνεται **πριν** από τις καταστάσεις επιφάνειας.
+ *
+ * @param {{dynamic: boolean}} route
+ * @param {{shellProven: boolean, pageProven: boolean, hits: Array}} verdict
+ * @returns {{state: string, detail?: string}}
+ */
+function classifySurface(route, verdict) {
+  // ⛔ Ούτε το κέλυφος δεν βάφτηκε: ο server απάντησε κάτι που ΔΕΝ είναι η
+  //    εφαρμογή. «0 ωμά κλειδιά» εδώ σημαίνει «δεν κοίταξα».
+  if (!verdict.shellProven) {
+    return { state: X_STATES.PROBE_UNPROVEN, detail: 'καμία μεταφρασμένη τιμή στη σελίδα — ο χρησμός ΔΕΝ απέδειξε ότι κοίταξε' };
+  }
+  // 🔴 Ωμό κλειδί ζωγραφίστηκε ΟΝΤΩΣ — αληθές ανεξάρτητα από το ΠΟΙΑ επιφάνεια αποδόθηκε.
+  if (verdict.hits.length > 0) return { state: X_STATES.RAW_KEY };
+  // 🔶 Δυναμική διαδρομή με ΣΥΝΘΕΤΙΚΟ id: ό,τι κι αν βάφτηκε, δεν είναι η σελίδα.
+  if (route.dynamic) {
+    return {
+      state: X_STATES.SYNTHETIC_ID,
+      detail: `το τμήμα «${SYNTHETIC_SEGMENT}» δεν αντιστοιχεί σε υπαρκτή οντότητα — η επιφάνεια της σελίδας ΔΕΝ κρίθηκε`,
+    };
+  }
+  // 🔴 Στατική διαδρομή που έβαψε ΜΟΝΟ το κέλυφος: το περιεχόμενό της δεν έφτασε στο SSR HTML.
+  if (!verdict.pageProven) {
+    return { state: X_STATES.SHELL_ONLY, detail: 'μόνο το κέλυφος αποδόθηκε — καμία τιμή πέρα από αυτό' };
+  }
+  return { state: X_STATES.CLEAN };
+}
 /**
  * Χτυπάει ΜΙΑ διαδρομή. **Ποτέ δεν επιστρέφει «καθαρό» χωρίς απόδειξη.**
  *
@@ -268,14 +316,9 @@ async function probeRoute(route, options) {
     return { ...route, route: route.url, state: X_STATES.UNREACHABLE, status: response.status, keys: [], detail: 'ΚΕΝΟ σώμα με 200' };
   }
 
-  const { proven, hits } = judgeHtml(html, oracle);
-  if (!proven) {
-    return { ...route, route: route.url, state: X_STATES.PROBE_UNPROVEN, status: response.status, keys: hits, detail: 'καμία μεταφρασμένη τιμή στη σελίδα — ο χρησμός ΔΕΝ απέδειξε ότι κοίταξε' };
-  }
-  if (hits.length > 0) {
-    return { ...route, route: route.url, state: X_STATES.RAW_KEY, status: response.status, keys: hits };
-  }
-  return { ...route, route: route.url, state: X_STATES.CLEAN, status: response.status, keys: [] };
+  const verdict = judgeHtml(html, oracle);
+  const { state, detail } = classifySurface(route, verdict);
+  return { ...route, route: route.url, state, status: response.status, keys: verdict.hits, ...(detail ? { detail } : {}) };
 }
 
 /** Ταυτότητα ratchet — **ποτέ γραμμή**, ποτέ σειρά: `διαδρομή|επιφάνεια|κλειδί`. */
@@ -315,8 +358,14 @@ async function sweep(routes, options) {
 
 module.exports = {
   X_STATES,
+  classifySurface,
   X_ZERO_TOLERANCE,
   X_RATCHETED,
+  X_COUNTED,
+  GREEK,
+  greekValuesIn,
+  buildControlUniverse,
+  anyControlRendered,
   SYNTHETIC_SEGMENT,
   HUMAN_ATTRIBUTES,
   enumerateRoutes,

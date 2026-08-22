@@ -196,6 +196,40 @@ function readWorkflowTriggers(filePath) {
  * @param {string} filePath
  * @returns {{ job: string, run: string, continueOnError: boolean, conditional: boolean }[]}
  */
+/**
+ * Το `env:` ενός βήματος, ως χάρτης ονόματος → τιμή.
+ *
+ * ΑΠΟ ΤΟ ADR-788 (CHECK 3.57): το **περιβάλλον** ενός production build είναι μέρος
+ * του **τι χτίζεται**, όχι διακόσμηση. Μετρημένο στις 2026-08-21: το job του
+ * χρησμού έχτιζε με **1 από τις 20** μεταβλητές των δύο άλλων καλούντων του
+ * `build:ci` — και πέθαινε σε OOM. Χωρίς αυτό το πεδίο, καμία πύλη δεν μπορεί να
+ * ρωτήσει «χτίζουν όλοι τον ίδιο server;».
+ *
+ * ⚠️ Η πρώτη γραμμή του βήματος έχει το πρόθεμα `- `, άρα τα κλειδιά του βήματος
+ * κάθονται **δύο** κενά πιο μέσα από τον δείκτη του `-`. Ένας υπολογισμός εσοχής
+ * που το αγνοεί βρίσκει **μηδέν** κλειδιά και επιστρέφει `{}` — δηλαδή «δεν έχει
+ * env», που είναι το ίδιο σχήμα «0 = κανείς δεν κοίταξε».
+ *
+ * @param {{indent:number, body:string}[]} stepLines γραμμές ΕΝΟΣ βήματος, με εσοχή
+ * @returns {Record<string,string>}
+ */
+function stepEnv(stepLines) {
+  if (stepLines.length === 0) return {};
+  const keyIndent = stepLines[0].indent + 2;
+  const normalized = stepLines.map((line, index) =>
+    index === 0 ? { indent: keyIndent, body: line.body.replace(/^- /, '') } : line,
+  );
+  const envIndex = findKey(normalized, 'env', keyIndent);
+  if (envIndex === -1) return {};
+
+  const out = {};
+  for (const line of childLines(normalized, envIndex)) {
+    const match = line.body.match(/^([A-Za-z_][A-Za-z0-9_]*):\s*(.*)$/);
+    if (match) out[match[1]] = scalar(match[2]);
+  }
+  return out;
+}
+
 function readWorkflowRunSteps(filePath) {
   const lines = significantLines(fs.readFileSync(filePath, 'utf8'));
   const jobsIndex = findKey(lines, 'jobs', 0);
@@ -236,6 +270,7 @@ function readWorkflowRunSteps(filePath) {
       steps.push({
         job,
         run,
+        env: stepEnv(stepLines.slice(start, end)),
         continueOnError: jobContinue || chunk.some((b) => /^continue-on-error:\s*true\b/.test(b)),
         conditional: chunk.some((b) => /^if:/.test(b)),
       });

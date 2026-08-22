@@ -328,7 +328,10 @@
     "jest-suite:baseline": "node scripts/check-jest-suite-ratchet.js --write-baseline",
     "prerender:check": "node scripts/check-prerender-bailout.js --all",
     "prerender:report": "node scripts/check-prerender-bailout.js --report",
-    "test:prerender": "jest scripts/__tests__/check-prerender-bailout.test.js --verbose"
+    "test:prerender": "jest scripts/__tests__/check-prerender-bailout.test.js --verbose",
+    "build-parity:check": "node scripts/check-production-build-parity.js",
+    "build-parity:report": "node scripts/check-production-build-parity.js --report",
+    "test:build-parity": "jest scripts/__tests__/check-production-build-parity.test.js --verbose"
   },
   "dependencies": {
     "@ai-sdk/openai": "3.0.48",

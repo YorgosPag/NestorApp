@@ -182,6 +182,28 @@ const ciTierTriggers = allFiles.filter(
 if (!process.env.SKIP_CI_TIER_COVERAGE && ciTierTriggers.length > 0)
   addThread('3.37', 'CI gate tier coverage', 'scripts/check-ci-gate-tiers.js');
 
+// CHECK 3.57 (ADR-788) — «χτίζουν ΟΛΟΙ τον ίδιο server;». Δύο workflows γράφουν κατά λέξη
+// «Any workflow calling build:ci MUST set NODE_OPTIONS itself»· ένα τρίτο το αγνόησε και
+// έχτιζε με **1 από τις 20** μεταβλητές — πέθαινε σε OOM στα ~4,1 GB, και ο ΧΡΗΣΜΟΣ του
+// CHECK 3.51 δεν έτρεξε ΟΥΤΕ ΜΙΑ φορά επί 13 ημέρες. Το σχόλιο μέσα στο τρίτο έλεγε ότι
+// έλειπε «μία γραμμή env»: η περιγραφή της διόρθωσης ΗΤΑΝ η απόκλιση. Ένα anchor χωρίς
+// gate είναι σχόλιο (3.36). Ίδια σκανδάλη με το 3.37 — και τα δύο ρωτούν για workflows,
+// αλλά ΑΛΛΟ ερώτημα: εκείνο «ποιος παρακολουθείται;», αυτό «τι χτίζεται;».
+// ΔΕΝ είναι ratchet — καμία baseline, ποτέ: ένα build με λάθος περιβάλλον αρκεί.
+// ⚠️ Η σκανδάλη ΔΕΝ είναι η ίδια με του 3.37: πρέπει να περιλαμβάνει και τις ΤΟΠΙΚΕΣ
+// σύνθετες ενέργειες (εκεί μπορεί να κρυφτεί build) και τον ΚΩΔΙΚΑ ΤΗΣ ΙΔΙΑΣ ΤΗΣ ΠΥΛΗΣ —
+// αλλιώς μια αλλαγή στο κριτήριο περνά χωρίς να ασκηθεί το κριτήριο.
+const buildParityTriggers = allFiles.filter(
+  f => f.startsWith('.github/workflows/')
+    || f.startsWith('.github/actions/')
+    || f === '.ci-gate-tiers.json'
+    || f.startsWith('scripts/lib/ci/')
+    || f.startsWith('scripts/lib/build-parity/')
+    || f === 'scripts/check-production-build-parity.js'
+);
+if (!process.env.SKIP_BUILD_PARITY && buildParityTriggers.length > 0)
+  addThread('3.57', 'Production build parity', 'scripts/check-production-build-parity.js');
+
 // CHECK 3.38 (ADR-770) — «διαβάζεται»; Στο ΠΡΟΕΠΙΛΕΓΜΕΝΟ (σκοτεινό) θέμα το `--primary`
 // λύνεται σε `217 33% 17%`, ΤΑΥΤΟΣΗΜΟ με το `--card`: το `text-primary` αποτυγχάνει σε
 // 23/23 επιφάνειες, τέσσερις στο 1,00:1 (ADR-759 §4.12.2). Κανένα υπάρχον gate δεν το

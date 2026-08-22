@@ -260,149 +260,20 @@ jobs:
             echo "Αναφορά: \`npm run i18n-ssr:report\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
-  ssr-raw-keys-oracle:
-    name: 🔮 i18n SSR raw keys — ο ΧΡΗΣΜΟΣ (CHECK 3.51 Χ)
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    steps:
-      - name: 📥 Checkout
-        uses: actions/checkout@v4
-
-      - name: 📦 Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9.14.0
-          run_install: false
-
-      - name: 📦 Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-
-      - name: 📦 Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      # Πρότυπο Next.js CI: το `.next/cache` κάνει τα επόμενα builds αυξητικά.
-      - name: 💾 Cache Next.js build
-        uses: actions/cache@v4
-        with:
-          path: ${{ github.workspace }}/.next/cache
-          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ hashFiles('src/**/*.ts', 'src/**/*.tsx') }}
-          restore-keys: |
-            ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-
-
-      - name: 🏗️ Build (παράγει τον ίδιο server που πάει στην παραγωγή)
-        run: pnpm run build:ci
-        env:
-          # ⚠️ ΥΠΟΧΡΕΩΤΙΚΟ — το `build:ci` ΔΕΝ θέτει NODE_OPTIONS από μόνο του, και
-          # αυτό είναι ΣΚΟΠΙΜΟ: το `build` το κάνει μέσω `cross-env`, που ΣΒΗΝΕΙ
-          # ό,τι έχει θέσει το workflow (δες docker-build.yml:45-50 — εκεί το 12288
-          # απορριπτόταν σιωπηλά και το build έτρεχε με 8192). Το τίμημα είναι ότι
-          # κάθε καλών του `build:ci` οφείλει να το θέσει ΜΟΝΟΣ του· αν το ξεχάσει,
-          # δεν σπάει τίποτα ρητά — ο runner πέφτει στο προεπιλεγμένο heap και το
-          # build πεθαίνει με `FATAL ERROR: Ineffective mark-compacts near heap
-          # limit` (exit 134). Ακριβώς αυτό συνέβη εδώ από 09/08 έως 21/08: ο
-          # ΧΡΗΣΜΟΣ του CHECK 3.51 δεν έτρεξε ΟΥΤΕ ΜΙΑ φορά, και η αποτυχία
-          # διαβαζόταν ως «σπασμένος χρησμός» αντί για «λείπει μία γραμμή env».
-          # Ίδια τιμή με docker-build.yml + bundle-ratchet.yml — οι μόνοι άλλοι δύο
-          # καλούντες του `build:ci` (επαληθευμένο σαρώνοντας ΟΛΑ τα workflows).
-          NODE_OPTIONS: '--max-old-space-size=12288'
-
-      # 🔑 Ο STANDALONE SERVER, ΟΧΙ `next dev` ΚΑΙ ΟΧΙ `next start`.
-      # Το `next.config` δηλώνει `output: 'standalone'`, δηλαδή **αυτό ακριβώς**
-      # είναι ο server που μπαίνει στο Docker image και φτάνει στο Netcup. Ο
-      # χρησμός οφείλει να ρωτήσει **τον server που στέλνεται**, όχι έναν
-      # ισοδύναμό του: σε dev το πρώτο αίτημα μεταγλωττίζει (μετρημένο **167s**
-      # για το `/`) και το αποτέλεσμα εξαρτάται από τη σειρά, ενώ το `next start`
-      # με standalone output είναι ρητά μη υποστηριζόμενο από το Next.js.
-      # Τα `static` και `public` αντιγράφονται όπως ορίζει η τεκμηρίωση του
-      # standalone — χωρίς αυτά ο server σηκώνεται αλλά σερβίρει σπασμένη σελίδα,
-      # που ο χρησμός θα ανέφερε ως `probe-unproven` (σωστά, αλλά για λάθος λόγο).
-      - name: 🚀 Σήκωσε τον server που ΟΝΤΩΣ στέλνεται
-        run: |
-          cp -r public .next/standalone/public 2>/dev/null || true
-          mkdir -p .next/standalone/.next
-          cp -r .next/static .next/standalone/.next/static
-          node .next/standalone/server.js > /tmp/next-start.log 2>&1 &
-          for i in $(seq 1 60); do
-            if curl -s -o /dev/null -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36" http://127.0.0.1:3000/; then
-              echo "server up after ${i}s"; exit 0
-            fi
-            sleep 1
-          done
-          echo "::error title=CHECK 3.51 Χ::ο server δεν σηκώθηκε σε 60s"
-          cat /tmp/next-start.log
-          exit 1
-
-      # ⚠️ 127.0.0.1 και ΟΧΙ localhost: το `fetch` του Node λύνει πρώτα σε `::1`
-      # και ένας server που ακούει IPv4 δίνει ECONNREFUSED — δηλαδή «unreachable»
-      # για λόγο που δεν είναι η εφαρμογή. Μετρημένο, όχι υποθετικό.
-      - name: 🔮 CHECK 3.51 Χ — ο χρησμός σε ΟΛΕΣ τις διαδρομές
-        env:
-          I18N_SSR_ORACLE_BASE_URL: http://127.0.0.1:3000
-          I18N_SSR_ORACLE_CONCURRENCY: '4'
-          I18N_SSR_ORACLE_TIMEOUT_MS: '60000'
-        run: node scripts/check-i18n-ssr-oracle.js
-
-      - name: 🧪 Gate self-test
-        run: pnpm exec jest scripts/__tests__/check-i18n-ssr-oracle.test.js
-
-      # 🔑 ΠΡΩΤΗ ΥΙΟΘΕΤΗΣΗ ΚΑΙ ΚΑΘΕ ΝΟΜΙΜΗ ΔΙΟΡΘΩΣΗ, ΧΩΡΙΣ ΧΕΙΡΩΝΑΚΤΙΚΗ ΜΕΤΡΗΣΗ.
-      # Η baseline είναι **μέτρηση ενός συγκεκριμένου server**, και ο σωστός server
-      # είναι **αυτός** — το standalone artifact που πάει στο Netcup. Ένας άνθρωπος
-      # που θα τη μετρούσε στο μηχάνημά του θα κωδικοποιούσε **άλλο** περιβάλλον.
-      # Γι' αυτό, όταν η πύλη είναι κόκκινη, το job παράγει την **υποψήφια** baseline
-      # εδώ και τη δίνει ως artifact: η σπορά γίνεται download + commit, χωρίς κανείς
-      # να χρειάζεται να στήσει production build τοπικά.
-      # ⚠️ Το `--write-baseline` **αρνείται** αν υπάρχει `route-unreachable` ή
-      # `probe-unproven` — τότε δεν υπάρχει τίποτα να σπαρεί, και ο λόγος είναι στην
-      # αναφορά. Αυτό είναι η εγγύηση, όχι σφάλμα.
-      - name: 📤 Υποψήφια baseline + πλήρης αναφορά (μόνο όταν είναι κόκκινη)
-        if: failure()
-        env:
-          I18N_SSR_ORACLE_BASE_URL: http://127.0.0.1:3000
-          I18N_SSR_ORACLE_CONCURRENCY: '4'
-          I18N_SSR_ORACLE_TIMEOUT_MS: '60000'
-        # ⚠️ ΜΙΑ σάρωση, όχι δύο: το artifact **είναι** η αναφορά (κρατά `by_state`
-        # και ολόκληρη τη λίστα ταυτοτήτων). Ένα δεύτερο `--report` θα ξαναχτυπούσε
-        # και τις 141 διαδρομές για να τυπώσει ό,τι μόλις γράφτηκε.
-        run: |
-          node scripts/check-i18n-ssr-oracle.js --write-baseline --quiet 2>&1 | tee /tmp/seed.log || true
-          {
-            echo '### CHECK 3.51 Χ — υποψήφια baseline από ΑΥΤΗ την εκτέλεση'
-            echo ''
-            echo 'Κατέβασε το artifact `i18n-ssr-oracle-baseline-candidate`, βάλε το'
-            echo 'στη ρίζα ως `.i18n-ssr-oracle-baseline.json` και κάνε commit.'
-            echo ''
-            echo '```'
-            cat /tmp/seed.log
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: 📎 Ανέβασε την υποψήφια baseline
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: i18n-ssr-oracle-baseline-candidate
-          path: .i18n-ssr-oracle-baseline.json
-          if-no-files-found: ignore
-
-      - name: 🧭 How to resolve
-        if: failure()
-        run: |
-          {
-            echo "### CHECK 3.51 Χ — ο server στέλνει ωμό i18n κλειδί"
-            echo ""
-            echo "Ο ΧΡΗΣΜΟΣ είναι η **αυθεντία**: δεν μπορεί να είναι πράσινος πάνω σε"
-            echo "σπασμένη οθόνη, γιατί **είναι** η οθόνη."
-            echo ""
-            echo "| κατάσταση | σημασία |"
-            echo "|---|---|"
-            echo "| \`raw-key\` 🔴 | ο server έστειλε κυριολεκτικά ένα κλειδί locale ως κείμενο ή \`aria-label\` |"
-            echo "| \`probe-unproven\` ⛔ | καμία μεταφρασμένη τιμή στη σελίδα — ο χρησμός **δεν απέδειξε ότι κοίταξε** |"
-            echo "| \`route-unreachable\` ⛔ | 403/500/timeout. Αν είναι 403 με ΚΕΝΟ σώμα → \`BLOCKED_BOT_PATTERNS\` στο \`src/middleware.ts\`. **ΜΗΝ** αφαιρέσεις pattern: είναι κώδικας ασφαλείας. |"
-            echo ""
-            echo "Αναφορά: \`npm run i18n-ssr-oracle:report\`"
-            echo "Reseed **μόνο** μετά από νόμιμη διόρθωση: \`npm run i18n-ssr-oracle:baseline\`"
-          } >> "$GITHUB_STEP_SUMMARY"
+  # ⚠️ ΤΟ JOB `ssr-raw-keys-oracle` ΜΕΤΑΚΟΜΙΣΕ ΣΕ `i18n-ssr-oracle.yml` (ADR-788).
+  #
+  # Ζούσε εδώ και έχτιζε **δικό του** production build για να σηκώσει server.
+  # Μετρημένο στο ίδιο commit (2026-08-21): έχτιζε με **1 από τις 20**
+  # μεταβλητές περιβάλλοντος που χρησιμοποιούν οι δύο άλλοι καλούντες του
+  # `build:ci`, και πέθαινε σε OOM στα ~4,1 GB. Αποτέλεσμα: ο χρησμός δεν
+  # έτρεξε **ΟΥΤΕ ΜΙΑ ΦΟΡΑ** από τις 09/08 ως τις 22/08.
+  #
+  # 🔑 Η θεραπεία δεν ήταν «αντίγραψε και τις 20» — ήταν «**μην ξαναχτίσεις**».
+  # Ο χρησμός τραβάει πλέον την εικόνα που έσπρωξε το `docker-build.yml`, που
+  # **είναι** ο server της παραγωγής (το `Dockerfile` μόνο αντιγράφει το
+  # `.next/standalone`). Δεν διαχειρίζεται την απόκλιση — την κάνει αδύνατη.
+  #
+  # ⚠️ **ΜΗΝ τον ξαναφέρεις εδώ.** Αυτό το workflow είναι πύλη **φρεσκάδας
+  # artifact** (CHECK 3.34) και τρέχει σε PR χωρίς build· ο χρησμός χρειάζεται
+  # **δημοσιευμένη εικόνα**, που υπάρχει μόνο μετά το merge. Δύο διαφορετικές
+  # σκανδάλες σε ένα αρχείο σημαίνει ότι η μία από τις δύο δεν θα τρέχει.

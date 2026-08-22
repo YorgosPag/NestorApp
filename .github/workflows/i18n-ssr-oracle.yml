@@ -1,0 +1,207 @@
+# =============================================================================
+# T2 🔮 CHECK 3.51 Χ — ο ΧΡΗΣΜΟΣ, πάνω στην ΕΙΚΟΝΑ ΠΟΥ ΣΤΑΛΘΗΚΕ  (ADR-788)
+# =============================================================================
+#
+# ΤΟ ΕΡΩΤΗΜΑ: «περιέχει ωμά i18n κλειδιά το HTML που στέλνει ο server;»
+#
+# 🏆 ΚΑΙ Η ΑΠΑΝΤΗΣΗ ΔΙΝΕΤΑΙ ΑΠΟ ΤΟΝ **ΙΔΙΟ** SERVER ΠΟΥ ΤΡΕΧΕΙ ΣΤΟ NETCUP
+# -----------------------------------------------------------------------
+# Αυτό το workflow **ΔΕΝ ΧΤΙΖΕΙ ΤΙΠΟΤΑ**. Τραβάει την εικόνα που μόλις έσπρωξε
+# το `docker-build.yml` (Tier 1) και τη σηκώνει. Το `Dockerfile` **μόνο
+# αντιγράφει** το `.next/standalone`, άρα η εικόνα **ΕΙΝΑΙ** ο server — όχι
+# κάτι ισοδύναμο, ο ίδιος.
+#
+# ┌───────────────────────────────────────────────────────────────────────────┐
+# │ 🔴 ΓΙΑΤΙ ΑΛΛΑΞΕ: ΤΟ ΠΡΟΗΓΟΥΜΕΝΟ JOB ΕΧΤΙΖΕ ΔΕΥΤΕΡΟ SERVER ΚΑΙ ΠΕΘΑΙΝΕ.   │
+# └───────────────────────────────────────────────────────────────────────────┘
+#
+# Ο χρησμός ζούσε μέσα στο `i18n-shell-slice.yml` και έτρεχε `pnpm run build:ci`
+# μόνος του. Μετρημένο στο ίδιο commit (2026-08-21, run 32458992910):
+#
+#     docker-build.yml   (Tier 1)   20 μεταβλητές env → ✅ build σε 14′15″
+#     bundle-ratchet.yml            20 μεταβλητές env → ✅ build
+#     i18n-shell-slice.yml (χρησμός) **1** μεταβλητή  → ❌ OOM στα ~4,1 GB
+#
+# Το σχόλιο μέσα στο παλιό job έλεγε ότι το πρόβλημα ήταν «**μία γραμμή env**»
+# που είχε προστεθεί. **Έλειπαν 19 από τις 20** — δηλαδή το σχόλιο που
+# περιέγραφε τη διόρθωση **ήταν το ίδιο η απόκλιση**. Αποτέλεσμα: ο χρησμός δεν
+# έτρεξε **ΟΥΤΕ ΜΙΑ ΦΟΡΑ** από τις 2026-08-09 ως τις 2026-08-22, και η
+# `.i18n-ssr-oracle-baseline.json` **δεν υπήρξε ποτέ**.
+#
+# 🔑 Η ΘΕΡΑΠΕΙΑ ΔΕΝ ΕΙΝΑΙ «ΑΝΤΙΓΡΑΨΕ ΚΑΙ ΤΙΣ 20» — ΕΙΝΑΙ «ΜΗΝ ΞΑΝΑΧΤΙΣΕΙΣ»
+# ----------------------------------------------------------------------
+# Τρεις χειρόγραφες λίστες env, η μία αποκλίνουσα κατά 95%, καμία πύλη από πάνω
+# τους: το ίδιο σχήμα με τις δύο λίστες namespace του CHECK 3.34 (απόκλιση 63)
+# και τη λίστα των 18-έναντι-26 του CHECK 3.37. Μια τέταρτη λίστα θα απέκλινε
+# κι αυτή. Το «build once, deploy many» είναι κανονική βιομηχανική πρακτική και
+# το ξαναχτίσιμο σε κάθε pipeline **τεκμηριωμένο anti-pattern**: η κατανάλωση
+# του **ίδιου** artifact δεν διαχειρίζεται την απόκλιση — την κάνει **αδύνατη**.
+#
+# ⚠️ ΓΙΑΤΙ ΞΕΧΩΡΙΣΤΟ WORKFLOW ΚΑΙ ΟΧΙ ΒΗΜΑ ΜΕΣΑ ΣΤΟ `docker-build.yml`
+# -------------------------------------------------------------------
+# Το `docker-build.yml` είναι ο αγωγός **κυκλοφορίας** (Tier 1). Μια πύλη
+# **ποιότητας** εκεί σημαίνει ότι ένα ωμό κλειδί σταματά το deploy στο Netcup
+# και ότι η αποτυχία **ονομάζεται** «απέτυχε το Build & Deploy» — το ακριβώς
+# λάθος που το ADR-775 απέρριψε ρητά και που γέννησε το ADR-757 (alert fatigue).
+# Εδώ: Tier 2, δικό του όνομα, δική του αποτυχία, μηδέν επίδραση στο deploy.
+#
+# ⚠️ ΔΗΛΩΜΕΝΟ ΟΡΙΟ: τρέχει **μετά** το merge, γιατί η εικόνα δεν υπάρχει πριν
+# χτιστεί. Δεν μπλοκάρει το PR που εισάγει το ελάττωμα — μπλοκάρει το επόμενο,
+# όπως κάθε ratchet του CI εδώ. Το `workflow_dispatch` δίνει εκτέλεση κατ᾽
+# απαίτηση πάνω σε οποιαδήποτε δημοσιευμένη ετικέτα.
+# =============================================================================
+
+name: T2 🔮 i18n SSR raw keys — ο ΧΡΗΣΜΟΣ (CHECK 3.51 Χ)
+
+on:
+  # 🔑 Η ΜΟΝΗ ΣΩΣΤΗ ΣΚΑΝΔΑΛΗ: όταν υπάρχει εικόνα να ρωτηθεί.
+  # ⚠️ Το `name` πρέπει να ταιριάζει ΑΚΡΙΒΩΣ με το `name:` του docker-build.yml —
+  #    το GitHub δεν προειδοποιεί για ασυμφωνία, απλώς δεν πυροδοτεί ΠΟΤΕ.
+  #    Το φυλάει το CHECK 3.37 (μητρώο `.ci-gate-tiers.json`).
+  workflow_run:
+    workflows: ['T1 🚀 Build & Deploy Docker Image']
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Ετικέτα εικόνας (π.χ. latest ή main-52647ed)'
+        required: false
+        default: 'latest'
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  oracle:
+    name: 🔮 ο ΧΡΗΣΜΟΣ πάνω στην εικόνα της παραγωγής
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    # ⚠️ fail-closed: αν το build απέτυχε, ΔΕΝ υπάρχει εικόνα αυτού του commit.
+    #    Χωρίς αυτό ο χρησμός θα ρωτούσε την ΠΡΟΗΓΟΥΜΕΝΗ εικόνα και θα ανέφερε
+    #    αποτέλεσμα για κώδικα που δεν είναι αυτός — «μέτρησα», για άλλο πράγμα.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+
+    steps:
+      # Το checkout δίνει τα locales, το slice και τον ίδιο τον χρησμό — και
+      # πρέπει να είναι ΤΟΥ ΙΔΙΟΥ commit με την εικόνα, αλλιώς ο χρησμός κρίνει
+      # τον server του Α με το σύμπαν κλειδιών του Β.
+      - name: 📥 Checkout — ΤΟ ΙΔΙΟ commit με την εικόνα
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.ref }}
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Ο χρησμός είναι σκέτο Node χωρίς εξαρτήσεις (fetch + fs). Καμία
+      # εγκατάσταση — ό,τι δεν εγκαθίσταται δεν μπορεί να αποκλίνει.
+
+      - name: 🔑 Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # ⚠️ Η ετικέτα βγαίνει από το `docker/metadata-action` του docker-build:
+      #    `type=sha,prefix=main-,format=short` ⇒ `main-<7 χαρακτήρες>`.
+      #    ΠΟΤΕ `latest` στο workflow_run: το `latest` δείχνει σε ό,τι έσπρωξε
+      #    τελευταίο, που σε δύο ταυτόχρονα merge ΔΕΝ είναι το δικό μας commit.
+      - name: 🏷️ Ποια εικόνα ρωτάμε
+        id: image
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.image_tag }}"
+          else
+            TAG="main-$(echo "${{ github.event.workflow_run.head_sha }}" | cut -c1-7)"
+          fi
+          echo "ref=ghcr.io/yorgospag/nestor-app:${TAG}" >> "$GITHUB_OUTPUT"
+          echo "::notice title=CHECK 3.51 Χ::ο χρησμός ρωτά την εικόνα ${TAG}"
+
+      # 🔑 ΤΟ ΙΔΙΟ ΠΕΡΙΒΑΛΛΟΝ ΠΟΥ ΨΗΝΕΤΑΙ ΣΤΗΝ ΕΙΚΟΝΑ ΤΗΣ ΠΑΡΑΓΩΓΗΣ.
+      #    Τα `NEXT_PUBLIC_*` ενσωματώνονται στο **build**, άρα ταξιδεύουν ήδη
+      #    μέσα στην εικόνα — δεν ξαναδηλώνονται εδώ. Ό,τι είναι μυστικό της
+      #    παραγωγής (Firebase Admin, Coolify) **ΔΕΝ** υπάρχει, και αυτό είναι
+      #    δηλωμένο: μια διαδρομή που το χρειάζεται θα βγει `route-unreachable`
+      #    ή `probe-unproven` — δηλαδή ⛔ και θορυβώδης, ποτέ σιωπηλά «καθαρή».
+      - name: 🚀 Σήκωσε ΤΗΝ ΕΙΚΟΝΑ (κανένα build)
+        run: |
+          docker run -d --name nestor-oracle -p 3000:3000 "${{ steps.image.outputs.ref }}"
+          for i in $(seq 1 90); do
+            if curl -s -o /dev/null -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36" http://127.0.0.1:3000/; then
+              echo "server up after ${i}s"; exit 0
+            fi
+            sleep 1
+          done
+          echo "::error title=CHECK 3.51 Χ::η εικόνα δεν σήκωσε server σε 90s"
+          docker logs nestor-oracle
+          exit 1
+
+      # ⚠️ 127.0.0.1 και ΟΧΙ localhost: το `fetch` του Node λύνει πρώτα σε `::1`
+      #    και ένας server που ακούει IPv4 δίνει ECONNREFUSED — δηλαδή
+      #    «unreachable» για λόγο που δεν είναι η εφαρμογή. Μετρημένο.
+      - name: 🔮 CHECK 3.51 Χ — ο χρησμός σε ΟΛΕΣ τις διαδρομές
+        env:
+          I18N_SSR_ORACLE_BASE_URL: http://127.0.0.1:3000
+          I18N_SSR_ORACLE_CONCURRENCY: '4'
+          I18N_SSR_ORACLE_TIMEOUT_MS: '60000'
+        run: node scripts/check-i18n-ssr-oracle.js
+
+      # ⚠️ ΚΑΝΕΝΑ gate self-test ΕΔΩ, ΕΠΙΤΗΔΕΣ. Το `jest-suite.yml` (CHECK 3.54)
+      #    τρέχει **ΟΛΗ** τη σουίτα **άνευ όρων** σε κάθε PR, άρα το
+      #    `check-i18n-ssr-oracle.test.js` εκτελείται ήδη — και μάλιστα *νωρίτερα*.
+      #    Δεύτερος εκτελεστής εδώ θα ήταν δεύτερη αυθεντία για το ίδιο ερώτημα
+      #    (ADR-749), και θα απαιτούσε `pnpm install` σε ένα job που σκόπιμα
+      #    **δεν έχει εξαρτήσεις**: ό,τι δεν εγκαθίσταται δεν μπορεί να αποκλίνει.
+
+      # 🔑 ΠΡΩΤΗ ΣΠΟΡΑ ΚΑΙ ΚΑΘΕ ΝΟΜΙΜΗ ΔΙΟΡΘΩΣΗ, ΧΩΡΙΣ ΧΕΙΡΩΝΑΚΤΙΚΗ ΜΕΤΡΗΣΗ.
+      # Η baseline είναι μέτρηση **ενός συγκεκριμένου server**, και ο σωστός
+      # server είναι **αυτός**. Όταν η πύλη είναι κόκκινη, το job παράγει την
+      # υποψήφια baseline εδώ και τη δίνει ως artifact: download + commit.
+      # ⚠️ Το `--write-baseline` **αρνείται** αν υπάρχει `route-unreachable` ή
+      # `probe-unproven`. Τότε δεν υπάρχει τίποτα να σπαρεί, και ο λόγος είναι
+      # στην αναφορά. **Αυτή η άρνηση είναι η εγγύηση, όχι σφάλμα.**
+      - name: 📤 Υποψήφια baseline + πλήρης αναφορά (μόνο όταν είναι κόκκινη)
+        if: failure()
+        env:
+          I18N_SSR_ORACLE_BASE_URL: http://127.0.0.1:3000
+          I18N_SSR_ORACLE_CONCURRENCY: '4'
+          I18N_SSR_ORACLE_TIMEOUT_MS: '60000'
+        # ⚠️ ΜΙΑ σάρωση, όχι δύο: το artifact **είναι** η αναφορά (κρατά
+        # `by_state` και ολόκληρη τη λίστα ταυτοτήτων).
+        run: |
+          node scripts/check-i18n-ssr-oracle.js --write-baseline --quiet 2>&1 | tee /tmp/seed.log || true
+          {
+            echo '### CHECK 3.51 Χ — υποψήφια baseline από ΑΥΤΗ την εκτέλεση'
+            echo ''
+            echo "Εικόνα: \`${{ steps.image.outputs.ref }}\`"
+            echo ''
+            echo 'Κατέβασε το artifact `i18n-ssr-oracle-baseline-candidate`, βάλε το'
+            echo 'στη ρίζα ως `.i18n-ssr-oracle-baseline.json` και κάνε commit.'
+            echo ''
+            echo '```'
+            cat /tmp/seed.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 📎 Ανέβασε την υποψήφια baseline
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: i18n-ssr-oracle-baseline-candidate
+          path: .i18n-ssr-oracle-baseline.json
+          include-hidden-files: true # dotfile baseline — το v4 τα κόβει by default
+          # ⚠️ `warn`, ΟΧΙ `ignore`: όταν το `--write-baseline` **αρνείται** (γιατί
+          #    υπάρχει ⛔ κατάσταση) το αρχείο δεν γράφεται, και μια σιωπηλή
+          #    απουσία artifact διαβάζεται ως «δεν χρειάστηκε». Η άρνηση πρέπει
+          #    να ακούγεται — είναι η εγγύηση, όχι παράλειψη.
+          if-no-files-found: warn
+
+      - name: 🧹 Κατέβασε τον server
+        if: always()
+        run: docker rm -f nestor-oracle || true

@@ -11,8 +11,13 @@
  * ΓΙΑΤΙ ΕΙΝΑΙ Η ΑΥΘΕΝΤΙΑ
  * -----------------------
  * Δεν μπορεί να είναι πράσινος πάνω σε σπασμένη οθόνη, **γιατί είναι η οθόνη**.
- * Και είναι ο **μόνος** που απαντά για τις **29 δυναμικές** διαδρομές και για
+ * Και είναι ο **μόνος** που απαντά για τις **33 δυναμικές** διαδρομές και για
  * ό,τι η στατική ανάλυση αρνείται.
+ *
+ * ⚠️ **154 διαδρομές, όχι 141** (μετρημένο 2026-08-22 εκτελώντας την
+ * `enumerateRoutes`). Ο αριθμός «141» ταξίδεψε από handoff σε ADR σε CLAUDE.md
+ * χωρίς κανείς να τον ξαναμετρήσει· είναι ακριβώς το σχήμα που το CHECK 3.49
+ * υπάρχει για να μη συμβαίνει. **Μέτρησέ τον, μην τον αντιγράψεις.**
  *
  * ΜΕΤΡΗΜΕΝΗ ΒΑΘΜΟΝΟΜΗΣΗ (dev server, 2026-08-09)
  * -----------------------------------------------
@@ -37,12 +42,31 @@
  * ⛔ ΑΛΛΑ ΔΥΟ ΚΑΤΑΣΤΑΣΕΙΣ ΔΕΝ ΜΠΑΙΝΟΥΝ ΠΟΤΕ ΣΕ BASELINE
  * -----------------------------------------------------
  *   `route-unreachable`  — 403/500/timeout/κενό σώμα
- *   `probe-unproven`     — καμία μεταφρασμένη τιμή στη σελίδα
+ *   `probe-unproven`     — ούτε το κέλυφος δεν βάφτηκε μεταφρασμένο
  * Και οι δύο σημαίνουν **«δεν κοίταξα»**, και «δεν κοίταξα» δεν έχει πρόοδο.
  * Το `buildPayload` **αρνείται** να τις γράψει (πρότυπο CHECK 3.44/3.50).
  *
- * ⚠️ ΔΕΝ ΤΡΕΧΕΙ ΣΕ PRE-COMMIT. Χρειάζεται server· στο CI σηκώνεται από
- * `next build` + `next start`. Τοπικά: σήκωσε server και τρέξε το script.
+ * ΟΙ ΔΥΟ ΝΕΕΣ ΚΑΤΑΣΤΑΣΕΙΣ ΕΠΙΦΑΝΕΙΑΣ (ADR-788) — ΓΙΑΤΙ ΔΕΝ ΕΙΝΑΙ «CLEAN»
+ * ----------------------------------------------------------------------
+ *   🔴 `surface-shell-only`   στατική διαδρομή που έβαψε **μόνο** το κέλυφος
+ *   🔶 `surface-synthetic-id` δυναμική διαδρομή με id που δεν υπάρχει
+ *
+ * Και οι δύο ήταν μέχρι σήμερα **«clean»** — δηλαδή ο χρησμός έλεγε «καθαρή»
+ * για οθόνες που δεν είχε δει ποτέ. Η πρώτη μπλοκάρει με ratchet (είναι
+ * διορθώσιμη), η δεύτερη **μετριέται** (δεν είναι — το id δεν υπάρχει επειδή
+ * η πύλη δεν επιτρέπεται να γράψει δεδομένα στη βάση για να το φτιάξει).
+ *
+ * ⚠️ ΔΕΝ ΤΡΕΧΕΙ ΣΕ PRE-COMMIT. Χρειάζεται server.
+ *
+ * 🏆 ΚΑΙ ΔΕΝ ΤΟΝ ΧΤΙΖΕΙ — ΤΟΝ ΚΑΤΕΒΑΖΕΙ (ADR-788)
+ * -----------------------------------------------
+ * Το `i18n-ssr-oracle.yml` **τραβάει την εικόνα** `ghcr.io/…:main-<sha>` που
+ * μόλις πήγε στο Netcup και τη σηκώνει. Δεν είναι βελτιστοποίηση: ένα δεύτερο
+ * build **δεν είναι ο server που στέλνεται**, όσο κι αν του μοιάζει — και η
+ * απόδειξη είναι μετρημένη (το παλιό job έχτιζε με **1 από τις 20**
+ * μεταβλητές περιβάλλοντος της παραγωγής και πέθαινε σε OOM).
+ * Τοπικά: `docker run -p 3000:3000 ghcr.io/yorgospag/nestor-app:latest` και
+ * μετά `npm run i18n-ssr-oracle:report`.
  *
  * Περιβάλλον:
  *   I18N_SSR_ORACLE_BASE_URL   προεπιλογή `http://127.0.0.1:3000`
@@ -90,38 +114,97 @@ function baseUrl() {
   return (process.env.I18N_SSR_ORACLE_BASE_URL || 'http://127.0.0.1:3000').replace(/\/$/, '');
 }
 
+/**
+ * Η ταυτότητα του ratchet: `διαδρομή|επιφάνεια|λεπτομέρεια`.
+ *
+ * ⚠️ **Χωρίς γραμμή και χωρίς σειρά** — μια μετακίνηση δεν επιτρέπεται να
+ * φαίνεται ως add+remove. **Ανά επιφάνεια** — μια διόρθωση στο κείμενο δεν
+ * επιτρέπεται να κρύψει νέο ωμό κλειδί στο `aria-label`.
+ */
+const VIOLATION_ID = (violation) => `${violation.line}|${violation.state.replace('raw-key/', '')}|${violation.detail}`;
+
+/** Οι κάδοι που ratchet-άρονται, σε **λεπτομέρειες** — η μία πηγή. */
+function toViolations(records) {
+  const out = [];
+  for (const record of records) {
+    if (record.state === O.X_STATES.RAW_KEY) {
+      for (const hit of record.keys) {
+        out.push({ file: record.file, line: record.route, state: `raw-key/${hit.surface}`, detail: hit.key });
+      }
+    } else if (O.X_RATCHETED.includes(record.state)) {
+      out.push({ file: record.file, line: record.route, state: record.state, detail: record.detail || '—' });
+    }
+  }
+  return out;
+}
+
+/**
+ * ⛔ μπλοκάρει και δεν μπαίνει σε baseline · 🔴 ratchet · 🔶 μετριέται · ✅ καθαρό.
+ * ⚠️ Η 🔶 **πρέπει** να έχει δικό της σύμβολο: αν έμπαινε στο ⛔ θα διαβαζόταν ως
+ * βλάβη, αν έμπαινε στο ✅ θα διαβαζόταν ως απόδειξη. Δεν είναι κανένα από τα δύο.
+ */
+function stateBadge(state) {
+  if (O.X_ZERO_TOLERANCE.includes(state)) return '⛔';
+  if (O.X_RATCHETED.includes(state)) return '🔴';
+  if (O.X_COUNTED.includes(state)) return '🔶';
+  return '✅';
+}
+
+/**
+ * Το σύμπαν κλειδιών + τα ΔΥΟ σύνολα απόδειξης.
+ *
+ * ⚠️ **fail-closed παντού**: κάθε «δεν διάβασα» γίνεται `throw`, ποτέ κενό σύνολο.
+ * Ένα κενό `page` σύνολο θα έβαφε **κάθε** διαδρομή `surface-shell-only`, δηλαδή
+ * φρουρός που κατηγορεί για δικό του σφάλμα· ένα κενό `shell` θα έβαφε κάθε
+ * διαδρομή `probe-unproven`. Και τα δύο θα έμοιαζαν με «βρήκα πρόβλημα».
+ */
+function buildOracleInputs() {
+  const { universe, unreadable } = O.buildUniverse(LOCALE_DIR);
+  if (unreadable.length > 0) {
+    throw new Error(`μη αναγνώσιμα locale namespaces: ${unreadable.map((item) => `${item.namespace} (${item.reason})`).join(', ')}`);
+  }
+  if (!fs.existsSync(SLICE)) throw new Error('λείπει το shell-slice.el.json — τρέξε: npm run generate:i18n-shell-slice');
+
+  // ⚠️ ΔΥΟ σύνολα απόδειξης, όχι ένα (ADR-788): το κέλυφος ζωγραφίζεται σε ΚΑΘΕ
+  //    διαδρομή, άρα ένα control φτιαγμένο ΜΟΝΟ από αυτό δεν μπορεί ποτέ να
+  //    πυροδοτήσει. Βλ. `lib/i18n-ssr/controls.js`.
+  const controls = O.buildControlUniverse(LOCALE_DIR, JSON.parse(fs.readFileSync(SLICE, 'utf8')));
+  if (controls.unreadable.length > 0) {
+    throw new Error(`μη αναγνώσιμα namespaces στο σύνολο απόδειξης: ${controls.unreadable.map((item) => item.namespace).join(', ')}`);
+  }
+  if (controls.shell.size === 0) throw new Error('μηδέν controls ΚΕΛΥΦΟΥΣ — ο χρησμός δεν μπορεί να αποδείξει ότι απάντησε ο server');
+  if (controls.page.size === 0) throw new Error('μηδέν controls ΣΕΛΙΔΑΣ — ο χρησμός δεν μπορεί να ξεχωρίσει σελίδα από κέλυφος');
+  return { universe, controls };
+}
+
+/** Η σάρωση, με ζωντανή πρόοδο ανά διαδρομή (η μόνη ορατότητα σε ένα CI job). */
+function sweepRoutes(selected, universe, controls, verbose) {
+  return O.sweep(selected, {
+    baseUrl: baseUrl(),
+    userAgent: USER_AGENT,
+    oracle: { universe, shellControls: controls.shell, pageControls: controls.page },
+    timeoutMs: Number(process.env.I18N_SSR_ORACLE_TIMEOUT_MS || 300000),
+    concurrency: Number(process.env.I18N_SSR_ORACLE_CONCURRENCY || 2),
+    onProgress: verbose
+      ? (record, done, total) => {
+          process.stderr.write(`${DIM}  [${String(done).padStart(3)}/${total}] ${stateBadge(record.state)} ${record.route} ${record.state}${record.keys.length ? ` (${record.keys.length})` : ''}${NC}\n`);
+        }
+      : undefined,
+  });
+}
+
 async function measure(args) {
   const posixRoot = PROJECT_ROOT.split(BS).join('/');
   const routes = O.enumerateRoutes(posixRoot);
   if (routes.length === 0) throw new Error('δεν βρέθηκε καμία διαδρομή κάτω από src/app');
 
-  const { universe, unreadable } = O.buildUniverse(LOCALE_DIR);
-  if (unreadable.length > 0) {
-    // fail-closed: ένα namespace που δεν διαβάστηκε είναι **άγνωστο**, όχι άδειο.
-    throw new Error(`μη αναγνώσιμα locale namespaces: ${unreadable.map((item) => `${item.namespace} (${item.reason})`).join(', ')}`);
-  }
-  if (!fs.existsSync(SLICE)) throw new Error('λείπει το shell-slice.el.json — τρέξε: npm run generate:i18n-shell-slice');
-  const controls = O.buildPositiveControls(JSON.parse(fs.readFileSync(SLICE, 'utf8')));
-  if (controls.size === 0) throw new Error('μηδέν θετικά controls — ο χρησμός δεν μπορεί να αποδείξει ότι κοίταξε');
+  const { universe, controls } = buildOracleInputs();
 
   const only = args.find((arg) => arg.startsWith('--only='));
   const selected = only ? routes.filter((route) => route.url.includes(only.slice('--only='.length))) : routes;
   const skipped = routes.filter((route) => !selected.includes(route));
 
-  const verbose = !args.includes('--quiet');
-  const records = await O.sweep(selected, {
-    baseUrl: baseUrl(),
-    userAgent: USER_AGENT,
-    oracle: { universe, controls },
-    timeoutMs: Number(process.env.I18N_SSR_ORACLE_TIMEOUT_MS || 300000),
-    concurrency: Number(process.env.I18N_SSR_ORACLE_CONCURRENCY || 2),
-    onProgress: verbose
-      ? (record, done, total) => {
-          const badge = record.state === O.X_STATES.CLEAN ? '✅' : record.state === O.X_STATES.RAW_KEY ? '🔴' : '⛔';
-          process.stderr.write(`${DIM}  [${String(done).padStart(3)}/${total}] ${badge} ${record.route} ${record.state}${record.keys.length ? ` (${record.keys.length})` : ''}${NC}\n`);
-        }
-      : undefined,
-  });
+  const records = await sweepRoutes(selected, universe, controls, !args.includes('--quiet'));
 
   // ⚠️ Καμία σιωπηλή δειγματοληψία: ό,τι δεν χτυπήθηκε μπαίνει ΡΗΤΑ και
   // ratchet-άρεται — μια κάλυψη που συρρικνώνεται πρέπει να φαίνεται.
@@ -131,29 +214,20 @@ async function measure(args) {
 
   const census = O.assertClosedX(records);
 
-  const violationIds = [];
-  for (const record of records) {
-    if (record.state === O.X_STATES.RAW_KEY) {
-      for (const hit of record.keys) violationIds.push(O.violationId(record, hit));
-    } else if (record.state === O.X_STATES.SKIPPED) {
-      violationIds.push(`${record.route}|skipped|—`);
-    }
-  }
+  // ⚠️ ΜΙΑ πηγή για τις ταυτότητες ΚΑΙ τις λεπτομέρειες. Μέχρι το ADR-788 τις
+  //    έχτιζαν ΔΥΟ βρόχοι με διαφορετικό κριτήριο, και το `route-skipped`
+  //    έβγαζε ταυτότητα που καμία λεπτομέρεια δεν αντιστοιχούσε — δηλαδή το
+  //    σχήμα του ADR-749 σε μικρογραφία, μέσα στην ίδια συνάρτηση.
+  const violations = toViolations(records);
 
   return {
     records,
     census,
     routes,
-    violationIds: violationIds.sort(),
+    controlSizes: { shell: controls.shell.size, page: controls.page.size, corpus: controls.corpus },
+    violationIds: violations.map(VIOLATION_ID).sort(),
     declarations: routes.map((route) => `${route.url}${route.dynamic ? ' (dynamic)' : ''}`).sort(),
-    violations: records
-      .filter((record) => record.state === O.X_STATES.RAW_KEY)
-      .flatMap((record) => record.keys.map((hit) => ({
-        file: record.file,
-        line: record.route,
-        state: `raw-key/${hit.surface}`,
-        detail: hit.key,
-      }))),
+    violations,
   };
 }
 
@@ -191,7 +265,7 @@ function buildPayload(measured) {
 
 function printReport(measured) {
   console.log(`\n${CHECK} — ο ΧΡΗΣΜΟΣ · ${measured.routes.length} διαδρομές έναντι ${baseUrl()}\n`);
-  const mark = (state) => (O.X_ZERO_TOLERANCE.includes(state) ? '⛔' : O.X_RATCHETED.includes(state) ? '🔴' : '✅');
+  const mark = stateBadge;
   // Οι κάδοι τυπώνονται ΑΚΟΜΑ ΚΑΙ ΣΤΟ ΜΗΔΕΝ (μάθημα CHECK 3.48 Κ6).
   for (const [state, count] of Object.entries(measured.census)) {
     console.log(`    ${mark(state)} ${state.padEnd(20)}${String(count).padStart(6)}`);
@@ -206,7 +280,17 @@ function printReport(measured) {
   const bySurface = {};
   for (const record of measured.records) for (const hit of record.keys) bySurface[hit.surface] = (bySurface[hit.surface] || 0) + 1;
   console.log(`\n  ανά επιφάνεια: ${JSON.stringify(bySurface)}`);
-  console.log(`  ${DIM}(μια επιφάνεια που λείπει από αυτόν τον πίνακα είναι τυφλό σημείο, όχι απουσία βλάβης)${NC}\n`);
+  console.log(`  ${DIM}(μια επιφάνεια που λείπει από αυτόν τον πίνακα είναι τυφλό σημείο, όχι απουσία βλάβης)${NC}`);
+
+  // ⚠️ Ο ΠΑΡΟΝΟΜΑΣΤΗΣ ΤΗΣ ΑΠΟΔΕΙΞΗΣ. Χωρίς αυτόν, ένα «όλα καθαρά» δεν
+  //    ξεχωρίζει από ένα «το control ήταν άδειο και κανείς δεν κοίταξε».
+  const sizes = measured.controlSizes;
+  console.log(`\n  σύνολα απόδειξης: κέλυφος ${sizes.shell} · σελίδα ${sizes.page} · corpus ${sizes.corpus}`);
+  console.log(`  ${DIM}(αν το «σελίδα» πέσει στο 0, κάθε διαδρομή γίνεται «μόνο κέλυφος» — φρουρός που κατηγορεί για δικό του σφάλμα)${NC}`);
+
+  const unjudged = measured.records.filter((record) => O.X_COUNTED.includes(record.state));
+  console.log(`\n  🔶 επιφάνειες που ΔΕΝ κρίθηκαν: ${unjudged.length} (δυναμικές διαδρομές με συνθετικό «${O.SYNTHETIC_SEGMENT}»)`);
+  console.log(`  ${DIM}(μετριούνται, δεν απαριθμούνται — πρότυπο \`unanalyzable-heritage\`, CHECK 3.44)${NC}\n`);
 }
 
 const DESCRIPTOR = {
@@ -216,8 +300,8 @@ const DESCRIPTOR = {
   measure,
   buildPayload,
   printReport,
-  violationId: (violation) => `${violation.line}|${violation.state.replace('raw-key/', '')}|${violation.detail}`,
-  labels: { violations: 'ωμά κλειδιά στο SSR HTML', declarations: 'διαδρομές' },
+  violationId: VIOLATION_ID,
+  labels: { violations: 'ευρήματα στο SSR HTML', declarations: 'διαδρομές' },
   messages: {
     worse: 'ο server στέλνει ωμό i18n κλειδί εκεί που δεν το έστελνε',
     newDeclLabel: 'ΝΕΑ ΔΙΑΔΡΟΜΗ:',
@@ -245,10 +329,10 @@ if (require.main === module) {
     console.error(`\n❌ ${CHECK} — Η ΠΥΛΗ ΑΡΝΕΙΤΑΙ ΝΑ ΑΠΟΦΑΝΘΕΙ\n`);
     console.error(`   ${error.message}\n`);
     console.error('   Σήκωσε τον server που ΟΝΤΩΣ στέλνεται και ξανατρέξε:');
-    console.error('     pnpm run build:ci');
-    console.error('     cp -r public .next/standalone/public');
-    console.error('     mkdir -p .next/standalone/.next && cp -r .next/static .next/standalone/.next/static');
-    console.error('     node .next/standalone/server.js &');
+    console.error('     docker run --rm -p 3000:3000 ghcr.io/yorgospag/nestor-app:latest');
+    console.error('   ⚠️ ΜΗΝ χτίσεις δεύτερο build για να τον φτιάξεις: ένα build με άλλο');
+    console.error('      περιβάλλον ΔΕΝ είναι ο server που στέλνεται, όσο κι αν του μοιάζει');
+    console.error('      (ADR-788 — μετρήθηκε ότι το παλιό job έχτιζε με 1 από τις 20).');
     console.error(`   Βάση: ${baseUrl()}  (⚠️ 127.0.0.1, ΟΧΙ localhost — το fetch του Node λύνει πρώτα ::1)\n`);
     process.exit(1);
   });
