@@ -12,7 +12,7 @@
 
 import { z } from 'zod';
 import { IfcGuidSchema, IfcPropertySetSchema } from './ifc-entity-mixin';
-import { Point3DSchema } from './geometry.schemas';
+import { BimPointSchema } from './geometry.schemas';
 
 // ─── Point3D ────────────────────────────────────────────────────────────────
 
@@ -110,7 +110,7 @@ export const RailingTypeSchema = z
 // ─── Path source ──────────────────────────────────────────────────────────────
 
 export const RailingPathSourceSchema = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal('sketch'), path: z.array(Point3DSchema) }).strict(),
+  z.object({ kind: z.literal('sketch'), path: z.array(BimPointSchema) }).strict(),
   z
     .object({
       kind: z.literal('hosted'),
@@ -118,9 +118,9 @@ export const RailingPathSourceSchema = z.discriminatedUnion('kind', [
       hostType: z.enum(['stair', 'slab-edge', 'ramp']),
       side: z.enum(['inner', 'outer']).optional(),
       // ADR-407 Φ7 — baked snapshot (self-hydrating hosted railing; sole writer = cascade).
-      resolvedPath: z.array(Point3DSchema).optional(),
+      resolvedPath: z.array(BimPointSchema).optional(),
       // ADR-407 Φ7c — «Baluster Per Tread» anchors (one railing-line point per tread, stepped z).
-      perTreadAnchors: z.array(Point3DSchema).optional(),
+      perTreadAnchors: z.array(BimPointSchema).optional(),
       slopeRatio: z.number().optional(),
     })
     .strict(),

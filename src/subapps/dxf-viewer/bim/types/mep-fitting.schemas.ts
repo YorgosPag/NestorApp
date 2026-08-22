@@ -12,7 +12,7 @@
 import { z } from 'zod';
 import { PlumbingSystemClassificationSchema } from './mep-connector.schemas';
 import { MEP_ELEMENT_TAIL_FIELDS } from './shared-params.schemas';
-import { Point3DSchema } from './geometry.schemas';
+import { BimPointSchema } from './geometry.schemas';
 
 export const MepFittingDomainSchema = z.enum(['pipe', 'duct']);
 
@@ -37,7 +37,7 @@ const MepFittingIncidentSchema = z
     entityId: z.string().min(1).optional(),
     segmentId: z.string().min(1).optional(),
     connectorId: z.string().min(1),
-    directionUnit: Point3DSchema,
+    directionUnit: BimPointSchema,
     diameterMm: z.number().positive(),
     // Transient point-host marker — host nodes never persist (kind → null), so a
     // persisted incident is normally `false`/absent; accepted for forward-compat.
@@ -53,7 +53,7 @@ export const MepFittingParamsSchema = z
     domain: MepFittingDomainSchema,
     kind: MepFittingKindSchema,
     junctionKey: z.string().min(1),
-    position: Point3DSchema,
+    position: BimPointSchema,
     centerlineElevationMm: z.number().finite(),
     incidents: z.array(MepFittingIncidentSchema),
     primaryDiameterMm: z.number().positive(),

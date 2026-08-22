@@ -31,8 +31,8 @@
 
 import type {
   BimEntity,
-  BoundingBox3D,
-  Point3D,
+  BimBounds,
+  BimPoint,
   PlanProfile,
 } from './bim-base';
 import type { SceneUnits } from '../../utils/scene-units';
@@ -112,17 +112,17 @@ export interface MepUnderfloorParams extends MepConnectorHostParams {
  */
 export interface MepUnderfloorGeometry {
   /** Axis-aligned bbox of the footprint (XY plane). */
-  readonly bbox: BoundingBox3D;
+  readonly bbox: BimBounds;
   /** m². Footprint area (Shoelace). */
   readonly areaM2: number;
   /** m. Total developed pipe length of the serpentine loop (BOQ-ready). */
   readonly totalLengthM: number;
   /** The continuous serpentine polyline (supply leg + return leg), world coords. */
-  readonly loopPath: readonly Point3D[];
+  readonly loopPath: readonly BimPoint[];
   /** Supply inlet world position (= loop entry). */
-  readonly supplyConnectorLocal: Point3D;
+  readonly supplyConnectorLocal: BimPoint;
   /** Return outlet world position (adjacent to supply at entry). */
-  readonly returnConnectorLocal: Point3D;
+  readonly returnConnectorLocal: BimPoint;
 }
 
 // ─── Entity (BIM generic instantiation) ───────────────────────────────────────

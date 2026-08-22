@@ -20,10 +20,10 @@
 
 import type {
   BimEntity,
-  Point3D,
-  Polyline3D,
-  Polygon3D,
-  BoundingBox3D,
+  BimPoint,
+  BimPolyline,
+  BimPolygon,
+  BimBounds,
 } from './bim-base';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
 import type { EnvelopeLayer } from './thermal-envelope-types';
@@ -106,7 +106,7 @@ export type OpeningSwing = 'inward' | 'outward';
  */
 export interface OpeningSelfHost {
   /** mm world coords — centre of the opening (self-host axis midpoint). */
-  readonly anchor: Point3D;
+  readonly anchor: BimPoint;
   /** rad — axis orientation, typically snapped to the underlying DXF line. */
   readonly rotationRad: number;
   /** mm — "wall thickness" the free-standing symbol shows. */
@@ -356,42 +356,42 @@ export function isWallHostedOpening<T extends { readonly params: Pick<OpeningPar
  */
 export interface OpeningGeometry {
   /** mm. Cutout center on host wall axis (world coords). */
-  readonly position: Point3D;
+  readonly position: BimPoint;
   /** rad. Host wall axis direction. */
   readonly rotation: number;
   /** mm. ΕΛΕΥΘΕΡΟ cutout rectangle outline (4 vertices, world coords) = το κούφωμα. */
-  readonly outline: Polygon3D;
+  readonly outline: BimPolygon;
   /**
    * mm. STRUCTURAL cutout outline (ADR-396) — το ελεύθερο `outline` διευρυμένο κατά
    * το πάχος της περιμετρικής μόνωσης (Z4) σε κάθε άκρο κατά τον άξονα. Ορίζει το
    * **δομικό κενό στον τοίχο** (η μόνωση τρώει τον τοίχο, όχι το κούφωμα). Present
    * μόνο όταν `params.revealInsulation` υπάρχει — αλλιώς undefined (consumers → free).
    */
-  readonly revealOutline?: Polygon3D;
+  readonly revealOutline?: BimPolygon;
   /** mm. Door swing arc — present only για door / french-door. */
-  readonly hingeArc?: Polyline3D;
+  readonly hingeArc?: BimPolyline;
   /**
    * mm. Door hinge anchor (pivot point) — present only για door / french-door.
    * Used by OpeningRenderer to draw the **leaf line** (door panel σε 90°-open)
    * from `hingeAnchor` → `hingeArc.points[HINGE_ARC_SUBDIVISIONS]`. Industry
    * convention (AutoCAD / Revit): door plan = swing arc (dashed) + leaf line (solid).
    */
-  readonly hingeAnchor?: Point3D;
+  readonly hingeAnchor?: BimPoint;
   /**
    * mm. Second hinge anchor — present only για french-door (dual-leaf).
    * Pairs με the second arc segment (points[HINGE_ARC_SUBDIVISIONS+1]) για
    * the second leaf line.
    */
-  readonly hingeAnchor2?: Point3D;
+  readonly hingeAnchor2?: BimPoint;
   /**
    * mm. ADR-611 — constant-cross-section frame members (κάσα) in PLAN, world
    * coords. Populated by the geometry phase as TWO jamb rectangles (one at each
-   * end of the opening along the wall axis), each a Polygon3D of 4 CCW vertices.
+   * end of the opening along the wall axis), each a BimPolygon of 4 CCW vertices.
    * Their faceWidth × depth stay CONSTANT regardless of `params.width/height`
    * (Revit swept-profile invariant). Absent → renderer draws no frame members.
    */
-  readonly frameOutlines?: readonly Polygon3D[];
-  readonly bbox: BoundingBox3D;
+  readonly frameOutlines?: readonly BimPolygon[];
+  readonly bbox: BimBounds;
   /** m². Opening face area (width × height in mm → m²). */
   readonly area: number;
   /** m. Perimeter για frame BOQ feed (2 × (width + height) / 1000). */

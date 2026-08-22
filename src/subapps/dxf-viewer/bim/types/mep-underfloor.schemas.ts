@@ -10,7 +10,7 @@
 import { z } from 'zod';
 import { IfcGuidSchema, IfcPropertySetSchema } from './ifc-entity-mixin';
 import { MepConnectorSchema } from './mep-connector.schemas';
-import { Point3DSchema, PlanProfileSchema } from './geometry.schemas';
+import { BimPointSchema, PlanProfileSchema } from './geometry.schemas';
 
 // ─── Point3D / Polygon3D ──────────────────────────────────────────────────────
 

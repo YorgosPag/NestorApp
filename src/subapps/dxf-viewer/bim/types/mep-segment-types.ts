@@ -35,10 +35,10 @@
 
 import type {
   BimEntity,
-  BoundingBox3D,
-  Point3D,
-  Polygon3D,
-  Polyline3D,
+  BimBounds,
+  BimPoint,
+  BimPolygon,
+  BimPolyline,
 } from './bim-base';
 import type { SceneUnits } from '../../utils/scene-units';
 import { mmToSceneUnits } from '../../utils/scene-units';
@@ -81,9 +81,9 @@ export interface MepSegmentParams extends MepConnectorHostParams {
   readonly domain: MepSegmentDomain;
   readonly sectionKind: MepSegmentSectionKind;
   /** Axis start, world coords (canvas units). */
-  readonly startPoint: Point3D;
+  readonly startPoint: BimPoint;
   /** Axis end, world coords (canvas units). */
-  readonly endPoint: Point3D;
+  readonly endPoint: BimPoint;
   /** mm. Cross-section X — rectangular only (duct width). Ignored when round. */
   readonly width?: number;
   /** mm. Cross-section Y — rectangular only (duct height). Ignored when round. */
@@ -144,9 +144,9 @@ export interface MepSegmentParams extends MepConnectorHostParams {
  *   - `bbox` — folds outline + axis, z range centred on centerlineElevation.
  */
 export interface MepSegmentGeometry {
-  readonly axisPolyline: Polyline3D;
-  readonly outline: Polygon3D;
-  readonly bbox: BoundingBox3D;
+  readonly axisPolyline: BimPolyline;
+  readonly outline: BimPolygon;
+  readonly bbox: BimBounds;
   /** m — axis length. */
   readonly length: number;
   /** m² — cross-section area. */

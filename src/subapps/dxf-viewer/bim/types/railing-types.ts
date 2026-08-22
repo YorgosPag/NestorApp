@@ -23,8 +23,8 @@
 
 import type {
   BimEntity,
-  BoundingBox3D,
-  Point3D,
+  BimBounds,
+  BimPoint,
 } from './bim-base';
 import type { SceneUnits } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
@@ -77,7 +77,7 @@ export interface RailProfile {
 // ─── PATH ⊥ TYPE: the path source ────────────────────────────────────────────
 
 /** A railing path = flat polyline in canvas-unit xy (z carried per-vertex, mm). */
-export type RailingPath = readonly Point3D[];
+export type RailingPath = readonly BimPoint[];
 
 /**
  * Source of the railing path. Φ1 ships `'sketch'`; `'hosted'` (Φ2-Φ3) resolves
@@ -107,7 +107,7 @@ export type RailingPathSource =
        * geometry); the rail + every baluster height stay derived from `resolvedPath`, so a stale
        * bake can never float the rail off the members. Sole writer = the cascade.
        */
-      readonly perTreadAnchors?: readonly Point3D[];
+      readonly perTreadAnchors?: readonly BimPoint[];
       /** ADR-407 Φ7 — host run rise/length ratio (baked with the snapshot; diagnostics + future ADA extensions). */
       readonly slopeRatio?: number;
     };
@@ -232,7 +232,7 @@ export interface RailingHostContext {
    * the tread-top z (stepped, mm). The engine seats a baluster on each tread; heights derive
    * live from `resolvedPath` to reach the smooth rail.
    */
-  readonly perTreadAnchors?: readonly Point3D[];
+  readonly perTreadAnchors?: readonly BimPoint[];
 }
 
 // ─── Geometry cache (derived; SSoT = params + engine) ────────────────────────
@@ -241,7 +241,7 @@ export interface RailingHostContext {
 export interface RailMemberSolid {
   readonly role: 'post' | 'baluster';
   /** Insertion point on the path (canvas-unit xy; z = base elevation, mm). */
-  readonly basePoint: Point3D;
+  readonly basePoint: BimPoint;
   /** mm. Vertical height of the member. */
   readonly heightMm: number;
   /** Degrees CCW — plan rotation aligning a rectangular profile to the path. */
@@ -263,7 +263,7 @@ export interface RailSweep {
 export interface RailPanel {
   readonly kind: 'glass' | 'mesh' | 'solid';
   /** Closed outline of the panel face (canvas-unit xy; z = mm). */
-  readonly outline: readonly Point3D[];
+  readonly outline: readonly BimPoint[];
   readonly thicknessMm: number;
   readonly material?: string;
 }
@@ -281,7 +281,7 @@ export interface RailingGeometry {
   readonly rails: readonly RailSweep[];
   /** Infill panels (empty until Φ5). */
   readonly panels: readonly RailPanel[];
-  readonly bbox: BoundingBox3D;
+  readonly bbox: BimBounds;
   /** m. Running length of the path (BOQ primary quantity). */
   readonly lengthM: number;
 }

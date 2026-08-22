@@ -27,8 +27,8 @@
 
 import type {
   BimEntity,
-  BoundingBox3D,
-  Point3D,
+  BimBounds,
+  BimPoint,
   PlanProfile,
 } from './bim-base';
 import type { SceneUnits } from '../../utils/scene-units';
@@ -163,7 +163,7 @@ export interface RoofParams {
  */
 export interface RoofFace {
   /** Closed outline (canvas-unit xy· z = κεκλιμένο mm απόλυτο). */
-  readonly outline: readonly Point3D[];
+  readonly outline: readonly BimPoint[];
   /** rise/run μέγεθος (0 = επίπεδο). */
   readonly slopeRatio: number;
   /** m². Προβολή στο έδαφος (footprint share). */
@@ -174,8 +174,8 @@ export interface RoofFace {
 
 /** Γραμμή κορφιά / λουκιού / hip / γείσου (canvas-unit xy, mm z). */
 export interface RoofRidgeLine {
-  readonly a: Point3D;
-  readonly b: Point3D;
+  readonly a: BimPoint;
+  readonly b: BimPoint;
   readonly kind: 'ridge' | 'hip' | 'valley' | 'eave';
 }
 
@@ -191,7 +191,7 @@ export interface RoofGeometry {
   readonly faces: readonly RoofFace[];
   /** Κορφιάδες / λούκια / hip ακμές (Φ1: ridge για gable). */
   readonly ridges: readonly RoofRidgeLine[];
-  readonly bbox: BoundingBox3D;
+  readonly bbox: BimBounds;
   /** m². Προβολή στο έδαφος (Qto ProjectedArea). */
   readonly projectedAreaM2: number;
   /** m². Κεκλιμένο/πραγματικό εμβαδό επιφάνειας (Qto GrossArea). */

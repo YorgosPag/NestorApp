@@ -11,7 +11,7 @@
 import { z } from 'zod';
 import { IfcGuidSchema, IfcPropertySetSchema } from './ifc-entity-mixin';
 import { MepConnectorSchema, PlumbingSystemClassificationSchema } from './mep-connector.schemas';
-import { Point3DSchema } from './geometry.schemas';
+import { BimPointSchema } from './geometry.schemas';
 import { PLACED_BODY_FIELDS, SCENE_HOST_FIELDS } from './shared-params.schemas';
 
 // ─── Point3D ──────────────────────────────────────────────────────────────────

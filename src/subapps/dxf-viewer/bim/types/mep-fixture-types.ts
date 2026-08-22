@@ -25,9 +25,9 @@
 
 import type {
   BimEntity,
-  BoundingBox3D,
-  Point3D,
-  Polygon3D,
+  BimBounds,
+  BimPoint,
+  BimPolygon,
 } from './bim-base';
 import type { SceneUnits } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
@@ -117,7 +117,7 @@ export interface MepFixtureParams extends MepConnectorHostParams {
   readonly kind: MepFixtureKind;
   readonly shape: MepFixtureShape;
   /** Insertion point (plan). `z` is derived from `mountingElevationMm`. */
-  readonly position: Point3D;
+  readonly position: BimPoint;
   /** Degrees CCW about `position` (plan). Ignored when `shape === 'circular'`. */
   readonly rotation: number;
   /** mm. Rectangular → footprint width; circular → diameter. */
@@ -164,9 +164,9 @@ export interface MepFixtureParams extends MepConnectorHostParams {
  * NEVER mutated by consumers. `area` in m², `height` (= body thickness) in mm.
  */
 export interface MepFixtureGeometry {
-  /** Polygon3D — horizontal footprint at the mounting plane. Closed CCW. */
-  readonly footprint: Polygon3D;
-  readonly bbox: BoundingBox3D;
+  /** BimPolygon — horizontal footprint at the mounting plane. Closed CCW. */
+  readonly footprint: BimPolygon;
+  readonly bbox: BimBounds;
   /** m². Footprint area. */
   readonly area: number;
   /** mm. Mirror of `params.bodyHeightMm` for downstream convenience. */

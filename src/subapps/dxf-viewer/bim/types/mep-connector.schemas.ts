@@ -10,7 +10,7 @@
  */
 
 import { z } from 'zod';
-import { Point3DSchema } from './geometry.schemas';
+import { BimPointSchema } from './geometry.schemas';
 
 export const MepConnectorDomainSchema = z.enum(['electrical', 'duct', 'pipe', 'fuel']);
 
@@ -85,8 +85,8 @@ export const MepConnectorSchema = z
     connectorId: z.string().min(1),
     domain: MepConnectorDomainSchema,
     flow: MepFlowDirectionSchema,
-    localPosition: Point3DSchema,
-    localDirection: Point3DSchema.optional(),
+    localPosition: BimPointSchema,
+    localDirection: BimPointSchema.optional(),
     electrical: MepElectricalConnectorParamsSchema.optional(),
     pipe: MepPipeConnectorParamsSchema.optional(),
     duct: MepDuctConnectorParamsSchema.optional(),

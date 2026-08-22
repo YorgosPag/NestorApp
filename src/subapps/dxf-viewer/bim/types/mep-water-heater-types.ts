@@ -36,9 +36,9 @@
 
 import type {
   BimEntity,
-  BoundingBox3D,
-  Point3D,
-  Polygon3D,
+  BimBounds,
+  BimPoint,
+  BimPolygon,
 } from './bim-base';
 import type { SceneUnits } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
@@ -69,7 +69,7 @@ export interface MepWaterHeaterParams extends MepConnectorHostParams {
   readonly kind: MepWaterHeaterKind;
   readonly shape: MepWaterHeaterShape;
   /** Insertion point (plan). `z` is derived from `mountingElevationMm`. */
-  readonly position: Point3D;
+  readonly position: BimPoint;
   /** Degrees CCW about `position` (plan). */
   readonly rotation: number;
   /** mm. Footprint width — the tank width (local X), along which the two connectors sit. */
@@ -125,9 +125,9 @@ export interface MepWaterHeaterParams extends MepConnectorHostParams {
  * NEVER mutated by consumers. `area` in m², `height` (= box height) in mm.
  */
 export interface MepWaterHeaterGeometry {
-  /** Polygon3D — horizontal footprint at the mounting plane. Closed CCW. */
-  readonly footprint: Polygon3D;
-  readonly bbox: BoundingBox3D;
+  /** BimPolygon — horizontal footprint at the mounting plane. Closed CCW. */
+  readonly footprint: BimPolygon;
+  readonly bbox: BimBounds;
   /** m². Footprint area. */
   readonly area: number;
   /** mm. Mirror of `params.bodyHeightMm` for downstream convenience. */

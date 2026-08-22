@@ -39,9 +39,9 @@
 import type {
   BimEntity,
   BimValidation,
-  BoundingBox3D,
-  Point3D,
-  Polygon3D,
+  BimBounds,
+  BimPoint,
+  BimPolygon,
 } from './bim-base';
 import type { SceneUnits } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
@@ -107,7 +107,7 @@ export interface MepFittingIncident {
   /** Which connector of the incident entity meets here (`'seg-start'` | `'seg-end'` | a manifold outlet id …). */
   readonly connectorId: string;
   /** Unit vector pointing AWAY from the node, along the pipe centreline. Zero vector for a host incident. */
-  readonly directionUnit: Point3D;
+  readonly directionUnit: BimPoint;
   /** mm. Nominal diameter of the incident pipe (0 for a host incident — its geometry is never built). */
   readonly diameterMm: number;
   /**
@@ -131,7 +131,7 @@ export interface MepFittingParams extends MepConnectorHostParams {
   /** Idempotency anchor — quantized node position. Same node ⇒ same key. */
   readonly junctionKey: string;
   /** Node centre, world coords (canvas units). */
-  readonly position: Point3D;
+  readonly position: BimPoint;
   /** mm. Elevation of the centreline node from project origin. */
   readonly centerlineElevationMm: number;
   /** The pipe ends meeting at the node — geometry + classification input. */
@@ -174,8 +174,8 @@ export interface MepFittingParams extends MepConnectorHostParams {
  *   - `length` — m, along-axis extent for coupling/reducer (optional).
  */
 export interface MepFittingGeometry {
-  readonly footprint: Polygon3D;
-  readonly bbox: BoundingBox3D;
+  readonly footprint: BimPolygon;
+  readonly bbox: BimBounds;
   /** m³ — BOQ rollup. */
   readonly volumeM3: number;
   /** m — along-axis length (coupling/reducer). */

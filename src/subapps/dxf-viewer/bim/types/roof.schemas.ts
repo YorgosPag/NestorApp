@@ -15,7 +15,7 @@ import { z } from 'zod';
 import { IfcGuidSchema, IfcPropertySetSchema } from './ifc-entity-mixin';
 import { SlabDnaSchema } from './slab.schemas';
 import { RoofTypeParamsSchema } from './bim-family-type.schemas';
-import { Point3DSchema, PlanProfileSchema } from './geometry.schemas';
+import { BimPointSchema, PlanProfileSchema } from './geometry.schemas';
 import { addDnaThicknessIssue } from './shared-params.schemas';
 
 // ─── Enums ──────────────────────────────────────────────────────────────────

@@ -12,7 +12,7 @@
 import { z } from 'zod';
 import { PlumbingSystemClassificationSchema } from './mep-connector.schemas';
 import { MEP_ELEMENT_TAIL_FIELDS } from './shared-params.schemas';
-import { Point3DSchema } from './geometry.schemas';
+import { BimPointSchema } from './geometry.schemas';
 
 export const MepSegmentDomainSchema = z.enum(['duct', 'pipe', 'fuel']);
 
@@ -25,8 +25,8 @@ export const MepSegmentParamsSchema = z
   .object({
     domain: MepSegmentDomainSchema,
     sectionKind: MepSegmentSectionKindSchema,
-    startPoint: Point3DSchema,
-    endPoint: Point3DSchema,
+    startPoint: BimPointSchema,
+    endPoint: BimPointSchema,
     width: z.number().positive().optional(),
     height: z.number().positive().optional(),
     diameter: z.number().positive().optional(),
