@@ -335,6 +335,28 @@ describe('Ν — ο χρησμός ξεχωρίζει ΤΗ ΣΕΛΙΔΑ από �
     });
   });
 
+  /**
+   * 🔴 Η `Ν4` ΕΒΓΑΙΝΕ ΠΡΑΣΙΝΗ ΚΑΙ ΠΡΙΝ ΤΟ ADR-790 — ΔΗΛΑΔΗ ΔΕΝ ΚΛΕΙΔΩΝΕ ΤΙΠΟΤΑ.
+   *
+   * Χρησιμοποιεί `fullPage(...)`, δηλαδή σελίδα που βάφει **και** control
+   * κελύφους **και** control σελίδας. Με τέτοια σελίδα το `!shellProven` είναι
+   * ψευδές ούτως ή άλλως, άρα η **σειρά** που η άγκυρα ισχυριζόταν ότι φυλά
+   * **δεν ασκούνταν ποτέ**. Η πραγματική περίπτωση είναι η αντίθετη και είναι
+   * **ζωντανή**: το `/mandate/ssr-probe` βάφει **δύο ωμά κλειδιά και τίποτε
+   * άλλο** — ακριβώς επειδή του λείπει το namespace — και αναφερόταν ⛔
+   * «δεν κοίταξα», μπλοκάροντας τη φωτογραφία ολόκληρου του έργου.
+   *
+   * ⚠️ Μετάλλαξη που βγαίνει πράσινη ⇒ διορθώνεται ο **σχεδιασμός**, όχι το test.
+   */
+  test('Ν4β — 🔴 ΤΟ ΖΩΝΤΑΝΟ /mandate: ΜΟΝΟ ωμά κλειδιά, ΚΑΜΙΑ άλλη απόδειξη ⇒ raw-key', async () => {
+    const raw = [...UNIVERSE].find((key) => key.includes('.'));
+    await serving(`<!doctype html><html><body><h1>${raw}</h1></body></html>`, async (baseUrl) => {
+      const record = await probe(baseUrl, { file: 'y/[token]/page.tsx', url: '/y/ssr-probe', dynamic: true });
+      expect(record.state).toBe(O.X_STATES.RAW_KEY);
+      expect(record.state).not.toBe(O.X_STATES.PROBE_UNPROVEN);
+    });
+  });
+
   test('Ν5 — η 🔶 κατάσταση ΔΕΝ μπλοκάρει και ΔΕΝ μπαίνει σε baseline ως παραβίαση', () => {
     expect(O.X_COUNTED).toContain(O.X_STATES.SYNTHETIC_ID);
     expect(O.X_ZERO_TOLERANCE).not.toContain(O.X_STATES.SYNTHETIC_ID);
@@ -433,5 +455,195 @@ describe('Δ — ο χρησμός ρωτά την ΕΙΚΟΝΑ που στάλ�
 
   test('Δ6 — fail-closed: αποτυχημένο build ⇒ ο χρησμός ΔΕΝ τρέχει σε παλιά εικόνα', () => {
     expect(ORACLE_WF).toContain("workflow_run.conclusion == 'success'");
+  });
+});
+
+
+// ===========================================================================
+// Ρ — ADR-790: Η ΜΗΧΑΝΗ ΚΑΤΑΣΤΑΣΕΩΝ ΜΕΤΑ ΤΗ ΦΩΤΟΓΡΑΦΙΑ
+//     «δεν κοίταξα» ΔΕΝ είναι μία κατάσταση — είναι τρεις, με τρεις θεραπείες
+// ===========================================================================
+
+/** Σαν τη `serving`, αλλά με **δικό μας κωδικό κατάστασης** — το 404 είναι το θέμα. */
+async function servingWith(status, html, fn) {
+  const server = http.createServer((_request, response) => {
+    response.writeHead(status, { 'content-type': 'text/html; charset=utf-8' });
+    response.end(html);
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const { port } = server.address();
+  try {
+    return await fn(`http://127.0.0.1:${port}`);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+}
+
+/** Έγγραφο Next.js **χωρίς τίποτα στο σώμα** — η ζωντανή περίπτωση `/oauth/consent`. */
+const emptyBody = '<!doctype html><html><head><title>Nestor App</title></head><body><div id="r"></div></body></html>';
+
+describe('Ρ — οι τρεις όψεις του «δεν κοίταξα»', () => {
+  test('Ρ1 — ΜΗΔΕΝ επιφάνειες στο σώμα ⇒ `surface-not-rendered`, ΟΧΙ ⛔ και ΟΧΙ «clean»', async () => {
+    await servingWith(200, emptyBody, async (baseUrl) => {
+      const record = await probe(baseUrl, { file: 'a/page.tsx', url: '/a', dynamic: false });
+      expect(record.state).toBe(O.X_STATES.NOT_RENDERED);
+      expect(O.X_ZERO_TOLERANCE).not.toContain(record.state);
+      expect(O.X_RATCHETED).toContain(record.state);
+    });
+  });
+
+  test('Ρ2 — ΤΟ `probe-unproven` ΠΑΡΑΜΕΝΕΙ ΟΠΛΙΣΜΕΝΟ: επιφάνειες υπάρχουν, καμία δική μας', async () => {
+    // Χωρίς αυτό η νέα κατάσταση θα είχε μετατρέψει τον ⛔ φρουρό σε αδρανή
+    // (ADR-749 §5) — δηλαδή θα «λυνόταν» το μπλοκάρισμα σβήνοντας τον έλεγχο.
+    const foreign = '<!doctype html><html><head><title>x</title></head><body><p>Access denied by upstream proxy</p></body></html>';
+    await servingWith(200, foreign, async (baseUrl) => {
+      const record = await probe(baseUrl, { file: 'a/page.tsx', url: '/a', dynamic: false });
+      expect(record.state).toBe(O.X_STATES.PROBE_UNPROVEN);
+      expect(O.X_ZERO_TOLERANCE).toContain(record.state);
+    });
+  });
+
+  test('Ρ3 — ΤΟ `<head>` ΔΕΝ ΕΙΝΑΙ ΑΠΟΔΟΘΕΙΣΑ ΕΠΙΦΑΝΕΙΑ (αλλιώς το «μηδέν» δεν υπάρχει)', () => {
+    const surfaces = O.extractSurfaces(emptyBody);
+    expect(surfaces.title).toBe('Nestor App');
+    expect(surfaces.bodyCount).toBe(0);
+  });
+
+  test('Ρ4 — …αλλά ωμό κλειδί ΣΤΟΝ ΤΙΤΛΟ κρίνεται κανονικά, ως `document-title`', () => {
+    const raw = [...UNIVERSE].find((key) => key.includes('.'));
+    const verdict = O.judgeHtml(`<html><head><title>${raw}</title></head><body></body></html>`, ORACLE);
+    expect(verdict.hits.map((hit) => hit.surface)).toContain('document-title');
+    expect(verdict.bodyCount).toBe(0);
+  });
+
+  test('Ρ5 — 🔴 ΤΟ ΚΕΛΥΦΟΣ ΔΕΝ ΑΠΟΔΕΙΚΝΥΕΙ ΤΗ ΣΕΛΙΔΑ: κομμάτι κόμβου ΔΕΝ είναι απόδειξη', () => {
+    // Το ζωντανό εύρημα: το `aria-label="Αλλαγή γλώσσας - Ελληνικά"` του κελύφους
+    // περιείχε τη λέξη «Ελληνικά», που είναι locale τιμή ΑΛΛΟΥ namespace ⇒ με
+    // αναζήτηση υπο-συμβολοσειράς **το κέλυφος απεδείκνυε τη σελίδα** σε 137
+    // από 150 ζωντανές διαδρομές της παραγωγής.
+    const control = [...CONTROLS.page].find((value) => !value.includes(' ') && value.length >= 6);
+    expect(O.anyControlRendered(CONTROLS.page, [`κάτι - ${control} και κάτι άλλο`])).toBe(false);
+    expect(O.anyControlRendered(CONTROLS.page, [control])).toBe(true);
+  });
+
+  test('Ρ6 — …και η ΝΟΜΙΜΗ περίπτωση κρατιέται: ακέραιοι ΓΕΙΤΟΝΙΚΟΙ κόμβοι', () => {
+    // `<strong>Διαχείριση</strong> Ακινήτων` = δύο ολόκληροι διαδοχικοί κόμβοι.
+    const control = [...CONTROLS.page].find((value) => value.split(' ').length === 2 && value.length >= 10);
+    const [head, tail] = control.split(' ');
+    expect(O.anyControlRendered(CONTROLS.page, ['άσχετο', head, tail, 'άσχετο'])).toBe(true);
+    // …αλλά ΟΧΙ όταν παρεμβάλλεται τρίτος κόμβος: η ένωση παύει να είναι η τιμή.
+    expect(O.anyControlRendered(CONTROLS.page, [head, 'ΠΑΡΕΜΒΟΛΗ', tail])).toBe(false);
+  });
+
+  test('Ρ7 — ΚΛΕΙΣΤΗ ΛΟΓΙΣΤΙΚΗ: ΚΑΘΕ κατάσταση σε ΑΚΡΙΒΩΣ μία κατηγορία', () => {
+    for (const state of Object.values(O.X_STATES)) {
+      const memberships = [O.X_ZERO_TOLERANCE, O.X_RATCHETED, O.X_COUNTED].filter((bucket) => bucket.includes(state)).length;
+      expect([state, memberships]).toEqual([state, state === O.X_STATES.CLEAN ? 0 : 1]);
+    }
+  });
+});
+
+// ===========================================================================
+// Σ — ADR-790: Η ΛΙΣΤΑ ΤΟΥ `src/app/**` ΔΕΝ ΕΙΝΑΙ Η ΛΙΣΤΑ ΤΗΣ ΠΑΡΑΓΩΓΗΣ
+// ===========================================================================
+
+const S = require('../lib/i18n-ssr/served-surface');
+
+describe('Σ — οι μηχανισμοί παρακράτησης, διαβασμένοι από την ΑΥΘΕΝΤΙΑ τους', () => {
+  test('Σ1 — τα `SCANNER_PATHS` διαβάζονται ΑΠΟ ΤΟ ΠΡΑΓΜΑΤΙΚΟ middleware, ποτέ αντιγραμμένα', () => {
+    const live = S.readStringArrayConst(readLive('src/middleware.ts'), 'SCANNER_PATHS', 'src/middleware.ts');
+    expect(live.length).toBeGreaterThan(20);
+    expect(live).toContain('/debug');
+    // ⚠️ Η ΑΠΟΔΕΙΞΗ ΟΤΙ ΔΕΝ ΕΙΝΑΙ ΑΝΤΙΓΡΑΦΟ: το σύνολο περιέχει και προθέματα που
+    //    καμία δική μας διαδρομή δεν αφορούν — δηλαδή προέρχεται από τον κώδικα.
+    expect(live).toContain('/wp-admin');
+  });
+
+  test('Σ2 — fail-closed: μετονομασμένο ή ΚΕΝΟ σύμβολο ⇒ throw ΜΕ ΟΝΟΜΑ, ποτέ κενό σύνολο', () => {
+    expect(() => S.readStringArrayConst('const OTHER = [];', 'SCANNER_PATHS', 'x')).toThrow(/SCANNER_PATHS/);
+    expect(() => S.readStringArrayConst('const SCANNER_PATHS: readonly string[] = [];', 'SCANNER_PATHS', 'x')).toThrow(/ΚΕΝΟΣ/);
+  });
+
+  test('Σ3 — κάθε μηχανισμός δηλώνεται με ΥΠΟΧΡΕΩΤΙΚΟ γραμμένο λόγο', () => {
+    const declared = S.loadDeclarations(REPO_ROOT);
+    expect(declared.length).toBeGreaterThan(0);
+    for (const entry of declared) {
+      expect(S.KINDS).toContain(entry.kind);
+      expect(entry.why.trim().length).toBeGreaterThanOrEqual(20);
+    }
+  });
+
+  test('Σ4 — άγνωστο είδος μηχανισμού ⇒ throw· λόγος που λείπει ⇒ throw', () => {
+    const tmp = path.join(REPO_ROOT, 'scripts', '__tests__', '.tmp-served-surface');
+    fs.mkdirSync(tmp, { recursive: true });
+    try {
+      fs.writeFileSync(path.join(tmp, S.DECLARATIONS), JSON.stringify({ withheldBy: [{ kind: 'επινοημένο', why: 'x'.repeat(30) }] }));
+      expect(() => S.loadDeclarations(tmp)).toThrow(/άγνωστος μηχανισμός/);
+      fs.writeFileSync(path.join(tmp, S.DECLARATIONS), JSON.stringify({ withheldBy: [{ kind: S.KINDS[0], why: 'σύντομο' }] }));
+      expect(() => S.loadDeclarations(tmp)).toThrow(/ΧΩΡΙΣ γραμμένο λόγο/);
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  test('Σ5 — Ο ΦΡΟΥΡΟΣ ΤΗΣ ΣΕΛΙΔΑΣ ΔΙΑΒΑΖΕΤΑΙ ΑΠΟ ΤΗΝ ΙΔΙΑ ΤΗ ΣΕΛΙΔΑ (και ο παρονομαστής)', () => {
+    const decorated = S.decorateWithholding(O.enumerateRoutes(POSIX_ROOT), REPO_ROOT);
+    const withheldUrls = decorated.filter((route) => route.withheld).map((route) => route.url);
+    expect(withheldUrls).toEqual(expect.arrayContaining(['/debug', '/debug/token-info', '/test-harness/dxf-canvas']));
+    // 🔑 Ο ΠΑΡΟΝΟΜΑΣΤΗΣ: το `/test-harness/listing-shapes` **δεν** έχει φρουρό,
+    //    άρα ΔΕΝ είναι παρακρατημένο — αλλιώς το κριτήριο θα ήταν «ο φάκελος».
+    expect(withheldUrls).not.toContain('/test-harness/listing-shapes');
+    expect(withheldUrls).not.toContain('/');
+  });
+
+  test('Σ6 — ΔΥΟ ΑΝΕΞΑΡΤΗΤΟΙ ΚΑΝΟΝΕΣ: 404 δηλωμένο ⇒ 🔶 · 404 ΑΔΗΛΩΤΟ ⇒ ⛔', async () => {
+    await servingWith(404, '', async (baseUrl) => {
+      const withheld = await probe(baseUrl, { file: 'a/page.tsx', url: '/a', dynamic: false, withheld: { mechanism: 'middleware-scanner-path', why: 'x' } });
+      expect(withheld.state).toBe(O.X_STATES.WITHHELD);
+      expect(O.X_COUNTED).toContain(withheld.state);
+
+      const plain = await probe(baseUrl, { file: 'b/page.tsx', url: '/b', dynamic: false });
+      expect(plain.state).toBe(O.X_STATES.UNREACHABLE);
+      expect(O.X_ZERO_TOLERANCE).toContain(plain.state);
+    });
+  });
+
+  test('Σ7 — 🔴 ΔΗΛΩΜΕΝΗ ΕΚΤΟΣ ΠΑΡΑΓΩΓΗΣ ΑΛΛΑ 200 ⇒ ratchet, ποτέ σιωπή', async () => {
+    await servingWith(200, page(''), async (baseUrl) => {
+      const record = await probe(baseUrl, { file: 'a/page.tsx', url: '/a', dynamic: false, withheld: { mechanism: 'in-page-production-guard', why: 'x' } });
+      expect(record.state).toBe(O.X_STATES.WITHHELD_ANSWERED);
+      expect(O.X_RATCHETED).toContain(record.state);
+      expect(record.detail).toContain('200');
+    });
+  });
+
+  test('Σ8 — Η ΣΕΙΡΑ: παρακρατημένη διαδρομή που ΒΑΦΕΙ ωμό κλειδί ⇒ raw-key, όχι σιωπή', async () => {
+    const raw = [...UNIVERSE].find((key) => key.includes('.'));
+    await servingWith(200, page(`<span>${raw}</span>`), async (baseUrl) => {
+      const record = await probe(baseUrl, { file: 'a/page.tsx', url: '/a', dynamic: false, withheld: { mechanism: 'in-page-production-guard', why: 'x' } });
+      expect(record.state).toBe(O.X_STATES.RAW_KEY);
+    });
+  });
+
+  /**
+   * 🔴 Η ΠΡΩΤΗ ΓΡΑΦΗ ΑΥΤΗΣ ΤΗΣ ΑΓΚΥΡΑΣ ΒΓΗΚΕ **ΠΡΑΣΙΝΗ** ΣΤΗ ΜΕΤΑΛΛΑΞΗ.
+   * Διάβαζε την **ήδη γραμμένη** baseline, οπότε σβήνοντας τον δείκτη από τον
+   * κώδικα το αρχείο έμενε ως είχε και το test περνούσε: έκρινε **στιγμιότυπο**,
+   * όχι **μηχανισμό** (σχήμα «Μ6» του CHECK 3.8). Πλέον καλεί το εκτελέσιμο.
+   */
+  test('Σ9 — Η ΠΑΡΑΚΡΑΤΗΣΗ ΕΙΝΑΙ ΜΕΡΟΣ ΤΗΣ ΔΗΛΩΣΗΣ (αλλιώς η κάλυψη συρρικνώνεται σιωπηλά)', () => {
+    const plain = CLI.declarationOf({ url: '/a', dynamic: false, withheld: null });
+    const withheld = CLI.declarationOf({ url: '/a', dynamic: false, withheld: { mechanism: 'middleware-scanner-path', why: 'x' } });
+    expect(plain).toBe('/a');
+    expect(withheld).toBe('/a (withheld: middleware-scanner-path)');
+    // …και η ΙΔΙΑ διαδρομή αλλάζει δήλωση όταν αποκτά φρουρό ⇒ ΜΠΛΟΚΑΡΕΙ.
+    expect(withheld).not.toBe(plain);
+  });
+
+  test('Σ9β — …και η φωτογραφία που γράφτηκε ΟΝΤΩΣ φέρει τον δείκτη', () => {
+    const baseline = JSON.parse(readLive('.i18n-ssr-oracle-baseline.json'));
+    const marked = baseline.declarations.filter((line) => line.includes('(withheld:'));
+    expect(marked.length).toBeGreaterThan(0);
+    for (const line of marked) expect(line).toMatch(/\(withheld: (middleware-scanner-path|in-page-production-guard)\)/);
   });
 });

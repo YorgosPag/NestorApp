@@ -46,15 +46,30 @@
  * Και οι δύο σημαίνουν **«δεν κοίταξα»**, και «δεν κοίταξα» δεν έχει πρόοδο.
  * Το `buildPayload` **αρνείται** να τις γράψει (πρότυπο CHECK 3.44/3.50).
  *
- * ΟΙ ΔΥΟ ΝΕΕΣ ΚΑΤΑΣΤΑΣΕΙΣ ΕΠΙΦΑΝΕΙΑΣ (ADR-788) — ΓΙΑΤΙ ΔΕΝ ΕΙΝΑΙ «CLEAN»
+ * ΟΙ ΚΑΤΑΣΤΑΣΕΙΣ ΕΠΙΦΑΝΕΙΑΣ — ΓΙΑΤΙ ΔΕΝ ΕΙΝΑΙ «CLEAN» (ADR-788 · ADR-790)
  * ----------------------------------------------------------------------
- *   🔴 `surface-shell-only`   στατική διαδρομή που έβαψε **μόνο** το κέλυφος
- *   🔶 `surface-synthetic-id` δυναμική διαδρομή με id που δεν υπάρχει
+ *   🔴 `surface-shell-only`      έβαψε **μόνο λεξιλόγιο κελύφους**
+ *   🔴 `surface-not-rendered`    **μηδέν** επιφάνειες στο σώμα (client-only σελίδα)
+ *   🔴 `withheld-but-answered`   δηλωμένη εκτός παραγωγής, μα ο server απαντά 200
+ *   🔶 `surface-synthetic-id`    δυναμική διαδρομή με id που δεν υπάρχει
+ *   🔶 `route-withheld`          δηλωμένη εκτός παραγωγής **και ο server συμφώνησε**
  *
- * Και οι δύο ήταν μέχρι σήμερα **«clean»** — δηλαδή ο χρησμός έλεγε «καθαρή»
- * για οθόνες που δεν είχε δει ποτέ. Η πρώτη μπλοκάρει με ratchet (είναι
- * διορθώσιμη), η δεύτερη **μετριέται** (δεν είναι — το id δεν υπάρχει επειδή
- * η πύλη δεν επιτρέπεται να γράψει δεδομένα στη βάση για να το φτιάξει).
+ * Όλες ήταν μέχρι πρόσφατα **«clean»** ή ⛔ — δηλαδή ο χρησμός είτε έλεγε
+ * «καθαρή» για οθόνη που δεν είχε δει, είτε μπλόκαρε για πάντα σε κάτι που
+ * **δεν είναι βλάβη**. Οι 🔴 μπαίνουν σε baseline (καταγράφονται, δεν
+ * ξεχνιούνται)· οι 🔶 **μετριούνται** και τυπώνονται **ακόμα και στο μηδέν**.
+ *
+ * 🔑 **Η ΣΕΙΡΑ ΕΙΝΑΙ ΣΥΜΒΟΛΑΙΟ, ΚΑΙ ΑΛΛΑΞΕ ΜΕ ΜΕΤΡΗΣΗ** (ADR-790): το `raw-key`
+ * κρίνεται **ΠΡΩΤΟ**. Ένα κλειδί του δικού μας κλειστού σύμπαντος, τυπωμένο στο
+ * HTML, **είναι** η ισχυρότερη απόδειξη ότι κοιτάχτηκε δική μας επιφάνεια —
+ * και το `/mandate/ssr-probe`, που βάφει **δύο ωμά κλειδιά και τίποτε άλλο**
+ * ακριβώς επειδή λείπει το namespace του, αναφερόταν ⛔ «δεν κοίταξα» και
+ * **μπλόκαρε τη φωτογραφία ολόκληρου του έργου**.
+ *
+ * 🏆 **Η ΛΙΣΤΑ ΤΟΥ `src/app/**` ΔΕΝ ΕΙΝΑΙ Η ΛΙΣΤΑ ΤΗΣ ΠΑΡΑΓΩΓΗΣ.** Ποιες
+ * διαδρομές παρακρατούνται και **γιατί** το απαντούν οι μηχανισμοί του
+ * `.i18n-ssr-served.json`, διαβασμένοι κάθε φορά από την **αυθεντία τους** —
+ * ποτέ από χειρόγραφη λίστα διαδρομών (`lib/i18n-ssr/served-surface.js`).
  *
  * ⚠️ ΔΕΝ ΤΡΕΧΕΙ ΣΕ PRE-COMMIT. Χρειάζεται server.
  *
@@ -87,6 +102,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const O = require('./lib/i18n-ssr/oracle');
+const { decorateWithholding, DECLARATIONS } = require('./lib/i18n-ssr/served-surface');
 const { runSetRatchetCli } = require('./lib/ratchet-baseline');
 
 const CHECK = 'CHECK 3.51 Χ (ADR-781)';
@@ -122,6 +138,25 @@ function baseUrl() {
  * επιτρέπεται να κρύψει νέο ωμό κλειδί στο `aria-label`.
  */
 const VIOLATION_ID = (violation) => `${violation.line}|${violation.state.replace('raw-key/', '')}|${violation.detail}`;
+
+/**
+ * Η γραμμή δήλωσης μιας διαδρομής.
+ *
+ * ⚠️ **ΞΕΧΩΡΙΣΤΗ, ΟΝΟΜΑΣΜΕΝΗ ΣΥΝΑΡΤΗΣΗ ΚΑΙ ΟΧΙ inline** — και ο λόγος είναι
+ * μετρημένος: όσο ζούσε inline μέσα στη `measure()`, η μόνη άγκυρα που μπορούσε
+ * να τη δει ήταν μια ανάγνωση της **ήδη γραμμένης** baseline. Μετάλλαξη που
+ * έσβηνε τον δείκτη παρακράτησης έβγαινε **ΠΡΑΣΙΝΗ**, γιατί το αρχείο δεν
+ * ξαναγραφόταν: η άγκυρα έκρινε **στιγμιότυπο**, όχι **μηχανισμό**. Είναι
+ * ακριβώς το σχήμα «Μ6» του CHECK 3.8 (άγκυρα που ρωτά κείμενο αντί για
+ * εκτελέσιμο). Πλέον την καλεί απευθείας το `Σ9`.
+ *
+ * 🔑 Ο δείκτης παρακράτησης **είναι μέρος της δήλωσης**: μια διαδρομή που
+ * **αποκτά** φρουρό παραγωγής βγαίνει από την κρίση, και αυτό οφείλει να
+ * **μπλοκάρει** — αλλιώς η κάλυψη συρρικνώνεται σιωπηλά (CHECK 3.38:
+ * «απουσία δεν είναι πρόοδος»).
+ */
+const declarationOf = (route) =>
+  `${route.url}${route.dynamic ? ' (dynamic)' : ''}${route.withheld ? ` (withheld: ${route.withheld.mechanism})` : ''}`;
 
 /** Οι κάδοι που ratchet-άρονται, σε **λεπτομέρειες** — η μία πηγή. */
 function toViolations(records) {
@@ -195,7 +230,10 @@ function sweepRoutes(selected, universe, controls, verbose) {
 
 async function measure(args) {
   const posixRoot = PROJECT_ROOT.split(BS).join('/');
-  const routes = O.enumerateRoutes(posixRoot);
+  // ⚠️ Η ΠΑΡΑΚΡΑΤΗΣΗ ΜΠΑΙΝΕΙ ΠΡΙΝ ΤΗ ΣΑΡΩΣΗ, ΟΧΙ ΜΕΤΑ. Αν έμπαινε μετά, θα ήταν
+  //    «συγχώρεση» ενός 404 που έχει ήδη κριθεί ⛔· εδώ είναι **ιδιότητα της
+  //    διαδρομής**, διαβασμένη από την αυθεντία της (βλ. `served-surface.js`).
+  const routes = decorateWithholding(O.enumerateRoutes(posixRoot), PROJECT_ROOT);
   if (routes.length === 0) throw new Error('δεν βρέθηκε καμία διαδρομή κάτω από src/app');
 
   const { universe, controls } = buildOracleInputs();
@@ -226,7 +264,7 @@ async function measure(args) {
     routes,
     controlSizes: { shell: controls.shell.size, page: controls.page.size, corpus: controls.corpus },
     violationIds: violations.map(VIOLATION_ID).sort(),
-    declarations: routes.map((route) => `${route.url}${route.dynamic ? ' (dynamic)' : ''}`).sort(),
+    declarations: routes.map(declarationOf).sort(),
     violations,
   };
 }
@@ -288,7 +326,18 @@ function printReport(measured) {
   console.log(`\n  σύνολα απόδειξης: κέλυφος ${sizes.shell} · σελίδα ${sizes.page} · corpus ${sizes.corpus}`);
   console.log(`  ${DIM}(αν το «σελίδα» πέσει στο 0, κάθε διαδρομή γίνεται «μόνο κέλυφος» — φρουρός που κατηγορεί για δικό του σφάλμα)${NC}`);
 
-  const unjudged = measured.records.filter((record) => O.X_COUNTED.includes(record.state));
+  // ⚠️ Τυπώνεται ΑΚΟΜΑ ΚΑΙ ΣΤΟ ΜΗΔΕΝ (μάθημα CHECK 3.48 Κ6): ένα «0» που δεν
+  //    τυπώνεται διαβάζεται ως «δεν υπάρχει τέτοιος έλεγχος».
+  const withheld = measured.records.filter((record) => record.withheld);
+  console.log(`
+  🔶 διαδρομές ΕΚΤΟΣ παραγωγής κατά δήλωση: ${withheld.length}  ${DIM}(${DECLARATIONS})${NC}`);
+  for (const record of withheld) console.log(`      ${record.route.padEnd(34)} ${record.withheld.mechanism}  ${DIM}${record.state}${NC}`);
+
+  // ⚠️ ΟΝΟΜΑΣΤΙΚΑ το `surface-synthetic-id`, ΟΧΙ ολόκληρο το X_COUNTED: από τότε
+  //    που μπήκε και το `route-withheld` στους μετρούμενους κάδους, ένα σκέτο
+  //    `X_COUNTED` θα τύπωνε «33 δυναμικές» ενώ οι δυναμικές είναι 29 — αριθμός
+  //    σωστός για άλλη ερώτηση, δηλαδή ακριβώς ο τρόπος που παλιώνει ένας αριθμός.
+  const unjudged = measured.records.filter((record) => record.state === O.X_STATES.SYNTHETIC_ID);
   console.log(`\n  🔶 επιφάνειες που ΔΕΝ κρίθηκαν: ${unjudged.length} (δυναμικές διαδρομές με συνθετικό «${O.SYNTHETIC_SEGMENT}»)`);
   console.log(`  ${DIM}(μετριούνται, δεν απαριθμούνται — πρότυπο \`unanalyzable-heritage\`, CHECK 3.44)${NC}\n`);
 }
@@ -338,4 +387,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { DESCRIPTOR, measure, buildPayload, printReport, assertNoZeroTolerance, USER_AGENT, CHECK };
+module.exports = { DESCRIPTOR, measure, buildPayload, printReport, assertNoZeroTolerance, declarationOf, USER_AGENT, CHECK };

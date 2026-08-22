@@ -56,6 +56,12 @@
  *    ωμά κλειδιά, και το `aria-label` είναι **η μόνη** ετικέτα που ακούει ο
  *    αναγνώστης οθόνης. Σαρώνονται **και** οι δύο.
  *
+ * 7. 🔴 **Η ΛΙΣΤΑ ΤΟΥ `src/app/**` ΔΕΝ ΕΙΝΑΙ Η ΛΙΣΤΑ ΤΗΣ ΠΑΡΑΓΩΓΗΣ** (ADR-790).
+ *    Τέσσερις διαδρομές απαντούν **404** και δύο αποδίδουν **τίποτα**. Ένα «404»
+ *    δεν είναι «καθαρό», αλλά ούτε «δεν ξέρω»: **γιατί** παρακρατείται μια
+ *    διαδρομή το απαντούν οι μηχανισμοί του `served-surface.js`, διαβασμένοι από
+ *    την αυθεντία τους — ποτέ από χειρόγραφη λίστα διαδρομών.
+ *
  * ΤΟ `<script>` ΑΦΑΙΡΕΙΤΑΙ ΩΣ ΠΡΟΦΥΛΑΞΗ, ΟΧΙ ΩΣ ΘΕΡΑΠΕΙΑ
  * -------------------------------------------------------
  * Μετρήθηκε ότι σήμερα **δεν** μολύνει (το `pages.home` εμφανίζεται **0** φορές
@@ -79,14 +85,23 @@ const X_STATES = Object.freeze({
   RAW_KEY: 'raw-key',
   SKIPPED: 'route-skipped',
   SHELL_ONLY: 'surface-shell-only',
+  NOT_RENDERED: 'surface-not-rendered',
+  WITHHELD_ANSWERED: 'withheld-but-answered',
   SYNTHETIC_ID: 'surface-synthetic-id',
+  WITHHELD: 'route-withheld',
   CLEAN: 'clean',
 });
 
 /** ⛔ ΠΟΤΕ σε baseline: ένας χρησμός που δεν απέδειξε ότι κοίταξε δεν έχει «πρόοδο». */
 const X_ZERO_TOLERANCE = Object.freeze([X_STATES.UNREACHABLE, X_STATES.PROBE_UNPROVEN]);
 /** 🔴 ratchet κατά ταυτότητα `διαδρομή|επιφάνεια|κλειδί` — ανταλλαγή ⇒ μπλοκ (ADR-749). */
-const X_RATCHETED = Object.freeze([X_STATES.RAW_KEY, X_STATES.SKIPPED, X_STATES.SHELL_ONLY]);
+const X_RATCHETED = Object.freeze([
+  X_STATES.RAW_KEY,
+  X_STATES.SKIPPED,
+  X_STATES.SHELL_ONLY,
+  X_STATES.NOT_RENDERED,
+  X_STATES.WITHHELD_ANSWERED,
+]);
 /**
  * 🔶 ΜΕΤΡΙΕΤΑΙ, ΔΕΝ ΑΠΑΡΙΘΜΕΙΤΑΙ — και **δεν** μπλοκάρει (πρότυπο
  * `unanalyzable-heritage`, CHECK 3.44).
@@ -102,7 +117,7 @@ const X_RATCHETED = Object.freeze([X_STATES.RAW_KEY, X_STATES.SKIPPED, X_STATES.
  * βρήκα» δεν αποδεικνύει τίποτα. Γι' αυτό το `raw-key` κρίνεται **πριν** από
  * αυτή την κατάσταση, όχι μετά.
  */
-const X_COUNTED = Object.freeze([X_STATES.SYNTHETIC_ID]);
+const X_COUNTED = Object.freeze([X_STATES.SYNTHETIC_ID, X_STATES.WITHHELD]);
 
 /** Το τμήμα που μπαίνει στη θέση ενός `[param]`. Σκόπιμα αναγνωρίσιμο στα logs. */
 const SYNTHETIC_SEGMENT = 'ssr-probe';
@@ -192,10 +207,39 @@ function stripScripts(html) {
 }
 
 /**
- * @returns {{texts: string[], attributes: Array<{attribute: string, value: string}>}}
+ * 🔑 **ΤΟ `<head>` ΔΕΝ ΕΙΝΑΙ ΑΠΟΔΟΘΕΙΣΑ ΕΠΙΦΑΝΕΙΑ** (ADR-790).
+ *
+ * Χωρίς αυτόν τον διαχωρισμό **κάθε** έγγραφο του Next.js έχει τουλάχιστον έναν
+ * κόμβο κειμένου — τον `<title>` — άρα το ερώτημα «**ζωγράφισε κάτι** αυτή η
+ * σελίδα;» δεν μπορούσε ποτέ να απαντηθεί «όχι». Μια σελίδα που αποδίδει
+ * **μηδέν** στον server (όλο το σώμα της μέσα σε `<Suspense fallback={null}>` —
+ * μετρημένα το `/oauth/consent`) θα φαινόταν να έχει «μία επιφάνεια», και το
+ * «μία» δεν ξεχωρίζει από το «λίγες»: η κατάσταση θα γεννιόταν με **μαγικό
+ * κατώφλι** αντί για απόδειξη.
+ *
+ * ⚠️ Ο `<title>` **δεν χάνεται** — επιστρέφεται ρητά και κρίνεται για ωμά κλειδιά
+ * ως επιφάνεια `document-title`: ένα ωμό κλειδί στην καρτέλα του browser είναι
+ * εξίσου ορατό. Μετρημένο 2026-08-22 στις 154 διαδρομές της παραγωγής, το κόστος
+ * του διαχωρισμού σε ωμά κλειδιά είναι **207 → 207**, δηλαδή **μηδέν**.
+ */
+function stripHead(html) {
+  return html.replace(/<head[\s\S]*?<\/head>/i, ' ');
+}
+
+/** Ο τίτλος του εγγράφου — μεταδεδομένο, ΟΧΙ απόδειξη ότι αποδόθηκε σελίδα. */
+function extractDocumentTitle(html) {
+  const match = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  if (!match) return null;
+  const value = decodeEntities(match[1].replace(/<[^>]+>/g, ' ')).trim();
+  return value || null;
+}
+
+/**
+ * @returns {{texts: string[], attributes: Array<{attribute: string, value: string}>, title: string|null, bodyCount: number}}
  */
 function extractSurfaces(html) {
-  const body = stripScripts(html);
+  const title = extractDocumentTitle(html);
+  const body = stripHead(stripScripts(html));
 
   const attributes = [];
   for (const attribute of HUMAN_ATTRIBUTES) {
@@ -212,7 +256,7 @@ function extractSurfaces(html) {
     .map((line) => line.trim())
     .filter(Boolean);
 
-  return { texts, attributes };
+  return { texts, attributes, title, bodyCount: texts.length + attributes.length };
 }
 
 // ---------------------------------------------------------------------------
@@ -234,13 +278,16 @@ function extractSurfaces(html) {
  * @returns {{shellProven: boolean, pageProven: boolean, hits: Array<{key: string, surface: string}>}}
  */
 function judgeHtml(html, oracle) {
-  const { texts, attributes } = extractSurfaces(html);
+  const { texts, attributes, title, bodyCount } = extractSurfaces(html);
   const hits = new Map();
 
   for (const text of texts) {
     if (oracle.universe.has(text)) hits.set(`text|${text}`, { key: text, surface: 'text' });
   }
-  for (const { attribute, value } of attributes) {
+  // ⚠️ Ο τίτλος κρίνεται ΞΕΧΩΡΙΣΤΑ: είναι ορατός στην καρτέλα του browser, αλλά
+  //    ΔΕΝ μετράει ως «η σελίδα ζωγράφισε κάτι» (βλ. `stripHead`).
+  const judged = title ? attributes.concat([{ attribute: 'document-title', value: title }]) : attributes;
+  for (const { attribute, value } of judged) {
     if (oracle.universe.has(value)) hits.set(`${attribute}|${value}`, { key: value, surface: attribute });
   }
 
@@ -251,6 +298,7 @@ function judgeHtml(html, oracle) {
   return {
     shellProven: anyControlRendered(oracle.shellControls, haystack),
     pageProven: anyControlRendered(oracle.pageControls, haystack),
+    bodyCount,
     hits: [...hits.values()],
   };
 }
@@ -267,23 +315,68 @@ function judgeHtml(html, oracle) {
  * @returns {{state: string, detail?: string}}
  */
 function classifySurface(route, verdict) {
-  // ⛔ Ούτε το κέλυφος δεν βάφτηκε: ο server απάντησε κάτι που ΔΕΝ είναι η
-  //    εφαρμογή. «0 ωμά κλειδιά» εδώ σημαίνει «δεν κοίταξα».
-  if (!verdict.shellProven) {
+  // 🔴 1. ΩΜΟ ΚΛΕΙΔΙ ΠΡΩΤΑ — ΚΑΙ ΕΙΝΑΙ ΤΟ ΙΔΙΟ Η ΑΠΟΔΕΙΞΗ (ADR-790).
+  //    Ένα κλειδί του **δικού μας** κλειστού σύμπαντος, τυπωμένο σε κόμβο του
+  //    HTML, δεν μπορεί να το βάλει εκεί τίποτε άλλο από τον δικό μας κώδικα.
+  //    Άρα «βρήκα ωμό κλειδί» **είναι** η ισχυρότερη δυνατή απόδειξη ότι ο
+  //    χρησμός κοίταξε δική μας αποδοθείσα επιφάνεια.
+  //    ⚠️ Μέχρι το ADR-788 το `!shellProven` προηγούνταν, οπότε το
+  //    `/mandate/ssr-probe` — που βάφει **δύο ωμά κλειδιά και τίποτε άλλο**,
+  //    επειδή ακριβώς λείπει το namespace του — αναφερόταν ⛔ «δεν κοίταξα»
+  //    και **μπλόκαρε τη φωτογραφία**. Η κεφαλίδα δήλωνε την ασυμμετρία· η
+  //    σειρά την ακύρωνε.
+  if (verdict.hits.length > 0) return { state: X_STATES.RAW_KEY };
+
+  // 🔴 2. ΔΗΛΩΜΕΝΗ ΕΚΤΟΣ ΠΑΡΑΓΩΓΗΣ, ΑΛΛΑ Ο SERVER ΑΠΑΝΤΗΣΕ 200.
+  //    Δεν είναι «σερβίρεται»: το `notFound()` **έτρεξε**, αλλά ρίχτηκε **μετά**
+  //    την έναρξη της ροής, οπότε ο κωδικός κατάστασης δεν αλλάζει πια. Η τεκμη-
+  //    ρίωση του Next.js το λέει ρητά: 200 για streamed απαντήσεις, 404 για μη
+  //    streamed. Μετρημένο φυσικό πείραμα (2026-08-22, nestorconstruct.gr): οι
+  //    **τρεις** διαδρομές του group `(app)` — που έχει `loading.tsx`, άρα
+  //    Suspense — απαντούν **200**· οι **δύο** του `(bare)`, που δεν έχει,
+  //    απαντούν **404**. Ίδιος φρουρός, ίδιο SSoT, **αντίθετος** κωδικός.
+  if (route.withheld) {
+    return {
+      state: X_STATES.WITHHELD_ANSWERED,
+      detail: `δηλωμένη εκτός παραγωγής (${route.withheld.mechanism}) αλλά ο server απαντά 200 — το notFound() ρίχτηκε ΜΕΤΑ την έναρξη της ροής`,
+    };
+  }
+
+  // ⛔/🔴 3. ΤΙΠΟΤΑ ΔΕΝ ΑΠΕΔΕΙΞΕ ΟΤΙ ΑΠΑΝΤΗΣΕ Η ΕΦΑΡΜΟΓΗ ΜΑΣ.
+  //    ⚠️ ΔΥΟ ΠΟΛΥ ΔΙΑΦΟΡΕΤΙΚΕΣ ΑΙΤΙΕΣ, ΚΑΙ ΤΟ ΝΑ ΤΙΣ ΛΕΣ ΜΕ ΕΝΑ ΟΝΟΜΑ ΕΙΝΑΙ
+  //    ΤΟ ΛΑΘΟΣ: (α) το σώμα έχει **μηδέν** αποδοθείσες επιφάνειες ⇒ η σελίδα
+  //    δεν αποδίδει τίποτα στον server (client-only), γεγονός **για τη σελίδα**
+  //    και **επαληθεύσιμο**· (β) το σώμα έχει επιφάνειες αλλά **καμία** δεν
+  //    είναι δική μας ⇒ ο server απάντησε **κάτι άλλο** (proxy, σελίδα σφάλματος,
+  //    αμετάφραστη απόδοση) και ο χρησμός **δεν επιτρέπεται** να αποφανθεί.
+  //    Το (α) είναι ratchet — καταγράφεται, δεν μπλοκάρει για πάντα. Το (β)
+  //    μένει ⛔: «δεν κοίταξα» δεν έχει πρόοδο.
+  if (!verdict.shellProven && !verdict.pageProven) {
+    if (verdict.bodyCount === 0) {
+      return {
+        state: X_STATES.NOT_RENDERED,
+        detail: 'μηδέν αποδοθείσες επιφάνειες στο σώμα — η σελίδα δεν αποδίδει ΤΙΠΟΤΑ στον server (client-only)',
+      };
+    }
     return { state: X_STATES.PROBE_UNPROVEN, detail: 'καμία μεταφρασμένη τιμή στη σελίδα — ο χρησμός ΔΕΝ απέδειξε ότι κοίταξε' };
   }
-  // 🔴 Ωμό κλειδί ζωγραφίστηκε ΟΝΤΩΣ — αληθές ανεξάρτητα από το ΠΟΙΑ επιφάνεια αποδόθηκε.
-  if (verdict.hits.length > 0) return { state: X_STATES.RAW_KEY };
-  // 🔶 Δυναμική διαδρομή με ΣΥΝΘΕΤΙΚΟ id: ό,τι κι αν βάφτηκε, δεν είναι η σελίδα.
+
+  // 🔶 4. Δυναμική διαδρομή με ΣΥΝΘΕΤΙΚΟ id: ό,τι κι αν βάφτηκε, δεν είναι η σελίδα.
   if (route.dynamic) {
     return {
       state: X_STATES.SYNTHETIC_ID,
       detail: `το τμήμα «${SYNTHETIC_SEGMENT}» δεν αντιστοιχεί σε υπαρκτή οντότητα — η επιφάνεια της σελίδας ΔΕΝ κρίθηκε`,
     };
   }
-  // 🔴 Στατική διαδρομή που έβαψε ΜΟΝΟ το κέλυφος: το περιεχόμενό της δεν έφτασε στο SSR HTML.
+
+  // 🔴 5. Στατική διαδρομή που έβαψε ΜΟΝΟ λεξιλόγιο κελύφους.
+  //    ⚠️ «Λεξιλόγιο κελύφους», ΟΧΙ «το κέλυφος»: μια σελίδα του `(auth)`/`(light)`
+  //    δεν φοράει κέλυφος (CHECK 3.52) και όμως προσγειώνεται εδώ, γιατί ό,τι
+  //    βάφει ζει ολόκληρο μέσα στο αποστελλόμενο slice. Η κατάσταση λέει
+  //    «**το περιεχόμενό της δεν έφτασε στο SSR HTML**» — και αυτό είναι αληθές
+  //    και στις δύο περιπτώσεις.
   if (!verdict.pageProven) {
-    return { state: X_STATES.SHELL_ONLY, detail: 'μόνο το κέλυφος αποδόθηκε — καμία τιμή πέρα από αυτό' };
+    return { state: X_STATES.SHELL_ONLY, detail: 'μόνο λεξιλόγιο κελύφους αποδόθηκε — καμία τιμή πέρα από αυτό' };
   }
   return { state: X_STATES.CLEAN };
 }
@@ -310,7 +403,13 @@ async function probeRoute(route, options) {
   }
 
   if (!response.ok) {
-    return { ...route, route: route.url, state: X_STATES.UNREACHABLE, status: response.status, keys: [], detail: `HTTP ${response.status}${html.trim() === '' ? ' (ΚΕΝΟ σώμα — έλεγξε το User-Agent)' : ''}` };
+    // 🔶 ΔΗΛΩΜΕΝΗ ΠΑΡΑΚΡΑΤΗΣΗ + Ο SERVER ΣΥΜΦΩΝΗΣΕ = ΤΟ ΣΥΜΒΟΛΑΙΟ ΤΗΡΗΘΗΚΕ.
+    //    Δεν είναι «δεν κοίταξα»: είναι «δεν υπάρχει τίποτα να κοιτάξω, και ο
+    //    λόγος είναι γραμμένος». ⚠️ Χωρίς δήλωση, το 404 παραμένει ⛔ — ο Κ2
+    //    (`served-surface.js`) είναι ανεξάρτητος κανόνας, ποτέ ο ίδιος με «ή».
+    const state = route.withheld ? X_STATES.WITHHELD : X_STATES.UNREACHABLE;
+    const why = route.withheld ? ` — δηλωμένη εκτός παραγωγής (${route.withheld.mechanism})` : '';
+    return { ...route, route: route.url, state, status: response.status, keys: [], detail: `HTTP ${response.status}${html.trim() === '' ? ' (ΚΕΝΟ σώμα)' : ''}${why}` };
   }
   if (html.trim() === '') {
     return { ...route, route: route.url, state: X_STATES.UNREACHABLE, status: response.status, keys: [], detail: 'ΚΕΝΟ σώμα με 200' };
@@ -372,8 +471,10 @@ module.exports = {
   buildUniverse,
   buildPositiveControls,
   extractSurfaces,
+  extractDocumentTitle,
   decodeEntities,
   stripScripts,
+  stripHead,
   judgeHtml,
   probeRoute,
   sweep,
