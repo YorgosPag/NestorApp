@@ -16,11 +16,10 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
-import LogoPagonis from '@/components/property-viewer/Logo_Pagonis';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -28,13 +27,14 @@ import { useTypography } from '@/hooks/useTypography';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects/hover-effects';
 import { TRANSITION_PRESETS } from '@/components/ui/effects/transitions';
-import { LanguageSwitcher } from '@/components/header/language-switcher';
-import { ThemeToggle } from '@/components/header/theme-toggle';
 import type { AuthFormProps } from '../types/auth.types';
 import { AUTH_ROUTES } from '@/lib/routes';
 import { GoogleIcon } from './GoogleIcon';
 import { MfaVerificationForm } from './MfaVerificationForm';
 import { useAuthFormState } from '../hooks/useAuthFormState';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { AuthBrandMark, AuthScreen } from './AuthScreenChrome';
+import { AuthField } from './AuthField';
 import '@/lib/design-system';
 
 // =============================================================================
@@ -53,6 +53,14 @@ export function AuthForm({
   const layout = useLayoutClasses();
 
   const state = useAuthFormState({ defaultMode, onSuccess, redirectTo });
+  // 🔴 ADR-744 §18 — ΤΟ NAMESPACE ΔΗΛΩΝΕΤΑΙ ΕΔΩ, ΚΑΙ ΕΙΝΑΙ ΟΡΘΟΤΗΤΑ, ΟΧΙ ΣΤΥΛ.
+  // Μέχρι 2026-08-22 αυτό το component δανειζόταν το `t` από το `useAuthFormState`
+  // (`t(...)`), οπότε δήλωνε ΜΗΔΕΝ namespace. Ο generator του shell slice
+  // αποδίδει τα κλειδιά ενός αρχείου στα namespaces ΠΟΥ ΤΟ ΙΔΙΟ δηλώνει — άρα
+  // `targets = []` και **26 λυμένα κλειδιά έπεφταν σιωπηλά**. Αποτέλεσμα: 13 από
+  // τα 16 ωμά κλειδιά που μέτρησε ζωντανά ο χρησμός (CHECK 3.51 Χ) στο /login.
+  // Το prop-drilling του `t` είναι και το αντι-ιδίωμα του react-i18next.
+  const { t } = useTranslation('auth');
 
   // ==========================================================================
   // RENDER: Redirect Loading Overlay
@@ -63,7 +71,7 @@ export function AuthForm({
       <main
         className={`${layout.shellAuthStandalone} ${colors.bg.primary}`}
         role="main"
-        aria-label={state.t('navigation.redirecting')}
+        aria-label={t('navigation.redirecting')}
       >
         <section
           className={`${layout.flexColGap4} ${layout.textCenter}`}
@@ -71,16 +79,12 @@ export function AuthForm({
           aria-live="polite"
           aria-busy="true"
         >
+          <AuthBrandMark as="fragment" />
           <figure className={layout.centerHorizontal}>
-            <LogoPagonis className={`${iconSizes.xl4} ${colors.text.primary}`} />
-          </figure>
-          {/* eslint-disable-next-line custom/no-hardcoded-strings */}
-          <h1 className={`${typography.heading.lg} ${colors.text.primary}`}>Nestor App</h1>
-          <figure className={layout.centerHorizontal}>
-            <Spinner size="large" aria-label={state.t('loading.spinnerLabel')} />
+            <Spinner size="large" aria-label={t('loading.spinnerLabel')} />
           </figure>
           <p className={`${typography.body.base} ${colors.text.muted}`}>
-            {state.t('navigation.loadingApp')}
+            {t('navigation.loadingApp')}
           </p>
         </section>
       </main>
@@ -101,7 +105,6 @@ export function AuthForm({
         isLoading={state.isLoading}
         displayError={state.displayError}
         successMessage={state.successMessage}
-        t={state.t}
       />
     );
   }
@@ -111,30 +114,10 @@ export function AuthForm({
   // ==========================================================================
 
   return (
-    <>
-      <nav className={layout.authToolbar} aria-label={state.t('navigation.settingsToolbar')}>
-        <LanguageSwitcher />
-        <ThemeToggle />
-      </nav>
-
-      <section className={layout.flexColGap4}>
-        <header className={`${layout.flexColGap2} ${layout.textCenter}`}>
-          <figure className={layout.centerHorizontal}>
-            <LogoPagonis className={`${iconSizes.xl4} ${colors.text.primary}`} />
-          </figure>
-          {/* eslint-disable-next-line custom/no-hardcoded-strings */}
-          <h1 className={`${typography.heading.lg} ${colors.text.primary}`}>Nestor App</h1>
-        </header>
-
-        <Card className={layout.cardAuthWidth}>
-          <CardHeader className={layout.flexColGap2}>
-            <CardTitle className={`${typography.heading.lg} ${layout.textCenter}`}>
-              {state.titles[state.mode]}
-            </CardTitle>
-            <CardDescription className={layout.textCenter}>
-              {state.descriptions[state.mode]}
-            </CardDescription>
-          </CardHeader>
+    <AuthScreen
+      title={state.titles[state.mode]}
+      description={state.descriptions[state.mode]}
+    >
 
           <CardContent>
             <form onSubmit={state.handleSubmit} className={layout.flexColGap4}>
@@ -155,130 +138,100 @@ export function AuthForm({
               )}
 
               {/* Email Field */}
-              <fieldset className={layout.flexColGap2}>
-                <label htmlFor="email" className={typography.label.sm}>
-                  {state.t('form.labels.email')}
-                </label>
-                <div className={layout.inputContainer}>
-                  <Mail className={`${layout.inputIconLeft} ${iconSizes.sm} ${colors.text.muted}`} />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder={state.t('form.placeholders.email')}
-                    value={state.formData.email}
-                    onChange={state.handleInputChange('email')}
-                    disabled={state.isLoading}
-                    hasLeftIcon
-                    required
-                  />
-                </div>
-              </fieldset>
+              <AuthField id="email" label={t('form.labels.email')} icon={Mail}>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder={t('form.placeholders.email')}
+                  value={state.formData.email}
+                  onChange={state.handleInputChange('email')}
+                  disabled={state.isLoading}
+                  hasLeftIcon
+                  required
+                />
+              </AuthField>
 
               {/* Name Fields (Sign Up Only) */}
               {state.mode === 'signup' && (
                 <>
-                  <fieldset className={layout.flexColGap2}>
-                    <label htmlFor="givenName" className={typography.label.sm}>
-                      {state.t('form.labels.givenName')}
-                    </label>
-                    <div className={layout.inputContainer}>
-                      <User className={`${layout.inputIconLeft} ${iconSizes.sm} ${colors.text.muted}`} />
-                      <Input
-                        id="givenName"
-                        type="text"
-                        placeholder={state.t('form.placeholders.givenName')}
-                        value={state.formData.givenName}
-                        onChange={state.handleInputChange('givenName')}
-                        disabled={state.isLoading}
-                        hasLeftIcon
-                        required
-                        autoComplete="given-name"
-                      />
-                    </div>
-                  </fieldset>
+                  <AuthField id="givenName" label={t('form.labels.givenName')} icon={User}>
+                    <Input
+                      id="givenName"
+                      type="text"
+                      placeholder={t('form.placeholders.givenName')}
+                      value={state.formData.givenName}
+                      onChange={state.handleInputChange('givenName')}
+                      disabled={state.isLoading}
+                      hasLeftIcon
+                      required
+                      autoComplete="given-name"
+                    />
+                  </AuthField>
 
-                  <fieldset className={layout.flexColGap2}>
-                    <label htmlFor="familyName" className={typography.label.sm}>
-                      {state.t('form.labels.familyName')}
-                    </label>
-                    <div className={layout.inputContainer}>
-                      <User className={`${layout.inputIconLeft} ${iconSizes.sm} ${colors.text.muted}`} />
-                      <Input
-                        id="familyName"
-                        type="text"
-                        placeholder={state.t('form.placeholders.familyName')}
-                        value={state.formData.familyName}
-                        onChange={state.handleInputChange('familyName')}
-                        disabled={state.isLoading}
-                        hasLeftIcon
-                        required
-                        autoComplete="family-name"
-                      />
-                    </div>
-                  </fieldset>
+                  <AuthField id="familyName" label={t('form.labels.familyName')} icon={User}>
+                    <Input
+                      id="familyName"
+                      type="text"
+                      placeholder={t('form.placeholders.familyName')}
+                      value={state.formData.familyName}
+                      onChange={state.handleInputChange('familyName')}
+                      disabled={state.isLoading}
+                      hasLeftIcon
+                      required
+                      autoComplete="family-name"
+                    />
+                  </AuthField>
                 </>
               )}
 
               {/* Password Field */}
               {state.mode !== 'reset' && (
-                <fieldset className={layout.flexColGap2}>
-                  <label htmlFor="password" className={typography.label.sm}>
-                    {state.t('form.labels.password')}
-                  </label>
-                  <div className={layout.inputContainer}>
-                    <Lock className={`${layout.inputIconLeft} ${iconSizes.sm} ${colors.text.muted}`} />
-                    <Input
-                      id="password"
-                      type={state.showPassword ? 'text' : 'password'}
-                      placeholder={state.t('form.placeholders.password')}
-                      value={state.formData.password}
-                      onChange={state.handleInputChange('password')}
-                      disabled={state.isLoading}
-                      hasLeftIcon
-                      hasRightIcon
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => state.setShowPassword(!state.showPassword)}
-                      className={`${layout.inputIconRight} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
-                      tabIndex={-1}
-                      aria-label={
-                        state.showPassword
-                          ? state.t('form.accessibility.hidePassword')
-                          : state.t('form.accessibility.showPassword')
-                      }
-                    >
-                      {state.showPassword ? (
-                        <EyeOff className={iconSizes.sm} />
-                      ) : (
-                        <Eye className={iconSizes.sm} />
-                      )}
-                    </button>
-                  </div>
-                </fieldset>
+                <AuthField id="password" label={t('form.labels.password')} icon={Lock}>
+                  <Input
+                    id="password"
+                    type={state.showPassword ? 'text' : 'password'}
+                    placeholder={t('form.placeholders.password')}
+                    value={state.formData.password}
+                    onChange={state.handleInputChange('password')}
+                    disabled={state.isLoading}
+                    hasLeftIcon
+                    hasRightIcon
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => state.setShowPassword(!state.showPassword)}
+                    className={`${layout.inputIconRight} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
+                    tabIndex={-1}
+                    aria-label={
+                      state.showPassword
+                        ? t('form.accessibility.hidePassword')
+                        : t('form.accessibility.showPassword')
+                    }
+                  >
+                    {state.showPassword ? (
+                      <EyeOff className={iconSizes.sm} />
+                    ) : (
+                      <Eye className={iconSizes.sm} />
+                    )}
+                  </button>
+                </AuthField>
               )}
 
               {/* Confirm Password (Sign Up Only) */}
               {state.mode === 'signup' && (
-                <fieldset className={layout.flexColGap2}>
-                  <label htmlFor="confirmPassword" className={typography.label.sm}>
-                    {state.t('form.labels.confirmPassword')}
-                  </label>
-                  <div className={layout.inputContainer}>
-                    <Lock className={`${layout.inputIconLeft} ${iconSizes.sm} ${colors.text.muted}`} />
-                    <Input
-                      id="confirmPassword"
-                      type="password"
-                      placeholder={state.t('form.placeholders.password')}
-                      value={state.formData.confirmPassword}
-                      onChange={state.handleInputChange('confirmPassword')}
-                      disabled={state.isLoading}
-                      hasLeftIcon
-                      required
-                    />
-                  </div>
-                </fieldset>
+                <AuthField id="confirmPassword" label={t('form.labels.confirmPassword')} icon={Lock}>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    placeholder={t('form.placeholders.password')}
+                    value={state.formData.confirmPassword}
+                    onChange={state.handleInputChange('confirmPassword')}
+                    disabled={state.isLoading}
+                    hasLeftIcon
+                    required
+                  />
+                </AuthField>
               )}
 
               {/* Submit Button */}
@@ -293,7 +246,7 @@ export function AuthForm({
                   <div className="relative flex items-center py-2" role="separator">
                     <div className="flex-grow border-t border-border" />
                     <span className={`mx-4 flex-shrink ${typography.body.sm} ${colors.text.muted}`}>
-                      {state.t('google.divider')}
+                      {t('google.divider')}
                     </span>
                     <div className="flex-grow border-t border-border" />
                   </div>
@@ -304,14 +257,14 @@ export function AuthForm({
                     className={layout.widthFull}
                     onClick={state.handleGoogleSignIn}
                     disabled={state.isLoading}
-                    aria-label={state.t('google.buttonAriaLabel')}
+                    aria-label={t('google.buttonAriaLabel')}
                   >
                     {state.googleLoading ? (
                       <Spinner size="small" className={layout.buttonIconSpacing} />
                     ) : (
                       <GoogleIcon className={`${iconSizes.sm} ${layout.buttonIconSpacing}`} />
                     )}
-                    {state.t('google.signInButton')}
+                    {t('google.signInButton')}
                   </Button>
                 </>
               )}
@@ -319,7 +272,7 @@ export function AuthForm({
               {/* Mode Switch Links */}
               <nav
                 className={`${layout.textCenter} ${layout.flexColGap2}`}
-                aria-label={state.t('form.navigation.loginOptions')}
+                aria-label={t('form.navigation.loginOptions')}
               >
                 {state.mode === 'signin' && (
                   <>
@@ -328,18 +281,18 @@ export function AuthForm({
                       onClick={() => state.setMode('reset')}
                       className={`${typography.body.sm} ${colors.text.info} ${INTERACTIVE_PATTERNS.BUTTON_LINK_HOVER}`}
                     >
-                      {state.t('form.navigation.forgotPassword')}
+                      {t('form.navigation.forgotPassword')}
                     </button>
                     <p>
                       <span className={`${typography.body.sm} ${colors.text.muted}`}>
-                        {state.t('form.navigation.noAccount')}{' '}
+                        {t('form.navigation.noAccount')}{' '}
                       </span>
                       <button
                         type="button"
                         onClick={() => state.setMode('signup')}
                         className={`${typography.body.sm} ${colors.text.info} ${INTERACTIVE_PATTERNS.BUTTON_LINK_HOVER}`}
                       >
-                        {state.t('form.navigation.signup')}
+                        {t('form.navigation.signup')}
                       </button>
                     </p>
                   </>
@@ -348,14 +301,14 @@ export function AuthForm({
                 {state.mode === 'signup' && (
                   <p>
                     <span className={`${typography.body.sm} ${colors.text.muted}`}>
-                      {state.t('form.navigation.hasAccount')}{' '}
+                      {t('form.navigation.hasAccount')}{' '}
                     </span>
                     <button
                       type="button"
                       onClick={() => state.setMode('signin')}
                       className={`${typography.body.sm} ${colors.text.info} ${INTERACTIVE_PATTERNS.BUTTON_LINK_HOVER}`}
                     >
-                      {state.t('form.navigation.signin')}
+                      {t('form.navigation.signin')}
                     </button>
                   </p>
                 )}
@@ -366,15 +319,13 @@ export function AuthForm({
                     onClick={() => state.setMode('signin')}
                     className={`${typography.body.sm} ${colors.text.info} ${INTERACTIVE_PATTERNS.BUTTON_LINK_HOVER}`}
                   >
-                    {state.t('form.navigation.backToSignin')}
+                    {t('form.navigation.backToSignin')}
                   </button>
                 )}
               </nav>
             </form>
           </CardContent>
-        </Card>
-      </section>
-    </>
+    </AuthScreen>
   );
 }
 

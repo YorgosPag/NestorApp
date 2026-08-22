@@ -120,6 +120,41 @@ describe('Π — τα πραγματικά artifacts στο δέντρο', () =>
     const localeBytes = fs.statSync(path.join(REPO, 'src/i18n/locales/el/geo-canvas.json')).size;
     expect(sliceBytes).toBeLessThan(localeBytes / 5);
   });
+
+  /**
+   * 🔴 ADR-744 §18 — «ΤΟ ARTIFACT ΥΠΑΡΧΕΙ» ΔΕΝ ΣΗΜΑΙΝΕΙ «ΠΑΡΑΔΙΔΕΤΑΙ».
+   *
+   * Πληρώθηκε ζωντανά: οι τέσσερις δημόσιες οθόνες πήραν δήλωση, artifact, υπογραφή στο
+   * manifest και **πράσινες πύλες** (3.34 · 3.51 · κάλυψη 68/68 κλειδιών μέσα στο αρχείο)
+   * ενώ **κανένα από τα τέσσερα `page.tsx` δεν εισήγαγε το slice του**. Ο μηχανισμός
+   * παράδοσης (§15.5) είναι **στατική εισαγωγή + `registerRouteSlice()` σε εμβέλεια
+   * module**· χωρίς αυτήν το slice δεν φορτώνεται ποτέ και η θεραπεία είναι **ΑΔΡΑΝΗΣ**.
+   *
+   * ⚠️ Ο έλεγχος ΔΕΝ ρωτά το `page.tsx`: τα έντεκα προϋπάρχοντα εγγράφουν από **component**
+   * μέσα στην κλειστότητά τους (`ListingDetailContent.tsx` κ.λπ.), και αυτό είναι σωστό.
+   * Ρωτά «υπάρχει **ΚΩΔΙΚΑΣ ΠΡΟΪΟΝΤΟΣ** που το εισάγει **και** καλεί `registerRouteSlice`;».
+   *
+   * ⚠️ ΤΑ TESTS ΔΕΝ ΜΕΤΡΑΝΕ. Το `route-slice.test.ts` εισάγει ένα artifact ως fixture — αν
+   * περνούσε για παράδοση, ένα slice θα φαινόταν «ζωντανό» επειδή το φορτώνει μια δοκιμή.
+   */
+  it('Π5: κάθε δηλωμένο route slice ΠΑΡΑΔΙΔΕΤΑΙ — στατική εισαγωγή + registerRouteSlice()', () => {
+    const { execFileSync } = require('node:child_process');
+    const tracked = execFileSync('git', ['grep', '-l', 'generated/routes/', '--', 'src'], { cwd: REPO, encoding: 'utf8' })
+      .split('\n')
+      .filter(file => /\.tsx?$/.test(file) && !file.includes('/generated/') && !file.includes('__tests__'));
+
+    const deliveredBy = new Map();
+    for (const file of tracked) {
+      const source = fs.readFileSync(path.join(REPO, file), 'utf8');
+      if (!source.includes('registerRouteSlice(')) continue;
+      for (const match of source.matchAll(/from '[^']*generated\/routes\/([A-Za-z0-9_-]+)\.el\.json'/g)) {
+        deliveredBy.set(match[1], file);
+      }
+    }
+
+    const inert = declared.filter(page => !deliveredBy.has(RS.routeIdFor(page)));
+    expect(inert).toEqual([]);
+  });
 });
 
 /**

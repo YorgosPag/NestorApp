@@ -239,8 +239,11 @@ export function useAuthFormState({ defaultMode, onSuccess, redirectTo }: UseAuth
   };
 
   return {
-    // Translation
-    t,
+    // 🔴 ADR-744 §18 — ΤΟ `t` ΔΕΝ ΕΠΙΣΤΡΕΦΕΤΑΙ ΠΙΑ. Ο μοναδικός καταναλωτής
+    // (`AuthForm.tsx`) δηλώνει πλέον το δικό του `useTranslation('auth')`. Ένας hook
+    // που δανείζει μεταφραστή κάνει τον καταναλωτή του **αόρατο** στον generator του
+    // shell slice: το αρχείο που δανείζεται δηλώνει μηδέν namespace, άρα τα κλειδιά του
+    // δεν αποδίδονται πουθενά και πέφτουν ΣΙΩΠΗΛΑ. Το `t` μένει για εσωτερική χρήση.
     // State
     mode,
     setMode,

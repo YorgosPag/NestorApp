@@ -2725,6 +2725,12 @@
         "focusInfo": "Πληροφορίες Εστίασης",
         "photoInfo": "Πληροφορίες Φωτογραφίας"
       },
+      "contactType": {
+        "company": "Νομικό Πρόσωπο",
+        "individual": "Φυσικό Πρόσωπο",
+        "service": "Δημόσια Υπηρεσία",
+        "unknown": "Άγνωστος Τύπος"
+      },
       "navigation": {
         "next": "Επόμενη φωτογραφία",
         "previous": "Προηγούμενη φωτογραφία"
@@ -2733,6 +2739,13 @@
         "gallery": "Προβολή φωτογραφίας {current} από {total}. {contactInfo}Χρησιμοποιήστε τα βέλη για πλοήγηση.",
         "photoFrom": "Φωτογραφία από {name}.",
         "single": "Προβολή φωτογραφίας. {contactInfo}"
+      },
+      "titles": {
+        "logo": "Λογότυπο",
+        "photo": "Φωτογραφία",
+        "photoWithIndex": "Φωτογραφία {index}",
+        "profile": "Φωτογραφία Προφίλ",
+        "representative": "Φωτογραφία Εκπροσώπου"
       },
       "toolbar": {
         "ariaLabel": "Εργαλεία Φωτογραφίας"

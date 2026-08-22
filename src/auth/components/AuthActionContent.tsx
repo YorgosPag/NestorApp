@@ -57,7 +57,6 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Spinner } from '@/components/ui/spinner';
-import LogoPagonis from '@/components/property-viewer/Logo_Pagonis';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTypography } from '@/hooks/useTypography';
@@ -65,8 +64,8 @@ import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects/hover-effects';
 import { TRANSITION_PRESETS } from '@/components/ui/effects/transitions';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { LanguageSwitcher } from '@/components/header/language-switcher';
-import { ThemeToggle } from '@/components/header/theme-toggle';
+import { AuthToolbar, AuthBrandMark } from './AuthScreenChrome';
+import { AuthField } from './AuthField';
 import { Lock, CheckCircle, XCircle, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { AUTH_ROUTES } from '@/lib/routes';
 import { getSpacingClass } from '@/lib/design-system';
@@ -331,25 +330,10 @@ export function AuthActionContent() {
       className={`${layout.shellAuthStandalone} ${colors.bg.primary}`}
       aria-label={getTitle()}
     >
-      {/* 🏢 ENTERPRISE: Auth Toolbar - Language & Theme */}
-      <nav
-        className={layout.authToolbar}
-        aria-label={t('navigation.settingsToolbar')}
-      >
-        <LanguageSwitcher />
-        <ThemeToggle />
-      </nav>
+      <AuthToolbar />
 
       <section className={layout.flexColGap4}>
-        {/* 🏢 ENTERPRISE: App Branding - Logo + Name */}
-        <header className={`${layout.flexColGap2} ${layout.textCenter}`}>
-          <figure className={layout.centerHorizontal}>
-            <LogoPagonis className={`${iconSizes.xl4} ${colors.text.primary}`} />
-          </figure>
-          <h1 className={`${typography.heading.lg} ${colors.text.primary}`}>
-            {t('brand.name')}
-          </h1>
-        </header>
+        <AuthBrandMark />
 
         <Card className={layout.cardAuthWidth}>
           <CardHeader className={`${layout.flexColGap2} ${layout.textCenter}`}>
@@ -388,58 +372,46 @@ export function AuthActionContent() {
                 )}
 
                 {/* New Password Field */}
-                <fieldset className={layout.flexColGap2}>
-                  <label htmlFor="newPassword" className={typography.label.sm}>
-                    {t('action.labels.newPassword')}
-                  </label>
-                  <div className={layout.inputContainer}>
-                    <Lock className={`${layout.inputIconLeft} ${iconSizes.sm} ${colors.text.muted}`} />
-                    <Input
-                      id="newPassword"
-                      type={showPassword ? 'text' : 'password'}
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      disabled={isSubmitting}
-                      hasLeftIcon
-                      hasRightIcon
-                      required
-                      minLength={6}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className={`${layout.inputIconRight} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
-                      tabIndex={-1}
-                      aria-label={showPassword ? t('form.accessibility.hidePassword') : t('form.accessibility.showPassword')}
-                    >
-                      {showPassword ? (
-                        <EyeOff className={iconSizes.sm} />
-                      ) : (
-                        <Eye className={iconSizes.sm} />
-                      )}
-                    </button>
-                  </div>
-                </fieldset>
+                <AuthField id="newPassword" label={t('action.labels.newPassword')} icon={Lock}>
+                  <Input
+                    id="newPassword"
+                    type={showPassword ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    disabled={isSubmitting}
+                    hasLeftIcon
+                    hasRightIcon
+                    required
+                    minLength={6}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className={`${layout.inputIconRight} ${colors.text.muted} ${INTERACTIVE_PATTERNS.TEXT_HOVER} ${TRANSITION_PRESETS.STANDARD_COLORS}`}
+                    tabIndex={-1}
+                    aria-label={showPassword ? t('form.accessibility.hidePassword') : t('form.accessibility.showPassword')}
+                  >
+                    {showPassword ? (
+                      <EyeOff className={iconSizes.sm} />
+                    ) : (
+                      <Eye className={iconSizes.sm} />
+                    )}
+                  </button>
+                </AuthField>
 
                 {/* Confirm Password Field */}
-                <fieldset className={layout.flexColGap2}>
-                  <label htmlFor="confirmPassword" className={typography.label.sm}>
-                    {t('action.labels.confirmNewPassword')}
-                  </label>
-                  <div className={layout.inputContainer}>
-                    <Lock className={`${layout.inputIconLeft} ${iconSizes.sm} ${colors.text.muted}`} />
-                    <Input
-                      id="confirmPassword"
-                      type="password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      disabled={isSubmitting}
-                      hasLeftIcon
-                      required
-                      minLength={6}
-                    />
-                  </div>
-                </fieldset>
+                <AuthField id="confirmPassword" label={t('action.labels.confirmNewPassword')} icon={Lock}>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    disabled={isSubmitting}
+                    hasLeftIcon
+                    required
+                    minLength={6}
+                  />
+                </AuthField>
 
                 {/* Submit Button */}
                 <Button type="submit" className={layout.widthFull} disabled={isSubmitting}>

@@ -10,18 +10,16 @@
 import '@/lib/design-system';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Spinner } from '@/components/ui/spinner';
-import LogoPagonis from '@/components/property-viewer/Logo_Pagonis';
-import { LanguageSwitcher } from '@/components/header/language-switcher';
-import { ThemeToggle } from '@/components/header/theme-toggle';
 import { Lock } from 'lucide-react';
-import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { useTypography } from '@/hooks/useTypography';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { AuthScreen } from './AuthScreenChrome';
+import { AuthField } from './AuthField';
 
 interface MfaVerificationFormProps {
   mfaCode: string;
@@ -31,7 +29,6 @@ interface MfaVerificationFormProps {
   isLoading: boolean;
   displayError: string | null;
   successMessage: string | null;
-  t: (key: string) => string;
 }
 
 export function MfaVerificationForm({
@@ -42,39 +39,18 @@ export function MfaVerificationForm({
   isLoading,
   displayError,
   successMessage,
-  t,
 }: MfaVerificationFormProps) {
-  const iconSizes = useIconSizes();
+  // 🔴 ADR-744 §18 — το `t` ΕΡΧΟΤΑΝ ΩΣ PROP από το `AuthForm`, δηλαδή αυτό το αρχείο
+  // δήλωνε ΜΗΔΕΝ namespace και τα **16** κλειδιά του (`mfa.*`) έπεφταν σιωπηλά έξω
+  // από κάθε slice. Το prop έφυγε: κανείς δεν περνάει πια μεταφραστή.
+  const { t } = useTranslation('auth');
   const { getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
-  const typography = useTypography();
   const layout = useLayoutClasses();
 
   return (
-    <>
-      <nav className={layout.authToolbar} aria-label={t('navigation.settingsToolbar')}>
-        <LanguageSwitcher />
-        <ThemeToggle />
-      </nav>
-
-      <section className={layout.flexColGap4}>
-        <header className={`${layout.flexColGap2} ${layout.textCenter}`}>
-          <figure className={layout.centerHorizontal}>
-            <LogoPagonis className={`${iconSizes.xl4} ${colors.text.primary}`} />
-          </figure>
-          {/* eslint-disable-next-line custom/no-hardcoded-strings */}
-          <h1 className={`${typography.heading.lg} ${colors.text.primary}`}>Nestor App</h1>
-        </header>
-
-        <Card className={layout.cardAuthWidth}>
-          <CardHeader className={layout.flexColGap2}>
-            <CardTitle className={`${typography.heading.lg} ${layout.textCenter}`}>
-              {t('mfa.title')}
-            </CardTitle>
-            <CardDescription className={layout.textCenter}>{t('mfa.description')}</CardDescription>
-          </CardHeader>
-
-          <CardContent>
+    <AuthScreen title={t('mfa.title')} description={t('mfa.description')}>
+      <CardContent>
             <form onSubmit={onSubmit} className={layout.flexColGap4}>
               {displayError && (
                 <Alert variant="destructive">
@@ -90,32 +66,28 @@ export function MfaVerificationForm({
                 </Alert>
               )}
 
-              <fieldset className={layout.flexColGap2}>
-                <label htmlFor="mfaCode" className={typography.label.sm}>
-                  {t('mfa.codeLabel')}
-                </label>
-                <div className={layout.inputContainer}>
-                  <Lock
-                    className={`${layout.inputIconLeft} ${iconSizes.sm} ${colors.text.muted}`}
-                  />
-                  <Input
-                    id="mfaCode"
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    maxLength={6}
-                    placeholder={t('mfa.codePlaceholder')}
-                    value={mfaCode}
-                    onChange={(e) => onMfaCodeChange(e.target.value.replace(/\D/g, ''))}
-                    disabled={isLoading}
-                    hasLeftIcon
-                    required
-                    autoComplete="one-time-code"
-                    autoFocus
-                  />
-                </div>
-                <p className={`${typography.body.sm} ${colors.text.muted}`}>{t('mfa.codeHint')}</p>
-              </fieldset>
+              <AuthField
+                id="mfaCode"
+                label={t('mfa.codeLabel')}
+                icon={Lock}
+                hint={t('mfa.codeHint')}
+              >
+                <Input
+                  id="mfaCode"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={6}
+                  placeholder={t('mfa.codePlaceholder')}
+                  value={mfaCode}
+                  onChange={(e) => onMfaCodeChange(e.target.value.replace(/\D/g, ''))}
+                  disabled={isLoading}
+                  hasLeftIcon
+                  required
+                  autoComplete="one-time-code"
+                  autoFocus
+                />
+              </AuthField>
 
               <Button type="submit" className={layout.widthFull} disabled={isLoading}>
                 {isLoading && <Spinner size="small" className={layout.buttonIconSpacing} />}
@@ -132,9 +104,7 @@ export function MfaVerificationForm({
                 {t('mfa.cancelButton')}
               </Button>
             </form>
-          </CardContent>
-        </Card>
-      </section>
-    </>
+      </CardContent>
+    </AuthScreen>
   );
 }
