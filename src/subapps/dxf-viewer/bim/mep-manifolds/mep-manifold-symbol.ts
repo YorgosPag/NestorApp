@@ -22,7 +22,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md
  */
 
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
+import { lerpPlanPoint, unitAxis } from '../geometry/shared/plan-frame';
 import type {
   MepManifoldGeometry,
   MepManifoldKind,
@@ -35,11 +36,11 @@ import { mmToSceneUnits } from '../../utils/scene-units';
 import { MEP_WATER_COLOR } from '../../config/color-config';
 
 /** A polyline of world-space points (canvas units). */
-export type ManifoldStroke = readonly Point3D[];
+export type ManifoldStroke = readonly BimPoint[];
 
 export interface ManifoldSymbolGeometry {
   /** Closed outline polygon (= the footprint). */
-  readonly outline: readonly Point3D[];
+  readonly outline: readonly BimPoint[];
   /** Stub strokes — inlet (first) + one per outlet. */
   readonly strokes: readonly ManifoldStroke[];
   /**
@@ -76,15 +77,6 @@ export function resolveManifoldPalette(kind: MepManifoldKind): ManifoldPalette {
   return isDrainageCollectorKind(kind) ? MANIFOLD_PALETTE_DRAINAGE : MANIFOLD_PALETTE_WATER;
 }
 
-function lerp(a: Point3D, b: Point3D, t: number): Point3D {
-  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: 0 };
-}
-
-function unit(dx: number, dy: number): { x: number; y: number } {
-  const len = Math.hypot(dx, dy) || 1;
-  return { x: dx / len, y: dy / len };
-}
-
 /**
  * ADR-408 Φ14 — `GRATING_BAR_COUNT` parallel bars across the footprint (the
  * φρεάτιο grating). Each bar runs the short dimension (bottom edge `v0→v1` to top
@@ -93,17 +85,17 @@ function unit(dx: number, dy: number): { x: number; y: number } {
  * rotated into world space).
  */
 export function buildDrainageGratingStrokes(
-  v0: Point3D,
-  v1: Point3D,
-  v2: Point3D,
-  v3: Point3D,
+  v0: BimPoint,
+  v1: BimPoint,
+  v2: BimPoint,
+  v3: BimPoint,
 ): ManifoldStroke[] {
   const bars: ManifoldStroke[] = [];
   for (let i = 0; i < GRATING_BAR_COUNT; i++) {
     const frac = (i + 1) / (GRATING_BAR_COUNT + 1);
-    const bottom = lerp(v0, v1, frac); // point along the −Y edge (across width)
-    const top = lerp(v3, v2, frac); // matching point along the +Y edge
-    bars.push([lerp(bottom, top, GRATING_INSET), lerp(bottom, top, 1 - GRATING_INSET)]);
+    const bottom = lerpPlanPoint(v0, v1, frac); // point along the −Y edge (across width)
+    const top = lerpPlanPoint(v3, v2, frac); // matching point along the +Y edge
+    bars.push([lerpPlanPoint(bottom, top, GRATING_INSET), lerpPlanPoint(bottom, top, 1 - GRATING_INSET)]);
   }
   return bars;
 }
@@ -132,8 +124,8 @@ export function buildMepManifoldSymbol(
   // Its connector ROLE is kind-dependent: water manifold = the inlet feed;
   // drainage collector (φρεάτιο) = the sewer outlet. The symbol only marks the
   // position; `buildMepManifoldConnectors` owns the in/out role per kind.
-  const singleStubRoot = lerp(v0, v3, 0.5);
-  const singleStubDir = unit(v0.x - v1.x, v0.y - v1.y); // −X local (world-rotated)
+  const singleStubRoot = lerpPlanPoint(v0, v3, 0.5);
+  const singleStubDir = unitAxis(v0.x - v1.x, v0.y - v1.y); // −X local (world-rotated)
   strokes.push([
     singleStubRoot,
     { x: singleStubRoot.x + singleStubDir.x * stubLen, y: singleStubRoot.y + singleStubDir.y * stubLen, z: 0 },
@@ -142,11 +134,11 @@ export function buildMepManifoldSymbol(
   // Branch stubs along the +Y front edge (v3→v2, pointing outward +Y). Roles are
   // again kind-dependent: water manifold = the N outlets; drainage collector = the
   // N gravity inlets. `outletCount` is the branch COUNT regardless of flow role.
-  const branchStubDir = unit(v3.x - v0.x, v3.y - v0.y); // +Y local (world-rotated)
+  const branchStubDir = unitAxis(v3.x - v0.x, v3.y - v0.y); // +Y local (world-rotated)
   const count = clampOutletCount(params.outletCount);
   for (let i = 0; i < count; i++) {
     const frac = (i + 1) / (count + 1);
-    const root = lerp(v3, v2, frac);
+    const root = lerpPlanPoint(v3, v2, frac);
     strokes.push([
       root,
       { x: root.x + branchStubDir.x * stubLen, y: root.y + branchStubDir.y * stubLen, z: 0 },

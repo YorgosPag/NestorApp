@@ -44,7 +44,7 @@
 import type { ColumnEntity, ColumnParams } from '../types/column-types';
 import type { BeamEntity } from '../types/beam-types';
 import type { Point2D } from '../../rendering/types/Types';
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import { rotateVector, rotationDegToAlignLocalY, unitVector } from '../grips/grip-math';
 import { lineIntersectionPoint } from '../geometry/shared/polygon-utils';
 import { mmToSceneUnits } from '../../utils/scene-units';
@@ -53,14 +53,51 @@ import { mmToSceneUnits } from '../../utils/scene-units';
 const PERPENDICULAR_DOT_TOL = 0.26;
 
 /**
+ * Η **κλειστή λύση τοποθέτησης** που μοιράζονται και οι τρεις aligners (§4 · §9.2 · L-shape):
+ * *«η στροφή είναι δεδομένη και ένα **ΤΟΠΙΚΟ** σημείο της διατομής πρέπει να πέσει πάνω σε
+ * δεδομένο σημείο του **κόσμου** — ποιο είναι το κέντρο;»* ⇒ `position = A − R(θ)·(P_local·s)`.
+ *
+ * Είναι η **αντιστροφή** του forward placement (`transformFootprintToWorld` του
+ * `rectangular-body-geometry`), γι' αυτό δεν γράφει δικά της cos/sin: καταναλώνει το
+ * `rotateVector` SSoT (`grip-math`, ADR-188).
+ *
+ * Πριν την εξαγωγή (N.18 / CHECK 3.28) ο τύπος ήταν **αντιγραμμένος τρεις φορές**, και το
+ * σχόλιο της τρίτης το **παραδεχόταν** γραπτά («ίδιο μοτίβο §4/§9.2»). Εδώ ζει ΜΙΑ φορά.
+ *
+ * ⚠️ Επιστρέφει τη **βάση** των `ColumnParams` — ό,τι είναι κοινό. Το `lshape`/`tshape` ΔΕΝ
+ * ενοποιείται: κάθε διατομή έχει δικά της πεδία και δική της γεωμετρική σημασία, και ένα
+ * ενιαίο «shape» θα ήταν λάθος απάντηση σε λάθος ερώτηση (πρβλ. `anchor-offsets`, ADR-793).
+ *
+ * @param worldAnchor Το σημείο του κόσμου πάνω στο οποίο προσγειώνεται το `pLocalMm`.
+ * @param pLocalMm    Το τοπικό σημείο της διατομής, σε **mm** (πριν την κλίμακα σκηνής).
+ */
+function placeColumnByLocalAnchor(
+  nextParams: ColumnParams,
+  worldAnchor: Point2D,
+  pLocalMm: Point2D,
+  rotationDeg: number,
+  width: number,
+  depth: number,
+): ColumnParams {
+  const s = mmToSceneUnits(nextParams.sceneUnits ?? 'mm');
+  const rotated = rotateVector({ x: pLocalMm.x * s, y: pLocalMm.y * s }, rotationDeg);
+  const position: BimPoint = {
+    x: worldAnchor.x - rotated.x,
+    y: worldAnchor.y - rotated.y,
+    z: nextParams.position.z,
+  };
+  return { ...nextParams, position, anchor: 'center', rotation: rotationDeg, width, depth };
+}
+
+/**
  * Τα άκρα ενός δοκαριού ταξινομημένα ως προς απόσταση από σημείο `(px,py)` — ΕΝΑ SSoT για
  * κάθε «ποιο άκρο είναι κοντά/μακριά» ερώτημα του module (πλησιέστερο πλαισιωτικό δοκάρι,
  * near/far-end του bearing arm, terminating-vs-passing για το T-junction). Πριν ήταν 3
  * inline `Math.hypot` επαναλήψεις (N.0.2 de-dup).
  */
 interface BeamEndsByProximity {
-  readonly near: Point3D;
-  readonly far: Point3D;
+  readonly near: BimPoint;
+  readonly far: BimPoint;
   readonly nearDist: number;
   readonly farDist: number;
 }
@@ -128,7 +165,6 @@ export function alignColumnToFramingBeam(
   const uSpan = unitVector(nearEnd, farEnd);
   if (!uSpan) return null;
 
-  const s = mmToSceneUnits(nextParams.sceneUnits ?? 'mm');
   const armWidth = beam.params.width; // mm — πάχος bearing arm = πλάτος δοκαριού (απαίτηση 3)
 
   // bbox: width = μήκος foot (X), depth = μήκος bearing arm (Y). Εγγύηση ότι το bbox
@@ -142,24 +178,11 @@ export function alignColumnToFramingBeam(
 
   // near-end centerline του bearing arm σε LOCAL mm (flipY=false: σκέλος αριστερά
   // x∈[−W/2, −W/2+armWidth], ελεύθερο άκρο στην κορυφή y=+D/2).
-  const pLocalX = -W / 2 + armWidth / 2;
-  const pLocalY = D / 2;
-  const rotated = rotateVector({ x: pLocalX * s, y: pLocalY * s }, rotationDeg);
-
   // position = E_n − R(θ)·(P_local·s)  → η όψη «α» πέφτει flush στο near-end (παρειά #1).
-  const position: Point3D = {
-    x: nearEnd.x - rotated.x,
-    y: nearEnd.y - rotated.y,
-    z: nextParams.position.z,
-  };
+  const pLocal = { x: -W / 2 + armWidth / 2, y: D / 2 };
 
   return {
-    ...nextParams,
-    position,
-    anchor: 'center',
-    rotation: rotationDeg,
-    width: W,
-    depth: D,
+    ...placeColumnByLocalAnchor(nextParams, nearEnd, pLocal, rotationDeg, W, D),
     lshape: { ...nextParams.lshape, armWidth, flipY: false },
   };
 }
@@ -187,6 +210,44 @@ function beamAxes(beams: readonly BeamEntity[]): BeamAxis[] {
  * αξόνων) είναι **πλησιέστερα στο κέντρο** της κολώνας (= η πραγματική συμβολή Τ). Για το
  * στιγμιότυπο (ακριβώς 2 κάθετα) υπάρχει ένα μόνο ζεύγος· >2 διαλέγει το γνήσιο junction.
  */
+/**
+ * Το κάθετο ζεύγος δοκαριών γύρω από την κολώνα, **μαζί με τα άκρα του καθενός ως προς τον
+ * κόμβο** — η κοινή ερώτηση *επίλυσης* που κάνουν και οι δύο dual-beam aligners (T-shape,
+ * L-shape) **πριν** αποφασίσουν τι σημαίνει το ζεύγος για τη δική τους διατομή.
+ *
+ * ⚠️ Σταματά **ακριβώς εδώ**, και αυτό είναι το σημείο: η **ερμηνεία** ΔΕΝ ενοποιείται —
+ * το T ρωτά *«ποιο καταλήγει;»* (`nearDist`, κορμός vs πέλμα), το L ρωτά *«προς τα πού
+ * εκτείνεται το καθένα;»* (`far`, χειρότητα με cross-product). Ίδια δεδομένα, **άλλη**
+ * ερώτηση πάνω τους — ένωση θα ισοπέδωνε δύο διαφορετικές γεωμετρικές αποφάσεις.
+ */
+interface PerpendicularBeamsAtNode {
+  readonly node: Point2D;
+  readonly a: BeamAxis;
+  readonly b: BeamAxis;
+  readonly endsA: BeamEndsByProximity;
+  readonly endsB: BeamEndsByProximity;
+}
+
+function resolvePerpendicularBeamsAtNode(
+  column: ColumnEntity,
+  framingBeams: readonly BeamEntity[],
+): PerpendicularBeamsAtNode | null {
+  const pair = bestPerpendicularPair(
+    beamAxes(framingBeams),
+    column.params.position.x,
+    column.params.position.y,
+  );
+  if (!pair) return null;
+  const { node, a, b } = pair;
+  return {
+    node,
+    a,
+    b,
+    endsA: beamEndsByProximity(a.beam, node.x, node.y),
+    endsB: beamEndsByProximity(b.beam, node.x, node.y),
+  };
+}
+
 function bestPerpendicularPair(
   axes: readonly BeamAxis[],
   cx: number,
@@ -246,20 +307,15 @@ export function alignTShapeColumnToFramingBeams(
 ): ColumnParams | null {
   if (nextParams.kind !== 'T-shape') return null;
 
-  const cx = column.params.position.x;
-  const cy = column.params.position.y;
-  const pair = bestPerpendicularPair(beamAxes(framingBeams), cx, cy);
-  if (!pair) return null;
+  const resolved = resolvePerpendicularBeamsAtNode(column, framingBeams);
+  if (!resolved) return null;
 
   // flange-beam = «περνά ευθεία» (μεγαλύτερη απόσταση κόμβου από τα άκρα του = εσωτερικός)·
-  // web-beam = «καταλήγει» (το ένα άκρο στον κόμβο = μικρότερη απόσταση). Reuse του ΕΝΟΣ
-  // `beamEndsByProximity` SSoT (near = το πλησιέστερο άκρο, far = η φορά που εκτείνεται).
-  const { node } = pair;
-  const endsA = beamEndsByProximity(pair.a.beam, node.x, node.y);
-  const endsB = beamEndsByProximity(pair.b.beam, node.x, node.y);
+  // web-beam = «καταλήγει» (το ένα άκρο στον κόμβο = μικρότερη απόσταση).
+  const { node, endsA, endsB } = resolved;
   const aIsFlange = endsA.nearDist >= endsB.nearDist;
-  const flangeBeam = (aIsFlange ? pair.a : pair.b).beam;
-  const webBeam = (aIsFlange ? pair.b : pair.a).beam;
+  const flangeBeam = (aIsFlange ? resolved.a : resolved.b).beam;
+  const webBeam = (aIsFlange ? resolved.b : resolved.a).beam;
   const webEnds = aIsFlange ? endsB : endsA;
 
   // u_webOut = φορά που εκτείνεται το σώμα του κορμού-δοκαριού από τον κόμβο (node → far).
@@ -269,7 +325,6 @@ export function alignTShapeColumnToFramingBeams(
   // rotation: τοπικό +Y (κορμός→πέλμα) = −u_webOut (αντίθετο της φοράς που εκτείνεται ο κορμός).
   const rotationDeg = rotationDegToAlignLocalY({ x: -uWebOut.x, y: -uWebOut.y });
 
-  const s = mmToSceneUnits(nextParams.sceneUnits ?? 'mm');
   const webThickness = webBeam.params.width; // mm — πάχος κορμού = πλάτος καταλήγοντος δοκαριού
   const flangeThickness = flangeBeam.params.width; // mm — πάχος πέλματος = πλάτος συνεχόμενου
 
@@ -279,22 +334,10 @@ export function alignTShapeColumnToFramingBeams(
   const D = Math.max(nextParams.depth, flangeThickness + webThickness);
 
   // P_local = ο κόμβος (τομή flange-centerline y=D/2−ft/2 × web-centerline x=0) σε τοπικές mm.
-  const pLocalY = D / 2 - flangeThickness / 2;
-  const rotated = rotateVector({ x: 0, y: pLocalY * s }, rotationDeg);
-
-  const position: Point3D = {
-    x: node.x - rotated.x,
-    y: node.y - rotated.y,
-    z: nextParams.position.z,
-  };
+  const pLocal = { x: 0, y: D / 2 - flangeThickness / 2 };
 
   return {
-    ...nextParams,
-    position,
-    anchor: 'center',
-    rotation: rotationDeg,
-    width: W,
-    depth: D,
+    ...placeColumnByLocalAnchor(nextParams, node, pLocal, rotationDeg, W, D),
     // flangeLength = W ⇒ το πέλμα καλύπτει όλο το bbox-πλάτος (πλήρης συνέχεια στο
     // συνεχόμενο δοκάρι). webThickness/flangeThickness = πλάτη δοκαριών· flipY=false.
     tshape: { ...nextParams.tshape, flangeLength: W, webThickness, flangeThickness, flipY: false },
@@ -344,26 +387,23 @@ export function alignLShapeColumnToFramingBeams(
 ): ColumnParams | null {
   if (nextParams.kind !== 'L-shape') return null;
 
-  const cx = column.params.position.x;
-  const cy = column.params.position.y;
-  const pair = bestPerpendicularPair(beamAxes(framingBeams), cx, cy);
-  if (!pair) return null;
+  const resolved = resolvePerpendicularBeamsAtNode(column, framingBeams);
+  if (!resolved) return null;
 
   // outward κάθε δοκαριού από τον κόμβο N (φορά προς το ελεύθερο άκρο = προς το άνοιγμα).
-  const { node } = pair;
-  const outA = unitVector(node, beamEndsByProximity(pair.a.beam, node.x, node.y).far);
-  const outB = unitVector(node, beamEndsByProximity(pair.b.beam, node.x, node.y).far);
+  const { node } = resolved;
+  const outA = unitVector(node, resolved.endsA.far);
+  const outB = unitVector(node, resolved.endsB.far);
   if (!outA || !outB) return null;
 
   // Chirality: το foot (τοπικό +X μετά την rotation) πέφτει στη φορά με crossZ(u_v, foot)=−1.
   // Διαλέγουμε ως κατακόρυφο σκέλος το δοκάρι που αφήνει το άλλο σε αυτή τη φορά — ΕΝΑ
   // πρόσημο cross-product καλύπτει και τις 4 γωνίες (αντί 4 hard-coded if).
   const aIsVerticalLeg = crossZ(outA, outB) < 0;
-  const vBeam = (aIsVerticalLeg ? pair.a : pair.b).beam; // κατακόρυφο σκέλος (∥ τοπικό +Y)
-  const hBeam = (aIsVerticalLeg ? pair.b : pair.a).beam; // foot / οριζόντιο σκέλος (∥ τοπικό +X)
+  const vBeam = (aIsVerticalLeg ? resolved.a : resolved.b).beam; // κατακόρυφο σκέλος (∥ τοπικό +Y)
+  const hBeam = (aIsVerticalLeg ? resolved.b : resolved.a).beam; // foot / οριζόντιο σκέλος (∥ τοπικό +X)
   const uVerticalOut = aIsVerticalLeg ? outA : outB;
 
-  const s = mmToSceneUnits(nextParams.sceneUnits ?? 'mm');
   const armWidth = vBeam.params.width; // mm — πάχος κατακόρυφου σκέλους = πλάτος δοκαριού του
   const armLength = hBeam.params.width; // mm — πάχος foot = πλάτος δοκαριού του
 
@@ -377,23 +417,10 @@ export function alignLShapeColumnToFramingBeams(
 
   // P_local = ο κόμβος (τομή leg-centerlines) σε τοπικές mm (flipY=false: κατακόρυφο σκέλος
   // αριστερά x∈[−W/2,−W/2+armWidth], foot κάτω y∈[−D/2,−D/2+armLength]).
-  const pLocalX = -W / 2 + armWidth / 2;
-  const pLocalY = -D / 2 + armLength / 2;
-  const rotated = rotateVector({ x: pLocalX * s, y: pLocalY * s }, rotationDeg);
-
-  const position: Point3D = {
-    x: node.x - rotated.x,
-    y: node.y - rotated.y,
-    z: nextParams.position.z,
-  };
+  const pLocal = { x: -W / 2 + armWidth / 2, y: -D / 2 + armLength / 2 };
 
   return {
-    ...nextParams,
-    position,
-    anchor: 'center',
-    rotation: rotationDeg,
-    width: W,
-    depth: D,
+    ...placeColumnByLocalAnchor(nextParams, node, pLocal, rotationDeg, W, D),
     lshape: { ...nextParams.lshape, armWidth, armLength, flipY: false },
   };
 }

@@ -395,3 +395,75 @@ describe('alignColumnOnTypeChange (ADR-496 dispatcher)', () => {
     expect(alignColumnOnTypeChange(col, rectNext, [hBeam, vBeam])).toBeNull();
   });
 });
+
+/**
+ * ΚΛΙΜΑΚΑ ΣΚΗΝΗΣ — η άγκυρα που έλειπε (N.18 / ADR-584).
+ *
+ * 🔴 Κάθε fixture παραπάνω δηλώνει `sceneUnits: 'mm'`, όπου `mmToSceneUnits` επιστρέφει
+ * **ακριβώς 1** ⇒ ο πολλαπλασιασμός `P_local · s` είναι **no-op** και καμία από τις 54
+ * άγκυρες δεν τον ασκούσε. Μετρημένο: αφαίρεση του `* s` από την κλειστή λύση τοποθέτησης
+ * άφηνε **όλες πράσινες**.
+ *
+ * Δεν είναι θεωρητικό: το ίδιο ακριβώς σφάλμα μονάδων έχει ήδη χτυπήσει σε αυτό το δέντρο
+ * (κλάδος που κατανάλωνε ίχνος ακλιμάκωτο ⇒ σώμα **1000× μακριά** από τη θέση του σε
+ * σκηνή mm). Εδώ η σκηνή είναι σε **μέτρα** (`s = 0,001`), οπότε μια χαμένη κλίμακα
+ * μετακινεί την κολώνα κατά ~1000×.
+ */
+describe('ADR-496 — η κλειστή λύση σέβεται την κλίμακα σκηνής (όχι μόνο mm)', () => {
+  /** Σκηνή σε ΜΕΤΡΑ: τα params μένουν σε mm, ο κόσμος είναι σε m ⇒ s = 0,001. */
+  function lshapeNextMetres(width = 400, depth = 400): ColumnParams {
+    return { ...lshapeNext(width, depth), sceneUnits: 'm' } as unknown as ColumnParams;
+  }
+
+  it('single-beam: η όψη «α» πέφτει flush στο near-end ακόμα και με s = 0,001', () => {
+    const col = rectColumn(0, 0);
+    // Δοκάρι σε ΜΕΤΡΑ: (0,0) → (3,0). near-end = (0,0), u_span = (1,0).
+    const fit = alignColumnToFramingBeam(col, lshapeNextMetres(), [
+      beam({ x: 0, y: 0 }, { x: 3, y: 0 }),
+    ]);
+    expect(fit).not.toBeNull();
+    if (!fit) return;
+
+    expect(mmToSceneUnits(fit.sceneUnits ?? 'mm')).toBe(0.001);
+
+    const world = worldOfLocal(fit, bearingNearEndLocal(fit));
+    expect(world.x).toBeCloseTo(0, 9);
+    expect(world.y).toBeCloseTo(0, 9);
+
+    // Η μετατόπιση κέντρου είναι ΚΛΙΜΑΚΩΜΕΝΗ: |position| ~ mm·s, όχι mm.
+    expect(Math.hypot(fit.position.x, fit.position.y)).toBeLessThan(1);
+  });
+
+  it('L-shape dual-beam: ο κόμβος μένει στη γωνία με s = 0,001', () => {
+    const col = rectColumn(0, 0);
+    const fit = alignLShapeColumnToFramingBeams(col, lshapeNextMetres(), [
+      beam({ x: 0, y: 0 }, { x: 3, y: 0 }, 300),
+      beam({ x: 0, y: 0 }, { x: 0, y: 3 }, 250),
+    ]);
+    expect(fit).not.toBeNull();
+    if (!fit) return;
+
+    const armWidth = fit.lshape?.armWidth ?? 0;
+    const armLength = fit.lshape?.armLength ?? 0;
+    const nodeLocal = { x: -fit.width / 2 + armWidth / 2, y: -fit.depth / 2 + armLength / 2 };
+    const world = worldOfLocal(fit, nodeLocal);
+    expect(world.x).toBeCloseTo(0, 9);
+    expect(world.y).toBeCloseTo(0, 9);
+  });
+
+  it('T-shape: ο κόμβος μένει στο σημείο τομής με s = 0,001', () => {
+    const col = rectColumn(0, 0);
+    const tNext = { ...lshapeNextMetres(), kind: 'T-shape', tshape: {} } as unknown as ColumnParams;
+    const fit = alignTShapeColumnToFramingBeams(col, tNext, [
+      beam({ x: -3, y: 0 }, { x: 3, y: 0 }, 300), // περνά ευθεία → πέλμα
+      beam({ x: 0, y: 0 }, { x: 0, y: -3 }, 250), // καταλήγει → κορμός
+    ]);
+    expect(fit).not.toBeNull();
+    if (!fit) return;
+
+    const flangeThickness = fit.tshape?.flangeThickness ?? 0;
+    const world = worldOfLocal(fit, { x: 0, y: fit.depth / 2 - flangeThickness / 2 });
+    expect(world.x).toBeCloseTo(0, 9);
+    expect(world.y).toBeCloseTo(0, 9);
+  });
+});

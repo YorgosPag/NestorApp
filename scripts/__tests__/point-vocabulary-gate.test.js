@@ -115,8 +115,13 @@ describe('Π — βαθμονόμηση στον πραγματικό κώδικ
     const found = scanDeclarations(registry, t);
     const { entries } = classify(found, registry);
     expect(entries.filter((e) => e.state === 'undeclared-owner')).toEqual([]);
+    // ⚠️ ΧΕΙΡΟΓΡΑΦΗ ΛΙΣΤΑ, ΕΠΙΤΗΔΕΣ: η πύλη παίρνει τα ονόματα ΑΠΟ ΤΟ ΜΗΤΡΩΟ, οπότε μια
+    // άγκυρα που κι αυτή διάβαζε το μητρώο θα ήταν ο ΙΔΙΟΣ κριτής δύο φορές. Εδώ χρειάζεται
+    // ΔΕΥΤΕΡΗ ΦΩΝΗ (ADR-792 §7) — άρα όταν αλλάζει το λεξιλόγιο, αλλάζει ΚΑΙ αυτή, με το χέρι.
+    // ADR-793: το `BimBounds` διασπάστηκε σε `PlanBounds` (ίχνος) + `SolidBounds` (στερεό).
     expect(found.map((f) => f.name).sort()).toEqual(
-      ['BimBounds', 'BimPoint', 'BimPolygon', 'BimPolyline', 'PlanProfile', 'PlanarPoint'],
+      ['BimPoint', 'BimPolygon', 'BimPolyline', 'PlanBounds', 'PlanProfile', 'PlanarPoint',
+        'SolidBounds'],
     );
   });
 

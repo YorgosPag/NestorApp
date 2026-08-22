@@ -23,6 +23,7 @@ import type { BimValidation, PlanBounds, BimPoint, BimPolygon } from '../../type
 import { polygonArea } from './polygon-utils';
 import { mmToSceneUnits, type SceneUnits } from '../../../utils/scene-units';
 import { planBoundsOf } from './xy-bounds';
+import { bodyFrame, framePoint, lateralStubFrames } from './plan-frame';
 
 /** mm → m scalar (area conversion applies this squared). */
 export const MM_TO_M = 1 / 1000;
@@ -127,6 +128,42 @@ export function computeRectangularBodyGeometry(
   const local = buildRectangularLocalFootprint(params.width, params.length, s);
   const transformed = transformFootprintToWorld(local, params.position, params.rotation);
   return computeFootprintBodyGeometry(transformed, params.bodyHeightMm, s);
+}
+
+// ─── Αντικριστοί πλευρικοί κλάδοι ────────────────────────────────────────────
+
+/** Μήκος κλάδου ως κλάσμα του μήκους του σώματος (σύμβαση συμβόλου κάτοψης). */
+const LATERAL_STUB_LENGTH_FRAC = 0.8;
+/** Κατώτατο μήκος κλάδου σε mm — ώστε ένα μικρό σώμα να μη χάνει τους κλάδους του. */
+const LATERAL_STUB_MIN_MM = 60;
+
+/**
+ * Τα **δύο αντικριστά stub strokes** ενός ορθογώνιου MEP σώματος: από το μέσο της παρειάς
+ * −X προς τα έξω, και από το μέσο της +X προς τα έξω. Επιστρέφει `null` όταν το ίχνος δεν
+ * είναι τετράπλευρο, ώστε ο καταναλωτής να κρατήσει το **δικό του** σχήμα πρόωρης εξόδου.
+ *
+ * 🔑 Είναι το ζεύγος «παροχή/επιστροφή» του καλοριφέρ και «κρύο/ζεστό» του θερμοσίφωνα:
+ * **ίδια γεωμετρία και ίδια σύμβαση μήκους**, δύο ονοματολογίες τομέα. Πριν την εξαγωγή
+ * (N.18 / CHECK 3.28) ο ίδιος τύπος μήκους ζούσε **δύο φορές**, οπότε μια αλλαγή στη
+ * σύμβαση θα άλλαζε το ένα σύμβολο και **όχι** το άλλο — σιωπηλά.
+ *
+ * ⚠️ Ό,τι **δεν** είναι κοινό μένει έξω: η ταξινόμηση συστήματος, η φορά ροής
+ * (`'in'`/`'out'`) και τα glyphs του σώματος είναι **απόφαση της οντότητας**.
+ */
+export function buildLateralStubStrokes(
+  footprint: readonly BimPoint[],
+  lengthMm: number,
+  sceneUnits: SceneUnits | null | undefined,
+): readonly [BimPoint[], BimPoint[]] | null {
+  if (footprint.length !== 4) return null;
+  const [v0, v1, v2, v3] = footprint;
+  const s = mmToSceneUnits(sceneUnits ?? 'mm');
+  const stubLen = Math.max(lengthMm * s * LATERAL_STUB_LENGTH_FRAC, LATERAL_STUB_MIN_MM * s);
+  const { negative, positive } = lateralStubFrames(bodyFrame(v0, v1, v2, v3));
+  return [
+    [negative.origin, framePoint(negative, stubLen, 0)],
+    [positive.origin, framePoint(positive, stubLen, 0)],
+  ];
 }
 
 // ─── Validation skeleton ─────────────────────────────────────────────────────

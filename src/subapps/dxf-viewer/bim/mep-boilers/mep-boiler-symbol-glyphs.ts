@@ -6,10 +6,19 @@
  * point (`buildMepBoilerSymbol`) lives in the sibling file and imports from here.
  */
 
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
+import {
+  bodyFrame,
+  frameArc,
+  framePoint,
+  lerpPlanPoint,
+  shiftFrame,
+  stubFrame,
+  type PlanAxis,
+} from '../geometry/shared/plan-frame';
 
 /** A polyline of world-space points (canvas units). Re-exported by `mep-boiler-symbol.ts`. */
-export type BoilerStroke = readonly Point3D[];
+export type BoilerStroke = readonly BimPoint[];
 
 // ---------------------------------------------------------------------------
 // Private constants — fractional geometry parameters for glyph builders
@@ -131,34 +140,6 @@ const FILLING_LOOP_RADIUS_FRAC = 0.06;
 const FILLING_TICK_HALF_FRAC = 0.04;
 
 // ---------------------------------------------------------------------------
-// Shared micro-helpers (pure)
-// ---------------------------------------------------------------------------
-
-export function lerp(a: Point3D, b: Point3D, t: number): Point3D {
-  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: 0 };
-}
-
-export function unit(dx: number, dy: number): { x: number; y: number } {
-  const len = Math.hypot(dx, dy) || 1;
-  return { x: dx / len, y: dy / len };
-}
-
-/** Point at `alongOut` (flow axis) + `alongPerp` (perpendicular) from `origin`. */
-export function pointAt(
-  origin: Point3D,
-  outward: { x: number; y: number },
-  perp: { x: number; y: number },
-  alongOut: number,
-  alongPerp: number,
-): Point3D {
-  return {
-    x: origin.x + outward.x * alongOut + perp.x * alongPerp,
-    y: origin.y + outward.y * alongOut + perp.y * alongPerp,
-    z: 0,
-  };
-}
-
-// ---------------------------------------------------------------------------
 // Glyph/stroke/outline builders (pure, rotation-aware)
 // ---------------------------------------------------------------------------
 
@@ -167,14 +148,13 @@ export function pointAt(
  * outward by `clearanceCanvas` on every side, rotation-aware. Returns a closed 4-vertex polygon.
  */
 export function buildClearanceOutline(
-  v0: Point3D,
-  v1: Point3D,
-  v2: Point3D,
-  v3: Point3D,
+  v0: BimPoint,
+  v1: BimPoint,
+  v2: BimPoint,
+  v3: BimPoint,
   clearanceCanvas: number,
-): Point3D[] {
-  const w = unit(v1.x - v0.x, v1.y - v0.y); // local +X (width) direction in world
-  const d = unit(v3.x - v0.x, v3.y - v0.y); // local +Y (depth) direction in world
+): BimPoint[] {
+  const { along: w, perp: d } = bodyFrame(v0, v1, v2, v3); // local +X (width) / +Y (depth) in world
   const c = clearanceCanvas;
   return [
     { x: v0.x - w.x * c - d.x * c, y: v0.y - w.y * c - d.y * c, z: 0 }, // −X/−Y corner
@@ -188,10 +168,10 @@ export function buildClearanceOutline(
  * Build the horizontal divider stroke across the boiler body at `DIVIDER_FRAC` height.
  * Rotation-aware (verts are already in world space).
  */
-export function buildDividerStroke(v0: Point3D, v1: Point3D, v2: Point3D, v3: Point3D): BoilerStroke {
+export function buildDividerStroke(v0: BimPoint, v1: BimPoint, v2: BimPoint, v3: BimPoint): BoilerStroke {
   // Left wall of the body: v0→v3; right wall: v1→v2
-  const leftPt  = lerp(v0, v3, DIVIDER_FRAC);  // point on −X edge at the divider height
-  const rightPt = lerp(v1, v2, DIVIDER_FRAC);  // matching point on +X edge
+  const leftPt  = lerpPlanPoint(v0, v3, DIVIDER_FRAC);  // point on −X edge at the divider height
+  const rightPt = lerpPlanPoint(v1, v2, DIVIDER_FRAC);  // matching point on +X edge
   return [leftPt, rightPt];
 }
 
@@ -199,49 +179,22 @@ export function buildDividerStroke(v0: Point3D, v1: Point3D, v2: Point3D, v3: Po
  * Build the upward-pointing triangle (flame/burner glyph) centred in the lower chamber.
  * Proportional to body dimensions, rotation-aware. Returns [base, leftLeg, rightLeg].
  */
-export function buildFlameStrokes(v0: Point3D, v1: Point3D, v2: Point3D, v3: Point3D): BoilerStroke[] {
-  // Body width direction (−X edge to +X edge centroid, a.k.a. local X axis in world)
-  const widthDir  = unit(v1.x - v0.x, v1.y - v0.y);
-  // Body depth direction (−Y edge to +Y edge centroid, a.k.a. local Y axis in world)
-  const depthDir  = unit(v3.x - v0.x, v3.y - v0.y);
+export function buildFlameStrokes(v0: BimPoint, v1: BimPoint, v2: BimPoint, v3: BimPoint): BoilerStroke[] {
+  const body = bodyFrame(v0, v1, v2, v3);
 
-  // Body dimensions in canvas units
-  const bodyWidthVec  = { x: v1.x - v0.x, y: v1.y - v0.y };
-  const bodyWidth  = Math.hypot(bodyWidthVec.x, bodyWidthVec.y);
-  const bodyDepthVec  = { x: v3.x - v0.x, y: v3.y - v0.y };
-  const bodyDepth = Math.hypot(bodyDepthVec.x, bodyDepthVec.y);
-
-  // Centroid of the whole footprint
-  const cx = (v0.x + v1.x + v2.x + v3.x) / 4;
-  const cy = (v0.y + v1.y + v2.y + v3.y) / 4;
-
-  // Flame centre: offset from footprint centroid toward the bottom (−width direction)
+  // Flame frame: offset from the footprint centroid toward the bottom (−width direction)
   // so it sits in the lower chamber (between bottom edge and divider).
-  const chamberCentreOffset = bodyWidth * (0.5 - DIVIDER_FRAC / 2);
-  const flameCx = cx - widthDir.x * chamberCentreOffset * 0.5;
-  const flameCy = cy - widthDir.y * chamberCentreOffset * 0.5;
+  const chamberCentreOffset = body.width * (0.5 - DIVIDER_FRAC / 2);
+  const flame = shiftFrame(body, -chamberCentreOffset * 0.5, 0);
 
   // Triangle geometry
-  const halfBase = bodyDepth * FLAME_HALF_WIDTH_FRAC;
-  const flameH   = bodyWidth * FLAME_HEIGHT_FRAC;
+  const halfBase = body.depth * FLAME_HALF_WIDTH_FRAC;
+  const flameH   = body.width * FLAME_HEIGHT_FRAC;
 
-  // Base-left and base-right (along depth axis)
-  const baseLeft:  Point3D = {
-    x: flameCx - depthDir.x * halfBase,
-    y: flameCy - depthDir.y * halfBase,
-    z: 0,
-  };
-  const baseRight: Point3D = {
-    x: flameCx + depthDir.x * halfBase,
-    y: flameCy + depthDir.y * halfBase,
-    z: 0,
-  };
-  // Apex: upward (toward the divider, i.e. +width direction)
-  const apex: Point3D = {
-    x: flameCx + widthDir.x * flameH,
-    y: flameCy + widthDir.y * flameH,
-    z: 0,
-  };
+  // Base-left and base-right (along depth axis); apex upward (toward the divider, +width).
+  const baseLeft  = framePoint(flame, 0, -halfBase);
+  const baseRight = framePoint(flame, 0, halfBase);
+  const apex      = framePoint(flame, flameH, 0);
 
   return [
     [baseLeft,  baseRight],  // base
@@ -255,40 +208,35 @@ export function buildFlameStrokes(v0: Point3D, v1: Point3D, v2: Point3D, v3: Poi
  * + discharge stem + chevron arrowhead, drawn ON the boiler body (not a perimeter connector).
  * Pure + rotation-aware. Returns [innerTriangle, outerTriangle, stem, chevronL, chevronR].
  */
-export function buildSafetyValveGlyph(v0: Point3D, v1: Point3D, v2: Point3D, v3: Point3D): BoilerStroke[] {
-  // Local body axes in world: +X (width, toward the top edge = discharge axis) and +Y (depth, lateral).
-  const along = unit(v1.x - v0.x, v1.y - v0.y);
-  const perp  = unit(v3.x - v0.x, v3.y - v0.y);
-  const bodyWidth = Math.hypot(v1.x - v0.x, v1.y - v0.y);
-  const bodyDepth = Math.hypot(v3.x - v0.x, v3.y - v0.y);
+export function buildSafetyValveGlyph(v0: BimPoint, v1: BimPoint, v2: BimPoint, v3: BimPoint): BoilerStroke[] {
+  const body = bodyFrame(v0, v1, v2, v3);
 
-  // Valve centre: from the footprint centroid, up toward the top edge + offset laterally so it
+  // Valve frame: from the footprint centroid, up toward the top edge + offset laterally so it
   // sits in the upper chamber clear of the central supply stub.
-  const cx = (v0.x + v1.x + v2.x + v3.x) / 4;
-  const cy = (v0.y + v1.y + v2.y + v3.y) / 4;
-  const centre: Point3D = {
-    x: cx + along.x * bodyWidth * VALVE_CENTRE_WIDTH_FRAC + perp.x * bodyDepth * VALVE_CENTRE_DEPTH_FRAC,
-    y: cy + along.y * bodyWidth * VALVE_CENTRE_WIDTH_FRAC + perp.y * bodyDepth * VALVE_CENTRE_DEPTH_FRAC,
-    z: 0,
-  };
+  const valve = shiftFrame(
+    body,
+    body.width * VALVE_CENTRE_WIDTH_FRAC,
+    body.depth * VALVE_CENTRE_DEPTH_FRAC,
+  );
+  const centre = valve.origin;
 
-  const bodyHalf = bodyWidth * VALVE_BODY_HALF_FRAC;   // triangle half-length along discharge
-  const baseHalf = bodyDepth * VALVE_BODY_WIDE_FRAC;   // bow-tie base half-width
-  const discharge = bodyWidth * VALVE_DISCHARGE_FRAC;  // stem length beyond the body
-  const arrowLen = bodyWidth * VALVE_ARROW_LEN_FRAC;
-  const arrowHalf = bodyDepth * VALVE_ARROW_HALF_FRAC;
+  const bodyHalf = body.width * VALVE_BODY_HALF_FRAC;   // triangle half-length along discharge
+  const baseHalf = body.depth * VALVE_BODY_WIDE_FRAC;   // bow-tie base half-width
+  const discharge = body.width * VALVE_DISCHARGE_FRAC;  // stem length beyond the body
+  const arrowLen = body.width * VALVE_ARROW_LEN_FRAC;
+  const arrowHalf = body.depth * VALVE_ARROW_HALF_FRAC;
 
   // Bow-tie body: apexes meet at `centre`, bases splay ± along the discharge axis.
-  const inBaseTop  = pointAt(centre, along, perp, -bodyHalf, baseHalf);
-  const inBaseBot  = pointAt(centre, along, perp, -bodyHalf, -baseHalf);
-  const outBaseTop = pointAt(centre, along, perp, bodyHalf, baseHalf);
-  const outBaseBot = pointAt(centre, along, perp, bodyHalf, -baseHalf);
+  const inBaseTop  = framePoint(valve, -bodyHalf, baseHalf);
+  const inBaseBot  = framePoint(valve, -bodyHalf, -baseHalf);
+  const outBaseTop = framePoint(valve, bodyHalf, baseHalf);
+  const outBaseBot = framePoint(valve, bodyHalf, -baseHalf);
 
   // Discharge stem from the outer base centre outward, capped with a chevron arrowhead.
-  const stemStart = pointAt(centre, along, perp, bodyHalf, 0);
-  const stemEnd   = pointAt(centre, along, perp, bodyHalf + discharge, 0);
-  const chevLeft  = pointAt(centre, along, perp, bodyHalf + discharge - arrowLen, arrowHalf);
-  const chevRight = pointAt(centre, along, perp, bodyHalf + discharge - arrowLen, -arrowHalf);
+  const stemStart = framePoint(valve, bodyHalf, 0);
+  const stemEnd   = framePoint(valve, bodyHalf + discharge, 0);
+  const chevLeft  = framePoint(valve, bodyHalf + discharge - arrowLen, arrowHalf);
+  const chevRight = framePoint(valve, bodyHalf + discharge - arrowLen, -arrowHalf);
 
   return [
     [centre, inBaseTop, inBaseBot, centre],   // inner triangle (closed)
@@ -304,42 +252,32 @@ export function buildSafetyValveGlyph(v0: Point3D, v1: Point3D, v2: Point3D, v3:
  * diaphragm-vessel symbol: circle (N-gon) + membrane chord + connection stem. Placed in the upper
  * chamber (−depth) opposite the relief valve. Pure + rotation-aware. Returns [circle, diaphragm, stem].
  */
-export function buildExpansionVesselGlyph(v0: Point3D, v1: Point3D, v2: Point3D, v3: Point3D): BoilerStroke[] {
-  // Local body axes in world: +X (width, toward the top edge) and +Y (depth, lateral).
-  const along = unit(v1.x - v0.x, v1.y - v0.y);
-  const perp  = unit(v3.x - v0.x, v3.y - v0.y);
-  const bodyWidth = Math.hypot(v1.x - v0.x, v1.y - v0.y);
-  const bodyDepth = Math.hypot(v3.x - v0.x, v3.y - v0.y);
+export function buildExpansionVesselGlyph(v0: BimPoint, v1: BimPoint, v2: BimPoint, v3: BimPoint): BoilerStroke[] {
+  const body = bodyFrame(v0, v1, v2, v3);
 
-  // Vessel centre: upper chamber (+width), lateral side OPPOSITE the relief valve (−depth).
-  const cx = (v0.x + v1.x + v2.x + v3.x) / 4;
-  const cy = (v0.y + v1.y + v2.y + v3.y) / 4;
-  const centre: Point3D = {
-    x: cx + along.x * bodyWidth * VESSEL_CENTRE_WIDTH_FRAC - perp.x * bodyDepth * VESSEL_CENTRE_DEPTH_FRAC,
-    y: cy + along.y * bodyWidth * VESSEL_CENTRE_WIDTH_FRAC - perp.y * bodyDepth * VESSEL_CENTRE_DEPTH_FRAC,
-    z: 0,
-  };
+  // Vessel frame: upper chamber (+width), lateral side OPPOSITE the relief valve (−depth).
+  const vessel = shiftFrame(
+    body,
+    body.width * VESSEL_CENTRE_WIDTH_FRAC,
+    -body.depth * VESSEL_CENTRE_DEPTH_FRAC,
+  );
 
-  const r = bodyDepth * VESSEL_RADIUS_FRAC; // equal world radius along both axes → a true circle
-  const stemLen = bodyWidth * VESSEL_STEM_FRAC;
+  const r = body.depth * VESSEL_RADIUS_FRAC; // equal world radius along both axes → a true circle
+  const stemLen = body.width * VESSEL_STEM_FRAC;
 
   // Circle as a closed N-gon (the rim faces are built from the two local axes scaled equally).
-  const circle: Point3D[] = [];
-  for (let i = 0; i <= VESSEL_SEGMENTS; i += 1) {
-    const a = (2 * Math.PI * i) / VESSEL_SEGMENTS;
-    circle.push(pointAt(centre, along, perp, r * Math.cos(a), r * Math.sin(a)));
-  }
+  const circle = frameArc(vessel, r, 0, 2 * Math.PI, VESSEL_SEGMENTS);
 
   // Diaphragm: a diameter chord along the lateral (perp) axis = a «horizontal» membrane line.
   const diaphragm: BoilerStroke = [
-    pointAt(centre, along, perp, 0, r),
-    pointAt(centre, along, perp, 0, -r),
+    framePoint(vessel, 0, r),
+    framePoint(vessel, 0, -r),
   ];
 
   // Connection stem: from the inner rim (−width) running inward toward the body centroid.
   const stem: BoilerStroke = [
-    pointAt(centre, along, perp, -r, 0),
-    pointAt(centre, along, perp, -(r + stemLen), 0),
+    framePoint(vessel, -r, 0),
+    framePoint(vessel, -(r + stemLen), 0),
   ];
 
   return [circle, diaphragm, stem];
@@ -351,46 +289,36 @@ export function buildExpansionVesselGlyph(v0: Point3D, v1: Point3D, v2: Point3D,
  * from flame (centre), valve (+depth upper) and vessel (−depth upper). Pure + rotation-aware.
  * Returns [circle, needle, pivot].
  */
-export function buildPressureGaugeGlyph(v0: Point3D, v1: Point3D, v2: Point3D, v3: Point3D): BoilerStroke[] {
-  // Local body axes in world: +X (width, toward the top edge) and +Y (depth, lateral).
-  const along = unit(v1.x - v0.x, v1.y - v0.y);
-  const perp  = unit(v3.x - v0.x, v3.y - v0.y);
-  const bodyWidth = Math.hypot(v1.x - v0.x, v1.y - v0.y);
-  const bodyDepth = Math.hypot(v3.x - v0.x, v3.y - v0.y);
+export function buildPressureGaugeGlyph(v0: BimPoint, v1: BimPoint, v2: BimPoint, v3: BimPoint): BoilerStroke[] {
+  const body = bodyFrame(v0, v1, v2, v3);
 
-  // Gauge centre: lower chamber (−width), relief-valve lateral side (+depth), clear of the flame.
-  const cx = (v0.x + v1.x + v2.x + v3.x) / 4;
-  const cy = (v0.y + v1.y + v2.y + v3.y) / 4;
-  const centre: Point3D = {
-    x: cx - along.x * bodyWidth * GAUGE_CENTRE_WIDTH_FRAC + perp.x * bodyDepth * GAUGE_CENTRE_DEPTH_FRAC,
-    y: cy - along.y * bodyWidth * GAUGE_CENTRE_WIDTH_FRAC + perp.y * bodyDepth * GAUGE_CENTRE_DEPTH_FRAC,
-    z: 0,
-  };
+  // Gauge frame: lower chamber (−width), relief-valve lateral side (+depth), clear of the flame.
+  const gauge = shiftFrame(
+    body,
+    -body.width * GAUGE_CENTRE_WIDTH_FRAC,
+    body.depth * GAUGE_CENTRE_DEPTH_FRAC,
+  );
 
-  const r = bodyDepth * GAUGE_RADIUS_FRAC; // equal world radius along both axes → a true circle
+  const r = body.depth * GAUGE_RADIUS_FRAC; // equal world radius along both axes → a true circle
   const needle = r * GAUGE_NEEDLE_FRAC;
   const pivot = r * GAUGE_PIVOT_FRAC;
 
   // Dial face as a closed N-gon (rim faces built from the two local axes scaled equally).
-  const circle: Point3D[] = [];
-  for (let i = 0; i <= VESSEL_SEGMENTS; i += 1) {
-    const a = (2 * Math.PI * i) / VESSEL_SEGMENTS;
-    circle.push(pointAt(centre, along, perp, r * Math.cos(a), r * Math.sin(a)));
-  }
+  const circle = frameArc(gauge, r, 0, 2 * Math.PI, VESSEL_SEGMENTS);
 
   // Needle: from the centre out to a fixed ~45° bearing in the local dial axes (a dial reading).
   const needleLine: BoilerStroke = [
-    centre,
-    pointAt(centre, along, perp, needle * GAUGE_NEEDLE_COS, needle * GAUGE_NEEDLE_SIN),
+    gauge.origin,
+    framePoint(gauge, needle * GAUGE_NEEDLE_COS, needle * GAUGE_NEEDLE_SIN),
   ];
 
   // Central pivot: a small closed diamond at the dial centre (the needle bearing).
   const pivotDot: BoilerStroke = [
-    pointAt(centre, along, perp, pivot, 0),
-    pointAt(centre, along, perp, 0, pivot),
-    pointAt(centre, along, perp, -pivot, 0),
-    pointAt(centre, along, perp, 0, -pivot),
-    pointAt(centre, along, perp, pivot, 0),
+    framePoint(gauge, pivot, 0),
+    framePoint(gauge, 0, pivot),
+    framePoint(gauge, -pivot, 0),
+    framePoint(gauge, 0, -pivot),
+    framePoint(gauge, pivot, 0),
   ];
 
   return [circle, needleLine, pivotDot];
@@ -405,60 +333,51 @@ export function buildPressureGaugeGlyph(v0: Point3D, v1: Point3D, v2: Point3D, v
  * (−depth) — the fourth distinct sealed-system position (flame=centre, valve=+w/+d, vessel=+w/−d,
  * gauge=−w/+d). Pure + rotation-aware. Returns [run, chevron1, chevron2, loopArc, tick1, tick2].
  */
-export function buildFillingLoopGlyph(v0: Point3D, v1: Point3D, v2: Point3D, v3: Point3D): BoilerStroke[] {
-  // Local body axes in world: +X (width, toward the top edge) and +Y (depth, lateral = flow axis).
-  const along = unit(v1.x - v0.x, v1.y - v0.y);
-  const perp  = unit(v3.x - v0.x, v3.y - v0.y);
-  const bodyWidth = Math.hypot(v1.x - v0.x, v1.y - v0.y);
-  const bodyDepth = Math.hypot(v3.x - v0.x, v3.y - v0.y);
+export function buildFillingLoopGlyph(v0: BimPoint, v1: BimPoint, v2: BimPoint, v3: BimPoint): BoilerStroke[] {
+  const body = bodyFrame(v0, v1, v2, v3);
 
-  // Loop centre: lower chamber (−width), lateral side OPPOSITE the gauge (−depth), clear of the flame.
-  const cx = (v0.x + v1.x + v2.x + v3.x) / 4;
-  const cy = (v0.y + v1.y + v2.y + v3.y) / 4;
-  const centre: Point3D = {
-    x: cx - along.x * bodyWidth * FILLING_CENTRE_WIDTH_FRAC - perp.x * bodyDepth * FILLING_CENTRE_DEPTH_FRAC,
-    y: cy - along.y * bodyWidth * FILLING_CENTRE_WIDTH_FRAC - perp.y * bodyDepth * FILLING_CENTRE_DEPTH_FRAC,
-    z: 0,
-  };
+  // Loop frame: lower chamber (−width), lateral side OPPOSITE the gauge (−depth), clear of the flame.
+  const loop = shiftFrame(
+    body,
+    -body.width * FILLING_CENTRE_WIDTH_FRAC,
+    -body.depth * FILLING_CENTRE_DEPTH_FRAC,
+  );
 
-  const runHalf = bodyDepth * FILLING_RUN_HALF_FRAC;     // run extends ± along the lateral (perp) axis
-  const chevLen = bodyDepth * FILLING_CHEVRON_LEN_FRAC;  // chevron leg length along the flow (perp)
-  const chevHalf = bodyWidth * FILLING_CHEVRON_HALF_FRAC; // chevron half-width across the flow (along)
-  const r = bodyWidth * FILLING_LOOP_RADIUS_FRAC;        // flexible-loop semicircle bulge radius
-  const tickHalf = bodyWidth * FILLING_TICK_HALF_FRAC;   // isolation-valve end-tick half-length
+  const runHalf = body.depth * FILLING_RUN_HALF_FRAC;     // run extends ± along the lateral (perp) axis
+  const chevLen = body.depth * FILLING_CHEVRON_LEN_FRAC;  // chevron leg length along the flow (perp)
+  const chevHalf = body.width * FILLING_CHEVRON_HALF_FRAC; // chevron half-width across the flow (along)
+  const r = body.width * FILLING_LOOP_RADIUS_FRAC;        // flexible-loop semicircle bulge radius
+  const tickHalf = body.width * FILLING_TICK_HALF_FRAC;   // isolation-valve end-tick half-length
 
   // Pipe run: a straight segment along the lateral (perp) flow axis through the centre.
   const run: BoilerStroke = [
-    pointAt(centre, along, perp, 0, -runHalf),
-    pointAt(centre, along, perp, 0, runHalf),
+    framePoint(loop, 0, -runHalf),
+    framePoint(loop, 0, runHalf),
   ];
 
   // Double-check valve: two chevrons «»» pointing in the +perp flow direction, in series along the run.
   // Each chevron is one open polyline: legLeft → apex → legRight.
   const chevron = (atPerp: number): BoilerStroke => [
-    pointAt(centre, along, perp, chevHalf, atPerp),
-    pointAt(centre, along, perp, 0, atPerp + chevLen),
-    pointAt(centre, along, perp, -chevHalf, atPerp),
+    framePoint(loop, chevHalf, atPerp),
+    framePoint(loop, 0, atPerp + chevLen),
+    framePoint(loop, -chevHalf, atPerp),
   ];
   const chevron1 = chevron(-runHalf * 0.45);
   const chevron2 = chevron(runHalf * 0.1);
 
   // Flexible-connector loop: a small semicircle bulging in the +width (+along) direction at the centre,
   // sweeping from (−r along perp) up over (+r along the bulge axis) to (+r along perp). N-gon half-circle.
-  const loopArc: Point3D[] = [];
-  for (let i = 0; i <= VESSEL_SEGMENTS; i += 1) {
-    const a = (Math.PI * i) / VESSEL_SEGMENTS;
-    loopArc.push(pointAt(centre, along, perp, r * Math.sin(a), -r * Math.cos(a)));
-  }
+  // Starting at −90° puts the sweep's first point on −perp and its apex on +along.
+  const loopArc = frameArc(loop, r, -Math.PI / 2, Math.PI, VESSEL_SEGMENTS);
 
   // Isolation valves: a short cross-tick across the run at each end (the two service stop-cocks).
   const tick1: BoilerStroke = [
-    pointAt(centre, along, perp, -tickHalf, -runHalf),
-    pointAt(centre, along, perp, tickHalf, -runHalf),
+    framePoint(loop, -tickHalf, -runHalf),
+    framePoint(loop, tickHalf, -runHalf),
   ];
   const tick2: BoilerStroke = [
-    pointAt(centre, along, perp, -tickHalf, runHalf),
-    pointAt(centre, along, perp, tickHalf, runHalf),
+    framePoint(loop, -tickHalf, runHalf),
+    framePoint(loop, tickHalf, runHalf),
   ];
 
   return [run, chevron1, chevron2, loopArc, tick1, tick2];
@@ -469,20 +388,17 @@ export function buildFillingLoopGlyph(v0: Point3D, v1: Point3D, v2: Point3D, v3:
  * at the tip. Pure + rotation-aware. Returns [stub, leftLeg, rightLeg].
  */
 export function buildFlueVentStroke(
-  root: Point3D,
-  outward: { x: number; y: number },
+  root: BimPoint,
+  outward: PlanAxis,
   stubLen: number,
 ): BoilerStroke[] {
-  const tip: Point3D = { x: root.x + outward.x * stubLen, y: root.y + outward.y * stubLen, z: 0 };
-  // Perpendicular to the outward direction (for the chevron half-width).
-  const perp = { x: -outward.y, y: outward.x };
+  const stub = stubFrame(root, outward);
+  const tip = framePoint(stub, stubLen, 0);
   const arrowLen = stubLen * VENT_ARROW_LEN_FRAC;
   const arrowHalf = stubLen * VENT_ARROW_HALF_FRAC;
   // Back-of-arrow centre, then split ± perpendicular to form the chevron legs.
-  const backX = tip.x - outward.x * arrowLen;
-  const backY = tip.y - outward.y * arrowLen;
-  const legLeft:  Point3D = { x: backX + perp.x * arrowHalf, y: backY + perp.y * arrowHalf, z: 0 };
-  const legRight: Point3D = { x: backX - perp.x * arrowHalf, y: backY - perp.y * arrowHalf, z: 0 };
+  const legLeft  = framePoint(stub, stubLen - arrowLen, arrowHalf);
+  const legRight = framePoint(stub, stubLen - arrowLen, -arrowHalf);
   return [
     [root, tip],      // stub
     [legLeft, tip],   // chevron left leg
@@ -495,31 +411,32 @@ export function buildFlueVentStroke(
  * «▷◁» valve + lever. Pure + rotation-aware. Returns [stub, leftTriangle, rightTriangle, leverStem, leverBar].
  */
 export function buildFuelCockStroke(
-  root: Point3D,
-  outward: { x: number; y: number },
+  root: BimPoint,
+  outward: PlanAxis,
   stubLen: number,
 ): BoilerStroke[] {
-  const tip: Point3D = { x: root.x + outward.x * stubLen, y: root.y + outward.y * stubLen, z: 0 };
-  // Perpendicular to the outward direction (the bow-tie's lateral / lever axis).
-  const perp = { x: -outward.y, y: outward.x };
+  const stub = stubFrame(root, outward);
+  // Bow-tie centred on the tip: apexes meet at `tip`, bases splay ± along the flow axis.
+  const valve = shiftFrame(stub, stubLen, 0);
+  const tip = valve.origin;
+  const apex = tip;
   const valveHalfLen = stubLen * COCK_VALVE_LEN_FRAC;   // along flow
   const valveHalf = stubLen * COCK_VALVE_HALF_FRAC;     // perpendicular (base half-width)
   const handleLen = stubLen * COCK_HANDLE_LEN_FRAC;     // lever stem (perpendicular)
   const barHalf = stubLen * COCK_HANDLE_BAR_FRAC;       // lever crossbar half (along flow)
 
-  // Bow-tie centred on the tip: apexes meet at `tip`, bases splay ± along the flow axis.
-  const apex = tip;
   // Inner base (toward the boiler), split ± perpendicular.
-  const inBaseTop: Point3D = pointAt(apex, outward, perp, -valveHalfLen, valveHalf);
-  const inBaseBot: Point3D = pointAt(apex, outward, perp, -valveHalfLen, -valveHalf);
+  const inBaseTop = framePoint(valve, -valveHalfLen, valveHalf);
+  const inBaseBot = framePoint(valve, -valveHalfLen, -valveHalf);
   // Outer base (away from the boiler), split ± perpendicular.
-  const outBaseTop: Point3D = pointAt(apex, outward, perp, valveHalfLen, valveHalf);
-  const outBaseBot: Point3D = pointAt(apex, outward, perp, valveHalfLen, -valveHalf);
+  const outBaseTop = framePoint(valve, valveHalfLen, valveHalf);
+  const outBaseBot = framePoint(valve, valveHalfLen, -valveHalf);
 
   // Operating lever: a stem from the valve centre out along +perp, ending in a small crossbar.
-  const stemEnd: Point3D = pointAt(apex, outward, perp, 0, handleLen);
-  const barLeft: Point3D = pointAt(stemEnd, outward, perp, barHalf, 0);
-  const barRight: Point3D = pointAt(stemEnd, outward, perp, -barHalf, 0);
+  const lever = shiftFrame(valve, 0, handleLen);
+  const stemEnd = lever.origin;
+  const barLeft = framePoint(lever, barHalf, 0);
+  const barRight = framePoint(lever, -barHalf, 0);
 
   return [
     [root, tip],                              // stub
@@ -536,24 +453,23 @@ export function buildFuelCockStroke(
  * Returns [stub, uBend]; caller tags both `'sanitary-drainage'` → renderer paints them brown.
  */
 export function buildCondensateTrapStroke(
-  root: Point3D,
-  outward: { x: number; y: number },
+  root: BimPoint,
+  outward: PlanAxis,
   stubLen: number,
 ): BoilerStroke[] {
-  const tip: Point3D = { x: root.x + outward.x * stubLen, y: root.y + outward.y * stubLen, z: 0 };
-  // Perpendicular to the outward direction (the U-bend's lateral axis).
-  const perp = { x: -outward.y, y: outward.x };
+  const trap = shiftFrame(stubFrame(root, outward), stubLen, 0);
+  const tip = trap.origin;
   const depth = stubLen * TRAP_DEPTH_FRAC;   // U depth along flow (outward of the tip)
   const half = stubLen * TRAP_LEG_HALF_FRAC; // U half-width perpendicular to flow
 
   // «∪» water-seal: the mouth (open side) faces back toward the boiler (−outward), the
   // rounded bottom faces outward. Drawn as one open polyline: down the left leg, across
   // the rounded bottom, up the right leg — straddling the stub tip so it reads as a trap.
-  const mouthLeft: Point3D = pointAt(tip, outward, perp, -depth, half);
-  const bottomLeft: Point3D = pointAt(tip, outward, perp, depth, half);
-  const bottomMid: Point3D = pointAt(tip, outward, perp, depth + half, 0);
-  const bottomRight: Point3D = pointAt(tip, outward, perp, depth, -half);
-  const mouthRight: Point3D = pointAt(tip, outward, perp, -depth, -half);
+  const mouthLeft = framePoint(trap, -depth, half);
+  const bottomLeft = framePoint(trap, depth, half);
+  const bottomMid = framePoint(trap, depth + half, 0);
+  const bottomRight = framePoint(trap, depth, -half);
+  const mouthRight = framePoint(trap, -depth, -half);
 
   return [
     [root, tip],                                                       // inlet stub
@@ -566,18 +482,17 @@ export function buildCondensateTrapStroke(
  * ~mid-stub. Pure + rotation-aware. Returns [closedRect] tagged `'sanitary-drainage'` → brown.
  */
 export function buildCondensateNeutraliserStroke(
-  root: Point3D,
-  outward: { x: number; y: number },
+  root: BimPoint,
+  outward: PlanAxis,
   stubLen: number,
 ): BoilerStroke[] {
-  const perp = { x: -outward.y, y: outward.x };
   const halfLen = stubLen * NEUTRALISER_LEN_FRAC; // along flow
   const half = stubLen * NEUTRALISER_HALF_FRAC;   // perpendicular
   // Centre the cartridge at ~mid-stub (between the boiler and the tip trap).
-  const mid: Point3D = { x: root.x + outward.x * stubLen * 0.5, y: root.y + outward.y * stubLen * 0.5, z: 0 };
-  const c0 = pointAt(mid, outward, perp, -halfLen, half);
-  const c1 = pointAt(mid, outward, perp, halfLen, half);
-  const c2 = pointAt(mid, outward, perp, halfLen, -half);
-  const c3 = pointAt(mid, outward, perp, -halfLen, -half);
+  const cartridge = shiftFrame(stubFrame(root, outward), stubLen * 0.5, 0);
+  const c0 = framePoint(cartridge, -halfLen, half);
+  const c1 = framePoint(cartridge, halfLen, half);
+  const c2 = framePoint(cartridge, halfLen, -half);
+  const c3 = framePoint(cartridge, -halfLen, -half);
   return [[c0, c1, c2, c3, c0]]; // closed rectangle
 }

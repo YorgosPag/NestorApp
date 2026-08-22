@@ -27,11 +27,12 @@
  */
 
 import type { BimPoint } from '../types/bim-base';
+import { lerpPlanPoint, unitAxis } from '../geometry/shared/plan-frame';
 import type {
   MepWaterHeaterGeometry,
   MepWaterHeaterParams,
 } from '../types/mep-water-heater-types';
-import { mmToSceneUnits } from '../../utils/scene-units';
+import { buildLateralStubStrokes } from '../geometry/shared/rectangular-body-geometry';
 
 /** A polyline of world-space points (canvas units). */
 export type WaterHeaterStroke = readonly BimPoint[];
@@ -64,15 +65,6 @@ const ELEMENT_HALF_WIDTH_FRAC = 0.20;
 
 /** Fractional position of the heating element from the bottom edge (lower quarter). */
 const ELEMENT_CENTRE_FRAC = 0.20;
-
-function lerp(a: BimPoint, b: BimPoint, t: number): BimPoint {
-  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: 0 };
-}
-
-function unit(dx: number, dy: number): { x: number; y: number } {
-  const len = Math.hypot(dx, dy) || 1;
-  return { x: dx / len, y: dy / len };
-}
 
 /**
  * Build the inscribed circle polygon (tank cross-section glyph).
@@ -111,8 +103,8 @@ function buildWaterLevelStroke(
   v0: BimPoint, v1: BimPoint, v2: BimPoint, v3: BimPoint,
 ): WaterHeaterStroke {
   // Depth-axis edge interpolation: left wall v0→v3, right wall v1→v2.
-  const leftPt  = lerp(v0, v3, WATER_LEVEL_FRAC);
-  const rightPt = lerp(v1, v2, WATER_LEVEL_FRAC);
+  const leftPt  = lerpPlanPoint(v0, v3, WATER_LEVEL_FRAC);
+  const rightPt = lerpPlanPoint(v1, v2, WATER_LEVEL_FRAC);
   return [leftPt, rightPt];
 }
 
@@ -127,8 +119,8 @@ function buildWaterLevelStroke(
 function buildHeatingElementStrokes(
   v0: BimPoint, v1: BimPoint, v2: BimPoint, v3: BimPoint,
 ): WaterHeaterStroke[] {
-  const depthDir = unit(v3.x - v0.x, v3.y - v0.y);  // local Y in world
-  const widthDir = unit(v1.x - v0.x, v1.y - v0.y);  // local X in world
+  const depthDir = unitAxis(v3.x - v0.x, v3.y - v0.y);  // local Y in world
+  const widthDir = unitAxis(v1.x - v0.x, v1.y - v0.y);  // local X in world
 
   const bodyDepth = Math.hypot(v3.x - v0.x, v3.y - v0.y);
   const bodyWidth = Math.hypot(v1.x - v0.x, v1.y - v0.y);
@@ -181,27 +173,16 @@ export function buildMepWaterHeaterSymbol(
   geometry: MepWaterHeaterGeometry,
 ): WaterHeaterSymbolGeometry {
   const outline = geometry.footprint.vertices;
-  if (outline.length !== 4) {
+  const stubs = buildLateralStubStrokes(outline, params.length, params.sceneUnits);
+  if (!stubs) {
     return { outline, strokes: [], glyphStrokes: [] };
   }
 
   // v0=(-hw,-hl) v1=(hw,-hl) v2=(hw,hl) v3=(-hw,hl) — rotated to world.
   const [v0, v1, v2, v3] = outline;
-  const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
-  const stubLen = Math.max(params.length * s * 0.8, 60 * s);
 
-  // Cold stub (flow:'in'): from the midpoint of the −X edge (v0→v3), pointing outward −X.
-  const coldRoot = lerp(v0, v3, 0.5);
-  const coldDir  = unit(v0.x - v1.x, v0.y - v1.y); // −X local (world-rotated)
-
-  // Hot stub (flow:'out'): from the midpoint of the +X edge (v1→v2), pointing outward +X.
-  const hotRoot = lerp(v1, v2, 0.5);
-  const hotDir  = unit(v1.x - v0.x, v1.y - v0.y); // +X local (world-rotated)
-
-  const strokes: WaterHeaterStroke[] = [
-    [coldRoot, { x: coldRoot.x + coldDir.x * stubLen, y: coldRoot.y + coldDir.y * stubLen, z: 0 }],
-    [hotRoot,  { x: hotRoot.x  + hotDir.x  * stubLen, y: hotRoot.y  + hotDir.y  * stubLen, z: 0 }],
-  ];
+  // Cold (flow:'in') = midpoint of the −X edge, outward −X; hot (flow:'out') = +X edge, outward +X.
+  const strokes: WaterHeaterStroke[] = [...stubs];
 
   const glyphStrokes: WaterHeaterStroke[] = [
     ...buildTankCircleStrokes(v0, v1, v2, v3),

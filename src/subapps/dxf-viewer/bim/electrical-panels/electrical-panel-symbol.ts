@@ -15,6 +15,7 @@
  */
 
 import type { BimPoint } from '../types/bim-base';
+import { lerpPlanPoint } from '../geometry/shared/plan-frame';
 import type {
   ElectricalPanelGeometry,
   ElectricalPanelParams,
@@ -40,10 +41,6 @@ const RACK_PORT_BAND: readonly [number, number] = [0.55, 0.85];
 /** Length-fraction of the comms-rack mid divider (separates the rack header row). */
 const RACK_DIVIDER_FRACTION = 0.4;
 
-function lerp(a: BimPoint, b: BimPoint, t: number): BimPoint {
-  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: 0 };
-}
-
 /**
  * Distribution-board glyph: 3 divider lines spanning the width (parallel to the
  * bottom edge) — the panelboard breaker-rows convention. v0=(-hw,-hl) v1=(hw,-hl)
@@ -51,7 +48,7 @@ function lerp(a: BimPoint, b: BimPoint, t: number): BimPoint {
  */
 function buildBoardStrokes(corners: readonly BimPoint[]): PanelStroke[] {
   const [v0, v1, v2, v3] = corners;
-  return DIVIDER_FRACTIONS.map((t) => [lerp(v0, v3, t), lerp(v1, v2, t)]);
+  return DIVIDER_FRACTIONS.map((t) => [lerpPlanPoint(v0, v3, t), lerpPlanPoint(v1, v2, t)]);
 }
 
 /**
@@ -61,12 +58,12 @@ function buildBoardStrokes(corners: readonly BimPoint[]): PanelStroke[] {
  */
 function buildRackStrokes(corners: readonly BimPoint[]): PanelStroke[] {
   const [v0, v1, v2, v3] = corners;
-  const strokes: PanelStroke[] = [[lerp(v0, v3, RACK_DIVIDER_FRACTION), lerp(v1, v2, RACK_DIVIDER_FRACTION)]];
+  const strokes: PanelStroke[] = [[lerpPlanPoint(v0, v3, RACK_DIVIDER_FRACTION), lerpPlanPoint(v1, v2, RACK_DIVIDER_FRACTION)]];
   const [t0, t1] = RACK_PORT_BAND;
   for (const u of RACK_PORT_FRACTIONS) {
-    const bottom = lerp(v0, v1, u);
-    const top = lerp(v3, v2, u);
-    strokes.push([lerp(bottom, top, t0), lerp(bottom, top, t1)]);
+    const bottom = lerpPlanPoint(v0, v1, u);
+    const top = lerpPlanPoint(v3, v2, u);
+    strokes.push([lerpPlanPoint(bottom, top, t0), lerpPlanPoint(bottom, top, t1)]);
   }
   return strokes;
 }
