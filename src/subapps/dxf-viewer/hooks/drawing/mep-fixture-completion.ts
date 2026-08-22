@@ -17,7 +17,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { Point3D } from '../../bim/types/bim-base';
+import type { BimPoint } from '../../bim/types/bim-base';
 import {
   DEFAULT_FIXTURE_BODY_HEIGHT_MM,
   DEFAULT_FIXTURE_DIAMETER_MM,
@@ -325,7 +325,7 @@ export function buildDefaultMepFixtureParams(
   const kind: MepFixtureKind = overrides.kind ?? 'light-fixture';
   const d = resolveFixtureKindDefaults(kind, overrides, sceneUnits);
   const rotation = overrides.rotation ?? 0;
-  const position: Point3D = { x: clickPoint.x, y: clickPoint.y, z: 0 };
+  const position: BimPoint = { x: clickPoint.x, y: clickPoint.y, z: 0 };
 
   return {
     kind,

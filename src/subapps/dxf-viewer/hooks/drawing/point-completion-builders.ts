@@ -28,7 +28,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { BimValidation, Point3D } from '../../bim/types/bim-base';
+import type { BimValidation, BimPoint } from '../../bim/types/bim-base';
 import type { SceneUnits } from '../../utils/scene-units';
 import type { PlacementBuildResult } from './create-single-click-placement-tool';
 
@@ -121,7 +121,7 @@ export interface BodyPlacementDefaults {
 
 /** Resolved footprint + pose for a clicked body-placement entity. */
 export interface ResolvedBodyPlacement {
-  readonly position: Point3D;
+  readonly position: BimPoint;
   readonly rotation: number;
   readonly width: number;
   readonly length: number;
@@ -185,7 +185,7 @@ export function assembleMepApplianceBodyParams<TKind extends string, TShape exte
 ): {
   readonly kind: TKind;
   readonly shape: TShape;
-  readonly position: Point3D;
+  readonly position: BimPoint;
   readonly rotation: number;
   readonly width: number;
   readonly length: number;

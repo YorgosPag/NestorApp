@@ -23,7 +23,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
-import type { Point3D } from '../../bim/types/bim-base';
+import type { BimPoint } from '../../bim/types/bim-base';
 import {
   buildDefaultRailingParams,
   buildRailingEntity,
@@ -75,7 +75,7 @@ export interface UseRailingToolResult {
    * yet awaiting the end click. Pure projection — no state mutation, no
    * cursor-store subscription (ADR-040). Consumed by the placement ghost leaf.
    */
-  getGhostPath(cursorPos: Readonly<Point2D> | null): readonly Point3D[] | null;
+  getGhostPath(cursorPos: Readonly<Point2D> | null): readonly BimPoint[] | null;
   readonly isActive: boolean;
   readonly isAwaitingStart: boolean;
   readonly isAwaitingEnd: boolean;
@@ -169,7 +169,7 @@ export function useRailingTool(options: UseRailingToolOptions = {}): UseRailingT
   }, []);
 
   const getGhostPath = useCallback(
-    (cursorPos: Readonly<Point2D> | null): readonly Point3D[] | null => {
+    (cursorPos: Readonly<Point2D> | null): readonly BimPoint[] | null => {
       const s = stateRef.current;
       if (s.phase !== 'awaitingEnd' || s.startPoint === null || cursorPos === null) return null;
       const sceneUnits = getSceneUnitsRef.current?.() ?? 'mm';

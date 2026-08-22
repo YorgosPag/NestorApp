@@ -18,7 +18,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { Point3D } from '../../bim/types/bim-base';
+import type { BimPoint } from '../../bim/types/bim-base';
 import {
   DEFAULT_COLUMN_DEPTH_MM,
   DEFAULT_COLUMN_HEIGHT_MM,
@@ -165,7 +165,7 @@ export function resolveColumnHeadReferences(
  *   1. Resolve kind (override → 'rectangular' default).
  *   2. Resolve anchor (override → 'center' default).
  *   3. Resolve width / depth / height / rotation (override → defaults).
- *   4. Lift 2D click point σε Point3D (z=0).
+ *   4. Lift 2D click point σε BimPoint (z=0).
  */
 export function buildDefaultColumnParams(
   clickPoint: Readonly<Point2D>,
@@ -182,7 +182,7 @@ export function buildDefaultColumnParams(
   const height = resolveStoreyHeightMm(overrides.height, DEFAULT_COLUMN_HEIGHT_MM);
   const rotation = overrides.rotation ?? DEFAULT_COLUMN_ROTATION_DEG;
 
-  const position: Point3D = { x: clickPoint.x, y: clickPoint.y, z: 0 };
+  const position: BimPoint = { x: clickPoint.x, y: clickPoint.y, z: 0 };
 
   const params: ColumnParams = {
     kind,

@@ -19,7 +19,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { BimValidation, Point3D } from '../../bim/types/bim-base';
+import type { BimValidation, BimPoint } from '../../bim/types/bim-base';
 import { quantizeMagnitude } from '../../systems/tracking/adaptive-distance-snap'; // scalar round-to-increment SSoT
 import type {
   OpeningEntity,
@@ -226,7 +226,7 @@ export function completeOpeningFromHostClick(
  * ADR-615 §Decision 2).
  */
 export function buildDefaultSelfOpeningParams(
-  anchor: Point3D,
+  anchor: BimPoint,
   rotationRad: number,
   overrides: OpeningParamOverrides = {},
 ): OpeningParams {
@@ -280,7 +280,7 @@ export function completeSelfOpeningFromClick(
   overrides: OpeningParamOverrides = {},
   sceneUnits: SceneUnits = 'mm',
 ): BuildOpeningEntityResult {
-  const anchor: Point3D = { x: clickPoint.x, y: clickPoint.y, z: 0 };
+  const anchor: BimPoint = { x: clickPoint.x, y: clickPoint.y, z: 0 };
   const params = buildDefaultSelfOpeningParams(anchor, rotationRad, overrides);
   return buildSelfOpeningEntity(params, layerId, sceneUnits);
 }
@@ -298,7 +298,7 @@ function clampOffset(offset: number, width: number, wallLengthMm: number): numbe
 export function getOpeningWorldCenter(
   params: OpeningParams,
   hostWall: WallEntity,
-): Point3D {
+): BimPoint {
   const start = hostWall.params.start;
   const end = hostWall.params.end;
   const dx = end.x - start.x;

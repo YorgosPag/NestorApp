@@ -12,7 +12,7 @@
 
 import { useCallback, type Dispatch, type SetStateAction } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
-import type { Point3D } from '../../bim/types/bim-base';
+import type { BimPoint } from '../../bim/types/bim-base';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { Entity } from '../../types/entities';
 import { isWallEntity } from '../../types/entities';
@@ -220,7 +220,7 @@ export function useWallCommit(ctx: WallCommitContext): WallCommitApi {
         const params =
           bulge != null
             ? { ...base, arc: bulge }
-            : { ...base, curveControl: { x: controlPoint.x, y: controlPoint.y, z: 0 } as Point3D };
+            : { ...base, curveControl: { x: controlPoint.x, y: controlPoint.y, z: 0 } as BimPoint };
         return finishCommit(s, params, 'curved', sceneUnits);
       }
 

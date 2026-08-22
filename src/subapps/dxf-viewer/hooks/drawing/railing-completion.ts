@@ -18,7 +18,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { Point3D } from '../../bim/types/bim-base';
+import type { BimPoint } from '../../bim/types/bim-base';
 import {
   DEFAULT_RAILING_TOTAL_HEIGHT_MM,
   DEFAULT_RAILING_TYPE,
@@ -69,7 +69,7 @@ export function buildDefaultRailingParams(
   const totalHeightMm = overrides.totalHeightMm ?? DEFAULT_RAILING_TOTAL_HEIGHT_MM;
   const baseElevationMm = overrides.baseElevationMm ?? 0;
 
-  const path: Point3D[] = [
+  const path: BimPoint[] = [
     { x: startPoint.x, y: startPoint.y, z: 0 },
     { x: endPoint.x, y: endPoint.y, z: 0 },
   ];

@@ -24,7 +24,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { Point3D } from '../../bim/types/bim-base';
+import type { BimPoint } from '../../bim/types/bim-base';
 import {
   DEFAULT_GENERIC_SOLID_MOUNTING_ELEVATION_MM,
   DEFAULT_GENERIC_SOLID_SHAPE,
@@ -80,7 +80,7 @@ export function buildDefaultGenericSolidParams(
   const mountingElevationMm =
     overrides.mountingElevationMm ?? DEFAULT_GENERIC_SOLID_MOUNTING_ELEVATION_MM;
 
-  const position: Point3D = { x: clickPoint.x, y: clickPoint.y, z: 0 };
+  const position: BimPoint = { x: clickPoint.x, y: clickPoint.y, z: 0 };
 
   return {
     kind: 'generic',

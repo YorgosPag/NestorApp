@@ -18,7 +18,7 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { ExtendedSceneEntity, PreviewPoint } from './drawing-types';
 import type { PlacementGhostEntity } from '../../bim/placement/placement-overlay-fields';
-import type { Point3D } from '../../bim/types/bim-base';
+import type { BimPoint } from '../../bim/types/bim-base';
 import { foundationPreviewStore } from '../../bim/foundations/foundation-preview-store';
 import { buildDefaultFoundationParams, buildFoundationEntity, type FoundationParamOverrides, type SceneUnits } from './foundation-completion';
 import { DEFAULT_PAD_WIDTH_MM, DEFAULT_PAD_LENGTH_MM, type FoundationKind, type FoundationParams } from '../../bim/types/foundation-types';
@@ -182,7 +182,7 @@ function makeFoundationBandGhost(
   overrides: FoundationParamOverrides,
   sceneUnits: SceneUnits,
 ): ExtendedSceneEntity | null {
-  const axisEnd: Point3D = { x: endPt.x, y: endPt.y, z: 0 };
+  const axisEnd: BimPoint = { x: endPt.x, y: endPt.y, z: 0 };
   const params = buildDefaultFoundationParams(startPt, kind, { ...overrides, kind, axisEnd }, sceneUnits);
   const built = buildFoundationEntity(params, getDefaultLayerId());
   if (!built.ok) return null;

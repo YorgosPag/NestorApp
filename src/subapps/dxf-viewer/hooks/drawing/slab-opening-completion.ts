@@ -26,7 +26,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { BimValidation, Point3D, Polygon3D } from '../../bim/types/bim-base';
+import type { BimValidation, BimPoint, BimPolygon } from '../../bim/types/bim-base';
 import type {
   SlabOpeningEntity,
   SlabOpeningKind,
@@ -322,10 +322,10 @@ function buildRectangleCcw(
   center: Readonly<Point2D>,
   width: number,
   depth: number,
-): Polygon3D {
+): BimPolygon {
   const halfW = width / 2;
   const halfD = depth / 2;
-  const vertices: Point3D[] = [
+  const vertices: BimPoint[] = [
     { x: center.x - halfW, y: center.y - halfD, z: 0 },
     { x: center.x + halfW, y: center.y - halfD, z: 0 },
     { x: center.x + halfW, y: center.y + halfD, z: 0 },

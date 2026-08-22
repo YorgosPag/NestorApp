@@ -15,7 +15,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { Point3D } from '../../bim/types/bim-base';
+import type { BimPoint } from '../../bim/types/bim-base';
 import {
   computeSpaceSeparatorGeometry,
   isValidSpaceSeparatorLength,
@@ -42,8 +42,8 @@ export function buildDefaultSpaceSeparatorParams(
   overrides: SpaceSeparatorParamOverrides = {},
   sceneUnits: SceneUnits = 'mm',
 ): SpaceSeparatorParams {
-  const start: Point3D = { x: startPoint.x, y: startPoint.y };
-  const end: Point3D = { x: endPoint.x, y: endPoint.y };
+  const start: BimPoint = { x: startPoint.x, y: startPoint.y };
+  const end: BimPoint = { x: endPoint.x, y: endPoint.y };
   return {
     start,
     end,

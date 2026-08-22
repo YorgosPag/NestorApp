@@ -29,7 +29,7 @@ import { DEFAULT_BEAM_WIDTH_MM, DEFAULT_BEAM_DEPTH_MM, type BeamKind, type BeamP
 // τοίχο (μήκος + ∠ γωνία + διατομή)· η μόνη διαφορά είναι η ετικέτα διατομής («b·h» αντί «πάχος·ύψος»).
 import { buildSegmentHudMeta, type WallHudMeta } from '../../canvas-v2/preview-canvas/wall-hud-paint';
 import { buildBeamHudSpecLabel } from './beam-hud-spec-label';
-import type { Point3D } from '../../bim/types/bim-base';
+import type { BimPoint } from '../../bim/types/bim-base';
 import { buildBeamCutbackDisplay } from '../canvas/dxf-scene-beam-cutback';
 import { getDefaultLayerId } from '../../stores/LayerStore';
 import { mmToSceneUnits } from '../../utils/scene-units';
@@ -210,7 +210,7 @@ function makeBeamWysiwygGhost(
   if (kind === 'curved') {
     const base = buildDefaultBeamParams(startPt, endPt, 'curved', overrides, sceneUnits);
     params = curveControl
-      ? { ...base, kind: 'curved', curveControl: { x: curveControl.x, y: curveControl.y, z: 0 } as Point3D }
+      ? { ...base, kind: 'curved', curveControl: { x: curveControl.x, y: curveControl.y, z: 0 } as BimPoint }
       : base;
   } else if (startAnchored) {
     // ADR-398 §Smart beam ghost — το start κλειδώθηκε από face-snap (ΗΔΗ centerline) →

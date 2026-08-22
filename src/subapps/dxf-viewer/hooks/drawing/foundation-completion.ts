@@ -19,7 +19,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { Point3D } from '../../bim/types/bim-base';
+import type { BimPoint } from '../../bim/types/bim-base';
 import {
   DEFAULT_FOUNDATION_ANCHOR,
   DEFAULT_FOUNDATION_ROTATION_DEG,
@@ -78,7 +78,7 @@ export interface FoundationParamOverrides {
   /** Catalog profile ID (Slice 4). */
   readonly catalogProfile?: string;
   /** Line-based kinds — άξονας τέλος (Slice 2). */
-  readonly axisEnd?: Point3D;
+  readonly axisEnd?: BimPoint;
   /** Location Line γραμμικού πεδίλου/συνδετήριας (default 'center', ADR-441 Slice 5a). */
   readonly justification?: StripJustification;
 }
@@ -137,7 +137,7 @@ export function buildDefaultFoundationParams(
   };
 
   if (kind === 'pad') {
-    const position: Point3D = { x: clickPoint.x, y: clickPoint.y, z: 0 };
+    const position: BimPoint = { x: clickPoint.x, y: clickPoint.y, z: 0 };
     return {
       kind: 'pad',
       ...common,
@@ -150,8 +150,8 @@ export function buildDefaultFoundationParams(
     };
   }
 
-  const start: Point3D = { x: clickPoint.x, y: clickPoint.y, z: 0 };
-  const end: Point3D = overrides.axisEnd ?? { x: clickPoint.x + 1000, y: clickPoint.y, z: 0 };
+  const start: BimPoint = { x: clickPoint.x, y: clickPoint.y, z: 0 };
+  const end: BimPoint = overrides.axisEnd ?? { x: clickPoint.x + 1000, y: clickPoint.y, z: 0 };
   return {
     kind,
     ...common,
@@ -225,7 +225,7 @@ export function completeFoundationFromTwoClicks(
   overrides: FoundationParamOverrides = {},
   sceneUnits: SceneUnits = 'mm',
 ): BuildFoundationEntityResult {
-  const axisEnd: Point3D = { x: endPoint.x, y: endPoint.y, z: 0 };
+  const axisEnd: BimPoint = { x: endPoint.x, y: endPoint.y, z: 0 };
   const params = buildDefaultFoundationParams(startPoint, kind, { ...overrides, kind, axisEnd }, sceneUnits);
   return buildFoundationEntity(params, layerId);
 }

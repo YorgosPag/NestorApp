@@ -15,7 +15,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { Point3D } from '../../bim/types/bim-base';
+import type { BimPoint } from '../../bim/types/bim-base';
 import type { PlumbingSystemClassification } from '../../bim/types/mep-connector-types';
 import {
   DEFAULT_DUCT_WIDTH_MM,
@@ -117,8 +117,8 @@ export function buildDefaultMepSegmentParams(
     }
   }
   const centerlineElevationMm = deriveCenterlineElevationMm(startZ, endZ);
-  const start: Point3D = { x: startPoint.x, y: startPoint.y, z: startZ };
-  const end: Point3D = { x: endPoint.x, y: endPoint.y, z: endZ };
+  const start: BimPoint = { x: startPoint.x, y: startPoint.y, z: startZ };
+  const end: BimPoint = { x: endPoint.x, y: endPoint.y, z: endZ };
 
   const base: MepSegmentParams = {
     domain,

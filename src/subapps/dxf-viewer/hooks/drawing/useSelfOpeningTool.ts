@@ -29,7 +29,7 @@
  */
 
 import { useCallback } from 'react';
-import type { Point3D } from '../../bim/types/bim-base';
+import type { BimPoint } from '../../bim/types/bim-base';
 import type { OpeningEntity, OpeningKind } from '../../bim/types/opening-types';
 import {
   buildDefaultSelfOpeningParams,
@@ -99,7 +99,7 @@ const useSelfOpeningPlacement = createSingleClickPlacementTool<
   defaultSceneUnits: 'mm',
   initialExtra: { rotationRad: 0 },
   buildParams: (pt, overrides) => {
-    const anchor: Point3D = { x: pt.x, y: pt.y, z: 0 };
+    const anchor: BimPoint = { x: pt.x, y: pt.y, z: 0 };
     return buildDefaultSelfOpeningParams(anchor, overrides.rotationRad ?? 0, overrides);
   },
   buildEntity: (params, levelId) => buildSelfOpeningEntity(params, levelId),
