@@ -29,11 +29,11 @@
  * @see docs/centralized-systems/reference/adrs/ADR-422-bim-heating-mechanical-study.md §3 (L7.3 Slice D)
  */
 
+import type { PlanarPoint } from '../../types/bim-base';
 import {
   computeOverhangAngleDeg,
   computeOverhangProjection,
   type OverhangOutline,
-  type Point2DLike,
 } from './solar-overhang-geometry';
 import { azimuthToOrientation, getFinGeometryShadingFactor } from './annual-gains-config';
 
@@ -46,7 +46,7 @@ const FIN_PROJECTION_EPS = 1e-6;
 /** Per-window inputs για το end-to-end `F_fin` (assembled από τον resolver). */
 export interface WindowFinInput {
   /** Θέση κουφώματος στο όριο του χώρου (world XY, μονάδα σκηνής). */
-  readonly openingPos: Point2DLike;
+  readonly openingPos: PlanarPoint;
   /** Αζιμούθιο outward normal του παραθύρου (deg, 0°=Βορράς, clockwise). */
   readonly azimuthDeg: number;
   /** mm — πλάτος ανοίγματος κουφώματος (αναφορά `w_ref` της γωνίας πτερυγίου). */
@@ -66,16 +66,16 @@ export interface WindowFinInput {
  * αρχή της ακτίνας (lateral edge αντί κέντρο). `0` αν κανένα πτερύγιο. Pure, idempotent.
  */
 function computeFinProjection(
-  openingPos: Point2DLike,
-  normal: Point2DLike,
-  tangent: Point2DLike,
+  openingPos: PlanarPoint,
+  normal: PlanarPoint,
+  tangent: PlanarPoint,
   halfWidthScene: number,
   thicknessScene: number,
   outlines: readonly OverhangOutline[],
 ): number {
   let maxDist = 0;
   for (const side of [-1, 1] as const) {
-    const facadePoint: Point2DLike = {
+    const facadePoint: PlanarPoint = {
       x: openingPos.x + tangent.x * side * halfWidthScene + normal.x * thicknessScene,
       y: openingPos.y + tangent.y * side * halfWidthScene + normal.y * thicknessScene,
     };
@@ -98,10 +98,10 @@ function computeFinProjection(
 export function resolveWindowFinFactor(input: WindowFinInput): number | undefined {
   if (input.outlines.length === 0) return undefined;
   const azRad = input.azimuthDeg * DEG_TO_RAD;
-  const normal: Point2DLike = { x: Math.sin(azRad), y: Math.cos(azRad) };
+  const normal: PlanarPoint = { x: Math.sin(azRad), y: Math.cos(azRad) };
   if (Math.hypot(normal.x, normal.y) < FIN_PROJECTION_EPS) return undefined;
   // Εφαπτομένη όψης (lateral άξονας) = perpendicular του outward normal.
-  const tangent: Point2DLike = { x: normal.y, y: -normal.x };
+  const tangent: PlanarPoint = { x: normal.y, y: -normal.x };
   const halfWidthScene = (input.openingWidthMm * 0.5 * MM_TO_M) / input.sceneToM;
   const thicknessScene = (input.wallThicknessMm * MM_TO_M) / input.sceneToM;
   const distScene = computeFinProjection(

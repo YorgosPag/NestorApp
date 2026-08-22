@@ -29,10 +29,10 @@
  */
 
 import { rotatePoint } from '../../../utils/rotation-math';
-import type { Point2DLike } from './solar-overhang-geometry';
+import type { PlanarPoint } from '../../types/bim-base';
 
 /** Σταθερό pivot περιστροφής = τοπικό origin του κτιρίου. */
-const ORIGIN: Point2DLike = { x: 0, y: 0 };
+const ORIGIN: PlanarPoint = { x: 0, y: 0 };
 
 /** Τοποθέτηση ενός κτιρίου στο site (ADR-369) + η κλίμακα της σκηνής του. */
 export interface BuildingPlacement {
@@ -45,17 +45,17 @@ export interface BuildingPlacement {
 }
 
 /** Τοπικό σημείο (scene units) → site frame (μέτρα): rotate γύρω από origin + siteOrigin. */
-function localToSiteMetres(p: Point2DLike, placement: BuildingPlacement): Point2DLike {
-  const m: Point2DLike = { x: p.x * placement.sceneToM, y: p.y * placement.sceneToM };
+function localToSiteMetres(p: PlanarPoint, placement: BuildingPlacement): PlanarPoint {
+  const m: PlanarPoint = { x: p.x * placement.sceneToM, y: p.y * placement.sceneToM };
   const rotated = rotatePoint(m, ORIGIN, placement.rotationDeg ?? 0);
   const o = placement.siteOrigin;
   return { x: rotated.x + (o?.x ?? 0), y: rotated.y + (o?.y ?? 0) };
 }
 
 /** Site σημείο (μέτρα) → τοπικό frame ενεργού κτιρίου (scene units): un-place + un-rotate. */
-function siteMetresToActiveLocal(siteP: Point2DLike, active: BuildingPlacement): Point2DLike {
+function siteMetresToActiveLocal(siteP: PlanarPoint, active: BuildingPlacement): PlanarPoint {
   const o = active.siteOrigin;
-  const rel: Point2DLike = { x: siteP.x - (o?.x ?? 0), y: siteP.y - (o?.y ?? 0) };
+  const rel: PlanarPoint = { x: siteP.x - (o?.x ?? 0), y: siteP.y - (o?.y ?? 0) };
   const unrotated = rotatePoint(rel, ORIGIN, -(active.rotationDeg ?? 0));
   const scale = active.sceneToM > 0 ? active.sceneToM : 1;
   return { x: unrotated.x / scale, y: unrotated.y / scale };
@@ -67,10 +67,10 @@ function siteMetresToActiveLocal(siteP: Point2DLike, active: BuildingPlacement):
  * κτίρια μοιράζονται placement (ή και τα δύο default) ⇒ zero-regression.
  */
 export function transformPointToActiveFrame(
-  p: Point2DLike,
+  p: PlanarPoint,
   source: BuildingPlacement,
   active: BuildingPlacement,
-): Point2DLike {
+): PlanarPoint {
   return siteMetresToActiveLocal(localToSiteMetres(p, source), active);
 }
 
@@ -80,9 +80,9 @@ export function transformPointToActiveFrame(
  * τη σειρά κορυφών (winding). Pure.
  */
 export function transformPolygonToActiveFrame(
-  polygon: readonly Point2DLike[],
+  polygon: readonly PlanarPoint[],
   source: BuildingPlacement,
   active: BuildingPlacement,
-): Point2DLike[] {
+): PlanarPoint[] {
   return polygon.map((p) => transformPointToActiveFrame(p, source, active));
 }

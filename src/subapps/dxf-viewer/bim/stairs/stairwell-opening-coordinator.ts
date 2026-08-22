@@ -37,7 +37,7 @@
 
 import type { ISceneManager, SceneEntity } from '../../core/commands/interfaces';
 import type { Entity } from '../../types/entities';
-import type { Polygon3D } from '../types/bim-base';
+import type { BimPolygon } from '../types/bim-base';
 import type { SlabEntity } from '../types/slab-types';
 import type { SlabOpeningEntity, SlabOpeningParams } from '../types/slab-opening-types';
 import { isSlabEntity, isSlabOpeningEntity, isStairEntity } from '../../types/entities';
@@ -156,7 +156,7 @@ export function materializeStairwellAutoOpening(
  */
 export function rebuildStairwellOpeningOutline(
   current: SlabOpeningEntity,
-  outline: Polygon3D,
+  outline: BimPolygon,
 ): { readonly params: SlabOpeningParams; readonly geometry: SlabOpeningEntity['geometry']; readonly entity: SlabOpeningEntity } {
   const params: SlabOpeningParams = { ...current.params, outline };
   const geometry = computeSlabOpeningGeometry(params);

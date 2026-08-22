@@ -33,10 +33,10 @@
  * @see docs/centralized-systems/reference/adrs/ADR-422-bim-heating-mechanical-study.md §3 (L7.3 Slice E)
  */
 
+import type { PlanarPoint } from '../../types/bim-base';
 import {
   computeNearestObstacleDistance,
   computeOverhangAngleDeg,
-  type Point2DLike,
 } from './solar-overhang-geometry';
 import { azimuthToOrientation, getHorizonGeometryShadingFactor } from './annual-gains-config';
 
@@ -52,7 +52,7 @@ const HORIZON_EPS = 1e-6;
  */
 export interface HorizonObstacle {
   /** Κλειστό footprint πολύγωνο XY στο **ενεργό** scene frame (scene units). */
-  readonly polygonXY: readonly Point2DLike[];
+  readonly polygonXY: readonly PlanarPoint[];
   /** METRES — απόλυτο ύψος κορυφής της μάζας (site datum: `baseElevation` + ύψος). */
   readonly topElevationM: number;
 }
@@ -60,7 +60,7 @@ export interface HorizonObstacle {
 /** Per-window inputs για το end-to-end `F_hor` (assembled από τον resolver). */
 export interface WindowHorizonInput {
   /** Θέση κουφώματος στο όριο του χώρου (world XY, μονάδα ενεργής σκηνής). */
-  readonly openingPos: Point2DLike;
+  readonly openingPos: PlanarPoint;
   /** Αζιμούθιο outward normal του παραθύρου (deg, 0°=Βορράς, clockwise). */
   readonly azimuthDeg: number;
   /** mm — πάχος τοίχου-ξενιστή (offset προς το εξωτ. πρόσωπο). */
@@ -87,10 +87,10 @@ export interface WindowHorizonInput {
 export function resolveWindowHorizonFactor(input: WindowHorizonInput): number | undefined {
   if (input.obstacles.length === 0) return undefined;
   const azRad = input.azimuthDeg * DEG_TO_RAD;
-  const normal: Point2DLike = { x: Math.sin(azRad), y: Math.cos(azRad) };
+  const normal: PlanarPoint = { x: Math.sin(azRad), y: Math.cos(azRad) };
   if (Math.hypot(normal.x, normal.y) < HORIZON_EPS) return undefined;
   const thicknessScene = (input.wallThicknessMm * MM_TO_M) / input.sceneToM;
-  const facadePoint: Point2DLike = {
+  const facadePoint: PlanarPoint = {
     x: input.openingPos.x + normal.x * thicknessScene,
     y: input.openingPos.y + normal.y * thicknessScene,
   };

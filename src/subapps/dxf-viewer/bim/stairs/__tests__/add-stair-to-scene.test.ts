@@ -15,7 +15,7 @@
  * στο `cascade/__tests__/stairwell-create-trigger.test.ts` — εδώ ΜΟΝΟ το stair wrapper wiring.
  */
 
-import type { Polygon3D } from '../../types/bim-base';
+import type { BimPolygon } from '../../types/bim-base';
 import type { SlabEntity } from '../../types/slab-types';
 import type { StairEntity } from '../../types/stair-types';
 import type { SceneModel, AnySceneEntity } from '../../../types/scene';
@@ -29,7 +29,7 @@ import {
 
 // ─── Fixtures (mirror stairwell-create-trigger.test.ts· jscpd-ignored test fixtures) ──
 
-function makeTread(x0: number, depth: number, z: number, y0 = 0, width = 1000): Polygon3D {
+function makeTread(x0: number, depth: number, z: number, y0 = 0, width = 1000): BimPolygon {
   return {
     vertices: [
       { x: x0, y: y0, z },
@@ -40,7 +40,7 @@ function makeTread(x0: number, depth: number, z: number, y0 = 0, width = 1000): 
   };
 }
 
-function makeRect(x0: number, y0: number, x1: number, y1: number, z = 0): Polygon3D {
+function makeRect(x0: number, y0: number, x1: number, y1: number, z = 0): BimPolygon {
   return {
     vertices: [
       { x: x0, y: y0, z },
@@ -51,7 +51,7 @@ function makeRect(x0: number, y0: number, x1: number, y1: number, z = 0): Polygo
   };
 }
 
-const TREADS: Polygon3D[] = [
+const TREADS: BimPolygon[] = [
   makeTread(0, 300, 300),
   makeTread(300, 300, 600),
   makeTread(600, 300, 900),

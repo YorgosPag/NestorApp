@@ -15,7 +15,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md Phase 3.7b+
  */
 
-import type { Polygon3D } from '../types/bim-base';
+import type { BimPolygon } from '../types/bim-base';
 import type { SlabEntity } from '../types/slab-types';
 import type { SlabOpeningEntity } from '../types/slab-opening-types';
 import type { SceneModel } from '../../types/scene';
@@ -28,7 +28,7 @@ import { generateSlabOpeningId } from '@/services/enterprise-id-convenience';
  * Returns null if no slab qualifies (missing or different floor footprint).
  */
 export function findHostSlabForLevel(
-  sourceOutline: Polygon3D,
+  sourceOutline: BimPolygon,
   scene: SceneModel,
 ): SlabEntity | null {
   const verts = sourceOutline.vertices;

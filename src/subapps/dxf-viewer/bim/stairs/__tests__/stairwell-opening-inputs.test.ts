@@ -11,7 +11,7 @@
  * @see bim-3d/converters/StairToThreeConverter.ts — 3D SSoT precedent (spread below+above)
  */
 
-import type { Point3D } from '../../types/bim-base';
+import type { BimPoint } from '../../types/bim-base';
 import type { StairEntity } from '../../types/stair-types';
 import type { SlabEntity } from '../../types/slab-types';
 import {
@@ -20,8 +20,8 @@ import {
 } from '../stairwell-opening-inputs';
 import { planStairwellOpenings } from '../../geometry/stairs/stairwell-opening-plan';
 
-/** Ένα τετράγωνο tread (bare `Point3D[]`, όπως το `StairGeometry.treads`) στο ύψος z. */
-function tread(z: number): Point3D[] {
+/** Ένα τετράγωνο tread (bare `BimPoint[]`, όπως το `StairGeometry.treads`) στο ύψος z. */
+function tread(z: number): BimPoint[] {
   return [
     { x: 0, y: 0, z },
     { x: 300, y: 0, z },

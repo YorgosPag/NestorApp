@@ -14,7 +14,7 @@ import { buildGroundBearingSlabs, buildSlabBaysFromGuides } from '../slab-from-g
 import { type AxisGuideReader } from '../../foundations/foundation-from-grid';
 import type { Guide } from '../../../systems/guides/guide-types';
 import type { WallForEnvelope } from '../../geometry/envelope-perimeter';
-import type { Point3D } from '../../types/bim-base';
+import type { BimPoint } from '../../types/bim-base';
 import type { WallParams } from '../../types/wall-types';
 import type { ICommand } from '../../../core/commands/interfaces';
 import type { SceneModel } from '../../../types/scene';
@@ -30,7 +30,7 @@ function reader(guides: readonly Guide[]): AxisGuideReader {
   return { getGuidesByAxis: (axis) => guides.filter((g) => g.axis === axis) };
 }
 
-function wall(id: string, start: Point3D, end: Point3D): WallForEnvelope & { type: 'wall' } {
+function wall(id: string, start: BimPoint, end: BimPoint): WallForEnvelope & { type: 'wall' } {
   const params: WallParams = {
     category: 'exterior', start, end, height: 3000, thickness: 200, flip: false,
     sceneUnits: 'mm', baseBinding: 'storey-floor', topBinding: 'storey-ceiling',
@@ -41,7 +41,7 @@ function wall(id: string, start: Point3D, end: Point3D): WallForEnvelope & { typ
 }
 
 function square(ox: number, oy: number, size: number): Array<WallForEnvelope & { type: 'wall' }> {
-  const q = (x: number, y: number): Point3D => ({ x: ox + x, y: oy + y, z: 0 });
+  const q = (x: number, y: number): BimPoint => ({ x: ox + x, y: oy + y, z: 0 });
   return [
     wall('w1', q(0, 0), q(size, 0)), wall('w2', q(size, 0), q(size, size)),
     wall('w3', q(size, size), q(0, size)), wall('w4', q(0, size), q(0, 0)),

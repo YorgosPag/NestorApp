@@ -16,7 +16,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-632-stairwell-auto-opening-ssot.md §3
  */
 
-import type { Point3D, Polygon3D } from '../types/bim-base';
+import type { BimPoint, BimPolygon } from '../types/bim-base';
 import type { Entity } from '../../types/entities';
 import type { SlabEntity } from '../types/slab-types';
 import type { StairEntity } from '../types/stair-types';
@@ -86,9 +86,9 @@ export function buildStairwellSlabCandidates(
 // ─── Stair plan inputs ───────────────────────────────────────────────────────
 
 /** Ορθογώνιο footprint (CCW, z=0) από το bbox της σκάλας — coarse overlap gate. */
-function bboxFootprint(stair: StairEntity): Polygon3D {
+function bboxFootprint(stair: StairEntity): BimPolygon {
   const { min, max } = stair.geometry.bbox;
-  const vertices: Point3D[] = [
+  const vertices: BimPoint[] = [
     { x: min.x, y: min.y, z: 0 },
     { x: max.x, y: min.y, z: 0 },
     { x: max.x, y: max.y, z: 0 },
@@ -115,11 +115,11 @@ function buildStairInput(
   // Fallback to `.treads` keeps legacy fixtures (that only set the alias) working.
   const belowCut = stair.geometry.treadsBelowCut ?? stair.geometry.treads;
   const aboveCut = stair.geometry.treadsAboveCut ?? [];
-  // Tread shape adapter (SSoT boundary): the planner reads `{ vertices }` `Polygon3D`,
-  // but the stair geometry SSoT stores each tread as a BARE `Point3D[]`. Wrap ONCE here
+  // Tread shape adapter (SSoT boundary): the planner reads `{ vertices }` `BimPolygon`,
+  // but the stair geometry SSoT stores each tread as a BARE `BimPoint[]`. Wrap ONCE here
   // (this file is the scene→planner translation boundary) so both consumers
   // (`computeStairNosings` + `computeStairwellOpeningOutline`) read `.vertices` safely.
-  const treads: Polygon3D[] = [...belowCut, ...aboveCut].map((vertices) => ({ vertices: [...vertices] }));
+  const treads: BimPolygon[] = [...belowCut, ...aboveCut].map((vertices) => ({ vertices: [...vertices] }));
   // ADR-632 cross-level — lift every z into ABSOLUTE datum by adding this stair's
   // floor FFL. In-scene geometry is level-relative (0-based per floor); the profile
   // (base/top) and nosings are all in that same relative frame, so a single uniform

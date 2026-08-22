@@ -24,7 +24,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-422-bim-heating-mechanical-study.md §3 (L7.9-C)
  */
 
-import type { Point3D } from '../../types/bim-base';
+import type { BimPoint } from '../../types/bim-base';
 import type { SlabDna } from '../../types/slab-dna-types';
 import type { SlabKind } from '../../types/slab-types';
 import { pointInPolygon, polygonArea } from '../../geometry/shared/polygon-utils';
@@ -40,7 +40,7 @@ export const MIN_CONTAINMENT_FRACTION = 0.5;
 export interface SlabMatchCandidate {
   readonly id: string;
   /** Outline της πλάκας (κλειστό πολύγωνο, world coords μονάδα σκηνής). */
-  readonly outline: readonly Point3D[];
+  readonly outline: readonly BimPoint[];
   /** Composite build-up — πηγή του `κ_m`. Absent ⇒ δεν θα δώσει stamp. */
   readonly dna?: SlabDna;
   /** Slab kind — καθορίζει interior-first ordering στο `computeSlabArealHeatCapacity`. */
@@ -49,8 +49,8 @@ export interface SlabMatchCandidate {
 
 /** Ποσοστό κορυφών του footprint που περικλείονται από το outline μιας πλάκας. */
 function containmentFraction(
-  footprint: readonly Point3D[],
-  outline: readonly Point3D[],
+  footprint: readonly BimPoint[],
+  outline: readonly BimPoint[],
 ): number {
   if (footprint.length === 0 || outline.length < 3) return 0;
   let inside = 0;
@@ -64,7 +64,7 @@ function containmentFraction(
  * μικρότερη πλάκα (πιο ειδική). Pure, idempotent.
  */
 export function findBestSlabMatch(
-  footprint: readonly Point3D[],
+  footprint: readonly BimPoint[],
   candidates: readonly SlabMatchCandidate[],
 ): SlabMatchCandidate | null {
   let best: SlabMatchCandidate | null = null;

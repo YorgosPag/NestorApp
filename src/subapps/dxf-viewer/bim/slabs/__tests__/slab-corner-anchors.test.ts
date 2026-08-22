@@ -10,10 +10,10 @@
 
 import { getSlabCornerWorldPoints } from '../slab-corner-anchors';
 import type { SlabEntity } from '../../types/slab-types';
-import type { Polygon3D } from '../../types/bim-base';
+import type { BimPolygon } from '../../types/bim-base';
 
 function makeSlabEntity(vertices: { x: number; y: number }[], id = 'slab_test'): SlabEntity {
-  const polygon: Polygon3D = { vertices: vertices.map(v => ({ x: v.x, y: v.y })) };
+  const polygon: BimPolygon = { vertices: vertices.map(v => ({ x: v.x, y: v.y })) };
   return {
     id,
     type: 'slab',

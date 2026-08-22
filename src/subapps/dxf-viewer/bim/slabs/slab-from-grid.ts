@@ -33,7 +33,7 @@
 
 import type { Pair, Polygon, Ring } from 'polygon-clipping';
 import type { Point2D } from '../../rendering/types/Types';
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import type { SlabEntity } from '../types/slab-types';
 import type { GuideBinding } from '../hosting/guide-binding-types';
 import {
@@ -151,8 +151,8 @@ function bboxOverlap(a: Bbox, b: Bbox): boolean {
   return a.minX < b.maxX && a.maxX > b.minX && a.minY < b.maxY && a.maxY > b.minY;
 }
 
-/** Point3D vertices → closed polygon-clipping Polygon (ένα ring), ή `null` αν degenerate. */
-function vertsToSubtrahend(verts: readonly Point3D[]): Subtrahend | null {
+/** BimPoint vertices → closed polygon-clipping Polygon (ένα ring), ή `null` αν degenerate. */
+function vertsToSubtrahend(verts: readonly BimPoint[]): Subtrahend | null {
   if (verts.length < 3) return null;
   const ring: Ring = verts.map((v): Pair => [v.x, v.y]);
   return { poly: [ring], bbox: bboxOf(ring) };

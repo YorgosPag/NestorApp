@@ -18,8 +18,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-407-bim-railings.md §Φ7
  */
 
-import type { StairEntity, Polygon3D } from '../types/stair-types';
-import type { Point3D } from '../types/bim-base';
+import type { StairEntity, Polygon3D, Point3D } from '../types/stair-types';
 import type { RailingHostContext, RailingPath } from '../types/railing-types';
 import { inferSceneUnitsFromWidth, mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { projectOntoPath } from '../railings/railing-geometry';
@@ -83,10 +82,10 @@ function buildTreadAnchors(
     .map((t) => {
       const c = centroidXY(t);
       const seat = projectOntoPath(resolvedPath, c.x, c.y); // xy ON the railing line at this tread
-      const treadTopZmm = (t[0]?.z ?? 0) * mmPerScene; // tread top elevation (stepped) → mm
+      const treadTopZmm = t[0].z * mmPerScene; // tread top elevation (stepped) → mm
       return { x: seat.x, y: seat.y, z: treadTopZmm };
     })
-    .sort((a, b) => (a.z ?? 0) - (b.z ?? 0)); // bottom → top
+    .sort((a, b) => a.z - b.z); // bottom → top
   return anchors.length > 0 ? anchors : undefined;
 }
 
@@ -107,7 +106,7 @@ export function buildStairRailingHost(
 
   const sceneUnits = stairRailingSceneUnits(stair);
   const mmPerScene = 1 / mmToSceneUnits(sceneUnits); // scene units → mm (z only; xy pass through)
-  const resolvedPath: RailingPath = poly.map((p) => ({ x: p.x, y: p.y, z: (p.z ?? 0) * mmPerScene }));
+  const resolvedPath: RailingPath = poly.map((p) => ({ x: p.x, y: p.y, z: p.z * mmPerScene }));
 
   const totalRun = stair.params.totalRun || 1;
   const slopeRatio = stair.params.totalRise / totalRun;

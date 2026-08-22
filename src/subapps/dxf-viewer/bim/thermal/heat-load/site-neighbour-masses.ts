@@ -19,7 +19,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-422-bim-heating-mechanical-study.md §3 (L7.3 Slice E)
  */
 
-import type { Point2DLike } from './solar-overhang-geometry';
+import type { PlanarPoint } from '../../types/bim-base';
 import type { HorizonObstacle } from './solar-horizon-geometry';
 import {
   transformPolygonToActiveFrame,
@@ -32,7 +32,7 @@ export const DEFAULT_STOREY_HEIGHT_M = 3;
 /** Ένα γειτονικό κτίριο: footprint στο **τοπικό** του frame + τοποθέτηση + ύψος. */
 export interface NeighbourBuildingInput {
   /** Εξωτ. footprint (κλειστό XY, **τοπικό** scene frame του κτιρίου, scene units). */
-  readonly footprintLocalXY: readonly Point2DLike[];
+  readonly footprintLocalXY: readonly PlanarPoint[];
   /** Τοποθέτηση του κτιρίου στο site (ADR-369) + κλίμακα της σκηνής του. */
   readonly placement: BuildingPlacement;
   /** METRES — ύψος βάσης του κτιρίου στο site datum (`Building.baseElevation`). */

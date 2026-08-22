@@ -4,11 +4,11 @@
  */
 
 import { findBestSlabMatch, type SlabMatchCandidate } from '../slab-space-match';
-import type { Point3D } from '../../../types/bim-base';
+import type { BimPoint } from '../../../types/bim-base';
 import { createDefaultFloorBuildup } from '../../../types/slab-dna-types';
 
 /** Ορθογώνιο outline (κλειστό όχι απαραίτητο — pointInPolygon δεν το χρειάζεται). */
-function rect(x0: number, y0: number, x1: number, y1: number): Point3D[] {
+function rect(x0: number, y0: number, x1: number, y1: number): BimPoint[] {
   return [
     { x: x0, y: y0, z: 0 },
     { x: x1, y: y0, z: 0 },

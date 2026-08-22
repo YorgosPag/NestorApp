@@ -9,7 +9,7 @@
  * @see bim/stairs/stairwell-cross-level-plan.ts
  */
 
-import type { Point3D } from '../../types/bim-base';
+import type { BimPoint } from '../../types/bim-base';
 import type { StairEntity } from '../../types/stair-types';
 import type { SlabEntity } from '../../types/slab-types';
 import type { SlabOpeningEntity } from '../../types/slab-opening-types';
@@ -18,7 +18,7 @@ import {
   type CrossLevelFloorEntry,
 } from '../stairwell-cross-level-plan';
 
-function tread(z: number): Point3D[] {
+function tread(z: number): BimPoint[] {
   return [
     { x: 0, y: 0, z },
     { x: 300, y: 0, z },

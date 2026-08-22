@@ -15,7 +15,7 @@
 
 import type { WallEntity } from '../../types/wall-types';
 import type { OpeningEntity } from '../../types/opening-types';
-import type { Point3D } from '../../types/bim-base';
+import type { BimPoint } from '../../types/bim-base';
 import { resolveWindowOverhangFactor, type OverhangOutline } from './solar-overhang-geometry';
 import { resolveWindowFinFactor } from './solar-fin-geometry';
 import { resolveWindowHorizonFactor, type HorizonObstacle } from './solar-horizon-geometry';
@@ -91,7 +91,7 @@ function perpendicularWallOutlines(
  * παράθυρα με θέση/αζιμούθιο & διαθέσιμα overhang outlines· αλλιώς `undefined` (1.0).
  */
 export function resolveOpeningOverhangFactor(
-  pos: Point3D | undefined,
+  pos: BimPoint | undefined,
   azimuthDeg: number | undefined,
   isWindow: boolean,
   params: OpeningEntity['params'],
@@ -121,7 +121,7 @@ export function resolveOpeningOverhangFactor(
  */
 export function resolveOpeningFinFactor(
   op: OpeningEntity,
-  pos: Point3D | undefined,
+  pos: BimPoint | undefined,
   azimuthDeg: number | undefined,
   isWindow: boolean,
   openingWidthMm: number,
@@ -152,7 +152,7 @@ export function resolveOpeningFinFactor(
  * `horizonShadingLevel` Slice C ⇒ zero-regression).
  */
 export function resolveOpeningHorizonFactor(
-  pos: Point3D | undefined,
+  pos: BimPoint | undefined,
   azimuthDeg: number | undefined,
   isWindow: boolean,
   params: OpeningEntity['params'],

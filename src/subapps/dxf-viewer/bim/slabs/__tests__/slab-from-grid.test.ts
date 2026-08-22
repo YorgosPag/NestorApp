@@ -12,12 +12,12 @@ import type { Guide } from '../../../systems/guides/guide-types';
 import type { WallForEnvelope } from '../../geometry/envelope-perimeter';
 import type { BeamForFootprint } from '../../geometry/building-footprint';
 import type { ColumnForEnvelope } from '../../geometry/envelope-column-bridge';
-import type { Point3D } from '../../types/bim-base';
+import type { BimPoint } from '../../types/bim-base';
 import type { WallParams } from '../../types/wall-types';
 import type { BeamParams } from '../../types/beam-types';
 import type { ColumnParams } from '../../types/column-types';
 
-function wallParams(start: Point3D, end: Point3D, thickness = 200): WallParams {
+function wallParams(start: BimPoint, end: BimPoint, thickness = 200): WallParams {
   return {
     category: 'exterior',
     start,
@@ -33,13 +33,13 @@ function wallParams(start: Point3D, end: Point3D, thickness = 200): WallParams {
   };
 }
 
-function wall(id: string, start: Point3D, end: Point3D): WallForEnvelope {
+function wall(id: string, start: BimPoint, end: BimPoint): WallForEnvelope {
   return { id, kind: 'straight', params: wallParams(start, end) };
 }
 
 /** Κλειστό τετράγωνο `size`×`size` με origin (ox,oy). 4 τοίχοι CCW. */
 function square(prefix: string, ox: number, oy: number, size: number): WallForEnvelope[] {
-  const q = (x: number, y: number): Point3D => ({ x: ox + x, y: oy + y, z: 0 });
+  const q = (x: number, y: number): BimPoint => ({ x: ox + x, y: oy + y, z: 0 });
   return [
     wall(`${prefix}1`, q(0, 0), q(size, 0)),
     wall(`${prefix}2`, q(size, 0), q(size, size)),
@@ -116,7 +116,7 @@ function reader(guides: readonly Guide[]): AxisGuideReader {
 }
 
 /** Δοκάρι centerline start→end, πλάτος width (mm), flat. */
-function beam(id: string, start: Point3D, end: Point3D, width = 300): BeamForFootprint {
+function beam(id: string, start: BimPoint, end: BimPoint, width = 300): BeamForFootprint {
   const params: BeamParams = {
     kind: 'straight',
     startPoint: start,

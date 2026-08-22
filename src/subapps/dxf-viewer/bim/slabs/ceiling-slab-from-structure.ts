@@ -34,7 +34,7 @@
 
 import type { Pair, Polygon, Ring } from 'polygon-clipping';
 import type { Point2D } from '../../rendering/types/Types';
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import type { Entity } from '../../types/entities';
 import { isBeamEntity, isColumnEntity, isWallEntity } from '../../types/entities';
 import type { SlabEntity } from '../types/slab-types';
@@ -78,8 +78,8 @@ const MIN_BUILDING_WIDTH_MM = 600;
  */
 const ROOM_GAP_BRIDGE_MM = 1500;
 
-/** Πρόσθεσε τις ακμές ενός κλειστού ring (Point3D[]) ως segments (wrap-around) στο `out`. */
-function addRingEdges(verts: readonly Point3D[] | undefined, out: [Point2D, Point2D][]): void {
+/** Πρόσθεσε τις ακμές ενός κλειστού ring (BimPoint[]) ως segments (wrap-around) στο `out`. */
+function addRingEdges(verts: readonly BimPoint[] | undefined, out: [Point2D, Point2D][]): void {
   if (!verts || verts.length < 3) return;
   for (let i = 0; i < verts.length; i++) {
     const a = verts[i];
@@ -89,7 +89,7 @@ function addRingEdges(verts: readonly Point3D[] | undefined, out: [Point2D, Poin
 }
 
 /** Πρόσθεσε τις ακμές μιας **ανοιχτής** πολυγραμμής (άξονας μέλους) ως segments (χωρίς wrap). */
-function addPolylineEdges(verts: readonly Point3D[] | undefined, out: [Point2D, Point2D][]): void {
+function addPolylineEdges(verts: readonly BimPoint[] | undefined, out: [Point2D, Point2D][]): void {
   if (!verts || verts.length < 2) return;
   for (let i = 0; i < verts.length - 1; i++) {
     const a = verts[i];
