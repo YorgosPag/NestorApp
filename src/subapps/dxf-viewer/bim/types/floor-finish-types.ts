@@ -11,10 +11,11 @@
  * @see docs/centralized-systems/reference/adrs/ADR-419-floor-finish-per-room.md
  */
 
-import type { BimEntity, BimBounds, PlanProfile } from './bim-base';
+import type { BimEntity, PlanBounds, PlanProfile } from './bim-base';
 import type { SceneUnits } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
-import { polygonArea, polygonPerimeter, polygonBbox } from '../geometry/shared/polygon-utils';
+import { polygonArea, polygonPerimeter } from '../geometry/shared/polygon-utils';
+import { planBoundsOf } from '../geometry/shared/xy-bounds';
 
 // ─── Material ID ──────────────────────────────────────────────────────────────
 
@@ -85,7 +86,7 @@ export interface FloorFinishParams {
  * ΠΟΤΕ mutated by consumers. SSoT = params.
  */
 export interface FloorFinishGeometry {
-  readonly bbox: BimBounds;
+  readonly bbox: PlanBounds;
   /** m². Εμβαδό polygon (Shoelace). */
   readonly area: number;
   /** m. Περίμετρος polygon. */
@@ -139,7 +140,7 @@ export function computeFloorFinishGeometry(
     };
   }
 
-  const bbox = polygonBbox(verts);
+  const bbox = planBoundsOf(verts);
   const areaMm2 = polygonArea(verts);
   const perimeterMm = polygonPerimeter(verts);
 

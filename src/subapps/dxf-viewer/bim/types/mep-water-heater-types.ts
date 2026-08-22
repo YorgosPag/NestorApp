@@ -36,7 +36,7 @@
 
 import type {
   BimEntity,
-  BimBounds,
+  PlanBounds,
   BimPoint,
   BimPolygon,
 } from './bim-base';
@@ -127,7 +127,7 @@ export interface MepWaterHeaterParams extends MepConnectorHostParams {
 export interface MepWaterHeaterGeometry {
   /** BimPolygon — horizontal footprint at the mounting plane. Closed CCW. */
   readonly footprint: BimPolygon;
-  readonly bbox: BimBounds;
+  readonly bbox: PlanBounds;
   /** m². Footprint area. */
   readonly area: number;
   /** mm. Mirror of `params.bodyHeightMm` for downstream convenience. */

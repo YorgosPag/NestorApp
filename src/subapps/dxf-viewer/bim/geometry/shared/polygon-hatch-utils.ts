@@ -13,7 +13,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md
  */
 
-import type { BimBounds } from '../../types/bim-base';
+import type { PlanBounds } from '../../types/bim-base';
 
 /** 2D point used by the hatch helpers (XY plane). */
 export interface HatchPoint2D {
@@ -44,7 +44,7 @@ const MAX_HATCH_STEPS = 4000;
  * να μην ξαναγράφεται το ίδιο corner-loop (N.12 dedup).
  */
 export function perpendicularRangeOverBbox(
-  bbox: BimBounds, u: HatchDirection,
+  bbox: PlanBounds, u: HatchDirection,
 ): { kMin: number; kMax: number } {
   const corners: ReadonlyArray<readonly [number, number]> = [
     [bbox.min.x, bbox.min.y],
@@ -69,7 +69,7 @@ export function perpendicularRangeOverBbox(
  * bbox rectangle. Degenerate bbox (min ≥ max) → empty list.
  */
 export function buildAxisAlignedHatch(
-  bbox: BimBounds,
+  bbox: PlanBounds,
   spacingMm: number,
   u: HatchDirection,
 ): HatchLineSegment[] {
@@ -94,7 +94,7 @@ export function buildAxisAlignedHatch(
 export function clipLineToBbox(
   u: HatchDirection,
   k: number,
-  bbox: BimBounds,
+  bbox: PlanBounds,
 ): HatchLineSegment | null {
   const p0x = -u.uy * k;
   const p0y = u.ux * k;

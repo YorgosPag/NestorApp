@@ -2,7 +2,7 @@
  * Bathroom-layout geometry helpers · ADR-638.
  *
  * Thin 2D adapters over the polygon SSoT (`pointInPolygon`, `polygonArea`,
- * `polygonBbox`, `polygonIntersectionAreaMm2`). All millimetres.
+ * `bboxOf`, `polygonIntersectionAreaMm2`). All millimetres.
  *
  * ADR-789 — μέχρι 2026-08-22 αυτό το module εξήγαγε `lift()` ώστε ο solver και ο scorer
  * να μοιράζονται ΕΝΑ z=0 idiom αντί να το επαναλαμβάνουν. Το SSoT δεν ήταν λάθος· ήταν
@@ -14,9 +14,9 @@ import type { Point2D } from '../../rendering/types/Types';
 import {
   pointInPolygon,
   polygonArea,
-  polygonBbox,
 } from '../../bim/geometry/shared/polygon-utils';
 import { polygonIntersectionAreaMm2 } from '../../bim/geometry/shared/polygon-clip-utils';
+import { bboxOf } from '../../bim/geometry/shared/xy-bounds';
 
 /** Unsigned area (mm²) of a 2D polygon. */
 export function areaOf(poly: readonly Point2D[]): number {
@@ -55,6 +55,6 @@ export function rectOverlapMm2(
 
 /** Room bounding-box diagonal length (mm) — normaliser for distance scores. */
 export function roomDiagonalMm(room: readonly Point2D[]): number {
-  const bb = polygonBbox(room);
-  return Math.hypot(bb.max.x - bb.min.x, bb.max.y - bb.min.y);
+  const bb = bboxOf(room);
+  return Math.hypot(bb.maxX - bb.minX, bb.maxY - bb.minY);
 }

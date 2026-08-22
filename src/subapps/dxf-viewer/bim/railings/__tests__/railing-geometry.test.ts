@@ -75,10 +75,15 @@ describe('computeRailingGeometry — straight sketch path', () => {
     expect(computeRailingGeometry(straightParams()).lengthM).toBeCloseTo(1.0, 6);
   });
 
-  it('bbox spans the path xy and the full height in z', () => {
+  it('bbox spans the path xy (canvas units) and the full height in z (ΜΕΤΡΑ)', () => {
     const g = computeRailingGeometry(straightParams());
-    expect(g.bbox.min).toMatchObject({ x: 0, y: 0, z: 0 });
-    expect(g.bbox.max).toMatchObject({ x: 1000, y: 0, z: 1000 });
+    expect(g.bbox.min).toEqual({ x: 0, y: 0 });
+    expect(g.bbox.max).toEqual({ x: 1000, y: 0 });
+    // 🔴 ADR-793 — ΗΤΑΝ `z: 1000` (ωμά χιλιοστά) στο ίδιο πεδίο όπου τοίχος/πλάκα/δοκός
+    // γράφουν μέτρα. Το `toMatchObject` άφηνε το ψέμα να περάσει· το `toEqual` στο ίχνος
+    // αποδεικνύει ΚΑΙ ότι το `z` έφυγε από το σχήμα, όχι μόνο ότι η τιμή διορθώθηκε.
+    expect(g.bbox.minZm).toBeCloseTo(0);
+    expect(g.bbox.maxZm).toBeCloseTo(1.0); // 1000 mm
   });
 });
 

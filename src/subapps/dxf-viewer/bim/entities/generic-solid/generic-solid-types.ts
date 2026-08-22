@@ -32,7 +32,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-684-generic-solid-primitive-entity.md
  */
 
-import type { BimEntity, BimBounds, BimPoint, BimPolygon } from '../../types/bim-base';
+import type { BimEntity, PlanBounds, BimPoint, BimPolygon } from '../../types/bim-base';
 import type { SceneUnits } from '../../../utils/scene-units';
 import type { IfcEntityMixin } from '../../types/ifc-entity-mixin';
 
@@ -134,7 +134,7 @@ export interface GenericSolidParams {
 export interface GenericSolidGeometry {
   /** BimPolygon — οριζόντιο ίχνος στο επίπεδο τοποθέτησης. Κλειστό CCW. */
   readonly footprint: BimPolygon;
-  readonly bbox: BimBounds;
+  readonly bbox: PlanBounds;
   /** m². Εμβαδόν ίχνους. */
   readonly area: number;
   /** mm. Συνολικό ύψος (bbox Z). */

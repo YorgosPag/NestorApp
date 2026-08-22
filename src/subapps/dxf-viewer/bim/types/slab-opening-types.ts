@@ -21,7 +21,7 @@
 
 import type {
   BimEntity,
-  BimBounds,
+  PlanBounds,
   BimPolygon,
 } from './bim-base';
 import type { SceneUnits } from '../../utils/scene-units';
@@ -113,7 +113,7 @@ export interface SlabOpeningParams {
 export interface SlabOpeningGeometry {
   /** BimPolygon — re-export του outline (closed, CCW). */
   readonly polygon: BimPolygon;
-  readonly bbox: BimBounds;
+  readonly bbox: PlanBounds;
   /** m². Εμβαδό cutout (αφαιρείται από slab.netArea). */
   readonly area: number;
   /** m. Περίμετρος cutout. */

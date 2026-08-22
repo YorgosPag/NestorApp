@@ -27,11 +27,11 @@
  * @see docs/centralized-systems/reference/adrs/ADR-422-bim-heating-mechanical-study.md
  */
 
-import type { BimEntity, BimBounds, PlanProfile } from './bim-base';
+import type { BimEntity, PlanBounds, PlanProfile } from './bim-base';
 import type { SceneUnits } from '../../utils/scene-units';
 import { mmScaleFor } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
-import { polygonArea, polygonPerimeter, polygonBbox } from '../geometry/shared/polygon-utils';
+import { polygonArea, polygonPerimeter } from '../geometry/shared/polygon-utils';
 import type {
   AirTightnessLevel,
   ReheatMode,
@@ -45,6 +45,7 @@ import type {
   SurfaceColorLevel,
   ThermalMassLevel,
 } from '../thermal/heat-load/annual-gains-config';
+import { planBoundsOf } from '../geometry/shared/xy-bounds';
 
 // ─── Χρήση χώρου (ΤΟΤΕΕ 20701-1) ────────────────────────────────────────────────
 
@@ -139,7 +140,7 @@ export interface ThermalSpaceParams {
  * ΠΟΤΕ mutated by consumers. SSoT = params.
  */
 export interface ThermalSpaceGeometry {
-  readonly bbox: BimBounds;
+  readonly bbox: PlanBounds;
   /** m². Εμβαδό polygon (Shoelace). */
   readonly area: number;
   /** m. Περίμετρος polygon. */
@@ -193,7 +194,7 @@ export function computeThermalSpaceGeometry(
     };
   }
 
-  const bbox = polygonBbox(verts);
+  const bbox = planBoundsOf(verts);
   // ADR-422 unit-fix — the footprint is in SCENE UNITS (`params.sceneUnits`); convert
   // scene-unit area/perimeter to metres via the sceneUnits SSoT. `ceilingHeightMm` is a
   // mm scalar, so height→m is always ×MM_TO_M. For an 'mm' scene the factor is 1 (no

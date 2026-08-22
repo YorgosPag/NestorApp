@@ -2,7 +2,7 @@
  * Tests για bim/schedule/filters (ADR-363 Phase 8 §6).
  */
 
-import type { BimBounds } from '../../types/bim-base';
+import type { PlanBounds } from '../../types/bim-base';
 import {
   applyScheduleFilters,
   passesAllFilters,
@@ -27,7 +27,7 @@ function makeEntity(overrides: Partial<FilterableBimEntity> = {}): FilterableBim
   };
 }
 
-function box(minX: number, minY: number, maxX: number, maxY: number): BimBounds {
+function box(minX: number, minY: number, maxX: number, maxY: number): PlanBounds {
   return { min: { x: minX, y: minY }, max: { x: maxX, y: maxY } };
 }
 
@@ -101,9 +101,9 @@ describe('passesRegionFilter', () => {
   });
   test('z dimension is ignored', () => {
     const entity = makeEntity({
-      geometry: { bbox: { min: { x: 0, y: 0, z: 0 }, max: { x: 100, y: 100, z: 100 } } },
+      geometry: { bbox: { min: { x: 0, y: 0 }, max: { x: 100, y: 100 } } },
     });
-    const region: BimBounds = {
+    const region: PlanBounds = {
       min: { x: 50, y: 50, z: 9999 },
       max: { x: 150, y: 150, z: 99999 },
     };

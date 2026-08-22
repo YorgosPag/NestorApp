@@ -2,10 +2,22 @@
  * ADR-435 — Entity → ClashEntity normaliser (SSoT, Slice 0).
  *
  * The cached `entity.geometry.bbox` is NOT directly usable for 3D collision:
- *   - XY is in **canvas/scene units**, Z is already in **metres** (mixed).
+ *   - XY is in **canvas/scene units**, Z is in **metres** (mixed) — και πλέον το λέει
+ *     ο ΤΥΠΟΣ, όχι αυτό το σχόλιο: `SolidBounds.minZm`/`maxZm` (ADR-793).
  *   - `column` / `mep-fixture` / `mep-radiator` / `mep-boiler` / `mep-water-heater`
- *     store `bbox.z = 0` (footprint only) — the real vertical extent lives in
- *     params (`height`, or `mountingElevationMm ± bodyHeightMm/2`).
+ *     κουβαλούν **{@link PlanBounds}** — ίχνος **χωρίς καμία αξίωση ύψους**· το
+ *     πραγματικό κατακόρυφο εύρος ζει στα params (`height`, ή
+ *     `mountingElevationMm ± bodyHeightMm/2`).
+ *
+ * 🔴 **ADR-793 — γιατί αυτό είναι πλέον ΤΥΠΟΣ και όχι πρόζα.** Μέχρι 2026-08-22 η
+ * διάκριση «στερεό έναντι ίχνους» ζούσε **αποκλειστικά** σε αυτό το σχόλιο και στην
+ * χειρόγραφη αλυσίδα `if` παρακάτω — το σχήμα που στο ίδιο repo έχει αποτύχει
+ * **μετρημένα** στα CHECK 3.34 (63) · 3.37 (18 vs 26) · 3.49 (60). Και οι δύο τρόποι
+ * να σπάσει ήταν **σιωπηλοί**: ένα είδος-ίχνος στον πρώτο κλάδο έδινε AABB **μηδενικού
+ * ύψους** (η ανίχνευση συγκρούσεων χάνει κάθε κατακόρυφη επικάλυψη, χωρίς σφάλμα),
+ * και το `railing` — που έγραφε z σε **χιλιοστά** — θα έδινε AABB **1000× ψηλότερο**.
+ * Πλέον **δεν μεταγλωττίζονται**: ο πρώτος κλάδος απαιτεί `SolidBounds`, το ίχνος δεν
+ * είναι εκχωρήσιμο εκεί, και η μονάδα ζει στο όνομα του πεδίου.
  *
  * This module is the ONE place that reconciles all of that into a single
  * consistent metric space: `(planX_m, planY_m, elevation_m)`. MEP segments also
@@ -24,7 +36,7 @@ import {
 } from '../../types/entities';
 import type { SceneUnits } from '../../utils/scene-units';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
-import type { BimBounds } from '../../bim/types/bim-base';
+import type { PlanBounds, SolidBounds } from '../../bim/types/bim-base';
 import type { MepSegmentEntity } from '../../bim/types/mep-segment-types';
 import { resolveSegmentSection, resolveSegmentEndpointElevationsMm } from '../../bim/types/mep-segment-types';
 import type { Aabb3, ClashEntity, Vec3 } from './clash-types';
@@ -40,8 +52,14 @@ function inflate(box: Aabb3, r: number): Aabb3 {
   };
 }
 
-/** Cached bbox → metres, taking XY from the (canvas-unit) bbox and Z from caller. */
-function bboxToAabb(bbox: BimBounds, sceneToM: number, zMinM: number, zMaxM: number): Aabb3 {
+/**
+ * Ίχνος (canvas units) + κατακόρυφο εύρος **σε μέτρα από τον καλούντα** → `Aabb3`.
+ *
+ * ⚠️ Δέχεται {@link PlanBounds} **επίτηδες**: κάθε `SolidBounds` είναι και ίχνος, αλλά
+ * η υπογραφή δηλώνει ότι αυτή η συνάρτηση **δεν διαβάζει** το z του κουτιού — το
+ * παίρνει από τον καλούντα, που είναι ο μόνος που ξέρει από πού προέρχεται.
+ */
+function bboxToAabb(bbox: PlanBounds, sceneToM: number, zMinM: number, zMaxM: number): Aabb3 {
   return {
     min: { x: bbox.min.x * sceneToM, y: bbox.min.y * sceneToM, z: zMinM },
     max: { x: bbox.max.x * sceneToM, y: bbox.max.y * sceneToM, z: zMaxM },
@@ -90,18 +108,19 @@ export function entityWorldAABB(
   if (isMepSegmentEntity(entity)) return segmentEntity(entity, sceneToM, systemIds);
 
   if (isBeamEntity(entity) || isWallEntity(entity) || isSlabEntity(entity) || isMepFittingEntity(entity)) {
-    const bbox = entity.geometry.bbox; // Z already in metres for these kinds (optional → 0)
-    return { id: entity.id, kind: entity.type, aabb: bboxToAabb(bbox, sceneToM, bbox.min.z ?? 0, bbox.max.z ?? 0), systemIds };
+    // ADR-793 — `SolidBounds`: το ύψος είναι ΕΓΓΥΗΜΕΝΟ και σε μέτρα. Κανένα `?? 0`.
+    const bbox: SolidBounds = entity.geometry.bbox;
+    return { id: entity.id, kind: entity.type, aabb: bboxToAabb(bbox, sceneToM, bbox.minZm, bbox.maxZm), systemIds };
   }
 
   if (isColumnEntity(entity)) {
-    const bbox = entity.geometry.bbox; // z=0 footprint → column rises floor→height
+    const bbox = entity.geometry.bbox; // PlanBounds — ίχνος· η κολόνα ανεβαίνει δάπεδο→height
     const aabb = bboxToAabb(bbox, sceneToM, 0, entity.params.height * MM_TO_M);
     return { id: entity.id, kind: 'column', aabb, systemIds };
   }
 
   if (isMepFixtureEntity(entity) || isMepRadiatorEntity(entity) || isMepBoilerEntity(entity) || isMepWaterHeaterEntity(entity)) {
-    const bbox = entity.geometry.bbox; // z=0 footprint → vertical span from params
+    const bbox = entity.geometry.bbox; // PlanBounds — ίχνος· το κατακόρυφο εύρος από params
     const [zMin, zMax] = mountedSpanM(entity.params.mountingElevationMm, entity.params.bodyHeightMm);
     return { id: entity.id, kind: entity.type, aabb: bboxToAabb(bbox, sceneToM, zMin, zMax), systemIds };
   }

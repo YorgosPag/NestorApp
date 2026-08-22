@@ -23,7 +23,7 @@ import type {
   BimPoint,
   BimPolyline,
   BimPolygon,
-  BimBounds,
+  SolidBounds,
 } from './bim-base';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
 import type { EnvelopeLayer } from './thermal-envelope-types';
@@ -391,7 +391,7 @@ export interface OpeningGeometry {
    * (Revit swept-profile invariant). Absent → renderer draws no frame members.
    */
   readonly frameOutlines?: readonly BimPolygon[];
-  readonly bbox: BimBounds;
+  readonly bbox: SolidBounds;
   /** m². Opening face area (width × height in mm → m²). */
   readonly area: number;
   /** m. Perimeter για frame BOQ feed (2 × (width + height) / 1000). */

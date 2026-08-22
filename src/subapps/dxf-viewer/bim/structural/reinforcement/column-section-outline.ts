@@ -7,7 +7,7 @@
  * συντεταγμένων με το rebar layout) + τον **detailing mode** + χαρακτηριστικά μεγέθη
  * (min πάχος, περίμετρος, εμβαδόν, bbox, άξονας τοιχώματος). Reuse:
  *   - `materializeColumnLocalPolygonMm` (column-geometry) — το ΙΔΙΟ footprint με 2Δ/3Δ
- *   - `polygonArea` / `polygonPerimeter` / `polygonBbox` (polygon-utils SSoT)
+ *   - `polygonArea` / `polygonPerimeter` (polygon-utils SSoT) · `bboxOf` (xy-bounds SSoT)
  *
  * Όλη η αλυσίδα οπλισμού (layout, ποσότητες, providers, 2Δ/3Δ, detail-sheet) χτίζεται
  * πάνω σε αυτό αντί για το παλιό σκαλάρ `width × depth` (rectangular-only). Pure —
@@ -20,7 +20,8 @@
 import type { Point2D } from '../../../rendering/types/Types';
 import type { ColumnKind, ColumnParams } from '../../types/column-types';
 import { materializeColumnLocalPolygonMm } from '../../geometry/column-geometry';
-import { polygonArea, polygonPerimeter, polygonBbox } from '../../geometry/shared/polygon-utils';
+import { polygonArea, polygonPerimeter } from '../../geometry/shared/polygon-utils';
+import { bboxOf } from '../../geometry/shared/xy-bounds';
 
 /**
  * Τρόπος διευθέτησης οπλισμού — επιλέγεται από το σχήμα/αναλογία διατομής:
@@ -88,9 +89,9 @@ export interface ColumnReinforcementSection {
 export function resolveColumnReinforcementSection(params: ColumnParams): ColumnReinforcementSection {
   const outlineMm = materializeColumnLocalPolygonMm(params);
   // ADR-789 — μηδέν lift: τα `polygon-utils` δέχονται `PlanarPoint`, άρα το 2D outline μπαίνει αυτούσιο.
-  const bbox = polygonBbox(outlineMm);
-  const bboxWidthMm = Math.max(0, bbox.max.x - bbox.min.x);
-  const bboxDepthMm = Math.max(0, bbox.max.y - bbox.min.y);
+  const bbox = bboxOf(outlineMm);
+  const bboxWidthMm = Math.max(0, bbox.maxX - bbox.minX);
+  const bboxDepthMm = Math.max(0, bbox.maxY - bbox.minY);
   const minThicknessMm = Math.min(bboxWidthMm, bboxDepthMm);
   const maxDimensionMm = Math.max(bboxWidthMm, bboxDepthMm);
 

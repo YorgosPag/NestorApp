@@ -35,7 +35,7 @@
 
 import type {
   BimEntity,
-  BimBounds,
+  SolidBounds,
   BimPoint,
   BimPolygon,
   BimPolyline,
@@ -146,7 +146,7 @@ export interface MepSegmentParams extends MepConnectorHostParams {
 export interface MepSegmentGeometry {
   readonly axisPolyline: BimPolyline;
   readonly outline: BimPolygon;
-  readonly bbox: BimBounds;
+  readonly bbox: SolidBounds;
   /** m — axis length. */
   readonly length: number;
   /** m² — cross-section area. */

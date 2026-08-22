@@ -26,7 +26,8 @@ import type { Point2D } from '../../../rendering/types/Types';
 import type { SceneUnits } from '../../../utils/scene-units';
 import { mmToSceneUnits } from '../../../utils/scene-units';
 import type { Vec2 } from './stair-geometry-shared';
-import { polygonArea, polygonBbox } from '../shared/polygon-utils';
+import { polygonArea } from '../shared/polygon-utils';
+import { bboxOf } from '../shared/xy-bounds';
 import {
   type CorridorWalkline,
   type WalklineSegment,
@@ -136,16 +137,16 @@ function degenerateFallback(
   ring: readonly Point2D[],
   reason: string,
 ): StairRegionClassification {
-  const bbox = polygonBbox(ring);
-  const w = bbox.max.x - bbox.min.x;
-  const h = bbox.max.y - bbox.min.y;
+  const bbox = bboxOf(ring);
+  const w = bbox.maxX - bbox.minX;
+  const h = bbox.maxY - bbox.minY;
   const alongX = w >= h;
   const long = Math.max(w, h);
   const short = Math.min(w, h);
-  const cx = (bbox.min.x + bbox.max.x) / 2;
-  const cy = (bbox.min.y + bbox.max.y) / 2;
-  const base: Point2D = alongX ? { x: bbox.min.x, y: cy } : { x: cx, y: bbox.min.y };
-  const top: Point2D = alongX ? { x: bbox.max.x, y: cy } : { x: cx, y: bbox.max.y };
+  const cx = (bbox.minX + bbox.maxX) / 2;
+  const cy = (bbox.minY + bbox.maxY) / 2;
+  const base: Point2D = alongX ? { x: bbox.minX, y: cy } : { x: cx, y: bbox.minY };
+  const top: Point2D = alongX ? { x: bbox.maxX, y: cy } : { x: cx, y: bbox.maxY };
   return {
     walkline: [{ type: 'line', start: base, end: top }],
     length: long,

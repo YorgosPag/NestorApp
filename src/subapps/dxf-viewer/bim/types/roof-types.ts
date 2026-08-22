@@ -27,7 +27,7 @@
 
 import type {
   BimEntity,
-  BimBounds,
+  SolidBounds,
   BimPoint,
   PlanProfile,
 } from './bim-base';
@@ -191,7 +191,7 @@ export interface RoofGeometry {
   readonly faces: readonly RoofFace[];
   /** Κορφιάδες / λούκια / hip ακμές (Φ1: ridge για gable). */
   readonly ridges: readonly RoofRidgeLine[];
-  readonly bbox: BimBounds;
+  readonly bbox: SolidBounds;
   /** m². Προβολή στο έδαφος (Qto ProjectedArea). */
   readonly projectedAreaM2: number;
   /** m². Κεκλιμένο/πραγματικό εμβαδό επιφάνειας (Qto GrossArea). */

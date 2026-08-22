@@ -155,8 +155,8 @@ describe('computeOpeningGeometry — scalars', () => {
 
   it('bbox z in metres: door sillHeight=0, height=2100mm → [0, 2.1] (ADR-369 Phase B)', () => {
     const g = computeOpeningGeometry(makeOpening({ kind: 'door', sillHeight: 0, height: 2100 }), makeWall());
-    expect(g.bbox.min.z).toBeCloseTo(0, FLOAT_TOL);
-    expect(g.bbox.max.z).toBeCloseTo(2.1, FLOAT_TOL);
+    expect(g.bbox.minZm).toBeCloseTo(0, FLOAT_TOL);
+    expect(g.bbox.maxZm).toBeCloseTo(2.1, FLOAT_TOL);
   });
 
   it('bbox z in metres: window sillHeight=900mm, height=1400mm → [0.9, 2.3]', () => {
@@ -164,8 +164,8 @@ describe('computeOpeningGeometry — scalars', () => {
       makeOpening({ kind: 'window', sillHeight: 900, height: 1400 }),
       makeWall(),
     );
-    expect(g.bbox.min.z).toBeCloseTo(0.9, FLOAT_TOL);
-    expect(g.bbox.max.z).toBeCloseTo(2.3, FLOAT_TOL);
+    expect(g.bbox.minZm).toBeCloseTo(0.9, FLOAT_TOL);
+    expect(g.bbox.maxZm).toBeCloseTo(2.3, FLOAT_TOL);
   });
 });
 

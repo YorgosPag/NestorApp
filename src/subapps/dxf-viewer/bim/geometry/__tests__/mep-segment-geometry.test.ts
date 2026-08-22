@@ -94,8 +94,8 @@ describe('computeMepSegmentGeometry — rectangular duct', () => {
   });
 
   it('bbox z centred on centreline ± height/2', () => {
-    expect(geo.bbox.min.z).toBeCloseTo((2800 - 100) / 1000, 5);
-    expect(geo.bbox.max.z).toBeCloseTo((2800 + 100) / 1000, 5);
+    expect(geo.bbox.minZm).toBeCloseTo((2800 - 100) / 1000, 5);
+    expect(geo.bbox.maxZm).toBeCloseTo((2800 + 100) / 1000, 5);
   });
 
   // ADR-408 Φ-A — a sloped run's z range spans both endpoint elevations (± h/2).
@@ -103,8 +103,8 @@ describe('computeMepSegmentGeometry — rectangular duct', () => {
     const riser = computeMepSegmentGeometry(
       rectDuct({ startPoint: { x: 0, y: 0, z: 0 }, endPoint: { x: 2000, y: 0, z: 2800 } }),
     );
-    expect(riser.bbox.min.z).toBeCloseTo((0 - 100) / 1000, 5);
-    expect(riser.bbox.max.z).toBeCloseTo((2800 + 100) / 1000, 5);
+    expect(riser.bbox.minZm).toBeCloseTo((0 - 100) / 1000, 5);
+    expect(riser.bbox.maxZm).toBeCloseTo((2800 + 100) / 1000, 5);
   });
 });
 

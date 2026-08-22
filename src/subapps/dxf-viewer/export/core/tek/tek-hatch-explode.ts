@@ -28,7 +28,7 @@ import type { Entity, HatchEntity } from '../../../types/entities';
 import {
   buildHatchEntitySegments, hatchMinWorldSpacing,
 } from '../../../bim/geometry/shared/hatch-pattern-geometry';
-import { polygonBbox } from '../../../bim/geometry/shared/polygon-utils';
+import { bboxOf } from '../../../bim/geometry/shared/xy-bounds';
 import { buildLineRecordXml } from './tek-xml-writer';
 import { entityColor, entityTag, toTekLine } from './dxf-to-tek';
 
@@ -53,7 +53,7 @@ export const MAX_TEK_FILL_LINES_TOTAL = 120_000;
  * υπολογιστεί — ο post-hoc έλεγχος είναι άχρηστος.)
  *
  * Μοντέλο: εμβαδόν bbox ÷ βήμα² — μία γραμμή ανά `spacing` σε κάθε άξονα. Reuse των SSoT
- * `hatchMinWorldSpacing` (πυκνότερη οικογένεια) + `polygonBbox` — μηδέν νέα pattern math.
+ * `hatchMinWorldSpacing` (πυκνότερη οικογένεια) + `bboxOf` — μηδέν νέα pattern math.
  * Υπερεκτιμά ~45% έναντι του πραγματικού (dashes/clipping) → ασφαλής κατεύθυνση για guard.
  */
 export function estimateHatchFillLines(h: HatchEntity): number {
@@ -61,9 +61,9 @@ export function estimateHatchFillLines(h: HatchEntity): number {
   if (spacing <= 0) return 0;
   const verts = (h.boundaryPaths ?? []).flat();
   if (verts.length < 3) return 0;
-  const bbox = polygonBbox(verts);
-  const w = Math.abs(bbox.max.x - bbox.min.x);
-  const hgt = Math.abs(bbox.max.y - bbox.min.y);
+  const bbox = bboxOf(verts);
+  const w = Math.abs(bbox.maxX - bbox.minX);
+  const hgt = Math.abs(bbox.maxY - bbox.minY);
   return Math.ceil((w * hgt) / (spacing * spacing));
 }
 

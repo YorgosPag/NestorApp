@@ -16,7 +16,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §6 Phase 8
  */
 
-import type { BimBounds } from '../types/bim-base';
+import type { PlanBounds } from '../types/bim-base';
 import type { BuildingRef } from '../utils/bim-floor-utils';
 import type { OpeningHardwareComponent } from '../family-types/opening-hardware-set';
 import type { ColumnFoundationStubQuantities } from '../geometry/column-foundation-stub';
@@ -149,7 +149,7 @@ export interface ScheduleFilterCriteria {
    */
   readonly categories?: readonly string[];
   /** World-coord bounding box (mm). Entity bbox must intersect to pass. */
-  readonly region?: BimBounds;
+  readonly region?: PlanBounds;
   /** Active selection IDs. Used by `'selection-only'` mode. */
   readonly selectionIds?: readonly string[];
 }

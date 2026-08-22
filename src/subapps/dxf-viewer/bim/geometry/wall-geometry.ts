@@ -20,7 +20,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.3
  */
 
-import type { BimPoint, BimPolyline, BimBounds } from '../types/bim-base';
+import type { BimPoint, BimPolyline, SolidBounds } from '../types/bim-base';
 import type { WallParams, WallGeometry, WallKind } from '../types/wall-types';
 import type { WallTopProfile } from './wall-top-profile';
 import type { WallBaseProfile } from './wall-base-profile';
@@ -415,12 +415,14 @@ function computeBbox(
   inner: readonly BimPoint[],
   heightMm: number,
   baseOffsetMm: number = 0,
-): BimBounds {
+): SolidBounds {
   const { minX, maxX, minY, maxY } = bboxOfAll(axis, outer, inner);
   const baseM = baseOffsetMm / 1000;
   return {
-    min: { x: minX, y: minY, z: baseM },
-    max: { x: maxX, y: maxY, z: baseM + heightMm / 1000 },
+    min: { x: minX, y: minY },
+    max: { x: maxX, y: maxY },
+    minZm: baseM,
+    maxZm: baseM + heightMm / 1000,
   };
 }
 

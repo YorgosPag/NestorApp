@@ -9,7 +9,8 @@
 
 import type { PlanarPoint } from '../../types/bim-base';
 import type { Point2D } from '../../../rendering/types/Types';
-import { polygonArea, polygonBbox, projectVerticesTo2D, shoelaceArea } from './polygon-utils';
+import { polygonArea, projectVerticesTo2D, shoelaceArea } from './polygon-utils';
+import { bboxOf, bboxOverlap } from './xy-bounds';
 
 /**
  * Sutherland-Hodgman polygon clip. Clips `subject` against a **convex** `clip`
@@ -71,10 +72,8 @@ export function polygonIntersectionAreaMm2(
   if (slabVertices.length < 3 || beamVertices.length < 3) return 0;
 
   // Fast AABB reject.
-  const sb = polygonBbox(slabVertices);
-  const bb = polygonBbox(beamVertices);
-  if (sb.max.x <= bb.min.x || bb.max.x <= sb.min.x) return 0;
-  if (sb.max.y <= bb.min.y || bb.max.y <= sb.min.y) return 0;
+  // ADR-793 / N.0.2 — ο έλεγχος επικάλυψης ζει ΜΙΑ φορά, στο `xy-bounds.bboxOverlap`.
+  if (!bboxOverlap(bboxOf(slabVertices), bboxOf(beamVertices))) return 0;
 
   // S-H: slab = subject (may be concave), beam = clip (convex rectangle → exact).
   const clipped = clipPolygonBySH(slabVertices, beamVertices);

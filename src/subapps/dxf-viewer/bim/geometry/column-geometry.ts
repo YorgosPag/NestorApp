@@ -41,13 +41,13 @@ import {
 } from '../types/column-types';
 import type { Point2D } from '../../rendering/types/Types';
 import type { ColumnTopProfile, ColumnBaseProfile } from './column-vertical-profile';
-import { polygonArea, polygonBbox } from './shared/polygon-utils';
+import { polygonArea } from './shared/polygon-utils';
 import { translatePoints } from '../../rendering/entities/shared/geometry-vector-utils';
 import { buildIShapeProfile } from './shared/i-shape-profile';
 import { mmScaleFor } from '../../utils/scene-units';
 import { columnAnchorFrame, columnFootprintDims } from '../columns/column-footprint-dims';
 import { centredLocalToWorld, centredPolyToWorld } from '../grips/centred-anchor-frame';
-import { bboxOf } from './shared/xy-bounds';
+import { bboxOf, planBoundsOf } from './shared/xy-bounds';
 
 const MM_TO_M = 1 / 1000;
 
@@ -100,7 +100,7 @@ export function computeColumnGeometry(
   const localVerts = buildLocalFootprint(params, s);
   const transformed = transformFootprint(localVerts, params);
 
-  const bbox = polygonBbox(transformed);
+  const bbox = planBoundsOf(transformed);
   // Polygon vertices are in canvas units → convert area to m².
   const areaCanvas2 = polygonArea(transformed);
   const canvasToM = (1 / s) * MM_TO_M;

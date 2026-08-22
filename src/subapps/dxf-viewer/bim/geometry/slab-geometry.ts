@@ -18,14 +18,14 @@
 
 import type { SlabGeometry, SlabParams } from '../types/slab-types';
 import type { SlabOpeningEntity } from '../types/slab-opening-types';
-import type { BimBounds, BimPoint, BimPolygon } from '../types/bim-base';
+import type { SolidBounds, BimPoint, BimPolygon } from '../types/bim-base';
 import {
   polygonArea,
-  polygonBbox,
   polygonPerimeter,
   polygonIntersectionAreaMm2,
 } from './shared/polygon-utils';
 import { canvasToMmScaleFor, type SceneUnits } from '../../utils/scene-units';
+import { bboxOf } from './shared/xy-bounds';
 
 // ─── Beam deduction input (Phase 5.5i+) ──────────────────────────────────────
 
@@ -84,7 +84,7 @@ export function computeSlabGeometry(
   const canvasToM = canvasToMmScaleFor(params) * MM_TO_M;
 
   const vertices = params.outline.vertices;
-  const xyBbox = polygonBbox(vertices);
+  const xyBbox = bboxOf(vertices);
   const areaCanvas2 = polygonArea(vertices);
   const perimeterCanvas = polygonPerimeter(vertices);
   const areaM2 = areaCanvas2 * canvasToM * canvasToM;
@@ -103,9 +103,11 @@ export function computeSlabGeometry(
   // Phase B: 3D z extent in metres (ADR-369 §2.1: top face = FFL, hangs DOWN by thickness).
   const topFaceM = (params.levelElevation + (params.heightOffsetFromLevel ?? 0)) / 1000;
   const botFaceM = topFaceM - thicknessMm / 1000;
-  const bbox: BimBounds = {
-    min: { x: xyBbox.min.x, y: xyBbox.min.y, z: botFaceM },
-    max: { x: xyBbox.max.x, y: xyBbox.max.y, z: topFaceM },
+  const bbox: SolidBounds = {
+    min: { x: xyBbox.minX, y: xyBbox.minY },
+    max: { x: xyBbox.maxX, y: xyBbox.maxY },
+    minZm: botFaceM,
+    maxZm: topFaceM,
   };
 
   return {
@@ -144,9 +146,9 @@ function sumSlabOpeningAreasM2(
  */
 export function getSlabMaxBboxDimensionM(params: SlabParams): number {
   const canvasToM = canvasToMmScaleFor(params) * MM_TO_M;
-  const bb = polygonBbox(params.outline.vertices);
-  const dx = bb.max.x - bb.min.x;
-  const dy = bb.max.y - bb.min.y;
+  const bb = bboxOf(params.outline.vertices);
+  const dx = bb.maxX - bb.minX;
+  const dy = bb.maxY - bb.minY;
   return Math.min(dx, dy) * canvasToM;
 }
 
@@ -204,9 +206,9 @@ export function computeSlabMaxFreeSpanM(
   sceneUnits: SceneUnits = 'mm',
 ): number {
   const canvasToM = canvasToMmScaleFor({ sceneUnits }) * MM_TO_M;
-  const bb = polygonBbox(slabVertices);
-  const dx = bb.max.x - bb.min.x;
-  const dy = bb.max.y - bb.min.y;
+  const bb = bboxOf(slabVertices);
+  const dx = bb.maxX - bb.minX;
+  const dy = bb.maxY - bb.minY;
   const bboxFallbackM = Math.min(dx, dy) * canvasToM;
 
   if (slabVertices.length < 3 || supportOutlines.length < 2) {

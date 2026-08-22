@@ -27,7 +27,8 @@ import { mmScaleFor } from '../../utils/scene-units';
 import type { SceneUnits } from '../../utils/scene-units';
 import { clamp } from '../../utils/scalar-math';
 // ADR-584 — reuse the shared 2D point-array bbox SSoT (avoid a sibling clone of the loop).
-import { bboxOf } from '../geometry/member-column-cutback';
+import type { PlanBounds } from '../types/bim-base';
+import { planBoundsOf } from '../geometry/shared/xy-bounds';
 
 /**
  * Δομικό (structural) minimum που χρειάζεται ο υπολογισμός λωρίδας από τον host τοίχο.
@@ -177,22 +178,18 @@ function orientOutward(wall: WallCoveringHost, faceAnchor: Point2D, left: Vec2):
 
 // ─── Cacheable render geometry (selection / hit-test) ─────────────────────────
 
-/** 2D bbox (z=0) από τα 4 σημεία της λωρίδας. */
-function stripBounds(quad: WallCoveringStrip['quad']): {
-  readonly min: { x: number; y: number; z: number };
-  readonly max: { x: number; y: number; z: number };
-} {
-  const b = bboxOf(quad);
-  return { min: { x: b.minX, y: b.minY, z: 0 }, max: { x: b.maxX, y: b.maxY, z: 0 } };
-}
 
 /** Cacheable render bits (outline + bbox) από host τοίχο + params. SSoT — completion + command. */
 export interface WallCoveringRenderGeometry {
   readonly outline?: readonly { readonly x: number; readonly y: number; readonly z: number }[];
-  readonly bbox?: {
-    readonly min: { x: number; y: number; z: number };
-    readonly max: { x: number; y: number; z: number };
-  };
+  /**
+   * ADR-793 — {@link PlanBounds}: ίχνος **χωρίς z**. Ήταν ανώνυμος inline τύπος με
+   * υποχρεωτικό `z: 0` — δομικό κλώνο του τότε `BimBounds`, γεμάτο με το ίδιο ψέμα από
+   * ιδιωτικό `stripBounds` που **ήδη** καλούσε τον `bboxOf` και πρόσθετε **μόνο** το `z`.
+   * ⚠️ Το πεδίο **αποθηκεύεται στο Firestore**· η αφαίρεση του `z` είναι **μηδενική
+   * μετανάστευση** (τα υπάρχοντα έγγραφα κουβαλούν ένα `z: 0` που κανείς δεν διαβάζει).
+   */
+  readonly bbox?: PlanBounds;
 }
 
 /**
@@ -207,7 +204,7 @@ export function computeWallCoveringRenderGeometry(
 ): WallCoveringRenderGeometry {
   const strip = computeWallCoveringStrip(wall, params);
   if (!strip) return {};
-  const bbox = stripBounds(strip.quad);
+  const bbox = planBoundsOf(strip.quad);
   // ADR-789 Φάση Δ — το `quad` ΕΙΝΑΙ ήδη 2Δ· το σχόλιο του τύπου το έλεγε («cached 2D
   // strip outline») ενώ ο τύπος έλεγε Point3D[]. Περνά αυτούσιο.
   return { outline: strip.quad, bbox };

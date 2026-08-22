@@ -401,7 +401,7 @@ export {
 import type {
   BimEntity,
   BimElementKind,
-  BimBounds,
+  PlanBounds,
 } from '../bim/types/bim-base';
 
 // ─── BIM entity concrete types ──────────────────────────────────────────────
@@ -416,7 +416,7 @@ export type SlabOpeningKind = 'shaft' | 'well' | 'duct' | 'chimney';
 
 // Minimal geometry stub — full geometry types in bim/types/*-types.ts (Phase 2+)
 interface BimGeometryStub {
-  readonly bbox: BimBounds;
+  readonly bbox: PlanBounds;
 }
 
 // Minimal params stubs — full params in bim/types/*-types.ts (Phase 2+)

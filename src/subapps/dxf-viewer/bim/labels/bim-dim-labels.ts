@@ -37,7 +37,7 @@ import type { WallEntity } from '../types/wall-types';
 import type { BeamEntity } from '../types/beam-types';
 import type { OpeningEntity } from '../types/opening-types';
 import type { FoundationEntity, FoundationParams } from '../types/foundation-types';
-import type { BimBounds } from '../types/bim-base';
+import type { PlanBounds } from '../types/bim-base';
 import { mmScaleFor } from '../../utils/scene-units';
 import { formatLengthMm } from '../../config/display-length-format';
 import { formatColumnDimLabels } from '../columns/column-dim-labels';
@@ -177,7 +177,7 @@ export type DimLabelPlacement = 'center-below' | 'top-mid';
 export function drawEntityDimLabel(
   ctx: CanvasRenderingContext2D,
   entity: Entity,
-  bbox: BimBounds,
+  bbox: PlanBounds,
   worldToScreen: (p: Point2D) => Point2D,
   placement: DimLabelPlacement = 'center-below',
 ): void {

@@ -39,7 +39,7 @@
 import type {
   BimEntity,
   BimValidation,
-  BimBounds,
+  SolidBounds,
   BimPoint,
   BimPolygon,
 } from './bim-base';
@@ -175,7 +175,7 @@ export interface MepFittingParams extends MepConnectorHostParams {
  */
 export interface MepFittingGeometry {
   readonly footprint: BimPolygon;
-  readonly bbox: BimBounds;
+  readonly bbox: SolidBounds;
   /** m³ — BOQ rollup. */
   readonly volumeM3: number;
   /** m — along-axis length (coupling/reducer). */

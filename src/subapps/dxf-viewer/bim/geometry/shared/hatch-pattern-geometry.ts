@@ -18,7 +18,7 @@
  * @see bim/geometry/shared/polygon-hatch-utils.ts (buildAxisAlignedHatch SSoT)
  */
 
-import type { BimPoint } from '../../types/bim-base';
+import type { BimPoint, PlanBounds } from '../../types/bim-base';
 import {
   buildAxisAlignedHatch,
   clipLineToBbox,
@@ -27,7 +27,8 @@ import {
   type HatchLineSegment,
   type HatchPoint2D,
 } from './polygon-hatch-utils';
-import { polygonBbox, pointInPolygon } from './polygon-utils';
+import { pointInPolygon } from './polygon-utils';
+import { planBoundsOf } from './xy-bounds';
 import { translatePoint } from '../../../rendering/entities/shared/geometry-vector-utils';
 import { lerpPoint } from '../../../rendering/entities/shared/geometry-utils';
 import { degToRad } from '../../../rendering/entities/shared/geometry-angle-utils';
@@ -134,7 +135,7 @@ function buildClippedSet(
   paths: readonly BimPoint[][], spacingMm: number, angleDeg: number, islandStyle: HatchIslandStyle,
 ): HatchLineSegment[] {
   const allVerts = paths.flat();
-  const bbox = polygonBbox(allVerts);
+  const bbox = planBoundsOf(allVerts);
   const full = buildAxisAlignedHatch(bbox, spacingMm, unitFromAngle(angleDeg));
   const out: HatchLineSegment[] = [];
   for (const seg of full) out.push(...clipSegmentToRegion(seg, paths, islandStyle));
@@ -236,7 +237,7 @@ function dashSpansAlongLine(
 
 /** Παράγει τα (μη-clipped στο όριο) τμήματα μιας `PatternLine` πάνω στο bbox. */
 function buildPatternLineSegments(
-  pl: PatternLine, bbox: ReturnType<typeof polygonBbox>, globalAngleDeg: number,
+  pl: PatternLine, bbox: PlanBounds, globalAngleDeg: number,
 ): HatchLineSegment[] {
   const angle = pl.angle + globalAngleDeg;
   const r = degToRad(angle);
@@ -304,7 +305,7 @@ export function buildPredefinedHatchLines(
   // Phase origin: μετατόπισε τα όρια κατά -origin (SSoT helper, mirror buildHatchLines).
   const shifted = usableShiftedPaths(boundaryPaths, origin);
   if (!shifted.length) return [];
-  const bbox = polygonBbox(shifted.flat());
+  const bbox = planBoundsOf(shifted.flat());
 
   const out: HatchLineSegment[] = [];
   for (const pl of pattern.lines) {

@@ -18,7 +18,7 @@
  */
 
 import { nowTimestamp } from '@/lib/firestore-now';
-import type { BimValidation, BimPoint } from '../types/bim-base';
+import type { BimValidation, BimPoint, PlanBounds } from '../types/bim-base';
 import type {
   MepUnderfloorGeometry,
   MepUnderfloorParams,
@@ -36,10 +36,10 @@ import {
   isPolygonCCW,
   pointInPolygon,
   polygonArea,
-  polygonBbox,
   stripClosingDuplicate,
   type HatchDirection,
 } from '../geometry/shared/polygon-utils';
+import { planBoundsOf } from '../geometry/shared/xy-bounds';
 
 const MM_TO_M = 1 / 1000;
 
@@ -65,7 +65,7 @@ export function computeMepUnderfloorGeometry(
   if (ring.length < MIN_UNDERFLOOR_VERTICES) return emptyGeometry(verts);
   if (!isPolygonCCW(ring)) ring = [...ring].reverse();
 
-  const bbox = polygonBbox(ring);
+  const bbox = planBoundsOf(ring);
   // ADR-422 unit-fix — the footprint is in SCENE UNITS (`params.sceneUnits`), while the
   // scalar params (edgeClearanceMm / pipeSpacingMm) are mm. They MUST be converted to
   // scene units before any geometric comparison, and scene-unit outputs back to metres.
@@ -155,7 +155,7 @@ function entryConnectors(entry: EntryPoints): Pick<MepUnderfloorGeometry, 'suppl
 // ─── Row generation ───────────────────────────────────────────────────────────
 
 /** Axis the rows run along — the longer bbox dimension (fewer U-turns). */
-function resolveAxis(bbox: { min: BimPoint; max: BimPoint }): HatchDirection {
+function resolveAxis(bbox: PlanBounds): HatchDirection {
   const w = bbox.max.x - bbox.min.x;
   const h = bbox.max.y - bbox.min.y;
   return w >= h ? { ux: 1, uy: 0 } : { ux: 0, uy: 1 };
@@ -167,7 +167,7 @@ function resolveAxis(bbox: { min: BimPoint; max: BimPoint }): HatchDirection {
  * perpendicular offset k (ascending) — `buildAxisAlignedHatch` emits in k order.
  */
 function buildClippedRows(inset: readonly BimPoint[], spacingMm: number): ClippedRow[] {
-  const bbox = polygonBbox(inset);
+  const bbox = planBoundsOf(inset);
   const u = resolveAxis(bbox);
   const lines = buildAxisAlignedHatch(bbox, spacingMm, u);
   const rows: ClippedRow[] = [];
@@ -387,7 +387,7 @@ function pathLengthMm(path: readonly BimPoint[]): number {
 }
 
 function emptyGeometry(verts: readonly BimPoint[]): MepUnderfloorGeometry {
-  const bbox = polygonBbox(verts as BimPoint[]);
+  const bbox = planBoundsOf(verts);
   const origin = verts[0] ? { x: verts[0].x, y: verts[0].y, z: 0 } : { x: 0, y: 0, z: 0 };
   return {
     bbox,

@@ -31,7 +31,7 @@
 
 import type {
   BimEntity,
-  BimBounds,
+  PlanBounds,
   BimPoint,
   BimPolygon,
 } from './bim-base';
@@ -116,7 +116,7 @@ export interface FurnitureParams {
 export interface FurnitureGeometry {
   /** BimPolygon — horizontal footprint at the mounting plane. Closed CCW. */
   readonly footprint: BimPolygon;
-  readonly bbox: BimBounds;
+  readonly bbox: PlanBounds;
   /** m². Footprint area. */
   readonly area: number;
   /** mm. Mirror of `params.heightMm` for downstream convenience. */

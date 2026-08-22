@@ -21,7 +21,7 @@
 import type { StairEntity, Polygon3D, Point3D } from '../types/stair-types';
 import type { RailingHostContext, RailingPath } from '../types/railing-types';
 import { inferSceneUnitsFromWidth, mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
-import { projectOntoPath } from '../railings/railing-geometry';
+import { projectOntoPath } from '../railings/railing-path';
 
 export type StairRailingSide = 'inner' | 'outer';
 

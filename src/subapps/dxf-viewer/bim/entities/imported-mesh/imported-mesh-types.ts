@@ -40,7 +40,7 @@
  */
 
 import type { BOQMeasurementUnit } from '@/types/boq/units';
-import type { BimEntity, BimBounds, BimPoint, BimPolygon } from '../../types/bim-base';
+import type { BimEntity, PlanBounds, BimPoint, BimPolygon } from '../../types/bim-base';
 import type { SceneUnits } from '../../../utils/scene-units';
 import type { IfcEntityMixin } from '../../types/ifc-entity-mixin';
 
@@ -239,7 +239,7 @@ export interface ImportedMeshParams {
 export interface ImportedMeshGeometry {
   /** BimPolygon — οριζόντιο ίχνος στο επίπεδο τοποθέτησης. Κλειστό CCW. */
   readonly footprint: BimPolygon;
-  readonly bbox: BimBounds;
+  readonly bbox: PlanBounds;
   /** m². Εμβαδόν ίχνους. */
   readonly area: number;
   /** mm. Καθρέφτης του `params.measuredHeightMm` για ευκολία downstream. */

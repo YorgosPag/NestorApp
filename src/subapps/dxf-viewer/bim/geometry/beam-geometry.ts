@@ -22,7 +22,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.7
  */
 
-import type { BimPoint, BimPolyline, BimPolygon, BimBounds } from '../types/bim-base';
+import type { BimPoint, BimPolyline, BimPolygon, SolidBounds } from '../types/bim-base';
 import type { BeamGeometry, BeamParams } from '../types/beam-types';
 import { CURVED_BEAM_SUBDIVISIONS } from '../types/beam-types';
 import { mmScaleFor } from '../../utils/scene-units';
@@ -152,12 +152,14 @@ function computeBbox(
   topMinMm: number,
   zOffsetMm: number,
   depthMm: number,
-): BimBounds {
+): SolidBounds {
   const { minX, maxX, minY, maxY } = bboxOfAll(axis, outline);
   const topFaceM = (topMaxMm + zOffsetMm) / 1000;
   const botFaceM = (topMinMm + zOffsetMm - depthMm) / 1000;
   return {
-    min: { x: minX, y: minY, z: botFaceM },
-    max: { x: maxX, y: maxY, z: topFaceM },
+    min: { x: minX, y: minY },
+    max: { x: maxX, y: maxY },
+    minZm: botFaceM,
+    maxZm: topFaceM,
   };
 }

@@ -31,7 +31,7 @@
 
 import type {
   BimEntity,
-  BimBounds,
+  PlanBounds,
   BimPoint,
   PlanProfile,
 } from './bim-base';
@@ -112,7 +112,7 @@ export interface MepUnderfloorParams extends MepConnectorHostParams {
  */
 export interface MepUnderfloorGeometry {
   /** Axis-aligned bbox of the footprint (XY plane). */
-  readonly bbox: BimBounds;
+  readonly bbox: PlanBounds;
   /** m². Footprint area (Shoelace). */
   readonly areaM2: number;
   /** m. Total developed pipe length of the serpentine loop (BOQ-ready). */

@@ -18,9 +18,10 @@
         "BimPoint",
         "BimPolyline",
         "BimPolygon",
-        "BimBounds"
+        "PlanBounds",
+        "SolidBounds"
       ],
-      "reason": "Λεξιλόγιο οντοτήτων BIM. `PlanarPoint` = ΠΑΡΑΛΗΠΤΗΣ («ό,τι εκθέτει x/y», ADR-789). `PlanProfile` = αποθηκευμένο 2Δ προφίλ. `BimPoint`/`BimPolyline`/`BimPolygon`/`BimBounds` ΜΠΟΡΕΙ να κουβαλούν `z` — γι' αυτό ΔΕΝ λένε «3D» στο όνομά τους (ADR-792· πρότυπο JTS `Coordinate` έναντι `CoordinateXY`)."
+      "reason": "Λεξιλόγιο οντοτήτων BIM. `PlanarPoint` = ΠΑΡΑΛΗΠΤΗΣ («ό,τι εκθέτει x/y», ADR-789). `PlanProfile` = αποθηκευμένο 2Δ προφίλ. `BimPoint`/`BimPolyline`/`BimPolygon` ΜΠΟΡΕΙ να κουβαλούν `z` — γι' αυτό ΔΕΝ λένε «3D» στο όνομά τους (ADR-792· πρότυπο JTS `Coordinate` έναντι `CoordinateXY`). ΑΝΤΙΘΕΤΑ τα κουτιά ΔΕΝ έχουν προαιρετικό z: το `BimBounds` διασπάστηκε (ADR-793) σε `PlanBounds` (ίχνος, ΧΩΡΙΣ z — το σχήμα που ζει ήδη στο Firestore για floor-finish/thermal-space/wall-covering) και `SolidBounds` (ίχνος + `minZm`/`maxZm`, ΜΟΝΑΔΑ ΣΤΟ ΟΝΟΜΑ). Ήταν ΕΝΑ όνομα για ΔΥΟ πράγματα: 7 παραγωγοί σε μέτρα, 1 (railing) σε ΧΙΛΙΟΣΤΑ, 11 σε ψεύτικο z:0."
     },
     {
       "file": "src/subapps/dxf-viewer/bim/types/stair-types.ts",

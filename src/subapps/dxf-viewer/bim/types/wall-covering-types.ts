@@ -21,7 +21,7 @@
  * @see bim/types/floor-finish-types.ts — το πρότυπο (IfcCovering FLOORING)
  */
 
-import type { BimEntity, BimBounds } from './bim-base';
+import type { BimEntity, PlanBounds } from './bim-base';
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneUnits } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
@@ -144,7 +144,7 @@ export interface WallCoveringGeometry {
    * covering (καλύπτεται από το deferred move-cascade). Absent όταν ο host λείπει στο build.
    */
   readonly outline?: readonly Point2D[];
-  readonly bbox?: BimBounds;
+  readonly bbox?: PlanBounds;
 }
 
 // ─── Entity ───────────────────────────────────────────────────────────────────

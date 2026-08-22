@@ -13,7 +13,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md §Φ8
  */
 
-import type { BimPoint, BimPolyline, BimPolygon, BimBounds } from '../types/bim-base';
+import type { BimPoint, BimPolyline, BimPolygon, SolidBounds } from '../types/bim-base';
 import type { MepSegmentGeometry, MepSegmentParams } from '../types/mep-segment-types';
 import {
   resolveSegmentSection,
@@ -23,6 +23,7 @@ import {
 } from '../types/mep-segment-types';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { buildAxisStripOutline } from './shared/polygon-offset-utils';
+import { bboxOfAll } from './shared/xy-bounds';
 import { roundCrossSectionAreaMm2, roundPerimeterMm, rectPerimeterMm } from './shared/round-profile';
 
 const MM_TO_M = 1 / 1000;
@@ -204,22 +205,16 @@ function computeBbox(
   startElevMm: number,
   endElevMm: number,
   heightMm: number,
-): BimBounds {
-  let minX = Infinity, minY = Infinity;
-  let maxX = -Infinity, maxY = -Infinity;
-  const fold = (p: BimPoint): void => {
-    if (p.x < minX) minX = p.x;
-    if (p.x > maxX) maxX = p.x;
-    if (p.y < minY) minY = p.y;
-    if (p.y > maxY) maxY = p.y;
-  };
-  for (const p of axis) fold(p);
-  for (const p of outline) fold(p);
+): SolidBounds {
+  // ADR-793 — ο βρόχος min/max ζει ΜΙΑ φορά, στο `shared/xy-bounds` (ADR-583/CHECK 3.28).
+  const { minX, minY, maxX, maxY } = bboxOfAll(axis, outline);
   const halfH = heightMm / 2;
   const lowMm = Math.min(startElevMm, endElevMm) - halfH;
   const highMm = Math.max(startElevMm, endElevMm) + halfH;
   return {
-    min: { x: minX, y: minY, z: lowMm / 1000 },
-    max: { x: maxX, y: maxY, z: highMm / 1000 },
+    min: { x: minX, y: minY },
+    max: { x: maxX, y: maxY },
+    minZm: lowMm / 1000,
+    maxZm: highMm / 1000,
   };
 }

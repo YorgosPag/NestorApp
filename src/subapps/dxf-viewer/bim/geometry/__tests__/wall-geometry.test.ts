@@ -78,8 +78,8 @@ describe('computeWallGeometry — straight kind', () => {
 
   it('bbox z in metres: baseOffset=0 → [0, height/1000] (ADR-369 Phase B)', () => {
     const g = computeWallGeometry(makeParams({ height: 3000 }));
-    expect(g.bbox.min.z).toBeCloseTo(0, FLOAT_TOL);
-    expect(g.bbox.max.z).toBeCloseTo(3, FLOAT_TOL); // 3000mm = 3m
+    expect(g.bbox.minZm).toBeCloseTo(0, FLOAT_TOL);
+    expect(g.bbox.maxZm).toBeCloseTo(3, FLOAT_TOL); // 3000mm = 3m
   });
 
   it('bbox folds outer + inner edges into xy extents', () => {
@@ -337,7 +337,7 @@ describe('computeWallGeometry — profile-aware (ADR-401 B3a)', () => {
     const g = computeWallGeometry(wall5m(), 'straight', undefined, profile);
     expect(g.area).toBeCloseTo(12.5, FLOAT_TOL);
     expect(g.volume).toBeCloseTo(12.5 * 0.2, FLOAT_TOL);
-    expect(g.bbox.max.z).toBeCloseTo(2.5, FLOAT_TOL); // maxTop − base = 2500 mm
+    expect(g.bbox.maxZm).toBeCloseTo(2.5, FLOAT_TOL); // maxTop − base = 2500 mm
   });
 
   it('stepped profile (50% @3.0 m, 50% @2.5 m) → Σ segment areas', () => {
@@ -348,7 +348,7 @@ describe('computeWallGeometry — profile-aware (ADR-401 B3a)', () => {
     const g = computeWallGeometry(wall5m(), 'straight', undefined, profile);
     // 5 × (0.5×3.0 + 0.5×2.5) = 5 × 2.75 = 13.75 m².
     expect(g.area).toBeCloseTo(13.75, FLOAT_TOL);
-    expect(g.bbox.max.z).toBeCloseTo(3.0, FLOAT_TOL); // bbox top = max segment top
+    expect(g.bbox.maxZm).toBeCloseTo(3.0, FLOAT_TOL); // bbox top = max segment top
   });
 
   it('sloped segment (z0 ≠ z1) → average height over the span', () => {
@@ -356,7 +356,7 @@ describe('computeWallGeometry — profile-aware (ADR-401 B3a)', () => {
     const g = computeWallGeometry(wall5m(), 'straight', undefined, profile);
     // avg height = (2000+3000)/2 = 2500 mm → 5 × 2.5 = 12.5 m².
     expect(g.area).toBeCloseTo(12.5, FLOAT_TOL);
-    expect(g.bbox.max.z).toBeCloseTo(3.0, FLOAT_TOL); // maxTop
+    expect(g.bbox.maxZm).toBeCloseTo(3.0, FLOAT_TOL); // maxTop
   });
 
   it('flat profile at nominal top === no-profile flat path (back-compat)', () => {
@@ -369,7 +369,7 @@ describe('computeWallGeometry — profile-aware (ADR-401 B3a)', () => {
     const flat = computeWallGeometry(wall5m());
     expect(withProfile.area).toBeCloseTo(flat.area, FLOAT_TOL);
     expect(withProfile.volume).toBeCloseTo(flat.volume, FLOAT_TOL);
-    expect(withProfile.bbox.max.z).toBeCloseTo(flat.bbox.max.z ?? 0, FLOAT_TOL);
+    expect(withProfile.bbox.maxZm).toBeCloseTo(flat.bbox.maxZm, FLOAT_TOL);
   });
 
   it('profile + openings → net = profile gross − Σ openings, clamped', () => {
@@ -386,7 +386,7 @@ describe('computeWallGeometry — profile-aware (ADR-401 B3a)', () => {
       500, // profile baseZmm = floorElev(0) + baseOffset 500
     );
     const g = computeWallGeometry(wall5m({ baseOffset: 500 }), 'straight', undefined, profile);
-    expect(g.bbox.min.z).toBeCloseTo(0.5, FLOAT_TOL); // baseOffset/1000
-    expect(g.bbox.max.z).toBeCloseTo(0.5 + 2.5, FLOAT_TOL); // base + (3000−500)/1000
+    expect(g.bbox.minZm).toBeCloseTo(0.5, FLOAT_TOL); // baseOffset/1000
+    expect(g.bbox.maxZm).toBeCloseTo(0.5 + 2.5, FLOAT_TOL); // base + (3000−500)/1000
   });
 });

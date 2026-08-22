@@ -20,7 +20,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.4
  */
 
-import type { BimPoint, BimPolyline, BimPolygon, BimBounds } from '../types/bim-base';
+import type { BimPoint, BimPolyline, BimPolygon, SolidBounds } from '../types/bim-base';
 import type { OpeningParams, OpeningGeometry, OpeningKind } from '../types/opening-types';
 import { isHingedKind, isDoubleLeafKind } from '../types/opening-types';
 import type { WallEntity } from '../types/wall-types';
@@ -29,6 +29,7 @@ import { resolveOpeningFrameProfile } from '../family-types/resolve-opening-fram
 import { buildFrameJambOutlines } from './opening-frame-outlines';
 import { resolveOpeningHost, type OpeningHost } from './opening-host';
 import { walkPolylineToDistance, projectPointToPolylineOffset } from './opening-axis-walk';
+import { bboxOf } from './shared/xy-bounds';
 
 const MM_TO_M = 1 / 1000;
 /**
@@ -274,17 +275,14 @@ function computeBbox(
   vertices: readonly BimPoint[],
   sillHeightMm: number,
   heightMm: number,
-): BimBounds {
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (const v of vertices) {
-    if (v.x < minX) minX = v.x;
-    if (v.y < minY) minY = v.y;
-    if (v.x > maxX) maxX = v.x;
-    if (v.y > maxY) maxY = v.y;
-  }
+): SolidBounds {
+  // ADR-793 — ο βρόχος min/max ζει ΜΙΑ φορά, στο `shared/xy-bounds` (ADR-583/CHECK 3.28).
+  const { minX, minY, maxX, maxY } = bboxOf(vertices);
   return {
-    min: { x: minX, y: minY, z: sillHeightMm / 1000 },
-    max: { x: maxX, y: maxY, z: (sillHeightMm + heightMm) / 1000 },
+    min: { x: minX, y: minY },
+    max: { x: maxX, y: maxY },
+    minZm: sillHeightMm / 1000,
+    maxZm: (sillHeightMm + heightMm) / 1000,
   };
 }
 

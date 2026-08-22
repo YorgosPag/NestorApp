@@ -770,7 +770,13 @@ const to3d = (q: Point2D): Point3D => ({ x: q.x, y: q.y, z: 0 });
 // (δ) Η ΙΔΙΑ κλάση με ΔΕΙΚΤΟΔΟΤΗΣΗ αντί για ιδιότητα. Τα (α)-(γ) απαιτούν \`ΟΝΟΜΑ.x\`,
 // άρα ήταν ΔΟΜΙΚΑ τυφλά σε ζεύγη-πίνακες (polygon-clipping \`Pair = [number, number]\`).
 // Μετρημένο: 1 ζωντανό στο \`stairwell-opening-outline\` που ο φρουρός έλεγε ΚΑΘΑΡΟ:
-const area = polygonArea(outer.map((pr) => ({ x: pr[0], y: pr[1], z: 0 })));`,
+const area = polygonArea(outer.map((pr) => ({ x: pr[0], y: pr[1], z: 0 })));
+// (ε) ADR-793 — ΤΟ ΚΟΥΤΙ, όχι η κορυφή. Άλλη διαδρομή προς την ΙΔΙΑ βλάβη: το όριο
+// δηλώνει ΜΗΔΕΝΙΚΟ ΥΨΟΣ. Τα (α)-(δ) φυλάνε ΣΗΜΕΙΟ, άρα ήταν δομικά τυφλά εδώ — και ο
+// φρουρός έλεγε ΚΑΘΑΡΟΣ (baseline 0) ενώ το \`polygonBbox\` γέμιζε 11 σημεία αποθήκευσης:
+return { min: { x: 0, y: 0, z: 0 }, max: { x: 0, y: 0, z: 0 } };
+    min: { x: minX, y: minY, z: 0 },
+return { min: { x: b.minX, y: b.minY, z: 0 }, max: { x: b.maxX, y: b.maxY, z: 0 } };`,
     shouldSkip: `// Κανονική χρήση — το 2Δ πολύγωνο μπαίνει ΑΥΤΟΥΣΙΟ στην επιφάνεια κάτοψης:
 import { polygonArea, polygonCentroid, projectVerticesTo2D } from './polygon-utils';
 const area = polygonArea(verts2d);
@@ -788,6 +794,13 @@ const moved = verts.map((v) => ({ x: v.x + dx, y: v.y + dy, z: 0 }));
 
 // (γ) Οικογένεια Γ2 — ΔΗΛΩΣΗ ΤΟΜΕΑ, όχι μετατροπή τύπου (49 σημεία, ADR-789 §6):
 const position: Point3D = { x: clickPoint.x, y: clickPoint.y, z: 0 };
+
+// (δ) ADR-793 — ΤΟ ΕΙΛΙΚΡΙΝΕΣ ΚΟΥΤΙ. Το ίχνος δεν έχει z καθόλου· το στερεό το λέει με
+// τη ΜΟΝΑΔΑ ΣΤΟ ΟΝΟΜΑ, και το \`minZm: 0\` είναι ΝΟΜΙΜΗ τιμή (στερεό πάνω στο datum):
+    min: { x: minX, y: minY },
+    minZm: 0,
+    maxZm: baseM + heightMm / 1000,
+    min: { x: minX, y: minY, z: baseM },
 const anchor: Point3D = { x: pt.x, y: pt.y, z: 0 };
 calculateMovedGeometry(entity, { x: delta.x, y: delta.y, z: 0 });
 // ⚠️ Το Π3 αγκυρώνεται στην ΑΡΧΗ της γραμμής (\`^\s*return\`): μια επιστροφή δήλωσης τομέα

@@ -8,7 +8,7 @@
  *   2. Saved snapshot (entityType / filters / format) for region-pick
  *      round-trip: dialog closes → canvas pick → dialog reopens with
  *      `initialEntityType` / `initialFilters` / `initialFormat` intact.
- *   3. Active region (BimBounds | null) set after canvas pick commit —
+ *   3. Active region (PlanBounds | null) set after canvas pick commit —
  *      passed to `BimScheduleDialog` as `activeRegion` prop.
  *   4. `pendingRegionPick` flag: when true the caller activates
  *      `useScheduleRegionPickTool` with `activeTool = SCHEDULE_REGION_PICK_TOOL`.
@@ -45,7 +45,7 @@
 
 import { useCallback, useState } from 'react';
 
-import type { BimBounds } from '../bim/types/bim-base';
+import type { PlanBounds } from '../bim/types/bim-base';
 import type { BimScheduleSnapshot, BimScheduleDialogProps } from '../ui/components/bim-schedule/BimScheduleDialog';
 import type {
   ScheduleEntityType,
@@ -99,7 +99,7 @@ export interface UseBimScheduleExportReturn {
   readonly dialogProps: BimScheduleDialogOwnedProps;
 
   /** Wire to `useScheduleRegionPickTool({ onCommit })`. */
-  readonly onRegionPickCommit: (bbox: BimBounds) => void;
+  readonly onRegionPickCommit: (bbox: PlanBounds) => void;
 
   /** Wire to `useScheduleRegionPickTool({ onCancel })`. */
   readonly onRegionPickCancel: () => void;
@@ -109,7 +109,7 @@ export interface UseBimScheduleExportReturn {
 
 export function useBimScheduleExport(): UseBimScheduleExportReturn {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [activeRegion, setActiveRegion] = useState<BimBounds | null>(null);
+  const [activeRegion, setActiveRegion] = useState<PlanBounds | null>(null);
   const [savedSnapshot, setSavedSnapshot] = useState<BimScheduleSnapshot>(DEFAULT_SNAPSHOT);
   const [pendingRegionPick, setPendingRegionPick] = useState(false);
 
@@ -130,7 +130,7 @@ export function useBimScheduleExport(): UseBimScheduleExportReturn {
   }, []);
 
   // ── Region pick commit (canvas FSM delivered a BBox) ─────────────────────
-  const onRegionPickCommit = useCallback((bbox: BimBounds) => {
+  const onRegionPickCommit = useCallback((bbox: PlanBounds) => {
     setActiveRegion(bbox);
     setPendingRegionPick(false);
     setDialogOpen(true);

@@ -24,7 +24,7 @@
  */
 
 import { nowTimestamp } from '@/lib/firestore-now';
-import type { BimValidation, BimPolygon, BimPoint } from '../types/bim-base';
+import type { BimValidation, BimPolygon, BimPoint, SolidBounds } from '../types/bim-base';
 import type {
   RoofEdgeSlope,
   RoofGeometry,
@@ -37,7 +37,8 @@ import {
   DEFAULT_ROOF_SLOPE_DEG,
   MIN_ROOF_POLYGON_VERTICES,
 } from '../types/roof-types';
-import { isConvexPolygon, polygonArea, polygonBbox, polygonPerimeter, projectVerticesTo2D } from './shared/polygon-utils';
+import { isConvexPolygon, polygonArea, polygonPerimeter, projectVerticesTo2D } from './shared/polygon-utils';
+import { bboxOf } from './shared/xy-bounds';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { roofSlopeToRatio, roofSlopeFromRatio } from './roof-slope-units';
 import { solveRoofByStraightSkeleton } from './roof-skeleton-solver';
@@ -119,7 +120,7 @@ export function computeRoofGeometry(params: RoofParams): RoofGeometry {
 
   const projectedAreaM2 = polygonArea(verts) * canvasToM * canvasToM;
   const perimeterM = polygonPerimeter(verts) * canvasToM;
-  const xyBbox = polygonBbox(verts);
+  const xyBbox = bboxOf(verts);
 
   const resolved = resolveEavePlanes(verts, params.edges, params.slopeUnit);
   const enoughVerts = verts.length >= MIN_ROOF_POLYGON_VERTICES;
@@ -150,9 +151,11 @@ export function computeRoofGeometry(params: RoofParams): RoofGeometry {
   }
   const ridgeHeightMm = Math.max(0, maxZmm - params.basePivotZ);
 
-  const bbox = {
-    min: { x: xyBbox.min.x, y: xyBbox.min.y, z: (params.basePivotZ - thicknessMm) * MM_TO_M },
-    max: { x: xyBbox.max.x, y: xyBbox.max.y, z: maxZmm * MM_TO_M },
+  const bbox: SolidBounds = {
+    min: { x: xyBbox.minX, y: xyBbox.minY },
+    max: { x: xyBbox.maxX, y: xyBbox.maxY },
+    minZm: (params.basePivotZ - thicknessMm) * MM_TO_M,
+    maxZm: maxZmm * MM_TO_M,
   };
 
   return {

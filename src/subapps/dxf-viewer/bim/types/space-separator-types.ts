@@ -26,11 +26,12 @@
  * @see docs/centralized-systems/reference/adrs/ADR-437-space-separation-lines.md
  */
 
-import type { BimEntity, BimBounds, BimPoint } from './bim-base';
+import type { BimEntity, PlanBounds, BimPoint } from './bim-base';
 import type { SceneUnits } from '../../utils/scene-units';
 import { mmScaleFor } from '../../utils/scene-units';
 import type { IfcEntityMixin } from './ifc-entity-mixin';
-import { polygonBbox } from '../geometry/shared/polygon-utils';
+import { planBoundsOf } from '../geometry/shared/xy-bounds';
+
 
 // ─── Kind (discriminator) ──────────────────────────────────────────────────────
 
@@ -68,7 +69,7 @@ export interface SpaceSeparatorParams {
  * ΠΟΤΕ mutated by consumers. SSoT = params.
  */
 export interface SpaceSeparatorGeometry {
-  readonly bbox: BimBounds;
+  readonly bbox: PlanBounds;
   /** m. Μήκος του τμήματος start→end. */
   readonly length: number;
 }
@@ -102,7 +103,7 @@ const MM_TO_M = 0.001;
 export function computeSpaceSeparatorGeometry(
   params: Pick<SpaceSeparatorParams, 'start' | 'end' | 'sceneUnits'>,
 ): SpaceSeparatorGeometry {
-  const bbox = polygonBbox([params.start, params.end]);
+  const bbox = planBoundsOf([params.start, params.end]);
   // Το μήκος είναι σε SCENE UNITS· μετατροπή σε μέτρα μέσω του sceneUnits SSoT
   // (mirror computeThermalSpaceGeometry). Για 'mm' scene ο factor είναι 1.
   const sceneToM = MM_TO_M / mmScaleFor(params);

@@ -114,8 +114,8 @@ describe('computeSlabGeometry — perimeter + bbox + volume', () => {
     const g = computeSlabGeometry(makeSlab([
       { x: 0, y: 0 }, { x: 5000, y: 0 }, { x: 5000, y: 5000 }, { x: 0, y: 5000 },
     ], { levelElevation: 3000, thickness: 200 }));
-    expect(g.bbox.max.z).toBeCloseTo(3, FLOAT_TOL);
-    expect(g.bbox.min.z).toBeCloseTo(2.8, FLOAT_TOL);
+    expect(g.bbox.maxZm).toBeCloseTo(3, FLOAT_TOL);
+    expect(g.bbox.minZm).toBeCloseTo(2.8, FLOAT_TOL);
   });
 
   it('bbox z: heightOffsetFromLevel shifts top face', () => {
@@ -123,16 +123,16 @@ describe('computeSlabGeometry — perimeter + bbox + volume', () => {
     const g = computeSlabGeometry(makeSlab([
       { x: 0, y: 0 }, { x: 4000, y: 0 }, { x: 4000, y: 4000 }, { x: 0, y: 4000 },
     ], { levelElevation: 3000, heightOffsetFromLevel: 50, thickness: 200 }));
-    expect(g.bbox.max.z).toBeCloseTo(3.05, FLOAT_TOL);
-    expect(g.bbox.min.z).toBeCloseTo(2.85, FLOAT_TOL);
+    expect(g.bbox.maxZm).toBeCloseTo(3.05, FLOAT_TOL);
+    expect(g.bbox.minZm).toBeCloseTo(2.85, FLOAT_TOL);
   });
 
   it('bbox z: foundation slab at elevation=0, thickness=500mm → [−0.5, 0]', () => {
     const g = computeSlabGeometry(makeSlab([
       { x: 0, y: 0 }, { x: 6000, y: 0 }, { x: 6000, y: 6000 }, { x: 0, y: 6000 },
     ], { kind: 'foundation', levelElevation: 0, thickness: 500 }));
-    expect(g.bbox.max.z).toBeCloseTo(0, FLOAT_TOL);
-    expect(g.bbox.min.z).toBeCloseTo(-0.5, FLOAT_TOL);
+    expect(g.bbox.maxZm).toBeCloseTo(0, FLOAT_TOL);
+    expect(g.bbox.minZm).toBeCloseTo(-0.5, FLOAT_TOL);
   });
 
   it('computes volume = netArea × thickness (m³)', () => {

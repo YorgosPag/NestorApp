@@ -31,7 +31,7 @@
 
 import type {
   BimEntity,
-  BimBounds,
+  PlanBounds,
   BimPolygon,
   BimPoint,
 } from './bim-base';
@@ -118,7 +118,7 @@ export interface FloorplanSymbolParams {
 export interface FloorplanSymbolGeometry {
   /** BimPolygon — horizontal footprint (closed CCW, plan). */
   readonly footprint: BimPolygon;
-  readonly bbox: BimBounds;
+  readonly bbox: PlanBounds;
   /** m². Footprint area. */
   readonly area: number;
 }

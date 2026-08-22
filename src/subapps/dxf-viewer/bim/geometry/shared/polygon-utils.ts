@@ -7,19 +7,17 @@
  * All inputs σε mm world coords; outputs:
  *   - shoelaceArea  → mm² (signed)
  *   - polygonPerimeter → mm (sum-of-edges)
- *   - polygonBbox → BimBounds (z=0 plane)
  *
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §5.5
  */
 
 import type { MultiPolygon, Pair, Polygon } from 'polygon-clipping';
-import type { BimBounds, BimPoint, BimPolygon } from '../../types/bim-base';
+import type { BimPoint, BimPolygon } from '../../types/bim-base';
 import type { Point2D } from '../../../rendering/types/Types';
 import type { PlanarPoint } from '../../types/bim-base';
 import { segmentsIntersect } from '../../../utils/geometry/GeometryUtils';
 import { angleBetweenVectors } from '../../../rendering/entities/shared/geometry-vector-utils';
 import { radToDeg } from '../../../rendering/entities/shared/geometry-angle-utils';
-import { bboxOfAll } from './xy-bounds';
 
 /**
  * Compute signed polygon area via the shoelace (Gauss) formula.
@@ -134,18 +132,6 @@ export function isConvexPolygon(vertices: readonly PlanarPoint[]): boolean {
   return true;
 }
 
-/** Axis-aligned bounding box (XY plane, z=0). */
-export function polygonBbox(vertices: readonly PlanarPoint[]): BimBounds {
-  if (vertices.length === 0) {
-    return { min: { x: 0, y: 0, z: 0 }, max: { x: 0, y: 0, z: 0 } };
-  }
-  // Ο βρόχος min/max ζει ΜΙΑ φορά, στο `./xy-bounds` (ADR-583 / CHECK 3.28).
-  const { minX, minY, maxX, maxY } = bboxOfAll(vertices);
-  return {
-    min: { x: minX, y: minY, z: 0 },
-    max: { x: maxX, y: maxY, z: 0 },
-  };
-}
 
 /**
  * Κλειστός δακτύλιος (closed ring / band footprint) από δύο παράλληλες ακμές: η εξωτερική

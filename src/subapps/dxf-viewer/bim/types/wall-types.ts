@@ -23,7 +23,7 @@ import type {
   BimEntity,
   BimPoint,
   BimPolyline,
-  BimBounds,
+  SolidBounds,
 } from './bim-base';
 import type { Point2D } from '../../rendering/types/Types';
 import type { WallDna } from './wall-dna-types';
@@ -261,7 +261,7 @@ export interface WallGeometry {
   readonly outerEdge: BimPolyline;
   /** Inner face (offset -thickness/2). */
   readonly innerEdge: BimPolyline;
-  readonly bbox: BimBounds;
+  readonly bbox: SolidBounds;
   /** m — geometric axis length. */
   readonly length: number;
   /** m² — `length × height`, net of openings when computed with the opening

@@ -63,7 +63,7 @@ import {
   type ScheduleFilterCriteria,
   type ScheduleLookups,
 } from '@/subapps/dxf-viewer/bim/schedule';
-import type { BimBounds } from '@/subapps/dxf-viewer/bim/types/bim-base';
+import type { PlanBounds } from '@/subapps/dxf-viewer/bim/types/bim-base';
 
 import { ScheduleEntityToggle } from './ScheduleEntityToggle';
 import { ScheduleFilterBar, type FilterOption } from './ScheduleFilterBar';
@@ -101,7 +101,7 @@ export interface BimScheduleDialogProps {
   readonly selectionIds: readonly string[];
 
   /** Region BBox preserved across canvas pick (M5 round-trip). */
-  readonly activeRegion: BimBounds | null;
+  readonly activeRegion: PlanBounds | null;
   readonly onRequestRegionPick: (snapshot: BimScheduleSnapshot) => void;
   readonly onClearRegion: () => void;
 

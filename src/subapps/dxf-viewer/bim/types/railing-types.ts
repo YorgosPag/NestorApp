@@ -23,7 +23,7 @@
 
 import type {
   BimEntity,
-  BimBounds,
+  SolidBounds,
   BimPoint,
 } from './bim-base';
 import type { SceneUnits } from '../../utils/scene-units';
@@ -281,7 +281,7 @@ export interface RailingGeometry {
   readonly rails: readonly RailSweep[];
   /** Infill panels (empty until Φ5). */
   readonly panels: readonly RailPanel[];
-  readonly bbox: BimBounds;
+  readonly bbox: SolidBounds;
   /** m. Running length of the path (BOQ primary quantity). */
   readonly lengthM: number;
 }

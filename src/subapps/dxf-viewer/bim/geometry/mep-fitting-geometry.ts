@@ -21,9 +21,10 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md §Φ11
  */
 
-import type { BimPoint, BimPolygon, BimBounds } from '../types/bim-base';
+import type { BimPoint, BimPolygon, SolidBounds } from '../types/bim-base';
 import type { MepFittingGeometry, MepFittingParams } from '../types/mep-fitting-types';
 import { mmToSceneUnits } from '../../utils/scene-units';
+import { bboxOf } from './shared/xy-bounds';
 import {
   computeFittingBody,
   tessellateFittingFootprint,
@@ -127,21 +128,15 @@ function computeBbox(
   outline: readonly BimPoint[],
   centerlineMm: number,
   sizeMm: number,
-): BimBounds {
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
-  for (const p of outline) {
-    if (p.x < minX) minX = p.x;
-    if (p.x > maxX) maxX = p.x;
-    if (p.y < minY) minY = p.y;
-    if (p.y > maxY) maxY = p.y;
-  }
+): SolidBounds {
+  // ADR-793 — ο βρόχος min/max ζει ΜΙΑ φορά, στο `shared/xy-bounds` (ADR-583/CHECK 3.28).
+  const { minX, minY, maxX, maxY } = bboxOf(outline);
   const half = sizeMm / 2;
   return {
-    min: { x: minX, y: minY, z: (centerlineMm - half) / 1000 },
-    max: { x: maxX, y: maxY, z: (centerlineMm + half) / 1000 },
+    min: { x: minX, y: minY },
+    max: { x: maxX, y: maxY },
+    minZm: (centerlineMm - half) / 1000,
+    maxZm: (centerlineMm + half) / 1000,
   };
 }
 

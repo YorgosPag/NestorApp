@@ -31,7 +31,7 @@
 
 import type {
   BimEntity,
-  BimBounds,
+  SolidBounds,
   BimPoint,
   BimPolygon,
   BimPolyline,
@@ -270,7 +270,7 @@ export interface BeamParams {
 export interface BeamGeometry {
   readonly axisPolyline: BimPolyline;
   readonly outline: BimPolygon;
-  readonly bbox: BimBounds;
+  readonly bbox: SolidBounds;
   /** m — geometric axis length (sum-of-edges). */
   readonly length: number;
   /** m² — top surface (length × width). */

@@ -22,7 +22,7 @@
 
 import { nowTimestamp } from '@/lib/firestore-now';
 import type { BimValidation } from '../types/bim-base';
-import type { BimPoint } from '../types/bim-base';
+import type { BimPoint, SolidBounds } from '../types/bim-base';
 import type {
   RailingGeometry,
   RailingHostContext,
@@ -38,14 +38,21 @@ import {
   MIN_RAILING_DIMENSION_MM,
 } from '../types/railing-types';
 import { mmToSceneUnits } from '../../utils/scene-units';
-// ADR-471 Slice 6 — arc-length sampling από το ΕΝΑ SSoT (`polyline-frame`)· πρώην
-// private `pathLength`/`pointAtDistance`/`angleAtDistance` εδώ (ratchet item — δες
-// pending-ratchet-work). Το railing δουλεύει σε BimPoint (xy + datum z): ο sampler
-// τρέχει στην xy προβολή (BimPoint ⊂ Point2D) και ο caller ξαναβάζει το z.
-import { samplePolylineFrame, polylineLength } from '../geometry/shared/polyline-frame';
+// ADR-407 — ΕΡΩΤΗΜΑΤΑ ΔΙΑΔΡΟΜΗΣ από το αδελφό module (N.7.1 split): εκείνο ξέρει «πού
+// είναι το σημείο και τι γωνία έχει», αυτό ξέρει «τι χτίζεται εκεί». Το arc-length
+// sampling παραμένει στο ΕΝΑ SSoT (`polyline-frame`) — το `railing-path` το καταναλώνει.
+import {
+  angleAtDistance,
+  liftPath,
+  nearestSegmentAngleDeg,
+  pathLength,
+  projectOntoPath,
+  sampleRailingPath,
+  segmentAngleDeg,
+} from './railing-path';
+import { bboxOf } from '../geometry/shared/xy-bounds';
 
 const MM_TO_M = 1 / 1000;
-const RAD_TO_DEG = 180 / Math.PI;
 /** |Δz| (mm) below which a path segment counts as a FLAT landing (vs a sloped flight). */
 const FLAT_SEGMENT_EPS_MM = 1;
 
@@ -61,112 +68,6 @@ function resolveRailingPath(
   }
   const z = params.baseElevationMm;
   return params.pathSource.path.map((p) => ({ x: p.x, y: p.y, z }));
-}
-
-/** Running length of a path in canvas units (SSoT `polylineLength`). */
-function pathLength(path: RailingPath): number {
-  return polylineLength(path);
-}
-
-/** Plan angle (deg CCW) of the segment a→b. */
-function segmentAngleDeg(a: BimPoint, b: BimPoint): number {
-  return Math.atan2(b.y - a.y, b.x - a.x) * RAD_TO_DEG;
-}
-
-/** Point at running distance `d` (canvas units) along the path, at elevation `z`. */
-function pointAtDistance(path: RailingPath, d: number, z: number): BimPoint {
-  const frame = samplePolylineFrame(path, d);
-  if (!frame) return { ...path[path.length - 1], z };
-  return { x: frame.point.x, y: frame.point.y, z };
-}
-
-/** Angle (deg) of the path at running distance `d` (SSoT frame tangent → deg). */
-function angleAtDistance(path: RailingPath, d: number): number {
-  const frame = samplePolylineFrame(path, d);
-  if (!frame) return 0;
-  return Math.atan2(frame.tangent.y, frame.tangent.x) * RAD_TO_DEG;
-}
-
-/**
- * Interpolated z (mm) at running xy distance `d` along the path. The SSoT `samplePolylineFrame`
- * runs on the xy projection (dropping z); here we lerp z from the containing segment so a member
- * placed by along-path distance sits on the **sloped** host path (ADR-407 Φ7).
- */
-function zAtDistance(path: RailingPath, d: number): number {
-  if (path.length === 0) return 0;
-  if (d <= 0) return path[0]!.z ?? 0;
-  let acc = 0;
-  for (let i = 1; i < path.length; i++) {
-    const a = path[i - 1]!;
-    const b = path[i]!;
-    const segLen = Math.hypot(b.x - a.x, b.y - a.y);
-    if (acc + segLen >= d) {
-      const t = segLen > 0 ? (d - acc) / segLen : 0;
-      return (a.z ?? 0) + ((b.z ?? 0) - (a.z ?? 0)) * t;
-    }
-    acc += segLen;
-  }
-  return path[path.length - 1]!.z ?? 0;
-}
-
-/**
- * Sample a point on the railing path at running xy distance `d`, carrying the interpolated
- * slope z (mm). SSoT for along-path placement — shared by the baluster spacing pattern AND the
- * stair host builder's «Baluster Per Tread» anchor sampling (N.0.2 — one walk, no sibling clone).
- */
-export function sampleRailingPath(path: RailingPath, d: number): BimPoint {
-  return pointAtDistance(path, d, zAtDistance(path, d));
-}
-
-/** Nearest point on the path to `(x, y)`: the containing segment index + parametric `t` + foot xy. */
-function nearestOnPath(
-  path: RailingPath,
-  x: number,
-  y: number,
-): { readonly i: number; readonly t: number; readonly x: number; readonly y: number } | null {
-  if (path.length < 2) return null;
-  let best = Infinity;
-  let out = { i: 1, t: 0, x: path[0]!.x, y: path[0]!.y };
-  for (let i = 1; i < path.length; i++) {
-    const a = path[i - 1]!;
-    const b = path[i]!;
-    const dx = b.x - a.x;
-    const dy = b.y - a.y;
-    const len2 = dx * dx + dy * dy;
-    const t = len2 > 0 ? Math.max(0, Math.min(1, ((x - a.x) * dx + (y - a.y) * dy) / len2)) : 0;
-    const cx = a.x + dx * t;
-    const cy = a.y + dy * t;
-    const dist = Math.hypot(x - cx, y - cy);
-    if (dist < best) {
-      best = dist;
-      out = { i, t, x: cx, y: cy };
-    }
-  }
-  return out;
-}
-
-/**
- * Project `(x, y)` onto the path and return the nearest point ON it — xy plus the z linearly
- * interpolated along the containing segment. SSoT for «where is this stair-tread point on the
- * railing line, and what is the SMOOTH walkline z there» (ADR-407 Φ7c): the host uses it to seat
- * a baluster on the railing line at each tread; the engine uses it to find the smooth rail z above
- * a baluster so the member reaches the (sloped) rail underside from its stepped tread base.
- */
-export function projectOntoPath(path: RailingPath, x: number, y: number): BimPoint {
-  const n = nearestOnPath(path, x, y);
-  if (!n) return path.length === 1 ? { x: path[0]!.x, y: path[0]!.y, z: path[0]!.z ?? 0 } : { x, y, z: 0 };
-  const a = path[n.i - 1]!;
-  const b = path[n.i]!;
-  return { x: n.x, y: n.y, z: (a.z ?? 0) + ((b.z ?? 0) - (a.z ?? 0)) * n.t };
-}
-
-/** Plan angle (deg CCW) of the path segment nearest to `p` — aligns a member profile at a baked anchor. */
-function nearestSegmentAngleDeg(path: RailingPath, p: BimPoint): number {
-  const n = nearestOnPath(path, p.x, p.y);
-  if (!n) return 0;
-  const a = path[n.i - 1]!;
-  const b = path[n.i]!;
-  return Math.atan2(b.y - a.y, b.x - a.x) * RAD_TO_DEG;
 }
 
 // ─── Posts ───────────────────────────────────────────────────────────────────
@@ -332,15 +233,6 @@ function buildBalusters(
 
 // ─── Rails ─────────────────────────────────────────────────────────────────────
 
-/**
- * Lift a path to a member centreline elevation, `heightMm` **above each vertex's own z**.
- * Sketch paths carry a flat z (= `baseElevationMm`), so the result is a flat rail exactly
- * as before; a hosted (stair) path carries per-vertex slope z, so the rail follows the
- * incline automatically (ADR-407 Φ7 — sloped rail, zero extra code at the render layer).
- */
-function liftPath(path: RailingPath, heightMm: number): RailingPath {
-  return path.map((p) => ({ x: p.x, y: p.y, z: (p.z ?? 0) + heightMm }));
-}
 
 /** Top rail + (Φ4) intermediate rails + handrail. Φ1: one centred top rail. */
 function buildRails(path: RailingPath, type: RailingType): RailSweep[] {
@@ -364,23 +256,35 @@ function buildRails(path: RailingPath, type: RailingType): RailSweep[] {
 
 // ─── Bbox ──────────────────────────────────────────────────────────────────────
 
-function computeBbox(path: RailingPath, params: RailingParams) {
+/**
+ * 🔴 **ADR-793 — ΔΙΟΡΘΩΣΗ ΜΟΝΑΔΑΣ, ΟΧΙ ΚΑΘΑΡΙΣΜΑ.** Μέχρι 2026-08-22 αυτή η συνάρτηση
+ * έγραφε το `z` σε **ωμά χιλιοστά** (`params.baseElevationMm`, `+ totalHeightMm`) στον
+ * **ΙΔΙΟ** τύπο όπου τοίχος · πλάκα · δοκός · άνοιγμα · στέγη · MEP γράφουν **μέτρα** —
+ * σφάλμα **1000×**. Ήταν αόρατο για έναν μόνο λόγο: **κανείς δεν διάβαζε** το z του
+ * κιγκλιδώματος (ο μοναδικός αναγνώστης, `entity-world-aabb`, δεν χειρίζεται `railing`).
+ * Θα γινόταν ζωντανό τη στιγμή που κάποιος πρόσθετε το `railing` στον πρώτο κλάδο του —
+ * που **μοιάζει** με τον γενικό. Το `minZm`/`maxZm` κάνει την επανάληψη **αδύνατη**.
+ */
+function computeBbox(path: RailingPath, params: RailingParams): SolidBounds {
+  const baseZm = params.baseElevationMm * MM_TO_M;
   if (path.length === 0) {
-    const o = { x: 0, y: 0, z: params.baseElevationMm };
-    return { min: o, max: o };
+    const o = { x: 0, y: 0 };
+    return { min: o, max: o, minZm: baseZm, maxZm: baseZm };
   }
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  let minZ = Infinity, maxZ = -Infinity;
+  // ADR-793 — ο βρόχος min/max του XY ζει ΜΙΑ φορά, στο `xy-bounds` (ADR-583/CHECK 3.28).
+  const { minX, minY, maxX, maxY } = bboxOf(path);
+  let minZmm = Infinity, maxZmm = -Infinity;
   for (const p of path) {
-    minX = Math.min(minX, p.x); minY = Math.min(minY, p.y);
-    maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y);
     // ADR-407 Φ7 — z spans the (possibly sloped) host path, not a single flat datum.
     const z = p.z ?? params.baseElevationMm;
-    minZ = Math.min(minZ, z); maxZ = Math.max(maxZ, z);
+    if (z < minZmm) minZmm = z;
+    if (z > maxZmm) maxZmm = z;
   }
   return {
-    min: { x: minX, y: minY, z: minZ },
-    max: { x: maxX, y: maxY, z: maxZ + params.totalHeightMm },
+    min: { x: minX, y: minY },
+    max: { x: maxX, y: maxY },
+    minZm: minZmm * MM_TO_M,
+    maxZm: (maxZmm + params.totalHeightMm) * MM_TO_M,
   };
 }
 

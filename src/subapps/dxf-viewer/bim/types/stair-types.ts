@@ -15,7 +15,7 @@
  * `Polygon3D` (54 vs 56 αρχεία) · `Polyline3D` (13 vs 14) · `BoundingBox3D` (45 vs 1)
  * ήταν επίσης διπλά, με **ασύμβατο σχήμα** (αντικείμενο `{vertices}` έναντι σκέτου
  * πίνακα). Ένα σχόλιο δεν είναι φρουρός. Πλέον το bim-base λέγεται `BimPoint` /
- * `BimPolygon` / `BimPolyline` / `BimBounds`, και το **CHECK 3.59** μπλοκάρει δεύτερο
+ * `BimPolygon` / `BimPolyline` / `PlanBounds`, και το **CHECK 3.59** μπλοκάρει δεύτερο
  * ορισμό οποιουδήποτε ονόματος του λεξιλογίου.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-358-dxf-stair-tool-google-level.md

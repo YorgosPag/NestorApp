@@ -130,8 +130,8 @@ describe('γ2 BOQ — computeWallGeometry top − base', () => {
     const geo = computeWallGeometry(makeWall().params, 'straight', undefined, undefined, bp);
     expect(geo.area).toBeCloseTo(17.5, 2);    // 5m × 3.5m
     expect(geo.volume).toBeCloseTo(4.375, 3); // × 0.25m
-    expect(geo.bbox.min.z).toBeCloseTo(-0.5, 3); // bottom πέφτει στο θεμέλιο
-    expect(geo.bbox.max.z).toBeCloseTo(3.0, 3);  // top nominal
+    expect(geo.bbox.minZm).toBeCloseTo(-0.5, 3); // bottom πέφτει στο θεμέλιο
+    expect(geo.bbox.maxZm).toBeCloseTo(3.0, 3);  // top nominal
   });
 
   it('χωρίς base profile → back-compat ύψος 3000mm → area 15m²', () => {

@@ -1,7 +1,7 @@
 /**
  * USE SCHEDULE REGION-PICK TOOL — 2-click BBox FSM (ADR-363 §6 Phase 8 / M5).
  *
- * 2-click FSM που εκπέμπει `BimBounds` (mm, z-agnostic) μέσω `onCommit`
+ * 2-click FSM που εκπέμπει `PlanBounds` (mm, z-agnostic) μέσω `onCommit`
  * callback. Καταναλώνεται από το BimScheduleDialog parent: όταν ο χρήστης
  * πατάει το «Επιλογή περιοχής» CTA, το parent κλείνει το dialog +
  * activate-ει αυτό το tool. Στο 2ο click το tool εκπέμπει BBox και
@@ -24,7 +24,7 @@
  * Escape handler:
  *   - Reset σε idle, call `onCancel` (αν δοθεί), `onToolChange('select')`.
  *
- * BimBounds produced:
+ * PlanBounds produced:
  *   - `min.{x,y}` = min(first.x, second.x), min(first.y, second.y)
  *   - `max.{x,y}` = max(first.x, second.x), max(first.y, second.y)
  *   - `z = 0` σε min+max (filter pipeline ignores z per ADR-363 §6 Phase 8)
@@ -49,7 +49,7 @@ import { useCallback, useState } from 'react';
 import i18next from 'i18next';
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { BimBounds } from '../../bim/types/bim-base';
+import type { PlanBounds } from '../../bim/types/bim-base';
 import {
   getRegionPickFirstCorner,
   resetRegionPickStore,
@@ -67,18 +67,12 @@ export type ScheduleRegionPickToolName = typeof SCHEDULE_REGION_PICK_TOOL;
 
 // ─── BBox builder ────────────────────────────────────────────────────────────
 
-function bboxFromTwoCorners(a: Point2D, b: Point2D): BimBounds {
+function bboxFromTwoCorners(a: Point2D, b: Point2D): PlanBounds {
+  // ADR-793 — περιοχή κάτοψης: ΔΕΝ έχει ύψος. Το `z: 0` που ζούσε εδώ ήταν γέμισμα τύπου
+  // (ο κριτής της είναι το `bboxesIntersect2D`, που δηλώνει «*z ignored — plan-view*»).
   return {
-    min: {
-      x: Math.min(a.x, b.x),
-      y: Math.min(a.y, b.y),
-      z: 0,
-    },
-    max: {
-      x: Math.max(a.x, b.x),
-      y: Math.max(a.y, b.y),
-      z: 0,
-    },
+    min: { x: Math.min(a.x, b.x), y: Math.min(a.y, b.y) },
+    max: { x: Math.max(a.x, b.x), y: Math.max(a.y, b.y) },
   };
 }
 
@@ -88,7 +82,7 @@ export interface UseScheduleRegionPickToolProps {
   /** Current active tool name (matches against `SCHEDULE_REGION_PICK_TOOL`). */
   readonly activeTool: string;
   /** Fired με την BBox όταν ο χρήστης κάνει το 2ο click. */
-  readonly onCommit: (bbox: BimBounds) => void;
+  readonly onCommit: (bbox: PlanBounds) => void;
   /** Fired όταν ο χρήστης κάνει Escape πριν ολοκληρωθεί το pick. */
   readonly onCancel?: () => void;
   /** Tool-switch callback — αυτο-επιστρέφει στο 'select' μετά από commit ή cancel. */

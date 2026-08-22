@@ -62,10 +62,13 @@ describe('computeRailingGeometry — hosted stair path (baked snapshot, no live 
     expect(top!.path[1].z).toBeCloseTo(2000); // 1000 + 1000
   });
 
-  it('spans the bbox z over the sloped run + guardrail height', () => {
+  it('spans the bbox z over the sloped run + guardrail height — ΣΕ ΜΕΤΡΑ', () => {
     const g = computeRailingGeometry(hostedParams());
-    expect(g.bbox.min.z).toBeCloseTo(0);
-    expect(g.bbox.max.z).toBeCloseTo(2000); // maxZ 1000 + totalHeight 1000
+    expect(g.bbox.minZm).toBeCloseTo(0);
+    // 🔴 ADR-793 — ΗΤΑΝ `2000`. Το κιγκλίδωμα έγραφε ΩΜΑ ΧΙΛΙΟΣΤΑ στο ίδιο πεδίο όπου
+    // τοίχος/πλάκα/δοκός γράφουν ΜΕΤΡΑ: σφάλμα 1000×, αόρατο μόνο επειδή κανένας
+    // καταναλωτής δεν διάβαζε το z του κιγκλιδώματος. Το `maxZm` το κάνει αδύνατο.
+    expect(g.bbox.maxZm).toBeCloseTo(2.0); // (maxZ 1000 + totalHeight 1000) mm = 2 m
   });
 });
 

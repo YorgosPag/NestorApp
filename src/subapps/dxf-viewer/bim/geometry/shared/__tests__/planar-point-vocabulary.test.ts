@@ -5,7 +5,7 @@
  * `readonly BimPoint[]` ενώ **δεν διάβαζε `.z` ούτε μία φορά**. Το ψέμα της υπογραφής το
  * πλήρωναν οι καλούντες με **89 ωμά `{ x: p.x, y: p.y, z: 0 }` σε 67 αρχεία**, πέντε
  * ιδιωτικά `lift`/`toXY`, δύο `polygon2D*` wrappers, ένα `as readonly BimPoint[]` cast και
- * δύο διπλότυπα `polygonBbox(readonly Point2D[])`.
+ * δύο διπλότυπα `polygonBbox(readonly Point2D[])` (ADR-793: το `polygonBbox` διαγράφηκε — `planBoundsOf`).
  *
  * ⚠️ Χωρίς αυτό το αρχείο, η επιστροφή στο `BimPoint[]` **δεν σπάει τίποτα**: κάθε
  * υπάρχων καλών περνά `BimPoint`, άρα όλα τα άλλα tests μένουν πράσινα και η ρύθμιση
@@ -25,14 +25,13 @@ import {
   pointInPolygon,
   polygonArea,
   polygonAreaCentroid,
-  polygonBbox,
   polygonCentroid,
   polygonPerimeter,
   projectVerticesTo2D,
   shoelaceArea,
 } from '../polygon-utils';
 import { clipPolygonByConvex2D, polygonIntersectionAreaMm2 } from '../polygon-clip-utils';
-import { bboxOf, bboxOfAll } from '../xy-bounds';
+import { bboxOf, bboxOfAll, planBoundsOf } from '../xy-bounds';
 
 /** Το ΙΔΙΟ τετράγωνο 100×100 CCW, στα τρία σχήματα που κυκλοφορούν στο δέντρο. */
 const AS_2D: readonly Point2D[] = [
@@ -56,7 +55,7 @@ describe('ADR-789 — Α. το 2Δ σχήμα περνά ΧΩΡΙΣ lift', () =>
   });
 
   it('Α3. bbox / κυρτότητα / γωνία / αυτοτομή / point-in-polygon δέχονται readonly Point2D[]', () => {
-    const bb = polygonBbox(AS_2D);
+    const bb = planBoundsOf(AS_2D);
     expect([bb.min.x, bb.min.y, bb.max.x, bb.max.y]).toEqual([0, 0, 100, 100]);
     expect(isConvexPolygon(AS_2D)).toBe(true);
     expect(minPolygonInteriorAngleDeg(AS_2D)).toBeCloseTo(90);
@@ -82,7 +81,7 @@ describe('ADR-789 — Β. το 3Δ σχήμα ΕΞΑΚΟΛΟΥΘΕΙ να περ
   it('Β2. 🔑 το z ΑΓΝΟΕΙΤΑΙ — z=4242 δίνει ό,τι και η απουσία z', () => {
     expect(polygonArea(AS_3D_NONZERO)).toBe(polygonArea(AS_2D));
     expect(polygonPerimeter(AS_3D_NONZERO)).toBe(polygonPerimeter(AS_2D));
-    expect(polygonBbox(AS_3D_NONZERO)).toEqual(polygonBbox(AS_2D));
+    expect(planBoundsOf(AS_3D_NONZERO)).toEqual(planBoundsOf(AS_2D));
     expect(polygonAreaCentroid(AS_3D_NONZERO)).toEqual(polygonAreaCentroid(AS_2D));
   });
 
@@ -129,7 +128,7 @@ describe('ADR-789 — Δ. ΖΩΝΤΑΝΗ απόδειξη: καμία συνάρ
     ['polygonArea', () => polygonArea(TRAPPED)],
     ['polygonPerimeter', () => polygonPerimeter(TRAPPED)],
     ['isPolygonCCW', () => isPolygonCCW(TRAPPED)],
-    ['polygonBbox', () => polygonBbox(TRAPPED)],
+    ['planBoundsOf', () => planBoundsOf(TRAPPED)],
     ['polygonCentroid', () => polygonCentroid(TRAPPED)],
     ['polygonAreaCentroid', () => polygonAreaCentroid(TRAPPED)],
     ['isConvexPolygon', () => isConvexPolygon(TRAPPED)],

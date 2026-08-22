@@ -67,8 +67,8 @@ describe('computeBeamGeometry — straight kind', () => {
     expect(g.bbox.min.x).toBeCloseTo(0, 3);
     expect(g.bbox.max.x).toBeCloseTo(5000, 3);
     // topElevation=3000mm, zOffset=0 → top=3m; depth=500mm → bottom=2.5m
-    expect(g.bbox.max.z).toBeCloseTo(DEFAULT_BEAM_TOP_ELEVATION_MM / 1000, 6);
-    expect(g.bbox.min.z).toBeCloseTo((DEFAULT_BEAM_TOP_ELEVATION_MM - DEFAULT_BEAM_DEPTH_MM) / 1000, 6);
+    expect(g.bbox.maxZm).toBeCloseTo(DEFAULT_BEAM_TOP_ELEVATION_MM / 1000, 6);
+    expect(g.bbox.minZm).toBeCloseTo((DEFAULT_BEAM_TOP_ELEVATION_MM - DEFAULT_BEAM_DEPTH_MM) / 1000, 6);
   });
 });
 

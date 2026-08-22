@@ -14,7 +14,7 @@
 
 import { nowTimestamp } from '@/lib/firestore-now';
 import type { BimValidation } from '../../types/bim-base';
-import { polygonArea, polygonBbox } from '../../geometry/shared/polygon-utils';
+import { polygonArea } from '../../geometry/shared/polygon-utils';
 import { mmToSceneUnits } from '../../../utils/scene-units';
 import { computeGenericSolidPlanOutline } from './generic-solid-plan-outline';
 import type {
@@ -26,6 +26,7 @@ import {
   MIN_GENERIC_SOLID_DIMENSION_MM,
   MIN_PRISM_SIDES,
 } from './generic-solid-types';
+import { planBoundsOf } from '../../geometry/shared/xy-bounds';
 
 // ─── Bounding box ανά σχήμα ────────────────────────────────────────────────────
 
@@ -98,7 +99,7 @@ export function computeGenericSolidGeometry(params: GenericSolidParams): Generic
 
   return {
     footprint: { vertices: [...outer] },
-    bbox: polygonBbox(outer),
+    bbox: planBoundsOf(outer),
     area: polygonArea(outer) * canvasToM * canvasToM,
     height: Math.max(0, box.heightMm),
   };
