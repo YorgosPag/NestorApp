@@ -11,17 +11,17 @@ import * as THREE from 'three';
 import { roofToMesh } from '../roof-to-three';
 import { computeRoofGeometry, validateRoofParams, applyRoofShapePreset } from '../../../bim/geometry/roof-geometry';
 import { usePolygonMode3DStore } from '../../stores/PolygonMode3DStore';
-import type { Polygon3D, Point3D } from '../../../bim/types/bim-base';
+import type { BimPolygon, BimPoint } from '../../../bim/types/bim-base';
 import type { RoofEntity, RoofParams } from '../../../bim/types/roof-types';
 import type { FaceAppearanceMap } from '../../../bim/types/face-appearance-types';
 
-const rect: Polygon3D = {
+const rect: BimPolygon = {
   vertices: [
     { x: 0, y: 0, z: 0 },
     { x: 4000, y: 0, z: 0 },
     { x: 4000, y: 3000, z: 0 },
     { x: 0, y: 3000, z: 0 },
-  ] as Point3D[],
+  ] as BimPoint[],
 };
 
 function gableParams(): RoofParams {

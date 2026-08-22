@@ -15,12 +15,12 @@
 
 import * as THREE from 'three';
 import type { RoofEaveQuad } from '../../bim/geometry/roof-eave-detail';
-import type { Point3D } from '../../bim/types/bim-base';
+import type { BimPoint } from '../../bim/types/bim-base';
 import { setBoxWorldUvs, setSlopeAlignedTileUvs, type SlopeTileUvOptions } from './bim-uv-helpers';
 import { MM_TO_M, toWorld } from './roof-world-transform';
 
 /** Διεύθυνση roof-coord → world (γραμμικό μέρος του `toWorld`, χωρίς μετάθεση). */
-function dirToWorld(d: Point3D, sceneToM: number): THREE.Vector3 {
+function dirToWorld(d: BimPoint, sceneToM: number): THREE.Vector3 {
   return new THREE.Vector3(d.x * sceneToM, (d.z ?? 0) * MM_TO_M, -d.y * sceneToM);
 }
 

@@ -29,7 +29,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-413-pbr-textures.md
  */
 
-import type { Point3D } from '../../bim/types/bim-base';
+import type { BimPoint } from '../../bim/types/bim-base';
 import type { WallDna, WallDnaLayer } from '../../bim/types/wall-dna-types';
 import { buildupBoundaryFractions } from '../../bim/types/layered-buildup';
 import type { WallOpeningPiece } from './wall-opening-pieces';
@@ -39,7 +39,7 @@ export interface WallLayerPiece {
   /** The source along-length piece (z range, slope flags, topFollowsProfile) — shared by all layers. */
   readonly piece: WallOpeningPiece;
   /** This layer's thickness sub-quad `[outer@a, outer@b, inner@b, inner@a]`. */
-  readonly quad: readonly [Point3D, Point3D, Point3D, Point3D];
+  readonly quad: readonly [BimPoint, BimPoint, BimPoint, BimPoint];
   /** DNA materialId of this layer (→ `getMaterial3D`). */
   readonly materialId: string;
   /** Stable layer id (DNA layer id) for `userData` tagging. */
@@ -52,7 +52,7 @@ export function isMultiLayerWall(dna: WallDna | undefined): dna is WallDna {
 }
 
 /** Linear interpolation of a plan point (z carried as 0 — pieces are 2D footprints). */
-function lerpPt(p: Point3D, q: Point3D, t: number): Point3D {
+function lerpPt(p: BimPoint, q: BimPoint, t: number): BimPoint {
   return { x: p.x + (q.x - p.x) * t, y: p.y + (q.y - p.y) * t, z: 0 };
 }
 
@@ -85,7 +85,7 @@ export function splitPieceByLayers(piece: WallOpeningPiece, dna: WallDna): WallL
     const f0 = fracs[i];
     const f1 = fracs[i + 1];
     if (f1 - f0 < 1e-9) continue; // zero-thickness layer → skip
-    const quad: [Point3D, Point3D, Point3D, Point3D] = [
+    const quad: [BimPoint, BimPoint, BimPoint, BimPoint] = [
       lerpPt(Ao, Ai, f0),
       lerpPt(Bo, Bi, f0),
       lerpPt(Bo, Bi, f1),

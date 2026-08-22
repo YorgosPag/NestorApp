@@ -46,7 +46,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-492-associative-beam-reframe-on-column-move.md
  */
 
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import type { BeamEntity } from '../types/beam-types';
 import { MIN_BEAM_LENGTH_MM } from '../types/beam-types';
 import type { ColumnEntity } from '../types/column-types';
@@ -72,8 +72,8 @@ const COLLINEAR_TOL_MM = 5;
 
 /** Νέα stored άκρα μετά το re-frame (scene units, ίδια σύμβαση με startPoint/endPoint). */
 export interface BeamReframeResult {
-  readonly startPoint: Point3D;
-  readonly endPoint: Point3D;
+  readonly startPoint: BimPoint;
+  readonly endPoint: BimPoint;
 }
 
 /** Συγγραμμική κολώνα με τη longitudinal προβολή του κέντρου της πάνω στον άξονα. */
@@ -151,8 +151,8 @@ export function reframeBeamEndpointsToColumns(
   const minLenScene = MIN_BEAM_LENGTH_MM * perScene;
   if (eProj - sProj < minLenScene) return null;
 
-  const nextStart: Point3D = startSup ? { x: a.x + ux * sProj, y: a.y + uy * sProj, z: a.z } : a;
-  const nextEnd: Point3D = endSup ? { x: a.x + ux * eProj, y: a.y + uy * eProj, z: b.z } : b;
+  const nextStart: BimPoint = startSup ? { x: a.x + ux * sProj, y: a.y + uy * sProj, z: a.z } : a;
+  const nextEnd: BimPoint = endSup ? { x: a.x + ux * eProj, y: a.y + uy * eProj, z: b.z } : b;
 
   // No-op όταν τίποτα δεν μετακινήθηκε αισθητά (μηδέν persist churn).
   const epsScene = REFRAME_EPS_MM * perScene;

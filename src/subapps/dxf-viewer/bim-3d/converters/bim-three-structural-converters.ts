@@ -14,7 +14,7 @@ import * as THREE from 'three';
 import type { ColumnEntity } from '../../bim/types/column-types';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { BeamEntity } from '../../bim/types/beam-types';
-import type { PlanarPoint, Point3D } from '../../bim/types/bim-base';
+import type { PlanarPoint, BimPoint } from '../../bim/types/bim-base';
 import { getElementMaterial3D } from '../materials/MaterialCatalog3D';
 import { buildShape, extrudeAndRotate, extrudeShapesAndRotate, tagMesh, hangDownMeshY, stampBimIdentity, attachElementComponent } from './bim-three-shape-helpers';
 import { scalePoints } from '../../rendering/entities/shared/geometry-vector-utils';
@@ -65,7 +65,7 @@ function buildColumnCoreBody(
   column: ColumnEntity,
   flatColumn: ColumnEntity,
   shape: THREE.Shape,
-  verts: readonly Point3D[],
+  verts: readonly BimPoint[],
   heightM: number,
   // ADR-713 — ύψος (m) της ΘΑΜΜΕΝΗΣ ζώνης από την κάτω παρειά. `0` → καμία ζώνη (legacy).
   buriedM = 0,
@@ -324,7 +324,7 @@ function attachColumnRebar(
  * FFL_mm) · MM_TO_M` (ίδια σύμβαση με `makeWallTopLocalFn`).
  */
 function buildAttachedColumnPrism(
-  footprint: readonly Point3D[],
+  footprint: readonly BimPoint[],
   floorElevationMm: number,
   topProfile?: ColumnTopProfile,
   baseProfile?: ColumnBaseProfile,
@@ -357,7 +357,7 @@ function buildAttachedColumnPrism(
  */
 function buildBeam3DCarveOutline(
   beam: BeamEntity,
-  verts: readonly Point3D[],
+  verts: readonly BimPoint[],
   hostFootprints: readonly (readonly { x: number; y: number }[])[],
   sceneToM: number,
 ): { x: number; y: number }[] {
@@ -378,7 +378,7 @@ function buildBeam3DCarveOutline(
  * Ή live Polygon-Mode target (faces pickable πριν τη βαφή), αλλιώς `null` → ο caller πέφτει στο legacy
  * extrude. Ίδιο local span [0, renderHeightM] → ίδια `position.y`· slope (ADR-401) εφαρμόζεται κι εδώ.
  */
-function buildBeamCoreBody(beam: BeamEntity, verts: readonly Point3D[], renderHeightM: number): THREE.Mesh | null {
+function buildBeamCoreBody(beam: BeamEntity, verts: readonly BimPoint[], renderHeightM: number): THREE.Mesh | null {
   const fa = beam.faceAppearance;
   if (!shouldRenderFaced(fa)) return null;
   const mesh = buildFacedSolidBody(verts, renderHeightM, fa ?? {}, getElementMaterial3D('beam'));

@@ -13,7 +13,7 @@ import {
 } from '../wall-layer-geometry';
 import type { WallDna } from '../../../bim/types/wall-dna-types';
 import type { WallOpeningPiece } from '../wall-opening-pieces';
-import type { Point3D } from '../../../bim/types/bim-base';
+import type { BimPoint } from '../../../bim/types/bim-base';
 
 function makeDna(thicknesses: number[]): WallDna {
   const layers = thicknesses.map((t, i) => ({
@@ -29,10 +29,10 @@ function makeDna(thicknesses: number[]): WallDna {
 
 /** A 1×1 plan piece: outer face at y=0, inner face at y=1 (quad [Ao,Bo,Bi,Ai]). */
 function makePiece(): WallOpeningPiece {
-  const Ao: Point3D = { x: 0, y: 0, z: 0 };
-  const Bo: Point3D = { x: 1, y: 0, z: 0 };
-  const Bi: Point3D = { x: 1, y: 1, z: 0 };
-  const Ai: Point3D = { x: 0, y: 1, z: 0 };
+  const Ao: BimPoint = { x: 0, y: 0, z: 0 };
+  const Bo: BimPoint = { x: 1, y: 0, z: 0 };
+  const Bi: BimPoint = { x: 1, y: 1, z: 0 };
+  const Ai: BimPoint = { x: 0, y: 1, z: 0 };
   return { quad: [Ao, Bo, Bi, Ai], zBotAM: 0, zBotBM: 0, zTopAM: 3, zTopBM: 3 };
 }
 

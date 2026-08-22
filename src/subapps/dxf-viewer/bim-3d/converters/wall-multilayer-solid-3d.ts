@@ -19,7 +19,7 @@
 
 import * as THREE from 'three';
 import type { WallEntity } from '../../bim/types/wall-types';
-import type { Point3D } from '../../bim/types/bim-base';
+import type { BimPoint } from '../../bim/types/bim-base';
 import { getMaterial3D } from '../materials/MaterialCatalog3D';
 import { buildWallShape, extrudeAndRotate, stampBimIdentity } from './bim-three-shape-helpers';
 import { attachEdgesProjection } from './bim-three-edges';
@@ -44,7 +44,7 @@ export function buildMultiLayerSolidWall(
   const inner = wall.geometry.innerEdge.points;
   if (outer.length < 2 || inner.length !== outer.length) return null;
   const fracs = layerBoundaryFractions(dna);
-  const lerpEdge = (f: number): Point3D[] =>
+  const lerpEdge = (f: number): BimPoint[] =>
     outer.map((o, i) => ({ x: o.x + (inner[i].x - o.x) * f, y: o.y + (inner[i].y - o.y) * f, z: 0 }));
   const heightM = wall.params.height * MM_TO_M;
   const baseY = (floorElevationMm + wall.params.baseOffset) * MM_TO_M + buildingBaseElevationM;

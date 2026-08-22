@@ -28,7 +28,7 @@ import type { SyncContext } from './bim-scene-context';
 import type { EntityResolution } from './BimSceneLayer';
 import type { BimCategory } from '../../config/bim-object-styles';
 import type { Discipline } from '../../bim/discipline/bim-discipline';
-import type { Point3D } from '../../bim/types/bim-base';
+import type { BimPoint } from '../../bim/types/bim-base';
 
 type ResolveEntity = (
   entity: { id?: string; layerId?: string; discipline?: Discipline },
@@ -53,7 +53,7 @@ export function syncWalls(
   // (3Δ-only z-fight fix· wallToMesh βυθίζει την άκρη μέσα στο μπετόν). Render-only.
   const columnFootprints = entities.columns
     .map((c) => c.geometry?.footprint?.vertices)
-    .filter((v): v is readonly Point3D[] => !!v && v.length >= 3);
+    .filter((v): v is readonly BimPoint[] => !!v && v.length >= 3);
 
   // ADR-458 (wall↔wall cross) — winner-wall cutters ανά τοίχο (priority): σε διασταύρωση Χ ο
   // νικητής μένει ακέραιος, ο loser κόβεται στην τομή (πραγματικό notch 3Δ). Ένα O(n²) pass για

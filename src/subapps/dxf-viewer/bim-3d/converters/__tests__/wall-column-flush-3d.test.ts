@@ -12,7 +12,7 @@ import * as THREE from 'three';
 import { wallToMesh } from '../BimToThreeConverter';
 import { computeWallGeometry } from '../../../bim/geometry/wall-geometry';
 import type { WallEntity, WallParams } from '../../../bim/types/wall-types';
-import type { Point3D } from '../../../bim/types/bim-base';
+import type { BimPoint } from '../../../bim/types/bim-base';
 
 /** X extent (μήκος κατά τον άξονα, metres) ενός built mesh/group. */
 function spanX(obj: THREE.Object3D): number {
@@ -44,14 +44,14 @@ function flushWall(): WallEntity {
   } as unknown as WallEntity;
 }
 
-const rect = (x0: number, x1: number, y0: number, y1: number): Point3D[] => [
+const rect = (x0: number, x1: number, y0: number, y1: number): BimPoint[] => [
   { x: x0, y: y0, z: 0 }, { x: x1, y: y0, z: 0 }, { x: x1, y: y1, z: 0 }, { x: x0, y: y1, z: 0 },
 ];
 
 // Αριστ. κολόνα: δεξιά παρειά x=−8.915 (edge-touch με τη start, μηδέν x-overlap → butt, όχι cutback).
-const LEFT_COLUMN: Point3D[] = rect(-9.165, -8.915, -0.125, 0.125);
+const LEFT_COLUMN: BimPoint[] = rect(-9.165, -8.915, -0.125, 0.125);
 // Δεξ. κολόνα: αριστ. παρειά x=−7.165 (edge-touch με την end).
-const RIGHT_COLUMN: Point3D[] = rect(-7.165, -6.915, -0.125, 0.125);
+const RIGHT_COLUMN: BimPoint[] = rect(-7.165, -6.915, -0.125, 0.125);
 
 describe('wallToMesh — wall↔column FLUSH join (ADR-449 #2/#C, 2026-07-19)', () => {
   it('ο τοίχος που κουμπώνει σε 2 κολόνες μένει flush → X-άνοιγμα = 1.750 m (όχι 1.746)', () => {

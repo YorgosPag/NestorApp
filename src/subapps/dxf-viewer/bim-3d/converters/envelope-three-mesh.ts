@@ -14,7 +14,7 @@
 
 import * as THREE from 'three';
 import { buildClosedShape } from './bim-three-shape-helpers';
-import type { PlanarPoint, Point3D } from '../../bim/types/bim-base';
+import type { PlanarPoint, BimPoint } from '../../bim/types/bim-base';
 import type { EnvelopeMaterialId } from '../../bim/types/thermal-envelope-types';
 import { resolveEnvelopeMaterial } from '../materials/envelope-material-resolver';
 import { resolve3DEdgeStyle } from '../edges/bim-3d-edge-resolver';
@@ -67,7 +67,7 @@ export function makeEnvelopeMesh(
  * ρητά σημεία. Στα όρια ανοίγματος τα O είναι οι **κάθετες** απολήξεις του
  * `cut.bandQuad` (collinear με Z4)· στις γωνίες είναι οι κορυφές του outer loop.
  */
-export function makeQuad(oStart: Point3D, oEnd: Point3D, fStart: Point3D, fEnd: Point3D): Point3D[] {
+export function makeQuad(oStart: BimPoint, oEnd: BimPoint, fStart: BimPoint, fEnd: BimPoint): BimPoint[] {
   return [oStart, oEnd, fEnd, fStart];
 }
 
@@ -78,7 +78,7 @@ export function makeQuad(oStart: Point3D, oEnd: Point3D, fStart: Point3D, fEnd: 
  */
 export function addBandPrism(
   group: THREE.Group,
-  quad: readonly Point3D[],
+  quad: readonly BimPoint[],
   z0: number,
   z1: number,
   baseY: number,

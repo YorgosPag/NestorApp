@@ -40,7 +40,7 @@ import { translatePoint3D } from '../../rendering/entities/shared/geometry-vecto
 import type { GripInfo, BeamGripKind } from '../../hooks/useGripMovement';
 import type { BeamEntity, BeamParams } from '../types/beam-types';
 import { MIN_BEAM_WIDTH_MM, MIN_BEAM_DEPTH_MM } from '../types/beam-types';
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 // ADR-397 §12 D3 — shared BIM grip math SSoT (no per-entity copies of
 // project2D / perpUnit / axis-unit). Replaces the local duplicates flagged in
 // ADR-393 §8.2.
@@ -116,7 +116,7 @@ function axisMidpoint2D(params: BeamParams): Point2D {
   };
 }
 
-function translate3D(p: Point3D, delta: Point2D): Point3D {
+function translate3D(p: BimPoint, delta: Point2D): BimPoint {
   return translatePoint3D(p, delta);
 }
 
@@ -427,7 +427,7 @@ function moveCurveControl(input: Readonly<BeamGripDragInput>): BeamParams {
   if (!existing) {
     // Seed από axis midpoint + delta (handle πριν το drag stood στο midpoint).
     const mid = axisMidpoint2D(originalParams);
-    const seeded: Point3D = translatePoint3D(mid, delta);
+    const seeded: BimPoint = translatePoint3D(mid, delta);
     return { ...originalParams, curveControl: seeded };
   }
   return { ...originalParams, curveControl: translate3D(existing, delta) };

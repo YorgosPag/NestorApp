@@ -27,7 +27,7 @@
  */
 
 import * as THREE from 'three';
-import type { Point3D } from '../../bim/types/bim-base';
+import type { BimPoint } from '../../bim/types/bim-base';
 import type { RoofFace } from '../../bim/types/roof-types';
 import { pointInPolygon } from '../../bim/geometry/shared/polygon-utils';
 import { setSlopeAlignedTileUvs, type SlopeTileUvOptions } from './bim-uv-helpers';
@@ -60,7 +60,7 @@ interface SlopePlane {
  * No unit-conversion needed: we only use it to interpolate z (mm) at new (x,y)
  * positions expressed in the SAME canvas-unit space as outline.
  */
-export function buildSlopePlane(outline: readonly Point3D[]): SlopePlane {
+export function buildSlopePlane(outline: readonly BimPoint[]): SlopePlane {
   if (outline.length < 3) return { A: 0, B: 0, C: 0, valid: false };
   const v0 = outline[0], v1 = outline[1], v2 = outline[2];
   const z0 = v0.z ?? 0, z1 = v1.z ?? 0, z2 = v2.z ?? 0;
@@ -96,7 +96,7 @@ export function slopeZMm(x: number, y: number, plane: SlopePlane): number {
  * το κελί του πλέγματος;», δηλαδή κανόνας γεμίσματος. Επίσης οι μονάδες είναι **canvas units**,
  * όχι mm ⇒ ανοχή σε mm θα ήταν **λάθος** εδώ (ADR-716).
  */
-export function pointInPolygon2D(px: number, py: number, outline: readonly Point3D[]): boolean {
+export function pointInPolygon2D(px: number, py: number, outline: readonly BimPoint[]): boolean {
   return pointInPolygon({ x: px, y: py }, outline);
 }
 

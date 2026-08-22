@@ -20,7 +20,7 @@
 
 import * as THREE from 'three';
 import type { RailingEntity, RailMemberSolid, RailProfile, RailSweep } from '../../bim/types/railing-types';
-import type { Point3D } from '../../bim/types/bim-base';
+import type { BimPoint } from '../../bim/types/bim-base';
 import { resolveRailingMaterial } from '../materials/railing-material-resolver';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
 import { stampBimIdentity } from './bim-three-shape-helpers';
@@ -127,16 +127,16 @@ function postDepthAlongPathMm(type: RailingEntity['params']['type']): number {
  * extension via `MM_TO_M / sceneToM`. Returns a fresh array; never mutates.
  */
 function extendRailEndsToPosts(
-  path: readonly Point3D[],
+  path: readonly BimPoint[],
   type: RailingEntity['params']['type'],
   sceneToM: number,
-): Point3D[] {
+): BimPoint[] {
   const out = path.map((p) => ({ ...p }));
   const posts = type.balusterPlacement.posts;
   const halfDepthMm = postDepthAlongPathMm(type) / 2;
   if (!posts.enabled || halfDepthMm <= 0 || out.length < 2) return out;
   const extCanvas = (halfDepthMm * MM_TO_M) / sceneToM; // mm → canvas units
-  const push = (a: Point3D, b: Point3D): Point3D => {
+  const push = (a: BimPoint, b: BimPoint): BimPoint => {
     const dx = a.x - b.x;
     const dy = a.y - b.y;
     const len = Math.hypot(dx, dy) || 1;
@@ -186,7 +186,7 @@ function buildRailTube(
 ): THREE.Object3D | null {
   if (rail.path.length < 2) return null;
   const extended = extendRailEndsToPosts(rail.path, railing.params.type, sceneToM);
-  const pts = extended.map((p: Point3D) =>
+  const pts = extended.map((p: BimPoint) =>
     new THREE.Vector3(
       p.x * sceneToM,
       worldY(p.z ?? 0, floorElevationMm, buildingBaseElevationM),

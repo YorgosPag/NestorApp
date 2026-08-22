@@ -27,7 +27,7 @@
  */
 
 import * as THREE from 'three';
-import type { Point3D } from '../../bim/types/bim-base';
+import type { BimPoint } from '../../bim/types/bim-base';
 import type { RoofEntity, RoofFace, RoofRidgeLine } from '../../bim/types/roof-types';
 import { DEFAULT_EAVE_MATERIAL_ID, DEFAULT_FASCIA_HEIGHT_MM, DEFAULT_ROOF_TILE_SIZE_M, DEFAULT_SOFFIT_MODE } from '../../bim/types/roof-types';
 import type { SlabDnaLayer } from '../../bim/types/slab-dna-types';
@@ -362,7 +362,7 @@ function addRidgeCaps(
   ridges: readonly RoofRidgeLine[],
   faces: readonly RoofFace[],
   ctx: RoofFaceMeshContext,
-  footprint: readonly Point3D[],
+  footprint: readonly BimPoint[],
   offLines: readonly RoofOverhangOffsetLine[],
 ): void {
   // Ridge/hip caps always show the tile covering material in tile-mode (ADR-417).

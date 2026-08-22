@@ -10,11 +10,11 @@ import {
   buildUnderfloorTubeGeometry,
   underfloorToObject3D,
 } from '../mep-underfloor-to-three';
-import type { Point3D } from '../../../bim/types/bim-base';
+import type { BimPoint } from '../../../bim/types/bim-base';
 import type { MepUnderfloorEntity } from '../../../bim/types/mep-underfloor-types';
 
 /** A small serpentine: two rows + a U-turn, scene units. */
-const LOOP: Point3D[] = [
+const LOOP: BimPoint[] = [
   { x: 0, y: 0, z: 0 },
   { x: 4, y: 0, z: 0 },
   { x: 4, y: 1, z: 0 },
@@ -22,7 +22,7 @@ const LOOP: Point3D[] = [
 ];
 
 /** Minimal underfloor entity carrying just what the converter reads. */
-function makeEntity(loopPath: readonly Point3D[], sceneUnits: 'mm' | 'm' = 'mm'): MepUnderfloorEntity {
+function makeEntity(loopPath: readonly BimPoint[], sceneUnits: 'mm' | 'm' = 'mm'): MepUnderfloorEntity {
   return {
     id: 'uf1',
     type: 'mep-underfloor',

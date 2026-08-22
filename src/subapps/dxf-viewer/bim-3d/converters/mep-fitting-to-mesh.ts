@@ -33,7 +33,7 @@
  */
 
 import * as THREE from 'three';
-import type { Point3D } from '../../bim/types/bim-base';
+import type { BimPoint } from '../../bim/types/bim-base';
 import type { MepFittingEntity, MepFittingParams } from '../../bim/types/mep-fitting-types';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
 import {
@@ -64,7 +64,7 @@ const FITTING_MAT_ID = 'elem-mep-fitting';
  * tilts to meet inclined pipes instead of sitting flat. A 2D direction (`z` absent
  * / 0) collapses to the legacy flat mapping. Returns a normalised vector.
  */
-function planDirToWorld(dir: Point3D): THREE.Vector3 {
+function planDirToWorld(dir: BimPoint): THREE.Vector3 {
   const v = new THREE.Vector3(dir.x, dir.z ?? 0, -dir.y);
   return v.lengthSq() > 1e-12 ? v.normalize() : new THREE.Vector3(1, 0, 0);
 }

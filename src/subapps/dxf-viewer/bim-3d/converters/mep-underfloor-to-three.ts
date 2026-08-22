@@ -9,7 +9,7 @@
  * loop is degenerate).
  *
  * SSoT: the serpentine is NOT recomputed here — it reuses the params-derived
- * `entity.geometry.loopPath` (`Point3D[]`, **scene-units**, already units-correct
+ * `entity.geometry.loopPath` (`BimPoint[]`, **scene-units**, already units-correct
  * after the ADR-422 unit-fix). Empty loopPath (degenerate room) ⇒ band only. The
  * corner polyline is rounded on demand by `buildFilletedUnderfloorPath` (shared with
  * the 2D renderer) so the bends match in plan and 3D.
@@ -32,7 +32,7 @@
  */
 
 import * as THREE from 'three';
-import type { Point3D } from '../../bim/types/bim-base';
+import type { BimPoint } from '../../bim/types/bim-base';
 import type { MepUnderfloorEntity } from '../../bim/types/mep-underfloor-types';
 import { DEFAULT_UNDERFLOOR_CONNECTOR_DIAMETER_MM } from '../../bim/types/mep-underfloor-types';
 import {
@@ -65,7 +65,7 @@ const TUBE_RADIAL_SEGMENTS = 6;
  * @param worldY    The pipe-centreline elevation in metres (screed level).
  */
 export function buildUnderfloorLoopPoints(
-  loopPath: readonly Point3D[],
+  loopPath: readonly BimPoint[],
   sceneToM: number,
   worldY: number,
 ): THREE.Vector3[] {
