@@ -29,7 +29,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md
  */
 
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import type {
   MepBoilerGeometry,
   MepBoilerParams,
@@ -76,7 +76,7 @@ export interface ClassifiedBoilerStroke {
 
 export interface BoilerSymbolGeometry {
   /** Closed outline polygon (= the footprint). */
-  readonly outline: readonly Point3D[];
+  readonly outline: readonly BimPoint[];
   /**
    * Connector stub strokes — one straight stub per PIPE connector: the water/pipe ports
    * (`domain:'pipe'`) only (the hydronic supply/return pair + any combi DHW hot/cold/recirc
@@ -116,7 +116,7 @@ export interface BoilerSymbolGeometry {
    * DASHED (a «keep-clear» maintenance-access zone). Closed 4-vertex polygon in world
    * units, rotation-aware. Absent ⇒ no clearance drawn (back-compat).
    */
-  readonly clearanceOutline?: readonly Point3D[];
+  readonly clearanceOutline?: readonly BimPoint[];
 }
 
 /** Below this magnitude the outward direction is treated as degenerate (skip the stub). */
@@ -171,7 +171,7 @@ export function buildMepBoilerSymbol(
         ...buildFlueVentStroke(root, outward, stubLen).map((line) => ({ line, classification: ductClass })),
       );
       // VENT TERMINAL (καμινάδα) — cap the chevron tip with the termination-type glyph.
-      const tip: Point3D = { x: root.x + outward.x * stubLen, y: root.y + outward.y * stubLen, z: 0 };
+      const tip: BimPoint = { x: root.x + outward.x * stubLen, y: root.y + outward.y * stubLen, z: 0 };
       ventStrokes.push(
         ...buildFlueTerminalGlyph(tip, outward, stubLen, params.flueTermination ?? DEFAULT_FLUE_TERMINATION).map(
           (line) => ({ line, classification: ductClass }),

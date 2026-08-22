@@ -29,12 +29,12 @@
  * @see ../mep-systems/mep-wire-conductor-ticks.ts (the screen-space tick model)
  */
 
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import type { Point2D } from '../../rendering/types/Types';
 import type { MepSegmentGeometry } from '../types/mep-segment-types';
 
 /** A polyline of world-space points (canvas units). */
-export type SegmentStroke = readonly Point3D[];
+export type SegmentStroke = readonly BimPoint[];
 
 export interface SegmentSymbolGeometry {
   /**

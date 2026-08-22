@@ -14,7 +14,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-406-point-based-mep-fixture.md
  */
 
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import type { MepFixtureGeometry, MepFixtureParams } from '../types/mep-fixture-types';
 import { buildDrainageGratingStrokes } from '../mep-manifolds/mep-manifold-symbol';
 import {
@@ -31,17 +31,17 @@ import { isGasMeterKind, gasMeterDrawer } from './gas-meter-symbol-spec';
 import { isGasCookerKind, gasCookerDrawer } from './gas-cooker-symbol-spec';
 
 /** A polyline of world-space points (canvas units). */
-export type FixtureStroke = readonly Point3D[];
+export type FixtureStroke = readonly BimPoint[];
 
 export interface FixtureSymbolGeometry {
   /** Closed outline polygon (= the footprint). */
-  readonly outline: readonly Point3D[];
+  readonly outline: readonly BimPoint[];
   /** Decorative inner strokes identifying the fixture type. */
   readonly strokes: readonly FixtureStroke[];
 }
 
 /** Centroid of the footprint vertices (canvas units). */
-function footprintCenter(vertices: readonly Point3D[]): Point3D {
+function footprintCenter(vertices: readonly BimPoint[]): BimPoint {
   let sx = 0, sy = 0;
   for (const v of vertices) { sx += v.x; sy += v.y; }
   const n = Math.max(1, vertices.length);

@@ -19,7 +19,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md
  */
 
-import type { BimValidation, Point3D } from '../types/bim-base';
+import type { BimValidation, BimPoint } from '../types/bim-base';
 import type {
   MepRadiatorGeometry,
   MepRadiatorParams,
@@ -60,8 +60,8 @@ export function computeMepRadiatorGeometry(
 export function buildRadiatorConnectors(params: MepRadiatorParams): MepConnector[] {
   const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
   const hw = (params.width * s) / 2;
-  const supply: Point3D = { x: -hw, y: 0, z: 0 };
-  const ret: Point3D = { x: hw, y: 0, z: 0 };
+  const supply: BimPoint = { x: -hw, y: 0, z: 0 };
+  const ret: BimPoint = { x: hw, y: 0, z: 0 };
   return [
     buildRadiatorSupplyConnector(supply, params.connectorDiameterMm),
     buildRadiatorReturnConnector(ret, params.connectorDiameterMm),

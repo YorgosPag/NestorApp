@@ -12,7 +12,7 @@
  */
 
 import type { PipeJunction } from '../../mep-systems/mep-pipe-junctions';
-import type { Point3D } from '../../types/bim-base';
+import type { BimPoint } from '../../types/bim-base';
 import type { MepFittingIncident } from '../../types/mep-fitting-types';
 import { DEFAULT_ELBOW_STYLE } from '../../types/mep-fitting-types';
 import { classifyJunction } from '../mep-fitting-classify';
@@ -20,7 +20,7 @@ import { classifyJunction } from '../mep-fitting-classify';
 /** Build a single pipe-segment incident with a given direction + diameter. */
 const incident = (
   entityId: string,
-  directionUnit: Point3D,
+  directionUnit: BimPoint,
   diameterMm: number,
 ): MepFittingIncident => ({
   entityId,
@@ -46,10 +46,10 @@ const junction = (incidents: MepFittingIncident[]): PipeJunction => ({
   incidents,
 });
 
-const RIGHT: Point3D = { x: 1, y: 0, z: 0 };
-const LEFT: Point3D = { x: -1, y: 0, z: 0 };
-const UP: Point3D = { x: 0, y: 1, z: 0 };
-const DOWN: Point3D = { x: 0, y: -1, z: 0 };
+const RIGHT: BimPoint = { x: 1, y: 0, z: 0 };
+const LEFT: BimPoint = { x: -1, y: 0, z: 0 };
+const UP: BimPoint = { x: 0, y: 1, z: 0 };
+const DOWN: BimPoint = { x: 0, y: -1, z: 0 };
 
 describe('classifyJunction — full topology table', () => {
   it('1 incident → cap', () => {
@@ -154,7 +154,7 @@ describe('classifyJunction — edge cases of the 2-incident branch', () => {
 
   it('classifies a near-collinear pair (≈8° bend) as a coupling/reducer, not an elbow', () => {
     // dot ≈ -0.99 (well past the -0.985 collinear threshold) → still inline.
-    const slightBend: Point3D = { x: -0.99, y: 0.141, z: 0 };
+    const slightBend: BimPoint = { x: -0.99, y: 0.141, z: 0 };
     const result = classifyJunction(
       junction([incident('a', RIGHT, 50), incident('b', slightBend, 50)]),
     );
@@ -163,7 +163,7 @@ describe('classifyJunction — edge cases of the 2-incident branch', () => {
 
   it('classifies a clearly angled pair (≈20° from straight) as an elbow', () => {
     // dot ≈ -0.94 (above the -0.985 threshold) → angled → elbow.
-    const bend: Point3D = { x: -0.94, y: 0.342, z: 0 };
+    const bend: BimPoint = { x: -0.94, y: 0.342, z: 0 };
     const result = classifyJunction(
       junction([incident('a', RIGHT, 50), incident('b', bend, 50)]),
     );

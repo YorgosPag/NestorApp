@@ -18,7 +18,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-406-point-based-mep-fixture.md
  */
 
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import type { BimValidation } from '../types/bim-base';
 import type { MepFixtureGeometry, MepFixtureParams } from '../types/mep-fixture-types';
 import { MIN_FIXTURE_DIMENSION_MM } from '../types/mep-fixture-types';
@@ -49,9 +49,9 @@ export function computeMepFixtureGeometry(params: MepFixtureParams): MepFixtureG
 
 // ─── Local footprint builder (circular — the fixture's genuine difference) ──
 
-function buildCircularLocal(diameter: number, s: number): Point3D[] {
+function buildCircularLocal(diameter: number, s: number): BimPoint[] {
   const r = (diameter * s) / 2;
-  const verts: Point3D[] = [];
+  const verts: BimPoint[] = [];
   const step = (2 * Math.PI) / CIRCULAR_FIXTURE_SEGMENTS;
   for (let i = 0; i < CIRCULAR_FIXTURE_SEGMENTS; i++) {
     const a = i * step;
@@ -67,9 +67,9 @@ function buildCircularLocal(diameter: number, s: number): Point3D[] {
  * shared `transformFootprintToWorld`.
  */
 function transformFootprint(
-  local: readonly Point3D[],
+  local: readonly BimPoint[],
   params: MepFixtureParams,
-): Point3D[] {
+): BimPoint[] {
   const { position } = params;
   if (params.shape === 'circular') {
     return local.map((v) => translatePoint(position, v));

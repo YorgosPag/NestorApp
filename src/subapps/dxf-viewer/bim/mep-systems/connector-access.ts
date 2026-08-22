@@ -25,7 +25,7 @@ import {
   isMepUnderfloorEntity,
 } from '../../types/entities';
 import type { MepConnector } from '../types/mep-connector-types';
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 
 /** The connectors embedded in an entity's params, or `[]` when it has none. */
 export function getEntityConnectors(entity: Entity): readonly MepConnector[] {
@@ -41,7 +41,7 @@ export function getEntityConnectors(entity: Entity): readonly MepConnector[] {
 }
 
 /** Identity host transform — area/segment hosts store connectors in world coords. */
-const IDENTITY_HOST_TRANSFORM: { position: Point3D; rotation: number } = {
+const IDENTITY_HOST_TRANSFORM: { position: BimPoint; rotation: number } = {
   position: { x: 0, y: 0, z: 0 },
   rotation: 0,
 };
@@ -56,7 +56,7 @@ const IDENTITY_HOST_TRANSFORM: { position: Point3D; rotation: number } = {
  */
 export function getConnectorHostPlanTransform(
   entity: Entity,
-): { position: Point3D; rotation: number } {
+): { position: BimPoint; rotation: number } {
   if (
     isMepFixtureEntity(entity) ||
     isElectricalPanelEntity(entity) ||

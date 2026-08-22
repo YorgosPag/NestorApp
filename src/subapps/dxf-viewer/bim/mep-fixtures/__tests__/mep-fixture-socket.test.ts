@@ -34,7 +34,7 @@ import { computeMepFixtureGeometry } from '../mep-fixture-geometry';
 import { buildFixtureSymbol } from '../mep-fixture-symbol';
 import { MepFixtureKindSchema, MepFixtureParamsSchema } from '../../types/mep-fixture.schemas';
 import { electricalTerminalRecognizer } from '../../../systems/recognition/recognizers/electrical-terminal-recognizer';
-import type { Point3D } from '../../types/bim-base';
+import type { BimPoint } from '../../types/bim-base';
 import type { Entity } from '../../../types/entities';
 
 /** A connectable electrical fixture at (x, y) — full params incl. its connector. */
@@ -117,7 +117,7 @@ describe('ADR-430 Slice 0 — electrical socket kind', () => {
   });
 
   describe('2D socket glyph', () => {
-    const FOOTPRINT: Point3D[] = [
+    const FOOTPRINT: BimPoint[] = [
       { x: 0, y: 0, z: 0 },
       { x: 1, y: 0, z: 0 },
       { x: 1, y: 1, z: 0 },

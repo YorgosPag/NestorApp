@@ -42,7 +42,7 @@ import { MepFixtureKindSchema, MepFixtureParamsSchema } from '../../types/mep-fi
 import { ElectricalPanelKindSchema } from '../../types/electrical-panel.schemas';
 import { electricalTerminalRecognizer } from '../../../systems/recognition/recognizers/electrical-terminal-recognizer';
 import { seedDefaultConnectors } from '../../mep-systems/mep-connector-seed';
-import type { Point3D } from '../../types/bim-base';
+import type { BimPoint } from '../../types/bim-base';
 import type { Entity } from '../../../types/entities';
 
 function fixture(id: string, kind: MepFixtureParams['kind'], x: number, y: number): MepFixtureEntity {
@@ -97,7 +97,7 @@ describe('ADR-431 Slice 0 — data outlet kind', () => {
   });
 
   describe('2D data-outlet glyph', () => {
-    const FOOTPRINT: Point3D[] = [
+    const FOOTPRINT: BimPoint[] = [
       { x: 0, y: 0, z: 0 },
       { x: 1, y: 0, z: 0 },
       { x: 1, y: 1, z: 0 },

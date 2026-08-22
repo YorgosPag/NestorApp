@@ -18,7 +18,7 @@
  */
 
 import { nowTimestamp } from '@/lib/firestore-now';
-import type { BimValidation, Point3D } from '../types/bim-base';
+import type { BimValidation, BimPoint } from '../types/bim-base';
 import type {
   MepUnderfloorGeometry,
   MepUnderfloorParams,
@@ -46,8 +46,8 @@ const MM_TO_M = 1 / 1000;
 /** One clipped serpentine row: the k-line index (for parity) + its two endpoints. */
 interface ClippedRow {
   readonly line: number;
-  readonly a: Point3D;
-  readonly b: Point3D;
+  readonly a: BimPoint;
+  readonly b: BimPoint;
 }
 
 /**
@@ -61,7 +61,7 @@ export function computeMepUnderfloorGeometry(
   const verts = params.footprint.vertices;
   if (verts.length < MIN_UNDERFLOOR_VERTICES) return emptyGeometry(verts);
 
-  let ring = stripClosingDuplicate(verts) as Point3D[];
+  let ring = stripClosingDuplicate(verts) as BimPoint[];
   if (ring.length < MIN_UNDERFLOOR_VERTICES) return emptyGeometry(verts);
   if (!isPolygonCCW(ring)) ring = [...ring].reverse();
 
@@ -111,11 +111,11 @@ export function computeMepUnderfloorGeometry(
  * field) — never throws, mirroring the degenerate-room contract.
  */
 function buildPatternField(
-  inset: readonly Point3D[],
+  inset: readonly BimPoint[],
   spacingScene: number,
   pattern: MepUnderfloorParams['patternType'],
-  entry: Point3D,
-): Point3D[] {
+  entry: BimPoint,
+): BimPoint[] {
   if (pattern === 'spiral') {
     const spiral = buildSpiralField(inset, spacingScene, entry);
     if (spiral.length > 0) return spiral;
@@ -126,10 +126,10 @@ function buildPatternField(
 
 // ─── Entry / connectors ───────────────────────────────────────────────────────
 
-interface EntryPoints { readonly supply: Point3D; readonly ret: Point3D }
+interface EntryPoints { readonly supply: BimPoint; readonly ret: BimPoint }
 
 /** Two entry points at the `entrySide` edge midpoint, offset ±spacing/4 along it. */
-function resolveEntryPoints(ring: readonly Point3D[], params: MepUnderfloorParams): EntryPoints {
+function resolveEntryPoints(ring: readonly BimPoint[], params: MepUnderfloorParams): EntryPoints {
   const n = ring.length;
   const e = ((params.entrySide ?? 0) % n + n) % n;
   const a = ring[e];
@@ -155,7 +155,7 @@ function entryConnectors(entry: EntryPoints): Pick<MepUnderfloorGeometry, 'suppl
 // ─── Row generation ───────────────────────────────────────────────────────────
 
 /** Axis the rows run along — the longer bbox dimension (fewer U-turns). */
-function resolveAxis(bbox: { min: Point3D; max: Point3D }): HatchDirection {
+function resolveAxis(bbox: { min: BimPoint; max: BimPoint }): HatchDirection {
   const w = bbox.max.x - bbox.min.x;
   const h = bbox.max.y - bbox.min.y;
   return w >= h ? { ux: 1, uy: 0 } : { ux: 0, uy: 1 };
@@ -166,14 +166,14 @@ function resolveAxis(bbox: { min: Point3D; max: Point3D }): HatchDirection {
  * inset polygon (concave rooms yield multiple spans per line). Pre-ordered by the
  * perpendicular offset k (ascending) — `buildAxisAlignedHatch` emits in k order.
  */
-function buildClippedRows(inset: readonly Point3D[], spacingMm: number): ClippedRow[] {
+function buildClippedRows(inset: readonly BimPoint[], spacingMm: number): ClippedRow[] {
   const bbox = polygonBbox(inset);
   const u = resolveAxis(bbox);
   const lines = buildAxisAlignedHatch(bbox, spacingMm, u);
   const rows: ClippedRow[] = [];
   lines.forEach((seg, line) => {
-    const a: Point3D = { x: seg.start.x, y: seg.start.y, z: 0 };
-    const b: Point3D = { x: seg.end.x, y: seg.end.y, z: 0 };
+    const a: BimPoint = { x: seg.start.x, y: seg.start.y, z: 0 };
+    const b: BimPoint = { x: seg.end.x, y: seg.end.y, z: 0 };
     for (const span of clipSegmentToPolygon(a, b, inset)) {
       rows.push({ line, a: span[0], b: span[1] });
     }
@@ -185,7 +185,7 @@ function buildClippedRows(inset: readonly Point3D[], spacingMm: number): Clipped
  * Split segment a→b into the spans that lie INSIDE `ring` (handles concave). Collects
  * crossing params with every ring edge, then keeps spans whose midpoint is inside.
  */
-function clipSegmentToPolygon(a: Point3D, b: Point3D, ring: readonly Point3D[]): Array<[Point3D, Point3D]> {
+function clipSegmentToPolygon(a: BimPoint, b: BimPoint, ring: readonly BimPoint[]): Array<[BimPoint, BimPoint]> {
   const ts = [0, 1];
   const n = ring.length;
   for (let i = 0; i < n; i++) {
@@ -193,7 +193,7 @@ function clipSegmentToPolygon(a: Point3D, b: Point3D, ring: readonly Point3D[]):
     if (t !== null) ts.push(t);
   }
   const uniq = [...new Set(ts)].sort((p, q) => p - q);
-  const out: Array<[Point3D, Point3D]> = [];
+  const out: Array<[BimPoint, BimPoint]> = [];
   for (let i = 0; i < uniq.length - 1; i++) {
     const t0 = uniq[i];
     const t1 = uniq[i + 1];
@@ -206,8 +206,8 @@ function clipSegmentToPolygon(a: Point3D, b: Point3D, ring: readonly Point3D[]):
 // ─── Stitching ────────────────────────────────────────────────────────────────
 
 /** Boustrophedon snake over all rows in order, alternating orientation per row. */
-function stitchSnake(rows: readonly ClippedRow[]): Point3D[] {
-  const path: Point3D[] = [];
+function stitchSnake(rows: readonly ClippedRow[]): BimPoint[] {
+  const path: BimPoint[] = [];
   rows.forEach((row, i) => {
     const fwd = i % 2 === 0;
     path.push(fwd ? row.a : row.b, fwd ? row.b : row.a);
@@ -219,7 +219,7 @@ function stitchSnake(rows: readonly ClippedRow[]): Point3D[] {
  * Counterflow bifilar: traverse even rows outward, then odd rows back to entry, so
  * supply and return alternate every row and both ends sit at the entry edge.
  */
-function stitchCounterflow(rows: readonly ClippedRow[]): Point3D[] {
+function stitchCounterflow(rows: readonly ClippedRow[]): BimPoint[] {
   const evens = rows.filter((r) => r.line % 2 === 0);
   const odds = rows.filter((r) => r.line % 2 === 1).reverse();
   return [...stitchSnake(evens), ...stitchSnake(odds)];
@@ -239,16 +239,16 @@ const MAX_SPIRAL_RINGS = 200;
  * characteristic spiral transition). Returns `[]` when the inset cannot be ringed
  * (caller falls back to the snake).
  */
-function buildSpiralField(inset: readonly Point3D[], spacingScene: number, entry: Point3D): Point3D[] {
+function buildSpiralField(inset: readonly BimPoint[], spacingScene: number, entry: BimPoint): BimPoint[] {
   if (spacingScene <= 0) return [];
-  const rings: Point3D[][] = [];
-  let poly = stripClosingDuplicate(inset) as Point3D[];
+  const rings: BimPoint[][] = [];
+  let poly = stripClosingDuplicate(inset) as BimPoint[];
   let guard = 0;
   while (poly.length >= MIN_UNDERFLOOR_VERTICES && guard < MAX_SPIRAL_RINGS) {
     rings.push(poly);
     const next = insetClosedPolygon(poly, spacingScene);
     if (!next || next.length < MIN_UNDERFLOOR_VERTICES) break;
-    poly = stripClosingDuplicate(next) as Point3D[];
+    poly = stripClosingDuplicate(next) as BimPoint[];
     guard += 1;
   }
   if (rings.length === 0) return [];
@@ -258,7 +258,7 @@ function buildSpiralField(inset: readonly Point3D[], spacingScene: number, entry
   const outward = rings.filter((_, i) => i % 2 === 1).reverse();
   const ordered = [...inward, ...outward];
 
-  const path: Point3D[] = [];
+  const path: BimPoint[] = [];
   let cursor = entry;
   for (const ring of ordered) {
     const seq = reorderRingFromNearest(ring, cursor);
@@ -270,7 +270,7 @@ function buildSpiralField(inset: readonly Point3D[], spacingScene: number, entry
 
 /** Rotate a ring's vertices so it starts at the vertex nearest `point` (one pass, no
  * wrap-back) — keeps the inter-ring jump short. */
-function reorderRingFromNearest(ring: readonly Point3D[], point: Point3D): Point3D[] {
+function reorderRingFromNearest(ring: readonly BimPoint[], point: BimPoint): BimPoint[] {
   const n = ring.length;
   let best = 0;
   let bestD = Infinity;
@@ -278,7 +278,7 @@ function reorderRingFromNearest(ring: readonly Point3D[], point: Point3D): Point
     const d = (ring[i].x - point.x) ** 2 + (ring[i].y - point.y) ** 2;
     if (d < bestD) { bestD = d; best = i; }
   }
-  const out: Point3D[] = [];
+  const out: BimPoint[] = [];
   for (let j = 0; j < n; j++) out.push(ring[(best + j) % n]);
   return out;
 }
@@ -305,9 +305,9 @@ export function resolveUnderfloorBendRadiusScene(params: MepUnderfloorParams): n
  * be in the SAME space as the path coordinates. Used on demand by the 2D renderer and
  * the 3D tube so the drawn pipe shows real bends instead of sharp mitres (Revit/4M).
  */
-export function buildFilletedUnderfloorPath(path: readonly Point3D[], radius: number): Point3D[] {
+export function buildFilletedUnderfloorPath(path: readonly BimPoint[], radius: number): BimPoint[] {
   if (path.length < 3 || radius <= 0) return [...path];
-  const out: Point3D[] = [path[0]];
+  const out: BimPoint[] = [path[0]];
   for (let i = 1; i < path.length - 1; i++) {
     const prev = path[i - 1];
     const cur = path[i];
@@ -344,7 +344,7 @@ export function buildFilletedUnderfloorPath(path: readonly Point3D[], radius: nu
 }
 
 /** Sample the minor arc centre→p1..p2 (inclusive) into a short point list. */
-function sampleArc(cx: number, cy: number, p1: Point3D, p2: Point3D): Point3D[] {
+function sampleArc(cx: number, cy: number, p1: BimPoint, p2: BimPoint): BimPoint[] {
   const a1 = Math.atan2(p1.y - cy, p1.x - cx);
   const a2 = Math.atan2(p2.y - cy, p2.x - cx);
   let delta = a2 - a1;
@@ -352,7 +352,7 @@ function sampleArc(cx: number, cy: number, p1: Point3D, p2: Point3D): Point3D[] 
   while (delta < -Math.PI) delta += 2 * Math.PI;
   const r = Math.hypot(p1.x - cx, p1.y - cy);
   const steps = Math.min(12, Math.max(2, Math.ceil(Math.abs(delta) / (Math.PI / 8))));
-  const pts: Point3D[] = [];
+  const pts: BimPoint[] = [];
   for (let k = 0; k <= steps; k++) {
     const a = a1 + (delta * k) / steps;
     pts.push({ x: cx + r * Math.cos(a), y: cy + r * Math.sin(a), z: 0 });
@@ -362,12 +362,12 @@ function sampleArc(cx: number, cy: number, p1: Point3D, p2: Point3D): Point3D[] 
 
 // ─── Math helpers ─────────────────────────────────────────────────────────────
 
-function lerp(a: Point3D, b: Point3D, t: number): Point3D {
+function lerp(a: BimPoint, b: BimPoint, t: number): BimPoint {
   return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: 0 };
 }
 
 /** Param t∈(0,1) where segment a→b crosses segment c→d, else null. */
-function segmentCrossT(a: Point3D, b: Point3D, c: Point3D, d: Point3D): number | null {
+function segmentCrossT(a: BimPoint, b: BimPoint, c: BimPoint, d: BimPoint): number | null {
   const r = { x: b.x - a.x, y: b.y - a.y };
   const s = { x: d.x - c.x, y: d.y - c.y };
   const denom = r.x * s.y - r.y * s.x;
@@ -378,7 +378,7 @@ function segmentCrossT(a: Point3D, b: Point3D, c: Point3D, d: Point3D): number |
   return null;
 }
 
-function pathLengthMm(path: readonly Point3D[]): number {
+function pathLengthMm(path: readonly BimPoint[]): number {
   let total = 0;
   for (let i = 1; i < path.length; i++) {
     total += Math.hypot(path[i].x - path[i - 1].x, path[i].y - path[i - 1].y);
@@ -386,8 +386,8 @@ function pathLengthMm(path: readonly Point3D[]): number {
   return total;
 }
 
-function emptyGeometry(verts: readonly Point3D[]): MepUnderfloorGeometry {
-  const bbox = polygonBbox(verts as Point3D[]);
+function emptyGeometry(verts: readonly BimPoint[]): MepUnderfloorGeometry {
+  const bbox = polygonBbox(verts as BimPoint[]);
   const origin = verts[0] ? { x: verts[0].x, y: verts[0].y, z: 0 } : { x: 0, y: 0, z: 0 };
   return {
     bbox,

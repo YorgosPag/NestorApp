@@ -17,7 +17,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md §Φ9
  */
 
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import type { MepSegmentParams } from '../types/mep-segment-types';
 import { resolveSegmentEndpointElevationsMm } from '../types/mep-segment-types';
 import {
@@ -40,7 +40,7 @@ import {
 export function segmentConnectorWorldPosition(
   connectorId: string,
   params: MepSegmentParams,
-): Point3D | null {
+): BimPoint | null {
   const elev = resolveSegmentEndpointElevationsMm(params);
   if (connectorId === SEGMENT_START_CONNECTOR_ID) {
     return { x: params.startPoint.x, y: params.startPoint.y, z: elev.startMm };

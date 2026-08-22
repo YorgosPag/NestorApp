@@ -20,7 +20,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-408-mep-connectors-and-systems.md
  */
 
-import type { BimValidation, Point3D } from '../types/bim-base';
+import type { BimValidation, BimPoint } from '../types/bim-base';
 import type {
   MepManifoldGeometry,
   MepManifoldParams,
@@ -67,17 +67,17 @@ export function clampOutletCount(n: number): number {
  * outlets are evenly distributed along the +Y (front) edge across the bar width.
  */
 function manifoldConnectorLocalPositions(params: MepManifoldParams): {
-  readonly inlet: Point3D;
-  readonly outlets: readonly Point3D[];
+  readonly inlet: BimPoint;
+  readonly outlets: readonly BimPoint[];
 } {
   const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
   const hw = (params.width * s) / 2;
   const hl = (params.length * s) / 2;
   const count = clampOutletCount(params.outletCount);
 
-  const inlet: Point3D = { x: -hw, y: 0, z: 0 };
+  const inlet: BimPoint = { x: -hw, y: 0, z: 0 };
 
-  const outlets: Point3D[] = Array.from({ length: count }, (_, i) => {
+  const outlets: BimPoint[] = Array.from({ length: count }, (_, i) => {
     // Even spread within the bar: x_i = -hw + width * (i+1)/(count+1).
     const frac = (i + 1) / (count + 1);
     return { x: -hw + params.width * s * frac, y: hl, z: 0 };

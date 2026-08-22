@@ -33,7 +33,7 @@
 import type { SceneEntity } from '../../core/commands/interfaces';
 // ADR-049 Phase 2 — the follow uses the FULL 3D move delta (optional `z` = elevation
 // in mm) so a vertical host/pipe move drags its connected pipe ends up/down too.
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import type { Entity } from '../../types/entities';
 import { calculateBimMovedGeometry } from '../utils/bim-move-geometry';
 import {
@@ -43,7 +43,7 @@ import {
 } from './cascade-connected-pipes';
 
 /** Next params of the move geometry patch for `entity` under `delta`, or null. */
-function movedParams(entity: Entity, delta: Point3D): unknown | null {
+function movedParams(entity: Entity, delta: BimPoint): unknown | null {
   return nextParamsFromTransformPatch(calculateBimMovedGeometry(entity, delta));
 }
 
@@ -55,7 +55,7 @@ function movedParams(entity: Entity, delta: Point3D): unknown | null {
  */
 export function cascadeConnectedPipesByDelta(
   movedIds: readonly string[],
-  delta: Point3D,
+  delta: BimPoint,
   sceneManager: ConnectedPipeCascadeSceneManager,
 ): SceneEntity[] {
   return cascadeConnectedPipes(movedIds, sceneManager, (entity) => movedParams(entity, delta)).moved;

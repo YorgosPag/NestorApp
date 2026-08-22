@@ -31,7 +31,7 @@ import type { Entity } from '../../types/entities';
 import { isMepSegmentEntity } from '../../types/entities';
 import type { MepSegmentEntity } from '../types/mep-segment-types';
 import { resolveSegmentSection, resolveSegmentEndpointElevationsMm } from '../types/mep-segment-types';
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import type { MepFittingIncident } from '../types/mep-fitting-types';
 import {
   SEGMENT_START_CONNECTOR_ID,
@@ -47,7 +47,7 @@ export interface PipeJunction {
   /** Idempotency anchor — quantized node position string. Same node ⇒ same key. */
   readonly key: string;
   /** Node centre (canvas units), averaged from the coincident endpoints. */
-  readonly position: Point3D;
+  readonly position: BimPoint;
   /** mm. Centreline elevation, averaged from the incident segments. */
   readonly centerlineElevationMm: number;
   /** The ends meeting at this node (sorted by entityId+connectorId). */
@@ -64,7 +64,7 @@ interface JunctionEndpoint {
   /** FK → the owning entity (segment OR host). */
   readonly entityId: string;
   readonly connectorId: string;
-  readonly point: Point3D;
+  readonly point: BimPoint;
   /** mm. This endpoint's own elevation (sloped runs differ start vs end, Φ-A). */
   readonly elevationMm: number;
   /**
@@ -75,7 +75,7 @@ interface JunctionEndpoint {
    */
   readonly zScene: number;
   /** Unit direction AWAY from the node (precomputed). Zero vector for a host. */
-  readonly directionUnit: Point3D;
+  readonly directionUnit: BimPoint;
   /** mm. Nominal diameter (0 for a host endpoint). */
   readonly diameterMm: number;
   /** True for a point-host connector — its node yields no fitting (the equipment is the fitting). */
@@ -160,12 +160,12 @@ function endpointDist2(a: JunctionEndpoint, b: JunctionEndpoint): number {
  * unit; the result's proportions therefore match the pipe's world-metre axis exactly.
  */
 function directionUnit(
-  from: Point3D,
-  to: Point3D,
+  from: BimPoint,
+  to: BimPoint,
   fromElevMm: number,
   toElevMm: number,
   mmToScene: number,
-): Point3D {
+): BimPoint {
   const dx = to.x - from.x;
   const dy = to.y - from.y;
   const dz = (toElevMm - fromElevMm) * mmToScene;
@@ -186,7 +186,7 @@ function directionUnit(
  * so every existing horizontal network (z=0) keeps its exact legacy key — no
  * reconcile churn, no re-creation of already-persisted fittings.
  */
-function junctionKey(position: Point3D, zScene: number, tolerance: number): string {
+function junctionKey(position: BimPoint, zScene: number, tolerance: number): string {
   const grid = tolerance > 0 ? tolerance : 1;
   const qx = Math.round(position.x / grid);
   const qy = Math.round(position.y / grid);
@@ -229,7 +229,7 @@ function buildJunction(bucket: readonly JunctionEndpoint[], tolerance: number): 
   }
   // `position.z` stays 0 (no consumer reads it; the converter/renderer/trim use
   // `centerlineElevationMm`). The averaged `zScene` only feeds the z-aware key.
-  const position: Point3D = { x: sumX / n, y: sumY / n, z: 0 };
+  const position: BimPoint = { x: sumX / n, y: sumY / n, z: 0 };
   const incidents = bucket
     .map(toIncident)
     .sort((a, b) =>

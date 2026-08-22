@@ -26,7 +26,7 @@ import {
 } from '../../types/mep-connector-types';
 import { buildDefaultMepFixtureParams } from '../../../hooks/drawing/mep-fixture-completion';
 import { MepFixtureKindSchema, MepFixtureParamsSchema } from '../../types/mep-fixture.schemas';
-import type { Point3D } from '../../types/bim-base';
+import type { BimPoint } from '../../types/bim-base';
 
 describe('ADR-408 Φ14 — sanitary fixture kinds', () => {
   describe('kind set + guards', () => {
@@ -106,7 +106,7 @@ describe('ADR-408 Φ14 — sanitary fixture kinds', () => {
 
   describe('SANITARY_DRAWERS (shared 2D vectors)', () => {
     // A unit-square footprint in the (c0,c1,c2,c3) front-left-CCW convention.
-    const FOOTPRINT: Point3D[] = [
+    const FOOTPRINT: BimPoint[] = [
       { x: 0, y: 0, z: 0 },
       { x: 1, y: 0, z: 0 },
       { x: 1, y: 1, z: 0 },

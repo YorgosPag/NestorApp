@@ -19,10 +19,10 @@ import type {
   MepUnderfloorPattern,
 } from '../../types/mep-underfloor-types';
 import { pointInPolygon } from '../../geometry/shared/polygon-utils';
-import type { Point3D } from '../../types/bim-base';
+import type { BimPoint } from '../../types/bim-base';
 
 /** 5000 × 4000 mm rectangle, CCW. */
-const RECT: Point3D[] = [
+const RECT: BimPoint[] = [
   { x: 0, y: 0, z: 0 },
   { x: 5000, y: 0, z: 0 },
   { x: 5000, y: 4000, z: 0 },
@@ -87,7 +87,7 @@ describe('computeMepUnderfloorGeometry', () => {
   });
 
   it('degenerates to a zero-length loop when the room is smaller than 2× clearance', () => {
-    const tiny: Point3D[] = [
+    const tiny: BimPoint[] = [
       { x: 0, y: 0, z: 0 },
       { x: 150, y: 0, z: 0 },
       { x: 150, y: 150, z: 0 },
@@ -102,7 +102,7 @@ describe('computeMepUnderfloorGeometry', () => {
   // sceneUnits) must still produce a serpentine field. Pre-fix this collapsed to the
   // degenerate guard (minSpan≈16 ≤ 2·100) → no coils, just a flat colour.
   it('produces a serpentine field for a metres-unit scene (16m × 16m ≈ 256 m²)', () => {
-    const metresRoom: Point3D[] = [
+    const metresRoom: BimPoint[] = [
       { x: 0, y: 0, z: 0 },
       { x: 16, y: 0, z: 0 },
       { x: 16, y: 16, z: 0 },
@@ -143,12 +143,12 @@ describe('resolveUnderfloorBendRadiusScene', () => {
 
 describe('buildFilletedUnderfloorPath', () => {
   it('leaves a collinear path unchanged (no corners to round)', () => {
-    const line: Point3D[] = [{ x: 0, y: 0, z: 0 }, { x: 10, y: 0, z: 0 }, { x: 20, y: 0, z: 0 }];
+    const line: BimPoint[] = [{ x: 0, y: 0, z: 0 }, { x: 10, y: 0, z: 0 }, { x: 20, y: 0, z: 0 }];
     expect(buildFilletedUnderfloorPath(line, 2)).toHaveLength(3);
   });
 
   it('rounds a right-angle corner — inserts arc samples and preserves endpoints', () => {
-    const corner: Point3D[] = [{ x: 0, y: 0, z: 0 }, { x: 10, y: 0, z: 0 }, { x: 10, y: 10, z: 0 }];
+    const corner: BimPoint[] = [{ x: 0, y: 0, z: 0 }, { x: 10, y: 0, z: 0 }, { x: 10, y: 10, z: 0 }];
     const out = buildFilletedUnderfloorPath(corner, 2);
     expect(out.length).toBeGreaterThan(3); // corner replaced by an arc
     expect(out[0]).toEqual({ x: 0, y: 0, z: 0 });
@@ -158,7 +158,7 @@ describe('buildFilletedUnderfloorPath', () => {
   });
 
   it('returns a copy unchanged for radius 0 or < 3 points', () => {
-    const p: Point3D[] = [{ x: 0, y: 0, z: 0 }, { x: 5, y: 5, z: 0 }, { x: 10, y: 0, z: 0 }];
+    const p: BimPoint[] = [{ x: 0, y: 0, z: 0 }, { x: 5, y: 5, z: 0 }, { x: 10, y: 0, z: 0 }];
     expect(buildFilletedUnderfloorPath(p, 0)).toHaveLength(3);
     expect(buildFilletedUnderfloorPath(p.slice(0, 2), 2)).toHaveLength(2);
   });

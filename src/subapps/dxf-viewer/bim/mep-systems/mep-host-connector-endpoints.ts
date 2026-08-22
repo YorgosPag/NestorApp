@@ -26,7 +26,7 @@
 
 import type { Entity } from '../../types/entities';
 import { isMepManifoldEntity, isMepFixtureEntity } from '../../types/entities';
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import { connectorWorldPosition } from '../types/mep-connector-types';
 import { getEntityConnectors } from './connector-access';
 import { pointHostMountingElevationMm } from '../mep-segments/mep-connector-elevation';
@@ -42,7 +42,7 @@ export interface HostConnectorEndpoint {
   /** Host-local connector id (manifold outlet / inlet id). */
   readonly connectorId: string;
   /** World plan position (canvas units); `z` stays 0 — elevation lives in `zScene`. */
-  readonly point: Point3D;
+  readonly point: BimPoint;
   /** mm. Connector elevation from project origin (mounting datum + local z). */
   readonly elevationMm: number;
   /** Elevation in CANVAS units (`elevationMm · mmToScene`) — same axis as `point`, for xyz coincidence. */

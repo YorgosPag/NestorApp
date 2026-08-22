@@ -48,7 +48,7 @@ import {
   resolveSegmentEndpointElevationsMm,
   deriveCenterlineElevationMm,
 } from '../types/mep-segment-types';
-import type { Point3D } from '../types/bim-base';
+import type { BimPoint } from '../types/bim-base';
 import { connectorWorldPosition } from '../types/mep-connector-types';
 import {
   getEntityConnectors,
@@ -89,11 +89,11 @@ function dist2(ax: number, ay: number, bx: number, by: number): number {
  * connectors are returned (electrical ports never join a water run). Empty when the
  * host carries no plumbing datum (e.g. an electrical panel).
  */
-function hostPipeConnectorPoses(host: Entity): Map<string, Point3D> {
+function hostPipeConnectorPoses(host: Entity): Map<string, BimPoint> {
   const datum = pointHostMountingElevationMm(host);
   if (datum === null) return new Map();
   const { position, rotation } = getConnectorHostPlanTransform(host);
-  const poses = new Map<string, Point3D>();
+  const poses = new Map<string, BimPoint>();
   for (const c of getEntityConnectors(host)) {
     if (c.domain !== 'pipe') continue;
     const w = connectorWorldPosition(c, position, rotation);
@@ -141,13 +141,13 @@ function nearestAnchor(
  * stays stable for drag-merge — see file header).
  */
 function retargetEndpoint(
-  p: Point3D,
+  p: BimPoint,
   anchors: readonly AnchorMove[],
   tol2: number,
-): { point: Point3D; moved: boolean } | null {
+): { point: BimPoint; moved: boolean } | null {
   const a = nearestAnchor(p.x, p.y, anchors, tol2);
   if (!a) return null;
-  const point: Point3D = { x: a.toX, y: a.toY, z: a.toZMm };
+  const point: BimPoint = { x: a.toX, y: a.toY, z: a.toZMm };
   const moved = dist2(p.x, p.y, a.toX, a.toY) > COORD_EPS2 || (p.z ?? 0) !== a.toZMm;
   return { point, moved };
 }
