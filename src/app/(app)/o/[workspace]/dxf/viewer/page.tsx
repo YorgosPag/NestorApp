@@ -14,6 +14,7 @@ import useSpacingTokens from '@/hooks/useSpacingTokens';
 import useTypography from '@/hooks/useTypography';
 import { i18n } from '@/i18n';
 import { PageLoadingState, StaticPageLoading } from '@/core/states';
+import { FullBleedSurface } from '@/core/containers';
 
 const DxfViewerApp = dynamic(
   () => import('@/subapps/dxf-viewer/DxfViewerApp'),
@@ -80,13 +81,27 @@ export default function DxfViewerPage() {
 
   return (
     <AdminGuard>
-      <main className="w-full h-full" aria-label="DXF Viewer">
+      {/*
+        🖼️ ADR-793 — ΚΑΜΒΑΣ: ΜΗΔΕΝ ΔΙΑΔΡΟΜΟΣ, ΚΑΙ Ο ΛΟΓΟΣ ΕΙΝΑΙ ΜΕΤΡΗΜΕΝΟΣ.
+
+        Το κέλυφος δίνει ρευστό διάδρομο σε **κάθε** σελίδα — σωστά, γιατί η
+        προεπιλογή είναι fail-closed. Εδώ όμως η επιφάνεια **είναι** το προϊόν:
+        μετρήθηκε ζωντανά (2400×1200, μπάρα σε εικονίδια) ότι ο διάδρομος κόβει
+        **64px πλάτος × 48px ύψος = 6,9% της επιφάνειας σχεδίασης**.
+
+        Σε εργαλείο CAD αυτό δεν είναι αισθητική επιλογή· είναι χαμένος καμβάς.
+
+        ⚠️ Το opt-out ζει **μόνο** στο κλαδί του viewer. Η οθόνη «δεν έχεις
+        δικαίωμα» του `AdminGuard` από πάνω κρατά τον διάδρομό της — είναι
+        **κείμενο**, και το κείμενο θέλει κενό.
+      */}
+      <FullBleedSurface className="h-full" ariaLabel="DXF Viewer">
         <Suspense
           fallback={<StaticPageLoading message={t('dxfViewer.loading')} />}
         >
           <DxfViewerApp className="w-full h-full" />
         </Suspense>
-      </main>
+      </FullBleedSurface>
     </AdminGuard>
   );
 }

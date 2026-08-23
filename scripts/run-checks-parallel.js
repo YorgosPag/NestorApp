@@ -517,6 +517,23 @@ if (!process.env.SKIP_WORKSPACE_AUTHORITY && allFiles.length > 0)
 if (!process.env.SKIP_POINT_VOCABULARY && allFiles.length > 0)
   addThread('3.59', 'Point vocabulary', 'scripts/check-point-vocabulary.js', allFiles);
 
+// CHECK 3.62 — ΠΥΛΗ ΔΗΜΟΣΙΑΣ ΕΠΙΦΑΝΕΙΑΣ (ADR-796). «Ζητά κάποιος από ΕΞΩ ένα σύμβολο
+// του dxf-viewer που κανείς δεν δήλωσε δημόσιο;»
+// 🔴 ΑΝΤΙΚΑΘΙΣΤΑ τον κανόνα `not-to-dxf-internals` του `.dependency-cruiser.cjs`, που
+// επέβαλλε barrel `src/subapps/dxf-viewer/index.ts` ΠΟΥ ΔΕΝ ΥΠΗΡΞΕ ΠΟΤΕ (`git log --all`
+// κενό): 163 αρχεία εισάγουν βαθιά, 0 μέσω barrel, και η ΙΔΙΑ η σελίδα της εφαρμογής
+// παραβιάζει. Φρουρός ΕΝΕΡΓΟΣ (baseline 335, DOWN-only) με ΑΝΥΠΑΡΚΤΗ θεραπεία —
+// χειρότερο από τους 606 αδρανείς του ADR-749 §5, γιατί εκείνοι δεν πυροδοτούν καν.
+// 🏆 ΓΙΑΤΙ ΟΧΙ BARREL: το Atlassian ΑΦΑΙΡΕΣΕ τα barrels από το Jira (90.000 αρχεία) και
+// μέτρησε 75% ταχύτερα builds — και ΠΑΡΑΔΕΧΤΗΚΕ ότι έτσι έχασε την ενθυλάκωση. Εδώ η
+// ενθυλάκωση γίνεται ΔΕΔΟΜΕΝΟ (.dxf-viewer-public-api.json) αντί για MODULE: μηδέν
+// κόμβος στον γράφο εισαγωγών ⇒ το όφελος του Atlassian ΚΑΙ η εγγύηση του Revit,
+// ανά ΣΥΜΒΟΛΟ — αυστηρότερο από το `package.json exports`, που κρίνει μονοπάτια.
+// ⚠️ Η ΣΚΑΝΔΑΛΗ ΖΕΙ ΜΕΣΑ ΣΤΗΝ ΠΥΛΗ: νέος καταναλωτής προσγειώνεται σε ΟΠΟΙΟΔΗΠΟΤΕ
+// αρχείο του src/, άρα λίστα μονοπατιών εδώ θα ήταν δεύτερη αυθεντία (3.34: 63).
+if (!process.env.SKIP_PUBLIC_SURFACE && allFiles.length > 0)
+  addThread('3.62', 'Public surface', 'scripts/check-public-surface.js', allFiles);
+
 // CHECK 3.60 — πύλη εμβέλειας χώρου (ADR-787 §5.3 γ). «Ζει αυτή η σελίδα πίσω από το
 // πρόθεμα χώρου — και αν όχι, το είπε κάποιος με λόγο;»
 // 🔑 Η ΠΡΟΕΠΙΛΟΓΗ ΕΙΝΑΙ «ΜΠΑΙΝΕΙ», ΚΑΙ Η ΚΑΤΕΥΘΥΝΣΗ ΕΙΝΑΙ ΟΛΟ ΤΟ ΝΟΗΜΑ: δύο κριτήρια για
