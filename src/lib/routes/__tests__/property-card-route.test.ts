@@ -1,6 +1,6 @@
 /**
  * @fileoverview **ΑΓΚΥΡΕΣ: Ο ΣΥΝΔΕΣΜΟΣ ΟΔΗΓΕΙ ΚΑΠΟΥ** (ADR-777 §8.30).
- * @related lib/routes/entityRoutes · app/(app)/properties/[id]/page.tsx
+ * @related lib/routes/entityRoutes · app/(app)/o/[workspace]/properties/[id]/page.tsx
  *
  * ────────────────────────────────────────────────────────────────────────────
  * 🔴 ΓΙΑΤΙ ΥΠΑΡΧΟΥΝ — ΤΟ ΕΛΑΤΤΩΜΑ ΕΠΕΖΗΣΕ ΕΠΕΙΔΗ ΚΑΘΕ ΚΟΜΜΑΤΙ ΗΤΑΝ «ΣΩΣΤΟ»
@@ -28,7 +28,10 @@ const REPO_ROOT = join(__dirname, '..', '..', '..', '..');
 const read = (relative: string): string =>
   readFileSync(join(REPO_ROOT, relative), 'utf8');
 
-const PROPERTY_DETAIL_PAGE = 'src/app/(app)/properties/[id]/page.tsx';
+// ⚠️ ADR-787 §5.3 — η σελίδα ΜΕΤΑΚΟΜΙΣΕ κάτω από το πρόθεμα χώρου (`5ff0baa2`).
+// Η άγκυρα διαβάζει **αρχείο**, άρα το μονοπάτι είναι μέρος του συμβολαίου της:
+// έμεινε πίσω και τα Α1-Α8 έπεσαν με «δεν βρέθηκε», όχι με «λάθος περιεχόμενο».
+const PROPERTY_DETAIL_PAGE = 'src/app/(app)/o/[workspace]/properties/[id]/page.tsx';
 const DETAIL_SURFACE = 'src/features/property-detail-surface/PropertyDetailSurface.tsx';
 
 describe('ADR-777 §8.30 — η καρτέλα ακινήτου έχει διεύθυνση που οδηγεί κάπου', () => {

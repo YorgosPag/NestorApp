@@ -13,76 +13,41 @@ import 'server-only';
  * @see src/lib/auth/tenant-isolation.ts (requireProjectInTenant SSoT)
  */
 
-import { SESSION_COOKIE_CONFIG } from '@/lib/auth/security-policy';
-import { getDevCompanyId } from '@/config/dev-environment';
-import { getCurrentRuntimeEnvironment } from '@/config/environment-security-config';
-import { verifySessionCookieToken } from '@/server/admin/admin-guards';
 import { requireProjectInTenant, TenantIsolationError, type TenantProject } from '@/lib/auth/tenant-isolation';
-import { isValidGlobalRole, type GlobalRole, type AuthContext } from '@/lib/auth/types';
-import { createModuleLogger } from '@/lib/telemetry';
-
-const logger = createModuleLogger('RequireProjectForPage');
+import { type AuthContext } from '@/lib/auth/types';
+import { readPageIdentity, type PageIdentityRejection } from '@/server/auth/page-identity';
 
 export interface RequireProjectForPageResult {
   ctx: AuthContext;
   project: TenantProject;
 }
 
+/**
+ * Ο λόγος απόρριψης → **το μήνυμα που έβγαζε αυτό το αρχείο πριν την εξαγωγή**.
+ * Ρητός πίνακας, ώστε η κεντρικοποίηση να μην αλλάξει ούτε μία συμβολοσειρά.
+ */
+const REJECTION_MESSAGE: Readonly<Record<PageIdentityRejection, string>> = {
+  'no-session': 'Not authenticated',
+  'invalid-session': 'Invalid or expired session',
+  'missing-companyId': 'Missing companyId claim',
+  'invalid-role': 'Missing or invalid globalRole claim',
+};
+
 export async function requireProjectForPage(
   projectId: string,
   path: string,
 ): Promise<RequireProjectForPageResult> {
-  const environment = getCurrentRuntimeEnvironment();
-  const { cookies } = await import('next/headers');
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get(SESSION_COOKIE_CONFIG.NAME)?.value;
+  // 🔑 Η ΑΝΑΓΝΩΣΗ ΤΑΥΤΟΤΗΤΑΣ ΕΞΗΧΘΗ (ADR-787 §5.3 ι) — ο ίδιος κώδικας έτρεχε ήδη
+  //    εδώ· τώρα ζει στο `page-identity.ts` και τον μοιράζεται και ο φρουρός του
+  //    χώρου. ⚠️ Τα μηνύματα σφάλματος μένουν **αυτούσια**: η αντιστοίχιση
+  //    λόγου→μήνυμα είναι ρητή ακριβώς για να μη χαθεί διαγνωστικό που υπήρχε.
+  const identity = await readPageIdentity();
 
-  let ctx: AuthContext;
-
-  if (!sessionCookie && environment === 'development') {
-    logger.info('[REQUIRE_PROJECT_FOR_PAGE] Dev bypass — no session cookie');
-    ctx = {
-      uid: 'dev-user',
-      email: 'dev@localhost',
-      companyId: await getDevCompanyId(),
-      globalRole: 'company_admin',
-      mfaEnrolled: false,
-      isAuthenticated: true,
-    };
-  } else {
-    if (!sessionCookie) {
-      throw new TenantIsolationError('Not authenticated', 403, 'FORBIDDEN');
-    }
-
-    const decoded = await verifySessionCookieToken(sessionCookie);
-    if (!decoded) {
-      throw new TenantIsolationError('Invalid or expired session', 403, 'FORBIDDEN');
-    }
-
-    // ADR-657 §3.5 — FAIL CLOSED. No env-var companyId fallback, no default
-    // 'company_admin' role: a session cookie without RFC-v6 claims is denied,
-    // not silently promoted to a default tenant + admin.
-    const companyId = decoded.companyId as string | undefined;
-    if (typeof companyId !== 'string' || companyId.length === 0) {
-      throw new TenantIsolationError('Missing companyId claim', 403, 'FORBIDDEN');
-    }
-
-    const globalRoleRaw = decoded.globalRole as string | undefined;
-    if (typeof globalRoleRaw !== 'string' || !isValidGlobalRole(globalRoleRaw)) {
-      throw new TenantIsolationError('Missing or invalid globalRole claim', 403, 'FORBIDDEN');
-    }
-    const globalRole: GlobalRole = globalRoleRaw;
-
-    ctx = {
-      uid: decoded.uid,
-      email: decoded.email || '',
-      companyId,
-      globalRole,
-      mfaEnrolled: decoded.mfaEnrolled === true,
-      isAuthenticated: true,
-    };
+  if (!identity.ok) {
+    throw new TenantIsolationError(REJECTION_MESSAGE[identity.reason], 403, 'FORBIDDEN');
   }
 
+  const { ctx } = identity;
   const project = await requireProjectInTenant({ ctx, projectId, path });
   return { ctx, project };
 }

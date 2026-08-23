@@ -26,7 +26,7 @@
  * @module app/(app)/layout
  */
 
-import { usePathname } from 'next/navigation';
+import { usePathname } from '@/lib/workspace/navigation';
 
 import { AppHeader } from '@/components/app-header';
 import { AppSidebar } from '@/components/app-sidebar';

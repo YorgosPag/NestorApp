@@ -52,6 +52,10 @@ jest.mock('@/lib/telemetry', () => ({
 
 import { resolveAlias, claimAlias, aliasKey } from '../alias-registry';
 import { PERSONAL_WORKSPACE_ALIAS } from '@/types/workspace-alias';
+// ⚠️ Οι δύο κριτές μορφής, εισαγμένοι για την άγκυρα Δ7: η ξενότητα των
+//    γραμματικών αποδεικνύεται ΕΚΤΕΛΩΝΤΑΣ τους, όχι διαβάζοντάς τους.
+import { judgeAliasShape } from '../alias-rules';
+import { isValidEnterpriseId } from '@/services/enterprise-id-parse';
 
 const COMPANY_A = 'comp_aaaaaaaa-0000-0000-0000-000000000001';
 const COMPANY_B = 'comp_bbbbbbbb-0000-0000-0000-000000000002';
@@ -239,5 +243,92 @@ describe('Γ — η ατομικότητα είναι του Firestore, όχι �
 
   it('Γ4: δύο διαφορετικά ονόματα δίνουν ΔΙΑΦΟΡΕΤΙΚΑ κλειδιά', () => {
     expect(aliasKey('pagonis')).not.toBe(aliasKey('nestor'));
+  });
+});
+
+// =============================================================================
+// Δ — Η ΔΕΥΤΕΡΗ ΜΟΡΦΗ: Η ΣΤΑΘΕΡΗ ΤΑΥΤΟΤΗΤΑ (ADR-787 §5.3 ζ)
+// =============================================================================
+//
+// ΓΙΑΤΙ ΥΠΑΡΧΕΙ Η ΟΜΑΔΑ: μετρήθηκε 2026-08-23 ότι `claimAlias` έχει **0
+// καλούντες** και το `workspace_aliases` **0 έγγραφα** ⇒ κανένας χώρος δεν έχει
+// όνομα ⇒ καμία διεύθυνση `/o/…` δεν ήταν κατασκευάσιμη. Η ταυτότητα υπάρχει
+// ήδη στα claims, άρα η μορφή αυτή κάνει τη διεύθυνση κατασκευάσιμη ΣΗΜΕΡΑ.
+
+/** ⚠️ Η **πραγματική** ταυτότητα της εταιρείας της βάσης — όχι επινοημένη. */
+const REAL_COMPANY = 'comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757';
+
+describe('Δ — η σταθερή ταυτότητα ως δεύτερη μορφή', () => {
+  it('Δ1: 🔴 ταυτότητα εταιρείας ⇒ found, form=identity, ΤΟ ΙΔΙΟ companyId', async () => {
+    const res = await resolveAlias(REAL_COMPANY);
+    expect(res).toEqual({
+      outcome: 'found',
+      companyId: REAL_COMPANY,
+      form: 'identity',
+      current: true,
+      canonicalAlias: null,
+    });
+  });
+
+  it('Δ2: 🔴 ΜΗΔΕΝ ΑΝΑΓΝΩΣΕΙΣ — και ΤΑΥΤΟΧΡΟΝΑ βρήκε τον χώρο', async () => {
+    // ⚠️ Ο ΠΑΡΟΝΟΜΑΣΤΗΣ ΕΙΝΑΙ ΤΟ `found`, ΚΑΙ ΤΟΝ ΠΛΗΡΩΣΑΜΕ: σκέτο
+    //    `expect(reads).toEqual([])` έμενε **ΠΡΑΣΙΝΟ** όταν σβήναμε ολόκληρο τον
+    //    κλάδο ταυτότητας (μετάλλαξη Μ3) — γιατί τότε το `_` απορρίπτεται στη
+    //    μορφή και η βάση **πάλι** δεν αγγίζεται. Θα αποδείκνυε «δεν κοίταξα»
+    //    αντί για «απάντησα χωρίς να κοιτάξω».
+    const res = await resolveAlias(REAL_COMPANY);
+    expect(res.outcome).toBe('found');
+    expect(reads).toEqual([]);
+  });
+
+  it('Δ3: 🔴🔴 ΛΥΝΕΤΑΙ ΚΑΙ ΜΕ ΤΗ ΒΑΣΗ ΠΕΣΜΕΝΗ — ο χώρος δεν εξαφανίζεται σε βλάβη', async () => {
+    // Ο λόγος που το «μηδέν αναγνώσεις» του Δ2 δεν είναι απλώς επίδοση: με
+    // ψευδώνυμο, μια πεσμένη βάση δίνει `unknown` ⇒ 503 (Β4/Β5). Με ταυτότητα
+    // ο άνθρωπος συνεχίζει να δουλεύει.
+    adminAvailable = false;
+    failReads = true;
+    expect((await resolveAlias(REAL_COMPANY)).outcome).toBe('found');
+    // ⚠️ Ο ΠΑΡΟΝΟΜΑΣΤΗΣ: στην ΙΔΙΑ βλάβη το ψευδώνυμο ΟΦΕΙΛΕΙ να λέει `unknown`.
+    expect((await resolveAlias('pagonis')).outcome).toBe('unknown');
+  });
+
+  it('Δ4: 🔴 ΛΑΘΟΣ ΠΡΟΘΕΜΑ — ένα έργο δεν ονομάζει χώρο', async () => {
+    // Ίδιο σχήμα, έγκυρο uuid v4, ΑΛΛΟ πρόθεμα: χωρίς τον έλεγχο προθέματος θα
+    // περνούσε στον απαντητή ως υποψήφιος οργανισμός.
+    const res = await resolveAlias('proj_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757');
+    expect(res.outcome).toBe('not-found');
+    expect(reads).toEqual([]); // ούτε καν άγγιξε τη βάση — το `_` κόβεται στη μορφή
+  });
+
+  it('Δ5: 🔶 ΔΗΛΩΜΕΝΗ ΑΥΣΤΗΡΟΤΗΤΑ — `comp_` χωρίς γνήσιο uuid v4 ΔΕΝ είναι ταυτότητα', async () => {
+    // fail-closed, και **δηλωμένο**: ο κριτής είναι ο `isValidEnterpriseId`, όχι
+    // ένα χαλαρότερο δικό μας. Συνέπεια: τέτοιο id δίνει 404 — ορατό, ποτέ σιωπηλό.
+    // ⚠️ Το `COMPANY_A` αυτού του αρχείου είναι ΑΚΡΙΒΩΣ τέτοιο, και γι' αυτό οι
+    //    ομάδες Α/Β/Γ έμειναν πράσινες όταν προστέθηκε η μορφή.
+    expect((await resolveAlias(COMPANY_A)).outcome).toBe('not-found');
+  });
+
+  it('Δ6: ο ΠΑΡΟΝΟΜΑΣΤΗΣ — το ψευδώνυμο εξακολουθεί να λέει form=alias', async () => {
+    // Χωρίς αυτό, το Δ1 θα μπορούσε να περνά επειδή **τα πάντα** λένε `identity`.
+    await claimAlias(REAL_COMPANY, 'pagonis');
+    const res = await resolveAlias('pagonis');
+    expect(res.outcome).toBe('found');
+    if (res.outcome !== 'found') return;
+    expect(res.form).toBe('alias');
+    expect(res.companyId).toBe(REAL_COMPANY);
+  });
+
+  it('Δ7: 🔴 ΤΟ ΘΕΜΕΛΙΟ — οι δύο γραμματικές δεν τέμνονται ΠΟΤΕ', async () => {
+    // Η ασφάλεια όλης της μορφής στηρίζεται σε ΑΥΤΟ: καμία συμβολοσειρά δεν
+    // είναι ταυτόχρονα έγκυρο ψευδώνυμο ΚΑΙ έγκυρη ταυτότητα. Δεν είναι σύμβαση
+    // — είναι ιδιότητα των ΥΠΑΡΧΟΥΣΩΝ γραμματικών (το `_`).
+    const identities = [REAL_COMPANY, 'comp_11111111-2222-4333-8444-555555555555'];
+    for (const id of identities) {
+      expect(judgeAliasShape(id).ok).toBe(false); // ποτέ έγκυρο ψευδώνυμο
+      expect(isValidEnterpriseId(id)).toBe(true); // πάντα έγκυρη ταυτότητα
+    }
+    for (const alias of ['pagonis', 'nestor', 'me', 'a-b-c', 'ΠΑΓΩΝΗΣ']) {
+      expect(isValidEnterpriseId(alias)).toBe(false); // ποτέ έγκυρη ταυτότητα
+    }
   });
 });
