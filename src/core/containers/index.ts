@@ -6,3 +6,6 @@ export { PageContainer } from './PageContainer';
 export type { PageContainerProps } from './PageContainer';
 export { FullscreenOverlay, FullscreenToggleButton } from './FullscreenOverlay';
 export type { FullscreenOverlayProps } from './FullscreenOverlay';
+
+export { FullBleedSurface } from './FullBleedSurface';
+export type { FullBleedSurfaceProps } from './FullBleedSurface';

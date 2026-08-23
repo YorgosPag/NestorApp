@@ -9,6 +9,11 @@
    Μητρώο: .zindex-foreign.json · φρουρός: CHECK 3.50 (δεύτερο κατάστιχο). */
 @import './foreign-boundary.css';
 
+/* 🏛️ Η ΕΠΙΦΑΝΕΙΑ ΤΟΥ ΚΕΛΥΦΟΥΣ (ADR-793) — ο ΕΝΑΣ ιδιοκτήτης του κενού ανάμεσα
+   στην μπάρα και το περιεχόμενο. Ρευστός διάδρομος μετρημένος στο **pane**, όχι
+   στο παράθυρο. Φρουρός: CHECK 3.61. */
+@import './shell-surface.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

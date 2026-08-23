@@ -58,6 +58,13 @@ export interface DesignTokens {
   spacing_component_margin_sm: string;
   spacing_component_margin_md: string;
   spacing_component_margin_lg: string;
+  spacing_layout_gutter_min: string;
+  spacing_layout_gutter_max: string;
+  spacing_layout_pane_min: string;
+  spacing_layout_pane_max: string;
+  spacing_layout_block: string;
+  spacing_layout_density_comfortable: string;
+  spacing_layout_density_compact: string;
   typography_fontSize_xs: string;
   typography_fontSize_sm: string;
   typography_fontSize_base: string;
@@ -217,6 +224,13 @@ export const designTokens: DesignTokens = {
   spacing_component_margin_sm: 'var(--spacing-component-margin-sm)',
   spacing_component_margin_md: 'var(--spacing-component-margin-md)',
   spacing_component_margin_lg: 'var(--spacing-component-margin-lg)',
+  spacing_layout_gutter_min: 'var(--spacing-layout-gutter-min)',
+  spacing_layout_gutter_max: 'var(--spacing-layout-gutter-max)',
+  spacing_layout_pane_min: 'var(--spacing-layout-pane-min)',
+  spacing_layout_pane_max: 'var(--spacing-layout-pane-max)',
+  spacing_layout_block: 'var(--spacing-layout-block)',
+  spacing_layout_density_comfortable: 'var(--spacing-layout-density-comfortable)',
+  spacing_layout_density_compact: 'var(--spacing-layout-density-compact)',
   typography_fontSize_xs: 'var(--typography-font-size-xs)',
   typography_fontSize_sm: 'var(--typography-font-size-sm)',
   typography_fontSize_base: 'var(--typography-font-size-base)',

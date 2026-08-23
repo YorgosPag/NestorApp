@@ -99,6 +99,70 @@ function formatCSSValue(value, type) {
 }
 
 // ============================================================================
+// ADR-793 — ΡΕΥΣΤΗ ΚΛΙΜΑΚΑ ΚΕΛΥΦΟΥΣ (fluid layout)
+// ============================================================================
+
+/**
+ * Παράγει τα **παράγωγα** της ρευστής κλίμακας του διαδρόμου.
+ *
+ * 🔑 **ΓΙΑΤΙ ΠΑΡΑΓΟΝΤΑΙ ΕΔΩ ΚΑΙ ΟΧΙ ΣΤΟ CSS.** Η ευθεία που ενώνει τους δύο
+ * πόλους θέλει `(gmax − gmin) / (pmax − pmin)`, δηλαδή **διαίρεση μήκους με
+ * μήκος**. Αυτό είναι *typed arithmetic* (CSS Values 4) και υποστηρίζεται μόνο
+ * σε **Chrome 119+ / Safari 17+ / Firefox 116+**. Σε παλαιότερο browser η
+ * `calc()` γίνεται **invalid at computed-value time**, οπότε **ολόκληρη η
+ * δήλωση πέφτει** και ο διάδρομος γίνεται **0** — δηλαδή ακριβώς το ελάττωμα
+ * που αυτό το ADR θεραπεύει, ξαναγεννημένο **σιωπηλά** και μόνο σε ξένη οθόνη.
+ *
+ * Ο generator είναι Node: κάνει την ίδια αριθμητική **μία φορά, στο build**,
+ * και το CSS μένει με `number × length` (Level 3, παντού). Κανείς δεν γράφει
+ * τους αριθμούς με το χέρι, άρα **δεν μπορούν να αποκλίνουν** από τους πόλους
+ * (ADR-749: μία μηχανή).
+ *
+ * @param {object} tokens Το πλήρες δέντρο του `design-tokens.json`.
+ * @returns {string} Γραμμές CSS custom properties, ή '' αν λείπει η κλίμακα.
+ */
+function emitFluidLayout(tokens) {
+  const layout = tokens?.spacing?.layout;
+  if (!layout) return '';
+
+  const num = (node, name) => {
+    const raw = Number(node?.value);
+    if (!Number.isFinite(raw)) {
+      // ⛔ fail-closed: σιωπηλή παράλειψη θα έδινε CSS που «δουλεύει» με
+      //    λάθος γεωμετρία — χειρότερο από σφάλμα build.
+      throw new Error(`[fluid-layout] Μη αριθμητικός πόλος: spacing.layout.${name}`);
+    }
+    return raw;
+  };
+
+  const gutterMin = num(layout.gutter?.min, 'gutter.min');
+  const gutterMax = num(layout.gutter?.max, 'gutter.max');
+  const paneMin = num(layout.pane?.min, 'pane.min');
+  const paneMax = num(layout.pane?.max, 'pane.max');
+
+  if (paneMax <= paneMin) {
+    throw new Error('[fluid-layout] pane.max πρέπει να είναι μεγαλύτερο του pane.min');
+  }
+  if (gutterMax < gutterMin) {
+    throw new Error('[fluid-layout] gutter.max δεν επιτρέπεται να είναι μικρότερο του gutter.min');
+  }
+
+  // Ευθεία μέσα από (paneMin, gutterMin) και (paneMax, gutterMax).
+  const slope = (gutterMax - gutterMin) / (paneMax - paneMin);
+  const intercept = gutterMin - slope * paneMin;
+
+  const round = (n) => Number(n.toFixed(6));
+
+  return [
+    '',
+    '  /* ── ADR-793: παράγωγα ρευστής κλίμακας — ΜΗΝ τα γράψεις με το χέρι ── */',
+    `  --shell-gutter-slope: ${round(slope)};`,
+    `  --shell-gutter-intercept: ${round(intercept)}px;`,
+    '',
+  ].join('\n');
+}
+
+// ============================================================================
 // GENERATORS - Output Generation
 // ============================================================================
 
@@ -128,6 +192,9 @@ function generateCSS(tokens) {
       css += `  ${cssVar}: ${formattedValue};\n`;
     }
   }
+
+  // 🔴 ADR-793 — ΤΑ ΠΑΡΑΓΩΓΑ ΤΗΣ ΡΕΥΣΤΗΣ ΚΛΙΜΑΚΑΣ, ΠΑΡΑΓΟΜΕΝΑ ΚΑΙ ΟΧΙ ΓΡΑΜΜΕΝΑ.
+  css += emitFluidLayout(tokens);
 
   css += `}\n\n`;
 

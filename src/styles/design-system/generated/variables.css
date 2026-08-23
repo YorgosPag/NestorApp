@@ -61,6 +61,13 @@
   --spacing-component-margin-sm: 8px;
   --spacing-component-margin-md: 16px;
   --spacing-component-margin-lg: 24px;
+  --spacing-layout-gutter-min: 16px;
+  --spacing-layout-gutter-max: 32px;
+  --spacing-layout-pane-min: 640px;
+  --spacing-layout-pane-max: 1600px;
+  --spacing-layout-block: 24px;
+  --spacing-layout-density-comfortable: 1;
+  --spacing-layout-density-compact: 0.75;
   --typography-font-size-xs: 12px;
   --typography-font-size-sm: 14px;
   --typography-font-size-base: 16px;
@@ -165,6 +172,10 @@
   --canvas-themes-blender: #232323;
   --canvas-themes-light: #ffffff;
   --canvas-themes-cinema4d: #555555;
+
+  /* ── ADR-793: παράγωγα ρευστής κλίμακας — ΜΗΝ τα γράψεις με το χέρι ── */
+  --shell-gutter-slope: 0.016667;
+  --shell-gutter-intercept: 5.333333px;
 }
 
 /* 🏢 ENTERPRISE UTILITY CLASSES - Auto-Generated */

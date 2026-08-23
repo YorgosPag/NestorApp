@@ -55,7 +55,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "53c9a2d771fa856d276460d136bd5568f61d2bf55b7f2cdf13bb6660df776883",
+  "inputsSha256": "756c17695af76989f74ade504715edfd39e151f880f04f53b822b66069b298d5",
   "languages": [
     "el"
   ],
@@ -475,7 +475,7 @@
     "src/stores/notificationCenter.ts": "c4f8f29729db4f02dbacd6bf6178ab476ee82489f80ebb86893f83434e98db98",
     "src/stores/voiceCommandStore.ts": "336596aa084185b15bada8f4231a7b8f91e0c4a2dd109e1532f37a0d1800fbeb",
     "src/styles/design-tokens/core/spacing.ts": "3b07162c1cdd384cf1db5c5d03c6157c268621800a541299de8791b01fbe0067",
-    "src/styles/design-tokens/generated/tokens.ts": "16b26a366d1d90a4353b4f9fcf1128b23962acafcd05b770da5f74699e5460e4",
+    "src/styles/design-tokens/generated/tokens.ts": "baf50e3574d8eae2a0408e43cd4c1623bd9a5b1eb6277b77567caba0160acb50",
     "src/styles/design-tokens/modules/borders.ts": "2a1dca295361b01d1a3e117c7fac45a8b42486290f7dce13bf5d894a97fa35d3",
     "src/styles/design-tokens/modules/component-sizes.ts": "2ed2a162f574891c36a7b41ee6638ee7f7647454730cd5f92aff849f9d7d3678",
     "src/styles/design-tokens/modules/foundations.ts": "3748a0c74a99cddef63cff715dd573379d532bbe5b97b67ab013377bfa3e6d4d",

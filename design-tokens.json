@@ -10,139 +10,426 @@
   "color": {
     "brand": {
       "primary": {
-        "50": { "value": "#eff6ff", "type": "color" },
-        "100": { "value": "#dbeafe", "type": "color" },
-        "500": { "value": "#3b82f6", "type": "color" },
-        "600": { "value": "#2563eb", "type": "color" },
-        "700": { "value": "#1d4ed8", "type": "color" }
+        "50": {
+          "value": "#eff6ff",
+          "type": "color"
+        },
+        "100": {
+          "value": "#dbeafe",
+          "type": "color"
+        },
+        "500": {
+          "value": "#3b82f6",
+          "type": "color"
+        },
+        "600": {
+          "value": "#2563eb",
+          "type": "color"
+        },
+        "700": {
+          "value": "#1d4ed8",
+          "type": "color"
+        }
       },
       "success": {
-        "50": { "value": "#f0fdf4", "type": "color" },
-        "500": { "value": "#22c55e", "type": "color" },
-        "600": { "value": "#16a34a", "type": "color" }
+        "50": {
+          "value": "#f0fdf4",
+          "type": "color"
+        },
+        "500": {
+          "value": "#22c55e",
+          "type": "color"
+        },
+        "600": {
+          "value": "#16a34a",
+          "type": "color"
+        }
       },
       "warning": {
-        "50": { "value": "#fff7ed", "type": "color" },
-        "500": { "value": "#f97316", "type": "color" },
-        "600": { "value": "#ea580c", "type": "color" }
+        "50": {
+          "value": "#fff7ed",
+          "type": "color"
+        },
+        "500": {
+          "value": "#f97316",
+          "type": "color"
+        },
+        "600": {
+          "value": "#ea580c",
+          "type": "color"
+        }
       },
       "error": {
-        "50": { "value": "#fef2f2", "type": "color" },
-        "500": { "value": "#ef4444", "type": "color" },
-        "600": { "value": "#dc2626", "type": "color" }
+        "50": {
+          "value": "#fef2f2",
+          "type": "color"
+        },
+        "500": {
+          "value": "#ef4444",
+          "type": "color"
+        },
+        "600": {
+          "value": "#dc2626",
+          "type": "color"
+        }
       },
       "info": {
-        "50": { "value": "#eff6ff", "type": "color" },
-        "500": { "value": "#3b82f6", "type": "color" },
-        "600": { "value": "#2563eb", "type": "color" }
+        "50": {
+          "value": "#eff6ff",
+          "type": "color"
+        },
+        "500": {
+          "value": "#3b82f6",
+          "type": "color"
+        },
+        "600": {
+          "value": "#2563eb",
+          "type": "color"
+        }
       }
     },
     "semantic": {
-      "success": { "value": "{color.brand.success.600}", "type": "color" },
-      "warning": { "value": "{color.brand.warning.600}", "type": "color" },
-      "error": { "value": "{color.brand.error.600}", "type": "color" },
-      "info": { "value": "{color.brand.info.600}", "type": "color" }
+      "success": {
+        "value": "{color.brand.success.600}",
+        "type": "color"
+      },
+      "warning": {
+        "value": "{color.brand.warning.600}",
+        "type": "color"
+      },
+      "error": {
+        "value": "{color.brand.error.600}",
+        "type": "color"
+      },
+      "info": {
+        "value": "{color.brand.info.600}",
+        "type": "color"
+      }
     },
     "background": {
-      "primary": { "value": "#ffffff", "type": "color" },
-      "secondary": { "value": "#f9fafb", "type": "color" },
-      "muted": { "value": "#21405f", "type": "color" },
-      "hover": { "value": "#f9fafb", "type": "color" },
-      "info-subtle": { "value": "#182633", "type": "color" }
+      "primary": {
+        "value": "#ffffff",
+        "type": "color"
+      },
+      "secondary": {
+        "value": "#f9fafb",
+        "type": "color"
+      },
+      "muted": {
+        "value": "#21405f",
+        "type": "color"
+      },
+      "hover": {
+        "value": "#f9fafb",
+        "type": "color"
+      },
+      "info-subtle": {
+        "value": "#182633",
+        "type": "color"
+      }
     },
     "text": {
-      "primary": { "value": "#111827", "type": "color" },
-      "secondary": { "value": "#6b7280", "type": "color" },
-      "muted": { "value": "#9ca3af", "type": "color" },
-      "on-primary": { "value": "#ffffff", "type": "color" }
+      "primary": {
+        "value": "#111827",
+        "type": "color"
+      },
+      "secondary": {
+        "value": "#6b7280",
+        "type": "color"
+      },
+      "muted": {
+        "value": "#9ca3af",
+        "type": "color"
+      },
+      "on-primary": {
+        "value": "#ffffff",
+        "type": "color"
+      }
     },
     "border": {
-      "primary": { "value": "#e5e7eb", "type": "color" },
-      "secondary": { "value": "#f3f4f6", "type": "color" },
-      "focus": { "value": "{color.brand.primary.500}", "type": "color" }
+      "primary": {
+        "value": "#e5e7eb",
+        "type": "color"
+      },
+      "secondary": {
+        "value": "#f3f4f6",
+        "type": "color"
+      },
+      "focus": {
+        "value": "{color.brand.primary.500}",
+        "type": "color"
+      }
     }
   },
   "spacing": {
     "base": {
-      "xs": { "value": "4", "type": "spacing" },
-      "sm": { "value": "8", "type": "spacing" },
-      "md": { "value": "16", "type": "spacing" },
-      "lg": { "value": "24", "type": "spacing" },
-      "xl": { "value": "32", "type": "spacing" },
-      "2xl": { "value": "48", "type": "spacing" },
-      "3xl": { "value": "64", "type": "spacing" }
+      "xs": {
+        "value": "4",
+        "type": "spacing"
+      },
+      "sm": {
+        "value": "8",
+        "type": "spacing"
+      },
+      "md": {
+        "value": "16",
+        "type": "spacing"
+      },
+      "lg": {
+        "value": "24",
+        "type": "spacing"
+      },
+      "xl": {
+        "value": "32",
+        "type": "spacing"
+      },
+      "2xl": {
+        "value": "48",
+        "type": "spacing"
+      },
+      "3xl": {
+        "value": "64",
+        "type": "spacing"
+      }
     },
     "component": {
       "padding": {
-        "xs": { "value": "{spacing.base.sm}", "type": "spacing" },
-        "sm": { "value": "12", "type": "spacing" },
-        "md": { "value": "{spacing.base.md}", "type": "spacing" },
-        "lg": { "value": "{spacing.base.lg}", "type": "spacing" }
+        "xs": {
+          "value": "{spacing.base.sm}",
+          "type": "spacing"
+        },
+        "sm": {
+          "value": "12",
+          "type": "spacing"
+        },
+        "md": {
+          "value": "{spacing.base.md}",
+          "type": "spacing"
+        },
+        "lg": {
+          "value": "{spacing.base.lg}",
+          "type": "spacing"
+        }
       },
       "gap": {
-        "xs": { "value": "{spacing.base.xs}", "type": "spacing" },
-        "sm": { "value": "{spacing.base.sm}", "type": "spacing" },
-        "md": { "value": "{spacing.base.md}", "type": "spacing" },
-        "lg": { "value": "{spacing.base.lg}", "type": "spacing" }
+        "xs": {
+          "value": "{spacing.base.xs}",
+          "type": "spacing"
+        },
+        "sm": {
+          "value": "{spacing.base.sm}",
+          "type": "spacing"
+        },
+        "md": {
+          "value": "{spacing.base.md}",
+          "type": "spacing"
+        },
+        "lg": {
+          "value": "{spacing.base.lg}",
+          "type": "spacing"
+        }
       },
       "margin": {
-        "xs": { "value": "{spacing.base.xs}", "type": "spacing" },
-        "sm": { "value": "{spacing.base.sm}", "type": "spacing" },
-        "md": { "value": "{spacing.base.md}", "type": "spacing" },
-        "lg": { "value": "{spacing.base.lg}", "type": "spacing" }
+        "xs": {
+          "value": "{spacing.base.xs}",
+          "type": "spacing"
+        },
+        "sm": {
+          "value": "{spacing.base.sm}",
+          "type": "spacing"
+        },
+        "md": {
+          "value": "{spacing.base.md}",
+          "type": "spacing"
+        },
+        "lg": {
+          "value": "{spacing.base.lg}",
+          "type": "spacing"
+        }
+      }
+    },
+    "layout": {
+      "_description": "ADR-793 — Η ΚΛΙΜΑΚΑ ΤΟΥ ΚΕΛΥΦΟΥΣ, ΞΕΧΩΡΙΣΤΗ ΑΠΟ ΤΗΝ component. Πρότυπο Carbon: «the layout scale has larger increments used to control the DENSITY of a design». Οι τιμές είναι ΠΟΛΟΙ μιας ρευστής συνάρτησης, ΟΧΙ σκαλιά: το CSS τις συνθέτει σε clamp() πάνω στο ΠΡΑΓΜΑΤΙΚΟ πλάτος του pane. ⚠️ ΜΗΝ τις χρησιμοποιήσεις μέσα σε component — εκεί ζει το spacing.component.*, και η ανάμειξη ξαναγεννά το «κάθε σελίδα αποφασίζει μόνη της» που το ADR-793 έκλεισε.",
+      "gutter": {
+        "min": {
+          "value": "16",
+          "type": "spacing",
+          "comment": "Material 3 compact margin — ο κάτω πόλος, σε στενό pane."
+        },
+        "max": {
+          "value": "32",
+          "type": "spacing",
+          "comment": "Atlassian space.400 — ο πάνω πόλος, σε φαρδύ pane."
+        }
+      },
+      "pane": {
+        "min": {
+          "value": "640",
+          "type": "spacing",
+          "comment": "Κάτω πόλος του pane. Κάτω από αυτό ο διάδρομος μένει στο min."
+        },
+        "max": {
+          "value": "1600",
+          "type": "spacing",
+          "comment": "Πάνω πόλος του pane (M3 extra-large). Πάνω από αυτό μένει στο max."
+        }
+      },
+      "block": {
+        "value": "24",
+        "type": "spacing",
+        "comment": "Κάθετος διάδρομος — σταθερός. Material 3 medium."
+      },
+      "density": {
+        "comfortable": {
+          "value": "1",
+          "type": "other",
+          "comment": "Προεπιλογή."
+        },
+        "compact": {
+          "value": "0.75",
+          "type": "other",
+          "comment": "Για οθόνες με πυκνά δεδομένα (πίνακες, λίστες). 16→12 και 32→24. Η επιλογή του εργαλείου, όπως Revit/ArchiCAD: ο επαγγελματίας θέλει δεδομένα στην οθόνη, όχι αέρα."
+        }
       }
     }
   },
   "typography": {
     "fontSize": {
-      "xs": { "value": "12", "type": "fontSizes" },
-      "sm": { "value": "14", "type": "fontSizes" },
-      "base": { "value": "16", "type": "fontSizes" },
-      "lg": { "value": "18", "type": "fontSizes" },
-      "xl": { "value": "20", "type": "fontSizes" }
+      "xs": {
+        "value": "12",
+        "type": "fontSizes"
+      },
+      "sm": {
+        "value": "14",
+        "type": "fontSizes"
+      },
+      "base": {
+        "value": "16",
+        "type": "fontSizes"
+      },
+      "lg": {
+        "value": "18",
+        "type": "fontSizes"
+      },
+      "xl": {
+        "value": "20",
+        "type": "fontSizes"
+      }
     },
     "fontWeight": {
-      "normal": { "value": "400", "type": "fontWeights" },
-      "medium": { "value": "500", "type": "fontWeights" },
-      "semibold": { "value": "600", "type": "fontWeights" },
-      "bold": { "value": "700", "type": "fontWeights" }
+      "normal": {
+        "value": "400",
+        "type": "fontWeights"
+      },
+      "medium": {
+        "value": "500",
+        "type": "fontWeights"
+      },
+      "semibold": {
+        "value": "600",
+        "type": "fontWeights"
+      },
+      "bold": {
+        "value": "700",
+        "type": "fontWeights"
+      }
     },
     "fontFamily": {
-      "sans": { "value": "ui-sans-serif, system-ui, sans-serif", "type": "fontFamilies" },
-      "mono": { "value": "ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace", "type": "fontFamilies" }
+      "sans": {
+        "value": "ui-sans-serif, system-ui, sans-serif",
+        "type": "fontFamilies"
+      },
+      "mono": {
+        "value": "ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace",
+        "type": "fontFamilies"
+      }
     },
     "lineHeight": {
-      "tight": { "value": "1.25", "type": "lineHeights" },
-      "normal": { "value": "1.5", "type": "lineHeights" },
-      "loose": { "value": "1.75", "type": "lineHeights" }
+      "tight": {
+        "value": "1.25",
+        "type": "lineHeights"
+      },
+      "normal": {
+        "value": "1.5",
+        "type": "lineHeights"
+      },
+      "loose": {
+        "value": "1.75",
+        "type": "lineHeights"
+      }
     }
   },
   "performance": {
     "component": {
       "success": {
-        "background": { "value": "color-mix(in srgb, {color.semantic.success} 10%, transparent)", "type": "color" },
-        "border": { "value": "color-mix(in srgb, {color.semantic.success} 20%, transparent)", "type": "color" },
-        "hover": { "value": "color-mix(in srgb, {color.semantic.success} 30%, transparent)", "type": "color" }
+        "background": {
+          "value": "color-mix(in srgb, {color.semantic.success} 10%, transparent)",
+          "type": "color"
+        },
+        "border": {
+          "value": "color-mix(in srgb, {color.semantic.success} 20%, transparent)",
+          "type": "color"
+        },
+        "hover": {
+          "value": "color-mix(in srgb, {color.semantic.success} 30%, transparent)",
+          "type": "color"
+        }
       },
       "warning": {
-        "background": { "value": "color-mix(in srgb, {color.semantic.warning} 10%, transparent)", "type": "color" },
-        "border": { "value": "color-mix(in srgb, {color.semantic.warning} 20%, transparent)", "type": "color" },
-        "hover": { "value": "color-mix(in srgb, {color.semantic.warning} 30%, transparent)", "type": "color" }
+        "background": {
+          "value": "color-mix(in srgb, {color.semantic.warning} 10%, transparent)",
+          "type": "color"
+        },
+        "border": {
+          "value": "color-mix(in srgb, {color.semantic.warning} 20%, transparent)",
+          "type": "color"
+        },
+        "hover": {
+          "value": "color-mix(in srgb, {color.semantic.warning} 30%, transparent)",
+          "type": "color"
+        }
       },
       "error": {
-        "background": { "value": "color-mix(in srgb, {color.semantic.error} 10%, transparent)", "type": "color" },
-        "border": { "value": "color-mix(in srgb, {color.semantic.error} 20%, transparent)", "type": "color" },
-        "hover": { "value": "color-mix(in srgb, {color.semantic.error} 30%, transparent)", "type": "color" }
+        "background": {
+          "value": "color-mix(in srgb, {color.semantic.error} 10%, transparent)",
+          "type": "color"
+        },
+        "border": {
+          "value": "color-mix(in srgb, {color.semantic.error} 20%, transparent)",
+          "type": "color"
+        },
+        "hover": {
+          "value": "color-mix(in srgb, {color.semantic.error} 30%, transparent)",
+          "type": "color"
+        }
       },
       "info": {
-        "background": { "value": "color-mix(in srgb, {color.semantic.info} 10%, transparent)", "type": "color" },
-        "border": { "value": "color-mix(in srgb, {color.semantic.info} 20%, transparent)", "type": "color" },
-        "hover": { "value": "color-mix(in srgb, {color.semantic.info} 30%, transparent)", "type": "color" }
+        "background": {
+          "value": "color-mix(in srgb, {color.semantic.info} 10%, transparent)",
+          "type": "color"
+        },
+        "border": {
+          "value": "color-mix(in srgb, {color.semantic.info} 20%, transparent)",
+          "type": "color"
+        },
+        "hover": {
+          "value": "color-mix(in srgb, {color.semantic.info} 30%, transparent)",
+          "type": "color"
+        }
       },
       "card": {
-        "background": { "value": "color-mix(in srgb, {color.background.muted} 50%, transparent)", "type": "color" },
-        "border": { "value": "{color.border.secondary}", "type": "color" },
-        "padding": { "value": "{spacing.component.padding.sm}", "type": "spacing" }
+        "background": {
+          "value": "color-mix(in srgb, {color.background.muted} 50%, transparent)",
+          "type": "color"
+        },
+        "border": {
+          "value": "{color.border.secondary}",
+          "type": "color"
+        },
+        "padding": {
+          "value": "{spacing.component.padding.sm}",
+          "type": "spacing"
+        }
       }
     }
   },
@@ -150,90 +437,316 @@
     "states": {
       "focus": {
         "ring": {
-          "color": { "value": "{color.brand.primary.500}", "type": "color" },
-          "width": { "value": "2", "type": "spacing" },
-          "offset": { "value": "2", "type": "spacing" }
+          "color": {
+            "value": "{color.brand.primary.500}",
+            "type": "color"
+          },
+          "width": {
+            "value": "2",
+            "type": "spacing"
+          },
+          "offset": {
+            "value": "2",
+            "type": "spacing"
+          }
         }
       },
       "disabled": {
-        "opacity": { "value": "0.5", "type": "opacity" }
+        "opacity": {
+          "value": "0.5",
+          "type": "opacity"
+        }
       }
     }
   },
   "animation": {
     "duration": {
-      "fast": { "value": "150ms", "type": "duration" },
-      "normal": { "value": "200ms", "type": "duration" },
-      "slow": { "value": "300ms", "type": "duration" }
+      "fast": {
+        "value": "150ms",
+        "type": "duration"
+      },
+      "normal": {
+        "value": "200ms",
+        "type": "duration"
+      },
+      "slow": {
+        "value": "300ms",
+        "type": "duration"
+      }
     },
     "easing": {
-      "ease-out": { "value": "cubic-bezier(0, 0, 0.2, 1)", "type": "cubicBezier" },
-      "ease-in": { "value": "cubic-bezier(0.4, 0, 1, 1)", "type": "cubicBezier" },
-      "ease-in-out": { "value": "cubic-bezier(0.4, 0, 0.2, 1)", "type": "cubicBezier" }
+      "ease-out": {
+        "value": "cubic-bezier(0, 0, 0.2, 1)",
+        "type": "cubicBezier"
+      },
+      "ease-in": {
+        "value": "cubic-bezier(0.4, 0, 1, 1)",
+        "type": "cubicBezier"
+      },
+      "ease-in-out": {
+        "value": "cubic-bezier(0.4, 0, 0.2, 1)",
+        "type": "cubicBezier"
+      }
     }
   },
   "shadow": {
-    "sm": { "value": "0 1px 2px 0 rgba(0, 0, 0, 0.05)", "type": "boxShadow" },
-    "md": { "value": "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)", "type": "boxShadow" },
-    "lg": { "value": "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)", "type": "boxShadow" },
-    "xl": { "value": "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)", "type": "boxShadow" }
+    "sm": {
+      "value": "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
+      "type": "boxShadow"
+    },
+    "md": {
+      "value": "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+      "type": "boxShadow"
+    },
+    "lg": {
+      "value": "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+      "type": "boxShadow"
+    },
+    "xl": {
+      "value": "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+      "type": "boxShadow"
+    }
   },
   "borderRadius": {
-    "none": { "value": "0", "type": "borderRadius" },
-    "sm": { "value": "2", "type": "borderRadius" },
-    "md": { "value": "6", "type": "borderRadius" },
-    "lg": { "value": "8", "type": "borderRadius" },
-    "xl": { "value": "12", "type": "borderRadius" },
-    "full": { "value": "9999", "type": "borderRadius" }
+    "none": {
+      "value": "0",
+      "type": "borderRadius"
+    },
+    "sm": {
+      "value": "2",
+      "type": "borderRadius"
+    },
+    "md": {
+      "value": "6",
+      "type": "borderRadius"
+    },
+    "lg": {
+      "value": "8",
+      "type": "borderRadius"
+    },
+    "xl": {
+      "value": "12",
+      "type": "borderRadius"
+    },
+    "full": {
+      "value": "9999",
+      "type": "borderRadius"
+    }
   },
   "zIndex": {
     "_description": "🏢 ENTERPRISE Z-INDEX HIERARCHY - Single Source of Truth",
-    "base": { "value": "0", "type": "zIndex", "description": "Base content layer" },
-    "docked": { "value": "10", "type": "zIndex", "description": "Docked panels, sidebars" },
-    "dropdown": { "value": "1000", "type": "zIndex", "description": "Dropdowns, selects, menus" },
-    "geoPanelProperties": { "value": "1010", "type": "zIndex", "description": "Geo-canvas properties panel" },
-    "geoPanelLayers": { "value": "1020", "type": "zIndex", "description": "Geo-canvas layers panel - over the properties panel" },
-    "geoPanelTools": { "value": "1030", "type": "zIndex", "description": "Geo-canvas tools panel - topmost of the three geo panels" },
-    "sticky": { "value": "1040", "type": "zIndex", "description": "Sticky headers, toolbars" },
-    "workspaceSidePanel": { "value": "1050", "type": "zIndex", "description": "Floating workspace side palette of the DXF viewer - above the toolbars it docks against" },
-    "banner": { "value": "1060", "type": "zIndex", "description": "Notification banners" },
-    "overlay": { "value": "1070", "type": "zIndex", "description": "Overlays, backdrops" },
-    "modal": { "value": "1080", "type": "zIndex", "description": "Modal dialogs (the BACKDROP rung)" },
-    "modalContent": { "value": "1090", "type": "zIndex", "description": "Card of a modal - one rung above its OWN backdrop, so DOM order never decides it" },
-    "viewerImportModal": { "value": "1100", "type": "zIndex", "description": "DXF import surface - a modal opened over the standard modal rung" },
-    "canvasSnap": { "value": "1110", "type": "zIndex", "description": "CAD snap indicator - reads the geometry under the cursor, so it clears the modal rung it is measured against" },
-    "popover": { "value": "1120", "type": "zIndex", "description": "Popovers, floating cards" },
-    "canvasControls": { "value": "1130", "type": "zIndex", "description": "Floating canvas toolbar and viewport controls" },
-    "canvasCalibration": { "value": "1140", "type": "zIndex", "description": "Coordinate calibration overlay - the user aims at the drawing THROUGH it" },
-    "debugLayoutMap": { "value": "1150", "type": "zIndex", "description": "Layout debug map - measures what it draws over, so it must sit above the canvas controls", "restrictedTo": ["src/subapps/dxf-viewer/debug/"] },
-    "debugLayoutMapControls": { "value": "1160", "type": "zIndex", "description": "Controls of the layout debug map - rides above its own map, same pairing logic as the eyedropper loupe", "restrictedTo": ["src/subapps/dxf-viewer/debug/"] },
-    "skipLink": { "value": "1170", "type": "zIndex", "description": "Accessibility skip links" },
-    "dynamicInput": { "value": "1180", "type": "zIndex", "description": "CAD dynamic input field pinned to the cursor - the user TYPES into it, so hiding it means typing blind" },
-    "toast": { "value": "1190", "type": "zIndex", "description": "Toast notifications" },
-    "tooltip": { "value": "1200", "type": "zIndex", "description": "Tooltips - highest UI layer of the APPLICATION SHELL" },
-
-    "elevatedMenu": { "value": "1210", "type": "zIndex", "description": "Context menu summoned from a floating surface - clears the tooltip rung below it" },
-    "elevatedDropdown": { "value": "1220", "type": "zIndex", "description": "Select/DropdownMenu content of the shell - the default portal rung opens BEHIND floating panels, so every elevated dropdown lands here" },
-    "pointerBadge": { "value": "1230", "type": "zIndex", "description": "Badge/tooltip pinned to the pointer (pointer-events:none) - annotates whatever sits under the cursor" },
-    "pointerMenu": { "value": "1240", "type": "zIndex", "description": "Listbox pinned to the pointer - the user PICKS from it, so it outranks the badge that merely annotates" },
-    "pickerOverlay": { "value": "1250", "type": "zIndex", "description": "Command-palette style picker with its own backdrop - dims every elevated surface above" },
-
-    "viewerModal": { "value": "1260", "type": "zIndex", "description": "DXF workspace modal surface (backdrop AND card share this rung; DOM order decides between them)" },
-    "viewerModalNested": { "value": "1270", "type": "zIndex", "description": "A modal opened FROM a workspace modal (function arguments over insert-function)" },
-    "viewerPalette": { "value": "1280", "type": "zIndex", "description": "Persistent workspace palettes (Properties) - outlive the surfaces below them" },
-    "viewerMenu": { "value": "1290", "type": "zIndex", "description": "Workspace context menus and hover popovers - summoned, dismissed on any gesture" },
-    "viewerTransient": { "value": "1300", "type": "zIndex", "description": "Transient workspace surfaces the user just aimed at (mini toolbar, quick-properties panel)" },
-    "viewerPrompt": { "value": "1310", "type": "zIndex", "description": "Modal command prompt of the workspace - blocks the transient surfaces below it" },
-
-    "appDrawerScrim": { "value": "1320", "type": "zIndex", "description": "Scrim of the application-shell drawer - dims the workspace, including its transient surfaces" },
-    "appDrawer": { "value": "1330", "type": "zIndex", "description": "Application-shell drawer panel (notifications) - outranks the whole workspace" },
-
-    "eyedropperCapture": { "value": "1340", "type": "zIndex", "description": "Full-viewport pointer capture of the eyedropper - must swallow every gesture of the app" },
-    "eyedropperLoupe": { "value": "1350", "type": "zIndex", "description": "Eyedropper loupe - rides ABOVE its own capture surface (that is the whole point of the pair)" },
-
-    "debugOverlay": { "value": "1360", "type": "zIndex", "description": "Developer debug overlays (pointer-events:none) - above EVERY product surface, otherwise they measure what they cannot see", "restrictedTo": ["src/subapps/dxf-viewer/debug/"] },
-
-    "devtoolsGuard": { "value": "1370", "type": "zIndex", "description": "NOT A PRODUCT LAYER. The framework dev overlay (nextjs-portal) hosts its own 2147483647 INSIDE its shadow root, so the host element itself stays z-index:auto and any product surface buries it. This rung exists only to raise that host above our ceiling. Never use it for product UI.", "restrictedTo": ["src/app/globals.css"] }
+    "base": {
+      "value": "0",
+      "type": "zIndex",
+      "description": "Base content layer"
+    },
+    "docked": {
+      "value": "10",
+      "type": "zIndex",
+      "description": "Docked panels, sidebars"
+    },
+    "dropdown": {
+      "value": "1000",
+      "type": "zIndex",
+      "description": "Dropdowns, selects, menus"
+    },
+    "geoPanelProperties": {
+      "value": "1010",
+      "type": "zIndex",
+      "description": "Geo-canvas properties panel"
+    },
+    "geoPanelLayers": {
+      "value": "1020",
+      "type": "zIndex",
+      "description": "Geo-canvas layers panel - over the properties panel"
+    },
+    "geoPanelTools": {
+      "value": "1030",
+      "type": "zIndex",
+      "description": "Geo-canvas tools panel - topmost of the three geo panels"
+    },
+    "sticky": {
+      "value": "1040",
+      "type": "zIndex",
+      "description": "Sticky headers, toolbars"
+    },
+    "workspaceSidePanel": {
+      "value": "1050",
+      "type": "zIndex",
+      "description": "Floating workspace side palette of the DXF viewer - above the toolbars it docks against"
+    },
+    "banner": {
+      "value": "1060",
+      "type": "zIndex",
+      "description": "Notification banners"
+    },
+    "overlay": {
+      "value": "1070",
+      "type": "zIndex",
+      "description": "Overlays, backdrops"
+    },
+    "modal": {
+      "value": "1080",
+      "type": "zIndex",
+      "description": "Modal dialogs (the BACKDROP rung)"
+    },
+    "modalContent": {
+      "value": "1090",
+      "type": "zIndex",
+      "description": "Card of a modal - one rung above its OWN backdrop, so DOM order never decides it"
+    },
+    "viewerImportModal": {
+      "value": "1100",
+      "type": "zIndex",
+      "description": "DXF import surface - a modal opened over the standard modal rung"
+    },
+    "canvasSnap": {
+      "value": "1110",
+      "type": "zIndex",
+      "description": "CAD snap indicator - reads the geometry under the cursor, so it clears the modal rung it is measured against"
+    },
+    "popover": {
+      "value": "1120",
+      "type": "zIndex",
+      "description": "Popovers, floating cards"
+    },
+    "canvasControls": {
+      "value": "1130",
+      "type": "zIndex",
+      "description": "Floating canvas toolbar and viewport controls"
+    },
+    "canvasCalibration": {
+      "value": "1140",
+      "type": "zIndex",
+      "description": "Coordinate calibration overlay - the user aims at the drawing THROUGH it"
+    },
+    "debugLayoutMap": {
+      "value": "1150",
+      "type": "zIndex",
+      "description": "Layout debug map - measures what it draws over, so it must sit above the canvas controls",
+      "restrictedTo": [
+        "src/subapps/dxf-viewer/debug/"
+      ]
+    },
+    "debugLayoutMapControls": {
+      "value": "1160",
+      "type": "zIndex",
+      "description": "Controls of the layout debug map - rides above its own map, same pairing logic as the eyedropper loupe",
+      "restrictedTo": [
+        "src/subapps/dxf-viewer/debug/"
+      ]
+    },
+    "skipLink": {
+      "value": "1170",
+      "type": "zIndex",
+      "description": "Accessibility skip links"
+    },
+    "dynamicInput": {
+      "value": "1180",
+      "type": "zIndex",
+      "description": "CAD dynamic input field pinned to the cursor - the user TYPES into it, so hiding it means typing blind"
+    },
+    "toast": {
+      "value": "1190",
+      "type": "zIndex",
+      "description": "Toast notifications"
+    },
+    "tooltip": {
+      "value": "1200",
+      "type": "zIndex",
+      "description": "Tooltips - highest UI layer of the APPLICATION SHELL"
+    },
+    "elevatedMenu": {
+      "value": "1210",
+      "type": "zIndex",
+      "description": "Context menu summoned from a floating surface - clears the tooltip rung below it"
+    },
+    "elevatedDropdown": {
+      "value": "1220",
+      "type": "zIndex",
+      "description": "Select/DropdownMenu content of the shell - the default portal rung opens BEHIND floating panels, so every elevated dropdown lands here"
+    },
+    "pointerBadge": {
+      "value": "1230",
+      "type": "zIndex",
+      "description": "Badge/tooltip pinned to the pointer (pointer-events:none) - annotates whatever sits under the cursor"
+    },
+    "pointerMenu": {
+      "value": "1240",
+      "type": "zIndex",
+      "description": "Listbox pinned to the pointer - the user PICKS from it, so it outranks the badge that merely annotates"
+    },
+    "pickerOverlay": {
+      "value": "1250",
+      "type": "zIndex",
+      "description": "Command-palette style picker with its own backdrop - dims every elevated surface above"
+    },
+    "viewerModal": {
+      "value": "1260",
+      "type": "zIndex",
+      "description": "DXF workspace modal surface (backdrop AND card share this rung; DOM order decides between them)"
+    },
+    "viewerModalNested": {
+      "value": "1270",
+      "type": "zIndex",
+      "description": "A modal opened FROM a workspace modal (function arguments over insert-function)"
+    },
+    "viewerPalette": {
+      "value": "1280",
+      "type": "zIndex",
+      "description": "Persistent workspace palettes (Properties) - outlive the surfaces below them"
+    },
+    "viewerMenu": {
+      "value": "1290",
+      "type": "zIndex",
+      "description": "Workspace context menus and hover popovers - summoned, dismissed on any gesture"
+    },
+    "viewerTransient": {
+      "value": "1300",
+      "type": "zIndex",
+      "description": "Transient workspace surfaces the user just aimed at (mini toolbar, quick-properties panel)"
+    },
+    "viewerPrompt": {
+      "value": "1310",
+      "type": "zIndex",
+      "description": "Modal command prompt of the workspace - blocks the transient surfaces below it"
+    },
+    "appDrawerScrim": {
+      "value": "1320",
+      "type": "zIndex",
+      "description": "Scrim of the application-shell drawer - dims the workspace, including its transient surfaces"
+    },
+    "appDrawer": {
+      "value": "1330",
+      "type": "zIndex",
+      "description": "Application-shell drawer panel (notifications) - outranks the whole workspace"
+    },
+    "eyedropperCapture": {
+      "value": "1340",
+      "type": "zIndex",
+      "description": "Full-viewport pointer capture of the eyedropper - must swallow every gesture of the app"
+    },
+    "eyedropperLoupe": {
+      "value": "1350",
+      "type": "zIndex",
+      "description": "Eyedropper loupe - rides ABOVE its own capture surface (that is the whole point of the pair)"
+    },
+    "debugOverlay": {
+      "value": "1360",
+      "type": "zIndex",
+      "description": "Developer debug overlays (pointer-events:none) - above EVERY product surface, otherwise they measure what they cannot see",
+      "restrictedTo": [
+        "src/subapps/dxf-viewer/debug/"
+      ]
+    },
+    "devtoolsGuard": {
+      "value": "1370",
+      "type": "zIndex",
+      "description": "NOT A PRODUCT LAYER. The framework dev overlay (nextjs-portal) hosts its own 2147483647 INSIDE its shadow root, so the host element itself stays z-index:auto and any product surface buries it. This rung exists only to raise that host above our ceiling. Never use it for product UI.",
+      "restrictedTo": [
+        "src/app/globals.css"
+      ]
+    }
   },
   "canvas": {
     "_description": "🎨 ENTERPRISE CANVAS THEME - ADR-004 Single Source of Truth for DXF Viewer Canvas",
@@ -267,22 +780,62 @@
     },
     "gradient": {
       "_description": "Per-theme vertical canvas gradient stops (Cinema 4D-style). Read by the 2D canvas (CSS linear-gradient) AND the 3D studio background (studio-background-texture.ts) so both views share one SSoT. ADR-446 §2.1",
-      "cinema4d-top": { "value": "#5B5B5B", "type": "color", "description": "Cinema 4D viewport gradient TOP — VIEWCOLOR_C4DBACKGROUND_GRAD1 (RGB 91,91,91)" },
-      "cinema4d-bottom": { "value": "#868686", "type": "color", "description": "Cinema 4D viewport gradient BOTTOM — VIEWCOLOR_C4DBACKGROUND_GRAD2 (RGB 134,134,134)" }
+      "cinema4d-top": {
+        "value": "#5B5B5B",
+        "type": "color",
+        "description": "Cinema 4D viewport gradient TOP — VIEWCOLOR_C4DBACKGROUND_GRAD1 (RGB 91,91,91)"
+      },
+      "cinema4d-bottom": {
+        "value": "#868686",
+        "type": "color",
+        "description": "Cinema 4D viewport gradient BOTTOM — VIEWCOLOR_C4DBACKGROUND_GRAD2 (RGB 134,134,134)"
+      }
     },
     "grid": {
       "_description": "Per-theme canvas grid line colours (mirrors Cinema 4D scheme VIEWCOLORS). Active grid colour resolved via --canvas-grid-major / --canvas-grid-minor set by the theme switch.",
-      "cinema4d-major": { "value": "#414141", "type": "color", "description": "Cinema 4D VIEWCOLOR_GRID_MAJOR (RGB 65,65,65)" },
-      "cinema4d-minor": { "value": "#4B4B4B", "type": "color", "description": "Cinema 4D VIEWCOLOR_GRID_MINOR (RGB 75,75,75)" }
+      "cinema4d-major": {
+        "value": "#414141",
+        "type": "color",
+        "description": "Cinema 4D VIEWCOLOR_GRID_MAJOR (RGB 65,65,65)"
+      },
+      "cinema4d-minor": {
+        "value": "#4B4B4B",
+        "type": "color",
+        "description": "Cinema 4D VIEWCOLOR_GRID_MINOR (RGB 75,75,75)"
+      }
     },
     "themes": {
       "_description": "Alternative canvas themes for user preferences",
-      "autocad-classic": { "value": "#000000", "type": "color", "description": "AutoCAD Classic - Pure black" },
-      "autocad-dark": { "value": "#1a1a1a", "type": "color", "description": "AutoCAD Dark Gray" },
-      "solidworks": { "value": "#2d3748", "type": "color", "description": "SolidWorks style - Dark blue-gray" },
-      "blender": { "value": "#232323", "type": "color", "description": "Blender style - Dark gray" },
-      "light": { "value": "#ffffff", "type": "color", "description": "Light theme - For print preview" },
-      "cinema4d": { "value": "#555555", "type": "color", "description": "Cinema 4D — solid base / gradient mid (VIEWCOLOR_C4DBACKGROUND, RGB 85,85,85)" }
+      "autocad-classic": {
+        "value": "#000000",
+        "type": "color",
+        "description": "AutoCAD Classic - Pure black"
+      },
+      "autocad-dark": {
+        "value": "#1a1a1a",
+        "type": "color",
+        "description": "AutoCAD Dark Gray"
+      },
+      "solidworks": {
+        "value": "#2d3748",
+        "type": "color",
+        "description": "SolidWorks style - Dark blue-gray"
+      },
+      "blender": {
+        "value": "#232323",
+        "type": "color",
+        "description": "Blender style - Dark gray"
+      },
+      "light": {
+        "value": "#ffffff",
+        "type": "color",
+        "description": "Light theme - For print preview"
+      },
+      "cinema4d": {
+        "value": "#555555",
+        "type": "color",
+        "description": "Cinema 4D — solid base / gradient mid (VIEWCOLOR_C4DBACKGROUND, RGB 85,85,85)"
+      }
     }
   }
 }

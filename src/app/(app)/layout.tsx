@@ -83,7 +83,18 @@ function AppShellBody({
     <SidebarProvider defaultOpen={sidebarDefaultOpen}>
       <div className={layout.shellAppContainer}>
         <AppSidebar />
-        <SidebarInset className={layout.shellAppContent}>
+        {/*
+          🏛️ ADR-793 — Ο ΔΕΚΤΗΣ ΤΗΣ ΚΑΤΑΣΤΑΣΗΣ ΤΗΣ ΜΠΑΡΑΣ.
+
+          Το `data-shell-inset` δεν στολίζει: είναι ο **στόχος** των αδελφικών
+          επιλογέων του `shell-surface.css`, που διαβάζουν το `data-collapsible`
+          της μπάρας — του **ίδιου** attribute που τη ζωγραφίζει — και βγάζουν
+          το `--shell-sidebar-occupied`. Χωρίς αυτό, το κενό θα υπολογιζόταν
+          πάντα σαν η μπάρα να ήταν ανοιχτή.
+
+          ⚠️ Πρέπει να μείνει **αδελφός** της μπάρας: οι επιλογείς είναι `~`.
+        */}
+        <SidebarInset data-shell-inset className={layout.shellAppContent}>
           <AppHeader />
           <MainContentBridge>{children}</MainContentBridge>
         </SidebarInset>
