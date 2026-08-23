@@ -833,3 +833,65 @@ jobs:
             echo "Απογραφή: npm run workspace-scope:report"
             echo "⛔ ΜΗΝ κάνεις μαζικό reseed: πρώτα ο ισομορφισμός (§5.3 στ)."
           } >> "$GITHUB_STEP_SUMMARY"
+
+  navigation-boundary:
+    name: 🧭 Navigation Boundary Gate (CHECK 3.61)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Πάκετα (jest + ts-morph για τις άγκυρες)
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # Layer 2 — ΑΝΕΥ ΟΡΩΝ και ΠΛΗΡΕΣ. Το pre-commit έχει σκανδάλη· εδώ όχι, γιατί
+      # μια αλλαγή στο κλειστό σύνολο ιδιοκτητών ξανα-ταξινομεί αρχεία που ΚΑΝΕΙΣ
+      # δεν έστειλε — και επειδή το `SKIP_NAVIGATION_BOUNDARY` δεν φτάνει ως εδώ.
+      - name: 🧭 CHECK 3.61 — κάθε σημείο πλοήγησης ζητά το σύνορο
+        run: pnpm run navigation-boundary:check
+
+      - name: "🧪 Σουίτα μετάλλαξης — CHECK 3.61 (25 άγκυρες, 10/10 μεταλλάξεις κόκκινες)"
+        run: pnpm run test:navigation-boundary
+
+      - name: 🧭 How to resolve
+        if: failure()
+        run: |
+          {
+            echo "### CHECK 3.61 — ADR-787 §5.3 ν (το σύνορο της πλοήγησης)"
+            echo "**Η ΠΡΟΕΠΙΛΟΓΗ ΕΙΝΑΙ «ΠΕΡΝΑΣ ΑΠΟ ΤΟ ΣΥΝΟΡΟ»** — μία γραμμή ανά αρχείο,"
+            echo "αλλάζει ΜΟΝΟ η πηγή της εισαγωγής, τα σημεία κλήσης μένουν αυτούσια."
+            echo ""
+            echo '  ❌ import Link from "next/link";'
+            echo '  ❌ import { useRouter } from "next/navigation";'
+            echo '  ✅ import { Link, useRouter } from "@/lib/workspace/navigation";'
+            echo ""
+            echo "Μαζικά: node scripts/migrate-navigation-boundary.mjs --apply"
+            echo ""
+            echo "**boundary-bypass** (zero-tol) → ωμό \`Link\`/\`useRouter\`/\`usePathname\`."
+            echo "Ένα ωμό \`prefetch\` προφορτώνει 404 **χωρίς κανένα ίχνος**: η πλοήγηση"
+            echo "απλώς «είναι αργή». Γι' αυτό ΔΕΝ υπάρχει baseline — ΜΙΑ αρκεί."
+            echo ""
+            echo "**orphan-owner** → δήλωση που δείχνει σε αρχείο που δεν αγγίζει πια"
+            echo "ωμό Next. Σβήσε τη γραμμή: κάθε νεκρή δήλωση είναι πόρτα που μένει"
+            echo "ανοιχτή χωρίς να τη θέλει κανείς."
+            echo ""
+            echo "**reasonless-owner** → ο λόγος είναι ΥΠΟΧΡΕΩΤΙΚΟΣ (≥40 χαρακτήρες)."
+            echo "Δήλωση χωρίς λόγο είναι παράκαμψη με άλλο όνομα."
+            echo ""
+            echo "Απογραφή: npm run navigation-boundary:report"
+            echo "⛔ ΜΗΝ λύσεις κόκκινο δηλώνοντας νέο ιδιοκτήτη «για να περάσει»:"
+            echo "το κλειστό σύνολο υπάρχει για να το δει άνθρωπος."
+          } >> "$GITHUB_STEP_SUMMARY"

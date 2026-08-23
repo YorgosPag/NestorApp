@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * CODEMOD: κάθε σημείο πλοήγησης περνά από το ΣΥΝΟΡΟ (ADR-787 §5.3 μ)
+ * CODEMOD: κάθε σημείο πλοήγησης περνά από το ΣΥΝΟΡΟ (ADR-787 §5.3 ν)
  *
  *   import Link from 'next/link';                 →  import { Link } from '@/lib/workspace/navigation';
  *   import { useRouter } from 'next/navigation';  →  import { useRouter } from '@/lib/workspace/navigation';
@@ -43,7 +43,11 @@ import path from 'node:path';
 import process from 'node:process';
 import { Project, QuoteKind } from 'ts-morph';
 
-import { STATES, repoRelativePosix } from './lib/navigation-boundary/contract.mjs';
+import { createRequire } from 'node:module';
+
+const { STATES, repoRelativePosix } = createRequire(import.meta.url)(
+  './lib/navigation-boundary/contract.js',
+);
 import { rewriteSourceFile } from './lib/navigation-boundary/rewrite.mjs';
 
 const args = process.argv.slice(2);
@@ -62,6 +66,19 @@ const project = new Project({
   compilerOptions: { allowJs: true },
 });
 project.addSourceFilesAtPaths(path.join(ROOT, dir, '**/*.{ts,tsx}').replace(/\\/g, '/'));
+
+// 🔴 ΤΟ ts-morph ΤΡΑΒΑΕΙ ΤΑ `.d.ts` ΤΩΝ ΕΞΑΡΤΗΣΕΩΝ — ΜΕΤΡΗΜΕΝΟ: **4.878** αρχεία
+//    από `node_modules` έμπαιναν στον παρονομαστή, δηλαδή «20.127 αρχεία του src»
+//    ενώ το `src/` έχει **15.252**. Ο αριθμός έλεγε ψέματα, και ήταν χειρότερο από
+//    αισθητικό: το `project.save()` γράφει **ό,τι τροποποιήθηκε**, οπότε αρχείο
+//    εξάρτησης που θα ταξινομούνταν `rewritten` θα **γραφόταν στο node_modules**.
+//    ⚠️ Το βρήκε η ΣΥΓΚΡΙΣΗ ΜΕ ΤΗΝ ΠΥΛΗ (CHECK 3.61), όχι η ανάγνωση: δύο όργανα
+//    πάνω στο ίδιο δέντρο **επιτρέπεται να υπάρχουν, δεν επιτρέπεται να διαφωνήσουν**
+//    (ADR-749) — και το κλειδώνει άγκυρα ισοδυναμίας.
+for (const sf of project.getSourceFiles()) {
+  const fp = sf.getFilePath();
+  if (fp.includes('/node_modules/') || fp.endsWith('.d.ts')) project.removeSourceFile(sf);
+}
 
 /** Οι καταστάσεις που **απαγορεύουν** εγγραφή — καμία μερική εφαρμογή. */
 const BLOCKING = new Set([STATES.UNANALYZABLE_IMPORT, STATES.COLLATERAL_CHANGE]);

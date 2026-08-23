@@ -32,13 +32,14 @@
  * @module scripts/lib/navigation-boundary/rewrite
  */
 
-import {
-  BOUNDARY_MODULE,
-  LINK_SYMBOL,
-  STATES,
-  classifySymbol,
-  isRawImportOwner,
-} from './contract.mjs';
+import { createRequire } from 'node:module';
+
+// ⚠️ Το συμβόλαιο ζει σε **CommonJS**, όπως τα 103 από τα 105 modules του
+//    `scripts/lib/`: το καταναλώνει ΚΑΙ η πύλη (CHECK 3.61, `.js`) ΚΑΙ το codemod
+//    (`.mjs`). Δύο αντίγραφα σε δύο συστήματα modules θα ήταν ακριβώς η «δεύτερη
+//    διάλεκτος» του ADR-749.
+const { BOUNDARY_MODULE, LINK_SYMBOL, STATES, classifySymbol, isRawImportOwner } =
+  createRequire(import.meta.url)('./contract.js');
 
 const NEXT_LINK = 'next/link';
 const NEXT_NAVIGATION = 'next/navigation';

@@ -2,7 +2,7 @@
  * ΤΟ ΣΥΜΒΟΛΑΙΟ ΤΟΥ ΣΥΝΟΡΟΥ ΠΛΟΗΓΗΣΗΣ — **μία** αλήθεια, δύο καταναλωτές
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * ΤΙ ΑΠΑΝΤΑ (ADR-787 §5.3 μ)
+ * ΤΙ ΑΠΑΝΤΑ (ADR-787 §5.3 ν)
  * ─────────────────────────────────────────────────────────────────────────────
  * *«Ποιο σύμβολο του Next περνά από το σύνορο, και ποιος επιτρέπεται να το
  * εισάγει ωμό;»* — και το ρωτούν **δύο** όργανα:
@@ -20,7 +20,7 @@
  */
 
 /** Ο κανονικός ειδικευτής του συνόρου. */
-export const BOUNDARY_MODULE = '@/lib/workspace/navigation';
+const BOUNDARY_MODULE = '@/lib/workspace/navigation';
 
 /**
  * **Τα σύμβολα που ΠΡΕΠΕΙ να περνούν από το σύνορο**, με τον λόγο του καθενός.
@@ -30,7 +30,7 @@ export const BOUNDARY_MODULE = '@/lib/workspace/navigation';
  * μεταφράσει, και μια εγγραφή γι' αυτό θα ήταν φρουρός **αδύνατο να
  * πυροδοτήσει** (ADR-749 §5 — 606 αδρανείς μετρημένοι σε αυτό το repo).
  */
-export const MIGRATED_SYMBOLS = Object.freeze({
+const MIGRATED_SYMBOLS = Object.freeze({
   useRouter:
     'ΠΑΙΡΝΕΙ ΔΙΕΥΘΥΝΣΗ: push/replace/prefetch. Το prefetch είναι το χειρότερο αν μείνει ωμό — ' +
     'προφορτώνει 404 και η πλοήγηση φαίνεται «απλώς αργή», ΧΩΡΙΣ κανένα ίχνος πουθενά.',
@@ -41,7 +41,7 @@ export const MIGRATED_SYMBOLS = Object.freeze({
 });
 
 /** Η προεπιλεγμένη εισαγωγή του `next/link` — άλλο module, ίδιο ερώτημα. */
-export const LINK_SYMBOL = 'Link';
+const LINK_SYMBOL = 'Link';
 
 /**
  * **Τα σύμβολα του `next/navigation` που ΜΕΝΟΥΝ ωμά**, με τον λόγο του καθενός.
@@ -52,7 +52,7 @@ export const LINK_SYMBOL = 'Link';
  * περνούσε **σιωπηλά** — «0 = κανείς δεν κοίταξε», το σχήμα που αυτό το repo
  * έχει πληρώσει **οκτώ** φορές.
  */
-export const UNMIGRATED_SYMBOLS = Object.freeze({
+const UNMIGRATED_SYMBOLS = Object.freeze({
   useSearchParams: 'ΕΡΩΤΗΜΑ, ΟΧΙ ΔΙΑΔΡΟΜΗ. Το ?a=b δεν φέρει ποτέ πρόθεμα χώρου.',
   useParams: 'ΤΑ ΤΜΗΜΑΤΑ ΤΗΣ ΤΡΕΧΟΥΣΑΣ ΔΙΑΔΡΟΜΗΣ ως δεδομένα — δεν κατασκευάζει διεύθυνση.',
   notFound: 'ΔΕΝ ΠΑΙΡΝΕΙ ΔΙΕΥΘΥΝΣΗ. Πετά τον έλεγχο στο όριο σφάλματος.',
@@ -78,7 +78,7 @@ export const UNMIGRATED_SYMBOLS = Object.freeze({
  * κανονικοποιεί τα backslash των Windows πριν ρωτήσει. Χωρίς αυτό, το σύνολο θα
  * ήταν **κενό σε Windows** και η πύλη θα κατήγγελλε τον ίδιο της τον ιδιοκτήτη.
  */
-export const RAW_IMPORT_OWNERS = Object.freeze({
+const RAW_IMPORT_OWNERS = Object.freeze({
   'src/lib/workspace/navigation.tsx':
     'ΤΟ ΙΔΙΟ ΤΟ ΣΥΝΟΡΟ. Είναι ο μοναδικός νόμιμος καταναλωτής του ωμού Next: τυλίγει το ' +
     'NextLink και τα useNextRouter/useNextPathname. Μια πύλη που το κατήγγελλε θα κοκκίνιζε ' +
@@ -89,7 +89,7 @@ export const RAW_IMPORT_OWNERS = Object.freeze({
 });
 
 /** Οι καταστάσεις της ταξινόμησης — **κλειστό σύνολο, fail-closed**. */
-export const STATES = Object.freeze({
+const STATES = Object.freeze({
   OWNER: 'owner',
   REWRITTEN: 'rewritten',
   ALREADY_AT_BOUNDARY: 'already-at-boundary',
@@ -107,13 +107,40 @@ export const STATES = Object.freeze({
   COLLATERAL_CHANGE: 'collateral-change',
 });
 
+/**
+ * Οι καταστάσεις **της πύλης** (CHECK 3.61) — **κλειστό σύνολο, fail-closed**.
+ *
+ * ⚠️ **ΞΕΧΩΡΙΣΤΟ από το {@link STATES} του codemod, ΕΠΙΤΗΔΕΣ.** Τα δύο όργανα
+ * ρωτούν **άλλο ερώτημα**: ο codemod *«τι έκανα σε αυτό το αρχείο;»*, η πύλη
+ * *«επιτρέπεται αυτό το αρχείο να είναι έτσι;»*. Ένα κοινό σύνολο θα γέμιζε τη
+ * λογιστική του καθενός με κάδους που **δεν τίθενται ποτέ** — και ένας κάδος που
+ * δηλώνεται αλλά δεν ασκείται είναι φρουρός χωρίς απόδειξη ζωής (ADR-749 §5),
+ * με το «0» του να διαβάζεται ως «κοίταξα και δεν υπάρχουν».
+ */
+const GATE_STATES = Object.freeze({
+  /** ⛔ Εισάγει ωμό μεταναστεύσιμο σύμβολο χωρίς να είναι δηλωμένος ιδιοκτήτης. */
+  BOUNDARY_BYPASS: 'boundary-bypass',
+  /** ⛔ Δήλωση ιδιοκτήτη που έπαψε να ισχύει — το κλειστό σύνολο σαπίζει σιωπηλά. */
+  ORPHAN_OWNER: 'orphan-owner',
+  /** ⛔ Δήλωση χωρίς ουσιαστικό λόγο — παράκαμψη με άλλο όνομα. */
+  REASONLESS_OWNER: 'reasonless-owner',
+  /** ✅ Ο δηλωμένος ιδιοκτήτης του ωμού Next. */
+  OWNER: 'owner',
+  /** ✅ Ζητά την πλοήγηση από το σύνορο. */
+  AT_BOUNDARY: 'at-boundary',
+  /** ✅ Αγγίζει το `next/navigation` μόνο για σύμβολα που **δεν** έχουν διεύθυνση. */
+  UNMIGRATABLE_ONLY: 'unmigratable-only',
+  /** Δεν αναφέρει καν ωμό Next — ο μεγάλος πληθυσμός, ο **παρονομαστής**. */
+  NOT_A_NAVIGATION_FILE: 'not-a-navigation-file',
+});
+
 /** Κανονικοποίηση σε POSIX, σχετική με τη ρίζα — **μία** φορά, για όλους. */
-export function repoRelativePosix(absPath, root) {
+function repoRelativePosix(absPath, root) {
   return absPath.replace(/\\/g, '/').replace(`${root.replace(/\\/g, '/')}/`, '');
 }
 
 /** Είναι αυτό το αρχείο δηλωμένος ιδιοκτήτης του ωμού Next; */
-export function isRawImportOwner(repoRelPath) {
+function isRawImportOwner(repoRelPath) {
   return Object.hasOwn(RAW_IMPORT_OWNERS, repoRelPath);
 }
 
@@ -124,7 +151,7 @@ export function isRawImportOwner(repoRelPath) {
  * δεν αναγνωρίζεται δεν επιτρέπεται να διαβαστεί ως «μένει ωμό» — αυτό θα ήταν
  * σιωπηλή απόρριψη με άλλο όνομα.
  */
-export function classifySymbol(name) {
+function classifySymbol(name) {
   if (Object.hasOwn(MIGRATED_SYMBOLS, name)) return 'migrate';
   if (Object.hasOwn(UNMIGRATED_SYMBOLS, name)) return 'keep';
   throw new Error(
@@ -133,3 +160,16 @@ export function classifySymbol(name) {
       'ΜΕ ΛΟΓΟ. Η σιωπή εδώ σημαίνει «κανείς δεν κοίταξε».',
   );
 }
+
+module.exports = {
+  BOUNDARY_MODULE,
+  GATE_STATES,
+  MIGRATED_SYMBOLS,
+  LINK_SYMBOL,
+  UNMIGRATED_SYMBOLS,
+  RAW_IMPORT_OWNERS,
+  STATES,
+  repoRelativePosix,
+  isRawImportOwner,
+  classifySymbol,
+};
