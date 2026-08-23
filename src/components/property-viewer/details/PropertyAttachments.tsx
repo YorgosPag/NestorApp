@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
+import { Link } from '@/lib/workspace/navigation';
 import { Package, Car } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import type { StorageUnitStub, ParkingSpotStub } from '@/types/property-viewer';

@@ -14,7 +14,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BarChart, Users, Phone, Target, ClipboardList, Filter, Users2, Bell, AppWindow, BarChart3, CalendarDays } from 'lucide-react';
-import Link from 'next/link';
+import { Link } from '@/lib/workspace/navigation';
 import { COMPLEX_HOVER_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';

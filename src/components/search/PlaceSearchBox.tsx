@@ -26,7 +26,7 @@
  */
 
 import React, { useId, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { geocodeAddressDetailed } from '@/lib/geocoding/geocoding-service';
 import {

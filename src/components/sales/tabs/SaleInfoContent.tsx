@@ -8,7 +8,7 @@
 
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
 import { ENTITY_ROUTES } from '@/lib/routes';
 import {
   DollarSign,

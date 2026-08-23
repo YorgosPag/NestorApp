@@ -16,7 +16,8 @@
 
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
+
 // 🏢 ENTERPRISE: Centralized auth (NO direct Firebase imports!)
 import { useAuth } from '@/auth';
 import {

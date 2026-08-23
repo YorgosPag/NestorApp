@@ -28,9 +28,7 @@
  */
 
 import React from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-
+import { Link, useRouter } from '@/lib/workspace/navigation';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { listingDetailHref } from '@/lib/listings/listing-routes';

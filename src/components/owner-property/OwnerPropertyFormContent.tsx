@@ -40,7 +40,7 @@
  */
 
 import React from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
 import { useForm } from 'react-hook-form';
 
 import { useAuth } from '@/auth/hooks/useAuth';

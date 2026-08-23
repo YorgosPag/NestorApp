@@ -7,7 +7,7 @@ import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import { create } from 'zustand';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
 import { X, CheckCircle, AlertCircle, AlertTriangle, Info, RefreshCw, Eye, CheckCheck } from 'lucide-react';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { apiClient } from '@/lib/api/enterprise-api-client';

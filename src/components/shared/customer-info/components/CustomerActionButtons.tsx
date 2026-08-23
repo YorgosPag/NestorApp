@@ -14,7 +14,7 @@
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useMemo } from 'react';
 import { createModuleLogger } from '@/lib/telemetry';
-import Link from 'next/link';
+import { Link } from '@/lib/workspace/navigation';
 import {
   Eye,
   Phone,

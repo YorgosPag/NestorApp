@@ -12,7 +12,7 @@
 import React, { useEffect, useMemo } from 'react';
 import '@/lib/design-system';
 import { createModuleLogger } from '@/lib/telemetry';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';

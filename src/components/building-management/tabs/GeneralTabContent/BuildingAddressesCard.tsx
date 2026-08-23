@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { MapPin, Plus } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Spinner } from '@/components/ui/spinner';

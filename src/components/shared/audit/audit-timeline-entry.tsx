@@ -13,7 +13,7 @@
 
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from "react";
-import Link from "next/link";
+import { Link } from '@/lib/workspace/navigation';
 import { ExternalLink } from "lucide-react";
 import { formatRelativeTime, formatDateTime } from "@/lib/intl-utils";
 import type {

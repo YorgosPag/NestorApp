@@ -15,8 +15,7 @@
  */
 
 import React from 'react';
-import Link from 'next/link';
-import { usePathname } from '@/lib/workspace/navigation';
+import { usePathname, Link } from '@/lib/workspace/navigation';
 import {
   Home,
   BarChart,

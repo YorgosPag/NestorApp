@@ -25,8 +25,7 @@
  */
 
 import React from 'react';
-import Link from 'next/link';
-
+import { Link } from '@/lib/workspace/navigation';
 import { MandateCatalogRow } from '@/components/mandate/catalog/MandateCatalogRow';
 import {
   CATALOG_KEYS,

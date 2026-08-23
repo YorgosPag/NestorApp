@@ -28,8 +28,7 @@
  */
 
 import React from 'react';
-import Link from 'next/link';
-
+import { Link } from '@/lib/workspace/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PROPERTY_TYPE_I18N_KEYS, isCanonicalPropertyType } from '@/constants/property-types';
 import { nowISO } from '@/lib/date-local';

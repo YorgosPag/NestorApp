@@ -20,7 +20,7 @@
 
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import * as React from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
 import {
   DropdownMenu,
   DropdownMenuContent,

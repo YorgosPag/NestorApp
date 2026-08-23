@@ -11,7 +11,7 @@
  */
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from '@/lib/workspace/navigation';
 import { ENTITY_ROUTES } from '@/lib/routes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {

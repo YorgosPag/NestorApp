@@ -16,7 +16,7 @@
 
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useCallback, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
 import { FileText } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';

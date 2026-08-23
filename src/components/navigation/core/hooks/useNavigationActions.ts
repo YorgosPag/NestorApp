@@ -3,7 +3,7 @@
  * Handles navigation actions and state updates
  */
 
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
 import { buildNavigationUrl } from '../utils/navigationHelpers';
 import type { NavigationState, NavigationLevel } from '../types';
 import { createModuleLogger } from '@/lib/telemetry';

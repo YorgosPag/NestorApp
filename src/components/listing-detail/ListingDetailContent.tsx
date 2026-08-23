@@ -37,7 +37,7 @@
  */
 
 import React from 'react';
-import Link from 'next/link';
+import { Link } from '@/lib/workspace/navigation';
 import { useSearchParams } from 'next/navigation';
 
 // 🧩 ADR-744 §15 (Φ4) — PER-ROUTE SLICE ΤΗΣ ΟΘΟΝΗΣ 3.

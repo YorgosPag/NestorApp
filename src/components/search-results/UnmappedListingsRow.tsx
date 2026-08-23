@@ -17,7 +17,7 @@
  */
 
 import React, { useState } from 'react';
-import Link from 'next/link';
+import { Link } from '@/lib/workspace/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { listingDetailHref } from '@/lib/listings/listing-routes';
 import type { PublicListing, UnknownPositionReason } from '@/types/public-listing';

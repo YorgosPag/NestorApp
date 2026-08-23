@@ -13,7 +13,7 @@
 
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useState, useCallback } from 'react';
-import Link from 'next/link';
+import { Link } from '@/lib/workspace/navigation';
 import { User, Scale, Briefcase, Pencil, X, Loader2, UserPlus } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Button } from '@/components/ui/button';

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
+import { useSearchParams } from 'next/navigation';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { Contact } from '@/types/contacts';
 import { getContactDisplayName } from '@/types/contacts';

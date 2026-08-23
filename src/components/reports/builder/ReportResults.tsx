@@ -11,7 +11,7 @@
 import '@/lib/design-system';
 import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
 import { AlertTriangle, Check, Clock, Link2, X } from 'lucide-react';
 import { useState } from 'react';
 import { ReportTable, type ReportColumnDef } from '@/components/reports/core/ReportTable';

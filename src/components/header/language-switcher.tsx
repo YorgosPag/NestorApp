@@ -3,7 +3,7 @@
 
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import { useState, useEffect, useMemo } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname } from '@/lib/workspace/navigation';
 import { Globe } from 'lucide-react';
 import {
   DropdownMenu,

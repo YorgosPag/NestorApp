@@ -8,8 +8,8 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { Link, useRouter } from '@/lib/workspace/navigation';
+import { useParams } from 'next/navigation';
 import { ENTITY_ROUTES } from '@/lib/routes';
 import { PageLayout } from '@/components/app/page-layout';
 import { Button } from '@/components/ui/button';

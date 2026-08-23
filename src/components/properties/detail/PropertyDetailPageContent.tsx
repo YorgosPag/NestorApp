@@ -34,7 +34,7 @@
  */
 
 import React from 'react';
-import Link from 'next/link';
+import { Link } from '@/lib/workspace/navigation';
 import { useSearchParams } from 'next/navigation';
 
 import { PlaceInterestPanel } from '@/components/demand/PlaceInterestPanel';

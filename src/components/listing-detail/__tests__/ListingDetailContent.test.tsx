@@ -37,8 +37,13 @@ jest.mock('@/i18n/hooks/useTranslation', () => ({
 }));
 
 const mockSearchParams = { value: '' };
+// ⚠️ Το `usePathname` ΔΕΝ είναι διακοσμητικό εδώ: το component πλοηγεί μέσω του
+//    ΣΥΝΟΡΟΥ (`@/lib/workspace/navigation`, ADR-787 §5.3 μ), και το σύνορο ρωτά την
+//    τρέχουσα διαδρομή για να βρει τον ενεργό χώρο. Μερικό mock ⇒ `usePathname is
+//    not a function` ΠΡΙΝ τρέξει η πρώτη προσδοκία.
 jest.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(mockSearchParams.value),
+  usePathname: () => '/',
 }));
 
 /**

@@ -23,8 +23,7 @@ import StructureEditor from "@/components/obligations/structure-editor";
 import LivePreview from "@/components/obligations/live-preview";
 import { getDynamicHeightClass } from "@/components/ui/utils/dynamic-styles";
 import { OBLIGATION_PREVIEW_LAYOUT } from "@/components/obligations/config/preview-layout";
-import Link from "next/link";
-
+import { Link } from '@/lib/workspace/navigation';
 import { useNewObligationPage } from '../hooks/useNewObligationPage';
 
 export function NewObligationPageContent() {

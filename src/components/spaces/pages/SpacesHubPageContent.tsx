@@ -8,7 +8,7 @@
 
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
-import Link from 'next/link';
+import { Link } from '@/lib/workspace/navigation';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import {
   Package,

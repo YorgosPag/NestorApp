@@ -19,7 +19,8 @@
  * @see ContextualNavigationService - Centralized route generation
  */
 import React from 'react';
-import Link from 'next/link';
+import { Link } from '@/lib/workspace/navigation';
+
 // 🏢 ENTERPRISE: Shadcn Tooltip for accessible tooltips (replaces native title)
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 // 🏢 ENTERPRISE: Icons από centralized config - ZERO hardcoded imports

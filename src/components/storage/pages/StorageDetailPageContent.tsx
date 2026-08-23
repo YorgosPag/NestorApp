@@ -8,6 +8,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { Link } from '@/lib/workspace/navigation';
 import { notFound, useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { UnitBadge } from '@/core/badges';
@@ -31,7 +32,6 @@ import {
 import { getParkingStatusLabel, getParkingStatusColor } from '@/components/projects/utils/parking-utils';
 import type { ParkingSpotStatus } from '@/types/parking';
 import { cn } from '@/lib/utils';
-import Link from 'next/link';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';

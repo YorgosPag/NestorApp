@@ -2,7 +2,7 @@
 
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
-import Link from 'next/link';
+import { Link } from '@/lib/workspace/navigation';
 import { ShieldX, LogIn } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PageContainer } from '@/core/containers';

@@ -32,8 +32,7 @@
  */
 
 import React from 'react';
-import Link from 'next/link';
-
+import { Link } from '@/lib/workspace/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { nowISO } from '@/lib/date-local';
 import { demandExclusionReason } from '@/lib/demand/demand-aggregate';

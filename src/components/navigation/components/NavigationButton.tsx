@@ -12,7 +12,7 @@ import { UnifiedBadge } from '../../../core/badges/UnifiedBadgeSystem';
 import { NavigationStatus } from '../../../core/types/BadgeTypes';
 import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS, HOVER_BORDER_EFFECTS } from '../../ui/effects';
 import { ExternalLink } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';

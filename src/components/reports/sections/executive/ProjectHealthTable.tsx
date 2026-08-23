@@ -10,7 +10,7 @@
 
 import '@/lib/design-system';
 import { useTranslation } from 'react-i18next';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
 import {
   ReportSection,
   ReportTable,

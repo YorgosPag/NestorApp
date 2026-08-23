@@ -49,7 +49,7 @@
  */
 
 import React from 'react';
-import Link from 'next/link';
+import { Link } from '@/lib/workspace/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { AUTH_ROUTES } from '@/lib/routes';
 import { SEARCH_LANDING_ROUTE } from '@/lib/listings/listing-routes';

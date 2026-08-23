@@ -10,10 +10,10 @@
  */
 
 import { useState, useMemo } from 'react';
+import { useRouter } from '@/lib/workspace/navigation';
 import { useParams, useSearchParams } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import { FileBarChart, ArrowLeft } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { PageLoadingState } from '@/core/states';
 import type { ReportType, ReportDateFilter, ReportDatePreset } from '@/subapps/accounting/types';

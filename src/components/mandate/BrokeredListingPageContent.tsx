@@ -19,7 +19,7 @@
  */
 
 import React from 'react';
-import Link from 'next/link';
+import { Link } from '@/lib/workspace/navigation';
 import { useTranslation } from 'react-i18next';
 
 import { BrokeredMandateFields } from '@/components/mandate/BrokeredMandateFields';

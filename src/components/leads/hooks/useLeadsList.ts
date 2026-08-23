@@ -9,7 +9,7 @@
  */
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from '@/lib/workspace/navigation';
 import { getOpportunities } from "@/services/opportunities.service";
 import { deleteOpportunityWithPolicy } from '@/services/crm/crm-mutation-gateway';
 import { useNotifications } from '@/providers/NotificationProvider';

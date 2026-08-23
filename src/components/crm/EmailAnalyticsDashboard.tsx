@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Mail, Eye, MousePointer, TrendingUp, Construction, ArrowLeft, Building2, Star } from 'lucide-react';
 // 🏢 ENTERPRISE: Centralized navigation entities for unit icon
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';

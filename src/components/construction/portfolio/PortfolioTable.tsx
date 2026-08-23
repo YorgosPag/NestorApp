@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
 import { useTranslation } from 'react-i18next';
 import { Progress } from '@/components/ui/progress';
 import {

@@ -15,8 +15,7 @@
 import { format } from 'date-fns';
 import { Calendar, Clock, User, FileText, Tag, ArrowRight, Edit3 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import Link from 'next/link';
-
+import { Link } from '@/lib/workspace/navigation';
 import {
   Dialog,
   DialogContent,

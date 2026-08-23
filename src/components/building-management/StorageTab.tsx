@@ -12,7 +12,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
 import { formatCurrencyWhole } from '@/lib/intl-utils';
 import type { StorageUnit, StorageType, StorageStatus } from '@/types/storage';
 import type { Building } from '@/types/building/contracts';

@@ -16,7 +16,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
 import { MapPin, Building2, Home, DollarSign, Maximize, Library } from 'lucide-react';
 import { PageLoadingState } from '@/core/states';
 import { PageContainer } from '@/core/containers';

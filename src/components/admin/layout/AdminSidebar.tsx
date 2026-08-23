@@ -9,8 +9,7 @@
  */
 
 import { useState } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { Link, usePathname } from '@/lib/workspace/navigation';
 import {
   Users,
   Wrench,

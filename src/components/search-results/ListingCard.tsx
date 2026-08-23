@@ -29,7 +29,7 @@
  */
 
 import React from 'react';
-import Link from 'next/link';
+import { Link } from '@/lib/workspace/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { resolveDisplayPrice } from '@/lib/properties/price-resolver';
 import { MISSING_PRICE_KEY } from '@/lib/listings/listing-price-keys';

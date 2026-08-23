@@ -25,8 +25,7 @@
  */
 
 import React from 'react';
-import Link from 'next/link';
-
+import { Link } from '@/lib/workspace/navigation';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useDemandAnswer, useDemandCompetition } from '@/hooks/demand/useDemandAnswer';

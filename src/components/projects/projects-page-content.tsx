@@ -28,7 +28,7 @@ import { ProjectViewSwitch } from './ProjectViewSwitch';
 import { PageLoadingState, PageErrorState } from '@/core/states';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import Link from 'next/link';
+import { Link } from '@/lib/workspace/navigation';
 import { Button } from '@/components/ui/button';
 import { deleteProject } from '@/services/projects-client.service';
 

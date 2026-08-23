@@ -2,7 +2,8 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
+import { useParams } from 'next/navigation';
 import { ArrowLeft, AlertTriangle, Calendar, ClipboardList, Filter, Folder, Home, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';

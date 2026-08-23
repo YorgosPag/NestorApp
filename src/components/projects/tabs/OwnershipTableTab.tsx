@@ -25,7 +25,7 @@ import { useOwnershipTable } from '@/hooks/ownership/useOwnershipTable';
 import { getBuildingIdsByProject } from '@/services/ownership/ownership-table-service';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useNotifications } from '@/providers/NotificationProvider';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';

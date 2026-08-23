@@ -14,8 +14,7 @@
  */
 
 import React from 'react';
-import { useRouter } from 'next/navigation';
-import { usePathname } from '@/lib/workspace/navigation';
+import { usePathname, useRouter } from '@/lib/workspace/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { BaseTabs } from './base-tabs';

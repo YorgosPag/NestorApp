@@ -13,7 +13,7 @@
  */
 
 import { useMemo, useState } from 'react';
-import Link from 'next/link';
+import { Link } from '@/lib/workspace/navigation';
 import { PageLayout } from '@/components/app/page-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
