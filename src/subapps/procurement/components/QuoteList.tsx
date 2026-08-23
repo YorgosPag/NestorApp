@@ -12,7 +12,8 @@
  */
 
 import React, { useMemo, useState, useCallback } from 'react';
-import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { useRouter, usePathname } from '@/lib/workspace/navigation';
+import { useSearchParams } from 'next/navigation';
 import { FileText, History, Loader2, Search, XCircle } from 'lucide-react';
 
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -255,7 +256,63 @@ export function QuoteList({
         default: {
           const aTs = (a.q.createdAt as { seconds: number } | null)?.seconds ?? 0;
           const bTs = (b.q.createdAt as { seconds: number } | null)?.seconds ?? 0;
-          return (aTs - bTs) * dir;
+          /**
+   * Η γραμμή εργαλείων αποδίδεται σε **δύο** θέσεις — σταθερή σε desktop,
+   * πτυσσόμενη σε mobile — με **ταυτόσημα** props. Ήταν γραμμένη δύο φορές, και
+   * το CHECK 3.28 τη μετρούσε ως αυτο-κλώνο 14 γραμμών / 66 tokens.
+   *
+   * ⚠️ Ένα React element είναι **αμετάβλητος περιγραφέας**, όχι στιγμιότυπο: η
+   * απόδοση του ίδιου element σε δύο θέσεις δίνει δύο ανεξάρτητα component
+   * instances, ακριβώς όπως πριν. Οι δύο θέσεις **δεν** μοιράζονται κατάσταση.
+   */
+  /**
+   * Η κάρτα μιας προσφοράς μαζί με τις παλαιότερες εκδόσεις της.
+   *
+   * Αποδιδόταν **δύο φορές, γράμμα προς γράμμα**: μια στον κλάδο που ομαδοποιεί
+   * κατά κατάσταση και μια στον επίπεδο. Το CHECK 3.28 τη μετρούσε ως αυτο-κλώνο.
+   *
+   * ⚠️ Το `key` μένει **μέσα** στο `React.Fragment` που επιστρέφεται, γιατί ο
+   * καλών το αποδίδει απευθείας μέσα σε `.map()` — αν έβγαινε έξω, οι δύο κλάδοι
+   * θα έπρεπε να το θυμούνται ο καθένας χωριστά.
+   */
+  const renderQuoteRow = (q: Quote) => {
+    const older = supersededByParentId.get(q.id) ?? [];
+    const isExpanded = expandedVersions.has(q.id);
+    return (
+      <React.Fragment key={q.id}>
+        <QuoteListCard
+          quote={q}
+          isSelected={selectedQuoteId === q.id}
+          onSelect={() => onSelectQuote(q)}
+          hasOlderVersions={older.length > 0}
+          isVersionExpanded={isExpanded}
+          onVersionToggle={(e) => toggleVersionExpand(q.id, e)}
+        />
+        {isExpanded && older.map((sq) => (
+          <SupersededVersionRow key={sq.id} quote={sq} />
+        ))}
+      </React.Fragment>
+    );
+  };
+
+  const toolbar = (
+    <CompactToolbar
+            config={quotesConfig}
+            selectedItems={selectedItems}
+            onSelectionChange={setSelectedItems}
+            searchTerm={effectiveSearch}
+            onSearchChange={handleSearchChange}
+            activeFilters={activeFilters}
+            onFiltersChange={setActiveFilters}
+            sortBy={sortBy}
+            onSortChange={renderSortChange}
+            hasSelectedContact={!!selectedQuoteId}
+            onNewItem={handleNewItem}
+            onEditItem={handleEditItem}
+    />
+  );
+
+  return (aTs - bTs) * dir;
         }
       }
     });
@@ -293,40 +350,8 @@ export function QuoteList({
           onToolbarToggle={setShowToolbar}
           hideSearch
         />
-        <div className="hidden md:block">
-          <CompactToolbar
-            config={quotesConfig}
-            selectedItems={selectedItems}
-            onSelectionChange={setSelectedItems}
-            searchTerm={effectiveSearch}
-            onSearchChange={handleSearchChange}
-            activeFilters={activeFilters}
-            onFiltersChange={setActiveFilters}
-            sortBy={sortBy}
-            onSortChange={renderSortChange}
-            hasSelectedContact={!!selectedQuoteId}
-            onNewItem={handleNewItem}
-            onEditItem={handleEditItem}
-          />
-        </div>
-        <div className="md:hidden">
-          {showToolbar && (
-            <CompactToolbar
-              config={quotesConfig}
-              selectedItems={selectedItems}
-              onSelectionChange={setSelectedItems}
-              searchTerm={effectiveSearch}
-              onSearchChange={handleSearchChange}
-              activeFilters={activeFilters}
-              onFiltersChange={setActiveFilters}
-              sortBy={sortBy}
-              onSortChange={renderSortChange}
-              hasSelectedContact={!!selectedQuoteId}
-              onNewItem={handleNewItem}
-              onEditItem={handleEditItem}
-            />
-          )}
-        </div>
+        <div className="hidden md:block">{toolbar}</div>
+        <div className="md:hidden">{showToolbar && toolbar}</div>
       </div>
 
       {/* Sort dropdown — RFQ mode only (ADR-328 §5.P) */}
@@ -419,45 +444,13 @@ export function QuoteList({
                 <React.Fragment key={group.status}>
                   {groupIdx > 0 && <div className="border-t border-muted my-2" />}
                   {group.quotes.map((q) => {
-                    const older = supersededByParentId.get(q.id) ?? [];
-                    const isExpanded = expandedVersions.has(q.id);
-                    return (
-                      <React.Fragment key={q.id}>
-                        <QuoteListCard
-                          quote={q}
-                          isSelected={selectedQuoteId === q.id}
-                          onSelect={() => onSelectQuote(q)}
-                          hasOlderVersions={older.length > 0}
-                          isVersionExpanded={isExpanded}
-                          onVersionToggle={(e) => toggleVersionExpand(q.id, e)}
-                        />
-                        {isExpanded && older.map((sq) => (
-                          <SupersededVersionRow key={sq.id} quote={sq} />
-                        ))}
-                      </React.Fragment>
-                    );
+                    return renderQuoteRow(q);
                   })}
                 </React.Fragment>
               ))
             ) : (
               rfqSorted.map((q) => {
-                const older = supersededByParentId.get(q.id) ?? [];
-                const isExpanded = expandedVersions.has(q.id);
-                return (
-                  <React.Fragment key={q.id}>
-                    <QuoteListCard
-                      quote={q}
-                      isSelected={selectedQuoteId === q.id}
-                      onSelect={() => onSelectQuote(q)}
-                      hasOlderVersions={older.length > 0}
-                      isVersionExpanded={isExpanded}
-                      onVersionToggle={(e) => toggleVersionExpand(q.id, e)}
-                    />
-                    {isExpanded && older.map((sq) => (
-                      <SupersededVersionRow key={sq.id} quote={sq} />
-                    ))}
-                  </React.Fragment>
-                );
+                return renderQuoteRow(q);
               })
             )
           ) : standaloneSorted.length === 0 ? (
