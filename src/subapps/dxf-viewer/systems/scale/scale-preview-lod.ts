@@ -21,6 +21,8 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { getEntityBBox } from '../../canvas-v2/dxf-canvas/dxf-viewport-culling';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ. Το σχόλιο ομολογούσε «mirror of getEntityBBox shape — structural, no import coupling»: το διπλότυπο ήταν ΣΚΟΠΙΜΟ, για να αποφευχθεί ένα import.
+import type { Bbox } from '../../types/coordinate-space';
 
 /**
  * At or below this many selected entities the drag preview stays FULL WYSIWYG (every entity real-
@@ -36,13 +38,6 @@ export const SCALE_PREVIEW_SAMPLE_COUNT = 400;
 /** Gold extent-box colour (matches the rubber-band chrome of the transform ghost skeleton). */
 export const SCALE_PREVIEW_EXTENT_COLOR = '#FFD700';
 
-/** Axis-aligned world bounds (mirror of `getEntityBBox`'s shape — structural, no import coupling). */
-export interface PreviewBBox {
-  minX: number;
-  minY: number;
-  maxX: number;
-  maxY: number;
-}
 
 export type ScalePreviewLod = 'full' | 'lod';
 
@@ -72,7 +67,7 @@ export function sampleIds(ids: readonly string[], maxCount: number): string[] {
 export function computeUnionBBox(
   ids: readonly string[],
   getEntity: (id: string) => DxfEntityUnion | null,
-): PreviewBBox | null {
+): Bbox | null {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   let any = false;
   for (const id of ids) {
@@ -91,7 +86,7 @@ export function computeUnionBBox(
 }
 
 /** Scale a bbox about `base` by (sx, sy); re-min/maxed so a negative factor (mirror) stays valid. */
-export function scaleBBoxAboutBase(b: PreviewBBox, base: Point2D, sx: number, sy: number): PreviewBBox {
+export function scaleBBoxAboutBase(b: Bbox, base: Point2D, sx: number, sy: number): Bbox {
   const x0 = base.x + (b.minX - base.x) * sx;
   const x1 = base.x + (b.maxX - base.x) * sx;
   const y0 = base.y + (b.minY - base.y) * sy;
@@ -107,7 +102,7 @@ export function scaleBBoxAboutBase(b: PreviewBBox, base: Point2D, sx: number, sy
  * as one extra object, so the LOD extent box needs no separate world→screen math. Gold, so it reads
  * as the selection's transformed footprint.
  */
-export function buildExtentBoxEntity(b: PreviewBBox): DxfEntityUnion {
+export function buildExtentBoxEntity(b: Bbox): DxfEntityUnion {
   return {
     id: 'scale-preview-extent',
     type: 'polyline',

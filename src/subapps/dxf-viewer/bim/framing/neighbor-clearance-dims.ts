@@ -31,10 +31,12 @@ import type { SceneUnits } from '../../utils/scene-units';
 import type { SceneSnapTargets } from './scene-snap-targets';
 import type { LinearMemberSnapTarget } from './linear-member-face-snap';
 import type { GhostFaceDimension, GhostFaceDimensionsMeta } from './ghost-face-dim-references';
-import { footprintBounds, footprintCenter, type FootprintBounds, type FootprintFace } from '../geometry/shared/footprint-face-frame';
+import { footprintBounds, footprintCenter, type FootprintFace } from '../geometry/shared/footprint-face-frame';
 import { projectPolygonOnAxis } from '../geometry/shared/polygon-axis-projection';
 import { buildMemberTargetFrame } from './linear-member-face-snap';
 import { quantizeMagnitude } from '../../systems/tracking/adaptive-distance-snap';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ (κάτοψη, canonical mm). Η ΣΥΝΑΡΤΗΣΗ κρατά το «τι» (footprintBounds) — ο ΤΥΠΟΣ κρατά τον χώρο.
+import type { Bbox } from '../../types/coordinate-space';
 
 /** Default μέγιστο διάκενο σε **screen px** (× worldPerPixel από τον caller) — πέρα από αυτό δεν δείχνουμε. */
 export const NEIGHBOR_DIM_MAX_CLEARANCE_PX = 700;
@@ -102,8 +104,8 @@ function overlapLen(aLo: number, aHi: number, bLo: number, bHi: number): number 
 /** Ένα AABB face-to-face διάκενο ανά ημιάξονα (E/W/N/S) — μόνο με εγκάρσια επικάλυψη. */
 function pushAabbCandidate(
   out: Candidate[],
-  g: FootprintBounds,
-  nb: FootprintBounds,
+  g: Bbox,
+  nb: Bbox,
   opts: Readonly<NeighborClearanceOptions>,
 ): void {
   const yOv = overlapLen(g.minY, g.maxY, nb.minY, nb.maxY);
@@ -151,7 +153,7 @@ function addGap(
 function pushMemberCandidate(
   out: Candidate[],
   ghostFootprint: readonly Point2D[],
-  g: FootprintBounds,
+  g: Bbox,
   t: LinearMemberSnapTarget,
   opts: Readonly<NeighborClearanceOptions>,
 ): void {
@@ -249,8 +251,8 @@ function faceOutward(face: FootprintFace): Point2D {
 /** AABB face-to-face διάκενα ghost↔γείτονα ανά ημιάξονα (μόνο με εγκάρσια επικάλυψη, εντός [ε,max]). */
 function pushGapCandidates(
   out: GapStepCandidate[],
-  g: FootprintBounds,
-  nb: FootprintBounds,
+  g: Bbox,
+  nb: Bbox,
   maxClearance: number,
 ): void {
   const yOv = overlapLen(g.minY, g.maxY, nb.minY, nb.maxY);

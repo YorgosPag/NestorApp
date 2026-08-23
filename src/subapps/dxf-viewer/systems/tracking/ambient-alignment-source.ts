@@ -35,17 +35,15 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import type { AcquiredTrackingPoint } from './TrackingPointStore';
 import { getBimCharacteristicPoints } from '../../bim/utils/bim-characteristic-points';
-import {
-  footprintBounds,
-  distanceToFootprintBounds,
-  type FootprintBounds,
-} from '../../bim/geometry/shared/footprint-face-frame';
+import { footprintBounds, distanceToFootprintBounds } from '../../bim/geometry/shared/footprint-face-frame';
 // ADR-357 (2026-07-04) — plain-geometry endpoints/midpoints reuse the OSNAP
 // geometry SSoT (the SAME extractor the Endpoint/Midpoint snap engines consume),
 // so a drawn line participates in alignment with zero duplicate geometry.
 import { GeometricCalculations } from '../../snapping/shared/GeometricCalculations';
 // ADR-654 — raster image rotated corners via το ΚΟΙΝΟ vertex SSoT (image-as-alignment-source).
 import { imageEntityRectVertices, type ImageRectShape } from '../../rendering/entities/shared/image-rect-vertices';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ (κάτοψη, canonical mm). Η ΣΥΝΑΡΤΗΣΗ κρατά το «τι» (footprintBounds) — ο ΤΥΠΟΣ κρατά τον χώρο.
+import type { Bbox } from '../../types/coordinate-space';
 
 /** `sourceSnapType` tag identifying anchors produced by the ambient source. */
 export const AMBIENT_SOURCE_TYPE = 'ambient-member';
@@ -115,7 +113,7 @@ export function collectAmbientAlignmentAnchors(
  * verts). A single text insertion point yields a zero-size bbox AT the point, so
  * `distanceToFootprintBounds` still measures cursor-to-point proximity correctly.
  */
-function boundsFromPoints(pts: readonly Point2D[]): FootprintBounds | null {
+function boundsFromPoints(pts: readonly Point2D[]): Bbox | null {
   if (pts.length === 0) return null;
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
   for (const p of pts) {
