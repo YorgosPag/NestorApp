@@ -37,8 +37,28 @@ export function computePerspectiveFraming(
   return { position, target: _center.clone(), orthoZoom: 1 };
 }
 
-/** Scene bounding box (world space). */
-export interface SceneBounds {
+/**
+ * Άξονο-ευθυγραμμισμένο κουτί σκηνής σε **world space, ΤΡΙΩΝ διαστάσεων**.
+ *
+ * ⚠️ Λεγόταν `SceneBounds` μέχρι το ADR-795, δηλαδή **ΤΟ ΙΔΙΟ ΟΝΟΜΑ** με **πέντε**
+ * δισδιάστατα `SceneBounds` του δέντρου (`types/scene-types.ts` · `lib/dxf-scene/
+ * scene-fit-transform.ts` · `components/.../overlay-renderer/types.ts` · κ.ά.). Τα πέντε 2Δ
+ * είναι **αμοιβαία συμβατά**, άρα η μεταξύ τους σύγχυση είναι αθόρυβη· αυτό εδώ όμως έχει
+ * **τρίτη διάσταση**, και μια τιμή του περνούσε ως «SceneBounds» σε αναγνώστη που περίμενε
+ * κάτοψη — το `z` απλώς **αγνοούνταν**. Το όνομα λέει πλέον τη διάσταση.
+ *
+ * 🏆 Το πρότυπο είναι ομόφωνο και το ακολουθούμε: three.js `Box3` (έναντι `Box2`) ·
+ * Revit `BoundingBoxXYZ` (έναντι `BoundingBoxUV`) · ArchiCAD `API_Box3D` (έναντι `Bbox`) ·
+ * Rhino `BoundingBox` 3Δ. **Το όνομα δηλώνει τι ΕΓΓΥΑΤΑΙ**, ποτέ ποιος το χρησιμοποιεί.
+ *
+ * ⚠️ **ΜΗΝ το αντικαταστήσεις με σκέτο `THREE.Box3`**: ο μοναδικός καλών
+ * (`viewport-camera.frameHome`) περνά **object literal** `{ min, max }`, που δεν έχει τις
+ * μεθόδους της κλάσης — θα απαιτούσε `new THREE.Box3(...)` σε κάθε κλήση, δηλαδή κατανομή
+ * αντικειμένου σε διαδρομή που σήμερα δεν κάνει καμία.
+ *
+ * @see docs/centralized-systems/reference/adrs/ADR-795-rect-vocabulary-persistence.md
+ */
+export interface SceneBox3 {
   readonly min: THREE.Vector3;
   readonly max: THREE.Vector3;
 }
@@ -50,7 +70,7 @@ export interface SceneBounds {
  */
 export function computeFramingForView(
   viewId: CanonicalViewId,
-  bounds: SceneBounds,
+  bounds: SceneBox3,
   aspect: number,
   fovDeg: number,
 ): FramingResult {

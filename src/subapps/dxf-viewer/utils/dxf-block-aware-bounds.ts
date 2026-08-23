@@ -13,12 +13,15 @@
 
 import { isBlockEntity } from '../types/entities';
 import { expandBlockInstance } from '../systems/block/block-expander';
-import type { AnySceneEntity } from '../types/scene';
-
-export interface SceneBounds {
-  min: { x: number; y: number };
-  max: { x: number; y: number };
-}
+// ADR-795: το `SceneBounds` ΔΕΝ δηλώνεται πια εδώ — ζητιέται από τη ρίζα του υποσυστήματος
+// (`types/scene-types.ts`, μέσω του ίδιου barrel που το αρχείο ήδη εισάγει). Ήταν ένα από
+// **έξι** ομώνυμα του δέντρου, δομικά ΤΑΥΤΟΣΗΜΟ με τη ρίζα ({ min: Point2D; max: Point2D }
+// όπου Point2D = { x: number; y: number }) — δηλαδή διπλότυπο χωρίς καμία διαφορά, όχι
+// σκόπιμη παραλλαγή. Μηδέν νέα ακμή εξάρτησης: η εισαγωγή υπήρχε ήδη στην ίδια γραμμή.
+// ⚠️ ΧΩΡΙΣ re-export: ο μοναδικός καταναλωτής (`dxf-scene-builder.ts`) εισάγει μόνο τη
+// συνάρτηση. Ένα `export type { SceneBounds }` εδώ θα γεννούσε **ενδέκατο μονοπάτι** προς
+// το ίδιο όνομα — δηλαδή θα αντέγραφε το ελάττωμα που αυτή η αλλαγή κλείνει.
+import type { AnySceneEntity, SceneBounds } from '../types/scene';
 
 /** Empty-scene fallback box (mirrors the builder's historical default extents). */
 const FALLBACK_BOUNDS: SceneBounds = { min: { x: -100, y: -100 }, max: { x: 100, y: 100 } };
