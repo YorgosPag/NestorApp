@@ -31,7 +31,8 @@ import { resolveHvacSource, type HvacSource } from './hvac-source-resolve';
 import { type RouteTarget } from '../routing/orthogonal-router';
 import { routeWallAware } from '../routing/route-wall-aware';
 import { wallObstacles } from '../routing/wall-obstacles';
-import type { Rect2D } from '../routing/routing-constants';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ. Το σχόλιο ομολογούσε «Field names mirror core/spatial SpatialBounds so an obstacle can be fed to the shared spatial index verbatim».
+import type { Bbox } from '../../../types/coordinate-space';
 
 /** Build one service's proposed duct network (route + size) rooted at the AHU outlet. */
 function buildNetwork(
@@ -39,7 +40,7 @@ function buildNetwork(
   source: HvacSource,
   demands: readonly TerminalAirDemand[],
   discipline: HvacDiscipline,
-  obstacles: readonly Rect2D[],
+  obstacles: readonly Bbox[],
 ): ProposedDuctNetwork {
   const classification = AIR_SERVICE_CLASSIFICATION[service];
   // Air-flow is the cumulative-sum driver (the router's `loadingUnits` is an air-flow proxy).
