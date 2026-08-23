@@ -1,13 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Link, useRouter } from '@/lib/workspace/navigation';
 import { useTranslation } from 'react-i18next';
-import Link from 'next/link';
 import { ArrowLeft, ClipboardCheck, Ban, FileX2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { useAuth } from '@/hooks/useAuth';
+import { authorizedFetch } from '@/subapps/accounting/utils/authorized-fetch';
 import { API_ROUTES } from '@/config/domain-constants';
 import type { Invoice } from '@/subapps/accounting/types';
 import { useCompanySetup } from '@/subapps/accounting/hooks/useCompanySetup';
@@ -47,10 +47,7 @@ export function InvoiceDetails({ invoiceId, onBack }: InvoiceDetailsProps) {
     }
     if (!invoiceDetailsCache.hasLoaded(invoiceId)) setLoading(true);
     try {
-      const token = await user.getIdToken();
-      const res = await fetch(API_ROUTES.ACCOUNTING.INVOICES.BY_ID(invoiceId), {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await authorizedFetch(user, API_ROUTES.ACCOUNTING.INVOICES.BY_ID(invoiceId));
       if (res.ok) {
         const json = await res.json();
         const data: Invoice | null = json.data ?? null;

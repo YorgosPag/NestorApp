@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import Link from 'next/link';
+import { Link } from '@/lib/workspace/navigation';
 import { Calendar, ExternalLink } from 'lucide-react';
 import { EscoOccupationPicker } from '@/components/shared/EscoOccupationPicker';
 import { EscoSkillPicker } from '@/components/shared/EscoSkillPicker';
@@ -21,6 +21,30 @@ type RendererFn = (
   fieldDisabled: boolean,
 ) => React.ReactNode;
 
+/**
+ * Προσαρμογέας για renderer που χρειάζεται **ΜΟΝΟ** το `fieldDisabled`.
+ *
+ * Οι πέντε picker renderers αυτού του αρχείου (`profession` · `employer` ·
+ * `skills` · `name` · `supervisionMinistry`) διαβάζουν το `formData` από το
+ * closure τους και **αγνοούν τις τέσσερις πρώτες παραμέτρους** της
+ * {@link RendererFn}. Μέχρι σήμερα καθένας ξανάγραφε ΟΛΟΚΛΗΡΗ την υπογραφή —
+ * **έξι γραμμές × πέντε αντίγραφα** — που το CHECK 3.28 (jscpd, token-based)
+ * μετρούσε ως πέντε κλώνους του ίδιου μπλοκ.
+ *
+ * ⚠️ **ΜΗΝ το κάνεις γενικό «προσαρμογέα με options»**: η μόνη παράμετρος που
+ * καταναλώνεται πραγματικά είναι το `fieldDisabled`. Ένας προσαρμογέας που
+ * δέχεται και τις πέντε θα ήταν η **ίδια boilerplate με άλλο όνομα** — δηλαδή
+ * θα μετακινούσε τον κλώνο αντί να τον λύσει.
+ *
+ * ⚠️ Οι παράμετροι **δεν** φέρουν ρητούς τύπους: τους δίνει το contextual typing
+ * από το `: RendererFn` της επιστροφής. Ρητή επανάληψή τους εδώ θα ξαναγεννούσε
+ * ακριβώς το μπλοκ που αυτή η συνάρτηση υπάρχει για να εξαλείψει.
+ */
+const disabledOnly =
+  (render: (fieldDisabled: boolean) => React.ReactNode): RendererFn =>
+  (_field, _fieldFormData, _onChange, _onSelectChange, fieldDisabled) =>
+    render(fieldDisabled);
+
 
 /**
  * Build individual-specific renderers (profession, employer, skills, clientSince, address).
@@ -31,11 +55,7 @@ export function buildIndividualRenderers(ctx: RendererContext): Record<string, R
   const { formData, setFormData, t } = ctx;
 
   return {
-    profession: (
-      _field: CustomRendererField, _fd: Record<string, unknown>,
-      _onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void,
-      _onSelect: (n: string, v: string) => void, fieldDisabled: boolean,
-    ) => (
+    profession: disabledOnly((fieldDisabled) => (
       <EscoOccupationPicker
         value={formData.profession ?? ''}
         escoUri={formData.escoUri ?? undefined}
@@ -53,13 +73,9 @@ export function buildIndividualRenderers(ctx: RendererContext): Record<string, R
           }
         }}
       />
-    ),
+    )),
 
-    employer: (
-      _field: CustomRendererField, _fd: Record<string, unknown>,
-      _onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void,
-      _onSelect: (n: string, v: string) => void, fieldDisabled: boolean,
-    ) => (
+    employer: disabledOnly((fieldDisabled) => (
       <EmployerPicker
         value={formData.employer ?? ''}
         employerId={formData.employerId ?? undefined}
@@ -74,13 +90,9 @@ export function buildIndividualRenderers(ctx: RendererContext): Record<string, R
           }
         }}
       />
-    ),
+    )),
 
-    skills: (
-      _field: CustomRendererField, _fd: Record<string, unknown>,
-      _onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void,
-      _onSelect: (n: string, v: string) => void, fieldDisabled: boolean,
-    ) => (
+    skills: disabledOnly((fieldDisabled) => (
       <EscoSkillPicker
         value={formData.escoSkills ?? []}
         disabled={fieldDisabled}
@@ -88,7 +100,7 @@ export function buildIndividualRenderers(ctx: RendererContext): Record<string, R
           if (setFormData) setFormData({ ...formData, escoSkills: skills });
         }}
       />
-    ),
+    )),
 
     clientSince: () => {
       const rawValue = (formData as unknown as Record<string, unknown>).clientSince as string | null;
@@ -124,11 +136,7 @@ export function buildServiceRenderers(ctx: RendererContext): Record<string, Rend
   const { formData, setFormData } = ctx;
 
   return {
-    name: (
-      _field: CustomRendererField, _fd: Record<string, unknown>,
-      _onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void,
-      _onSelect: (n: string, v: string) => void, fieldDisabled: boolean,
-    ) => (
+    name: disabledOnly((fieldDisabled) => (
       <PublicServicePicker
         value={(formData.name as string) ?? ''}
         disabled={fieldDisabled}
@@ -137,19 +145,15 @@ export function buildServiceRenderers(ctx: RendererContext): Record<string, Rend
           if (setFormData) setFormData({ ...formData, name: entity.name, supervisionMinistry: entity.supervisingMinistry });
         }}
       />
-    ),
+    )),
 
-    supervisionMinistry: (
-      _field: CustomRendererField, _fd: Record<string, unknown>,
-      _onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void,
-      _onSelect: (n: string, v: string) => void, fieldDisabled: boolean,
-    ) => (
+    supervisionMinistry: disabledOnly((fieldDisabled) => (
       <MinistryPicker
         value={formData.supervisionMinistry ?? ''}
         disabled={fieldDisabled}
         onChange={(name: string) => { if (setFormData) setFormData({ ...formData, supervisionMinistry: name }); }}
       />
-    ),
+    )),
   };
 }
 

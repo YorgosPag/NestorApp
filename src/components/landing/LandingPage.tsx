@@ -1,16 +1,53 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { Search, MapPin, Home, TrendingUp, Building, ArrowRight, Star, Users, Shield } from 'lucide-react';
+import { Link, useRouter } from '@/lib/workspace/navigation';
+import { Search, MapPin, Home, TrendingUp, Building, ArrowRight, Users, Shield } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS, GRADIENT_HOVER_EFFECTS } from '@/components/ui/effects';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import type { LucideIcon } from 'lucide-react';
+import { FeatureCard, PropertyShowcaseCard, type CardTone } from './LandingShowcaseCards';
 import '@/lib/design-system';
+
+
+/**
+ * Τα τρία χαρακτηριστικά της αρχικής. Ο **τόνος** είναι σημασιολογικό κλειδί,
+ * όχι κλάση — τη λύνει η ίδια η {@link FeatureCard} από το `useSemanticColors`.
+ */
+const FEATURE_CARDS = [
+  { icon: MapPin, tone: 'info', titleKey: 'features.interactiveFloorplan.title', descriptionKey: 'features.interactiveFloorplan.description' },
+  { icon: Shield, tone: 'accent', titleKey: 'features.guaranteedQuality.title', descriptionKey: 'features.guaranteedQuality.description' },
+  { icon: Users, tone: 'success', titleKey: 'features.personalService.title', descriptionKey: 'features.personalService.description' },
+] as const satisfies readonly {
+  icon: LucideIcon;
+  tone: CardTone;
+  titleKey: string;
+  descriptionKey: string;
+}[];
+
+/**
+ * Τα τρία προβεβλημένα ακίνητα.
+ *
+ * ⚠️ Το `gradientClass` κρατά **ωμή παλέτα Tailwind** και μένει ΕΔΩ επίτηδες:
+ * το CHECK 3.26 (ADR-365, baseline 0/0) μπλοκάρει ωμή παλέτα σε **νέο** αρχείο,
+ * οπότε μετακόμισή του στο `LandingShowcaseCards.tsx` θα το έκανε παράβαση χωρίς
+ * να το διορθώσει. Η σωστή θεραπεία είναι σημασιολογικά tokens — άλλη δουλειά.
+ */
+const SHOWCASE_PROPERTIES = [
+  { key: 'studioB1', icon: Home, gradientClass: 'bg-gradient-to-br from-blue-400 to-blue-600', price: '€65.000', rating: 4.0 },
+  { key: 'apartment2D', icon: Building, gradientClass: 'bg-gradient-to-br from-purple-400 to-purple-600', price: '€145.000', rating: 5.0 },
+  { key: 'maisonetteE1', icon: TrendingUp, gradientClass: 'bg-gradient-to-br from-green-400 to-green-600', price: '€280.000', rating: 4.5 },
+] as const satisfies readonly {
+  key: string;
+  icon: LucideIcon;
+  gradientClass: string;
+  price: string;
+  rating: number;
+}[];
 
 export function LandingPage() {
   const iconSizes = useIconSizes();
@@ -207,47 +244,16 @@ export function LandingPage() {
           </header>
 
           <ul className="grid md:grid-cols-3 gap-8">
-            <li>
-              <article className={`${colors.bg.primary} rounded-xl p-6 shadow-sm ${INTERACTIVE_PATTERNS.CARD_STANDARD}`}>
-                <figure className={`${iconSizes.xl2} ${colors.bg.info} rounded-lg flex items-center justify-center mb-4`}>
-                  <MapPin className={`${iconSizes.lg} ${colors.text.info}`} />
-                </figure>
-              <h3 className={`text-lg font-semibold ${colors.text.foreground} mb-2`}>
-                {t('features.interactiveFloorplan.title')}
-              </h3>
-              <p className={colors.text.muted}>
-                {t('features.interactiveFloorplan.description')}
-              </p>
-              </article>
-            </li>
-
-            <li>
-              <article className={`${colors.bg.primary} rounded-xl p-6 shadow-sm ${INTERACTIVE_PATTERNS.CARD_STANDARD}`}>
-                <figure className={`${iconSizes.xl2} ${colors.bg.accent} rounded-lg flex items-center justify-center mb-4`}>
-                  <Shield className={`${iconSizes.lg} ${colors.text.accent}`} />
-                </figure>
-              <h3 className={`text-lg font-semibold ${colors.text.foreground} mb-2`}>
-                {t('features.guaranteedQuality.title')}
-              </h3>
-              <p className={colors.text.muted}>
-                {t('features.guaranteedQuality.description')}
-              </p>
-              </article>
-            </li>
-
-            <li>
-              <article className={`${colors.bg.primary} rounded-xl p-6 shadow-sm ${INTERACTIVE_PATTERNS.CARD_STANDARD}`}>
-                <figure className={`${iconSizes.xl2} ${colors.bg.success} rounded-lg flex items-center justify-center mb-4`}>
-                  <Users className={`${iconSizes.lg} ${colors.text.success}`} />
-                </figure>
-              <h3 className={`text-lg font-semibold ${colors.text.foreground} mb-2`}>
-                {t('features.personalService.title')}
-              </h3>
-              <p className={colors.text.muted}>
-                {t('features.personalService.description')}
-              </p>
-              </article>
-            </li>
+            {FEATURE_CARDS.map((card) => (
+              <li key={card.titleKey}>
+                <FeatureCard
+                  icon={card.icon}
+                  tone={card.tone}
+                  title={t(card.titleKey)}
+                  description={t(card.descriptionKey)}
+                />
+              </li>
+            ))}
           </ul>
         </div>
       </section>
@@ -265,86 +271,20 @@ export function LandingPage() {
           </header>
 
           <ul className="grid md:grid-cols-3 gap-8 mb-12">
-            {/* Property Card 1 */}
-            <li>
-              <article className={`${colors.bg.primary} rounded-xl shadow-lg overflow-hidden cursor-pointer ${INTERACTIVE_PATTERNS.CARD_ENHANCED}`} onClick={() => router.push('/properties')}>
-              <figure className="h-48 bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
-                <Home className={`${iconSizes.xl12} ${colors.text.foreground}`} aria-hidden="true" />
-              </figure>
-              <div className="p-6">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className={`text-lg font-bold ${colors.text.foreground}`}>{t('featuredProperties.properties.studioB1.title')}</h3>
-                  <span className={`px-2 py-1 ${colors.bg.info} ${colors.text.info} text-xs font-semibold rounded-full`}>
-                    {t('featuredProperties.available')}
-                  </span>
-                </div>
-                <p className={`text-2xl font-bold ${colors.text.info} mb-2`}>€65.000</p>
-                <p className={`${colors.text.muted} text-sm mb-4`}>{t('featuredProperties.properties.studioB1.details')}</p>
-                <div className="flex items-center gap-1">
-                  <Star className={`${iconSizes.sm} ${colors.text.warning} fill-current`} />
-                  <Star className={`${iconSizes.sm} ${colors.text.warning} fill-current`} />
-                  <Star className={`${iconSizes.sm} ${colors.text.warning} fill-current`} />
-                  <Star className={`${iconSizes.sm} ${colors.text.warning} fill-current`} />
-                  <Star className={`${iconSizes.sm} ${colors.text.muted}`} />
-                  <span className={`text-sm ${colors.text.muted} ml-2`}>4.0</span>
-                </div>
-              </div>
-              </article>
-            </li>
-
-            {/* Property Card 2 */}
-            <li>
-              <article className={`${colors.bg.primary} rounded-xl shadow-lg overflow-hidden cursor-pointer ${INTERACTIVE_PATTERNS.CARD_ENHANCED}`} onClick={() => router.push('/properties')}>
-                <figure className="h-48 bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center">
-                  <Building className={`${iconSizes.xl12} ${colors.text.foreground}`} aria-hidden="true" />
-                </figure>
-              <div className="p-6">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className={`text-lg font-bold ${colors.text.foreground}`}>{t('featuredProperties.properties.apartment2D.title')}</h3>
-                  <span className={`px-2 py-1 ${colors.bg.info} ${colors.text.info} text-xs font-semibold rounded-full`}>
-                    {t('featuredProperties.available')}
-                  </span>
-                </div>
-                <p className={`text-2xl font-bold ${colors.text.info} mb-2`}>€145.000</p>
-                <p className={`${colors.text.muted} text-sm mb-4`}>{t('featuredProperties.properties.apartment2D.details')}</p>
-                <div className="flex items-center gap-1">
-                  <Star className={`${iconSizes.sm} ${colors.text.warning} fill-current`} />
-                  <Star className={`${iconSizes.sm} ${colors.text.warning} fill-current`} />
-                  <Star className={`${iconSizes.sm} ${colors.text.warning} fill-current`} />
-                  <Star className={`${iconSizes.sm} ${colors.text.warning} fill-current`} />
-                  <Star className={`${iconSizes.sm} ${colors.text.warning} fill-current`} />
-                  <span className={`text-sm ${colors.text.muted} ml-2`}>5.0</span>
-                </div>
-              </div>
-              </article>
-            </li>
-
-            {/* Property Card 3 */}
-            <li>
-              <article className={`${colors.bg.primary} rounded-xl shadow-lg overflow-hidden cursor-pointer ${INTERACTIVE_PATTERNS.CARD_ENHANCED}`} onClick={() => router.push('/properties')}>
-                <figure className="h-48 bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
-                  <TrendingUp className={`${iconSizes.xl12} ${colors.text.foreground}`} aria-hidden="true" />
-                </figure>
-              <div className="p-6">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className={`text-lg font-bold ${colors.text.foreground}`}>{t('featuredProperties.properties.maisonetteE1.title')}</h3>
-                  <span className={`px-2 py-1 ${colors.bg.info} ${colors.text.info} text-xs font-semibold rounded-full`}>
-                    {t('featuredProperties.available')}
-                  </span>
-                </div>
-                <p className={`text-2xl font-bold ${colors.text.info} mb-2`}>€280.000</p>
-                <p className={`${colors.text.muted} text-sm mb-4`}>{t('featuredProperties.properties.maisonetteE1.details')}</p>
-                <div className="flex items-center gap-1">
-                  <Star className={`${iconSizes.sm} ${colors.text.warning} fill-current`} />
-                  <Star className={`${iconSizes.sm} ${colors.text.warning} fill-current`} />
-                  <Star className={`${iconSizes.sm} ${colors.text.warning} fill-current`} />
-                  <Star className={`${iconSizes.sm} ${colors.text.warning} fill-current`} />
-                  <Star className={`${iconSizes.sm} ${colors.text.muted}`} />
-                  <span className={`text-sm ${colors.text.muted} ml-2`}>4.5</span>
-                </div>
-              </div>
-              </article>
-            </li>
+            {SHOWCASE_PROPERTIES.map((property) => (
+              <li key={property.key}>
+                <PropertyShowcaseCard
+                  icon={property.icon}
+                  gradientClass={property.gradientClass}
+                  title={t(`featuredProperties.properties.${property.key}.title`)}
+                  price={property.price}
+                  details={t(`featuredProperties.properties.${property.key}.details`)}
+                  availableLabel={t('featuredProperties.available')}
+                  rating={property.rating}
+                  onSelect={() => router.push('/properties')}
+                />
+              </li>
+            ))}
           </ul>
 
           <footer className="text-center">

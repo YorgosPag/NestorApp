@@ -10,13 +10,14 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { PageLoadingState } from '@/core/states';
 import { useAuth } from '@/hooks/useAuth';
+import { authorizedFetch } from '@/subapps/accounting/utils/authorized-fetch';
 import { API_ROUTES } from '@/config/domain-constants';
 import { InvoiceForm } from './forms/InvoiceForm';
 import type { Invoice } from '@/subapps/accounting/types';
@@ -60,10 +61,7 @@ export function EditInvoicePageContent({ invoiceId }: EditInvoicePageContentProp
     // ADR-300: Only show spinner on first load — not on re-navigation
     if (!editInvoiceCache.hasLoaded(invoiceId)) setLoading(true);
     try {
-      const token = await user.getIdToken();
-      const res = await fetch(API_ROUTES.ACCOUNTING.INVOICES.BY_ID(invoiceId), {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await authorizedFetch(user, API_ROUTES.ACCOUNTING.INVOICES.BY_ID(invoiceId));
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       const loaded: Invoice | null = data.data ?? null;
