@@ -56,6 +56,9 @@ import {
 import { computeBeamGeometry } from '../geometry/beam-geometry';
 import { computeColumnGeometry } from '../geometry/column-geometry';
 import { safeDifference } from '../geometry/shared/safe-polygon-boolean';
+// ADR-794 — ο ΤΥΠΟΣ του ορθογωνίου κάτοψης ζει ΜΙΑ φορά. (Ο τοπικός βρόχος μένει:
+// δέχεται πλειάδες `Pair`, και ο τοπικός έλεγχος επικάλυψης είναι ΑΝΟΙΧΤΟΣ — βλ. παρακάτω.)
+import type { Bbox } from '../geometry/shared/xy-bounds';
 import type { WallForEnvelope } from '../geometry/envelope-perimeter';
 import type { ColumnForEnvelope } from '../geometry/envelope-column-bridge';
 
@@ -125,18 +128,18 @@ export interface BuildSlabBaysResult {
   readonly ignoredCount: number;
 }
 
-/** Αξονικά-ευθυγραμμισμένο bbox ενός πολυγώνου (scene units). */
-interface Bbox {
-  readonly minX: number; readonly minY: number; readonly maxX: number; readonly maxY: number;
-}
-
 /** Footprint ενός subtrahend (δοκάρι/κολώνα) + bbox για γρήγορο overlap φίλτρο. */
 interface Subtrahend {
   readonly poly: Polygon;
   readonly bbox: Bbox;
 }
 
-function bboxOf(pts: readonly Pair[]): Bbox {
+/**
+ * Το ίδιο κουτί με το SSoT {@link bboxOf}, αλλά πάνω σε **πλειάδες** `Pair` (`[x, y]`) —
+ * η αναπαράσταση του `polygon-clipping`, ΟΧΙ `{x, y}`. ⚠️ **ΜΗΝ το «ενοποιήσεις» με το
+ * `bboxOf`**: άλλη *είσοδος*, όχι άλλη *απάντηση* — το όνομα το λέει (ADR-794).
+ */
+function bboxOfPairs(pts: readonly Pair[]): Bbox {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (const [x, y] of pts) {
     if (x < minX) minX = x;
@@ -147,7 +150,16 @@ function bboxOf(pts: readonly Pair[]): Bbox {
   return { minX, minY, maxX, maxY };
 }
 
-function bboxOverlap(a: Bbox, b: Bbox): boolean {
+/**
+ * 🔴 **ΑΝΟΙΧΤΑ διαστήματα — η επαφή ΔΕΝ μετράει**, σε αντίθεση με το SSoT
+ * {@link bboxOverlap} που είναι **κλειστό**. Και είναι **σωστό εδώ**: το φίλτρο τρέχει
+ * πριν από boolean difference, και ένας subtrahend που απλώς **εφάπτεται** αφαιρεί
+ * **μηδενικό** εμβαδόν — να τον περάσεις είναι καθαρή σπατάλη.
+ *
+ * ⚠️ **ΜΗΝ το αντικαταστήσεις με το SSoT** νομίζοντας ότι είναι το ίδιο: οι δύο εκφράσεις
+ * διαφέρουν σε **τέσσερα** `<` έναντι `<=` (ADR-794 — πιάστηκε ακριβώς έτσι).
+ */
+function bboxesStrictlyOverlap(a: Bbox, b: Bbox): boolean {
   return a.minX < b.maxX && a.maxX > b.minX && a.minY < b.maxY && a.maxY > b.minY;
 }
 
@@ -155,7 +167,7 @@ function bboxOverlap(a: Bbox, b: Bbox): boolean {
 function vertsToSubtrahend(verts: readonly BimPoint[]): Subtrahend | null {
   if (verts.length < 3) return null;
   const ring: Ring = verts.map((v): Pair => [v.x, v.y]);
-  return { poly: [ring], bbox: bboxOf(ring) };
+  return { poly: [ring], bbox: bboxOfPairs(ring) };
 }
 
 /** Shoelace area (unsigned) ενός ring από Pairs. */
@@ -217,8 +229,8 @@ function cleanRingToPts(ring: Ring): Point2D[] {
  * (footprint κτιρίου ΜΕΙΟΝ εσωτερικά δοκάρια → N φατνώματα, ADR-534).
  */
 function regionMinusSubtrahends(regionRing: Ring, subs: readonly Subtrahend[]): Point2D[][] {
-  const regionBbox = bboxOf(regionRing);
-  const overlapping = subs.filter((s) => bboxOverlap(s.bbox, regionBbox)).map((s) => s.poly);
+  const regionBbox = bboxOfPairs(regionRing);
+  const overlapping = subs.filter((s) => bboxesStrictlyOverlap(s.bbox, regionBbox)).map((s) => s.poly);
   if (overlapping.length === 0) {
     const pts = cleanRingToPts(regionRing);
     return pts.length >= 3 ? [pts] : [];

@@ -22,6 +22,8 @@ import { pointToLineDistance } from '../../rendering/entities/shared/geometry-ut
 import { findClosedPolygonsFromLines } from '../../systems/auto-area/auto-area-geometry';
 import { polygonArea, polygonCentroid } from '../walls/perimeter-polygon-math';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
+// ADR-794 — το ορθογώνιο κάτοψης και ο βρόχος του ζουν ΜΙΑ φορά (ADR-583/CHECK 3.28).
+import { bboxOf, type Bbox } from '../geometry/shared/xy-bounds';
 
 /** Ένα φάτνωμα οροφής — outline + άνοιγμα σχεδιασμού + αν είναι εσωτερικό (για K). */
 export interface CeilingBay {
@@ -36,19 +38,6 @@ export interface CeilingBay {
 const MIN_BAY_AREA_MM2 = 0.5e6;
 /** Ελάχιστο υδραυλικό πλάτος φατνώματος (mm) — κόβει sliver λωρίδες ανάμεσα σε διπλούς άξονες. */
 const MIN_BAY_WIDTH_MM = 300;
-
-interface Bbox { minX: number; minY: number; maxX: number; maxY: number; }
-
-function bboxOf(ring: readonly Point2D[]): Bbox {
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (const p of ring) {
-    if (p.x < minX) minX = p.x;
-    if (p.y < minY) minY = p.y;
-    if (p.x > maxX) maxX = p.x;
-    if (p.y > maxY) maxY = p.y;
-  }
-  return { minX, minY, maxX, maxY };
-}
 
 /**
  * Επέκτεινε ένα τμήμα κατά `by` και στα δύο άκρα (κατά τη διεύθυνσή του). Ο άξονας εσωτερικού
