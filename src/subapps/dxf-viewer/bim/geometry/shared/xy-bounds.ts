@@ -32,21 +32,38 @@
  */
 
 import type { PlanarPoint, PlanBounds } from '../../types/bim-base';
+import type { Bbox, CoordinateSpace, Rect } from '../../../types/coordinate-space';
 
-/** Άξονο-ευθυγραμμισμένο όριο στο επίπεδο XY. Το z **δεν** συμμετέχει ποτέ. */
-export interface Bbox {
-  readonly minX: number;
-  readonly maxX: number;
-  readonly minY: number;
-  readonly maxY: number;
-}
+/**
+ * Το όνομα του χώρου `plan-mm` — δηλωμένο ΜΙΑ φορά, στο SSoT των χώρων, και
+ * **επανεξαγόμενο εδώ** ώστε οι ~30 καλούντες αυτού του module να μην αλλάξουν και
+ * ώστε το `rendering/` · `overlays/` · `accessibility/` να μπορούν να το εισάγουν
+ * **χωρίς** να αποκτήσουν εξάρτηση από το `bim/`.
+ *
+ * @see ../../../types/coordinate-space — η ταξινομία των χώρων, με τη μέτρησή της
+ */
+export type { Bbox };
 
 /**
  * Όριο που χωράει **όλα** τα σημεία. Κενή είσοδος ⇒ `±Infinity` — **σκόπιμα ωμό**:
  * ο καλών ξέρει αν το κενό σύνολο είναι νόμιμο στο δικό του πλαίσιο, το όριο όχι.
+ *
+ * 🔑 **Ο ΒΡΟΧΟΣ ΕΙΝΑΙ ΕΝΑΣ ΓΙΑ ΟΛΟΥΣ ΤΟΥΣ ΧΩΡΟΥΣ.** Το min/max δεν ξέρει μονάδες —
+ * ο χώρος είναι **όρισμα τύπου**, με προεπιλογή `plan-mm` ώστε **κανένας** από τους ~30
+ * υπάρχοντες καλούντες να μην αλλάξει. Όποιος δουλεύει αλλού, το **δηλώνει**:
+ *
+ * ```ts
+ * const bbM = bboxOf<'plan-m'>(vertsInMetres);   // PlanRectM
+ * const bb  = bboxOf(vertsInSceneUnits);         // Bbox (plan-mm)
+ * ```
+ *
+ * ⚠️ Το `S` **δεν συμπεραίνεται ποτέ από τα ορίσματα** (εμφανίζεται μόνο στην επιστροφή),
+ * άρα χωρίς ρητό όρισμα παίρνεις **πάντα** `plan-mm` — ντετερμινιστικά, όχι κατά τύχη.
  */
-export function bboxOf(pts: readonly PlanarPoint[]): Bbox {
-  return bboxOfAll(pts);
+export function bboxOf<S extends CoordinateSpace = 'plan-mm'>(
+  pts: readonly PlanarPoint[],
+): Rect<S> {
+  return bboxOfAll<S>(pts);
 }
 
 /**
@@ -54,7 +71,9 @@ export function bboxOf(pts: readonly PlanarPoint[]): Bbox {
  * χωρίς ενδιάμεσο `concat`. Ένα πέρασμα ανά σύνολο — και **η μόνη** θέση όπου ζει
  * ο βρόχος: ο {@link bboxOf} είναι η εκφυλισμένη περίπτωση ενός συνόλου, όχι δίδυμο.
  */
-export function bboxOfAll(...sets: readonly (readonly PlanarPoint[])[]): Bbox {
+export function bboxOfAll<S extends CoordinateSpace = 'plan-mm'>(
+  ...sets: readonly (readonly PlanarPoint[])[]
+): Rect<S> {
   let minX = Infinity;
   let maxX = -Infinity;
   let minY = Infinity;
@@ -93,7 +112,19 @@ export function planBoundsOf(pts: readonly PlanarPoint[]): PlanBounds {
   return { min: { x: minX, y: minY }, max: { x: maxX, y: maxY } };
 }
 
-/** `true` όταν τα δύο κουτιά τέμνονται (κλειστά διαστήματα — επαφή μετράει). */
-export function bboxOverlap(a: Bbox, b: Bbox): boolean {
-  return a.minX <= b.maxX && b.minX <= a.maxX && a.minY <= b.maxY && b.minY <= a.maxY;
+/**
+ * `true` όταν τα δύο κουτιά τέμνονται (κλειστά διαστήματα — **επαφή μετράει**).
+ *
+ * Το `pad` διευρύνει το **πρώτο** κουτί προς κάθε κατεύθυνση (ανοχή σύνδεσης/εγγύτητας).
+ * ⚠️ **Ήταν δεύτερη υλοποίηση** στο `structural-finish-scene.ts` — ταυτόσημη έκφραση,
+ * μόνο με το `pad` μέσα (ADR-794). Με `pad = 0` η έκφραση είναι **γραμμή προς γραμμή**
+ * η προηγούμενη, οπότε κανένας υπάρχων καλών δεν αλλάζει συμπεριφορά.
+ */
+export function bboxOverlap(a: Bbox, b: Bbox, pad = 0): boolean {
+  return (
+    a.minX - pad <= b.maxX &&
+    b.minX <= a.maxX + pad &&
+    a.minY - pad <= b.maxY &&
+    b.minY <= a.maxY + pad
+  );
 }
