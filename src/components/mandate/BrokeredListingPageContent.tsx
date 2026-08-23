@@ -52,7 +52,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 // ⚠️ **Στατική εισαγωγή, εμβέλεια MODULE**: με `import()` το κλειδί θα ήταν ωμό για ένα
 // καρέ και **κρυμμένο** από το CHECK 3.51 — μετακίνηση του ελαττώματος, όχι διόρθωση.
 // Το Next κόβει ήδη chunk ανά διαδρομή, άρα τα 577 bytes δεν ταξιδεύουν αλλού.
-import routeSlice from '@/i18n/generated/routes/listings__mandates__new.el.json';
+import routeSlice from '@/i18n/generated/routes/o__workspace__listings__mandates__new.el.json';
 import { registerRouteSlice } from '@/i18n/route-slice';
 
 // ⚠️ Εμβέλεια MODULE, όχι render και όχι effect: τρέχει **πριν** αποδοθεί οτιδήποτε.

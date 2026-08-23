@@ -182,6 +182,14 @@ export const Link = forwardRef(function WorkspaceLink(
 });
 
 /**
+ * Τα ορίσματα **μετά** το πρώτο — ώστε το σύνορο να προωθεί ό,τι δέχεται ο
+ * δρομολογητής του Next **χωρίς να το απαριθμεί** και χωρίς να το συμπληρώνει.
+ */
+type DropFirst<T extends readonly unknown[]> = T extends readonly [unknown, ...infer Rest]
+  ? Rest
+  : never;
+
+/**
  * Ο δρομολογητής που ξέρει σε ποιον χώρο ζει.
  *
  * ⚠️ **Το `prefetch` ΠΡΕΠΕΙ να μεταφράζεται κι αυτό.** Αν έμενε ωμό, το Next θα
@@ -198,12 +206,23 @@ export function useRouter(): ReturnType<typeof useNextRouter> {
   return useMemo(
     () => ({
       ...router,
-      push: (href: WorkspaceHref, options?: Parameters<typeof router.push>[1]) =>
-        router.push(resolve(href), options),
-      replace: (href: WorkspaceHref, options?: Parameters<typeof router.replace>[1]) =>
-        router.replace(resolve(href), options),
-      prefetch: (href: WorkspaceHref, options?: Parameters<typeof router.prefetch>[1]) =>
-        router.prefetch(resolve(href), options),
+      // ⚠️ **REST ARGS, ΟΧΙ ΡΗΤΗ ΠΡΟΑΙΡΕΤΙΚΗ ΠΑΡΑΜΕΤΡΟΣ.** Το `(href, options?)`
+      //    προωθεί `undefined` **πάντα**, δηλαδή το `push(x)` γίνεται στον
+      //    παραλήπτη `push(x, undefined)`: αλλάζει η **αριθμητική** της κλήσης.
+      //    Λειτουργικά ισοδύναμο για το Next — αλλά ένα σύνορο που υπόσχεται
+      //    «τα σημεία κλήσης δεν αλλάζουν» δεν επιτρέπεται να αλλάζει ούτε το
+      //    πώς **φαίνεται** η κλήση σε όποιον την παρατηρεί.
+      //    🔴 Το έπιασε ΖΩΝΤΑΝΑ η άγκυρα `route-tabs.test.tsx` τη στιγμή που
+      //    μετανάστευσε ο πρώτος καταναλωτής (ADR-787 §5.3 ν): «Expected
+      //    '/procurement/quotes' · Received '/procurement/quotes', undefined».
+      //    ⛔ Η θεραπεία ήταν ΤΟ ΣΥΝΟΡΟ, ποτέ το test — ένα test που μαθαίνει να
+      //    δέχεται το `undefined` είναι σβησμένος μάρτυρας.
+      push: (href: WorkspaceHref, ...rest: DropFirst<Parameters<typeof router.push>>) =>
+        router.push(resolve(href), ...rest),
+      replace: (href: WorkspaceHref, ...rest: DropFirst<Parameters<typeof router.replace>>) =>
+        router.replace(resolve(href), ...rest),
+      prefetch: (href: WorkspaceHref, ...rest: DropFirst<Parameters<typeof router.prefetch>>) =>
+        router.prefetch(resolve(href), ...rest),
     }),
     [router, resolve],
   );

@@ -137,8 +137,8 @@ describe('Ι — Link · useRouter', () => {
     const { result } = renderHook(() => useRouter());
     result.current.push('/contacts');
     result.current.replace('/properties');
-    expect(push).toHaveBeenCalledWith('/o/nikos/contacts', undefined);
-    expect(replace).toHaveBeenCalledWith('/o/nikos/properties', undefined);
+    expect(push).toHaveBeenCalledWith('/o/nikos/contacts');
+    expect(replace).toHaveBeenCalledWith('/o/nikos/properties');
   });
 
   it('Ι3β: ο ΠΑΡΟΝΟΜΑΣΤΗΣ — δημόσιος προορισμός περνά ανέγγιχτος και στις δύο', () => {
@@ -146,8 +146,28 @@ describe('Ι — Link · useRouter', () => {
     const { result } = renderHook(() => useRouter());
     result.current.push('/login');
     result.current.replace('/terms');
-    expect(push).toHaveBeenCalledWith('/login', undefined);
-    expect(replace).toHaveBeenCalledWith('/terms', undefined);
+    expect(push).toHaveBeenCalledWith('/login');
+    expect(replace).toHaveBeenCalledWith('/terms');
+  });
+
+  it('Ι3γ: 🔴 ΤΑ ΟΡΙΣΜΑΤΑ ΠΡΟΩΘΟΥΝΤΑΙ ΑΥΤΟΥΣΙΑ — ούτε λείπουν, ούτε περισσεύουν', () => {
+    // 🔴 ΓΕΝΝΗΘΗΚΕ ΑΠΟ ΠΡΑΓΜΑΤΙΚΗ ΒΛΑΒΗ (ADR-787 §5.3 ν). Η υπογραφή ήταν
+    //    `(href, options?)`, άρα το σύνορο προώθει `undefined` **πάντα**: το
+    //    `push(x)` έφτανε ως `push(x, undefined)`. Λειτουργικά αδιάφορο για το
+    //    Next — αλλά ένα σύνορο που υπόσχεται «τα σημεία κλήσης δεν
+    //    αλλάζουν» δεν επιτρέπεται να αλλάζει την **αριθμητική** της κλήσης.
+    //    Το έπιασε ζωντανά το `route-tabs.test.tsx` στην πρώτη μετανάστευση.
+    //
+    // ⚠️ ΔΥΟ ΚΑΤΕΥΘΥΝΣΕΙΣ, ΠΟΤΕ ΜΙΑ: έλεγχος μόνο για «δεν περισσεύει» θα
+    //    έμενε πράσινος αν κάποιος «διόρθωνε» το σύνορο πετώντας τα options.
+    currentPathname = '/o/nikos/dashboard';
+    const { result } = renderHook(() => useRouter());
+
+    result.current.push('/contacts');
+    expect(push.mock.calls[0]).toHaveLength(1);
+
+    result.current.push('/projects', { scroll: false });
+    expect(push.mock.calls[1]).toEqual(['/o/nikos/projects', { scroll: false }]);
   });
 
   it('Ι4: 🔴🔴 ΤΟ prefetch ΜΕΤΑΦΡΑΖΕΤΑΙ — αλλιώς προφορτώνει 404 ΧΩΡΙΣ ΚΑΝΕΝΑ ΙΧΝΟΣ', () => {
@@ -156,7 +176,7 @@ describe('Ι — Link · useRouter', () => {
     currentPathname = '/o/nikos/dashboard';
     const { result } = renderHook(() => useRouter());
     result.current.prefetch('/projects');
-    expect(prefetch).toHaveBeenCalledWith('/o/nikos/projects', undefined);
+    expect(prefetch).toHaveBeenCalledWith('/o/nikos/projects');
   });
 
   it('Ι5: ό,τι δεν παίρνει διεύθυνση περνά αυτούσιο', () => {

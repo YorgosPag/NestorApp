@@ -42,7 +42,7 @@ import {
 import { NEW_BROKERED_LISTING_ROUTE } from '@/lib/mandate/mandate-routes';
 import type { MandateCatalogRow as CatalogRow } from '@/services/mandate/mandate-catalog.service';
 
-// 🧩 ADR-744 §15 (Φ4) — PER-ROUTE SLICE ΤΗΣ `/listings/mandates` (ADR-777 §8.39).
+// 🧩 ADR-744 §15 (Φ4) — PER-ROUTE SLICE ΤΗΣ `/o/[workspace]/listings/mandates` (ADR-777 §8.39).
 //
 // Το `property-market` έπαψε να ταξιδεύει ΟΛΟΚΛΗΡΟ σε 141 διαδρομές (§8.38). Χωρίς
 // αυτή τη γραμμή, αυτή η οθόνη θα έβαφε **ωμά κλειδιά στο πρώτο καρέ** — η μία κλάση
@@ -54,7 +54,7 @@ import type { MandateCatalogRow as CatalogRow } from '@/services/mandate/mandate
 //
 // ⚠️ **Στατική εισαγωγή, εμβέλεια MODULE** — με `import()` το ωμό κλειδί απλώς
 // μετακομίζει σε «ένα καρέ» και κρύβεται από το CHECK 3.51.
-import routeSlice from '@/i18n/generated/routes/listings__mandates.el.json';
+import routeSlice from '@/i18n/generated/routes/o__workspace__listings__mandates.el.json';
 import { registerRouteSlice } from '@/i18n/route-slice';
 
 registerRouteSlice(routeSlice);
