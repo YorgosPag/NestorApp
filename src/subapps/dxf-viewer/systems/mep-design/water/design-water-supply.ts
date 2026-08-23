@@ -30,7 +30,8 @@ import { resolveWaterSource, type WaterSource } from './water-source-resolve';
 import { type RouteTarget } from '../routing/orthogonal-router';
 import { routeWallAware } from '../routing/route-wall-aware';
 import { wallObstacles } from '../routing/wall-obstacles';
-import type { Rect2D } from '../routing/routing-constants';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ. Το σχόλιο ομολογούσε «Field names mirror core/spatial SpatialBounds so an obstacle can be fed to the shared spatial index verbatim».
+import type { Bbox } from '../../../types/coordinate-space';
 
 /** Build one service's proposed network (route + size). */
 function buildNetwork(
@@ -38,7 +39,7 @@ function buildNetwork(
   source: WaterSource,
   demands: readonly FixtureDemand[],
   discipline: WaterSupplyDiscipline,
-  obstacles: readonly Rect2D[],
+  obstacles: readonly Bbox[],
 ): ProposedNetwork {
   const classification = WATER_SERVICE_CLASSIFICATION[service];
   const targets: RouteTarget[] = demands.map((d) => ({
