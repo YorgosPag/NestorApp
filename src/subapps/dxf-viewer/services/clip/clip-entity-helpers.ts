@@ -7,7 +7,9 @@
 
 import type { Entity, HatchEntity } from '../../types/entities';
 import type { Point2D } from '../../rendering/types/Types';
-import { getEntityRenderBounds, type SpatialBounds } from '../../types/entity-bounds';
+import { getEntityRenderBounds } from '../../types/entity-bounds';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ για το ορθογώνιο κάτοψης.
+import type { Bbox } from '../../types/coordinate-space';
 
 /**
  * Clip μιας γραμμοσκίασης ανά boundary loop (path[0] = εξωτερικό, υπόλοιπα = νησίδες)
@@ -34,7 +36,7 @@ export function clipHatchLoops(
  */
 export function bboxCullEntity(
   e: Entity,
-  overlaps: (b: SpatialBounds) => boolean,
+  overlaps: (b: Bbox) => boolean,
 ): Entity[] {
   const b = getEntityRenderBounds(e);
   if (b.minX === b.maxX && b.minY === b.maxY) return [e];

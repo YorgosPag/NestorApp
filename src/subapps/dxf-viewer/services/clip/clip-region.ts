@@ -8,7 +8,9 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { SpatialBounds } from '../../types/entity-bounds';
+
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ για το ορθογώνιο κάτοψης.
+import type { Bbox } from '../../types/coordinate-space';
 import {
   type ClipRect, inRect, liangBarsky, sutherlandRect, rectBboxOverlap,
   pointInPolygon, sutherlandGeneral, clipSegmentByPolygon, bboxOverlapsPolygon,
@@ -23,7 +25,7 @@ export interface ClipRegion {
   /** Clip a closed polygon loop → clipped vertices (empty if fully outside). */
   clipLoop(verts: Point2D[]): Point2D[];
   /** Does an axis-aligned bbox overlap the region? (all-or-nothing bbox cull) */
-  bboxOverlaps(b: SpatialBounds): boolean;
+  bboxOverlaps(b: Bbox): boolean;
 }
 
 /** Rectangular window region — Liang-Barsky + Sutherland-Hodgman-rect (exact, fast). */
@@ -44,7 +46,7 @@ export class RectClipRegion implements ClipRegion {
     return sutherlandRect(verts, this.rect);
   }
 
-  bboxOverlaps(b: SpatialBounds): boolean {
+  bboxOverlaps(b: Bbox): boolean {
     return rectBboxOverlap(b, this.rect);
   }
 }
@@ -66,7 +68,7 @@ export class PolygonClipRegion implements ClipRegion {
     return sutherlandGeneral(verts, this.poly);
   }
 
-  bboxOverlaps(b: SpatialBounds): boolean {
+  bboxOverlaps(b: Bbox): boolean {
     return bboxOverlapsPolygon(b, this.poly);
   }
 }

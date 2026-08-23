@@ -6,7 +6,9 @@
 import { describe, it, expect } from '@jest/globals';
 import { clipHatchLoops, bboxCullEntity } from '../clip/clip-entity-helpers';
 import type { HatchEntity, Entity } from '../../types/entities';
-import type { SpatialBounds } from '../../types/entity-bounds';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ για το ορθογώνιο κάτοψης.
+import type { Bbox } from '../../types/coordinate-space';
+
 
 function makeHatch(paths: Array<Array<{ x: number; y: number }>>): HatchEntity {
   return { id: 'h1', type: 'hatch', layerId: 'lyr_0', visible: true, boundaryPaths: paths } as unknown as HatchEntity;
@@ -55,7 +57,7 @@ describe('bboxCullEntity — SSoT all-or-nothing cull', () => {
   it('keeps unmeasurable (zero-area sentinel bounds) entity regardless of overlaps()', () => {
     // A BIM entity with no geometry.bbox → getEntityRenderBounds returns {0,0,0,0}.
     const degenerate = { id: 'w2', type: 'wall', layerId: 'lyr_0', visible: true } as unknown as Entity;
-    const overlaps = (_b: SpatialBounds) => false;
+    const overlaps = (_b: Bbox) => false;
     expect(bboxCullEntity(degenerate, overlaps)).toHaveLength(1);
   });
 });

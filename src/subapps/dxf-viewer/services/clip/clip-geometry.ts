@@ -7,10 +7,12 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { SpatialBounds } from '../../types/entity-bounds';
+
 import type { PlanarPoint } from '../../bim/geometry/shared/polygon-point-location';
 import { normalizeAngleDeg } from '../../rendering/entities/shared/geometry-angle-utils';
 import { pointInPolygon as pointInPolygonRaw } from '../../bim/geometry/shared/polygon-utils';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ για το ορθογώνιο κάτοψης.
+import type { Bbox } from '../../types/coordinate-space';
 
 export interface ClipRect {
   xMin: number;
@@ -48,7 +50,7 @@ export function ptEq(a: Point2D, b: Point2D): boolean {
  * The parameter is `ReadonlyArray` because nothing here mutates: a caller holding a
  * `readonly Point2D[]` must not have to cast its immutability away to ask a question.
  */
-export function boundsOfPoints(pts: ReadonlyArray<Point2D | [number, number]>): SpatialBounds {
+export function boundsOfPoints(pts: ReadonlyArray<Point2D | [number, number]>): Bbox {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (const p of pts) {
     const x = Array.isArray(p) ? p[0] : p.x;
@@ -220,12 +222,12 @@ export function clipSegmentByPolygon(
 }
 
 /** Axis-aligned bbox overlaps an axis-aligned rect. */
-export function rectBboxOverlap(b: SpatialBounds, r: ClipRect): boolean {
+export function rectBboxOverlap(b: Bbox, r: ClipRect): boolean {
   return !(b.maxX < r.xMin || b.minX > r.xMax || b.maxY < r.yMin || b.minY > r.yMax);
 }
 
 /** Axis-aligned bbox overlaps a (convex OR concave) polygon. */
-export function bboxOverlapsPolygon(b: SpatialBounds, poly: Array<[number, number]>): boolean {
+export function bboxOverlapsPolygon(b: Bbox, poly: Array<[number, number]>): boolean {
   const pb = boundsOfPoints(poly);
   if (b.maxX < pb.minX || b.minX > pb.maxX || b.maxY < pb.minY || b.minY > pb.maxY) return false;
   const corners: Point2D[] = [
