@@ -36,13 +36,7 @@ import type { SceneUnits } from '../../utils/scene-units';
 import { paperHeightToModel } from '../../utils/annotation-scale';
 import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import type { TableModel } from '../../types/table';
-import type {
-  TableBBox,
-  TableCellHit,
-  TableEntity,
-  TableEntityGeometry,
-  TableFramePoint,
-} from '../../types/table-entity';
+import type { TableCellHit, TableEntity, TableEntityGeometry, TableFramePoint } from '../../types/table-entity';
 import type { TableLayout } from './table-layout-types';
 // 🔴 ADR-786 §9 — ο ΙΔΙΟΣ μετρητής έκδοσης που ακυρώνει το bitmap cache του καμβά. Η διάταξη
 // εξαρτάται από τη **βαθμίδα** του μετρητή κειμένου, άρα οφείλει να ακυρώνεται από το ίδιο σήμα.
@@ -52,6 +46,12 @@ import { DELIVERABLE_PAPER_SURFACE, liveTableSurface, type TableSurface } from '
 import { resolveTableModel } from './table-model-helpers';
 import type { TableStyle } from './table-style';
 import { getTableStyleRegistry } from './table-style-registry';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ, ΠΟΤΕ ανά ΑΝΤΙΚΕΙΜΕΝΟ — δεν υπάρχει TableBBox στον Revit.
+import type { Bbox } from '../../types/coordinate-space';
+// 🔴 ADR-794 — ΕΔΩ ΖΟΥΣΕ ΤΟ ΕΝΑ ΑΠΟ ΤΑ ΔΥΟ **BYTE-ΤΑΥΤΟΣΗΜΑ** `bboxOfCorners`
+// (το άλλο στο αδελφό module). Το CHECK 3.28 (jscpd) ΔΕΝ τα έπιανε: `min-tokens: 50`,
+// ο βρόχος είναι ~30 tokens — μετρημένο, γραμμένο στο ADR-793 §4.1.
+import { bboxOf } from '../geometry/shared/xy-bounds';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // 1. Η ΜΙΑ γέφυρα μονάδων
@@ -227,16 +227,6 @@ export function resolveTableStyle(entity: Pick<TableEntity, 'styleId'>): TableSt
 // ──────────────────────────────────────────────────────────────────────────────
 
 /** Το κουτί τεσσάρων γωνιών. */
-function bboxOfCorners(corners: readonly Point2D[]): TableBBox {
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (const c of corners) {
-    if (c.x < minX) minX = c.x;
-    if (c.y < minY) minY = c.y;
-    if (c.x > maxX) maxX = c.x;
-    if (c.y > maxY) maxY = c.y;
-  }
-  return { minX, minY, maxX, maxY };
-}
 
 /**
  * Η πλήρης γεωμετρία ενός πίνακα. Καθαρή + ταυτοδύναμη. `drawingScale` ρητό ώστε τα
@@ -281,7 +271,7 @@ export function computeTableEntityGeometry(
     worldWidth: layout.widthMm * mmToWorld,
     worldHeight: layout.heightMm * mmToWorld,
     worldCorners,
-    bbox: bboxOfCorners(worldCorners),
+    bbox: bboxOf(worldCorners),
     // 🔴 ADR-739 §41 — η **ίδια** τιμή που μόλις έφτιαξε τα χρώματα της διάταξης, όχι δεύτερη
     // ανάγνωση: δες `TableEntityGeometry.surfaceHex` για το γιατί δεν επιτρέπεται να ξαναζητηθεί.
     surfaceHex,

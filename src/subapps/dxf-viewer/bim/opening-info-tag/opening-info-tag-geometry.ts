@@ -17,15 +17,13 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import {
-  OPENING_INFO_TAG_ASPECT,
-  OPENING_INFO_TAG_TEXT_HEIGHT_RATIO,
-  type OpeningInfoTagBBox,
-  type OpeningInfoTagCellRect,
-  type OpeningInfoTagEntity,
-  type OpeningInfoTagFramePoint,
-  type OpeningInfoTagGeometry,
-} from '../../types/opening-info-tag';
+import { OPENING_INFO_TAG_ASPECT, OPENING_INFO_TAG_TEXT_HEIGHT_RATIO, type OpeningInfoTagCellRect, type OpeningInfoTagEntity, type OpeningInfoTagFramePoint, type OpeningInfoTagGeometry } from '../../types/opening-info-tag';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ, ΠΟΤΕ ανά ΑΝΤΙΚΕΙΜΕΝΟ.
+import type { Bbox } from '../../types/coordinate-space';
+// 🔴 ADR-794 — ΕΔΩ ΖΟΥΣΕ ΤΟ ΕΝΑ ΑΠΟ ΤΑ ΔΥΟ **BYTE-ΤΑΥΤΟΣΗΜΑ** `bboxOfCorners`
+// (το άλλο στο αδελφό module). Το CHECK 3.28 (jscpd) ΔΕΝ τα έπιανε: `min-tokens: 50`,
+// ο βρόχος είναι ~30 tokens — μετρημένο, γραμμένο στο ADR-793 §4.1.
+import { bboxOf } from '../geometry/shared/xy-bounds';
 
 /** Derive box height (canonical-mm) from the single width DOF. */
 export function openingInfoTagHeightMm(widthMm: number): number {
@@ -62,16 +60,6 @@ function computeCellRects(halfWidth: number, halfHeight: number): OpeningInfoTag
 }
 
 /** World-space AABB of the four (rotated) box corners. */
-function bboxOfCorners(corners: readonly Point2D[]): OpeningInfoTagBBox {
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (const c of corners) {
-    if (c.x < minX) minX = c.x;
-    if (c.y < minY) minY = c.y;
-    if (c.x > maxX) maxX = c.x;
-    if (c.y > maxY) maxY = c.y;
-  }
-  return { minX, minY, maxX, maxY };
-}
 
 /**
  * Compute the full derived geometry for an opening-info-tag. Pure + idempotent.
@@ -99,7 +87,7 @@ export function computeOpeningInfoTagGeometry(
     textHeightMm: heightMm * OPENING_INFO_TAG_TEXT_HEIGHT_RATIO,
     cells: computeCellRects(halfWidth, halfHeight),
     worldCorners,
-    bbox: bboxOfCorners(worldCorners),
+    bbox: bboxOf(worldCorners),
   };
 }
 

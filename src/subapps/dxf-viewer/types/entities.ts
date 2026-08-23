@@ -698,14 +698,7 @@ export { isAnnotationSymbolEntity, DEFAULT_ANNOTATION_SYMBOL_SIZE_MM } from './a
 
 // ADR-583 Φ2: standalone graphic Scale-Bar (dedicated sibling of dimension/center-mark).
 import type { ScaleBarEntity } from './scale-bar';
-export type {
-  ScaleBarEntity,
-  ScaleBarGeometry,
-  ScaleBarBoundaryLabel,
-  ScaleBarBBox,
-  ScaleBarStyle,
-  ScaleBarLabelPlacement,
-} from './scale-bar';
+export type { ScaleBarEntity, ScaleBarGeometry, ScaleBarBoundaryLabel, ScaleBarStyle, ScaleBarLabelPlacement } from './scale-bar';
 export {
   isScaleBarEntity,
   DEFAULT_SCALE_BAR_DIVISIONS,
@@ -730,14 +723,7 @@ export { isTopoSurfaceEntity } from './topo-surface';
 
 // ADR-612 Φ1: standalone Opening Info Tag (πινακίδα ανοίγματος — 3 editable numeric cells).
 import type { OpeningInfoTagEntity } from './opening-info-tag';
-export type {
-  OpeningInfoTagEntity,
-  OpeningInfoTagGeometry,
-  OpeningInfoTagCellRect,
-  OpeningInfoTagCellId,
-  OpeningInfoTagFramePoint,
-  OpeningInfoTagBBox,
-} from './opening-info-tag';
+export type { OpeningInfoTagEntity, OpeningInfoTagGeometry, OpeningInfoTagCellRect, OpeningInfoTagCellId, OpeningInfoTagFramePoint } from './opening-info-tag';
 export {
   isOpeningInfoTagEntity,
   OPENING_INFO_TAG_ASPECT,
@@ -750,13 +736,7 @@ export {
 // Το ΜΟΝΤΕΛΟ (`types/table.ts`) μένει καθαρό και ανεξάρτητο από τη σκηνή· εδώ ρέει μόνο
 // η οντότητα που το τυλίγει.
 import type { TableEntity } from './table-entity';
-export type {
-  TableEntity,
-  TableEntityGeometry,
-  TableFramePoint,
-  TableBBox,
-  TableCellHit,
-} from './table-entity';
+export type { TableEntity, TableEntityGeometry, TableFramePoint, TableCellHit } from './table-entity';
 export {
   isTableEntity,
   MIN_TABLE_COLUMN_WIDTH_MM,
@@ -1023,6 +1003,8 @@ export type { ArrayKind, ArrayParams };
 // ADR-358: Parametric Stair Entity — discriminated union over 11 kinds.
 // ADR-363 Phase 0.5 follow-up: import from canonical bim/ path (types/stair.ts barrel deleted).
 import type { StairEntity } from '../bim/types/stair-types';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ, ΠΟΤΕ ανά ΑΝΤΙΚΕΙΜΕΝΟ — δεν υπάρχει TableBBox στον Revit.
+import type { Bbox } from './coordinate-space';
 export type {
   StairEntity,
   StairKind,
@@ -1462,7 +1444,6 @@ export const isBimEntity = (entity: Entity): entity is BimParametricEntity =>
 export { generateEntityId } from '../systems/entity-creation/utils';
 
 export { getEntityBounds, getEntityRenderBounds, getEntityExtentsBounds } from './entity-bounds';
-export type { SpatialBounds } from './entity-bounds';
 
 // Scene aliases — simple Entity re-names kept here for backward compat.
 // Full scene types (SceneLayer, SceneModel, etc.) live in ./scene-types.

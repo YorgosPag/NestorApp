@@ -46,6 +46,8 @@ import type {
   TableRowId,
 } from './table';
 import type { TableLayout } from '../bim/table/table-layout-types';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ, ΠΟΤΕ ανά ΑΝΤΙΚΕΙΜΕΝΟ — δεν υπάρχει TableBBox στον Revit.
+import type { Bbox } from './coordinate-space';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Παράγωγη γεωμετρία
@@ -65,13 +67,6 @@ export interface TableFramePoint {
   readonly v: number;
 }
 
-/** Άξονο-ευθυγραμμισμένο κουτί σε μονάδες σκηνής (μετά την περιστροφή) για broad phase. */
-export interface TableBBox {
-  readonly minX: number;
-  readonly minY: number;
-  readonly maxX: number;
-  readonly maxY: number;
-}
 
 /**
  * Το αποτέλεσμα του `computeTableEntityGeometry`. **Παράγωγο** — οι παράμετροι της
@@ -95,7 +90,7 @@ export interface TableEntityGeometry {
    */
   readonly worldCorners: readonly Point2D[];
   /** Το κουτί των τεσσάρων γωνιών — αυτό που βλέπει το marquee και ο δείκτης χώρου. */
-  readonly bbox: TableBBox;
+  readonly bbox: Bbox;
   /**
    * 🔴 ADR-739 §41 — **η επιφάνεια πάνω στην οποία υπολογίστηκε αυτή η διάταξη**: φόντο καμβά
    * στην οθόνη, `TABLE_PAPER_HEX` στην εκτύπωση/εξαγωγή.

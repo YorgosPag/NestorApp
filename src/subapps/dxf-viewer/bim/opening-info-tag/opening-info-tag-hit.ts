@@ -25,7 +25,9 @@ import {
   computeOpeningInfoTagGeometry,
   openingInfoTagContainsWorld,
 } from './opening-info-tag-geometry';
-import type { OpeningInfoTagBBox, OpeningInfoTagEntity } from '../../types/opening-info-tag';
+import type { OpeningInfoTagEntity } from '../../types/opening-info-tag';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ, ΠΟΤΕ ανά ΑΝΤΙΚΕΙΜΕΝΟ.
+import type { Bbox } from '../../types/coordinate-space';
 
 /**
  * Precise pick: true when `worldPoint` lands inside the (rotated) box, padded
@@ -51,7 +53,7 @@ export function hitTestOpeningInfoTag(
 export function calculateOpeningInfoTagBounds(
   entity: OpeningInfoTagEntity,
   toleranceMm = 0,
-): OpeningInfoTagBBox {
+): Bbox {
   const { bbox } = computeOpeningInfoTagGeometry(entity);
   if (toleranceMm === 0) return bbox;
   return {

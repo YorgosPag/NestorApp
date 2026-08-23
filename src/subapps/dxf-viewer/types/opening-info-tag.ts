@@ -36,6 +36,8 @@
 
 import type { Point2D } from '../rendering/types/Types';
 import type { BaseEntity } from './entities';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ, ΠΟΤΕ ανά ΑΝΤΙΚΕΙΜΕΝΟ.
+import type { Bbox } from './coordinate-space';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Geometry constants
@@ -71,13 +73,6 @@ export interface OpeningInfoTagCellRect {
   readonly halfHeight: number;
 }
 
-/** Axis-aligned bounding box (canonical-mm, world space AFTER rotation) for broad-phase hit-test / bounds. */
-export interface OpeningInfoTagBBox {
-  readonly minX: number;
-  readonly minY: number;
-  readonly maxX: number;
-  readonly maxY: number;
-}
 
 /**
  * Pure, side-effect-free output of `computeOpeningInfoTagGeometry(entity)`. A
@@ -100,7 +95,7 @@ export interface OpeningInfoTagGeometry {
   /** Four box corners in WORLD space (canonical-mm), CCW from bottom-left, rotation applied. */
   readonly worldCorners: readonly Point2D[];
   /** World-space AABB (rotation-aware) for broad-phase. */
-  readonly bbox: OpeningInfoTagBBox;
+  readonly bbox: Bbox;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────

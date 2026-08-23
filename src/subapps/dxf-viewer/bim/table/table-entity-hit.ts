@@ -25,11 +25,13 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneUnits } from '../../utils/scene-units';
-import type { TableBBox, TableEntity } from '../../types/table-entity';
+import type { TableEntity } from '../../types/table-entity';
 import {
   computeTableEntityGeometryLive,
   tableWorldToFrame,
 } from './table-entity-geometry';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ, ΠΟΤΕ ανά ΑΝΤΙΚΕΙΜΕΝΟ — δεν υπάρχει TableBBox στον Revit.
+import type { Bbox } from '../../types/coordinate-space';
 
 /**
  * Αληθές όταν ένα σημείο **σκηνής** πέφτει μέσα στο (στραμμένο) ορθογώνιο του πίνακα,
@@ -74,7 +76,7 @@ export function calculateTableBounds(
   entity: TableEntity,
   padWorld = 0,
   sceneUnits: SceneUnits = 'mm',
-): TableBBox {
+): Bbox {
   const { bbox } = computeTableEntityGeometryLive(entity, sceneUnits);
   if (!Number.isFinite(bbox.minX) || !Number.isFinite(bbox.minY)) {
     const { x, y } = entity.position;
