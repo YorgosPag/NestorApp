@@ -1,19 +1,15 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
-import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { useRouter, usePathname } from '@/lib/workspace/navigation';
+import { useSearchParams } from 'next/navigation';
 import { FileText, Inbox, Eye, CheckCircle, Clock } from 'lucide-react';
-import { ProcurementSubNav } from '@/subapps/procurement/components/ProcurementSubNav';
 import { QuoteList } from '@/subapps/procurement/components/QuoteList';
 import { QuoteRightPane } from '@/subapps/procurement/components/QuoteRightPane';
 import { useQuotes } from '@/subapps/procurement/hooks/useQuotes';
 import { buildQuoteHeaderActions } from '@/subapps/procurement/utils/quote-header-actions';
-import { PageContainer, ListContainer, DetailsContainer } from '@/core/containers';
-import { MobileDetailsSlideIn } from '@/core/layouts';
-import { PageHeader } from '@/core/headers';
-import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
+import { ProcurementHubPage, useProcurementHubChrome } from '@/components/procurement/hub/ProcurementHubPage';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import type { ViewMode } from '@/core/headers';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { useFirestoreStatus } from '@/hooks/useFirestoreStatus';
 import { toast } from 'sonner';
@@ -53,8 +49,8 @@ export default function QuotesPage() {
   // ── Local UI state ────────────────────────────────────────────────────────
   const [pdfOpen, setPdfOpen] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
-  const [showDashboard, setShowDashboard] = useState(false);
+  const chrome = useProcurementHubChrome();
+  const { viewMode } = chrome;
 
   const dashboardStats = useMemo(() => {
     const total = quotes.length;
@@ -167,78 +163,24 @@ export default function QuotesPage() {
   ) : null;
 
   return (
-    <PageContainer ariaLabel={t('nav.quotes')}>
-      <div className="px-2 mt-2">
-        <ProcurementSubNav className="mb-0" />
-      </div>
-
-      <PageHeader
-        variant="sticky-rounded"
-        layout="compact"
-        spacing="compact"
-        title={{
-          icon: FileText,
-          title: t('nav.quotes'),
-          subtitle: t('hub.quotes.description'),
-        }}
-        actions={{
-          showDashboard,
-          onDashboardToggle: () => setShowDashboard((v) => !v),
-          viewMode: viewMode as ViewMode,
-          onViewModeChange: (m) => setViewMode(m as 'list' | 'grid'),
-          viewModes: ['list', 'grid'] as ViewMode[],
-        }}
-      />
-
-      {showDashboard && (
-        <section role="region" aria-label={t('nav.quotes')}>
-          <UnifiedDashboard stats={dashboardStats} columns={5} />
-        </section>
-      )}
-
-      <ListContainer>
-        <>
-          {/* ── Desktop: split list + detail ───────────────────────────────── */}
-          <section
-            className="hidden md:flex flex-1 gap-2 min-h-0 min-w-0 overflow-hidden"
-            aria-label={t('nav.quotes')}
-          >
-            <QuoteList {...listProps} />
-
-            {rightPane ? (
-              <div className="flex-1 flex flex-col min-h-0 overflow-y-auto bg-card border rounded-lg shadow-sm p-4">
-                {rightPane}
-              </div>
-            ) : (
-              <DetailsContainer
-                emptyStateProps={{
-                  icon: FileText,
-                  title: tQ('detail.emptyTitle'),
-                  description: tQ('detail.emptyDescription'),
-                }}
-                onCreateAction={() => router.push('/procurement/quotes/scan')}
-              />
-            )}
-          </section>
-
-          {/* ── Mobile: list (hidden when quote selected) ──────────────────── */}
-          <section
-            className={`md:hidden flex-1 min-h-0 overflow-hidden ${selectedQuote ? 'hidden' : 'block'}`}
-            aria-label={t('nav.quotes')}
-          >
-            <QuoteList {...listProps} />
-          </section>
-
-          {/* ── Mobile: slide-in detail overlay ────────────────────────────── */}
-          <MobileDetailsSlideIn
-            isOpen={!!selectedQuote}
-            onClose={() => handleSelectQuote(null)}
-            title={selectedQuote?.displayNumber ?? ''}
-          >
-            {rightPane}
-          </MobileDetailsSlideIn>
-        </>
-      </ListContainer>
-    </PageContainer>
+    <ProcurementHubPage
+      icon={FileText}
+      title={t('nav.quotes')}
+      subtitle={t('hub.quotes.description')}
+      dashboardColumns={5}
+      chrome={chrome}
+      dashboardStats={dashboardStats}
+      list={<QuoteList {...listProps} />}
+      detail={rightPane}
+      emptyState={{
+        icon: FileText,
+        title: tQ('detail.emptyTitle'),
+        description: tQ('detail.emptyDescription'),
+      }}
+      onCreateAction={() => router.push('/procurement/quotes/scan')}
+      detailOpen={!!selectedQuote}
+      detailTitle={selectedQuote?.displayNumber ?? ''}
+      onDetailClose={() => handleSelectQuote(null)}
+    />
   );
 }

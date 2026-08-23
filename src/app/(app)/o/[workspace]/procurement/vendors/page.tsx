@@ -1,22 +1,18 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
+import { useSearchParams } from 'next/navigation';
 import { Users2, PackageCheck, DollarSign, TrendingUp, Star } from 'lucide-react';
-import { ProcurementSubNav } from '@/subapps/procurement/components/ProcurementSubNav';
 import { VendorList } from '@/components/procurement/vendors/VendorList';
 import { VendorDetail } from '@/components/procurement/vendors/VendorDetail';
-import { PageContainer, ListContainer, DetailsContainer } from '@/core/containers';
-import { MobileDetailsSlideIn } from '@/core/layouts';
-import { PageHeader } from '@/core/headers';
-import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
+import { ProcurementHubPage, useProcurementHubChrome } from '@/components/procurement/hub/ProcurementHubPage';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { usePOSupplierContacts } from '@/hooks/procurement/usePOSupplierContacts';
 import { useSupplierComparison } from '@/hooks/procurement/useSupplierMetrics';
 import { getContactDisplayName } from '@/types/contacts';
 import { formatCurrency } from '@/lib/intl-formatting';
 import type { Contact } from '@/types/contacts';
-import type { ViewMode } from '@/core/headers';
 import type { VendorCardData } from '@/components/procurement/vendors/VendorCard';
 
 export default function VendorsPage() {
@@ -24,8 +20,8 @@ export default function VendorsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
-  const [showDashboard, setShowDashboard] = useState(false);
+  const chrome = useProcurementHubChrome();
+  const { viewMode } = chrome;
 
   const { suppliers, loading: contactsLoading } = usePOSupplierContacts();
   const { comparison, isLoading: metricsLoading } = useSupplierComparison();
@@ -98,74 +94,23 @@ export default function VendorsPage() {
   const rightPane = selectedVendor ? <VendorDetail data={selectedVendor} /> : null;
 
   return (
-    <PageContainer ariaLabel={t('hub.vendorMaster.title')}>
-      <div className="px-2 mt-2">
-        <ProcurementSubNav className="mb-0" />
-      </div>
-
-      <PageHeader
-        variant="sticky-rounded"
-        layout="compact"
-        spacing="compact"
-        title={{
-          icon: Users2,
-          title: t('hub.vendorMaster.title'),
-          subtitle: t('hub.vendorMaster.description'),
-        }}
-        actions={{
-          showDashboard,
-          onDashboardToggle: () => setShowDashboard((v) => !v),
-          viewMode: viewMode as ViewMode,
-          onViewModeChange: (m) => setViewMode(m as 'list' | 'grid'),
-          viewModes: ['list', 'grid'] as ViewMode[],
-        }}
-      />
-
-      {showDashboard && (
-        <section role="region" aria-label={t('hub.vendorMaster.title')}>
-          <UnifiedDashboard stats={dashboardStats} columns={5} />
-        </section>
-      )}
-
-      <ListContainer>
-        <>
-          <section
-            className="hidden md:flex flex-1 gap-2 min-h-0 min-w-0 overflow-hidden"
-            aria-label={t('hub.vendorMaster.title')}
-          >
-            <VendorList {...listProps} />
-
-            {rightPane ? (
-              <div className="flex-1 flex flex-col min-h-0 overflow-y-auto bg-card border rounded-lg shadow-sm p-4">
-                {rightPane}
-              </div>
-            ) : (
-              <DetailsContainer
-                emptyStateProps={{
-                  icon: Users2,
-                  title: t('hub.vendorMaster.detail.emptyTitle'),
-                  description: t('hub.vendorMaster.detail.emptyDescription'),
-                }}
-              />
-            )}
-          </section>
-
-          <section
-            className={`md:hidden flex-1 min-h-0 overflow-hidden ${selectedVendor ? 'hidden' : 'block'}`}
-            aria-label={t('hub.vendorMaster.title')}
-          >
-            <VendorList {...listProps} />
-          </section>
-
-          <MobileDetailsSlideIn
-            isOpen={!!selectedVendor}
-            onClose={handleDeselectVendor}
-            title={selectedVendor ? getContactDisplayName(selectedVendor.contact) : ''}
-          >
-            {rightPane}
-          </MobileDetailsSlideIn>
-        </>
-      </ListContainer>
-    </PageContainer>
+    <ProcurementHubPage
+      icon={Users2}
+      title={t('hub.vendorMaster.title')}
+      subtitle={t('hub.vendorMaster.description')}
+      dashboardColumns={5}
+      chrome={chrome}
+      dashboardStats={dashboardStats}
+      list={<VendorList {...listProps} />}
+      detail={rightPane}
+      emptyState={{
+        icon: Users2,
+        title: t('hub.vendorMaster.detail.emptyTitle'),
+        description: t('hub.vendorMaster.detail.emptyDescription'),
+      }}
+      detailOpen={!!selectedVendor}
+      detailTitle={selectedVendor ? getContactDisplayName(selectedVendor.contact) : ''}
+      onDetailClose={handleDeselectVendor}
+    />
   );
 }

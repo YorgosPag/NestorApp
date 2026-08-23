@@ -1,19 +1,15 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
+import { useSearchParams } from 'next/navigation';
 import { Package, FileEdit, CheckCircle, Send, AlertTriangle } from 'lucide-react';
-import { ProcurementSubNav } from '@/subapps/procurement/components/ProcurementSubNav';
 import { PurchaseOrderList } from '@/components/procurement/PurchaseOrderList';
 import { PurchaseOrderDetail } from '@/components/procurement/PurchaseOrderDetail';
 import { usePurchaseOrders } from '@/hooks/procurement/usePurchaseOrders';
 import { getPoDetailUrl } from '@/lib/navigation/procurement-urls';
-import { PageContainer, ListContainer, DetailsContainer } from '@/core/containers';
-import { MobileDetailsSlideIn } from '@/core/layouts';
-import { PageHeader } from '@/core/headers';
-import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
+import { ProcurementHubPage, useProcurementHubChrome } from '@/components/procurement/hub/ProcurementHubPage';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import type { ViewMode } from '@/core/headers';
 import { parseFilterArray } from '@/lib/url-filters/multi-value';
 import { emitSpendAnalyticsInvalidate } from '@/lib/cache/spend-analytics-bus';
 import type { PurchaseOrder, AnalyticsDrillFilters } from '@/types/procurement';
@@ -46,8 +42,8 @@ export default function PurchaseOrdersPage() {
 
   const { purchaseOrders, actionRequired, loading } = usePurchaseOrders(analyticsDrill);
 
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
-  const [showDashboard, setShowDashboard] = useState(false);
+  const chrome = useProcurementHubChrome();
+  const { viewMode } = chrome;
 
   const dashboardStats = useMemo(() => {
     const total = purchaseOrders.length;
@@ -183,87 +179,33 @@ export default function PurchaseOrdersPage() {
   };
 
   return (
-    <PageContainer ariaLabel={t('nav.purchaseOrders')}>
-      <div className="px-2 mt-2">
-        <ProcurementSubNav className="mb-0" />
-      </div>
-
-      <PageHeader
-        variant="sticky-rounded"
-        layout="compact"
-        spacing="compact"
-        title={{
-          icon: Package,
-          title: t('nav.purchaseOrders'),
-          subtitle: t('hub.purchaseOrders.description'),
-        }}
-        actions={{
-          showDashboard,
-          onDashboardToggle: () => setShowDashboard((v) => !v),
-          viewMode: viewMode as ViewMode,
-          onViewModeChange: (m) => setViewMode(m as 'list' | 'grid'),
-          viewModes: ['list', 'grid'] as ViewMode[],
-        }}
-      />
-
-      {showDashboard && (
-        <section role="region" aria-label={t('nav.purchaseOrders')}>
-          <UnifiedDashboard stats={dashboardStats} columns={5} />
-        </section>
-      )}
-
-      <ListContainer>
-        <>
-          {/* ── Desktop: split list + detail ───────────────────────────────── */}
-          <section
-            className="hidden md:flex flex-1 gap-2 min-h-0 min-w-0 overflow-hidden"
-            aria-label={t('nav.purchaseOrders')}
-          >
-            <PurchaseOrderList {...listProps} />
-
-            {detailProps ? (
-              <div className="flex-1 flex flex-col min-h-0 overflow-y-auto bg-card border rounded-lg shadow-sm p-4">
-                <PurchaseOrderDetail {...detailProps} />
-              </div>
-            ) : (
-              <DetailsContainer
-                emptyStateProps={{
-                  icon: Package,
-                  title: t('detail.emptyTitle'),
-                  description: t('detail.emptyDescription'),
-                }}
-                onCreateAction={() => router.push('/procurement/new')}
-              />
-            )}
-          </section>
-
-          {/* ── Mobile: list (hidden when PO selected) ─────────────────────── */}
-          <section
-            className={`md:hidden flex-1 min-h-0 overflow-hidden ${selectedPO ? 'hidden' : 'block'}`}
-            aria-label={t('nav.purchaseOrders')}
-          >
-            <PurchaseOrderList {...listProps} />
-          </section>
-
-          {/* ── Mobile: slide-in detail overlay ────────────────────────────── */}
-          <MobileDetailsSlideIn
-            isOpen={!!selectedPO}
-            onClose={handleDeselectPO}
-            title={selectedPO?.poNumber ?? ''}
-            actionButtons={
-              <button
-                type="button"
-                className="text-xs underline px-2"
-                onClick={() => selectedPO && handleEditPO(selectedPO.id)}
-              >
-                {t('detail.edit')}
-              </button>
-            }
-          >
-            {detailProps && <PurchaseOrderDetail {...detailProps} />}
-          </MobileDetailsSlideIn>
-        </>
-      </ListContainer>
-    </PageContainer>
+    <ProcurementHubPage
+      icon={Package}
+      title={t('nav.purchaseOrders')}
+      subtitle={t('hub.purchaseOrders.description')}
+      dashboardColumns={5}
+      chrome={chrome}
+      dashboardStats={dashboardStats}
+      list={<PurchaseOrderList {...listProps} />}
+      detail={detailProps ? <PurchaseOrderDetail {...detailProps} /> : null}
+      emptyState={{
+        icon: Package,
+        title: t('detail.emptyTitle'),
+        description: t('detail.emptyDescription'),
+      }}
+      onCreateAction={() => router.push('/procurement/new')}
+      detailOpen={!!selectedPO}
+      detailTitle={selectedPO?.poNumber ?? ''}
+      onDetailClose={handleDeselectPO}
+      detailActions={
+        <button
+          type="button"
+          className="text-xs underline px-2"
+          onClick={() => selectedPO && handleEditPO(selectedPO.id)}
+        >
+          {t('detail.edit')}
+        </button>
+      }
+    />
   );
 }

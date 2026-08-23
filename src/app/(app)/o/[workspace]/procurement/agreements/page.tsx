@@ -1,23 +1,20 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
-import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { useRouter, usePathname } from '@/lib/workspace/navigation';
+import { useSearchParams } from 'next/navigation';
 import { ScrollText, FileEdit, CheckCircle, AlertTriangle, Clock } from 'lucide-react';
-import { ProcurementSubNav } from '@/subapps/procurement/components/ProcurementSubNav';
 import { AgreementSlimList } from '@/components/procurement/agreements/AgreementSlimList';
 import { AgreementDetail } from '@/components/procurement/agreements/AgreementDetail';
 import { FrameworkAgreementFormDialog } from '@/components/procurement/agreements/FrameworkAgreementFormDialog';
-import { PageContainer, ListContainer, DetailsContainer } from '@/core/containers';
-import { MobileDetailsSlideIn } from '@/core/layouts';
-import { PageHeader } from '@/core/headers';
-import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
+import { runHubDelete } from '@/components/procurement/hub/hub-delete';
+import { ProcurementHubPage, useProcurementHubChrome } from '@/components/procurement/hub/ProcurementHubPage';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { toast } from 'sonner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useFrameworkAgreements } from '@/hooks/procurement/useFrameworkAgreements';
 import { usePOSupplierContacts } from '@/hooks/procurement/usePOSupplierContacts';
 import { getContactDisplayName } from '@/types/contacts';
-import type { ViewMode } from '@/core/headers';
 import type {
   FrameworkAgreement,
   CreateFrameworkAgreementDTO,
@@ -34,8 +31,8 @@ export default function AgreementsPage() {
     useFrameworkAgreements();
   const { suppliers } = usePOSupplierContacts();
 
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
-  const [showDashboard, setShowDashboard] = useState(false);
+  const chrome = useProcurementHubChrome();
+  const { viewMode } = chrome;
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<FrameworkAgreement | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<FrameworkAgreement | null>(null);
@@ -122,15 +119,12 @@ export default function AgreementsPage() {
 
   async function handleConfirmDelete() {
     if (!deleteTarget) return;
-    try {
-      await deleteAgreement(deleteTarget.id);
-      toast.success(t('hub.frameworkAgreements.toast.deleted'));
-      if (selectedAgreementId === deleteTarget.id) handleDeselectAgreement();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : String(err));
-    } finally {
-      setDeleteTarget(null);
-    }
+    await runHubDelete({
+      remove: () => deleteAgreement(deleteTarget.id),
+      successMessage: t('hub.frameworkAgreements.toast.deleted'),
+      onSuccess: () => { if (selectedAgreementId === deleteTarget.id) handleDeselectAgreement(); },
+      onSettled: () => setDeleteTarget(null),
+    });
   }
 
   const handleEditFromList = useCallback((id: string) => {
@@ -165,75 +159,26 @@ export default function AgreementsPage() {
   ) : null;
 
   return (
-    <PageContainer ariaLabel={t('hub.frameworkAgreements.title')}>
-      <div className="px-2 mt-2">
-        <ProcurementSubNav className="mb-0" />
-      </div>
+    <ProcurementHubPage
+      icon={ScrollText}
+      title={t('hub.frameworkAgreements.title')}
+      subtitle={t('hub.frameworkAgreements.description')}
+      dashboardColumns={5}
+      chrome={chrome}
+      dashboardStats={dashboardStats}
+      list={<AgreementSlimList {...listProps} />}
+      detail={rightPane}
+      emptyState={{
+        icon: ScrollText,
+        title: t('hub.frameworkAgreements.detail.emptyTitle'),
+        description: t('hub.frameworkAgreements.detail.emptyDescription'),
+      }}
+      onCreateAction={handleNew}
+      detailOpen={!!selectedAgreement}
+      detailTitle={selectedAgreement?.title ?? ''}
+      onDetailClose={handleDeselectAgreement}
+    >
 
-      <PageHeader
-        variant="sticky-rounded"
-        layout="compact"
-        spacing="compact"
-        title={{
-          icon: ScrollText,
-          title: t('hub.frameworkAgreements.title'),
-          subtitle: t('hub.frameworkAgreements.description'),
-        }}
-        actions={{
-          showDashboard,
-          onDashboardToggle: () => setShowDashboard((v) => !v),
-          viewMode: viewMode as ViewMode,
-          onViewModeChange: (m) => setViewMode(m as 'list' | 'grid'),
-          viewModes: ['list', 'grid'] as ViewMode[],
-        }}
-      />
-
-      {showDashboard && (
-        <section role="region" aria-label={t('hub.frameworkAgreements.title')}>
-          <UnifiedDashboard stats={dashboardStats} columns={5} />
-        </section>
-      )}
-
-      <ListContainer>
-        <>
-          <section
-            className="hidden md:flex flex-1 gap-2 min-h-0 min-w-0 overflow-hidden"
-            aria-label={t('hub.frameworkAgreements.title')}
-          >
-            <AgreementSlimList {...listProps} />
-
-            {rightPane ? (
-              <div className="flex-1 flex flex-col min-h-0 overflow-y-auto bg-card border rounded-lg shadow-sm p-4">
-                {rightPane}
-              </div>
-            ) : (
-              <DetailsContainer
-                emptyStateProps={{
-                  icon: ScrollText,
-                  title: t('hub.frameworkAgreements.detail.emptyTitle'),
-                  description: t('hub.frameworkAgreements.detail.emptyDescription'),
-                }}
-                onCreateAction={handleNew}
-              />
-            )}
-          </section>
-
-          <section
-            className={`md:hidden flex-1 min-h-0 overflow-hidden ${selectedAgreement ? 'hidden' : 'block'}`}
-            aria-label={t('hub.frameworkAgreements.title')}
-          >
-            <AgreementSlimList {...listProps} />
-          </section>
-
-          <MobileDetailsSlideIn
-            isOpen={!!selectedAgreement}
-            onClose={handleDeselectAgreement}
-            title={selectedAgreement?.title ?? ''}
-          >
-            {rightPane}
-          </MobileDetailsSlideIn>
-        </>
-      </ListContainer>
 
       <FrameworkAgreementFormDialog
         open={dialogOpen}
@@ -253,6 +198,6 @@ export default function AgreementsPage() {
         onConfirm={handleConfirmDelete}
         variant="destructive"
       />
-    </PageContainer>
+    </ProcurementHubPage>
   );
 }

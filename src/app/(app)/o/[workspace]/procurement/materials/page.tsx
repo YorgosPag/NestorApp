@@ -1,21 +1,18 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
-import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { useRouter, usePathname } from '@/lib/workspace/navigation';
+import { useSearchParams } from 'next/navigation';
 import { Layers, Boxes, Sparkles, Clock, AlertTriangle } from 'lucide-react';
-import { ProcurementSubNav } from '@/subapps/procurement/components/ProcurementSubNav';
 import { MaterialSlimList } from '@/components/procurement/materials/MaterialSlimList';
 import { MaterialDetail } from '@/components/procurement/materials/MaterialDetail';
 import { MaterialFormDialog } from '@/components/procurement/materials/MaterialFormDialog';
-import { PageContainer, ListContainer, DetailsContainer } from '@/core/containers';
-import { MobileDetailsSlideIn } from '@/core/layouts';
-import { PageHeader } from '@/core/headers';
-import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
+import { runHubDelete } from '@/components/procurement/hub/hub-delete';
+import { ProcurementHubPage, useProcurementHubChrome } from '@/components/procurement/hub/ProcurementHubPage';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { toast } from 'sonner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useMaterials } from '@/hooks/procurement/useMaterials';
-import type { ViewMode } from '@/core/headers';
 import type {
   Material,
   CreateMaterialDTO,
@@ -30,8 +27,8 @@ export default function MaterialsPage() {
 
   const { materials, loading, createMaterial, updateMaterial, deleteMaterial } = useMaterials();
 
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
-  const [showDashboard, setShowDashboard] = useState(false);
+  const chrome = useProcurementHubChrome();
+  const { viewMode } = chrome;
   const [formOpen, setFormOpen] = useState(false);
   const [formInitial, setFormInitial] = useState<Material | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Material | null>(null);
@@ -103,15 +100,12 @@ export default function MaterialsPage() {
 
   async function handleConfirmDelete() {
     if (!deleteTarget) return;
-    try {
-      await deleteMaterial(deleteTarget.id);
-      toast.success(t('hub.materialCatalog.toast.deleted'));
-      if (selectedMaterialId === deleteTarget.id) handleDeselectMaterial();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : String(err));
-    } finally {
-      setDeleteTarget(null);
-    }
+    await runHubDelete({
+      remove: () => deleteMaterial(deleteTarget.id),
+      successMessage: t('hub.materialCatalog.toast.deleted'),
+      onSuccess: () => { if (selectedMaterialId === deleteTarget.id) handleDeselectMaterial(); },
+      onSettled: () => setDeleteTarget(null),
+    });
   }
 
   const handleEditFromList = useCallback((id: string) => {
@@ -145,75 +139,26 @@ export default function MaterialsPage() {
   ) : null;
 
   return (
-    <PageContainer ariaLabel={t('hub.materialCatalog.title')}>
-      <div className="px-2 mt-2">
-        <ProcurementSubNav className="mb-0" />
-      </div>
+    <ProcurementHubPage
+      icon={Layers}
+      title={t('hub.materialCatalog.title')}
+      subtitle={t('hub.materialCatalog.description')}
+      dashboardColumns={4}
+      chrome={chrome}
+      dashboardStats={dashboardStats}
+      list={<MaterialSlimList {...listProps} />}
+      detail={rightPane}
+      emptyState={{
+        icon: Layers,
+        title: t('hub.materialCatalog.detail.emptyTitle'),
+        description: t('hub.materialCatalog.detail.emptyDescription'),
+      }}
+      onCreateAction={openCreate}
+      detailOpen={!!selectedMaterial}
+      detailTitle={selectedMaterial?.name ?? ''}
+      onDetailClose={handleDeselectMaterial}
+    >
 
-      <PageHeader
-        variant="sticky-rounded"
-        layout="compact"
-        spacing="compact"
-        title={{
-          icon: Layers,
-          title: t('hub.materialCatalog.title'),
-          subtitle: t('hub.materialCatalog.description'),
-        }}
-        actions={{
-          showDashboard,
-          onDashboardToggle: () => setShowDashboard((v) => !v),
-          viewMode: viewMode as ViewMode,
-          onViewModeChange: (m) => setViewMode(m as 'list' | 'grid'),
-          viewModes: ['list', 'grid'] as ViewMode[],
-        }}
-      />
-
-      {showDashboard && (
-        <section role="region" aria-label={t('hub.materialCatalog.title')}>
-          <UnifiedDashboard stats={dashboardStats} columns={4} />
-        </section>
-      )}
-
-      <ListContainer>
-        <>
-          <section
-            className="hidden md:flex flex-1 gap-2 min-h-0 min-w-0 overflow-hidden"
-            aria-label={t('hub.materialCatalog.title')}
-          >
-            <MaterialSlimList {...listProps} />
-
-            {rightPane ? (
-              <div className="flex-1 flex flex-col min-h-0 overflow-y-auto bg-card border rounded-lg shadow-sm p-4">
-                {rightPane}
-              </div>
-            ) : (
-              <DetailsContainer
-                emptyStateProps={{
-                  icon: Layers,
-                  title: t('hub.materialCatalog.detail.emptyTitle'),
-                  description: t('hub.materialCatalog.detail.emptyDescription'),
-                }}
-                onCreateAction={openCreate}
-              />
-            )}
-          </section>
-
-          <section
-            className={`md:hidden flex-1 min-h-0 overflow-hidden ${selectedMaterial ? 'hidden' : 'block'}`}
-            aria-label={t('hub.materialCatalog.title')}
-          >
-            <MaterialSlimList {...listProps} />
-          </section>
-
-          <MobileDetailsSlideIn
-            isOpen={!!selectedMaterial}
-            onClose={handleDeselectMaterial}
-            title={selectedMaterial?.name ?? ''}
-          >
-            {rightPane}
-          </MobileDetailsSlideIn>
-        </>
-      </ListContainer>
 
       <MaterialFormDialog
         open={formOpen}
@@ -233,6 +178,6 @@ export default function MaterialsPage() {
         onConfirm={handleConfirmDelete}
         variant="destructive"
       />
-    </PageContainer>
+    </ProcurementHubPage>
   );
 }
