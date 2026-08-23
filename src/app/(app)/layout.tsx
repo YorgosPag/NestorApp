@@ -84,7 +84,7 @@ function AppShellBody({
       <div className={layout.shellAppContainer}>
         <AppSidebar />
         {/*
-          🏛️ ADR-793 — Ο ΔΕΚΤΗΣ ΤΗΣ ΚΑΤΑΣΤΑΣΗΣ ΤΗΣ ΜΠΑΡΑΣ.
+          🏛️ ADR-797 — Ο ΔΕΚΤΗΣ ΤΗΣ ΚΑΤΑΣΤΑΣΗΣ ΤΗΣ ΜΠΑΡΑΣ.
 
           Το `data-shell-inset` δεν στολίζει: είναι ο **στόχος** των αδελφικών
           επιλογέων του `shell-surface.css`, που διαβάζουν το `data-collapsible`

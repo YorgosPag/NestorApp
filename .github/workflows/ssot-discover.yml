@@ -722,6 +722,58 @@ jobs:
             echo "Reseed ΜΟΝΟ μετά από νόμιμο καθάρισμα: \`npm run point-vocabulary:baseline\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
+  public-surface:
+    name: 🚪 Public Surface Gate (CHECK 3.62)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Πάκετα (jest για τις άγκυρες)
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # Layer 2 — ΑΝΕΥ ΟΡΩΝ και ΠΛΗΡΕΣ. Νέος καταναλωτής προσγειώνεται σε ΟΠΟΙΟΔΗΠΟΤΕ
+      # αρχείο του src/, και μια σβησμένη εξαγωγή ΜΕΣΑ στο subapp κάνει ορφανή μια
+      # δήλωση σε αρχείο που κανείς δεν έστειλε — μερική ανάλυση θα ήταν αναληθής.
+      - name: 🚪 CHECK 3.62 — κάθε δημόσιο σύμβολο δηλωμένο, με λόγο
+        run: pnpm run public-surface:check
+
+      - name: "🧪 Σουίτα μετάλλαξης — CHECK 3.62"
+        run: pnpm run test:public-surface
+
+      - name: 🧭 How to resolve
+        if: failure()
+        run: |
+          {
+            echo "### CHECK 3.62 — ADR-796 (δημόσια επιφάνεια του dxf-viewer)"
+            echo ""
+            echo "Κάθε σύμβολο που ζητά ο **έξω** κόσμος πρέπει να είναι δηλωμένο δημόσιο."
+            echo ""
+            echo "- **αδήλωτη εισαγωγή** ⇒ δήλωσέ την στο \`.dxf-viewer-public-api.json\` ΜΕ ΛΟΓΟ,"
+            echo "  ή σταμάτα να ζητάς το σύμβολο από έξω."
+            echo "- **ορφανή δήλωση** ⇒ σβήσε τη γραμμή: η επιφάνεια ΣΥΡΡΙΚΝΩΘΗΚΕ, καλό είναι."
+            echo "- **δήλωση χωρίς λόγο** ⇒ γράψε το «γιατί»· χωρίς αυτό κανείς δεν μπορεί να κλαδέψει."
+            echo ""
+            echo "⛔ ΜΗΝ φτιάξεις barrel για να περάσει. Το Atlassian ΑΦΑΙΡΕΣΕ τα barrels από"
+            echo "το Jira (90.000 αρχεία) και μέτρησε **75% ταχύτερα builds**. Η ενθυλάκωση εδώ"
+            echo "ζει ως **ΔΕΔΟΜΕΝΟ** (μανιφέστο), όχι ως module, και γι αυτό δεν κοστίζει τίποτα."
+            echo ""
+            echo "Απογραφή: \`npm run public-surface:report\`"
+            echo "Reseed ΜΟΝΟ μετά από νόμιμη συρρίκνωση: \`npm run public-surface:baseline\`"
+          } >> "$GITHUB_STEP_SUMMARY"
   workspace-authority:
     name: 🏢 Workspace Authority Gate (CHECK 3.58)
     runs-on: ubuntu-latest
@@ -894,4 +946,74 @@ jobs:
             echo "Απογραφή: npm run navigation-boundary:report"
             echo "⛔ ΜΗΝ λύσεις κόκκινο δηλώνοντας νέο ιδιοκτήτη «για να περάσει»:"
             echo "το κλειστό σύνολο υπάρχει για να το δει άνθρωπος."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  shell-surface:
+    name: 🏛️ Shell Surface Gate (CHECK 3.63)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # οι άγκυρες Π κάνουν `git show` σε ΚΑΡΦΩΜΕΝΟ commit
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Πάκετα (jest για τις άγκυρες)
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # Layer 2 — ΑΝΕΥ ΟΡΩΝ. Το pre-commit δεν έχει σκανδάλη (το πλήρες κοστίζει
+      # ~0,3s), αλλά το `SKIP_SHELL_SURFACE` δεν φτάνει ως εδώ — και μια αλλαγή
+      # στον ΙΔΙΟΚΤΗΤΗ ξανα-ταξινομεί κάθε σελίδα, ακόμα κι αυτές που κανείς
+      # δεν έστειλε.
+      - name: 🏛️ CHECK 3.63 — ο διάδρομος έχει έναν ιδιοκτήτη
+        run: pnpm run shell-surface:check
+
+      - name: "🧪 Άγκυρες — CHECK 3.63 (22 άγκυρες, 7/7 μεταλλάξεις κόκκινες)"
+        run: pnpm run test:shell-surface
+
+      - name: 🧭 How to resolve
+        if: failure()
+        run: |
+          {
+            echo "### CHECK 3.63 — ADR-797 (ο διάδρομος του κελύφους)"
+            echo "**ΤΟ ΕΞΩΤΕΡΙΚΟ ΚΕΝΟ ΑΝΗΚΕΙ ΣΤΟ ΚΕΛΥΦΟΣ, ΟΧΙ ΣΤΗ ΣΕΛΙΔΑ.**"
+            echo "Ο κανόνας είναι ομόφωνος στα design systems: *outer spacing is a"
+            echo "**layout** concern, not a component one*."
+            echo ""
+            echo '  ❌ <section className="flex flex-col gap-6 p-6">'
+            echo '  ✅ <section className="flex flex-col gap-6">'
+            echo ""
+            echo "**page-padding / content-padding** → σβήσε το \`p-*\`/\`px-*\` από τη"
+            echo "**ρίζα**. Το κενό ΜΕΣΑ σε κάρτα/διάλογο/ταμπλό είναι σωστό και δεν"
+            echo "κρίνεται — παραβίαση είναι μόνο το κενό ΓΥΡΩ από τη σελίδα."
+            echo ""
+            echo "**negative-margin** → σιωπηλό opt-out. Αν θέλεις πλήρες πλάτος,"
+            echo "δήλωσέ το: \`<FullBleedSurface>\` + γραμμή στο .shell-surface.json."
+            echo ""
+            echo "**owner-declares-padding / owner-lost-marker** (⛔ zero-tol) → κάποιος"
+            echo "άγγιξε τον ΙΔΙΟ τον ιδιοκτήτη (MainContentBridge). Χωρίς τον δείκτη"
+            echo "\`data-shell-surface\` ο διάδρομος γίνεται **σιωπηλά μηδέν**."
+            echo ""
+            echo "**undeclared-bleed** (⛔) → νέα επιφάνεια χωρίς διάδρομο ΜΠΛΟΚΑΡΕΙ"
+            echo "ακόμα κι αν είναι σωστή. Αυτό είναι το σημείο: το opt-out πρέπει να"
+            echo "το δει άνθρωπος, αλλιώς η δεύτερη σωστή πράξη γίνεται τρίτη."
+            echo "Ο λόγος οφείλει να είναι **ΜΕΤΡΗΜΕΝΟΣ** — δες \$howToMeasure."
+            echo ""
+            echo "**orphan-declaration** (⛔) → δήλωση για διαδρομή που δεν τη ζητά πια."
+            echo ""
+            echo "Απογραφή: npm run shell-surface:report"
+            echo "⛔ ΜΗΝ αλλάξεις τους ΠΟΛΟΥΣ (design-tokens.json → spacing.layout) για"
+            echo "να «φαίνεται καλύτερα» μία σελίδα: αφορούν ΟΛΗ την εφαρμογή."
           } >> "$GITHUB_STEP_SUMMARY"

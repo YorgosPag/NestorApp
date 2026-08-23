@@ -249,7 +249,7 @@
       }
     },
     "layout": {
-      "_description": "ADR-793 — Η ΚΛΙΜΑΚΑ ΤΟΥ ΚΕΛΥΦΟΥΣ, ΞΕΧΩΡΙΣΤΗ ΑΠΟ ΤΗΝ component. Πρότυπο Carbon: «the layout scale has larger increments used to control the DENSITY of a design». Οι τιμές είναι ΠΟΛΟΙ μιας ρευστής συνάρτησης, ΟΧΙ σκαλιά: το CSS τις συνθέτει σε clamp() πάνω στο ΠΡΑΓΜΑΤΙΚΟ πλάτος του pane. ⚠️ ΜΗΝ τις χρησιμοποιήσεις μέσα σε component — εκεί ζει το spacing.component.*, και η ανάμειξη ξαναγεννά το «κάθε σελίδα αποφασίζει μόνη της» που το ADR-793 έκλεισε.",
+      "_description": "ADR-797 — Η ΚΛΙΜΑΚΑ ΤΟΥ ΚΕΛΥΦΟΥΣ, ΞΕΧΩΡΙΣΤΗ ΑΠΟ ΤΗΝ component. Πρότυπο Carbon: «the layout scale has larger increments used to control the DENSITY of a design». Οι τιμές είναι ΠΟΛΟΙ μιας ρευστής συνάρτησης, ΟΧΙ σκαλιά: το CSS τις συνθέτει σε clamp() πάνω στο ΠΡΑΓΜΑΤΙΚΟ πλάτος του pane. ⚠️ ΜΗΝ τις χρησιμοποιήσεις μέσα σε component — εκεί ζει το spacing.component.*, και η ανάμειξη ξαναγεννά το «κάθε σελίδα αποφασίζει μόνη της» που το ADR-797 έκλεισε.",
       "gutter": {
         "min": {
           "value": "16",

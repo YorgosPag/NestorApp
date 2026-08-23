@@ -114,7 +114,8 @@ export function PropertyDetailPageContent({
   );
 
   return (
-    <main className="flex min-h-0 flex-1 flex-col gap-4 p-4">
+    {/* ADR-797: το εξωτερικό κενό ανηκει στο κελυφος — το p-4 εφυγε (CHECK 3.63). */}
+    <main className="flex min-h-0 flex-1 flex-col gap-4">
       {/*
         🔴 **ΟΣΟ ΔΕΝ ΞΕΡΟΥΜΕ, Η ΣΕΛΙΔΑ ΔΕΝ ΛΕΕΙ ΤΙΠΟΤΑ — ΚΑΙ ΕΙΝΑΙ ΜΕΤΡΗΣΗ.**
 

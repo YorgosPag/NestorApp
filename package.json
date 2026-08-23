@@ -352,7 +352,11 @@
     "test:prerender": "jest scripts/__tests__/check-prerender-bailout.test.js --verbose",
     "build-parity:check": "node scripts/check-production-build-parity.js",
     "build-parity:report": "node scripts/check-production-build-parity.js --report",
-    "test:build-parity": "jest scripts/__tests__/check-production-build-parity.test.js --verbose"
+    "test:build-parity": "jest scripts/__tests__/check-production-build-parity.test.js --verbose",
+    "shell-surface:check": "node scripts/check-shell-surface.js",
+    "shell-surface:report": "node scripts/check-shell-surface.js --report",
+    "shell-surface:baseline": "node scripts/check-shell-surface.js --write-baseline",
+    "test:shell-surface": "jest scripts/__tests__/shell-surface-gate.test.js --verbose"
   },
   "dependencies": {
     "@ai-sdk/openai": "3.0.48",

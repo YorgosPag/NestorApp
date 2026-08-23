@@ -12,7 +12,8 @@ export default function ConstructionPortfolioPage() {
   const { items, totals, loading, error, refresh } = useConstructionPortfolio();
 
   return (
-    <main className="flex flex-col gap-6 p-6">
+    {/* ADR-797: το εξωτερικό κενό ανηκει στο κελυφος — το p-6 εφυγε (CHECK 3.63). */}
+    <main className="flex flex-col gap-6">
       <header className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-foreground">{t('portfolio.title')}</h1>

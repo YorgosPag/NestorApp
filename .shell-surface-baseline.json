@@ -1,0 +1,22 @@
+{
+  "$doc": "ADR-797 / CHECK 3.63 — σελίδες που δηλώνουν κενό που ανήκει στο κέλυφος. Ο αριθμός ΔΕΝ είναι δείκτης υγείας: είναι εκστρατεία που τελειώνει στο μηδέν. Τα zero-tolerance ΔΕΝ μπαίνουν ΠΟΤΕ εδώ.",
+  "generated": "2026-08-23",
+  "violations": [
+    "/admin/audit-log|content-padding",
+    "/data-deletion|page-padding",
+    "/demo/addresses-editor-state|page-padding",
+    "/demo/addresses-editor|page-padding",
+    "/o/[workspace]/accounting|page-padding",
+    "/o/[workspace]/attendance/check-in/[token]|content-padding",
+    "/o/[workspace]/dashboard|content-padding",
+    "/onboarding/organization|page-padding",
+    "/pending-approval|page-padding",
+    "/privacy-policy|page-padding",
+    "/terms|page-padding",
+    "/test-harness/contact-mutation|content-padding",
+    "/test-upload|page-padding"
+  ],
+  "declarations": [
+    "/o/[workspace]/dxf/viewer"
+  ]
+}

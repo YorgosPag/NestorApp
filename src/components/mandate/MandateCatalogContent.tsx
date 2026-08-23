@@ -213,7 +213,13 @@ export function MandateCatalogContent(): React.ReactElement {
     // (εικονικοποιημένες λίστες). Εδώ η κύλιση ανήκει στο κέλυφος· ένα δεύτερο δοχείο
     // κύλισης θα έδινε **δύο μπάρες** και θα **έκοβε** τη λίστα όταν οι γραμμές
     // ξεπερνούσαν το ύψος — βλάβη που ένας **άδειος** κατάλογος δεν θα έδειχνε ποτέ.
-    <section className="flex w-full flex-col gap-6 p-6">
+    // 3. 🔴 **ΤΟ `p-6` ΕΦΥΓΕ (ADR-797).** Μετρήθηκε ζωντανά: με το κέλυφος να δίνει
+    //    πλέον ρευστό διάδρομο, αυτή η σελίδα έβγαζε **32px + 24px = 56px** — διπλό
+    //    κενό, ορατό στην οθόνη. Το κενό **δεν ανήκει στη σελίδα**: *«outer spacing
+    //    is a **layout** concern, not a component one»*. Μια σελίδα που κρατά δικό
+    //    της `p-*` είναι **δεύτερη αυθεντία** που αποκλίνει σιωπηλά μόλις αλλάξει η
+    //    κλίμακα — και το φυλά πλέον το CHECK 3.63.
+    <section className="flex w-full flex-col gap-6">
       <header className="flex flex-col gap-2">
         <h1 className="m-0 text-2xl font-semibold text-foreground">
           {t(CATALOG_KEYS.title)}
