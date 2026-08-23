@@ -32,18 +32,33 @@ module.exports = {
       from: { path: '^src/services/' },
       to: { path: '^src/components/' },
     },
-    {
-      name: 'not-to-dxf-internals',
-      comment:
-        'The DXF viewer subapp is a black box: import it only through its public ' +
-        'barrel (src/subapps/dxf-viewer/index.ts[x]), never a deep internal path.',
-      severity: 'warn',
-      from: { pathNot: '^src/subapps/dxf-viewer/' },
-      to: {
-        path: '^src/subapps/dxf-viewer/',
-        pathNot: '^src/subapps/dxf-viewer/index\\.(ts|tsx)$',
-      },
-    },
+    // ─────────────────────────────────────────────────────────────────────────
+    // ⚰️ ΑΠΟΣΥΡΘΗΚΕ — `not-to-dxf-internals` (ADR-796, 2026-08-24)
+    //
+    // 🔴 ΕΠΕΒΑΛΛΕ ΘΕΡΑΠΕΙΑ ΠΟΥ ΔΕΝ ΥΠΗΡΞΕ ΠΟΤΕ. Ζητούσε «import it only through its
+    // public barrel `src/subapps/dxf-viewer/index.ts`» — και αυτό το αρχείο ΔΕΝ
+    // ΥΠΗΡΞΕ ΠΟΤΕ στην ιστορία του repo (`git log --all -- src/subapps/dxf-viewer/
+    // index.ts*` ⇒ ΚΕΝΟ). Μετρημένο: 163 αρχεία εισάγουν βαθιά, 0 μέσω barrel, και
+    // ακόμη και η ΙΔΙΑ η σελίδα της εφαρμογής (`o/[workspace]/dxf/viewer/page.tsx:19`)
+    // εισάγει `@/subapps/dxf-viewer/DxfViewerApp`, δηλαδή ΠΑΡΑΒΙΑΖΕΙ. Με baseline 335
+    // και ratchet DOWN-only, ήταν φρουρός ΕΝΕΡΓΟΣ (μπλόκαρε PR) που απαιτούσε μείωση
+    // προς το μηδέν μέσω διαδρομής ΠΟΥ ΔΕΝ ΥΠΑΡΧΕΙ — χειρότερο από τους 606 αδρανείς
+    // του ADR-749 §5, γιατί εκείνοι τουλάχιστον δεν πυροδοτούν.
+    //
+    // 🏆 ΚΑΙ Η ΘΕΡΑΠΕΙΑ ΗΤΑΝ ΛΑΘΟΣ, ΟΧΙ ΜΟΝΟ ΑΠΟΥΣΑ. Το Atlassian ΑΦΑΙΡΕΣΕ τα barrel
+    // files από το Jira (90.000 αρχεία, codemod): 75% ταχύτερα builds, unit tests
+    // 1600→200, TS highlighting +30%. Το Next.js έχει `optimizePackageImports` για να
+    // τα ΠΑΡΑΚΑΜΠΤΕΙ. Ένα barrel εδώ θα ξαναεξήγαγε 432 σύμβολα — ακριβώς το τέρας.
+    //
+    // ✅ ΑΝΤΙΚΑΤΑΣΤΑΘΗΚΕ ΑΠΟ ΤΟ **CHECK 3.62** (`scripts/check-public-surface.js`),
+    // που κάνει το ΙΔΙΟ ερώτημα σωστά: μανιφέστο δημόσιας επιφάνειας ΑΝΑ ΣΥΜΒΟΛΟ
+    // (`.dxf-viewer-public-api.json`), zero-tolerance, με ΥΠΟΧΡΕΩΤΙΚΟ λόγο ανά εγγραφή.
+    // Η ενθυλάκωση γίνεται ΔΕΔΟΜΕΝΟ αντί για MODULE ⇒ μηδέν κόμβος στον γράφο
+    // εισαγωγών, άρα το όφελος του Atlassian ΚΑΙ η εγγύηση του Revit (`internal`).
+    //
+    // ⚠️ ΜΗΝ τον επαναφέρεις χωρίς να φτιάξεις ΠΡΩΤΑ το barrel και να μεταναστεύσεις
+    // τα 163 αρχεία — και διάβασε πρώτα γιατί αυτό είναι μετρημένα λάθος κίνηση.
+    // ─────────────────────────────────────────────────────────────────────────
     {
       name: 'no-test-utils-in-prod',
       comment: 'Production code must not import test utilities / testing scaffolding.',
