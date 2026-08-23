@@ -15,16 +15,18 @@
  */
 
 import type { TekPlaneRecord, TekStairRecord, TekPoint2D } from './tek-import-types';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ (εδώ: μέτρα). Ο βρόχος ΜΕΝΕΙ τοπικός: φιλτράρει το
+// sentinel `(0,0)` του Τέκτονα, άρα απαντά ΑΛΛΗ ερώτηση από το SSoT «ποιο κουτί
+// χωράει αυτά τα σημεία».
+import type { PlanRectM } from '../../types/coordinate-space';
 
 /** Περιθώριο (μέτρα) γύρω από το footprint σκάλας για το «ανήκει σε σκάλα». */
 const STAIR_BBOX_MARGIN_M = 0.15;
 /** Κάτω από αυτό το |elev1| (μέτρα) η πλάκα θεωρείται stair-generated (ο Τέκτων αφήνει elev1=0). */
 const ELEV1_EPS = 1e-6;
 
-interface BBox { readonly minX: number; readonly minY: number; readonly maxX: number; readonly maxY: number; }
-
-/** BBox (μέτρα) των κορυφών μιας σκάλας — αγνοεί sentinel `(0,0)` του Τέκτονα. */
-function stairBBox(stair: TekStairRecord): BBox | null {
+/** Κουτί (μέτρα) των κορυφών μιας σκάλας — αγνοεί sentinel `(0,0)` του Τέκτονα. */
+function stairBBox(stair: TekStairRecord): PlanRectM | null {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (const pl of stair.polylines) {
     for (const p of pl) {
@@ -43,7 +45,7 @@ function centroid(vertices: readonly TekPoint2D[]): TekPoint2D {
 }
 
 /** `true` αν το κέντρο της πλάκας πέφτει εντός ενός stair bbox (+ περιθώριο). */
-function insideAnyStair(vertices: readonly TekPoint2D[], boxes: readonly BBox[]): boolean {
+function insideAnyStair(vertices: readonly TekPoint2D[], boxes: readonly PlanRectM[]): boolean {
   const c = centroid(vertices);
   const m = STAIR_BBOX_MARGIN_M;
   return boxes.some((b) => c.x >= b.minX - m && c.x <= b.maxX + m && c.y >= b.minY - m && c.y <= b.maxY + m);
@@ -75,7 +77,7 @@ export function refineStairMeshPlanes(
   planes: readonly TekPlaneRecord[],
   stairs: readonly TekStairRecord[],
 ): TekPlaneRecord[] {
-  const boxes = stairs.map(stairBBox).filter((b): b is BBox => b !== null);
+  const boxes = stairs.map(stairBBox).filter((b): b is PlanRectM => b !== null);
   if (boxes.length === 0) return [...planes];
   const isStairMesh = (p: TekPlaneRecord): boolean =>
     Math.abs(p.elevationM) < ELEV1_EPS && insideAnyStair(p.vertices, boxes);

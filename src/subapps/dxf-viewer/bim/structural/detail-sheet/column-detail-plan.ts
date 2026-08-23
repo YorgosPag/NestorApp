@@ -30,6 +30,11 @@ import { resolveColumnReinforcementSection } from '../reinforcement/column-secti
 import { DEFAULT_STIRRUP_TYPE } from '../reinforcement/column-reinforcement-types';
 import { assignColumnBarNumbers } from './column-rebar-bar-marks';
 import { pickScaleDenominator } from './detail-sheet-fit';
+// ADR-794 — ΔΥΟ χώροι σε αυτό το αρχείο, και τώρα φαίνονται: το footprint της κολόνας
+// είναι `local-mm` (πραγματικά χιλιοστά, base στο origin) και το `RectMm` της περιοχής
+// είναι ΧΑΡΤΙ. Μέχρι σήμερα το ένα λεγόταν `BBox` και ο μετασχηματισμός ζούσε σε σχόλιο
+// (`const s = 1 / denom; // sheet-mm per real-mm`).
+import { bboxOf } from '../../geometry/shared/xy-bounds';
 import type { DetailPrimitive, RectMm } from './detail-sheet-types';
 // ADR-471 Slice 6 — χρώμα οπλισμού από το ΕΝΑ SSoT (πρώην inline literal σε 10 αρχεία).
 import { REBAR_COLOR_HEX as REBAR_HEX } from '../rebar-catalog';
@@ -58,23 +63,37 @@ const WIDTH_DIM_OFFSET_MM = 6;
 const DEPTH_DIM_OFFSET_MM = 6;
 const COVER_DIM_OFFSET_MM = 3;
 
+/**
+ * Τα άγκιστρα 135° μιας ομάδας συνδετήρων — **ίδιο πάχος και χρώμα όπου κι αν
+ * εμφανίζονται** (κύριο στεφάνι ή cross-tie). Ήταν γραμμένο **δύο φορές μέσα σε
+ * αυτό το αρχείο** (N.18 / CHECK 3.28): αν άλλαζε το πάχος στο ένα σημείο και όχι
+ * στο άλλο, το **ίδιο** σχέδιο θα ζωγράφιζε **δύο διαφορετικά** άγκιστρα.
+ *
+ * ⚠️ Ο έλεγχος «είναι `closed-hooked`;» **μένει στον καλούντα** επίτηδες: εκεί έχει
+ * δύο διαφορετικές μορφές — `if (...)` για το στεφάνι, `continue` μέσα στον βρόχο
+ * των cross-ties. Τραβώντας τον εδώ μέσα θα χρειαζόταν σημαία, δηλαδή θα έκρυβε
+ * τη ροή ελέγχου αντί να την ενοποιήσει.
+ */
+function pushHookEnds(
+  primitives: DetailPrimitive[],
+  hookEndsMm: readonly (readonly Point2D[])[],
+  toSheet: (p: Point2D) => Point2D,
+): void {
+  for (const end of hookEndsMm) {
+    if (end.length < 2) continue;
+    primitives.push({
+      kind: 'polyline',
+      points: end.map(toSheet),
+      closed: false,
+      stroke: { colorHex: REBAR_HEX, widthMm: MIN_STIRRUP_WIDTH_MM },
+    });
+  }
+}
+
 export interface ColumnPlanResult {
   readonly primitives: readonly DetailPrimitive[];
   /** Scale caption (e.g. "1:20"); omitted when nothing was drawn. */
   readonly caption?: string;
-}
-
-interface BBox { minX: number; minY: number; maxX: number; maxY: number; }
-
-function bboxOf(points: readonly Point2D[]): BBox {
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (const p of points) {
-    if (p.x < minX) minX = p.x;
-    if (p.y < minY) minY = p.y;
-    if (p.x > maxX) maxX = p.x;
-    if (p.y > maxY) maxY = p.y;
-  }
-  return { minX, minY, maxX, maxY };
 }
 
 /**
@@ -90,7 +109,7 @@ export function buildColumnPlanRegion(params: ColumnParams, region: RectMm): Col
 
   const footprintLocal = materializeColumnLocalPolygonMm(params);
   if (footprintLocal.length < 3) return { primitives: [] };
-  const bbox = bboxOf(footprintLocal);
+  const bbox = bboxOf<'local-mm'>(footprintLocal);
   const fpWidthMm = bbox.maxX - bbox.minX;
   const fpDepthMm = bbox.maxY - bbox.minY;
   const cx = (bbox.minX + bbox.maxX) / 2;
@@ -133,15 +152,7 @@ export function buildColumnPlanRegion(params: ColumnParams, region: RectMm): Col
     });
     // 135° hooks — only for closed-hooked stirrups (welded/spiral: clean ring).
     if ((r.stirrups.type ?? DEFAULT_STIRRUP_TYPE) === 'closed-hooked') {
-      for (const end of layout.stirrupHookEndsMm) {
-        if (end.length < 2) continue;
-        primitives.push({
-          kind: 'polyline',
-          points: end.map(toSheet),
-          closed: false,
-          stroke: { colorHex: REBAR_HEX, widthMm: MIN_STIRRUP_WIDTH_MM },
-        });
-      }
+      pushHookEnds(primitives, layout.stirrupHookEndsMm, toSheet);
     }
   }
 
@@ -171,15 +182,7 @@ export function buildColumnPlanRegion(params: ColumnParams, region: RectMm): Col
       });
     }
     if (!hooked) continue;
-    for (const end of tie.hookEndsMm) {
-      if (end.length < 2) continue;
-      primitives.push({
-        kind: 'polyline',
-        points: end.map(toSheet),
-        closed: false,
-        stroke: { colorHex: REBAR_HEX, widthMm: MIN_STIRRUP_WIDTH_MM },
-      });
-    }
+    pushHookEnds(primitives, tie.hookEndsMm, toSheet);
   }
 
   // ── Longitudinal bars (filled dots) + bar marks (#1…#N, shared SSoT order) ──

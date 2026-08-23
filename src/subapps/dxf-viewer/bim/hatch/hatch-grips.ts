@@ -16,6 +16,9 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+// ADR-794 — ΕΝΑ όνομα για το ορθογώνιο κάτοψης· το «τι περικλείω» ζει στο όνομα της
+// ΣΥΝΑΡΤΗΣΗΣ (`hatchBounds`), όχι του τύπου — η πρακτική της Figma/Revit.
+import type { Bbox } from '../../types/coordinate-space';
 import type { HatchGripKind } from '../../hooks/grip-types';
 import { constrainDeltaToDominantAxis } from '../grips/ortho-delta';
 import { projectVerticesTo2D } from '../geometry/shared/polygon-utils';
@@ -125,12 +128,6 @@ export function isHatchAngleGripKind(gripKind: HatchGripKind): boolean {
   return gripKind === HATCH_GRADIENT_ANGLE_KIND;
 }
 
-/** Axis-aligned bounding box των boundaryPaths· `null` σε κενό όριο. */
-export interface HatchBounds {
-  readonly minX: number; readonly minY: number;
-  readonly maxX: number; readonly maxY: number;
-}
-
 /**
  * SSoT bounding-box των boundaryPaths. Το μοιράζονται η προεπιλεγμένη θέση του
  * gradient origin (`hatchBoundsCenter`) και ο `HatchRenderer.fillGradient`
@@ -138,7 +135,7 @@ export interface HatchBounds {
  */
 export function hatchBounds(
   boundaryPaths: ReadonlyArray<ReadonlyArray<Point2D>>,
-): HatchBounds | null {
+): Bbox | null {
   let minX = Infinity; let minY = Infinity; let maxX = -Infinity; let maxY = -Infinity;
   for (const path of boundaryPaths) {
     for (const v of path) {
@@ -179,7 +176,7 @@ export function applyHatchOriginGripDrag(
  * τύπο gradient (linear/radial) — ο βραχίονας δηλώνει ΦΟΡΑ, όχι έκταση → ίδιος κανόνας
  * για όλους. Καθαρή ποσότητα (όχι το linear `half` του fillGradient → μηδέν διπλότυπο).
  */
-function hatchGradientArmRadius(b: HatchBounds): number {
+function hatchGradientArmRadius(b: Bbox): number {
   return 0.5 * Math.hypot(b.maxX - b.minX, b.maxY - b.minY);
 }
 

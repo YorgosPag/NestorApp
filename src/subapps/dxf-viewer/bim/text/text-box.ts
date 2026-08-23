@@ -82,19 +82,14 @@ import { layoutTextBlock, layoutLineStrings, totalExtraLineRatio } from './text-
 // ADR-557 — the oblique shear SSoT (angle → tan θ). The SAME map the renderer uses, so the
 // box parallelogram leans by exactly what the drawn glyphs lean by (no second `Math.tan`).
 import { obliqueShearFromAngle } from './text-oblique';
+// ADR-794 — ΕΝΑ όνομα για το ορθογώνιο κάτοψης. Το σχόλιο έλεγε ήδη «matches
+// `getEntityBBox`'s shape» — δηλαδή ομολογούσε το διπλότυπο.
+import type { Bbox } from '../../types/coordinate-space';
 
 const CHAR_WIDTH = TEXT_METRICS_RATIOS.CHAR_WIDTH_MONOSPACE;
 
 /** Fallback height (world units) when a text carries no usable height (AutoCAD DIMTXT default). */
 const DEFAULT_TEXT_HEIGHT = 2.5;
-
-/** Axis-aligned bounding box in world units (matches `getEntityBBox`'s shape). */
-export interface TextBoxAABB {
-  readonly minX: number;
-  readonly minY: number;
-  readonly maxX: number;
-  readonly maxY: number;
-}
 
 /**
  * Monospace fallback width (widthFactor = 1) of a simple TEXT at a given height —
@@ -457,7 +452,7 @@ export function textEmBoxCornersWorld(text: DxfText): Point2D[] {
  * Axis-aligned world bounding box enclosing the (rotated) NOMINAL em box — culling uses the
  * generous em box (not the tight cap box) so text never pops at the viewport edge.
  */
-export function textBoxAABB(text: DxfText): TextBoxAABB {
+export function textBoxAABB(text: DxfText): Bbox {
   const corners = textEmBoxCornersWorld(text);
   let minX = corners[0].x, minY = corners[0].y, maxX = corners[0].x, maxY = corners[0].y;
   for (let i = 1; i < corners.length; i++) {
