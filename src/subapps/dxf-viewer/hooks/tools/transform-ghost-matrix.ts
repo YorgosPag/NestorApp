@@ -17,9 +17,10 @@
  */
 
 import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
-import type { PreviewBBox } from '../../systems/scale/scale-preview-lod';
 // SSoT margins used by `worldToScreen` (left=top=30) — do NOT hardcode the constant.
 import { getDrawingAreaRect } from '../../rendering/core/drawing-area';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ. Το σχόλιο ομολογούσε «mirror of getEntityBBox shape — structural, no import coupling»: το διπλότυπο ήταν ΣΚΟΠΙΜΟ, για να αποφευχθεί ένα import.
+import type { Bbox } from '../../types/coordinate-space';
 
 /** 2×3 affine with canvas `transform(a,b,c,d,e,f)` semantics: `x'=a·x+c·y+e ; y'=b·x+d·y+f`. */
 export interface Affine2x3 {
@@ -90,7 +91,7 @@ export function offscreenToWorldAffine(rect: CaptureRect, scale0: number): Affin
  * the bbox is non-finite / the zoom non-positive.
  */
 export function captureRectFromBBox(
-  bbox: PreviewBBox, scale0: number, margin: number, maxCss: number,
+  bbox: Bbox, scale0: number, margin: number, maxCss: number,
 ): CaptureRect | null {
   if (!(scale0 > 0)) return null;
   const wCss = (bbox.maxX - bbox.minX) * scale0 + 2 * margin;

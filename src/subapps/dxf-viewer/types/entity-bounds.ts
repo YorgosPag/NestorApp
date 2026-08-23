@@ -1,5 +1,7 @@
 import type { Entity } from './entities';
 import type { EntityType } from './base-entity';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ για το ορθογώνιο κάτοψης.
+import type { Bbox } from './coordinate-space';
 import { EMPTY_SPATIAL_BOUNDS } from '../config/geometry-constants';
 // ADR-587 Φ9 Slice 2 — canonical per-type bounds SSoT (the marquee/pick resolver, seeded from
 // the hit-test `BoundsCalculator`). Twin A (render/culling bounds) DELEGATES to it for every type
@@ -11,7 +13,6 @@ import { resolveEntityBounds } from '../rendering/hitTesting/entity-bounds-ssot'
 import { textBoxAABB } from '../bim/text/text-box';
 import { projectSceneEntityText } from '../bim/text/project-scene-text';
 
-export type SpatialBounds = { minX: number; minY: number; maxX: number; maxY: number };
 
 type XY = { x: number; y: number };
 
@@ -22,7 +23,7 @@ const RENDER_NOMINAL_EXTENT = 10000;
 
 /** AABB over an array of points; empty → EMPTY_SPATIAL_BOUNDS. Generic fallback for the few
  *  non-provider types that still carry top-level `vertices` (e.g. leader). */
-function aabbOf(points: ReadonlyArray<XY>): SpatialBounds {
+function aabbOf(points: ReadonlyArray<XY>): Bbox {
   if (points.length === 0) return EMPTY_SPATIAL_BOUNDS;
   const xs = points.map(p => p.x);
   const ys = points.map(p => p.y);
@@ -30,7 +31,7 @@ function aabbOf(points: ReadonlyArray<XY>): SpatialBounds {
 }
 
 /** XLINE culling box: ±NOMINAL square around the base point (infinite line spans the viewport). */
-function xlineRenderBounds(entity: Entity): SpatialBounds {
+function xlineRenderBounds(entity: Entity): Bbox {
   const bp = ('basePoint' in entity ? (entity as { basePoint?: XY }).basePoint : undefined);
   if (!bp) return EMPTY_SPATIAL_BOUNDS;
   return {
@@ -40,7 +41,7 @@ function xlineRenderBounds(entity: Entity): SpatialBounds {
 }
 
 /** RAY culling box: from the base point ±NOMINAL along the ray direction (default +X). */
-function rayRenderBounds(entity: Entity): SpatialBounds {
+function rayRenderBounds(entity: Entity): Bbox {
   const e = entity as { basePoint?: XY; direction?: XY };
   if (!e.basePoint) return EMPTY_SPATIAL_BOUNDS;
   const tipX = e.basePoint.x + (e.direction?.x ?? 1) * RENDER_NOMINAL_EXTENT;
@@ -54,7 +55,7 @@ function rayRenderBounds(entity: Entity): SpatialBounds {
 /** ELLIPSE culling box: scene shape carries `majorAxis`/`minorAxis`. The pick resolver routes
  *  ellipse through `BoundsCalculator` which reads `radiusX`/`radiusY` (fields the SCENE entity
  *  lacks → NaN), so this stays local; Slice 3 reconciles the resolver's ellipse provider. */
-function ellipseRenderBounds(entity: Entity): SpatialBounds {
+function ellipseRenderBounds(entity: Entity): Bbox {
   const e = entity as { center: XY; majorAxis: number; minorAxis: number };
   const r = Math.max(e.majorAxis, e.minorAxis);
   return { minX: e.center.x - r, minY: e.center.y - r, maxX: e.center.x + r, maxY: e.center.y + r };
@@ -62,12 +63,12 @@ function ellipseRenderBounds(entity: Entity): SpatialBounds {
 
 /** POINT culling box: degenerate box at the position (pick adds ±1 selection padding; culling
  *  doesn't need it). */
-function pointRenderBounds(entity: Entity): SpatialBounds {
+function pointRenderBounds(entity: Entity): Bbox {
   const p = (entity as { position: XY }).position;
   return { minX: p.x, minY: p.y, maxX: p.x, maxY: p.y };
 }
 
-const textRenderBounds = (entity: Entity): SpatialBounds => {
+const textRenderBounds = (entity: Entity): Bbox => {
   const dxfText = projectSceneEntityText(entity, (entity as { id: string }).id);
   return dxfText ? textBoxAABB(dxfText) : EMPTY_SPATIAL_BOUNDS;
 };
@@ -79,7 +80,7 @@ const textRenderBounds = (entity: Entity): SpatialBounds => {
  * Twin A previously ignored — arc/dimension/angle-measurement + BIM footprint bbox). `forExtents`
  * (zoom-to-fit) drops infinite construction lines so they never affect zoom-extents.
  */
-const CULLING_BOUNDS_OVERRIDES: Partial<Record<EntityType, (entity: Entity, forExtents: boolean) => SpatialBounds>> = {
+const CULLING_BOUNDS_OVERRIDES: Partial<Record<EntityType, (entity: Entity, forExtents: boolean) => Bbox>> = {
   xline: (entity, forExtents) => (forExtents ? EMPTY_SPATIAL_BOUNDS : xlineRenderBounds(entity)),
   ray: (entity, forExtents) => (forExtents ? EMPTY_SPATIAL_BOUNDS : rayRenderBounds(entity)),
   text: textRenderBounds,
@@ -88,7 +89,7 @@ const CULLING_BOUNDS_OVERRIDES: Partial<Record<EntityType, (entity: Entity, forE
   point: pointRenderBounds,
 };
 
-function computeBounds(entity: Entity, forExtents: boolean): SpatialBounds {
+function computeBounds(entity: Entity, forExtents: boolean): Bbox {
   const override = CULLING_BOUNDS_OVERRIDES[entity.type as EntityType];
   if (override) return override(entity, forExtents);
 
@@ -103,11 +104,11 @@ function computeBounds(entity: Entity, forExtents: boolean): SpatialBounds {
 }
 
 /** For render culling: XLINE/RAY use NOMINAL_EXTENT so they appear across the viewport. */
-export const getEntityRenderBounds = (entity: Entity): SpatialBounds =>
+export const getEntityRenderBounds = (entity: Entity): Bbox =>
   computeBounds(entity, false);
 
 /** For zoom-to-extents: XLINE/RAY return empty bounds — infinite lines must not affect zoom. */
-export const getEntityExtentsBounds = (entity: Entity): SpatialBounds =>
+export const getEntityExtentsBounds = (entity: Entity): Bbox =>
   computeBounds(entity, true);
 
 /** @deprecated Use getEntityRenderBounds (rendering) or getEntityExtentsBounds (zoom). */

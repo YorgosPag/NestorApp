@@ -35,7 +35,7 @@
 import type { Point2D } from '../../rendering/types/Types';
 import { ExtendedSnapType, type Entity } from '../extended-types';
 // ADR-587 Φ9 — SSoT per-type 2D bounds (ο ίδιος resolver που τροφοδοτεί το marquee).
-import { resolveEntityBounds, type BoundingBox2D } from '../../rendering/hitTesting/entity-bounds-ssot';
+import { resolveEntityBounds } from '../../rendering/hitTesting/entity-bounds-ssot';
 // ADR-728 §3.4 — ΥΠΑΡΧΟΝ spatial SSoT· καμία νέα υλοποίηση ευρετηρίου.
 import { spatialIndexFactory, SpatialIndexType, type ISpatialIndex, type SpatialBounds } from '../../core/spatial';
 // Ο μεγαλύτερος συντελεστής που εφαρμόζει ΟΠΟΙΑΔΗΠΟΤΕ engine πάνω στην ανοχή της (βλ. §Aperture).
@@ -45,6 +45,8 @@ import { SNAP_RADIUS_MULTIPLIERS } from '../../config/tolerance-config';
 // το ένα ευρετήριο, ενώ τα εννέα ιδιωτικά των snap engines έμεναν στο πάγιο `50` που τους κόστιζε
 // 16-19ms ανά κλήση. Μετακόμισε (MOVE, όχι copy — N.18) για να το μοιράζονται όλοι.
 import { resolveGridSize } from '../../core/spatial/grid-sizing';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ. Αυτό το module δηλώνει τον εαυτό του «canonical bounds SSoT» — και ΞΑΝΑΔΗΛΩΝΕ το σχήμα αντί να το εισάγει.
+import type { Bbox } from '../../types/coordinate-space';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Σταθερές συντονισμού — κάθε μία με μετρήσιμο επιχείρημα, όχι με αίσθηση
@@ -113,8 +115,8 @@ export interface SnapApertureResolver {
  * provider (μισοφτιαγμένη οντότητα — ο snap δεν είναι το σωστό μέρος για να σκάσει), και μη
  * πεπερασμένα bounds (ADR-510 Φ5: ένα NaN δηλητηριάζει ολόκληρο το ευρετήριο).
  */
-function resolveIndexableBounds(entity: Entity): BoundingBox2D | null {
-  let box: BoundingBox2D | null;
+function resolveIndexableBounds(entity: Entity): Bbox | null {
+  let box: Bbox | null;
   try {
     box = resolveEntityBounds(entity);
   } catch {
@@ -127,7 +129,7 @@ function resolveIndexableBounds(entity: Entity): BoundingBox2D | null {
 }
 
 /** Ένωση AABB + περιθώριο, ώστε **καμία** διάσταση να μην είναι μηδενική (πλέγμα με 0 γραμμές). */
-function unionWithMargin(boxes: readonly BoundingBox2D[]): SpatialBounds | null {
+function unionWithMargin(boxes: readonly Bbox[]): SpatialBounds | null {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (const b of boxes) {
     if (b.minX < minX) minX = b.minX;
@@ -144,7 +146,7 @@ function unionWithMargin(boxes: readonly BoundingBox2D[]): SpatialBounds | null 
 }
 
 /** Πόσα κελιά καλύπτει ένα AABB — φράγμα κόστους εισαγωγής (βλ. {@link MAX_CELLS_PER_ENTITY}). */
-function coveredCellCount(box: BoundingBox2D, gridSize: number): number {
+function coveredCellCount(box: Bbox, gridSize: number): number {
   const cols = Math.floor((box.maxX - box.minX) / gridSize) + 1;
   const rows = Math.floor((box.maxY - box.minY) / gridSize) + 1;
   return cols * rows;
@@ -160,7 +162,7 @@ function coveredCellCount(box: BoundingBox2D, gridSize: number): number {
 export function buildSnapBroadPhase(entities: readonly Entity[]): SnapBroadPhase | null {
   if (entities.length === 0) return null;
 
-  const indexable: Array<{ id: string; box: BoundingBox2D }> = [];
+  const indexable: Array<{ id: string; box: Bbox }> = [];
   const alwaysInclude = new Set<string>();
   for (const entity of entities) {
     const box = resolveIndexableBounds(entity);
@@ -192,7 +194,7 @@ function createIndex(bounds: SpatialBounds, gridSize: number): ISpatialIndex | n
 /** Εισαγωγή με φράγμα κόστους + fail-open ανά item. Μεταλλάσσει το `alwaysInclude`. */
 function fillIndex(
   index: ISpatialIndex,
-  indexable: ReadonlyArray<{ id: string; box: BoundingBox2D }>,
+  indexable: ReadonlyArray<{ id: string; box: Bbox }>,
   gridSize: number,
   alwaysInclude: Set<string>,
 ): void {

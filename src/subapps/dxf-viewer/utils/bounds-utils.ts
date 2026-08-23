@@ -1,3 +1,5 @@
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ. Το «legacy format» ΗΤΑΝ το βαθμωτό ορθογώνιο κάτοψης — δηλαδή το Bbox, με άλλο όνομα.
+import type { Bbox } from '../types/coordinate-space';
 /**
  * 🏢 BOUNDS UTILITIES - FACADE
  * Re-exports from canonical bounds system for backward compatibility
@@ -18,7 +20,7 @@ export {
   type Bounds,
   type BoundsEntity,
   type MutableBoundsEntity,
-  type LegacyBounds,
+  type Bbox,
   type NormalizedSceneBounds,
 
   // Bounds Creation

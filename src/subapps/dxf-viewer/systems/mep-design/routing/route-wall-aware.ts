@@ -31,12 +31,13 @@ import {
 import type { Point2D } from '../../../rendering/types/Types';
 import { findOrthogonalPath, type AStarOptions } from './astar-grid';
 import { segmentHitsObstacles } from './wall-obstacles';
-import type { Rect2D } from './routing-constants';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ. Το σχόλιο ομολογούσε «Field names mirror core/spatial SpatialBounds so an obstacle can be fed to the shared spatial index verbatim».
+import type { Bbox } from '../../../types/coordinate-space';
 
 /** Emit the runs for one parent run: its A* detour sub-runs, or the straight run unchanged. */
 function expandRun(
   run: RoutedSegment,
-  obstacles: readonly Rect2D[],
+  obstacles: readonly Bbox[],
   opts: AStarOptions,
   out: RoutedSegment[],
 ): void {
@@ -67,7 +68,7 @@ function expandRun(
 export function routeWallAware(
   root: Point2D,
   targets: readonly RouteTarget[],
-  obstacles: readonly Rect2D[],
+  obstacles: readonly Bbox[],
   opts: AStarOptions = {},
 ): readonly RoutedSegment[] {
   const runs = routeOrthogonalTrunkBranch(root, targets);

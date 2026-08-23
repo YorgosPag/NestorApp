@@ -25,9 +25,10 @@
 
 import type { Point2D } from '../../../rendering/types/Types';
 import { buildOffsetPairing } from '../routing/offset-pairing';
-import type { Rect2D } from '../routing/routing-constants';
 import type { FixtureDemand, ProposedNetwork, ProposedSegment } from './water-design-types';
 import type { WaterSupplyDiscipline } from './water-supply-discipline';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ. Το σχόλιο ομολογούσε «Field names mirror core/spatial SpatialBounds so an obstacle can be fed to the shared spatial index verbatim».
+import type { Bbox } from '../../../types/coordinate-space';
 
 /** A hot trunk/stub run carrying a copied cumulative LU + DN from its original counterpart. */
 function hotTrunk(
@@ -51,7 +52,7 @@ export function buildOffsetHotNetwork(
   hot: ProposedNetwork,
   hotDemands: readonly FixtureDemand[],
   discipline: WaterSupplyDiscipline,
-  obstacles: readonly Rect2D[] = [],
+  obstacles: readonly Bbox[] = [],
 ): ProposedNetwork {
   const trunks = hot.segments.filter((s) => s.role === 'trunk');
   const pairing = buildOffsetPairing(

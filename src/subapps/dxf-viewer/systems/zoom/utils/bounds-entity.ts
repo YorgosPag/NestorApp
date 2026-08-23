@@ -28,6 +28,8 @@ import type { Bounds } from './bounds';
 // expander SSoT so the bounds match exactly where the block draws.
 import { expandBlockInstance } from '../../block/block-expander';
 import type { BlockEntity } from '../../../types/entities';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ. Το «legacy format» ΗΤΑΝ το βαθμωτό ορθογώνιο κάτοψης — δηλαδή το Bbox, με άλλο όνομα.
+import type { Bbox } from '../../../types/coordinate-space';
 
 // ============================================================================
 // ENTITY BOUNDS CALCULATION
@@ -54,15 +56,6 @@ export interface BoundsEntity {
   boundaryPaths?: Point2D[][];
 }
 
-/**
- * Legacy bounds format for backward compatibility.
- */
-export interface LegacyBounds {
-  minX: number;
-  minY: number;
-  maxX: number;
-  maxY: number;
-}
 
 /**
  * Mutable entity interface for position normalization.
@@ -232,7 +225,7 @@ export function getEntityBounds(entity: BoundsEntity): Bounds | null {
  * Get bounds in legacy format { minX, minY, maxX, maxY }.
  * @deprecated Prefer getEntityBounds() which returns modern Bounds format.
  */
-export function getEntityBoundsLegacy(entity: BoundsEntity): LegacyBounds | null {
+export function getEntityBoundsLegacy(entity: BoundsEntity): Bbox | null {
   const bounds = getEntityBounds(entity);
   if (!bounds) return null;
 
@@ -247,7 +240,7 @@ export function getEntityBoundsLegacy(entity: BoundsEntity): LegacyBounds | null
 /**
  * Convert legacy bounds to modern Bounds format.
  */
-export function legacyToModernBounds(legacy: LegacyBounds): Bounds {
+export function legacyToModernBounds(legacy: Bbox): Bounds {
   return {
     min: { x: legacy.minX, y: legacy.minY },
     max: { x: legacy.maxX, y: legacy.maxY }
@@ -257,7 +250,7 @@ export function legacyToModernBounds(legacy: LegacyBounds): Bounds {
 /**
  * Convert modern Bounds to legacy format.
  */
-export function modernToLegacyBounds(modern: Bounds): LegacyBounds {
+export function modernToLegacyBounds(modern: Bounds): Bbox {
   return {
     minX: modern.min.x,
     minY: modern.min.y,

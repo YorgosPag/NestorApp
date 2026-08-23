@@ -19,7 +19,8 @@
 
 import { CoordinateTransforms as CT } from './CoordinateTransforms';
 import type { ViewTransform, Viewport } from '../types/Types';
-import type { WorldRectMm } from '../../systems/topography/topo-grid-model';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ. Το όνομα ήταν σωστό (χώρος+μονάδα) — αλλά ο χώρος είναι ο ΙΔΙΟΣ με του Bbox.
+import type { Bbox } from '../../types/coordinate-space';
 
 /**
  * Το ορατό ορθογώνιο σε **display** mm (τοπικές συντεταγμένες του σχεδίου), από τις δύο
@@ -29,7 +30,7 @@ import type { WorldRectMm } from '../../systems/topography/topo-grid-model';
  * τέσσερις: η οθόνη και το χαρτί συνδέονται με μετασχηματισμό **χωρίς στροφή**, οπότε το
  * ορθογώνιο παραμένει ευθυγραμμισμένο με τους άξονες.
  */
-export function visibleDisplayRect(transform: ViewTransform, viewport: Viewport): WorldRectMm {
+export function visibleDisplayRect(transform: ViewTransform, viewport: Viewport): Bbox {
   const a = CT.screenToWorld({ x: 0, y: 0 }, transform, viewport);
   const b = CT.screenToWorld({ x: viewport.width, y: viewport.height }, transform, viewport);
   return {

@@ -8,7 +8,8 @@
 
 import { buildOffsetPairing, type OffsetRun } from '../offset-pairing';
 import { segmentHitsObstacles } from '../wall-obstacles';
-import type { Rect2D } from '../routing-constants';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ. Το σχόλιο ομολογούσε «Field names mirror core/spatial SpatialBounds so an obstacle can be fed to the shared spatial index verbatim».
+import type { Bbox } from '../../../../types/coordinate-space';
 
 function run(sx: number, sy: number, ex: number, ey: number): OffsetRun {
   return { start: { x: sx, y: sy }, end: { x: ex, y: ey } };
@@ -79,7 +80,7 @@ describe('ADR-429 Slice 3C — buildOffsetPairing wall-aware repair', () => {
   // ON this wall (y∈[40,400]) while the reference (y=0) clears it.
   const straight: OffsetRun[] = [run(0, 0, 3000, 0)];
   const farTarget = [{ x: 2800, y: 800 }]; // off to the side, its branch clears the wall
-  const wall: Rect2D = { minX: 1400, minY: 40, maxX: 1600, maxY: 400 };
+  const wall: Bbox = { minX: 1400, minY: 40, maxX: 1600, maxY: 400 };
 
   it('locally detours an offset trunk that lands on a wall, keeping its source tag', () => {
     const pairing = buildOffsetPairing(straight, { x: 0, y: 0 }, { x: 0, y: 0 }, farTarget, 52, {

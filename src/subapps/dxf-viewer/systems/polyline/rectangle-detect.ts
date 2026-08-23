@@ -19,14 +19,9 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { RectFrame } from '../../bim/grips/rect-frame';
+// ADR-794 — ΕΝΑ όνομα, ΜΙΑ ρίζα: το `Bbox` δηλωνόταν ΚΑΙ εδώ ΚΑΙ στο SSoT — ακριβώς η παραβίαση που φυλά το CHECK 3.59.
+import type { Bbox } from '../../types/coordinate-space';
 
-/** Axis-aligned bounding box of a vertex ring. */
-export interface Bbox {
-  readonly minX: number;
-  readonly minY: number;
-  readonly maxX: number;
-  readonly maxY: number;
-}
 
 /** Axis-aligned bounding box of `vertices` (assumes ≥1 point). */
 export function polylineBbox(vertices: readonly Point2D[]): Bbox {

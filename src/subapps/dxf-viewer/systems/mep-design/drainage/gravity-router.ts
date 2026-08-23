@@ -17,13 +17,14 @@ import type { Point2D } from '../../../rendering/types/Types';
 import type { SceneUnits } from '../../../utils/scene-units';
 import { type RouteTarget } from '../routing/orthogonal-router';
 import { routeWallAware } from '../routing/route-wall-aware';
-import type { Rect2D } from '../routing/routing-constants';
 import type { DrainageSizingStandard } from './drainage-sizing';
 import { assignGravitySlopes, type RoutedSizedRun } from './slope-assignment';
 import {
   DRAINAGE_CLASSIFICATION,
   type ProposedDrainageSegment,
 } from './drainage-design-types';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ. Το σχόλιο ομολογούσε «Field names mirror core/spatial SpatialBounds so an obstacle can be fed to the shared spatial index verbatim».
+import type { Bbox } from '../../../types/coordinate-space';
 
 /** Route + size + slope the drainage runs from fixtures to one collector. Pure. */
 export function routeGravityNetwork(
@@ -32,7 +33,7 @@ export function routeGravityNetwork(
   targets: readonly RouteTarget[],
   sizingStandard: DrainageSizingStandard,
   sceneUnits: SceneUnits,
-  obstacles: readonly Rect2D[] = [],
+  obstacles: readonly Bbox[] = [],
 ): readonly ProposedDrainageSegment[] {
   const routed = routeWallAware(rootPoint, targets, obstacles);
   // Size each run: the ΣDU curve, floored by the largest min branch DN it carries.

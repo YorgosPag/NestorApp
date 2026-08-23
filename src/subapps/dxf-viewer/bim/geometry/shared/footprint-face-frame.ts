@@ -22,14 +22,9 @@
 
 import type { Point2D } from '../../../rendering/types/Types';
 import { projectPolygonOnAxis } from './polygon-axis-projection';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ (κάτοψη, canonical mm). Η ΣΥΝΑΡΤΗΣΗ κρατά το «τι» (footprintBounds) — ο ΤΥΠΟΣ κρατά τον χώρο.
+import type { Bbox } from '../../../types/coordinate-space';
 
-/** World-aligned extents ενός ορθογωνίου footprint. */
-export interface FootprintBounds {
-  readonly minX: number;
-  readonly maxX: number;
-  readonly minY: number;
-  readonly maxY: number;
-}
 
 /** Κυρίαρχη παρειά footprint (world-aligned). */
 export type FootprintFace = 'E' | 'W' | 'N' | 'S';
@@ -37,7 +32,7 @@ export type FootprintFace = 'E' | 'W' | 'N' | 'S';
 /** World-aligned extents πολυγώνου μέσω του `projectPolygonOnAxis` SSoT (X + Y άξονες). */
 export function footprintBounds(
   verts: readonly { readonly x: number; readonly y: number }[],
-): FootprintBounds | null {
+): Bbox | null {
   if (verts.length < 3) return null;
   const xp = projectPolygonOnAxis(verts, 0, 0, 1, 0); // along = v.x
   const yp = projectPolygonOnAxis(verts, 0, 0, 0, 1); // along = v.y
@@ -45,19 +40,19 @@ export function footprintBounds(
 }
 
 /** Απόσταση σημείου από (clamped) bbox — 0 όταν εντός. */
-export function distanceToFootprintBounds(c: Readonly<Point2D>, b: FootprintBounds): number {
+export function distanceToFootprintBounds(c: Readonly<Point2D>, b: Bbox): number {
   const dx = Math.max(b.minX - c.x, 0, c.x - b.maxX);
   const dy = Math.max(b.minY - c.y, 0, c.y - b.maxY);
   return Math.hypot(dx, dy);
 }
 
 /** Κέντρο (centroid) του world-aligned bbox — ΕΝΑ SSoT για κάθε AABB-based framing/column resolver. */
-export function footprintCenter(b: FootprintBounds): Point2D {
+export function footprintCenter(b: Bbox): Point2D {
   return { x: (b.minX + b.maxX) / 2, y: (b.minY + b.maxY) / 2 };
 }
 
 /** Κανονικοποιημένη θέση cursor → κυρίαρχος άξονας → πλευρά (E/W αν |ex|≥|ey|, αλλιώς N/S). */
-export function pickDominantFace(c: Readonly<Point2D>, b: FootprintBounds): FootprintFace {
+export function pickDominantFace(c: Readonly<Point2D>, b: Bbox): FootprintFace {
   const { x: cx, y: cy } = footprintCenter(b);
   const halfX = (b.maxX - b.minX) / 2;
   const halfY = (b.maxY - b.minY) / 2;

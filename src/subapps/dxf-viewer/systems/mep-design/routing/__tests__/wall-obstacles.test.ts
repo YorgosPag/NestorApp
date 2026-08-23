@@ -10,7 +10,8 @@ import {
   segmentHitsRect,
   segmentHitsObstacles,
 } from '../wall-obstacles';
-import type { Rect2D } from '../routing-constants';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ. Το σχόλιο ομολογούσε «Field names mirror core/spatial SpatialBounds so an obstacle can be fed to the shared spatial index verbatim».
+import type { Bbox } from '../../../../types/coordinate-space';
 
 function wall(id: string, min: [number, number], max: [number, number]): Entity {
   return {
@@ -42,7 +43,7 @@ describe('wallObstacles', () => {
 });
 
 describe('pointInRect / pointInAnyObstacle', () => {
-  const r: Rect2D = { minX: 0, minY: 0, maxX: 100, maxY: 100 };
+  const r: Bbox = { minX: 0, minY: 0, maxX: 100, maxY: 100 };
   it('is inclusive of the boundary', () => {
     expect(pointInRect(0, 50, r)).toBe(true);
     expect(pointInRect(100, 100, r)).toBe(true);
@@ -55,7 +56,7 @@ describe('pointInRect / pointInAnyObstacle', () => {
 });
 
 describe('segmentHitsRect (axis-aligned, boundary = free)', () => {
-  const r: Rect2D = { minX: 400, minY: -300, maxX: 600, maxY: 300 };
+  const r: Bbox = { minX: 400, minY: -300, maxX: 600, maxY: 300 };
   it('flags a horizontal run crossing the interior', () => {
     expect(segmentHitsRect({ x: 0, y: 0 }, { x: 1000, y: 0 }, r)).toBe(true);
   });

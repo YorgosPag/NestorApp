@@ -156,12 +156,6 @@ export interface HitTestResult {
  */
 // Point2D now imported from shared types
 
-export interface BoundingBox {
-  minX: number;
-  minY: number;
-  maxX: number;
-  maxY: number;
-}
 
 /**
  * Default values

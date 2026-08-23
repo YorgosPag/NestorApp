@@ -34,7 +34,8 @@ import { resolveFireSource, type FireSource } from './fire-source-resolve';
 import { type RouteTarget } from '../routing/orthogonal-router';
 import { routeWallAware } from '../routing/route-wall-aware';
 import { wallObstacles } from '../routing/wall-obstacles';
-import type { Rect2D } from '../routing/routing-constants';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ. Το σχόλιο ομολογούσε «Field names mirror core/spatial SpatialBounds so an obstacle can be fed to the shared spatial index verbatim».
+import type { Bbox } from '../../../types/coordinate-space';
 
 /** Build one service's proposed wet-pipe network (route + size) rooted at the riser outlet. */
 function buildNetwork(
@@ -42,7 +43,7 @@ function buildNetwork(
   source: FireSource,
   demands: readonly SprinklerDemand[],
   discipline: FireProtectionDiscipline,
-  obstacles: readonly Rect2D[],
+  obstacles: readonly Bbox[],
 ): ProposedNetwork {
   const classification = FIRE_SERVICE_CLASSIFICATION[service];
   // Design flow is the cumulative-sum driver (the router's `loadingUnits` is a flow proxy).

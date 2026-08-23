@@ -12,27 +12,16 @@
 // CORE INTERFACES & TYPES
 // ========================================
 
-// Define missing types locally if ISpatialIndex doesn't exist
-type SpatialBounds = {
-  minX: number;
-  minY: number;
-  maxX: number;
-  maxY: number;
-};
-
-type SpatialItem<T = unknown> = {
-  id: string;
-  bounds: SpatialBounds;
-  data?: T;
-};
-
+// 🔴 ADR-794 — ΕΔΩ ΖΟΥΣΕ ΔΕΥΤΕΡΟ `SpatialBounds`. Το σχόλιο έλεγε «define missing types
+// locally if ISpatialIndex doesn't exist» — αλλά το `ISpatialIndex` ΥΠΑΡΧΕΙ και δηλώνει το
+// δικό του (με προαιρετικά `centerX`/`centerY`). Αποτέλεσμα: μέσα στον ΙΔΙΟ φάκελο, το
+// όνομα `SpatialBounds` σήμαινε ΑΛΛΟ πράγμα ανάλογα με το ποιο αρχείο εισήγαγες —
+// `grid-sizing`/`SpatialUtils` έπαιρναν το πλήρες, το `snap-broad-phase` (μέσω αυτού του
+// barrel) το κουτσουρεμένο. Δεν έσπαγε ΜΟΝΟ επειδή τα δύο πεδία είναι προαιρετικά.
+// Πλέον ΜΙΑ πηγή: το `ISpatialIndex`.
 export type {
   SpatialBounds,
-  SpatialItem
-};
-
-// Try to export from ISpatialIndex, fallback to local definitions
-export type {
+  SpatialItem,
   ISpatialIndex,
   ISpatialIndexFactory,
   SpatialQueryOptions,

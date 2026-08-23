@@ -138,10 +138,10 @@ export type CoordinateSpace =
  * τίμημα γλωσσών χωρίς τύπους-παραμέτρους σε αυτή τη θέση. Εδώ το σχήμα είναι **ένα**
  * και ο χώρος είναι **όρισμα τύπου** — μία δήλωση, πέντε εγγυήσεις, μηδέν αντιγραφή.
  *
- * ⚠️ **ΜΗΝ το χρησιμοποιήσεις ωμό** (`Rect<'plan-mm'>`) στις υπογραφές: κάθε χώρος έχει
+ * ⚠️ **ΜΗΝ το χρησιμοποιήσεις ωμό** (`MinMaxRect<'plan-mm'>`) στις υπογραφές: κάθε χώρος έχει
  * **όνομα**, και το όνομα είναι αυτό που διαβάζει ο άνθρωπος.
  */
-export interface Rect<S extends CoordinateSpace> extends InSpace<S> {
+export interface MinMaxRect<S extends CoordinateSpace> extends InSpace<S> {
   readonly minX: number;
   readonly minY: number;
   readonly maxX: number;
@@ -169,12 +169,12 @@ export interface Rect<S extends CoordinateSpace> extends InSpace<S> {
  * είναι το **CHECK 3.59** (`.point-vocabulary.json`): το όνομα `Bbox` επιτρέπεται σε
  * **ΑΚΡΙΒΩΣ ΕΝΑ** αρχείο, και είναι αυτό.
  *
- * ⚠️ **Ο χώρος ζει στον τύπο** ({@link Rect}, phantom, μηδέν κόστος): μια τιμή `Bbox`
+ * ⚠️ **Ο χώρος ζει στον τύπο** ({@link MinMaxRect}, phantom, μηδέν κόστος): μια τιμή `Bbox`
  * **δεν** περνά εκεί που ζητείται `LocalRectMm` (τοπικό στο στοιχείο), `PlanRectM`
  * (μέτρα), `SheetRectMm` (χαρτί) ή `TileRange` (δείκτες πλακιδίων). Η TypeScript είναι
  * **δομική** — χωρίς αυτό, το όνομα θα ήταν **διακοσμητικό**.
  */
-export type Bbox = Rect<'plan-mm'>;
+export type Bbox = MinMaxRect<'plan-mm'>;
 
 /**
  * Ορθογώνιο κάτοψης σε **ΜΕΤΡΑ** — ο χώρος της 3Δ σκηνής και της εισαγωγής Τέκτονα.
@@ -187,7 +187,7 @@ export type Bbox = Rect<'plan-mm'>;
  * σωστά** — αλλά ο τύπος δεν έλεγε **τίποτα**. Τώρα το λέει.
  */
 /**
- * Η **ΜΕΤΑΒΛΗΤΗ** μορφή του {@link Rect} — ο συσσωρευτής, όχι το αποτέλεσμα.
+ * Η **ΜΕΤΑΒΛΗΤΗ** μορφή του {@link MinMaxRect} — ο συσσωρευτής, όχι το αποτέλεσμα.
  *
  * Υπάρχει για **έναν μετρημένο λόγο**: το `InfinityBounds` του ADR-158 (8 αρχεία
  * καταναλωτές, `createInfinityBounds` · `expandInfinityBounds` · `isInfinityBounds`)
@@ -196,11 +196,11 @@ export type Bbox = Rect<'plan-mm'>;
  * **επιβιώνει** και ένας συσσωρευτής `plan-mm` περνά ελεύθερα εκεί που ζητείται `Bbox`
  * (μεταβλητό → αμετάβλητο είναι πάντα νόμιμο), αλλά **όχι** εκεί που ζητείται άλλος χώρος.
  */
-export type MutableRect<S extends CoordinateSpace> = {
-  -readonly [K in keyof Rect<S>]: Rect<S>[K];
+export type MutableMinMaxRect<S extends CoordinateSpace> = {
+  -readonly [K in keyof MinMaxRect<S>]: MinMaxRect<S>[K];
 };
 
-export type PlanRectM = Rect<'plan-m'>;
+export type PlanRectM = MinMaxRect<'plan-m'>;
 
 /**
  * Ορθογώνιο σε canonical mm αλλά **ΤΟΠΙΚΑ ΣΤΟ ΣΤΟΙΧΕΙΟ** — base στο origin, ανεξάρτητο
@@ -211,7 +211,7 @@ export type PlanRectM = Rect<'plan-m'>;
  * αόρατο, γιατί οι δύο έχουν την **ίδια μονάδα** και το ίδιο σχήμα. Ήταν **τέσσερα**
  * ονόματα (`BlockBoundsMm` · `Extent` · `BBox` · αυτό).
  */
-export type LocalRectMm = Rect<'local-mm'>;
+export type LocalRectMm = MinMaxRect<'local-mm'>;
 
 /**
  * Ορθογώνιο στο πλέγμα **πλακιδίων** ενός επιπέδου: **ακέραιοι** δείκτες, **κλειστό**
@@ -220,4 +220,4 @@ export type LocalRectMm = Rect<'local-mm'>;
  * ⚠️ Ο πιο επικίνδυνος της οικογένειας ακριβώς επειδή είναι ο πιο **ξένος**: μοιράζεται
  * σχήμα με ένα κουτί σε mm, και ο basemap μετατρέπει προς/από αυτό σε **κάθε καρέ**.
  */
-export type TileRange = Rect<'tile-index'>;
+export type TileRange = MinMaxRect<'tile-index'>;

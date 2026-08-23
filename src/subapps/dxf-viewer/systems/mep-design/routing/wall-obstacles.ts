@@ -16,7 +16,9 @@
 import type { Entity } from '../../../types/entities';
 import type { Point2D } from '../../../rendering/types/Types';
 import { isWallEntity } from '../../../types/entities';
-import { WALL_CLEARANCE_SCENE, type Rect2D } from './routing-constants';
+import { WALL_CLEARANCE_SCENE } from './routing-constants';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ. Το σχόλιο ομολογούσε «Field names mirror core/spatial SpatialBounds so an obstacle can be fed to the shared spatial index verbatim».
+import type { Bbox } from '../../../types/coordinate-space';
 
 /** Smallest physically meaningful wall footprint (scene units) — skip degenerate bboxes. */
 const MIN_FOOTPRINT = 1e-3;
@@ -32,8 +34,8 @@ const MIN_FOOTPRINT = 1e-3;
 export function wallObstacles(
   entities: readonly Entity[],
   clearance: number = WALL_CLEARANCE_SCENE,
-): readonly Rect2D[] {
-  const out: Rect2D[] = [];
+): readonly Bbox[] {
+  const out: Bbox[] = [];
   for (const entity of entities) {
     if (!isWallEntity(entity)) continue;
     const bbox = entity.geometry.bbox;
@@ -51,7 +53,7 @@ export function wallObstacles(
 }
 
 /** True if point (x,y) lies inside the rectangle (inclusive). Shared with the A* grid. */
-export function pointInRect(x: number, y: number, rect: Rect2D): boolean {
+export function pointInRect(x: number, y: number, rect: Bbox): boolean {
   return x >= rect.minX && x <= rect.maxX && y >= rect.minY && y <= rect.maxY;
 }
 
@@ -59,7 +61,7 @@ export function pointInRect(x: number, y: number, rect: Rect2D): boolean {
 export function pointInAnyObstacle(
   x: number,
   y: number,
-  obstacles: readonly Rect2D[],
+  obstacles: readonly Bbox[],
 ): boolean {
   for (const rect of obstacles) {
     if (pointInRect(x, y, rect)) return true;
@@ -80,7 +82,7 @@ function intervalsOverlapInterior(lo: number, hi: number, a: number, b: number):
  * behaviour. Non-axis-aligned segments fall back to interior sampling (the routing grid only
  * emits axis-aligned edges, so that branch is a safety net, not the norm).
  */
-export function segmentHitsRect(p: Point2D, q: Point2D, rect: Rect2D): boolean {
+export function segmentHitsRect(p: Point2D, q: Point2D, rect: Bbox): boolean {
   const horizontal = Math.abs(p.y - q.y) < COORD_EPS;
   const vertical = Math.abs(p.x - q.x) < COORD_EPS;
   if (horizontal && p.y > rect.minY + COORD_EPS && p.y < rect.maxY - COORD_EPS) {
@@ -101,7 +103,7 @@ export function segmentHitsRect(p: Point2D, q: Point2D, rect: Rect2D): boolean {
 export function segmentHitsObstacles(
   p: Point2D,
   q: Point2D,
-  obstacles: readonly Rect2D[],
+  obstacles: readonly Bbox[],
 ): boolean {
   for (const rect of obstacles) {
     if (segmentHitsRect(p, q, rect)) return true;

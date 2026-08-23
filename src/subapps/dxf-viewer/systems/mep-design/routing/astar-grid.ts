@@ -19,14 +19,10 @@
  */
 
 import type { Point2D } from '../../../rendering/types/Types';
-import {
-  ASTAR_CELL_SCENE,
-  ASTAR_LOCAL_MARGIN_SCENE,
-  ASTAR_MAX_CELLS,
-  ASTAR_MAX_ITERATIONS,
-  type Rect2D,
-} from './routing-constants';
+import { ASTAR_CELL_SCENE, ASTAR_LOCAL_MARGIN_SCENE, ASTAR_MAX_CELLS, ASTAR_MAX_ITERATIONS } from './routing-constants';
 import { pointInRect, segmentHitsObstacles } from './wall-obstacles';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ. Το σχόλιο ομολογούσε «Field names mirror core/spatial SpatialBounds so an obstacle can be fed to the shared spatial index verbatim».
+import type { Bbox } from '../../../types/coordinate-space';
 
 export interface AStarOptions {
   readonly cell?: number;
@@ -59,7 +55,7 @@ function lineIndex(lines: readonly number[], value: number): number {
 }
 
 /** Obstacle edges (within the local window) seed Hanan grid lines so paths hug wall faces. */
-function obstacleEdges(obstacles: readonly Rect2D[], axis: 'x' | 'y'): number[] {
+function obstacleEdges(obstacles: readonly Bbox[], axis: 'x' | 'y'): number[] {
   const out: number[] = [];
   for (const r of obstacles) {
     if (axis === 'x') out.push(r.minX, r.maxX);
@@ -135,7 +131,7 @@ function simplifyCollinear(pts: readonly Point2D[]): Point2D[] {
 interface Grid {
   readonly xs: readonly number[];
   readonly ys: readonly number[];
-  readonly obstacles: readonly Rect2D[];
+  readonly obstacles: readonly Bbox[];
 }
 
 /** World point of grid node (ix,iy). */
@@ -201,7 +197,7 @@ function searchGrid(
 export function findOrthogonalPath(
   start: Point2D,
   end: Point2D,
-  obstacles: readonly Rect2D[],
+  obstacles: readonly Bbox[],
   opts: AStarOptions = {},
 ): Point2D[] | null {
   const cell = opts.cell ?? ASTAR_CELL_SCENE;

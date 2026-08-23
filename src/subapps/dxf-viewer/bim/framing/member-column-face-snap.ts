@@ -36,13 +36,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import {
-  footprintBounds,
-  footprintCenter,
-  distanceToFootprintBounds,
-  pickDominantFace,
-  type FootprintBounds,
-} from '../geometry/shared/footprint-face-frame';
+import { footprintBounds, footprintCenter, distanceToFootprintBounds, pickDominantFace } from '../geometry/shared/footprint-face-frame';
 import { pickThird, type MemberGhostThird } from './member-face-third';
 import { quantizeMagnitude } from '../../systems/tracking/adaptive-distance-snap';
 import {
@@ -59,6 +53,8 @@ import {
   type RectFrame,
 } from './rect-frame';
 import { clamp } from '../../rendering/entities/shared/geometry-utils';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ (κάτοψη, canonical mm). Η ΣΥΝΑΡΤΗΣΗ κρατά το «τι» (footprintBounds) — ο ΤΥΠΟΣ κρατά τον χώρο.
+import type { Bbox } from '../../types/coordinate-space';
 
 /** Παρειά κολόνας στην οποία κουμπώνει το φάντασμα (world-aligned). SSoT alias `FootprintFace`. */
 export type MemberGhostFace = 'E' | 'W' | 'N' | 'S';
@@ -118,7 +114,7 @@ function slideAlongFace(c: number, lo: number, hi: number, half: number, dominan
 
 /** Χτίζει το συνεχές centerline (start/end/third) για την επιλεγμένη παρειά. Pure (scene units). */
 function resolveContinuousColumnFace(
-  best: FootprintBounds,
+  best: Bbox,
   face: MemberGhostFace,
   cursor: Readonly<Point2D>,
   half: number,
@@ -158,7 +154,7 @@ const outwardNormal = (face: MemberGhostFace): Point2D =>
  * `buildCenteredAxisFaceFrame` (SSoT). Orientation-agnostic (AABB-based, scene units).
  */
 function resolveColumnCenterSnap(
-  best: FootprintBounds,
+  best: Bbox,
   cursor: Readonly<Point2D>,
   face: MemberGhostFace,
   faceContact: Readonly<Point2D>,
@@ -213,7 +209,7 @@ function orientedRectFrame(fp: readonly Point2D[]): RectFrame | null {
 /** Υποψήφια κολόνα-στόχος: λοξό ορθογώνιο (τοπικό πλαίσιο) ή world-aligned bbox. + απόσταση από cursor. */
 type ColumnCandidate =
   | { readonly kind: 'rect'; readonly rect: RectFrame; readonly dist: number }
-  | { readonly kind: 'aabb'; readonly bounds: FootprintBounds; readonly dist: number };
+  | { readonly kind: 'aabb'; readonly bounds: Bbox; readonly dist: number };
 
 /** Πλησιέστερη κολόνα εντός capture. Λοξό ορθογώνιο → απόσταση στο τοπικό πλαίσιο (rigid → ίδια μετρική). */
 function nearestColumnCandidate(
@@ -245,7 +241,7 @@ function nearestColumnCandidate(
  * είτε με τοπικές bounds λοξής κολόνας (rotated path) → ΕΝΑΣ κώδικας για ίσιες ΚΑΙ γυρισμένες κολόνες.
  */
 function resolveFaceSnapInBounds(
-  best: FootprintBounds,
+  best: Bbox,
   cursor: Readonly<Point2D>,
   half: number,
   opts: Readonly<MemberColumnFaceSnapOptions>,
@@ -302,7 +298,7 @@ export function resolveMemberColumnFaceSnap(
   const half = opts.memberWidthScene / 2;
   // ── Λοξή κολόνα → resolve στο τοπικό πλαίσιο, μετά πίσω στον κόσμο (ADR-508 §rotated-column) ──
   if (cand.kind === 'rect') {
-    const bLocal: FootprintBounds = { minX: -cand.rect.halfW, maxX: cand.rect.halfW, minY: -cand.rect.halfV, maxY: cand.rect.halfV };
+    const bLocal: Bbox = { minX: -cand.rect.halfW, maxX: cand.rect.halfW, minY: -cand.rect.halfV, maxY: cand.rect.halfV };
     const local = resolveFaceSnapInBounds(bLocal, rectWorldToLocal(cand.rect, cursor), half, opts);
     return localSnapToWorld(local, cand.rect);
   }

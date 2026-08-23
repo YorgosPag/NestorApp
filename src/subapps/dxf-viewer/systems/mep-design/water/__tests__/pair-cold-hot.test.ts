@@ -10,8 +10,9 @@
 import { buildOffsetHotNetwork } from '../pair-cold-hot';
 import { WATER_SUPPLY_DISCIPLINE } from '../water-supply-discipline';
 import { segmentHitsObstacles } from '../../routing/wall-obstacles';
-import type { Rect2D } from '../../routing/routing-constants';
 import type { FixtureDemand, ProposedNetwork, ProposedSegment } from '../water-design-types';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ. Το σχόλιο ομολογούσε «Field names mirror core/spatial SpatialBounds so an obstacle can be fed to the shared spatial index verbatim».
+import type { Bbox } from '../../../../types/coordinate-space';
 
 function trunk(sx: number, sy: number, ex: number, ey: number, dn: number, lu: number): ProposedSegment {
   return {
@@ -116,7 +117,7 @@ describe('ADR-426 — buildOffsetHotNetwork', () => {
     // The hot offset spine sits at y=80; this wall (y∈[60,260]) straddles it between the two
     // fixtures (x∈[2000,2200], clear of both branch drops at x=1500/3000) while the cold
     // reference (y=0) clears it. Pairing must A*-detour the offset trunk, not overlap the wall.
-    const wall: Rect2D = { minX: 2000, minY: 60, maxX: 2200, maxY: 260 };
+    const wall: Bbox = { minX: 2000, minY: 60, maxX: 2200, maxY: 260 };
     const hot = buildOffsetHotNetwork(singleArmHot(), demands, WATER_SUPPLY_DISCIPLINE, [wall]);
     for (const s of hot.segments) expect(segmentHitsObstacles(s.start, s.end, [wall])).toBe(false);
     expect(hot.totalLU).toBe(5); // unchanged by the detour

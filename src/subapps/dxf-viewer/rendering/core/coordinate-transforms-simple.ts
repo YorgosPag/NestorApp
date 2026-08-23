@@ -14,13 +14,8 @@
  */
 
 import type { Point2D, ViewTransform } from '../types/Types';
-
-interface AxisAlignedBounds {
-  minX: number;
-  minY: number;
-  maxX: number;
-  maxY: number;
-}
+// ADR-794 — ΕΝΑ όνομα για το ορθογώνιο κάτοψης σε όλο το subapp.
+import type { Bbox } from '../../types/coordinate-space';
 
 /**
  * 🏢 ADR-151: Simple world-to-screen coordinate transform (NO Y-inversion).
@@ -50,9 +45,9 @@ export function screenToWorldSimple(point: Point2D, transform: ViewTransform): P
  * Converts all four corners; use for visibility checks and culling.
  */
 export function transformBoundsToScreen(
-  bounds: AxisAlignedBounds,
+  bounds: Bbox,
   transform: ViewTransform,
-): AxisAlignedBounds {
+): Bbox {
   return {
     minX: bounds.minX * transform.scale + transform.offsetX,
     minY: bounds.minY * transform.scale + transform.offsetY,
@@ -66,9 +61,9 @@ export function transformBoundsToScreen(
  * Inverse of `transformBoundsToScreen`.
  */
 export function transformBoundsToWorld(
-  bounds: AxisAlignedBounds,
+  bounds: Bbox,
   transform: ViewTransform,
-): AxisAlignedBounds {
+): Bbox {
   return {
     minX: (bounds.minX - transform.offsetX) / transform.scale,
     minY: (bounds.minY - transform.offsetY) / transform.scale,

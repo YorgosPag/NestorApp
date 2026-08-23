@@ -8,21 +8,13 @@
  * the Revit-grade baseline.
  *
  * @see ./route-wall-aware.ts (the entry point that swaps Manhattan → A* when walls exist)
- * @see ./astar-grid.ts (the pathfinder) · ./wall-obstacles.ts (wall → Rect2D extraction)
+ * ⚠️ ADR-794 — ο τύπος `Rect2D` ΔΙΑΓΡΑΦΗΚΕ: ήταν το ορθογώνιο κάτοψης με άλλο όνομα, και
+ * το ίδιο του το σχόλιο το ομολογούσε («*Field names mirror `core/spatial` `SpatialBounds`
+ * so an obstacle can be fed to the shared spatial index verbatim*»). Πλέον `Bbox`.
+ *
+ * @see ./astar-grid.ts (the pathfinder) · ./wall-obstacles.ts (wall → `Bbox` extraction)
  */
 
-/**
- * Axis-aligned obstacle rectangle in routing (scene-unit) space. Field names mirror
- * `core/spatial` `SpatialBounds` so an obstacle can be fed to the shared spatial index
- * verbatim if a future slice needs broad-phase queries — but this module stays pure (no
- * spatial-index dependency) for testability.
- */
-export interface Rect2D {
-  readonly minX: number;
-  readonly minY: number;
-  readonly maxX: number;
-  readonly maxY: number;
-}
 
 /**
  * A* grid cell size (scene units). 150 trades accuracy for speed: fine enough to slip a

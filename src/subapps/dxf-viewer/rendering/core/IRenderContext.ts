@@ -27,12 +27,6 @@ import type { Point2D } from '../types/Types';
 // Re-export unified types για backwards compatibility
 export type { Point2D, Viewport } from '../types/Types';
 
-export interface BoundingBox {
-  minX: number;
-  minY: number;
-  maxX: number;
-  maxY: number;
-}
 
 /**
  * 🔺 ΚΕΝΤΡΙΚΗ ΑΦΑΙΡΕΣΗ RENDERING

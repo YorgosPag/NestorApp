@@ -23,7 +23,7 @@
 
 import type { Point2D } from '../../../rendering/types/Types';
 import { buildOffsetPairing } from '../routing/offset-pairing';
-import { PAIRING_CLEARANCE_SCENE, type Rect2D } from '../routing/routing-constants';
+import { PAIRING_CLEARANCE_SCENE } from '../routing/routing-constants';
 import type { HeatingDiscipline } from './heating-discipline';
 import type { HeatingEndpoint } from './heating-source-resolve';
 import {
@@ -32,6 +32,8 @@ import {
   type ProposedHeatingSegment,
   type TerminalHeatDemand,
 } from './heating-design-types';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ. Το σχόλιο ομολογούσε «Field names mirror core/spatial SpatialBounds so an obstacle can be fed to the shared spatial index verbatim».
+import type { Bbox } from '../../../types/coordinate-space';
 
 const RETURN_CLASSIFICATION = HEATING_ROLE_CLASSIFICATION.return;
 
@@ -63,7 +65,7 @@ export function buildPairedReturnNetwork(
   returnSink: HeatingEndpoint,
   demands: readonly TerminalHeatDemand[],
   discipline: HeatingDiscipline,
-  obstacles: readonly Rect2D[] = [],
+  obstacles: readonly Bbox[] = [],
 ): ProposedHeatingNetwork {
   const trunks = supply.segments.filter((s) => s.role === 'trunk');
   const maxTrunkDN = Math.max(...trunks.map((s) => s.diameterMm));

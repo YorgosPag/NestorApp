@@ -46,7 +46,9 @@ import { offsetPolyline } from '../../../rendering/entities/shared/geometry-offs
 import { getNearestPointOnLine } from '../../../rendering/entities/shared/geometry-utils';
 import { findOrthogonalPath, type AStarOptions } from './astar-grid';
 import { segmentHitsObstacles } from './wall-obstacles';
-import type { Rect2D } from './routing-constants';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ. Το σχόλιο ομολογούσε «Field names mirror core/spatial SpatialBounds so an obstacle can be fed to the shared spatial index verbatim».
+import type { Bbox } from '../../../types/coordinate-space';
+
 
 const COINCIDENT_EPS = 1e-6;
 
@@ -80,7 +82,7 @@ export interface OffsetPairing {
 
 /** Optional wall-aware repair: detour any offset run that lands on a wall (Slice 3C). */
 export interface OffsetPairingOptions {
-  readonly obstacles?: readonly Rect2D[];
+  readonly obstacles?: readonly Bbox[];
   readonly astar?: AStarOptions;
 }
 
@@ -147,7 +149,7 @@ function buildArmOffset(
 function repairPath(
   start: Point2D,
   end: Point2D,
-  obstacles: readonly Rect2D[] | undefined,
+  obstacles: readonly Bbox[] | undefined,
   astar: AStarOptions,
 ): Array<{ readonly start: Point2D; readonly end: Point2D }> {
   if (!obstacles || obstacles.length === 0 || !segmentHitsObstacles(start, end, obstacles)) {
@@ -189,7 +191,7 @@ function emitArm(
   referenceTrunks: readonly OffsetRun[],
   offsetMm: number,
   root: Point2D,
-  obstacles: readonly Rect2D[] | undefined,
+  obstacles: readonly Bbox[] | undefined,
   astar: AStarOptions,
   acc: PairingAcc,
 ): void {

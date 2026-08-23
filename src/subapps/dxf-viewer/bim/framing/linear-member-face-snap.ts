@@ -27,10 +27,12 @@ import type { Point2D } from '../../rendering/types/Types';
 import { projectPolygonOnAxis, projectPointOnAxis } from '../geometry/shared/polygon-axis-projection';
 import { coveredIntervals } from '../geometry/shared/segment-polygon-coverage';
 import { quantizeMagnitude } from '../../systems/tracking/adaptive-distance-snap';
-import type { FootprintBounds, FootprintFace } from '../geometry/shared/footprint-face-frame';
+import type { FootprintFace } from '../geometry/shared/footprint-face-frame';
 import type { GhostStatus } from '../ghosts/ghost-status-color';
 import type { PlacementAlignmentGuide } from './placement-alignment-guide';
 import type { StripJustification } from '../types/foundation-types';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ (κάτοψη, canonical mm). Η ΣΥΝΑΡΤΗΣΗ κρατά το «τι» (footprintBounds) — ο ΤΥΠΟΣ κρατά τον χώρο.
+import type { Bbox } from '../../types/coordinate-space';
 
 /**
  * ADR-398 §3.12 — **καμπύλος στόχος** (κύκλος/τόξο): η αληθινή γεωμετρία περιφέρειας, ώστε οι
@@ -391,7 +393,7 @@ function bodyOverlapsAlongMember(
  * Ζει εδώ (δίπλα στο `GhostFaceFrame`) ώστε το `bim/framing` να μην εξαρτάται από το `bim/columns`.
  * `position` = θέση centerline φαντάσματος κατά μήκος της παρειάς.
  */
-export function buildColumnBboxFaceFrame(b: FootprintBounds, face: FootprintFace, position: Point2D): GhostFaceFrame {
+export function buildColumnBboxFaceFrame(b: Bbox, face: FootprintFace, position: Point2D): GhostFaceFrame {
   if (face === 'N' || face === 'S') {
     const faceY = face === 'N' ? b.maxY : b.minY;
     return {

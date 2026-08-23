@@ -9,6 +9,8 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+// ADR-794 — ο χώρος συντεταγμένων ζει στον τύπο (phantom, μηδέν κόστος).
+import type { MutableMinMaxRect } from '../../types/coordinate-space';
 
 // ========================================
 // CORE INTERFACES
@@ -56,13 +58,14 @@ export interface SpatialItem<T = unknown> {
 }
 
 /**
- * Unified bounding box interface
+ * Το κουτί που δέχεται ο χωρικός δείκτης: το **ίδιο** ορθογώνιο κάτοψης με το `Bbox`,
+ * **ΜΕΤΑΒΛΗΤΟ** (συμπληρώνεται καθώς χτίζεται ο δείκτης) και με **προαιρετικό** κέντρο.
+ *
+ * 🔑 ADR-794 — ο χώρος ζει πλέον στον τύπο ({@link MutableMinMaxRect}): τα τέσσερα πεδία δεν
+ * ξαναγράφονται εδώ, κληρονομούνται. Ένα κουτί σε **μέτρα** ή σε **δείκτες πλακιδίων**
+ * δεν περνά πια σε χωρικό δείκτη κάτοψης — πριν, δομικά, περνούσε.
  */
-export interface SpatialBounds {
-  minX: number;
-  minY: number;
-  maxX: number;
-  maxY: number;
+export interface SpatialBounds extends MutableMinMaxRect<'plan-mm'> {
   // ✅ ENTERPRISE FIX: Added convenience properties για center calculations
   centerX?: number; // Convenience getter για center point X
   centerY?: number; // Convenience getter για center point Y

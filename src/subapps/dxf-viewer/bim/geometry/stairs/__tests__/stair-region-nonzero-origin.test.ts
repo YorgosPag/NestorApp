@@ -15,8 +15,10 @@ import type { Point2D } from '../../../../rendering/types/Types';
 import { classifyStairRegion, WARNING_NO_CORRIDOR, WARNING_DEGENERATE } from '../stair-region-classifier';
 import { buildStairParamsFromRegion } from '../stair-params-from-region';
 import { computeStairGeometry } from '../StairGeometryService';
+// ADR-794 — ακόμη και τα fixtures εισάγουν το ΕΝΑ όνομα· αλλιώς η επόμενη επαναδήλωση
+// γεννιέται εδώ, όπου κανείς δεν κοιτάζει.
+import type { Bbox } from '../../../../types/coordinate-space';
 
-interface Bbox { minX: number; minY: number; maxX: number; maxY: number; }
 
 function bboxOf(pts: readonly { x: number; y: number }[]): Bbox {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;

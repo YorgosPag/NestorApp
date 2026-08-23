@@ -31,7 +31,8 @@ import { resolveDrainageOutfall, type DrainageOutfall } from './outfall-resolve'
 import { routeGravityNetwork } from './gravity-router';
 import type { RouteTarget } from '../routing/orthogonal-router';
 import { wallObstacles } from '../routing/wall-obstacles';
-import type { Rect2D } from '../routing/routing-constants';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ. Το σχόλιο ομολογούσε «Field names mirror core/spatial SpatialBounds so an obstacle can be fed to the shared spatial index verbatim».
+import type { Bbox } from '../../../types/coordinate-space';
 
 /** Build the proposed gravity network for one collector (route + size + slope). */
 function buildNetwork(
@@ -39,7 +40,7 @@ function buildNetwork(
   discharges: readonly FixtureDischarge[],
   discipline: SanitaryDrainageDiscipline,
   sceneUnits: SceneUnits,
-  obstacles: readonly Rect2D[],
+  obstacles: readonly Bbox[],
 ): ProposedDrainageNetwork {
   const targets: RouteTarget[] = discharges.map((d) => ({
     point: d.point,

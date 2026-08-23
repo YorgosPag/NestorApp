@@ -37,7 +37,8 @@ import { buildPairedReturnNetwork } from './pair-supply-return';
 import { type RouteTarget } from '../routing/orthogonal-router';
 import { routeWallAware } from '../routing/route-wall-aware';
 import { wallObstacles } from '../routing/wall-obstacles';
-import type { Rect2D } from '../routing/routing-constants';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ. Το σχόλιο ομολογούσε «Field names mirror core/spatial SpatialBounds so an obstacle can be fed to the shared spatial index verbatim».
+import type { Bbox } from '../../../types/coordinate-space';
 
 /** Pick the connector (id, point) a demand exposes to the network of `role`. */
 function terminalEndpoint(
@@ -54,7 +55,7 @@ function buildNetwork(
   root: HeatingEndpoint,
   demands: readonly TerminalHeatDemand[],
   discipline: HeatingDiscipline,
-  obstacles: readonly Rect2D[],
+  obstacles: readonly Bbox[],
 ): ProposedHeatingNetwork {
   const { role } = root;
   const classification = HEATING_ROLE_CLASSIFICATION[role];

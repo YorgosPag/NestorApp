@@ -62,7 +62,7 @@ export type { Bbox };
  */
 export function bboxOf<S extends CoordinateSpace = 'plan-mm'>(
   pts: readonly PlanarPoint[],
-): Rect<S> {
+): MinMaxRect<S> {
   return bboxOfAll<S>(pts);
 }
 
@@ -73,7 +73,7 @@ export function bboxOf<S extends CoordinateSpace = 'plan-mm'>(
  */
 export function bboxOfAll<S extends CoordinateSpace = 'plan-mm'>(
   ...sets: readonly (readonly PlanarPoint[])[]
-): Rect<S> {
+): MinMaxRect<S> {
   let minX = Infinity;
   let maxX = -Infinity;
   let minY = Infinity;

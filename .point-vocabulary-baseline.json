@@ -1,5 +1,5 @@
 {
-  "generated": "2026-08-22",
+  "generated": "2026-08-23",
   "adr": "ADR-792 (CHECK 3.59)",
   "note": "Κοινά ονόματα λεξιλογίου. Τα zero-tolerance ΔΕΝ μπαίνουν ΠΟΤΕ εδώ.",
   "violations": [
@@ -23,6 +23,14 @@
     "src/subapps/dxf-viewer/bim/types/stair-types.ts#Segment3D",
     "src/subapps/dxf-viewer/rendering/types/Types.ts#Point2D",
     "src/subapps/dxf-viewer/rendering/types/Types.ts#Point3D",
+    "src/subapps/dxf-viewer/types/coordinate-space.ts#Bbox",
+    "src/subapps/dxf-viewer/types/coordinate-space.ts#CoordinateSpace",
+    "src/subapps/dxf-viewer/types/coordinate-space.ts#InSpace",
+    "src/subapps/dxf-viewer/types/coordinate-space.ts#LocalRectMm",
+    "src/subapps/dxf-viewer/types/coordinate-space.ts#MinMaxRect",
+    "src/subapps/dxf-viewer/types/coordinate-space.ts#MutableMinMaxRect",
+    "src/subapps/dxf-viewer/types/coordinate-space.ts#PlanRectM",
+    "src/subapps/dxf-viewer/types/coordinate-space.ts#TileRange",
     "src/types/floorplan-overlays.ts#Point2D"
   ]
 }

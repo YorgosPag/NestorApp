@@ -47,6 +47,20 @@
         "Vector2D"
       ],
       "reason": "ΡΙΖΑ ΤΟΥ geo-adapter — 2 καταναλωτές, αμφότεροι `src/adapters/canvas/geo-adapter`. Απομονωμένο υποσύστημα. 🔶 ΑΝΟΙΧΤΟ (ADR-792 §7): το barrel `src/core/canvas/index.ts` έχει ΜΗΔΕΝ καταναλωτές και είναι ΕΚΤΟΣ εμβέλειας του CHECK 3.30 (`scopes: [\"src/subapps/dxf-viewer\"]`) — απόφαση Giorgio."
+    },
+    {
+      "file": "src/subapps/dxf-viewer/types/coordinate-space.ts",
+      "names": [
+        "InSpace",
+        "CoordinateSpace",
+        "MinMaxRect",
+        "MutableMinMaxRect",
+        "Bbox",
+        "PlanRectM",
+        "LocalRectMm",
+        "TileRange"
+      ],
+      "reason": "Λεξιλόγιο ΟΡΘΟΓΩΝΙΟΥ + ΧΩΡΟΥ (ADR-794). Το σχήμα `{minX,minY,maxX,maxY}` δηλωνόταν 42 φορές σε 24 exported ονόματα, και το `BoundingBox` 10 φορές σε ΕΞΙ ασύμβατα σχήματα. Ο κανόνας των μεγάλων είναι ομόφωνος — ΕΝΑ όνομα ανά ΧΩΡΟ, ΠΟΤΕ ανά αντικείμενο (Revit BoundingBoxXYZ/UV · ArchiCAD BoundingBox2D/API_Box3D · Qt QRect/QRectF · three.js Box2/Box3): δεν υπάρχει `TableBBox` στον Revit. Εδώ 14 από τα 24 ονομάζονταν από το αντικείμενο. `Rect<S>` = το σχήμα ΜΙΑ φορά για ΟΛΟΥΣ τους χώρους (εκείνοι γράφουν δύο κλάσεις με διπλογραμμένα μέλη — οι γλώσσες τους δεν έχουν παράμετρο τύπου εδώ). `InSpace` = phantom brand που ΕΠΑΝΑΦΕΡΕΙ την ονομαστικότητα που C#/C++ δίνουν δωρεάν: η TypeScript είναι ΔΟΜΙΚΗ, άρα σκέτη μετονομασία θα έδινε την οργάνωσή τους με ΜΗΔΕΝ από την ασφάλειά τους. Τέσσερις χώροι, ο καθένας με ΜΕΤΡΗΜΕΝΟ σημείο επαφής: `plan-mm` (36/42) · `plan-m` (slab-rebar-3d vs rebar-segments-3d-grid — δηλωμένα «mirror», ΤΑΥΤΟΣΗΜΟΣ τοπικός τύπος, ΑΛΛΗ μονάδα) · `local-mm` (ήταν 4 ονόματα) · `tile-index` (ακέραιοι, όχι μήκος). Το `Bbox` ζει ΕΔΩ ώστε `rendering/`·`overlays/`·`accessibility/` να μην αποκτήσουν εξάρτηση από το `bim/`· το `xy-bounds.ts` το ΕΠΑΝΕΞΑΓΕΙ μαζί με τον `bboxOf` που το γεννά. ⚠️ Η βάση λέγεται `MinMaxRect` και ΟΧΙ `Rect`, και ο λόγος βρέθηκε ΑΠΟ ΤΗΝ ΙΔΙΑ ΤΗΝ ΠΥΛΗ στην πρώτη της εκτέλεση: το `text-engine/layout/attachment-point.ts` δηλώνει ήδη `Rect`, σε ΤΡΙΤΗ αναπαράσταση — `{x, y, width, height}` (η ίδια με το `RectMm` του χαρτιού). Ένα σκέτο `Rect` δεν λέει ΠΟΙΑ από τις δύο αναπαραστάσεις είναι· το `MinMaxRect` το λέει."
     }
   ]
 }

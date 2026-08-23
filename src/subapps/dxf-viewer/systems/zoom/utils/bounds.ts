@@ -16,11 +16,12 @@ import { SpatialUtils } from '../../../core/spatial/SpatialUtils';
 // hit-test / marquee / viewport-culling use). Reused here so Home/Shift+1
 // zoom-extents frames EVERY renderable type, not a hardcoded DXF+BIM subset.
 import { resolveEntityBounds } from '../../../rendering/hitTesting/entity-bounds-ssot';
-import type { BoundingBox2D } from '../../../rendering/hitTesting/entity-bounds-ssot';
 import type { Entity } from '../../../types/entities';
 // Giorgio 2026-07-12 — outlier-tolerant zoom-extents: a few corrupted/stray entities
 // (import flyaways at km-scale coords) must not blow up the fit bbox into a dot.
 import { computeRobustBounds } from './robust-bounds';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ. Αυτό το module δηλώνει τον εαυτό του «canonical bounds SSoT» — και ΞΑΝΑΔΗΛΩΝΕ το σχήμα αντί να το εισάγει.
+import type { Bbox } from '../../../types/coordinate-space';
 
 // ============================================================================
 // 🏢 CANONICAL TYPES
@@ -101,7 +102,7 @@ export function createBoundsFromDxfScene(
   // silently ignored them. A lone dimension gave null bounds → no zoom at all;
   // it "worked" only when a covered entity was co-present. One resolver now frames
   // every renderable type the rest of the app already knows how to bound.
-  const boxes: BoundingBox2D[] = [];
+  const boxes: Bbox[] = [];
 
   for (const entity of scene.entities) {
     const box = resolveEntityBounds(entity as unknown as Entity);
@@ -343,9 +344,4 @@ export {
   normalizeEntitiesToOrigin,
 } from './bounds-entity';
 
-export type {
-  BoundsEntity,
-  LegacyBounds,
-  MutableBoundsEntity,
-  NormalizedSceneBounds,
-} from './bounds-entity';
+export type { BoundsEntity, MutableBoundsEntity, NormalizedSceneBounds } from './bounds-entity';

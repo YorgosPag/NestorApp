@@ -9,6 +9,8 @@
  */
 
 import type { Point2D, BoundingBox, ViewTransform } from '../rendering/types/Types';
+// ADR-794 — ο συσσωρευτής είναι η ΜΕΤΑΒΛΗΤΗ μορφή του ίδιου ορθογωνίου κάτοψης.
+import type { MutableMinMaxRect } from '../types/coordinate-space';
 
 // ============================================================================
 // 🌍 ZERO POINTS - Semantic Constants
@@ -206,13 +208,14 @@ export const DEFAULT_ORIGIN: Readonly<Point2D> = WORLD_ORIGIN;
  *
  * Use for iterating points/entities to find min/max values.
  * The Infinity pattern ensures first point always wins.
+ *
+ * 🔑 **ADR-794 — ΕΝΑ σχήμα, μία φορά.** Ήταν ξεχωριστή δήλωση των ίδιων τεσσάρων πεδίων·
+ * είναι στην πραγματικότητα **η μεταβλητή μορφή** του `Bbox` (ο συσσωρευτής, όχι το
+ * αποτέλεσμα) — και τώρα το λέει ο τύπος. Ο **χώρος επιβιώνει**: ένας συσσωρευτής
+ * κάτοψης περνά ελεύθερα όπου ζητείται `Bbox`, αλλά **όχι** όπου ζητείται κουτί σε
+ * μέτρα ή σε δείκτες πλακιδίων.
  */
-export interface InfinityBounds {
-  minX: number;
-  minY: number;
-  maxX: number;
-  maxY: number;
-}
+export type InfinityBounds = MutableMinMaxRect<'plan-mm'>;
 
 /**
  * 🏢 ADR-158: Creates bounds initialized with Infinity for accumulation

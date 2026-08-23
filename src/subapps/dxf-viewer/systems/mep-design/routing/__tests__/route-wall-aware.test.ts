@@ -10,7 +10,8 @@ import {
 } from '../orthogonal-router';
 import { routeWallAware } from '../route-wall-aware';
 import { segmentHitsObstacles } from '../wall-obstacles';
-import type { Rect2D } from '../routing-constants';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ. Το σχόλιο ομολογούσε «Field names mirror core/spatial SpatialBounds so an obstacle can be fed to the shared spatial index verbatim».
+import type { Bbox } from '../../../../types/coordinate-space';
 
 const ROOT = { x: 0, y: 0 };
 const TARGETS: readonly RouteTarget[] = [
@@ -24,7 +25,7 @@ describe('routeWallAware — zero-regression', () => {
   });
 
   it('leaves runs that clear every wall unchanged', () => {
-    const farWall: Rect2D = { minX: 0, minY: 5000, maxX: 200, maxY: 6000 };
+    const farWall: Bbox = { minX: 0, minY: 5000, maxX: 200, maxY: 6000 };
     expect(routeWallAware(ROOT, TARGETS, [farWall])).toEqual(
       routeOrthogonalTrunkBranch(ROOT, TARGETS),
     );
@@ -32,7 +33,7 @@ describe('routeWallAware — zero-regression', () => {
 });
 
 describe('routeWallAware — detour', () => {
-  const blocker: Rect2D = { minX: 400, minY: -300, maxX: 600, maxY: 300 };
+  const blocker: Bbox = { minX: 400, minY: -300, maxX: 600, maxY: 300 };
 
   it('replaces a blocked run with detour sub-runs carrying the parent metadata', () => {
     const manhattan = routeOrthogonalTrunkBranch(ROOT, TARGETS);

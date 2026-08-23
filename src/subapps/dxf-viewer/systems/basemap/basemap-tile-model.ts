@@ -32,7 +32,9 @@
 
 import type { WorldToDisplayProjector } from '../geo-referencing/geo-transform';
 import { unprojectRectToWorld } from '../topography/topo-display-frame';
-import type { WorldRectMm } from '../topography/topo-grid-model';
+// ADR-794 — το ορθογώνιο πλακιδίων είναι ΧΩΡΟΣ, όχι σχήμα: ακέραιοι δείκτες, όχι μήκος.
+// Ο τύπος πλέον το εγγυάται — ένα κουτί σε χιλιοστά ΔΕΝ περνά εδώ.
+import type { TileRange } from '../../types/coordinate-space';
 import { worldMmToGeographic } from './basemap-projection';
 import { assessTileWarp } from './basemap-warp';
 import {
@@ -43,6 +45,8 @@ import {
   type TileId,
 } from './web-mercator';
 import type { BasemapSource } from './basemap-source';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ. Το όνομα ήταν σωστό (χώρος+μονάδα) — αλλά ο χώρος είναι ο ΙΔΙΟΣ με του Bbox.
+import type { Bbox } from '../../types/coordinate-space';
 
 /**
  * Ανώτατο πλήθος πλακιδίων ανά καρέ. Στα 256 px το πλακίδιο, **256** πλακίδια καλύπτουν οθόνη
@@ -88,14 +92,6 @@ function clampZoom(z: number, source: BasemapSource): number {
   return Math.max(MIN_ZOOM, Math.min(source.maxZoom, Math.trunc(z)));
 }
 
-/** Ορθογώνιο στο πλέγμα πλακιδίων ενός επιπέδου (ακέραιο, κλειστό διάστημα). */
-interface TileRange {
-  readonly minX: number;
-  readonly maxX: number;
-  readonly minY: number;
-  readonly maxY: number;
-}
-
 /** Πόσα πλακίδια περιέχει ένα εύρος. */
 function tileCount(range: TileRange): number {
   return (range.maxX - range.minX + 1) * (range.maxY - range.minY + 1);
@@ -108,7 +104,7 @@ function tileCount(range: TileRange): number {
  * γεωαναφορά με στροφή το world AABB δεν είναι ευθυγραμμισμένο με τους μεσημβρινούς, οπότε δύο
  * αντιδιαμετρικές γωνίες θα άφηναν λωρίδα του ορατού χωρίς πλακίδια.
  */
-function tileRangeForWorldRect(rect: WorldRectMm, z: number): TileRange {
+function tileRangeForWorldRect(rect: Bbox, z: number): TileRange {
   const corners = [
     worldMmToGeographic(rect.minX, rect.minY),
     worldMmToGeographic(rect.maxX, rect.minY),
@@ -151,7 +147,7 @@ export interface TileSelection {
  * ταχύτατη. Επιστρέφει **κενή** λίστα όταν το ορατό δεν τέμνει τον κόσμο.
  */
 export function tilesForDisplayRect(
-  displayRect: WorldRectMm,
+  displayRect: Bbox,
   preferredZoom: number,
   projector: WorldToDisplayProjector | null,
   pixelsPerMm: number,

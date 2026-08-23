@@ -35,6 +35,8 @@
 import type { Point2D } from '../rendering/types/Types';
 import type { BaseEntity } from './entities';
 import type { SceneUnits } from '../utils/scene-units';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ, ΠΟΤΕ ανά ΑΝΤΙΚΕΙΜΕΝΟ.
+import type { Bbox } from './coordinate-space';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Style enums
@@ -62,13 +64,6 @@ export interface ScaleBarBoundaryLabel {
   readonly text: string;
 }
 
-/** Axis-aligned bounding box (canonical-mm) of the bar's LENGTH extent (thickness added at render). */
-export interface ScaleBarBBox {
-  readonly minX: number;
-  readonly minY: number;
-  readonly maxX: number;
-  readonly maxY: number;
-}
 
 /**
  * Pure, side-effect-free output of `computeScaleBarGeometry(entity, drawingScale,
@@ -92,7 +87,7 @@ export interface ScaleBarGeometry {
   /** The unit label drawn once at the far end (e.g. "m"), from the SSoT length formatter. */
   readonly unitText: string;
   /** Length-extent bbox (canonical-mm); annotative thickness/ticks are padded at render time. */
-  readonly bbox: ScaleBarBBox;
+  readonly bbox: Bbox;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────

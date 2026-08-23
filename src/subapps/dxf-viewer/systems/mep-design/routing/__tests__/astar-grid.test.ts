@@ -5,15 +5,16 @@
 import type { Point2D } from '../../../../rendering/types/Types';
 import { findOrthogonalPath } from '../astar-grid';
 import { segmentHitsObstacles } from '../wall-obstacles';
-import type { Rect2D } from '../routing-constants';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ. Το σχόλιο ομολογούσε «Field names mirror core/spatial SpatialBounds so an obstacle can be fed to the shared spatial index verbatim».
+import type { Bbox } from '../../../../types/coordinate-space';
 
-const BLOCKER: Rect2D = { minX: 400, minY: -300, maxX: 600, maxY: 300 };
+const BLOCKER: Bbox = { minX: 400, minY: -300, maxX: 600, maxY: 300 };
 
 function isAxisAligned(a: Point2D, b: Point2D): boolean {
   return Math.abs(a.x - b.x) < 1e-6 || Math.abs(a.y - b.y) < 1e-6;
 }
 
-function pathClearsObstacle(path: readonly Point2D[], obs: Rect2D): boolean {
+function pathClearsObstacle(path: readonly Point2D[], obs: Bbox): boolean {
   for (let i = 0; i < path.length - 1; i++) {
     if (segmentHitsObstacles(path[i], path[i + 1], [obs])) return false;
   }
@@ -40,7 +41,7 @@ describe('findOrthogonalPath', () => {
   });
 
   it('ignores a wall that hosts an endpoint (no self-detour) → straight', () => {
-    const hostWall: Rect2D = { minX: -50, minY: -50, maxX: 50, maxY: 50 };
+    const hostWall: Bbox = { minX: -50, minY: -50, maxX: 50, maxY: 50 };
     expect(findOrthogonalPath({ x: 0, y: 0 }, { x: 1000, y: 0 }, [hostWall])).toEqual([
       { x: 0, y: 0 },
       { x: 1000, y: 0 },

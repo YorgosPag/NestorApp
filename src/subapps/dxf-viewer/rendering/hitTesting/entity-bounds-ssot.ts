@@ -7,7 +7,7 @@
  * marquee's bounds twin (Twin B `calculateEntityBounds`, `selection-duplicate-
  * utils.ts`), which is now a thin `{min,max}` shape-adapter over `resolveEntityBounds`.
  *
- * Shape = `BoundingBox2D {minX,minY,maxX,maxY}` (donor = the fuller hit-test
+ * Shape = `Bbox {minX,minY,maxX,maxY}` (donor = the fuller hit-test
  * `BoundsCalculator`, C). Lives in the bounds/hit-test layer (NOT a field on the
  * `EntityTypeDescriptor` — §5.4 layering: the per-type math drags BoundsCalculator/
  * text-box/BIM projections, so a descriptor field would invert dependencies +
@@ -46,23 +46,18 @@ import type { OpeningInfoTagEntity } from '../../types/opening-info-tag';
 import { calculateTableBounds } from '../../bim/table/table-entity-hit';
 import type { TableEntity } from '../../types/table-entity';
 import { RECT_CORNERS, rectCornerWorld } from '../../bim/grips/rect-frame';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ. Αυτό το module δηλώνει τον εαυτό του «canonical bounds SSoT» — και ΞΑΝΑΔΗΛΩΝΕ το σχήμα αντί να το εισάγει.
+import type { Bbox } from '../../types/coordinate-space';
 
-/** Axis-aligned 2D bounding box (the canonical hit-test/bounds shape). */
-export interface BoundingBox2D {
-  minX: number;
-  minY: number;
-  maxX: number;
-  maxY: number;
-}
 
 type MinMax = { min: Point2D; max: Point2D };
 
-/** `{min,max}` (GeometryUtils / BIM) → `BoundingBox2D`, null-preserving. */
-function box2D(b: MinMax | null): BoundingBox2D | null {
+/** `{min,max}` (GeometryUtils / BIM) → `Bbox`, null-preserving. */
+function box2D(b: MinMax | null): Bbox | null {
   return b ? { minX: b.min.x, minY: b.min.y, maxX: b.max.x, maxY: b.max.y } : null;
 }
 
-function lineBounds(entity: Entity): BoundingBox2D | null {
+function lineBounds(entity: Entity): Bbox | null {
   const e = entity as unknown as { start: Point2D; end: Point2D };
   return {
     minX: Math.min(e.start.x, e.end.x),
@@ -72,7 +67,7 @@ function lineBounds(entity: Entity): BoundingBox2D | null {
   };
 }
 
-function circleBounds(entity: Entity): BoundingBox2D | null {
+function circleBounds(entity: Entity): Bbox | null {
   const e = entity as unknown as { center: Point2D; radius: number };
   return {
     minX: e.center.x - e.radius,
@@ -82,12 +77,12 @@ function circleBounds(entity: Entity): BoundingBox2D | null {
   };
 }
 
-function verticesBounds(entity: Entity): BoundingBox2D | null {
+function verticesBounds(entity: Entity): Bbox | null {
   const e = entity as unknown as { vertices: Point2D[] };
   return box2D(calculateVerticesBounds(e.vertices));
 }
 
-function arcBounds(entity: Entity): BoundingBox2D | null {
+function arcBounds(entity: Entity): Bbox | null {
   const center = ('center' in entity ? (entity as { center?: Point2D }).center : undefined);
   const radius = ('radius' in entity ? (entity as { radius?: number }).radius : undefined);
   if (!center || radius === undefined) return null;
@@ -99,7 +94,7 @@ function arcBounds(entity: Entity): BoundingBox2D | null {
   };
 }
 
-function rectBounds(entity: Entity): BoundingBox2D | null {
+function rectBounds(entity: Entity): Bbox | null {
   let vertices: Point2D[] | undefined = ('vertices' in entity ? (entity as { vertices?: Point2D[] }).vertices : undefined);
   if (!vertices || vertices.length === 0) {
     const corner1 = ('corner1' in entity ? (entity as { corner1?: Point2D }).corner1 : 'start' in entity ? (entity as { start?: Point2D }).start : undefined);
@@ -111,7 +106,7 @@ function rectBounds(entity: Entity): BoundingBox2D | null {
   return vertices ? box2D(calculateVerticesBounds(vertices)) : null;
 }
 
-function angleMeasurementBounds(entity: Entity): BoundingBox2D | null {
+function angleMeasurementBounds(entity: Entity): Bbox | null {
   const vertex = ('vertex' in entity ? (entity as { vertex?: Point2D }).vertex : undefined);
   const point1 = ('point1' in entity ? (entity as { point1?: Point2D }).point1 : undefined);
   const point2 = ('point2' in entity ? (entity as { point2?: Point2D }).point2 : undefined);
@@ -124,7 +119,7 @@ function angleMeasurementBounds(entity: Entity): BoundingBox2D | null {
   };
 }
 
-function hatchBounds(entity: Entity): BoundingBox2D | null {
+function hatchBounds(entity: Entity): Bbox | null {
   const paths = ('boundaryPaths' in entity ? (entity as { boundaryPaths?: Point2D[][] }).boundaryPaths : undefined);
   const pts = paths?.flat() ?? [];
   return pts.length > 0 ? box2D(calculateVerticesBounds(pts)) : null;
@@ -136,7 +131,7 @@ function hatchBounds(entity: Entity): BoundingBox2D | null {
  * VISUAL box the 2D grips/hover/hit-test use (`resolveTextBox`). The rotated
  * RectFrame → AABB via its four world corners.
  */
-function textBounds(entity: Entity): BoundingBox2D | null {
+function textBounds(entity: Entity): Bbox | null {
   const dxfText = projectSceneEntityText(entity, (entity as { id?: string }).id ?? '');
   if (!dxfText?.text) return null;
   const frame = resolveTextBox(dxfText);
@@ -149,7 +144,7 @@ function textBounds(entity: Entity): BoundingBox2D | null {
  * `dimensionEntity`); unwrap, then reuse the dimension-bounds SSoT (the same
  * accurate bbox viewport culling uses). Handles wrapped and already-flat forms.
  */
-function dimensionBounds(entity: Entity): BoundingBox2D | null {
+function dimensionBounds(entity: Entity): Bbox | null {
   const dimEntity =
     (entity as { dimensionEntity?: DimensionEntity }).dimensionEntity
     ?? (entity as unknown as DimensionEntity);
@@ -166,13 +161,13 @@ function dimensionBounds(entity: Entity): BoundingBox2D | null {
  * hit-test `BoundsCalculator` (C), the same SSoT the click hit-test uses. No new
  * bounds math (ADR-394 for the DXF five; ADR-583 for annotation-symbol).
  */
-function viaBoundsCalculator(entity: Entity): BoundingBox2D | null {
+function viaBoundsCalculator(entity: Entity): Bbox | null {
   const bb = BoundsCalculator.calculateEntityBounds(entity as unknown as EntityModel, 0);
   return bb ? { minX: bb.minX, minY: bb.minY, maxX: bb.maxX, maxY: bb.maxY } : null;
 }
 
 /** BIM parametric entities — project pre-computed `geometry.bbox` to XY plan view. */
-function bimBounds(entity: Entity): BoundingBox2D | null {
+function bimBounds(entity: Entity): Bbox | null {
   return box2D(calculateBimEntity2DBounds(entity));
 }
 
@@ -181,7 +176,7 @@ function bimBounds(entity: Entity): BoundingBox2D | null {
  * `computeScaleBarGeometry` (canonical-mm; span is scale-invariant, hence `(1,'mm')`).
  * Makes the bar window/crossing-marquee selectable (mirror `annotation-symbol`).
  */
-function scaleBarBounds(entity: Entity): BoundingBox2D | null {
+function scaleBarBounds(entity: Entity): Bbox | null {
   const { bbox } = computeScaleBarGeometry(entity as unknown as ScaleBarEntity, 1, 'mm');
   return { minX: bbox.minX, minY: bbox.minY, maxX: bbox.maxX, maxY: bbox.maxY };
 }
@@ -195,12 +190,12 @@ function scaleBarBounds(entity: Entity): BoundingBox2D | null {
  * ADR-739 Φ.Γ — γενικός πίνακας: το rotation-aware AABB του `computeTableEntityGeometry`
  * (αδελφός του `openingInfoTagBounds`). Κάνει τον πίνακα επιλέξιμο με marquee.
  */
-function tableBounds(entity: Entity): BoundingBox2D | null {
+function tableBounds(entity: Entity): Bbox | null {
   const bbox = calculateTableBounds(entity as unknown as TableEntity);
   return { minX: bbox.minX, minY: bbox.minY, maxX: bbox.maxX, maxY: bbox.maxY };
 }
 
-function openingInfoTagBounds(entity: Entity): BoundingBox2D | null {
+function openingInfoTagBounds(entity: Entity): Bbox | null {
   const bbox = calculateOpeningInfoTagBounds(entity as unknown as OpeningInfoTagEntity);
   return { minX: bbox.minX, minY: bbox.minY, maxX: bbox.maxX, maxY: bbox.maxY };
 }
@@ -210,7 +205,7 @@ function openingInfoTagBounds(entity: Entity): BoundingBox2D | null {
  * bounds/hit-test layer. Keyed by `EntityType`; a missing key ⇒ genuinely
  * unbounded (resolver returns `null`, no console noise).
  */
-export const ENTITY_BOUNDS_PROVIDERS: Partial<Record<EntityType, (entity: Entity) => BoundingBox2D | null>> = {
+export const ENTITY_BOUNDS_PROVIDERS: Partial<Record<EntityType, (entity: Entity) => Bbox | null>> = {
   // ── DXF primitives (byte-identical to Twin B) ──
   line: lineBounds,
   circle: circleBounds,
@@ -292,10 +287,10 @@ export const ENTITY_BOUNDS_SUPPORTED_TYPES: readonly EntityType[] =
   Object.keys(ENTITY_BOUNDS_PROVIDERS) as EntityType[];
 
 /**
- * Canonical per-type 2D bounds resolver — `BoundingBox2D | null`. `null` ⇒ no
+ * Canonical per-type 2D bounds resolver — `Bbox | null`. `null` ⇒ no
  * provider for this type (genuinely unbounded), matching Twin B's old `default`.
  */
-export function resolveEntityBounds(entity: Entity): BoundingBox2D | null {
+export function resolveEntityBounds(entity: Entity): Bbox | null {
   const provider = ENTITY_BOUNDS_PROVIDERS[entity.type as EntityType];
   return provider ? provider(entity) : null;
 }

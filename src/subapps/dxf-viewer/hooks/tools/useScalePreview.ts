@@ -22,16 +22,15 @@ import { scaleEntity } from '../../systems/scale/scale-entity-transform';
 // ADR-646 #1 SSoT — the live drag factor shared verbatim with the tooltip + click-commit.
 import { computeLiveScale } from '../../systems/scale/scale-reference-calc';
 // ADR-646 Φάση 5 — drag-preview LOD: bound the O(N)-per-frame real-render on huge selections.
-import {
-  resolveScalePreviewLod, sampleIds, computeUnionBBox, scaleBBoxAboutBase, buildExtentBoxEntity,
-  SCALE_PREVIEW_SAMPLE_COUNT, type PreviewBBox,
-} from '../../systems/scale/scale-preview-lod';
+import { resolveScalePreviewLod, sampleIds, computeUnionBBox, scaleBBoxAboutBase, buildExtentBoxEntity, SCALE_PREVIEW_SAMPLE_COUNT } from '../../systems/scale/scale-preview-lod';
 // ADR-550 (WYSIWYG) — moving copies render through the REAL entity renderer (full fidelity).
 import { drawRealEntityPreview } from '../../rendering/ghost/draw-real-entity-preview';
 import type { LevelSceneReader } from '../../systems/levels/level-scene-accessor';
 import { useTransformGhostPreview, type TransformGhostFrame } from './use-transform-ghost-preview';
 // ADR-646 Φ6 — scale-about-base is a pure affine → the O(1)/frame matrix-ghost world affine.
 import { scaleAboutBaseWorldAffine, type MatrixGhostConfig } from './transform-ghost-matrix-cache';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ. Το σχόλιο ομολογούσε «mirror of getEntityBBox shape — structural, no import coupling»: το διπλότυπο ήταν ΣΚΟΠΙΜΟ, για να αποφευχθεί ένα import.
+import type { Bbox } from '../../types/coordinate-space';
 
 export interface UseScalePreviewProps {
   levelManager: LevelSceneReader;
@@ -74,7 +73,7 @@ export function useScalePreview(props: UseScalePreviewProps): void {
   // ADR-646 Φάση 5 — the selection's UNSCALED union bbox is constant for a whole drag, so cache it
   // (keyed by the selection array identity, stable per scale op) → only the O(1) per-frame scaling
   // runs, never an O(N) bbox rescan. Recomputed lazily when the selection reference changes.
-  const unionRef = useRef<{ ids: readonly string[]; bbox: PreviewBBox | null } | null>(null);
+  const unionRef = useRef<{ ids: readonly string[]; bbox: Bbox | null } | null>(null);
 
   // ADR-641 — `getEntity` (BEDIT-aware, VIEW-space members) is supplied by the harness frame.
   const renderCopies = useCallback(

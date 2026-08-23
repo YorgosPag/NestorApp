@@ -33,20 +33,16 @@ import { textBoxAABB } from '../../bim/text/text-box';
 // geometry the picking path uses), so a dim in a geo-referenced DXF is culled by its REAL
 // bounds instead of the ±1e6 full-plane fallback (the "dims invisible but glow on hover" bug).
 import { getDimensionWorldBounds } from '../../systems/dimensions/dimension-cull-bounds';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ (world-space culling κάτοψης).
+import type { Bbox } from '../../types/coordinate-space';
 
-interface BBox {
-  minX: number;
-  minY: number;
-  maxX: number;
-  maxY: number;
-}
 
 /** Padding (in screen pixels) added to viewport bounds to avoid edge artefacts
  *  (e.g. line caps, text glyph overflow, arc anti-aliasing). */
 const CULL_PADDING_PX = 32;
 
 /** Full-plane conservative bbox — used for entity types with no computable AABB. */
-const FULL_PLANE_BBOX: BBox = { minX: -1e6, minY: -1e6, maxX: 1e6, maxY: 1e6 };
+const FULL_PLANE_BBOX: Bbox = { minX: -1e6, minY: -1e6, maxX: 1e6, maxY: 1e6 };
 
 /**
  * ADR-363 / ADR-040 Phase IX — world-space footprint AABB for BIM direct-entities.
@@ -59,14 +55,14 @@ const FULL_PLANE_BBOX: BBox = { minX: -1e6, minY: -1e6, maxX: 1e6, maxY: 1e6 };
  * stayed visible in 3D and on hover (both bypass viewport culling). Bbox-less types (dimension,
  * ray, xline) fall back to the full-plane box.
  */
-function geometryBBoxOrFullPlane(entity: DxfEntityUnion): BBox {
+function geometryBBoxOrFullPlane(entity: DxfEntityUnion): Bbox {
   const bb = (entity as { geometry?: { bbox?: { min: { x: number; y: number }; max: { x: number; y: number } } } }).geometry?.bbox;
   if (bb) return { minX: bb.min.x, minY: bb.min.y, maxX: bb.max.x, maxY: bb.max.y };
   return FULL_PLANE_BBOX;
 }
 
 /** Enclosing-circle AABB — shared by `circle` and (conservatively) `arc` entities. */
-function radialBBox(center: { x: number; y: number }, radius: number): BBox {
+function radialBBox(center: { x: number; y: number }, radius: number): Bbox {
   return {
     minX: center.x - radius,
     minY: center.y - radius,
@@ -83,7 +79,7 @@ function radialBBox(center: { x: number; y: number }, radius: number): BBox {
  * κανένα runtime σύνορο δεν **εγγυάται** (persistence / DXF import / clipboard / undo patches).
  * Οι καλούντες περνούν από το εξαγόμενο {@link getEntityBBox}, που είναι ο φύλακας.
  */
-function computeEntityBBox(entity: DxfEntityUnion): BBox {
+function computeEntityBBox(entity: DxfEntityUnion): Bbox {
   switch (entity.type) {
     case 'line': {
       return {
@@ -216,7 +212,7 @@ function computeEntityBBox(entity: DxfEntityUnion): BBox {
  * που δεν πετούν (ήταν εμπόδιο μόνο στο παλιό Crankshaft). Το κόστος πληρώνεται μόνο στην
  * αποτυχία — και η καραντίνα φροντίζει να πληρωθεί **μία φορά** ανά οντότητα, όχι 60×/δευτ.
  */
-export function getEntityBBox(entity: DxfEntityUnion): BBox {
+export function getEntityBBox(entity: DxfEntityUnion): Bbox {
   try {
     return computeEntityBBox(entity);
   } catch (error) {
@@ -235,7 +231,7 @@ export function getEntityBBox(entity: DxfEntityUnion): BBox {
 export function viewportToWorldBBox(
   transform: ViewTransform,
   viewport: Viewport,
-): BBox {
+): Bbox {
   const s = transform.scale;
   if (s === 0) {
     // Degenerate transform — disable culling by returning an infinite bbox.
@@ -260,7 +256,7 @@ export function viewportToWorldBBox(
 }
 
 /** Standard AABB overlap test. */
-export function bboxIntersects(a: BBox, b: BBox): boolean {
+export function bboxIntersects(a: Bbox, b: Bbox): boolean {
   return !(a.maxX < b.minX || a.minX > b.maxX || a.maxY < b.minY || a.minY > b.maxY);
 }
 
@@ -272,7 +268,7 @@ export function bboxIntersects(a: BBox, b: BBox): boolean {
  */
 export function isEntityInViewport(
   entity: DxfEntityUnion,
-  worldViewport: BBox,
+  worldViewport: Bbox,
 ): boolean {
   const eb = getEntityBBox(entity);
   return bboxIntersects(eb, worldViewport);
