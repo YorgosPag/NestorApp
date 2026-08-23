@@ -15,15 +15,10 @@ import { isArcEntity, isLineEntity } from '../../types/entities';
 import type { SceneModel } from '../../types/scene';
 import type { WallEntity } from '../types/wall-types';
 import { aabbIntersectsRaw } from '../../rendering/hitTesting/bounds-operations';
+// ADR-794 — ΕΝΑ όνομα για το ορθογώνιο κάτοψης σε όλο το subapp.
+import type { Bbox } from '../geometry/shared/xy-bounds';
 
-interface RawAabb {
-  readonly minX: number;
-  readonly minY: number;
-  readonly maxX: number;
-  readonly maxY: number;
-}
-
-function lineBounds(l: LineEntity): RawAabb {
+function lineBounds(l: LineEntity): Bbox {
   return {
     minX: Math.min(l.start.x, l.end.x),
     minY: Math.min(l.start.y, l.end.y),
@@ -32,7 +27,7 @@ function lineBounds(l: LineEntity): RawAabb {
   };
 }
 
-function arcBounds(a: ArcEntity): RawAabb {
+function arcBounds(a: ArcEntity): Bbox {
   // Συντηρητικό: ολόκληρος ο κύκλος (φθηνό + ασφαλές για culling).
   return {
     minX: a.center.x - a.radius,

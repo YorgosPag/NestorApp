@@ -36,6 +36,10 @@ import { finishAreasByMaterial } from './structural-finish-area';
 import type { FinishBoqContribution } from '../services/structural-finish-boq';
 import type { Pt2 } from '../geometry/shared/segment-polygon-coverage';
 import { dilatePolygonAlongAxis } from '../geometry/shared/polygon-dilate';
+// ADR-794 — το ορθογώνιο κάτοψης και ο βρόχος του ζουν ΜΙΑ φορά (ADR-583/CHECK 3.28).
+// Το ιδιωτικό αντίγραφο εδώ ήταν ταυτόσημο· το `pad` του `bboxOverlap` είναι πλέον
+// παράμετρος του SSoT (ίδια έκφραση, ίδιο αποτέλεσμα).
+import { bboxOf, bboxOverlap, type Bbox } from '../geometry/shared/xy-bounds';
 
 export const MM_TO_M = 0.001;
 /**
@@ -256,31 +260,6 @@ export interface ColumnFinishBand {
   readonly faces: StructuralFinishFaces;
   readonly zBottomMm: number;
   readonly zTopMm: number;
-}
-
-interface Bbox {
-  minX: number;
-  maxX: number;
-  minY: number;
-  maxY: number;
-}
-
-function bboxOf(pts: readonly { x: number; y: number }[]): Bbox {
-  let minX = Infinity;
-  let maxX = -Infinity;
-  let minY = Infinity;
-  let maxY = -Infinity;
-  for (const p of pts) {
-    if (p.x < minX) minX = p.x;
-    if (p.x > maxX) maxX = p.x;
-    if (p.y < minY) minY = p.y;
-    if (p.y > maxY) maxY = p.y;
-  }
-  return { minX, maxX, minY, maxY };
-}
-
-function bboxOverlap(a: Bbox, b: Bbox, pad: number): boolean {
-  return a.minX - pad <= b.maxX && b.minX <= a.maxX + pad && a.minY - pad <= b.maxY && b.minY <= a.maxY + pad;
 }
 
 /**

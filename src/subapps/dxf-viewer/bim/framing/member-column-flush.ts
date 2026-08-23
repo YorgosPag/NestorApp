@@ -25,27 +25,11 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { StripJustification } from '../types/foundation-types';
 import { canonicalAxisNormal } from '../grid/axis-normal';
+// ADR-794 — το ορθογώνιο κάτοψης και ο βρόχος του ζουν ΜΙΑ φορά (ADR-583/CHECK 3.28).
+import { bboxOf, type Bbox } from '../geometry/shared/xy-bounds';
 
 /** Κάτω από αυτό το |d| (perpendicular offset κέντρου από άξονα) → καμία προτίμηση πλευράς. */
 const FLUSH_D_EPS = 1e-6;
-
-interface Bbox2D {
-  readonly minX: number;
-  readonly maxX: number;
-  readonly minY: number;
-  readonly maxY: number;
-}
-
-function bboxOf(pts: readonly Point2D[]): Bbox2D {
-  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-  for (const p of pts) {
-    if (p.x < minX) minX = p.x;
-    if (p.x > maxX) maxX = p.x;
-    if (p.y < minY) minY = p.y;
-    if (p.y > maxY) maxY = p.y;
-  }
-  return { minX, maxX, minY, maxY };
-}
 
 /** Vertex-average centroid (επαρκές για κυρτές column footprints — direction-only χρήση). */
 function centroidOf(pts: readonly Point2D[]): Point2D {
@@ -55,7 +39,7 @@ function centroidOf(pts: readonly Point2D[]): Point2D {
 }
 
 /** Το σημείο `E` μέσα στο (διογκωμένο κατά `tol`) bbox της κολόνας — ο χρήστης έκανε snap εκεί. */
-function pointInBbox(E: Readonly<Point2D>, bb: Bbox2D, tol: number): boolean {
+function pointInBbox(E: Readonly<Point2D>, bb: Bbox, tol: number): boolean {
   return E.x >= bb.minX - tol && E.x <= bb.maxX + tol && E.y >= bb.minY - tol && E.y <= bb.maxY + tol;
 }
 
