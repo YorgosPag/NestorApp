@@ -1,17 +1,18 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
+  ProcurementRowLink,
+  ProcurementTableNotice,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { ArrowRight } from 'lucide-react';
+} from '@/components/procurement/shared/procurement-table-parts';
 import { cn, getStatusColor } from '@/lib/design-system';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrency } from '@/lib/intl-formatting';
@@ -69,13 +70,13 @@ export function ContactPurchaseOrdersSection({
       </CardHeader>
       <CardContent>
         {loading ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">
+          <ProcurementTableNotice>
             {t('procurement:list.loading')}
-          </p>
+          </ProcurementTableNotice>
         ) : visible.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">
+          <ProcurementTableNotice>
             {t('procurement:list.empty')}
-          </p>
+          </ProcurementTableNotice>
         ) : (
           <Table>
             <TableHeader>
@@ -91,9 +92,8 @@ export function ContactPurchaseOrdersSection({
             </TableHeader>
             <TableBody>
               {visible.map((po) => (
-                <TableRow
+                <ProcurementRowLink
                   key={po.id}
-                  className="cursor-pointer hover:bg-muted/50"
                   onClick={() => handleView(po.id)}
                 >
                   <TableCell className="font-mono text-sm">{po.poNumber}</TableCell>
@@ -106,10 +106,7 @@ export function ContactPurchaseOrdersSection({
                   <TableCell className="text-right font-medium">
                     {formatCurrency(po.total)}
                   </TableCell>
-                  <TableCell>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                  </TableCell>
-                </TableRow>
+                </ProcurementRowLink>
               ))}
             </TableBody>
           </Table>

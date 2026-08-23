@@ -1,17 +1,19 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
+  ProcurementRowLink,
+  ProcurementTableNotice,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { ArrowRight, Plus } from 'lucide-react';
+} from '@/components/procurement/shared/procurement-table-parts';
+import { Plus } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrency, formatDate } from '@/lib/intl-formatting';
 import { normalizeToDate } from '@/lib/date-local';
@@ -59,13 +61,13 @@ export function ContactQuotesSection({
       </CardHeader>
       <CardContent>
         {loading ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">
+          <ProcurementTableNotice>
             {t('quotes:quotes.loading')}
-          </p>
+          </ProcurementTableNotice>
         ) : quotes.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">
+          <ProcurementTableNotice>
             {t('quotes:quotes.empty')}
-          </p>
+          </ProcurementTableNotice>
         ) : (
           <Table>
             <TableHeader>
@@ -81,11 +83,10 @@ export function ContactQuotesSection({
             </TableHeader>
             <TableBody>
               {quotes.map((quote) => (
-                <TableRow
+                <ProcurementRowLink
                   key={quote.id}
-                  className="cursor-pointer hover:bg-muted/50"
                   onClick={() => handleView(quote.id)}
-                  data-testid={`quote-row-${quote.id}`}
+                  testId={`quote-row-${quote.id}`}
                 >
                   <TableCell className="font-mono text-sm">
                     {quote.displayNumber}
@@ -99,10 +100,7 @@ export function ContactQuotesSection({
                   <TableCell className="text-right font-medium">
                     {formatCurrency(quote.totals.total)}
                   </TableCell>
-                  <TableCell>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                  </TableCell>
-                </TableRow>
+                </ProcurementRowLink>
               ))}
             </TableBody>
           </Table>

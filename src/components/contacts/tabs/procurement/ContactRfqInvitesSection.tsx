@@ -1,18 +1,20 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
+  ProcurementRowLink,
+  ProcurementTableNotice,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { ArrowRight, Plus } from 'lucide-react';
+} from '@/components/procurement/shared/procurement-table-parts';
+import { Plus } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/design-system';
 import type { VendorInvite } from '@/subapps/procurement/types/vendor-invite';
@@ -59,13 +61,13 @@ export function ContactRfqInvitesSection({
       </CardHeader>
       <CardContent>
         {loading ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">
+          <ProcurementTableNotice>
             {t('quotes:rfqs.loading')}
-          </p>
+          </ProcurementTableNotice>
         ) : invites.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">
+          <ProcurementTableNotice>
             {t('quotes:rfqs.empty')}
-          </p>
+          </ProcurementTableNotice>
         ) : (
           <Table>
             <TableHeader>
@@ -78,9 +80,8 @@ export function ContactRfqInvitesSection({
             </TableHeader>
             <TableBody>
               {invites.map((inv) => (
-                <TableRow
+                <ProcurementRowLink
                   key={inv.id}
-                  className="cursor-pointer hover:bg-muted/50"
                   onClick={() => handleView(inv.rfqId)}
                 >
                   <TableCell className="font-mono text-sm">{inv.rfqId}</TableCell>
@@ -95,10 +96,7 @@ export function ContactRfqInvitesSection({
                   <TableCell className="text-sm text-muted-foreground">
                     {inv.deliveryChannel}
                   </TableCell>
-                  <TableCell>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                  </TableCell>
-                </TableRow>
+                </ProcurementRowLink>
               ))}
             </TableBody>
           </Table>

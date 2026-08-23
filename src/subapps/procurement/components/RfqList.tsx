@@ -1,20 +1,22 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
+  ProcurementRowLink,
+  ProcurementTableNotice,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { Plus, Search, ArrowRight } from 'lucide-react';
+} from '@/components/procurement/shared/procurement-table-parts';
+import { Plus, Search } from 'lucide-react';
 import { cn, getStatusColor } from '@/lib/design-system';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { getRfqDetailUrl } from '@/lib/navigation/procurement-urls';
@@ -91,9 +93,9 @@ export function RfqList({ rfqs, loading, onCreateRfq }: RfqListProps) {
         </div>
 
         {loading ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">{t('rfqs.loading')}</p>
+          <ProcurementTableNotice>{t('rfqs.loading')}</ProcurementTableNotice>
         ) : filtered.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">{t('rfqs.empty')}</p>
+          <ProcurementTableNotice>{t('rfqs.empty')}</ProcurementTableNotice>
         ) : (
           <Table>
             <TableHeader>
@@ -124,10 +126,7 @@ export function RfqList({ rfqs, loading, onCreateRfq }: RfqListProps) {
                   <TableCell className="text-sm">
                     {t(`rfqs.awardModes.${rfq.awardMode}`)}
                   </TableCell>
-                  <TableCell>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                  </TableCell>
-                </TableRow>
+                </ProcurementRowLink>
               ))}
             </TableBody>
           </Table>
