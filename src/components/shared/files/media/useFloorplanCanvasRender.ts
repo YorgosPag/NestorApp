@@ -33,11 +33,12 @@ import { renderPdfWithOverlays } from '@/components/shared/files/media/floorplan
 import { renderBimEntitiesToCanvas } from '@/components/shared/files/media/bim-readonly-render';
 import type { FloorplanBimSnapshot } from '@/components/shared/files/media/useFloorplanBimEntities';
 import type { OverlayLabel } from '@/components/shared/files/media/overlay-polygon-renderer';
-
-interface SceneBounds {
-  min: { x: number; y: number };
-  max: { x: number; y: number };
-}
+// ADR-795: το `SceneBounds` ζητιέται από τη ΡΙΖΑ ΤΟΥ ΣΤΡΩΜΑΤΟΣ (`overlay-renderer`, το
+// public barrel του φακέλου — 20 καταναλωτές) αντί να ξαναδηλώνεται τοπικά. Ήταν δομικά
+// ΤΑΥΤΟΣΗΜΟ ({ min: {x,y}; max: {x,y} }), δηλαδή διπλότυπο χωρίς διαφορά.
+// ⚠️ ΜΗΝ το γυρίσεις σε `@/subapps/dxf-viewer/...`: θα πρόσθετε ακμή στο ratchet
+// `not-to-dxf-internals` του `.dependency-cruiser.cjs` (baseline 335, DOWN-only) ⇒ ΜΠΛΟΚ.
+import type { SceneBounds } from '@/components/shared/files/media/overlay-renderer';
 
 export interface FloorplanCanvasRenderParams {
   canvasRef: RefObject<HTMLCanvasElement>;

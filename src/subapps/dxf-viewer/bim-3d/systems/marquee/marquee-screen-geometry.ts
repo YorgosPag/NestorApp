@@ -14,17 +14,30 @@
  */
 
 import type { Point2D } from '../../../rendering/types/Types';
+import type { ScreenRectPx } from '../../../types/coordinate-space';
 import { SpatialUtils } from '../../../core/spatial/SpatialUtils';
 import {
   polygonIntersectsRectangle,
   lineIntersectsRectangle,
 } from '../../../systems/selection/universal-marquee-geometry';
 
-/** Ορθογώνιο σε screen px (client coords) — η ίδια μορφή που περιμένει το 2D marquee SSoT. */
-export interface ScreenRect {
-  min: Point2D;
-  max: Point2D;
-}
+/**
+ * Ορθογώνιο σε screen px (client coords) — η ίδια μορφή που περιμένει το 2D marquee SSoT.
+ *
+ * 🔴 **ADR-795 — ο ΧΩΡΟΣ ζει πλέον στον ΤΥΠΟ.** Ήταν σκέτο `{ min: Point2D; max: Point2D }`,
+ * δηλαδή **δομικά ΤΑΥΤΟΣΗΜΟ** με **εννέα** άλλους τύπους του δέντρου που όμως μετρούν
+ * **κόσμο/κάτοψη σε χιλιοστά** (`Bounds2D` λέει κατά λέξη «world mm» · `WorldBounds` ·
+ * `SceneBounds` · `Bounds` · `BoundingBox` ×2 · `CrossingWindow` · `MinMax` ·
+ * `ReviewFocusBounds`). Η TypeScript είναι **ΔΟΜΙΚΗ** ⇒ αυτό το rect περνούσε **αθόρυβα**
+ * σε καθέναν από τους εννέα. Ο λόγος px↔mm **αλλάζει με το zoom**, άρα ούτε εκ των υστέρων
+ * διορθώνεται. Το `ScreenRectPx` κουβαλά phantom brand — **μηδέν** παραγόμενο JavaScript.
+ *
+ * ⚠️ Το όνομα `ScreenRect` **μένει** (το διαβάζει ο άνθρωπος, και είναι το σωστό όνομα για
+ * τον χώρο του)· αλλάζει μόνο το τι **εγγυάται**. Ένα σκέτο object literal εξακολουθεί να
+ * περνά — το brand είναι **προαιρετικό** by design (coordinate-space.ts): φυλάει τη **ΡΟΗ**
+ * ανάμεσα σε δύο *μαρκαρισμένους* χώρους, όχι την κατασκευή.
+ */
+export type ScreenRect = ScreenRectPx;
 
 /**
  * Το axis-aligned ορθογώνιο του marquee από την άγκυρα drag + τον τρέχοντα δείκτη (CLIENT px).

@@ -192,3 +192,102 @@ describe('ADR-794 — ο συσσωρευτής είναι η ΜΕΤΑΒΛΗΤΗ
     expect(Object.getOwnPropertySymbols(acc)).toEqual([]);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ADR-795 — η ΔΕΥΤΕΡΗ ΜΟΡΦΗ ({min,max} με σημεία) και ο ΠΕΜΠΤΟΣ ΧΩΡΟΣ
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe('ADR-795 — το ορθογώνιο ΣΗΜΕΙΩΝ κουβαλά κι αυτό τον χώρο', () => {
+  it('Ρ0 (ΠΑΡΟΝΟΜΑΣΤΗΣ). Ίδιος χώρος ⇒ περνά — το probe ΟΝΤΩΣ μεταγλωττίζεται', () => {
+    const errs = typeErrors(`
+import type { ScreenRectPx } from './space';
+declare const a: ScreenRectPx;
+export const b: ScreenRectPx = a;
+`);
+    expect(errs).toEqual([]);
+  });
+
+  it('Ρ1. Ορθογώνιο ΟΘΟΝΗΣ δεν περνά ως ορθογώνιο ΚΑΤΟΨΗΣ — ΚΑΙ το ανάποδο', () => {
+    const errs = typeErrors(`
+import type { ScreenRectPx, PointRect } from './space';
+declare const px: ScreenRectPx;
+export const wrong: PointRect<'plan-mm'> = px;
+declare function wantsPlan(r: PointRect<'plan-mm'>): void;
+wantsPlan(px);
+declare const plan: PointRect<'plan-mm'>;
+export const alsoWrong: ScreenRectPx = plan;
+`);
+    // ΚΑΙ ΟΙ ΔΥΟ κατευθύνσεις + όρισμα: μια μονόδρομη εγγύηση αφήνει τη μισή βλάβη ζωντανή.
+    expect(errs.map((e) => e.line).sort((x, y) => x - y)).toEqual([4, 6, 8]);
+  });
+
+  it('Ρ2 (Η ΖΩΝΤΑΝΗ ΒΛΑΒΗ). px ↔ world mm: ΑΚΡΙΒΩΣ το ζεύγος που περνούσε αθόρυβα', () => {
+    // Πριν το ADR-795 το `ScreenRect` του marquee ήταν σκέτο `{min:Point2D;max:Point2D}`,
+    // δομικά ΤΑΥΤΟΣΗΜΟ με **εννέα** τύπους σε κόσμο/κάτοψη — μεταξύ τους το `Bounds2D`,
+    // που λέει κατά λέξη «world mm». Ο λόγος px↔mm αλλάζει με το ZOOM: δεν υπάρχει καν
+    // συντελεστής να διορθώσει κανείς εκ των υστέρων.
+    const errs = typeErrors(`
+import type { ScreenRectPx, PointRect } from './space';
+declare function drawInWorldMm(b: PointRect<'plan-mm'>): void;
+declare const marquee: ScreenRectPx;
+drawInWorldMm(marquee);
+`);
+    expect(errs).toHaveLength(1);
+    expect(errs[0]!.code).toBe(2345); // όρισμα μη-αναθέσιμο
+  });
+
+  it('Μ2 (ΜΕΤΑΛΛΑΞΗ ΣΤΗΝ ΕΙΣΟΔΟ). Χωρίς το brand, το Ρ1 γίνεται ΠΡΑΣΙΝΟ', () => {
+    // Μετάλλαξη στο ΠΡΑΓΜΑΤΙΚΟ module — μόνο η κληρονομιά του brand του PointRect.
+    const withoutBrand = SPACE_MODULE.replace(
+      'export interface PointRect<S extends CoordinateSpace> extends InSpace<S> {',
+      'export interface PointRect<S extends CoordinateSpace> {',
+    );
+    expect(withoutBrand).not.toEqual(SPACE_MODULE); // η μετάλλαξη ΟΝΤΩΣ άλλαξε κάτι
+    const errs = typeErrors(
+      `
+import type { ScreenRectPx, PointRect } from './space';
+declare const px: ScreenRectPx;
+export const wrong: PointRect<'plan-mm'> = px;
+`,
+      withoutBrand,
+    );
+    // Δομική γλώσσα: ίδια δύο πεδία ⇒ ίδιος τύπος. Αυτό ΗΤΑΝ η κατάσταση πριν.
+    expect(errs).toEqual([]);
+  });
+
+  it('Ρ3. Οι ΔΥΟ μορφές δεν αναμειγνύονται ούτε στον ΙΔΙΟ χώρο — άλλο σχήμα, άλλο ερώτημα', () => {
+    const errs = typeErrors(`
+import type { Bbox, PointRect } from './space';
+declare const scalar: Bbox;
+export const wrong: PointRect<'plan-mm'> = scalar;
+`);
+    expect(errs).toHaveLength(1);
+    // ⚠️ Κωδικός **2739** («λείπουν οι ιδιότητες min, max»), ΟΧΙ 2322 («μη αναθέσιμο»):
+    // εδώ ο μεταγλωττιστής απορρίπτει σε επίπεδο **ΣΧΗΜΑΤΟΣ** (βαθμωτά ≠ σημεία), ενώ στο
+    // Ρ1 σε επίπεδο **ΧΩΡΟΥ** (ίδιο σχήμα, άλλο brand). Δύο διαφορετικοί μηχανισμοί που
+    // απαντούν δύο διαφορετικά ερωτήματα — γι' αυτό ο κωδικός κλειδώνεται ρητά και όχι με
+    // ένα σκέτο «απέτυχε»: αν αυτό γίνει ποτέ 2322, το σχήμα έχει συγχωνευθεί εν αγνοία μας.
+    expect(errs[0]!.code).toBe(2739);
+  });
+
+  it('Ρ4 (ΔΗΛΩΜΕΝΟ ΟΡΙΟ). Ωμό literal περνά παντού — το brand φυλάει τη ΡΟΗ, όχι την κατασκευή', () => {
+    const errs = typeErrors(`
+import type { ScreenRectPx, PointRect } from './space';
+export const a: ScreenRectPx = { min: { x: 0, y: 0 }, max: { x: 1, y: 1 } };
+export const b: PointRect<'plan-mm'> = { min: { x: 0, y: 0 }, max: { x: 1, y: 1 } };
+`);
+    expect(errs).toEqual([]);
+  });
+});
+
+describe('ADR-795 — το brand του PointRect είναι ΑΟΡΑΤΟ σε χρόνο εκτέλεσης', () => {
+  it('Ρ5. Μηδέν πεδίο παραπάνω — το σχήμα ΑΠΟΘΗΚΕΥΕΤΑΙ σε Firestore/Storage αυτούσιο', () => {
+    // 🔴 Δεν είναι θεωρητικό: αυτό ΑΚΡΙΒΩΣ το σχήμα γράφεται σήμερα σε
+    // `files/{id}.processedData.bounds` (Firestore) ΚΑΙ στο gzip JSON της σκηνής (Storage).
+    // Ένα ορατό phantom πεδίο θα ήταν ΜΕΤΑΝΑΣΤΕΥΣΗ ΔΕΔΟΜΕΝΩΝ, όχι αλλαγή τύπου.
+    const rect = { min: { x: 1, y: 2 }, max: { x: 5, y: 9 } };
+    expect(Object.keys(rect).sort()).toEqual(['max', 'min']);
+    expect(Object.getOwnPropertySymbols(rect)).toEqual([]);
+    expect(JSON.parse(JSON.stringify(rect))).toEqual(rect);
+  });
+});

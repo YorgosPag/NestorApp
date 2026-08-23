@@ -58,9 +58,32 @@
         "Bbox",
         "PlanRectM",
         "LocalRectMm",
-        "TileRange"
+        "TileRange",
+        "PointRect",
+        "ScreenRectPx"
       ],
-      "reason": "Λεξιλόγιο ΟΡΘΟΓΩΝΙΟΥ + ΧΩΡΟΥ (ADR-794). Το σχήμα `{minX,minY,maxX,maxY}` δηλωνόταν 42 φορές σε 24 exported ονόματα, και το `BoundingBox` 10 φορές σε ΕΞΙ ασύμβατα σχήματα. Ο κανόνας των μεγάλων είναι ομόφωνος — ΕΝΑ όνομα ανά ΧΩΡΟ, ΠΟΤΕ ανά αντικείμενο (Revit BoundingBoxXYZ/UV · ArchiCAD BoundingBox2D/API_Box3D · Qt QRect/QRectF · three.js Box2/Box3): δεν υπάρχει `TableBBox` στον Revit. Εδώ 14 από τα 24 ονομάζονταν από το αντικείμενο. `Rect<S>` = το σχήμα ΜΙΑ φορά για ΟΛΟΥΣ τους χώρους (εκείνοι γράφουν δύο κλάσεις με διπλογραμμένα μέλη — οι γλώσσες τους δεν έχουν παράμετρο τύπου εδώ). `InSpace` = phantom brand που ΕΠΑΝΑΦΕΡΕΙ την ονομαστικότητα που C#/C++ δίνουν δωρεάν: η TypeScript είναι ΔΟΜΙΚΗ, άρα σκέτη μετονομασία θα έδινε την οργάνωσή τους με ΜΗΔΕΝ από την ασφάλειά τους. Τέσσερις χώροι, ο καθένας με ΜΕΤΡΗΜΕΝΟ σημείο επαφής: `plan-mm` (36/42) · `plan-m` (slab-rebar-3d vs rebar-segments-3d-grid — δηλωμένα «mirror», ΤΑΥΤΟΣΗΜΟΣ τοπικός τύπος, ΑΛΛΗ μονάδα) · `local-mm` (ήταν 4 ονόματα) · `tile-index` (ακέραιοι, όχι μήκος). Το `Bbox` ζει ΕΔΩ ώστε `rendering/`·`overlays/`·`accessibility/` να μην αποκτήσουν εξάρτηση από το `bim/`· το `xy-bounds.ts` το ΕΠΑΝΕΞΑΓΕΙ μαζί με τον `bboxOf` που το γεννά. ⚠️ Η βάση λέγεται `MinMaxRect` και ΟΧΙ `Rect`, και ο λόγος βρέθηκε ΑΠΟ ΤΗΝ ΙΔΙΑ ΤΗΝ ΠΥΛΗ στην πρώτη της εκτέλεση: το `text-engine/layout/attachment-point.ts` δηλώνει ήδη `Rect`, σε ΤΡΙΤΗ αναπαράσταση — `{x, y, width, height}` (η ίδια με το `RectMm` του χαρτιού). Ένα σκέτο `Rect` δεν λέει ΠΟΙΑ από τις δύο αναπαραστάσεις είναι· το `MinMaxRect` το λέει."
+      "reason": "Λεξιλόγιο ΟΡΘΟΓΩΝΙΟΥ + ΧΩΡΟΥ (ADR-794). Το σχήμα `{minX,minY,maxX,maxY}` δηλωνόταν 42 φορές σε 24 exported ονόματα, και το `BoundingBox` 10 φορές σε ΕΞΙ ασύμβατα σχήματα. Ο κανόνας των μεγάλων είναι ομόφωνος — ΕΝΑ όνομα ανά ΧΩΡΟ, ΠΟΤΕ ανά αντικείμενο (Revit BoundingBoxXYZ/UV · ArchiCAD BoundingBox2D/API_Box3D · Qt QRect/QRectF · three.js Box2/Box3): δεν υπάρχει `TableBBox` στον Revit. Εδώ 14 από τα 24 ονομάζονταν από το αντικείμενο. `Rect<S>` = το σχήμα ΜΙΑ φορά για ΟΛΟΥΣ τους χώρους (εκείνοι γράφουν δύο κλάσεις με διπλογραμμένα μέλη — οι γλώσσες τους δεν έχουν παράμετρο τύπου εδώ). `InSpace` = phantom brand που ΕΠΑΝΑΦΕΡΕΙ την ονομαστικότητα που C#/C++ δίνουν δωρεάν: η TypeScript είναι ΔΟΜΙΚΗ, άρα σκέτη μετονομασία θα έδινε την οργάνωσή τους με ΜΗΔΕΝ από την ασφάλειά τους. Τέσσερις χώροι, ο καθένας με ΜΕΤΡΗΜΕΝΟ σημείο επαφής: `plan-mm` (36/42) · `plan-m` (slab-rebar-3d vs rebar-segments-3d-grid — δηλωμένα «mirror», ΤΑΥΤΟΣΗΜΟΣ τοπικός τύπος, ΑΛΛΗ μονάδα) · `local-mm` (ήταν 4 ονόματα) · `tile-index` (ακέραιοι, όχι μήκος). Το `Bbox` ζει ΕΔΩ ώστε `rendering/`·`overlays/`·`accessibility/` να μην αποκτήσουν εξάρτηση από το `bim/`· το `xy-bounds.ts` το ΕΠΑΝΕΞΑΓΕΙ μαζί με τον `bboxOf` που το γεννά. ⚠️ Η βάση λέγεται `MinMaxRect` και ΟΧΙ `Rect`, και ο λόγος βρέθηκε ΑΠΟ ΤΗΝ ΙΔΙΑ ΤΗΝ ΠΥΛΗ στην πρώτη της εκτέλεση: το `text-engine/layout/attachment-point.ts` δηλώνει ήδη `Rect`, σε ΤΡΙΤΗ αναπαράσταση — `{x, y, width, height}` (η ίδια με το `RectMm` του χαρτιού). Ένα σκέτο `Rect` δεν λέει ΠΟΙΑ από τις δύο αναπαραστάσεις είναι· το `MinMaxRect` το λέει. ⚠️ ADR-795 — Η ΔΕΥΤΕΡΗ ΜΟΡΦΗ ΚΑΙ Ο ΠΕΜΠΤΟΣ ΧΩΡΟΣ. `PointRect<S>` = το ΙΔΙΟ ορθογώνιο με ΣΗΜΕΙΑ αντί για βαθμωτά, με τον ΙΔΙΟ phantom χώρο. ΔΕΝ είναι δεύτερη αλήθεια (ADR-749): η γραμμή είναι ΣΥΝΟΡΟ ΕΠΙΜΟΝΗΣ, μετρημένο — το {min,max} με σημεία ΕΙΝΑΙ ΗΔΗ ΓΡΑΜΜΕΝΟ στο Firestore (PlanBounds για floor-finish/thermal-space/wall-covering: 3 από 27, οι 24 ξαναϋπολογίζουν) ΚΑΙ στο Storage (DxfSceneBounds: files/{id}.processedData.bounds + το gzip JSON της σκηνής), ενώ τα βαθμωτά είναι η μορφή ΥΠΟΛΟΓΙΣΜΟΥ (μηδέν κατανομή στους βρόχους). Και οι δύο μορφές είναι βιομηχανικές: three.js Box2/Box3 και Revit BoundingBoxXYZ κρατούν ΣΗΜΕΙΑ, η JTS Envelope κρατά ΒΑΘΜΩΤΑ, η Qt δίνει και τα δύο ως μεθόδους ΕΝΟΣ τύπου. Εδώ κρατάμε δύο μορφές όπως όλοι — με τη διαφορά ότι ΚΑΙ ΟΙ ΔΥΟ κουβαλούν τον ΧΩΡΟ, που κανένας τους δεν κάνει. `ScreenRectPx` = ο πέμπτος χώρος (screen-px, CLIENT px, Y-DOWN). Πέρασε ΤΟ ΙΔΙΟ κριτήριο που ΕΚΟΨΕ το sheet-mm: brand παίρνει μόνο ό,τι ο μεταγλωττιστής ΔΕΝ ξεχωρίζει ήδη. Το sheet-mm είναι {x,y,w,h} = δομικά ασύμβατο ⇒ κόπηκε· το ScreenRect ήταν {min:Point2D;max:Point2D} = δομικά ΤΑΥΤΟΣΗΜΟ με ΕΝΝΕΑ τύπους σε κόσμο/κάτοψη (Bounds2D λέει κατά λέξη «world mm») ⇒ πέρασε. Χειρότερο από το σφάλμα 1000× του railing (ADR-793 §2.1): ο λόγος px↔mm αλλάζει με το ZOOM, άρα ούτε εκ των υστέρων διορθώνεται."
+    },
+    {
+      "file": "src/subapps/dxf-viewer/types/scene-types.ts",
+      "names": [
+        "SceneBounds"
+      ],
+      "reason": "ΡΙΖΑ ΤΟΥ DXF VIEWER για το `SceneBounds` (ADR-795). Ήταν ΕΞΙ δηλώσεις με ΤΕΣΣΕΡΙΣ τύπους μελών — και η μία ΤΡΙΣΔΙΑΣΤΑΤΗ (THREE.Vector3 στο bim-3d/viewport/viewport-framing.ts, πλέον `SceneBox3`). Τα πέντε 2Δ ήταν ΑΜΟΙΒΑΙΑ ΣΥΜΒΑΤΑ, άρα η σύγχυση ήταν ΑΘΟΡΥΒΗ — χειρότερο από το BoundingBox του ADR-794, όπου τα σχήματα ήταν ασύμβατα και ο μεταγλωττιστής ΒΟΗΘΟΥΣΕ. Μετρημένο: 32 καταναλωτές, ΤΡΕΙΣ ζωντανές ρίζες, μία ανά ΣΤΡΩΜΑ. Οι δύο διπλότυπες (utils/dxf-block-aware-bounds.ts και components/.../useFloorplanCanvasRender.ts) ήταν δομικά ΤΑΥΤΟΣΗΜΕΣ με τη ρίζα του στρώματός τους ⇒ διαγράφηκαν."
+    },
+    {
+      "file": "src/lib/dxf-scene/scene-fit-transform.ts",
+      "names": [
+        "SceneBounds"
+      ],
+      "reason": "ΡΙΖΑ ΤΟΥ ΟΥΔΕΤΕΡΟΥ ΣΤΡΩΜΑΤΟΣ (src/lib) για το `SceneBounds` (ADR-795) — 9 καταναλωτές. ⚠️ ΜΗΝ την ενώσεις με τη ρίζα του subapp: το ίδιο το αρχείο γράφει ΓΙΑΤΙ ζει εδώ («the callers span components/, services/ and subapps/ bridges — a neutral, dependency-free home is the only one all three may import without a layering violation»). Ο καταναλωτής services/thumbnail-generator.ts τρέχει σε ΑΛΛΟ περιβάλλον. Και υπάρχει ΜΕΤΡΗΜΕΝΟΣ φραγμός: ο κανόνας not-to-dxf-internals του .dependency-cruiser.cjs είναι ratchet DOWN-only σε baseline 335 — μια νέα ακμή προς το subapp ΜΠΛΟΚΑΡΕΙ το PR."
+    },
+    {
+      "file": "src/components/shared/files/media/overlay-renderer/types.ts",
+      "names": [
+        "SceneBounds"
+      ],
+      "reason": "ΡΙΖΑ ΤΟΥ ΣΤΡΩΜΑΤΟΣ components για το `SceneBounds` (ADR-795) — 20 καταναλωτές, όλοι μέσα στο components/shared/files/media (η επικάλυψη κατόψεων σε φωτογραφίες). ⚠️ ΜΗΝ την ενώσεις με το λεξιλόγιο του DXF Viewer — ΙΔΙΟ σκεπτικό με το Point2D του src/types/floorplan-overlays.ts (ADR-792 §5), αλλά με ΔΙΟΡΘΩΜΕΝΗ δικαιολόγηση: το ADR-792 έγραφε ότι «η εξάρτηση src/components → src/subapps/dxf-viewer ΔΕΝ υπάρχει», και αυτό ΜΕΤΡΗΘΗΚΕ ΛΑΘΟΣ (υπάρχει: 163 αρχεία εκτός subapp εισάγουν βαθιά). Ο πραγματικός φραγμός είναι ΙΣΧΥΡΟΤΕΡΟΣ: το ratchet not-to-dxf-internals (baseline 335, DOWN-only) ⇒ κάθε νέα ακμή ΜΠΛΟΚΑΡΕΙ."
     }
   ]
 }

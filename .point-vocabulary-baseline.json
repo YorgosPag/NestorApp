@@ -5,11 +5,16 @@
   "violations": [
     "Point2D@src/core/canvas/primitives/coordinates.ts",
     "Point2D@src/subapps/dxf-viewer/rendering/types/Types.ts",
-    "Point2D@src/types/floorplan-overlays.ts"
+    "Point2D@src/types/floorplan-overlays.ts",
+    "SceneBounds@src/components/shared/files/media/overlay-renderer/types.ts",
+    "SceneBounds@src/lib/dxf-scene/scene-fit-transform.ts",
+    "SceneBounds@src/subapps/dxf-viewer/types/scene-types.ts"
   ],
   "declarations": [
+    "src/components/shared/files/media/overlay-renderer/types.ts#SceneBounds",
     "src/core/canvas/primitives/coordinates.ts#Point2D",
     "src/core/canvas/primitives/coordinates.ts#Vector2D",
+    "src/lib/dxf-scene/scene-fit-transform.ts#SceneBounds",
     "src/subapps/dxf-viewer/bim/types/bim-base.ts#BimPoint",
     "src/subapps/dxf-viewer/bim/types/bim-base.ts#BimPolygon",
     "src/subapps/dxf-viewer/bim/types/bim-base.ts#BimPolyline",
@@ -30,7 +35,10 @@
     "src/subapps/dxf-viewer/types/coordinate-space.ts#MinMaxRect",
     "src/subapps/dxf-viewer/types/coordinate-space.ts#MutableMinMaxRect",
     "src/subapps/dxf-viewer/types/coordinate-space.ts#PlanRectM",
+    "src/subapps/dxf-viewer/types/coordinate-space.ts#PointRect",
+    "src/subapps/dxf-viewer/types/coordinate-space.ts#ScreenRectPx",
     "src/subapps/dxf-viewer/types/coordinate-space.ts#TileRange",
+    "src/subapps/dxf-viewer/types/scene-types.ts#SceneBounds",
     "src/types/floorplan-overlays.ts#Point2D"
   ]
 }
