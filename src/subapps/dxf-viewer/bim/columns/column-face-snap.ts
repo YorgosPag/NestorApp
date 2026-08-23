@@ -50,12 +50,7 @@ import type { Entity } from '../../types/entities';
 import type { ColumnAnchor } from '../types/column-types';
 import type { ColumnGhostStatus } from '../../systems/cursor/ColumnPlacementGhostStatusStore';
 import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
-import {
-  footprintBounds,
-  distanceToFootprintBounds,
-  pickDominantFace,
-  type FootprintBounds,
-} from '../geometry/shared/footprint-face-frame';
+import { footprintBounds, distanceToFootprintBounds, pickDominantFace } from '../geometry/shared/footprint-face-frame';
 import { pickThird, type MemberGhostThird } from '../framing/member-face-third';
 import { MEMBER_GHOST_CAPTURE_MM } from '../framing/member-column-face-snap';
 import {
@@ -91,6 +86,8 @@ import {
   type MemberAxisFrame,
   type ColumnFaceSide,
 } from './column-face-snap-helpers';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ (κάτοψη, canonical mm). Η ΣΥΝΑΡΤΗΣΗ κρατά το «τι» (footprintBounds) — ο ΤΥΠΟΣ κρατά τον χώρο.
+import type { Bbox } from '../../types/coordinate-space';
 
 export type { ColumnFaceSide };
 
@@ -137,7 +134,7 @@ export interface ColumnFaceSnap {
 /** Στόχος: world-aligned bbox + ο άξονας των κοντών άκρων (`null` = κολόνα, καμία άκρη). */
 interface FaceTarget {
   readonly id: string | null;
-  readonly bounds: FootprintBounds;
+  readonly bounds: Bbox;
   /** 'x' = οριζόντιο μέλος (άκρες E/W) · 'y' = κάθετο (άκρες N/S) · null = κολόνα (όλες έγκυρες). */
   readonly endsAxis: 'x' | 'y' | null;
   /**
@@ -258,6 +255,27 @@ function nearestHit(...hits: readonly ({ snap: ColumnFaceSnap; dist: number } | 
  * το preview ghost ΚΑΙ από το commit (ίδιοι στόχοι από το κοινό `sceneSnapTargetsStore` + ίδιος
  * cursor → preview ≡ commit). Pure. `null` όταν κανένας στόχος εντός `MEMBER_GHOST_CAPTURE_MM`.
  */
+/**
+ * Το κοινό `ColumnFaceSnap` των tier που κουμπώνουν **κεντραρισμένα σε δοκάρι**
+ * (L-γωνία ADR-525 · κεφαλή Τ ADR-523). Ήταν γραμμένο **δύο φορές** μέσα σε αυτό
+ * το αρχείο (N.18 / CHECK 3.28) — και τα οκτώ πεδία ήταν ταυτόσημα.
+ *
+ * ⚠️ Τα `anchor`/`status`/`targetId`/`face`/`third` είναι **σταθερά αυτής της
+ * κατηγορίας snap**, όχι προεπιλογές: ένα tier που θα ήθελε άλλη τιμή **δεν
+ * ανήκει εδώ**. Ό,τι διαφέρει (οδηγοί, διαστασιολόγηση) μπαίνει από τον καλούντα
+ * με spread — ώστε η διαφορά να **φαίνεται** στο σημείο κλήσης.
+ */
+function beamCenteredSnap(
+  position: ColumnFaceSnap['position'],
+  rotation: ColumnFaceSnap['rotation'],
+  faceFrame: ColumnFaceSnap['faceFrame'],
+): ColumnFaceSnap {
+  return {
+    position, anchor: 'center', status: 'beam', rotation,
+    targetId: null, face: 'N', third: 'mid', faceFrame,
+  };
+}
+
 export function resolveColumnFaceSnapFromTargets(
   cursor: Readonly<Point2D>,
   t: Readonly<SceneSnapTargets>,
@@ -275,8 +293,7 @@ export function resolveColumnFaceSnapFromTargets(
     const r = resolveColumnBeamCornerSnap(cursor, t.beamTargets, sceneUnits);
     if (!r) return null;
     const snap: ColumnFaceSnap = {
-      position: r.position, anchor: 'center', status: 'beam', rotation: r.rotation,
-      targetId: null, face: 'N', third: 'mid', faceFrame: r.faceFrame,
+      ...beamCenteredSnap(r.position, r.rotation, r.faceFrame),
       alignmentGuide: r.guides, sizing: r.sizing,
     };
     return { snap, dist: r.dist };
@@ -289,10 +306,7 @@ export function resolveColumnFaceSnapFromTargets(
     if (!columnHead) return null;
     const r = resolveColumnHeadReferenceSnap(cursor, t.wallTargets, columnHead, sceneUnits);
     if (!r) return null;
-    const snap: ColumnFaceSnap = {
-      position: r.position, anchor: 'center', status: 'beam', rotation: r.rotation,
-      targetId: null, face: 'N', third: 'mid', faceFrame: r.faceFrame,
-    };
+    const snap: ColumnFaceSnap = beamCenteredSnap(r.position, r.rotation, r.faceFrame);
     return { snap, dist: r.dist };
   })();
   const scaleF = mmToSceneUnits(sceneUnits);

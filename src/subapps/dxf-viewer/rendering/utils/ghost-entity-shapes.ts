@@ -21,6 +21,8 @@ import { addCirclePath } from '../primitives/canvasPaths';
 // 🏢 ADR-080: Centralized Rectangle Bounds
 // 🏢 ADR-577: Centralized point translation SSoT
 import { rectFromTwoPoints, translatePoint } from '../entities/shared/geometry-rendering-utils';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ.
+import type { Bbox } from '../../types/coordinate-space';
 
 // ============================================================================
 // 🏢 ENTERPRISE: Configuration
@@ -72,12 +74,6 @@ export interface GhostRenderOptions {
   scale?: number;
 }
 
-export interface BoundingBox {
-  minX: number;
-  minY: number;
-  maxX: number;
-  maxY: number;
-}
 
 // ============================================================================
 // 🏢 ENTERPRISE: Utility Functions
@@ -87,7 +83,7 @@ export function defaultWorldToScreen(point: Point2D): Point2D {
   return point;
 }
 
-export function getEntityBounds(entity: GhostableEntity): BoundingBox | null {
+export function getEntityBounds(entity: GhostableEntity): Bbox | null {
   switch (entity.type) {
     case 'line':
       if (entity.start && entity.end) {
@@ -157,7 +153,7 @@ export function getEntityBounds(entity: GhostableEntity): BoundingBox | null {
   return null;
 }
 
-export function mergeBounds(boxes: BoundingBox[]): BoundingBox | null {
+export function mergeBounds(boxes: Bbox[]): Bbox | null {
   if (boxes.length === 0) return null;
 
   let minX = boxes[0].minX;
@@ -208,6 +204,19 @@ function renderGhostCircle(
 
   ctx.beginPath();
   addCirclePath(ctx, ghostCenter, screenRadius);
+  paintGhost(ctx, options);
+}
+
+/**
+ * Το βάψιμο του ghost — **γέμισμα και περίγραμμα με τις ίδιες προεπιλογές**,
+ * όποιο κι αν είναι το σχήμα. Ήταν γραμμένο **2 φορές** μέσα σε αυτό το αρχείο
+ * (N.18 / CHECK 3.28): μια αλλαγή στο πάχος ή στη διαφάνεια που ξεχνιόταν σε ένα
+ * σημείο θα ζωγράφιζε **δύο διαφορετικά ghost** στον ίδιο καμβά.
+ *
+ * ⚠️ Δέχεται τη διαδρομή **ήδη χτισμένη** (`beginPath` + σχήμα στον καλούντα):
+ * το σχήμα είναι ό,τι διαφέρει, το βάψιμο ό,τι όχι.
+ */
+function paintGhost(ctx: CanvasRenderingContext2D, options: GhostRenderOptions): void {
   ctx.fillStyle = options.ghostFill ?? GHOST_RENDER_CONFIG.GHOST_FILL;
   ctx.fill();
   ctx.strokeStyle = options.ghostStroke ?? GHOST_RENDER_CONFIG.GHOST_STROKE;
@@ -227,11 +236,7 @@ function renderGhostRectangle(
 
   ctx.beginPath();
   ctx.rect(x, y, width, height);
-  ctx.fillStyle = options.ghostFill ?? GHOST_RENDER_CONFIG.GHOST_FILL;
-  ctx.fill();
-  ctx.strokeStyle = options.ghostStroke ?? GHOST_RENDER_CONFIG.GHOST_STROKE;
-  ctx.lineWidth = options.strokeWidth ?? GHOST_RENDER_CONFIG.GHOST_STROKE_WIDTH;
-  ctx.stroke();
+  paintGhost(ctx, options);
 }
 
 function renderGhostPolyline(
