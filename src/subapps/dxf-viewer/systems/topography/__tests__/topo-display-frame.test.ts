@@ -20,7 +20,7 @@ import { buildContourEntities, type ContourLayerIds } from '../topo-to-entities'
 import { buildSurveyPointLabelEntities, type PointLabelLayerIds } from '../topo-point-labels';
 import { buildTopoGridEntities } from '../topo-grid-entities';
 import { buildNorthArrowEntities } from '../north-arrow-entities';
-import { buildTopoGrid, type WorldRectMm } from '../topo-grid-model';
+import { buildTopoGrid } from '../topo-grid-model';
 import { DEFAULT_CONTOUR_CONFIG } from '../contour-config';
 import {
   getTopoDisplayProjector, projectContourLines, projectWorldPoint, projectWorldPoints,
@@ -32,6 +32,8 @@ import { getGeoReference, setGeoReference } from '../../geo-referencing/geo-refe
 import type { Point2D } from '../../../rendering/types/Types';
 import type { ContourLine, TopoPoint } from '../topo-types';
 import type { TinSampler } from '../tin-sampler';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ. Το όνομα ήταν σωστό (χώρος+μονάδα) — αλλά ο χώρος είναι ο ΙΔΙΟΣ με του Bbox.
+import type { Bbox } from '../../../types/coordinate-space';
 
 // ── Το πραγματικό οικόπεδο της υπόθεσης (ADR-650): origin του αρχείου + κορυφές γύρω του ──────
 const ORIGIN_WORLD = { x: 407_565_290, y: 4_502_055_670 }; // mm — «Ενεργή: 407565.29, 4502055.67 m»
@@ -56,7 +58,7 @@ const POINTS: readonly TopoPoint[] = [
 ];
 const BOUNDARY: readonly Point2D[] = [WORLD_A, WORLD_B, { x: 407_700_000, y: 4_502_350_000 }];
 const RINGS: readonly Point2D[][] = [[WORLD_A, WORLD_B, { x: 407_650_000, y: 4_502_200_000 }]];
-const WORLD_RECT: WorldRectMm = {
+const WORLD_RECT: Bbox = {
   minX: 407_600_000, minY: 4_502_200_000, maxX: 407_800_000, maxY: 4_502_400_000,
 };
 
@@ -215,7 +217,7 @@ describe('ADR-650 §M10f — η ΜΙΑ είσοδος που διαβάζει st
 
 describe('ADR-650 §M10f — unprojectRectToWorld (ο ζωντανός κάναβος ρωτά στο σωστό σύστημα)', () => {
   const projector = makeWorldToDisplayProjector(GEO);
-  const DISPLAY_RECT: WorldRectMm = { minX: -50_000, minY: -50_000, maxX: 200_000, maxY: 400_000 };
+  const DISPLAY_RECT: Bbox = { minX: -50_000, minY: -50_000, maxX: 200_000, maxY: 400_000 };
 
   it('γυρίζει το ορατό ορθογώνιο πίσω σε ΕΓΣΑ, ώστε οι στρογγυλές γραμμές να έχουν νόημα', () => {
     const world = unprojectRectToWorld(DISPLAY_RECT, projector);

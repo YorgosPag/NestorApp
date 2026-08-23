@@ -12,6 +12,8 @@
  */
 
 import type { PointCloudPreview } from '../../../systems/topography/pointcloud/pointcloud-types';
+// ADR-794 — το preview είναι LOCAL mm (το λέει η κεφαλίδα του module): ΕΝΑ όνομα ανά χώρο.
+import type { LocalRectMm } from '../../../types/coordinate-space';
 
 /** Fallback point colour (CSS) when the cloud carries no per-point classification colour. */
 const FALLBACK_POINT_COLOR = '#5fb87a';
@@ -41,15 +43,8 @@ export function drawCloudPreview(canvas: HTMLCanvasElement, preview: PointCloudP
   }
 }
 
-interface PlanarBounds {
-  readonly minX: number;
-  readonly minY: number;
-  readonly maxX: number;
-  readonly maxY: number;
-}
-
 /** Min/max of the LOCAL x/y in the interleaved buffer — the extent the projector maps to pixels. */
-function planarBounds(positions: Float32Array): PlanarBounds {
+function planarBounds(positions: Float32Array): LocalRectMm {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (let i = 0; i < positions.length; i += 3) {
     const x = positions[i];
@@ -63,7 +58,7 @@ function planarBounds(positions: Float32Array): PlanarBounds {
 }
 
 /** LOCAL mm (x, y) → canvas px, uniformly scaled (no axis distortion) and Y-flipped (plan-up). */
-function projector(bounds: PlanarBounds, width: number, height: number): (x: number, y: number) => readonly [number, number] {
+function projector(bounds: LocalRectMm, width: number, height: number): (x: number, y: number) => readonly [number, number] {
   const spanX = Math.max(bounds.maxX - bounds.minX, 1);
   const spanY = Math.max(bounds.maxY - bounds.minY, 1);
   const usableW = width - PADDING_PX * 2;

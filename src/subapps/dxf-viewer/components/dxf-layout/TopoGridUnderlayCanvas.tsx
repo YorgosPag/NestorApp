@@ -28,7 +28,7 @@ import {
   paintOverlayDispatchFrame,
   type OverlayDispatchPainter,
 } from './overlay-dispatch/overlay-dispatch-frame';
-import { buildTopoGrid, pickSurveyGridStepMm, type WorldRectMm } from '../../systems/topography/topo-grid-model';
+import { buildTopoGrid, pickSurveyGridStepMm } from '../../systems/topography/topo-grid-model';
 import { formatGridCoordinate } from '../../systems/topography/topo-grid-entities';
 import {
   getGeoReference, subscribeGeoReference,
@@ -43,6 +43,8 @@ import {
   TOPO_GRID_COLOR, TOPO_GRID_LABEL_COLOR, TOPO_GRID_CROSS_SCREEN_PX, TOPO_GRID_LABEL_FONT,
 } from '../../systems/topography/topo-grid-config';
 import type { ViewTransform } from '../../rendering/types/Types';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ. Το όνομα ήταν σωστό (χώρος+μονάδα) — αλλά ο χώρος είναι ο ΙΔΙΟΣ με του Bbox.
+import type { Bbox } from '../../types/coordinate-space';
 
 export interface TopoGridUnderlayCanvasProps {
   viewport: { width: number; height: number };
@@ -81,7 +83,7 @@ function drawCrosses(
  * στο μέσο της οθόνης — η ΤΙΜΗ μένει σωστή σε κάθε περίπτωση, που είναι το ζητούμενο.
  */
 function drawEdgeLabels(
-  ctx: CanvasRenderingContext2D, world: WorldRectMm, grid: { eastings: readonly number[]; northings: readonly number[] },
+  ctx: CanvasRenderingContext2D, world: Bbox, grid: { eastings: readonly number[]; northings: readonly number[] },
   projector: ReturnType<typeof getTopoDisplayProjector>,
   transform: ViewTransform, viewport: { width: number; height: number },
 ): void {

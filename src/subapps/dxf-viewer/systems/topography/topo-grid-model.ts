@@ -15,14 +15,9 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import { SURVEY_STEP_LADDER_MM, TOPO_GRID_TARGET_SPACING_PX } from './topo-grid-config';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ. Το όνομα ήταν σωστό (χώρος+μονάδα) — αλλά ο χώρος είναι ο ΙΔΙΟΣ με του Bbox.
+import type { Bbox } from '../../types/coordinate-space';
 
-/** A world-space rectangle in canonical mm (min/max on each axis). */
-export interface WorldRectMm {
-  readonly minX: number;
-  readonly minY: number;
-  readonly maxX: number;
-  readonly maxY: number;
-}
 
 /** Which edge a perimeter label sits on (drives its alignment/offset in each consumer). */
 export type GridAxis = 'E' | 'N';
@@ -82,7 +77,7 @@ function roundLinesInRange(min: number, max: number, stepMm: number): number[] {
  * their crossings, and one perimeter label per line (Eastings on the bottom edge, Northings on
  * the left edge — the export edges; the screen consumer re-pins them to the viewport margin).
  */
-export function buildTopoGrid(rect: WorldRectMm, stepMm: number): TopoGridModel {
+export function buildTopoGrid(rect: Bbox, stepMm: number): TopoGridModel {
   const eastings = roundLinesInRange(rect.minX, rect.maxX, stepMm);
   const northings = roundLinesInRange(rect.minY, rect.maxY, stepMm);
 

@@ -3,10 +3,12 @@
  */
 
 import { buildTopoGridEntities, formatGridCoordinate } from '../topo-grid-entities';
-import { buildTopoGrid, type WorldRectMm } from '../topo-grid-model';
+import { buildTopoGrid } from '../topo-grid-model';
 import { TOPO_GRID_LAYER_NAME } from '../topo-grid-config';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ. Το όνομα ήταν σωστό (χώρος+μονάδα) — αλλά ο χώρος είναι ο ΙΔΙΟΣ με του Bbox.
+import type { Bbox } from '../../../types/coordinate-space';
 
-const rect: WorldRectMm = { minX: 130_000, minY: 40_000, maxX: 370_000, maxY: 170_000 };
+const rect: Bbox = { minX: 130_000, minY: 40_000, maxX: 370_000, maxY: 170_000 };
 const STEP = 50_000; // → 5 eastings × 3 northings = 15 crosses, 8 perimeter labels
 const LAYER = 'layer-topo-grid';
 

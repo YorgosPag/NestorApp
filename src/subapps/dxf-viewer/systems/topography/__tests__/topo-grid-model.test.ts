@@ -2,12 +2,10 @@
  * ADR-656 M11 — topo-grid-model pure math tests.
  */
 
-import {
-  buildTopoGrid,
-  pickSurveyGridStepMm,
-  type WorldRectMm,
-} from '../topo-grid-model';
+import { buildTopoGrid, pickSurveyGridStepMm } from '../topo-grid-model';
 import { SURVEY_STEP_LADDER_MM, TOPO_GRID_TARGET_SPACING_PX } from '../topo-grid-config';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ. Το όνομα ήταν σωστό (χώρος+μονάδα) — αλλά ο χώρος είναι ο ΙΔΙΟΣ με του Bbox.
+import type { Bbox } from '../../../types/coordinate-space';
 
 describe('pickSurveyGridStepMm (1-2-5 survey ladder)', () => {
   it('picks the smallest step whose on-screen spacing meets the target', () => {
@@ -30,7 +28,7 @@ describe('pickSurveyGridStepMm (1-2-5 survey ladder)', () => {
 
 describe('buildTopoGrid (round lines within a rectangle)', () => {
   // A 240 m × 130 m plot starting at a non-round corner, step 50 m.
-  const rect: WorldRectMm = { minX: 130_000, minY: 40_000, maxX: 370_000, maxY: 170_000 };
+  const rect: Bbox = { minX: 130_000, minY: 40_000, maxX: 370_000, maxY: 170_000 };
   const STEP = 50_000;
 
   it('includes only round multiples of the step inside the rectangle', () => {

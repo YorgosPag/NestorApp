@@ -16,13 +16,15 @@ import { useLevels } from '../levels';
 import { commitBakedTopoEntities } from './topo-bake-commit';
 import { realDistanceToModelMm } from '../../utils/scene-units';
 import { getTopoPoints } from './TopoPointStore';
-import { buildTopoGrid, type WorldRectMm } from './topo-grid-model';
+import { buildTopoGrid } from './topo-grid-model';
 import { buildTopoGridEntities } from './topo-grid-entities';
 import { getTopoDisplayProjector } from './topo-display-frame';
 import { ensureGridLayer } from './ensure-grid-layers';
 import { getGridDisplayOptions } from './topo-grid-store';
 import type { Entity } from '../../types/entities';
 import type { TopoPoint } from './topo-types';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ. Το όνομα ήταν σωστό (χώρος+μονάδα) — αλλά ο χώρος είναι ο ΙΔΙΟΣ με του Bbox.
+import type { Bbox } from '../../types/coordinate-space';
 
 export interface BakeGridOutcome {
   readonly ok: boolean;
@@ -39,7 +41,7 @@ export interface UseTopoGrid {
 }
 
 /** Bounding box of the survey points in canonical mm, padded outward by one step. */
-function paddedPointsRect(points: readonly TopoPoint[], stepMm: number): WorldRectMm {
+function paddedPointsRect(points: readonly TopoPoint[], stepMm: number): Bbox {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (const p of points) {
     if (p.x < minX) minX = p.x;

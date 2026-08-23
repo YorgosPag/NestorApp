@@ -47,7 +47,8 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { WorldToDisplayProjector } from '../geo-referencing/geo-transform';
 import { getActiveWorldToDisplayProjector } from '../geo-referencing/geo-reference-store';
 import type { ContourLine } from './topo-types';
-import type { WorldRectMm } from './topo-grid-model';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ. Το όνομα ήταν σωστό (χώρος+μονάδα) — αλλά ο χώρος είναι ο ΙΔΙΟΣ με του Bbox.
+import type { Bbox } from '../../types/coordinate-space';
 
 /**
  * Ο ενεργός projector, **κανονικοποιημένος σε `null` όταν είναι identity** — έτσι το fast path
@@ -152,9 +153,9 @@ export function unprojectDisplayPoints(
  * (μερικοί σταυροί εκτός οθόνης, μηδέν κόστος στην πράξη) αντί να κόψει κάναβο που φαίνεται.
  */
 export function unprojectRectToWorld(
-  rect: WorldRectMm,
+  rect: Bbox,
   projector: WorldToDisplayProjector | null,
-): WorldRectMm {
+): Bbox {
   if (!projector) return rect;
   const corners = [
     projector.unproject(rect.minX, rect.minY),
