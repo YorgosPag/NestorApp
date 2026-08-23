@@ -14,7 +14,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createStaleCache } from '@/lib/stale-cache';
 import { useTranslation } from 'react-i18next';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
 import { ShoppingCart, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import type { PurchaseOrder, PurchaseOrderItem } from '@/types/procurement';

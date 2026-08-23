@@ -10,7 +10,7 @@
  */
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
 import { usePurchaseOrders } from '@/hooks/procurement/usePurchaseOrders';
 import { PurchaseOrderList } from '@/components/procurement/PurchaseOrderList';
 import { getPoDetailUrl } from '@/lib/navigation/procurement-urls';

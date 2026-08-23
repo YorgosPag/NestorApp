@@ -6,7 +6,7 @@
  * @see ADR-331 §4 D17
  */
 
-import Link from 'next/link';
+import { Link } from '@/lib/workspace/navigation';
 import { BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n/hooks/useTranslation';

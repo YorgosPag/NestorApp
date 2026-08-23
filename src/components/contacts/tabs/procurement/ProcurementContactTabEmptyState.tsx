@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ShoppingCart, FileText, Send } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
 
 interface ProcurementContactTabEmptyStateProps {
   contactId: string;

@@ -9,7 +9,7 @@
  * provides the canonical return path back to the project tab strip.
  */
 
-import Link from 'next/link';
+import { Link } from '@/lib/workspace/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 

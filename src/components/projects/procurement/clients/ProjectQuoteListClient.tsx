@@ -10,7 +10,7 @@
  * the click target is the standalone review page.
  */
 
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
 import { useQuotes } from '@/subapps/procurement/hooks/useQuotes';
 import { QuoteList } from '@/subapps/procurement/components/QuoteList';
 import { getQuoteDetailUrl } from '@/lib/navigation/procurement-urls';

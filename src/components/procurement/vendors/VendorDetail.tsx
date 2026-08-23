@@ -1,7 +1,7 @@
 ﻿'use client';
 
 import { useMemo, type ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
 import { Building2, ExternalLink, PackageCheck, TrendingUp, DollarSign, Clock } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';

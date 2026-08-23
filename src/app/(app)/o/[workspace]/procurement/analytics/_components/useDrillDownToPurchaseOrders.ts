@@ -37,7 +37,7 @@
  */
 
 import { useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
 import {
   buildPurchaseOrdersUrl,
   readClickedRowKey,

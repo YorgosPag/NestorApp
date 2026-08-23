@@ -7,7 +7,7 @@
  * @see ADR-330 §3 Phase 6
  */
 
-import Link from 'next/link';
+import { Link } from '@/lib/workspace/navigation';
 import type { LucideIcon } from 'lucide-react';
 import { BarChart3, ChevronRight, ShoppingCart, TrendingUp, Truck, Users } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';

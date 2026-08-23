@@ -9,7 +9,7 @@
  */
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export function ProcurementProjectTab({ projectId }: { projectId: string }) {

@@ -1,12 +1,13 @@
 'use client';
 
+import { useRouter } from '@/lib/workspace/navigation';
 /**
  * @module procurement/detail
  * @enterprise ADR-267 §Phase A — Purchase Order Detail / Edit
  * @lazy ADR-294 Batch 3 — Extracted for dynamic import
  */
 
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { useState, useCallback, useEffect } from 'react';
 import { cn } from '@/lib/design-system';
 import { useTypography } from '@/hooks/useTypography';

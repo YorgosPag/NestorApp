@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { AlertTriangle } from 'lucide-react';
 import { useVendorQuotes } from '@/hooks/procurement/useVendorQuotes';

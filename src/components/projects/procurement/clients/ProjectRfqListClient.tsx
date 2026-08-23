@@ -9,7 +9,7 @@
  * SSoT helper (S1).
  */
 
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
 import { useRfqs } from '@/subapps/procurement/hooks/useRfqs';
 import { RfqList } from '@/subapps/procurement/components/RfqList';
 

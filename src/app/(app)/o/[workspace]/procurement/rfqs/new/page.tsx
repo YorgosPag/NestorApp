@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
+import { useSearchParams } from 'next/navigation';
 import { RfqBuilder } from '@/subapps/procurement/components/RfqBuilder';
 import type { RfqBuilderInitialState } from '@/subapps/procurement/components/RfqBuilder';
 import { Spinner } from '@/components/ui/spinner';
