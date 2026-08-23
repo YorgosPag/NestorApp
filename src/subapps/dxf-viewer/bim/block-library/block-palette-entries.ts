@@ -17,7 +17,7 @@
  */
 
 import type {
-  BlockBoundsMm,
+  LocalRectMm,
   BlockCategory,
   BlockLibraryItem,
   BlockLibraryScope,
@@ -37,7 +37,7 @@ export interface BlockPaletteEntry {
   /** Μοναδικό κλειδί λίστας: `blklib_*` id (cloud) ή `session:<name>` (import). */
   readonly key: string;
   readonly name: string;
-  readonly boundsMm: BlockBoundsMm | null;
+  readonly boundsMm: LocalRectMm | null;
   readonly source: 'session' | 'cloud';
   /** Σε ποια βιβλιοθήκη ζει (φίλτρο + badge). */
   readonly scope: BlockPaletteScope;

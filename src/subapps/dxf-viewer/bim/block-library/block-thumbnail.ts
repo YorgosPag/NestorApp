@@ -42,6 +42,10 @@ import {
   type EntityPolyline,
 } from '../../rendering/entities/shared/entity-polylines';
 import type { BlockThumbnailVector } from './block-library-types';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ: το preview ζωγραφίζει τον ΟΡΙΣΜΟ (base στο origin),
+// άρα `local-mm` — ο ΙΔΙΟΣ χώρος με τα `boundsMm`. Ο βρόχος ΜΕΝΕΙ τοπικός: φιλτράρει
+// μη-πεπερασμένες κορυφές, δηλαδή απαντά ΑΛΛΗ ερώτηση από το SSoT.
+import type { LocalRectMm } from '../../types/coordinate-space';
 
 /** Πλευρά του τετράγωνου viewBox του preview (μονάδες μονοπατιού — ΟΧΙ px· το SVG κλιμακώνει). */
 export const BLOCK_THUMBNAIL_VIEWBOX = 100;
@@ -66,15 +70,8 @@ const THUMBNAIL_TESSELLATION = { arcSegmentDeg: 24, splineSegments: 16 } as cons
 /** Ακρίβεια συντεταγμένων στο μονοπάτι: 1 δεκαδικό σε viewBox 100 ⇒ 1/1000 της πλευράς. */
 const DECIMALS = 1;
 
-interface Extent {
-  readonly minX: number;
-  readonly minY: number;
-  readonly maxX: number;
-  readonly maxY: number;
-}
-
 /** Το πλαίσιο ΑΥΤΟΥ που πραγματικά ζωγραφίζεται (όχι των `boundsMm`) — μηδέν κρυφή περικοπή. */
-function polylinesExtent(polylines: readonly EntityPolyline[]): Extent | null {
+function polylinesExtent(polylines: readonly EntityPolyline[]): LocalRectMm | null {
   let minX = Infinity;
   let minY = Infinity;
   let maxX = -Infinity;
@@ -97,7 +94,7 @@ function polylinesExtent(polylines: readonly EntityPolyline[]): Extent | null {
  * Προβολή world → viewBox: ομοιόμορφη κλίμακα (aspect-fit, κεντραρισμένο) + **αναστροφή Y**
  * (CAD Y-πάνω → SVG Y-κάτω). Εκφυλισμένη διάσταση (κάθετη/οριζόντια γραμμή) → κεντράρεται.
  */
-function makeProjector(extent: Extent): (p: Point2D) => Point2D {
+function makeProjector(extent: LocalRectMm): (p: Point2D) => Point2D {
   const inner = BLOCK_THUMBNAIL_VIEWBOX - PADDING * 2;
   const w = extent.maxX - extent.minX;
   const h = extent.maxY - extent.minY;

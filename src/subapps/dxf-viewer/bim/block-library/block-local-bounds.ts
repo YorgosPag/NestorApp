@@ -12,13 +12,13 @@
 
 import type { Entity } from '../../types/entities';
 import { calculateTightBounds, type BoundsEntity } from '../../systems/zoom/utils/bounds-entity';
-import type { BlockBoundsMm } from './block-library-types';
+import type { LocalRectMm } from './block-library-types';
 
 /**
  * Union AABB των BLOCK-LOCAL members σε canonical mm, ή `null` αν δεν υπάρχει μετρήσιμη
  * γεωμετρία. `normalize:false` → δεν μεταλλάσσει τα members.
  */
-export function computeBlockLocalBoundsMm(members: readonly Entity[]): BlockBoundsMm | null {
+export function computeBlockLocalBoundsMm(members: readonly Entity[]): LocalRectMm | null {
   if (members.length === 0) return null;
   const b = calculateTightBounds(members as unknown as BoundsEntity[], false);
   return { minX: b.min.x, minY: b.min.y, maxX: b.max.x, maxY: b.max.y };

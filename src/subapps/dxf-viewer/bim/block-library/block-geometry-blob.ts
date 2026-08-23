@@ -20,7 +20,7 @@
  */
 
 import type { Entity } from '../../types/entities';
-import type { BlockBoundsMm } from './block-library-types';
+import type { LocalRectMm } from './block-library-types';
 
 /** Έκδοση σχήματος blob — bump ΜΟΝΟ σε breaking αλλαγή του entity contract. */
 export const BLOCK_GEOMETRY_BLOB_VERSION = 1;
@@ -29,13 +29,13 @@ export const BLOCK_GEOMETRY_BLOB_VERSION = 1;
 export interface BlockGeometryBlob {
   readonly version: number;
   readonly name: string;
-  readonly boundsMm: BlockBoundsMm;
+  readonly boundsMm: LocalRectMm;
   readonly entities: readonly Entity[];
 }
 
 export interface SerializeBlockGeometryInput {
   readonly name: string;
-  readonly boundsMm: BlockBoundsMm;
+  readonly boundsMm: LocalRectMm;
   readonly localMembers: readonly Entity[];
 }
 

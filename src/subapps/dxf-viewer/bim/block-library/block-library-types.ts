@@ -21,14 +21,12 @@
  */
 
 import type { Entity } from '../../types/entities';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ: το κουτί του ορισμού (base στο origin) είναι ο χώρος
+// `local-mm`, ο ΙΔΙΟΣ που χρησιμοποιεί και το detail sheet της κολόνας και το thumbnail.
+// Ήταν τέσσερα ονόματα για τον ΙΔΙΟ χώρο: `BlockBoundsMm` · `Extent` · `BBox` · (νέο) `LocalRectMm`.
+import type { LocalRectMm } from '../../types/coordinate-space';
+export type { LocalRectMm };
 
-/** Άξονο-ευθυγραμμισμένο bounding box σε canonical mm (για ghost/footprint + palette preview). */
-export interface BlockBoundsMm {
-  readonly minX: number;
-  readonly minY: number;
-  readonly maxX: number;
-  readonly maxY: number;
-}
 
 /**
  * In-session ορισμός block (Milestone 1). `localMembers` είναι σε BLOCK-LOCAL space
@@ -38,7 +36,7 @@ export interface InSessionBlockDef {
   readonly name: string;
   readonly localMembers: readonly Entity[];
   /** null όσο δεν έχει υπολογιστεί ακόμα (footprint υπολογίζεται στο wiring του tool). */
-  readonly boundsMm: BlockBoundsMm | null;
+  readonly boundsMm: LocalRectMm | null;
 }
 
 /**
@@ -129,7 +127,7 @@ export interface BlockLibraryItem {
   readonly labelKey?: string;
   readonly category: BlockCategory;
 
-  readonly boundsMm: BlockBoundsMm;
+  readonly boundsMm: LocalRectMm;
   /** Storage blob με τα serialized BLOCK-LOCAL members. */
   readonly geometryUrl: string;
   /**
@@ -159,7 +157,7 @@ export interface SaveBlockLibraryItemInput {
   readonly scope: Exclude<BlockLibraryScope, 'system'>;
   readonly name: string;
   readonly category: BlockCategory;
-  readonly boundsMm: BlockBoundsMm;
+  readonly boundsMm: LocalRectMm;
   /** BLOCK-LOCAL members — ανεβαίνουν ως blob στο Storage. */
   readonly localMembers: readonly Entity[];
   readonly provenance: BlockProvenance;

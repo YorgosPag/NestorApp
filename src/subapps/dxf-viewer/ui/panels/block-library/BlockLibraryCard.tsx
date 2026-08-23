@@ -19,10 +19,10 @@ import { Cloud, Loader2, Pencil, Save, Share2, Trash2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useTranslation } from '@/i18n';
 import type { BlockPaletteEntry } from '../../../bim/block-library/block-palette-entries';
-import type { BlockBoundsMm } from '../../../bim/block-library/block-library-types';
+import type { LocalRectMm } from '../../../bim/block-library/block-library-types';
 import { BlockThumbnailPreview } from './BlockThumbnailPreview';
 
-function formatDimensions(bounds: BlockBoundsMm | null): string {
+function formatDimensions(bounds: LocalRectMm | null): string {
   if (!bounds) return '';
   const w = Math.round(bounds.maxX - bounds.minX);
   const h = Math.round(bounds.maxY - bounds.minY);

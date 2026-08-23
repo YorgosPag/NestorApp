@@ -20,17 +20,17 @@
 import React from 'react';
 import { BLOCK_THUMBNAIL_VIEWBOX } from '../../../bim/block-library/block-thumbnail';
 import type {
-  BlockBoundsMm,
+  LocalRectMm,
   BlockThumbnailVector,
 } from '../../../bim/block-library/block-library-types';
 
 export interface BlockThumbnailPreviewProps {
   readonly thumbnail: BlockThumbnailVector | null;
-  readonly bounds: BlockBoundsMm | null;
+  readonly bounds: LocalRectMm | null;
 }
 
 /** Αποτύπωμα από τα bounds — ό,τι έδειχνε το palette πριν το M4 (fallback). */
-const FootprintOutline: React.FC<{ bounds: BlockBoundsMm }> = ({ bounds }) => {
+const FootprintOutline: React.FC<{ bounds: LocalRectMm }> = ({ bounds }) => {
   const w = Math.max(bounds.maxX - bounds.minX, 1e-6);
   const h = Math.max(bounds.maxY - bounds.minY, 1e-6);
   return (
