@@ -66,6 +66,14 @@ const TSC_OUTCOME = Object.freeze({
   KILLED: 'killed',
   OUTPUT_TRUNCATED: 'output-truncated',
   NO_DIAGNOSTICS: 'no-diagnostics',
+  /**
+   * Οι τύποι που παράγει το framework λείπουν ⇒ ο μεταγλωττιστής θα έκρινε άλλο
+   * δέντρο από αυτό που στέλνεται. Ξεχωριστή κατάσταση από το `SPAWN_FAILED`
+   * επειδή έχει **άλλη θεραπεία** (`npx next typegen`, όχι «φτιάξε την
+   * εγκατάσταση») — και συγχώνευσή τους είναι ακριβώς η σύγχυση που κόστισε τις
+   * 9 μέρες που περιγράφει η κεφαλίδα. Βλ. `framework-types.js`.
+   */
+  FRAMEWORK_TYPES_MISSING: 'framework-types-missing',
 });
 
 /**
@@ -152,6 +160,13 @@ function outputTail(text, limit = 2000) {
  * the ceiling that was in force plus tsc's own last words.
  */
 function formatTscFailure({ outcome, detail, command, heapMb, status, signal, output, combined }) {
+  // Η απουσία τύπων framework έχει **δικό της** πλήρες μήνυμα (ονομάζει κάθε
+  // αρχείο που λείπει και ΓΙΑΤΙ, και τη μία εντολή που το φτιάχνει). Το τύλιγμά
+  // του σε `why:` θα το έκανε ένα πολυγραμμικό μπλοκ μέσα σε πεδίο μιας γραμμής,
+  // δηλαδή θα έθαβε την ίδια την οδηγία — και τυπώνει ήδη «UNKNOWN» από μόνο του.
+  if (outcome === TSC_OUTCOME.FRAMEWORK_TYPES_MISSING) {
+    return detail || `⚠️  UNKNOWN — λείπουν οι τύποι του framework (${outcome}).`;
+  }
   // `combined` is what runTsc() returns; `output` is the explicit form. Accept
   // BOTH — reading only one of them is how this function would have gone on
   // printing "no output at all" while holding the evidence in the other field,
@@ -174,8 +189,49 @@ function formatTscFailure({ outcome, detail, command, heapMb, status, signal, ou
  * Spawn `tsc` and classify. NEVER throws on a compiler failure — it returns the
  * outcome so the caller decides how to report it. Heavy (a full type-check);
  * CI only per CLAUDE.md N.17.
+ *
+ * ── ΠΡΙΝ ΤΗ ΜΕΤΡΗΣΗ: ΥΠΗΡΧΕ ΤΙ ΝΑ ΔΕΙ; (ADR-787 §5.3 Γ0.5) ──────────────────
+ * Το Next παράγει τύπους που **δεν ζουν στο git** (`next-env.d.ts` και
+ * `<distDir>/types/*`, και τα δύο gitignored). Μετρήθηκε 2026-08-23 ότι **και τα
+ * πέντε** workflows που κρίνουν τύπους κάνουν checkout → install → κρίνουν, χωρίς
+ * κανένα build — δηλαδή έκριναν σε κόσμο όπου **86** αρχεία εισάγουν `.css` με
+ * τύπο που δεν υπάρχει και τα καθολικά `PageProps`/`LayoutProps` λείπουν.
+ * Η εγγύηση ζει **εδώ** και όχι σε πέντε χειρόγραφα βήματα workflow, γιατί πέντε
+ * σημεία είναι λίστα που αποκλίνει — το σχήμα που αυτό το repo έχει πληρώσει
+ * μετρημένα τέσσερις φορές (CHECK 3.34 · 3.37 · 3.49 · 3.57).
+ * ⚠️ Απουσία τύπων είναι **UNKNOWN**, ποτέ «0 σφάλματα»: γι' αυτό επιστρέφεται ως
+ * `outcome` και δεν αφήνεται στο `tsc` να τη μεταφράσει σε TS2307 × 86.
+ *
+ * `frameworkTypes` παραμετροποιεί **μόνο** αυτή την εγγύηση:
+ *   `{ projectRoot }` — ποιο δέντρο ελέγχεται· `{ generate: false }` — μη
+ *   παράγεις, απλώς πες μου· `skipFrameworkTypes: true` — καθόλου εγγύηση.
+ * ⚠️ Υπάρχει ώστε οι άγκυρες να **ΕΚΤΕΛΟΥΝ** αυτόν τον κλάδο αντί να ψάχνουν τη
+ * λέξη στην πηγή: μια μετάλλαξη `if (!skip)` → `if (false)` αφήνει κάθε λέξη στη
+ * θέση της και ένα κειμενικό test μένει **πράσινο πάνω στο ελάττωμα** (πιάστηκε
+ * ζωντανά, μετάλλαξη `Μ6`, 2026-08-23 — ίδιο σχήμα με τη `Μ6` του CHECK 3.8).
  */
-function runTsc({ args, cwd = PROJECT_ROOT, heapMb = resolveHeapMb(), maxBufferMb = 128 }) {
+function runTsc({
+  args, cwd = PROJECT_ROOT, heapMb = resolveHeapMb(), maxBufferMb = 128,
+  skipFrameworkTypes = false, frameworkTypes = {},
+}) {
+  if (!skipFrameworkTypes) {
+    const ft = require('./framework-types');
+    const types = ft.ensureFrameworkTypesSync({ projectRoot: PROJECT_ROOT, ...frameworkTypes });
+    if (!ft.isUsable(types.state)) {
+      return {
+        outcome: TSC_OUTCOME.FRAMEWORK_TYPES_MISSING,
+        detail: ft.formatFrameworkTypesFailure(types),
+        frameworkTypes: types,
+        heapMb,
+        command: `npx tsc ${args.join(' ')}`,
+        status: undefined,
+        signal: null,
+        stdout: '',
+        stderr: '',
+        combined: '',
+      };
+    }
+  }
   const result = spawnSync('npx', ['tsc', ...args], {
     cwd,
     encoding: 'utf8',

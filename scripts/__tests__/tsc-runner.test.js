@@ -48,11 +48,18 @@ describe('Μ0 — ζωντανή αγκύρωση', () => {
     expect(mb).toBeLessThanOrEqual(tsc.CI_TSC_HEAP_MB);
   });
 
-  test('οι έξι καταστάσεις είναι παγωμένες και μοναδικές', () => {
+  // ⚠️ 6 → 7 στις 2026-08-23 (ADR-787 §5.3 Γ0.5): προστέθηκε το
+  // `FRAMEWORK_TYPES_MISSING`. Ο αριθμός ΔΕΝ είναι διακοσμητικός — αυτή η άγκυρα
+  // υπάρχει για να μη γλιστρήσει νέα κατάσταση χωρίς να τη δει άνθρωπος, και
+  // έκανε ακριβώς αυτό. Κάθε επόμενη αλλαγή οφείλει να γράψει ΕΔΩ τον λόγο της.
+  test('οι επτά καταστάσεις είναι παγωμένες και μοναδικές', () => {
     const values = Object.values(TSC_OUTCOME);
-    expect(values).toHaveLength(6);
-    expect(new Set(values).size).toBe(6);
+    expect(values).toHaveLength(7);
+    expect(new Set(values).size).toBe(7);
     expect(Object.isFrozen(TSC_OUTCOME)).toBe(true);
+    // Ονομαστικά, ώστε μια ΑΝΤΑΛΛΑΓΗ (σβήνω μία, προσθέτω άλλη — 7 → 7) να μη
+    // περνά αθόρυβα· το πλήθος μόνο του δεν είναι ταυτότητα (ADR-749).
+    expect(values).toContain('framework-types-missing');
   });
 
   test('το committed budget δηλώνει heapWarnPct', () => {

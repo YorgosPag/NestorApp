@@ -67,7 +67,21 @@ function parseTypeCoverageOutput(stdout) {
 // Heavy — runs the TS compiler API. CI only (N.17). --strict counts function
 // arguments/generics strictly; --ignore-catch excludes unavoidable `catch (e)`
 // bindings from the denominator.
+//
+// ⚠️ ΠΡΙΝ ΤΗ ΜΕΤΡΗΣΗ: ΥΠΗΡΧΕ ΤΙ ΝΑ ΔΕΙ; (ADR-787 §5.3 Γ0.5, 2026-08-23)
+// Αυτή η πύλη οδηγεί το TS compiler API, άρα πάσχει από την ΙΔΙΑ βλάβη με τις
+// τρεις πύλες που περνούν από το `tsc-runner.js`: το workflow κάνει checkout →
+// install → μετρά, χωρίς build, οπότε λείπουν οι τύποι που παράγει το Next.
+// Εδώ όμως η βλάβη είναι ΧΕΙΡΟΤΕΡΗ, γιατί δεν σκάει — **μετράει**: τα 86 αρχεία
+// που εισάγουν `.css` γίνονται `any` και ο παρονομαστής μολύνεται σιωπηλά.
+// Ένα ποσοστό που έπεσε επειδή λείπουν οι τύποι διαβάζεται ως «χειροτέρεψε ο
+// κώδικας». Βλ. `scripts/lib/framework-types.js`.
 function measure() {
+  const ft = require('./lib/framework-types');
+  const types = ft.ensureFrameworkTypesSync({ projectRoot: PROJECT_ROOT });
+  if (!ft.isUsable(types.state)) {
+    throw new Error('\n' + ft.formatFrameworkTypesFailure(types));
+  }
   const result = spawnSync('npx', ['type-coverage', '--strict', '--ignore-catch'], {
     cwd: PROJECT_ROOT,
     encoding: 'utf8',

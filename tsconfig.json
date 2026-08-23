@@ -18,21 +18,18 @@
       }
     ]
   },
+  "_comment_build_types": "ADR-787 §5.3 — ΜΙΑ αυθεντία τύπων build: ο ΚΑΝΟΝΙΚΟΣ κατάλογος `.next`. Οι εφήμεροι `.next-*` (ένας ανά dev θύρα, βλ. NEXT_DIST_DIR στο next.config.js) σβήνονται στο exclude, ΚΑΙ ΑΥΤΟ ΕΙΝΑΙ ΜΗΧΑΝΙΣΜΟΣ, ΟΧΙ ΤΑΞΗ: το `next dev|build|typegen` ΞΑΝΑΓΡΑΦΕΙ ΜΟΝΟ ΤΟΥ το include ('reconfigured your tsconfig.json for you') κάθε φορά που τρέχει με άλλο distDir — έτσι μπήκαν οι 3 μπαγιάτικες εγγραφές που κάποιος μετά κομμιτάρισε. Με το exclude να τους σβήνει, η επόμενη αυτόματη εγγραφή είναι ΑΒΛΑΒΗΣ. Μετρημένο 2026-08-23: οι εφήμεροι έδιναν 1.152 αρχεία στο πρόγραμμα, από τα οποία 219 εισήγαν από σελίδες που μετακινήθηκαν στο /o/[workspace] ⇒ ψευδή σφάλματα τοπικά που το CI ΔΕΝ βλέπει (εκεί δεν υπάρχει κανένας κατάλογος build). Φρουρός: CHECK 3.61.",
   "include": [
-    ".next-*/types/**/*.ts",
-    ".next-oracle/types/**/*.ts",
     ".next/types/**/*.ts",
     "next-env.d.ts",
     "src/**/*.d.ts",
     "src/app/**/*.ts",
     "src/app/**/*.tsx",
-    "src/middleware.ts",
-    ".next-3100/types/**/*.ts"
+    "src/middleware.ts"
   ],
   "exclude": [
     "node_modules",
-    ".next",
-    "-.next",
+    ".next-*",
     "functions/**",
     "src/**/*.test.ts",
     "src/**/*.test.tsx",
