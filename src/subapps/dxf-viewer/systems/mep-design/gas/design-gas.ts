@@ -31,7 +31,8 @@ import { resolveGasSource, type GasSource } from './gas-source-resolve';
 import { type RouteTarget } from '../routing/orthogonal-router';
 import { routeWallAware } from '../routing/route-wall-aware';
 import { wallObstacles } from '../routing/wall-obstacles';
-import type { Rect2D } from '../routing/routing-constants';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ. Το σχόλιο ομολογούσε «Field names mirror core/spatial SpatialBounds so an obstacle can be fed to the shared spatial index verbatim».
+import type { Bbox } from '../../../types/coordinate-space';
 
 /** Build one service's proposed fuel network (route + size) rooted at the meter outlet. */
 function buildNetwork(
@@ -39,7 +40,7 @@ function buildNetwork(
   source: GasSource,
   demands: readonly TerminalGasDemand[],
   discipline: GasDiscipline,
-  obstacles: readonly Rect2D[],
+  obstacles: readonly Bbox[],
 ): ProposedFuelNetwork {
   const classification = GAS_SERVICE_CLASSIFICATION[service];
   // Gas flow is the cumulative-sum driver (the router's `loadingUnits` is a flow proxy).
