@@ -22,19 +22,17 @@ import { resolveActiveSlabReinforcementForEntity } from '../active-reinforcement
 import { coveredIntervals, type Pt2 } from '../../geometry/shared/segment-polygon-coverage';
 import { projectVerticesTo2D } from '../../geometry/shared/polygon-utils';
 import type { RebarPlanGeometry, RebarPlanPath } from './rebar-plan-geometry-types';
+// ADR-794 — το ορθογώνιο κάτοψης και ο βρόχος του ζουν ΜΙΑ φορά (ADR-583/CHECK 3.28).
+import { bboxOf, type Bbox } from '../../geometry/shared/xy-bounds';
+import type { PlanarPoint } from '../../types/bim-base';
 
-interface Bbox { readonly minX: number; readonly minY: number; readonly maxX: number; readonly maxY: number }
-
-function outlineBbox(verts: readonly { x: number; y: number }[]): Bbox | null {
+/**
+ * Το κουτί του outline, ή `null` σε εκφυλισμένο πολύγωνο (<3 κορυφές). Ο **βρόχος**
+ * ζει στο SSoT· εδώ μένει μόνο ο **φρουρός εκφυλισμού** (ADR-794).
+ */
+function outlineBbox(verts: readonly PlanarPoint[]): Bbox | null {
   if (verts.length < 3) return null;
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (const v of verts) {
-    if (v.x < minX) minX = v.x;
-    if (v.x > maxX) maxX = v.x;
-    if (v.y < minY) minY = v.y;
-    if (v.y > maxY) maxY = v.y;
-  }
-  return { minX, minY, maxX, maxY };
+  return bboxOf(verts);
 }
 
 const lerp = (a: Pt2, b: Pt2, t: number): Point2D => ({ x: a.x + t * (b.x - a.x), y: a.y + t * (b.y - a.y) });

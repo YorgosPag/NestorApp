@@ -20,6 +20,10 @@ import * as THREE from 'three';
 import type { SlabEntity } from '../../bim/types/slab-types';
 import type { RebarMesh } from '../../bim/structural/reinforcement/slab-foundation-reinforcement-types';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
+// ADR-794 — ΕΝΑΣ βρόχος για όλους τους χώρους· ο χώρος δηλώνεται ρητά.
+import { bboxOf } from '../../bim/geometry/shared/xy-bounds';
+import type { PlanRectM } from '../../types/coordinate-space';
+import type { PlanarPoint } from '../../bim/types/bim-base';
 import { scalePoints } from '../../rendering/entities/shared/geometry-vector-utils';
 import { resolveActiveSlabReinforcementForEntity } from '../../bim/structural/active-reinforcement';
 import { stampBimIdentity } from './bim-three-shape-helpers';
@@ -31,24 +35,18 @@ import {
   type Seg,
 } from './rebar-3d-shared';
 
-/** Axis-aligned bbox σε absolute world-metre plan coords. */
-interface Bbox {
-  readonly minX: number;
-  readonly minY: number;
-  readonly maxX: number;
-  readonly maxY: number;
-}
-
-function bboxOf(verts: readonly { x: number; y: number }[]): Bbox | null {
+/**
+ * Το κουτί του outline σε **ΑΠΟΛΥΤΑ ΜΕΤΡΑ** κάτοψης, ή `null` σε εκφυλισμένο πολύγωνο.
+ *
+ * 🔴 Ο **ίδιος** βρόχος με το SSoT — αλλά ο **χώρος δηλώνεται** (`plan-m`), γιατί ο
+ * ρητά «mirror» αδελφός `rebar-segments-3d-grid.ts` τρέχει τον ίδιο υπολογισμό σε
+ * **scene units**. Πριν το ADR-794 και οι δύο δήλωναν τον ίδιο ανώνυμο τοπικό τύπο και
+ * **κανένα εργαλείο δεν μπορούσε να τους ξεχωρίσει** — η ίδια κατηγορία με το σφάλμα
+ * 1000× του ADR-793.
+ */
+function outlineRectM(verts: readonly PlanarPoint[]): PlanRectM | null {
   if (verts.length < 3) return null;
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (const v of verts) {
-    if (v.x < minX) minX = v.x;
-    if (v.x > maxX) maxX = v.x;
-    if (v.y < minY) minY = v.y;
-    if (v.y > maxY) maxY = v.y;
-  }
-  return { minX, minY, maxX, maxY };
+  return bboxOf<'plan-m'>(verts);
 }
 
 function radiusOf(diameterMm: number): number {
@@ -59,7 +57,7 @@ function radiusOf(diameterMm: number): number {
  * Οριζόντιες ράβδοι σε στάθμη `yLevel` εντός του bbox − cover, βήμα `spacingM`.
  * `dir='x'`: ράβδοι // X (σταθερό plan-Y), βήμα κατά Y· `dir='y'`: το κατοπτρικό.
  */
-function bboxBars(bb: Bbox, yLevel: number, spacingM: number, coverM: number, dir: 'x' | 'y'): Seg[] {
+function bboxBars(bb: PlanRectM, yLevel: number, spacingM: number, coverM: number, dir: 'x' | 'y'): Seg[] {
   const x0 = bb.minX + coverM, x1 = bb.maxX - coverM;
   const y0 = bb.minY + coverM, y1 = bb.maxY - coverM;
   if (x1 <= x0 || y1 <= y0 || spacingM <= 0) return [];
@@ -77,7 +75,7 @@ function bboxBars(bb: Bbox, yLevel: number, spacingM: number, coverM: number, di
 }
 
 /** Μία δι-διευθυντική σχάρα (X+Y) σε στάθμη `yLevel`. */
-function addMesh(group: THREE.Group, bb: Bbox, yLevel: number, meshX: RebarMesh, meshY: RebarMesh, coverM: number): void {
+function addMesh(group: THREE.Group, bb: PlanRectM, yLevel: number, meshX: RebarMesh, meshY: RebarMesh, coverM: number): void {
   addRods(group, bboxBars(bb, yLevel, meshX.spacingMm * MM_TO_M, coverM, 'x'), radiusOf(meshX.diameterMm));
   addRods(group, bboxBars(bb, yLevel, meshY.spacingMm * MM_TO_M, coverM, 'y'), radiusOf(meshY.diameterMm));
 }
@@ -96,7 +94,7 @@ export function buildSlabRebarCage(
   if (!r) return null;
   const sceneToM = sceneUnitsToMeters(slab.params.sceneUnits ?? 'mm');
   const verts = scalePoints(slab.params.outline.vertices, sceneToM);
-  const bb = bboxOf(verts);
+  const bb = outlineRectM(verts);
   if (!bb) return null;
   const cover = r.coverMm * MM_TO_M;
   const thicknessM = Math.max(0, slab.params.thickness) * MM_TO_M;

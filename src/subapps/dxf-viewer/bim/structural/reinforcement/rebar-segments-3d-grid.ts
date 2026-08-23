@@ -26,6 +26,9 @@ import { DEFAULT_STIRRUP_TYPE } from './beam-reinforcement-types';
 import { tieBeamRebarLayout, tieBeamAxisPoints } from './tie-beam-linear-member';
 import { collectLinearMemberRebarSegments3D } from './rebar-segments-3d-linear';
 import type { RebarSeg3D, RebarPoint3D } from './rebar-plan-geometry-types';
+// ADR-794 — το ορθογώνιο κάτοψης και ο βρόχος του ζουν ΜΙΑ φορά (ADR-583/CHECK 3.28).
+import { bboxOf, type Bbox } from '../../geometry/shared/xy-bounds';
+import type { PlanarPoint } from '../../types/bim-base';
 
 const pt = (p: Point2D, zMm: number): RebarPoint3D => ({ x: p.x, y: p.y, zMm });
 
@@ -142,17 +145,17 @@ export function collectFootingRebarSegments3D(foundation: FoundationEntity): Reb
 }
 
 // ── Slab (bbox-based, mirror slab-rebar-3d) ────────────────────────────────────
-interface Bbox { minX: number; minY: number; maxX: number; maxY: number }
-function bboxOf(verts: readonly { x: number; y: number }[]): Bbox | null {
+/**
+ * Το κουτί του outline, ή `null` σε εκφυλισμένο πολύγωνο (<3 κορυφές). Ο **βρόχος**
+ * ζει στο SSoT· εδώ μένει μόνο ο **φρουρός εκφυλισμού**, που είναι η ερώτηση αυτού
+ * του module (ADR-794).
+ *
+ * ⚠️ Οι κορυφές είναι σε **scene units** (`plan-mm`) — ο 3Δ δίδυμος `slab-rebar-3d`
+ * τρέχει τον ΙΔΙΟ βρόχο σε **ΜΕΤΡΑ**. Ο τύπος πλέον το λέει· πριν ήταν **αόρατο**.
+ */
+function outlineBboxOrNull(verts: readonly PlanarPoint[]): Bbox | null {
   if (verts.length < 3) return null;
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (const v of verts) {
-    if (v.x < minX) minX = v.x;
-    if (v.x > maxX) maxX = v.x;
-    if (v.y < minY) minY = v.y;
-    if (v.y > maxY) maxY = v.y;
-  }
-  return { minX, minY, maxX, maxY };
+  return bboxOf(verts);
 }
 
 function slabMesh(bb: Bbox, zMm: number, meshX: RebarMesh, meshY: RebarMesh, cover: number, s: number, out: RebarSeg3D[]): void {
@@ -169,7 +172,7 @@ function slabMesh(bb: Bbox, zMm: number, meshX: RebarMesh, meshY: RebarMesh, cov
 export function collectSlabRebarSegments3D(slab: SlabEntity): RebarSeg3D[] {
   const r = resolveActiveSlabReinforcementForEntity(slab);
   if (!r) return [];
-  const bb = bboxOf(slab.params.outline.vertices);
+  const bb = outlineBboxOrNull(slab.params.outline.vertices);
   if (!bb) return [];
   const s = mmToSceneUnits(slab.params.sceneUnits ?? 'mm');
   if (s <= 0) return [];
