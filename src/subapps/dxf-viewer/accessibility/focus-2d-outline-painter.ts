@@ -14,18 +14,14 @@
 import type { ViewTransform, Viewport } from '../rendering/types/Types';
 import { CoordinateTransforms } from '../rendering/core/CoordinateTransforms';
 import { BIM_FOCUS_OUTLINE_COLOR_CSS } from './bim-a11y-color-tokens';
+// ADR-794 — ΕΝΑ όνομα για το ορθογώνιο κάτοψης. Η είσοδος είναι ΚΟΣΜΟΣ (η προβολή σε
+// οθόνη γίνεται μέσα στον ζωγράφο) — μετρημένο, όχι υποτιθέμενο.
+import type { Bbox } from '../types/coordinate-space';
 
 const FOCUS_OUTLINE_COLOR = BIM_FOCUS_OUTLINE_COLOR_CSS;
 const FOCUS_OUTLINE_LINE_WIDTH = 1.5;
 const FOCUS_OUTLINE_DASH: readonly [number, number] = [6, 4];
 const FOCUS_OUTLINE_PADDING_PX = 4;
-
-export interface Focus2DOutlineBBox {
-  readonly minX: number;
-  readonly minY: number;
-  readonly maxX: number;
-  readonly maxY: number;
-}
 
 // ADR-732 Batch 3 — το `clearFocus2DOverlay` ΔΙΑΓΡΑΦΗΚΕ: ο inactive-teardown που το καλούσε
 // καταργήθηκε (το inner canvas κάνει unmount μαζί με το focus — δεν υπάρχει τι να καθαρίσει).
@@ -33,7 +29,7 @@ export interface Focus2DOutlineBBox {
 /** Paint a dashed cyan rectangle around the bbox. World coords → screen via transform. */
 export function paintFocus2DOutline(
   canvas: HTMLCanvasElement,
-  bbox: Focus2DOutlineBBox,
+  bbox: Bbox,
   transform: ViewTransform,
   viewport: Viewport,
 ): void {

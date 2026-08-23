@@ -24,11 +24,12 @@
  */
 
 import type { Point2D } from '../../../rendering/types/Types';
-import type { BoundingBox2D } from '../../../rendering/hitTesting/entity-bounds-ssot';
 // ADR-650 §M10e boy-scout — `median`/`mad` were private twins here (and a third in
 // `bim-3d/performance/baseline-tracker`). One SSoT; both sort internally, so callers no
 // longer pre-sort.
 import { median, mad } from '../../../utils/statistics';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ. Αυτό το module δηλώνει τον εαυτό του «canonical bounds SSoT» — και ΞΑΝΑΔΗΛΩΝΕ το σχήμα αντί να το εισάγει.
+import type { Bbox } from '../../../types/coordinate-space';
 
 /** An entity is an outlier when its center is > this many MADs from the median. */
 const MAD_K = 12;
@@ -54,7 +55,7 @@ export interface RobustBoundsResult {
   dropped: number;
 }
 
-function unionOf(boxes: BoundingBox2D[]): { min: Point2D; max: Point2D } | null {
+function unionOf(boxes: Bbox[]): { min: Point2D; max: Point2D } | null {
   if (boxes.length === 0) return null;
   let miX = Infinity, miY = Infinity, maX = -Infinity, maY = -Infinity;
   for (const b of boxes) {
@@ -75,7 +76,7 @@ function diagonal(b: { min: Point2D; max: Point2D }): number {
  * unless a tiny minority of provably-far flyaways can be dropped (both gates hold),
  * in which case it returns the tightened bounds + the dropped count.
  */
-export function computeRobustBounds(boxes: BoundingBox2D[]): RobustBoundsResult {
+export function computeRobustBounds(boxes: Bbox[]): RobustBoundsResult {
   const full = unionOf(boxes);
   if (!full || boxes.length < 8) return { bounds: full, dropped: 0 };
 
@@ -94,7 +95,7 @@ export function computeRobustBounds(boxes: BoundingBox2D[]): RobustBoundsResult 
   const thrX = madX > 0 ? MAD_K * madX : Infinity;
   const thrY = madY > 0 ? MAD_K * madY : Infinity;
 
-  const kept: BoundingBox2D[] = [];
+  const kept: Bbox[] = [];
   let dropped = 0;
   for (let i = 0; i < boxes.length; i++) {
     const isOutlier = Math.abs(cxs[i] - medX) > thrX || Math.abs(cys[i] - medY) > thrY;

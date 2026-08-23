@@ -22,16 +22,11 @@ import type { DimGeometry } from './dim-geometry-builder';
 // ADR-746 — ο ΕΝΑΣ αναγνώστης των defPoints (parse-at-the-boundary + legacy repair +
 // φίλτρο μη-πεπερασμένων). Αντικαθιστά το ωμό `[...dim.defPoints]` που έριχνε ΟΛΟ το raster.
 import { resolveDimDefPoints, isFiniteDimPoint } from './dimension-def-points';
-
-export interface DimWorldBounds {
-  minX: number;
-  minY: number;
-  maxX: number;
-  maxY: number;
-}
+// ADR-794 — ΕΝΑ όνομα για το ορθογώνιο κάτοψης.
+import type { Bbox } from '../../../types/coordinate-space';
 
 /** AABB over a point list; `null` for an empty list. */
-function aabbOf(points: readonly Point2D[]): DimWorldBounds | null {
+function aabbOf(points: readonly Point2D[]): Bbox | null {
   if (points.length === 0) return null;
   let minX = points[0].x, minY = points[0].y, maxX = points[0].x, maxY = points[0].y;
   for (let i = 1; i < points.length; i++) {
@@ -84,7 +79,7 @@ function collectGeometryPoints(g: DimGeometry, out: Point2D[]): void {
  * διορθώσει εδώ — γι' αυτό ο άλλος (viewport culling) έμεινε εκτεθειμένος. Τώρα η υπόσχεση
  * επιβάλλεται στην πηγή, μέσω του `resolveDimDefPoints` SSoT, και οι φύλακες των call sites φεύγουν.
  */
-export function getDimensionWorldBounds(dim: DimensionEntity): DimWorldBounds | null {
+export function getDimensionWorldBounds(dim: DimensionEntity): Bbox | null {
   const pts: Point2D[] = [...resolveDimDefPoints(dim).points];
   // `isFiniteDimPoint`: ένα NaN `textMidpoint` δηλητηριάζει όλο το AABB (Math.min/max → NaN)
   // → το κουτί γίνεται μη-πεπερασμένο και το culling απαντά σιωπηλά λάθος (ADR-510 Φ5).

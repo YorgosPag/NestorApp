@@ -6,10 +6,11 @@
  */
 
 import { computeRobustBounds } from '../robust-bounds';
-import type { BoundingBox2D } from '../../../../rendering/hitTesting/entity-bounds-ssot';
+// ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ. Αυτό το module δηλώνει τον εαυτό του «canonical bounds SSoT» — και ΞΑΝΑΔΗΛΩΝΕ το σχήμα αντί να το εισάγει.
+import type { Bbox } from '../../../../types/coordinate-space';
 
 /** A tiny box centered at (cx, cy). */
-const box = (cx: number, cy: number, s = 1): BoundingBox2D => ({
+const box = (cx: number, cy: number, s = 1): Bbox => ({
   minX: cx - s, minY: cy - s, maxX: cx + s, maxY: cy + s,
 });
 
@@ -26,7 +27,7 @@ describe('computeRobustBounds', () => {
   });
 
   it('REAL SCENARIO — dense 74m cluster + 7 flyaways at ~8.5km → drops the flyaways', () => {
-    const cluster: BoundingBox2D[] = [];
+    const cluster: Bbox[] = [];
     // 200 entities packed in a ~74m × 40m plan around (17.14M, 4.19M) — the real drawing.
     for (let i = 0; i < 200; i++) {
       cluster.push(box(17_140_000 + (i % 20) * 3700, 4_190_000 + Math.floor(i / 20) * 4000, 500));
@@ -46,7 +47,7 @@ describe('computeRobustBounds', () => {
   });
 
   it('LEGIT wide drawing — uniform spread over 500m → keeps full union (0 dropped)', () => {
-    const boxes: BoundingBox2D[] = [];
+    const boxes: Bbox[] = [];
     for (let i = 0; i < 400; i++) {
       // evenly spread, no lone flyaway — a real site plan
       boxes.push(box((i * 1250) % 500_000, ((i * 3300) % 500_000), 100));
@@ -56,7 +57,7 @@ describe('computeRobustBounds', () => {
   });
 
   it('flyaways too many (>10%) → treated as legit spread, full union kept', () => {
-    const boxes: BoundingBox2D[] = [];
+    const boxes: Bbox[] = [];
     for (let i = 0; i < 80; i++) boxes.push(box(1000 + i, 1000 + i, 5));   // 80 near
     for (let i = 0; i < 20; i++) boxes.push(box(50_000_000 + i, 50_000_000 + i, 5)); // 20% far
     const r = computeRobustBounds(boxes);
@@ -66,7 +67,7 @@ describe('computeRobustBounds', () => {
   it('far entity but small shrink → keeps full (shrink gate blocks over-eager crop)', () => {
     // A tight cluster plus ONE point ~2× the cluster diagonal away: dropping it barely
     // shrinks the box, so the shrink-ratio gate keeps the honest full extents.
-    const boxes: BoundingBox2D[] = [];
+    const boxes: Bbox[] = [];
     for (let i = 0; i < 50; i++) boxes.push(box(1000 + i * 10, 1000, 5));
     boxes.push(box(2000, 1000, 5)); // near the cluster edge, not a km-scale flyaway
     const r = computeRobustBounds(boxes);
@@ -78,7 +79,7 @@ describe('computeRobustBounds', () => {
     // HATCH (bigger than the block, only ~11 units away) is a statistical + minority outlier
     // but dropping it shrinks the box only ~9× — NOT a sub-pixel-dot flyaway. It must stay in
     // the fit extents (else «φαίνεται μόνο το μπλοκ»). Locks MIN_SHRINK_RATIO (was 4 → cropped).
-    const boxes: BoundingBox2D[] = [];
+    const boxes: Bbox[] = [];
     for (let i = 0; i < 28; i++) {
       boxes.push(box(3201.85 + (i % 4) * 0.3, 1459.7 + Math.floor(i / 4) * 0.1, 0.4));
     }
