@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, type ElementType } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
 import { Building2, Calculator, Briefcase, Scale, Check } from 'lucide-react';
 import { useAuth } from '@/auth';
 import { useTranslation } from '@/i18n';

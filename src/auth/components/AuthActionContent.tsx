@@ -45,7 +45,8 @@
 // =============================================================================
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
+import { useSearchParams } from 'next/navigation';
 import {
   applyActionCode,
   confirmPasswordReset,

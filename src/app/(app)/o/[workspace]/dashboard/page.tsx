@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
 import { useAuth } from '@/auth';
 import { useTranslation } from '@/i18n';
 import { DashboardHome } from '@/components/dashboard/DashboardHome';

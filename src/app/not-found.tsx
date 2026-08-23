@@ -17,7 +17,7 @@
  * @enterprise ADR-024 - Zero Hardcoded Values
  */
 
-import Link from 'next/link';
+import { Link } from '@/lib/workspace/navigation';
 import { Button } from '@/components/ui/button';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { useTypography } from '@/hooks/useTypography';

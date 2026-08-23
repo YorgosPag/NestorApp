@@ -6,7 +6,7 @@
 'use client';
 
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
-import Link from 'next/link';
+import { Link } from '@/lib/workspace/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageContainer } from '@/core/containers';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';

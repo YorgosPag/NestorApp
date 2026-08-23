@@ -35,8 +35,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { Link, useRouter } from '@/lib/workspace/navigation';
 import { ShieldCheck, LogOut, RefreshCw, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/auth';
 import { useTranslation } from '@/i18n';

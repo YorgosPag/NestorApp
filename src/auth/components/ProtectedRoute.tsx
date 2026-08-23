@@ -8,8 +8,7 @@
 // Redirects unauthenticated users to login page
 //
 // =============================================================================
-
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
 import { useEffect } from 'react';
 import { useUserRole } from '../contexts/UserRoleContext';
 import { Spinner } from '@/components/ui/spinner';
