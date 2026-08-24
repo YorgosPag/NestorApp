@@ -434,6 +434,23 @@ describe('η διάταξη κουβαλά τα τμήματα — καμία έ
     expect(heavy?.advanceMm).toBeCloseTo(plain?.advanceMm as number, 10);
   });
 
+  // ── ADR-799: το ΟΡΓΑΝΟ, όχι μόνο ο αριθμός ──────────────────────────────
+  it('🔴 ΚΑΙ ΤΑ ΔΥΟ σκέλη μετριούνται στη ΒΑΘΜΙΔΑ ΠΕΡΙΓΡΑΜΜΑΤΩΝ — αλλιώς η σύγκριση είναι άκυρη', () => {
+    // Χωρίς αυτό, οι τρεις ισχυρισμοί από πάνω μπορούν να γίνουν πράσινοι συγκρίνοντας
+    // **opentype με μονοδιάστημη**: δύο διαφορετικά όργανα δίνουν διαφορετικό αριθμό, οπότε
+    // κάθε `toBeGreaterThan` περνά — για λόγο που δεν έχει σχέση με το αν η διάταξη προώθησε
+    // ποτέ το στυλ. Η άγκυρα απαιτεί **το ίδιο** όργανο και στα δύο σκέλη.
+    const plain = measureTextAdvanceVerdict('ΠΕΡΙΓΡΑΦΗ', HEIGHT_MM, { bold: false });
+    const bold = measureTextAdvanceVerdict('ΠΕΡΙΓΡΑΦΗ', HEIGHT_MM, { bold: true });
+    expect(plain.kind).toBe('glyph');
+    expect(bold.kind).toBe('glyph');
+    expect(plain.kind === 'glyph' && plain.face).toBe('Liberation Sans');
+    expect(bold.kind === 'glyph' && bold.face).toBe('Liberation Sans Bold');
+    // Και οι δύο όψεις είναι όντως ΔΙΑΚΡΙΤΕΣ — ένα ζεύγος με ίδιο λόγο θα άφηνε κάθε
+    // ισχυρισμό πλάτους πράσινο ό,τι κι αν έκανε ο κώδικας.
+    expect(bold.world).toBeGreaterThan(plain.world);
+  });
+
   it('🔴 τα έντονα μεγαλώνουν τη στήλη `hug` — η μέτρηση φτάνει στο πλάτος', () => {
     const hug: TableColumn = { ...column, sizing: { kind: 'hug' } };
     const widthOf = (cell: TableCell) =>
@@ -445,5 +462,40 @@ describe('η διάταξη κουβαλά τα τμήματα — καμία έ
     const plain = widthOf({ kind: 'text', value: 'ΠΕΡΙΓΡΑΦΗ ΕΡΓΑΣΙΑΣ' });
     const bolded = widthOf({ kind: 'text', value: 'ΠΕΡΙΓΡΑΦΗ ΕΡΓΑΣΙΑΣ', runs: [BOLD(0, 9)] });
     expect(bolded).toBeGreaterThan(plain);
+  });
+});
+
+// ── ADR-799: ο ΠΑΡΟΝΟΜΑΣΤΗΣ — τι συμβαίνει όταν το όργανο ΔΕΝ βλέπει το στυλ ──
+
+describe('ο μετρητής ΛΕΕΙ σε ποια βαθμίδα απάντησε — και το tier 3 είναι τυφλό στο στυλ', () => {
+  // ⚠️ Αυτό το describe ΔΕΝ εγκαθιστά όψεις, **επίτηδες**. Είναι η ζωντανή αναπαραγωγή της
+  // κατάστασης που στις 24/08 κοκκίνισε τρεις ισχυρισμούς — και η απόδειξη ότι το ζεύγος
+  // όψεων από πάνω **κάνει διαφορά**. Χωρίς αυτό, το «με το ζεύγος βγαίνουν σωστά» θα
+  // μπορούσε να είναι πράσινο επειδή **δεν υπήρξε ποτέ βλάβη**.
+
+  it('🔴 χωρίς φορτωμένη όψη, ΕΝΤΟΝΟ και ΑΠΛΟ δίνουν ΤΑΥΤΟΣΗΜΟ αριθμό', () => {
+    const plain = measureTextAdvanceVerdict('ΠΕΡΙΓΡΑΦΗ', HEIGHT_MM, { bold: false });
+    const bold = measureTextAdvanceVerdict('ΠΕΡΙΓΡΑΦΗ', HEIGHT_MM, { bold: true });
+    expect(bold.world).toBe(plain.world);
+  });
+
+  it('🔴 και το ΛΕΕΙ: `nominal`, με ΟΝΟΜΑΤΑ των αξόνων που πετάχτηκαν', () => {
+    // Αυτό ακριβώς έλειπε πριν το ADR-799: η συνάρτηση απαντούσε απόλυτα εύλογο αριθμό και
+    // **κανείς δεν μπορούσε να ρωτήσει** αν τίμησε το αίτημα. Η αποτυχία ήταν άφωνη.
+    const v = measureTextAdvanceVerdict('ΠΕΡΙΓΡΑΦΗ', HEIGHT_MM, {
+      bold: true,
+      italic: true,
+      fontFamily: 'arial',
+    });
+    expect(v.kind).toBe('nominal');
+    expect(v.kind === 'nominal' && [...v.dropped].sort()).toEqual(['bold', 'family', 'italic']);
+  });
+
+  it('αίτημα ΧΩΡΙΣ άξονες στυλ δεν «πέταξε» τίποτα — καμία ψεύτικη καταγγελία', () => {
+    // Το `dropped` ονομάζει ό,τι **ζητήθηκε** και δεν τιμήθηκε. Ένα σκέτο μήκος/ύψος δεν
+    // ζητά τίποτα που η μονοδιάστημη προσέγγιση να μην μπορεί να δώσει.
+    const v = measureTextAdvanceVerdict('ΠΕΡΙΓΡΑΦΗ', HEIGHT_MM);
+    expect(v.kind).toBe('nominal');
+    expect(v.kind === 'nominal' && v.dropped).toEqual([]);
   });
 });
