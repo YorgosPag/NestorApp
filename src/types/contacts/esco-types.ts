@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- * ESCO Professional Classification Types (ADR-034)
+ * ESCO Professional Classification Types (ADR-132)
  * ============================================================================
  *
  * European Skills, Competences, Qualifications and Occupations (ESCO)
@@ -18,7 +18,21 @@
  *
  * @module types/contacts/esco-types
  * @see https://esco.ec.europa.eu
+ * @see docs/centralized-systems/reference/adrs/ADR-798-person-professional-identity.md
  */
+
+import type { DeclaredOccupation } from '@/types/professional-identity';
+
+/**
+ * 🔁 **Επανεξαγωγή, όχι δεύτερη δήλωση** (ADR-798 Φάση 1).
+ *
+ * Το `DeclaredOccupation` μετακόμισε σε **ουδέτερο** σπίτι
+ * (`src/types/professional-identity.ts`) επειδή το ίδιο σχήμα απαντά **και** στο
+ * *«τι επάγγελμα έχει αυτή η επαφή»* **και** στο *«τι ΕΙΝΑΙ ο κάτοχος αυτού του
+ * λογαριασμού»* — δύο τομείς, ένα στοιχείο. Επανεξάγεται από εδώ ώστε **κανένας**
+ * υπάρχων καταναλωτής του `esco-types` να μη χρειαστεί να αλλάξει.
+ */
+export type { DeclaredOccupation };
 
 // ============================================================================
 // ESCO OCCUPATION — Core Data Model
@@ -159,20 +173,20 @@ export interface EscoSearchResponse {
  * Two modes:
  * 1. **ESCO selection**: User selects from autocomplete → all fields populated
  * 2. **Free text**: User types custom text → only `profession` populated
+ *
+ * 🔑 **ΕΙΝΑΙ ΤΟ `DeclaredOccupation` ΜΕ ΜΙΑ ΕΠΙΠΛΕΟΝ ΕΓΓΥΗΣΗ** (ADR-798 Φάση 1).
+ * Μέχρι τις 2026-08-24 ήταν **δεύτερη, ανεξάρτητη δήλωση** των ίδιων τεσσάρων
+ * πεδίων — και η αλλαγή ενός από τα δύο **δεν** τραβούσε το άλλο (ADR-749).
+ *
+ * ⚠️ **Η διαφορά ΔΕΝ είναι ατύχημα και ΔΕΝ ισοπεδώνεται**: εδώ το `profession`
+ * είναι **υποχρεωτικό**, γιατί ένα picker που εκπέμπει τιμή **έχει πάντα κείμενο**
+ * — ακόμη και στην ελεύθερη λειτουργία. Στο αποθηκευμένο `DeclaredOccupation`
+ * είναι προαιρετικό, γιατί μια εγγραφή μπορεί να **μην** έχει επάγγελμα καθόλου.
+ * Γι' αυτό η στένωση γράφεται **ρητά** με `Required<Pick<…>>` αντί να ξαναγραφούν
+ * τα πεδία: ο αναγνώστης βλέπει **ποια ακριβώς** εγγύηση προστίθεται.
  */
-export interface EscoPickerValue {
-  /** Human-readable profession text (always set) */
-  profession: string;
-
-  /** ESCO occupation URI (set only when user selects from autocomplete) */
-  escoUri?: string;
-
-  /** Cached ESCO label (set only when user selects from autocomplete) */
-  escoLabel?: string;
-
-  /** ISCO-08 code (set only when user selects from autocomplete) */
-  iscoCode?: string;
-}
+export type EscoPickerValue = DeclaredOccupation &
+  Required<Pick<DeclaredOccupation, 'profession'>>;
 
 /**
  * Props for the EscoOccupationPicker component.

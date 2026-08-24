@@ -1,5 +1,6 @@
 // Type definitions for contacts, decoupled from Firebase SDK.
 import type { AddressSourceType } from '@/lib/geocoding/geocoding-types';
+import type { DeclaredOccupation } from '@/types/professional-identity';
 
 export type FirestoreishTimestamp = Date | { toDate: () => Date };
 
@@ -89,7 +90,7 @@ export interface BaseContact {
 }
 
 // Interface για Φυσικά Πρόσωπα
-export interface IndividualContact extends BaseContact {
+export interface IndividualContact extends BaseContact, DeclaredOccupation {
   type: 'individual';
 
   // 👤 Βασικά Στοιχεία
@@ -122,7 +123,9 @@ export interface IndividualContact extends BaseContact {
   socialSecurityNumber?: string; // Deprecated: use amka
 
   // 💼 Επαγγελματικά Στοιχεία
-  profession?: string;        // Επάγγελμα (human-readable, always set)
+  // ⚠️ Το `profession` ΔΕΝ δηλώνεται εδώ — κληρονομείται από το `DeclaredOccupation`
+  //    μαζί με τα escoUri/escoLabel/iscoCode, γιατί τα τέσσερα είναι ΕΝΑ πράγμα
+  //    και ταξίδευαν χωριστά (ADR-798 Φάση 1). Δες `@/types/professional-identity`.
   specialty?: string;         // Ειδικότητα
   employer?: string;          // Επιχείρηση/Εργοδότης
   employerId?: string;        // ID σύνδεσης με Company contact (ADR-177)
@@ -130,11 +133,11 @@ export interface IndividualContact extends BaseContact {
   workAddress?: string;       // Διεύθυνση Εργασίας
   workWebsite?: string;       // Ιστοσελίδα Επαγγελματικού Προφίλ
 
-  // 🇪🇺 ESCO Professional Classification (ADR-034)
-  // European standard occupation taxonomy — optional, backward compatible
-  escoUri?: string;           // ESCO occupation URI (link to EU taxonomy)
-  escoLabel?: string;         // Cached ESCO preferred label
-  iscoCode?: string;          // ISCO-08 4-digit code (for grouping/filtering)
+  // 🇪🇺 ESCO Professional Classification (ADR-132) — profession · escoUri ·
+  //    escoLabel · iscoCode κληρονομούνται από το `DeclaredOccupation`
+  //    (`@/types/professional-identity`). ΜΗΝ τα ξαναδηλώσεις εδώ: μέχρι τις
+  //    2026-08-24 ήταν δεύτερη, ανεξάρτητη δήλωση των ίδιων πεδίων, και αυτό το
+  //    αρχείο ΔΕΝ εισήγαγε καθόλου από το `esco-types.ts` (ADR-749 / ADR-798 §3).
 
   // 🇪🇺 ESCO Skills (ADR-132)
   // Multi-select skills from EU ESCO taxonomy — optional, backward compatible
