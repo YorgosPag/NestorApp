@@ -162,41 +162,18 @@ export function cellBaselineYMm(
   return rect.y + rect.h / 2 + style.textHeightMm / 2;
 }
 
-/**
- * 🔴 ADR-739 §58 Γ2 — η γραμμή βάσης της **i-οστής** οπτικής γραμμής ενός κελιού.
- *
- * Με `lineCount === 1` επιστρέφει **ακριβώς** το {@link cellBaselineYMm}: το `topAdd` είναι
- * μηδέν και το `index` επίσης, οπότε δεν υπάρχει κλάδος-εξαίρεση για τη συνηθισμένη
- * περίπτωση — κάθε πίνακας που υπάρχει σήμερα περνά από τον **ίδιο** τύπο και βγάζει την
- * ίδια θέση.
- *
- * Το `resolveMultilineExtents` είναι το SSoT της κατανομής (AutoCAD/Revit: **T** μεγαλώνει
- * κάτω, **B** πάνω, **M** συμμετρικά) και το `LINE_HEIGHT_RATIO` το SSoT του βήματος
- * (DXF MTEXT κωδ. 44, «3-on-5» = 5/3). Κανένα από τα δύο δεν ξαναγράφεται εδώ.
- */
-export function multilineBaselineYMm(
-  rect: TableRectMm,
-  align: TableCellAlign,
-  style: TableCellStyle,
-  lineCount: number,
-  index: number,
-): number {
-  return cellBaselineYMm(rect, align, style)
-    + multilineBaselineDeltaMm(align, style, lineCount, index);
-}
-
+// ADR-700 §4 (2026-08-24): multilineBaselineYMm() ΔΙΑΓΡΑΦΗΚΕ — μηδέν καταναλωτές. Ο
+// πραγματικός καταναλωτής (`cellTextPositionMm`, πιο κάτω σε αυτό το αρχείο) συνθέτει ήδη
+// `cellBaselineYMm` + περιστραμμένο `multilineBaselineDeltaMm` απευθείας (χειρίζεται
+// rotationDeg)· ο in-cell επεξεργαστής (`table-cell-edit-session.ts`) χρησιμοποιεί το
+// μονογραμμικό `cellBaselineYMm` standalone. Το wrapper δεν υιοθετήθηκε ποτέ.
 /**
  * 🔴 ADR-739 §59 Δ1 — η **απόσταση** της i-οστής γραμμής από τη γραμμή βάσης της μονής, σε mm
  * **κάθετα στη γραμμή βάσης**. Μηδέν για μονογραμμικό κελί.
  *
- * ## Γιατί εξήχθη από το {@link multilineBaselineYMm}
- * Μέχρι το §59 η κατανομή ήταν πάντα κατακόρυφη, οπότε «απόσταση» και «y» ήταν το ίδιο νούμερο.
- * Με στροφή δεν είναι: η απόσταση πρέπει να **περιστραφεί** πριν προστεθεί, αλλιώς οι γραμμές
- * ενός γερμένου κελιού απλώνονται κατακόρυφα ενώ τα γράμματά τους τρέχουν πλάγια — και το
+ * Με στροφή η απόσταση πρέπει να **περιστραφεί** πριν προστεθεί, αλλιώς οι γραμμές ενός
+ * γερμένου κελιού απλώνονται κατακόρυφα ενώ τα γράμματά τους τρέχουν πλάγια — και το
  * αποτέλεσμα δεν είναι «λίγο λάθος», είναι γραμμές που **τέμνονται μεταξύ τους**.
- *
- * Εξαγωγή, όχι διπλότυπο: το {@link multilineBaselineYMm} μένει και **την καλεί**, ώστε ο
- * κατακόρυφος δρόμος (in-cell επεξεργαστής) να μην αποκτήσει δεύτερη διατύπωση του κανόνα.
  */
 export function multilineBaselineDeltaMm(
   align: TableCellAlign,

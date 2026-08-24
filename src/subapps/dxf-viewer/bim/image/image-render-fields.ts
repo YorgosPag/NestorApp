@@ -68,7 +68,6 @@ export const IMAGE_RENDER_FIELDS = [
   'sourcePath',
 ] as const satisfies readonly (keyof ImageEntity)[];
 
-export type ImageRenderField = (typeof IMAGE_RENDER_FIELDS)[number];
 
 /**
  * Αντιγράφει ακριβώς τα {@link IMAGE_RENDER_FIELDS} που υπάρχουν (non-`undefined`) από μια πηγή

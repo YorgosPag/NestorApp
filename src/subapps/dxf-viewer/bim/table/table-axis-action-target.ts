@@ -125,29 +125,15 @@ export function resolveTableAxisActionTarget(
   };
 }
 
+// ADR-700 §4 (2026-08-24): axisTargetAt() ΔΙΑΓΡΑΦΗΚΕ — μηδέν καταναλωτές (μόνη «χρήση» ήταν
+// η δική του κλήση προς axisTargetOf). Ο πυρήνας axisTargetOf ΜΕΝΕΙ — έχει πραγματικούς
+// καταναλωτές (π.χ. tableFormatScopeBounds).
 /**
- * Ο **ένας** άξονας του στόχου σε θέση `index`, στο λεξιλόγιο που δέχονται οι συναρτήσεις
- * επιλογής ({@link TableAxisTarget}).
+ * ADR-739 §52 — άξονας + ταυτότητα → στόχος επιλογής.
  *
- * Υπάρχει ώστε ο καλών να μη γράφει `axis === 'column' ? { axis, colId: id } : { axis, rowId: id }`
- * — μια έκφραση αθώα από μόνη της, που όμως θα ξαναγραφόταν σε **κάθε** σημείο που μεταφράζει
- * στόχο σε επιλογή. Εδώ ζει μία φορά, δίπλα στον τύπο που παράγει.
- *
- * Δείκτης εκτός ορίων ⇒ ο πρώτος/τελευταίος του στόχου (κόψιμο, ποτέ `undefined` ταυτότητα).
- */
-export function axisTargetAt(target: TableAxisActionTarget, index: number): TableAxisTarget {
-  const at = Math.min(Math.max(index, 0), target.ids.length - 1);
-  return axisTargetOf(target.axis, target.ids[at]);
-}
-
-/**
- * ADR-739 §52 — **ο πυρήνας του {@link axisTargetAt}: άξονας + ταυτότητα → στόχος επιλογής.**
- *
- * Το `axisTargetAt` το ήθελε από `TableAxisActionTarget` (δείκτης μέσα σε διάστημα)· το
- * `tableFormatScopeBounds` το θέλει από **σκέτο** `(axis, id)`, γιατί ένα `TableFormatScope`
+ * Το `tableFormatScopeBounds` το θέλει από **σκέτο** `(axis, id)`, γιατί ένα `TableFormatScope`
  * κρατά ταυτότητες χωρίς διάστημα. Ο ορισμός μένει **ΕΝΑΣ**: το τριαδικό
- * `axis === 'column' ? { colId } : { rowId }` γράφεται εδώ και πουθενά αλλού — ακριβώς ό,τι
- * λέει η κεφαλίδα του `axisTargetAt` από την πρώτη μέρα.
+ * `axis === 'column' ? { colId } : { rowId }` γράφεται εδώ και πουθενά αλλού.
  */
 export function axisTargetOf(axis: 'row' | 'column', id: string): TableAxisTarget {
   return axis === 'column' ? { axis: 'column', colId: id } : { axis: 'row', rowId: id };

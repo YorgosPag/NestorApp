@@ -38,7 +38,6 @@ import type { TableEntity } from '../../types/table-entity';
 import { isTableEntity } from '../../types/table-entity';
 import { decomposeTable } from '../../export/core/table-to-primitives';
 import { projectSceneEntityText } from '../../bim/text/project-scene-text';
-import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { resolveDxfCanvasBackgroundHex } from '../../config/color-config';
 import { appendEntitySegments } from './dxf-underlay-segments';
 import { resolveEntityColor } from './dxf-overlay-entity-color';
@@ -118,9 +117,10 @@ export function table3DSurfaceHex(): string {
  * Ο πίνακας → γραμμές + κείμενα του 3Δ υποστρώματος, σε **native μονάδες σκηνής** (το ίδιο
  * σύστημα με κάθε άλλη οντότητα εδώ· το `group.scale` του ορόφου τις ανεβάζει σε μέτρα).
  *
- * **Καθαρή**: μηδέν ανάγνωση store, ώστε να είναι ντετερμινιστικά δοκιμάσιμη. Η ζωντανή
- * εκδοχή είναι το {@link decomposeTableForUnderlay3DLive} — ακριβώς το ζεύγος
- * `computeTableEntityGeometry` / `…Live` που το ίδιο το ADR-739 §4.1 καθιέρωσε.
+ * **Καθαρή**: μηδέν ανάγνωση store, ώστε να είναι ντετερμινιστικά δοκιμάσιμη. Ο μοναδικός
+ * πραγματικός καταναλωτής (`DxfToThreeConverter.ts` → `appendTableToUnderlay`) διαβάζει το
+ * ζωντανό `drawingScale` στο ΔΙΚΟ του σημείο κλήσης, όχι εδώ μέσα (ADR-700 §4, 2026-08-24 —
+ * το `…Live` wrapper δεν υιοθετήθηκε ποτέ, διαγράφηκε).
  */
 export function decomposeTableForUnderlay3D(
   table: TableEntity,
@@ -175,25 +175,10 @@ function toUnderlayFill(part: Entity): TableFill3D | null {
   return { ring, colorInt: colorInt & 0xFFFFFF };
 }
 
-/**
- * Το ίδιο, με τα **ζωντανά** SSoT (κλίμακα σχεδίασης + επιφάνεια), διαβασμένα με getter τη
- * στιγμή της κλήσης — καμία συνδρομή, ADR-040. Την καλεί ο converter, ο οποίος τρέχει ήδη
- * εκτός React render.
- *
- * ⚠️ Το `drawingScale` **δεν** διαβάζεται εδώ μόνο: ο converter το περνά και στο κλειδί
- * ταυτοδυναμίας του (`dxf-overlay-sync-guard`). Αν το διάβαζε **μόνο** αυτή η συνάρτηση, μια
- * αλλαγή 1:100 → 1:50 θα άφηνε το κλειδί αμετάβλητο ⇒ ο πίνακας θα έμενε στο **παλιό** μέγεθος
- * μέχρι κάποια άσχετη αλλαγή να ξαναχτίσει τη σκηνή. Γι' αυτό η καθαρή εκδοχή δέχεται τον
- * αριθμό αντί να τον διαβάζει: **μία** ανάγνωση, δύο καταναλωτές που δεν μπορούν να αποκλίνουν.
- */
-export function decomposeTableForUnderlay3DLive(
-  table: TableEntity,
-  sceneUnits: SceneUnits,
-): DxfTable3DParts {
-  return decomposeTableForUnderlay3D(
-    table, useDrawingScaleStore.getState().drawingScale, sceneUnits, table3DSurfaceHex(),
-  );
-}
+// ADR-700 §4 (2026-08-24): decomposeTableForUnderlay3DLive ΔΙΑΓΡΑΦΗΚΕ — μηδέν καταναλωτές.
+// Ο πραγματικός converter (`DxfToThreeConverter.ts:306`) καλεί το `appendTableToUnderlay`
+// απευθείας με sink που φτιάχνει ο ίδιος (ζωντανό `drawingScale` στο ΔΙΚΟ του σημείο
+// κλήσης) — αυτό το wrapper δεν υιοθετήθηκε ποτέ σε αυτό το μονοπάτι.
 
 /**
  * Αποδομημένο κείμενο → το επίπεδο `DxfText` που ζητά ο atlas.

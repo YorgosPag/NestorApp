@@ -73,14 +73,6 @@ export function diagnoseFormulaText(text: string, committed: boolean): FormulaDi
   return committed ? { kind: 'not-a-formula', separator } : null;
 }
 
-/**
- * Ο διαχωριστής **αυτού του σχεδίου**, για μηνύματα και υποδείξεις.
- *
- * Εκτίθεται από εδώ ώστε η διεπαφή να μη μάθει ποτέ την έννοια «γραμματική»: ρωτά «τι
- * χαρακτήρα να δείξω;» και παίρνει χαρακτήρα. Η ίδια αρχή με το `colorIndex` του
- * `table-formula-reference-spans.ts` — ο καταναλωτής παίρνει την **απάντηση**, όχι τον
- * μηχανισμό.
- */
-export function drawingArgumentSeparator(): string {
-  return drawingFormulaGrammar().argumentSeparator;
-}
+// ADR-700 §4 (2026-08-24): drawingArgumentSeparator() ΔΙΑΓΡΑΦΗΚΕ — μηδέν καταναλωτές. Κάθε
+// πραγματικό σημείο κλήσης (production + tests) διαβάζει ήδη απευθείας
+// `drawingFormulaGrammar().argumentSeparator` — το wrapper δεν υιοθετήθηκε ποτέ.

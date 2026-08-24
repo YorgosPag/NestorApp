@@ -168,6 +168,3 @@ export function parseKindCode(code: string): ParsedKindCode | null {
   if (repeatGroup > kinds.length) return null;
   return { kinds, repeatGroup };
 }
-
-/** Τα γράμματα του λεξιλογίου — το test τα διαβάζει από εδώ, δεν τα ξαναγράφει. */
-export const FORMULA_ARGUMENT_KIND_CODES: readonly string[] = Object.keys(KIND_CODES);

@@ -78,7 +78,6 @@ export const HATCH_RENDER_FIELDS = [
   'contourPen',
 ] as const satisfies readonly (keyof HatchEntity)[];
 
-export type HatchRenderField = (typeof HATCH_RENDER_FIELDS)[number];
 
 /**
  * Αντιγράφει ακριβώς τα {@link HATCH_RENDER_FIELDS} που υπάρχουν (non-`undefined`) από μια πηγή

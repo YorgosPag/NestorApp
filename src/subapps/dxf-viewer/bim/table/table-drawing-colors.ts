@@ -48,7 +48,8 @@ import { normalizeHexColor } from '../../config/color-math';
 import { survivesAsInk, type PlotColorRole } from '../../config/print-color-policy';
 import { isAutomaticTableInk } from './table-ink';
 import type { TableStyle } from './table-style';
-import type { PersistedTableModel, TableRowClass } from '../../types/table';
+import type { PersistedTableModel } from '../../types/table';
+import { TABLE_ROW_CLASSES } from './table-style-presets';
 
 /**
  * Πόσα δείγματα το πολύ. Δώδεκα = μία σειρά κάτω από το πλέγμα των 13 στηλών, δηλαδή η ζώνη
@@ -78,7 +79,9 @@ export interface DrawingColorSources {
   readonly role?: PlotColorRole;
 }
 
-const ROW_CLASS_ORDER: readonly TableRowClass[] = ['title', 'header', 'data'];
+// ADR-700 §4 (2026-08-24) / N.0.2 Boy Scout: ο τοπικός ROW_CLASS_ORDER ήταν token-ταυτόσημος
+// με το TABLE_ROW_CLASSES των presets — δεύτερη απάντηση στο «ποιες κλάσεις γραμμής, με ποια
+// σειρά;». Πλέον ΜΙΑ πηγή.
 
 /**
  * Τα χρώματα του σχεδίου, κανονικοποιημένα, χωρίς διπλότυπα, το πολύ
@@ -122,7 +125,7 @@ export function collectDrawingColors(sources: DrawingColorSources): readonly str
   ): string | null | undefined =>
     role === 'fill' ? override?.fillColorHex : override?.textColorHex;
 
-  for (const rowClass of ROW_CLASS_ORDER) offer(fieldOf(style.rowClasses[rowClass]));
+  for (const rowClass of TABLE_ROW_CLASSES) offer(fieldOf(style.rowClasses[rowClass]));
   for (const column of model.columns) offer(fieldOf(column.styleOverride));
   for (const row of model.rows) offer(fieldOf(row.styleOverride));
   // `TableCellEntry` είναι **τριάδα** `[rowId, colId, cell]` (η Λύση Α του §19.2 — λίστα στο

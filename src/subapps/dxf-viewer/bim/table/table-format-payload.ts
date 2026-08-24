@@ -146,10 +146,8 @@ const FACET_BY_STYLE_KEY: Readonly<Record<TableCellStyleKey, TableFormatFacet>> 
   fillColorHex: 'fill',
 };
 
-/** Σε ποια όψη ανήκει αυτό το πεδίο στυλ. Ολική συνάρτηση — δες {@link FACET_BY_STYLE_KEY}. */
-export function tableFormatFacetOfStyleKey(key: TableCellStyleKey): TableFormatFacet {
-  return FACET_BY_STYLE_KEY[key];
-}
+// ADR-700 §4 (2026-08-24): tableFormatFacetOfStyleKey() ΔΙΑΓΡΑΦΗΚΕ — μηδέν καταναλωτές.
+// Ο χάρτης FACET_BY_STYLE_KEY ΜΕΝΕΙ, τον χρησιμοποιούν άλλες συναρτήσεις του αρχείου.
 
 /**
  * Τα πεδία στυλ **αυτής** της όψης, σε σταθερή σειρά.
@@ -262,12 +260,8 @@ const FACET_BY_PAYLOAD_MEMBER: Readonly<
   borders: 'borders',
 };
 
-/** Σε ποια όψη ανήκει αυτό το μέλος του φορτίου. Ολική — δες {@link FACET_BY_PAYLOAD_MEMBER}. */
-export function tableFormatFacetOfPayloadMember(
-  member: Exclude<keyof TableCellFormatPayload, 'style'>,
-): TableFormatFacet {
-  return FACET_BY_PAYLOAD_MEMBER[member];
-}
+// ADR-700 §4 (2026-08-24): tableFormatFacetOfPayloadMember() ΔΙΑΓΡΑΦΗΚΕ — μηδέν καταναλωτές.
+// Ο χάρτης FACET_BY_PAYLOAD_MEMBER ΜΕΝΕΙ, τον χρησιμοποιούν άλλες συναρτήσεις του αρχείου.
 
 /**
  * 🔴 **ΤΟ ΦΟΡΤΩΜΕΝΟ ΠΙΝΕΛΟ** — ένα ολόκληρο **στιγμιότυπο** της πηγής, αποκομμένο από το μοντέλο.
