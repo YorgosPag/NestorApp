@@ -37,14 +37,17 @@ import { translatePoint } from '../../../rendering/entities/shared/geometry-vect
 // ADR-736 — ΤΟ SSoT «ποια πεδία διάστασης είναι σημεία κόσμου» (κοινό με την κλίμακα).
 import { mapDimensionPoints } from '../../../systems/scale/scale-dimension';
 
-/** Οι πέντε τύποι που καλύπτει αυτό το module — διαβάζεται από το coverage test. */
-export const ANNOTATION_MOVABLE_TYPES: ReadonlySet<string> = new Set([
-  'dimension', 'leader', 'xline', 'ray', 'spline',
-]);
-
+// 🔴 ADR-700 §4 (2026-08-24): ANNOTATION_MOVABLE_TYPES ΔΙΑΓΡΑΦΗΚΕ — μηδέν καταναλωτές, και
+// το σχόλιό του («διαβάζεται από το coverage test») ήταν **ΨΕΥΔΕΣ**: το
+// `move-entity-geometry-coverage.test.ts:81-86` γράφει τους ΙΔΙΟΥΣ πέντε τύπους
+// ΧΕΙΡΟΓΡΑΦΑ, και μάλιστα στη λίστα `NOOP_GOLDEN` («κανένα move guard») — ενώ αυτό το
+// module ΤΟΥΣ ΠΙΑΝΕΙ και είναι καλωδιωμένο στο `move-entity-geometry.ts:56`, ΠΡΙΝ την
+// αλυσίδα των primitives. Δύο λίστες που διαφωνούν, με καμία πύλη να τις συγκρίνει (σχήμα
+// ADR-749). 🔶 ΑΝΟΙΧΤΟ — ΑΠΟΦΑΣΗ GIORGIO: η σωστή θεραπεία είναι να μετακινηθούν οι πέντε
+// από το NOOP_GOLDEN στο MOVE_GOLDEN του test, όχι να αναβιώσει η σταθερά.
 /**
- * Μετατόπιση για τους τύπους του {@link ANNOTATION_MOVABLE_TYPES}, ή `null` όταν η οντότητα
- * δεν είναι κανένας από αυτούς (ο καλών συνεχίζει με τους δικούς του κλάδους).
+ * Μετατόπιση για `dimension` / `leader` / `xline` / `ray` / `spline`, ή `null` όταν η
+ * οντότητα δεν είναι κανένας από αυτούς (ο καλών συνεχίζει με τους δικούς του κλάδους).
  */
 export function calculateAnnotationMovedGeometry(
   entity: SceneEntity,

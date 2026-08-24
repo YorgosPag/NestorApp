@@ -120,8 +120,4 @@ export function getTileImage(source: BasemapSource, tile: TileId): HTMLImageElem
   return null;
 }
 
-/** Καθαρισμός για απομόνωση δοκιμών. */
-export function clearTileCache(): void {
-  cache.clear();
-  readyListeners.clear();
-}
+// ADR-700 §4 (2026-08-24): clearTileCache() ΔΙΑΓΡΑΦΗΚΕ — test helper ΧΩΡΙΣ ΚΑΝΕΝΑ test.

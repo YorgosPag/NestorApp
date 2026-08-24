@@ -62,7 +62,5 @@ export function closeInsertFunctionDialog(): void {
   store.set(CLOSED);
 }
 
-/** Test helper — ίδιο μοτίβο με τα υπόλοιπα stores του subapp. */
-export function __resetInsertFunctionDialogForTests(): void {
-  store.set(CLOSED);
-}
+// ADR-700 §4 (2026-08-24): test helper ΧΩΡΙΣ ΚΑΝΕΝΑ test — διαγράφηκε (ίδιο σχήμα με
+// ADR-364 §10.5). Speculative: γράφτηκε «ίδιο μοτίβο με τα αδελφά stores», ποτέ δεν κλήθηκε.

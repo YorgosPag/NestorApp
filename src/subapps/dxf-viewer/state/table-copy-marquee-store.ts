@@ -38,7 +38,6 @@
  * @see rendering/entities/table/stamp-table-copy-marquee.ts — ο ένας ζωγράφος
  */
 
-import { useSyncExternalStore } from 'react';
 import { createExternalStore } from '../stores/createExternalStore';
 import { markSystemsDirty } from '../rendering/core/frame-scheduler-api';
 import { getTableCellCursor } from './table-cell-cursor-store';
@@ -143,18 +142,10 @@ export function clearTableCopyMarquee(): void {
   commit(null);
 }
 
-/** Συνδρομή σε αλλαγές· επιστρέφει την αποδέσμευση. */
-export function subscribeTableCopyMarquee(listener: () => void): () => void {
-  return store.subscribe(listener);
-}
-
-/**
- * React binding για **φύλλα χαμηλής συχνότητας**. ⚠️ **ΠΟΤΕ σε orchestrator** (ADR-040
- * CHECK 6C): ο ζωγράφος διαβάζει με τον getter από πάνω, ποτέ από εδώ.
- */
-export function useTableCopyMarquee(): TableCopyMarqueeState | null {
-  return useSyncExternalStore(store.subscribe, store.get, store.get);
-}
+// ADR-700 §4 (2026-08-24): subscribeTableCopyMarquee + useTableCopyMarquee ΔΙΑΓΡΑΦΗΚΑΝ —
+// μηδέν καταναλωτές. Ο μοναδικός πραγματικός αναγνώστης (stamp-table-copy-marquee.ts) παίρνει
+// το state ως ΟΡΙΣΜΑ από τον TableRenderer, ο οποίος το διαβάζει με getter τη στιγμή του
+// καρέ (ADR-040) — δηλαδή το React binding δεν επρόκειτο ποτέ να χρησιμοποιηθεί εδώ.
 
 /** Test helper — μηδενισμός μεταξύ tests, μαζί με τον παλμό που αλλιώς θα επιζούσε. */
 export function __resetTableCopyMarqueeForTests(): void {

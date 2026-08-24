@@ -89,15 +89,5 @@ export function subscribeToFirstPaint(listener: () => void): () => void {
   return firstPaintSignal.subscribe(listener);
 }
 
-/**
- * Μηδενίζει την απογραφή — **μόνο** για tests που μοιράζονται το module registry του jest.
- *
- * Δεν καλείται από παραγωγικό κώδικα: η απογραφή είναι ανά φόρτωση σελίδας και ένα «reset»
- * στη μέση θα έκανε το μονότονο ερώτημα ξανά ψεύτικο.
- */
-export function resetPaintCensus(): void {
-  frames.clear();
-  // `reset` του SSoT = επαναφορά τιμής **χωρίς** ειδοποίηση + απόρριψη κάθε συνδρομητή,
-  // δηλαδή ακριβώς η σημασιολογία του παλιού `listeners.clear()`.
-  firstPaintSignal.reset(0);
-}
+// ADR-700 §4 (2026-08-24): resetPaintCensus() ΔΙΑΓΡΑΦΗΚΕ — test helper ΧΩΡΙΣ ΚΑΝΕΝΑ test.
+// Το ίδιο του το σχόλιο δήλωνε «δεν καλείται από παραγωγικό κώδικα»· ούτε από δοκιμαστικό.

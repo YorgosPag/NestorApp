@@ -113,5 +113,5 @@ export function isCellInSelection(
   return colIndex < size.columnCount && rowIndex < size.totalRowCount;
 }
 
-/** Τα προτεινόμενα πλάτη στήλης του πεδίου mm — συνήθη πλάτη υπομνήματος / ποσοτήτων. */
-export const TABLE_COLUMN_WIDTH_PRESETS_MM: readonly number[] = [20, 25, 30, 40, 50, 60, 80];
+// ADR-700 §4 (2026-08-24): TABLE_COLUMN_WIDTH_PRESETS_MM ΔΙΑΓΡΑΦΗΚΕ — μηδέν καταναλωτές
+// (το πεδίο mm του μενού δεν πρόσφερε ποτέ presets στην οθόνη).

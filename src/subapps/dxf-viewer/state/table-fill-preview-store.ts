@@ -77,7 +77,5 @@ export function clearTableFillPreview(): void {
   setTableFillPreview(null);
 }
 
-/** Test helper — μηδενισμός μεταξύ tests, ίδιο μοτίβο με τα αδελφά stores. */
-export function __resetTableFillPreviewForTests(): void {
-  store.reset(null);
-}
+// ADR-700 §4 (2026-08-24): test helper ΧΩΡΙΣ ΚΑΝΕΝΑ test — διαγράφηκε (ίδιο σχήμα με
+// ADR-364 §10.5). Speculative: γράφτηκε «ίδιο μοτίβο με τα αδελφά stores», ποτέ δεν κλήθηκε.

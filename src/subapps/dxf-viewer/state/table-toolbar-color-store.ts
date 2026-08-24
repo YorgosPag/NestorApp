@@ -173,8 +173,5 @@ export function toolbarColorStoreFor(role: PlotColorRole): ToolbarColorStore {
   return role === 'fill' ? tableFillColorStore : tableTextColorStore;
 }
 
-/** Καθαρίζει **και τις δύο** μνήμες — ένα test που ξεχνά τη μία θα κληρονομούσε σιωπηλά. */
-export function resetToolbarColorStoresForTest(): void {
-  tableTextColorStore.resetForTest();
-  tableFillColorStore.resetForTest();
-}
+// ADR-700 §4 (2026-08-24): test helper ΧΩΡΙΣ ΚΑΝΕΝΑ test — διαγράφηκε (ίδιο σχήμα με
+// ADR-364 §10.5). Speculative: γράφτηκε «ίδιο μοτίβο με τα αδελφά stores», ποτέ δεν κλήθηκε.

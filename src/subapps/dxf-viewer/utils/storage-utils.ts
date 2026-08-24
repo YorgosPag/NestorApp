@@ -9,8 +9,7 @@
  * ⚠️ **Η ανάκτηση από γεμάτο storage ΔΕΝ ζει εδώ** — μετακόμισε στο
  * {@link ../utils/storage-error-handling storage-error-handling.ts} όταν το αρχείο πέρασε τις
  * 500 γραμμές (N.7.1, EXTRACT ποτέ trim). Η τομή είναι κατά ευθύνη, όχι κατά γραμμή: εδώ «πώς
- * γράφω και διαβάζω», εκεί «τι κάνω όταν γεμίσει». Αν ψάχνεις `StorageErrorHandler` ή
- * `withStorageErrorHandling`, είναι εκεί.
+ * γράφω και διαβάζω», εκεί «τι κάνω όταν γεμίσει». Αν ψάχνεις `StorageErrorHandler`, είναι εκεί.
  *
  * @author Γιώργος Παγωνής + Claude Code (Anthropic AI)
  * @since 2026-01-31

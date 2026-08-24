@@ -82,24 +82,6 @@ export class StorageErrorHandler {
   }
 }
 
-/**
- * Wrapper για storage operations με automatic error handling
- */
-export async function withStorageErrorHandling<T>(
-  operation: () => Promise<T>,
-  errorMessage?: string
-): Promise<T | null> {
-  try {
-    return await operation();
-  } catch (error) {
-    const handled = await StorageErrorHandler.handleStorageError(error);
-
-    if (!handled) {
-      // If it's not a storage error or couldn't be handled, rethrow
-      derr('Storage', errorMessage || 'Operation failed:', error);
-      throw error;
-    }
-
-    return null;
-  }
-}
+// ADR-700 §4 (2026-08-24): withStorageErrorHandling() ΔΙΑΓΡΑΦΗΚΕ — μηδέν καταναλωτές.
+// Γενικός wrapper που κανένα σημείο κλήσης δεν υιοθέτησε· ο StorageErrorHandler καλείται
+// απευθείας εκεί που χρειάζεται.

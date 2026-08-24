@@ -104,18 +104,6 @@ export function isTileInWorld(tile: TileId): boolean {
   return tile.x >= 0 && tile.x < n && tile.y >= 0 && tile.y < n;
 }
 
-/**
- * Οι τέσσερις γωνίες ενός πλακιδίου σε WGS84, με σειρά **ΒΔ · ΒΑ · ΝΑ · ΝΔ**.
- *
- * Η σειρά είναι συμβόλαιο: ο μετασχηματισμός του υποβάθρου την καταναλώνει για να χτίσει το
- * πλέγμα παραμόρφωσης, και μια σιωπηλή αλλαγή της θα αναποδογύριζε την εικόνα — βλάβη που
- * *φαίνεται* σαν λάθος γεωαναφορά και θα κυνηγιόταν στο λάθος μέρος.
- */
-export function tileCornersGeographic(tile: TileId): readonly { lat: number; lon: number }[] {
-  return [
-    tileFractionToGeographic(tile.x, tile.y, tile.z),
-    tileFractionToGeographic(tile.x + 1, tile.y, tile.z),
-    tileFractionToGeographic(tile.x + 1, tile.y + 1, tile.z),
-    tileFractionToGeographic(tile.x, tile.y + 1, tile.z),
-  ];
-}
+// ADR-700 §4 (2026-08-24): tileCornersGeographic() ΔΙΑΓΡΑΦΗΚΕ — μηδέν καταναλωτές. Το
+// συμβόλαιο σειράς που περιέγραφε (ΒΔ·ΒΑ·ΝΑ·ΝΔ) δεν καταναλώθηκε ποτέ από τον
+// μετασχηματισμό υποβάθρου· το `tileFractionToGeographic` παραμένει και είναι ζωντανό.

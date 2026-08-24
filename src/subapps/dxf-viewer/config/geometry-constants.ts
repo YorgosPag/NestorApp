@@ -135,17 +135,12 @@ export const DEFAULT_BOUNDS: Readonly<BoundingBox> = Object.freeze({
 // 🔧 UTILITY FUNCTIONS
 // ============================================================================
 
-/**
- * Creates a mutable copy of ZERO_VECTOR for state initialization
- *
- * Use when you need a fresh mutable point (e.g., for React state)
- *
- * @example
- * const [position, setPosition] = useState(createZeroPoint());
- */
-export function createZeroPoint(): Point2D {
-  return { x: 0, y: 0 };
-}
+// ADR-700 §4 (2026-08-24): createZeroPoint() ΔΙΑΓΡΑΦΗΚΕ μαζί με τη συστάδα του. Οι ΔΥΟ
+// μοναδικοί καταναλωτές του ήταν `hooks/useGripMovement.ts` και `hooks/useViewState.ts`,
+// **και οι δύο νεκροί και διαγραμμένοι στο ίδιο πέρασμα**. Το ίδιο του το παράδειγμα το
+// έλεγε: «for React state» — δηλαδή υπηρετούσε ακριβώς το ιδίωμα που κατήργησε το ADR-040
+// (transform/θέση σε `useState` αντί για ImmediateTransformStore). Τα σταθερά
+// `ZERO_POINT`/`ZERO_VECTOR` παραμένουν και είναι ζωντανά.
 
 /**
  * Creates a mutable copy of EMPTY_BOUNDS for state initialization

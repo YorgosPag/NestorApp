@@ -135,10 +135,7 @@ export function endTableAxisResizeDrag(): void {
   session.end();
 }
 
-/** Test helper — «σέρνεται κάτι τώρα;», χωρίς να εκτεθεί ο ίδιος ο κύκλος ζωής. */
-export function isTableAxisResizeDragging(): boolean {
-  return session.isActive();
-}
+// ADR-700 §4 (2026-08-24): isTableAxisResizeDragging() ΔΙΑΓΡΑΦΗΚΕ — test helper ΧΩΡΙΣ ΚΑΝΕΝΑ test.
 
 /** Ό,τι χρειάζεται το {@link beginTableAxisResize} — γεωμετρία **και** οι δύο γραφείς. */
 export interface TableAxisResizeParams {

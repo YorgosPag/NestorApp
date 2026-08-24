@@ -123,10 +123,9 @@ export function setProjectAnchor(resolution: ProjectAnchorResolution | null): vo
   anchorStore.set(resolution);
 }
 
-/** Η πλήρης απάντηση (θέση **ή** λόγος άρνησης), ή `null` όσο δεν έχει ρωτηθεί. */
-export function getProjectAnchor(): ProjectAnchorResolution | null {
-  return anchorStore.get();
-}
+// ADR-700 §4 (2026-08-24): getProjectAnchor() ΔΙΑΓΡΑΦΗΚΕ — μηδέν καταναλωτές. Οι δύο
+// στενοί αδελφοί του (getApproximateAnchor / getProjectAnchorRefusal) απαντούν ήδη ό,τι
+// ρωτά κάποιος στην πράξη· η «πλήρης απάντηση» δεν ζητήθηκε ποτέ.
 
 /** Η ενεργή κατά προσέγγιση άγκυρα, αν υπάρχει. */
 export function getApproximateAnchor(): ApproximateAnchor | null {

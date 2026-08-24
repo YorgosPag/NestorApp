@@ -81,7 +81,5 @@ export function clearExternalReferenceResolutionFlag(): void {
 export const peekExternalReferenceResolutionOutcome = store.get;
 export const subscribeExternalReferenceResolutionOutcome = store.subscribe;
 
-/** Test-only: επαναφορά σε αρχική κατάσταση **χωρίς** ειδοποίηση (jest isolation). */
-export function resetExternalReferenceResolutionOutcome(): void {
-  store.reset(IDLE);
-}
+// ADR-700 §4 (2026-08-24): test helper ΧΩΡΙΣ ΚΑΝΕΝΑ test — διαγράφηκε (ίδιο σχήμα με
+// ADR-364 §10.5). Speculative: γράφτηκε «ίδιο μοτίβο με τα αδελφά stores», ποτέ δεν κλήθηκε.

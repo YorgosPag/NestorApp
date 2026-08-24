@@ -49,10 +49,8 @@ import type { TablePasteResult } from '../../bim/table/table-range-clipboard';
  */
 let plainTextNoticeShown = false;
 
-/** Test helper — μηδενισμός του «μία φορά» μεταξύ tests. */
-export function __resetTablePlainTextNoticeForTests(): void {
-  plainTextNoticeShown = false;
-}
+// ADR-700 §4 (2026-08-24): test helper ΧΩΡΙΣ ΚΑΝΕΝΑ test — διαγράφηκε (ίδιο σχήμα με
+// ADR-364 §10.5). Speculative: γράφτηκε «ίδιο μοτίβο με τα αδελφά stores», ποτέ δεν κλήθηκε.
 
 export function useTablePasteReport(): (result: TablePasteResult, external: boolean) => void {
   const { t } = useTranslation('dxf-viewer');
