@@ -224,3 +224,7 @@ firestore.rules.compiled
 # (.jest-suite-baseline.json) ΕΙΝΑΙ απόφαση και κομμιτάρεται· αυτά όχι.
 /.jest-first-run.json
 /.jest-suite-results.json
+
+# CHECK 3.64 — προσωρινά NDJSON ανά jest worker. Η ΥΠΟΓΕΓΡΑΜΜΕΝΗ απογραφή
+# (.text-measure-census.json) ΚΟΜΜΙΤΑΡΕΤΑΙ — αυτά εδώ όχι.
+.text-measure-census/

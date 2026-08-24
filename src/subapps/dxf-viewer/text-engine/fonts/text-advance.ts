@@ -226,7 +226,51 @@ export function measureTextAdvanceWorld(
   style?: TextAdvanceStyle,
 ): number {
   const widthFactor = normalizedWidthFactor(style);
-  return baseAdvanceWorld(text, height, style) * widthFactor;
+  // ⚠️ ΜΗΔΕΝ ΚΟΣΤΟΣ ΟΤΑΝ Η ΑΠΟΓΡΑΦΗ ΕΙΝΑΙ ΚΛΕΙΣΤΗ: χωρίς sink δεν δεσμεύεται **κανένα**
+  //    αντικείμενο probe — η καυτή πόρτα μένει ακριβώς όπως ήταν (ADR-040).
+  if (!censusSink) return baseAdvanceWorld(text, height, style) * widthFactor;
+  const probe: TierProbe = { tier: 'nominal', detail: '' };
+  const world = baseAdvanceWorld(text, height, style, probe) * widthFactor;
+  recordCensus(probe.tier, style);
+  return world;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ΑΠΟΓΡΑΦΗ ΒΑΘΜΙΔΑΣ — CHECK 3.64 (ADR-799 Φάση 2)
+// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * 🔴 **ΓΙΑΤΙ ΠΑΡΑΤΗΡΗΣΗ ΚΑΙ ΟΧΙ ΣΤΑΤΙΚΗ ΑΝΑΛΥΣΗ.**
+ *
+ * Ο πληθυσμός των σουιτών που φτάνουν εδώ είναι **έμμεση εμβέλεια**: μετρημένο 2026-08-25,
+ * μόλις **10** σουίτες καλούν τον μετρητή **ονομαστικά**, ενώ δεκάδες τον φτάνουν μέσα από
+ * layout/render αλυσίδες. Ένα στατικό κριτήριο («καλεί `installStubFont`;») θα ήταν είτε
+ * τυφλό στις έμμεσες είτε γεμάτο ψευδώς θετικά — το ADR-799 §7 το απορρίπτει ρητά, γιατί
+ * πολλές από αυτές **δεν κρίνουν καθόλου πλάτος**.
+ *
+ * Η απογραφή **παρατηρεί**: μηδέν ψευδώς θετικά εξ ορισμού. Είναι η ίδια κίνηση με το
+ * CHECK 3.40 — *όχι νέα μηχανή κρίσης, νέα **πηγή τιμών***.
+ *
+ * ⚠️ **Test-only**: κανένας κώδικας παραγωγής δεν εγκαθιστά sink, και χωρίς sink το μονοπάτι
+ * είναι **byte-for-byte** το προηγούμενο.
+ */
+export interface AdvanceCensusEntry {
+  readonly tier: AdvanceTier;
+  /** Μη κενό **μόνο** όταν `tier === 'nominal'` — δες {@link AdvanceVerdict.dropped}. */
+  readonly dropped: readonly AdvanceStyleAxis[];
+}
+
+const NO_AXES: readonly AdvanceStyleAxis[] = Object.freeze([]);
+let censusSink: ((entry: AdvanceCensusEntry) => void) | null = null;
+
+/** ⚠️ Ένα σώμα για τις **δύο** πόρτες — γραμμένο δύο φορές θα ήταν sibling clone (CHECK 3.28). */
+function recordCensus(tier: AdvanceTier, style?: TextAdvanceStyle): void {
+  if (!censusSink) return;
+  censusSink({ tier, dropped: tier === 'nominal' ? droppedAxes(style) : NO_AXES });
+}
+
+/** Test-only: άνοιξε/κλείσε την απογραφή. `null` = κλειστή (η προεπιλογή, πάντα, στην παραγωγή). */
+export function __installAdvanceCensus(sink: ((entry: AdvanceCensusEntry) => void) | null): void {
+  censusSink = sink;
 }
 
 /**
@@ -258,6 +302,7 @@ export function measureTextAdvanceVerdict(
   const probe: TierProbe = { tier: 'nominal', detail: '' };
   const widthFactor = normalizedWidthFactor(style);
   const world = baseAdvanceWorld(text, height, style, probe) * widthFactor;
+  recordCensus(probe.tier, style);
   if (probe.tier === 'glyph') return { kind: 'glyph', world, face: probe.detail };
   if (probe.tier === 'css') return { kind: 'css', world, font: probe.detail };
   return { kind: 'nominal', world, dropped: droppedAxes(style) };
