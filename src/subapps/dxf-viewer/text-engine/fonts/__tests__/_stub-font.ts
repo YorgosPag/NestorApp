@@ -139,13 +139,83 @@ export function installStubFont(emPerChar = 0.6, family = 'arial', ink?: StubInk
 }
 
 /**
+ * ΕΝΑ σώμα για κάθε εγκατάσταση πολλαπλών όψεων — γραμμένο δύο φορές θα ήταν sibling clone
+ * (CHECK 3.28) και, χειρότερα, δύο σημεία που θα δώσουν διαφορετική απάντηση στην πρώτη
+ * ρύθμιση του κανόνα «με ποια σειρά επαναφέρονται οι όψεις».
+ *
+ * ⚠️ Η σειρά ΕΠΑΝΑΦΟΡΑΣ είναι αντίστροφη της εγκατάστασης: το `installStubFont` επιστρέφει
+ * καθαριστή που κάνει `fontCache.clear()`, οπότε ο πρώτος εγκαταστάτης πρέπει να κλείσει
+ * τελευταίος — αλλιώς μια ενδιάμεση επαναφορά θα έσβηνε όψεις που ακόμη «ζουν».
+ */
+function installFaces(
+  faces: ReadonlyArray<readonly [emPerChar: number, cacheName: string]>,
+  ink?: StubInkBounds,
+): () => void {
+  const restores = faces.map(([emPerChar, cacheName]) => installStubFont(emPerChar, cacheName, ink));
+  return () => {
+    for (let i = restores.length - 1; i >= 0; i -= 1) restores[i]();
+  };
+}
+
+/**
+ * Τα προχωρήματα ανά χαρακτήρα των τεσσάρων όψεων μιας οικογένειας.
+ *
+ * ⚠️ **ΠΡΕΠΕΙ να διαφέρουν μεταξύ τους** όταν η άγκυρα κρίνει πλάτος: με ίσους λόγους,
+ * «έντονο», «πλάγιο» και «απλό» δίνουν **τον ίδιο αριθμό**, και κανένας ισχυρισμός δεν
+ * μπορεί να δει αν η διάταξη προώθησε ποτέ το στυλ. **Μια ταυτότητα δεν αποδεικνύει τίποτα.**
+ */
+export interface StubFaceAdvances {
+  readonly regular?: number;
+  readonly bold?: number;
+  readonly italic?: number;
+  readonly boldItalic?: number;
+}
+
+/**
+ * 🔴 ADR-799 — **ΟΛΕΣ οι όψεις που μπορεί να ζητήσει ο {@link resolveEntityFont}.**
+ *
+ * Ο resolver **δεν** ψάχνει την οικογένεια που ζητήθηκε όταν το στυλ ζητά όψη: πηδά στο
+ * υποκατάστατο και ζητά «<υποκατάστατο> Bold» / «… Italic» / «… Bold Italic». Όποια λείπει
+ * επιστρέφει `null` **επίτηδες**, οπότε η μέτρηση πέφτει στη βαθμίδα 3 — που δέχεται
+ * κυριολεκτικά `(text, height)` και είναι ΤΥΦΛΗ στο στυλ.
+ *
+ * ⚠️ Άρα σε σουίτα που **κρίνει πλάτος** και αγγίζει πλάγια, το σκέτο ζεύγος **δεν αρκεί**:
+ * το απλό και το έντονο μένουν σε tier 1 ενώ το πλάγιο πέφτει σε tier 3, και ο ισχυρισμός
+ * συγκρίνει **ΔΥΟ ΔΙΑΦΟΡΕΤΙΚΑ ΟΡΓΑΝΑ**. Το CHECK 3.64 το βλέπει ως `undeclared-blind-measure`.
+ *
+ * @param advances προχωρήματα ανά όψη· ό,τι δεν δηλωθεί παίρνει διακριτή προεπιλογή
+ * @param family   η **υποκατάστατη** οικογένεια (εκεί καταλήγει και το `arial`)
+ */
+export function installStubFontFaces(
+  advances: StubFaceAdvances = {},
+  family = 'Liberation Sans',
+  ink?: StubInkBounds,
+): () => void {
+  const {
+    regular = 0.6,
+    bold = 0.75,
+    italic = 0.68,
+    boldItalic = 0.82,
+  } = advances;
+  return installFaces([
+    [regular, family],
+    [bold, `${family} Bold`],
+    [italic, `${family} Italic`],
+    [boldItalic, `${family} Bold Italic`],
+  ], ink);
+}
+
+/**
  * 🔴 ADR-799 — **ΤΟ ΖΕΥΓΟΣ ΟΨΕΩΝ: η μόνη εγγραφή που κάνει το `bold` ΟΡΑΤΟ στη μέτρηση.**
  *
  * Ο {@link resolveEntityFont} για `bold` **δεν** ψάχνει την οικογένεια που ζητήθηκε: πηδά
- * κατευθείαν στο υποκατάστατο (`lookupSubstitute`) και ζητά `«<υποκατάστατο> Bold»`. Αν λείπει,
- * γυρνά **`null` επίτηδες** — τεκμηριωμένη απόφαση («un-bundled bold faces deliberately resolve
- * to null»), ώστε ο **browser** να ζωγραφίσει το έντονο μέσω CSS. Στο jest **δεν υπάρχει
- * browser**, οπότε αυτό το `null` καταλήγει στο tier 3.
+ * κατευθείαν στο υποκατάστατο (`lookupSubstitute`) και ζητά `«<υποκατάστατο> Bold»`. Αν η όψη
+ * **λείπει** επιστρέφει `null`, ώστε ο **browser** να ζωγραφίσει το έντονο μέσω CSS. Στο jest
+ * **δεν υπάρχει browser**, οπότε αυτό το `null` καταλήγει στο tier 3.
+ *
+ * ⚠️ Για τα **πλάγια** ίσχυε κάτι χειρότερο μέχρι το ADR-799: ο resolver βραχυκύκλωνε **πριν
+ * κοιτάξει**, οπότε καμία εγγραφή στην κρυφή μνήμη δεν μπορούσε να τα θεραπεύσει. Πλέον η
+ * αναζήτηση είναι συμμετρική — δες {@link installStubFontFaces}.
  *
  * ⚠️ **Όταν η άγκυρα κρίνει ΠΛΑΤΟΣ, οι δύο όψεις ΠΡΕΠΕΙ να έχουν διαφορετικό `emPerChar`**,
  * αλλιώς είναι πράσινη
@@ -171,10 +241,5 @@ export function installStubFontPair(
   family = 'Liberation Sans',
   ink?: StubInkBounds,
 ): () => void {
-  const restoreRegular = installStubFont(regularEmPerChar, family, ink);
-  const restoreBold = installStubFont(boldEmPerChar, `${family} Bold`, ink);
-  return () => {
-    restoreBold();
-    restoreRegular();
-  };
+  return installFaces([[regularEmPerChar, family], [boldEmPerChar, `${family} Bold`]], ink);
 }

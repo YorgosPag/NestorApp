@@ -23,6 +23,20 @@ import { styledSpansWidthMm } from '../table-cell-styled-spans';
 import type { TableTextMeasurer } from '../table-layout-types';
 import type { TableCellStyle } from '../table-style';
 import type { TableCellTextRun } from '../../../types/table';
+// 🔴 ADR-799 — ΤΟ ΖΕΥΓΟΣ ΟΨΕΩΝ, ΚΑΙ ΓΙΑΤΙ ΕΙΝΑΙ ΠΡΟΫΠΟΘΕΣΗ ΚΑΙ ΟΧΙ ΔΙΑΚΟΣΜΗΣΗ.
+// Αυτή η σουίτα ΚΡΙΝΕΙ ΠΛΑΤΟΣ. Χωρίς φορτωμένη όψη η μέτρηση πέφτει στη βαθμίδα 3
+// (`monospaceAdvance`), που δέχεται κυριολεκτικά `(text, height)` ⇒ είναι ΔΟΜΙΚΑ ΤΥΦΛΗ σε
+// `bold` / `italic` / οικογένεια: η σουίτα θα έβγαινε πράσινη κρίνοντας με όργανο που δεν
+// βλέπει το ερώτημά της. Το CHECK 3.64 το ονομάζει `undeclared-blind-measure`.
+// ⚠️ ΖΕΥΓΟΣ και όχι `installStubFont`: ο `resolveEntityFont` για `bold` ΠΑΡΑΚΑΜΠΤΕΙ την άμεση
+// εύρεση και ζητά «<υποκατάστατο> Bold»· αλλιώς επιστρέφει `null` ΕΠΙΤΗΔΕΣ, οπότε το απλό θα
+// έμενε σε tier 1 και το έντονο σε tier 3 — σύγκριση ΔΥΟ ΔΙΑΦΟΡΕΤΙΚΩΝ ΟΡΓΑΝΩΝ.
+import { installStubFontPair } from '../../../text-engine/fonts/__tests__/_stub-font';
+
+let __restoreFaces: () => void;
+beforeAll(() => { __restoreFaces = installStubFontPair(); });
+afterAll(() => __restoreFaces());
+
 
 const measure: TableTextMeasurer = (text, heightMm, style) =>
   text.length * heightMm * 0.6 * (style.bold === true ? 2 : 1);

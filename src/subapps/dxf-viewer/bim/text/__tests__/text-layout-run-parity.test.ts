@@ -29,6 +29,18 @@ import { parseMtext } from '../../../text-engine/parser/mtext-parser';
 import { measureTextAdvanceWorld } from '../../../text-engine/fonts';
 import type { DxfText } from '../../../canvas-v2/dxf-canvas/dxf-types';
 import type { DxfTextNode } from '../../../text-engine/types';
+// 🔴 ADR-799 — ΟΛΕΣ ΟΙ ΟΨΕΙΣ, ΚΑΙ ΓΙΑΤΙ ΔΕΝ ΑΡΚΕΙ ΤΟ ΖΕΥΓΟΣ.
+// Αυτή η σουίτα ΚΡΙΝΕΙ ΠΛΑΤΟΣ και αγγίζει **πλάγια** runs. Χωρίς φορτωμένη όψη η μέτρηση
+// πέφτει στη βαθμίδα 3 (`monospaceAdvance`), που δέχεται κυριολεκτικά `(text, height)` ⇒
+// είναι ΔΟΜΙΚΑ ΤΥΦΛΗ σε `bold` / `italic` / οικογένεια. Με σκέτο `installStubFontPair` το
+// απλό και το έντονο θα έφταναν σε tier 1 ενώ το πλάγιο θα έμενε σε tier 3 — ο ισχυρισμός
+// θα σύγκρινε **ΔΥΟ ΔΙΑΦΟΡΕΤΙΚΑ ΟΡΓΑΝΑ** και θα ήταν πράσινος για λάθος λόγο (CHECK 3.64).
+import { installStubFontFaces } from '../../../text-engine/fonts/__tests__/_stub-font';
+
+let __restoreFaces: () => void;
+beforeAll(() => { __restoreFaces = installStubFontFaces(); });
+afterAll(() => __restoreFaces());
+
 
 const H = 10;
 

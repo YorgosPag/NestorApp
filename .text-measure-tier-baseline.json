@@ -1,22 +1,18 @@
 {
   "$doc": "CHECK 3.64 / ADR-799 Φάση 2 — ΡΑΤΣΕΤΑ ΚΑΤΑ ΤΑΥΤΟΤΗΤΑ. Ο αριθμός ΔΕΝ είναι δείκτης υγείας.",
-  "generatedAt": 61,
+  "generatedAt": 51,
   "violations": [
+    "src/subapps/dxf-viewer/bim/table/__tests__/table-cell-clipping.test.ts"
+  ],
+  "declarations": [
     "src/subapps/dxf-viewer/bim-3d/converters/__tests__/dxf-table-3d-decompose.test.ts",
     "src/subapps/dxf-viewer/bim/structural/detail-sheet/__tests__/adr622-absorption-characterization.test.ts",
     "src/subapps/dxf-viewer/bim/structural/detail-sheet/__tests__/beam-detail-sheet.test.ts",
     "src/subapps/dxf-viewer/bim/structural/detail-sheet/__tests__/column-detail-schedule.test.ts",
     "src/subapps/dxf-viewer/bim/structural/detail-sheet/__tests__/footing-detail-sheet.test.ts",
     "src/subapps/dxf-viewer/bim/structural/detail-sheet/__tests__/slab-detail-sheet.test.ts",
-    "src/subapps/dxf-viewer/bim/table/__tests__/table-cell-clipping.test.ts",
-    "src/subapps/dxf-viewer/bim/table/__tests__/table-cell-shrink.test.ts",
     "src/subapps/dxf-viewer/bim/table/__tests__/table-cell-styled-spans.test.ts",
-    "src/subapps/dxf-viewer/bim/text/__tests__/text-layout-justify-spacing.test.ts",
-    "src/subapps/dxf-viewer/bim/text/__tests__/text-layout-rich-mtext.test.ts",
-    "src/subapps/dxf-viewer/bim/text/__tests__/text-layout-run-parity.test.ts",
     "src/subapps/dxf-viewer/bim/text/__tests__/text-layout-vertical-align.test.ts",
-    "src/subapps/dxf-viewer/export/formats/__tests__/table-typography-specimen.test.ts",
     "src/subapps/dxf-viewer/ui/table-cell-editor/__tests__/table-format-painter-click.test.tsx"
-  ],
-  "declarations": []
+  ]
 }

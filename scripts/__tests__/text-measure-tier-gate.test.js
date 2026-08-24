@@ -206,6 +206,45 @@ describe('Κ — κριτήριο', () => {
     expect(merged).toEqual({ file: f, glyph: 1, css: 3, nominal: 3, dropped: ['bold', 'italic'] });
   });
 
+  /**
+   * 🔴 ADR-799 Φάση 3 — ΤΟ ΟΡΓΑΝΟ ΔΕΝ ΕΠΙΤΡΕΠΕΤΑΙ ΝΑ ΑΛΛΟΙΩΝΕΙ ΑΥΤΟ ΠΟΥ ΜΕΤΡΑ.
+   *
+   * Το `census-setup.js` έκανε `require` του μετρητή σε **εμβέλεια module**, οπότε φόρτωνε
+   * μεταβατικά ολόκληρο τον glyph pipeline **πριν** ισχύσει το `jest.mock` του αρχείου test.
+   * Μετρημένο: **3** σουίτες κοκκίνιζαν **μόνο μέσα στην απογραφή** — και ο εκτελεστής
+   * **αγνοεί επίτηδες** τις κόκκινες, οπότε κανείς δεν το είδε επί μία έκδοση της πύλης.
+   *
+   * ⚠️ Η άγκυρα κρίνει **ΘΕΣΗ**, όχι κείμενο: το `require` του `text-advance` πρέπει να ζει
+   * **μέσα σε συνάρτηση**. Μια άγκυρα «αναφέρει τη λέξη lazy;» θα ήταν πράσινη πάνω σε σχόλιο
+   * (το μάθημα `Μ6` του CHECK 3.8).
+   */
+  it('Κ14: ο ΣΥΛΛΕΚΤΗΣ φορτώνει τον μετρητή ΤΕΜΠΕΛΙΚΑ — αλλιώς νικά τα `jest.mock` της σουίτας', () => {
+    /** `true` ⇒ το require του μετρητή ζει σε εμβέλεια module (βάθος αγκύλων 0 πριν από αυτό). */
+    const loadsAtModuleScope = (src) => {
+      const at = src.indexOf('text-engine/fonts/text-advance.ts');
+      if (at < 0) throw new Error('δεν βρέθηκε require του μετρητή — η άγκυρα δεν κοίταξε τίποτα');
+      let depth = 0;
+      for (const ch of src.slice(0, at)) {
+        if (ch === '{') depth += 1;
+        else if (ch === '}') depth -= 1;
+      }
+      return depth === 0;
+    };
+
+    // 🔑 Ο ΠΑΡΟΝΟΜΑΣΤΗΣ: το ίδιο κατηγόρημα πάνω στη ΣΠΑΣΜΕΝΗ μορφή. Χωρίς αυτό, ένα «false»
+    //    στον πραγματικό συλλέκτη θα μπορούσε να σημαίνει «δεν κοίταξα», όχι «είναι τεμπέλικο».
+    const brokenShape = [
+      "const path = require('node:path');",
+      "const advance = require(path.join(REPO_ROOT, 'src/subapps/dxf-viewer/text-engine/fonts/text-advance.ts'));",
+      'beforeAll(() => { advance.__installAdvanceCensus(() => {}); });',
+    ].join('\n');
+    expect(loadsAtModuleScope(brokenShape)).toBe(true);
+
+    const setupPath = path.join(REPO_ROOT, 'scripts', 'lib', 'text-measure-tier', 'census-setup.js');
+    expect({ collector: 'census-setup.js', moduleScope: loadsAtModuleScope(fs.readFileSync(setupPath, 'utf8')) })
+      .toEqual({ collector: 'census-setup.js', moduleScope: false });
+  });
+
   it('Κ13: κάθε ⛔ κατάσταση ανήκει σε κατάστιχο', () => {
     const all = new Set(Object.values(gate.LEDGER_STATES).flat());
     for (const state of gate.BLOCKING) expect({ state, known: all.has(state) }).toEqual({ state, known: true });
