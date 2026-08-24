@@ -1921,3 +1921,61 @@ Closed via `hostWall.params.sceneUnits ?? 'mm'` frozen-context pattern σε **4 
   - **Γιατί ΔΕΝ έγινε τότε**: τέσσερα από τα πέντε ζουν κάτω από
     `services/ai-pipeline/`, όπου **κάθε** άγγιγμα ενεργοποιεί τον **N.10**
     (`npm run test:ai-pipeline:all`, 77 σουίτες). Σχήμα «μεγάλο διπλότυπο» του N.0.2.
+
+- [ ] **CHECK 3.29 — DXF Viewer TS Error Ratchet: +525 σφάλματα σε 237 αρχεία (N.17)**
+  - **Τι**: το `dxf:tsc:check` πέρασε από baseline καθαρό σε **+525** σφάλματα (κορυφαίοι κωδικοί:
+    TS2353×135, TS2345×116, TS2322×69, TS2739×26, TS2352×25, TS2741×24, TS2339×23, TS2305×13,
+    TS2554×11, TS2304×8 — 33 διακριτοί κωδικοί συνολικά). Πλήρης αναφορά: `npm run dxf:tsc:report`.
+  - **Γιατί ΔΕΝ έγινε**: **N.17 απαγορεύει σε πράκτορα να τρέξει `tsc`** — άρα δεν υπάρχει τρόπος
+    να επαληθευτεί καμία διόρθωση εδώ χωρίς να παραβιαστεί ρητός κανόνας. Ο Giorgio τρέχει τον
+    έλεγχο περιοδικά· αυτό είναι δικό του πέρασμα.
+
+- [ ] **CHECK 3.30 — Barrel-aware Dead-export Ratchet: 58 dead exports + 5 dead files, 100% εντός dxf-viewer**
+  - **Τι**: `npm run barrel-deadcode:check` → 58 νέα dead exports + 5 νέα dead files, **όλα** κάτω
+    από `src/subapps/dxf-viewer/`. Παράδειγμα διερευνημένο έως το τέλος: το ίδιο το `useGripMovement.ts`
+    (475 γρ.) — το `--explain useGripMovement` δείχνει το ίδιο το hook **αναπόδεικτα νεκρό**
+    (`module reachable from a root: NO`, `importers: none`), ενώ το αρχείο **παραμένει ζωντανό**
+    επειδή κουβαλά `export type * from './grip-types'` που το καταναλώνουν **30+** αρχεία (grips
+    ανά entity type). Δηλαδή «dead file» εδώ σημαίνει «όλες οι VALUE εξαγωγές νεκρές, τα TYPES ζωντανά
+    μέσω wildcard re-export» — ΟΧΙ «κανείς δεν το εισάγει».
+  - **Γιατί ΔΕΝ έγινε**: κάθε ένα από τα 63 ευρήματα χρειάζεται την ίδια ανάλυση (real reachability
+    via `--explain`, όχι grep by basename — αποδείχθηκε ότι naive grep δίνει ψευδώς-ζωντανά αποτελέσματα
+    επειδή οι «importers» μπορεί να είναι κι αυτοί ίδιοι νεκροί, π.χ. `CollaborationOverlay.tsx` έχει
+    0 δικούς του importers). Το subapp είναι το πιο εύθραυστο κομμάτι του repo (ADR-040 micro-leaf
+    architecture, CHECK 6B/6C/6D μπλοκάρουν commit σε αρχεία αυτής της λίστας χωρίς ADR staged).
+    Μαζική διαγραφή/wiring χωρίς tsc verification (N.17) σε αυτό το υποσύστημα = πολύ υψηλό ρίσκο.
+    Εκτίμηση: >2h, ανά-σύμβολο επαλήθευση, θέλει ADR update (N.0.1) αν αγγίξει πίνακα του ADR-040.
+
+- [ ] **CHECK depcruise (ADR-598 G9+G10) — cycles +469, boundaries: ΕΝΤΑΓΜΕΝΟ σε ενεργό WIP άλλου agent**
+  - **Τι**: το CI στο commit `3acdea1` έδειξε `cycles: 1299 → 1768 (+469)` και
+    `not-to-dxf-internals: 335 → 396 (+61)` / `services-not-to-components: 20 → 21 (+1)`. Τοπικά όμως
+    (στο πιο πρόσφατο local HEAD) το `depcruise:boundaries` βγαίνει **27/361** (πολύ κάτω από baseline) —
+    η απόκλιση δείχνει ότι το `.dependency-cruiser.cjs` και/ή το γράφημα εξαρτήσεων άλλαξαν σημαντικά
+    από **άλλον agent που δουλεύει στο ίδιο δέντρο ταυτόχρονα** (14+ commits μέσα στη διάρκεια αυτού
+    του session, ADR-787 §5.3 refactor).
+  - **Γιατί ΔΕΝ έγινε**: αγγίζει κοινό state (`.dependency-cruiser.cjs`, baseline JSON) ενώ άλλος
+    πράκτορας κάνει ενεργό commit stream πάνω στο ίδιο repo — memory hub «Multi-agent shared tree»
+    το απαγορεύει ρητά («τίποτα καθολικό: ούτε stash, ούτε reseed baseline πάνω σε ξένο WIP»). Θέλει
+    να ξαναμετρηθεί **μετά** που θα σταθεροποιηθεί το δέντρο.
+
+- [ ] **CHECK 3.18 — SSoT Discover: 13 unprotected registry gaps + 1 «anti-pattern» που είναι ψευδώς θετικό**
+  - **Τι (unprotected, 13 αρχεία)**: `survey-card-config.ts`(36) · `title-block-binding-id.ts`(7) ·
+    `survey-record-labels.ts`(5) · `survey-list-config.ts`(5) · `survey-bindable-fields.ts`(5) ·
+    `greek-person-name.ts`(4) · `survey-card-order.ts`(4) · `project-role-labels.ts`(4) ·
+    `survey-row-bindings.ts`(3) · `test-harness-access.ts`(2) · `greek-name-order.ts`(1) ·
+    `environment-contract.ts`(1) · `document-body-vocabulary.ts`(1) — παλιά (ADR-759), όχι νέο χρέος.
+  - **Γιατί ΔΕΝ έγινε**: εγγραφή στο `.ssot-registry.json` θέλει `forbiddenPatterns` regex ΑΝΑ module
+    που να πιάνει «κάποιος αντέγραψε αυτό το catalog αλλού» — αυτό είναι κρίση περιεχομένου ανά αρχείο,
+    όχι μηχανική προσθήκη· 13 modules × ουσιαστική ανάλυση = N.0.2 «μεγάλο, ασαφές» ⇒ pending.
+  - **Τι (anti-pattern «manual sort by locale», 5 αρχεία)**: ΕΛΕΓΧΘΗΚΑΝ ΚΑΙ ΤΑ 5 — **όλα ψευδώς θετικά**.
+    Ο σαρωτής (`scripts/ssot-discover.sh`) δεν ξεχωρίζει «ταξινόμηση εμφανιζόμενου κειμένου ανά locale»
+    από «ντετερμινιστικό tie-break σε τεχνικό αναγνωριστικό»: `scene-title-block-cells.ts`/
+    `DemandBlockerList.tsx` ταξινομούν ρητά ΓΙΑ σταθερότητα (σχόλιο το λέει), όχι για εμφάνιση·
+    `survey-record.service.ts` ταξινομεί ISO ημερομηνίες (`localeCompare` ως γενικός συγκριτής
+    strings — locale collation θα ΕΣΠΑΖΕ τη χρονολογική σειρά)· `formula-catalog.ts` έχει ήδη ρητό
+    σχόλιο για το `'en'`· `token-color-leaves.ts` ταξινομεί dev-tool paths (η γειτονική γραμμή
+    χρησιμοποιεί ήδη σκέτο `<`/`>`, επιβεβαιώνοντας ότι η πρόθεση είναι τεχνική, όχι locale).
+  - **Γιατί ΔΕΝ έγινε καμία αλλαγή**: το ΝΑ τα μετατρέψω σε `compareByLocale()` θα ήταν **λάθος** —
+    θα εισήγαγε locale-εξάρτηση σε 4 περιπτώσεις όπου χρειάζεται ντετερμινισμός/ISO ordering.
+    Ο σαρωτής χρειάζεται καλύτερο κριτήριο (π.χ. εξαίρεση όταν λείπει `t()`/i18n γύρω από την τιμή),
+    όχι το επόμενο αρχείο να πληρώσει για τον πήχη.
