@@ -13,6 +13,7 @@
  * @see docs/adr/global-search-v1.md
  */
 
+import type { WorkspaceHref } from '@/lib/workspace/route-worlds';
 import type { Timestamp } from 'firebase/firestore';
 
 // =============================================================================
@@ -93,7 +94,7 @@ export interface SearchFields {
  */
 export interface SearchResultLinks {
   /** Route path: '/contacts/abc123' */
-  href: string;
+  href: WorkspaceHref;
 
   /** Route parameters for dynamic routes */
   routeParams: Record<string, string>;
@@ -226,7 +227,7 @@ export interface SearchResult {
   subtitle: string;
 
   /** Navigation href */
-  href: string;
+  href: WorkspaceHref;
 
   /**
    * 🏢 ENTERPRISE: Entity status for badge display

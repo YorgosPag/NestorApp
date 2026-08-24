@@ -31,7 +31,9 @@
  * ψάχνει και γραφείο και σπίτι). Ενικός εδώ θα προδίκαζε **μία** ανά χρήστη, και θα
  * το ανακάλυπτε κανείς όταν ήταν αργά.
  */
-export const MY_DEMANDS_ROUTE = '/demands';
+import { typedHref } from '@/lib/workspace/route-worlds';
+
+export const MY_DEMANDS_ROUTE = '/demands' as const;
 
 /**
  * **Δημιουργία ζήτησης** — η μόνη διαδρομή του χαρακτηριστικού που είναι
@@ -48,7 +50,7 @@ export const MY_DEMANDS_ROUTE = '/demands';
  * λίστα του, και το «μόνο desktop» θα ήταν δήλωση προθέσεων. Η **Α19** (πρώτος καρές)
  * και το §11.6 (φθηνή συσκευή, κινητό δίκτυο) ζητούν το αντίθετο.
  */
-export const NEW_DEMAND_ROUTE = '/demands/new';
+export const NEW_DEMAND_ROUTE = '/demands/new' as const;
 
 /** Η βάση της **μίας** ζήτησης. Δυναμικό τμήμα: η ταυτότητα (`dmnd_*`). */
 export const DEMAND_DETAIL_ROUTE_BASE = '/demands';
@@ -60,6 +62,6 @@ export const DEMAND_DETAIL_ROUTE_BASE = '/demands';
  * η ταυτότητα έρχεται από **δεδομένα**, και μια διεύθυνση που σπάει σε ένα `#` θα
  * αστοχούσε σιωπηλά σε ένα μόνο έγγραφο — ίδιο σκεπτικό με το `listingDetailHref`.
  */
-export function demandDetailHref(demandId: string): string {
-  return `${DEMAND_DETAIL_ROUTE_BASE}/${encodeURIComponent(demandId)}`;
+export function demandDetailHref(demandId: string) {
+  return typedHref(`${DEMAND_DETAIL_ROUTE_BASE}/${encodeURIComponent(demandId)}`);
 }

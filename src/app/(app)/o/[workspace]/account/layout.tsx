@@ -21,6 +21,7 @@
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import { usePathname, Link } from '@/lib/workspace/navigation';
+import type { WorkspaceHref } from '@/lib/workspace/route-worlds';
 import {
   User,
   Settings,
@@ -45,7 +46,7 @@ import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
  * Navigation item configuration
  */
 interface NavItem {
-  href: string;
+  href: WorkspaceHref;
   labelKey: string;
   icon: React.ElementType;
 }

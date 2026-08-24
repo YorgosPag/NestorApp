@@ -9,17 +9,19 @@
  * @module lib/routes/entityRoutes
  */
 
+import { typedHref, withQuery } from '@/lib/workspace/route-worlds';
+
 export const ENTITY_ROUTES = {
   crm: {
     leads: '/crm/leads',
-    lead: (id: string) => `/crm/leads/${id}`,
+    lead: (id: string) => typedHref(`/crm/leads/${id}`),
     tasks: '/crm/tasks',
-    task: (id: string) => `/crm/tasks/${id}`,
+    task: (id: string) => typedHref(`/crm/tasks/${id}`),
   },
   contacts: {
     list: '/contacts',
-    withFilter: (term: string) => `/contacts?filter=${encodeURIComponent(term)}`,
-    withId: (id: string) => `/contacts?contactId=${id}`,
+    withFilter: (term: string) => withQuery('/contacts', `filter=${encodeURIComponent(term)}`),
+    withId: (id: string) => withQuery('/contacts', `contactId=${id}`),
   },
   /**
    * 🔴 **ΤΟ `withId` ΕΔΕΙΧΝΕ ΣΤΗ ΣΕΛΙΔΑ ΠΟΥ ΑΓΝΟΟΥΣΕ ΤΗΝ ΠΑΡΑΜΕΤΡΟ** (ADR-777 §8.30).
@@ -38,23 +40,23 @@ export const ENTITY_ROUTES = {
    */
   properties: {
     list: '/properties',
-    withId: (id: string) => `/properties/${encodeURIComponent(id)}`,
+    withId: (id: string) => typedHref(`/properties/${encodeURIComponent(id)}`),
     /**
      * Η καρτέλα, **ανοιγμένη σε συγκεκριμένη ενότητα** (έγγραφα, φωτογραφίες…).
      * Η τιμή ταξιδεύει στη διεύθυνση ώστε ο σύνδεσμος να μοιράζεται: «δες τα
      * έγγραφα του Δ3» δεν είναι το ίδιο με «δες το Δ3».
      */
     withTab: (id: string, tab: string) =>
-      `/properties/${encodeURIComponent(id)}?tab=${encodeURIComponent(tab)}`,
+      typedHref(`/properties/${encodeURIComponent(id)}?tab=${encodeURIComponent(tab)}`),
     /** Η λίστα με την κάτοψη, με **επιλεγμένο** ακίνητο. Κατάσταση λίστας, όχι ταυτότητα. */
-    inSpaces: (id: string) => `/spaces/properties?propertyId=${encodeURIComponent(id)}`,
+    inSpaces: (id: string) => withQuery('/spaces/properties', `propertyId=${encodeURIComponent(id)}`),
   },
   spaces: {
-    parking: (id: string) => `/spaces/parking?parkingId=${id}`,
-    storage: (id: string) => `/spaces/storage?storageId=${id}`,
+    parking: (id: string) => withQuery('/spaces/parking', `parkingId=${id}`),
+    storage: (id: string) => withQuery('/spaces/storage', `storageId=${id}`),
   },
   obligations: {
     list: '/obligations',
-    edit: (id: string) => `/obligations/${id}/edit`,
+    edit: (id: string) => typedHref(`/obligations/${id}/edit`),
   },
 } as const;

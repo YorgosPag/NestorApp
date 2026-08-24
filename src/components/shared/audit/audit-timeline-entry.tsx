@@ -14,6 +14,7 @@
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from "react";
 import { Link } from '@/lib/workspace/navigation';
+import { declaredHref } from '@/lib/workspace/route-worlds';
 import { ExternalLink } from "lucide-react";
 import { formatRelativeTime, formatDateTime } from "@/lib/intl-utils";
 import type {
@@ -165,7 +166,10 @@ export function AuditTimelineEntry({
   const absoluteTime = timestamp ? formatDateTime(timestamp) : "";
 
   const entityHref = showEntityLink
-    ? buildEntityHref(entry.entityType, entry.entityId)
+    ? declaredHref(
+        'buildEntityHref διαλέγει βάση από τον τύπο οντότητας σε χρόνο εκτέλεσης.',
+        buildEntityHref(entry.entityType, entry.entityId),
+      )
     : null;
 
   /** Firebase UID detector — alphanumeric 20–36 chars, no separators. */

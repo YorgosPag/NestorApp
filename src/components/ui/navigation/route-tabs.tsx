@@ -15,6 +15,7 @@
 
 import React from 'react';
 import { usePathname, useRouter } from '@/lib/workspace/navigation';
+import { declaredHref } from '@/lib/workspace/route-worlds';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { BaseTabs } from './base-tabs';
@@ -63,7 +64,11 @@ export function RouteTabs({
     <BaseTabs
       tabs={baseTabs}
       value={activeHref}
-      onValueChange={(href) => router.push(href)}
+      onValueChange={(href) =>
+        router.push(
+          declaredHref('BaseTabs είναι γενικό UI primitive · η τιμή προήλθε από tab.href.', href),
+        )
+      }
       ariaLabel={ariaLabel}
       className={cn('mb-2', className)}
       alwaysShowLabels

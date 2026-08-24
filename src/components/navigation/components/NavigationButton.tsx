@@ -13,6 +13,7 @@ import { NavigationStatus } from '../../../core/types/BadgeTypes';
 import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS, HOVER_BORDER_EFFECTS } from '../../ui/effects';
 import { ExternalLink } from 'lucide-react';
 import { useRouter } from '@/lib/workspace/navigation';
+import type { WorkspaceHref } from '@/lib/workspace/route-worlds';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -210,7 +211,7 @@ export function NavigationButton({
 // ============================================================================
 
 interface NavigationLinkOverlayProps {
-  href: string;
+  href: WorkspaceHref;
   tooltip?: string;
   variant?: 'default' | 'compact';
 }

@@ -8,19 +8,22 @@
  * `.ssot-registry.json` (added in S1).
  */
 
-export function getPoDetailUrl(projectId: string, poId: string): string {
-  return `/projects/${projectId}/procurement/po/${poId}`;
+import { typedHref } from '@/lib/workspace/route-worlds';
+
+export function getPoDetailUrl(projectId: string, poId: string) {
+  return typedHref(`/projects/${projectId}/procurement/po/${poId}`);
 }
 
 export function getQuoteDetailUrl(
   projectId: string,
   quoteId: string,
   opts?: { review?: boolean },
-): string {
-  const base = `/projects/${projectId}/procurement/quote/${quoteId}`;
-  return opts?.review ? `${base}/review` : base;
+) {
+  const base = `/projects/${projectId}/procurement/quote/${quoteId}` as const;
+  if (opts?.review) return typedHref(`${base}/review`);
+  return typedHref(base);
 }
 
-export function getRfqDetailUrl(projectId: string, rfqId: string): string {
-  return `/projects/${projectId}/procurement/rfq/${rfqId}`;
+export function getRfqDetailUrl(projectId: string, rfqId: string) {
+  return typedHref(`/projects/${projectId}/procurement/rfq/${rfqId}`);
 }

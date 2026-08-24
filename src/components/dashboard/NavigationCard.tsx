@@ -1,6 +1,7 @@
 'use client';
 
 import { Link } from '@/lib/workspace/navigation';
+import type { WorkspaceHref } from '@/lib/workspace/route-worlds';
 import type { LucideIcon } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -21,7 +22,7 @@ interface NavigationCardProps {
   title: string;
   description: string;
   icon: LucideIcon;
-  href: string;
+  href: WorkspaceHref;
   badge?: string | null;
   colorVariant: ColorVariant;
   subItemCount?: number;

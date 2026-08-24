@@ -11,7 +11,7 @@ import { BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
-const NEW_PO_PATH = '/procurement/new';
+const NEW_PO_PATH = '/procurement/new' as const;
 
 export function AnalyticsEmptyState() {
   const { t } = useTranslation('procurement');

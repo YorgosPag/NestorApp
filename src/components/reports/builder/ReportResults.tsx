@@ -12,6 +12,7 @@ import '@/lib/design-system';
 import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from '@/lib/workspace/navigation';
+import { declaredHref } from '@/lib/workspace/route-worlds';
 import { AlertTriangle, Check, Clock, Link2, X } from 'lucide-react';
 import { useState } from 'react';
 import { ReportTable, type ReportColumnDef } from '@/components/reports/core/ReportTable';
@@ -90,7 +91,14 @@ export function ReportResults({
       const id = row['id'] as string;
       if (!id) return;
       const path = domainDefinition.entityLinkPath.replace('{id}', id);
-      router.push(path);
+      // ΔΡΟΜΟΣ #3: το `entityLinkPath` είναι ΓΛΩΣΣΑ ΤΟΥ report-builder DSL
+      // (`{id}` placeholder, ΟΧΙ Next `[id]`) — άλλο σύστημα, άλλη απόδειξη.
+      router.push(
+        declaredHref(
+          'report-builder DSL entityLinkPath, γλώσσα ΔΙΑΦΟΡΕΤΙΚΗ από τον κατάλογο Next.',
+          path,
+        ),
+      );
     },
     [domainDefinition.entityLinkPath, router],
   );

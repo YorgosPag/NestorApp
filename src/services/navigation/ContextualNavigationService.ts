@@ -10,6 +10,7 @@
  * @centralized-system
  */
 
+import { declaredHref, typedHref } from '@/lib/workspace/route-worlds';
 import { ParsedUrlQuery } from 'querystring';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -154,12 +155,15 @@ export class ContextualNavigationService {
     entityType: NavigableEntityType,
     entityId: string,
     context?: NavigationContext
-  ): string {
+  ) {
     const config = ENTITY_ROUTES[entityType];
 
     if (!config) {
       logger.error(`Unknown entity type: ${entityType}`);
-      return '/';
+      return declaredHref(
+        'ΑΓΝΩΣΤΟΣ entityType — πτώση ασφαλείας στη ρίζα, όχι σε σελίδα οντότητας.',
+        '/',
+      );
     }
 
     // Build query parameters
@@ -184,7 +188,14 @@ export class ContextualNavigationService {
 
     // Build final URL
     const queryString = params.toString();
-    return queryString ? `${config.basePath}?${queryString}` : config.basePath;
+    // ΔΡΟΜΟΣ #3: το `config.basePath` προέρχεται από ΔΥΝΑΜΙΚΗ αναζήτηση
+    // `ENTITY_ROUTES[entityType]` — ο μεταγλωττιστής δεν μπορεί να αποδείξει ΠΟΙΑ
+    // από τις βάσεις είναι, μόνο ότι κάποια είναι (SSoT: το ίδιο το ENTITY_ROUTES).
+    return declaredHref(
+      'Δυναμική επιλογή βάσης μέσα από το κεντρικό ENTITY_ROUTES — η απόδειξη ζει ' +
+        'στο ίδιο το μητρώο, όχι εδώ.',
+      queryString ? `${config.basePath}?${queryString}` : config.basePath,
+    );
   }
 
   /**
@@ -237,8 +248,8 @@ export class ContextualNavigationService {
    */
   static generateBreadcrumbRoute(
     hierarchy: Array<{ type: NavigableEntityType; id: string; name: string }>
-  ): string {
-    if (hierarchy.length === 0) return '/';
+  ) {
+    if (hierarchy.length === 0) return typedHref('/');
 
     const lastItem = hierarchy[hierarchy.length - 1];
 

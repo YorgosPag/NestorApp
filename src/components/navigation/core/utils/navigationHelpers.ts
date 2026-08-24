@@ -3,6 +3,7 @@
  * Utility functions for navigation operations
  */
 
+import { declaredHref } from '@/lib/workspace/route-worlds';
 import type { NavigationState, NavigationLevel } from '../types';
 
 /**
@@ -12,7 +13,7 @@ export function buildNavigationUrl(
   type: 'properties' | 'projects' | 'buildings' | 'floorplan',
   state: NavigationState,
   additionalFilters?: Record<string, unknown>
-): string {
+) {
   const baseFilters = {
     company: state.selectedCompany?.companyName,
     project: state.selectedProject?.name,
@@ -32,7 +33,14 @@ export function buildNavigationUrl(
   });
 
   const queryString = searchParams.toString();
-  return `/${type}${queryString ? '?' + queryString : ''}`;
+  // ΔΡΟΜΟΣ #3: το `type` είναι runtime μεταβλητή ⇒ ο μεταγλωττιστής δεν μπορεί να
+  // αποδείξει ΠΟΙΑ από τις 4 σελίδες είναι — μόνο ότι είναι μία από τις 4, που τις
+  // απαριθμεί ήδη η υπογραφή της συνάρτησης.
+  return declaredHref(
+    'Δυναμική επιλογή μεταξύ properties/projects/buildings/floorplan — η ένωση ' +
+      'στην υπογραφή είναι η απόδειξη, όχι η κατασκευή εδώ.',
+    `/${type}${queryString ? '?' + queryString : ''}`,
+  );
 }
 
 /**

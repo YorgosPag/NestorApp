@@ -49,7 +49,8 @@
     "autoprefixer",
     "cross-env",
     "concurrently",
-    "patch-package"
+    "patch-package",
+    "server-only"
   ],
   "ignoreExportsUsedInFile": true,
   "rules": {

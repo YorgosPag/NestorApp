@@ -28,7 +28,7 @@
  * Ο κατάλογος είναι ο φυσικός του γονέας, και ο μόνος λόγος που η πόρτα καταχώρησης
  * αποκτά **διάδρομο**.
  */
-export const MANDATE_CATALOG_ROUTE = '/listings/mandates';
+export const MANDATE_CATALOG_ROUTE = '/listings/mandates' as const;
 
 /** **Καταχώρηση ακινήτου για λογαριασμό πελάτη** (§8.33). */
-export const NEW_BROKERED_LISTING_ROUTE = '/listings/mandates/new';
+export const NEW_BROKERED_LISTING_ROUTE = '/listings/mandates/new' as const;

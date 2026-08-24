@@ -16,6 +16,7 @@ import { format } from 'date-fns';
 import { Calendar, Clock, User, FileText, Tag, ArrowRight, Edit3 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from '@/lib/workspace/navigation';
+import { typedHref } from '@/lib/workspace/route-worlds';
 import {
   Dialog,
   DialogContent,
@@ -68,7 +69,7 @@ export function CalendarEventDialog({ event, open, onOpenChange, onEditTask }: C
 
   const _colorScheme = CALENDAR_EVENT_COLORS[event.eventType];
   const originalLink = event.source === 'task'
-    ? `/crm/tasks/${event.entityId}`
+    ? typedHref(`/crm/tasks/${event.entityId}`)
     : null;
 
   return (

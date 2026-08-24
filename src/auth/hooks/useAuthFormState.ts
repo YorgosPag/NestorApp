@@ -13,6 +13,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { AuthFormMode } from '../types/auth.types';
+import type { AppHref } from '@/lib/workspace/route-worlds';
 
 const logger = createModuleLogger('AuthForm');
 
@@ -27,7 +28,7 @@ interface FormData {
 interface UseAuthFormStateOptions {
   defaultMode: AuthFormMode;
   onSuccess?: () => void;
-  redirectTo: string;
+  redirectTo: AppHref;
 }
 
 export function useAuthFormState({ defaultMode, onSuccess, redirectTo }: UseAuthFormStateOptions) {

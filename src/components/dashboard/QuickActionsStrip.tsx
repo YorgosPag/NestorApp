@@ -1,6 +1,7 @@
 'use client';
 
 import { Link } from '@/lib/workspace/navigation';
+import type { WorkspaceHref } from '@/lib/workspace/route-worlds';
 import { UserPlus, FolderPlus, Receipt, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n';
@@ -17,7 +18,7 @@ import '@/lib/design-system';
 interface QuickAction {
   labelKey: string;
   icon: typeof UserPlus;
-  href: string;
+  href: WorkspaceHref;
   variant: 'blue' | 'purple' | 'green' | 'neutral';
 }
 

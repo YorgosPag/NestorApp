@@ -14,7 +14,9 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { BarChart, Users, Phone, Target, ClipboardList, Filter, Users2, Bell, AppWindow, BarChart3, CalendarDays } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { Link } from '@/lib/workspace/navigation';
+import type { WorkspaceHref } from '@/lib/workspace/route-worlds';
 import { COMPLEX_HOVER_EFFECTS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -22,7 +24,12 @@ import { cn, getSpacingClass } from '@/lib/design-system';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
 
-const crmSectionKeys = [
+const crmSectionKeys: ReadonlyArray<{
+  titleKey: string;
+  href: WorkspaceHref;
+  icon: LucideIcon;
+  descKey: string;
+}> = [
     { titleKey: 'sections.dashboard.title', href: '/crm/dashboard', icon: BarChart, descKey: 'sections.dashboard.description' },
     { titleKey: 'sections.customers.title', href: '/crm/customers', icon: Users, descKey: 'sections.customers.description' },
     { titleKey: 'sections.communications.title', href: '/crm/communications', icon: Phone, descKey: 'sections.communications.description' },

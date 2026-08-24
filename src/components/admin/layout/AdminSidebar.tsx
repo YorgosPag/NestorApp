@@ -10,6 +10,7 @@
 
 import { useState } from 'react';
 import { Link, usePathname } from '@/lib/workspace/navigation';
+import type { WorkspaceHref } from '@/lib/workspace/route-worlds';
 import {
   Users,
   Wrench,
@@ -41,7 +42,7 @@ import { Button } from '@/components/ui/button';
 // =============================================================================
 
 interface NavItem {
-  href: string;
+  href: WorkspaceHref;
   labelKey: string;
   icon: LucideIcon;
   superAdminOnly?: boolean;

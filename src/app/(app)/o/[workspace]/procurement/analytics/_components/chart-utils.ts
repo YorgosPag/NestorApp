@@ -11,10 +11,11 @@
  */
 
 import { serializeFilterArray } from '@/lib/url-filters/multi-value';
+import { withQuery } from '@/lib/workspace/route-worlds';
 import { formatCurrency } from '@/lib/intl-formatting';
 import type { SpendAnalyticsFilters } from '@/services/procurement/aggregators/spendAnalyticsAggregator';
 
-const PO_LIST_PATH = '/procurement/purchase-orders';
+const PO_LIST_PATH = '/procurement/purchase-orders' as const;
 
 export function formatEurShort(n: number): string {
   if (!Number.isFinite(n)) return '0€';
@@ -36,7 +37,7 @@ export type PurchaseOrdersFilterKey = keyof PurchaseOrdersUrlOverride;
 export function buildPurchaseOrdersUrl(
   filters: SpendAnalyticsFilters,
   overrides: PurchaseOrdersUrlOverride,
-): string {
+) {
   const params = new URLSearchParams();
   params.set('from', filters.from);
   params.set('to', filters.to);
@@ -50,7 +51,7 @@ export function buildPurchaseOrdersUrl(
     const serialized = serializeFilterArray(values);
     if (serialized) params.set(key, serialized);
   }
-  return `${PO_LIST_PATH}?${params.toString()}`;
+  return withQuery(PO_LIST_PATH, params.toString());
 }
 
 export function readClickedRowKey(payload: unknown, key: string): string | null {

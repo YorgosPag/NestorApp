@@ -1,3 +1,5 @@
+import type { AppHref } from '@/lib/workspace/route-worlds';
+
 // =============================================================================
 // 🔐 AUTH TYPES - CENTRALIZED TYPE DEFINITIONS
 // =============================================================================
@@ -201,7 +203,7 @@ export type AuthFormMode = 'signin' | 'signup' | 'reset';
 export interface AuthFormProps {
   defaultMode?: AuthFormMode;
   onSuccess?: () => void;
-  redirectTo?: string;
+  redirectTo?: AppHref;
 }
 
 /**
@@ -211,7 +213,7 @@ export interface ProtectedRouteProps {
   children: React.ReactNode;
   fallback?: React.ReactNode;
   requiredRole?: UserRole;
-  redirectTo?: string;
+  redirectTo?: AppHref;
 }
 
 // =============================================================================

@@ -21,6 +21,7 @@
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import * as React from 'react';
 import { useRouter } from '@/lib/workspace/navigation';
+import type { AppHref } from '@/lib/workspace/route-worlds';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -55,7 +56,7 @@ export function HelpButton() {
     setIsMac(typeof navigator !== 'undefined' && navigator.platform?.includes('Mac'));
   }, []);
 
-  const handleNavigation = (path: string) => {
+  const handleNavigation = (path: AppHref) => {
     router.push(path);
   };
 
@@ -109,20 +110,16 @@ export function HelpButton() {
           <span>{t('helpHub.keyboardShortcuts')}</span>
         </DropdownMenuItem>
 
-        {/* Documentation */}
-        <DropdownMenuItem onClick={() => handleNavigation('/help/docs')}>
-          <BookOpen className={`mr-2 ${iconSizes.sm}`} />
-          <span>{t('helpHub.documentation')}</span>
-          <ExternalLink className={`ml-auto ${iconSizes.xs}`} />
-        </DropdownMenuItem>
-
-        <DropdownMenuSeparator />
-
-        {/* Support */}
-        <DropdownMenuItem onClick={() => handleNavigation('/help/support')}>
-          <MessageCircle className={`mr-2 ${iconSizes.sm}`} />
-          <span>{t('helpHub.support')}</span>
-        </DropdownMenuItem>
+        {/*
+          🔴 «Documentation» / «Support» ΑΦΑΙΡΕΘΗΚΑΝ 2026-08-24 (Γ5, ADR-787 §5.3 ξ).
+          Έδειχναν σε `/help/docs` · `/help/support` — διευθύνσεις που ΔΕΝ υπάρχουν σε
+          ΚΑΝΕΝΑ route group (επαληθεύτηκε στον κατάλογο του `next typegen`). Ο έλεγχος
+          τύπων του Γ5 το αποκάλυψε ως σφάλμα μεταγλώττισης — ΔΕΝ ήταν σπασμένα ΕΞΑΙΤΙΑΣ
+          του Γ5, ήταν ήδη σπασμένα στον χρόνο εκτέλεσης (`router.push` σε ανύπαρκτη
+          σελίδα πέφτει στο δίχτυ `[...unprefixed]`, 307 προς άγνωστο προορισμό).
+          ΑΠΟΦΑΣΗ ΤΟΜΕΑ, όχι δική μου: πού πρέπει να δείχνουν; (εξωτερικό site τεκμηρίωσης;
+          mailto; ticket σύστημα;) Μέχρι τότε, καλύτερο να ΛΕΙΠΟΥΝ παρά να δείχνουν πουθενά.
+        */}
       </DropdownMenuContent>
     </DropdownMenu>
   );

@@ -10,6 +10,8 @@
  * @module components/projects/tabs/OwnershipTableSummary
  */
 
+import type { WorkspaceHref } from '@/lib/workspace/route-worlds';
+import { withQuery } from '@/lib/workspace/route-worlds';
 import '@/lib/design-system';
 import React from 'react';
 import { cn } from '@/lib/utils';
@@ -235,7 +237,7 @@ interface LinkedSpaceRowsProps {
   spacing: SpacingTokens;
   colors: ColorTokens;
   iconSizes: UseIconSizesReturn;
-  onNavigate: (path: string) => void;
+  onNavigate: (path: WorkspaceHref) => void;
   updateLinkedSpace: (rowIndex: number, spaceIndex: number, field: 'hasOwnShares' | 'millesimalShares', value: boolean | number) => void;
 }
 
@@ -259,7 +261,7 @@ export function LinkedSpaceRows({
                 ? <NAVIGATION_ENTITIES.parking.icon className={cn('inline', iconSizes.xs, NAVIGATION_ENTITIES.parking.color)} />
                 : <NAVIGATION_ENTITIES.storage.icon className={cn('inline', iconSizes.xs, NAVIGATION_ENTITIES.storage.color)} />}
               {' '}
-              <button type="button" className="hover:underline cursor-pointer" onClick={() => onNavigate(ls.spaceType === 'parking' ? `/spaces/parking?parkingId=${ls.spaceId}` : `/spaces/storage?storageId=${ls.spaceId}`)}>
+              <button type="button" className="hover:underline cursor-pointer" onClick={() => onNavigate(ls.spaceType === 'parking' ? withQuery('/spaces/parking', `parkingId=${ls.spaceId}`) : withQuery('/spaces/storage', `storageId=${ls.spaceId}`))}>
                 {ls.entityCode}
               </button>
             </TableCell>

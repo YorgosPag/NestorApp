@@ -75,7 +75,7 @@ import { AUTH_ROUTES } from './authRoutes';
  *
  * 🔶 Αν αύριο αποκτήσει το `(me)` δικό του ευρετήριο, αλλάζει **αυτή η γραμμή**.
  */
-export const PRIVATE_SPACE_HOME: string = MY_OFFERS_ROUTE;
+export const PRIVATE_SPACE_HOME = MY_OFFERS_ROUTE;
 
 /**
  * Το ελάχιστο σχήμα ταυτότητας που χρειάζεται η προσγείωση.
@@ -100,7 +100,7 @@ export interface LandingIdentity {
  * @example
  * router.replace(resolvePostLoginRoute(user));
  */
-export function resolvePostLoginRoute(identity: LandingIdentity): string {
+export function resolvePostLoginRoute(identity: LandingIdentity) {
   return hasOrganization(identity) ? AUTH_ROUTES.home : PRIVATE_SPACE_HOME;
 }
 

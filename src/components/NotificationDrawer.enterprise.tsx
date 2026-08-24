@@ -8,6 +8,7 @@ import { create } from 'zustand';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useRouter } from '@/lib/workspace/navigation';
+import { declaredHref } from '@/lib/workspace/route-worlds';
 import { X, CheckCircle, AlertCircle, AlertTriangle, Info, RefreshCw, Eye, CheckCheck } from 'lucide-react';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { apiClient } from '@/lib/api/enterprise-api-client';
@@ -185,7 +186,11 @@ export function NotificationDrawer() {
         if (url.startsWith('/')) {
           // Internal URL: in-app navigation + close drawer
           close();
-          router.push(url);
+          // ΔΡΟΜΟΣ #3: το `url` έρχεται από αποθηκευμένη ενέργεια ειδοποίησης
+          // (δεδομένα Firestore) — ο μεταγλωττιστής δεν βλέπει τη βάση.
+          router.push(
+            declaredHref('Στόχος αποθηκευμένης ενέργειας ειδοποίησης — δεδομένα, όχι κώδικας.', url),
+          );
         } else {
           // External URL: open in new tab
           window.open(url, '_blank', 'noopener,noreferrer');

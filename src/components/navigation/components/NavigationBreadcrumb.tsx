@@ -21,6 +21,7 @@
 import React from 'react';
 import { Link } from '@/lib/workspace/navigation';
 
+import type { WorkspaceHref } from '@/lib/workspace/route-worlds';
 // 🏢 ENTERPRISE: Shadcn Tooltip for accessible tooltips (replaces native title)
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 // 🏢 ENTERPRISE: Icons από centralized config - ZERO hardcoded imports
@@ -43,7 +44,7 @@ interface NavigationBreadcrumbProps {
  * 🏢 ENTERPRISE: Extended BreadcrumbItem with href for Link navigation
  */
 interface BreadcrumbItemWithHref extends BreadcrumbItem {
-  href: string;
+  href: WorkspaceHref;
   entityType: NavigableEntityType;
 }
 

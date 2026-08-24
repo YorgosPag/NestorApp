@@ -48,10 +48,12 @@
  * οποίο το {@link withQuery} δεν γράφει κενό `?`), και ένας σπασμένος σύνδεσμος θα
  * ήταν χειρότερος από τα δύο.
  */
-export const SEARCH_LANDING_ROUTE = '/';
+import { typedHref } from '@/lib/workspace/route-worlds';
+
+export const SEARCH_LANDING_ROUTE = '/' as const;
 
 /** Η οθόνη 2 — χάρτης **και** λίστα. */
-export const SEARCH_RESULTS_ROUTE = '/search/results';
+export const SEARCH_RESULTS_ROUTE = '/search/results' as const;
 
 /** Η οθόνη 3 — ένα ακίνητο. Δυναμικό τμήμα: η ταυτότητα της αγγελίας. */
 export const LISTING_DETAIL_ROUTE_BASE = '/listing';
@@ -63,19 +65,25 @@ export const LISTING_DETAIL_ROUTE_BASE = '/listing';
  * δύο διευθύνσεις για το ίδιο περιεχόμενο — ο ίδιος λόγος για τον οποίο το
  * `serializeListingFilters` δεν γράφει κενά φίλτρα.
  */
-function withQuery(path: string, query: string | null | undefined): string {
-  return query && query.length > 0 ? `${path}?${query}` : path;
-}
+/**
+ * ⚠️ **`as const` στο `path` ΕΙΝΑΙ ΑΝΑΓΚΑΙΟ, ΟΧΙ ΥΦΟΣ** — επαληθεύτηκε πειραματικά:
+ * χωρίς αυτό, μια ενδιάμεση `const` που χρησιμοποιείται σε **δύο** κλάδους
+ * φαρδαίνει σε `string` στον δεύτερο. Το `typedHref` καλείται **χωριστά** σε κάθε
+ * κλάδο — ποτέ μέσα σε τερνάρια, που φαρδαίνει και τα δύο άκρα μαζί (μετρημένο).
+ */
 
 /** Η σελίδα **ενός** ακινήτου, κρατώντας την αναζήτηση από την οποία ήρθε ο επισκέπτης. */
-export function listingDetailHref(id: string, query?: string | null): string {
+export function listingDetailHref(id: string, query?: string | null) {
   // `encodeURIComponent` παρότι οι enterprise ταυτότητες είναι ασφαλείς χαρακτήρες:
   // η ταυτότητα έρχεται από **δεδομένα**, και μια διεύθυνση που σπάει σε ένα `#` θα
   // αστοχούσε σιωπηλά σε ένα μόνο έγγραφο — το χειρότερο είδος σφάλματος.
-  return withQuery(`${LISTING_DETAIL_ROUTE_BASE}/${encodeURIComponent(id)}`, query);
+  const path = `${LISTING_DETAIL_ROUTE_BASE}/${encodeURIComponent(id)}` as const;
+  if (query && query.length > 0) return typedHref(`${path}?${query}`);
+  return typedHref(path);
 }
 
 /** Επιστροφή στα αποτελέσματα, **με τα ίδια φίλτρα**. */
-export function searchResultsHref(query?: string | null): string {
-  return withQuery(SEARCH_RESULTS_ROUTE, query);
+export function searchResultsHref(query?: string | null) {
+  if (query && query.length > 0) return typedHref(`${SEARCH_RESULTS_ROUTE}?${query}`);
+  return typedHref(SEARCH_RESULTS_ROUTE);
 }

@@ -195,7 +195,7 @@ export function listingFiltersFromDemand(demand: PropertyDemand): ListingFilters
  * **οφείλει** να το πει — αλλιώς ο χρήστης διαβάζει τα αποτελέσματα ως απάντηση στο
  * αίτημά του, ενώ είναι απάντηση σε **χαλαρότερο** αίτημα.
  */
-export function demandResultsHref(demand: PropertyDemand): string {
+export function demandResultsHref(demand: PropertyDemand) {
   const filters = listingFiltersFromDemand(demand);
   return searchResultsHref(serializeListingFilters(filters).toString());
 }

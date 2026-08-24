@@ -54,6 +54,16 @@ export const AUTH_ROUTES = {
    * **αποκλειστικά** ο {@link resolvePostLoginRoute} (`lib/routes/landing.ts`).
    */
   pendingApproval: '/pending-approval',
+  /**
+   * **Η οθόνη «ΕΧΕΙΣ ταυτότητα, ΔΕΝ έχεις δικαίωμα»** — διαφορετική από το
+   * `pendingApproval` (§8.34 πιο πάνω): εκείνη σημαίνει *«ζήτησες να μπεις σε
+   * γραφείο»*, αυτή σημαίνει *«είσαι ήδη μέσα, αλλά όχι σε αυτό το κομμάτι»*
+   * (έλεγχος **ρόλου**, `ProtectedRoute` `requiredRole`). Ονομάστηκε ΕΔΩ επειδή
+   * το Γ5 (ADR-787 §5.3 ξ) βρήκε τη διεύθυνση χωρίς καμία σελίδα να τη σερβίρει —
+   * `ProtectedRoute.tsx` την προϋπέθετε από πριν, δηλωμένο ρητά ως ανοιχτό στο
+   * handoff της §5.3 ξ §7.
+   */
+  unauthorized: '/unauthorized',
 } as const;
 
 /** Type for auth route keys */

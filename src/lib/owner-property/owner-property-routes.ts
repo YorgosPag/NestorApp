@@ -42,7 +42,9 @@
  * κανόνας, όχι η εξαίρεση. Ενικός εδώ θα προδίκαζε **μία** ανά χρήστη, και θα το
  * ανακάλυπτε κανείς όταν ήταν αργά. Ίδιο σκεπτικό με το `MY_DEMANDS_ROUTE`.
  */
-export const MY_OFFERS_ROUTE = '/offers';
+import { typedHref } from '@/lib/workspace/route-worlds';
+
+export const MY_OFFERS_ROUTE = '/offers' as const;
 
 /**
  * **Καταχώρηση ακινήτου** — αποκλειστικά desktop (**Α8**).
@@ -57,7 +59,7 @@ export const MY_OFFERS_ROUTE = '/offers';
  * bundle με τον κατάλογο — δηλαδή θα φορτωνόταν σε **κάθε κινητό** που ανοίγει τη
  * λίστα του, και το «μόνο desktop» θα ήταν δήλωση προθέσεων.
  */
-export const NEW_OFFER_ROUTE = '/offers/new';
+export const NEW_OFFER_ROUTE = '/offers/new' as const;
 
 /** Η βάση της **μίας** καταχώρησης. Δυναμικό τμήμα: η ταυτότητα (`ownp_*`). */
 export const OFFER_DETAIL_ROUTE_BASE = '/offers';
@@ -70,6 +72,6 @@ export const OFFER_DETAIL_ROUTE_BASE = '/offers';
  * αστοχούσε **σιωπηλά** σε ένα μόνο έγγραφο — το χειρότερο είδος σφάλματος, γιατί
  * μοιάζει με «δεν υπάρχει».
  */
-export function offerDetailHref(ownerPropertyId: string): string {
-  return `${OFFER_DETAIL_ROUTE_BASE}/${encodeURIComponent(ownerPropertyId)}`;
+export function offerDetailHref(ownerPropertyId: string) {
+  return typedHref(`${OFFER_DETAIL_ROUTE_BASE}/${encodeURIComponent(ownerPropertyId)}`);
 }

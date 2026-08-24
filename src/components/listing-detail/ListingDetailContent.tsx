@@ -38,6 +38,7 @@
 
 import React from 'react';
 import { Link } from '@/lib/workspace/navigation';
+import type { WorkspaceHref } from '@/lib/workspace/route-worlds';
 import { useSearchParams } from 'next/navigation';
 
 // 🧩 ADR-744 §15 (Φ4) — PER-ROUTE SLICE ΤΗΣ ΟΘΟΝΗΣ 3.
@@ -90,7 +91,7 @@ function DetailNotice({
 }: {
   readonly titleKey: string;
   readonly bodyKey: string;
-  readonly backHref: string;
+  readonly backHref: WorkspaceHref;
 }) {
   const { t } = useTranslation(['search-results']);
 
@@ -202,7 +203,7 @@ function ListingDetailBody({
   backHref,
 }: {
   readonly listing: PublicListing;
-  readonly backHref: string;
+  readonly backHref: WorkspaceHref;
 }) {
   const { t } = useTranslation(['search-results']);
 

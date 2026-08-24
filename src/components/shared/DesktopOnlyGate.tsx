@@ -40,6 +40,7 @@
 
 import React from 'react';
 import { Link } from '@/lib/workspace/navigation';
+import { declaredHref, typedHref } from '@/lib/workspace/route-worlds';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useViewportClass } from '@/hooks/media/useViewportClass';
 import { useAuth } from '@/auth/hooks/useAuth';
@@ -106,7 +107,9 @@ export function DesktopOnlyNotice({
    * αδιέξοδο, απλώς πιο ευγενικό.
    */
   const identified = hasDraftIdentity(user?.uid ?? null);
-  const exitHref = identified ? privateHref : SEARCH_LANDING_ROUTE;
+  const exitHref = identified
+    ? declaredHref('privateHref χτίζεται από τον χώρο του συνδεδεμένου.', privateHref)
+    : typedHref(SEARCH_LANDING_ROUTE);
   const whatKey = identified ? 'what' : 'whatAnonymous';
   const backKey = identified ? 'back' : 'backAnonymous';
 

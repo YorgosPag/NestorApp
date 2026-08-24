@@ -16,6 +16,8 @@
 
 import React from 'react';
 import { usePathname, Link } from '@/lib/workspace/navigation';
+import { declaredHref } from '@/lib/workspace/route-worlds';
+import type { WorkspaceHref } from '@/lib/workspace/route-worlds';
 import {
   Home,
   BarChart,
@@ -102,7 +104,7 @@ const SEGMENT_CONFIG: Record<string, { labelKey: string; icon: LucideIcon; color
 
 interface BreadcrumbSegment {
   label: string;
-  href: string;
+  href: WorkspaceHref;
   icon: LucideIcon;
   color: string;
 }
@@ -135,7 +137,10 @@ export function ModuleBreadcrumb({ className }: ModuleBreadcrumbProps) {
     if (config) {
       items.push({
         label: t(config.labelKey),
-        href: currentPath,
+        // ΔΡΟΜΟΣ #3: το `currentPath` είναι ΠΡΟΘΕΜΑ της τρέχουσας διαδρομής
+        // (usePathname), όχι ολόκληρη σελίδα — ένα πρόθεμα ΔΕΝ είναι πάντα δικός
+        // του προορισμός (π.χ. `/crm` δεν είναι σελίδα, το `/crm/leads` είναι).
+        href: declaredHref('Πρόθεμα της τρέχουσας usePathname() — breadcrumb, όχι νέος προορισμός.', currentPath),
         icon: config.icon,
         color: config.color,
       });
