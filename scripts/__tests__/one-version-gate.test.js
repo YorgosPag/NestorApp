@@ -49,13 +49,17 @@ function gitShow(commit, rel) {
  * πύλη, και προσθέτουμε επόμενο μπλοκ ανώτατου επιπέδου ώστε να ασκείται και ο
  * τερματισμός του αναγνώστη.
  */
-function realImportersBlock() {
-  const lines = fs.readFileSync(path.join(REPO_ROOT, 'pnpm-lock.yaml'), 'utf8').split(/\r?\n/);
+function importersBlockOf(lockText) {
+  const lines = lockText.split(/\r?\n/);
   const start = lines.indexOf('importers:');
+  if (start < 0) throw new Error('importers: δεν βρέθηκε στο lockfile του fixture.');
   let end = start + 1;
   while (end < lines.length && !(/^\S/.test(lines[end]) && lines[end].trim())) end++;
   return lines.slice(start, end).join('\n');
 }
+
+const realImportersBlock = () =>
+  importersBlockOf(fs.readFileSync(path.join(REPO_ROOT, 'pnpm-lock.yaml'), 'utf8'));
 
 function lockFrom(importersBlock) {
   return `lockfileVersion: '9.0'\n\n${importersBlock}\npackages:\n\n  some-pkg@1.0.0: {}\n`;
@@ -75,12 +79,19 @@ function replaceOnce(text, pattern, replacement) {
  * Μίνι-repo από **πραγματικά** αρχεία. `edits` = { relPath: (text) => text }
  * για μετάλλαξη, ή συμβολοσειρά για νέο αρχείο.
  */
-function miniRepo(edits = {}) {
+/**
+ * ⚠️ **ΟΛΟΚΛΗΡΗ Η ΚΑΤΑΣΤΑΣΗ ΑΠΟ ΤΟ ΙΔΙΟ ΣΗΜΕΙΟ, ΠΟΤΕ ΜΙΣΗ.** Με `fromCommit`, **ΚΑΘΕ**
+ * είσοδος (manifests **και** lockfile) διαβάζεται από το καρφωμένο commit. Η πρώτη γραφή
+ * ζευγάρωνε το **παλιό** manifest με το **σημερινό** lockfile — κατάσταση που **δεν υπήρξε
+ * ποτέ**, και που έδινε σωστή απάντηση **κατά τύχη** μέχρι να τρέξει το `pnpm install`.
+ * Το έπιασε η ίδια η βαθμονόμηση, μόλις η πραγματικότητα προχώρησε.
+ */
+function miniRepo(edits = {}, fromCommit = null) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'onever-'));
-  const read = (rel) => fs.readFileSync(path.join(REPO_ROOT, rel), 'utf8');
+  const read = (rel) => (fromCommit ? gitShow(fromCommit, rel) : fs.readFileSync(path.join(REPO_ROOT, rel), 'utf8'));
   const files = {
     'pnpm-workspace.yaml': read('pnpm-workspace.yaml'),
-    'pnpm-lock.yaml': lockFrom(realImportersBlock()),
+    'pnpm-lock.yaml': lockFrom(importersBlockOf(read('pnpm-lock.yaml'))),
     '.one-version.json': NO_EXCEPTIONS,
     'package.json': read('package.json'),
     'packages/core/package.json': read('packages/core/package.json'),
@@ -149,11 +160,8 @@ describe('Μ0 — παρονομαστής', () => {
 // =============================================================================
 
 describe('Π — βαθμονόμηση', () => {
-  it('Π1: με το manifest ΠΡΙΝ τη διόρθωση η πύλη είναι ΚΟΚΚΙΝΗ και ονομάζει jest/jsdom', () => {
-    const root = miniRepo({
-      'src/subapps/dxf-viewer/package.json': gitShow(PRE_FIX_COMMIT, 'src/subapps/dxf-viewer/package.json'),
-    });
-    const result = sweep(root);
+  it('Π1: στην ΚΑΤΑΣΤΑΣΗ ΠΡΙΝ τη διόρθωση η πύλη είναι ΚΟΚΚΙΝΗ και ονομάζει jest/jsdom', () => {
+    const result = sweep(miniRepo({}, PRE_FIX_COMMIT));
     expect(counts(result, 'names')[S.REDECLARED]).toBeGreaterThanOrEqual(20);
     expect(idsOf(result, S.VERSION_SPLIT)).toEqual(
       expect.arrayContaining(['jest', 'jsdom', '@types/jest', 'lucide-react', 'pixelmatch']),
@@ -194,8 +202,7 @@ describe('Μ — μεταλλάξεις στις εισόδους', () => {
     const root = miniRepo({
       'src/subapps/dxf-viewer/package.json': (s) =>
         replaceOnce(s, '"fast-check"', '"jest": "^30.2.0",\n    "fast-check"'),
-      'pnpm-lock.yaml': (s) =>
-        replaceOnce(s, /( {6}jest:\n {8}specifier: )\^29\.7\.0(\n {8}version: )29\.7\.0/, '$1^30.2.0$230.2.0'),
+      'pnpm-lock.yaml': addSubappLockEntry('jest', '^30.2.0', '30.2.0'),
     });
     const result = sweep(root);
     expect(idsOf(result, S.REDECLARED)).toContain('jest');
