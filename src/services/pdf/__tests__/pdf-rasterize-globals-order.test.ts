@@ -2,19 +2,16 @@
  * ΑΓΚΥΡΑ ΣΕΙΡΑΣ ΦΟΡΤΩΣΗΣ — ADR-598 G2.
  *
  * ΤΙ ΦΥΛΑΕΙ: το `pdf.mjs` (legacy) αποφασίζει **κατά τη φόρτωσή του** αν θα γεμίσει
- * μόνο του τα `DOMMatrix`/`Path2D` από το προαιρετικό πακέτο `canvas`. Αφού το
- * `node-canvas` αφαιρέθηκε από το δέντρο (`pnpm.overrides["pdfjs-dist>canvas"]="-"`,
- * −62 πακέτα, −9 advisories), τα globals πρέπει να είναι **ήδη εκεί** τη στιγμή της
- * εισαγωγής, αλλιώς κάθε PDF με tiling pattern πέφτει σε χρόνο εκτέλεσης με
- * `ReferenceError: DOMMatrix is not defined` (μετρημένο ζωντανά).
+ * μόνο του τα `DOMMatrix`/`Path2D` από το προαιρετικό πακέτο node-canvas. Αφού εκείνο
+ * αφαιρέθηκε από το δέντρο (`pnpm.overrides["pdfjs-dist>canvas"] = "-"`, −62 πακέτα,
+ * −9 advisories), τα globals πρέπει να είναι **ήδη εκεί** τη στιγμή της εισαγωγής·
+ * αλλιώς κάθε PDF με tiling pattern πέφτει σε χρόνο εκτέλεσης με
+ * `ReferenceError: DOMMatrix is not defined` (μετρημένο ζωντανά, ADR-598 §G2).
  *
- * ΓΙΑΤΙ ΧΡΕΙΑΖΕΤΑΙ: η βλάβη είναι **αόρατη στον μεταγλωττιστή** και δεν την πιάνει
- * κανένα άλλο test — ένα αθώο `Promise.all([loadPdfjs(), loadCanvas()])` την
- * επαναφέρει σιωπηλά. Χωρίς άγκυρα, η εγγύηση είναι σχόλιο.
+ * ΓΙΑΤΙ ΧΡΕΙΑΖΕΤΑΙ: η βλάβη είναι αόρατη στον μεταγλωττιστή και δεν την πιάνει κανένα
+ * άλλο test — μια αθώα παράλληλη φόρτωση την επαναφέρει σιωπηλά. Χωρίς άγκυρα, η
+ * εγγύηση είναι σχόλιο.
  */
-
-const NAPI = '@napi-rs/canvas';
-const PDFJS = 'pdfjs-dist/legacy/build/pdf.mjs';
 
 /** Τι έβλεπε το `globalThis` τη στιγμή που φορτώθηκε το pdf.js. */
 let globalsAtPdfjsImport: { DOMMatrix: string; Path2D: string } | null = null;
@@ -52,14 +49,15 @@ jest.mock('pdfjs-dist/legacy/build/pdf.mjs', () => {
 }, { virtual: true });
 
 /**
- * Ο κώδικας ΟΝΟΜΑΖΕΙ τη βλάβη μέσα στα σχόλιά του (`Promise.all`, `canvas`) ως
- * τεκμηρίωση του γιατί δεν γράφεται έτσι. Χωρίς αφαίρεση σχολίων, οι άγκυρες Δ/Ε
- * θα κοκκίνιζαν πάνω στη ΘΕΡΑΠΕΙΑ — το μάθημα των CHECK 3.50 (Κ7β) / 3.56.
+ * Ο ΚΩΔΙΚΑΣ ΟΝΟΜΑΖΕΙ ΤΗ ΒΛΑΒΗ ΜΕΣΑ ΣΤΑ ΣΧΟΛΙΑ ΤΟΥ, ως τεκμηρίωση του γιατί δεν
+ * γράφεται έτσι. Χωρίς αφαίρεση σχολίων, οι άγκυρες Δ/Ε θα κοκκίνιζαν πάνω στη
+ * ΘΕΡΑΠΕΙΑ — το μάθημα των CHECK 3.50 (Κ7β) και 3.56.
  */
 function readServiceCode(): string {
   const raw = jest.requireActual<typeof import('fs')>('fs')
     .readFileSync(require.resolve('../pdf-rasterize.service.ts'), 'utf8');
-  return raw.replace(//*[sS]*?*//g, '').replace(///.*$/gm, '');
+  const withoutBlockComments = raw.replace(/\/\*[\s\S]*?\*\//g, '');
+  return withoutBlockComments.replace(/\/\/.*$/gm, '');
 }
 
 describe('pdf-rasterize: σειρά εγκατάστασης browser globals (ADR-598 G2)', () => {
@@ -83,7 +81,7 @@ describe('pdf-rasterize: σειρά εγκατάστασης browser globals (AD
     const { rasterizePdfPages } = await import('../pdf-rasterize.service');
     await rasterizePdfPages(Buffer.from('%PDF-1.4'), {});
 
-    const napi = await import(NAPI);
+    const napi = await import('@napi-rs/canvas');
     expect((globalThis as Record<string, unknown>).DOMMatrix).toBe(napi.DOMMatrix);
     expect((globalThis as Record<string, unknown>).Path2D).toBe(napi.Path2D);
   });
@@ -101,18 +99,13 @@ describe('pdf-rasterize: σειρά εγκατάστασης browser globals (AD
   });
 
   it('Δ) το συμβόλαιο ζει ΜΕΣΑ στο loadPdfjs, όχι στον καλούντα', () => {
-    // Ένα `Promise.all([loadPdfjs(), loadCanvas()])` είναι αγώνας δρόμου: η σειρά
-    // δεν επιτρέπεται να εξαρτάται από τον καλούντα.
-    const src = jest.requireActual<typeof import('fs')>('fs')
-      .readFileSync(require.resolve('../pdf-rasterize.service.ts'), 'utf8');
+    const src = readServiceCode();
     expect(src).not.toMatch(/Promise\.all\(\s*\[\s*loadPdfjs\(\)/);
     expect(src).toMatch(/installPdfjsBrowserGlobals\(await loadCanvas\(\)\)/);
   });
 
-  it('Ε) ΜΗΔΕΝ αναφορά στο αφαιρεμένο πακέτο node-canvas', () => {
-    const src = jest.requireActual<typeof import('fs')>('fs')
-      .readFileSync(require.resolve('../pdf-rasterize.service.ts'), 'utf8');
-    // μόνο ο σχολιασμός επιτρέπεται να το ονομάζει· ποτέ import.
+  it('Ε) ΜΗΔΕΝ εισαγωγή του αφαιρεμένου πακέτου node-canvas', () => {
+    const src = readServiceCode();
     expect(src).not.toMatch(/from\s+'canvas'|import\('canvas'\)|require\('canvas'\)/);
   });
 });
