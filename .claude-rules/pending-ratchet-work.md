@@ -1930,21 +1930,41 @@ Closed via `hostWall.params.sceneUnits ?? 'mm'` frozen-context pattern σε **4 
     να επαληθευτεί καμία διόρθωση εδώ χωρίς να παραβιαστεί ρητός κανόνας. Ο Giorgio τρέχει τον
     έλεγχο περιοδικά· αυτό είναι δικό του πέρασμα.
 
-- [ ] **CHECK 3.30 — Barrel-aware Dead-export Ratchet: 58 dead exports + 5 dead files, 100% εντός dxf-viewer**
-  - **Τι**: `npm run barrel-deadcode:check` → 58 νέα dead exports + 5 νέα dead files, **όλα** κάτω
-    από `src/subapps/dxf-viewer/`. Παράδειγμα διερευνημένο έως το τέλος: το ίδιο το `useGripMovement.ts`
-    (475 γρ.) — το `--explain useGripMovement` δείχνει το ίδιο το hook **αναπόδεικτα νεκρό**
-    (`module reachable from a root: NO`, `importers: none`), ενώ το αρχείο **παραμένει ζωντανό**
-    επειδή κουβαλά `export type * from './grip-types'` που το καταναλώνουν **30+** αρχεία (grips
-    ανά entity type). Δηλαδή «dead file» εδώ σημαίνει «όλες οι VALUE εξαγωγές νεκρές, τα TYPES ζωντανά
-    μέσω wildcard re-export» — ΟΧΙ «κανείς δεν το εισάγει».
-  - **Γιατί ΔΕΝ έγινε**: κάθε ένα από τα 63 ευρήματα χρειάζεται την ίδια ανάλυση (real reachability
-    via `--explain`, όχι grep by basename — αποδείχθηκε ότι naive grep δίνει ψευδώς-ζωντανά αποτελέσματα
-    επειδή οι «importers» μπορεί να είναι κι αυτοί ίδιοι νεκροί, π.χ. `CollaborationOverlay.tsx` έχει
-    0 δικούς του importers). Το subapp είναι το πιο εύθραυστο κομμάτι του repo (ADR-040 micro-leaf
-    architecture, CHECK 6B/6C/6D μπλοκάρουν commit σε αρχεία αυτής της λίστας χωρίς ADR staged).
-    Μαζική διαγραφή/wiring χωρίς tsc verification (N.17) σε αυτό το υποσύστημα = πολύ υψηλό ρίσκο.
-    Εκτίμηση: >2h, ανά-σύμβολο επαλήθευση, θέλει ADR update (N.0.1) αν αγγίξει πίνακα του ADR-040.
+- [ ] **CHECK 3.30 — Barrel-aware Dead-export Ratchet: 58→14 dead exports · 5→3 dead files** (μερικώς ΕΓΙΝΕ 2026-08-24, ADR-700 §5)
+  - ✅ **ΤΙ ΕΓΙΝΕ**: δεύτερο πέρασμα διαγραφής, **7 συστάδες, ατομικά commits**. Νέες παραβιάσεις
+    **58→14 exports** και **5→3 files**· επιπλέον **−57 exports / −10 files από την ΙΔΙΑ τη baseline**
+    (κάθε διαγραμμένο αρχείο πήρε μαζί του τις δικές του καταχωρήσεις). **jest 301 suites / 4.297 tests
+    πράσινα**, `jscpd:diff` καθαρό, **+0 νέες** παραβιάσεις ⇒ καμία ζωντανή εξάρτηση δεν αποσυνδέθηκε.
+    Πλήρης λογιστική ανά συστάδα + οι αντικαταστάτες: **ADR-700 §5, εγγραφή 2026-08-24**.
+  - 🔶 **ΤΙ ΜΕΝΕΙ — 14 exports + 3 files, ΟΛΑ θέλουν ΑΠΟΦΑΣΗ GIORGIO** (⚠️ **ΜΗΝ** τα διαγράψει
+    πράκτορας: και τα πέντε αρχεία είναι **πρόσφατα** —29/07 έως 22/08— δηλαδή 🔴/🟡 στο `--triage`,
+    **ποτέ** 🟢· το handoff §6 το απαγορεύει ρητά):
+    1. **`styles/DxfSurface.styles.ts`** (8 exports + το αρχείο) — μόνος importer το
+       `collaboration/CollaborationOverlay.tsx`, που έχει **μηδέν** δικούς του. Είναι **ακριβώς** η
+       συστάδα `collaboration/` που το **ADR-700 §4.Δ.1 ήδη πήγε σε άνθρωπο** (Speculative Generality,
+       «δεν αντικαταστάθηκε — δεν συνδέθηκε ποτέ»). **Ίδια απόφαση, ίδιος τόπος: μένει ή φεύγει ΟΛΟ.**
+    2. **`bim/types/{geometry,shared-params}.schemas.ts`** (3) — γεννήθηκαν **22/08**, commit ADR-792
+       *«(12/15)»* = **ΕΝ ΕΞΕΛΙΞΕΙ**. Το `MEP_ELEMENT_TAIL_FIELDS` έχει **δύο** πραγματικούς importers
+       (`mep-fitting`/`mep-segment.schemas.ts`) που είναι **και οι δύο** ασύνδετοι ⇒ υποδέντρο «σωστό
+       αλλά μη καλωδιωμένο» = **η δηλωμένη κλάση ψευδώς θετικών** της πύλης (περίπτωση `generic-solid`,
+       ADR-684). **Ερώτημα: ολοκληρώνεται το ADR-792 ή είναι νεκρό;**
+    3. **`bim/table/table-row-link-resolver.ts`** (2) — ADR-739 Φ.B1/B2, **ενεργό WIP**.
+    4. **`systems/topography/topo-elevation-assign.ts#ElevationAssignment`** — ο καταναλωτής του
+       `AssignTopoElevationCommand.ts` είναι **ο ίδιος** ασύνδετος (ADR-731 ημιτελές).
+  - 🔴 **ΔΟΜΙΚΟ ΕΛΑΤΤΩΜΑ ΤΗΣ ΙΔΙΑΣ ΤΗΣ ΠΥΛΗΣ — ΔΕΝ διορθώθηκε, θέλει εντολή**: τα
+    `core/spatial/index.ts` (14 πραγματικοί importers) και
+    `text-engine/title-block/reading/title-block-reading.types.ts` (7) αναφέρονται «dead files» ενώ
+    είναι **ζωντανά**. Αιτία **μετρημένη**: `localExports === 0` (19 και 6 **re-exports**, μηδέν δικοί
+    τους ορισμοί) ⇒ στο `classifyFile` το `verdicts.every(...)` πάνω σε **κενό** πίνακα είναι **κενά
+    αληθές**, και το `liveModules` δεν τα περιέχει γιατί η ζωντάνια αποδίδεται —σωστά— στο module που
+    **ορίζει**. *Ένα barrel που περνά τα πάντα και δεν ορίζει τίποτα κρίνεται νεκρό επειδή δεν έχει
+    τίποτα δικό του να κριθεί.* ⚠️ Το `core/spatial/index.ts` **ήταν ήδη** στη λίστα πριν (είχε ένα
+    τοπικό export, το νεκρό `SpatialTypeGuards`)· η αφαίρεσή του **δεν** το έλυσε — το **αποκάλυψε**.
+    **Θεραπεία**: `classifyFile` → `false` όταν `localExports.length === 0 && reexports.length > 0`,
+    **ΟΧΙ** rebaseline. Θέλει άγκυρα + μετάλλαξη, δηλαδή δικό του commit.
+  - ⚠️ **Η baseline ΔΕΝ ξαναγράφτηκε επίτηδες**: rebaseline τώρα θα **κλείδωνε** και τα τέσσερα ανοιχτά
+    ως «αποδεκτά» — και μαζί το ελάττωμα του barrel. Πρώτα η απόφαση, μετά `npm run barrel-deadcode:baseline`.
+  - ⚠️ **Εκκρεμεί browser check** (N.17: ο πράκτορας δεν τρέχει tsc).
 
 - [ ] **CHECK depcruise (ADR-598 G9+G10) — cycles +469, boundaries: ΕΝΤΑΓΜΕΝΟ σε ενεργό WIP άλλου agent**
   - **Τι**: το CI στο commit `3acdea1` έδειξε `cycles: 1299 → 1768 (+469)` και
