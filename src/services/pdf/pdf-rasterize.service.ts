@@ -41,8 +41,13 @@ type CanvasContextLike = {
   fillStyle: string;
   fillRect(x: number, y: number, w: number, h: number): void;
 };
+/** Κατασκευαστής browser API όπως τον εξάγει το `@napi-rs/canvas` (δεν τον καλούμε εμείς). */
+type BrowserGlobalCtor = new (...args: never[]) => object;
+
 interface CanvasModule {
   createCanvas(w: number, h: number): CanvasLike;
+  DOMMatrix: BrowserGlobalCtor;
+  Path2D: BrowserGlobalCtor;
 }
 
 interface CanvasAndContext {
@@ -78,8 +83,36 @@ interface PdfjsPage {
 let cachedPdfjs: PdfjsLib | null = null;
 let cachedCanvas: CanvasModule | null = null;
 
+/**
+ * Δίνει στο global scope τα `DOMMatrix` / `Path2D` από την ΙΔΙΑ υλοποίηση καμβά
+ * που ζωγραφίζει. Ο Node δεν τα έχει (επαληθευμένο σε v20), και το pdf.js τα
+ * διαβάζει από το `globalThis` τη στιγμή της ζωγραφικής: χωρίς αυτά, κάθε PDF με
+ * tiling pattern πέφτει με `ReferenceError: DOMMatrix is not defined`.
+ *
+ * Ιδεμποτητή (`??=`): δεύτερη κλήση δεν πατάει ό,τι υπάρχει ήδη.
+ */
+function installPdfjsBrowserGlobals(mod: CanvasModule): void {
+  const scope = globalThis as unknown as Record<'DOMMatrix' | 'Path2D', BrowserGlobalCtor | undefined>;
+  scope.DOMMatrix ??= mod.DOMMatrix;
+  scope.Path2D ??= mod.Path2D;
+}
+
+/**
+ * ⚠️ Η ΣΕΙΡΑ ΕΙΝΑΙ ΤΟ ΣΥΜΒΟΛΑΙΟ, ΓΙ' ΑΥΤΟ ΖΕΙ ΕΔΩ ΜΕΣΑ.
+ *
+ * Το `pdf.mjs` αποφασίζει κατά τη ΦΟΡΤΩΣΗ αν πρέπει να γεμίσει μόνο του τα
+ * `DOMMatrix`/`Path2D` (`if (!globalThis.DOMMatrix)`). Αν τα βρει έτοιμα, δεν
+ * ψάχνει το προαιρετικό πακέτο `canvas` — γι' αυτό το `node-canvas` (και μαζί
+ * του ολόκληρο το `@mapbox/node-pre-gyp > tar` υποδέντρο) αφαιρέθηκε από το
+ * δέντρο με `pnpm.overrides["pdfjs-dist>canvas"] = "-"` (ADR-598 G2).
+ *
+ * Ένα `Promise.all([loadPdfjs(), loadCanvas()])` στον καλούντα ΘΑ ΗΤΑΝ ΑΓΩΝΑΣ
+ * ΔΡΟΜΟΥ. Η προϋπόθεση εξασφαλίζεται εδώ, ώστε κανένας καλών να μην μπορεί να
+ * τη χάσει.
+ */
 async function loadPdfjs(): Promise<PdfjsLib> {
   if (cachedPdfjs) return cachedPdfjs;
+  installPdfjsBrowserGlobals(await loadCanvas());
   try {
     const mod = (await import('pdfjs-dist/legacy/build/pdf.mjs')) as unknown as PdfjsLib;
     cachedPdfjs = mod;
@@ -122,6 +155,28 @@ function makeCanvasFactory(createCanvas: (w: number, h: number) => CanvasLike): 
   };
 }
 
+/** Ζωγραφίζει ΜΙΑ σελίδα σε PNG, με λευκό υπόβαθρο και ταβάνι πλάτους. */
+async function renderPageToPng(
+  page: PdfjsPage,
+  createCanvas: (w: number, h: number) => CanvasLike,
+  limits: { dpi: number; maxWidthPx: number },
+): Promise<Buffer> {
+  const baseScale = limits.dpi / 72;
+  const baseViewport = page.getViewport({ scale: baseScale });
+  const widthCap = baseViewport.width > limits.maxWidthPx
+    ? limits.maxWidthPx / baseViewport.width
+    : 1;
+  const viewport = page.getViewport({ scale: baseScale * widthCap });
+
+  const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  await page.render({ canvasContext: ctx, viewport }).promise;
+  return canvas.toBuffer('image/png');
+}
+
 export async function rasterizePdfPages(
   pdfBuffer: Buffer,
   options: RasterizeOptions = {},
@@ -130,7 +185,9 @@ export async function rasterizePdfPages(
   const maxPages = options.maxPages ?? DEFAULT_MAX_PAGES;
   const maxWidthPx = options.maxWidthPx ?? DEFAULT_MAX_WIDTH_PX;
 
-  const [pdfjs, canvasMod] = await Promise.all([loadPdfjs(), loadCanvas()]);
+  // Σειριακά και ΟΧΙ Promise.all: το loadPdfjs() οφείλει να δει τα globals έτοιμα.
+  const pdfjs = await loadPdfjs();
+  const canvasMod = await loadCanvas();
   const { createCanvas } = canvasMod;
   const canvasFactory = makeCanvasFactory(createCanvas);
 
@@ -148,20 +205,7 @@ export async function rasterizePdfPages(
     for (let pageNum = 1; pageNum <= pageCount; pageNum += 1) {
       const page = await doc.getPage(pageNum);
       try {
-        const baseScale = dpi / 72;
-        const baseViewport = page.getViewport({ scale: baseScale });
-        const widthCap = baseViewport.width > maxWidthPx
-          ? maxWidthPx / baseViewport.width
-          : 1;
-        const viewport = page.getViewport({ scale: baseScale * widthCap });
-
-        const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        await page.render({ canvasContext: ctx, viewport }).promise;
-        pages.push(canvas.toBuffer('image/png'));
+        pages.push(await renderPageToPng(page, createCanvas, { dpi, maxWidthPx }));
       } finally {
         page.cleanup();
       }
