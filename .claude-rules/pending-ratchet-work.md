@@ -2,6 +2,33 @@
 
 **STATUS: ACTIVE**
 
+- 🔶 **24/08 — allowlist CVE: 12 εγγραφές, ΚΑΜΙΑ με λόγο** *(ADR-598 G2)*
+  Μετά την εξάλειψη του `tar` (21 → 12), **και οι 12** εγγραφές του `.pnpm-audit-baseline.json`
+  λένε `reason: "Seeded — pre-existing transitive advisory"`. **Μια allowlist χωρίς αιτιολογία δεν
+  είναι απόφαση, είναι αναβολή** — και το «12» δεν είναι δείκτης υγείας, είναι «όσα κανείς δεν
+  ξανακοίταξε».
+
+  Κατανομή: **`jspdf` 8** (εκ των οποίων **4 critical**, μαζί με Path Traversal `CVE-2025-68428`) ·
+  `fast-xml-parser` 3 · `serialize-javascript` 1. Το `jspdf` είναι **άμεση** εξάρτηση ⇒ ο δρόμος
+  «αφαίρεση» **δεν υπάρχει**· θέλει **αναβάθμιση**, με μέτρηση του breaking surface.
+
+  ⚠️ **Ο μηχανισμός διόρθωσης υπάρχει πλέον**: από 24/08 το `--write-baseline` **διατηρεί** το
+  `reason`/`owner` (`mergeAllowlistEntry`), άρα μια χειρόγραφη αιτιολόγηση **δεν σβήνεται πια** από
+  το επόμενο rebaseline. Μέχρι 24/08 σβηνόταν, και γι᾽ αυτό κατέληξαν όλες «Seeded».
+
+- 🔶 **24/08 — νεκρό jest config + λάθος ταξινόμηση εξάρτησης στο dxf-viewer** *(ADR-598 G2, παράπλευρα ευρήματα)*
+  (α) Το `src/subapps/dxf-viewer/jest.config.ts` **δεν το εκτελεί κανείς**: δεν είναι ένα από τα 5
+  configs του CHECK 3.47, δεν υπάρχει npm script, δεν υπάρχει workflow. Συνέπεια: το `jsdom@24.1.3`
+  στις devDependencies του workspace είναι **νεκρό** — και ήταν η **δεύτερη** διαδρομή προς το
+  ευάλωτο `tar`, που έμεινε αόρατη επειδή το `pnpm why` από τη ρίζα **δεν διασχίζει workspaces**.
+
+  (β) Το `@napi-rs/canvas` είναι σε **devDependencies** ενώ το καλεί **server-only κώδικας
+  παραγωγής** (`pdf-rasterize.service.ts`, μέσω `openai-quote-analyzer` και `logo-extractor`).
+  Σήμερα σώζεται επειδή το standalone build το ιχνηλατεί, αλλά η ταξινόμηση είναι λάθος — και μετά
+  την αφαίρεση του node-canvas είναι **φέρον στοιχείο ορθότητας** (δίνει `DOMMatrix`/`Path2D`).
+
+  ⚠️ Και τα δύο είναι **καθαρισμός**, όχι βλάβη σήμερα. Απόφαση Giorgio για προτεραιότητα.
+
 - 🔶 **23/08 — η οικογένεια MEP design: ΤΕΣΣΕΡΑ δίδυμα, 16 γραμμές το καθένα** *(ADR-794 Φ.11)*
   Μετρημένο με `jscpd`: `design-fire` · `design-gas` · `design-hvac` · `design-water-supply`
   μοιράζονται **το ίδιο μπλοκ 16 γρ. / 97 tokens** — τη συναρμολόγηση του αντικειμένου-αποτελέσματος

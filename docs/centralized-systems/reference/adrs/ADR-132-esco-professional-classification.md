@@ -7,6 +7,22 @@
 | **Category** | Contact Management / CRM |
 | **Canonical Locations** | `src/types/contacts/esco-types.ts`, `src/services/esco.service.ts`, `src/components/shared/EscoOccupationPicker.tsx`, `src/components/shared/EscoSkillPicker.tsx` |
 | **Author** | Georgios Pagonis + Claude Code (Anthropic AI) |
+| **Σχετικά** | 🆕 **ADR-798** *(2026-08-24)* — **ΔΙΑΒΑΣΕ ΤΟ ΠΡΙΝ ΑΓΓΙΞΕΙΣ ΤΟ ΣΧΗΜΑ**, δύο λόγοι παρακάτω |
+
+> 🔗 **ΣΧΕΤΙΚΑ — ADR-798 «Ο Άνθρωπος: ταυτότητα προσώπου ξεχωριστά από εξουσιοδότηση»** *(2026-08-24)*
+>
+> **(1) Το σχήμα ESCO αποκτά ΔΕΥΤΕΡΟ καταναλωτή.** Μέχρι σήμερα τα `escoUri` · `iscoCode` ·
+> `escoLabel` ζούσαν **μόνο** πάνω στο `Contact`. Το ADR-798 αποφάσισε ότι το **ίδιο** σχήμα
+> απαντά και στο *«τι είναι ο κάτοχος του λογαριασμού»* — **χωρίς νέο λεξιλόγιο** *(θα ήταν το
+> δέκατο, ADR-749)*. ⚠️ Το `Contact` **δεν έχει `uid`**: η γέφυρα **δεν υπάρχει ακόμη**, και το
+> αν θα υπάρξει ποτέ είναι **απόφαση GDPR** *(ADR-798 §11, Ο-3)*.
+>
+> **(2) 🔴 ΤΡΙΑ ΣΧΟΛΙΑ ΚΩΔΙΚΑ ΔΕΙΧΝΟΥΝ ΣΕ ΛΑΘΟΣ ADR.** Τα `types/contacts/esco-types.ts:3` ·
+> `types/contacts/contracts.ts:133` · `config/firestore-collections.ts:386` αποδίδουν το ESCO στο
+> **ADR-034** — που είναι **ΤΡΙΠΛΟ** *(`empty-spatial-bounds` · `gantt-chart` ·
+> `validation-bounds`)* και του οποίου **κανένα** αρχείο δεν αναφέρει τη λέξη ESCO *(0·0·0,
+> μετρημένο)*. **Ο ιδιοκτήτης είναι ΑΥΤΟ το έγγραφο.** Το λάθος **έχει ήδη διαδοθεί** σε handoff
+> και σε εγκεκριμένο σχέδιο. Διόρθωση = **τρία σχόλια** *(ADR-748 §12, **Π-21**)*.
 
 ---
 
