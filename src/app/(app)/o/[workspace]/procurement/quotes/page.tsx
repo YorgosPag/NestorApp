@@ -2,11 +2,13 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { useRouter, usePathname } from '@/lib/workspace/navigation';
+import { declaredHref } from '@/lib/workspace/route-worlds';
 import { useSearchParams } from 'next/navigation';
 import { FileText, Inbox, Eye, CheckCircle, Clock } from 'lucide-react';
 import { QuoteList } from '@/subapps/procurement/components/QuoteList';
 import { QuoteRightPane } from '@/subapps/procurement/components/QuoteRightPane';
 import { useQuotes } from '@/subapps/procurement/hooks/useQuotes';
+import { usePatchQuoteStatus } from '@/subapps/procurement/hooks/usePatchQuoteStatus';
 import { buildQuoteHeaderActions } from '@/subapps/procurement/utils/quote-header-actions';
 import { ProcurementHubPage, useProcurementHubChrome } from '@/components/procurement/hub/ProcurementHubPage';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -41,7 +43,9 @@ export default function QuotesPage() {
       const params = new URLSearchParams(searchParams.toString());
       if (quote) params.set('quoteId', quote.id);
       else params.delete('quoteId');
-      router.replace(`${pathname}?${params.toString()}`);
+      router.replace(
+        declaredHref('usePathname() είναι ΗΔΗ η έγκυρη τρέχουσα σελίδα — ενημέρωση ερωτήματος, όχι νέος προορισμός.', `${pathname}?${params.toString()}`),
+      );
     },
     [router, searchParams, pathname],
   );
@@ -71,18 +75,7 @@ export default function QuotesPage() {
   const handleToggleComments = useCallback(() => setCommentsOpen((v) => !v), []);
 
   // ── Quote mutations ───────────────────────────────────────────────────────
-  const patchQuoteStatus = useCallback(
-    async (status: string) => {
-      if (!selectedQuote) return;
-      const res = await fetch(`/api/quotes/${selectedQuote.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
-      });
-      if (!res.ok) toast.error(tQ('quotes.errors.updateFailed'));
-    },
-    [selectedQuote, tQ],
-  );
+  const patchQuoteStatus = usePatchQuoteStatus(selectedQuote, tQ);
 
   const handleDeleteQuote = useCallback(async () => {
     if (!selectedQuote) return;

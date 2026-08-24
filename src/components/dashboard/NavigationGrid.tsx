@@ -1,6 +1,7 @@
 'use client';
 
 import type { LucideIcon } from 'lucide-react';
+import type { WorkspaceHref } from '@/lib/workspace/route-worlds';
 import { NavigationCard, type ColorVariant } from './NavigationCard';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
@@ -15,7 +16,7 @@ export interface NavigationTile {
   title: string;
   description: string;
   icon: LucideIcon;
-  href: string;
+  href: WorkspaceHref;
   badge?: string | null;
   colorVariant: ColorVariant;
   subItemCount?: number;

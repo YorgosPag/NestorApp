@@ -21,6 +21,7 @@ import {
 
 // 🏢 ENTERPRISE: Import LucideIcon type for proper typing
 import type { LucideIcon } from 'lucide-react';
+import type { WorkspaceHref } from '@/lib/workspace/route-worlds';
 
 // 🏢 BACKWARD COMPATIBILITY: Legacy imports maintained
 // Define MenuItem locally για compatibility fix
@@ -29,7 +30,7 @@ import type { LucideIcon } from 'lucide-react';
 export interface MenuItem {
   title: string;
   icon: LucideIcon;
-  href: string;
+  href: WorkspaceHref;
   badge?: string | null;
   subItems?: MenuItem[];
 }

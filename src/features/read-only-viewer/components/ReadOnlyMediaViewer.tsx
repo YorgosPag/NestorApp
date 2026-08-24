@@ -15,6 +15,7 @@
 
 import React, { useCallback } from 'react';
 import { useRouter, usePathname } from '@/lib/workspace/navigation';
+import { declaredHref } from '@/lib/workspace/route-worlds';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -114,7 +115,7 @@ export function ReadOnlyMediaViewer({
     } else {
       params.set(MEDIA_TAB_PARAM, newTab);
     }
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    router.replace(declaredHref('usePathname() είναι ΗΔΗ η έγκυρη τρέχουσα σελίδα — ενημέρωση ερωτήματος, όχι νέος προορισμός.', `${pathname}?${params.toString()}`), { scroll: false });
   }, [searchParams, router, pathname, hasMultipleLevels]);
 
   // ==========================================================================

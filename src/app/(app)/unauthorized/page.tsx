@@ -35,8 +35,8 @@ import { AUTH_ROUTES, PRIVATE_SPACE_HOME } from '@/lib/routes';
 export default function UnauthorizedPage() {
   const { t } = useTranslation(COMMON_NAMESPACES);
 
+  // ADR-797 (CHECK 3.63): το οριζόντιο κενό ανήκει στο κέλυφος — καμία δική του padding.
   return (
-    {/* ADR-797 (CHECK 3.63): το οριζόντιο κενό ανήκει στο κέλυφος — καμία δική του padding. */}
     <main className="flex min-h-screen items-center justify-center bg-background">
       <section
         aria-label={t('accessDenied.ariaLabel')}

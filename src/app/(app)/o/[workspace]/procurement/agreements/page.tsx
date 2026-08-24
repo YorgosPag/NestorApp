@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { useRouter, usePathname } from '@/lib/workspace/navigation';
+import { declaredHref } from '@/lib/workspace/route-worlds';
 import { useSearchParams } from 'next/navigation';
 import { ScrollText, FileEdit, CheckCircle, AlertTriangle, Clock } from 'lucide-react';
 import { AgreementSlimList } from '@/components/procurement/agreements/AgreementSlimList';
@@ -83,7 +84,9 @@ export default function AgreementsPage() {
     (agreement: FrameworkAgreement) => {
       const params = new URLSearchParams(searchParams.toString());
       params.set('agreementId', agreement.id);
-      router.replace(`${pathname}?${params.toString()}`);
+      router.replace(
+        declaredHref('usePathname() είναι ΗΔΗ η έγκυρη τρέχουσα σελίδα — ενημέρωση ερωτήματος, όχι νέος προορισμός.', `${pathname}?${params.toString()}`),
+      );
     },
     [router, searchParams, pathname],
   );
@@ -91,7 +94,9 @@ export default function AgreementsPage() {
   const handleDeselectAgreement = useCallback(() => {
     const params = new URLSearchParams(searchParams.toString());
     params.delete('agreementId');
-    router.replace(`${pathname}?${params.toString()}`);
+    router.replace(
+        declaredHref('usePathname() είναι ΗΔΗ η έγκυρη τρέχουσα σελίδα — ενημέρωση ερωτήματος, όχι νέος προορισμός.', `${pathname}?${params.toString()}`),
+      );
   }, [router, searchParams, pathname]);
 
   function handleNew() {

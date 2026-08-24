@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useRouter } from '@/lib/workspace/navigation';
+import { withQuery } from '@/lib/workspace/route-worlds';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Building2, ClipboardList, Eye, EyeOff, Plus, ScanLine } from 'lucide-react';
@@ -18,6 +19,7 @@ import { buildRfqDashboardStats } from '@/subapps/procurement/utils/rfq-dashboar
 import { PageHeader } from '@/core/headers';
 import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
 import { useQuotes } from '@/subapps/procurement/hooks/useQuotes';
+import { usePatchQuoteStatus } from '@/subapps/procurement/hooks/usePatchQuoteStatus';
 import { useComparison } from '@/subapps/procurement/hooks/useComparison';
 import { useRfqLines } from '@/subapps/procurement/hooks/useRfqLines';
 import { useSourcingEventAggregate } from '@/subapps/procurement/hooks/useSourcingEventAggregate';
@@ -220,16 +222,7 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
     [t],
   );
 
-  const patchQuoteStatus = useCallback(async (status: string) => {
-    if (!selectedQuote) return;
-    const res = await fetch(`/api/quotes/${selectedQuote.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status }),
-    });
-    if (!res.ok) { toast.error(t('quotes.errors.updateFailed')); return; }
-    await refetch();
-  }, [selectedQuote, refetch, t]);
+  const patchQuoteStatus = usePatchQuoteStatus(selectedQuote, t, refetch);
   const { primaryActions, secondaryActions, overflowActions } = useMemo(
     () => !selectedQuote
       ? { primaryActions: [], secondaryActions: [], overflowActions: [] }
@@ -262,7 +255,7 @@ export function RfqDetailClient({ id }: RfqDetailClientProps) {
         sp.set('trade', rfq.lines[0].trade);
       }
     }
-    return `/procurement/quotes/scan?${sp.toString()}`;
+    return withQuery('/procurement/quotes/scan', sp.toString());
   }, [id, rfq]);
   const handleQuoteCreated = async () => {
     setShowQuoteForm(false);

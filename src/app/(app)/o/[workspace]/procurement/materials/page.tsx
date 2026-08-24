@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { useRouter, usePathname } from '@/lib/workspace/navigation';
+import { declaredHref } from '@/lib/workspace/route-worlds';
 import { useSearchParams } from 'next/navigation';
 import { Layers, Boxes, Sparkles, Clock, AlertTriangle } from 'lucide-react';
 import { MaterialSlimList } from '@/components/procurement/materials/MaterialSlimList';
@@ -64,7 +65,9 @@ export default function MaterialsPage() {
     (material: Material) => {
       const params = new URLSearchParams(searchParams.toString());
       params.set('materialId', material.id);
-      router.replace(`${pathname}?${params.toString()}`);
+      router.replace(
+        declaredHref('usePathname() είναι ΗΔΗ η έγκυρη τρέχουσα σελίδα — ενημέρωση ερωτήματος, όχι νέος προορισμός.', `${pathname}?${params.toString()}`),
+      );
     },
     [router, searchParams, pathname],
   );
@@ -72,7 +75,9 @@ export default function MaterialsPage() {
   const handleDeselectMaterial = useCallback(() => {
     const params = new URLSearchParams(searchParams.toString());
     params.delete('materialId');
-    router.replace(`${pathname}?${params.toString()}`);
+    router.replace(
+        declaredHref('usePathname() είναι ΗΔΗ η έγκυρη τρέχουσα σελίδα — ενημέρωση ερωτήματος, όχι νέος προορισμός.', `${pathname}?${params.toString()}`),
+      );
   }, [router, searchParams, pathname]);
 
   function openCreate() {

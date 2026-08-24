@@ -38,7 +38,7 @@ interface NavigationButtonProps {
   warningText?: string; // DEPRECATED: Use badgeText instead
 
   // 🔗 ENTERPRISE: Navigation to entity source page
-  navigationHref?: string; // e.g., '/contacts/123' for companies
+  navigationHref?: WorkspaceHref; // e.g., '/contacts/123' for companies
   navigationTooltip?: string; // e.g., 'Άνοιγμα στις Επαφές'
 
   // 🏢 ENTERPRISE: Keyboard navigation support (ADR-029 Global Search)

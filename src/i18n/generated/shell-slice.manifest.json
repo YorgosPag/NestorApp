@@ -55,7 +55,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "76a1b135097f65538e75f0352d30208512a59f81984d5aafb08ac0007bbc8bb7",
+  "inputsSha256": "ed3ea4cdfff50678d9e4434c3c29f0d0a7a7ab25cc55d6ef69dc3d8cd57e73bd",
   "languages": [
     "el"
   ],
@@ -230,7 +230,7 @@
     "src/config/jobs-access.ts": "cd9ecbc9f56123a902b624b7ddd6cc52082dc2e7e7fc6b7116c853a86f799821",
     "src/config/jobs-registry.ts": "030b7091aeb5191bbd6abe3ccc9e23a1aa25f586cbed3fe226c07a4b6d9086b7",
     "src/config/jobs-visibility.ts": "ab652f1d2a901b3411b15871f941beac2bb71950a0a2d15129f8bda65e4467ff",
-    "src/config/navigation.ts": "9016242f8b53a5a8eb1cda81120884853f2ab46eda2e06e83f57d91fb59210bc",
+    "src/config/navigation.ts": "512c29db1290f050f22f1e5203a3163f444f0259f998399ab21e38bd73398e71",
     "src/config/notification-events.ts": "6c363f1a922d4088abc2ec62f0ab5cc1786496cdbe87083cc0e556af812b56b9",
     "src/config/notification-keys.ts": "d2e8d464ddc860d07e32c60966579815c9927c966a3dc86fdf70f76d45393c7e",
     "src/config/persona-config.ts": "1abb294d59594082c369ad1d3e4513cbd9bbbfc88a8825714e9fc8b9eb7dd5eb",

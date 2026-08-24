@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useRouter, usePathname } from '@/lib/workspace/navigation';
+import { declaredHref } from '@/lib/workspace/route-worlds';
 import { useSearchParams } from 'next/navigation';
 import { useIsMobile } from '@/hooks/useMobile';
 import type { Quote } from '../types/quote';
@@ -88,7 +89,7 @@ export function useRfqUrlState({
     (nextTab: RfqTabValue) => {
       const params = new URLSearchParams(searchParams.toString());
       params.set('tab', nextTab);
-      router.push(`${pathname}?${params.toString()}`);
+      router.push(declaredHref('usePathname() είναι ΗΔΗ η έγκυρη τρέχουσα σελίδα — ενημέρωση ερωτήματος, όχι νέος προορισμός.', `${pathname}?${params.toString()}`));
     },
     [router, pathname, searchParams],
   );
@@ -98,7 +99,7 @@ export function useRfqUrlState({
       const params = new URLSearchParams(searchParams.toString());
       if (quote) params.set('quote', quote.id);
       else params.delete('quote');
-      const url = `${pathname}?${params.toString()}`;
+      const url = declaredHref('usePathname() είναι ΗΔΗ η έγκυρη τρέχουσα σελίδα — ενημέρωση ερωτήματος, όχι νέος προορισμός.', `${pathname}?${params.toString()}`);
       // Mobile: push so back-gesture restores list (§5.E.4)
       if (isMobile) router.push(url);
       else router.replace(url);
@@ -114,7 +115,7 @@ export function useRfqUrlState({
       params.set('pdf', '1');
       params.delete('comments'); // mutually exclusive with comments drawer
     }
-    router.replace(`${pathname}?${params.toString()}`);
+    router.replace(declaredHref('usePathname() είναι ΗΔΗ η έγκυρη τρέχουσα σελίδα — ενημέρωση ερωτήματος, όχι νέος προορισμός.', `${pathname}?${params.toString()}`));
   }, [router, pathname, searchParams, pdfOpen]);
 
   const handleToggleComments = useCallback(() => {
@@ -125,7 +126,7 @@ export function useRfqUrlState({
       params.set('comments', '1');
       params.delete('pdf');
     }
-    router.replace(`${pathname}?${params.toString()}`);
+    router.replace(declaredHref('usePathname() είναι ΗΔΗ η έγκυρη τρέχουσα σελίδα — ενημέρωση ερωτήματος, όχι νέος προορισμός.', `${pathname}?${params.toString()}`));
   }, [router, pathname, searchParams, commentsOpen]);
 
   // Single push: tab=quotes + quote=id — one history entry (§5.D.3)
@@ -134,7 +135,7 @@ export function useRfqUrlState({
       const params = new URLSearchParams(searchParams.toString());
       params.set('tab', 'quotes');
       params.set('quote', quoteId);
-      router.push(`${pathname}?${params.toString()}`);
+      router.push(declaredHref('usePathname() είναι ΗΔΗ η έγκυρη τρέχουσα σελίδα — ενημέρωση ερωτήματος, όχι νέος προορισμός.', `${pathname}?${params.toString()}`));
     },
     [router, pathname, searchParams],
   );
@@ -152,7 +153,7 @@ export function useRfqUrlState({
     const params = new URLSearchParams(searchParams.toString());
     if (expectedId) params.set('quote', expectedId);
     else params.delete('quote');
-    router.replace(`${pathname}?${params.toString()}`);
+    router.replace(declaredHref('usePathname() είναι ΗΔΗ η έγκυρη τρέχουσα σελίδα — ενημέρωση ερωτήματος, όχι νέος προορισμός.', `${pathname}?${params.toString()}`));
   }, [quotesLoading, selectedQuote, quoteParam, searchParams, pathname, router]);
 
   return { activeTab, selectedQuote, pdfOpen, commentsOpen, handleTabChange, handleSelectQuote, handleComparisonDrillDown, handleTogglePdf, handleToggleComments };

@@ -29,6 +29,7 @@ import {
   removeUndefinedValues,
 } from './search-index-config';
 import { resolveTenantId } from './tenant-resolver';
+import { declaredHref } from '@/lib/workspace/route-worlds';
 
 const logger = createModuleLogger('BackfillEngine');
 
@@ -116,7 +117,12 @@ export async function buildSearchDocument(
     audience,
     requiredPermission: config.requiredPermission,
     links: {
-      href: config.routeTemplate.replace('{id}', entityId),
+      // ΔΡΟΜΟΣ #3: `routeTemplate` είναι ΓΛΩΣΣΑ DSL ({id} placeholder) του search
+      // index builder — ίδιο σχήμα με το report-builder entityLinkPath, άλλο σύστημα.
+      href: declaredHref(
+        'search-backfill routeTemplate DSL — {id} placeholder, όχι Next [id].',
+        config.routeTemplate.replace('{id}', entityId),
+      ),
       routeParams: { id: entityId },
     },
     metadata,

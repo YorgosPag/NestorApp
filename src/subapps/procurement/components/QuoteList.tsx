@@ -13,6 +13,7 @@
 
 import React, { useMemo, useState, useCallback } from 'react';
 import { useRouter, usePathname } from '@/lib/workspace/navigation';
+import { declaredHref } from '@/lib/workspace/route-worlds';
 import { useSearchParams } from 'next/navigation';
 import { FileText, History, Loader2, Search, XCircle } from 'lucide-react';
 
@@ -164,7 +165,7 @@ export function QuoteList({
       const params = new URLSearchParams(searchParams.toString());
       if (newSort === DEFAULT_SORT_KEY) params.delete('sort');
       else params.set('sort', newSort);
-      router.replace(`${pathname}?${params.toString()}`);
+      router.replace(declaredHref('usePathname() είναι ΗΔΗ η έγκυρη τρέχουσα σελίδα — ενημέρωση ερωτήματος, όχι νέος προορισμός.', `${pathname}?${params.toString()}`));
     },
     [router, pathname, searchParams],
   );
@@ -173,7 +174,7 @@ export function QuoteList({
       const params = new URLSearchParams(searchParams.toString());
       if (value) params.set('q', value);
       else params.delete('q');
-      router.replace(`${pathname}?${params.toString()}`);
+      router.replace(declaredHref('usePathname() είναι ΗΔΗ η έγκυρη τρέχουσα σελίδα — ενημέρωση ερωτήματος, όχι νέος προορισμός.', `${pathname}?${params.toString()}`));
     },
     [router, pathname, searchParams],
   );
