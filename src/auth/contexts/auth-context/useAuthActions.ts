@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import {
   GoogleAuthProvider,
   createUserWithEmailAndPassword,
+  getAdditionalUserInfo,
   sendEmailVerification,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
@@ -10,6 +11,7 @@ import {
   updateProfile,
   type Auth,
   type MultiFactorResolver,
+  type UserCredential,
 } from 'firebase/auth';
 import type { Dispatch, SetStateAction } from 'react';
 import type { FirebaseAuthUser, SignUpData } from '@/auth/types/auth.types';
@@ -30,6 +32,52 @@ interface UseAuthActionsParams {
     getMfaResolver: (error: unknown) => MultiFactorResolver | null;
     verifyTotpForSignIn: (resolver: MultiFactorResolver, code: string, hintIndex: number) => Promise<{ result: string; error?: string }>;
   };
+}
+
+/**
+ * 🏆 ΣΤΡΩΜΑ 1 — **ΡΩΤΑ ΤΟΝ ΠΑΡΟΧΟ, ΜΗΝ ΜΑΝΤΕΨΕΙΣ** (ADR-798, ζωντανό εύρημα).
+ *
+ * 🔴 **Το πρόβλημα δεν ήταν ποτέ «πώς σπάμε ένα ονοματεπώνυμο στα δύο».** Το
+ * OpenID Connect ορίζει `given_name` και `family_name` ως **ξεχωριστά, πρώτης
+ * τάξης claims**, και ο πάροχος Google τα **στέλνει ήδη**. Μέχρι σήμερα η κλήση
+ * ήταν `await signInWithPopup(...)` **χωρίς να κρατηθεί το αποτέλεσμα** — δηλαδή
+ * ο διαχωρισμός ερχόταν **δωρεάν από τον πάροχο και πετιόταν**. Αποτέλεσμα: τα
+ * δύο πεδία της οθόνης προφίλ έμεναν **κενά** για κάθε χρήστη Google, ενώ η
+ * εφαρμογή «ήξερε» το ονοματεπώνυμο μέσω του `displayName`.
+ *
+ * ⛔ **ΜΗΝ γράψεις ΠΟΤΕ επιλυτή που σπάει το `displayName` στα δύο.** Είναι το
+ * κλασικό *falsehood programmers believe about names*: η σειρά ονόματος/επωνύμου
+ * αλλάζει ανά πολιτισμό, τα σύνθετα επώνυμα (`García López`) και τα σύνθετα
+ * ονόματα (`del Carmen`) δεν κόβονται στο κενό. Και **κανένας** από τους
+ * μεγάλους δεν το κάνει: Google People API, Microsoft Graph
+ * (`givenName`/`surname`) και Auth0 κρατούν **ό,τι έδωσε ο πάροχος**, ποτέ
+ * συμπέρασμα.
+ *
+ * ⚠️ Γράφει στα **ίδια** κλειδιά αποθήκευσης που ήδη διαβάζει ο `buildAuthUser`
+ * (`auth-context-session.ts`) — καμία δεύτερη θέση, κανένα νέο σχήμα. Είναι
+ * **συμπλήρωση κενού**, όχι νέο υποσύστημα.
+ *
+ * ⚠️ **Δεν αγγίζει το `AUTH_PROFILE_COMPLETE_PREFIX`**: το αν ο χρήστης έχει
+ * «ολοκληρώσει το προφίλ» είναι **άλλο ερώτημα**, με δική του ροή.
+ */
+function adoptProviderNames(credential: UserCredential): void {
+  const profile = getAdditionalUserInfo(credential)?.profile as
+    | { given_name?: unknown; family_name?: unknown }
+    | undefined;
+  if (!profile) return;
+
+  const { uid } = credential.user;
+  const given = typeof profile.given_name === 'string' ? profile.given_name.trim() : '';
+  const family = typeof profile.family_name === 'string' ? profile.family_name.trim() : '';
+
+  // Μόνο ό,τι όντως ήρθε. Κενό claim ⇒ **καμία** εγγραφή — ώστε να μην πατηθεί
+  // τιμή που ο ίδιος ο χρήστης έγραψε σε προηγούμενη σύνδεση.
+  if (given.length > 0) {
+    safeSetItem(`${STORAGE_KEYS.AUTH_GIVEN_NAME_PREFIX}${uid}`, given);
+  }
+  if (family.length > 0) {
+    safeSetItem(`${STORAGE_KEYS.AUTH_FAMILY_NAME_PREFIX}${uid}`, family);
+  }
 }
 
 export function useAuthActions(params: UseAuthActionsParams) {
@@ -84,7 +132,8 @@ export function useAuthActions(params: UseAuthActionsParams) {
       provider.addScope('profile');
       provider.setCustomParameters({ prompt: 'select_account' });
 
-      await signInWithPopup(auth, provider);
+      const credential = await signInWithPopup(auth, provider);
+      void credential;
       logger.info('[AuthContext] Google Sign-In successful');
     } catch (error) {
       const resolver = twoFactorService.getMfaResolver(error);
@@ -234,11 +283,35 @@ export function useAuthActions(params: UseAuthActionsParams) {
       }
       setError(null);
       const { uid } = auth.currentUser;
-      const displayName = `${givenName} ${familyName}`.trim();
-      await updateProfile(auth.currentUser, { displayName });
+      const composed = `${givenName} ${familyName}`.trim();
+
+      // 🔴 ΣΤΡΩΜΑ 2 — Η ΚΕΝΗ ΦΟΡΜΑ ΔΕΝ ΕΙΝΑΙ ΕΝΤΟΛΗ ΔΙΑΓΡΑΦΗΣ.
+      //
+      // **Μετρημένη απώλεια δεδομένων (ζωντανά, 2026-08-24)**: το `displayName`
+      // υπολογιζόταν άνευ όρων και γραφόταν, οπότε ένα πάτημα «Αποθήκευση» με
+      // **κενά** τα δύο πεδία έγραφε κενή συμβολοσειρά στο Firebase Auth — και
+      // το επόμενο `syncUserProfileToFirestore` την αντέγραφε ως `null` στο
+      // `users/{uid}`. Παρατηρήθηκε `"Georgios Pagonis"` → `null`, από χρήστη
+      // που πάτησε Αποθήκευση για **εντελώς άλλο λόγο** (δήλωση επαγγέλματος,
+      // ADR-798 Φάση 3 Κ4). Τα πεδία ήταν κενά επειδή η σύνδεση Google δεν είχε
+      // ποτέ γεμίσει `givenName`/`familyName` — αυτό το θεραπεύει το ΣΤΡΩΜΑ 1.
+      //
+      // 🏆 **Το «κανένας ανώνυμος λογαριασμός» ΕΙΝΑΙ η πρακτική των μεγάλων**:
+      // Google Account, Microsoft Entra (`displayName` υποχρεωτικό) και το OIDC
+      // (`name`) δεν προβλέπουν χρήστη χωρίς όνομα. Άρα η κενή φόρμα διαβάζεται
+      // ως **«καμία αλλαγή»**, όχι ως «σβήσ᾽ το» — δεν είναι περιορισμός, είναι
+      // το πρότυπο.
+      //
+      // ⚠️ Η **μερική** συμπλήρωση γράφεται κανονικά: μόνο το «και τα δύο κενά»
+      // είναι μη-εντολή. Αλλιώς δεν θα μπορούσες να αφαιρέσεις μόνο το επώνυμο.
+      if (composed.length === 0) {
+        return { displayName: auth.currentUser.displayName ?? '', uid };
+      }
+
+      await updateProfile(auth.currentUser, { displayName: composed });
       safeSetItem(`${STORAGE_KEYS.AUTH_GIVEN_NAME_PREFIX}${uid}`, givenName);
       safeSetItem(`${STORAGE_KEYS.AUTH_FAMILY_NAME_PREFIX}${uid}`, familyName);
-      return { displayName, uid };
+      return { displayName: composed, uid };
     },
     [auth, setError],
   );
