@@ -20,6 +20,7 @@ import { Search } from 'lucide-react';
 import { EscoService } from '@/services/esco.service';
 import type { EscoOccupationPickerProps, EscoSearchResult, EscoPickerValue } from '@/types/contacts/esco-types';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { Badge } from '@/components/ui/badge';
 import { pickBilingualLabel, resolveEscoLang } from '@/components/shared/esco/esco-label';
 import { LinkedSinglePickerView, useContactPickerTranslation } from '@/components/shared/pickers';
 import '@/lib/design-system';
@@ -69,9 +70,35 @@ export function EscoOccupationPicker({
       selectedInputPadding="pr-16"
       leftIcon={<Search className={cn("absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none", colors.text.muted)} />}
       badge={
-        <span className="absolute right-10 top-1/2 -translate-y-1/2 text-xs font-medium px-1.5 py-0.5 rounded bg-[hsl(var(--bg-info))]/20 text-primary">
+        /*
+          🔴 ADR-798 §8 — ΗΤΑΝ ΑΟΡΑΤΟ, ΟΧΙ ΑΠΛΩΣ ΔΥΣΑΝΑΓΝΩΣΤΟ.
+
+          Εδώ έγραφε χειροποίητο `<span … bg-[hsl(var(--bg-info))]/20 text-primary>`.
+          Στο **προεπιλεγμένο (σκοτεινό)** θέμα το `--primary` λύνεται σε
+          `rgb(29,40,58)` — **ταυτόσημο** με το `--card` — άρα το κείμενο μετρήθηκε
+          ζωντανά στο **1,00:1** πάνω στην επιφάνεια και **1,01:1** πάνω στο ίδιο το
+          chip. Είναι η κλάση που τεκμηριώνει το CHECK 3.38 / ADR-770.
+
+          ⚠️ **Η ΠΡΟΦΑΝΗΣ ΔΙΟΡΘΩΣΗ ΜΕΤΡΗΘΗΚΕ ΚΑΙ ΑΠΟΡΡΙΦΘΗΚΕ**: το
+          `text-[hsl(var(--text-info))]` — που χρησιμοποιεί ο **αδελφός**
+          `EmployerPicker` — δίνει **5,77:1** στο σκοτεινό αλλά **3,19:1** στο
+          **φωτεινό**, δηλαδή **κάτω από το AA**. Θα αντάλλασσε το ένα θέμα με το
+          άλλο, αντί να θεραπεύσει.
+
+          ✅ Το Badge SSoT με `variant="info"` είναι ζεύγος **`on-*`** (Material 3):
+          γέμισμα `--status-info` + λευκό κείμενο ⇒ **5,17:1 ΚΑΙ ΣΤΑ ΔΥΟ** θέματα,
+          σωστό **εκ κατασκευής** και όχι κατά τύχη. Ταυτόχρονα φεύγει ένα
+          χειροποίητο badge υπέρ του κεντρικού (N.0.2).
+
+          ⚠️ **ΜΗΝ το «λύσεις» αλλάζοντας το `--primary`** — απορρίφθηκε γραπτώς
+          στο ADR-682 §5.5 και το επαναλαμβάνει το CLAUDE.md (CHECK 3.38).
+        */
+        <Badge
+          variant="info"
+          className="absolute right-10 top-1/2 -translate-y-1/2 font-medium"
+        >
           {t('esco.badge')}
-        </span>
+        </Badge>
       }
       getKey={(r) => r.occupation.uri}
       renderItemContent={(result) => (
