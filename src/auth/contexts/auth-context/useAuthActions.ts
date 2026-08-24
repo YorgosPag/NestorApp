@@ -133,7 +133,7 @@ export function useAuthActions(params: UseAuthActionsParams) {
       provider.setCustomParameters({ prompt: 'select_account' });
 
       const credential = await signInWithPopup(auth, provider);
-      void credential;
+      adoptProviderNames(credential);
       logger.info('[AuthContext] Google Sign-In successful');
     } catch (error) {
       const resolver = twoFactorService.getMfaResolver(error);
