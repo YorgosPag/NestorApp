@@ -2,40 +2,30 @@
 /**
  * Generates .deadcode-baseline.json from current knip output.
  * Usage: node scripts/generate-deadcode-baseline.js
+ *
+ * ⚠️ Η ΜΕΤΡΗΣΗ ΔΕΝ ΖΕΙ ΕΔΩ. Τα ορίσματα του knip και η ανάγνωση της εξόδου είναι
+ * ΜΙΑ μηχανή (`scripts/lib/knip/file-scope.js`), κοινή με την πύλη CHECK 3.22 —
+ * αλλιώς το ratchet συγκρίνει `τρέχον(Α)` με `baseline(Β)`. Μέχρι 2026-08-25 ήταν
+ * όντως δύο: μόνο η πύλη έκοβε το `npm info …` πρόθεμα του `.npmrc`.
  */
-const { spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const { readUnusedFiles } = require('./lib/knip/file-scope');
 
 const BASELINE_FILE = path.join(__dirname, '..', '.deadcode-baseline.json');
 const ROOT = path.join(__dirname, '..');
 
 console.log('🔍 Running knip (this takes ~30s)...');
 
-const result = spawnSync('npx', ['knip', '--reporter', 'json'], {
-  cwd: ROOT,
-  encoding: 'utf8',
-  maxBuffer: 50 * 1024 * 1024,
-  stdio: ['ignore', 'pipe', 'ignore'],
-  shell: true,
-});
-
-const raw = result.stdout ?? '';
-
-let report;
+let unusedFiles;
 try {
-  report = JSON.parse(raw);
-} catch {
-  console.error('❌ Could not parse knip JSON output.');
-  console.error('Raw output preview:', raw.slice(0, 200));
+  // Χωρίς `--cache`: ο γεννήτορας γράφει τη μέτρηση με την οποία θα κριθούν όλοι,
+  // άρα δεν επιτρέπεται να απαντήσει από κρυφή μνήμη προηγούμενης διαμόρφωσης.
+  unusedFiles = readUnusedFiles(ROOT);
+} catch (error) {
+  console.error(`❌ ${error.message}`);
   process.exit(1);
 }
-
-// knip v6: { issues: [{ file, files: [{name}], exports: [...], ... }] }
-const unusedFiles = (report.issues ?? [])
-  .filter(issue => Array.isArray(issue.files) && issue.files.length > 0)
-  .map(issue => issue.file)
-  .sort();
 
 const baseline = {
   generated: new Date().toISOString(),

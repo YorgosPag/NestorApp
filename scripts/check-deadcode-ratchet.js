@@ -4,10 +4,10 @@
  * Blocks commit if new unused files appear beyond baseline.
  * Usage: node scripts/check-deadcode-ratchet.js
  */
-const { spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const { compareSets } = require('./lib/ratchet-baseline');
+const { readUnusedFiles } = require('./lib/knip/file-scope');
 
 const BASELINE_FILE = path.join(__dirname, '..', '.deadcode-baseline.json');
 const ROOT = path.join(__dirname, '..');
@@ -20,37 +20,15 @@ if (!fs.existsSync(BASELINE_FILE)) {
 const baseline = JSON.parse(fs.readFileSync(BASELINE_FILE, 'utf8'));
 const baselineSet = new Set(baseline.files ?? []);
 
-const result = spawnSync('npx', ['knip', '--reporter', 'json', '--cache'], {
-  cwd: ROOT,
-  encoding: 'utf8',
-  maxBuffer: 50 * 1024 * 1024,
-  stdio: ['ignore', 'pipe', 'ignore'],
-  shell: true,
-});
-
-const raw = result.stdout ?? '';
-
-// `.npmrc` sets loglevel=info, so npx prefixes stdout with "npm info using npm@..."
-// lines before knip's JSON. Parsing the raw buffer throws, which surfaced as a bogus
-// "new dead code introduced" block on every commit that touches a non-dxf-viewer file
-// (dxf-viewer paths are smart-skipped, which is why this stayed hidden).
-const jsonStart = raw.indexOf('{');
-const json = jsonStart >= 0 ? raw.slice(jsonStart) : raw;
-
-let report;
+let currentFilesArr;
 try {
-  report = JSON.parse(json);
-} catch {
-  console.error('❌ Could not parse knip JSON output.');
+  currentFilesArr = readUnusedFiles(ROOT, { cache: true });
+} catch (error) {
+  console.error(`❌ ${error.message}`);
   process.exit(1);
 }
 
-// knip v6: { issues: [{ file, files: [{name}], ... }] }
-const currentFiles = new Set(
-  (report.issues ?? [])
-    .filter(issue => Array.isArray(issue.files) && issue.files.length > 0)
-    .map(issue => issue.file)
-);
+const currentFiles = new Set(currentFilesArr);
 
 // Set-diff lives in scripts/lib/ratchet-baseline.js so the dead-code family
 // (CHECK 3.22 here, CHECK 3.30 barrel-aware) shares ONE comparison (N.18).
