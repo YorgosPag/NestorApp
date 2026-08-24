@@ -9,6 +9,11 @@
  *
  * Q8.3 scope: spatial chain + units + geometric context. Q8.4+Q8.5 will
  * append building elements + property sets via the same `IfcGraph`.
+ *
+ * ADR-798 Φάση 4: πριν από τη χωρική αλυσίδα γράφεται η **αλυσίδα ιδιοκτησίας**
+ * (`ifc-authorship.ts`), ώστε το `IfcProject` να μπορεί να τη δείξει — αυτό που
+ * το σχόλιο *«OwnerHistory — patched in by exporter»* υποσχόταν και **κανείς δεν
+ * έκανε** μέχρι σήμερα.
  */
 
 import type { Project } from '@/types/project';
@@ -16,6 +21,9 @@ import type { Building } from '@/types/building/contracts';
 import type { FloorDocument } from '@/app/api/floors/floors.types';
 import type { SceneModel } from '@/subapps/dxf-viewer/types/scene';
 import type { ThermalEnvelopeSpec } from '@/subapps/dxf-viewer/bim/types/thermal-envelope-types';
+import type { DeclaredOccupation } from '@/types/professional-identity';
+import type { IfcActorRoleVerdict } from '@/config/isco-ifc-role';
+import { nowISO } from '@/lib/date-local';
 
 import { IfcGraph } from './ifc-entity-graph';
 import {
@@ -26,6 +34,29 @@ import {
   writeStepIfc,
   type IfcStepHeader,
 } from './ifc-step-writer';
+import { appendIfcAuthorship, type IfcAuthoringApplication } from './ifc-authorship';
+
+// ─── Application identity ───────────────────────────────────────────────────
+
+/**
+ * **Ποιος** παράγει το αρχείο — μία δήλωση, δύο καταναλωτές.
+ *
+ * 🔑 Ζει **εδώ**, στον ενορχηστρωτή, επειδή είναι το **μόνο** σημείο που συνθέτει
+ * και τα δύο μέρη όπου η ταυτότητα της εφαρμογής εμφανίζεται: την **κεφαλίδα**
+ * STEP21 (`FILE_NAME`) και το **`IfcApplication`** μέσα στα δεδομένα. Δηλωμένη
+ * χωριστά στα δύο, θα ήταν το σχήμα των δύο λιστών namespace του CHECK 3.34 —
+ * σωστή σήμερα, αποκλίνουσα αύριο.
+ *
+ * ⚠️ Οι προεπιλογές του `DEFAULT_HEADER` στο `ifc-step-writer.ts` παραμένουν, και
+ * **δεν** είναι δεύτερη αυθεντία: τις βλέπει μόνο όποιος καλεί το `writeStepIfc`
+ * **απευθείας** (σήμερα: άγκυρες). Η πραγματική εξαγωγή τις παρακάμπτει πάντα.
+ */
+export const NESTOR_IFC_APPLICATION: IfcAuthoringApplication = {
+  developer: 'Nestor',
+  version: '1.0',
+  fullName: 'Nestor BIM IFC4 STEP21 Writer',
+  identifier: 'NestorBIM',
+};
 
 // ─── Public types ───────────────────────────────────────────────────────────
 
@@ -48,6 +79,15 @@ export interface IfcExportParams {
   readonly header?: Partial<IfcStepHeader>;
   /** Optional plugin that appends building elements after the spatial chain. */
   readonly entitySerializer?: IfcEntitySerializer;
+  /**
+   * Το **δηλωμένο επάγγελμα** του κατόχου του λογαριασμού — ADR-798 Φάση 4.
+   *
+   * ⚠️ **Ταξιδεύει ως ΡΟΛΟΣ, ποτέ ως όνομα.** Το `ifc-authorship.ts` γράφει
+   * `IfcActorRole` + ταξινόμηση ESCO πάνω σε `IfcPerson` **χωρίς κανένα όνομα**.
+   * Παράλειψη ή `null` ⇒ **σιωπή**: η αλυσίδα ιδιοκτησίας γράφεται κανονικά,
+   * απλώς χωρίς ρόλο. Δεν υπάρχει κατάσταση όπου η παράλειψη σπάει την εξαγωγή.
+   */
+  readonly declaredOccupation?: DeclaredOccupation | null;
 }
 
 export interface IfcExportResult {
@@ -55,6 +95,12 @@ export interface IfcExportResult {
   readonly fileName: string;
   /** Highest expressID assigned in the graph — useful for telemetry. */
   readonly entityCount: number;
+  /**
+   * Η ετυμηγορία της επαγγελματικής προβολής — **πέντε ρητές καταστάσεις**,
+   * ποτέ boolean. Επιτρέπει στον καλούντα να ξεχωρίσει *«δεν έπρεπε να μπει
+   * ρόλος»* από *«κάτι έσπασε»* (ADR-798 §6.2).
+   */
+  readonly authorship: IfcActorRoleVerdict;
 }
 
 /**
@@ -78,22 +124,42 @@ export class IfcExporter {
    * Builds the complete IFC4 graph and returns it as a STEP21 byte buffer.
    * Synchronous on purpose — text emission is CPU-bound and avoids the
    * web-ifc WASM round-trip until tessellated geometry is required (Q8.6).
+   *
+   * ⚠️ **Η ΣΕΙΡΑ ΕΙΝΑΙ ΣΥΜΒΟΛΑΙΟ**: η ιδιοκτησία γράφεται **πρώτη**, γιατί το
+   * `IfcProject` οφείλει να δείξει το `#id` της. Ένας γράφος append-only δεν
+   * μπορεί να «γυρίσει πίσω» να το συμπληρώσει.
    */
   exportProject(params: IfcExportParams): IfcExportResult {
     const graph = new IfcGraph();
+    const timeStampISO = params.header?.timeStampISO ?? nowISO();
+    const authorship = appendIfcAuthorship(graph, {
+      application: NESTOR_IFC_APPLICATION,
+      occupation: params.declaredOccupation,
+      creationTimestamp: Math.floor(Date.parse(timeStampISO) / 1000),
+    });
+
     const spatial = buildIfcSpatialHierarchy(graph, {
       project: params.project,
       buildings: params.buildings,
       floors: params.floors,
+      ownerHistoryID: authorship.ownerHistoryId,
     });
     params.entitySerializer?.serializeEntities(graph, spatial, params);
 
     const fileName = sanitizeFileName(params.project.name) + '.ifc';
     const bytes = writeStepIfc(graph, {
       fileName,
+      timeStampISO,
+      organizations: [NESTOR_IFC_APPLICATION.developer],
+      authoringTool: `${NESTOR_IFC_APPLICATION.fullName} ${NESTOR_IFC_APPLICATION.version}`,
       ...params.header,
     });
-    return { bytes, fileName, entityCount: graph.lastId() };
+    return {
+      bytes,
+      fileName,
+      entityCount: graph.lastId(),
+      authorship: authorship.verdict,
+    };
   }
 }
 

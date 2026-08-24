@@ -21,6 +21,10 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
+// ⚠️ ΑΠΟ ΤΟ `@/auth`, ΠΟΤΕ ΑΠΟ ΤΟ `@/hooks/useAuth`: υπάρχουν ΔΥΟ hooks με το ίδιο
+// όνομα — το δεύτερο είναι ωμό Firebase και ΔΕΝ έχει `declaredOccupation`, οπότε
+// λάθος εισαγωγή δίνει `undefined` **σιωπηλά** (ADR-798, εκκρεμότητα ratchet).
+import { useAuth } from '@/auth';
 
 import type { Project } from '@/types/project';
 import type { Building } from '@/types/building/contracts';
@@ -39,17 +43,28 @@ export function IfcExportHost(): React.ReactElement | null {
   const notifications = useNotifications();
   const { t } = useTranslation(['dxf-viewer-shell']);
   const { buildings: firestoreBuildings } = useFirestoreBuildings();
+  // ADR-798 Φάση 4 — ταξιδεύει ως ΡΟΛΟΣ, ποτέ ως όνομα (βλ. `ifc-authorship.ts`).
+  const { declaredOccupation } = useAuth();
 
   // Latest-value ref so the EventBus handler always sees current data
   // without re-binding on every Firestore tick (anti-stale-snapshot, ADR-040).
-  const stateRef = useRef({ firestoreBuildings, notifications, t });
+  // ⚠️ Το `declaredOccupation` φτάνει **αργότερα** από την πρώτη απόδοση: το
+  // `AuthContext` το γεμίζει όταν λυθεί το προφίλ. Μπαίνει στο **υπάρχον** ref
+  // ακριβώς γι΄ αυτό — ένας χειριστής με `useCallback(..., [])` θα το πάγωνε σε
+  // `null` και η εξαγωγή θα έλεγε «δεν έχει επάγγελμα» για πάντα.
+  const stateRef = useRef({ firestoreBuildings, notifications, t, declaredOccupation });
   useEffect(() => {
-    stateRef.current = { firestoreBuildings, notifications, t };
+    stateRef.current = { firestoreBuildings, notifications, t, declaredOccupation };
   });
 
   useEffect(() => {
     return EventBus.on('bim:ifc-export-requested', async (payload) => {
-      const { firestoreBuildings: currentBuildings, notifications: notif, t: tr } = stateRef.current;
+      const {
+        firestoreBuildings: currentBuildings,
+        notifications: notif,
+        t: tr,
+        declaredOccupation: occupation,
+      } = stateRef.current;
       const { projectId, buildingIds } = payload;
 
       if (!projectId) {
@@ -79,6 +94,7 @@ export function IfcExportHost(): React.ReactElement | null {
           envelopeSpecs,
           entitySerializer: new CombinedEntitySerializer(),
           includePsets: payload.includePsets ?? true,
+          declaredOccupation: occupation,
         });
 
         const blob = new Blob([result.bytes as BlobPart], { type: 'application/x-step' });

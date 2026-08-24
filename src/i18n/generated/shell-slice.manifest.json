@@ -55,7 +55,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "3d64c8858b42b99a2a8f73b9e35766ab9092399a1cb33239d375120645882c12",
+  "inputsSha256": "29bc9bf766d3608051ed5904b6fb577821466ace2c44fca99c0033085b6993de",
   "languages": [
     "el"
   ],
@@ -529,7 +529,7 @@
     "src/types/ownership-table.ts": "b82f5606c32c665b580732264de62e0bc46098689fe03068d043728e2a398504",
     "src/types/parking.ts": "7522f13547556bf7640797034363c5db5f7d1ce5e7b548ddb1589c19075183d8",
     "src/types/payment-plan.ts": "804bd4d5c8dac2e36c73b2439603dd9b7a964865b20911c4aaedaa5708fe4226",
-    "src/types/professional-identity.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
+    "src/types/professional-identity.ts": "09c38c9181ed0f02dd95b57674bcfdf9c56629a7eb20b45477b1fcf670353be4",
     "src/types/project-basemap-placement.schemas.ts": "da18b3b1a788ecbf4ae980651719317961315838603e8c1407116a7bce9d891e",
     "src/types/project-building-code.ts": "3e5b1273ceb21fcfe778446490ee02095297158e644c2b0d87eb3ce652bbdf54",
     "src/types/project-elevation.schemas.ts": "da18b3b1a788ecbf4ae980651719317961315838603e8c1407116a7bce9d891e",

@@ -57,8 +57,25 @@ export interface SpatialHierarchyInput {
   readonly project: Project;
   readonly buildings: readonly Building[];
   readonly floors: readonly FloorDocument[];
-  /** Optional override of the IfcProject owner-history label. */
-  readonly ownerName?: string;
+  /**
+   * Το `#id` του `IfcOwnerHistory` — ADR-798 Φάση 4.
+   *
+   * ⚠️ **ΑΝΤΙΚΑΤΕΣΤΗΣΕ νεκρό πεδίο.** Μέχρι σήμερα εδώ δηλωνόταν
+   * `ownerName?: string` ως *«optional override of the IfcProject owner-history
+   * label»* — και **δεν το διάβαζε κανείς**: η `buildIfcSpatialHierarchy`
+   * αποδομεί μόνο `project`/`buildings`/`floors`. Δίπλα του, η γραμμή του
+   * `IFCPROJECT` έγραφε `null, // OwnerHistory — patched in by exporter` ενώ
+   * **μηδέν** `IFCOWNERHISTORY` υπήρχε σε ολόκληρο το `src/services/ifc/`.
+   * **Δύο σχόλια που υπόσχονταν ιδιοκτησία, καμία εκτέλεση** — το σχήμα των
+   * CHECK 3.34 / 3.36 / 3.57.
+   *
+   * 🔶 **ΔΗΛΩΜΕΝΟ ΟΡΙΟ**: δένεται **μόνο** στο `IfcProject`, τη ρίζα του αρχείου.
+   * Οι υπόλοιπες οντότητες κρατούν την κενή τιμή — **έγκυρο**, γιατί το IFC4
+   * έκανε το `IfcRoot.OwnerHistory` **OPTIONAL**. Η Φάση 4 απαντά *«ποιος
+   * συνέταξε το αρχείο»*, όχι *«ποιος άγγιξε κάθε τοίχο»* — εκείνο θέλει
+   * ιστορικό αλλαγών ανά οντότητα, που δεν υπάρχει.
+   */
+  readonly ownerHistoryID?: number;
 }
 
 // ─── Builder ────────────────────────────────────────────────────────────────
@@ -81,7 +98,7 @@ export function buildIfcSpatialHierarchy(
   // 2. Project root.
   const projectID = graph.add('IFCPROJECT', [
     lbl(generateIfcGuid()),
-    null,                         // OwnerHistory — patched in by exporter
+    input.ownerHistoryID === undefined ? null : ref(input.ownerHistoryID),
     lbl(project.name),
     project.description ? lbl(project.description) : null,
     null,                         // ObjectType

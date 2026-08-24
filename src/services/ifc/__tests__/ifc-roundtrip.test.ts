@@ -36,6 +36,12 @@ import {
   IFCOPENINGELEMENT,
   IFCRELVOIDSELEMENT,
   IFCRELFILLSELEMENT,
+  IFCOWNERHISTORY,
+  IFCPERSON,
+  IFCACTORROLE,
+  IFCCLASSIFICATION,
+  IFCCLASSIFICATIONREFERENCE,
+  IFCEXTERNALREFERENCERELATIONSHIP,
 } from 'web-ifc';
 
 import { IfcExporter } from '../ifc-exporter.service';
@@ -322,6 +328,117 @@ describe('IFC4 export — building elements', () => {
     const modelID = api.OpenModel(bytes);
     try {
       expect(getLineCount(modelID, IFCCOLUMN)).toBe(2);
+    } finally {
+      api.CloseModel(modelID);
+    }
+  });
+});
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+describe('IFC4 export — ταυτότητα συντάκτη (ADR-798 Φάση 4)', () => {
+  const ARCHITECT_URI = 'http://data.europa.eu/esco/occupation/aaaa-1111';
+
+  /**
+   * 🔑 Οι άγκυρες αυτής της ομάδας ρωτούν τον **ΑΝΑΦΟΡΙΚΟ PARSER**, όχι τον δικό
+   * μας γράφο. Οι άγκυρες του `ifc-authorship.test.ts` αποδεικνύουν *«γράψαμε τα
+   * σωστά ορίσματα»*· εδώ αποδεικνύεται *«**τρίτη υλοποίηση** ανοίγει το αρχείο
+   * και **βλέπει** αυτό που εννοούσαμε»* — άλλο ερώτημα, και το μόνο που μετράει
+   * για κάποιον που θα ανοίξει το αρχείο σε Revit ή ArchiCAD.
+   */
+  function exportWith(occupation: unknown) {
+    const { project, buildings, floors } = makeSampleProject();
+    return new IfcExporter().exportProject({
+      project,
+      buildings,
+      floors,
+      declaredOccupation: occupation as never,
+    });
+  }
+
+  it('δένει το IfcOwnerHistory στο IfcProject — αυτό που το σχόλιο υποσχόταν και κανείς δεν έκανε', () => {
+    const { bytes } = exportWith(null);
+    const modelID = api.OpenModel(bytes);
+    try {
+      expect(getLineCount(modelID, IFCOWNERHISTORY)).toBe(1);
+      const projectID = api.GetLineIDsWithType(modelID, IFCPROJECT).get(0);
+      const line = api.GetLine(modelID, projectID) as { OwnerHistory: { value: number } | null };
+      expect(line.OwnerHistory).not.toBeNull();
+      expect(line.OwnerHistory?.value).toBe(api.GetLineIDsWithType(modelID, IFCOWNERHISTORY).get(0));
+    } finally {
+      api.CloseModel(modelID);
+    }
+  });
+
+  it('🔴 ΦΡΟΥΡΟΣ GDPR: ο αναφορικός parser ΔΕΝ βρίσκει όνομα ανθρώπου πουθενά', () => {
+    const { bytes } = exportWith({
+      profession: 'Αρχιτέκτονας',
+      escoLabel: 'αρχιτέκτονας κτιρίων',
+      escoUri: ARCHITECT_URI,
+      iscoCode: '2161',
+    });
+    const modelID = api.OpenModel(bytes);
+    try {
+      const personID = api.GetLineIDsWithType(modelID, IFCPERSON).get(0);
+      const person = api.GetLine(modelID, personID) as {
+        Identification: { value: string } | null;
+        FamilyName: unknown; GivenName: unknown; MiddleNames: unknown;
+        PrefixTitles: unknown; SuffixTitles: unknown;
+      };
+      expect(person.FamilyName).toBeNull();
+      expect(person.GivenName).toBeNull();
+      expect(person.MiddleNames).toBeNull();
+      expect(person.PrefixTitles).toBeNull();
+      expect(person.SuffixTitles).toBeNull();
+      // …και όμως το αρχείο είναι ΕΓΚΥΡΟ: ο κανόνας IdentifiablePerson
+      // ικανοποιείται από το Identification (IFC4 relaxation).
+      expect(person.Identification?.value).toEqual(expect.any(String));
+    } finally {
+      api.CloseModel(modelID);
+    }
+  });
+
+  it('ο ρόλος φτάνει ως ΤΙΜΗ ΤΟΥ ΠΡΟΤΥΠΟΥ, και το ESCO URI ακέραιο δίπλα του', () => {
+    const { bytes, authorship } = exportWith({
+      profession: 'Αρχιτέκτονας',
+      escoLabel: 'αρχιτέκτονας κτιρίων',
+      escoUri: ARCHITECT_URI,
+      iscoCode: '2161',
+    });
+    expect(authorship.kind).toBe('enumerated');
+    const modelID = api.OpenModel(bytes);
+    try {
+      const roleID = api.GetLineIDsWithType(modelID, IFCACTORROLE).get(0);
+      const role = api.GetLine(modelID, roleID) as { Role: { value: string } };
+      expect(role.Role.value).toBe('ARCHITECT');
+
+      expect(getLineCount(modelID, IFCCLASSIFICATION)).toBe(1);
+      const refID = api.GetLineIDsWithType(modelID, IFCCLASSIFICATIONREFERENCE).get(0);
+      const reference = api.GetLine(modelID, refID) as {
+        Location: { value: string }; Identification: { value: string }; Name: { value: string };
+      };
+      expect(reference.Location.value).toBe(ARCHITECT_URI);
+      expect(reference.Identification.value).toBe('2161');
+      // 🔴 Το ελληνικό κείμενο επιβιώνει του ISO 10303-21 escaping, ΑΠΟΚΩΔΙΚΟΠΟΙΗΜΕΝΟ
+      // από τρίτη υλοποίηση — όχι απλώς «γράφτηκε σωστά» από εμάς.
+      expect(reference.Name.value).toBe('αρχιτέκτονας κτιρίων');
+      expect(getLineCount(modelID, IFCEXTERNALREFERENCERELATIONSHIP)).toBe(1);
+    } finally {
+      api.CloseModel(modelID);
+    }
+  });
+
+  it('🔑 ΠΑΡΟΝΟΜΑΣΤΗΣ: χωρίς δήλωση, ο parser δεν βρίσκει ΚΑΝΕΝΑ ρόλο και ΚΑΜΙΑ ταξινομία', () => {
+    const { bytes, authorship } = exportWith(null);
+    expect(authorship.kind).toBe('absent');
+    const modelID = api.OpenModel(bytes);
+    try {
+      expect(getLineCount(modelID, IFCACTORROLE)).toBe(0);
+      expect(getLineCount(modelID, IFCCLASSIFICATION)).toBe(0);
+      expect(getLineCount(modelID, IFCCLASSIFICATIONREFERENCE)).toBe(0);
+      expect(getLineCount(modelID, IFCEXTERNALREFERENCERELATIONSHIP)).toBe(0);
+      // …αλλά η αλυσίδα ιδιοκτησίας γράφεται κανονικά: η σιωπή αφορά ΜΟΝΟ τον ρόλο.
+      expect(getLineCount(modelID, IFCOWNERHISTORY)).toBe(1);
     } finally {
       api.CloseModel(modelID);
     }
