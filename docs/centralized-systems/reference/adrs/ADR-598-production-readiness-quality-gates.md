@@ -156,3 +156,69 @@
 - **2026-07-08** — **ΦΑΣΗ 2 HANDOFF ετοιμάστηκε (G5+G6+G14).** SSoT audit: `type-coverage`/`@typescript/analyze-trace`/`dependency-cruiser` απόντα (όλα MIT — περνούν G13)· `@next/bundle-analyzer@16.1.0` + `scripts/bundle-analyzer.js` (εξάγει `analyzeNextBuild()`) υπάρχουν· `config/quality-gates/ts-error-budget.json` = policy pattern για reuse (G14). Απόφαση Giorgio: **seeding via CI dispatch** (ο agent δεν τρέχει tsc/build τοπικά, N.17). Δεν υλοποιήθηκε κώδικας — πλήρες βήμα-βήμα brief στο `HANDOFFS/2026-07-08_ADR-598_Phase2-G5-G6-G14_type-bundle-ratchets_handoff.md` (ratchet directions, CI seed-job template, N.18 shared-helper προειδοποίηση, file list). Επόμενο session υλοποιεί με καθαρό context.
 - **2026-07-08** — **ΦΑΣΗ 1 ΟΛΟΚΛΗΡΩΘΗΚΕ — G4 + G8 DONE.** SSoT audit πρώτα: επιβεβαιώθηκε ότι τα gate entries `jsx-a11y`/`security` υπάρχουν ήδη στο engine (fail-closed), το `.eslintrc.semantic.js` είναι legacy/un-wired (δεν αγγίχτηκε), κανένα plugin installed. Νέα αρχεία: `eslint/gates/jsx-a11y.mjs`, `eslint/gates/security.mjs`, `eslint/gates/_severity.mjs` (κοινός `downgradeToWarn` — SSoT, αποφεύγει clone μεταξύ των 2 gates / CHECK 3.28), `.eslint-jsx-a11y-baseline.json` (1148/415), `.eslint-security-baseline.json` (208/57). G4 = `eslint-plugin-jsx-a11y@6.10.2` (MIT), G8 = `eslint-plugin-security@4.0.1` (Apache-2.0) — και τα δύο pinned devDeps, πέρασαν το G13 license gate (114 pkgs, exit 0). G8 recommended ΜΕΙΟΝ `detect-object-injection` (big-players practice). Τροποποιήθηκαν: `package.json` (+2 pinned devDeps, +4 scripts), `pnpm-lock.yaml`, `.github/workflows/eslint-ratchet.yml` (matrix → `[complexity, jsx-a11y, security]` + baseline paths), `scripts/check-eslint-ratchet.js` (**engine bugfix**: `--config` additive σε ESLint 9 → νέο `rulePrefix` namespace-filter ώστε plugin gates να μη μετρούν ξένους κανόνες), `scripts/__tests__/check-eslint-ratchet.test.js` (+2 tests → 25). Επαληθεύτηκε: `test:eslint-ratchet` 25/25, `--check` exit 0 και για τα δύο, `license:check` exit 0. Heavy ESLint → CI μόνο (N.17).
 - **2026-07-08** — **ΦΑΣΗ 1 ξεκίνησε — G7 DONE, generic engine.** SSoT απόφαση: αντί για 3 ξεχωριστά ratchet scripts (structural clones → θα έσκαγαν στο CHECK 3.28/N.18), **ΕΝΑ** engine `scripts/check-eslint-ratchet.js` με `--gate <name>` (GATES map: complexity+jsx-a11y+security· τα 2 τελευταία fail-closed μέχρι install plugin). Νέα αρχεία: `scripts/check-eslint-ratchet.js`, `eslint/gates/complexity.mjs`, `.eslint-complexity-baseline.json` (seed full-src), `.github/workflows/eslint-ratchet.yml` (matrix, μόνο `complexity` active). `package.json` +2 scripts (`eslint-gate:complexity` / `:baseline`). G7 = ESLint core rules (complexity/max-depth/max-params) → μηδέν νέο dependency. Heavy ESLint run → CI μόνο (N.17), ΟΧΙ pre-commit. Επαληθεύτηκε τοπικά: check-pass (exit 0) + regression-block (exit 1) + fatal-parse guard. G4/G8 PENDING (θέλουν pin plugin devDep → περνούν από το G13 license gate).
+
+---
+
+### 2026-08-25 — G2: **η επιφάνεια του `jspdf` μετρήθηκε· και τα 8 advisories είναι ΜΗ ΠΡΟΣΠΕΛΑΣΙΜΑ**
+
+🔴 **Τρεις αριθμοί που κυκλοφορούσαν ήταν λάθος. Μετρημένοι από το ίδιο το JSON / δέντρο:**
+
+| ισχυρισμός | πού γραφόταν | **μετρημένο** |
+|---|---|---|
+| «`jspdf` **4** critical» | `.claude-rules/pending-ratchet-work.md` | **2** critical + 6 high |
+| «**10** καταναλωτές» | handoff 25/08 | **31** αρχεία παραγωγής (+8 tests) |
+| `reason: "pre-existing **transitive** advisory"` | και στις 12 εγγραφές | το `jspdf` είναι **ΑΜΕΣΗ** εξάρτηση ⇒ ο λόγος δεν είναι απλώς κενός, είναι **ψευδής** για τα 8 |
+
+#### Η επιφάνεια που ΧΡΗΣΙΜΟΠΟΙΟΥΜΕ, έναντι αυτής που ονομάζουν τα CVE
+
+Μετρημένο στα **31** αρχεία παραγωγής: η χρήση είναι **αποκλειστικά ο πυρήνας σχεδίασης** —
+`text` (179) · `setFontSize` (121) · `setFont` (92) · `setTextColor` (88) · `line` · `rect` ·
+`addImage` (13) · `output` (10) · `GState` · `Matrix` · `addFont`/`addFileToVFS` · `splitTextToSize`.
+
+| CVE | επιφάνεια | δική μας χρήση |
+|---|---|---|
+| **CVE-2025-68428** *(critical, LFI/Path Traversal)* | `loadFile` / fs σε Node | **0** — μηδέν `.loadFile(`, μηδέν `allowFsRead` |
+| **CVE-2026-31938** *(critical, HTML Injection «New Window»)* | `output('dataurlnewwindow')` | **0** — μόνο `blob` (9) και `arraybuffer` (3) |
+| CVE-2026-24737 · CVE-2026-25940 *(AcroForm)* | AcroForm fields | **0** |
+| CVE-2026-25755 *(addJS injection)* | `addJS` | **0** |
+| CVE-2026-31898 *(FreeText color)* | FreeText annotation | **0** |
+| CVE-2026-24133 *(BMP DoS)* | BMP decoder | **0** — `addImage` δέχεται **PNG (12)** και **JPEG (1)** |
+| CVE-2026-25535 *(GIF DoS)* | GIF dimensions | **0** |
+
+⇒ **Αυτός είναι ΠΡΑΓΜΑΤΙΚΟΣ λόγος allowlist**, όχι σφραγίδα: απαντά και τα τρία ερωτήματα
+(*γιατί δεν μας φτάνει* = μηδέν χρήση των επτά επιφανειών· *γιατί δεν αναβαθμίζουμε ΑΚΟΜΗ* =
+γράφει το κοινό `pnpm-lock.yaml`, απόφαση Giorgio· *πότε ξανακοιτάμε* = με την πρώτη χρήση
+AcroForm/`addJS`/`html()`/BMP-GIF ή `output` σε νέο παράθυρο).
+
+⚠️ **Το «μη προσπελάσιμο» ΔΕΝ σημαίνει «μην αναβαθμίσεις»** — σημαίνει ότι δεν είναι **επείγον**,
+άρα η αναβάθμιση γίνεται **με τους όρους μας** και όχι βιαστικά.
+
+#### Η αναβάθμιση: **μία γραμμή, μηδέν αλλαγές κώδικα** *(ερευνημένο στην πηγή)*
+
+`jspdf ^3.0.3` (εγκατεστημένο **3.0.4**) → **`^4.2.1`** κλείνει **και τα 8** = **67%** της allowlist.
+
+* **4.0.0** — *«File system access is now restricted by default … There are **no other breaking
+  changes**»* + κατάργηση IE. **Το μοναδικό πραγματικό breaking change, και δεν μας αγγίζει**
+  (μηδέν `loadFile`).
+* **4.1.0 / 4.2.0 / 4.2.1** — **κανένα** breaking change· μόνο διορθώσεις ασφαλείας.
+* **Τύποι ακέραιοι** (επαληθεύτηκε στο `jspdf@4.2.1/types/index.d.ts`): `export class jsPDF` +
+  `export default jsPDF` · `export interface Matrix` · `export class TilingPattern` ·
+  `export class GState` — **ακριβώς** οι τέσσερις μορφές που εισάγει το repo.
+* **N.5 — ΑΔΕΙΑ: MIT** ✅, και **μηδέν νέες εξαρτήσεις**: τα σύνολα v3.0.4/v4.2.1 είναι
+  **ταυτόσημα** (`@babel/runtime`, `fflate`, `fast-png`), με μόνη διαφορά το **προαιρετικό**
+  `dompurify` 3.2.4 → 3.3.1 — που αφορά το `.html()`, **που δεν καλούμε**.
+
+#### Παρονομαστής πριν την αλλαγή *(ώστε το «πράσινο μετά» να σημαίνει κάτι)*
+
+`npx jest src/services/pdf src/services/report-engine src/subapps/dxf-viewer/print
+src/subapps/dxf-viewer/bim/structural/detail-sheet src/subapps/dxf-viewer/bim/schedule`
+⇒ **52 σουίτες / 656 tests / 10 snapshots — όλα πράσινα στο 3.0.4** (2026-08-25).
+
+⚠️ Τα **10 snapshots** είναι το ευαίσθητο σημείο: αν το v4 αλλάξει έστω byte στη σειριοποίηση
+του PDF, θα το πουν **αυτά** και όχι ο μεταγλωττιστής. Είναι ο λόγος που ο παρονομαστής
+καταγράφηκε **πριν**.
+
+#### ⛔ Εκκρεμεί απόφαση Giorgio — γράφει το κοινό `pnpm-lock.yaml`
+
+Δεν εκτελέστηκε καμία αλλαγή σε `package.json`/lockfile (§0 του handoff· κανόνας Giorgio).
+
