@@ -80,7 +80,7 @@ import type { TableEntity } from './table-entity';
  * `undefined` θεωρείται **ασφαλές**: το `JSON.stringify` απλώς παραλείπει το κλειδί, που
  * είναι ισοδύναμο με «απόν προαιρετικό πεδίο» — δεν χάνεται πληροφορία.
  */
-export type JsonSafe<T> =
+type JsonSafe<T> =
   // 1. πρωτόγονα (και branded strings / ενώσεις κυριολεκτικών) — αυτούσια
   T extends string | number | boolean | null | undefined
     ? T
@@ -106,7 +106,7 @@ export type JsonSafe<T> =
  * ένωση, οπότε ένα `Foo | undefined` θα απαντούσε «ναι» για το σκέλος `undefined` και
  * το αποτέλεσμα θα ήταν `true | false` — δηλαδή `boolean`, δηλαδή τίποτα.
  */
-export type IsJsonSafe<T> = [T] extends [JsonSafe<T>] ? true : false;
+type IsJsonSafe<T> = [T] extends [JsonSafe<T>] ? true : false;
 
 /**
  * **Διαγνωστικό**: τα ονόματα των πεδίων **πρώτου επιπέδου** που δεν επιβιώνουν. Το
@@ -142,7 +142,7 @@ export type AssertJsonSafe<T> = IsJsonSafe<T> extends true ? true : never;
  * έναν τύπο που *οφείλει* να απορρίπτεται, μια μελλοντική «απλοποίηση» του {@link JsonSafe}
  * που θα τον έκανε μονίμως πράσινο σπάει **εδώ**, αμέσως.
  */
-export type AssertNotJsonSafe<T> = IsJsonSafe<T> extends true ? never : true;
+type AssertNotJsonSafe<T> = IsJsonSafe<T> extends true ? never : true;
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Ζωντανές βεβαιώσεις (ADR-739 Φ.Δ)

@@ -32,7 +32,7 @@
 import type { Point2D } from '../rendering/types/Types';
 
 /** Μία διαδρομή που χαράχτηκε: με τι μολύβι και σε ποια σημεία **οθόνης**. */
-export interface StrokeRecord {
+interface StrokeRecord {
   readonly color: string;
   readonly lineWidth: number;
   readonly points: ReadonlyArray<{ readonly x: number; readonly y: number }>;
@@ -58,7 +58,7 @@ export interface StrokeRecord {
  * υλοποίηση. Γι' αυτό ο καταγραφέας κρατά πλέον πραγματική **στοίβα μετασχηματισμού** και
  * καταγράφει το σημείο **μετά** την εφαρμογή της — δηλαδή ό,τι θα έβλεπε το μάτι.
  */
-export interface TextRecord {
+interface TextRecord {
   readonly text: string;
   readonly color: string;
   /** Το `ctx.font` τη στιγμή της γραφής — έντονο/κανονικό, ύψος, οικογένεια. */
@@ -77,7 +77,7 @@ export interface TextRecord {
  * ένας καταγραφέας που κοιτά μόνο αυτά θα ήταν πράσινος και για γραμμή που έμεινε οριζόντια
  * κάτω από γερμένο κείμενο.
  */
-export interface RectRecord {
+interface RectRecord {
   readonly color: string;
   readonly at: { readonly x: number; readonly y: number };
   readonly widthPx: number;
@@ -90,7 +90,7 @@ export interface RectRecord {
  * να βγει το επόμενο μελάνι. Ο σύνδεσμος μέσα σε μικτό κείμενο είναι ο μόνος σημερινός
  * παραγωγός.
  */
-export interface ClipRecord {
+interface ClipRecord {
   readonly at: { readonly x: number; readonly y: number };
   readonly widthPx: number;
   readonly heightPx: number;
@@ -111,7 +111,7 @@ export interface ClipRecord {
  * Το `fills` **μένει** και γεμίζει όπως πάντα: πέντε σουίτες το διαβάζουν και δεν έχουν
  * λόγο να μάθουν γεωμετρία που δεν τις αφορά.
  */
-export interface FillPathRecord {
+interface FillPathRecord {
   readonly color: string;
   /** Μία εγγραφή ανά `moveTo`, σε px **οθόνης** (μετά τον ενεργό μετασχηματισμό). */
   readonly subpaths: ReadonlyArray<ReadonlyArray<Point2D>>;
@@ -127,7 +127,7 @@ export interface FillPathRecord {
  * ένας κύκλος ή ένα τόξο εξαφανίζονται από το ίχνος **σιωπηλά** — δηλαδή ακριβώς το
  * «κατάπιε-και-προχώρα» stub, σε τρίτη ιδιότητα, μέσα στο όργανο που το κυνηγά.
  */
-export interface ArcRecord {
+interface ArcRecord {
   /** Το κέντρο σε px **οθόνης**, μετά τον ενεργό μετασχηματισμό. */
   readonly at: Point2D;
   readonly radiusX: number;
