@@ -1,0 +1,95 @@
+name: T2 📏 Text Measure Tier Census (CHECK 3.64)
+
+# Layer 2 του CHECK 3.64 (ADR-799 Φάση 2) — **ΤΡΕΧΕΙ** την απογραφή.
+#
+# ⚠️ ΔΥΟ ΣΤΡΩΜΑΤΑ ΜΕ ΔΙΑΦΟΡΕΤΙΚΗ ΔΟΥΛΕΙΑ: το pre-commit κρίνει την **αποθηκευμένη** απογραφή
+#    και φυλά την **ΠΑΛΙΝΔΡΟΜΗΣΗ**· εδώ η απογραφή **παράγεται από την εκτέλεση** και φυλά την
+#    **ΑΝΑΚΑΛΥΨΗ**. Μια ΝΕΑ σουίτα που αρχίζει να μετρά τυφλά είναι, εξ ορισμού, αόρατη σε
+#    αποθηκευμένη απογραφή — γι' αυτό εδώ τρέχει ΑΝΕΥ ΟΡΩΝ.
+#
+# ⚠️ ΞΕΧΩΡΙΣΤΟ WORKFLOW, ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ: δεν μπήκε στο `jest-suite.yml` (θα διπλασίαζε τον
+#    χρόνο του ΕΚΤΕΛΕΣΤΗ και μια αποτυχία απογραφής θα αναφερόταν ως αποτυχία σουίτας) ούτε στο
+#    `ssot-discover.yml` (workflow γρήγορων ελέγχων SSoT· μια αποτυχία μέτρησης κειμένου εκεί θα
+#    λεγόταν «αποτυχία SSoT» — το λάθος που απέφυγε ρητά το ADR-775).
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: text-measure-tier-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  census:
+    name: 📏 Απογραφή βαθμίδας μέτρησης
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Πάκετα
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # ⚠️ Κόκκινη σουίτα ΔΕΝ ακυρώνει την απογραφή: οι παρατηρήσεις είναι ΑΝΕΞΑΡΤΗΤΕΣ από το αν
+      #    πέρασε ο ισχυρισμός — αυτό ακριβώς είναι το νόημα («πράσινο σε τυφλή βαθμίδα»).
+      #    Τις αποτυχίες των tests τις κρίνει το `jest-suite.yml` (ADR-783), όχι αυτό εδώ.
+      - name: 📏 Εκτέλεση απογραφής (παρατήρηση, όχι ευρετικό)
+        run: pnpm run text-measure:census
+
+      - name: 🔴 CHECK 3.64 — ratchet κατά ταυτότητα
+        run: pnpm run text-measure:report && node scripts/check-text-measure-tier.js
+
+      - name: "🧪 Άγκυρες — CHECK 3.64 (16 άγκυρες, 14/14 μεταλλάξεις κόκκινες)"
+        run: pnpm run test:text-measure-tier
+
+      - name: 🧭 How to resolve
+        if: failure()
+        run: |
+          {
+            echo "### CHECK 3.64 — ADR-799 Φάση 2 (η βαθμίδα μέτρησης κειμένου)"
+            echo "**ΤΟ ΕΡΩΤΗΜΑ:** μέτρησε αυτή η σουίτα κείμενο σε βαθμίδα που ΔΕΝ ΒΛΕΠΕΙ"
+            echo "ό,τι της ζητήθηκε — και αν ναι, το ξέρει κάποιος;"
+            echo ""
+            echo "🔑 **Το κριτήριο ΔΕΝ είναι «tier 3»** — είναι **«tier 3 ΚΑΙ ζητήθηκε στυλ»**."
+            echo "Μετρημένο: 61 σουίτες αγγίζουν τον μετρητή, **32** μετρούν nominal χωρίς να"
+            echo "ζητούν κανέναν άξονα (η βαθμίδα απαντά ΑΚΡΙΒΩΣ την ερώτηση — δεν είναι"
+            echo "παράβαση), 14 φτάνουν tier 1/2, και **15** είναι τυφλές."
+            echo ""
+            echo "**undeclared-blind-measure** (🔴 ratchet) → μια σουίτα άρχισε να κρίνει"
+            echo "κείμενο με όργανο που δεν βλέπει το στυλ της. Θεραπεία:"
+            echo '  `installStubFontPair(family)` στο `beforeEach`.'
+            echo "  ⚠️ Για **bold** ΧΡΕΙΑΖΕΤΑΙ ΖΕΥΓΟΣ: ο \`resolveEntityFont\` για bold"
+            echo "  παρακάμπτει την άμεση εύρεση και ζητά «<οικογένεια> Bold», αλλιώς"
+            echo "  επιστρέφει \`null\` ΕΠΙΤΗΔΕΣ. Σκέτο \`installStubFont\` αφήνει το απλό σε"
+            echo "  tier 1 και το έντονο σε tier 3 ⇒ πράσινο ΣΥΓΚΡΙΝΟΝΤΑΣ ΔΥΟ ΟΡΓΑΝΑ."
+            echo ""
+            echo "⚠️ **ΜΗΝ** εγκαταστήσεις ΚΑΘΟΛΙΚΗ όψη στο jest setup: μετρήθηκε και"
+            echo "απορρίφθηκε (ADR-799 §7) — δεκάδες σουίτες υπολογίζουν με το χέρι"
+            echo "\`len×height×0,6\`, που ΕΙΝΑΙ ο τύπος του tier 3."
+            echo ""
+            echo "**stale-census / missing-census** (⛔) → η αποθηκευμένη απογραφή δεν"
+            echo "αντιστοιχεί πια στις εισόδους της. Τρέξε \`npm run text-measure:census\`"
+            echo "και κομμίταρε το \`.text-measure-census.json\` ΜΑΖΙ με την αλλαγή."
+            echo ""
+            echo "**orphan-declaration / reasonless-declaration** (⛔) → το κλειστό σύνολο"
+            echo "\`.text-measure-tier.json\` έχει εγγραφή που δεν εξαιρεί τίποτα, ή χωρίς"
+            echo "ουσιαστικό λόγο. ΔΕΝ μπαίνουν ΠΟΤΕ σε baseline."
+            echo ""
+            echo "Απογραφή: npm run text-measure:report"
+          } >> "$GITHUB_STEP_SUMMARY"
