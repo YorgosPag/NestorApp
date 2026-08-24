@@ -22,7 +22,7 @@
 
 import { initEmulator, teardownEmulator, resetData } from '../_harness/emulator';
 import { getContext } from '../_harness/auth-contexts';
-import { assertCell, expectAllow, type AssertTarget } from '../_harness/assertions';
+import { assertCell, expectAllow, expectDeny, type AssertTarget } from '../_harness/assertions';
 import { seedUser } from '../_harness/seed-helpers-users';
 import { FIRESTORE_RULES_COVERAGE } from '../_registry/coverage-manifest';
 import { PERSONA_CLAIMS, SAME_TENANT_COMPANY_ID } from '../_registry/personas';
@@ -80,6 +80,107 @@ describe('users.rules — uid-ownership + companyAdmin write (usersMatrix)', () 
         displayName: 'Own Profile',
         email: 'own@test.com',
         globalRole: 'internal_user',
+        createdAt: new Date(),
+      }));
+    });
+  });
+
+  // ── Ο ΚΑΘΡΕΦΤΗΣ ΠΡΕΠΕΙ ΝΑ ΑΠΟΔΕΙΚΝΥΕΤΑΙ ΚΑΘΡΕΦΤΗΣ (ADR-787 §5.3) ─────────
+  //
+  // 🔴 ΓΙΑΤΙ ΥΠΑΡΧΟΥΝ: μέχρι 2026-08-24 ο κανόνας ήταν `uid == userId` **χωρίς
+  // allowlist πεδίων** — ο χρήστης έγραφε ΟΤΙΔΗΠΟΤΕ στο δικό του έγγραφο, και
+  // **τρία** σημεία του διακομιστή το διάβαζαν ως αλήθεια (δες το σχόλιο στο
+  // `firestore.rules`, match /users/{userId}).
+  //
+  // ⚠️ ΚΑΙ ΤΑ 26 ΥΠΑΡΧΟΝΤΑ TESTS ΗΤΑΝ ΠΡΑΣΙΝΑ ΠΡΙΝ ΚΑΙ ΜΕΤΑ τη διόρθωση:
+  // **καμία** άγκυρα δεν ρωτούσε τι γράφεται, μόνο **ποιος** γράφει. Αυτό είναι
+  // το σχήμα CHECK 3.36 — *ένα anchor χωρίς gate είναι σχόλιο*, εδώ στην
+  // αντίστροφη μορφή του: *ένα gate χωρίς anchor είναι ευχή*.
+  //
+  // ⚠️ Ο ΠΑΡΟΝΟΜΑΣΤΗΣ ΕΙΝΑΙ ΥΠΟΧΡΕΩΤΙΚΟΣ (Κ5/Κ6): χωρίς αυτόν, ένας κανόνας που
+  // αρνείται **τα πάντα** θα έβγαζε όλες τις αρνήσεις πράσινες — και θα έσπαγε
+  // κάθε σύνδεση στην παραγωγή, με τη σουίτα να το επιβεβαιώνει.
+  describe('προνομιακά πεδία — ο καθρέφτης πρέπει να αποδεικνύεται', () => {
+    const ownUid = PERSONA_CLAIMS.same_tenant_user.uid;
+
+    /** Το έγγραφο του ίδιου του καλούντος, μέσω του context του. */
+    function ownDoc() {
+      return getContext(env, 'same_tenant_user').firestore().collection('users').doc(ownUid);
+    }
+
+    // ── UPDATE: η βλάβη ──────────────────────────────────────────────────
+    it('Κ1 — αυτο-ανύψωση globalRole ≠ claim → DENY', async () => {
+      await seedUser(env, ownUid);
+      await expectDeny(ownDoc().update({ globalRole: 'company_admin' }));
+    });
+
+    it('Κ2 — αυτο-γραμμένο companyId ≠ claim → DENY (παράκαμψη ADR-660)', async () => {
+      await seedUser(env, ownUid);
+      await expectDeny(ownDoc().update({ companyId: 'company-θύμα' }));
+    });
+
+    it('Κ3 — αυτο-γραμμένο status → DENY (το γράφει ο διακομιστής)', async () => {
+      await seedUser(env, ownUid);
+      await expectDeny(ownDoc().update({ status: 'active' }));
+    });
+
+    it('Κ4 — αυτο-γραμμένα permissions → DENY', async () => {
+      await seedUser(env, ownUid);
+      await expectDeny(ownDoc().update({ permissions: ['admin_access'] }));
+    });
+
+    it('Κ4β — αλλοίωση createdAt → DENY', async () => {
+      await seedUser(env, ownUid);
+      await expectDeny(ownDoc().update({ createdAt: new Date(0) }));
+    });
+
+    // ── UPDATE: ο ΠΑΡΟΝΟΜΑΣΤΗΣ ───────────────────────────────────────────
+    it('Κ5 — ο ΝΟΜΙΜΟΣ συγχρονισμός claims (τιμή == claim) → ALLOW', async () => {
+      // Το έγγραφο ξεκινά **αποκλίνον** από τα claims, αλλιώς η γραμμή δεν
+      // αλλάζει και ο κλάδος του καθρέφτη ΔΕΝ ασκείται ποτέ.
+      await seedUser(env, ownUid, { overrides: { globalRole: 'external_user' } });
+      await expectAllow(ownDoc().update({
+        globalRole: PERSONA_CLAIMS.same_tenant_user.globalRole,
+      }));
+    });
+
+    it('Κ6 — τα ακίνδυνα πεδία του προφίλ → ALLOW', async () => {
+      await seedUser(env, ownUid);
+      await expectAllow(ownDoc().update({
+        displayName: 'Νέο Όνομα',
+        photoURL: 'https://example.test/a.png',
+        loginCount: 7,
+        updatedAt: new Date(),
+      }));
+    });
+
+    // ── CREATE: η ίδια τρύπα, στη γέννηση ────────────────────────────────
+    it('Κ7 — γέννηση με globalRole ≠ claim → DENY', async () => {
+      await expectDeny(ownDoc().set({
+        companyId: SAME_TENANT_COMPANY_ID,
+        globalRole: 'super_admin',
+        email: 'own@test.com',
+        createdAt: new Date(),
+      }));
+    });
+
+    it('Κ8 — γέννηση με status που ΔΕΝ παράγεται από το claim → DENY', async () => {
+      // Ο καλών **έχει** tenant claim ⇒ το μόνο συνεπές status είναι 'active'.
+      await expectDeny(ownDoc().set({
+        companyId: SAME_TENANT_COMPANY_ID,
+        globalRole: PERSONA_CLAIMS.same_tenant_user.globalRole,
+        status: 'pending',
+        email: 'own@test.com',
+        createdAt: new Date(),
+      }));
+    });
+
+    it('Κ9 — γέννηση με status ΠΑΡΑΓΟΜΕΝΟ από το claim → ALLOW (παρονομαστής του Κ8)', async () => {
+      await expectAllow(ownDoc().set({
+        companyId: SAME_TENANT_COMPANY_ID,
+        globalRole: PERSONA_CLAIMS.same_tenant_user.globalRole,
+        status: 'active',
+        email: 'own@test.com',
         createdAt: new Date(),
       }));
     });
