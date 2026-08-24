@@ -17,7 +17,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { WallGripKind } from '../../hooks/useGripMovement';
+import type { WallGripKind } from '../../hooks/grip-types';
 import type { WallParams } from '../types/wall-types';
 import type { BimPoint } from '../types/bim-base';
 import { mmScaleFor } from '../../utils/scene-units';

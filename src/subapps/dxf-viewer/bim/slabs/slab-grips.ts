@@ -31,7 +31,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { GripInfo, SlabGripKind } from '../../hooks/useGripMovement';
+import type { GripInfo, SlabGripKind } from '../../hooks/grip-types';
 import type { SlabEntity, SlabParams } from '../types/slab-types';
 import type { Entity } from '../../types/entities';
 import { getBimEntityKeyPoints2D } from '../utils/bim-entity-points';

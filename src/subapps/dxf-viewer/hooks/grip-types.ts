@@ -40,12 +40,5 @@ export interface GripInfo {
   landingId?: string;
 }
 
-/** Grip drag state */
-export interface GripDragState {
-  isDragging: boolean;
-  activeGrip: GripInfo | null;
-  startPosition: Point2D | null;
-  currentPosition: Point2D | null;
-  totalDelta: Point2D;
-  hasMoved: boolean;
-}
+// ADR-700 §4 (2026-08-24): GripDragState ΔΙΑΓΡΑΦΗΚΕ — μοναδικός καταναλωτής ήταν το
+// hooks/useGripMovement.ts, το ίδιο διαγραμμένο ως νεκρό (superseded by systems/grip/).

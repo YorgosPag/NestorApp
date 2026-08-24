@@ -31,7 +31,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { FoundationGripKind, GripInfo } from '../../hooks/useGripMovement';
+import type { FoundationGripKind, GripInfo } from '../../hooks/grip-types';
 import type {
   FoundationEntity,
   FoundationParams,

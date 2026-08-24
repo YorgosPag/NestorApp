@@ -30,7 +30,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { WallGripKind } from '../../hooks/useGripMovement';
+import type { WallGripKind } from '../../hooks/grip-types';
 import type { WallParams } from '../types/wall-types';
 // ADR-363 (2026-06-11) — the WHOLE axis grip pipeline (geometry + corner/edge
 // resize + the axis↔frame mapping) is the shared `axis-box-grips` SSoT — the SAME

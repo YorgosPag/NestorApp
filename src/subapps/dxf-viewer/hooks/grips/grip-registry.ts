@@ -13,7 +13,7 @@ import { useMemo } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
 import type { DxfScene, DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { Overlay } from '../../overlays/types';
-import type { GripInfo } from '../useGripMovement';
+import type { GripInfo } from '../grip-types';
 import { computeDxfEntityGrips } from '../grip-computation';
 import { calculateMidpoint } from '../../rendering/entities/shared/geometry-utils';
 import type { UnifiedGripInfo } from './unified-grip-types';

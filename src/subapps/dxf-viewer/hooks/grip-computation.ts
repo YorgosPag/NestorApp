@@ -11,7 +11,7 @@
 
 import type { Point2D } from '../rendering/types/Types';
 import type { DxfEntityUnion } from '../canvas-v2/dxf-canvas/dxf-types';
-import type { GripInfo } from './useGripMovement';
+import type { GripInfo } from './grip-types';
 // ADR-587 Φ7 — introspectable per-type grip-producer registry (SRP sibling, N.7.1).
 // The producers there import the leaf `get*Grips` SSoTs; this module only dispatches.
 import { GRIP_PRODUCERS } from './grip-computation-producers';

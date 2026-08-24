@@ -37,7 +37,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import { translatePoint3D } from '../../rendering/entities/shared/geometry-vector-utils';
-import type { GripInfo, BeamGripKind } from '../../hooks/useGripMovement';
+import type { GripInfo, BeamGripKind } from '../../hooks/grip-types';
 import type { BeamEntity, BeamParams } from '../types/beam-types';
 import { MIN_BEAM_WIDTH_MM, MIN_BEAM_DEPTH_MM } from '../types/beam-types';
 import type { BimPoint } from '../types/bim-base';

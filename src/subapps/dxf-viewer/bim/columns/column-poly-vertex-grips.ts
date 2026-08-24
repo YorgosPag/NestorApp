@@ -21,7 +21,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { ColumnEntity, ColumnParams } from '../types/column-types';
-import type { GripInfo } from '../../hooks/useGripMovement';
+import type { GripInfo } from '../../hooks/grip-types';
 import {
   columnCenterMoveGrip,
   columnRotationHandleMidwayWorld,

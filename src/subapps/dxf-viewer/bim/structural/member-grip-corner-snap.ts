@@ -27,7 +27,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import { isColumnEntity, isBeamEntity, isFoundationEntity, type Entity } from '../../types/entities';
-import type { ColumnGripKind, BeamGripKind, FoundationGripKind } from '../../hooks/useGripMovement';
+import type { ColumnGripKind, BeamGripKind, FoundationGripKind } from '../../hooks/grip-types';
 import { applyColumnGripDrag } from '../columns/column-grips';
 import { applyBeamGripDrag } from '../beams/beam-grips';
 import { applyFoundationGripDrag } from '../foundations/foundation-grips';

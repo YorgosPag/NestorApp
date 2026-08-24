@@ -54,7 +54,7 @@ import type { StairParams, StairEntity } from '../../bim/types/stair-types';
 import { applyColumnGripDrag } from '../../bim/columns/column-grips';
 import { applyBeamGripDrag } from '../../bim/beams/beam-grips';
 import { applyStairGripDrag } from '../../bim/stairs/stair-grip-transforms';
-import type { ColumnGripKind, StairGripKind } from '../../hooks/useGripMovement';
+import type { ColumnGripKind, StairGripKind } from '../../hooks/grip-types';
 import { MIN_WALL_THICKNESS_MM, MAX_WALL_THICKNESS_MM } from '../../bim/types/wall-types';
 import { MIN_BEAM_DEPTH_MM } from '../../bim/types/beam-types';
 import { MIN_SLAB_THICKNESS_MM } from '../../bim/types/slab-types';

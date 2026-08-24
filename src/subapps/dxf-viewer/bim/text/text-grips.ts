@@ -29,7 +29,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { GripInfo, TextGripKind } from '../../hooks/useGripMovement';
+import type { GripInfo, TextGripKind } from '../../hooks/grip-types';
 import type { DxfText } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { rotateVector } from '../grips/grip-math';
 import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';

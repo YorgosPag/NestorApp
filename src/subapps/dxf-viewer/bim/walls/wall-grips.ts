@@ -42,7 +42,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { GripInfo, WallGripKind } from '../../hooks/useGripMovement';
+import type { GripInfo, WallGripKind } from '../../hooks/grip-types';
 import type { GripShape } from '../../rendering/grips/types';
 import type { WallEntity } from '../types/wall-types';
 import { mmScaleFor } from '../../utils/scene-units';

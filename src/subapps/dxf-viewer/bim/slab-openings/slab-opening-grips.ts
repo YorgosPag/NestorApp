@@ -32,7 +32,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { GripInfo, SlabOpeningGripKind } from '../../hooks/useGripMovement';
+import type { GripInfo, SlabOpeningGripKind } from '../../hooks/grip-types';
 import type {
   SlabOpeningEntity,
   SlabOpeningParams,

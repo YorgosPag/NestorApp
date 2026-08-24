@@ -36,7 +36,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { StairGripKind } from '../../hooks/useGripMovement';
+import type { StairGripKind } from '../../hooks/grip-types';
 import type { StairParams } from '../types/stair-types';
 import {
   applyAxisBoxGripDrag,

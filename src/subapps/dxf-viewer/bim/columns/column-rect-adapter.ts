@@ -21,7 +21,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { GripInfo, ColumnGripKind } from '../../hooks/useGripMovement';
+import type { GripInfo, ColumnGripKind } from '../../hooks/grip-types';
 import type { ColumnEntity, ColumnParams } from '../types/column-types';
 import { ANCHOR_OFFSETS, MIN_COLUMN_DIMENSION_MM } from '../types/column-types';
 import { mmScaleFor } from '../../utils/scene-units';

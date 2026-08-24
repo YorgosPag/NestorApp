@@ -42,7 +42,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { GripInfo, OpeningGripKind } from '../../hooks/useGripMovement';
+import type { GripInfo, OpeningGripKind } from '../../hooks/grip-types';
 import { gripKindOf } from '../../hooks/grip-kinds';
 import type { OpeningEntity, OpeningParams } from '../types/opening-types';
 import { DEFAULT_FRAME_WIDTH_MM, MIN_OPENING_WIDTH_MM, isHingedKind, isSelfHostedOpening } from '../types/opening-types';

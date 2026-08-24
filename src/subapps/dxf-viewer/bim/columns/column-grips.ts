@@ -56,7 +56,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { ColumnGripKind, GripInfo } from '../../hooks/useGripMovement';
+import type { ColumnGripKind, GripInfo } from '../../hooks/grip-types';
 import type { ColumnEntity, ColumnParams } from '../types/column-types';
 import { ANCHOR_OFFSETS, MIN_COLUMN_DIMENSION_MM } from '../types/column-types';
 import { rotatePoint } from '../../utils/rotation-math';

@@ -34,7 +34,7 @@
  */
 
 import type { Point2D, Point3D } from '../../rendering/types/Types';
-import type { GripInfo, StairGripKind } from '../../hooks/useGripMovement';
+import type { GripInfo, StairGripKind } from '../../hooks/grip-types';
 import { gripKindOf } from '../../hooks/grip-kinds';
 import type { GripShape } from '../../rendering/grips/types';
 import type { StairEntity, StairVariantParams } from '../../bim/types/stair-types';

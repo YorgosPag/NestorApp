@@ -43,14 +43,10 @@ export { useEnhancedSelection, useSelectAll, type UseEnhancedSelectionReturn } f
 // Διάδοχος για το body-drag: systems/drag/EntityBodyDragStore.ts, σωστά στον escape-bus
 // (ESC_PRIORITY.BODY_DRAG). Το NUDGE_CONFIG ζει τοπικά στο useKeyboardShortcuts.ts.
 
-// Grip Movement Hook (Phase 4)
-export {
-  useGripMovement,
-  useGripDrag,
-  GRIP_CONFIG,
-  type GripType,
-  type GripInfo,
-  type GripDragState,
-  type UseGripMovementOptions,
-  type UseGripMovementReturn,
-} from './useGripMovement';
+// ADR-700 §4 (2026-08-24): useGripMovement/useGripDrag (Grip Movement Hook, Phase 4)
+// ΔΙΑΓΡΑΦΗΚΕ. Barrel-only export, μηδέν πραγματικοί καταναλωτές — μόνο η αυτο-αναφορά
+// useGripDrag = useGripMovement μέσα στο ίδιο αρχείο. Ο σχολιασμός του ίδιου του αρχείου
+// έγραφε ήδη «the live unified grip system uses a separate, richer adapter»: διάδοχος
+// systems/grip/ (AllGripsStore, GripArmedStore, grip-scene-manager-adapter.ts). Ο τύπος
+// GripType/GripInfo ζει κανονικά στο ./grip-types (κανείς δεν τον έπαιρνε από αυτό το
+// barrel — επαληθεύτηκε με grep πριν τη διαγραφή).

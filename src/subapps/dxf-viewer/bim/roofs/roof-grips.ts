@@ -40,7 +40,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { GripInfo, RoofGripKind } from '../../hooks/useGripMovement';
+import type { GripInfo, RoofGripKind } from '../../hooks/grip-types';
 import type { BimPoint } from '../types/bim-base';
 import type { RoofEntity, RoofParams, RoofEdgeSlope } from '../types/roof-types';
 import {

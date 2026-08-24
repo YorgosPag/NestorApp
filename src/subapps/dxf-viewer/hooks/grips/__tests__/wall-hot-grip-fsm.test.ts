@@ -21,7 +21,7 @@ import {
   resolveHotGripMouseUp,
   isReferenceFlowKey,
 } from '../wall-hot-grip-fsm';
-import type { WallGripKind } from '../../useGripMovement';
+import type { WallGripKind } from '../../grip-types';
 import type { UnifiedGripInfo, UnifiedGripPhase } from '../unified-grip-types';
 
 const NON_CORNER_KINDS: WallGripKind[] = [

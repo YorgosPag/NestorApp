@@ -24,7 +24,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { OpeningEntity, OpeningParams } from '../types/opening-types';
-import type { OpeningGripKind } from '../../hooks/useGripMovement';
+import type { OpeningGripKind } from '../../hooks/grip-types';
 import {
   MIN_OPENING_WIDTH_MM,
   MIN_SELF_HOST_THICKNESS_MM,

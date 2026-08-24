@@ -19,7 +19,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { FoundationGripKind } from '../../hooks/useGripMovement';
+import type { FoundationGripKind } from '../../hooks/grip-types';
 import type { PadFootingParams } from '../types/foundation-types';
 import { ANCHOR_OFFSETS, MIN_FOUNDATION_DIMENSION_MM } from '../types/foundation-types';
 import { rotateVector, farEdgeSign } from '../grips/grip-math';

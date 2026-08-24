@@ -19,7 +19,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-363-bim-drawing-mode.md §6 Phase 1G
  */
 
-import type { WallGripKind } from '../useGripMovement';
+import type { WallGripKind } from '../grip-types';
 import type { UnifiedGripInfo, UnifiedGripPhase } from './unified-grip-types';
 
 /** Τα 4 corner grip kinds που υποστηρίζουν hot-grip (asymmetric corner drag, Phase 1C-bis). */

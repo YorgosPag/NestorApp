@@ -18,7 +18,7 @@
  */
 
 import type { Point2D, Point3D } from '../../rendering/types/Types';
-import type { StairGripKind } from '../../hooks/useGripMovement';
+import type { StairGripKind } from '../../hooks/grip-types';
 import type {
   StairGeometry,
   StairParams,

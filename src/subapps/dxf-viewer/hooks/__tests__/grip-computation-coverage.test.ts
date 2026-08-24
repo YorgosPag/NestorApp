@@ -48,7 +48,7 @@ import {
   BIM_RENDERABLE_TYPES,
 } from '../../rendering/contract/renderable-entity-type';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
-import type { GripInfo } from '../useGripMovement';
+import type { GripInfo } from '../grip-types';
 
 const asSorted = (xs: readonly string[]): string[] => [...xs].sort();
 

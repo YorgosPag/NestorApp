@@ -23,7 +23,7 @@
  */
 
 import type { DxfEntityUnion } from '../canvas-v2/dxf-canvas/dxf-types';
-import type { GripInfo } from './useGripMovement';
+import type { GripInfo } from './grip-types';
 // ADR-662 §13 — παραγωγή λαβών τοπογραφικής επιφάνειας (κοινό SSoT με τον renderer).
 import {
   topoSurfaceGripsOf,

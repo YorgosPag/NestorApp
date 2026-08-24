@@ -35,7 +35,7 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { ColumnEntity, ColumnParams } from '../types/column-types';
-import type { ColumnGripKind } from '../../hooks/useGripMovement';
+import type { ColumnGripKind } from '../../hooks/grip-types';
 import type { ColumnParamOverrides } from '../../hooks/drawing/column-completion';
 import type { SceneUnits } from '../../utils/scene-units';
 import { computeColumnGeometry } from '../geometry/column-geometry';
