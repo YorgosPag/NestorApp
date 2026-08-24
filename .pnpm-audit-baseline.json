@@ -76,7 +76,7 @@
         "CVE-2026-25896"
       ],
       "url": "https://github.com/advisories/GHSA-m7jm-9gc2-mpf2",
-      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "reason": "ΜΗ ΠΡΟΣΠΕΛΑΣΙΜΟ — μετρημένο 2026-08-25 (ADR-598 G2). Μηδέν άμεση χρήση XMLParser/XMLBuilder στο src/. Μοναδική διαδρομή: firebase-admin 12.7.0 -> @google-cloud/storage 7.18.0, όπου ο ΜΟΝΟΣ καταναλωτής του fast-xml-parser είναι το transfer-manager.js (multipart XML API) — και τα TransferManager/uploadManyFiles/downloadManyFiles ΔΕΝ καλούνται πουθενά (χρησιμοποιούμε αποκλειστικά το JSON API: save 408, delete 480, copy 136, download 18, streams). ΓΙΑΤΙ ΔΕΝ ΑΝΑΒΑΘΜΙΖΕΤΑΙ ΑΚΟΜΗ: γράφει το κοινό pnpm-lock.yaml — απόφαση Giorgio. Το override 'fast-xml-parser@4': '^4.5.7' είναι ΕΠΑΛΗΘΕΥΜΕΝΑ ΑΣΦΑΛΕΣ: το δηλωμένο range του @google-cloud/storage είναι ^4.4.1 και το ^4.5.7 είναι εντός του (legacy dist-tag = 4.5.7, MIT) ⇒ δεν σπάει καθαρό pnpm install. ΞΑΝΑΚΟΙΤΑΜΕ: με την πρώτη χρήση TransferManager / multipart XML API, ή σε αναβάθμιση firebase-admin.",
       "owner": "giorgio"
     },
     "GHSA-jmr7-xgp7-cmfj": {
@@ -88,7 +88,7 @@
         "CVE-2026-26278"
       ],
       "url": "https://github.com/advisories/GHSA-jmr7-xgp7-cmfj",
-      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "reason": "ΜΗ ΠΡΟΣΠΕΛΑΣΙΜΟ — μετρημένο 2026-08-25 (ADR-598 G2). Μηδέν άμεση χρήση XMLParser/XMLBuilder στο src/. Μοναδική διαδρομή: firebase-admin 12.7.0 -> @google-cloud/storage 7.18.0, όπου ο ΜΟΝΟΣ καταναλωτής του fast-xml-parser είναι το transfer-manager.js (multipart XML API) — και τα TransferManager/uploadManyFiles/downloadManyFiles ΔΕΝ καλούνται πουθενά (χρησιμοποιούμε αποκλειστικά το JSON API: save 408, delete 480, copy 136, download 18, streams). ΓΙΑΤΙ ΔΕΝ ΑΝΑΒΑΘΜΙΖΕΤΑΙ ΑΚΟΜΗ: γράφει το κοινό pnpm-lock.yaml — απόφαση Giorgio. Το override 'fast-xml-parser@4': '^4.5.7' είναι ΕΠΑΛΗΘΕΥΜΕΝΑ ΑΣΦΑΛΕΣ: το δηλωμένο range του @google-cloud/storage είναι ^4.4.1 και το ^4.5.7 είναι εντός του (legacy dist-tag = 4.5.7, MIT) ⇒ δεν σπάει καθαρό pnpm install. ΞΑΝΑΚΟΙΤΑΜΕ: με την πρώτη χρήση TransferManager / multipart XML API, ή σε αναβάθμιση firebase-admin.",
       "owner": "giorgio"
     },
     "GHSA-5c6j-r48x-rmvq": {
@@ -98,7 +98,7 @@
       "title": "Serialize JavaScript is Vulnerable to RCE via RegExp.flags and Date.prototype.toISOString()",
       "cves": [],
       "url": "https://github.com/advisories/GHSA-5c6j-r48x-rmvq",
-      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "reason": "BUILD-TIME ONLY + ΜΗ ΠΡΟΣΠΕΛΑΣΙΜΟ — μετρημένο 2026-08-25 (ADR-598 G2). devDependency, μοναδική διαδρομή copy-webpack-plugin 13.0.1. Τρέχει στο next.config.js:261 και σειριοποιεί τις ΔΙΚΕΣ ΤΟΥ επιλογές για κλειδιά cache, αντιγράφοντας δύο σταθερά αρχεία pdfjs-dist από το node_modules — μηδέν είσοδος ελεγχόμενη από επιτιθέμενο, καμία εκτέλεση σε runtime παραγωγής. ΓΙΑΤΙ ΔΕΝ ΓΙΝΕΤΑΙ OVERRIDE: patched >=7.0.3 ενώ το copy-webpack-plugin δηλώνει ^6.0.2 ⇒ ένα override σε ^7 ΠΑΡΑΒΙΑΖΕΙ το δηλωμένο range και σπάει καθαρό pnpm install — ακριβώς το λάθος που απέρριψε ρητά το ADR-598 για το tar@7. ΞΑΝΑΚΟΙΤΑΜΕ: όταν το copy-webpack-plugin δηλώσει serialize-javascript >=7.0.3.",
       "owner": "giorgio"
     },
     "GHSA-p5xg-68wr-hm3m": {
@@ -146,7 +146,7 @@
         "CVE-2026-33036"
       ],
       "url": "https://github.com/advisories/GHSA-8gc5-j5rx-235r",
-      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
+      "reason": "ΜΗ ΠΡΟΣΠΕΛΑΣΙΜΟ — μετρημένο 2026-08-25 (ADR-598 G2). Μηδέν άμεση χρήση XMLParser/XMLBuilder στο src/. Μοναδική διαδρομή: firebase-admin 12.7.0 -> @google-cloud/storage 7.18.0, όπου ο ΜΟΝΟΣ καταναλωτής του fast-xml-parser είναι το transfer-manager.js (multipart XML API) — και τα TransferManager/uploadManyFiles/downloadManyFiles ΔΕΝ καλούνται πουθενά (χρησιμοποιούμε αποκλειστικά το JSON API: save 408, delete 480, copy 136, download 18, streams). ΓΙΑΤΙ ΔΕΝ ΑΝΑΒΑΘΜΙΖΕΤΑΙ ΑΚΟΜΗ: γράφει το κοινό pnpm-lock.yaml — απόφαση Giorgio. Το override 'fast-xml-parser@4': '^4.5.7' είναι ΕΠΑΛΗΘΕΥΜΕΝΑ ΑΣΦΑΛΕΣ: το δηλωμένο range του @google-cloud/storage είναι ^4.4.1 και το ^4.5.7 είναι εντός του (legacy dist-tag = 4.5.7, MIT) ⇒ δεν σπάει καθαρό pnpm install. ΞΑΝΑΚΟΙΤΑΜΕ: με την πρώτη χρήση TransferManager / multipart XML API, ή σε αναβάθμιση firebase-admin.",
       "owner": "giorgio"
     }
   }
