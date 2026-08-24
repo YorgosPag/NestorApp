@@ -1,17 +1,49 @@
 import { doc, getDoc, increment, setDoc, type Firestore } from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth';
 import type { UserProfileDocument } from '@/auth/types/auth.types';
+import type { DeclaredOccupation } from '@/types/professional-identity';
 import { API_ROUTES } from '@/config/domain-constants';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('AuthContextProfile');
 
+const NO_OCCUPATION: DeclaredOccupation = {};
+
+/**
+ * Το δηλωμένο επάγγελμα **από το έγγραφο που ήδη διαβάζεται** (ADR-798 Φάση 2).
+ *
+ * 🔑 **ΜΗΔΕΝ ΕΠΙΠΛΕΟΝ I/O — ΚΑΙ ΑΥΤΟ ΕΙΝΑΙ ΟΛΟΣ Ο ΣΧΕΔΙΑΣΜΟΣ.** Το `getDoc`
+ * παρακάτω γινόταν **ήδη** σε κάθε σύνδεση, και το αποτέλεσμά του **πεταγόταν**.
+ * Το επάγγελμα ζει στο Firestore και **ποτέ στα claims** (Α4), οπότε ο μόνος
+ * τρόπος να το δει ο browser χωρίς νέο αίτημα είναι να **μη χαθεί** αυτή η
+ * ανάγνωση.
+ *
+ * ⛔ **ΜΗΝ γράψεις hook που κάνει `getDoc` για να το βρει.** Θα ήταν I/O σε
+ * κάθε σελίδα — ακριβώς η προειδοποίηση του `useEffectivePermissions.ts:27-30`.
+ */
+export type SyncedProfile = { readonly occupation: DeclaredOccupation };
+
+/** Κρατά **μόνο** τα τέσσερα πεδία· ό,τι άλλο κουβαλά το έγγραφο δεν αφορά. */
+function readOccupation(data: Record<string, unknown> | undefined): DeclaredOccupation {
+  const pick = (key: string): string | undefined =>
+    typeof data?.[key] === 'string' && (data[key] as string).length > 0
+      ? (data[key] as string)
+      : undefined;
+
+  return {
+    profession: pick('profession'),
+    escoUri: pick('escoUri'),
+    escoLabel: pick('escoLabel'),
+    iscoCode: pick('iscoCode'),
+  };
+}
+
 export async function syncUserProfileToFirestore(
   db: Firestore,
   firebaseUser: FirebaseUser,
   customClaims: Record<string, unknown>,
-): Promise<void> {
+): Promise<SyncedProfile> {
   const userDocRef = doc(db, COLLECTIONS.USERS, firebaseUser.uid);
 
   try {
@@ -44,7 +76,9 @@ export async function syncUserProfileToFirestore(
 
       await setDoc(userDocRef, newProfile, { merge: true });
       logger.info('[AuthContext] User profile created successfully');
-      return;
+      // Νέο έγγραφο ⇒ κανένα δηλωμένο επάγγελμα ακόμη. `unknown`, όχι «κανένα»
+      // (ADR-798 §7): η απουσία τιμής ΔΕΝ είναι δήλωση ότι δεν έχει επάγγελμα.
+      return { occupation: NO_OCCUPATION };
     }
 
     const existingData = userSnapshot.data();
@@ -66,8 +100,12 @@ export async function syncUserProfileToFirestore(
     }, { merge: true });
 
     logger.info('[AuthContext] User profile updated successfully');
+    return { occupation: readOccupation(existingData) };
   } catch (syncError) {
     logger.warn('[AuthContext] User profile sync failed (non-blocking)', { error: syncError });
+    // ⚠️ Ο συγχρονισμός είναι **μη μπλοκαριστικός** εξ αρχής. Αποτυχία ⇒ κενό
+    // επάγγελμα, που ο καταναλωτής διαβάζει ως `unknown` — ΠΟΤΕ ως «δεν έχει».
+    return { occupation: NO_OCCUPATION };
   }
 }
 

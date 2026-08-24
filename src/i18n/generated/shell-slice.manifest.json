@@ -55,7 +55,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "999f95cbfb4f24ddd173878c35d7ecca5d821d2e9ce9cda499a291f7f242cf8d",
+  "inputsSha256": "95868dbf10bcfd39f04a412fd08c858fc0fcabdab6594ff4adcc0621609a1840",
   "languages": [
     "el"
   ],
@@ -95,15 +95,15 @@
     "src/app/(me)/layout.tsx": "efa0d26520867e4c752d713b00e91be8783a90828c70eaf9b58176b07f20ee88",
     "src/app/layout.tsx": "0d263d8a651b972cc5959ac1bda7806bb7cf816490940b23cee75b82add9937e",
     "src/auth/components/ProtectedRoute.tsx": "856ebd62823da579a2fbe9e0c4aae72c378d09f8ce044c6ff7c133d0e395c67c",
-    "src/auth/contexts/AuthContext.tsx": "26d03cf803cfcd0b2faec71f1b72865f14636356c7c2e338dd8b2f8d2484e54c",
+    "src/auth/contexts/AuthContext.tsx": "c89813039e77a2af2e5840ce09b00f360f17c2fafbd010b60a373544180e43d0",
     "src/auth/contexts/UserRoleContext.tsx": "e9f0191504136d5f89f5323948cfa06c7ae545467227af1753b532a9b1a7306a",
     "src/auth/contexts/auth-context/auth-context-errors.ts": "9d2f51a2f97927908dbc989a10596fa748dff25fc61f6d6d90ba11376ae6ca9a",
-    "src/auth/contexts/auth-context/auth-context-profile.ts": "bf2a28c94d1544749fe3ca14b985a0686e4bfa0159cd27cd118dcf7ce8fd4846",
+    "src/auth/contexts/auth-context/auth-context-profile.ts": "44574c9d9844482db228cea44ffbe210520270f23b7019054a0df0ebb654c871",
     "src/auth/contexts/auth-context/auth-context-session.ts": "7aa84961e6af85c1efe91c27b38093d3b7885166f8c5d1b2021a68f3823412b3",
     "src/auth/contexts/auth-context/use-claims-refresh.ts": "fdd3f087107a109c452f8d6538de6c3e2588dae0290bddaf8bb0972c24de33f7",
     "src/auth/contexts/auth-context/useAuthActions.ts": "96366cff124d0b3014a1b32479c09105ecd145eb9b6d8b9484f2bcc621400f8a",
     "src/auth/hooks/useAuth.ts": "2c3f64bad43714d2f7e5cabf304b8d8bb3cd1bf83f9c66774067fe65d10fec81",
-    "src/auth/types/auth.types.ts": "b923f8af7e5c011d93d1e0d9974851fee69183450fadb85bc7f93eb3ce736bae",
+    "src/auth/types/auth.types.ts": "a110448737768733439acf6d63b38644a0812fd0d9e737084091093f67543b7d",
     "src/components/GlobalErrorSetup.tsx": "ba9a1ad830faba610671a7d69599f4aae5147c9c009207f80e016b831f545e40",
     "src/components/NotificationBell.enterprise.tsx": "001b786e354d79152b9004f46021d208a089aea9f8b31a0efd255c0e4fcd84d1",
     "src/components/NotificationDrawer.enterprise.tsx": "a582890f403e1ec40c06b2476d33f21ef2b29b98785e14a82286f0fddf389a21",

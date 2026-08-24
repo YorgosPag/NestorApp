@@ -1,4 +1,5 @@
 import type { AppHref } from '@/lib/workspace/route-worlds';
+import type { DeclaredOccupation } from '@/types/professional-identity';
 
 // =============================================================================
 // 🔐 AUTH TYPES - CENTRALIZED TYPE DEFINITIONS
@@ -161,8 +162,26 @@ export interface UserTypeContextType {
 /**
  * Firestore /users/{uid} document schema
  * Represents the materialized user profile in Firestore
+ *
+ * 🆕 **ΚΛΗΡΟΝΟΜΕΙ `DeclaredOccupation`** (ADR-798 Φάση 2) — *«τι ΕΙΝΑΙ αυτός ο
+ * άνθρωπος»*, ξεχωριστά από *«τι δικαιούται»* και από *«πού ανήκει»*.
+ *
+ * ⚠️ **ΤΑ ΠΕΔΙΑ ΕΙΝΑΙ ΕΠΙΠΕΔΑ, ΟΧΙ ΥΠΟ-ΑΝΤΙΚΕΙΜΕΝΟ — και ο λόγος είναι οι
+ * ΚΑΝΟΝΕΣ**: το `firestore.rules` κρίνει με `diff().affectedKeys()`, που
+ * επιστρέφει **κορυφαία** κλειδιά μόνο. Μέσα σε ένα `professionalIdentity: {…}`
+ * ο φρουρός δεν θα μπορούσε να ξεχωρίσει το *δηλωμένο* από το *επαληθευμένο* —
+ * δηλαδή θα έχανε ακριβώς τη διάκριση που το ADR-798 §7 υπάρχει για να κρατήσει.
+ * Επίπεδα πεδία ⇒ έλεγχος **ανά πεδίο**, που είναι το μάθημα του `47686a8f`.
+ * ⚠️ Δεύτερος λόγος: το `IndividualContact` τα έχει **επίπεδα** με τα ίδια
+ * ονόματα· υπο-αντικείμενο εδώ θα ήταν **δεύτερο σχήμα για το ίδιο δεδομένο**.
+ *
+ * 🔴 **ΤΟ ΕΠΑΓΓΕΛΜΑ ΔΕΝ ΜΠΑΙΝΕΙ ΠΟΤΕ ΣΤΑ CLAIMS** (ADR-798 Α4). Τα claims είναι
+ * **εξουσιοδότηση**· αυτό είναι **αυτο-δηλωμένη ιδιότητα**. Στο token θα γινόταν
+ * σιωπηλά είσοδος εξουσιοδότησης — και το `CustomClaims` παραμένει **5 πεδία**.
+ *
+ * @see docs/centralized-systems/reference/adrs/ADR-798-person-professional-identity.md
  */
-export interface UserProfileDocument {
+export interface UserProfileDocument extends DeclaredOccupation {
   /** Firebase Auth UID (also used as document ID) */
   uid: string;
   /** Primary email from Firebase Auth */
