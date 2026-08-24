@@ -55,7 +55,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "6f397e1e9aa0bf23d26e885bdf45a1b4dda97f4a6a2bef24b571b7ec805fb751",
+  "inputsSha256": "6252af8eabbc978a1702dbe15a5d163f9a2f8974cb1a14294f2e7d03f6ae2275",
   "languages": [
     "el"
   ],
@@ -317,7 +317,8 @@
     "src/hooks/useVoiceCommandSubscription.ts": "2c404e42d58b1d41487b8ef3ab7f4dd04cfacbcba89805b5632829b0dfd2ce98",
     "src/hooks/useVoiceRecorder.ts": "bae55aaae53faa71dc6d705e23fa66d427b8d834c5de738cfc246945bc6db1e1",
     "src/i18n/bundle-registry.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
-    "src/i18n/config.ts": "86792bd8238402927d7d304eee98c96b2d5fa051d3bcd5dd4956151bdd2047ab",
+    "src/i18n/compat-translate.ts": "3dab4013f93a07d9f961602ec9f756f4d96ac8d437880a41c6226c607a07efdf",
+    "src/i18n/config.ts": "8ee00904e9954f1a1201f0870876064b438f0ad71c615d9f64f2499528d4c76c",
     "src/i18n/hooks/useLanguagePreference.ts": "b33ecd5786a67b2567bd7b4d18a2b1a6d6105db4117472223c76745adcd3f381",
     "src/i18n/hooks/useTranslation.ts": "2d879b473c2c3997c7ab929baa31c5b297512c69e77ea006184ede362e8154e5",
     "src/i18n/languages.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -583,7 +584,7 @@
     "dynamicBoundaries": 18,
     "matchedKeys": 132,
     "routeBoundaries": 0,
-    "shellFiles": 482,
+    "shellFiles": 483,
     "sliceBytes": 312357
   },
   "unresolvableKeys": [

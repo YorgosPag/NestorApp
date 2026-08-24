@@ -71,7 +71,7 @@ export function EscoOccupationPicker({
       leftIcon={<Search className={cn("absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none", colors.text.muted)} />}
       badge={
         /*
-          🔴 ADR-798 §8 — ΗΤΑΝ ΑΟΡΑΤΟ, ΟΧΙ ΑΠΛΩΣ ΔΥΣΑΝΑΓΝΩΣΤΟ.
+          🔴 ADR-798 §14 — ΗΤΑΝ ΑΟΡΑΤΟ, ΟΧΙ ΑΠΛΩΣ ΔΥΣΑΝΑΓΝΩΣΤΟ.
 
           Εδώ έγραφε χειροποίητο `<span … bg-[hsl(var(--bg-info))]/20 text-primary>`.
           Στο **προεπιλεγμένο (σκοτεινό)** θέμα το `--primary` λύνεται σε
