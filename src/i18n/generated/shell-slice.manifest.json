@@ -55,7 +55,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "29bc9bf766d3608051ed5904b6fb577821466ace2c44fca99c0033085b6993de",
+  "inputsSha256": "6f397e1e9aa0bf23d26e885bdf45a1b4dda97f4a6a2bef24b571b7ec805fb751",
   "languages": [
     "el"
   ],
@@ -317,15 +317,16 @@
     "src/hooks/useVoiceCommandSubscription.ts": "2c404e42d58b1d41487b8ef3ab7f4dd04cfacbcba89805b5632829b0dfd2ce98",
     "src/hooks/useVoiceRecorder.ts": "bae55aaae53faa71dc6d705e23fa66d427b8d834c5de738cfc246945bc6db1e1",
     "src/i18n/bundle-registry.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
-    "src/i18n/config.ts": "5a4d52b43b7c769dba3f48b960cda6ba058ba2f3a79e03d3b30c29079f0c3270",
+    "src/i18n/config.ts": "86792bd8238402927d7d304eee98c96b2d5fa051d3bcd5dd4956151bdd2047ab",
     "src/i18n/hooks/useLanguagePreference.ts": "b33ecd5786a67b2567bd7b4d18a2b1a6d6105db4117472223c76745adcd3f381",
-    "src/i18n/hooks/useTranslation.ts": "10f4bf9bcba09399b070df84144c3abfb46d5478fe702b92e5820352ea4b65b1",
+    "src/i18n/hooks/useTranslation.ts": "2d879b473c2c3997c7ab929baa31c5b297512c69e77ea006184ede362e8154e5",
     "src/i18n/languages.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/i18n/lazy-config.ts": "d924cd25c0a5e70b517818a3627d59eda6d6619f288c009def40abb220572454",
     "src/i18n/namespace-bundles.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/i18n/namespace-compat.ts": "54fa081677bd35c50b24ed5914d8c0a343b23f82fa50f33ac0ac931e011a165c",
     "src/i18n/namespace-loaders.ts": "186bbe9aea70521b07a05527149e4606f0e7e4c7f560e442e580f4e1b009534d",
     "src/i18n/pseudo-post-processor.ts": "36b77ab41d90b6545bac0a64f6a17336374a4cfa6fdde89b961b7bc48a5cd5e3",
+    "src/i18n/unresolved-key.ts": "45d824a09cac8ce40aead2f90fe2405c9da4421e6b9766f1c55cbded0affb491",
     "src/lib/a11y/keyboard-scope.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/a11y/use-dialog-focus-restore.ts": "8fd6edd13dfa0351fa57df3a923d8a5bbcf9c8887d24ad13f6a7654922c08b47",
     "src/lib/a11y/use-modal-keyboard-scope.ts": "1aefe4a7211496c61e829d96a460117b612590ed3e64f4ede0d236117ae87c83",
@@ -582,7 +583,7 @@
     "dynamicBoundaries": 18,
     "matchedKeys": 132,
     "routeBoundaries": 0,
-    "shellFiles": 481,
+    "shellFiles": 482,
     "sliceBytes": 312357
   },
   "unresolvableKeys": [

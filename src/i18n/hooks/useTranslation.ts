@@ -6,6 +6,7 @@ import type { TOptions } from 'i18next';
 import { loadNamespace, type Namespace, type Language } from '../lazy-config';
 import { remapLegacyTranslationKey, getCompatNamespaces, getExplicitNamespace } from '../namespace-compat';
 import { getBundleState, isBundleComplete } from '../bundle-registry';
+import { isUnresolvedTranslation } from '../unresolved-key';
 
 import { createModuleLogger } from '@/lib/telemetry';
 // ⚠️ ADR-777 §8.29 (Π9): διαγράφοντας το `changeLanguage` έφυγε και ο **μοναδικός**
@@ -26,45 +27,11 @@ function resolveAllNamespaces(namespaces: string[]): string[] {
   return [...new Set([...namespaces, ...compatSplits])];
 }
 
-/**
- * 🔴 ADR-635 Φ C.23 — ΠΟΤΕ ΔΕΝ ΤΟ ΞΑΝΑΓΡΑΨΕΙΣ ΩΣ `result !== key`.
- *
- * Όταν το i18next **αστοχεί** σε κλειδί με πρόθεμα namespace (`dxf-viewer:import.warnings.summary`)
- * επιστρέφει το κλειδί **χωρίς** το πρόθεμα (`import.warnings.summary`). Η παλιά σύγκριση
- * `result !== key` το έβλεπε ως **επιτυχία**, οπότε:
- *   1. το ωμό κλειδί ζωγραφιζόταν στην οθόνη σαν να ήταν μετάφραση, και
- *   2. το compat στρώμα του ADR-280 **δεν δοκιμαζόταν ΠΟΤΕ** για ολόκληρη τη σύμβαση `ns:key`
- *      — δηλαδή για όλα τα `NOTIFICATION_KEYS`.
- * Μετρημένο 2026-07-29: `import.warnings.summary` στην οθόνη ενώ η μετάφραση ΥΠΑΡΧΕΙ.
- */
-function isUnresolved(result: unknown, key: string): boolean {
-  // 🔴 ADR-739 §27.16 Ε5 — ΕΝΑΣ ΠΙΝΑΚΑΣ ΔΕΝ ΕΙΝΑΙ ΑΝΕΠΙΛΥΤΟ ΚΛΕΙΔΙ.
-  //
-  // Εδώ έγραφε `if (typeof result !== 'string') return true;`. Το `returnObjects: true` όμως
-  // επιστρέφει **πίνακα/αντικείμενο** ακριβώς όταν το κλειδί **βρέθηκε** — άρα κάθε επιτυχής
-  // ανάγνωση κρινόταν αστοχία. Τρεις συνέπειες, μετρημένες σε `tool-hints:tools.select.steps`
-  // (κλειδί που υπάρχει και στα δύο locale):
-  //   1. ψευδής συναγερμός «raw key reached the UI» — και ένας συναγερμός που χτυπά σε σωστό
-  //      κώδικα διδάσκει να τον αγνοείς, οπότε χάνεται και ο αληθινός·
-  //   2. ολόκληρο το compat remap + η σάρωση namespaces έτρεχαν για το τίποτα, σε κάθε κλήση·
-  //   3. 🔴 το επικίνδυνο: αν άλλο namespace είχε ομώνυμο κλειδί με τιμή **string**, η σάρωση
-  //      «πετύχαινε» και επέστρεφε **εκείνο** αντί για τον σωστό πίνακα — σιωπηλά λάθος
-  //      δεδομένα. Αποδεικνύεται εκτελέσιμα στο test «ΔΕΝ διαρρέει σε ομώνυμο κλειδί».
-  //
-  // Ο έλεγχος που **μετράει** δεν χάνεται: όταν το κλειδί όντως λείπει, το i18next επιστρέφει
-  // το ίδιο το κλειδί — **string** — ακόμη και με `returnObjects: true`.
-  //
-  // ⚠️ **ΙΣΟΔΥΝΑΜΗ ΜΕΤΑΛΛΑΞΗ, ΔΗΛΩΜΕΝΗ**: η επόμενη γραμμή δεν καλύπτεται από test, και δεν
-  // είναι κενό δικτύου — είναι **ιδιότητα του i18next**: όταν το κλειδί λείπει επιστρέφει
-  // *το ίδιο το κλειδί* (string), ποτέ `undefined`. Ο έλεγχος είναι **ζώνη ασφαλείας** για
-  // την περίπτωση που κάποια μελλοντική ρύθμιση (`parseMissingKeyHandler`, custom backend)
-  // αλλάξει αυτό το συμβόλαιο: χωρίς αυτόν, ένα `undefined` θα περνούσε ως **επιτυχία** και
-  // θα ζωγραφιζόταν κενό αντί να ενεργοποιηθεί το compat στρώμα. Ο έλεγχος μεταλλάξεων το
-  // επιβεβαίωσε (2026-08-02): αλλοιώνοντάς τον, κανένα test δεν κοκκινίζει.
-  if (result === undefined || result === null) return true;
-  if (typeof result !== 'string') return false;
-  return result === key || result === getExplicitNamespace(key).bareKey;
-}
+// 🏢 ADR-798 §7 — ο έλεγχος «ανεπίλυτο κλειδί;» ζούσε εδώ ως ιδιωτική συνάρτηση.
+// Απέκτησε **δεύτερο** καλούντα (`config.ts`, ο καθολικός compat μπαλωματής), οπότε
+// μετακόμισε σε SSoT αντί να αντιγραφεί: δύο μηχανές για ένα ερώτημα είναι ADR-749.
+// Το σώμα και τα δύο πληρωμένα σχόλια μετακόμισαν **αυτούσια**.
+const isUnresolved = isUnresolvedTranslation;
 
 /** Ένα προειδοποιητικό ανά κλειδί ανά session — ένα ωμό κλειδί μπορεί να ζωγραφιστεί σε κάθε frame. */
 const warnedUnresolvedKeys = new Set<string>();

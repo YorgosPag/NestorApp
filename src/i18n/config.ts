@@ -8,6 +8,7 @@ import { initReactI18next } from 'react-i18next';
 import ICU from 'i18next-icu';
 import { loadNamespace, CRITICAL_NAMESPACES, type Language, SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE } from './lazy-config';
 import { remapLegacyTranslationKey } from './namespace-compat';
+import { isUnresolvedTranslation } from './unresolved-key';
 import { pseudoPostProcessor, PSEUDO_LANGUAGE } from './pseudo-post-processor';
 
 // 🏢 ADR-744: the ONLY locale data imported synchronously — generated, not written.
@@ -151,6 +152,67 @@ export default i18n;
 const originalTranslate = i18n.t.bind(i18n);
 type TranslateAdapter = (...args: readonly unknown[]) => unknown;
 
+/**
+ * 🔴 ADR-798 §7 — ΤΟ REMAP ΕΙΝΑΙ ΔΕΥΤΕΡΗ ΠΟΡΤΑ, ΟΧΙ ΑΝΤΙΚΑΤΑΣΤΑΣΗ ΤΗΣ ΠΡΩΤΗΣ.
+ *
+ * Μέχρι τις 2026-08-24 αυτή η συνάρτηση έκανε **άνευ όρων** remap και ρωτούσε
+ * **μόνο** τον στόχο. Επειδή το `getFixedT` του i18next τελειώνει σε
+ * `return this.t(resultKey, o)` (`i18next.js:2034`), ο μπαλωματής **δεν** αφορά
+ * μόνο όσους καλούν `i18n.t` — μολύνει **κάθε** `t` του react-i18next, άρα
+ * ολόκληρη την εφαρμογή.
+ *
+ * ## Γιατί ήταν λάθος: ο χάρτης είναι ΡΙΖΑΣ, ο διαχωρισμός ήταν ΚΛΕΙΔΙΟΥ
+ *
+ * Το `LEGACY_NAMESPACE_ROOT_MAP` λέει «η ρίζα `esco` του `contacts` μετακόμισε
+ * στο `contacts-relationships`». Η μετακόμιση όμως ήταν **μερική**: τα
+ * `esco.searchResults`/`noResults`/`useFreeText` όντως έφυγαν, το `esco.badge`
+ * **έμεινε πίσω**. Μια εγγραφή ρίζας δεν μπορεί να πει «μερικά ναι, μερικά όχι»,
+ * οπότε το άνευ όρων remap έστελνε το ερώτημα σε namespace που **δεν έχει** το
+ * κλειδί — και το **μόνο** ερώτημα που θα απαντούσε (το αρχικό) ήταν δομικά
+ * αδύνατο να τεθεί.
+ *
+ * **Μετρημένο 2026-08-24** με δύο ανεξάρτητα όργανα που συμφώνησαν (στατική
+ * απογραφή των locale · εκτέλεση της **πραγματικής** μηχανής στο ζωντανό
+ * στιγμιότυπο): **172 κλειδιά ανά γλώσσα** υπήρχαν και ήταν απρόσιτα, από τα
+ * οποία **135 καλούνται** όντως από τον κώδικα (`dxf-viewer` 102 · `contacts` 17
+ * · `properties` 7 · `projects` 4 · `common` 4 · `files` 1). Στην οθόνη
+ * `account/profile` ήταν τα `contacts:esco.badge` και `contacts:common.clear`.
+ *
+ * ## Γιατί ΑΥΤΗ η σειρά — και όχι η προφανής
+ *
+ * ⚠️ **ΜΗΝ το γυρίσεις σε «αρχικό πρώτα, remap ως εφεδρεία»** (τη σειρά που έχει
+ * ο wrapper στο `hooks/useTranslation.ts`). **Δοκιμάστηκε και απορρίφθηκε ΜΕ
+ * ΜΕΤΡΗΣΗ**: **404** κλειδιά υπάρχουν **και στα δύο** σημεία και **149** από
+ * αυτά με **διαφορετική τιμή** — και σε κάθε δείγμα ο **στόχος** κρατά τη
+ * νεότερη γραφή (`«Βαθμονόμηση Συντεταγμένων»` έναντι του παλιού
+ * `«🔧 Καλιμπράρισμα Συντεταγμένων»` · `«Επιλέξτε ακίνητο»` έναντι του
+ * **αμετάφραστου** `«Unit»`). Η αντιστροφή θα άλλαζε σιωπηλά 149 ορατά κείμενα,
+ * επαναφέροντας παλιότερη γραφή — παλινδρόμηση χωρίς καμία ένδειξη βελτίωσης.
+ *
+ * Άρα: **ο στόχος διατηρεί την προτεραιότητά του**, και το αρχικό κλειδί ρωτιέται
+ * **μόνο** όταν ο στόχος επιστρέψει ανεπίλυτο. Η αλλαγή είναι **αυστηρά
+ * προσθετική εκ κατασκευής**: δεν μπορεί να αλλάξει καμία συμβολοσειρά που
+ * επιλύεται σήμερα — μπορεί μόνο να μετατρέψει ωμό κλειδί σε μετάφραση. Είναι το
+ * ίδιο δόγμα που το `slice-build.js` έχει ήδη γραμμένο: *«can only ever ADD
+ * correct strings … it can never remove one»*.
+ *
+ * ⚠️ **ΜΗΝ «λύσεις» το πρόβλημα σβήνοντας εγγραφές από τον χάρτη** — η εγγραφή
+ * `contacts.esco` εξυπηρετεί **3** κλειδιά που όντως μετακόμισαν· η διαγραφή της
+ * θα αντάλλασσε 1 σπασμένο με 3 σπασμένα.
+ * ⚠️ **ΜΗΝ αφαιρέσεις τον μπαλωματή** — **3.364** κλειδιά (μετρημένα) ζουν
+ * αποκλειστικά χάρη σε αυτόν και θα γίνονταν όλα ωμά.
+ *
+ * 🔶 **ΔΗΛΩΜΕΝΟ ΟΡΙΟ**: υπάρχουν **4** κλειδιά (el) όπου το αρχικό κρατά
+ * **string** ενώ ο στόχος κρατά **αντικείμενο** στην ίδια διαδρομή
+ * (`dxf-viewer:calibration.{sceneStatus,coordinates,clickTest,tips}`). Εκεί ο
+ * στόχος απαντά — με αντικείμενο — άρα δεν είναι «ανεπίλυτο» και η συμπεριφορά
+ * μένει **ακριβώς όπως σήμερα**. Είναι **άλλο** ελάττωμα (σκίαση τύπου, όχι ωμό
+ * κλειδί) και δεν το θεραπεύει αυτή η αλλαγή.
+ *
+ * ⚡ **Κόστος**: μηδέν επιπλέον αναζήτηση στη διαδρομή που πετυχαίνει — μόνο μία
+ * σύγκριση συμβολοσειρών. Η δεύτερη αναζήτηση γίνεται **αποκλειστικά** εκεί που
+ * σήμερα ζωγραφίζεται ωμό κλειδί.
+ */
 const compatibleTranslate = ((...args: readonly unknown[]) => {
   const [key, arg2, arg3] = args;
   const translate = originalTranslate as unknown as TranslateAdapter;
@@ -162,9 +224,25 @@ const compatibleTranslate = ((...args: readonly unknown[]) => {
   }
 
   const remapped = remapLegacyTranslationKey(key, arg2);
-  return arg3 === undefined
+  const viaCompat = arg3 === undefined
     ? translate(remapped.key, remapped.options)
     : translate(remapped.key, remapped.options, arg3);
+
+  // Κανένα remap δεν εφαρμόστηκε ⇒ το `viaCompat` ΕΙΝΑΙ ήδη το αρχικό ερώτημα.
+  // Δεύτερη αναζήτηση θα ήταν κυριολεκτικά η ίδια, με το ίδιο αποτέλεσμα.
+  if (remapped.key === key) return viaCompat;
+
+  if (!isUnresolvedTranslation(viaCompat, remapped.key)) return viaCompat;
+
+  // Η πόρτα που έλειπε: το κλειδί μπορεί να **έμεινε πίσω** στο αρχικό namespace.
+  const viaOriginal = arg3 === undefined
+    ? translate(key, arg2)
+    : translate(key, arg2, arg3);
+  if (!isUnresolvedTranslation(viaOriginal, key)) return viaOriginal;
+
+  // Ούτε εκεί. Επιστρέφουμε ό,τι θα επέστρεφε και πριν — ίδια σημασιολογία
+  // αστοχίας, ίδιο ίχνος για όποιον διαγιγνώσκει.
+  return viaCompat;
 }) as unknown as typeof i18n.t;
 
 i18n.t = compatibleTranslate;
