@@ -145,20 +145,59 @@ function loadBaseline(filePath = getBaselineFile()) {
   }
 }
 
+const SEED_REASON = 'Seeded — pre-existing transitive advisory; tracked for remediation';
+
+/**
+ * Ένα advisory έχει ΔΥΟ ειδών πεδία και μόνο το ένα ανήκει στο εργαλείο:
+ *   • ΜΗΧΑΝΙΚΑ (id/severity/title/cves/url) — τα ξέρει το `pnpm audit`, ανανεώνονται πάντα.
+ *   • ΑΠΟΦΑΣΗ (reason/owner) — τα γράφει άνθρωπος. ΔΕΝ τα ξέρει το εργαλείο, άρα
+ *     δεν επιτρέπεται να τα σβήνει.
+ *
+ * ΓΙΑΤΙ: μέχρι 2026-08-24 το `--write-baseline` ισοπέδωνε ΚΑΘΕ `reason` στο seed
+ * κείμενο. Στις 2026-07-26 γράφτηκαν δύο πλήρως αιτιολογημένες εγγραφές και το ADR
+ * κατέγραψε ρητά ότι η εντολή αποφεύχθηκε χειροκίνητα «για να μη σβηστούν» — η επόμενη
+ * εκτέλεση τις έσβησε ούτως ή άλλως, και **και οι 21** κατέληξαν να λένε «Seeded».
+ * Μια allowlist χωρίς αιτιολογία δεν είναι απόφαση, είναι αναβολή· και μια εγγύηση που
+ * απαιτεί από άνθρωπο να θυμάται δεν είναι εγγύηση.
+ *
+ * Πρότυπο: Snyk `.snyk` (`ignore` με υποχρεωτικό `reason`) · OWASP dependency-check
+ * (`<notes>` διατηρούνται στο suppression αρχείο).
+ */
+function mergeAllowlistEntry(advisory, previous) {
+  return {
+    id: advisory.id,
+    severity: advisory.severity,
+    module: advisory.module,
+    title: advisory.title,
+    cves: advisory.cves,
+    url: advisory.url,
+    reason: previous?.reason ?? SEED_REASON,
+    owner: previous?.owner ?? 'giorgio',
+  };
+}
+
+/** Κλειστή λογιστική — τυπώνεται ΚΑΙ στο μηδέν (ένα «0» που δεν τυπώνεται διαβάζεται «δεν κοίταξα»). */
+function reportBaselineTally(tally) {
+  console.log(`   ↳ διατηρήθηκαν αιτιολογήσεις: ${tally.preserved.length}${tally.preserved.length ? ' — ' + tally.preserved.join(', ') : ''}`);
+  console.log(`   ↳ νέες (seed placeholder):    ${tally.seeded.length}${tally.seeded.length ? ' — ' + tally.seeded.join(', ') : ''}`);
+  console.log(`   ↳ κλαδεύτηκαν (δεν αναφέρονται πια): ${tally.pruned.length}${tally.pruned.length ? ' — ' + tally.pruned.join(', ') : ''}`);
+}
+
 function writeBaseline(gated, filePath = getBaselineFile()) {
+  const existing = loadBaseline(filePath);
+  const previousAllowed = (existing && !existing.__invalid && existing.allowed) || {};
+
   const allowed = {};
+  const tally = { preserved: [], seeded: [], pruned: [] };
   for (const [key, a] of Object.entries(gated)) {
-    allowed[key] = {
-      id: a.id,
-      severity: a.severity,
-      module: a.module,
-      title: a.title,
-      cves: a.cves,
-      url: a.url,
-      reason: 'Seeded — pre-existing transitive advisory; tracked for remediation',
-      owner: 'giorgio',
-    };
+    const previous = previousAllowed[key];
+    allowed[key] = mergeAllowlistEntry(a, previous);
+    (previous?.reason && previous.reason !== SEED_REASON ? tally.preserved : tally.seeded).push(key);
   }
+  for (const key of Object.keys(previousAllowed)) {
+    if (!(key in allowed)) tally.pruned.push(key);
+  }
+  reportBaselineTally(tally);
   const payload = {
     description:
       'ADR-598 G2 — pnpm audit CVE allowlist. Every HIGH/CRITICAL advisory pnpm reports must appear here (keyed by GHSA id). A HIGH/CRITICAL advisory outside this list blocks the PR. Ratchet: to accept a new advisory add it here with a reason/owner; to lock progress after a fix, prune the stale entry and refresh via `pnpm run deps-audit:baseline`.',
