@@ -24,6 +24,17 @@ const { judgeIdentityShift, shiftPipeIdentity } = require('../lib/workspace-scop
 
 const REPO_ROOT = path.join(__dirname, '..', '..');
 
+/**
+ * ⚠️ **ΤΟ ΠΛΗΘΟΣ ΒΓΑΙΝΕΙ ΑΠΟ ΤΟ SSoT, ΠΟΤΕ ΓΡΑΜΜΕΝΟ ΣΤΟ TEST.**
+ * Ήταν καρφωμένο `15`· το `3b728bf7` πρόσθεσε τη 16η δήλωση και το `Κ4` κοκκίνισε
+ * **χωρίς να έχει χαλάσει τίποτα στην πύλη** — δηλαδή το test εμπόδιζε τη σωστή
+ * πράξη (ίδιο μάθημα με το `Μ11`/`Κ11` του CHECK 3.50). Ο παρονομαστής είναι η
+ * **ίδια η δήλωση** που αντιγράφει το `miniRepo`.
+ */
+const DECLARED_OUTSIDE = Object.keys(
+  JSON.parse(fs.readFileSync(path.join(REPO_ROOT, '.workspace-scope.json'), 'utf8')).outsideWorkspace,
+);
+
 /** Τα αρχεία-είσοδοι της πύλης, αντιγραμμένα **αυτούσια** από το repo. */
 const FIXTURE_FILES = ['.workspace-scope.json', 'src/lib/workspace/workspace-path.ts'];
 
@@ -108,9 +119,10 @@ describe('Κ — τα δύο κριτήρια', () => {
 
   it('Κ4: ⛔ ΟΡΦΑΝΗ ΔΗΛΩΣΗ — εξαίρεση για φάκελο που δεν υπάρχει', () => {
     // Κάθε νεκρή γραμμή είναι ένα όνομα που ο χρήστης δεν μπορεί να πάρει ΧΩΡΙΣ ΛΟΓΟ.
-    const root = miniRepo({}, ['projects']); // κανένα από τα 15 δηλωμένα δεν υπάρχει
+    const root = miniRepo({}, ['projects']); // κανένα από τα δηλωμένα δεν υπάρχει
     const m = gate.measure([], root);
-    expect(m.blocking.length).toBe(15);
+    expect(DECLARED_OUTSIDE.length).toBeGreaterThan(0); // ο παρονομαστής υπάρχει
+    expect(m.blocking.length).toBe(DECLARED_OUTSIDE.length);
     expect(m.blocking.every((f) => f.state === 'orphan-declaration')).toBe(true);
   });
 

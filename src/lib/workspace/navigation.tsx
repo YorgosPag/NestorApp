@@ -49,11 +49,11 @@
 
 import NextLink from 'next/link';
 import { usePathname as useNextPathname, useRouter as useNextRouter } from 'next/navigation';
-import type { AnchorHTMLAttributes, ForwardedRef } from 'react';
-import { forwardRef, useCallback, useMemo } from 'react';
+import type { AnchorHTMLAttributes, ReactElement, Ref } from 'react';
+import { useCallback, useMemo } from 'react';
 
 import { extractWorkspaceSegment, stripWorkspace, workspacePath } from './workspace-path';
-import type { AppHref } from './route-worlds';
+import type { WorkspaceHref } from './route-worlds';
 import { isInsideWorkspace } from './workspace-scope';
 
 // =============================================================================
@@ -131,39 +131,38 @@ export function useWorkspaceHref(): (href: string) => string {
 // =============================================================================
 
 /**
- * ⚠️ **`href: string`, ΟΧΙ `UrlObject`** — και είναι **μέτρηση, όχι περιορισμός**:
- * σε όλο το `src/` υπάρχουν **μηδέν** `href={{ pathname: … }}`. Ένας τύπος που
- * δέχεται και τα δύο θα ήταν κώδικας για περίπτωση που **δεν συμβαίνει**, και θα
- * έκρυβε τη μία διαδρομή που όντως χρησιμοποιείται πίσω από έναν κλάδο.
+ * **Ο τύπος ζει στο {@link module:lib/workspace/route-worlds}** — εδώ μόνο
+ * ξαναβγαίνει, για όποιον μιλά με το σύνορο.
+ *
+ * 🔴 **ΓΙΑΤΙ ΕΦΥΓΕ ΑΠΟ ΕΔΩ (Γ5).** Μέχρι σήμερα ήταν `AppHref | (string & {})`:
+ * ο κατάλογος **ονομαζόταν** στο σύνορο *(αυτόματη συμπλήρωση)* αλλά **δεν
+ * έκρινε τίποτα**. Το Γ5 αφαίρεσε το `(string & {})` — και η αφαίρεση απαίτησε
+ * να αποκτήσει ο τύπος **μορφή γραμμένης διεύθυνσης** *(slugs, ερώτημα)*, που
+ * είναι ερώτημα «ποιοι κόσμοι υπάρχουν», όχι «τι κάνει το σύνορο».
+ *
+ * ⛔ **ΜΗΝ το ξαναγράψεις εδώ.** Δύο ορισμοί για μία ερώτηση είναι το σχήμα του
+ * **ADR-749**, και εδώ η απόκλιση θα ήταν **αόρατη**: ο ένας τύπος θα δεχόταν
+ * ό,τι ο άλλος απορρίπτει, χωρίς κανένα κόκκινο πουθενά.
  */
-/**
- * Η διεύθυνση όπως τη δέχεται **το σύνορο** — ο κατάλογος του {@link AppHref}
- * **συν** τη ρητή έξοδο για ό,τι χτίζεται σε χρόνο εκτέλεσης.
- *
- * 🔴 **ΓΙΑΤΙ ΟΧΙ ΣΚΕΤΟ `AppHref` — ΜΕΤΡΗΣΗ, ΟΧΙ ΣΥΜΒΙΒΑΣΜΟΣ**: το σύνορο δέχεται
- * σήμερα **δυναμικές** συμβολοσειρές *(τις μετρά η κεφαλίδα του `route-worlds`:
- * **190**, και τις κρίνει ο `isInsideWorkspace` σε χρόνο εκτέλεσης)*. Ένας τύπος
- * που τις απαγόρευε σήμερα θα έσπαγε **190 σημεία κλήσης**, και η προφανής
- * θεραπεία —ένα `as Route` στο καθένα— είναι **ακριβώς** αυτό που προειδοποιεί
- * να μη γίνει το `route-worlds`: θα έκανε κάθε σημείο κλήσης **αόρατο** στον
- * μεταγλωττιστή, και το Γ5 θα έβγαινε πράσινο σημαίνοντας «κανείς δεν κοίταξε».
- *
- * 🔑 **Τι κερδίζει ΗΔΗ**: ο κατάλογος **ονομάζεται** στο σύνορο — αυτόματη
- * συμπλήρωση πάνω στις πραγματικές διαδρομές, και ο μεταγλωττιστής ξέρει πλέον
- * ότι υπάρχουν **δύο κόσμοι**. Όταν έρθει το Γ5 *(ADR-787 §5.3 κ.4)*, το σφίξιμο
- * είναι **η αφαίρεση του `(string & {})` σε ΕΝΑ σημείο** — όχι επέμβαση σε 190.
- *
- * ⚠️ **ΜΗΝ** το γράψεις `AppHref | string`: η ένωση θα κατέρρεε σε σκέτο `string`
- * και θα έσβηνε **και** την αυτόματη συμπλήρωση **και** τη γνώση του καταλόγου.
- */
-export type WorkspaceHref = AppHref | (string & {});
+export type { WorkspaceHref };
 
-export type WorkspaceLinkProps = Omit<
+/**
+ * ⚠️ **`href` ΣΥΜΒΟΛΟΣΕΙΡΑ, ΟΧΙ `UrlObject`** — **μέτρηση, όχι περιορισμός**: σε
+ * όλο το `src/` υπάρχουν **μηδέν** `href={{ pathname: … }}`. Ένας τύπος που
+ * δεχόταν και τα δύο θα ήταν κώδικας για περίπτωση που **δεν συμβαίνει**, και θα
+ * έκρυβε τη μία διαδρομή που όντως χρησιμοποιείται πίσω από έναν κλάδο.
+ *
+ * 🔑 Και μετά το Γ5 είναι **ενεργή απόφαση**: το ίδιο το Next αναφέρει ρητά ότι
+ * ένα αντικείμενο `href` **παρακάμπτει κάθε έλεγχο** *(Discussion #83182)*.
+ * Εδώ αυτή η διαφυγή απλώς **δεν υπάρχει**.
+ */
+export type WorkspaceLinkProps<T extends string = string> = Omit<
   AnchorHTMLAttributes<HTMLAnchorElement>,
   'href'
 > &
   Omit<React.ComponentPropsWithoutRef<typeof NextLink>, 'href'> & {
-    readonly href: WorkspaceHref;
+    readonly href: WorkspaceHref<T>;
+    readonly ref?: Ref<HTMLAnchorElement>;
   };
 
 /**
@@ -172,14 +171,25 @@ export type WorkspaceLinkProps = Omit<
  * ⚠️ **Προωθεί το `ref`**: το `NextLink` το χρησιμοποιούν βιβλιοθήκες μενού και
  * tooltip (Radix `asChild`). Ένα wrapper που καταπίνει το `ref` σπάει τον
  * εντοπισμό θέσης **σιωπηλά** — δουλεύει το κλικ, χαλάει η τοποθέτηση.
+ * Το φυλά η άγκυρα `Ι2`.
+ *
+ * 🔴 **ΓΙΑΤΙ ΕΦΥΓΕ ΤΟ `forwardRef` (Γ5) — ΑΝΑΓΚΗ, ΟΧΙ ΓΟΥΣΤΟ.** Το `forwardRef`
+ * επιστρέφει `ForwardRefExoticComponent`, τύπο **μη γενικό**: η παράμετρος `T`
+ * θα **σβηνόταν** στο σύνορο και κάθε δυναμικό `href` θα έπεφτε στο
+ * `WorkspaceHref<string>`, όπου ο κλάδος των δυναμικών **δεν μπορεί να κρίνει**
+ * τίποτα. Δηλαδή το Γ5 θα ήταν πράσινο για **38** σημεία template χωρίς να τα
+ * έχει κοιτάξει. Το γνωστό ιδίωμα-παράκαμψη είναι ένα `as` πάνω στο αποτέλεσμα·
+ * στο **React 19** δεν χρειάζεται καν: το `ref` είναι **κανονικό prop**, οπότε
+ * μια απλή γενική συνάρτηση κάνει **και** τα δύο, με **μηδέν** ισχυρισμούς τύπου.
  */
-export const Link = forwardRef(function WorkspaceLink(
-  { href, ...rest }: WorkspaceLinkProps,
-  ref: ForwardedRef<HTMLAnchorElement>,
-) {
+export function Link<T extends string>({
+  href,
+  ref,
+  ...rest
+}: WorkspaceLinkProps<T>): ReactElement {
   const resolve = useWorkspaceHref();
   return <NextLink {...rest} ref={ref} href={resolve(href)} />;
-});
+}
 
 /**
  * Τα ορίσματα **μετά** το πρώτο — ώστε το σύνορο να προωθεί ό,τι δέχεται ο
@@ -199,7 +209,41 @@ type DropFirst<T extends readonly unknown[]> = T extends readonly [unknown, ...i
  * ⚠️ Τα `back` · `forward` · `refresh` περνούν **αυτούσια**: δεν παίρνουν
  * διεύθυνση, άρα δεν έχουν τι να μεταφράσουν.
  */
-export function useRouter(): ReturnType<typeof useNextRouter> {
+/**
+ * Ο δρομολογητής **του συνόρου**, ως τύπος.
+ *
+ * 🔴 **ΓΙΑΤΙ ΔΕΝ ΑΡΚΕΙ ΤΟ `ReturnType<typeof useNextRouter>` — ΤΟ ΠΛΗΡΩΣΕ ΤΟ Γ5.**
+ * Μέχρι σήμερα το `useRouter` δήλωνε επιστροφή **τον τύπο του Next**, όπου
+ * `push(href: string)`. Οι τύποι που έγραφαν οι μέθοδοι **μέσα** στο σύνορο ήταν
+ * επομένως **αόρατοι στον καταναλωτή**: ό,τι κι αν έλεγε το `WorkspaceHref`, ο
+ * κάθε `router.push(οτιδήποτε)` περνούσε.
+ *
+ * Μετρημένο: **164 από τα 218** σημεία πλοήγησης είναι `router.*`. Χωρίς αυτόν
+ * τον τύπο, το Γ5 θα έβγαινε πράσινο έχοντας κοιτάξει το **25%** — «κανείς δεν
+ * κοίταξε», για **δεύτερη αιτία**, ανεξάρτητη από το δίχτυ.
+ *
+ * ⚠️ Τα `back` · `forward` · `refresh` κληρονομούνται **αυτούσια** μέσω του
+ * `Omit`: δεν παίρνουν διεύθυνση, άρα δεν έχουν τι να κρίνουν — και μια
+ * απαρίθμησή τους εδώ θα ήταν λίστα που **αποκλίνει** σε κάθε έκδοση του Next.
+ */
+type NextRouter = ReturnType<typeof useNextRouter>;
+
+export type WorkspaceRouter = Omit<NextRouter, 'push' | 'replace' | 'prefetch'> & {
+  push: <T extends string>(
+    href: WorkspaceHref<T>,
+    ...rest: DropFirst<Parameters<NextRouter['push']>>
+  ) => void;
+  replace: <T extends string>(
+    href: WorkspaceHref<T>,
+    ...rest: DropFirst<Parameters<NextRouter['replace']>>
+  ) => void;
+  prefetch: <T extends string>(
+    href: WorkspaceHref<T>,
+    ...rest: DropFirst<Parameters<NextRouter['prefetch']>>
+  ) => void;
+};
+
+export function useRouter(): WorkspaceRouter {
   const router = useNextRouter();
   const resolve = useWorkspaceHref();
 
@@ -217,12 +261,18 @@ export function useRouter(): ReturnType<typeof useNextRouter> {
       //    '/procurement/quotes' · Received '/procurement/quotes', undefined».
       //    ⛔ Η θεραπεία ήταν ΤΟ ΣΥΝΟΡΟ, ποτέ το test — ένα test που μαθαίνει να
       //    δέχεται το `undefined` είναι σβησμένος μάρτυρας.
-      push: (href: WorkspaceHref, ...rest: DropFirst<Parameters<typeof router.push>>) =>
-        router.push(resolve(href), ...rest),
-      replace: (href: WorkspaceHref, ...rest: DropFirst<Parameters<typeof router.replace>>) =>
-        router.replace(resolve(href), ...rest),
-      prefetch: (href: WorkspaceHref, ...rest: DropFirst<Parameters<typeof router.prefetch>>) =>
-        router.prefetch(resolve(href), ...rest),
+      push: <T extends string>(
+        href: WorkspaceHref<T>,
+        ...rest: DropFirst<Parameters<NextRouter['push']>>
+      ) => router.push(resolve(href), ...rest),
+      replace: <T extends string>(
+        href: WorkspaceHref<T>,
+        ...rest: DropFirst<Parameters<NextRouter['replace']>>
+      ) => router.replace(resolve(href), ...rest),
+      prefetch: <T extends string>(
+        href: WorkspaceHref<T>,
+        ...rest: DropFirst<Parameters<NextRouter['prefetch']>>
+      ) => router.prefetch(resolve(href), ...rest),
     }),
     [router, resolve],
   );

@@ -109,10 +109,10 @@ export function RfqList({ rfqs, loading, onCreateRfq }: RfqListProps) {
             </TableHeader>
             <TableBody>
               {filtered.map((rfq) => (
-                <TableRow
+                <ProcurementRowLink
                   key={rfq.id}
-                  className="cursor-pointer"
                   onClick={() => handleView(rfq)}
+                  testId={`rfq-row-${rfq.id}`}
                 >
                   <TableCell className="font-medium">{rfq.title}</TableCell>
                   <TableCell>

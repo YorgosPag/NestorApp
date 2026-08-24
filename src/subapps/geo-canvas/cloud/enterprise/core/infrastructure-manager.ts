@@ -359,7 +359,6 @@ export class InfrastructureManager {
   }
 
   // Provider validation delegated to infrastructure-validation.ts
-  }
 
   // ========================================================================
   // ALERT INTEGRATION METHODS

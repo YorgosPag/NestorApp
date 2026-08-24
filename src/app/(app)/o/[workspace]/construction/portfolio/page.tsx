@@ -11,8 +11,8 @@ export default function ConstructionPortfolioPage() {
   const { t } = useTranslation('building-timeline');
   const { items, totals, loading, error, refresh } = useConstructionPortfolio();
 
+  // ADR-797: το εξωτερικό κενό ανηκει στο κελυφος — το p-6 εφυγε (CHECK 3.63).
   return (
-    {/* ADR-797: το εξωτερικό κενό ανηκει στο κελυφος — το p-6 εφυγε (CHECK 3.63). */}
     <main className="flex flex-col gap-6">
       <header className="flex items-start justify-between">
         <div>

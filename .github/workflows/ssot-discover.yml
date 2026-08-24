@@ -271,8 +271,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      # ⚠️ fetch-depth: 0 — ΟΧΙ προεπιλογή, και ΜΟΝΟ σε αυτό το job (τα άλλα δύο
-      # δεν διαβάζουν ιστορικό). Η ομάδα Π τραβά με `git show 8318b50d:<αρχείο>`
+      # ⚠️ fetch-depth: 0 — ΟΧΙ προεπιλογή. Το θέλει ΚΑΘΕ job του οποίου η σουίτα
+      # μετάλλαξης βαθμονομεί με ΚΑΡΦΩΜΕΝΟ commit· σήμερα: 3.48 (εδώ) · 3.56 ·
+      # 3.58 · 3.59 · 3.63. Το σχόλιο έλεγε «ΜΟΝΟ σε αυτό το job» και ΑΠΕΚΛΙΝΕ:
+      # στις 2026-08-23 τα 3.56/3.58/3.59 έσκασαν με `fatal: invalid object name`
+      # (runs 32668143204). Η ομάδα Π τραβά με `git show 8318b50d:<αρχείο>`
       # τις ΠΡΑΓΜΑΤΙΚΕΣ νάρκες του ADR-739 §59/§60 και απαιτεί μπλοκ στις γραμμές
       # 179/193. Με ρηχό checkout το αντικείμενο δεν υπάρχει (`fatal: invalid
       # object name`) και η βαθμονόμηση σκάει — η πύλη γίνεται μονίμως κόκκινη για
@@ -512,6 +515,8 @@ jobs:
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # οι άγκυρες Π κάνουν `git show` στο ΚΑΡΦΩΜΕΝΟ a19347d3
 
       - name: 📦 Setup pnpm
         uses: pnpm/action-setup@v4
@@ -678,6 +683,8 @@ jobs:
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # οι άγκυρες Π κάνουν `git show` στο ΚΑΡΦΩΜΕΝΟ dbd89df8
 
       - name: 📦 Setup pnpm
         uses: pnpm/action-setup@v4
@@ -781,6 +788,8 @@ jobs:
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # οι άγκυρες Π κάνουν `git show` στο ΚΑΡΦΩΜΕΝΟ 7ccfc4fd
 
       - name: 📦 Setup pnpm
         uses: pnpm/action-setup@v4
