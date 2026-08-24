@@ -55,7 +55,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "95868dbf10bcfd39f04a412fd08c858fc0fcabdab6594ff4adcc0621609a1840",
+  "inputsSha256": "81dc53e74204b5e2e2c56d60abe2caf55ffa003bc0e161c4cbbd917b956190f1",
   "languages": [
     "el"
   ],
@@ -225,6 +225,7 @@
     "src/config/firestore-collections.ts": "591aa47af654250c13eaf3c790e79550d4af840fd9c3370f39f98ae58b1bdba0",
     "src/config/geographic-config.ts": "42453bbb4e8870560540403f219cb9b26f6308519f6b28c9cc8ef4a8de59deee",
     "src/config/individual-config.ts": "8a2a4f81ae215b752ff71e21d929d09a893d3d14335e7faa00c99e6dab0367bc",
+    "src/config/isco-job-affinity.ts": "7970f5d56f79e03cbff88d83278eddf1a36a2cfa3a43250725d3c306e4ee3dc7",
     "src/config/iso19650-constants.ts": "9b52b8e6cd641328762db95ba0d1e280581845fe5827c8dead926531658349c3",
     "src/config/job-suggestion.ts": "5f9b926d736393f104be8cef5ff45187bfb324b372e148f00e02d7636208e2e2",
     "src/config/jobs-access.ts": "cd9ecbc9f56123a902b624b7ddd6cc52082dc2e7e7fc6b7116c853a86f799821",
@@ -291,6 +292,7 @@
     "src/hooks/useAdministrativeHierarchy.ts": "cf399b3f4fbdda749e3931ad6279011fc8485b492d5cab5e52e46310e3e9112e",
     "src/hooks/useBorderTokens.ts": "e57e219e9753daedbc00c737db3d3e3ef8fcc88a2013823ad53361ae1257bcd9",
     "src/hooks/useCopyToClipboard.ts": "e9fbb8dfd166df3911b4085ea71f5e1aabae6983babf12b78d0403dbf2bdf998",
+    "src/hooks/useDeclaredOccupation.ts": "3628f0dd219f1896d0f6114c39009d5f035fca1a6334d96639b0aa7214fdbebd",
     "src/hooks/useDropdownTokens.ts": "fbf97823babaf80ed36e89974f45744eb162ef33144fd91d14d0d6db8ed60e37",
     "src/hooks/useEffectivePermissions.ts": "b2df0f667549242c64ee4a612f13b4ef0e487f081a237c81f0dc94d31f7f6f96",
     "src/hooks/useEscapeKey.ts": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
@@ -300,7 +302,7 @@
     "src/hooks/useHasBuildingsWithNoUnits.ts": "2cabeb87e1013037ccf8e73be1ff4060976ec6a8a0db8e77e9ff91b2fd3dde25",
     "src/hooks/useIconSizes.ts": "fbf97823babaf80ed36e89974f45744eb162ef33144fd91d14d0d6db8ed60e37",
     "src/hooks/useInterval.ts": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
-    "src/hooks/useJobFilteredNavigation.ts": "579842f5e5a243ebc4ff3d9f8f2b4a1bcd9f7f4abf775b7943d5d2bf6b6b2265",
+    "src/hooks/useJobFilteredNavigation.ts": "a276bbc143d1f0de2b0728fa41f564aefbf24e10569181843111a1224e04a941",
     "src/hooks/useKeyboardShortcuts.ts": "8fd6edd13dfa0351fa57df3a923d8a5bbcf9c8887d24ad13f6a7654922c08b47",
     "src/hooks/useLayoutClasses.ts": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
     "src/hooks/useMobile.tsx": "7e9a21ad70c199c41a5759f3f25d7b663b0d9e263604d22a408b979e118b39be",
@@ -579,7 +581,7 @@
     "dynamicBoundaries": 18,
     "matchedKeys": 132,
     "routeBoundaries": 0,
-    "shellFiles": 478,
+    "shellFiles": 480,
     "sliceBytes": 312357
   },
   "unresolvableKeys": [

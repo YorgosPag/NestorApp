@@ -49,7 +49,9 @@ import {
 import type { MenuItem } from '@/config/navigation';
 import { filterItemsByJob, summarizeHidden } from '@/config/jobs-visibility';
 import { computeJobSuggestion, type JobSuggestionOutcome } from '@/config/job-suggestion';
+import { resolveJobAffinity } from '@/config/isco-job-affinity';
 import { useActiveJob } from '@/contexts/ActiveJobContext';
+import { useDeclaredOccupation } from '@/hooks/useDeclaredOccupation';
 import { useEffectivePermissions } from '@/hooks/useEffectivePermissions';
 
 /** Τα τρία δέντρα του sidebar, περασμένα **μόνο** από το φίλτρο δικαιωμάτων. */
@@ -167,10 +169,32 @@ export function useJobFilteredNavigation(): JobFilteredNavigation {
  * ⚠️ Η **απόρριψη** έρχεται απ' έξω ως `dismissed` και δεν διαβάζεται εδώ: η
  * αποθήκευση είναι πλευρική ενέργεια του component, ενώ αυτός ο hook μένει
  * καθαρός υπολογισμός πάνω σε ζωντανά δεδομένα (Ε5.α).
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * ADR-798 Φάση 3 — ΕΔΩ ΕΝΩΝΟΝΤΑΙ ΤΑ ΔΥΟ ΕΡΩΤΗΜΑΤΑ, ΚΑΙ **ΜΟΝΟ** ΕΔΩ
+ *
+ *   `useDeclaredOccupation()` → *«τι δήλωσε ο άνθρωπος»* (μηδέν I/O)
+ *   `resolveJobAffinity()`    → *«τι δουλειά υποδεικνύει αυτό»* (καθαρός πίνακας)
+ *
+ * Χωριστά επίτηδες: ο χαρακτηρισμός της δήλωσης δεν ξέρει τίποτα για δουλειές,
+ * και ο πίνακας συγγένειας δεν ξέρει τίποτα για χρήστες. Καθένας δοκιμάζεται
+ * μόνος του· η ένωση είναι **τρεις γραμμές** και ζει στον καταναλωτή.
+ *
+ * 🔒 Το αποτέλεσμα ταξιδεύει ως `tiebreak` — **σπάει ισοβαθμία, δεν διευρύνει
+ * σύνολο**. Το `computeJobSuggestion` κρατά ακέραιο τον έλεγχο `granted`, οπότε
+ * επάγγελμα που δείχνει σε δουλειά χωρίς **μετρημένο** δικαίωμα ⇒ **σιωπή**.
+ *
+ * ⚠️ Το `iscoCode` **ΠΡΕΠΕΙ** να είναι στις εξαρτήσεις του `useMemo`: χωρίς
+ * αυτό η τιμή παγώνει στην πρώτη απόδοση — τότε το προφίλ **δεν έχει φορτώσει
+ * ακόμη** — και το επάγγελμα φαίνεται «μη δηλωμένο» **για πάντα**. Σφάλμα που
+ * **καμία πύλη δεν πιάνει** (μάθημα Φάσης 2). Είναι `string | null`, δηλαδή
+ * πρωτογενής τιμή: σταθερή εξάρτηση, χωρίς την αστάθεια του αντικειμένου.
+ * ─────────────────────────────────────────────────────────────────────────────
  */
 export function useJobSuggestion(dismissed: boolean): JobSuggestionOutcome | null {
   const access = useEffectivePermissions();
   const { activeJob } = useActiveJob();
+  const { iscoCode } = useDeclaredOccupation();
 
   return useMemo(() => {
     const menus = buildJobMenus(access.permissions);
@@ -178,7 +202,8 @@ export function useJobSuggestion(dismissed: boolean): JobSuggestionOutcome | nul
       access,
       activeJob,
       dismissed,
+      tiebreak: resolveJobAffinity(iscoCode),
       menus: [menus.main, menus.tools, menus.settings],
     });
-  }, [access, activeJob, dismissed]);
+  }, [access, activeJob, dismissed, iscoCode]);
 }

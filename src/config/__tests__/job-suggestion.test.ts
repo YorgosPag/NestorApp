@@ -14,10 +14,16 @@
  */
 
 import { createMainMenuItems, createToolsMenuItems, createSettingsMenuItems } from '../smart-navigation-factory';
-import { JOBS, JOB_ORDER } from '../jobs-registry';
+import { JOBS, JOB_ORDER, type JobId } from '../jobs-registry';
 import { JOB_ALL, pickDefaultJob, resolveAvailableJobs, type JobAccessInput } from '../jobs-access';
 import { filterItemsByJob, summarizeHidden, type JobFilterableItem } from '../jobs-visibility';
 import { MIN_JOBS_FOR_SUGGESTION, computeJobSuggestion } from '../job-suggestion';
+import {
+  ISCO_JOB_AFFINITY,
+  ISCO_UNIT_GROUP_LENGTH,
+  judgeIscoAffinity,
+  resolveJobAffinity,
+} from '../isco-job-affinity';
 
 /** Ο browser σήμερα: μόνο ο ρόλος οργανισμού απαντά (Π-15). */
 const ALL_SOURCES = ['globalRole', 'projectRoles', 'permissionSets'] as const;
@@ -215,5 +221,328 @@ describe('Σ-6 — το άθροισμα κλείνει', () => {
       expect(outcome.visibleCount).toBeLessThanOrEqual(outcome.totalCount);
       expect(outcome.visibleCount).toBeGreaterThanOrEqual(0);
     }
+  });
+});
+
+// ============================================================================
+// ADR-798 ΦΑΣΗ 3 — ΤΟ ΕΠΑΓΓΕΛΜΑ ΣΠΑΕΙ ΤΗΝ ΙΣΟΒΑΘΜΙΑ
+//
+//   Χ-1..Χ-8  Ο πίνακας συγγένειας: πρόθεμα, εξαίρεση, σιωπή, υγιεινή
+//   Ε-1       🔑 Ο ΠΑΡΟΝΟΜΑΣΤΗΣ — καμία δήλωση δεν ΔΙΕΥΡΥΝΕΙ το σύνολο
+//   Ε-2       Δύο άνθρωποι, ΙΔΙΑ permissions, ΔΙΑΦΟΡΕΤΙΚΗ απάντηση
+//   Ε-3       Η μέτρηση νικά τη δήλωση — ποτέ το αντίστροφο
+//   Ε-4       Χωρίς επάγγελμα: γραμμή προς γραμμή η παλιά συμπεριφορά
+//   Ε-5       Η σιωπή του Σ-7 επιβιώνει του επαγγέλματος
+// ============================================================================
+
+/**
+ * Πραγματικοί κωδικοί ISCO-08, **επαληθευμένοι** στην επίσημη δομή του ILO.
+ *
+ * ⚠️ Γράφονται ως **σταθερές του ελέγχου** και οι προσδοκίες παρακάτω είναι
+ * **κυριολεκτικές** (`'design'`, `'clients'`, …) — ΠΟΤΕ υπολογισμένες από τον
+ * ίδιο τον πίνακα. Παρονομαστής που διαβάζει τον κριτή μετακινείται μαζί με τη
+ * μετάλλαξη και βγαίνει πράσινος πάνω σε σβησμένη γραμμή (σφάλμα ADR-790 §9.1).
+ */
+const ISCO = {
+  /** 2165 Cartographers and Surveyors — ο τοπογράφος. */
+  surveyor: '2165',
+  /** 2611 Lawyers — ο δικηγόρος. */
+  lawyer: '2611',
+  /** 2411 Accountants (μέσα στο δηλωμένο `241`). */
+  accountant: '2411',
+  /** 2142 Civil Engineers (μέσα στο δηλωμένο `214`). */
+  civilEngineer: '2142',
+  /** 1211 Finance Managers — η **εξαίρεση** του `121`. */
+  financeManager: '1211',
+  /** 1212 Human Resource Managers — πέφτει στο γονικό `121`. */
+  hrManager: '1212',
+  /** 2166 Graphic and Multimedia Designers — μέσα στο `216`, **αδήλωτο**. */
+  graphicDesigner: '2166',
+  /** 2211 Generalist Medical Practitioners — εκτός κάθε κλάδου μας. */
+  doctor: '2211',
+} as const;
+
+/**
+ * Ισοβαθμία **κατασκευασμένη από το μητρώο**: ένα permission από καθεμία, άρα
+ * σκορ 1-1. Χωρίς επάγγελμα ο νικητής βγαίνει από τη σειρά του `JOB_ORDER`
+ * (`design` πριν από `clients`) — δηλαδή **από τίποτα**. Αυτό είναι το κενό.
+ */
+const DESIGN_AND_CLIENTS = access({
+  permissions: [JOBS.design.permissions[0], JOBS.clients.permissions[0]],
+});
+
+/** Μία μόνο δουλειά — για να ασκείται και η διαδρομή «δεν προτείνουμε μονόδρομο». */
+const ONE_JOB = access({ permissions: [JOBS.finance.permissions[0]] });
+
+/** Καμία διαθέσιμη ⇒ `JOB_ALL`, με ή χωρίς επάγγελμα. */
+const NO_JOBS = access({ permissions: [] });
+
+/**
+ * 🔴 Ο μεταλλάκτης **ΟΥΡΛΙΑΖΕΙ αν η μετάλλαξη δεν άλλαξε τίποτα**.
+ *
+ * Μάθημα 3.44/Μ11: μια «μετάλλαξη» που αφήνει την είσοδο ίδια αποδεικνύει
+ * **μηδέν**, και το test βγαίνει πράσινο δείχνοντας σιγουριά που δεν υπάρχει.
+ * Συνέβη ζωντανά στη Φάση 2 (CRLF), γι' αυτό ο έλεγχος είναι ρητός εδώ.
+ */
+function mutateInput<TIn, TOut>(
+  label: string,
+  before: TIn,
+  after: TIn,
+  run: (value: TIn) => TOut,
+): { readonly before: TOut; readonly after: TOut } {
+  if (Object.is(before, after) || JSON.stringify(before) === JSON.stringify(after)) {
+    throw new Error(`Η μετάλλαξη «${label}» ΔΕΝ άλλαξε την είσοδο — δεν αποδεικνύει τίποτα.`);
+  }
+  return { before: run(before), after: run(after) };
+}
+
+// ----------------------------------------------------------------------------
+// Χ — ο πίνακας συγγένειας
+// ----------------------------------------------------------------------------
+
+describe('Χ — ο πίνακας συγγένειας ISCO → δουλειά', () => {
+  it('Χ-1: ο τετραψήφιος απαντιέται από το ΠΡΟΘΕΜΑ που δηλώθηκε', () => {
+    // Δηλωμένο είναι το `214`, όχι το `2142`: το πρόθεμα απαντά για όλη την ομάδα.
+    expect(resolveJobAffinity(ISCO.civilEngineer)).toBe('design');
+    const verdict = judgeIscoAffinity(ISCO.civilEngineer);
+    expect(verdict.kind).toBe('declared');
+    if (verdict.kind === 'declared') expect(verdict.prefix).toBe('214');
+  });
+
+  it('Χ-2: ο ΜΑΚΡΥΤΕΡΟΣ πρόθεμα νικά — 1211 → Οικονομικά, 1212 → Διαχείριση', () => {
+    // Και τα δύο ζουν κάτω από το δηλωμένο `121`. Μόνο το πρώτο έχει δική του
+    // δήλωση — αν η ανάλυση δεν ήταν «μακρύτερος πρώτα», θα έπαιρναν ΤΟ ΙΔΙΟ.
+    expect(resolveJobAffinity(ISCO.financeManager)).toBe('finance');
+    expect(resolveJobAffinity(ISCO.hrManager)).toBe('administration');
+  });
+
+  it('Χ-3: ο τοπογράφος και ο δικηγόρος ΔΕΝ δείχνουν στο ίδιο πράγμα', () => {
+    expect(resolveJobAffinity(ISCO.surveyor)).toBe('design');
+    expect(resolveJobAffinity(ISCO.lawyer)).toBe('clients');
+    expect(resolveJobAffinity(ISCO.accountant)).toBe('finance');
+  });
+
+  it('Χ-4: αδήλωτο επάγγελμα ⇒ ΣΙΩΠΗ, και η σιωπή είναι ΟΝΟΜΑΣΜΕΝΗ', () => {
+    // Το 2166 ζει μέσα στο 216 — που ΔΕΝ δηλώνεται ολόκληρο ακριβώς γι΄ αυτό.
+    expect(resolveJobAffinity(ISCO.graphicDesigner)).toBeNull();
+    expect(judgeIscoAffinity(ISCO.graphicDesigner)).toEqual({
+      kind: 'undeclared',
+      code: ISCO.graphicDesigner,
+    });
+    expect(judgeIscoAffinity(ISCO.doctor).kind).toBe('undeclared');
+  });
+
+  it('Χ-5: απουσία και δυσμορφία είναι ΔΙΑΦΟΡΕΤΙΚΕΣ καταστάσεις', () => {
+    expect(judgeIscoAffinity(null).kind).toBe('absent');
+    expect(judgeIscoAffinity(undefined).kind).toBe('absent');
+    expect(judgeIscoAffinity('').kind).toBe('absent');
+
+    // ⚠️ Χωρίς έλεγχο σχήματος, το `21.6` θα έκοβε σε `21` και θα «απαντούσε».
+    for (const bad of ['21.6', '2165x', 'αρχιτέκτονας', '21650', ' 214']) {
+      expect(judgeIscoAffinity(bad)).toEqual({ kind: 'malformed', value: bad });
+      expect(resolveJobAffinity(bad)).toBeNull();
+    }
+  });
+
+  it('Χ-6: κάθε κλειδί είναι έγκυρο πρόθεμα ISCO και κάθε τιμή υπαρκτή δουλειά', () => {
+    for (const [prefix, entry] of Object.entries(ISCO_JOB_AFFINITY)) {
+      expect(prefix).toMatch(/^\d{1,4}$/);
+      expect(prefix.length).toBeLessThanOrEqual(ISCO_UNIT_GROUP_LENGTH);
+      expect(JOB_ORDER).toContain(entry.job);
+    }
+  });
+
+  it('Χ-7: ΚΑΜΙΑ πλεοναστική δήλωση — πρόγονος που λέει το ίδιο', () => {
+    // Μια γραμμή της οποίας ο πλησιέστερος δηλωμένος πρόγονος δίνει την ΙΔΙΑ
+    // δουλειά δεν προσθέτει τίποτα σήμερα και θα αποκλίνει σιωπηλά αύριο.
+    const redundant: string[] = [];
+    for (const [prefix, entry] of Object.entries(ISCO_JOB_AFFINITY)) {
+      for (let length = prefix.length - 1; length >= 1; length -= 1) {
+        const ancestor = ISCO_JOB_AFFINITY[prefix.slice(0, length)];
+        if (ancestor === undefined) continue;
+        if (ancestor.job === entry.job) redundant.push(prefix);
+        break; // μόνο ο ΠΛΗΣΙΕΣΤΕΡΟΣ δηλωμένος πρόγονος κρίνει
+      }
+    }
+    expect(redundant).toEqual([]);
+  });
+
+  it('Χ-8: κάθε δήλωση φέρει ΔΙΚΟ ΤΗΣ, μη κενό `why`', () => {
+    const reasons = new Set<string>();
+    for (const [prefix, entry] of Object.entries(ISCO_JOB_AFFINITY)) {
+      expect(entry.why.trim().length).toBeGreaterThan(20);
+      // Αντιγραμμένος λόγος = γραμμή που προστέθηκε χωρίς να σκεφτεί κανείς.
+      expect(reasons.has(entry.why)).toBe(false);
+      reasons.add(entry.why);
+      expect(prefix.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+// ----------------------------------------------------------------------------
+// Ε — η ένωση με την πρόταση δουλειάς
+// ----------------------------------------------------------------------------
+
+describe('Ε-1 🔑 Ο ΠΑΡΟΝΟΜΑΣΤΗΣ — το επάγγελμα ΔΕΝ διευρύνει ΠΟΤΕ το σύνολο', () => {
+  it('καμία δήλωση δεν βγάζει την επιλογή έξω από τα διαθέσιμα', () => {
+    // Εξαντλητικά: κάθε δουλειά ως `tiebreak`, σε κάθε προφίλ δικαιωμάτων.
+    // Χωρίς αυτό, ένα «λειτουργεί» δεν αποδεικνύει ότι δεν διευρύνει.
+    for (const acc of [DESIGN_AND_CLIENTS, TWO_JOBS, ONE_JOB, NO_JOBS, BYPASS]) {
+      const available = resolveAvailableJobs(acc);
+      for (const job of JOB_ORDER) {
+        const picked = pickDefaultJob(acc, job);
+        if (picked === JOB_ALL) {
+          expect(available).toHaveLength(0);
+          continue;
+        }
+        expect(available).toContain(picked);
+      }
+    }
+  });
+
+  it('επάγγελμα που δείχνει σε ΜΗ διαθέσιμη δουλειά αφήνει την πρόταση ΑΘΙΚΤΗ', () => {
+    // Λογιστής (→ Οικονομικά) με δικαιώματα μόνο Σχεδίου + Πελατών.
+    const tiebreak = resolveJobAffinity(ISCO.accountant);
+    expect(tiebreak).toBe('finance');
+    expect(resolveAvailableJobs(DESIGN_AND_CLIENTS)).not.toContain('finance');
+
+    expect(pickDefaultJob(DESIGN_AND_CLIENTS, tiebreak)).toBe(
+      pickDefaultJob(DESIGN_AND_CLIENTS),
+    );
+  });
+
+  it('ούτε το σύνολο των διαθέσιμων αλλάζει — ο υπολογισμός δεν βλέπει επάγγελμα', () => {
+    const before = resolveAvailableJobs(DESIGN_AND_CLIENTS);
+    // Το `resolveAvailableJobs` δεν δέχεται καν όρισμα επαγγέλματος. Η άγκυρα
+    // κλειδώνει **την υπογραφή**: αν κάποιος του περάσει επάγγελμα αύριο, εδώ
+    // θα χρειαστεί να αλλάξει — και θα το δει άνθρωπος.
+    expect(resolveAvailableJobs.length).toBe(1);
+    expect(before).toEqual(['design', 'clients']);
+  });
+});
+
+describe('Ε-2 — ίδια permissions, διαφορετικό επάγγελμα, ΔΙΑΦΟΡΕΤΙΚΗ απάντηση', () => {
+  it('ο τοπογράφος παίρνει Σχέδιο και ο δικηγόρος Πελάτες', () => {
+    // Η ισοβαθμία είναι πραγματική: **ένα** μετρημένο δικαίωμα η καθεμία.
+    const scoreOf = (job: JobId): number =>
+      JOBS[job].permissions.filter((p) => DESIGN_AND_CLIENTS.permissions.includes(p)).length;
+    expect(scoreOf('design')).toBe(scoreOf('clients'));
+
+    const { before, after } = mutateInput(
+      'iscoCode: τοπογράφος → δικηγόρος',
+      ISCO.surveyor,
+      ISCO.lawyer,
+      (isco) => pickDefaultJob(DESIGN_AND_CLIENTS, resolveJobAffinity(isco)),
+    );
+
+    expect(before).toBe('design');
+    expect(after).toBe('clients');
+    expect(before).not.toBe(after);
+  });
+
+  it('και η ΠΡΟΤΑΣΗ που φτάνει στην οθόνη ακολουθεί', () => {
+    const suggestFor = (isco: string) =>
+      computeJobSuggestion({
+        access: DESIGN_AND_CLIENTS,
+        activeJob: JOB_ALL,
+        dismissed: false,
+        tiebreak: resolveJobAffinity(isco),
+        menus: realMenus(DESIGN_AND_CLIENTS.permissions),
+      });
+
+    const { before, after } = mutateInput(
+      'πρόταση: τοπογράφος → δικηγόρος',
+      ISCO.surveyor,
+      ISCO.lawyer,
+      suggestFor,
+    );
+
+    expect(before?.job).toBe('design');
+    expect(after?.job).toBe('clients');
+  });
+});
+
+describe('Ε-3 — η ΜΕΤΡΗΣΗ νικά τη ΔΗΛΩΣΗ, ποτέ το αντίστροφο', () => {
+  it('δουλειά με λιγότερα μετρημένα δικαιώματα δεν κερδίζει επειδή ταιριάζει', () => {
+    // Σχέδιο με ΔΥΟ δικαιώματα, Πελάτες με ΕΝΑ ⇒ καμία ισοβαθμία να σπάσει.
+    const designWins = access({
+      permissions: [
+        JOBS.design.permissions[0],
+        JOBS.design.permissions[1],
+        JOBS.clients.permissions[0],
+      ],
+    });
+
+    expect(pickDefaultJob(designWins, resolveJobAffinity(ISCO.lawyer))).toBe('design');
+    // …και το ανάποδο, ώστε το «design» να μην είναι απλώς η σειρά του πίνακα:
+    const clientsWin = access({
+      permissions: [
+        JOBS.clients.permissions[0],
+        JOBS.clients.permissions[1],
+        JOBS.design.permissions[0],
+      ],
+    });
+    expect(pickDefaultJob(clientsWin, resolveJobAffinity(ISCO.surveyor))).toBe('clients');
+  });
+});
+
+describe('Ε-4 — χωρίς επάγγελμα: γραμμή προς γραμμή η παλιά συμπεριφορά', () => {
+  it('παράλειψη, `null` και `undefined` δίνουν ΤΟ ΙΔΙΟ με πριν', () => {
+    for (const acc of [DESIGN_AND_CLIENTS, TWO_JOBS, ONE_JOB, NO_JOBS, BYPASS]) {
+      const baseline = pickDefaultJob(acc);
+      expect(pickDefaultJob(acc, null)).toBe(baseline);
+      expect(pickDefaultJob(acc, undefined)).toBe(baseline);
+      // Επάγγελμα εκτός πίνακα ⇒ `null` ⇒ ίδιο αποτέλεσμα.
+      expect(pickDefaultJob(acc, resolveJobAffinity(ISCO.doctor))).toBe(baseline);
+    }
+  });
+
+  it('και η πρόταση χωρίς `tiebreak` μένει ταυτόσημη', () => {
+    const withoutField = computeJobSuggestion({
+      access: TWO_JOBS,
+      activeJob: JOB_ALL,
+      dismissed: false,
+      menus: realMenus(TWO_JOBS.permissions),
+    });
+    const withNull = computeJobSuggestion({
+      access: TWO_JOBS,
+      activeJob: JOB_ALL,
+      dismissed: false,
+      tiebreak: null,
+      menus: realMenus(TWO_JOBS.permissions),
+    });
+    expect(withoutField).toEqual(withNull);
+  });
+});
+
+describe('Ε-5 — η σιωπή του Σ-7 ΕΠΙΒΙΩΝΕΙ του επαγγέλματος', () => {
+  it('τυφλό περιβάλλον + δηλωμένο επάγγελμα ⇒ ΑΚΟΜΑ σιωπή', () => {
+    // Μόνο ο `globalRole` απαντά ⇒ και οι έξι `unknown` ⇒ διαθέσιμες, αλλά
+    // **καμία μετρημένη**. Το επάγγελμα ΔΕΝ επιτρέπεται να μετατρέψει το «δεν
+    // ξέρω» σε ισχυρισμό γνώσης: αλλιώς μια αυτο-δήλωση θα γεννούσε πρόταση
+    // πάνω σε μηδέν αποδείξεις.
+    const blind = access({ permissions: [], availableSources: ['globalRole'] });
+    expect(resolveAvailableJobs(blind)).toHaveLength(JOB_ORDER.length);
+    expect(pickDefaultJob(blind, resolveJobAffinity(ISCO.lawyer))).toBe('clients');
+
+    expect(
+      computeJobSuggestion({
+        access: blind,
+        activeJob: JOB_ALL,
+        dismissed: false,
+        tiebreak: resolveJobAffinity(ISCO.lawyer),
+        menus: realMenus(blind.permissions),
+      }),
+    ).toBeNull();
+  });
+
+  it('η άρνηση και η ήδη-παρμένη απόφαση υπερισχύουν του επαγγέλματος', () => {
+    const base = {
+      access: DESIGN_AND_CLIENTS,
+      tiebreak: resolveJobAffinity(ISCO.lawyer),
+      menus: realMenus(DESIGN_AND_CLIENTS.permissions),
+    };
+    expect(computeJobSuggestion({ ...base, activeJob: JOB_ALL, dismissed: true })).toBeNull();
+    expect(computeJobSuggestion({ ...base, activeJob: 'design', dismissed: false })).toBeNull();
   });
 });

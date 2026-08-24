@@ -76,6 +76,19 @@ export interface JobSuggestionInput<T extends JobFilterableItem & { readonly sub
   /** Την απέρριψε ήδη ο χρήστης; (Α-3: μία φορά «όχι» σημαίνει όχι.) */
   readonly dismissed: boolean;
   /**
+   * ADR-798 Φάση 3 — η δουλειά που **υποδεικνύει το δηλωμένο επάγγελμα**, όταν
+   * υπάρχει. **Σπάει ισοβαθμία, δεν διευρύνει σύνολο** (`jobs-access.ts`).
+   *
+   * ⚠️ **Προαιρετικό, και αυτό είναι το συμβόλαιο**: χωρίς αυτό η πρόταση είναι
+   * γραμμή προς γραμμή η προηγούμενη. Το επάγγελμα **δεν είναι προϋπόθεση** για
+   * να μιλήσουμε — είναι κριτήριο **ανάμεσα** σε ισοδύναμες απαντήσεις.
+   *
+   * 🔒 Περνά **ανέπαφο** στο `pickDefaultJob` και **δεν παρακάμπτει** τον έλεγχο
+   * `granted` παρακάτω: επάγγελμα που δείχνει σε δουλειά για την οποία δεν
+   * έχουμε **μετρημένο** δικαίωμα οδηγεί ξανά σε **σιωπή**, όχι σε πρόταση.
+   */
+  readonly tiebreak?: JobId | null;
+  /**
    * Τα δέντρα πλοήγησης **ΗΔΗ φιλτραρισμένα κατά δικαίωμα** — ακριβώς αυτά που
    * βάφει η οθόνη. Δίνονται απ' έξω και δεν χτίζονται εδώ: έτσι το αρχείο μένει
    * καθαρό (μηδέν εξάρτηση από `navigation`/React) και ο έλεγχος μπορεί να
@@ -118,7 +131,7 @@ function findSuggestableJob<T extends JobFilterableItem & { readonly subItems?: 
   if (input.activeJob !== JOB_ALL) return null;
   if (resolveAvailableJobs(input.access).length < MIN_JOBS_FOR_SUGGESTION) return null;
 
-  const suggested = pickDefaultJob(input.access);
+  const suggested = pickDefaultJob(input.access, input.tiebreak);
   // `JOB_ALL` = «καμία διαθέσιμη» (jobs-access.ts:209). Δεν προτείνεται το ίδιο
   // πράγμα που ήδη ισχύει.
   if (suggested === JOB_ALL) return null;
