@@ -378,6 +378,37 @@ export function useAuthActions(params: UseAuthActionsParams) {
     }
   }, [auth, handleError, setError, setUser]);
 
+  /**
+   * 🖼️ ADR-798 §16 — Η ΦΩΤΟΓΡΑΦΙΑ ΠΡΟΦΙΛ.
+   *
+   * Γράφει **μόνο** στο Firebase Auth. ⚠️ **ΔΕΝ αγγίζει ΠΟΤΕ τον λογαριασμό
+   * Google του ανθρώπου**: το Google είναι **πάροχος ταυτότητας** — δίνει
+   * δεδομένα στη σύνδεση, δεν τα παίρνει πίσω. Ρωτήθηκε ρητά και απαντήθηκε.
+   *
+   * 🔑 **ΤΟ `null` ΔΕΝ ΣΗΜΑΙΝΕΙ «ΚΑΜΙΑ ΦΩΤΟΓΡΑΦΙΑ» — ΣΗΜΑΙΝΕΙ «ΠΙΣΩ ΣΤΟΝ
+   * ΠΑΡΟΧΟ».** Ένα σκέτο `updateProfile({ photoURL: null })` θα άφηνε τον
+   * άνθρωπο με **κενό** avatar, ενώ αυτό που ζήτησε ήταν να **αφαιρέσει τη δική
+   * του** εικόνα — και είχε ήδη μία από το Google πριν ανεβάσει. Η επαναφορά
+   * διαβάζεται από το `providerData`, που το κρατά ο **πάροχος** και δεν το
+   * πειράζει το `updateProfile` (γι' αυτό επιβιώνει της αντικατάστασης).
+   *
+   * Ιδεμπόταντ: δεύτερη κλήση με την ίδια τιμή = ίδιο αποτέλεσμα.
+   */
+  const updateUserPhoto = useCallback(async (photoURL: string | null): Promise<void> => {
+    try {
+      if (!auth.currentUser) throw new Error('No authenticated user');
+      setError(null);
+      const fallback = auth.currentUser.providerData.find((p) => p.photoURL)?.photoURL ?? null;
+      const next = photoURL ?? fallback;
+      await updateProfile(auth.currentUser, { photoURL: next });
+      setUser((prev) => (prev ? { ...prev, photoURL: next } : null));
+      logger.info('[AuthContext] Profile photo updated', { restored: photoURL === null });
+    } catch (error) {
+      handleError(error);
+      throw error;
+    }
+  }, [auth, handleError, setError, setUser]);
+
   return {
     clearError,
     signIn,
@@ -386,6 +417,7 @@ export function useAuthActions(params: UseAuthActionsParams) {
     signOut,
     resetPassword,
     updateUserProfile,
+    updateUserPhoto,
     completeProfile,
     sendVerificationEmail: sendVerificationEmailAction,
     verifyMfaCode,

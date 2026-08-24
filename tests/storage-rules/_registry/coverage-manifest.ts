@@ -64,7 +64,22 @@ export type StoragePathPattern =
    * μόνο server-side (Admin SDK) μέσα από την πύλη εξουσιοδότησης. Γράψιμο/σβήσιμο = curation,
    * μόνο super_admin.
    */
-  | 'server_only_read_superadmin_curation';
+  | 'server_only_read_superadmin_curation'
+  /**
+   * `authenticated_read_owner_write` (ADR-798 §16 — φωτογραφία προφίλ) — το
+   * **πρώτο** path όπου η ανάγνωση δεν εξαρτάται από εταιρεία ούτε από ιδιοκτησία:
+   * `allow read: if isAuthenticated()`. Δεν είναι χαλάρωση — είναι ο **αυστηρότερος
+   * εκφράσιμος** κανόνας: τα avatar εμφανίζονται σε λίστες/σχόλια/αναθέσεις όπου ο
+   * θεατής δεν είναι ο ιδιοκτήτης, και οι Storage rules **δεν μπορούν να διαβάσουν
+   * Firestore**, άρα «ίδια εταιρεία;» είναι **αδύνατο να ερωτηθεί** εδώ (το
+   * `companyId` δεν υπάρχει στο path). ⚠️ Παραμένει **αυστηρότερο από σήμερα**:
+   * το τρέχον `photoURL` δείχνει σε δημόσιο `lh3.googleusercontent.com`.
+   *
+   * Γράψιμο: **ΜΟΝΟ ο ίδιος** — ούτε super_admin, γιατί κανείς δεν βάζει
+   * φωτογραφία σε ξένο πρόσωπο. Σβήσιμο: ιδιοκτήτης **ή** super_admin, γιατί η
+   * αφαίρεση ακατάλληλης εικόνας είναι νόμιμη διαχειριστική πράξη.
+   */
+  | 'authenticated_read_owner_write';
 
 /** One (persona × operation) cell of a path's coverage matrix. */
 export interface StorageCoverageCell {
@@ -156,6 +171,42 @@ function companyScopedMatrix(): readonly StorageCoverageCell[] {
     ...allowAll('super_admin'),
     ...allowAll('same_tenant_user'),
     ...denyAll('cross_tenant_user', 'cross_tenant'),
+    ...denyAll('anonymous', 'missing_claim'),
+  ] as const;
+}
+
+// ---------------------------------------------------------------------------
+// Προσωπικό asset — ανάγνωση από κάθε συνδεδεμένο, γραφή μόνο από τον ίδιο
+// (ADR-798 §16)
+// ---------------------------------------------------------------------------
+
+/**
+ * Μήτρα για `authenticated_read_owner_write`.
+ *
+ * ⚠️ Η **ενδιαφέρουσα γραμμή είναι το `cross_tenant_user × read: allow`**, και
+ * γράφεται ρητά ώστε η συναλλαγή να είναι **ορατή σε μήτρα**, όχι κρυμμένη σε
+ * σχόλιο: ναι, συνδεδεμένος άνθρωπος άλλης εταιρείας μπορεί να διαβάσει το
+ * avatar — **αν ξέρει το uid** — και αυτό είναι το τίμημα του ότι οι Storage
+ * rules δεν βλέπουν Firestore. Αν κάποια μέρα το `companyId` μπει στο path ή
+ * στα claims με τρόπο που να απαντά «ίδια εταιρεία;», **αυτή η γραμμή είναι που
+ * πρέπει να γίνει `deny`** — και τότε το test θα το απαιτήσει.
+ */
+function personalAssetMatrix(): readonly StorageCoverageCell[] {
+  return [
+    // Ο ιδιοκτήτης: τα πάντα.
+    ...allowAll('same_tenant_user'),
+    // super_admin: διαβάζει και σβήνει, ΔΕΝ γράφει.
+    cell('super_admin',        'read',   'allow'),
+    cell('super_admin',        'write',  'deny',  'not_owner'),
+    cell('super_admin',        'delete', 'allow'),
+    // Κάθε άλλος συνδεδεμένος: διαβάζει, τίποτε άλλο.
+    cell('same_tenant_admin',  'read',   'allow'),
+    cell('same_tenant_admin',  'write',  'deny',  'not_owner'),
+    cell('same_tenant_admin',  'delete', 'deny',  'not_owner'),
+    cell('cross_tenant_user',  'read',   'allow'),
+    cell('cross_tenant_user',  'write',  'deny',  'not_owner'),
+    cell('cross_tenant_user',  'delete', 'deny',  'not_owner'),
+    // Ανώνυμος: τίποτα.
     ...denyAll('anonymous', 'missing_claim'),
   ] as const;
 }
@@ -429,6 +480,28 @@ export const STORAGE_RULES_COVERAGE: readonly StorageCoverageEntry[] = [
     rulesRange: [272, 296],
     testFile: 'tests/storage-rules/suites/dxf-external-references.storage.test.ts',
     matrix: companyScopedMatrix(),
+  },
+
+  // -------------------------------------------------------------------------
+  // ADR-798 §16 — Φωτογραφία προφίλ: /users/{userId}/{fileName}
+  //
+  // Το ΜΟΝΟ path αυτού του αρχείου που ΔΕΝ είναι ούτε εταιρικό ούτε
+  // ιδιοκτησιακό-στην-ανάγνωση. Ο λόγος είναι γραμμένος στο `storage.rules` και
+  // στο `storage-path-user.ts`: ο δείκτης (`photoURL`) ζει στο Firebase Auth και
+  // είναι ΚΑΘΟΛΙΚΟΣ, οπότε εταιρική εμβέλεια στα bytes θα έσπαγε το avatar σε
+  // κάθε δεύτερο χώρο.
+  // -------------------------------------------------------------------------
+  {
+    pathId: 'user_avatars',
+    pattern: 'authenticated_read_owner_write',
+    // ⚠️ ΜΕΤΡΗΜΕΝΟ 2026-08-24: το `rulesRange` **ΚΑΝΕΝΟΣ** από τα 11 entries δεν
+    // δείχνει πια σε γραμμή `match /` — έχουν αποκλίνει **όλα**, από παλιότερες
+    // εισαγωγές μπλοκ, και **καμία πύλη δεν το ρωτά** (το CHECK 3.19 ταιριάζει
+    // κατά `pathId`, όχι κατά γραμμή). Είναι «δεύτερη αλήθεια που σαπίζει
+    // σιωπηλά» — καταγράφεται εδώ ρητά. Αυτή η γραμμή είναι σωστή σήμερα.
+    rulesRange: [299, 305],
+    testFile: 'tests/storage-rules/suites/user-avatars.storage.test.ts',
+    matrix: personalAssetMatrix(),
   },
 ] as const;
 

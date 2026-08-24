@@ -15,11 +15,11 @@
 
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useEffect, useState } from 'react';
-import { Camera, Mail, User as UserIcon, Building2, Briefcase } from 'lucide-react';
+import { Mail, User as UserIcon, Building2, Briefcase } from 'lucide-react';
 import { EscoOccupationPicker } from '@/components/shared/EscoOccupationPicker';
 import type { DeclaredOccupation } from '@/types/professional-identity';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { ProfileAvatarField } from '@/components/account/avatar/ProfileAvatarField';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -33,7 +33,7 @@ import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 export function ProfilePageContent() {
-  const { user, updateUserProfile, declaredOccupation, updateDeclaredOccupation } = useAuth();
+  const { user, updateUserProfile, updateUserPhoto, declaredOccupation, updateDeclaredOccupation } = useAuth();
   const { t } = useTranslation(COMMON_NAMESPACES);
   const colors = useSemanticColors();
   const borders = useBorderTokens();
@@ -41,9 +41,31 @@ export function ProfilePageContent() {
   const iconSizes = useIconSizes();
   const typography = useTypography();
 
+  // 🔴 ADR-798 §15 — ΤΟ ΙΔΙΟ ΣΦΑΛΜΑ ΜΕ ΤΟ ΕΠΑΓΓΕΛΜΑ, ΣΕ ΔΙΠΛΑΝΟ ΠΕΔΙΟ.
+  //
+  // Το `useState(user?.givenName)` **παγώνει στην πρώτη απόδοση**, ενώ το προφίλ
+  // φτάνει από το `syncUserProfileToFirestore` **μετά** το `onAuthStateChanged`.
+  // Μετρημένο ζωντανά 2026-08-24: στην πρώτη φόρτωση της σελίδας τα δύο πεδία
+  // ήταν **κενά** ενώ ο άνθρωπος έχει όνομα (`Georgios Pagonis` ζωγραφιζόταν
+  // δίπλα τους, από το `user.displayName`). Είναι **race**, όχι σταθερό — γι᾽
+  // αυτό ξέφυγε: σε γρήγορη επαναφορά συνεδρίας τα πεδία γεμίζουν κανονικά.
+  //
+  // Η συνέπεια δεν είναι αισθητική: κενό πεδίο ονόματος **καλεί** τον άνθρωπο να
+  // ξαναγράψει, ή να πατήσει «Αποθήκευση» πάνω σε κενό. Το `applyProfileNames`
+  // μαθαίνει ήδη ότι *«η κενή φόρμα δεν είναι εντολή διαγραφής»* (§1), οπότε τα
+  // δεδομένα ήταν ασφαλή — **η οθόνη όμως έλεγε ψέματα**.
+  //
+  // ⚠️ **ΟΙ ΕΞΑΡΤΗΣΕΙΣ ΕΙΝΑΙ ΟΙ ΤΙΜΕΣ, ΠΟΤΕ ΤΟ ΑΝΤΙΚΕΙΜΕΝΟ `user`.** Η ταυτότητα
+  // του `user` αλλάζει σε κάθε ανανέωση συνεδρίας· ένα effect πάνω της θα
+  // **έσβηνε ό,τι πληκτρολογεί** ο άνθρωπος τη στιγμή που θα συνέβαινε η
+  // ανανέωση. Με πρωτογενείς τιμές, το effect ξανατρέχει **μόνο** όταν αλλάξει
+  // πραγματικά το αποθηκευμένο όνομα: στην πρώτη άφιξη, και μετά την αποθήκευση.
+  const storedGivenName = user?.givenName ?? '';
+  const storedFamilyName = user?.familyName ?? '';
+
   // Form state
-  const [givenName, setGivenName] = useState(user?.givenName || '');
-  const [familyName, setFamilyName] = useState(user?.familyName || '');
+  const [givenName, setGivenName] = useState(storedGivenName);
+  const [familyName, setFamilyName] = useState(storedFamilyName);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -66,6 +88,14 @@ export function ProfilePageContent() {
   useEffect(() => {
     if (declaredOccupation !== null) setOccupation(declaredOccupation);
   }, [declaredOccupation]);
+
+  // Η αδελφή του παραπάνω effect, για τα ονόματα (βλ. ADR-798 §15 πιο πάνω).
+  // Ίδιο δόγμα: μετά την αποθήκευση το context κρατά ό,τι **γράφτηκε πραγματικά**,
+  // οπότε η φόρμα δείχνει την αποθηκευμένη αλήθεια — ποτέ κάτι που δεν σώθηκε.
+  useEffect(() => {
+    setGivenName(storedGivenName);
+    setFamilyName(storedFamilyName);
+  }, [storedGivenName, storedFamilyName]);
 
   const handleSave = async () => {
     setIsLoading(true);
@@ -98,44 +128,23 @@ export function ProfilePageContent() {
       </CardHeader>
 
       <CardContent className={layout.flexColGap4}>
-        {/* Avatar Section */}
-        <section className={layout.flexCenterGap4}>
-          <figure className="relative">
-            <Avatar className="h-20 w-20">
-              {user?.photoURL ? (
-                <AvatarImage
-                  src={user.photoURL}
-                  alt={user.displayName || t('account.defaultUser')}
-                  referrerPolicy="no-referrer"
-                />
-              ) : null}
-              <AvatarFallback className={cn(colors.bg.muted, 'text-2xl')}>
-                <UserIcon className={iconSizes.lg} />
-              </AvatarFallback>
-            </Avatar>
-            <Button
-              variant="outline"
-              size="icon"
-              className={cn(
-                'absolute -bottom-1 -right-1',
-                'h-8 w-8 rounded-full',
-                colors.bg.primary
-              )}
-              aria-label={t('account.profile.changePhoto')}
-              disabled
-            >
-              <Camera className={iconSizes.xs} />
-            </Button>
-          </figure>
-          <div>
-            <p className={cn(typography.label.sm, colors.text.primary)}>
-              {user?.displayName || t('account.defaultUser')}
-            </p>
-            <p className={cn(typography.body.sm, colors.text.muted)}>
-              {t('account.profile.photoHint')}
-            </p>
-          </div>
-        </section>
+        {/*
+          🖼️ ADR-798 §16 — ΤΟ ΚΟΥΜΠΙ ΗΤΑΝ ΚΥΡΙΟΛΕΚΤΙΚΑ `disabled`.
+
+          Εδώ ζούσε avatar με κουμπί φωτογραφικής μηχανής **χωρίς κανέναν
+          handler**, και από κάτω του το `photoHint` έλεγε «Κάντε κλικ για αλλαγή
+          φωτογραφίας» — δηλαδή η οθόνη **υποσχόταν κάτι που δεν γινόταν**.
+
+          Η ροή (επιλογή → αποκωδικοποίηση → περικοπή → ανέβασμα → γραφή δείκτη)
+          ζει στο `ProfileAvatarField`: είναι δική της κατάσταση και δεν αφορά
+          καθόλου τη φόρμα ονομάτων/επαγγέλματος που ακολουθεί.
+        */}
+        <ProfileAvatarField
+          userId={user?.uid}
+          photoURL={user?.photoURL}
+          displayName={user?.displayName || t('account.defaultUser')}
+          updateUserPhoto={updateUserPhoto}
+        />
 
         {/* Form Fields */}
         <form className={layout.flexColGap4} onSubmit={(e) => { e.preventDefault(); handleSave(); }}>

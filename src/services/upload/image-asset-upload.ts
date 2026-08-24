@@ -130,6 +130,12 @@ export async function findImageAssetUrl(storagePath: string): Promise<string | n
 /**
  * Σβήνει το Storage object πίσω από ένα **download URL** (το modular `ref(storage, url)`
  * δέχεται `https://` URL του ίδιου bucket ⇒ κανένα μάντεμα κατάληξης). No-op σε κενό URL.
+ *
+ * ⚠️ **Δέχεται ΕΞΙΣΟΥ ένα storage path** (`users/{uid}/avatar.webp`): το ίδιο
+ * `ref(storage, x)` επιλύει path **και** URL. Γράφεται ρητά επειδή ο δεύτερος
+ * καταναλωτής (ADR-798 §16, φωτογραφία προφίλ) περνά **path** — και μια
+ * συμπεριφορά που δουλεύει κατά τύχη είναι μια συμπεριφορά που θα «καθαριστεί»
+ * από κάποιον που δεν ήξερε ότι κάποιος τη χρειάζεται.
  */
 export async function deleteImageAssetByUrl(url: string): Promise<void> {
   if (!url) return;

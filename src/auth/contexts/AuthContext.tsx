@@ -68,6 +68,12 @@ export interface AuthContextType {
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updateUserProfile: (givenName: string, familyName: string) => Promise<void>;
+  /**
+   * 🖼️ ADR-798 §16 — η φωτογραφία προφίλ. `null` = **επαναφορά στην εικόνα του
+   * παρόχου** (Google), ΟΧΙ «καμία εικόνα». Γράφει μόνο στο Firebase Auth —
+   * ποτέ στον λογαριασμό Google.
+   */
+  updateUserPhoto: (photoURL: string | null) => Promise<void>;
   completeProfile: (givenName: string, familyName: string) => Promise<void>;
   sendVerificationEmail: () => Promise<void>;
   mfaRequired: boolean;
@@ -284,6 +290,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     },
     resetPassword: actions.resetPassword,
     updateUserProfile: actions.updateUserProfile,
+    updateUserPhoto: actions.updateUserPhoto,
     completeProfile: actions.completeProfile,
     // ADR-798 Φάση 3 (Κ4) — ζει **εδώ** και όχι στο `useAuthActions`: εκείνο
     // γράφει σε Firebase Auth + localStorage και **δεν αγγίζει Firestore**
