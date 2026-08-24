@@ -37,7 +37,12 @@ export { emSizeForTextHeight, capHeightRatio, __resetCapHeightCache } from './te
 
 // ADR-557 Φ-attachment — metrics-accurate text advance SSoT (real glyph width in
 // world units), shared by the text-box geometry so grips/hover/hitTest ≡ drawn glyphs.
-export { measureTextAdvanceWorld, __resetTextAdvanceMeasureCtx } from './text-advance';
+export {
+  measureTextAdvanceWorld,
+  measureTextAdvanceVerdict,
+  __resetTextAdvanceMeasureCtx,
+} from './text-advance';
+export type { AdvanceTier, AdvanceStyleAxis, AdvanceVerdict } from './text-advance';
 export type { TextAdvanceStyle } from './text-advance';
 
 // ADR-557 Φ-attachment — glyph INK box (both axes): real font-metric baseline anchor +

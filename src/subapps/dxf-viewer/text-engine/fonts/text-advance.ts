@@ -45,6 +45,69 @@ const CHAR_WIDTH_MONOSPACE = TEXT_METRICS_RATIOS.CHAR_WIDTH_MONOSPACE;
 /** Reference px size for the tier-2 offscreen measure (advance scales linearly with size). */
 const CSS_MEASURE_REF_PX = 100;
 
+/**
+ * 🔴 ADR-799 — **ΠΟΙΟ ΟΡΓΑΝΟ ΑΠΑΝΤΗΣΕ, ΚΑΙ ΤΙΜΗΣΕ ΑΥΤΟ ΠΟΥ ΤΟΥ ΖΗΤΗΘΗΚΕ;**
+ *
+ * Η {@link measureTextAdvanceWorld} δέχεται `{ bold, italic, fontFamily }` και στο **tier 3**
+ * τα πετάει **σιωπηλά**: το {@link monospaceAdvance} δέχεται μόνο `(text, height)`. Επιστρέφει
+ * απόλυτα εύλογο αριθμό για ερώτηση που **δεν μπορεί** να απαντήσει — η ίδια κλάση με την
+ * `adaptColorToBackground` που επέστρεφε χρώμα ενώ *«κανείς δεν ρωτούσε αν πέτυχε»*
+ * (ADR-771 Φ.3). Η θεραπεία είναι η **ίδια** που εφηύρε ήδη αυτό το έργο, όχι δεύτερος
+ * μηχανισμός: **ετυμηγορία**.
+ *
+ * ## 🔴 ΤΡΕΙΣ ρητές καταστάσεις, ποτέ δύο
+ * Ένα `exact: boolean` θα ήταν σιωπηλή απόρριψη με άλλο όνομα. Οι τρεις **είναι** οι τρεις
+ * βαθμίδες, και η καθεμία λέει *με ποιο όργανο* μετρήθηκε:
+ *
+ * | κατάσταση | όργανο | το στυλ τιμήθηκε; |
+ * |---|---|---|
+ * | `glyph`   | περιγράμματα της **επιλυμένης όψης** (opentype) | ναι — **από την όψη** |
+ * | `css`     | `ctx.measureText` με **το ίδιο shorthand που ζωγραφίζει** ο ζωγράφος | ναι — **από το shorthand** |
+ * | `nominal` | μονοδιάστημη προσέγγιση | **όχι** — δες {@link AdvanceVerdict.dropped} |
+ *
+ * ## Γιατί `dropped` και όχι `styleBlind: boolean`
+ * Ένα boolean θα έκρυβε **ποιος** άξονας χάθηκε, και ο επόμενος θα το ξαναμετρούσε. Το
+ * `dropped` **ονομάζει** ό,τι ζητήθηκε και δεν τιμήθηκε — και είναι **παραγόμενο** από
+ * (αίτημα × βαθμίδα), ποτέ θυμητό: αν αλλάξει η ανάλυση αύριο, η ετυμηγορία ακολουθεί δωρεάν.
+ * Είναι η θέση της APCA που ήδη επικαλείται το `InkVerdict`: επιστρέφεις **τη μέτρηση**, όχι
+ * pass/fail, γιατί μια ετυμηγορία που κρύβει τη μέτρησή της αναγκάζει τον επόμενο να την
+ * ξανακάνει.
+ *
+ * ⚠️ **Η ΠΑΡΑΓΩΓΗ ΔΕΝ ΦΤΑΝΕΙ ΣΤΟ `nominal`** (μετρημένο, ADR-799 §3): κάθε καταναλωτής της
+ * διάταξης τρέχει σε browser, όπου το `document` υπάρχει πάντα ⇒ tier 2 στη χειρότερη· και οι
+ * δύο workers εισάγουν **μόνο τύπους**. Ο πληθυσμός του `nominal` είναι το **περιβάλλον των
+ * δοκιμών** — και εκεί ακριβώς κόστισε: στις 2026-08-24 το `"jsdom>canvas": "-"` εξαφάνισε το
+ * tier 2, **41** σουίτες άλλαξαν σιωπηλά βαθμίδα, και οι μόνες που το **είπαν** ήταν τρεις
+ * ισχυρισμοί που σύγκριναν έντονο με απλό και πήραν **ταυτόσημο** αριθμό.
+ */
+export type AdvanceTier = 'glyph' | 'css' | 'nominal';
+
+/** Άξονας στυλ που ζητήθηκε και **δεν** τιμήθηκε. Μη κενό **μόνο** στο `nominal`. */
+export type AdvanceStyleAxis = 'bold' | 'italic' | 'family';
+
+/** Η {@link measureTextAdvanceWorld} **με ετυμηγορία** — ίδιο σώμα, ίδιος αριθμός. */
+export type AdvanceVerdict =
+  | { readonly kind: 'glyph'; readonly world: number; readonly face: string }
+  | { readonly kind: 'css'; readonly world: number; readonly font: string }
+  | {
+      readonly kind: 'nominal';
+      readonly world: number;
+      readonly dropped: readonly AdvanceStyleAxis[];
+    };
+
+/**
+ * Out-parameter της **μίας** μηχανής — το πρότυπο `SkFont::measureText(…, SkRect* bounds)` του
+ * Skia. ⚠️ **Υπάρχει για να μην γίνουν ΔΥΟ σώματα**: μια δεύτερη υλοποίηση «ίδια, αλλά που
+ * επιστρέφει και τη βαθμίδα» είναι sibling clone (CHECK 3.28) και, χειρότερα, δύο σημεία που
+ * θα δώσουν διαφορετική απάντηση στην πρώτη ρύθμιση. Και ⚠️ **μηδέν δεσμεύσεις όταν λείπει**:
+ * η καυτή πόρτα δεν πληρώνει αντικείμενο ανά κλήση (ADR-040).
+ */
+interface TierProbe {
+  tier: AdvanceTier;
+  /** Όνομα όψης (`glyph`) ή το CSS shorthand (`css`). Κενό στο `nominal`. */
+  detail: string;
+}
+
 /** Style inputs that drive font resolution + the horizontal X-scale + character tracking. */
 export interface TextAdvanceStyle {
   readonly fontFamily?: string;
@@ -54,6 +117,15 @@ export interface TextAdvanceStyle {
   readonly widthFactor?: number;
   /** AutoCAD MTEXT `\T` character tracking — inter-glyph spacing factor (1 = normal). */
   readonly tracking?: number;
+}
+
+/**
+ * Ο AutoCAD X-scale, κανονικοποιημένος. ⚠️ **ΕΝΑ σώμα για τις ΔΥΟ πόρτες** — γραμμένο δύο
+ * φορές θα ήταν sibling clone (CHECK 3.28) και, χειρότερα, δύο σημεία που θα δώσουν
+ * διαφορετική απάντηση στην πρώτη ρύθμιση του κανόνα «τι σημαίνει άκυρος widthFactor».
+ */
+function normalizedWidthFactor(style?: TextAdvanceStyle): number {
+  return style?.widthFactor != null && style.widthFactor > 0 ? style.widthFactor : 1;
 }
 
 /** Monospace approximation — the no-font / no-DOM fallback (tier 3). `max(len,1)` never collapses. */
@@ -82,7 +154,12 @@ function cssMeasureContext(): CanvasRenderingContext2D | null {
 }
 
 /** The natural (widthFactor = 1) advance, in world units, via the 3-tier resolution. */
-function baseAdvanceWorld(text: string, height: number, style?: TextAdvanceStyle): number {
+function baseAdvanceWorld(
+  text: string,
+  height: number,
+  style?: TextAdvanceStyle,
+  probe?: TierProbe,
+): number {
   // Empty / missing content → a minimum (1-char) box so the geometry never degenerates.
   if (!text) return monospaceAdvance(text, height);
 
@@ -97,6 +174,10 @@ function baseAdvanceWorld(text: string, height: number, style?: TextAdvanceStyle
     // ADR-635 Φ C.22 — `height` is a DXF TEXT HEIGHT; the run is cached at GLYPH_REFERENCE_SIZE em
     // units, so it scales by the EM the renderer will actually draw at, not by the height itself.
     // `TextRenderer.paintText` converts with the SAME call ⇒ measured advance ≡ painted advance.
+    if (probe) {
+      probe.tier = 'glyph';
+      probe.detail = resolved.cacheName;
+    }
     return (run.metrics.width / GLYPH_REFERENCE_SIZE) * emSizeForTextHeight(height, resolved);
   }
 
@@ -121,7 +202,13 @@ function baseAdvanceWorld(text: string, height: number, style?: TextAdvanceStyle
     if (applySpacing) ls.letterSpacing = `${(tracking - 1) * CSS_MEASURE_REF_PX}px`;
     const px = ctx.measureText(text).width;
     if (applySpacing) ls.letterSpacing = prevLs ?? '0px';
-    if (Number.isFinite(px) && px > 0) return (px / CSS_MEASURE_REF_PX) * height;
+    if (Number.isFinite(px) && px > 0) {
+      if (probe) {
+        probe.tier = 'css';
+        probe.detail = ctx.font;
+      }
+      return (px / CSS_MEASURE_REF_PX) * height;
+    }
   }
 
   // Tier 3 — no font, no DOM: monospace approximation × tracking.
@@ -138,8 +225,42 @@ export function measureTextAdvanceWorld(
   height: number,
   style?: TextAdvanceStyle,
 ): number {
-  const widthFactor = style?.widthFactor != null && style.widthFactor > 0 ? style.widthFactor : 1;
+  const widthFactor = normalizedWidthFactor(style);
   return baseAdvanceWorld(text, height, style) * widthFactor;
+}
+
+/**
+ * Οι άξονες στυλ που **ζητήθηκαν** και τους οποίους η μονοδιάστημη προσέγγιση δεν βλέπει.
+ * ⚠️ **Παραγόμενο από το αίτημα, όχι θυμητό** — `monospaceAdvance(text, height)` δέχεται
+ * κυριολεκτικά δύο ορίσματα, οπότε ό,τι άλλο ζητήθηκε **έπεσε**.
+ */
+function droppedAxes(style?: TextAdvanceStyle): readonly AdvanceStyleAxis[] {
+  const out: AdvanceStyleAxis[] = [];
+  if (style?.bold) out.push('bold');
+  if (style?.italic) out.push('italic');
+  if (style?.fontFamily && style.fontFamily.trim()) out.push('family');
+  return out;
+}
+
+/**
+ * Η {@link measureTextAdvanceWorld} **με ετυμηγορία**: ίδιο σώμα, ίδιος αριθμός, συν *ποιο
+ * όργανο απάντησε*. Δες {@link AdvanceVerdict}.
+ *
+ * ⚠️ **Ο αριθμός βγαίνει από την ΙΔΙΑ κλήση που παράγει τη βαθμίδα** — ποτέ δεύτερος
+ * υπολογισμός «για να δούμε τι θα έβγαινε»: δύο περάσματα μπορούν να αποκλίνουν (και
+ * αποκλίνουν, μόλις μπει μνήμη ή αλλάξει η σειρά ανάλυσης).
+ */
+export function measureTextAdvanceVerdict(
+  text: string,
+  height: number,
+  style?: TextAdvanceStyle,
+): AdvanceVerdict {
+  const probe: TierProbe = { tier: 'nominal', detail: '' };
+  const widthFactor = normalizedWidthFactor(style);
+  const world = baseAdvanceWorld(text, height, style, probe) * widthFactor;
+  if (probe.tier === 'glyph') return { kind: 'glyph', world, face: probe.detail };
+  if (probe.tier === 'css') return { kind: 'css', world, font: probe.detail };
+  return { kind: 'nominal', world, dropped: droppedAxes(style) };
 }
 
 /** Test-only: reset the memoised measure context (so a jsdom canvas mock can be re-probed). */
