@@ -10,7 +10,6 @@ import {
   AppWindow,
   Calculator,
   FolderTree,
-  FileText,
   Construction,
 } from 'lucide-react';
 import { useAuth } from '@/auth';
@@ -106,13 +105,11 @@ function useToolsTiles(t: (key: string) => string): NavigationTile[] {
       href: '/files',
       colorVariant: 'blue',
     },
-    {
-      title: t('home.modules.legal.title'),
-      description: t('home.modules.legal.description'),
-      icon: FileText,
-      href: '/legal-documents',
-      colorVariant: 'purple',
-    },
+    // 🔴 «Legal» ΑΦΑΙΡΕΘΗΚΕ 2026-08-24 (Γ5, ADR-787 §5.3 ξ). Έδειχνε σε
+    // `/legal-documents` — ΗΔΗ τεκμηριωμένο νεκρό σύνδεσμο, με ρητή απόφαση
+    // Giorgio 2026-08-02 (`jobs-registry.ts` LEGAL_DOCUMENTS_STATUS) που το κρατά
+    // ΕΚΤΟΣ μητρώου/sidebar σκόπιμα. Αυτό το tile παρέκαμπτε την απόφαση,
+    // hardcoded, χωρίς να περνά από το μητρώο — ο έλεγχος τύπων του Γ5 το βρήκε.
     {
       title: t('home.modules.dxfViewer.title'),
       description: t('home.modules.dxfViewer.description'),
