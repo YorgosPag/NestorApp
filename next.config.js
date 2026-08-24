@@ -63,7 +63,11 @@ const nextConfig = {
   // "could not resolve @resvg/resvg-js-win32-x64-msvc into a module".
   // rimraf: added as direct dependency to suppress transitive resolution warnings
   // from Turbopack (previously unavailable in nested pnpm structure).
-  serverExternalPackages: ['@mapbox/node-pre-gyp', '@resvg/resvg-js', 'rimraf', '@napi-rs/canvas', 'pdfjs-dist'],
+  // ⚠️ Το '@mapbox/node-pre-gyp' αφαιρέθηκε 2026-08-25 (ADR-598 G2): έφυγε από το δέντρο μαζί με
+  // το node-canvas (19fbc2cc) — επαληθεύτηκε ότι ΔΕΝ υπάρχει στο node_modules. Μια εγγραφή εδώ
+  // για πακέτο που δεν υπάρχει είναι ακίνδυνη αλλά ψευδής: λέει «αυτό δεν το κάνουμε bundle»
+  // για κάτι που δεν υπάρχει να γίνει bundle.
+  serverExternalPackages: ['@resvg/resvg-js', 'rimraf', '@napi-rs/canvas', 'pdfjs-dist'],
 
   // [OK] NEXT.JS 15: Fix workspace root detection (multiple lockfiles)
   outputFileTracingRoot: __dirname,
