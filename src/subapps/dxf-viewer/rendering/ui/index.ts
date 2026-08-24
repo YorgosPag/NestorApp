@@ -51,7 +51,6 @@ export { DEFAULT_UI_CURSOR_SETTINGS } from './cursor/CursorTypes';
 // ADR-137: SnapRenderer + LegacySnapAdapter removed (dead). Live rendering = SnapIndicatorOverlay (SVG).
 // Result types unified onto ProSnapResult (snapping/extended-types.ts); only snap *settings* remain here.
 export type { SnapSettings } from './snap/SnapTypes';
-export { DEFAULT_SNAP_SETTINGS } from './snap/SnapTypes';
 
 // === GRID RENDERING ===
 export { GridRenderer } from './grid/GridRenderer';

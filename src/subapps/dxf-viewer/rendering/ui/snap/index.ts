@@ -9,7 +9,6 @@
 // Snap settings (the only remaining snap types here — result types live in snapping/extended-types.ts).
 export type { SnapSettings } from './SnapTypes';
 
-export { DEFAULT_SNAP_SETTINGS } from './SnapTypes';
 
 // 🏢 ADR-137: Snap Icon Geometry Centralization
 export {
