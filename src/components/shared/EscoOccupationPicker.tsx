@@ -67,7 +67,7 @@ export function EscoOccupationPicker({
       disabled={disabled}
       placeholder={placeholder ?? t('individual.placeholders.profession')}
       clearLabel={t('common.clear')}
-      selectedInputPadding="pr-16"
+      selectedInputPadding="pr-24"
       leftIcon={<Search className={cn("absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none", colors.text.muted)} />}
       badge={
         /*
@@ -92,6 +92,13 @@ export function EscoOccupationPicker({
 
           ⚠️ **ΜΗΝ το «λύσεις» αλλάζοντας το `--primary`** — απορρίφθηκε γραπτώς
           στο ADR-682 §5.5 και το επαναλαμβάνει το CLAUDE.md (CHECK 3.38).
+
+          🔑 **Το `selectedInputPadding` ΔΕΝΕΤΑΙ με αυτό το badge.** Μετρημένο
+          ζωντανά: το badge πιάνει `right-10` (40px) **+ 53px πλάτος = 93px** από
+          το δεξί χείλος, ενώ το `pr-16` (64px) ήταν **μικρότερο από το ίδιο το
+          badge** — δηλαδή σε στενή οθόνη το κείμενο περνούσε **από κάτω** του.
+          Έγινε `pr-24` (96px). Αν αλλάξεις γέμιση/μέγεθος του badge, **ξαναμέτρα**:
+          σε φαρδιά οθόνη η επικάλυψη είναι αόρατη και το test δεν τη ρωτά.
         */
         <Badge
           variant="info"
