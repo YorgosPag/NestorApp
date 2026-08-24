@@ -139,6 +139,12 @@ describe('Visual Testing Readiness', () => {
     });
   });
 
+  // ⚠️ Η ερώτηση είναι «**δηλώνεται**;», ΠΟΤΕ «σε ποιον κάδο;». Ο ισχυρισμός ζητούσε
+  // `devDependencies` και για τα πέντε· το `68b27b8a` μετακίνησε **σκόπιμα** το
+  // `@napi-rs/canvas` στα runtime `dependencies` (το χρειάζεται η παραγωγή) ⇒ ο έλεγχος
+  // κοκκίνιζε πάνω σε **σωστή απόφαση πολιτικής εξαρτήσεων**. Ένα test οπτικής παλινδρόμησης
+  // δεν είναι η αυθεντία για το πού δηλώνεται μια εξάρτηση — αυθεντία είναι το CHECK 3.65.
+  // Ο κάδος **τυπώνεται** ώστε η μετακίνηση να μένει ορατή αντί να γίνεται σιωπηλή.
   test('dependencies status check', () => {
     const packageJsonPath = path.join(process.cwd(), 'package.json');
     const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
@@ -152,9 +158,11 @@ describe('Visual Testing Readiness', () => {
     ];
 
     requiredDeps.forEach(dep => {
-      const isInDevDeps = packageJson.devDependencies?.[dep];
-      expect(isInDevDeps).toBeTruthy();
-      console.log(`✅ ${dep}: ${isInDevDeps}`);
+      const inDev = packageJson.devDependencies?.[dep];
+      const inProd = packageJson.dependencies?.[dep];
+      const declared = inDev ?? inProd;
+      expect(declared).toBeTruthy();
+      console.log(`✅ ${dep}: ${declared} (${inDev ? 'devDependencies' : 'dependencies'})`);
     });
   });
 
@@ -162,8 +170,12 @@ describe('Visual Testing Readiness', () => {
     const packageJsonPath = path.join(process.cwd(), 'package.json');
     const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
 
+    // ⚠️ ΤΟ `test:visual` ΛΕΙΠΕΙ ΕΠΙΤΗΔΕΣ — η επαναφορά του κοκκινίζει το CHECK 3.46.
+    // Έδειχνε σε `e2e/grid-visual-regression.spec.ts`, spec διαγραμμένο οριστικά στο
+    // `6a267614`· η ομάδα Γ του ADR-775 («κάθε `playwright test <φίλτρο>` δείχνει σε
+    // **υπαρκτό** spec») το αφαίρεσε στο `cb29ed75`. Ο ισχυρισμός έμεινε πίσω και απαιτούσε
+    // ό,τι μια πύλη είχε **σωστά** σβήσει: δύο όργανα με αντίθετη απαίτηση για το ίδιο script.
     const requiredScripts = [
-      'test:visual',
       'test:visual-metrics',
       'test:cross-browser',
       'test:enterprise'

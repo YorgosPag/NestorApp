@@ -113,12 +113,17 @@ export interface JobDefinition {
 
 /**
  * Ορατά σε κάθε δουλειά. Δεν είναι «αταξινόμητα» — είναι το **πλαίσιο**:
- *  • `/` `/projects` `/properties` `/files` `/settings` → §14.1 (1-4, 15)
+ *  • `/dashboard` `/projects` `/properties` `/files` `/settings` → §14.1 (1-4, 15)
+ *  • `/dashboard` **αντικατέστησε** το `/` (ADR-777 §8.13, `4cfe274e`): η αρχική του
+ *    συνδεδεμένου μετακόμισε και το `/` έγινε **δημόσια** οθόνη αναζήτησης. Το μενού
+ *    εκπέμπει `AUTH_ROUTES.home` και **ωμό `/` δεν εκπέμπει πουθενά** — άρα η παλιά
+ *    γραμμή ταξινομούσε διαδρομή που κανείς δεν ζωγραφίζει, ενώ η ζωντανή έμενε
+ *    αταξινόμητη και σωζόταν **μόνο** από το φίλτρο θορύβου του Ε14.ζ.
  *  • `/projects` ειδικά: είναι ο **άξονας 2** (Ε4.η′), όχι περιεχόμενο δουλειάς
  *  • `/obligations` → βλ. LEGAL_DOCUMENTS_STATUS παρακάτω
  */
 export const COMMON_SIDEBAR_ROUTES: readonly string[] = [
-  '/',
+  '/dashboard',
   '/projects',
   '/properties',
   '/files',
