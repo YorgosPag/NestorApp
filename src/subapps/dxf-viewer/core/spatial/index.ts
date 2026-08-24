@@ -72,34 +72,8 @@ export { resolveGridSize, MIN_GRID_SIDE, MAX_GRID_SIDE } from './grid-sizing';
  */
 export { PointHashGrid, NO_POINT } from './PointHashGrid';
 
-// ========================================
-// TYPE GUARDS
-// ========================================
-
-/**
- * Type guards για development
- * 🏢 ENTERPRISE: Type-safe guards with unknown instead of any
- */
-export const SpatialTypeGuards = {
-  isValidBounds: (bounds: unknown): bounds is SpatialBounds => {
-    if (!bounds || typeof bounds !== 'object') return false;
-    const b = bounds as Record<string, unknown>;
-    return (
-      typeof b.minX === 'number' &&
-      typeof b.minY === 'number' &&
-      typeof b.maxX === 'number' &&
-      typeof b.maxY === 'number' &&
-      b.minX <= b.maxX &&
-      b.minY <= b.maxY
-    );
-  },
-
-  isValidItem: (item: unknown): item is SpatialItem => {
-    if (!item || typeof item !== 'object') return false;
-    const i = item as Record<string, unknown>;
-    return (
-      typeof i.id === 'string' &&
-      SpatialTypeGuards.isValidBounds(i.bounds)
-    );
-  }
-};
+// ADR-700 §4 (2026-08-24): SpatialTypeGuards ΔΙΑΓΡΑΦΗΚΕ — μηδέν καταναλωτές (μόνο
+// αυτο-αναφορά isValidItem→isValidBounds). Το ΙΔΙΟ το barrel παραμένει: τα re-exports
+// παραπάνω έχουν 40+ πραγματικούς καταναλωτές (attribution πάει στο υποκείμενο module,
+// π.χ. SpatialIndexFactory.ts — γι' αυτό το CHECK 3.30 έβλεπε το barrel «dead file»: το
+// ΜΟΝΟ τοπικό του export ήταν αυτό το νεκρό αντικείμενο).
