@@ -50,6 +50,7 @@ import type {
 } from '@/types/contacts/contracts';
 import type { ContactRelationship } from '@/types/contacts/relationships';
 import type { RelationshipType } from '@/types/contacts/relationships/core/relationship-types';
+import type { SignatoryFieldSet } from '@/subapps/procurement/types/signatory-fields';
 
 const logger = createModuleLogger('COMMIT_SIGNATORY');
 
@@ -57,19 +58,7 @@ const logger = createModuleLogger('COMMIT_SIGNATORY');
 // PUBLIC TYPES
 // ============================================================================
 
-export interface CommitSignatoryFields {
-  firstName: string;
-  lastName: string;
-  role: string | null;
-  profession: string | null;
-  /** ESCO occupation URI (ADR-034). Null when free-text. */
-  escoUri: string | null;
-  escoLabel: string | null;
-  iscoCode: string | null;
-  mobile: string | null;
-  email: string | null;
-  vatNumber: string | null;
-}
+export type CommitSignatoryFields = SignatoryFieldSet;
 
 export type CommitRelationshipTypeInput =
   | { kind: 'static'; type: RelationshipType }

@@ -183,7 +183,7 @@ export interface ContactFormData {
   position: string;
   workAddress: string;
   workWebsite: string;
-  // 🇪🇺 ESCO Professional Classification (ADR-034)
+  // 🇪🇺 ESCO Professional Classification (ADR-132)
   escoUri: string;
   escoLabel: string;
   iscoCode: string;
@@ -435,7 +435,7 @@ export const initialFormData: ContactFormData = {
   position: '',
   workAddress: '',
   workWebsite: '',
-  // 🇪🇺 ESCO Professional Classification (ADR-034)
+  // 🇪🇺 ESCO Professional Classification (ADR-132)
   escoUri: '',
   escoLabel: '',
   iscoCode: '',

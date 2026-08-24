@@ -141,7 +141,7 @@ export function mapIndividualContactToFormData(contact: Contact): ContactFormDat
     position: getSafeFieldValue(individualContact, 'position'),
     workAddress: getSafeFieldValue(individualContact, 'workAddress'),
     workWebsite: getSafeFieldValue(individualContact, 'workWebsite'),
-    // 🇪🇺 ESCO Professional Classification (ADR-034)
+    // 🇪🇺 ESCO Professional Classification (ADR-132)
     escoUri: getSafeFieldValue(individualContact, 'escoUri'),
     escoLabel: getSafeFieldValue(individualContact, 'escoLabel'),
     iscoCode: getSafeFieldValue(individualContact, 'iscoCode'),

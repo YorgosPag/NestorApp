@@ -6,22 +6,9 @@
  */
 
 import type { RelationshipType } from '@/types/contacts/relationships/core/relationship-types';
+import type { SignatoryFieldSet } from '@/subapps/procurement/types/signatory-fields';
 
-export interface SignatoryFields {
-  firstName: string;
-  lastName: string;
-  role: string | null;
-  profession: string | null;
-  /** ESCO occupation URI (set when picked from autocomplete, ADR-034) */
-  escoUri: string | null;
-  /** Cached ESCO label */
-  escoLabel: string | null;
-  /** ISCO-08 4-digit code */
-  iscoCode: string | null;
-  mobile: string | null;
-  email: string | null;
-  vatNumber: string | null;
-}
+export type SignatoryFields = SignatoryFieldSet;
 
 export type SignatoryFieldKey = keyof SignatoryFields;
 

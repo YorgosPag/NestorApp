@@ -3,7 +3,7 @@
 
 /**
  * ============================================================================
- * ESCO Occupation Picker (ADR-034 · ADR-601)
+ * ESCO Occupation Picker (ADR-132 · ADR-601)
  * ============================================================================
  *
  * Autocomplete for selecting ESCO-standardized occupations (bilingual EL/EN +

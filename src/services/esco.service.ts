@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- * ESCO Professional Classification Service (ADR-034)
+ * ESCO Professional Classification Service (ADR-132)
  * ============================================================================
  *
  * Client-side service for searching and retrieving ESCO occupations
@@ -161,6 +161,23 @@ function queryToTokens(query: string): string[] {
 
 export class EscoService {
   /**
+   * Firestore document → domain shape. Κεντρικοποιήθηκε (N.0.2, CHECK 3.28):
+   * η ίδια χαρτογράφηση ζούσε τρεις φορές (search / getByUri / getByIscoGroup).
+   */
+  private static mapOccupation(data: EscoOccupationDocument): EscoOccupation {
+    return {
+      uri: data.uri,
+      iscoCode: data.iscoCode,
+      iscoGroup: data.iscoGroup,
+      preferredLabel: data.preferredLabel,
+      alternativeLabels: data.alternativeLabels
+        ? { el: data.alternativeLabels.el ?? [], en: data.alternativeLabels.en ?? [] }
+        : undefined,
+      description: data.description,
+    };
+  }
+
+  /**
    * Search ESCO occupations by text query.
    *
    * Uses Firestore `array-contains` on pre-computed search tokens
@@ -281,15 +298,7 @@ export class EscoService {
           }
         }
 
-        const occupation: EscoOccupation = {
-          uri: data.uri,
-          iscoCode: data.iscoCode,
-          iscoGroup: data.iscoGroup,
-          preferredLabel: data.preferredLabel,
-          alternativeLabels: data.alternativeLabels
-            ? { el: data.alternativeLabels.el ?? [], en: data.alternativeLabels.en ?? [] }
-            : undefined,
-        };
+        const occupation = EscoService.mapOccupation(data);
 
         results.push({ occupation, score, matchedField });
       });
@@ -347,16 +356,7 @@ export class EscoService {
       if (!docSnap.exists()) return null;
 
       const data = docSnap.data() as EscoOccupationDocument;
-      return {
-        uri: data.uri,
-        iscoCode: data.iscoCode,
-        iscoGroup: data.iscoGroup,
-        preferredLabel: data.preferredLabel,
-        alternativeLabels: data.alternativeLabels
-          ? { el: data.alternativeLabels.el ?? [], en: data.alternativeLabels.en ?? [] }
-          : undefined,
-        description: data.description,
-      };
+      return EscoService.mapOccupation(data);
     } catch (error) {
       logger.error('Get by URI error', { error });
       return null;
@@ -391,15 +391,7 @@ export class EscoService {
 
       snapshot.forEach((docSnap) => {
         const data = docSnap.data() as EscoOccupationDocument;
-        occupations.push({
-          uri: data.uri,
-          iscoCode: data.iscoCode,
-          iscoGroup: data.iscoGroup,
-          preferredLabel: data.preferredLabel,
-          alternativeLabels: data.alternativeLabels
-            ? { el: data.alternativeLabels.el ?? [], en: data.alternativeLabels.en ?? [] }
-            : undefined,
-        });
+        occupations.push(EscoService.mapOccupation(data));
       });
 
       return occupations;

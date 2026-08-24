@@ -15,7 +15,7 @@
  * - Free text allowed (new KAD codes may exist)
  *
  * Architecture:
- * - Follows same pattern as EscoOccupationPicker (ADR-034)
+ * - Follows same pattern as EscoOccupationPicker (ADR-132)
  * - Reuses SearchableCombobox (ADR-ACC-013)
  * - Integrated via custom renderer in UnifiedContactTabbedSection
  *
