@@ -20,6 +20,7 @@
 import { tableTextFace, tableTextFont, tableCellFont } from '../table-text-font';
 import {
   installStubFont,
+  installStubFontPair,
   stubEmSize,
 } from '../../../text-engine/fonts/__tests__/_stub-font';
 
@@ -110,11 +111,10 @@ describe('🔴 Γ — το CSS ζητά το face που ΖΩΓΡΑΦΙΖΕΙ, �
     // έντονο face **υπάρχει**, οπότε ο καμβάς ζωγραφίζει τα δικά του περιγράμματα· ένα `bold`
     // στο CSS θα ζητούσε από τον browser να τα παχύνει **ξανά** — γράμματα πιο χοντρά από του
     // καμβά, στην ίδια ακριβώς θέση.
-    let restore: Array<() => void> = [];
-    beforeAll(() => {
-      restore = [installStubFont(0.6, 'Liberation Sans'), installStubFont(0.6, 'Liberation Sans Bold')];
-    });
-    afterAll(() => restore.forEach((r) => r()));
+    // Ίσοι λόγοι επίτηδες: εδώ κρίνεται **ποια όψη επιλύθηκε**, όχι πόσο πλατιά μετρά.
+    let restore: () => void = () => {};
+    beforeAll(() => { restore = installStubFontPair(0.6, 0.6); });
+    afterAll(() => restore());
 
     it('το έντονο λύνεται στο δικό του face και το CSS ζητά κανονικό βάρος', () => {
       const face = tableTextFace(true, false, 'verdana');

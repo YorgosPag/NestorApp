@@ -31,6 +31,8 @@ import { BUILTIN_TABLE_STYLES, BUILTIN_TABLE_STYLE_IDS } from '../table-style-pr
 import type { TableCellStyle, TableStyle } from '../table-style';
 import type { TableTextMeasurer } from '../table-layout-types';
 import type { TableCell, TableCellTextRun, TableColumn, TableRow } from '../../../types/table';
+import { installStubFontPair } from '../../../text-engine/fonts/__tests__/_stub-font';
+import { measureTextAdvanceVerdict } from '../../../text-engine/fonts/text-advance';
 
 // ── Εργαλεία ────────────────────────────────────────────────────────────────
 
@@ -330,6 +332,19 @@ describe('η διάταξη κουβαλά τα τμήματα — καμία έ
     align: 'left',
   };
   const row: TableRow = { id: 'r1', rowClass: 'data' };
+
+  // 🔴 ADR-799 — **ΤΟ ΟΡΓΑΝΟ ΠΡΕΠΕΙ ΝΑ ΒΛΕΠΕΙ ΤΟ ΣΤΥΛ, ΑΛΛΙΩΣ Η ΑΓΚΥΡΑ ΔΕΝ ΜΕΤΡΑ ΤΙΠΟΤΑ.**
+  // Αυτό το describe είναι το μόνο που ΔΕΝ ενίεται μετρητή: ρωτά τον πραγματικό, μέσω
+  // `layoutTable`. Μέχρι τις 24/08 έπαιρνε tier 2 (`ctx.measureText`) από το native canvas του
+  // jsdom· το `19fbc2cc` το αφαίρεσε (αλυσίδα CVE `tar`, ADR-598 G2) και **οι τρεις ισχυρισμοί
+  // παρακάτω κοκκίνισαν σωστά**: στο tier 3 η μονοδιάστημη προσέγγιση δέχεται `(text, height)`
+  // και **τίποτε άλλο**, άρα έντονο και απλό έδιναν ΤΑΥΤΟΣΗΜΟ αριθμό.
+  // Το ζεύγος όψεων επαναφέρει tier 1 **και για τα δύο σκέλη** — ντετερμινιστικά, χωρίς native
+  // εξάρτηση και χωρίς μετρικές που αλλάζουν ανά λειτουργικό (μοντέλο `FlutterTest` / `Ahem`).
+  let restoreFaces: () => void = () => {};
+  beforeAll(() => { restoreFaces = installStubFontPair(0.6, 0.75); });
+  afterAll(() => restoreFaces());
+
 
   const runFor = (cell: TableCell) =>
     layoutTable(
