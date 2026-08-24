@@ -144,6 +144,29 @@ describe('users.rules — uid-ownership + companyAdmin write (usersMatrix)', () 
       }));
     });
 
+    it('Κ10 — αλλάζει ΜΟΝΟ το companyId (σωστά) ενώ το globalRole αποκλίνει → ALLOW', async () => {
+      // 🔴 ΤΟ ΣΕΝΑΡΙΟ ΠΟΥ ΕΣΠΑΣΕ ΤΗΝ ΠΡΩΤΗ ΓΡΑΦΗ: το έγγραφο κουβαλά
+      // `globalRole` που ΔΕΝ καθρεφτίστηκε ποτέ στα claims (παλαιό έγγραφο, ή
+      // το `'admin'` του `ensureDevUserProfile`). Ο πελάτης γράφει το ΝΕΟ
+      // companyId από το claim και **κρατά** το παλιό globalRole
+      // (`auth-context-profile.ts:62-64`). Με έλεγχο «και τα δύο μαζί» ο
+      // άνθρωπος έμενε κλειδωμένος έξω από το ίδιο του το προφίλ, εξαιτίας
+      // πεδίου που **δεν άλλαξε καν**.
+      await seedUser(env, ownUid, {
+        overrides: { companyId: 'company-παλιά', globalRole: 'admin' },
+      });
+      await expectAllow(ownDoc().update({
+        companyId: PERSONA_CLAIMS.same_tenant_user.companyId,
+      }));
+    });
+
+    it('Κ10β — αλλάζει ΜΟΝΟ το companyId σε τιμή ≠ claim → DENY (παρονομαστής του Κ10)', async () => {
+      await seedUser(env, ownUid, {
+        overrides: { companyId: 'company-παλιά', globalRole: 'admin' },
+      });
+      await expectDeny(ownDoc().update({ companyId: 'company-θύμα' }));
+    });
+
     it('Κ6 — τα ακίνδυνα πεδία του προφίλ → ALLOW', async () => {
       await seedUser(env, ownUid);
       await expectAllow(ownDoc().update({

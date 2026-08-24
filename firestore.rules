@@ -1879,6 +1879,32 @@ service cloud.firestore {
       }
 
       /**
+       * 🔴 ΑΝΑ ΠΕΔΙΟ, ΠΟΤΕ ΣΥΝΟΛΙΚΑ — *πεδίο που δεν άλλαξε δεν είναι ισχυρισμός.*
+       *
+       * Η πρώτη γραφή απαιτούσε να ταιριάζουν **και τα δύο** προνομιακά πεδία σε
+       * κάθε ενημέρωση που άγγιζε **έστω ένα**. Βρέθηκε ζωντανό σενάριο όπου
+       * αυτό αρνείται **νόμιμη** εγγραφή:
+       *
+       *   έγγραφο με `globalRole` που **δεν καθρεφτίστηκε ποτέ** στα claims
+       *   (παλαιό έγγραφο, ή το `'admin'` που γράφει το `ensureDevUserProfile`)
+       *   → ο χρήστης αλλάζει εταιρεία → ο πελάτης γράφει το **νέο** `companyId`
+       *   από το claim αλλά **κρατά** το παλιό `globalRole`
+       *   (`auth-context-profile.ts:62-64`: `existingData.globalRole ?? null`
+       *   όταν λείπει το claim) ⇒ ο έλεγχος έπεφτε πάνω σε πεδίο που **δεν
+       *   άλλαξε καν**, και ο άνθρωπος έμενε κλειδωμένος έξω από το προφίλ του.
+       *
+       * ⚠️ Είναι **αυστηρότερο εκεί που πρέπει και μόνο εκεί**: κάθε προνομιακό
+       * πεδίο που **όντως άλλαξε** οφείλει να ισούται με το claim· κάθε άλλο δεν
+       * κρίνεται, γιατί κανείς δεν το διεκδίκησε. Άγκυρα: `Κ10`.
+       */
+      function changedPrivilegedFieldsMirrorClaims(changed, data) {
+        return (!changed.hasAny(['companyId'])
+                || data.get('companyId', null) == request.auth.token.get('companyId', null))
+               && (!changed.hasAny(['globalRole'])
+                   || data.get('globalRole', null) == request.auth.token.get('globalRole', null));
+      }
+
+      /**
        * Πεδία που ο πελάτης **δεν γράφει ΠΟΤΕ** — τα γράφει μόνο ο διακομιστής
        * (Admin SDK, που παρακάμπτει αυτούς τους κανόνες).
        *
@@ -1900,10 +1926,7 @@ service cloud.firestore {
       function isHonestSelfUpdate() {
         let changed = request.resource.data.diff(resource.data).affectedKeys();
         return !changed.hasAny(serverOwnedUserFields())
-               && (
-                    !changed.hasAny(['companyId', 'globalRole'])
-                    || mirrorsOwnClaims(request.resource.data)
-                  );
+               && changedPrivilegedFieldsMirrorClaims(changed, request.resource.data);
       }
 
       /**
