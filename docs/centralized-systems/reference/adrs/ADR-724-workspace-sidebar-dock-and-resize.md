@@ -86,7 +86,7 @@ MAX_WIDTH: PANEL_LAYOUT.LAYOUT_DIMENSIONS.SIDEBAR_MAX_WIDTH  // max-w-[384px]
 
 | Αρχείο | Κατάσταση | Απόδειξη |
 |---|---|---|
-| `layout/CadDock.tsx` | **ΝΕΚΡΟ + ΣΠΑΣΜΕΝΟ** | κάνει `import { DockviewReact } from 'dockview'` — το **`dockview` ΔΕΝ είναι στο `package.json` και ΔΕΝ είναι εγκατεστημένο**. Δεν το εισάγει κανείς. Περνά απαρατήρητο επειδή το subapp εξαιρείται από το root `tsconfig` (ADR-663/ADR-719) |
+| `layout/CadDock.tsx` | **ΝΕΚΡΟ + ΣΠΑΣΜΕΝΟ** | κάνει `import { DockviewReact } from 'dockview'` — το **`dockview` δεν το εισάγει κανείς άλλος**. ⚠️ **ΔΙΟΡΘΩΣΗ 2026-08-25 (ADR-800)**: η αρχική διατύπωση «ΔΕΝ είναι στο `package.json` και ΔΕΝ είναι εγκατεστημένο» ήταν **λάθος** — ήταν στο `src/subapps/dxf-viewer/package.json` **από το initial commit** (`83729ea4`) και εγκατεστημένο στο **δικό του** `node_modules` (1.17.2). Αληθές ήταν μόνο ότι δεν υπήρχε στο **root** `node_modules` — και ακριβώς αυτό το τυφλό σημείο (δεύτερο manifest, δεύτερο `node_modules`) γέννησε το CHECK 3.65. Περνά απαρατήρητο επειδή το subapp εξαιρείται από το root `tsconfig` (ADR-663/ADR-719) |
 | `systems/toolbars/ToolbarsContext.types.ts:33` | **ΝΕΚΡΟ** | έχει `docked: boolean` + `isToolbarDocked()`, αλλά `grep -rn "ToolbarsProvider" src` → **0 αποτελέσματα** |
 
 > **Κανόνας μνήμης**: «feature σε unmounted container = ΝΕΚΡΟ». Και τα δύο είναι *σχόλια που
@@ -625,7 +625,7 @@ transitions (**και τα δύο NOT IMPLEMENTED**).
   `inactive` / `hover` / `active` / `disabled` και `data-group`. Δηλαδή οι 3 υπάρχουσες σελίδες
   **δεν έχουν οπτική ένδειξη ενεργού συρσίματος** και το νομίζουν. Το `WorkspaceSplitLayout`
   παρακάμπτει με σωστούς v4 selectors στο δικό του className.
-- `layout/CadDock.tsx` παραμένει **νεκρό + σπασμένο** (`import 'dockview'`, μη εγκατεστημένο) —
+- `layout/CadDock.tsx` παραμένει **νεκρό + σπασμένο** (`import 'dockview'` — ⚠️ **ΔΙΟΡΘΩΣΗ 2026-08-25**: ήταν εγκατεστημένο, στο `node_modules` του **subapp**· δες ADR-800) —
   §2.3. Προτείνεται διαγραφή σε **ξεχωριστό** commit.
 
 ---

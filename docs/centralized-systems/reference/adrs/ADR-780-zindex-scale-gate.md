@@ -563,7 +563,7 @@ token** που λέει *«above EVERYTHING»*, όπως και το `DebugOverl
 |---|---|---|
 | 2147483647 | `playwright-core` | **devDependency** — ποτέ σε bundle browser |
 | **100000** | `@sentry-internal/feedback` | φορτώνεται **μόνο** με ρητό `feedbackIntegration()` — μετρημένο ότι **δεν** δηλώνεται |
-| 1000 | `dockview` · `dockview-core` | **ορφανά στο store**: ούτε στο `package.json`, ούτε τα εισάγει κανείς |
+| 1000 | `dockview` · `dockview-core` | **ορφανά**: δεν τα εισάγει κανείς. ⚠️ **ΔΙΟΡΘΩΣΗ 2026-08-25 (ADR-800)**: το «ούτε στο `package.json`» ήταν **λάθος** — ήταν στο `src/subapps/dxf-viewer/package.json` από το initial commit. Η απογραφή κοίταζε **μόνο** το manifest της ρίζας· το δεύτερο manifest ήταν το τυφλό σημείο που έκλεισε το CHECK 3.65. Το `dockview` **αφαιρέθηκε** στις 2026-08-25 (νεκρό: ο μόνος καταναλωτής `CadDock.tsx` διαγράφηκε στο `1414c63f`) |
 
 ⇒ **0 από τα 4 φτάνουν σήμερα**, άρα το κενό **μένει γραμμένο** αντί να λυθεί με κόστος 125s
 ανά έλεγχο. 🔴 **Το σημαντικό είναι το ΠΩΣ ΘΑ ΕΠΑΥΕ**: το `@sentry/nextjs` **είναι** runtime

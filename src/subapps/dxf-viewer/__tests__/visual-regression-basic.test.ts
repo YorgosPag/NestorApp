@@ -12,7 +12,13 @@ let pixelmatch: PixelmatchFn | null = null;
 let PNG: PNGCombined | null = null;
 
 try {
-  pixelmatch = require('pixelmatch') as PixelmatchFn;
+  // ⚠️ Το `pixelmatch@7` είναι ESM με default export: το σκέτο `require()` επιστρέφει
+  // `{ default: fn }`. Ίδια interop με το `scripts/lib/golden-triage/compare.js`, που την
+  // τεκμηριώνει και ονομάζει ρητά αυτό εδώ το αρχείο — **μία** απάντηση, όχι δεύτερη.
+  // Μέχρι το ADR-800 το subapp δήλωνε δικό του `pixelmatch@5` (CJS) και η διαφορά ήταν
+  // αόρατη· με ένα σημείο δήλωσης, εδώ φτάνει πλέον η **ίδια** έκδοση με τη ρίζα.
+  const pixelmatchModule = require('pixelmatch');
+  pixelmatch = (pixelmatchModule.default ?? pixelmatchModule) as PixelmatchFn;
   PNG = require('pngjs').PNG as PNGCombined;
 } catch (error) {
   console.warn('⚠️ Visual testing dependencies not installed yet');
