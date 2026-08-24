@@ -71,13 +71,19 @@
  */
 
 import type { JobId } from './jobs-registry';
+import { resolveIscoPrefix } from './isco-prefix';
 
 // =============================================================================
 // ΤΑΥΤΟΤΗΤΑ
 // =============================================================================
 
-/** Μέγιστο μήκος κωδικού ISCO-08 (μοναδιαία ομάδα). **Δεδομένο του προτύπου.** */
-export const ISCO_UNIT_GROUP_LENGTH = 4;
+/**
+ * 🔁 **Επανεξαγωγή, όχι δεύτερη δήλωση.** Το μήκος της μοναδιαίας ομάδας είναι
+ * γνώρισμα του **ISCO-08**, όχι αυτού του πίνακα — ζει στο `isco-prefix.ts` μαζί
+ * με τον μηχανισμό που το χρησιμοποιεί. Η επανεξαγωγή κρατά το δημόσιο συμβόλαιο
+ * αυτού του module ακέραιο για τους υπάρχοντες καταναλωτές.
+ */
+export { ISCO_UNIT_GROUP_LENGTH } from './isco-prefix';
 
 /**
  * Μία δήλωση συγγένειας. Το `why` είναι **υποχρεωτικό** και δεν εμφανίζεται
@@ -258,38 +264,19 @@ export const ISCO_JOB_AFFINITY: Readonly<Record<string, IscoAffinityEntry>> = {
 // =============================================================================
 
 /**
- * Μόνο ψηφία, 1 έως 4. Οτιδήποτε άλλο είναι `malformed`.
- *
- * 🔑 Είναι **και ο φρουρός της αναζήτησης**: επειδή ο κωδικός αποδεδειγμένα
- * αποτελείται μόνο από ψηφία, κανένα πρόθεμα δεν μπορεί ποτέ να είναι
- * `constructor`/`toString` — η αναζήτηση στο αντικείμενο είναι δομικά ασφαλής.
- */
-const ISCO_CODE_SHAPE = /^\d{1,4}$/;
-
-/**
  * Η ετυμηγορία για έναν κωδικό ISCO — **ανάλυση μεγαλύτερου προθέματος**.
  *
- * Ο βρόχος τρέχει το πολύ `ISCO_UNIT_GROUP_LENGTH` φορές και ρωτά **δηλωμένα
- * κλειδιά**, ποτέ «όλα τα πιθανά μήκη»: γι' αυτό δεν χρειάζεται ούτε πίνακας
- * γονέων ούτε δεύτερη δομή. Η ιεραρχία **είναι** η συμβολοσειρά.
+ * ⚠️ Ο **μηχανισμός** ζει στο `isco-prefix.ts` και είναι κοινός με το
+ * `isco-ifc-role.ts`: γραμμένος δύο φορές θα ήταν **δύο ορισμοί του «τι είναι
+ * έγκυρος κωδικός ISCO»**, δηλαδή δύο απαντήσεις στο `malformed` (ADR-749).
+ * Εδώ μένει **μόνο η απόφαση** — ο πίνακας — και η προβολή της ετυμηγορίας του
+ * μηχανισμού στο λεξιλόγιο αυτού του τομέα (`entry` → `job`).
  */
 export function judgeIscoAffinity(iscoCode: string | null | undefined): IscoAffinityVerdict {
-  if (iscoCode === null || iscoCode === undefined || iscoCode.length === 0) {
-    return { kind: 'absent' };
-  }
-  if (!ISCO_CODE_SHAPE.test(iscoCode)) {
-    return { kind: 'malformed', value: iscoCode };
-  }
-
-  for (let length = iscoCode.length; length >= 1; length -= 1) {
-    const prefix = iscoCode.slice(0, length);
-    const entry: IscoAffinityEntry | undefined = ISCO_JOB_AFFINITY[prefix];
-    if (entry !== undefined) {
-      return { kind: 'declared', job: entry.job, prefix };
-    }
-  }
-
-  return { kind: 'undeclared', code: iscoCode };
+  const verdict = resolveIscoPrefix(ISCO_JOB_AFFINITY, iscoCode);
+  return verdict.kind === 'declared'
+    ? { kind: 'declared', job: verdict.entry.job, prefix: verdict.prefix }
+    : verdict;
 }
 
 /**

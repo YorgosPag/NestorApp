@@ -55,7 +55,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "81dc53e74204b5e2e2c56d60abe2caf55ffa003bc0e161c4cbbd917b956190f1",
+  "inputsSha256": "3d64c8858b42b99a2a8f73b9e35766ab9092399a1cb33239d375120645882c12",
   "languages": [
     "el"
   ],
@@ -225,7 +225,8 @@
     "src/config/firestore-collections.ts": "591aa47af654250c13eaf3c790e79550d4af840fd9c3370f39f98ae58b1bdba0",
     "src/config/geographic-config.ts": "42453bbb4e8870560540403f219cb9b26f6308519f6b28c9cc8ef4a8de59deee",
     "src/config/individual-config.ts": "8a2a4f81ae215b752ff71e21d929d09a893d3d14335e7faa00c99e6dab0367bc",
-    "src/config/isco-job-affinity.ts": "7970f5d56f79e03cbff88d83278eddf1a36a2cfa3a43250725d3c306e4ee3dc7",
+    "src/config/isco-job-affinity.ts": "66d4c9281d6a1bce8fde79cf8ea070ee82de2a646badb91d67c2f2df529a8583",
+    "src/config/isco-prefix.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/config/iso19650-constants.ts": "9b52b8e6cd641328762db95ba0d1e280581845fe5827c8dead926531658349c3",
     "src/config/job-suggestion.ts": "5f9b926d736393f104be8cef5ff45187bfb324b372e148f00e02d7636208e2e2",
     "src/config/jobs-access.ts": "cd9ecbc9f56123a902b624b7ddd6cc52082dc2e7e7fc6b7116c853a86f799821",
@@ -581,7 +582,7 @@
     "dynamicBoundaries": 18,
     "matchedKeys": 132,
     "routeBoundaries": 0,
-    "shellFiles": 480,
+    "shellFiles": 481,
     "sliceBytes": 312357
   },
   "unresolvableKeys": [
