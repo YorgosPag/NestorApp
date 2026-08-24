@@ -9,13 +9,33 @@
  * (.knip-deps-baseline.json). Ratchet DOWN only — package.json hygiene may only
  * improve.
  *
- * SCOPE NOTE (why not the ADR's "include dxf-viewer" idea): knip.json
- * deliberately ignores src/subapps/dxf-viewer/** because that subapp resolves
- * modules through dynamic registries knip cannot see, so including it would flood
- * the dead-code ratchet (CHECK 3.22) with false positives and break Giorgio's
- * commit flow (verified 2026-06-21, ADR-357). This gate therefore ratchets
- * DEPENDENCY hygiene only and leaves the file-level project scope untouched. See
- * the ADR-598 G15 note.
+ * ΣΗΜΕΙΩΣΗ ΕΜΒΕΛΕΙΑΣ (ενημερώθηκε 2026-08-25 — η προηγούμενη έλεγε ότι το dxf-viewer μένει
+ * knip-ignored· ΔΕΝ ισχύει πια):
+ *
+ * Το `knip.json` δηλώνει πλέον ΡΗΤΑ workspaces — `.` και `src/subapps/dxf-viewer` — γιατί οι
+ * δηλωμένες-αλλά-αχρησιμοποίητες εξαρτήσεις του subapp ήταν ΔΟΜΙΚΑ αόρατες: τέσσερις νεκρές
+ * έζησαν εκεί απαρατήρητες, μία από το initial commit (ADR-800). ⚠️ Η αιτία ΔΕΝ ήταν ότι το
+ * knip αγνοεί τα workspaces — τα βρίσκει μόνο του από το `pnpm-workspace.yaml`· ήταν το
+ * `ignore`.
+ *
+ * 🔑 Η ΕΡΩΤΗΣΗ ΤΗΣ ΠΥΛΗΣ ΣΤΕΝΕΨΕ ΕΠΙΤΗΔΕΣ, ΚΑΙ ΑΥΤΟ ΤΗΝ ΚΑΝΕΙ ΣΩΣΤΗ: εδώ ρωτάμε ΜΟΝΟ
+ * «είναι δηλωμένο το ΠΑΚΕΤΟ;». Οι σπασμένες ΣΧΕΤΙΚΕΣ διαδρομές είναι ΑΛΛΟ ερώτημα με ΑΛΛΟΝ
+ * ιδιοκτήτη — `tsc` για το root δέντρο, CHECK 3.29 για το subapp (που το root tsconfig
+ * εξαιρεί) — γι' αυτό το `ignoreUnresolved: ["^\.{1,2}/"]`. Μετρημένο: χωρίς αυτό η
+ * διεύρυνση πρόσθετε 17 ευρήματα που ratchετάρει ΗΔΗ το 3.29, δηλαδή δεύτερη μηχανή για το
+ * ίδιο εύρημα (ADR-749).
+ *
+ * ⚠️ `@jest/globals` στο `ignoreDependencies`: το jest το σερβίρει ως ΕΙΚΟΝΙΚΟ module από το
+ * `jest-runtime` (δεν είναι δηλωμένο πουθενά και δεν χρειάζεται να είναι). Μετρημένο: 149
+ * ψευδώς θετικά στο subapp + 2 στο root — το 87% όλου του θορύβου της διεύρυνσης.
+ *
+ * 🔶 ΔΗΛΩΜΕΝΟ ΟΡΙΟ — το `packages/**` ΜΕΝΕΙ εκτός, και είναι ΜΕΤΡΗΣΗ όχι παράλειψη: το
+ * `packages/core` δηλώνει `main: dist/index.js` που ΔΕΝ ΥΠΑΡΧΕΙ ⇒ το knip δεν βρίσκει entry
+ * ⇒ δεν αναλύει τίποτα. Η προσθήκη του μετρήθηκε: **+0 ευρήματα**. Δηλαδή θα ήταν
+ * ΔΙΑΚΟΣΜΗΤΙΚΗ κάλυψη — «0 = κανείς δεν κοίταξε», μέσα στη διόρθωση που το κυνηγά.
+ *
+ * ⚠️ Το file-level dead-code scope (CHECK 3.22) ΔΕΝ αγγίχθηκε: το subapp επιλύει modules μέσα
+ * από δυναμικά μητρώα που το knip δεν βλέπει (επαληθευμένο 2026-06-21, ADR-357).
  *
  * A full knip crawl is heavy → CI only (N.17). Baseline seeded via CI seed
  * dispatch. Baseline/compare/CLI reuse scripts/lib/ratchet-baseline.js (N.18).
@@ -100,7 +120,11 @@ function buildPayload(m) {
       'ADR-598 G15 — knip dependency-hygiene ratchet baseline. total = unused ' +
       'dependencies/devDependencies + unlisted + binaries + unresolved (knip ' +
       '--dependencies --reporter json). Ratchet DOWN only: a rise blocks the PR. ' +
-      'File-level dead-code scope is unchanged (dxf-viewer stays knip-ignored — see G15 note). Reseed via CI dispatch.',
+      'Scope (2026-08-25): explicit knip workspaces — "." + src/subapps/dxf-viewer. The ' +
+      'question is package declaration ONLY; relative-specifier resolution belongs to tsc / ' +
+      'CHECK 3.29 (ignoreUnresolved). packages/** stays out — measured +0 (no entry: main ' +
+      'points at an unbuilt dist/). File-level dead-code scope (CHECK 3.22) unchanged. ' +
+      'Reseed via CI dispatch.',
     generatedBy: 'scripts/check-knip-deps-ratchet.js --write-baseline',
     adr: 'ADR-598 G15',
     total: m.total,
