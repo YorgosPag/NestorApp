@@ -1,4 +1,4 @@
-import { doc, getDoc, increment, setDoc, type Firestore } from 'firebase/firestore';
+import { deleteField, doc, getDoc, increment, setDoc, type Firestore } from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth';
 import type { UserProfileDocument } from '@/auth/types/auth.types';
 import type { DeclaredOccupation } from '@/types/professional-identity';
@@ -107,6 +107,70 @@ export async function syncUserProfileToFirestore(
     // επάγγελμα, που ο καταναλωτής διαβάζει ως `unknown` — ΠΟΤΕ ως «δεν έχει».
     return { occupation: NO_OCCUPATION };
   }
+}
+
+/**
+ * ADR-798 Φάση 3 (Κ4) — Η **ΔΗΛΩΣΗ** του επαγγέλματος από τον ίδιο τον χρήστη.
+ *
+ * ═════════════════════════════════════════════════════════════════════════════
+ * 🔑 ΓΙΑΤΙ ΕΔΩ ΚΑΙ ΟΧΙ ΣΤΟ `useAuthActions.ts`
+ *
+ * Το `updateUserProfile()` γράφει σε **Firebase Auth** *(`updateProfile`)* και
+ * **localStorage** — **ποτέ** στο Firestore. Το επάγγελμα ζει στο
+ * `users/{uid}`, δηλαδή σε **άλλο αποθετήριο**. Το `useAuthActions` δεν αγγίζει
+ * Firestore πουθενά· προσθέτοντάς το εκεί θα ανακάτευα δύο συστήματα
+ * αποθήκευσης σε ένα module. **Αυτό** το αρχείο κατέχει ήδη το `users/{uid}`
+ * από τον πελάτη *(`setDoc(merge:true)` παραπάνω)* — ο γραφέας μπαίνει δίπλα
+ * στον αναγνώστη του, όχι σε δεύτερο σπίτι.
+ * ═════════════════════════════════════════════════════════════════════════════
+ * 🔒 Ο ΓΡΑΦΕΑΣ ΕΠΙΒΑΛΛΕΙ ΟΤΙ Ο ΤΥΠΟΣ **ΤΕΚΜΗΡΙΩΝΕΙ ΑΛΛΑ ΔΕΝ ΜΠΟΡΕΙ**
+ *
+ * Το `DeclaredOccupation` λέει ότι τα **τρία πεδία ESCO πάνε ΠΑΝΤΑ μαζί**, και
+ * ρητά ότι *«ο τύπος δεν μπορεί να το επιβάλει· ο **γραφέας** οφείλει»*. Εδώ
+ * επιβάλλεται: **χωρίς `escoUri`, καθαρίζονται και το `escoLabel` και το
+ * `iscoCode`**. Έτσι ο **ορφανός κωδικός γίνεται δομικά αδύνατος**.
+ *
+ * 🔑 Είναι **belt-and-suspenders** (N.7.2 #4) με το `useDeclaredOccupation`: ο
+ * **αναγνώστης** αρνείται να **εκθέσει** ορφανό κωδικό, ο **γραφέας** αρνείται
+ * να τον **γεννήσει**. Οι δύο άμυνες είναι ανεξάρτητες επίτηδες — δεδομένα από
+ * import ή χειρόγραφη επεξεργασία δεν περνούν από εδώ.
+ *
+ * ⚠️ **`deleteField()`, ποτέ `''` και ποτέ `undefined`**: το `setDoc` πετάει σε
+ * `undefined`, ενώ το κενό string θα άφηνε **ψεύτικο δεδομένο** που ο επόμενος
+ * αναγνώστης θα έπρεπε να θυμηθεί να φιλτράρει. Σύμβαση του δέντρου —
+ * `contacts.service.ts:334`, ίδια περίπτωση *(ρητό «clear» του χρήστη)*.
+ *
+ * ⛔ **ΜΗΝ γράψεις εδώ `occupationVerification`** — είναι **server-owned** στα
+ * `firestore.rules` και η εγγραφή θα απορριφθεί *(σωστά: ADR-798 §7)*.
+ *
+ * @returns Ό,τι **γράφτηκε πραγματικά** — ώστε η κατάσταση να τεθεί από το
+ *   αποτέλεσμα, όχι από ό,τι πληκτρολογήθηκε.
+ */
+export async function saveDeclaredOccupation(
+  db: Firestore,
+  uid: string,
+  occupation: DeclaredOccupation,
+): Promise<DeclaredOccupation> {
+  const clean = (value: string | undefined): string | undefined => {
+    const trimmed = typeof value === 'string' ? value.trim() : '';
+    return trimmed.length > 0 ? trimmed : undefined;
+  };
+
+  const profession = clean(occupation.profession);
+  const escoUri = clean(occupation.escoUri);
+  // 🔒 Η συνοχή των τριών: χωρίς αυθεντία (`escoUri`) δεν υπάρχει ταξινόμηση.
+  const escoLabel = escoUri === undefined ? undefined : clean(occupation.escoLabel);
+  const iscoCode = escoUri === undefined ? undefined : clean(occupation.iscoCode);
+
+  const written: DeclaredOccupation = { profession, escoUri, escoLabel, iscoCode };
+  const payload: Record<string, unknown> = { updatedAt: new Date() };
+  for (const [field, value] of Object.entries(written)) {
+    payload[field] = value ?? deleteField();
+  }
+
+  await setDoc(doc(db, COLLECTIONS.USERS, uid), payload, { merge: true });
+  logger.info('[AuthContext] Declared occupation saved', { classified: escoUri !== undefined });
+  return written;
 }
 
 export async function ensureDevUserProfile(): Promise<void> {

@@ -24,6 +24,7 @@ import {
 } from './auth-context/auth-context-session';
 import {
   ensureDevUserProfile,
+  saveDeclaredOccupation,
   syncUserProfileToFirestore,
 } from './auth-context/auth-context-profile';
 import type { DeclaredOccupation } from '@/types/professional-identity';
@@ -49,6 +50,16 @@ export interface AuthContextType {
    * ⛔ **ΠΟΤΕ ως πηγή δικαιώματος** — είναι **αυτο-δηλωμένο**.
    */
   declaredOccupation: DeclaredOccupation | null;
+  /**
+   * ADR-798 Φάση 3 (Κ4) — η **δήλωση** του επαγγέλματος από τον ίδιο τον χρήστη.
+   *
+   * ⚠️ **Α5: ΚΑΜΙΑ modal, καμία ερώτηση πριν ή μετά το login.** Καλείται **μόνο**
+   * από σελίδα προφίλ, όποτε το θελήσει **ο ίδιος**.
+   *
+   * ⛔ **ΔΕΝ δίνει κανένα δικαίωμα** — το αποτέλεσμα σπάει **ισοβαθμία** στην
+   * πρόταση δουλειάς και τίποτε άλλο (`isco-job-affinity.ts`).
+   */
+  updateDeclaredOccupation: (occupation: DeclaredOccupation) => Promise<void>;
   loading: boolean;
   error: string | null;
   signIn: (email: string, password: string) => Promise<void>;
@@ -274,6 +285,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
     resetPassword: actions.resetPassword,
     updateUserProfile: actions.updateUserProfile,
     completeProfile: actions.completeProfile,
+    // ADR-798 Φάση 3 (Κ4) — ζει **εδώ** και όχι στο `useAuthActions`: εκείνο
+    // γράφει σε Firebase Auth + localStorage και **δεν αγγίζει Firestore**
+    // πουθενά, ενώ το επάγγελμα ζει στο `users/{uid}`. Δύο αποθετήρια, δύο
+    // ιδιοκτήτες. 🔑 Η κατάσταση τίθεται από ό,τι **γράφτηκε πραγματικά**
+    // (`written`), ποτέ από ό,τι πληκτρολογήθηκε: ο γραφέας καθαρίζει κενά και
+    // **σβήνει** τη μισή ταξινόμηση, οπότε η οθόνη οφείλει να δει το αληθινό
+    // αποτέλεσμα — αλλιώς θα έδειχνε ταξινομημένο κάτι που δεν αποθηκεύτηκε.
+    updateDeclaredOccupation: async (occupation: DeclaredOccupation) => {
+      const uid = auth.currentUser?.uid;
+      if (!uid) throw new Error('No authenticated user');
+      setDeclaredOccupation(await saveDeclaredOccupation(db, uid, occupation));
+    },
     sendVerificationEmail: actions.sendVerificationEmail,
     mfaRequired,
     verifyMfaCode: async (code: string) => {
