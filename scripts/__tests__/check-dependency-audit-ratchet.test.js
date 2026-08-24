@@ -49,16 +49,19 @@ describe('deps-audit --write-baseline: η ΑΠΟΦΑΣΗ δεν ανήκει σ�
   beforeEach(() => { logSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined); });
   afterEach(() => { logSpy.mockRestore(); });
 
-  it('Α) ΔΙΑΤΗΡΕΙ ανθρώπινη αιτιολόγηση υπάρχουσας εγγραφής', () => {
+  it('Α) ΔΙΑΤΗΡΕΙ ανθρώπινη αιτιολόγηση ΚΑΙ ιδιοκτήτη υπάρχουσας εγγραφής', () => {
     const initial = {
       allowed: {
-        'GHSA-aaaa-bbbb-cccc': { ...advisory(), reason: HUMAN_REASON, owner: 'giorgio' },
+        'GHSA-aaaa-bbbb-cccc': { ...advisory(), reason: HUMAN_REASON, owner: 'security-team' },
       },
     };
     withTempBaseline(initial, (file) => {
       writeBaseline({ 'GHSA-aaaa-bbbb-cccc': advisory() }, file);
-      const out = loadBaseline(file);
-      expect(out.allowed['GHSA-aaaa-bbbb-cccc'].reason).toBe(HUMAN_REASON);
+      const e = loadBaseline(file).allowed['GHSA-aaaa-bbbb-cccc'];
+      expect(e.reason).toBe(HUMAN_REASON);
+      // Ο ιδιοκτήτης είναι ΚΙ ΑΥΤΟΣ απόφαση: το 'giorgio' είναι προεπιλογή για ΝΕΑ
+      // εγγραφή, ποτέ επιβολή πάνω σε υπάρχουσα (μετάλλαξη Μ2 — έβγαινε πράσινη).
+      expect(e.owner).toBe('security-team');
     });
   });
 

@@ -19,18 +19,6 @@
       "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
       "owner": "giorgio"
     },
-    "GHSA-34x7-hfp2-rc4v": {
-      "id": 1112659,
-      "severity": "high",
-      "module": "tar",
-      "title": "node-tar Vulnerable to Arbitrary File Creation/Overwrite via Hardlink Path Traversal",
-      "cves": [
-        "CVE-2026-24842"
-      ],
-      "url": "https://github.com/advisories/GHSA-34x7-hfp2-rc4v",
-      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
-      "owner": "giorgio"
-    },
     "GHSA-pqxr-3g65-p328": {
       "id": 1112801,
       "severity": "high",
@@ -55,18 +43,6 @@
       "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
       "owner": "giorgio"
     },
-    "GHSA-8qq5-rm4j-mr97": {
-      "id": 1113300,
-      "severity": "high",
-      "module": "tar",
-      "title": "node-tar is Vulnerable to Arbitrary File Overwrite and Symlink Poisoning via Insufficient Path Sanitization",
-      "cves": [
-        "CVE-2026-23745"
-      ],
-      "url": "https://github.com/advisories/GHSA-8qq5-rm4j-mr97",
-      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
-      "owner": "giorgio"
-    },
     "GHSA-9vjf-qc39-jprp": {
       "id": 1113310,
       "severity": "high",
@@ -88,18 +64,6 @@
         "CVE-2026-25535"
       ],
       "url": "https://github.com/advisories/GHSA-67pg-wm7f-q7fj",
-      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
-      "owner": "giorgio"
-    },
-    "GHSA-83g3-92jg-28cx": {
-      "id": 1113375,
-      "severity": "high",
-      "module": "tar",
-      "title": "Arbitrary File Read/Write via Hardlink Target Escape Through Symlink Chain in node-tar Extraction",
-      "cves": [
-        "CVE-2026-26960"
-      ],
-      "url": "https://github.com/advisories/GHSA-83g3-92jg-28cx",
       "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
       "owner": "giorgio"
     },
@@ -137,30 +101,6 @@
       "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
       "owner": "giorgio"
     },
-    "GHSA-qffp-2rhf-9h96": {
-      "id": 1114200,
-      "severity": "high",
-      "module": "tar",
-      "title": "tar has Hardlink Path Traversal via Drive-Relative Linkpath",
-      "cves": [
-        "CVE-2026-29786"
-      ],
-      "url": "https://github.com/advisories/GHSA-qffp-2rhf-9h96",
-      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
-      "owner": "giorgio"
-    },
-    "GHSA-9ppj-qmqm-q256": {
-      "id": 1114302,
-      "severity": "high",
-      "module": "tar",
-      "title": "node-tar Symlink Path Traversal via Drive-Relative Linkpath",
-      "cves": [
-        "CVE-2026-31802"
-      ],
-      "url": "https://github.com/advisories/GHSA-9ppj-qmqm-q256",
-      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
-      "owner": "giorgio"
-    },
     "GHSA-p5xg-68wr-hm3m": {
       "id": 1114396,
       "severity": "high",
@@ -170,18 +110,6 @@
         "CVE-2026-25940"
       ],
       "url": "https://github.com/advisories/GHSA-p5xg-68wr-hm3m",
-      "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
-      "owner": "giorgio"
-    },
-    "GHSA-r6q2-hw4h-h46w": {
-      "id": 1114680,
-      "severity": "high",
-      "module": "tar",
-      "title": "Race Condition in node-tar Path Reservations via Unicode Ligature Collisions on macOS APFS",
-      "cves": [
-        "CVE-2026-23950"
-      ],
-      "url": "https://github.com/advisories/GHSA-r6q2-hw4h-h46w",
       "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
       "owner": "giorgio"
     },
@@ -219,42 +147,6 @@
       ],
       "url": "https://github.com/advisories/GHSA-8gc5-j5rx-235r",
       "reason": "Seeded — pre-existing transitive advisory; tracked for remediation",
-      "owner": "giorgio"
-    },
-    "GHSA-23hp-3jrh-7fpw": {
-      "id": 1123940,
-      "severity": "critical",
-      "module": "tar",
-      "title": "node-tar: Decompression/parse DoS via unlimited input",
-      "cves": [
-        "CVE-2026-59873"
-      ],
-      "url": "https://github.com/advisories/GHSA-23hp-3jrh-7fpw",
-      "reason": "ADR-598 G2 (2026-07-26) — install-time only, ΔΕΝ αναβαθμίζεται. Διαδρομή: pdfjs-dist > canvas > @mapbox/node-pre-gyp@1.0.11, που δηλώνει `tar: \"^6.1.11\"`· κάθε patched range είναι >=7.5.x (major). Override σε tar@7 παραβιάζει το δηλωμένο range του node-pre-gyp ⇒ σπάει το `pnpm install` σε καθαρό clone ⇒ σπάει CI ΚΑΙ deploy. Το tar εκτελείται μόνο κατά την εγκατάσταση (unpack prebuilt binaries)· δεν βλέπει user input σε production runtime — το CVE προϋποθέτει κακόβουλο tarball, δηλαδή compromise του registry. Επανεξέταση όταν canvas/node-pre-gyp υποστηρίξουν tar 7.",
-      "owner": "giorgio"
-    },
-    "GHSA-8x88-c5mf-7j5w": {
-      "id": 1123941,
-      "severity": "high",
-      "module": "tar",
-      "title": "node-tar: Negative tar entry size causes infinite loop in archive replace",
-      "cves": [
-        "CVE-2026-59874"
-      ],
-      "url": "https://github.com/advisories/GHSA-8x88-c5mf-7j5w",
-      "reason": "ADR-598 G2 (2026-07-26) — install-time only, ΔΕΝ αναβαθμίζεται. Διαδρομή: pdfjs-dist > canvas > @mapbox/node-pre-gyp@1.0.11, που δηλώνει `tar: \"^6.1.11\"`· κάθε patched range είναι >=7.5.x (major). Override σε tar@7 παραβιάζει το δηλωμένο range του node-pre-gyp ⇒ σπάει το `pnpm install` σε καθαρό clone ⇒ σπάει CI ΚΑΙ deploy. Το tar εκτελείται μόνο κατά την εγκατάσταση (unpack prebuilt binaries)· δεν βλέπει user input σε production runtime — το CVE προϋποθέτει κακόβουλο tarball, δηλαδή compromise του registry. Επανεξέταση όταν canvas/node-pre-gyp υποστηρίξουν tar 7.",
-      "owner": "giorgio"
-    },
-    "GHSA-mh99-v99m-4gvg": {
-      "id": 1124334,
-      "severity": "high",
-      "module": "brace-expansion",
-      "title": "brace-expansion: DoS via unbounded expansion length causing an out-of-memory process crash",
-      "cves": [
-        "CVE-2026-14257"
-      ],
-      "url": "https://github.com/advisories/GHSA-mh99-v99m-4gvg",
-      "reason": "ADR-598 G2 (2026-07-26) — δεν υπάρχει backport. Patched μόνο >=5.0.8, ενώ οι ευάλωτες εγκατεστημένες είναι 1.1.16 (τελευταία δημοσιευμένη 1.x) και 2.1.2 (τελευταία 2.x), μέσω minimatch@3/5/9 σε exceljs>archiver / unzipper>fstream>rimraf>glob@7 και @typescript-eslint>typescript-estree. Override σε ^5 θα πίεζε major API αλλαγή στα glob@7/minimatch@3 ⇒ σπάει build tooling. DoS μέσω unbounded expansion σε glob patterns που παράγονται από τον ίδιο τον κώδικα, όχι από χρήστη. Επανεξέταση όταν exceljs / @typescript-eslint περάσουν σε minimatch@10.",
       "owner": "giorgio"
     }
   }
