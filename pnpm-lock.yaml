@@ -43,6 +43,7 @@ overrides:
   form-data@4: ^4.0.6
   '@grpc/grpc-js': ^1.14.4
   sharp: ^0.35.3
+  pdfjs-dist>canvas: '-'
 
 patchedDependencies:
   '@radix-ui/react-presence@1.1.5':
@@ -18171,11 +18172,7 @@ snapshots:
 
   pdfjs-dist@4.5.136:
     optionalDependencies:
-      canvas: 2.11.2
       path2d: 0.2.2
-    transitivePeerDependencies:
-      - encoding
-      - supports-color
 
   pdfjs-dist@5.4.296:
     optionalDependencies:
