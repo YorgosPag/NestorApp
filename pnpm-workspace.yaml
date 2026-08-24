@@ -1,43 +1,39 @@
 # 🏢 ENTERPRISE WORKSPACE CONFIGURATION
-# Multi-package repository με strict dependency isolation
+#
+# ΠΟΛΙΤΙΚΗ ΜΙΑΣ ΕΚΔΟΣΗΣ (ADR-800 · CHECK 3.65)
+# ────────────────────────────────────────────────────────────────────────────
+# Κάθε όνομα πακέτου δηλώνεται σε **ΕΝΑ** manifest του workspace:
+#   • `.`                      — η εφαρμογή· κατέχει ό,τι μοιράζεται.
+#   • `packages/core`          — ΔΙΑΝΕΜΗΤΕΟ πακέτο· οφείλει να δηλώνει ό,τι
+#                                εισάγει (συμβόλαιο npm), γι' αυτό εξαιρείται.
+#   • `src/subapps/dxf-viewer` — ΕΣΩΤΕΡΙΚΟ· δηλώνει **μόνο** ό,τι δεν έχει η
+#                                ρίζα (`polygon-clipping`, `@formulajs/formulajs`,
+#                                `fast-check`) — δες SPEC-739C §49.1.
+# Έτσι η απόκλιση εκδόσεων γίνεται **μη εκφράσιμη**, όχι απλώς ανιχνεύσιμη.
+#
+# ⛔ ΤΙ ΑΦΑΙΡΕΘΗΚΕ ΚΑΙ ΓΙΑΤΙ (2026-08-25, μετρημένο — ADR-800 §4)
+# ────────────────────────────────────────────────────────────────────────────
+# `catalog:` — υπήρχε με 12 εγγραφές και **ΜΗΔΕΝ** manifest έγραφε ποτέ
+#   `"catalog:"` ⇒ δεν δέσμευε τίποτα· και **6 από τις 12** τιμές του ήταν
+#   **λάθος** (δήλωνε `react: 18.3.1` ενώ το δέντρο τρέχει `19.2.1`). Ήταν
+#   τρίτος αριθμός σε τρίτο σημείο — το σχήμα του ADR-749. Το `catalogMode:
+#   strict` που θα τον επέβαλλε απαιτεί **pnpm ≥10.12.1**· εδώ δεσμευόμαστε σε
+#   **pnpm@9.14.0**. Με ένα σημείο δήλωσης ο κατάλογος είναι περιττός.
+#   ⚠️ Οι κατάλογοι ΔΕΝ απαγορεύονται — το CHECK 3.65 (κατάστιχο Δ) απαγορεύει
+#   μόνο τους **διακοσμητικούς**: εγγραφή που δεν τη ζητά κανένα manifest.
+#
+# `filter:` — **δεν είναι έγκυρο κλειδί** του `pnpm-workspace.yaml` (έγκυρα:
+#   `packages`, `catalog`, `catalogs`). Η pnpm το αγνοούσε σιωπηλά· ο τίτλος
+#   «dependency isolation rules» δεν απομόνωνε τίποτα. Τα μονοπάτια που
+#   ονόμαζε (`.next`, `node_modules`, `dist`, `build`, `coverage`) δεν έχουν
+#   `package.json`, άρα δεν ήταν ποτέ υποψήφια μέλη.
 
 packages:
   # Core application
   - '.'
 
-  # Subpackages - μονοlithic modules που θα γίνουν packages
+  # Subpackages — μονολιθικά modules που θα γίνουν packages
   - 'packages/*'
 
-  # Subapps - Domain-specific applications
+  # Subapps — domain-specific applications
   - 'src/subapps/*'
-
-# 🔒 ENTERPRISE: Dependency isolation rules
-filter:
-  # Exclude dev builds and cache directories
-  - '!**/.next'
-  - '!**/node_modules'
-  - '!**/dist'
-  - '!**/build'
-  - '!**/coverage'
-
-# 🏢 ENTERPRISE: Strict versioning για production stability
-catalog:
-  # Core framework versions - locked για stability
-  next: "14.2.33"
-  react: "18.3.1"
-  react-dom: "18.3.1"
-  typescript: "5.9.3"
-
-  # Database layers - enterprise versions
-  firebase: "12.4.0"
-  firebase-admin: "12.7.0"
-
-  # UI consistency - design system versions
-  "@radix-ui/react-accordion": "1.2.12"
-  "@radix-ui/react-dialog": "1.1.15"
-  tailwindcss: "3.4.18"
-
-  # Utility consistency
-  clsx: "2.1.1"
-  tailwind-merge: "3.3.1"
-  zod: "3.25.76"

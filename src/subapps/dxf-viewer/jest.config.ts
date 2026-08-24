@@ -28,6 +28,24 @@ const rootConfig = require('../../../jest.config.js') as Config;
  * (επιβεβαιωμένο grep) — δεν χρειάζονται mappers. Τα `test/setupTests.ts` &
  * `test/setupCanvas.ts` (legacy, σπασμένα, αχρησιμοποίητα) αντικαθίστανται από το
  * proven `<repo>/jest.setup.js` που κληρονομείται.
+ *
+ * ── ΠΩΣ ΤΟ ΤΡΕΧΕΙΣ (ADR-800, 2026-08-25) ──────────────────────────────────────
+ * **ΑΠΟ ΤΗ ΡΙΖΑ ΤΟΥ REPO, ΠΑΝΤΑ:**
+ *
+ *     npx jest --config src/subapps/dxf-viewer/jest.config.ts <scope>
+ *
+ * 🔴 **ΜΗΝ ξαναφτιάξεις script `"test": "jest"` στο `src/subapps/dxf-viewer/
+ * package.json`.** Υπήρχε, και ήταν το ελάττωμα: το manifest δήλωνε `jest@29` +
+ * `jsdom@24` ενώ η ρίζα τρέχει `jest@30` + `jsdom@27`, οπότε όποιος έτρεχε
+ * δοκιμές **από μέσα** τον φάκελο έπαιρνε **άλλη μηχανή από το CI** — το σχήμα
+ * του ADR-749 σε επίπεδο εργαλείου δοκιμών. Πλέον το manifest δηλώνει **μόνο**
+ * τα τρία πακέτα που **κατέχει** (`polygon-clipping`, `@formulajs/formulajs`,
+ * `fast-check`)· ό,τι άλλο κληρονομείται από τη ρίζα, σε **μία** έκδοση, και το
+ * επιβάλλει το **CHECK 3.65**.
+ *
+ * ⚠️ Αυτό το config **ΔΕΝ είναι νεκρό**: είναι τεκμηριωμένο **χειροκίνητο**
+ * εργαλείο (handoffs 2026-07-29 · 2026-07-30, εκστρατεία pan-lag). «Δεν το
+ * τρέχει **πύλη**» ≠ «δεν το τρέχει **κανείς**».
  */
 const config: Config = {
   ...rootConfig,

@@ -1026,3 +1026,74 @@ jobs:
             echo "⛔ ΜΗΝ αλλάξεις τους ΠΟΛΟΥΣ (design-tokens.json → spacing.layout) για"
             echo "να «φαίνεται καλύτερα» μία σελίδα: αφορούν ΟΛΗ την εφαρμογή."
           } >> "$GITHUB_STEP_SUMMARY"
+
+  one-version:
+    name: 📦 One Version Policy Gate (CHECK 3.65)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # η άγκυρα Π1 κάνει `git show` σε ΚΑΡΦΩΜΕΝΟ commit
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Πάκετα (jest για τις άγκυρες)
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # Layer 2 — ΑΝΕΥ ΟΡΩΝ. Το pre-commit έχει σκανδάλη (τρέχει μόνο όταν
+      # αγγίζεται manifest / lockfile / workspace / κλειστό σύνολο / η ίδια η
+      # πύλη), αλλά το `SKIP_ONE_VERSION` δεν φτάνει ως εδώ.
+      - name: 📦 CHECK 3.65 — ένα σημείο δήλωσης, μία εγκατεστημένη έκδοση
+        run: pnpm run one-version:report
+
+      - name: "🧪 Άγκυρες — CHECK 3.65 (28 άγκυρες, 14/14 μεταλλάξεις κόκκινες)"
+        run: pnpm run test:one-version
+
+      - name: 🧭 How to resolve
+        if: failure()
+        run: |
+          {
+            echo "### CHECK 3.65 — ADR-800 (η πολιτική μίας έκδοσης)"
+            echo "**ΚΑΘΕ ΟΝΟΜΑ ΠΑΚΕΤΟΥ ΔΗΛΩΝΕΤΑΙ ΣΕ ΕΝΑ MANIFEST ΤΟΥ WORKSPACE.**"
+            echo "Ένα ΕΣΩΤΕΡΙΚΟ μέλος (private, χωρίς σημείο εισόδου) μεταγλωττίζεται"
+            echo "μέσα στην εφαρμογή της ρίζας — δηλώνει ΜΟΝΟ ό,τι δεν έχει η ρίζα."
+            echo ""
+            echo "**redeclared-dependency** (⛔) → σβήσε τη δήλωση από το εσωτερικό"
+            echo "μέλος. Η ρίζα την κατέχει· η κληρονομιά είναι αυτόματη."
+            echo ""
+            echo "**version-split** (⛔) → δύο ΕΓΚΑΤΕΣΤΗΜΕΝΕΣ εκδόσεις. Αυτό ήταν το"
+            echo "αρχικό ελάττωμα: jest 29 στο subapp, jest 30 στη ρίζα ⇒ όποιος"
+            echo "έτρεχε δοκιμές από μέσα έπαιρνε ΑΛΛΗ ΜΗΧΑΝΗ από το CI."
+            echo ""
+            echo "**overridden-declaration** (⛔) → το manifest δηλώνει εύρος που η pnpm"
+            echo "ξαναγράφει μέσω \`pnpm.overrides\`. Κάνε τη δήλωση ίση με το override:"
+            echo "ένα manifest δεν επιτρέπεται να λέει κάτι που δεν ισχύει."
+            echo ""
+            echo "**lockfile-desync** (⛔) → κάποιος άλλαξε manifest χωρίς install."
+            echo "Τρέξε \`pnpm install\` και κομμίταρε το lockfile ΜΑΖΙ."
+            echo ""
+            echo "**unlisted-manifest** (⛔) → νέο package.json μέσα στα workspace globs."
+            echo "Έτσι ακριβώς γεννήθηκε το πρόβλημα: φάκελος που έγινε σιωπηλά"
+            echo "ξεχωριστό πακέτο, με δικό του node_modules και δική του μηχανή."
+            echo ""
+            echo "**unreferenced-catalog-entry** (⛔) → εγγραφή \`catalog:\` που δεν τη"
+            echo "ζητά κανένα manifest. Οι κατάλογοι ΔΕΝ απαγορεύονται — οι"
+            echo "ΔΙΑΚΟΣΜΗΤΙΚΟΙ ναι: ο παλιός είχε 12 εγγραφές, 0 αναφορές, 6/12 λάθος."
+            echo ""
+            echo "Αν ΔΥΟ εσωτερικά μέλη ΠΡΕΠΕΙ να δηλώνουν το ίδιο πακέτο, γράψ' το στο"
+            echo ".one-version.json — ο λόγος είναι ΥΠΟΧΡΕΩΤΙΚΟΣ."
+            echo ""
+            echo "Απογραφή: npm run one-version:report"
+          } >> "$GITHUB_STEP_SUMMARY"
