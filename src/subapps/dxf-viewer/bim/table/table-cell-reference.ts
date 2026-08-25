@@ -41,6 +41,9 @@ import { columnIndexFromLetter, columnLetter } from '@/lib/spreadsheet/column-le
 import type { TableColumnId, TableModel, TableRowId } from '../../types/table';
 import { buildMergeIndex, cellKey, cellText, getCell, indexById } from './table-model-helpers';
 import { cellPairIndices } from './table-cell-order';
+// ⚠️ ΞΕΧΩΡΙΣΤΑ ΑΠΟ ΤΗΝ ΕΠΑΝΕΞΑΓΩΓΗ ΤΗΣ γρ. 176 — ένα `export … from` επανεξάγει,
+// **δεν εισάγει** (ADR-806 §7 #1): οι υπογραφές παρακάτω χρειάζονται το όνομα ΕΔΩ.
+import type { TableCellAddress } from './table-cell-order';
 import { tableCursorAt, type TableCursorPosition } from './table-cell-navigation';
 import type { TableColumnLayout, TableRowLayout } from './table-layout-types';
 

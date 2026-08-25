@@ -32,7 +32,7 @@
  */
 
 import type { PlanarPoint, PlanBounds } from '../../types/bim-base';
-import type { Bbox, CoordinateSpace, Rect } from '../../../types/coordinate-space';
+import type { Bbox, CoordinateSpace, MinMaxRect, Rect } from '../../../types/coordinate-space';
 
 /**
  * Το όνομα του χώρου `plan-mm` — δηλωμένο ΜΙΑ φορά, στο SSoT των χώρων, και

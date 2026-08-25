@@ -57,7 +57,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "8251531418364f6c3241841adf199d2f9f2754b5357328b4aa0317a01b1a454a",
+  "inputsSha256": "c35b816cf60259e116ee05259537458bb46b4a0e7592e6b74c05afae3d4c70f1",
   "languages": [
     "el"
   ],
@@ -347,7 +347,7 @@
     "src/lib/auth/audit-types.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/auth/claim-permissions.ts": "97105089ff8e5a5088d5fb5402c7d97fcaebd664c9eaa092a7d9b473b1e45ed9",
     "src/lib/auth/role-catalogue.ts": "794d368d33bfe733ccf3ca87cc35f11681de79c043fd326b055c9f07efd681bc",
-    "src/lib/auth/roles.ts": "ba7416fb48cd1a7d3321d5bb80b6250ee56ea11f2032bfb8f50e0bfc2e6e25a4",
+    "src/lib/auth/roles.ts": "1e61e55fd5628c54d6d3e0f9e6e1b7ad1b742105586c80d2afec7e6c53967ce8",
     "src/lib/auth/security-policy.ts": "873a3a4fce658cb1faa22e49e64cea7f0b9144e92941b2757bf8ee184cb55330",
     "src/lib/auth/tenant-isolation-error.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/auth/tenant-isolation.ts": "953bc81516d07feac3df5ecf3f76608871298976104886344f218bf810e6ac8f",

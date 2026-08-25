@@ -57,11 +57,17 @@ function reportBuildingMutationFailure(
  * και **είχαν ήδη αποκλίνει**· το εντόπισε το **CHECK 3.28**, όχι άνθρωπος. Τα
  * re-exports μένουν ώστε οι υπάρχοντες καταναλωτές να μη μετακομίσουν στην ίδια πράξη
  * (ADR-777 κανόνας 19: *μετακινούμε καταναλωτές, όχι αρχεία* — και όχι στο ίδιο βήμα).
+ *
+ * 🔴 **ΕΙΣΑΓΩΓΗ *ΚΑΙ* ΕΠΑΝΕΞΑΓΩΓΗ, ΟΧΙ ΜΟΝΟ ΤΟ ΔΕΥΤΕΡΟ** (ADR-806 §7 #1): ένα
+ * `export … from` δεν φέρνει το όνομα στην τοπική εμβέλεια, και οι υπογραφές
+ * `updateBuilding` / `createBuilding` παρακάτω το χρησιμοποιούν **εδώ**.
  */
-export type {
+import type {
   BuildingUpdatePayload,
   BuildingCreatePayload,
 } from '@/types/building/mutation-payloads';
+
+export type { BuildingUpdatePayload, BuildingCreatePayload };
 
 /**
  * 🏗️ ENTERPRISE: Ενημέρωση κτιρίου μέσω API (Admin SDK)

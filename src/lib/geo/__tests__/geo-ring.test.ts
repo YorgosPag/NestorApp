@@ -13,7 +13,7 @@
 
 import { geoOutlineBoundingCircle, isPointInGeoOutline } from '../geo-ring';
 import { distanceMeters as metres } from '@/lib/geo/geo-distance';
-import type { GeoOutline } from '@/types/geo/coordinates';
+import type { GeoOutline, GeoPoint } from '@/types/geo/coordinates';
 
 /** Τετράγωνο 0,02° × 0,02° γύρω από τη Θεσσαλονίκη. */
 const SQUARE: GeoOutline = [

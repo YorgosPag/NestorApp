@@ -42,6 +42,20 @@ interface MessagesListResponse {
   source: 'cache' | 'firestore';
 }
 
+/**
+ * Το **κανονικό περιτύλιγμα** `{ success: true, data: T }` που παράγει ο
+ * {@link apiSuccess} — ίδιο σχήμα με τον αδελφό `DeleteMessagesCanonicalResponse`
+ * (`api/messages/delete/route.ts`).
+ *
+ * 🔴 **ΕΛΕΙΠΕ ΕΝΤΕΛΩΣ** (ADR-806 §7 #1): το όνομα χρησιμοποιούνταν σε **δύο**
+ * υπογραφές παρακάτω και **δεν δηλωνόταν πουθενά στο έργο**. Δεν είναι λάθος
+ * εισαγωγή — είναι σύμβολο που **έφυγε και ο καταναλωτής έμεινε**, το ίδιο σχήμα
+ * με το περιστατικό `MODAL_SELECT_PLACEHOLDERS` του ADR-806 §4. Αόρατο σε
+ * parse-only · σε `symbol-integrity` (δεν ήρθε ποτέ από `import`) · και στο jest
+ * (οι τύποι σβήνονται στη μεταγλώττιση).
+ */
+type MessagesCanonicalResponse = ApiSuccessResponse<MessagesListResponse>;
+
 // ============================================================================
 // CONSTANTS
 // ============================================================================

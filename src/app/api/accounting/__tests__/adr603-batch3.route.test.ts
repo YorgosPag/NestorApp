@@ -73,6 +73,14 @@ jest.mock('@/lib/auth', () => ({
     if (required !== undefined) {
       const roles = Array.isArray(required) ? required : [required as string];
       if (!roles.includes(authCtx.globalRole)) {
+        // ⚠️ ΤΟ ΕΦΕΔΡΙΚΟ ΠΕΡΝΑΕΙ ΑΠΟ ΤΟ **MOCKΑΡΙΣΜΕΝΟ** `next/server` (ADR-806 §7 #1).
+        // Ήταν γραμμένο ως σκέτο `NextResponse.json(...)` — όνομα που **δεν υπάρχει σε
+        // αυτή την εμβέλεια**: το `MockNextResponse` ζει στο κλείσιμο του *άλλου*
+        // factory. Λανθάνον `ReferenceError`, αόρατο σήμερα μόνο επειδή **κάθε**
+        // φρουρημένη διαδρομή της σουίτας δίνει `roleRequiredResponse` ⇒ ο κλάδος δεν
+        // αποτιμάται ποτέ. Η πρώτη διαδρομή με `requiredGlobalRoles` ΧΩΡΙΣ δικό της
+        // σώμα θα έσκαγε με μήνυμα που δεν λέει τίποτα για την προστασία που δοκιμάζει.
+        const { NextResponse } = require('next/server') as typeof import('next/server');
         return options?.roleRequiredResponse
           ? options.roleRequiredResponse(roles)
           : NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });

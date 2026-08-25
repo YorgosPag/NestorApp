@@ -25,7 +25,8 @@
     "src/**/*.d.ts",
     "src/app/**/*.ts",
     "src/app/**/*.tsx",
-    "src/middleware.ts"
+    "src/middleware.ts",
+    ".next-emulator/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

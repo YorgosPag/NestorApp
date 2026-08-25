@@ -69,3 +69,25 @@ export function findGuardedEntity<TEntity extends { id: string }, TNarrow extend
   const found = scene.entities.find((entity) => entity.id === entityId);
   return found && guard(found) ? found : null;
 }
+
+/**
+ * «**Υπάρχει καθόλου** οντότητα με αυτό το id σε αυτή τη σκηνή;» — χωρίς φύλακα.
+ *
+ * ⚠️ **Η ΕΚΦΥΛΙΣΜΕΝΗ ΠΕΡΙΠΤΩΣΗ ΤΟΥ {@link findGuardedEntity}, ΟΧΙ ΔΙΔΥΜΟ** (ADR-749):
+ * ο βρόχος ζει **μία** φορά· εδώ αλλάζει μόνο ο φύλακας, και ο φύλακας «όλα περνούν»
+ * είναι φύλακας. Ίδια κίνηση με τον `bboxOf` απέναντι στον `bboxOfAll`.
+ *
+ * 🔑 **ΓΙΑΤΙ ΕΙΝΑΙ ΞΕΧΩΡΙΣΤΗ ΕΡΩΤΗΣΗ ΚΑΙ ΟΧΙ ΠΟΛΥΤΕΛΕΙΑ** (ADR-806 §7 #1): μια παλέτα
+ * ιδιοτήτων έχει **τρεις** καταστάσεις — *τίποτα επιλεγμένο* · *επιλεγμένο αλλά
+ * μη υποστηριζόμενο* · *υποστηριζόμενο*. Οι φυλαγμένες ερωτήσεις (`isDxfLine`,
+ * `isDxfDimension`) διακρίνουν **μόνο** την τρίτη από τις άλλες δύο: με σκέτο
+ * `line === null` οι δύο πρώτες γίνονται **δυσδιάκριτες** και το μήνυμα «δεν
+ * υποστηρίζεται» γίνεται **νεκρός κλάδος**. Το `entity && !isLine && !isDimension`
+ * είναι εκφράσιμο **μόνο** με αυτή την ερώτηση.
+ */
+export function findSceneEntity<TEntity extends { id: string }>(
+  scene: { readonly entities: readonly TEntity[] } | null | undefined,
+  entityId: string | null | undefined,
+): TEntity | null {
+  return findGuardedEntity(scene, entityId, (entity): entity is TEntity => true);
+}

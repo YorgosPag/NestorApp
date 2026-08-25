@@ -50,7 +50,7 @@ import { listArrowheadBlockNames } from '../dimensions/dim-arrowhead-blocks';
 import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 // N.18 — ΕΝΑΣ resolver «id + φύλακας τύπου → οντότητα», κοινός με το QuickProperties
 // και τους γεφυρωτές του ribbon· οι φύλακες στενεύουν, οπότε κανένα `as Dxf*` εδώ.
-import { findGuardedEntity } from '../selection/resolve-selected-entity';
+import { findGuardedEntity, findSceneEntity } from '../selection/resolve-selected-entity';
 import { isDxfDimension, isDxfLine } from '../../canvas-v2/dxf-canvas/dxf-entity-guards';
 import type { ICommand } from '../../core/commands/interfaces';
 import styles from './PropertiesPalette.module.css';
@@ -198,6 +198,13 @@ export function PropertiesPalette({
 
   if (!paletteSnap.open) return null;
 
+  // 🔴 ΤΟ `entity` ΕΙΧΕ ΔΙΑΓΡΑΦΕΙ ΚΑΙ ΟΙ ΚΑΤΑΝΑΛΩΤΕΣ ΤΟΥ ΕΜΕΙΝΑΝ (ADR-806 §7 #1):
+  // ο refactor `5e24e43f` αντικατέστησε το `dxfScene.entities.find(...)` με φυλαγμένες
+  // ερωτήσεις, αλλά **δύο** αναφορές του `entity` έμειναν στο JSX παρακάτω. Κάθε
+  // άνοιγμα της παλέτας (F11) πετούσε `ReferenceError` — **ζωντανά, στην οθόνη** —
+  // και το είδε μόνο ο σαρωτής αδέσμευτων: parse-only, `symbol-integrity` και jest
+  // ήταν **και τα τρία πράσινα** από πάνω του.
+  const entity = findSceneEntity(dxfScene, entityId);
   const line = findGuardedEntity(dxfScene, entityId, isDxfLine);
   const isLine = line !== null;
   const isDimension = findGuardedEntity(dxfScene, entityId, isDxfDimension) !== null;

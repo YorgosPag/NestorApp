@@ -14,6 +14,7 @@ import type {
   ResourceMetrics,
   ProfileSession,
   NavigatorWithConnection,
+  NetworkInformation,
   MemoryMetrics,
   FirstInputEntry,
   LayoutShiftEntry,
