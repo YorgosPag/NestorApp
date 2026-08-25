@@ -45,7 +45,7 @@
 import React, { useCallback, useId } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
-import { getCurrencyOptions } from '../../../../config/modal-select';
+import { getCurrencyOptions } from '@/config/vocabulary/options/individual';
 import { setTableFormatField } from '../../../../bim/table/table-format-scope';
 import { resolveTableNumberFormatOrigin } from '../../../../bim/table/table-format-origin';
 import { tableFormatSample } from '../../../../bim/table/table-format-sample';

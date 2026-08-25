@@ -75,7 +75,7 @@ import {
   getGenderOptions,
   getIdentityTypeOptions,
   getCountryOptions,
-} from '../subapps/dxf-viewer/config/modal-select/core/options/individual';
+} from '@/config/vocabulary/options/individual';
 
 // 🏢 ENTERPRISE: Import centralized form field labels - ZERO HARDCODED VALUES
 import {

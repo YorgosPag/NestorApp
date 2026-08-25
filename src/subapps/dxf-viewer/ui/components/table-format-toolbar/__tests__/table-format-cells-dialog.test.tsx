@@ -36,7 +36,7 @@ import {
 import { MAX_TABLE_INDENT_LEVEL } from '@/subapps/dxf-viewer/bim/table/table-indent-ops';
 import { resolveTableFormatState } from '@/subapps/dxf-viewer/bim/table/table-format-scope';
 import { resolveTableNumberFormatState } from '@/subapps/dxf-viewer/ui/table-cell-editor/table-format-snapshot';
-import { getCurrencyOptions } from '@/subapps/dxf-viewer/config/modal-select';
+import { getCurrencyOptions } from '@/config/vocabulary/options/individual';
 import {
   BUILTIN_TABLE_STYLES,
   BUILTIN_TABLE_STYLE_IDS,

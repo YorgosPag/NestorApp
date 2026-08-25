@@ -16,7 +16,7 @@ const logger = createModuleLogger('legal-forms');
 // ENTERPRISE: Import από existing centralized system - ZERO DUPLICATES
 import {
   getLegalFormOptions,
-} from '../../../subapps/dxf-viewer/config/modal-select/core/options/company';
+} from '@/config/vocabulary/options/company';
 import { businessRulesService } from '../../../services/business/EnterpriseBusinessRulesService';
 
 // ============================================================================

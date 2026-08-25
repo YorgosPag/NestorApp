@@ -16,7 +16,7 @@ const logger = createModuleLogger('currencies');
 // ENTERPRISE: Import από existing centralized system - ZERO DUPLICATES
 import {
   getCurrencyOptions,
-} from '../../../subapps/dxf-viewer/config/modal-select/core/options/individual';
+} from '@/config/vocabulary/options/individual';
 
 // ============================================================================
 // CURRENCY OPTIONS - ENTERPRISE WRAPPER

@@ -27,11 +27,11 @@ import {
   MODAL_SELECT_PLACEHOLDERS,
   getCompanyFieldLabels,
   getServiceFieldLabels,
-} from '../../subapps/dxf-viewer/config/modal-select/core/labels/fields';
+} from '@/config/vocabulary/labels/fields';
 import {
   getContactTypeLabels,
   getProjectStatusLabels,
-} from '../../subapps/dxf-viewer/config/modal-select/core/labels/status';
+} from '@/config/vocabulary/labels/status';
 import { DROPDOWN_PLACEHOLDERS } from '../../constants/property-statuses-enterprise';
 import type {
   DialogCopyVariant,

@@ -5,10 +5,10 @@
 // 🏢 ENTERPRISE: Use centralized options from modal-select system
 import {
   getServiceFieldLabels,
-} from '../subapps/dxf-viewer/config/modal-select/core/labels/fields';
+} from '@/config/vocabulary/labels/fields';
 import {
   getServiceCategoryOptions,
-} from '../subapps/dxf-viewer/config/modal-select/core/options/company';
+} from '@/config/vocabulary/options/company';
 
 // 🏢 ENTERPRISE: Import centralized service form field labels - ZERO HARDCODED VALUES
 import {

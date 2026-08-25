@@ -32,7 +32,7 @@ import {
   getPropertyMarketStatusLabels,
   getRentalTypeLabels,
   getStorageStatusLabels,
-} from '../../subapps/dxf-viewer/config/modal-select/core/labels/status';
+} from '@/config/vocabulary/labels/status';
 
 // 🏢 ENTERPRISE: Import from modular status.ts for extended property labels (market/sales-related)
 import {
@@ -41,7 +41,7 @@ import {
   MODAL_SELECT_RECORD_STATE_LABELS,
   MODAL_SELECT_ENTITY_TYPE_LABELS,
   MODAL_SELECT_DOCUMENT_STATUS_LABELS
-} from '../../subapps/dxf-viewer/config/modal-select/core/labels/status';
+} from '@/config/vocabulary/labels/status';
 
 // ============================================================================
 // PROJECT STATUS DEFINITIONS

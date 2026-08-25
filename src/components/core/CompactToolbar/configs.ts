@@ -2,7 +2,7 @@
 // 🏢 ENTERPRISE: 100% CENTRALIZED - ZERO HARDCODED VALUES
 
 import type { CompactToolbarConfig } from './types';
-import { getCompactToolbarSearchPlaceholders } from '@/subapps/dxf-viewer/config/modal-select/core/labels/navigation';
+import { getCompactToolbarSearchPlaceholders } from '@/config/vocabulary/labels/navigation';
 import {
   type ToolbarType,
   getFilterCategoriesForType,
@@ -127,20 +127,35 @@ export const propertiesToolbarConfig: CompactToolbarConfig = createToolbarConfig
 export const storagesToolbarConfig: CompactToolbarConfig = createToolbarConfig('storages');
 export const parkingToolbarConfig: CompactToolbarConfig = createToolbarConfig('parking');
 
+/**
+ * Οι ενέργειες που ΚΑΜΙΑ λιτή λίστα δεν προσφέρει.
+ *
+ * ⚠️ SSoT — αυτές οι εννέα γραμμές γράφονταν **αυτολεξεί πέντε φορές** μέσα σε
+ * αυτό το αρχείο (procurement · quotes · vendors · materials · agreements), και
+ * τα δύο τελευταία ήταν **ταυτόσημα από άκρη σε άκρη** — το CHECK 3.28 (jscpd,
+ * ADR-583/584) τα ανέφερε ως κλώνο μέσα στο ΙΔΙΟ αρχείο.
+ *
+ * Κάθε config προσθέτει από κάτω **ΜΟΝΟ ό,τι το ξεχωρίζει**, ώστε η διαφορά να
+ * διαβάζεται με το μάτι αντί να κρύβεται μέσα σε δώδεκα πανομοιότυπες γραμμές.
+ */
+const LEAN_LIST_DISABLED_ACTIONS: CompactToolbarConfig['availableActions'] = {
+  favorites: false,
+  favoritesManagement: false,
+  import: false,
+  preview: false,
+  copy: false,
+  refresh: false,
+  reports: false,
+  settings: false,
+  help: false,
+};
+
 const _procurementBase = createToolbarConfig('procurement');
 export const procurementToolbarConfig: CompactToolbarConfig = {
   ..._procurementBase,
   availableActions: {
     ..._procurementBase.availableActions,
-    favorites: false,
-    favoritesManagement: false,
-    import: false,
-    preview: false,
-    copy: false,
-    refresh: false,
-    reports: false,
-    settings: false,
-    help: false,
+    ...LEAN_LIST_DISABLED_ACTIONS,
     deleteItems: false,
     archive: false,
   },
@@ -151,15 +166,7 @@ export const quotesToolbarConfig: CompactToolbarConfig = {
   ..._quotesBase,
   availableActions: {
     ..._quotesBase.availableActions,
-    favorites: false,
-    favoritesManagement: false,
-    import: false,
-    preview: false,
-    copy: false,
-    refresh: false,
-    reports: false,
-    settings: false,
-    help: false,
+    ...LEAN_LIST_DISABLED_ACTIONS,
     deleteItems: false,
     archive: false,
     share: false,
@@ -171,15 +178,7 @@ export const vendorsToolbarConfig: CompactToolbarConfig = {
   ..._vendorsBase,
   availableActions: {
     ..._vendorsBase.availableActions,
-    favorites: false,
-    favoritesManagement: false,
-    import: false,
-    preview: false,
-    copy: false,
-    refresh: false,
-    reports: false,
-    settings: false,
-    help: false,
+    ...LEAN_LIST_DISABLED_ACTIONS,
     editItem: false,
     deleteItems: false,
     archive: false,
@@ -192,15 +191,7 @@ export const materialsToolbarConfig: CompactToolbarConfig = {
   ..._materialsBase,
   availableActions: {
     ..._materialsBase.availableActions,
-    favorites: false,
-    favoritesManagement: false,
-    import: false,
-    preview: false,
-    copy: false,
-    refresh: false,
-    reports: false,
-    settings: false,
-    help: false,
+    ...LEAN_LIST_DISABLED_ACTIONS,
     archive: false,
     share: false,
   },
@@ -211,15 +202,7 @@ export const agreementsToolbarConfig: CompactToolbarConfig = {
   ..._agreementsBase,
   availableActions: {
     ..._agreementsBase.availableActions,
-    favorites: false,
-    favoritesManagement: false,
-    import: false,
-    preview: false,
-    copy: false,
-    refresh: false,
-    reports: false,
-    settings: false,
-    help: false,
+    ...LEAN_LIST_DISABLED_ACTIONS,
     archive: false,
     share: false,
   },

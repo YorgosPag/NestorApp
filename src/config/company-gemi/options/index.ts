@@ -12,12 +12,12 @@
 import {
   getAddressTypeOptions,
   getShareholderTypeOptions,
-} from '../../../subapps/dxf-viewer/config/modal-select/core/options/company';
+} from '@/config/vocabulary/options/company';
 import {
   getDocumentTypeOptions,
   getBoardTypeOptions,
   getRepresentativePositionOptions,
-} from '../../../subapps/dxf-viewer/config/modal-select/utils/accessors';
+} from '@/config/vocabulary/options/entities';
 
 // Re-export local options
 export {

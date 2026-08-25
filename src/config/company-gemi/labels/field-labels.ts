@@ -9,7 +9,7 @@
  */
 
 // ENTERPRISE: Import από centralized modal-select system
-import { MODAL_SELECT_COMPANY_FIELD_LABELS } from '../../../subapps/dxf-viewer/config/modal-select/core/labels/fields';
+import { MODAL_SELECT_COMPANY_FIELD_LABELS } from '@/config/vocabulary/labels/fields';
 
 // ============================================================================
 // FIELD LABELS MAPPING

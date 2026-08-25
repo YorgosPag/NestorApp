@@ -18,7 +18,7 @@ import { NavigationCardToolbar } from './NavigationCardToolbar';
 import { BuildingSpacesTabs } from './BuildingSpacesTabs';
 import { NAVIGATION_ENTITIES, NAVIGATION_ACTIONS } from '../config';
 import { useNavigation } from '../core/NavigationContext';
-import { getNavigationFilterCategories } from '@/subapps/dxf-viewer/config/modal-select/core/labels/navigation';
+import { getNavigationFilterCategories } from '@/config/vocabulary/labels/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
 import { formatBuildingLabel } from '@/lib/entity-formatters';

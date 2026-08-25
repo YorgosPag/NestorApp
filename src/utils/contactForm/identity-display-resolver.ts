@@ -14,7 +14,7 @@
  */
 
 import { getTaxOfficeDisplayName } from '@/subapps/accounting/data/greek-tax-offices';
-import { MODAL_SELECT_LEGAL_FORMS, MODAL_SELECT_GEMI_STATUSES } from '@/subapps/dxf-viewer/config/modal-select/core/options/company';
+import { MODAL_SELECT_LEGAL_FORMS, MODAL_SELECT_GEMI_STATUSES } from '@/config/vocabulary/options/company';
 import type { CompanyIdentityField } from './company-identity-guard';
 
 export type IdentityDisplayTranslator = (key: string) => string;

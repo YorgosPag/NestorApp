@@ -16,7 +16,7 @@ const logger = createModuleLogger('gemi-statuses');
 import {
   getGemiStatusOptions,
   MODAL_SELECT_GEMI_STATUSES,
-} from '../../../subapps/dxf-viewer/config/modal-select/core/options/company';
+} from '@/config/vocabulary/options/company';
 import { businessRulesService } from '../../../services/business/EnterpriseBusinessRulesService';
 
 // ============================================================================

@@ -13,7 +13,7 @@
 import {
   getLegalFormOptions,
   getGemiStatusOptions,
-} from '../../subapps/dxf-viewer/config/modal-select/core/options/company';
+} from '@/config/vocabulary/options/company';
 import type {
   LegalFormOption,
   CompanyStatusOption,

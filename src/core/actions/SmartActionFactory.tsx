@@ -38,7 +38,7 @@ import {
 // Import από existing centralized configuration system
 import {
   getActionButtons,
-} from '../../subapps/dxf-viewer/config/modal-select/toolbar/configurations';
+} from '@/config/vocabulary/labels/desktop-navigation';
 
 // Import από existing centralized design system
 import { useBorderTokens } from '@/hooks/useBorderTokens';
