@@ -25,16 +25,19 @@ import { AuthForm } from '@/auth';
 // bootstrap του i18next έχει τελειώσει όταν τρέξει η κλήση.
 import routeSlice from '@/i18n/generated/routes/login.el.json';
 import { registerRouteSlice } from '@/i18n/route-slice';
-import { cn } from '@/lib/design-system';
 
 registerRouteSlice(routeSlice);
 
 export default function LoginPage() {
   // NOTE: No <main> here — το `(auth)/layout.tsx` παρέχει το <main> wrapper (ADR-777 §8.12)
-  // This avoids nested <main> tags which cause HTML semantic issues
-  return (
-    <section className={cn('min-h-screen bg-background flex items-center justify-center')}>
-      <AuthForm defaultMode="signin" />
-    </section>
-  );
+  // This avoids nested <main> tags which cause HTML semantic issues.
+  //
+  // ⚠️ ΟΥΤΕ «γέμισε το παράθυρο και κεντράρισε» (ADR-797 ΦΑΣΗ Β). Το ΙΔΙΟ
+  // `min-h-screen … items-center justify-center` δηλωνόταν **δύο φορές
+  // εμφωλευμένα** — εδώ και στο `<main>` του layout — μετρημένο ζωντανά
+  // 2026-08-25 ως δύο `min-height: 1122.5px` στην ίδια αλυσίδα. Η επανάληψη
+  // δεν φαινόταν, γιατί δύο ταυτόσημες δηλώσεις δίνουν το ίδιο αποτέλεσμα·
+  // φάνηκε μόλις ο διάδρομος έδωσε κάθετο κενό, οπότε η **δεύτερη** παρήγαγε
+  // 48px κύλισης. Το κεντράρισμα ανήκει στο layout, μία φορά.
+  return <AuthForm defaultMode="signin" />;
 }

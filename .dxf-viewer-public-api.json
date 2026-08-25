@@ -842,8 +842,7 @@
         "getStorageStatusLabels",
         "getStorageTabLabels",
         "getUnitStatusLabels",
-        "getUnitsTabLabels",
-        "getValidationMessages"
+        "getUnitsTabLabels"
       ],
       "reason": "ΣΠΟΡΑ ADR-796 — υπάρχουσα δημόσια επιφάνεια, καταγεγραμμένη ΑΠΟ ΜΕΤΡΗΣΗ στις 2026-08-24. ⚠️ ΔΕΝ σημαίνει «σχεδιασμένο API»: το 76% των συμβόλων έχει ΕΝΑΝ καταναλωτή, άρα μεγάλο μέρος είναι τυχαία διαρροή. Ο λόγος οφείλει να αντικατασταθεί από πραγματικό «γιατί» όταν κάποιος αγγίξει τη γραμμή."
     },

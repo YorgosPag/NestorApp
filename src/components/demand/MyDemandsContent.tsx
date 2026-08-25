@@ -102,7 +102,17 @@ export function MyDemandsContent(): React.ReactElement {
   return (
     // `flex-1`, ΟΧΙ `min-h-screen`: το ύψος το κατέχει το `(me)/layout.tsx`, που
     // φιλοξενεί και την κεφαλίδα — ίδια σύμβαση με το `(light)`.
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 p-6">
+    <main className="flex w-full flex-col gap-6">
+      {/*
+        ⚠️ ΚΑΝΕΝΑ `mx-auto max-w-3xl p-6` εδώ (ADR-797 ΦΑΣΗ Β). Και τα τρία τα κατέχει
+        πλέον ο ΕΝΑΣ ιδιοκτήτης, το `ShellSurface` του `PrivateSpaceShell`:
+          · ο **διάδρομος** ρευστά από το πλάτος της επιφάνειας (16→32px),
+          · το **μέτρο** ως ρόλος `wide` = 80 χαρακτήρες (WCAG 1.4.8),
+          · το **κεντράρισμα** δωρεάν από τις δύο `1fr` στήλες του grid.
+        Το παλιό `max-w-3xl` + `p-6` έδινε 720px = **80,1 χαρακτήρες** — δηλαδή το
+        ίδιο πλάτος, αλλά κλειδωμένο σε pixel (σπάει στο zoom, WCAG 1.4.4) και
+        γραμμένο **τέσσερις φορές** σε τέσσερα αρχεία.
+      */}
       <header className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold text-foreground">
           {t('property-market:demand.list.title')}

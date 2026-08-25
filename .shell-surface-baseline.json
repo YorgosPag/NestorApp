@@ -1,22 +1,38 @@
 {
-  "$doc": "ADR-797 / CHECK 3.63 — σελίδες που δηλώνουν κενό που ανήκει στο κέλυφος. Ο αριθμός ΔΕΝ είναι δείκτης υγείας: είναι εκστρατεία που τελειώνει στο μηδέν. Τα zero-tolerance ΔΕΝ μπαίνουν ΠΟΤΕ εδώ.",
-  "generated": "2026-08-23",
+  "$doc": "ADR-797 / CHECK 3.63 — σελίδες που δηλώνουν γεωμετρία που ανήκει στο κέλυφος: κενό (page/content-padding, negative-margin) ή ΠΛΑΤΟΣ (page-measure). Ο αριθμός ΔΕΝ είναι δείκτης υγείας: είναι εκστρατεία που τελειώνει στο μηδέν. Τα zero-tolerance ΔΕΝ μπαίνουν ΠΟΤΕ εδώ.",
+  "generated": "2026-08-25",
   "violations": [
     "/admin/audit-log|content-padding",
+    "/data-deletion|page-measure",
     "/data-deletion|page-padding",
+    "/demo/addresses-editor-state|page-measure",
     "/demo/addresses-editor-state|page-padding",
+    "/demo/addresses-editor|page-measure",
     "/demo/addresses-editor|page-padding",
+    "/demo/addresses|page-measure",
+    "/listing/[id]|page-measure",
+    "/mandate/[token]|page-measure",
     "/o/[workspace]/accounting|page-padding",
     "/o/[workspace]/attendance/check-in/[token]|content-padding",
     "/o/[workspace]/dashboard|content-padding",
+    "/o/[workspace]/dashboard|page-measure",
+    "/o/[workspace]/procurement/quotes/scan|page-measure",
+    "/o/[workspace]/procurement/rfqs/new|page-measure",
+    "/o/[workspace]/projects/[id]/procurement/quote/[quoteId]/review|page-measure",
+    "/oauth/consent|page-measure",
     "/onboarding/organization|page-padding",
     "/pending-approval|page-padding",
+    "/privacy-policy|page-measure",
     "/privacy-policy|page-padding",
+    "/terms|page-measure",
     "/terms|page-padding",
     "/test-harness/contact-mutation|content-padding",
+    "/test-harness/contact-mutation|page-measure",
+    "/test-upload|page-measure",
     "/test-upload|page-padding"
   ],
   "declarations": [
-    "/o/[workspace]/dxf/viewer"
+    "/o/[workspace]/dxf/viewer",
+    "/search/results"
   ]
 }

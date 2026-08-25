@@ -276,7 +276,12 @@
       "loading": "Loading your properties…",
       "error": "Your properties could not be loaded. Please try again shortly.",
       "open": "Open",
-      "countLabel": "{count, plural, one {# property} other {# properties}}"
+      "countLabel": "{count, plural, one {# property} other {# properties}}",
+      "workspaceCta": {
+        "title": "Working professionally?",
+        "body": "Create your office workspace — projects, contacts and files, kept separate from your own.",
+        "action": "Create workspace"
+      }
     },
     "mandates": {
       "title": "Office mandates",

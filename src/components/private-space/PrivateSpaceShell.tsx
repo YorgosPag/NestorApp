@@ -31,6 +31,7 @@
 
 import React from 'react';
 
+import { ShellSurface } from '@/core/containers/ShellSurface';
 import { ProtectedRoute } from '@/auth/components/ProtectedRoute';
 import { PublicSiteHeader } from '@/components/public-site/PublicSiteHeader';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -70,7 +71,33 @@ export function PrivateSpaceShell({ children }: Readonly<{ children: React.React
       */}
       <PublicSiteHeader />
       <ProtectedRoute redirectTo={AUTH_ROUTES.login} fallback={<IdentityPending />}>
-        {children}
+        {/*
+          🏛️ Ο ΔΙΑΔΡΟΜΟΣ ΚΑΙ ΤΟ ΜΕΤΡΟ (ADR-797 ΦΑΣΗ Β).
+
+          Το ίδιο `data-shell-surface` με το κέλυφος — μηδέν νέο CSS, μηδέν νέα
+          κλίμακα. **ΜΕΣΑ** στον φρουρό επίτηδες: η κατάσταση αναμονής είναι
+          κεντραρισμένο μήνυμα, όχι σελίδα, και δεν θέλει τον διάδρομο μιας σελίδας.
+
+          🔑 **ΕΔΩ το `measure` δηλώνεται στη ΓΕΙΤΟΝΙΑ, και είναι μέτρηση:** και οι
+          τέσσερις σελίδες του `(me)` έχουν το **ίδιο** σχήμα (κεντραρισμένη στήλη
+          καρτών) και έγραφαν την **ίδια** χειρόγραφη τιμή `max-w-3xl` — τέσσερις
+          φορές. Μία δήλωση αντί για τέσσερις ευκαιρίες να αποκλίνουν.
+
+          ⚠️ `wide` = **80 χαρακτήρες** = ακριβώς το ταβάνι του WCAG 1.4.8. Το παλιό
+          `max-w-3xl` + `p-6` έδινε **720px = 80,1 χαρακτήρες** στη ζωντανή
+          γραμματοσειρά — δηλαδή ο ρόλος αναπαράγει το σημερινό πλάτος με απόκλιση
+          **κάτω από 1px**, και ταυτόχρονα κλιμακώνεται με το zoom του χρήστη.
+
+          🔴 **ΚΑΜΙΑ κλάση `flex` εδώ, και ΔΕΝ είναι αισθητικό.** Με `measure` το
+          `shell-surface.css` κάνει την επιφάνεια `display: grid`· το `.flex` του
+          Tailwind έχει **ίδια ειδικότητα** (0,1,0) και το `shell-surface.css`
+          εισάγεται **πριν** τα `@tailwind` ⇒ κατά σειρά πηγής **νικά το Tailwind**
+          και το grid **δεν εφαρμόζεται ΠΟΤΕ**. Το ταβάνι θα εξαφανιζόταν σιωπηλά,
+          με τη σελίδα να δείχνει απολύτως φυσιολογική.
+        */}
+        <ShellSurface measure="wide" className="flex-1">
+          {children}
+        </ShellSurface>
       </ProtectedRoute>
     </>
   );

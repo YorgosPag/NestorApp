@@ -87,24 +87,44 @@ const {
   stripComments,
   classifyPage,
   collectPages,
+  exportedRootOf,
+  namedImports,
+  resolveAlias,
 } = require('./lib/shell-surface/scan');
 
 const REPO = path.resolve(__dirname, '..');
 const BASELINE = path.join(REPO, '.shell-surface-baseline.json');
 const REGISTRY = path.join(REPO, '.shell-surface.json');
 
-/** Ο ΕΝΑΣ ιδιοκτήτης. Αν μετακινηθεί, η πύλη πρέπει να το μάθει — δεν μαντεύει. */
+/**
+ * Ο ΕΝΑΣ ΓΡΑΦΕΑΣ του δείκτη. Κάθε επιφάνεια που παίρνει διάδρομο περνά από εδώ —
+ * και αυτό κάνει τη «δεύτερη αυθεντία» **αδύνατη**, όχι απλώς ανιχνεύσιμη.
+ */
+const PRIMITIVE = path.join(REPO, 'src', 'core', 'containers', 'ShellSurface.tsx');
+
+/** Ο ιδιοκτήτης του κελύφους. Δεν γράφει πια τον δείκτη — τον **παραδίδει**. */
 const OWNER = path.join(REPO, 'src', 'components', 'layout', 'MainContentBridge.tsx');
 
-/** Οι σελίδες που φοράνε το κέλυφος. Το `(app)` **είναι** ο ορισμός (CHECK 3.52). */
-const SHELL_ROOT = path.join(REPO, 'src', 'app', '(app)');
+/** Η ρίζα των διαδρομών. Οι **γειτονιές** παράγονται από εδώ, ποτέ από λίστα. */
+const APP_ROOT = path.join(REPO, 'src', 'app');
 
 const BLOCKING = new Set(['page-padding', 'content-padding', 'negative-margin']);
 
 const relative = (p) => path.relative(REPO, p).split(path.sep).join('/');
 
-/** Ταυτότητα παραβίασης: **διαδρομή + κατάσταση**, ποτέ γραμμή.
- *  Η γραμμή μετακινείται με κάθε σχόλιο· η ταυτότητα δεν πρέπει. */
+/**
+ * Ταυτότητα παραβίασης: **διαδρομή + κατάσταση**, ποτέ γραμμή.
+ * Η γραμμή μετακινείται με κάθε σχόλιο· η ταυτότητα δεν πρέπει.
+ *
+ * 🔑 Η ΔΙΑΔΡΟΜΗ ΜΕΝΕΙ ΓΥΜΝΗ ΑΚΟΜΑ ΚΑΙ ΤΩΡΑ ΠΟΥ ΟΙ ΓΕΙΤΟΝΙΕΣ ΕΙΝΑΙ ΠΕΝΤΕ, και
+ * δεν είναι παράλειψη: το Next.js **απαγορεύει** σε δύο route groups να λύνονται
+ * στην ίδια διεύθυνση (τεκμηρίωση, αυτολεξεί: *«Routes in different route groups
+ * should not resolve to the same URL path … and cause an error»*). Η μοναδικότητα
+ * είναι **δομική, από το framework** — άρα η επέκταση εμβέλειας από 139 σε 157
+ * σελίδες **δεν μετακίνησε καμία υπάρχουσα ταυτότητα**, και δεν χρειάστηκε ούτε
+ * πρόθεμα γειτονιάς ούτε ισομορφισμός baseline (πρότυπο CHECK 3.60).
+ * Επαληθεύτηκε **μετρώντας**: 0 συγκρούσεις σε 156 διαδρομές.
+ */
 const violationId = (v) => `${v.route}|${v.state}`;
 
 function readRegistry() {
@@ -112,97 +132,242 @@ function readRegistry() {
     throw new Error(`λείπει το μητρώο ${relative(REGISTRY)}`);
   }
   const raw = JSON.parse(fs.readFileSync(REGISTRY, 'utf8'));
-  const entries = raw.fullBleed || {};
-  for (const [route, entry] of Object.entries(entries)) {
-    if (route.startsWith('$')) continue;
-    // ⛔ Ο λόγος είναι ΥΠΟΧΡΕΩΤΙΚΟΣ (πρότυπο CHECK 3.35/3.58). Μια εξαίρεση
-    //    χωρίς λόγο είναι εξαίρεση που κανείς δεν μπορεί να αποσύρει.
+
+  // ⛔ Ο λόγος είναι ΥΠΟΧΡΕΩΤΙΚΟΣ (πρότυπο CHECK 3.35/3.58). Μια εξαίρεση χωρίς
+  //    λόγο είναι εξαίρεση που κανείς δεν μπορεί να αποσύρει.
+  const needsReason = (entry, label) => {
     if (!entry || typeof entry.reason !== 'string' || entry.reason.trim().length < 20) {
-      throw new Error(`η δήλωση bleed «${route}» δεν έχει ουσιαστικό reason`);
+      throw new Error(`η δήλωση «${label}» δεν έχει ουσιαστικό reason`);
     }
+  };
+
+  const fullBleed = raw.fullBleed || {};
+  for (const [route, entry] of Object.entries(fullBleed)) {
+    if (route.startsWith('$')) continue;
+    needsReason(entry, route);
   }
-  return entries;
+
+  const withoutCorridor = raw.groupsWithoutCorridor || {};
+  for (const [group, entry] of Object.entries(withoutCorridor)) {
+    if (group.startsWith('$')) continue;
+    needsReason(entry, group);
+  }
+
+  return { fullBleed, withoutCorridor };
 }
 
-/** Κ1 — ο ιδιοκτήτης δεν γίνεται διάδικος. */
-function judgeOwner() {
-  if (!fs.existsSync(OWNER)) {
-    throw new Error(`ο ιδιοκτήτης δεν βρέθηκε: ${relative(OWNER)}`);
-  }
-  const src = stripComments(fs.readFileSync(OWNER, 'utf8'));
-  const open = src.match(/<main\b([^>]*)>/);
-  if (!open) throw new Error(`ο ιδιοκτήτης δεν αποδίδει <main>: ${relative(OWNER)}`);
+/** Το κείμενο ενός αρχείου χωρίς σχόλια, ή `null` αν δεν υπάρχει. */
+function readClean(file) {
+  if (!fs.existsSync(file)) return null;
+  return stripComments(fs.readFileSync(file, 'utf8'));
+}
 
-  const hasSurface = /data-shell-surface/.test(open[1]);
-  const hasPadding = OUTER_PADDING.test(open[1]);
-  return { hasSurface, hasPadding, attrs: open[1].trim().slice(0, 120) };
+/**
+ * Κ1 — Ο ΕΝΑΣ ΓΡΑΦΕΑΣ, ΚΑΙ Η ΠΑΡΑΔΟΣΗ ΣΕ ΑΥΤΟΝ.
+ *
+ * Τέσσερις ερωτήσεις, όχι μία — και καμία δεν συνεπάγεται τις άλλες:
+ *   α) γράφει **το primitive** τον δείκτη;   (αλλιώς ο διάδρομος σβήνει ΠΑΝΤΟΥ)
+ *   β) **παραδίδει** ο ιδιοκτήτης σε αυτό;   (αλλιώς δεύτερος γραφέας)
+ *   γ) τον ξαναγράφει **και** με το χέρι;    (τότε είναι ΚΑΙ οι δύο)
+ *   δ) δηλώνει κάποιος από τους δύο padding; (τότε ο κριτής έγινε διάδικος)
+ *
+ * ⚠️ Η (β) είναι **αυστηρότερη** από τον έλεγχο της ΦΑΣΗΣ Α («το `<main>` φέρει
+ * `data-shell-surface`»): εκείνος ήταν ικανοποιημένος από ένα **χειρόγραφο**
+ * attribute — δηλαδή ακριβώς από τη δεύτερη αυθεντία που το ADR απαγορεύει.
+ */
+function judgeOwnership() {
+  const prim = readClean(PRIMITIVE);
+  if (prim === null) throw new Error(`το primitive δεν βρέθηκε: ${relative(PRIMITIVE)}`);
+  const own = readClean(OWNER);
+  if (own === null) throw new Error(`ο ιδιοκτήτης δεν βρέθηκε: ${relative(OWNER)}`);
+
+  const primitiveRoot = exportedRootOf(prim) || { classAttr: '' };
+  const ownerRoot = exportedRootOf(own) || { classAttr: '' };
+
+  return {
+    primitiveWrites: /data-shell-surface\s*=/.test(prim),
+    primitivePads: OUTER_PADDING.test(prim),
+    delegates: /<\s*ShellSurface\b[\s\S]{0,160}?as="main"/.test(own),
+    ownerWritesRaw: /data-shell-surface/.test(own),
+    ownerPads: OUTER_PADDING.test(ownerRoot.classAttr || ''),
+    attrs: (ownerRoot.classAttr || '').slice(0, 120),
+    primitiveTag: primitiveRoot.tag || '?',
+  };
+}
+
+/** Οι γειτονιές, **παραγμένες** από τον δίσκο. Ποτέ χειρόγραφη λίστα. */
+function routeGroups() {
+  return fs
+    .readdirSync(APP_ROOT, { withFileTypes: true })
+    .filter((e) => e.isDirectory() && /^\(.+\)$/.test(e.name))
+    .map((e) => e.name)
+    .sort();
+}
+
+/**
+ * Κ4 — ΚΑΘΕ ΓΕΙΤΟΝΙΑ ΠΑΙΡΝΕΙ ΔΙΑΔΡΟΜΟ, εκτός αν το είπε κάποιος **με λόγο**.
+ *
+ * Η αναζήτηση είναι **ΕΝΑ άλμα** από το `layout.tsx` — ίδιο συμβόλαιο με τον
+ * σαρωτή σελίδων, και **μετρημένα αρκετό και για τις πέντε**: το `(app)` εισάγει
+ * το `MainContentBridge` **άμεσα**, το `(me)` το `PrivateSpaceShell`, τα
+ * `(light)`/`(auth)` το γράφουν στο ίδιο τους το layout.
+ *
+ * ⚠️ **fail-closed**: γειτονιά **χωρίς** `layout.tsx` είναι ⛔, όχι «καθαρή».
+ * Χωρίς αυτό, μια γειτονιά που χάνει το layout της θα έβγαινε **σιωπηλά** από
+ * την κρίση — δηλαδή θα ήταν πράσινη ακριβώς **επειδή** έσπασε.
+ *
+ * ⚠️ Και η **αντίφαση** είναι δική της κατάσταση: μητρώο που λέει «χωρίς
+ * διάδρομο» ενώ το layout δίνει διάδρομο δεν είναι «εντάξει επειδή το ένα από τα
+ * δύο περνά» — είναι δύο αλήθειες που διαφωνούν (ADR-749).
+ */
+function judgeGroupCorridor(group, withoutCorridor) {
+  const layoutFile = path.join(APP_ROOT, group, 'layout.tsx');
+  const src = readClean(layoutFile);
+  if (src === null) {
+    return { state: 'group-without-layout', detail: `η γειτονιά ${group} δεν έχει layout.tsx` };
+  }
+
+  let found = /<\s*ShellSurface\b/.test(src);
+  if (!found) {
+    for (const imp of namedImports(src)) {
+      const target = resolveAlias(imp.spec, REPO);
+      if (!target) continue;
+      if (!imp.names.some((n) => src.includes(`<${n}`))) continue;
+      const child = readClean(target);
+      if (child && /<\s*ShellSurface\b/.test(child)) {
+        found = true;
+        break;
+      }
+    }
+  }
+
+  const declared = Object.prototype.hasOwnProperty.call(withoutCorridor, group);
+  if (found && declared) {
+    return {
+      state: 'corridor-contradicts-declaration',
+      detail: `${group}: το μητρώο λέει «χωρίς διάδρομο», το layout όμως δίνει διάδρομο`,
+    };
+  }
+  if (found) return { state: 'corridor-owned', detail: group };
+  if (declared) return { state: 'corridor-declared-absent', detail: group };
+  return {
+    state: 'group-without-corridor',
+    detail: `${group}: ούτε το layout ούτε ένα άλμα από αυτό δηλώνει διάδρομο`,
+  };
 }
 
 function measure() {
   const registry = readRegistry();
-  const owner = judgeOwner();
+  const ownership = judgeOwnership();
 
   const tally = Object.create(null);
+  const groupTally = Object.create(null);
   const violations = [];
   const declarations = [];
   const unresolved = [];
+  const measures = [];
+
+  const flag = (route, state, file, detail) =>
+    violations.push({ route, state, file, line: 0, detail });
 
   // ⛔ Κ1 — ZERO-TOL. Μπαίνει στις violations αλλά ΔΕΝ επιτρέπεται σε baseline
   //    (δες buildPayload): ένα zero-tol που κλειδώνεται με ένα `--write-baseline`
   //    δεν είναι zero-tol (πρότυπο CHECK 3.44/3.58).
-  if (!owner.hasSurface) {
-    violations.push({
-      route: relative(OWNER), state: 'owner-lost-marker', file: relative(OWNER), line: 0,
-      detail: `το <main> του κελύφους έχασε το data-shell-surface — ο διάδρομος γίνεται ΣΙΩΠΗΛΑ μηδέν · ${owner.attrs}`,
-    });
+  if (!ownership.primitiveWrites) {
+    flag(relative(PRIMITIVE), 'primitive-lost-marker', relative(PRIMITIVE),
+      'ο ΕΝΑΣ γραφέας έπαψε να γράφει το data-shell-surface — ο διάδρομος γίνεται ΣΙΩΠΗΛΑ μηδέν σε ΟΛΕΣ τις γειτονιές ταυτόχρονα');
   }
-  if (owner.hasPadding) {
-    violations.push({
-      route: relative(OWNER), state: 'owner-declares-padding', file: relative(OWNER), line: 0,
-      detail: `ο ιδιοκτήτης δηλώνει δικό του padding — δεύτερη αυθεντία που νικά κατά σειρά πηγής · ${owner.attrs}`,
-    });
+  if (ownership.primitivePads) {
+    flag(relative(PRIMITIVE), 'primitive-declares-padding', relative(PRIMITIVE),
+      'το primitive δηλώνει δικό του padding — δεύτερη αυθεντία στην πηγή της πρώτης');
+  }
+  if (!ownership.delegates) {
+    flag(relative(OWNER), 'owner-lost-marker', relative(OWNER),
+      `ο ιδιοκτήτης του κελύφους δεν παραδίδει στο ShellSurface (as="main") · ${ownership.attrs}`);
+  }
+  if (ownership.ownerWritesRaw && ownership.delegates) {
+    flag(relative(OWNER), 'owner-writes-marker-by-hand', relative(OWNER),
+      'ο ιδιοκτήτης ξαναγράφει το data-shell-surface με το χέρι δίπλα στην παράδοση — δύο γραφείς');
+  }
+  if (ownership.ownerPads) {
+    flag(relative(OWNER), 'owner-declares-padding', relative(OWNER),
+      `ο ιδιοκτήτης δηλώνει δικό του padding — δεύτερη αυθεντία που νικά κατά σειρά πηγής · ${ownership.attrs}`);
   }
 
-  for (const page of collectPages(SHELL_ROOT)) {
-    const verdict = classifyPage(page, REPO);
-    const route =
-      relative(page).replace('src/app/(app)', '').replace(/\/page\.tsx$/, '') || '/';
-
-    tally[verdict.state] = (tally[verdict.state] || 0) + 1;
-
-    if (verdict.state === 'declared-bleed') {
-      declarations.push(route);
-      if (!registry[route]) {
-        violations.push({
-          route, state: 'undeclared-bleed', file: relative(page), line: 0,
-          detail: `η σελίδα βγαίνει από τον διάδρομο χωρίς γραμμή στο ${relative(REGISTRY)}`,
-        });
-      }
-      continue;
+  // ⛔ Κ4 — η κάθε γειτονιά, παραγμένη από τον δίσκο.
+  const groups = routeGroups();
+  for (const group of groups) {
+    const verdict = judgeGroupCorridor(group, registry.withoutCorridor);
+    groupTally[verdict.state] = (groupTally[verdict.state] || 0) + 1;
+    if (verdict.state !== 'corridor-owned' && verdict.state !== 'corridor-declared-absent') {
+      flag(group, verdict.state, `src/app/${group}/layout.tsx`, verdict.detail);
     }
-    if (verdict.state === 'unresolved-root') { unresolved.push(route); continue; }
-    if (BLOCKING.has(verdict.state)) {
-      violations.push({ route, state: verdict.state, file: relative(page), line: 0, detail: verdict.detail });
+  }
+  for (const group of Object.keys(registry.withoutCorridor)) {
+    if (group.startsWith('$')) continue;
+    if (!groups.includes(group)) {
+      flag(group, 'orphan-group-declaration', relative(REGISTRY),
+        'το μητρώο δηλώνει γειτονιά χωρίς διάδρομο που δεν υπάρχει (πια) στον δίσκο');
+    }
+  }
+
+  // ── ΟΙ ΣΕΛΙΔΕΣ, ΣΕ ΟΛΕΣ ΤΙΣ ΓΕΙΤΟΝΙΕΣ ────────────────────────────────────
+  let pages = 0;
+  for (const group of groups) {
+    for (const page of collectPages(path.join(APP_ROOT, group))) {
+      pages += 1;
+      const verdict = classifyPage(page, REPO);
+      const route =
+        relative(page).replace(`src/app/${group}`, '').replace(/\/page\.tsx$/, '') || '/';
+
+      tally[verdict.state] = (tally[verdict.state] || 0) + 1;
+
+      // 🔑 Κ5 — ΔΕΥΤΕΡΟΣ ΑΞΟΝΑΣ: κρίνεται ΠΑΝΤΑ, ακόμη κι όταν η σελίδα είναι
+      //    «καθαρή» ως προς το κενό. Μία κατάσταση για δύο ερωτήσεις θα έκρυβε
+      //    τη μία πίσω από την άλλη (μάθημα CHECK 3.41).
+      if (verdict.measure) {
+        measures.push(route);
+        flag(route, 'page-measure', relative(page),
+          `${verdict.measure.where}: <${verdict.measure.tag} className="… ${verdict.measure.klass} …"> — χειρόγραφο ταβάνι πλάτους· η κλίμακα ζει στο spacing.layout.measure`);
+      }
+
+      if (verdict.state === 'declared-bleed') {
+        declarations.push(route);
+        if (!registry.fullBleed[route]) {
+          flag(route, 'undeclared-bleed', relative(page),
+            `η σελίδα βγαίνει από τον διάδρομο χωρίς γραμμή στο ${relative(REGISTRY)}`);
+        }
+        continue;
+      }
+      if (verdict.state === 'unresolved-root') {
+        unresolved.push(route);
+        continue;
+      }
+      if (BLOCKING.has(verdict.state)) {
+        flag(route, verdict.state, relative(page), verdict.detail);
+      }
     }
   }
 
   // Κ3, η άλλη κατεύθυνση: δήλωση χωρίς σελίδα. Χωρίς αυτό το μητρώο σαπίζει
   // σιωπηλά και ο επόμενος διαβάζει «εγκεκριμένο» εκεί που δεν υπάρχει τίποτα.
-  for (const route of Object.keys(registry)) {
+  for (const route of Object.keys(registry.fullBleed)) {
     if (route.startsWith('$')) continue;
     if (!declarations.includes(route)) {
-      violations.push({
-        route, state: 'orphan-declaration', file: relative(REGISTRY), line: 0,
-        detail: 'το μητρώο δηλώνει bleed για διαδρομή που δεν το ζητά (πια)',
-      });
+      flag(route, 'orphan-declaration', relative(REGISTRY),
+        'το μητρώο δηλώνει bleed για διαδρομή που δεν το ζητά (πια)');
     }
   }
 
-  const pages = collectPages(SHELL_ROOT).length;
+  // fail-closed: κλειστή λογιστική, ΔΥΟ κατάστιχα. Άγνωστη κατάσταση δεν χάνεται
+  // σιωπηλά — και τα δύο μεγέθη μετρώνται ανεξάρτητα από τα ευρήματα.
   const counted = Object.values(tally).reduce((a, b) => a + b, 0);
   if (counted !== pages) {
-    // fail-closed: κλειστή λογιστική. Άγνωστη κατάσταση δεν χάνεται σιωπηλά.
-    throw new Error(`η λογιστική δεν κλείνει: ${counted} ≠ ${pages}`);
+    throw new Error(`η λογιστική σελίδων δεν κλείνει: ${counted} ≠ ${pages}`);
+  }
+  const countedGroups = Object.values(groupTally).reduce((a, b) => a + b, 0);
+  if (countedGroups !== groups.length) {
+    throw new Error(`η λογιστική γειτονιών δεν κλείνει: ${countedGroups} ≠ ${groups.length}`);
   }
 
   return {
@@ -210,26 +375,61 @@ function measure() {
     violationIds: violations.map(violationId),
     declarations: declarations.sort(),
     tally,
+    groupTally,
+    groups,
     unresolved,
+    measures,
     pages,
-    owner,
+    ownership,
   };
 }
 
-const ZERO_TOL = new Set(['owner-declares-padding', 'owner-lost-marker', 'undeclared-bleed', 'orphan-declaration']);
+/**
+ * ⛔ ΟΙ ΚΑΤΑΣΤΑΣΕΙΣ ΠΟΥ ΔΕΝ ΜΠΑΙΝΟΥΝ **ΠΟΤΕ** ΣΕ BASELINE.
+ *
+ * Δεν είναι «σοβαρότερες» — είναι **άλλου είδους**. Καμία από αυτές δεν έχει
+ * νόημα ως «λιγότερες από χθες»: ένας ιδιοκτήτης που έπαψε να παραδίδει, μια
+ * γειτονιά χωρίς διάδρομο, ή ένα μητρώο που αντιφάσκει με τον δίσκο είναι
+ * **σπασμένα**, όχι χρέος. Ένα zero-tolerance που κλειδώνεται με ένα
+ * `--write-baseline` δεν είναι zero-tolerance (πρότυπο CHECK 3.44/3.50/3.58).
+ */
+const ZERO_TOL = new Set([
+  'primitive-lost-marker',
+  'primitive-declares-padding',
+  'owner-lost-marker',
+  'owner-writes-marker-by-hand',
+  'owner-declares-padding',
+  'undeclared-bleed',
+  'orphan-declaration',
+  'group-without-corridor',
+  'group-without-layout',
+  'corridor-contradicts-declaration',
+  'orphan-group-declaration',
+]);
+
+/** Οι ratcheted — **εκστρατείες που τελειώνουν στο μηδέν**, όχι δείκτες υγείας. */
+const RATCHETED = new Set(['page-padding', 'content-padding', 'negative-margin', 'page-measure']);
 
 function buildPayload(m) {
   const forbidden = m.violations.filter((v) => ZERO_TOL.has(v.state));
   if (forbidden.length) {
-    // ⛔ Ένα zero-tolerance που κλειδώνεται με ένα `--write-baseline` δεν είναι
-    //    zero-tolerance. Πρότυπο CHECK 3.44 / 3.50 / 3.58.
     throw new Error(
       'ΑΡΝΟΥΜΑΙ να γράψω baseline που περιέχει zero-tolerance καταστάσεις:\n'
       + forbidden.map((v) => `   ⛔ ${v.state}  ${v.route}`).join('\n'),
     );
   }
+  const unknown = m.violations.filter((v) => !RATCHETED.has(v.state));
+  if (unknown.length) {
+    // fail-closed: κατάσταση που δεν είναι ούτε zero-tol ούτε ratcheted δεν
+    // επιτρέπεται να προσγειωθεί σιωπηλά σε αρχείο που λέγεται «αποδεκτά».
+    throw new Error(
+      'άγνωστη κατάσταση στις παραβιάσεις:\n'
+      + unknown.map((v) => `   ? ${v.state}  ${v.route}`).join('\n'),
+    );
+  }
   return {
-    $doc: 'ADR-797 / CHECK 3.63 — σελίδες που δηλώνουν κενό που ανήκει στο κέλυφος. '
+    $doc: 'ADR-797 / CHECK 3.63 — σελίδες που δηλώνουν γεωμετρία που ανήκει στο κέλυφος: '
+      + 'κενό (page/content-padding, negative-margin) ή ΠΛΑΤΟΣ (page-measure). '
       + 'Ο αριθμός ΔΕΝ είναι δείκτης υγείας: είναι εκστρατεία που τελειώνει στο μηδέν. '
       + 'Τα zero-tolerance ΔΕΝ μπαίνουν ΠΟΤΕ εδώ.',
     generated: new Date().toISOString().slice(0, 10),
@@ -239,17 +439,35 @@ function buildPayload(m) {
 }
 
 function printReport(m) {
+  const o = m.ownership;
   console.log('🏛️  ADR-797 / CHECK 3.63 — ο διάδρομος του κελύφους\n');
-  console.log(`   Ιδιοκτήτης: ${relative(OWNER)}`);
-  console.log(`     δείκτης data-shell-surface : ${m.owner.hasSurface ? '✅' : '⛔ ΛΕΙΠΕΙ'}`);
-  console.log(`     δικό του padding           : ${m.owner.hasPadding ? '⛔ ΝΑΙ' : '✅ όχι'}\n`);
-  console.log(`   Σελίδες κελύφους: ${m.pages}`);
+  console.log(`   Ο ΕΝΑΣ γραφέας: ${relative(PRIMITIVE)}  (<${o.primitiveTag}>)`);
+  console.log(`     γράφει data-shell-surface  : ${o.primitiveWrites ? '✅' : '⛔ ΟΧΙ'}`);
+  console.log(`     δικό του padding           : ${o.primitivePads ? '⛔ ΝΑΙ' : '✅ όχι'}\n`);
+  console.log(`   Ιδιοκτήτης κελύφους: ${relative(OWNER)}`);
+  console.log(`     παραδίδει στο primitive    : ${o.delegates ? '✅' : '⛔ ΟΧΙ'}`);
+  console.log(`     ξαναγράφει τον δείκτη      : ${o.ownerWritesRaw && o.delegates ? '⛔ ΝΑΙ' : '✅ όχι'}`);
+  console.log(`     δικό του padding           : ${o.ownerPads ? '⛔ ΝΑΙ' : '✅ όχι'}\n`);
+
+  // ⚠️ Οι κάδοι τυπώνονται **ΑΚΟΜΑ ΚΑΙ ΣΤΟ ΜΗΔΕΝ**: ένα «0» που δεν τυπώνεται
+  //    διαβάζεται ως «δεν υπάρχει τέτοιος έλεγχος» (μάθημα CHECK 3.48 / Κ6).
+  console.log(`   Γειτονιές (παραγμένες από τον δίσκο): ${m.groups.length} — ${m.groups.join(' ')}`);
+  for (const state of ['corridor-owned', 'corridor-declared-absent', 'group-without-corridor',
+                       'group-without-layout', 'corridor-contradicts-declaration']) {
+    const n = m.groupTally[state] || 0;
+    const mark = state.startsWith('corridor-owned') || state.endsWith('declared-absent') ? '✅' : n ? '⛔' : '✅';
+    console.log(`     ${mark} ${state.padEnd(34)} ${n}`);
+  }
+
+  console.log(`\n   Σελίδες: ${m.pages}`);
   for (const [state, n] of Object.entries(m.tally).sort((a, b) => b[1] - a[1])) {
     const mark = BLOCKING.has(state) ? '🔴' : state === 'unresolved-root' ? '🔶' : '✅';
     console.log(`     ${mark} ${state.padEnd(18)} ${n}`);
   }
+  console.log(`     🔴 ${'page-measure'.padEnd(18)} ${m.measures.length}   (2ος άξονας — κρίνεται ανεξάρτητα)`);
+
   if (m.unresolved.length) {
-    console.log(`\n   🔶 Δηλωμένο τυφλό σημείο (${m.unresolved.length}) — ένα άλμα δεν έφτασε:`);
+    console.log(`\n   🔶 Δηλωμένο τυφλό σημείο (${m.unresolved.length}) — τα άλματα δεν έφτασαν:`);
     for (const r of m.unresolved) console.log(`      ${r}`);
   }
   if (m.violations.length) {
@@ -269,14 +487,14 @@ runSetRatchetCli({
   buildPayload,
   printReport,
   violationId: (v) => violationId(v),
-  labels: { violations: 'σελίδες με δικό τους κενό', declarations: 'δηλώσεις bleed' },
+  labels: { violations: 'σελίδες με δική τους γεωμετρία', declarations: 'δηλώσεις bleed' },
   commands: {
     report: 'npm run shell-surface:report',
     baseline: 'npm run shell-surface:baseline',
     seed: 'npm run shell-surface:baseline',
   },
   messages: {
-    worse: 'κάποιος ξαναδήλωσε κενό που ανήκει στο κέλυφος',
+    worse: 'κάποιος ξαναδήλωσε γεωμετρία (κενό ή πλάτος) που ανήκει στο κέλυφος',
     newDeclLabel: 'ΝΕΑ δήλωση bleed:',
     newDeclAdvice: [
       'Μια νέα επιφάνεια χωρίς διάδρομο μπλοκάρει ΑΚΟΜΑ ΚΙ ΑΝ είναι σωστή.',

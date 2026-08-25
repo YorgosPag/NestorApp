@@ -1,7 +1,29 @@
 /**
  * =============================================================================
- * GET /api/workspaces — «σε ποιους χώρους ανήκω;»
+ * GET + POST /api/workspaces — «σε ποιους χώρους ανήκω;» · «φτιάξε μου χώρο»
  * =============================================================================
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * 🔑 ΓΙΑΤΙ ΟΙ ΔΥΟ ΜΕΘΟΔΟΙ ΖΟΥΝ ΣΤΟ ΙΔΙΟ ΑΡΧΕΙΟ (ADR-787 Κ-1, 2026-08-25)
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Είναι ο **ίδιος πόρος**: «οι χώροι μου». Το `GET` τους απαριθμεί, το `POST`
+ * προσθέτει έναν. Χωριστή διεύθυνση (`/api/workspaces/create`) θα ήταν ρήμα σε
+ * θέση πόρου — και, χειρότερα, **δεύτερο σημείο** που θα έπρεπε να θυμάται
+ * κανείς όταν αλλάξει το συμβόλαιο του χώρου.
+ *
+ * ⚠️ **ΤΟ `POST` ΔΕΝ ΕΙΝΑΙ ΑΝΑΓΝΩΣΤΗΣ ΚΑΝΑΛΙΟΥ** (CHECK 3.58 · ADR-787 Ε-5), και
+ * η διάκριση δεν είναι λεπτολογία: «κανάλι» είναι ο τρόπος με τον οποίο ο
+ * πελάτης λέει *«θέλω να ενεργήσω σε **αυτόν** τον χώρο»* — αναξιόπιστη είσοδος
+ * που **οφείλει** να περάσει από τον κριτή. Εδώ ο πελάτης **δεν ονομάζει χώρο**:
+ * ζητά να **γεννηθεί** ένας, και το `uid` έρχεται από το **υπογεγραμμένο token**.
+ * Δεν υπάρχει τιμή να εμπιστευτούμε, άρα δεν υπάρχει τι να κριθεί.
+ *
+ * ⛔ **ΚΑΜΙΑ ΑΠΑΙΤΗΣΗ ΡΟΛΟΥ, ΚΑΙ ΕΙΝΑΙ ΤΟ ΝΟΗΜΑ ΤΟΥ ΒΗΜΑΤΟΣ.** Ο άνθρωπος που
+ *    φτιάχνει το **δικό του** γραφείο δεν έχει — και δεν μπορεί να έχει —
+ *    δικαίωμα μέσα σε αυτό: **δεν υπάρχει ακόμη**. Ο φρουρός δεν είναι ο ρόλος
+ *    αλλά η **κατοχή**: όποιος έχει ήδη χώρο δεν περνά (`already-has-workspace`,
+ *    `workspace-provisioning.ts`). Απαίτηση `company_admin` εδώ θα ήταν κυκλική —
+ *    ακριβώς το εμπόδιο που κρατούσε το Κ-1 κλειδωμένο στον `super_admin`.
  *
  * Η **αντίστροφη** ερώτηση του ADR-787 Κ-2. Απαντιέται **μόνο εδώ**, στον
  * διακομιστή.
@@ -49,10 +71,15 @@ import 'server-only';
 import { NextResponse, type NextRequest } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext } from '@/lib/auth';
-import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import {
+  withStandardRateLimit,
+  withSensitiveRateLimit,
+} from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { listMemberWorkspaces } from '@/lib/auth/workspace-membership';
+import { provisionWorkspace } from '@/lib/workspace/workspace-provisioning';
+import { workspacePath } from '@/lib/workspace/workspace-path';
 import {
   orgWorkspace,
   personalWorkspace,
@@ -180,4 +207,91 @@ async function buildOrgWorkspaces(orgIds: Set<string>, uid: string): Promise<Wor
   });
 }
 
+// =============================================================================
+// POST — «φτιάξε μου χώρο» (ADR-787 Κ-1)
+// =============================================================================
+
+/** Το σώμα του αιτήματος, όπως το στέλνει η οθόνη. */
+interface CreateWorkspaceBody {
+  readonly displayName?: unknown;
+  readonly alias?: unknown;
+}
+
+/** Η επωνυμία, κανονικοποιημένη — ή `null` αν δεν είναι επωνυμία. */
+function readDisplayName(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+async function handlePost(request: NextRequest, ctx: AuthContext): Promise<NextResponse> {
+  let body: CreateWorkspaceBody;
+  try {
+    body = (await request.json()) as CreateWorkspaceBody;
+  } catch {
+    return rejected('failed', 400);
+  }
+
+  const displayName = readDisplayName(body.displayName);
+  if (!displayName) return rejected('name-required', 400);
+
+  // ⚠️ Το ψευδώνυμο περνά **ωμό**. Καμία κανονικοποίηση εδώ: ο `judgeAliasShape`
+  //    είναι ο κριτής της μορφής, και μια δεύτερη «καθάρισή» της στο σύνορο θα
+  //    ήταν κριτήριο που μπορεί να αποκλίνει από εκείνον (ADR-749) — ακριβώς
+  //    στα σημεία που έχουν σημασία (κενά, Unicode, κεφαλαία).
+  const requestedAlias = typeof body.alias === 'string' ? body.alias : '';
+
+  const result = await provisionWorkspace({
+    uid: ctx.uid,
+    currentCompanyId: ctx.companyId,
+    displayName,
+    requestedAlias,
+  });
+
+  if (!result.ok) {
+    // 409 όταν το εμπόδιο είναι **κατάσταση** (όνομα πιασμένο, χώρος υπάρχει)·
+    // 503 όταν **δεν κοιτάξαμε**· 400 όταν το κείμενο δεν είναι ψευδώνυμο.
+    return rejected(result.reason, statusFor(result.reason));
+  }
+
+  return NextResponse.json({
+    success: true,
+    data: {
+      companyId: result.companyId,
+      alias: result.alias,
+      // Η **διεύθυνση** χτίζεται από το SSoT, ποτέ με ένωση συμβολοσειρών στην
+      // οθόνη — αλλιώς το πρόθεμα αποκτά δεύτερη γραφή (`workspace-path.ts`).
+      redirectTo: workspacePath(result.alias),
+    },
+  });
+}
+
+/** Οι τρεις οικογένειες αποτυχίας, με τον κωδικό HTTP που τους ανήκει. */
+function statusFor(reason: string): number {
+  if (reason === 'registry-unavailable' || reason === 'failed') return 503;
+  if (reason === 'already-taken' || reason === 'look-alike-taken') return 409;
+  if (reason === 'already-has-workspace') return 409;
+  return 400;
+}
+
+/**
+ * Η απόρριψη — **κωδικός, ποτέ κείμενο** (N.11).
+ *
+ * Η οθόνη μεταφράζει το `reason` από τα locale αρχεία. Ένα έτοιμο μήνυμα εδώ θα
+ * ήταν σκληρή συμβολοσειρά οθόνης σε λάθος στρώμα, και θα αγνοούσε τη γλώσσα
+ * του ανθρώπου που τη διαβάζει.
+ */
+function rejected(reason: string, status: number): NextResponse {
+  return NextResponse.json({ success: false, reason }, { status });
+}
+
+// =============================================================================
+// ΕΞΑΓΩΓΕΣ
+// =============================================================================
+
 export const GET = withStandardRateLimit(withAuth(handleGet));
+
+// ⚠️ **Ευαίσθητο** όριο ρυθμού (όχι το τυπικό): η δημιουργία χώρου δεσμεύει
+//    **παγκόσμιο** όνομα. Χωρίς σφιχτό όριο, ένας βρόχος θα μπορούσε να πιάσει
+//    ψευδώνυμα μαζικά — απαρίθμηση και κατάληψη ταυτόχρονα.
+export const POST = withSensitiveRateLimit(withAuth(handlePost));

@@ -147,6 +147,40 @@ function emitFluidLayout(tokens) {
     throw new Error('[fluid-layout] gutter.max δεν επιτρέπεται να είναι μικρότερο του gutter.min');
   }
 
+  // ── ADR-797 ΦΑΣΗ Β: ΤΟ ΤΑΒΑΝΙ ΤΟΥ WCAG ΩΣ ΣΦΑΛΜΑ BUILD ──────────────────
+  // Το WCAG 2.2 §1.4.8 (Visual Presentation) λέει κατά λέξη «width is no more
+  // than 80 characters». Δεν αρκεί να είναι ανιχνεύσιμη η παραβίαση: ο ρόλος
+  // ζει σε ΕΝΑ αρχείο και τον καταναλώνουν ΟΛΕΣ οι σελίδες που τον ζητούν, άρα
+  // ένας κακός αριθμός εδώ είναι κακός ΠΑΝΤΟΥ, ταυτόχρονα και σιωπηλά.
+  //
+  // 🔑 Γι' αυτό ο έλεγχος ζει στον ΓΕΝΝΗΤΟΡΑ και όχι σε πύλη: μια πύλη ρωτά
+  //    «πέρασε κάτι κακό;» εκ των υστέρων· εδώ το κακό είναι ΜΗ ΕΚΦΡΑΣΙΜΟ —
+  //    το build δεν παράγει CSS που το περιέχει.
+  //
+  // ⚠️ Μετρημένο 2026-08-25 στη ζωντανή γραμματοσειρά (Roboto 16px, 1ch=8,99px):
+  //    το χειρόγραφο `max-w-3xl` των τεσσάρων σελίδων του (me) έδινε **85ch**
+  //    (91 πεζούς χαρακτήρες) — δηλαδή η εφαρμογή ΕΙΧΕ ΗΔΗ περάσει το ταβάνι,
+  //    και κανείς δεν το ήξερε γιατί ο αριθμός ήταν σε pixel.
+  const MEASURE_CEILING = 80;
+  const measure = layout.measure;
+  if (measure) {
+    for (const [role, node] of Object.entries(measure)) {
+      if (role.startsWith('_')) continue;
+      const chars = num(node, `measure.${role}`);
+      if (chars > MEASURE_CEILING) {
+        throw new Error(
+          `[fluid-layout] spacing.layout.measure.${role} = ${chars} χαρακτήρες· `
+          + `το WCAG 1.4.8 ορίζει ταβάνι ${MEASURE_CEILING}. `
+          + 'ΜΗΝ ανεβάσεις το ταβάνι για να περάσει — αν η σελίδα θέλει περισσότερο '
+          + 'πλάτος, δεν θέλει μεγαλύτερο MEASURE: θέλει ΔΙΑΤΑΞΗ (πολλαπλές στήλες).',
+        );
+      }
+      if (chars < 20) {
+        throw new Error(`[fluid-layout] spacing.layout.measure.${role} = ${chars} — αφύσικα στενό.`);
+      }
+    }
+  }
+
   // Ευθεία μέσα από (paneMin, gutterMin) και (paneMax, gutterMax).
   const slope = (gutterMax - gutterMin) / (paneMax - paneMin);
   const intercept = gutterMin - slope * paneMin;

@@ -1,5 +1,6 @@
 'use client';
 
+import { ShellSurface } from '@/core/containers/ShellSurface';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
 
@@ -37,9 +38,17 @@ interface MainContentBridgeProps {
  * ⚠️ **ΜΗΝ προσθέσεις `px-*`/`py-*` εδώ.** Θα ήταν δεύτερη αυθεντία δίπλα στην
  * πρώτη (ADR-749), και θα κέρδιζε κατά ειδικότητα χωρίς να το δει κανείς.
  *
- * ⚠️ **ΜΗΝ αφαιρέσεις το `data-shell-surface`** — είναι ο **στόχος** του
- * επιλογέα, όχι διακοσμητικό. Χωρίς αυτό δεν σπάει τίποτα ορατά· απλώς το
- * κενό γίνεται **σιωπηλά μηδέν**, δηλαδή ακριβώς το ελάττωμα που θεραπεύτηκε.
+ * ⚠️ **ΜΗΝ ξαναγράψεις το `data-shell-surface` εδώ με το χέρι** (ADR-797 ΦΑΣΗ Β).
+ * Ο δείκτης ζει πλέον σε **ΕΝΑ** σημείο σε όλο το δέντρο — το
+ * {@link ShellSurface} — και αυτό το component τον **παραδίδει** (`as="main"`).
+ * Ήταν χειρόγραφος εδώ όσο ο μόνος καταναλωτής ήταν το κέλυφος· από τη στιγμή
+ * που τον ζήτησαν **άλλες τέσσερις** γειτονιές, ένα attribute γραμμένο σε πέντε
+ * αρχεία θα ήταν πέντε ευκαιρίες να ξεχαστεί — και η αστοχία του δεν σπάει
+ * τίποτα ορατά: κάνει το κενό **σιωπηλά μηδέν**.
+ *
+ * ⚠️ **ΚΑΝΕΝΑ `measure` εδώ, και είναι απόφαση.** Το κέλυφος φιλοξενεί πίνακες,
+ * λογιστική και τον καμβά DXF· ένα ταβάνι 80 χαρακτήρων θα τα κατέστρεφε. Το
+ * μέτρο είναι **opt-in** ακριβώς γι' αυτόν τον λόγο.
  *
  * Σελίδα που θέλει **πλήρες πλάτος** (χάρτης, καμβάς) το δηλώνει η ίδια με
  * `data-shell-surface="bleed"` στη ρίζα της — δες `FullBleedSurface`.
@@ -48,11 +57,11 @@ export function MainContentBridge({ children }: MainContentBridgeProps) {
   const colors = useSemanticColors();
 
   return (
-    <main
-      data-shell-surface
-      className={`flex-1 overflow-y-auto overflow-x-hidden ${colors.bg.primary}/95 w-full max-w-full`}
+    <ShellSurface
+      as="main"
+      className={`flex-1 overflow-y-auto overflow-x-hidden ${colors.bg.primary}/95 max-w-full`}
     >
       {children}
-    </main>
+    </ShellSurface>
   );
 }

@@ -327,10 +327,10 @@ export function AuthActionContent() {
   // NOTE: Using <section> instead of <main> — το `(auth)/layout.tsx` παρέχει το <main> wrapper (ADR-777 §8.12)
   // This avoids nested <main> tags which cause HTML semantic issues
   return (
-    <section
-      className={`${layout.shellAuthStandalone} ${colors.bg.primary}`}
-      aria-label={getTitle()}
-    >
+    // ⚠️ Ούτε `shellAuthStandalone` εδώ (ADR-797 ΦΑΣΗ Β): το «γέμισε το παράθυρο και
+    //    κεντράρισε» το δηλώνει **μία φορά** το `<main>` του `(auth)/layout.tsx`.
+    //    Ήταν ταυτόσημη επανάληψη — αόρατη όσο δεν υπήρχε κάθετος διάδρομος.
+    <section className={layout.flexColGap4} aria-label={getTitle()}>
       <AuthToolbar />
 
       <section className={layout.flexColGap4}>

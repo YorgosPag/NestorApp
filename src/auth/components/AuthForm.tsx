@@ -67,27 +67,34 @@ export function AuthForm({
   // ==========================================================================
 
   if (state.isRedirecting) {
+    // 🔴 ΗΤΑΝ `<main role="main">` ΜΕΣΑ ΣΤΟ `<main>` ΤΟΥ `(auth)/layout.tsx` — δύο
+    //    landmarks `main` στην ίδια σελίδα, ενώ το WCAG επιτρέπει **ένα**. Το
+    //    διπλανό `AuthActionContent` έφερε **ήδη** τη διόρθωση γραμμένη στο σχόλιό
+    //    του («Using <section> instead of <main> … avoids nested <main> tags»), και
+    //    το `(light)/layout.tsx` την πλήρωσε ξεχωριστά· αυτή η διαδρομή απλώς δεν
+    //    ρωτήθηκε ποτέ. Βρέθηκε 2026-08-25 (ADR-797 ΦΑΣΗ Β).
+    //
+    // ⚠️ Ούτε `shellAuthStandalone`: το «γέμισε το παράθυρο και κεντράρισε» το
+    //    κατέχει το layout — εδώ ήταν η **τρίτη** εμφωλευμένη δήλωσή του.
+    // ⚠️ ΚΑΝΕΝΑ εξωτερικό wrapper: η `<section role="status">` παρακάτω **είναι ήδη**
+    //    η ζωντανή περιοχή. Ένα δεύτερο `role="status"` γύρω της θα ανακοίνωνε το
+    //    ίδιο μήνυμα **δύο φορές** στον αναγνώστη οθόνης.
     return (
-      <main
-        className={`${layout.shellAuthStandalone} ${colors.bg.primary}`}
-        role="main"
+      <section
+        className={`${layout.flexColGap4} ${layout.textCenter}`}
+        role="status"
         aria-label={t('navigation.redirecting')}
+        aria-live="polite"
+        aria-busy="true"
       >
-        <section
-          className={`${layout.flexColGap4} ${layout.textCenter}`}
-          role="status"
-          aria-live="polite"
-          aria-busy="true"
-        >
-          <AuthBrandMark as="fragment" />
-          <figure className={layout.centerHorizontal}>
-            <Spinner size="large" aria-label={t('loading.spinnerLabel')} />
-          </figure>
-          <p className={`${typography.body.base} ${colors.text.muted}`}>
-            {t('navigation.loadingApp')}
-          </p>
-        </section>
-      </main>
+        <AuthBrandMark as="fragment" />
+        <figure className={layout.centerHorizontal}>
+          <Spinner size="large" aria-label={t('loading.spinnerLabel')} />
+        </figure>
+        <p className={`${typography.body.base} ${colors.text.muted}`}>
+          {t('navigation.loadingApp')}
+        </p>
+      </section>
     );
   }
 

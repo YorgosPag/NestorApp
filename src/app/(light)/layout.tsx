@@ -17,6 +17,7 @@
  */
 
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
+import { ShellSurface } from '@/core/containers/ShellSurface';
 import { PublicSiteHeader } from '@/components/public-site/PublicSiteHeader';
 
 export default function LightLayout({
@@ -27,7 +28,22 @@ export default function LightLayout({
   return (
     <div className={`flex min-h-screen w-full flex-col ${COLOR_BRIDGE.bg.primary}`}>
       <PublicSiteHeader />
-      {children}
+      {/*
+        🏛️ Ο ΔΙΑΔΡΟΜΟΣ (ADR-797 ΦΑΣΗ Β). Το ίδιο `data-shell-surface` με το κέλυφος,
+        η ίδια ρευστή συνάρτηση, οι ίδιοι πόλοι — και **μηδέν** νέο CSS: το
+        `--shell-sidebar-occupied` δεν ορίζεται εδώ, οπότε πέφτει στο `0px` και το
+        pane γίνεται όλο το παράθυρο. Αποδεδειγμένο ζωντανά 2026-08-25.
+
+        ⚠️ **ΕΞΩ από την κεφαλίδα, επίτηδες.** Η κεφαλίδα είναι πλάτους οθόνης και
+        έχει δικό της εσωτερικό κενό· ένας διάδρομος γύρω της θα την ξεκολλούσε από
+        την άκρη — άλλο σχέδιο, όχι «λίγο κενό».
+
+        ⚠️ **ΚΑΝΕΝΑ `measure` εδώ.** Η γειτονιά είναι **ετερογενής**, μετρημένα: η
+        αρχική είναι κεντραρισμένο μενού, η καρτέλα ακινήτου διάταξη δύο στηλών, τα
+        αποτελέσματα **χάρτης σε πλήρες παράθυρο**. Ένα ταβάνι για όλες θα ήταν
+        λάθος στις τρεις από τις τέσσερις — γι' αυτό το δηλώνει **η σελίδα**.
+      */}
+      <ShellSurface className="flex flex-1 flex-col">{children}</ShellSurface>
     </div>
   );
 }

@@ -63,6 +63,8 @@ export interface DesignTokens {
   spacing_layout_pane_min: string;
   spacing_layout_pane_max: string;
   spacing_layout_block: string;
+  spacing_layout_measure_prose: string;
+  spacing_layout_measure_wide: string;
   spacing_layout_density_comfortable: string;
   spacing_layout_density_compact: string;
   typography_fontSize_xs: string;
@@ -229,6 +231,8 @@ export const designTokens: DesignTokens = {
   spacing_layout_pane_min: 'var(--spacing-layout-pane-min)',
   spacing_layout_pane_max: 'var(--spacing-layout-pane-max)',
   spacing_layout_block: 'var(--spacing-layout-block)',
+  spacing_layout_measure_prose: 'var(--spacing-layout-measure-prose)',
+  spacing_layout_measure_wide: 'var(--spacing-layout-measure-wide)',
   spacing_layout_density_comfortable: 'var(--spacing-layout-density-comfortable)',
   spacing_layout_density_compact: 'var(--spacing-layout-density-compact)',
   typography_fontSize_xs: 'var(--typography-font-size-xs)',

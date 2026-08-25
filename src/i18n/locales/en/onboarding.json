@@ -40,6 +40,34 @@
       "body": "The Accounting department has not been configured within 7 days of the initial invitation. Please log in to the application and complete the setup.",
       "cta": "Set up now",
       "footer": "This message was sent automatically by Nestor App."
+    },
+    "workspace": {
+      "title": "Create your workspace",
+      "subtitle": "A space for your office — your projects, contacts and files live there, separate from your private space.",
+      "nameLabel": "Office name",
+      "namePlaceholder": "e.g. Pagonis Engineering",
+      "nameHint": "This is how your office appears inside the application.",
+      "aliasLabel": "Workspace address",
+      "aliasHint": "Letters, digits and hyphen — from {min} to {max} characters. Not easily changed later.",
+      "aliasAuto": "Filled in automatically from the name — you can change it.",
+      "youBecomeAdmin": "You become the administrator of this workspace.",
+      "privateStays": "Your private space stays separate and nobody else can see it.",
+      "submit": "Create workspace",
+      "submitting": "Creating...",
+      "cancel": "Cancel",
+      "errors": {
+        "reserved": "That name is reserved by the system. Please choose another.",
+        "too-short": "Too short — at least {min} characters are required.",
+        "too-long": "Too long — {max} characters at most.",
+        "invalid-characters": "Letters, digits and hyphen are allowed. A hyphen cannot start or end the address.",
+        "mixed-script": "Write it in one alphabet — Greek or Latin, not mixed.",
+        "already-taken": "That address is already in use. Please choose another.",
+        "look-alike-taken": "An address that looks identical already exists. Please choose another.",
+        "already-has-workspace": "You already belong to an office workspace.",
+        "name-required": "Please fill in the office name.",
+        "registry-unavailable": "The service is unavailable right now. Please try again shortly.",
+        "failed": "Something went wrong. Please try again."
+      }
     }
   }
 }

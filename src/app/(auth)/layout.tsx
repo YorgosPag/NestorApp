@@ -28,6 +28,7 @@
  * @module app/(auth)/layout
  */
 
+import { ShellSurface } from '@/core/containers/ShellSurface';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -39,9 +40,23 @@ export default function AuthGroupLayout({ children }: Readonly<{ children: React
 
   return (
     <TooltipProvider delayDuration={300}>
-      <main className={`${layout.shellAuthStandalone} ${colors.bg.primary}`}>
+      {/*
+        🏛️ Ο ΔΙΑΔΡΟΜΟΣ (ADR-797 ΦΑΣΗ Β). Το ίδιο `data-shell-surface`, οι ίδιοι
+        πόλοι, μηδέν νέο CSS.
+
+        ⚠️ **ΠΑΝΩ στο ΥΠΑΡΧΟΝ `<main>`, όχι σε νέο wrapper.** Το `shellAuthStandalone`
+        είναι `min-h-screen … items-center justify-center` και το preflight του
+        Tailwind ορίζει `box-sizing: border-box` παντού ⇒ ο διάδρομος ζει **ΜΕΣΑ**
+        στο 100vh και **δεν** γεννά κάθετη κύλιση. Μετρημένο ζωντανά 2026-08-25:
+        με τη σελίδα να **ξαναδηλώνει** `min-h-screen` προέκυπταν **48px** κύλιση
+        (= 2×24 του κάθετου διαδρόμου)· χωρίς την επανάληψη, **0px**.
+
+        ⚠️ **ΚΑΝΕΝΑ `measure`.** Εδώ δεν υπάρχει «γραμμή κειμένου» να περιοριστεί —
+        υπάρχει **κάρτα** που κεντράρεται, και το πλάτος της το κατέχει η κάρτα.
+      */}
+      <ShellSurface as="main" className={`${layout.shellAuthStandalone} ${colors.bg.primary}`}>
         {children}
-      </main>
+      </ShellSurface>
     </TooltipProvider>
   );
 }

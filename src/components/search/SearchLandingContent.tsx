@@ -69,7 +69,25 @@ export function SearchLandingContent() {
     // `flex-1`, ΟΧΙ `min-h-screen`: το ύψος το κατέχει πλέον το `(light)/layout.tsx`,
     // που φιλοξενεί και την κεφαλίδα. Το `min-h-screen` εδώ θα ζητούσε **ολόκληρο** το
     // παράθυρο **κάτω** από την κεφαλίδα ⇒ μπάρα κύλισης σε οθόνη που δεν κυλά.
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center gap-6 p-6">
+    <main
+      /*
+        ⚠️ ΤΟ ΜΕΤΡΟ ΔΗΛΩΝΕΤΑΙ ΑΠΟ ΤΗ ΣΕΛΙΔΑ, ΟΧΙ ΑΠΟ ΤΗ ΓΕΙΤΟΝΙΑ (ADR-797 ΦΑΣΗ Β).
+        Το `(light)` είναι **ετερογενές**, μετρημένα: αυτή είναι κεντραρισμένο μενού,
+        η καρτέλα ακινήτου είναι διάταξη δύο στηλών, τα αποτελέσματα είναι **χάρτης
+        σε πλήρες παράθυρο**. Ένα ταβάνι στο layout θα ήταν λάθος στις τρεις από τις
+        τέσσερις — γι' αυτό εδώ ζει η δήλωση και εκεί μόνο ο διάδρομος.
+
+        `prose` = 65 χαρακτήρες (Bringhurst ~66). Το παλιό `max-w-2xl` + `p-6` έδινε
+        624px = **74 χαρακτήρες**· ο ρόλος το φέρνει στο τεκμηριωμένο ιδανικό, και σε
+        μονάδα που **κλιμακώνεται με το zoom του χρήστη** (WCAG 1.4.4).
+
+        ⚠️ `content-center` και ΟΧΙ `justify-center`: με το μέτρο η επιφάνεια είναι
+        `display: grid`, όπου το κάθετο κεντράρισμα το κάνει το `align-content`. Το
+        `justify-content` εκεί ταξινομεί **στήλες** — δηλαδή θα ήταν σιωπηλά ανενεργό.
+      */
+      data-shell-measure="prose"
+      className="w-full flex-1 content-center gap-6"
+    >
       <h1 className="text-3xl font-semibold text-foreground">
         {t('search-results:landing.title')}
       </h1>

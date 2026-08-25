@@ -31,11 +31,14 @@ function ConsentPageBody(): React.ReactElement {
 }
 
 export default function OAuthConsentPage(): React.ReactElement {
+  // ⚠️ Ούτε `min-h-screen … justify-center` ούτε `p-4` εδώ (ADR-797 ΦΑΣΗ Β): και τα
+  // δύο τα κατέχει πλέον το `<main>` του `(auth)/layout.tsx` — το κεντράρισμα ήταν
+  // **δεύτερη, ταυτόσημη** δήλωση, και το `p-4` ήταν η **μόνη** αυθεντία του κενού
+  // σε αυτή τη γειτονιά, δηλαδή σωστό αλλά χειρόγραφο και ασύμφωνο με το `p-6` που
+  // έγραφαν οι διπλανές γειτονιές. Ένας ιδιοκτήτης, ρευστή τιμή.
   return (
-    <section className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Suspense fallback={null}>
-        <ConsentPageBody />
-      </Suspense>
-    </section>
+    <Suspense fallback={null}>
+      <ConsentPageBody />
+    </Suspense>
   );
 }

@@ -28,6 +28,7 @@ import { Link } from '@/lib/workspace/navigation';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { NEW_OFFER_ROUTE } from '@/lib/owner-property/owner-property-routes';
+import { CREATE_WORKSPACE_ROUTE } from '@/lib/workspace/workspace-routes';
 import { useMyOwnerProperties } from '@/services/realtime/hooks/useMyOwnerProperties';
 
 import { OwnerPropertyCard } from './OwnerPropertyCard';
@@ -103,7 +104,17 @@ export function MyOwnerPropertiesContent(): React.ReactElement {
   return (
     // `flex-1`, ΟΧΙ `min-h-screen`: το ύψος το κατέχει το `(me)/layout.tsx`, που
     // φιλοξενεί και την κεφαλίδα — ίδια σύμβαση με το `(light)`.
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 p-6">
+    <main className="flex w-full flex-col gap-6">
+      {/*
+        ⚠️ ΚΑΝΕΝΑ `mx-auto max-w-3xl p-6` εδώ (ADR-797 ΦΑΣΗ Β). Και τα τρία τα κατέχει
+        πλέον ο ΕΝΑΣ ιδιοκτήτης, το `ShellSurface` του `PrivateSpaceShell`:
+          · ο **διάδρομος** ρευστά από το πλάτος της επιφάνειας (16→32px),
+          · το **μέτρο** ως ρόλος `wide` = 80 χαρακτήρες (WCAG 1.4.8),
+          · το **κεντράρισμα** δωρεάν από τις δύο `1fr` στήλες του grid.
+        Το παλιό `max-w-3xl` + `p-6` έδινε 720px = **80,1 χαρακτήρες** — δηλαδή το
+        ίδιο πλάτος, αλλά κλειδωμένο σε pixel (σπάει στο zoom, WCAG 1.4.4) και
+        γραμμένο **τέσσερις φορές** σε τέσσερα αρχεία.
+      */}
       <header className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold text-foreground">{t(`${K}.title`)}</h1>
         <p className="text-sm text-muted-foreground">{t(`${K}.lead`)}</p>
@@ -125,6 +136,49 @@ export function MyOwnerPropertiesContent(): React.ReactElement {
       </nav>
 
       <OwnerPropertiesBody />
+
+      <WorkspaceInvitation />
     </main>
+  );
+}
+
+/**
+ * **Η πόρτα προς τον εταιρικό χώρο** (ADR-787 Κ-1).
+ *
+ * 🔴 **Γιατί εδώ.** Μέχρι σήμερα ένας αυτο-εγγεγραμμένος άνθρωπος **δεν είχε
+ * κανέναν τρόπο** να φτιάξει γραφείο: ο εταιρικός χώρος δινόταν μόνο από
+ * `super_admin`. Αυτή η οθόνη είναι το **μοναδικό** σημείο όπου προσγειώνεται
+ * όποιος δεν έχει χώρο (`PRIVATE_SPACE_HOME`, `lib/routes/landing.ts`) — δηλαδή
+ * η μόνη θέση όπου η πόρτα **συναντά** αυτόν που τη χρειάζεται.
+ *
+ * ⚠️ **Ζωγραφίζεται μόνο σε όποιον ΔΕΝ έχει ήδη χώρο.** Ο διακομιστής τον
+ * απορρίπτει ούτως ή άλλως (`already-has-workspace`), αλλά μια πρόσκληση που
+ * οδηγεί σε βέβαιη άρνηση είναι **ψέμα στην οθόνη** — και δεν διορθώνεται με
+ * καλύτερο μήνυμα σφάλματος.
+ *
+ * ⚠️ **Κάτω από τον κατάλογο, όχι πάνω.** Ο άνθρωπος ήρθε για τα ακίνητά του·
+ * η πρόσκληση είναι **δεύτερη** πρόταση, όχι ανταγωνιστής της «Νέα καταχώρηση».
+ */
+function WorkspaceInvitation(): React.ReactElement | null {
+  const { t } = useTranslation([NS]);
+  const { user } = useAuth();
+
+  if (user?.companyId) return null;
+
+  return (
+    <aside className="rounded-lg border border-border bg-muted/30 p-5">
+      <h2 className="text-sm font-semibold text-foreground">
+        {t(`${K}.workspaceCta.title`)}
+      </h2>
+      <p className="mt-1 text-sm text-muted-foreground">
+        {t(`${K}.workspaceCta.body`)}
+      </p>
+      <Link
+        href={CREATE_WORKSPACE_ROUTE}
+        className="mt-3 inline-block rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+      >
+        {t(`${K}.workspaceCta.action`)}
+      </Link>
+    </aside>
   );
 }

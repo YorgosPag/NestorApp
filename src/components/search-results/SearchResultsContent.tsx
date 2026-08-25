@@ -86,7 +86,17 @@ export function SearchResultsContent() {
     // ένα σταθερό ύψος παραθύρου θα έσπρωχνε το κάτω μέρος του χάρτη εκτός οθόνης. Το
     // `min-h-0` είναι υποχρεωτικό — χωρίς αυτό το flex item αρνείται να συρρικνωθεί
     // κάτω από το περιεχόμενό του και η **εσωτερική** κύλιση της λίστας δεν λειτουργεί.
-    <main className="flex min-h-0 flex-1 flex-col bg-background">
+    <main
+      /*
+        🖼️ ΕΠΙΦΑΝΕΙΑ-ΚΑΜΒΑΣ — ΜΗΔΕΝ ΔΙΑΔΡΟΜΟΣ (ADR-797 ΦΑΣΗ Β).
+        Χάρτης + λίστα σε **πλήρες παράθυρο**: ο διάδρομος εδώ δεν είναι αισθητική
+        επιλογή, είναι **χαμένη επιφάνεια χάρτη**, και θα άφηνε το φύλλο των
+        αποτελεσμάτων να αιωρείται μακριά από την άκρη. Η δήλωση είναι ρητή και
+        καταγράφεται με λόγο στο `.shell-surface.json` — δεν λύνεται με `-mx-*`.
+      */
+      data-shell-surface="bleed"
+      className="flex min-h-0 flex-1 flex-col bg-background"
+    >
       <header className="border-b border-border px-4 py-3">
         <h1 className="text-lg font-semibold text-foreground">{t('search-results:page.title')}</h1>
         {/* Η λογιστική τυπώνεται ΠΑΝΤΑ — ακόμη και στο μηδέν, ακόμη και στη φόρτωση. */}

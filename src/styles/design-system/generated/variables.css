@@ -66,6 +66,8 @@
   --spacing-layout-pane-min: 640px;
   --spacing-layout-pane-max: 1600px;
   --spacing-layout-block: 24px;
+  --spacing-layout-measure-prose: 65;
+  --spacing-layout-measure-wide: 80;
   --spacing-layout-density-comfortable: 1;
   --spacing-layout-density-compact: 0.75;
   --typography-font-size-xs: 12px;
