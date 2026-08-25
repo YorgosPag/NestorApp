@@ -30,8 +30,8 @@ import {
   getContactTabLabels,
   getProjectTabLabels,
   getCRMDashboardTabLabels,
-  getParkingTabLabels
-} from '@/subapps/dxf-viewer/config/modal-select';
+  getParkingTabLabels,
+} from '../subapps/dxf-viewer/config/modal-select/core/labels/tabs';
 
 // ============================================================================
 // ENTERPRISE TYPE DEFINITIONS - TYPE-SAFE ARCHITECTURE

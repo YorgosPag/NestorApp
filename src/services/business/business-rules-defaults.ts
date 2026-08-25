@@ -10,7 +10,10 @@
  * @config-data true
  */
 
-import { getLegalFormOptions, getGemiStatusOptions } from '@/subapps/dxf-viewer/config/modal-select';
+import {
+  getLegalFormOptions,
+  getGemiStatusOptions,
+} from '../../subapps/dxf-viewer/config/modal-select/core/options/company';
 import type {
   LegalFormOption,
   CompanyStatusOption,

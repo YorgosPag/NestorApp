@@ -14,7 +14,9 @@ import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('currencies');
 
 // ENTERPRISE: Import από existing centralized system - ZERO DUPLICATES
-import { getCurrencyOptions } from '../../../subapps/dxf-viewer/config/modal-select';
+import {
+  getCurrencyOptions,
+} from '../../../subapps/dxf-viewer/config/modal-select/core/options/individual';
 
 // ============================================================================
 // CURRENCY OPTIONS - ENTERPRISE WRAPPER

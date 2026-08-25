@@ -31,8 +31,8 @@ import {
   getContactTypeLabels,
   getPropertyMarketStatusLabels,
   getRentalTypeLabels,
-  getStorageStatusLabels
-} from '../../subapps/dxf-viewer/config/modal-select';
+  getStorageStatusLabels,
+} from '../../subapps/dxf-viewer/config/modal-select/core/labels/status';
 
 // 🏢 ENTERPRISE: Import from modular status.ts for extended property labels (market/sales-related)
 import {

@@ -11,7 +11,9 @@
 import { SelectOption } from '../core/field-types';
 
 // ENTERPRISE: Import από existing centralized system - ZERO DUPLICATES
-import { getActivityTypeOptions } from '../../../subapps/dxf-viewer/config/modal-select';
+import {
+  getActivityTypeOptions,
+} from '../../../subapps/dxf-viewer/config/modal-select/core/options/company';
 
 // ============================================================================
 // ACTIVITY TYPE OPTIONS - ENTERPRISE WRAPPER

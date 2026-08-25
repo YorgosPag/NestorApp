@@ -14,7 +14,9 @@ import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('legal-forms');
 
 // ENTERPRISE: Import από existing centralized system - ZERO DUPLICATES
-import { getLegalFormOptions } from '../../../subapps/dxf-viewer/config/modal-select';
+import {
+  getLegalFormOptions,
+} from '../../../subapps/dxf-viewer/config/modal-select/core/options/company';
 import { businessRulesService } from '../../../services/business/EnterpriseBusinessRulesService';
 
 // ============================================================================

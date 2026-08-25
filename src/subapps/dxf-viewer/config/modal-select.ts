@@ -31,14 +31,6 @@ export const MODAL_SELECT_STYLES = MIGRATED_MODAL_SELECT_STYLES;
 import { MODAL_SELECT_ITEM_PATTERNS as MIGRATED_MODAL_SELECT_ITEM_PATTERNS } from './modal-select/core/styles/patterns';
 export const MODAL_SELECT_ITEM_PATTERNS = MIGRATED_MODAL_SELECT_ITEM_PATTERNS;
 
-// Placeholders
-export const MODAL_SELECT_PLACEHOLDERS = {
-  default: 'Επιλέξτε...',
-  search: 'Αναζήτηση...',
-  loading: 'Φόρτωση...',
-  noResults: 'Δεν βρέθηκαν αποτελέσματα',
-  error: 'Σφάλμα φόρτωσης'
-} as const;
 
 // Field Labels
 export const MODAL_SELECT_FIELD_LABELS = {

@@ -74,8 +74,8 @@ export interface IndividualSectionConfig {
 import {
   getGenderOptions,
   getIdentityTypeOptions,
-  getCountryOptions
-} from '@/subapps/dxf-viewer/config/modal-select';
+  getCountryOptions,
+} from '../subapps/dxf-viewer/config/modal-select/core/options/individual';
 
 // 🏢 ENTERPRISE: Import centralized form field labels - ZERO HARDCODED VALUES
 import {

@@ -15,8 +15,8 @@ const logger = createModuleLogger('gemi-statuses');
 // ENTERPRISE: Import από existing centralized system - ZERO DUPLICATES
 import {
   getGemiStatusOptions,
-  MODAL_SELECT_GEMI_STATUSES
-} from '../../../subapps/dxf-viewer/config/modal-select';
+  MODAL_SELECT_GEMI_STATUSES,
+} from '../../../subapps/dxf-viewer/config/modal-select/core/options/company';
 import { businessRulesService } from '../../../services/business/EnterpriseBusinessRulesService';
 
 // ============================================================================

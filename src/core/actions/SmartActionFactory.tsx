@@ -36,7 +36,9 @@ import {
 } from '@/components/ui/form/ActionButtons';
 
 // Import από existing centralized configuration system
-import { getActionButtons } from '@/subapps/dxf-viewer/config/modal-select';
+import {
+  getActionButtons,
+} from '../../subapps/dxf-viewer/config/modal-select/toolbar/configurations';
 
 // Import από existing centralized design system
 import { useBorderTokens } from '@/hooks/useBorderTokens';
