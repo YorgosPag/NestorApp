@@ -31,10 +31,19 @@
  * @see ADR-360 — claims mirror για live refresh χωρίς logout/login
  */
 
-import { initializeApp, getApps } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
-import { getFirestore, FieldValue, type Firestore } from 'firebase-admin/firestore';
+import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import type { Auth } from 'firebase-admin/auth';
+
+// 🔑 ADR-798 Φάση 6 — Η ΜΗΧΑΝΗ ΕΙΝΑΙ **ΜΙΑ**, ΚΑΙ ΤΟ ΕΠΙΒΑΛΕ ΤΟ CHECK 3.28.
+// Ο φρουρός του emulator, το `ensureUser` και τα claims ζούσαν εδώ. Τη στιγμή που
+// γεννήθηκε δεύτερος σπορέας (`emulator-seed-personas.ts`) το jscpd τα ανέφερε ως
+// κλώνους — σωστά. Εδώ μένουν **μόνο** τα δεδομένα ΑΥΤΟΥ του σεναρίου.
+import {
+  SEED_CREDENTIAL,
+  runSeeder,
+  seedIdentity,
+  type SeedIdentity,
+} from './lib/emulator/identity';
 
 // ============================================================================
 // ΣΤΑΘΕΡΕΣ — μία πηγή για ό,τι τυπώνεται και ό,τι γράφεται
@@ -43,10 +52,6 @@ import type { Auth } from 'firebase-admin/auth';
 /** Πρέπει να ταυτίζεται με τον client (`NEXT_PUBLIC_FIREBASE_PROJECT_ID`),
  *  αλλιώς ο emulator κρατά τα δεδομένα σε **άλλο namespace** και η οθόνη
  *  βλέπει άδεια βάση ενώ ο seeder «πέτυχε». */
-const PROJECT_ID = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? 'pagonis-87766';
-
-const FIRESTORE_HOST = 'localhost:8080';
-const AUTH_HOST = 'localhost:9099';
 
 /**
  * Το συνθηματικό του demo χρήστη.
@@ -59,11 +64,10 @@ const AUTH_HOST = 'localhost:9099';
  * `DEMO_SEED_PASSWORD`· το default υπάρχει μόνο για να τρέχει το script χωρίς
  * ρύθμιση σε τοπικό emulator.
  */
-const DEMO_CREDENTIAL = process.env.DEMO_SEED_PASSWORD ?? 'demo1234';
 
 const DEMO = {
   email: 'demo@nestor.local',
-  password: DEMO_CREDENTIAL,
+  password: SEED_CREDENTIAL,
   displayName: 'Demo Διαχειριστής',
   companyId: 'comp_demo_emulator',
   companyName: 'Παγώνης Ενεργειακή (DEMO)',
@@ -81,97 +85,23 @@ const DEMO = {
 // ΦΡΟΥΡΟΣ — καμία εκτέλεση χωρίς emulator
 // ============================================================================
 
-async function isReachable(url: string): Promise<boolean> {
-  try {
-    await fetch(url, { signal: AbortSignal.timeout(2000) });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Επιβεβαιώνει ότι **και οι δύο** emulators απαντούν, και θέτει τις env vars
- * **πριν** αρχικοποιηθεί το Admin SDK — το SDK τις διαβάζει στο init, οπότε
- * αργότερα είναι πολύ αργά (ίδιο σκεπτικό με το
- * `tests/functions-integration/_harness/setup-env.ts`).
- */
-async function assertEmulatorsUp(): Promise<void> {
-  const [firestoreUp, authUp] = await Promise.all([
-    isReachable(`http://${FIRESTORE_HOST}/`),
-    isReachable(`http://${AUTH_HOST}/`),
-  ]);
-
-  if (!firestoreUp || !authUp) {
-    console.error('❌ Ο emulator δεν απαντά — το script σταματά ΠΡΙΝ αγγίξει οτιδήποτε.');
-    console.error(`   Firestore ${FIRESTORE_HOST}: ${firestoreUp ? '✅' : '❌'}`);
-    console.error(`   Auth      ${AUTH_HOST}: ${authUp ? '✅' : '❌'}`);
-    console.error('');
-    console.error('💡 Σήκωσέ τον σε άλλο τερματικό:  npm run emulator');
-    process.exit(1);
-  }
-
-  process.env.FIRESTORE_EMULATOR_HOST = FIRESTORE_HOST;
-  process.env.FIREBASE_AUTH_EMULATOR_HOST = AUTH_HOST;
-  process.env.GCLOUD_PROJECT = PROJECT_ID;
-}
-
 // ============================================================================
 // ΒΗΜΑΤΑ
 // ============================================================================
 
-/** Idempotent: αν ο χρήστης υπάρχει τον επιστρέφει, αλλιώς τον φτιάχνει. */
-async function ensureDemoUser(auth: Auth): Promise<string> {
-  try {
-    const existing = await auth.getUserByEmail(DEMO.email);
-    console.log(`   ↻ Ο χρήστης υπάρχει ήδη — uid ${existing.uid}`);
-    return existing.uid;
-  } catch {
-    const created = await auth.createUser({
-      email: DEMO.email,
-      password: DEMO.password,
-      displayName: DEMO.displayName,
-      emailVerified: true,
-    });
-    console.log(`   ✚ Νέος χρήστης — uid ${created.uid}`);
-    return created.uid;
-  }
-}
-
 /**
- * Custom claims + Firestore mirror.
+ * Η ταυτότητα αυτού του σεναρίου, στη μορφή που δέχεται το SSoT.
  *
- * Το σχήμα είναι σκόπιμα **ίδιο** με το SSoT `src/lib/auth/set-claims-with-mirror.ts`
- * (ADR-360): `claimsUpdatedAt` **μέσα** στα claims **και** στο `users/{uid}`.
- * Το SSoT δεν καλείται απευθείας γιατί είναι `import 'server-only'` — δεν
- * φορτώνεται εκτός Next runtime. Αν αλλάξει το σχήμα εκεί, αλλάζει κι εδώ.
+ * ⚠️ Το σχήμα claims + mirror (ADR-360: `claimsUpdatedAt` **μέσα** στα claims
+ * **και** στο `users/{uid}`) ζει πλέον στο `lib/emulator/identity` — μία θέση για
+ * δύο σπορείς. Αν αλλάξει το `lib/auth/set-claims-with-mirror.ts`, αλλάζει εκεί.
  */
-async function applyTenantClaims(auth: Auth, db: Firestore, uid: string): Promise<void> {
-  const claimsUpdatedAt = Date.now();
-
-  await auth.setCustomUserClaims(uid, {
-    companyId: DEMO.companyId,
-    globalRole: DEMO.globalRole,
-    claimsUpdatedAt,
-  });
-
-  await db.collection('users').doc(uid).set(
-    {
-      uid,
-      email: DEMO.email,
-      displayName: DEMO.displayName,
-      companyId: DEMO.companyId,
-      globalRole: DEMO.globalRole,
-      status: 'active',
-      emailVerified: true,
-      claimsUpdatedAt,
-      updatedAt: FieldValue.serverTimestamp(),
-    },
-    { merge: true },
-  );
-
-  console.log(`   ✚ claim companyId=${DEMO.companyId}, globalRole=${DEMO.globalRole} (+ mirror)`);
-}
+const DEMO_IDENTITY: SeedIdentity = {
+  email: DEMO.email,
+  displayName: DEMO.displayName,
+  companyId: DEMO.companyId,
+  globalRole: DEMO.globalRole,
+};
 
 /** Εταιρεία + έργο + επαφή, όλα στον **ίδιο** μισθωτή. */
 async function seedTenantDocuments(db: Firestore, uid: string): Promise<void> {
@@ -264,36 +194,17 @@ function printNextSteps(uid: string): void {
 // MAIN
 // ============================================================================
 
-async function main(): Promise<void> {
-  await assertEmulatorsUp();
+async function main(auth: Auth, db: Firestore): Promise<void> {
 
-  console.log(`🔧 Emulator: firestore=${FIRESTORE_HOST} auth=${AUTH_HOST} project=${PROJECT_ID}`);
-  console.log('');
 
-  if (!getApps().length) {
-    // Χωρίς credential — σκόπιμα. Το Admin SDK πάει στον emulator μέσω των
-    // env vars· χωρίς credential δεν ΜΠΟΡΕΙ να φτάσει στην παραγωγή.
-    initializeApp({ projectId: PROJECT_ID });
-  }
+  console.log('📋 1/2 Ταυτότητα + tenant claims');
+  const uid = await seedIdentity(auth, db, DEMO_IDENTITY);
+  console.log(`   ✚ uid ${uid} · companyId=${DEMO.companyId} · globalRole=${DEMO.globalRole}`);
 
-  const auth = getAuth();
-  const db = getFirestore();
-
-  console.log('📋 1/3 Χρήστης');
-  const uid = await ensureDemoUser(auth);
-
-  console.log('📋 2/3 Tenant claims');
-  await applyTenantClaims(auth, db, uid);
-
-  console.log('📋 3/3 Δεδομένα');
+  console.log('📋 2/2 Δεδομένα');
   await seedTenantDocuments(db, uid);
 
   printNextSteps(uid);
 }
 
-main()
-  .then(() => process.exit(0))
-  .catch((error: unknown) => {
-    console.error('❌ Η σπορά απέτυχε:', error instanceof Error ? error.message : error);
-    process.exit(1);
-  });
+runSeeder(main);
