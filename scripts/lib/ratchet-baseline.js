@@ -88,6 +88,44 @@ function isRegression({ current, baseline, direction, tolerancePct = 0 }) {
   throw new Error(`Unknown ratchet direction "${direction}" (expected 'up' or 'down')`);
 }
 
+/**
+ * 🔴 **ΤΟ ΤΑΒΑΝΙ ΠΟΥ ΣΑΠΙΖΕΙ — Η ΑΣΥΜΜΕΤΡΙΑ ΠΟΥ ΚΟΣΤΙΣΕ 40 ΜΕΡΕΣ** (2026-08-25).
+ *
+ * Η **ταυτοτική** διαδρομή ({@link runSetRatchetCli}) πάντα έλεγε «⬇ N λιγότερες — κλείδωσέ
+ * το». Η **αριθμητική** ({@link runRatchetCli}) τύπωνε σκέτο `✅` και **σιωπούσε για τον
+ * τζόγο**. Μετρημένο: το CHECK G15 (knip) είχε baseline **456** ενώ το δέντρο μετρούσε **57**
+ * — ταβάνι **8×** πάνω από την πραγματικότητα, επί **40 ημέρες**. Δηλαδή μπορούσες να
+ * προσθέσεις **~400** αδήλωτες εξαρτήσεις και η πύλη θα έμενε **πράσινη**.
+ *
+ * ⚠️ Δεν ήταν σφάλμα μέτρησης — ήταν **απουσία ερωτήματος**: κανείς δεν ρωτούσε «πόσο τζόγο
+ * έχει το ταβάνι;», άρα η απάντηση δεν εμφανιζόταν πουθενά για να τη δει άνθρωπος.
+ *
+ * 🏆 **Η ΠΡΑΚΤΙΚΗ ΤΩΝ ΜΕΓΑΛΩΝ ΕΙΝΑΙ ΟΜΟΦΩΝΗ**: το **PHPStan** έχει το
+ * `reportUnmatchedIgnoredErrors` **ενεργό από προεπιλογή** — μια εγγραφή baseline που δεν
+ * αντιστοιχεί πια σε σφάλμα **αναφέρεται ως αποτυχία**· το **ESLint** κάνει το ίδιο με το
+ * `reportUnusedDisableDirectives`. Η αρχή και στα δύο: *μια καταστολή που δεν χρειάζεται
+ * πλέον είναι η ίδια ελάττωμα*, γιατί **κρύβει την επόμενη παλινδρόμηση στο ίδιο σημείο**.
+ *
+ * ⚠️ **ΔΕΝ ΜΠΛΟΚΑΡΕΙ, ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ**: **14 από τις 27** πύλες που μοιράζονται αυτή τη
+ * μηχανή τρέχουν σε **pre-commit**. Μπλοκάρισμα στη *βελτίωση* θα σταματούσε τον Giorgio για
+ * κάτι που **δεν μπορεί να διορθώσει τοπικά** (η σπορά είναι συμβολαιακά CI) ⇒ μονίμως
+ * κόκκινο ⇒ `SKIP_` ⇒ διακοσμητική πύλη — η παγίδα που το CHECK 3.39 δοκίμασε και απέρριψε
+ * **γραπτώς**. Αντ' αυτού η ορατότητα γίνεται **αδύνατο να θαφτεί**: εκτός από τη γραμμή στο
+ * τερματικό, κάτω από GitHub Actions εκπέμπεται **annotation**, που εμφανίζεται στο PR — όχι
+ * στο βάθος ενός log που κανείς δεν ανοίγει.
+ *
+ * @param {{adr: string, slack: number, detail: string, command: string}} p
+ * @returns {string} το επίθεμα της γραμμής `✅` (κενό όταν δεν υπάρχει τζόγος)
+ */
+function announceSlack({ adr, slack, detail, command }) {
+  if (!(slack > 0)) return '';
+  const line = `${detail} — κλείδωσέ το: ${command}`;
+  if (process.env.GITHUB_ACTIONS === 'true') {
+    console.log(`::warning title=${adr} — μπαγιάτικη baseline::${line}`);
+  }
+  return `  ⬇ ${line}`;
+}
+
 // The whole check/write/help control-flow, parameterised by a per-gate descriptor
 // so the three gate scripts stay clone-free (N.18). Descriptor:
 //   adr           — e.g. 'ADR-598 G5'
@@ -150,7 +188,18 @@ function runRatchetCli(descriptor, argv = process.argv) {
   const summary = descriptor.describe({ measured, baseline, tolerancePct, regressed });
 
   if (!regressed) {
-    console.log(`✅ ${descriptor.adr} OK — ${summary}`);
+    // ⚠️ Ο τζόγος υπολογίζεται ΜΕ ΤΗΝ ΚΑΤΕΥΘΥΝΣΗ, ποτέ ως απόλυτη διαφορά: σε ratchet 'up'
+    //    (ψηλότερα = καλύτερα) το «κάτω από το ταβάνι» είναι `measured - baseline`.
+    const cur = measured[descriptor.metricKey];
+    const base = baseline[descriptor.metricKey];
+    const slack = descriptor.direction === 'down' ? base - cur : cur - base;
+    const progress = announceSlack({
+      adr: descriptor.adr,
+      slack,
+      detail: `${slack} ${descriptor.slackNoun || 'μονάδες'} κάτω από το ταβάνι (baseline ${base}, μετρημένο ${cur})`,
+      command: descriptor.slackCommand || `node ${descriptor.scriptName} --write-baseline (σπορά: CI seed dispatch)`,
+    });
+    console.log(`✅ ${descriptor.adr} OK — ${summary}${progress}`);
     process.exit(0);
   }
 
@@ -295,9 +344,14 @@ async function runSetRatchetCli(descriptor, argv = process.argv) {
     return process.exit(1);
   }
 
-  const progress = v.removed.length || d.removed.length
-    ? `  ⬇ ${v.removed.length} ${L.violations} / ${d.removed.length} ${L.declarations} λιγότερες — κλείδωσέ το: ${descriptor.commands.baseline}`
-    : '';
+  // ⚠️ ΤΟ ΙΔΙΟ ΣΩΜΑ με την αριθμητική διαδρομή (N.18) — και ταυτόχρονα η ταυτοτική κερδίζει
+  //    δωρεάν το annotation του CI, που πριν είχε μόνο γραμμή σε log.
+  const progress = announceSlack({
+    adr: descriptor.adr,
+    slack: v.removed.length + d.removed.length,
+    detail: `${v.removed.length} ${L.violations} / ${d.removed.length} ${L.declarations} λιγότερες`,
+    command: descriptor.commands.baseline,
+  });
   console.log(
     `✅ ${descriptor.adr} — ${v.currentCount} ${L.violations} / ${d.currentCount} ${L.declarations} `
     + `(baseline ${v.baselineCount}/${d.baselineCount})${progress}`,

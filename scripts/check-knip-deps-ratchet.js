@@ -147,6 +147,9 @@ const DESCRIPTOR = {
   requiredKeys: ['total'],
   metricKey: 'total',
   direction: 'down',
+  // Ο τζόγος του ταβανιού — δες `announceSlack` στο lib. Εδώ κόστισε 40 ημέρες σιωπής.
+  slackNoun: 'ευρήματα εξαρτήσεων',
+  slackCommand: 'workflow_dispatch στο knip-deps-ratchet.yml με seed=true, και commit το JSON',
   resolveTolerancePct: () => 0,
   measure,
   buildPayload,
