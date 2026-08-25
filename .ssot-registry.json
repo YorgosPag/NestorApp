@@ -806,6 +806,7 @@
       ]
     },
     "property-offer-derivation": {
+      "addedDate": "2026-08-10",
       "ssotFile": "src/lib/offers/derive-commercial-status.ts",
       "description": "ADR-777 Α20 — Το `commercialStatus` και το `offerKinds` ενός ακινήτου είναι ΠΑΡΑΓΟΜΕΝΑ από τις ΔΙΑΘΕΣΕΙΣ (`offers`), και παράγονται σε ΕΝΑ σημείο: `deriveCommercialStatus` / `deriveOfferKinds`. Απαγορεύεται δεύτερη υλοποίηση της προβολής — δηλαδή χειρόγραφη αντιστοίχιση είδους/κύκλου ζωής σε κατάσταση (`kind === 'sell' ? 'for-sale' : …`), ή δεύτερος υπολογισμός του offerKinds. 🔴 ΓΙΑΤΙ: η προβολή είναι ΡΗΤΑ LOSSY — το `COMMERCIAL_STATUSES` έχει 7 τιμές και ΚΑΜΙΑ δεν σημαίνει αντιπαροχή (η Α20 απαγορεύει όγδοη: 3 → 7 listed τιμές, combinatorial explosion). Ένα δεύτερο αντίγραφο της αντιστοίχισης θα διαφωνούσε ΣΙΩΠΗΛΑ ακριβώς εκεί που η πρώτη χάνει πληροφορία — το σχήμα του ADR-749 στην ακριβέστερή του μορφή. ⚠️ Η γραφή περνά ΜΟΝΟ από το property-mutation-gateway (`DerivedFieldWriteError`): αυτό είναι επιβολή ΧΡΟΝΟΥ ΕΚΤΕΛΕΣΗΣ, ίδιο επίπεδο με το read-only παραμέτρου του Revit· η compile-time άμυνα είναι ο τύπος `PropertyOffersUpdate` (`?: never`) και ισχύει για τους ΝΕΟΥΣ καλούντες — ο τύπος `updates` παραμένει `Record<string, unknown>` για τους 6 υπάρχοντες, και δηλώνεται ρητά ως όριο.",
       "forbiddenPatterns": [
@@ -913,6 +914,7 @@
       ]
     },
     "property-type-aliases": {
+      "addedDate": "2026-08-20",
       "ssotFile": "src/constants/property-type-aliases.ts",
       "description": "Η ΑΝΑΓΝΩΡΙΣΗ — «τι μου έγραψαν;»: ελληνικά/αγγλικά ψευδώνυμα ελεύθερου κειμένου προς κανονικό είδος, και οι ελληνικές ετικέτες. Import from @/constants/property-type-aliases — no inline re-declaration. ⚠️ Χωρίστηκε από το property-types (ADR-777 §8.32) στο σημείο όπου αλλάζει η ΕΡΩΤΗΣΗ, όχι για να χωρέσει σε 500 γραμμές: το μοντέλο ταξιδεύει σε 46 αρχεία, η αναγνώριση σε 4.",
       "forbiddenPatterns": [
@@ -5405,6 +5407,7 @@
       "tier": 3
     },
     "administrative-hierarchy-vocabulary": {
+      "addedDate": "2026-08-07",
       "ssotFile": "src/utils/address/administrative-hierarchy-vocabulary.ts",
       "description": "ADR-772 - THE table mapping the 8 Greek administrative levels (Kallikratis) across all 6 address vocabularies (AddressWithHierarchyValue form / ProjectAddress / CompanyAddress / AddressInfo / flat contact form / ResolvedAddressFields). Measured 2026-08-08 PER DIRECTION: four private to/from converter pairs carried 5/8, 6/8 and 8/8 admin levels and 0-2 of 8 identities, each silently dropping the rest - the screen asked, the storage kept whatever the converter remembered, with NO message. Name-based grep called three of them '8/8' because the type name appeared in casts. The ancestor HIERARCHY_PROJECTION (ADR-332 D15) solved this for contacts only. Do NOT hand-write a to/from hierarchy pair: call projectAddressVocabulary() from utils/address/administrative-hierarchy. A hand-written reverse is a sibling clone invisible to name-based ssot:discover and often below the jscpd 50-token floor (ADR-584 / N.18). Anchor: utils/address/__tests__/administrative-hierarchy-round-trip.test.ts (29 tests, 12/12 mutations red). NOTE: a third pattern was drafted and DELIBERATELY DROPPED - it matched '<level>Name: x.<field>' assignments, which fire on three LEGITIMATE files (FrontageAddressCreateDialog, LocationInlineForm, useProjectLocations) that merge geocoder results back into hierarchy slots. It could not tell a hand-written converter from a legitimate merge, i.e. >10% false positives on a blocking gate. Function DEFINITIONS are the unambiguous signal; call sites are not.",
       "forbiddenPatterns": [
@@ -5421,6 +5424,7 @@
       "tier": 3
     },
     "property-price-resolver": {
+      "addedDate": "2026-08-09",
       "ssotFile": "src/lib/properties/price-resolver.ts",
       "description": "ADR-777 A6 (2026-08-09) - the ONE rule for \"which number is the price of this unit, and what does it mean when there isn't one\". `resolveDisplayPrice` returns a discriminated union (priced{headline,secondary} / missing{reason}) where every amount carries its `source`; `getEffectivePrice` is its thin projection; `totalPrice` sums a collection with CLOSED accounting (pricedCount + unpricedCount === length, average divided by the priced ones); `priceSortKey` returns `number | null` for comparators. Input is the STRUCTURAL type `PricedPropertyLike`, so both `Property` shapes AND parking/storage satisfy it - do NOT write an adapter. WHY THIS ENTRY EXISTS: the module was written, tested (38 tests) and then re-implemented privately in 24 other places, because nothing recorded that it is the SSoT - it was absent from this registry and from docs/centralized-systems/README.md. Phi5 measured what that costs: on the public dashboard the same omission produced THREE simultaneous defects (understated total, a price filter reading a DIFFERENT field from the card, and an average divided by units that have no price). `src/types/spaces.ts` declares `commercial.askingPrice` for parking and storage too, so a bare `s.price` is not a legacy fallback - it is silent loss of the real price. NEVER write `?? 0` for a price: \"has no price\" is not \"costs 0 EUR\", and a 0 ranks the unit as the cheapest one in any sorted table. DELIBERATELY NARROW, measured 2026-08-09: the obvious pattern `commercial\\?\\.askingPrice\\s*\\?\\?` matches 12 lines in 8 files and ALL TWELVE are legitimate (dialog form defaults, a revert payload snapshot, a dirty-check, and the two sites waiting on ADR-777 SS8.2 open item #4) = 100% false positives, far past Google's <=10% bar for a blocking check - exactly the zero-signal trap CLAUDE.md N.12 warns about. A bare `\\.price\\s*\\|\\|\\s*0` is worse: 7 of its 9 hits are COMMENTS, including the ones documenting this very fix (the CHECK 3.50 K7b lesson - a comment describing the old shape must not be counted as the old shape). So the three patterns below pin only shapes that no legitimate caller has: asking-then-flat chaining, a stats `getValue` reading the flat field, and a `sumBy` over it. NOT GUARDED HERE, GUARDED BY REVIEW: whether a given site is asking \"what is the price?\" (must use this SSoT) or displaying a NAMED field (\"Asking price: X\") is semantic, and regex cannot see it - `SalesPropertyListCard` and `SaleInfoContent` are correct as they stand. Revenue is NOT the display price either: `useExecutiveReport` and `report-data-aggregator.totalRevenue` read `finalPrice` on purpose.",
       "forbiddenPatterns": [
@@ -5435,6 +5439,7 @@
       "tier": 3
     },
     "location-provenance": {
+      "addedDate": "2026-08-10",
       "ssotFile": "src/lib/location/location-provenance.ts",
       "description": "ADR-777 Α1/Α11 (SPEC-777A §13.3 · §14.3 · §21.4) — Η ΠΡΟΕΛΕΥΣΗ ΤΗΣ ΘΕΣΗΣ και η ΚΑΤΑΤΑΞΗ των πηγών ζουν σε ΕΝΑ σημείο: 'src/lib/location/location-provenance.ts'. Απαγορεύεται δεύτερη δήλωση του λεξιλογίου ('geocoded'/'manual'/'drawn'/'osm'/'survey'/'bim'), δεύτερος πίνακας κατάταξης, ή δεύτερη υλοποίηση των outranksForLocation/outranksForFact/locationKnowledgeStep. 🔴 ΓΙΑΤΙ: η κατάταξη ΔΕΝ είναι εμφάνιση — ΕΙΝΑΙ ο κανόνας συγχώνευσης του §14.3 ('ανεβαίνει στο Α μόνο αν επαληθευτεί από ισχυρότερη πηγή'), δηλαδή αποφασίζει ΠΟΙΟΣ ΕΧΕΙ ΔΙΚΑΙΩΜΑ ΝΑ ΞΑΝΑΓΡΑΨΕΙ ΤΟ ΚΟΙΝΟ ΕΠΙΠΕΔΟ Α — που το βλέπουν ΟΛΟΙ οι πελάτες ταυτόχρονα (§14.4). Ένα δεύτερο αντίγραφο θα διαφωνούσε σιωπηλά ακριβώς εκεί που κρίνεται η αντικατάσταση. ⚠️ Η ΠΙΟ ΑΚΡΙΒΗ ΠΑΓΙΔΑ, ΜΕΤΡΗΜΕΝΗ: ο πίνακας του §21.4 αριθμεί τα σκαλοπάτια 0-6, ΑΛΛΑ το σκαλοπάτι 5 ('document-only') δίνει ΜΗΔΕΝ θέση ενώ το 4 ('osm') δίνει σχήμα. Όποιος ξαναγράψει την κατάταξη διαβάζοντας τον πίνακα ως σειρά αξιοπιστίας θα αφήσει ένα ΑΝΥΠΑΡΚΤΟ στοιχείο θέσης να σβήσει ένα ΥΠΑΡΚΤΟ. Γι' αυτό η σκάλα (locationKnowledgeStep, μόνο για την οθόνη) και η κατάταξη (outranksForLocation, ο κανόνας) είναι ΞΕΧΩΡΙΣΤΕΣ συναρτήσεις και ΔΕΝ επιτρέπεται να ενοποιηθούν.",
       "forbiddenPatterns": [
@@ -5447,6 +5452,7 @@
       "tier": 3
     },
     "browser-sha256": {
+      "addedDate": "2026-08-22",
       "ssotFile": "src/lib/hash/sha256.ts",
       "tier": 2,
       "description": "ADR-749 - SHA-256 sto browser (async Web Crypto) zei MIA fora sto src/lib/hash/sha256.ts: sha256Hex(BufferSource) / sha256HexOfText(string) / bytesToHex / isWebCryptoAvailable. Itan grammeno EXI fores me tria idiotika bytesToHex kai dyo asymvates symperifores otan leipei to Web Crypto. DEN kalyptei to Node createHash (sync, allo perivallon: vqe/hashing.ts, server/lib/id-generation.ts, lib/middleware/with-rate-limit.ts, services/backup/*) oute to hex XROMATOS (color-math.ts, rgb-unit-hex.ts, run-color.ts) - alli erotisi.",
