@@ -175,7 +175,7 @@ export async function saveDeclaredOccupation(
 
 export async function ensureDevUserProfile(): Promise<void> {
   // Ο φρουρός ζει ΕΔΩ, όχι στο call site: η συνάρτηση γράφει `users/dev-admin` με
-  // `globalRole: 'admin'` μέσω Admin SDK (παρακάμπτει τους Firestore rules). Αν ο έλεγχος
+  // `globalRole: 'super_admin'` μέσω Admin SDK (παρακάμπτει τους Firestore rules). Αν ο έλεγχος
   // περιβάλλοντος έμενε στον καλούντα, κάθε νέος καλών θα τον ξανάγραφε — και μία παράλειψη
   // αρκεί για να γεννηθεί ψεύτικος λογαριασμός στην παραγωγή. Ένα σημείο, αδύνατο να παρακαμφθεί.
   if (process.env.NODE_ENV !== 'development') return;
@@ -190,7 +190,7 @@ export async function ensureDevUserProfile(): Promise<void> {
         displayName: 'Dev Admin',
         givenName: 'Dev',
         familyName: 'Admin',
-        globalRole: 'admin',
+        globalRole: 'super_admin',
         authProvider: 'development-bypass',
       }),
     });

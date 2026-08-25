@@ -12,17 +12,24 @@
  *   - CREATE       → anyone with `dxf:text:edit` (low bar — small action)
  *   - EDIT / DELETE → `dxf:dictionary:manage` (admin-only)
  *
- * Mirrors role check in `text-edit-capabilities.ts`: admin-tier roles
- * (super_admin / admin / company_admin) can manage; everyone else can
- * still add their own terms via the editor dialog but cannot edit /
- * delete entries created by colleagues.
+ * ADR-801 Φάση 3 — και οι δύο ερωτήσεις πάνε στον **ΕΝΑ** κριτή
+ * (`lib/auth/authority.ts`) μέσω του PEP `useCapability`.
+ *
+ * 🔴 Μέχρι 2026-08-25 εδώ ζούσε `ADMIN_ROLES = new Set(['super_admin',
+ * 'admin', 'company_admin'])`, κρινόμενο πάνω στο `useUserRole().user.role` —
+ * τιμή με **τρεις** μόνο δυνατές καταστάσεις (`'admin'`·`'authenticated'`·
+ * `'public'`) που παράγεται από **λίστα email**. Δηλαδή τα `'super_admin'` και
+ * `'company_admin'` του συνόλου **δεν μπορούσαν να πυροδοτήσουν ποτέ**, και
+ * διαχειριστής εκτός της λίστας email έπαιρνε άρνηση σιωπηλά.
  */
 'use client';
 
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from '@/i18n';
-import { useUserRole } from '@/auth/contexts/UserRoleContext';
+import { useAuth } from '@/auth/hooks/useAuth';
+import { useCapability } from '@/auth/hooks/useCapability';
 import { useCanEditText } from '@/subapps/dxf-viewer/hooks/useCanEditText';
+import { isGranted } from '@/types/capability-authority';
 import {
   Tooltip,
   TooltipContent,
@@ -38,15 +45,16 @@ import {
   useCustomDictionaryMutations,
 } from './hooks/useCustomDictionary';
 
-const ADMIN_ROLES = new Set(['super_admin', 'admin', 'company_admin']);
-
 export const CustomDictionaryManager: React.FC = () => {
-  const { t } = useTranslation(['textSpell']);
-  const { user, firebaseUser } = useUserRole();
-  const companyId = firebaseUser?.companyId ?? null;
-  const role = user?.role ?? null;
+  // ⚠️ Το `auth` δηλώνεται ρητά: ο `denyReason` είναι κλειδί **εκείνου** του
+  //    namespace (`auth:capability.denyReason.*`) και χωρίς τη δήλωση θα
+  //    έβγαινε ωμό στην οθόνη (CHECK 3.34 / 3.51).
+  const { t } = useTranslation(['textSpell', 'auth']);
+  const { user } = useAuth();
+  const companyId = user?.companyId ?? null;
   const capabilities = useCanEditText();
-  const canManage = role !== null && ADMIN_ROLES.has(role);
+  const manageGate = useCapability('dxf:dictionary:manage');
+  const canManage = isGranted(manageGate.verdict);
   const canCreate = capabilities.canEdit;
 
   const { entries, loading, error, refresh, setEntriesLocal } = useCustomDictionary(companyId);

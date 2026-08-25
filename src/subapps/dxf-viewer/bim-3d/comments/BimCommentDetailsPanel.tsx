@@ -11,6 +11,8 @@ import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/auth/hooks/useAuth';
+import { useCapability } from '@/auth/hooks/useCapability';
+import { isGranted } from '@/types/capability-authority';
 import {
   useBimCommentsStore,
   selectRepliesFor,
@@ -21,8 +23,6 @@ import { CommentReplyInput } from './CommentReplyInput';
 import { CommentAttachmentLightbox } from './CommentAttachmentLightbox';
 import { getAvailableTransitions } from './comment-status-fsm';
 import type { BimComment, CommentStatus } from './bim-comment-types';
-
-const ADMIN_ROLES = new Set(['company_admin', 'project_manager']);
 
 const STATUS_ACTION_KEY: Record<CommentStatus, string> = {
   in_review: 'comments.actions.markInReview',
@@ -39,6 +39,15 @@ interface BimCommentDetailsPanelProps {
 export function BimCommentDetailsPanel({ commentId, companyId }: BimCommentDetailsPanelProps) {
   const { t } = useTranslation('bim3d');
   const { user } = useAuth();
+  // ADR-801 Φάση 3 — ο **ΕΝΑΣ** κριτής, όχι inline σύνολο ρόλων.
+  //
+  // 🔴 Το σύνολο που αντικαταστάθηκε ήταν `['company_admin','project_manager']`
+  //    και **δεν περιείχε τον `super_admin`**: ο υπερδιαχειριστής δεν μπορούσε
+  //    να μετακινήσει κατάσταση σχολίου που δεν έγραψε ο ίδιος. Ο κριτής του
+  //    δίνει `granted-by-bypass`, άρα η παράλειψη διορθώνεται **δομικά**.
+  //    Το `project_manager` ήταν ούτως ή άλλως ανενεργό: είναι ρόλος **έργου**,
+  //    ποτέ τιμή του claim `globalRole` (τέσσερις τιμές, `GLOBAL_ROLES`).
+  const moderateGate = useCapability('bim_comments:comments:update');
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   const comment = useBimCommentsStore((s) => s.comments[commentId]);
@@ -54,7 +63,7 @@ export function BimCommentDetailsPanel({ commentId, companyId }: BimCommentDetai
   if (!comment) return null;
 
   const isAuthorOrAdmin =
-    user?.uid === comment.authorId || ADMIN_ROLES.has(user?.globalRole ?? '');
+    user?.uid === comment.authorId || isGranted(moderateGate.verdict);
 
   const availableTransitions = getAvailableTransitions(comment.status, isAuthorOrAdmin);
 

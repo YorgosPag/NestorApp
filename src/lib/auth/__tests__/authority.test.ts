@@ -21,6 +21,9 @@
  * @see ADR-801 · CHECK 3.66
  */
 
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { describe, it, expect } from '@jest/globals';
 
 import { decideCapability } from '../authority';
@@ -308,5 +311,50 @@ describe('Λ — πληρότητα λεξιλογίου (ο παρονομασ�
       if (isGranted(d.verdict)) expect(d.reason).toBeNull();
       else expect(typeof d.reason).toBe('string');
     }
+  });
+});
+
+// =============================================================================
+// Δ — Η ΤΑΥΤΟΤΗΤΑ ΠΟΥ ΓΡΑΦΕΙ Η ΙΔΙΑ Η ΕΦΑΡΜΟΓΗ (ADR-801 §6, Φάση 2)
+// =============================================================================
+
+describe('Δ — καμία ταυτότητα που γράφουμε δεν είναι ακατανόητη στον κριτή', () => {
+  /**
+   * Αρχεία που **γράφουν** `globalRole` σε έγγραφο χρήστη.
+   *
+   * 🔴 **ΓΙΑΤΙ ΥΠΑΡΧΕΙ**: μέχρι 2026-08-25 το `ensureDevUserProfile` έγραφε
+   * `globalRole: 'admin'` — τιμή που **δεν υπάρχει** ούτε στα `GLOBAL_ROLES`,
+   * ούτε στα `PREDEFINED_ROLES`. Το έγγραφο `users/dev-admin` υπάρχει **στην
+   * παραγωγή** με αυτή την τιμή. Χωρίς άγκυρα, ο επόμενος το ξαναγράφει.
+   *
+   * ⚠️ **ΔΙΑΒΑΖΕΙ ΤΟ ΠΡΑΓΜΑΤΙΚΟ ΑΡΧΕΙΟ, ΔΕΝ ΑΝΤΙΓΡΑΦΕΙ ΤΙΜΗ.** Καρφωμένο
+   *    `'super_admin'` εδώ θα έμενε πράσινο ενώ το αρχείο γράφει ό,τι θέλει.
+   */
+  const WRITERS = ['src/auth/contexts/auth-context/auth-context-profile.ts'] as const;
+
+  it.each(WRITERS)('Δ1 — κάθε globalRole που γράφει το %s είναι γνωστός ρόλος', file => {
+    const src = readFileSync(join(process.cwd(), file), 'utf8');
+    const found = [...src.matchAll(/globalRole:\s*'([^']+)'/g)].map(m => m[1]);
+
+    // ⚠️ Ο ΠΑΡΟΝΟΜΑΣΤΗΣ: αν το regex δεν βρει τίποτα, το test θα ήταν πράσινο
+    //    χωρίς να κοιτάξει — το σχήμα «0 = κανείς δεν κοίταξε».
+    expect(found.length).toBeGreaterThan(0);
+
+    for (const role of found) {
+      const d = decideCapability({
+        subject: { globalRole: role, permissions: null },
+        action: ADMIN_ACCESS,
+      });
+      expect(d.verdict).not.toBe('denied-unknown-role');
+    }
+  });
+
+  it('Δ2 — ο παρονομαστής: το ΠΑΛΙΟ "admin" ΟΝΤΩΣ θα κοκκίνιζε', () => {
+    // Χωρίς αυτό, το Δ1 μπορεί να είναι πράσινο επειδή δεν υπήρξε ποτέ βλάβη.
+    const d = decideCapability({
+      subject: { globalRole: 'admin', permissions: null },
+      action: ADMIN_ACCESS,
+    });
+    expect(d.verdict).toBe('denied-unknown-role');
   });
 });

@@ -18,53 +18,27 @@
 // =============================================================================
 
 /**
- * Admin roles that exist in the system.
- * These are the roles that can access admin APIs.
- */
-export const ADMIN_ROLES = ['admin', 'broker', 'builder'] as const;
-
-/**
- * Admin role type derived from registry.
- */
-export type AdminRole = (typeof ADMIN_ROLES)[number];
-
-/**
- * Roles that REQUIRE MFA enrollment for access.
+ * 🔴 **ΤΟ ΛΕΞΙΛΟΓΙΟ ΔΙΑΧΕΙΡΙΣΤΗ ΑΦΑΙΡΕΘΗΚΕ ΑΠΟ ΕΔΩ** (ADR-801 Φάση 3).
  *
- * @enterprise Business rule: All admin-level roles must have MFA enabled
- * for compliance with security standards.
+ * Ζούσαν εδώ `ADMIN_ROLES = ['admin','broker','builder']`, ο τύπος `AdminRole`,
+ * τα `MFA_REQUIRED_ROLES`, το `roleRequiresMfa()` και το `isAdminRole()` — **με
+ * μηδέν καταναλωτές**, μετρημένα: κανένα αρχείο του δέντρου δεν τα εισήγαγε
+ * ποτέ (μόνο τα `SESSION_COOKIE_CONFIG` / `getSessionCookieDurationMs` από
+ * αυτό το αρχείο έχουν χρήστες).
  *
- * @see PR-1B: MFA Enforcement
- */
-export const MFA_REQUIRED_ROLES: readonly AdminRole[] = [
-  'admin',
-  'broker',
-  'builder',
-] as const;
-
-/**
- * Check if a role requires MFA enrollment.
+ * ⚠️ **Δεν ήταν αδρανή — ήταν ΔΟΛΩΜΑ.** Το λεξιλόγιό τους (`admin`·`broker`·
+ * `builder`) ανήκει σε **παλαιότερο** σύστημα ρόλων, ενώ τα claims του Firebase
+ * λένε `super_admin`·`company_admin`·`internal_user`·`external_user`. Ένα
+ * `isAdminRole('company_admin')` επέστρεφε **`false`** — δηλαδή ο πρώτος που θα
+ * το εμπιστευόταν θα έκλεινε σιωπηλά έξω **κάθε** διαχειριστή εταιρείας, και το
+ * σφάλμα θα έμοιαζε με «λάθος δικαιώματα» αντί για «λάθος λίστα». Το
+ * `mcp-identity.ts` είχε **ήδη** γράψει αυτή την προειδοποίηση σε σχόλιο· ένα
+ * σχόλιο δεν είναι φρουρός (μάθημα CHECK 3.36).
  *
- * @param role - The admin role to check
- * @returns true if the role requires MFA enrollment
- *
- * @example
- * ```typescript
- * if (roleRequiresMfa('admin')) {
- *   // Enforce MFA check
- * }
- * ```
+ * ⇒ Η **μόνη** αυθεντία για το «επιτρέπεται;» είναι ο `lib/auth/authority.ts`.
+ * ⚠️ **ΜΗΝ ξαναφέρεις σύνολο ρόλων σε αυτό το αρχείο** — εδώ ζει η πολιτική
+ *    **συνεδρίας**, όχι η εξουσιοδότηση.
  */
-export function roleRequiresMfa(role: AdminRole): boolean {
-  return MFA_REQUIRED_ROLES.includes(role);
-}
-
-/**
- * Check if a string is a valid admin role.
- */
-export function isAdminRole(role: string): role is AdminRole {
-  return ADMIN_ROLES.includes(role as AdminRole);
-}
 
 // =============================================================================
 // SESSION POLICY CONFIGURATION
