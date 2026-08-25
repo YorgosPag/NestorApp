@@ -933,7 +933,7 @@ describe('Group 14 — `t(`${K}.x`)` όπου K είναι σταθερά ΔΕΝ
     const canonical = [...source.matchAll(/^\s{2}(\w+): '(types\.\w+)',$/gm)].map(m => m[2]);
     expect(canonical.length).toBeGreaterThanOrEqual(14);
 
-    for (const route of ['offers__new', 'demands__new', 'listings__mandates__new']) {
+    for (const route of ['offers__new', 'demands__new', 'o__workspace__listings__mandates__new']) {
       const slice = JSON.parse(fs.readFileSync(
         path.join(__dirname, '..', '..', 'src', 'i18n', 'generated', 'routes', `${route}.el.json`),
         'utf8'));
@@ -1066,7 +1066,7 @@ describe('Group 15 — πίνακες άλλου module · template σε πίν�
   it('Σ8 — 🔴 ΑΓΚΥΡΑ ΠΡΑΓΜΑΤΙΚΟΥ ΚΩΔΙΚΑ: ο κατάλογος εντολών έχει ΟΛΕΣ του τις λέξεις', () => {
     // Πριν το §8.39 αυτή η σελίδα είχε **37** ανεπίλυτες κλήσεις και **μηδέν** bytes.
     const slice = JSON.parse(fs.readFileSync(
-      path.join(REPO, 'src', 'i18n', 'generated', 'routes', 'listings__mandates.el.json'), 'utf8'));
+      path.join(REPO, 'src', 'i18n', 'generated', 'routes', 'o__workspace__listings__mandates.el.json'), 'utf8'));
     const mandates = slice['property-market'].offer.mandates;
     for (const key of ['title', 'lead', 'empty', 'emptyHint', 'retry', 'truncated']) {
       expect(typeof mandates[key]).toBe('string');
@@ -1080,7 +1080,7 @@ describe('Group 15 — πίνακες άλλου module · template σε πίν�
     // Ο παρονομαστής της μετακόμισης: χωρίς αυτά, το §8.38 θα είχε ανταλλάξει μια
     // κλάση ωμού κλειδιού με άλλη.
     for (const route of ['offers', 'offers__offerId', 'demands', 'demands__demandId',
-      'mandate__token', 'listings__mandates', 'listings__mandates__new']) {
+      'mandate__token', 'o__workspace__listings__mandates', 'o__workspace__listings__mandates__new']) {
       const file = path.join(REPO, 'src', 'i18n', 'generated', 'routes', `${route}.el.json`);
       expect(fs.existsSync(file)).toBe(true);
       expect(JSON.parse(fs.readFileSync(file, 'utf8'))['property-market']).toBeDefined();
