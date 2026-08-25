@@ -59,12 +59,30 @@ describe('Basic Visual Regression Setup', () => {
     expect(canvas.tagName).toBe('CANVAS');
   });
 
-  test('mock 2d context available', () => {
+  /**
+   * 🔴 **ΔΕΝ ΥΠΑΡΧΕΙ 2D BACKEND ΣΤΟ JEST, ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ ΑΣΦΑΛΕΙΑΣ** (2026-08-24, `19fbc2cc`).
+   *
+   * Το `pnpm.overrides['jsdom>canvas'] = '-'` έκοψε αλυσίδα **CVE** του `tar`. Από τότε το
+   * `getContext('2d')` επιστρέφει **`null`** — και αυτός ο ισχυρισμός, που απαιτούσε το
+   * αντίθετο, έμεινε **κόκκινος**. Ήταν το **δεύτερο** αδιάγνωστο θύμα της ίδιας αλλαγής: το
+   * πρώτο ήταν η **εξαφάνιση της βαθμίδας 2** της μέτρησης κειμένου (ADR-799), που άφησε
+   * **15** σουίτες να κρίνουν πλάτος με όργανο τυφλό στο στυλ.
+   *
+   * ⚠️ **ΜΗΝ «ΔΙΟΡΘΩΣΕΙΣ» ΑΥΤΟ ΤΟ TEST ΕΠΑΝΑΦΕΡΟΝΤΑΣ ΤΟ `canvas`** — θα ξανάνοιγε το CVE.
+   * Ο ισχυρισμός είναι πλέον **χαρακτηρισμός**: κλειδώνει τη ρητή κατάσταση «κανένας 2D
+   * καμβάς στο jest», ώστε μια μελλοντική αλλαγή να είναι **συνειδητή** και όχι σιωπηλή.
+   *
+   * 🔑 **ΠΟΥ ΓΙΝΕΤΑΙ ΤΟΤΕ Η ΟΠΤΙΚΗ ΕΠΑΛΗΘΕΥΣΗ**: στο **Playwright** (CHECK 3.46 / ADR-775),
+   * με πραγματικό browser. Και η **μέτρηση κειμένου** δεν χρειάζεται καμβά: γίνεται σε
+   * **βαθμίδα 1** με `installStubFontPair` — ντετερμινιστικά, όπως το `FlutterTest` του
+   * Flutter και το `Ahem` του WPT (ADR-799 Φάση 3).
+   */
+  test('ΚΑΝΕΝΑΣ 2D καμβάς στο jest — απόφαση ασφαλείας, όχι έλλειψη', () => {
     const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
 
-    expect(ctx).toBeTruthy();
-    expect(typeof ctx?.fillRect).toBe('function');
+    expect(canvas.getContext('2d')).toBeNull();
+    // Ο παρονομαστής: το στοιχείο ΥΠΑΡΧΕΙ και είναι καμβάς — λείπει μόνο το backend.
+    expect(canvas.tagName).toBe('CANVAS');
   });
 
   test('conditional pixelmatch loading', () => {

@@ -148,20 +148,41 @@ function windowsOf(cleanSource, vocabulary) {
   return windows;
 }
 
-/** Κρίνει το σύνολο, ή απλώς το **δείχνει**; */
-function isGate(cleanSource, vocabulary) {
+/**
+ * Κρίνει το σύνολο, ή απλώς το **δείχνει**;
+ *
+ * 🔴 **ΤΡΙΑ ΚΡΙΤΗΡΙΑ, ΚΑΙ ΤΟ ΤΡΙΤΟ ΤΟ ΑΠΟΚΑΛΥΨΕ ΑΓΚΥΡΑ ΠΟΥ ΑΠΕΤΥΧΕ.** Η δεύτερη
+ * γραφή ζητούσε το όρισμα να **ονομάζει** ρόλο (`.includes(role)`), οπότε ένα
+ * `ADMIN_ROLES.includes(r)` — ίδια πράξη, άλλο όνομα μεταβλητής — περνούσε για
+ * «απλή δήλωση πολιτικής». Το κριτήριο (γ) ρωτά το **σωστό** πράγμα: *δοκιμάζεται
+ * μέλος πάνω στη σταθερά που **κρατά το σύνολο ρόλων**;* — ταυτότητα, όχι όνομα.
+ */
+function isGate(cleanSource, vocabulary, windows = []) {
   // (α) σύγκριση ή κλάδος **πάνω σε κυριολεκτικό ρόλο**.
   const literalTest = vocabulary.some((role) =>
     QUOTES(role).some((q) =>
       new RegExp(`(?:\\.includes\\(|\\.has\\(|===\\s*|!==\\s*|case\\s+)${escapeRe(q)}`).test(cleanSource)));
 
-  // (β) δοκιμή **μέλους σε σύνολο**, με όρισμα που ονομάζει ρόλο.
-  //     ⚠️ Χωρίς αυτό, το κυρίαρχο ιδίωμα `ADMIN_ROLES.includes(role)` περνούσε
-  //     για «απλή δήλωση πολιτικής»: το `pending-registration.ts` και το
-  //     `email-inbound-service.ts` έβγαιναν **αθώα ενώ κρίνουν**.
-  const membershipTest = /\.(?:includes|has)\(\s*[^)]*[Rr]ole/.test(cleanSource);
+  // (β) δοκιμή μέλους με όρισμα που **ονομάζει** ρόλο — το κυρίαρχο ιδίωμα
+  //     (`ADMIN_ROLES.includes(role)`, `.has(user?.globalRole ?? '')`).
+  const namedArgTest = /\.(?:includes|has)\(\s*[^)]*[Rr]ole/.test(cleanSource);
 
-  return literalTest || membershipTest;
+  // (γ) δοκιμή μέλους **πάνω στην ίδια τη σταθερά του συνόλου**.
+  const holderTest = holdersOf(windows).some((name) =>
+    new RegExp(`\\b${escapeRe(name)}\\.(?:includes|has)\\(`).test(cleanSource));
+
+  return literalTest || namedArgTest || holderTest;
+}
+
+/** Τα ονόματα των σταθερών που **κρατούν** ένα σύνολο ρόλων. */
+function holdersOf(windows) {
+  const names = new Set();
+  for (const win of windows) {
+    const first = win.text.split('\n')[0];
+    const m = /(?:const|let|var)\s+([A-Za-z_$][\w$]*)/.exec(first);
+    if (m) names.add(m[1]);
+  }
+  return [...names];
 }
 
 function escapeRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
@@ -243,7 +264,7 @@ function takeInventory(root, options = {}) {
     const clean = stripComments(raw);
     const windows = windowsOf(clean, indicator);
     if (windows.length === 0) continue;
-    entries.push({ file: rel, windows, gate: isGate(clean, indicator) });
+    entries.push({ file: rel, windows, gate: isGate(clean, indicator, windows) });
   }
   return { registry, vocabularies, entries, scanned: files.length };
 }
@@ -260,5 +281,6 @@ module.exports = {
   claimRolesIn,
   windowsOf,
   isGate,
+  holdersOf,
   takeInventory,
 };

@@ -308,4 +308,32 @@ describe('Σ — τα δομικά στοιχεία', () => {
       expect(legacy.why.trim().length).toBeGreaterThanOrEqual(MIN_REASON);
     }
   });
+
+  it('Σ7 — 🔴 Ο ΔΕΙΚΤΗΣ ΠΕΡΙΛΑΜΒΑΝΕΙ ΤΑ LEGACY: το §2.4 ΔΕΝ ξαναγίνεται αόρατο', () => {
+    // Η πραγματική γραμμή του `admin-guards-types.ts`: **ΕΝΑΣ** ρόλος claims και
+    // **τρία** legacy. Με δείκτη μόνο τα GLOBAL_ROLES δεν υπήρχε παράθυρο ⇒ το
+    // αρχείο δεν σαρωνόταν ΚΑΘΟΛΟΥ, και το «0» του σήμαινε «δεν κοίταξα».
+    const real = [
+      "export type AdminRole = 'admin' | 'broker' | 'builder' | 'super_admin';",
+      "export const ADMIN_ROLES: AdminRole[] = ['admin', 'broker', 'builder', 'super_admin'];",
+      'export const ok = (r) => ADMIN_ROLES.includes(r);',
+    ].join(String.fromCharCode(10));
+    const legacy = [
+      { name: 'admin', why: 'l'.repeat(MIN_REASON) },
+      { name: 'broker', why: 'l'.repeat(MIN_REASON) },
+      { name: 'builder', why: 'l'.repeat(MIN_REASON) },
+    ];
+    const { verdict } = miniRepo({ 'src/x.ts': real }, { legacyRoleNames: legacy });
+    expect(statesFor(verdict, 'src/x.ts')).toEqual([STATES.INLINE_DECIDER]);
+    expect(idsOf(verdict, STATES.GHOST_ROLE)).toEqual([]);
+  });
+
+  it('Λ5 — το buildPayload ΑΡΝΕΙΤΑΙ να σπείρει μπλοκάρουσα κατάσταση', () => {
+    // «Ένα zero-tol που κλειδώνεται με ένα --write-baseline δεν είναι zero-tol».
+    const gate = require('../check-authority-registry');
+    expect(() => gate.buildPayload({
+      blocking: [{ state: STATES.GHOST_ROLE, id: 'foreman@src/x.ts', detail: 'δοκιμή' }],
+      violationIds: [], declarations: [],
+    })).toThrow(/άρνηση σποράς/);
+  });
 });

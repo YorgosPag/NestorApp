@@ -1,9 +1,7 @@
 {
   "$doc": "CHECK 3.64 / ADR-799 Φάση 2 — ΡΑΤΣΕΤΑ ΚΑΤΑ ΤΑΥΤΟΤΗΤΑ. Ο αριθμός ΔΕΝ είναι δείκτης υγείας.",
-  "generatedAt": 51,
-  "violations": [
-    "src/subapps/dxf-viewer/bim/table/__tests__/table-cell-clipping.test.ts"
-  ],
+  "generatedAt": 61,
+  "violations": [],
   "declarations": [
     "src/subapps/dxf-viewer/bim-3d/converters/__tests__/dxf-table-3d-decompose.test.ts",
     "src/subapps/dxf-viewer/bim/structural/detail-sheet/__tests__/adr622-absorption-characterization.test.ts",

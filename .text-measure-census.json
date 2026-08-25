@@ -187,10 +187,8 @@
       "file": "src/subapps/dxf-viewer/bim/table/__tests__/table-cell-clipping.test.ts",
       "glyph": 108,
       "css": 0,
-      "nominal": 100,
-      "dropped": [
-        "bold"
-      ]
+      "nominal": 0,
+      "dropped": []
     },
     {
       "file": "src/subapps/dxf-viewer/bim/table/__tests__/table-cell-edit-session.test.ts",
