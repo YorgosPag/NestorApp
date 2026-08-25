@@ -33,7 +33,7 @@ import {
   resolveProjectAddressPositions,
   republishProjectListings,
   type ProjectAddressLike,
-} from './project-place-projection';
+} from '@/services/listings/address-place-writeback';
 import type {
   ProjectUpdateResponse,
   ProjectDeleteResponse,
@@ -112,7 +112,7 @@ export async function handleUpdateProject(
   requireProjectAccess({ projectData, caller: ctx, projectId, action: 'update' });
 
   // 3β. **Η ΘΕΣΗ ΠΡΙΝ ΤΗ ΓΡΑΦΗ** (ADR-777 Α5) — δες `resolveAddressesForWrite`.
-  void resolveAddressesForWrite;
+  await resolveAddressesForWrite(body as Record<string, unknown>, projectData);
 
   // 4. Build update payload (companyId is IMMUTABLE — ADR-232)
   const { companyId: _immutableCompanyId, ...safeBody } = body;

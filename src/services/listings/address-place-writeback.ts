@@ -1,7 +1,17 @@
 /**
- * **Ο ΤΟΠΟΣ ΤΟΥ ΕΡΓΟΥ, ΑΠΟ ΤΗ ΜΕΡΙΑ ΤΟΥ PATCH** — λύσε τη θέση, μετά ξαναπρόβαλε.
+ * **ΛΥΣΕ ΤΗ ΘΕΣΗ, ΜΕΤΑ ΞΑΝΑΠΡΟΒΑΛΕ** — η μία διαδρομή εγγραφής του τόπου.
  *
- * @module api/projects/[projectId]/project-place-projection
+ * ⚠️ **Ζει στο `services/listings/` και ΟΧΙ στον φάκελο μιας διαδρομής API, επειδή
+ * έχει ΔΥΟ καταναλωτές**: το `PATCH /api/projects/[projectId]` (η **θέση**) και το
+ * `PATCH /api/buildings` (ο **δεσμός** προς το επίπεδο Α). Σε φάκελο έργου, το όνομα
+ * του module θα έλεγε ψέματα στον δεύτερο.
+ *
+ * 🔶 **Δηλωμένο χρέος στρωμάτωσης, το ίδιο με το `services/places/place-source-verification.ts`:**
+ * η μηχανή γεωκωδικοποίησης ζει σε `app/api/geocoding/`. Ένα `services/` module που
+ * την εισάγει διασχίζει στρώμα. Δεν αντιγράφεται εδώ — **δεύτερη μηχανή θα ήταν
+ * χειρότερη** από τη δηλωμένη διάσχιση (ADR-749).
+ *
+ * @module services/listings/address-place-writeback
  * @related ADR-777 Α1/Α5 · lib/geocoding/address-position.ts · services/listings/publish-public-listing.ts
  *
  * ────────────────────────────────────────────────────────────────────────────
@@ -38,7 +48,7 @@ import {
   type AddressLike,
   type AddressPositionTally,
 } from '@/lib/geocoding/address-position';
-import { republishListingsForProject } from '@/services/listings/publish-public-listing';
+import { republishListingsForProject } from './publish-public-listing';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 const logger = createModuleLogger('ProjectPlaceProjection');

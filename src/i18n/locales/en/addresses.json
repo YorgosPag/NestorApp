@@ -299,5 +299,9 @@
       "dragApplied": "Map position applied",
       "formCleared": "Form cleared"
     }
+  },
+  "publicMap": {
+    "label": "On the public map:",
+    "noneHint": "No position was found for this address. Fill in street and number, or drag the pin on the map."
   }
 }

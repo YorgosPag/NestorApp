@@ -27,7 +27,7 @@ import {
   resolveProjectAddressPositions,
   republishProjectListings,
   type ProjectAddressLike,
-} from '@/app/api/projects/[projectId]/project-place-projection';
+} from '@/services/listings/address-place-writeback';
 import { verifyPlaceRef } from '@/services/places/public-place-read.service';
 import type { PlaceRef } from '@/types/geo/public-place';
 // 🔴 **Το σχήμα καλωδίου γράφεται ΜΙΑ φορά** — ήταν αντιγραμμένο εδώ και στον πελάτη,

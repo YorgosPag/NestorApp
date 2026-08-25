@@ -53,6 +53,15 @@ export interface SharedAddressActionCardProps {
   verifiedAt?: number | null;
   /** Whether the address has stored map coordinates. */
   hasCoordinates?: boolean;
+  /**
+   * Ό,τι θέλει να πει ο καταναλωτής **κάτω** από τη σειρά εμπλουτισμού.
+   *
+   * 🔑 **Υποδοχή και όχι νέο prop ανά πληροφορία**: η καρτέλα Τοποθεσιών του έργου
+   * δείχνει εδώ **τι θα ζωγραφίσει ο δημόσιος χάρτης** ({@link AddressPublicShapeBadge}),
+   * ενώ οι επαφές δεν έχουν δημόσιο χάρτη. Ένα ειδικό prop θα υποχρέωνε **κάθε**
+   * καταναλωτή να έχει γνώμη για ερώτημα που δεν τον αφορά.
+   */
+  footer?: React.ReactNode;
 }
 
 // =============================================================================
@@ -78,6 +87,7 @@ export function SharedAddressActionCard({
   source,
   verifiedAt,
   hasCoordinates,
+  footer,
 }: SharedAddressActionCardProps) {
   const { t } = useTranslation('addresses');
   const colors = useSemanticColors();
@@ -206,6 +216,8 @@ export function SharedAddressActionCard({
           {hasCoordinates !== undefined && <AddressCoordsBadge hasCoords={hasCoordinates} />}
         </div>
       )}
+
+      {footer && <div className={cn('pl-6', spacing.margin.top.xs)}>{footer}</div>}
     </article>
   );
 }

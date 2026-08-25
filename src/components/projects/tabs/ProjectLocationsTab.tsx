@@ -5,6 +5,7 @@ import React, { useCallback, useMemo, useRef, useState } from 'react';
 import type { Project } from '@/types/project';
 import type { ProjectAddress, PartialProjectAddress, ProjectAddressType } from '@/types/project/addresses';
 import { SharedAddressActionCard } from '@/components/shared/addresses/SharedAddressActionCard';
+import { AddressPublicShapeBadge } from '@/components/shared/addresses/AddressPublicShapeBadge';
 import { ADDRESS_TYPE_KEYS, isUniqueAddressType } from './locations/address-constants';
 import { AddressMap } from '@/components/shared/addresses/AddressMap';
 import { Button } from '@/components/ui/button';
@@ -311,6 +312,28 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
                       deleteLabel={t('deleteDialog.confirm')}
                       setPrimaryLabel={tProjects('common.setAsPrimary')}
                       primaryLabel={tProjects('common.primary')}
+                      /*
+                        🔴 **Η ΣΕΙΡΑ ΕΜΠΛΟΥΤΙΣΜΟΥ ΗΤΑΝ ΔΟΜΙΚΑ ΝΕΚΡΗ** (ADR-332 Φ8):
+                        `grep -rn "hasCoordinates=" src/` → **0 σημεία κλήσης** σε ολόκληρη
+                        την εφαρμογή. Τρία component χτισμένα και **ποτέ αποδοθέντα** — γιατί
+                        τα πεδία που τρέφονται (`source`/`verifiedAt`/`geocodingMetadata`)
+                        είχαν **12 αναγνώστες και 0 γραφείς**. Τώρα τα γράφει ο ένας γραφέας
+                        θέσης (`lib/geocoding/address-position.ts`), οπότε έχουν τι να πουν.
+                      */
+                      source={address.source}
+                      verifiedAt={address.verifiedAt ?? null}
+                      hasCoordinates={Boolean(address.coordinates)}
+                      /*
+                        Η **συνέπεια**, δίπλα στη θεραπεία (Α5 §4.3: *«το γέμισμα της θέσης
+                        είναι το δόλωμα, ποτέ το φράγμα»*). Ο επαγγελματίας βλέπει εδώ τι θα
+                        δει ο επισκέπτης — όχι μια συντεταγμένη που δεν μπορεί να κρίνει.
+                      */
+                      footer={
+                        <AddressPublicShapeBadge
+                          coordinates={address.coordinates ?? null}
+                          geocodingMetadata={address.geocodingMetadata ?? null}
+                        />
+                      }
                     />
                   );
                 })}
