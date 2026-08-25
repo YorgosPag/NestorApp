@@ -1,0 +1,66 @@
+{
+  "$doc": "CHECK 3.69 / ADR-805 — ΤΟ ΜΗΤΡΩΟ ΤΩΝ ΓΡΑΜΜΑΤΟΣΕΙΡΩΝ ΠΟΥ ΔΙΑΝΕΜΟΥΜΕ. Κάθε δυαδικό γραμματοσειράς που φεύγει στον χρήστη (στο public/ ή ενσωματωμένο σε base64) δηλώνεται ΕΔΩ. Η άδεια ΔΕΝ γίνεται πιστευτή επειδή τη γράψαμε: η πύλη τη διαβάζει από το `name` table του ΙΔΙΟΥ ΤΟΥ ΑΡΧΕΙΟΥ (IDs 0/13/14) και μπλοκάρει σε απόκλιση (`license-drift`).",
+
+  "$whyThisExists": [
+    "🔴 Ο license gate (ADR-598 G13) τρέχει `license-checker`, που διαβάζει node_modules.",
+    "Ένα .ttf μέσα στο public/ ΔΕΝ είναι πακέτο ⇒ είναι ΔΟΜΙΚΑ ΑΟΡΑΤΟ. Μετρημένο 2026-08-25:",
+    "τρία σύνολα bytes γραμματοσειράς ταξίδευαν με ΜΗΔΕΝΙΚΗ δηλωμένη άδεια και κανένα αρχείο",
+    "απόδοσης πουθενά — ένα από αυτά ενσωματώνεται σε ΚΑΘΕ PDF που φεύγει σε πελάτη.",
+    "",
+    "⚠️ Η λίστα των ΕΠΙΤΡΕΠΟΜΕΝΩΝ αδειών ΔΕΝ είναι εδώ — είναι το `allowedLicenses` του",
+    ".license-allowlist.json, το ΙΔΙΟ που κρίνει τα npm πακέτα. Δεύτερη λίστα θα ήταν ADR-749."
+  ],
+
+  "assets": {
+    "public/fonts/LiberationSans-Regular.ttf": {
+      "spdx": "OFL-1.1",
+      "family": "Liberation Sans",
+      "attribution": "public/fonts/LiberationFonts-OFL-LICENSE.txt",
+      "why": "ADR-803 — ο catch-all στόχος του FONT_SUBSTITUTION_TABLE. Metric-compatible με Arial (A/M/W/i/m/κενό = 667/833/944/222/833/278, 6/6 ακριβή), ελληνική κάλυψη 8/8. Liberation 2.1.5, static TTF."
+    },
+    "public/fonts/LiberationSans-Bold.ttf": {
+      "spdx": "OFL-1.1",
+      "family": "Liberation Sans",
+      "attribution": "public/fonts/LiberationFonts-OFL-LICENSE.txt",
+      "why": "ADR-803 — ο ρητός στόχος του romand.shx (stroke duplex). Χωρίς αυτήν κάθε έντονο CAD κείμενο έπεφτε ΣΙΩΠΗΛΑ στην εφεδρική του browser."
+    },
+    "public/fonts/LiberationSans-Italic.ttf": {
+      "spdx": "OFL-1.1",
+      "family": "Liberation Sans",
+      "attribution": "public/fonts/LiberationFonts-OFL-LICENSE.txt",
+      "why": "ADR-803 §6.3 — ο ΑΞΟΝΑΣ ΣΤΥΛ: ο resolveEntityFont συνθέτει «<οικογένεια> Italic» όταν η οντότητα DXF ζητά πλάγιο. Δεν είναι υπόσχεση του πίνακα, αλλά η απουσία της παράγει την ίδια σιωπηλή υποβάθμιση."
+    },
+    "public/fonts/LiberationSans-BoldItalic.ttf": {
+      "spdx": "OFL-1.1",
+      "family": "Liberation Sans",
+      "attribution": "public/fonts/LiberationFonts-OFL-LICENSE.txt",
+      "why": "ADR-803 §6.3 — ο άξονας στυλ, συνδυασμός έντονου + πλάγιου."
+    },
+    "public/fonts/LiberationMono-Regular.ttf": {
+      "spdx": "OFL-1.1",
+      "family": "Liberation Mono",
+      "attribution": "public/fonts/LiberationFonts-OFL-LICENSE.txt",
+      "why": "ADR-803 — ο στόχος του txt.shx (μονοδιάστημο stroke). Metric-compatible με Courier New: 600/1000 σε ΟΛΟΥΣ τους χαρακτήρες που μετρήθηκαν."
+    },
+
+    "public/fonts/Roboto-Regular.ttf": {
+      "spdx": "Apache-2.0",
+      "family": "Roboto",
+      "attribution": "public/fonts/Roboto-Apache-2.0-LICENSE.txt",
+      "why": "ΙΣΤΟΡΙΚΟ — ήταν το φυσικό αρχείο πίσω από το λογικό «Liberation Sans» μέχρι το ADR-803. ⚠️ ΜΕΤΡΗΜΕΝΟ 2026-08-25: ΜΗΔΕΝ καταναλωτές πλέον — κανένα αρχείο πηγής δεν αναφέρει το /fonts/Roboto-Regular.ttf. Είναι 515 KB νεκρά bytes και ΠΡΕΠΕΙ να διαγραφεί· η διαγραφή δυαδικού είναι απόφαση Giorgio (N.13)."
+    },
+    "public/fonts/helvetiker_regular.typeface.json": {
+      "spdx": "LicenseRef-MgOpen",
+      "family": "Helvetiker",
+      "attribution": null,
+      "why": "🔴 ΜΗ ΕΓΚΕΚΡΙΜΕΝΗ ΑΔΕΙΑ. Το ίδιο το αρχείο δηλώνει copyright «Μagenta ltd, 2004» και license_url «ellak.gr/fonts/MgOpen/license.html» — προσαρμοσμένη άδεια MgOpen, ΕΚΤΟΣ SPDX, που δεν πέρασε ποτέ από N.5. ⚠️ Και έχει ΜΗΔΕΝ καταναλωτές: κανένα tracked αρχείο δεν αναφέρει «helvetiker» πλην ενός handoff. 63 KB νεκρά bytes με ανοιχτό νομικό ερώτημα. ΑΠΟΦΑΣΗ GIORGIO: διαγραφή (προτεινόμενο) ή έγκριση της MgOpen στο .license-allowlist.json."
+    },
+
+    "src/services/gantt-export/roboto-font-data.ts": {
+      "spdx": "Apache-2.0",
+      "family": "Roboto",
+      "attribution": "public/fonts/Roboto-Apache-2.0-LICENSE.txt",
+      "why": "🔴 Η ΠΙΟ ΕΚΤΕΘΕΙΜΕΝΗ ΔΙΑΝΟΜΗ ΤΟΥ ΕΡΓΟΥ: 687 KB base64 TTF που το jsPDF ΕΝΣΩΜΑΤΩΝΕΙ σε κάθε τιμολόγιο, gantt, milestone και εκτύπωση DXF που φεύγει σε πελάτη. Η άδεια επαληθεύεται αποκωδικοποιώντας τα ίδια τα bytes και διαβάζοντας το name table τους — όχι από τη δήλωση."
+    }
+  }
+}

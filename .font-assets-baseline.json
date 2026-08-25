@@ -1,0 +1,16 @@
+{
+  "$doc": "CHECK 3.69 / ADR-805 — ΡΑΤΣΕΤΑ ΚΑΤΑ ΤΑΥΤΟΤΗΤΑ («κατάσταση :: αρχείο»). Ο αριθμός ΔΕΝ είναι δείκτης υγείας: είναι το μέτρο εκστρατειών που τελειώνουν στο ΜΗΔΕΝ — κάθε διανεμόμενη γραμματοσειρά με εγκεκριμένη άδεια και το κείμενό της να ταξιδεύει μαζί.",
+  "violations": [
+    "license-not-allowed :: public/fonts/helvetiker_regular.typeface.json"
+  ],
+  "declarations": [
+    "public/fonts/LiberationMono-Regular.ttf",
+    "public/fonts/LiberationSans-Bold.ttf",
+    "public/fonts/LiberationSans-BoldItalic.ttf",
+    "public/fonts/LiberationSans-Italic.ttf",
+    "public/fonts/LiberationSans-Regular.ttf",
+    "public/fonts/Roboto-Regular.ttf",
+    "public/fonts/helvetiker_regular.typeface.json",
+    "src/services/gantt-export/roboto-font-data.ts"
+  ]
+}

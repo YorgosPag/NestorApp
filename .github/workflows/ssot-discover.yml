@@ -1156,12 +1156,12 @@ jobs:
             echo "Απογραφή: npm run one-version:report"
           } >> "$GITHUB_STEP_SUMMARY"
 
-  # ⚠️ CHECK 3.68 (ADR-803) — υπόσχεται ο πίνακας υποκατάστασης όψη που ΔΕΝ φορτώνεται;
+  # ⚠️ CHECK 3.67 (ADR-803) — υπόσχεται ο πίνακας υποκατάστασης όψη που ΔΕΝ φορτώνεται;
   # Άνευ όρων: ο πίνακας και ο preloader αλλάζουν ΑΝΕΞΑΡΤΗΤΑ, και η υπόσχεση σπάει με
   # αλλαγή σε ΟΠΟΙΟΔΗΠΟΤΕ από τα δύο. Κανένα νέο workflow — το μητρώο του 3.37
   # παρακολουθεί ΑΡΧΕΙΑ, όχι jobs.
   font-promise:
-    name: 🔤 CHECK 3.68 — η υπόσχεση γραμματοσειράς
+    name: 🔤 CHECK 3.67 — η υπόσχεση γραμματοσειράς
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -1169,3 +1169,35 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: '20' }
       - run: node scripts/check-font-promise.js
+
+  # ⚠️ CHECK 3.69 (ADR-805) — έχει κάθε διανεμόμενη γραμματοσειρά εγκεκριμένη άδεια;
+  # Άνευ όρων: το μητρώο, η allowlist και τα δυαδικά αλλάζουν ΑΝΕΞΑΡΤΗΤΑ. Κανένα νέο
+  # workflow — το μητρώο του 3.37 παρακολουθεί ΑΡΧΕΙΑ, όχι jobs.
+  # 🔴 Ο license gate (G13) διαβάζει node_modules ⇒ ένα .ttf στο public/ είναι ΔΟΜΙΚΑ αόρατο.
+  font-assets:
+    name: 🔠 CHECK 3.69 — το μητρώο γραμματοσειρών
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      # ⚠️ Η ΕΓΚΑΤΑΣΤΑΣΗ ΕΙΝΑΙ ΥΠΟΧΡΕΩΤΙΚΗ, ΣΕ ΑΝΤΙΘΕΣΗ ΜΕ ΤΟ ΑΔΕΛΦΟ font-promise job:
+      # η απόδειξη άδειας διαβάζεται με `opentype.js` από το ΙΔΙΟ ΤΟ ΑΡΧΕΙΟ. Χωρίς αυτό το
+      # βήμα η πύλη σκάει με MODULE_NOT_FOUND — που είναι fail-closed και σωστό, αλλά θα
+      # έστελνε τον επόμενο να ψάχνει λάθος πράγμα.
+      - name: 📦 Install dependencies (opentype.js)
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - run: node scripts/check-font-assets.js
