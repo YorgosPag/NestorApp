@@ -1,0 +1,22 @@
+{
+  "adr": "ADR-783",
+  "why": "Γνωστό χρέος: αρχεία test που απέτυχαν ΔΥΟ φορές. Κάθε νέο μπλοκάρει.",
+  "executed": 3410,
+  "violations": [
+    "__diag__/wall-edge-diag.test.ts",
+    "functions/src/storage/__tests__/orphan-cleanup.test.ts",
+    "functions/src/storage/__tests__/orphan-sweeper.test.ts",
+    "scripts/__tests__/check-i18n-ssr-oracle.test.js",
+    "scripts/__tests__/framework-types.test.js",
+    "scripts/__tests__/i18n-shell-slice.test.js",
+    "scripts/__tests__/registry-baseline-reconciliation.test.js",
+    "src/components/shared/files/hooks/__tests__/useFileListActions.test.tsx",
+    "src/features/property-details/utils/__tests__/impact-value-formatter.test.ts",
+    "src/hooks/notifications/__tests__/registry-exhaustiveness.test.ts",
+    "src/services/mandate/__tests__/mandate-consent.test.ts",
+    "src/subapps/dxf-viewer/__tests__/visual-regression-basic.test.ts",
+    "src/subapps/dxf-viewer/keyboard/__tests__/raw-keydown-listener-ratchet.test.ts",
+    "src/subapps/geo-canvas/__tests__/DxfGeoTransform.test.ts"
+  ],
+  "declarations": []
+}
