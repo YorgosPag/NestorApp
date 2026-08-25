@@ -8,7 +8,7 @@
  * Motivation
  * ----------
  * The existing missing-keys check only inspects explicit `t('key')` calls.
- * Configuration files such as `MODAL_SELECT_SERVICE_CATEGORIES` pass i18n keys
+ * Configuration files such as `VOCAB_SERVICE_CATEGORIES` pass i18n keys
  * as string *literals* inside option arrays (`{ value: 'x', label: 'a.b.c' }`).
  * These reach the UI via a renderer that resolves them dynamically. If the
  * rendered namespace chain does not contain the key, the raw dotted string

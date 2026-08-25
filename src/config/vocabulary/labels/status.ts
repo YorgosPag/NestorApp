@@ -17,7 +17,7 @@
  * Centralized project status labels
  * 🌐 i18n: Uses keys from projects.json namespace
  */
-export const MODAL_SELECT_PROJECT_STATUS_LABELS = {
+export const VOCAB_PROJECT_STATUS_LABELS = {
   planning: 'projects.status.planning',
   in_progress: 'projects.status.inProgress',
   completed: 'projects.status.completed',
@@ -31,7 +31,7 @@ export const MODAL_SELECT_PROJECT_STATUS_LABELS = {
  * Centralized unit availability status labels
  * 🌐 i18n: Uses keys from units.json namespace
  */
-export const MODAL_SELECT_UNIT_STATUS_LABELS = {
+export const VOCAB_UNIT_STATUS_LABELS = {
   available: 'properties.status.available',
   occupied: 'properties.status.occupied',
   maintenance: 'properties.status.maintenance',
@@ -48,7 +48,7 @@ export const MODAL_SELECT_UNIT_STATUS_LABELS = {
  * Centralized contact status labels
  * 🌐 i18n: Uses keys from contacts.json namespace
  */
-export const MODAL_SELECT_CONTACT_STATUS_LABELS = {
+export const VOCAB_CONTACT_STATUS_LABELS = {
   active: 'contacts.status.active',
   inactive: 'contacts.status.inactive',
   pending: 'contacts.status.pending',
@@ -61,7 +61,7 @@ export const MODAL_SELECT_CONTACT_STATUS_LABELS = {
  * Centralized contact type labels
  * 🌐 i18n: Uses keys from contacts.json namespace
  */
-export const MODAL_SELECT_CONTACT_TYPE_LABELS = {
+export const VOCAB_CONTACT_TYPE_LABELS = {
   individual: 'contacts.types.individual',
   company: 'contacts.types.company',
   service: 'contacts.types.service'
@@ -71,7 +71,7 @@ export const MODAL_SELECT_CONTACT_TYPE_LABELS = {
  * Centralized property market status labels
  * 🌐 i18n: Uses keys from properties.json namespace
  */
-export const MODAL_SELECT_PROPERTY_MARKET_STATUS_LABELS = {
+export const VOCAB_PROPERTY_MARKET_STATUS_LABELS = {
   available: 'properties.status.available',
   reserved: 'properties.status.reserved',
   sold: 'properties.status.sold',
@@ -86,7 +86,7 @@ export const MODAL_SELECT_PROPERTY_MARKET_STATUS_LABELS = {
  * Centralized rental type labels
  * 🌐 i18n: Uses keys from properties.json namespace
  */
-export const MODAL_SELECT_RENTAL_TYPE_LABELS = {
+export const VOCAB_RENTAL_TYPE_LABELS = {
   rent_only: 'properties.rental.rentOnly',
   long_term: 'properties.rental.longTerm',
   short_term: 'properties.rental.shortTerm'
@@ -96,7 +96,7 @@ export const MODAL_SELECT_RENTAL_TYPE_LABELS = {
  * Centralized property special status labels
  * 🌐 i18n: Uses keys from properties.json namespace
  */
-export const MODAL_SELECT_PROPERTY_SPECIAL_STATUS_LABELS = {
+export const VOCAB_PROPERTY_SPECIAL_STATUS_LABELS = {
   reserved_pending: 'properties.specialStatus.reservedPending',
   contract_signed: 'properties.specialStatus.contractSigned',
   deposit_paid: 'properties.specialStatus.depositPaid',
@@ -129,7 +129,7 @@ export const MODAL_SELECT_PROPERTY_SPECIAL_STATUS_LABELS = {
  * Centralized storage unit status labels
  * 🌐 i18n: Uses keys from storage.json namespace
  */
-export const MODAL_SELECT_STORAGE_STATUS_LABELS = {
+export const VOCAB_STORAGE_STATUS_LABELS = {
   available: 'storage.general.status.available',
   occupied: 'storage.general.status.occupied',
   sold: 'storage.general.status.sold',
@@ -141,7 +141,7 @@ export const MODAL_SELECT_STORAGE_STATUS_LABELS = {
  * Centralized priority/alert level labels
  * 🌐 i18n: Uses keys from common.json namespace
  */
-export const MODAL_SELECT_PRIORITY_LABELS = {
+export const VOCAB_PRIORITY_LABELS = {
   none: 'common.priority.none',
   empty: 'common.priority.empty',
   warning: 'common.priority.warning',
@@ -154,7 +154,7 @@ export const MODAL_SELECT_PRIORITY_LABELS = {
  * Centralized record state labels
  * 🌐 i18n: Uses keys from common.json namespace
  */
-export const MODAL_SELECT_RECORD_STATE_LABELS = {
+export const VOCAB_RECORD_STATE_LABELS = {
   new: 'common.recordState.new',
   updated: 'common.recordState.updated',
   deleted: 'common.recordState.deleted'
@@ -164,7 +164,7 @@ export const MODAL_SELECT_RECORD_STATE_LABELS = {
  * Centralized entity type labels
  * 🌐 i18n: Uses keys from common.json namespace
  */
-export const MODAL_SELECT_ENTITY_TYPE_LABELS = {
+export const VOCAB_ENTITY_TYPE_LABELS = {
   company: 'common.entityType.company',
   main: 'common.entityType.main',
   secondary: 'common.entityType.secondary'
@@ -174,7 +174,7 @@ export const MODAL_SELECT_ENTITY_TYPE_LABELS = {
  * Centralized document status labels
  * 🌐 i18n: Uses keys from common.json namespace
  */
-export const MODAL_SELECT_DOCUMENT_STATUS_LABELS = {
+export const VOCAB_DOCUMENT_STATUS_LABELS = {
   draft: 'common.documentStatus.draft',
   completed: 'common.documentStatus.completed',
   approved: 'common.documentStatus.approved'
@@ -184,7 +184,7 @@ export const MODAL_SELECT_DOCUMENT_STATUS_LABELS = {
  * Centralized property type labels
  * 🌐 i18n: Uses keys from building.json namespace
  */
-export const MODAL_SELECT_PROPERTY_TYPE_LABELS = {
+export const VOCAB_PROPERTY_TYPE_LABELS = {
   studio: 'building.propertyTypes.studio',
   garsoniera: 'building.propertyTypes.garsoniera',
   apartment: 'building.propertyTypes.apartment',
@@ -199,89 +199,89 @@ export const MODAL_SELECT_PROPERTY_TYPE_LABELS = {
  * Get centralized project status labels
  */
 export function getProjectStatusLabels() {
-  return MODAL_SELECT_PROJECT_STATUS_LABELS;
+  return VOCAB_PROJECT_STATUS_LABELS;
 }
 
 /**
  * Get centralized unit status labels
  */
 export function getUnitStatusLabels() {
-  return MODAL_SELECT_UNIT_STATUS_LABELS;
+  return VOCAB_UNIT_STATUS_LABELS;
 }
 
 /**
  * Get centralized contact status labels
  */
 export function getContactStatusLabels() {
-  return MODAL_SELECT_CONTACT_STATUS_LABELS;
+  return VOCAB_CONTACT_STATUS_LABELS;
 }
 
 /**
  * Get centralized contact type labels
  */
 export function getContactTypeLabels() {
-  return MODAL_SELECT_CONTACT_TYPE_LABELS;
+  return VOCAB_CONTACT_TYPE_LABELS;
 }
 
 /**
  * Get centralized property market status labels
  */
 export function getPropertyMarketStatusLabels() {
-  return MODAL_SELECT_PROPERTY_MARKET_STATUS_LABELS;
+  return VOCAB_PROPERTY_MARKET_STATUS_LABELS;
 }
 
 /**
  * Get centralized rental type labels
  */
 export function getRentalTypeLabels() {
-  return MODAL_SELECT_RENTAL_TYPE_LABELS;
+  return VOCAB_RENTAL_TYPE_LABELS;
 }
 
 /**
  * Get centralized property special status labels
  */
 export function getPropertySpecialStatusLabels() {
-  return MODAL_SELECT_PROPERTY_SPECIAL_STATUS_LABELS;
+  return VOCAB_PROPERTY_SPECIAL_STATUS_LABELS;
 }
 
 /**
  * Get centralized storage status labels
  */
 export function getStorageStatusLabels() {
-  return MODAL_SELECT_STORAGE_STATUS_LABELS;
+  return VOCAB_STORAGE_STATUS_LABELS;
 }
 
 /**
  * Get centralized priority labels
  */
 export function getPriorityLabels() {
-  return MODAL_SELECT_PRIORITY_LABELS;
+  return VOCAB_PRIORITY_LABELS;
 }
 
 /**
  * Get centralized record state labels
  */
 export function getRecordStateLabels() {
-  return MODAL_SELECT_RECORD_STATE_LABELS;
+  return VOCAB_RECORD_STATE_LABELS;
 }
 
 /**
  * Get centralized entity type labels
  */
 export function getEntityTypeLabels() {
-  return MODAL_SELECT_ENTITY_TYPE_LABELS;
+  return VOCAB_ENTITY_TYPE_LABELS;
 }
 
 /**
  * Get centralized document status labels
  */
 export function getDocumentStatusLabels() {
-  return MODAL_SELECT_DOCUMENT_STATUS_LABELS;
+  return VOCAB_DOCUMENT_STATUS_LABELS;
 }
 
 /**
  * Get centralized property type labels
  */
 export function getPropertyTypeLabels() {
-  return MODAL_SELECT_PROPERTY_TYPE_LABELS;
+  return VOCAB_PROPERTY_TYPE_LABELS;
 }

@@ -43,7 +43,7 @@ export type AuditTranslator = (
  * Convert a snake_case / kebab-case token to camelCase.
  *
  * Audit trail entries persist form option values as stored — most form
- * catalogs (e.g. `MODAL_SELECT_SERVICE_CATEGORIES`) use snake_case tokens
+ * catalogs (e.g. `VOCAB_SERVICE_CATEGORIES`) use snake_case tokens
  * like `fire_department`, while the canonical i18n catalogs referenced by
  * `AUDIT_VALUE_CATALOGS` normalize enum keys to camelCase (`fireDepartment`)
  * per ADR-279. Without this normalization the audit timeline silently

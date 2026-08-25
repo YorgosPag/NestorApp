@@ -8,8 +8,9 @@
     "src/config/individual-config.ts": 3,
     "src/config/search-index-config.ts": 8,
     "src/config/service-config.ts": 3,
-    "src/constants/domains/dropdown-misc-labels.ts": 139,
-    "src/subapps/dxf-viewer/config/modal-select/core/labels/fields.ts": 12,
-    "src/subapps/dxf-viewer/config/modal-select/core/labels/status.ts": 81
-  }
+    "src/config/vocabulary/labels/fields.ts": 12,
+    "src/config/vocabulary/labels/status.ts": 81,
+    "src/constants/domains/dropdown-misc-labels.ts": 139
+  },
+  "movedNote": "2026-08-25 (ADR-806): ΜΕΤΑΚΙΝΗΣΗ, οχι reseed. Τα δυο αρχεια λεξιλογιου εφυγαν απο το config/modal-select του viewer στο src/config/vocabulary (ADR-804 Φ.4) και η baseline ειχε μεινει στο ΠΑΛΙΟ μονοπατι ⇒ το νεο ξεκινουσε με μηδενικη ανοχη και τα ΙΔΙΑ ορφανα φαινονταν «νεα». Αποδειξη ισομορφισμου πριν την αλλαγη: τα συνολα κλειδιων ειναι ΤΑΥΤΟΣΗΜΑ (93 = 93, diff κενο) — οχι απλως ισα σε πληθος, γιατι ισο πληθος αφηνει την ανταλλαγη να περασει αθορυβα (ADR-749). Οι αριθμοι δεν αγγιχτηκαν: 12 και 81."
 }

@@ -14,9 +14,9 @@
 
 /**
  * Action Buttons Labels — i18n keys for ActionButtons.tsx
- * Resolve at render time: t(MODAL_SELECT_ACTION_BUTTONS_LABELS.save, { ns: 'dxf-viewer' })
+ * Resolve at render time: t(VOCAB_ACTION_BUTTONS_LABELS.save, { ns: 'dxf-viewer' })
  */
-export const MODAL_SELECT_ACTION_BUTTONS_LABELS = {
+export const VOCAB_ACTION_BUTTONS_LABELS = {
   // Primary Actions
   save: 'toolbar.actions.save',
   create: 'toolbar.actions.create',
@@ -218,5 +218,5 @@ export function getDesktopConfirmationDialog(): DesktopConfirmationDialogConfig 
 // ====================================================================
 
 export function getActionButtons() {
-  return MODAL_SELECT_ACTION_BUTTONS_LABELS;
+  return VOCAB_ACTION_BUTTONS_LABELS;
 }

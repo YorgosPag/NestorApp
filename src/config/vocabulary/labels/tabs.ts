@@ -157,7 +157,7 @@ export interface ParkingTabLabelsConfig {
  * 🏢 PATTERN: i18n keys for translation at component level (UniversalTabsRenderer)
  * 📍 Translations: src/i18n/locales/{lang}/building.json → tabs.labels.*
  */
-export const MODAL_SELECT_BUILDING_TAB_LABELS: BuildingTabLabelsConfig = {
+export const VOCAB_BUILDING_TAB_LABELS: BuildingTabLabelsConfig = {
   // ✅ ENTERPRISE: i18n keys for building tabs
   general: "tabs.labels.general",
   locations: "tabs.labels.buildingLocations",
@@ -191,7 +191,7 @@ export const MODAL_SELECT_BUILDING_TAB_LABELS: BuildingTabLabelsConfig = {
  * 🏢 PATTERN: i18n keys for translation at component level
  * 📍 Translations: src/i18n/locales/{lang}/building.json → tabs.labels.*
  */
-export const MODAL_SELECT_CONTACT_TAB_LABELS: ContactTabLabelsConfig = {
+export const VOCAB_CONTACT_TAB_LABELS: ContactTabLabelsConfig = {
   general: "tabs.labels.general",
   details: "tabs.labels.details",
   properties: "tabs.labels.properties",
@@ -210,7 +210,7 @@ export const MODAL_SELECT_CONTACT_TAB_LABELS: ContactTabLabelsConfig = {
  * 🏢 PATTERN: i18n keys for translation at component level
  * 📍 Translations: src/i18n/locales/{lang}/building.json → tabs.labels.*
  */
-export const MODAL_SELECT_PROJECT_TAB_LABELS: ProjectTabLabelsConfig = {
+export const VOCAB_PROJECT_TAB_LABELS: ProjectTabLabelsConfig = {
   general: "tabs.labels.general",
   details: "tabs.labels.details",
   buildings: "tabs.labels.buildings",
@@ -228,7 +228,7 @@ export const MODAL_SELECT_PROJECT_TAB_LABELS: ProjectTabLabelsConfig = {
  * 🏢 PATTERN: i18n keys for translation at component level
  * 📍 Translations: src/i18n/locales/{lang}/building.json → tabs.labels.*
  */
-export const MODAL_SELECT_CRM_DASHBOARD_TAB_LABELS: CRMDashboardTabLabelsConfig = {
+export const VOCAB_CRM_DASHBOARD_TAB_LABELS: CRMDashboardTabLabelsConfig = {
   dashboard: "tabs.labels.dashboard",
   leads: "tabs.labels.leads",
   opportunities: "tabs.labels.opportunities",
@@ -246,7 +246,7 @@ export const MODAL_SELECT_CRM_DASHBOARD_TAB_LABELS: CRMDashboardTabLabelsConfig 
  * 📍 Translations: src/i18n/locales/{lang}/building.json → tabs.labels.*
  * 🔧 UPDATED: Added keys matching unified-tabs-factory tab IDs
  */
-export const MODAL_SELECT_UNITS_TAB_LABELS: UnitsTabLabelsConfig = {
+export const VOCAB_UNITS_TAB_LABELS: UnitsTabLabelsConfig = {
   // 🎯 Core unit tabs - matching unified-tabs-factory IDs
   info: "tabs.labels.basicInfo",
   'floor-plan': "tabs.labels.floorplans",
@@ -268,7 +268,7 @@ export const MODAL_SELECT_UNITS_TAB_LABELS: UnitsTabLabelsConfig = {
  * 🏢 PATTERN: i18n keys for translation at component level
  * 📍 Translations: src/i18n/locales/{lang}/building.json → tabs.labels.*
  */
-export const MODAL_SELECT_STORAGE_TAB_LABELS: StorageTabLabelsConfig = {
+export const VOCAB_STORAGE_TAB_LABELS: StorageTabLabelsConfig = {
   // 🎯 Core storage tabs — ADR-193 aligned with Units prototype
   info: "tabs.labels.basicInfo",
   'floor-plan': "tabs.labels.floorplans",
@@ -289,7 +289,7 @@ export const MODAL_SELECT_STORAGE_TAB_LABELS: StorageTabLabelsConfig = {
  * 🏢 PATTERN: i18n keys for translation at component level
  * 📍 Translations: src/i18n/locales/{lang}/building.json → tabs.labels.*
  */
-export const MODAL_SELECT_PARKING_TAB_LABELS: ParkingTabLabelsConfig = {
+export const VOCAB_PARKING_TAB_LABELS: ParkingTabLabelsConfig = {
   // 🎯 Core parking tabs — ADR-193 aligned with Units prototype
   info: "tabs.labels.basicInfo",
   'floor-plan': "tabs.labels.floorplans",
@@ -310,7 +310,7 @@ export const MODAL_SELECT_PARKING_TAB_LABELS: ParkingTabLabelsConfig = {
  * ✅ CENTRALIZED: Getter function για building tab labels
  */
 export function getBuildingTabLabels(): BuildingTabLabelsConfig {
-  return MODAL_SELECT_BUILDING_TAB_LABELS;
+  return VOCAB_BUILDING_TAB_LABELS;
 }
 
 /**
@@ -318,7 +318,7 @@ export function getBuildingTabLabels(): BuildingTabLabelsConfig {
  * ✅ CENTRALIZED: Getter function για contact tab labels
  */
 export function getContactTabLabels(): ContactTabLabelsConfig {
-  return MODAL_SELECT_CONTACT_TAB_LABELS;
+  return VOCAB_CONTACT_TAB_LABELS;
 }
 
 /**
@@ -326,7 +326,7 @@ export function getContactTabLabels(): ContactTabLabelsConfig {
  * ✅ CENTRALIZED: Getter function για project tab labels
  */
 export function getProjectTabLabels(): ProjectTabLabelsConfig {
-  return MODAL_SELECT_PROJECT_TAB_LABELS;
+  return VOCAB_PROJECT_TAB_LABELS;
 }
 
 /**
@@ -334,7 +334,7 @@ export function getProjectTabLabels(): ProjectTabLabelsConfig {
  * ✅ CENTRALIZED: Getter function για CRM dashboard tab labels
  */
 export function getCRMDashboardTabLabels(): CRMDashboardTabLabelsConfig {
-  return MODAL_SELECT_CRM_DASHBOARD_TAB_LABELS;
+  return VOCAB_CRM_DASHBOARD_TAB_LABELS;
 }
 
 /**
@@ -342,7 +342,7 @@ export function getCRMDashboardTabLabels(): CRMDashboardTabLabelsConfig {
  * ✅ CENTRALIZED: Getter function για units tab labels
  */
 export function getUnitsTabLabels(): UnitsTabLabelsConfig {
-  return MODAL_SELECT_UNITS_TAB_LABELS;
+  return VOCAB_UNITS_TAB_LABELS;
 }
 
 /**
@@ -350,7 +350,7 @@ export function getUnitsTabLabels(): UnitsTabLabelsConfig {
  * ✅ CENTRALIZED: Getter function για storage tab labels
  */
 export function getStorageTabLabels(): StorageTabLabelsConfig {
-  return MODAL_SELECT_STORAGE_TAB_LABELS;
+  return VOCAB_STORAGE_TAB_LABELS;
 }
 
 /**
@@ -358,7 +358,7 @@ export function getStorageTabLabels(): StorageTabLabelsConfig {
  * ✅ CENTRALIZED: Getter function για parking tab labels
  */
 export function getParkingTabLabels(): ParkingTabLabelsConfig {
-  return MODAL_SELECT_PARKING_TAB_LABELS;
+  return VOCAB_PARKING_TAB_LABELS;
 }
 
 // ====================================================================
@@ -371,13 +371,13 @@ export function getParkingTabLabels(): ParkingTabLabelsConfig {
  */
 export function getAllTabLabels() {
   return {
-    building: MODAL_SELECT_BUILDING_TAB_LABELS,
-    contact: MODAL_SELECT_CONTACT_TAB_LABELS,
-    project: MODAL_SELECT_PROJECT_TAB_LABELS,
-    crmDashboard: MODAL_SELECT_CRM_DASHBOARD_TAB_LABELS,
-    units: MODAL_SELECT_UNITS_TAB_LABELS,
-    storage: MODAL_SELECT_STORAGE_TAB_LABELS,
-    parking: MODAL_SELECT_PARKING_TAB_LABELS
+    building: VOCAB_BUILDING_TAB_LABELS,
+    contact: VOCAB_CONTACT_TAB_LABELS,
+    project: VOCAB_PROJECT_TAB_LABELS,
+    crmDashboard: VOCAB_CRM_DASHBOARD_TAB_LABELS,
+    units: VOCAB_UNITS_TAB_LABELS,
+    storage: VOCAB_STORAGE_TAB_LABELS,
+    parking: VOCAB_PARKING_TAB_LABELS
   } as const;
 }
 

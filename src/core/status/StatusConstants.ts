@@ -36,11 +36,11 @@ import {
 
 // 🏢 ENTERPRISE: Import from modular status.ts for extended property labels (market/sales-related)
 import {
-  MODAL_SELECT_PROPERTY_SPECIAL_STATUS_LABELS,
-  MODAL_SELECT_PRIORITY_LABELS,
-  MODAL_SELECT_RECORD_STATE_LABELS,
-  MODAL_SELECT_ENTITY_TYPE_LABELS,
-  MODAL_SELECT_DOCUMENT_STATUS_LABELS
+  VOCAB_PROPERTY_SPECIAL_STATUS_LABELS,
+  VOCAB_PRIORITY_LABELS,
+  VOCAB_RECORD_STATE_LABELS,
+  VOCAB_ENTITY_TYPE_LABELS,
+  VOCAB_DOCUMENT_STATUS_LABELS
 } from '@/config/vocabulary/labels/status';
 
 // ============================================================================
@@ -57,11 +57,11 @@ const rentalTypeLabels = getRentalTypeLabels();
 const storageStatusLabels = getStorageStatusLabels();
 
 // ✅ ENTERPRISE: Direct constants from modular status.ts (avoid re-export conflicts)
-const propertySpecialStatusLabels = MODAL_SELECT_PROPERTY_SPECIAL_STATUS_LABELS;
-const priorityLabels = MODAL_SELECT_PRIORITY_LABELS;
-const recordStateLabels = MODAL_SELECT_RECORD_STATE_LABELS;
-const entityTypeLabels = MODAL_SELECT_ENTITY_TYPE_LABELS;
-const documentStatusLabels = MODAL_SELECT_DOCUMENT_STATUS_LABELS;
+const propertySpecialStatusLabels = VOCAB_PROPERTY_SPECIAL_STATUS_LABELS;
+const priorityLabels = VOCAB_PRIORITY_LABELS;
+const recordStateLabels = VOCAB_RECORD_STATE_LABELS;
+const entityTypeLabels = VOCAB_ENTITY_TYPE_LABELS;
+const documentStatusLabels = VOCAB_DOCUMENT_STATUS_LABELS;
 
 // ============================================================================
 // 🏢 ENTERPRISE: Dynamic Badge Generation με Dependency Injection

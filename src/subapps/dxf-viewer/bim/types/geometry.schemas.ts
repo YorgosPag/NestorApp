@@ -40,7 +40,10 @@ export const BimPointSchema = z
   .strict();
 
 /** Κλειστό πολύγωνο ≥3 κορυφών. Η ανοχή στο `z` κληρονομείται από το {@link BimPointSchema}. */
-export const BimPolygonSchema = z
+// ⚠️ ΕΣΩΤΕΡΙΚΟ, ΜΗΝ το ξανα-εξάγεις (ADR-806): κανείς δεν το ζητά ονομαστικά — ο
+// καταναλωτής το παίρνει ΔΟΜΙΚΑ μέσα από την υπογραφή των εξαγόμενων συμβόλων αυτού
+// του module. Το `export` ήταν πλατύτερο από τη χρήση (CHECK 3.30).
+const BimPolygonSchema = z
   .object({
     vertices: z.array(BimPointSchema).min(3),
   })

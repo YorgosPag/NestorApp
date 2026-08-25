@@ -64,7 +64,7 @@ export interface UnitFilterOption {
  * Document Type Options - Centralized για document type selections
  * ✅ ENTERPRISE: Single source of truth για όλα τα document type options
  */
-export const MODAL_SELECT_DOCUMENT_TYPES: readonly DocumentTypeOption[] = [
+export const VOCAB_DOCUMENT_TYPES: readonly DocumentTypeOption[] = [
   { value: 'certificate', label: 'Πιστοποιητικό' },
   { value: 'announcement', label: 'Ανακοίνωση' },
   { value: 'registration', label: 'Έγγραφο Σύστασης' },
@@ -75,7 +75,7 @@ export const MODAL_SELECT_DOCUMENT_TYPES: readonly DocumentTypeOption[] = [
  * Board Type Options - Centralized για company board type selections
  * ✅ ENTERPRISE: Single source of truth για όλα τα board type options
  */
-export const MODAL_SELECT_BOARD_TYPES: readonly BoardTypeOption[] = [
+export const VOCAB_BOARD_TYPES: readonly BoardTypeOption[] = [
   { value: 'general_assembly', label: 'Γενική Συνέλευση' },
   { value: 'board_directors', label: 'Διοικητικό Συμβούλιο' },
   { value: 'supervisory_board', label: 'Εποπτικό Συμβούλιο' }
@@ -85,7 +85,7 @@ export const MODAL_SELECT_BOARD_TYPES: readonly BoardTypeOption[] = [
  * Representative Position Options - Centralized για representative position selections
  * ✅ ENTERPRISE: Single source of truth για όλα τα representative position options
  */
-export const MODAL_SELECT_REPRESENTATIVE_POSITIONS: readonly RepresentativePositionOption[] = [
+export const VOCAB_REPRESENTATIVE_POSITIONS: readonly RepresentativePositionOption[] = [
   { value: 'ceo', label: 'Διευθύνων Σύμβουλος' },
   { value: 'president', label: 'Πρόεδρος Δ.Σ.' },
   { value: 'manager', label: 'Διαχειριστής' },
@@ -97,7 +97,7 @@ export const MODAL_SELECT_REPRESENTATIVE_POSITIONS: readonly RepresentativePosit
  * Property Type Options - Centralized για property type filtering
  * ✅ ENTERPRISE: Single source of truth για όλα τα property type options
  */
-export const MODAL_SELECT_PROPERTY_TYPE_OPTIONS: readonly PropertyTypeOption[] = [
+export const VOCAB_PROPERTY_TYPE_OPTIONS: readonly PropertyTypeOption[] = [
   { value: 'apartment', label: 'Διαμέρισμα' },
   { value: 'house', label: 'Κατοικία' },
   { value: 'office', label: 'Γραφείο' },
@@ -110,7 +110,7 @@ export const MODAL_SELECT_PROPERTY_TYPE_OPTIONS: readonly PropertyTypeOption[] =
  * Unit Filter Options - Centralized για unit filtering UI
  * ✅ ENTERPRISE: Single source of truth για όλα τα unit filter options
  */
-export const MODAL_SELECT_UNIT_FILTER_OPTIONS: readonly UnitFilterOption[] = [
+export const VOCAB_UNIT_FILTER_OPTIONS: readonly UnitFilterOption[] = [
   { value: 'available', label: 'Διαθέσιμες' },
   { value: 'rented', label: 'Ενοικιασμένες' },
   { value: 'sold', label: 'Πωληθείσες' },
@@ -127,7 +127,7 @@ export const MODAL_SELECT_UNIT_FILTER_OPTIONS: readonly UnitFilterOption[] = [
  * ✅ CENTRALIZED: Getter function για document type options
  */
 export function getDocumentTypeOptions(): readonly DocumentTypeOption[] {
-  return MODAL_SELECT_DOCUMENT_TYPES;
+  return VOCAB_DOCUMENT_TYPES;
 }
 
 /**
@@ -135,7 +135,7 @@ export function getDocumentTypeOptions(): readonly DocumentTypeOption[] {
  * ✅ CENTRALIZED: Getter function για board type options
  */
 export function getBoardTypeOptions(): readonly BoardTypeOption[] {
-  return MODAL_SELECT_BOARD_TYPES;
+  return VOCAB_BOARD_TYPES;
 }
 
 /**
@@ -143,7 +143,7 @@ export function getBoardTypeOptions(): readonly BoardTypeOption[] {
  * ✅ CENTRALIZED: Getter function για representative position options
  */
 export function getRepresentativePositionOptions(): readonly RepresentativePositionOption[] {
-  return MODAL_SELECT_REPRESENTATIVE_POSITIONS;
+  return VOCAB_REPRESENTATIVE_POSITIONS;
 }
 
 /**
@@ -151,7 +151,7 @@ export function getRepresentativePositionOptions(): readonly RepresentativePosit
  * ✅ CENTRALIZED: Getter function για property type options
  */
 export function getPropertyTypeOptions(): readonly PropertyTypeOption[] {
-  return MODAL_SELECT_PROPERTY_TYPE_OPTIONS;
+  return VOCAB_PROPERTY_TYPE_OPTIONS;
 }
 
 /**
@@ -159,7 +159,7 @@ export function getPropertyTypeOptions(): readonly PropertyTypeOption[] {
  * ✅ CENTRALIZED: Getter function για unit filter options
  */
 export function getUnitFilterOptions(): readonly UnitFilterOption[] {
-  return MODAL_SELECT_UNIT_FILTER_OPTIONS;
+  return VOCAB_UNIT_FILTER_OPTIONS;
 }
 
 // ====================================================================
@@ -172,9 +172,9 @@ export function getUnitFilterOptions(): readonly UnitFilterOption[] {
  */
 export function getCompanyOptions() {
   return {
-    documentTypes: MODAL_SELECT_DOCUMENT_TYPES,
-    boardTypes: MODAL_SELECT_BOARD_TYPES,
-    representativePositions: MODAL_SELECT_REPRESENTATIVE_POSITIONS
+    documentTypes: VOCAB_DOCUMENT_TYPES,
+    boardTypes: VOCAB_BOARD_TYPES,
+    representativePositions: VOCAB_REPRESENTATIVE_POSITIONS
   } as const;
 }
 
@@ -184,8 +184,8 @@ export function getCompanyOptions() {
  */
 export function getPropertyOptions() {
   return {
-    propertyTypes: MODAL_SELECT_PROPERTY_TYPE_OPTIONS,
-    unitFilters: MODAL_SELECT_UNIT_FILTER_OPTIONS
+    propertyTypes: VOCAB_PROPERTY_TYPE_OPTIONS,
+    unitFilters: VOCAB_UNIT_FILTER_OPTIONS
   } as const;
 }
 

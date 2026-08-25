@@ -9,7 +9,7 @@
  */
 
 // ENTERPRISE: Import από centralized modal-select system
-import { MODAL_SELECT_COMPANY_FIELD_LABELS } from '@/config/vocabulary/labels/fields';
+import { VOCAB_COMPANY_FIELD_LABELS } from '@/config/vocabulary/labels/fields';
 
 // ============================================================================
 // FIELD LABELS MAPPING
@@ -17,9 +17,9 @@ import { MODAL_SELECT_COMPANY_FIELD_LABELS } from '@/config/vocabulary/labels/fi
 
 /**
  * Company field labels mapping
- * Uses centralized MODAL_SELECT_COMPANY_FIELD_LABELS για consistency
+ * Uses centralized VOCAB_COMPANY_FIELD_LABELS για consistency
  */
-export const COMPANY_FIELD_LABELS = MODAL_SELECT_COMPANY_FIELD_LABELS;
+export const COMPANY_FIELD_LABELS = VOCAB_COMPANY_FIELD_LABELS;
 
 /**
  * Convenient field labels object με clean API

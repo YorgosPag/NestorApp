@@ -29,7 +29,7 @@
  * const label = getCompanyLabel('companyName'); // Returns translated string
  * ```
  */
-export const MODAL_SELECT_COMPANY_FIELD_LABELS = {
+export const VOCAB_COMPANY_FIELD_LABELS = {
   // Basic Company Info - i18n keys
   company_name: 'company.companyName',
   trade_name: 'company.tradeName',
@@ -95,7 +95,7 @@ export const MODAL_SELECT_COMPANY_FIELD_LABELS = {
  * ✅ ENTERPRISE: Use useFormLabels().getServiceLabel(key) to translate
  * 🔧 FIX: Updated to use contacts.service.fields.* keys with .label suffix (2026-01-19)
  */
-export const MODAL_SELECT_SERVICE_FIELD_LABELS = {
+export const VOCAB_SERVICE_FIELD_LABELS = {
   // Basic Info - i18n keys (updated to match contacts.json structure)
   service_name: 'contacts.service.fields.name.label',
   short_name: 'contacts.service.fields.shortName.label',
@@ -137,7 +137,7 @@ export const MODAL_SELECT_SERVICE_FIELD_LABELS = {
  * ✅ ENTERPRISE: Eliminates ALL hardcoded filter titles from AdvancedFilters/configs.ts
  * ✅ ENTERPRISE: Use useFormLabels().getFilterLabel(key) to translate
  */
-export const MODAL_SELECT_FILTER_PANEL_TITLES = {
+export const VOCAB_FILTER_PANEL_TITLES = {
   // Filter Panel Titles - i18n keys
   units: 'filters.title',
   contacts: 'filters.contacts',
@@ -153,7 +153,7 @@ export const MODAL_SELECT_FILTER_PANEL_TITLES = {
  * ✅ ENTERPRISE: Eliminates ALL hardcoded search placeholders
  * ✅ ENTERPRISE: Use useFormLabels().getPlaceholder(key) to translate
  */
-export const MODAL_SELECT_SEARCH_PLACEHOLDERS = {
+export const VOCAB_SEARCH_PLACEHOLDERS = {
   // Search Field Placeholders - i18n keys
   units_search: 'searchPlaceholders.units',
   contacts_search: 'searchPlaceholders.contacts',
@@ -181,7 +181,7 @@ export const MODAL_SELECT_SEARCH_PLACEHOLDERS = {
  * ✅ ENTERPRISE: Eliminates ALL hardcoded field labels
  * ✅ ENTERPRISE: Use useFormLabels().getFilterLabel(key) to translate
  */
-export const MODAL_SELECT_FIELD_LABELS = {
+export const VOCAB_FIELD_LABELS = {
   // Common Field Labels - i18n keys
   search: 'filters.search',
   status: 'labels.status',
@@ -239,7 +239,7 @@ export const MODAL_SELECT_FIELD_LABELS = {
  * Advanced Filter Options (i18n Keys) - Centralized Source of Truth
  * ✅ ENTERPRISE: Eliminates ALL hardcoded advanced filter labels
  */
-export const MODAL_SELECT_ADVANCED_FILTER_OPTIONS = {
+export const VOCAB_ADVANCED_FILTER_OPTIONS = {
   // Unit Features - i18n keys
   parking: 'features.parking',
   storage: 'features.storage',
@@ -258,7 +258,7 @@ export const MODAL_SELECT_ADVANCED_FILTER_OPTIONS = {
  * Range Labels (i18n Keys) - Centralized Source of Truth
  * ✅ ENTERPRISE: Eliminates ALL hardcoded range option labels
  */
-export const MODAL_SELECT_RANGE_LABELS = {
+export const VOCAB_RANGE_LABELS = {
   // Units Count Options - i18n keys
   units_all: 'rangeOptions.allUnits',
   units_1_2: 'rangeOptions.units1to2',
@@ -276,7 +276,7 @@ export const MODAL_SELECT_RANGE_LABELS = {
  * Energy Class Labels - Centralized Source of Truth
  * ✅ ENTERPRISE: Eliminates hardcoded energy class options
  */
-export const MODAL_SELECT_ENERGY_CLASS_LABELS = {
+export const VOCAB_ENERGY_CLASS_LABELS = {
   'A+': 'A+',
   'A': 'A',
   'B+': 'B+',
@@ -297,7 +297,7 @@ export const MODAL_SELECT_ENERGY_CLASS_LABELS = {
  * ✅ CENTRALIZED: Getter function for company field labels
  */
 export function getCompanyFieldLabels() {
-  return MODAL_SELECT_COMPANY_FIELD_LABELS;
+  return VOCAB_COMPANY_FIELD_LABELS;
 }
 
 /**
@@ -305,7 +305,7 @@ export function getCompanyFieldLabels() {
  * ✅ CENTRALIZED: Getter function για service form fields
  */
 export function getServiceFieldLabels() {
-  return MODAL_SELECT_SERVICE_FIELD_LABELS;
+  return VOCAB_SERVICE_FIELD_LABELS;
 }
 
 /**
@@ -313,7 +313,7 @@ export function getServiceFieldLabels() {
  * ✅ CENTRALIZED: Getter function για filter panel titles
  */
 export function getFilterPanelTitles() {
-  return MODAL_SELECT_FILTER_PANEL_TITLES;
+  return VOCAB_FILTER_PANEL_TITLES;
 }
 
 /**
@@ -321,7 +321,7 @@ export function getFilterPanelTitles() {
  * ✅ CENTRALIZED: Getter function για search placeholders
  */
 export function getSearchPlaceholders() {
-  return MODAL_SELECT_SEARCH_PLACEHOLDERS;
+  return VOCAB_SEARCH_PLACEHOLDERS;
 }
 
 /**
@@ -329,7 +329,7 @@ export function getSearchPlaceholders() {
  * ✅ CENTRALIZED: Getter function για field labels
  */
 export function getFieldLabels() {
-  return MODAL_SELECT_FIELD_LABELS;
+  return VOCAB_FIELD_LABELS;
 }
 
 /**
@@ -337,7 +337,7 @@ export function getFieldLabels() {
  * ✅ CENTRALIZED: Getter function για advanced filter options
  */
 export function getAdvancedFilterOptions() {
-  return MODAL_SELECT_ADVANCED_FILTER_OPTIONS;
+  return VOCAB_ADVANCED_FILTER_OPTIONS;
 }
 
 /**
@@ -345,7 +345,7 @@ export function getAdvancedFilterOptions() {
  * ✅ CENTRALIZED: Getter function για range labels
  */
 export function getRangeLabels() {
-  return MODAL_SELECT_RANGE_LABELS;
+  return VOCAB_RANGE_LABELS;
 }
 
 /**
@@ -353,7 +353,7 @@ export function getRangeLabels() {
  * ✅ CENTRALIZED: Getter function για energy class labels
  */
 export function getEnergyClassLabels() {
-  return MODAL_SELECT_ENERGY_CLASS_LABELS;
+  return VOCAB_ENERGY_CLASS_LABELS;
 }
 
 /**
@@ -367,7 +367,7 @@ export function getEnergyClassLabels() {
  * ⚠️ Όποιος τα μεταφράσει, να ελέγξει ΚΑΙ τους καταναλωτές — ένας από αυτούς
  * (`smart-dialog-config`) τα περνά σε επιφάνεια που **δεν** μεταφράζει μόνη της.
  */
-export const MODAL_SELECT_PLACEHOLDERS = {
+export const VOCAB_PLACEHOLDERS = {
   default: 'Επιλέξτε...',
   search: 'Αναζήτηση...',
   loading: 'Φόρτωση...',

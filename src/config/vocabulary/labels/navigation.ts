@@ -16,7 +16,7 @@
  * ✅ ENTERPRISE: Single source of truth για όλους τους navigation level titles
  * 🌐 i18n: Uses keys from navigation.json namespace
  */
-export const MODAL_SELECT_NAVIGATION_LEVEL_TITLES = {
+export const VOCAB_NAVIGATION_LEVEL_TITLES = {
   companies: 'entities.company.title',
   projects: 'entities.project.title',
   buildings: 'entities.building.title',
@@ -29,7 +29,7 @@ export const MODAL_SELECT_NAVIGATION_LEVEL_TITLES = {
  * ✅ ENTERPRISE: Single source of truth για όλα τα base navigation labels
  * 🌐 i18n: Uses keys from navigation.json namespace
  */
-export const MODAL_SELECT_NAVIGATION_BASE_LABELS = {
+export const VOCAB_NAVIGATION_BASE_LABELS = {
   // Action Labels
   add: 'toolbar.labels.link',
   connect: 'toolbar.labels.link',
@@ -64,7 +64,7 @@ export const MODAL_SELECT_NAVIGATION_BASE_LABELS = {
  * ✅ ENTERPRISE: Single source of truth για όλα τα search placeholders
  * 🌐 i18n: Uses keys from navigation.json namespace
  */
-export const MODAL_SELECT_NAVIGATION_SEARCH_PLACEHOLDERS = {
+export const VOCAB_NAVIGATION_SEARCH_PLACEHOLDERS = {
   companies: 'toolbar.search.company',
   projects: 'toolbar.search.project',
   buildings: 'toolbar.search.building',
@@ -77,7 +77,7 @@ export const MODAL_SELECT_NAVIGATION_SEARCH_PLACEHOLDERS = {
  * ✅ ENTERPRISE: Single source of truth για όλα τα navigation tooltips
  * 🌐 i18n: Uses keys from navigation.json namespace
  */
-export const MODAL_SELECT_NAVIGATION_TOOLTIPS = {
+export const VOCAB_NAVIGATION_TOOLTIPS = {
   // Companies Tooltips
   add_company: 'toolbar.actions.companies.new',
   edit_company: 'toolbar.actions.companies.edit',
@@ -109,7 +109,7 @@ export const MODAL_SELECT_NAVIGATION_TOOLTIPS = {
  * ✅ ENTERPRISE: Single source of truth για όλες τις filter κατηγορίες
  * 🌐 i18n: Uses keys from navigation.json namespace
  */
-export const MODAL_SELECT_NAVIGATION_FILTER_CATEGORIES = {
+export const VOCAB_NAVIGATION_FILTER_CATEGORIES = {
   // Companies Filters
   company_type_label: 'filters.companies.typeLabel',
   company_construction: 'filters.companies.construction',
@@ -184,7 +184,7 @@ export const MODAL_SELECT_NAVIGATION_FILTER_CATEGORIES = {
  * ✅ ENTERPRISE: Single source of truth για όλες τις sort επιλογές
  * 🌐 i18n: Uses keys from navigation.json namespace
  */
-export const MODAL_SELECT_NAVIGATION_SORT_OPTIONS = {
+export const VOCAB_NAVIGATION_SORT_OPTIONS = {
   // Common Sort Options
   name_asc: 'toolbar.sort.nameAsc',
   name_desc: 'toolbar.sort.nameDesc',
@@ -211,7 +211,7 @@ export const MODAL_SELECT_NAVIGATION_SORT_OPTIONS = {
  * ✅ ENTERPRISE: Single source of truth για όλα τα compact toolbar search placeholders
  * 🏢 ENTERPRISE: Now uses i18n keys - translations in building.json
  */
-export const MODAL_SELECT_COMPACT_TOOLBAR_SEARCH_PLACEHOLDERS = {
+export const VOCAB_COMPACT_TOOLBAR_SEARCH_PLACEHOLDERS = {
   buildings: 'placeholders.searchBuildings',
   projects: 'placeholders.searchProjects',
   contacts: 'placeholders.searchContacts',
@@ -227,7 +227,7 @@ export const MODAL_SELECT_COMPACT_TOOLBAR_SEARCH_PLACEHOLDERS = {
  * ✅ ENTERPRISE: Single source of truth για όλα τα "New Item" labels
  * 🌐 i18n: Uses keys from common.json namespace
  */
-export const MODAL_SELECT_COMPACT_TOOLBAR_NEW_ITEM_LABELS = {
+export const VOCAB_COMPACT_TOOLBAR_NEW_ITEM_LABELS = {
   new_building: 'common-actions:actions.newBuilding',
   new_project: 'common-actions:actions.newProject',
   new_contact: 'common-actions:actions.newContact',
@@ -241,7 +241,7 @@ export const MODAL_SELECT_COMPACT_TOOLBAR_NEW_ITEM_LABELS = {
  * ✅ ENTERPRISE: Single source of truth για όλα τα context-specific labels
  * 🌐 i18n: Uses keys from navigation.json and common.json namespaces
  */
-export const MODAL_SELECT_COMPACT_TOOLBAR_CONTEXT_LABELS = {
+export const VOCAB_COMPACT_TOOLBAR_CONTEXT_LABELS = {
   // Buildings Context
   favorites_feminine: 'toolbar.labels.favorites',
   favorites_feminine_plural: 'toolbar.labels.favorites',
@@ -267,7 +267,7 @@ export const MODAL_SELECT_COMPACT_TOOLBAR_CONTEXT_LABELS = {
  * 🏢 ENTERPRISE: Extended με ΟΛΑ τα tooltips για 100% κεντρικοποίηση
  * 🌐 i18n: Uses keys from navigation.json and common.json namespaces
  */
-export const MODAL_SELECT_COMPACT_TOOLBAR_TOOLTIPS = {
+export const VOCAB_COMPACT_TOOLBAR_TOOLTIPS = {
   // ========================================================================
   // 🆕 NEW ITEM TOOLTIPS (Context-specific)
   // ========================================================================
@@ -344,7 +344,7 @@ export const MODAL_SELECT_COMPACT_TOOLBAR_TOOLTIPS = {
  * ✅ CENTRALIZED: Getter function για navigation level titles
  */
 export function getNavigationLevelTitles() {
-  return MODAL_SELECT_NAVIGATION_LEVEL_TITLES;
+  return VOCAB_NAVIGATION_LEVEL_TITLES;
 }
 
 /**
@@ -352,7 +352,7 @@ export function getNavigationLevelTitles() {
  * ✅ CENTRALIZED: Getter function για navigation base labels
  */
 export function getNavigationBaseLabels() {
-  return MODAL_SELECT_NAVIGATION_BASE_LABELS;
+  return VOCAB_NAVIGATION_BASE_LABELS;
 }
 
 /**
@@ -360,7 +360,7 @@ export function getNavigationBaseLabels() {
  * ✅ CENTRALIZED: Getter function για navigation search placeholders
  */
 export function getNavigationSearchPlaceholders() {
-  return MODAL_SELECT_NAVIGATION_SEARCH_PLACEHOLDERS;
+  return VOCAB_NAVIGATION_SEARCH_PLACEHOLDERS;
 }
 
 /**
@@ -368,7 +368,7 @@ export function getNavigationSearchPlaceholders() {
  * ✅ CENTRALIZED: Getter function για navigation tooltips
  */
 export function getNavigationTooltips() {
-  return MODAL_SELECT_NAVIGATION_TOOLTIPS;
+  return VOCAB_NAVIGATION_TOOLTIPS;
 }
 
 /**
@@ -376,7 +376,7 @@ export function getNavigationTooltips() {
  * ✅ CENTRALIZED: Getter function για navigation filter categories
  */
 export function getNavigationFilterCategories() {
-  return MODAL_SELECT_NAVIGATION_FILTER_CATEGORIES;
+  return VOCAB_NAVIGATION_FILTER_CATEGORIES;
 }
 
 /**
@@ -384,7 +384,7 @@ export function getNavigationFilterCategories() {
  * ✅ CENTRALIZED: Getter function για navigation sort options
  */
 export function getNavigationSortOptions() {
-  return MODAL_SELECT_NAVIGATION_SORT_OPTIONS;
+  return VOCAB_NAVIGATION_SORT_OPTIONS;
 }
 
 /**
@@ -392,7 +392,7 @@ export function getNavigationSortOptions() {
  * ✅ CENTRALIZED: Getter function για compact toolbar search placeholders
  */
 export function getCompactToolbarSearchPlaceholders() {
-  return MODAL_SELECT_COMPACT_TOOLBAR_SEARCH_PLACEHOLDERS;
+  return VOCAB_COMPACT_TOOLBAR_SEARCH_PLACEHOLDERS;
 }
 
 /**
@@ -400,7 +400,7 @@ export function getCompactToolbarSearchPlaceholders() {
  * ✅ CENTRALIZED: Getter function για compact toolbar new item labels
  */
 export function getCompactToolbarNewItemLabels() {
-  return MODAL_SELECT_COMPACT_TOOLBAR_NEW_ITEM_LABELS;
+  return VOCAB_COMPACT_TOOLBAR_NEW_ITEM_LABELS;
 }
 
 /**
@@ -408,7 +408,7 @@ export function getCompactToolbarNewItemLabels() {
  * ✅ CENTRALIZED: Getter function για compact toolbar context labels
  */
 export function getCompactToolbarContextLabels() {
-  return MODAL_SELECT_COMPACT_TOOLBAR_CONTEXT_LABELS;
+  return VOCAB_COMPACT_TOOLBAR_CONTEXT_LABELS;
 }
 
 /**
@@ -416,5 +416,5 @@ export function getCompactToolbarContextLabels() {
  * ✅ CENTRALIZED: Getter function για compact toolbar detailed tooltips
  */
 export function getCompactToolbarTooltips() {
-  return MODAL_SELECT_COMPACT_TOOLBAR_TOOLTIPS;
+  return VOCAB_COMPACT_TOOLBAR_TOOLTIPS;
 }

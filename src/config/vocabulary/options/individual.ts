@@ -17,7 +17,7 @@
  * Standardized gender options
  * 🌐 i18n: Uses keys from contacts.json namespace
  */
-export const MODAL_SELECT_GENDER_OPTIONS = [
+export const VOCAB_GENDER_OPTIONS = [
   { value: 'male', label: 'options.gender.male' },
   { value: 'female', label: 'options.gender.female' },
   { value: 'other', label: 'options.gender.other' },
@@ -28,7 +28,7 @@ export const MODAL_SELECT_GENDER_OPTIONS = [
  * Standardized identity document types
  * 🌐 i18n: Uses keys from contacts.json namespace
  */
-export const MODAL_SELECT_IDENTITY_TYPES = [
+export const VOCAB_IDENTITY_TYPES = [
   { value: 'identity_card', label: 'options.identity.identityCard' },
   { value: 'passport', label: 'options.identity.passport' },
   { value: 'drivers_license', label: 'options.identity.driversLicense' },
@@ -39,7 +39,7 @@ export const MODAL_SELECT_IDENTITY_TYPES = [
  * Standardized country options (common ones για Greece-focused app)
  * 🌐 i18n: Uses keys from common.json namespace
  */
-export const MODAL_SELECT_COUNTRY_OPTIONS = [
+export const VOCAB_COUNTRY_OPTIONS = [
   { value: 'GR', label: 'common:countries.greece' },
   { value: 'CY', label: 'common:countries.cyprus' },
   { value: 'US', label: 'common:countries.usa' },
@@ -57,7 +57,7 @@ export const MODAL_SELECT_COUNTRY_OPTIONS = [
  * Standardized currency options
  * 🏢 ENTERPRISE: i18n keys for multilingual support
  */
-export const MODAL_SELECT_CURRENCY_OPTIONS = [
+export const VOCAB_CURRENCY_OPTIONS = [
   { value: 'EUR', label: 'options.currencies.eur' },
   { value: 'USD', label: 'options.currencies.usd' },
   { value: 'GBP', label: 'options.currencies.gbp' }
@@ -71,26 +71,26 @@ export const MODAL_SELECT_CURRENCY_OPTIONS = [
  * Get gender options
  */
 export function getGenderOptions() {
-  return MODAL_SELECT_GENDER_OPTIONS;
+  return VOCAB_GENDER_OPTIONS;
 }
 
 /**
  * Get identity document type options
  */
 export function getIdentityTypeOptions() {
-  return MODAL_SELECT_IDENTITY_TYPES;
+  return VOCAB_IDENTITY_TYPES;
 }
 
 /**
  * Get country options
  */
 export function getCountryOptions() {
-  return MODAL_SELECT_COUNTRY_OPTIONS;
+  return VOCAB_COUNTRY_OPTIONS;
 }
 
 /**
  * Get currency options
  */
 export function getCurrencyOptions() {
-  return MODAL_SELECT_CURRENCY_OPTIONS;
+  return VOCAB_CURRENCY_OPTIONS;
 }

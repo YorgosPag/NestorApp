@@ -52,7 +52,10 @@ import { bridgingTrianglesOnly } from './qa/topo-qa-topology';
 import { isMeasuredElevation } from './topo-point-elevation';
 
 /** Ένα σημείο και το υψόμετρο που θα του αποδοθεί (WORLD canonical mm). */
-export interface ElevationAssignment {
+// ⚠️ ΕΣΩΤΕΡΙΚΟ, ΜΗΝ το ξανα-εξάγεις (ADR-806): κανείς δεν το ζητά ονομαστικά — ο
+// καταναλωτής το παίρνει ΔΟΜΙΚΑ μέσα από την υπογραφή των εξαγόμενων συμβόλων αυτού
+// του module. Το `export` ήταν πλατύτερο από τη χρήση (CHECK 3.30).
+interface ElevationAssignment {
   readonly pointIndex: number;
   readonly zMm: number;
   /**

@@ -24,7 +24,7 @@ import { i18n } from '@/i18n';
 // ⚠️ ΜΗΝ τα ξαναγυρίσεις στο `modal-select.ts`: εκεί ζουν **δεύτερα σώματα** με το ίδιο
 // όνομα (μετρημένα 30 αποκλίνοντα) — το σχήμα ADR-749.
 import {
-  MODAL_SELECT_PLACEHOLDERS,
+  VOCAB_PLACEHOLDERS,
   getCompanyFieldLabels,
   getServiceFieldLabels,
 } from '@/config/vocabulary/labels/fields';
@@ -183,7 +183,7 @@ const FIELD_PLACEHOLDER_MAP: Record<string, string> = {
 };
 
 export function getPlaceholder(fieldName: string): string | undefined {
-  return FIELD_PLACEHOLDER_MAP[fieldName] || MODAL_SELECT_PLACEHOLDERS.default;
+  return FIELD_PLACEHOLDER_MAP[fieldName] || VOCAB_PLACEHOLDERS.default;
 }
 
 // =============================================================================

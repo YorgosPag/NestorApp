@@ -14,7 +14,7 @@
  */
 
 import { getTaxOfficeDisplayName } from '@/subapps/accounting/data/greek-tax-offices';
-import { MODAL_SELECT_LEGAL_FORMS, MODAL_SELECT_GEMI_STATUSES } from '@/config/vocabulary/options/company';
+import { VOCAB_LEGAL_FORMS, VOCAB_GEMI_STATUSES } from '@/config/vocabulary/options/company';
 import type { CompanyIdentityField } from './company-identity-guard';
 
 export type IdentityDisplayTranslator = (key: string) => string;
@@ -51,9 +51,9 @@ export function resolveIdentityDisplay(
     case 'taxOffice':
       return getTaxOfficeDisplayName(value);
     case 'legalForm':
-      return resolveOptionLabel(MODAL_SELECT_LEGAL_FORMS, value, t);
+      return resolveOptionLabel(VOCAB_LEGAL_FORMS, value, t);
     case 'gemiStatus':
-      return resolveOptionLabel(MODAL_SELECT_GEMI_STATUSES, value, t);
+      return resolveOptionLabel(VOCAB_GEMI_STATUSES, value, t);
     case 'companyName':
     case 'vatNumber':
     case 'gemiNumber':

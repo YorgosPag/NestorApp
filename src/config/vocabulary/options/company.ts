@@ -16,7 +16,7 @@
  * 🏢 ENTERPRISE: i18n keys for multilingual support
  * Labels are translated at runtime by GenericFormRenderer
  */
-export const MODAL_SELECT_LEGAL_FORMS = [
+export const VOCAB_LEGAL_FORMS = [
   { value: 'ae', label: 'options.legalForms.ae' },
   { value: 'epe', label: 'options.legalForms.epe' },
   { value: 'ee', label: 'options.legalForms.ee' },
@@ -33,7 +33,7 @@ export const MODAL_SELECT_LEGAL_FORMS = [
  * Standardized ΓΕΜΗ statuses
  * 🏢 ENTERPRISE: i18n keys for multilingual support
  */
-export const MODAL_SELECT_GEMI_STATUSES = [
+export const VOCAB_GEMI_STATUSES = [
   { value: 'active', label: 'options.gemiStatuses.active' },
   { value: 'inactive', label: 'options.gemiStatuses.inactive' },
   { value: 'suspended', label: 'options.gemiStatuses.suspended' },
@@ -47,7 +47,7 @@ export const MODAL_SELECT_GEMI_STATUSES = [
  * Standardized service categories
  * 🏢 ENTERPRISE: i18n keys for multilingual support
  */
-export const MODAL_SELECT_SERVICE_CATEGORIES = [
+export const VOCAB_SERVICE_CATEGORIES = [
   { value: 'ministry', label: 'options.serviceCategories.ministry' },
   { value: 'region', label: 'options.serviceCategories.region' },
   { value: 'municipality', label: 'options.serviceCategories.municipality' },
@@ -73,7 +73,7 @@ export const MODAL_SELECT_SERVICE_CATEGORIES = [
  * Standardized legal statuses για δημόσιες υπηρεσίες
  * 🏢 ENTERPRISE: i18n keys for multilingual support
  */
-export const MODAL_SELECT_LEGAL_STATUSES = [
+export const VOCAB_LEGAL_STATUSES = [
   { value: 'npdd', label: 'options.legalStatuses.npdd' },
   { value: 'npid', label: 'options.legalStatuses.npid' },
   { value: 'public_service', label: 'options.legalStatuses.publicService' },
@@ -85,7 +85,7 @@ export const MODAL_SELECT_LEGAL_STATUSES = [
  * Standardized activity types
  * 🏢 ENTERPRISE: i18n keys for multilingual support
  */
-export const MODAL_SELECT_ACTIVITY_TYPES = [
+export const VOCAB_ACTIVITY_TYPES = [
   { value: 'main', label: 'options.activityTypes.main' },
   { value: 'secondary', label: 'options.activityTypes.secondary' }
 ] as const;
@@ -94,7 +94,7 @@ export const MODAL_SELECT_ACTIVITY_TYPES = [
  * Standardized address types
  * 🏢 ENTERPRISE: i18n keys for multilingual support
  */
-export const MODAL_SELECT_ADDRESS_TYPES = [
+export const VOCAB_ADDRESS_TYPES = [
   { value: 'headquarters', label: 'options.addressTypes.headquarters' },
   { value: 'branch', label: 'options.addressTypes.branch' }
 ] as const;
@@ -103,7 +103,7 @@ export const MODAL_SELECT_ADDRESS_TYPES = [
  * Standardized shareholder types
  * 🏢 ENTERPRISE: i18n keys for multilingual support
  */
-export const MODAL_SELECT_SHAREHOLDER_TYPES = [
+export const VOCAB_SHAREHOLDER_TYPES = [
   { value: 'individual', label: 'options.shareholderTypes.individual' },
   { value: 'legal', label: 'options.shareholderTypes.legal' }
 ] as const;
@@ -119,7 +119,7 @@ export const MODAL_SELECT_SHAREHOLDER_TYPES = [
  * Αντικαθιστά διάσπαρτα help strings σε όλη την εφαρμογή
  * 🌐 i18n: All help texts converted to i18n keys
  */
-export const MODAL_SELECT_COMPANY_HELP_TEXTS = {
+export const VOCAB_COMPANY_HELP_TEXTS = {
   AFM: 'contacts.company.helpTexts.afm',
   DOY: 'contacts.company.helpTexts.doy',
   GEMI_NUMBER: 'contacts.company.helpTexts.gemiNumber',
@@ -138,49 +138,49 @@ export const MODAL_SELECT_COMPANY_HELP_TEXTS = {
  * Get legal forms για Ελληνικές εταιρείες
  */
 export function getLegalFormOptions() {
-  return MODAL_SELECT_LEGAL_FORMS;
+  return VOCAB_LEGAL_FORMS;
 }
 
 /**
  * Get ΓΕΜΉ status options
  */
 export function getGemiStatusOptions() {
-  return MODAL_SELECT_GEMI_STATUSES;
+  return VOCAB_GEMI_STATUSES;
 }
 
 /**
  * Get service category options
  */
 export function getServiceCategoryOptions() {
-  return MODAL_SELECT_SERVICE_CATEGORIES;
+  return VOCAB_SERVICE_CATEGORIES;
 }
 
 /**
  * Get legal status options για δημόσιες υπηρεσίες
  */
 export function getLegalStatusOptions() {
-  return MODAL_SELECT_LEGAL_STATUSES;
+  return VOCAB_LEGAL_STATUSES;
 }
 
 /**
  * Get activity type options
  */
 export function getActivityTypeOptions() {
-  return MODAL_SELECT_ACTIVITY_TYPES;
+  return VOCAB_ACTIVITY_TYPES;
 }
 
 /**
  * Get address type options
  */
 export function getAddressTypeOptions() {
-  return MODAL_SELECT_ADDRESS_TYPES;
+  return VOCAB_ADDRESS_TYPES;
 }
 
 /**
  * Get shareholder type options
  */
 export function getShareholderTypeOptions() {
-  return MODAL_SELECT_SHAREHOLDER_TYPES;
+  return VOCAB_SHAREHOLDER_TYPES;
 }
 
 /**
@@ -188,5 +188,5 @@ export function getShareholderTypeOptions() {
  * Accessor function για τα help texts - διατηρεί consistency με το getCompanyFieldLabels pattern
  */
 export function getGemiHelpTexts() {
-  return MODAL_SELECT_COMPANY_HELP_TEXTS;
+  return VOCAB_COMPANY_HELP_TEXTS;
 }

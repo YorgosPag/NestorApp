@@ -984,8 +984,7 @@
       ],
       "allowlist": [
         "src/constants/property-features-enterprise.ts",
-        "src/subapps/dxf-viewer/config/modal-select/core/labels/fields.ts",
-        "src/subapps/dxf-viewer/config/modal-select.ts"
+        "src/config/vocabulary/labels/fields.ts"
       ]
     },
     "archive-feedback": {
@@ -1204,7 +1203,7 @@
       ],
       "allowlist": [
         "src/config/individual-config.ts",
-        "src/subapps/dxf-viewer/config/modal-select/"
+        "src/config/vocabulary/options/individual.ts"
       ]
     },
     "photo-compression-config": {

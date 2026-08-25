@@ -15,7 +15,7 @@ const logger = createModuleLogger('gemi-statuses');
 // ENTERPRISE: Import από existing centralized system - ZERO DUPLICATES
 import {
   getGemiStatusOptions,
-  MODAL_SELECT_GEMI_STATUSES,
+  VOCAB_GEMI_STATUSES,
 } from '@/config/vocabulary/options/company';
 import { businessRulesService } from '../../../services/business/EnterpriseBusinessRulesService';
 
@@ -115,10 +115,10 @@ export async function getEnterpriseCompanyStatuses(options: EnterpriseOptions = 
 
 /**
  * Get filtered GEMI statuses για specific lifecycle states
- * ENTERPRISE: Uses existing MODAL_SELECT_GEMI_STATUSES με filtering
+ * ENTERPRISE: Uses existing VOCAB_GEMI_STATUSES με filtering
  */
 export function getLifecycleGemiStatuses(): SelectOption[] {
-  return MODAL_SELECT_GEMI_STATUSES.filter(status =>
+  return VOCAB_GEMI_STATUSES.filter(status =>
     ['active', 'inactive', 'dissolved', 'bankruptcy', 'liquidation'].includes(status.value)
   );
 }

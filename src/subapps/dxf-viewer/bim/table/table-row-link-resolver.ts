@@ -40,9 +40,12 @@ import type { TableRowLink } from '../../types/table-row-link';
  *   ταυτότητες («δεν έδεσα ακόμη»), ή κριτήριο που δεν ταιριάζει σε καμία οντότητα.
  * - `unresolvable` — 🔴 κριτήριο **χωρίς κανέναν ορισμένο άξονα**. Δες {@link isAskingSomething}.
  */
-export type TableRowLinkStatus = 'resolved' | 'partial' | 'orphan' | 'empty' | 'unresolvable';
+// ⚠️ ΕΣΩΤΕΡΙΚΟ, ΜΗΝ το ξανα-εξάγεις (ADR-806): κανείς δεν το ζητά ονομαστικά — ο
+// καταναλωτής το παίρνει ΔΟΜΙΚΑ μέσα από την υπογραφή των εξαγόμενων συμβόλων αυτού
+// του module. Το `export` ήταν πλατύτερο από τη χρήση (CHECK 3.30).
+type TableRowLinkStatus = 'resolved' | 'partial' | 'orphan' | 'empty' | 'unresolvable';
 
-export interface TableRowLinkResolution {
+interface TableRowLinkResolution {
   readonly status: TableRowLinkStatus;
   /** Οι ταυτότητες που **υπάρχουν** — ό,τι επιτρέπεται να τονιστεί στο 3Δ. */
   readonly entityIds: readonly string[];

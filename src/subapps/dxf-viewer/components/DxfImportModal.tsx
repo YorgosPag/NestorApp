@@ -23,7 +23,8 @@ import {
 } from './modal/ModalContainer';
 import { getModalIconColor } from '../config/modal-colors';
 import { MODAL_FLEX_PATTERNS, getIconSize } from '../config/modal-layout';
-import { getSelectStyles, getEncodingOptions } from '../config/modal-select';
+import { getSelectStyles } from '../config/modal-select/core/styles/select-styles';
+import { getEncodingOptions } from '../config/modal-select/core/options/encoding';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../config/panel-tokens';
 // 🏢 ENTERPRISE: i18n support
