@@ -28,6 +28,7 @@
  *   SKIP_PRERENDER_BAILOUT                                  bypass CHECK 3.55
  *   SKIP_LISTING_CUSTODY                                    bypass CHECK 3.56
  *   SKIP_WORKSPACE_AUTHORITY                                bypass CHECK 3.58
+ *   SKIP_AUTHORITY_REGISTRY                                 bypass CHECK 3.68
  *   SKIP_I18N_TYPES                '1' = bypass CHECK 3.33 (generated-types freshness)
  *   SKIP_I18N_SHELL_SLICE          '1' = bypass CHECK 3.34 (i18n shell-slice freshness)
  *   SKIP_I18N_NAMESPACE_WIRING     '1' = bypass CHECK 3.36 (i18n namespace reachability)
@@ -516,6 +517,22 @@ if (!process.env.SKIP_WORKSPACE_AUTHORITY && allFiles.length > 0)
 // baseline — το `buildPayload` ρίχνει) + RATCHET κατά ταυτότητα για το κοινό όνομα.
 if (!process.env.SKIP_POINT_VOCABULARY && allFiles.length > 0)
   addThread('3.59', 'Point vocabulary', 'scripts/check-point-vocabulary.js', allFiles);
+
+// CHECK 3.68 — ΠΥΛΗ ΤΗΣ ΑΡΧΗΣ ΤΗΣ ΕΞΟΥΣΙΟΔΟΤΗΣΗΣ (ADR-801 §4). «Αποφασίζει κάποιος
+// "επιτρέπεται;" έξω από τον ΕΝΑ κριτή;» ⚠️ ΔΕΝ είναι το ερώτημα του 3.58: εκείνο ρωτά
+// ποιος διαβάζει αναξιόπιστο ΚΑΝΑΛΙ ΧΩΡΟΥ (απομόνωση) — αυτό ποιος κρίνει ΙΚΑΝΟΤΗΤΑ.
+// Μετρημένο 25/08: 20 αρχεία απαντούσαν μόνα τους, με ΕΠΤΑ σταθερές ονόματι ADMIN_ROLES /
+// ADMIN_GLOBAL_ROLES και ΠΕΝΤΕ διαφορετικά περιεχόμενα· δύο έκριναν με λίστα email.
+// 🏆 Ο Κ3 («μπορεί αυτός ο κλάδος να πυροδοτήσει ΠΟΤΕ;») είναι η πρωτοτυπία — κανένα
+// εργαλείο της αγοράς δεν το ρωτά, και είναι ο κανόνας που θα είχε πιάσει τον πίνακα των
+// 13 ρόλων ΤΗ ΜΕΡΑ ΠΟΥ ΓΡΑΦΤΗΚΕ (ADR-801 §2.2, 11 πράσινα tests από πάνω).
+// ⚠️ Η ΣΚΑΝΔΑΛΗ ΖΕΙ ΜΕΣΑ ΣΤΗΝ ΠΥΛΗ: νέος κριτής προσγειώνεται σε ΟΠΟΙΟΔΗΠΟΤΕ αρχείο του
+// src/, άρα λίστα μονοπατιών εδώ θα απέκλινε σιωπηλά (3.34/3.37).
+// ⚠️ ΔΥΟ ΜΗΧΑΝΙΣΜΟΙ: RATCHET κατά ταυτότητα για τους inline κριτές (14 ζωντανοί ⇒ zero-tol
+// θα ήταν μονίμως κόκκινο, 3.39) + ZERO-TOL για φαντάσματα/ορφανές δηλώσεις, που ΔΕΝ
+// μπαίνουν ΠΟΤΕ σε baseline (το buildPayload ρίχνει).
+if (!process.env.SKIP_AUTHORITY_REGISTRY && allFiles.length > 0)
+  addThread('3.68', 'Authority registry', 'scripts/check-authority-registry.js', allFiles);
 
 // CHECK 3.62 — ΠΥΛΗ ΔΗΜΟΣΙΑΣ ΕΠΙΦΑΝΕΙΑΣ (ADR-796). «Ζητά κάποιος από ΕΞΩ ένα σύμβολο
 // του dxf-viewer που κανείς δεν δήλωσε δημόσιο;»

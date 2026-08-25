@@ -56,6 +56,18 @@ on:
       - 'scripts/check-workspace-authority.js'
       - '.workspace-authority.json'
       - '.workspace-authority-baseline.json'
+      # CHECK 3.68 (ADR-801 §4) — η αρχή της εξουσιοδότησης. Το μητρώο, τα ΛΕΞΙΛΟΓΙΑ
+      # (roles.ts / types.ts) και η ίδια η πύλη είναι ΕΙΣΟΔΟΙ: αλλαγή σε οποιοδήποτε
+      # ξανακρίνει ΟΛΟ το δέντρο, αλλιώς το job μένει πράσινο πάνω στην αλλαγή του κριτηρίου.
+      - 'scripts/check-authority-registry.js'
+      - 'scripts/lib/authority-registry/**'
+      - '.authority-registry.json'
+      - '.authority-registry-baseline.json'
+      - 'src/lib/auth/roles.ts'
+      - 'src/lib/auth/types.ts'
+      - 'src/lib/auth/authority.ts'
+      - 'src/types/capability-authority.ts'
+      - 'src/auth/hooks/useCapability.ts'
       # CHECK 3.59 (ADR-792) — το λεξιλόγιο σημείου. Το μητρώο ριζών και η ίδια η πύλη
       # είναι ΕΙΣΟΔΟΙ: νέα ρίζα ή αλλαγή κριτηρίου ξανακρίνει ΟΛΟ το δέντρο.
       - 'scripts/check-point-vocabulary.js'
@@ -116,6 +128,18 @@ on:
       - 'scripts/check-workspace-authority.js'
       - '.workspace-authority.json'
       - '.workspace-authority-baseline.json'
+      # CHECK 3.68 (ADR-801 §4) — η αρχή της εξουσιοδότησης. Το μητρώο, τα ΛΕΞΙΛΟΓΙΑ
+      # (roles.ts / types.ts) και η ίδια η πύλη είναι ΕΙΣΟΔΟΙ: αλλαγή σε οποιοδήποτε
+      # ξανακρίνει ΟΛΟ το δέντρο, αλλιώς το job μένει πράσινο πάνω στην αλλαγή του κριτηρίου.
+      - 'scripts/check-authority-registry.js'
+      - 'scripts/lib/authority-registry/**'
+      - '.authority-registry.json'
+      - '.authority-registry-baseline.json'
+      - 'src/lib/auth/roles.ts'
+      - 'src/lib/auth/types.ts'
+      - 'src/lib/auth/authority.ts'
+      - 'src/types/capability-authority.ts'
+      - 'src/auth/hooks/useCapability.ts'
       # CHECK 3.59 (ADR-792) — το λεξιλόγιο σημείου. Το μητρώο ριζών και η ίδια η πύλη
       # είναι ΕΙΣΟΔΟΙ: νέα ρίζα ή αλλαγή κριτηρίου ξανακρίνει ΟΛΟ το δέντρο.
       - 'scripts/check-point-vocabulary.js'
@@ -781,6 +805,40 @@ jobs:
             echo "Απογραφή: \`npm run public-surface:report\`"
             echo "Reseed ΜΟΝΟ μετά από νόμιμη συρρίκνωση: \`npm run public-surface:baseline\`"
           } >> "$GITHUB_STEP_SUMMARY"
+  authority-registry:
+    name: 🔐 Authority Registry Gate (CHECK 3.68)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Πάκετα (jest για τις άγκυρες)
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # Layer 2 — ΑΝΕΥ ΟΡΩΝ και ΠΛΗΡΕΣ. Ένας νέος inline κριτής προσγειώνεται σε
+      # ΟΠΟΙΟΔΗΠΟΤΕ αρχείο, και μια αλλαγή στο `roles.ts` / `types.ts` ξανα-ταξινομεί
+      # αρχεία ΠΟΥ ΚΑΝΕΙΣ ΔΕΝ ΕΣΤΕΙΛΕ — μερική ανάλυση θα ήταν αναληθής.
+      - name: 🔐 CHECK 3.68 — κανείς δεν κρίνει «επιτρέπεται;» έξω από τον ΕΝΑ κριτή
+        run: pnpm run authority-registry:check
+
+      - name: "🧪 Άγκυρες — CHECK 3.68"
+        run: pnpm run test:authority-registry
+
   workspace-authority:
     name: 🏢 Workspace Authority Gate (CHECK 3.58)
     runs-on: ubuntu-latest
@@ -1098,12 +1156,12 @@ jobs:
             echo "Απογραφή: npm run one-version:report"
           } >> "$GITHUB_STEP_SUMMARY"
 
-  # ⚠️ CHECK 3.67 (ADR-803) — υπόσχεται ο πίνακας υποκατάστασης όψη που ΔΕΝ φορτώνεται;
+  # ⚠️ CHECK 3.68 (ADR-803) — υπόσχεται ο πίνακας υποκατάστασης όψη που ΔΕΝ φορτώνεται;
   # Άνευ όρων: ο πίνακας και ο preloader αλλάζουν ΑΝΕΞΑΡΤΗΤΑ, και η υπόσχεση σπάει με
   # αλλαγή σε ΟΠΟΙΟΔΗΠΟΤΕ από τα δύο. Κανένα νέο workflow — το μητρώο του 3.37
   # παρακολουθεί ΑΡΧΕΙΑ, όχι jobs.
   font-promise:
-    name: 🔤 CHECK 3.67 — η υπόσχεση γραμματοσειράς
+    name: 🔤 CHECK 3.68 — η υπόσχεση γραμματοσειράς
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

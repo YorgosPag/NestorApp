@@ -56,7 +56,7 @@
  * @module auth/hooks/useCapability
  * @enterprise ADR-801 — Ένας κριτής για το «επιτρέπεται;»
  * @see lib/auth/authority.ts — ο PDP
- * @see CHECK 3.66 — η πύλη που κάνει τον δεύτερο κριτή αδύνατο
+ * @see CHECK 3.68 — η πύλη που κάνει τον δεύτερο κριτή αδύνατο
  */
 
 import { useMemo } from 'react';

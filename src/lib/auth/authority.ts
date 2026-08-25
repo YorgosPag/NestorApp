@@ -54,7 +54,7 @@
  * @module lib/auth/authority
  * @enterprise ADR-801 — Ένας κριτής για το «επιτρέπεται;»
  * @see ADR-787 §5.1 — ο αδελφός («είναι μέλος;»)
- * @see CHECK 3.66 — η πύλη που κάνει τον δεύτερο κριτή αδύνατο
+ * @see CHECK 3.68 — η πύλη που κάνει τον δεύτερο κριτή αδύνατο
  */
 
 import { PERMISSIONS, type PermissionId } from './types';
