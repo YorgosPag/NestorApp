@@ -18,7 +18,7 @@ import { NAVIGATION_ENTITIES } from '../config';
 import { useNavigation } from '../core/NavigationContext';
 import { HOVER_TEXT_EFFECTS } from '../../ui/effects';
 // 🏢 ENTERPRISE: Centralized labels - ZERO HARDCODED VALUES
-import { getNavigationFilterCategories } from '@/subapps/dxf-viewer/config/modal-select/core/labels/navigation';
+import { getNavigationFilterCategories } from '@/config/vocabulary/labels/navigation';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
