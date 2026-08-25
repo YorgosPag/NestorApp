@@ -239,7 +239,7 @@ export async function checkPermission(
     // ⚠️ Ήταν `'project_role'` — **ψευδές**: εδώ δεν υπάρχει έργο, η παραχώρηση
     //    έρχεται από τον καθολικό ρόλο. Πέρασε απαρατήρητο επειδή **κανείς δεν
     //    διάβαζε** το `source` (μετρημένο: μηδέν καταναλωτές πριν το §2.8).
-    return { granted: true, reason: null, source: 'project_role' };
+    return { granted: true, reason: null, source: 'global_role' };
   }
 
   return { granted: false, reason: 'permission_not_in_role' };

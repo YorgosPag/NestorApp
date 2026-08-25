@@ -83,7 +83,7 @@ export function readPermissionsClaim(
     // Το claim γράφεται ως **ένωση συνόλων** (`claims-handler.ts:159`), αλλά
     // παλαιότερα έγγραφα δεν το εγγυώνται. Κανονικοποιούμε ώστε η άγκυρα
     // ισοδυναμίας να συγκρίνει **κανονική** μορφή και στις δύο πλευρές.
-    granted.push(entry);
+    if (!granted.includes(entry)) granted.push(entry);
   }
 
   return Object.freeze(granted);

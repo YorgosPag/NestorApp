@@ -195,6 +195,22 @@ describe('ADR-801 §2.6 — ΙΣΟΔΥΝΑΜΙΑ ΤΩΝ ΔΥΟ PDP (ερώτημ
     expect(server.source).toBe('company_scoped_claim');
   });
 
+  it('Α2γ — η ΠΗΓΗ ξεχωρίζει claim από ρόλο, και δεν λέει ψέματα', async () => {
+    // ⚠️ Γεννήθηκε από μετάλλαξη που ΕΜΕΙΝΕ ΠΡΑΣΙΝΗ: το `source` του καθολικού
+    //    ρόλου ήταν `'project_role'` — **ψευδές**, εδώ δεν υπάρχει έργο — και
+    //    κανένα test δεν το κοιτούσε. Το `source` είναι η μόνη λέξη που λέει
+    //    **από πού** ήρθε η παραχώρηση· αν λέει ψέματα, το log του `withAuth`
+    //    (§2.8, Β6) παραπλανά ακριβώς όταν το χρειάζεσαι.
+    const viaRole = await checkPermission(asAuthContext(LIVE_SUBJECTS[3]), 'users:users:manage', {});
+    expect(viaRole).toEqual({ granted: true, reason: null, source: 'global_role' });
+
+    const viaClaim = await checkPermission(asAuthContext(LIVE_SUBJECTS[1]), 'admin_access', {});
+    expect(viaClaim.source).toBe('company_scoped_claim');
+
+    const viaBypass = await checkPermission(asAuthContext(LIVE_SUBJECTS[2]), 'admin_access', {});
+    expect(viaBypass.source).toBe('global_role_bypass');
+  });
+
   it('Α2β — ΠΑΡΟΝΟΜΑΣΤΗΣ: ο ίδιος ρόλος ΧΩΡΙΣ το claim ΔΕΝ παίρνει `admin_access`', async () => {
     const withoutClaim = { label: 'x', globalRole: 'external_user' as GlobalRole };
     expect(
