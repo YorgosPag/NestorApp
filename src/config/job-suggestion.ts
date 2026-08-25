@@ -105,8 +105,25 @@ export interface JobSuggestionInput<T extends JobFilterableItem & { readonly sub
  * **μόνο** στο ανοιγμένο δοχείο, με ρήμα και ενέργεια. Η ίδια οπτική θέση με
  * δύο νοήματα είναι το σχήμα ελαττώματος που πιάστηκε **τέσσερις** φορές εδώ.
  */
+/**
+ * **ΓΙΑΤΙ** προτείνεται — η αλυσίδα αιτίασης του **Υ-6**.
+ *
+ * 🔴 Βρέθηκε **ΣΤΗΝ ΟΘΟΝΗ** (2026-08-25): το popover έλεγε «με βάση τα
+ * δικαιώματά σου» σε **υπερδιαχειριστή**, όπου **όλες** οι δουλειές έχουν
+ * ταυτόσημα δικαιώματα — η αιτία ήταν το **επάγγελμα**. Το απέδειξε το ίδιο το
+ * πείραμα: σβήνοντας τη δήλωση η πρόταση **εξαφανίστηκε**, με τα δικαιώματα
+ * **αμετάβλητα**.
+ *
+ * ⚠️ Ένα μήνυμα που ονομάζει **λάθος** αιτία είναι χειρότερο από κανένα:
+ * διδάσκει στον άνθρωπο **λάθος μοντέλο** του συστήματος. Κανένα test δεν
+ * μπορούσε να το δει — το κλειδί i18n ήταν υπαρκτό και η μετάφραση σωστή.
+ */
+export type JobSuggestionBasis = 'occupation' | 'permissions';
+
 export interface JobSuggestionOutcome {
   readonly job: JobId;
+  /** Υ-6 — **μετρημένη**, ποτέ υποτιθέμενη. */
+  readonly basis: JobSuggestionBasis;
   /** Πόσα στοιχεία πρώτου επιπέδου θα μείνουν στην οθόνη αν δεχτεί. */
   readonly visibleCount: number;
   /** Πόσα βλέπει **τώρα** — ο παρονομαστής του «Χ από Υ». */
@@ -130,6 +147,45 @@ function findSuggestableJob<T extends JobFilterableItem & { readonly subItems?: 
   // Έχει ήδη διαλέξει ⇒ η πρόταση θα ήταν δεύτερη γνώμη σε απόφαση που πάρθηκε.
   if (input.activeJob !== JOB_ALL) return null;
   if (resolveAvailableJobs(input.access).length < MIN_JOBS_FOR_SUGGESTION) return null;
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 🏆 Ο ΠΛΗΡΗΣ ΚΑΤΟΧΟΣ ΧΩΡΙΣ ΔΗΛΩΣΗ ⇒ ΣΙΩΠΗ — πρότυπο **και των τριών** μεγάλων
+  //
+  // Έρευνα 2026-08-25, με τις πηγές διαβασμένες **ολόκληρες**:
+  //
+  //   • **Revit** *(Autodesk, «Select the Discipline for a Revit Installation»)*:
+  //     «if you do not select a discipline … **Autodesk Revit: All**; Revit
+  //     Architecture: Architectural; Revit MEP: Mechanical». Δηλαδή η ειδικότητα
+  //     είναι για τις **περιορισμένες** άδειες· ο κάτοχος της **πλήρους** παίρνει
+  //     **«All»**.
+  //   • **ArchiCAD** *(Graphisoft)*: πρώτη εκκίνηση ⇒ **Standard**· τα ειδικευμένα
+  //     *(Visualization · Layouting)* απαιτούν **ρητή** επιλογή.
+  //   • **Cinema 4D** *(Maxon)*: **Standard** layout· τα ειδικευμένα απαιτούν ρητή
+  //     επιλογή.
+  //
+  // ⇒ **Ομόφωνο**: όποιος δεν δήλωσε ειδίκευση παίρνει το **ΓΕΝΙΚΟ**, ποτέ
+  // αυθαίρετη ειδικότητα. Εδώ το γενικό είναι το `JOB_ALL`, που είναι **ήδη** η
+  // ενεργή κατάσταση *(ελέγχθηκε παραπάνω)* ⇒ δεν υπάρχει τίποτα να προταθεί.
+  //
+  // 🔑 ΓΙΑΤΙ ΧΡΕΙΑΖΕΤΑΙ ΡΗΤΟΣ ΕΛΕΓΧΟΣ: για `isBypass` **καμία** δουλειά δεν έχει
+  // μετρημένο δικαίωμα *(`pickDefaultJob`: `counted = []`)* ⇒ **όλες ισοβαθμούν**
+  // ⇒ χωρίς `tiebreak` ο νικητής βγαίνει από τη **σειρά του μητρώου**, δηλαδή από
+  // **τίποτα**. Είναι κατά λέξη το σφάλμα που το §6.14 ονομάζει: *«δεν ρωτάμε
+  // επειδή ξέρουμε»* — μια πρόταση χωρίς σηματοδότη **καταρρίπτει το ίδιο το
+  // επιχείρημα**. Ο έλεγχος του `granted` παρακάτω **δεν** το πιάνει: για bypass
+  // κάθε δουλειά είναι `granted` *(`decideJobAccess`, κλάδος 1)*.
+  //
+  // 🏆 ΠΟΥ ΞΕΠΕΡΝΑΜΕ: ο Revit **σταματά** στο «All» και δεν ξαναρωτά ποτέ. Εδώ η
+  // σιωπή γίνεται **πρόσκληση** — το `DeclaredOccupationBadge` δείχνει «πες μας τι
+  // κάνεις» **μέσα στο μενού που άνοιξε ο ίδιος**, χωρίς modal *(Ε7.γ′ · Α5)*.
+  // Μόλις δηλώσει, ο **ίδιος** αυτός κώδικας αρχίζει να προτείνει.
+  //
+  // ⛔ ΜΗΝ το αφαιρέσεις «γιατί ο bypass τα βλέπει όλα ούτως ή άλλως»: χωρίς αυτό
+  //    ο υπερδιαχειριστής παίρνει πρόταση **«Σχέδιο»** για τον μόνο λόγο ότι το
+  //    `design` είναι **πρώτο** στο `JOB_ORDER`.
+  // ═══════════════════════════════════════════════════════════════════════════
+  const hasOccupationSignal = input.tiebreak !== null && input.tiebreak !== undefined;
+  if (input.access.isBypass && !hasOccupationSignal) return null;
 
   const suggested = pickDefaultJob(input.access, input.tiebreak);
   // `JOB_ALL` = «καμία διαθέσιμη» (jobs-access.ts:209). Δεν προτείνεται το ίδιο
@@ -167,6 +223,17 @@ export function computeJobSuggestion<T extends JobFilterableItem & { readonly su
   const job = findSuggestableJob(input);
   if (job === null) return null;
 
+  // ── Υ-6: Η ΑΙΤΙΑ, ΜΕΤΡΗΜΕΝΗ ─────────────────────────────────────────────
+  // Κριτήριο: *«θα έδινε η ΙΔΙΑ είσοδος άλλη απάντηση χωρίς τον σηματοδότη;»*
+  // Για isBypass η απάντηση χωρίς σηματοδότη είναι **σιωπή**, άρα null — και
+  // το null !== job δίνει σωστά occupation.
+  //
+  // ⛔ ΜΗΝ το γράψεις ως isBypass ? occupation : permissions: θα έλεγε
+  //    «permissions» σε **μη-bypass** χρήστη όπου το επάγγελμα **έσπασε**
+  //    ισοβαθμία — δηλαδή θα ήταν λάθος ακριβώς στη μισή περίπτωση.
+  const withoutSignal = input.access.isBypass ? null : pickDefaultJob(input.access, null);
+  const basis: JobSuggestionBasis = withoutSignal === job ? 'permissions' : 'occupation';
+
   const results = input.menus.map((items) => filterItemsByJob(items, job));
   const { hiddenCount } = summarizeHidden(results);
   if (hiddenCount === 0) return null;
@@ -176,5 +243,5 @@ export function computeJobSuggestion<T extends JobFilterableItem & { readonly su
   // οποιοσδήποτε άλλος θα έσπαγε το `visible + hidden = total`.
   const totalCount = input.menus.reduce((sum, items) => sum + items.length, 0);
 
-  return { job, visibleCount: totalCount - hiddenCount, totalCount };
+  return { job, basis, visibleCount: totalCount - hiddenCount, totalCount };
 }

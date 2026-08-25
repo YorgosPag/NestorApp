@@ -15,7 +15,7 @@
 
 import { createMainMenuItems, createToolsMenuItems, createSettingsMenuItems } from '../smart-navigation-factory';
 import { JOBS, JOB_ORDER, type JobId } from '../jobs-registry';
-import { JOB_ALL, pickDefaultJob, resolveAvailableJobs, type JobAccessInput } from '../jobs-access';
+import { JOB_ALL, decideJobAccess, pickDefaultJob, resolveAvailableJobs, type JobAccessInput } from '../jobs-access';
 import { filterItemsByJob, summarizeHidden, type JobFilterableItem } from '../jobs-visibility';
 import { MIN_JOBS_FOR_SUGGESTION, computeJobSuggestion } from '../job-suggestion';
 import {
@@ -66,16 +66,40 @@ const TWO_JOBS = access({
   permissions: [JOBS.clients.permissions[0], JOBS.finance.permissions[0]],
 });
 
+/**
+ * 🔴 ΓΙΑΤΙ Ο ΠΡΟΕΠΙΛΕΓΜΕΝΟΣ ΣΗΜΑΤΟΔΟΤΗΣ ΔΕΝ ΕΙΝΑΙ ΔΙΑΚΟΣΜΗΤΙΚΟΣ
+ *
+ * Από 2026-08-25 ο **πλήρης κάτοχος χωρίς δήλωση σωπαίνει** — πρότυπο **και των
+ * τριών** μεγάλων: Revit «Autodesk Revit: **All**» · ArchiCAD **Standard** ·
+ * Cinema 4D **Standard**. Όποιος δεν δήλωσε ειδίκευση παίρνει το **γενικό**,
+ * ποτέ αυθαίρετη ειδικότητα.
+ *
+ * Οι άγκυρες παρακάτω χρησιμοποιούν τον BYPASS ως *«χρήστης με πολλές δουλειές»*
+ * για να δοκιμάσουν **άλλα** πράγματα *(η επιλογή έγινε ήδη · κρύβει κάτι · ο
+ * αριθμός ταιριάζει)*. Χωρίς σηματοδότη επαγγέλματος θα δοκίμαζαν έναν
+ * υπερδιαχειριστή που **δεν δήλωσε ποτέ τίποτα** και όμως περιμένει πρόταση —
+ * δηλαδή **κόσμο που δεν υπάρχει**, ακριβώς το σφάλμα που η ομάδα Ζ τεκμηριώνει.
+ *
+ * ⚠️ **ΜΗΝ** το κάνεις undefined/null καθολικά: τότε **τέσσερις** άγκυρες γίνονται
+ * πράσινες επειδή **δεν κοιτάζουν τίποτα** (outcome === null παντού).
+ */
+// ⚠️ ΣΥΝΑΡΤΗΣΗ, ΟΧΙ ΣΤΑΘΕΡΑ: το ISCO ορίζεται ΠΙΟ ΚΑΤΩ σε αυτό το αρχείο, οπότε
+//    μια σταθερά εδώ θα έσκαγε σε TDZ. Η καθυστερημένη κλήση λύνει τη σειρά
+//    χωρίς να μετακινηθεί τίποτα — και το αποτέλεσμα είναι ταυτόσημο.
+const declaredSurveyor = () => resolveJobAffinity(ISCO.surveyor);
+
 function suggest(input: {
   access?: JobAccessInput;
   activeJob?: typeof JOB_ALL | ReturnType<typeof pickDefaultJob>;
   dismissed?: boolean;
+  tiebreak?: JobId | null;
 }) {
   const acc = input.access ?? BYPASS;
   return computeJobSuggestion({
     access: acc,
     activeJob: input.activeJob ?? JOB_ALL,
     dismissed: input.dismissed ?? false,
+    tiebreak: input.tiebreak === undefined ? declaredSurveyor() : input.tiebreak,
     menus: realMenus(acc.permissions),
   });
 }
@@ -626,5 +650,97 @@ describe('Ζ-1 🔴 ο ζωντανός υπερδιαχειριστής — τ�
     const counted = access({ isBypass: false, permissions: ['admin_access'] });
     expect(pickDefaultJob(counted, 'design')).toBe('administration');
     expect(pickDefaultJob(counted, null)).toBe('administration');
+  });
+});
+
+// ----------------------------------------------------------------------------
+// Η — 🏆 Η ΣΙΩΠΗ ΤΟΥ ΠΛΗΡΟΥΣ ΚΑΤΟΧΟΥ (πρότυπο Revit / ArchiCAD / Cinema 4D)
+//
+// Έρευνα 2026-08-25, με τις πηγές διαβασμένες **ολόκληρες**:
+//   Revit     «if you do not select a discipline … Autodesk Revit: **All**;
+//              Revit Architecture: Architectural; Revit MEP: Mechanical»
+//              ⇒ η ειδικότητα είναι για τις ΠΕΡΙΟΡΙΣΜΕΝΕΣ άδειες· ο κάτοχος
+//              της ΠΛΗΡΟΥΣ παίρνει «All».
+//   ArchiCAD  πρώτη εκκίνηση ⇒ Standard (Visualization/Layouting θέλουν ρητή
+//              επιλογή)
+//   C4D       Standard layout (ομοίως)
+//
+// ⇒ Ομόφωνο: όποιος δεν δήλωσε ειδίκευση παίρνει το ΓΕΝΙΚΟ. Εδώ το γενικό
+//   είναι το JOB_ALL — και είναι **ήδη** η ενεργή κατάσταση.
+//
+// ⚠️ Η κομμένη παράθεση («Architectural») είναι το σφάλμα που το ADR-748 Ε7.δ′
+//   έχει ήδη πληρώσει ΜΙΑ φορά. Διαβάζεται ΟΛΟΚΛΗΡΗ ή καθόλου.
+// ----------------------------------------------------------------------------
+
+describe('Η-1 🏆 ο πλήρης κάτοχος χωρίς δήλωση ΣΩΠΑΙΝΕΙ', () => {
+  it('καμία πρόταση όταν λείπει ο σηματοδότης επαγγέλματος', () => {
+    expect(suggest({ tiebreak: null })).toBeNull();
+  });
+
+  it('🔑 ΤΟ ΖΕΥΓΟΣ: με δήλωση ΜΙΛΑΕΙ — η σιωπή δεν είναι «χαλασμένο»', () => {
+    // Ο παρονομαστής. Χωρίς αυτό, μια μετάλλαξη που σωπαίνει **πάντα** θα
+    // περνούσε πράσινη, και η πύλη θα φύλαγε το τίποτα.
+    const spoken = suggest({ tiebreak: declaredSurveyor() });
+    expect(spoken).not.toBeNull();
+    expect(spoken!.job).toBe('design');
+  });
+
+  it('🔒 η σιωπή ΔΕΝ επεκτείνεται σε όποιον έχει ΜΕΤΡΗΜΕΝΑ δικαιώματα', () => {
+    // Ο κανόνας αφορά **μόνο** τον bypass: εκεί καμία δουλειά δεν έχει μετρημένο
+    // δικαίωμα, οπότε ο νικητής θα έβγαινε από τη σειρά του μητρώου — από τίποτα.
+    // Όποιος έχει πραγματική μέτρηση παίρνει πρόταση και χωρίς δήλωση.
+    expect(suggest({ access: DESIGN_AND_CLIENTS, tiebreak: null })).not.toBeNull();
+  });
+
+  it('⚠️ ΓΙΑΤΙ ΔΕΝ ΑΡΚΕΙ Ο ΥΠΑΡΧΩΝ ΦΡΟΥΡΟΣ ΤΟΥ granted', () => {
+    // Για bypass **κάθε** δουλειά είναι granted (decideJobAccess, κλάδος 1), άρα
+    // ο φρουρός «δεν το κρύβω ≠ το προτείνω» **δεν μπορεί** να πυροδοτήσει εδώ.
+    // Η άγκυρα κλειδώνει ότι η σιωπή χρειάζεται ΔΙΚΟ ΤΗΣ ρητό έλεγχο.
+    for (const job of JOB_ORDER) {
+      expect(decideJobAccess(job, BYPASS).decision).toBe('granted');
+    }
+    expect(suggest({ tiebreak: null })).toBeNull();
+  });
+});
+
+// ----------------------------------------------------------------------------
+// Θ — Υ-6: Η ΑΙΤΙΑ ΤΗΣ ΠΡΟΤΑΣΗΣ ΕΙΝΑΙ ΜΕΤΡΗΜΕΝΗ, ΟΧΙ ΥΠΟΤΙΘΕΜΕΝΗ
+//
+// 🔴 Βρέθηκε ΣΤΗΝ ΟΘΟΝΗ (2026-08-25): το popover έλεγε «με βάση τα δικαιώματά
+// σου» σε υπερδιαχειριστή — όπου ΟΛΕΣ οι δουλειές έχουν ταυτόσημα δικαιώματα.
+// Η αιτία ήταν το ΕΠΑΓΓΕΛΜΑ, και το απέδειξε το ίδιο το πείραμα: σβήνοντας τη
+// δήλωση η πρόταση εξαφανίστηκε, με τα δικαιώματα ΑΜΕΤΑΒΛΗΤΑ.
+//
+// ⚠️ ΚΑΝΕΝΑ test δεν μπορούσε να το δει: το κλειδί i18n ήταν υπαρκτό και η
+//    μετάφραση σωστή. Έλεγε απλώς ΛΑΘΟΣ ΠΡΑΓΜΑ.
+// ----------------------------------------------------------------------------
+
+describe('Θ-1 — η αιτία ονομάζεται σωστά', () => {
+  it('🔴 ο υπερδιαχειριστής παίρνει αιτία «επάγγελμα», ΠΟΤΕ «δικαιώματα»', () => {
+    // Η άγκυρα που θα είχε πιάσει το ελάττωμα της οθόνης.
+    const out = suggest({ tiebreak: declaredSurveyor() });
+    expect(out).not.toBeNull();
+    expect(out!.basis).toBe('occupation');
+  });
+
+  it('🔑 ΤΟ ΖΕΥΓΟΣ: όπου η αιτία ΕΙΝΑΙ τα δικαιώματα, το λέει', () => {
+    // Χωρίς αυτό, μια μετάλλαξη που επιστρέφει πάντα «occupation» περνά πράσινη.
+    // Ο λογιστής (→ Οικονομικά) δεν αλλάζει την απάντηση σε χρήστη που ήδη
+    // κλίνει αλλού από ΜΕΤΡΗΜΕΝΑ δικαιώματα.
+    const out = suggest({ access: DESIGN_AND_CLIENTS, tiebreak: null });
+    expect(out).not.toBeNull();
+    expect(out!.basis).toBe('permissions');
+  });
+
+  it('🔒 μη-bypass όπου το επάγγελμα ΕΣΠΑΣΕ ισοβαθμία ⇒ «επάγγελμα»', () => {
+    // Το κριτήριο ΔΕΝ είναι «είναι bypass;» — είναι «άλλαξε ο σηματοδότης την
+    // απάντηση;». Εδώ ο χρήστης έχει μετρημένα δικαιώματα ΚΑΙ ισοβαθμία, και ο
+    // δικηγόρος τη σπάει προς Πελάτες.
+    const lawyer = resolveJobAffinity(ISCO.lawyer);
+    const withSignal = suggest({ access: DESIGN_AND_CLIENTS, tiebreak: lawyer });
+    const without = suggest({ access: DESIGN_AND_CLIENTS, tiebreak: null });
+    expect(withSignal).not.toBeNull();
+    expect(withSignal!.job).not.toBe(without!.job);
+    expect(withSignal!.basis).toBe('occupation');
   });
 });

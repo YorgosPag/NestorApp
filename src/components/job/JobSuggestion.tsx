@@ -141,7 +141,13 @@ export function JobSuggestion() {
               {t('jobs.suggestion.title', { job: jobLabel })}
             </h3>
             <p className="text-xs text-muted-foreground">
-              {t('jobs.suggestion.reason')}
+              {/* Υ-6 — η ΑΙΤΙΑ, όπως τη ΜΕΤΡΗΣΕ το computeJobSuggestion.
+                  🔴 Μέχρι 2026-08-25 ήταν σταθερά «με βάση τα δικαιώματά σου»,
+                  **ψευδές** για κάθε υπερδιαχειριστή: εκεί όλες οι δουλειές
+                  έχουν ταυτόσημα δικαιώματα και η αιτία είναι το επάγγελμα. */}
+              {t(suggestion.basis === 'occupation'
+                ? 'jobs.suggestion.reasonOccupation'
+                : 'jobs.suggestion.reason')}
             </p>
           </header>
 
