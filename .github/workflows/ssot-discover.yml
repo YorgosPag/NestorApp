@@ -1097,3 +1097,17 @@ jobs:
             echo ""
             echo "Απογραφή: npm run one-version:report"
           } >> "$GITHUB_STEP_SUMMARY"
+
+  # ⚠️ CHECK 3.67 (ADR-803) — υπόσχεται ο πίνακας υποκατάστασης όψη που ΔΕΝ φορτώνεται;
+  # Άνευ όρων: ο πίνακας και ο preloader αλλάζουν ΑΝΕΞΑΡΤΗΤΑ, και η υπόσχεση σπάει με
+  # αλλαγή σε ΟΠΟΙΟΔΗΠΟΤΕ από τα δύο. Κανένα νέο workflow — το μητρώο του 3.37
+  # παρακολουθεί ΑΡΧΕΙΑ, όχι jobs.
+  font-promise:
+    name: 🔤 CHECK 3.67 — η υπόσχεση γραμματοσειράς
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - run: node scripts/check-font-promise.js

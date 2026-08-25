@@ -1,0 +1,10 @@
+{
+  "$doc": "CHECK 3.67 / ADR-803 — ΡΑΤΣΕΤΑ ΚΑΤΑ ΤΑΥΤΟΤΗΤΑ. Ο αριθμός ΔΕΝ είναι δείκτης υγείας: είναι το μέτρο μιας εκστρατείας που τελειώνει στο ΜΗΔΕΝ — κάθε υποσχεμένη όψη φορτωμένη.",
+  "violations": [
+    "ISO 3098",
+    "Liberation Mono",
+    "Liberation Sans Bold",
+    "UnifrakturMaguntia"
+  ],
+  "declarations": []
+}
