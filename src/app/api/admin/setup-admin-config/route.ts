@@ -174,7 +174,7 @@ export async function POST(request: NextRequest) {
       // 🏢 ENTERPRISE: First-time setup - any authenticated user can configure
       // After setup, access should be restricted to super_admin only
       // For now, we rely on authentication only (no permission check)
-      // TODO: Add requiredGlobalRoles: ['super_admin'] after first setup
+      // TODO: Add `requiredGlobalRoles: BYPASS_ROLES` (@/lib/auth/roles) after first setup
     }
   ));
 

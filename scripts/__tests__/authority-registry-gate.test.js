@@ -61,6 +61,7 @@ function miniRepo(files, registryOverride = {}) {
     claimRoleVocabulary: [...REAL_VOCAB.globalRoles],
     legacyRoleNames: [],
     inlineDeciders: [],
+    roleGuards: [],
     ...registryOverride,
   };
   for (const [rel, body] of Object.entries(files)) {
@@ -72,6 +73,7 @@ function miniRepo(files, registryOverride = {}) {
     registry,
     vocabularies: REAL_VOCAB,
     files: Object.keys(files),
+    roleCheckFiles: Object.keys(files),
   });
   return { dir, verdict: judge(inventory), inventory };
 }
@@ -263,6 +265,24 @@ describe('Λ — η λογιστική δεν χάνεται σιωπηλά', ()
     produced.add(idsOf(miniRepo({ 'src/x.ts': D }, { inlineDeciders: [{ id: 'src/x.ts', why: 'μικρό' }] }).verdict, STATES.REASONLESS_DECLARATION).length ? STATES.REASONLESS_DECLARATION : '');
     produced.add(idsOf(miniRepo({ 'src/x.ts': D }, { legacyRoleNames: [{ name: 'foreman', why: 'x' }] }).verdict, STATES.ORPHAN_LEGACY).length ? STATES.ORPHAN_LEGACY : '');
     produced.add(idsOf(miniRepo({ 'src/x.ts': D }, { claimRoleVocabulary: ['super_admin'] }).verdict, STATES.VOCABULARY_DRIFT).length ? STATES.VOCABULARY_DRIFT : '');
+
+    // ── Κ1′ (ADR-801 §2.11) — οι τρεις νέες μπλοκάρουσες ─────────────────────
+    // Χωρίς αυτές τις τρεις γραμμές η Λ4 θα κοκκίνιζε, ΚΑΙ ΘΑ ΕΙΧΕ ΔΙΚΙΟ: μια
+    // μπλοκάρουσα κατάσταση που κανένα δέντρο δεν παράγει είναι φρουρός χωρίς
+    // απόδειξη ζωής. Η Λ4 ΕΠΙΑΣΕ ακριβώς αυτό όταν προστέθηκε ο Κ1′.
+    const GUARD = [
+      'export function h(ctx) {',
+      '  if (!isRoleBypass(ctx.globalRole)) {',
+      "    return NextResponse.json({ error: 'no' }, { status: 403 });",
+      '  }',
+      '  return null;',
+      '}',
+    ].join('\n');
+    const guardId = 'src/g.ts::!isRoleBypass(ctx.globalRole)';
+    produced.add(idsOf(miniRepo({ 'src/g.ts': GUARD }).verdict, STATES.UNDECLARED_ROLE_GUARD).length ? STATES.UNDECLARED_ROLE_GUARD : '');
+    produced.add(idsOf(miniRepo({ 'src/g.ts': GUARD }, { roleGuards: [{ id: 'src/άλλο.ts::x', why: 'q'.repeat(MIN_REASON) }] }).verdict, STATES.ORPHAN_GUARD_DECLARATION).length ? STATES.ORPHAN_GUARD_DECLARATION : '');
+    produced.add(idsOf(miniRepo({ 'src/g.ts': GUARD }, { roleGuards: [{ id: guardId, why: 'μικρό' }] }).verdict, STATES.REASONLESS_GUARD_DECLARATION).length ? STATES.REASONLESS_GUARD_DECLARATION : '');
+
     for (const state of BLOCKING) expect([...produced]).toContain(state);
   });
 });

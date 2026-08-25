@@ -47,10 +47,39 @@ var authCtx = {
   isAuthenticated: true as const,
 };
 
+/**
+ * 🔴 **Ο MOCK ΕΙΝΑΙ ΠΙΣΤΟΣ, ΚΑΙ ΔΕΝ ΗΤΑΝ** (ADR-801 §2.10 / §2.11).
+ *
+ * Μέχρι τη Φάση Β αγνοούσε τις **επιλογές** του `withAuth`, οπότε η άγκυρα
+ * *«non-admin → 403»* περνούσε **επειδή ο handler έκανε τον έλεγχο** — ποτέ επειδή
+ * η **διαδρομή** ήταν φρουρημένη. Μόλις ο φρουρός ανέβηκε στη δήλωση, ένα mock που
+ * δεν διαβάζει τη δήλωση θα ανέφερε «καμία προστασία» σε **φρουρημένη** διαδρομή.
+ *
+ * Τιμά πλέον το `requiredGlobalRoles` **και** το `roleRequiredResponse`, δηλαδή
+ * ελέγχει την **πραγματική** προστασία. Ίδια θεραπεία με τις δύο σουίτες migration
+ * του §2.10.
+ */
 jest.mock('@/lib/auth', () => ({
-  withAuth: (callback: (...args: unknown[]) => Promise<unknown>) =>
-    async (request: unknown, segmentData?: unknown) =>
-      callback(request, authCtx, { cache: true }, segmentData),
+  ADMINISTRATIVE_ROLES: ['super_admin', 'company_admin'],
+  BYPASS_ROLES: ['super_admin'],
+  withAuth: (
+    callback: (...args: unknown[]) => Promise<unknown>,
+    options?: {
+      requiredGlobalRoles?: string | readonly string[];
+      roleRequiredResponse?: (roles: readonly string[]) => unknown;
+    },
+  ) => async (request: unknown, segmentData?: unknown) => {
+    const required = options?.requiredGlobalRoles;
+    if (required !== undefined) {
+      const roles = Array.isArray(required) ? required : [required as string];
+      if (!roles.includes(authCtx.globalRole)) {
+        return options?.roleRequiredResponse
+          ? options.roleRequiredResponse(roles)
+          : NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
+      }
+    }
+    return callback(request, authCtx, { cache: true }, segmentData);
+  },
   logAuditEvent: jest.fn(async () => undefined),
   logFinancialTransition: jest.fn(async () => undefined),
 }));

@@ -17,6 +17,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
+import { BYPASS_ROLES } from '@/lib/auth/roles';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
@@ -222,7 +223,7 @@ const getHandler = async (request: NextRequest) => {
         return NextResponse.json({ error: 'Audit failed' }, { status: 500 });
       }
     },
-    { requiredGlobalRoles: 'super_admin' }
+    { requiredGlobalRoles: BYPASS_ROLES }
   );
 
   return handler(request);

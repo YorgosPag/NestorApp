@@ -23,6 +23,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
+import { BYPASS_ROLES } from '@/lib/auth/roles';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import {
   handleSeedFloorsDelete,
@@ -33,17 +34,17 @@ import {
 export const GET = withAuth(
   async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> =>
     handleSeedFloorsPreview(req, ctx),
-  { permissions: 'admin:migrations:execute' }
+  { requiredGlobalRoles: BYPASS_ROLES, permissions: 'admin:migrations:execute' }
 );
 
 export const POST = withAuth(
   async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> =>
     handleSeedFloorsExecute(req, ctx),
-  { permissions: 'admin:migrations:execute' }
+  { requiredGlobalRoles: BYPASS_ROLES, permissions: 'admin:migrations:execute' }
 );
 
 export const DELETE = withAuth(
   async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> =>
     handleSeedFloorsDelete(req, ctx),
-  { permissions: 'admin:migrations:execute' }
+  { requiredGlobalRoles: BYPASS_ROLES, permissions: 'admin:migrations:execute' }
 );

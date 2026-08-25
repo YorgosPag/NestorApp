@@ -25,6 +25,7 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { withAuth, logRoleChange, logClaimsUpdated } from '@/lib/auth';
+import { BYPASS_ROLES } from '@/lib/auth/roles';
 import type { AuthContext, PermissionCache, GlobalRole } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { FieldValue } from '@/lib/firebaseAdmin';
@@ -146,6 +147,6 @@ export const PATCH = withSensitiveRateLimit(
         });
       }
     },
-    { requiredGlobalRoles: ['super_admin'] }
+    { requiredGlobalRoles: BYPASS_ROLES }
   )
 );

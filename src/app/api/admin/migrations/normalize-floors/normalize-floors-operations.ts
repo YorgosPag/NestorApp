@@ -9,7 +9,6 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { nowISO } from '@/lib/date-local';
-import { isRoleBypass } from '@/lib/auth/roles';
 
 const logger = createModuleLogger('NormalizeFloorsRoute');
 
@@ -59,18 +58,6 @@ export async function handleFloorsNormalization(
   ctx: AuthContext
 ): Promise<NextResponse> {
   const startTime = Date.now();
-
-  if (!isRoleBypass(ctx.globalRole)) {
-    logger.warn('BLOCKED: Non-super_admin attempted database normalization', { email: ctx.email, globalRole: ctx.globalRole });
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Forbidden: Only super_admin can execute database normalization migrations',
-        message: 'Database normalization is a system-level operation restricted to super_admin'
-      },
-      { status: 403 }
-    );
-  }
 
   logger.info('Database normalization request', { email: ctx.email, globalRole: ctx.globalRole, companyId: ctx.companyId });
 

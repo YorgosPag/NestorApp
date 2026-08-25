@@ -15,6 +15,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
+import { BYPASS_ROLES } from '@/lib/auth/roles';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { runAdminSdkMigration } from './execute-admin-operations';
@@ -23,7 +24,7 @@ export async function POST(request: NextRequest): Promise<Response> {
   const handler = withSensitiveRateLimit(withAuth(
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> =>
       runAdminSdkMigration(req, ctx),
-    { permissions: 'admin:migrations:execute' }
+    { requiredGlobalRoles: BYPASS_ROLES, permissions: 'admin:migrations:execute' }
   ));
 
   return handler(request);

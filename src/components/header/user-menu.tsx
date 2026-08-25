@@ -31,6 +31,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
+// ADR-798 §7 — «τι είσαι», ο χαρακτηρισμός του, και τι δουλειά υποδεικνύει.
+import { DeclaredOccupationBadge } from '@/components/header/DeclaredOccupationBadge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import {
   User,
@@ -153,6 +155,18 @@ export function UserMenu() {
             </div>
           </div>
         </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {/* ADR-798 §7 — Η ΥΠΟΣΧΕΣΗ ΣΤΗΝ ΟΘΟΝΗ.
+            Το §7 λέει «η οθόνη δείχνει ΠΑΝΤΑ ποια από τις τρεις ισχύει», και
+            μετρήθηκε (2026-08-25) ότι δεν έδειχνε ΚΑΜΙΑ: `confidence` και
+            `isClassified` είχαν **0** καταναλωτές παραγωγής.
+
+            🔑 ΓΙΑΤΙ ΕΔΩ ΚΑΙ ΟΧΙ ΣΤΗΝ ΜΠΑΡΑ: η ταυτότητα ζει δίπλα στο avatar —
+            το ίδιο μενού που οδηγεί στο «Λογαριασμός». Στην κεφαλίδα θα ήταν
+            **ένατο** στοιχείο σε μια σειρά που έχει ήδη οκτώ.
+            ⚠️ ΚΑΜΙΑ ερώτηση/modal (ADR-748 Ε7.γ′ · ADR-798 Α5): όταν δεν έχει
+            δηλωθεί τίποτα γίνεται **πρόταση**, μέσα σε μενού που άνοιξε ο ίδιος. */}
+        <DeclaredOccupationBadge />
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem

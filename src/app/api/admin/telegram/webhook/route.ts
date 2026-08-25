@@ -20,6 +20,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
+import { BYPASS_ROLES } from '@/lib/auth/roles';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withTelegramRateLimit } from '@/lib/middleware/with-rate-limit';
 import {
@@ -33,17 +34,17 @@ const ADMIN_PERMISSION = 'admin:system:configure';
 export const GET = withTelegramRateLimit(withAuth(
   async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> =>
     handleGetWebhookInfo(req, ctx),
-  { permissions: ADMIN_PERMISSION },
+  { requiredGlobalRoles: BYPASS_ROLES, permissions: ADMIN_PERMISSION },
 ));
 
 export const POST = withTelegramRateLimit(withAuth(
   async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> =>
     handleSetWebhook(req, ctx),
-  { permissions: ADMIN_PERMISSION },
+  { requiredGlobalRoles: BYPASS_ROLES, permissions: ADMIN_PERMISSION },
 ));
 
 export const DELETE = withTelegramRateLimit(withAuth(
   async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> =>
     handleDeleteWebhook(req, ctx),
-  { permissions: ADMIN_PERMISSION },
+  { requiredGlobalRoles: BYPASS_ROLES, permissions: ADMIN_PERMISSION },
 ));

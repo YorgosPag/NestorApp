@@ -12,6 +12,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
+import { BYPASS_ROLES } from '@/lib/auth/roles';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import {
@@ -26,23 +27,23 @@ const ADMIN_PERMISSION = 'admin:migrations:execute';
 export const GET = withSensitiveRateLimit(withAuth(
   async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> =>
     handleSeedParkingPreview(req, ctx),
-  { permissions: ADMIN_PERMISSION }
+  { requiredGlobalRoles: BYPASS_ROLES, permissions: ADMIN_PERMISSION }
 ));
 
 export const POST = withSensitiveRateLimit(withAuth(
   async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> =>
     handleSeedParkingExecute(req, ctx),
-  { permissions: ADMIN_PERMISSION }
+  { requiredGlobalRoles: BYPASS_ROLES, permissions: ADMIN_PERMISSION }
 ));
 
 export const DELETE = withSensitiveRateLimit(withAuth(
   async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> =>
     handleSeedParkingDelete(req, ctx),
-  { permissions: ADMIN_PERMISSION }
+  { requiredGlobalRoles: BYPASS_ROLES, permissions: ADMIN_PERMISSION }
 ));
 
 export const PATCH = withSensitiveRateLimit(withAuth(
   async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> =>
     handleForeignKeyValidation(req, ctx),
-  { permissions: ADMIN_PERMISSION }
+  { requiredGlobalRoles: BYPASS_ROLES, permissions: ADMIN_PERMISSION }
 ));

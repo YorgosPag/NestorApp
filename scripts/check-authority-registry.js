@@ -32,6 +32,13 @@
  *   Κ1 🔴 RATCHET κατά ταυτότητα — inline σύνολο ρόλων που **κρίνει**.
  *   Κ2 ⛔ ZERO-TOL — κλειστό σύνολο εξαιρέσεων, **υποχρεωτικός λόγος ≥40**.
  *   Κ3 ⛔ ZERO-TOL — **όνομα ρόλου που δεν υπάρχει σε κανένα λεξιλόγιο**.
+ *   Κ1′ ⛔ ZERO-TOL — **άρνηση με βάση ΜΟΝΟ τον ρόλο, μέσα στον handler** (§2.11).
+ *   Κ4 ⛔ ZERO-TOL — κλειστό σύνολο **φρουρών**, ορφανή/ανιτιολόγητη δήλωση.
+ *
+ * ⚠️ **Ο Κ1′ ΕΙΝΑΙ ZERO-TOL ΚΑΙ ΟΧΙ RATCHET, ΚΑΙ ΕΙΝΑΙ ΜΕΤΡΗΣΗ**: η AST σάρωση
+ * βρήκε **6** ζωντανούς φρουρούς — **5** ανυψώθηκαν στο ίδιο ρεύμα δουλειάς, **1**
+ * δηλώθηκε. Δεν υπάρχει *«λιγότεροι φρουροί σε handler από χθες»*: **ένας** αρκεί
+ * για να ζει η απόφαση σε σημείο που κανείς δεν επιθεωρεί.
  *
  * ⚠️ **ΓΙΑΤΙ Ο Κ1 ΕΙΝΑΙ RATCHET ΚΑΙ ΟΧΙ ZERO-TOL**: **14** ζωντανοί ⇒ zero-tol θα
  * γεννιόταν μονίμως κόκκινο ⇒ `SKIP_` ⇒ **διακοσμητική πύλη**. Δοκιμάστηκε και
@@ -83,8 +90,16 @@ const TRIGGER_FILES = [
   'scripts/check-authority-registry.js',
 ];
 
-/** Ο δείκτης κειμένου — ίδιος με το προφίλτρο της απογραφής. */
-const ROLE_HINT = /super_admin|company_admin|internal_user|external_user/;
+/**
+ * Ο δείκτης κειμένου — **η ένωση** των δύο προφίλτρων της απογραφής.
+ *
+ * 🔴 **ΤΟ `globalRole` ΠΡΟΣΤΕΘΗΚΕ ΜΕ ΤΟΝ Κ1′, ΚΑΙ ΧΩΡΙΣ ΑΥΤΟ Η ΔΙΕΥΡΥΝΣΗ ΘΑ ΗΤΑΝ
+ * ΔΙΑΚΟΣΜΗΤΙΚΗ.** Ο μονορολικός φρουρός `!isRoleBypass(ctx.globalRole)` **δεν
+ * γράφει κανένα όνομα ρόλου σε εισαγωγικά** — άρα ένα commit που τον προσθέτει δεν
+ * θα πυροδοτούσε καν την πύλη, και ο νέος κανόνας θα ήταν *γραμμένος και ανενεργός*
+ * (ADR-749 §5). Ο δείκτης οφείλει να είναι η **ένωση** των ερωτημάτων που κρίνει.
+ */
+const ROLE_HINT = /super_admin|company_admin|internal_user|external_user|globalRole/;
 
 function triggers(stagedFiles, readFile) {
   return stagedFiles.some((f) => {
@@ -133,7 +148,12 @@ function ledgerLine(m) {
     + ` · SSoT: ${t[STATES.SSOT]} · δηλώσεις πολιτικής: ${t[STATES.POLICY_DECLARATION]}`
     + ` │ ⛔ φαντάσματα: ${t[STATES.GHOST_ROLE]} · ορφανές δηλώσεις: ${t[STATES.ORPHAN_DECLARATION]}`
     + ` · ορφανά legacy: ${t[STATES.ORPHAN_LEGACY]} · άκυρος λόγος: ${t[STATES.REASONLESS_DECLARATION]}`
-    + ` · απόκλιση λεξιλογίου: ${t[STATES.VOCABULARY_DRIFT]}`;
+    + ` · απόκλιση λεξιλογίου: ${t[STATES.VOCABULARY_DRIFT]}`
+    + `\n📋 CHECK 3.68/Κ1′ — φρουροί ρόλου σε handler: ⛔ αδήλωτοι: ${t[STATES.UNDECLARED_ROLE_GUARD]}`
+    + ` · ✅ δηλωμένοι: ${t[STATES.DECLARED_ROLE_GUARD]}`
+    + ` · 🔶 ρόλος ρυθμίζει ροή χωρίς άρνηση: ${t[STATES.ROLE_CONDITIONED_FLOW]}`
+    + ` │ ⛔ ορφανές: ${t[STATES.ORPHAN_GUARD_DECLARATION]}`
+    + ` · άκυρος λόγος: ${t[STATES.REASONLESS_GUARD_DECLARATION]}`;
 }
 
 /**
@@ -168,6 +188,9 @@ function printReport(m) {
   console.log('');
   console.log('  ✅ Δηλωμένες εξαιρέσεις (κλειστό σύνολο):');
   for (const id of m.declarations) console.log(`     ${id}`);
+  console.log('');
+  console.log('  ✅ Δηλωμένοι φρουροί ρόλου σε handler (Κ1′, κλειστό σύνολο):');
+  for (const id of idsOf(m.verdict, STATES.DECLARED_ROLE_GUARD)) console.log(`     ${id}`);
 }
 
 const DESCRIPTOR = {
@@ -226,6 +249,12 @@ async function main() {
       console.error('     orphan-legacy         → σβήσε το legacy όνομα: δεν στέκεται πουθενά.');
       console.error('     reasonless-declaration→ γράψε λόγο ≥40 χαρακτήρων.');
       console.error('     vocabulary-drift      → ο δείκτης του μητρώου πάλιωσε έναντι του GLOBAL_ROLES.');
+      console.error('     undeclared-role-guard → ΑΝΥΨΩΣΕ τη στη ΔΗΛΩΣΗ της διαδρομής:');
+      console.error('                             withAuth(h, { requiredGlobalRoles: BYPASS_ROLES })');
+      console.error('                             ή ADMINISTRATIVE_ROLES — ΠΟΤΕ ωμό σύνολο ονομάτων (ADR-703).');
+      console.error('                             Αν ΟΦΕΙΛΕΙ να ζει inline (κοινός φάκελος, όχι διαδρομή):');
+      console.error(`                             δήλωσέ τον στο ${REGISTRY_FILE} → roleGuards[], ΜΕ ΛΟΓΟ ≥40.`);
+      console.error('     orphan-guard-declaration → ο φρουρός έφυγε ή άλλαξε συνθήκη: σβήσε/ενημέρωσε τη δήλωση.');
       console.error(`\n   Αναφορά: ${DESCRIPTOR.commands.report}`);
       return process.exit(1);
     }

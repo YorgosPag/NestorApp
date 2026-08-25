@@ -20,7 +20,7 @@
 import { NextResponse } from 'next/server';
 import type { AuthContext } from '@/lib/auth';
 import { defineRoute } from '@/lib/api/define-route';
-import { isRoleBypass } from '@/lib/auth/roles';
+import { BYPASS_ROLES } from '@/lib/auth/roles';
 import { requireTenantScopeFromQuery } from '@/lib/api/tenant-scope-http';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -86,17 +86,6 @@ async function handleGetCosts(
 ): Promise<NextResponse> {
   // ADR-702: was `ctx.globalRole !== 'super_admin'` — a raw string comparison that
   // would refuse any *other* bypass role its own privileges. Asks the roles SSoT now.
-  if (!isRoleBypass(ctx.globalRole)) {
-    logger.warn('BLOCKED: Non-super_admin attempted ISO 19650 cost query', {
-      email: ctx.email,
-      globalRole: ctx.globalRole,
-    });
-    return NextResponse.json(
-      { success: false, error: 'Forbidden: Only super_admin can query enrichment costs' },
-      { status: 403 },
-    );
-  }
-
   try {
     const db = getAdminFirestore();
     let query: FirebaseFirestore.Query = db
@@ -180,7 +169,7 @@ async function handleGetCosts(
 
 export const GET = defineRoute({
   rateLimit: 'sensitive',
-  auth: { permissions: 'admin:migrations:execute' },
+  auth: { requiredGlobalRoles: BYPASS_ROLES, permissions: 'admin:migrations:execute' },
   handler: async ({ req, auth }) => {
     // 🔒 ADR-702: the caller does not get to name any company it likes. A
     // bypass role may target anyone; anyone else may target only itself and is

@@ -15,7 +15,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logMigrationExecuted, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext } from '@/lib/auth/types';
-import { isRoleBypass } from '@/lib/auth/roles';
 import { MigrationEngine } from '@/database/migrations/MigrationEngine';
 import { createProjectCompanyRelationshipsMigration } from '@/database/migrations/001_fix_project_company_relationships';
 import { createFloorsNormalizationMigration } from '@/database/migrations/002_normalize_floors_collection';
@@ -234,18 +233,6 @@ export async function dispatchMigration(request: NextRequest, ctx: AuthContext):
   const startTime = Date.now();
 
   // 🔐 Migrations are SYSTEM-LEVEL (NOT tenant-scoped) — bypass roles ONLY
-  if (!isRoleBypass(ctx.globalRole)) {
-    logger.warn('BLOCKED: Non-super_admin attempted migration execution', { email: ctx.email, globalRole: ctx.globalRole });
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Forbidden: Only super_admin can execute migrations',
-        message: 'Migrations are system-level operations restricted to super_admin',
-      },
-      { status: 403 },
-    );
-  }
-
   logger.info('Migration request', { email: ctx.email, globalRole: ctx.globalRole, companyId: ctx.companyId });
 
   try {

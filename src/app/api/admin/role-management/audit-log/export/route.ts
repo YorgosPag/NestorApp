@@ -17,6 +17,7 @@ import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
+import { BYPASS_ROLES } from '@/lib/auth/roles';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
@@ -174,6 +175,6 @@ export const GET = withHeavyRateLimit(
         );
       }
     },
-    { requiredGlobalRoles: 'super_admin' }
+    { requiredGlobalRoles: BYPASS_ROLES }
   )
 );

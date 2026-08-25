@@ -22,21 +22,22 @@
  * @see ADR-439 Tenant Identity SSoT & Provisioning — Phase 2c
  * @see N.6 — deterministic doc id (`accountingDocId`), `setDoc` not `addDoc`
  * @see /api/admin/migrate-accounting-profile — sibling endpoint (company profile)
+ * @see lib/api/migration-endpoint — το κοινό περίβλημα (φρουρός · προοίμιο · αποτυχία)
  * =============================================================================
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { NextResponse } from 'next/server';
 import { COLLECTIONS, SYSTEM_DOCS } from '@/config/firestore-collections';
-import { LEGACY_TENANT_COMPANY_ID } from '@/config/tenant';
-import { withAuth, logSystemOperation, extractRequestMetadata } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import {
+  migrationExecute,
+  migrationPreview,
+  recordMigrationAudit,
+} from '@/lib/api/migration-endpoint';
 import { createModuleLogger } from '@/lib/telemetry';
-import { getErrorMessage } from '@/lib/error-utils';
 import { nowISO } from '@/lib/date-local';
 import { accountingDocId } from '@/subapps/accounting/services/repository/accounting-doc-ids';
-import { bypassRoleGuard } from '@/lib/auth/bypass-role-guard';
+
+const SCOPE = 'MigrateAccountingSingletons';
 
 const logger = createModuleLogger('MigrateAccountingSingletonsRoute');
 
@@ -80,132 +81,92 @@ function resolveStatus(sourceExists: boolean, targetExists: boolean): SingletonS
 // GET — Dry-run / preview (zero writes)
 // =============================================================================
 
-export const GET = withAuth(
-  async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-    const forbidden = bypassRoleGuard(ctx);
-    if (forbidden) return forbidden;
+export const GET = migrationPreview(SCOPE, async ({ db, companyId }) => {
+  const previews: SingletonPreview[] = await Promise.all(
+    SINGLETONS.map(async (entry) => {
+      const col = db.collection(entry.collection);
+      const targetDocId = entry.targetDocId(companyId);
+      const [sourceSnap, targetSnap] = await Promise.all([
+        col.doc(entry.legacyDocId).get(),
+        col.doc(targetDocId).get(),
+      ]);
+      const targetData = targetSnap.data() as Record<string, unknown> | undefined;
+      return {
+        type: entry.label,
+        source: { docId: entry.legacyDocId, exists: sourceSnap.exists },
+        target: {
+          docId: targetDocId,
+          exists: targetSnap.exists,
+          hasCompanyId: typeof targetData?.companyId === 'string',
+        },
+        status: resolveStatus(sourceSnap.exists, targetSnap.exists),
+      };
+    })
+  );
 
-    try {
-      const companyId = LEGACY_TENANT_COMPANY_ID;
-      const db = getAdminFirestore();
+  const willMigrate = previews.filter((p) => p.status === 'READY_TO_MIGRATE').length;
 
-      const previews: SingletonPreview[] = await Promise.all(
-        SINGLETONS.map(async (entry) => {
-          const col = db.collection(entry.collection);
-          const targetDocId = entry.targetDocId(companyId);
-          const [sourceSnap, targetSnap] = await Promise.all([
-            col.doc(entry.legacyDocId).get(),
-            col.doc(targetDocId).get(),
-          ]);
-          const targetData = targetSnap.data() as Record<string, unknown> | undefined;
-          return {
-            type: entry.label,
-            source: { docId: entry.legacyDocId, exists: sourceSnap.exists },
-            target: {
-              docId: targetDocId,
-              exists: targetSnap.exists,
-              hasCompanyId: typeof targetData?.companyId === 'string',
-            },
-            status: resolveStatus(sourceSnap.exists, targetSnap.exists),
-          };
-        })
-      );
-
-      const willMigrate = previews.filter((p) => p.status === 'READY_TO_MIGRATE').length;
-
-      return NextResponse.json({
-        success: true,
-        dryRun: true,
-        companyId,
-        singletons: previews,
-        willMigrate,
-        message:
-          willMigrate > 0
-            ? `POST will copy ${willMigrate} global singleton(s) → per-tenant for ${companyId}.`
-            : 'Nothing to migrate — all singletons already per-tenant or no source.',
-      });
-    } catch (error) {
-      logger.error('[MigrateAccountingSingletons] GET (dry-run) failed', { error: getErrorMessage(error) });
-      return NextResponse.json(
-        { success: false, error: 'Failed to preview migration' },
-        { status: 500 }
-      );
-    }
-  },
-  { permissions: 'admin:direct:operations' }
-);
+  return NextResponse.json({
+    success: true,
+    dryRun: true,
+    companyId,
+    singletons: previews,
+    willMigrate,
+    message:
+      willMigrate > 0
+        ? `POST will copy ${willMigrate} global singleton(s) → per-tenant for ${companyId}.`
+        : 'Nothing to migrate — all singletons already per-tenant or no source.',
+  });
+});
 
 // =============================================================================
 // POST — Execute migration (idempotent)
 // =============================================================================
 
-export const POST = withSensitiveRateLimit(
-  withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      const forbidden = bypassRoleGuard(ctx);
-      if (forbidden) return forbidden;
+export const POST = migrationExecute(SCOPE, async (context) => {
+  const { ctx, db, companyId } = context;
+  const results = await Promise.all(
+    SINGLETONS.map(async (entry) => {
+      const col = db.collection(entry.collection);
+      const targetRef = col.doc(entry.targetDocId(companyId));
 
-      try {
-        const companyId = LEGACY_TENANT_COMPANY_ID;
-        const db = getAdminFirestore();
+      // Idempotency — target already present → skip.
+      const targetSnap = await targetRef.get();
+      if (targetSnap.exists) return { type: entry.label, action: 'ALREADY_MIGRATED' as const };
 
-        const results = await Promise.all(
-          SINGLETONS.map(async (entry) => {
-            const col = db.collection(entry.collection);
-            const targetRef = col.doc(entry.targetDocId(companyId));
+      // Read the legacy global source.
+      const sourceSnap = await col.doc(entry.legacyDocId).get();
+      if (!sourceSnap.exists) return { type: entry.label, action: 'NO_SOURCE' as const };
 
-            // Idempotency — target already present → skip.
-            const targetSnap = await targetRef.get();
-            if (targetSnap.exists) return { type: entry.label, action: 'ALREADY_MIGRATED' as const };
+      // Write per-tenant doc (N.6: deterministic id, set() not add()).
+      // Stamp companyId so gate-by-body-companyId rules pass; global left intact.
+      const sourceData = sourceSnap.data() as Record<string, unknown>;
+      await targetRef.set({ ...sourceData, companyId, updatedAt: nowISO() });
+      return { type: entry.label, action: 'MIGRATED' as const };
+    })
+  );
 
-            // Read the legacy global source.
-            const sourceSnap = await col.doc(entry.legacyDocId).get();
-            if (!sourceSnap.exists) return { type: entry.label, action: 'NO_SOURCE' as const };
+  const migrated = results.filter((r) => r.action === 'MIGRATED').map((r) => r.type);
 
-            // Write per-tenant doc (N.6: deterministic id, set() not add()).
-            // Stamp companyId so gate-by-body-companyId rules pass; global left intact.
-            const sourceData = sourceSnap.data() as Record<string, unknown>;
-            await targetRef.set({ ...sourceData, companyId, updatedAt: nowISO() });
-            return { type: entry.label, action: 'MIGRATED' as const };
-          })
-        );
+  // Audit (non-blocking).
+  await recordMigrationAudit(
+    context,
+    SCOPE,
+    'migrate_accounting_singletons',
+    { companyId, migrated, action: 'global_to_per_tenant' },
+    `Accounting singletons migrated to per-tenant by ${ctx.email}`
+  );
 
-        const migrated = results.filter((r) => r.action === 'MIGRATED').map((r) => r.type);
+  logger.info(`[${SCOPE}] Migration completed`, { companyId, migrated });
 
-        // Audit (non-blocking).
-        const metadata = extractRequestMetadata(req);
-        await logSystemOperation(
-          ctx,
-          'migrate_accounting_singletons',
-          { companyId, migrated, action: 'global_to_per_tenant' },
-          `Accounting singletons migrated to per-tenant by ${ctx.email}`
-        ).catch((err: unknown) => {
-          logger.error('[MigrateAccountingSingletons] Audit log failed (non-blocking)', {
-            error: getErrorMessage(err),
-            metadata,
-          });
-        });
-
-        logger.info('[MigrateAccountingSingletons] Migration completed', { companyId, migrated });
-
-        return NextResponse.json({
-          success: true,
-          companyId,
-          results,
-          migratedCount: migrated.length,
-          message:
-            migrated.length > 0
-              ? `Migrated ${migrated.length} singleton(s): ${migrated.join(', ')}.`
-              : 'No action needed — all singletons already per-tenant or no source.',
-        });
-      } catch (error) {
-        logger.error('[MigrateAccountingSingletons] POST failed', { error: getErrorMessage(error) });
-        return NextResponse.json(
-          { success: false, error: `Migration failed: ${getErrorMessage(error)}` },
-          { status: 500 }
-        );
-      }
-    },
-    { permissions: 'admin:direct:operations' }
-  )
-);
+  return NextResponse.json({
+    success: true,
+    companyId,
+    results,
+    migratedCount: migrated.length,
+    message:
+      migrated.length > 0
+        ? `Migrated ${migrated.length} singleton(s): ${migrated.join(', ')}.`
+        : 'No action needed — all singletons already per-tenant or no source.',
+  });
+});

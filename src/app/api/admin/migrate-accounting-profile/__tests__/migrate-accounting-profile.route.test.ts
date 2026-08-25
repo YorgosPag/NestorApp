@@ -33,9 +33,35 @@ var authCtx: { uid: string; companyId: string; email: string | null; globalRole:
 };
 
 jest.mock('@/lib/auth', () => ({
-  withAuth: (callback: (...args: unknown[]) => Promise<unknown>) => {
-    return async (request: unknown, segmentData?: unknown) =>
-      callback(request, authCtx, {}, segmentData);
+  // ⚠️ ΠΙΣΤΟ και στο ΤΑΒΑΝΙ: ο φρουρός ζει πλέον στο `lib/api/admin-operation-route`,
+  //    που διαβάζει το `BYPASS_ROLES` ΑΠΟ ΕΔΩ. Χωρίς αυτή τη γραμμή θα ήταν
+  //    `undefined` ⇒ `requiredGlobalRoles: undefined` ⇒ ο έλεγχος του 403 παρακάτω
+  //    ΔΕΝ θα πυροδοτούσε ΠΟΤΕ: «πράσινο που σημαίνει δεν κοίταξα».
+  BYPASS_ROLES: ['super_admin'],
+  // ADR-801 §2.10 — ΠΙΣΤΟ mock: τιμά το `requiredGlobalRoles` της δήλωσης.
+  //
+  // ⚠️ Μέχρι τη Φάση 5 αγνοούσε τις επιλογές εντελώς, οπότε οι άγκυρες του 403
+  //    δοκίμαζαν **μόνο το inline `if`** μέσα στον handler — ποτέ την πραγματική
+  //    προστασία της διαδρομής. Μόλις ο φρουρός ανέβηκε στη δήλωση, ένα mock που
+  //    δεν τη διαβάζει θα ανέφερε «καμία προστασία» σε φρουρημένη διαδρομή.
+  withAuth: (
+    callback: (...args: unknown[]) => Promise<unknown>,
+    options?: { requiredGlobalRoles?: readonly string[] },
+  ) => {
+    return async (request: unknown, segmentData?: unknown) => {
+      const required = options?.requiredGlobalRoles;
+      if (required && !required.includes(authCtx.globalRole)) {
+        // ⚠️ Το `MockNextResponse` ζει σε ΑΛΛΟ mock factory (jest hoisting) —
+        //    το σχήμα της απόκρισης χτίζεται εδώ, ίδιο με εκείνο.
+        const body = {
+          error: 'Insufficient role',
+          code: 'ROLE_REQUIRED',
+          details: { requiredRoles: required },
+        };
+        return { status: 403, json: async () => body };
+      }
+      return callback(request, authCtx, {}, segmentData);
+    };
   },
   logSystemOperation: jest.fn(async () => undefined),
   extractRequestMetadata: jest.fn(() => ({ ip: 'test' })),

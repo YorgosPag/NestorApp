@@ -15,6 +15,7 @@ import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, logMigrationExecuted } from '@/lib/auth';
+import { BYPASS_ROLES } from '@/lib/auth/roles';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -122,7 +123,7 @@ export const GET = withSensitiveRateLimit(
         simpleCollections: simpleSummaries,
       });
     },
-    { requiredGlobalRoles: 'super_admin' },
+    { requiredGlobalRoles: BYPASS_ROLES },
   ),
 );
 
@@ -259,6 +260,6 @@ export const POST = withSensitiveRateLimit(
         ...(errors.length > 0 ? { errors } : {}),
       });
     },
-    { requiredGlobalRoles: 'super_admin' },
+    { requiredGlobalRoles: BYPASS_ROLES },
   ),
 );

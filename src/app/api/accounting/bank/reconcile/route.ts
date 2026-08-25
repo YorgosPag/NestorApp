@@ -31,7 +31,7 @@ import {
   type BankMatchProblem,
 } from '@/subapps/accounting/services/bank/bank-match-errors';
 import { nowISO } from '@/lib/date-local';
-import { isRoleBypass } from '@/lib/auth/roles';
+import { ADMINISTRATIVE_ROLES, isRoleBypass } from '@/lib/auth/roles';
 
 // =============================================================================
 // HELPERS
@@ -158,17 +158,22 @@ export const POST = defineRoute({
 
 export const PATCH = defineRoute({
   rateLimit: 'standard',
+  // ADR-801 §2.11 — ΔΗΛΩΤΙΚΟ ταβάνι: το «μόνο διαχειριστής ξεκλειδώνει» είναι
+  // δεδομένο της διαδρομής, ΟΧΙ `if` μέσα στον handler.
+  //
+  // ⚠️ Το `roleRequiredResponse` κρατά το **ίδιο σώμα απόκρισης** που έδινε ο inline
+  //    φρουρός: η ανύψωση μετακινεί **πού** κρίνεται, ποτέ **τι απαντά** (ADR-603
+  //    κλειδώνει byte-identical συμπεριφορά). Η ραφή υπήρχε ήδη στο σύνορο.
+  auth: {
+    requiredGlobalRoles: ADMINISTRATIVE_ROLES,
+    roleRequiredResponse: () => NextResponse.json(
+      { success: false, error: 'Only admin can unlock reconciled transactions' },
+      { status: 403 },
+    ),
+  },
   fallbackError: 'Failed to unlock transaction',
   handler: async ({ req, auth }) => {
     const { repository } = createAccountingServices({ companyId: auth.companyId, userId: auth.uid });
-
-    // ── Admin-only ────────────────────────────────────────────────
-    if (auth.globalRole !== 'super_admin' && auth.globalRole !== 'company_admin') {
-      return NextResponse.json(
-        { success: false, error: 'Only admin can unlock reconciled transactions' },
-        { status: 403 }
-      );
-    }
 
     // ── Parse ─────────────────────────────────────────────────────
     const rawBody = await req.json();

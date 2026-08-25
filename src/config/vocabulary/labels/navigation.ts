@@ -121,7 +121,11 @@ export const MODAL_SELECT_NAVIGATION_FILTER_CATEGORIES = {
   company_with_projects: 'filters.companies.withProjects',
   company_without_projects: 'filters.companies.withoutProjects',
   project_without_buildings: 'filters.projects.withoutBuildings',
-  building_without_units: 'filters.buildings.withoutUnits',
+  // ⚠️ Έδειχνε σε `filters.buildings.withoutUnits`, κλειδί που **δεν υπάρχει σε
+  // κανένα locale** — ούτε el ούτε en. Το locale ονομάζει την ίδια έννοια
+  // `withoutProperties` («Χωρίς ακίνητα»), και ο κώδικας που το καταναλώνει
+  // μετρά `getPropertyCount()`. Δεν έλειπε μετάφραση· έδειχνε λάθος.
+  building_without_units: 'filters.buildings.withoutProperties',
 
   // Projects Filters
   project_status_label: 'filters.projects.statusLabel',

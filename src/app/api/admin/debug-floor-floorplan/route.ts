@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
+import { BYPASS_ROLES } from '@/lib/auth/roles';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -135,7 +136,7 @@ export const GET = async (request: NextRequest) => {
         },
       });
     },
-    { requiredGlobalRoles: 'super_admin' }
+    { requiredGlobalRoles: BYPASS_ROLES }
   );
 
   return handler(request);

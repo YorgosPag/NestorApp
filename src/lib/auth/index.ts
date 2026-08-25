@@ -82,6 +82,8 @@ export {
   PREDEFINED_ROLES,
   // ADR-801 §2.10 — το ΤΑΒΑΝΙ «μόνο υπερδιαχειριστής», δηλωτικά στο σύνορο.
   BYPASS_ROLES,
+  // ADR-801 §2.11 — το ΤΑΒΑΝΙ «μόνο διοικητικός ρόλος», παραγόμενο από `admin_access`.
+  ADMINISTRATIVE_ROLES,
   getRole,
   getRolePermissions,
   isRoleBypass,

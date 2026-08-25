@@ -23,7 +23,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { extractRequestMetadata, logMigrationExecuted } from '@/lib/auth';
 import type { AuthContext } from '@/lib/auth';
 import { defineRoute } from '@/lib/api/define-route';
-import { isRoleBypass } from '@/lib/auth/roles';
+import { BYPASS_ROLES } from '@/lib/auth/roles';
 import { requireTenantScopeFromBody, requireTenantScopeFromQuery } from '@/lib/api/tenant-scope-http';
 import { getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -131,17 +131,6 @@ async function handleBackfill(
 ): Promise<NextResponse> {
   // ADR-702: was `ctx.globalRole !== 'super_admin'` — a raw string comparison that
   // would refuse any *other* bypass role its own privileges. Asks the roles SSoT now.
-  if (!isRoleBypass(ctx.globalRole)) {
-    logger.warn('BLOCKED: Non-super_admin attempted ISO 19650 backfill', {
-      email: ctx.email,
-      globalRole: ctx.globalRole,
-    });
-    return NextResponse.json(
-      { success: false, error: 'Forbidden: Only super_admin can run this backfill' },
-      { status: 403 }
-    );
-  }
-
   const startTime = Date.now();
   logger.info(`ISO19650 backfill ${dryRun ? 'DRY-RUN' : 'EXECUTE'}`, { companyId, limit, email: ctx.email });
 
@@ -253,7 +242,7 @@ async function handleBackfill(
 
 export const GET = defineRoute({
   rateLimit: 'sensitive',
-  auth: { permissions: MIGRATION_PERMISSION },
+  auth: { requiredGlobalRoles: BYPASS_ROLES, permissions: MIGRATION_PERMISSION },
   handler: async ({ req, auth }) => {
     // 🔒 ADR-702 — see the POST below: dry-run or not, the caller may only
     // name a company it is entitled to.
@@ -264,7 +253,7 @@ export const GET = defineRoute({
 
 export const POST = defineRoute({
   rateLimit: 'sensitive',
-  auth: { permissions: MIGRATION_PERMISSION },
+  auth: { requiredGlobalRoles: BYPASS_ROLES, permissions: MIGRATION_PERMISSION },
   handler: async ({ req, auth }) => {
     // Body stays hand-parsed rather than schema-parsed: an empty body is a
     // legal call here, which `safeParseBody` would reject.

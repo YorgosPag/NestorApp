@@ -9,7 +9,8 @@
  * @method POST   - Add one company to navigation
  * @method DELETE - Remove one company from navigation
  *
- * @security withAuth + admin role check (super_admin | company_admin)
+ * @security withAuth — ΔΗΛΩΤΙΚΟ ταβάνι `requiredGlobalRoles: ADMINISTRATIVE_ROLES`
+ *           (ADR-801 §2.11). Ο έλεγχος ΔΕΝ ζει μέσα στους handlers.
  * @permission projects:projects:view (same as bootstrap endpoint)
  */
 
@@ -18,7 +19,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { generateNavigationId } from '@/services/enterprise-id.service';
-import { withAuth } from '@/lib/auth';
+import { ADMINISTRATIVE_ROLES, withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { apiSuccess } from '@/lib/api/ApiErrorHandler';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
@@ -38,20 +39,13 @@ export async function POST(request: NextRequest) {
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       return handleAddCompany(req, ctx);
     },
-    { permissions: 'projects:projects:view' }
+    { permissions: 'projects:projects:view', requiredGlobalRoles: ADMINISTRATIVE_ROLES }
   ));
 
   return handler(request);
 }
 
 async function handleAddCompany(request: NextRequest, ctx: AuthContext): Promise<NextResponse> {
-  // Admin-only (same check as bootstrap)
-  const isAdmin = ctx.globalRole === 'super_admin' || ctx.globalRole === 'company_admin';
-  if (!isAdmin) {
-    logger.warn('[NavCompany] Non-admin attempted add', { uid: ctx.uid, role: ctx.globalRole });
-    return NextResponse.json({ success: false, error: 'Forbidden: admin role required' }, { status: 403 });
-  }
-
   const body = await request.json() as { contactId?: string };
   const { contactId } = body;
 
@@ -97,19 +91,13 @@ export async function DELETE(request: NextRequest) {
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       return handleRemoveCompany(req, ctx);
     },
-    { permissions: 'projects:projects:view' }
+    { permissions: 'projects:projects:view', requiredGlobalRoles: ADMINISTRATIVE_ROLES }
   ));
 
   return handler(request);
 }
 
 async function handleRemoveCompany(request: NextRequest, ctx: AuthContext): Promise<NextResponse> {
-  const isAdmin = ctx.globalRole === 'super_admin' || ctx.globalRole === 'company_admin';
-  if (!isAdmin) {
-    logger.warn('[NavCompany] Non-admin attempted remove', { uid: ctx.uid, role: ctx.globalRole });
-    return NextResponse.json({ success: false, error: 'Forbidden: admin role required' }, { status: 403 });
-  }
-
   const { searchParams } = request.nextUrl;
   const contactId = searchParams.get('contactId');
 

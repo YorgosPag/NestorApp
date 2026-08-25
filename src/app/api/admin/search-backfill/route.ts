@@ -16,6 +16,7 @@
  */
 
 import { withAuth } from '@/lib/auth';
+import { BYPASS_ROLES } from '@/lib/auth/roles';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import {
   runSearchBackfill,
@@ -28,15 +29,15 @@ import {
 
 export const POST = withSensitiveRateLimit(withAuth<BackfillApiResponse>(
   runSearchBackfill,
-  { permissions: 'admin:migrations:execute' }
+  { requiredGlobalRoles: BYPASS_ROLES, permissions: 'admin:migrations:execute' }
 ));
 
 export const GET = withAuth<BackfillStatusApiResponse>(
   getBackfillStatus,
-  { permissions: 'admin:migrations:execute' }
+  { requiredGlobalRoles: BYPASS_ROLES, permissions: 'admin:migrations:execute' }
 );
 
 export const PATCH = withAuth<MigrationApiResponse>(
   migrateContactTenants,
-  { permissions: 'admin:migrations:execute' }
+  { requiredGlobalRoles: BYPASS_ROLES, permissions: 'admin:migrations:execute' }
 );

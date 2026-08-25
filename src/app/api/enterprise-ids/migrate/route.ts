@@ -12,6 +12,7 @@ import { MigrationPhase, type MigrationStats } from '@/services/enterprise-id-mi
 import { ENTITY_TYPES, isPlatformEntityType, type EntityType } from '@/config/domain-constants';
 import { MigrationController, type MigrationConfig } from './migration-controller';
 import { withAuth } from '@/lib/auth/middleware';
+import { BYPASS_ROLES } from '@/lib/auth/roles';
 import { getErrorMessage } from '@/lib/error-utils';
 
 const controller = new MigrationController();
@@ -59,7 +60,7 @@ export const GET = withAuth<MigrationStatusResponse>(
       }, { status: 500 });
     }
   },
-  { requiredGlobalRoles: 'super_admin' }
+  { requiredGlobalRoles: BYPASS_ROLES }
 );
 
 /**
@@ -90,7 +91,7 @@ export const POST = withAuth<MigrationExecutionResponse>(
       }, { status: 500 });
     }
   },
-  { requiredGlobalRoles: 'super_admin' }
+  { requiredGlobalRoles: BYPASS_ROLES }
 );
 
 /**

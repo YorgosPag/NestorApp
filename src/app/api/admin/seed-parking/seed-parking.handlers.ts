@@ -14,7 +14,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logMigrationExecuted, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext } from '@/lib/auth/types';
-import { isRoleBypass } from '@/lib/auth/roles';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { TARGET_BUILDING, PARKING_TEMPLATES } from './parking-seed-config';
@@ -31,31 +30,6 @@ const logger = createModuleLogger('SeedParkingRoute');
 // =============================================================================
 // Shared helpers
 // =============================================================================
-
-function requireSuperAdmin(
-  ctx: AuthContext,
-  actionDescription: string,
-  restrictedMessage: string,
-): NextResponse | null {
-  if (isRoleBypass(ctx.globalRole)) {
-    return null;
-  }
-
-  logger.warn('BLOCKED: Non-super_admin attempted action', {
-    actionDescription,
-    email: ctx.email,
-    globalRole: ctx.globalRole,
-  });
-
-  return NextResponse.json(
-    {
-      success: false,
-      error: 'Forbidden: Only super_admin can ' + actionDescription,
-      message: restrictedMessage,
-    },
-    { status: 403 },
-  );
-}
 
 async function auditMigration(
   request: NextRequest,
@@ -98,15 +72,6 @@ export async function handleSeedParkingPreview(
   request: NextRequest,
   ctx: AuthContext,
 ): Promise<NextResponse> {
-  const forbidden = requireSuperAdmin(
-    ctx,
-    'preview parking seeding',
-    'Parking seeding is a system-level operation restricted to super_admin',
-  );
-  if (forbidden) {
-    return forbidden;
-  }
-
   logger.info('Seed parking preview request', {
     email: ctx.email,
     globalRole: ctx.globalRole,
@@ -156,15 +121,6 @@ export async function handleSeedParkingExecute(
   ctx: AuthContext,
 ): Promise<NextResponse> {
   const startTime = Date.now();
-  const forbidden = requireSuperAdmin(
-    ctx,
-    'execute parking seeding',
-    'Mass deletion and creation are system-level operations restricted to super_admin',
-  );
-  if (forbidden) {
-    return forbidden;
-  }
-
   logger.info('Seed parking execute request', {
     email: ctx.email,
     globalRole: ctx.globalRole,
@@ -228,15 +184,6 @@ export async function handleSeedParkingDelete(
   ctx: AuthContext,
 ): Promise<NextResponse> {
   const startTime = Date.now();
-  const forbidden = requireSuperAdmin(
-    ctx,
-    'delete all parking spots',
-    'Mass deletion is a system-level operation restricted to super_admin',
-  );
-  if (forbidden) {
-    return forbidden;
-  }
-
   logger.info('Seed parking delete request', {
     email: ctx.email,
     globalRole: ctx.globalRole,
@@ -288,15 +235,6 @@ export async function handleForeignKeyValidation(
 ): Promise<NextResponse> {
   const startTime = Date.now();
   const migrationId = 'fk_validation_' + Date.now();
-  const forbidden = requireSuperAdmin(
-    ctx,
-    'validate parking FK',
-    'Foreign key validation is a system-level operation restricted to super_admin',
-  );
-  if (forbidden) {
-    return forbidden;
-  }
-
   logger.info('Parking FK validation request', {
     email: ctx.email,
     globalRole: ctx.globalRole,

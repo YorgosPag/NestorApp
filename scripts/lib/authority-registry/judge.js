@@ -15,6 +15,8 @@
  * αποτυγχάνει **μόνο** στον Κ3.
  */
 
+const { guardIdOf } = require('./role-guards');
+
 const STATES = {
   INLINE_DECIDER: 'inline-decider',
   ORPHAN_DECLARATION: 'orphan-declaration',
@@ -25,6 +27,12 @@ const STATES = {
   DECLARED_DECIDER: 'declared-decider',
   POLICY_DECLARATION: 'policy-declaration',
   SSOT: 'ssot',
+  // ── Κ1′ (ADR-801 §2.11) — Ο ΦΡΟΥΡΟΣ ΡΟΛΟΥ ΜΕΣΑ ΣΤΟΝ HANDLER ──────────────
+  UNDECLARED_ROLE_GUARD: 'undeclared-role-guard',
+  DECLARED_ROLE_GUARD: 'declared-role-guard',
+  ORPHAN_GUARD_DECLARATION: 'orphan-guard-declaration',
+  REASONLESS_GUARD_DECLARATION: 'reasonless-guard-declaration',
+  ROLE_CONDITIONED_FLOW: 'role-conditioned-flow',
 };
 
 /** ⛔ Όσες **δεν μπαίνουν ΠΟΤΕ σε baseline** — το `buildPayload` ρίχνει. */
@@ -34,6 +42,9 @@ const BLOCKING = [
   STATES.GHOST_ROLE,
   STATES.ORPHAN_LEGACY,
   STATES.VOCABULARY_DRIFT,
+  STATES.UNDECLARED_ROLE_GUARD,
+  STATES.ORPHAN_GUARD_DECLARATION,
+  STATES.REASONLESS_GUARD_DECLARATION,
 ];
 
 /** Το ελάχιστο μήκος λόγου — πρότυπο CHECK 3.58 / 3.61. */
@@ -78,6 +89,74 @@ function ghostsOf(entry, known) {
 // =============================================================================
 // Η ΚΡΙΣΗ
 // =============================================================================
+
+/**
+ * **Κ1′ — Ο ΦΡΟΥΡΟΣ ΡΟΛΟΥ ΜΕΣΑ ΣΤΟΝ HANDLER** (ADR-801 §2.11).
+ *
+ * ⚠️ **ΑΝΕΞΑΡΤΗΤΟΣ ΚΑΝΟΝΑΣ, ΠΟΤΕ «Ή» ΜΕ ΤΟΝ Κ1** — μάθημα CHECK 3.41, και το
+ * κριτήριο του διαχωρισμού είναι ότι έχουν **ΔΙΑΦΟΡΕΤΙΚΗ ΘΕΡΑΠΕΙΑ**:
+ *
+ * | | Ερώτημα | Θεραπεία |
+ * |---|---|---|
+ * | **Κ1** | *ποιος **κρίνει** με δικό του σύνολο ρόλων;* | κάλεσε τον `decideCapability` |
+ * | **Κ1′** | *ποιος **αρνείται** με βάση τον ρόλο μέσα στον handler;* | ανύψωσέ το σε `requiredGlobalRoles` |
+ *
+ * Ένας κανόνας με «ή» θα έμενε **πράσινος πάνω στο μισό ελάττωμα**: το
+ * `admin-migration-runner.ts` δεν έχει **κανένα** όνομα ρόλου σε εισαγωγικά, άρα ο
+ * Κ1 δεν το βλέπει καν· τα τέσσερα `isAdmin = super_admin || company_admin` είναι
+ * **και** τα δύο, και ο καθένας τα ονομάζει με **άλλη** θεραπεία.
+ *
+ * 🔶 Οι έλεγχοι που **δεν** αρνούνται μετρώνται ως `role-conditioned-flow` και
+ * **δεν απαριθμούνται** — είναι το τυφλό σημείο **με αριθμό**, πρότυπο
+ * `unanalyzable-heritage` του CHECK 3.44. Ανύψωσή τους θα έκλεινε τη διαδρομή σε
+ * όλους πλην υπερδιαχειριστή: *θα έσπαγε λειτουργία ενώ θα έμοιαζε σκλήρυνση*.
+ */
+function judgeRoleGuards(inventory) {
+  const declared = new Map((inventory.registry.roleGuards || []).map((g) => [g.id, g]));
+  const seen = new Set();
+  const rows = [];
+
+  for (const check of inventory.roleChecks || []) {
+    if (!check.denies) {
+      rows.push({
+        id: `${check.file}:${check.line}`,
+        state: STATES.ROLE_CONDITIONED_FLOW,
+        detail: `ο ρόλος ρυθμίζει ροή/δεδομένα χωρίς να αρνείται — «${check.condition}»`,
+      });
+      continue;
+    }
+    const id = guardIdOf(check);
+    const declaration = declared.get(id);
+    if (declaration === undefined) {
+      rows.push({
+        id,
+        state: STATES.UNDECLARED_ROLE_GUARD,
+        detail: `${check.file}:${check.line} αρνείται με βάση ΜΟΝΟ τον ρόλο του καλούντος`
+          + ' — ανύψωσέ το σε `requiredGlobalRoles` στη δήλωση της διαδρομής',
+      });
+      continue;
+    }
+    seen.add(id);
+    const why = (declaration.why || '').trim();
+    rows.push(why.length >= MIN_REASON
+      ? { id, state: STATES.DECLARED_ROLE_GUARD, detail: `${check.file}:${check.line} — δηλωμένος με λόγο` }
+      : {
+        id,
+        state: STATES.REASONLESS_GUARD_DECLARATION,
+        detail: `ο λόγος έχει ${why.length} χαρακτήρες (ελάχιστο ${MIN_REASON})`,
+      });
+  }
+
+  for (const id of declared.keys()) {
+    if (seen.has(id)) continue;
+    rows.push({
+      id,
+      state: STATES.ORPHAN_GUARD_DECLARATION,
+      detail: 'δηλωμένος φρουρός που δεν υπάρχει πια (ή άλλαξε συνθήκη) — σβήσε ή ενημέρωσε τη δήλωση',
+    });
+  }
+  return rows;
+}
 
 function declarationMap(registry) {
   return new Map((registry.inlineDeciders || []).map((d) => [d.id, d]));
@@ -145,6 +224,7 @@ function judge(inventory) {
 
   rows.push(...orphanDeclarations(declared, seenDeclarations));
   rows.push(...orphanLegacy(registry, entries));
+  rows.push(...judgeRoleGuards(inventory));
 
   return { rows, tally: tallyOf(rows), known: [...known].sort() };
 }
@@ -226,5 +306,5 @@ function idsOf(verdict, state) {
 module.exports = {
   STATES, BLOCKING, MIN_REASON,
   namesInRolePosition, ghostsOf, knownNames, ssotFiles,
-  classifyFile, orphanDeclarations, orphanLegacy, tallyOf, idsOf, judge,
+  classifyFile, orphanDeclarations, orphanLegacy, judgeRoleGuards, tallyOf, idsOf, judge,
 };

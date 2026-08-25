@@ -6,7 +6,8 @@
  * GET:  Returns authenticated tenant's OrgStructure.
  * PUT:  Validates + persists OrgStructure for authenticated tenant.
  *
- * Auth: withAuth (any internal user for GET; company_admin for PUT)
+ * Auth: withAuth — GET ανοιχτό· PUT με ΔΗΛΩΤΙΚΟ ταβάνι
+ *       `requiredGlobalRoles: ADMINISTRATIVE_ROLES` (ADR-801 §2.11).
  * Rate: withStandardRateLimit (60 req/min)
  * Storage: companies/{companyId}.settings.orgStructure (Admin SDK)
  *
@@ -17,7 +18,7 @@
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
+import { ADMINISTRATIVE_ROLES, withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -66,11 +67,6 @@ async function handlePut(
   ctx: AuthContext,
   _cache: PermissionCache,
 ): Promise<NextResponse<PutResponse | { error: string }>> {
-  const isAdmin = ctx.globalRole === 'company_admin' || ctx.globalRole === 'super_admin';
-  if (!isAdmin) {
-    return NextResponse.json({ error: 'Forbidden — company_admin required' }, { status: 403 });
-  }
-
   let body: unknown;
   try {
     body = await req.json();
@@ -110,5 +106,5 @@ export const GET = withStandardRateLimit(async function GET(request: NextRequest
 });
 
 export const PUT = withStandardRateLimit(async function PUT(request: NextRequest) {
-  return withAuth<PutResponse | { error: string }>(handlePut)(request);
+  return withAuth<PutResponse | { error: string }>(handlePut, { requiredGlobalRoles: ADMINISTRATIVE_ROLES })(request);
 });

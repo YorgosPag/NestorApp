@@ -15,7 +15,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import type { Firestore } from 'firebase-admin/firestore';
 import { logMigrationExecuted, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext } from '@/lib/auth/types';
-import { isRoleBypass } from '@/lib/auth/roles';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
@@ -222,21 +221,6 @@ export async function runAdminSdkMigration(request: NextRequest, ctx: AuthContex
   const startTime = Date.now();
 
   // 🔐 Admin SDK migrations are SYSTEM-LEVEL (cross-tenant) — bypass roles ONLY
-  if (!isRoleBypass(ctx.globalRole)) {
-    logger.warn('BLOCKED: Non-super_admin attempted Admin SDK migration', {
-      email: ctx.email,
-      globalRole: ctx.globalRole,
-    });
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Forbidden: Only super_admin can execute Admin SDK migrations',
-        message: 'Admin SDK migrations are system-level operations restricted to super_admin',
-      },
-      { status: 403 },
-    );
-  }
-
   logger.info('Admin SDK migration request', { email: ctx.email, globalRole: ctx.globalRole, companyId: ctx.companyId });
 
   try {

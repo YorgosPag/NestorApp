@@ -1,16 +1,13 @@
 {
-  "_doc": "CHECK 3.67 / ADR-801 §4 — violations = inline κριτές (Κ1) · declarations = κλειστό σύνολο εξαιρέσεων (Κ2).",
+  "_doc": "CHECK 3.68 / ADR-801 §4 — violations = inline κριτές (Κ1) · declarations = κλειστό σύνολο εξαιρέσεων (Κ2).",
   "_warning": "Ο Κ3 (φάντασμα ρόλου) και οι ορφανές δηλώσεις είναι ZERO-TOLERANCE και ΔΕΝ μπαίνουν ΠΟΤΕ εδώ.",
   "_health": "Ο αριθμός ΔΕΝ είναι δείκτης υγείας: μετρά «όσα δεν ρωτούν ΑΚΟΜΗ τον κριτή». Θεραπεία = decideCapability.",
   "generatedAt": "2026-08-25",
   "violations": [
-    "src/app/api/accounting/bank/reconcile/route.ts",
     "src/app/api/admin/role-management/bootstrap/route.ts",
     "src/app/api/admin/set-user-claims/claims-handler.ts",
     "src/app/api/companies/route.ts",
-    "src/app/api/navigation/company/route.ts",
     "src/app/api/onboarding/organization/route.ts",
-    "src/app/api/org-structure/route.ts",
     "src/app/api/projects/bootstrap/bootstrap-queries.ts",
     "src/components/admin/pages/RoleManagementPageContent.tsx",
     "src/components/layout/useRoutePrefetch.ts",

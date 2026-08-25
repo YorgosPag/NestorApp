@@ -18,10 +18,16 @@ import { NavigationCardToolbar } from './NavigationCardToolbar';
 import { BuildingSpacesTabs } from './BuildingSpacesTabs';
 import { NAVIGATION_ENTITIES, NAVIGATION_ACTIONS } from '../config';
 import { useNavigation } from '../core/NavigationContext';
-import { getNavigationFilterCategories } from '@/config/vocabulary/labels/navigation';
+// 🏢 ENTERPRISE: μία απάντηση για τις δύο οθόνες πλοήγησης — δες το ίδιο το module
+// για το τι έκρυβαν τα δύο αντίγραφα (ωμά κλειδιά i18n, λάθος κλειδί, δύο ΑΦΜ).
+import {
+  describeNavigationCompany,
+  describeNavigationProject,
+  describeNavigationBuilding,
+  buildBuildingActionDescriptors,
+} from '../core/utils/navigation-item-descriptors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
-import { formatBuildingLabel } from '@/lib/entity-formatters';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 
 // Extracted modules
@@ -81,7 +87,11 @@ export function DesktopMultiColumn({
   } = useNavigation();
 
   const { warning } = useNotifications();
-  const { t } = useTranslation('navigation');
+  // ⚠️ ΔΥΟ namespaces, και το δεύτερο ΔΕΝ είναι διακοσμητικό: οι ετικέτες των
+  // badge ζουν στο `navigation-entities`. Χωρίς αυτό, το `t('navigation-entities:…')`
+  // αστοχεί — και επειδή το `config.ts` δεν ορίζει `fallbackNS`, η αστοχία
+  // καταλήγει **ωμό κλειδί στην οθόνη** αντί για σφάλμα.
+  const { t } = useTranslation(['navigation', 'navigation-entities']);
 
   // ── Local UI state ──
   const [companiesSearch, setCompaniesSearch] = useState('');
@@ -256,39 +266,24 @@ export function DesktopMultiColumn({
           />
           <ul className="space-y-2 list-none max-h-64 pr-2 overflow-y-auto" role="list"
               aria-label={t('columns.companies.listLabel')} data-navigation-scroll="true">
-            {filterData(companies, companiesSearch, companiesFilters).map(company => {
-              const companyProjects = projects.filter(p => p.companyId === company.id);
-              const hasProjects = companyProjects.length > 0;
-              const isNavigationCompany = navigationCompanyIds.includes(company.id);
-              let subtitle = company.industry || t('columns.companies.defaultSubtitle');
-              let extraInfo: string | undefined;
-              if (!hasProjects) {
-                subtitle = isNavigationCompany
-                  ? t('columns.companies.addProjects')
-                  : t('columns.companies.noProjects');
-                extraInfo = company.vatNumber
-                  ? t('columns.companies.vatNumber', { vatNumber: company.vatNumber })
-                  : undefined;
-              }
-              return (
-                <li key={company.id}>
-                  <NavigationButton
-                    onClick={() => onCompanySelect(company.id)}
-                    icon={NAVIGATION_ENTITIES.company.icon}
-                    iconColor={NAVIGATION_ENTITIES.company.color}
-                    title={company.companyName}
-                    subtitle={subtitle}
-                    extraInfo={extraInfo}
-                    isSelected={selectedCompany?.id === company.id}
-                    variant="compact"
-                    badgeStatus={!projectsLoading && !hasProjects ? 'no_projects' : undefined}
-                    badgeText={!projectsLoading && !hasProjects ? t(getNavigationFilterCategories().company_without_projects) : undefined}
-                    navigationHref={ContextualNavigationService.generateRoute('company', company.id, { action: 'select' })}
-                    navigationTooltip={t('columns.companies.openTooltip')}
-                  />
-                </li>
-              );
-            })}
+            {filterData(companies, companiesSearch, companiesFilters).map(company => (
+              <li key={company.id}>
+                <NavigationButton
+                  onClick={() => onCompanySelect(company.id)}
+                  {...describeNavigationCompany({
+                    company,
+                    hasProjects: projects.some(p => p.companyId === company.id),
+                    isNavigationCompany: navigationCompanyIds.includes(company.id),
+                    projectsLoading,
+                    t,
+                  })}
+                  isSelected={selectedCompany?.id === company.id}
+                  variant="compact"
+                  navigationHref={ContextualNavigationService.generateRoute('company', company.id, { action: 'select' })}
+                  navigationTooltip={t('columns.companies.openTooltip')}
+                />
+              </li>
+            ))}
           </ul>
         </section>
 
@@ -313,27 +308,18 @@ export function DesktopMultiColumn({
             />
             <ul className="space-y-2 list-none max-h-64 pr-2 overflow-y-auto" role="list"
                 aria-label={t('columns.projects.listLabel')} data-navigation-scroll="true">
-              {filterData(projects.filter(p => p.linkedCompanyId === selectedCompany?.id), projectsSearch, projectsFilters).map(project => {
-                const buildingCount = getBuildingCount(project.id);
-                const hasBuildings = buildingCount > 0;
-                return (
-                  <li key={project.id}>
-                    <NavigationButton
-                      onClick={() => onProjectSelect(project.id)}
-                      icon={NAVIGATION_ENTITIES.project.icon}
-                      iconColor={NAVIGATION_ENTITIES.project.color}
-                      title={project.name}
-                      subtitle={t('columns.projects.buildingCount', { count: buildingCount })}
-                      isSelected={selectedProject?.id === project.id}
-                      variant="compact"
-                      badgeStatus={!hasBuildings ? 'no_projects' : undefined}
-                      badgeText={!hasBuildings ? t(getNavigationFilterCategories().project_without_buildings) : undefined}
-                      navigationHref={ContextualNavigationService.generateRoute('project', project.id, { action: 'select' })}
-                      navigationTooltip={t('columns.projects.openTooltip')}
-                    />
-                  </li>
-                );
-              })}
+              {filterData(projects.filter(p => p.linkedCompanyId === selectedCompany?.id), projectsSearch, projectsFilters).map(project => (
+                <li key={project.id}>
+                  <NavigationButton
+                    onClick={() => onProjectSelect(project.id)}
+                    {...describeNavigationProject({ project, buildingCount: getBuildingCount(project.id), t })}
+                    isSelected={selectedProject?.id === project.id}
+                    variant="compact"
+                    navigationHref={ContextualNavigationService.generateRoute('project', project.id, { action: 'select' })}
+                    navigationTooltip={t('columns.projects.openTooltip')}
+                  />
+                </li>
+              ))}
             </ul>
           </section>
         )}
@@ -359,27 +345,18 @@ export function DesktopMultiColumn({
             />
             <ul className="space-y-2 list-none max-h-64 pr-2 overflow-y-auto" role="list"
                 aria-label={t('columns.buildings.listLabel')} data-navigation-scroll="true">
-              {filteredProjectBuildings.map(building => {
-                const propertyCount = getPropertyCount(building.id);
-                const hasProperties = propertyCount > 0;
-                return (
-                  <li key={building.id}>
-                    <NavigationButton
-                      onClick={() => onBuildingSelect(building.id)}
-                      icon={NAVIGATION_ENTITIES.building.icon}
-                      iconColor={NAVIGATION_ENTITIES.building.color}
-                      title={building.name}
-                      subtitle={t('columns.buildings.propertyCount', { count: propertyCount })}
-                      isSelected={selectedBuilding?.id === building.id}
-                      variant="compact"
-                      badgeStatus={!hasProperties ? 'no_projects' : undefined}
-                      badgeText={!hasProperties ? t(getNavigationFilterCategories().building_without_units) : undefined}
-                      navigationHref={ContextualNavigationService.generateRoute('building', building.id, { action: 'select' })}
-                      navigationTooltip={t('columns.buildings.openTooltip')}
-                    />
-                  </li>
-                );
-              })}
+              {filteredProjectBuildings.map(building => (
+                <li key={building.id}>
+                  <NavigationButton
+                    onClick={() => onBuildingSelect(building.id)}
+                    {...describeNavigationBuilding({ building, propertyCount: getPropertyCount(building.id), t })}
+                    isSelected={selectedBuilding?.id === building.id}
+                    variant="compact"
+                    navigationHref={ContextualNavigationService.generateRoute('building', building.id, { action: 'select' })}
+                    navigationTooltip={t('columns.buildings.openTooltip')}
+                  />
+                </li>
+              ))}
             </ul>
           </section>
         )}
@@ -413,38 +390,23 @@ export function DesktopMultiColumn({
               <h3 className="font-semibold text-foreground">{t('columns.actions.title')}</h3>
             </header>
             <ul className="space-y-2 list-none" role="list" aria-label={t('columns.actions.listLabel')}>
-              <li>
-                <NavigationButton
-                  onClick={() => onNavigateToPage('properties')}
-                  icon={NAVIGATION_ENTITIES.property.icon}
-                  iconColor={NAVIGATION_ENTITIES.property.color}
-                  title={t('columns.actions.viewProperties')}
-                  subtitle={t('columns.actions.propertiesCount', { count: buildingProperties.length })}
-                  variant="compact"
-                />
-              </li>
-              <li>
-                <NavigationButton
-                  onClick={() => onNavigateToPage('buildings')}
-                  icon={NAVIGATION_ENTITIES.building.icon}
-                  iconColor={NAVIGATION_ENTITIES.building.color}
-                  title={t('columns.actions.buildingDetails')}
-                  subtitle={formatBuildingLabel(selectedBuilding.code, selectedBuilding.name)}
-                  variant="compact"
-                />
-              </li>
-              {selectedProject && (
-                <li>
+              {buildBuildingActionDescriptors({
+                selectedBuilding,
+                selectedProject,
+                propertyCount: buildingProperties.length,
+                t,
+              }).map(action => (
+                <li key={action.key}>
                   <NavigationButton
-                    onClick={() => onNavigateToPage('projects')}
-                    icon={NAVIGATION_ENTITIES.project.icon}
-                    iconColor={NAVIGATION_ENTITIES.project.color}
-                    title={t('columns.actions.projectDetails')}
-                    subtitle={selectedProject.name}
+                    onClick={() => onNavigateToPage(action.page)}
+                    icon={action.icon}
+                    iconColor={action.iconColor}
+                    title={action.title}
+                    subtitle={action.subtitle}
                     variant="compact"
                   />
                 </li>
-              )}
+              ))}
             </ul>
           </section>
         )}

@@ -17,6 +17,7 @@
  * @method POST - Materialize the phantom document
  *
  * @see ADR-210 Phase 3: Company Document Materialization
+ * @see lib/api/admin-operation-route — ο ΕΝΑΣ ορισμός του «άμεση διοικητική επέμβαση»
  * =============================================================================
  */
 
@@ -25,12 +26,14 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { LEGACY_TENANT_COMPANY_ID } from '@/config/tenant';
 import { ensureCompanyDocument, getCompanyDocument, repairCompanyDocument } from '@/services/company-document.service';
-import { withAuth, logSystemOperation, extractRequestMetadata } from '@/lib/auth';
+import { logSystemOperation, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import {
+  adminDirectOperationRead,
+  adminDirectOperationWrite,
+} from '@/lib/api/admin-operation-route';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
-import { bypassRoleGuard } from '@/lib/auth/bypass-role-guard';
 
 const logger = createModuleLogger('BootstrapCompanyRoute');
 
@@ -38,11 +41,8 @@ const logger = createModuleLogger('BootstrapCompanyRoute');
 // GET — Check company document status
 // =============================================================================
 
-export const GET = withAuth(
+export const GET = adminDirectOperationRead(
   async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-    const forbidden = bypassRoleGuard(ctx);
-    if (forbidden) return forbidden;
-
     try {
       const companyId = LEGACY_TENANT_COMPANY_ID;
       const existing = await getCompanyDocument(companyId);
@@ -76,155 +76,142 @@ export const GET = withAuth(
         { status: 500 }
       );
     }
-  },
-  { permissions: 'admin:direct:operations' }
+  }
 );
 
 // =============================================================================
 // POST — Materialize phantom → real document
 // =============================================================================
 
-export const POST = withSensitiveRateLimit(
-  withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      const forbidden = bypassRoleGuard(ctx);
-      if (forbidden) return forbidden;
+export const POST = adminDirectOperationWrite(
+  async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    const startTime = Date.now();
 
-      const startTime = Date.now();
+    try {
+      const companyId = LEGACY_TENANT_COMPANY_ID;
 
-      try {
-        const companyId = LEGACY_TENANT_COMPANY_ID;
-
-        // Step 1: Check if already materialized
-        const existing = await getCompanyDocument(companyId);
-        if (existing) {
-          return NextResponse.json({
-            success: true,
-            message: 'Company document already exists — no action needed.',
-            document: existing,
-            action: 'ALREADY_EXISTS',
-          });
-        }
-
-        // Step 2: Read any explicit contact override (optional — the legal
-        // identity SSoT is the per-tenant company profile, read inside
-        // ensureCompanyDocument; ADR-439).
-        const db = getAdminFirestore();
-        const contactDoc = await db.collection(COLLECTIONS.CONTACTS).doc(companyId).get();
-
-        let companyName = 'ΠΑΓΩΝΗΣ';
-        let contactData: { name: string; contactId: string } | undefined;
-        if (contactDoc.exists) {
-          const cd = contactDoc.data();
-          const resolvedContactName = cd?.companyName ?? cd?.name;
-          if (resolvedContactName) {
-            companyName = resolvedContactName;
-            contactData = { name: resolvedContactName, contactId: contactDoc.id };
-          }
-        } else {
-          logger.warn('[BootstrapCompany] Contact document not found, deriving name from company profile', { companyId });
-        }
-
-        // Step 3: Materialize — name derived from company profile (or contact override)
-        const document = await ensureCompanyDocument(companyId, contactData, ctx.uid);
-
-        const duration = Date.now() - startTime;
-
-        // Step 4: Audit log
-        const metadata = extractRequestMetadata(req);
-        await logSystemOperation(
-          ctx,
-          'bootstrap_company_document',
-          {
-            companyId,
-            companyName,
-            action: 'materialize_phantom',
-            contactExists: contactDoc.exists,
-            executionTimeMs: duration,
-          },
-          `Company document materialized by ${ctx.email}`
-        ).catch((err: unknown) => {
-          logger.error('[BootstrapCompany] Audit log failed (non-blocking)', {
-            error: getErrorMessage(err),
-            metadata,
-          });
-        });
-
-        logger.info('[BootstrapCompany] Successfully materialized company document', {
-          companyId,
-          companyName,
-          duration,
-        });
-
+      // Step 1: Check if already materialized
+      const existing = await getCompanyDocument(companyId);
+      if (existing) {
         return NextResponse.json({
           success: true,
-          message: `Company document materialized successfully.`,
-          document,
-          action: 'CREATED',
-          executionTimeMs: duration,
+          message: 'Company document already exists — no action needed.',
+          document: existing,
+          action: 'ALREADY_EXISTS',
         });
-      } catch (error) {
-        const duration = Date.now() - startTime;
-        logger.error('[BootstrapCompany] POST failed', {
-          error: getErrorMessage(error),
-          duration,
-        });
-        return NextResponse.json(
-          {
-            success: false,
-            error: `Bootstrap failed: ${getErrorMessage(error)}`,
-            executionTimeMs: duration,
-          },
-          { status: 500 }
-        );
       }
-    },
-    { permissions: 'admin:direct:operations' }
-  )
+
+      // Step 2: Read any explicit contact override (optional — the legal
+      // identity SSoT is the per-tenant company profile, read inside
+      // ensureCompanyDocument; ADR-439).
+      const db = getAdminFirestore();
+      const contactDoc = await db.collection(COLLECTIONS.CONTACTS).doc(companyId).get();
+
+      let companyName = 'ΠΑΓΩΝΗΣ';
+      let contactData: { name: string; contactId: string } | undefined;
+      if (contactDoc.exists) {
+        const cd = contactDoc.data();
+        const resolvedContactName = cd?.companyName ?? cd?.name;
+        if (resolvedContactName) {
+          companyName = resolvedContactName;
+          contactData = { name: resolvedContactName, contactId: contactDoc.id };
+        }
+      } else {
+        logger.warn('[BootstrapCompany] Contact document not found, deriving name from company profile', { companyId });
+      }
+
+      // Step 3: Materialize — name derived from company profile (or contact override)
+      const document = await ensureCompanyDocument(companyId, contactData, ctx.uid);
+
+      const duration = Date.now() - startTime;
+
+      // Step 4: Audit log
+      const metadata = extractRequestMetadata(req);
+      await logSystemOperation(
+        ctx,
+        'bootstrap_company_document',
+        {
+          companyId,
+          companyName,
+          action: 'materialize_phantom',
+          contactExists: contactDoc.exists,
+          executionTimeMs: duration,
+        },
+        `Company document materialized by ${ctx.email}`
+      ).catch((err: unknown) => {
+        logger.error('[BootstrapCompany] Audit log failed (non-blocking)', {
+          error: getErrorMessage(err),
+          metadata,
+        });
+      });
+
+      logger.info('[BootstrapCompany] Successfully materialized company document', {
+        companyId,
+        companyName,
+        duration,
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: `Company document materialized successfully.`,
+        document,
+        action: 'CREATED',
+        executionTimeMs: duration,
+      });
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      logger.error('[BootstrapCompany] POST failed', {
+        error: getErrorMessage(error),
+        duration,
+      });
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Bootstrap failed: ${getErrorMessage(error)}`,
+          executionTimeMs: duration,
+        },
+        { status: 500 }
+      );
+    }
+  }
 );
 
 // =============================================================================
 // PATCH — Repair existing company document (fix name + contactId)
 // =============================================================================
 
-export const PATCH = withSensitiveRateLimit(
-  withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      const forbidden = bypassRoleGuard(ctx);
-      if (forbidden) return forbidden;
+export const PATCH = adminDirectOperationWrite(
+  async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    try {
+      const body = await req.json().catch(() => ({})) as { companyId?: string };
+      const targetCompanyId = body.companyId ?? LEGACY_TENANT_COMPANY_ID;
 
-      try {
-        const body = await req.json().catch(() => ({})) as { companyId?: string };
-        const targetCompanyId = body.companyId ?? LEGACY_TENANT_COMPANY_ID;
+      const result = await repairCompanyDocument(targetCompanyId, ctx.uid);
 
-        const result = await repairCompanyDocument(targetCompanyId, ctx.uid);
-
-        if (!result.wasRepaired) {
-          return NextResponse.json(
-            { success: false, error: 'No admin user found for this company', companyId: targetCompanyId },
-            { status: 404 }
-          );
-        }
-
-        logger.info('[BootstrapCompany] PATCH repair completed', {
-          companyId: targetCompanyId,
-          name: result.name,
-        });
-
-        return NextResponse.json({
-          success: true,
-          message: 'Company document repaired.',
-          companyId: targetCompanyId,
-          name: result.name,
-        });
-      } catch (error) {
-        logger.error('[BootstrapCompany] PATCH failed', { error: getErrorMessage(error) });
+      if (!result.wasRepaired) {
         return NextResponse.json(
-          { success: false, error: getErrorMessage(error) },
-          { status: 500 }
+          { success: false, error: 'No admin user found for this company', companyId: targetCompanyId },
+          { status: 404 }
         );
       }
-    },
-    { permissions: 'admin:direct:operations' }
-  )
+
+      logger.info('[BootstrapCompany] PATCH repair completed', {
+        companyId: targetCompanyId,
+        name: result.name,
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: 'Company document repaired.',
+        companyId: targetCompanyId,
+        name: result.name,
+      });
+    } catch (error) {
+      logger.error('[BootstrapCompany] PATCH failed', { error: getErrorMessage(error) });
+      return NextResponse.json(
+        { success: false, error: getErrorMessage(error) },
+        { status: 500 }
+      );
+    }
+  }
 );

@@ -19,6 +19,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
+import { BYPASS_ROLES } from '@/lib/auth/roles';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { dispatchNotification } from '@/server/notifications/notification-orchestrator';
@@ -103,7 +104,7 @@ const basePOST = async (request: NextRequest) => {
     async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       return handleDispatch(req, ctx);
     },
-    { requiredGlobalRoles: 'super_admin' }
+    { requiredGlobalRoles: BYPASS_ROLES }
   );
 
   return handler(request);

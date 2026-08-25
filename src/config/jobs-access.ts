@@ -240,11 +240,42 @@ export function pickDefaultJob(
   const available = resolveAvailableJobs(input);
   if (available.length === 0) return JOB_ALL;
 
+  // ───────────────────────────────────────────────────────────────────────────
+  // ADR-798 Φάση 3 (διόρθωση 2026-08-25) — ΤΟ BYPASS ΔΕΝ ΕΙΝΑΙ ΜΕΤΡΗΜΕΝΟ ΔΙΚΑΙΩΜΑ
+  //
+  // 🔴 Το ελάττωμα, μετρημένο ζωντανά: ο `super_admin` έχει
+  // `PREDEFINED_ROLES.super_admin.permissions = []` (roles.ts:58), αλλά το
+  // `useEffectivePermissions:91-93` του προσθέτει **πάντα** `admin_access` —
+  // **σωστά**, το χρειάζεται για **ορατότητα**. Παρασιτικά όμως το
+  // `admin_access` ζει σε **ακριβώς μία** από τις έξι δουλειές
+  // (`jobs-registry.ts`, Διαχείριση) ⇒ σκορ `{administration: 1, άλλες: 0}`
+  // ⇒ **μοναδικός νικητής** ⇒ ο έλεγχος ισοβαθμίας παρακάτω **δεν εκτελείται
+  // ΠΟΤΕ**. Αποτέλεσμα: δηλωμένος μηχανικός (ISCO 2149 → πρόθεμα 214 → Σχέδιο)
+  // προσγειωνόταν στη **Διαχείριση**, με το `tiebreak` να φτάνει σωστά και να
+  // αγνοείται. Μετρημένο **0 στους 4** ζωντανούς λογαριασμούς μπορούσαν να το
+  // πυροδοτήσουν ⇒ **αδρανής φρουρός** (ADR-749 §5).
+  //
+  // 🔑 Η ΑΣΥΜΦΩΝΙΑ ΗΤΑΝ ΜΕΣΑ ΣΕ ΑΥΤΟ ΤΟ ΑΡΧΕΙΟ: το `decideJobAccess` ξεχωρίζει
+  // ρητά `{kind:'bypass'}` από `{kind:'permission'}` — το σχόλιό του λέει
+  // «**μετρημένο** permission ⇒ granted». Το `pickDefaultJob` δεν ρωτούσε, και
+  // μετρούσε ωμά το `input.permissions`. **Δύο συναρτήσεις, ένα αρχείο, δύο
+  // απαντήσεις στο ίδιο ερώτημα** — σχήμα ADR-749 σε μικρογραφία.
+  //
+  // 🔒 ΔΕΝ ΠΑΡΑΒΙΑΖΕΙ ΤΟ Α4 («το επάγγελμα ΠΟΤΕ δεν δίνει δικαίωμα»): το
+  // `available` υπολογίζεται **πριν** και **χωρίς** αυτό, και ο bypass χρήστης
+  // έχει **ήδη και τις έξι**. Το `tiebreak` διαλέγει **ανάμεσα σε όσες ήδη
+  // δικαιούται** — καμία διεύρυνση, ούτε μία δουλειά παραπάνω.
+  //
+  // ⛔ ΜΗΝ το «απλοποιήσεις» σε `input.permissions`: τότε το `admin_access`
+  // ξαναγίνεται σιωπηλή προεπιλογή «Διαχείριση» για **κάθε** υπερδιαχειριστή.
+  // ───────────────────────────────────────────────────────────────────────────
+  const counted: readonly string[] = input.isBypass ? [] : input.permissions;
+
   let best: JobId = available[0];
   let bestScore = -1;
   for (const job of available) {
     const score = JOBS[job].permissions.filter((permission) =>
-      input.permissions.includes(permission),
+      counted.includes(permission),
     ).length;
     // Αυστηρό `>`: η ισοβαθμία κρατά τον πρώτο κατά JOB_ORDER (Ε7.δ).
     if (score > bestScore) {

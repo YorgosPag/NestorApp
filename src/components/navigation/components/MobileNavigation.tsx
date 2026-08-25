@@ -17,12 +17,17 @@ import { ChevronLeft } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '../config';
 import { useNavigation } from '../core/NavigationContext';
 import { HOVER_TEXT_EFFECTS } from '../../ui/effects';
-// 🏢 ENTERPRISE: Centralized labels - ZERO HARDCODED VALUES
-import { getNavigationFilterCategories } from '@/config/vocabulary/labels/navigation';
+// 🏢 ENTERPRISE: μία απάντηση για τις δύο οθόνες πλοήγησης — δες το ίδιο το module
+// για το τι έκρυβαν τα δύο αντίγραφα (ωμά κλειδιά i18n, λάθος κλειδί, δύο ΑΦΜ).
+import {
+  describeNavigationCompany,
+  describeNavigationProject,
+  describeNavigationBuilding,
+  buildBuildingActionDescriptors,
+} from '../core/utils/navigation-item-descriptors';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
-import { formatBuildingLabel } from '@/lib/entity-formatters';
 
 interface MobileNavigationProps {
   /** 🏢 ENTERPRISE: 'floors' αφαιρέθηκε από navigation levels (Επιλογή Α) */
@@ -70,7 +75,12 @@ export function MobileNavigation({
   } = useNavigation();
 
   // 🏢 ENTERPRISE: i18n hook
-  const { t } = useTranslation('navigation');
+  //
+  // ⚠️ ΔΥΟ namespaces, και το δεύτερο ΔΕΝ είναι διακοσμητικό: οι ετικέτες των
+  // badge ζουν στο `navigation-entities`. Χωρίς αυτό, το `t('navigation-entities:…')`
+  // αστοχεί — και επειδή το `config.ts` δεν ορίζει `fallbackNS`, η αστοχία
+  // καταλήγει **ωμό κλειδί στην οθόνη** αντί για σφάλμα.
+  const { t } = useTranslation(['navigation', 'navigation-entities']);
 
   // ==========================================================================
   // 🏢 ENTERPRISE: Memoized Real-time Buildings Data
@@ -124,35 +134,19 @@ export function MobileNavigation({
         {mobileLevel === 'companies' && (
           <>
             {companies.map(company => {
-              // Ελέγχουμε αν η εταιρεία έχει έργα
-              const companyProjects = projects.filter(p => p.companyId === company.id);
-              const hasProjects = companyProjects.length > 0;
-
-              // Ελέγχουμε αν είναι navigation company (προστέθηκε χειροκίνητα)
-              const isNavigationCompany = navigationCompanyIds.includes(company.id);
-
-              // Διαφοροποίηση ανάλογα με το αν έχει έργα ή είναι navigation company
-              let subtitle = company.industry || t('columns.companies.defaultSubtitle');
-              let extraInfo = company.vatNumber ? t('columns.companies.vatNumber', { vatNumber: company.vatNumber }) : undefined;
-
-              if (!hasProjects) {
-                subtitle = isNavigationCompany
-                  ? t('columns.companies.addProjects')
-                  : t('columns.companies.noProjects');
-                extraInfo = company.vatNumber ? t('columns.companies.vatNumber', { vatNumber: company.vatNumber }) : undefined;
-              }
+              const descriptor = describeNavigationCompany({
+                company,
+                hasProjects: projects.some(p => p.companyId === company.id),
+                isNavigationCompany: navigationCompanyIds.includes(company.id),
+                projectsLoading,
+                t,
+              });
 
               return (
                 <NavigationButton
                   key={company.id}
                   onClick={() => onCompanySelect(company.id)}
-                  icon={NAVIGATION_ENTITIES.company.icon}
-                  iconColor={NAVIGATION_ENTITIES.company.color}
-                  title={company.companyName}
-                  subtitle={subtitle}
-                  extraInfo={extraInfo}
-                  badgeStatus={!projectsLoading && !hasProjects ? 'no_projects' : undefined}
-                  badgeText={!projectsLoading && !hasProjects ? getNavigationFilterCategories().company_without_projects : undefined}
+                  {...descriptor}
                 />
               );
             })}
@@ -162,48 +156,28 @@ export function MobileNavigation({
         {/* Projects - 🏢 ENTERPRISE: Using real-time building counts */}
         {mobileLevel === 'projects' && selectedCompany && (
           <>
-            {projects.filter(project => project.linkedCompanyId === selectedCompany.id).map(project => {
-              // 🏢 ENTERPRISE: Real-time building count
-              const buildingCount = getBuildingCount(project.id);
-              const hasBuildings = buildingCount > 0;
-
-              return (
-                <NavigationButton
-                  key={project.id}
-                  onClick={() => onProjectSelect(project.id)}
-                  icon={NAVIGATION_ENTITIES.project.icon}
-                  iconColor={NAVIGATION_ENTITIES.project.color}
-                  title={project.name}
-                  subtitle={t('columns.projects.buildingCount', { count: buildingCount })}
-                  badgeStatus={!hasBuildings ? 'no_projects' : undefined}
-                  badgeText={!hasBuildings ? getNavigationFilterCategories().project_without_buildings : undefined}
-                />
-              );
-            })}
+            {projects.filter(project => project.linkedCompanyId === selectedCompany.id).map(project => (
+              <NavigationButton
+                key={project.id}
+                onClick={() => onProjectSelect(project.id)}
+                // 🏢 ENTERPRISE: Real-time building count
+                {...describeNavigationProject({ project, buildingCount: getBuildingCount(project.id), t })}
+              />
+            ))}
           </>
         )}
 
         {/* Buildings - 🏢 ENTERPRISE: Using memoized real-time data with unit count */}
         {mobileLevel === 'buildings' && selectedProject && (
           <>
-            {projectBuildings.map(building => {
-              // 🏢 ENTERPRISE: Real-time unit count
-              const propertyCount = getPropertyCount(building.id);
-              const hasProperties = propertyCount > 0;
-
-              return (
-                <NavigationButton
-                  key={building.id}
-                  onClick={() => onBuildingSelect(building.id)}
-                  icon={NAVIGATION_ENTITIES.building.icon}
-                  iconColor={NAVIGATION_ENTITIES.building.color}
-                  title={building.name}
-                  subtitle={t('columns.buildings.propertyCount', { count: propertyCount })}
-                  badgeStatus={!hasProperties ? 'no_projects' : undefined}
-                  badgeText={!hasProperties ? getNavigationFilterCategories().building_without_units : undefined}
-                />
-              );
-            })}
+            {projectBuildings.map(building => (
+              <NavigationButton
+                key={building.id}
+                onClick={() => onBuildingSelect(building.id)}
+                // 🏢 ENTERPRISE: Real-time unit count
+                {...describeNavigationBuilding({ building, propertyCount: getPropertyCount(building.id), t })}
+              />
+            ))}
           </>
         )}
 
@@ -237,34 +211,22 @@ export function MobileNavigation({
         {/* Actions - 🏢 ENTERPRISE: Εξαρτάται από Building (skip Floors) */}
         {mobileLevel === 'actions' && selectedBuilding && (
           <nav className="space-y-3" aria-label={t('mobile.actionsLabel')}>
-            <NavigationButton
-              onClick={() => onNavigateToPage('properties')}
-              icon={NAVIGATION_ENTITIES.property.icon}
-              iconColor={NAVIGATION_ENTITIES.property.color}
-              title={t('columns.actions.viewProperties')}
-              subtitle={t('columns.actions.propertiesCount', { count: buildingProperties.length })}
-              variant="compact"
-            />
-
-            <NavigationButton
-              onClick={() => onNavigateToPage('buildings')}
-              icon={NAVIGATION_ENTITIES.building.icon}
-              iconColor={NAVIGATION_ENTITIES.building.color}
-              title={t('columns.actions.buildingDetails')}
-              subtitle={formatBuildingLabel(selectedBuilding.code, selectedBuilding.name)}
-              variant="compact"
-            />
-
-            {selectedProject && (
+            {buildBuildingActionDescriptors({
+              selectedBuilding,
+              selectedProject,
+              propertyCount: buildingProperties.length,
+              t,
+            }).map(action => (
               <NavigationButton
-                onClick={() => onNavigateToPage('projects')}
-                icon={NAVIGATION_ENTITIES.project.icon}
-                iconColor={NAVIGATION_ENTITIES.project.color}
-                title={t('columns.actions.projectDetails')}
-                subtitle={selectedProject.name}
+                key={action.key}
+                onClick={() => onNavigateToPage(action.page)}
+                icon={action.icon}
+                iconColor={action.iconColor}
+                title={action.title}
+                subtitle={action.subtitle}
                 variant="compact"
               />
-            )}
+            ))}
           </nav>
         )}
       </div>

@@ -11,7 +11,9 @@
  *                       Engineering + Legal optional) and marks onboarding complete.
  *   action='skip'     — marks onboarding skipped; triggers 7-day banner / cron reminder.
  *
- * Auth:   withAuth — company_admin required for POST
+ * Auth:   withAuth — ΔΗΛΩΤΙΚΟ ταβάνι `requiredGlobalRoles: ADMINISTRATIVE_ROLES` στο POST
+ *         (ADR-801 §2.11). Το GET μένει ανοιχτό ΕΠΙΤΗΔΕΣ: απαντά `{ state: null }` σε
+ *         μη-διαχειριστή — απόκριση, όχι άρνηση.
  * Rate:   withStandardRateLimit
  * Store:  companies/{companyId}.settings.onboarding  (Admin SDK)
  *
@@ -22,7 +24,7 @@
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
+import { ADMINISTRATIVE_ROLES, withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -80,11 +82,6 @@ async function handlePost(
   ctx: AuthContext,
   _cache: PermissionCache,
 ): Promise<NextResponse> {
-  const isAdmin = ctx.globalRole === 'company_admin' || ctx.globalRole === 'super_admin';
-  if (!isAdmin) {
-    return NextResponse.json({ error: 'Forbidden — company_admin required' }, { status: 403 });
-  }
-
   let body: PostBody;
   try {
     body = await req.json();
@@ -136,5 +133,5 @@ export const GET = withStandardRateLimit(async function GET(request: NextRequest
 });
 
 export const POST = withStandardRateLimit(async function POST(request: NextRequest) {
-  return withAuth(handlePost)(request);
+  return withAuth(handlePost, { requiredGlobalRoles: ADMINISTRATIVE_ROLES })(request);
 });

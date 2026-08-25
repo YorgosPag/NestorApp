@@ -258,7 +258,16 @@
       "preview": "You will see {visible} of {total} menu sections.",
       "reversible": "Return to “All jobs” with one click, whenever you want.",
       "accept": "Try it",
-      "decline": "No thanks"
+      "decline": "No thanks",
+      "reasonOccupation": "Based on the occupation you declared, this job suits you."
+    },
+    "occupation": {
+      "undeclaredHint": "Optional — helps suggest the job that suits you.",
+      "declare": "Tell us what you do",
+      "declared": "Declared by you — unverified",
+      "verified": "Verified",
+      "suggests": "Suggests: {job}",
+      "noSuggestion": "Does not map to a specific job"
     }
   },
   "sidebar": {

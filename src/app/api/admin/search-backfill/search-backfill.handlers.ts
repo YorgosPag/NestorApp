@@ -25,7 +25,6 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { clearUserCompanyCache } from './tenant-resolver';
 import { backfillAllTypesParallel, type BackfillStats } from './backfill-engine';
 import { nowISO } from '@/lib/date-local';
-import { isRoleBypass } from '@/lib/auth/roles';
 
 const logger = createModuleLogger('SearchBackfillRoute');
 
@@ -94,11 +93,6 @@ export async function runSearchBackfill(
 ): Promise<NextResponse<BackfillApiResponse>> {
   const startTime = Date.now();
 
-  if (!isRoleBypass(ctx.globalRole)) {
-    logger.warn('BLOCKED: Non-super_admin attempted backfill', { email: ctx.email });
-    return createErrorResponse('Forbidden: Only super_admin can execute search backfill', 403);
-  }
-
   logger.info('Search Backfill request', { email: ctx.email });
 
   try {
@@ -137,13 +131,9 @@ export async function runSearchBackfill(
 
 export async function getBackfillStatus(
   _request: NextRequest,
-  ctx: AuthContext,
+  _ctx: AuthContext,
   _cache: PermissionCache,
 ): Promise<NextResponse<BackfillStatusApiResponse>> {
-  if (!isRoleBypass(ctx.globalRole)) {
-    return createErrorResponse('Forbidden: Only super_admin can access search backfill', 403);
-  }
-
   const adminDb = getAdminFirestore();
   if (!adminDb) {
     return createErrorResponse('Firebase Admin not initialized', 500);
@@ -184,15 +174,10 @@ export async function getBackfillStatus(
 
 export async function migrateContactTenants(
   request: NextRequest,
-  ctx: AuthContext,
+  _ctx: AuthContext,
   _cache: PermissionCache,
 ): Promise<NextResponse<MigrationApiResponse>> {
   const startTime = Date.now();
-
-  if (!isRoleBypass(ctx.globalRole)) {
-    logger.warn('BLOCKED: Non-super_admin attempted contact migration', { email: ctx.email });
-    return createErrorResponse('Forbidden: Only super_admin can execute contact migration', 403);
-  }
 
   const adminDb = getAdminFirestore();
   if (!adminDb) {

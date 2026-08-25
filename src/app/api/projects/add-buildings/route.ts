@@ -16,6 +16,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
+import { BYPASS_ROLES } from '@/lib/auth/roles';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { BUILDING_IDS } from '@/config/building-ids-config';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -116,7 +117,7 @@ export const POST = withStandardRateLimit(async (request: NextRequest) => {
         }, { status: 500 });
       }
     },
-    { requiredGlobalRoles: 'super_admin' }
+    { requiredGlobalRoles: BYPASS_ROLES }
   );
 
   return handler(request);

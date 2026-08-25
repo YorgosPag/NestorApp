@@ -8,11 +8,11 @@ import {
   getAdminFirestore,
   SERVER_COLLECTIONS,
 } from '@/server/admin/admin-guards';
-import { handleBuildingInstantiation } from '@/server/admin/building-instantiation-handler';
+import { buildingInstantiationRoute } from '@/server/admin/building-instantiation-route';
 import { getCompanyByName } from '@/services/companies.service';
 import { getRequiredAdminCompanyName } from '@/config/admin-env';
 import { generateOperationId } from '@/services/enterprise-id.service';
-import { withAuth } from '@/lib/auth';
+import { withAuth, BYPASS_ROLES } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { FIELDS } from '@/config/firestore-field-constants';
@@ -23,16 +23,15 @@ import { nowISO } from '@/lib/date-local';
  * ENTERPRISE POPULATE ROUTE: Create Buildings from Templates
  *
  * Server-only admin endpoint that populates buildings from Firestore templates.
- * Uses shared handler from building-instantiation-handler.ts for POST.
  * Includes GET endpoint for verification of existing buildings.
  *
- * NOTE: POST is functionally identical to /api/buildings/seed.
- * Both routes use the same shared handler. The distinction is maintained
- * for backward compatibility and semantic clarity.
+ * NOTE: POST is functionally identical to /api/buildings/seed — both delegate to
+ * the SAME route factory. The distinction is kept for backward compatibility and
+ * semantic clarity, and survives only in the audit trail (`source` / `operationPrefix`).
  *
  * SECURITY GATES:
  * - server-only (import 'server-only')
- * - withAuth + requiredGlobalRoles: 'super_admin' (both GET and POST)
+ * - withAuth + requiredGlobalRoles: BYPASS_ROLES (both GET and POST)
  * - Admin SDK only (getAdminFirestore)
  *
  * @method POST - Create buildings from templates
@@ -59,25 +58,6 @@ interface BuildingSummary {
   createdAt: unknown;
 }
 
-/** Response type for populate POST */
-interface PopulateResponse {
-  success: boolean;
-  error?: string;
-  suggestion?: string;
-  operationId: string;
-  message?: string;
-  summary?: {
-    totalTemplates: number;
-    created: number;
-    skipped: number;
-    errors: number;
-    companyId: string;
-    companyName: string;
-  };
-  results?: unknown[];
-  companyId?: string;
-}
-
 /** Response type for populate GET */
 interface VerifyResponse {
   success: boolean;
@@ -99,33 +79,12 @@ interface VerifyResponse {
 /**
  * @rateLimit STANDARD (60 req/min) - CRUD
  */
-export const POST = withStandardRateLimit(
-  withAuth<PopulateResponse>(
-  async (request: NextRequest, _ctx: AuthContext, _cache: PermissionCache) => {
-    const response = await handleBuildingInstantiation(request, {
-      source: 'api/buildings/populate',
-      operationPrefix: 'POPULATE_BUILDINGS',
-      createdBy: 'populate-operation',
-      includeEnterpriseFields: true,
-    });
-
-    return NextResponse.json(
-      {
-        success: response.success,
-        error: response.error,
-        suggestion: response.suggestion,
-        operationId: response.operationId,
-        message: response.message,
-        summary: response.summary,
-        results: response.results,
-        companyId: response.companyId,
-      },
-      { status: response.statusCode }
-    );
-  },
-  { requiredGlobalRoles: 'super_admin' }
-  )
-);
+export const POST = buildingInstantiationRoute({
+  source: 'api/buildings/populate',
+  operationPrefix: 'POPULATE_BUILDINGS',
+  createdBy: 'populate-operation',
+  includeEnterpriseFields: true,
+});
 
 // ============================================================================
 // VERIFICATION ENDPOINT
@@ -230,6 +189,6 @@ export const GET = withStandardRateLimit(
       );
     }
   },
-  { requiredGlobalRoles: 'super_admin' }
+  { requiredGlobalRoles: BYPASS_ROLES }
   )
 );

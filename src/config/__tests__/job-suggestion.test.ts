@@ -546,3 +546,85 @@ describe('Ε-5 — η σιωπή του Σ-7 ΕΠΙΒΙΩΝΕΙ του επαγ�
     expect(computeJobSuggestion({ ...base, activeJob: 'design', dismissed: false })).toBeNull();
   });
 });
+
+// ----------------------------------------------------------------------------
+// Ζ — 🔴 Ο ΥΠΕΡΔΙΑΧΕΙΡΙΣΤΗΣ: ΤΟ BYPASS ΔΕΝ ΕΙΝΑΙ ΜΕΤΡΗΜΕΝΟ ΔΙΚΑΙΩΜΑ
+//
+// Μετρήθηκε ζωντανά (2026-08-25) ότι το `tiebreak` ήταν **αδρανής φρουρός**
+// (ADR-749 §5): **0 στους 4** λογαριασμούς της βάσης μπορούσαν να το
+// πυροδοτήσουν. Ο δηλωμένος μηχανικός (ISCO 2149 → πρόθεμα 214 → Σχέδιο)
+// προσγειωνόταν στη **Διαχείριση**.
+//
+// 🔑 ΓΙΑΤΙ ΚΑΜΙΑ ΑΓΚΥΡΑ ΔΕΝ ΤΟ ΕΙΔΕ — ΤΟ FIXTURE ΔΟΚΙΜΑΖΕ ΚΟΣΜΟ ΠΟΥ ΔΕΝ ΥΠΑΡΧΕΙ.
+// Το `BYPASS` παραπάνω δηλώνει `permissions: []`. **Ζωντανά είναι αδύνατο**: το
+// `useEffectivePermissions:91-93` προσθέτει **πάντα** `admin_access` στον
+// `super_admin`. Και με **κενά** permissions όλα ισοβαθμούν στο 0, οπότε το
+// tiebreak δούλευε — δηλαδή οι άγκυρες ήταν **πράσινες πάνω σε μηχανισμό που
+// ζωντανά ήταν νεκρός**. Το σχόλιο του fixture, γραμμένο με βεβαιότητα, **ήταν
+// η ίδια η απόκλιση** — σχήμα CHECK 3.34 (63) · 3.37 (18 vs 26) · 3.57 (19/20).
+// ----------------------------------------------------------------------------
+
+/**
+ * Ο υπερδιαχειριστής **όπως τον φτιάχνει ο browser**, όχι όπως τον φανταζόμαστε.
+ *
+ * ⚠️ **ΜΗΝ** το «απλοποιήσεις» σε `permissions: []`: αυτή ακριβώς η
+ * απλοποίηση έκρυβε το ελάττωμα. Η τιμή έρχεται από το
+ * `useEffectivePermissions:91-93` και είναι **αμετάβλητη** για κάθε
+ * `super_admin`.
+ */
+const BYPASS_LIVE = access({ isBypass: true, permissions: ['admin_access'] });
+
+describe('Ζ-1 🔴 ο ζωντανός υπερδιαχειριστής — το επάγγελμα ΠΡΕΠΕΙ να ακούγεται', () => {
+  it('ΠΑΡΟΝΟΜΑΣΤΗΣ: το `admin_access` ζει σε ΑΚΡΙΒΩΣ ΜΙΑ δουλειά', () => {
+    // Χωρίς αυτό, το «σκορ 1 μόνο στη Διαχείριση» θα ήταν ισχυρισμός. Αν αύριο
+    // δεύτερη δουλειά αποκτήσει `admin_access`, η αιτία αλλάζει και πρέπει να
+    // το δει άνθρωπος.
+    const owners = JOB_ORDER.filter((job) => JOBS[job].permissions.includes('admin_access'));
+    expect(owners).toEqual(['administration']);
+  });
+
+  it('ΠΑΡΟΝΟΜΑΣΤΗΣ: ο bypass δικαιούται ΚΑΙ ΤΙΣ ΕΞΙ', () => {
+    // Αλλιώς μια πράσινη «θεραπεία» θα μπορούσε να σημαίνει «λιγότερες δουλειές».
+    expect(resolveAvailableJobs(BYPASS_LIVE)).toEqual([...JOB_ORDER]);
+  });
+
+  it('🔴 ο δηλωμένος ΜΗΧΑΝΙΚΟΣ παίρνει Σχέδιο, ΟΧΙ Διαχείριση', () => {
+    // Η άγκυρα που κοκκινίζει χωρίς τη διόρθωση: πριν επέστρεφε 'administration'.
+    const tiebreak = resolveJobAffinity(ISCO.civilEngineer);
+    expect(tiebreak).toBe('design');
+    expect(pickDefaultJob(BYPASS_LIVE, tiebreak)).toBe('design');
+  });
+
+  it('🔴 ο δηλωμένος ΔΙΚΗΓΟΡΟΣ παίρνει Πελάτες — ίδια permissions, άλλη απάντηση', () => {
+    // Το ζεύγος είναι ο μηχανισμός: **ίδιος** λογαριασμός, **μόνο** το επάγγελμα
+    // αλλάζει. Ένα μονό test θα μπορούσε να είναι πράσινο από σύμπτωση σειράς.
+    const tiebreak = resolveJobAffinity(ISCO.lawyer);
+    expect(tiebreak).toBe('clients');
+    expect(pickDefaultJob(BYPASS_LIVE, tiebreak)).toBe('clients');
+    expect(pickDefaultJob(BYPASS_LIVE, resolveJobAffinity(ISCO.civilEngineer))).toBe('design');
+  });
+
+  it('🔒 Α4: το επάγγελμα ΔΕΝ διευρύνει — κάθε επιλογή μένει μέσα στα διαθέσιμα', () => {
+    const available = resolveAvailableJobs(BYPASS_LIVE);
+    for (const job of JOB_ORDER) {
+      expect(available).toContain(pickDefaultJob(BYPASS_LIVE, job));
+    }
+  });
+
+  it('⚠️ ΔΗΛΩΜΕΝΗ ΣΥΝΕΠΕΙΑ: χωρίς επάγγελμα ⇒ σειρά μητρώου (Ε7.δ), όχι Διαχείριση', () => {
+    // Η συμπεριφορά **αλλάζει** εδώ, και είναι σκόπιμο: το «Διαχείριση» ήταν
+    // παρενέργεια ενός fallback **ορατότητας**, που κανείς δεν αποφάσισε ως
+    // προεπιλογή. Το Ε7.δ δηλώνει «σε ισοβαθμία, η σταθερή σειρά του μητρώου».
+    // 🔶 ΑΝΟΙΧΤΟ (απόφαση προϊόντος): και οι δύο τιμές είναι **μαντεψιά** για
+    //    bypass χωρίς δήλωση· το τιμιότερο θα ήταν **σιωπή**. Δες ADR-798.
+    expect(pickDefaultJob(BYPASS_LIVE, null)).toBe(JOB_ORDER[0]);
+  });
+
+  it('🔒 όποιος ΔΕΝ έχει bypass μένει ΑΘΙΚΤΟΣ — η μέτρηση προηγείται της δήλωσης', () => {
+    // Ο company_admin έχει **μετρημένο** `admin_access` (όχι bypass): εκεί το
+    // σκορ είναι πραγματικό και το επάγγελμα δεν επιτρέπεται να το ανατρέψει.
+    const counted = access({ isBypass: false, permissions: ['admin_access'] });
+    expect(pickDefaultJob(counted, 'design')).toBe('administration');
+    expect(pickDefaultJob(counted, null)).toBe('administration');
+  });
+});

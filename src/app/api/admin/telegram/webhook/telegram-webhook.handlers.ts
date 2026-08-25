@@ -16,7 +16,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateRequestId } from '@/services/enterprise-id.service';
 import { logSystemOperation, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext } from '@/lib/auth';
-import { isRoleBypass } from '@/lib/auth/roles';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { WebhookInfo, SetWebhookRequest, WebhookStatus } from './telegram-webhook-types';
 import {
@@ -37,32 +36,6 @@ const logger = createModuleLogger('TelegramWebhookAdminRoute');
  * bypass-role-only check (explicit) — ADR-703. Returns a 403 response if the
  * caller is not a super_admin, otherwise null.
  */
-function requireSuperAdmin(
-  ctx: AuthContext,
-  operationId: string,
-  blockedMessage: string,
-): NextResponse | null {
-  if (isRoleBypass(ctx.globalRole)) {
-    return null;
-  }
-
-  logger.warn(blockedMessage, {
-    userId: ctx.uid,
-    email: ctx.email,
-    globalRole: ctx.globalRole,
-    operationId,
-  });
-
-  return NextResponse.json(
-    {
-      success: false,
-      error: 'Forbidden: This operation requires super_admin role',
-      code: 'SUPER_ADMIN_REQUIRED',
-    },
-    { status: 403 },
-  );
-}
-
 /** Audit a Telegram webhook system operation (non-blocking). */
 async function auditSystemOperation(
   request: NextRequest,
@@ -127,11 +100,6 @@ function buildWebhookStatus(webhookInfo: WebhookInfo | undefined): WebhookStatus
 export async function handleGetWebhookInfo(request: NextRequest, ctx: AuthContext): Promise<NextResponse> {
   const operationId = generateRequestId();
 
-  const forbidden = requireSuperAdmin(ctx, operationId, 'BLOCKED: Non-super_admin attempted webhook info');
-  if (forbidden) {
-    return forbidden;
-  }
-
   logger.info('Getting Telegram webhook info', { email: ctx.email, operationId });
 
   const result = await getWebhookInfo();
@@ -187,11 +155,6 @@ function resolveWebhookConfig(
 export async function handleSetWebhook(request: NextRequest, ctx: AuthContext): Promise<NextResponse> {
   const startTime = Date.now();
   const operationId = generateRequestId();
-
-  const forbidden = requireSuperAdmin(ctx, operationId, 'BLOCKED: Non-super_admin attempted webhook configuration');
-  if (forbidden) {
-    return forbidden;
-  }
 
   logger.info('Setting Telegram webhook', { email: ctx.email, operationId });
 
@@ -275,11 +238,6 @@ export async function handleSetWebhook(request: NextRequest, ctx: AuthContext): 
 export async function handleDeleteWebhook(request: NextRequest, ctx: AuthContext): Promise<NextResponse> {
   const startTime = Date.now();
   const operationId = generateRequestId();
-
-  const forbidden = requireSuperAdmin(ctx, operationId, 'BLOCKED: Non-super_admin attempted webhook deletion');
-  if (forbidden) {
-    return forbidden;
-  }
 
   logger.info('Removing Telegram webhook', { email: ctx.email, operationId });
 

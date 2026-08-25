@@ -20,33 +20,13 @@ import { processAdminBatch, BATCH_SIZE_READ } from '@/lib/admin-batch-utils';
 import { getErrorMessage } from '@/lib/error-utils';
 import { FLOOR_TEMPLATES, TARGET_BUILDING, TARGET_COMPANY_ID } from './seed-floors.config';
 import { EntityAuditService } from '@/services/entity-audit.service';
-import { isRoleBypass } from '@/lib/auth/roles';
 
 const logger = createModuleLogger('SeedFloorsHandlers');
-
-function forbiddenResponse(message: string): NextResponse {
-  return NextResponse.json(
-    {
-      success: false,
-      error: `Forbidden: ${message}`,
-      message: 'Floors seeding is a system-level operation restricted to super_admin',
-    },
-    { status: 403 }
-  );
-}
 
 export async function handleSeedFloorsPreview(
   _request: NextRequest,
   ctx: AuthContext
 ): Promise<NextResponse> {
-  if (!isRoleBypass(ctx.globalRole)) {
-    logger.warn('BLOCKED: Non-super_admin attempted seeding preview', {
-      email: ctx.email,
-      globalRole: ctx.globalRole,
-    });
-    return forbiddenResponse('Only super_admin can preview floors seeding');
-  }
-
   logger.info('Seed floors preview request', {
     email: ctx.email,
     globalRole: ctx.globalRole,
@@ -110,14 +90,6 @@ export async function handleSeedFloorsExecute(
   ctx: AuthContext
 ): Promise<NextResponse> {
   const startTime = Date.now();
-
-  if (!isRoleBypass(ctx.globalRole)) {
-    logger.warn('BLOCKED: Non-super_admin attempted seeding execution', {
-      email: ctx.email,
-      globalRole: ctx.globalRole,
-    });
-    return forbiddenResponse('Only super_admin can execute floors seeding');
-  }
 
   logger.info('Seed floors execute request', {
     email: ctx.email,
@@ -220,14 +192,6 @@ export async function handleSeedFloorsDelete(
   ctx: AuthContext
 ): Promise<NextResponse> {
   const startTime = Date.now();
-
-  if (!isRoleBypass(ctx.globalRole)) {
-    logger.warn('BLOCKED: Non-super_admin attempted mass deletion', {
-      email: ctx.email,
-      globalRole: ctx.globalRole,
-    });
-    return forbiddenResponse('Only super_admin can delete all floors');
-  }
 
   logger.info('Seed floors delete request', {
     email: ctx.email,

@@ -26,6 +26,7 @@ import { COLLECTIONS, SYSTEM_DOCS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { withAuth, type AuthenticatedHandler } from '@/lib/auth/middleware';
+import { BYPASS_ROLES } from '@/lib/auth/roles';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 
@@ -214,5 +215,5 @@ const handleGet: AuthenticatedHandler<AnalyticsResponse> = async () => {
 };
 
 export const GET = withSensitiveRateLimit(withAuth(handleGet, {
-  requiredGlobalRoles: 'super_admin',
+  requiredGlobalRoles: BYPASS_ROLES,
 }));

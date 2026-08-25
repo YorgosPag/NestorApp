@@ -25,6 +25,7 @@ import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, logSystemBootstrap } from '@/lib/auth';
+import { BYPASS_ROLES } from '@/lib/auth/roles';
 import type { AuthContext, PermissionCache, GlobalRole } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminAuth, getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
@@ -185,6 +186,6 @@ export const POST = withSensitiveRateLimit(
         return NextResponse.json({ success: false, error: message }, { status: 500 });
       }
     },
-    { requiredGlobalRoles: ['super_admin'] }
+    { requiredGlobalRoles: BYPASS_ROLES }
   )
 );
