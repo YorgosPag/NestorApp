@@ -8,6 +8,7 @@
     "src/i18n/generated/routes/listing__id.el.json": "1f5bb80734871a98e9c0f08d8457a0d00871069ea36dfc90239a02e77749647e",
     "src/i18n/generated/routes/login.el.json": "3572a0681e12dd71bda049c2221dc6f8874d4c79c3f6883e5e8562f2bd11214a",
     "src/i18n/generated/routes/mandate__token.el.json": "6e75cdb41998a3f76bb88840249c7b197754548563acc1de2269b9e88099531c",
+    "src/i18n/generated/routes/o__workspace__dashboard.el.json": "263a3349d6e3f1e2badbab37f08d81836a102b89054c44e5ffac29cfacafffd0",
     "src/i18n/generated/routes/o__workspace__listings__mandates.el.json": "acc74d03857daa50427b8bff88d2bcd40e9d1952a442b9e7577c34eedf95c83a",
     "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "dd5a37e4dd6d0b4f33a2f8dbd4f7306dde97d013dfa8a2b1cf8ab492c4f6ca7d",
     "src/i18n/generated/routes/offers.el.json": "3f80253d5a96a295e1d5b5b7a8eaacf1f65034115b256f48812fa10cc2d40383",
@@ -56,7 +57,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "8c07cb3d5f93fc3b5be2e1bf367abb068aabea39a2135942f911286b48efea53",
+  "inputsSha256": "8251531418364f6c3241841adf199d2f9f2754b5357328b4aa0317a01b1a454a",
   "languages": [
     "el"
   ],
@@ -583,7 +584,7 @@
     "matchedKeys": 132,
     "routeBoundaries": 0,
     "shellFiles": 480,
-    "sliceBytes": 316155
+    "sliceBytes": 318859
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

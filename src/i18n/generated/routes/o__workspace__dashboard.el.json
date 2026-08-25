@@ -1,0 +1,76 @@
+{
+  "dashboard": {
+    "home": {
+      "actions": {
+        "newContact": "Νέα Επαφή",
+        "newInvoice": "Νέο Τιμολόγιο",
+        "newProject": "Νέο Έργο",
+        "search": "Αναζήτηση"
+      },
+      "greeting": {
+        "afternoon": "Καλό απόγευμα",
+        "evening": "Καλό βράδυ",
+        "morning": "Καλημέρα"
+      },
+      "modules": {
+        "accounting": {
+          "description": "Τιμολόγια, ΦΠΑ, ΕΦΚΑ",
+          "title": "Λογιστικό"
+        },
+        "buildings": {
+          "description": "Διαχείριση κτιριακού αποθέματος",
+          "title": "Κτίρια"
+        },
+        "contacts": {
+          "description": "Φυσικά και νομικά πρόσωπα",
+          "title": "Επαφές"
+        },
+        "crm": {
+          "description": "Πελάτες, ενδιαφερόμενοι, ροή",
+          "title": "CRM"
+        },
+        "dxfViewer": {
+          "description": "Τεχνικά σχέδια και μετρήσεις",
+          "title": "DXF Viewer"
+        },
+        "files": {
+          "description": "Διαχείριση αρχείων και εγγράφων",
+          "title": "Αρχεία"
+        },
+        "projects": {
+          "description": "Κατασκευαστικά έργα και αξιολόγηση",
+          "title": "Έργα"
+        },
+        "properties": {
+          "description": "Αναζήτηση και διαχείριση ακινήτων",
+          "title": "Ευρετήριο Ακινήτων"
+        },
+        "sales": {
+          "description": "Διαθέσιμα και πωλημένα ακίνητα",
+          "title": "Πωλήσεις"
+        },
+        "spaces": {
+          "description": "Μονάδες, αποθήκες, θέσεις στάθμευσης",
+          "title": "Χώροι"
+        }
+      },
+      "sections": {
+        "mainMenu": "Κύρια Πλοήγηση",
+        "quickActions": "Γρήγορες Ενέργειες",
+        "tools": "Εργαλεία"
+      },
+      "subItems": "{count} υπο-ενότητες",
+      "subtitle": "Τι θέλετε να διαχειριστείτε σήμερα;"
+    }
+  },
+  "onboarding": {
+    "onboarding": {
+      "banner": {
+        "cta": "Διαμόρφωση τώρα",
+        "description": "Το Λογιστήριο δεν έχει ρυθμιστεί. Χρειάζεται για σωστή δρομολόγηση ειδοποιήσεων.",
+        "dismiss": "Κλείσιμο",
+        "title": "Ρυθμίστε τη δομή της επιχείρησής σας"
+      }
+    }
+  }
+}

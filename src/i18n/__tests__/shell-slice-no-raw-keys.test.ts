@@ -23,12 +23,17 @@
  * survived every CHECK in the repo.
  */
 
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import i18next, { type Resource } from 'i18next';
 
 import manifest from '../generated/shell-slice.manifest.json';
 import shellSlice from '../generated/shell-slice.el.json';
 // Ανεξάρτητη αυθεντία: τι ΟΦΕΙΛΕΙ να υπάρχει, έναντι του τι ΤΑΞΙΔΕΥΕΙ (ADR-781 §7).
 import localeNavigation from '../locales/el/navigation.json';
+import localeDashboard from '../locales/el/dashboard.json';
+import dashboardRouteSlice from '../generated/routes/o__workspace__dashboard.el.json';
 
 const LANGUAGE = 'el';
 
@@ -280,5 +285,70 @@ describe('ADR-744 — the shell slice alone is enough to render the shell', () =
 
     // Το κλειδί που ονομάστηκε στο ADR-744 §12 ως αυτό που έβαφε ωμό.
     expect(client.t('pages.home', { ns: 'navigation' })).not.toBe('pages.home');
+  });
+  /**
+   * 🔴 ADR-744 §15 — Η ΑΡΧΙΚΗ ΤΟΥ ΕΠΑΓΓΕΛΜΑΤΙΑ ΕΒΓΑΖΕ ΩΜΑ ΚΛΕΙΔΙΑ ΣΤΟΝ CLIENT.
+   *
+   * Το `resolvePostLoginRoute` στέλνει **κάθε** ταυτότητα με `companyId` στο
+   * `/dashboard`, και το `dashboard` namespace ήταν **absent** από το κέλυφος:
+   * ο ζωντανός logger ανέφερε `raw key reached the UI → dashboard:home.*` με
+   * `bundles:["dashboard=absent"]`.
+   *
+   * 🔴 **ΓΙΑΤΙ ΚΑΜΙΑ ΠΥΛΗ ΔΕΝ ΤΟ ΕΙΔΕ**: το CHECK 3.51 κρίνει **SSR HTML**, και
+   * εκεί η σελίδα κάθεται πίσω από `(app)/loading.tsx` ⇒ ταξινομείται
+   * `surface-shell-only`. Τα ωμά κλειδιά ζουν **μετά την ενυδάτωση**, όπου καμία
+   * πύλη δεν κοιτάζει. Αυτή η άγκυρα είναι το υποκατάστατο.
+   *
+   * ⚠️ **Ο ΠΑΡΟΝΟΜΑΣΤΗΣ ΕΙΝΑΙ Ο ΠΗΓΑΙΟΣ ΚΩΔΙΚΑΣ** *(μάθημα ADR-790 §9.1)*: αν
+   * ρωτούσαμε το ίδιο το slice — ή το `manifest.wants`, που το γράφει ο ίδιος
+   * generator — σβήνοντας ένα κλειδί ο έλεγχος θα έμενε **πράσινος**, γιατί ο
+   * παρονομαστής θα μετακινούνταν μαζί με τη μετάλλαξη.
+   */
+  it('🔴 ADR-744 §15 — το κέλυφος ΔΕΝ απαντά κανένα `dashboard:home.*`, το route slice τα απαντά ΟΛΑ', () => {
+    // 🔴 Ο ΠΑΡΟΝΟΜΑΣΤΗΣ ΕΙΝΑΙ Ο **ΠΗΓΑΙΟΣ ΚΩΔΙΚΑΣ**, ΚΑΙ ΤΟ ΛΑΘΟΣ ΕΓΙΝΕ ΓΡΑΦΟΝΤΑΣ
+    // ΑΥΤΗ ΤΗΝ ΑΓΚΥΡΑ. Η πρώτη γραφή ρωτούσε «όσα κλειδιά ΕΧΕΙ το locale» και
+    // κοκκίνισε σε **7** (`modules.legal.*` · `modules.geoCanvas.*` · `badges.*`)
+    // που **κανείς δεν ζητά** — μετρημένο: μηδέν καταναλωτές σε όλο το `src/`.
+    // Ο generator τα έκοψε **σωστά**· η άγκυρα κατηγορούσε τη θεραπεία.
+    //
+    // ⚠️ Και ΟΧΙ το `manifest.wants`: εκείνο το γράφει ο ΙΔΙΟΣ generator που
+    // παράγει το slice ⇒ κυκλικός παρονομαστής (ADR-790 §9.1). Ο πηγαίος κώδικας
+    // είναι η μόνη αυθεντία που δεν μετακινείται μαζί με τη μετάλλαξη.
+    const owed = [...new Set(
+      ['DashboardHome', 'DashboardWelcome', 'NavigationCard', 'QuickActionsStrip'].flatMap(
+        (name) => [
+          ...readFileSync(
+            join(__dirname, '..', '..', 'components', 'dashboard', `${name}.tsx`), 'utf8',
+          ).matchAll(/t\('(home\.[\w.]+)'/g),
+        ].map((m) => m[1]),
+      ),
+    )];
+    // Μετρημένο 2026-08-25: **25** διακριτά κλειδιά. Το κατώφλι είναι ΚΑΤΩ ΟΡΙΟ —
+    // αποδεικνύει ότι ο παρονομαστής δεν είναι κενός, χωρίς να κοκκινίζει σε νόμιμη
+    // αφαίρεση ενός πλακιδίου.
+    expect(owed.length).toBeGreaterThanOrEqual(20);
+
+    // ── Ο ΠΑΡΟΝΟΜΑΣΤΗΣ ΤΗΣ ΒΛΑΒΗΣ: χωρίς το slice τα κλειδιά ΔΕΝ απαντιούνται.
+    // Αν κάποιος βάλει το `dashboard` στο κέλυφος (guaranteedNamespaces), αυτή η
+    // γραμμή κοκκινίζει — και σωστά: η απόφαση μετρήθηκε 748× ακριβότερη.
+    expect(shellSlice as Record<string, unknown>).not.toHaveProperty('dashboard');
+
+    const at = (root: unknown, dotted: string): unknown =>
+      dotted.split('.').reduce<unknown>(
+        (node, part) =>
+          typeof node === 'object' && node !== null
+            ? (node as Record<string, unknown>)[part]
+            : undefined,
+        root);
+
+    // ── Η ΘΕΡΑΠΕΙΑ, και ταυτόχρονα ο έλεγχος ότι το locale ΟΦΕΙΛΕΙ ό,τι ζητά ο κώδικας.
+    const sliceNs = (dashboardRouteSlice as Record<string, unknown>).dashboard;
+    expect(sliceNs).toBeDefined();
+
+    const missingFromLocale = owed.filter((k) => typeof at(localeDashboard, k) !== 'string');
+    expect(missingFromLocale).toEqual([]);
+
+    const missingFromSlice = owed.filter((k) => typeof at(sliceNs, k) !== 'string');
+    expect(missingFromSlice).toEqual([]);
   });
 });

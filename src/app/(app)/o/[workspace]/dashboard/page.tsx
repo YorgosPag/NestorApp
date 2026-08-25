@@ -9,6 +9,22 @@ import { LayoutDashboard } from 'lucide-react';
 import { PageLoadingState } from '@/core/states';
 import { AUTH_ROUTES, resolvePostLoginRoute } from '@/lib/routes';
 import { createStaleCache } from '@/lib/stale-cache';
+// 🔴 ADR-744 §15 — ΤΟ SLICE ΤΗΣ ΔΙΑΔΡΟΜΗΣ, ΣΤΑΤΙΚΑ ΚΑΙ ΣΕ ΕΜΒΕΛΕΙΑ MODULE.
+// Χωρίς αυτές τις δύο γραμμές το artifact υπάρχει, το manifest το υπογράφει, οι πύλες
+// είναι πράσινες — και **κανείς δεν το φορτώνει ποτέ**: η θεραπεία μένει ΑΔΡΑΝΗΣ.
+//
+// 🔑 **ΕΔΩ, ΚΑΙ ΟΧΙ ΣΤΟ `DashboardHome.tsx`**: αυτό το αρχείο είναι ΗΔΗ `use client`
+// (γρ. 1), άρα ίδιος γράφος module με τον καταναλωτή — και είναι ο **μόνος** εισαγωγέας
+// του `DashboardHome` σε όλο το δέντρο. Η ρίζα της διαδρομής είναι η σωστή θέση, όπως
+// στα `/login` · `/terms` · `/privacy-policy`.
+//
+// ⚠️ ΠΟΤΕ `import()` (μετακινεί το ωμό κλειδί σε «ένα καρέ» και το κρύβει από το
+// CHECK 3.51)· ΠΟΤΕ σε Server Component (ξεχωριστός γράφος module ⇒ γράφει σε άλλο
+// στιγμιότυπο i18next).
+import routeSlice from '@/i18n/generated/routes/o__workspace__dashboard.el.json';
+import { registerRouteSlice } from '@/i18n/route-slice';
+
+registerRouteSlice(routeSlice);
 
 // SSoT stale-while-revalidate cache (ADR-300) — stores auth-known state.
 // DashboardHome is fully static — safe to render optimistically on re-navigation.
