@@ -5,7 +5,7 @@
  * ⚠️ SINGLE SOURCE OF TRUTH MOVED: as of ADR-516 (2026-06-24) the canonical
  * owner of every timing value is `config/dxf-timing.ts → DXF_TIMING`.
  * This module is kept as a backward-compatible facade so existing consumers
- * (useDynamicInputKeyboard, useDxfSettings, CollaborationEngine, ToolStateStore,
+ * (useDynamicInputKeyboard, useDxfSettings, ToolStateStore,
  * useColorMenuState, …) keep working unchanged. Every value below is a reference
  * into DXF_TIMING — no number is defined here anymore.
  *

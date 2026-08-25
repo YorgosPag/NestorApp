@@ -134,8 +134,10 @@ export const dxfZIndex: DxfZIndexHierarchy = {
 
 /**
  * ✅ Η ΙΕΡΑΡΧΙΑ. Τα **στυλ** των επιφανειών (`dxfComponentStyles`, `dxfOverlayStyles`,
- * `dxfAccessibility`, δυναμικά utilities) ζουν στο αδελφό `DxfSurface.styles.ts` —
- * χωρίστηκαν στο ADR-780 Φάση Β όταν το ενιαίο αρχείο έφτασε τις 600 γραμμές (N.7.1).
+ * `dxfAccessibility`, δυναμικά utilities) ζούσαν στο αδελφό `DxfSurface.styles.ts`,
+ * που χωρίστηκε από εδώ στο ADR-780 Φάση Β όταν το ενιαίο αρχείο έφτασε τις 600
+ * γραμμές (N.7.1) — και **διαγράφηκε ως νεκρό στο ADR-806**: κανένα ζωντανό module
+ * δεν το εισήγαγε ποτέ. Έμεινε το μισό που έχει καταναλωτές, δηλαδή αυτό εδώ.
  *
  * ΤΙ ΑΠΑΝΤΑ ΕΔΩ: «ποιο κάθεται πάνω από ποιο», παραγόμενο από το SSoT
  * (`design-tokens.json ▸ zIndex` → `zIndexScale` → `globalZIndex`).

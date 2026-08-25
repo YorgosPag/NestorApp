@@ -53,6 +53,7 @@ const { collectSourceFiles, isEntryFile } = require('./lib/module-graph/scan-con
 const { TEST_PATTERN } = require('./lib/module-graph/parse-module');
 const { loadBaseline, writeBaselineFile, compareSets } = require('./lib/ratchet-baseline');
 const { readAddHistory, readAdrStatus, triage } = require('./lib/deadcode-triage');
+const { loadInstrumentRoots, BLOCKING: ROOT_BLOCKING } = require('./lib/module-graph/instrument-roots');
 
 const PROJECT_ROOT = toPosix(path.resolve(__dirname, '..'));
 const DEFAULT_BASELINE = path.join(PROJECT_ROOT, '.barrel-deadcode-baseline.json');
@@ -111,9 +112,18 @@ function analyse(options) {
 
   const relOf = abs => toPosix(path.relative(root, abs));
   const isEntry = abs => isEntryFile(relOf(abs));
+
+  // 🔑 ΡΙΖΕΣ-ΟΡΓΑΝΑ (ADR-806): το `isEntry` βλέπει μόνο μέσα στο `src/`, άρα σύμβολο που
+  // το καλεί seed script ή συλλέκτης απογραφής ήταν ΔΟΜΙΚΑ αδύνατο να φανεί ζωντανό.
+  // ⚠️ Ο γράφος κλειδώνεται με ΑΠΟΛΥΤΑ μονοπάτια· οι δηλώσεις είναι σχετικές.
+  const instruments = loadInstrumentRoots({ projectRoot: root });
+  const externalRoots = instruments.externalRoots.map(r => ({
+    ...r, targetFile: toPosix(path.join(root, r.targetFile)),
+  }));
+
   // Two fixpoints. Their difference IS the "test-only" bucket — no heuristic.
-  const live = computeLiveness(graph, { isEntry });
-  const test = computeLiveness(graph, { isEntry, withTests: true });
+  const live = computeLiveness(graph, { isEntry, externalRoots });
+  const test = computeLiveness(graph, { isEntry, withTests: true, externalRoots });
   const allImporters = collectAllImporters(graph);
 
   const inScope = abs => {
@@ -122,7 +132,7 @@ function analyse(options) {
   };
 
   return {
-    graph, live, test, allImporters, relOf, parseErrors, files,
+    graph, live, test, allImporters, relOf, parseErrors, files, instruments,
     result: classifyExports(graph, live, test, { inScope }),
   };
 }
@@ -312,14 +322,44 @@ function runTriage(_analysis, options) {
   return 0;
 }
 
+/**
+ * Οι ρίζες-όργανα τυπώνονται ΠΑΝΤΑ, και οι μπλοκάροντες κάδοι **ακόμα και στο μηδέν**:
+ * ένα «0» που δεν τυπώνεται διαβάζεται ως «δεν υπάρχει τέτοιος έλεγχος» (πρότυπο 3.48/Κ6).
+ * Επιστρέφει τον αριθμό των ⛔ ευρημάτων.
+ */
+function reportInstrumentRoots(instruments) {
+  if (!instruments) return 0;
+  const t = instruments.tally;
+  const line = [
+    `✅ συνδεδεμένες ${t['root-wired'] || 0}`,
+    `🔶 χειροκίνητες ${t['root-manual'] || 0}`,
+    `⛔ ορφανές ${t['orphan-root'] || 0}`,
+    `⛔ χωρίς λόγο ${t['reasonless-root'] || 0}`,
+    `⛔ αδρανείς ${t['inert-root'] || 0}`,
+    `⛔ ανεπαλήθευτες ${t['unprovable-claim'] || 0}`,
+    `⛔ μη αναγνώσιμες ${t['unreadable-root'] || 0}`,
+  ].join(' · ');
+  console.log(`   ρίζες-όργανα (ADR-806): ${instruments.declared} δηλωμένες → ${line}`);
+  for (const f of instruments.findings) {
+    if (f.state === 'root-manual') console.log(`      🔶 ${f.file} — ${f.detail}`);
+  }
+  if (!instruments.blocking.length) return 0;
+  console.log('\n❌ ΡΙΖΕΣ-ΟΡΓΑΝΑ — δηλώσεις που δεν στέκουν:');
+  for (const f of instruments.blocking) console.log(`   🚫 [${f.state}] ${f.file} — ${f.detail}`);
+  console.log('\n   Το `.instrument-roots.json` ΔΕΝ είναι σίγαση: κάθε γραμμή ισχυρίζεται ότι κάποιο');
+  console.log('   εργαλείο κρατά σύμβολα ζωντανά, και ο ισχυρισμός ΕΠΑΛΗΘΕΥΕΤΑΙ. Διόρθωσε ή σβήσε.');
+  return instruments.blocking.length;
+}
+
 function runCheck(analysis, options) {
   const baseline = readBaseline(options);
   if (!baseline) return 1;
   const { result, relOf } = analysis;
+  const rootProblems = reportInstrumentRoots(analysis.instruments);
   const exports = compareSets(result.dead.map(e => idOf(relOf, e)), baseline.deadExports || []);
   const deadFiles = compareSets(result.deadFiles.map(relOf), baseline.deadFiles || []);
 
-  if (exports.added.length === 0 && deadFiles.added.length === 0) {
+  if (exports.added.length === 0 && deadFiles.added.length === 0 && rootProblems === 0) {
     const cleaned = exports.removed.length + deadFiles.removed.length;
     console.log(cleaned > 0
       ? `✅ CHECK 3.30 OK — ${cleaned} entr(ies) cleaned vs baseline (${exports.baselineCount} exports / ${deadFiles.baselineCount} files). Lock it in: npm run barrel-deadcode:baseline`

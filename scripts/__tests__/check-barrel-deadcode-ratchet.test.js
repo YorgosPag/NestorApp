@@ -621,3 +621,203 @@ describe('ADR-364 §10.7 regression — the shape knip scored 1/4 on', () => {
     expect(usageKey('a', 'b')).toBe('a b');
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════════
+// ADR-806 — ΤΟ ΚΕΝΟ ΣΥΝΟΛΟ ΔΕΝ ΕΙΝΑΙ ΑΠΟΔΕΙΞΗ ΘΑΝΑΤΟΥ
+// ════════════════════════════════════════════════════════════════════════════
+
+describe('ADR-806 — κενό σύνολο τοπικών exports (καθαρό barrel)', () => {
+  // Ένα καθαρό barrel έχει localExportsOf === κενό, άρα το every() πάνω σε κενό
+  // πίνακα επιστρέφει true. Ταυτόχρονα δεν μπαίνει ΠΟΤΕ στο liveModules (η διάσχιση
+  // περνά «μέσα από» αυτό). Μαζί: χαρακτηριζόταν νεκρό ΟΤΙ ΚΙ ΑΝ ΓΙΝΕΤΑΙ.
+  const barrelTree = {
+    [at('src/app/page.tsx')]: "import { useThing } from '../lib/barrel';\nexport default function P() { return useThing(); }\n",
+    [at('src/lib/barrel.ts')]: "export { useThing } from './thing';\n",
+    [at('src/lib/thing.ts')]: 'export function useThing() { return 1; }\n',
+  };
+
+  it('Κ1 — barrel που το εισάγει ΖΩΝΤΑΝΟ module ΔΕΝ είναι νεκρό αρχείο', () => {
+    const { deadFiles } = analyseFixture(barrelTree, { entries: ['src/app/page.tsx'] });
+    expect(deadFiles).not.toContain('src/lib/barrel.ts');
+  });
+
+  it('Κ2 — Ο ΠΑΡΟΝΟΜΑΣΤΗΣ: το ΙΔΙΟ barrel ΧΩΡΙΣ κανέναν εισαγωγέα ΕΙΝΑΙ νεκρό', () => {
+    // Χωρίς αυτό, το Κ1 θα ήταν πράσινο ακόμη κι αν ο κανόνας έλεγε «κανένα barrel δεν
+    // είναι ποτέ νεκρό» — δηλαδή θα αποδείκνυε ότι η πύλη ΣΤΑΜΑΤΗΣΕ να κοιτάζει.
+    const orphaned = Object.assign({}, barrelTree);
+    orphaned[at('src/app/page.tsx')] = 'export default function P() { return null; }\n';
+    const { deadFiles } = analyseFixture(orphaned, { entries: ['src/app/page.tsx'] });
+    expect(deadFiles).toContain('src/lib/barrel.ts');
+  });
+
+  it('Κ3 — ο κανόνας φυλά το ΑΡΧΕΙΟ, ΟΧΙ το σύμβολο: νεκρό export μένει νεκρό', () => {
+    const tree = {
+      [at('src/app/page.tsx')]: "import { used } from '../lib/m';\nexport default function P() { return used(); }\n",
+      [at('src/lib/m.ts')]: 'export function used() { return 1; }\nexport function alsoDead() { return 2; }\n',
+    };
+    const { deadFiles, bucketOf } = analyseFixture(tree, { entries: ['src/app/page.tsx'] });
+    expect(deadFiles).not.toContain('src/lib/m.ts');
+    expect(bucketOf('src/lib/m.ts', 'alsoDead')).toBe('dead');
+  });
+
+  it('Π1 — ΠΡΑΓΜΑΤΙΚΟΣ κώδικας: το core/spatial/index.ts είναι όντως καθαρό barrel', () => {
+    // Πριν τη διόρθωση αναφερόταν «νέο νεκρό αρχείο» ενώ 14 ΖΩΝΤΑΝΑ modules το εισάγουν.
+    const real = fs.readFileSync(
+      path.join(PROJECT_ROOT, 'src/subapps/dxf-viewer/core/spatial/index.ts'), 'utf8');
+    const withoutComments = real.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    expect(withoutComments).toMatch(/^export /m);
+    expect(withoutComments).not.toMatch(/^export (const|function|class|interface|type|enum) [A-Za-z]/m);
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// ADR-806 — ΡΙΖΕΣ-ΟΡΓΑΝΑ
+// ════════════════════════════════════════════════════════════════════════════
+
+describe('ADR-806 — ρίζες-όργανα (τα scripts είναι κι αυτά ρίζες)', () => {
+  const { loadInstrumentRoots, STATES: R } = require('../lib/module-graph/instrument-roots');
+  let dir;
+  const w = (rel, body) => {
+    const abs = path.join(dir, rel);
+    fs.mkdirSync(path.dirname(abs), { recursive: true });
+    fs.writeFileSync(abs, body);
+  };
+  const decl = (roots) => w('.instrument-roots.json', JSON.stringify({ roots }, null, 2));
+  const REASON = 'Λόγος αρκετά μακρύς ώστε να περάσει το κατώφλι των σαράντα χαρακτήρων, με νόημα.';
+
+  beforeEach(() => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'adr806-'));
+    w('package.json', JSON.stringify({ scripts: { seed: 'tsx scripts/seed.ts' } }));
+    w('tsconfig.base.json', JSON.stringify({ compilerOptions: { paths: {} } }));
+    w('src/data.ts', 'export const SEED = [1];\nexport const OTHER = 2;\n');
+    w('scripts/seed.ts', "import { SEED } from '../src/data';\nconsole.log(SEED);\n");
+  });
+  afterEach(() => { fs.rmSync(dir, { recursive: true, force: true }); });
+
+  it('Ρ1 — συνδεδεμένο όργανο δίνει ρίζα για ΤΟ ΣΥΜΒΟΛΟ που ζητά, όχι για όλο το module', () => {
+    decl([{ file: 'scripts/seed.ts', reason: REASON }]);
+    const r = loadInstrumentRoots({ projectRoot: toPosix(dir) });
+    expect(r.tally[R.WIRED]).toBe(1);
+    expect(r.blocking).toHaveLength(0);
+    expect(r.externalRoots).toHaveLength(1);
+    expect(r.externalRoots[0].names).toEqual(['SEED']);
+  });
+
+  it('Ρ2 — ΟΡΦΑΝΗ δήλωση (το όργανο δεν υπάρχει) ΜΠΛΟΚΑΡΕΙ', () => {
+    decl([{ file: 'scripts/den-yparxei.ts', reason: REASON }]);
+    const r = loadInstrumentRoots({ projectRoot: toPosix(dir) });
+    expect(r.tally[R.ORPHAN]).toBe(1);
+    expect(r.blocking).toHaveLength(1);
+  });
+
+  it('Ρ3 — δήλωση ΧΩΡΙΣ λόγο ΜΠΛΟΚΑΡΕΙ', () => {
+    decl([{ file: 'scripts/seed.ts', reason: 'γιατί ναι' }]);
+    const r = loadInstrumentRoots({ projectRoot: toPosix(dir) });
+    expect(r.tally[R.REASONLESS]).toBe(1);
+    expect(r.blocking).toHaveLength(1);
+  });
+
+  it('Ρ4 — ΑΔΡΑΝΗΣ δήλωση (το όργανο δεν αγγίζει το src/) ΜΠΛΟΚΑΡΕΙ', () => {
+    w('scripts/tipota.ts', 'console.log(1);\n');
+    decl([{ file: 'scripts/tipota.ts', reason: REASON }]);
+    const r = loadInstrumentRoots({ projectRoot: toPosix(dir) });
+    expect(r.tally[R.INERT]).toBe(1);
+    expect(r.blocking).toHaveLength(1);
+  });
+
+  it('Ρ5 — όργανο που ΔΕΝ το τρέχει κανείς και ΔΕΝ δηλώνει manual ΜΠΛΟΚΑΡΕΙ, με ΔΙΚΗ ΤΟΥ κατάσταση', () => {
+    // ⚠️ Η κατάσταση είναι `unrun`, ΟΧΙ `inert`: οι δύο ασθένειες έχουν άλλη θεραπεία
+    // (σύνδεσέ το / δήλωσε manual  vs  σβήσε τη γραμμή). Όσο μοιράζονταν όνομα, μια
+    // μετάλλαξη που έσβηνε τον έλεγχο του `inert` έβγαινε ΠΡΑΣΙΝΗ.
+    w('scripts/orfano.ts', "import { SEED } from '../src/data';\nconsole.log(SEED);\n");
+    decl([{ file: 'scripts/orfano.ts', reason: REASON }]);
+    const r = loadInstrumentRoots({ projectRoot: toPosix(dir) });
+    expect(r.tally[R.UNRUN]).toBe(1);
+    expect(r.tally[R.INERT]).toBe(0);
+    expect(r.blocking).toHaveLength(1);
+  });
+
+  it('Ρ5β — και το ΑΝΤΙΣΤΡΟΦΟ: το αδρανές είναι `inert` και ΟΧΙ `unrun` (συνδεδεμένο μεν, άδειο δε)', () => {
+    w('scripts/tipota.ts', 'console.log(1);\n');
+    w('package.json', JSON.stringify({ scripts: { t: 'tsx scripts/tipota.ts' } }));
+    decl([{ file: 'scripts/tipota.ts', reason: REASON }]);
+    const r = loadInstrumentRoots({ projectRoot: toPosix(dir) });
+    expect(r.tally[R.INERT]).toBe(1);
+    expect(r.tally[R.UNRUN]).toBe(0);
+  });
+
+  it('Ρ10 — CommonJS `const { X } = require(...)`: τα ΟΝΟΜΑΤΑ διαβάζονται, όχι μόνο το module', () => {
+    // Τα όργανα είναι συχνά `.js` με CJS. Χωρίς αυτή την άγκυρα, μια μετάλλαξη που
+    // πετούσε τα ονόματα του CJS έβγαινε ΠΡΑΣΙΝΗ — κανένα test δεν το ασκούσε.
+    w('scripts/cjs.js', "const { SEED } = require('../src/data');\nconsole.log(SEED);\n");
+    w('package.json', JSON.stringify({ scripts: { c: 'node scripts/cjs.js' } }));
+    decl([{ file: 'scripts/cjs.js', reason: REASON }]);
+    const r = loadInstrumentRoots({ projectRoot: toPosix(dir) });
+    expect(r.blocking).toHaveLength(0);
+    expect(r.externalRoots).toHaveLength(1);
+    expect(r.externalRoots[0].names).toEqual(['SEED']);
+    expect(r.externalRoots[0].kind).toBe('named');
+  });
+
+  it('Ρ6 — το ΙΔΙΟ όργανο με manual:true ΠΕΡΝΑ, αλλά ΟΝΟΜΑΖΕΤΑΙ', () => {
+    w('scripts/orfano.ts', "import { SEED } from '../src/data';\nconsole.log(SEED);\n");
+    decl([{ file: 'scripts/orfano.ts', manual: true, reason: REASON }]);
+    const r = loadInstrumentRoots({ projectRoot: toPosix(dir) });
+    expect(r.tally[R.MANUAL]).toBe(1);
+    expect(r.blocking).toHaveLength(0);
+    expect(r.findings.find((f) => f.state === R.MANUAL).detail).toMatch(/ΧΕΙΡΟΚΙΝΗΤΟ/);
+  });
+
+  it('Ρ7 — ΡΗΤΟΣ ισχυρισμός provides γίνεται δεκτός ΜΟΝΟ αν το module εξάγει το σύμβολο', () => {
+    w('scripts/dyn.js', "const p = require('path');\nrequire(p.join(__dirname, '..', 'src', 'data'));\n");
+    w('package.json', JSON.stringify({ scripts: { dyn: 'node scripts/dyn.js' } }));
+
+    decl([{ file: 'scripts/dyn.js', reason: REASON,
+      provides: [{ module: 'src/data.ts', symbols: ['SEED'] }] }]);
+    expect(loadInstrumentRoots({ projectRoot: toPosix(dir) }).blocking).toHaveLength(0);
+
+    decl([{ file: 'scripts/dyn.js', reason: REASON,
+      provides: [{ module: 'src/data.ts', symbols: ['DEN_YPARXEI'] }] }]);
+    const bad = loadInstrumentRoots({ projectRoot: toPosix(dir) });
+    expect(bad.tally[R.UNPROVABLE]).toBe(1);
+    expect(bad.blocking[0].detail).toMatch(/ΔΕΝ εξάγει/);
+  });
+
+  it('Ρ8 — η λογιστική ΚΛΕΙΝΕΙ: κάθε δήλωση παίρνει ακριβώς μία κατάσταση', () => {
+    w('scripts/orfano.ts', "import { SEED } from '../src/data';\n");
+    decl([
+      { file: 'scripts/seed.ts', reason: REASON },
+      { file: 'scripts/orfano.ts', manual: true, reason: REASON },
+      { file: 'scripts/leipei.ts', reason: REASON },
+    ]);
+    const r = loadInstrumentRoots({ projectRoot: toPosix(dir) });
+    expect(Object.values(r.tally).reduce((a, b) => a + b, 0)).toBe(3);
+    expect(r.declared).toBe(3);
+  });
+
+  it('Ρ9 — η ρίζα ΟΝΤΩΣ κρατά το σύμβολο ζωντανό στη μηχανή προσπελασιμότητας', () => {
+    // Χωρίς εξωτερική ρίζα το σύμβολο είναι νεκρό· ΜΕ αυτήν, ζωντανό. Η διαφορά
+    // είναι ΜΟΝΟ η ρίζα — άρα το test μετρά τον μηχανισμό, όχι το fixture.
+    const tree = {
+      [at('src/app/page.tsx')]: 'export default function P() { return null; }\n',
+      [at('src/data.ts')]: 'export const SEED = 1;\n',
+    };
+    const files = Object.keys(tree);
+    const graph = buildGraph({ projectRoot: ROOT, aliases: [], files, readFile: (f) => tree[f] });
+    const isEntry = (f) => f === at('src/app/page.tsx');
+
+    const without = computeLiveness(graph, { isEntry });
+    expect(without.liveSymbols.has(usageKey(at('src/data.ts'), 'SEED'))).toBe(false);
+
+    const withRoot = computeLiveness(graph, { isEntry,
+      externalRoots: [{ from: 'scripts/seed.ts', targetFile: at('src/data.ts'), names: ['SEED'], kind: 'named' }] });
+    expect(withRoot.liveSymbols.has(usageKey(at('src/data.ts'), 'SEED'))).toBe(true);
+  });
+
+  it('Π2 — ΠΡΑΓΜΑΤΙΚΟ δέντρο: το .instrument-roots.json του repo είναι ΚΑΘΑΡΟ και ΜΗ ΚΕΝΟ', () => {
+    const real = loadInstrumentRoots({ projectRoot: PROJECT_ROOT });
+    expect(real.declared).toBeGreaterThan(0);
+    expect(real.externalRoots.length).toBeGreaterThan(0);
+    expect(real.blocking).toHaveLength(0);
+  });
+});

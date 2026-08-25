@@ -70,6 +70,15 @@ export const MODAL_SELECT_STYLES = {
 // 🔄 RE-EXPORT SELECT ITEM PATTERNS - FROM MODULAR SYSTEM
 // ====================================================================
 
-// ✅ MIGRATED: Moved to core/styles/patterns.ts (2025-12-28)
-// Import from modular system for re-export:
-export { MODAL_SELECT_ITEM_PATTERNS } from './patterns';
+/**
+ * Το θέμα του select, δίπλα στα δεδομένα του (ADR-806).
+ *
+ * ⚠️ Ζούσε στο `config/modal-select.ts`, ένα facade 811 γραμμών που κρατούσε **87
+ * exports για 3 ζωντανά σύμβολα**. Μετά την έξωση του λεξιλογίου (ADR-804 Φ.4) και τον
+ * καθαρισμό των νεκρών, ό,τι απέμενε ήταν **καθαρά ψευδώνυμα** — και ένα αρχείο που δεν
+ * κάνει τίποτα άλλο από το να προωθεί είναι ακριβώς το barrel που το Atlassian αφαίρεσε
+ * από το Jira (μετρημένα −75% χρόνος build). Ο accessor ανήκει εκεί που ζει η σταθερά.
+ */
+export function getSelectStyles(theme: keyof typeof MODAL_SELECT_STYLES = 'DXF_TECHNICAL') {
+  return MODAL_SELECT_STYLES[theme];
+}

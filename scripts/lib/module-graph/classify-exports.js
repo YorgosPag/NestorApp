@@ -47,13 +47,43 @@ function localExportsOf(mod) {
 }
 
 /**
- * A file is dead when nothing live reaches it and every symbol it declares is
- * unreachable. `unusedExport` counts here: a symbol used only by its own file
- * cannot keep that file alive if no import ever arrives.
+ * A file is dead when nothing live reaches it, nothing live imports it, and every
+ * symbol it declares is unreachable. `unusedExport` counts here: a symbol used only
+ * by its own file cannot keep that file alive if no import ever arrives.
+ *
+ * 🔴 ADR-806 — ΤΟ ΚΕΝΟ ΣΥΝΟΛΟ ΔΕΝ ΕΙΝΑΙ ΑΠΟΔΕΙΞΗ ΘΑΝΑΤΟΥ.
+ *
+ * Ένα ΚΑΘΑΡΟ barrel (μόνο `export … from`) έχει `localExportsOf(mod) === []`, οπότε το
+ * `[].every(...)` επιστρέφει **`true`** και το αρχείο χαρακτηριζόταν νεκρό **ό,τι κι αν
+ * γίνεται** — γιατί ταυτόχρονα δεν μπαίνει ΠΟΤΕ στο `liveModules`: το `applyNamedImport`
+ * λύνει την ΠΡΟΕΛΕΥΣΗ και προσθέτει **εκείνη**, περνώντας «μέσα από» το barrel (αυτό
+ * ακριβώς είναι το «barrel-aware» του ADR-700).
+ *
+ * Μετρημένο ζωντανά: το `core/spatial/index.ts` αναφέρθηκε «νέο νεκρό αρχείο» ενώ **14
+ * ΖΩΝΤΑΝΑ** modules το εισάγουν (HitTester · όλες οι μηχανές snap). Το ίδιο το αρχείο
+ * είχε ήδη γραμμένη τη διάγνωση από προηγούμενο πράκτορα — αλλά η πύλη έμενε κόκκινη,
+ * δηλαδή *η γνώση υπήρχε και δεν την εκτελούσε κανείς* (σχήμα CHECK 3.36).
+ *
+ * ⚠️ Ο κανόνας μπαίνει ΠΡΙΝ το `every` και ισχύει για ΚΑΘΕ αρχείο, όχι μόνο για barrels:
+ * **αρχείο που το εισάγει ζωντανό module ΔΕΝ διαγράφεται**, ανεξάρτητα από το τι δηλώνει.
+ * Είναι μονόδρομος ασφαλείας — μπορεί μόνο να ΑΦΑΙΡΕΣΕΙ ψευδώς θετικά, ποτέ να προσθέσει.
  */
-function classifyFile(live, mod, verdicts) {
+function classifyFile(live, mod, verdicts, importedByLive) {
   if (live.liveModules.has(mod.file) || live.sideEffect.has(mod.file)) return false;
+  if (importedByLive && importedByLive.has(mod.file)) return false;
   return verdicts.every(v => UNREACHABLE_BUCKETS.has(v.bucket));
+}
+
+/** Κάθε αρχείο που το εισάγει ΖΩΝΤΑΝΟ module (οι ακμές λύνονται στη διάσχιση). */
+function filesImportedByLive(graph, live) {
+  const out = new Set();
+  for (const file of live.liveModules) {
+    const mod = graph.modules.get(file);
+    if (!mod) continue;
+    for (const imp of mod.imports) if (imp.targetFile) out.add(imp.targetFile);
+    for (const re of mod.reExports || []) if (re.targetFile) out.add(re.targetFile);
+  }
+  return out;
 }
 
 function emptyResult() {
@@ -64,6 +94,7 @@ function emptyResult() {
 
 function classifyExports(graph, live, test, { inScope }) {
   const result = emptyResult();
+  const importedByLive = filesImportedByLive(graph, live);
 
   for (const mod of graph.modules.values()) {
     if (!inScope(mod.file)) continue;
@@ -77,7 +108,7 @@ function classifyExports(graph, live, test, { inScope }) {
     }));
 
     for (const v of verdicts) result[v.bucket].push(v);
-    if (classifyFile(live, mod, verdicts)) result.deadFiles.push(mod.file);
+    if (classifyFile(live, mod, verdicts, importedByLive)) result.deadFiles.push(mod.file);
   }
 
   for (const bucket of BUCKETS) {
@@ -87,4 +118,4 @@ function classifyExports(graph, live, test, { inScope }) {
   return result;
 }
 
-module.exports = { BUCKETS, UNREACHABLE_BUCKETS, classifyExport, localExportsOf, classifyFile, classifyExports };
+module.exports = { BUCKETS, UNREACHABLE_BUCKETS, classifyExport, localExportsOf, classifyFile, filesImportedByLive, classifyExports };

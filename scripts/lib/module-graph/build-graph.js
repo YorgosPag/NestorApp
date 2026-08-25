@@ -196,7 +196,7 @@ function applyImport(state, mod, imp) {
  * additionally seeds every test file, so the difference between the two runs is
  * exactly "used only by its own test".
  */
-function computeLiveness(graph, { isEntry, withTests = false }) {
+function computeLiveness(graph, { isEntry, withTests = false, externalRoots = [] }) {
   const resolve = createResolver(graph);
   const queue = [];
   const state = {
@@ -218,6 +218,30 @@ function computeLiveness(graph, { isEntry, withTests = false }) {
     if (isEntry(file)) markOpaque(state, file);
     else if (withTests && mod.isTest) state.addModule(file);
   }
+
+  // 🔑 ΡΙΖΕΣ ΕΚΤΟΣ ΤΟΥ ΑΝΑΛΥΟΜΕΝΟΥ ΔΕΝΤΡΟΥ (ADR-806).
+  //
+  // Το `isEntry` απαντά «τι καλεί το framework χωρίς import» — και ζει ΟΛΟΚΛΗΡΟ μέσα
+  // στο `src/`. Ένα ΟΡΓΑΝΟ (seed script, συλλέκτης απογραφής) είναι κι αυτό ρίζα: το
+  // εκτελεί το npm ή το CI, απλώς δεν ζει εδώ. Χωρίς αυτό, σύμβολο που το καταναλώνει
+  // ΜΟΝΟ όργανο είναι **δομικά αδύνατο** να χαρακτηριστεί ζωντανό — μετρημένο σε 6
+  // σύμβολα, από τα οποία **5 ήταν ήδη θαμμένα στη baseline ως «νεκρά»** ενώ τρία npm
+  // scripts τα καλούσαν (ADR-806 §2).
+  //
+  // ⚠️ Οι ρίζες έρχονται ΠΡΟ-ΛΥΜΕΝΕΣ (`targetFile`): ο resolver του γράφου λύνει
+  // σχετικά μονοπάτια ως προς αρχείο ΜΕΣΑ στον γράφο, και το όργανο δεν είναι μέσα.
+  // ⚠️ Καμία δεύτερη μηχανή: η διάδοση γίνεται από το ΙΔΙΟ `applyNamedImport`, άρα
+  // αλυσίδες re-export και barrels συμπεριφέρονται ΑΚΡΙΒΩΣ όπως για κάθε άλλη εισαγωγή.
+  for (const root of externalRoots) {
+    if (!graph.modules.has(root.targetFile)) continue;   // δεν είναι στο αναλυόμενο δέντρο
+    if (root.kind === 'namespace' || root.kind === 'dynamic') { markOpaque(state, root.targetFile); continue; }
+    if (root.kind === 'side-effect') { state.sideEffect.add(root.targetFile); state.addModule(root.targetFile); continue; }
+    applyNamedImport(state, { file: root.from }, {
+      targetFile: root.targetFile,
+      names: root.names.map((n) => ({ imported: n })),
+    });
+  }
+
   while (queue.length > 0) {
     const mod = graph.modules.get(queue.pop());
     if (!mod) continue;

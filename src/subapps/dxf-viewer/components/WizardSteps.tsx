@@ -6,36 +6,20 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import type { Building, Floor } from '../contexts/ProjectHierarchyContext';
-import { useTypography } from '@/hooks/useTypography';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { getModalIconColor } from '../config/modal-colors';
-import { MODAL_FLEX_PATTERNS, MODAL_DIMENSIONS, MODAL_SPACING, getIconSize } from '../config/modal-layout';
-import { getSelectStyles } from '../config/modal-select';
-import {
-  ProjectModalContainer, ModalActions, ErrorModalContainer,
-} from './modal/ModalContainer';
+import { MODAL_FLEX_PATTERNS, MODAL_SPACING, getIconSize } from '../config/modal-layout';
+import { getSelectStyles } from '../config/modal-select/core/styles/select-styles';
+import { ProjectModalContainer, ErrorModalContainer } from './modal/ModalContainer';
 import { InlineLoading, ModalErrorState } from './modal/ModalLoadingStates';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
+import {
+  useWizardStepChrome, WizardStepSection, CompanySummaryCard,
+  WizardEmptyNote, WizardFloorplanAction, WizardLoadButton, WizardHint,
+  type CompanyData, type ProjectData, type LoadFloorplan,
+} from './modal/wizard-step-chrome';
 import { formatBuildingLabel } from '@/lib/entity-formatters';
 
-// ── Shared Types ───────────────────────────────────────────────
-interface CompanyData {
-  id?: string;
-  companyName: string;
-  industry?: string;
-}
-
-interface ProjectData {
-  id: string;
-  name: string;
-}
-
-// ── Border Helper Hook ─────────────────────────────────────────
-function useModalBorder() {
-  const { getStatusBorder } = useBorderTokens();
-  return (variant: 'default' | 'info' | 'success' | 'warning' | 'error') =>
-    getStatusBorder(variant);
-}
+// ⚠️ Οι κοινοί τύποι, το τρίπτυχο hooks και οι επαναλαμβανόμενες κάρτες ζουν στο
+// `./modal/wizard-step-chrome` — ΜΗΝ τα ξαναγράψεις εδώ (N.18 / CHECK 3.28).
 
 // ── Step 1: Company Selection ──────────────────────────────────
 interface CompanyStepProps {
@@ -50,9 +34,7 @@ interface CompanyStepProps {
 export function CompanyStep({
   companies, selectedCompanyId, loading, error, onCompanyChange, onRetry,
 }: CompanyStepProps) {
-  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
-  const typography = useTypography();
-  const getBorder = useModalBorder();
+  const { t, typography } = useWizardStepChrome();
 
   return (
     <fieldset className={MODAL_SPACING.SECTIONS.betweenSections}>
@@ -93,9 +75,7 @@ export function CompanyStep({
       )}
 
       {(!companies || companies.length === 0) && !loading && !error && (
-        <ProjectModalContainer title="" className={getBorder('default')}>
-          <p className={typography.body.sm}>{t('wizard.empty.companies')}</p>
-        </ProjectModalContainer>
+        <WizardEmptyNote messageKey="wizard.empty.companies" />
       )}
     </fieldset>
   );
@@ -114,26 +94,15 @@ interface ProjectStepProps {
 export function ProjectStep({
   selectedCompany, projects, selectedProjectId, loading, error, onProjectChange,
 }: ProjectStepProps) {
-  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
-  const typography = useTypography();
-  const getBorder = useModalBorder();
+  const { t } = useWizardStepChrome();
 
   return (
-    <div className={MODAL_SPACING.SECTIONS.betweenSections}>
-      <label className={`block ${typography.label.sm} ${MODAL_SPACING.SECTIONS.betweenItems}`}>
-        {t('wizard.labels.selectProject')}
-      </label>
-
+    <WizardStepSection labelKey="wizard.labels.selectProject">
       {selectedCompany && (
-        <ProjectModalContainer title="" className={`${MODAL_SPACING.SECTIONS.betweenItems} ${getBorder('info')}`}>
-          <div className={MODAL_FLEX_PATTERNS.ROW.centerWithGap}>
-            <BuildingIcon className={`${getIconSize('title')} ${getModalIconColor('info')}`} />
-            <div>
-              <p className={typography.heading.md}>{selectedCompany.companyName}</p>
-              <p className={typography.body.sm}>{selectedCompany.industry}</p>
-            </div>
-          </div>
-        </ProjectModalContainer>
+        <CompanySummaryCard
+          company={selectedCompany}
+          className={MODAL_SPACING.SECTIONS.betweenItems}
+        />
       )}
 
       {loading ? (
@@ -159,11 +128,9 @@ export function ProjectStep({
       )}
 
       {(!projects || projects.length === 0) && !loading && !error && selectedCompany && (
-        <ProjectModalContainer title="" className={getBorder('default')}>
-          <p className={typography.body.sm}>{t('wizard.empty.projects')}</p>
-        </ProjectModalContainer>
+        <WizardEmptyNote messageKey="wizard.empty.projects" />
       )}
-    </div>
+    </WizardStepSection>
   );
 }
 
@@ -177,35 +144,21 @@ interface BuildingStepProps {
   selectedFloorId: string;
   onBuildingChange: (id: string) => void;
   onFloorChange: (id: string) => void;
-  onLoadFloorplan: (type: 'project' | 'parking' | 'building' | 'storage' | 'property' | 'floor') => void;
+  onLoadFloorplan: LoadFloorplan;
 }
 
 export function BuildingStep({
   selectedCompany, selectedProject, buildings, selectedBuildingId,
   floors, selectedFloorId, onBuildingChange, onFloorChange, onLoadFloorplan,
 }: BuildingStepProps) {
-  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
-  const typography = useTypography();
-  const getBorder = useModalBorder();
+  const { t, typography, getBorder } = useWizardStepChrome();
 
   return (
-    <div className={MODAL_SPACING.SECTIONS.betweenSections}>
-      <label className={`block ${typography.label.sm} ${MODAL_SPACING.SECTIONS.betweenItems}`}>
-        {t('wizard.labels.selectBuilding')}
-      </label>
-
+    <WizardStepSection labelKey="wizard.labels.selectBuilding">
       {/* Company & Project Summary */}
       {selectedCompany && selectedProject && (
         <div className={`${MODAL_SPACING.SECTIONS.betweenSections} ${MODAL_FLEX_PATTERNS.COLUMN.stretchWithGap}`}>
-          <ProjectModalContainer title="" className={getBorder('info')}>
-            <div className={MODAL_FLEX_PATTERNS.ROW.centerWithGap}>
-              <BuildingIcon className={`${getIconSize('title')} ${getModalIconColor('info')}`} />
-              <div>
-                <p className={typography.heading.md}>{selectedCompany.companyName}</p>
-                <p className={typography.body.sm}>{selectedCompany.industry}</p>
-              </div>
-            </div>
-          </ProjectModalContainer>
+          <CompanySummaryCard company={selectedCompany} />
           <ProjectModalContainer title="" className={getBorder('success')}>
             <div className={MODAL_FLEX_PATTERNS.ROW.centerWithGap}>
               <Building2 className={`${getIconSize('title')} ${getModalIconColor('success')}`} />
@@ -243,30 +196,18 @@ export function BuildingStep({
           </SelectContent>
         </Select>
       ) : (
-        <ProjectModalContainer title="" className={getBorder('default')}>
-          <p className={typography.body.sm}>{t('wizard.empty.buildings')}</p>
-        </ProjectModalContainer>
+        <WizardEmptyNote messageKey="wizard.empty.buildings" />
       )}
 
       {/* Building General Floorplan */}
       {selectedBuildingId && (
-        <ProjectModalContainer
-          title={t('wizard.floorplanSections.selectForBuilding')}
-          className={`${MODAL_SPACING.SECTIONS.betweenBlocks} ${getBorder('default')}`}
-        >
-          <ModalActions alignment="center">
-            <Button
-              onClick={() => onLoadFloorplan('building')}
-              variant="default" size="default"
-              className={MODAL_DIMENSIONS.BUTTONS.flex}
-            >
-              {t('wizard.floorplanTypes.buildingGeneral')}
-            </Button>
-          </ModalActions>
-          <p className={`${typography.body.sm} ${MODAL_FLEX_PATTERNS.COLUMN.center} ${MODAL_SPACING.CONTAINER.paddingSmall}`}>
-            {t('wizard.floorplanSections.hintBuilding')}
-          </p>
-        </ProjectModalContainer>
+        <WizardFloorplanAction
+          titleKey="wizard.floorplanSections.selectForBuilding"
+          labelKey="wizard.floorplanTypes.buildingGeneral"
+          hintKey="wizard.floorplanSections.hintBuilding"
+          target="building"
+          onLoadFloorplan={onLoadFloorplan}
+        />
       )}
 
       {/* Floor Selection Section */}
@@ -278,7 +219,7 @@ export function BuildingStep({
           onLoadFloorplan={onLoadFloorplan}
         />
       )}
-    </div>
+    </WizardStepSection>
   );
 }
 
@@ -287,13 +228,11 @@ interface FloorSectionProps {
   floors: Floor[];
   selectedFloorId: string;
   onFloorChange: (id: string) => void;
-  onLoadFloorplan: (type: 'project' | 'parking' | 'building' | 'storage' | 'property' | 'floor') => void;
+  onLoadFloorplan: LoadFloorplan;
 }
 
 function FloorSection({ floors, selectedFloorId, onFloorChange, onLoadFloorplan }: FloorSectionProps) {
-  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
-  const typography = useTypography();
-  const getBorder = useModalBorder();
+  const { t, typography, getBorder } = useWizardStepChrome();
 
   return (
     <ProjectModalContainer
@@ -323,15 +262,11 @@ function FloorSection({ floors, selectedFloorId, onFloorChange, onLoadFloorplan 
             </Select>
           </div>
           {selectedFloorId && (
-            <ModalActions alignment="center">
-              <Button
-                onClick={() => onLoadFloorplan('floor')}
-                variant="default" size="default"
-                className={MODAL_DIMENSIONS.BUTTONS.flex}
-              >
-                {t('wizard.floorplanTypes.floor')}
-              </Button>
-            </ModalActions>
+            <WizardLoadButton
+              target="floor"
+              labelKey="wizard.floorplanTypes.floor"
+              onLoadFloorplan={onLoadFloorplan}
+            />
           )}
         </>
       ) : (
@@ -340,9 +275,7 @@ function FloorSection({ floors, selectedFloorId, onFloorChange, onLoadFloorplan 
           <p className={typography.body.sm}>{t('wizard.floorplanSections.noFloorsGuide')}</p>
         </div>
       )}
-      <p className={`${typography.body.sm} ${MODAL_FLEX_PATTERNS.COLUMN.center} ${MODAL_SPACING.CONTAINER.paddingSmall}`}>
-        {t('wizard.floorplanSections.hintFloor')}
-      </p>
+      <WizardHint messageKey="wizard.floorplanSections.hintFloor" />
     </ProjectModalContainer>
   );
 }

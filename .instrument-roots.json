@@ -1,0 +1,39 @@
+{
+  "adr": "ADR-806 (CHECK 3.30)",
+  "note": "ΡΙΖΕΣ-ΟΡΓΑΝΑ. Δεν είναι εξαιρέσεις: ΔΙΟΡΘΩΝΟΥΝ ΤΟΝ ΠΑΡΟΝΟΜΑΣΤΗ. Το `isEntryFile` ορίζει ρίζες αποκλειστικά μέσα στο `src/`, άρα σύμβολο που το καταναλώνει μόνο εργαλείο ήταν ΔΟΜΙΚΑ αδύνατο να φανεί ζωντανό — μετρημένα 5 τέτοια ήταν ήδη θαμμένα στη baseline ως «νεκρά» ενώ τρία npm scripts τα καλούσαν. ⚠️ Κάθε γραμμή επαληθεύεται: το αρχείο πρέπει να υπάρχει, να εισάγει όντως από το `src/`, και (αν δηλώνει `provides`) το module να ΕΞΑΓΕΙ τα σύμβολα. Ορφανή ή αδρανής δήλωση ΜΠΛΟΚΑΡΕΙ.",
+  "generated": "2026-08-25",
+  "roots": [
+    {
+      "file": "scripts/seed-bim-materials.ts",
+      "reason": "Σπορά της βιβλιοθήκης υλικών BIM στο Firestore (`npm run seed:bim-materials`). Το `SYSTEM_MATERIALS_SEED` είναι δεδομένα που ΜΟΝΟ ο σπορέας διαβάζει — η εφαρμογή διαβάζει το αποτέλεσμα από τη βάση, ποτέ τη σταθερά. Ήταν θαμμένο στη baseline ως νεκρό."
+    },
+    {
+      "file": "scripts/seed-block-library.ts",
+      "reason": "Σπορά της βιβλιοθήκης συστημικών block (`npm run seed:block-library`). Το `SYSTEM_BLOCK_PROVENANCE` (προέλευση/άδεια κάθε block) ταξιδεύει στη βάση κατά τη σπορά και δεν το ζητά καμία οθόνη. Ήταν θαμμένο στη baseline ως νεκρό."
+    },
+    {
+      "file": "scripts/seed-boq-subcategories.ts",
+      "reason": "Σπορά των υποκατηγοριών επιμέτρησης (ΒΟQ) στο Firestore. Διαβάζει τον κανονικό κατάλογο από το `src/config` — η εφαρμογή τον ξαναδιαβάζει από τη βάση, άρα η σταθερά φαίνεται αζήτητη από τη μεριά του `src/`."
+    },
+    {
+      "file": "scripts/seed-relationship-type-registry.ts",
+      "manual": true,
+      "reason": "Σπορά του μητρώου τύπων σχέσης επαφών. Το `RELATIONSHIP_METADATA` είναι η κανονική πηγή που ο σπορέας μεταφέρει στη βάση. ⚠️ ΧΕΙΡΟΚΙΝΗΤΟ: μετρημένο 2026-08-25 ότι δεν αναφέρεται σε package.json (0), σε workflow (0), σε άλλο script (0) — το βρήκε η ίδια η πύλη, δεν ήταν γνωστό."
+    },
+    {
+      "file": "scripts/download-bim-textures.ts",
+      "manual": true,
+      "reason": "ΧΕΙΡΟΚΙΝΗΤΟ εργαλείο συντήρησης: κατεβάζει τις υφές PBR του BIM. Μετρημένο 2026-08-25 ότι ΔΕΝ αναφέρεται σε κανένα npm script, σε κανένα workflow και σε κανένα άλλο script — κρατά ζωντανά τα `TEXTURE_RESOLUTION`, `TEXTURE_PROVIDER`, `isOwnScanTexture` και αυτό ΠΡΕΠΕΙ να είναι ορατό, όχι σιωπηλό."
+    },
+    {
+      "file": "scripts/lib/text-measure-tier/census-setup.js",
+      "reason": "Ο συλλέκτης απογραφής του CHECK 3.64 (ADR-799): φορτώνεται από τον jest ως setup file μέσω του `text-measure:census`. Φτάνει στο `src/` με ΥΠΟΛΟΓΙΣΜΕΝΟ μονοπάτι (`require(path.join(REPO_ROOT, …))`), δομικά αόρατο σε κάθε στατικό resolver — γι' αυτό δηλώνει ρητά τι αγγίζει.",
+      "provides": [
+        {
+          "module": "src/subapps/dxf-viewer/text-engine/fonts/text-advance.ts",
+          "symbols": ["__installAdvanceCensus"]
+        }
+      ]
+    }
+  ]
+}

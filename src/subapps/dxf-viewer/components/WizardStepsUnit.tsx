@@ -4,33 +4,17 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
 import type { Building, Unit } from '../contexts/ProjectHierarchyContext';
-import { useTypography } from '@/hooks/useTypography';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { getModalIconColor } from '../config/modal-colors';
-import { MODAL_FLEX_PATTERNS, MODAL_DIMENSIONS, MODAL_SPACING, getIconSize } from '../config/modal-layout';
-import { getSelectStyles } from '../config/modal-select';
-import { ProjectModalContainer, ModalActions } from './modal/ModalContainer';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { MODAL_FLEX_PATTERNS, MODAL_SPACING, getIconSize } from '../config/modal-layout';
+import { getSelectStyles } from '../config/modal-select/core/styles/select-styles';
+import {
+  useWizardStepChrome, WizardEmptyNote, WizardFloorplanAction,
+  type CompanyData, type ProjectData, type LoadFloorplan,
+} from './modal/wizard-step-chrome';
 
-// ── Shared Types ───────────────────────────────────────────────
-interface CompanyData {
-  id?: string;
-  companyName: string;
-  industry?: string;
-}
-
-interface ProjectData {
-  id: string;
-  name: string;
-}
-
-function useModalBorder() {
-  const { getStatusBorder } = useBorderTokens();
-  return (variant: 'default' | 'info' | 'success' | 'warning' | 'error') =>
-    getStatusBorder(variant);
-}
+// ⚠️ Οι κοινοί τύποι, το τρίπτυχο hooks και οι επαναλαμβανόμενες κάρτες ζουν στο
+// `./modal/wizard-step-chrome` — ΜΗΝ τα ξαναγράψεις εδώ (N.18 / CHECK 3.28).
 
 // ── Unit Step ──────────────────────────────────────────────────
 interface UnitStepProps {
@@ -43,7 +27,7 @@ interface UnitStepProps {
   units: Unit[];
   selectedUnitId: string;
   onUnitChange: (id: string) => void;
-  onLoadFloorplan: (type: 'project' | 'parking' | 'building' | 'storage' | 'property' | 'floor') => void;
+  onLoadFloorplan: LoadFloorplan;
 }
 
 export function UnitStep({
@@ -51,9 +35,7 @@ export function UnitStep({
   buildings, selectedBuildingId, units, selectedUnitId,
   onUnitChange, onLoadFloorplan,
 }: UnitStepProps) {
-  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
-  const typography = useTypography();
-  const getBorder = useModalBorder();
+  const { t, typography } = useWizardStepChrome();
 
   return (
     <>
@@ -110,31 +92,19 @@ export function UnitStep({
             </SelectContent>
           </Select>
         ) : (
-          <ProjectModalContainer title="" className={getBorder('default')}>
-            <p className={typography.body.sm}>{t('wizard.empty.units')}</p>
-          </ProjectModalContainer>
+          <WizardEmptyNote messageKey="wizard.empty.units" />
         )}
       </div>
 
       {/* Unit Floorplan */}
       {selectedUnitId && (
-        <ProjectModalContainer
-          title={t('wizard.floorplanSections.selectForUnit')}
-          className={`${MODAL_SPACING.SECTIONS.betweenBlocks} ${getBorder('default')}`}
-        >
-          <ModalActions alignment="center">
-            <Button
-              onClick={() => onLoadFloorplan('property')}
-              variant="default" size="default"
-              className={MODAL_DIMENSIONS.BUTTONS.flex}
-            >
-              {t('wizard.floorplanTypes.unit')}
-            </Button>
-          </ModalActions>
-          <p className={`${typography.body.sm} ${MODAL_FLEX_PATTERNS.COLUMN.center} ${MODAL_SPACING.CONTAINER.paddingSmall}`}>
-            {t('wizard.floorplanSections.hintUnit')}
-          </p>
-        </ProjectModalContainer>
+        <WizardFloorplanAction
+          titleKey="wizard.floorplanSections.selectForUnit"
+          labelKey="wizard.floorplanTypes.unit"
+          hintKey="wizard.floorplanSections.hintUnit"
+          target="property"
+          onLoadFloorplan={onLoadFloorplan}
+        />
       )}
     </>
   );
@@ -153,8 +123,7 @@ interface StatusCountsProps {
 export function StatusCounts({
   currentStep, companies, projects, buildings, units, loading,
 }: StatusCountsProps) {
-  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
-  const typography = useTypography();
+  const { t, typography } = useWizardStepChrome();
 
   return (
     <div className={MODAL_FLEX_PATTERNS.COLUMN.center}>
@@ -184,31 +153,17 @@ export function StatusCounts({
 
 // ── Site Plan Section (Project-level) ──────────────────────────
 interface SitePlanSectionProps {
-  onLoadFloorplan: (type: 'project' | 'parking' | 'building' | 'storage' | 'property' | 'floor') => void;
+  onLoadFloorplan: LoadFloorplan;
 }
 
 export function SitePlanSection({ onLoadFloorplan }: SitePlanSectionProps) {
-  const { t } = useTranslation(['dxf-viewer', 'dxf-viewer-settings', 'dxf-viewer-wizard', 'dxf-viewer-guides', 'dxf-viewer-panels', 'dxf-viewer-shell']);
-  const typography = useTypography();
-  const getBorder = useModalBorder();
-
   return (
-    <ProjectModalContainer
-      title={t('wizard.floorplanSections.selectForProject')}
-      className={`${MODAL_SPACING.SECTIONS.betweenBlocks} ${getBorder('default')}`}
-    >
-      <ModalActions alignment="center">
-        <Button
-          onClick={() => onLoadFloorplan('project')}
-          variant="default" size="default"
-          className={MODAL_DIMENSIONS.BUTTONS.flex}
-        >
-          {t('wizard.floorplanTypes.sitePlan')}
-        </Button>
-      </ModalActions>
-      <p className={`${typography.body.sm} ${MODAL_FLEX_PATTERNS.COLUMN.center} ${MODAL_SPACING.CONTAINER.paddingSmall}`}>
-        {t('wizard.floorplanSections.hintSitePlan')}
-      </p>
-    </ProjectModalContainer>
+    <WizardFloorplanAction
+      titleKey="wizard.floorplanSections.selectForProject"
+      labelKey="wizard.floorplanTypes.sitePlan"
+      hintKey="wizard.floorplanSections.hintSitePlan"
+      target="project"
+      onLoadFloorplan={onLoadFloorplan}
+    />
   );
 }
