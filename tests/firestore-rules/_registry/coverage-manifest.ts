@@ -1317,6 +1317,13 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     rulesRange: [5194, 5196],
     matrix: denyAllMatrix(),
   },
+  {
+    collection: 'workspace_aliases',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/workspace-aliases.rules.test.ts',
+    rulesRange: [5792, 5794],
+    matrix: denyAllMatrix(),
+  },
 ] as const;
 
 /**

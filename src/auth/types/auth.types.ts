@@ -1,5 +1,6 @@
 import type { AppHref } from '@/lib/workspace/route-worlds';
 import type { DeclaredOccupation } from '@/types/professional-identity';
+import type { PermissionId } from '@/lib/auth/types';
 
 // =============================================================================
 // 🔐 AUTH TYPES - CENTRALIZED TYPE DEFINITIONS
@@ -47,8 +48,16 @@ export interface FirebaseAuthUser {
   globalRole?: string;
   /** Company ID (tenant anchor) */
   companyId?: string;
-  /** Array of permission IDs */
-  permissions?: string[];
+  /**
+   * Οι **ρητά δοσμένες** ικανότητες του claim.
+   *
+   * ⚠️ **`readonly` + `PermissionId`, από το ADR-801 §2.8**: η μόνη νόμιμη πηγή
+   * είναι ο `readPermissionsClaim` (`@/lib/auth/claim-permissions`), κοινός με
+   * τον server. Μέχρι τότε το πεδίο γεμιζόταν με **ωμό cast** σε **δύο** σημεία
+   * με **διαφορετικό** κανόνα για την απουσία — δηλαδή ο φυλλομετρητής και ο
+   * server διάβαζαν το ίδιο token αλλιώς.
+   */
+  permissions?: readonly PermissionId[];
   /** MFA enrollment status */
   mfaEnrolled?: boolean;
   /** Epoch ms when custom claims were last updated server-side (ADR-360) */

@@ -252,8 +252,15 @@ export interface CustomClaims {
   mfaEnrolled?: boolean;
   /** Email verification status */
   emailVerified?: boolean;
-  /** Fine-grained permissions (optional) */
-  permissions?: PermissionId[];
+  /**
+   * Fine-grained permissions (optional).
+   *
+   * ⚠️ `readonly` από το ADR-801 §2.8: η **μόνη** νόμιμη πηγή είναι ο
+   * `readPermissionsClaim`, που επιστρέφει παγωμένο πίνακα. Μεταβλητός τύπος
+   * εδώ θα καλούσε τον επόμενο να τον «συμπληρώσει» με `push` — δηλαδή να
+   * γεννήσει τέταρτο κανόνα ανάγνωσης, ακριβώς ό,τι έκλεισε αυτή η φάση.
+   */
+  permissions?: readonly PermissionId[];
 }
 
 // =============================================================================
@@ -288,6 +295,33 @@ export interface AuthContext {
    * `AuthContext`.
    */
   membershipVerdict?: MembershipVerdict;
+
+  /**
+   * Οι **ρητά δοσμένες** ικανότητες του claim (ADR-801 §2.8, Φάση 3γ).
+   *
+   * 🔴 **Γιατί δεν υπήρχε, και τι κόστισε**: το `CustomClaims.permissions`
+   * δηλωνόταν από την αρχή (γρ. 256) και ο `claims-handler.ts:159` το γράφει
+   * **επίτηδες** ως `rolePermissions ∪ ρητά extras ∪ {admin_access}` — δηλαδή
+   * είναι **κανάλι παραχώρησης**. Το `AuthContext` όμως δεν το κουβαλούσε, άρα
+   * ο `checkPermission` έκρινε **αποκλειστικά** από `globalRole` και το ρητό
+   * claim **πεταγόταν**. Μετρημένο σε πραγματικό χρήστη (`pagonis.oe@gmail.com`:
+   * `external_user` + `['admin_access']`): πελάτης ✅ `granted-by-permission`,
+   * server ⛔ `permission_not_in_role` ⇒ **το UI έδειχνε κουμπί που ο server θα
+   * απέρριπτε**.
+   *
+   * ⚠️ **ΕΙΝΑΙ ΠΑΡΑΧΩΡΗΣΗ ΣΕ ΕΜΒΕΛΕΙΑ ΕΤΑΙΡΕΙΑΣ — ΟΧΙ ΑΝΑ ΠΟΡΟ.** Γράφεται
+   * δίπλα στο `companyId` και **δεν κουβαλά** δική του εμβέλεια (σε αντίθεση με
+   * το scope της ανάθεσης στο Azure RBAC ή το `Resource` του AWS IAM). Άρα
+   * απαντά **μόνο** στο ερώτημα χωρίς πόρο. Ερώτημα με `projectId`/`propertyId`
+   * το κρίνει η **συμμετοχή στο έργο** — όπως ακριβώς και τα permissions του
+   * ρόλου, τα οποία αυτό το claim **περιέχει**. Αν κληρονομούσε προς τα κάτω,
+   * το **ίδιο** permission id θα συμπεριφερόταν αλλιώς ανάλογα με τη διαδρομή
+   * παράδοσης (ρόλος ή claim) — δύο απαντήσεις σε ένα ερώτημα, ADR-749 ξανά.
+   *
+   * ⚠️ **Απουσία (`undefined`) ≠ κενό (`[]`)**: το πρώτο λέει *«το token δεν
+   * φέρει το κανάλι»*, το δεύτερο *«το φέρει, και είναι άδειο»*.
+   */
+  permissions?: readonly PermissionId[];
 }
 
 /** Unauthenticated context with reason. */
@@ -390,16 +424,28 @@ export function isAuthenticated(ctx: RequestContext): ctx is AuthContext {
   return ctx.isAuthenticated === true;
 }
 
-/** Type guard — is string a valid PermissionId? */
+/**
+ * Type guard — is string a valid PermissionId?
+ *
+ * ⚠️ **`Object.hasOwn` και ΟΧΙ `in`** (ADR-801 §2.9). Το `in` απαντά `true` για
+ * **κάθε** ιδιότητα του prototype — `'toString'`, `'constructor'`, `'valueOf'`.
+ * Μετρημένη συνέπεια πριν τη διόρθωση: το `checkPermission(ctx, 'toString')`
+ * περνούσε το βήμα (1) και ο `super_admin` έπαιρνε **✅ από το bypass**, ενώ ο
+ * `decideCapability` — που χρησιμοποιούσε ήδη σωστά το `Object.hasOwn` —
+ * απαντούσε ⛔ `denied-unknown-action`. Δηλαδή **fail-open στον server**, και
+ * ακριβώς το σχήμα που το §4.2 ονομάζει *το χειρότερο είδος σφάλματος*: το
+ * τυπογραφικό δούλευε **για όποιον μπορεί να το διορθώσει** και αποτύγχανε
+ * σιωπηλά για όλους τους άλλους.
+ */
 export function isValidPermission(
   permission: string,
 ): permission is PermissionId {
-  return permission in PERMISSIONS;
+  return Object.hasOwn(PERMISSIONS, permission);
 }
 
-/** Type guard — is string a valid GrantScope? */
+/** Type guard — is string a valid GrantScope? (ίδιος λόγος με το παραπάνω) */
 export function isValidGrantScope(scope: string): scope is GrantScope {
-  return scope in GRANT_SCOPES;
+  return Object.hasOwn(GRANT_SCOPES, scope);
 }
 
 /** Type guard — is string a valid GlobalRole? */

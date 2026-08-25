@@ -30,6 +30,10 @@ import type {
   CustomClaims,
 } from './types';
 import { isValidGlobalRole } from './types';
+// ADR-801 §2.8 — ο ΕΝΑΣ αναγνώστης του claim `permissions`, κοινός με τον
+// φυλλομετρητή. ⚠️ ΜΗΝ γράψεις εδώ δικό σου `Array.isArray(...)`: αυτό ακριβώς
+// ήταν το σχήμα των τριών κανόνων που έκλεισε αυτή η φάση.
+import { readPermissionsClaim } from './claim-permissions';
 import { getDevCompanyId } from '@/config/dev-environment';
 import { SESSION_COOKIE_CONFIG } from '@/lib/auth/security-policy';
 // 🎫 ADR-787 Κ-2 — ο ΕΝΑΣ απαντητής του «είναι μέλος;».
@@ -258,11 +262,19 @@ function extractCustomClaims(token: DecodedIdToken): CustomClaims | null {
   // Email verified is optional (from standard Firebase claims)
   const emailVerified = token.email_verified === true;
 
+  // ADR-801 §2.8 — το ρητό κανάλι παραχώρησης. Δηλωνόταν στο `CustomClaims`
+  // από την αρχή και **κανείς δεν το διάβαζε εδώ**, οπότε ο `checkPermission`
+  // έκρινε μόνο από τον ρόλο και το claim πεταγόταν (μετρημένη απόκλιση με τον
+  // κριτή του πελάτη, §2.6). Ο αναγνώστης είναι **ένας**, κοινός με τον
+  // φυλλομετρητή — αλλιώς η άγκυρα ισοδυναμίας θα σύγκρινε άλλη είσοδο.
+  const permissions = readPermissionsClaim(token.permissions);
+
   return {
     companyId,
     globalRole: globalRoleRaw as GlobalRole,
     mfaEnrolled,
     emailVerified,
+    permissions,
   };
 }
 
@@ -306,6 +318,10 @@ async function contextFromDecodedToken(
     isAuthenticated: true,
     superAdminOverride: effective.overridden,
     membershipVerdict: effective.verdict,
+    // ADR-801 §2.8 — ταξιδεύει μέχρι τον `checkPermission`. Χωρίς αυτή τη
+    // γραμμή το claim σταματούσε στο `extractCustomClaims` και ο server έκρινε
+    // σαν να μην υπήρχε.
+    permissions: claims.permissions,
   };
 }
 

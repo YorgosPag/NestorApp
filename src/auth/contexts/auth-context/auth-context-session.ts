@@ -2,6 +2,7 @@ import type { FirebaseAuthUser } from '@/auth/types/auth.types';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { API_ROUTES, AUTH_EVENTS } from '@/config/domain-constants';
 import { safeGetItem, STORAGE_KEYS } from '@/lib/storage';
+import { readPermissionsClaim } from '@/lib/auth/claim-permissions';
 
 export function buildAuthUser(firebaseUser: FirebaseUser, customClaims: Record<string, unknown>): FirebaseAuthUser {
   const displayName = firebaseUser.displayName;
@@ -21,7 +22,11 @@ export function buildAuthUser(firebaseUser: FirebaseUser, customClaims: Record<s
     profileIncomplete,
     globalRole: typeof customClaims.globalRole === 'string' ? customClaims.globalRole : undefined,
     companyId: typeof customClaims.companyId === 'string' ? customClaims.companyId : undefined,
-    permissions: Array.isArray(customClaims.permissions) ? customClaims.permissions as string[] : undefined,
+    // ADR-801 §2.8 — ο ΕΝΑΣ αναγνώστης, κοινός με τον server.
+    // ⚠️ ΜΗΝ γυρίσεις σε `Array.isArray(...) as string[]`: το ωμό cast δεν
+    //    επικυρώνει τίποτα, και ήταν ο **πρώτος** από τους τρεις κανόνες που
+    //    διάβαζαν αυτό το claim διαφορετικά.
+    permissions: readPermissionsClaim(customClaims.permissions),
     mfaEnrolled: typeof customClaims.mfaEnrolled === 'boolean' ? customClaims.mfaEnrolled : undefined,
     claimsUpdatedAt: typeof customClaims.claimsUpdatedAt === 'number' ? customClaims.claimsUpdatedAt : undefined,
   };

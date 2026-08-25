@@ -17,6 +17,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import type { FirebaseAuthUser, SignUpData } from '@/auth/types/auth.types';
 import { safeSetItem, STORAGE_KEYS } from '@/lib/storage';
 import { createModuleLogger } from '@/lib/telemetry';
+import { readPermissionsClaim } from '@/lib/auth/claim-permissions';
 import { getAuthErrorMessage } from './auth-context-errors';
 
 const logger = createModuleLogger('AuthContextActions');
@@ -367,7 +368,13 @@ export function useAuthActions(params: UseAuthActionsParams) {
         ...prev,
         globalRole: typeof idTokenResult.claims.globalRole === 'string' ? idTokenResult.claims.globalRole : prev.globalRole,
         companyId: typeof idTokenResult.claims.companyId === 'string' ? idTokenResult.claims.companyId : prev.companyId,
-        permissions: Array.isArray(idTokenResult.claims.permissions) ? idTokenResult.claims.permissions as string[] : prev.permissions,
+        // 🔴 ADR-801 §2.8 — ΗΤΑΝ `: prev.permissions`, και αυτό ήταν ο **δεύτερος**
+        //    κανόνας ανάγνωσης του ίδιου claim: αν το ανανεωμένο token **δεν**
+        //    έφερνε το κανάλι, η συνάρτηση που λογάρει «new permissions loaded»
+        //    κρατούσε τα **παλιά** — δηλαδή μια **ανάκληση δεν προσγειωνόταν**.
+        //    Πλέον η απουσία του claim σημαίνει το ίδιο εδώ και στον server:
+        //    **καμία ρητή παραχώρηση**.
+        permissions: readPermissionsClaim(idTokenResult.claims.permissions),
         mfaEnrolled: typeof idTokenResult.claims.mfaEnrolled === 'boolean' ? idTokenResult.claims.mfaEnrolled : prev.mfaEnrolled,
       } : prev);
       logger.info('[AuthContext] Token refreshed successfully - new permissions loaded');

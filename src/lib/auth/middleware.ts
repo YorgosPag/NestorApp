@@ -19,7 +19,7 @@ import type { AuthContext, GlobalRole, PermissionId } from './types';
 import { isAuthenticated } from './types';
 import { buildRequestContext } from './auth-context';
 import {
-  hasPermission,
+  checkPermission,
   createPermissionCache,
   type PermissionCache,
   type PermissionCheckOptions,
@@ -267,8 +267,23 @@ export function withAuth<T = unknown, R = unknown>(
 
       // Check all required permissions
       for (const permission of permissions) {
-        const hasAccess = await hasPermission(ctx, permission, permissionOpts, cache);
-        if (!hasAccess) {
+        // 🔑 ADR-801 §2.8 — **`checkPermission`, ΟΧΙ `hasPermission`.** Ο PDP
+        //    παράγει `reason` + `source`, και μέχρι σήμερα **κάθε** σημείο
+        //    επιβολής τα πετούσε: η boolean πόρτα ήταν ο λόγος που η απόκλιση
+        //    του §2.6 (`permission_not_in_role` στον `pagonis.oe`) **δεν βγήκε
+        //    ποτέ από τη συνάρτηση**. Το OpenID AuthZEN 1.0 κάνει το `context`
+        //    των λόγων **προαιρετικό**· εδώ είναι το μόνο που κάνει την άρνηση
+        //    λέξιμη — και ο **μόνος** καταναλωτής του `PermissionSource`.
+        //    ⚠️ Η ετυμηγορία δεν αλλάζει: κρίνεται το ίδιο `granted`.
+        const decision = await checkPermission(ctx, permission, permissionOpts, cache);
+        if (!decision.granted) {
+          logger.warn('[withAuth] Permission denied', {
+            uid: ctx.uid,
+            permission,
+            reason: decision.reason,
+            source: decision.source ?? null,
+            globalRole: ctx.globalRole,
+          });
           const errorResponse = options.forbiddenResponse
             ? options.forbiddenResponse(permission)
             : createForbiddenResponse(permission);

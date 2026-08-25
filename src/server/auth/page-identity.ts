@@ -40,6 +40,12 @@ import { getDevCompanyId } from '@/config/dev-environment';
 import { getCurrentRuntimeEnvironment } from '@/config/environment-security-config';
 import { verifySessionCookieToken } from '@/server/admin/admin-guards';
 import { isValidGlobalRole, type GlobalRole, type AuthContext } from '@/lib/auth/types';
+// ADR-801 §2.8 — ο ΕΝΑΣ αναγνώστης του claim `permissions`.
+// 🔴 ΓΙΑΤΙ ΕΙΝΑΙ ΕΔΩ: αυτό είναι ο **δεύτερος** παραγωγός `AuthContext` του
+// server (ο πρώτος είναι το `buildRequestContext`). Αν μόνο εκείνος διάβαζε το
+// claim, οι **σελίδες** θα έκριναν διαφορετικά από τις **διαδρομές API** — η
+// ίδια βλάβη που κλείνει αυτή η φάση, έναν όροφο πιο κάτω.
+import { readPermissionsClaim } from '@/lib/auth/claim-permissions';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('PageIdentity');
@@ -108,6 +114,7 @@ export async function readPageIdentity(): Promise<PageIdentity> {
       globalRole,
       mfaEnrolled: decoded.mfaEnrolled === true,
       isAuthenticated: true,
+      permissions: readPermissionsClaim(decoded.permissions),
     },
   };
 }

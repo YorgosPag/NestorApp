@@ -14,22 +14,25 @@
 
 import 'server-only';
 
-import { getAdminFirestore, isFirebaseAdminAvailable } from '@/lib/firebaseAdmin';
-import type { Firestore } from 'firebase-admin/firestore';
-import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
-
-import type {
-  AuthContext,
-  PermissionId,
-  ProjectMember,
-  GrantScope,
-  PropertyGrant,
-} from './types';
+import type { AuthContext, PermissionId, GrantScope } from './types';
 import { isValidPermission, isValidGrantScope } from './types';
 import { isRoleBypass, getRolePermissions } from './roles';
 import { getPermissionSetPermissions, requiresMfaEnrollment } from './permission-sets';
-import { createModuleLogger } from '@/lib/telemetry';
-const logger = createModuleLogger('permissions');
+// ADR-801 §2.8 — το «πού ψάχνω» ζει χωριστά από το «τι αποφασίζω».
+import {
+  createPermissionCache,
+  getProjectMembership,
+  getPropertyGrant,
+  type PermissionCache,
+} from './permissions/resource-lookups';
+
+/**
+ * ⚠️ **Επανεξαγωγή, ώστε η δημόσια επιφάνεια να μείνει ακέραιη**: ~118
+ * αρχεία-διαδρομές εισάγουν `PermissionCache` / `createPermissionCache` από το
+ * barrel `@/lib/auth`, που τα παίρνει από **εδώ**. Η εξαγωγή του §2.8 ήταν
+ * εσωτερική αναδιάταξη — δεν επιτρέπεται να γίνει αλλαγή API.
+ */
+export { createPermissionCache, type PermissionCache };
 
 // =============================================================================
 // TYPES
@@ -72,173 +75,21 @@ export type PermissionDeniedReason =
 
 /**
  * Where permission was granted from.
+ *
+ * ⚠️ **Το `company_scoped_claim` ονομάζει ΕΜΒΕΛΕΙΑ, όχι μόνο πηγή** (ADR-801
+ * §2.8): η ρητή παραχώρηση του claim ισχύει στην εμβέλεια της **εταιρείας** και
+ * **δεν** υποκαθιστά τη συμμετοχή σε έργο. Το πρότυπο είναι το `context` των
+ * λόγων του OpenID AuthZEN 1.0 — με τη διαφορά ότι εκεί είναι **προαιρετικό**.
+ *
+ * ⚠️ Το `global_role` ήταν μέχρι το §2.8 λανθασμένα `project_role`.
  */
 export type PermissionSource =
   | 'global_role_bypass'
+  | 'company_scoped_claim'
+  | 'global_role'
   | 'project_role'
   | 'permission_set'
   | 'unit_grant';
-
-/**
- * Request-scoped permission cache.
- * Pass this between checks in the same request to avoid duplicate Firestore reads.
- */
-export interface PermissionCache {
-  /** Cached project memberships by projectId */
-  memberships: Map<string, ProjectMember | null>;
-  /** Cached property grants by propertyId */
-  grants: Map<string, PropertyGrant | null>;
-}
-
-// =============================================================================
-// CACHE MANAGEMENT
-// =============================================================================
-
-/**
- * Create a new request-scoped permission cache.
- * Call this once per request and pass to all permission checks.
- *
- * @returns Empty permission cache
- *
- * @example
- * ```typescript
- * const cache = createPermissionCache();
- * const hasView = await hasPermission(ctx, 'projects:projects:view', { projectId }, cache);
- * const hasUpdate = await hasPermission(ctx, 'projects:projects:update', { projectId }, cache);
- * ```
- */
-export function createPermissionCache(): PermissionCache {
-  return {
-    memberships: new Map(),
-    grants: new Map(),
-  };
-}
-
-// =============================================================================
-// FIRESTORE ACCESS
-// =============================================================================
-
-/**
- * Get Firestore instance (ADR-077: Centralized via @/lib/firebaseAdmin).
- */
-function getDb(): Firestore | null {
-  if (!isFirebaseAdminAvailable()) {
-    return null;
-  }
-  return getAdminFirestore();
-}
-
-// =============================================================================
-// MEMBERSHIP LOOKUP
-// =============================================================================
-
-/**
- * Get project membership for a user.
- *
- * @param ctx - Auth context
- * @param projectId - Project ID
- * @param cache - Permission cache
- * @returns ProjectMember or null
- */
-async function getProjectMembership(
-  ctx: AuthContext,
-  projectId: string,
-  cache: PermissionCache
-): Promise<ProjectMember | null> {
-  const cacheKey = `${projectId}:${ctx.uid}`;
-
-  // Check cache first
-  if (cache.memberships.has(cacheKey)) {
-    return cache.memberships.get(cacheKey) ?? null;
-  }
-
-  const db = getDb();
-  if (!db) {
-    cache.memberships.set(cacheKey, null);
-    return null;
-  }
-
-  try {
-    // Path: /companies/{companyId}/projects/{projectId}/members/{uid}
-    const memberDoc = await db
-      .collection(COLLECTIONS.COMPANIES)
-      .doc(ctx.companyId)
-      .collection(SUBCOLLECTIONS.COMPANY_PROJECTS)
-      .doc(projectId)
-      .collection(SUBCOLLECTIONS.PROJECT_MEMBERS)
-      .doc(ctx.uid)
-      .get();
-
-    if (!memberDoc.exists) {
-      cache.memberships.set(cacheKey, null);
-      return null;
-    }
-
-    const membership = memberDoc.data() as ProjectMember;
-    cache.memberships.set(cacheKey, membership);
-    return membership;
-  } catch (error) {
-    logger.error('[PERMISSIONS] Failed to get project membership', { error });
-    cache.memberships.set(cacheKey, null);
-    return null;
-  }
-}
-
-// =============================================================================
-// GRANT LOOKUP
-// =============================================================================
-
-/**
- * Get property grant for a user.
- *
- * @param ctx - Auth context
- * @param propertyId - Property ID
- * @param cache - Permission cache
- * @returns PropertyGrant or null
- */
-async function getPropertyGrant(
-  ctx: AuthContext,
-  propertyId: string,
-  cache: PermissionCache
-): Promise<PropertyGrant | null> {
-  const cacheKey = `${propertyId}:${ctx.uid}`;
-
-  // Check cache first
-  if (cache.grants.has(cacheKey)) {
-    return cache.grants.get(cacheKey) ?? null;
-  }
-
-  const db = getDb();
-  if (!db) {
-    cache.grants.set(cacheKey, null);
-    return null;
-  }
-
-  try {
-    // Path: /companies/{companyId}/properties/{propertyId}/grants/{uid}
-    const grantDoc = await db
-      .collection(COLLECTIONS.COMPANIES)
-      .doc(ctx.companyId)
-      .collection(SUBCOLLECTIONS.COMPANY_PROPERTIES)
-      .doc(propertyId)
-      .collection(SUBCOLLECTIONS.PROPERTY_GRANTS)
-      .doc(ctx.uid)
-      .get();
-
-    if (!grantDoc.exists) {
-      cache.grants.set(cacheKey, null);
-      return null;
-    }
-
-    const grant = grantDoc.data() as PropertyGrant;
-    cache.grants.set(cacheKey, grant);
-    return grant;
-  } catch (error) {
-    logger.error('[PERMISSIONS] Failed to get property grant', { error });
-    cache.grants.set(cacheKey, null);
-    return null;
-  }
-}
 
 // =============================================================================
 // PERMISSION CHECKING
@@ -356,9 +207,38 @@ export async function checkPermission(
     return { granted: false, reason: 'permission_not_in_role' };
   }
 
-  // No project or unit scope - check global role permissions
+  // ===========================================================================
+  // ΤΟ ΕΡΩΤΗΜΑ ΧΩΡΙΣ ΠΟΡΟ — εδώ και μόνο εδώ οι δύο κριτές οφείλουν να συμφωνούν
+  // ===========================================================================
+
+  // Check 4: ρητά δοσμένο permission στο claim (ADR-801 §2.8).
+  //
+  // 🔑 **Η ΘΕΣΗ ΕΙΝΑΙ ΣΥΜΒΟΛΑΙΟ**: πριν τον ρόλο, μετά το bypass — **ίδια σειρά**
+  //    με τα βήματα (5)→(6) του `decideCapability`. Η άγκυρα
+  //    `__tests__/pdp-equivalence.test.ts` την κλειδώνει.
+  //
+  // 🔴 **ΓΙΑΤΙ ΔΕΝ ΕΙΝΑΙ ΨΗΛΟΤΕΡΑ, ΔΙΠΛΑ ΣΤΟ BYPASS**: το claim γράφεται ως
+  //    `rolePermissions ∪ ρητά extras ∪ {admin_access}` (`claims-handler.ts:159`)
+  //    — δηλαδή **περιέχει** τα permissions του ρόλου. Ο ρόλος συμβουλεύεται
+  //    **μόνο** εδώ, στο σκέλος χωρίς πόρο. Αν το claim κρινόταν πριν από τα
+  //    σκέλη με πόρο, το **ίδιο** permission id θα συμπεριφερόταν διαφορετικά
+  //    ανάλογα με τη διαδρομή παράδοσης (ρόλος ή claim) — δύο απαντήσεις σε ένα
+  //    ερώτημα, δηλαδή ADR-749 μέσα στη διόρθωσή του.
+  //
+  // ⚠️ Η παραχώρηση είναι **εμβέλειας εταιρείας**: το claim ζει δίπλα στο
+  //    `companyId` και **δεν κουβαλά** δική του εμβέλεια — σε αντίθεση με το
+  //    scope της ανάθεσης στο Azure RBAC ή το `Resource` του AWS IAM. Η πηγή το
+  //    **ονομάζει**, ώστε να μη χρειάζεται να το θυμάται ο επόμενος.
+  if (ctx.permissions?.includes(permission)) {
+    return { granted: true, reason: null, source: 'company_scoped_claim' };
+  }
+
+  // Check 5: τα permissions του **καθολικού** ρόλου.
   const globalPermissions = getRolePermissions(ctx.globalRole);
   if (globalPermissions.includes(permission)) {
+    // ⚠️ Ήταν `'project_role'` — **ψευδές**: εδώ δεν υπάρχει έργο, η παραχώρηση
+    //    έρχεται από τον καθολικό ρόλο. Πέρασε απαρατήρητο επειδή **κανείς δεν
+    //    διάβαζε** το `source` (μετρημένο: μηδέν καταναλωτές πριν το §2.8).
     return { granted: true, reason: null, source: 'project_role' };
   }
 
@@ -446,6 +326,35 @@ export async function requirePermission(
 }
 
 /**
+ * 🏛️ **Ο ΕΝΑΣ ΒΡΟΧΟΣ ΤΩΝ ΠΟΛΛΑΠΛΩΝ ΕΛΕΓΧΩΝ** (N.0.2 · CHECK 3.28).
+ *
+ * Το `hasAllPermissions` και το `hasAnyPermission` ήταν **ο ίδιος βρόχος γραμμένος δύο
+ * φορές**, με μόνη διαφορά **ποια ετυμηγορία σταματά τη σάρωση**. Ο κλώνος ήταν
+ * κληρονομημένος· τον ονόμασε το `jscpd --diff` όταν το αρχείο μπήκε σταδιοποιημένο.
+ *
+ * Επιστρέφει `true` μόλις βρεθεί η **πρώτη** άδεια που κρίνεται `granted === stopOn`.
+ *
+ * ⚠️ **ΣΕΙΡΙΑΚΟΣ ΕΠΙΤΗΔΕΣ, ΠΟΤΕ `Promise.all`**: η `cache` γεμίζει **σταδιακά** και ο
+ * σύντομος τερματισμός είναι μέρος του συμβολαίου — παράλληλη εκτέλεση θα ρωτούσε τη
+ * Firestore για άδειες που η απάντηση **έχει ήδη κριθεί άσχετη**.
+ */
+async function anyVerdictMatches(
+  ctx: AuthContext,
+  permissions: PermissionId[],
+  options: PermissionCheckOptions,
+  cache: PermissionCache,
+  stopOn: boolean
+): Promise<boolean> {
+  for (const permission of permissions) {
+    const result = await checkPermission(ctx, permission, options, cache);
+    if (result.granted === stopOn) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
  * Check multiple permissions (all must be granted).
  *
  * @param ctx - Authenticated context
@@ -460,13 +369,8 @@ export async function hasAllPermissions(
   options: PermissionCheckOptions = {},
   cache: PermissionCache = createPermissionCache()
 ): Promise<boolean> {
-  for (const permission of permissions) {
-    const result = await checkPermission(ctx, permission, options, cache);
-    if (!result.granted) {
-      return false;
-    }
-  }
-  return true;
+  // «όλες δεκτές» == «καμία δεν βρέθηκε απορριμμένη»
+  return !(await anyVerdictMatches(ctx, permissions, options, cache, false));
 }
 
 /**
@@ -484,11 +388,5 @@ export async function hasAnyPermission(
   options: PermissionCheckOptions = {},
   cache: PermissionCache = createPermissionCache()
 ): Promise<boolean> {
-  for (const permission of permissions) {
-    const result = await checkPermission(ctx, permission, options, cache);
-    if (result.granted) {
-      return true;
-    }
-  }
-  return false;
+  return anyVerdictMatches(ctx, permissions, options, cache, true);
 }

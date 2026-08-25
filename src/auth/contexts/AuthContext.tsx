@@ -28,6 +28,7 @@ import {
   syncUserProfileToFirestore,
 } from './auth-context/auth-context-profile';
 import type { DeclaredOccupation } from '@/types/professional-identity';
+import { readPermissionsClaim } from '@/lib/auth/claim-permissions';
 import { useAuthActions } from './auth-context/useAuthActions';
 import { useClaimsRefresh } from './auth-context/use-claims-refresh';
 
@@ -190,7 +191,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
         logger.debug('[AuthContext] Custom claims loaded:', {
           globalRole: customClaims.globalRole,
           companyId: customClaims.companyId,
-          permissions: Array.isArray(customClaims.permissions) ? customClaims.permissions.length : 0,
+          // ADR-801 §2.8 — ο **ίδιος** αναγνώστης με την κρίση: ένα log που
+          // μετρά αλλιώς από ό,τι κρίνεται είναι διαγνωστικό που παραπλανά
+          // ακριβώς όταν το χρειάζεσαι.
+          permissions: readPermissionsClaim(customClaims.permissions)?.length ?? 0,
         });
       } catch (claimsError) {
         logger.warn('[AuthContext] Failed to load custom claims (non-blocking)', { error: claimsError });

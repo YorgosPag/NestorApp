@@ -51,7 +51,11 @@ jest.mock('@/i18n', () => ({
         { onboarding: { workspace: W } },
       );
       if (typeof value !== 'string') return key; // ⚠️ ωμό κλειδί ⇒ ο ισχυρισμός σκάει
-      return value.replace(/\{\{(\w+)\}\}/g, (_m, name) => String(vars?.[name] ?? `{{${name}}}`));
+      // ⚠️ **ICU, ΜΟΝΑ άγκιστρα** (`{min}`), όχι `{{min}}`: το repo τρέχει
+      //    `i18next-icu` και το **CHECK 3.9** το επιβάλλει στα locale JSON. Η πρώτη
+      //    γραφή αυτού του mock αντέγραφε τη σύνταξη του σκέτου i18next και έμενε
+      //    πράσινη μόνο επειδή τα locale είχαν ΚΙ ΑΥΤΑ τη λάθος μορφή.
+      return value.replace(/\{(\w+)\}/g, (_m, name) => String(vars?.[name] ?? `{${name}}`));
     },
   }),
 }));

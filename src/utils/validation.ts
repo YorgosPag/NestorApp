@@ -1,77 +1,57 @@
 import { z } from 'zod';
 import i18n from '@/i18n/config';
-// ✅ ENTERPRISE: Import centralized validation messages
-import { getValidationMessages } from '@/subapps/dxf-viewer/config/modal-select';
 import { PHONE_REGEX } from '@/lib/validation/phone-validation';
 import { parseDate } from './validation/date-validators';
 
-import { createModuleLogger } from '@/lib/telemetry';
-const logger = createModuleLogger('Validation');
-
-// 🏢 ENTERPRISE: Validation messages config type
-type ValidationMessagesConfig = Record<string, string>;
-
-// 🏢 ENTERPRISE: Get centralized validation messages with i18n fallback
-const getValidationMessagesOnce = (): ValidationMessagesConfig => {
-  try {
-    return getValidationMessages();
-  } catch (error) {
-    logger.warn('Failed to load validation messages, using i18n fallback', { error });
-    // 🏢 ENTERPRISE: i18n-based fallback for validation messages
-    return {
-      // Required field messages
-      first_name_required: i18n.t('validation.entities.firstNameRequired', { ns: 'forms' }),
-      last_name_required: i18n.t('validation.entities.lastNameRequired', { ns: 'forms' }),
-      company_name_required: i18n.t('validation.entities.companyNameRequired', { ns: 'forms' }),
-      service_name_required: i18n.t('validation.entities.serviceNameRequired', { ns: 'forms' }),
-
-      // Format validation messages
-      vat_individual_format: i18n.t('validation.entities.vatIndividualFormat', { ns: 'forms' }),
-      vat_company_format: i18n.t('validation.entities.vatCompanyFormat', { ns: 'forms' }),
-      amka_format: i18n.t('validation.entities.amkaFormat', { ns: 'forms' }),
-
-      // Date validation messages
-      birthdate_invalid: i18n.t('validation.dates.birthdateInvalid', { ns: 'forms' }),
-      birthdate_future_error: i18n.t('validation.dates.birthdateFutureError', { ns: 'forms' }),
-      issue_date_future_error: i18n.t('validation.dates.issueDateFutureError', { ns: 'forms' }),
-      expiry_after_issue_error: i18n.t('validation.dates.expiryAfterIssueError', { ns: 'forms' }),
-      past_date_error: i18n.t('validation.dates.pastDateError', { ns: 'forms' }),
-      date_comparison_error: i18n.t('validation.dates.dateComparisonError', { ns: 'forms' }),
-
-      // Generic validation messages - required for ValidationMessagesConfig
-      required: i18n.t('validation.required', { ns: 'forms' }),
-      minLength: i18n.t('validation.minLength', { ns: 'forms' }),
-      maxLength: i18n.t('validation.maxLength', { ns: 'forms' }),
-      exactLength: i18n.t('validation.exactLength', { ns: 'forms' }),
-      invalidEmail: i18n.t('validation.invalidEmail', { ns: 'forms' }),
-      invalidPhone: i18n.t('validation.invalidPhone', { ns: 'forms' }),
-      invalidUrl: i18n.t('validation.invalidUrl', { ns: 'forms' }),
-      invalidNumber: i18n.t('validation.invalidNumber', { ns: 'forms' }),
-      notInteger: i18n.t('validation.notInteger', { ns: 'forms' }),
-      positiveNumber: i18n.t('validation.positiveNumber', { ns: 'forms' }),
-      nonNegativeNumber: i18n.t('validation.nonNegativeNumber', { ns: 'forms' }),
-      minValue: i18n.t('validation.minValue', { ns: 'forms' }),
-      maxValue: i18n.t('validation.maxValue', { ns: 'forms' }),
-      greaterThan: i18n.t('validation.greaterThan', { ns: 'forms' }),
-      lessThan: i18n.t('validation.lessThan', { ns: 'forms' }),
-      invalidDate: i18n.t('validation.invalidDate', { ns: 'forms' }),
-      pastDate: i18n.t('validation.pastDate', { ns: 'forms' }),
-      futureDate: i18n.t('validation.futureDate', { ns: 'forms' }),
-      invalidSelection: i18n.t('validation.invalidSelection', { ns: 'forms' }),
-      areaRequired: i18n.t('validation.areaRequired', { ns: 'forms' }),
-      priceRequired: i18n.t('validation.priceRequired', { ns: 'forms' }),
-      invalidCode: i18n.t('validation.invalidCode', { ns: 'forms' }),
-      confirmPassword: i18n.t('validation.confirmPassword', { ns: 'forms' })
-    };
-  }
-};
-
-const validationMessages: ValidationMessagesConfig = getValidationMessagesOnce();
-
-// Helper function to get validation message with i18n
+/**
+ * 🔑 Η ΜΙΑ ΠΗΓΗ ΜΗΝΥΜΑΤΩΝ ΕΠΙΚΥΡΩΣΗΣ — i18n, αποτιμώμενη ΤΗ ΣΤΙΓΜΗ ΤΗΣ ΧΡΗΣΗΣ.
+ *
+ * ⚠️ **ΤΟ NAMESPACE ΕΙΝΑΙ ΗΔΗ `forms` — ΜΗΝ ξαναγράψεις πρόθεμα `forms.` στο κλειδί.**
+ * Μέχρι 2026-08-25 η κλήση ήταν `t('forms.validation.' + key, { ns: 'forms' })`:
+ * διπλό πρόθεμα ⇒ το κλειδί δεν υπάρχει ⇒ το i18next επιστρέφει **το ίδιο το
+ * κλειδί**, και ο χρήστης έβλεπε `forms.validation.required` σε **22** κανόνες
+ * του `validationRules`. Αποδείχθηκε **εκτελώντας** το πραγματικό i18next.
+ *
+ * ⚠️ **ΜΗΝ την κάνεις σταθερά σε εμβέλεια module** (`const messages = build()`):
+ * το module φορτώνεται πριν ολοκληρωθεί το `i18n.init()` ⇒ κάθε μήνυμα θα
+ * «πάγωνε» ως **ωμό κλειδί** — το σχήμα του CHECK 3.51. Ακριβώς αυτό έκανε το
+ * `validationMessages`, που αντικαταστάθηκε από αυτή τη συνάρτηση.
+ *
+ * ⚠️ **ΜΗΝ ξαναφέρεις δεύτερο μονοπάτι μηνυμάτων.** Το προηγούμενο ήταν
+ * `try { getValidationMessages() } catch { <i18n fallback> }` πάνω σε συνάρτηση
+ * που επιστρέφει σκέτο object literal, άρα **δεν μπορούσε να πετάξει ΠΟΤΕ**:
+ * το fallback ήταν **αδρανής φρουρός** (ADR-749 §5) και τα πέντε μηνύματα
+ * ημερομηνίας έβγαιναν `undefined` — κενό μήνυμα σφάλματος στην οθόνη.
+ *
+ * @see ADR-804 §2
+ */
 export const getValidationMessage = (key: string, params?: Record<string, unknown>) => {
-  return i18n.t(`forms.validation.${key}`, { ...params, ns: 'forms' });
+  return i18n.t(`validation.${key}`, { ...params, ns: 'forms' });
 };
+
+/**
+ * 🏛️ **Ο ΕΝΑΣ ΚΑΝΟΝΑΣ ΤΗΣ ΠΡΟΑΙΡΕΤΙΚΗΣ ΜΗ-ΜΕΛΛΟΝΤΙΚΗΣ ΗΜΕΡΟΜΗΝΙΑΣ** (N.0.2 · CHECK 3.28).
+ *
+ * Το `birthDate` και το `documentIssueDate` έθεταν **το ίδιο ερώτημα με δύο σώματα** —
+ * *«κενό ⇒ δεκτό· αλλιώς έγκυρη ημερομηνία που δεν έχει περάσει το τώρα»* — και η μόνη
+ * τους διαφορά ήταν **το κλειδί του μηνύματος**. Ο κλώνος ήταν κληρονομημένος (75 tokens,
+ * τον ονόμασε το `jscpd --diff` όταν η μετανάστευση i18n ακούμπησε μία γραμμή του καθενός).
+ *
+ * ⚠️ **Η ΑΝΟΧΗ ΣΤΟ ΚΕΝΟ ΕΙΝΑΙ ΜΕΡΟΣ ΤΟΥ ΚΑΝΟΝΑ, ΟΧΙ ΠΑΡΑΛΕΙΨΗ**: το πεδίο είναι
+ * `optional()`, άρα κενή συμβολοσειρά σημαίνει «δεν απάντησε ο άνθρωπος», όχι «άκυρη
+ * ημερομηνία». Ένας τρίτος καλών που ξεχνούσε αυτή τη γραμμή θα έκανε το πεδίο **σιωπηλά
+ * υποχρεωτικό**.
+ */
+const optionalNonFutureDate = (messageKey: string) => (message?: string) =>
+  z.string()
+    .optional()
+    .refine(dateStr => {
+      if (!dateStr || dateStr.trim() === '') return true; // Optional field
+      const date = new Date(dateStr);
+      return !isNaN(date.getTime()) && date <= new Date();
+    }, {
+      message: message || getValidationMessage(messageKey)
+    });
 
 // Common validation rules with i18n messages
 export const validationRules = {
@@ -145,30 +125,12 @@ export const validationRules = {
   /**
    * Ημερομηνία γέννησης - δεν μπορεί να είναι μελλοντική
    */
-  birthDate: (message?: string) =>
-    z.string()
-      .optional()
-      .refine(dateStr => {
-        if (!dateStr || dateStr.trim() === '') return true; // Optional field
-        const date = new Date(dateStr);
-        return !isNaN(date.getTime()) && date <= new Date();
-      }, {
-        message: message || validationMessages.birthdate_future_error
-      }),
+  birthDate: optionalNonFutureDate('dates.birthdateFutureError'),
 
   /**
    * Ημερομηνία έκδοσης εγγράφου - δεν μπορεί να είναι μελλοντική
    */
-  documentIssueDate: (message?: string) =>
-    z.string()
-      .optional()
-      .refine(dateStr => {
-        if (!dateStr || dateStr.trim() === '') return true; // Optional field
-        const date = new Date(dateStr);
-        return !isNaN(date.getTime()) && date <= new Date();
-      }, {
-        message: message || validationMessages.issue_date_future_error
-      }),
+  documentIssueDate: optionalNonFutureDate('dates.issueDateFutureError'),
 
   /**
    * Ημερομηνία λήξης εγγράφου - πρέπει να είναι μετά την ημερομηνία έκδοσης
@@ -187,7 +149,7 @@ export const validationRules = {
 
         return expiryDate > issueDateObj;
       }, {
-        message: message || validationMessages.expiry_after_issue_error
+        message: message || getValidationMessage('dates.expiryAfterIssueError')
       }),
 
   /**
@@ -203,7 +165,7 @@ export const validationRules = {
         today.setHours(0, 0, 0, 0); // Start of today
         return !isNaN(date.getTime()) && date >= today;
       }, {
-        message: message || validationMessages.past_date_error
+        message: message || getValidationMessage('dates.pastDateError')
       }),
 
   /**
@@ -220,7 +182,7 @@ export const validationRules = {
         return !isNaN(date.getTime()) && date >= minDate && date <= new Date();
       }, {
         // 🌐 i18n: Converted to i18n key with interpolation - 2026-01-18
-        message: message || `validation.dates.maxYearsAgo`
+        message: message || getValidationMessage('dates.maxYearsAgo', { years: maxYearsAgo })
       }),
 
   /**
@@ -239,7 +201,7 @@ export const validationRules = {
         return !isNaN(date.getTime()) && date >= today && date <= maxDate;
       }, {
         // 🌐 i18n: Converted to i18n key with interpolation - 2026-01-18
-        message: message || `validation.dates.maxYearsAhead`
+        message: message || getValidationMessage('dates.maxYearsAhead', { years: maxYearsAhead })
       }),
 
   // Selection validation
@@ -308,7 +270,7 @@ export const validateDocumentDates = (formData: {
 
   return {
     isValid,
-    error: isValid ? undefined : validationMessages.date_comparison_error
+    error: isValid ? undefined : getValidationMessage('dates.dateComparisonError')
   };
 };
 
