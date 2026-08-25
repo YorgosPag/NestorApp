@@ -125,7 +125,7 @@ export function CreateWorkspaceForm() {
   };
 
   // ⚠️ ΚΑΜΙΑ `max-w-*` στη ρίζα: το **μέτρο** το δηλώνει η γειτονιά, μία φορά
-  //    (`ShellSurface measure="wide"` = 80 χαρακτήρες, WCAG 1.4.8, στο
+  //    (`ShellSurface measure="wide"` = 80ch — ΟΧΙ 80 χαρακτήρες, δες §Β.11 — στο
   //    `PrivateSpaceShell`). Χειρόγραφο ταβάνι εδώ θα ήταν πέμπτη τιμή δίπλα σε
   //    τέσσερις που μόλις ενοποιήθηκαν — και το φυλά το CHECK 3.63.
   return (
