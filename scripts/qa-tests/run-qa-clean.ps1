@@ -45,7 +45,8 @@ for ($i = 1; $i -le $maxWait; $i++) {
 Write-Host ""
 Write-Host "[Step 3] Starting Next.js dev server (emulator mode)..." -ForegroundColor Cyan
 $env:FIRESTORE_EMULATOR_HOST = "localhost:8080"
-$env:NEXT_PUBLIC_USE_FIREBASE_EMULATOR = "true"
+$env:FIREBASE_AUTH_EMULATOR_HOST = "localhost:9099"
+$env:STORAGE_EMULATOR_HOST = "http://localhost:9199"
 $env:NODE_OPTIONS = "--max-old-space-size=8192"
 
 $devJob = Start-Process -FilePath "npx" -ArgumentList "next dev --turbopack" -PassThru -WindowStyle Minimized

@@ -63,7 +63,8 @@ done
 # ── Step 3: Start dev server ──
 echo -e "${CYAN}🚀 Step 3: Starting Next.js dev server (emulator mode)...${NC}"
 FIRESTORE_EMULATOR_HOST=localhost:8080 \
-NEXT_PUBLIC_USE_FIREBASE_EMULATOR=true \
+FIREBASE_AUTH_EMULATOR_HOST=localhost:9099 \
+STORAGE_EMULATOR_HOST=http://localhost:9199 \
 NODE_OPTIONS=--max-old-space-size=8192 \
 npx next dev --turbopack &
 DEV_PID=$!
