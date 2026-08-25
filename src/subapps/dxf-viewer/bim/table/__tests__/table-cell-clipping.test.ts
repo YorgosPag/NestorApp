@@ -46,6 +46,25 @@ import {
 import { stampTableText } from '../../../rendering/entities/table/stamp-table-layout';
 import type { TableCell, TableColumn, TableRow } from '../../../types/table';
 import type { TableEntity } from '../../../types/table-entity';
+// 🔴 ADR-799 Φάση 3 — ΟΨΕΙΣ + ΜΑΤΙΑ ΓΙΑ ΤΑ GLYPH RUNS.
+// Η σουίτα κρίνει ΠΟΙΟ κείμενο κόπηκε, δηλαδή κρίνει ΠΛΑΤΟΣ. Χωρίς φορτωμένη όψη η μέτρηση
+// πέφτει στη βαθμίδα 3, που είναι ΤΥΦΛΗ στο έντονο — η κεφαλίδα ενός πίνακα είναι έντονη,
+// άρα το «τι χώρεσε» κρινόταν με όργανο που δεν βλέπει το ερώτημα (CHECK 3.64).
+// ⚠️ Και το ΖΕΥΓΟΣ ΜΟΝΟ ΤΟΥ ΔΕΝ ΑΡΚΟΥΣΕ: με όψη, ο ζωγράφος περνά σε `ctx.fill(Path2D)` και
+// ο καταγραφέας — που διάβαζε μόνο `fillText` — έβλεπε ΚΕΝΟ. Δες `_glyph-paint-text`.
+import { installStubFontPair } from '../../../text-engine/fonts/__tests__/_stub-font';
+import { installGlyphTextCapture, paintedText } from '../../../text-engine/fonts/__tests__/_glyph-paint-text';
+
+let __restoreFaces: () => void;
+let __restoreGlyphIndex: () => void;
+beforeAll(() => {
+  __restoreFaces = installStubFontPair();
+  __restoreGlyphIndex = installGlyphTextCapture();
+});
+afterAll(() => {
+  __restoreGlyphIndex();
+  __restoreFaces();
+});
 
 // ── Το σενάριο ──────────────────────────────────────────────────────────────
 
@@ -88,11 +107,23 @@ function entityWith(cell: TableCell): TableEntity {
 
 // ── Οι τέσσερις αναγνώσεις ──────────────────────────────────────────────────
 
-/** #1 — ό,τι έφτασε πραγματικά στο `ctx.fillText`. */
+/**
+ * #1 — ό,τι έφτασε πραγματικά στον καμβά.
+ *
+ * 🔴 **ΔΙΟΡΘΩΣΗ 2026-08-25 (ADR-799 Φάση 3): ΜΕΧΡΙ ΣΗΜΕΡΑ ΑΥΤΟ ΤΟ BACKEND ΕΠΑΛΗΘΕΥΟΤΑΝ ΜΟΝΟ
+ * ΣΕ ΔΙΑΜΟΡΦΩΣΗ ΠΟΥ Η ΠΑΡΑΓΩΓΗ ΔΕΝ ΕΧΕΙ ΠΟΤΕ.** Διάβαζε **μόνο** `log.texts`, δηλαδή μόνο
+ * `ctx.fillText`. Μόλις φορτωθεί όψη — που στην παραγωγή ισχύει **πάντα** — το
+ * `stamp-table-text.ts:157` ζωγραφίζει με `paintTextRun` ⇒ `ctx.fill(Path2D)`, και το
+ * `screenText()` γύριζε **κενή συμβολοσειρά**. Η ισοτιμία των τεσσάρων backends ήταν, για το
+ * #1, δήλωση για διαδρομή που ο χρήστης δεν βλέπει.
+ *
+ * Πλέον το {@link paintedText} διαβάζει **και τις δύο** βαθμίδες, οπότε η σουίτα λέει την
+ * αλήθεια είτε υπάρχει όψη είτε όχι.
+ */
 function screenText(cell: TableCell): string {
   const log = createPaintLog();
   stampTableText(createRc(log), layoutTable(modelWith(cell), STANDARD).cells);
-  return log.texts.map((t) => t.text).join('');
+  return paintedText(log).join('');
 }
 
 /** #2 — το πρωτογενές σχήμα κειμένου (σκηνή / PDF preview). */
@@ -115,6 +146,27 @@ function exportedText(cell: TableCell): string {
 
 describe('ADR-739 Φ.Δ βήμα 5 — ένας κανόνας, τέσσερα backends', () => {
   const cell: TableCell = { kind: 'text', value: LONG_TEXT };
+
+  /**
+   * 🔴 **Η ΑΓΚΥΡΑ ΤΗΣ ΔΙΑΜΟΡΦΩΣΗΣ — χωρίς αυτή, τα υπόλοιπα είναι πράσινα για λάθος λόγο.**
+   *
+   * Το backend #1 έχει **δύο** δρόμους ζωγραφικής: `ctx.fillText` (καμία όψη) και
+   * `ctx.fill(Path2D)` (φορτωμένη όψη). **Η παραγωγή είναι ΠΑΝΤΑ ο δεύτερος.** Αν αύριο
+   * κάποιος αφαιρέσει το `installStubFontPair` από πάνω, η σουίτα θα ξαναγίνει πράσινη
+   * μετρώντας τον **πρώτο** — δηλαδή θα επαληθεύει διαδρομή που ο χρήστης δεν βλέπει, και
+   * κανένας άλλος ισχυρισμός εδώ δεν θα το πει.
+   *
+   * Μετρημένο 2026-08-25: με όψη, `fillText = 0` και `fill(Path2D) = 1` ανά κελί.
+   */
+  it('🔴 το backend #1 ζωγραφίζει ΟΝΤΩΣ με glyph paths — τη διαδρομή που έχει η παραγωγή', () => {
+    const log = createPaintLog();
+    stampTableText(createRc(log), layoutTable(modelWith({ kind: 'text', value: 'ΟΚ' }), STANDARD).cells);
+    expect({
+      viaFillText: log.texts.length,
+      viaGlyphPaths: log.fillPaths.filter((f) => f.path).length > 0,
+      visible: paintedText(log).join(''),
+    }).toEqual({ viaFillText: 0, viaGlyphPaths: true, visible: 'ΟΚ' });
+  });
 
   it('🔴 οθόνη === πρωτογενή === εξαγωγή: ΤΟ ΙΔΙΟ ορατό κείμενο', () => {
     const screen = screenText(cell);

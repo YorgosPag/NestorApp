@@ -117,6 +117,12 @@ interface FillPathRecord {
   readonly subpaths: ReadonlyArray<ReadonlyArray<Point2D>>;
   /** Ό,τι ζητήθηκε στο `fill(rule)`· `'nonzero'` όταν δεν δόθηκε, όπως ο καμβάς. */
   readonly rule: CanvasFillRule;
+  /**
+   * Το `Path2D` της υπερφόρτωσης `fill(path, rule?)`, όταν δόθηκε — αλλιώς `undefined`.
+   * Είναι **αναφορά**, ώστε το κείμενο ενός glyph run να μπορεί να ανακτηθεί από την κρυφή
+   * μνήμη που το παρήγαγε. Δες τη σημείωση στο `fill` του `createCtx`.
+   */
+  readonly path?: object;
 }
 
 /**
@@ -332,12 +338,29 @@ export function createCtx(log: PaintLog): CanvasRenderingContext2D {
       dashPx = [...segments];
     },
     getLineDash: (): number[] => [...dashPx],
-    fill: (rule?: CanvasFillRule): void => {
+    /**
+     * 🔴 **ΔΥΟ ΥΠΕΡΦΟΡΤΩΣΕΙΣ, ΟΠΩΣ Ο ΠΡΑΓΜΑΤΙΚΟΣ ΚΑΜΒΑΣ** — διόρθωση 2026-08-25 (ADR-799 Φ3).
+     *
+     * Το `CanvasRenderingContext2D.fill` δέχεται `fill(rule?)` **ή** `fill(path, rule?)`. Ο
+     * καταγραφέας υλοποιούσε **μόνο** την πρώτη, οπότε όταν ο ζωγράφος καλούσε
+     * `ctx.fill(run.path)` (η διαδρομή που παίρνει κάθε κείμενο **μόλις φορτωθεί όψη** —
+     * `glyph-run-draw.ts:104`), το `Path2D` καταγραφόταν **ως κανόνας γεμίσματος** και η
+     * διαδρομή χανόταν. Μετρημένο: **8** σουίτες κρίνουν ζωγραφισμένο κείμενο μέσω αυτού του
+     * καταγραφέα, και **όλες** τυφλώνονταν ακριβώς στη διαμόρφωση που έχει η **παραγωγή**.
+     *
+     * ⚠️ Το `path` κρατιέται ως **αναφορά** ώστε μια σουίτα να μπορεί να το ξαναδέσει με το
+     * κείμενό του (δες `__glyphRunText` στο `glyph-path-cache`). Ο καταγραφέας **δεν** εισάγει
+     * την κρυφή μνήμη γλύφων — αυτό θα έσερνε ολόκληρο τον glyph pipeline σε **13** σουίτες,
+     * το ίδιο ελάττωμα που μόλις διορθώθηκε στο `census-setup.js`.
+     */
+    fill: (pathOrRule?: CanvasFillRule | Path2D, maybeRule?: CanvasFillRule): void => {
+      const isPath = typeof pathOrRule === 'object' && pathOrRule !== null;
       log.fills.push(fillStyle);
       log.fillPaths.push({
         color: fillStyle,
         subpaths: subpaths.map((s) => [...s]),
-        rule: rule ?? 'nonzero',
+        rule: (isPath ? maybeRule : (pathOrRule as CanvasFillRule | undefined)) ?? 'nonzero',
+        path: isPath ? (pathOrRule as object) : undefined,
       });
     },
     fillText: (text: string, x: number, y: number): void => {
