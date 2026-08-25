@@ -401,6 +401,11 @@ if (require.main === module) {
 
 module.exports = {
   analyzeNextBuild,
+  // Δημοσιευμένο 2026-08-25 (ADR-807): η άγκυρα του προορισμού Firebase κρίνει το
+  // **ίδιο** artifact που μετρά ο bundle ratchet. Δεύτερη υλοποίηση του «ποιος
+  // φάκελος build;» θα ήταν δεύτερη αλήθεια — ακριβώς ό,τι απαγορεύει το docblock
+  // αυτής της συνάρτησης.
+  resolveBuildDir,
   formatBytes,
   CONFIG
 };
