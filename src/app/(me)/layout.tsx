@@ -59,10 +59,15 @@ export default function PrivateSpaceLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    // `min-h-screen` + `flex-col`: ίδια δομή με το `(light)`, ώστε οι σελίδες να
-    // ζητούν `flex-1` («ό,τι περισσεύει») και να μένουν σωστές όταν αλλάξει το ύψος
-    // της κεφαλίδας — η μόνη εκδοχή που δεν σπάει σε καμία ανάλυση.
-    <div className={`flex min-h-screen w-full flex-col ${COLOR_BRIDGE.bg.primary}`}>
+    // Ίδια δομή με το `(light)`, ώστε οι σελίδες να ζητούν «ό,τι περισσεύει» και να
+    // μένουν σωστές όταν αλλάξει το ύψος της κεφαλίδας.
+    //
+    // 🔴 Έγραφε `min-h-screen` με το χέρι, δηλαδή **ακριβώς το ίδιο ψέμα** με το
+    // `(light)`: «ίδια δομή» ήταν αληθές — ίδια δομή, ίδιο ελάττωμα. Εδώ δεν είχε
+    // ακόμη φανεί μόνο επειδή καμία σελίδα του `(me)` δεν ζητά πλήρες ύψος.
+    // Το ύψος το κατέχει πλέον το `data-shell-frame` (`shell-surface.css` §5).
+    // ⚠️ **ΜΗΝ** ξαναγράψεις ύψος παραθύρου εδώ — κανόνας Υ1, CHECK 3.63.
+    <div data-shell-frame className={`w-full ${COLOR_BRIDGE.bg.primary}`}>
       <PrivateSpaceShell>{children}</PrivateSpaceShell>
     </div>
   );

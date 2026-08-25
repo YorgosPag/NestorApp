@@ -14,25 +14,32 @@
     "/mandate/[token]|page-measure",
     "/o/[workspace]/accounting|page-padding",
     "/o/[workspace]/attendance/check-in/[token]|content-padding",
+    "/o/[workspace]/attendance/check-in/[token]|nested-viewport-height",
     "/o/[workspace]/dashboard|content-padding",
     "/o/[workspace]/dashboard|page-measure",
     "/o/[workspace]/procurement/quotes/scan|page-measure",
     "/o/[workspace]/procurement/rfqs/new|page-measure",
     "/o/[workspace]/projects/[id]/procurement/quote/[quoteId]/review|page-measure",
     "/oauth/consent|page-measure",
+    "/onboarding/organization|nested-viewport-height",
     "/onboarding/organization|page-padding",
+    "/pending-approval|nested-viewport-height",
     "/pending-approval|page-padding",
     "/privacy-policy|page-measure",
     "/privacy-policy|page-padding",
     "/terms|page-measure",
     "/terms|page-padding",
+    "/test-cursor|nested-viewport-height",
     "/test-harness/contact-mutation|content-padding",
     "/test-harness/contact-mutation|page-measure",
+    "/test-harness/listing-shapes|nested-viewport-height",
     "/test-upload|page-measure",
-    "/test-upload|page-padding"
+    "/test-upload|page-padding",
+    "/unauthorized|nested-viewport-height"
   ],
   "declarations": [
     "/o/[workspace]/dxf/viewer",
-    "/search/results"
+    "/search/results",
+    "viewport:/search/results"
   ]
 }

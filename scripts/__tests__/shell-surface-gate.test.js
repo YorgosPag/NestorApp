@@ -388,9 +388,15 @@ describe('Β-Λ — η κλειστή λογιστική', () => {
     //    έβγαινε **131 αντί για 157** — δηλαδή η άγκυρα της κλειστής λογιστικής
     //    θα ήταν σιωπηλά τυφλή σε τρεις κάδους, ανάμεσά τους ΚΑΙ ΟΙ ΔΥΟ
     //    μπλοκάροντες.
-    const sum = [...section.matchAll(/^\s+[✅🔴🔶]\s+([a-z-]+)\s+(\d+)/gmu)]
-      .filter(([, st]) => st !== 'page-measure')
-      .reduce((a, [, , n]) => a + Number(n), 0);
+    // ⚠️ ΟΙ ΑΞΟΝΕΣ ΔΕΝ ΕΙΝΑΙ ΚΑΤΑΣΤΑΣΕΙΣ ΣΕΛΙΔΑΣ, ΚΑΙ ΓΙ' ΑΥΤΟ ΒΓΑΙΝΟΥΝ ΑΠΟ ΤΟ
+    //    ΑΘΡΟΙΣΜΑ. Το πλάτος (2ος) και το ύψος (4ος) ταξιδεύουν **δίπλα** στην
+    //    κατάσταση: μια σελίδα μπορεί να τα έχει και τα δύο ΚΑΙ να είναι «clean»
+    //    ως προς το κενό. Το φίλτρο δείχνει στην ίδια την ετικέτα του άξονα, όχι
+    //    σε λίστα ονομάτων — ήταν λίστα, και έσπασε την ημέρα που προστέθηκε ο
+    //    τέταρτος άξονας (άθροισμα 163 αντί για 157).
+    const sum = [...section.matchAll(/^\s+[✅🔴🔶]\s+([a-z-]+)\s+(\d+)([^\n]*)/gmu)]
+      .filter((m) => !/άξονας/.test(m[3]))
+      .reduce((a, m) => a + Number(m[2]), 0);
     expect(sum).toBe(pages);
   });
 
@@ -482,7 +488,11 @@ describe('Β-Μ — μεταλλάξεις ΣΤΙΣ ΕΙΣΟΔΟΥΣ', () => {
   });
 
   it('Β-Μ7: αντίφαση μητρώου/δίσκου ⇒ ΚΟΚΚΙΝΟ (δύο αλήθειες που διαφωνούν)', () => {
-    withMutation(REGISTRY, '"(bare)": {', '"(light)": { "reason": "δοκιμή αντίφασης — το layout ΔΙΝΕΙ διάδρομο" },\n    "(bare)": {', (r) => {
+    // ⚠️ Ο ΣΤΟΧΟΣ ΟΝΟΜΑΖΕΙ ΡΗΤΑ ΤΟ ΚΑΤΑΣΤΙΧΟ ΤΟΥ ΔΙΑΔΡΟΜΟΥ. Σκέτο «"(bare)": {»
+    //    έγινε ΔΙΦΟΡΟΥΜΕΝΟ μόλις το μητρώο απέκτησε δεύτερο κατάστιχο
+    //    (groupsWithoutFrame, ΦΑΣΗ Γ): το replace χτυπούσε το ΠΡΩΤΟ, δηλαδή η
+    //    άγκυρα δοκίμαζε **άλλον κανόνα από αυτόν που ονομάζει**.
+    withMutation(REGISTRY, '"groupsWithoutCorridor": {\n    "(bare)": {', '"groupsWithoutCorridor": {\n    "(light)": { "reason": "δοκιμή αντίφασης — το layout ΔΙΝΕΙ διάδρομο" },\n    "(bare)": {', (r) => {
       expect(r.code).not.toBe(0);
       expect(r.out).toContain('corridor-contradicts-declaration');
     });
@@ -578,5 +588,277 @@ describe('Β-Τ — η κλίμακα του μέτρου δεν μπορεί ν
     //    πυροδότησε πάνω στην **τεκμηρίωση του προτύπου που επιβάλλει** — το
     //    ίδιο σχήμα με το Κ7β του CHECK 3.50, μέσα στο test που το κυνηγά.
     expect(stripComments(raw)).not.toMatch(/min\(\s*\d+ch/);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ΦΑΣΗ Γ — Ο ΤΕΤΑΡΤΟΣ ΑΞΟΝΑΣ: ΤΟ ΥΨΟΣ ΤΟΥ ΚΑΔΡΟΥ                 (ADR-797 §Γ)
+// ═══════════════════════════════════════════════════════════════════════════
+
+const {
+  VIEWPORT_HEIGHT,
+  OUT_OF_FLOW: VP_OUT_OF_FLOW,
+  viewportOf,
+} = require('../lib/shell-surface/scan');
+
+const CSS_FILE = path.join(REPO, 'src', 'app', 'shell-surface.css');
+const LIGHT_LAYOUT = path.join(REPO, 'src', 'app', '(light)', 'layout.tsx');
+const ME_LAYOUT = path.join(REPO, 'src', 'app', '(me)', 'layout.tsx');
+const RESULTS_CONTENT = path.join(REPO, 'src', 'components', 'search-results', 'SearchResultsContent.tsx');
+const SHELL_REGISTRY = path.join(REPO, '.shell-surface.json');
+const CLEAN_APP_PAGE = path.join(REPO, 'src', 'app', '(app)', 'o', '[workspace]', 'crm', 'email-analytics', 'page.tsx');
+
+describe('Γ-Κ — το κριτήριο του ύψους', () => {
+  it('Γ-Κ1: πιάνει ΟΛΕΣ τις μορφές ύψους παραθύρου', () => {
+    const forms = ['h-screen', 'min-h-screen', 'h-svh', 'min-h-svh', 'h-dvh', 'h-lvh',
+      'h-[calc(100vh-4rem)]', 'min-h-[calc(100dvh-2rem)]'];
+    for (const k of forms) {
+      expect(VIEWPORT_HEIGHT.test('flex ' + k + ' items-center')).toBe(true);
+    }
+  });
+
+  it('Γ-Κ2: ΔΕΝ πιάνει το `max-h-*` — ταβάνι, όχι ύψος', () => {
+    // Ένα αιωρούμενο πάνελ που λέει «μη γίνεις ψηλότερο από το παράθυρο» δεν
+    // διεκδικεί καμία αυθεντία διάταξης. Μετρημένο: 4 τέτοιες, όλες νόμιμες.
+    expect(VIEWPORT_HEIGHT.test('overflow-y-auto max-h-screen')).toBe(false);
+    expect(VIEWPORT_HEIGHT.test('max-h-[calc(100vh-6rem)] overflow-y-auto')).toBe(false);
+  });
+
+  it('Γ-Κ3: το εκτός ροής εξαιρείται — ένα modal μετράει ΝΟΜΙΜΑ το παράθυρο', () => {
+    expect(VP_OUT_OF_FLOW.test('fixed inset-0 h-screen')).toBe(true);
+    expect(VP_OUT_OF_FLOW.test('absolute inset-0 h-screen')).toBe(true);
+    expect(VP_OUT_OF_FLOW.test('flex h-screen flex-col')).toBe(false);
+    const root = { classAttr: 'fixed inset-0 h-screen', attrs: '', tag: 'div' };
+    expect(viewportOf(root, 'x', '').height).toBeNull();
+  });
+
+  it('Γ-Κ4: ύψος ΜΕΣΑ ΣΕ ΣΧΟΛΙΟ δεν κρίνεται — αλλιώς κοκκινίζει η ΘΕΡΑΠΕΙΑ', () => {
+    // Σχήμα Κ7β του CHECK 3.50: ο κώδικας εδώ τεκμηριώνει τη βλάβη με τη
+    // λέξη-δείκτη μέσα σε σχόλιο· χωρίς stripComments ο φρουρός θα πυροδοτούσε
+    // πάνω στο κείμενο που εξηγεί γιατί υπάρχει.
+    const src = '/* ADR-797: το min-h-screen έφυγε από εδώ */\n'
+      + 'export default function P() {\n  return <main className="flex flex-1">x</main>;\n}';
+    const tmp = path.join(os.tmpdir(), 'vp-comment-' + Date.now() + '.tsx');
+    fs.writeFileSync(tmp, src);
+    try {
+      expect(classifyPage(tmp, REPO).viewport.height).toBeNull();
+    } finally {
+      fs.unlinkSync(tmp);
+    }
+  });
+
+  it('Γ-Κ5: ο δείκτης διαβάζεται από τα ΩΜΑ attributes, όχι από κλάση', () => {
+    const marked = { classAttr: 'flex', attrs: 'data-shell-viewport', tag: 'main' };
+    expect(viewportOf(marked, 'x', 'data-shell-viewport').atRoot).toBe(true);
+    const plain = { classAttr: 'flex', attrs: '', tag: 'main' };
+    expect(viewportOf(plain, 'x', '').atRoot).toBe(false);
+  });
+
+  it('Γ-Κ6: η συγχώνευση είναι ΑΝΑ ΥΠΟ-ΕΡΩΤΗΜΑ — το ύψος της σελίδας δεν χάνεται', () => {
+    // 🔴 ΑΥΤΗ Η ΑΓΚΥΡΑ ΓΕΝΝΗΘΗΚΕ ΑΠΟ ΠΡΑΓΜΑΤΙΚΟ ΣΦΑΛΜΑ. Η πρώτη συγχώνευση
+    //    έλεγε «κερδίζει όποιο ΔΗΛΩΝΕΙ» και έχανε σιωπηλά το ύψος κάθε σελίδας
+    //    που είναι καθαρή ως προς το κενό: μετρημένο **1 στις 5** παραβιάσεις
+    //    εξαφανιζόταν. Το έπιασε ΔΕΥΤΕΡΗ, ανεξάρτητη μέτρηση — όχι η ανάγνωση.
+    const page = path.join(REPO, 'src', 'app', '(app)', 'test-harness', 'listing-shapes', 'page.tsx');
+    const v = classifyPage(page, REPO);
+    expect(v.viewport).not.toBeNull();
+    expect(v.viewport.height).not.toBeNull();
+    expect(v.viewport.height.klass).toMatch(/h-screen/);
+  });
+});
+
+describe('Γ-Σ — το συμβόλαιο του CSS', () => {
+  const css = () => stripComments(fs.readFileSync(CSS_FILE, 'utf8'));
+
+  it('Γ-Σ1: `svh`, ΠΟΤΕ σκέτο `vh` — το `vh` ΕΙΝΑΙ το `lvh` (MDN)', () => {
+    const rules = css();
+    expect(rules).toContain('100svh');
+    // Το lvh είναι ψηλότερο από το ορατό στο κινητό ⇒ γεννά κύλιση μόνο του.
+    expect(rules).not.toMatch(/\b100vh\b/);
+    // Και το dvh δεν ενημερώνεται στα 60fps (web.dev: «updating is throttled»).
+    expect(rules).not.toMatch(/\b100dvh\b/);
+  });
+
+  it('Γ-Σ2: `overflow: clip`, ΠΟΤΕ `hidden` στο κάδρο', () => {
+    // Το `hidden` δημιουργεί scroll container ⇒ γίνεται ο πρόγονος κύλισης για
+    // κάθε `position: sticky` από κάτω — η #1 τεκμηριωμένη αιτία νεκρού sticky.
+    const rules = css();
+    const frameRule = rules.slice(rules.indexOf('[data-shell-frame]:has('));
+    expect(frameRule).toContain('overflow: clip');
+    expect(frameRule).not.toContain('overflow: hidden');
+  });
+
+  it('Γ-Σ3: ο επιλογέας είναι ΔΕΣΜΕΥΜΕΝΟΥ ΒΑΘΟΥΣ — οδηγία MDN για το :has()', () => {
+    // «any DOM change within the entire subtree requires the browser to
+    //  re-check the :has() condition» ⇒ αλυσίδα άμεσων παιδιών, όχι απόγονος.
+    expect(css()).toContain(':has(> [data-shell-surface] > [data-shell-viewport])');
+    expect(css()).not.toMatch(/\[data-shell-frame\]:has\(\s*\[data-shell-viewport\]/);
+  });
+
+  it('Γ-Σ4: καμία ιδιότητα που γεννά containing block για `position: fixed`', () => {
+    // `container-type` · `contain: layout|content|strict` · `content-visibility`
+    // κάνουν το κέλυφος containing block ⇒ κάθε modal/dropdown που δραπετεύει
+    // θα αγκυρωνόταν πάνω του. Το Chrome άλλαξε στο 129· Firefox/Safari ΟΧΙ.
+    const rules = css();
+    expect(rules).not.toMatch(/container-type\s*:/);
+    expect(rules).not.toMatch(/contain\s*:\s*(layout|content|strict)/);
+    expect(rules).not.toMatch(/content-visibility\s*:\s*auto/);
+  });
+});
+
+describe('Γ-Λ — η λογιστική του κάδρου', () => {
+  it('Γ-Λ1: το άθροισμα των καταστάσεων κάδρου ισούται με τις γειτονιές', () => {
+    const out = runGate(['--report']).out;
+    const groups = Number(/Γειτονιές \(παραγμένες από τον δίσκο\): (\d+)/.exec(out)[1]);
+    const states = ['frame-owned', 'frame-declared-manual', 'frame-without-owner',
+      'frame-without-layout', 'frame-contradicts-declaration'];
+    const sum = states.reduce((acc, st) => {
+      const m = new RegExp(st + '\\s+(\\d+)').exec(out);
+      return acc + (m ? Number(m[1]) : 0);
+    }, 0);
+    expect(sum).toBe(groups);
+  });
+
+  it('Γ-Λ2: οι κάδοι του ύψους τυπώνονται ΑΚΟΜΑ ΚΑΙ ΣΤΟ ΜΗΔΕΝ', () => {
+    // Ένα «0» που δεν τυπώνεται διαβάζεται «δεν υπάρχει τέτοιος έλεγχος»
+    // (μάθημα CHECK 3.48 / Κ6).
+    const out = runGate(['--report']).out;
+    expect(out).toContain('frame-without-owner');
+    expect(out).toContain('frame-contradicts-declaration');
+    expect(out).toContain('κλειδωμένες επιφάνειες');
+  });
+});
+
+describe('Γ-Μ — μεταλλάξεις ΣΤΙΣ ΕΙΣΟΔΟΥΣ: οι πέντε κανόνες πυροδοτούν ΑΝΕΞΑΡΤΗΤΑ', () => {
+  it('Γ-Μ1 (Υ1): γειτονιά χάνει το κάδρο της ⇒ ΚΟΚΚΙΝΟ', () => {
+    withMutation(LIGHT_LAYOUT, 'data-shell-frame ', '', (r) => {
+      expect(r.code).not.toBe(0);
+      expect(r.out).toContain('frame-without-owner');
+    });
+  });
+
+  it('Γ-Μ2 (Υ1): το μητρώο λέει «χωρίς κάδρο» ενώ το layout φέρει κάδρο ⇒ ΚΟΚΚΙΝΟ', () => {
+    // Δύο αλήθειες που διαφωνούν (ADR-749) — όχι «εντάξει επειδή το ένα περνά».
+    withMutation(SHELL_REGISTRY,
+      '"groupsWithoutFrame": {\n    "(app)"',
+      '"groupsWithoutFrame": {\n    "(light)": { "reason": "ΜΕΤΑΛΛΑΞΗ ΤΗΣ ΑΓΚΥΡΑΣ Γ-Μ2 — δεν είναι αληθής δήλωση" },\n    "(app)"',
+      (r) => {
+        expect(r.code).not.toBe(0);
+        expect(r.out).toContain('frame-contradicts-declaration');
+      });
+  });
+
+  it('Γ-Μ3 (Υ2): κλείδωμα χωρίς γραμμή στο μητρώο ⇒ ΚΟΚΚΙΝΟ', () => {
+    withMutation(SHELL_REGISTRY, '"/search/results": {\n      "reason": "Χάρτης',
+      '"/search/results-ΜΕΤΑΛΛΑΞΗ": {\n      "reason": "Χάρτης', (r) => {
+        expect(r.code).not.toBe(0);
+        expect(r.out).toContain('undeclared-viewport-lock');
+      });
+  });
+
+  it('Γ-Μ4 (Υ2): δήλωση κλειδώματος ΧΩΡΙΣ αξίωση εξαίρεσης WCAG 1.4.10 ⇒ ΚΟΚΚΙΝΟ', () => {
+    // Κλειδωμένη επιφάνεια δεν κυλά ⇒ στο 400% zoom ό,τι δεν χωρά ΧΑΝΕΤΑΙ. Η
+    // εξαίρεση υπάρχει για επιφάνειες χειρισμού, όχι για κείμενο — και πρέπει
+    // να είναι ΓΡΑΠΤΗ, ώστε να μπορεί να ελεγχθεί ξανά από άνθρωπο.
+    withMutation(SHELL_REGISTRY, '"reflowException"', '"reflowExceptionΜΕΤΑΛΛΑΞΗ"', (r) => {
+      expect(r.code).not.toBe(0);
+      expect(r.out).toMatch(/reflowException|WCAG/);
+    });
+  });
+
+  it('Γ-Μ5 (Υ5): ο δείκτης φεύγει από τη ρίζα ⇒ ΚΟΚΚΙΝΟ (το κλείδωμα δεν συμβαίνει)', () => {
+    // 🔑 Ο ΚΑΝΟΝΑΣ ΠΟΥ ΚΑΝΕΙΣ ΣΤΗ ΒΙΟΜΗΧΑΝΙΑ ΔΕΝ ΕΧΕΙ. dockview · golden-layout ·
+    //    FlexLayout · rc-dock · Blueprint γράφουν την αντίστοιχη απαίτησή τους
+    //    σε ΠΡΟΖΑ στο README και **καμία δεν την ελέγχει**· η αστοχία τους είναι
+    //    σιωπηλή (μηδενικό ύψος — Blueprint#2777).
+    withMutation(RESULTS_CONTENT,
+      '      data-shell-viewport\n      className="flex min-h-0 flex-1 flex-col bg-background"\n    >',
+      '      className="flex min-h-0 flex-1 flex-col bg-background"\n    >\n      <div data-shell-viewport />',
+      (r) => {
+        expect(r.code).not.toBe(0);
+        expect(r.out).toContain('viewport-marker-not-at-root');
+      });
+  });
+
+  it('Γ-Μ6 (Υ3): μέτρο γραμμής ΚΑΙ κλείδωμα στον ίδιο διάδρομο ⇒ ΚΟΚΚΙΝΟ', () => {
+    // Το `measure` κάνει τον διάδρομο `display: grid` με στήλη κειμένου· το
+    // κλείδωμα ζητά από το ΙΔΙΟ στοιχείο να μοιράσει ύψος ως flex.
+    withMutation(LIGHT_LAYOUT, '<ShellSurface className="flex flex-1 flex-col">',
+      '<ShellSurface measure="wide" className="flex flex-1 flex-col">', (r) => {
+        expect(r.code).not.toBe(0);
+        expect(r.out).toContain('viewport-with-measure');
+      });
+  });
+
+  it('Γ-Μ7 (Υ4): ΝΕΑ δεύτερη αυθεντία ύψους ⇒ ΚΟΚΚΙΝΟ', () => {
+    // ⚠️ Ο ΣΤΟΧΟΣ ΔΙΑΛΕΧΤΗΚΕ ΜΕ ΜΕΤΡΗΣΗ, ΟΧΙ ΜΕ ΤΟ ΜΑΤΙ. Η πρώτη εκδοχή
+    //    μετάλλασσε το (app)/o/[workspace]/buildings, του οποίου η ρίζα είναι
+    //    <ProtectedRoute> **χωρίς className**: ο resolver δεν φτάνει ποτέ στο
+    //    εσωτερικό <div>, οπότε η μετάλλαξη έμενε ΠΡΑΣΙΝΗ και θα «αποδείκνυε»
+    //    ότι ο κανόνας δουλεύει ενώ δεν είχε κοιτάξει τίποτα. Μετρήθηκε ποιες
+    //    καθαρές σελίδες του (app) έχουν ρίζα ΜΕΣΑ στο ίδιο τους το page.tsx:
+    //    **μία**.
+    withMutation(CLEAN_APP_PAGE, "'container mx-auto'", "'container mx-auto min-h-screen'", (r) => {
+      expect(r.code).not.toBe(0);
+      expect(r.out).toContain('nested-viewport-height');
+    });
+  });
+
+  it('Γ-Μ8: ορφανή δήλωση κλειδώματος ⇒ ΚΟΚΚΙΝΟ (το μητρώο δεν σαπίζει σιωπηλά)', () => {
+    withMutation(SHELL_REGISTRY, '"viewportLocked": {',
+      '"viewportLocked": {\n    "/δεν-υπαρχει-ΜΕΤΑΛΛΑΞΗ": { "reason": "ΑΓΚΥΡΑ Γ-Μ8 — διαδρομή που δεν υπάρχει στον δίσκο", "reflowException": "ΑΓΚΥΡΑ Γ-Μ8 — αξίωση που δεν αντιστοιχεί σε τίποτα" },',
+      (r) => {
+        expect(r.code).not.toBe(0);
+        expect(r.out).toContain('orphan-viewport-declaration');
+      });
+  });
+
+  it('Γ-Μ9: το `--write-baseline` ΑΡΝΕΙΤΑΙ zero-tolerance του τέταρτου άξονα', () => {
+    // Ένα zero-tolerance που κλειδώνεται με ένα `--write-baseline` δεν είναι
+    // zero-tolerance (πρότυπο CHECK 3.44/3.58/3.60).
+    const before = fs.readFileSync(LIGHT_LAYOUT, 'utf8');
+    const after = before.replace('data-shell-frame ', '');
+    expect(after).not.toBe(before);
+    try {
+      fs.writeFileSync(LIGHT_LAYOUT, after);
+      const r = runGate(['--write-baseline']);
+      expect(r.code).not.toBe(0);
+      expect(r.out).toMatch(/ΑΡΝΟΥΜΑΙ|frame-without-owner/);
+    } finally {
+      fs.writeFileSync(LIGHT_LAYOUT, before);
+    }
+  });
+});
+
+describe('Γ-Π — βαθμονόμηση σε ΠΡΑΓΜΑΤΙΚΟ ιστορικό', () => {
+  const GAMMA_PINNED = '2aff5dcd'; // ⚠️ ΚΑΡΦΩΜΕΝΟ. ΠΟΤΕ HEAD.
+
+  function showAt(ref, file) {
+    const out = execFileSync('git', ['show', ref + ':' + file], { cwd: REPO, encoding: 'utf8' });
+    if (!out || !out.trim()) throw new Error('git show ' + ref + ':' + file + ' → κενό');
+    return out;
+  }
+
+  it('Γ-Π1: ΠΡΙΝ τη θεραπεία, το `(light)` έγραφε ύψος με το χέρι και ΔΕΝ είχε κάδρο', () => {
+    const historic = stripComments(showAt(GAMMA_PINNED, 'src/app/(light)/layout.tsx'));
+    expect(historic).not.toContain('data-shell-frame');
+    const root = exportedRootOf(historic);
+    expect(VIEWPORT_HEIGHT.test(root.classAttr)).toBe(true);
+    expect(root.classAttr).toContain('min-h-screen'); // ΕΛΑΧΙΣΤΟ, όχι ύψος
+  });
+
+  it('Γ-Π2: Ο ΠΑΡΟΝΟΜΑΣΤΗΣ — η ΣΗΜΕΡΙΝΗ εκδοχή φέρει κάδρο και ΔΕΝ γράφει ύψος', () => {
+    // Χωρίς αυτό, το Γ-Π1 θα ήταν πράσινο ακόμη κι αν η πύλη κατήγγελλε τα πάντα.
+    const today = stripComments(fs.readFileSync(LIGHT_LAYOUT, 'utf8'));
+    expect(today).toContain('data-shell-frame');
+    expect(VIEWPORT_HEIGHT.test(exportedRootOf(today).classAttr)).toBe(false);
+  });
+
+  it('Γ-Π3: το δίδυμο `(me)` έλεγε ΤΟ ΙΔΙΟ ψέμα — και θεραπεύτηκε μαζί', () => {
+    const historic = stripComments(showAt(GAMMA_PINNED, 'src/app/(me)/layout.tsx'));
+    expect(VIEWPORT_HEIGHT.test(exportedRootOf(historic).classAttr)).toBe(true);
+    const today = stripComments(fs.readFileSync(ME_LAYOUT, 'utf8'));
+    expect(today).toContain('data-shell-frame');
+    expect(VIEWPORT_HEIGHT.test(exportedRootOf(today).classAttr)).toBe(false);
   });
 });

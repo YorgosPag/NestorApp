@@ -87,6 +87,49 @@ const ROUNDED = /(?:^|[\s"'`{])rounded-/;
 const NEGATIVE_MARGIN = /(?:^|[\s"'`{])-m(?:x|l|r)?-(?:\d+|\[[^\]]+\])/;
 
 /**
+ * ΤΕΤΑΡΤΟΣ ΑΞΟΝΑΣ — ύψος **παραθύρου** γραμμένο με το χέρι (ADR-797 ΦΑΣΗ Γ).
+ *
+ * 🔑 **ΤΟ ΟΡΙΟ ΑΡΙΣΤΕΡΑ ΑΠΟΚΛΕΙΕΙ ΤΟ `max-h-*` ΔΩΡΕΑΝ, ΚΑΙ ΕΙΝΑΙ ΣΚΟΠΙΜΟ.**
+ * Στο `max-h-screen` ο χαρακτήρας πριν το `h-` είναι παύλα, που **δεν** ανήκει
+ * στο σύνολο ορίου — άρα δεν ταιριάζει. Και είναι σωστό: ένα `max-h-*` είναι
+ * **ταβάνι**, όχι ύψος· ένα αιωρούμενο πάνελ που λέει «μη γίνεις ψηλότερο από το
+ * παράθυρο» δεν διεκδικεί καμία αυθεντία διάταξης. Μετρημένο: **4** τέτοιες
+ * δηλώσεις στο δέντρο, **όλες** νόμιμες.
+ */
+const VIEWPORT_HEIGHT =
+  /(?:^|[\s"'`{])(?:min-)?h-(?:screen|svh|dvh|lvh)(?![\w-])|(?:^|[\s"'`{])(?:min-)?h-\[calc\(100[dsl]?vh/;
+
+/**
+ * **ΕΚΤΟΣ ΡΟΗΣ.** Ένα `fixed`/`absolute` στοιχείο δεν μοιράζεται το ύψος του
+ * γονέα — μετράει **νόμιμα** το παράθυρο (modal, drawer, overlay). Χωρίς αυτή
+ * την εξαίρεση ο κανόνας θα κατηγορούσε κώδικα που κάνει ακριβώς το σωστό, και
+ * ένας φρουρός που κατηγορεί νόμιμο κώδικα είναι ο δρόμος προς το `SKIP_`.
+ */
+const OUT_OF_FLOW = /(?:^|[\s"'`{])(?:fixed|absolute)(?![\w-])/;
+
+/** Ο δείκτης κλειδώματος, όπως τον διαβάζει το `shell-surface.css` §5. */
+const VIEWPORT_MARKER = /data-shell-viewport(?![\w-])/;
+
+/**
+ * Ο τέταρτος άξονας για **μία** ρίζα.
+ *
+ * ⚠️ Ταξιδεύει **δίπλα** στην κατάσταση, ποτέ **ως** κατάσταση — ίδιο συμβόλαιο
+ * με τον άξονα του πλάτους: μια σελίδα μπορεί να είναι καθαρή ως προς το κενό,
+ * να γράφει δικό της πλάτος **και** να γράφει δικό της ύψος. Τρεις ερωτήσεις σε
+ * μία κατάσταση θα έκρυβαν η μία την άλλη (μάθημα CHECK 3.41).
+ */
+function viewportOf(root, where, fileSource) {
+  const declared = VIEWPORT_MARKER.test(fileSource);
+  const atRoot = !!(root && VIEWPORT_MARKER.test(root.attrs || ''));
+  const cls = (root && root.classAttr) || '';
+  const m = VIEWPORT_HEIGHT.exec(cls);
+  const height = m && !OUT_OF_FLOW.test(cls)
+    ? { klass: m[0].trim(), tag: (root && root.tag) || '?', where }
+    : null;
+  return { declared, atRoot, height, where };
+}
+
+/**
  * Αφαιρεί σχόλια block και γραμμής, κρατώντας το μήκος-γραμμών ουδέτερο ως προς
  * το κριτήριο (δεν χρειάζεται να διατηρηθούν θέσεις — κρίνεται περιεχόμενο).
  */
@@ -267,7 +310,15 @@ function classifyPage(pageFile, repoRoot) {
   const src = stripComments(raw);
 
   if (/data-shell-surface\s*=\s*["']bleed["']|<\s*FullBleedSurface\b/.test(src)) {
-    return { state: 'declared-bleed', detail: 'το ίδιο το page.tsx δηλώνει bleed' };
+    // ⚠️ Και εδώ ο τέταρτος άξονας: μια σελίδα που δηλώνει bleed στο ίδιο της το
+    //    `page.tsx` μπορεί να δηλώνει και κλείδωμα. Χωρίς αυτό, ο μόνος τρόπος να
+    //    ξεφύγει κανείς από τον έλεγχο θα ήταν να γράψει bleed μία γραμμή πιο πάνω.
+    const bleedRoot = exportedRootOf(src) ?? rootElementOf(src);
+    return {
+      state: 'declared-bleed',
+      detail: 'το ίδιο το page.tsx δηλώνει bleed',
+      viewport: viewportOf(bleedRoot, 'page.tsx', src),
+    };
   }
 
   const judge = (cleanSource, where) => {
@@ -275,12 +326,17 @@ function classifyPage(pageFile, repoRoot) {
     // αρχείο δεν ακολουθεί τη σύμβαση μορφοποίησης — ποτέ χειρότερα από πριν.
     const root = exportedRootOf(cleanSource) ?? rootElementOf(cleanSource);
     if (!root) return null;
+    // 🔑 Ο ΤΕΤΑΡΤΟΣ ΑΞΟΝΑΣ ΥΠΟΛΟΓΙΖΕΤΑΙ ΠΡΩΤΑ ΚΑΙ ΤΑΞΙΔΕΥΕΙ ΠΑΝΤΟΥ.
+    //    Το `/search/results` είναι ΚΑΙ bleed ΚΑΙ κλειδωμένο: αν ο άξονας
+    //    υπολογιζόταν μετά τους κλάδους, ο πρώτος κλάδος που επιστρέφει θα τον
+    //    έχανε — δηλαδή η μόνη σελίδα που τον χρειάζεται θα ήταν αόρατη.
+    const viewport = viewportOf(root, where, cleanSource);
     if (/FullBleedSurface/.test(root.tag)
         || /data-shell-surface\s*=\s*["']bleed["']/.test(root.attrs || '')) {
-      return { state: 'declared-bleed', detail: where };
+      return { state: 'declared-bleed', detail: where, viewport };
     }
     if (NEGATIVE_MARGIN.test(root.classAttr)) {
-      return { state: 'negative-margin', detail: `${where}: <${root.tag} className="${root.classAttr}">` };
+      return { state: 'negative-margin', detail: `${where}: <${root.tag} className="${root.classAttr}">`, viewport };
     }
     // 🔑 Ο ΔΕΥΤΕΡΟΣ ΑΞΟΝΑΣ ΤΑΞΙΔΕΥΕΙ ΜΑΖΙ, ΠΟΤΕ ΩΣ ΚΑΤΑΣΤΑΣΗ. Το χειρόγραφο
     //    πλάτος δεν αποκλείει το χειρόγραφο κενό, ούτε το αντίστροφο· μία
@@ -294,12 +350,12 @@ function classifyPage(pageFile, repoRoot) {
       //    εσωτερικό της κενό, και η «διόρθωση» θα κολλούσε το κείμενο στο
       //    περίγραμμα — φρουρός που ζητά χειροτέρευση.
       if (CARD_ROOT.test(root.classAttr) && ROUNDED.test(root.classAttr)) {
-        return { state: 'component-root', detail: `${where}: <${root.tag}> είναι ΚΑΡΤΑ — το κενό της είναι spacing.component`, measure };
+        return { state: 'component-root', detail: `${where}: <${root.tag}> είναι ΚΑΡΤΑ — το κενό της είναι spacing.component`, measure, viewport };
       }
       return { state: where === 'page.tsx' ? 'page-padding' : 'content-padding',
-               detail: `${where}: <${root.tag} className="${root.classAttr}">`, measure };
+               detail: `${where}: <${root.tag} className="${root.classAttr}">`, measure, viewport };
     }
-    return { state: 'clean', detail: where, measure };
+    return { state: 'clean', detail: where, measure, viewport };
   };
 
   const own = judge(src, 'page.tsx');
@@ -316,10 +372,39 @@ function classifyPage(pageFile, repoRoot) {
     const verdict = judge(childSrc, path.relative(repoRoot, target).split(path.sep).join('/'));
     // ⚠️ Το ταβάνι πλάτους της **σελίδας** δεν χάνεται όταν την κρίση την παίρνει
     //    το παιδί: κρατιέται ό,τι βρέθηκε πρώτο (η σελίδα υπερισχύει).
-    if (verdict) return { ...verdict, measure: own?.measure ?? verdict.measure };
+    // ⚠️ Ο ΤΕΤΑΡΤΟΣ ΑΞΟΝΑΣ ΣΥΓΧΩΝΕΥΕΤΑΙ ΑΝΤΙΣΤΡΟΦΑ ΑΠΟ ΤΟ ΠΛΑΤΟΣ, ΚΑΙ ΕΙΝΑΙ
+    //    ΜΕΤΡΗΜΕΝΟ: το ταβάνι πλάτους το γράφει συνήθως η **σελίδα**, ενώ τον
+    //    δείκτη κλειδώματος τον γράφει το **component περιεχομένου** (το
+    //    `/search/results` τον έχει στο `SearchResultsContent`). Άρα κερδίζει
+    //    όποιο από τα δύο **δηλώνει** — αλλιώς η μόνη κλειδωμένη σελίδα του
+    //    δέντρου θα διαβαζόταν ως αδήλωτη.
+    if (verdict) {
+      // ⚠️ Ο ΤΕΤΑΡΤΟΣ ΑΞΟΝΑΣ ΣΥΓΧΩΝΕΥΕΤΑΙ **ΑΝΑ ΥΠΟ-ΕΡΩΤΗΜΑ**, ΚΑΙ ΤΟ ΕΜΑΘΑ
+      //    ΧΑΝΟΝΤΑΣ ΜΙΑ ΠΑΡΑΒΙΑΣΗ. Τα δύο υπο-ερωτήματα έχουν **διαφορετικό
+      //    φυσικό ιδιοκτήτη**: το χειρόγραφο **ύψος** το γράφει συνήθως η ρίζα
+      //    της **σελίδας** (όπως το ταβάνι πλάτους), ενώ τον **δείκτη** τον
+      //    γράφει το **component περιεχομένου** (`SearchResultsContent`).
+      //    Μια ενιαία συγχώνευση «κερδίζει όποιο δηλώνει» έχανε σιωπηλά το ύψος
+      //    κάθε σελίδας που είναι καθαρή ως προς το κενό — μετρημένο: **1 στις
+      //    5** παραβιάσεις εξαφανιζόταν (`/test-harness/listing-shapes`).
+      //    Το έπιασε **δεύτερη, ανεξάρτητη μέτρηση**, όχι η ανάγνωση.
+      const ownVp = own?.viewport ?? null;
+      const childVp = verdict.viewport ?? null;
+      const mergedVp = (ownVp || childVp) ? {
+        declared: !!(ownVp?.declared || childVp?.declared),
+        atRoot: !!(ownVp?.atRoot || childVp?.atRoot),
+        height: ownVp?.height ?? childVp?.height ?? null,
+        where: (ownVp?.atRoot || ownVp?.height) ? ownVp.where : (childVp?.where ?? ownVp?.where),
+      } : null;
+      return {
+        ...verdict,
+        measure: own?.measure ?? verdict.measure,
+        viewport: mergedVp,
+      };
+    }
   }
 
-  return own ?? { state: 'unresolved-root', detail: 'δεν βρέθηκε ρίζα JSX', measure: null };
+  return own ?? { state: 'unresolved-root', detail: 'δεν βρέθηκε ρίζα JSX', measure: null, viewport: null };
 }
 
 /** Απαριθμεί τα `page.tsx` κάτω από μια ρίζα. */
@@ -335,6 +420,10 @@ function collectPages(dir, out = []) {
 module.exports = {
   OUTER_PADDING,
   HANDWRITTEN_MEASURE,
+  VIEWPORT_HEIGHT,
+  VIEWPORT_MARKER,
+  OUT_OF_FLOW,
+  viewportOf,
   CARD_ROOT,
   ROUNDED,
   exportedBody,

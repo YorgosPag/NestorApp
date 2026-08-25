@@ -90,6 +90,9 @@ const {
   exportedRootOf,
   namedImports,
   resolveAlias,
+  VIEWPORT_HEIGHT,
+  VIEWPORT_MARKER,
+  OUT_OF_FLOW,
 } = require('./lib/shell-surface/scan');
 
 const REPO = path.resolve(__dirname, '..');
@@ -153,7 +156,32 @@ function readRegistry() {
     needsReason(entry, group);
   }
 
-  return { fullBleed, withoutCorridor };
+  // ⛔ Υ2 — Ο ΤΕΤΑΡΤΟΣ ΑΞΟΝΑΣ ΘΕΛΕΙ **ΔΥΟ** ΛΟΓΟΥΣ, ΚΑΙ Ο ΔΕΥΤΕΡΟΣ ΕΙΝΑΙ
+  //    ΚΑΝΟΝΙΣΤΙΚΟΣ. Μια κλειδωμένη επιφάνεια ΔΕΝ κυλά — άρα στο 400% zoom
+  //    (320 CSS px, WCAG 2.2 SC 1.4.10 Reflow, επίπεδο **AA**) ό,τι δεν χωρά
+  //    **χάνεται**. Το κριτήριο εξαιρεί ρητά «parts of the content which require
+  //    two-dimensional layout for usage or meaning». Απαιτώντας γραπτή αξίωση
+  //    της εξαίρεσης, η εφαρμογή αποκτά **μηχανικά απαριθμήσιμη** λίστα κάθε
+  //    αξίωσης 2D κύλισης — που κανένα design system της αγοράς δεν παράγει.
+  const viewportLocked = raw.viewportLocked || {};
+  for (const [route, entry] of Object.entries(viewportLocked)) {
+    if (route.startsWith('$')) continue;
+    needsReason(entry, route);
+    if (!entry || typeof entry.reflowException !== 'string'
+        || entry.reflowException.trim().length < 20) {
+      throw new Error(
+        `η δήλωση κλειδώματος «${route}» δεν αξιώνει την εξαίρεση WCAG 1.4.10 (reflowException)`,
+      );
+    }
+  }
+
+  const withoutFrame = raw.groupsWithoutFrame || {};
+  for (const [group, entry] of Object.entries(withoutFrame)) {
+    if (group.startsWith('$')) continue;
+    needsReason(entry, group);
+  }
+
+  return { fullBleed, withoutCorridor, viewportLocked, withoutFrame };
 }
 
 /** Το κείμενο ενός αρχείου χωρίς σχόλια, ή `null` αν δεν υπάρχει. */
@@ -256,16 +284,91 @@ function judgeGroupCorridor(group, withoutCorridor) {
   };
 }
 
+/**
+ * Υ1 — Η ΑΥΘΕΝΤΙΑ ΤΟΥ ΥΨΟΥΣ, ΑΝΑ ΓΕΙΤΟΝΙΑ (ADR-797 ΦΑΣΗ Γ).
+ *
+ * **ΑΛΛΟ ΕΡΩΤΗΜΑ ΑΠΟ ΤΟΝ ΔΙΑΔΡΟΜΟ, ΚΑΙ ΓΙ' ΑΥΤΟ ΞΕΧΩΡΙΣΤΟΣ ΚΡΙΤΗΣ.** Ο Κ4 ρωτά
+ * «ποια γειτονιά δίνει οριζόντιο κενό;»· αυτός ρωτά «ποια γειτονιά **κατέχει το
+ * ύψος**;». Μια γειτονιά μπορεί να δίνει διάδρομο και να μην κατέχει ύψος —
+ * ακριβώς αυτό συνέβαινε στο `(light)`, όπου ο διάδρομος ήταν σωστός και το ύψος
+ * ψέμα. Ένας κριτής για τα δύο θα ήταν πράσινος πάνω στη βλάβη.
+ *
+ * Το κανονιστικό γιατί: **CSS 2.2 §10.5** — αλυσίδα ποσοστιαίου ύψους δεν λύνεται
+ * χωρίς κάτι **ορισμένο** στην κορυφή. Άρα η ερώτηση «ποιος;» έχει **πάντα**
+ * απάντηση· το μόνο που αλλάζει είναι αν την ξέρει κάποιος.
+ *
+ * ⚠️ **fail-closed**: γειτονιά χωρίς κάδρο και χωρίς δήλωση είναι ⛔, όχι
+ * «καθαρή». ⚠️ Και η **αντίφαση** είναι δική της κατάσταση: μητρώο που λέει
+ * «χωρίς κάδρο» ενώ το layout φέρει κάδρο είναι δύο αλήθειες που διαφωνούν
+ * (ADR-749) — όχι «εντάξει επειδή το ένα από τα δύο περνά».
+ */
+function judgeGroupFrame(group, withoutFrame) {
+  const layoutFile = path.join(APP_ROOT, group, 'layout.tsx');
+  const src = readClean(layoutFile);
+  if (src === null) {
+    return { state: 'frame-without-layout', detail: `η γειτονιά ${group} δεν έχει layout.tsx` };
+  }
+
+  // ΕΝΑ άλμα, ίδιο συμβόλαιο με τον διάδρομο: το κάδρο γράφεται στο layout ή στο
+  // κέλυφος που αυτό εισάγει άμεσα.
+  let found = /data-shell-frame/.test(src);
+  if (!found) {
+    for (const imp of namedImports(src)) {
+      const target = resolveAlias(imp.spec, REPO);
+      if (!target) continue;
+      if (!imp.names.some((n) => src.includes(`<${n}`))) continue;
+      const child = readClean(target);
+      if (child && /data-shell-frame/.test(child)) { found = true; break; }
+    }
+  }
+
+  const declared = Object.prototype.hasOwnProperty.call(withoutFrame, group);
+  if (found && declared) {
+    return {
+      state: 'frame-contradicts-declaration',
+      detail: `${group}: το μητρώο λέει «χωρίς κάδρο», το layout όμως φέρει data-shell-frame`,
+    };
+  }
+  if (found) return { state: 'frame-owned', detail: group };
+  if (declared) return { state: 'frame-declared-manual', detail: group };
+  return {
+    state: 'frame-without-owner',
+    detail: `${group}: κανείς δεν κατέχει το ύψος — ούτε κάδρο ούτε γραμμή στο μητρώο`,
+  };
+}
+
+/** Δηλώνει η γειτονιά **μέτρο γραμμής** στον διάδρομό της; (για την αντίφαση Υ3) */
+function groupDeclaresMeasure(group) {
+  const layoutFile = path.join(APP_ROOT, group, 'layout.tsx');
+  const src = readClean(layoutFile);
+  if (src === null) return false;
+  if (/<\s*ShellSurface\b[^>]*measure\s*=/.test(src)) return true;
+  for (const imp of namedImports(src)) {
+    const target = resolveAlias(imp.spec, REPO);
+    if (!target) continue;
+    if (!imp.names.some((n) => src.includes(`<${n}`))) continue;
+    const child = readClean(target);
+    if (child && /<\s*ShellSurface\b[^>]*measure\s*=/.test(child)) return true;
+  }
+  return false;
+}
+
 function measure() {
   const registry = readRegistry();
   const ownership = judgeOwnership();
 
   const tally = Object.create(null);
   const groupTally = Object.create(null);
+  // ⚠️ ΤΕΤΑΡΤΟ ΚΑΤΑΣΤΙΧΟ, ΞΕΧΩΡΙΣΤΟ. Το ύψος κρίνεται ανά **γειτονιά**, το κενό
+  //    επίσης — αλλά είναι ΑΛΛΟ ερώτημα, και ένα κοινό κατάστιχο θα διπλομετρούσε
+  //    την ίδια γειτονιά σε δύο ρόλους (το σφάλμα που έπιασε η Λ1 του CHECK 3.61).
+  const frameTally = Object.create(null);
+  const frameVerdicts = new Map();
   const violations = [];
   const declarations = [];
   const unresolved = [];
   const measures = [];
+  const viewportDeclarations = [];
 
   const flag = (route, state, file, detail) =>
     violations.push({ route, state, file, line: 0, detail });
@@ -311,9 +414,32 @@ function measure() {
     }
   }
 
+  // ⛔ Υ1 — Η ΑΥΘΕΝΤΙΑ ΤΟΥ ΥΨΟΥΣ. Ίδιο σχήμα, ΞΕΧΩΡΙΣΤΟ ερώτημα.
+  for (const group of groups) {
+    const verdict = judgeGroupFrame(group, registry.withoutFrame);
+    frameVerdicts.set(group, verdict.state);
+    frameTally[verdict.state] = (frameTally[verdict.state] || 0) + 1;
+    if (verdict.state !== 'frame-owned' && verdict.state !== 'frame-declared-manual') {
+      flag(group, verdict.state, `src/app/${group}/layout.tsx`, verdict.detail);
+    }
+  }
+  for (const group of Object.keys(registry.withoutFrame)) {
+    if (group.startsWith('$')) continue;
+    if (!groups.includes(group)) {
+      flag(group, 'orphan-frame-declaration', relative(REGISTRY),
+        'το μητρώο δηλώνει γειτονιά χωρίς κάδρο που δεν υπάρχει (πια) στον δίσκο');
+    }
+  }
+
   // ── ΟΙ ΣΕΛΙΔΕΣ, ΣΕ ΟΛΕΣ ΤΙΣ ΓΕΙΤΟΝΙΕΣ ────────────────────────────────────
   let pages = 0;
   for (const group of groups) {
+    // Μία φορά ανά γειτονιά, όχι ανά σελίδα: το μέτρο δηλώνεται στον διάδρομο.
+    const groupHasMeasure = groupDeclaresMeasure(group);
+    // ⚠️ Ο Υ4 ρωτά «η γειτονιά κατέχει ΗΔΗ ύψος;» — και η απάντηση έρχεται από
+    //    το ΙΔΙΟ κατάστιχο που μόλις γέμισε ο Υ1, ποτέ από δεύτερη κρίση: δύο
+    //    κλήσεις του ίδιου κριτή είναι δύο ευκαιρίες να διαφωνήσουν (ADR-749).
+    const groupOwnsHeight = frameVerdicts.get(group) !== 'frame-without-owner';
     for (const page of collectPages(path.join(APP_ROOT, group))) {
       pages += 1;
       const verdict = classifyPage(page, REPO);
@@ -329,6 +455,48 @@ function measure() {
         measures.push(route);
         flag(route, 'page-measure', relative(page),
           `${verdict.measure.where}: <${verdict.measure.tag} className="… ${verdict.measure.klass} …"> — χειρόγραφο ταβάνι πλάτους· η κλίμακα ζει στο spacing.layout.measure`);
+      }
+
+      // ══ Ο ΤΕΤΑΡΤΟΣ ΑΞΟΝΑΣ — κρίνεται ΠΑΝΤΑ, ανεξάρτητα από την κατάσταση ══
+      const vp = verdict.viewport;
+      if (vp && vp.declared && !vp.atRoot) {
+        // ⛔ Υ5 — Ο ΚΑΝΟΝΑΣ ΠΟΥ ΚΑΝΕΙΣ ΣΤΗ ΒΙΟΜΗΧΑΝΙΑ ΔΕΝ ΕΧΕΙ.
+        //    Ο επιλογέας του shell-surface.css §5 είναι ΔΕΣΜΕΥΜΕΝΟΥ ΒΑΘΟΥΣ
+        //    (`:has(> [data-shell-surface] > [data-shell-viewport])`) — επίτηδες,
+        //    ώστε η ακύρωση του `:has()` να μην αφορά όλο το υποδέντρο (οδηγία
+        //    MDN για την άγκυρα). Τίμημα: ο δείκτης ΠΡΕΠΕΙ να είναι άμεσο παιδί
+        //    του διαδρόμου. Τυλιγμένος σε έναν `<div>`, το κλείδωμα σταματά
+        //    ΣΙΩΠΗΛΑ και η σελίδα δείχνει απολύτως φυσιολογική — μέχρι να δει
+        //    κανείς ότι ξαναγεννήθηκε η υπερχείλιση.
+        //    Οι dockview/golden-layout/FlexLayout/rc-dock/Blueprint γράφουν την
+        //    αντίστοιχη απαίτησή τους σε ΠΡΟΖΑ στο README και καμία δεν την
+        //    ελέγχει· η αστοχία τους είναι μηδενικό ύψος, σιωπηλά.
+        flag(route, 'viewport-marker-not-at-root', relative(page),
+          `${vp.where}: το data-shell-viewport δεν είναι στη ρίζα ⇒ ο δεσμευμένου βάθους επιλογέας ΔΕΝ ταιριάζει και το κλείδωμα δεν συμβαίνει ΠΟΤΕ`);
+      }
+      if (vp && vp.atRoot) {
+        viewportDeclarations.push(route);
+        if (!registry.viewportLocked[route]) {
+          flag(route, 'undeclared-viewport-lock', relative(page),
+            `η σελίδα κλειδώνει το κάδρο στο παράθυρο χωρίς γραμμή στο ${relative(REGISTRY)} — και χωρίς γραπτή αξίωση της εξαίρεσης WCAG 1.4.10`);
+        }
+        if (groupHasMeasure) {
+          // ⛔ Υ3 — ΑΝΤΙΦΑΣΗ. Το `measure` κάνει τον διάδρομο `display: grid` με
+          //    στήλη κειμένου· το κλείδωμα ζητά από τον ΙΔΙΟ διάδρομο να μοιράσει
+          //    ΥΨΟΣ ως flex. Δεν είναι «λίγο και τα δύο»: μια επιφάνεια-καμβάς
+          //    δεν έχει μέτρο γραμμής, και μια στήλη πρόζας δεν κλειδώνεται.
+          flag(route, 'viewport-with-measure', relative(page),
+            `${group}: η γειτονιά δηλώνει μέτρο γραμμής στον διάδρομο ΚΑΙ η σελίδα ζητά κλείδωμα — δύο ασύμβατες γεωμετρίες στο ίδιο στοιχείο`);
+        }
+      }
+      if (vp && vp.height && groupOwnsHeight) {
+        // 🔴 Υ4 — ΔΕΥΤΕΡΗ ΑΥΘΕΝΤΙΑ ΥΨΟΥΣ. Μετρημένο: 5 σελίδες, όλες στο (app),
+        //    όλες ΜΕΣΑ σε κέλυφος που ήδη κατέχει ύψος (h-screen + overflow
+        //    hidden) ⇒ το παιδί βγαίνει ψηλότερο από τον διαθέσιμο χώρο και
+        //    ΚΟΒΕΤΑΙ, χωρίς κύλιση. Είναι η ίδια βλάβη που το docblock του
+        //    (auth)/layout.tsx έχει ήδη μετρήσει: 48px φάντασμα κύλισης.
+        flag(route, 'nested-viewport-height', relative(page),
+          `${vp.height.where}: <${vp.height.tag} className="… ${vp.height.klass} …"> — η γειτονιά ${group} κατέχει ΗΔΗ το ύψος· ζήτα «ό,τι περισσεύει», μη μαντεύεις το παράθυρο`);
       }
 
       if (verdict.state === 'declared-bleed') {
@@ -358,6 +526,13 @@ function measure() {
         'το μητρώο δηλώνει bleed για διαδρομή που δεν το ζητά (πια)');
     }
   }
+  for (const route of Object.keys(registry.viewportLocked)) {
+    if (route.startsWith('$')) continue;
+    if (!viewportDeclarations.includes(route)) {
+      flag(route, 'orphan-viewport-declaration', relative(REGISTRY),
+        'το μητρώο δηλώνει κλείδωμα για διαδρομή που δεν το ζητά (πια) — και μαζί αξίωση εξαίρεσης WCAG που δεν αντιστοιχεί σε τίποτα');
+    }
+  }
 
   // fail-closed: κλειστή λογιστική, ΔΥΟ κατάστιχα. Άγνωστη κατάσταση δεν χάνεται
   // σιωπηλά — και τα δύο μεγέθη μετρώνται ανεξάρτητα από τα ευρήματα.
@@ -369,16 +544,32 @@ function measure() {
   if (countedGroups !== groups.length) {
     throw new Error(`η λογιστική γειτονιών δεν κλείνει: ${countedGroups} ≠ ${groups.length}`);
   }
+  const countedFrames = Object.values(frameTally).reduce((a, b) => a + b, 0);
+  if (countedFrames !== groups.length) {
+    throw new Error(`η λογιστική κάδρων δεν κλείνει: ${countedFrames} ≠ ${groups.length}`);
+  }
 
   return {
     violations,
     violationIds: violations.map(violationId),
-    declarations: declarations.sort(),
+    // ⚠️ ΕΝΑ ΣΥΝΟΛΟ ΔΗΛΩΣΕΩΝ, ΜΕ ΧΩΡΟ ΟΝΟΜΑΤΩΝ — ΚΑΙ ΕΙΝΑΙ ΤΟ ΔΕΥΤΕΡΟ ΣΚΑΛΙ.
+    //    Το πρώτο σκαλί (⛔ undeclared-viewport-lock) πιάνει όποιον κλειδώνει
+    //    ΧΩΡΙΣ γραμμή στο μητρώο. Χωρίς αυτό εδώ, μόλις κάποιος γράψει τη γραμμή
+    //    η πύλη θα γινόταν σιωπηλά πράσινη — δηλαδή το «κλειστό σύνολο» θα
+    //    ενέκρινε μόνο του τη δεύτερη σωστή πράξη, και μετά την τρίτη, και μετά
+    //    θα ήταν κανόνας. Μια ΝΕΑ δήλωση οφείλει να τη δει ΑΝΘΡΩΠΟΣ, ακόμα κι αν
+    //    είναι σωστή (ίδιο συμβόλαιο με το bleed).
+    declarations: [
+      ...declarations,
+      ...viewportDeclarations.map((r) => `viewport:${r}`),
+    ].sort(),
     tally,
     groupTally,
+    frameTally,
     groups,
     unresolved,
     measures,
+    viewportDeclarations: viewportDeclarations.sort(),
     pages,
     ownership,
   };
@@ -405,10 +596,30 @@ const ZERO_TOL = new Set([
   'group-without-layout',
   'corridor-contradicts-declaration',
   'orphan-group-declaration',
+  // ── ΤΕΤΑΡΤΟΣ ΑΞΟΝΑΣ: ΤΟ ΥΨΟΣ (ADR-797 ΦΑΣΗ Γ) ──────────────────────────
+  // Καμία τους δεν έχει νόημα ως «λιγότερες από χθες»: μια γειτονιά χωρίς
+  // ιδιοκτήτη ύψους, ένας δείκτης που δεν ταιριάζει, ή ένα κλείδωμα χωρίς
+  // γραπτή αξίωση της εξαίρεσης WCAG δεν είναι χρέος — είναι **σπασμένα**.
+  'frame-without-owner',
+  'frame-without-layout',
+  'frame-contradicts-declaration',
+  'orphan-frame-declaration',
+  'undeclared-viewport-lock',
+  'orphan-viewport-declaration',
+  'viewport-marker-not-at-root',
+  'viewport-with-measure',
 ]);
 
 /** Οι ratcheted — **εκστρατείες που τελειώνουν στο μηδέν**, όχι δείκτες υγείας. */
-const RATCHETED = new Set(['page-padding', 'content-padding', 'negative-margin', 'page-measure']);
+const RATCHETED = new Set([
+  'page-padding', 'content-padding', 'negative-margin', 'page-measure',
+  // 🔴 Υ4 — ΕΚΣΤΡΑΤΕΙΑ ΠΟΥ ΤΕΛΕΙΩΝΕΙ ΣΤΟ ΜΗΔΕΝ, όχι δείκτης υγείας. Ratchet και
+  //    όχι zero-tolerance επειδή **μετρήθηκε**: 5 ζωντανές παραβιάσεις, όλες στο
+  //    (app), που δεν διορθώνονται σε αυτό το ρεύμα δουλειάς. Zero-tol με
+  //    ζωντανές παραβιάσεις = μονίμως κόκκινο ⇒ `SKIP_` ⇒ διακοσμητική πύλη
+  //    (δοκιμάστηκε και απορρίφθηκε γραπτώς στο CHECK 3.39).
+  'nested-viewport-height',
+]);
 
 function buildPayload(m) {
   const forbidden = m.violations.filter((v) => ZERO_TOL.has(v.state));
@@ -459,12 +670,24 @@ function printReport(m) {
     console.log(`     ${mark} ${state.padEnd(34)} ${n}`);
   }
 
+  // ⚠️ Ο ΤΕΤΑΡΤΟΣ ΑΞΟΝΑΣ ΕΧΕΙ ΔΙΚΟ ΤΟΥ ΚΑΤΑΣΤΙΧΟ, ΚΑΙ ΤΥΠΩΝΕΤΑΙ ΠΑΝΤΑ.
+  console.log('\n   Η αυθεντία του ΥΨΟΥΣ, ανά γειτονιά (CSS 2.2 §10.5):');
+  for (const state of ['frame-owned', 'frame-declared-manual', 'frame-without-owner',
+                       'frame-without-layout', 'frame-contradicts-declaration']) {
+    const n = m.frameTally[state] || 0;
+    const ok = state === 'frame-owned' || state === 'frame-declared-manual';
+    console.log(`     ${ok ? '✅' : n ? '⛔' : '✅'} ${state.padEnd(34)} ${n}${state === 'frame-declared-manual' && n ? '   🔶 δηλωμένο χρέος' : ''}`);
+  }
+  console.log(`     ✅ ${'κλειδωμένες επιφάνειες'.padEnd(34)} ${m.viewportDeclarations.length}${m.viewportDeclarations.length ? '   ' + m.viewportDeclarations.join(' ') : ''}`);
+
   console.log(`\n   Σελίδες: ${m.pages}`);
   for (const [state, n] of Object.entries(m.tally).sort((a, b) => b[1] - a[1])) {
     const mark = BLOCKING.has(state) ? '🔴' : state === 'unresolved-root' ? '🔶' : '✅';
     console.log(`     ${mark} ${state.padEnd(18)} ${n}`);
   }
   console.log(`     🔴 ${'page-measure'.padEnd(18)} ${m.measures.length}   (2ος άξονας — κρίνεται ανεξάρτητα)`);
+  const nested = m.violations.filter((v) => v.state === 'nested-viewport-height').length;
+  console.log(`     ${nested ? '🔴' : '✅'} ${'nested-viewport'.padEnd(18)} ${nested}   (4ος άξονας — δεύτερη αυθεντία ύψους)`);
 
   if (m.unresolved.length) {
     console.log(`\n   🔶 Δηλωμένο τυφλό σημείο (${m.unresolved.length}) — τα άλματα δεν έφτασαν:`);
@@ -487,7 +710,7 @@ runSetRatchetCli({
   buildPayload,
   printReport,
   violationId: (v) => violationId(v),
-  labels: { violations: 'σελίδες με δική τους γεωμετρία', declarations: 'δηλώσεις bleed' },
+  labels: { violations: 'σελίδες με δική τους γεωμετρία', declarations: 'δηλώσεις γεωμετρίας (bleed + κλείδωμα)' },
   commands: {
     report: 'npm run shell-surface:report',
     baseline: 'npm run shell-surface:baseline',
@@ -495,9 +718,10 @@ runSetRatchetCli({
   },
   messages: {
     worse: 'κάποιος ξαναδήλωσε γεωμετρία (κενό ή πλάτος) που ανήκει στο κέλυφος',
-    newDeclLabel: 'ΝΕΑ δήλωση bleed:',
+    newDeclLabel: 'ΝΕΑ δήλωση γεωμετρίας (bleed ή κλείδωμα παραθύρου):',
     newDeclAdvice: [
-      'Μια νέα επιφάνεια χωρίς διάδρομο μπλοκάρει ΑΚΟΜΑ ΚΙ ΑΝ είναι σωστή.',
+      'Μια νέα επιφάνεια χωρίς διάδρομο —ή κλειδωμένη στο παράθυρο— μπλοκάρει',
+      'ΑΚΟΜΑ ΚΙ ΑΝ είναι σωστή.',
       'Αυτό είναι το σημείο: το opt-out πρέπει να το δει άνθρωπος, αλλιώς η',
       'δεύτερη σωστή πράξη γίνεται τρίτη, και μετά κανόνας.',
       `Δήλωσέ την με λόγο στο ${relative(REGISTRY)} και ξανατρέξε.`,
