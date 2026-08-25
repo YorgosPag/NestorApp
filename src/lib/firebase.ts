@@ -84,4 +84,47 @@ if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_USE_FIREBASE_EMULAT
   connectEmulatorOrReport('Storage', () => connectStorageEmulator(storage, 'localhost', 9199));
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// 🔴 Ο ΦΡΟΥΡΟΣ ΤΟΥ ΠΡΟΟΡΙΣΜΟΥ — ΓΙΑΤΙ Ο ΠΡΟΗΓΟΥΜΕΝΟΣ ΗΤΑΝ **ΑΔΡΑΝΗΣ**
+//
+// Το `connectEmulatorOrReport` παραπάνω τυπώνει ✅/⚠️ **ΜΕΣΑ** στο `if`. Στις
+// 2026-08-25 μετρήθηκε ότι το `if` **δεν αλήθευε ποτέ**: το Turbopack άφηνε το
+// `NEXT_PUBLIC_USE_FIREBASE_EMULATOR` ως runtime lookup πάνω στο polyfill του
+// `process`, που στον browser είναι κενό ⇒ `undefined === 'true'` ⇒ false.
+// **Δεν σιωπούσε επειδή πέτυχε· σιωπούσε επειδή δεν εκτελέστηκε** — φρουρός
+// δομικά ανίκανος να πυροδοτήσει (ADR-749 §5).
+//
+// Το σύμπτωμα έφτασε στον άνθρωπο ως «**Μη έγκυρα στοιχεία σύνδεσης**»: λάθος
+// **προορισμού** μεταμφιεσμένο σε λάθος **διαπιστευτηρίων**.
+//
+// 🔑 ΑΥΤΟΣ Ο ΕΛΕΓΧΟΣ ΖΕΙ **ΕΞΩ** ΑΠΟ ΤΟ `if`, ΚΑΙ ΑΥΤΟ ΕΙΝΑΙ ΟΛΟ ΤΟ ΝΟΗΜΑ.
+// Δεν ρωτά «τι λέει το flag;» — ρωτά «**τρέχει emulator ενώ εμείς μιλάμε αλλού;**».
+// Είναι η μόνη ερώτηση που πιάνει τη διαφορά ανάμεσα στη **δήλωση** και στον
+// **προορισμό**, και γι' αυτό δεν επιτρέπεται να εξαρτάται από τη δήλωση.
+//
+// ⚠️ Μόνο σε development και μόνο στον browser: σε production δεν υπάρχει emulator
+// να απαντήσει, και το αίτημα θα ήταν καθαρός θόρυβος.
+// ⚠️ Δεν διορθώνει τίποτα μόνος του — **σκόπιμα**. Η σύνδεση στον emulator πρέπει
+// να γίνει **πριν** την πρώτη χρήση του `auth`· ένα async fetch δεν προλαβαίνει.
+// Η δουλειά του είναι να μη μείνει η βλάβη **αόρατη**.
+// ══════════════════════════════════════════════════════════════════════════════
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+  const usingEmulator = process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true';
+  if (!usingEmulator) {
+    void fetch('http://localhost:9099/', { mode: 'no-cors', signal: AbortSignal.timeout(1500) })
+      .then(() => {
+        console.error(
+          '🔴 ΤΡΕΧΕΙ Firebase Auth emulator στο :9099, ΑΛΛΑ ο client μιλά στην ΠΑΡΑΓΩΓΗ.\n' +
+            '   Το σύμπτωμα θα φτάσει ως «Μη έγκυρα στοιχεία σύνδεσης» — λάθος ΠΡΟΟΡΙΣΜΟΥ.\n' +
+            '   Αιτία: το NEXT_PUBLIC_USE_FIREBASE_EMULATOR δεν έφτασε στο client bundle.\n' +
+            '   Λύση: `npm run dev:emulator` (το next.config.js παράγει το flag από το\n' +
+            '   FIREBASE_AUTH_EMULATOR_HOST) — και ΚΑΘΑΡΟ restart του dev server.',
+        );
+      })
+      .catch(() => {
+        // Κανένας emulator — φυσιολογικό `npm run dev`. Καμία σιωπή να εξηγηθεί.
+      });
+  }
+}
+
 export default app;

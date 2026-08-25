@@ -32,6 +32,40 @@ const resolveDistDir = () => {
 /** @type {import('next').NextConfig} */
 // Vercel rebuild trigger: 2026-03-23
 const nextConfig = {
+  // ══════════════════════════════════════════════════════════════════════════
+  // 🔴 Ο ΠΕΛΑΤΗΣ ΜΙΛΟΥΣΕ ΣΤΗΝ **ΠΑΡΑΓΩΓΗ** ΕΝΩ ΤΟ SCRIPT ΕΛΕΓΕ «EMULATOR»
+  //
+  // Το `dev:emulator` έθετε `NEXT_PUBLIC_USE_FIREBASE_EMULATOR=true` **μόνο στο
+  // process**. Το Next/Turbopack ενσωματώνει στο client bundle τα `NEXT_PUBLIC_*`
+  // που **γνωρίζει** (από `.env*` ή από αυτό εδώ το κλειδί)· μια μεταβλητή που
+  // υπάρχει μόνο στο process **δεν ενσωματώνεται** — μένει runtime lookup πάνω στο
+  // `next/dist/build/polyfills/process.js`, που στον browser είναι **κενό**.
+  //
+  // Μετρημένο στο ίδιο bundle (2026-08-25): `NEXT_PUBLIC_FIREBASE_PROJECT_ID` και
+  // `NEXT_PUBLIC_FIREBASE_API_KEY` ήταν **απόντα ως ονόματα** (⇒ έγιναν inline,
+  // ζουν στο `.env`), ενώ το `NEXT_PUBLIC_USE_FIREBASE_EMULATOR` ήταν **παρόν ως
+  // όνομα** ⇒ `undefined === 'true'` ⇒ **false, πάντα**.
+  //
+  // 🔴 Συνέπεια: ο Admin SDK (server) πήγαινε στον emulator, ο **client** στην
+  // παραγωγή. Το σύμπτωμα έφτανε ως «**Μη έγκυρα στοιχεία σύνδεσης**» — λάθος
+  // **προορισμού** μεταμφιεσμένο σε λάθος **διαπιστευτηρίων**.
+  //
+  // ⚠️ Και ο φρουρός του `src/lib/firebase.ts` ήταν **ΑΔΡΑΝΗΣ**: το `connectEmulatorOrReport`
+  // τυπώνει ✅/⚠️ **μέσα** στο `if` — που δεν αλήθευε ποτέ. Δεν σιωπούσε επειδή
+  // πέτυχε· σιωπούσε επειδή **δεν εκτελέστηκε**.
+  //
+  // 🔑 ΜΙΑ ΠΗΓΗ: το `FIREBASE_AUTH_EMULATOR_HOST` είναι η μεταβλητή που **ήδη**
+  // στρέφει τον Admin SDK (αυτόματη ανίχνευση). Παράγοντας το client flag από
+  // **αυτήν**, η απόκλιση server/client γίνεται **δομικά αδύνατη** αντί για
+  // ανιχνεύσιμη (ADR-749). Δεύτερος διακόπτης θα ήταν δεύτερη αλήθεια.
+  //
+  // ⛔ ΜΗΝ ξαναβάλεις `NEXT_PUBLIC_USE_FIREBASE_EMULATOR=true` στο npm script:
+  //    δεν είναι πια ο διακόπτης, και θα ξαναγεννούσε τις δύο αλήθειες.
+  // ══════════════════════════════════════════════════════════════════════════
+  env: {
+    NEXT_PUBLIC_USE_FIREBASE_EMULATOR: String(Boolean(process.env.FIREBASE_AUTH_EMULATOR_HOST)),
+  },
+
   // [COOLIFY] Standalone output: self-contained Node server for Docker deployment.
   // Creates .next/standalone with only necessary files — smaller image, no full node_modules.
   output: 'standalone',
