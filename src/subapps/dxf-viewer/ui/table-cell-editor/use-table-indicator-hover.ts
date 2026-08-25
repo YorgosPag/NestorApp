@@ -99,12 +99,16 @@ import { noteCursorProbe } from '../../systems/cursor/cursor-apply-audit';
 // 🔴 ADR-739 §36 — η επιλογή (ΤΙ πιάνεται) και τα πλήκτρα (ΤΙ θα γίνει αν το πιάσεις).
 import { getTableCellCursor } from '../../state/table-cell-cursor-store';
 import {
-  TABLE_RANGE_MODIFIER_KEYS,
   tableRangeDragIntentOf,
+  type TableRangeIntentModifiers,
 } from '../../bim/table/table-range-move-zone';
 // 🔴 ADR-739 §36 ΦΑΣΗ 3 — όσο σέρνεται περιοχή, η **χειρονομία** ξέρει τι οφείλει ο δείκτης·
 // η σάρωση θέσης δεν το ξέρει και δεν μπορεί να το μάθει (χρειάζεται ολόκληρο το σχέδιο).
 import { activeTableRangeTransferCursor } from './table-range-transfer-drag';
+import {
+  observeModifierSnapshot,
+  type ModifierSnapshot,
+} from '../../keyboard/modifier-snapshot';
 import type { TableEntity } from '../../types/table-entity';
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 
@@ -216,7 +220,7 @@ export function useTableIndicatorHover(params: UseTableIndicatorHoverParams): vo
    */
   const handleMouseMove = useEventCallback((
     event: MouseEvent,
-    modifiers: Pick<MouseEvent, 'ctrlKey' | 'metaKey' | 'shiftKey'> = event,
+    modifiers: TableRangeIntentModifiers = event,
   ): void => {
     lastMoveRef.current = event;
     // 🔴 §36 ΦΑΣΗ 3 — **η σύρση μεταφοράς έχει προτεραιότητα**: όσο ζει, ο δείκτης λέει τι
@@ -402,11 +406,10 @@ export function useTableIndicatorHover(params: UseTableIndicatorHoverParams): vo
    * ώρα του hover ανήκει στο `<textarea>` της συνεδρίας — ένας ακροατής στο δοχείο **δεν θα
    * έβλεπε ποτέ** το πλήκτρο.
    */
-  const handleModifierChange = useEventCallback((event: KeyboardEvent): void => {
-    if (!TABLE_RANGE_MODIFIER_KEYS.has(event.key)) return;
+  const handleModifierChange = useEventCallback((modifiers: ModifierSnapshot): void => {
     const last = lastMoveRef.current;
-    // Η **θέση** από την τελευταία κίνηση, η **πρόθεση** από το πλήκτρο που μόλις άλλαξε.
-    if (last) handleMouseMove(last, event);
+    // Η **θέση** από την τελευταία κίνηση, η **πρόθεση** από το στιγμιότυπο που μόλις άλλαξε.
+    if (last) handleMouseMove(last, modifiers);
   });
 
   /**
@@ -455,13 +458,14 @@ export function useTableIndicatorHover(params: UseTableIndicatorHoverParams): vo
     container.addEventListener('mouseleave', handleMouseLeave);
     // §36 — παθητικοί και οι δύο: **μόνο** ξαναρωτούν την ίδια ερώτηση. Καμία διεκδίκηση
     // πλήκτρου — το `Ctrl`/`Shift` ανήκουν σε όποιον τα διεκδικεί αλλού (αντιγραφή, επέκταση).
-    window.addEventListener('keydown', handleModifierChange, { passive: true });
-    window.addEventListener('keyup', handleModifierChange, { passive: true });
+    // Προεπιλεγμένη προτεραιότητα = **καταναλωτής**: αυτός ο γραφέας διαβάζει τον ενεργό
+    // δείκτη που γράφει η μεταφορά περιοχής, άρα οφείλει να τρέχει **μετά** από εκείνη.
+    // Πριν, η ίδια εγγύηση προερχόταν από τη **φάση** (εκείνη σύλληψη, αυτός αναπήδηση).
+    const stopObservingModifiers = observeModifierSnapshot(handleModifierChange);
     return () => {
       container.removeEventListener('mousemove', handleMouseMove);
       container.removeEventListener('mouseleave', handleMouseLeave);
-      window.removeEventListener('keydown', handleModifierChange);
-      window.removeEventListener('keyup', handleModifierChange);
+      stopObservingModifiers();
       lastMoveRef.current = null;
       // Ο καμβάς ξηλώνεται: ό,τι έμεινε βαμμένο ή γραμμένο στο `style.cursor` δεν έχει πια
       // ιδιοκτήτη. Η **έξοδος από τη λειτουργία** (το συχνό σενάριο) καθαρίζεται από τον

@@ -31,5 +31,6 @@ import { createModifierKeyTracker } from './createModifierKeyTracker';
 
 export const ShiftKeyTracker = createModifierKeyTracker({
   match: (e) => e.key === 'Shift',
+  modifierNames: ['Shift'],
 });
 ShiftKeyTracker.install();

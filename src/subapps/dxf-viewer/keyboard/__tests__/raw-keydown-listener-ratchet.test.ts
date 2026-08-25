@@ -82,6 +82,19 @@ const BY_DESIGN: ReadonlyMap<string, string> = new Map([
     'ο ιδιοκτήτης του πληκτρολογίου του Dynamic Input',
   ],
   [
+    // ΔΥΟ ΚΑΤΑΣΚΟΠΟΙ, ΟΧΙ ΔΙΕΚΔΙΚΗΤΕΣ (ADR-711 §10, 2026-08-25). Και οι δύο εγγράφουν για να
+    // **παρατηρήσουν σειρά** — καταγράφουν τι είδε ο κόσμος και αποδεσμεύονται μέσα στην ίδια
+    // άγκυρα. Δεν μπορούν να περάσουν από την πόρτα `observeModifierSnapshot`: εκείνη δίνει
+    // **στιγμιότυπο**, ενώ αυτό που κρίνεται εδώ είναι ακριβώς το `EventTarget` και η φάση —
+    // δηλαδή ό,τι η πόρτα σκόπιμα κρύβει.
+    'ui/table-cell-editor/__tests__/table-format-cells-shortcut.test.tsx',
+    'κατάσκοπος σειράς: επιβεβαιώνει ότι το Ctrl+1 ΦΤΑΝΕΙ στο κελί (§61) — παρατηρεί, δεν διεκδικεί',
+  ],
+  [
+    'ui/table-cell-editor/__tests__/table-range-transfer-drag.test.ts',
+    'κατάσκοπος σειράς: αποδεικνύει ότι ο παραγωγός γράφει ΠΡΙΝ διαβάσει ο αναγνώστης (§31)',
+  ],
+  [
     'ui/components/tests-modal/examples/advanced-usage.tsx',
     'παράδειγμα τεκμηρίωσης μέσα σε σχόλιο/επίδειξη, δεν είναι accelerator του viewer',
   ],
@@ -122,7 +135,6 @@ const PENDING_MIGRATION: ReadonlySet<string> = new Set([
   'hooks/tools/useMirrorPreview.ts',
   'hooks/tools/useMirrorTool.ts',
   'hooks/useDxfToolbarShortcuts.ts',
-  'hooks/useEnhancedSelection.ts',
   'statusbar/CadStatusBar.tsx',
   'systems/properties/QuickPropertiesMiniPanel.tsx',
   'systems/selection/use-selection-cycling.ts',
@@ -146,10 +158,37 @@ function relative(file: string): string {
   return path.relative(VIEWER_ROOT, file).split(path.sep).join('/');
 }
 
-function hasRawListener(source: string): boolean {
-  return source.includes(RAW_LISTENER) || source.includes(RAW_LISTENER_DOUBLE_QUOTED);
+/**
+ * 🔴 **Η ΠΡΟΖΑ ΔΕΝ ΕΙΝΑΙ ΕΓΓΡΑΦΗ.**
+ *
+ * Ο έλεγχος ήταν `source.includes(...)` σε **ολόκληρο** το αρχείο, οπότε ένα σχόλιο που
+ * *περιγράφει* το πρόβλημα μετριόταν ως το πρόβλημα. Το πλήρωσε το πρώτο αρχείο που
+ * τεκμηρίωσε τον κανόνα: το `keyboard/modifier-snapshot.ts` — η **πόρτα που υπάρχει για να
+ * μην εγγράφεται κανείς** — αναφέρθηκε ως παραβάτης, επειδή η κεφαλίδα του εξηγεί τι
+ * μετράει αυτός εδώ ο ratchet.
+ *
+ * Το ίδιο μάθημα με τον `Κ7β` του CHECK 3.50: *ένα σχόλιο που τεκμηριώνει παλιό λεξιλόγιο
+ * δεν πρέπει να μετριέται ως ζωντανό, αλλιώς κάθε τεκμηρίωση της βλάβης γίνεται η βλάβη*.
+ *
+ * ⚠️ **Καμία έκτη μηχανή αφαίρεσης σχολίων** (υπάρχουν ήδη πέντε τοπικές στο `scripts/` —
+ * ADR-749). Η ερώτηση εδώ είναι στενή: *«υπάρχει **εντολή** εγγραφής;»*. Μια εντολή δεν
+ * ξεκινά ποτέ με `//` ή `*`, άρα ο έλεγχος γίνεται **ανά γραμμή** και αγνοεί την πρόζα.
+ * Σχόλιο **στο τέλος** γραμμής με κώδικα μετριέται κανονικά — εκεί υπάρχει και εντολή.
+ */
+function isProse(line: string): boolean {
+  const trimmed = line.trimStart();
+  return trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*');
 }
 
+function hasRawListener(source: string): boolean {
+  return source
+    .split('\n')
+    .some(
+      (line) =>
+        !isProse(line) &&
+        (line.includes(RAW_LISTENER) || line.includes(RAW_LISTENER_DOUBLE_QUOTED)),
+    );
+}
 describe('ADR-711 — ratchet: ωμοί window keydown listeners στον viewer', () => {
   const files = collectSourceFiles(VIEWER_ROOT).filter(
     (file) => !relative(file).startsWith('keyboard/__tests__/'),

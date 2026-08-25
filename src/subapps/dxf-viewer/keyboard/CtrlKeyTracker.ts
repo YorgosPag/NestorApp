@@ -29,5 +29,8 @@ import { createModifierKeyTracker } from './createModifierKeyTracker';
 
 export const CtrlKeyTracker = createModifierKeyTracker({
   match: (e) => e.key === 'Control' || e.key === 'Meta',
+  // Τα δύο ταξιδεύουν μαζί επειδή ο κριτής τα θεωρεί **ισοδύναμα** (ίδια απόφαση με το
+  // `match` από πάνω): σε Mac το `Meta` παίζει τον ρόλο του `Control`.
+  modifierNames: ['Control', 'Meta'],
 });
 CtrlKeyTracker.install();

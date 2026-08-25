@@ -66,9 +66,14 @@ import {
   type TableRangeGrab,
 } from '../../bim/table/table-range-drop-target';
 import {
-  TABLE_RANGE_MODIFIER_KEYS,
   tableRangeDragIntentOf,
+  type TableRangeIntentModifiers,
 } from '../../bim/table/table-range-move-zone';
+import {
+  MODIFIER_OBSERVER_PRIORITY,
+  observeModifierSnapshot,
+  type ModifierSnapshot,
+} from '../../keyboard/modifier-snapshot';
 import {
   clearTableRangeTransferPreview,
   getTableRangeTransferPreview,
@@ -159,9 +164,12 @@ export function beginTableRangeTransfer(start: TableRangeTransferStart): void {
    * ήρθε να καταργήσει. Γι' αυτό ταξιδεύουν **δύο** αντικείμενα: το ένα δίνει **θέση**, το
    * άλλο **πρόθεση**.
    */
-  const onModifier = (event: KeyboardEvent): void => {
-    if (!TABLE_RANGE_MODIFIER_KEYS.has(event.key)) return;
-    if (lastEvent) applyAt(lastEvent, event);
+  const onModifier = (modifiers: ModifierSnapshot): void => {
+    // Κανένας έλεγχος «είναι δικό μου πλήκτρο;»: ο παρατηρητής ειδοποιεί **μόνο** όταν
+    // αλλάζει όντως η κατάσταση των modifiers. Το παλιό φίλτρο ήταν επίσης το μόνο που
+    // κρατούσε έξω την **αυτόματη επανάληψη** του πλήκτρου — τώρα την κόβει η ισότητα
+    // `Object.is` του store, δηλαδή δομικά αντί για χειροκίνητα.
+    if (lastEvent) applyAt(lastEvent, modifiers);
   };
 
   const onUp = (): void => {
@@ -200,8 +208,16 @@ export function beginTableRangeTransfer(start: TableRangeTransferStart): void {
   // Η **σύλληψη** το λύνει ντετερμινιστικά: το `window` είναι η κορυφή της διαδρομής, άρα οι
   // ακροατές σύλληψης εδώ τρέχουν **πριν** από κάθε ακροατή αναπήδησης — ανεξάρτητα από το
   // ποιος εγγράφηκε πρώτος. Ίδια θεραπεία με το `mousemove` παραπάνω, ίδιος λόγος.
-  window.addEventListener('keydown', onModifier, { capture: true, passive: true });
-  window.addEventListener('keyup', onModifier, { capture: true, passive: true });
+  //
+  // 🔑 **Η ΣΕΙΡΑ ΕΙΝΑΙ ΠΛΕΟΝ ΔΗΛΩΜΕΝΗ, ΟΧΙ ΠΑΡΑΓΩΓΟ ΤΗΣ ΦΑΣΗΣ.** Η σύλληψη έλυνε το
+  // πρόβλημα σωστά, αλλά **πλάγια**: ο λόγος ζούσε στο σχόλιο από πάνω και ο επόμενος
+  // που θα άγγιζε οποιονδήποτε από τους δύο ακροατές δεν είχε τίποτα να τον σταματήσει.
+  // Εδώ ο ρόλος γράφεται: **παραγωγός** — γράφει τον ενεργό δείκτη που ο γραφέας του
+  // `use-table-indicator-hover` διαβάζει στο **ίδιο** πέρασμα.
+  const stopObservingModifiers = observeModifierSnapshot(
+    onModifier,
+    MODIFIER_OBSERVER_PRIORITY.STATE_PRODUCER,
+  );
   // §27.16 Ε1 — η άκρη: ο κόσμος κουνιέται κάτω από ακίνητο χέρι, η ερώτηση είναι η ίδια.
   startDragEdgeAutoPan({
     sample: () => (lastEvent ? edgeAutoPanSample(lastEvent, start.container) : null),
@@ -213,8 +229,7 @@ export function beginTableRangeTransfer(start: TableRangeTransferStart): void {
   activeTeardown = (): void => {
     document.removeEventListener('mousemove', onMove, { capture: true });
     document.removeEventListener('mouseup', onUp, { capture: true });
-    window.removeEventListener('keydown', onModifier, { capture: true });
-    window.removeEventListener('keyup', onModifier, { capture: true });
+    stopObservingModifiers();
     stopDragEdgeAutoPan();
   };
 }
@@ -255,7 +270,7 @@ export function isTableRangeTransferDragging(): boolean {
 // ──────────────────────────────────────────────────────────────────────────────
 
 /** Ό,τι χρειάζεται η πρόθεση — το ικανοποιούν **και** το `MouseEvent` **και** το `KeyboardEvent`. */
-type TableRangeModifiers = Pick<MouseEvent, 'ctrlKey' | 'metaKey' | 'shiftKey'>;
+type TableRangeModifiers = TableRangeIntentModifiers;
 
 /**
  * Η κατάσταση αυτού του καρέ· `null` όταν η προβολή δεν διαβάζεται (η σύρση επιζεί, §31.9).

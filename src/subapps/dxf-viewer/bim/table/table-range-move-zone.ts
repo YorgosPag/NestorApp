@@ -120,20 +120,6 @@ export interface TableRangeDragIntent {
 export const PLAIN_TABLE_RANGE_DRAG: TableRangeDragIntent = { copy: false, insert: false };
 
 /**
- * 🔴 §36 ΦΑΣΗ 3 — **ΤΑ ΠΛΗΚΤΡΑ ΠΟΥ ΑΛΛΑΖΟΥΝ ΤΗΝ ΥΠΟΣΧΕΣΗ**, ονομαστικά.
- *
- * Δύο ανεξάρτητοι ακροατές ξαναρωτούν την ίδια ερώτηση όταν πατηθεί ή αφεθεί ένα από αυτά,
- * **χωρίς να κουνηθεί το χέρι**: ο δείκτης πριν τη σύρση (`use-table-indicator-hover`) και η
- * ίδια η σύρση (`table-range-transfer-drag`). Δύο σύνολα θα ήταν δύο ευκαιρίες να ξεχαστεί το
- * `Meta` — και το σύμπτωμα θα ήταν «*στο Mac η αντιγραφή δεν αναγγέλλεται*», δηλαδή απουσία
- * λειτουργίας, όχι σφάλμα. Ζει εδώ γιατί εδώ ζει και η **σημασία** τους
- * ({@link tableRangeDragIntentOf}).
- *
- * Κάθε άλλο πλήκτρο αγνοείται: θα ξανα-σάρωνε γεωμετρία για απάντηση που δεν αλλάζει.
- */
-export const TABLE_RANGE_MODIFIER_KEYS: ReadonlySet<string> = new Set(['Control', 'Meta', 'Shift']);
-
-/**
  * Τα πλήκτρα του συμβάντος → πρόθεση.
  *
  * ⚠️ Το `metaKey` δεν είναι ευγένεια προς macOS: ο **ίδιος** κώδικας τρέχει σε Mac, όπου το
@@ -141,11 +127,23 @@ export const TABLE_RANGE_MODIFIER_KEYS: ReadonlySet<string> = new Set(['Control'
  * Χωρίς το `metaKey`, η αντιγραφή θα ήταν **αδύνατη** εκεί — και το σύμπτωμα θα ήταν
  * «λείπει λειτουργία», όχι «σφάλμα».
  */
-export function tableRangeDragIntentOf(modifiers: {
+export interface TableRangeIntentModifiers {
   readonly ctrlKey: boolean;
+  /**
+   * ⚠️ **ΠΡΟΑΙΡΕΤΙΚΟ, ΚΑΙ ΕΙΝΑΙ ΤΟ ΝΟΗΜΑ.** Ο κριτής παρακάτω το διαβάζει ως
+   * `metaKey === true`, άρα «δεν ξέρω» ≡ «όχι». Έτσι μια πηγή που **έχει ήδη ενώσει**
+   * το `Control` με το `Meta` (ο `CtrlKeyTracker`, γιατί εδώ είναι ισοδύναμα) μπορεί να
+   * απαντήσει **χωρίς να πει ψέματα** για το ποιο φυσικό πλήκτρο πατήθηκε.
+   *
+   * Ήταν `Pick<MouseEvent, …>` σε **δύο** αρχεία — δηλαδή ο τύπος απαιτούσε πεδίο που
+   * ο ίδιος ο κριτής θεωρεί προαιρετικό, και κάθε μη-ποντικίσια πηγή έπρεπε να
+   * επινοήσει τιμή γι' αυτό.
+   */
   readonly metaKey?: boolean;
   readonly shiftKey: boolean;
-}): TableRangeDragIntent {
+}
+
+export function tableRangeDragIntentOf(modifiers: TableRangeIntentModifiers): TableRangeDragIntent {
   const copy = modifiers.ctrlKey || modifiers.metaKey === true;
   if (!copy && !modifiers.shiftKey) return PLAIN_TABLE_RANGE_DRAG;
   return { copy, insert: modifiers.shiftKey };
