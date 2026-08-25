@@ -7,11 +7,23 @@
  * affected entity IDs so the user can decide whether to upload the original.
  *
  * Font choices:
- *  - romans/simplex/txt → Liberation Sans (metric-compatible sans-serif)
+ *  - romans/simplex     → Liberation Sans (metric-compatible sans-serif)
  *  - romand             → Liberation Sans Bold (duplex → bold sans)
- *  - isocpeur           → ISO 3098 engineering lettering (bundled LFF fallback)
- *  - gothicg / gothice  → UnifrakturMaguntia (MIT, Google Fonts)
+ *  - txt                → Liberation Mono (metric-compatible με Courier New)
+ *  - isocpeur           → ISO 3098 engineering lettering
+ *  - gothicg / gothice  → UnifrakturMaguntia (SIL OFL 1.1, Google Fonts)
  *  - unknown            → Liberation Sans (generic fallback)
+ *
+ * ⚠️ **ΤΟ ΟΝΟΜΑ ΣΤΗΝ ΑΡΙΣΤΕΡΗ ΣΤΗΛΗ ΕΙΝΑΙ ΥΠΟΣΧΕΣΗ, ΟΧΙ ΕΤΙΚΕΤΑ** (ADR-803 / CHECK 3.67).
+ * Ό,τι γράφεται εδώ ως `substituteFamily` πρέπει να **φορτώνεται όντως** από το
+ * `CAD_SUBSTITUTE_FONTS`, αλλιώς ο `resolveEntityFont` επιστρέφει `null` και η βαφή πέφτει
+ * **σιωπηλά** στην εφεδρική του browser: το `MissingFontBanner` αναφέρει το βήμα
+ * `SHX → υποκατάστατο`, ποτέ το βήμα `υποκατάστατο → εφεδρική`. Η πύλη μπλοκάρει ακριβώς αυτό.
+ *
+ * ⚠️ **ΚΑΙ ΤΟ `reason` ΤΟ ΔΙΑΒΑΖΕΙ Ο ΧΡΗΣΤΗΣ** — δύο από αυτά έλεγαν ψέματα ως τις 2026-08-25:
+ * το `isocpeur` υποσχόταν «bundled LFF fallback» ενώ **τίποτα δεν ήταν ενσωματωμένο**, και τα
+ * gothic δήλωναν άδεια **MIT** ενώ το UnifrakturMaguntia είναι **SIL OFL 1.1** (επαληθεύτηκε
+ * στο `name` table του ίδιου του αρχείου: `licenseURL = http://scripts.sil.org/OFL`).
  *
  * @module text-engine/fonts/font-substitution-table
  */
@@ -45,7 +57,7 @@ export const FONT_SUBSTITUTION_TABLE: readonly FontSubstitutionEntry[] = [
   {
     shxName: 'isocpeur.shx',
     substituteFamily: 'ISO 3098',
-    reason: 'isocpeur → ISO 3098 engineering lettering (bundled LFF fallback)',
+    reason: 'isocpeur → ISO 3098 engineering lettering',
   },
   {
     shxName: 'isocpeur',
@@ -65,12 +77,12 @@ export const FONT_SUBSTITUTION_TABLE: readonly FontSubstitutionEntry[] = [
   {
     shxName: 'gothicg.shx',
     substituteFamily: 'UnifrakturMaguntia',
-    reason: 'gothicg (Gothic stroke) → UnifrakturMaguntia (MIT, Google Fonts)',
+    reason: 'gothicg (Gothic stroke) → UnifrakturMaguntia (SIL OFL 1.1, Google Fonts)',
   },
   {
     shxName: 'gothice.shx',
     substituteFamily: 'UnifrakturMaguntia',
-    reason: 'gothice (Gothic stroke) → UnifrakturMaguntia (MIT, Google Fonts)',
+    reason: 'gothice (Gothic stroke) → UnifrakturMaguntia (SIL OFL 1.1, Google Fonts)',
   },
   {
     shxName: '*',

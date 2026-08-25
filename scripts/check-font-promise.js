@@ -75,7 +75,43 @@ function buildPayload(m) {
   };
 }
 
+/**
+ * 🔴 **Ο ΦΡΟΥΡΟΣ ΠΟΥ ΕΛΕΙΠΕ — ΚΑΙ ΧΩΡΙΣ ΑΥΤΟΝ ΟΙ ΠΕΝΤΕ ⛔ ΗΤΑΝ ΔΙΑΚΟΣΜΗΤΙΚΕΣ** (2026-08-25).
+ *
+ * Το `runSetRatchetCli` συγκρίνει **σύνολα ταυτοτήτων** (`violationIds`, `declarations`) — και
+ * **τίποτε άλλο**. Οι μπλοκάρουσες καταστάσεις ταξίδευαν στο `measured.violations`, το οποίο ο
+ * κοινός μηχανισμός χρησιμοποιεί **μόνο για να ΤΥΠΩΣΕΙ** λεπτομέρεια σε μια αποτυχία που έχει
+ * ήδη αποφασιστεί αλλού· το `buildPayload` πάλι αρνείται μόνο στο `--write-baseline`.
+ *
+ * **Μετρημένο ζωντανά, δύο φορές**: με `orphan-declaration` εμφυτευμένο, και με `url` που δείχνει
+ * σε **ανύπαρκτο αρχείο**, η αναφορά τύπωνε `⛔ unloadable-preload 1` και η πύλη απαντούσε
+ * **`✅` με exit 0**. Δηλαδή ακριβώς το «σκαλί πάνω από το AutoCAD» που διαφημίζει το ADR-803 §4.1
+ * — *«επαληθεύεται ότι το ΑΡΧΕΙΟ κάθε δηλωμένης όψης υπάρχει όντως»* — **δεν μπορούσε να
+ * πυροδοτήσει**. Φρουρός που δεν μπορεί να πυροδοτήσει είναι προσθήκη στους **606 αδρανείς**
+ * του ADR-749 §5.
+ *
+ * ⚠️ Η αδελφή πύλη **CHECK 3.59** το κάνει σωστά με δικό της `if (m.blocking.length > 0)` — άρα
+ * το σχήμα «ο κοινός CLI ΔΕΝ κρίνει το zero-tol, το κρίνει ο καλών» είναι το **υπάρχον**
+ * συμβόλαιο, και εδώ απλώς είχε παραλειφθεί.
+ *
+ * ⚠️ Τρέχει **μόνο** στη διαδρομή κρίσης: το `--report` οφείλει να **τυπώνει** (αλλιώς ο
+ * άνθρωπος δεν βλέπει τι έσπασε) και το `--write-baseline` το φυλά ήδη το `buildPayload`.
+ * Κόστος: μία επιπλέον `measure()` — **~15ms**.
+ */
+function enforceZeroTolerance(argv, measureFn = measure) {
+  if (process.env.SKIP_FONT_PROMISE) return;
+  if (argv.includes('--report') || argv.includes('--write-baseline')) return;
+  const m = measureFn();
+  if (!m.blocking.length) return;
+  console.error(`\n❌ CHECK 3.67 — ${m.blocking.length} μπλοκάρουσα(ες) κατάσταση(εις):\n`);
+  for (const r of m.blocking) console.error(`  ⛔ ${r.state}: ${r.id} — ${r.detail}`);
+  console.error(`\n   Αναφορά: npm run font-promise:report`);
+  console.error('   ⚠️ ΔΕΝ μπαίνουν ΠΟΤΕ σε baseline — διόρθωσε την αιτία.');
+  process.exit(1);
+}
+
 if (require.main === module) {
+  enforceZeroTolerance(process.argv.slice(2));
   ratchet.runSetRatchetCli({
     adr: 'ADR-803 (CHECK 3.67)',
     skipEnv: 'SKIP_FONT_PROMISE',
@@ -98,4 +134,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { measure, buildPayload, printReport, BASELINE_FILE };
+module.exports = { measure, buildPayload, printReport, enforceZeroTolerance, BASELINE_FILE };
