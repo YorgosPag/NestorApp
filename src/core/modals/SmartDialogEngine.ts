@@ -57,6 +57,36 @@ export { createSmartDialog } from './smart-dialog-factory';
 // ENGINE CLASS - Singleton Pattern
 // =============================================================================
 
+/**
+ * 🛡️ **Η ΕΤΙΚΕΤΑ ΠΕΔΙΟΥ ΔΕΝ ΒΓΑΙΝΕΙ ΠΟΤΕ ΩΜΟ ΚΛΕΙΔΙ** (ADR-804 §3).
+ *
+ * 🔑 **Ο ΚΑΤΑΛΟΓΟΣ ΕΤΙΚΕΤΩΝ ΕΧΕΙ ΔΥΟ ΣΥΜΒΟΛΑΙΑ, ΚΑΙ ΑΥΤΟ ΕΙΝΑΙ ΜΕΤΡΗΜΕΝΟ**: άλλες
+ * εγγραφές δίνουν **έτοιμο κείμενο** (παλιό, σκληρά ελληνικά) και άλλες **i18n κλειδί**
+ * (μεταναστευμένο). Πριν από αυτή τη συνάρτηση η τιμή πήγαινε **κατευθείαν** στην οθόνη,
+ * οπότε κάθε μεταναστευμένη εγγραφή ζωγράφιζε το κλειδί της: μετρημένα **25** για τον
+ * τύπο `service` και **3** για τον `contact`, ζωντανά, πριν αγγίξει κανείς τίποτα.
+ *
+ * ⚠️ **ΤΑ NAMESPACES ΕΙΝΑΙ ΠΕΡΙΣΣΟΤΕΡΑ ΑΠΟ ΕΝΑ, ΚΑΙ ΜΕΤΡΗΘΗΚΑΝ**: τα κλειδιά της
+ * εταιρείας ζουν στο `forms` (**56/56** λύνονται), του τύπου επαφής στο `common-shared`.
+ * Ένα καρφωμένο `ns` θα άφηνε τη μισή οθόνη ωμή.
+ *
+ * ⚠️ **fail-safe, ΜΕ ΣΕΙΡΑ**: μεταφρασμένο ⇒ κείμενο· αμετάφραστο **που μοιάζει κλειδί**
+ * ⇒ ανθρώπινο όνομα πεδίου (**ποτέ** το κλειδί)· αμετάφραστο που **δεν** μοιάζει κλειδί
+ * ⇒ είναι ήδη κείμενο, πέρασέ το. Έτσι καμία από τις δύο εποχές δεν σπάει την οθόνη.
+ * ⚠️ Το `defaultValue` είναι **κενή συμβολοσειρά** επίτηδες — literal κείμενο εκεί
+ * απαγορεύεται από τον κανόνα N.11 (i18n SSoT).
+ */
+const FIELD_LABEL_NAMESPACES = ['forms', 'common-shared', 'common'] as const;
+/** Μοτίβο i18n κλειδιού: `tmima.tmima[.tmima]` χωρίς κενά/τόνους. */
+const LOOKS_LIKE_I18N_KEY = /^[a-z][a-zA-Z0-9]*(\.[a-zA-Z][a-zA-Z0-9]*)+$/;
+
+function resolveFieldLabel(raw: string | undefined, fieldName: string): string {
+  if (!raw) return getFallbackLabel(fieldName);
+  const translated = i18n.t(raw, { ns: FIELD_LABEL_NAMESPACES, defaultValue: '' });
+  if (translated) return translated;
+  return LOOKS_LIKE_I18N_KEY.test(raw) ? getFallbackLabel(fieldName) : raw;
+}
+
 export class SmartDialogEngine {
   private static readonly instance = new SmartDialogEngine();
   private constructor() {}
@@ -157,7 +187,7 @@ export class SmartDialogEngine {
     return commonFields.map((fieldName) => ({
       name: fieldName,
       type: inferFieldType(fieldName),
-      label: fieldLabels[fieldName] || getFallbackLabel(fieldName),
+      label: resolveFieldLabel(fieldLabels[fieldName], fieldName),
       placeholder: getPlaceholder(fieldName),
       required: getRequiredFields(entityType, operationType).includes(fieldName),
       options: getFieldOptions(fieldName, entityType),

@@ -4,7 +4,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
-import { isRoleBypass } from '@/lib/auth/roles';
+import { BYPASS_ROLES } from '@/lib/auth/roles';
 import {
   createDryRunReport,
   createLiveMigrationReport,
@@ -14,42 +14,8 @@ import {
 
 const logger = createModuleLogger('MigrateDxfRoute');
 
-const createForbiddenResponse = (action: 'preview' | 'execute'): NextResponse => {
-  const actionLabel = action === 'preview' ? 'preview' : 'execute';
-  const message = action === 'preview'
-    ? 'DXF migrations are system-level operations restricted to super_admin'
-    : 'DXF data migration is a system-level operation restricted to super_admin';
-
-  return NextResponse.json(
-    {
-      success: false,
-      error: `Forbidden: Only super_admin can ${actionLabel} DXF migrations`,
-      message,
-    },
-    { status: 403 },
-  );
-};
-
-const ensureSuperAdmin = (ctx: AuthContext, action: 'preview' | 'execute'): NextResponse | null => {
-  if (isRoleBypass(ctx.globalRole)) {
-    return null;
-  }
-
-  logger.warn(`BLOCKED: Non-super_admin attempted DXF migration ${action}`, {
-    email: ctx.email,
-    globalRole: ctx.globalRole,
-  });
-
-  return createForbiddenResponse(action);
-};
-
 export const GET = withSensitiveRateLimit(withAuth(
   async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-    const forbiddenResponse = ensureSuperAdmin(ctx, 'preview');
-    if (forbiddenResponse) {
-      return forbiddenResponse;
-    }
-
     logger.info('DXF migration preview request', { email: ctx.email, globalRole: ctx.globalRole, companyId: ctx.companyId });
 
     try {
@@ -72,16 +38,11 @@ export const GET = withSensitiveRateLimit(withAuth(
       );
     }
   },
-  { permissions: 'admin:migrations:execute' },
+  { requiredGlobalRoles: BYPASS_ROLES, permissions: 'admin:migrations:execute' },
 ));
 
 export const POST = withSensitiveRateLimit(withAuth(
   async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-    const forbiddenResponse = ensureSuperAdmin(ctx, 'execute');
-    if (forbiddenResponse) {
-      return forbiddenResponse;
-    }
-
     logger.info('DXF migration execute request', { email: ctx.email, globalRole: ctx.globalRole, companyId: ctx.companyId });
     const startTime = Date.now();
 
@@ -131,5 +92,5 @@ export const POST = withSensitiveRateLimit(withAuth(
       );
     }
   },
-  { permissions: 'admin:migrations:execute' },
+  { requiredGlobalRoles: BYPASS_ROLES, permissions: 'admin:migrations:execute' },
 ));

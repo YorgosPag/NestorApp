@@ -35,7 +35,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { ENTITY_TYPES } from '@/config/domain-constants';
-import { isRoleBypass } from '@/lib/auth/roles';
+import { BYPASS_ROLES } from '@/lib/auth/roles';
 import {
   planProjectCodes,
   type BuildingRow,
@@ -64,17 +64,6 @@ async function handleMigration(
   request?: NextRequest
 ): Promise<NextResponse> {
   const startTime = Date.now();
-
-  if (!isRoleBypass(ctx.globalRole)) {
-    logger.warn('BLOCKED: Non-super_admin attempted building code backfill', {
-      email: ctx.email,
-      globalRole: ctx.globalRole,
-    });
-    return NextResponse.json(
-      { success: false, error: 'Forbidden: Only super_admin can execute this migration' },
-      { status: 403 }
-    );
-  }
 
   try {
     const db = getAdminFirestore();
@@ -238,7 +227,7 @@ export async function GET(request: NextRequest): Promise<Response> {
     withAuth(
       async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> =>
         handleMigration(ctx, true),
-      { permissions: 'admin:migrations:execute' }
+      { requiredGlobalRoles: BYPASS_ROLES, permissions: 'admin:migrations:execute' }
     )
   );
   return handler(request);
@@ -249,7 +238,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     withAuth(
       async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> =>
         handleMigration(ctx, false, req),
-      { permissions: 'admin:migrations:execute' }
+      { requiredGlobalRoles: BYPASS_ROLES, permissions: 'admin:migrations:execute' }
     )
   );
   return handler(request);

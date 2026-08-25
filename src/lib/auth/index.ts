@@ -80,6 +80,8 @@ export type { RoleDefinition } from './roles';
 
 export {
   PREDEFINED_ROLES,
+  // ADR-801 §2.10 — το ΤΑΒΑΝΙ «μόνο υπερδιαχειριστής», δηλωτικά στο σύνορο.
+  BYPASS_ROLES,
   getRole,
   getRolePermissions,
   isRoleBypass,

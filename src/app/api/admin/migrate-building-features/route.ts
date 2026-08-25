@@ -12,43 +12,16 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
-import { isRoleBypass } from '@/lib/auth/roles';
+import { BYPASS_ROLES } from '@/lib/auth/roles';
 import {
-  createForbiddenPayload,
   executeBuildingFeaturesMigration,
   previewBuildingFeaturesMigration,
 } from './migration-operations';
-import {
-  SUPER_ADMIN_REQUIRED_CODE,
-  SUPER_ADMIN_REQUIRED_ERROR,
-} from './migration-config';
 
 const logger = createModuleLogger('MigrateBuildingFeaturesRoute');
 
-const ensureSuperAdmin = (ctx: AuthContext, action: 'preview' | 'migration'): NextResponse | null => {
-  if (isRoleBypass(ctx.globalRole)) {
-    return null;
-  }
-
-  logger.warn(`BLOCKED: Non-super_admin attempted building features ${action}`, {
-    userId: ctx.uid,
-    email: ctx.email,
-    globalRole: ctx.globalRole,
-  });
-
-  return NextResponse.json(
-    createForbiddenPayload(SUPER_ADMIN_REQUIRED_ERROR, SUPER_ADMIN_REQUIRED_CODE),
-    { status: 403 },
-  );
-};
-
 export const GET = withSensitiveRateLimit(withAuth(
-  async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-    const forbiddenResponse = ensureSuperAdmin(ctx, 'preview');
-    if (forbiddenResponse) {
-      return forbiddenResponse;
-    }
-
+  async (_req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
     try {
       const payload = await previewBuildingFeaturesMigration();
       return NextResponse.json(payload);
@@ -65,16 +38,11 @@ export const GET = withSensitiveRateLimit(withAuth(
       );
     }
   },
-  { permissions: 'admin:migrations:execute' },
+  { requiredGlobalRoles: BYPASS_ROLES, permissions: 'admin:migrations:execute' },
 ));
 
 export const POST = withSensitiveRateLimit(withAuth(
   async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-    const forbiddenResponse = ensureSuperAdmin(ctx, 'migration');
-    if (forbiddenResponse) {
-      return forbiddenResponse;
-    }
-
     try {
       const payload = await executeBuildingFeaturesMigration(req, ctx);
       return NextResponse.json(payload);
@@ -115,5 +83,5 @@ export const POST = withSensitiveRateLimit(withAuth(
       );
     }
   },
-  { permissions: 'admin:migrations:execute' },
+  { requiredGlobalRoles: BYPASS_ROLES, permissions: 'admin:migrations:execute' },
 ));

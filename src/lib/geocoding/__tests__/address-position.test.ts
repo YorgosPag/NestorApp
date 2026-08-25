@@ -94,6 +94,35 @@ describe('Κ — ο κλειστός κανόνας της θέσης', () => {
     expect(calls).toHaveLength(0);
   });
 
+  it('Κ1β — σύρσιμο ΠΑΝΩ σε γεωκωδικοποιημένη διεύθυνση ΣΒΗΝΕΙ τα παλιά μεταδεδομένα', async () => {
+    // 🔴 Το **ρεαλιστικό** μονοπάτι, και το κενό που άφησε η πρώτη γραφή των αγκυρών:
+    // ο πελάτης ξαναστέλνει **ολόκληρο** το αντικείμενο (`useProjectLocations` κάνει
+    // `{...addr, coordinates: …}`), άρα η ανθρώπινη πινέζα φτάνει **παρέα με τα
+    // μεταδεδομένα της μηχανής**. Αν επιβίωναν, το σημείο του ανθρώπου θα φορούσε
+    // ετικέτα `geocoded` με ακρίβεια `center` ⇒ σκιασμένη πόλη πάνω σε **ακριβή πινέζα**.
+    const { geocode, calls } = spyGeocoder(HIT_EXACT);
+    const stored: AddressLike = {
+      ...CITY_ONLY,
+      coordinates: { lat: 40.6401, lng: 22.9444 },
+      geocodingMetadata: { confidence: 0.55, accuracy: 'center', variantUsed: 5 },
+    };
+    const incoming: AddressLike = { ...stored, coordinates: { lat: 40.65, lng: 22.95 } };
+
+    const { outcome, position } = await resolveAddressPosition(stored, incoming, geocode, NOW);
+
+    expect(outcome).toBe('human-pinned');
+    expect(position.geocodingMetadata).toBeNull();
+    expect(position.source).toBe('dragged');
+    expect(calls).toHaveLength(0);
+
+    const candidate = addressToPositionCandidate(
+      { coordinates: position.coordinates, geocodingMetadata: position.geocodingMetadata },
+      AT
+    );
+    expect(candidate?.provenance).toBe('manual');
+    expect(listingMapShape(candidate!)).toBe('pin');
+  });
+
   it('Κ2 — ΤΙΠΟΤΑ δεν άλλαξε ⇒ η αποθηκευμένη θέση μένει ΑΥΤΟΥΣΙΑ, με τα μεταδεδομένα της', async () => {
     const { geocode, calls } = spyGeocoder(HIT_CITY);
     const stored: AddressLike = {

@@ -19,7 +19,6 @@ import type { AuthContext } from '@/lib/auth';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { resolveCompanyDisplayName } from '@/services/company/company-name-resolver';
-import { isRoleBypass } from '@/lib/auth/roles';
 
 const logger = createModuleLogger('NavigationAutoFixHandler');
 
@@ -55,29 +54,6 @@ export async function handleAutoFixExecute(
   ctx: AuthContext,
 ): Promise<NextResponse<AutoFixResult>> {
   const startTime = Date.now();
-
-  // 🏢 ENTERPRISE: bypass-role-only check (explicit)
-  if (!isRoleBypass(ctx.globalRole)) {
-    logger.warn('[Navigation/AutoFix] BLOCKED: Non-super_admin attempted navigation auto-fix', {
-      userId: ctx.uid,
-      email: ctx.email,
-      globalRole: ctx.globalRole,
-    });
-
-    const errorResult: AutoFixResult = {
-      success: false,
-      message: 'Forbidden: This operation requires super_admin role',
-      fixes: [],
-      stats: {
-        companiesChecked: 0,
-        companiesWithProjects: 0,
-        companiesMissingFromNavigation: 0,
-        companiesAdded: 0,
-      },
-    };
-
-    return NextResponse.json(errorResult, { status: 403 });
-  }
 
   try {
     const db = getAdminFirestore();

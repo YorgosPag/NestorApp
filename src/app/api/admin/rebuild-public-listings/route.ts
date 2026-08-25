@@ -37,7 +37,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
-import { isRoleBypass } from '@/lib/auth/roles';
+import { BYPASS_ROLES } from '@/lib/auth/roles';
 import {
   republishListing,
   type PublishOutcome,
@@ -123,9 +123,6 @@ async function handle(request: NextRequest, ctx: AuthContext, dryRun: boolean) {
   // super_admin** — δηλαδή η επανασύνθεση ήταν δομικά μη εκτελέσιμη. Το βρήκε η
   // **εκτέλεση**, όχι η ανάγνωση (2026-08-10, ADR-777 Β2β). Και τα **20** άλλα admin
   // routes γράφουν ήδη `ctx.globalRole` — αυτό ήταν το μοναδικό που απέκλινε.
-  if (!isRoleBypass(ctx.globalRole)) {
-    return NextResponse.json({ error: 'super_admin only' }, { status: 403 });
-  }
   try {
     const report = await rebuildAll(dryRun);
     logger.info(dryRun ? 'Στεγνή επανασύνθεση' : 'Επανασύνθεση προβολών', { ...report });
@@ -137,13 +134,17 @@ async function handle(request: NextRequest, ctx: AuthContext, dryRun: boolean) {
 }
 
 export const GET = withSensitiveRateLimit(
-  withAuth(async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) =>
-    handle(request, ctx, true)
+  withAuth(
+    async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) =>
+      handle(request, ctx, true),
+    { requiredGlobalRoles: BYPASS_ROLES },
   )
 );
 
 export const POST = withSensitiveRateLimit(
-  withAuth(async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) =>
-    handle(request, ctx, false)
+  withAuth(
+    async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) =>
+      handle(request, ctx, false),
+    { requiredGlobalRoles: BYPASS_ROLES },
   )
 );

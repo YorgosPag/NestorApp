@@ -21,7 +21,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { handleAutoFixExecute, type AutoFixResult } from './fix-handler';
-import { isRoleBypass } from '@/lib/auth/roles';
+import { BYPASS_ROLES, isRoleBypass } from '@/lib/auth/roles';
 
 /**
  * POST — Execute auto-fix.
@@ -36,7 +36,10 @@ export const POST = withAuth(
   ): Promise<NextResponse<AutoFixResult>> => {
     return handleAutoFixExecute(req, ctx);
   },
-  { permissions: 'admin:data:fix' },
+  // ⚠️ ΜΟΝΟ στο POST: το GET είναι **αναφορά κατάστασης**, και το `hasAccess`
+  //    του οφείλει να απαντά **και** σε όποιον ΔΕΝ έχει πρόσβαση — ταβάνι εκεί
+  //    θα το έκανε μονίμως `true`, δηλαδή άχρηστο (ADR-801 §2.10).
+  { requiredGlobalRoles: BYPASS_ROLES, permissions: 'admin:data:fix' },
 );
 
 /**

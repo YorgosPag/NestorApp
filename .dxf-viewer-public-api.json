@@ -819,7 +819,6 @@
         "getBooleanOptions",
         "getBuildingTabLabels",
         "getCRMDashboardTabLabels",
-        "getCompanyFieldLabels",
         "getContactStatusLabels",
         "getContactTabLabels",
         "getContactTypeLabels",
@@ -849,9 +848,11 @@
     {
       "file": "src/subapps/dxf-viewer/config/modal-select/core/labels/fields.ts",
       "symbols": [
-        "MODAL_SELECT_COMPANY_FIELD_LABELS"
+        "MODAL_SELECT_COMPANY_FIELD_LABELS",
+        "getCompanyFieldLabels",
+        "getServiceFieldLabels"
       ],
-      "reason": "ΣΠΟΡΑ ADR-796 — υπάρχουσα δημόσια επιφάνεια, καταγεγραμμένη ΑΠΟ ΜΕΤΡΗΣΗ στις 2026-08-24. ⚠️ ΔΕΝ σημαίνει «σχεδιασμένο API»: το 76% των συμβόλων έχει ΕΝΑΝ καταναλωτή, άρα μεγάλο μέρος είναι τυχαία διαρροή. Ο λόγος οφείλει να αντικατασταθεί από πραγματικό «γιατί» όταν κάποιος αγγίξει τη γραμμή."
+      "reason": "ΛΕΞΙΛΟΓΙΟ ΕΤΙΚΕΤΩΝ ΤΗΣ ΕΦΑΡΜΟΓΗΣ, ΟΧΙ ΤΟΥ VIEWER (ADR-804 §3). Οι ετικέτες πεδίων και καταστάσεων (εταιρεία · υπηρεσία · τύπος επαφής · κατάσταση έργου) ζουν εδώ για ιστορικούς λόγους — ο CAD viewer ΔΕΝ τις χρησιμοποιεί. Ο έξυπνος διάλογος τις ζητά ΑΠΕΥΘΕΙΑΣ από αυτό το module και ΠΟΤΕ από το `config/modal-select.ts`, όπου υπάρχουν ΔΕΥΤΕΡΑ ΣΩΜΑΤΑ με το ίδιο όνομα (μετρημένα 30 αποκλίνοντα — σχήμα ADR-749): εκείνα δίνουν σκληρά ελληνικά ή ΓΕΝΙΚΕΣ ετικέτες αντί για τις ΕΤΑΙΡΙΚΕΣ, και η οθόνη έβγαζε αγγλικά fallback («Vat number» αντί «ΑΦΜ»). ⚠️ Η γραμμή αυτή είναι ΜΕΤΑΒΑΤΙΚΗ: το σωστό σπίτι του λεξιλογίου είναι εκτός subapp (ADR-804 §4) — μην τη «σταθεροποιήσεις»."
     },
     {
       "file": "src/subapps/dxf-viewer/config/modal-select/core/labels/navigation.ts",
@@ -868,9 +869,11 @@
         "MODAL_SELECT_ENTITY_TYPE_LABELS",
         "MODAL_SELECT_PRIORITY_LABELS",
         "MODAL_SELECT_PROPERTY_SPECIAL_STATUS_LABELS",
-        "MODAL_SELECT_RECORD_STATE_LABELS"
+        "MODAL_SELECT_RECORD_STATE_LABELS",
+        "getContactTypeLabels",
+        "getProjectStatusLabels"
       ],
-      "reason": "ΣΠΟΡΑ ADR-796 — υπάρχουσα δημόσια επιφάνεια, καταγεγραμμένη ΑΠΟ ΜΕΤΡΗΣΗ στις 2026-08-24. ⚠️ ΔΕΝ σημαίνει «σχεδιασμένο API»: το 76% των συμβόλων έχει ΕΝΑΝ καταναλωτή, άρα μεγάλο μέρος είναι τυχαία διαρροή. Ο λόγος οφείλει να αντικατασταθεί από πραγματικό «γιατί» όταν κάποιος αγγίξει τη γραμμή."
+      "reason": "ΛΕΞΙΛΟΓΙΟ ΕΤΙΚΕΤΩΝ ΤΗΣ ΕΦΑΡΜΟΓΗΣ, ΟΧΙ ΤΟΥ VIEWER (ADR-804 §3). Οι ετικέτες πεδίων και καταστάσεων (εταιρεία · υπηρεσία · τύπος επαφής · κατάσταση έργου) ζουν εδώ για ιστορικούς λόγους — ο CAD viewer ΔΕΝ τις χρησιμοποιεί. Ο έξυπνος διάλογος τις ζητά ΑΠΕΥΘΕΙΑΣ από αυτό το module και ΠΟΤΕ από το `config/modal-select.ts`, όπου υπάρχουν ΔΕΥΤΕΡΑ ΣΩΜΑΤΑ με το ίδιο όνομα (μετρημένα 30 αποκλίνοντα — σχήμα ADR-749): εκείνα δίνουν σκληρά ελληνικά ή ΓΕΝΙΚΕΣ ετικέτες αντί για τις ΕΤΑΙΡΙΚΕΣ, και η οθόνη έβγαζε αγγλικά fallback («Vat number» αντί «ΑΦΜ»). ⚠️ Η γραμμή αυτή είναι ΜΕΤΑΒΑΤΙΚΗ: το σωστό σπίτι του λεξιλογίου είναι εκτός subapp (ADR-804 §4) — μην τη «σταθεροποιήσεις»."
     },
     {
       "file": "src/subapps/dxf-viewer/config/modal-select/core/options/company.ts",

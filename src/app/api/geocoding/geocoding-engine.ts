@@ -317,7 +317,7 @@ function createGreeklishVariant(params: GeocodingRequestBody): GeocodingRequestB
  *
  * @returns null when ALL variants returned no results (true hard fail).
  */
-export async function geocode(rawParams: GeocodingRequestBody): Promise<GeocodingApiResponse | null> {
+export async function geocodeWithVerdict(rawParams: GeocodingRequestBody): Promise<GeocodeVerdict> {
   const params = sanitizeQuery(rawParams);
   const cc = countryNameToCode(params.country);
   const attempts: GeocodingAttempt[] = [];
@@ -328,7 +328,7 @@ export async function geocode(rawParams: GeocodingRequestBody): Promise<Geocodin
     const out = await fetchNominatim(buildFreeformUrl(osmQuery, cc), 1);
     attempts.push(out.attempt);
     if (out.results.length > 0) {
-      return finishWith(out.results, params, attempts, 1, cc);
+      return hit(finishWith(out.results, params, attempts, 1, cc));
     }
   } else {
     attempts.push(skippedAttempt(1));
@@ -339,7 +339,7 @@ export async function geocode(rawParams: GeocodingRequestBody): Promise<Geocodin
   const v2 = await fetchNominatim(buildStructuredUrl(params, cc), 2);
   attempts.push(v2.attempt);
   if (v2.results.length > 0) {
-    return finishWith(v2.results, params, attempts, 2, cc);
+    return hit(finishWith(v2.results, params, attempts, 2, cc));
   }
 
   if (params.city?.includes('-') || params.neighborhood?.includes('-')) {
@@ -353,7 +353,7 @@ export async function geocode(rawParams: GeocodingRequestBody): Promise<Geocodin
     const v3 = await fetchNominatim(buildStructuredUrl(dh, cc), 3);
     attempts.push(v3.attempt);
     if (v3.results.length > 0) {
-      return finishWith(v3.results, params, attempts, 3, cc);
+      return hit(finishWith(v3.results, params, attempts, 3, cc));
     }
   } else {
     attempts.push(skippedAttempt(3));
@@ -364,7 +364,7 @@ export async function geocode(rawParams: GeocodingRequestBody): Promise<Geocodin
   const v4 = await fetchNominatim(buildStructuredUrl(createAccentStrippedVariant(params), cc), 4);
   attempts.push(v4.attempt);
   if (v4.results.length > 0) {
-    return finishWith(v4.results, params, attempts, 4, cc);
+    return hit(finishWith(v4.results, params, attempts, 4, cc));
   }
 
   if (!params.country || cc === 'gr') {
@@ -375,7 +375,7 @@ export async function geocode(rawParams: GeocodingRequestBody): Promise<Geocodin
       const v5 = await fetchNominatim(buildStructuredUrl(gv, cc), 5);
       attempts.push(v5.attempt);
       if (v5.results.length > 0) {
-        return finishWith(v5.results, params, attempts, 5, cc);
+        return hit(finishWith(v5.results, params, attempts, 5, cc));
       }
     } else {
       attempts.push(skippedAttempt(5));
@@ -391,7 +391,7 @@ export async function geocode(rawParams: GeocodingRequestBody): Promise<Geocodin
     const v6 = await fetchNominatim(buildFreeformUrl(freeformQuery, cc), 6);
     attempts.push(v6.attempt);
     if (v6.results.length > 0) {
-      return finishWith(v6.results, params, attempts, 6, cc);
+      return hit(finishWith(v6.results, params, attempts, 6, cc));
     }
   } else {
     attempts.push(skippedAttempt(6));
@@ -405,7 +405,7 @@ export async function geocode(rawParams: GeocodingRequestBody): Promise<Geocodin
       const v7 = await fetchNominatim(buildFreeformUrl(globalQuery, null), 7);
       attempts.push(v7.attempt);
       if (v7.results.length > 0) {
-        return finishWith(v7.results, params, attempts, 7, cc);
+        return hit(finishWith(v7.results, params, attempts, 7, cc));
       }
     } else {
       attempts.push(skippedAttempt(7));
@@ -418,7 +418,7 @@ export async function geocode(rawParams: GeocodingRequestBody): Promise<Geocodin
       const v8 = await fetchNominatim(buildFreeformUrl(cityOnly, null), 8);
       attempts.push(v8.attempt);
       if (v8.results.length > 0) {
-        return finishWith(v8.results, params, attempts, 8, cc);
+        return hit(finishWith(v8.results, params, attempts, 8, cc));
       }
     } else {
       attempts.push(skippedAttempt(8));
@@ -429,5 +429,69 @@ export async function geocode(rawParams: GeocodingRequestBody): Promise<Geocodin
   }
 
   logger.warn('All geocoding variants failed', { data: { params, attemptsCount: attempts.length } });
-  return null;
+  return classifyFailure(attempts);
+}
+
+// =============================================================================
+// ΕΤΥΜΗΓΟΡΙΑ — «δεν υπάρχει» ΔΕΝ είναι «δεν μπόρεσα να ρωτήσω»
+// =============================================================================
+
+/**
+ * Τι έμαθε πραγματικά η μηχανή.
+ *
+ * 🔴 **Η διάκριση υπήρχε στα δεδομένα και χανόταν στην έξοδο.** Ο `fetchNominatim`
+ * καταπίνει κάθε σφάλμα δικτύου και επιστρέφει `results: []`, οπότε το ιστορικό
+ * συμβόλαιο `GeocodingApiResponse | null` απαντούσε **`null` και στις δύο**
+ * περιπτώσεις. Το ίδιο το `geocodeAddressDetailed` το ονομάζει στην τεκμηρίωσή του:
+ * *«the boolean-ish `null` contract cannot distinguish "no such address" from "rate
+ * limited"»* — αλλά εκείνο είναι ο **πελάτης HTTP**, και ο διακομιστής δεν περνά από
+ * εκεί.
+ *
+ * ⚠️ **Γιατί έχει σημασία, συγκεκριμένα:** ο γραφέας θέσης
+ * (`lib/geocoding/address-position.ts`) **σβήνει** τη θέση όταν μια αλλαγμένη
+ * διεύθυνση δεν λύνεται — γιατί η παλιά συντεταγμένη θα έδειχνε το **προηγούμενο**
+ * κτίριο. Αν μια διακοπή του Nominatim ερχόταν ως «δεν υπάρχει», μια αποθήκευση κατά
+ * τη διάρκειά της θα **έσβηνε σωστές θέσεις** — σιωπηλά, και για όλους.
+ *
+ * 🔑 **Το κριτήριο βγαίνει από τα ίδια τα `attempts`, δεν προστίθεται μηχανισμός:**
+ * αν **κάθε** προσπάθεια που όντως ρώτησε γύρισε `'error'`, δεν μάθαμε τίποτα. Αν
+ * έστω μία γύρισε καθαρό `'no-results'`, η διεύθυνση όντως δεν βρέθηκε.
+ */
+export type GeocodeVerdict =
+  | { readonly kind: 'hit'; readonly result: GeocodingApiResponse }
+  /** Ρωτήθηκε καθαρά και **δεν υπάρχει**. */
+  | { readonly kind: 'absent' }
+  /** **Δεν μπόρεσε να ρωτηθεί** — δίκτυο, χρονικό όριο, ή ρυθμιστής. */
+  | { readonly kind: 'unavailable' };
+
+/** Επιτυχία, τυλιγμένη μία φορά. */
+function hit(result: GeocodingApiResponse): GeocodeVerdict {
+  return { kind: 'hit', result };
+}
+
+/**
+ * Ταξινομεί την ολική αποτυχία.
+ *
+ * ⚠️ Οι `'skipped'` προσπάθειες **δεν μετράνε**: μια παραλλαγή που δεν εκτελέστηκε
+ * (π.χ. greeklish σε ελληνικό κείμενο) δεν είναι ούτε απάντηση ούτε αποτυχία, και
+ * μετρώντας την θα κάναμε το `unavailable` **δομικά ανέφικτο**.
+ */
+function classifyFailure(attempts: readonly GeocodingAttempt[]): GeocodeVerdict {
+  const asked = attempts.filter((a) => a.status !== 'skipped');
+  if (asked.length === 0) return { kind: 'absent' };
+  return asked.every((a) => a.status === 'error') ? { kind: 'unavailable' } : { kind: 'absent' };
+}
+
+/**
+ * Ιστορικό συμβόλαιο, **αμετάβλητο** — και τα τρία υπάρχοντα σημεία κλήσης το κρατούν.
+ *
+ * ⚠️ **ΜΗΝ το χρησιμοποιήσεις σε νέο κώδικα που ΓΡΑΦΕΙ.** Ισοπεδώνει το «δεν υπάρχει»
+ * με το «δεν ρώτησα», και μια γραφή που βασίζεται σε αυτό μπορεί να σβήσει δεδομένα σε
+ * διακοπή δικτύου. Χρησιμοποίησε το {@link geocodeWithVerdict}.
+ */
+export async function geocode(
+  rawParams: GeocodingRequestBody,
+): Promise<GeocodingApiResponse | null> {
+  const verdict = await geocodeWithVerdict(rawParams);
+  return verdict.kind === 'hit' ? verdict.result : null;
 }

@@ -22,7 +22,7 @@
 
 import 'server-only';
 
-import { NextResponse, type NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 import { withAuth, type AuthenticatedHandler } from '@/lib/auth/middleware';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
@@ -31,7 +31,8 @@ import { EntityAuditService } from '@/services/entity-audit.service';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 import { nowISO } from '@/lib/date-local';
-import { isRoleBypass } from '@/lib/auth/roles';
+import { BYPASS_ROLES } from '@/lib/auth/roles';
+import { readDiagnosticRequest } from './_request-preamble';
 import { canTransition, TRIAGE_STATUSES } from '@/app/(app)/admin/bim-diagnostics/lib/triage-fsm';
 import type {
   PerformanceDiagnostic,
@@ -122,29 +123,13 @@ const handlePatch: AuthenticatedHandler<PatchResponse | ErrorBody, RouteContext>
   _cache,
   routeContext,
 ) => {
-  if (!isRoleBypass(ctx.globalRole)) {
-    return NextResponse.json({ error: 'Forbidden: super-admin only' }, { status: 403 });
+  const preamble = await readDiagnosticRequest(request, routeContext, validateBody);
+  if (!preamble.ok) {
+    return preamble.response;
   }
+  const { diagId } = preamble;
 
-  const params = await routeContext?.params;
-  const diagId = params?.id;
-  if (!diagId) {
-    return NextResponse.json({ error: 'Missing diagnostic id' }, { status: 400 });
-  }
-
-  let raw: unknown;
-  try {
-    raw = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
-  }
-
-  const validation = validateBody(raw);
-  if (!validation.ok) {
-    return NextResponse.json({ error: validation.reason }, { status: 400 });
-  }
-
-  const { status: targetStatus, transitionNote, assignedSuperAdminId: targetAssignee } = validation.body;
+  const { status: targetStatus, transitionNote, assignedSuperAdminId: targetAssignee } = preamble.body;
   const performerUid = ctx.uid;
 
   try {
@@ -285,5 +270,5 @@ const handlePatch: AuthenticatedHandler<PatchResponse | ErrorBody, RouteContext>
 };
 
 export const PATCH = withStandardRateLimit(
-  withAuth(handlePatch as AuthenticatedHandler<PatchResponse | ErrorBody>),
+  withAuth(handlePatch as AuthenticatedHandler<PatchResponse | ErrorBody>, { requiredGlobalRoles: BYPASS_ROLES }),
 );

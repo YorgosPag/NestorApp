@@ -23,7 +23,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { apiSuccess, ApiError, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
-import { isRoleBypass } from '@/lib/auth/roles';
+import { BYPASS_ROLES } from '@/lib/auth/roles';
 import { runDxfThumbnailMigration, type MigrationReport } from './helpers';
 
 const logger = createModuleLogger('MigrateDxfThumbnailsRoute');
@@ -43,10 +43,6 @@ async function handle(
   req: NextRequest,
   ctx: AuthContext
 ): Promise<NextResponse<ApiSuccessResponse<MigrationReport>>> {
-  if (!isRoleBypass(ctx.globalRole)) {
-    throw new ApiError(403, 'Only super_admin can run this migration');
-  }
-
   let body: z.infer<typeof BodySchema>;
   try {
     const raw = await req.text();
@@ -82,7 +78,8 @@ async function handle(
 export async function POST(request: NextRequest) {
   const handler = withSensitiveRateLimit(
     withAuth<ApiSuccessResponse<MigrationReport>>(
-      async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => handle(req, ctx)
+      async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => handle(req, ctx),
+      { requiredGlobalRoles: BYPASS_ROLES },
     )
   );
   return handler(request);

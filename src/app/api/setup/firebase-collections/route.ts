@@ -35,7 +35,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
-import { isRoleBypass } from '@/lib/auth/roles';
+import { BYPASS_ROLES } from '@/lib/auth/roles';
 
 const logger = createModuleLogger('FirebaseCollectionsRoute');
 
@@ -50,7 +50,7 @@ export const POST = withSensitiveRateLimit(withAuth(
   async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
     return handleFirebaseCollectionsSetup(req, ctx);
   },
-  { permissions: 'admin:data:fix' }
+  { requiredGlobalRoles: BYPASS_ROLES, permissions: 'admin:data:fix' }
 ));
 
 /**
@@ -58,19 +58,6 @@ export const POST = withSensitiveRateLimit(withAuth(
  */
 async function handleFirebaseCollectionsSetup(request: NextRequest, ctx: AuthContext): Promise<NextResponse> {
   const startTime = Date.now();
-
-  // 🏢 ENTERPRISE: bypass-role-only check (explicit)
-  if (!isRoleBypass(ctx.globalRole)) {
-    logger.warn('[POST /api/setup/firebase-collections] BLOCKED: Non-super_admin attempted Firebase setup', { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole });
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Forbidden: This CRITICAL system initialization requires super_admin role',
-        code: 'SUPER_ADMIN_REQUIRED',
-      },
-      { status: 403 }
-    );
-  }
 
   try {
     logger.info('Setting up Firebase collections...');

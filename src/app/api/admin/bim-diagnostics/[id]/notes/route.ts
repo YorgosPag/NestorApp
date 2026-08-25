@@ -26,7 +26,8 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
-import { isRoleBypass } from '@/lib/auth/roles';
+import { BYPASS_ROLES } from '@/lib/auth/roles';
+import { readDiagnosticRequest } from '../_request-preamble';
 import type { PerformanceDiagnostic } from '@/types/performance-diagnostic';
 
 const logger = createModuleLogger('ADMIN_BIM_DIAGNOSTICS_NOTES');
@@ -68,29 +69,13 @@ const handlePut: AuthenticatedHandler<PutResponse | ErrorBody, RouteContext> = a
   _cache,
   routeContext,
 ) => {
-  if (!isRoleBypass(ctx.globalRole)) {
-    return NextResponse.json({ error: 'Forbidden: super-admin only' }, { status: 403 });
+  const preamble = await readDiagnosticRequest(request, routeContext, validateBody);
+  if (!preamble.ok) {
+    return preamble.response;
   }
+  const { diagId } = preamble;
 
-  const params = await routeContext?.params;
-  const diagId = params?.id;
-  if (!diagId) {
-    return NextResponse.json({ error: 'Missing diagnostic id' }, { status: 400 });
-  }
-
-  let raw: unknown;
-  try {
-    raw = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
-  }
-
-  const validation = validateBody(raw);
-  if (!validation.ok) {
-    return NextResponse.json({ error: validation.reason }, { status: 400 });
-  }
-
-  const newNote = validation.body.note;
+  const newNote = preamble.body.note;
   const newNoteValue: string | null = newNote.length === 0 ? null : newNote;
 
   try {
@@ -139,5 +124,5 @@ const handlePut: AuthenticatedHandler<PutResponse | ErrorBody, RouteContext> = a
 };
 
 export const PUT = withStandardRateLimit(
-  withAuth(handlePut as AuthenticatedHandler<PutResponse | ErrorBody>),
+  withAuth(handlePut as AuthenticatedHandler<PutResponse | ErrorBody>, { requiredGlobalRoles: BYPASS_ROLES }),
 );

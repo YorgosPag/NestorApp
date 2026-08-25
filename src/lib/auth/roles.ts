@@ -10,7 +10,8 @@
  * @see docs/rfc/authorization-rbac.md
  */
 
-import type { PermissionId } from "./types";
+import type { GlobalRole, PermissionId } from "./types";
+import { GLOBAL_ROLES } from "./types";
 
 // =============================================================================
 // ROLE DEFINITION INTERFACE
@@ -430,6 +431,31 @@ export function isRoleBypass(roleId: string): boolean {
   const role = PREDEFINED_ROLES[roleId];
   return role?.isBypass === true;
 }
+
+/**
+ * Οι **καθολικοί** ρόλοι που παρακάμπτουν κάθε έλεγχο — **ΤΑΒΑΝΙ**, όχι παραχώρηση.
+ *
+ * 🔑 **Γιατί υπάρχει** (ADR-801 §2.10): δηλώνεται στο σύνορο ως
+ * `withAuth(h, { requiredGlobalRoles: BYPASS_ROLES })`, ώστε η απόφαση *«μόνο
+ * υπερδιαχειριστής»* να είναι **δεδομένο στη δήλωση** αντί για `if` μέσα στον
+ * handler — το *«Hardcoded Rules» antipattern* που ονομάζει το OWASP.
+ *
+ * ⚠️ **ΠΑΡΑΓΟΜΕΝΗ, ΠΟΤΕ ΓΡΑΜΜΕΝΗ ΜΕ ΤΟ ΧΕΡΙ.** Το ADR-703 το λέει ρητά: ένα ωμό
+ * `['super_admin']` *«silently refuses any **second** bypass role its own
+ * privileges — the code reads correct, the behaviour is wrong, and nothing
+ * fails»*. Εδώ ο κατάλογος βγαίνει από το **ίδιο** `PREDEFINED_ROLES` που
+ * ρωτά ο `isRoleBypass`, οπότε ένας δεύτερος bypass ρόλος τιμάται **παντού
+ * ταυτόχρονα**.
+ *
+ * ⚠️ **Είναι ΤΑΒΑΝΙ**: κατά το πρότυπο SCP/permissions-boundary του AWS,
+ * *«ceilings only subtract»* — τα effective permissions είναι η **τομή** των
+ * στρωμάτων. Δεν παραχωρεί τίποτα σε κανέναν, και **δεν μπορεί να αγοραστεί**
+ * από το claim `permissions` (ADR-801 §2.8), γιατί το `withAuth` κρίνει τον
+ * ρόλο **πριν** τις ικανότητες.
+ */
+export const BYPASS_ROLES: readonly GlobalRole[] = Object.freeze(
+  (GLOBAL_ROLES as readonly GlobalRole[]).filter((role) => isRoleBypass(role)),
+);
 
 /**
  * Get all project roles.

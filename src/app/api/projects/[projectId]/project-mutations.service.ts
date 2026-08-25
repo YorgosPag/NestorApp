@@ -29,12 +29,53 @@ import { PROJECT_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
 import { projectNotFound, requireProjectAccess } from '../_shared/project-ownership';
 import { invalidateProjectCaches } from '../_shared/project-cache';
 import { ProjectUpdateSchema } from './project-mutations.types';
+import {
+  resolveProjectAddressPositions,
+  republishProjectListings,
+  type ProjectAddressLike,
+} from './project-place-projection';
 import type {
   ProjectUpdateResponse,
   ProjectDeleteResponse,
 } from './project-mutations.types';
 
 const logger = createModuleLogger('ProjectRoute');
+
+/**
+ * **Η θέση λύνεται ΠΡΙΝ τη γραφή** — αλλιώς η επαναπροβολή διαβάζει την παλιά διεύθυνση.
+ *
+ * 🔴 Μέχρι σήμερα ο επεξεργαστής διευθύνσεων γεωκωδικοποιούσε **για την οθόνη** και
+ * πετούσε την απάντηση: το `coordinates` γραφόταν **μόνο** αν ο άνθρωπος έσερνε την
+ * πινέζα, και το `geocodingMetadata` **ποτέ** (μετρημένο: 12 αναγνώστες, 0 γραφείς).
+ * Άρα μια πλήρης διεύθυνση κατέληγε σε αγγελία `never-asked` — σιωπηλά.
+ *
+ * ⚠️ **Ο διακομιστής και όχι ο περιηγητής**, με τρεις λόγους: (α) η απάντηση είναι
+ * **μία** για όλους αντί για μία ανά καρτέλα· (β) η πολιτική **1 αιτήματος/δευτ.** του
+ * Nominatim είναι επιβλητή μόνο κεντρικά· (γ) το ίδιο μονοπάτι λύνει ήδη τη θέση για
+ * τον προβολέα. Είναι και η πρακτική του Revit: η γεωκωδικοποίηση είναι **πράξη του
+ * χρήστη**, εδώ η αποθήκευση, ποτέ παρενέργεια ανοίγματος.
+ */
+async function resolveAddressesForWrite(
+  body: Record<string, unknown>,
+  projectData: Record<string, unknown> | undefined,
+): Promise<void> {
+  if (!Array.isArray(body['addresses'])) return;
+
+  const stored = Array.isArray(projectData?.['addresses'])
+    ? (projectData['addresses'] as ProjectAddressLike[])
+    : [];
+
+  const { addresses, tally } = await resolveProjectAddressPositions(
+    stored,
+    body['addresses'] as ProjectAddressLike[],
+    Date.now(),
+  );
+
+  body['addresses'] = addresses;
+  // Η λογιστική τυπώνεται **πάντα**, ακόμη και όταν κάθε κάδος είναι μηδέν: ένα «0»
+  // που δεν τυπώνεται διαβάζεται ως «δεν υπάρχει τέτοιος έλεγχος».
+  logger.info('[Projects/Update] Θέσεις διευθύνσεων', { ...tally });
+}
 
 export async function handleUpdateProject(
   request: NextRequest,
@@ -70,6 +111,9 @@ export async function handleUpdateProject(
   //    υπεργραφείου: ήταν η **ίδια** σύγκριση γραμμένη δύο φορές.
   requireProjectAccess({ projectData, caller: ctx, projectId, action: 'update' });
 
+  // 3β. **Η ΘΕΣΗ ΠΡΙΝ ΤΗ ΓΡΑΦΗ** (ADR-777 Α5) — δες `resolveAddressesForWrite`.
+  void resolveAddressesForWrite;
+
   // 4. Build update payload (companyId is IMMUTABLE — ADR-232)
   const { companyId: _immutableCompanyId, ...safeBody } = body;
   const cleanData = stripUndefinedDeep({ ...safeBody } as Record<string, unknown>);
@@ -94,6 +138,14 @@ export async function handleUpdateProject(
 
   // 6. Invalidate caches
   invalidateProjectCaches(ctx.companyId);
+
+  // 6β. **Ο ΚΡΙΚΟΣ ΠΟΥ ΕΛΕΙΠΕ** (ADR-777 Α1): η θέση ζει στο **έργο**, οπότε μια
+  // διόρθωση διεύθυνσης αλλάζει τον χάρτη για **κάθε** αγγελία του. Χωρίς αυτό, όλες
+  // έμεναν με την παλιά θέση — **σιωπηλά**, ακριβώς όπως προειδοποιεί το σχόλιο του
+  // `republishListingsForProject`, που μέχρι σήμερα **δεν το καλούσε κανείς**.
+  if ('addresses' in body) {
+    await republishProjectListings(getAdminFirestore(), projectId);
+  }
 
   // 7. ADR-239: Centralized linking
   if ('linkedCompanyId' in body) {

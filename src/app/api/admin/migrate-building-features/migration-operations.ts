@@ -60,18 +60,6 @@ interface ExecuteResponsePayload {
   warning?: string;
 }
 
-export interface ForbiddenPayload {
-  success: false;
-  error: string;
-  code: string;
-}
-
-export const createForbiddenPayload = (error: string, code: string): ForbiddenPayload => ({
-  success: false,
-  error,
-  code,
-});
-
 const migrateFeature = (feature: string): { key: BuildingFeatureKey | null; status: 'migrated' | 'already_key' | 'unmapped' } => {
   if (isBuildingFeatureKey(feature)) {
     return { key: feature, status: 'already_key' };

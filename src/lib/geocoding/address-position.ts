@@ -419,7 +419,7 @@ export function applyAddressPosition<T extends object>(
   delete rest['source'];
   delete rest['verifiedAt'];
 
-  if (position.coordinates === null) return { ...rest, coordinates: undefined } as T;
+  if (position.coordinates === null) return rest as T;
 
   return {
     ...rest,

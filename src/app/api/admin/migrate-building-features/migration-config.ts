@@ -27,8 +27,6 @@ export interface MigrationResultEntry {
 
 export const MIGRATION_OPERATION_NAME = 'migrate-building-features';
 export const MIGRATION_AUDIT_KEY = 'migrate_building_features_greek_to_keys';
-export const SUPER_ADMIN_REQUIRED_ERROR = 'Forbidden: This operation requires super_admin role';
-export const SUPER_ADMIN_REQUIRED_CODE = 'SUPER_ADMIN_REQUIRED';
 export const FALLBACK_BUILDING_NAME = 'UNNAMED';
 export const MIGRATION_TIMESTAMP_FIELD = '_featuresMigratedAt';
 

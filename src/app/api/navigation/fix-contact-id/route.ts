@@ -39,7 +39,7 @@ import { withAuth, logDataFix, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
-import { isRoleBypass } from '@/lib/auth/roles';
+import { BYPASS_ROLES, isRoleBypass } from '@/lib/auth/roles';
 
 const logger = createModuleLogger('NavigationFixContactIdRoute');
 
@@ -70,7 +70,7 @@ export const POST = withAuth(
   async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<ContactIdFixResult>> => {
     return handleFixContactIdExecute(req, ctx);
   },
-  { permissions: 'admin:data:fix' }
+  { requiredGlobalRoles: BYPASS_ROLES, permissions: 'admin:data:fix' }
 );
 
 /**
@@ -78,24 +78,6 @@ export const POST = withAuth(
  */
 async function handleFixContactIdExecute(request: NextRequest, ctx: AuthContext): Promise<NextResponse<ContactIdFixResult>> {
   const startTime = Date.now();
-
-  // 🏢 ENTERPRISE: bypass-role-only check (explicit)
-  if (!isRoleBypass(ctx.globalRole)) {
-    logger.warn('[Navigation/FixContactId] BLOCKED: Non-super_admin attempted contactId fix', { userId: ctx.uid, email: ctx.email, globalRole: ctx.globalRole });
-
-    const errorResult: ContactIdFixResult = {
-      success: false,
-      message: 'Forbidden: This CRITICAL operation requires super_admin role',
-      fixes: [],
-      stats: {
-        documentsChecked: 0,
-        documentsFixed: 0,
-        errors: 1
-      }
-    };
-
-    return NextResponse.json(errorResult, { status: 403 });
-  }
 
   try {
     const db = getAdminFirestore();

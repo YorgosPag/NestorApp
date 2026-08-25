@@ -23,7 +23,11 @@ import { linkEntity } from '@/lib/firestore/entity-linking.service';
 import { getErrorMessage } from '@/lib/error-utils';
 import { withVersionCheck, ConflictError } from '@/lib/firestore/version-check';
 import { POLICY_ERROR_CODES } from '@/lib/policy';
-import { geocode } from '@/app/api/geocoding/geocoding-engine';
+import {
+  resolveProjectAddressPositions,
+  republishProjectListings,
+  type ProjectAddressLike,
+} from '@/app/api/projects/[projectId]/project-place-projection';
 import { verifyPlaceRef } from '@/services/places/public-place-read.service';
 import type { PlaceRef } from '@/types/geo/public-place';
 // 🔴 **Το σχήμα καλωδίου γράφεται ΜΙΑ φορά** — ήταν αντιγραμμένο εδώ και στον πελάτη,
@@ -38,46 +42,41 @@ const logger = createModuleLogger('BuildingUpdate');
 // ============================================================================
 
 /**
- * Extracts lat/lng from the primary address in the addresses array.
- * If the address already has coordinates (from the map picker), returns them directly.
- * Otherwise calls Nominatim forward geocoding (only for manually typed addresses).
- * Returns null if geocoding fails or no meaningful address fields are present.
+ * Λύνει τη θέση **κάθε** διεύθυνσης του κτιρίου και επιστρέφει το σημείο της κύριας.
+ *
+ * 🔴 **Αντικατέστησε το `geocodePrimaryAddress`, που ήταν το ΠΕΜΠΤΟ σημείο όπου
+ * χανόταν η ακρίβεια.** Εκείνο καλούσε τη μηχανή και κρατούσε **μόνο** `{lat, lng}`,
+ * πετώντας `accuracy` και `confidence` — δηλαδή έγραφε συντεταγμένη που **κανείς δεν
+ * μπορούσε πια να κρίνει πόσο καλή είναι**. Πλέον η απάντηση αποθηκεύεται **ολόκληρη**
+ * πάνω στη διεύθυνση, από τον έναν γραφέα (`lib/geocoding/address-position.ts`).
+ *
+ * ⚠️ Είχε επίσης `if (existing?.lat && existing?.lng)` — **αληθοφάνεια**, όχι ύπαρξη:
+ * μια διεύθυνση στον ισημερινό ή στον μεσημβρινό του Γκρίνουιτς (`0`) θα ξαναρωτούσε
+ * τη μηχανή σε **κάθε** αποθήκευση. Ο γραφέας κρίνει με `typeof`.
+ *
+ * 🔶 **Δηλωμένο όριο, αμετάβλητη συμπεριφορά:** τα `latitude`/`longitude` του κτιρίου
+ * (ειδοποιήσεις καιρού) γράφονται **μόνο** όταν υπάρχει σημείο — όπως και πριν. Μια
+ * διεύθυνση που έπαψε να λύνεται αφήνει το παλιό ζεύγος ζωντανό· είναι **άλλο ερώτημα**
+ * από τον χάρτη αγγελιών και δεν το αλλάζω μαζί με αυτό.
  */
-async function geocodePrimaryAddress(
-  addresses: Record<string, unknown>[],
-): Promise<{ lat: number; lng: number } | null> {
-  const primary = addresses.find(a => a['isPrimary'] === true) ?? addresses[0];
-  if (!primary) return null;
+async function resolveBuildingAddresses(
+  storedAddresses: readonly ProjectAddressLike[],
+  incomingAddresses: readonly ProjectAddressLike[],
+): Promise<{ addresses: readonly ProjectAddressLike[]; primaryPoint: { lat: number; lng: number } | null }> {
+  const { addresses, tally } = await resolveProjectAddressPositions(
+    storedAddresses,
+    incomingAddresses,
+    Date.now(),
+  );
+  logger.info('[Buildings] Θέσεις διευθύνσεων', { ...tally });
 
-  const existing = primary['coordinates'] as { lat?: number; lng?: number } | undefined;
-  if (existing?.lat && existing?.lng) {
-    return { lat: existing.lat, lng: existing.lng };
-  }
+  const primary = addresses.find((a) => (a as { isPrimary?: boolean }).isPrimary === true) ?? addresses[0];
+  const lat = primary?.coordinates?.lat;
+  const lng = primary?.coordinates?.lng;
+  const primaryPoint =
+    typeof lat === 'number' && typeof lng === 'number' ? { lat, lng } : null;
 
-  const street = typeof primary['street'] === 'string' ? primary['street'] : undefined;
-  const number = typeof primary['number'] === 'string' ? primary['number'] : undefined;
-  const city = typeof primary['city'] === 'string' ? primary['city'] : undefined;
-  const postalCode = typeof primary['postalCode'] === 'string' ? primary['postalCode'] : undefined;
-  const region = typeof primary['region'] === 'string' ? primary['region'] : undefined;
-  const municipality = typeof primary['municipality'] === 'string' ? primary['municipality'] : undefined;
-
-  if (!street && !city) return null;
-
-  try {
-    const result = await geocode({
-      street: street && number ? `${street} ${number}` : street,
-      city,
-      postalCode,
-      region,
-      municipality,
-      country: 'Greece',
-    });
-    if (!result) return null;
-    return { lat: result.lat, lng: result.lng };
-  } catch (err) {
-    logger.warn('[Buildings] Geocoding failed — lat/lon not updated', { error: getErrorMessage(err) });
-    return null;
-  }
+  return { addresses, primaryPoint };
 }
 
 // ============================================================================
@@ -185,17 +184,24 @@ export const PATCH = withStandardRateLimit(
         await assertPlaceRefResolvable(adminDb, cleanUpdates.placeRef as PlaceRef);
       }
 
-      // Auto-geocode lat/lon when addresses are saved (for weather alerts)
+      // **Η ΘΕΣΗ ΠΡΙΝ ΤΗ ΓΡΑΦΗ** (ADR-777 Α5) — σημείο **και** ακρίβεια, μαζί ή καθόλου.
       if (Array.isArray(cleanUpdates.addresses)) {
         if ((cleanUpdates.addresses as unknown[]).length === 0) {
           cleanUpdates.latitude = null;
           cleanUpdates.longitude = null;
         } else {
-          const coords = await geocodePrimaryAddress(cleanUpdates.addresses as Record<string, unknown>[]);
-          if (coords) {
-            cleanUpdates.latitude = coords.lat;
-            cleanUpdates.longitude = coords.lng;
-            logger.info('[Buildings] Auto-geocoded lat/lon from primary address', { buildingId, lat: coords.lat, lng: coords.lng });
+          const stored = Array.isArray(buildingData?.addresses)
+            ? (buildingData.addresses as ProjectAddressLike[])
+            : [];
+          const { addresses, primaryPoint } = await resolveBuildingAddresses(
+            stored,
+            cleanUpdates.addresses as ProjectAddressLike[],
+          );
+          cleanUpdates.addresses = addresses;
+          if (primaryPoint) {
+            cleanUpdates.latitude = primaryPoint.lat;
+            cleanUpdates.longitude = primaryPoint.lng;
+            logger.info('[Buildings] Auto-geocoded lat/lon from primary address', { buildingId, ...primaryPoint });
           }
         }
       }
@@ -214,6 +220,25 @@ export const PATCH = withStandardRateLimit(
       logger.info('[Buildings] Building updated', { buildingId, email: ctx.email, _v: versionResult.newVersion });
 
       // ADR-029 Phase D: search_documents written by Cloud Function onBuildingWrite.
+
+      // **Ο ΔΕΣΜΟΣ ΠΡΟΣ ΤΟ ΕΠΙΠΕΔΟ Α ΖΕΙ ΣΤΟ ΚΤΙΡΙΟ** (ADR-777 §14.5), και ο προβολέας
+      // τον διαβάζει από εδώ (`collectPlaceKnowledge` → `building.placeRef`). Μια αλλαγή
+      // δεσμού — ή μετακίνηση του κτιρίου σε άλλο έργο — αλλάζει **ποιο πράγμα είναι**
+      // κάθε αγγελία του. Χωρίς αυτόν τον κρίκο η αλλαγή δεν έφτανε ποτέ στο κοινό.
+      //
+      // ⚠️ Ξαναπροβάλλεται **ολόκληρο** το έργο, όχι μόνο τα ακίνητα του κτιρίου: το
+      // `republishListingsForProject` είναι το SSoT και είναι **idempotent**, οπότε ένα
+      // υπερσύνολο είναι σωστό. Δεύτερη συνάρτηση «ανά κτίριο» θα ήταν δεύτερη μηχανή
+      // για την ίδια ερώτηση (ADR-749).
+      if ('placeRef' in cleanUpdates || 'projectId' in cleanUpdates) {
+        const affectedProjectId =
+          (cleanUpdates.projectId as string | undefined) ??
+          (buildingData?.projectId as string | undefined) ??
+          null;
+        if (affectedProjectId) {
+          await republishProjectListings(adminDb, affectedProjectId);
+        }
+      }
 
       if ('projectId' in cleanUpdates) {
         linkEntity('building:projectId', {

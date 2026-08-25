@@ -15,13 +15,23 @@
  */
 
 import { i18n } from '@/i18n';
+// 🔑 ΜΙΑ ΑΛΗΘΕΙΑ ΓΙΑ ΤΙΣ ΕΤΙΚΕΤΕΣ (ADR-804 §3): οι getters έρχονται ΑΠΕΥΘΕΙΑΣ από τα
+// modules που τις ορίζουν, ΠΟΤΕ από το `modal-select.ts`.
+// ⚠️ Το `modal-select.ts` όριζε **δικό του** `getCompanyFieldLabels` που επέστρεφε τις
+// ΓΕΝΙΚΕΣ ετικέτες (22 πεδία: unit_code, floor, area…) αντί για τις ΕΤΑΙΡΙΚΕΣ (56 πεδία).
+// Μετρημένο ζωντανά: `vat_number` → «Vat number», `legal_form` → «Legal form» — αγγλικά
+// fallback σε ελληνική οθόνη, επειδή τα πεδία **δεν υπήρχαν** στον γενικό κατάλογο.
+// ⚠️ ΜΗΝ τα ξαναγυρίσεις στο `modal-select.ts`: εκεί ζουν **δεύτερα σώματα** με το ίδιο
+// όνομα (μετρημένα 30 αποκλίνοντα) — το σχήμα ADR-749.
 import {
   MODAL_SELECT_PLACEHOLDERS,
   getCompanyFieldLabels,
   getServiceFieldLabels,
+} from '../../subapps/dxf-viewer/config/modal-select/core/labels/fields';
+import {
   getContactTypeLabels,
   getProjectStatusLabels,
-} from '../../subapps/dxf-viewer/config/modal-select';
+} from '../../subapps/dxf-viewer/config/modal-select/core/labels/status';
 import { DROPDOWN_PLACEHOLDERS } from '../../constants/property-statuses-enterprise';
 import type {
   DialogCopyVariant,
@@ -243,53 +253,51 @@ type DialogCopyOverrides = {
   body?: string;
 };
 
+/**
+ * 🏛️ **ΕΝΑΣ ΔΙΑΛΟΓΟΣ ΑΠΟΡΡΙΨΗΣ ΕΠΑΦΗΣ** (N.0.2 · CHECK 3.28).
+ *
+ * Οι δύο παραλλαγές — «στα σκουπίδια» και «οριστική διαγραφή» — έθεταν **το ίδιο
+ * ερώτημα με δύο σώματα**: ταυτόσημη δομή κεφαλίδας/ενεργειών, ταυτόσημο δευτερεύον
+ * κουμπί, και **μόνη** διαφορά δύο κλειδιά i18n.
+ *
+ * ⚠️ **ΤΟ `destructive` ΕΙΝΑΙ ΜΕΡΟΣ ΤΟΥ ΚΑΝΟΝΑ, ΟΧΙ ΤΗΣ ΠΑΡΑΛΛΑΓΗΣ**: και οι δύο
+ * πράξεις χάνουν δεδομένα από τη σκοπιά του ανθρώπου που τις βλέπει. Ένας τρίτος
+ * καλών που ξεχνούσε αυτή τη γραμμή θα ζωγράφιζε **ουδέτερο** κουμπί πάνω σε
+ * καταστροφική πράξη — ακριβώς η βλάβη που ένα κοινό σώμα κάνει αδύνατη.
+ */
+function contactDeleteDialogCopy(dialogKey: string, primaryLabelKey: string): DialogCopyOverrides {
+  return {
+    header: {
+      title: i18n.t(`trash.${dialogKey}.title`, { ns: 'contacts' }),
+      description: i18n.t(`trash.${dialogKey}.description`, { ns: 'contacts' }),
+    },
+    actions: {
+      primary: {
+        key: 'submit',
+        label: i18n.t(primaryLabelKey, { ns: 'contacts' }),
+        variant: 'destructive',
+      },
+      secondary: {
+        key: 'cancel',
+        label: i18n.t('dialog.cancel', { ns: 'contacts' }),
+        variant: 'outline',
+      },
+    },
+    body: i18n.t(`trash.${dialogKey}.body`, { ns: 'contacts' }),
+  };
+}
+
 export function getDialogCopyOverrides(
   entityType: DialogEntityType,
   operationType: DialogOperationType,
   copyVariant: DialogCopyVariant = 'default'
 ): DialogCopyOverrides {
   if (copyVariant === 'contactSoftDelete' && entityType === 'contact' && operationType === 'delete') {
-    return {
-      header: {
-        title: i18n.t('trash.softDeleteDialog.title', { ns: 'contacts' }),
-        description: i18n.t('trash.softDeleteDialog.description', { ns: 'contacts' }),
-      },
-      actions: {
-        primary: {
-          key: 'submit',
-          label: i18n.t('trash.moveToTrash', { ns: 'contacts' }),
-          variant: 'destructive',
-        },
-        secondary: {
-          key: 'cancel',
-          label: i18n.t('dialog.cancel', { ns: 'contacts' }),
-          variant: 'outline',
-        },
-      },
-      body: i18n.t('trash.softDeleteDialog.body', { ns: 'contacts' }),
-    };
+    return contactDeleteDialogCopy('softDeleteDialog', 'trash.moveToTrash');
   }
 
   if (copyVariant === 'contactPermanentDelete' && entityType === 'contact' && operationType === 'delete') {
-    return {
-      header: {
-        title: i18n.t('trash.permanentDeleteDialog.title', { ns: 'contacts' }),
-        description: i18n.t('trash.permanentDeleteDialog.description', { ns: 'contacts' }),
-      },
-      actions: {
-        primary: {
-          key: 'submit',
-          label: i18n.t('trash.permanentDelete', { ns: 'contacts' }),
-          variant: 'destructive',
-        },
-        secondary: {
-          key: 'cancel',
-          label: i18n.t('dialog.cancel', { ns: 'contacts' }),
-          variant: 'outline',
-        },
-      },
-      body: i18n.t('trash.permanentDeleteDialog.body', { ns: 'contacts' }),
-    };
+    return contactDeleteDialogCopy('permanentDeleteDialog', 'trash.permanentDelete');
   }
 
   return {};
