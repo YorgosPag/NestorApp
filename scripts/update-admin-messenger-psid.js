@@ -13,30 +13,11 @@
  */
 
 const admin = require('firebase-admin');
-const fs = require('fs');
-const path = require('path');
+const { initAdminApp } = require('./_shared/firebaseAdminOps');
 
 // =============================================================================
 // LOAD SERVICE ACCOUNT (same pattern as set-super-admin.js)
 // =============================================================================
-
-function loadServiceAccount() {
-  try {
-    const envPath = path.join(__dirname, '..', '.env.local');
-    const envContent = fs.readFileSync(envPath, 'utf8');
-
-    const match = envContent.match(/FIREBASE_SERVICE_ACCOUNT_KEY=(.+)/);
-    if (!match) {
-      throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY not found in .env.local');
-    }
-
-    return JSON.parse(match[1].trim());
-  } catch (error) {
-    console.error('Failed to load service account:', error.message);
-    process.exit(1);
-  }
-}
-
 // =============================================================================
 // MAIN
 // =============================================================================
@@ -44,16 +25,7 @@ function loadServiceAccount() {
 async function main() {
   console.log('=== Update Super Admin Registry: Messenger + WhatsApp ===\n');
 
-  const serviceAccount = loadServiceAccount();
-
-  if (!admin.apps.length) {
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-      projectId: serviceAccount.project_id,
-    });
-  }
-
-  const db = admin.firestore();
+  const { db } = initAdminApp(admin);
 
   // ── Step 1: Find Messenger conversations to get PSID ──
   console.log('Step 1: Searching for Messenger conversations...\n');

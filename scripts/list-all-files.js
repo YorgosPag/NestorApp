@@ -3,28 +3,11 @@
  */
 
 const admin = require('firebase-admin');
-const fs = require('fs');
-const path = require('path');
-
-function loadServiceAccount() {
-  const envPath = path.join(__dirname, '..', '.env.local');
-  const envContent = fs.readFileSync(envPath, 'utf8');
-  const match = envContent.match(/FIREBASE_SERVICE_ACCOUNT_KEY=(.+)/);
-  if (!match) throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY not found');
-  return JSON.parse(match[1].trim());
-}
-
-async function main() {
+const { initAdminApp } = require('./_shared/firebaseAdminOps');
+async function main() {
   console.log('🔍 Listing ALL FileRecords (including deleted)...\n');
 
-  const serviceAccount = loadServiceAccount();
-  if (!admin.apps.length) {
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-    });
-  }
-
-  const db = admin.firestore();
+  const { db } = initAdminApp(admin);
 
   try {
     const filesRef = db.collection('files');
