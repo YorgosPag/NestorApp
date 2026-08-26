@@ -74,7 +74,18 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
     workspacePath(workspace, '/'),
     identity.ctx.uid,
     {
-      companyId: identity.ctx.companyId,
+      // 🔴 ADR-807 — Ο ΠΡΟΣΩΠΙΚΟΣ ΧΩΡΟΣ ΔΗΛΩΝΕΙ **ΚΕΝΟ** companyId, ΕΠΙΤΗΔΕΣ.
+      //
+      // Δεν είναι «τιμή γεμίσματος»: το `''` είναι το **καθιερωμένο** ιδίωμα του
+      // repo για «κανένας οργανισμός» — το `extractCustomClaims` το απορρίπτει
+      // fail-closed, το `hasOrganization` το κρίνει ως απουσία, και το ίδιο το
+      // `resolveWorkspaceFromPath` **επιστρέφει** `companyId: ''` για τον
+      // προσωπικό χώρο. Τρίτη ερμηνεία εδώ θα ήταν δεύτερη αλήθεια (ADR-749).
+      //
+      // ⚠️ Και είναι **fail-closed**: αν ο άνθρωπος του προσωπικού χώρου ζητήσει
+      //    ΞΕΝΟ γραφείο, το `decideMembership` κρίνει με `claimCompanyId: ''` και
+      //    **αρνείται** — δεν παρακάμπτεται τίποτα.
+      companyId: identity.scope === 'organization' ? identity.ctx.companyId : '',
       globalRole: identity.ctx.globalRole,
       mfaEnrolled: identity.ctx.mfaEnrolled,
     },

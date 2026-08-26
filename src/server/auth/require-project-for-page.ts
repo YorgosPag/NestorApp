@@ -29,9 +29,20 @@ export interface RequireProjectForPageResult {
 const REJECTION_MESSAGE: Readonly<Record<PageIdentityRejection, string>> = {
   'no-session': 'Not authenticated',
   'invalid-session': 'Invalid or expired session',
-  'missing-companyId': 'Missing companyId claim',
   'invalid-role': 'Missing or invalid globalRole claim',
 };
+
+/**
+ * Το μήνυμα για τον άνθρωπο **χωρίς οργανισμό** — **αυτούσιο** από πριν το ADR-807.
+ *
+ * 🔑 **ΑΛΛΑΞΕ Η ΑΙΤΙΑ, ΟΧΙ Η ΣΥΜΠΕΡΙΦΟΡΑ.** Πριν, το `'missing-companyId'` ήταν
+ * λόγος **αποτυχίας ταυτότητας** και έφτανε εδώ μαζί με τα «δεν είσαι
+ * συνδεδεμένος». Πλέον είναι **έγκυρη ταυτότητα σε προσωπικό χώρο**, και η άρνηση
+ * εδώ είναι **απόφαση τομέα**: ένα έργο ανήκει πάντα σε εταιρεία, ο προσωπικός
+ * χώρος δεν έχει καμία, άρα δεν υπάρχει έργο να δειχθεί. Ίδιο 403, ίδιο κείμενο —
+ * αλλά τώρα γραμμένο ως **κρίση**, όχι ως παρενέργεια σφάλματος αυθεντικοποίησης.
+ */
+const PERSONAL_SCOPE_MESSAGE = 'Missing companyId claim';
 
 export async function requireProjectForPage(
   projectId: string,
@@ -45,6 +56,11 @@ export async function requireProjectForPage(
 
   if (!identity.ok) {
     throw new TenantIsolationError(REJECTION_MESSAGE[identity.reason], 403, 'FORBIDDEN');
+  }
+
+  // ADR-807 — δες το σχόλιο του `PERSONAL_SCOPE_MESSAGE`.
+  if (identity.scope === 'personal') {
+    throw new TenantIsolationError(PERSONAL_SCOPE_MESSAGE, 403, 'FORBIDDEN');
   }
 
   const { ctx } = identity;

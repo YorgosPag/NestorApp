@@ -42,7 +42,6 @@
 import { notFound, redirect } from 'next/navigation';
 
 import { readPageIdentity } from '@/server/auth/page-identity';
-import { hasOrganization } from '@/lib/routes/landing';
 import { AUTH_ROUTES } from '@/lib/routes';
 import { workspacePath } from '@/lib/workspace/workspace-path';
 import { isInsideWorkspace } from '@/lib/workspace/workspace-scope';
@@ -79,9 +78,21 @@ export default async function UnprefixedCatchAll({ params, searchParams }: Unpre
   const identity = await readPageIdentity();
   if (!identity.ok) redirect(AUTH_ROUTES.login);
 
-  const alias = hasOrganization(identity.ctx)
-    ? identity.ctx.companyId
-    : PERSONAL_WORKSPACE_ALIAS;
+  // 🔴 ADR-807 — ΑΥΤΟΣ Ο ΚΛΑΔΟΣ ΗΤΑΝ ΝΕΚΡΟΣ ΚΩΔΙΚΑΣ ΜΕΧΡΙ ΣΗΜΕΡΑ.
+  //
+  // Γραμμένος ειδικά για τον άνθρωπο χωρίς γραφείο, και **δομικά ανέφικτος**: το
+  // `readPageIdentity` απέρριπτε την απουσία `companyId` ως αποτυχία ταυτότητας,
+  // άρα το `ok:true` συνεπαγόταν `companyId.length > 0` και το `hasOrganization()`
+  // ήταν **πάντα** αληθές. Ο φρουρός από πάνω (`if (!identity.ok) redirect(login)`)
+  // έστελνε τον αυτόνομο επαγγελματία στη σύνδεση **ενώ ήταν συνδεδεμένος** —
+  // ατέρμονος βρόχος `/dashboard → /login`, μετρημένος ζωντανά 2026-08-25.
+  //
+  // ⚠️ Ο έλεγχος είναι πλέον στο **`scope`** και όχι στο `hasOrganization(ctx)`:
+  //    το `ctx` του προσωπικού χώρου **δεν έχει καν** πεδίο `companyId`, οπότε η
+  //    ερώτηση «έχει οργανισμό;» πάνω του δεν είναι απλώς περιττή — είναι λάθος
+  //    ερώτηση. Ο μεταγλωττιστής το επιβάλλει (`PersonalIdentityContext`).
+  const alias =
+    identity.scope === 'organization' ? identity.ctx.companyId : PERSONAL_WORKSPACE_ALIAS;
 
   redirect(`${workspacePath(alias, path)}${rebuildQuery(await searchParams)}`);
 }

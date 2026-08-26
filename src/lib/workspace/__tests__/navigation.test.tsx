@@ -240,6 +240,21 @@ describe('Λ — το σύνορο δεν αγγίζει ταυτότητα', ()
     const { readRepoCode } = require('@/test-utils/read-source') as typeof import('@/test-utils/read-source');
     const net = readRepoCode('src/app/(app)/[...unprefixed]/page.tsx');
     expect(net).toContain('readPageIdentity');
-    expect(net).toContain('hasOrganization');
+    // 🔴 ADR-807 — Η ΔΙΑΚΡΙΣΗ ΑΛΛΑΞΕ ΜΗΧΑΝΙΣΜΟ, ΚΑΙ Η ΑΓΚΥΡΑ ΕΓΙΝΕ ΑΥΣΤΗΡΟΤΕΡΗ.
+    //
+    // Ήταν `expect(net).toContain('hasOrganization')` — **μία** λέξη, που ονόμαζε
+    // μόνο τη ΜΙΑ πλευρά της διακλάδωσης. Το `hasOrganization(identity.ctx)` έπαψε
+    // να είναι εκφράσιμο: το `ctx` του προσωπικού χώρου **δεν έχει πια πεδίο**
+    // `companyId` (`PersonalIdentityContext`), άρα η ερώτηση «έχει οργανισμό;»
+    // πάνω του δεν είναι περιττή — είναι **λάθος ερώτηση**, και ο μεταγλωττιστής
+    // την απαγορεύει.
+    //
+    // ⚠️ Ονομάζονται **ΚΑΙ ΟΙ ΔΥΟ** κλάδοι επίτηδες. Μέχρι το ADR-807 ο κλάδος του
+    //    προσωπικού χώρου ήταν **νεκρός κώδικας** — γραμμένος, και δομικά ανέφικτος
+    //    επειδή το `readPageIdentity` απέρριπτε την απουσία `companyId` ως αποτυχία
+    //    ταυτότητας. Μια άγκυρα που κοιτά μόνο τον εταιρικό κλάδο θα ήταν **πράσινη
+    //    πάνω σε ακριβώς εκείνο το ελάττωμα**.
+    expect(net).toContain("identity.scope === 'organization'");
+    expect(net).toContain('PERSONAL_WORKSPACE_ALIAS');
   });
 });
