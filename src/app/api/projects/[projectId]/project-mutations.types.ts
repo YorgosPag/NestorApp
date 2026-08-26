@@ -3,7 +3,13 @@
  */
 
 import { z } from 'zod';
-import { PROJECT_STATUS_LABELS } from '@/types/project';
+// 🔴 **Ο ΦΡΟΥΡΟΣ ΕΓΚΥΡΟΤΗΤΑΣ ΕΙΝΑΙ ΤΟ SSoT, ΟΧΙ ΕΝΑΣ ΠΙΝΑΚΑΣ ΕΤΙΚΕΤΩΝ** (ADR-806 §7 #2).
+// Μέχρι σήμερα το σχήμα έλεγε `value in PROJECT_STATUS_LABELS`: η **οθόνη** αποφάσιζε τι
+// δέχεται το **API**. Δύο συνέπειες, καμία επιθυμητή — (α) όποιος πρόσθετε ετικέτα
+// διεύρυνε σιωπηλά την επιφάνεια εισόδου, (β) όποιος «καθάριζε» ετικέτες έκοβε σιωπηλά
+// έγκυρες τιμές. Το `isProjectStatus` (ADR-287) είναι ο **δηλωμένος** φρουρός, παράγεται
+// από το `PROJECT_STATUSES` και λέει **ακριβώς** την ίδια αλήθεια με τον τύπο.
+import { isProjectStatus } from '@/constants/project-statuses';
 import type { ProjectStatus } from '@/types/project';
 import { projectAddressesSchema } from '@/types/project/address-schemas';
 // ADR-369 / ADR-650 M10 — 3-tier Revit reference (survey / base point / north).
@@ -18,7 +24,7 @@ export const ProjectUpdateSchema = z.object({
   name: z.string().max(500).optional(),
   title: z.string().max(500).optional(),
   description: z.string().max(5000).optional(),
-  status: z.custom<ProjectStatus>((value): value is ProjectStatus => typeof value === 'string' && value in PROJECT_STATUS_LABELS).optional(),
+  status: z.custom<ProjectStatus>(isProjectStatus).optional(),
   companyId: z.string().max(128).nullable().optional(),
   company: z.string().max(200).nullable().optional(),
   linkedCompanyId: z.string().max(128).nullable().optional(),

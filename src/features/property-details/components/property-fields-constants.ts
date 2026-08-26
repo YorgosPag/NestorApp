@@ -71,7 +71,18 @@ export const SECURITY_FEATURE_OPTIONS: SecurityFeatureCodeType[] = [
 // Uses CREATABLE_PROPERTY_TYPES (excludes 'storage' — ADR-287 Batch 20).
 // Widened to PropertyType[] (which includes legacy Greek values) so existing
 // callers that accept the broader union remain type-compatible.
-export const PROPERTY_TYPE_OPTIONS: PropertyType[] = [...CREATABLE_PROPERTY_TYPES];
+/**
+ * Οι τύποι ακινήτου που προσφέρει η **φόρμα επεξεργασίας** — μεταβλητό αντίγραφο του
+ * SSoT `CREATABLE_PROPERTY_TYPES`, γιατί το control θέλει `PropertyType[]`.
+ *
+ * 🔴 **ΛΕΓΟΤΑΝ `PROPERTY_TYPE_OPTIONS` ΚΑΙ ΗΤΑΝ ΨΕΜΑ** (ADR-806 §7 #2): δεν είναι
+ * *options* (καμία ετικέτα) — είναι **τιμές**. Το ίδιο όνομα το είχαν **τρία** ακόμη
+ * σώματα, με **τρία διαφορετικά σχήματα**: το `VOCAB_PROPERTY_TYPE_OPTIONS` (ωμά
+ * ελληνικά, **νεκρό**), το `TypeQuickFilters` (**νεκρό**) και το `SalesQuickFilters`
+ * (κλειδιά i18n **και εικονίδια**, τοπικό, ζωντανό). Ομωνυμία, όχι διπλότυπο —
+ * γι' αυτό το context μπήκε στο όνομα αντί να ενωθούν.
+ */
+export const EDITABLE_PROPERTY_TYPES: PropertyType[] = [...CREATABLE_PROPERTY_TYPES];
 
 // Transaction statuses (reserved, sold, rented) require buyer/tenant selection
 // and can ONLY be set through SalesActionDialogs (ReserveDialog/SellDialog).

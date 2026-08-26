@@ -50,7 +50,22 @@ export const CURRENCY_LABELS: Record<CurrencyCode, string> = {
 } as const;
 
 /** Ordered keys for currency dropdowns — use with t('account.currencies.<code>') */
-export const CURRENCY_OPTIONS: readonly CurrencyCode[] = ['EUR', 'USD', 'GBP', 'CHF', 'BGN', 'RON', 'RSD', 'MKD', 'ALL'] as const;
+/**
+ * Τα νομίσματα που μπορεί να έχει ένας **τραπεζικός λογαριασμός** επαφής — κωδικοί,
+ * όχι ετικέτες.
+ *
+ * 🔴 **ΛΕΓΟΤΑΝ `CURRENCY_OPTIONS` ΚΑΙ ΗΤΑΝ ΔΥΟ ΨΕΜΑΤΑ** (ADR-806 §7 #2): (α) δεν είναι
+ * *options* — δεν έχει `{value,label}`, είναι σκέτοι κωδικοί· (β) υπήρχε **δεύτερο**
+ * `CURRENCY_OPTIONS` στο `config/vocabulary/options/individual.ts` με **τρία** νομίσματα
+ * (EUR/USD/GBP) και i18n ετικέτες, για dropdown.
+ *
+ * ⚠️ **ΔΕΝ ΕΝΩΘΗΚΑΝ, ΚΑΙ Ο ΛΟΓΟΣ ΕΙΝΑΙ ΜΕΤΡΗΜΕΝΟΣ**: η ένωση θα έκοβε **έξι** νομίσματα
+ * (CHF/BGN/RON/RSD/MKD/ALL) από τους τραπεζικούς λογαριασμούς — δηλαδή θα έσπαγε
+ * λειτουργία για να «διορθώσει» ένα διπλότυπο **που δεν υπήρχε**. Είναι **ομωνυμία**:
+ * δύο bounded contexts, ίδια λέξη. Το DDD ονομάζει τη θεραπεία — το context μπαίνει
+ * στο **όνομα**, όχι στη σύγχυση.
+ */
+export const BANK_ACCOUNT_CURRENCIES: readonly CurrencyCode[] = ['EUR', 'USD', 'GBP', 'CHF', 'BGN', 'RON', 'RSD', 'MKD', 'ALL'] as const;
 
 // ============================================================================
 // BANK INFO INTERFACE

@@ -237,11 +237,29 @@ export type ProjectUpdatePayload = Partial<Omit<Project, 'id' | 'createdAt' | 'u
 
 };
 
+/**
+ * **Κλειδιά i18n** ανά κανονική κατάσταση έργου — ένα κλειδί, ποτέ έτοιμο κείμενο.
+ *
+ * 🔴 **ΗΤΑΝ ΣΚΛΗΡΑ ΕΛΛΗΝΙΚΑ** (ADR-806 §7 #2, N.11): οι έξι τιμές ήταν γραμμένες ως
+ * ωμό κείμενο (`'Σχεδιασμός'`…) και ζωγραφίζονταν **αμετάφραστες** στην κάρτα έργου
+ * (`useProjectCardModel.ts`) — δηλαδή **αγγλόφωνος χρήστης έβλεπε ελληνικά**, σε
+ * component που είχε το `t` **ήδη στη γραμμή από πάνω**. Τα κλειδιά υπήρχαν **ήδη**
+ * στο `projects.json` και των δύο γλωσσών· έλειπε μόνο το `deleted`, που προστέθηκε
+ * σε **el+en πριν** αλλάξει αυτό το αρχείο (N.11: πρώτα το κλειδί, μετά ο κώδικας).
+ *
+ * ⚠️ **Ο ΤΥΠΟΣ ΕΙΝΑΙ Ο ΦΡΟΥΡΟΣ ΠΛΗΡΟΤΗΤΑΣ**: `Record<ProjectStatus, string>` σημαίνει
+ * ότι μια **έβδομη** κανονική κατάσταση στο `PROJECT_STATUSES` (ADR-287) σπάει εδώ τη
+ * μεταγλώττιση, αντί να ζωγραφίσει ωμό κλειδί στην οθόνη.
+ *
+ * ⚠️ **ΔΕΝ ΕΙΝΑΙ ΦΡΟΥΡΟΣ ΕΓΚΥΡΟΤΗΤΑΣ.** Μέχρι σήμερα το `ProjectUpdateSchema` ρωτούσε
+ * `value in PROJECT_STATUS_LABELS` — η οθόνη αποφάσιζε τι δέχεται το API. Αυτό κόπηκε:
+ * ο φρουρός είναι το `isProjectStatus()` του SSoT.
+ */
 export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
-    planning: 'Σχεδιασμός',
-    in_progress: 'Σε εξέλιξη',
-    completed: 'Ολοκληρωμένο',
-    on_hold: 'Σε αναμονή',
-    cancelled: 'Ακυρωμένο',
-    deleted: 'Στον κάδο'
+    planning: 'projects.status.planning',
+    in_progress: 'projects.status.inProgress',
+    completed: 'projects.status.completed',
+    on_hold: 'projects.status.onHold',
+    cancelled: 'projects.status.cancelled',
+    deleted: 'projects.status.deleted'
 };

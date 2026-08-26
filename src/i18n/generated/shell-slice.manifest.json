@@ -57,7 +57,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "c35b816cf60259e116ee05259537458bb46b4a0e7592e6b74c05afae3d4c70f1",
+  "inputsSha256": "ec626d0f4584e77981c298c128567495f113ecba64ac9600a13fdfdb8f67a7d6",
   "languages": [
     "el"
   ],
@@ -270,7 +270,8 @@
     "src/contexts/WebSocketContext.tsx": "81d0d84f3c95cf98dba7c0a2cbcaed8e39f69f439ad1a692798a587a2ec50de7",
     "src/contexts/WorkspaceContext.tsx": "c40dbeb3540512babfe1cff26671f17a22fdccc3fd976e2d70432636384931f9",
     "src/core/badges/BadgeFactory.ts": "e569d039be441aa6e904a2e16e92d719c152b9e64b9bb201199c7c8acb69af9e",
-    "src/core/badges/UnifiedBadgeSystem.tsx": "46f974c7587b8979a272c66db01ca128c7952d79bbc9b463af49fa79e1851da9",
+    "src/core/badges/UnifiedBadgeSystem.tsx": "5e4f6cafd55aa3b90c5de5b517011c39c308a669a8f1462b5a638fd45b55d405",
+    "src/core/badges/badge-label-key.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/core/containers/PageContainer.tsx": "86e6be0e84bbc0fb7ccc86167856ebcf5591b2d8f9dad105c8b2154dc66b04c8",
     "src/core/containers/ShellSurface.tsx": "f1da2f889d0e940653d7ce4c6fc81cd2572fc1bb518cb6b68eb919ceedae8a6b",
     "src/core/modals/PhotoPreviewModal.tsx": "7c5e31eb1379318b5e669781308793b295df20cc307406f538eb1cba542558a5",
@@ -414,7 +415,7 @@
     "src/server/admin/admin-guards-types.ts": "92f19ba939dbc9ec89ab9357843ea24f95de6d0a374897de759f97933cf47689",
     "src/server/admin/admin-guards.ts": "6d011e186e6a1d1f62b4efe26da0fcdce015319f8a8f86e45799976831fa1058",
     "src/server/auth/page-identity.ts": "845d23b1ba6a234bc9c2f4928920be08873bf9990e32707ed103f877e289cddd",
-    "src/server/auth/require-project-for-page.ts": "56a07da2c53d56abf6977a216a7b08302b0afa32666ee1e5e408a1aea112b260",
+    "src/server/auth/require-project-for-page.ts": "d30ce315030f4c1b1783a5c40956db2e22d609ec0c0d5482c0e2dd83865834cb",
     "src/services/FileNamingService.ts": "e17136476c638c631b27cea4f15b836931b51b5afeceb9231b6a21a025085180",
     "src/services/building-code/types/bonus.types.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/services/building-code/types/setback.types.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -534,7 +535,7 @@
     "src/types/project-basemap-placement.schemas.ts": "da18b3b1a788ecbf4ae980651719317961315838603e8c1407116a7bce9d891e",
     "src/types/project-building-code.ts": "3e5b1273ceb21fcfe778446490ee02095297158e644c2b0d87eb3ce652bbdf54",
     "src/types/project-elevation.schemas.ts": "da18b3b1a788ecbf4ae980651719317961315838603e8c1407116a7bce9d891e",
-    "src/types/project.ts": "716a2ee37a5d778e1eb41a8d8306ae85b344888ba6df022f122d559e7031e02c",
+    "src/types/project.ts": "0308445f27e56fbb79a570aec5f598ac99f8cf7516f9c103022f303ee15a9523",
     "src/types/project/addresses.ts": "ce242c49be232435f788216d68a35c8dadec77220bb134fb31506656eda2b458",
     "src/types/property-offers.ts": "d458cf6b92bfd24efb82d099b7f3bff825a6d19eb381e464e47551d5746421be",
     "src/types/property-viewer.ts": "affb6d4a6b268beefec607ae0573c4334f20f06268f2672f7a5b5478f28a6a18",
@@ -583,7 +584,7 @@
     "dynamicBoundaries": 18,
     "matchedKeys": 132,
     "routeBoundaries": 0,
-    "shellFiles": 480,
+    "shellFiles": 481,
     "sliceBytes": 318859
   },
   "unresolvableKeys": [

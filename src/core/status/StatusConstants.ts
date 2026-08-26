@@ -37,7 +37,7 @@ import {
 // 🏢 ENTERPRISE: Import from modular status.ts for extended property labels (market/sales-related)
 import {
   VOCAB_PROPERTY_SPECIAL_STATUS_LABELS,
-  VOCAB_PRIORITY_LABELS,
+  VOCAB_SEVERITY_LABELS,
   VOCAB_RECORD_STATE_LABELS,
   VOCAB_ENTITY_TYPE_LABELS,
   VOCAB_DOCUMENT_STATUS_LABELS
@@ -58,7 +58,7 @@ const storageStatusLabels = getStorageStatusLabels();
 
 // ✅ ENTERPRISE: Direct constants from modular status.ts (avoid re-export conflicts)
 const propertySpecialStatusLabels = VOCAB_PROPERTY_SPECIAL_STATUS_LABELS;
-const priorityLabels = VOCAB_PRIORITY_LABELS;
+const severityLabels = VOCAB_SEVERITY_LABELS;
 const recordStateLabels = VOCAB_RECORD_STATE_LABELS;
 const entityTypeLabels = VOCAB_ENTITY_TYPE_LABELS;
 const documentStatusLabels = VOCAB_DOCUMENT_STATUS_LABELS;
@@ -212,15 +212,17 @@ export const createUnitStatuses = (colors: UseSemanticColorsReturn): Record<Unit
 
 /**
  * ✅ ENTERPRISE PROFESSIONAL: Navigation Statuses Generator
- * 🏢 CENTRALIZED: Uses priorityLabels from modal-select - ZERO HARDCODED VALUES
+ * 🏢 CENTRALIZED: Uses severityLabels from the vocabulary - ZERO HARDCODED VALUES
+ * ⚠️ Λεγόταν «priorityLabels» και ήταν ψέμα: οι τιμές είναι `none · empty · warning ·
+ * attention · success · info` — **σοβαρότητα**, όχι προτεραιότητα (ADR-806 §7 #2).
  */
 export const createNavigationStatuses = (colors: UseSemanticColorsReturn): Record<NavigationStatus, BadgeDefinition> => ({
-  no_projects: { label: priorityLabels.none, variant: 'warning', backgroundColor: colors.bg.warning, color: colors.text.warning, icon: 'alertTriangle' },
-  empty: { label: priorityLabels.empty, variant: 'outline', backgroundColor: colors.bg.secondary, color: colors.text.muted, icon: 'circle' },
-  warning: { label: priorityLabels.warning, variant: 'warning', backgroundColor: colors.bg.warning, color: colors.text.warning, icon: 'alertTriangle' },
-  alert: { label: priorityLabels.attention, variant: 'destructive', backgroundColor: colors.bg.error, color: colors.text.error, icon: 'alert' },
-  success: { label: priorityLabels.success, variant: 'success', backgroundColor: colors.bg.success, color: colors.text.success, icon: 'check' },
-  info: { label: priorityLabels.info, variant: 'info', backgroundColor: colors.bg.info, color: colors.text.info, icon: 'info' }
+  no_projects: { label: severityLabels.none, variant: 'warning', backgroundColor: colors.bg.warning, color: colors.text.warning, icon: 'alertTriangle' },
+  empty: { label: severityLabels.empty, variant: 'outline', backgroundColor: colors.bg.secondary, color: colors.text.muted, icon: 'circle' },
+  warning: { label: severityLabels.warning, variant: 'warning', backgroundColor: colors.bg.warning, color: colors.text.warning, icon: 'alertTriangle' },
+  alert: { label: severityLabels.attention, variant: 'destructive', backgroundColor: colors.bg.error, color: colors.text.error, icon: 'alert' },
+  success: { label: severityLabels.success, variant: 'success', backgroundColor: colors.bg.success, color: colors.text.success, icon: 'check' },
+  info: { label: severityLabels.info, variant: 'info', backgroundColor: colors.bg.info, color: colors.text.info, icon: 'info' }
 });
 
 /**

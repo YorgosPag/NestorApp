@@ -42,15 +42,10 @@ interface ProjectStatusPillProps {
   onChange?: (next: ProjectStatus) => void;
 }
 
-// snake_case ProjectStatus → camelCase i18n key under `projects.status.*`
-const STATUS_I18N_KEY: Record<ProjectStatus, string> = {
-  planning: 'planning',
-  in_progress: 'inProgress',
-  completed: 'completed',
-  on_hold: 'onHold',
-  cancelled: 'cancelled',
-  deleted: 'deleted',
-};
+// 🔴 ΔΙΑΓΡΑΦΗΚΕ: `STATUS_I18N_KEY` — έβδομο σώμα του ίδιου πίνακα «κατάσταση → κλειδί»,
+// **δηλωμένο και ποτέ χρησιμοποιημένο** (ADR-806 §7 #2). Το component αναθέτει ήδη την
+// ετικέτα στο `<ProjectBadge>`, που είναι η αυθεντία. Τοπική σταθερά ⇒ **αόρατη** στο
+// CHECK 3.30 (κρίνει εξαγωγές) — γι' αυτό επιβίωσε.
 
 export const ProjectStatusPill = React.memo(function ProjectStatusPill({
   projectId,

@@ -32,7 +32,7 @@ import {
   createEmptyBankAccount,
   validateIBAN,
   ACCOUNT_TYPE_OPTIONS,
-  CURRENCY_OPTIONS,
+  BANK_ACCOUNT_CURRENCIES,
 } from '@/types/contacts/banking';
 import { getBankByIBAN } from '@/constants/greek-banks';
 import { IBANInput } from './IBANInput';
@@ -369,7 +369,7 @@ export function BankAccountForm({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {CURRENCY_OPTIONS.map((value) => (
+              {BANK_ACCOUNT_CURRENCIES.map((value) => (
                 <SelectItem key={value} value={value}>
                   {t(`account.currencies.${value}`)}
                 </SelectItem>

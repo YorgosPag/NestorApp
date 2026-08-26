@@ -138,10 +138,28 @@ export const VOCAB_STORAGE_STATUS_LABELS = {
 } as const;
 
 /**
- * Centralized priority/alert level labels
+ * Centralized **severity / notice level** labels.
  * 🌐 i18n: Uses keys from common.json namespace
+ *
+ * 🔴 **ΛΕΓΟΤΑΝ `VOCAB_PRIORITY_LABELS` ΚΑΙ ΗΤΑΝ ΨΕΜΑ** (ADR-806 §7 #2). Δεν κρατά
+ * προτεραιότητα: κρατά `none · empty · warning · attention · success · info` —
+ * **σοβαρότητα/τόνο**. Η προτεραιότητα (`high · medium · low · urgent · critical`)
+ * ζει στο `constants/domains/filter-labels.ts`, με **ίδιο ακριβώς όνομα**.
+ *
+ * 🔑 **ΜΕΤΟΝΟΜΑΣΤΗΚΕ ΑΥΤΟ ΠΟΥ ΕΛΕΓΕ ΨΕΜΑΤΑ, ΟΧΙ ΑΥΤΟ ΠΟΥ ΕΛΕΓΕ ΤΗΝ ΑΛΗΘΕΙΑ.** Το
+ * DDD ονομάζει τη θεραπεία της ομωνυμίας: *«τα ονόματα των contexts μπαίνουν στη
+ * γλώσσα, ώστε να μιλάς για το μοντέλο **χωρίς αμφισημία**»* — δηλαδή **μετονομασία**,
+ * ποτέ ένωση: ένωση των δύο θα ισοπέδωνε δύο ξεχωριστές έννοιες σε μία.
+ * ⚠️ Ο μοναδικός καταναλωτής (`core/status/StatusConstants.ts`) το χρησιμοποιεί για
+ * badges `no_projects · empty · warning · alert · success · info` — **επιβεβαιώνει**
+ * ότι το context είναι σοβαρότητα.
+ *
+ * 🔶 **ΔΗΛΩΜΕΝΟ, ΜΗ ΛΥΜΕΝΟ**: το ίδιο το locale συγχέει τα δύο — το `common.priority`
+ * κρατά **11** κλειδιά (τις 5 πραγματικές προτεραιότητες **και** τις 6 σοβαρότητες),
+ * και οι 5 πρώτες είναι **διπλότυπες** του `filters.priority`. Μετακίνηση κλειδιών
+ * locale είναι αλλαγή i18n με δικό της εύρος — ADR-806 §7.
  */
-export const VOCAB_PRIORITY_LABELS = {
+export const VOCAB_SEVERITY_LABELS = {
   none: 'common.priority.none',
   empty: 'common.priority.empty',
   warning: 'common.priority.warning',
@@ -254,8 +272,8 @@ export function getStorageStatusLabels() {
 /**
  * Get centralized priority labels
  */
-export function getPriorityLabels() {
-  return VOCAB_PRIORITY_LABELS;
+export function getSeverityLabels() {
+  return VOCAB_SEVERITY_LABELS;
 }
 
 /**

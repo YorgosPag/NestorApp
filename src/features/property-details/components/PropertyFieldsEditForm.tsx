@@ -48,7 +48,7 @@ import { LevelTabStrip } from './PropertyFieldsReadOnly';
 import { FloorMultiSelectField } from '@/components/shared/FloorMultiSelectField';
 import { isMultiLevelCapableType } from '@/config/domain-constants';
 import {
-  PROPERTY_TYPE_OPTIONS, COMMERCIAL_STATUS_OPTIONS, OPERATIONAL_STATUS_OPTIONS,
+  EDITABLE_PROPERTY_TYPES, COMMERCIAL_STATUS_OPTIONS, OPERATIONAL_STATUS_OPTIONS,
   PROPERTY_CARD_COLORS, PROPERTY_MICRO_TEXT,
 } from './property-fields-constants';
 import type { PropertyFieldsEditFormProps } from './property-fields-form-types';
@@ -243,7 +243,7 @@ export function PropertyFieldsEditForm({
                     <SelectValue placeholder={t('fields.identity.typePlaceholder')} />
                   </SelectTrigger>
                   <SelectContent>
-                    {PROPERTY_TYPE_OPTIONS.map((propertyType) => (
+                    {EDITABLE_PROPERTY_TYPES.map((propertyType) => (
                       <SelectItem key={propertyType} value={propertyType} className="text-xs">
                         {t(`types.${propertyType}`, { defaultValue: propertyType })}
                       </SelectItem>

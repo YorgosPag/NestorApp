@@ -36,7 +36,11 @@ const STATUS_I18N_KEY: Record<ProjectStatus, string> = {
   completed: 'projects:status.completed',
   on_hold: 'projects:status.onHold',
   cancelled: 'projects:status.cancelled',
-  deleted: 'projects:status.cancelled',
+  // 🔴 ΕΛΕΓΕ `status.cancelled` — το κοινοποιημένο κείμενο παρουσίαζε **διαγραμμένο**
+  // έργο ως «Ακυρωμένο» (ADR-806 §7 #2). Δεν ήταν αμέλεια: το κλειδί
+  // `projects.status.deleted` **δεν υπήρχε** σε κανένα locale μέχρι τις 2026-08-25, οπότε
+  // η μόνη εναλλακτική ήταν ωμό κλειδί στην οθόνη. Πλέον υπάρχει σε **el ΚΑΙ en**.
+  deleted: 'projects:status.deleted',
 };
 
 function truncate(text: string, max: number): string {

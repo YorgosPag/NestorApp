@@ -3,10 +3,21 @@
  * Controls optional/experimental features in DXF Viewer
  */
 
+/**
+ * ⚠️ **ΜΙΑ ΣΗΜΑΙΑ ΦΕΥΓΕΙ ΜΑΖΙ ΜΕ ΤΟΝ ΚΩΔΙΚΑ ΤΗΣ** (ADR-806 §7 #3). Το
+ * `COLLABORATION_OVERLAY: false` αφαιρέθηκε **στην ίδια πράξη** με τα τέσσερα αρχεία
+ * του collaboration: μια σημαία που δεν ενεργοποιεί τίποτα δεν είναι ρύθμιση, είναι
+ * **υπόσχεση που λέει ψέματα** — ο επόμενος τη γυρίζει σε `true` και δεν συμβαίνει
+ * τίποτα. Είναι το *flag debt* που ονομάζει ρητά ο Fowler (release toggle που
+ * επιβίωσε του σκοπού του) και η κανονική θεραπεία είναι **αφαίρεση με τον κώδικα**.
+ *
+ * 🔶 **ΜΕΤΡΗΜΕΝΟ ΧΡΕΟΣ, ΔΗΛΩΜΕΝΟ ΚΑΙ ΟΧΙ ΔΙΚΟ ΜΟΥ**: άλλες **τρεις** εγγραφές εδώ
+ * έχουν επίσης **μηδέν αναγνώστες** — `DXF_CANVAS_OVERLAY_INTEGRATION` ·
+ * `ADVANCED_SNAPPING` · `MULTI_LAYER_GRIPS`. Οι δύο τελευταίες είναι `true`, δηλαδή
+ * **δηλώνουν ενεργό χαρακτηριστικό που κανείς δεν ρωτά**. Δεν αφαιρέθηκαν επειδή
+ * προϋπήρχαν και η αφαίρεσή τους είναι **δήλωση προϊόντος** — απόφαση Giorgio.
+ */
 export const EXPERIMENTAL_FEATURES = {
-  // Collaboration features (currently disabled)
-  COLLABORATION_OVERLAY: false,
-
   // Legacy overlay integration system (deprecated)
   DXF_CANVAS_OVERLAY_INTEGRATION: false,
 

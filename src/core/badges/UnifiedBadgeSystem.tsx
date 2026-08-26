@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { BadgeFactory } from './BadgeFactory';
+import { splitNamespacedLabelKey } from './badge-label-key';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from 'react-i18next';
@@ -55,21 +56,14 @@ export const UnifiedBadge: React.FC<UnifiedBadgeProps> = ({
   // Δημιουργία badge configuration μέσω Factory
   const badgeConfig = BadgeFactory.create(domain, status, colors, options);
 
-  // 🏢 ENTERPRISE: Auto-detect namespace from label prefix and translate
-  const translateLabel = (label: string | undefined): string => {
-    if (!label) return '';
-
-    // Extract namespace from label prefix (e.g., 'projects.status.planning' → namespace: 'projects')
-    const parts = label.split('.');
-    if (parts.length >= 2) {
-      const namespace = parts[0];
-      const key = parts.slice(1).join('.');
-      return t(key, { ns: namespace, defaultValue: label });
-    }
-    return label;
-  };
-
-  const translatedLabel = translateLabel(badgeConfig.label);
+  // 🏢 ENTERPRISE: Auto-detect namespace from label prefix and translate.
+  // ⚠️ Η ΑΝΑΓΝΩΣΗ ΤΟΥ ΚΛΕΙΔΙΟΥ ΖΕΙ ΣΕ ΕΝΑ ΣΗΜΕΙΟ (ADR-806 §7 #2): ήταν κλεισμένη εδώ
+  // μέσα και η κάρτα έργου, που χτίζει badge μόνη της, δεν μπορούσε να τη δει — γι' αυτό
+  // κρατούσε ωμό ελληνικό κείμενο. Το κόψιμο του προθέματος είναι πλέον κοινή συνάρτηση.
+  const labelRef = splitNamespacedLabelKey(badgeConfig.label);
+  const translatedLabel = labelRef
+    ? t(labelRef.key, { ns: labelRef.ns, defaultValue: badgeConfig.label })
+    : (badgeConfig.label ?? '');
 
   return (
     <Badge

@@ -21,6 +21,7 @@ import { formatCurrency, formatNumber } from '@/lib/intl-utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Project } from '@/types/project';
 import { PROJECT_STATUS_LABELS } from '@/types/project';
+import { splitNamespacedLabelKey } from '@/core/badges/badge-label-key';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import '@/lib/design-system';
 
@@ -86,14 +87,30 @@ export function useProjectCardModel(project: Project): CardViewModel {
     return items;
   }, [project.progress, project.totalArea, project.totalValue, t]);
 
-  /** Build badges from status */
+  /**
+   * Build badges from status.
+   *
+   * 🔴 **ΜΕΤΑΦΡΑΖΕΤΑΙ** (ADR-806 §7 #2, N.11). Ο `PROJECT_STATUS_LABELS` κρατούσε ωμό
+   * **ελληνικό κείμενο** και το `label` πήγαινε κατευθείαν στο badge: η κάρτα έγραφε
+   * «Σχεδιασμός» **και σε αγγλόφωνο χρήστη**, ενώ αυτό το ίδιο hook καλεί `t(…)` σε
+   * **κάθε άλλο** πεδίο του (`listCard.progress`, `listCard.totalArea`, …) τρεις
+   * γραμμές πιο πάνω. Πλέον ο πίνακας κρατά **κλειδιά** και η μετάφραση γίνεται εδώ.
+   *
+   * ⚠️ Το `t` **μπαίνει στις εξαρτήσεις**: χωρίς αυτό η ετικέτα θα έμενε παγωμένη στη
+   * γλώσσα που ίσχυε την πρώτη απόδοση — αλλαγή γλώσσας χωρίς αλλαγή `project.status`
+   * δεν θα ξανάβαφε το badge. Το ίδιο κάνει ήδη το `useMemo` από πάνω.
+   */
   const badges = useMemo(() => {
     const status = project.status || 'planning';
-    const statusLabel = PROJECT_STATUS_LABELS[status] || status;
+    const statusKey = PROJECT_STATUS_LABELS[status];
     const variant = STATUS_BADGE_VARIANTS[status] || 'default';
+    const ref = splitNamespacedLabelKey(statusKey);
 
-    return [{ label: statusLabel, variant }];
-  }, [project.status]);
+    return [{
+      label: ref ? t(ref.key, { ns: ref.ns, defaultValue: statusKey }) : (statusKey || status),
+      variant,
+    }];
+  }, [project.status, t]);
 
   const title = project.name || project.title || project.id;
 
