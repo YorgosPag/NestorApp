@@ -45,14 +45,16 @@
  * θερμοχάρτη που πουλάμε ως **Ε2** — δωρεάν, και χωρίς κανείς να το προσέξει.
  *
  * Με ταυτότητα, ο αιτών μπορεί να ρωτήσει **μόνο για τη δική του** εντολή (ο έλεγχος
- * `authorUserId === ctx.uid` είναι ρητός παρακάτω), δηλαδή μαθαίνει **μόνο** τη θέση
+ * `authorUserId === actor.ctx.uid` είναι ρητός παρακάτω), δηλαδή μαθαίνει **μόνο** τη θέση
  * του στην αγορά που ο ίδιος διάλεξε.
  */
 
 import { NextResponse, type NextRequest } from 'next/server';
 
-import { withAuth } from '@/lib/auth/middleware';
-import type { AuthContext } from '@/lib/auth/types';
+import {
+  withPersonalOrOrgAuth,
+  type ApiActor,
+} from '@/lib/auth/personal-scope-middleware';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { nowISO } from '@/lib/date-local';
@@ -71,7 +73,7 @@ interface CompetitionResponse {
 
 async function handler(
   request: NextRequest,
-  ctx: AuthContext,
+  actor: ApiActor,
 ): Promise<NextResponse<CompetitionResponse | { error: string }>> {
   const demandId = request.nextUrl.searchParams.get('demandId')?.trim() ?? '';
   if (demandId === '') {
@@ -87,7 +89,10 @@ async function handler(
   // ξεχωριστή απάντηση 403 θα **επιβεβαίωνε** ότι η ταυτότητα υπάρχει — δηλαδή θα
   // διέρρεε το επίπεδο Β μέσω του κωδικού λάθους, που είναι η κλασική διαρροή μέσω
   // άρνησης. Ίδιο συμβόλαιο με το `MyDemandLookup.absent` στον πελάτη.
-  if (demand === undefined || demand.authorUserId !== ctx.uid) {
+  // ⚠️ `actor.ctx.uid` **χωρίς διάκριση χώρου**: το `uid` υπάρχει και στα δύο μέλη της
+  // ένωσης, και η ζήτηση ανήκει σε **άνθρωπο**, ποτέ σε γραφείο (`property_demands`:
+  // `mode: 'userId'`). Μια διάκριση εδώ θα ήταν φρουρός χωρίς ετυμηγορία.
+  if (demand === undefined || demand.authorUserId !== actor.ctx.uid) {
     return NextResponse.json({ error: 'NOT_FOUND' }, { status: 404 });
   }
 
@@ -120,4 +125,4 @@ async function discloseFor(
   return discloseCompetition(demand, selectSimilarDemands(demand, candidates), nowISO());
 }
 
-export const GET = withAuth(handler);
+export const GET = withPersonalOrOrgAuth(handler);

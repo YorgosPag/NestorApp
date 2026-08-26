@@ -324,6 +324,28 @@ export interface AuthContext {
   permissions?: readonly PermissionId[];
 }
 
+/**
+ * **Η ταυτότητα ανθρώπου ΧΩΡΙΣ ΟΡΓΑΝΙΣΜΟ** — ό,τι και το {@link AuthContext},
+ * **χωρίς** `companyId` και χωρίς τα δύο πεδία που έχουν νόημα μόνο μέσα σε χώρο.
+ *
+ * 🔑 **ΓΙΑΤΙ ΞΕΧΩΡΙΣΤΟΣ ΤΥΠΟΣ ΚΑΙ ΟΧΙ `companyId: string | null`** (ADR-807 §5 #4,
+ * ADR-817 §4.3): το `AuthContext` το καταναλώνουν **352** διαδρομές, η απομόνωση
+ * μισθωτή και τα `firestore.rules`. Χαλαρώνοντας **εκείνον** τον τύπο, κάθε σημείο
+ * που σήμερα **εγγυάται** μισθωτή θα δεχόταν σιωπηλά `null` — δηλαδή θα πληρώναμε
+ * μια διόρθωση **γραφής** με **διεύρυνση της επιφάνειας ασφαλείας**. Εδώ γίνεται το
+ * αντίθετο: ο προσωπικός χώρος **δεν μπορεί δομικά** να περάσει εκεί όπου απαιτείται
+ * `companyId` — το απαγορεύει ο **μεταγλωττιστής**, ανά έκφραση.
+ *
+ * ⚠️ **ΖΕΙ ΕΔΩ ΚΑΙ ΟΧΙ ΣΤΟΝ ΠΑΡΑΓΩΓΟ ΤΟΥ** (Boy Scout, N.0.2): τον χρειάζονται **δύο**
+ * παραγωγοί ταυτότητας — ο σελιδο-φρουρός (`server/auth/page-identity.ts`, ADR-807)
+ * και το σύνορο API (`lib/auth/auth-context.ts`, ADR-817). Δεύτερος ορισμός θα ήταν
+ * δύο λεξιλόγια για ένα ερώτημα, δηλαδή ADR-749 σε μικρογραφία.
+ */
+export type PersonalIdentityContext = Omit<
+  AuthContext,
+  'companyId' | 'superAdminOverride' | 'membershipVerdict'
+>;
+
 /** Unauthenticated context with reason. */
 export interface UnauthenticatedContext {
   isAuthenticated: false;

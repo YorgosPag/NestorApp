@@ -16,8 +16,20 @@
  * όσους υπάρχει για να μπουν, και θα φαινόταν «ασφαλής».
  *
  * 🔑 **Η εξουσιοδότηση εδώ είναι η ΤΑΥΤΟΤΗΤΑ**, και επιβάλλεται δύο φορές: το
- * `withAuth` απαιτεί συνδεδεμένο χρήστη, και το `authorUserId` **δεν έρχεται από το
- * σώμα** — γράφεται από το `ctx.uid`. Ό,τι δεν είναι στο σχήμα δεν μπορεί να σταλεί.
+ * περιτύλιγμα απαιτεί συνδεδεμένο χρήστη, και το `authorUserId` **δεν έρχεται από το
+ * σώμα** — γράφεται από το `uid` του δρώντος. Ό,τι δεν είναι στο σχήμα δεν μπορεί να
+ * σταλεί.
+ *
+ * 🔴 **ADR-817 — `withPersonalOrOrgAuth`, ΟΧΙ `withAuth`.** Μέχρι τις 2026-08-26 αυτή
+ * η πόρτα ήταν **κλειστή ακριβώς για το ακροατήριό της**: το `withAuth` απαιτεί
+ * `AuthContext`, που **εγγυάται** μισθωτή, και ο ιδιώτης δεν έχει. Η αγγελία γράφεται
+ * **μόνο** από Admin SDK (`firestore.rules`: `allow create: if false`), άρα το `401`
+ * ήταν **απόλυτος** φραγμός — χωρίς παρακαμπτήριο από τον πελάτη.
+ *
+ * ⚠️ Γράφει **πάντα** `authorCompanyId: null`, δηλαδή **προσωπική θεματοφυλακή**
+ * (`lib/owner-property/listing-custody.ts`) — **και για τον υπάλληλο γραφείου που
+ * καταχωρεί το δικό του σπίτι**. Αυτό είναι το σημείο: ο ιδιωτικός χώρος **δεν
+ * διευρύνεται ποτέ**, ούτε προς τα πάνω.
  *
  * ⚠️ **ΑΥΤΗ Η ΠΟΡΤΑ ΓΡΑΦΕΙ ΜΟΝΟ `mandate: 'self'`, ΚΑΙ ΕΙΝΑΙ ΣΥΜΒΟΛΑΙΟ (§8.33).** Ο
  * μεσίτης έχει **δική του** διαδρομή, γιατί έχει **δικά του** πράγματα να αποδείξει:
@@ -34,8 +46,10 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 
-import { withAuth } from '@/lib/auth/middleware';
-import type { AuthContext } from '@/lib/auth/types';
+import {
+  withPersonalOrOrgAuth,
+  type ApiActor,
+} from '@/lib/auth/personal-scope-middleware';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import {
@@ -60,7 +74,7 @@ import {
  */
 async function handler(
   request: NextRequest,
-  ctx: AuthContext,
+  actor: ApiActor,
 ): Promise<NextResponse<OwnerPropertyResponse>> {
   // ⚠️ `json()` πετά σε κατεστραμμένο σώμα — και ένα ακάλυπτο `throw` εδώ θα γινόταν
   // **500**, δηλαδή «δικό μας λάθος» για κάτι που έστειλε ο πελάτης.
@@ -78,10 +92,13 @@ async function handler(
   return respondToWrite(
     await createOwnerProperty(
       getAdminFirestore(),
-      { id, authorUserId: ctx.uid, authorCompanyId: null, mandate: { kind: 'self' } },
+      // ⚠️ `actor.ctx.uid` **χωρίς διάκριση χώρου**, και είναι σωστό: το `uid` υπάρχει
+      // και στα δύο μέλη της ένωσης. Μια διάκριση εδώ θα ήταν φρουρός χωρίς
+      // ετυμηγορία — και τα δύο σκέλη θα έγραφαν την ίδια γραμμή.
+      { id, authorUserId: actor.ctx.uid, authorCompanyId: null, mandate: { kind: 'self' } },
       parsed.draft,
     ),
   );
 }
 
-export const POST = withStandardRateLimit(withAuth(handler));
+export const POST = withStandardRateLimit(withPersonalOrOrgAuth(handler));

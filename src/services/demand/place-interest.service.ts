@@ -85,19 +85,33 @@ const ABSENT: PlaceLookup = { kind: 'absent' };
  * υπάλληλο εταιρείας δεδομένα που ανήκουν σε **ιδιώτη** είναι η χειρότερη από τις δύο
  * αστοχίες.
  *
+ * 🔴 **ADR-817 — ΤΟ `companyId` ΕΓΙΝΕ `string | null`, ΚΑΙ Ο ΕΣΩΤΕΡΙΚΟΣ ΤΟ ΔΕΧΟΤΑΝ ΗΔΗ.**
+ * Ο ιδιώτης δεν έχει εταιρεία. Το `readOwnerProperty` από κάτω δηλώνει **ήδη**
+ * `companyId: string | null` (το απαιτεί το `ListingActor` του `listing-custody`) —
+ * η **μόνη** υπογραφή που το στένευε ήταν αυτή εδώ, και ήταν σωστή όσο ο πολίτης
+ * έπαιρνε `401` στο σύνορο και δεν έφτανε ποτέ.
+ *
+ * ⚠️ **ΧΩΡΙΣ ΕΤΑΙΡΕΙΑ, Η ΔΕΥΤΕΡΗ ΑΝΑΓΝΩΣΗ ΔΕΝ ΓΙΝΕΤΑΙ ΚΑΘΟΛΟΥ** — και δεν είναι
+ * βελτιστοποίηση: το `readCompanyProperty` φιλτράρει **κατά μισθωτή**, οπότε μια κλήση
+ * με κενό/απόν `companyId` είναι ακριβώς το ερώτημα «δώσε μου ό,τι δεν ανήκει σε
+ * κανέναν» που κυνηγά το **CHECK 3.35**. Ο ιδιώτης **δεν έχει** εταιρικά ακίνητα:
+ * `absent` είναι η **σωστή** απάντηση, όχι υποβαθμισμένη.
+ *
  * @param uid — ο συνδεδεμένος άνθρωπος (κατοχή ιδιώτη)
- * @param companyId — η **ενεργή** εταιρεία του (κατοχή γραφείου)
+ * @param companyId — η **ενεργή** εταιρεία του, ή `null` για τον ιδιώτη (κατοχή γραφείου)
  */
 export async function lookupOwnedPlace(
   db: AdminFirestore,
   propertyId: string,
   uid: string,
-  companyId: string,
+  companyId: string | null,
 ): Promise<PlaceLookup> {
   const personal = await readOwnerProperty(db, propertyId, { uid, companyId });
   if (personal !== null) {
     return { kind: 'found', source: 'owner-property', facts: personal };
   }
+
+  if (companyId === null) return ABSENT;
 
   const company = await readCompanyProperty(db, propertyId, companyId);
   return company === null

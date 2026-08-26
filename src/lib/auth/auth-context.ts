@@ -18,7 +18,6 @@
 
 import 'server-only';
 
-import { getAdminAuth, isFirebaseAdminAvailable } from '@/lib/firebaseAdmin';
 import type { DecodedIdToken } from 'firebase-admin/auth';
 import type { NextRequest } from 'next/server';
 
@@ -28,6 +27,7 @@ import type {
   RequestContext,
   GlobalRole,
   CustomClaims,
+  PersonalIdentityContext,
 } from './types';
 import { isValidGlobalRole } from './types';
 // ADR-801 §2.8 — ο ΕΝΑΣ αναγνώστης του claim `permissions`, κοινός με τον
@@ -35,7 +35,14 @@ import { isValidGlobalRole } from './types';
 // ήταν το σχήμα των τριών κανόνων που έκλεισε αυτή η φάση.
 import { readPermissionsClaim } from './claim-permissions';
 import { getDevCompanyId } from '@/config/dev-environment';
-import { SESSION_COOKIE_CONFIG } from '@/lib/auth/security-policy';
+// 🔑 ADR-817 §4.1 — τα διαπιστευτήρια εξήχθησαν (N.7.1). Άλλη ευθύνη: «πώς παίρνω
+// υπογεγραμμένο token;» έναντι «τι σημαίνει αυτό το token;».
+import {
+  extractBearerToken,
+  extractSessionCookie,
+  verifyIdToken,
+  verifySessionCookie,
+} from '@/lib/auth/token-credentials';
 // 🎫 ADR-787 Κ-2 — ο ΕΝΑΣ απαντητής του «είναι μέλος;».
 // ⚠️ Το `isRoleBypass` έφυγε από εδώ επίτηδες: ο έλεγχος ρόλου έπαψε να είναι
 //    *η απόφαση* και έγινε **μία από τις επτά ετυμηγορίες** μέσα στον απαντητή
@@ -128,9 +135,6 @@ async function resolveEffectiveCompanyId(
 // CONSTANTS
 // =============================================================================
 
-const AUTHORIZATION_HEADER = 'authorization';
-const BEARER_PREFIX = 'bearer';
-
 /**
  * Unauthenticated context reasons for diagnostics.
  */
@@ -141,112 +145,26 @@ type UnauthReason = UnauthenticatedContext['reason'];
 // =============================================================================
 
 // =============================================================================
-// TOKEN EXTRACTION
-// =============================================================================
-
-/**
- * Extract Bearer token from Authorization header.
- *
- * @param request - NextRequest object
- * @returns Token string or null
- */
-function extractBearerToken(request: NextRequest): string | null {
-  const authHeader = request.headers.get(AUTHORIZATION_HEADER);
-  if (!authHeader) {
-    return null;
-  }
-
-  const parts = authHeader.split(' ');
-  if (parts.length !== 2 || parts[0].toLowerCase() !== BEARER_PREFIX) {
-    return null;
-  }
-
-  return parts[1];
-}
-
-// =============================================================================
-// SESSION COOKIE EXTRACTION
-// =============================================================================
-
-/**
- * Extract Firebase session cookie (__session) from request cookies.
- *
- * @param request - NextRequest object
- * @returns Session cookie value or null
- */
-function extractSessionCookie(request: NextRequest): string | null {
-  const cookie = request.cookies.get(SESSION_COOKIE_CONFIG.NAME);
-  return cookie?.value ?? null;
-}
-
-// =============================================================================
-// TOKEN VERIFICATION
-// =============================================================================
-
-/**
- * Verify Firebase ID token and return decoded token.
- *
- * @param token - ID token string
- * @returns DecodedIdToken or null
- */
-async function verifyIdToken(token: string): Promise<DecodedIdToken | null> {
-  try {
-    if (!isFirebaseAdminAvailable()) {
-      logger.info('[AUTH_CONTEXT] Cannot verify token - Admin SDK not available');
-      return null;
-    }
-
-    const auth = getAdminAuth();
-    return await auth.verifyIdToken(token);
-  } catch (error) {
-    logger.info('[AUTH_CONTEXT] Token verification failed:', { message: (error as Error).message });
-    return null;
-  }
-}
-
-/**
- * Verify Firebase session cookie and return decoded token.
- * Same pattern as admin-guards.ts verifySessionCookieToken().
- *
- * @param sessionCookie - Session cookie string
- * @returns DecodedIdToken or null
- */
-async function verifySessionCookie(sessionCookie: string): Promise<DecodedIdToken | null> {
-  try {
-    if (!isFirebaseAdminAvailable()) {
-      logger.info('[AUTH_CONTEXT] Cannot verify session cookie - Admin SDK not available');
-      return null;
-    }
-
-    const auth = getAdminAuth();
-    return await auth.verifySessionCookie(sessionCookie, false);
-  } catch (error) {
-    logger.info('[AUTH_CONTEXT] Session cookie verification failed:', { message: (error as Error).message });
-    return null;
-  }
-}
-
-// =============================================================================
 // CLAIMS EXTRACTION
 // =============================================================================
 
 /**
- * Extract RFC v6 custom claims from decoded token.
+ * Τα claims της **ΤΑΥΤΟΤΗΤΑΣ** — ό,τι απαντά στο *«ποιος είσαι;»*, **χωρίς τον χώρο**.
  *
- * @param token - Decoded ID token
- * @returns CustomClaims or null if invalid
+ * 🔑 **ΓΙΑΤΙ ΞΕΧΩΡΙΣΕ ΑΠΟ ΤΟΝ ΧΩΡΟ** (ADR-817 §4.1): μέχρι τις 2026-08-26 τα δύο
+ * ερωτήματα ζούσαν σε **μία** συνάρτηση, οπότε η απάντηση *«δεν έχω γραφείο»* έβγαινε
+ * ως *«δεν είσαι κανείς»* — **κατηγοριακό λάθος**, ακριβώς αυτό που το ADR-807 §3.3
+ * είχε ήδη διορθώσει έναν όροφο πιο πάνω, στον σελιδο-φρουρό.
+ *
+ * ⚠️ **Ο ΡΟΛΟΣ ΕΙΝΑΙ ΤΑΥΤΟΤΗΤΑ, ΟΧΙ ΧΩΡΟΣ**, και γι' αυτό κρίνεται **εδώ**: άκυρος
+ * ρόλος σημαίνει cookie που δεν εμπιστευόμαστε, και **πρέπει** να απορριφθεί
+ * ανεξάρτητα από το αν ο άνθρωπος έχει γραφείο (ADR-807 §3.4β). Με την αντίστροφη
+ * σειρά, token με **άκυρο ρόλο** και **χωρίς** `companyId` θα έβγαινε `personal` —
+ * δηλαδή η διόρθωση της γραφής θα **χαλάρωνε την ασφάλεια, σιωπηλά**.
  */
-function extractCustomClaims(token: DecodedIdToken): CustomClaims | null {
-  // ADR-657 §3.5 — FAIL CLOSED. A token without RFC-v6 claims is not an identity
-  // we can authorize. The previous env-var / 'company_admin' fallbacks silently
-  // granted a default tenant + ADMIN rights to any user whose claims-provisioning
-  // had failed (see scripts/audit-missing-auth-claims.js).
-  const companyId = token.companyId as string | undefined;
-  if (typeof companyId !== 'string' || companyId.length === 0) {
-    logger.warn('[AUTH_CONTEXT] DENY — missing companyId claim', { uid: token.uid });
-    return null;
-  }
+type IdentityClaims = Omit<CustomClaims, 'companyId'>;
 
+function extractIdentityClaims(token: DecodedIdToken): IdentityClaims | null {
   const globalRoleRaw = token.globalRole as string | undefined;
   if (typeof globalRoleRaw !== 'string' || !isValidGlobalRole(globalRoleRaw)) {
     logger.warn('[AUTH_CONTEXT] DENY — missing/invalid globalRole claim', {
@@ -256,26 +174,49 @@ function extractCustomClaims(token: DecodedIdToken): CustomClaims | null {
     return null;
   }
 
-  // MFA enrollment is optional
-  const mfaEnrolled = token.mfaEnrolled === true;
-
-  // Email verified is optional (from standard Firebase claims)
-  const emailVerified = token.email_verified === true;
-
-  // ADR-801 §2.8 — το ρητό κανάλι παραχώρησης. Δηλωνόταν στο `CustomClaims`
-  // από την αρχή και **κανείς δεν το διάβαζε εδώ**, οπότε ο `checkPermission`
-  // έκρινε μόνο από τον ρόλο και το claim πεταγόταν (μετρημένη απόκλιση με τον
-  // κριτή του πελάτη, §2.6). Ο αναγνώστης είναι **ένας**, κοινός με τον
-  // φυλλομετρητή — αλλιώς η άγκυρα ισοδυναμίας θα σύγκρινε άλλη είσοδο.
-  const permissions = readPermissionsClaim(token.permissions);
-
   return {
-    companyId,
     globalRole: globalRoleRaw as GlobalRole,
-    mfaEnrolled,
-    emailVerified,
-    permissions,
+    // MFA enrollment is optional
+    mfaEnrolled: token.mfaEnrolled === true,
+    // Email verified is optional (from standard Firebase claims)
+    emailVerified: token.email_verified === true,
+    // ADR-801 §2.8 — το ρητό κανάλι παραχώρησης. Δηλωνόταν στο `CustomClaims`
+    // από την αρχή και **κανείς δεν το διάβαζε εδώ**, οπότε ο `checkPermission`
+    // έκρινε μόνο από τον ρόλο και το claim πεταγόταν. Ο αναγνώστης είναι
+    // **ένας**, κοινός με τον φυλλομετρητή — αλλιώς η άγκυρα ισοδυναμίας θα
+    // σύγκρινε άλλη είσοδο.
+    permissions: readPermissionsClaim(token.permissions),
   };
+}
+
+/**
+ * Extract RFC v6 custom claims from decoded token — **η ΕΤΑΙΡΙΚΗ ταυτότητα**.
+ *
+ * ⚠️ **ΑΠΟΡΡΙΠΤΕΙ fail-closed το `companyId.length === 0`** (ADR-657 §3.5) — *«κενή
+ * συμβολοσειρά = **απουσία**, όχι μισθωτής»*. Ο κανόνας αυτός αναφέρεται **ονομαστικά**
+ * ως πρότυπο από το `lib/routes/landing.ts` και το `lib/auth/authority.ts`, και μένει
+ * **ακέραιος**.
+ *
+ * 🔴 **ΑΛΛΑΞΕ ΤΙ ΣΗΜΑΙΝΕΙ Η ΑΡΝΗΣΗ ΤΟΥ, ΟΧΙ ΤΟ ΚΡΙΤΗΡΙΟ ΤΟΥ** (ADR-817): το `null`
+ * **δεν** είναι πλέον «δεν είσαι» — είναι **«δεν έχεις οργανισμό»**, δηλαδή ο
+ * **προσωπικός** κλάδος. Για τις **319** διαδρομές που περνούν από το
+ * {@link buildRequestContext} το αποτέλεσμα παραμένει **ταυτόσημο** (401 με
+ * `missing_claims`)· αλλάζει μόνο ότι η κατάσταση απέκτησε **όνομα** και υπάρχει
+ * **μία** πόρτα που μπορεί να τη δει ({@link buildApiIdentity}).
+ *
+ * ⚠️ Δέχεται τα claims ταυτότητας **ως όρισμα** και δεν τα ξαναβγάζει: αλλιώς η ίδια
+ * ερώτηση θα απαντιόταν **δύο φορές** στην ίδια διαδρομή εκτέλεσης.
+ */
+function extractCustomClaims(
+  token: DecodedIdToken,
+  identity: IdentityClaims,
+): CustomClaims | null {
+  const companyId = token.companyId as string | undefined;
+  if (typeof companyId !== 'string' || companyId.length === 0) {
+    return null;
+  }
+
+  return { ...identity, companyId };
 }
 
 // =============================================================================
@@ -283,56 +224,137 @@ function extractCustomClaims(token: DecodedIdToken): CustomClaims | null {
 // =============================================================================
 
 /**
- * Turn an already-decoded token (from a Bearer ID token OR a __session cookie)
- * into a RequestContext. Both credential paths share this — decode differs, the
- * claims→context steps are identical, so they live here once (N.18 anti-clone).
+ * **ΤΡΕΙΣ ΡΗΤΕΣ ΚΑΤΑΣΤΑΣΕΙΣ, ΠΟΤΕ BOOLEAN** — η ταυτότητα του αιτούντος στο σύνορο API.
  *
- * @param decodedToken - the verified token, or null if verification failed
- * @param request - the incoming request (for super-admin company override)
- * @returns AuthContext on valid claims, else the matching UnauthenticatedContext
+ * ═══════════════════════════════════════════════════════════════════════════
+ * 🔴 ΤΟ ΓΕΓΟΝΟΣ: «ΔΕΝ ΕΧΕΙΣ ΕΤΑΙΡΕΙΑ» ΔΙΑΒΑΖΟΤΑΝ ΩΣ «ΔΕΝ ΥΠΑΡΧΕΙΣ» — ΞΑΝΑ
+ *
+ * Το **ADR-807** διόρθωσε ακριβώς αυτό στον **σελιδο-φρουρό**. Το API layer έμεινε
+ * πίσω: μέχρι τις 2026-08-26 η απουσία `companyId` έβγαινε `401` σε **κάθε** μία από
+ * τις **319** διαδρομές `withAuth`. Ο πολίτης έμπαινε, προσγειωνόταν, **έβλεπε** τα
+ * ακίνητά του — και **δεν μπορούσε να καταχωρήσει τίποτα** (ADR-660 §5.7).
+ *
+ * ⚠️ Και ο φραγμός ήταν **απόλυτος** για την αγγελία: το `firestore.rules` δίνει
+ * `allow create: if false` στο `owner_properties` — **μόνο Admin SDK**. Δεν υπήρχε
+ * παρακαμπτήριος από τον πελάτη, σε αντίθεση με τη **ζήτηση** (`property_demands`),
+ * που ο πελάτης γράφει μόνος του και **δούλευε ήδη**.
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * ⛔ **ΜΗΝ ξαναφέρεις λόγο απόρριψης για την απουσία οργανισμού** — και μην τη
+ *    μοντελοποιήσεις ως «εταιρεία με κενό id»: θα περνούσε ερωτήματα Firestore με
+ *    κενό μισθωτή, που κυνηγά το **CHECK 3.35**.
  */
-async function contextFromDecodedToken(
+export type ApiIdentity =
+  | { readonly ok: true; readonly scope: 'organization'; readonly ctx: AuthContext }
+  | { readonly ok: true; readonly scope: 'personal'; readonly ctx: PersonalIdentityContext }
+  | { readonly ok: false; readonly reason: UnauthReason };
+
+/**
+ * Turn an already-decoded token (from a Bearer ID token OR a __session cookie)
+ * into an {@link ApiIdentity}. Both credential paths share this — decode differs, the
+ * claims→identity steps are identical, so they live here once (N.18 anti-clone).
+ */
+async function identityFromDecodedToken(
   decodedToken: DecodedIdToken | null,
   request: NextRequest,
-): Promise<RequestContext> {
+): Promise<ApiIdentity> {
   if (!decodedToken) {
-    return createUnauthenticatedContext('invalid_token');
+    return { ok: false, reason: 'invalid_token' };
   }
 
-  const claims = extractCustomClaims(decodedToken);
+  // ── ΒΗΜΑ 1: Η ΤΑΥΤΟΤΗΤΑ ────────────────────────────────────────────────────
+  // ⚠️ **Η ΣΕΙΡΑ ΕΙΝΑΙ ΣΥΜΒΟΛΑΙΟ, ΟΧΙ ΥΦΟΣ** (ADR-807 §3.4β): ο ρόλος κρίνεται
+  //    **ΠΡΙΝ** τον χώρο.
+  const identity = extractIdentityClaims(decodedToken);
+  if (!identity) {
+    return { ok: false, reason: 'missing_claims' };
+  }
+
+  const base: PersonalIdentityContext = {
+    uid: decodedToken.uid,
+    email: decodedToken.email || '',
+    globalRole: identity.globalRole,
+    mfaEnrolled: identity.mfaEnrolled ?? false,
+    isAuthenticated: true,
+    permissions: identity.permissions,
+  };
+
+  // ── ΒΗΜΑ 2: Ο ΧΩΡΟΣ — ΔΥΟ ΚΑΤΑΣΤΑΣΕΙΣ, ΚΑΜΙΑ ΑΠΟΤΥΧΙΑ ─────────────────────
+  const claims = extractCustomClaims(decodedToken, identity);
   if (!claims) {
-    return createUnauthenticatedContext('missing_claims');
+    // ⚠️ Ο ΠΡΟΣΩΠΙΚΟΣ ΧΩΡΟΣ ΔΕΝ ΠΕΡΝΑ ΑΠΟ ΤΟΝ ΕΠΙΛΥΤΗ ΕΝΕΡΓΟΥ ΧΩΡΟΥ, ΚΑΙ ΕΙΝΑΙ
+    //    ΣΚΟΠΙΜΟ: η κεφαλίδα `x-super-admin-company-id` ζητά **μετακίνηση σε άλλον
+    //    οργανισμό**, και κάποιος χωρίς οργανισμό δεν έχει από πού να μετακινηθεί.
+    //    Ένας πολίτης **δεν μπορεί δομικά** να ζητήσει ξένο χώρο από αυτή τη διαδρομή.
+    return { ok: true, scope: 'personal', ctx: base };
   }
 
   const effective = await resolveEffectiveCompanyId(request, claims, decodedToken.uid);
   if (!effective.ok) {
-    return createUnauthenticatedContext(effective.reason);
+    return { ok: false, reason: effective.reason };
   }
 
   return {
-    uid: decodedToken.uid,
-    email: decodedToken.email || '',
-    companyId: effective.companyId,
-    globalRole: claims.globalRole,
-    mfaEnrolled: claims.mfaEnrolled ?? false,
-    isAuthenticated: true,
-    superAdminOverride: effective.overridden,
-    membershipVerdict: effective.verdict,
-    // ADR-801 §2.8 — ταξιδεύει μέχρι τον `checkPermission`. Χωρίς αυτή τη
-    // γραμμή το claim σταματούσε στο `extractCustomClaims` και ο server έκρινε
-    // σαν να μην υπήρχε.
-    permissions: claims.permissions,
+    ok: true,
+    scope: 'organization',
+    ctx: {
+      ...base,
+      companyId: effective.companyId,
+      superAdminOverride: effective.overridden,
+      membershipVerdict: effective.verdict,
+    },
   };
 }
 
 /**
- * Build request context from NextRequest.
+ * **Η ΜΙΑ ΜΗΧΑΝΗ ΤΑΥΤΟΤΗΤΑΣ ΤΟΥ ΣΥΝΟΡΟΥ API** (ADR-817 §4.1).
  *
- * This function:
- * 1. Extracts Bearer token from Authorization header
- * 2. Verifies token with Firebase Auth
- * 3. Validates RFC v6 custom claims (companyId, globalRole)
- * 4. Returns typed RequestContext
+ * 1. Bearer token από την κεφαλίδα `Authorization` (API clients)
+ * 2. Cookie συνεδρίας `__session` (φυλλομετρητής, `credentials: 'include'`)
+ * 3. Καμία πιστοποίηση — dev bypass ή απόρριψη
+ *
+ * ⚠️ **ΤΟ `buildRequestContext` ΕΙΝΑΙ ΚΑΤΑΝΑΛΩΤΗΣ ΤΗΣ, ΟΧΙ ΑΔΕΛΦΗ ΤΗΣ.** Δύο
+ * ανεξάρτητοι παραγωγοί ταυτότητας στο ίδιο αρχείο θα ήταν **δύο απαντήσεις σε ένα
+ * ερώτημα** — ADR-749, και μάλιστα στην πιο ακριβή του θέση.
+ */
+export async function buildApiIdentity(request: NextRequest): Promise<ApiIdentity> {
+  // Step 1: Try Bearer token from Authorization header (API clients)
+  const token = extractBearerToken(request);
+
+  if (token) {
+    return identityFromDecodedToken(await verifyIdToken(token), request);
+  }
+
+  // Step 2: Try session cookie (__session) — browser clients use credentials: 'include'
+  const sessionCookie = extractSessionCookie(request);
+
+  if (sessionCookie) {
+    return identityFromDecodedToken(await verifySessionCookie(sessionCookie), request);
+  }
+
+  // Step 3: No credentials found — development bypass or reject
+  if (process.env.NODE_ENV === 'development') {
+    logger.info('[AUTH_CONTEXT] Development mode: bypassing API auth (no token or cookie)');
+    // Το dev bypass **κατασκευάζει** companyId, άρα είναι εξ ορισμού εταιρικό.
+    return { ok: true, scope: 'organization', ctx: await createDevContext() };
+  }
+
+  return { ok: false, reason: 'missing_token' };
+}
+
+/**
+ * Build request context from NextRequest — **ο ΕΤΑΙΡΙΚΟΣ καταναλωτής** της
+ * {@link buildApiIdentity}.
+ *
+ * 🔴 **ΓΙΑΤΙ ΙΣΟΠΕΔΩΝΕΙ ΤΟΝ ΠΡΟΣΩΠΙΚΟ ΧΩΡΟ ΣΕ 401** (ADR-817 §3): η **προεπιλογή**
+ * είναι fail-closed. Το `AuthContext` **εγγυάται** μισθωτή, και το καταναλώνουν οι
+ * **319** διαδρομές `withAuth`, η απομόνωση μισθωτή και τα `firestore.rules`. Μια
+ * διαδρομή αποκτά προσωπική εμβέλεια **μόνο δηλώνοντάς το** — με το
+ * `withPersonalOrOrgAuth`, ποτέ σιωπηλά.
+ *
+ * ⚠️ **ΜΗΔΕΝ ΑΛΛΑΓΗ ΣΥΜΠΕΡΙΦΟΡΑΣ**: ο άνθρωπος χωρίς οργανισμό έπαιρνε
+ * `missing_claims` πριν το ADR-817, παίρνει `missing_claims` και μετά. Άλλαξε μόνο
+ * ότι η κατάσταση απέκτησε **όνομα**.
  *
  * @param request - NextRequest object
  * @returns RequestContext (AuthContext | UnauthenticatedContext)
@@ -350,28 +372,18 @@ async function contextFromDecodedToken(
 export async function buildRequestContext(
   request: NextRequest
 ): Promise<RequestContext> {
-  // Step 1: Try Bearer token from Authorization header (API clients)
-  const token = extractBearerToken(request);
+  const identity = await buildApiIdentity(request);
 
-  if (token) {
-    // Verify ID token, then run the shared claims→context path.
-    return contextFromDecodedToken(await verifyIdToken(token), request);
+  if (!identity.ok) {
+    return createUnauthenticatedContext(identity.reason);
   }
 
-  // Step 2: Try session cookie (__session) — browser clients use credentials: 'include'
-  const sessionCookie = extractSessionCookie(request);
-
-  if (sessionCookie) {
-    return contextFromDecodedToken(await verifySessionCookie(sessionCookie), request);
+  if (identity.scope === 'personal') {
+    logger.warn('[AUTH_CONTEXT] DENY — missing companyId claim', { uid: identity.ctx.uid });
+    return createUnauthenticatedContext('missing_claims');
   }
 
-  // Step 3: No credentials found — development bypass or reject
-  if (process.env.NODE_ENV === 'development') {
-    logger.info('[AUTH_CONTEXT] Development mode: bypassing API auth (no token or cookie)');
-    return createDevContext();
-  }
-
-  return createUnauthenticatedContext('missing_token');
+  return identity.ctx;
 }
 
 /**

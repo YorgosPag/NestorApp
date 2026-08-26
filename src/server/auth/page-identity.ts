@@ -39,7 +39,12 @@ import { SESSION_COOKIE_CONFIG } from '@/lib/auth/security-policy';
 import { getDevCompanyId } from '@/config/dev-environment';
 import { getCurrentRuntimeEnvironment } from '@/config/environment-security-config';
 import { verifySessionCookieToken } from '@/server/admin/admin-guards';
-import { isValidGlobalRole, type GlobalRole, type AuthContext } from '@/lib/auth/types';
+import {
+  isValidGlobalRole,
+  type GlobalRole,
+  type AuthContext,
+  type PersonalIdentityContext,
+} from '@/lib/auth/types';
 // ADR-801 §2.8 — ο ΕΝΑΣ αναγνώστης του claim `permissions`.
 // 🔴 ΓΙΑΤΙ ΕΙΝΑΙ ΕΔΩ: αυτό είναι ο **δεύτερος** παραγωγός `AuthContext` του
 // server (ο πρώτος είναι το `buildRequestContext`). Αν μόνο εκείνος διάβαζε το
@@ -61,21 +66,15 @@ const logger = createModuleLogger('PageIdentity');
 export type PageIdentityRejection = 'no-session' | 'invalid-session' | 'invalid-role';
 
 /**
- * Η ταυτότητα ανθρώπου **χωρίς οργανισμό** — ό,τι και το {@link AuthContext},
- * **χωρίς** `companyId` και χωρίς τα δύο πεδία που έχουν νόημα μόνο μέσα σε χώρο.
+ * Η ταυτότητα ανθρώπου **χωρίς οργανισμό**.
  *
- * 🔑 **ΓΙΑΤΙ ΞΕΧΩΡΙΣΤΟΣ ΤΥΠΟΣ ΚΑΙ ΟΧΙ `companyId: string | null`**: το
- * `AuthContext` το καταναλώνουν οι διαδρομές API, η απομόνωση μισθωτή και τα
- * `firestore.rules` μέσω του `buildRequestContext`. Χαλαρώνοντας **εκείνον** τον
- * τύπο, κάθε σημείο που σήμερα **εγγυάται** μισθωτή θα δεχόταν σιωπηλά `null` —
- * δηλαδή θα πληρώναμε μια διόρθωση προσγείωσης με **διεύρυνση της επιφάνειας
- * ασφαλείας**. Εδώ γίνεται το αντίθετο: ο προσωπικός χώρος **δεν μπορεί δομικά**
- * να περάσει εκεί όπου απαιτείται `companyId` — το απαγορεύει ο μεταγλωττιστής.
+ * ⚠️ **ΜΕΤΑΚΟΜΙΣΕ ΣΤΟ `lib/auth/types.ts` (ADR-817 §4.1), ΚΑΙ ΔΕΝ ΕΙΝΑΙ ΑΙΣΘΗΤΙΚΟ**:
+ * τον χρειάζεται πλέον και το **σύνορο API** — δεύτερος ορισμός θα ήταν δύο λεξιλόγια
+ * για ένα ερώτημα, και θα αποκλίναν την πρώτη φορά που κάποιος πρόσθετε πεδίο στο
+ * `AuthContext` (ADR-749). Το σκεπτικό «γιατί ξεχωριστός τύπος και όχι `string | null`»
+ * ζει **εκεί**, δίπλα στον ορισμό.
  */
-export type PersonalIdentityContext = Omit<
-  AuthContext,
-  'companyId' | 'superAdminOverride' | 'membershipVerdict'
->;
+export type { PersonalIdentityContext };
 
 /**
  * **ΤΡΕΙΣ ΡΗΤΕΣ ΚΑΤΑΣΤΑΣΕΙΣ, ΠΟΤΕ BOOLEAN** — και η μεσαία είναι όλο το ADR-807.

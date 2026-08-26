@@ -30,8 +30,11 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 
-import { withAuth } from '@/lib/auth/middleware';
-import type { AuthContext } from '@/lib/auth/types';
+import {
+  withPersonalOrOrgAuth,
+  actorWorkspace,
+  type ApiActor,
+} from '@/lib/auth/personal-scope-middleware';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { nowISO, todayLocalDate } from '@/lib/date-local';
@@ -49,7 +52,7 @@ interface InterestResponse {
 
 async function handler(
   request: NextRequest,
-  ctx: AuthContext,
+  actor: ApiActor,
 ): Promise<NextResponse<InterestResponse | { error: string }>> {
   const propertyId = request.nextUrl.searchParams.get('propertyId')?.trim() ?? '';
   if (propertyId === '') {
@@ -59,7 +62,11 @@ async function handler(
   const db = getAdminFirestore();
 
   try {
-    const place = await lookupOwnedPlace(db, propertyId, ctx.uid, ctx.companyId);
+    // 🔴 ADR-817 — ο **ιδιοκτήτης** αυτής της ερώτησης είναι, εξ ορισμού της Α14,
+    // συχνά ιδιώτης χωρίς εταιρεία. Το `actorWorkspace` δίνει `null` εκεί, και το
+    // `lookupOwnedPlace` **παραλείπει** τότε την εταιρική ανάγνωση: ο ιδιώτης δεν έχει
+    // εταιρικά ακίνητα, άρα `absent` είναι η **σωστή** απάντηση.
+    const place = await lookupOwnedPlace(db, propertyId, actor.ctx.uid, actorWorkspace(actor));
 
     // 🔴 «Δεν υπάρχει» και «δεν είναι δικό σου» απαντώνται **ΤΟ ΙΔΙΟ**, επίτηδες: μια
     // ξεχωριστή άρνηση θα επιβεβαίωνε την ύπαρξη της ταυτότητας, δηλαδή θα επέτρεπε
@@ -88,4 +95,4 @@ async function handler(
   }
 }
 
-export const GET = withStandardRateLimit(withAuth(handler));
+export const GET = withStandardRateLimit(withPersonalOrOrgAuth(handler));

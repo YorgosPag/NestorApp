@@ -25,8 +25,11 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 
-import { withAuth } from '@/lib/auth/middleware';
-import type { AuthContext } from '@/lib/auth/types';
+import {
+  withPersonalOrOrgAuth,
+  actorWorkspace,
+  type ApiActor,
+} from '@/lib/auth/personal-scope-middleware';
 import type { ListingActor } from '@/lib/owner-property/listing-custody';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
@@ -63,22 +66,29 @@ type RouteContext = { params: Promise<{ ownerPropertyId: string }> };
 /**
  * **Ποιος ρωτά** — και **τα δύο** σκέλη της ταυτότητας, όχι μόνο το uid.
  *
- * 🔴 ADR-777 §8.39: το `ctx.companyId` υπήρχε πάντα εδώ και **δεν το ζητούσε κανείς**,
+ * 🔴 ADR-777 §8.39: το `companyId` υπήρχε πάντα εδώ και **δεν το ζητούσε κανείς**,
  * οπότε η διαδρομή μπορούσε να κρίνει μόνο «είναι δική σου;» — ποτέ «είναι του
  * γραφείου σου;». Η {@link mayAdminister} απαντά και τα δύο, **χωρίς** να διευρύνει τον
  * ιδιωτικό χώρο.
+ *
+ * 🔴 **ADR-817 — Ο ΝΕΚΡΟΣ ΚΛΑΔΟΣ ΖΩΝΤΑΝΕΨΕ.** Μέχρι τις 2026-08-26 εδώ έγραφε
+ * `{ uid: ctx.uid, companyId: ctx.companyId }` με σχόλιο *«κανένα `?? null` εδώ: θα
+ * ήταν νεκρός κλάδος που μοιάζει με φρουρός»* — **σωστό όσο ο πολίτης έπαιρνε 401 και
+ * δεν έφτανε ποτέ**. Τώρα φτάνει, και ο τύπος-στόχος ήταν **ήδη έτοιμος**: το
+ * `ListingActor.companyId` δηλώνεται `string | null` με αιτιολογία *«γιατί ο ιδιώτης
+ * δεν έχει εταιρεία»*.
+ *
+ * ⚠️ Η μετάφραση γίνεται από το **ΕΝΑ** `actorWorkspace` — ποτέ με `?? null` εδώ:
+ * κενή/απούσα εταιρεία **δεν ταιριάζει με τίποτα** στο `mayAdminister` (`hasTenant`),
+ * και δεύτερη μετάφραση θα ήταν δεύτερη ερμηνεία του «απουσία».
  */
-function actorOf(ctx: AuthContext): ListingActor {
-  // ⚠️ Το `companyId` είναι **υποχρεωτικό** στο `AuthContext`: το `extractCustomClaims` απορρίπτει
-  // (fail-closed, ADR-657 §3.5) κάθε token χωρίς αυτό — άρα κανένα `?? null` εδώ: θα ήταν
-  // νεκρός κλάδος που μοιάζει με φρουρός.
-  return { uid: ctx.uid, companyId: ctx.companyId };
+function actorOf(actor: ApiActor): ListingActor {
+  return { uid: actor.ctx.uid, companyId: actorWorkspace(actor) };
 }
 
 async function handler(
   request: NextRequest,
-  ctx: AuthContext,
-  _cache: unknown,
+  actor: ApiActor,
   routeContext?: RouteContext,
 ): Promise<NextResponse<OwnerPropertyResponse>> {
   const params = await routeContext?.params;
@@ -96,7 +106,7 @@ async function handler(
       return respondToMalformed(['lifecycle']);
     }
     return respondToWrite(
-      await setOwnerPropertyLifecycle(adminDb, ownerPropertyId, lifecycle, actorOf(ctx)),
+      await setOwnerPropertyLifecycle(adminDb, ownerPropertyId, lifecycle, actorOf(actor)),
     );
   }
 
@@ -104,10 +114,10 @@ async function handler(
   if (!parsed.ok) return respondToMalformed(parsed.malformed);
 
   return respondToWrite(
-    await updateOwnerProperty(adminDb, ownerPropertyId, parsed.draft, actorOf(ctx)),
+    await updateOwnerProperty(adminDb, ownerPropertyId, parsed.draft, actorOf(actor)),
   );
 }
 
 export const PATCH = withStandardRateLimit(
-  withAuth<OwnerPropertyResponse, RouteContext>(handler),
+  withPersonalOrOrgAuth<OwnerPropertyResponse, RouteContext>(handler),
 );
