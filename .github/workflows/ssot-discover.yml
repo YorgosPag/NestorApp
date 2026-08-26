@@ -1201,3 +1201,74 @@ jobs:
         run: pnpm install --frozen-lockfile --ignore-scripts
 
       - run: node scripts/check-font-assets.js
+
+  # ===========================================================================
+  # CHECK 3.70 — ΑΔΕΣΜΕΥΤΑ ΑΝΑΓΝΩΡΙΣΤΙΚΑ (ADR-808)
+  # ===========================================================================
+  # Άνευ όρων, και ο λόγος είναι ΔΟΜΙΚΟΣ: το Layer 1 κρίνει τα ΣΤΑΔΙΟΠΟΙΗΜΕΝΑ, αλλά μια
+  # διαγραφή καθολικής δήλωσης (`declare global`, `export as namespace`, πακέτο @types)
+  # κάνει αδέσμευτα αρχεία ΠΟΥ ΚΑΝΕΙΣ ΔΕΝ ΣΤΑΔΙΟΠΟΙΗΣΕ. Η πύλη κλιμακώνεται μόνη της σε
+  # πλήρη σάρωση όταν σταδιοποιείται .d.ts/manifest — εδώ η πλήρης είναι ΠΑΝΤΑ.
+  # 🔴 Το ερώτημα ΔΕΝ το απαντά κανείς άλλος: το typescript-eslint ΑΠΕΝΕΡΓΟΠΟΙΕΙ τον
+  # `no-undef` («το κάνει ο μεταγλωττιστής»), ο `tsc` απαγορεύεται στον πράκτορα (N.17)
+  # και το src/subapps/dxf-viewer είναι ΕΚΤΟΣ root tsconfig (baseline 381 του 3.29).
+  # Κανένα νέο workflow — το μητρώο του 3.37 παρακολουθεί ΑΡΧΕΙΑ, όχι jobs.
+  unbound-identifiers:
+    name: 🔗 CHECK 3.70 — αδέσμευτα αναγνωριστικά
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # ⚠️ fetch-depth: 0 — η ομάδα Π βαθμονομεί με `git show 95056738:<αρχείο>` πάνω στις
+      # ΠΡΑΓΜΑΤΙΚΕΣ βλάβες (8 αρχεία). Με ρηχό checkout το αντικείμενο δεν υπάρχει και η
+      # βαθμονόμηση σκάει — η πύλη γίνεται μονίμως κόκκινη για λόγο άσχετο με τον κώδικα.
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      # ⚠️ Η ΕΓΚΑΤΑΣΤΑΣΗ ΕΙΝΑΙ ΥΠΟΧΡΕΩΤΙΚΗ: τα καθολικά ΠΑΡΑΓΟΝΤΑΙ από τα ίδια τα
+      # `node_modules/typescript/lib/lib.*.d.ts` + `@types/*` + τις εξαρτήσεις. Χωρίς
+      # node_modules ο σαρωτής πέφτει στον ελάχιστο πυρήνα και θα ανέφερε ΕΚΑΤΟΝΤΑΔΕΣ
+      # ψευδώς θετικά — δηλαδή θα ήταν χειρότερος από ανύπαρκτος.
+      - name: 📦 Install dependencies (TypeScript + @types)
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: 🔗 CHECK 3.70 — πλήρης σάρωση src/ (~38s, 15.296 αρχεία)
+        run: pnpm run unbound:check
+
+      - name: 🧪 Άγκυρες — CHECK 3.70 (33 tests, βαθμονόμηση σε πραγματικό ιστορικό)
+        run: pnpm run test:unbound-identifiers
+
+      - name: ✅ Summary
+        if: success()
+        run: |
+          echo "::notice title=Unbound identifiers::Κανένα όνομα χωρίς δέσμευση — καμία επιφάνεια δεν πέφτει με ReferenceError"
+
+      - name: 🧭 How to resolve
+        if: failure()
+        run: |
+          {
+            echo "### CHECK 3.70 — ADR-808 (αδέσμευτα αναγνωριστικά)"
+            echo ""
+            echo "Το όνομα αναφέρεται αλλά **δεν δηλώνεται, δεν εισάγεται και δεν είναι καθολικό**."
+            echo ""
+            echo "- ⚠️ Ένα \`export … from\` **ΕΠΑΝΕΞΑΓΕΙ — ΔΕΝ εισάγει**. Χρειάζεσαι **δύο** γραμμές:"
+            echo "  \`import type { X } from './y';\` **και** \`export type { X };\`"
+            echo "- ⚠️ **ΜΗΝ** το λύσεις με \`any\` (N.2) ούτε σβήνοντας το \`export\`."
+            echo "- Αν το σύμβολο **δεν υπάρχει πουθενά**, κάποιο refactor το διέγραψε και"
+            echo "  άφησε τον καταναλωτή — βρες τι έπρεπε να επιστρέφει, μην το σβήσεις."
+            echo ""
+            echo "Αναφορά: \`npm run unbound:report\`"
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -379,12 +379,31 @@ function collectReads(sf) {
 }
 
 /**
+ * **ΜΙΑ ΑΝΑΛΥΣΗ, ΔΥΟ ΑΠΑΝΤΗΣΕΙΣ** — «αναλύθηκε;» **και** «τι βρέθηκε;».
+ *
+ * ⚠️ Ο {@link findUnbound} επιστρέφει `[]` **και** για «καθαρό» **και** για «σπασμένη
+ * σύνταξη». Ο καλών που θέλει να τα ξεχωρίσει (η πύλη: ένα αρχείο που δεν αναλύθηκε
+ * **δεν είναι** καθαρό) θα έπρεπε αλλιώς να ξανα-αναλύσει — δηλαδή **δεύτερο parse σε
+ * κάθε αρχείο**: μετρημένο **+18s** στα 15.296 αρχεία, για πληροφορία που η πρώτη
+ * ανάλυση **είχε ήδη**.
+ *
+ * @returns {{parsed:boolean, unbound:{file:string,name:string,line:number}[]}}
+ */
+function scanFile(relPath, source, projectRoot) {
+  const kind = relPath.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
+  const sf = ts.createSourceFile(relPath, source, ts.ScriptTarget.Latest, true, kind);
+  if ((sf.parseDiagnostics || []).length) return { parsed: false, unbound: [] };
+  return { parsed: true, unbound: collectUnbound(sf, relPath, projectRoot) };
+}
+
+/**
  * @returns {{file:string, name:string, line:number}[]} αδέσμευτα αναγνωριστικά
  */
 function findUnbound(relPath, source, projectRoot) {
-  const kind = relPath.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
-  const sf = ts.createSourceFile(relPath, source, ts.ScriptTarget.Latest, true, kind);
-  if ((sf.parseDiagnostics || []).length) return [];   // σπασμένη σύνταξη — άλλο ερώτημα
+  return scanFile(relPath, source, projectRoot).unbound;
+}
+
+function collectUnbound(sf, relPath, projectRoot) {
   const bound = collectBindings(sf);
   const ambient = ambientGlobals(projectRoot || process.cwd());
   const out = [];
@@ -400,7 +419,7 @@ function findUnbound(relPath, source, projectRoot) {
 }
 
 module.exports = {
-  findUnbound, collectBindings, ambientGlobals, GLOBALS,
+  scanFile, findUnbound, collectBindings, ambientGlobals, GLOBALS,
   // εκτεθειμένα ΓΙΑ ΤΙΣ ΑΓΚΥΡΕΣ: ο κανόνας «τι είναι καθολικό» πρέπει να ασκείται
   // απευθείας, αλλιώς μια αλλαγή του περνά κρυμμένη πίσω από 12.833 αρχεία.
   harvestGlobals, vendorTypeRoots, cacheFingerprint,
