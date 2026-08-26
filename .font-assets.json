@@ -43,19 +43,6 @@
       "why": "ADR-803 — ο στόχος του txt.shx (μονοδιάστημο stroke). Metric-compatible με Courier New: 600/1000 σε ΟΛΟΥΣ τους χαρακτήρες που μετρήθηκαν."
     },
 
-    "public/fonts/Roboto-Regular.ttf": {
-      "spdx": "Apache-2.0",
-      "family": "Roboto",
-      "attribution": "public/fonts/Roboto-Apache-2.0-LICENSE.txt",
-      "why": "ΙΣΤΟΡΙΚΟ — ήταν το φυσικό αρχείο πίσω από το λογικό «Liberation Sans» μέχρι το ADR-803. ⚠️ ΜΕΤΡΗΜΕΝΟ 2026-08-25: ΜΗΔΕΝ καταναλωτές πλέον — κανένα αρχείο πηγής δεν αναφέρει το /fonts/Roboto-Regular.ttf. Είναι 515 KB νεκρά bytes και ΠΡΕΠΕΙ να διαγραφεί· η διαγραφή δυαδικού είναι απόφαση Giorgio (N.13)."
-    },
-    "public/fonts/helvetiker_regular.typeface.json": {
-      "spdx": "LicenseRef-MgOpen",
-      "family": "Helvetiker",
-      "attribution": null,
-      "why": "🔴 ΜΗ ΕΓΚΕΚΡΙΜΕΝΗ ΑΔΕΙΑ. Το ίδιο το αρχείο δηλώνει copyright «Μagenta ltd, 2004» και license_url «ellak.gr/fonts/MgOpen/license.html» — προσαρμοσμένη άδεια MgOpen, ΕΚΤΟΣ SPDX, που δεν πέρασε ποτέ από N.5. ⚠️ Και έχει ΜΗΔΕΝ καταναλωτές: κανένα tracked αρχείο δεν αναφέρει «helvetiker» πλην ενός handoff. 63 KB νεκρά bytes με ανοιχτό νομικό ερώτημα. ΑΠΟΦΑΣΗ GIORGIO: διαγραφή (προτεινόμενο) ή έγκριση της MgOpen στο .license-allowlist.json."
-    },
-
     "src/services/gantt-export/roboto-font-data.ts": {
       "spdx": "Apache-2.0",
       "family": "Roboto",

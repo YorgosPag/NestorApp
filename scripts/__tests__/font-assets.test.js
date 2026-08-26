@@ -117,14 +117,16 @@ describe('CHECK 3.69 — έχει κάθε διανεμόμενη γραμματ
 // ─── Η ΑΠΟΔΕΙΞΗ ΔΙΑΒΑΖΕΤΑΙ ΑΠΟ ΤΟ ΙΔΙΟ ΤΟ ΑΡΧΕΙΟ ────────────────────────────
 
 describe('Α — η άδεια βγαίνει από το ΑΡΧΕΙΟ, όχι από τη δήλωση', () => {
-  it('Α1: το πραγματικό Roboto δηλώνει Apache-2.0 στο δικό του name table', () => {
-    const ev = E.readEvidence(REPO_ROOT, 'public/fonts/Roboto-Regular.ttf');
-    expect(ev.family).toBe('Roboto');
-    expect(ev.license).toMatch(/Apache License, Version 2\.0/);
-    expect(ev.spdx).toBe('Apache-2.0');
+  it('Α1: το πραγματικό Liberation δηλώνει OFL-1.1 στο δικό του name table', () => {
+    const ev = E.readEvidence(REPO_ROOT, 'public/fonts/LiberationSans-Regular.ttf');
+    expect(ev.family).toBe('Liberation Sans');
+    expect(ev.license).toMatch(/SIL Open Font License, Version 1\.1/);
+    expect(ev.licenseURL).toMatch(/scripts\.sil\.org\/OFL/);
+    expect(ev.spdx).toBe('OFL-1.1');
   });
 
-  it('Α2: το πραγματικό Liberation δηλώνει OFL-1.1 στο δικό του name table', () => {
+  /** Η ΟΨΗ διαβάζεται ξεχωριστά — δύο αρχεία της ίδιας οικογένειας δεν είναι το ίδιο στοιχείο. */
+  it('Α2: η ΟΨΗ (subfamily) διαβάζεται ανά αρχείο, όχι ανά οικογένεια', () => {
     const ev = E.readEvidence(REPO_ROOT, 'public/fonts/LiberationSans-Bold.ttf');
     expect(ev.family).toBe('Liberation Sans');
     expect(ev.subfamily).toBe('Bold');
@@ -135,10 +137,38 @@ describe('Α — η άδεια βγαίνει από το ΑΡΧΕΙΟ, όχι �
    * 🔑 Το `.typeface.json` του three.js κρατά τα **ίδια** πεδία **αλλού** — και αυτό είναι που
    * αποκάλυψε το ζωντανό εύρημα.
    */
-  it('Α3: το helvetiker δηλώνει MgOpen — άλλη μορφή, ίδια απόδειξη', () => {
-    const ev = E.readEvidence(REPO_ROOT, 'public/fonts/helvetiker_regular.typeface.json');
+  /**
+   * ⚠️ **ΣΥΝΘΕΤΙΚΟ ΕΠΙΤΗΔΕΣ, ΚΑΙ Ο ΛΟΓΟΣ ΕΙΝΑΙ ΜΕΤΡΗΜΕΝΟΣ.** Ως τις 2026-08-25 αυτή η άγκυρα
+   * διάβαζε το **πραγματικό** `helvetiker_regular.typeface.json`. Το αρχείο **διαγράφηκε**
+   * (ADR-805 §9: MgOpen εκτός SPDX, μηδέν καταναλωτές) ⇒ η άγκυρα **αυτο-ακυρώθηκε τη στιγμή
+   * που η εκστρατεία πέτυχε** — τρίτη φορά που αυτό το σχήμα πληρώνεται σε δύο μέρες
+   * (ADR-790 §9.1 · `Π2` του CHECK 3.67).
+   *
+   * Ο **αναγνώστης** της μορφής και η **υπογραφή** `LicenseRef-MgOpen` παραμένουν, με
+   * **πληθυσμό 0 εκ σχεδιασμού**: κλειδώνουν την κατάσταση **πριν** ξαναεμφανιστεί, όπως ο
+   * κανόνας `Κ1` του CHECK 3.43. Χωρίς άγκυρα θα ήταν **νεκρός κώδικας που κανείς δεν ασκεί**.
+   */
+  it('Α3: μορφή `.typeface.json` — τα ΙΔΙΑ πεδία αλλού, και η MgOpen αναγνωρίζεται', () => {
+    // eslint-disable-next-line global-require
+    const fs = require('node:fs');
+    // eslint-disable-next-line global-require
+    const os = require('node:os');
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'font-assets-'));
+    const file = path.join(dir, 'ghost_regular.typeface.json');
+    fs.writeFileSync(file, JSON.stringify({
+      familyName: 'Ghost',
+      glyphs: { A: {}, B: {} },
+      original_font_information: {
+        copyright: 'Copyright (c) Magenta ltd, 2004',
+        license_url: 'http://www.ellak.gr/fonts/MgOpen/license.html',
+      },
+    }), 'utf8');
+
+    const ev = E.readEvidence(dir, 'ghost_regular.typeface.json');
+    expect(ev.family).toBe('Ghost');
     expect(ev.licenseURL).toMatch(/ellak\.gr\/fonts\/MgOpen/);
     expect(ev.spdx).toBe('LicenseRef-MgOpen');
+    fs.rmSync(dir, { recursive: true, force: true });
   });
 
   /**
@@ -173,27 +203,50 @@ describe('Π — το πραγματικό δέντρο', () => {
   });
 
   /**
-   * 🔑 Ο ΠΑΡΟΝΟΜΑΣΤΗΣ: η πύλη **βρίσκει όντως** κάτι στο πραγματικό δέντρο. Χωρίς αυτό, ένα
-   * «0 μπλοκάρουσες» θα μπορούσε να σημαίνει «δεν κοίταξα».
+   * 🔑 Ο ΠΑΡΟΝΟΜΑΣΤΗΣ — ΚΑΙ ΓΙΑΤΙ ΔΕΝ ΕΙΝΑΙ ΠΙΑ «ΒΡΙΣΚΕΙ ΤΟ helvetiker».
+   *
+   * 🔴 Η πρώτη του γραφή απαιτούσε από το **ζωντανό** δέντρο να περιέχει τη μη εγκεκριμένη
+   * άδεια. Ήταν σωστή όσο η βλάβη υπήρχε, και **έσπασε τη στιγμή που η εκστρατεία πέτυχε**
+   * (ADR-805 §9: το αρχείο διαγράφηκε). Ένας παρονομαστής **δεν επιτρέπεται να μετακινείται
+   * μαζί με τη θεραπεία** (ADR-790 §9.1).
+   *
+   * Πλέον αποδεικνύει το ίδιο πράγμα **χωρίς να χρειάζεται ζωντανή βλάβη**: με τις
+   * **ΠΡΑΓΜΑΤΙΚΕΣ** αποδείξεις — διαβασμένες από τα **ΠΡΑΓΜΑΤΙΚΑ bytes** των αρχείων που
+   * διανέμουμε — και **μόνο** τη λίστα αδειών συρρικνωμένη, κάθε διανεμόμενη γραμματοσειρά
+   * **οφείλει** να γίνει `license-not-allowed`. Αν η πύλη ήταν κενή, εδώ θα έβγαινε 0.
    */
-  it('Π2: ο ΠΑΡΟΝΟΜΑΣΤΗΣ — βρίσκει τη ΜΗ εγκεκριμένη άδεια που γέννησε την πύλη', () => {
-    const m = cli.measure();
-    expect(m.violationIds).toContain(
-      'license-not-allowed :: public/fonts/helvetiker_regular.typeface.json',
-    );
+  it('Π2: ο ΠΑΡΟΝΟΜΑΣΤΗΣ — με ΠΡΑΓΜΑΤΙΚΕΣ αποδείξεις και συρρικνωμένη allowlist, ΟΛΑ πέφτουν', () => {
+    const inv = A.takeInventory(REPO_ROOT, { allowedLicenses: ['MIT'] });
+    expect(inv.shipped.length).toBeGreaterThan(0);
+    const v = A.judge(inv);
+    const flagged = A.idsOf(v, A.STATES.LICENSE_NOT_ALLOWED);
+    expect(flagged).toEqual(inv.shipped);
+    expect(A.idsOf(v, A.STATES.DECLARED_ALLOWED)).toEqual([]);
+  });
+
+  /** Και η αντίστροφη κατεύθυνση: με την ΠΡΑΓΜΑΤΙΚΗ allowlist, κανένα δεν πέφτει. */
+  it('Π2β: με την πραγματική allowlist κάθε διανεμόμενη γραμματοσειρά είναι εγκεκριμένη', () => {
+    const v = A.judge(A.takeInventory(REPO_ROOT));
+    expect(A.idsOf(v, A.STATES.LICENSE_NOT_ALLOWED)).toEqual([]);
+    expect(A.idsOf(v, A.STATES.DECLARED_ALLOWED).length).toBeGreaterThan(0);
   });
 
   /**
    * 🔑 Η ανακάλυψη είναι **παραγόμενη**, όχι χειρόγραφη λίστα — το σχήμα που έχει αποτύχει
    * μετρημένα τέσσερις φορές σε αυτό το repo (3.34 · 3.37 · 3.49 · 3.57).
    */
-  it('Π3: η απογραφή ΠΑΡΑΓΕΤΑΙ και περιλαμβάνει και τις τρεις μορφές διανομής', () => {
+  /**
+   * ⚠️ Η **τρίτη** μορφή (`.typeface.json`) δεν έχει πια ζωντανό εκπρόσωπο μετά το ADR-805 §9 —
+   * την ασκεί η **συνθετική** άγκυρα `Α3`, ώστε ο αναγνώστης της να μη γίνει νεκρός κώδικας.
+   */
+  it('Π3: η απογραφή ΠΑΡΑΓΕΤΑΙ και πιάνει ΚΑΙ τις δύο ζωντανές μορφές διανομής', () => {
     const inv = A.takeInventory(REPO_ROOT);
     expect(inv.shipped).toEqual(expect.arrayContaining([
-      'public/fonts/LiberationSans-Regular.ttf',
-      'public/fonts/helvetiker_regular.typeface.json',
-      'src/services/gantt-export/roboto-font-data.ts',
+      'public/fonts/LiberationSans-Regular.ttf',          // δυαδικό στο public/
+      'src/services/gantt-export/roboto-font-data.ts',    // base64 μέσα σε module
     ]));
+    // …και ΔΕΝ πιάνει ό,τι δεν είναι γραμματοσειρά.
+    expect(inv.shipped).not.toContain('src/subapps/accounting/services/pdf/logo-data.ts');
   });
 
   it('Π4: το base64 module εντοπίζεται ΑΚΟΛΟΥΘΩΝΤΑΣ ΤΟΝ ΚΑΤΑΝΑΛΩΤΗ — 0 ψευδώς θετικά', () => {
