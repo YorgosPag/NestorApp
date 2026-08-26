@@ -203,17 +203,39 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const { occupation } = await syncUserProfileToFirestore(db, firebaseUser, customClaims);
       setDeclaredOccupation(occupation);
       const authUser = buildAuthUser(firebaseUser, customClaims);
-      logger.info('[AuthContext] Valid session established:', { email: authUser.email });
-      setUser(authUser);
 
-      await syncActiveSession(firebaseUser);
-
+      // 🔴 ADR-819 §4.2 — Η ΣΕΙΡΑ ΕΙΝΑΙ ΣΥΜΒΟΛΑΙΟ: ΤΟ COOKIE **ΠΡΙΝ** ΤΟΝ `user`.
+      //
+      // Μέχρι τις 2026-08-26 το `setUser` έτρεχε **εδώ**, και το `syncServerSession`
+      // **δύο await παρακάτω**. Το `useAuthFormState` πλοηγεί σε `useEffect` που
+      // πυροδοτεί ο **ίδιος ο `user`** (`useAuthFormState.ts:107`) ⇒ ο React
+      // ξαναπέδιδε και **έφευγε** ενώ το `__session` δεν είχε ακόμη στηθεί.
+      //
+      // Το server component `(app)/[...unprefixed]` έτρεχε τότε **χωρίς cookie**,
+      // έπεφτε στο dev bypass του `page-identity.ts` και **κατασκεύαζε** companyId
+      // από το `.env.local` (`NEXT_PUBLIC_DEFAULT_COMPANY_ID`) — μετρημένο ζωντανά:
+      // ο `int.architect@alpha.local` προσγειωνόταν σε `/o/comp_9c7c1a50-…/dashboard`
+      // και έπαιρνε **404**, επειδή το claim του έλεγε άλλον χώρο.
+      //
+      // ⛔ **ΜΗΝ το «λύσεις» με `setTimeout`** (ADR-819 §5 Α6): ο αγώνας γίνεται
+      //    λιγότερο **πιθανός**, όχι **αδύνατος** — πράσινο για λάθος λόγο.
+      //    Ο `user` γίνεται μη-κενός **μόνο αφού** υπάρχει το cookie: η πλοήγηση
+      //    δεν **μπορεί** πλέον να προσπεράσει τη συνεδρία (N.7.2 Q2).
+      //
+      // ⚠️ Παραμένει **non-blocking**: αποτυχία του cookie δεν επιτρέπεται να
+      //    αφήσει τον άνθρωπο κολλημένο σε οθόνη φόρτωσης — προχωρά, και οι
+      //    φρουροί του διακομιστή θα τον στείλουν στη σύνδεση.
       try {
         await syncServerSession(firebaseUser);
         logger.debug('[AuthContext] Server session cookie synced');
       } catch (sessionError) {
         logger.warn('[AuthContext] Failed to sync server session cookie (non-blocking)', { error: sessionError });
       }
+
+      logger.info('[AuthContext] Valid session established:', { email: authUser.email });
+      setUser(authUser);
+
+      await syncActiveSession(firebaseUser);
 
       setLoading(false);
     });

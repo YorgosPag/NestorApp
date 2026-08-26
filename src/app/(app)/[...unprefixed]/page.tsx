@@ -45,7 +45,7 @@ import { readPageIdentity } from '@/server/auth/page-identity';
 import { AUTH_ROUTES } from '@/lib/routes';
 import { workspacePath } from '@/lib/workspace/workspace-path';
 import { isInsideWorkspace } from '@/lib/workspace/workspace-scope';
-import { PERSONAL_WORKSPACE_ALIAS } from '@/types/workspace-alias';
+import { workspaceSegmentFor, type WorkspaceOwner } from '@/lib/workspace/workspace-segment';
 
 interface UnprefixedPageProps {
   /** ⚠️ Next.js 15: `params` και `searchParams` είναι **Promise**. */
@@ -78,7 +78,7 @@ export default async function UnprefixedCatchAll({ params, searchParams }: Unpre
   const identity = await readPageIdentity();
   if (!identity.ok) redirect(AUTH_ROUTES.login);
 
-  // 🔴 ADR-807 — ΑΥΤΟΣ Ο ΚΛΑΔΟΣ ΗΤΑΝ ΝΕΚΡΟΣ ΚΩΔΙΚΑΣ ΜΕΧΡΙ ΣΗΜΕΡΑ.
+  // 🔴 ADR-807 — ΑΥΤΟΣ Ο ΚΛΑΔΟΣ ΗΤΑΝ ΝΕΚΡΟΣ ΚΩΔΙΚΑΣ ΜΕΧΡΙ ΤΟΤΕ.
   //
   // Γραμμένος ειδικά για τον άνθρωπο χωρίς γραφείο, και **δομικά ανέφικτος**: το
   // `readPageIdentity` απέρριπτε την απουσία `companyId` ως αποτυχία ταυτότητας,
@@ -87,12 +87,37 @@ export default async function UnprefixedCatchAll({ params, searchParams }: Unpre
   // έστελνε τον αυτόνομο επαγγελματία στη σύνδεση **ενώ ήταν συνδεδεμένος** —
   // ατέρμονος βρόχος `/dashboard → /login`, μετρημένος ζωντανά 2026-08-25.
   //
-  // ⚠️ Ο έλεγχος είναι πλέον στο **`scope`** και όχι στο `hasOrganization(ctx)`:
-  //    το `ctx` του προσωπικού χώρου **δεν έχει καν** πεδίο `companyId`, οπότε η
-  //    ερώτηση «έχει οργανισμό;» πάνω του δεν είναι απλώς περιττή — είναι λάθος
-  //    ερώτηση. Ο μεταγλωττιστής το επιβάλλει (`PersonalIdentityContext`).
-  const alias =
-    identity.scope === 'organization' ? identity.ctx.companyId : PERSONAL_WORKSPACE_ALIAS;
+  // ⚠️ Ο έλεγχος είναι στο **`scope`** και όχι στο `hasOrganization(ctx)`: το `ctx`
+  //    του προσωπικού χώρου **δεν έχει καν** πεδίο `companyId`, οπότε η ερώτηση
+  //    «έχει οργανισμό;» πάνω του δεν είναι απλώς περιττή — είναι λάθος ερώτηση.
+  const owner: WorkspaceOwner =
+    identity.scope === 'organization'
+      ? { kind: 'organization', companyId: identity.ctx.companyId }
+      : { kind: 'personal' };
 
-  redirect(`${workspacePath(alias, path)}${rebuildQuery(await searchParams)}`);
+  // 🔴 ADR-819 — ΕΔΩ ΖΟΥΣΕ ΜΙΑ ΤΡΙΑΔΙΚΗ ΕΚΦΡΑΣΗ ΠΟΥ **ΜΑΝΤΕΥΕ**.
+  //
+  // Έγραφε `identity.ctx.companyId` σε μεταβλητή ονόματι `alias`, και **κανείς
+  // δεν εγγυόταν** ότι ο `companyId` ικανοποιεί οποιαδήποτε από τις **δύο**
+  // γραμματικές που δέχεται η υποδοχή `/o/<…>` *(ψευδώνυμο ή ταυτότητα χώρου)*.
+  // Μετρημένο ζωντανά: `comp_alpha_emulator` δεν είναι **ούτε** το ένα **ούτε**
+  // το άλλο — έχει `_` (άρα το `ALIAS_PATTERN` το κόβει) και δεν έχει uuid v4
+  // (άρα το `isValidEnterpriseId` το κόβει) ⇒ **404 χωρίς αιτία στα ίχνη**.
+  //
+  // ⛔ **ΜΗΝ ξαναγράψεις εδώ κατασκευή διεύθυνσης.** Η ερώτηση έχει πλέον
+  //    ιδιοκτήτη, και είναι **ολική**: `workspace-segment.ts` (ADR-819 §4.1).
+  const resolution = await workspaceSegmentFor(owner);
+
+  // ⚠️ **ΟΧΙ `notFound()`** (ADR-819 §5 Α7): «ο χώρος σου δεν έχει διεύθυνση» δεν
+  //    επιτρέπεται να φορέσει τη στολή του «δεν υπάρχει» — ίδιο δόγμα με το
+  //    `unavailable ⇒ 503` του `workspace-from-path.ts`. Είναι **χαλασμένη
+  //    παροχή** (χώρος που δεν πέρασε από το `workspace-provisioning.ts`) και
+  //    οφείλει να **φανεί**, αλλιώς η επόμενη συνεδρία ψάχνει ξανά από την αρχή.
+  if (resolution.outcome === 'unaddressable') {
+    throw new Error(
+      `[ADR-819] Ο χώρος ${resolution.companyId} δεν έχει διεύθυνση: ούτε ψευδώνυμο στο έγγραφό του, ούτε έγκυρη ταυτότητα χώρου.`,
+    );
+  }
+
+  redirect(`${workspacePath(resolution.segment, path)}${rebuildQuery(await searchParams)}`);
 }

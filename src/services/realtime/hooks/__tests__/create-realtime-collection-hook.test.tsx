@@ -17,6 +17,12 @@
  * **ΟΧΙ**: ο κριτής (`isMissingTenantError`) και ο δρομολογητής
  * (`routeTenantScopedError`) εκτελούνται **αληθινοί**. Αλλιώς η άγκυρα θα
  * επικύρωνε το πλαστό της.
+ *
+ * 🔑 **ΤΟ ΕΡΓΟΣΤΑΣΙΟ ΚΑΛΕΙΤΑΙ ΜΙΑ ΦΟΡΑ, ΠΟΤΕ ΜΕΣΑ ΣΕ RENDER** — όπως στην
+ * πραγματική χρήση (`const useX = createRealtimeCollectionHook(...)` σε εμβέλεια
+ * module). Η πρώτη γραφή αυτού του αρχείου το καλούσε **μέσα** στη render
+ * callback: κάθε render έφτιαχνε **νέο** store, και οι άγκυρες του Βήματος Β
+ * κοκκίνισαν σωστά δείχνοντάς το.
  * ═════════════════════════════════════════════════════════════════════════════
  */
 
@@ -56,7 +62,10 @@ function lastHandlers(): { onData: OnData; onError: OnError } {
 
 const logger = createModuleLogger('create-realtime-collection-hook.test');
 
-/** Ένα hook ανά test: η μηχανή κρατά state ανά **ορισμό**, όχι καθολικά. */
+/**
+ * Ένα **εργοστάσιο** ανά test — δηλαδή ένα store ανά test, ίδια απομόνωση με
+ * ξεχωριστό αρχείο hook. Καλείται **έξω** από κάθε render.
+ */
 function buildHook(cache?: ReturnType<typeof createStaleCache<string[]>>) {
   return createRealtimeCollectionHook<DocumentData, string>({
     collection: 'TASKS',
@@ -78,7 +87,8 @@ beforeEach(() => {
 // ============================================================================
 describe('Α — ο κύκλος ζωής, από άκρη σε άκρη', () => {
   test('Α1 — προσάρτηση ⇒ connecting ⇒ δεδομένα ⇒ active', () => {
-    const { result } = renderHook(() => buildHook()(true));
+    const useCollection = buildHook();
+    const { result } = renderHook(() => useCollection(true));
 
     expect(result.current.status).toBe('connecting');
     expect(result.current.loading).toBe(true);
@@ -94,16 +104,18 @@ describe('Α — ο κύκλος ζωής, από άκρη σε άκρη', () =>
   });
 
   test('Α2 — αποπροσάρτηση **κλείνει** τη συνδρομή', () => {
-    // Ο παρονομαστής κάθε διαρροής listener: χωρίς αυτό, μια ξεχασμένη
-    // `return` στο effect θα άφηνε το `onSnapshot` ζωντανό για πάντα.
-    const { unmount } = renderHook(() => buildHook()(true));
+    // Ο παρονομαστής κάθε διαρροής listener: χωρίς αυτό, ξεχασμένος καθαρισμός
+    // θα άφηνε το `onSnapshot` ζωντανό για πάντα.
+    const useCollection = buildHook();
+    const { unmount } = renderHook(() => useCollection(true));
     expect(unsubscribe).not.toHaveBeenCalled();
     unmount();
     expect(unsubscribe).toHaveBeenCalledTimes(1);
   });
 
   test('Α3 — `enabled: false` ⇒ ΚΑΜΙΑ συνδρομή, κατάσταση idle', () => {
-    const { result } = renderHook(() => buildHook()(false));
+    const useCollection = buildHook();
+    const { result } = renderHook(() => useCollection(false));
     expect(subscribeMock).not.toHaveBeenCalled();
     expect(result.current.status).toBe('idle');
     expect(result.current.loading).toBe(false);
@@ -116,7 +128,8 @@ describe('Β — 🔴 Η ΚΡΙΣΗ «σχεδιασμένη κατάσταση 
     // Ο αυτόνομος του ADR-807 δεν έχει οργανισμό **εκ σχεδιασμού**. Αυτό δεν
     // είναι βλάβη — και ο θόρυβος κρύβει τα αληθινά σφάλματα.
     const errorSpy = jest.spyOn(logger, 'error').mockImplementation(() => undefined);
-    const { result } = renderHook(() => buildHook()(true));
+    const useCollection = buildHook();
+    const { result } = renderHook(() => useCollection(true));
 
     act(() => lastHandlers().onData({ documents: [{ id: 'a' }] }));
     act(() => lastHandlers().onError(new MissingTenantError()));
@@ -131,7 +144,8 @@ describe('Β — 🔴 Η ΚΡΙΣΗ «σχεδιασμένη κατάσταση 
     // Χωρίς αυτό, μια μηχανή που καλεί **πάντα** το `onDesignedEmpty` θα
     // περνούσε το Β1 και θα **έθαβε κάθε σφάλμα** — σιωπή αντί για διάκριση.
     const errorSpy = jest.spyOn(logger, 'error').mockImplementation(() => undefined);
-    const { result } = renderHook(() => buildHook()(true));
+    const useCollection = buildHook();
+    const { result } = renderHook(() => useCollection(true));
 
     act(() => lastHandlers().onError(new Error('PERMISSION_DENIED: real breakage')));
 
@@ -145,7 +159,8 @@ describe('Β — 🔴 Η ΚΡΙΣΗ «σχεδιασμένη κατάσταση 
     // Αλλιώς το κενό του αυτόνομου θα το **κληρονομούσε** η επόμενη ταυτότητα
     // που θα προσαρτούσε τη σελίδα — δεδομένα ενός χρήστη στην οθόνη άλλου.
     const cache = createStaleCache<string[]>('anchor-designed-empty');
-    const { result } = renderHook(() => buildHook(cache)(true));
+    const useCollection = buildHook(cache);
+    const { result } = renderHook(() => useCollection(true));
 
     act(() => lastHandlers().onData({ documents: [{ id: 'a' }] }));
     expect(cache.get()).toEqual(['a']); // ο παρονομαστής: η μνήμη ΟΝΤΩΣ γράφεται
@@ -157,14 +172,14 @@ describe('Β — 🔴 Η ΚΡΙΣΗ «σχεδιασμένη κατάσταση 
 });
 
 // ============================================================================
-describe('Γ — ο πυροδότης του `refetch` είναι STATE, όχι ref', () => {
+describe('Γ — ο πυροδότης του `refetch` ξαναστήνει, όντως', () => {
   test('Γ1 — `refetch()` **ξαναστήνει** τη συνδρομή', () => {
-    // 🔴 Η ΑΠΟΦΑΣΗ ΤΟΥ §22: τρία από τα πέντε αδέλφια κρατούσαν τον πυροδότη σε
+    // 🔴 Η ΑΠΟΦΑΣΗ ΤΟΥ §22.4: τρία από τα πέντε αδέλφια κρατούσαν τον πυροδότη σε
     // `useRef` και τον διάβαζαν στο dep array — μη-αντιδραστική σύλληψη, που
     // επανεγγράφεται **κατά τύχη**, μόνο όταν ένα διπλανό `setState` προκαλέσει
-    // render. Το `useRealtimeBuildings` το είχε ήδη διορθώσει σε state
-    // (2026-06-11) και **αυτό** το δόγμα υιοθετήθηκε για όλους.
-    const { result } = renderHook(() => buildHook()(true));
+    // render. Το `useRealtimeBuildings` το είχε ήδη διορθώσει (2026-06-11).
+    const useCollection = buildHook();
+    const { result } = renderHook(() => useCollection(true));
     expect(subscribeMock).toHaveBeenCalledTimes(1);
 
     act(() => result.current.refetch());
@@ -176,13 +191,105 @@ describe('Γ — ο πυροδότης του `refetch` είναι STATE, όχι
   test('Γ2 — ΤΟ ΑΟΡΑΤΟ: `refetch()` ΕΝΩ φορτώνει ήδη, δουλεύει κι αυτό', () => {
     // 🔑 Αυτό ακριβώς **έπεφτε σιωπηλά** στην έκδοση με ref: με `loading === true`
     // και `error === null`, τα `setLoading(true)`/`setError(null)` του `refetch`
-    // είναι **no-op** ⇒ κανένα render ⇒ το `ref.current` δεν ξαναδιαβάζεται ποτέ
-    // ⇒ **καμία** επανεγγραφή. Με state, ο μετρητής αλλάζει πάντα.
-    const { result } = renderHook(() => buildHook()(true));
+    // ήταν **no-op** ⇒ κανένα render ⇒ το `ref.current` δεν ξαναδιαβαζόταν ποτέ
+    // ⇒ **καμία** επανεγγραφή.
+    const useCollection = buildHook();
+    const { result } = renderHook(() => useCollection(true));
     expect(result.current.loading).toBe(true); // ο παρονομαστής: ΟΝΤΩΣ φορτώνει
 
     act(() => result.current.refetch());
 
     expect(subscribeMock).toHaveBeenCalledTimes(2);
+  });
+
+  test('Γ3 — ΠΑΡΟΝΟΜΑΣΤΗΣ: απενεργοποιημένος καταναλωτής ΔΕΝ ξαναστήνει', () => {
+    // Αλλιώς ένα `refetch()` από οθόνη που έχει ρητά δηλώσει «μη με συνδέσεις»
+    // θα άνοιγε συνδρομή που κανείς δεν ζήτησε.
+    const useCollection = buildHook();
+    const { result } = renderHook(() => useCollection(false));
+    act(() => result.current.refetch());
+    expect(subscribeMock).not.toHaveBeenCalled();
+  });
+});
+
+// ============================================================================
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * Δ — 🔴 ΒΗΜΑ Β: **ΕΝΑΣ LISTENER ΓΙΑ ΟΛΟΥΣ** (§22.7)
+ *
+ * Το μετρημένο περιστατικό του `useFirestoreBuildings` (2026-06-11): ~11
+ * ταυτόχρονοι καταναλωτές άνοιγαν ο καθένας **δικό του** `onSnapshot` ⇒ **9×**
+ * διπλή δουλειά ανά αλλαγή. Οι πέντε αδελφοί είχαν **2-4** ο καθένας.
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+describe('Δ — ο κοινός, μετρημένος listener', () => {
+  test('Δ1 — ΔΥΟ καταναλωτές ⇒ **ΜΙΑ** συνδρομή', () => {
+    const useCollection = buildHook();
+    renderHook(() => useCollection(true));
+    renderHook(() => useCollection(true));
+
+    expect(subscribeMock).toHaveBeenCalledTimes(1);
+  });
+
+  test('Δ2 — μία παράδοση φτάνει σε **ΟΛΟΥΣ** τους καταναλωτές', () => {
+    // Ο παρονομαστής του Δ1: χωρίς αυτό, «μία συνδρομή» θα μπορούσε να σημαίνει
+    // ότι ο δεύτερος καταναλωτής απλώς **δεν βλέπει τίποτα**.
+    const useCollection = buildHook();
+    const first = renderHook(() => useCollection(true));
+    const second = renderHook(() => useCollection(true));
+
+    act(() => lastHandlers().onData({ documents: [{ id: 'a' }, { id: 'b' }] }));
+
+    expect(first.result.current.items).toEqual(['a', 'b']);
+    expect(second.result.current.items).toEqual(['a', 'b']);
+    // ...και είναι **η ίδια** αναφορά: μία χαρτογράφηση, όχι δύο.
+    expect(first.result.current.items).toBe(second.result.current.items);
+  });
+
+  test('Δ3 — ο ΠΡΩΤΟΣ που φεύγει ΔΕΝ κλείνει· ο ΤΕΛΕΥΤΑΙΟΣ κλείνει', () => {
+    const useCollection = buildHook();
+    const first = renderHook(() => useCollection(true));
+    const second = renderHook(() => useCollection(true));
+
+    first.unmount();
+    expect(unsubscribe).not.toHaveBeenCalled(); // ο δεύτερος ακούει ακόμη
+
+    second.unmount();
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+  });
+
+  test('Δ4 — 🔴 Η ΑΙΧΜΗ ΤΟΥ TanStack: επαναπροσάρτηση ΞΑΝΑΣΤΗΝΕΙ, ποτέ παγωμένα', () => {
+    // Το invertase/tanstack-query-firebase #25 περιγράφει ακριβώς αυτό: όταν
+    // φύγει ο τελευταίος καταναλωτής η συνδρομή κλείνει, και σε επαναπροσάρτηση
+    // **όσο η εγγραφή ζει στη μνήμη** το `queryFn` δεν ξανατρέχει ⇒ η οθόνη
+    // δείχνει **σιωπηλά παγωμένα** δεδομένα. Εδώ ο μετρητής αναφορών 0 → 1
+    // ξαναστήνει, ενώ τα δεδομένα επιβιώνουν ⇒ μηδέν αναλαμπή ΚΑΙ μηδέν ψέμα.
+    const useCollection = buildHook();
+    const first = renderHook(() => useCollection(true));
+    act(() => lastHandlers().onData({ documents: [{ id: 'a' }] }));
+    first.unmount();
+
+    expect(subscribeMock).toHaveBeenCalledTimes(1);
+
+    const second = renderHook(() => useCollection(true));
+    expect(subscribeMock).toHaveBeenCalledTimes(2); // ΞΑΝΑΣΤΗΘΗΚΕ
+    expect(second.result.current.items).toEqual(['a']); // ...χωρίς αναλαμπή
+  });
+
+  test('Δ5 — 🔑 το ατομικό συμβόλαιο του `enabled` ΕΠΙΒΙΩΝΕΙ του κοινού store', () => {
+    // 🔴 Ο κίνδυνος του Βήματος Β: με κοινή κατάσταση, ένας καταναλωτής που έχει
+    // ρητά δηλώσει «μη με συνδέσεις» θα μπορούσε να **αρχίσει να βλέπει
+    // δεδομένα** επειδή τα ζήτησε κάποιος άλλος. Το store είναι κοινό — η
+    // **προβολή** του, όχι.
+    const useCollection = buildHook();
+    const active = renderHook(() => useCollection(true));
+    const disabled = renderHook(() => useCollection(false));
+
+    act(() => lastHandlers().onData({ documents: [{ id: 'a' }] }));
+
+    expect(active.result.current.items).toEqual(['a']);
+    expect(disabled.result.current.items).toEqual([]);
+    expect(disabled.result.current.status).toBe('idle');
+    expect(disabled.result.current.loading).toBe(false);
   });
 });

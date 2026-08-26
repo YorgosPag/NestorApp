@@ -48,12 +48,51 @@ import {
   seedIdentity,
   type SeedIdentity,
 } from './lib/emulator/identity';
-import { COMPANY_ID, COMPANY_NAME, PERSONAS } from './lib/emulator/personas';
+import {
+  COMPANY_ALIAS,
+  COMPANY_ALIAS_KEY,
+  COMPANY_ID,
+  COMPANY_NAME,
+  PERSONAS,
+} from './lib/emulator/personas';
 
-/** Ο χώρος στον οποίο δείχνουν οι τέσσερις `@alpha.local`. */
+/**
+ * Ο χώρος στον οποίο δείχνουν οι τέσσερις `@alpha.local` — **με τη διεύθυνσή του**.
+ *
+ * 🔴 **ΔΥΟ ΕΓΓΡΑΦΑ, ΟΧΙ ΕΝΑ** (ADR-819 §4.3): ακριβώς τα δύο που γράφει και το
+ * `workspace-provisioning.ts` στην παραγωγή —
+ *
+ * | έγγραφο | ρόλος |
+ * |---|---|
+ * | `companies/<id>.alias` | ο **γραφέας** της διεύθυνσης το διαβάζει *(`workspace-segment.ts`, ανάγνωση κατά κλειδί)* |
+ * | `workspace_aliases/<σκελετός>` | ο **αναγνώστης** της διεύθυνσης το λύνει *(`resolveAlias`)* |
+ *
+ * ⚠️ **Λείψει το ένα, ο επαγγελματίας βλέπει 404** — και τα δύο 404 μοιάζουν ίδια:
+ * χωρίς το πρώτο δεν κατασκευάζεται διεύθυνση· χωρίς το δεύτερο κατασκευάζεται
+ * διεύθυνση **που δεν λύνεται**.
+ *
+ * ⚠️ **Ο σκελετός ΕΙΝΑΙ το κλειδί** του δεύτερου εγγράφου, και **δεν** αποθηκεύεται
+ * ως πεδίο μέσα του: θα ήταν δεύτερη αλήθεια δίπλα στο κλειδί (`WorkspaceAliasRecord`).
+ */
 async function ensureCompany(db: Firestore): Promise<void> {
   await db.collection('companies').doc(COMPANY_ID).set(
-    { name: COMPANY_NAME, status: 'active', createdAt: FieldValue.serverTimestamp() },
+    {
+      name: COMPANY_NAME,
+      status: 'active',
+      alias: COMPANY_ALIAS,
+      createdAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true },
+  );
+
+  await db.collection('workspace_aliases').doc(COMPANY_ALIAS_KEY).set(
+    {
+      companyId: COMPANY_ID,
+      alias: COMPANY_ALIAS,
+      current: true,
+      createdAt: FieldValue.serverTimestamp(),
+      retiredAt: null,
+    },
     { merge: true },
   );
 }
@@ -76,13 +115,13 @@ function printNextSteps(): void {
   console.log('');
   console.log('   🔑 Το κρίσιμο πείραμα — ΙΔΙΟ επάγγελμα, ΑΛΛΟΣ χώρος:');
   console.log('      ext.architect@solo.local   → ιδιωτικός χώρος (οι προσφορές μου)');
-  console.log('      int.architect@alpha.local  → χώρος εργασίας (dashboard)');
+  console.log(`      int.architect@alpha.local  → χώρος εργασίας (/o/${COMPANY_ALIAS}/dashboard)`);
   console.log('');
 }
 
 async function main(auth: Auth, db: Firestore): Promise<void> {
   await ensureCompany(db);
-  console.log(`🏢 Χώρος: ${COMPANY_NAME} (${COMPANY_ID})`);
+  console.log(`🏢 Χώρος: ${COMPANY_NAME} (${COMPANY_ID}) → /o/${COMPANY_ALIAS}/`);
   console.log('');
 
   for (const person of PERSONAS) {

@@ -49,7 +49,7 @@
   "notFound": {
     "title": "404",
     "message": "The page you are looking for was not found.",
-    "backToLogin": "Back to login"
+    "backHome": "Back to home"
   },
   "global": {
     "title": "Something went wrong",

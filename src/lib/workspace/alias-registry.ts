@@ -125,7 +125,13 @@ export type AliasResolution =
  * `isValidEnterpriseId` (`services/enterprise-id-parse.ts`), που απαιτεί **και**
  * γνωστό πρόθεμα **και** γνήσιο uuid v4.
  */
-function readsAsWorkspaceIdentity(segment: string): boolean {
+/**
+ * ⚠️ **ΕΞΑΓΕΤΑΙ** για τη ΜΙΑ αυθεντία του τμήματος διεύθυνσης
+ * ({@link module:lib/workspace/workspace-segment}, ADR-819) — ώστε ο **γραφέας**
+ * της διεύθυνσης να κρίνει τη μορφή με τον **ΙΔΙΟ** κανόνα που θα τη διαβάσει ο
+ * **αναγνώστης**. Δεύτερος κριτής θα ήταν δύο γραμματικές για μία υποδοχή.
+ */
+export function readsAsWorkspaceIdentity(segment: string): boolean {
   return (
     isValidEnterpriseId(segment) &&
     enterpriseIdType(segment) === ENTERPRISE_ID_PREFIXES.COMPANY

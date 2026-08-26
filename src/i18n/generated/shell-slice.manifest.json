@@ -57,7 +57,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "522b7a8fae3b31c65c7683ae16e70da206704639d0aa7bd877d71529305a7447",
+  "inputsSha256": "667ab10dc25293069fdb60d7c2f93d610d93eb201d1420f5d276da70e19aac9c",
   "languages": [
     "el"
   ],
@@ -463,7 +463,7 @@
     "src/services/notificationService.ts": "53e0251636cfda81bc8fecd825e66923b20c7597ff5ea6fb8e0be7dbc75ed540",
     "src/services/realtime/RealtimeService.ts": "74041709a532b1af4b14add0a5a5909fd1424f201144b959073bdfedba6d9501",
     "src/services/realtime/event-payload-definitions.ts": "78b9e40a30565f7fae74ac114948afbecd2b051de9bb667dc1035f0fbb0a312a",
-    "src/services/realtime/hooks/create-realtime-collection-hook.ts": "33c8e0f2d16373ea9935103b3828b0c5a8f71f4c35ea2fae17fc8108620d75a8",
+    "src/services/realtime/hooks/create-realtime-collection-hook.ts": "f32578caeec4701b7cc8f098104fd6a03158faebc8bfd51f558bf23c440943bb",
     "src/services/realtime/hooks/realtime-collection.types.ts": "09034af987c919815f0a1f14bcb7f36d068174dfc7ed0607ac27e98f6cdbf2fe",
     "src/services/realtime/hooks/tenant-scoped-error.ts": "aad28da520d047ef7280e72a53d118f6726c6fa133ba7c6c0de3a68a1941b127",
     "src/services/realtime/hooks/use-realtime-entity-events.ts": "00070fc2701d75d65341bb80e1ef29bc54c395b8e1ef144fddd4dbee8f8feaf3",
