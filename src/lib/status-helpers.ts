@@ -17,6 +17,7 @@
 
 import type { UseSemanticColorsReturn } from '@/ui-adapters/react/useSemanticColors';
 import { brandClasses } from '@/styles/design-tokens';
+import type { ProjectStatus } from '@/constants/project-statuses';
 import {
   getEnhancedStatusColor,
   getEnhancedStatusLabel,
@@ -50,9 +51,19 @@ export type BuildingTimelineStatusValue =
 export type BuildingProjectStatusValue =
   | 'active' | 'construction' | 'planned' | 'completed';
 
-export type ProjectStatusValue =
-  | 'planning' | 'in_progress' | 'completed'
-  | 'on_hold' | 'cancelled' | 'default';
+/**
+ * ADR-812 — ΠΑΡΑΓΟΜΕΝΟ ΑΠΟ ΤΟ ΛΕΞΙΛΟΓΙΟ + ο κλάδος fallback, ρητά.
+ *
+ * Ήταν χειρόγραφο union που αντέγραφε πέντε από τις έξι καταστάσεις (έλειπε ο
+ * κάδος) και **ανύψωνε το `'default'` σε τιμή** — το `'default'` όμως δεν είναι
+ * κατάσταση έργου, είναι ο κλάδος fallback του `switch` παρακάτω. Ένα όνομα για
+ * δύο πράγματα.
+ *
+ * Πλέον το λεξιλόγιο έρχεται από τη ρίζα και ο fallback δηλώνεται δίπλα του:
+ * μια έβδομη κατάσταση εμφανίζεται εδώ αυτόματα, και ο μεταγλωττιστής απαιτεί
+ * να απαντηθεί στο `switch`.
+ */
+export type ProjectStatusValue = ProjectStatus | 'default';
 
 export type StatusByDomain = {
   storage: StorageStatusValue;

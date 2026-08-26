@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { validationRules } from '@/utils/validation';
-import { PROJECT_STATUSES as CENTRALIZED_PROJECT_STATUSES, BUILDING_STATUSES as CENTRALIZED_BUILDING_STATUSES } from '@/core/status/StatusConstants';
+import { ACTIVE_PROJECT_STATUSES } from '@/constants/project-statuses';
+import { ACTIVE_BUILDING_STATUSES } from '@/constants/building-statuses';
 import { PROJECT_ADDRESS_TYPES, BLOCK_SIDE_DIRECTIONS } from '@/types/project/addresses'; // Runtime enums (SSoT)
 import { PRIORITY_LEVELS as CANONICAL_PRIORITY_LEVELS } from '@/constants/priority-levels';
 import {
@@ -10,9 +11,29 @@ import {
   projectAddressesCreateSchema,
 } from '@/types/project/address-schemas';
 
-// 🏢 ENTERPRISE: Use centralized status constants (NO MORE DUPLICATES)
-const PROJECT_STATUSES = Object.keys(CENTRALIZED_PROJECT_STATUSES);
-const BUILDING_STATUSES = Object.keys(CENTRALIZED_BUILDING_STATUSES);
+/**
+ * 🔴 ADR-812 — Ο ΦΡΟΥΡΟΣ ΕΓΚΥΡΟΤΗΤΑΣ ΔΙΑΒΑΖΕΙ ΤΟ SSoT, ΟΧΙ ΠΙΝΑΚΑ ΧΡΩΜΑΤΩΝ.
+ *
+ * Μέχρι 2026-08-26 αυτές οι δύο γραμμές έγραφαν
+ * `Object.keys(CENTRALIZED_PROJECT_STATUSES)` πάνω στο **badge config map** του
+ * `StatusConstants` — δηλαδή τα κλειδιά ενός πίνακα ΧΡΩΜΑΤΩΝ και ΕΙΚΟΝΙΔΙΩΝ
+ * γίνονταν ο κανόνας ΕΓΚΥΡΟΤΗΤΑΣ ενός Zod schema. Από πάνω το σχόλιο έγραφε
+ * «Use centralized status constants (NO MORE DUPLICATES)»: η περιγραφή της
+ * διόρθωσης ΗΤΑΝ η απόκλιση.
+ *
+ * Μετρημένο κόστος: το έργο δεχόταν 8 τιμές (μαζί με `review`/`approved`, που
+ * κατά ISO 19650 · Revit · Figma ανήκουν σε ΑΛΛΟ αντικείμενο) και το κτίριο 13
+ * αντί για 5 — και ΚΑΙ ΤΑ ΔΥΟ δέχονταν `deleted`, δηλαδή δημιουργία εγγραφής
+ * κατευθείαν «στον κάδο».
+ *
+ * ⚠️ Τα ACTIVE_* υποσύνολα (χωρίς `deleted`) είναι το σωστό σύνολο για ΦΟΡΜΑ:
+ * το soft-delete είναι ΕΝΕΡΓΕΙΑ (ADR-028), όχι επιλογή σε dropdown.
+ *
+ * ⚠️ ΜΗΝ ξαναγράψεις `Object.keys()` πάνω σε πίνακα παρουσίασης για να πάρεις
+ * λεξιλόγιο — το CHECK 3.73 το μπλοκάρει.
+ */
+const PROJECT_STATUSES: readonly string[] = ACTIVE_PROJECT_STATUSES;
+const BUILDING_STATUSES: readonly string[] = ACTIVE_BUILDING_STATUSES;
 
 // 🏢 ENTERPRISE: Configurable business constants (NO MORE HARDCODED VALUES)
 export const BUILDING_CATEGORIES = (process.env.NEXT_PUBLIC_BUILDING_CATEGORIES || 'residential,commercial,mixed,industrial').split(',').map(c => c.trim());
@@ -164,7 +185,7 @@ const buildingBaseSchemaRaw = z.object({
   address: validationRules.required(), // Legacy - kept for backward compatibility
   description: z.string().optional(),
   category: validationRules.selection(BUILDING_CATEGORIES),
-  status: validationRules.selection(BUILDING_STATUSES),
+  status: validationRules.selection([...BUILDING_STATUSES]),
   // 🏢 ENTERPRISE: Address inheritance (ADR-167)
   addressConfigs: buildingAddressConfigsSchema.optional(),
   /**
@@ -181,105 +202,76 @@ const buildingBaseSchemaRaw = z.object({
   primaryProjectAddressId: z.string().optional(),
 });
 
+/**
+ * 🔴 ADR-812 (Boy Scout, N.0.2 · CHECK 3.28) — ΕΝΑ σώμα, τρεις καταναλωτές.
+ *
+ * Οι τρεις αναλλοίωτες διευθύνσεων κτιρίου ήταν γραμμένες **ΤΡΕΙΣ ΦΟΡΕΣ**,
+ * token-ταυτόσημες, σε `buildingBaseSchema` · `buildingCreateSchema` ·
+ * `buildingEditSchema`. Το `jscpd` τις ανέφερε ως δύο κλώνους 33 και 34 γραμμών.
+ * Ήταν προϋπάρχουσες — αλλά θα μπλόκαραν το commit που αγγίζει αυτό το αρχείο,
+ * και ήταν το είδος γραμμής που ξεχνιέται στην **τέταρτη** αντιγραφή.
+ *
+ * ⚠️ ΤΟ ΜΗΝΥΜΑ ΕΙΝΑΙ ΜΕΡΟΣ ΤΟΥ ΣΥΜΒΟΛΑΙΟΥ και ζει δίπλα στον έλεγχο: τρία
+ * αντίγραφα του ίδιου κειμένου αποκλίνουν σιωπηλά, και ο χρήστης θα έβλεπε άλλη
+ * αιτιολόγηση ανάλογα με το ποια φόρμα άνοιξε.
+ */
+interface BuildingAddressInvariantInput {
+  readonly primaryProjectAddressId?: string;
+  readonly addressConfigs?: ReadonlyArray<{
+    readonly inheritFromProject?: boolean;
+    readonly projectAddressId?: string;
+  }>;
+}
+
+function satisfiesBuildingAddressInvariants(data: BuildingAddressInvariantInput): boolean {
+  // 🏢 ENTERPRISE INVARIANT 1: If primaryProjectAddressId is set → addressConfigs must exist
+  if (data.primaryProjectAddressId && (!data.addressConfigs || data.addressConfigs.length === 0)) {
+    return false;
+  }
+
+  // 🏢 ENTERPRISE INVARIANT 2: If addressConfigs exist → primaryProjectAddressId REQUIRED
+  if (data.addressConfigs && data.addressConfigs.length > 0 && !data.primaryProjectAddressId) {
+    return false;
+  }
+
+  // 🏢 ENTERPRISE INVARIANT 3: primaryProjectAddressId must match one of the addressConfigs
+  if (data.primaryProjectAddressId && data.addressConfigs && data.addressConfigs.length > 0) {
+    const referencedIds = data.addressConfigs
+      .filter((c) => c.inheritFromProject)
+      .map((c) => c.projectAddressId)
+      .filter(Boolean);
+
+    if (!referencedIds.includes(data.primaryProjectAddressId)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+const BUILDING_ADDRESS_INVARIANT_ERROR = {
+  message: 'Building address invariants violated: (1) primaryProjectAddressId requires addressConfigs, (2) addressConfigs require primaryProjectAddressId, (3) primaryProjectAddressId must match one of the addressConfigs',
+  path: ['primaryProjectAddressId'],
+} as const;
+
 // Building base schema with invariants
 export const buildingBaseSchema = buildingBaseSchemaRaw.refine(
-  (data) => {
-    // 🏢 ENTERPRISE INVARIANT 1: If primaryProjectAddressId is set → addressConfigs must exist
-    if (data.primaryProjectAddressId && (!data.addressConfigs || data.addressConfigs.length === 0)) {
-      return false;
-    }
-
-    // 🏢 ENTERPRISE INVARIANT 2: If addressConfigs exist → primaryProjectAddressId REQUIRED
-    if (data.addressConfigs && data.addressConfigs.length > 0 && !data.primaryProjectAddressId) {
-      return false;
-    }
-
-    // 🏢 ENTERPRISE INVARIANT 3: primaryProjectAddressId must match one of the addressConfigs
-    if (data.primaryProjectAddressId && data.addressConfigs && data.addressConfigs.length > 0) {
-      const referencedIds = data.addressConfigs
-        .filter((c) => c.inheritFromProject)
-        .map((c) => c.projectAddressId)
-        .filter(Boolean); // Remove undefined
-
-      if (!referencedIds.includes(data.primaryProjectAddressId)) {
-        return false;
-      }
-    }
-
-    return true;
-  },
-  {
-    message: 'Building address invariants violated: (1) primaryProjectAddressId requires addressConfigs, (2) addressConfigs require primaryProjectAddressId, (3) primaryProjectAddressId must match one of the addressConfigs',
-    path: ['primaryProjectAddressId'],
-  }
+  satisfiesBuildingAddressInvariants,
+  BUILDING_ADDRESS_INVARIANT_ERROR
 );
 
 export const buildingCreateSchema = buildingBaseSchemaRaw.extend({
   projectId: z.string().optional(),
 }).refine(
-  (data) => {
-    // 🏢 ENTERPRISE INVARIANT 1: If primaryProjectAddressId is set → addressConfigs must exist
-    if (data.primaryProjectAddressId && (!data.addressConfigs || data.addressConfigs.length === 0)) {
-      return false;
-    }
-
-    // 🏢 ENTERPRISE INVARIANT 2: If addressConfigs exist → primaryProjectAddressId REQUIRED
-    if (data.addressConfigs && data.addressConfigs.length > 0 && !data.primaryProjectAddressId) {
-      return false;
-    }
-
-    // 🏢 ENTERPRISE INVARIANT 3: primaryProjectAddressId must match one of the addressConfigs
-    if (data.primaryProjectAddressId && data.addressConfigs && data.addressConfigs.length > 0) {
-      const referencedIds = data.addressConfigs
-        .filter((c) => c.inheritFromProject)
-        .map((c) => c.projectAddressId)
-        .filter(Boolean);
-
-      if (!referencedIds.includes(data.primaryProjectAddressId)) {
-        return false;
-      }
-    }
-
-    return true;
-  },
-  {
-    message: 'Building address invariants violated: (1) primaryProjectAddressId requires addressConfigs, (2) addressConfigs require primaryProjectAddressId, (3) primaryProjectAddressId must match one of the addressConfigs',
-    path: ['primaryProjectAddressId'],
-  }
+  satisfiesBuildingAddressInvariants,
+  BUILDING_ADDRESS_INVARIANT_ERROR
 );
 
 export const buildingEditSchema = buildingBaseSchemaRaw.extend({
   id: z.string(),
 }).refine(
-  (data) => {
-    // 🏢 ENTERPRISE INVARIANT 1: If primaryProjectAddressId is set → addressConfigs must exist
-    if (data.primaryProjectAddressId && (!data.addressConfigs || data.addressConfigs.length === 0)) {
-      return false;
-    }
-
-    // 🏢 ENTERPRISE INVARIANT 2: If addressConfigs exist → primaryProjectAddressId REQUIRED
-    if (data.addressConfigs && data.addressConfigs.length > 0 && !data.primaryProjectAddressId) {
-      return false;
-    }
-
-    // 🏢 ENTERPRISE INVARIANT 3: primaryProjectAddressId must match one of the addressConfigs
-    if (data.primaryProjectAddressId && data.addressConfigs && data.addressConfigs.length > 0) {
-      const referencedIds = data.addressConfigs
-        .filter((c) => c.inheritFromProject)
-        .map((c) => c.projectAddressId)
-        .filter(Boolean);
-
-      if (!referencedIds.includes(data.primaryProjectAddressId)) {
-        return false;
-      }
-    }
-
-    return true;
-  },
-  {
-    message: 'Building address invariants violated: (1) primaryProjectAddressId requires addressConfigs, (2) addressConfigs require primaryProjectAddressId, (3) primaryProjectAddressId must match one of the addressConfigs',
-    path: ['primaryProjectAddressId'],
-  }
+  satisfiesBuildingAddressInvariants,
+  BUILDING_ADDRESS_INVARIANT_ERROR
 );
 
 // Project schemas
@@ -289,7 +281,7 @@ export const projectBaseSchema = z.object({
   location: validationRules.required(),
   startDate: validationRules.date().optional(),
   endDate: validationRules.date().optional(),
-  status: validationRules.selection(PROJECT_STATUSES),
+  status: validationRules.selection([...PROJECT_STATUSES]),
   // 🏢 ENTERPRISE: Multi-address support (ADR-167) - PERSISTED (allows empty strings)
   addresses: projectAddressesSchema.optional(),
 });

@@ -19,8 +19,6 @@ import type {
   NavigationStatus
 } from '../types/BadgeTypes';
 import type { UseSemanticColorsReturn } from '../../ui-adapters/react/useSemanticColors';
-// ✅ ENTERPRISE SOLUTION: Import complete COLOR_BRIDGE με all missing properties
-import { COLOR_BRIDGE } from '../../design-system/color-bridge';
 
 // 🏢 ENTERPRISE: Import centralized status labels - NO MORE HARDCODED VALUES
 // 📌 NOTE: Import directly from modular files to avoid conflicts with original modal-select.ts re-exports
@@ -111,22 +109,12 @@ export const createProjectStatuses = (colors: UseSemanticColorsReturn): Record<P
     color: colors.text.error,
     icon: 'x'
   },
-  review: {
-    label: projectStatusLabels.review,
-    variant: 'purple',
-    backgroundColor: colors.bg.secondary,
-    color: colors.text.primary,
-    icon: 'review'
-  },
-  approved: {
-    label: projectStatusLabels.approved,
-    variant: 'success',
-    backgroundColor: colors.bg.success,
-    color: colors.text.success,
-    icon: 'checkCircle'
-  },
+  // ADR-812: τα `review`/`approved` ΕΦΥΓΑΝ — ανήκουν στον άξονα έγκρισης
+  // παραδοτέου (ISO 19650 S3/S4/B1 · Revit revision · Figma branch), όχι στο
+  // lifecycle του έργου. Ο τύπος επιστροφής `Record<ProjectStatus, …>` δεν
+  // επιτρέπει πια να ξαναμπούν χωρίς να αλλάξει το SSoT.
   deleted: {
-    label: 'trash:trashView',
+    label: projectStatusLabels.deleted,
     variant: 'outline',
     backgroundColor: colors.bg.secondary,
     color: colors.text.muted,
@@ -392,32 +380,26 @@ export const createUnifiedBadgeSystem = (colors: UseSemanticColorsReturn): Badge
  */
 
 // ============================================================================
-// 🏢 ENTERPRISE: Color System Integration με Direct COLOR_BRIDGE Access
 // ============================================================================
-
-const getDefaultColors = (): UseSemanticColorsReturn => {
-  // 🏢 ENTERPRISE SOLUTION: Use actual COLOR_BRIDGE με all properties
-  return {
-    // 🌉 Direct bridge mappings - ZERO LOGIC (same as useSemanticColors)
-    text: COLOR_BRIDGE.text,
-    bg: COLOR_BRIDGE.bg,
-    border: COLOR_BRIDGE.border,
-    interactive: COLOR_BRIDGE.interactive,
-    gradients: COLOR_BRIDGE.gradients,
-    ring: COLOR_BRIDGE.ring, // ✅ ENTERPRISE: Added missing ring property
-
-    // 🎯 Simple utility methods - PURE MAPPING (same as useSemanticColors)
-    getText: (type) => COLOR_BRIDGE.text[type],
-    getBg: (type) => COLOR_BRIDGE.bg[type] || COLOR_BRIDGE.bg.primary,
-    getBorder: (type) => COLOR_BRIDGE.border[type] || COLOR_BRIDGE.border.default,
-    getGradient: (type) => COLOR_BRIDGE.gradients[type] || COLOR_BRIDGE.gradients.neutralSubtle,
-    getRing: (type) => COLOR_BRIDGE.ring[type] || COLOR_BRIDGE.ring.default, // ✅ ENTERPRISE: Added missing getRing method
-  };
-};
-
+// 🔴 ADR-812 — ΤΑ ΔΥΟ ΟΜΩΝΥΜΑ ΔΙΑΓΡΑΦΗΚΑΝ
 // ============================================================================
-// 🏷️ STATIC EXPORTS - Enterprise Compatibility Layer με Lazy Initialization
-// ============================================================================
-
-export const PROJECT_STATUSES = createProjectStatuses(getDefaultColors());
-export const BUILDING_STATUSES = createBuildingStatuses(getDefaultColors());
+//
+// Εδώ ζούσαν `PROJECT_STATUSES` και `BUILDING_STATUSES` — **badge maps**
+// (χρώμα · variant · εικονίδιο · ετικέτα) με τα ονόματα του ΛΕΞΙΛΟΓΙΟΥ. Το
+// `PROJECT_STATUSES` ήταν ομώνυμο του κανονικού array στο
+// `@/constants/project-statuses`, με ΑΛΛΟ περιεχόμενο και ΑΛΛΟ νόημα: «δες το
+// PROJECT_STATUSES» δεν προσδιόριζε πράγμα.
+//
+// 🔴 Ο μοναδικός τους καταναλωτής ήταν το `types/validation/schemas.ts`, που
+// έκανε `Object.keys()` πάνω τους και τα έδινε σε **Zod** — τα κλειδιά ενός
+// πίνακα χρωμάτων γίνονταν κανόνας εγκυρότητας. Μόλις εκείνο έμαθε να ρωτά το
+// SSoT, τα δύο έμειναν με ΜΗΔΕΝ καταναλωτές (AST μεταβατικά + `git grep`,
+// 2026-08-26· το barrel `core/badges/index.ts` επανεξάγει μόνο τα `create*`).
+//
+// Μαζί τους έφυγε και ένας υπολογισμός σε χρόνο φόρτωσης module: το
+// `createProjectStatuses(...)` έτρεχε με στιγμιότυπο των προεπιλεγμένων χρωμάτων
+// σε κάθε import· μαζί τους έφυγε και ο βοηθός που τα παρήγε.
+//
+// ⚠️ Χρειάζεσαι badge configs; Κάλεσε τα `create*Statuses(colors)` με τα ΖΩΝΤΑΝΑ
+// χρώματα του θέματος — όχι στιγμιότυπο των προεπιλεγμένων.
+// ⚠️ Χρειάζεσαι το λεξιλόγιο; `@/constants/project-statuses`. Ένα σπίτι.

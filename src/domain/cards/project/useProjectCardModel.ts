@@ -20,7 +20,9 @@ import type { GridCardBadgeVariant } from '@/design-system/components/GridCard/G
 import { formatCurrency, formatNumber } from '@/lib/intl-utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Project } from '@/types/project';
-import { PROJECT_STATUS_LABELS } from '@/types/project';
+// ADR-812: λεξιλόγιο ΚΑΙ ετικέτες από το leaf SSoT — το `@/types/project`
+// τις επανεξάγει, αλλά σέρνει μαζί του ολόκληρο το dxf-viewer subapp.
+import { PROJECT_STATUS_LABELS, type ProjectStatus } from '@/constants/project-statuses';
 import { splitNamespacedLabelKey } from '@/core/badges/badge-label-key';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import '@/lib/design-system';
@@ -31,12 +33,26 @@ import type { CardViewModel } from '../shared/card-model.types';
 // 🏢 STATUS TO BADGE VARIANT MAPPING (Centralized)
 // =============================================================================
 
-const STATUS_BADGE_VARIANTS: Record<string, GridCardBadgeVariant> = {
+/**
+ * ADR-812 — `Record<ProjectStatus, …>`, ΟΧΙ `Record<string, …>`.
+ *
+ * Ο χαλαρός τύπος έκανε τον πίνακα να δέχεται ό,τι όνομα να 'ναι και να μη
+ * ζητά ΚΑΜΙΑ κατάσταση: του έλειπε το `deleted` και τίποτα δεν το είπε — το
+ * `?? 'default'` παρακάτω το έβαφε ουδέτερο γκρι, δηλαδή έργο στον κάδο έμοιαζε
+ * με έργο χωρίς κατάσταση. Με τον σφιχτό τύπο, μια έβδομη κατάσταση στο SSoT
+ * σπάει εδώ τη μεταγλώττιση αντί να ξεθωριάσει στην οθόνη.
+ *
+ * ⚠️ ΤΟ FALLBACK ΜΕΝΕΙ, και δεν είναι πλεονασμός: το `status` έρχεται από το
+ * Firestore, όπου μπορεί να υπάρχει παλιά τιμή εκτός λεξιλογίου (μετρημένο —
+ * το `ProjectDetailsHeader` κρατά repair path για `'active'`).
+ */
+const STATUS_BADGE_VARIANTS: Record<ProjectStatus, GridCardBadgeVariant> = {
   planning: 'warning',
   in_progress: 'info',
   completed: 'success',
   on_hold: 'secondary',
   cancelled: 'destructive',
+  deleted: 'outline',
 };
 
 /**
@@ -103,7 +119,7 @@ export function useProjectCardModel(project: Project): CardViewModel {
   const badges = useMemo(() => {
     const status = project.status || 'planning';
     const statusKey = PROJECT_STATUS_LABELS[status];
-    const variant = STATUS_BADGE_VARIANTS[status] || 'default';
+    const variant = STATUS_BADGE_VARIANTS[status as ProjectStatus] ?? 'default';
     const ref = splitNamespacedLabelKey(statusKey);
 
     return [{

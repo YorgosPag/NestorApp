@@ -32,6 +32,9 @@ import {
   getContactTypeLabels,
   getProjectStatusLabels,
 } from '@/config/vocabulary/labels/status';
+// ADR-812: το ΛΕΞΙΛΟΓΙΟ (τι επιτρέπεται) και οι ΕΤΙΚΕΤΕΣ (πώς λέγεται) είναι δύο
+// ερωτήματα. Το dropdown ρωτά το πρώτο· ο πίνακας ετικετών απαντά μόνο το δεύτερο.
+import { ACTIVE_PROJECT_STATUSES } from '@/constants/project-statuses';
 import { DROPDOWN_PLACEHOLDERS } from '../../constants/property-statuses-enterprise';
 import type {
   DialogCopyVariant,
@@ -195,8 +198,15 @@ export function getFieldOptions(
   entityType: DialogEntityType
 ): ReadonlyArray<{ value: string; label: string }> | undefined {
   if (fieldName === 'status' && entityType === 'project') {
-    const statusLabels = getProjectStatusLabels();
-    return Object.entries(statusLabels).map(([value, label]) => ({ value, label }));
+    // 🔴 ADR-812 — Η ΠΗΓΗ ΕΙΝΑΙ ΤΟ ΥΠΟΣΥΝΟΛΟ ΦΟΡΜΑΣ, ΟΧΙ ΤΑ ΚΛΕΙΔΙΑ ΤΩΝ ΕΤΙΚΕΤΩΝ.
+    // Μέχρι 2026-08-26 έγραφε `Object.entries(getProjectStatusLabels())`, δηλαδή
+    // «ό,τι έχει ετικέτα είναι και επιλέξιμο». Ήταν ήδη λάθος (πρόσφερε
+    // `review`/`approved`) και θα γινόταν χειρότερο τη στιγμή που ο πίνακας
+    // ετικετών απέκτησε το `deleted`: το dropdown θα πρόσφερε «Στον κάδο» ως
+    // επιλογή δημιουργίας. Το soft-delete είναι ΕΝΕΡΓΕΙΑ (ADR-028).
+    // Οι ετικέτες απαντούν «πώς λέγεται», ΠΟΤΕ «τι επιτρέπεται».
+    const labels = getProjectStatusLabels();
+    return ACTIVE_PROJECT_STATUSES.map(value => ({ value, label: labels[value] }));
   }
   return undefined;
 }

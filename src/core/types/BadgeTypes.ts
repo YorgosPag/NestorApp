@@ -6,6 +6,9 @@
  */
 
 import type { ReactNode } from 'react';
+// 🔴 ADR-808 / CHECK 3.70 — το `export type { X } from` ΕΠΑΝΕΞΑΓΕΙ, ΔΕΝ ΕΙΣΑΓΕΙ:
+// χωρίς αυτή τη γραμμή το `ProjectStatus` της γρ. 159 είναι ΑΔΕΣΜΕΥΤΟ.
+import type { ProjectStatus } from '@/constants/project-statuses';
 
 // ===== CORE BADGE TYPES =====
 
@@ -28,15 +31,26 @@ export type DomainType = 'PROJECT' | 'BUILDING' | 'CONTACT' | 'PROPERTY' | 'UNIT
 
 // ===== STATUS TYPE UNIONS =====
 
-export type ProjectStatus =
-  | 'planning'
-  | 'in_progress'
-  | 'completed'
-  | 'on_hold'
-  | 'cancelled'
-  | 'review'
-  | 'approved'
-  | 'deleted';
+/**
+ * 🔴 ADR-812 — ΠΑΡΑΓΟΜΕΝΟ, ΟΧΙ ΑΝΤΙΓΡΑΦΟ.
+ *
+ * Εδώ υπήρχε δικό του union με **οκτώ** τιμές: τις έξι κανονικές ΣΥΝ
+ * `review`/`approved`. Ήταν το δεύτερο από δεκατρία σώματα του ίδιου
+ * λεξιλογίου, και τροφοδοτούσε **όλα** τα badges της εφαρμογής — δηλαδή η
+ * απόκλιση ζωγραφιζόταν παντού.
+ *
+ * Τα `review`/`approved` ανήκουν στον άξονα ΕΓΚΡΙΣΗΣ ΠΑΡΑΔΟΤΕΟΥ, όχι στο
+ * lifecycle του έργου (ISO 19650 `S3`/`S4`/`B1` στο information container ·
+ * Revit `Issued` στο revision · Figma «Approved» στο branch). Τεκμηρίωση:
+ * `src/config/vocabulary/labels/status.ts`.
+ *
+ * ⚠️ Η επανεξαγωγή ΔΕΝ είναι κοσμητική: κάνει τον **μεταγλωττιστή** φρουρό.
+ * Το `createProjectStatuses(): Record<ProjectStatus, BadgeDefinition>` δεν
+ * μεταγλωττίζεται πια αν αποκτήσει κλειδί εκτός λεξιλογίου, ή αν χάσει κάποιο.
+ *
+ * ⚠️ ΜΗΝ ξαναγράψεις εδώ literal union — το CHECK 3.73 το μπλοκάρει.
+ */
+export type { ProjectStatus } from '@/constants/project-statuses';
 
 export type BuildingStatus =
   | 'available'
