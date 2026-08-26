@@ -58,8 +58,6 @@ import type {
   AdminRole,
   AuthResult,
   AuditEntry,
-  UserAuthResult,
-  StaffAuthResult,
 } from './admin-guards-types';
 
 import { ADMIN_ROLES, roleRequiresMfa } from './admin-guards-types';
@@ -124,48 +122,56 @@ export async function verifySessionCookieToken(sessionCookie: string): Promise<D
 }
 
 /**
- * Check if decoded token has admin role claim
- * Exported for use by admin-guards-page-auth.ts
- * 🏢 ENTERPRISE: Email-based role checking (matches EnterpriseSecurityService)
+ * Ο ρόλος διαχειριστή **του token** — ή `null`.
+ *
+ * =============================================================================
+ * 🔴 ΤΙ ΕΦΥΓΕ ΑΠΟ ΕΔΩ, ΚΑΙ ΓΙΑΤΙ (ADR-813 Φάση Β)
+ * =============================================================================
+ *
+ * Η συνάρτηση είχε **τέσσερις** πηγές αλήθειας, με την τελευταία σημειωμένη ως
+ * *«PRIMARY METHOD»*. Καμία δεν επιβίωσε τη μέτρηση:
+ *
+ * | πηγή | μετρημένο ζωντανά (5 λογαριασμοί παραγωγής) |
+ * |---|---|
+ * | `globalRole` claim | ✅ **η μόνη που απαντά** |
+ * | `role` claim *(legacy)* | **0** λογαριασμοί το φέρουν ⇒ νεκρός κλάδος |
+ * | `admin === true` *(legacy)* | **0** λογαριασμοί το φέρουν ⇒ νεκρός κλάδος |
+ * | **`NEXT_PUBLIC_ADMIN_EMAILS`** | 🔴 **η αυθεντία που έπρεπε να φύγει** |
+ *
+ * 🔑 **ΓΙΑΤΙ Η ΛΙΣΤΑ EMAIL ΔΕΝ ΜΠΟΡΕΙ ΝΑ ΕΙΝΑΙ ΑΥΘΕΝΤΙΑ** (ADR-813 §3): παγώνει
+ *    στο build (*«all `NEXT_PUBLIC_` variables will be **frozen** with the value
+ *    evaluated at build time»*) ⇒ **η ανάκληση διαχειριστή απαιτούσε redeploy**.
+ *    Και ο πελάτης με τον server μπορούσαν να διαβάζουν **διαφορετική** λίστα:
+ *    του πελάτη παγώνει στο workflow, του server έρχεται από το Coolify.
+ *    Επιπλέον **3 στα 5** email ήταν **φαντάσματα** — λογαριασμοί που δεν
+ *    υπήρχαν, δηλαδή διαχειριστικές θέσεις που διεκδικούνταν με μια εγγραφή.
+ *
+ * ⚠️ **ΟΙ ΔΥΟ LEGACY ΚΛΑΔΟΙ ΔΕΝ ΕΦΥΓΑΝ ΕΠΕΙΔΗ «ΦΑΙΝΟΝΤΑΝ ΠΑΛΙΟΙ»** — έφυγαν
+ *    επειδή ο τύπος τους απαγόρευσε: επέστρεφαν `'admin'`, όνομα που **δεν
+ *    υπάρχει** στο `GlobalRole`. Μετρήθηκε **πρώτα** ο πληθυσμός τους (0/5) και
+ *    **μετά** διαγράφηκαν· η σειρά έχει σημασία, γιατί «φαίνεται νεκρό» και
+ *    «είναι νεκρό» είναι δύο διαφορετικά πράγματα.
+ *
+ * 🏆 **ΤΟ ΑΠΟΤΕΛΕΣΜΑ ΕΙΝΑΙ ΤΟ ΠΡΟΤΥΠΟ ΤΩΝ ΜΕΓΑΛΩΝ**: ο PEP δεν κρίνει πια μόνος
+ *    του — καταναλώνει **παραγόμενο** σύνολο από το SSoT. NIST SP 800-162 /
+ *    SP 800-207: *«the PEP … contains **no clever logic of its own**»*.
+ *
+ * ⛔ **ΜΗΝ ξαναφέρεις εδώ λίστα email, μεταβλητή περιβάλλοντος, ή ονόματα
+ *    ρόλων.** Το ταβάνι είναι το `ADMIN_ROLES`, και **παράγεται**.
+ *
+ * @param decodedToken Το επαληθευμένο token.
+ * @returns Ο ρόλος, ή `null` όταν το token δεν φέρει διαχειριστικό ρόλο.
+ * @see lib/auth/roles.ts — `ADMINISTRATIVE_ROLES`, η παραγωγή
+ * @see server/admin/admin-guards-types.ts — γιατί ταβάνι και όχι ικανότητα
  */
 export function hasAdminRole(decodedToken: DecodedIdToken): AdminRole | null {
-  const role = decodedToken.role as string | undefined;
   const globalRole = (decodedToken as Record<string, unknown>).globalRole as string | undefined;
 
-  // Check globalRole first (preferred claim name)
+  // Ο ρόλος του **token**, κριμένος με το **παραγόμενο** ταβάνι. Καμία άλλη
+  // πηγή: όχι email, όχι legacy claims, όχι μεταβλητή περιβάλλοντος.
   if (globalRole && ADMIN_ROLES.includes(globalRole as AdminRole)) {
     logger.info(`🔐 [admin-guards] Role from globalRole claim: ${globalRole}`);
     return globalRole as AdminRole;
-  }
-
-  // Check role claim (legacy)
-  if (role && ADMIN_ROLES.includes(role as AdminRole)) {
-    logger.info(`🔐 [admin-guards] Role from role claim: ${role}`);
-    return role as AdminRole;
-  }
-
-  // Fallback: check if user has admin claim (legacy support)
-  if (decodedToken.admin === true) {
-    return 'admin';
-  }
-
-  // 🏢 ENTERPRISE: Email-based admin check (PRIMARY METHOD)
-  const email = decodedToken.email;
-  if (!email) {
-    return null;
-  }
-
-  const envAdminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS;
-  if (envAdminEmails) {
-    const adminEmails = envAdminEmails
-      .split(',')
-      .map(e => e.trim().toLowerCase())
-      .filter(Boolean);
-
-    if (adminEmails.includes(email.toLowerCase())) {
-      logger.info(`🔐 [admin-guards] Admin access granted via email for: ${email}`);
-      return 'admin';
-    }
   }
 
   return null;

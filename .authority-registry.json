@@ -32,7 +32,6 @@
     "   Google για μπλοκάρουσα πύλη: <10%), γιατί τα `vendor`/`client`/`engineer` είναι",
     "   ΚΑΙ τύποι σχέσης επαφής ΚΑΙ persona. Ίδια λέξη, ΑΛΛΟ ερώτημα."
   ],
-
   "ssot": {
     "judge": "src/lib/auth/authority.ts",
     "vocabulary": "src/types/capability-authority.ts",
@@ -42,8 +41,12 @@
     "clientPep": "src/auth/hooks/useCapability.ts",
     "_why": "Ο ΕΝΑΣ κριτής (PDP) + το λεξιλόγιό του + ο ΚΑΤΑΛΟΓΟΣ των ρόλων (δεδομένα) + οι ΕΡΩΤΗΣΕΙΣ πάνω του (κατηγορήματα + τα ΤΑΒΑΝΙΑ) + το λεξιλόγιο των claims + ο ΕΝΑΣ PEP του πελάτη. Τα λεξιλόγια ΔΙΑΒΑΖΟΝΤΑΙ από εδώ — ΠΟΤΕ αντιγραμμένα στην πύλη (3.34: δύο λίστες που απέκλιναν κατά 63)."
   },
-
-  "claimRoleVocabulary": ["super_admin", "company_admin", "internal_user", "external_user"],
+  "claimRoleVocabulary": [
+    "super_admin",
+    "company_admin",
+    "internal_user",
+    "external_user"
+  ],
   "_claimRoleVocabularyWhy": [
     "Ο δείκτης του Κ1: μόνο αυτές οι τιμές μπορούν να είναι claim `globalRole` (ο",
     "`claims-handler` τις επιβάλλει με `isValidGlobalRole`). Παράγονται από το",
@@ -51,22 +54,12 @@
     "(κατάσταση `vocabulary-drift`). Γραμμένες εδώ ΜΟΝΟ ως δείκτης σάρωσης, ώστε το",
     "προφίλτρο κειμένου να μη χρειάζεται να φορτώσει TypeScript."
   ],
-
   "legacyRoleNames": [
     {
       "name": "admin",
       "why": "ΖΩΝΤΑΝΟ ΣΤΑ ΔΕΔΟΜΕΝΑ, ΟΧΙ ΣΤΟΝ ΚΩΔΙΚΑ: το έγγραφο `users/dev-admin` έφερε `globalRole: 'admin'` (ADR-801 §2.3, μετρημένο στην παραγωγή 2026-08-24) — τιμή που το `isValidGlobalRole` απορρίπτει. Ο κριτής την ονομάζει `denied-unknown-role`· ο `useRoutePrefetch` και ο `hasAdminRole` κρατούν κλάδο συμβατότητας. ⚠️ ΜΗΝ τη σβήσεις πριν κλείσει η Φάση 2β: είναι συμβατότητα με ΥΠΑΡΚΤΑ δεδομένα, όχι παράνοια."
-    },
-    {
-      "name": "broker",
-      "why": "Λεξιλόγιο ΠΑΛΑΙΟΤΕΡΟΥ συστήματος ρόλων, ζωντανό μόνο στο `server/admin/admin-guards-types.ts`. Το ομώνυμό του στο `security-policy.ts` ΔΙΑΓΡΑΦΗΚΕ 2026-08-25 (μηδέν καταναλωτές). Φεύγει με τη Φάση 3β, που είναι ΜΠΛΟΚΑΡΙΣΜΕΝΗ από τη 2γ (break-glass)."
-    },
-    {
-      "name": "builder",
-      "why": "Ο δίδυμος του `broker`, ίδια προέλευση και ίδια μοίρα: φεύγει μαζί του στη Φάση 3β. ⚠️ Δηλωμένο ΞΕΧΩΡΙΣΤΑ και όχι ως «broker|builder»: δύο ονόματα που φεύγουν μαζί σήμερα μπορεί να μη φύγουν μαζί αύριο, και μια δήλωση που καλύπτει δύο πράγματα κρύβει το ένα."
     }
   ],
-
   "roleGuards": [
     {
       "id": "src/lib/admin-migration-runner.ts::!isRoleBypass(ctx.globalRole)",
@@ -102,7 +95,6 @@
     "⚠️ Ορφανή δήλωση ⇒ ΜΠΛΟΚ: αλλιώς το μητρώο σαπίζει και ο επόμενος δεν ξέρει",
     "   ποιες εγγραφές ισχύουν (σχήμα CHECK 3.50)."
   ],
-
   "inlineDeciders": [
     {
       "id": "src/components/admin/role-management/components/RolePermissionMatrix.tsx",

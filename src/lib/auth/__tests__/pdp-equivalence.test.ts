@@ -254,10 +254,16 @@ describe('ADR-801 §2.6 — ΙΣΟΔΥΝΑΜΙΑ ΤΩΝ ΔΥΟ PDP (ερώτημ
       expect(unscoped.granted).toBe(true); // ✅ εμβέλεια εταιρείας
 
       const scoped = await checkPermission(ctx, 'projects:projects:update', { projectId: 'p1' });
-      // ⚠️ ΜΗΝ «διορθώσεις» αυτό σε `true`. Το claim γράφεται ως
-      //    `rolePermissions ∪ extras` (claims-handler.ts:159) και ο ΡΟΛΟΣ δεν
-      //    απαντά σε ερώτημα με πόρο· αν το claim απαντούσε, το ΙΔΙΟ permission
-      //    id θα συμπεριφερόταν αλλιώς ανάλογα με τη διαδρομή παράδοσης.
+      // ⚠️ ΜΗΝ «διορθώσεις» αυτό σε `true`. Ούτε το claim ούτε ο ΡΟΛΟΣ απαντούν
+      //    σε ερώτημα **με πόρο**: εκεί κρίνει η ιδιότητα μέλους του έργου. Αν
+      //    απαντούσαν, το ΙΔΙΟ permission id θα συμπεριφερόταν αλλιώς ανάλογα
+      //    με τη διαδρομή παράδοσης.
+      //
+      // ⚠️ Η παλιά διατύπωση εδώ επικαλούνταν ότι *«το claim γράφεται ως
+      //    `rolePermissions ∪ extras`»* — **έπαψε να ισχύει** στο ADR-813 Φάση Β
+      //    (το claim κρατά μόνο extras· η αντιγραφή έσπαγε το όριο 1.000 bytes).
+      //    Το `ctx` εδώ το στήνει το ίδιο το test, οπότε η άγκυρα δεν εξαρτήθηκε
+      //    ποτέ από εκείνη τη συμπεριφορά — μόνο η **αιτιολόγηση** είχε παλιώσει.
       expect(scoped.granted).toBe(false);
       expect(scoped.reason).toBe('no_project_membership');
     });
