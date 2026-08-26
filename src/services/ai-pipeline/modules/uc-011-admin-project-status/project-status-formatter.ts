@@ -4,6 +4,7 @@
  */
 
 import type { LookupMode, ProjectWithDetails } from './project-status-types';
+import type { ProjectStatus } from '@/constants/project-statuses';
 
 // ============================================================================
 // CRITERIA MATCHING
@@ -26,7 +27,14 @@ export function matchesCriteria(project: ProjectWithDetails, criteria: string): 
   }
 
   // Status criteria
-  const statusMap: Record<string, string[]> = {
+  // ADR-812 — `Partial<Record<ProjectStatus, …>>`, ΟΧΙ `Record<string, …>`.
+  //
+  // ΔΕΝ είναι πίνακας ετικετών: είναι λέξεις-κλειδιά NLU ανά κατάσταση, και το
+  // ότι είναι ΜΕΡΙΚΟΣ είναι σωστό (κανείς δεν ψάχνει «στον κάδο» με φυσική
+  // γλώσσα). Ο χαλαρός τύπος όμως δεχόταν **οποιοδήποτε** όνομα: ένα typo
+  // (`in_progres`) θα έκανε το κριτήριο να μην ταιριάζει ΠΟΤΕ, σιωπηλά. Το
+  // `Partial` δηλώνει «υποσύνολο του λεξιλογίου, σκόπιμα» και κρατά τον έλεγχο.
+  const statusMap: Partial<Record<ProjectStatus, string[]>> = {
     planning: ['σχεδιασμ', 'planning', 'σχέδιο'],
     in_progress: ['εξέλιξη', 'progress', 'ενεργ', 'τρέχ'],
     completed: ['ολοκληρ', 'completed', 'τελειωμ', 'finished'],
@@ -35,7 +43,7 @@ export function matchesCriteria(project: ProjectWithDetails, criteria: string): 
   };
 
   for (const [status, keywords] of Object.entries(statusMap)) {
-    if (keywords.some((kw) => criteria.includes(kw))) {
+    if (keywords?.some((kw) => criteria.includes(kw))) {
       return project.project.status === status;
     }
   }

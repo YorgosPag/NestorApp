@@ -2,17 +2,27 @@
  * @fileoverview Types and constants for UC-011 Admin Project Status (ADR-145)
  */
 
+import { projectStatusTexts } from '@/constants/project-status-text';
+import type { ProjectStatus } from '@/constants/project-statuses';
+
 // ============================================================================
 // STATUS LABELS
 // ============================================================================
 
-export const STATUS_LABELS: Record<string, string> = {
-  planning: 'Σχεδιασμός',
-  in_progress: 'Σε εξέλιξη',
-  completed: 'Ολοκληρωμένο',
-  on_hold: 'Σε αναμονή',
-  cancelled: 'Ακυρωμένο',
-};
+/**
+ * ADR-812 — ΠΑΡΑΓΟΜΕΝΟ ΑΠΟ ΤΟ ΛΕΞΙΛΟΓΙΟ, όχι χειρόγραφο.
+ *
+ * Εδώ ζούσε πίνακας με **σκληρά ελληνικά** και πέντε καταστάσεις. Ήταν
+ * μονόγλωσσος: κάθε χρήστης έπαιρνε ελληνικά στο Telegram, ανεξάρτητα από τη
+ * γλώσσα του. Και του έλειπε ο κάδος, οπότε διαγραμμένο έργο απαντούσε με ωμό
+ * αναγνωριστικό (`deleted`) μέσα σε ελληνική πρόταση.
+ *
+ * ⚠️ ΤΟ `el` ΕΙΝΑΙ ΠΑΓΩΜΕΝΟ ΕΔΩ, ΚΑΙ ΕΙΝΑΙ ΔΗΛΩΜΕΝΟ ΟΡΙΟ, ΟΧΙ ΛΥΣΗ: ο agent
+ * του AI pipeline δεν κουβαλά ακόμη γλώσσα χρήστη στο context του. Η διαφορά
+ * με πριν είναι ότι η αγγλική εκδοχή **υπάρχει και είναι μία κλήση μακριά**
+ * (`projectStatusText(status, locale)`), αντί να χρειάζεται νέος πίνακας.
+ */
+export const STATUS_LABELS: Record<ProjectStatus, string> = projectStatusTexts('el');
 
 // ============================================================================
 // TYPES

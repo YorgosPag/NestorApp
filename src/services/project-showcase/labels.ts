@@ -13,6 +13,7 @@
  */
 
 import type { EnumLocale } from '@/services/property-enum-labels/property-enum-labels.service';
+import { projectStatusTexts } from '@/constants/project-status-text';
 import {
   createLocaleFallback,
   type ShowcaseHeaderContactLabels,
@@ -60,23 +61,22 @@ const PROJECT_TYPE_LABELS: Record<EnumLocale, Record<string, string>> = {
   },
 };
 
+/**
+ * ADR-812 — ΠΑΡΑΓΟΜΕΝΟ ΑΠΟ ΤΟ ΛΕΞΙΛΟΓΙΟ, όχι χειρόγραφο.
+ *
+ * Εδώ ζούσαν δύο χειρόγραφοι πίνακες (el + en) με πέντε καταστάσεις — αντίγραφο
+ * του λεξιλογίου, με **σκληρό κείμενο** και χωρίς τον κάδο. Το docblock από
+ * πάνω έγραφε «no separate constants file exists for these enum labels»: ήταν
+ * ήδη ψευδές. Πλέον οι τιμές λύνονται από τα ΙΔΙΑ locale JSON που βλέπει ο
+ * React, με ΕΝΑ σύνολο κλειδιών.
+ *
+ * ⚠️ Οι τιμές είναι πλέον **έξι**: το `deleted` δεν υπήρχε εδώ, οπότε ένα
+ * διαγραμμένο έργο σε PDF έβγαινε με ωμό αναγνωριστικό.
+ */
 const PROJECT_STATUS_LABELS: Record<EnumLocale, Record<string, string>> = {
-  el: {
-    planning: 'Σχεδιασμός',
-    in_progress: 'Σε εξέλιξη',
-    completed: 'Ολοκληρωμένο',
-    on_hold: 'Σε αναμονή',
-    cancelled: 'Ακυρωμένο',
-  },
-  en: {
-    planning: 'Planning',
-    in_progress: 'In progress',
-    completed: 'Completed',
-    on_hold: 'On hold',
-    cancelled: 'Cancelled',
-  },
+  el: projectStatusTexts('el'),
+  en: projectStatusTexts('en'),
 };
-
 export const translateProjectType = createEnumLabelTranslator(PROJECT_TYPE_LABELS);
 export const translateProjectStatus = createEnumLabelTranslator(PROJECT_STATUS_LABELS);
 

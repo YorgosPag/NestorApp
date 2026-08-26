@@ -21,6 +21,8 @@
 
 import type { TFunction } from 'i18next';
 import type { Project, ProjectStatus } from '@/types/project';
+import { PROJECT_STATUS_LABELS } from '@/constants/project-statuses';
+import { splitNamespacedLabelKey } from '@/core/badges/badge-label-key';
 
 export interface ProjectShareData {
   title: string;
@@ -30,19 +32,29 @@ export interface ProjectShareData {
 
 const DESCRIPTION_MAX_LENGTH = 200;
 
-const STATUS_I18N_KEY: Record<ProjectStatus, string> = {
-  planning: 'projects:status.planning',
-  in_progress: 'projects:status.inProgress',
-  completed: 'projects:status.completed',
-  on_hold: 'projects:status.onHold',
-  cancelled: 'projects:status.cancelled',
-  // 🔴 ΕΛΕΓΕ `status.cancelled` — το κοινοποιημένο κείμενο παρουσίαζε **διαγραμμένο**
-  // έργο ως «Ακυρωμένο» (ADR-806 §7 #2). Δεν ήταν αμέλεια: το κλειδί
-  // `projects.status.deleted` **δεν υπήρχε** σε κανένα locale μέχρι τις 2026-08-25, οπότε
-  // η μόνη εναλλακτική ήταν ωμό κλειδί στην οθόνη. Πλέον υπάρχει σε **el ΚΑΙ en**.
-  deleted: 'projects:status.deleted',
-};
-
+/**
+ * 🔴 ADR-812 — ΤΟ ΟΓΔΟΟ ΣΩΜΑ ΕΦΥΓΕ. Οι ετικέτες έρχονται από το ΛΕΞΙΛΟΓΙΟ.
+ *
+ * Εδώ ζούσε δικός του πίνακας κλειδιών με τα ίδια έξι κλειδιά σε **άλλη
+ * ορθογραφία** (`projects:status.…` αντί `projects.status.…`) — δηλαδή δύο
+ * γραφές του ίδιου κλειδιού σε δύο αρχεία. Το κόστος το είχε ήδη πληρώσει το
+ * repo: όσο έλειπε η γραμμή για τον κάδο, το κοινοποιημένο κείμενο παρουσίαζε
+ * **διαγραμμένο** έργο ως «Ακυρωμένο».
+ *
+ * Ο μετασχηματισμός `<ns>.<κλειδί>` → `{ns, key}` ζει σε ΕΝΑ σημείο
+ * (`splitNamespacedLabelKey`) και τον καταναλώνουν και τα badges και αυτό.
+ *
+ * ⚠️ ΧΩΡΙΣ `!` ΕΠΙΤΗΔΕΣ: ο resolver επιστρέφει `null` όταν η ετικέτα δεν είναι
+ * κλειδί με namespace, και μια σιωπηλή πτώση θα ζωγράφιζε ωμό κλειδί στο
+ * κοινοποιημένο κείμενο (N.11). Η άγκυρα `Κ8` του
+ * `constants/__tests__/project-status-vocabulary.test.ts` κλειδώνει ότι κάθε
+ * ετικέτα του λεξιλογίου ΕΙΝΑΙ κλειδί· εδώ επαληθεύεται ξανά σε χρόνο
+ * εκτέλεσης αντί να θεωρείται δεδομένο.
+ */
+function translateStatus(status: ProjectStatus, t: TFunction): string {
+  const parsed = splitNamespacedLabelKey(PROJECT_STATUS_LABELS[status]);
+  return parsed ? t(parsed.key, { ns: parsed.ns }) : status;
+}
 function truncate(text: string, max: number): string {
   if (text.length <= max) return text;
   return `${text.slice(0, max - 1).trimEnd()}…`;
@@ -79,7 +91,7 @@ function buildSingleProjectLines(project: Project, t: TFunction): string[] {
   lines.push(`🏗️ ${project.name}`);
 
   if (project.status) {
-    lines.push(`📊 ${t('projects:share.status')}: ${t(STATUS_I18N_KEY[project.status])}`);
+    lines.push(`📊 ${t('projects:share.status')}: ${translateStatus(project.status, t)}`);
   }
   if (typeof project.progress === 'number') {
     lines.push(`📈 ${t('projects:share.progress')}: ${project.progress}%`);
@@ -124,7 +136,7 @@ function buildCompactLine(project: Project, t: TFunction): string {
   const address = resolveAddress(project);
   if (address) parts.push(address);
   if (typeof project.progress === 'number') parts.push(`${project.progress}%`);
-  if (project.status) parts.push(t(STATUS_I18N_KEY[project.status]));
+  if (project.status) parts.push(translateStatus(project.status, t));
   return `🏗️ ${parts.join(' — ')}`;
 }
 
