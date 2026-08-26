@@ -387,7 +387,10 @@
     "test:shell-surface": "jest scripts/__tests__/shell-surface-gate.test.js --verbose",
     "shell-utilities:check": "node scripts/check-shell-utilities.js --all",
     "shell-utilities:report": "node scripts/check-shell-utilities.js --report",
-    "test:shell-utilities": "jest scripts/__tests__/check-shell-utilities.test.js --verbose"
+    "test:shell-utilities": "jest scripts/__tests__/check-shell-utilities.test.js --verbose",
+    "gate-index:generate": "node scripts/generate-gate-index.js",
+    "gate-index:check": "node scripts/generate-gate-index.js --check",
+    "gate:explain": "node scripts/gate-explain.js"
   },
   "dependencies": {
     "@ai-sdk/openai": "3.0.48",

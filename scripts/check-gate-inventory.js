@@ -27,20 +27,46 @@ const path = require('node:path');
 const ratchet = require('./lib/ratchet-baseline');
 const { takeInventory, byGateNumber, EXECUTOR, HOOK, GUIDE, DECLARATIONS_FILE } = require('./lib/gate-inventory/inventory');
 const { STATES, BLOCKING, judge, idsOf } = require('./lib/gate-inventory/judge');
+const { judgeFreshness, STATES: FRESH_STATES, BLOCKING: FRESH_BLOCKING } = require('./lib/gate-index/freshness');
 
 const ROOT = ratchet.PROJECT_ROOT;
 const BASELINE_FILE = path.join(ROOT, '.gate-inventory-baseline.json');
 
-/** ⚠️ Ο πλήρης έλεγχος κοστίζει ~40ms (4 αρχεία, 4 regex) — καμία σκανδάλη, καμία μερική ανάλυση. */
+/**
+ * ⚠️ ΑΠΟΜΝΗΜΟΝΕΥΣΗ, ΚΑΙ ΕΙΝΑΙ ΑΠΑΡΑΙΤΗΤΗ: ο φρουρός zero-tolerance και το `runSetRatchetCli`
+ *    καλούν ΚΑΙ ΟΙ ΔΥΟ το `measure()` στην ίδια εκτέλεση. Χωρίς αυτό η απογραφή + η ανάγνωση
+ *    των 55 πηγών γίνονται δύο φορές — το ίδιο σχήμα που στο CHECK 3.68 κόστισε 11,1s ώσπου να
+ *    φανεί. Μετρημένο εδώ: 246ms → 137ms.
+ */
+let _cache = null;
 function measure() {
-  const verdict = judge(takeInventory(ROOT));
+  if (_cache) return _cache;
+  return (_cache = measureFresh());
+}
+
+/** ⚠️ Ο πλήρης έλεγχος κοστίζει ~140ms — καμία σκανδάλη, καμία μερική ανάλυση. */
+function measureFresh() {
+  const inv = takeInventory(ROOT);
+  const verdict = judge(inv);
   const blocking = verdict.rows.filter((r) => BLOCKING.includes(r.state));
+
+  // ── ΔΕΥΤΕΡΟ ΚΑΤΑΣΤΙΧΟ: «η ΠΗΓΗ και η ΠΡΟΒΟΛΗ συμφωνούν;» (ADR-8xx) ─────────────
+  // ⚠️ ΞΕΧΩΡΙΣΤΟ, ΟΧΙ ΝΕΕΣ ΚΑΤΑΣΤΑΣΕΙΣ ΣΤΟ ΠΡΩΤΟ: η λογιστική του πρώτου κλείνει πάνω στον
+  //    πληθυσμό «πύλες», εδώ ο πληθυσμός είναι «αρχεία πηγής» (πρότυπο ΔΥΟ ΚΑΤΑΣΤΙΧΩΝ, 3.50).
+  //    Όλες οι καταστάσεις είναι ⛔ και ΔΕΝ μπαίνουν ΠΟΤΕ σε baseline.
+  const fresh = judgeFreshness(inv, ROOT);
+  const freshBlocking = fresh.violations.filter((v) => FRESH_BLOCKING.includes(v.state));
+
   return {
     verdict,
+    freshness: fresh,
     violationIds: idsOf(verdict, STATES.UNDOCUMENTED).sort(byGateNumber),
     declarations: idsOf(verdict, STATES.DECLARED_CI_ONLY).sort(byGateNumber),
-    violations: blocking.map((r) => ({ file: GUIDE, line: 0, state: r.state, detail: `${r.id} — ${r.detail}`, id: r.id })),
-    blocking,
+    violations: [
+      ...blocking.map((r) => ({ file: GUIDE, line: 0, state: r.state, detail: `${r.id} — ${r.detail}`, id: r.id })),
+      ...freshBlocking.map((v) => ({ file: GUIDE, line: 0, state: v.state, detail: `${v.id} — ${v.detail}`, id: v.id })),
+    ],
+    blocking: [...blocking, ...freshBlocking],
   };
 }
 
@@ -53,6 +79,13 @@ function printTally(m) {
   for (const state of Object.values(STATES)) {
     const mark = BLOCKING.includes(state) ? '⛔' : (state === STATES.UNDOCUMENTED ? '🔴' : (state === STATES.PROSE_ONLY ? '🔶' : '✅'));
     console.log(`   ${mark} ${state.padEnd(24)} ${t[state]}`);
+  }
+  // ⚠️ Το δεύτερο κατάστιχο τυπώνεται ΚΑΙ ΣΤΟ ΜΗΔΕΝ: ένα «0» που δεν τυπώνεται διαβάζεται ως
+  //    «δεν υπάρχει τέτοιος έλεγχος» — το σχήμα που όλη αυτή η οικογένεια πυλών κυνηγά.
+  console.log(`   ── πηγή ⇄ προβολή (docs/gates) ──`);
+  for (const state of Object.values(FRESH_STATES)) {
+    const mark = FRESH_BLOCKING.includes(state) ? '⛔' : '✅';
+    console.log(`   ${mark} ${state.padEnd(24)} ${m.freshness.tally[state]}`);
   }
   const total = Object.values(t).reduce((a, b) => a + b, 0);
   const population = m.verdict.rows.length;
@@ -81,7 +114,34 @@ function buildPayload(m) {
   };
 }
 
+/**
+ * 🔴 ΧΩΡΙΣ ΑΥΤΟ, ΟΛΕΣ ΟΙ ⛔ ΤΟΥ 3.66 ΕΙΝΑΙ ΔΙΑΚΟΣΜΗΤΙΚΕΣ — ΚΑΙ ΗΤΑΝ, ΜΕΤΡΗΜΕΝΑ.
+ *
+ * Το `runSetRatchetCli` συγκρίνει **μόνο** τα σύνολα `violationIds`/`declarations`. Οι
+ * καταστάσεις zero-tolerance ζούσαν στο `blocking`, που το CLI **δεν κοιτάζει ποτέ** — και το
+ * `buildPayload` που τις ελέγχει τρέχει **μόνο** στο `--write-baseline`. Αποδεδειγμένο ζωντανά
+ * (2026-08-26): με φύτεμα φαντάσματος `| **3.997** |` η αναφορά τύπωνε `⛔ ghost-row 1` και η
+ * πύλη απαντούσε `✅ … EXIT=0`.
+ *
+ * ⚠️ Είναι **ακριβώς** η κλάση που σάρωσε το CHECK 3.69 σε 18 πύλες — και το 3.66 είχε
+ *    καταγραφεί εκεί ως «έγκυρος μηχανισμός με δικό του `blocking.length`». Ο ισχυρισμός ήταν
+ *    ΨΕΥΔΗΣ: το `blocking.length` υπήρχε, αλλά **εκτός της διαδρομής κρίσης**. *Ένας φρουρός
+ *    που υπάρχει σε λάθος διαδρομή δεν είναι φρουρός — και διαβάζεται ως φρουρός.*
+ */
+function enforceZeroTolerance(argv, measureFn = measure) {
+  if (process.env.SKIP_GATE_INVENTORY) return;
+  if (argv.includes('--report') || argv.includes('--write-baseline')) return;
+  const m = measureFn();
+  if (!m.blocking.length) return;
+  console.error(`\n❌ CHECK 3.66 — ${m.blocking.length} μπλοκάρουσα(ες) κατάσταση(εις):\n`);
+  for (const r of m.blocking) console.error(`  ⛔ ${r.state}: ${r.id}\n     ${r.detail}`);
+  console.error('\n   Αναφορά: npm run gate-inventory:report');
+  console.error('   ⚠️ ΔΕΝ μπαίνουν ΠΟΤΕ σε baseline — διόρθωσε την αιτία.');
+  process.exit(1);
+}
+
 if (require.main === module) {
+  enforceZeroTolerance(process.argv.slice(2));
   ratchet.runSetRatchetCli({
     adr: 'ADR-802 (CHECK 3.66)',
     skipEnv: 'SKIP_GATE_INVENTORY',
@@ -104,4 +164,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { measure, buildPayload, printReport, BASELINE_FILE };
+module.exports = { measure, buildPayload, printReport, enforceZeroTolerance, BASELINE_FILE };
