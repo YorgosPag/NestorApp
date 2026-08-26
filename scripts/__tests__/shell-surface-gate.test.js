@@ -531,13 +531,49 @@ describe('Β-Τ — η κλίμακα του μέτρου δεν μπορεί ν
     }
   }
 
+  /**
+   * Το advance του γλύφου «0» και τα px ανά ΠΡΑΓΜΑΤΙΚΟ χαρακτήρα — μετρημένα
+   * ντετερμινιστικά από το `hmtx` της Roboto πάνω σε 458.272 χαρακτήρες locale
+   * (ADR-797 §Β.11). ⚠️ Η ΔΕΣΜΕΥΤΙΚΗ ΓΛΩΣΣΑ ΕΙΝΑΙ ΤΑ ΑΓΓΛΙΚΑ: πλατύτεροι
+   * χαρακτήρες ⇒ περισσότεροι σε ίδιο πλάτος.
+   */
+  const CH_PX = 8.984;
+  const PX_PER_CHAR = { el: 7.895, en: 7.088 };
+  const charsOf = (ch, lang) => (ch * CH_PX) / PX_PER_CHAR[lang];
+
   it('Β-Τ1: οι ρόλοι υπάρχουν και είναι ΑΡΙΘΜΟΣ ch, όχι pixel', () => {
+    // 🔴 ΔΙΟΡΘΩΘΗΚΕ 2026-08-26 (ADR-816): εδώ έγραφε `toBe(65)` και `toBe(80)` —
+    //    **καρφωμένες τιμές**. Μια εντολή να αλλάξει το `prose` σε μετρημένη
+    //    τιμή έκανε την άγκυρα κόκκινη, δηλαδή ο φρουρός μπλόκαρε τη
+    //    **ΘΕΡΑΠΕΙΑ** αντί για τη βλάβη. Είναι ακριβώς η προειδοποίηση που το
+    //    ίδιο το ADR-797 §Γ γράφει για το CHECK 3.50: «ΜΗΝ κάνεις tests που
+    //    καρφώνουν τιμές». Ελέγχεται πλέον η **ΙΔΙΟΤΗΤΑ**.
     const t = JSON.parse(fs.readFileSync(TOKENS, 'utf8'));
     const m = t.spacing.layout.measure;
-    expect(Number(m.prose.value)).toBe(65);
-    expect(Number(m.wide.value)).toBe(80);
-    // `type: other` ⇒ ο γεννήτορας ΔΕΝ κολλά `px`. Η μονάδα είναι δουλειά του CSS.
-    expect(m.prose.type).toBe('other');
+    for (const [role, node] of Object.entries(m)) {
+      if (role.startsWith('_')) continue;
+      const n = Number(node.value);
+      expect(`${role}=${Number.isFinite(n)}`).toBe(`${role}=true`);
+      expect(String(node.value)).not.toMatch(/px|rem|ch/);
+      // `type: other` ⇒ ο γεννήτορας ΔΕΝ κολλά `px`. Η μονάδα είναι δουλειά του CSS.
+      expect(`${role}.type=${node.type}`).toBe(`${role}.type=other`);
+    }
+    expect(Object.keys(m).filter((k) => !k.startsWith('_')).sort()).toEqual(['prose', 'wide']);
+  });
+
+  it('Β-Τ1β: το `prose` κρατά ΚΑΙ ΤΙΣ ΔΥΟ γλώσσες εντός 45-75 χαρακτήρων', () => {
+    // 🔑 Η άγκυρα που ΑΝΤΙΚΑΘΙΣΤΑ την καρφωμένη τιμή, και είναι αυστηρότερη:
+    //    δεν λέει «να είναι 59», λέει «να ικανοποιεί τον λόγο για τον οποίο
+    //    επιλέχθηκε». Το εύρος 45-75 είναι του Bringhurst· το ταβάνι 80 του
+    //    σκέλους 2 του WCAG 1.4.8 προκύπτει **δωρεάν** από αυτό.
+    //    ⚠️ Με 65ch τα αγγλικά έβγαιναν **82,4** — εκτός. Με 59ch: 74,8.
+    const t = JSON.parse(fs.readFileSync(TOKENS, 'utf8'));
+    const prose = Number(t.spacing.layout.measure.prose.value);
+    for (const lang of ['el', 'en']) {
+      const chars = charsOf(prose, lang);
+      expect(`${lang}:${chars <= 75}`).toBe(`${lang}:true`);
+      expect(`${lang}:${chars >= 45}`).toBe(`${lang}:true`);
+    }
   });
 
   // ⚠️ ΤΟ ΟΝΟΜΑ ΑΥΤΗΣ ΤΗΣ ΑΓΚΥΡΑΣ ΔΙΟΡΘΩΘΗΚΕ 2026-08-25 (ADR-797 §Β.11): έλεγε

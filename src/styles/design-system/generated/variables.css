@@ -66,7 +66,7 @@
   --spacing-layout-pane-min: 640px;
   --spacing-layout-pane-max: 1600px;
   --spacing-layout-block: 24px;
-  --spacing-layout-measure-prose: 65;
+  --spacing-layout-measure-prose: 59;
   --spacing-layout-measure-wide: 80;
   --spacing-layout-density-comfortable: 1;
   --spacing-layout-density-compact: 0.75;
@@ -178,6 +178,29 @@
   /* ── ADR-797: παράγωγα ρευστής κλίμακας — ΜΗΝ τα γράψεις με το χέρι ── */
   --shell-gutter-slope: 0.016667;
   --shell-gutter-intercept: 5.333333px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   Ο ΜΟΧΛΟΣ ΤΗΣ ΠΡΟΤΙΜΗΣΗΣ ΠΥΚΝΟΤΗΤΑΣ — ΠΑΡΑΓΟΜΕΝΟΣ, ΜΗΝ ΤΟΝ ΓΡΑΨΕΙΣ
+   ─────────────────────────────────────────────────────────────────────
+   Το `<html data-density="…">` ορίζει το `--shell-density-preference`, και ο
+   διάδρομος του κελύφους το **ρωτά** με fallback στην προεπιλογή.
+
+   🔴 ΜΕΤΡΗΜΕΝΟ ΖΩΝΤΑΝΑ: γράφοντας κατευθείαν `--shell-density` στη ρίζα το
+   padding έμενε **αμετάβλητο** (25,07px), επειδή το `[data-shell-surface]`
+   **ξαναδηλώνει** τη μεταβλητή τοπικά και η τοπική δήλωση νικά την
+   κληρονομιά. Γράφοντας στην ίδια την επιφάνεια έπεφτε σε 18,80px — δηλαδή
+   ο μοχλός ΔΟΥΛΕΥΕΙ και αδρανής ήταν **μόνο η διαδρομή από τη ρίζα**.
+   Γι' αυτό υπάρχει ΞΕΧΩΡΙΣΤΗ μεταβλητή προτίμησης: κληρονομείται καθαρά
+   και το `[data-shell-surface]` τη **ρωτά** αντί να την παρακάμπτει.
+
+   Προεπιλογή (ουδέτερος πολλαπλασιαστής): `comfortable`.
+   ══════════════════════════════════════════════════════════════════════ */
+:root[data-density="comfortable"] {
+  --shell-density-preference: var(--spacing-layout-density-comfortable);
+}
+:root[data-density="compact"] {
+  --shell-density-preference: var(--spacing-layout-density-compact);
 }
 
 /* 🏢 ENTERPRISE UTILITY CLASSES - Auto-Generated */
