@@ -1,5 +1,5 @@
 {
-  "generated": "2026-07-08T19:49:30.806Z",
+  "generated": "2026-08-26T09:41:21.288Z",
   "knipVersion": "6",
   "files": [
     "src/app/(bare)/test-harness/dxf-canvas/DxfCanvasHarness.prod.ts",
@@ -7,11 +7,14 @@
     "src/components/properties/dialogs/PropertyDeletionGuardDialog.tsx",
     "src/hooks/useDebouncedCallback.ts",
     "src/services/dxf-overlay-item-mutation-gateway.ts",
+    "src/services/security/EnterpriseSecurityService.ts",
+    "src/services/security/security-defaults.ts",
+    "src/services/security/security-types.ts",
     "src/subapps/procurement/components/ConflictDialog.tsx",
     "src/subapps/procurement/hooks/useLiveChangeToasts.ts",
     "src/subapps/procurement/hooks/useTradeRegistry.ts",
     "src/subapps/procurement/services/trade-registry.ts",
     "src/test-utils/a11y.tsx"
   ],
-  "fileCount": 10
+  "fileCount": 13
 }

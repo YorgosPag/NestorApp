@@ -17,7 +17,6 @@ import { normalizeToDate } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
 
 import type {
-  SecurityRole,
   EmailDomainPolicy,
   CountrySecurityPolicy,
   SecurityCacheEntry,
@@ -25,7 +24,6 @@ import type {
 } from './security-types';
 
 import {
-  getDefaultSecurityRoles,
   getDefaultEmailDomainPolicies,
   getDefaultCountryPolicies,
 } from './security-defaults';
@@ -116,121 +114,28 @@ export class EnterpriseSecurityService {
   }
 
   // ============================================================================
-  // ROLE MANAGEMENT
+  // 🔴 ΤΟ ΥΠΟΣΥΣΤΗΜΑ ΡΟΛΩΝ ΑΦΑΙΡΕΘΗΚΕ (ADR-813 Φάση Β, 2026-08-26)
   // ============================================================================
-
-  async loadSecurityRoles(
-    tenantId: string = 'default',
-    environment: string = 'production'
-  ): Promise<SecurityRole[]> {
-    const cacheKey = `roles-${tenantId}-${environment}`;
-
-    const cached = this.getSecurityCacheEntry(this.cache.roles, cacheKey);
-    if (cached) {
-      return cached;
-    }
-
-    try {
-      const result = await firestoreQueryService.getAll<SecurityRole>(
-        'SECURITY_ROLES', {
-          constraints: [
-            where('tenantId', '==', tenantId),
-            where('environment', '==', environment),
-            where('isActive', '==', true),
-            orderBy('level', 'asc'),
-          ],
-          tenantOverride: 'skip',
-        }
-      );
-
-      const roles: SecurityRole[] = result.documents.map(data => ({
-        ...data,
-        createdAt: normalizeToDate(data.createdAt) ?? new Date(),
-        lastUpdated: normalizeToDate(data.lastUpdated) ?? new Date(),
-        expiryDate: normalizeToDate(data.expiryDate) ?? undefined,
-      }));
-
-      this.setSecurityCacheEntry(this.cache.roles, cacheKey, roles, 'high', 120);
-
-      logger.info(`🔒 Loaded ${roles.length} security roles from database`);
-      return roles;
-    } catch (error) {
-      logger.error('❌ Failed to load security roles:', error);
-      return getDefaultSecurityRoles(tenantId, environment);
-    }
-  }
-
-  async getSecurityRole(
-    roleId: string,
-    tenantId?: string,
-    environment?: string
-  ): Promise<SecurityRole | null> {
-    const roles = await this.loadSecurityRoles(tenantId, environment);
-    return roles.find(role => role.id === roleId) || null;
-  }
-
-  async getUserRoles(
-    _userId: string,
-    tenantId?: string,
-    environment?: string
-  ): Promise<SecurityRole[]> {
-    const roles = await this.loadSecurityRoles(tenantId, environment);
-    return roles.filter(role => role.category === 'user').slice(0, 1);
-  }
-
-  /**
-   * 🔒 Check user role based on email (REPLACES HARDCODED ADMIN ARRAYS)
-   */
-  async checkUserRole(
-    email: string,
-    tenantId: string = 'default',
-    environment: string = 'production'
-  ): Promise<'admin' | 'authenticated' | 'public'> {
-    if (!email) {
-      return 'public';
-    }
-
-    try {
-      await this.loadSecurityRoles(tenantId, environment);
-
-      const envAdminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS;
-
-      if (envAdminEmails) {
-        const adminEmails = envAdminEmails
-          .split(',')
-          .map(e => e.trim().toLowerCase())
-          .filter(Boolean);
-
-        if (adminEmails.includes(email.toLowerCase())) {
-          logger.info(`🔐 Admin access granted for: ${email}`);
-          return 'admin';
-        }
-      }
-
-      if (process.env.NODE_ENV === 'development') {
-        const devAdminEmails = ['admin@company.local', 'developer@company.local'];
-        if (devAdminEmails.includes(email.toLowerCase())) {
-          logger.warn(`⚠️ Development admin access granted for: ${email}`);
-          return 'admin';
-        }
-      }
-
-      logger.info(`🔐 Authenticated access granted for: ${email}`);
-      return 'authenticated';
-    } catch (error) {
-      logger.error('❌ Failed to check user role:', error);
-      return email ? 'authenticated' : 'public';
-    }
-  }
-
-  async isAdminUser(
-    email: string,
-    tenantId?: string,
-    environment?: string
-  ): Promise<boolean> {
-    const role = await this.checkUserRole(email, tenantId, environment);
-    return role === 'admin';
-  }
+  //
+  // Ζούσαν εδώ τα `loadSecurityRoles` · `getSecurityRole` · `getUserRoles` ·
+  // `checkUserRole` · `isAdminUser`. Το `checkUserRole` ήταν η **ΜΟΝΑΔΙΚΗ**
+  // πηγή που έβαζε το `NEXT_PUBLIC_ADMIN_EMAILS` **μέσα στο bundle του
+  // φυλλομετρητή** — μετρημένο inlined από το Turbopack σε **2 εκτελέσιμα
+  // `.js` chunks**.
+  //
+  // 🔑 **ΔΕΝ ΔΙΑΓΡΑΦΗΚΑΝ ΕΠΕΙΔΗ «ΦΑΙΝΟΝΤΑΝ ΠΑΛΙΑ»** — μετρήθηκε πρώτα ότι είχαν
+  //    **μηδέν καταναλωτές** έξω από αυτό το αρχείο, αφού ο τελευταίος
+  //    (`UserRoleContext`) πέρασε στον ΕΝΑ κριτή (`decideCapability`).
+  //
+  // ⚠️ **ΚΑΙ ΔΕΝ ΜΠΟΡΟΥΣΑΝ ΝΑ ΚΡΙΝΟΥΝ, ΕΞ ΑΡΧΗΣ**: το ADR-813 §5 μέτρησε ότι το
+  //    λεξιλόγιό τους (`*`·`alert:read`·`dashboard:read`·`report:read`) έχει
+  //    τομή **∅** με τα 100 `PERMISSIONS`, και τα ονόματα ρόλων του
+  //    (`admin`·`operator`·`viewer`) τομή **∅** με τα `GLOBAL_ROLES`. Η
+  //    συλλογή `security_roles` έχει **0 έγγραφα** — έπεφτε **πάντα** στο
+  //    `getDefaultSecurityRoles`.
+  //
+  // ⛔ **ΜΗΝ τα επαναφέρεις.** Η αυθεντία για το «επιτρέπεται;» είναι ο
+  //    `lib/auth/authority.ts`, και **μόνο** αυτός (CHECK 3.68).
 
   // ============================================================================
   // EMAIL DOMAIN POLICIES

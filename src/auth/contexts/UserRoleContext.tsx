@@ -4,20 +4,26 @@
 // 🔐 USER ROLE CONTEXT - ROLE-BASED ACCESS CONTROL
 // =============================================================================
 //
-// Enterprise-grade role management with Firebase Auth integration
-// Uses EnterpriseSecurityService for database-driven role determination
+// Ο ρόλος βγαίνει από τα **claims**, μέσα από τον ΕΝΑ κριτή (ADR-801/813).
 //
-// Features:
-// - Database-driven role management (no hardcoded admin emails!)
-// - Integration with EnterpriseSecurityService
-// - Legacy API compatibility
-// - Secure fallback on errors
+// ⚠️ Η κεφαλίδα αυτή έγραφε μέχρι τις 2026-08-26: *«Uses EnterpriseSecurityService
+// for database-driven role determination»* και *«Database-driven role management
+// (no hardcoded admin emails!)»*. **Και τα δύο ήταν ψευδή**: ο ρόλος ερχόταν από
+// το `NEXT_PUBLIC_ADMIN_EMAILS`, δηλαδή από **σκληροκωδικοποιημένη λίστα email**
+// — ακριβώς αυτό που η επόμενη γραμμή διαφήμιζε ότι δεν υπάρχει.
+// *Η περιγραφή της λύσης ΗΤΑΝ η απόκλιση* (σχήμα CHECK 3.34 · 3.37 · 3.57).
+//
+// Σήμερα:
+// - Ο ρόλος παράγεται από `decideCapability` πάνω στα claims του `AuthContext`
+// - Καμία μεταβλητή περιβάλλοντος, κανένα email, καμία λίστα ρόλων εδώ
+// - **Σύγχρονα** — η απάντηση υπάρχει στο πρώτο καρέ, όχι στο δεύτερο
 //
 // =============================================================================
 
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { useAuth } from './AuthContext';
-import { EnterpriseSecurityService } from '@/services/security/EnterpriseSecurityService';
+import { decideCapability } from '@/lib/auth/authority';
+import { isGranted } from '@/types/capability-authority';
 import type { User, FirebaseAuthUser, UserRoleContextType, SignUpData } from '../types/auth.types';
 
 import { createModuleLogger } from '@/lib/telemetry';
@@ -29,11 +35,8 @@ const logger = createModuleLogger('UserRoleContext');
 
 const UserRoleContext = createContext<UserRoleContextType | null>(null);
 
-// =============================================================================
-// SECURITY SERVICE SINGLETON
-// =============================================================================
-
-const securityService = EnterpriseSecurityService.getInstance();
+// ⚠️ Το singleton του EnterpriseSecurityService **έφυγε** (ADR-813 Φάση Β): το
+// υποσύστημα ρόλων του δεν έχει πλέον κανέναν καταναλωτή — βλ. §7.4 του ADR.
 
 // =============================================================================
 // PROVIDER
@@ -57,61 +60,74 @@ export function UserRoleProvider({ children }: UserRoleProviderProps) {
   const [isLoading, setIsLoading] = useState(true);
 
   // ==========================================================================
-  // DETERMINE USER ROLE
+  // 🔴 Η ΑΠΟΦΑΣΗ ΕΡΧΕΤΑΙ ΑΠΟ ΤΟΝ ΚΡΙΤΗ, ΟΧΙ ΑΠΟ ΤΟ EMAIL (ADR-813 Φάση Β)
   // ==========================================================================
-
+  //
+  // 🔑 **ΤΙ ΑΝΤΙΚΑΘΙΣΤΑΤΑΙ**: `securityService.checkUserRole(email)` — η
+  //    **μοναδική** πηγή που έβαζε το `NEXT_PUBLIC_ADMIN_EMAILS` **μέσα στο
+  //    bundle του φυλλομετρητή**. Μετρημένο στο χτισμένο bundle: η τιμή
+  //    ταξίδευε inlined από το Turbopack σε **2 εκτελέσιμα `.js` chunks`**.
+  //    Δηλαδή η λίστα των διαχειριστών ήταν **αναγνώσιμη από οποιονδήποτε**
+  //    άνοιγε τα devtools — και ταυτόχρονα **πάγωνε στο build**, άρα η
+  //    ανάκληση διαχειριστή απαιτούσε redeploy (ADR-813 §3.1/§3.2).
+  //
+  // ✅ **ΤΩΡΑ**: ο **ΕΝΑΣ** κριτής (`decideCapability`, ADR-801) πάνω στα claims
+  //    που έχει **ήδη** ο `AuthContext`. Καμία νέα πηγή, καμία νέα εξάρτηση.
+  //
+  // 🔑 **ΚΑΙ ΕΓΙΝΕ ΣΥΓΧΡΟΝΟ — ΑΥΤΟ ΔΕΝ ΕΙΝΑΙ ΠΑΡΕΝΕΡΓΕΙΑ, ΕΙΝΑΙ ΘΕΡΑΠΕΙΑ.** Η
+  //    παλιά μορφή ήταν `async` μέσα σε `useEffect`, δηλαδή ο ρόλος
+  //    **αρχικοποιούνταν λάθος και διορθωνόταν σε δεύτερο καρέ**. Είναι το ίδιο
+  //    σχήμα που το CHECK 3.51 (ADR-781) μέτρησε ως **17 ωμά κλειδιά × 141
+  //    διαδρομές** στο SSR: `useEffect` **δεν τρέχει στον server**. Ο κριτής
+  //    είναι **καθαρή συνάρτηση** — η απάντηση υπάρχει στο πρώτο καρέ.
+  //
+  // ⚠️ **ΤΟ ΚΡΙΤΗΡΙΟ ΕΙΝΑΙ ΙΚΑΝΟΤΗΤΑ (`admin_access`), ΟΧΙ ΤΑΒΑΝΙ.** Διαφέρει
+  //    **σκόπιμα** από τον server guard του `/admin` (`ADMINISTRATIVE_ROLES`):
+  //    εκεί κρίνεται *«ποιος βλέπει την επιφάνεια της πλατφόρμας;»*, εδώ *«τι
+  //    μπορεί να κάνει αυτός ο άνθρωπος;»* για **λειτουργικές** οθόνες (ο
+  //    προβολέας DXF, το CRM). Ένωσή τους θα ανέφερε άρνηση ικανότητας ως
+  //    άρνηση πλατφόρμας (ADR-775).
+  //
+  // ⛔ **ΜΗΝ ξαναφέρεις εδώ email, `NEXT_PUBLIC_*`, ή λίστα ρόλων.**
   useEffect(() => {
-    const determineRole = async () => {
-      // 🏢 ENTERPRISE: Wait for Firebase auth to resolve
-      if (authLoading) {
-        setIsLoading(true);
-        return;
-      }
+    // 🏢 ENTERPRISE: Wait for Firebase auth to resolve
+    if (authLoading) {
+      setIsLoading(true);
+      return;
+    }
 
-      if (firebaseUser) {
-        try {
-          // Use EnterpriseSecurityService for role determination
-          const role = await securityService.checkUserRole(
-            firebaseUser.email || '',
-            'default',
-            process.env.NODE_ENV || 'development'
-          );
+    if (firebaseUser) {
+      const decision = decideCapability({
+        subject: {
+          globalRole: firebaseUser.globalRole ?? null,
+          permissions: firebaseUser.permissions ?? null,
+        },
+        action: 'admin_access',
+      });
 
-          const mappedUser: User = {
-            email: firebaseUser.email || '',
-            role,
-            isAuthenticated: true,
-            uid: firebaseUser.uid,
-            displayName: firebaseUser.displayName
-          };
+      // ⚠️ `isGranted`, ΠΟΤΕ `verdict === 'granted-…'`: οι ετυμηγορίες
+      //    παραχώρησης είναι **τρεις** (bypass · permission · role) και ο
+      //    έλεγχος μιας μόνο θα έκλεινε σιωπηλά έξω τον υπερδιαχειριστή.
+      const role: User['role'] = isGranted(decision.verdict) ? 'admin' : 'authenticated';
 
-          setUser(mappedUser);
-          logger.info('[UserRoleContext] User role determined', { role });
-        } catch (error) {
-          logger.error('[UserRoleContext] Role determination failed', { error });
+      setUser({
+        email: firebaseUser.email || '',
+        role,
+        isAuthenticated: true,
+        uid: firebaseUser.uid,
+        displayName: firebaseUser.displayName,
+      });
+      logger.info('[UserRoleContext] User role determined', {
+        role,
+        verdict: decision.verdict,
+      });
+    } else {
+      // No Firebase user - clear user state
+      setUser(null);
+    }
 
-          // Secure fallback - NEVER grant admin on error
-          const fallbackUser: User = {
-            email: firebaseUser.email || '',
-            role: 'authenticated',
-            isAuthenticated: true,
-            uid: firebaseUser.uid,
-            displayName: firebaseUser.displayName
-          };
-
-          setUser(fallbackUser);
-          logger.warn('[UserRoleContext] Using secure fallback role: authenticated');
-        }
-      } else {
-        // No Firebase user - clear user state
-        setUser(null);
-      }
-
-      // 🏢 ENTERPRISE: Loading is false ONLY after all checks complete
-      setIsLoading(false);
-    };
-
-    determineRole();
+    // 🏢 ENTERPRISE: Loading is false ONLY after all checks complete
+    setIsLoading(false);
   }, [firebaseUser, authLoading]);
 
   // ==========================================================================
