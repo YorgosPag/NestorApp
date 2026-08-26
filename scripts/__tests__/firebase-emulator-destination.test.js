@@ -73,7 +73,7 @@
  * πράσινο. Η λογιστική (Λ1) τυπώνει τους αριθμούς **ακόμα και στο μηδέν**.
  *
  * @jest-environment node
- * @see docs/centralized-systems/reference/adrs/ADR-807-firebase-client-destination.md
+ * @see docs/centralized-systems/reference/adrs/ADR-807-personal-workspace-identity.md
  * @see docs/centralized-systems/reference/adrs/ADR-745-titleblock-live-binding.md — Φάση Γ, η προηγούμενη (λάθος) διάγνωση
  */
 
