@@ -61,7 +61,12 @@
       "themeLight": "Light",
       "themeDark": "Dark",
       "themeSystem": "System",
-      "themeHint": "Application display theme"
+      "themeHint": "Application display theme",
+      "density": "Interface density",
+      "selectDensity": "Select density",
+      "densityComfortable": "Comfortable",
+      "densityCompact": "Compact",
+      "densityHint": "How much space surrounds the content. Compact fits more data on the same screen."
     },
     "notifications": {
       "title": "Notifications",

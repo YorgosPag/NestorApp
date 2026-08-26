@@ -360,10 +360,6 @@
     "primary": "Κύρια",
     "setAsPrimary": "Ορισμός ως Κύρια"
   },
-  "documents": {
-    "selectForContracts": "Επιλέξτε ένα έργο για να δείτε τα συμβόλαια.",
-    "selectForDocuments": "Επιλέξτε ένα έργο για να δείτε τα έγγραφα."
-  },
   "cards": {
     "area": "Επιφάνεια",
     "totalProjectValue": "Συνολική αξία έργου"
@@ -578,7 +574,9 @@
     "selectProject": "Επιλέξτε ένα έργο για να δείτε τα βίντεο."
   },
   "documents": {
-    "selectProject": "Επιλέξτε ένα έργο για να δείτε τα έγγραφα."
+    "selectProject": "Επιλέξτε ένα έργο για να δείτε τα έγγραφα.",
+    "selectForContracts": "Επιλέξτε ένα έργο για να δείτε τα συμβόλαια.",
+    "selectForDocuments": "Επιλέξτε ένα έργο για να δείτε τα έγγραφα."
   },
   "tabs": {
     "subtabs": {

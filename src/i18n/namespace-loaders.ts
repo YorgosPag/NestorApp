@@ -28,6 +28,7 @@ function getElLoader(namespace: Namespace): NamespaceLoader | null {
     case 'common-empty-states': return () => import('./locales/el/common-empty-states.json');
     case 'common-sales': return () => import('./locales/el/common-sales.json');
     case 'common-account': return () => import('./locales/el/common-account.json');
+    case 'common-audit': return () => import('./locales/el/common-audit.json');
     case 'common-photos': return () => import('./locales/el/common-photos.json');
     case 'common-shared': return () => import('./locales/el/common-shared.json');
     case 'filters': return () => import('./locales/el/filters.json');
@@ -140,6 +141,7 @@ function getEnLoader(namespace: Namespace): NamespaceLoader | null {
     case 'common-empty-states': return () => import('./locales/en/common-empty-states.json');
     case 'common-sales': return () => import('./locales/en/common-sales.json');
     case 'common-account': return () => import('./locales/en/common-account.json');
+    case 'common-audit': return () => import('./locales/en/common-audit.json');
     case 'common-photos': return () => import('./locales/en/common-photos.json');
     case 'common-shared': return () => import('./locales/en/common-shared.json');
     case 'filters': return () => import('./locales/en/filters.json');

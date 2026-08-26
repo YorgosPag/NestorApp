@@ -360,10 +360,6 @@
     "primary": "Primary",
     "setAsPrimary": "Set as Primary"
   },
-  "documents": {
-    "selectForContracts": "Select a project to view contracts.",
-    "selectForDocuments": "Select a project to view documents."
-  },
   "cards": {
     "area": "Area",
     "totalProjectValue": "Total project value"
@@ -578,7 +574,9 @@
     "selectProject": "Select a project to view videos."
   },
   "documents": {
-    "selectProject": "Select a project to view documents."
+    "selectProject": "Select a project to view documents.",
+    "selectForContracts": "Select a project to view contracts.",
+    "selectForDocuments": "Select a project to view documents."
   },
   "tabs": {
     "subtabs": {

@@ -96,6 +96,7 @@ export const SUPPORTED_NAMESPACES = [
   'surveyRecord',           // 📐 Survey Record card — ADR-759 Φ2
   'common-sales',           // 🏢 Sales/e-commerce domain (split from common — ADR-280)
   'common-account',         // 🏢 User account/2FA (split from common — ADR-280)
+  'common-audit',           // 🏢 Ετικέτες πεδίων ιστορικού (split from common — ADR-810)
   'common-photos',          // 🏢 Photo management (split from common — ADR-280)
   'common-shared',          // 🏢 Shared UI: toolbar, filters, contacts, sharing (split from common — ADR-280)
   'dxf-viewer-shell',       // 🏢 DXF viewer chrome/toolbar (split from dxf-viewer — ADR-280)

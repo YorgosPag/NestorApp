@@ -474,10 +474,6 @@
       "noProjects": "Καμία συμμετοχή σε έργο",
       "effectivePermissions": "Ενεργά Δικαιώματα"
     },
-    "mfa": {
-      "enabled": "MFA Ενεργό",
-      "notEnabled": "MFA Ανενεργό"
-    },
     "matrix": {
       "title": "Πίνακας Δικαιωμάτων",
       "legend": {
@@ -707,9 +703,6 @@
       "units": "Μονάδες",
       "users": "Χρήστες & Ρόλοι"
     },
-    "unnamed": "Χωρίς Όνομα",
-    "you": "εσείς",
-    "cannotSuspendSelf": "Δεν μπορείτε να αναστείλετε τον εαυτό σας",
     "statusLabels": {
       "active": "Ενεργός",
       "suspended": "Ανεσταλμένος",

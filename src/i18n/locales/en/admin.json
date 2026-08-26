@@ -474,10 +474,6 @@
       "noProjects": "No project memberships",
       "effectivePermissions": "Effective Permissions"
     },
-    "mfa": {
-      "enabled": "MFA Enabled",
-      "notEnabled": "MFA Not Enabled"
-    },
     "matrix": {
       "title": "Permission Matrix",
       "legend": {
@@ -707,9 +703,6 @@
       "units": "Units",
       "users": "Users & Roles"
     },
-    "unnamed": "Unnamed",
-    "you": "you",
-    "cannotSuspendSelf": "Cannot suspend yourself",
     "statusLabels": {
       "active": "Active",
       "suspended": "Suspended",

@@ -37,3 +37,36 @@ export const COMMON_NAMESPACES = [
   'common-status',
   'common-validation',
 ] as const;
+
+/**
+ * `COMMON_NAMESPACES` **+ οι ετικέτες πεδίων του ιστορικού** — για τη γραμμή χρόνου
+ * ελέγχου και **μόνο** γι' αυτήν.
+ *
+ * 🔴 **ΓΙΑΤΙ ΞΕΧΩΡΙΣΤΟ BUNDLE ΚΑΙ ΟΧΙ ΕΓΓΡΑΦΗ ΣΤΟ `COMMON_NAMESPACES`** (ADR-810):
+ * το `audit.fields` είναι **14.839 bytes** — **27%** του `common.json` — και υπηρετεί
+ * **ΜΙΑ** επιφάνεια (`audit-timeline-entry.tsx`, τρία δυναμικά κλειδιά). Το
+ * `COMMON_NAMESPACES` το φορτώνουν **~137 components**, και το `common` ταξιδεύει
+ * **ΟΛΟΚΛΗΡΟ** στο shell slice κάθε διαδρομής (`guaranteedNamespaces`, ADR-744) —
+ * άρα εγγραφή εκεί θα έστελνε τις ετικέτες ιστορικού σε **κάθε οθόνη**.
+ * Μετρημένο: `common` **55.457 → 40.608** bytes, δηλαδή **κάτω** ακόμη κι από την τιμή
+ * πριν την αποκατάσταση των 177 χαμένων ετικετών (48.599).
+ *
+ * ⚠️ **Η ΕΜΦΩΛΕΥΣΗ ΜΕΝΕΙ ΙΔΙΑ** (`{ audit: { fields: … } }`): το i18next ψάχνει τη
+ * λίστα namespaces **με σειρά**, οπότε κανένα από τα τρία δυναμικά κλειδιά του
+ * καταναλωτή δεν χρειάστηκε να αλλάξει — **μηδέν ρίσκο ωμού κλειδιού**.
+ * ⚠️ **ΜΗΝ** το προσθέσεις στα `CRITICAL_NAMESPACES`: δεν είναι κέλυφος, και το
+ * preload ζει πίσω από `typeof window !== 'undefined'` (δεν αγγίζει τον server).
+ */
+export const AUDIT_TIMELINE_NAMESPACES = [
+  'common',
+  'common-account',
+  'common-actions',
+  'common-audit',
+  'common-empty-states',
+  'common-navigation',
+  'common-photos',
+  'common-sales',
+  'common-shared',
+  'common-status',
+  'common-validation',
+] as const;

@@ -161,3 +161,55 @@ jobs:
           echo "validate:i18n (EL/EN completeness): PASS"
           echo "CHECK 3.36 (namespace reachability): PASS"
           echo "CHECK 3.8 (missing i18n keys, full scan): PASS"
+
+  # ===========================================================================
+  # CHECK 3.71 — ΔΙΠΛΑ ΚΛΕΙΔΙΑ LOCALE (ADR-810)
+  # ===========================================================================
+  # Άνευ όρων: μια μετονομασία namespace ή μια συγχώνευση κλάδου μπορεί να γεννήσει
+  # διπλότυπο σε αρχείο που το PR δεν «άγγιξε» λογικά. Κόστος ~0,9s για 206 αρχεία.
+  # 🔴 Το ερώτημα ΔΕΝ το απαντά καμία άλλη πύλη: το ECMA-404 επιτρέπει διπλά ονόματα,
+  # το `JSON.parse` κρατά σιωπηλά το τελευταίο, και ΚΑΘΕ υπάρχουσα πύλη i18n ξεκινά
+  # από `JSON.parse` ⇒ βλέπει κόσμο όπου το διπλότυπο δεν υπήρξε ποτέ.
+  locale-duplicate-keys:
+    name: 🗝️ CHECK 3.71 — διπλά κλειδιά locale
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # ⚠️ fetch-depth: 0 — η ομάδα Π βαθμονομεί με `git show ff307a28:` πάνω στα
+      # ΠΡΑΓΜΑΤΙΚΑ διπλότυπα (6 αρχεία). Με ρηχό checkout το αντικείμενο δεν υπάρχει
+      # και η βαθμονόμηση σκάει — η πύλη γίνεται κόκκινη για λόγο άσχετο με τα locale.
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # ⚠️ ΚΑΜΙΑ ΕΓΚΑΤΑΣΤΑΣΗ: ο σαρωτής είναι καθαρό Node χωρίς εξαρτήσεις — ΔΕΝ
+      # χρησιμοποιεί καν `JSON.parse` για την κρίση (γι' αυτό ακριβώς υπάρχει).
+      - name: 🗝️ CHECK 3.71 — πλήρης σάρωση locale (~0,9s, 206 αρχεία)
+        run: node scripts/check-locale-duplicate-keys.js --all
+
+      - name: ✅ Summary
+        if: success()
+        run: |
+          echo "::notice title=Locale duplicate keys::Κανένα κλειδί δεν δηλώνεται δύο φορές — καμία μετάφραση δεν καταπίνεται σιωπηλά"
+
+      - name: 🧭 How to resolve
+        if: failure()
+        run: |
+          {
+            echo "### CHECK 3.71 — ADR-810 (διπλά κλειδιά locale)"
+            echo ""
+            echo "Το \`JSON.parse\` κρατά **σιωπηλά το τελευταίο** — τα υπόλοιπα χάνονται."
+            echo ""
+            echo "- ⚠️ **ΜΗΝ** σβήσεις τη **δεύτερη** δήλωση: σήμερα εκείνη **νικά**, άρα η"
+            echo "  διαγραφή της αλλάζει ό,τι βλέπει ο χρήστης. **Συγχώνευσε μέσα σε αυτήν.**"
+            echo "- ⚠️ **ΜΗΝ** επεξεργαστείς locale με \`JSON.parse\` + \`stringify\`: χάνεις"
+            echo "  σιωπηλά τα διπλότυπα **και** αναμορφώνεις 25 αρχεία που δεν έχουν αυτή τη μορφή."
+            echo ""
+            echo "Αναφορά: \`npm run locale-dup-keys:report\`"
+          } >> "$GITHUB_STEP_SUMMARY"

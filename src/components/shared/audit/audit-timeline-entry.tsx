@@ -11,7 +11,12 @@
 
 "use client";
 
-import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
+// 🔴 ΞΕΧΩΡΙΣΤΟ BUNDLE, ΟΧΙ ΤΟ ΚΟΙΝΟ (ADR-810): το `audit.fields` μετακόμισε σε δικό του
+// namespace. Ήταν **27%** του `common.json`, που ταξιδεύει **ΟΛΟΚΛΗΡΟ** στο shell slice
+// **κάθε** διαδρομής (ADR-744 `guaranteedNamespaces`), ενώ το ζητά **μόνο** αυτή η
+// επιφάνεια. Η εμφώλευση των κλειδιών έμεινε ίδια — μηδέν αλλαγή στα τρία δυναμικά
+// κλειδιά παρακάτω, άρα μηδέν ρίσκο ωμού κλειδιού.
+import { AUDIT_TIMELINE_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from "react";
 import { Link } from '@/lib/workspace/navigation';
 import { declaredHref } from '@/lib/workspace/route-worlds';
@@ -156,7 +161,7 @@ export function AuditTimelineEntry({
   showEntityLink,
 }: AuditTimelineEntryProps) {
   const entry = sanitizeEntry(rawEntry);
-  const { t } = useTranslation(COMMON_NAMESPACES);
+  const { t } = useTranslation(AUDIT_TIMELINE_NAMESPACES);
   const colors = useSemanticColors();
   const config = ACTION_MAP[entry.action] ?? ACTION_MAP.updated;
   const Icon = config.icon;
