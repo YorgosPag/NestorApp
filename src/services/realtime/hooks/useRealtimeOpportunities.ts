@@ -3,25 +3,27 @@
 /**
  * Real-time Opportunities Hook
  *
- * Canonical pattern from useRealtimeBuildings.ts.
- * Subscribes to OPPORTUNITIES collection for live updates.
+ * Εγγράφεται στη συλλογή `OPPORTUNITIES` για ζωντανές ενημερώσεις.
+ *
+ * ⚠️ **Δύο ερωτήματα, δύο σπίτια** (ADR-798 §22 · ADR-749):
+ *  - ο **κύκλος ζωής** της συνδρομής Firestore → `create-realtime-collection-hook.ts`
+ *  - η **αισιόδοξη ενημέρωση** από το event bus → `use-realtime-entity-events.ts`
+ *
+ * Εδώ μένει **μόνο** η μετάφραση εγγράφου (Timestamp → Date).
  *
  * @module services/realtime/hooks/useRealtimeOpportunities
  * @enterprise ADR-227 Phase 1 — Eliminate one-time fetches
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { firestoreQueryService } from '@/services/firestore';
-import type { QueryResult } from '@/services/firestore';
 import type { DocumentData } from 'firebase/firestore';
 import type { Opportunity } from '@/types/crm';
-import type { SubscriptionStatus, OpportunityCreatedPayload, OpportunityUpdatedPayload, OpportunityDeletedPayload } from '../types';
-import { RealtimeService } from '@/services/realtime';
-import { applyUpdates } from '@/lib/utils';
+import type { SubscriptionStatus } from '../types';
 import { createModuleLogger } from '@/lib/telemetry';
 import { normalizeToDate } from '@/lib/date-local';
 // 🏢 ADR-300: Stale-while-revalidate — prevents navigation flash on remount
 import { createStaleCache } from '@/lib/stale-cache';
+import { createRealtimeCollectionHook } from './create-realtime-collection-hook';
+import { useRealtimeEntityEvents } from './use-realtime-entity-events';
 
 const logger = createModuleLogger('useRealtimeOpportunities');
 
@@ -60,95 +62,43 @@ function toOpportunity(raw: DocumentData & { id: string }): Opportunity {
 }
 
 // ============================================================================
+// Η ΠΑΡΑΛΛΑΓΗ — ό,τι είναι γνήσια δικό του
+// ============================================================================
+
+const useOpportunitiesCollection = createRealtimeCollectionHook<DocumentData, Opportunity>({
+  collection: 'OPPORTUNITIES',
+  logger,
+  cache: opportunitiesCache,
+  mapDocuments: (documents): Opportunity[] =>
+    documents.map((doc) => toOpportunity(doc as DocumentData & { id: string })),
+});
+
+// ============================================================================
 // HOOK IMPLEMENTATION
 // ============================================================================
 
 export function useRealtimeOpportunities(enabled = true): UseRealtimeOpportunitiesReturn {
-  // ADR-300: Seed from module-level cache → zero flash on re-navigation
-  const [opportunities, setOpportunities] = useState<Opportunity[]>(opportunitiesCache.get() ?? []);
-  const [loading, setLoading] = useState(enabled && !opportunitiesCache.hasLoaded());
-  const [error, setError] = useState<string | null>(null);
-  const [status, setStatus] = useState<SubscriptionStatus>('idle');
-  const refreshTriggerRef = useRef(0);
-
-  const refetch = useCallback(() => {
-    refreshTriggerRef.current += 1;
-    setLoading(true);
-    setError(null);
-  }, []);
-
-  useEffect(() => {
-    if (!enabled) {
-      setStatus('idle');
-      setLoading(false);
-      return;
-    }
-
-    setStatus('connecting');
-    // ADR-300: Only show spinner on first load — not on re-navigation
-    if (!opportunitiesCache.hasLoaded()) setLoading(true);
-
-    const unsubscribe = firestoreQueryService.subscribe<DocumentData>(
-      'OPPORTUNITIES',
-      (result: QueryResult<DocumentData>) => {
-        const mapped = result.documents.map((doc) =>
-          toOpportunity(doc as DocumentData & { id: string })
-        );
-
-        logger.debug('Received opportunities in real-time', { count: mapped.length });
-
-        // ADR-300: Write to module-level cache so next remount skips spinner
-        opportunitiesCache.set(mapped);
-        setOpportunities(mapped);
-        setLoading(false);
-        setError(null);
-        setStatus('active');
-      },
-      (err: Error) => {
-        logger.error('Firestore error', { error: err.message });
-        setError(err.message);
-        setLoading(false);
-        setStatus('error');
-      }
-    );
-
-    return () => {
-      logger.debug('Cleaning up opportunities subscription');
-      unsubscribe();
-    };
-  }, [enabled, refreshTriggerRef.current]);
+  const {
+    items: opportunities,
+    setItems: setOpportunities,
+    loading,
+    error,
+    status,
+    refetch,
+  } = useOpportunitiesCollection(enabled);
 
   // 🏢 ENTERPRISE: Event bus subscribers for optimistic UI updates (ADR-227 Phase 3)
-  useEffect(() => {
-    const handleCreated = (_payload: OpportunityCreatedPayload) => {
-      logger.debug('Opportunity created, triggering refetch');
-      refetch();
-    };
-
-    const handleUpdated = (payload: OpportunityUpdatedPayload) => {
-      logger.debug('Applying optimistic update for opportunity', { opportunityId: payload.opportunityId });
-      setOpportunities(prev => prev.map(opp =>
-        opp.id === payload.opportunityId
-          ? applyUpdates(opp, payload.updates as Partial<Opportunity>)
-          : opp
-      ));
-    };
-
-    const handleDeleted = (payload: OpportunityDeletedPayload) => {
-      logger.debug('Removing deleted opportunity from list', { opportunityId: payload.opportunityId });
-      setOpportunities(prev => prev.filter(opp => opp.id !== payload.opportunityId));
-    };
-
-    const unsubCreate = RealtimeService.subscribe('OPPORTUNITY_CREATED', handleCreated);
-    const unsubUpdate = RealtimeService.subscribe('OPPORTUNITY_UPDATED', handleUpdated);
-    const unsubDelete = RealtimeService.subscribe('OPPORTUNITY_DELETED', handleDeleted);
-
-    return () => {
-      unsubCreate();
-      unsubUpdate();
-      unsubDelete();
-    };
-  }, [refetch]);
+  useRealtimeEntityEvents({
+    created: 'OPPORTUNITY_CREATED',
+    updated: 'OPPORTUNITY_UPDATED',
+    deleted: 'OPPORTUNITY_DELETED',
+    updatedId: (payload) => payload.opportunityId,
+    updatedFields: (payload) => payload.updates as Partial<Opportunity>,
+    deletedId: (payload) => payload.opportunityId,
+    setItems: setOpportunities,
+    refetch,
+    logger,
+  });
 
   return { opportunities, loading, error, status, refetch };
 }

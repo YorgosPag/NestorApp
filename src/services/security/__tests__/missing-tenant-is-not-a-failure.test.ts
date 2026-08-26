@@ -130,7 +130,12 @@ describe('Β — το υποσύστημα ρόλων ΕΦΥΓΕ, και μαζ�
     const root = path.join(__dirname, '..', '..', '..');
     const readers = [
       path.join(root, 'hooks', 'useFirestoreNotifications.ts'),
-      path.join(root, 'services', 'realtime', 'hooks', 'useRealtimeBuildings.ts'),
+      // ⚠️ **ΜΕΤΑΚΟΜΙΣΕ 2026-08-26 (ADR-798 §21)**: ήταν ο `useRealtimeBuildings`,
+      //    ο **μόνος** από τους πέντε αδελφούς που ρωτούσε. Όταν το CHECK 3.28
+      //    επέβαλε εξαγωγή, ο αναγνώστης έγινε **ΕΝΑΣ** για όλους. Η πρόθεση αυτής
+      //    της άγκυρας δεν άλλαξε: το brand δεν επιτρέπεται να ξαναγίνει **0
+      //    αναγνώστες** ενώ σημεία πετούν το σφάλμα.
+      path.join(root, 'services', 'realtime', 'hooks', 'tenant-scoped-error.ts'),
     ];
     for (const file of readers) {
       const src = fs.readFileSync(file, 'utf8').replace(/\/\/[^\n]*/g, '');
@@ -177,5 +182,170 @@ describe('Γ — η μετανάστευση των τριών (ADR-811)', () =>
     const source = fs.readFileSync(path.join(SRC, MIGRATED[2]), 'utf8');
     expect(source).not.toContain('Missing companyId for transmittal issuance');
     expect(isMissingTenantError(new MissingTenantError())).toBe(true);
+  });
+});
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * Δ — 🔴 Η ΚΛΑΣΗ, ΟΧΙ ΤΟ ΔΕΙΓΜΑ (ADR-798 §21)
+ *
+ * Το ADR-809 έκλεισε τη βλάβη σε **έναν** καταναλωτή. Ζωντανά 2026-08-26, ο
+ * αυτόνομος στο `/account/profile` έβγαλε **ξανά** κόκκινο — από
+ * `useRealtimeProperties`, **αδελφό** που κανείς δεν κοίταξε.
+ *
+ * Μετρημένο: από τα realtime hooks με **εταιρικό** εύρος και χειριστή σφάλματος,
+ * **1 στους 5** ρωτούσε τον κριτή. Τα υπόλοιπα τέσσερα λογούσαν `[ERROR]` πάνω σε
+ * **σχεδιασμένη** κατάσταση, και ο θόρυβος κρύβει τα αληθινά σφάλματα.
+ *
+ * ✅ **ΚΑΙ ΠΛΕΟΝ ΕΙΝΑΙ 5 ΣΤΟΥΣ 5 — ΧΩΡΙΣ ΝΑ ΤΟ ΘΥΜΑΤΑΙ ΚΑΝΕΙΣ** (§22): ο κύκλος
+ * ζωής εξήχθη σε **μία** μηχανή, και η μόνη διαδρομή προς συνδρομή περνά από τον
+ * κριτή. Το ερώτημα άλλαξε από *«ρώτησαν όλοι;»* σε *«μπορεί κάποιος να μη
+ * ρωτήσει;»* — και η απάντηση είναι **όχι**.
+ *
+ * ⚠️ **Ο `useOwnedDocuments` ΔΕΝ είναι στη λίστα, και είναι απόφαση**: το
+ * `tenant-config.ts` τον δηλώνει `mode: 'userId'` ⇒ ιδιωτικό εύρος, **δομικά
+ * αδύνατο** να πετάξει `MissingTenantError`. Φρουρός εκεί θα ήταν αδρανής.
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+describe('Δ — ΟΛΟΙ οι εταιρικοί realtime αδελφοί ρωτούν τον κριτή', () => {
+  const fs = require('node:fs') as typeof import('node:fs');
+  const path = require('node:path') as typeof import('node:path');
+  const SRC = path.join(__dirname, '..', '..', '..');
+  const HOOKS = path.join(SRC, 'services', 'realtime', 'hooks');
+
+  /** Εταιρικό εύρος **και** χειριστή σφάλματος ⇒ μπορεί να δει τη σχεδιασμένη κατάσταση. */
+  const TENANT_SCOPED = [
+    'useRealtimeBuildings.ts',
+    'useRealtimeProperties.ts',
+    'useRealtimeOpportunities.ts',
+    'useRealtimePropertiesTrashCount.ts',
+    'useRealtimeTasks.ts',
+  ];
+
+  /** Ο κώδικας ενός αρχείου, **χωρίς σχόλια** — η τεκμηρίωση δεν κρίνεται ποτέ. */
+  const codeOf = (file: string): string =>
+    fs
+      .readFileSync(path.join(HOOKS, file), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/^\s*\/\/.*$/gm, '');
+
+  test('Δ0 — ο ΠΑΡΟΝΟΜΑΣΤΗΣ: τα αρχεία υπάρχουν και ΟΛΑ χτίζονται από τη ΜΙΑ μηχανή', () => {
+    // Χωρίς αυτό, μια μετονομασία θα έκανε το `Δ1` πράσινο πάνω σε **κενό σύνολο**.
+    for (const f of TENANT_SCOPED) {
+      expect({ file: f, built: codeOf(f).includes('createRealtimeCollectionHook<') }).toEqual({
+        file: f,
+        built: true,
+      });
+    }
+  });
+
+  /**
+   * ⚠️ **ΑΥΤΗ Η ΑΓΚΥΡΑ ΞΑΝΑΓΡΑΦΤΗΚΕ ΔΥΟ ΦΟΡΕΣ. ΚΑΘΕ ΦΟΡΑ ΕΓΙΝΕ ΙΣΧΥΡΟΤΕΡΗ.**
+   *
+   * **Γραφή 1** — `toContain('isMissingTenantError')`: απεδείκνυε ότι υπάρχει η
+   * **εισαγωγή**, όχι ότι ο φρουρός **τρέχει**. Με `if (false)` έμενε ΠΡΑΣΙΝΗ
+   * πάνω σε νεκρό φρουρό, σε **δύο** αρχεία.
+   *
+   * **Γραφή 2** — `toContain('routeTenantScopedError(')` σε **κάθε** αδέλφι:
+   * απεδείκνυε ότι ο καθένας **θυμήθηκε** να ρωτήσει. Καλύτερη, αλλά κρατούσε
+   * την εγγύηση **πέντε φορές** — και μια εγγύηση επαναλαμβανόμενη πέντε φορές
+   * μπορεί να ξεχαστεί σε ένα έκτο αδέλφι που θα γραφτεί αύριο.
+   *
+   * 🔑 **Γραφή 3 (ADR-798 §22) — Η ΑΓΚΥΡΑ ΤΟΥ ΑΔΥΝΑΤΟΥ, ΟΧΙ ΤΟΥ ΘΥΜΗΘΗΚΑ.**
+   * Η κλήση **μετακόμισε** στο `create-realtime-collection-hook.ts`, και αυτό
+   * **δεν είναι αποδυνάμωση**: η προηγούμενη γραφή χαρακτήριζε **ΥΛΟΠΟΙΗΣΗ**
+   * *(«πού είναι γραμμένη η κλήση;»)*, ενώ το **ΣΥΜΒΟΛΑΙΟ** ήταν πάντα
+   * *«σχεδιασμένη κατάσταση δεν αναφέρεται ως βλάβη»*. Σήμερα κανένα αδέλφι
+   * **δεν έχει πού** να παρακάμψει τον κριτή: δεν αγγίζει `subscribe`, δεν
+   * αγγίζει `onSnapshot`. Δεν είναι «θυμήθηκαν όλοι» — είναι **δομικά αδύνατο**
+   * να ξεχάσουν.
+   *
+   * 🔑 Η **σημασιολογία** δοκιμάζεται **εκτελώντας** τη μηχανή, ποτέ διαβάζοντας
+   * πηγή: `services/realtime/hooks/__tests__/create-realtime-collection-hook.test.tsx`
+   * (ομάδα `Β`, μεταλλάξεις 5/5 κόκκινες). Εδώ: «είναι αδύνατη η παράκαμψη;».
+   * Εκεί: «λέει το σωστό;». Δύο ερωτήματα, δύο άγκυρες.
+   */
+  test.each(TENANT_SCOPED)('Δ1 — %s ΔΕΝ ΜΠΟΡΕΙ να παρακάμψει τον κριτή', (file) => {
+    const code = codeOf(file);
+    // Καμία ιδιωτική συνδρομή ⇒ καμία ιδιωτική διαδρομή σφάλματος.
+    expect(code).not.toContain('firestoreQueryService.subscribe');
+    expect(code).not.toContain('onSnapshot(');
+    // ⚠️ Κανένας δεύτερος, inline κριτής: μία ερώτηση, μία απάντηση (ADR-749).
+    expect(code).not.toContain('isMissingTenantError');
+  });
+
+  test('Δ1β — και η ΜΙΑ μηχανή ρωτά τον ΕΝΑ κριτή', () => {
+    // Ο παρονομαστής του Δ1: χωρίς αυτό, το «κανείς δεν στήνει συνδρομή» θα
+    // έμενε πράσινο και σε έναν κόσμο όπου **καμία** συνδρομή δεν στήνεται
+    // πουθενά — δηλαδή «δεν βρήκα» αντί για «περνά από τον κριτή».
+    const engine = codeOf('create-realtime-collection-hook.ts');
+    expect(engine).toContain('firestoreQueryService.subscribe<');
+    expect(engine).toContain('routeTenantScopedError(');
+  });
+
+  test('Δ2 — ο ιδιωτικός αδελφός ΔΕΝ μπαίνει στη λίστα: φρουρός χωρίς πληθυσμό', () => {
+    const src = fs.readFileSync(path.join(HOOKS, 'useOwnedDocuments.ts'), 'utf8');
+    expect(src).toContain("mode: 'userId'");
+    expect(TENANT_SCOPED).not.toContain('useOwnedDocuments.ts');
+  });
+
+  /**
+   * 🔴 Ο πελάτης ΔΕΝ σπέρνει διαμόρφωση. Το `firestore.rules` λέει
+   * `allow write: if false; // Admin/server only` για το `config` — **ρητή
+   * απόφαση**, όχι κενό. Η παλιά `initializeDefaultConfig()` ήταν **δομικά
+   * αδύνατη για κάθε χρήστη** και έβγαζε `[ERROR] PERMISSION_DENIED` σε **κάθε**
+   * φόρτωση σελίδας.
+   */
+  test('Δ3 — καμία απόπειρα σποράς διαμόρφωσης από τον φυλλομετρητή', () => {
+    const rules = fs.readFileSync(path.join(SRC, '..', 'firestore.rules'), 'utf8');
+    // Ο παρονομαστής: ο κανόνας όντως απαγορεύει — αλλιώς το επόμενο δεν σημαίνει τίποτα.
+    expect(rules).toMatch(/match \/config\/\{configId\} \{[^}]*allow write: if false/);
+
+    // ⚠️ Κρίνεται ο **ΚΩΔΙΚΑΣ**, ποτέ το κείμενο: το ίδιο αρχείο **αναφέρει** τη
+    //    νεκρή μέθοδο σε σχόλιο που τεκμηριώνει τη θεραπεία. Άγκυρα πάνω στη λέξη
+    //    θα κοκκίνιζε πάνω στη ΘΕΡΑΠΕΙΑ (σχήμα `Κ7β` του CHECK 3.50) — και
+    //    κοκκίνισε, την πρώτη φορά που γράφτηκε.
+    const svc = fs.readFileSync(path.join(SRC, 'services', 'routes', 'EnterpriseRouteConfigService.ts'), 'utf8');
+    const code = svc.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    expect(code).not.toContain('initializeDefaultConfig');
+    expect(code).not.toContain('configWithTenant');
+  });
+});
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * Ε — Ο ΔΡΟΜΟΛΟΓΗΤΗΣ **ΕΚΤΕΛΕΙΤΑΙ**, ΔΕΝ ΔΙΑΒΑΖΕΤΑΙ (ADR-798 §21)
+ *
+ * Το `Δ1` αποδεικνύει **καλωδίωση** (ποιος τον καλεί). Αυτό αποδεικνύει
+ * **σημασιολογία** (τι απαντά). Μια άγκυρα μόνο για το πρώτο θα έμενε πράσινη
+ * με τον δρομολογητή να καλεί **πάντα** τον λάθος κλάδο.
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+describe('Ε — ο δρομολογητής της σχεδιασμένης κατάστασης', () => {
+  const { routeTenantScopedError } = require('@/services/realtime/hooks/tenant-scoped-error');
+
+  it('Ε1 — «δεν ανήκεις σε εταιρεία» ⇒ ΚΕΝΟ αποτέλεσμα, ΠΟΤΕ θόρυβος', () => {
+    const empty = jest.fn();
+    const fail = jest.fn();
+    routeTenantScopedError(new MissingTenantError(), empty, fail);
+    expect(empty).toHaveBeenCalledTimes(1);
+    expect(fail).not.toHaveBeenCalled();
+  });
+
+  it('Ε2 — ΠΡΑΓΜΑΤΙΚΗ βλάβη περνά ΑΝΕΠΑΦΗ στον χειριστή σφάλματος', () => {
+    // ⚠️ Ο ΠΑΡΟΝΟΜΑΣΤΗΣ: χωρίς αυτό, ένας δρομολογητής που καλεί **πάντα** το
+    //    `onDesignedEmpty` θα περνούσε το `Ε1` και θα **έθαβε κάθε σφάλμα**.
+    const empty = jest.fn();
+    const fail = jest.fn();
+    routeTenantScopedError(new Error('PERMISSION_DENIED: real breakage'), empty, fail);
+    expect(fail).toHaveBeenCalledTimes(1);
+    expect(empty).not.toHaveBeenCalled();
+  });
+
+  it('Ε3 — ΔΙΧΤΥ ΚΕΙΜΕΝΟΥ: ωμό Error με το κανονικό μήνυμα δρομολογείται σωστά', () => {
+    const empty = jest.fn();
+    const fail = jest.fn();
+    routeTenantScopedError(new Error(MISSING_TENANT_MESSAGE), empty, fail);
+    expect(empty).toHaveBeenCalledTimes(1);
   });
 });

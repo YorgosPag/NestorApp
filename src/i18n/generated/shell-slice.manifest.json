@@ -57,7 +57,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "a3b5ea6af1fdb1451571747109818966bf9605ee47a3bf76bb6ddc6a6b04bba2",
+  "inputsSha256": "522b7a8fae3b31c65c7683ae16e70da206704639d0aa7bd877d71529305a7447",
   "languages": [
     "el"
   ],
@@ -395,6 +395,7 @@
     "src/lib/share-utils.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/sidebar-utils.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/social-sharing/SocialSharingPlatforms.tsx": "0fbec2423b4140ef043cb7375a7fc39473b87aae1153ac349a8581196a58872f",
+    "src/lib/stale-cache.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/state/createExternalStore.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/storage/safe-storage.ts": "879d2197935e76a9e9ff074ebd3bf5689f3bbb45166d26fab1cbe7f4c68153de",
     "src/lib/telegram/chat-id-validator.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -462,9 +463,13 @@
     "src/services/notificationService.ts": "53e0251636cfda81bc8fecd825e66923b20c7597ff5ea6fb8e0be7dbc75ed540",
     "src/services/realtime/RealtimeService.ts": "74041709a532b1af4b14add0a5a5909fd1424f201144b959073bdfedba6d9501",
     "src/services/realtime/event-payload-definitions.ts": "78b9e40a30565f7fae74ac114948afbecd2b051de9bb667dc1035f0fbb0a312a",
+    "src/services/realtime/hooks/create-realtime-collection-hook.ts": "33c8e0f2d16373ea9935103b3828b0c5a8f71f4c35ea2fae17fc8108620d75a8",
+    "src/services/realtime/hooks/realtime-collection.types.ts": "09034af987c919815f0a1f14bcb7f36d068174dfc7ed0607ac27e98f6cdbf2fe",
+    "src/services/realtime/hooks/tenant-scoped-error.ts": "aad28da520d047ef7280e72a53d118f6726c6fa133ba7c6c0de3a68a1941b127",
+    "src/services/realtime/hooks/use-realtime-entity-events.ts": "00070fc2701d75d65341bb80e1ef29bc54c395b8e1ef144fddd4dbee8f8feaf3",
     "src/services/realtime/hooks/usePublicListings.ts": "47cac2577b44fc183e16ba30493ae1f9e3209caed09caa3e3abfc8dd1b86afd6",
-    "src/services/realtime/hooks/useRealtimeBuildings.ts": "e1aeba5467326b1b9a4fb59587b47aeb6c6cb6dba102b89451b19e8fa1cb03f9",
-    "src/services/realtime/hooks/useRealtimeProperties.ts": "fb346596b16cbbc167076f16556e65b1559df6adb2caf28e89a9f9ed81d818e6",
+    "src/services/realtime/hooks/useRealtimeBuildings.ts": "af46011285db2d751d797e08007bfd30c4d7d0e4ad1a2ef5b6a36abfa58dcf96",
+    "src/services/realtime/hooks/useRealtimeProperties.ts": "af366363c5814cc2f6cd97df419cfb26a4eb16bfda2b82ce26ecb04991294633",
     "src/services/realtime/types.ts": "3f55257ee4e425ae42d9f98089c9f64c2fe6a0f7b1ac753dbbaffe6f94e193ab",
     "src/services/routes/EnterpriseRouteConfigService.ts": "a95f777390f9e73299e31e75d65370efbca0a3ca41f6096efb2e1dce0823f090",
     "src/services/session/EnterpriseSessionService.ts": "7142145b40bcb17ace947ea785133aacc753f030ac4f201d66f5cc254cc91cd5",
@@ -589,7 +594,7 @@
     "dynamicBoundaries": 18,
     "matchedKeys": 134,
     "routeBoundaries": 0,
-    "shellFiles": 486,
+    "shellFiles": 491,
     "sliceBytes": 308873
   },
   "unresolvableKeys": [

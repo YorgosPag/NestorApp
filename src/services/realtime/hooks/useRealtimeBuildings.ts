@@ -3,18 +3,23 @@
 /**
  * 🏢 ENTERPRISE: Real-time Buildings Hook for Navigation
  *
- * Provides real-time updates for buildings grouped by projectId.
- * Used by NavigationContext to show live building counts.
+ * Παρέχει ζωντανές ενημερώσεις κτηρίων ομαδοποιημένων ανά `projectId`.
+ * Το χρησιμοποιεί το `NavigationContext` για ζωντανούς μετρητές.
+ *
+ * ⚠️ **Ο κύκλος ζωής της συνδρομής ΔΕΝ ζει εδώ** (ADR-798 §22): στήσιμο,
+ * εγγραφή, χαρτογράφηση, **κρίση σφάλματος** και καθαρισμός ανήκουν στο
+ * `create-realtime-collection-hook.ts`. Εδώ μένει **μόνο** ό,τι είναι γνήσια
+ * δικό αυτού του hook: η μετάφραση εγγράφου και η ομαδοποίηση ανά έργο.
+ *
+ * @see ./create-realtime-collection-hook.ts
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { isMissingTenantError } from '@/services/firestore/auth-context';
-import { firestoreQueryService } from '@/services/firestore';
-import type { QueryResult } from '@/services/firestore';
+import { useCallback, useEffect, useMemo } from 'react';
 import type { DocumentData } from 'firebase/firestore';
 import type { RealtimeBuilding, SubscriptionStatus } from '../types';
 import { REALTIME_EVENTS } from '../types';
 import { createModuleLogger } from '@/lib/telemetry';
+import { createRealtimeCollectionHook } from './create-realtime-collection-hook';
 
 const logger = createModuleLogger('useRealtimeBuildings');
 
@@ -46,163 +51,76 @@ interface UseRealtimeBuildingsReturn {
 }
 
 // ============================================================================
+// Η ΠΑΡΑΛΛΑΓΗ — ό,τι είναι γνήσια δικό του
+// ============================================================================
+
+const useBuildingsCollection = createRealtimeCollectionHook<DocumentData, RealtimeBuilding>({
+  collection: 'BUILDINGS',
+  logger,
+  mapDocuments: (documents): RealtimeBuilding[] =>
+    documents.map((doc) => ({
+      id: doc.id,
+      name: (doc.name as string) || '',
+      code: (doc.code as string) || undefined,
+      projectId: (doc.projectId as string) || null,
+      address: doc.address as string | undefined,
+      city: doc.city as string | undefined,
+      status: doc.status as string | undefined,
+      totalArea: doc.totalArea as number | undefined,
+      floors: doc.floors as number | undefined,
+      units: doc.units as number | undefined,
+      addressesCount: (doc.addresses as unknown[] | undefined)?.length ?? 0,
+      createdAt: doc.createdAt as string | undefined,
+      updatedAt: doc.updatedAt as string | undefined,
+    })),
+});
+
+/** Ομαδοποίηση ανά έργο· τα αδέσποτα πάνε σε ρητό κάδο, ποτέ σιωπηλά χαμένα. */
+function groupByProject(buildings: readonly RealtimeBuilding[]): BuildingsByProject {
+  const grouped: BuildingsByProject = {};
+
+  buildings.forEach((building) => {
+    const projectId = building.projectId || '__unassigned__';
+    if (!grouped[projectId]) {
+      grouped[projectId] = [];
+    }
+    grouped[projectId].push(building);
+  });
+
+  return grouped;
+}
+
+// ============================================================================
 // HOOK IMPLEMENTATION
 // ============================================================================
 
 /**
  * 🏢 ENTERPRISE: Real-time buildings hook
  *
- * Watches the buildings collection and groups by projectId.
- * Automatically updates when buildings are added/removed/modified.
- *
  * @example
  * ```tsx
  * const { getBuildingCount, buildingsByProject } = useRealtimeBuildings();
  *
- * // Get count for a specific project
- * const count = getBuildingCount('projectId123'); // Returns number
- *
- * // Get all buildings for a project
+ * const count = getBuildingCount('projectId123');       // Returns number
  * const buildings = buildingsByProject['projectId123']; // Returns Building[]
  * ```
  */
 export function useRealtimeBuildings(enabled = true): UseRealtimeBuildingsReturn {
-  // State
-  const [allBuildings, setAllBuildings] = useState<RealtimeBuilding[]>([]);
-  const [buildingsByProject, setBuildingsByProject] = useState<BuildingsByProject>({});
-  const [loading, setLoading] = useState(enabled);
-  const [error, setError] = useState<string | null>(null);
-  const [status, setStatus] = useState<SubscriptionStatus>('idle');
+  const { items: allBuildings, loading, error, status, refetch } = useBuildingsCollection(enabled);
 
-  // Refs
-  const unsubscribeRef = useRef<(() => void) | null>(null);
-  // 🚀 PERF (2026-06-11): refetch trigger is STATE, not a ref. A ref read in the
-  // effect dep array (`refreshTriggerRef.current`) is an anti-pattern — the value
-  // is captured non-reactively and re-evaluated on every unrelated re-render
-  // (e.g. auth flip), risking spurious re-subscribes. State makes refetch the
-  // sole, reliable cause of re-subscription.
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  // Παράγωγο, όχι δεύτερη κατάσταση: ο χάρτης **δεν μπορεί** να ξεσυγχρονιστεί
+  // από τη λίστα, γιατί δεν έχει δικό του γραφέα.
+  const buildingsByProject = useMemo(() => groupByProject(allBuildings), [allBuildings]);
 
-  /**
-   * 🏢 ENTERPRISE: Group buildings by projectId
-   */
-  const groupBuildingsByProject = useCallback((buildings: RealtimeBuilding[]): BuildingsByProject => {
-    const grouped: BuildingsByProject = {};
-
-    buildings.forEach((building) => {
-      const projectId = building.projectId || '__unassigned__';
-      if (!grouped[projectId]) {
-        grouped[projectId] = [];
-      }
-      grouped[projectId].push(building);
-    });
-
-    return grouped;
-  }, []);
-
-  /**
-   * 🏢 ENTERPRISE: Get buildings for a specific project
-   */
   const getBuildingsForProject = useCallback(
-    (projectId: string): RealtimeBuilding[] => {
-      return buildingsByProject[projectId] || [];
-    },
+    (projectId: string): RealtimeBuilding[] => buildingsByProject[projectId] || [],
     [buildingsByProject]
   );
 
-  /**
-   * 🏢 ENTERPRISE: Get building count for a project
-   */
   const getBuildingCount = useCallback(
-    (projectId: string): number => {
-      return (buildingsByProject[projectId] || []).length;
-    },
+    (projectId: string): number => (buildingsByProject[projectId] || []).length,
     [buildingsByProject]
   );
-
-  /**
-   * 🏢 ENTERPRISE: Manual refetch
-   */
-  const refetch = useCallback(() => {
-    setRefreshTrigger(n => n + 1);
-    setLoading(true);
-    setError(null);
-  }, []);
-
-  // ==========================================================================
-  // MAIN SUBSCRIPTION EFFECT - WAITS FOR AUTHENTICATION
-  // ==========================================================================
-
-  useEffect(() => {
-    // Skip subscription when disabled. Auth readiness is handled centrally
-    // inside firestoreQueryService.subscribe() via waitForAuthReady().
-    if (!enabled) {
-      setStatus('idle');
-      setLoading(false);
-      return;
-    }
-
-    setStatus('connecting');
-    setLoading(true);
-
-    // 🔐 ENTERPRISE: firestoreQueryService.subscribe() handles auth internally
-    // and auto-injects companyId tenant filter — SECURITY FIX for cross-tenant data leak
-    const unsubscribe = firestoreQueryService.subscribe<DocumentData>(
-      'BUILDINGS',
-      (result: QueryResult<DocumentData>) => {
-        const buildings = result.documents.map(doc => ({
-          id: doc.id,
-          name: (doc.name as string) || '',
-          code: (doc.code as string) || undefined,
-          projectId: (doc.projectId as string) || null,
-          address: doc.address as string | undefined,
-          city: doc.city as string | undefined,
-          status: doc.status as string | undefined,
-          totalArea: doc.totalArea as number | undefined,
-          floors: doc.floors as number | undefined,
-          units: doc.units as number | undefined,
-          addressesCount: (doc.addresses as unknown[] | undefined)?.length ?? 0,
-          createdAt: doc.createdAt as string | undefined,
-          updatedAt: doc.updatedAt as string | undefined,
-        })) satisfies RealtimeBuilding[];
-
-        logger.debug('Received buildings in real-time', { count: buildings.length });
-
-        setAllBuildings(buildings);
-        setBuildingsByProject(groupBuildingsByProject(buildings));
-        setLoading(false);
-        setError(null);
-        setStatus('active');
-      },
-      (err: Error) => {
-        // 🔴 **«ΔΕΝ ΕΧΕΙΣ ΕΤΑΙΡΕΙΑ» ΔΕΝ ΕΙΝΑΙ ΒΛΑΒΗ** (ADR-807 · ADR-813 Φάση Β).
-        //    Χωρίς οργανισμό δεν υπάρχουν κτίρια εταιρείας να δειχτούν — **κενή
-        //    λίστα**, όχι σφάλμα. Το `setLoading(false)` μένει: η φόρτωση όντως
-        //    τελείωσε, απλώς με μηδέν αποτελέσματα.
-        //
-        // ⚠️ Brand, ποτέ σύγκριση κειμένου — βλ. `isMissingTenantError`.
-        if (isMissingTenantError(err)) {
-          setAllBuildings([]);
-          setBuildingsByProject({});
-          setError(null);
-          setLoading(false);
-          setStatus('active');
-          return;
-        }
-        logger.error('Firestore error', { error: err.message });
-        setError(err.message);
-        setLoading(false);
-        setStatus('error');
-      }
-    );
-
-    unsubscribeRef.current = unsubscribe;
-
-    return () => {
-      logger.debug('Cleaning up subscription');
-      unsubscribe();
-    };
-  }, [enabled, refreshTrigger, groupBuildingsByProject]);
 
   // ==========================================================================
   // LISTEN FOR EXTERNAL EVENTS

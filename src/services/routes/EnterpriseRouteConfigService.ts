@@ -201,8 +201,17 @@ export class EnterpriseRouteConfigService {
       const snapshot = await getDocs(configQuery);
 
       if (snapshot.empty) {
-        logger.warn('⚠️ No route configuration found in Firebase, using fallback');
-        return this.initializeDefaultConfig(tenantId);
+        // 🔴 **ΔΕΝ ΕΠΙΧΕΙΡΕΙΤΑΙ ΣΠΟΡΑ ΑΠΟ ΤΟΝ ΦΥΛΛΟΜΕΤΡΗΤΗ** (ADR-798 §21).
+        //    Το `firestore.rules:2257` λέει `allow write: if false; // Admin/server
+        //    only` — **ρητή απόφαση με γραμμένο λόγο**, όχι κενό. Η παλιά κλήση
+        //    `initializeDefaultConfig()` ήταν **δομικά αδύνατη για ΚΑΘΕ χρήστη**
+        //    (πελατικό SDK ⇒ περνά πάντα από τους κανόνες) και κατέληγε
+        //    `[ERROR] PERMISSION_DENIED` σε **κάθε φόρτωση σελίδας**, κρύβοντας
+        //    τα αληθινά σφάλματα. Το fallback ήταν ΗΔΗ η πραγματική διαδρομή.
+        //
+        // ⚠️ Άδεια συλλογή είναι **αναμενόμενη** κατάσταση, όχι βλάβη ⇒ `info`.
+        logger.info('Καμία διαμόρφωση διαδρομών στη Firebase — χρήση fallback');
+        return this.getFallbackConfig();
       }
 
       const routeConfigs: RouteConfig[] = [];
@@ -239,32 +248,6 @@ export class EnterpriseRouteConfigService {
     }
   }
 
-  /**
-   * 🏗️ Initialize default configuration στη Firebase
-   */
-  async initializeDefaultConfig(tenantId?: string): Promise<RouteConfig[]> {
-    try {
-      logger.info('🏗️ Initializing default route configuration in Firebase...');
-
-      const batch = [];
-      for (const config of FALLBACK_ROUTE_CONFIG) {
-        const configWithTenant = tenantId
-          ? { ...config, tenantId }
-          : config;
-
-        const docRef = doc(db, COLLECTIONS.CONFIG, config.id);
-        batch.push(setDoc(docRef, configWithTenant));
-      }
-
-      await Promise.all(batch);
-      logger.info('✅ Default route configuration initialized in Firebase');
-
-      return FALLBACK_ROUTE_CONFIG;
-    } catch (error) {
-      logger.error('❌ Error initializing default route configuration:', error);
-      return this.getFallbackConfig();
-    }
-  }
 
   // ========================================================================
   // ROUTE CATEGORIZATION

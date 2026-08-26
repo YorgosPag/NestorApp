@@ -3,18 +3,26 @@
 /**
  * 🏢 ENTERPRISE: Real-time Properties Trash Count Hook
  *
- * Firestore onSnapshot listener for soft-deleted properties (status === 'deleted').
- * Drives the badge on the trash button in the Properties header.
+ * Ζωντανός μετρητής των ήπια διαγραμμένων ακινήτων (`status === 'deleted'`).
+ * Τροφοδοτεί το σήμα στο κουμπί κάδου της κεφαλίδας Ακινήτων.
  *
- * Pattern: same as useRealtimeBuildings / useRealtimeProperties.
+ * ⚠️ **Ο κύκλος ζωής της συνδρομής ΔΕΝ ζει εδώ** (ADR-798 §22) — ανήκει στο
+ * `create-realtime-collection-hook.ts`, όπως και στα υπόλοιπα τέσσερα αδέλφια.
+ *
+ * 🔑 **ΓΙΑΤΙ ΔΕΝ ΕΚΘΕΤΕΙ `error` — ΕΙΝΑΙ ΑΠΟΦΑΣΗ, ΟΧΙ ΠΑΡΑΛΕΙΨΗ**: ένα σήμα
+ * μετρητή δεν έχει πού να δείξει μήνυμα σφάλματος. Σε βλάβη η μηχανή περνά σε
+ * `status: 'error'` — αυτό **είναι** το ορατό σήμα του — και το μήνυμα
+ * καταγράφεται μία φορά, κεντρικά. Η μηχανή **παράγει** `error`· αυτό το hook
+ * απλώς δεν το **δημοσιεύει**. Δημόσιο συμβόλαιο αμετάβλητο.
+ *
+ * @see ./create-realtime-collection-hook.ts
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useMemo } from 'react';
 import { where, type QueryConstraint, type DocumentData } from 'firebase/firestore';
-import { firestoreQueryService } from '@/services/firestore';
-import type { QueryResult } from '@/services/firestore';
 import type { SubscriptionStatus } from '../types';
 import { createModuleLogger } from '@/lib/telemetry';
+import { createRealtimeCollectionHook } from './create-realtime-collection-hook';
 
 const logger = createModuleLogger('useRealtimePropertiesTrashCount');
 
@@ -26,46 +34,29 @@ export interface UseRealtimePropertiesTrashCountReturn {
   status: SubscriptionStatus;
 }
 
+// ============================================================================
+// Η ΠΑΡΑΛΛΑΓΗ — ό,τι είναι γνήσια δικό του
+// ============================================================================
+
+/**
+ * ⚠️ Χαρτογραφεί σε **ταυτότητες**, όχι σε πλήρη μοντέλα: ο καταναλωτής θέλει
+ * **πλήθος**. Το «κενό αποτέλεσμα» της μηχανής (άδειος πίνακας) δίνει `0` —
+ * ακριβώς η παλιά συμπεριφορά, χωρίς ξεχωριστό σχήμα κατάστασης.
+ */
+const useTrashedPropertiesCollection = createRealtimeCollectionHook<DocumentData, string>({
+  collection: 'PROPERTIES',
+  logger,
+  constraints: DELETED_CONSTRAINTS,
+  mapDocuments: (documents): string[] => documents.map((doc) => doc.id as string),
+});
+
 export function useRealtimePropertiesTrashCount(
   enabled = true
 ): UseRealtimePropertiesTrashCountReturn {
-  const [count, setCount] = useState(0);
-  const [loading, setLoading] = useState(enabled);
-  const [status, setStatus] = useState<SubscriptionStatus>('idle');
-  const unsubRef = useRef<(() => void) | null>(null);
+  const { items, loading, status } = useTrashedPropertiesCollection(enabled);
 
-  useEffect(() => {
-    if (!enabled) {
-      setStatus('idle');
-      setLoading(false);
-      return;
-    }
-
-    setStatus('connecting');
-    setLoading(true);
-
-    const unsub = firestoreQueryService.subscribe<DocumentData>(
-      'PROPERTIES',
-      (result: QueryResult<DocumentData>) => {
-        setCount(result.documents.length);
-        setLoading(false);
-        setStatus('active');
-        logger.debug('Trash count updated', { count: result.documents.length });
-      },
-      (err: Error) => {
-        logger.error('Firestore subscription error', { error: err.message });
-        setLoading(false);
-        setStatus('error');
-      },
-      { constraints: DELETED_CONSTRAINTS }
-    );
-
-    unsubRef.current = unsub;
-    return () => {
-      unsub();
-      unsubRef.current = null;
-    };
-  }, [enabled]);
-
-  return { trashCount: count, loading, status };
+  return useMemo(
+    () => ({ trashCount: items.length, loading, status }),
+    [items, loading, status]
+  );
 }

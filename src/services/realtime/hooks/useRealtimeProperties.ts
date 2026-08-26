@@ -3,8 +3,14 @@
 /**
  * 🏢 ENTERPRISE: Real-time Properties Hook for Navigation
  *
- * Provides real-time updates for properties grouped by buildingId.
- * Used by NavigationContext to show live property counts per building.
+ * Παρέχει ζωντανές ενημερώσεις ακινήτων ομαδοποιημένων ανά `buildingId`.
+ * Το χρησιμοποιεί το `NavigationContext` για ζωντανούς μετρητές ανά κτήριο.
+ *
+ * ⚠️ **Δύο ερωτήματα, δύο σπίτια** (ADR-798 §22 · ADR-749):
+ *  - ο **κύκλος ζωής** της συνδρομής Firestore → `create-realtime-collection-hook.ts`
+ *  - η **αισιόδοξη ενημέρωση** από το event bus → `use-realtime-entity-events.ts`
+ *
+ * Εδώ μένει **μόνο** η μετάφραση εγγράφου και η ομαδοποίηση ανά κτήριο.
  *
  * @compliance CLAUDE.md Enterprise Standards
  * - ZERO hardcoded values
@@ -12,15 +18,13 @@
  * - Full TypeScript strict mode
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { firestoreQueryService } from '@/services/firestore';
-import type { QueryResult } from '@/services/firestore';
+import { useCallback, useEffect, useMemo } from 'react';
 import type { DocumentData } from 'firebase/firestore';
-import type { RealtimeUnit, SubscriptionStatus, PropertyCreatedPayload, PropertyUpdatedPayload, PropertyDeletedPayload } from '../types';
+import type { RealtimeUnit, SubscriptionStatus } from '../types';
 import { REALTIME_EVENTS } from '../types';
-import { RealtimeService } from '../RealtimeService';
-import { applyUpdates } from '@/lib/utils';
 import { createModuleLogger } from '@/lib/telemetry';
+import { createRealtimeCollectionHook } from './create-realtime-collection-hook';
+import { useRealtimeEntityEvents } from './use-realtime-entity-events';
 
 const logger = createModuleLogger('useRealtimeProperties');
 
@@ -52,139 +56,94 @@ interface UseRealtimePropertiesReturn {
 }
 
 // ============================================================================
+// Η ΠΑΡΑΛΛΑΓΗ — ό,τι είναι γνήσια δικό του
+// ============================================================================
+
+const usePropertiesCollection = createRealtimeCollectionHook<DocumentData, RealtimeUnit>({
+  collection: 'PROPERTIES',
+  logger,
+  mapDocuments: (documents): RealtimeUnit[] =>
+    documents.map((doc) => ({
+      id: doc.id,
+      name: (doc.name as string) || '',
+      buildingId: (doc.buildingId as string) || null,
+      type: doc.type as string | undefined,
+      status: doc.status as string | undefined,
+      area: doc.area as number | undefined,
+      floor: doc.floor as number | undefined,
+      createdAt: doc.createdAt as string | undefined,
+      updatedAt: doc.updatedAt as string | undefined,
+    })),
+});
+
+/** Ομαδοποίηση ανά κτήριο· τα αδέσποτα πάνε σε ρητό κάδο, ποτέ σιωπηλά χαμένα. */
+function groupByBuilding(units: readonly RealtimeUnit[]): UnitsByBuilding {
+  const grouped: UnitsByBuilding = {};
+
+  units.forEach((unit) => {
+    const buildingId = unit.buildingId || '__unassigned__';
+    if (!grouped[buildingId]) {
+      grouped[buildingId] = [];
+    }
+    grouped[buildingId].push(unit);
+  });
+
+  return grouped;
+}
+
+// ============================================================================
 // HOOK IMPLEMENTATION
 // ============================================================================
 
 /**
  * 🏢 ENTERPRISE: Real-time properties hook
  *
- * Watches the properties collection and groups by buildingId.
- * Automatically updates when properties are added/removed/modified.
- *
  * @example
  * ```tsx
  * const { getPropertyCount, propertiesByBuilding } = useRealtimeProperties();
  *
- * // Get count for a specific building
- * const count = getPropertyCount('buildingId123'); // Returns number
- *
- * // Get all properties for a building
- * const properties = propertiesByBuilding['buildingId123']; // Returns Property[]
+ * const count = getPropertyCount('buildingId123');            // Returns number
+ * const properties = propertiesByBuilding['buildingId123'];   // Returns Property[]
  * ```
  */
 export function useRealtimeProperties(enabled = true): UseRealtimePropertiesReturn {
-  // State
-  const [allUnits, setAllUnits] = useState<RealtimeUnit[]>([]);
-  const [unitsByBuilding, setUnitsByBuilding] = useState<UnitsByBuilding>({});
-  const [loading, setLoading] = useState(enabled);
-  const [error, setError] = useState<string | null>(null);
-  const [status, setStatus] = useState<SubscriptionStatus>('idle');
+  const {
+    items: allUnits,
+    setItems: setAllUnits,
+    loading,
+    error,
+    status,
+    refetch,
+  } = usePropertiesCollection(enabled);
 
-  // Refs
-  const unsubscribeRef = useRef<(() => void) | null>(null);
-  const refreshTriggerRef = useRef(0);
+  // 🔴 Παράγωγο, όχι δεύτερη κατάσταση. Πριν, ο χάρτης ήταν **ξεχωριστό
+  // `useState`** που το ενημέρωνε ένα `setUnitsByBuilding(...)` **μέσα** στον
+  // updater ενός άλλου `setState` — μη καθαρός updater που δούλευε, αλλά άφηνε
+  // δύο γραφείς για μία αλήθεια. Τώρα ο χάρτης δεν έχει δικό του γραφέα.
+  const unitsByBuilding = useMemo(() => groupByBuilding(allUnits), [allUnits]);
 
-  /**
-   * 🏢 ENTERPRISE: Group units by buildingId
-   */
-  const groupUnitsByBuilding = useCallback((units: RealtimeUnit[]): UnitsByBuilding => {
-    const grouped: UnitsByBuilding = {};
-
-    units.forEach((unit) => {
-      const buildingId = unit.buildingId || '__unassigned__';
-      if (!grouped[buildingId]) {
-        grouped[buildingId] = [];
-      }
-      grouped[buildingId].push(unit);
-    });
-
-    return grouped;
-  }, []);
-
-  /**
-   * 🏢 ENTERPRISE: Get properties for a specific building
-   */
   const getPropertiesForBuilding = useCallback(
-    (buildingId: string): RealtimeUnit[] => {
-      return unitsByBuilding[buildingId] || [];
-    },
+    (buildingId: string): RealtimeUnit[] => unitsByBuilding[buildingId] || [],
     [unitsByBuilding]
   );
 
-  /**
-   * 🏢 ENTERPRISE: Get property count for a building
-   */
   const getPropertyCount = useCallback(
-    (buildingId: string): number => {
-      return (unitsByBuilding[buildingId] || []).length;
-    },
+    (buildingId: string): number => (unitsByBuilding[buildingId] || []).length,
     [unitsByBuilding]
   );
 
-  /**
-   * 🏢 ENTERPRISE: Manual refetch
-   */
-  const refetch = useCallback(() => {
-    refreshTriggerRef.current += 1;
-    setLoading(true);
-    setError(null);
-  }, []);
-
-  // ==========================================================================
-  // MAIN SUBSCRIPTION EFFECT
-  // ==========================================================================
-
-  useEffect(() => {
-    // 🔐 ENTERPRISE: Skip subscription when disabled (no auth yet)
-    if (!enabled) {
-      setStatus('idle');
-      setLoading(false);
-      return;
-    }
-
-    setStatus('connecting');
-    setLoading(true);
-
-    // 🔐 ENTERPRISE: firestoreQueryService.subscribe() handles auth internally
-    // and auto-injects companyId tenant filter — SECURITY FIX for cross-tenant data leak
-    const unsubscribe = firestoreQueryService.subscribe<DocumentData>(
-      'PROPERTIES',
-      (result: QueryResult<DocumentData>) => {
-        const units: RealtimeUnit[] = result.documents.map(doc => ({
-          id: doc.id,
-          name: (doc.name as string) || '',
-          buildingId: (doc.buildingId as string) || null,
-          type: doc.type as string | undefined,
-          status: doc.status as string | undefined,
-          area: doc.area as number | undefined,
-          floor: doc.floor as number | undefined,
-          createdAt: doc.createdAt as string | undefined,
-          updatedAt: doc.updatedAt as string | undefined,
-        }));
-
-        logger.debug('Received units in real-time', { count: units.length });
-
-        setAllUnits(units);
-        setUnitsByBuilding(groupUnitsByBuilding(units));
-        setLoading(false);
-        setError(null);
-        setStatus('active');
-      },
-      (err: Error) => {
-        logger.error('Firestore error', { error: err.message });
-        setError(err.message);
-        setLoading(false);
-        setStatus('error');
-      }
-    );
-
-    unsubscribeRef.current = unsubscribe;
-
-    return () => {
-      logger.debug('Cleaning up subscription');
-      unsubscribe();
-    };
-  }, [enabled, refreshTriggerRef.current, groupUnitsByBuilding]);
+  // 🏢 ENTERPRISE: Event bus subscribers for optimistic UI updates (ADR-228 Tier 1)
+  useRealtimeEntityEvents({
+    created: 'UNIT_CREATED',
+    updated: 'UNIT_UPDATED',
+    deleted: 'UNIT_DELETED',
+    updatedId: (payload) => payload.propertyId,
+    updatedFields: (payload) => payload.updates as Partial<RealtimeUnit>,
+    deletedId: (payload) => payload.propertyId,
+    setItems: setAllUnits,
+    refetch,
+    logger,
+  });
 
   // ==========================================================================
   // LISTEN FOR EXTERNAL EVENTS
@@ -202,42 +161,6 @@ export function useRealtimeProperties(enabled = true): UseRealtimePropertiesRetu
       window.removeEventListener(REALTIME_EVENTS.NAVIGATION_REFRESH, handleNavigationRefresh);
     };
   }, []);
-
-  // 🏢 ENTERPRISE: Event bus subscribers for optimistic UI updates (ADR-228 Tier 1)
-  useEffect(() => {
-    const handleCreated = (_payload: PropertyCreatedPayload) => {
-      logger.info('Unit created — triggering refetch');
-      refetch();
-    };
-
-    const handleUpdated = (payload: PropertyUpdatedPayload) => {
-      logger.info('Applying optimistic update for property', { propertyId: payload.propertyId });
-      setAllUnits(prev => {
-        const updated = prev.map(unit =>
-          unit.id === payload.propertyId
-            ? applyUpdates(unit, payload.updates as Partial<RealtimeUnit>)
-            : unit
-        );
-        setUnitsByBuilding(groupUnitsByBuilding(updated));
-        return updated;
-      });
-    };
-
-    const handleDeleted = (payload: PropertyDeletedPayload) => {
-      logger.info('Removing deleted property', { propertyId: payload.propertyId });
-      setAllUnits(prev => {
-        const filtered = prev.filter(unit => unit.id !== payload.propertyId);
-        setUnitsByBuilding(groupUnitsByBuilding(filtered));
-        return filtered;
-      });
-    };
-
-    const unsubCreate = RealtimeService.subscribe('UNIT_CREATED', handleCreated);
-    const unsubUpdate = RealtimeService.subscribe('UNIT_UPDATED', handleUpdated);
-    const unsubDelete = RealtimeService.subscribe('UNIT_DELETED', handleDeleted);
-
-    return () => { unsubCreate(); unsubUpdate(); unsubDelete(); };
-  }, [refetch, groupUnitsByBuilding]);
 
   return {
     propertiesByBuilding: unitsByBuilding,
