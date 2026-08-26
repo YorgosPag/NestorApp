@@ -17,6 +17,12 @@ const path = require('path');
 // CONFIGURATION
 // =============================================================================
 
+const {
+  readDecisions,
+  chooseDecision,
+  findLostDescriptions,
+} = require('./lib/preserve-decisions.cjs');
+
 const ADRS_FOLDER = path.join(__dirname, '..', 'adrs');
 const OUTPUT_PATH = path.join(__dirname, '..', 'adr-index.md');
 
@@ -129,7 +135,18 @@ function sortAdrs(adrs) {
 /**
  * Generate the clean index content
  */
-function generateIndex(adrs) {
+function generateIndex(adrs, preserved) {
+  // 🔴 ADR-814 — ΠΡΟΣΘΕΣΕ ΧΩΡΙΣ ΝΑ ΚΑΤΑΣΤΡΕΨΕΙΣ.
+  // Μετρημένο: χωρίς αυτό ο γεννήτορας έσβηνε **169.937 χαρακτήρες**
+  // επιμελημένης γνώσης σε **83** γραμμές (το ADR-777 πήγαινε 10.340 → 137),
+  // ενώ ταυτόχρονα ήταν ο ΜΟΝΟΣ τρόπος να μπουν τα **79** ADR που έλειπαν.
+  // Πλήρης στην κάλυψη, καταστροφικός στο περιεχόμενο — τώρα και τα δύο.
+  const kept = new Set();
+  const decisionOf = (adr) => {
+    const { text, preserved: wasKept } = chooseDecision(adr.id, adr.title, preserved);
+    if (wasKept) kept.add(adr.id);
+    return text;
+  };
   const sortedAdrs = sortAdrs(adrs);
   const today = new Date().toISOString().split('T')[0];
 
@@ -190,7 +207,7 @@ function generateIndex(adrs) {
   for (const adr of sortedAdrs) {
     const statusEmoji = getStatusEmoji(adr.status);
     const link = `[📄](./adrs/${adr.filename})`;
-    content += `| **${adr.id}** | ${adr.title} | ${statusEmoji} ${adr.status} | ${adr.date} | ${adr.category} | ${link} |\n`;
+    content += `| **${adr.id}** | ${decisionOf(adr)} | ${statusEmoji} ${adr.status} | ${adr.date} | ${adr.category} | ${link} |\n`;
   }
 
   content += `
@@ -215,7 +232,7 @@ function generateIndex(adrs) {
     for (const adr of categoryAdrs) {
       const statusEmoji = getStatusEmoji(adr.status);
       const link = `[View](./adrs/${adr.filename})`;
-      content += `| **${adr.id}** | ${adr.title} | ${statusEmoji} ${adr.status} | ${link} |\n`;
+      content += `| **${adr.id}** | ${decisionOf(adr)} | ${statusEmoji} ${adr.status} | ${link} |\n`;
     }
 
     content += `
@@ -268,7 +285,7 @@ Based on these ADRs, the following are **PROHIBITED**:
 *Enterprise standards inspired by: Autodesk, Adobe, Bentley Systems, SAP, Google*
 `;
 
-  return content;
+  return { content, kept };
 }
 
 // =============================================================================
@@ -322,11 +339,52 @@ async function main() {
 
   // Generate index
   console.log('\n📝 Generating index...');
-  const indexContent = generateIndex(adrs);
+  // Ο υπάρχων δείκτης είναι ΕΙΣΟΔΟΣ, όχι μόνο έξοδος: κουβαλά ό,τι έμαθε άνθρωπος.
+  let existing = '';
+  try {
+    existing = fs.readFileSync(OUTPUT_PATH, 'utf-8');
+  } catch (e) {
+    // Πρώτη γέννηση — κανονική κατάσταση, όχι σφάλμα.
+  }
+  const preserved = readDecisions(existing);
+  const { content: indexContent, kept } = generateIndex(adrs, preserved);
+
+  // ⛔ FAIL-CLOSED: ΑΡΝΗΣΗ ΣΥΡΡΙΚΝΩΣΗΣ.
+  // Ο δείκτης μεγαλώνει ή μένει ίδιος· ΠΟΤΕ δεν μικραίνει από μια εκτέλεση του
+  // γεννήτορα. Αυτή η γραμμή είναι ο λόγος που το «μην τον τρέχεις» παύει να
+  // χρειάζεται: η καταστροφή γίνεται **μη εκφράσιμη**, όχι απλώς απίθανη.
+  // ⚠️ Νόμιμη συρρίκνωση (π.χ. μαζική διαγραφή ADR) περνά με `--allow-shrink`,
+  // ώστε να είναι ΡΗΤΗ ΠΡΑΞΗ ΑΝΘΡΩΠΟΥ και όχι παρενέργεια.
+  // ⛔ FAIL-CLOSED: ΚΑΝΕΝΑ ADR ΔΕΝ ΧΑΝΕΙ ΤΗΝ ΠΕΡΙΓΡΑΦΗ ΤΟΥ.
+  //
+  // 🔴 Η ΠΡΩΤΗ ΓΡΑΦΗ ΣΥΓΚΡΙΝΕ **ΜΕΓΕΘΟΣ ΑΡΧΕΙΟΥ** ΚΑΙ ΗΤΑΝ ΛΑΘΟΣ ΕΡΩΤΗΜΑ:
+  //    δοκιμάστηκε και **πυροδότησε για 2 χαρακτήρες** — ένα κενό στο τέλος
+  //    κελιού που το `trim()` έκοψε. Φρουρός που κοκκινίζει σε κοσμητική διαφορά
+  //    μαθαίνει τον επόμενο να γράφει `--allow-shrink` από συνήθεια, και τότε
+  //    παύει να φυλάει οτιδήποτε (CHECK 3.39: «μονίμως κόκκινο ⇒ SKIP_ ⇒
+  //    διακοσμητικό»).
+  //
+  //    Πλέον μετριέται **ΤΑΥΤΟΤΗΤΑ**: ποιο ADR έχασε περιγραφή. Απρόσβλητο σε
+  //    μορφοποίηση, και όταν πυροδοτεί δίνει **ΟΝΟΜΑΤΑ** αντί για αριθμό.
+  //
+  // ⚠️ Νόμιμη απώλεια (π.χ. σκόπιμη περικοπή) περνά με `--allow-shrink`, ώστε να
+  //    είναι ΡΗΤΗ ΠΡΑΞΗ ΑΝΘΡΩΠΟΥ και όχι παρενέργεια.
+  const allowShrink = process.argv.includes('--allow-shrink');
+  const lost = existing ? findLostDescriptions(existing, indexContent) : [];
+  if (lost.length > 0 && !allowShrink) {
+    console.error(`\n❌ ΑΡΝΗΣΗ: ${lost.length} ADR χάνουν την περιγραφή τους.`);
+    for (const l of lost.slice(0, 10)) {
+      console.error(`   ${l.id}: ${l.before} → ${l.after} χαρακτήρες`);
+    }
+    if (lost.length > 10) console.error(`   … και άλλα ${lost.length - 10}`);
+    console.error('   Αν η απώλεια είναι ΣΚΟΠΙΜΗ: --allow-shrink');
+    process.exit(1);
+  }
 
   // Write index
   fs.writeFileSync(OUTPUT_PATH, indexContent, 'utf-8');
   console.log(`✅ Index written to: ${OUTPUT_PATH}`);
+  console.log(`🛡️  Διατηρήθηκαν ${kept.size} επιμελημένες περιγραφές (χρέος με όνομα — ADR-814).`);
 
   // Stats
   const stats = fs.statSync(OUTPUT_PATH);
