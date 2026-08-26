@@ -112,7 +112,7 @@ export function DeclaredOccupationBadge({
 }: DeclaredOccupationBadgeProps) {
   const { t } = useTranslation('navigation');
   const router = useRouter();
-  const { occupation, confidence, iscoCode } = useDeclaredOccupation();
+  const { occupation, confidence, isClassified, iscoCode } = useDeclaredOccupation();
   const suggestedJob = useSuggestedJobLabel(iscoCode);
 
   const goToProfile = () => {
@@ -174,11 +174,29 @@ export function DeclaredOccupationBadge({
         <p className={cn('text-xs leading-snug', isVerified ? VERIFIED_TONE : 'text-muted-foreground')}>
           {isVerified ? t('jobs.occupation.verified') : t('jobs.occupation.declared')}
         </p>
-        {/* Η ΣΥΝΕΠΕΙΑ — από τον ίδιο πίνακα που την εκτελεί. */}
+        {/* Η ΣΥΝΕΠΕΙΑ — από τον ίδιο πίνακα που την εκτελεί.
+
+            🔴 **ΔΥΟ ΣΙΩΠΕΣ, ΟΧΙ ΜΙΑ** (ADR-798 §20). Μέχρι 2026-08-26 και οι δύο
+            έβγαζαν `noSuggestion` — *«δεν αντιστοιχεί σε συγκεκριμένη δουλειά»*:
+
+              • **ταξινομημένο** & ο πίνακας σωπαίνει ⇒ ο ισχυρισμός είναι ΑΛΗΘΗΣ
+              • **ελεύθερο κείμενο** ⇒ ο ισχυρισμός είναι ΨΕΥΔΗΣ: δεν ρωτήθηκε
+                ΠΟΤΕ ταξινομητής, άρα δεν ξέρουμε αν αντιστοιχεί
+
+            Το δεύτερο είναι η ίδια η βλάβη που ολόκληρο το ADR-798 κυνηγά —
+            **η απουσία γνώσης παρουσιασμένη ως γνώση** (Α5) — και ταυτόχρονα ο
+            μόνος τόπος όπου το `isClassified` έχει νόημα: μέχρι σήμερα είχε
+            **μηδέν** καταναλωτές παραγωγής, δηλαδή ήταν αδρανής φρουρός.
+
+            ⚠️ Ο διαχωρισμός είναι ΚΑΙ **ενέργεια**: στο ελεύθερο κείμενο η γραμμή
+            λέει τι να κάνει ο άνθρωπος (διάλεξε από τη λίστα), ενώ στο
+            ταξινομημένο δεν υπάρχει τίποτα να κάνει. */}
         <p className="text-xs leading-snug text-muted-foreground">
-          {suggestedJob === null
-            ? t('jobs.occupation.noSuggestion')
-            : t('jobs.occupation.suggests', { job: suggestedJob })}
+          {suggestedJob !== null
+            ? t('jobs.occupation.suggests', { job: suggestedJob })
+            : isClassified
+              ? t('jobs.occupation.noSuggestion')
+              : t('jobs.occupation.unclassifiedHint')}
         </p>
       </div>
     </div>

@@ -267,7 +267,8 @@
       "declared": "Declared by you — unverified",
       "verified": "Verified",
       "suggests": "Suggests: {job}",
-      "noSuggestion": "Does not map to a specific job"
+      "noSuggestion": "Does not map to a specific job",
+      "unclassifiedHint": "Free text — pick it from the list to get a job suggestion"
     }
   },
   "sidebar": {

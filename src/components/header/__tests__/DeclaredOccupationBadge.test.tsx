@@ -173,14 +173,69 @@ describe('Ο-5 — άγνωστο επάγγελμα ⇒ σιωπή, ΠΟΤΕ μ
     expect(screen.getByText('jobs.occupation.noSuggestion')).toBeInTheDocument();
   });
 
-  it('μη ταξινομημένη δήλωση δεν παράγει πρόταση', () => {
+  /**
+   * 🔴 **ΑΛΛΑΞΕ 2026-08-26 (ADR-798 §20) — Η ΑΓΚΥΡΑ ΚΛΕΙΔΩΝΕ ΤΟ ΛΑΘΟΣ.**
+   *
+   * Απαιτούσε `noSuggestion` — *«δεν αντιστοιχεί σε συγκεκριμένη δουλειά»* — για
+   * **ελεύθερο κείμενο**. Αυτό είναι **ισχυρισμός που δεν μπορούμε να
+   * στηρίξουμε**: κανένας ταξινομητής δεν ρωτήθηκε ποτέ, άρα δεν ξέρουμε αν
+   * αντιστοιχεί. Είναι η **απουσία γνώσης παρουσιασμένη ως γνώση** — η ίδια
+   * βλάβη που ολόκληρο το ADR-798 υπάρχει για να αποτρέψει (Α5).
+   */
+  it('ελεύθερο κείμενο ΔΕΝ ισχυρίζεται ότι δεν αντιστοιχεί — καλεί σε ταξινόμηση', () => {
     show({
       occupation: { profession: 'Ξυλουργός' },
       confidence: 'declared',
       isClassified: false,
       iscoCode: null,
     });
+    expect(screen.getByText('jobs.occupation.unclassifiedHint')).toBeInTheDocument();
+    expect(screen.queryByText('jobs.occupation.noSuggestion')).not.toBeInTheDocument();
+  });
+
+  it('ταξινομημένο εκτός πίνακα ΟΝΤΩΣ δεν αντιστοιχεί — εκεί ο ισχυρισμός στέκει', () => {
+    // ISCO 2163 (σχεδιαστές προϊόντος): έγκυρος, ταξινομημένος, και ο πίνακας
+    // **σκόπιμα** σωπαίνει (δεν σχεδιάζει κτίρια). Εδώ το «δεν αντιστοιχεί»
+    // είναι αληθές, γιατί ρωτήθηκε ταξινομητής και απάντησε.
+    show({
+      occupation: {
+        profession: 'Σχεδιάστρια προϊόντος',
+        escoUri: 'http://data.europa.eu/esco/occupation/product-designer',
+        escoLabel: 'σχεδιαστής προϊόντος',
+        iscoCode: '2163',
+      },
+      confidence: 'declared',
+      isClassified: true,
+      iscoCode: '2163',
+    });
     expect(screen.getByText('jobs.occupation.noSuggestion')).toBeInTheDocument();
+  });
+
+  /**
+   * 🔑 **ΤΟ ΖΕΥΓΟΣ.** Χωρίς αυτό, μια «απλοποίηση» που ξαναενώνει τις δύο σιωπές
+   * σε ένα μήνυμα θα άφηνε **και τις δύο** παραπάνω άγκυρες πράσινες αν το
+   * κοινό μήνυμα τύχαινε να είναι εκείνο που καθεμιά περιμένει. Η ταυτότητα
+   * της βλάβης είναι ότι **δύο διαφορετικές καταστάσεις λένε το ίδιο**.
+   */
+  it('🔴 οι ΔΥΟ σιωπές ΔΕΝ λένε το ίδιο πράγμα', () => {
+    const freeText = show({
+      occupation: { profession: 'Ξυλουργός' },
+      confidence: 'declared',
+      isClassified: false,
+      iscoCode: null,
+    }).container.textContent;
+    const classified = show({
+      occupation: {
+        profession: 'Σχεδιάστρια προϊόντος',
+        escoUri: 'http://data.europa.eu/esco/occupation/product-designer',
+        escoLabel: 'σχεδιαστής προϊόντος',
+        iscoCode: '2163',
+      },
+      confidence: 'declared',
+      isClassified: true,
+      iscoCode: '2163',
+    }).container.textContent;
+    expect(freeText).not.toBe(classified);
   });
 });
 

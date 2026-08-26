@@ -15,6 +15,8 @@
 import { renderHook } from '@testing-library/react';
 import type { DeclaredOccupation } from '@/types/professional-identity';
 import { useDeclaredOccupation } from '../useDeclaredOccupation';
+import { resolveJobAffinity } from '@/config/isco-job-affinity';
+import { PERSONAS } from '../../../scripts/lib/emulator/personas';
 
 /**
  * Ό,τι θα επέστρεφε το `AuthContext`. Μεταβλητή ώστε οι μεταλλάξεις να γίνονται
@@ -150,5 +152,61 @@ describe('Ρ-6 — η τιμή ΑΚΟΛΟΥΘΕΙ το προφίλ', () => {
   it('δύο διαφορετικά επαγγέλματα δίνουν διαφορετικό κωδικό', () => {
     expect(read({ ...CLASSIFIED, iscoCode: '2165' }).iscoCode).toBe('2165');
     expect(read({ ...CLASSIFIED, iscoCode: '2611' }).iscoCode).toBe('2611');
+  });
+});
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * Ρ-7 — 🔴 **Η ΔΙΑΔΡΟΜΗ, ΟΧΙ Ο ΠΙΝΑΚΑΣ** (ADR-798 §19)
+ *
+ * Η άγκυρα `Κ2` του rig (`scripts/__tests__/emulator-seed-personas.test.ts`)
+ * καλεί `resolveJobAffinity(persona.occupation.iscoCode)` **απευθείας**. Η οθόνη
+ * όμως δεν βλέπει ποτέ αυτό το πεδίο: βλέπει ό,τι της δίνει **αυτός** ο
+ * αναγνώστης, που κατά το `Ρ-4` **αρνείται** ορφανό κωδικό.
+ *
+ * 🔴 Μετρημένο 2026-08-26, **πριν** τη θεραπεία: `Κ2` **πράσινο** με 6 στους 8 να
+ * λύνονται σε τρεις δουλειές — και **8 στους 8** να φτάνουν στην οθόνη ως
+ * **σιωπή**, γιατί κανένας δεν είχε `escoUri`. Δύο όργανα, δύο απαντήσεις, καμία
+ * σύγκριση (σχήμα **ADR-749**).
+ *
+ * ⚠️ **ΕΔΩ ΖΕΙ Ο ΠΑΡΟΝΟΜΑΣΤΗΣ, ΚΑΙ ΓΙ ΑΥΤΟ Η ΑΓΚΥΡΑ ΕΙΝΑΙ ΕΔΩ ΚΑΙ ΟΧΙ ΣΤΟ RIG**:
+ * το `scripts/` δεν έχει React harness, οπότε μια άγκυρα εκεί θα **ξανάγραφε**
+ * τον κανόνα του `escoUri` — δεύτερη διάλεκτος της ίδιας ερώτησης. Εδώ τρέχει ο
+ * **πραγματικός** hook πάνω στα **πραγματικά** δεδομένα του rig.
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+describe('Ρ-7 — οι άνθρωποι του rig φτάνουν στην ΟΘΟΝΗ, όχι μόνο στον πίνακα', () => {
+  const WITH_OCCUPATION = PERSONAS.filter((p) => p.occupation);
+
+  it('ο παρονομαστής: το rig ΕΧΕΙ επαγγελματίες να δοκιμάσει', () => {
+    // Χωρίς αυτό, τα δύο επόμενα θα ήταν πράσινα πάνω σε **κενό σύνολο** —
+    // ακριβώς το «0 = κανείς δεν κοίταξε» που η άγκυρα υπάρχει για να πιάσει.
+    expect(WITH_OCCUPATION.length).toBeGreaterThanOrEqual(10);
+  });
+
+  it('ΚΑΘΕ επαγγελματίας του rig εκθέτει κωδικό μέσα από τον ΠΡΑΓΜΑΤΙΚΟ αναγνώστη', () => {
+    const silent = WITH_OCCUPATION
+      .filter((p) => read(p.occupation as DeclaredOccupation).iscoCode === null)
+      .map((p) => p.email);
+    expect(silent).toEqual([]);
+  });
+
+  it('ΚΑΘΕ επαγγελματίας του rig φτάνει σε δουλειά μέσα από τη ΔΙΑΔΡΟΜΗ', () => {
+    const unreachable = WITH_OCCUPATION
+      .filter((p) => resolveJobAffinity(read(p.occupation as DeclaredOccupation).iscoCode) === null)
+      .map((p) => `${p.email} -> ${p.occupation?.iscoCode}`);
+    expect(unreachable).toEqual([]);
+  });
+
+  it('ο πολίτης παραμένει ΣΙΩΠΗΛΟΣ: η θεραπεία δεν έδωσε επάγγελμα σε όποιον δεν δήλωσε', () => {
+    // ⚠️ Ο **αντίστροφος** φρουρός. Χωρίς αυτόν, μια «διόρθωση» που δίνει σε
+    // όλους κωδικό θα έβαφε τα δύο παραπάνω πράσινα ενώ θα κατέστρεφε τη
+    // σημασία του `unknown` (ADR-798 Α5: η απουσία δήλωσης ΔΕΝ είναι δήλωση).
+    const citizens = PERSONAS.filter((p) => !p.occupation);
+    expect(citizens.length).toBeGreaterThanOrEqual(2);
+    for (const c of citizens) {
+      expect(c.occupation).toBeUndefined();
+    }
+    expect(read(null).confidence).toBe('unknown');
   });
 });
