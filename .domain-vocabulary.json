@@ -1,0 +1,17 @@
+{
+  "adr": "ADR-812",
+  "note": "Κλειστό σύνολο ΛΕΞΙΛΟΓΙΩΝ ΤΟΜΕΑ. Κάθε λεξιλόγιο έχει ΜΙΑ ρίζα· κάθε άλλη δήλωση που το απαριθμεί πρέπει να είναι ΤΥΠΟΠΟΙΗΜΕΝΗ πάνω της, ώστε η απόκλιση να σπάει τη μεταγλώττιση αντί να ξεθωριάζει στην οθόνη. Δεν απαγορεύεται η επανάληψη — απαιτείται να είναι ΔΕΜΕΝΗ. Νέο λεξιλόγιο ή νέα εξαίρεση ΜΠΛΟΚΑΡΕΙ, ακόμα κι αν είναι σωστή, ώστε να τη δει άνθρωπος. Ο λόγος είναι ΥΠΟΧΡΕΩΤΙΚΟΣ.",
+  "vocabularies": [
+    {
+      "id": "project-status",
+      "root": "src/constants/project-statuses.ts",
+      "rootSymbol": "PROJECT_STATUSES",
+      "typeName": "ProjectStatus",
+      "derivedTypes": ["StatusTransitionTarget"],
+      "values": ["planning", "in_progress", "completed", "on_hold", "cancelled", "deleted"],
+      "threshold": 4,
+      "reason": "Lifecycle έργου (ADR-287 · ADR-812). Είχε ΔΕΚΑΤΡΙΑ σώματα με ΤΕΣΣΕΡΑ ασύμβατα σύνολα τιμών και δύο ομώνυμα PROJECT_STATUSES. Ο άξονας ΕΓΚΡΙΣΗΣ (review/approved) είναι ΕΞΩ και ανήκει στο παραδοτέο, όπως σε ISO 19650 (S3/S4/B1 στο information container), Revit (Issued στο revision) και Figma (Approved στο branch).",
+      "exemptions": []
+    }
+  ]
+}

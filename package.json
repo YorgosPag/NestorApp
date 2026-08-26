@@ -178,6 +178,8 @@
     "locale-dup-keys:report": "node scripts/check-locale-duplicate-keys.js --report",
     "locale-dup-keys:check": "node scripts/check-locale-duplicate-keys.js --all",
     "test:locale-dup-keys": "jest scripts/__tests__/locale-duplicate-keys.test.js",
+    "domain-vocabulary:report": "node scripts/check-domain-vocabulary.js",
+    "test:domain-vocabulary": "jest scripts/__tests__/domain-vocabulary.test.js",
     "unbound:report": "node scripts/check-unbound-identifiers.js --report",
     "unbound:check": "node scripts/check-unbound-identifiers.js --all",
     "test:unbound-identifiers": "jest scripts/__tests__/unbound-identifiers-gate.test.js",
