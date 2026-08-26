@@ -105,7 +105,22 @@ async function handleBootstrapPost(
 
     // STEP 3: Set custom claims via ADR-360 mirror
     try {
-      await setClaimsWithMirror(uid, { companyId, globalRole, mfaEnrolled: false });
+      // ⚠️ **ΤΟ ΙΔΙΟ ΕΛΑΤΤΩΜΑ ΜΕ ΤΟΝ `claims-handler`, ΣΠΑΝΙΟΤΕΡΗ ΔΙΑΔΡΟΜΗ**
+      //    (ADR-813 Φάση Β). Ήταν σταθερό `mfaEnrolled: false`, και **φαίνεται**
+      //    σωστό γιατί το bootstrap «φτιάχνει τον πρώτο διαχειριστή». Αλλά το
+      //    `lookupFirebaseUser` **βρίσκει υπάρχοντα** λογαριασμό — δεν
+      //    δημιουργεί — οπότε χρήστης που είχε ήδη εγγραφεί σε MFA το **έχανε**
+      //    τη στιγμή που γινόταν διαχειριστής, δηλαδή κλεινόταν έξω από αυτό
+      //    ακριβώς που του δόθηκε (ο `roleRequiresMfa` φυλά με αυτό το πεδίο).
+      //
+      // 🔑 Διορθώνεται **μαζί** με τον αδελφό του και όχι αργότερα: ίδιο σχήμα,
+      //    ίδια θεραπεία — αν έμενε, θα ήταν **δύο διαδρομές με δύο
+      //    συμπεριφορές** (ADR-749), μόνο που η δεύτερη θα έμοιαζε «λυμένη».
+      await setClaimsWithMirror(uid, {
+        companyId,
+        globalRole,
+        mfaEnrolled: firebaseUser.customClaims?.mfaEnrolled === true,
+      });
       logger.info('Custom claims set successfully');
     } catch (error) {
       logger.error('Failed to set custom claims', { error });

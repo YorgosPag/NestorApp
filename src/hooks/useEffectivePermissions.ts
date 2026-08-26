@@ -35,7 +35,7 @@
 
 import { useMemo } from 'react';
 import { useAuth } from '@/auth/contexts/AuthContext';
-import { isRoleBypass } from '@/lib/auth/roles';
+import { getRolePermissions, isRoleBypass } from '@/lib/auth/roles';
 import type { JobAccessInput, PermissionSourceId } from '@/config/jobs-access';
 
 /**
@@ -44,6 +44,15 @@ import type { JobAccessInput, PermissionSourceId } from '@/config/jobs-access';
  * Είναι σταθερά, όχι υπολογισμός: αλλάζει μόνο αν αλλάξει τι μπαίνει στα claims
  * (`claims-handler.ts`) — και τότε πρέπει να αλλάξει **συνειδητά** εδώ, με νέα
  * μέτρηση. Γι' αυτό είναι ονομασμένη και σχολιασμένη αντί για inline literal.
+ *
+ * ✅ **Η ΜΕΤΡΗΣΗ ΕΓΙΝΕ — Η ΑΠΑΝΤΗΣΗ ΕΙΝΑΙ «ΔΕΝ ΑΛΛΑΖΕΙ»** (ADR-813 Φάση Β,
+ * 2026-08-26). Το claim **όντως** άλλαξε: έπαψε να κουβαλά τον κατάλογο του
+ * ρόλου. Αλλά η ερώτηση εδώ είναι *«ποιες πηγές **απάντησαν**;»*, όχι *«πώς
+ * ταξίδεψε η απάντηση;»* — και ο `globalRole` εξακολουθεί να απαντά, απλώς
+ * μέσα από το `getRolePermissions()` αντί από αντίγραφο μέσα στο token.
+ *
+ * ⚠️ Καταγράφεται ρητά ώστε ο επόμενος να μη νομίσει ότι **ξεχάστηκε**: η
+ * σιωπή εδώ θα ήταν αδιάκριτη από παράλειψη.
  */
 export const CLIENT_AVAILABLE_PERMISSION_SOURCES: readonly PermissionSourceId[] = [
   'globalRole',
@@ -67,7 +76,47 @@ export function useEffectivePermissions(): EffectivePermissions {
   const globalRole = user?.globalRole;
 
   return useMemo(() => {
-    const permissions = claimPermissions ? [...claimPermissions] : [];
+    // =========================================================================
+    // Η ΕΝΩΣΗ ΠΑΡΑΓΕΤΑΙ ΕΔΩ — ΔΕΝ ΕΡΧΕΤΑΙ ΕΤΟΙΜΗ (ADR-813 Φάση Β)
+    // =========================================================================
+    //
+    // 🔑 **ΜΕΧΡΙ ΣΗΜΕΡΑ Ο ΚΑΤΑΛΟΓΟΣ ΕΦΤΑΝΕ ΜΕ ΑΝΤΙΓΡΑΦΗ.** Ο `claims-handler`
+    //    έγραφε `rolePermissions ∪ extras` **μέσα** στο claim, οπότε αυτό εδώ
+    //    διάβαζε τον κατάλογο **χωρίς να το ξέρει**. Η αντιγραφή έπρεπε να
+    //    φύγει (μετρημένα **1.585 bytes** για `company_admin` και **1.302** για
+    //    `project_manager`, έναντι ορίου **1.000** της Firebase) — και τότε
+    //    αυτή η γραμμή θα ήταν σιωπηλά **φτωχότερη**.
+    //
+    // 🔴 **ΤΙ ΘΑ ΕΣΠΑΓΕ ΧΩΡΙΣ ΑΥΤΟ, ΜΕΤΡΗΜΕΝΟ — ΚΑΙ ΔΕΝ ΕΙΝΑΙ ΤΟ ΠΡΟΦΑΝΕΣ**:
+    //      • `resolveAvailableJobs` ....... **τίποτα**. Οι πηγές που λείπουν
+    //        δίνουν `unknown`, και το φίλτρο πετά μόνο το `none`.
+    //      • `pickDefaultJob` ............. 🔴 **η προεπιλεγμένη δουλειά**. Το
+    //        κριτήριο είναι «τα **περισσότερα μετρημένα** δικαιώματα» ⇒ με
+    //        άδεια μέτρηση ο νικητής βγαίνει από τη σειρά του πίνακα.
+    //      • `job-suggestion.ts:208` ...... 🔴 απαιτεί `=== 'granted'` ⇒ η
+    //        πρόταση δουλειάς θα **εξαφανιζόταν σιωπηλά**.
+    //    Και τα δύο είναι **ορατή συμπεριφορά χρήστη**, όχι εσωτερικά.
+    //
+    // ✅ **ΤΙ ΔΕΝ ΑΛΛΑΖΕΙ, ΚΑΙ ΓΙΑΤΙ ΕΙΝΑΙ ΔΟΜΙΚΟ**: το `admin_access` του
+    //    sidebar. Το `filterItemsByPermissions` κάνει ωμό `includes` στο claim,
+    //    αλλά ο `claims-handler` το γράφει **ρητά** για `super_admin` /
+    //    `company_admin` — δεν εξαρτάται από την ένωση.
+    //
+    // ⚠️ **ΤΟ `availableSources` ΜΕΝΕΙ `['globalRole']` — ΔΕΝ ΕΙΝΑΙ ΠΑΡΑΛΕΙΨΗ**:
+    //    η πηγή είναι **η ίδια**, άλλαξε μόνο το μεταφορικό μέσο (παραγωγή αντί
+    //    αντιγραφής). Οι `projectRoles` / `permissionSets` εξακολουθούν να **μη
+    //    φτάνουν** στον browser, άρα το `unknown` του Ε14.ζ μένει ακέραιο. Αν
+    //    το προσθέταμε εδώ, το φίλτρο θα άρχιζε να **κρύβει** δουλειές που ο
+    //    χρήστης δικαιούται μέσω πηγής που κανείς δεν ρώτησε.
+    //
+    // ⛔ **ΜΗΝ** αντιγράψεις εδώ λίστα permissions ανά ρόλο: το
+    //    `getRolePermissions` **είναι** το SSoT, και το module εισάγεται ήδη
+    //    (`isRoleBypass`) — μηδέν νέα εξάρτηση, μηδέν `server-only`.
+    const effective = new Set<string>(claimPermissions ?? []);
+    for (const granted of globalRole ? getRolePermissions(globalRole) : []) {
+      effective.add(granted);
+    }
+    const permissions = [...effective];
 
     // ΜΕΤΑΦΕΡΕΤΑΙ ΑΥΤΟΥΣΙΟ από το app-sidebar.tsx:37-43 (fallback για την
     // περίπτωση που τα custom claims δεν έχουν ακόμη γραφτεί).

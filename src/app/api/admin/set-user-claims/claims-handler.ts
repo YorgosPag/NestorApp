@@ -1,10 +1,14 @@
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth, isValidGlobalRole, isValidPermission, PREDEFINED_ROLES, GLOBAL_ROLES, logClaimsUpdated, extractRequestMetadata } from '@/lib/auth';
+// ⚠️ Το `PREDEFINED_ROLES` **έφυγε** από εδώ (ADR-813 Φάση Β): ο κατάλογος των
+//    ρόλων δεν έχει καμία δουλειά σε αυτή τη διαδρομή — τον διαβάζουν οι δύο
+//    κριτές. Επαναφορά του εδώ σημαίνει ότι κάποιος ξαναγράφει την αντιγραφή.
+import { withAuth, isValidGlobalRole, isValidPermission, GLOBAL_ROLES, logClaimsUpdated, extractRequestMetadata } from '@/lib/auth';
 import type { AuthContext, GlobalRole, PermissionId } from '@/lib/auth';
 import { getAdminAuth, getAdminFirestore } from '@/lib/firebaseAdmin';
 import { setClaimsWithMirror } from '@/lib/auth/set-claims-with-mirror';
+import { composeClaimPayload, checkClaimFits } from '@/lib/auth/claim-payload';
 import { FieldValue as AdminFieldValue } from 'firebase-admin/firestore';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { ENTITY_TYPES } from '@/config/domain-constants';
@@ -50,7 +54,7 @@ async function resolveFirebaseUser(
       const fsData = userDoc.data();
       logger.info('User verified via Firestore fallback', { targetUid: uid });
       return { user: { email: fsData?.email as string | undefined }, previousClaims: {}, authLookupFailed: true };
-    } catch (fsError) {
+    } catch (_fsError) {
       return {
         user: null, previousClaims: {}, authLookupFailed: true,
         errorResponse: NextResponse.json(
@@ -77,6 +81,18 @@ async function syncFirestoreRecords(
   try {
     const userRef = getAdminFirestore().collection(COLLECTIONS.USERS).doc(uid);
     const userDoc = await userRef.get();
+    // ⚠️ **ΤΟ ΕΓΓΡΑΦΟ ΓΡΑΦΕΙ ΟΤΙ ΑΚΡΙΒΩΣ ΚΑΙ ΤΟ CLAIM — ΠΟΤΕ ΤΑ «ΠΛΗΡΗ»**
+    //    (ADR-813 Φάση Β). Είναι **καθρέφτης** (ADR-360), όχι δεύτερη αυθεντία:
+    //    αν εδώ έμπαιναν τα 54 του καταλόγου ενώ το claim κρατά τα extras, τότε
+    //    όποιος διάβαζε το έγγραφο θα έβγαζε **άλλη** απάντηση από τον κριτή.
+    //
+    // 🔴 Δεν είναι υποθετικό: η προηγούμενη συνεδρία συμπέρανε από **αυτό** το
+    //    έγγραφο ότι ο `pagonis.oe` έχει `admin_access`, ενώ το claim του **δεν
+    //    το είχε** (ADR-813 §2, «τρεις πηγές, τρεις απαντήσεις»). Ένα σχήμα που
+    //    έχει ήδη παραπλανήσει άνθρωπο δεν το ξαναγράφουμε.
+    //
+    // ⚠️ Τα **effective** δικαιώματα δεν αποθηκεύονται πουθενά, επίτηδες:
+    //    παράγονται από το `globalRole` (που είναι εδώ) μέσω του καταλόγου.
     const userData = {
       email: firebaseUser?.email || email,
       displayName: firebaseUser?.displayName ?? null,
@@ -156,12 +172,90 @@ export async function handleSetUserClaims(
     const { user: firebaseUser, previousClaims, authLookupFailed, errorResponse } = await resolveFirebaseUser(uid, email);
     if (errorResponse) return errorResponse;
 
-    const rolePermissions = PREDEFINED_ROLES[globalRole]?.permissions ?? [];
-    const mergedPermissions = new Set<PermissionId>([...rolePermissions, ...(Array.isArray(permissions) ? permissions : [])]);
-    if (globalRole === 'super_admin' || globalRole === 'company_admin') mergedPermissions.add('admin_access');
-    const finalPermissions = Array.from(mergedPermissions).filter(isValidPermission);
+    // =========================================================================
+    // ΤΟ CLAIM ΚΟΥΒΑΛΑ ΤΑΥΤΟΤΗΤΑ, ΟΧΙ ΑΝΤΙΓΡΑΦΟ ΤΟΥ ΚΑΤΑΛΟΓΟΥ (ADR-813 Φάση Β)
+    // =========================================================================
+    //
+    // 🔴 **ΗΤΑΝ ΔΟΜΙΚΑ ΑΔΥΝΑΤΟ ΝΑ ΦΤΙΑΞΕΙ ΔΥΟ ΡΟΛΟΥΣ.** Η παλιά γραφή ήταν
+    //    `rolePermissions ∪ extras ∪ {admin_access}` ⇒ το claim κουβαλούσε
+    //    **ολόκληρο** τον κατάλογο του ρόλου. Μετρημένο (2026-08-26, AST πάνω
+    //    στο `role-catalogue.ts`, με το `claimsUpdatedAt` του γραφέα μέσα):
+    //
+    //      company_admin    54 perms → **1.585 bytes**  ⛔
+    //      project_manager  42 perms → **1.302 bytes**  ⛔
+    //      engineer         25 perms →      855 bytes   ok
+    //
+    //    Το **hard limit της Firebase είναι 1.000 bytes** («The custom claims
+    //    payload must not exceed 1000 bytes») ⇒ `auth/claims-too-large` ⇒ η
+    //    διαδρομή που υπάρχει για να **δίνει** τον ρόλο ήταν η μόνη που **δεν
+    //    μπορούσε** να τον δώσει. ⚠️ Το ADR-813 §7 είχε μετρήσει **μόνο** το
+    //    `company_admin`· ο `project_manager` έλειπε από τη μέτρηση.
+    //
+    // 🔑 **ΚΑΙ Η ΑΝΤΙΓΡΑΦΗ ΗΤΑΝ ΚΑΘΑΡΟΣ ΠΛΕΟΝΑΣΜΟΣ — ΤΟ ΠΑΡΑΓΟΥΝ ΚΑΙ ΟΙ ΔΥΟ
+    //    ΚΡΙΤΕΣ, ΗΔΗ**: `authority.ts` βήμα (6) `roleGrants()` και
+    //    `permissions.ts` Check 5 `getRolePermissions(ctx.globalRole)`. Ό,τι
+    //    έδινε ο ρόλος, το δίνουν **ούτως ή άλλως**. Το claim πλήρωνε bytes για
+    //    να ξαναπεί κάτι που ο κατάλογος λέει καλύτερα — και ο κατάλογος είναι
+    //    το SSoT: αλλαγή ρόλου εκεί ίσχυε **αμέσως**, ενώ το claim κρατούσε
+    //    **παγωμένο** αντίγραφο μέχρι το επόμενο γράψιμο (ADR-749: δύο
+    //    απαντήσεις σε ένα ερώτημα, με τη μία να παλιώνει σιωπηλά).
+    //
+    // ⚠️ **ΤΟ `admin_access` ΜΕΝΕΙ ΡΗΤΑ, ΚΑΙ ΔΕΝ ΕΙΝΑΙ ΠΡΟΛΗΨΗ**: μετρημένο ότι
+    //    ζει **μέσα** στα 54 του `company_admin`, ενώ ο `super_admin` έχει
+    //    `permissions: []` (όλη του η δύναμη είναι το `isBypass`). Το
+    //    `filterItemsByPermissions` του sidebar κάνει **ωμό `includes`** στο
+    //    claim — δεν ρωτά κριτή, δεν κοιτά ρόλο — και **και οι 8** δηλώσεις του
+    //    `smart-navigation-factory.ts` ζητούν ακριβώς αυτό το ένα id. Χωρίς
+    //    αυτή τη γραμμή, ο διαχειριστής θα έχανε **ολόκληρο** το μενού.
+    //
+    // ⚠️ **ΜΗΝ ξαναβάλεις τα role permissions «για ασφάλεια»**: θα ξαναφέρει το
+    //    όριο, και ο πελάτης τα **παράγει** ήδη (`useEffectivePermissions`).
+    //
+    // 🔴 **«ΔΙΝΩ ΡΟΛΟ» ΗΤΑΝ «ΚΛΕΙΔΩΝΩ ΕΞΩ».** Η παλιά γραφή είχε σταθερό
+    //    `mfaEnrolled: false`, ενώ ο `roleRequiresMfa()` φυλά με αυτό ακριβώς το
+    //    πεδίο τις διοικητικές οθόνες ⇒ κάθε ανάθεση ρόλου **έσβηνε** την
+    //    εγγραφή MFA του χρήστη. Το ops script **διατηρούσε** ⇒ ήταν δύο
+    //    διαδρομές με δύο συμπεριφορές (ADR-749). Πλέον **μία σύνθεση**, στο
+    //    `claim-payload.ts`, που την καλούν όλες.
+    const newClaims = composeClaimPayload({
+      companyId,
+      globalRole,
+      explicitPermissions: permissions,
+      previousClaims,
+    });
+    const finalPermissions = newClaims.permissions;
 
-    const newClaims = { companyId, globalRole, mfaEnrolled: false, permissions: finalPermissions };
+    // =========================================================================
+    // ΤΟ ΟΡΙΟ ΜΕΤΡΙΕΤΑΙ **ΠΡΙΝ** ΤΗ ΓΡΑΦΗ (ADR-813 Φάση Β)
+    // =========================================================================
+    //
+    // 🔑 **ΓΙΑΤΙ ΔΕΝ ΑΡΚΕΙ Η ΑΦΑΙΡΕΣΗ ΤΗΣ ΑΝΤΙΓΡΑΦΗΣ**: το request δέχεται
+    //    `permissions?: PermissionId[]` και τα επικυρώνει **ένα-ένα**, χωρίς
+    //    **κανένα όριο πλήθους** (γρ. ~145). Χειριστής που στέλνει 54 extras
+    //    ξαναφέρνει το **ίδιο** σφάλμα από άλλη πόρτα. Χωρίς αυτόν τον φρουρό
+    //    θα είχαμε λύσει το **δείγμα** (ο ρόλος) και αφήσει την **κλάση**.
+    //
+    // 🏆 Και είναι **σκαλί πάνω από τη Firebase**: εκείνη πετά αδιαφανές
+    //    `auth/claims-too-large` χωρίς να πει πόσο, τι, ή γιατί. Εδώ ο χειριστής
+    //    μαθαίνει **κατά πόσα bytes** ξεπέρασε και **πόσα** extras έστειλε.
+    //
+    // ⚠️ **400, όχι 500**: είναι σφάλμα **του αιτήματος** (πάρα πολλά extras),
+    //    όχι του διακομιστή — και το μήνυμα λέει τι να αλλάξει ο χειριστής.
+    const fit = checkClaimFits(newClaims);
+    if (!fit.fits) {
+      logger.warn('Claim payload exceeds Firebase limit', {
+        targetUid: uid, bytes: fit.bytes, limit: fit.limit, overBy: fit.overBy,
+        permissionsCount: finalPermissions.length,
+      });
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Claims payload too large',
+          error: `Το claim πιάνει ${fit.bytes} bytes και το όριο της Firebase είναι ${fit.limit} (υπέρβαση ${fit.overBy}). Στάλθηκαν ${finalPermissions.length} ρητά permissions — μείωσέ τα· τα δικαιώματα του ρόλου δίνονται ήδη από τον κατάλογο και δεν χρειάζεται να σταλούν.`,
+        },
+        { status: 400 }
+      );
+    }
 
     try {
       await setClaimsWithMirror(uid, newClaims);
