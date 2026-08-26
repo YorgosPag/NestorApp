@@ -14,6 +14,10 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { AuthFormMode } from '../types/auth.types';
 import type { AppHref } from '@/lib/workspace/route-worlds';
+// 🔴 ADR-660 §5.4 / ADR-817 — Ο ΕΝΑΣ ΕΠΙΛΥΤΗΣ ΠΡΟΣΓΕΙΩΣΗΣ.
+// ⚠️ ΜΗΝ γράψεις εδώ δικό σου `user.companyId ? … : …`: αυτή η απόφαση ζει σε ΕΝΑ
+//    σημείο επίτηδες, και το `landing.ts` είναι η αυθεντία της.
+import { resolvePostLoginRoute } from '@/lib/routes/landing';
 
 const logger = createModuleLogger('AuthForm');
 
@@ -28,7 +32,16 @@ interface FormData {
 interface UseAuthFormStateOptions {
   defaultMode: AuthFormMode;
   onSuccess?: () => void;
-  redirectTo: AppHref;
+  /**
+   * **Ρητή παράκαμψη** της προσγείωσης — π.χ. «γύρνα εκεί που ήσουν».
+   *
+   * ⚠️ **ΧΩΡΙΣ ΠΡΟΕΠΙΛΟΓΗ, ΚΑΙ ΕΙΝΑΙ ΤΟ ΚΕΝΤΡΟ ΤΗΣ ΔΙΟΡΘΩΣΗΣ** (ADR-817 §9): μέχρι
+   * τις 2026-08-26 έγραφε `redirectTo: AppHref` με προεπιλογή `AUTH_ROUTES.home`
+   * (`/dashboard`) στο `AuthForm` — δηλαδή **κάθε** σύνδεση προσγειωνόταν στον
+   * **εταιρικό** χώρο, και ο πολίτης κατέληγε σε σελίδα που ζητά εταιρικά δεδομένα.
+   * Η απουσία σημαίνει πλέον *«ρώτα τον επιλυτή»*, όχι *«πήγαινε στο dashboard»*.
+   */
+  redirectTo?: AppHref;
 }
 
 export function useAuthFormState({ defaultMode, onSuccess, redirectTo }: UseAuthFormStateOptions) {
@@ -66,20 +79,34 @@ export function useAuthFormState({ defaultMode, onSuccess, redirectTo }: UseAuth
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [mfaCode, setMfaCode] = useState('');
 
+  /**
+   * **Πού προσγειώνεται ΑΥΤΟΣ ο άνθρωπος** — ρητή παράκαμψη, αλλιώς ο ΕΝΑΣ επιλυτής.
+   *
+   * 🔴 **ΓΙΑΤΙ ΥΠΟΛΟΓΙΖΕΤΑΙ ΣΕ ΚΑΘΕ ΑΠΟΔΟΣΗ ΚΑΙ ΔΕΝ ΕΙΝΑΙ ΣΤΑΘΕΡΑ** (ADR-817 §9): τη
+   * στιγμή της υποβολής το `user` είναι ακόμη `null` — η ταυτότητα φτάνει **μετά**,
+   * από τον `AuthContext`. Ένας στόχος παγωμένος στο closure της υποβολής θα ήταν
+   * **πάντα** ο στόχος του ανώνυμου. Επειδή το `landing` είναι παράγωγο του `user`,
+   * μόλις η ταυτότητα προσγειωθεί το effect από κάτω **ξαναπυροδοτεί** με τη σωστή
+   * διεύθυνση — άρα η τελική προσγείωση είναι σωστή ακόμη κι αν η πρώτη ώθηση
+   * πρόλαβε να φύγει.
+   *
+   * ⚠️ Το `user ?? {}` **δεν** είναι αμυντικό θόρυβος: ο ανώνυμος έχει, εξ ορισμού,
+   * ταυτότητα **χωρίς** οργανισμό — και ο επιλυτής απαντά ήδη σωστά γι' αυτόν.
+   */
+  const landing: AppHref = redirectTo ?? resolvePostLoginRoute(user ?? {});
+
   // ── Effects ──
 
   useEffect(() => {
-    if (redirectTo) {
-      router.prefetch(redirectTo);
-    }
-  }, [router, redirectTo]);
+    router.prefetch(landing);
+  }, [router, landing]);
 
   useEffect(() => {
     if (!loading && user) {
       setIsRedirecting(true);
-      router.replace(redirectTo);
+      router.replace(landing);
     }
-  }, [loading, user, router, redirectTo]);
+  }, [loading, user, router, landing]);
 
   // ── Handlers ──
 
@@ -131,8 +158,8 @@ export function useAuthFormState({ defaultMode, onSuccess, redirectTo }: UseAuth
         setSuccessMessage(t('messages.signinSuccess'));
         onSuccess?.();
         setIsRedirecting(true);
-        logger.info('[AuthForm] Redirecting to', { redirectTo });
-        setTimeout(() => router.push(redirectTo), 100);
+        logger.info('[AuthForm] Redirecting to', { landing });
+        setTimeout(() => router.push(landing), 100);
         return;
       } else if (mode === 'signup') {
         logger.info('[AuthForm] Sign up attempt');
@@ -173,7 +200,7 @@ export function useAuthFormState({ defaultMode, onSuccess, redirectTo }: UseAuth
       setSuccessMessage(t('google.success'));
       onSuccess?.();
       setIsRedirecting(true);
-      router.push(redirectTo);
+      router.push(landing);
     } catch (err) {
       logger.error('[AuthForm] Google Sign-In error', { error: err });
     } finally {
@@ -196,7 +223,7 @@ export function useAuthFormState({ defaultMode, onSuccess, redirectTo }: UseAuth
       await verifyMfaCode(mfaCode);
       setSuccessMessage(t('mfa.verificationSuccess'));
       setIsRedirecting(true);
-      setTimeout(() => router.push(redirectTo), 100);
+      setTimeout(() => router.push(landing), 100);
     } catch (err) {
       logger.error('[AuthForm] MFA verification error', { error: err });
     } finally {

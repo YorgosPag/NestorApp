@@ -28,7 +28,6 @@ import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects/hover-effects';
 import { TRANSITION_PRESETS } from '@/components/ui/effects/transitions';
 import type { AuthFormProps } from '../types/auth.types';
-import { AUTH_ROUTES } from '@/lib/routes';
 import { GoogleIcon } from './GoogleIcon';
 import { MfaVerificationForm } from './MfaVerificationForm';
 import { useAuthFormState } from '../hooks/useAuthFormState';
@@ -44,7 +43,11 @@ import '@/lib/design-system';
 export function AuthForm({
   defaultMode = 'signin',
   onSuccess,
-  redirectTo = AUTH_ROUTES.home,
+  // 🔴 **ΚΑΜΙΑ ΠΡΟΕΠΙΛΟΓΗ** (ADR-817 §9): έγραφε `= AUTH_ROUTES.home` (`/dashboard`),
+  //    άρα **κάθε** σύνδεση προσγειωνόταν στον ΕΤΑΙΡΙΚΟ χώρο — και ο πολίτης κατέληγε
+  //    σε σελίδα που ζητά εταιρικά δεδομένα, με `AUTHORIZATION_ERROR` στην κονσόλα.
+  //    Απόν ⇒ το `useAuthFormState` ρωτά τον ΕΝΑΝ επιλυτή (`landing.ts`).
+  redirectTo,
 }: AuthFormProps) {
   const iconSizes = useIconSizes();
   const { getStatusBorder } = useBorderTokens();
