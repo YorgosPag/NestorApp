@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { I18nProvider } from '@/components/providers/I18nProvider';
 import { TourProvider, TourRenderer } from '@/components/ui/ProductTour';
 import { SuperAdminCompanyProvider } from '@/contexts/SuperAdminCompanyContext';
+import { densityBootScript } from '@/lib/appearance/density-boot-script';
 
 /**
  * =============================================================================
@@ -65,6 +66,29 @@ export default function RootLayout({
     <html lang="el" className="overflow-x-hidden" suppressHydrationWarning>
       <head>
         <Script src="/react-bugfix-guards.js" strategy="beforeInteractive" />
+        {/*
+          🔴 ADR-811 — Η ΠΥΚΝΟΤΗΤΑ ΠΡΙΝ ΑΠΟ ΤΟ ΠΡΩΤΟ ΚΑΡΕ.
+
+          Ωμό `<script>` και ΟΧΙ `next/script`: πρέπει να τρέξει **σύγχρονα, μέσα
+          στο SSR HTML**, πριν ο browser ζωγραφίσει οτιδήποτε. Είναι το ιδίωμα
+          που χρησιμοποιεί το ίδιο το `next-themes` για τον ίδιο ακριβώς λόγο.
+
+          🏆 ΚΑΙ ΕΙΝΑΙ ΕΝΑ ΣΚΑΛΙ ΠΑΝΩ ΑΠΟ ΕΚΕΙΝΟ: το `next-themes` εγχέει το δικό
+          του από **Client Component** (ο provider του είναι client). Αυτό εδώ
+          ζει σε **Server Component**, άρα δεν χρειάζεται client boundary και
+          παραμένει συμβατό με στατική απόδοση — που μετρήθηκε ότι αφορά **168
+          από τις 170** ρίζες (CHECK 3.55).
+
+          ⚠️ ΜΗΝ το κάνεις `strategy="afterInteractive"` ούτε `useEffect`: τότε η
+          πυκνότητα εφαρμόζεται **μετά** το πρώτο καρέ και ο χρήστης βλέπει τη
+          διάταξη να αναπηδά. ⚠️ ΜΗΝ αφαιρέσεις το `suppressHydrationWarning`:
+          το script γράφει attribute στο `<html>` ΠΡΙΝ την ενυδάτωση, οπότε ο
+          server και ο πελάτης βλέπουν διαφορετικό `<html>` εξ ορισμού.
+        */}
+        <script
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: densityBootScript() }}
+        />
       </head>
       <body className={cn("font-sans overflow-x-hidden", roboto.variable)}>
         {/* 🏢 ENTERPRISE: Minimal provider stack - essential providers only */}
