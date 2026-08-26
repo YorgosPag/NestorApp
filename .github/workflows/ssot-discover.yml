@@ -1346,3 +1346,65 @@ jobs:
             echo ""
             echo "Αναφορά: \`npm run unbound:report\`"
           } >> "$GITHUB_STEP_SUMMARY"
+
+  domain-vocabulary:
+    name: 🏷️ CHECK 3.73 — λεξιλόγιο τομέα
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      # ⚠️ Η ΕΓΚΑΤΑΣΤΑΣΗ ΕΙΝΑΙ ΥΠΟΧΡΕΩΤΙΚΗ: ο σαρωτής είναι AST (`ts.createSourceFile`
+      # parse-only, ΠΟΤΕ `ts.Program` — N.17) και χρειάζεται το `typescript` του repo.
+      - name: 📦 Install dependencies (TypeScript)
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # ⚠️ ΑΝΕΥ ΟΡΩΝ, ΧΩΡΙΣ paths: — ένα νέο σώμα του λεξιλογίου προσγειώνεται σε
+      # ΟΠΟΙΟΔΗΠΟΤΕ αρχείο του src/, και η ρίζα μπορεί να αλλάξει χωρίς να αγγιχτεί
+      # κανένας καταναλωτής. Φίλτρο διαδρομών θα ήταν το `blocking-path-filtered`
+      # του CHECK 3.54.
+      - name: 🏷️ CHECK 3.73 — πλήρης σάρωση src/ (~3s με προφίλτρο)
+        run: pnpm run domain-vocabulary:report
+
+      - name: 🧪 Άγκυρες — CHECK 3.73 (22 tests, μεταλλάξεις στις ΕΙΣΟΔΟΥΣ)
+        run: pnpm run test:domain-vocabulary
+
+      - name: ✅ Summary
+        if: success()
+        run: |
+          echo "::notice title=Domain vocabulary::Κάθε δήλωση του λεξιλογίου είναι δεμένη στη ρίζα της"
+
+      - name: 🧭 How to resolve
+        if: failure()
+        run: |
+          {
+            echo "### CHECK 3.73 — ADR-812 (λεξιλόγιο τομέα)"
+            echo ""
+            echo "Μια δήλωση **απαριθμεί** το λεξιλόγιο χωρίς να είναι **δεμένη στη ρίζα** του."
+            echo ""
+            echo "- ✅ Η επανάληψη **επιτρέπεται** — badge variants, στόχοι μετάβασης, λεξικό NLU"
+            echo "  απαριθμούν τις ίδιες τιμές για **άλλο λόγο**. Ζητείται να είναι **δεμένη**."
+            echo "- ΘΕΡΑΠΕΙΑ: δώσε τύπο που αναφέρει τη ρίζα — \`Record<ProjectStatus, …>\`,"
+            echo "  \`Partial<Record<…>>\`, \`Extract<ProjectStatus, …>\`,"
+            echo "  \`satisfies readonly ProjectStatus[]\`."
+            echo "- ⚠️ **ΜΗΝ** σβήσεις το λεξιλόγιο από το \`.domain-vocabulary.json\` για να"
+            echo "  περάσει: βγαίνει από την **εμβέλεια** και κάθε δεύτερο σώμα του γίνεται"
+            echo "  **αόρατο** — «πράσινο επειδή κανείς δεν κοίταξε»."
+            echo "- \`root-drift\` σημαίνει ότι **η ίδια η ρίζα** άλλαξε: ενημέρωσε το μητρώο"
+            echo "  **μαζί** με τον κώδικα, στο ίδιο commit."
+            echo ""
+            echo "Αναφορά: \`npm run domain-vocabulary:report\`"
+          } >> "$GITHUB_STEP_SUMMARY"
