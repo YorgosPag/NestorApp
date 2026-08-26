@@ -53,7 +53,23 @@ import { cn } from '@/lib/utils';
 
 const logger = createModuleLogger('UserMenu');
 
-export function UserMenu() {
+/**
+ * @param signedOut Τι μπαίνει στη θέση του μενού όταν **δεν** υπάρχει ταυτότητα
+ *   — η πόρτα «Σύνδεση» του δημόσιου ιστότοπου, ή τίποτα.
+ *
+ * 🔑 **ΓΙΑΤΙ ΕΔΩ ΚΑΙ ΟΧΙ ΣΤΟΝ ΚΑΛΟΥΝΤΑ** (ADR-809): αυτό το component **ήδη**
+ * κρίνει «υπάρχει άνθρωπος;» για να αποφασίσει αν θα αποδοθεί. Ένας καλών που
+ * έκρινε **μόνος του** αν θα δείξει «Σύνδεση» θα ήταν **δεύτερη απάντηση στην
+ * ίδια ερώτηση** (σχήμα ADR-749) — και οι δύο θα απέκλιναν στο παράθυρο του
+ * `isLoggingOut`, όπου το μενού **επίτηδες** μένει ορατό με `user === null`:
+ * ο καλών θα ζωγράφιζε «Σύνδεση» **δίπλα** στο ανοιχτό μενού.
+ *
+ * 🔴 Η ανάγκη γεννήθηκε από μετρημένο ψέμα: ο `PublicSiteHeader` έδειχνε
+ * «Σύνδεση» **άνευ όρων**, δηλαδή και σε **συνδεδεμένο** άνθρωπο, σε **δύο**
+ * γειτονιές — `(me)` (φρουρημένη από `ProtectedRoute`: **κανείς** ανώνυμος δεν
+ * τη βλέπει ποτέ) και `(light)`.
+ */
+export function UserMenu({ signedOut }: Readonly<{ signedOut?: React.ReactNode }> = {}) {
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation(COMMON_NAMESPACES);
   const colors = useSemanticColors();
@@ -64,8 +80,10 @@ export function UserMenu() {
   const { user, signOut } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  // No user = no menu (after logout or before login)
-  if (!user && !isLoggingOut) return null;
+  // No user = no menu (after logout or before login) — και στη θέση του ό,τι
+  // δήλωσε ο κόσμος. Χωρίς δήλωση, `undefined` ⇒ ταυτόσημο με το παλιό `null`:
+  // η επέκταση είναι **γνήσια γενίκευση**, κανένας υπάρχων καλών δεν αλλάζει.
+  if (!user && !isLoggingOut) return <>{signedOut}</>;
 
   /**
    * 🏢 ENTERPRISE: Optimistic Logout Pattern

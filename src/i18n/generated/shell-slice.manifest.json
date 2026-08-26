@@ -6,7 +6,7 @@
     "src/i18n/generated/routes/demands__demandId.el.json": "7959c1e9aa579a2b4fe1b39e65a4e0232c6928e497d52cc86389d0df3b159ad8",
     "src/i18n/generated/routes/demands__new.el.json": "383ce0eedd908e243eb01c208f730d5b5d6f8699899ae3e31c290cec5899224e",
     "src/i18n/generated/routes/listing__id.el.json": "1f5bb80734871a98e9c0f08d8457a0d00871069ea36dfc90239a02e77749647e",
-    "src/i18n/generated/routes/login.el.json": "3572a0681e12dd71bda049c2221dc6f8874d4c79c3f6883e5e8562f2bd11214a",
+    "src/i18n/generated/routes/login.el.json": "6ba750825f9e8597ac3c9718ed99005e265a55752e1d64217ba48b29fad7f281",
     "src/i18n/generated/routes/mandate__token.el.json": "6e75cdb41998a3f76bb88840249c7b197754548563acc1de2269b9e88099531c",
     "src/i18n/generated/routes/o__workspace__dashboard.el.json": "263a3349d6e3f1e2badbab37f08d81836a102b89054c44e5ffac29cfacafffd0",
     "src/i18n/generated/routes/o__workspace__listings__mandates.el.json": "acc74d03857daa50427b8bff88d2bcd40e9d1952a442b9e7577c34eedf95c83a",
@@ -18,7 +18,7 @@
     "src/i18n/generated/routes/terms.el.json": "481f837696b407553f56de16128778617a86f72cf7b27471d61cd5793cf7d288",
     "src/i18n/generated/routes/test-harness__listing-shapes.el.json": "9b6aaaa831492e24807a1c83e0b505dc865c03afbd5638abf8ea2b990422b037",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "151298182ba181ce2c599fa23855d555635c390f691dc4f76f7f432ac0797843",
+    "src/i18n/generated/shell-slice.el.json": "8b2c027f1d8b2e9412d75555a674227346219063c8ad144bf4055f0d8f1dcd5e",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "boundaries": {
@@ -57,7 +57,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "ec626d0f4584e77981c298c128567495f113ecba64ac9600a13fdfdb8f67a7d6",
+  "inputsSha256": "bed341150ebe1d5d12b357faab9c94d17ea0d553603efb79268ef897498d16ab",
   "languages": [
     "el"
   ],
@@ -90,12 +90,13 @@
     "src/app/(app)/o/[workspace]/layout.tsx": "714fcc4772120dce207200fa220a85026b9b26426977d93729b1262c3130a9fc",
     "src/app/(app)/o/[workspace]/projects/[id]/procurement/layout.tsx": "027d8caaef44164d814c6ef84558a2e05c9583057f2b5d69f75013960330e8d0",
     "src/app/(app)/o/[workspace]/settings/layout.tsx": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
-    "src/app/(auth)/layout.tsx": "5ab2f02c5ac0d8636ff5c2e38aabb47d8839c0901ef7a3fbc74585a41c413211",
+    "src/app/(auth)/layout.tsx": "2516446e753d611e8cc8965dc85512d2fe627e355d2c8b7682d451181f006bed",
     "src/app/(bare)/layout.tsx": "d8d5e14aafe05d5f4e38db737cd7a168263b583637b6206dfb97e3b6ec286e52",
     "src/app/(light)/layout.tsx": "d6a84eee83d88fdecd4c7b1d845add2e7639b066452dbfb3264527be19a39166",
     "src/app/(light)/page.tsx": "5c172b3fe1ab0a4e69b4b635dbe8a4ff96f057cdb6a893599eae948a37a18a0c",
     "src/app/(me)/layout.tsx": "efa0d26520867e4c752d713b00e91be8783a90828c70eaf9b58176b07f20ee88",
     "src/app/layout.tsx": "0d263d8a651b972cc5959ac1bda7806bb7cf816490940b23cee75b82add9937e",
+    "src/auth/components/AuthScreenChrome.tsx": "9bb87577155e7391892741c916eedbb9b1decfce476115e33d8bd6f892a717c4",
     "src/auth/components/ProtectedRoute.tsx": "856ebd62823da579a2fbe9e0c4aae72c378d09f8ce044c6ff7c133d0e395c67c",
     "src/auth/contexts/AuthContext.tsx": "fb23f2921aafeb6d65b37ec59e74739014fbb0b60bc418c41c36d5d80fc8dac2",
     "src/auth/contexts/UserRoleContext.tsx": "e9f0191504136d5f89f5323948cfa06c7ae545467227af1753b532a9b1a7306a",
@@ -111,7 +112,7 @@
     "src/components/NotificationDrawer.enterprise.tsx": "a582890f403e1ec40c06b2476d33f21ef2b29b98785e14a82286f0fddf389a21",
     "src/components/admin/ai-inbox/AIInboxUnauthorized.tsx": "0e290ffff352296dd64c982569feb49c4a05bff0c000b327d34b9c7396c0a2c2",
     "src/components/admin/layout/AdminSidebar.tsx": "17521acfe76c3e6ec90e72e601e7c4324f5cc6f3a0f77742706d658dab58ed0a",
-    "src/components/app-header.tsx": "ce7ac01d3dbe5d06dea0c29bc271f47d67f1f7855b3036f08d6bc4f3f26c3083",
+    "src/components/app-header.tsx": "22c5949bbf360782329d0540ebe4f4294b0011f4c007a04fe0afad82022d0b98",
     "src/components/app-sidebar.tsx": "81de2275b5a0b18f89a52d4fd53868897f8a50ae14b77560dfdf509cd4217a02",
     "src/components/core/AdvancedFilters/types.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/components/generic/config/photo-config/styling/colors.ts": "49664378ba12496215630613e47937572e59891b2f75d71303162187e99d7105",
@@ -144,7 +145,7 @@
     "src/components/projects/procurement/ProjectProcurementTabs.tsx": "9fc7a77d5fc8b542183887c10158877a46fcd55ca8cc23542e05bcdc1d9ae7c1",
     "src/components/property-viewer/Logo_Pagonis.tsx": "abe960984e1f408862eae2ad7eb305b93edb6ba4f7fdcf375ef29f992c3b98ce",
     "src/components/providers/I18nProvider.tsx": "bb82ce64bdb15f688d8d20467bde1357c6e5b71afb367cf015ade7f691d841f2",
-    "src/components/public-site/PublicSiteHeader.tsx": "551661d7da896b4ac38009b4445fd2bd497b478f68e6a557fb39cf266e402c2d",
+    "src/components/public-site/PublicSiteHeader.tsx": "3c0ac0bb4cfc886ac000d8bef6b37f426aabbf3d2ab866c893e76fce36e5ae1e",
     "src/components/search/CoverageStatement.tsx": "3a99e80c975df088c325a5e156c3a2fa949cfcd115294297d502991a8b44eb3f",
     "src/components/search/GlobalSearchDialog.tsx": "f2f938184d386db2f647a6566216185b8544c55eda4219daa7a6215be9061761",
     "src/components/search/PlaceSearchBox.tsx": "3723cb735a0e272562a073520c12d4c33636e17c3f2f9b4dcf45f9148105feed",
@@ -274,6 +275,7 @@
     "src/core/badges/badge-label-key.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/core/containers/PageContainer.tsx": "86e6be0e84bbc0fb7ccc86167856ebcf5591b2d8f9dad105c8b2154dc66b04c8",
     "src/core/containers/ShellSurface.tsx": "f1da2f889d0e940653d7ce4c6fc81cd2572fc1bb518cb6b68eb919ceedae8a6b",
+    "src/core/containers/ShellUtilities.tsx": "1085d45b1ebded751deb3c8e68f4255066d3881f8e8f6faaa19aea4b6b92578d",
     "src/core/modals/PhotoPreviewModal.tsx": "7c5e31eb1379318b5e669781308793b295df20cc307406f538eb1cba542558a5",
     "src/core/modals/photo-preview-helpers.ts": "01cc5afcf1fda44f44da434e8a9af4b6fd0821db6ba750aa3c057cf40f04a880",
     "src/core/modals/usePhotoPreviewModal.ts": "901aa3520a09f56748db4acf095f4d36915baba81b2aa2b7749590363cd65273",
@@ -332,7 +334,7 @@
     "src/i18n/lazy-config.ts": "d924cd25c0a5e70b517818a3627d59eda6d6619f288c009def40abb220572454",
     "src/i18n/namespace-bundles.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/i18n/namespace-compat.ts": "54fa081677bd35c50b24ed5914d8c0a343b23f82fa50f33ac0ac931e011a165c",
-    "src/i18n/namespace-loaders.ts": "186bbe9aea70521b07a05527149e4606f0e7e4c7f560e442e580f4e1b009534d",
+    "src/i18n/namespace-loaders.ts": "53f9651c24119fbf90aaf22ee183327ffca30bcc57c3fa1a955d903f269b45eb",
     "src/i18n/pseudo-post-processor.ts": "36b77ab41d90b6545bac0a64f6a17336374a4cfa6fdde89b961b7bc48a5cd5e3",
     "src/i18n/unresolved-key.ts": "45d824a09cac8ce40aead2f90fe2405c9da4421e6b9766f1c55cbded0affb491",
     "src/lib/a11y/keyboard-scope.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -582,10 +584,10 @@
   ],
   "stats": {
     "dynamicBoundaries": 18,
-    "matchedKeys": 132,
+    "matchedKeys": 134,
     "routeBoundaries": 0,
-    "shellFiles": 481,
-    "sliceBytes": 318859
+    "shellFiles": 483,
+    "sliceBytes": 308722
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
@@ -783,6 +785,7 @@
     "src/i18n/namespace-loaders.ts → ./locales/el/cash-flow.json",
     "src/i18n/namespace-loaders.ts → ./locales/el/common-account.json",
     "src/i18n/namespace-loaders.ts → ./locales/el/common-actions.json",
+    "src/i18n/namespace-loaders.ts → ./locales/el/common-audit.json",
     "src/i18n/namespace-loaders.ts → ./locales/el/common-empty-states.json",
     "src/i18n/namespace-loaders.ts → ./locales/el/common-navigation.json",
     "src/i18n/namespace-loaders.ts → ./locales/el/common-photos.json",
@@ -886,6 +889,7 @@
     "src/i18n/namespace-loaders.ts → ./locales/en/cash-flow.json",
     "src/i18n/namespace-loaders.ts → ./locales/en/common-account.json",
     "src/i18n/namespace-loaders.ts → ./locales/en/common-actions.json",
+    "src/i18n/namespace-loaders.ts → ./locales/en/common-audit.json",
     "src/i18n/namespace-loaders.ts → ./locales/en/common-empty-states.json",
     "src/i18n/namespace-loaders.ts → ./locales/en/common-navigation.json",
     "src/i18n/namespace-loaders.ts → ./locales/en/common-photos.json",
@@ -986,7 +990,9 @@
     },
     "auth": {
       "keys": [
-        "loading.checkingAccess"
+        "brand.name",
+        "loading.checkingAccess",
+        "navigation.settingsToolbar"
       ],
       "prefixes": [],
       "whole": false

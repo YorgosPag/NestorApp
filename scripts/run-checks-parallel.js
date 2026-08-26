@@ -602,6 +602,7 @@ if (!process.env.SKIP_NAVIGATION_BOUNDARY && allFiles.length > 0)
 // η μερική ανάλυση δεν είναι βελτιστοποίηση — είναι δεύτερη αυθεντία, χωρίς αντάλλαγμα.
 if (!process.env.SKIP_SHELL_SURFACE && allFiles.length > 0)
   addThread('3.63', 'Shell surface', 'scripts/check-shell-surface.js', allFiles);
+  addThread('3.72', 'Shell utilities', 'scripts/check-shell-utilities.js', allFiles);
 
 // CHECK 3.65 — ΠΥΛΗ ΤΗΣ ΜΙΑΣ ΕΚΔΟΣΗΣ (ADR-800). «Υπάρχει ΕΝΑ σημείο δήλωσης και ΜΙΑ
 // εγκατεστημένη έκδοση για κάθε όνομα πακέτου μέσα στο workspace;»

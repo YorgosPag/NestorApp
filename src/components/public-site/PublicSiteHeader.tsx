@@ -50,6 +50,7 @@
 
 import React from 'react';
 import { Link } from '@/lib/workspace/navigation';
+import { ShellUtilities } from '@/core/containers/ShellUtilities';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { AUTH_ROUTES } from '@/lib/routes';
 import { SEARCH_LANDING_ROUTE } from '@/lib/listings/listing-routes';
@@ -138,17 +139,50 @@ export function PublicSiteHeader() {
           </Link>
 
           {/*
-            ⚠️ Η πόρτα του επαγγελματία δείχνει στη **σύνδεση**, όχι στο
-            {@link AUTH_ROUTES}`.home`: ο ανώνυμος που θα πατούσε «ο χώρος μου» θα
-            έπαιρνε ανακατεύθυνση πίσω στη σύνδεση — δύο βήματα για ένα, και μια
-            ετικέτα που λέει κάτι που δεν συμβαίνει.
+            ✅ **ΟΙ ΚΑΘΟΛΙΚΕΣ ΔΥΝΑΤΟΤΗΤΕΣ (2026-08-26, ADR-809 / CHECK 3.72).**
+
+            🔴 **ΤΙ ΔΙΟΡΘΩΝΕΙ, ΚΑΙ ΕΙΝΑΙ ΔΥΟ ΑΝΕΞΑΡΤΗΤΑ ΕΛΑΤΤΩΜΑΤΑ:**
+
+            **(Α) ΤΟ ΨΕΜΑ.** Η πόρτα «Σύνδεση» ζωγραφιζόταν **άνευ όρων**, άρα και
+            σε **ΣΥΝΔΕΔΕΜΕΝΟ** άνθρωπο — σε **δύο** γειτονιές, όχι μία: στο `(me)`
+            (`PrivateSpaceShell` → αυτή η κεφαλίδα), που φρουρείται από
+            `ProtectedRoute` και άρα **κανείς ανώνυμος δεν τη βλέπει ΠΟΤΕ**, και στο
+            `(light)`, όπου ο συνδεδεμένος επαγγελματίας περιηγείται στις δημόσιες
+            αγγελίες. Πλέον η ίδια γωνία δείχνει **λογαριασμό** σε όποιον έχει
+            ταυτότητα και **πόρτα** σε όποιον δεν έχει — η κρίση γίνεται **μία**
+            φορά, μέσα στο `UserMenu` (ADR-749: ποτέ δεύτερη απάντηση).
+
+            **(Β) Η ΑΠΟΥΣΙΑ.** Γλώσσα και θέμα δεν υπήρχαν **πουθενά** σε `(light)`
+            και `(me)`. Η **κατάσταση** ήταν πάντα καθολική (οι `ThemeProvider` και
+            `I18nProvider` ζουν στο ριζικό `layout.tsx:71-78`) — αυτό που έλειπε
+            ήταν το **χειριστήριο**.
+
+            ⚠️ **Ο σύνδεσμος μένει ΑΥΤΟΥΣΙΟΣ, απλώς μετακομίζει.** Δείχνει στη
+            **σύνδεση** και όχι στο {@link AUTH_ROUTES}`.home`: ο ανώνυμος που θα
+            πατούσε «ο χώρος μου» θα έπαιρνε ανακατεύθυνση πίσω στη σύνδεση — δύο
+            βήματα για ένα, και μια ετικέτα που λέει κάτι που δεν συμβαίνει.
+
+            ⚠️ **ΜΗΝ ξαναγράψεις εδώ `useAuth()`** για να κρίνεις τι θα δείξεις:
+            το φυλά ο κανόνας **Κ3** του CHECK 3.72 (ιδιοκτησία συμβόλων), και η
+            διπλή κρίση θα απέκλινε στο παράθυρο του `isLoggingOut`.
+
+            ⚠️ **Μετρημένο κόστος** (2026-08-26, κλειστότητα πελάτη ανά **σελίδα**,
+            όχι ανά component): **+8 αρχεία · +84,5 KB πηγής · +2,3%**, με **δύο**
+            νέα πακέτα (`@radix-ui/react-avatar`, `react-tooltip`). Τα βαριά
+            (`firebase`·`zod`·`qrcode`·`date-fns`) ήταν **ήδη** εκεί από το ριζικό
+            layout, και το «−41% έως −59% SSR bytes» του `.shell-boundary.json`
+            αφορά τους **9 βαρείς providers + sidebar** — που δεν αγγίζονται.
           */}
-          <Link
-            href={AUTH_ROUTES.login}
-            className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-foreground"
-          >
-            {t('search-results:site.signIn')}
-          </Link>
+          <ShellUtilities
+            signedOutAction={
+              <Link
+                href={AUTH_ROUTES.login}
+                className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-foreground"
+              >
+                {t('search-results:site.signIn')}
+              </Link>
+            }
+          />
         </div>
       </nav>
     </header>

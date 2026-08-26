@@ -77,6 +77,13 @@ on:
       - 'src/types/workspace-membership.ts'
       - 'scripts/lib/shell-boundary/**'
       - '.shell-boundary.json'
+      # CHECK 3.72 (ADR-809) — οι ΚΑΘΟΛΙΚΕΣ δυνατότητες. Ο ιδιοκτήτης, τα τρία σύμβολα,
+      # το κλειστό σύνολο και η ίδια η πύλη είναι ΕΙΣΟΔΟΙ: αλλαγή στο κριτήριο πρέπει να
+      # ξανακρίνει ΟΛΟ το δέντρο, αλλιώς το job μένει πράσινο πάνω στην αλλαγή του.
+      - 'scripts/check-shell-utilities.js'
+      - 'scripts/lib/shell-utilities/**'
+      - '.shell-utilities.json'
+      - 'src/core/containers/ShellUtilities.tsx'
       # CHECK 3.53 (ADR-739 §0.3 / ADR-777 §0.4) — ταυτότητα ενοτήτων ADR. Τα ίδια τα
       # έγγραφα είναι είσοδοι: η διαγραφή μιας επικεφαλίδας κάνει αδέσποτους δείκτες σε
       # αρχεία που κανείς δεν άγγιξε (996 από τους 1.104 ζουν στο `src/subapps`, που ήδη
@@ -149,6 +156,13 @@ on:
       - 'src/types/workspace-membership.ts'
       - 'scripts/lib/shell-boundary/**'
       - '.shell-boundary.json'
+      # CHECK 3.72 (ADR-809) — οι ΚΑΘΟΛΙΚΕΣ δυνατότητες. Ο ιδιοκτήτης, τα τρία σύμβολα,
+      # το κλειστό σύνολο και η ίδια η πύλη είναι ΕΙΣΟΔΟΙ: αλλαγή στο κριτήριο πρέπει να
+      # ξανακρίνει ΟΛΟ το δέντρο, αλλιώς το job μένει πράσινο πάνω στην αλλαγή του.
+      - 'scripts/check-shell-utilities.js'
+      - 'scripts/lib/shell-utilities/**'
+      - '.shell-utilities.json'
+      - 'src/core/containers/ShellUtilities.tsx'
       # CHECK 3.53 (ADR-739 §0.3 / ADR-777 §0.4) — ταυτότητα ενοτήτων ADR. Τα ίδια τα
       # έγγραφα είναι είσοδοι: η διαγραφή μιας επικεφαλίδας κάνει αδέσποτους δείκτες σε
       # αρχεία που κανείς δεν άγγιξε (996 από τους 1.104 ζουν στο `src/subapps`, που ήδη
@@ -638,6 +652,66 @@ jobs:
             echo "ο λόγος **είναι** η απάντηση."
             echo ""
             echo "Απογραφή: \`npm run shell-boundary:report\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  shell-utilities:
+    name: 🎛️ Shell Universal Utilities Gate (CHECK 3.72)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: 📦 Install dependencies (jest + typescript για το AST του δέντρου απόδοσης)
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # Layer 2 — ΑΝΕΥ ΟΡΩΝ και ΠΛΗΡΕΣ. Το Layer 1 πυροδοτεί σε staged page/layout ή στα
+      # αρχεία του κελύφους· μια αλλαγή στον ΙΔΙΟΚΤΗΤΗ ξανακρίνει ΚΑΘΕ σελίδα του δέντρου,
+      # και καμία από αυτές δεν είναι σταδιοποιημένη.
+      - name: 🎛️ CHECK 3.72 — πλήρεις καθολικές δυνατότητες (Κ1 + Κ2 + Κ3)
+        run: pnpm run shell-utilities:check
+
+      - name: "🧪 Σουίτα μετάλλαξης — CHECK 3.72 (23 tests: 9 μεταλλάξεις εισόδων + 8 άγκυρες κριτηρίου + 4 στο πραγματικό δέντρο + Μ0)"
+        run: pnpm run test:shell-utilities
+
+      - name: 🧭 How to resolve
+        if: failure()
+        run: |
+          {
+            echo "### CHECK 3.72 — ADR-809 (καθολικές δυνατότητες του κελύφους)"
+            echo ""
+            echo "**Η γλώσσα, το θέμα και ο λογαριασμός δεν είναι χαρακτηριστικά της εφαρμογής —**"
+            echo "**είναι υποσχέσεις του κελύφους σε ΚΑΘΕ οθόνη.**"
+            echo ""
+            echo "| κατάσταση | τι σημαίνει | θεραπεία |"
+            echo "|---|---|---|"
+            echo "| \`silent-screen\` | οθόνη που δεν ζωγραφίζει τον ιδιοκτήτη | φέρ' τη κάτω από layout που αποδίδει \`<ShellUtilities/>\` |"
+            echo "| \`assembled-outside-owner\` | κάποιος συναρμολογεί **τέταρτο** cluster | οι τρεις διακόπτες έχουν **έναν** ιδιοκτήτη |"
+            echo "| \`orphan-declaration\` | δήλωση για γειτονιά/σελίδα που δεν υπάρχει | σβήσε τη δήλωση |"
+            echo "| \`reasonless-declaration\` | λόγος κάτω από τους 40 χαρακτήρες | ο λόγος οφείλει να είναι **μέτρηση** |"
+            echo "| \`contradicted-declaration\` | δηλώθηκε σιωπηλή, αλλά **ΟΝΤΩΣ** φτάνει | δύο αλήθειες που διαφωνούν (ADR-749) — σβήσε τη δήλωση |"
+            echo "| \`owner-incomplete\` | ο ιδιοκτήτης δεν εισάγει και τα τρία | υπόσχεση χωρίς αντίκρισμα |"
+            echo ""
+            echo "⚠️ **ΜΗΝ** επικαλεστείς το WCAG: τα SC 3.2.3/3.2.6 φυλούν τη **ΣΕΙΡΑ**,"
+            echo "και το 3.2.6 λέει **ρητά** ότι η **απουσία** δεν είναι παραβίαση."
+            echo "Η παρουσία είναι **απόφαση προϊόντος** — εδώ γίνεται μηχανικά ελέγξιμη."
+            echo ""
+            echo "⚠️ **ΜΗΝ** το κάνεις ratchet: **μία** οθόνη αρκεί ώστε συνδεδεμένος"
+            echo "άνθρωπος να καλείται να συνδεθεί."
+            echo ""
+            echo "Απογραφή: \`npm run shell-utilities:report\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
   adr-section-refs:

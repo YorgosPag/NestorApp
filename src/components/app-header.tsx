@@ -6,9 +6,7 @@ import dynamic from "next/dynamic"
 import { Search } from "lucide-react"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
-import { ThemeToggle } from "@/components/header/theme-toggle"
-import { UserMenu } from "@/components/header/user-menu"
-import { LanguageSwitcher } from "@/components/header/language-switcher"
+import { ShellUtilities } from "@/core/containers/ShellUtilities"
 import { HelpButton } from "@/components/header/help-button"
 import { VoiceAssistantButton } from "@/components/header/voice-assistant-button"
 import { CompanySwitcher } from "@/components/header/CompanySwitcher"
@@ -103,17 +101,32 @@ export function AppHeader() {
               αυτό εδώ. ⚠️ Το `CompanySwitcher` δίπλα είναι ο ΟΡΓΑΝΙΣΜΟΣ. */}
           <JobSwitch />
           <CompanySwitcher />
-          <LanguageSwitcher />
           <Separator orientation="vertical" className="h-6 hidden sm:block" />
           <NotificationBell />
           <Separator orientation="vertical" className="h-6 hidden sm:block" />
           <VoiceAssistantButton />
           <Separator orientation="vertical" className="h-6 hidden sm:block" />
-          <ThemeToggle />
-          <Separator orientation="vertical" className="h-6 hidden sm:block" />
           <HelpButton />
           <Separator orientation="vertical" className="h-6 hidden sm:block" />
-          <UserMenu />
+          {/*
+            ✅ ADR-809 / CHECK 3.72 — οι ΚΑΘΟΛΙΚΕΣ δυνατότητες (γλώσσα · θέμα ·
+            λογαριασμός) έρχονται πλέον από ΕΝΑΝ ιδιοκτήτη. Εδώ ήταν γραμμένες
+            χωριστά, και δίπλα τους ζούσε ΔΕΥΤΕΡΟΣ συναρμολογητής
+            (`AuthScreenChrome`) — δύο αλήθειες που είχαν ήδη αποκλίνει: εκείνος
+            έδινε δύο από τις τρεις, και ΚΑΝΕΙΣ δεν τις έδινε στο (light)/(me).
+
+            ⚠️ Ό,τι ΜΕΝΕΙ εδώ πάνω είναι σκόπιμα ΜΗ καθολικό: το `JobSwitch` και
+            ο `CompanySwitcher` προϋποθέτουν οργανισμό· ο `NotificationBell`,
+            ο `VoiceAssistantButton` και το `HelpButton` είναι χαρακτηριστικά
+            ΤΗΣ ΕΦΑΡΜΟΓΗΣ, όχι υποσχέσεις του κελύφους.
+
+            ⚠️ ΚΑΜΙΑ αλλαγή στη σειρά γλώσσα → θέμα → λογαριασμός: το WCAG 2.2
+            SC 3.2.3 (AA) απαιτεί «the same relative order each time». Η σειρά
+            ήταν ήδη σωστή — αυτό που έλειπε ήταν η ΠΑΡΟΥΣΙΑ αλλού.
+
+            ⚠️ ΧΩΡΙΣ `signedOutAction`: στο (app) δεν υπάρχει ποτέ ανώνυμος.
+          */}
+          <ShellUtilities />
         </div>
       </div>
 

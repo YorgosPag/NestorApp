@@ -382,7 +382,10 @@
     "shell-surface:check": "node scripts/check-shell-surface.js",
     "shell-surface:report": "node scripts/check-shell-surface.js --report",
     "shell-surface:baseline": "node scripts/check-shell-surface.js --write-baseline",
-    "test:shell-surface": "jest scripts/__tests__/shell-surface-gate.test.js --verbose"
+    "test:shell-surface": "jest scripts/__tests__/shell-surface-gate.test.js --verbose",
+    "shell-utilities:check": "node scripts/check-shell-utilities.js --all",
+    "shell-utilities:report": "node scripts/check-shell-utilities.js --report",
+    "test:shell-utilities": "jest scripts/__tests__/check-shell-utilities.test.js --verbose"
   },
   "dependencies": {
     "@ai-sdk/openai": "3.0.48",

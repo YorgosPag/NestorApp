@@ -29,6 +29,7 @@
  */
 
 import { ShellSurface } from '@/core/containers/ShellSurface';
+import { AuthToolbar } from '@/auth/components/AuthScreenChrome';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -40,6 +41,25 @@ export default function AuthGroupLayout({ children }: Readonly<{ children: React
 
   return (
     <TooltipProvider delayDuration={300}>
+      {/*
+        ✅ **Η ΜΠΑΡΑ ΡΥΘΜΙΣΕΩΝ ΗΡΘΕ ΕΔΩ (2026-08-26, ADR-809 / CHECK 3.72).**
+
+        🔴 **Μετρημένο κενό**: ζουσε σε **τρία** σημεία μέσα στο δέντρο της
+        **σελίδας** (`AuthScreen` · `AuthActionContent`) — άρα οι δύο σελίδες που
+        **δεν** περνούν από αυτά (`/oauth/consent` και `/mandate/[token]`) δεν είχαν
+        **καμία** γλώσσα και **κανένα** θέμα. Το είδε η μέτρηση **ανά σελίδα**·
+        μια μέτρηση ανά **γειτονιά** θα έλεγε «το (auth) έχει γλώσσα» — **αληθές
+        και άσχετο**, γιατί η οθόνη που δεν την έχει εξακολουθεί να μην την έχει.
+
+        🔑 **Μηδενική οπτική αλλαγή, και είναι δομικό**: το `authToolbar` είναι
+        `fixed top-4 right-4` — η θέση του δεν εξαρτάται από το πού ζει στο δέντρο.
+
+        ⚠️ **ΕΞΩ από το `ShellSurface`, επίτηδες**: εκείνο είναι `<main>` και
+        κεντράρει το κύριο περιεχόμενο· μια μπάρα ρυθμίσεων **δεν** είναι
+        κύριο περιεχόμενο, και μέσα στο `<main>` θα έμπαινε στη ροή ανάγνωσής
+        του — και στον διάδρομο του ADR-797, που δεν την αφορά (είναι `fixed`).
+      */}
+      <AuthToolbar />
       {/*
         🏛️ Ο ΔΙΑΔΡΟΜΟΣ (ADR-797 ΦΑΣΗ Β). Το ίδιο `data-shell-surface`, οι ίδιοι
         πόλοι, μηδέν νέο CSS.

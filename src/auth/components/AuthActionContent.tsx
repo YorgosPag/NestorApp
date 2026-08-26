@@ -65,7 +65,7 @@ import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects/hover-effects';
 import { TRANSITION_PRESETS } from '@/components/ui/effects/transitions';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { AuthToolbar, AuthBrandMark } from './AuthScreenChrome';
+import { AuthBrandMark } from './AuthScreenChrome';
 import { AuthField } from './AuthField';
 import { Lock, CheckCircle, XCircle, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { AUTH_ROUTES } from '@/lib/routes';
@@ -331,7 +331,7 @@ export function AuthActionContent() {
     //    κεντράρισε» το δηλώνει **μία φορά** το `<main>` του `(auth)/layout.tsx`.
     //    Ήταν ταυτόσημη επανάληψη — αόρατη όσο δεν υπήρχε κάθετος διάδρομος.
     <section className={layout.flexColGap4} aria-label={getTitle()}>
-      <AuthToolbar />
+      {/* 🔴 Η μπάρα ρυθμίσεων ζει πλέον στο `(auth)/layout.tsx` (ADR-809). */}
 
       <section className={layout.flexColGap4}>
         <AuthBrandMark />

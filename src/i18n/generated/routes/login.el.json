@@ -1,8 +1,5 @@
 {
   "auth": {
-    "brand": {
-      "name": "Nestor App"
-    },
     "form": {
       "accessibility": {
         "hidePassword": "Απόκρυψη κωδικού",
@@ -73,8 +70,7 @@
     },
     "navigation": {
       "loadingApp": "Μεταφορά στην εφαρμογή...",
-      "redirecting": "Μεταφορά στην εφαρμογή",
-      "settingsToolbar": "Ρυθμίσεις εμφάνισης"
+      "redirecting": "Μεταφορά στην εφαρμογή"
     },
     "validation": {
       "emailInvalid": "Μη έγκυρο format email.",

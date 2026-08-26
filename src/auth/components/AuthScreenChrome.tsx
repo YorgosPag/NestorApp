@@ -30,8 +30,7 @@
 import '@/lib/design-system';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import LogoPagonis from '@/components/property-viewer/Logo_Pagonis';
-import { LanguageSwitcher } from '@/components/header/language-switcher';
-import { ThemeToggle } from '@/components/header/theme-toggle';
+import { ShellUtilities } from '@/core/containers/ShellUtilities';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
@@ -45,8 +44,21 @@ export function AuthToolbar() {
 
   return (
     <nav className={layout.authToolbar} aria-label={t('navigation.settingsToolbar')}>
-      <LanguageSwitcher />
-      <ThemeToggle />
+      {/*
+        ✅ ADR-809 / CHECK 3.72 — ΕΝΑΣ ιδιοκτήτης των καθολικών δυνατοτήτων.
+        Εδώ ήταν ο ΔΕΥΤΕΡΟΣ συναρμολογητής, και είχε ήδη αποκλίνει από τον
+        `AppHeader`: έδινε **δύο** από τις τρεις.
+
+        🔑 Ο λογαριασμός ΔΕΝ αποδίδεται εδώ, και **χωρίς καμία δήλωση**: το
+        `UserMenu` κρίνει την ταυτότητα μόνο του, και σε αυτές τις οθόνες ο
+        άνθρωπος **δεν έχει συνδεθεί ακόμη** ⇒ επιστρέφει `null`. Δομικά σωστό,
+        όχι κατόπιν ρύθμισης — μια σημαία `account={false}` θα ήταν δεύτερη
+        αλήθεια που θα απέκλινε.
+
+        ⚠️ ΚΑΝΕΝΑ `signedOutAction`: μια πόρτα «Σύνδεση» πάνω στην **ίδια** την
+        οθόνη σύνδεσης θα ήταν σύνδεσμος προς τον εαυτό της.
+      */}
+      <ShellUtilities />
     </nav>
   );
 }
@@ -102,8 +114,14 @@ export function AuthScreen({ title, description, children }: {
 
   return (
     <>
-      <AuthToolbar />
-
+      {/*
+        🔴 Η `<AuthToolbar />` **ΕΦΥΓΕ από εδώ** (2026-08-26, ADR-809). Ζούσε σε **τρία**
+        σημεία μέσα στο δέντρο της σελίδας, άρα οι δύο οθόνες του `(auth)` που
+        δεν περνούν από εδώ (`/oauth/consent` · `/mandate/[token]`) είχαν **μηδέν**
+        γλώσσα και **μηδέν** θέμα. Πλέον ζει στο `(auth)/layout.tsx`, όπως σε
+        **κάθε άλλη** γειτονιά — μία απόδοση αντί για τρεις.
+        ⚠️ **ΜΗΝ την ξαναβάλεις εδώ** — θα αποδιδόταν ΔΥΟ φορές.
+      */}
       <section className={layout.flexColGap4}>
         <AuthBrandMark />
 
