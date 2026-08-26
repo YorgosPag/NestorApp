@@ -20,34 +20,14 @@
  */
 
 const admin = require('firebase-admin');
-const fs = require('fs');
-const path = require('path');
+const { initAdminApp, requireUserByEmail, printVerifiedClaims } = require('./_shared/firebaseAdminOps');
+const { setClaimsWithMirror } = require('./_shared/setClaimsWithMirror');
 
 // =============================================================================
 // CONFIGURATION
 // =============================================================================
 
 const TARGET_EMAIL = 'pagonis.oe@gmail.com';
-
-// =============================================================================
-// LOAD SERVICE ACCOUNT
-// =============================================================================
-
-function loadServiceAccount() {
-  try {
-    const envPath = path.join(__dirname, '..', '.env.local');
-    const envContent = fs.readFileSync(envPath, 'utf8');
-    const match = envContent.match(/FIREBASE_SERVICE_ACCOUNT_KEY=(.+)/);
-    if (!match) {
-      throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY not found in .env.local');
-    }
-    return JSON.parse(match[1].trim());
-  } catch (error) {
-    console.error('❌ Failed to load service account:', error.message);
-    process.exit(1);
-  }
-}
-
 // =============================================================================
 // MAIN
 // =============================================================================
@@ -58,36 +38,16 @@ async function main() {
   console.log('🧹 ================================================\n');
 
   console.log('📦 Loading service account...');
-  const serviceAccount = loadServiceAccount();
-
-  if (!admin.apps.length) {
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-      projectId: serviceAccount.project_id,
-    });
-  }
+  const { auth } = initAdminApp(admin);
   console.log('✅ Firebase Admin initialized\n');
-
-  const auth = admin.auth();
 
   try {
     // ========================================================================
     // STEP 1: Find user
     // ========================================================================
-    console.log(`🔍 Looking for user: ${TARGET_EMAIL}`);
+    const user = await requireUserByEmail(auth, TARGET_EMAIL);
 
-    let user;
-    try {
-      user = await auth.getUserByEmail(TARGET_EMAIL);
-      console.log(`✅ User found: ${user.uid}`);
-      console.log(`   Email: ${user.email}`);
-      console.log(`   Current Claims: ${JSON.stringify(user.customClaims || {})}\n`);
-    } catch (error) {
-      console.error(`❌ User not found: ${TARGET_EMAIL}`);
-      process.exit(1);
-    }
-
-    const existingClaims = user.customClaims || {};
+const existingClaims = user.customClaims || {};
 
     if (!('permissions' in existingClaims)) {
       console.log('✨ No `permissions` claim present — nothing to do.\n');
@@ -101,18 +61,17 @@ async function main() {
 
     const { permissions: _removed, ...newClaims } = existingClaims;
 
-    await auth.setCustomUserClaims(user.uid, newClaims);
+    // ADR-813: ΕΝΑΣ γραφέας. ⚠️ ΑΝΑΚΛΗΣΗ — βλ. downgrade-super-admin.js.
+    await setClaimsWithMirror(admin, user.uid, newClaims);
     console.log('✅ Custom claims updated!');
     console.log(`   New Claims: ${JSON.stringify(newClaims)}\n`);
 
     // ========================================================================
     // STEP 3: Verify
     // ========================================================================
-    console.log('🔍 Verifying claims...');
-    const updatedUser = await auth.getUser(user.uid);
-    console.log(`✅ Verified Claims: ${JSON.stringify(updatedUser.customClaims)}\n`);
+    await printVerifiedClaims(auth, user.uid);
 
-    // ========================================================================
+// ========================================================================
     // SUCCESS
     // ========================================================================
     console.log('🎉 ================================================');

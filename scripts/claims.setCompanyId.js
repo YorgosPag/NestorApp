@@ -27,6 +27,7 @@
  */
 
 const admin = require('firebase-admin');
+const { setClaimsWithMirror } = require('./_shared/setClaimsWithMirror');
 const { loadEnvLocal } = require('./_shared/loadEnvLocal');
 const { getCompanyId, getUserUid, printHeader, printFooter } = require('./_shared/validateInputs');
 
@@ -128,12 +129,8 @@ async function setUserClaims() {
     // Step 3: Set custom claims
     console.log('');
     console.log('📋 Step 3: Setting custom claims...');
-    await admin.auth().setCustomUserClaims(USER_UID, mergedClaims);
-    // ADR-360: mirror claimsUpdatedAt to Firestore for live client refresh.
-    await admin.firestore().collection('users').doc(USER_UID).set({
-      claimsUpdatedAt: mergedClaims.claimsUpdatedAt,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    }, { merge: true });
+    // ADR-813: ΕΝΑΣ γραφέας — ο καθρέφτης ADR-360 ζει πλέον εκεί, όχι εδώ.
+    await setClaimsWithMirror(admin, USER_UID, mergedClaims);
     console.log('   ✅ Claims set successfully (mirror written)!');
 
     // Step 4: Verify claims were set

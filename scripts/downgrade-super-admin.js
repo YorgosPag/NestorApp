@@ -20,8 +20,8 @@
  */
 
 const admin = require('firebase-admin');
-const fs = require('fs');
-const path = require('path');
+const { initAdminApp, requireUserByEmail, printVerifiedClaims } = require('./_shared/firebaseAdminOps');
+const { setClaimsWithMirror } = require('./_shared/setClaimsWithMirror');
 
 // =============================================================================
 // CONFIGURATION
@@ -29,26 +29,6 @@ const path = require('path');
 
 const TARGET_EMAIL = 'pagonis.oe@gmail.com';
 const TARGET_ROLE = 'external_user';
-
-// =============================================================================
-// LOAD SERVICE ACCOUNT
-// =============================================================================
-
-function loadServiceAccount() {
-  try {
-    const envPath = path.join(__dirname, '..', '.env.local');
-    const envContent = fs.readFileSync(envPath, 'utf8');
-    const match = envContent.match(/FIREBASE_SERVICE_ACCOUNT_KEY=(.+)/);
-    if (!match) {
-      throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY not found in .env.local');
-    }
-    return JSON.parse(match[1].trim());
-  } catch (error) {
-    console.error('❌ Failed to load service account:', error.message);
-    process.exit(1);
-  }
-}
-
 // =============================================================================
 // MAIN
 // =============================================================================
@@ -59,38 +39,16 @@ async function main() {
   console.log('🔻 ================================================\n');
 
   console.log('📦 Loading service account...');
-  const serviceAccount = loadServiceAccount();
-
-  if (!admin.apps.length) {
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-      projectId: serviceAccount.project_id,
-    });
-  }
+  const { auth, db } = initAdminApp(admin);
   console.log('✅ Firebase Admin initialized\n');
-
-  const auth = admin.auth();
-  const db = admin.firestore();
 
   try {
     // ========================================================================
     // STEP 1: Find user
     // ========================================================================
-    console.log(`🔍 Looking for user: ${TARGET_EMAIL}`);
+    const user = await requireUserByEmail(auth, TARGET_EMAIL);
 
-    let user;
-    try {
-      user = await auth.getUserByEmail(TARGET_EMAIL);
-      console.log(`✅ User found: ${user.uid}`);
-      console.log(`   Email: ${user.email}`);
-      console.log(`   Display Name: ${user.displayName || 'N/A'}`);
-      console.log(`   Current Claims: ${JSON.stringify(user.customClaims || {})}\n`);
-    } catch (error) {
-      console.error(`❌ User not found: ${TARGET_EMAIL}`);
-      process.exit(1);
-    }
-
-    const existingClaims = user.customClaims || {};
+const existingClaims = user.customClaims || {};
 
     if (existingClaims.globalRole !== 'super_admin') {
       console.warn(`⚠️  Current globalRole is "${existingClaims.globalRole}" — not super_admin. Proceeding anyway to set ${TARGET_ROLE}.`);
@@ -106,7 +64,9 @@ async function main() {
       globalRole: TARGET_ROLE,
     };
 
-    await auth.setCustomUserClaims(user.uid, newClaims);
+    // ADR-813: ΕΝΑΣ γραφέας. ⚠️ ΑΝΑΚΛΗΣΗ — χωρίς τον καθρέφτη ο υποβιβασμένος
+    // κρατούσε τα προνόμιά του έως μία ώρα (όσο ζει το cached ID token).
+    await setClaimsWithMirror(admin, user.uid, newClaims);
     console.log('✅ Custom claims updated!');
     console.log(`   New Claims: ${JSON.stringify(newClaims)}\n`);
 
@@ -131,11 +91,9 @@ async function main() {
     // ========================================================================
     // STEP 4: Verify
     // ========================================================================
-    console.log('🔍 Verifying claims...');
-    const updatedUser = await auth.getUser(user.uid);
-    console.log(`✅ Verified Claims: ${JSON.stringify(updatedUser.customClaims)}\n`);
+    await printVerifiedClaims(auth, user.uid);
 
-    // ========================================================================
+// ========================================================================
     // SUCCESS
     // ========================================================================
     console.log('🎉 ================================================');

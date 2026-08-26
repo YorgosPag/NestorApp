@@ -19,7 +19,8 @@
  */
 
 const admin = require('firebase-admin');
-const { loadEnvLocal } = require('./_shared/loadEnvLocal');
+const { initAdminApp } = require('./_shared/firebaseAdminOps');
+const { setClaimsWithMirror } = require('./_shared/setClaimsWithMirror');
 
 // =============================================================================
 // CONFIGURATION - CHANGE THESE AS NEEDED
@@ -49,12 +50,7 @@ async function bootstrapAdmin() {
   try {
     // Step 1: Load environment and initialize Firebase
     console.log('📋 Step 1: Loading environment...');
-    const envVars = loadEnvLocal();
-
-    const serviceAccount = JSON.parse(envVars.FIREBASE_SERVICE_ACCOUNT_KEY);
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount)
-    });
+    initAdminApp(admin);
     console.log('   ✅ Firebase Admin initialized');
     console.log('');
 
@@ -105,13 +101,8 @@ async function bootstrapAdmin() {
     };
 
     console.log('   📝 New claims:', JSON.stringify(newClaims, null, 2));
-    await admin.auth().setCustomUserClaims(userRecord.uid, newClaims);
-    // ADR-360: mirror claimsUpdatedAt to Firestore so connected clients
-    // detect the change via onSnapshot and auto-refresh their ID token.
-    await db.collection('users').doc(userRecord.uid).set({
-      claimsUpdatedAt: newClaims.claimsUpdatedAt,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    }, { merge: true });
+    // ADR-813: ΕΝΑΣ γραφέας — ο καθρέφτης ADR-360 ζει πλέον εκεί, όχι εδώ.
+    await setClaimsWithMirror(admin, userRecord.uid, newClaims);
     console.log('   ✅ Claims set successfully (mirror written)!');
     console.log('');
 

@@ -19,7 +19,8 @@
  */
 
 const admin = require('firebase-admin');
-const { loadEnvLocal } = require('./_shared/loadEnvLocal');
+const { initAdminApp } = require('./_shared/firebaseAdminOps');
+const { setClaimsWithMirror } = require('./_shared/setClaimsWithMirror');
 
 function getRequiredEnv(key) {
   const value = process.env[key];
@@ -38,25 +39,16 @@ function parsePermissions(raw) {
 }
 
 async function run() {
-  loadEnvLocal();
 
   const uid = getRequiredEnv('TARGET_UID');
   const email = getRequiredEnv('TARGET_EMAIL');
   const companyId = getRequiredEnv('TARGET_COMPANY_ID');
   const globalRole = getRequiredEnv('TARGET_GLOBAL_ROLE');
 
-  const serviceAccountRaw = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-  if (!serviceAccountRaw) {
-    throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY not found in environment');
-  }
-
-  const serviceAccount = JSON.parse(serviceAccountRaw);
-  if (!admin.apps.length) {
-    admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
-  }
-
-  const auth = admin.auth();
-  const db = admin.firestore();
+  // 🔴 ADR-813: ΗΤΑΝ ΣΠΑΣΜΕΝΟ. Διάβαζε `process.env.FIREBASE_SERVICE_ACCOUNT_KEY`
+  //    ενώ το `loadEnvLocal()` **επιστρέφει** αντικείμενο και ΔΕΝ γράφει ποτέ
+  //    στο `process.env` ⇒ μετρημένα `undefined` ⇒ το script δεν έτρεχε.
+  const { auth, db } = initAdminApp(admin);
 
   const userRecord = await auth.getUser(uid);
   if (userRecord.email && userRecord.email !== email) {
@@ -87,7 +79,8 @@ async function run() {
     permissions,
   };
 
-  await auth.setCustomUserClaims(uid, newClaims);
+  // ADR-813: ΕΝΑΣ γραφέας — claims + καθρέφτης ADR-360 σε μία πράξη.
+  await setClaimsWithMirror(admin, uid, newClaims);
 
   await db.collection('users').doc(uid).set(
     {

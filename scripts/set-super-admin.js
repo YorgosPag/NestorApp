@@ -15,8 +15,8 @@
  */
 
 const admin = require('firebase-admin');
-const fs = require('fs');
-const path = require('path');
+const { initAdminApp, requireUserByEmail, printVerifiedClaims } = require('./_shared/firebaseAdminOps');
+const { setClaimsWithMirror } = require('./_shared/setClaimsWithMirror');
 
 // =============================================================================
 // CONFIGURATION
@@ -29,33 +29,7 @@ const TARGET_ROLE = 'super_admin';
 // audit logs, ownership records, and contacts created by this user.
 // Fallback: if user has no companyId yet, use this default.
 const FALLBACK_COMPANY_ID = 'comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757';
-
-// =============================================================================
-// LOAD SERVICE ACCOUNT
-// =============================================================================
-
-function loadServiceAccount() {
-  try {
-    // Read .env.local
-    const envPath = path.join(__dirname, '..', '.env.local');
-    const envContent = fs.readFileSync(envPath, 'utf8');
-
-    // Extract FIREBASE_SERVICE_ACCOUNT_KEY
-    const match = envContent.match(/FIREBASE_SERVICE_ACCOUNT_KEY=(.+)/);
-    if (!match) {
-      throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY not found in .env.local');
-    }
-
-    // Parse JSON (handle potential line breaks)
-    const jsonStr = match[1].trim();
-    return JSON.parse(jsonStr);
-  } catch (error) {
-    console.error('❌ Failed to load service account:', error.message);
-    process.exit(1);
-  }
-}
-
-// =============================================================================
+// =============================================================================
 // MAIN
 // =============================================================================
 
@@ -66,38 +40,17 @@ async function main() {
 
   // Initialize Firebase Admin
   console.log('📦 Loading service account...');
-  const serviceAccount = loadServiceAccount();
-
-  if (!admin.apps.length) {
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-      projectId: serviceAccount.project_id,
-    });
-  }
-  console.log('✅ Firebase Admin initialized\n');
-
-  const auth = admin.auth();
-  const db = admin.firestore();
+  const { auth, db } = initAdminApp(admin);
+console.log('✅ Firebase Admin initialized\n');
+
 
   try {
     // ========================================================================
     // STEP 1: Find user by email
     // ========================================================================
-    console.log(`🔍 Looking for user: ${TARGET_EMAIL}`);
+    const user = await requireUserByEmail(auth, TARGET_EMAIL);
 
-    let user;
-    try {
-      user = await auth.getUserByEmail(TARGET_EMAIL);
-      console.log(`✅ User found: ${user.uid}`);
-      console.log(`   Email: ${user.email}`);
-      console.log(`   Display Name: ${user.displayName || 'N/A'}`);
-      console.log(`   Current Claims: ${JSON.stringify(user.customClaims || {})}\n`);
-    } catch (error) {
-      console.error(`❌ User not found: ${TARGET_EMAIL}`);
-      process.exit(1);
-    }
-
-    // ========================================================================
+// ========================================================================
     // STEP 2: Set custom claims (preserve existing companyId)
     // ========================================================================
     console.log('🔐 Setting custom claims (role-only elevation)...');
@@ -119,7 +72,8 @@ async function main() {
       mfaEnrolled: preservedMfa,
     };
 
-    await auth.setCustomUserClaims(user.uid, newClaims);
+    // ADR-813: ΕΝΑΣ γραφέας — claims + καθρέφτης ADR-360 σε μία πράξη.
+    await setClaimsWithMirror(admin, user.uid, newClaims);
     console.log('✅ Custom claims set successfully!');
     console.log(`   New Claims: ${JSON.stringify(newClaims)}\n`);
 
@@ -153,11 +107,9 @@ async function main() {
     // ========================================================================
     // STEP 4: Verify
     // ========================================================================
-    console.log('🔍 Verifying claims...');
-    const updatedUser = await auth.getUser(user.uid);
-    console.log(`✅ Verified Claims: ${JSON.stringify(updatedUser.customClaims)}\n`);
+    await printVerifiedClaims(auth, user.uid);
 
-    // ========================================================================
+// ========================================================================
     // SUCCESS
     // ========================================================================
     console.log('🎉 ================================================');
