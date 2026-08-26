@@ -29,7 +29,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { formatDateShort } from '@/lib/intl-utils';
-import { useTheme } from 'next-themes';
+import { useHydratedTheme } from '@/lib/appearance/useHydratedTheme';
 import { GanttChart, ViewMode } from 'react-modern-gantt';
 import type { Task, TaskColorProps } from 'react-modern-gantt';
 import 'react-modern-gantt/dist/index.css';
@@ -94,7 +94,13 @@ export function GanttView({ building }: GanttViewProps) {
   const iconSizes = useIconSizes();
   const typography = useTypography();
   const colors = useSemanticColors();
-  const { resolvedTheme } = useTheme();
+  // 🔴 ADR-815 — ΑΠΟΔΙΔΕΙ ΜΕ ΒΑΣΗ ΤΟ ΘΕΜΑ, άρα είναι ακριβώς η κατηγορία που
+  // χρειάζεται ασφαλή ανάγνωση: το `next-themes` αρχικοποιεί την κατάστασή του
+  // από `localStorage`, που στον διακομιστή **δεν υπάρχει** ⇒ οι δύο πλευρές
+  // παράγουν διαφορετικό HTML. Πριν την ενυδάτωση εδώ βγαίνει `undefined` ⇒
+  // `isDarkMode === false` **και στις δύο** πλευρές ⇒ συμφωνία, και μετά
+  // διόρθωση. (Πριν, το κάλυπτε το `invisible` ολόκληρης της εφαρμογής.)
+  const { resolvedTheme } = useHydratedTheme();
 
   const isDarkMode = resolvedTheme === 'dark';
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.MONTH);

@@ -2,7 +2,7 @@
 
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import * as React from "react"
-import { useTheme } from "next-themes"
+import { useHydratedTheme } from '@/lib/appearance/useHydratedTheme'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,7 +21,13 @@ import '@/lib/design-system';
 
 export function ThemeToggle() {
   const iconSizes = useIconSizes();
-  const { theme, setTheme } = useTheme()
+  // 🔴 ADR-815 — ΑΣΦΑΛΗΣ ΑΝΑΓΝΩΣΗ, ΑΚΟΜΑ ΚΑΙ ΟΠΟΥ ΔΕΝ ΦΑΙΝΕΤΑΙ ΝΑ ΧΡΕΙΑΖΕΤΑΙ.
+  // Το `DropdownMenuRadioGroup value={theme}` ζει μέσα σε `DropdownMenuContent`,
+  // που το Radix **δεν αποδίδει όσο είναι κλειστό** — άρα σήμερα δεν υπάρχει
+  // ασυμφωνία. ⚠️ Αυτό όμως είναι **γνώση για τη συμπεριφορά τρίτου**: ένα
+  // `forceMount` (ή αλλαγή ανάντη) θα την έκανε ξαφνικά λάθος, σιωπηλά.
+  // Περνώντας από τον έναν ιδιοκτήτη, η ορθότητα παύει να εξαρτάται από αυτό.
+  const { theme, setTheme } = useHydratedTheme()
   const { t } = useTranslation(COMMON_NAMESPACES);
 
   return (
