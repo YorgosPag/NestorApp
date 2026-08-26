@@ -43,7 +43,34 @@ export const PROJECT_STATUSES = [
 export type ProjectStatus = (typeof PROJECT_STATUSES)[number];
 
 // =============================================================================
-// 2. RUNTIME TYPE GUARD
+// 2. LABELS — i18n κλειδιά, ΕΝΑ ανά κατάσταση (ADR-812)
+// =============================================================================
+
+/**
+ * i18n κλειδί ανά κατάσταση. `Record<ProjectStatus, string>` ⇒ ο μεταγλωττιστής
+ * απαιτεί ΑΚΡΙΒΩΣ τις κανονικές καταστάσεις: μια κατάσταση χωρίς ετικέτα, ή μια
+ * ετικέτα χωρίς κατάσταση, ΔΕΝ μεταγλωττίζεται.
+ *
+ * 🔴 ΓΙΑΤΙ ΖΕΙ ΕΔΩ ΚΑΙ ΟΧΙ ΣΤΟ `types/project.ts` (ADR-812): αυτό το module είναι
+ * **leaf** — μηδέν εξαρτήσεις, ασφαλές για import από server, client και tests.
+ * Το `types/project.ts` εισάγει `@/subapps/dxf-viewer/...`, άρα οποιοσδήποτε
+ * έπαιρνε τις ετικέτες από εκεί έσερνε ολόκληρο το subapp μαζί τους. Οι ετικέτες
+ * είναι μέρος του ΛΕΞΙΛΟΓΙΟΥ, όχι του σχήματος δεδομένων.
+ *
+ * ⚠️ ΜΗΝ γράψεις εδώ ωμό ελληνικό/αγγλικό κείμενο (N.11) — ΜΟΝΟ κλειδιά.
+ * ⚠️ ΜΗΝ φτιάξεις δεύτερο πίνακα ετικετών αλλού· το CHECK 3.73 το μπλοκάρει.
+ */
+export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
+  planning: 'projects.status.planning',
+  in_progress: 'projects.status.inProgress',
+  completed: 'projects.status.completed',
+  on_hold: 'projects.status.onHold',
+  cancelled: 'projects.status.cancelled',
+  deleted: 'projects.status.deleted',
+};
+
+// =============================================================================
+// 3. RUNTIME TYPE GUARD
 // =============================================================================
 
 /** Returns `true` if `value` is one of the 6 canonical project statuses. */
@@ -55,7 +82,7 @@ export function isProjectStatus(value: unknown): value is ProjectStatus {
 }
 
 // =============================================================================
-// 3. DERIVED SUBSETS
+// 4. DERIVED SUBSETS
 // =============================================================================
 
 /**

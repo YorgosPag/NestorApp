@@ -32,18 +32,24 @@ export const ENTITY_STATUS = {
 export type EntityStatus = typeof ENTITY_STATUS[keyof typeof ENTITY_STATUS];
 
 // ============================================================================
-// PROJECT STATUS
+// PROJECT STATUS — ΔΕΝ ΖΕΙ ΕΔΩ (ADR-812)
 // ============================================================================
-
-export const PROJECT_STATUS = {
-  ACTIVE: 'active',
-  ARCHIVED: 'archived',
-  COMPLETED: 'completed',
-  SUSPENDED: 'suspended',
-  CONSTRUCTION: 'construction',
-} as const;
-
-export type ProjectStatus = typeof PROJECT_STATUS[keyof typeof PROJECT_STATUS];
+//
+// 🔴 Εδώ υπήρχε ένα `PROJECT_STATUS` με τιμές
+// `active · archived · completed · suspended · construction` — ΜΙΑ κοινή λέξη
+// με το κανονικό λεξιλόγιο. Μετρήθηκε 2026-08-26 με ΤΕΣΣΕΡΑ ανεξάρτητα όργανα
+// (AST μεταβατικά μέσω barrels · AST ακμές εισαγωγής · `git grep` σε όλο το
+// δέντρο · οι jest mocks) και είχε **ΜΗΔΕΝ καταναλωτές**: δεν ήταν «άλλη γλώσσα
+// που εξυπηρετεί άλλο πράγμα» — δεν το ζητούσε κανείς. Άφησε όμως ίχνος στα
+// δεδομένα: το `ProjectDetailsHeader.tsx` φέρει ήδη repair path για έργα που
+// βρέθηκαν με `status: 'active'`.
+//
+// Το κανονικό λεξιλόγιο κατάστασης έργου ζει σε ΕΝΑ σπίτι:
+//     src/constants/project-statuses.ts   (ADR-287 · ADR-812)
+//
+// ⚠️ ΜΗΝ το ξαναφέρεις εδώ. Αυτό το αρχείο κρατά ΓΕΝΙΚΟ lifecycle οντότητας
+// (`ENTITY_STATUS`, 7 καταναλωτές) και καταστάσεις ουράς (`QUEUE_STATUS`, 5) —
+// και τα δύο ζωντανά και σωστά. Το CHECK 3.73 μπλοκάρει την επιστροφή του.
 
 // ============================================================================
 // QUEUE STATUS — Email ingestion, AI pipeline, and other async queues

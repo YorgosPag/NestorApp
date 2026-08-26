@@ -8,24 +8,42 @@
  * 🌐 i18n: All labels converted to i18n keys - 2026-01-18
  */
 
+import { PROJECT_STATUS_LABELS, type ProjectStatus } from '@/constants/project-statuses';
+
 // ====================================================================
 // STATUS LABELS - 🏢 ENTERPRISE CENTRALIZED
 // 🌐 i18n: Uses keys from various namespaces (projects, units, common, etc.)
 // ====================================================================
 
 /**
- * Centralized project status labels
- * 🌐 i18n: Uses keys from projects.json namespace
+ * 🔴 ADR-812 — ΤΟ ΛΕΞΙΛΟΓΙΟ ΚΑΤΑΣΤΑΣΗΣ ΕΡΓΟΥ ΔΕΝ ΖΕΙ ΕΔΩ.
+ *
+ * Εδώ υπήρχε `VOCAB_PROJECT_STATUS_LABELS` με **επτά** κλειδιά: τα πέντε ενεργά
+ * του λεξιλογίου, ΣΥΝ `review`/`approved`, ΧΩΡΙΣ `deleted`. Ήταν το τέταρτο από
+ * δεκατρία σώματα που έλεγαν το ίδιο πράγμα με διαφορετικό σύνολο τιμών.
+ *
+ * 🏆 ΓΙΑΤΙ ΕΦΥΓΑΝ ΤΑ `review`/`approved` — ΔΕΝ είναι κατάσταση ΕΡΓΟΥ, είναι
+ * κατάσταση ΕΓΚΡΙΣΗΣ ΠΑΡΑΔΟΤΕΟΥ: δύο ορθογώνιοι άξονες, και **και οι τρεις
+ * μεγάλοι τους κρατούν χωριστά**:
+ *   · ISO 19650 — τα `S3` «suitable for review and comment», `S4` «suitable for
+ *     stage approval», `B1` «shared for authorisation» είναι μεταδεδομένα του
+ *     **information container**· το έργο έχει **work stages**.
+ *   · Revit — `Issued` ανήκει στο **revision**, `Approved By` στο **sheet**·
+ *     το έργο έχει **Phases**.
+ *   · Figma — «Approved» ανήκει στο **branch**, ποτέ στο file.
+ * Ενωμένα σε ένα πεδίο, ένα έργο δεν μπορεί να είναι ταυτόχρονα «σε εξέλιξη»
+ * ΚΑΙ να έχει «εγκεκριμένη» άδεια — που είναι η κανονική κατάσταση κάθε
+ * οικοδομής. Στη ΝΕΣΤΩΡ ο άξονας έγκρισης ζει ήδη σωστά σε λογιστικά έγγραφα,
+ * παραγγελίες και προσφορές CRM.
+ *
+ * Μετρημένο ότι η αφαίρεση δεν αλλάζει τίποτα ορατό (2026-08-26): το ζωντανό
+ * dropdown είναι το `ProjectStatusPill` και παράγεται από `ACTIVE_PROJECT_STATUSES`·
+ * ο μόνος καταναλωτής που πρόσφερε τα επτά (`getFieldOptions` → `SmartDialogEngine`)
+ * είναι **δομικά απρόσιτος** — και οι 6 καλούντες του `createSmartDialog` περνούν
+ * `PROPERTY · CONTACT ×3 · opportunity · task`, κανένας `project`.
+ *
+ * ⚠️ ΜΗΝ το ξαναφέρεις εδώ. Το CHECK 3.73 το μπλοκάρει.
  */
-export const VOCAB_PROJECT_STATUS_LABELS = {
-  planning: 'projects.status.planning',
-  in_progress: 'projects.status.inProgress',
-  completed: 'projects.status.completed',
-  on_hold: 'projects.status.onHold',
-  cancelled: 'projects.status.cancelled',
-  review: 'projects.status.review',
-  approved: 'projects.status.approved'
-} as const;
 
 /**
  * Centralized unit availability status labels
@@ -216,8 +234,8 @@ export const VOCAB_PROPERTY_TYPE_LABELS = {
 /**
  * Get centralized project status labels
  */
-export function getProjectStatusLabels() {
-  return VOCAB_PROJECT_STATUS_LABELS;
+export function getProjectStatusLabels(): Readonly<Record<ProjectStatus, string>> {
+  return PROJECT_STATUS_LABELS;
 }
 
 /**

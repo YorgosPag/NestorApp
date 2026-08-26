@@ -255,11 +255,15 @@ export type ProjectUpdatePayload = Partial<Omit<Project, 'id' | 'createdAt' | 'u
  * `value in PROJECT_STATUS_LABELS` — η οθόνη αποφάσιζε τι δέχεται το API. Αυτό κόπηκε:
  * ο φρουρός είναι το `isProjectStatus()` του SSoT.
  */
-export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
-    planning: 'projects.status.planning',
-    in_progress: 'projects.status.inProgress',
-    completed: 'projects.status.completed',
-    on_hold: 'projects.status.onHold',
-    cancelled: 'projects.status.cancelled',
-    deleted: 'projects.status.deleted'
-};
+/**
+ * 🔴 ADR-812 — ΜΕΤΑΚΟΜΙΣΕ ΣΤΟ LEAF. Ο πίνακας ζει πλέον δίπλα στο λεξιλόγιο, στο
+ * `@/constants/project-statuses`, και εδώ μόνο **επανεξάγεται**.
+ *
+ * Ο λόγος είναι μετρημένος: αυτό το module εισάγει `@/subapps/dxf-viewer/...`,
+ * οπότε όποιος έπαιρνε τις ετικέτες από εδώ έσερνε ολόκληρο το subapp. Το
+ * `constants/project-statuses.ts` δηλώνει ρητά «Leaf module — καμία εξάρτηση».
+ * Οι ετικέτες είναι μέρος του ΛΕΞΙΛΟΓΙΟΥ, όχι του σχήματος δεδομένων.
+ *
+ * Το συμβόλαιο δεν άλλαξε: ίδιο όνομα, ίδιος τύπος, ίδιες τιμές.
+ */
+export { PROJECT_STATUS_LABELS } from '@/constants/project-statuses';
