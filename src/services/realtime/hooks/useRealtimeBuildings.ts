@@ -8,6 +8,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { isMissingTenantError } from '@/services/firestore/auth-context';
 import { firestoreQueryService } from '@/services/firestore';
 import type { QueryResult } from '@/services/firestore';
 import type { DocumentData } from 'firebase/firestore';
@@ -174,6 +175,20 @@ export function useRealtimeBuildings(enabled = true): UseRealtimeBuildingsReturn
         setStatus('active');
       },
       (err: Error) => {
+        // 🔴 **«ΔΕΝ ΕΧΕΙΣ ΕΤΑΙΡΕΙΑ» ΔΕΝ ΕΙΝΑΙ ΒΛΑΒΗ** (ADR-807 · ADR-813 Φάση Β).
+        //    Χωρίς οργανισμό δεν υπάρχουν κτίρια εταιρείας να δειχτούν — **κενή
+        //    λίστα**, όχι σφάλμα. Το `setLoading(false)` μένει: η φόρτωση όντως
+        //    τελείωσε, απλώς με μηδέν αποτελέσματα.
+        //
+        // ⚠️ Brand, ποτέ σύγκριση κειμένου — βλ. `isMissingTenantError`.
+        if (isMissingTenantError(err)) {
+          setAllBuildings([]);
+          setBuildingsByProject({});
+          setError(null);
+          setLoading(false);
+          setStatus('active');
+          return;
+        }
         logger.error('Firestore error', { error: err.message });
         setError(err.message);
         setLoading(false);

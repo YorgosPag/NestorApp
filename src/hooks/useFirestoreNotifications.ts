@@ -2,6 +2,7 @@
 // ✅ Real-time Firestore notifications με onSnapshot
 
 import { useEffect } from 'react';
+import { isMissingTenantError } from '@/services/firestore/auth-context';
 import { subscribeToNotifications } from '@/services/notificationService';
 import { useNotificationCenter } from '@/stores/notificationCenter';
 import type { Notification } from '@/types/notification';
@@ -34,6 +35,20 @@ export function useFirestoreNotifications(opts: FirestoreNotificationOptions) {
         setStatus('ready');
       },
       (error: Error) => {
+        // 🔴 **«ΔΕΝ ΕΧΕΙΣ ΕΤΑΙΡΕΙΑ» ΔΕΝ ΕΙΝΑΙ ΒΛΑΒΗ** (ADR-807 · ADR-813 Φάση Β).
+        //    Ο αυτόνομος επαγγελματίας **νόμιμα** δεν ανήκει σε οργανισμό· τα
+        //    ειδοποιητήρια εταιρείας απλώς δεν τον αφορούν. Η καταγραφή του ως
+        //    κόκκινο `[ERROR]` έκανε **κανονική κατάσταση** να μοιάζει με
+        //    αποτυχία σε **κάθε φόρτωση σελίδας**.
+        //
+        // ⚠️ Ο έλεγχος γίνεται με το **brand** (`isMissingTenantError`), ποτέ με
+        //    σύγκριση κειμένου: το μήνυμα αλλάζει, η ταυτότητα όχι — και το
+        //    brand επιβιώνει όταν το module φορτωθεί σε δεύτερο γράφο (Server ≠
+        //    Client), όπου το `instanceof` απαντά ψευδώς `false`.
+        if (isMissingTenantError(error)) {
+          setStatus('ready');
+          return;
+        }
         logger.error('Firestore listener error', { error });
         setError(error.message);
         setStatus('error');

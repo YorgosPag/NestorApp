@@ -18,6 +18,7 @@ import {
 import { generateObligationId } from '@/services/enterprise-id.service';
 import { SYSTEM_IDENTITY } from '@/config/domain-constants';
 import { auth, db } from '@/lib/firebase';
+import { MissingTenantError } from '@/services/firestore/auth-context';
 import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
 import { firestoreQueryService } from '@/services/firestore';
 import type {
@@ -85,7 +86,7 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
       const tokenResult = await currentUser.getIdTokenResult();
       const userCompanyId = tokenResult.claims?.companyId as string | undefined;
       if (!userCompanyId) {
-        throw new Error('AUTHORIZATION_ERROR: User is not assigned to a company');
+        throw new MissingTenantError();
       }
 
       const now = new Date();

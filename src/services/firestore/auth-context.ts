@@ -37,6 +37,81 @@ export function waitForAuthReady(): Promise<boolean> {
 }
 
 /**
+ * **«ΔΕΝ ΑΝΗΚΕΙΣ ΣΕ ΕΤΑΙΡΕΙΑ» ΕΙΝΑΙ ΣΧΕΔΙΑΣΜΕΝΗ ΚΑΤΑΣΤΑΣΗ, ΟΧΙ ΒΛΑΒΗ** (ADR-809).
+ *
+ * Ο αυτόνομος επαγγελματίας — ο persona του **ADR-807** — δεν έχει `companyId`
+ * **εκ σχεδιασμού**. Κάθε καταναλωτής που πιάνει αυτό το σφάλμα οφείλει να
+ * ξεχωρίσει *«ο άνθρωπος δουλεύει μόνος του»* από *«η Firestore έπεσε»*, γιατί
+ * η **πρώτη** θέλει σιωπηλή, σωστή απάντηση και η **δεύτερη** κόκκινο.
+ *
+ * 🔴 **Το κόστος του να μην ξεχωρίζουν**: μετρημένο 2026-08-26, ο
+ * `EnterpriseSecurityService` κατέγραφε κόκκινο `[ERROR]` σε **κάθε φόρτωση
+ * σελίδας** για ολόκληρη κλάση χρηστών, ενώ ο fallback του ήταν **η σωστή
+ * απάντηση**. Σχεδιασμένη κατάσταση αναφερόμενη ως βλάβη — το **ίδιο σχήμα** με
+ * το ADR-807, όπου το «δεν έχεις εταιρεία» διαβαζόταν ως «δεν υπάρχεις». Ο
+ * θόρυβος κρύβει τα αληθινά σφάλματα.
+ *
+ * ⚠️ **Η ΤΑΥΤΟΤΗΤΑ ΖΕΙ ΕΔΩ, ΜΙΑ ΦΟΡΑ.** Πριν από αυτό ήταν **πρόθεμα
+ * συμβολοσειράς** γραμμένο σε **τέσσερα** σημεία — και το ένα από αυτά
+ * (`obligation-transmittal-operations.ts:77`) έγραφε **άλλο μήνυμα**, δηλαδή
+ * κριτής που ταιριάζει κείμενο ήταν τυφλός ακριβώς εκεί. ✅ Από 2026-08-26
+ * (ADR-813) τα τέσσερα έγιναν **ένα**: αυτό.
+ */
+export const MISSING_TENANT_MESSAGE = 'AUTHORIZATION_ERROR: User is not assigned to a company';
+
+/**
+ * Το σφάλμα με **ρητή** ταυτότητα — το μήνυμα μένει **αυτούσιο** για συμβατότητα.
+ *
+ * ⚠️ **Το `isMissingTenant` ΔΕΝ είναι διακοσμητικό — ΕΙΝΑΙ η ταυτότητα που
+ * διαβάζει ο κριτής.** Μέχρι 2026-08-26 το έγραφε η κλάση και **δεν το διάβαζε
+ * κανείς** (μετρημένο: **0** αναγνώστες σε όλο το `src/`), ενώ ο κριτής ρωτούσε
+ * `instanceof` — δηλαδή η κλάση κουβαλούσε τη θεραπεία και κανείς δεν την
+ * έπαιρνε. **Αδρανής φρουρός** (σχήμα ADR-749 §5).
+ */
+export class MissingTenantError extends Error {
+  readonly isMissingTenant = true as const;
+
+  constructor() {
+    super(MISSING_TENANT_MESSAGE);
+    this.name = 'MissingTenantError';
+  }
+}
+
+/**
+ * «Είναι αυτό το σφάλμα ο **αυτόνομος επαγγελματίας**, ή **πραγματική βλάβη**;»
+ *
+ * ✅ **Η ΜΕΤΑΝΑΣΤΕΥΣΗ ΕΚΛΕΙΣΕ (ADR-813, 2026-08-26).** Τα τρία σημεία που
+ * πετούσαν σκέτο `Error` (`contacts.service.ts` · `InMemoryObligationsRepository.ts`
+ * · `obligation-transmittal-operations.ts`) πετούν πλέον `MissingTenantError`.
+ * ⚠️ Το τρίτο έγραφε **ΑΛΛΟ μήνυμα** (*«Missing companyId for transmittal
+ * issuance»*) ⇒ ο κριτής **δεν το έπιανε καθόλου**: ακριβώς ο λόγος που η
+ * ταυτότητα δεν επιτρέπεται να είναι πρόθεμα συμβολοσειράς.
+ *
+ * 🔑 **ΔΥΟ ΚΛΑΔΟΙ, ΔΥΟ ΞΕΧΩΡΙΣΤΕΣ ΔΟΥΛΕΙΕΣ** — ποτέ δύο απαντήσεις στο ίδιο:
+ *   1. **ταυτότητα** — το brand `isMissingTenant`. **Υπερσύνολο** του
+ *      `instanceof`: κάθε `MissingTenantError` το φέρει, και επιπλέον επιβιώνει
+ *      όταν το module φορτωθεί σε **δεύτερο γράφο** (Server ≠ Client, ADR-744
+ *      §15), όπου το `instanceof` απαντά **ψευδώς `false`**. Ένας κλάδος
+ *      `instanceof` **δίπλα** σε αυτόν θα ήταν γνήσιο υποσύνολο, δηλαδή δεύτερη
+ *      απάντηση στο ίδιο ερώτημα (ADR-749 σε μικρογραφία).
+ *   2. **δίχτυ κειμένου** — σύγκριση με την **εξαγόμενη σταθερά**, για ωμό
+ *      `Error` με το κανονικό μήνυμα. **Πληθυσμός σήμερα: 0** (μετρημένο).
+ *      ⚠️ **ΜΗΝ το διαγράψεις επειδή είναι μηδέν**: κλειδώνει την κατάσταση
+ *      **πριν** ξαναεμφανιστεί (πρότυπο `Κ1` του CHECK 3.43) — και ήταν
+ *      **1 στα 4** πριν τη μετανάστευση, δηλαδή «καθαρός επειδή δεν κοίταξε».
+ */
+export function isMissingTenantError(error: unknown): boolean {
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    (error as { isMissingTenant?: unknown }).isMissingTenant === true
+  ) {
+    return true;
+  }
+  return error instanceof Error && error.message === MISSING_TENANT_MESSAGE;
+}
+
+/**
  * Extracts tenant-aware authentication context from the current Firebase user.
  *
  * - Reads `companyId` and `globalRole` from custom claims (set via Firebase Admin SDK)
@@ -68,7 +143,7 @@ export async function requireAuthContext(): Promise<TenantContext> {
   const isSuperAdmin = globalRole === 'super_admin';
 
   if (!companyId && !isSuperAdmin) {
-    throw new Error('AUTHORIZATION_ERROR: User is not assigned to a company');
+    throw new MissingTenantError();
   }
 
   const effectiveCompanyId = isSuperAdmin

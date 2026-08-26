@@ -8,6 +8,7 @@
 import { doc, setDoc, updateDoc } from 'firebase/firestore';
 import { generateObligationId, generateTransmittalId } from '@/services/enterprise-id.service';
 import { auth, db } from '@/lib/firebase';
+import { MissingTenantError } from '@/services/firestore/auth-context';
 import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
 import { createModuleLogger } from '@/lib/telemetry';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -74,7 +75,7 @@ export async function executeIssueWithTransmittal(
     const companyId = current.companyId || userCompanyId;
 
     if (!companyId) {
-      throw new Error('AUTHORIZATION_ERROR: Missing companyId for transmittal issuance');
+      throw new MissingTenantError();
     }
 
     const now = new Date();

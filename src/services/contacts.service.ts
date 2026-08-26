@@ -12,6 +12,7 @@ import {
   serverTimestamp, deleteField, FieldValue,
 } from 'firebase/firestore';
 import { auth } from '@/lib/firebase';
+import { MissingTenantError } from '@/services/firestore/auth-context';
 import {
   Contact, ContactStatus,
 } from '@/types/contacts';
@@ -192,7 +193,7 @@ export class ContactsService {
 
     const tokenResult = await currentUser.getIdTokenResult();
     const userCompanyId = tokenResult.claims?.companyId as string | undefined;
-    if (!userCompanyId) throw new Error('AUTHORIZATION_ERROR: User is not assigned to a company');
+    if (!userCompanyId) throw new MissingTenantError();
 
     const colRef = getCol<Contact>(CONTACTS_COLLECTION, contactConverter);
     const id = generateContactId();
