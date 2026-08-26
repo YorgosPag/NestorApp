@@ -30,6 +30,7 @@
  * **δάπεδο** — το έγγραφο κυλά· κλειδώνει **μόνο** σελίδα που το δηλώνει.
  */
 
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import { ShellSurface } from '@/core/containers/ShellSurface';
 import { PublicSiteHeader } from '@/components/public-site/PublicSiteHeader';
@@ -41,6 +42,26 @@ export default function LightLayout({
 }>) {
   return (
     <div data-shell-frame className={`w-full ${COLOR_BRIDGE.bg.primary}`}>
+    <TooltipProvider delayDuration={300}>
+      {/*
+        🔴 **ΖΩΝΤΑΝΗ ΒΛΑΒΗ 2026-08-26 (ADR-813)**: «`Tooltip` must be used within
+        `TooltipProvider`» ⇒ **ολόκληρη η διαδρομή** έπεφτε στο `global-error`.
+
+        Μετρημένο: **81 components** του `src/` χρησιμοποιούν `<Tooltip>` **χωρίς
+        δικό τους provider** — η σύμβαση της εφαρμογής είναι *«τον δίνει το
+        layout»*, και τον έδιναν **τρεις** γειτονιές (`(app)` · `(auth)` ·
+        `(bare)`)· οι `(light)` και `(me)` **ΟΧΙ**. Το ADR-809 έβαλε εδώ τα
+        καθολικά utilities, και το ADR-797 τις πρώτες πλούσιες σελίδες.
+
+        ⚠️ **ΔΕΝ μπήκε μέσα στο `ShellUtilities`**: θα ήταν **έκτο** αντίγραφο και
+        θα κάλυπτε **μόνο** τα utilities — όχι τα υπόλοιπα 80 components της
+        σελίδας. Η απόφαση ανήκει εκεί όπου την έχει ήδη η εφαρμογή.
+
+        ⚠️ Το `delayDuration={300}` είναι **ταυτόσημο** με των άλλων τριών.
+        🔶 Ανοιχτό (ADR-813 §8): **πέντε** πανομοιότυπες δηλώσεις — η σωστή
+        θεραπεία είναι **μία** στη ρίζα· δεν έγινε εδώ γιατί το `app/layout.tsx`
+        το κρατά άλλος πράκτορας και η βλάβη ήταν ζωντανή.
+      */}
       <PublicSiteHeader />
       {/*
         🏛️ Ο ΔΙΑΔΡΟΜΟΣ (ADR-797 ΦΑΣΗ Β). Το ίδιο `data-shell-surface` με το κέλυφος,
@@ -58,6 +79,7 @@ export default function LightLayout({
         λάθος στις τρεις από τις τέσσερις — γι' αυτό το δηλώνει **η σελίδα**.
       */}
       <ShellSurface className="flex flex-1 flex-col">{children}</ShellSurface>
+    </TooltipProvider>
     </div>
   );
 }

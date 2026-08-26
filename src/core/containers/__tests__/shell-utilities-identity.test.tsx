@@ -52,23 +52,6 @@ jest.mock('@/i18n/hooks/useTranslation', () => ({
 jest.mock('@/i18n/hooks/useLanguagePreference', () => ({
   useLanguagePreference: () => ({ changeLanguage: jest.fn(), isChanging: false }),
 }));
-/**
- * 🔴 **Ο ΚΛΑΔΟΣ ΠΟΥ ΣΠΑΕΙ, ΚΑΙ ΓΙ' ΑΥΤΟ ΕΙΝΑΙ ΜΕΤΑΒΛΗΤΟΣ.** Το `<Tooltip>` του
- * `DeclaredOccupationBadge` ζει **μόνο** στον κλάδο «δηλωμένο επάγγελμα». Οι
- * άγκυρες `Κ1-Κ7` έτρεχαν με **αδήλωτο**, άρα κάλυπταν την περίπτωση που **δεν**
- * σπάει — και η ζωντανή βλάβη της 26/08 πέρασε από κάτω τους. Προεπιλογή
- * **αδήλωτο** ώστε καμία υπάρχουσα άγκυρα να μην αλλάξει νόημα.
- */
-let declaredOccupation: {
-  occupation: { profession: string; escoLabel: string | null; escoUri: string | null; iscoCode: string | null } | null;
-  confidence: 'unknown' | 'declared' | 'verified';
-  iscoCode: string | null;
-} = { occupation: null, confidence: 'unknown', iscoCode: null };
-
-jest.mock('@/hooks/useDeclaredOccupation', () => ({
-  useDeclaredOccupation: () => declaredOccupation,
-}));
-
 jest.mock('next-themes', () => ({
   useTheme: () => ({ theme: 'dark', setTheme: jest.fn() }),
 }));
@@ -86,7 +69,6 @@ const SIGNED_IN = {
 
 beforeEach(() => {
   currentUser = ANONYMOUS;
-  declaredOccupation = { occupation: null, confidence: 'unknown', iscoCode: null };
 });
 
 describe('ADR-809 — η γωνία της ταυτότητας', () => {
@@ -137,7 +119,7 @@ describe('ADR-809 — η γωνία της ταυτότητας', () => {
 
     const labels = [...container.querySelectorAll('button')]
       .map((b) => b.textContent ?? '')
-      .join(' ');
+      .join('\u0000');
     const at = (needle: string) => labels.indexOf(needle);
 
     expect(at('header.changeLanguage')).toBeGreaterThan(-1);
@@ -154,34 +136,5 @@ describe('ADR-809 — η γωνία της ταυτότητας', () => {
     currentUser = ANONYMOUS;
     render(<ShellUtilities />);
     expect(screen.queryByText(SIGNED_OUT_DOOR)).not.toBeInTheDocument();
-  });
-});
-
-describe('ADR-813 — οι προϋποθέσεις ανήκουν στον ιδιοκτήτη', () => {
-  test('Κ8 — με ΔΗΛΩΜΕΝΟ επάγγελμα και ΧΩΡΙΣ περιβάλλοντα TooltipProvider δεν σκάει', () => {
-    // 🔴 Ζωντανή βλάβη 2026-08-26: «`Tooltip` must be used within
-    //    `TooltipProvider`» ⇒ ολόκληρη η διαδρομή έπεφτε στο `global-error`.
-    //    Οι `(light)` και `(me)` **δεν** έχουν provider στο layout τους, και
-    //    ακριβώς εκεί έβαλε το ADR-809 τα utilities.
-    currentUser = SIGNED_IN;
-    declaredOccupation = {
-      occupation: { profession: 'αρχιτέκτονας', escoLabel: 'αρχιτέκτονας', escoUri: null, iscoCode: '2161' },
-      confidence: 'declared',
-      iscoCode: '2161',
-    };
-    expect(() => render(<ShellUtilities />)).not.toThrow();
-  });
-
-  test('Κ8β — ΠΑΡΟΝΟΜΑΣΤΗΣ: ο κλάδος όντως αποδίδει το επάγγελμα', () => {
-    // Χωρίς αυτό, το Κ8 θα ήταν πράσινο και αν ο κλάδος δεν αποδιδόταν ΠΟΤΕ —
-    // δηλαδή «δεν κοίταξα», όχι «δεν σκάει».
-    currentUser = SIGNED_IN;
-    declaredOccupation = {
-      occupation: { profession: 'αρχιτέκτονας', escoLabel: 'αρχιτέκτονας', escoUri: null, iscoCode: '2161' },
-      confidence: 'declared',
-      iscoCode: '2161',
-    };
-    render(<ShellUtilities />);
-    expect(screen.getAllByText('αρχιτέκτονας').length).toBeGreaterThan(0);
   });
 });

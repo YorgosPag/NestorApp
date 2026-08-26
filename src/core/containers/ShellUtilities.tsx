@@ -82,7 +82,6 @@ import React from 'react';
 import { LanguageSwitcher } from '@/components/header/language-switcher';
 import { ThemeToggle } from '@/components/header/theme-toggle';
 import { UserMenu } from '@/components/header/user-menu';
-import { TooltipProvider } from '@/components/ui/tooltip';
 
 /**
  * @param signedOutAction Τι μπαίνει στη θέση του λογαριασμού όταν **δεν**
@@ -97,31 +96,6 @@ export function ShellUtilities({
   className?: string;
 }>): React.ReactElement {
   return (
-    /*
-      🔴 **Ο ΙΔΙΟΚΤΗΤΗΣ ΕΓΓΥΑΤΑΙ ΤΙΣ ΠΡΟΫΠΟΘΕΣΕΙΣ ΤΟΥ** — ζωντανή βλάβη, 26/08.
-
-      Το `UserMenu` αποδίδει `DeclaredOccupationBadge`, που χρησιμοποιεί Radix
-      `Tooltip`. Οι γειτονιές `(app)` · `(auth)` · `(bare)` έχουν `TooltipProvider`
-      στο layout τους· οι **`(light)` και `(me)` ΟΧΙ** — και ακριβώς εκεί τα
-      έβαλε το ADR-809 ⇒ «`Tooltip` must be used within `TooltipProvider`» ⇒
-      **ολόκληρη η διαδρομή έπεφτε στο `global-error`**.
-
-      ⚠️ **ΓΙΑΤΙ ΟΙ ΑΓΚΥΡΕΣ ΤΟΥ ADR-809 ΗΤΑΝ ΠΡΑΣΙΝΕΣ**: το `<Tooltip>` ζει
-      **μόνο** στον κλάδο «δηλωμένο επάγγελμα» του badge, και οι άγκυρες
-      έτρεχαν με **αδήλωτο**. Κάλυπταν την περίπτωση που **δεν** σπάει.
-      Ο `Κ8` κλείνει ακριβώς αυτό.
-
-      ⚠️ **ΔΕΝ διορθώθηκε προσθέτοντας provider στα δύο layouts**: θα ήταν
-      **τέταρτο και πέμπτο** αντίγραφο της ίδιας απόφασης, και η **έκτη**
-      γειτονιά θα το ξανάσπαγε. Το repo έχει ήδη τη σύμβαση γραμμένη —
-      `TableFormatToolbar.tsx:240` *«Δικός του TooltipProvider, όχι εξάρτηση
-      από τον περιβάλλοντα»* — απλώς κανείς δεν την επέβαλλε εδώ.
-
-      ⚠️ Το ένθετο `TooltipProvider` μέσα σε υπάρχον είναι **νόμιμο** στο Radix
-      και το `delayDuration={300}` είναι **ταυτόσημο** με των τριών layouts, άρα
-      μηδέν αλλαγή συμπεριφοράς εκεί που ήδη υπήρχε.
-    */
-    <TooltipProvider delayDuration={300}>
     <div className={className ? `flex items-center gap-2 ${className}` : 'flex items-center gap-2'}>
       {/*
         ⚠️ **Η ΣΕΙΡΑ ΕΙΝΑΙ ΣΥΜΒΟΛΑΙΟ, ΚΑΙ ΕΙΝΑΙ ΚΑΝΟΝΙΣΤΙΚΗ.** Το **WCAG 2.2
@@ -155,6 +129,5 @@ export function ShellUtilities({
       */}
       <UserMenu signedOut={signedOutAction} />
     </div>
-    </TooltipProvider>
   );
 }

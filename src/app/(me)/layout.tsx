@@ -33,6 +33,7 @@
  * @module app/(me)/layout
  */
 
+import { TooltipProvider } from '@/components/ui/tooltip';
 import type { Metadata } from 'next';
 
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
@@ -68,7 +69,28 @@ export default function PrivateSpaceLayout({
     // Το ύψος το κατέχει πλέον το `data-shell-frame` (`shell-surface.css` §5).
     // ⚠️ **ΜΗΝ** ξαναγράψεις ύψος παραθύρου εδώ — κανόνας Υ1, CHECK 3.63.
     <div data-shell-frame className={`w-full ${COLOR_BRIDGE.bg.primary}`}>
+      {/*
+        🔴 **ΖΩΝΤΑΝΗ ΒΛΑΒΗ 2026-08-26 (ADR-813)**: «`Tooltip` must be used within
+        `TooltipProvider`» ⇒ **ολόκληρη η διαδρομή** έπεφτε στο `global-error`.
+
+        Μετρημένο: **81 components** του `src/` χρησιμοποιούν `<Tooltip>` **χωρίς
+        δικό τους provider** — η σύμβαση της εφαρμογής είναι *«τον δίνει το
+        layout»*, και τον έδιναν **τρεις** γειτονιές (`(app)` · `(auth)` ·
+        `(bare)`)· οι `(light)` και `(me)` **ΟΧΙ**. Το ADR-809 έβαλε εδώ τα
+        καθολικά utilities, και το ADR-797 τις πρώτες πλούσιες σελίδες.
+
+        ⚠️ **ΔΕΝ μπήκε μέσα στο `ShellUtilities`**: θα ήταν **έκτο** αντίγραφο και
+        θα κάλυπτε **μόνο** τα utilities — όχι τα υπόλοιπα 80 components της
+        σελίδας. Η απόφαση ανήκει εκεί όπου την έχει ήδη η εφαρμογή.
+
+        ⚠️ Το `delayDuration={300}` είναι **ταυτόσημο** με των άλλων τριών.
+        🔶 Ανοιχτό (ADR-813 §8): **πέντε** πανομοιότυπες δηλώσεις — η σωστή
+        θεραπεία είναι **μία** στη ρίζα· δεν έγινε εδώ γιατί το `app/layout.tsx`
+        το κρατά άλλος πράκτορας και η βλάβη ήταν ζωντανή.
+      */}
+      <TooltipProvider delayDuration={300}>
       <PrivateSpaceShell>{children}</PrivateSpaceShell>
+      </TooltipProvider>
     </div>
   );
 }
