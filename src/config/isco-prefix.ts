@@ -41,6 +41,17 @@
 /** Μέγιστο μήκος κωδικού ISCO-08 (μοναδιαία ομάδα). **Δεδομένο του προτύπου.** */
 export const ISCO_UNIT_GROUP_LENGTH = 4;
 
+
+/**
+ * Μήκος **ελάσσονος** ομάδας ISCO-08 *(3 ψηφία, 130 ομάδες)*. **Δεδομένο του προτύπου.**
+ *
+ * 🔑 Ζει **εδώ** και όχι στον εισαγωγέα: το `iscoGroup` που γράφεται στο
+ * `system/esco_cache/occupations` **είναι** αυτό το πρόθεμα, και το
+ * `EscoService.getByIscoGroup` ρωτά με **την ίδια** ανάλυση. Δύο ορισμοί του «3»
+ * σε δύο άκρα του ίδιου ευρετηρίου θα ήταν σιωπηλή αστοχία αναζήτησης.
+ */
+export const ISCO_MINOR_GROUP_LENGTH = 3;
+
 /**
  * Μόνο ψηφία, 1 έως 4. Οτιδήποτε άλλο είναι `malformed`.
  *
@@ -50,6 +61,65 @@ export const ISCO_UNIT_GROUP_LENGTH = 4;
  * **δομικά** ασφαλής, όχι ασφαλής κατά σύμβαση.
  */
 const ISCO_CODE_SHAPE = /^\d{1,4}$/;
+
+/**
+ * Η **μορφή** μιας τιμής που ισχυρίζεται ότι είναι κωδικός ISCO-08 — **πριν**
+ * ρωτηθεί οποιοσδήποτε πίνακας.
+ *
+ * ═════════════════════════════════════════════════════════════════════════════
+ * 🔑 ΓΙΑΤΙ ΞΕΧΩΡΙΣΤΑ ΑΠΟ ΤΟ `resolveIscoPrefix` — ADR-798 §20.4 #3
+ *
+ * Ο **εισαγωγέας** *(`scripts/import-esco-occupations.ts`)* πρέπει να απαντήσει
+ * *«είναι αυτό κωδικός;»* **χωρίς** να έχει πίνακα να ρωτήσει: γράφει το πεδίο,
+ * δεν το ερμηνεύει. Μέχρι σήμερα απαντούσε **μόνος του** — και απαντούσε
+ * `'0000'`, μια **επινοημένη** τιμή που περνά το `ISCO_CODE_SHAPE` και άρα
+ * κατέληγε `undeclared` *(«σιωπή εκ σχεδιασμού»)* αντί για την αλήθεια
+ * *(«κανένας κωδικός»)*. Χειρότερα: στο ISCO-08 η **μείζων ομάδα 0** είναι οι
+ * **Ένοπλες Δυνάμεις** *(`0110`/`0210`/`0310` είναι υπαρκτές μονάδες)*, οπότε το
+ * `iscoGroup` γινόταν `'000'` — **λάθος κατάταξη που δείχνει σωστή**.
+ *
+ * Αν ο εισαγωγέας κρατούσε **δικό του** `/^\d{1,4}$/`, θα υπήρχαν **δύο ορισμοί
+ * του «τι είναι έγκυρος κωδικός ISCO»** — ακριβώς η βλάβη που η επικεφαλίδα
+ * αυτού του αρχείου υπάρχει για να αποτρέψει *(ADR-749)*. Άρα ο μηχανισμός
+ * εξάγεται **εδώ**, και το `resolveIscoPrefix` τον **καταναλώνει**: ένας κανόνας,
+ * δύο ερωτήσεις.
+ * ═════════════════════════════════════════════════════════════════════════════
+ */
+export type IscoCodeShapeVerdict =
+  /** Έγκυρη μορφή: 1-4 ψηφία. Δεν λέει τίποτα για το αν κάποιος τον **δήλωσε**. */
+  | { readonly kind: 'valid'; readonly code: string }
+  /** Καμία τιμή: `null` · `undefined` · κενή συμβολοσειρά. **Σιωπή, όχι σφάλμα.** */
+  | { readonly kind: 'absent' }
+  /** Υπάρχει τιμή, **δεν είναι** κωδικός ISCO-08. **Σφάλμα, και ορατό.** */
+  | { readonly kind: 'malformed'; readonly value: string };
+
+/**
+ * *«Είναι αυτή η τιμή κωδικός ISCO-08;»* — **μία** φορά, για όλους.
+ *
+ * ⚠️ Τρεις καταστάσεις, **ποτέ** δύο: «δεν δηλώθηκε» και «δηλώθηκε σκουπίδι»
+ * έχουν διαφορετική θεραπεία, και ένα κοινό `null` θα έκρυβε το δεύτερο μέσα
+ * στο πρώτο.
+ */
+export function classifyIscoCode(value: string | null | undefined): IscoCodeShapeVerdict {
+  if (value === null || value === undefined || value.length === 0) {
+    return { kind: 'absent' };
+  }
+  if (!ISCO_CODE_SHAPE.test(value)) {
+    return { kind: 'malformed', value };
+  }
+  return { kind: 'valid', code: value };
+}
+
+/**
+ * Η **ελάσσων ομάδα** (3 ψηφία) ενός κωδικού ISCO-08.
+ *
+ * ⚠️ Κωδικός **κοντύτερος** από 3 ψηφία *(μείζων ή υπο-μείζων ομάδα)* επιστρέφεται
+ * **αυτούσιος** — δεν συμπληρώνεται με μηδενικά. Το γέμισμα θα ήταν **επινόηση**:
+ * το `21` δεν είναι το `210`, και το `210` είναι υπαρκτή, διαφορετική ομάδα.
+ */
+export function iscoMinorGroupOf(code: string): string {
+  return code.length >= ISCO_MINOR_GROUP_LENGTH ? code.slice(0, ISCO_MINOR_GROUP_LENGTH) : code;
+}
 
 /**
  * Η ετυμηγορία, σε **τέσσερις ρητές καταστάσεις** — ποτέ `TEntry | undefined`.
@@ -77,25 +147,29 @@ export type IscoPrefixVerdict<TEntry> =
  * κλειδιά**, ποτέ «όλα τα πιθανά μήκη» — γι' αυτό ο πίνακας μπορεί να μιλά σε
  * **ανάμεικτη** ανάλυση *(`214` για μια ολόκληρη ελάσσονα ομάδα, `2142` για μία
  * μοναδιαία μέσα της)* χωρίς καμία επιπλέον δομή. **Ο μακρύτερος νικά.**
+ *
+ * 🔑 Η **μορφή** δεν κρίνεται εδώ: ρωτιέται το `classifyIscoCode`, ώστε ο
+ * εισαγωγέας και ο επιλυτής να μη μπορούν ποτέ να διαφωνήσουν *(§20.4 #3)*.
  */
 export function resolveIscoPrefix<TEntry>(
   table: Readonly<Record<string, TEntry>>,
   iscoCode: string | null | undefined,
 ): IscoPrefixVerdict<TEntry> {
-  if (iscoCode === null || iscoCode === undefined || iscoCode.length === 0) {
+  const shape = classifyIscoCode(iscoCode);
+  if (shape.kind === 'absent') {
     return { kind: 'absent' };
   }
-  if (!ISCO_CODE_SHAPE.test(iscoCode)) {
-    return { kind: 'malformed', value: iscoCode };
+  if (shape.kind === 'malformed') {
+    return { kind: 'malformed', value: shape.value };
   }
 
-  for (let length = iscoCode.length; length >= 1; length -= 1) {
-    const prefix = iscoCode.slice(0, length);
+  for (let length = shape.code.length; length >= 1; length -= 1) {
+    const prefix = shape.code.slice(0, length);
     const entry: TEntry | undefined = table[prefix];
     if (entry !== undefined) {
       return { kind: 'declared', entry, prefix };
     }
   }
 
-  return { kind: 'undeclared', code: iscoCode };
+  return { kind: 'undeclared', code: shape.code };
 }

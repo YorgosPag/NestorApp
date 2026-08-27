@@ -3,14 +3,14 @@
  * ESCO Professional Classification Service (ADR-132)
  * ============================================================================
  *
- * Client-side service for searching and retrieving ESCO occupations
- * from the Firestore cache (system/esco_cache/occupations).
+ * Αναζήτηση και ανάκτηση επαγγελμάτων ESCO από τη μνήμη Firestore
+ * (`system/esco_cache/occupations`), από τον πελάτη.
  *
- * Architecture:
- * - Firestore prefix search on pre-computed search tokens
- * - In-memory LRU cache for recent searches (reduces Firestore reads)
- * - Bilingual support (EL/EN) with language-specific token fields
- * - Fallback to ESCO REST API if Firestore cache is empty
+ * ⚠️ **Η ΜΗΧΑΝΗ ΑΝΑΖΗΤΗΣΗΣ ΔΕΝ ΖΕΙ ΕΔΩ** *(από 2026-08-26)*. Ήταν **παράλληλο
+ * δίδυμο** του `esco-skill.service.ts` — τρεις κλώνοι μετρημένοι από το
+ * CHECK 3.28. Το κοινό ζει στο `@/lib/esco/token-search`· εδώ μένει το
+ * λεξιλόγιο των **επαγγελμάτων** και το μόνο που τα ξεχωρίζει πραγματικά: ο
+ * **κωδικός ISCO** ως δευτερεύον κλειδί αναζήτησης.
  *
  * Usage:
  * ```typescript
@@ -24,6 +24,7 @@
  * ```
  *
  * @module services/esco.service
+ * @see src/lib/esco/token-search.ts
  * @see src/types/contacts/esco-types.ts
  */
 
@@ -53,6 +54,7 @@ import type {
   EscoSkill,
 } from '@/types/contacts/esco-types';
 import { EscoSkillService } from './esco-skill.service';
+import { searchEscoByTokens, clearEscoSearchCache } from '@/lib/esco/token-search';
 
 // ============================================================================
 // CONSTANTS
@@ -62,98 +64,14 @@ import { EscoSkillService } from './esco-skill.service';
 import { COLLECTIONS } from '@/config/firestore-collections';
 const ESCO_COLLECTION = COLLECTIONS.ESCO_CACHE;
 
-/** Maximum results per search query */
+/** Μέγιστα αποτελέσματα ανά ερώτημα. */
 const DEFAULT_SEARCH_LIMIT = 20;
 
-/** Minimum query length to trigger search */
-const MIN_QUERY_LENGTH = 2;
+/** Μέγιστα επαγγέλματα που επιστρέφει η περιήγηση σε ομάδα ISCO. */
+const ISCO_GROUP_LIMIT = 100;
 
-/** Cache TTL in milliseconds (5 minutes) */
-const CACHE_TTL_MS = 5 * 60 * 1000;
-
-/** Maximum entries in the in-memory cache */
-const CACHE_MAX_ENTRIES = 50;
-
-// ============================================================================
-// IN-MEMORY CACHE
-// ============================================================================
-
-interface CacheEntry<T = EscoSearchResult[]> {
-  results: T;
-  total: number;
-  timestamp: number;
-}
-
-/** Simple LRU cache for occupation search results */
-const searchCache = new Map<string, CacheEntry<EscoSearchResult[]>>();
-
-/**
- * Generate a cache key from search params.
- */
-function getCacheKey(params: EscoSearchParams): string {
-  return `${params.language}:${params.query.toLowerCase().trim()}:${params.limit ?? DEFAULT_SEARCH_LIMIT}`;
-}
-
-/**
- * Get cached result if not expired.
- */
-function getCachedResult(key: string): CacheEntry | null {
-  const entry = searchCache.get(key);
-  if (!entry) return null;
-
-  if (Date.now() - entry.timestamp > CACHE_TTL_MS) {
-    searchCache.delete(key);
-    return null;
-  }
-
-  return entry;
-}
-
-/**
- * Store result in cache, evicting oldest if full.
- */
-function setCachedResult(key: string, results: EscoSearchResult[], total: number): void {
-  // Evict oldest entries if cache is full
-  if (searchCache.size >= CACHE_MAX_ENTRIES) {
-    const oldestKey = searchCache.keys().next().value;
-    if (oldestKey !== undefined) {
-      searchCache.delete(oldestKey);
-    }
-  }
-
-  searchCache.set(key, {
-    results,
-    total,
-    timestamp: Date.now(),
-  });
-}
-
-// ============================================================================
-// SEARCH TOKEN UTILITIES
-// ============================================================================
-
-/**
- * Normalize text for search: lowercase, remove diacritics.
- * Critical for Greek text where accents vary.
- */
-function normalizeForSearch(text: string): string {
-  return text
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim();
-}
-
-/**
- * Generate search tokens from a query string.
- * Same algorithm as the import script.
- */
-function queryToTokens(query: string): string[] {
-  const normalized = normalizeForSearch(query);
-  return normalized
-    .split(/[\s,.\-/()]+/)
-    .filter(token => token.length >= MIN_QUERY_LENGTH);
-}
+/** Ελάχιστο μήκος ομάδας ISCO για να έχει νόημα το ερώτημα. */
+const MIN_ISCO_GROUP_LENGTH = 2;
 
 // ============================================================================
 // ESCO SERVICE
@@ -177,186 +95,59 @@ export class EscoService {
     };
   }
 
+  /** Η ετικέτα στη γλώσσα του ερωτήματος. */
+  private static labelOf(occupation: EscoOccupation, language: EscoLanguage): string {
+    return language === 'el' ? occupation.preferredLabel.el : occupation.preferredLabel.en;
+  }
+
   /**
-   * Search ESCO occupations by text query.
+   * Αναζήτηση επαγγελμάτων ESCO με κείμενο.
    *
-   * Uses Firestore `array-contains` on pre-computed search tokens
-   * for efficient prefix matching.
+   * Χρησιμοποιεί `array-contains` πάνω στα προϋπολογισμένα `searchTokens*`, που
+   * γράφει ο εισαγωγέας με **τον ίδιο** τοκενιστή *(`@/lib/esco/search-tokens`)*.
    *
-   * @param params - Search parameters
-   * @returns Search response with matched occupations
+   * 🔑 Ο **κωδικός ISCO** είναι το δευτερεύον κλειδί: όποιος πληκτρολογήσει
+   * `2142` βρίσκει τον πολιτικό μηχανικό, χωρίς να ξέρει την ετικέτα.
    */
   static async searchOccupations(params: EscoSearchParams): Promise<EscoSearchResponse> {
     const { query: searchQuery, language, limit: resultLimit = DEFAULT_SEARCH_LIMIT } = params;
 
-    // Validate query length
-    if (searchQuery.trim().length < MIN_QUERY_LENGTH) {
-      return {
-        results: [],
-        total: 0,
-        query: searchQuery,
-        language,
-      };
-    }
+    const outcome = await searchEscoByTokens<EscoOccupationDocument, EscoOccupation>({
+      collectionPath: ESCO_COLLECTION,
+      cacheNamespace: 'occupation',
+      rawQuery: searchQuery,
+      language,
+      limit: resultLimit,
+      toItem: EscoService.mapOccupation,
+      labelOf: EscoService.labelOf,
+      // ⚠️ `?? ''` επειδή το πεδίο μπορεί να λείπει σε παλιό έγγραφο της μνήμης·
+      // ο εισαγωγέας πλέον γράφει πάντα συμβολοσειρά (κενή = «κανένας κωδικός»).
+      secondaryKeyMatches: (data, rawQuery) => (data.iscoCode ?? '').startsWith(rawQuery),
+    });
 
-    // Check in-memory cache
-    const cacheKey = getCacheKey(params);
-    const cached = getCachedResult(cacheKey);
-    if (cached) {
-      return {
-        results: cached.results.slice(0, resultLimit),
-        total: cached.total,
-        query: searchQuery,
-        language,
-      };
-    }
+    const results: EscoSearchResult[] = outcome.hits.map((hit) => ({
+      occupation: hit.item,
+      score: hit.score,
+      matchedField: hit.matchedField === 'secondaryKey' ? 'iscoCode' : hit.matchedField,
+    }));
 
-    // Generate search tokens
-    const tokens = queryToTokens(searchQuery);
-    if (tokens.length === 0) {
-      return {
-        results: [],
-        total: 0,
-        query: searchQuery,
-        language,
-      };
-    }
-
-    // Query Firestore using the first token (most selective)
-    // Firestore `array-contains` only supports one value per query
-    const primaryToken = tokens[0];
-    const tokenField = language === 'el' ? 'searchTokensEl' : 'searchTokensEn';
-
-    try {
-      const collectionRef = collection(db, ESCO_COLLECTION);
-      const q = query(
-        // companyId: N/A — public ESCO taxonomy (system/esco_cache/occupations), shared across all tenants
-        collectionRef,
-        where(tokenField, 'array-contains', primaryToken),
-        firestoreLimit(resultLimit * 2) // Fetch extra for client-side filtering
-      );
-
-      const snapshot = await getDocs(q);
-
-      // Convert to EscoOccupation and score results
-      const results: EscoSearchResult[] = [];
-      const normalizedQuery = normalizeForSearch(searchQuery);
-
-      snapshot.forEach((docSnap) => {
-        const data = docSnap.data() as EscoOccupationDocument;
-
-        // Client-side filtering: check if ALL tokens are present
-        const docTokens = language === 'el' ? data.searchTokensEl : data.searchTokensEn;
-        const allTokensMatch = tokens.every(token =>
-          docTokens.some(dt => dt.startsWith(token) || dt === token)
-        );
-
-        if (!allTokensMatch) return;
-
-        // Calculate relevance score
-        const label = language === 'el'
-          ? data.preferredLabel.el
-          : data.preferredLabel.en;
-
-        const normalizedLabel = normalizeForSearch(label);
-        let score = 0;
-        let matchedField: 'preferredLabel' | 'alternativeLabel' | 'iscoCode' = 'preferredLabel';
-
-        // Exact match = highest score
-        if (normalizedLabel === normalizedQuery) {
-          score = 1.0;
-        }
-        // Starts with query = high score
-        else if (normalizedLabel.startsWith(normalizedQuery)) {
-          score = 0.9;
-        }
-        // Contains query = medium score
-        else if (normalizedLabel.includes(normalizedQuery)) {
-          score = 0.7;
-        }
-        // ISCO code match
-        else if (data.iscoCode.startsWith(searchQuery)) {
-          score = 0.8;
-          matchedField = 'iscoCode';
-        }
-        // Token match = base score
-        else {
-          score = 0.5;
-
-          // Check alternative labels for better match
-          const altLabels = language === 'el'
-            ? (data.alternativeLabels?.el ?? [])
-            : (data.alternativeLabels?.en ?? []);
-
-          for (const alt of altLabels) {
-            const normalizedAlt = normalizeForSearch(alt);
-            if (normalizedAlt.includes(normalizedQuery)) {
-              score = 0.6;
-              matchedField = 'alternativeLabel';
-              break;
-            }
-          }
-        }
-
-        const occupation = EscoService.mapOccupation(data);
-
-        results.push({ occupation, score, matchedField });
-      });
-
-      // Sort by score (descending), then by label (alphabetical)
-      results.sort((a, b) => {
-        if (b.score !== a.score) return b.score - a.score;
-        const labelA = language === 'el'
-          ? a.occupation.preferredLabel.el
-          : a.occupation.preferredLabel.en;
-        const labelB = language === 'el'
-          ? b.occupation.preferredLabel.el
-          : b.occupation.preferredLabel.en;
-        return labelA.localeCompare(labelB, language);
-      });
-
-      // Cache results
-      setCachedResult(cacheKey, results, results.length);
-
-      return {
-        results: results.slice(0, resultLimit),
-        total: results.length,
-        query: searchQuery,
-        language,
-      };
-    } catch (error) {
-      logger.error('Search error', { error });
-      return {
-        results: [],
-        total: 0,
-        query: searchQuery,
-        language,
-      };
-    }
+    return { results, total: outcome.total, query: searchQuery, language };
   }
 
   /**
-   * Get a single ESCO occupation by its URI.
-   *
-   * @param uri - Full ESCO occupation URI
-   * @returns The occupation or null if not found
+   * Ένα επάγγελμα ESCO από το URI του.
    */
   static async getOccupationByUri(uri: string): Promise<EscoOccupation | null> {
     if (!uri) return null;
 
     try {
-      // Extract document ID from URI
       const match = uri.match(/\/([a-f0-9-]+)$/i);
       if (!match) return null;
 
-      const docId = match[1];
-      const docRef = doc(db, ESCO_COLLECTION, docId);
-      const docSnap = await getDoc(docRef);
-
+      const docSnap = await getDoc(doc(db, ESCO_COLLECTION, match[1]));
       if (!docSnap.exists()) return null;
 
-      const data = docSnap.data() as EscoOccupationDocument;
-      return EscoService.mapOccupation(data);
+      return EscoService.mapOccupation(docSnap.data() as EscoOccupationDocument);
     } catch (error) {
       logger.error('Get by URI error', { error });
       return null;
@@ -364,37 +155,32 @@ export class EscoService {
   }
 
   /**
-   * Get all ESCO occupations in a specific ISCO group.
+   * Όλα τα επαγγέλματα μιας **ελάσσονος ομάδας** ISCO-08 *(3 ψηφία)*.
    *
-   * @param iscoGroup - 3-digit ISCO minor group code (e.g., "214")
-   * @param language - Display language
-   * @returns Array of occupations in the group
+   * ⚠️ Το `iscoGroup` το γράφει ο εισαγωγέας με το `iscoMinorGroupOf` — η ίδια
+   * ανάλυση και στα δύο άκρα *(βλ. `ISCO_MINOR_GROUP_LENGTH`)*.
    */
   static async getOccupationsByIscoGroup(
     iscoGroup: string,
-    language: EscoLanguage = 'el'
+    language: EscoLanguage = 'el',
   ): Promise<EscoOccupation[]> {
-    if (!iscoGroup || iscoGroup.length < 2) return [];
+    if (!iscoGroup || iscoGroup.length < MIN_ISCO_GROUP_LENGTH) return [];
 
     try {
-      const collectionRef = collection(db, ESCO_COLLECTION);
-      const q = query(
-        // companyId: N/A — public ESCO taxonomy (system/esco_cache/occupations), shared across all tenants
-        collectionRef,
-        where('iscoGroup', '==', iscoGroup),
-        orderBy(`preferredLabel.${language}`),
-        firestoreLimit(100)
+      const snapshot = await getDocs(
+        query(
+          // companyId: N/A — public ESCO taxonomy (system/esco_cache/occupations),
+          // shared across all tenants
+          collection(db, ESCO_COLLECTION),
+          where('iscoGroup', '==', iscoGroup),
+          orderBy(`preferredLabel.${language}`),
+          firestoreLimit(ISCO_GROUP_LIMIT),
+        ),
       );
 
-      const snapshot = await getDocs(q);
-      const occupations: EscoOccupation[] = [];
-
-      snapshot.forEach((docSnap) => {
-        const data = docSnap.data() as EscoOccupationDocument;
-        occupations.push(EscoService.mapOccupation(data));
-      });
-
-      return occupations;
+      return snapshot.docs.map((docSnap) =>
+        EscoService.mapOccupation(docSnap.data() as EscoOccupationDocument),
+      );
     } catch (error) {
       logger.error('Get by ISCO group error', { error });
       return [];
@@ -416,10 +202,11 @@ export class EscoService {
   }
 
   /**
-   * Clear the in-memory search cache (occupations + skills).
+   * Καθαρίζει τη μνήμη αναζήτησης (επαγγέλματα **και** δεξιότητες).
+   *
+   * ⚠️ Είναι **μία** μνήμη πλέον, με namespace ανά λεξιλόγιο.
    */
   static clearCache(): void {
-    searchCache.clear();
-    EscoSkillService.clearCache();
+    clearEscoSearchCache();
   }
 }

@@ -14,10 +14,9 @@
  * @see ./create-realtime-collection-hook.ts
  */
 
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import type { DocumentData } from 'firebase/firestore';
 import type { RealtimeBuilding, SubscriptionStatus } from '../types';
-import { REALTIME_EVENTS } from '../types';
 import { createModuleLogger } from '@/lib/telemetry';
 import { createRealtimeCollectionHook } from './create-realtime-collection-hook';
 
@@ -123,22 +122,22 @@ export function useRealtimeBuildings(enabled = true): UseRealtimeBuildingsReturn
   );
 
   // ==========================================================================
-  // LISTEN FOR EXTERNAL EVENTS
+  // 🔴 Ο ΑΔΡΑΝΗΣ ΦΡΟΥΡΟΣ ΠΟΥ ΑΦΑΙΡΕΘΗΚΕ (2026-08-26, ADR-798 §22.6 #2)
   // ==========================================================================
-
-  useEffect(() => {
-    const handleNavigationRefresh = () => {
-      logger.info('[useRealtimeBuildings] Navigation refresh event received');
-      // No need to refetch - onSnapshot already handles real-time updates
-      // But we can force a re-render if needed
-    };
-
-    window.addEventListener(REALTIME_EVENTS.NAVIGATION_REFRESH, handleNavigationRefresh);
-
-    return () => {
-      window.removeEventListener(REALTIME_EVENTS.NAVIGATION_REFRESH, handleNavigationRefresh);
-    };
-  }, []);
+  //
+  // Εδώ ζούσε listener στο `REALTIME_EVENTS.NAVIGATION_REFRESH` του οποίου το
+  // σώμα ήταν **μία γραμμή καταγραφής** και ένα σχόλιο «no need to refetch».
+  // Δηλαδή **αδρανής φρουρός** (ADR-749 §5): έκανε τον αναγνώστη να πιστεύει
+  // ότι αυτό το hook **αντιδρά** σε ανανέωση πλοήγησης, ενώ **δεν αντιδρούσε**.
+  //
+  // ⚠️ **ΤΟ ΣΥΜΒΑΝ ΔΕΝ ΣΚΟΤΩΘΗΚΕ — ΜΕΤΡΗΘΗΚΕ**: το `NAVIGATION_REFRESH` έχει
+  // **πραγματικό** καταναλωτή, το `navigation/core/hooks/useNavigationSubscriptions.ts`,
+  // που κάνει **πλήρη επαναφόρτωση** πλοήγησης· και **τρεις** παραγωγούς
+  // (`NavigationCompanyManager` · `RealtimeService` ×2 · `entity-linking/config` ×3).
+  // Αυτό που αφαιρέθηκε είναι **μόνο** ο εδώ σιωπηλός ακροατής.
+  //
+  // Μοναδική παρατηρήσιμη συνέπεια: **μία γραμμή log λιγότερη**. Η συνδρομή
+  // `onSnapshot` ήδη φέρνει κάθε αλλαγή — γι' αυτό ακριβώς το έγραφε το σχόλιο.
 
   return {
     buildingsByProject,

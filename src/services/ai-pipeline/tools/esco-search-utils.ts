@@ -13,6 +13,8 @@
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { compareByLocale } from '@/lib/intl-formatting';
+import { normalizeEscoText, escoQueryTokens } from '@/lib/esco/search-tokens';
+import { judgeEscoRelevance } from '@/lib/esco/relevance';
 
 // ============================================================================
 // TYPES
@@ -34,29 +36,25 @@ export interface EscoSkillMatch {
 }
 
 // ============================================================================
-// TEXT NORMALIZATION
+// TEXT NORMALIZATION — ΔΕΝ ΖΕΙ ΕΔΩ (ADR-132)
 // ============================================================================
 
-/**
- * Normalize Greek text: lowercase + strip diacritics.
- * Same algorithm as client-side esco.service.ts.
+/*
+ * 🔑 Ήταν το **πέμπτο** αντίγραφο του τοκενιστή ESCO, και το σχόλιό του έγραφε
+ * «Same algorithm as client-side esco.service.ts» — σχόλιο εκεί που έπρεπε να
+ * υπάρχει module. Ο αλγόριθμος ζει πλέον στο `@/lib/esco/search-tokens`, μαζί
+ * με την **πλευρά γραφής** του εισαγωγέα: αν οι δύο πλευρές αποκλίνουν, το
+ * `array-contains` επιστρέφει άδεια λίστα **χωρίς κανένα σφάλμα**.
+ *
+ * Τα ονόματα διατηρούνται ως **επανεξαγωγές**: το
+ * `__tests__/esco-search-utils.test.ts` τα εκτελεί, και η άγκυρα πρέπει να
+ * συνεχίσει να τρέχει πάνω στη ΝΕΑ διαδρομή.
  */
-export function normalizeEsco(text: string): string {
-  return text
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim();
-}
+export {
+  normalizeEscoText as normalizeEsco,
+  escoQueryTokens as queryToTokens,
+} from '@/lib/esco/search-tokens';
 
-/**
- * Extract search tokens from query (min 2 chars per word).
- */
-export function queryToTokens(query: string): string[] {
-  return normalizeEsco(query)
-    .split(/[\s,.\-/()]+/)
-    .filter(t => t.length >= 2);
-}
 
 // ============================================================================
 // MULTI-TOKEN FIRESTORE SEARCH (shared helper)
@@ -95,14 +93,42 @@ async function queryWithTokenFallback(
 }
 
 // ============================================================================
-// SCORING HELPER
+// ΒΑΘΜΟΛΟΓΗΣΗ + ΧΑΡΤΟΓΡΑΦΗΣΗ — ΜΙΑ ΦΟΡΑ ΓΙΑ ΤΑ ΔΥΟ ΛΕΞΙΛΟΓΙΑ
 // ============================================================================
 
-function computeScore(normalizedLabel: string, normalizedQuery: string): number {
-  if (normalizedLabel === normalizedQuery) return 1.0;
-  if (normalizedLabel.startsWith(normalizedQuery)) return 0.9;
-  if (normalizedLabel.includes(normalizedQuery)) return 0.7;
-  return 0.5;
+/**
+ * Φιλτράρει *(όλα τα tokens)*, βαθμολογεί με την **κοινή** κλίμακα και ταξινομεί.
+ *
+ * 🔴 Ήταν γραμμένο **δύο φορές** μέσα σε αυτό το αρχείο *(επαγγέλματα +
+ * δεξιότητες, 57 tokens κλώνος, CHECK 3.28)* και η κλίμακά του είχε **αποκλίνει**
+ * από την πλευρά του πελάτη: εδώ έλειπε το σκαλοπάτι των **συνωνύμων**, δηλαδή ο
+ * διακομιστής επέβαλλε *«διάλεξε από τη λίστα»* με **άλλη κατάταξη** από αυτήν
+ * που έβλεπε ο άνθρωπος. Πλέον η κλίμακα ζει στο `@/lib/esco/relevance`.
+ */
+function scoreEscoDocuments<TMatch extends { labelEl: string; score: number }>(
+  documents: readonly FirebaseFirestore.DocumentData[],
+  tokens: readonly string[],
+  normalizedQuery: string,
+  toMatch: (data: FirebaseFirestore.DocumentData, score: number) => TMatch,
+  limit: number,
+): TMatch[] {
+  return documents
+    .filter((data) => {
+      const documentTokens = (data.searchTokensEl as string[]) ?? [];
+      return tokens.every((token) => documentTokens.some((st) => st.startsWith(token)));
+    })
+    .map((data) => {
+      const label = data.preferredLabel as Record<string, string> | undefined;
+      const alternatives = (data.alternativeLabels as Record<string, string[]> | undefined)?.el;
+      const verdict = judgeEscoRelevance({
+        normalizedLabel: normalizeEscoText(label?.el ?? ''),
+        normalizedQuery,
+        alternatives,
+      });
+      return toMatch(data, verdict.score);
+    })
+    .sort((a, b) => b.score - a.score || compareByLocale(a.labelEl, b.labelEl))
+    .slice(0, limit);
 }
 
 // ============================================================================
@@ -118,31 +144,27 @@ export async function searchEscoOccupations(
   query: string,
   limit = 10
 ): Promise<EscoOccupationMatch[]> {
-  const tokens = queryToTokens(query);
+  const tokens = escoQueryTokens(query);
   if (tokens.length === 0) return [];
 
   const docs = await queryWithTokenFallback(COLLECTIONS.ESCO_CACHE, tokens);
-  const normalizedQuery = normalizeEsco(query);
 
-  return docs
-    .map(d => d.data())
-    .filter(occ => {
-      const allTokens = (occ.searchTokensEl as string[]) ?? [];
-      return tokens.every(t => allTokens.some(st => st.startsWith(t)));
-    })
-    .map(occ => {
-      const label = occ.preferredLabel as Record<string, string>;
-      const normalizedLabel = normalizeEsco(label.el ?? '');
+  return scoreEscoDocuments(
+    docs.map((d) => d.data()),
+    tokens,
+    normalizeEscoText(query),
+    (occupation, score) => {
+      const label = occupation.preferredLabel as Record<string, string> | undefined;
       return {
-        labelEl: label.el ?? '',
-        labelEn: label.en ?? '',
-        iscoCode: String(occ.iscoCode ?? ''),
-        uri: String(occ.uri ?? ''),
-        score: computeScore(normalizedLabel, normalizedQuery),
+        labelEl: label?.el ?? '',
+        labelEn: label?.en ?? '',
+        iscoCode: String(occupation.iscoCode ?? ''),
+        uri: String(occupation.uri ?? ''),
+        score,
       };
-    })
-    .sort((a, b) => b.score - a.score || compareByLocale(a.labelEl, b.labelEl))
-    .slice(0, limit);
+    },
+    limit,
+  );
 }
 
 /**
@@ -154,30 +176,26 @@ export async function searchEscoSkills(
   query: string,
   limit = 10
 ): Promise<EscoSkillMatch[]> {
-  const tokens = queryToTokens(query);
+  const tokens = escoQueryTokens(query);
   if (tokens.length === 0) return [];
 
   const docs = await queryWithTokenFallback(COLLECTIONS.ESCO_SKILLS_CACHE, tokens);
-  const normalizedQuery = normalizeEsco(query);
 
-  return docs
-    .map(d => d.data())
-    .filter(skill => {
-      const allTokens = (skill.searchTokensEl as string[]) ?? [];
-      return tokens.every(t => allTokens.some(st => st.startsWith(t)));
-    })
-    .map(skill => {
-      const label = skill.preferredLabel as Record<string, string>;
-      const normalizedLabel = normalizeEsco(label.el ?? '');
+  return scoreEscoDocuments(
+    docs.map((d) => d.data()),
+    tokens,
+    normalizeEscoText(query),
+    (skill, score) => {
+      const label = skill.preferredLabel as Record<string, string> | undefined;
       return {
-        labelEl: label.el ?? '',
-        labelEn: label.en ?? '',
+        labelEl: label?.el ?? '',
+        labelEn: label?.en ?? '',
         uri: String(skill.uri ?? ''),
-        score: computeScore(normalizedLabel, normalizedQuery),
+        score,
       };
-    })
-    .sort((a, b) => b.score - a.score || compareByLocale(a.labelEl, b.labelEl))
-    .slice(0, limit);
+    },
+    limit,
+  );
 }
 
 // ============================================================================

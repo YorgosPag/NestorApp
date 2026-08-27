@@ -82,7 +82,7 @@ import type { QueryResult, SubscribeOptions } from '@/services/firestore';
 import type { StaleCache } from '@/lib/stale-cache';
 import { createExternalStore } from '@/lib/state/createExternalStore';
 import type { SubscriptionStatus } from '../types';
-import { routeTenantScopedError } from './tenant-scoped-error';
+import { createSubscriptionErrorHandler } from './subscription-error-handler';
 import type {
   RealtimeCollection,
   RealtimeCollectionConfig,
@@ -177,14 +177,20 @@ export function createRealtimeCollectionHook<TDoc extends DocumentData, TItem>(
     patch({ items: NO_ITEMS, loading: false, error: null, status: 'active' });
   }
 
-  /** Πραγματική βλάβη: **αυτή** αξίζει κόκκινο. */
-  function failure(error: Error): void {
-    config.logger.error('Realtime subscription error', {
-      collection: config.collection,
-      error: error.message,
-    });
-    patch({ error: error.message, loading: false, status: 'error' });
-  }
+  /**
+   * Πραγματική βλάβη: **αυτή** αξίζει κόκκινο.
+   *
+   * ⚠️ Η **κρίση και η καταγραφή** ζουν στο `createSubscriptionErrorHandler`
+   * (§22.6 #1) — εδώ μένει **μόνο** η μετάβαση κατάστασης, που είναι το μόνο
+   * που ξέρει αυτή η μηχανή. Ήταν γραμμένη εδώ και **πουθενά** στα τρία hooks
+   * με αντιδραστικό κλειδί, όπου το σφάλμα καταπινόταν σιωπηλά.
+   */
+  const handleSubscriptionError = createSubscriptionErrorHandler({
+    logger: config.logger,
+    collection: config.collection,
+    onDesignedEmpty: designedEmpty,
+    onFailure: (message) => patch({ error: message, loading: false, status: 'error' }),
+  });
 
   let unsubscribe: (() => void) | null = null;
   let refCount = 0;
@@ -206,7 +212,7 @@ export function createRealtimeCollectionHook<TDoc extends DocumentData, TItem>(
       config.collection,
       deliver,
       // §21 — «δεν έχεις εταιρεία» ⇒ κενό, όχι βλάβη. Ο κριτής είναι ΕΝΑΣ.
-      (err: Error) => routeTenantScopedError(err, designedEmpty, () => failure(err)),
+      handleSubscriptionError,
       options,
     );
   }

@@ -112,9 +112,14 @@ export function EscoOccupationPicker({
         <>
           <span className="text-sm font-medium">
             {pickBilingualLabel(result.occupation.preferredLabel, lang)}
-            <span className={cn("ml-2 text-xs font-mono", colors.text.muted)}>
-              ({result.occupation.iscoCode})
-            </span>
+            {/* ADR-798 §20.4 #3 — ο εισαγωγέας ΔΕΝ επινοεί πια κωδικό: όπου το
+                ESCO δεν δήλωσε, το πεδίο είναι ΚΕΝΟ. Χωρίς αυτόν τον φρουρό η
+                οθόνη θα έδειχνε «()», δηλαδή θόρυβο αντί για σιωπή. */}
+            {result.occupation.iscoCode ? (
+              <span className={cn("ml-2 text-xs font-mono", colors.text.muted)}>
+                ({result.occupation.iscoCode})
+              </span>
+            ) : null}
           </span>
           <span className={cn("text-xs", colors.text.muted)}>
             {pickBilingualLabel(result.occupation.preferredLabel, otherLang)}

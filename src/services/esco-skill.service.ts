@@ -3,25 +3,24 @@
  * ESCO Skill Search Service (ADR-132)
  * ============================================================================
  *
- * Extracted from esco.service.ts (ADR-065 Phase 6).
- * Client-side service for searching ESCO skills from Firestore cache.
+ * Αναζήτηση δεξιοτήτων ESCO από τη μνήμη Firestore, από τον πελάτη.
+ *
+ * ⚠️ **Η ΜΗΧΑΝΗ ΔΕΝ ΖΕΙ ΕΔΩ.** Μέχρι τις 2026-08-26 αυτό το αρχείο ήταν
+ * **παράλληλο δίδυμο** του `esco.service.ts`: το CHECK 3.28 μέτρησε **τρεις**
+ * κλώνους *(65 · 89 · 77 tokens)* — ερώτημα, φιλτράρισμα, βαθμολόγηση,
+ * ταξινόμηση, LRU. Ό,τι πραγματικά διέφερε ήταν **η συλλογή και ο τύπος**.
+ * Πλέον το κοινό ζει στο `@/lib/esco/token-search` και εδώ μένει **μόνο** το
+ * λεξιλόγιο των δεξιοτήτων. ⛔ Μην ξαναγράψεις εδώ ερώτημα Firestore.
  *
  * @module services/esco-skill.service
+ * @see src/lib/esco/token-search.ts
  * @see src/types/contacts/esco-types.ts
  */
 
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('EscoSkillService');
 
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-  doc,
-  getDoc,
-  limit as firestoreLimit,
-} from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type {
   EscoSkill,
@@ -29,50 +28,17 @@ import type {
   EscoSkillSearchParams,
   EscoSkillSearchResult,
   EscoSkillSearchResponse,
+  EscoLanguage,
 } from '@/types/contacts/esco-types';
-
-// ============================================================================
-// CONSTANTS
-// ============================================================================
 
 // SSoT: Collection name from centralized config
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { searchEscoByTokens, clearEscoSearchCache } from '@/lib/esco/token-search';
+
 const ESCO_SKILLS_COLLECTION = COLLECTIONS.ESCO_SKILLS_CACHE;
+
+/** Μέγιστα αποτελέσματα ανά ερώτημα. */
 const DEFAULT_SEARCH_LIMIT = 20;
-const MIN_QUERY_LENGTH = 2;
-const CACHE_TTL_MS = 5 * 60 * 1000;
-const CACHE_MAX_ENTRIES = 50;
-
-// ============================================================================
-// CACHE
-// ============================================================================
-
-interface CacheEntry {
-  results: EscoSkillSearchResult[];
-  total: number;
-  timestamp: number;
-}
-
-const skillSearchCache = new Map<string, CacheEntry>();
-
-// ============================================================================
-// SEARCH UTILITIES
-// ============================================================================
-
-function normalizeForSearch(text: string): string {
-  return text
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim();
-}
-
-function queryToTokens(searchQuery: string): string[] {
-  const normalized = normalizeForSearch(searchQuery);
-  return normalized
-    .split(/[\s,.\-/()]+/)
-    .filter(token => token.length >= MIN_QUERY_LENGTH);
-}
 
 // ============================================================================
 // ESCO SKILL SERVICE
@@ -80,128 +46,57 @@ function queryToTokens(searchQuery: string): string[] {
 
 export class EscoSkillService {
   /**
-   * Search ESCO skills by text query.
+   * Firestore document → domain shape.
+   *
+   * Κεντρικοποιήθηκε (N.0.2): η ίδια χαρτογράφηση ζούσε **δύο** φορές
+   * *(αναζήτηση / ανάκτηση με URI)*.
+   */
+  private static mapSkill(data: EscoSkillDocument): EscoSkill {
+    return {
+      uri: data.uri,
+      preferredLabel: data.preferredLabel,
+      alternativeLabels: data.alternativeLabels
+        ? { el: data.alternativeLabels.el ?? [], en: data.alternativeLabels.en ?? [] }
+        : undefined,
+    };
+  }
+
+  /** Η ετικέτα στη γλώσσα του ερωτήματος. */
+  private static labelOf(skill: EscoSkill, language: EscoLanguage): string {
+    return language === 'el' ? skill.preferredLabel.el : skill.preferredLabel.en;
+  }
+
+  /**
+   * Αναζήτηση δεξιοτήτων ESCO με κείμενο.
+   *
+   * ⚠️ Οι δεξιότητες **δεν έχουν** κωδικό ISCO *(είναι δια-επαγγελματικές)*,
+   * γι' αυτό δεν δίνεται `secondaryKeyMatches` — και το αντίστοιχο σκαλοπάτι
+   * της κλίμακας απλώς δεν παίζει.
    */
   static async searchSkills(params: EscoSkillSearchParams): Promise<EscoSkillSearchResponse> {
     const { query: searchQuery, language, limit: resultLimit = DEFAULT_SEARCH_LIMIT } = params;
 
-    if (searchQuery.trim().length < MIN_QUERY_LENGTH) {
-      return { results: [], total: 0, query: searchQuery, language };
-    }
+    const outcome = await searchEscoByTokens<EscoSkillDocument, EscoSkill>({
+      collectionPath: ESCO_SKILLS_COLLECTION,
+      cacheNamespace: 'skill',
+      rawQuery: searchQuery,
+      language,
+      limit: resultLimit,
+      toItem: EscoSkillService.mapSkill,
+      labelOf: EscoSkillService.labelOf,
+    });
 
-    const cacheKey = `skill:${language}:${searchQuery.toLowerCase().trim()}:${resultLimit}`;
-    const cached = skillSearchCache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp <= CACHE_TTL_MS) {
-      return {
-        results: cached.results.slice(0, resultLimit),
-        total: cached.total,
-        query: searchQuery,
-        language,
-      };
-    }
+    const results: EscoSkillSearchResult[] = outcome.hits.map((hit) => ({
+      skill: hit.item,
+      score: hit.score,
+      matchedField: hit.matchedField === 'alternativeLabel' ? 'alternativeLabel' : 'preferredLabel',
+    }));
 
-    const tokens = queryToTokens(searchQuery);
-    if (tokens.length === 0) {
-      return { results: [], total: 0, query: searchQuery, language };
-    }
-
-    const primaryToken = tokens[0];
-    const tokenField = language === 'el' ? 'searchTokensEl' : 'searchTokensEn';
-
-    try {
-      const collectionRef = collection(db, ESCO_SKILLS_COLLECTION);
-      const q = query(
-        // companyId: N/A — public ESCO skills taxonomy (system/esco_cache/skills), shared across all tenants
-        collectionRef,
-        where(tokenField, 'array-contains', primaryToken),
-        firestoreLimit(resultLimit * 2)
-      );
-
-      const snapshot = await getDocs(q);
-      const results: EscoSkillSearchResult[] = [];
-      const normalizedQuery = normalizeForSearch(searchQuery);
-
-      snapshot.forEach((docSnap) => {
-        const data = docSnap.data() as EscoSkillDocument;
-
-        const docTokens = language === 'el' ? data.searchTokensEl : data.searchTokensEn;
-        const allTokensMatch = tokens.every(token =>
-          docTokens.some(dt => dt.startsWith(token) || dt === token)
-        );
-
-        if (!allTokensMatch) return;
-
-        const label = language === 'el'
-          ? data.preferredLabel.el
-          : data.preferredLabel.en;
-
-        const normalizedLabel = normalizeForSearch(label);
-        let score = 0;
-        let matchedField: 'preferredLabel' | 'alternativeLabel' = 'preferredLabel';
-
-        if (normalizedLabel === normalizedQuery) {
-          score = 1.0;
-        } else if (normalizedLabel.startsWith(normalizedQuery)) {
-          score = 0.9;
-        } else if (normalizedLabel.includes(normalizedQuery)) {
-          score = 0.7;
-        } else {
-          score = 0.5;
-
-          const altLabels = language === 'el'
-            ? (data.alternativeLabels?.el ?? [])
-            : (data.alternativeLabels?.en ?? []);
-
-          for (const alt of altLabels) {
-            const normalizedAlt = normalizeForSearch(alt);
-            if (normalizedAlt.includes(normalizedQuery)) {
-              score = 0.6;
-              matchedField = 'alternativeLabel';
-              break;
-            }
-          }
-        }
-
-        const skill: EscoSkill = {
-          uri: data.uri,
-          preferredLabel: data.preferredLabel,
-          alternativeLabels: data.alternativeLabels
-            ? { el: data.alternativeLabels.el ?? [], en: data.alternativeLabels.en ?? [] }
-            : undefined,
-        };
-
-        results.push({ skill, score, matchedField });
-      });
-
-      results.sort((a, b) => {
-        if (b.score !== a.score) return b.score - a.score;
-        const labelA = language === 'el' ? a.skill.preferredLabel.el : a.skill.preferredLabel.en;
-        const labelB = language === 'el' ? b.skill.preferredLabel.el : b.skill.preferredLabel.en;
-        return labelA.localeCompare(labelB, language);
-      });
-
-      if (skillSearchCache.size >= CACHE_MAX_ENTRIES) {
-        const oldestKey = skillSearchCache.keys().next().value;
-        if (oldestKey !== undefined) {
-          skillSearchCache.delete(oldestKey);
-        }
-      }
-      skillSearchCache.set(cacheKey, { results, total: results.length, timestamp: Date.now() });
-
-      return {
-        results: results.slice(0, resultLimit),
-        total: results.length,
-        query: searchQuery,
-        language,
-      };
-    } catch (error) {
-      logger.error('Skill search error', { error });
-      return { results: [], total: 0, query: searchQuery, language };
-    }
+    return { results, total: outcome.total, query: searchQuery, language };
   }
 
   /**
-   * Get a single ESCO skill by its URI.
+   * Μία δεξιότητα από το URI της.
    */
   static async getSkillByUri(uri: string): Promise<EscoSkill | null> {
     if (!uri) return null;
@@ -210,20 +105,10 @@ export class EscoSkillService {
       const match = uri.match(/\/([a-f0-9-]+)$/i);
       if (!match) return null;
 
-      const docId = match[1];
-      const docRef = doc(db, ESCO_SKILLS_COLLECTION, docId);
-      const docSnap = await getDoc(docRef);
-
+      const docSnap = await getDoc(doc(db, ESCO_SKILLS_COLLECTION, match[1]));
       if (!docSnap.exists()) return null;
 
-      const data = docSnap.data() as EscoSkillDocument;
-      return {
-        uri: data.uri,
-        preferredLabel: data.preferredLabel,
-        alternativeLabels: data.alternativeLabels
-          ? { el: data.alternativeLabels.el ?? [], en: data.alternativeLabels.en ?? [] }
-          : undefined,
-      };
+      return EscoSkillService.mapSkill(docSnap.data() as EscoSkillDocument);
     } catch (error) {
       logger.error('Get skill by URI error', { error });
       return null;
@@ -231,9 +116,13 @@ export class EscoSkillService {
   }
 
   /**
-   * Clear the in-memory skill search cache.
+   * Καθαρίζει τη μνήμη αναζήτησης.
+   *
+   * ⚠️ Η μνήμη είναι πλέον **κοινή** για επαγγέλματα και δεξιότητες *(με
+   * διακριτό namespace)*, οπότε αυτό καθαρίζει και τις δύο. Διατηρείται ως
+   * μέθοδος επειδή το `EscoService.clearCache()` τη ζητά.
    */
   static clearCache(): void {
-    skillSearchCache.clear();
+    clearEscoSearchCache();
   }
 }

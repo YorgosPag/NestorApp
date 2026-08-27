@@ -868,4 +868,56 @@ const d = distanceToLineSegment(cursor, seg.a, seg.b);
 const centroid = getCentroid(pts);
 handlers.distanceToLineSegment = distanceToLineSegment;`,
   },
+
+  // ADR-132 — ο τοκενιστής ESCO. Το σήμα είναι (α) το όνομα της παλιάς πλευράς
+  // γραφής και (β) η ΩΜΗ κλάση διαχωριστικών: όποιος την ξαναγράφει, ξαναγράφει
+  // τον κανόνα κοπής λέξεων — και μια απόκλιση εκεί αδειάζει σιωπηλά την αναζήτηση.
+  'esco-search-tokens': {
+    shouldMatch: `// Ξαναγραμμένος τοκενιστής αντί για τον SSoT:
+function generateSearchTokens(label, altLabels = []) {
+  const words = text.split(/[\\s,.\\-/()]+/).filter(w => w.length >= 2);
+  return words;
+}`,
+    shouldSkip: `// Κανονική χρήση — εισαγωγή, ποτέ επανυλοποίηση:
+import { escoIndexTokens, escoQueryTokens } from '@/lib/esco/search-tokens';
+const tokens = escoQueryTokens(searchQuery);
+const indexed = escoIndexTokens(label, alternatives);
+
+// Άλλα splits ΔΕΝ είναι ο τοκενιστής του ESCO:
+const parts = raw.split(/\\s+/);
+const segments = code.split('.');`,
+  },
+
+  // ADR-132 — η κλίμακα συνάφειας. Το `matchedField =` (ανάθεση, όχι ιδιότητα)
+  // είναι το αποτύπωμα της παλιάς σκάλας: ο κώδικας που την ξαναγράφει κρατά
+  // μεταβλητή που τη μεταλλάσσει, ενώ ο SSoT επιστρέφει ετυμηγορία.
+  'esco-relevance': {
+    shouldMatch: `// Δεύτερη κρίση συνάφειας αντί για τον SSoT:
+function computeScore(normalizedLabel: string, normalizedQuery: string): number {
+  if (normalizedLabel === normalizedQuery) return 1.0;
+  return 0.5;
+}
+let matchedField = 'preferredLabel';`,
+    shouldSkip: `// Κανονική χρήση — μία σκάλα, μία ετυμηγορία:
+import { judgeEscoRelevance, ESCO_RELEVANCE } from '@/lib/esco/relevance';
+const verdict = judgeEscoRelevance({ normalizedLabel, normalizedQuery, alternatives });
+results.push({ occupation, score: verdict.score, matchedField: verdict.matchedField });
+const matchedField = hit.matchedField === 'secondaryKey' ? 'iscoCode' : hit.matchedField;`,
+  },
+
+  // ADR-132 — η αναζήτηση προθέματος. Το σήμα είναι το ΙΔΙΟ το ερώτημα Firestore
+  // πάνω στα searchTokens*: όποιος το ξαναγράφει, ξαναγράφει και το φιλτράρισμα,
+  // τη βαθμολόγηση και τη μνήμη — ακριβώς οι τρεις κλώνοι που μετρήθηκαν.
+  'esco-token-search': {
+    shouldMatch: `// Τρίτο δίδυμο της αναζήτησης ESCO:
+const q = query(ref, where('searchTokensEl', 'array-contains', primaryToken), limit(40));
+const q2 = db.collection(path).where('searchTokensEn', 'array-contains', token);`,
+    shouldSkip: `// Κανονική χρήση — μία μηχανή, με παραμέτρους:
+import { searchEscoByTokens } from '@/lib/esco/token-search';
+const outcome = await searchEscoByTokens({ collectionPath, cacheNamespace, rawQuery, language, limit });
+
+// Άλλα array-contains ΔΕΝ είναι η αναζήτηση ESCO:
+where('personaTypes', 'array-contains', 'supplier');
+query.where('commercial.ownerContactIds', 'array-contains', contactId);`,
+  },
 };
