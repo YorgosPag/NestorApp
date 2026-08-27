@@ -22,6 +22,8 @@ import { withAuth, logAuditEvent, isValidGlobalRole } from '@/lib/auth';
 import type { AuthContext, PermissionCache, GlobalRole } from '@/lib/auth';
 // 🎫 ADR-787 Κ-2 — η ΜΙΑ μετάφραση του εγγράφου μέλους χώρου.
 import { normalizeMembership } from '@/lib/auth/workspace-membership';
+// 🎫 ADR-822 §4.1 — η ΜΙΑ απάντηση στο «το δημιούργησε άνθρωπος;».
+import { isSyntheticIdentity } from '@/lib/auth/identity-provenance';
 import type { WorkspaceMembership } from '@/types/workspace-membership';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminAuth, getAdminFirestore } from '@/lib/firebaseAdmin';
@@ -163,12 +165,25 @@ export const GET = withSensitiveRateLimit(
           .limit(1000)
           .get();
 
-        // Exclude synthetic development-bypass users (e.g. dev-admin). They
-        // have no Firebase Auth identity, cannot be promoted to companyMembers,
-        // and listing them produces UI/API mismatches where PATCH role/status/
-        // permission-sets fails with 404 "User not found in this company".
-        const realUnassignedDocs = unassignedSnap.docs.filter(
-          (doc) => (doc.data().authProvider as string | undefined) !== 'development-bypass'
+        // Exclude synthetic users. They have no Firebase Auth identity, cannot
+        // be promoted to companyMembers, and listing them produces UI/API
+        // mismatches where PATCH role/status/permission-sets fails with 404
+        // "User not found in this company".
+        //
+        // ⚠️ ADR-822 §4.1 — ΤΟ ΚΑΤΗΓΟΡΗΜΑ ΕΦΥΓΕ ΑΠΟ ΕΔΩ, ΕΠΙΤΗΔΕΣ. Ήταν inline
+        //    σύγκριση με τη συμβολοσειρά 'development-bypass' — δηλαδή το ΜΟΝΟ
+        //    σημείο του δέντρου που ήξερε πώς αναγνωρίζεται μια ταυτότητα που
+        //    κανένας άνθρωπος δεν δημιούργησε. Ο επόμενος που θα χρειαζόταν την
+        //    ίδια απάντηση θα την ξανάγραφε ⇒ δύο λεξιλόγια (ADR-749).
+        //    Η απάντηση ζει τώρα στο `lib/auth/identity-provenance.ts`· εδώ
+        //    μένει η **χρήση** της.
+        //
+        // 🔴 ΚΑΙ Η ΠΡΟΤΑΣΗ «δεν έχουν ταυτότητα Firebase Auth» ΕΙΝΑΙ ΠΛΕΟΝ
+        //    ΜΕΤΡΗΜΕΝΗ, ΟΧΙ ΥΠΟΘΕΣΗ: 2026-08-27, ζωντανή βάση — `getUser`
+        //    και `getUserByEmail` για το `dev-admin` επέστρεψαν και τα δύο
+        //    «δεν υπάρχει», με θετικό μάρτυρα στο ίδιο τρέξιμο (ADR-822 §2.3).
+        const realUnassignedDocs = unassignedSnap.docs.filter((doc) =>
+          !isSyntheticIdentity(doc.data())
         );
 
         const unassignedUsers: CompanyUser[] = [];

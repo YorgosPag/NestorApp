@@ -49,6 +49,9 @@
 import { readdirSync, readFileSync, statSync } from 'fs';
 import { join } from 'path';
 
+// ⚓ ADR-822 / N.18 — η ΜΙΑ αφαίρεση σχολίων (ήταν δύο τοπικά δίδυμα).
+import { stripComments } from './_harness/strip-comments';
+
 /**
  * Τα δέντρα όπου **γεννιέται** μια άρνηση HTTP — **με μετρημένο κατώφλι το
  * καθένα**. Δηλωμένος περιορισμός, όχι παράλειψη: συστατικά UI δεν εκπέμπουν
@@ -190,9 +193,12 @@ const relative = (file: string): string =>
  * `//` — για τα δύο σήματα που ψάχνουμε δεν υπάρχει τέτοια περίπτωση, και ένας
  * «έξυπνος» αναλυτής εδώ θα ήταν δεύτερη μηχανή προς συντήρηση.
  */
-function stripComments(source: string): string {
-  return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
-}
+// 🔴 ADR-822 / N.18 — Η ΥΛΟΠΟΙΗΣΗ ΕΦΥΓΕ ΑΠΟ ΕΔΩ, ΕΠΙΤΗΔΕΣ.
+//    Ήταν **δίδυμο** με το `roleLiteralsInCode` του `authority.test.ts` (ίδια
+//    δουλειά, ασήμαντα διαφορετικό regex για το `//`). Τρίτος καταναλωτής
+//    γεννήθηκε στο ADR-822 ⇒ τρία αντίγραφα. Η μία υλοποίηση ζει στο
+//    `_harness/strip-comments.ts`· εδώ μένει η **χρήση**. Το σκεπτικό
+//    («σκόπιμα συντακτικός και ανόητος») μετακινήθηκε **μαζί** της.
 
 const SRC_FILES = SCANNED_TREES.flatMap(({ tree }) => listTypeScriptFiles(join(process.cwd(), tree)))
   .filter((f) => !/\.(test|spec)\.tsx?$/.test(f))

@@ -267,6 +267,85 @@ describe('Δ. πύλη fail-closed', () => {
 });
 
 // ============================================================================
+// ΣΤ. 🔍 --dry-run — Η ΠΡΟΕΠΙΣΚΟΠΗΣΗ ΠΟΥ ΕΛΕΙΠΕ (ADR-132 §10 · ADR-823)
+// ============================================================================
+//
+// 🔴 **Γιατί**: ο εισαγωγέας γράφει σε **παραγωγή** και η μηχανή **δεν έχει δει
+// ποτέ** το αληθινό API — και οι 95 άγκυρες τρέχουν με **πλαστό `fetch`**. Το
+// πρώτο πραγματικό τρέξιμο **ήταν** και η πρώτη γραφή. Καμία σοβαρή εργαλειοθήκη
+// δεν βγάζει μεταλλάκτη δεδομένων χωρίς προεπισκόπηση.
+//
+// ⚠️ **Ο ΤΡΟΠΟΣ ΕΧΕΙ ΣΗΜΑΣΙΑ**: το `run()` παραπάνω **ενίει γραφέα-κατάσκοπο**.
+// Άρα η πρόταση *«το --dry-run δεν γράφει»* δεν ελέγχεται από **κείμενο εξόδου**
+// αλλά από **μετρημένη σειρά κλήσεων**: ο κατάσκοπος δεν καλείται ΠΟΤΕ. Άγκυρα
+// που ζητούσε `toContain('ΠΡΟΕΠΙΣΚΟΠΗΣΗ')` θα αποδείκνυε ότι το μήνυμα είναι
+// **γραμμένο**, ποτέ ότι ο γραφέας είναι **παρακαμμένος**.
+describe('ΣΤ. --dry-run: ΜΗΔΕΝ γραφές, πλήρης λογιστική', () => {
+  it('🔑 ο ΓΡΑΦΕΑΣ ΔΕΝ ΚΑΛΕΙΤΑΙ ΚΑΘΟΛΟΥ — ούτε ο ενεμένος', async () => {
+    const result = await run(complete, ['--dry-run']);
+
+    expect(result.writes).toBe(0); // ⚠️ Η σειρά, μετρημένη — όχι το μήνυμα.
+    expect(result.exitCode).toBe(0);
+  });
+
+  it('η σημαία ΝΙΚΑ τον ενεμένο γραφέα — δεν παρακάμπτεται από σημείο εισόδου', async () => {
+    // Η ίδια κλήση ΧΩΡΙΣ τη σημαία καλεί τον κατάσκοπο ακριβώς μία φορά. Αυτό το
+    // ζεύγος είναι που κάνει το προηγούμενο test να σημαίνει κάτι: αλλιώς θα ήταν
+    // πράσινο και σε μια υλοποίηση που δεν γράφει ΠΟΤΕ.
+    const withFlag = await run(complete, ['--dry-run']);
+    const withoutFlag = await run(complete, []);
+
+    expect(withFlag.writes).toBe(0);
+    expect(withoutFlag.writes).toBe(1);
+  });
+
+  it('δείχνει ΑΚΡΙΒΩΣ την ίδια λογιστική με την πραγματική γραφή', async () => {
+    const preview = await run(complete, ['--dry-run']);
+    const real = await run(complete, []);
+
+    const accounting = 'δηλωμένα 1 · μοναδικά 1 · έγγραφα 1 · παραλείφθηκαν 0';
+    expect(preview.output).toContain(accounting);
+    expect(real.output).toContain(accounting);
+  });
+
+  it('λέει ΠΟΣΑ και ΠΟΥ θα γράφονταν, και δείχνει δείγμα id', async () => {
+    const result = await run(complete, ['--dry-run']);
+
+    expect(result.output).toContain('system/esco_cache/occupations');
+    expect(result.output).toContain('ΘΑ γράφονταν: 1 επαγγέλματα');
+    // Το id είναι το UUID του URI — ντετερμινιστικό, άρα ελέγξιμο.
+    expect(result.output).toContain('fbceeac6-798b-4307-a825-626707a753ad');
+  });
+
+  it('ΠΟΤΕ δεν δηλώνει επιτυχή εισαγωγή — η προεπισκόπηση δεν είναι εισαγωγή', async () => {
+    const result = await run(complete, ['--dry-run']);
+
+    expect(result.output).not.toContain('✅ ΕΙΣΑΓΩΓΗ ΠΛΗΡΗΣ');
+    expect(result.output).not.toContain('⚠️  ΕΙΣΑΓΩΓΗ ΜΕ ΕΠΙΦΥΛΑΞΕΙΣ');
+    expect(result.output).toContain('ΤΙΠΟΤΑ ΔΕΝ ΓΡΑΦΤΗΚΕ');
+  });
+
+  it('🔴 η ΠΥΛΗ προηγείται: ατελής συγκομιδή σταματά ΚΑΙ σε --dry-run', async () => {
+    // Η προεπισκόπηση δεν επιτρέπεται να δείξει ποτέ κάτι που η πύλη θα απέρριπτε
+    // — αλλιώς θα δίδασκε λάθος μοντέλο για το τι θα γραφόταν.
+    const result = await run(incomplete, ['--dry-run']);
+
+    expect(result.writes).toBe(0);
+    expect(result.exitCode).toBe(1);
+    expect(result.output).toContain('ΔΕΝ ΓΡΑΦΤΗΚΕ ΤΙΠΟΤΑ');
+    expect(result.output).not.toContain('ΠΡΟΕΠΙΣΚΟΠΗΣΗ ΟΛΟΚΛΗΡΩΘΗΚΕ');
+  });
+
+  it('συνδυασμός --dry-run --allow-partial: προχωρά ως την προεπισκόπηση, ΧΩΡΙΣ γραφή', async () => {
+    const result = await run(incomplete, ['--dry-run', '--allow-partial']);
+
+    expect(result.writes).toBe(0);
+    expect(result.exitCode).toBe(0);
+    expect(result.output).toContain('ΤΙΠΟΤΑ ΔΕΝ ΓΡΑΦΤΗΚΕ');
+  });
+});
+
+// ============================================================================
 // Ε. Ο ΚΡΙΤΗΣ ΤΗΣ ΠΥΛΗΣ, ΞΕΧΩΡΙΣΤΑ
 // ============================================================================
 

@@ -132,6 +132,45 @@ async function writeDocuments<TDoc extends object>(
   return written;
 }
 
+/** Πόσα δείγματα id δείχνει η προεπισκόπηση — αρκετά για έλεγχο, όχι dump. */
+const PREVIEW_SAMPLE_SIZE = 5;
+
+/**
+ * **ΠΡΟΕΠΙΣΚΟΠΗΣΗ — ΜΗΔΕΝ ΓΡΑΦΕΣ.** Ίδια υπογραφή με τον `writeDocuments`, ώστε να
+ * μπαίνει στην **ίδια** θέση του κύκλου: η συγκομιδή, ο μετασχηματισμός, η
+ * λογιστική και η **πύλη fail-closed** τρέχουν **ακέραια**· μόνο ο γραφέας
+ * αντικαθίσταται.
+ *
+ * ⚠️ **Γιατί υπάρχει** (ADR-132 §10, ADR-823): ο εισαγωγέας γράφει σε **παραγωγή**
+ * και η μηχανή **δεν έχει δει ποτέ** το αληθινό API — και οι 95 άγκυρες τρέχουν με
+ * πλαστό `fetch`. Κανένας εισαγωγέας που μεταλλάσσει δεδομένα δεν βγαίνει χωρίς
+ * προεπισκόπηση· το πρώτο πραγματικό τρέξιμο **δεν επιτρέπεται** να είναι και η
+ * πρώτη γραφή.
+ *
+ * 🔑 **ΔΕΝ αγγίζει το Admin SDK**: ο `initializeAdmin()` ζει **μέσα** στον
+ * προεπιλεγμένο γραφέα, οπότε σε `--dry-run` δεν ανοίγει **καμία** σύνδεση και δεν
+ * χρειάζεται **κανένα** διαπιστευτήριο. Άγκυρα: `esco-import-gate.test.ts`.
+ */
+function previewDocuments<TDoc extends object>(
+  descriptor: EscoImportDescriptor<TDoc>,
+  documents: readonly TDoc[],
+): Promise<number> {
+  console.log('\n🔍 ΠΡΟΕΠΙΣΚΟΠΗΣΗ (--dry-run) — ΚΑΜΙΑ ΓΡΑΦΗ ΔΕΝ ΘΑ ΓΙΝΕΙ');
+  console.log(`   Προορισμός που ΘΑ γραφόταν: ${descriptor.collection}`);
+  console.log(`   Έγγραφα που ΘΑ γράφονταν:   ${documents.length} ${descriptor.noun}`);
+  console.log(`   Τρόπος γραφής:              set(..., { merge: true }) ⇒ ιδιοδύναμο`);
+
+  const sample = documents.slice(0, PREVIEW_SAMPLE_SIZE);
+  if (sample.length > 0) {
+    console.log(`   Δείγμα id εγγράφων (${sample.length}/${documents.length}):`);
+    for (const document of sample) {
+      console.log(`     • ${uriToDocId(descriptor.uriOf(document), descriptor.uriPrefix)}`);
+    }
+  }
+  console.log('   ℹ️  Η λογιστική παραπάνω είναι ΑΚΡΙΒΩΣ αυτή που θα ίσχυε στη γραφή.');
+  return Promise.resolve(0);
+}
+
 /**
  * Τα **σημεία εισόδου** του κύκλου, ενέσιμα.
  *
@@ -193,11 +232,13 @@ export async function runEscoImport<TDoc extends object>(
   ports: EscoImportPorts<TDoc> = {},
 ): Promise<number> {
   const allowPartial = argv.includes('--allow-partial');
+  const dryRun = argv.includes('--dry-run');
   console.log('====================================================');
-  console.log(`🇪🇺 ${descriptor.title}`);
+  console.log(`🇪🇺 ${descriptor.title}${dryRun ? '  [ΠΡΟΕΠΙΣΚΟΠΗΣΗ]' : ''}`);
   console.log('====================================================');
   console.log(`📅 ${new Date().toISOString()}`);
   console.log(`📍 Προορισμός: ${descriptor.collection}`);
+  if (dryRun) console.log('🔍 --dry-run: θα εκτελεστούν ΟΛΑ τα βήματα ΕΚΤΟΣ από τη γραφή');
 
   console.log(`\n📥 Συγκομιδή ${descriptor.noun} από το concept-scheme…`);
   const harvest = ports.harvest ?? harvestEscoConcepts;
@@ -222,18 +263,33 @@ export async function runEscoImport<TDoc extends object>(
     return 1;
   }
 
-  const write =
-    ports.write ??
-    ((target: EscoImportDescriptor<TDoc>, documents: readonly TDoc[]) =>
-      writeDocuments(initializeAdmin(), target, documents));
+  // ⚠️ **Η ΣΕΙΡΑ ΕΧΕΙ ΣΗΜΑΣΙΑ**: το `--dry-run` επιλέγεται **ΜΕΤΑ** την πύλη
+  // fail-closed. Δηλαδή μια ατελής συγκομιδή σταματά **ούτως ή άλλως**, και η
+  // προεπισκόπηση δεν μπορεί ποτέ να δείξει κάτι που η πύλη θα απέρριπτε.
+  // 🔑 **ΤΟ `--dry-run` ΝΙΚΑ ΤΟΝ ΕΝΕΜΕΝΟ ΓΡΑΦΕΑ, ΕΠΙΤΗΔΕΣ.** Σημαία που λέει «μη
+  // γράψεις» δεν επιτρέπεται να παρακάμπτεται από κανένα σημείο εισόδου — αλλιώς
+  // η υπόσχεση εξαρτάται από το ποιος καλεί. Και **ταυτόχρονα** αυτή η σειρά είναι
+  // που κάνει την υπόσχεση **παρατηρήσιμη**: η άγκυρα ενίει γραφέα-κατάσκοπο, τρέχει
+  // με `--dry-run`, και απαιτεί ο κατάσκοπος να **μην κληθεί ΠΟΤΕ**. Αν υπερίσχυε
+  // το `ports.write`, καμία άγκυρα δεν θα μπορούσε να δει τη διαφορά.
+  const write = dryRun
+    ? previewDocuments
+    : ports.write ??
+      ((target: EscoImportDescriptor<TDoc>, documents: readonly TDoc[]) =>
+        writeDocuments(initializeAdmin(), target, documents));
   const written = await write(descriptor, transformed.documents);
   const partial = verdict.kind === 'incomplete';
   const warned = partial || transformed.warnings.length > 0;
 
   console.log('\n====================================================');
-  console.log(warned ? '⚠️  ΕΙΣΑΓΩΓΗ ΜΕ ΕΠΙΦΥΛΑΞΕΙΣ' : '✅ ΕΙΣΑΓΩΓΗ ΠΛΗΡΗΣ');
+  if (dryRun) console.log('🔍 ΠΡΟΕΠΙΣΚΟΠΗΣΗ ΟΛΟΚΛΗΡΩΘΗΚΕ — ΤΙΠΟΤΑ ΔΕΝ ΓΡΑΦΤΗΚΕ');
+  else console.log(warned ? '⚠️  ΕΙΣΑΓΩΓΗ ΜΕ ΕΠΙΦΥΛΑΞΕΙΣ' : '✅ ΕΙΣΑΓΩΓΗ ΠΛΗΡΗΣ');
   console.log('====================================================');
-  console.log(`📊 Γράφτηκαν: ${written} ${descriptor.noun}`);
+  console.log(
+    dryRun
+      ? `📊 ΘΑ γράφονταν: ${transformed.documents.length} ${descriptor.noun}`
+      : `📊 Γράφτηκαν: ${written} ${descriptor.noun}`,
+  );
   if (partial) console.log('⚠️  ΜΕΡΙΚΗ συγκομιδή γράφτηκε κατ᾽ εντολή --allow-partial');
   for (const warning of transformed.warnings) console.log(`⚠️  ${warning}`);
   return 0;

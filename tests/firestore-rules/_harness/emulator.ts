@@ -31,8 +31,40 @@ const EMULATOR_PORT = 8080;
 /**
  * Path to the canonical firestore.rules file, resolved from this module.
  * CHECK 3.16 parses the same file, so drift is impossible by construction.
+ *
+ * ═════════════════════════════════════════════════════════════════════════════
+ * 🔴 ΙΣΟΤΙΜΙΑ ΜΕ ΤΟ ΑΡΧΕΙΟ ΠΟΥ **ΣΤΕΛΝΕΤΑΙ** — `FIRESTORE_RULES_FILE` (ADR-823 §11)
+ * ═════════════════════════════════════════════════════════════════════════════
+ *
+ * ⚠️ **Η σουίτα δοκιμάζει την ΠΗΓΗ· η παραγωγή τρέχει ΑΛΛΟ ΑΡΧΕΙΟ.** Το
+ * `firebase.json` δηλώνει `"rules": "firestore.rules.compiled"` — παράγωγο που
+ * φτιάχνει το `scripts/build-firestore-rules.js` στο `predeploy` (η **πηγή** είναι
+ * 334 KB, πάνω από το σκληρό όριο 256 KiB του Firebase, οπότε φεύγει minified).
+ *
+ * Το script δηλώνει *«semantics-preserving — provably no behaviour change»*. Μέχρι
+ * τις 2026-08-27 αυτό ήταν **ισχυρισμός χωρίς μηχανισμό**: **κανένα** test και
+ * **καμία** πύλη δεν εκτέλεσε ποτέ το compiled αρχείο. Ένα bug στο `stripComment`
+ * *(π.χ. `//` μέσα σε literal)* θα άλλαζε **σιωπηλά** πολιτική ασφαλείας, και η
+ * σουίτα θα έμενε **πράσινη πάνω σε αρχείο που δεν στέλνεται**.
+ *
+ * Αυτή η μεταβλητή κλείνει το κενό **χωρίς δεύτερη σουίτα**: η **ίδια** σουίτα
+ * τρέχει δύο φορές, στα δύο αρχεία.
+ *
+ * ```bash
+ * npm run rules:build
+ * FIRESTORE_RULES_FILE=firestore.rules.compiled npm run test:firestore-rules
+ * ```
+ *
+ * ⚠️ **ΜΗΝ** την κάνεις προεπιλογή: η **πηγή** μένει το SSoT που διαβάζουν η
+ * CHECK 3.16 και κάθε άγκυρα που μετρά γραμμές· το compiled είναι **παράγωγο**.
  */
-const FIRESTORE_RULES_PATH = path.resolve(__dirname, '..', '..', '..', 'firestore.rules');
+const FIRESTORE_RULES_PATH = path.resolve(
+  __dirname,
+  '..',
+  '..',
+  '..',
+  process.env.FIRESTORE_RULES_FILE ?? 'firestore.rules',
+);
 
 /**
  * Unique project id per emulator session.

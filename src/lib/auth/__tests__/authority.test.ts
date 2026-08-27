@@ -26,6 +26,8 @@ import { join } from 'node:path';
 
 import { describe, it, expect } from '@jest/globals';
 
+// ⚓ ADR-822 / N.18 — η ΜΙΑ αφαίρεση σχολίων (ήταν δύο τοπικά δίδυμα).
+import { stripComments } from './_harness/strip-comments';
 import { decideCapability } from '../authority';
 import { PERMISSIONS, type PermissionId } from '../types';
 import { PREDEFINED_ROLES } from '../roles';
@@ -62,6 +64,11 @@ const PROD_CONTRADICTORY: CapabilitySubject = {
 /**
  * `dev-admin` — 🔴 **globalRole `'admin'`**, τιμή **εκτός** `GLOBAL_ROLES` και
  * εκτός `PREDEFINED_ROLES`. Ο λόγος που το `denied-unknown-role` υπάρχει.
+ *
+ * ⚠️ **ΙΣΤΟΡΙΚΟ ΔΕΙΓΜΑ, ΟΧΙ ΤΡΕΧΟΥΣΑ ΜΕΤΡΗΣΗ** (ADR-822 §2.7): το ζωντανό
+ * έγγραφο φέρει `'super_admin'` από τις 2026-08-25 (commit `c8b374a0`). **Η
+ * δοκιμασία μένει ακέραιη** — ελέγχει τον κριτή σε **άγνωστο** ρόλο, και το
+ * `'admin'` παραμένει άγνωστο. Άλλαξε η **ετικέτα**, όχι η ερώτηση.
  */
 const PROD_UNKNOWN_ROLE: CapabilitySubject = {
   globalRole: 'admin',
@@ -324,8 +331,14 @@ describe('Δ — καμία ταυτότητα που γράφουμε δεν ε
    *
    * 🔴 **ΓΙΑΤΙ ΥΠΑΡΧΕΙ**: μέχρι 2026-08-25 το `ensureDevUserProfile` έγραφε
    * `globalRole: 'admin'` — τιμή που **δεν υπάρχει** ούτε στα `GLOBAL_ROLES`,
-   * ούτε στα `PREDEFINED_ROLES`. Το έγγραφο `users/dev-admin` υπάρχει **στην
-   * παραγωγή** με αυτή την τιμή. Χωρίς άγκυρα, ο επόμενος το ξαναγράφει.
+   * ούτε στα `PREDEFINED_ROLES`. Χωρίς άγκυρα, ο επόμενος το ξαναγράφει.
+   *
+   * 🔴 **ΔΙΟΡΘΩΣΗ 2026-08-27 (ADR-822 §2.7)**: αυτό το σχόλιο έλεγε ότι το
+   * `users/dev-admin` υπάρχει στην παραγωγή **με αυτή την τιμή**. **ΨΕΥΔΕΣ.**
+   * Το commit `c8b374a0` (25/08 08:13Z) άλλαξε το literal σε `'super_admin'`
+   * και **10,58 ώρες αργότερα** το ζωντανό έγγραφο ξαναγράφτηκε. Δηλαδή η
+   * κατασκευή **κλιμακώθηκε** δύο μέρες πριν κλείσει η βρύση — και το σχόλιο
+   * περιέγραφε κόσμο που είχε ήδη πάψει να υπάρχει.
    *
    * ⚠️ **ΔΙΑΒΑΖΕΙ ΤΟ ΠΡΑΓΜΑΤΙΚΟ ΑΡΧΕΙΟ, ΔΕΝ ΑΝΤΙΓΡΑΦΕΙ ΤΙΜΗ.** Καρφωμένο
    *    `'super_admin'` εδώ θα έμενε πράσινο ενώ το αρχείο γράφει ό,τι θέλει.
@@ -342,8 +355,11 @@ describe('Δ — καμία ταυτότητα που γράφουμε δεν ε
    * θα έμενε πράσινη **διαβάζοντας πρόζα**. Ακριβώς το σχήμα «άγκυρα που ψάχνει
    * ΟΝΟΜΑ αντί για ΧΡΗΣΗ» — τρίτη καταγεγραμμένη εμφάνιση.
    */
+  // 🔴 ADR-822 / N.18 — η ΑΦΑΙΡΕΣΗ ΣΧΟΛΙΩΝ έφυγε από εδώ, επίτηδες: ήταν δίδυμο
+  //    με το `stripComments` του `resource-concealment-anchor.test.ts`. Εδώ μένει
+  //    το **ειδικό** μέρος — η εξαγωγή των literals ρόλου.
   const roleLiteralsInCode = (src: string): string[] => {
-    const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+    const code = stripComments(src);
     return [...code.matchAll(/globalRole:\s*'([^']+)'/g)].map(m => m[1]);
   };
 

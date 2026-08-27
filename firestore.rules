@@ -953,12 +953,20 @@ service cloud.firestore {
     //   - WRITE: Admin/server only (via Firebase Admin SDK)
     // =========================================================================
     match /floors/{floorId} {
-      // 📖 READ: Tenant-scoped via building lookup
+      // 📖 READ: Tenant-scoped — direct companyId first, building lookup as fallback
       // 🔒 SECURITY: Prevents cross-tenant data leak
+      // 🔴 ADR-823: το σκέλος `companyId` είναι αυτό που **αποδεικνύει** το παραγωγικό
+      //    ερώτημα (`tenant-config.ts` → `FLOORS` παίρνει το προεπιλεγμένο `companyId`).
+      //    Χωρίς αυτό, ένα `where('companyId','==',…)` **χωρίς** συνοδό `where('buildingId')`
+      //    είναι **δομικά ανικανοποίητο** — μετρημένο 2026-08-27. Δες `properties` για την
+      //    πλήρη ανατομία.
       allow read: if isAuthenticated()
                   && (
                        // Super admin can read all
                        isSuperAdminOnly()
+                       // PRIMARY: the tenant key the client actually queries on
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
                        // OR user belongs to the building's company
                        || (resource.data.keys().hasAny(['buildingId'])
                            && resource.data.buildingId is string
@@ -1172,18 +1180,71 @@ service cloud.firestore {
       // πίνακας personas ήταν πράσινος πάνω στη διαρροή επί μήνες, σπέρνοντας έγγραφο
       // χωρίς κανένα από τα δύο πεδία.
       //
-      // 📖 READ PRIVATE: Authenticated users from project's company
+      // 📖 READ PRIVATE: Authenticated users of the property's company
       // 🔒 SECURITY: Tenant-scoped - prevents cross-tenant data leak
+      //
+      // ============================================================================
+      // 🔴 ΓΙΑΤΙ ΥΠΑΡΧΕΙ ΤΟ ΣΚΕΛΟΣ `companyId` — ΤΟ ΕΡΩΤΗΜΑ ΠΡΕΠΕΙ ΝΑ ΜΠΟΡΕΙ ΝΑ
+      //    ΑΠΟΔΕΙΞΕΙ ΤΟΝ ΚΑΝΟΝΑ (ADR-823, μετρημένο 2026-08-27)
+      // ============================================================================
+      //
+      // Το Firestore κρίνει ένα `list` **ΟΧΙ** πάνω στα αποθηκευμένα έγγραφα αλλά
+      // πάνω στο **δυνητικό σύνολο αποτελεσμάτων** που ορίζουν οι περιορισμοί του
+      // ερωτήματος — κατά λέξη από την τεκμηρίωση: *«Cloud Firestore evaluates a
+      // query against its potential result set instead of the actual field values»*.
+      // Πεδίο που ο κανόνας διαβάζει και το ερώτημα **δεν περιορίζει** αποτιμάται
+      // ως απροσδιόριστο ⇒ **σφάλμα αξιολόγησης** ⇒ **άρνηση ΟΛΟΚΛΗΡΟΥ** του
+      // ερωτήματος. «Rules are not filters.»
+      //
+      // 🔴 **ΜΕΤΡΗΜΕΝΟ**: μέχρι τις 2026-08-27 αυτό το μπλοκ διάβαζε **μόνο**
+      // `resource.data.projectId`, ενώ ο πελάτης στέλνει `where('companyId','==',…)`
+      // (`tenant-config.ts` — το `PROPERTIES` δεν έχει override, άρα παίρνει το
+      // προεπιλεγμένο `companyId`). Αποτέλεσμα: η λίστα ακινήτων ήταν **ΠΑΝΤΑ
+      // κλειστή** για **κάθε** μη-super-admin — με **υγιή** βάση, **ένα** έγγραφο,
+      // **νόμιμο** χρήστη:
+      //     false for 'list' @ L21, Property projectId is undefined on object.
+      // Νεκροί καταναλωτές: `useRealtimeProperties` (μετρητές πλοήγησης) και
+      // `useRealtimePropertiesTrashCount`. Η **σελίδα** επιβίωνε μόνο επειδή περνά
+      // από `/api/properties` (Admin SDK, **παρακάμπτει** τους κανόνες).
+      //
+      // ⚠️ **ΓΙΑΤΙ ΕΜΕΙΝΕ ΑΟΡΑΤΟ**: ο `isSuperAdminOnly()` αποδεικνύεται **χωρίς**
+      // `resource`, οπότε ο μοναδικός λογαριασμός της ανάπτυξης περνούσε πάντα.
+      // Ταυτόσημο σχήμα με το ADR-745 (`contacts`) — **δεύτερη φορά**.
+      //
+      // 🏢 **Η ΠΡΑΚΤΙΚΗ ΤΩΝ ΜΕΓΑΛΩΝ**: το κλειδί μισθωτή ζει σε **κάθε** έγγραφο και
+      // το ερώτημα το φιλτράρει· το cross-doc `get()` μένει **εφεδρικό** σκέλος.
+      // Δεν είναι χαλάρωση: ο **ίδιος ο διακομιστής** θεωρεί ήδη το `companyId`
+      // κλειδί μισθωτή των ακινήτων (`tenantScopedCollection(COLLECTIONS.PROPERTIES,…)`
+      // στο `/api/properties`). Ήταν **δύο δόγματα για την ίδια ερώτηση**· τώρα ένα.
+      //
+      // ✅ Ίδιο σχήμα με **τις άλλες εννέα** συλλογές της ίδιας κλάσης
+      // (`buildings` 937 · `obligations` 2668 · `employment_records` 508 …) — το
+      // `properties` ήταν το **μοναδικό** που αποαναφερόταν γυμνό.
+      //
+      // ⚠️ Ο φρουρός `keys().hasAny([...]) && … is string` στο **εφεδρικό** σκέλος
+      // μένει για **δύο** λόγους, και **κανένας δεν είναι «αλλιώς πέφτει η λίστα»**:
+      //   1. είναι το **ίδιο σχήμα** με τις άλλες εννέα συλλογές της κλάσης — το
+      //      `properties` ήταν το μοναδικό που αποαναφερόταν γυμνό·
+      //   2. γίνεται **φορτιοφέρων** αν κάποτε φύγει το σκέλος `companyId`.
+      // 🔴 **Μετρημένο 2026-08-27**: με το σκέλος `companyId` παρόν, η αφαίρεσή του
+      // **δεν αλλάζει καμία ετυμηγορία** (μετάλλαξη Μ3 → πράσινη). Γράφεται εδώ ώστε
+      // να μην πιστέψει κανείς ότι τον προστατεύει άγκυρα που δεν υπάρχει.
+      // Ό,τι **είναι** αγκυρωμένο: η αφαίρεση του σκέλους `companyId` ρίχνει **7**
+      // δοκιμές στο `tenant-list-satisfiability.rules.test.ts` (μετάλλαξη Μ1).
       allow read: if isAuthenticated()
                   && (
                        // Super admin can read all
                        isSuperAdminOnly()
-                       // OR user belongs to the project's company
+                       // PRIMARY: the tenant key the client actually queries on
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
+                       // FALLBACK: legacy documents without companyId — resolve via project.
                        // 📅 2026-08-05: field was `project` — every production document
                        //    carries `projectId` (server writes it, ADR-284 §3.1). Accessing a
-                       //    missing key errors → this leg denied for ALL non-super-admins,
-                       //    leaving the public `commercialStatus` leg as the only read path.
-                       || belongsToProjectCompany(resource.data.projectId)
+                       //    missing key errors → this leg denied for ALL non-super-admins.
+                       || (resource.data.keys().hasAny(['projectId'])
+                           && resource.data.projectId is string
+                           && belongsToProjectCompany(resource.data.projectId))
                      );
 
       // ✍️ CREATE: Admin/server only
@@ -1223,11 +1284,16 @@ service cloud.firestore {
     //   - WRITE: Admin/server only (via Firebase Admin SDK)
     // =========================================================================
     match /storage_units/{storageId} {
-      // 📖 READ: Tenant-scoped via building lookup
+      // 📖 READ: Tenant-scoped — direct companyId first, building lookup as fallback
       // 🔒 SECURITY: Prevents cross-tenant data leak
+      // 🔴 ADR-823 — ίδιο σκεπτικό με `floors`/`properties`: το παραγωγικό ερώτημα
+      //    φιλτράρει `companyId`, άρα ο κανόνας πρέπει να μπορεί να αποδειχθεί από αυτό.
       allow read: if isAuthenticated()
                   && (
                        isSuperAdminOnly()
+                       // PRIMARY: the tenant key the client actually queries on
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
                        || (resource.data.keys().hasAny(['buildingId'])
                            && resource.data.buildingId is string
                            && belongsToBuildingCompany(resource.data.buildingId))
@@ -1254,11 +1320,15 @@ service cloud.firestore {
     //   - WRITE: Admin/server only (via Firebase Admin SDK)
     // =========================================================================
     match /parking_spots/{parkingId} {
-      // 📖 READ: Tenant-scoped via building lookup
+      // 📖 READ: Tenant-scoped — direct companyId first, building lookup as fallback
       // 🔒 SECURITY: Prevents cross-tenant data leak
+      // 🔴 ADR-823 — ίδιο σκεπτικό με `floors`/`storage_units`/`properties`.
       allow read: if isAuthenticated()
                   && (
                        isSuperAdminOnly()
+                       // PRIMARY: the tenant key the client actually queries on
+                       || (resource.data.keys().hasAny(['companyId'])
+                           && belongsToCompany(resource.data.companyId))
                        || (resource.data.keys().hasAny(['buildingId'])
                            && resource.data.buildingId is string
                            && belongsToBuildingCompany(resource.data.buildingId))
@@ -5300,6 +5370,40 @@ service cloud.firestore {
     // Usage: getProjectCompanyId(resource.data.projectId) — `projectId` is the canonical
     // cross-reference field name on every child collection (ADR-284 §3.1). Do NOT write
     // `resource.data.project`: the key does not exist, and a missing key errors → deny.
+    // =========================================================================
+    // ⚠️ ΜΗΝ ΠΡΟΣΘΕΣΕΙΣ ΕΔΩ ΦΡΟΥΡΟ `exists()` — ΜΕΤΡΗΘΗΚΕ ΑΔΡΑΝΗΣ (ADR-823)
+    // =========================================================================
+    //
+    // Το `get()` σε έγγραφο **που δεν υπάρχει** επιστρέφει `null`, και το `.data`
+    // πάνω σε `null` είναι **σφάλμα αξιολόγησης**, όχι `false`. Η προφανής άμυνα
+    // είναι `exists(...) ? get(...).data.companyId : null`. **Γράφτηκε, μετρήθηκε
+    // ζωντανά, και ΑΦΑΙΡΕΘΗΚΕ** (2026-08-27):
+    //
+    //   9 σχήματα ερωτήματος × 2 εκδοχές κανόνων (ΜΕ / ΧΩΡΙΣ φρουρό)
+    //   → **18/18 ΤΑΥΤΟΣΗΜΕΣ ΕΤΥΜΗΓΟΡΙΕΣ**
+    //
+    // Δοκιμάστηκαν: σημειακή ανάγνωση υγιούς & κρεμάμενου· `where(ξένο κλειδί)`·
+    // `where(ξένο κλειδί, 'in', [υπαρκτό, φάντασμα])` — το **δυσκολότερο**, που
+    // αναμειγνύει τα δύο· και γονέας που υπάρχει αλλά **δεν έχει ούτε `companyId`
+    // ούτε `projectId`**. Όλα σε κόσμο **χωρίς** `companyId` στα παιδιά, δηλαδή
+    // εκεί που το εφεδρικό σκέλος είναι η **ΜΟΝΗ** προσβάσιμη διαδρομή.
+    //
+    // 🔑 **ΓΙΑΤΙ**: σφάλμα αξιολόγησης και `false` δίνουν **και τα δύο** άρνηση, σε
+    // **κάθε** κοκκομετρία που εκθέτει το Firestore. Το σφάλμα **ΔΕΝ μεταδίδεται**
+    // σε αδελφά έγγραφα: το `list` κρίνεται πάνω στο **δυνητικό σύνολο** που ορίζει
+    // το ερώτημα, και το εφεδρικό σκέλος γίνεται προσβάσιμο **μόνο** όταν το
+    // ερώτημα **καρφώνει** το ξένο κλειδί — άρα το καρφώνει σε **μία** τιμή.
+    //
+    // 🔴 **ΑΡΑ ΤΟ «ΕΝΑ ΧΑΛΑΣΜΕΝΟ ΒΙΒΛΙΟ ΚΛΕΙΔΩΝΕΙ ΟΛΗ ΤΗ ΒΙΒΛΙΟΘΗΚΗ» ΕΙΝΑΙ ΨΕΥΔΕΣ.**
+    // Το κρεμάμενο κλειδί αρνείται **μόνο το ερώτημα που το ζητά**. Αυτό που
+    // κλείδωνε τη βιβλιοθήκη ήταν ο **ανικανοποίητος κανόνας** (έλειπε το σκέλος
+    // `companyId`) — δες `match /properties`. Άγκυρες: `tenant-list-satisfiability`
+    // Κ1/Κ2 (πέφτουν σε 5 μεταλλάξεις) και Κ5 (κλειδώνει το υπόλοιπο ως γεγονός).
+    //
+    // ⚠️ Το `resource.data.get('projectId','')` **επίσης δεν είναι λύση**: μετρήθηκε
+    // ότι το `get()` με **κενό segment** γυρίζει `null` ⇒ `Null value error`.
+    // Ο σωστός φρουρός για το **λείπον** κλειδί είναι `keys().hasAny([...])` στο
+    // σημείο κλήσης — και υπάρχει ήδη και στις δέκα συλλογές της κλάσης.
     function getProjectCompanyId(projectId) {
       return get(/databases/$(database)/documents/projects/$(projectId)).data.companyId;
     }
@@ -5322,6 +5426,12 @@ service cloud.firestore {
     //
     // Get the companyId from a building document
     // Handles both direct companyId and projectId fallback
+    // ⚠️ Δύο ΑΝΕΞΑΡΤΗΤΟΙ τρόποι να σκάσει εδώ: (α) το κτίριο δεν υπάρχει ⇒ `get()`
+    // → `null` → `.data`· (β) το κτίριο υπάρχει αλλά δεν έχει **ούτε** `companyId`
+    // **ούτε** `projectId` ⇒ σκάει το `building.projectId`. **Και οι δύο** μετρήθηκαν
+    // (2026-08-27) και **παράγουν ακριβώς την ίδια ετυμηγορία** με έναν φρουρό
+    // `exists()`/`hasAny` — γι' αυτό ο φρουρός **δεν** μπήκε. Πλήρες σκεπτικό και
+    // αριθμοί: δες το σχόλιο πάνω από τον `getProjectCompanyId`.
     function getBuildingCompanyId(buildingId) {
       let building = get(/databases/$(database)/documents/buildings/$(buildingId)).data;
       // If building has direct companyId, use it
