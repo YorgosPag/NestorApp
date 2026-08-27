@@ -40,6 +40,10 @@ import { FormProvider, type FieldValues, type UseFormReturn } from 'react-hook-f
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { DraftFormValidation } from '@/lib/forms/draft-validation';
 
+import type { ListingCustody } from '@/lib/owner-property/listing-custody';
+
+import { PersonalCustodyNotice } from '../PersonalCustodyNotice';
+
 import { FormIssues } from './FormIssues';
 
 const NS = 'property-market';
@@ -73,6 +77,7 @@ export function DraftFormShell<
   TViolation extends string,
 >({
   keyBase,
+  custody,
   form,
   editing,
   validation,
@@ -89,6 +94,21 @@ export function DraftFormShell<
    * κλώνος θα μετακινούνταν από το σώμα στην **υπογραφή**.
    */
   keyBase: string;
+  /**
+   * **Σε ποιον χώρο γράφει η πόρτα αυτής της φόρμας** (ADR-820 §5.2).
+   *
+   * 🔴 **ΥΠΟΧΡΕΩΤΙΚΟ, ΚΑΙ ΕΙΝΑΙ ΤΟ ΟΛΟ ΝΟΗΜΑ.** Το ίδιο `OwnerPropertyFormContent`
+   * σερβίρει **και** τον ιδιώτη (`/offers/new`) **και** το γραφείο
+   * (`/o/<χώρος>/listings/mandates/new`, μέσω `BrokeredListingPageContent`) — δύο
+   * ακροατήρια, **δύο διαφορετικοί χώροι**. Ένα προαιρετικό πεδίο με προεπιλογή
+   * `'personal'` θα έλεγε **ψέματα σιωπηλά** στη μία από τις δύο. Έτσι, μια νέα
+   * φόρμα προσχεδίου **δεν μπορεί να ξεχάσει** να απαντήσει: δεν χτίζει.
+   *
+   * ⚠️ **Το υπάρχον λεξιλόγιο** (`ListingCustody['kind']`, `lib/owner-property/
+   * listing-custody.ts`), ποτέ τέταρτο όνομα δίπλα σε `WorkspaceOwner` ·
+   * `ApiActor` · `ListingCustody` (ADR-820 §6 #2).
+   */
+  custody: ListingCustody['kind'];
   form: UseFormReturn<TValues>;
   /** `true` όταν επεξεργαζόμαστε υπάρχουσα οντότητα — αλλάζει τίτλο και ετικέτα. */
   editing: boolean;
@@ -111,6 +131,39 @@ export function DraftFormShell<
           </h1>
           <p className="text-sm text-muted-foreground">{t(`${K}.lead`)}</p>
         </header>
+
+        {/*
+          🔑 **Η ΔΗΛΩΣΗ ΧΩΡΟΥ — ΕΔΩ, ΜΙΑ ΦΟΡΑ, ΓΙΑ ΟΛΕΣ ΤΙΣ ΦΟΡΜΕΣ** (ADR-820 §5.2).
+
+          Οι **προσωπικές** πόρτες *(ζήτηση Α9 · προσφορά Α14)* γράφουν
+          `authorCompanyId: null`, δηλαδή **προσωπική θεματοφυλακή** — **και για τον
+          υπάλληλο γραφείου**. Η σημασιολογία ήταν σωστή και **αόρατη**.
+
+          🔴 **ΚΑΙ ΔΕΝ ΕΙΝΑΙ ΟΛΕΣ ΟΙ ΦΟΡΜΕΣ ΠΡΟΣΩΠΙΚΕΣ.** Το ίδιο
+          `OwnerPropertyFormContent` σερβίρει **και** τη διαδρομή **της εντολής**
+          (`BrokeredListingPageContent`), όπου ο υπάλληλος ενεργεί **όντως για το
+          γραφείο**. Γι' αυτό ο χώρος έρχεται ως **υποχρεωτικό** `custody` από τον
+          καλούντα: **η ΠΟΡΤΑ ξέρει, το κέλυφος όχι**. Η πρώτη γραφή απέδιδε τη
+          δήλωση **άνευ όρων** και θα έλεγε στον μεσίτη το **αντίθετο** από την
+          αλήθεια — το βρήκε ο **γεννήτορας** των route slices, όχι η κρίση.
+
+          ⛔ **ΜΗΝ το γράψεις μέσα στην κάθε φόρμα.** Θα ήταν το κλασικό λάθος του
+          **N.18** — *«κεντρικοποιείς το Α, γράφεις Β+Γ ως δίδυμα»* — και θα το έπιανε
+          το `jscpd:diff` στο ίδιο commit. Είναι ακριβώς ο λόγος που γεννήθηκε αυτό το
+          αρχείο (γρ. 9: το CHECK 3.28 το ζήτησε).
+
+          🔑 **ΠΑΝΩ από τα πεδία, ΚΑΤΩ από την κεφαλίδα**: ο άνθρωπος οφείλει να ξέρει
+          σε ποιον χώρο ενεργεί **πριν** αρχίσει να γράφει, όχι αφού πατήσει υποβολή.
+          Το ίδιο αρχείο το έχει ήδη αποφασίσει για τις ελλείψεις (§17.2): *«η λίστα
+          είναι ορατή ΠΡΙΝ πατηθεί κουμπί»*.
+
+          ⚠️ **Αυτοκρύβεται** — και για τη ροή εντολής, και για όποιον δεν έχει
+          γραφείο. **Και οι δύο** κρίσεις ζουν **μέσα** του, όχι εδώ: ένα
+          `hasOrganization()` εδώ θα ήταν **δεύτερη ανάγνωση** της ίδιας ταυτότητας
+          (ADR-749), και το `ShellUtilities` έχει ήδη γράψει γιατί: *«ΜΗΝ προσθέσεις
+          εδώ `useAuth()` για να αποφασίσεις αν να τον δείξεις»*.
+        */}
+        <PersonalCustodyNotice custody={custody} />
 
         {children}
 

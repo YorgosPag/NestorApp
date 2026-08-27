@@ -1,4 +1,11 @@
 {
+  "custody": {
+    "personal": {
+      "title": "You are posting in your personal space",
+      "body": "This entry belongs to you, not to your office. Your colleagues neither see nor manage it — and it stays yours even if you change office.",
+      "brokered": "To post under a client mandate, use Mandates inside your office space."
+    }
+  },
   "demand": {
     "door": {
       "label": "I am looking",

@@ -231,6 +231,12 @@
     "menuLabel": "User menu",
     "defaultUser": "User",
     "noEmail": "No email",
+    "spaces": {
+      "label": "My spaces",
+      "personal": "My personal space",
+      "organization": "My office space",
+      "current": "you are here"
+    },
     "account": "Account",
     "profile": "Profile",
     "settings": "Settings",

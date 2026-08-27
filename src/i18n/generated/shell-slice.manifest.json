@@ -4,21 +4,21 @@
     "src/i18n/generated/routes/data-deletion.el.json": "50365f50ff77003a6cb3602a0863d0dc674b3f215b30e55bfd88d21aa793807b",
     "src/i18n/generated/routes/demands.el.json": "41368086189cfdb5ef568de8e811404ebcea9d13f89bd756e76ac0f99a185932",
     "src/i18n/generated/routes/demands__demandId.el.json": "7959c1e9aa579a2b4fe1b39e65a4e0232c6928e497d52cc86389d0df3b159ad8",
-    "src/i18n/generated/routes/demands__new.el.json": "383ce0eedd908e243eb01c208f730d5b5d6f8699899ae3e31c290cec5899224e",
+    "src/i18n/generated/routes/demands__new.el.json": "8b7f7d13e6524d496caf0f5f4cadbfede1f56f4466b11121b5b4f594984916f7",
     "src/i18n/generated/routes/listing__id.el.json": "1f5bb80734871a98e9c0f08d8457a0d00871069ea36dfc90239a02e77749647e",
     "src/i18n/generated/routes/login.el.json": "6ba750825f9e8597ac3c9718ed99005e265a55752e1d64217ba48b29fad7f281",
     "src/i18n/generated/routes/mandate__token.el.json": "6e75cdb41998a3f76bb88840249c7b197754548563acc1de2269b9e88099531c",
     "src/i18n/generated/routes/o__workspace__dashboard.el.json": "263a3349d6e3f1e2badbab37f08d81836a102b89054c44e5ffac29cfacafffd0",
     "src/i18n/generated/routes/o__workspace__listings__mandates.el.json": "acc74d03857daa50427b8bff88d2bcd40e9d1952a442b9e7577c34eedf95c83a",
-    "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "dd5a37e4dd6d0b4f33a2f8dbd4f7306dde97d013dfa8a2b1cf8ab492c4f6ca7d",
+    "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "065ac535af7d5c7ac3a0db863d9c73a78e4a93be1a8c123da2d992cd158e9622",
     "src/i18n/generated/routes/offers.el.json": "3f80253d5a96a295e1d5b5b7a8eaacf1f65034115b256f48812fa10cc2d40383",
-    "src/i18n/generated/routes/offers__new.el.json": "9c3448585ef6de08e32debf3524300938bc1cdf473d1646683851d7b7f151b1c",
-    "src/i18n/generated/routes/offers__offerId.el.json": "3d9ed05450c675f8aac86bf5e8d3b78ffacfd3e57c43ebc94d6144e7bba52bd3",
+    "src/i18n/generated/routes/offers__new.el.json": "202c8267577dd434155ddbe6db9478642d7bd3a5e30bbbb3bacf5cf0d89072f5",
+    "src/i18n/generated/routes/offers__offerId.el.json": "f92482a1497eafc2ed1352ad1ac88631bfe50c4b53be11b3646a2f21c9d71bbf",
     "src/i18n/generated/routes/privacy-policy.el.json": "181e3b315e8ac63a3e927fa8bf073863b2aa706fd66a06f38d936dce70b0cee0",
     "src/i18n/generated/routes/terms.el.json": "481f837696b407553f56de16128778617a86f72cf7b27471d61cd5793cf7d288",
     "src/i18n/generated/routes/test-harness__listing-shapes.el.json": "9b6aaaa831492e24807a1c83e0b505dc865c03afbd5638abf8ea2b990422b037",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "d2f0cdfff0918ec0a6fedb5a19e849ee97bc89538c9b11546eb9684cb6431f30",
+    "src/i18n/generated/shell-slice.el.json": "6d19236d7b55b095ad7cc8cbbbc97370c5b7ca745fb3aa6801dfa6e802876757",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "boundaries": {
@@ -57,7 +57,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "667ab10dc25293069fdb60d7c2f93d610d93eb201d1420f5d276da70e19aac9c",
+  "inputsSha256": "4d3243ef3e440e916af44baf90b1369d7c0d72e4d6a9c34a011e6a0d37bcc5ca",
   "languages": [
     "el"
   ],
@@ -119,10 +119,11 @@
     "src/components/header/CompanySwitcher.tsx": "15b046266274446df4faf2e090b8f11b443fb5686d8372e71a81d42db0dd3875",
     "src/components/header/DeclaredOccupationBadge.tsx": "cf1ff7fc9b667325981d299784fcca293aee6ffd0a628a1ffb4b283d7cb3a2c4",
     "src/components/header/JobSwitch.tsx": "90a57871b1795ee1211f960408fc1559aed466a649ef58c0ea6f0a7a846c6e5c",
+    "src/components/header/MySpacesSection.tsx": "c5f10f50687682d5a7ff0f30fc50171dc5980d4305cb16a619e2ece107c370c5",
     "src/components/header/help-button.tsx": "dc22b85d44c8a74a38cd8923d6bbd3b04e40ba775bc55cd5a2f22b51eb9ccb29",
     "src/components/header/language-switcher.tsx": "25414678713ac486b99364f5133bd21e3bfb54138c46a18443d29f2d39447ba1",
     "src/components/header/theme-toggle.tsx": "b3f84f46495466cb3891d4a6ecb9d61e61d90406dfd5aa91f9727b9b9d544038",
-    "src/components/header/user-menu.tsx": "39fb963938717990b1125c3c213ea9509c33f119bcd0edcd3393436ad118ad0c",
+    "src/components/header/user-menu.tsx": "af94888940845c97a62b7d0afc179ebfa85322ebdf9df2710ae5ce36822511d1",
     "src/components/header/voice-assistant-button.tsx": "c56a417da0fd30f53ba7046c5293b0f09395d03f3149675787f6d1ca109f9e05",
     "src/components/job/HiddenItemsBadge.tsx": "4a787cd073d257838351379574abe8e8dd222efca9c44e05fb0fdb3ff3e7b58d",
     "src/components/job/JobSuggestion.tsx": "d84189b720848db336ca46f0b48c1d6c52e03bef6544d2c8f268d3389490bc64",
@@ -391,6 +392,7 @@
     "src/lib/properties/price-resolver.ts": "8bce354c57b171a702e82c2e934d75ef30bc5443c42a88e10d6282847e04150a",
     "src/lib/routes/accountRoutes.ts": "b82193379953e61a92c5adeb40bcb33597727241d6b6d920b57b2ae361242f01",
     "src/lib/routes/authRoutes.ts": "c8ea68cb2c0498af015c642dd1958a71daee1ea8e1d821ee13980443dc6bdc36",
+    "src/lib/routes/landing.ts": "051d6c163accef7cb3a256f44c4781b7a09482ab6bbd77e7d521f7ba23921d95",
     "src/lib/safe-fire-and-forget.ts": "7e6568024ebd6120e865d1681fa6dcf3db98600fc116d33b97e02f07dfef5375",
     "src/lib/share-utils.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/sidebar-utils.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -413,6 +415,7 @@
     "src/lib/workspace/navigation.tsx": "78c40b8d41e610a5be7e0efe14f29997c7c150abf0797a787d52bb414ad16295",
     "src/lib/workspace/route-worlds.ts": "58360164d8d2e95139b5f32a58ce93ebc5331bbc161cb5f815f7c2e80eeef4d3",
     "src/lib/workspace/workspace-path.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
+    "src/lib/workspace/workspace-routes.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/workspace/workspace-scope.ts": "c737f091ceba6aaccb27d2c5d6edccc1e4a1c52dd3f7e70136233e3cce9dea73",
     "src/providers/NotificationProvider.tsx": "a17811e65465cd85d2a32365784a1d2a90bb871065e1eee493b87b58aabc146c",
     "src/providers/PhotoPreviewProvider.tsx": "2fa3c948bfb9fc4bb3053f198a169364300a1d76938cf23a990eb898948e08b0",
@@ -592,10 +595,10 @@
   ],
   "stats": {
     "dynamicBoundaries": 18,
-    "matchedKeys": 134,
+    "matchedKeys": 135,
     "routeBoundaries": 0,
-    "shellFiles": 491,
-    "sliceBytes": 308873
+    "shellFiles": 494,
+    "sliceBytes": 311683
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
@@ -1511,6 +1514,8 @@
         "userMenu.logout",
         "userMenu.menuLabel",
         "userMenu.noEmail",
+        "userMenu.spaces.current",
+        "userMenu.spaces.label",
         "voiceAssistant.aiProcessing",
         "voiceAssistant.cancel",
         "voiceAssistant.clearHistory",
@@ -1543,7 +1548,8 @@
         "channelShare.externalIdPlaceholder",
         "emailShare",
         "emailShare.recipientMode",
-        "status"
+        "status",
+        "userMenu.spaces"
       ],
       "whole": false
     },

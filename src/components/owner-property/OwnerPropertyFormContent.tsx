@@ -284,6 +284,13 @@ export function OwnerPropertyFormContent({
   return (
     <DraftFormShell
       keyBase="offer"
+      // 🔑 **ΤΟ ΑΚΡΟΑΤΗΡΙΟ ΕΙΝΑΙ Ο ΧΩΡΟΣ** (ADR-820 §5.2). Το `mandate` είναι ήδη ο
+      //    διακρίτης των δύο πορτών — «απών για τον ιδιώτη, παρών για το γραφείο»
+      //    (§8.33) — και είναι ακριβώς το ίδιο μπιτ που γίνεται `authorCompanyId`:
+      //    `null` στην `/api/owner-properties`, `ctx.companyId` στην `…/brokered`.
+      //    ⛔ ΜΗΝ βάλεις εδώ `useAuth()`: το ερώτημα είναι **ποια πόρτα**, όχι
+      //    **ποιος ρωτά** — ο υπάλληλος περνά κι από τις δύο.
+      custody={mandate === undefined ? 'personal' : 'company'}
       form={form}
       editing={editingId !== null}
       validation={validation}

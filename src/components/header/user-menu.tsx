@@ -33,6 +33,8 @@ import {
 import { Button } from '@/components/ui/button';
 // ADR-798 §7 — «τι είσαι», ο χαρακτηρισμός του, και τι δουλειά υποδεικνύει.
 import { DeclaredOccupationBadge } from '@/components/header/DeclaredOccupationBadge';
+// ADR-820 §5.1 — «σε ποιου τον χώρο;»: η ΜΙΑ πόρτα ανάμεσα στους δύο κόσμους.
+import { MySpacesSection } from '@/components/header/MySpacesSection';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import {
   User,
@@ -185,6 +187,18 @@ export function UserMenu({ signedOut }: Readonly<{ signedOut?: React.ReactNode }
             ⚠️ ΚΑΜΙΑ ερώτηση/modal (ADR-748 Ε7.γ′ · ADR-798 Α5): όταν δεν έχει
             δηλωθεί τίποτα γίνεται **πρόταση**, μέσα σε μενού που άνοιξε ο ίδιος. */}
         <DeclaredOccupationBadge />
+        <DropdownMenuSeparator />
+        {/* ADR-820 §5.1 — ΟΙ ΧΩΡΟΙ ΜΟΥ.
+            🔑 ΕΔΩ, ΚΑΙ ΟΧΙ ΣΤΟ SIDEBAR: αυτό το μενού είναι το **μόνο** σημείο που
+            αποδίδεται και στους πέντε κόσμους (`ShellUtilities`, ADR-809 / CHECK
+            3.72) ⇒ **μία ένθεση καλύπτει ΚΑΙ ΤΙΣ ΔΥΟ κατευθύνσεις**. Το sidebar ζει
+            μόνο στο `(app)` (CHECK 3.52 Κ3) και θα ήθελε δεύτερη ένθεση αλλού.
+            🔑 ΑΜΕΣΩΣ ΜΕΤΑ ΤΗΝ ΤΑΥΤΟΤΗΤΑ, ΠΡΙΝ ΤΙΣ ΠΡΑΞΕΙΣ — και είναι η ίδια σειρά
+            που ήδη τηρεί το μενού: «ποιος είμαι» (avatar · email · επάγγελμα), μετά
+            «πού είμαι», και τέλος τι μπορώ να **κάνω** (λογαριασμός · αποσύνδεση).
+            ⚠️ ΚΑΜΙΑ κρίση ταυτότητας εδώ: την κάνει το ίδιο το τμήμα, μία φορά —
+            ίδιο δόγμα με το `UserMenu` μέσα στο `ShellUtilities`. */}
+        <MySpacesSection />
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem

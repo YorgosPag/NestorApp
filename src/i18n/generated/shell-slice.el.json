@@ -2373,7 +2373,13 @@
       "loggingOut": "Αποσύνδεση...",
       "logout": "Αποσύνδεση",
       "menuLabel": "Μενού χρήστη",
-      "noEmail": "Δεν υπάρχει email"
+      "noEmail": "Δεν υπάρχει email",
+      "spaces": {
+        "current": "εδώ βρίσκεσαι",
+        "label": "Οι χώροι μου",
+        "organization": "Ο χώρος του γραφείου μου",
+        "personal": "Ο προσωπικός μου χώρος"
+      }
     }
   },
   "common-actions": {

@@ -28,6 +28,8 @@ import { Link } from '@/lib/workspace/navigation';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { NEW_OFFER_ROUTE } from '@/lib/owner-property/owner-property-routes';
+// ADR-820 §5.3 — Ο ΕΝΑΣ κριτής του «ανήκω σε οργανισμό;», ποτέ ωμό `user?.companyId`.
+import { hasOrganization } from '@/lib/routes/landing';
 import { CREATE_WORKSPACE_ROUTE } from '@/lib/workspace/workspace-routes';
 import { useMyOwnerProperties } from '@/services/realtime/hooks/useMyOwnerProperties';
 
@@ -161,12 +163,20 @@ export function MyOwnerPropertiesContent(): React.ReactElement {
  *
  * ⚠️ **Κάτω από τον κατάλογο, όχι πάνω.** Ο άνθρωπος ήρθε για τα ακίνητά του·
  * η πρόσκληση είναι **δεύτερη** πρόταση, όχι ανταγωνιστής της «Νέα καταχώρηση».
+ *
+ * 🔴 **ΤΟ ΚΡΙΤΗΡΙΟ ΗΤΑΝ ΔΕΥΤΕΡΗ ΓΡΑΦΗ — ΔΙΟΡΘΩΘΗΚΕ 2026-08-27 (ADR-820 §5.3).**
+ * Έγραφε `if (user?.companyId) return null;`, δηλαδή **δεύτερη υλοποίηση** του
+ * {@link hasOrganization} *(`lib/routes/landing.ts`)*, που κατέχει **αυτό ακριβώς**
+ * το ερώτημα και χειρίζεται **ρητά την κενή συμβολοσειρά** — τη μόνη περίπτωση όπου
+ * η απάντηση δεν είναι προφανής, και άρα το μόνο σημείο όπου δύο κρίσεις μπορούν να
+ * αποκλίνουν **σιωπηλά** (ADR-749). Ο κανόνας **N.0.2** το θέλει διορθωμένο επιτόπου:
+ * χωρίς αυτό, το ADR-820 θα γεννούσε **τρίτη** γραφή δίπλα σε δύο.
  */
 function WorkspaceInvitation(): React.ReactElement | null {
   const { t } = useTranslation([NS]);
   const { user } = useAuth();
 
-  if (user?.companyId) return null;
+  if (hasOrganization({ companyId: user?.companyId })) return null;
 
   return (
     <aside className="rounded-lg border border-border bg-muted/30 p-5">

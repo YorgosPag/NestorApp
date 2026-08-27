@@ -134,6 +134,11 @@ export function DemandFormContent({
   return (
     <DraftFormShell
       keyBase="demand"
+      // 🔑 **ΠΑΝΤΑ προσωπική** (ADR-820 §5.2), και δεν είναι προεπιλογή: αυτή η
+      //    φόρμα γράφει `authorCompanyId: null` **άνευ όρων** (γρ. 73), και η
+      //    απόδοση σε γραφείο είναι **άλλη ροή, με έγκριση πελάτη**. Τη μέρα που θα
+      //    αποκτήσει η ζήτηση εταιρική πόρτα, **αυτή η γραμμή** είναι που αλλάζει.
+      custody="personal"
       form={form}
       editing={editingId !== null}
       validation={validation}

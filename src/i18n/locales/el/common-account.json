@@ -231,6 +231,12 @@
     "menuLabel": "Μενού χρήστη",
     "defaultUser": "Χρήστης",
     "noEmail": "Δεν υπάρχει email",
+    "spaces": {
+      "label": "Οι χώροι μου",
+      "personal": "Ο προσωπικός μου χώρος",
+      "organization": "Ο χώρος του γραφείου μου",
+      "current": "εδώ βρίσκεσαι"
+    },
     "account": "Λογαριασμός",
     "profile": "Προφίλ",
     "settings": "Ρυθμίσεις",
