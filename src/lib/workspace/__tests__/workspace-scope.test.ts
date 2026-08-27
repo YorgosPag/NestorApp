@@ -48,6 +48,7 @@ function topLevelRouteSegments(dir: string): Set<string> {
       continue;
     }
     if (isDynamicSegment(entry.name)) continue;
+    if (isPrivateFolder(entry.name)) continue;
     tops.add(entry.name);
   }
   return tops;
@@ -56,6 +57,21 @@ function topLevelRouteSegments(dir: string): Set<string> {
 /** `[id]` · `[...rest]` · `[[...opt]]` — σχήμα διαδρομής, ποτέ κυριολεκτικό τμήμα. */
 function isDynamicSegment(name: string): boolean {
   return name.startsWith('[');
+}
+
+/**
+ * `_folder` — **ιδιωτικός φάκελος του Next.js**: εξαιρείται από τη δρομολόγηση,
+ * άρα **δεν είναι τμήμα διαδρομής** και δεν έχει τι να δηλώσει κανείς γι' αυτόν.
+ *
+ * 🔴 **ΤΟ ΒΡΗΚΕ ΖΩΝΤΑΝΗ ΑΣΤΟΧΙΑ** (2026-08-27): το `98333253` γέννησε το
+ * `src/app/__tests__/` και το Ε1 κοκκίνισε ζητώντας δήλωση για φάκελο που **καμία
+ * διεύθυνση δεν φτάνει**. Η θεραπεία δεν είναι γραμμή στο `OUTSIDE_WORKSPACE` —
+ * θα ήταν ψέμα: ο φάκελος δεν είναι «έξω από τον χώρο», είναι **έξω από τις
+ * διαδρομές**. ⚠️ Ο κανόνας είναι η **σύμβαση του πλαισίου**, όχι το όνομα
+ * `__tests__`: κάθε `_*` εξαιρείται, όπως ακριβώς το ορίζει το Next.js.
+ */
+function isPrivateFolder(name: string): boolean {
+  return name.startsWith('_');
 }
 
 function workspaceChildren(): Set<string> {
