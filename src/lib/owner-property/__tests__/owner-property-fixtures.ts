@@ -117,6 +117,7 @@ export function brokeredOwnerProperty(
       viewedAt: null,
       consentNonce: null,
       expiresAt: '2027-08-11T09:00:00.000Z',
+      agencyRevokedAt: null,
       ...mandate,
     },
     ...overrides,

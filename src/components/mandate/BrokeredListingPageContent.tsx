@@ -22,7 +22,9 @@ import React from 'react';
 import { Link } from '@/lib/workspace/navigation';
 import { useTranslation } from 'react-i18next';
 
+import { useAuth } from '@/auth/hooks/useAuth';
 import { BrokeredMandateFields } from '@/components/mandate/BrokeredMandateFields';
+import { useOrganizationCapability } from '@/services/realtime/hooks/useOrganizationCapability';
 import { OwnerPropertyFormContent } from '@/components/owner-property/OwnerPropertyFormContent';
 import type { ComboboxOption } from '@/components/ui/searchable-combobox';
 import { nowISO } from '@/lib/date-local';
@@ -78,7 +80,19 @@ const logger = createModuleLogger('BrokeredListingPageContent');
 const CLIENT_PICKER_LIMIT = 500;
 
 export function BrokeredListingPageContent(): React.ReactElement {
-  const { t } = useTranslation([NS]);
+  const { t } = useTranslation([NS, 'auth']);
+  const { user } = useAuth();
+
+  /**
+   * 🔴 **Η ΟΘΟΝΗ ΔΕΝ ΠΡΟΣΦΕΡΕΙ ΠΟΡΤΑ ΠΟΥ ΘΑ ΑΠΑΝΤΗΣΕΙ 403** (ADR-824 §8 Κ5).
+   *
+   * ⛔ **ΔΕΝ είναι ο φρουρός** — εκείνος είναι ο τύπος `BrokerageAuthority` στον
+   * διακομιστή, και μια διαδρομή που τον ξεχνά **δεν μεταγλωττίζεται**. Αυτό εδώ
+   * είναι **ειλικρίνεια της οθόνης**: μέχρι τις 2026-08-27 η φόρμα εμφανιζόταν σε
+   * **κάθε** γραφείο, και το tooltip του επιλογέα «δουλειάς» το ομολογούσε —
+   * *«Δεν αλλάζει δικαιώματα — **μόνο τι εμφανίζεται**»*.
+   */
+  const brokerage = useOrganizationCapability(user?.companyId ?? null, 'brokerage_listings');
 
   // 🔑 **Αρχικοποιητής συνάρτησης**: το ρολόι διαβάζεται σε **μία** απόδοση. Ένα
   // `useState(emptyMandateForm(nowISO()))` θα υπολόγιζε νέα προεπιλεγμένη λήξη σε
@@ -122,6 +136,29 @@ export function BrokeredListingPageContent(): React.ReactElement {
       alive = false;
     };
   }, []);
+
+  // 🔴 **ΟΛΟΚΛΗΡΗ η φόρμα λείπει, όχι απενεργοποιημένο κουμπί.** Μια φόρμα που ο
+  //    άνθρωπος συμπληρώνει και **δεν μπορεί** να υποβάλει είναι χειρότερη από
+  //    απουσία: του ζητά δουλειά που θα πεταχτεί. Το μήνυμα λέει **σε ποια
+  //    κατάσταση** βρίσκεται και άρα **τι μπορεί να κάνει**.
+  if (brokerage !== 'active') {
+    return (
+      <section className="flex flex-col gap-4">
+        {/* ⚠️ **Τα ΥΠΑΡΧΟΝΤΑ κλειδιά, κανένα νέο.** Ο τίτλος και ο σύνδεσμος επιστροφής
+            είναι οι ίδιοι με την κανονική οθόνη — αλλάζει **μόνο** το μήνυμα, που
+            έχει ήδη τρεις γραμμένες αποδόσεις (μία ανά κατάσταση). */}
+        <h1 className="text-xl font-semibold text-foreground">{t(`${K}.newTitle`)}</h1>
+        <p className="text-sm text-muted-foreground">
+          {t(`auth:brokerage.denyReason.${brokerage}`)}
+        </p>
+        <nav>
+          <Link href={MANDATE_CATALOG_ROUTE} className="text-sm text-muted-foreground">
+            {t('property-market:offer.mandates.backToCatalog')}
+          </Link>
+        </nav>
+      </section>
+    );
+  }
 
   return (
     <section className="flex flex-col gap-4">

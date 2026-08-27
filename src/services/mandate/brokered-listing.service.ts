@@ -137,6 +137,8 @@ export async function createBrokeredListing(
     viewedAt: null,
     consentNonce: link.nonce,
     expiresAt: request.expiresAt,
+    // Το γραφείο μόλις κρίθηκε ενεργό από τον φρουρό — δες `authority`.
+    agencyRevokedAt: null,
   };
 
   const write = await createOwnerProperty(
