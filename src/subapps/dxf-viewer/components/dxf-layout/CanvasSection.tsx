@@ -112,7 +112,9 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const { viewport, viewportRef, viewportReady, setTransform, transformRef } = useViewportManager({
     containerRef, transform, setTransform: contextSetTransform,
   });
-  const zoomSystem = useZoom({ initialTransform: transform, onTransformChange: setTransform, viewport });
+  // ADR-418 — `transformProvider`: ο κάτοχος δηλώνει το SSoT του, ώστε ο ZoomManager να χτίζει στη
+  // ΖΩΝΤΑΝΗ κατάσταση (το pan γράφει κατευθείαν στο store). Getter, όχι snapshot — ADR-040 κανόνας #2.
+  const zoomSystem = useZoom({ initialTransform: transform, onTransformChange: setTransform, viewport, transformProvider: getImmediateTransform });
   // === Visibility ===
   const showDxfCanvas = props.dxfCanvasVisible ?? true;
   const showLayerCanvasDebug = props.layerCanvasVisible ?? true;

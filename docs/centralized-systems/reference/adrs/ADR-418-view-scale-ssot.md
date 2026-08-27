@@ -71,7 +71,8 @@ Worked example: metres @ scale 55 → N ≈ 69 → "1:69". 1:1 actual size → s
 | Physical-screen constants | `config/dpi-config.ts` (`SCREEN_DPI`, `MM_PER_INCH`, `pxPerMmCss`) |
 | Pure conversion + presets + formatting | `utils/view-scale.ts` (`scaleToRatio`, `ratioToScale`, `formatViewScale`, `VIEW_SCALE_RATIO_PRESETS`, `VIEW_SCALE_MENU_PRESETS`, `isViewRatioActive`) |
 | Reactive view scale (micro-leaf) | `systems/zoom/hooks/useViewScale.ts` (subscribes ZoomStore scale + current scene units) |
-| Zoom operations | `ZoomManager.zoomToRatio` / `zoomToActualSize` (replace `zoomTo100`) |
+| Zoom operations | `ZoomManager.zoomToRatio` / `zoomToActualSize` (replace `zoomTo100`) — **ο ΜΟΝΟΣ απόλυτος δρόμος**, §Απόλυτος προορισμός |
+| Εντολή κλίμακας από έξω | event `canvas-zoom-to-ratio` → `useFitToView` → `zoomSystem.zoomToRatio` |
 | Displays (1:N) | `RulerCornerBox`, `ToolbarStatusBar` (via `StatusBarViewScaleLeaf`), `ZoomControls`/`ZoomControlsWidget`, `SidebarSection` (`SidebarZoomLeaf`) |
 | Reload guard | `useAutoFitOnFileChange` — degenerate restore (content diagonal < `MIN_VISIBLE_CONTENT_PX`) re-fits |
 
@@ -92,9 +93,69 @@ subscription. `StandaloneStatusBar` no longer subscribes to zoom at all (improve
   renderers to `SCREEN_DPI`; relocate `useCurrentSceneModel` to `systems/levels/`.
 - 🗑️ Deleted dead `ui/toolbar/ScaleControls.tsx` (never rendered, wrong `1/zoom` formula).
 
+## Απόλυτος προορισμός vs σχετικό βήμα (2026-08-27)
+
+Δύο **διαφορετικές** ερωτήσεις μοιράζονταν έναν δρόμο:
+
+| Ερώτηση | Παράδειγμα | Σωστός δρόμος |
+|---|---|---|
+| «κάνε **βήμα**» (σχετικό) | κουμπιά ±20%, ροδάκι | `zoomAtScreenPoint(factor)` → wheel path |
+| «πήγαινε **εκεί**» (απόλυτο) | 1:100 από το widget/μενού | `ZoomManager.zoomToRatio` |
+
+Ο δρόμος του ροδακιού έχει **anti-fling clamp** (`WHEEL_MAX_DELTA = 300`): το `deltaY` κόβεται, άρα
+ο πραγματικός factor δεν βγαίνει ποτέ έξω από **[÷1,73, ×1,73]**. Σωστό για hardware εισόδους —
+**μοιραίο** για προορισμό. Το `wheelDeltaForFactor` (η αντιστροφή) **δεν** κόβει, οπότε η σύνθεση
+των δύο δεν είναι ταυτότητα: σιωπηλός κορεσμός, χωρίς σφάλμα, χωρίς log.
+
+**Το μετρημένο σύμπτωμα** (από 1:32, το στιγμιότυπο του περιστατικού):
+
+| Ζητήθηκε | Απαιτούμενο deltaY | Προσγειώθηκε |
+|---|---|---|
+| 1:20 | −258 | 1:20 ✅ |
+| 1:50 | +245 | 1:50 ✅ |
+| 1:100 | +625 | **1:55,3** ❌ |
+| 1:200 | +1005 | **1:55,3** ❌ |
+| 1:500 | +1508 | **1:55,3** ❌ |
+| 1:1 | −1901 | **1:18,5** ❌ |
+
+Τρεις διαφορετικοί στόχοι, **μία** τιμή: η υπογραφή του κορεσμού. Μικρά άλματα δούλευαν — γι' αυτό
+η βλάβη έμοιαζε με «κολλάει καμιά φορά» αντί για «είναι σπασμένο».
+
+🔴 **Η ρίζα δεν ήταν το clamp — ήταν ότι το ADR-418 έφτιαξε τον σωστό δρόμο και τον πήρε ΜΟΝΟ ο
+ένας από τους δύο καταναλωτές.** Το μενού της γωνίας των χαράκων καλούσε `zoomSystem.zoomToRatio`
+(σωστά)· το widget του ribbon, επειδή ζει **έξω** από το `CanvasLayerStack` και δεν βλέπει το
+`zoomSystem`, «τα κατάφερε μόνο του» μέσω `canvasOps.zoomToScale`. Δύο αδέλφια, ένα σωστό.
+
+**Η θεραπεία**: το widget ταξιδεύει με event (`canvas-zoom-to-ratio`) — **ακριβώς το σχήμα που
+ήδη χρησιμοποιεί το `canvas-fit-to-view`** για την ίδια ακριβώς αιτία — και καταλήγει στον ΕΝΑ
+`zoomToRatio`. Ο σπασμένος `useCanvasOperations.zoomToScale` **διαγράφηκε** (ήταν ο μοναδικός του
+καταναλωτής): προτιμότερο να λείπει ο δρόμος παρά να υπάρχει και να παραπλανά.
+
+## Η ζωντανή βάση του ZoomManager (2026-08-27)
+
+Ο `ZoomManager` κρατούσε **δικό του** `currentTransform`, ενημερωμένο μόνο από τις δικές του
+πράξεις — ενώ το **pan** γράφει κατευθείαν στο SSoT (`useCentralizedMouseHandlers` →
+`onTransformChange`), όπως και fit / restore-viewport / reset-to-origin. Δεύτερη πηγή αλήθειας
+δίπλα στο `ImmediateTransformStore`: μετά από pan, το επόμενο zoom υπολόγιζε **σωστό factor πάνω σε
+λάθος αγκύρωση**.
+
+Θεραπεία: **injected getter** (4ο όρισμα του constructor, `getImmediateTransform`), με
+`syncFromLiveTransform()` πριν από κάθε πράξη που χτίζει πάνω στην τρέχουσα κατάσταση. Η κλάση
+μένει καθαρή (δεν εισάγει store, testable)· χωρίς getter η συμπεριφορά είναι η παλιά.
+
 ## Changelog
 
 - **2026-06-05** — Initial implementation. New `dpi-config.ts` + `view-scale.ts` SSoT +
   `useViewScale` hook + 11 unit tests. `ZoomManager`/`useZoom`/`CanvasContext` gain
   `zoomToRatio`/`zoomToActualSize`, drop `zoomTo100`. Displays migrated to 1:N. Reload
   degenerate-view guard added. i18n el/en. ScaleControls deleted.
+- **2026-08-27** — 🔴 **Το ribbon widget κλίμακας δεν έφτανε ποτέ στον στόχο του.** Το
+  `set-view-ratio` δρομολογούνταν μέσα από τον δρόμο του ροδακιού και κορενόταν από το anti-fling
+  clamp (μετρημένο: από 1:32 τα 1:100/1:200/1:500 προσγειώνονταν **όλα** στο 1:55,3). Τώρα εκπέμπει
+  `canvas-zoom-to-ratio` → `useFitToView` → `zoomSystem.zoomToRatio` — ο ΙΔΙΟΣ δρόμος με το μενού
+  της γωνίας των χαράκων. Διαγράφηκε ο `useCanvasOperations.zoomToScale` (νεκρός + παγίδα)·
+  προειδοποίηση-νάρκη στο `wheelDeltaForFactor`. **Δεύτερο εύρημα**: ο `ZoomManager` χτίζει πλέον
+  πάνω στη **ζωντανή** κατάσταση (injected `getImmediateTransform`), όχι σε αντίγραφο που το pan
+  άφηνε μπαγιάτικο. **Άγκυρα**: `systems/zoom/__tests__/view-ratio-landing.test.ts` — 13 tests που
+  ρωτούν «ΠΟΥ προσγειώθηκα;» αντί για τα μαθηματικά· επαληθευμένη με **2/2 μεταλλάξεις** (επαναφορά
+  του wheel δρόμου → 8 κόκκινα· αφαίρεση του συγχρονισμού → 1 κόκκινο).

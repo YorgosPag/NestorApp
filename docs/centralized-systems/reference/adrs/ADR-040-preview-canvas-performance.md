@@ -113,6 +113,22 @@ SSoT γεωμετρίας: `canvas-v2/dxf-canvas/dxf-bitmap-cache-anchor.ts` (κ
 
 ## Changelog
 
+### 2026-08-27 — ADR-418: το `zoomSystem` του `CanvasSection` δηλώνει ρητά το SSoT του (CHECK 6B)
+
+- **`CanvasSection.tsx`**: **+1 πεδίο στο ένα υπάρχον `useZoom({...})`**, καμία νέα συνδρομή, καμία
+  αλλαγή στη δομή του orchestrator. Το `transformProvider: getImmediateTransform` είναι **getter**
+  — ακριβώς ο **κανόνας #2** αυτού του ADR («event handlers παίρνουν `getX`, όχι snapshot»), εδώ
+  εφαρμοσμένος στον `ZoomManager`: ο manager χτιζόταν **μία** φορά (ref guard) και κρατούσε
+  αντίγραφο του transform, ενώ το **pan** γράφει κατευθείαν στο `ImmediateTransformStore`. Δηλαδή
+  ένα ακόμη **stale snapshot** της ίδιας οικογένειας με όσα λύθηκαν στη Φάση XXII.
+- **ADR-040 συμμόρφωση**: `getImmediateTransform` είναι **ανάγνωση**, όχι `useSyncExternalStore` —
+  ο `CanvasSection` δεν αποκτά συνδρομή υψηλής συχνότητας (CHECK 6C ανέγγιχτο). Το ίδιο σύμβολο
+  ήταν ήδη εισηγμένο και χρησιμοποιούμενο στο αρχείο (γρ. 107).
+- ⚠️ Ο getter δίνεται **από τον κάτοχο**, δεν είναι προεπιλογή μέσα στο `useZoom`: το ίδιο hook το
+  χρησιμοποιεί και το `FloorPlanViewer` με **δικό του** καμβά — σιωπηρή προεπιλογή θα το έκανε να
+  διαβάζει το transform του DXF viewer.
+- Πλήρες σκεπτικό + το σφάλμα κλίμακας που το αποκάλυψε: **ADR-418** (§«Η ζωντανή βάση του ZoomManager»).
+
 ### 2026-08-04 — ADR-751 Φ8: η **τρίτη** θύρα δεξιού κλικ + ο επιλογέας συνδέσμων (CHECK 6B)
 
 - **`CanvasSection.tsx`**: **+2 γραμμές, καμία νέα συνδρομή** — ένα ακόμη πεδίο (`tableLinkMenu`)
