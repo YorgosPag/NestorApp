@@ -169,6 +169,33 @@ export interface UserTypeContextType {
 // =============================================================================
 
 /**
+ * Το λεξιλόγιο **κατάστασης χρήστη** — η ΡΙΖΑ του (ADR-812 · CHECK 3.73).
+ *
+ * 🔴 **ΓΙΑΤΙ ΕΓΙΝΕ ΤΥΠΟΣ, ΚΑΙ ΕΙΝΑΙ ΜΕΤΡΗΜΕΝΟ**: μέχρι 2026-08-27 αυτές οι
+ * τέσσερις τιμές ζούσαν **inline** μέσα στο {@link UserProfileDocument}. Κανείς
+ * δεν *μπορούσε* να τις δανειστεί — άρα το `identity-remediation.ts` κράτησε
+ * **μερικό αντίγραφο** (δύο από τις τέσσερις) ενώ δήλωνε «δανεισμένο, όχι
+ * επινοημένο». Το αντίγραφο ήταν ήδη αδύναμο: μια αναίρεση που έπρεπε να
+ * επαναφέρει `'pending'` δεν **χωρούσε** στον τύπο, και περνούσε με cast.
+ *
+ * ⚠️ **ΔΕΝ είναι το `ENTITY_STATUS`** (`src/constants/entity-status-values.ts`):
+ * εκείνο είναι **γενικό lifecycle οντότητας** — έχει `archived`, **δεν** έχει
+ * `pending`. Διαφορετικό ερώτημα, διαφορετικό λεξιλόγιο, σωστά χωριστά (ADR-812).
+ *
+ * ⚠️ **Ο ΠΙΝΑΚΑΣ ΕΙΝΑΙ Η ΑΥΘΕΝΤΙΑ, Ο ΤΥΠΟΣ ΠΑΡΑΓΕΤΑΙ** — ίδιο μοτίβο με το
+ * `GLOBAL_ROLES` → `GlobalRole` (`src/lib/auth/types.ts`) και το
+ * `ENTITY_STATUS` → `EntityStatus`. **Ένα** μοτίβο σε αυτό το δέντρο, όχι
+ * δεύτερο. Έτσι ο έλεγχος «είναι έγκυρη τιμή;» γράφεται **χωρίς `as`**:
+ * `USER_STATUSES.find((value) => value === raw)`.
+ *
+ * @see ADR-660 — γιατί υπάρχει το `pending`
+ */
+export const USER_STATUSES = ['active', 'inactive', 'suspended', 'pending'] as const;
+
+/** Η κατάσταση ενός εγγράφου χρήστη. Παράγεται από {@link USER_STATUSES}. */
+export type UserStatus = (typeof USER_STATUSES)[number];
+
+/**
  * Firestore /users/{uid} document schema
  * Represents the materialized user profile in Firestore
  *
@@ -208,7 +235,7 @@ export interface UserProfileDocument extends DeclaredOccupation {
   /** Global role from custom claims */
   globalRole: string | null;
   /** Account status. `pending` = αυτο-εγγραφή που εκκρεμεί έγκριση admin (ADR-660). */
-  status: 'active' | 'inactive' | 'suspended' | 'pending';
+  status: UserStatus;
   /** Email verification status */
   emailVerified: boolean;
   /** Login counter (incremented on each sign-in) */

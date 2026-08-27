@@ -39,6 +39,8 @@
  * @see ADR-244 — η υπάρχουσα διαδρομή αλλαγής ρόλου (και το τυφλό της σημείο)
  */
 
+import { USER_STATUSES, type UserStatus } from '@/auth/types/auth.types';
+
 import {
   SAFE_DOWNGRADE_ROLE,
   type IdentityDocumentFacts,
@@ -75,6 +77,11 @@ export type {
  * στην παραγωγή **τιμή εκτός λεξιλογίου** — δηλαδή **ακριβώς την κλάση βλάβης
  * που καθαρίζει** *(το `globalRole: 'admin'` του ADR-801 §4.3)*.
  *
+ * ✅ **ΚΑΙ ΠΛΕΟΝ ΕΙΝΑΙ ΑΠΟΔΕΙΓΜΕΝΑ ΔΑΝΕΙΣΜΕΝΟ** (2026-08-27): το `satisfies` παρακάτω κάνει
+ * τον **μεταγλωττιστή** να επιβάλλει ότι κάθε τιμή εδώ ανήκει στο `UserStatus`.
+ * *Πριν από αυτό ήταν **μερικό αντίγραφο** — δύο από τις τέσσερις τιμές, χωρίς
+ * καμία σύνδεση με τη ρίζα, ενώ δήλωνε «δανεισμένο».*
+ *
  * ⚠️ Η σωστή τιμή είναι **`'suspended'`** — η ίδια που ήδη χρησιμοποιεί η
  * διαχείριση χρηστών *(`normalizeMembership`, ADR-787)*. **Ένα λεξιλόγιο.**
  */
@@ -83,18 +90,28 @@ export const REMEDIATION_STATUS = {
   active: 'active',
   /** Ανενεργός **με πρόθεση**: το πρότυπο «deactivate before delete» (Okta). */
   suspended: 'suspended',
-} as const;
+} as const satisfies Readonly<Record<string, UserStatus>>;
 
-export type RemediationStatus = (typeof REMEDIATION_STATUS)[keyof typeof REMEDIATION_STATUS];
 
 // ============================================================================
 // 2. Η ΠΡΑΞΗ — ΚΑΙ Η ΑΝΤΙΣΤΡΟΦΗ ΤΗΣ
 // ============================================================================
 
-/** Τα πεδία που η θεραπεία επιτρέπεται **ποτέ** να αγγίξει. Τίποτα άλλο. */
+/**
+ * Τα πεδία που η θεραπεία επιτρέπεται **ποτέ** να αγγίξει. Τίποτα άλλο.
+ *
+ * 🔑 **ΓΙΑΤΙ `| null`**: το `null` **δεν είναι απουσία** σε αυτά τα έγγραφα —
+ * είναι **ζωντανή τιμή** *(μετρημένο: `globalRole: null` σε πραγματικό έγγραφο
+ * της παραγωγής)*. Χωρίς αυτό, μια αναίρεση που πρέπει να επαναφέρει σε `null`
+ * **παρέλειπε σιωπηλά το πεδίο** — δηλαδή δεν αναιρούσε.
+ *
+ * ⚠️ Το `status` δέχεται **ολόκληρο** το `UserStatus`, όχι μόνο όσα γράφει η
+ * θεραπεία: η **αναίρεση** μπορεί να χρειαστεί να επαναφέρει `'pending'` ή
+ * `'inactive'`. Πριν, αυτή η περίπτωση περνούσε με **cast**.
+ */
 export interface RemediationPatch {
-  readonly globalRole?: string;
-  readonly status?: RemediationStatus;
+  readonly globalRole?: string | null;
+  readonly status?: UserStatus | null;
 }
 
 /**
@@ -138,8 +155,15 @@ export type NoPlanReason =
    * κώδικα**. Η δημιουργία εγγράφου θα **επινοούσε** ταυτότητα — ADR-821.
    */
   | 'requires-human-identification'
-  /** Το έγγραφο δεν φέρει τίποτα από όσα η θεραπεία ξέρει να αλλάξει. */
-  | 'no-actionable-fields';
+  /** Η ετυμηγορία δεν αντιστοιχεί σε καμία επιθυμητή κατάσταση. */
+  | 'no-actionable-fields'
+  /**
+   * 🏆 Το έγγραφο είναι **ΗΔΗ** στον προορισμό — το «No changes» του
+   * Terraform. **ΔΕΝ ΕΙΝΑΙ ΣΦΑΛΜΑ**: είναι η σωστή απάντηση σε δεύτερη
+   * εκτέλεση, και η αιτία που καμία επανάληψη δεν μπορεί να χαλάσει
+   * την αναίρεση της πρώτης *(μετρημένο σφάλμα, 2026-08-27)*.
+   */
+  | 'already-in-desired-state';
 
 /** Η απάντηση: σχέδιο **ή** ονομασμένος λόγος που δεν υπάρχει. */
 export type RemediationOutcome =
@@ -147,7 +171,84 @@ export type RemediationOutcome =
   | { readonly kind: 'none'; readonly reason: NoPlanReason };
 
 // ============================================================================
-// 3. Ο ΣΧΕΔΙΑΣΤΗΣ
+// 3. Η ΕΠΙΘΥΜΗΤΗ ΚΑΤΑΣΤΑΣΗ — ΤΟ «ΤΙ», ΠΟΤΕ ΤΟ «ΑΠΟ ΠΟΥ ΠΡΟΣ ΠΟΥ»
+// ============================================================================
+
+/**
+ * 🏆 **Η ΕΠΙΘΥΜΗΤΗ ΚΑΤΑΣΤΑΣΗ ανά ετυμηγορία — ΕΝΑ σημείο, καθαρά δηλωτικό.**
+ *
+ * 🔴 **ΓΙΑΤΙ ΑΛΛΑΞΕ ΤΟ ΕΡΩΤΗΜΑ, ΚΑΙ ΕΙΝΑΙ ΜΕΤΡΗΜΕΝΟ (2026-08-27)**: μέχρι σήμερα
+ * εδώ ζούσε το `plannedPatch`, που ρωτούσε **«τι ΜΕΤΑΒΑΣΗ κάνω;»** και κουβαλούσε
+ * **τρεις χειροποίητους φρουρούς** ιδεμποτικότητας — έναν ανά δρόμο, και **ο
+ * τρίτος ρωτούσε άλλο πράγμα από τους δύο πρώτους**:
+ *
+ * | δρόμος | φρουρός | ρωτούσε |
+ * |---|---|---|
+ * | `disabled-account-active-document` | `status !== active` | «είμαι στον στόχο;» ✅ |
+ * | `role-mismatch` | `previousRole === SAFE_DOWNGRADE_ROLE` | «είμαι στον στόχο;» ✅ |
+ * | `document-without-account` | `previousRole === null && status !== active` | **άλλο** ❌ |
+ *
+ * Ο τρίτος **δεν έπιασε** το ήδη-θεραπευμένο `dev-admin` *(ρόλος `external_user`,
+ * κατάσταση `suspended`)*, οπότε το εργαλείο ξαναπρότεινε την ίδια πράξη με
+ * `patch === inverse === {external_user, suspended}` — δηλαδή **αναίρεση που δεν
+ * αναιρεί**. Η δεύτερη εκτέλεση θα είχε **καταστρέψει** τη μοναδική πραγματική
+ * αναίρεση (`super_admin, active`), ακυρώνοντας την υπόσχεση του §4.5.
+ *
+ * 🏆 **Η ΑΠΑΝΤΗΣΗ ΤΩΝ ΜΕΓΑΛΩΝ — ΜΗΝ ΔΙΟΡΘΩΣΕΙΣ ΤΟΝ ΦΡΟΥΡΟ, ΑΛΛΑΞΕ ΤΟ ΕΡΩΤΗΜΑ.**
+ * Ο Kubernetes είναι *level-triggered*: ο reconciler **δεν** μαθαίνει «γιατί»
+ * κλήθηκε, μόνο **ποια είναι η τρέχουσα κατάσταση** — γι' αυτό το
+ * `controller-runtime` επίτηδες δεν περνά τον τύπο γεγονότος στο `Reconcile()`.
+ * Ο Terraform τυπώνει *«No changes»* και **δεν ανοίγει καν συναλλαγή**. Το
+ * Figma/Revit/C4D **δεν σπρώχνουν no-op στη στοίβα undo** — αλλιώς το Ctrl+Z
+ * κολλάει σε κενά βήματα.
+ *
+ * ⇒ Εδώ δηλώνεται **μόνο ο προορισμός**. Η διαφορά υπολογίζεται από το
+ * {@link narrowToChanges}. **Καμία επανάληψη δεν μπορεί να γεννήσει no-op, και
+ * καμία αναίρεση δεν μπορεί να είναι λάθος — δομικά, χωρίς φρουρό.**
+ *
+ * ⚠️ Ο πίνακας είναι `Partial`: ετυμηγορία **χωρίς** γραμμή σημαίνει «δεν
+ * θεραπεύεται από εδώ» — π.χ. το `account-without-document` το πιάνει ο καλών
+ * *(υλοποίηση, ADR-822 §4.7)* και το `consistent` κόβεται πριν φτάσει.
+ */
+const DESIRED_STATE_BY_VERDICT: Partial<Record<ReconciliationVerdict, RemediationPatch>> = {
+  // Δρόμος Γ: **ανίκανο ΚΑΙ ορατό**. Τίποτα δεν σβήνεται.
+  'document-without-account': {
+    globalRole: SAFE_DOWNGRADE_ROLE,
+    status: REMEDIATION_STATUS.suspended,
+  },
+  // Το έγγραφο **μαθαίνει** ό,τι ξέρει ήδη το Auth. Καμία αλλαγή ρόλου.
+  'disabled-account-active-document': {
+    status: REMEDIATION_STATUS.suspended,
+  },
+  // ⚠️ Το claim ΝΙΚΑ (`firestore.rules:5161`). Ευθυγράμμιση **ΠΡΟΣ ΤΑ ΚΑΤΩ**:
+  //    το να ανέβαινε το έγγραφο στο claim θα ήταν **κλιμάκωση**.
+  'role-mismatch': {
+    globalRole: SAFE_DOWNGRADE_ROLE,
+  },
+};
+
+/**
+ * Η **ανθρώπινη** περιγραφή της πράξης, για το audit.
+ *
+ * ⚠️ Συνάρτηση και όχι σταθερά: χρειάζεται το **ΠΡΙΝ** *(«υποβάθμιση από τι;»)*,
+ * που ζει στο έγγραφο. Ο προορισμός είναι δηλωτικός· η **αφήγηση** δεν είναι.
+ */
+const SUMMARY_BY_VERDICT: Partial<
+  Record<ReconciliationVerdict, (document: IdentityDocumentFacts) => string>
+> = {
+  'document-without-account': (document) =>
+    `Υποβάθμιση '${document.globalRole ?? '—'}' → '${SAFE_DOWNGRADE_ROLE}' και ` +
+    `αναστολή: έγγραφο χωρίς λογαριασμό Auth (ADR-822 §4.4 δρόμος Γ).`,
+  'disabled-account-active-document': () =>
+    'Ευθυγράμμιση με το Auth: ο λογαριασμός είναι disabled ενώ το έγγραφο ' +
+    'δηλώνει ενεργό (ADR-822 §4.4 #3). ΚΑΜΙΑ διαγραφή — αποδεικτικό υλικό.',
+  'role-mismatch': (document) =>
+    `Ο ρόλος του εγγράφου ('${document.globalRole ?? '—'}') διαφωνεί με το claim. ` +
+    `Ευθυγράμμιση ΠΡΟΣ ΤΑ ΚΑΤΩ σε '${SAFE_DOWNGRADE_ROLE}' — ποτέ προς τα πάνω.`,
+};
+
+// ============================================================================
+// 4. Ο ΣΧΕΔΙΑΣΤΗΣ
 // ============================================================================
 
 /** Ο λόγος κάθε «δεν υπάρχει σχέδιο» — πληρότητα από τον μεταγλωττιστή. */
@@ -157,7 +258,10 @@ const NO_PLAN_EXPLANATION: Readonly<Record<NoPlanReason, string>> = {
     'Λογαριασμός με ενεργά claims και χωρίς έγγραφο. Η δημιουργία εγγράφου θα ' +
     'ΕΠΙΝΟΟΥΣΕ ταυτότητα (ADR-821). Χρειάζεται άνθρωπος να πει ποιος είναι.',
   'no-actionable-fields':
-    'Το έγγραφο δεν φέρει ούτε ρόλο προς υποβάθμιση ούτε κατάσταση προς διόρθωση.',
+    'Η ετυμηγορία δεν αντιστοιχεί σε καμία επιθυμητή κατάσταση που ξέρει η θεραπεία.',
+  'already-in-desired-state':
+    'Το έγγραφο είναι ΗΔΗ στην επιθυμητή κατάσταση. Καμία πράξη — και καμία ' +
+    'εγγραφή στο audit: μια πράξη που δεν αλλάζει τίποτα δεν είναι πράξη.',
 };
 
 /** Η ανθρώπινη εξήγηση ενός «δεν υπάρχει σχέδιο». */
@@ -166,7 +270,66 @@ export function explainNoPlan(reason: NoPlanReason): string {
 }
 
 /**
+ * Διαβάζει το `status` του εγγράφου **επικυρωμένο**, ή `null` αν είναι εκτός
+ * λεξιλογίου.
+ *
+ * 🔑 **ΧΩΡΙΣ `as`**: το `find` πάνω στον πίνακα-αυθεντία {@link USER_STATUSES}
+ * επιστρέφει ήδη `UserStatus | undefined`. Ένα cast εδώ θα δήλωνε ψευδώς ότι
+ * μια αυθαίρετη συμβολοσειρά από τη Firestore **είναι** έγκυρη κατάσταση.
+ */
+function readStatus(document: IdentityDocumentFacts): UserStatus | null {
+  return USER_STATUSES.find((value) => value === document.status) ?? null;
+}
+
+/** Μεταβλητή όψη — **μόνο** για την κατασκευή· η έξοδος είναι readonly. */
+type MutablePatch = { -readonly [K in keyof RemediationPatch]: RemediationPatch[K] };
+
+/**
+ * 🏆 **ΤΟ ΣΤΕΝΕΜΑ**: κρατά **μόνο** τα πεδία που ΟΝΤΩΣ διαφέρουν από τον
+ * προορισμό — και γεννά ταυτόχρονα την **ακριβή** αναίρεσή τους.
+ *
+ * @returns `null` όταν **τίποτα** δεν διαφέρει. Αυτό είναι το «No changes» του
+ *   Terraform: όχι σφάλμα, όχι πράξη — **απουσία πράξης**.
+ *
+ * 🔑 Η αναίρεση κρατά και το **`null`**: αν ο ρόλος ήταν `null`, η επαναφορά
+ * γράφει `null` — τιμή που **υπάρχει** στα ζωντανά έγγραφα. Η προηγούμενη
+ * εκδοχή **παρέλειπε** το πεδίο, δηλαδή σιωπηλά **δεν το επανέφερε**.
+ */
+function narrowToChanges(
+  desired: RemediationPatch,
+  document: IdentityDocumentFacts,
+): { forward: RemediationPatch; inverse: RemediationPatch } | null {
+  const forward: MutablePatch = {};
+  const inverse: MutablePatch = {};
+  let changed = false;
+
+  if (desired.globalRole !== undefined) {
+    const current = document.globalRole ?? null;
+    if (current !== desired.globalRole) {
+      forward.globalRole = desired.globalRole;
+      inverse.globalRole = current;
+      changed = true;
+    }
+  }
+
+  if (desired.status !== undefined) {
+    const current = readStatus(document);
+    if (current !== desired.status) {
+      forward.status = desired.status;
+      inverse.status = current;
+      changed = true;
+    }
+  }
+
+  return changed ? { forward, inverse } : null;
+}
+
+/**
  * *«Τι πράξη θεραπεύει αυτή την απόκλιση — και πώς την παίρνω πίσω;»*
+ *
+ * 🔑 **Ιδεμποτεντικό εξ ορισμού** (N.7.2 #3): δεύτερη κλήση πάνω σε ήδη
+ * θεραπευμένο έγγραφο επιστρέφει `already-in-desired-state`, **όχι** σχέδιο.
+ * Δεν υπάρχει φρουρός να ξεχαστεί — η ιδιότητα προκύπτει από τη **μορφή**.
  *
  * @param uid       Η ταυτότητα υπό θεραπεία.
  * @param verdict   Η ετυμηγορία της {@link ./identity-provenance}.
@@ -183,79 +346,24 @@ export function planRemediation(
   if (verdict === 'consistent') return { kind: 'none', reason: 'nothing-to-remediate' };
   if (document === null) return { kind: 'none', reason: 'requires-human-identification' };
 
-  const patch = plannedPatch(verdict, document);
-  if (patch === null) return { kind: 'none', reason: 'no-actionable-fields' };
+  const desired = DESIRED_STATE_BY_VERDICT[verdict];
+  const describe = SUMMARY_BY_VERDICT[verdict];
+  if (desired === undefined || describe === undefined) {
+    return { kind: 'none', reason: 'no-actionable-fields' };
+  }
 
+  const changes = narrowToChanges(desired, document);
+  if (changes === null) return { kind: 'none', reason: 'already-in-desired-state' };
+
+  const summary = describe(document);
   return {
     kind: 'plan',
     plan: {
       verdict,
-      forward: {
-        uid,
-        patch: patch.forward,
-        expectedUpdatedAtMs: updatedAtMs,
-        summary: patch.summary,
-      },
+      forward: { uid, patch: changes.forward, expectedUpdatedAtMs: updatedAtMs, summary },
       // 🔑 Η αναίρεση κατασκευάζεται από τις **διαβασμένες** τιμές, ποτέ από
-      //    προεπιλογή. Αν το έγγραφο δεν είχε ρόλο, η αναίρεση **δεν** βάζει
-      //    ρόλο — ούτε καν «τον προηγούμενο που μάλλον ήταν».
-      inverse: {
-        uid,
-        patch: patch.inverse,
-        summary: `Αναίρεση: ${patch.summary}`,
-      },
+      //    προεπιλογή — και **μόνο** για τα πεδία που όντως αλλάζουν.
+      inverse: { uid, patch: changes.inverse, summary: `Αναίρεση: ${summary}` },
     },
   };
-}
-
-/** Το ζεύγος τιμών ανά ετυμηγορία — **η μόνη** γνώση του «τι αλλάζει». */
-function plannedPatch(
-  verdict: ReconciliationVerdict,
-  document: IdentityDocumentFacts,
-): { forward: RemediationPatch; inverse: RemediationPatch; summary: string } | null {
-  if (verdict === 'document-without-account') {
-    // Δρόμος Γ: **ανίκανο ΚΑΙ ορατό**. Υποβάθμιση + αναστολή, τίποτα δεν σβήνεται.
-    const previousRole = document.globalRole ?? null;
-    if (previousRole === null && document.status !== REMEDIATION_STATUS.active) return null;
-    return {
-      forward: { globalRole: SAFE_DOWNGRADE_ROLE, status: REMEDIATION_STATUS.suspended },
-      inverse: {
-        ...(previousRole === null ? {} : { globalRole: previousRole }),
-        status: (document.status as RemediationStatus) ?? REMEDIATION_STATUS.active,
-      },
-      summary:
-        `Υποβάθμιση '${previousRole ?? '—'}' → '${SAFE_DOWNGRADE_ROLE}' και ` +
-        `αναστολή: έγγραφο χωρίς λογαριασμό Auth (ADR-822 §4.4 δρόμος Γ).`,
-    };
-  }
-
-  if (verdict === 'disabled-account-active-document') {
-    // Το έγγραφο **μαθαίνει** ό,τι ξέρει ήδη το Auth. Καμία αλλαγή ρόλου.
-    if (document.status !== REMEDIATION_STATUS.active) return null;
-    return {
-      forward: { status: REMEDIATION_STATUS.suspended },
-      inverse: { status: REMEDIATION_STATUS.active },
-      summary:
-        'Ευθυγράμμιση με το Auth: ο λογαριασμός είναι disabled ενώ το έγγραφο ' +
-        'δηλώνει ενεργό (ADR-822 §4.4 #3). ΚΑΜΙΑ διαγραφή — αποδεικτικό υλικό.',
-    };
-  }
-
-  if (verdict === 'role-mismatch') {
-    // ⚠️ Το claim ΝΙΚΑ (firestore.rules:5161). Το έγγραφο **δεν** το ανεβάζει
-    //    κανείς εδώ: αυτό θα ήταν κλιμάκωση. Ευθυγραμμίζεται προς τα **κάτω**,
-    //    στην ασφαλή τιμή, και ο άνθρωπος αποφασίζει το υπόλοιπο.
-    const previousRole = document.globalRole ?? null;
-    if (previousRole === SAFE_DOWNGRADE_ROLE) return null;
-    return {
-      forward: { globalRole: SAFE_DOWNGRADE_ROLE },
-      inverse: previousRole === null ? {} : { globalRole: previousRole },
-      summary:
-        `Ο ρόλος του εγγράφου ('${previousRole ?? '—'}') διαφωνεί με το claim. ` +
-        `Ευθυγράμμιση ΠΡΟΣ ΤΑ ΚΑΤΩ σε '${SAFE_DOWNGRADE_ROLE}' — ποτέ προς τα πάνω.`,
-    };
-  }
-
-  // `account-without-document` το πιάνει ο καλών πριν φτάσει εδώ.
-  return null;
 }

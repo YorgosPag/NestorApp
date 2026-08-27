@@ -115,12 +115,20 @@ describe('Θ1 — κάθε πράξη γεννά την ΑΚΡΙΒΗ αναίρ�
     expect(plan.inverse.patch).toEqual({ globalRole: 'internal_user', status: 'pending' });
   });
 
-  it('Θ1.3 — έγγραφο ΧΩΡΙΣ ρόλο: η αναίρεση ΔΕΝ επινοεί ρόλο', () => {
-    // ⚠️ Ένα `globalRole: 'external_user'` στην αναίρεση θα ΠΡΟΣΘΕΤΕ πεδίο που
-    //    δεν υπήρχε ποτέ — δηλαδή η «αναίρεση» θα άφηνε ίχνος.
+  it('Θ1.3 — έγγραφο ΧΩΡΙΣ ρόλο: η αναίρεση ΕΠΑΝΑΦΕΡΕΙ το null, δεν επινοεί ρόλο', () => {
+    // ⚠️ Ένα `globalRole: 'external_user'` στην αναίρεση θα επινοούσε τιμή.
+    //
+    // 🔴 **ΑΛΛΑΞΕ Η ΠΡΟΣΔΟΚΙΑ, ΚΑΙ ΕΙΝΑΙ ΔΙΟΡΘΩΣΗ — ΟΧΙ ΧΑΛΑΡΩΣΗ** (2026-08-27):
+    //    η άγκυρα απαιτούσε `toBeUndefined()`, δηλαδή **παράλειψη** του πεδίου.
+    //    Παράλειψη σημαίνει ότι μετά την «αναίρεση» το έγγραφο μένει με
+    //    `external_user` — δηλαδή **δεν αναιρέθηκε**.
+    //
+    //    Το σχόλιο έλεγε «πεδίο που δεν υπήρχε ποτέ». **Υπήρχε**: στη Firestore
+    //    το `null` είναι **τιμή**, όχι απουσία — μετρημένο σε ζωντανό έγγραφο
+    //    της παραγωγής (`globalRole: null` ρητά γραμμένο).
     const roleless = { authProvider: SYNTHETIC_AUTH_PROVIDER, status: 'active', globalRole: null } as const;
     const plan = planOf(planRemediation('x', 'document-without-account', roleless, 1));
-    expect(plan.inverse.patch.globalRole).toBeUndefined();
+    expect(plan.inverse.patch.globalRole).toBeNull();
     expect(plan.inverse.patch.status).toBe('active');
   });
 
@@ -179,11 +187,45 @@ describe('Θ2 — οι πράξεις που ο κώδικας ΑΡΝΕΙΤΑΙ,
   });
 
   it('Θ2.5 — ήδη θεραπευμένο ζόμπι ⇒ κανένα σχέδιο (ιδεμποτεντικό)', () => {
+    // Ο λόγος έγινε **ακριβής** (2026-08-27): «δεν ξέρω τι να κάνω» και «είμαι
+    // ήδη στον στόχο» είναι **δύο** καταστάσεις — πριν συγχέονταν σε μία.
     const healed = { ...ZOMBIE, status: 'suspended' } as const;
     expect(planRemediation('e', 'disabled-account-active-document', healed, 1)).toEqual({
       kind: 'none',
-      reason: 'no-actionable-fields',
+      reason: 'already-in-desired-state',
     });
+  });
+
+  it('Θ2.6 — Η ΔΕΥΤΕΡΗ ΕΚΤΕΛΕΣΗ: εφαρμόζω το forward και ξανακρίνω', () => {
+    // 🔴 **Η ΑΓΚΥΡΑ ΠΟΥ ΕΛΕΙΠΕ ΑΠΟ ΤΙΣ 42** — μετρημένο κενό, βρέθηκε στην
+    //    ΠΑΡΑΓΩΓΗ (2026-08-27), όχι από test. Όλες οι άγκυρες ρωτούσαν «τι
+    //    κάνει η πράξη;»· **καμία** δεν ρωτούσε «τι κάνει η ΕΠΑΝΑΛΗΨΗ της;».
+    //
+    //    Χωρίς αυτήν, το `document-without-account` ξαναπρότεινε την ίδια πράξη
+    //    με `patch === inverse`, δηλαδή **αναίρεση που δεν αναιρεί** — και η
+    //    δεύτερη εκτέλεση θα κατέστρεφε τη μοναδική πραγματική αναίρεση.
+    //
+    // 🔑 Η άγκυρα **εκτελεί** τη μετάβαση αντί να την υποθέσει: εφαρμόζει το
+    //    `forward.patch` πάνω στο έγγραφο — ακριβώς ό,τι κάνει η βάση — και
+    //    ξανακρίνει το αποτέλεσμα.
+    const first = planOf(planRemediation('x', 'document-without-account', GHOST, 1));
+    const healed = { ...GHOST, ...first.forward.patch };
+
+    expect(planRemediation('x', 'document-without-account', healed, 2)).toEqual({
+      kind: 'none',
+      reason: 'already-in-desired-state',
+    });
+  });
+
+  it('Θ2.7 — ΜΕΡΙΚΩΣ θεραπευμένο: στενεύει ΜΟΝΟ στο πεδίο που απομένει', () => {
+    // Η ενδιάμεση κατάσταση — ο ρόλος υποβαθμίστηκε, η αναστολή ΔΕΝ γράφτηκε
+    // (π.χ. μερική γραφή, ή χειροκίνητη αλλαγή). Το σχέδιο πρέπει να αγγίξει
+    // **μόνο** το `status`, και η αναίρεση να μη «θυμηθεί» ρόλο που δεν αλλάζει.
+    const halfway = { ...GHOST, globalRole: SAFE_DOWNGRADE_ROLE } as const;
+    const plan = planOf(planRemediation('x', 'document-without-account', halfway, 1));
+
+    expect(plan.forward.patch).toEqual({ status: 'suspended' });
+    expect(plan.inverse.patch).toEqual({ status: 'active' });
   });
 });
 

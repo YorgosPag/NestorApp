@@ -281,7 +281,7 @@ async function main(): Promise<never> {
   const [accounts, documents] = await Promise.all([readAuthAccounts(), readUserDocuments()]);
   const union = [...new Set([...accounts.keys(), ...documents.keys()])].sort();
 
-  console.log(`Auth: ${accounts.size} · έγγραφα: ${documents.size} · ένωση: ${union.size}\n${'─'.repeat(78)}\n`);
+  console.log(`Auth: ${accounts.size} · έγγραφα: ${documents.size} · ένωση: ${union.length}\n${'─'.repeat(78)}\n`);
 
   const rows = union.map((uid) => judge(uid, accounts.get(uid), documents.get(uid)));
   rows.forEach(printIdentity);
