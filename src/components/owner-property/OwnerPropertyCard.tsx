@@ -32,9 +32,8 @@ import { Link } from '@/lib/workspace/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PROPERTY_TYPE_I18N_KEYS, isCanonicalPropertyType } from '@/constants/property-types';
 import { nowISO } from '@/lib/date-local';
-import { projectableFromOwnerProperty } from '@/lib/owner-property/owner-property-projection';
+import { ownerListingVisibility } from '@/lib/owner-property/owner-property-projection';
 import { offerDetailHref } from '@/lib/owner-property/owner-property-routes';
-import { isPubliclyListed } from '@/services/listings/public-listing-projection';
 import { ownerPropertyOfferKinds, type OwnerProperty } from '@/types/owner-property';
 
 const NS = 'property-market';
@@ -50,7 +49,7 @@ export function OwnerPropertyCard({
   // 🔴 Ο **ίδιος** κριτής με τον διακομιστή. Δες την επικεφαλίδα του αρχείου.
   // ⚠️ **Μία ανάγνωση ρολογιού ανά απόδοση** (§8.33): η λήξη της εντολής κρίνεται με
   // την ίδια στιγμή για κάθε κάρτα της λίστας.
-  const onMap = isPubliclyListed(projectableFromOwnerProperty(property, nowISO()));
+  const visibility = ownerListingVisibility(property, nowISO());
   const kinds = ownerPropertyOfferKinds(property);
 
   return (
@@ -89,9 +88,14 @@ export function OwnerPropertyCard({
         <p className="text-sm text-muted-foreground">{t(`${K}.card.noPlace`)}</p>
       )}
 
-      <p className="text-sm text-foreground">
-        {t(onMap ? `${K}.publish.published` : `${K}.publish.withdrawn`)}
-      </p>
+      {/*
+        🔴 **ΤΡΙΑ ΣΚΕΛΗ, ΟΧΙ ΔΥΟ.** Εδώ ζούσε ένα τριαδικό `onMap ? published :
+        withdrawn` — δηλαδή η οθόνη έλεγε «*είναι στον δημόσιο χάρτη*» **με βεβαιότητα**
+        κάθε φορά που η αγγελία **δικαιούνταν** να είναι, ακόμη κι όταν ο γραφέας της
+        προβολής είχε αποτύχει. Το κλειδί `publish.failed` **υπήρχε ήδη γραμμένο και
+        στις δύο γλώσσες** — και **κανείς δεν το ζητούσε ποτέ**.
+      */}
+      <p className="text-sm text-foreground">{t(`${K}.publish.${visibility}`)}</p>
 
       <nav>
         <Link

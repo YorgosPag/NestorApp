@@ -51,6 +51,10 @@
 
 import { z } from 'zod';
 
+import {
+  PROPERTY_TYPES,
+  type PropertyTypeCanonical,
+} from '@/constants/property-types';
 import { GEOCODING_ACCURACIES, type GeocodingAccuracy } from '@/lib/geocoding/geocoding-types';
 import { ENTERPRISE_ID_PREFIXES } from '@/services/enterprise-id-prefixes';
 import { enterpriseIdType, isValidEnterpriseId } from '@/services/enterprise-id-parse';
@@ -101,6 +105,25 @@ const offer = z.discriminatedUnion('kind', [
   }),
 ]);
 
+/**
+ * **Ο δεσμός προς το επίπεδο Α** — το σχήμα του {@link PlaceRef}, τίποτα παραπάνω.
+ *
+ * 🔑 **ΣΧΗΜΑ ΕΔΩ, ΥΠΑΡΞΗ ΑΛΛΟΥ — και ο διαχωρισμός είναι σκόπιμος.** Αυτό απαντά
+ * *«είναι ζεύγος ταυτοτήτων;»*· το *«δείχνει σε τόπο που **υπάρχει**;»* το απαντά
+ * ο {@link verifyPlaceRef} στην πόρτα, γιατί χρειάζεται **ανάγνωση βάσης** και ένα
+ * σχήμα zod είναι —και οφείλει να μείνει— καθαρή συνάρτηση («leaf», δες την
+ * επικεφαλίδα). Ίδιος διαχωρισμός με το `storagePath` παρακάτω: το σχήμα δεν κρίνει
+ * ιδιοκτησία, την κρίνει ο κανόνας του Storage.
+ *
+ * ⚠️ **`min(1)` και όχι σκέτο `string()`**, σε αντίθεση με το αδελφό σχήμα της
+ * φόρμας: κενή συμβολοσειρά εδώ θα ήταν **δείκτης προς το πουθενά** που περνά για
+ * δεσμό — και θα ταξίδευε αυτούσιος στη δημόσια προβολή.
+ */
+const placeRef = z.object({
+  landId: z.string().min(1),
+  buildingId: z.string().min(1).nullable(),
+});
+
 /** Η θέση — η ίδια διακριτή ένωση με τον τύπο (Α5 §3). */
 const place = z.discriminatedUnion('kind', [
   z.object({
@@ -110,6 +133,24 @@ const place = z.discriminatedUnion('kind', [
     accuracy: z
       .enum(GEOCODING_ACCURACIES as unknown as [GeocodingAccuracy, ...GeocodingAccuracy[]])
       .nullable(),
+    /**
+     * 🔴 **ΕΛΕΙΠΕ, ΚΑΙ Η ΑΠΟΥΣΙΑ ΤΟΥ ΕΣΒΗΝΕ ΚΑΘΕ ΑΓΓΕΛΙΑ ΜΕ ΔΙΕΥΘΥΝΣΗ** — μετρημένο
+     * 2026-08-27, και η σχέση ήταν **ανάποδη από την υπόσχεση της φόρμας**: όσο
+     * **πληρέστερη** η αγγελία, τόσο **σιγουρότερα** εξαφανιζόταν.
+     *
+     * Η αλυσίδα: ο πελάτης έστελνε τον δεσμό · το σχήμα δεν τον είχε · το `as` της
+     * {@link ownerPropertyDraftFromRequest} έσβηνε τη διαφωνία με την οντότητα · η
+     * προβολή διάβαζε `property.place.link` → **`undefined`** · και το Firestore
+     * **πετά** σε `undefined` (`Cannot use "undefined" as a Firestore value`) — άρα
+     * `publish: 'failed'`, **σιωπηλά**, σε **καθεμία** από τις τρεις πόρτες γραφής.
+     *
+     * ⚠️ **Απαιτείται ρητά (nullable), δεν είναι `optional`** — ίδιο συμβόλαιο με το
+     * αδελφό του `accuracy` δέκα γραμμές πάνω, και ο ίδιος λόγος: *«δεν έδειξα
+     * κτίριο»* είναι **απάντηση** και γράφεται `null`. Ένα `optional` θα έκανε την
+     * **απουσία** έγκυρη, δηλαδή θα ξαναγεννούσε ακριβώς το `undefined` που αυτή η
+     * γραμμή υπάρχει για να αποκλείσει.
+     */
+    link: placeRef.nullable(),
   }),
   z.object({ kind: z.literal('declined') }),
 ]);
@@ -133,7 +174,25 @@ const media = z.object({
 /** Το προσχέδιο, όπως φτάνει από το δίκτυο. */
 export const ownerPropertyDraftSchema = z.object({
   title: z.string(),
-  type: z.string(),
+  /**
+   * 🔴 **ΗΤΑΝ `z.string()`, ΚΑΙ ΤΟ `as` ΤΟ ΕΚΡΥΒΕ** — δεύτερο δείγμα της ίδιας
+   * κλάσης με το `place.link`, βρεμένο στην ίδια μέτρηση (2026-08-27). Κάθε
+   * συμβολοσειρά περνούσε για είδος ακινήτου, γραφόταν στο `owner_properties`, και
+   * **ξαναβαφτιζόταν με δεύτερο `as`** στη δημόσια προβολή
+   * (`public-listing-projection.ts` → `(property.type ?? 'apartment') as PropertyType`).
+   *
+   * 🔑 **Το κλειστό σύνολο είναι το ΚΑΝΟΝΙΚΟ, όχι ολόκληρος ο {@link PropertyType}**:
+   * εκείνος περιλαμβάνει **παρωχημένες** και **ελληνικές legacy** τιμές, που
+   * υπάρχουν για να **διαβάζονται** παλιά έγγραφα — ποτέ για να **γεννιούνται** νέα.
+   * Ένα σύνορο που τις δεχόταν θα ήταν πόρτα εισόδου σε λεξιλόγιο υπό απόσυρση.
+   *
+   * ✅ **Παρονομαστής, μετρημένος**: η φόρμα προσφέρει **ακριβώς** αυτό το σύνολο
+   * (`OwnerPropertyFields.tsx` → `options={PROPERTY_TYPES}`), άρα η αυστηροποίηση
+   * **δεν κλείνει καμία πόρτα που είναι ανοιχτή σήμερα**.
+   */
+  type: z.enum(
+    PROPERTY_TYPES as unknown as [PropertyTypeCanonical, ...PropertyTypeCanonical[]],
+  ),
   areaSqm: nullableNumber,
   floor: nullableNumber,
   bedrooms: nullableNumber,
@@ -149,6 +208,31 @@ export const ownerPropertyDraftSchema = z.object({
  * σφάλμα μεταγλώττισης** και όχι κάτι που ανακαλύπτεται στην παραγωγή. Χωρίς αυτήν, ο
  * τύπος θα ήταν «ό,τι τυχαίνει να λέει το zod», και το σχήμα θα μπορούσε να αποκλίνει
  * σιωπηλά — το ίδιο σχήμα με τις δύο λίστες namespace του CHECK 3.34.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 Η ΥΠΟΣΧΕΣΗ ΑΠΟ ΠΑΝΩ ΗΤΑΝ ΓΡΑΜΜΕΝΗ ΣΩΣΤΑ ΚΑΙ ΔΕΝ ΙΣΧΥΕ — ΕΝΑ `as` ΤΗΝ ΑΚΥΡΩΝΕ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Μέχρι τις 2026-08-27 η γραμμή ήταν `parsed.data as OwnerPropertyDraft`. Ο τύπος
+ * επιστροφής **δήλωνε** την οντότητα, αλλά ο ισχυρισμός τον **ικανοποιούσε με το
+ * ζόρι** — δηλαδή ο μεταγλωττιστής δεν ρωτήθηκε ποτέ. Η **ίδια η περιγραφή της
+ * εγγύησης ήταν η απόκλιση**: το σχήμα του CHECK 3.34 / 3.37 / 3.57, και του
+ * `UserRoleContext` που έγραφε *«no hardcoded admin emails!»* δέκα γραμμές πάνω από
+ * μια λίστα email.
+ *
+ * 📏 **Και δεν έκρυβε μία απόκλιση — έκρυβε ΔΥΟ**, ζωντανές τη μέρα που μετρήθηκε:
+ * το `place.link` (**έλειπε**, ⇒ `undefined` ⇒ το Firestore πετά ⇒ **καμία** αγγελία
+ * με διεύθυνση δεν έφτανε ποτέ στη δημόσια προβολή) και το `type` (**`z.string()`**
+ * απέναντι σε `PropertyType`). Ένα `as` κρύβει **όσες** αποκλίσεις γεννηθούν, όχι
+ * όσες ήξερε αυτός που το έγραψε.
+ *
+ * 🔑 **Η θεραπεία είναι ΣΚΕΤΗ ΑΝΑΘΕΣΗ, όχι δεύτερος έλεγχος.** `const draft:
+ * OwnerPropertyDraft = parsed.data` ζητά από τον μεταγλωττιστή **ακριβώς** αυτό που
+ * υπόσχεται η παράγραφος από πάνω — και μια **τρίτη** μελλοντική απόκλιση δεν θα
+ * χρειαστεί να τη θυμηθεί κανείς: **δεν θα μεταγλωττίζεται**.
+ *
+ * ⚠️ **ΜΗΝ ΤΟ ΞΑΝΑΒΑΛΕΙΣ ΓΙΑ ΝΑ «ΠΕΡΑΣΕΙ» ΚΟΚΚΙΝΟ tsc.** Το κόκκινο **είναι** το
+ * εύρημα: λέει ότι το σχήμα και η οντότητα διαφωνούν. Διόρθωσε το σχήμα.
  */
 export function ownerPropertyDraftFromRequest(value: unknown):
   | { readonly ok: true; readonly draft: OwnerPropertyDraft }
@@ -162,7 +246,9 @@ export function ownerPropertyDraftFromRequest(value: unknown):
     };
   }
 
-  const draft: OwnerPropertyDraft = parsed.data as OwnerPropertyDraft;
+  // 🔴 Καμία μετατροπή. Δες την επικεφαλίδα: το `as` που ήταν εδώ έκρυβε **δύο**
+  //    ζωντανές αποκλίσεις, και η μία έσβηνε κάθε αγγελία με δηλωμένη διεύθυνση.
+  const draft: OwnerPropertyDraft = parsed.data;
   return { ok: true, draft };
 }
 

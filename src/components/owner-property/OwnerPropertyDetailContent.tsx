@@ -33,10 +33,9 @@ import { useAuth } from '@/auth/hooks/useAuth';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { listingDetailHref } from '@/lib/listings/listing-routes';
 import { nowISO } from '@/lib/date-local';
-import { projectableFromOwnerProperty } from '@/lib/owner-property/owner-property-projection';
+import { ownerListingVisibility } from '@/lib/owner-property/owner-property-projection';
 import { ownerPropertyFormFrom } from '@/lib/owner-property/owner-property-form-values';
 import { MY_OFFERS_ROUTE } from '@/lib/owner-property/owner-property-routes';
-import { isPubliclyListed } from '@/services/listings/public-listing-projection';
 import { setOwnerListingLifecycle } from '@/services/owner-property/owner-property.service';
 import { useMyOwnerProperty } from '@/services/realtime/hooks/useMyOwnerProperties';
 import type { OwnerProperty } from '@/types/owner-property';
@@ -121,7 +120,11 @@ function OwnerPropertyView({
   onEdit: () => void;
 }): React.ReactElement {
   const { t } = useTranslation([NS]);
-  const onMap = isPubliclyListed(projectableFromOwnerProperty(property, nowISO()));
+  // 🔴 **Ο ΕΝΑΣ κριτής, ο ίδιος με την κάρτα.** Εδώ ζούσε `isPubliclyListed(...)`
+  //    σκέτο — δηλαδή *«**δικαιούται**;»*, όχι *«**έφτασε**;»*. Ο σύνδεσμος από κάτω
+  //    οδηγούσε σε **κενή σελίδα** κάθε φορά που ο γραφέας της προβολής είχε αποτύχει,
+  //    ακριβώς το «*χειρότερος από κανέναν*» που το ίδιο του το σχόλιο απαγορεύει.
+  const onMap = ownerListingVisibility(property, nowISO()) === 'published';
   // ⚠️ Στην **κορυφή** του component, ποτέ μέσα στο JSX: ένας hook που ζει σε έκφραση
   // γνωρίσματος διαβάζεται ως υπό όρους από τον επόμενο αναγνώστη, ακόμη κι όταν δεν
   // είναι — και η πρώτη φορά που κάποιος τον τυλίξει σε `{onMap && …}` σπάει σιωπηλά.

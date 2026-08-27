@@ -53,15 +53,13 @@ import {
 } from '@/lib/owner-property/listing-custody';
 import { nowISO } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
-import { readCompanyPublicName } from '@/services/company/company-public-name.reader';
+import { republishOwnerProperty } from '@/services/owner-property/owner-property-publication.service';
+import type { PublishOutcome } from '@/services/listings/publish-public-listing';
 import {
-  placeKnowledgeFromOwnerProperty,
-  projectableFromOwnerProperty,
-} from '@/lib/owner-property/owner-property-projection';
-import {
-  writeListingProjection,
-  type PublishOutcome,
-} from '@/services/listings/publish-public-listing';
+  PLACE_REF_TREATMENT,
+  verifyPlaceRef,
+  type PlaceRefVerdict,
+} from '@/services/places/public-place-read.service';
 import {
   newOwnerProperty,
   type OwnerProperty,
@@ -114,51 +112,32 @@ export type OwnerPropertyWriteResult =
    */
   | { readonly kind: 'invalid-mandate'; readonly violations: readonly MandateInvariant[] }
   | { readonly kind: 'absent' }
+  /**
+   * 🔴 **Ο ΔΕΣΜΟΣ ΠΡΟΣ ΤΟ ΕΠΙΠΕΔΟ Α ΔΕΝ ΔΕΙΧΝΕΙ ΠΟΥΘΕΝΑ** — και ξεχωρίζει από το
+   * `invalid` γιατί **ο άνθρωπος δεν το βλέπει στη φόρμα**: κάθε άλλο `invalid` είναι
+   * αντίφαση **μέσα** στην αγγελία (πώληση χωρίς τιμή), κρίσιμη από **καθαρή
+   * συνάρτηση** που τρέχει και η οθόνη. Αυτό απαιτεί **ανάγνωση βάσης** και άρα
+   * **δεν μπορεί** να ζήσει στα invariants — μια απόπειρα να μπει εκεί θα έκανε τη
+   * φόρμα και τον διακομιστή να απαντούν **διαφορετικά** στο ίδιο κλειστό σύνολο
+   * (σχήμα ADR-749).
+   *
+   * ⚠️ **Η ετυμηγορία ταξιδεύει**: *«δεν είναι καν ταυτότητα τόπου»* και *«η γη
+   * υπάρχει, το κτίριο όχι»* έχουν την **ίδια** θεραπεία (διόρθωσε τον δεσμό) αλλά
+   * **άλλο μήνυμα**, και η οθόνη το χρειάζεται για να δείξει το σωστό.
+   */
+  | { readonly kind: 'invalid-place-link'; readonly verdict: PlaceRefVerdict }
+  /**
+   * 🔴 **ΔΕΝ ΜΑΘΑΜΕ** — και **ΠΟΤΕ** δεν συγχωνεύεται με το από πάνω.
+   *
+   * Το `verifyPlaceRef` επιστρέφει `'unavailable'` όταν η ερώτηση **δεν
+   * απαντήθηκε**. Διαβασμένο ως «δεν υπάρχει», μια στιγμιαία αστοχία της βάσης θα
+   * έλεγε στον άνθρωπο *«αυτό το κτίριο δεν υπάρχει»* και θα τον έστελνε να
+   * **φτιάξει δεύτερη ταυτότητα** για φυσικό κτίριο που έχει ήδη μία — δηλαδή θα
+   * παρήγαγε ακριβώς το διπλότυπο που όλο το επίπεδο Α υπάρχει για να αποτρέψει.
+   * Η διάκριση έχει **ήδη πληρωθεί μία φορά** (SPEC-777A §13.7.2, εύρημα #5).
+   */
+  | { readonly kind: 'place-link-unverified' }
   | { readonly kind: 'failed'; readonly message: string };
-
-// =============================================================================
-// 2. Η ΔΗΜΟΣΙΕΥΣΗ — μία γραμμή, μοιρασμένη από τις τρεις πράξεις
-// =============================================================================
-
-/**
- * Ξαναγράφει (ή σβήνει) τη δημόσια προβολή **αυτής** της καταχώρησης.
- *
- * 🔑 **Καμία νέα μηχανή**: καλείται το **υπάρχον** {@link writeListingProjection},
- * που είναι ο ίδιος πυρήνας που εξυπηρετεί και τον επαγγελματία. Η **μόνη** διαφορά
- * είναι από πού έρχεται ο τόπος — και αυτό είναι ακριβώς η παράμετρος που ο πυρήνας
- * δέχεται.
- *
- * ⚠️ **Μία ανάγνωση ρολογιού**, περασμένη σε **τρία** σημεία: το `projectedAt` της
- * αγγελίας, το `locatedAt` της θέσης, και —από το §8.33— η κρίση **λήξης της
- * εντολής**. Οφείλουν να είναι **η ίδια** στιγμή· ένα δεύτερο `nowISO()` μέσα στον
- * κριτή θα έκανε το ίδιο πέρασμα να διαφωνεί με τον εαυτό του σε μια εντολή που λήγει
- * ακριβώς τώρα.
- */
-async function republishOwnerListing(
-  adminDb: AdminFirestore,
-  property: OwnerProperty,
-): Promise<PublishOutcome> {
-  const at = nowISO();
-
-  // 🔑 **Η επωνυμία διαβάζεται ΕΔΩ, τη στιγμή της δημοσίευσης** (§8.33) — μία ανάγνωση
-  // εγγράφου ανά **γραφή**, όχι ανά ανάγνωση αγγελίας. Ο ιδιώτης δεν πληρώνει τίποτα:
-  // το `authorCompanyId` του είναι `null` και ο αναγνώστης επιστρέφει αμέσως.
-  //
-  // ⚠️ **Απο-κανονικοποίηση, με τη συνέπειά της γραμμένη**: αν το γραφείο αλλάξει
-  // επωνυμία, οι ήδη δημοσιευμένες αγγελίες του δείχνουν την **παλιά** μέχρι την
-  // επόμενη επανασύνθεση. Είναι το ίδιο συμβόλαιο που έχει ήδη κάθε πεδίο αυτής της
-  // προβολής (`title`, `commercialStatus`): η προβολή είναι **στιγμιότυπο**, και το
-  // `projectedAt` λέει πότε τραβήχτηκε.
-  const agencyName = await readCompanyPublicName(adminDb, property.authorCompanyId);
-
-  return writeListingProjection(
-    adminDb,
-    property.id,
-    projectableFromOwnerProperty(property, at, agencyName),
-    placeKnowledgeFromOwnerProperty(property, at),
-    at,
-  );
-}
 
 /**
  * Αποθηκεύει το έγγραφο **και** ξαναγράφει την προβολή του. Η **μία** διατύπωση.
@@ -198,8 +177,55 @@ async function persist(
     return failure('Η αγγελία δεν αποθηκεύτηκε', property.id, error);
   }
 
-  const publish = await republishOwnerListing(adminDb, property);
-  return { kind: 'saved', property, publish };
+  const republished = await republishOwnerProperty(adminDb, property);
+  return { kind: 'saved', property: republished.property, publish: republished.publish };
+}
+
+// =============================================================================
+// Ο ΔΕΣΜΟΣ ΠΡΟΣ ΤΟ ΕΠΙΠΕΔΟ Α — «δείχνει κάπου;», μία φορά για τις ΤΡΕΙΣ πόρτες
+// =============================================================================
+
+/**
+ * **Αρνείται η γραφή εξαιτίας του δεσμού;** `null` = προχώρα.
+ *
+ * 🔑 **ΖΕΙ ΕΔΩ, ΚΑΙ ΓΙ' ΑΥΤΟ ΓΡΑΦΕΤΑΙ ΜΙΑ ΦΟΡΑ.** Οι **τρεις** πόρτες γραφής
+ * (`POST /api/owner-properties` · `POST /api/owner-properties/brokered` ·
+ * `PATCH /api/owner-properties/[id]`) περνούν **όλες** από τη
+ * {@link createOwnerProperty} ή την {@link updateOwnerProperty} — η μεσιτική
+ * μάλιστα καλεί την πρώτη. Γραμμένος στις διαδρομές, ο έλεγχος θα ήταν **τρία**
+ * αντίγραφα και η επόμενη πόρτα θα γεννιόταν **χωρίς** αυτόν.
+ *
+ * 🔑 **Ο κριτής είναι ο ΥΠΑΡΧΩΝ {@link verifyPlaceRef}** — ο ίδιος που ρωτά ήδη η
+ * πόρτα του επαγγελματία (`building-update.handler.ts`). Καμία νέα μηχανή, και η
+ * **σημασία** των ετυμηγοριών διαβάζεται από το **ένα** {@link PLACE_REF_TREATMENT}.
+ *
+ * ⚠️ **Η ΑΠΟΥΣΙΑ ΔΕΣΜΟΥ ΔΕΝ ΕΙΝΑΙ ΣΦΑΛΜΑ, ΚΑΙ ΕΙΝΑΙ Ο ΠΑΡΟΝΟΜΑΣΤΗΣ**: το `link:
+ * null` σημαίνει *«δεν έδειξα κτίριο»* — **επιλογή, ποτέ προϋπόθεση** (ίδιος κανόνας
+ * με το τοπογραφικό, §21.4). Και το `declined` **δεν έχει καν πεδίο** να ελεγχθεί:
+ * ο τύπος το κάνει αδύνατο.
+ *
+ * ⚠️ **Δεν επαληθεύει ΑΛΗΘΕΙΑ, μόνο ΥΠΑΡΞΗ** (§14.3): το αν το ακίνητο του ανθρώπου
+ * **είναι** μέσα σε εκείνο το κτίριο είναι **ισχυρισμός** του, και κανένα ερώτημα
+ * βάσης δεν τον κρίνει. Αυτό που κρίνεται είναι αν ο δεσμός δείχνει **κάπου**.
+ */
+async function placeLinkRefusal(
+  adminDb: AdminFirestore,
+  draft: OwnerPropertyDraft,
+): Promise<OwnerPropertyWriteResult | null> {
+  if (draft.place.kind !== 'declared' || draft.place.link === null) return null;
+
+  const verdict = await verifyPlaceRef(adminDb, draft.place.link);
+
+  // ⚠️ Κλειστό σύνολο, **χωρίς `default`**: μια τέταρτη θεραπεία δεν μεταγλωττίζεται
+  //    μέχρι κάποιος να αποφασίσει τι σημαίνει για τη γραφή.
+  switch (PLACE_REF_TREATMENT[verdict]) {
+    case 'accept':
+      return null;
+    case 'reject':
+      return { kind: 'invalid-place-link', verdict };
+    case 'retry':
+      return { kind: 'place-link-unverified' };
+  }
 }
 
 // =============================================================================
@@ -232,6 +258,12 @@ export async function createOwnerProperty(
   if (mandateViolations.length > 0) {
     return { kind: 'invalid-mandate', violations: mandateViolations };
   }
+
+  // 🔴 **ΤΕΛΕΥΤΑΙΟΣ, ΚΑΙ Η ΣΕΙΡΑ ΕΙΝΑΙ ΣΥΜΒΟΛΑΙΟ**: οι δύο από πάνω είναι **καθαρές
+  //    συναρτήσεις**, αυτός **διαβάζει βάση**. Το φθηνό πριν το ακριβό — και ο
+  //    άνθρωπος που έστειλε αγγελία με τρία λάθη μαθαίνει πρώτα αυτά που βλέπει.
+  const refusal = await placeLinkRefusal(adminDb, draft);
+  if (refusal !== null) return refusal;
 
   return persist(adminDb, newOwnerProperty(draft, authorship), 'create');
 }
@@ -294,6 +326,11 @@ export async function updateOwnerProperty(
 
   const existing = await loadAdministrable(adminDb, ownerPropertyId, actor);
   if (existing === null) return { kind: 'absent' };
+
+  // ⚠️ **ΜΕΤΑ την εξουσιοδότηση, ποτέ πριν.** Δεν κάνουμε δουλειά —ούτε ανάγνωση—
+  //    για αιτούντα που δεν έχει δικαίωμα στον χώρο της αγγελίας.
+  const refusal = await placeLinkRefusal(adminDb, draft);
+  if (refusal !== null) return refusal;
 
   return persist(adminDb, { ...existing, ...draft, updatedAt: nowISO() }, 'overwrite');
 }

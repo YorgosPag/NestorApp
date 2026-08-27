@@ -1,0 +1,281 @@
+/**
+ * @fileoverview **ΤΟ ΣΥΝΟΡΟ ΤΟΥ ΔΙΑΚΟΜΙΣΤΗ, ΜΕ ΜΑΡΤΥΡΕΣ** — τι επιβιώνει και τι όχι.
+ * @related ADR-777 §7 (Α5 · Α14 · §14.5) · lib/owner-property/owner-property-draft-schema.ts
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΓΙΑΤΙ ΓΡΑΦΤΗΚΕ — Η ΒΛΑΒΗ ΠΟΥ ΔΕΝ ΕΙΧΕ ΚΑΝΕΝΑ ΟΡΓΑΝΟ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Μέχρι τις 2026-08-27, **καμία** αγγελία με δηλωμένη διεύθυνση δεν έφτανε ποτέ στο
+ * `public_listings` — από **καμία** από τις τρεις πόρτες γραφής. Και η σχέση ήταν
+ * **ανάποδη από την υπόσχεση της φόρμας** *(«χωρίς θέση το ακίνητο δεν εμφανίζεται
+ * στον χάρτη»)*: όσο **πληρέστερη** η αγγελία, τόσο **σιγουρότερα** εξαφανιζόταν.
+ *
+ * Η αλυσίδα, μετρημένη ζωντανά: ο πελάτης έστελνε το `place.link` · το zod **δεν το
+ * είχε** · ένα `as OwnerPropertyDraft` **έσβηνε** τη διαφωνία με την οντότητα · η
+ * προβολή διάβαζε `undefined` · και το Firestore **πετά** σε `undefined`. Αποτέλεσμα:
+ * `publish: 'failed'`, **σιωπηλά**, με HTTP **200**.
+ *
+ * 🔴 **ΤΗΝ ΩΡΑ ΠΟΥ ΓΡΑΦΤΗΚΕ ΑΥΤΟ ΤΟ ΑΡΧΕΙΟ ΔΕΝ ΥΠΗΡΧΕ ΚΑΜΙΑ ΣΟΥΙΤΑ** που να καλεί
+ * την {@link ownerPropertyDraftFromRequest} — μετρημένο, **μηδέν** αρχεία. Το σύνορο
+ * που δέχεται ό,τι φτάνει από το δίκτυο ήταν εντελώς αμάρτυρο.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * ⚠️ ΤΙ **ΔΕΝ** ΜΠΟΡΕΙ ΝΑ ΔΕΙ ΑΥΤΗ Η ΣΟΥΙΤΑ — ΔΗΛΩΜΕΝΟ, ΟΧΙ ΣΙΩΠΗΛΟ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Το Jest εδώ τρέχει με **@swc/jest** (`jest.config.js`), που **σβήνει τους τύπους**.
+ * Άρα *«ξαναβάλε το `as` ⇒ κοκκίνισε»* **δεν είναι εφικτό ως άγκυρα**: καμία δοκιμή
+ * εδώ δεν βλέπει σφάλμα μεταγλώττισης. Οι δύο εγγυήσεις είναι **διαφορετικά όργανα**
+ * και δηλώνονται χωριστά:
+ *
+ * | Εγγύηση | Ποιος την επιβάλλει |
+ * |---|---|
+ * | *«το σχήμα **παράγει** ό,τι απαιτεί η οντότητα»* | ο **μεταγλωττιστής** (σκέτη ανάθεση, χωρίς `as`) — pre-commit hook · CI |
+ * | *«το πεδίο **επιβιώνει** του συνόρου, με αυτή την τιμή»* | **αυτή η σουίτα** |
+ *
+ * Ένας ισχυρισμός τύπου μέσα σε δοκιμή θα ήταν **πράσινο που δεν σημαίνει τίποτα**.
+ */
+
+import { PROPERTY_TYPES } from '@/constants/property-types';
+import { buildPublicListing } from '@/services/listings/public-listing-projection';
+import type { OwnerProperty } from '@/types/owner-property';
+
+import { ownerPropertyDraftFromRequest } from '../owner-property-draft-schema';
+import {
+  placeKnowledgeFromOwnerProperty,
+  projectableFromOwnerProperty,
+} from '../owner-property-projection';
+import { validDraft, validOwnerProperty } from './owner-property-fixtures';
+
+const AT = '2026-08-27T12:00:00.000Z';
+
+/** Ο δεσμός που στέλνει ο επιλογέας της φόρμας — γη **και** κτίριο. */
+const LINK = { landId: 'land_dokimi', buildingId: 'pbld_dokimi' } as const;
+
+const DECLARED = {
+  kind: 'declared',
+  point: { lat: 40.63, lng: 22.95 },
+  label: 'Εγνατίας 147, Θεσσαλονίκη',
+  accuracy: 'exact',
+} as const;
+
+/**
+ * Ό,τι στέλνει ο πελάτης — **ωμό `unknown`**, όπως το βλέπει ο διακομιστής.
+ *
+ * ⚠️ **ΔΕΝ γράφεται ως `OwnerPropertyDraft`**, και είναι το νόημα: αν το σώμα ήταν
+ * τυπωμένο, η δοκιμή θα ρωτούσε *«περνά ο τύπος;»* ενώ το ερώτημα του συνόρου είναι
+ * *«τι επιβιώνει από **αυθαίρετο** JSON;»*.
+ */
+function bodyOf(place: unknown, rest: Record<string, unknown> = {}): unknown {
+  const { place: _replaced, ...draft } = validDraft();
+  return { ...draft, ...rest, place };
+}
+
+/**
+ * **Κάθε μονοπάτι όπου ζει `undefined`**, όσο βαθιά κι αν είναι.
+ *
+ * 🔑 **Ο ανιχνευτής ρωτά την ΚΛΑΣΗ, όχι το δείγμα.** Το Firestore πετά σε
+ * *«Cannot use "undefined" as a Firestore value»* για **οποιοδήποτε** πεδίο — όχι
+ * μόνο για το `place` που έτυχε να μας κάψει. Μια άγκυρα καρφωμένη στο `place` θα
+ * ήταν πράσινη την επόμενη φορά που ένα **άλλο** πεδίο κάνει το ίδιο.
+ */
+function undefinedPathsIn(value: unknown, path = '$'): readonly string[] {
+  if (value === undefined) return [path];
+  if (value === null || typeof value !== 'object') return [];
+
+  if (Array.isArray(value)) {
+    return value.flatMap((item, index) => undefinedPathsIn(item, `${path}[${index}]`));
+  }
+
+  return Object.entries(value).flatMap(([key, item]) =>
+    undefinedPathsIn(item, `${path}.${key}`),
+  );
+}
+
+/** Η **πλήρης** διαδρομή προς τη δημόσια προβολή, όπως την εκτελεί ο γραφέας. */
+function publicListingOf(property: OwnerProperty): unknown {
+  return buildPublicListing(
+    projectableFromOwnerProperty(property, AT),
+    placeKnowledgeFromOwnerProperty(property, AT),
+    AT,
+  );
+}
+
+// =============================================================================
+// Κ1 — Ο ΔΕΣΜΟΣ ΕΠΙΒΙΩΝΕΙ ΤΟΥ ΣΥΝΟΡΟΥ
+// =============================================================================
+
+describe('Κ1 — ο δεσμός προς το επίπεδο Α επιβιώνει του συνόρου', () => {
+  /** ⛔ ΜΕΤΑΛΛΑΞΗ: βγάλε το `link` από το zod σχήμα ⇒ **κόκκινο**. */
+  it('κρατά τον δεσμό αυτούσιο', () => {
+    const parsed = ownerPropertyDraftFromRequest(bodyOf({ ...DECLARED, link: LINK }));
+
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.draft.place).toMatchObject({ kind: 'declared', link: LINK });
+  });
+
+  /**
+   * ✅ **Ο ΠΑΡΟΝΟΜΑΣΤΗΣ — αποδεικνύει ότι το όργανο ΒΛΕΠΕΙ το πεδίο.**
+   *
+   * Πριν τη διόρθωση, αυτό ακριβώς το σώμα περνούσε **αθόρυβα** και παρήγαγε `link:
+   * undefined`. Αν αύριο κάποιος κάνει το πεδίο `optional`, αυτή η άγκυρα κοκκινίζει
+   * **πρώτη** — και είναι η μόνη που ξεχωρίζει *«το σχήμα έχει το πεδίο»* από *«το
+   * σχήμα το απαιτεί»*.
+   */
+  it('ΑΠΟΡΡΙΠΤΕΙ δηλωμένη θέση χωρίς δεσμό — η απουσία δεν είναι απάντηση', () => {
+    const parsed = ownerPropertyDraftFromRequest(bodyOf(DECLARED));
+
+    expect(parsed.ok).toBe(false);
+    if (parsed.ok) return;
+    expect(parsed.malformed).toContain('place.link');
+  });
+
+  /** «Δεν δείχνω κτίριο» είναι **απάντηση** — επιλογή, ποτέ προϋπόθεση (§21.4). */
+  it('δέχεται ρητό `null` και το κρατά `null`', () => {
+    const parsed = ownerPropertyDraftFromRequest(bodyOf({ ...DECLARED, link: null }));
+
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.draft.place).toMatchObject({ kind: 'declared', link: null });
+  });
+
+  /** Γη χωρίς κτίριο: **η γη αρκεί** — δες `PlaceRef.buildingId`. */
+  it('δέχεται δεσμό μόνο προς γη', () => {
+    const onlyLand = { landId: 'land_dokimi', buildingId: null };
+    const parsed = ownerPropertyDraftFromRequest(bodyOf({ ...DECLARED, link: onlyLand }));
+
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.draft.place).toMatchObject({ link: onlyLand });
+  });
+
+  /** ⛔ ΜΕΤΑΛΛΑΞΗ: `z.string()` αντί για `z.string().min(1)` ⇒ **κόκκινο**. */
+  it('απορρίπτει κενή ταυτότητα γης — δείκτης προς το πουθενά', () => {
+    const parsed = ownerPropertyDraftFromRequest(
+      bodyOf({ ...DECLARED, link: { landId: '', buildingId: null } }),
+    );
+
+    expect(parsed.ok).toBe(false);
+    if (parsed.ok) return;
+    expect(parsed.malformed).toContain('place.link.landId');
+  });
+
+  /**
+   * ⚠️ Το `declined` **δεν έχει** πεδίο δεσμού — και είναι σχεδίαση: το να δείξεις
+   * δημόσιο κτίριο **είναι** αποκάλυψη θέσης, ακριβέστερη από μια διεύθυνση.
+   */
+  it('η άρνηση θέσης περνά χωρίς δεσμό', () => {
+    const parsed = ownerPropertyDraftFromRequest(bodyOf({ kind: 'declined' }));
+
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.draft.place).toEqual({ kind: 'declined' });
+  });
+});
+
+// =============================================================================
+// Κ2 — ΤΟ ΕΙΔΟΣ ΕΙΝΑΙ ΚΛΕΙΣΤΟ ΣΥΝΟΛΟ
+// =============================================================================
+
+describe('Κ2 — το είδος ακινήτου είναι κλειστό σύνολο', () => {
+  /**
+   * ⛔ ΜΕΤΑΛΛΑΞΗ: γύρνα το `type` σε `z.string()` ⇒ **κόκκινο**.
+   *
+   * Πριν τη διόρθωση **κάθε** συμβολοσειρά περνούσε για είδος, γραφόταν στο
+   * `owner_properties`, και ξαναβαφτιζόταν με **δεύτερο** `as` στη δημόσια προβολή.
+   */
+  it('απορρίπτει είδος εκτός λεξιλογίου', () => {
+    const parsed = ownerPropertyDraftFromRequest(
+      bodyOf({ ...DECLARED, link: null }, { type: 'κάστρο' }),
+    );
+
+    expect(parsed.ok).toBe(false);
+    if (parsed.ok) return;
+    expect(parsed.malformed).toContain('type');
+  });
+
+  /**
+   * ✅ **Ο ΠΑΡΟΝΟΜΑΣΤΗΣ — η αυστηροποίηση δεν έκλεισε καμία ανοιχτή πόρτα.**
+   *
+   * Η φόρμα προσφέρει **ακριβώς** αυτό το σύνολο (`OwnerPropertyFields.tsx` →
+   * `options={PROPERTY_TYPES}`). Χωρίς αυτή τη δοκιμή, το «απορρίπτει τα άγνωστα»
+   * θα ήταν πράσινο **και** αν το σχήμα απέρριπτε τα πάντα.
+   */
+  it.each(PROPERTY_TYPES)('δέχεται το κανονικό είδος «%s»', (type) => {
+    const parsed = ownerPropertyDraftFromRequest(
+      bodyOf({ ...DECLARED, link: null }, { type }),
+    );
+
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.draft.type).toBe(type);
+  });
+});
+
+// =============================================================================
+// Κ3 — 🔴 Η ΚΛΑΣΗ: ΚΑΜΙΑ ΤΙΜΗ `undefined` ΔΕΝ ΦΤΑΝΕΙ ΣΤΟ FIRESTORE
+// =============================================================================
+
+describe('Κ3 — η δημόσια προβολή δεν περιέχει ΠΟΤΕ `undefined`', () => {
+  /**
+   * 🔴 **Η ΑΓΚΥΡΑ ΤΟΥ ΠΕΡΙΣΤΑΤΙΚΟΥ, ΓΡΑΜΜΕΝΗ ΩΣ ΚΛΑΣΗ.**
+   *
+   * ⛔ ΜΕΤΑΛΛΑΞΗ: βγάλε το `link` από το σχήμα **ή** το `?? null` της προβολής ⇒
+   * **κόκκινο**, με το μονοπάτι τυπωμένο.
+   */
+  it('με δηλωμένο δεσμό', () => {
+    const property = validOwnerProperty({ place: { ...DECLARED, link: LINK } });
+
+    expect(undefinedPathsIn(publicListingOf(property))).toEqual([]);
+  });
+
+  it('χωρίς δεσμό (`null`)', () => {
+    expect(undefinedPathsIn(publicListingOf(validOwnerProperty()))).toEqual([]);
+  });
+
+  it('με άρνηση θέσης', () => {
+    const property = validOwnerProperty({ place: { kind: 'declined' } });
+
+    expect(undefinedPathsIn(publicListingOf(property))).toEqual([]);
+  });
+
+  /**
+   * ✅ **Ο ΠΑΡΟΝΟΜΑΣΤΗΣ ΤΟΥ ΟΡΓΑΝΟΥ.** Χωρίς αυτόν, τα τρία από πάνω θα ήταν πράσινα
+   * και αν ο ανιχνευτής επέστρεφε **πάντα** κενό — δηλαδή «0 ευρήματα» θα σήμαινε
+   * «δεν κοίταξα». Φυτεύουμε `undefined` σε **τρία** βάθη, και τρεις μη-τιμές που
+   * **δεν** πρέπει να μπερδευτούν μαζί του.
+   */
+  it('ο ανιχνευτής ΒΛΕΠΕΙ — φυτεμένο `undefined` βρίσκεται', () => {
+    expect(undefinedPathsIn({ a: undefined })).toEqual(['$.a']);
+    expect(undefinedPathsIn({ a: { b: undefined } })).toEqual(['$.a.b']);
+    expect(undefinedPathsIn({ a: [1, undefined] })).toEqual(['$.a[1]']);
+    expect(undefinedPathsIn({ a: null, b: 0, c: '' })).toEqual([]);
+  });
+});
+
+// =============================================================================
+// Κ4 — ΖΩΝΗ ΚΑΙ ΤΙΡΑΝΤΕΣ: ΜΠΑΓΙΑΤΙΚΟ ΕΓΓΡΑΦΟ ΔΕΝ ΡΙΧΝΕΙ ΤΗΝ ΠΡΟΒΟΛΗ
+// =============================================================================
+
+describe('Κ4 — έγγραφο χωρίς `link` δίνει `ref: null`, ποτέ `undefined`', () => {
+  /**
+   * 🔑 **Δεν είναι επανάληψη του Κ1 — είναι ΑΛΛΗ ΠΗΓΗ.** Το Κ1 φυλάει το **δίκτυο**·
+   * αυτό φυλάει τη **βάση**: κάθε αγγελία που γράφτηκε πριν τη διόρθωση **δεν έχει**
+   * το πεδίο, και η επανασύνθεση θα τη διαβάσει αυτούσια.
+   *
+   * ⛔ ΜΕΤΑΛΛΑΞΗ: βγάλε το `?? null` από την `placeKnowledgeFromOwnerProperty` ⇒
+   * **κόκκινο**.
+   */
+  it('η γνώση τόπου κλείνει την απουσία', () => {
+    // ⚠️ Ο ισχυρισμός τύπου είναι **σκόπιμος και μοναδικός**: εκφράζει έγγραφο που ο
+    //    σημερινός τύπος **δεν επιτρέπει** να γεννηθεί, αλλά η βάση **περιέχει**.
+    const stale = validOwnerProperty({
+      place: { ...DECLARED, link: undefined as unknown as null },
+    });
+
+    expect(placeKnowledgeFromOwnerProperty(stale, AT).ref).toBeNull();
+    expect(undefinedPathsIn(publicListingOf(stale))).toEqual([]);
+  });
+});

@@ -17,6 +17,7 @@
  */
 
 import {
+  ownerListingVisibility,
   placeKnowledgeFromOwnerProperty,
   projectableFromOwnerProperty,
 } from '../owner-property-projection';
@@ -343,5 +344,76 @@ describe('🔴 Υ — ο επισκέπτης μαθαίνει ΠΟΙΟΣ δημ
     const projectable = projectableFromOwnerProperty(confirmed, AT, null);
     expect(projectable.authorship).toBe('agency');
     expect(projectable.agencyName).toBeNull();
+  });
+});
+
+
+// =============================================================================
+// Ο — Η ΟΘΟΝΗ ΤΟΥ ΚΑΤΟΧΟΥ ΔΕΝ ΛΕΕΙ «ΣΤΟΝ ΧΑΡΤΗ» ΟΤΑΝ Η ΓΡΑΦΗ ΕΙΠΕ ΑΛΛΟ
+// =============================================================================
+
+describe('🔴 Φ — «δικαιούται» ≠ «έφτασε»: το γεγονός νικά την πρόβλεψη', () => {
+  /**
+   * 🔴 **Η ΑΓΚΥΡΑ ΤΟΥ ΨΕΜΑΤΟΣ ΤΗΣ ΟΘΟΝΗΣ.**
+   *
+   * Μέχρι τις 2026-08-27 η κάρτα έλεγε «*Η αγγελία είναι στον δημόσιο χάρτη*» με
+   * απόλυτη βεβαιότητα σε **ακριβώς** αυτή την περίπτωση — αγγελία που **δικαιούται**
+   * και της οποίας η προβολή **απέτυχε** — γιατί έκρινε μόνο με την καθαρή συνάρτηση.
+   *
+   * ⛔ ΜΕΤΑΛΛΑΞΗ: βγάλε τον κλάδο `publication?.outcome === 'failed'` ⇒ **κόκκινο**.
+   */
+  it('αποτυχία δημοσίευσης ⇒ «failed», ΟΧΙ «published»', () => {
+    const property = validOwnerProperty({
+      publication: { outcome: 'failed', at: AT },
+    });
+
+    // ✅ Ο παρονομαστής **μέσα** στην ίδια δοκιμή: η αγγελία **δικαιούται** — άρα η
+    //    διαφορά προέρχεται αποκλειστικά από το αποτύπωμα, όχι από άκυρη οντότητα.
+    expect(isPubliclyListed(projectableFromOwnerProperty(property, AT))).toBe(true);
+    expect(ownerListingVisibility(property, AT)).toBe('failed');
+  });
+
+  /**
+   * ✅ **Ο ΠΑΡΟΝΟΜΑΣΤΗΣ ΤΗΣ ΣΙΩΠΗΣ.** Κάθε αγγελία που υπάρχει σήμερα στη βάση
+   * **δεν έχει** αποτύπωμα. Αν η απουσία διαβαζόταν ως αποτυχία, **ολόκληρη** η
+   * σημερινή βάση θα εμφανιζόταν εκκρεμής.
+   */
+  it('χωρίς αποτύπωμα ⇒ κρίνει η καθαρή συνάρτηση', () => {
+    expect(validOwnerProperty().publication).toBeUndefined();
+    expect(ownerListingVisibility(validOwnerProperty(), AT)).toBe('published');
+  });
+
+  /**
+   * 🔑 **Μπαγιάτικο «published» ΔΕΝ υπερισχύει.** Το αποτύπωμα λέει τι έγινε **τότε**·
+   * η οντότητα λέει τι δικαιούται **τώρα**. Μια αγγελία που αποσύρθηκε μετά από
+   * επιτυχή δημοσίευση **δεν** είναι στον χάρτη.
+   *
+   * ⛔ ΜΕΤΑΛΛΑΞΗ: κάνε το αποτύπωμα να επιστρέφεται πάντα (`return
+   * property.publication.outcome`) ⇒ **κόκκινο**.
+   */
+  it('παλιό «published» δεν κρύβει την τωρινή απόσυρση', () => {
+    const withdrawn = validOwnerProperty({
+      offers: [offerOf('sell', 210_000, 'withdrawn')],
+      publication: { outcome: 'published', at: AT },
+    });
+
+    expect(ownerListingVisibility(withdrawn, AT)).toBe('withdrawn');
+  });
+
+  /** Και τα τρία σκέλη έχουν **γραμμένο** κλειδί i18n — `offer.publish.<σκέλος>`. */
+  it('το λεξιλόγιο είναι το ΥΠΑΡΧΟΝ `PublishOutcome`, καμία νέα λέξη', () => {
+    const outcomes = new Set([
+      ownerListingVisibility(validOwnerProperty(), AT),
+      ownerListingVisibility(
+        validOwnerProperty({ offers: [offerOf('sell', 210_000, 'withdrawn')] }),
+        AT,
+      ),
+      ownerListingVisibility(
+        validOwnerProperty({ publication: { outcome: 'failed', at: AT } }),
+        AT,
+      ),
+    ]);
+
+    expect([...outcomes].sort()).toEqual(['failed', 'published', 'withdrawn']);
   });
 });

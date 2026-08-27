@@ -19,6 +19,7 @@ import { NextResponse } from 'next/server';
 import type { OwnerPropertyWriteResult } from '@/services/owner-property/owner-property-write.service';
 import type { PublishOutcome } from '@/services/listings/publish-public-listing';
 import type { OwnerProperty } from '@/types/owner-property';
+import type { PlaceRefVerdict } from '@/services/places/public-place-read.service';
 import type { OwnerPropertyInvariant } from '@/types/owner-property-invariants';
 import type { MandateInvariant } from '@/types/owner-property-mandate';
 
@@ -43,6 +44,12 @@ export interface OwnerPropertyErrorResponse {
   readonly violations?: readonly OwnerPropertyInvariant[] | readonly MandateInvariant[];
   /** Μονοπάτια πεδίων που δεν διαβάστηκαν καν ως σχήμα. */
   readonly malformed?: readonly string[];
+  /**
+   * **Γιατί δεν στέκει ο δεσμός προς το επίπεδο Α** — ταξιδεύει ώστε η οθόνη να πει
+   * το σωστό: *«αυτό δεν είναι ταυτότητα τόπου»* ≠ *«η γη υπάρχει, το κτίριο όχι»*.
+   * Ίδια θεραπεία, **άλλο μήνυμα**.
+   */
+  readonly placeVerdict?: PlaceRefVerdict;
 }
 
 export type OwnerPropertyResponse =
@@ -58,6 +65,8 @@ export type OwnerPropertyResponse =
  * | `invalid` | **422** | Το αίτημα ήταν **κατανοητό** και η οντότητα άκυρη — 400 θα σήμαινε «δεν σε κατάλαβα», που είναι ψέμα και στέλνει τον πελάτη να ψάξει το JSON του |
  * | `absent` | **404** | *«Δεν υπάρχει **για σένα**»* — και το 403 απαγορεύεται: θα **επιβεβαίωνε** την ύπαρξη ξένου εγγράφου |
  * | `invalid-mandate` | **422** | Ίδιος κωδικός, **άλλο σφάλμα**: το πρόβλημα είναι στην **εντολή** (πελάτης · λήξη · βεβαίωση), όχι στο ακίνητο. Η οθόνη το χρειάζεται ξεχωριστά για να δείξει το σωστό μέρος της φόρμας |
+ * | `invalid-place-link` | **422** | Ο **δεσμός** δείχνει σε τόπο που δεν υπάρχει. Ίδιος κωδικός με το `invalid`, **τρίτο** σφάλμα: ούτε το ακίνητο ούτε η εντολή — **το «ποιο κτίριο;»**. Η ετυμηγορία ταξιδεύει για να δείξει η οθόνη το σωστό μήνυμα |
+ * | `place-link-unverified` | **503** | 🔴 **ΠΟΤΕ 422.** *«Δεν μάθαμε»* ≠ *«δεν υπάρχει»*: ένα 422 εδώ λέει στον άνθρωπο ότι **το κτίριό του δεν υπάρχει** και τον στέλνει να φτιάξει **δεύτερη ταυτότητα** για φυσικό κτίριο που έχει ήδη μία — το ακριβές διπλότυπο που αποτρέπει όλο το επίπεδο Α. Το 503 λέει *«ξαναδοκίμασε, **μην αλλάξεις τίποτα**»*, όπως ήδη κάνουν το `/api/places/resolve` και η πόρτα του επαγγελματία |
  * | `failed` | **500** | Δεν φτάσαμε στη βάση· ο άνθρωπος δεν έχει τι να διορθώσει |
  */
 export function respondToWrite(
@@ -78,6 +87,13 @@ export function respondToWrite(
       );
     case 'absent':
       return NextResponse.json({ error: 'NOT_FOUND' }, { status: 404 });
+    case 'invalid-place-link':
+      return NextResponse.json(
+        { error: 'INVALID_PLACE_LINK', placeVerdict: result.verdict },
+        { status: 422 },
+      );
+    case 'place-link-unverified':
+      return NextResponse.json({ error: 'PLACE_LINK_UNVERIFIED' }, { status: 503 });
     case 'failed':
       return NextResponse.json({ error: 'WRITE_FAILED' }, { status: 500 });
   }

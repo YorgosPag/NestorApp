@@ -484,7 +484,7 @@
     "publish": {
       "published": "The listing is on the public map.",
       "withdrawn": "The listing is not on the public map.",
-      "failed": "Saved, but the public listing was not updated. We will retry automatically.",
+      "failed": "Saved, but the public listing was not updated. Save it again to retry.",
       "view": "View the public listing"
     },
     "detail": {

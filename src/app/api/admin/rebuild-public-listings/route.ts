@@ -21,6 +21,27 @@
  * ορατό για πάντα** — ακριβώς το είδος σιωπηλού υπολείμματος που ο κύκλος ζωής της
  * κατηγορίας `published-projection` υπάρχει για να αποκλείσει.
  *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴🔴 ΔΥΟ ΟΙΚΟΓΕΝΕΙΕΣ ΓΡΑΦΟΥΝ ΕΔΩ — ΚΑΙ ΤΟ ΑΡΧΕΙΟ ΗΞΕΡΕ ΜΟΝΟ ΤΗ ΜΙΑ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Το `public_listings` δέχεται προβολές από **δύο** πηγές (ADR-777 Α14): τον
+ * **επαγγελματία** (`properties/{prop_*}`, ο τόπος λύνεται ανεβαίνοντας ακίνητο →
+ * κτίριο → έργο) και τον **ιδιώτη** (`owner_properties/{ownp_*}`, ο τόπος είναι η
+ * **δήλωσή** του). Μέχρι τις 2026-08-27 αυτή η πράξη σάρωνε **μόνο** το `properties`.
+ *
+ * ⛔ **Και δεν ήταν απλώς ελλιπής — ήταν ΚΑΤΑΣΤΡΟΦΙΚΗ.** Το `removeOrphanListings`
+ * σβήνει κάθε προβολή της οποίας η ταυτότητα **δεν βρέθηκε στη σάρωση**. Καμία
+ * ταυτότητα `ownp_*` δεν ήταν ποτέ εκεί ⇒ **μία εκτέλεση θα διέγραφε ΚΑΘΕ αγγελία
+ * ιδιώτη από τον δημόσιο χάρτη**, και θα το ανέφερε ως **επιτυχία** («orphansRemoved»).
+ * Η ίδια η αναφορά ήταν το σχήμα «*0 = κανείς δεν κοίταξε*» που η επικεφαλίδα από πάνω
+ * απαγορεύει: η λογιστική **έκλεινε**, επειδή μετρούσε **λάθος σύμπαν**.
+ *
+ * 🔑 **Η θεραπεία ΔΕΝ είναι δεύτερος γραφέας.** Κάθε οικογένεια επανασυντίθεται από
+ * τη **δική της** υπάρχουσα διαδρομή —`republishListing` ⇄ `republishOwnerProperty`—
+ * που είναι οι ίδιες που τρέχουν στη γραφή. Ένας «ενοποιημένος» γραφέας εδώ θα ήταν
+ * **τρίτος** και θα απέκλινε από αμφότερους (ADR-749).
+ *
  * - GET  = στεγνή εκτέλεση (μετράει, **μηδέν** εγγραφές)
  * - POST = εκτέλεση
  *
@@ -46,12 +67,23 @@ import {
   isPubliclyListed,
   type ProjectableProperty,
 } from '@/services/listings/public-listing-projection';
+import { projectableFromOwnerProperty } from '@/lib/owner-property/owner-property-projection';
+import { republishOwnerProperty } from '@/services/owner-property/owner-property-publication.service';
+import { nowISO } from '@/lib/date-local';
+import type { OwnerProperty } from '@/types/owner-property';
 
 const logger = createModuleLogger('rebuild-public-listings');
 
 /** Οι κάδοι της λογιστικής. Άγνωστη κατάσταση ⇒ δεν υπάρχει: ο τύπος τη σβήνει. */
 interface RebuildReport {
   readonly scannedProperties: number;
+  /**
+   * Πόσες **αγγελίες ιδιώτη** σαρώθηκαν — **χωριστός** αριθμός, επίτηδες.
+   *
+   * ⚠️ Ένα κοινό `scanned` θα έκρυβε ακριβώς το ελάττωμα που διορθώθηκε: με **μηδέν**
+   * αγγελίες ιδιώτη σαρωμένες, το άθροισμα εξακολουθούσε να **κλείνει**.
+   */
+  readonly scannedOwnerProperties: number;
   readonly published: number;
   readonly withdrawn: number;
   readonly failed: number;
@@ -63,15 +95,19 @@ interface RebuildReport {
 function buildReport(
   tally: Record<PublishOutcome, number>,
   scanned: number,
+  scannedOwner: number,
   orphansRemoved: number
 ): RebuildReport {
   return {
     scannedProperties: scanned,
+    scannedOwnerProperties: scannedOwner,
     published: tally.published,
     withdrawn: tally.withdrawn,
     failed: tally.failed,
     orphansRemoved,
-    balanced: tally.published + tally.withdrawn + tally.failed === scanned,
+    // 🔑 Το άθροισμα κλείνει πάνω στο **σύνολο** των δύο οικογενειών — αλλιώς θα
+    //    έκλεινε ψευδώς αγνοώντας τη μία, όπως έκλεινε μέχρι τις 2026-08-27.
+    balanced: tally.published + tally.withdrawn + tally.failed === scanned + scannedOwner,
   };
 }
 
@@ -97,8 +133,35 @@ async function rebuildAll(dryRun: boolean): Promise<RebuildReport> {
     tally[await republishListing(adminDb, doc.id, data)] += 1;
   }
 
+  // ────────────────────────────────────────────────────────────────────────
+  // Η ΔΕΥΤΕΡΗ ΟΙΚΟΓΕΝΕΙΑ — η προσφορά του ιδιώτη (ADR-777 Α14)
+  // ────────────────────────────────────────────────────────────────────────
+  //
+  // ⚠️ **Ο ίδιος βρόχος, ΑΛΛΗ διαδρομή επανασύνθεσης**: ο ιδιώτης δεν έχει αλυσίδα
+  //    να ανέβει — ο τόπος του είναι η δήλωσή του — και η
+  //    `republishOwnerProperty` **καταγράφει** επιπλέον την έκβαση στο έγγραφο,
+  //    ώστε μια διορθωμένη αγγελία να πάψει να εμφανίζεται «εκκρεμής» στην οθόνη.
+  const ownerProperties = await adminDb.collection(COLLECTIONS.OWNER_PROPERTIES).get();
+
+  for (const doc of ownerProperties.docs) {
+    // 🔴 **ΚΑΙ ΣΤΗ ΣΤΕΓΝΗ ΕΚΤΕΛΕΣΗ**: το `liveIds` δεν είναι λογιστική, είναι το
+    //    σύνολο που **προστατεύει** από τη διαγραφή. Παράλειψή του εδώ θα σήμαινε ότι
+    //    ένα `GET` αναφέρει κάθε αγγελία ιδιώτη ως «ορφανή προς διαγραφή».
+    liveIds.add(doc.id);
+    const owner = doc.data() as OwnerProperty;
+
+    if (dryRun) {
+      tally[
+        isPubliclyListed(projectableFromOwnerProperty(owner, nowISO())) ? 'published' : 'withdrawn'
+      ] += 1;
+      continue;
+    }
+
+    tally[(await republishOwnerProperty(adminDb, { ...owner, id: doc.id })).publish] += 1;
+  }
+
   const orphansRemoved = await removeOrphanListings(adminDb, liveIds, dryRun);
-  return buildReport(tally, properties.size, orphansRemoved);
+  return buildReport(tally, properties.size, ownerProperties.size, orphansRemoved);
 }
 
 /** Προβολές χωρίς ακίνητο — δημόσια ορατές αγγελίες που δεν αντιστοιχούν σε τίποτα. */
