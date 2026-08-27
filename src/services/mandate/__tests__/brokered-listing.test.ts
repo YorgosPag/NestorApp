@@ -16,6 +16,7 @@ import { validDraft } from '@/lib/owner-property/__tests__/owner-property-fixtur
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import type { OwnerProperty } from '@/types/owner-property';
 import { AGENCY_ATTESTATION, OWNER_CONSENT } from '@/types/owner-property-mandate';
+import { requireBrokerageCapability } from '@/lib/auth/brokerage-authority';
 
 process.env.MANDATE_CONSENT_SECRET ??= 'δοκιμαστικό-μυστικό-συγκατάθεσης';
 
@@ -41,9 +42,31 @@ const CLIENT = 'cont_kostas';
 const IDENTITY = {
   id: LISTING_ID,
   authorUserId: 'user_maria',
-  authorCompanyId: 'comp_alfa',
   agencyName: 'ΑΛΦΑ ΜΕΣΙΤΙΚΗ',
 };
+
+/**
+ * 🔑 **Η ΑΠΟΔΕΙΞΗ ΚΑΤΑΣΚΕΥΑΖΕΤΑΙ ΑΠΟ ΤΟΝ ΚΡΙΤΗ, ΠΟΤΕ ΜΕ LITERAL** (ADR-824 §6).
+ *
+ * Το `__brand` είναι `unique symbol` που **δεν εξάγεται**, άρα καμία σουίτα δεν
+ * μπορεί να φτιάξει `{} as BrokerageAuthority` χωρίς να το δει αναθεωρητής. Εδώ
+ * περνάμε από τον **ίδιο** κριτή που τρέχει στην παραγωγή — δηλαδή αυτές οι άγκυρες
+ * κρίνουν και τη διέλευσή του, όχι μόνο τη γραφή.
+ */
+const AUTHORITY = (() => {
+  const verdict = requireBrokerageCapability('comp_alfa', {
+    brokerage_listings: {
+      status: 'active',
+      requirements: [],
+      declaration: null,
+      decidedByUserId: 'user_super',
+      decidedAt: '2026-08-27T10:00:00.000Z',
+      revocationReason: null,
+    },
+  });
+  if ('denied' in verdict) throw new Error('ο παρονομαστής έσπασε: ενεργή ικανότητα κρίθηκε άρνηση');
+  return verdict;
+})();
 const FUTURE = '2027-08-20T12:00:00.000Z';
 
 function dbWithContact(emails: unknown): AdminFirestore {
@@ -74,7 +97,7 @@ beforeEach(() => {
 describe('🔴 Β — «ρώτα τον πελάτη»: τίποτα δημόσιο πριν απαντήσει', () => {
   it('🔑 Β1 — γεννιέται ΣΕ ΑΝΑΜΟΝΗ και ΔΕΝ δημοσιεύεται', async () => {
     const db = dbWithContact([{ email: 'kostas@example.gr', isPrimary: true }]);
-    const result = await createBrokeredListing(db, IDENTITY, validDraft(), {
+    const result = await createBrokeredListing(db, AUTHORITY, IDENTITY, validDraft(), {
       clientContactId: CLIENT,
       expiresAt: FUTURE,
       proof: OWNER_CONSENT_PROOF,
@@ -89,7 +112,7 @@ describe('🔴 Β — «ρώτα τον πελάτη»: τίποτα δημόσ�
 
   it('Β2 — ο σύνδεσμος υπάρχει ΣΤΗΝ ΕΝΤΟΛΗ τη στιγμή που φεύγει το μήνυμα', async () => {
     const db = dbWithContact([{ email: 'kostas@example.gr', isPrimary: true }]);
-    await createBrokeredListing(db, IDENTITY, validDraft(), {
+    await createBrokeredListing(db, AUTHORITY, IDENTITY, validDraft(), {
       clientContactId: CLIENT,
       expiresAt: FUTURE,
       proof: OWNER_CONSENT_PROOF,
@@ -106,7 +129,7 @@ describe('🔴 Β — «ρώτα τον πελάτη»: τίποτα δημόσ�
 
   it('🔴 Β3 — ο σύνδεσμος ΔΕΝ δείχνει στο νεκρό vercel', async () => {
     const db = dbWithContact([{ email: 'kostas@example.gr', isPrimary: true }]);
-    await createBrokeredListing(db, IDENTITY, validDraft(), {
+    await createBrokeredListing(db, AUTHORITY, IDENTITY, validDraft(), {
       clientContactId: CLIENT,
       expiresAt: FUTURE,
       proof: OWNER_CONSENT_PROOF,
@@ -125,7 +148,7 @@ describe('🔴 Β — «ρώτα τον πελάτη»: τίποτα δημόσ�
 describe('🔴 Γ — «έχω υπογεγραμμένο χαρτί»: δημοσιεύεται, ΚΑΙ ο ιδιοκτήτης ειδοποιείται', () => {
   it('🔑 Γ1 — γεννιέται ΕΓΚΕΚΡΙΜΕΝΗ και δημοσιεύεται ΑΜΕΣΩΣ', async () => {
     const db = dbWithContact([{ email: 'kostas@example.gr', isPrimary: true }]);
-    await createBrokeredListing(db, IDENTITY, validDraft(), {
+    await createBrokeredListing(db, AUTHORITY, IDENTITY, validDraft(), {
       clientContactId: CLIENT,
       expiresAt: FUTURE,
       proof: agencyAttestation('user_maria'),
@@ -139,7 +162,7 @@ describe('🔴 Γ — «έχω υπογεγραμμένο χαρτί»: δημο
 
   it('🔑 Γ2 — η βεβαίωση κρατά ΠΟΙΟΣ την έδωσε — και δεν είναι ο πελάτης', async () => {
     const db = dbWithContact([{ email: 'kostas@example.gr', isPrimary: true }]);
-    await createBrokeredListing(db, IDENTITY, validDraft(), {
+    await createBrokeredListing(db, AUTHORITY, IDENTITY, validDraft(), {
       clientContactId: CLIENT,
       expiresAt: FUTURE,
       proof: agencyAttestation('user_maria', 'entoles/kostas.pdf'),
@@ -159,7 +182,7 @@ describe('🔴 Γ — «έχω υπογεγραμμένο χαρτί»: δημο
 
   it('🏆 Γ3 — το μήνυμα είναι ΑΛΛΟ: ενημέρωση με δικαίωμα αντίρρησης, όχι ερώτηση', async () => {
     const db = dbWithContact([{ email: 'kostas@example.gr', isPrimary: true }]);
-    await createBrokeredListing(db, IDENTITY, validDraft(), {
+    await createBrokeredListing(db, AUTHORITY, IDENTITY, validDraft(), {
       clientContactId: CLIENT,
       expiresAt: FUTURE,
       proof: agencyAttestation('user_maria'),
@@ -168,7 +191,7 @@ describe('🔴 Γ — «έχω υπογεγραμμένο χαρτί»: δημο
 
     enqueued.length = 0;
     const db2 = dbWithContact([{ email: 'kostas@example.gr', isPrimary: true }]);
-    await createBrokeredListing(db2, IDENTITY, validDraft(), {
+    await createBrokeredListing(db2, AUTHORITY, IDENTITY, validDraft(), {
       clientContactId: CLIENT,
       expiresAt: FUTURE,
       proof: OWNER_CONSENT_PROOF,
@@ -192,7 +215,7 @@ describe('🔴 Γ — «έχω υπογεγραμμένο χαρτί»: δημο
 describe('🔴 Ε — το γραφείο μαθαίνει ΑΝ έμαθε ο πελάτης', () => {
   it('🔑 Ε1 — επαφή ΧΩΡΙΣ email ⇒ `no-address`, και `notifiedAt` μένει κενό', async () => {
     const db = dbWithContact([]);
-    const result = await createBrokeredListing(db, IDENTITY, validDraft(), {
+    const result = await createBrokeredListing(db, AUTHORITY, IDENTITY, validDraft(), {
       clientContactId: CLIENT,
       expiresAt: FUTURE,
       proof: OWNER_CONSENT_PROOF,
@@ -208,7 +231,7 @@ describe('🔴 Ε — το γραφείο μαθαίνει ΑΝ έμαθε ο π
   it('🔴 Ε2 — αποτυχία αποστολής ⇒ `notifiedAt` ΠΑΡΑΜΕΝΕΙ κενό (υποτιμούμε, ποτέ υπερτιμούμε)', async () => {
     enqueueSucceeds = false;
     const db = dbWithContact([{ email: 'kostas@example.gr', isPrimary: true }]);
-    const result = await createBrokeredListing(db, IDENTITY, validDraft(), {
+    const result = await createBrokeredListing(db, AUTHORITY, IDENTITY, validDraft(), {
       clientContactId: CLIENT,
       expiresAt: FUTURE,
       proof: OWNER_CONSENT_PROOF,
@@ -221,7 +244,7 @@ describe('🔴 Ε — το γραφείο μαθαίνει ΑΝ έμαθε ο π
 
   it('🔑 Ε3 — ο ΠΑΡΟΝΟΜΑΣΤΗΣ: όταν φύγει, το `notifiedAt` γράφεται', async () => {
     const db = dbWithContact([{ email: 'kostas@example.gr', isPrimary: true }]);
-    const result = await createBrokeredListing(db, IDENTITY, validDraft(), {
+    const result = await createBrokeredListing(db, AUTHORITY, IDENTITY, validDraft(), {
       clientContactId: CLIENT,
       expiresAt: FUTURE,
       proof: OWNER_CONSENT_PROOF,
@@ -237,7 +260,7 @@ describe('🔴 Ε — το γραφείο μαθαίνει ΑΝ έμαθε ο π
       { email: 'palio@example.gr', isPrimary: false },
       { email: 'kostas@example.gr', isPrimary: true },
     ]);
-    const result = await createBrokeredListing(db, IDENTITY, validDraft(), {
+    const result = await createBrokeredListing(db, AUTHORITY, IDENTITY, validDraft(), {
       clientContactId: CLIENT,
       expiresAt: FUTURE,
       proof: OWNER_CONSENT_PROOF,
@@ -255,7 +278,7 @@ describe('🔴 Ε — το γραφείο μαθαίνει ΑΝ έμαθε ο π
 describe('🔴 Φ — άκυρη εντολή δεν γεννά αγγελία', () => {
   it('Φ1 — λήξη ΣΤΟ ΠΑΡΕΛΘΟΝ ⇒ `invalid-mandate`, κανένα έγγραφο', async () => {
     const db = dbWithContact([{ email: 'kostas@example.gr', isPrimary: true }]);
-    const result = await createBrokeredListing(db, IDENTITY, validDraft(), {
+    const result = await createBrokeredListing(db, AUTHORITY, IDENTITY, validDraft(), {
       clientContactId: CLIENT,
       expiresAt: '2020-01-01T00:00:00.000Z',
       proof: OWNER_CONSENT_PROOF,
@@ -270,7 +293,7 @@ describe('🔴 Φ — άκυρη εντολή δεν γεννά αγγελία',
 
   it('Φ2 — εντολή χωρίς πελάτη ⇒ `invalid-mandate`', async () => {
     const db = dbWithContact([{ email: 'kostas@example.gr', isPrimary: true }]);
-    const result = await createBrokeredListing(db, IDENTITY, validDraft(), {
+    const result = await createBrokeredListing(db, AUTHORITY, IDENTITY, validDraft(), {
       clientContactId: '   ',
       expiresAt: FUTURE,
       proof: OWNER_CONSENT_PROOF,

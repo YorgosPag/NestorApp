@@ -47,6 +47,7 @@ import {
   setOwnerPropertyMandate,
   type OwnerPropertyWriteResult,
 } from '@/services/owner-property/owner-property-write.service';
+import type { BrokerageAuthority } from '@/lib/auth/brokerage-authority';
 import type { OwnerPropertyDraft } from '@/types/owner-property';
 import {
   AGENCY_ATTESTATION,
@@ -94,10 +95,30 @@ export interface BrokeredCreateResult {
  */
 export async function createBrokeredListing(
   adminDb: AdminFirestore,
+  /**
+   * 🔴 **Η ΑΠΟΔΕΙΞΗ, ΟΧΙ Η ΤΑΥΤΟΤΗΤΑ (ADR-824 §6).**
+   *
+   * Αυτή η παράμετρος **ΗΤΑΝ** `authorCompanyId: string` μέσα στο `identity`. Δηλαδή
+   * ο γραφέας δεχόταν *«ποιο γραφείο»* και **ποτέ** *«επιτρέπεται;»* — και η μόνη
+   * άμυνα ήταν να **θυμηθεί** ο καλών να ρωτήσει. Μέχρι τις 2026-08-27 δεν ρωτούσε
+   * κανείς: η πόρτα ήταν σκέτο `withAuth`, άρα **οποιοδήποτε** γραφείο δημοσίευε
+   * αγγελία για ξένο ακίνητο.
+   *
+   * 🔑 **Τώρα η παράλειψη ΔΕΝ ΜΕΤΑΓΛΩΤΤΙΖΕΤΑΙ.** Ο τύπος
+   * {@link BrokerageAuthority} έχει `unique symbol` που **δεν εξάγεται**: μόνο ο
+   * {@link requireBrokerageCapability} τον κατασκευάζει. Η Stripe —το πρότυπο του
+   * κύκλου ζωής— αφήνει τον έλεγχο στον χρόνο εκτέλεσης και **παραδέχεται** ότι
+   * *«sandboxes might not enforce some capabilities»*· εδώ ο φρουρός **έπαψε να
+   * είναι έλεγχος και έγινε ΤΥΠΟΣ**.
+   *
+   * ⚠️ **Και το `authorCompanyId` διαβάζεται ΑΠΟ ΤΗΝ ΑΠΟΔΕΙΞΗ**, όχι από το
+   * `identity`: έτσι είναι **αδύνατο** να κριθεί ο ένας οργανισμός και να γραφτεί ο
+   * άλλος.
+   */
+  authority: BrokerageAuthority,
   identity: {
     readonly id: string;
     readonly authorUserId: string;
-    readonly authorCompanyId: string;
     readonly agencyName: string;
   },
   draft: OwnerPropertyDraft,
@@ -123,7 +144,7 @@ export async function createBrokeredListing(
     {
       id: identity.id,
       authorUserId: identity.authorUserId,
-      authorCompanyId: identity.authorCompanyId,
+      authorCompanyId: authority.companyId,
       mandate,
     },
     draft,

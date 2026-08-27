@@ -25,6 +25,11 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { withAuth } from '@/lib/auth/middleware';
+import {
+  isBrokerageDenial,
+  requireBrokerageCapability,
+} from '@/lib/auth/brokerage-authority';
+import { readCompanyCapabilities } from '@/services/company/company-capabilities.reader';
 import type { AuthContext } from '@/lib/auth/types';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
@@ -61,12 +66,59 @@ import {
  * έχει email και δεν θα μάθει ποτέ»* — και ο μεσίτης θα περίμενε απάντηση που δεν
  * ζητήθηκε από κανέναν. Ίδιο σκεπτικό με το `publish` του §8.16.
  */
-type BrokeredResponse = OwnerPropertyResponse & { readonly notify?: NotifyOutcome };
+type BrokeredResponse =
+  | (OwnerPropertyResponse & { readonly notify?: NotifyOutcome })
+  /**
+   * 🔴 **Η ΑΡΝΗΣΗ ΤΗΣ ΡΥΘΜΙΖΟΜΕΝΗΣ ΠΡΑΞΗΣ — δικό της σχήμα, επίτηδες.**
+   *
+   * Δεν είναι `OwnerPropertyErrorResponse`: εκείνο απαντά *«η **αγγελία** σου λέει
+   * κάτι λάθος»* και οδηγεί τον άνθρωπο **στη φόρμα**. Αυτό λέει *«**δεν
+   * επιτρέπεσαι** σε αυτή τη δραστηριότητα»* και τον οδηγεί **στις ρυθμίσεις του
+   * οργανισμού**. Κοινός κάδος θα τον έστελνε να διορθώσει το εμβαδόν επειδή το
+   * γραφείο του δεν είναι μεσιτικό.
+   *
+   * ⚠️ **Το `capabilityStatus` ταξιδεύει**: *«δεν δήλωσες ποτέ»* ≠ *«εκκρεμεί»* ≠
+   * *«σου ανακλήθηκε»* — τρεις **διαφορετικές** θεραπείες στην οθόνη.
+   */
+  | {
+      readonly error: 'BROKERAGE_NOT_ALLOWED';
+      readonly reason: string;
+      readonly capabilityStatus: string;
+    };
 
 async function handler(
   request: NextRequest,
   ctx: AuthContext,
 ): Promise<NextResponse<BrokeredResponse>> {
+  const adminDb = getAdminFirestore();
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // 🔴 Ο ΦΡΟΥΡΟΣ ΤΗΣ ΡΥΘΜΙΖΟΜΕΝΗΣ ΠΡΑΞΗΣ — ΠΡΩΤΟΣ, ΠΡΙΝ ΑΠΟ ΚΑΘΕ ΑΛΛΗ ΔΟΥΛΕΙΑ
+  // ══════════════════════════════════════════════════════════════════════════
+  //
+  // ⚠️ **ΠΡΙΝ την ανάγνωση του σώματος**, και είναι δύο πράγματα μαζί: δεν κάνουμε
+  //    δουλειά για αιτούντα που δεν επιτρέπεται, και **δεν του λέμε αν το JSON του
+  //    ήταν έγκυρο** — μια άρνηση που περιγράφει το σώμα είναι κανάλι πληροφορίας
+  //    προς κάποιον που δεν έπρεπε καν να φτάσει εδώ.
+  //
+  // 🔑 **Μία ανάγνωση εγγράφου, και είναι η ΦΘΗΝΟΤΕΡΗ διαδρομή για την άρνηση**: η
+  //    επωνυμία διαβάζεται **μετά**, μόνο για όποιον περνά.
+  const authority = requireBrokerageCapability(
+    ctx.companyId,
+    await readCompanyCapabilities(adminDb, ctx.companyId),
+  );
+
+  if (isBrokerageDenial(authority)) {
+    return NextResponse.json(
+      {
+        error: 'BROKERAGE_NOT_ALLOWED',
+        reason: authority.reason,
+        capabilityStatus: authority.status,
+      } as const,
+      { status: 403 },
+    );
+  }
+
   const body: unknown = await request.json().catch(() => null);
 
   const id = ownerPropertyIdFromRequest((body as { id?: unknown } | null)?.id);
@@ -80,8 +132,6 @@ async function handler(
   );
   if (!parsedMandate.ok) return respondToMalformed(parsedMandate.malformed);
 
-  const adminDb = getAdminFirestore();
-
   // ⚠️ Η επωνυμία διαβάζεται **εδώ** και περνιέται· η υπηρεσία δεν ξέρει από εταιρείες.
   // Ένα `null` σημαίνει «δεν βρέθηκε» και **δεν** ακυρώνει την καταχώρηση — αλλά το
   // μήνυμα προς τον ιδιοκτήτη θα ήταν ανώνυμο, οπότε λέγεται κενό και όχι μπαλαντέρ.
@@ -89,10 +139,13 @@ async function handler(
 
   const result = await createBrokeredListing(
     adminDb,
+    // 🔴 **Η ΑΠΟΔΕΙΞΗ, ΟΧΙ Η ΤΑΥΤΟΤΗΤΑ.** Το `authorCompanyId` δεν περνιέται πια:
+    //    ο γραφέας το διαβάζει **από την απόδειξη**, άρα είναι αδύνατο να κριθεί ο
+    //    ένας οργανισμός και να γραφτεί ο άλλος.
+    authority,
     {
       id,
       authorUserId: ctx.uid,
-      authorCompanyId: ctx.companyId,
       agencyName,
     },
     parsedDraft.draft,

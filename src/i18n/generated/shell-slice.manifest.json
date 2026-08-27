@@ -11,9 +11,9 @@
     "src/i18n/generated/routes/o__workspace__dashboard.el.json": "263a3349d6e3f1e2badbab37f08d81836a102b89054c44e5ffac29cfacafffd0",
     "src/i18n/generated/routes/o__workspace__listings__mandates.el.json": "acc74d03857daa50427b8bff88d2bcd40e9d1952a442b9e7577c34eedf95c83a",
     "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "065ac535af7d5c7ac3a0db863d9c73a78e4a93be1a8c123da2d992cd158e9622",
-    "src/i18n/generated/routes/offers.el.json": "3f80253d5a96a295e1d5b5b7a8eaacf1f65034115b256f48812fa10cc2d40383",
+    "src/i18n/generated/routes/offers.el.json": "37f11fe465050e47c3d55037f4cb71f77828554b0f9fe71399f5f1e059966ce8",
     "src/i18n/generated/routes/offers__new.el.json": "202c8267577dd434155ddbe6db9478642d7bd3a5e30bbbb3bacf5cf0d89072f5",
-    "src/i18n/generated/routes/offers__offerId.el.json": "f92482a1497eafc2ed1352ad1ac88631bfe50c4b53be11b3646a2f21c9d71bbf",
+    "src/i18n/generated/routes/offers__offerId.el.json": "b20de67166260f52c4e9eb6d473e2b2a6acc0eefe59d78e3698bed897b3dc8d4",
     "src/i18n/generated/routes/privacy-policy.el.json": "181e3b315e8ac63a3e927fa8bf073863b2aa706fd66a06f38d936dce70b0cee0",
     "src/i18n/generated/routes/terms.el.json": "481f837696b407553f56de16128778617a86f72cf7b27471d61cd5793cf7d288",
     "src/i18n/generated/routes/test-harness__listing-shapes.el.json": "9b6aaaa831492e24807a1c83e0b505dc865c03afbd5638abf8ea2b990422b037",
@@ -57,7 +57,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "254299bca841ead8ccdc2e04e88d5a93e2533927f40e74603ac24221e129653c",
+  "inputsSha256": "e2171ee73cf25150acf6ede85e99153249cae12e533ac74defa420f5050315d2",
   "languages": [
     "el"
   ],
@@ -525,7 +525,7 @@
     "src/types/building/elevation.schemas.ts": "da18b3b1a788ecbf4ae980651719317961315838603e8c1407116a7bce9d891e",
     "src/types/building/features.ts": "40cd17ea2ed1ab67c0228038110113c425192dc608e29fafd89ac75d48b11dad",
     "src/types/capability-authority.ts": "ea939d1981bce7790992dc108887f45e5afb8d84dc7f57504843b2b6a5439382",
-    "src/types/company.ts": "b8f67ced6ceea67a1e7eaf2bfe749ff35831b8a45ba2310b28056a6a0d982551",
+    "src/types/company.ts": "656a19c5113289232025614cdca4214667e4620b10c1c87d327e8116accba705",
     "src/types/contacts/address-types.ts": "4b344329845d26af2c138cdddb1eb7fc2bdea7b7c79b3ee0366b37f964ad3ab7",
     "src/types/contacts/contracts.ts": "c7b7cb171a47794005d8c1ce50e9dcadd6fb3ebf22d9c5cce479d23407726761",
     "src/types/contacts/helpers.ts": "127972745e9a1cb2a9a25ebb2a81b4c355e6dec07a0a9379f43e87a9266a51bc",
@@ -543,6 +543,7 @@
     "src/types/notification.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/types/notifications.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/types/org/org-structure.ts": "ef64e92d802969c67420d5449cd5b2d6a4d8109d8b9ab13b83719cdf1847b84c",
+    "src/types/organization-capability.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/types/ownership-table.ts": "b82f5606c32c665b580732264de62e0bc46098689fe03068d043728e2a398504",
     "src/types/parking.ts": "7522f13547556bf7640797034363c5db5f7d1ce5e7b548ddb1589c19075183d8",
     "src/types/payment-plan.ts": "804bd4d5c8dac2e36c73b2439603dd9b7a964865b20911c4aaedaa5708fe4226",
@@ -599,8 +600,8 @@
     "dynamicBoundaries": 18,
     "matchedKeys": 135,
     "routeBoundaries": 0,
-    "shellFiles": 496,
-    "sliceBytes": 311683
+    "shellFiles": 497,
+    "sliceBytes": 312146
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
