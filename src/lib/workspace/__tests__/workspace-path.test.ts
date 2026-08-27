@@ -6,6 +6,9 @@
  * και ένας μηχανισμός για τα δύο θα ήταν σωστός στο μισό (ADR-787 §5.3 η #1).
  */
 
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+
 import {
   WORKSPACE_PATH_PREFIX,
   extractWorkspaceSegment,
@@ -13,6 +16,9 @@ import {
   stripWorkspace,
   workspacePath,
 } from '../workspace-path';
+// ⚠️ Η ομάδα Ε ρωτά την **ίδια** αυθεντία προσγείωσης με τη διαδρομή — ποτέ ωμό
+//    `'/dashboard'`, που θα ήταν δεύτερος κριτής μέσα στο ίδιο το test (ADR-749).
+import { resolvePostLoginRoute } from '@/lib/routes/landing';
 
 describe('Α — ανάγνωση: ονομάζει χώρο;', () => {
   it('Α1: /o/nikos/projects → «nikos»', () => {
@@ -116,5 +122,67 @@ describe('Δ — το SSoT του προθέματος', () => {
     for (const path of ['/o/nikos', '/o/nikos/x', '/login', '/obligations', '/o', '/']) {
       expect(hasWorkspacePrefix(path)).toBe(extractWorkspaceSegment(path) !== null);
     }
+  });
+});
+
+// =============================================================================
+// Ε — 🔴 ΠΡΟΣΓΕΙΩΝΕΤΑΙ ΚΑΠΟΥ ΑΥΤΗ Η ΔΙΕΥΘΥΝΣΗ; (ADR-787 Κ-1, 2026-08-27)
+// =============================================================================
+//
+// 🔴 ΤΟ ΓΕΓΟΝΟΣ: το `POST /api/workspaces` επέστρεφε `redirectTo: workspacePath(alias)`
+//    — δηλαδή **σκέτο** `/o/<ψευδώνυμο>`. Δεν υπάρχει `page.tsx` στη ρίζα του
+//    `(app)/o/[workspace]/`, μόνο `layout.tsx` και υποφάκελοι. Ο άνθρωπος που μόλις
+//    έφτιαξε το γραφείο του προσγειωνόταν στο **κέλυφός του με 404 μέσα**: το sidebar
+//    φόρτωνε κανονικά, το περιεχόμενο έλεγε «Η σελίδα που αναζητάτε δεν βρέθηκε».
+//
+// ⚠️ **ΓΙΑΤΙ ΚΑΝΕΝΑ ΥΠΑΡΧΟΝ TEST ΔΕΝ ΤΟ ΕΠΙΑΣΕ**: όλα τα Β/Γ παραπάνω κρίνουν
+//    **μορφή** συμβολοσειράς — «μπήκε το πρόθεμα;». Καμία ερώτηση δεν ήταν
+//    *«υπάρχει σελίδα εκεί;»*, και η μορφή ήταν **άψογη**. Ίδιο σχήμα με το
+//    `/unauthorized` του ADR-787 §5.3 ξ: σωστά χτισμένη διεύθυνση προς το πουθενά.
+//
+// ⛔ Η άγκυρα ρωτά το **αρχειοσύστημα**, όχι μια λίστα: λίστα διαδρομών θα ήταν
+//    δεύτερη αυθεντία δίπλα στον App Router, και θα πάλιωνε σιωπηλά.
+describe('Ε — 🔴 Ο ΠΡΟΟΡΙΣΜΟΣ ΥΠΑΡΧΕΙ; (όχι απλώς «είναι σωστά γραμμένος»)', () => {
+  const WORKSPACE_TREE = join(__dirname, '../../../app/(app)/o/[workspace]');
+
+  /** Το τμήμα μετά το ψευδώνυμο έχει `page.tsx`; */
+  const landsOnAPage = (path: string): boolean => {
+    const segment = path.replace(/^\/o\/[^/]+/, '').split('/').filter(Boolean)[0];
+    if (!segment) return false; // σκέτο `/o/<alias>` — η ίδια η βλάβη
+    return existsSync(join(WORKSPACE_TREE, segment, 'page.tsx'));
+  };
+
+  it('Ε0: Ο ΠΑΡΟΝΟΜΑΣΤΗΣ — το όργανο ΒΛΕΠΕΙ σελίδες', () => {
+    // Χωρίς αυτό, ένα λάθος μονοπάτι θα έκανε το Ε2 πράσινο για λάθος λόγο:
+    // «δεν βρήκα σελίδα» και «δεν κοίταξα» δίνουν το ίδιο false.
+    expect(existsSync(join(WORKSPACE_TREE, 'dashboard', 'page.tsx'))).toBe(true);
+  });
+
+  it('Ε1: 🔴 Η ΒΛΑΒΗ — το ΣΚΕΤΟ /o/<alias> ΔΕΝ προσγειώνεται πουθενά', () => {
+    expect(workspacePath('dokimi')).toBe('/o/dokimi');
+    expect(landsOnAPage(workspacePath('dokimi'))).toBe(false);
+    // Και ο λόγος, ρητά: ΔΕΝ υπάρχει σελίδα στη ρίζα του χώρου.
+    expect(existsSync(join(WORKSPACE_TREE, 'page.tsx'))).toBe(false);
+  });
+
+  it('Ε2: 🔑 Η ΔΙΟΡΘΩΣΗ — ο νέος διαχειριστής προσγειώνεται σε ΥΠΑΡΚΤΗ σελίδα', () => {
+    // Ακριβώς η έκφραση του `api/workspaces/route.ts`, ρωτώντας την ΙΔΙΑ αυθεντία.
+    const destination = workspacePath(
+      'dokimi',
+      resolvePostLoginRoute({ companyId: 'comp_x' }),
+    );
+
+    expect(landsOnAPage(destination)).toBe(true);
+  });
+
+  it('Ε3: ⛔ Η ΑΥΘΕΝΤΙΑ ΕΙΝΑΙ ΜΙΑ — δεν ρωτάμε τον ΔΡΩΝΤΑ, ρωτάμε το ΑΠΟΤΕΛΕΣΜΑ', () => {
+    // Ο αιτών μπαίνει ΧΩΡΙΣ οργανισμό. Αν τον ρωτούσαμε αυτόν, θα έπαιρνε την
+    // προσγείωση του πολίτη και θα έστελνε τον νέο διαχειριστή ΕΞΩ από το
+    // γραφείο που μόλις γέννησε — μέσα σε διεύθυνση που δηλώνει ότι είναι μέσα.
+    const asCitizen = resolvePostLoginRoute({ companyId: null });
+    const asFounder = resolvePostLoginRoute({ companyId: 'comp_x' });
+
+    expect(asCitizen).not.toBe(asFounder);
+    expect(landsOnAPage(workspacePath('dokimi', asCitizen))).toBe(false);
   });
 });
