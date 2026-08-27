@@ -34,8 +34,6 @@ import { PolygonCropStore } from '../systems/lasso/LassoCropStore';
 import { LassoFreehandStore } from '../systems/lasso/LassoFreehandStore';
 import { SketchFreehandStore } from '../systems/sketch/SketchFreehandStore';
 // 🏢 ADR-418: real view-scale (1:N) → pixel-scale conversion SSoT
-import { ratioToScale } from '../utils/view-scale';
-import { resolveSceneUnits } from '../utils/scene-units';
 
 const clipService = new ClipToRegionService();
 const polygonClipService = new ClipToPolygonService();
@@ -235,7 +233,6 @@ export function useDxfViewerState() {
   const canvasActions = useMemo(() => ({
     zoomIn: canvasOps.zoomIn,
     zoomOut: canvasOps.zoomOut,
-    zoomToScale: canvasOps.zoomToScale,
     fitToView: canvasOps.fitToView,
     resetToOrigin: canvasOps.resetToOrigin,
     getTransform: canvasOps.getTransform,
@@ -243,7 +240,7 @@ export function useDxfViewerState() {
     undo: undoAction,
     redo: redoAction,
   }), [
-    canvasOps.zoomIn, canvasOps.zoomOut, canvasOps.zoomToScale, canvasOps.fitToView,
+    canvasOps.zoomIn, canvasOps.zoomOut, canvasOps.fitToView,
     canvasOps.resetToOrigin, canvasOps.getTransform, canvasOps.setTransform,
     undoAction, redoAction,
   ]);
@@ -378,12 +375,12 @@ export function useDxfViewerState() {
         canvasActions.resetToOrigin();
         break;
       case 'set-view-ratio':
-        // 🏢 ADR-418: data is a drawing-scale denominator N (1:N). Convert to a
-        // CSS-px scale via the view-scale SSoT (DPI + active scene units), then
-        // route through the canonical imperative zoomToScale path.
+        // 🏢 ADR-418 §«Απόλυτος προορισμός»: το `data` είναι παρονομαστής N (1:N) — ΠΡΟΟΡΙΣΜΟΣ,
+        // όχι βήμα. 🔴 ΜΗΝ το γυρίσεις σε `zoomToScale(ratioToScale(…))`: εκείνο περνούσε από τον
+        // δρόμο του ροδακιού και κορενόταν στο anti-fling clamp (1:32 → «1:500» = 1:55).
+        // Ίδιο σχήμα με το `canvas-fit-to-view` από πάνω, ίδια αιτία (το widget δεν βλέπει zoomSystem).
         if (typeof data === 'number' && Number.isFinite(data) && data > 0) {
-          const sceneUnits = resolveSceneUnits(sceneStateRef.current.currentScene);
-          canvasActions.zoomToScale(ratioToScale({ ratioN: data, sceneUnits }));
+          EventBus.emit('canvas-zoom-to-ratio', { ratioN: data, source: 'ribbon' });
         }
         break;
       case 'zoom-window':

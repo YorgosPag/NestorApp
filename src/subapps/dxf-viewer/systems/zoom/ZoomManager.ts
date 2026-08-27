@@ -49,9 +49,27 @@ export class ZoomManager implements IZoomManager {
   private historyIndex: number;
   // 🏢 ENTERPRISE: Dependency Injection - Viewport reference
   private viewport: { width: number; height: number };
+  /**
+   * 🔴 ADR-418 — «ποια είναι ΤΩΡΑ η κατάσταση», injected.
+   *
+   * Ο manager κρατούσε ΔΙΚΟ του `currentTransform` και το ενημέρωναν ΜΟΝΟ οι δικές του πράξεις.
+   * Όμως το pan γράφει κατευθείαν στο SSoT (`useCentralizedMouseHandlers` → `onTransformChange`),
+   * όπως και το fit / restore-viewport / reset-to-origin — δηλαδή το αντίγραφο έμενε μπαγιάτικο και
+   * κάθε επόμενο zoom υπολόγιζε **από λάθος βάση**: σωστός factor, λάθος κέντρο ⇒ η σκηνή τιναζόταν.
+   *
+   * Δεν κάνουμε την κλάση να εισάγει store (μένει καθαρή/testable): ο κάτοχος δίνει τον getter.
+   * Χωρίς getter η συμπεριφορά είναι η παλιά (τα υπάρχοντα unit tests μένουν ανέγγιχτα).
+   */
+  private readonly transformProvider?: () => ViewTransform;
 
-  constructor(initialTransform: ViewTransform, config?: Partial<ZoomConfig>, viewport?: { width: number; height: number }) {
+  constructor(
+    initialTransform: ViewTransform,
+    config?: Partial<ZoomConfig>,
+    viewport?: { width: number; height: number },
+    transformProvider?: () => ViewTransform,
+  ) {
     this.config = { ...DEFAULT_ZOOM_CONFIG, ...config };
+    this.transformProvider = transformProvider;
     this.currentTransform = { ...initialTransform };
     this.history = [];
     this.historyIndex = -1;
@@ -66,12 +84,31 @@ export class ZoomManager implements IZoomManager {
     this.addToHistory('fit');
   }
 
+  /**
+   * Ευθυγράμμισε το εσωτερικό αντίγραφο με τη ΖΩΝΤΑΝΗ κατάσταση πριν από κάθε πράξη που
+   * χτίζει πάνω της. Χωρίς history: δεν είναι ενέργεια του χρήστη, είναι ανάγνωση.
+   * Αμυντικό — ένας getter που γυρίζει σκουπίδια δεν επιτρέπεται να δηλητηριάσει τη βάση.
+   */
+  private syncFromLiveTransform(): void {
+    if (!this.transformProvider) return;
+    const live = this.transformProvider();
+    if (
+      !live ||
+      !Number.isFinite(live.scale) || live.scale <= 0 ||
+      !Number.isFinite(live.offsetX) || !Number.isFinite(live.offsetY)
+    ) {
+      return;
+    }
+    this.currentTransform = { scale: live.scale, offsetX: live.offsetX, offsetY: live.offsetY };
+  }
+
   // === CORE ZOOM OPERATIONS ===
 
   /**
    * Zoom In - Μεγέθυνση
    */
   zoomIn(center?: Point2D, constraints?: ZoomConstraints): ZoomResult {
+    this.syncFromLiveTransform();
     const zoomCenter = center || this.getViewportCenterInternal(constraints?.viewport);
     const newScale = clampScale(
       this.currentTransform.scale * this.config.keyboardFactor,
@@ -91,6 +128,7 @@ export class ZoomManager implements IZoomManager {
    * Zoom Out - Σμίκρυνση
    */
   zoomOut(center?: Point2D, constraints?: ZoomConstraints): ZoomResult {
+    this.syncFromLiveTransform();
     const zoomCenter = center || this.getViewportCenterInternal(constraints?.viewport);
     const newScale = clampScale(
       this.currentTransform.scale / this.config.keyboardFactor,
@@ -147,6 +185,7 @@ export class ZoomManager implements IZoomManager {
    * Zoom to Scale - Συγκεκριμένη κλίμακα
    */
   zoomToScale(scale: number, center?: Point2D): ZoomResult {
+    this.syncFromLiveTransform();
     const clampedScale = Math.max(
       this.config.minScale,
       Math.min(scale, this.config.maxScale)
@@ -227,6 +266,7 @@ export class ZoomManager implements IZoomManager {
   ): ZoomResult {
     // AutoCAD-parity: magnitude-aware exponential factor (όχι σταθερό 10%). Ctrl = 2× sensitivity.
     // Το πρόσημο του wheelDelta ορίζει κατεύθυνση μέσα στο exp· το μέγεθος ορίζει ταχύτητα.
+    this.syncFromLiveTransform();
     const useCtrlZoom = modifiers?.ctrlKey === true;
     const factor = computeWheelZoomFactor(wheelDelta, useCtrlZoom);
 
@@ -360,6 +400,7 @@ export class ZoomManager implements IZoomManager {
   // === PUBLIC GETTERS/SETTERS ===
 
   getCurrentTransform(): ViewTransform {
+    this.syncFromLiveTransform();
     return { ...this.currentTransform };
   }
 

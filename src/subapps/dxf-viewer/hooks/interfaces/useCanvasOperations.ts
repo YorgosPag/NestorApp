@@ -20,7 +20,7 @@ import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import { useCanvasRefs } from '../../contexts/CanvasContext';
 import { getMainDxfCanvas } from '../../rendering/utils/main-canvas-element';
 // ✅ ENTERPRISE: Import zoom constants for consistent zoom factors
-import { ZOOM_FACTORS, ZOOM_LIMITS } from '../../config/transform-config';
+import { ZOOM_FACTORS } from '../../config/transform-config';
 // 🏢 ADR-151: Centralized Simple Coordinate Transforms
 import { worldToScreenSimple, screenToWorldSimple } from '../../rendering/core/CoordinateTransforms';
 // 🏢 ENTERPRISE: Unified EventBus for type-safe event dispatch
@@ -42,8 +42,13 @@ export interface CanvasOperations {
   };
   zoomIn: () => void;
   zoomOut: () => void;
+  /**
+   * ⚠️ ΣΧΕΤΙΚΟΣ πολλαπλασιαστής, ΟΧΙ προορισμός. Καταλήγει στον δρόμο του ροδακιού, όπου το
+   * anti-fling clamp (`WHEEL_MAX_DELTA`) κόβει κάθε factor εκτός [÷1.73, ×1.73]. Σωστό για
+   * κουμπιά ±20%· ΛΑΘΟΣ για «πήγαινε στο 1:N» — γι' αυτό εκπέμπεται `canvas-zoom-to-ratio`
+   * (ADR-418). Εδώ ΔΕΝ υπάρχει πια `zoomToScale`: ήταν ακριβώς αυτή η παγίδα.
+   */
   zoomAtScreenPoint: (factor: number, screenPt: Point2D) => void;
-  zoomToScale: (scale: number, center?: Point2D) => void;
   resetToOrigin: () => void;
   fitToView: () => void;
 }
@@ -179,15 +184,6 @@ export const useCanvasOperations = (): CanvasOperations => {
     }
   }, [context]);
 
-  const zoomToScale = useCallback((targetScale: number, center?: Point2D) => {
-    const clamped = Math.max(ZOOM_LIMITS.MIN_SCALE, Math.min(targetScale, ZOOM_LIMITS.MAX_SCALE));
-    const current = getTransform();
-    if (current.scale === 0) return;
-    const factor = clamped / current.scale;
-    const zoomCenter = center || getCanvasCenter();
-    zoomAtScreenPoint(factor, zoomCenter);
-  }, [getTransform, getCanvasCenter, zoomAtScreenPoint]);
-
   /**
    * 🏢 ENTERPRISE: Reset To Origin
    * Θέτει ΑΠΕΥΘΕΙΑΣ το αγκυρωμένο transform (world (0,0) στην κάτω-αριστερή γωνία των
@@ -242,7 +238,6 @@ export const useCanvasOperations = (): CanvasOperations => {
     zoomIn,
     zoomOut,
     zoomAtScreenPoint,
-    zoomToScale,
     resetToOrigin,
     fitToView,
   };

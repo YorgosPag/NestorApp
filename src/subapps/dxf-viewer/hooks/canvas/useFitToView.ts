@@ -20,6 +20,8 @@ import { EventBus } from '../../systems/events';
 import { computeFitToPaperScale } from '../../systems/dimensions/auto-drawing-scale';
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 import { serviceRegistry } from '../../services';
+// ADR-418 — «σε ποιες μονάδες ζει η σκηνή» SSoT: το 1:N διπλώνει μέσα του μονάδες + DPI.
+import { resolveSceneUnits, type SceneUnits } from '../../utils/scene-units';
 import { dwarn, derr } from '../../debug';
 // ADR-641 — block-editor-aware zoom-extents: while a BEDIT session is open, every fit path targets
 // the entered block's LOCAL bounds (via the scene-scope resolver SSoT), not the world scene.
@@ -48,6 +50,16 @@ interface ZoomSystemLike {
     alignToOrigin?: boolean,
   ) => { transform: ViewTransform } | null;
   setTransform: (transform: ViewTransform) => void;
+  /**
+   * ADR-418 — ΑΠΟΛΥΤΗ μετάβαση σε κλίμακα 1:N. Ο ΕΝΑΣ δρόμος: ο ίδιος που ήδη χρησιμοποιεί
+   * το μενού της γωνίας των χαράκων (`handleZoomToRatio`). ΜΗΝ τον αντικαταστήσεις με
+   * `zoomToScale` μέσω `zoomAtScreenPoint` — εκείνος περνά από το clamp του ροδακιού.
+   */
+  zoomToRatio: (
+    ratioN: number,
+    sceneUnits: SceneUnits,
+    center?: Point2D,
+  ) => { transform: ViewTransform } | null;
 }
 
 export interface UseFitToViewParams {
@@ -243,12 +255,34 @@ export function useFitToView({
       }
     };
 
+    /**
+     * ADR-418 — ΑΠΟΛΥΤΗ κλίμακα 1:N από το ribbon widget (`ZoomControlsWidget`), που ζει έξω από
+     * το `CanvasLayerStack` και δεν βλέπει το `zoomSystem`. Καταλήγει στον ΙΔΙΟ `zoomToRatio` με
+     * το μενού της γωνίας των χαράκων — ένα ερώτημα, ένας δρόμος, μία απάντηση.
+     *
+     * Οι μονάδες διαβάζονται σε χρόνο ΣΥΜΒΑΝΤΟΣ από το `currentSceneRef` — τον getter που αυτό
+     * το αρχείο ήδη συντηρεί (ίδιο πρότυπο με τον handler του block-edit fit). Snapshot στα deps
+     * θα ξανάδενε ΟΛΕΣ τις συνδρομές σε κάθε αλλαγή σκηνής, χωρίς κανένα κέρδος.
+     */
+    const handleZoomToRatio = (payload: { ratioN: number }) => {
+      const ratioN = payload?.ratioN;
+      if (!Number.isFinite(ratioN) || ratioN <= 0) {
+        dwarn('useFitToView', 'zoom-to-ratio: μη έγκυρο N, αγνοείται', { ratioN });
+        return;
+      }
+      zoomSystem.zoomToRatio(ratioN, resolveSceneUnits(currentSceneRef.current));
+    };
+
     const cleanup = EventBus.on('canvas-fit-to-view', handleFitToView);
     const cleanupSelected = EventBus.on('canvas-fit-to-view-selected', handleFitToViewSelected);
     const cleanupCenter = EventBus.on('canvas-center-on-point', handleCenterOnPoint);
     const cleanupRestore = EventBus.on('canvas-restore-viewport', handleRestoreViewport);
     const cleanupFitAnnotations = EventBus.on('annotation-fit-to-paper', handleFitAnnotationsToPaper);
-    return () => { cleanup(); cleanupSelected(); cleanupCenter(); cleanupRestore(); cleanupFitAnnotations(); };
+    const cleanupZoomToRatio = EventBus.on('canvas-zoom-to-ratio', handleZoomToRatio);
+    return () => {
+      cleanup(); cleanupSelected(); cleanupCenter(); cleanupRestore();
+      cleanupFitAnnotations(); cleanupZoomToRatio();
+    };
   }, [dxfScene, colorLayers, zoomSystem]); // 🚀 Include colorLayers για combined bounds
 
   return { fitToOverlay };

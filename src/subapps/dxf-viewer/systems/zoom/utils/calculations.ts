@@ -44,6 +44,15 @@ export function computeWheelZoomFactor(deltaY: number, ctrlKey: boolean = false)
  * να περνούν από τον ΕΝΑ wheel-zoom δρόμο και να τιμούν τον ΑΚΡΙΒΗ factor τους, αντί για ένα ψεύτικο
  * ±120 που το παλιό sign-based `wheelZoom` αγνοούσε (latent bug: κουμπιά έκαναν 10% αντί 20%).
  *
+ * 🔴 ΟΡΙΟ — ΔΙΑΒΑΣΕ ΠΡΙΝ ΤΟ ΧΡΗΣΙΜΟΠΟΙΗΣΕΙΣ: η αντιστροφή ΔΕΝ είναι ολική. Ο καταναλωτής
+ * (`computeWheelZoomFactor`) κόβει το `deltaY` στο `WHEEL_MAX_DELTA` ως anti-fling, ενώ εδώ
+ * δεν κόβεται τίποτα. Άρα κάθε factor εκτός **[÷1.73, ×1.73]** (για `WHEEL_ZOOM_PER_NOTCH=1.20`)
+ * επιστρέφει κορεσμένος — μετρημένο: 1:32 → «1:500» προσγειωνόταν στο **1:55**.
+ *
+ * ✅ Σωστή χρήση: σχετικά βήματα εντός εύρους (κουμπιά ±20%).
+ * ❌ ΛΑΘΟΣ χρήση: **απόλυτος προορισμός** («πήγαινε στο 1:N», «θέσε scale = X»). Γι' αυτό
+ *    υπάρχει `ZoomManager.zoomToRatio` / `zoomToScale` — δεν περνούν από εδώ (ADR-418).
+ *
  * @param factor - επιθυμητός scale multiplier (>0)
  * @param ctrlKey - πρέπει να ταιριάζει με το sensitivity που θα χρησιμοποιηθεί στην κατανάλωση
  */

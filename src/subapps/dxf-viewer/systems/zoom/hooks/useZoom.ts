@@ -19,6 +19,20 @@ interface UseZoomProps {
   onTransformChange?: (transform: ViewTransform) => void;
   // 🏢 ENTERPRISE: Viewport injection για accurate zoom-to-cursor
   viewport?: Viewport;
+  /**
+   * 🔴 ADR-418 — getter της ΖΩΝΤΑΝΗΣ κατάστασης του καμβά ΠΟΥ ΑΝΗΚΕΙ ΣΕ ΑΥΤΟ το instance.
+   *
+   * Ο manager χτίζεται ΜΙΑ φορά (ref guard), οπότε το `initialTransform` είναι φωτογραφία της
+   * πρώτης στιγμής — ενώ το pan γράφει κατευθείαν στο SSoT χωρίς να περάσει από εδώ. Χωρίς
+   * getter, κάθε zoom μετά από pan υπολογίζει πάνω σε μπαγιάτικο offset.
+   *
+   * ⚠️ ΓΙΑΤΙ ΠΑΡΑΜΕΤΡΟΣ ΚΑΙ ΟΧΙ ΠΡΟΕΠΙΛΟΓΗ: αυτό το hook έχει **δύο** κατόχους με **χωριστούς**
+   * καμβάδες — το `CanvasSection` (DXF, SSoT = `ImmediateTransformStore`) και το
+   * `FloorPlanViewer`. Σιωπηρό `getImmediateTransform` εδώ θα έκανε τον floorplan να διαβάζει
+   * το transform του DXF viewer. Ο κάτοχος ξέρει ποιο είναι το SSoT του· το hook δεν το μαντεύει.
+   * Χωρίς getter η συμπεριφορά είναι η παλιά (τοπικό αντίγραφο).
+   */
+  transformProvider?: () => ViewTransform;
 }
 
 interface UseZoomReturn {
@@ -65,7 +79,8 @@ export const useZoom = ({
   initialTransform,
   config,
   onTransformChange,
-  viewport
+  viewport,
+  transformProvider
 }: UseZoomProps): UseZoomReturn => {
 
   // Create zoom manager instance
@@ -73,7 +88,9 @@ export const useZoom = ({
 
   if (!zoomManagerRef.current) {
     // 🏢 ENTERPRISE: Inject viewport during initialization
-    zoomManagerRef.current = new ZoomManager(initialTransform, config, viewport);
+    //
+    // 🔴 4ο όρισμα (ADR-418): ο getter της ζωντανής κατάστασης, όπως τον δίνει ο ΚΑΤΟΧΟΣ.
+    zoomManagerRef.current = new ZoomManager(initialTransform, config, viewport, transformProvider);
   }
 
   const zoomManager = zoomManagerRef.current;

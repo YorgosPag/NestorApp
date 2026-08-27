@@ -106,6 +106,22 @@ export interface DrawingEventMap extends MepAutoDesignEventMap, BimEventMap, Top
     source?: string; // 'middle-double-click' | 'keyboard' | 'auto' | undefined
     viewport?: { width: number; height: number };
   };
+  /**
+   * ADR-418 — «πήγαινε σε ΑΥΤΗ την κλίμακα 1:N», ως ΑΠΟΛΥΤΗ εντολή.
+   *
+   * Υπάρχει επειδή το ribbon widget (`ZoomControlsWidget`) ζει ΕΞΩ από το `CanvasLayerStack`
+   * και δεν βλέπει το `zoomSystem` — ίδια ακριβώς αιτία και ίδιο σχήμα με το `canvas-fit-to-view`.
+   *
+   * 🔴 Ο λόγος που δεν αρκεί «στείλ' το στο zoomToScale»: ο δρόμος `zoomAtScreenPoint` μεταφράζει
+   * την απόλυτη κλίμακα σε *factor* και τον περνά μέσα από τον δρόμο του ΡΟΔΑΚΙΟΥ, όπου το
+   * anti-fling clamp (`WHEEL_MAX_DELTA`) κόβει κάθε άλμα εκτός [÷1.73, ×1.73]. Μετρημένο: από
+   * 1:32 το «1:500» προσγειωνόταν στο 1:55. Η κλίμακα ΔΕΝ είναι κίνηση ροδακιού — είναι προορισμός.
+   */
+  'canvas-zoom-to-ratio': {
+    /** Παρονομαστής κλίμακας N (1:N). Πεπερασμένος, > 0 — ο handler το επαληθεύει. */
+    ratioN: number;
+    source?: string; // 'ribbon' | 'ruler-corner' | undefined
+  };
   // ADR-394: Fit-to-view to the bounding box of the current selection (Z key).
   // Bounds are pre-computed by useKeyboardShortcuts at keypress time over the
   // selected DXF + BIM entities (calculateCombinedEntityBounds SSoT).
