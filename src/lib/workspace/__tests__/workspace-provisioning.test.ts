@@ -90,12 +90,16 @@ function makeCollection(name: string) {
   };
 }
 
-import { provisionWorkspace } from '../workspace-provisioning';
+import { provisionWorkspace, type ProvisioningInput } from '../workspace-provisioning';
 import { isFirebaseAdminAvailable } from '@/lib/firebaseAdmin';
 
-const INPUT = {
+// ⚠️ `null` και ΟΧΙ `''` — αυτό είναι που στέλνει **όντως** η διαδρομή
+//    (`actorWorkspace(actor)`, ADR-817). Το fixture έγραφε `''`, τιμή που ο
+//    πραγματικός καλών **δεν παράγει**: η σουίτα δοκίμαζε μονοπάτι που δεν
+//    εκτελείται. Το `''` κρατιέται ως ξεχωριστή περίπτωση στο Κ2.
+const INPUT: ProvisioningInput = {
   uid: 'user_1',
-  currentCompanyId: '',
+  currentCompanyId: null,
   displayName: 'Δομή Τεχνική',
   requestedAlias: 'domi',
 };
@@ -161,6 +165,30 @@ describe('Κ2 — Ο ΦΡΟΥΡΟΣ: ένας χώρος ανά άνθρωπο',
     expect(result).toEqual({ ok: false, reason: 'already-has-workspace' });
     // Το Κ0 απέδειξε ότι το ημερολόγιο γεμίζει· άρα το κενό εδώ σημαίνει κάτι.
     expect(journal).toEqual([]);
+  });
+
+  // 🔴 Η ΑΛΛΗ ΠΛΕΥΡΑ ΤΟΥ ΦΡΟΥΡΟΥ, ΚΑΙ ΕΙΝΑΙ Ο ΛΟΓΟΣ ΠΟΥ ΥΠΑΡΧΕΙ Η ΟΘΟΝΗ Κ-1:
+  //    ο άνθρωπος **χωρίς** χώρο πρέπει να ΠΕΡΝΑΕΙ. Μέχρι τις 2026-08-27 δεν
+  //    περνούσε ποτέ — όχι εδώ, αλλά στο σύνορο (`withAuth` → 401 σε κάθε
+  //    `scope: 'personal'`), δηλαδή σε στρώμα που **αυτή η σουίτα δεν βλέπει**.
+  //    Ο ισχυρισμός μένει ως δήλωση της αναμενόμενης εισόδου· το σύνορο το
+  //    φυλά το `lib/auth/__tests__/personal-scope-consumers.test.ts`.
+  it('ΤΟ null ΠΕΡΝΑΕΙ — ο πολίτης είναι ο κύριος πληθυσμός, όχι η εξαίρεση', async () => {
+    await expect(provisionWorkspace({ ...INPUT, currentCompanyId: null })).resolves.toEqual({
+      ok: true,
+      companyId: 'comp_generated',
+      alias: 'domi',
+    });
+  });
+
+  // ⚠️ Ο έλεγχος είναι ΠΑΡΟΥΣΙΑΣ: η κενή συμβολοσειρά δεν είναι χώρος. Χωρίς
+  //    αυτό, μια μετατροπή του `if (x)` σε `if (x !== null)` θα έμενε πράσινη.
+  it('η ΚΕΝΗ συμβολοσειρά διαβάζεται ως «δεν έχει χώρο», ταυτόσημα με το null', async () => {
+    await expect(provisionWorkspace({ ...INPUT, currentCompanyId: '' })).resolves.toEqual({
+      ok: true,
+      companyId: 'comp_generated',
+      alias: 'domi',
+    });
   });
 });
 

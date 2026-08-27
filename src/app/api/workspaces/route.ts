@@ -25,6 +25,37 @@
  *    `workspace-provisioning.ts`). Απαίτηση `company_admin` εδώ θα ήταν κυκλική —
  *    ακριβώς το εμπόδιο που κρατούσε το Κ-1 κλειδωμένο στον `super_admin`.
  *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΓΙΑΤΙ `withPersonalOrOrgAuth` ΚΑΙ ΟΧΙ `withAuth` — Η ΚΥΚΛΙΚΟΤΗΤΑ ΕΝΑ ΕΠΙΠΕΔΟ
+ *    ΠΙΟ ΚΑΤΩ (ADR-817 §5, διορθώθηκε 2026-08-27)
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Η παραπάνω παράγραφος έλεγε *«καμία απαίτηση ρόλου»* — και ήταν **αληθής**. Το
+ * `withAuth` όμως δεν απαιτεί **ρόλο**, απαιτεί **μισθωτή**: το
+ * `buildRequestContext` απαντά `401 missing_claims` σε **κάθε** ταυτότητα με
+ * `scope === 'personal'` (`lib/auth/auth-context.ts`). Δηλαδή **η ίδια κυκλικότητα
+ * που η παράγραφος απέκλεισε ρητά, ένα επίπεδο πιο κάτω** — και έκλεινε την πόρτα
+ * σε **ακριβώς** τον πληθυσμό για τον οποίο χτίστηκε.
+ *
+ * 🔴 **ΤΟ ΑΔΙΕΞΟΔΟ ΗΤΑΝ ΚΛΕΙΣΤΟ ΚΑΙ ΑΠΟ ΤΙΣ ΔΥΟ ΜΕΡΙΕΣ** (μετρημένο ζωντανά,
+ * `POST /api/workspaces → 401`): **χωρίς** χώρο δεν έφτανες ποτέ στον handler·
+ * **με** χώρο έφτανες και έπαιρνες `already-has-workspace`. Καμία τιμή του
+ * `companyId` δεν οδηγούσε σε δημιουργία — η οθόνη Κ-1 ήταν **δομικά ανίκανη**.
+ *
+ * ⚠️ **Η ΑΠΟΔΕΙΞΗ ΟΤΙ Ο ΦΡΟΥΡΟΣ ΕΦΤΑΙΓΕ, ΟΧΙ Ο HANDLER**: το `provisionWorkspace`
+ * ξεκινά με `if (input.currentCompanyId) return 'already-has-workspace'` — είναι
+ * **γραμμένο** για να τρέχει με κενή κατοχή, κατάσταση που ο φρουρός από πάνω δεν
+ * επέτρεπε ποτέ. Φρουρός που κάνει τον έλεγχο του φρουρουμένου αδύνατο.
+ *
+ * ⛔ **ΜΗΝ το «λύσεις» χαλαρώνοντας το `withAuth`.** Η προεπιλογή του συνόρου
+ *    μένει fail-closed για **319** διαδρομές· η προσωπική εμβέλεια αποκτάται
+ *    **μόνο** με ρητή κλήση αυτού του περιτυλίγματος, και το κλειστό σύνολο των
+ *    καταναλωτών φυλάγεται από το `lib/auth/__tests__/personal-scope-consumers.test.ts`.
+ *
+ * ⚠️ **ΚΑΙ ΤΟ `GET` ΑΛΛΑΞΕ, ΚΑΙ ΔΕΝ ΕΙΝΑΙ ΣΥΝΟΔΕΥΤΙΚΟ**: ο κατάλογος «οι χώροι
+ *    μου» χτίζει `buildPersonalWorkspace(uid)` (`workspace-catalog.ts`) — έγγραφο
+ *    που **υπάρχει για κάθε
+ *    άνθρωπο**. Ο πολίτης ήταν ο μόνος που δεν μπορούσε να το δει.
+ *
  * Η **αντίστροφη** ερώτηση του ADR-787 Κ-2. Απαντιέται **μόνο εδώ**, στον
  * διακομιστή.
  *
@@ -59,8 +90,9 @@
  * Ένας κατάλογος χτισμένος από **άλλη** λογική από την πύλη θα μπορούσε να
  * **διαφωνήσει** μαζί της — εδώ είναι δομικά αδύνατο.
  *
- * Auth: κάθε συνδεδεμένος (ο καθένας βλέπει **μόνο τους δικούς του** χώρους)
- * Rate: withStandardRateLimit
+ * Auth: `withPersonalOrOrgAuth` — κάθε συνδεδεμένος, **με ή χωρίς οργανισμό**
+ *       (ο καθένας βλέπει **μόνο τους δικούς του** χώρους)
+ * Rate: GET `withStandardRateLimit` · POST `withSensitiveRateLimit`
  *
  * @module api/workspaces
  * @see docs/centralized-systems/reference/adrs/ADR-787-multi-organization-platform.md §5.1
@@ -69,46 +101,36 @@
 import 'server-only';
 
 import { NextResponse, type NextRequest } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext } from '@/lib/auth';
+import {
+  withPersonalOrOrgAuth,
+  actorWorkspace,
+  type ApiActor,
+} from '@/lib/auth/personal-scope-middleware';
 import {
   withStandardRateLimit,
   withSensitiveRateLimit,
 } from '@/lib/middleware/with-rate-limit';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { COLLECTIONS } from '@/config/firestore-collections';
 import { listMemberWorkspaces } from '@/lib/auth/workspace-membership';
 import { provisionWorkspace } from '@/lib/workspace/workspace-provisioning';
-import { workspacePath } from '@/lib/workspace/workspace-path';
 import {
-  orgWorkspace,
-  personalWorkspace,
-  workspaceRefKey,
-} from '@/types/workspace-membership';
+  buildPersonalWorkspace,
+  buildOrgWorkspaces,
+} from '@/lib/workspace/workspace-catalog';
+import { workspacePath } from '@/lib/workspace/workspace-path';
+import { resolvePostLoginRoute } from '@/lib/routes/landing';
 import type { Workspace } from '@/types/workspace';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
-import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('api:workspaces');
-
-/**
- * Το όνομα του ιδιωτικού χώρου **δεν μπαίνει εδώ ως κείμενο**.
- *
- * ⚠️ Ο κανόνας **N.11** απαγορεύει ωμές συμβολοσειρές οθόνης στον κώδικα, και
- * ο κανόνας ισχύει και στον διακομιστή: το κείμενο *«Τα προσωπικά μου»* που
- * σκιαγραφεί το **ADR-787 Ε-3 §1** είναι **ετικέτα οθόνης**, άρα ζει στα
- * locale αρχεία και το επιλέγει η οθόνη από το `type: 'personal'`.
- * Ο διακομιστής στέλνει **κενό** — και αυτό είναι πληροφορία, όχι παράλειψη.
- */
-const PERSONAL_DISPLAY_NAME = '';
 
 // =============================================================================
 // GET
 // =============================================================================
 
-async function handleGet(_request: NextRequest, ctx: AuthContext): Promise<NextResponse> {
-  const membership = await listMemberWorkspaces(ctx.uid);
+async function handleGet(_request: NextRequest, actor: ApiActor): Promise<NextResponse> {
+  const uid = actor.ctx.uid;
+  const membership = await listMemberWorkspaces(uid);
 
   // ⛔ ΑΓΝΩΣΤΟ ≠ ΚΕΝΟ (N.12 · ADR-787 Ε-5 §4 #3).
   // Μια κενή λίστα εδώ θα έλεγε στον άνθρωπο «δεν έχεις χώρους» ενώ η αλήθεια
@@ -116,7 +138,7 @@ async function handleGet(_request: NextRequest, ctx: AuthContext): Promise<NextR
   // §2.7 (`PERMISSION_DENIED` υποβαθμισμένο σε `warn` + κενή λίστα).
   if (membership.outcome === 'unknown') {
     logger.error('[WORKSPACES] Ο κατάλογος δεν απαντήθηκε', {
-      uid: ctx.uid,
+      uid,
       reason: membership.reason,
     });
     return NextResponse.json(
@@ -125,18 +147,21 @@ async function handleGet(_request: NextRequest, ctx: AuthContext): Promise<NextR
     );
   }
 
-  // Ο χώρος του token μπαίνει **πάντα** (ετυμηγορία `home`, μηδέν αναγνώσεις).
-  const orgIds = new Set<string>([ctx.companyId, ...membership.companyIds].filter(Boolean));
+  // Ο χώρος του token μπαίνει **πάντα** (ετυμηγορία `home`, μηδέν αναγνώσεις) —
+  // **όταν υπάρχει**. Ο πολίτης δεν έχει, και αυτό είναι **κανονική** κατάσταση:
+  // ο κατάλογός του είναι νόμιμα «μόνο ο ιδιωτικός μου χώρος».
+  const home = actorWorkspace(actor);
+  const orgIds = new Set<string>([...(home ? [home] : []), ...membership.companyIds]);
 
   try {
     const workspaces: Workspace[] = [
-      buildPersonalWorkspace(ctx.uid),
-      ...(await buildOrgWorkspaces(orgIds, ctx.uid)),
+      buildPersonalWorkspace(uid),
+      ...(await buildOrgWorkspaces(orgIds, uid)),
     ];
     return NextResponse.json({ success: true, data: { workspaces } });
   } catch (error) {
     logger.error('[WORKSPACES] Η ανάγνωση ονομάτων απέτυχε', {
-      uid: ctx.uid,
+      uid,
       error: getErrorMessage(error),
     });
     return NextResponse.json(
@@ -144,67 +169,6 @@ async function handleGet(_request: NextRequest, ctx: AuthContext): Promise<NextR
       { status: 503 },
     );
   }
-}
-
-// =============================================================================
-// ΚΑΤΑΣΚΕΥΗ
-// =============================================================================
-
-/**
- * Ο ιδιωτικός χώρος — **παραγόμενος, ποτέ αποθηκευμένος**.
- *
- * ⛔ **ΔΕΝ έχει `companyId`, και δεν επιτρέπεται να αποκτήσει** (ADR-787 Ε-3
- *    §3): θα έδινε σιωπηλά στον διαχειριστή ενός γραφείου πρόσβαση στο ψάξιμο
- *    σπιτιού ενός ανθρώπου — **πράσινο σε κάθε πύλη**. Ο τύπος
- *    `PersonalWorkspaceRef` το κάνει ήδη αδύνατο· εδώ κρατιέται και στην
- *    προβολή.
- */
-function buildPersonalWorkspace(uid: string): Workspace {
-  return {
-    id: workspaceRefKey(personalWorkspace(uid)),
-    type: 'personal',
-    displayName: PERSONAL_DISPLAY_NAME,
-    status: 'active',
-    createdAt: nowISO(),
-    createdBy: uid,
-  };
-}
-
-/**
- * Οι χώροι γραφείου, με το όνομά τους από το `companies/{id}`.
- *
- * ⚠️ Ένας χώρος του οποίου το έγγραφο **λείπει** δεν πετιέται σιωπηλά: η
- * συμμετοχή υπάρχει, άρα ο χώρος υπάρχει· λείπει μόνο το **όνομα**. Σιωπηλή
- * απόρριψη εδώ θα ξανάφτιαχνε το *«δεν έχεις χώρους»* από την πίσω πόρτα.
- */
-async function buildOrgWorkspaces(orgIds: Set<string>, uid: string): Promise<Workspace[]> {
-  if (orgIds.size === 0) return [];
-
-  const db = getAdminFirestore();
-  const ids = [...orgIds];
-  const snapshots = await Promise.all(
-    ids.map((id) => db.collection(COLLECTIONS.COMPANIES).doc(id).get()),
-  );
-
-  return ids.map((companyId, index) => {
-    const data = snapshots[index].data();
-    const name = typeof data?.name === 'string' ? data.name : '';
-    if (!snapshots[index].exists) {
-      logger.warn('[WORKSPACES] Συμμετοχή σε χώρο χωρίς έγγραφο — κρατιέται χωρίς όνομα', {
-        uid,
-        companyId,
-      });
-    }
-    return {
-      id: workspaceRefKey(orgWorkspace(companyId)),
-      type: 'company',
-      displayName: name,
-      companyId,
-      status: 'active',
-      createdAt: nowISO(),
-      createdBy: uid,
-    };
-  });
 }
 
 // =============================================================================
@@ -224,7 +188,7 @@ function readDisplayName(value: unknown): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
-async function handlePost(request: NextRequest, ctx: AuthContext): Promise<NextResponse> {
+async function handlePost(request: NextRequest, actor: ApiActor): Promise<NextResponse> {
   let body: CreateWorkspaceBody;
   try {
     body = (await request.json()) as CreateWorkspaceBody;
@@ -242,8 +206,12 @@ async function handlePost(request: NextRequest, ctx: AuthContext): Promise<NextR
   const requestedAlias = typeof body.alias === 'string' ? body.alias : '';
 
   const result = await provisionWorkspace({
-    uid: ctx.uid,
-    currentCompanyId: ctx.companyId,
+    uid: actor.ctx.uid,
+    // ⚠️ `null` σημαίνει **«δεν έχει χώρο»** και είναι η ΑΝΑΜΕΝΟΜΕΝΗ τιμή εδώ.
+    //    ⛔ ΜΗΝ γράψεις `?? ''`: κενή συμβολοσειρά είναι «εταιρεία με κενό όνομα»,
+    //    που δεν ταιριάζει ούτε με τον εαυτό της (`hasTenant` · CHECK 3.35). Ο
+    //    `provisionWorkspace` δηλώνει `string | null` ακριβώς γι' αυτό.
+    currentCompanyId: actorWorkspace(actor),
     displayName,
     requestedAlias,
   });
@@ -261,7 +229,31 @@ async function handlePost(request: NextRequest, ctx: AuthContext): Promise<NextR
       alias: result.alias,
       // Η **διεύθυνση** χτίζεται από το SSoT, ποτέ με ένωση συμβολοσειρών στην
       // οθόνη — αλλιώς το πρόθεμα αποκτά δεύτερη γραφή (`workspace-path.ts`).
-      redirectTo: workspacePath(result.alias),
+      //
+      // 🔴 **ΚΑΙ ΤΟ ΔΕΥΤΕΡΟ ΟΡΙΣΜΑ ΔΕΝ ΕΙΝΑΙ ΔΙΑΚΟΣΜΗΤΙΚΟ** (διορθώθηκε 2026-08-27):
+      //    σκέτο `workspacePath(alias)` δίνει `/o/<alias>`, και **δεν υπάρχει
+      //    `page.tsx` στη ρίζα του `(app)/o/[workspace]/`** — μόνο `layout.tsx` και
+      //    υποφάκελοι. Δηλαδή ο άνθρωπος που μόλις έφτιαξε το γραφείο του
+      //    προσγειωνόταν στο **κέλυφός του με 404 μέσα**: το sidebar φόρτωνε, το
+      //    περιεχόμενο έλεγε «Η σελίδα που αναζητάτε δεν βρέθηκε». **Μετρημένο
+      //    ζωντανά** — η ίδια κλάση με το `/unauthorized` του ADR-787 §5.3 ξ
+      //    («διεύθυνση χωρίς σελίδα»), δύο μέρες μετά την καταγραφή της.
+      //
+      // ⛔ **ΜΗΝ γράψεις `'/dashboard'` εδώ.** Το ερώτημα *«πού προσγειώνεται
+      //    άνθρωπος ΜΕ οργανισμό;»* έχει **ήδη** αυθεντία, και είναι το
+      //    `resolvePostLoginRoute` — το ίδιο που απαντά μετά τη σύνδεση. Ωμή
+      //    διαδρομή εδώ θα ήταν **δεύτερος κριτής προσγείωσης** που μπορεί να
+      //    αποκλίνει (ADR-749): την ημέρα που η αρχική του γραφείου αλλάξει,
+      //    θα άλλαζε η μία και όχι η άλλη.
+      //
+      // 🔑 Ρωτάμε με το **αποτέλεσμα** (`result.companyId`), όχι με το εισερχόμενο
+      //    `actor`: ο δρων μπήκε **χωρίς** οργανισμό — αν τον ρωτούσαμε αυτόν, θα
+      //    έπαιρνε την προσγείωση του πολίτη και θα έστελνε τον νέο διαχειριστή
+      //    **έξω** από το γραφείο που μόλις γέννησε.
+      redirectTo: workspacePath(
+        result.alias,
+        resolvePostLoginRoute({ companyId: result.companyId }),
+      ),
     },
   });
 }
@@ -289,9 +281,9 @@ function rejected(reason: string, status: number): NextResponse {
 // ΕΞΑΓΩΓΕΣ
 // =============================================================================
 
-export const GET = withStandardRateLimit(withAuth(handleGet));
+export const GET = withStandardRateLimit(withPersonalOrOrgAuth(handleGet));
 
 // ⚠️ **Ευαίσθητο** όριο ρυθμού (όχι το τυπικό): η δημιουργία χώρου δεσμεύει
 //    **παγκόσμιο** όνομα. Χωρίς σφιχτό όριο, ένας βρόχος θα μπορούσε να πιάσει
 //    ψευδώνυμα μαζικά — απαρίθμηση και κατάληψη ταυτόχρονα.
-export const POST = withSensitiveRateLimit(withAuth(handlePost));
+export const POST = withSensitiveRateLimit(withPersonalOrOrgAuth(handlePost));
