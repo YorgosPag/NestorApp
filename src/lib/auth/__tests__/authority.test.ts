@@ -332,14 +332,27 @@ describe('Δ — καμία ταυτότητα που γράφουμε δεν ε
    */
   const WRITERS = ['src/auth/contexts/auth-context/auth-context-profile.ts'] as const;
 
+  /**
+   * Οι **κώδικες** ρόλων ενός αρχείου — **χωρίς τα σχόλια**.
+   *
+   * 🔴 **ΓΙΑΤΙ ΑΦΑΙΡΟΥΝΤΑΙ ΤΑ ΣΧΟΛΙΑ, ΚΑΙ ΕΙΝΑΙ ΜΕΤΡΗΣΗ (2026-08-27, ADR-821)**:
+   * όταν το `ensureDevUserProfile` σβήστηκε, στη θέση του έμεινε docblock που
+   * **περιγράφει** τι έγραφε — και περιέχει αυτολεξεί τη συμβολοσειρά
+   * `globalRole: 'super_admin'`. Το παλιό regex θα την **ταίριαζε** και η άγκυρα
+   * θα έμενε πράσινη **διαβάζοντας πρόζα**. Ακριβώς το σχήμα «άγκυρα που ψάχνει
+   * ΟΝΟΜΑ αντί για ΧΡΗΣΗ» — τρίτη καταγεγραμμένη εμφάνιση.
+   */
+  const roleLiteralsInCode = (src: string): string[] => {
+    const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+    return [...code.matchAll(/globalRole:\s*'([^']+)'/g)].map(m => m[1]);
+  };
+
   it.each(WRITERS)('Δ1 — κάθε globalRole που γράφει το %s είναι γνωστός ρόλος', file => {
-    const src = readFileSync(join(process.cwd(), file), 'utf8');
-    const found = [...src.matchAll(/globalRole:\s*'([^']+)'/g)].map(m => m[1]);
+    const found = roleLiteralsInCode(readFileSync(join(process.cwd(), file), 'utf8'));
 
-    // ⚠️ Ο ΠΑΡΟΝΟΜΑΣΤΗΣ: αν το regex δεν βρει τίποτα, το test θα ήταν πράσινο
-    //    χωρίς να κοιτάξει — το σχήμα «0 = κανείς δεν κοίταξε».
-    expect(found.length).toBeGreaterThan(0);
-
+    // ⚠️ **ΤΟ ΚΕΝΟ ΕΙΝΑΙ ΠΛΕΟΝ ΝΟΜΙΜΟ** (ADR-821 §2.6): το αρχείο **έπαψε** να
+    //    γράφει ρόλο. Ο παρονομαστής δεν είναι πια «βρήκα κάτι» — είναι το **Δ3**,
+    //    που αποδεικνύει ότι ο σαρωτής **θα έβλεπε** παράβαση αν υπήρχε.
     for (const role of found) {
       const d = decideCapability({
         subject: { globalRole: role, permissions: null },
@@ -356,5 +369,19 @@ describe('Δ — καμία ταυτότητα που γράφουμε δεν ε
       action: ADMIN_ACCESS,
     });
     expect(d.verdict).toBe('denied-unknown-role');
+  });
+
+  /**
+   * 🔒 **Ο ΠΑΡΟΝΟΜΑΣΤΗΣ ΤΟΥ ΙΔΙΟΥ ΤΟΥ ΣΑΡΩΤΗ** (ADR-821).
+   *
+   * Το Δ1 μπορεί πλέον να μη βρει τίποτα — **νόμιμα**. Άρα το «πράσινο» του δεν
+   * αποδεικνύει από μόνο του ότι κάποιος **κοίταξε**. Αυτό εδώ εκτελεί τον σαρωτή
+   * σε **δύο** εισόδους και απαιτεί να τις ξεχωρίσει: παράβαση σε **κώδικα**
+   * πιάνεται· η **ίδια** συμβολοσειρά μέσα σε σχόλιο **αγνοείται**.
+   */
+  it('Δ3 — ο σαρωτής βλέπει τον ΚΩΔΙΚΑ και αγνοεί την ΠΡΟΖΑ', () => {
+    expect(roleLiteralsInCode("const x = { globalRole: 'admin' };")).toEqual(['admin']);
+    expect(roleLiteralsInCode("/** Έγραφε `globalRole: 'admin'` κάποτε. */")).toEqual([]);
+    expect(roleLiteralsInCode("// globalRole: 'admin'")).toEqual([]);
   });
 });

@@ -208,22 +208,24 @@ export async function requireAdminContext(
   // Gate 2: Extract token
   const token = extractBearerToken(request);
 
-  // Development bypass (when no token and in development)
-  if (!token && environment === 'development') {
-    logger.info('[ADMIN_GUARDS] Development mode: bypassing auth (no token provided)');
-    return {
-      success: true,
-      context: {
-        uid: 'dev-admin',
-        email: 'dev@localhost',
-        role: 'admin',
-        operationId,
-        environment,
-        mfaEnrolled: true,
-      },
-    };
-  }
-
+  // ⛔ **ΚΑΜΙΑ ΚΑΤΑΣΚΕΥΗ ΔΙΑΧΕΙΡΙΣΤΗ — ΣΒΗΣΤΗΚΕ 2026-08-27 (ADR-821 §4.4).**
+  //
+  // Εδώ ζούσε κλάδος που σε `development` **χωρίς κανένα token** επέστρεφε
+  // `role: 'admin'` **και `mfaEnrolled: true`**. Δύο ανεξάρτητα λάθη:
+  //   1. Το `'admin'` είναι **εκτός** `GLOBAL_ROLES` — η ακριβής τιμή για την οποία
+  //      υπάρχει το `denied-unknown-role` του ADR-801 §4.3.
+  //   2. Το `mfaEnrolled: true` **ικανοποιεί** τον έλεγχο του `permissions.ts:143`
+  //      με **μηδέν** MFA — δεύτερος παράγοντας δηλωμένος από τον αιτούντα.
+  //
+  // ⚠️ **ΚΑΙ ΥΠΑΡΧΕΙ ΔΡΟΜΟΣ, ΜΕΤΡΗΜΕΝΟΣ ΠΡΙΝ ΤΗΝ ΑΦΑΙΡΕΣΗ**: το `hasAdminRole`
+  //    δέχεται `ADMINISTRATIVE_ROLES` = ρόλοι με `admin_access`, που ο
+  //    `company_admin` **κατέχει ρητά** (`roles.ts:113`) — και ο emulator σπέρνει
+  //    `admin.civil@alpha.local` με ακριβώς αυτόν. **Καμία δυνατότητα δεν χάθηκε**·
+  //    αλλάζει ποιος την ανοίγει: πιστοποιητικό, όχι μεταβλητή περιβάλλοντος.
+  //
+  // ⛔ **ΜΗΝ ΤΟΝ ΞΑΝΑΓΡΑΨΕΙΣ.** Η διαχείριση είναι το σημείο όπου η κατασκευή είναι
+  //    **λιγότερο** αποδεκτή, όχι περισσότερο — και η βιομηχανία είναι ομόφωνη
+  //    (Django `hijack`/`loginas`: impersonation **από ήδη πιστοποιημένο** superuser).
   if (!token) {
     return {
       success: false,

@@ -2,7 +2,6 @@ import { deleteField, doc, getDoc, increment, setDoc, type Firestore } from 'fir
 import type { User as FirebaseUser } from 'firebase/auth';
 import type { UserProfileDocument } from '@/auth/types/auth.types';
 import type { DeclaredOccupation } from '@/types/professional-identity';
-import { API_ROUTES } from '@/config/domain-constants';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -173,37 +172,28 @@ export async function saveDeclaredOccupation(
   return written;
 }
 
-export async function ensureDevUserProfile(): Promise<void> {
-  // Ο φρουρός ζει ΕΔΩ, όχι στο call site: η συνάρτηση γράφει `users/dev-admin` με
-  // `globalRole: 'super_admin'` μέσω Admin SDK (παρακάμπτει τους Firestore rules). Αν ο έλεγχος
-  // περιβάλλοντος έμενε στον καλούντα, κάθε νέος καλών θα τον ξανάγραφε — και μία παράλειψη
-  // αρκεί για να γεννηθεί ψεύτικος λογαριασμός στην παραγωγή. Ένα σημείο, αδύνατο να παρακαμφθεί.
-  if (process.env.NODE_ENV !== 'development') return;
-
-  try {
-    const response = await fetch(API_ROUTES.ADMIN.ENSURE_USER_PROFILE, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        uid: 'dev-admin',
-        email: 'dev@localhost',
-        displayName: 'Dev Admin',
-        givenName: 'Dev',
-        familyName: 'Admin',
-        globalRole: 'super_admin',
-        authProvider: 'development-bypass',
-      }),
-    });
-
-    if (!response.ok) {
-      return;
-    }
-
-    const data = await response.json() as { created?: boolean };
-    if (data.created) {
-      logger.info('[AuthContext] Dev-admin user profile created via Admin SDK');
-    }
-  } catch (devError) {
-    logger.warn('[AuthContext] Failed to create dev-admin profile (non-blocking)', { error: devError });
-  }
-}
+/**
+ * ⛔ **ΕΔΩ ΖΟΥΣΕ ΤΟ `ensureDevUserProfile()` — ΣΒΗΣΤΗΚΕ 2026-08-27 (ADR-821 §2.6).**
+ *
+ * Έγραφε `users/dev-admin` με `globalRole: 'super_admin'` και
+ * `authProvider: 'development-bypass'`, μέσω Admin SDK (παρακάμπτοντας τους
+ * Firestore rules), σε **κάθε** φόρτωση του `AuthContext` provider.
+ *
+ * 🔴 **ΔΕΝ ΕΜΕΙΝΕ ΤΟΠΙΚΟ**: το έγγραφο επαληθεύτηκε **στη ζωντανή βάση**, ενεργό,
+ * με ημερομηνία γέννησης **2026-03-13** και τελευταία ενημέρωση **2026-08-25**.
+ *
+ * 🔑 **ΤΟ ΜΑΘΗΜΑ, ΓΙΑ ΤΟΝ ΕΠΟΜΕΝΟ ΠΟΥ ΘΑ ΜΠΕΙ ΣΤΟΝ ΠΕΙΡΑΣΜΟ**: ο φρουρός της
+ * διαδρομής **υπήρχε και ήταν σωστός** (`requiredGlobalRoles`). Η ανώνυμη κλήση
+ * τον **ικανοποίησε**, επειδή ένας *άλλος* κατασκευαστής ταυτότητας — το
+ * `buildApiIdentity`, οκτώ αρχεία μακριά — της έδινε `company_admin`.
+ * **Μια κατασκευασμένη ταυτότητα δεν σπάει φρουρούς· τους περνά.**
+ *
+ * ⛔ **ΜΗΝ ΤΟ ΞΑΝΑΓΡΑΨΕΙΣ, ΟΥΤΕ «ΜΕ ΚΑΛΥΤΕΡΟ ΦΡΟΥΡΟ».** Το πρόβλημα δεν ήταν ο
+ * φρουρός του — ήταν ότι **κάθε** κατασκευασμένη ταυτότητα που **επιμένει** παύει
+ * να είναι τοπική ευκολία και γίνεται δεδομένο παραγωγής. Καμία από τις πέντε
+ * πλατφόρμες της έρευνας (ADR-821 §3) δεν γράφει ποτέ κατασκευασμένη ταυτότητα
+ * σε βάση.
+ *
+ * ⚠️ Η ίδια η διαδρομή `/api/admin/ensure-user-profile` **μένει** — είναι νόμιμη,
+ * φρουρούμενη, και χρησιμοποιείται για migrations προφίλ.
+ */

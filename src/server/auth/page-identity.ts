@@ -37,7 +37,11 @@ import 'server-only';
 
 import { SESSION_COOKIE_CONFIG } from '@/lib/auth/security-policy';
 import { getDevCompanyId } from '@/config/dev-environment';
-import { getCurrentRuntimeEnvironment } from '@/config/environment-security-config';
+// ADR-821 — ο ΕΝΑΣ κριτής του «επιτρέπεται να κατασκευάσω ταυτότητα;», κοινός με
+// το `buildApiIdentity`. ⚠️ ΜΗΝ ξαναρωτήσεις εδώ το περιβάλλον μόνος σου: η
+// `getCurrentRuntimeEnvironment()` λύνει το **άγνωστο** `NODE_ENV` ως
+// `'development'`, δηλαδή ως τον κλάδο **παράκαμψης** (ADR-821 §2.3).
+import { decideIdentityFabrication } from '@/lib/auth/identity-fabrication';
 import { verifySessionCookieToken } from '@/server/admin/admin-guards';
 import {
   isValidGlobalRole,
@@ -137,31 +141,54 @@ export type PageIdentity =
  * ⚠️ **FAIL-CLOSED, και είναι απόφαση με ιστορία** (ADR-657 §3.5): cookie χωρίς
  * claims RFC-v6 **απορρίπτεται** — δεν προάγεται σιωπηλά σε προεπιλεγμένο
  * μισθωτή με ρόλο `company_admin`. Ούτε fallback από μεταβλητή περιβάλλοντος.
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ * 🔴 ΑΥΤΟ ΤΟ DOCBLOCK ΗΤΑΝ ΨΕΥΔΕΣ ΕΠΙ ΟΚΤΩ ΓΡΑΜΜΕΣ (ADR-821 §2.2)
+ *
+ * Μέχρι 2026-08-27, αμέσως από κάτω, ένας κλάδος έκανε **ακριβώς και τα δύο**
+ * που η παραπάνω παράγραφος ορκίζεται ότι δεν γίνονται: προεπιλεγμένος μισθωτής
+ * με `company_admin`, **και** fallback από μεταβλητή περιβάλλοντος
+ * (`NEXT_PUBLIC_DEFAULT_COMPANY_ID`).
+ *
+ * ⚠️ **Δεν ήταν μπαγιάτικο σχόλιο σε άλλο αρχείο** — ήταν **σωστή** αντιγραφή μιας
+ * **πραγματικής** απόφασης *(ADR-657 §3.5, αυτολεξεί: «Όχι `company_admin`. Όχι
+ * `NEXT_PUBLIC_DEFAULT_COMPANY_ID`.»)*, με τον κλάδο από πάνω της να μην την τηρεί.
+ * **Αντίφαση μέσα στην ίδια συνάρτηση.**
+ *
+ * 🔑 Πλέον η κατασκευή **δεν κρίνεται εδώ**: ρωτιέται η αυθεντία του ADR-821, που
+ * είναι η **ίδια** με εκείνη του `buildApiIdentity`. Οι δύο παραγωγοί έπαψαν να
+ * έχουν **δύο κριτήρια** για ένα ερώτημα.
+ * ═══════════════════════════════════════════════════════════════════════════
  */
 export async function readPageIdentity(): Promise<PageIdentity> {
-  const environment = getCurrentRuntimeEnvironment();
   const { cookies } = await import('next/headers');
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get(SESSION_COOKIE_CONFIG.NAME)?.value;
 
-  if (!sessionCookie && environment === 'development') {
-    logger.info('[PAGE_IDENTITY] Dev bypass — no session cookie');
+  if (!sessionCookie) {
+    const fabrication = decideIdentityFabrication();
+    if (fabrication.verdict !== 'granted-development-fallback') {
+      logger.warn('[PAGE_IDENTITY] DENY — χωρίς cookie, καμία κατασκευή', {
+        verdict: fabrication.verdict,
+        reason: fabrication.reason,
+      });
+      return { ok: false, reason: 'no-session' };
+    }
+
+    logger.info('[PAGE_IDENTITY] Κατασκευασμένη ταυτότητα — χωρίς cookie συνεδρίας', {
+      verdict: fabrication.verdict,
+    });
     return {
       ok: true,
-      // Το dev bypass **κατασκευάζει** companyId, άρα είναι εξ ορισμού εταιρικό.
+      // Η κατασκευή **δίνει** companyId, άρα είναι εξ ορισμού εταιρική.
       scope: 'organization',
       ctx: {
-        uid: 'dev-user',
-        email: 'dev@localhost',
+        ...fabrication.principal,
         companyId: await getDevCompanyId(),
-        globalRole: 'company_admin',
-        mfaEnrolled: false,
         isAuthenticated: true,
       },
     };
   }
-
-  if (!sessionCookie) return { ok: false, reason: 'no-session' };
 
   const decoded = await verifySessionCookieToken(sessionCookie);
   if (!decoded) return { ok: false, reason: 'invalid-session' };

@@ -34,6 +34,10 @@ import { isValidGlobalRole } from './types';
 // φυλλομετρητή. ⚠️ ΜΗΝ γράψεις εδώ δικό σου `Array.isArray(...)`: αυτό ακριβώς
 // ήταν το σχήμα των τριών κανόνων που έκλεισε αυτή η φάση.
 import { readPermissionsClaim } from './claim-permissions';
+// ADR-821 — ο ΕΝΑΣ κριτής του «επιτρέπεται να κατασκευάσω ταυτότητα;». ⚠️ ΜΗΝ
+// γράψεις εδώ δικό σου `process.env.NODE_ENV === 'development'`: αυτό ακριβώς ήταν
+// το σχήμα των **έξι** κατασκευαστών σε **δύο** αποκλίνουσες διαλέκτους.
+import { decideIdentityFabrication } from './identity-fabrication';
 import { getDevCompanyId } from '@/config/dev-environment';
 // 🔑 ADR-817 §4.1 — τα διαπιστευτήρια εξήχθησαν (N.7.1). Άλλη ευθύνη: «πώς παίρνω
 // υπογεγραμμένο token;» έναντι «τι σημαίνει αυτό το token;».
@@ -332,13 +336,32 @@ export async function buildApiIdentity(request: NextRequest): Promise<ApiIdentit
     return identityFromDecodedToken(await verifySessionCookie(sessionCookie), request);
   }
 
-  // Step 3: No credentials found — development bypass or reject
-  if (process.env.NODE_ENV === 'development') {
-    logger.info('[AUTH_CONTEXT] Development mode: bypassing API auth (no token or cookie)');
-    // Το dev bypass **κατασκευάζει** companyId, άρα είναι εξ ορισμού εταιρικό.
+  // Step 3: Καμία πιστοποίηση — **ΡΩΤΑ ΤΗΝ ΑΥΘΕΝΤΙΑ** (ADR-821), μη κρίνεις εδώ.
+  //
+  // 🔴 ΓΙΑΤΙ ΔΕΝ ΕΙΝΑΙ ΠΙΑ `process.env.NODE_ENV === 'development'`: αυτή η γραμμή
+  //    ήταν ο **ένας από τους έξι** κατασκευαστές, και ο **αυστηρός** από τις δύο
+  //    διαλέκτους — ενώ ο αδελφός του `readPageIdentity` χρησιμοποιούσε την
+  //    **επιεική**. Με `NODE_ENV` κενό οι δύο **αποκλίνουν**: η σελίδα αποδίδεται
+  //    με ταυτότητα, το API απαντά 401 (ADR-821 §2.1).
+  //
+  // 🔴 ΚΑΙ ΕΙΝΑΙ Η ΓΡΑΜΜΗ ΤΟΥ ΠΕΡΙΣΤΑΤΙΚΟΥ (§2.7): ο `ensureDevUserProfile`
+  //    καλούσε ανώνυμα μια διαδρομή με `requiredGlobalRoles`, και περνούσε **μόνο
+  //    επειδή** εδώ γεννιόταν `company_admin`. Ο φρουρός δεν παρακάμφθηκε —
+  //    **ικανοποιήθηκε**. Αποτέλεσμα: `users/dev-admin` με `super_admin` **στην
+  //    παραγωγή**.
+  const fabrication = decideIdentityFabrication();
+  if (fabrication.verdict === 'granted-development-fallback') {
+    logger.info('[AUTH_CONTEXT] Κατασκευασμένη ταυτότητα — καμία πιστοποίηση', {
+      verdict: fabrication.verdict,
+    });
+    // Η κατασκευή **δίνει** companyId, άρα είναι εξ ορισμού εταιρική.
     return { ok: true, scope: 'organization', ctx: await createDevContext() };
   }
 
+  logger.warn('[AUTH_CONTEXT] DENY — καμία πιστοποίηση, καμία κατασκευή', {
+    verdict: fabrication.verdict,
+    reason: fabrication.reason,
+  });
   return { ok: false, reason: 'missing_token' };
 }
 
@@ -404,25 +427,36 @@ function createUnauthenticatedContext(reason: UnauthReason): UnauthenticatedCont
 // =============================================================================
 
 /**
- * Create a mock authenticated context for development/testing.
- * NEVER use in production!
+ * Η κατασκευασμένη ταυτότητα **σε σχήμα `AuthContext`** — προβολή, όχι απόφαση.
+ *
+ * ⚠️ **ΤΑ ΠΕΔΙΑ ΔΕΝ ΓΡΑΦΟΝΤΑΙ ΕΔΩ** (ADR-821 §4.3): έρχονται από το
+ * `FABRICATED_PRINCIPAL`, που είναι η **μία** κατασκευασμένη αρχή. Καρφωμένα
+ * `uid`/`globalRole` εδώ θα ήταν **δεύτερη** ταυτότητα δίπλα στην πρώτη — ακριβώς
+ * το σχήμα των **τριών** κλιμακούμενων ταυτοτήτων που έκλεισε αυτό το ADR.
+ *
+ * ⛔ **Ο ΦΡΟΥΡΟΣ ΖΕΙ ΕΔΩ, ΟΧΙ ΣΤΟΝ ΚΑΛΟΥΝΤΑ** (belt-and-suspenders, N.7.2 #4): η
+ * συνάρτηση είναι `export` και το `lib/auth/index.ts` τη διανέμει. Αν ο έλεγχος
+ * έμενε μόνο στον καλούντα, κάθε νέος καλών θα τον ξανάγραφε — και **μία**
+ * παράλειψη αρκεί. Ρωτά την **ίδια** αυθεντία με το `buildApiIdentity`, ποτέ
+ * δικό της `NODE_ENV`.
  *
  * @param overrides - Partial AuthContext overrides
  * @returns AuthContext
+ * @throws Αν η αυθεντία δεν επιτρέπει κατασκευή — με τον **λόγο** της.
  */
 export async function createDevContext(overrides?: Partial<AuthContext>): Promise<AuthContext> {
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('[AUTH_CONTEXT] createDevContext cannot be used in production');
+  const fabrication = decideIdentityFabrication();
+  if (fabrication.verdict !== 'granted-development-fallback') {
+    throw new Error(
+      `[AUTH_CONTEXT] createDevContext: ${fabrication.verdict} — ${fabrication.reason}`,
+    );
   }
 
   const companyId = await getDevCompanyId();
 
   return {
-    uid: 'dev-user',
-    email: 'dev@localhost',
+    ...fabrication.principal,
     companyId,
-    globalRole: 'company_admin',
-    mfaEnrolled: false,
     isAuthenticated: true,
     ...overrides,
   };

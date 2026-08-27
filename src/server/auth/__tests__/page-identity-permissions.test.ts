@@ -30,10 +30,18 @@ jest.mock('@/server/admin/admin-guards', () => ({
   verifySessionCookieToken: (...args: unknown[]) => mockVerify(...args),
 }));
 
-// ⚠️ Το περιβάλλον **δεν** πρέπει να είναι `development`: εκεί υπάρχει dev
-//    bypass χωρίς cookie, και η άγκυρα θα δοκίμαζε μονοπάτι που δεν κρίνει
-//    claims (σχήμα «η δοκιμή έτρεξε σε κόσμο που δεν υπάρχει», CHECK 3.46).
+// ⚠️ Το περιβάλλον **δεν** πρέπει να είναι `development`: εκεί μπορεί να
+//    κατασκευαστεί ταυτότητα χωρίς cookie, και η άγκυρα θα δοκίμαζε μονοπάτι που
+//    δεν κρίνει claims (σχήμα «η δοκιμή έτρεξε σε κόσμο που δεν υπάρχει», CHECK 3.46).
+//
+// ⚠️ **ΤΟ `...actual` ΔΕΝ ΕΙΝΑΙ ΔΙΑΚΟΣΜΗΤΙΚΟ** (ADR-821): το μοκ ήταν **μερικό** —
+//    δήλωνε **μόνο** το `getCurrentRuntimeEnvironment`. Όταν η κατασκευή απέκτησε
+//    αυθεντία που ρωτά και το `getCurrentSecurityPolicy`, το μοκ θα το έδινε
+//    `undefined`. Δεν έσπασε **μόνο** επειδή αυτές οι άγκυρες στέλνουν πάντα
+//    cookie, άρα ο κλάδος δεν εκτελείται ποτέ. **Λανθάνουσα παγίδα για τον
+//    επόμενο**, όχι σφάλμα σήμερα.
 jest.mock('@/config/environment-security-config', () => ({
+  ...jest.requireActual('@/config/environment-security-config'),
   getCurrentRuntimeEnvironment: () => 'production',
 }));
 

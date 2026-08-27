@@ -11,7 +11,6 @@ import {
   validateEnvironmentForOperation,
   getCurrentRuntimeEnvironment,
 } from '@/config/environment-security-config';
-import { getDevCompanyId } from '@/config/dev-environment';
 import { SESSION_COOKIE_CONFIG } from '@/lib/auth/security-policy';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { AdminContext } from './admin-guards-types';
@@ -55,20 +54,11 @@ export async function requireAdminForPage(
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get(SESSION_COOKIE_CONFIG.NAME)?.value;
 
-  // Development bypass (when no token and in development)
-  if (!sessionCookie && environment === 'development') {
-    logger.info('[ADMIN_GUARDS] Development mode: bypassing page auth (no session cookie)');
-    return {
-      uid: 'dev-admin',
-      email: 'dev@localhost',
-      role: 'admin',
-      operationId,
-      environment,
-      mfaEnrolled: true,
-      companyId: await getDevCompanyId(),
-    };
-  }
-
+  // ⛔ **ΚΑΜΙΑ ΚΑΤΑΣΚΕΥΗ ΔΙΑΧΕΙΡΙΣΤΗ — ΣΒΗΣΤΗΚΕ 2026-08-27 (ADR-821 §4.4).**
+  //    Δίδυμο του κλάδου στο `admin-guards.ts` (ίδια τιμή `'admin'` εκτός
+  //    λεξιλογίου, ίδιο κατασκευασμένο `mfaEnrolled: true`), για τις **σελίδες**
+  //    αντί για τις διαδρομές. Το σκεπτικό και ο μετρημένος δρόμος
+  //    (`admin.civil@alpha.local`, `company_admin` με `admin_access`) ζουν εκεί.
   if (!sessionCookie) {
     throw new Error('Not authenticated - no session cookie found');
   }

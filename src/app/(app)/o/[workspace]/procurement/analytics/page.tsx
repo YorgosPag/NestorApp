@@ -12,7 +12,6 @@ import { cookies } from 'next/headers';
 
 import { SESSION_COOKIE_CONFIG } from '@/lib/auth/security-policy';
 import { verifySessionCookieToken } from '@/server/admin/admin-guards';
-import { getCurrentRuntimeEnvironment } from '@/config/environment-security-config';
 import { canViewSpendAnalytics } from '@/lib/auth/permissions/spend-analytics';
 
 import { AnalyticsPageShell } from './_components/AnalyticsPageShell';
@@ -24,9 +23,11 @@ async function resolveGlobalRole(): Promise<string | null> {
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get(SESSION_COOKIE_CONFIG.NAME)?.value;
 
-  if (!sessionCookie) {
-    return getCurrentRuntimeEnvironment() === 'development' ? 'company_admin' : null;
-  }
+  // ⛔ **ΚΑΜΙΑ ΚΑΤΑΣΚΕΥΗ ΡΟΛΟΥ — ΣΒΗΣΤΗΚΕ 2026-08-27 (ADR-821 §4.4).** Εδώ
+  //    επιστρεφόταν σκέτο `'company_admin'` σε `development` χωρίς cookie: ο
+  //    **πέμπτος** από τους έξι κατασκευαστές, και ο μόνος που έφτιαχνε ρόλο ως
+  //    γυμνό `string`, έξω από κάθε τύπο ταυτότητας. Χωρίς cookie ⇒ σύνδεση.
+  if (!sessionCookie) return null;
 
   const decoded = await verifySessionCookieToken(sessionCookie);
   if (!decoded) return null;

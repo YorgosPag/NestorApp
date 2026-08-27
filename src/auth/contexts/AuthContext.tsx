@@ -23,7 +23,6 @@ import {
   syncServerSession,
 } from './auth-context/auth-context-session';
 import {
-  ensureDevUserProfile,
   saveDeclaredOccupation,
   syncUserProfileToFirestore,
 } from './auth-context/auth-context-profile';
@@ -142,8 +141,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
   });
 
   useEffect(() => {
-    void ensureDevUserProfile();
-
+    // ⛔ **ΤΟ `ensureDevUserProfile()` ΣΒΗΣΤΗΚΕ ΑΠΟ ΕΔΩ — 2026-08-27 (ADR-821 §2.6).**
+    //    Έγραφε `users/dev-admin` με `globalRole: 'super_admin'` μέσω Admin SDK, σε
+    //    **κάθε** φόρτωση του provider. Το έγγραφο **υπάρχει στην παραγωγή** από
+    //    2026-03-13, με `authProvider: 'development-bypass'`.
+    //
+    // 🔴 **ΠΩΣ ΠΕΡΑΣΕ ΤΟΝ ΦΡΟΥΡΟ**: η διαδρομή `/api/admin/ensure-user-profile`
+    //    απαιτεί `requiredGlobalRoles: ['super_admin','company_admin']` — και η
+    //    ανώνυμη κλήση την **ικανοποιούσε**, επειδή το `buildApiIdentity` της
+    //    κατασκεύαζε `company_admin`. Ο φρουρός δεν παρακάμφθηκε· τον πέρασε
+    //    ταυτότητα που έφτιαξε το ίδιο το σύστημα (ADR-821 §2.7).
+    //
+    // ⛔ **ΜΗΝ ΤΟ ΞΑΝΑΦΕΡΕΙΣ.** Η **επιμονή** μιας κατασκευής είναι κατηγοριακά
+    //    διαφορετική από την κατασκευή: παύει να είναι τοπική ευκολία και γίνεται
+    //    **δεδομένο παραγωγής**. Καμία από τις πέντε πλατφόρμες της έρευνας (§3)
+    //    δεν γράφει ποτέ κατασκευασμένη ταυτότητα σε βάση.
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       logger.debug('[AuthContext] Auth state changed:', { uid: firebaseUser?.uid || 'No user' });
 
