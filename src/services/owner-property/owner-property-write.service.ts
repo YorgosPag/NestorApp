@@ -212,7 +212,13 @@ async function placeLinkRefusal(
   adminDb: AdminFirestore,
   draft: OwnerPropertyDraft,
 ): Promise<OwnerPropertyWriteResult | null> {
-  if (draft.place.kind !== 'declared' || draft.place.link === null) return null;
+  // ⚠️ **`?? null` και ΟΧΙ `=== null` σκέτο** — και το βρήκε **εκτέλεση**, όχι ανάγνωση
+  //    (2026-08-27): με το `link` προσωρινά βγαλμένο από το σχήμα, το `undefined`
+  //    δεν είναι `null`, ο έλεγχος **περνούσε**, και ο επαληθευτής έπαιρνε
+  //    `undefined.landId` ⇒ **500**. Δηλαδή μια μελλοντική υποχώρηση του σχήματος θα
+  //    γινόταν *«δικό μας λάθος»* αντί για ήπια απουσία δεσμού. Η απουσία και η ρητή
+  //    άρνηση **είναι το ίδιο πράγμα εδώ**: «δεν έδειξε κτίριο».
+  if (draft.place.kind !== 'declared' || (draft.place.link ?? null) === null) return null;
 
   const verdict = await verifyPlaceRef(adminDb, draft.place.link);
 
