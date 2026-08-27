@@ -14,6 +14,7 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { isNonEmptyArray } from '@/lib/type-guards';
+import { translateFilterLabel } from '@/i18n/filter-label';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
 
@@ -52,26 +53,15 @@ export function FilterField({ config, value, onValueChange, onRangeChange, i18nN
 
   // 🏢 ENTERPRISE: Helper to translate option labels
   // Supports both translation keys (e.g., 'properties.operationalStatus.ready') and direct values
-  // 🎯 PR1.2: Auto-detect namespace from key prefix (e.g., 'properties.x.y' → ns:'properties', key:'x.y')
-  const translateLabel = (label: string | undefined): string => {
-    // 🛡️ ENTERPRISE: Guard against undefined/null labels
-    if (!label) return '';
-    // If it's a translation key (contains a dot), translate it
-    if (label.includes('.')) {
-      // Check if key has namespace prefix (e.g., 'units.operationalStatus.ready')
-      const parts = label.split('.');
-      const knownNamespaces = ['common', 'navigation', 'properties', 'building', 'filters', 'parking', 'storage'];
-      if (parts.length >= 2 && knownNamespaces.includes(parts[0])) {
-        const namespace = parts[0];
-        const key = parts.slice(1).join('.');
-        return t(key, { ns: namespace });
-      }
-      // Default: use current namespace (building)
-      return t(label);
-    }
-    // Otherwise return as-is (for dynamic values like city names from env)
-    return label;
-  };
+  //
+  // 🔴 ADR-823 §14 — Η ΛΟΓΙΚΗ ΜΕΤΑΚΟΜΙΣΕ, ΔΕΝ ΑΝΤΙΓΡΑΦΗΚΕ.
+  // Ζούσε εδώ ως τοπική συνάρτηση με **δικό της** πίνακα `knownNamespaces`. Τις
+  // ίδιες όμως σταθερές ετικετών τις διαβάζει και το `CompactToolbar`, που
+  // **δεν ήξερε** τη σύμβαση και έψαχνε στο `common` κλειδιά του `parking` —
+  // ωμά κλειδιά στο μενού φίλτρων, ζωντανά. Μία κωδικοποίηση δεν επιτρέπεται να
+  // έχει δύο αναγνώστες με **διαφορετική** γνώση: τώρα υπάρχει **ένα** σπίτι.
+  const translateLabel = (label: string | undefined): string =>
+    translateFilterLabel(t, label);
   const getColumnSpan = (width?: number) => {
     switch (width) {
       case 1: return 'col-span-1';

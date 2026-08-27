@@ -146,6 +146,34 @@ export const PREDEFINED_ROLES: Record<string, RoleDefinition> = {
       "projects:floors:view",
       "buildings:buildings:view",
       "properties:properties:view",
+      // 🔴 ΤΟ ΠΑΛΙΟ ΟΝΟΜΑ ΤΗΣ ΙΔΙΑΣ ΕΞΟΥΣΙΑΣ — ΜΗΝ ΤΟ ΑΦΑΙΡΕΣΕΙΣ ΜΟΝΟ ΤΟΥ
+      //
+      // Η μετονομασία `units` → `properties` (ADR-269) **δεν ολοκληρώθηκε**: τα
+      // `/api/parking`, `/api/storages`, `/api/spaces/batch-resolve` και το
+      // `/api/entity-code/suggest` ζητούν ακόμη το **παλιό** `units:units:view`,
+      // ενώ το `/api/properties` ζητά το **νέο**. Ο `internal_user` προστέθηκε
+      // **μετά** τη μετονομασία, οπότε πήρε μόνο το νέο όνομα.
+      //
+      // ⚠️ **Μετρημένο 2026-08-27**: αυτό έκανε τον υπάλληλο να έχει **λιγότερα
+      // από τον `viewer`** — τον χαμηλότερο ρόλο του καταλόγου, που **έχει** το
+      // `units:units:view`. Κάθε άλλος ρόλος με `properties:properties:view` το
+      // ζευγαρώνει· εξαίρεση ήταν **μόνο** `internal_user` και `external_user`
+      // *(ο δεύτερος σκόπιμα — έχει συνολικά δύο δικαιώματα)*.
+      //
+      // 🔴 **Η ΣΥΝΕΠΕΙΑ ΗΤΑΝ ΠΟΡΤΑ ΠΟΥ ΟΔΗΓΟΥΣΕ ΣΕ ΤΟΙΧΟ**: η πλοήγηση έδειχνε
+      // «Χώροι», και το άνοιγμά τους έβγαζε `403 Permission denied` — μια
+      // επιλογή που **εγγυημένα** αποτύγχανε.
+      //
+      // ⚠️ **ΜΟΝΟ `view`, επίτηδες**: ο ρόλος δεν έχει `create/update/delete`
+      // ούτε για τα `properties`. Είναι ρόλος **ανάγνωσης**· η προσθήκη μένει
+      // πιστή στο σχήμα του.
+      //
+      // 📌 **Το βαθύτερο ερώτημα ΔΕΝ απαντήθηκε εδώ**: είναι το `units:*`
+      // *ψευδώνυμο* του `properties:*` (όπως λέει το σχόλιο στο `company_admin`)
+      // ή **ξεχωριστή** εξουσία για parking/storage; Τα δύο ζουν σε **άλλες
+      // συλλογές**, άρα το σχόλιο μπορεί να είναι λάθος. Η ενοποίηση θέλει δική
+      // της συνεδρία (N.8) — δες ADR-823 §13.
+      "units:units:view",
       "notifications:notifications:view",
       "asset_packs:packs:use", // ADR-655
     ],

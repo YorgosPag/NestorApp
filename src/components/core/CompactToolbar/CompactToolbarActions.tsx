@@ -7,10 +7,20 @@
  *
  * All toolbar icon-action buttons extracted for file size compliance.
  *
+ * 🔴 **ADR-823 §14.5** — τα δεκατρία εικονιδιακά κουμπιά ήταν **δεκατρία
+ * αντίγραφα** του ίδιου δεκάγραμμου μπλοκ *(μετρημένο: 13 κλώνοι, 117 γραμμές,
+ * 29,5% του αρχείου)*. Ζουν πλέον στο `./ToolbarIconButton`.
+ * ⛔ Τα **δύο dropdown** (φίλτρα · ταξινόμηση) **δεν** ενοποιήθηκαν: παρεμβάλλουν
+ * `DropdownMenuTrigger asChild` και είναι **άλλο σχήμα** — δες το σχόλιο εκεί.
+ *
  * @module components/core/CompactToolbar/CompactToolbarActions
  */
 
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
+// 🔴 ADR-823 §14 — ο ΜΟΝΟΣ αποκωδικοποιητής ετικέτας φίλτρου. Πριν, αυτό το αρχείο
+// έγραφε `t(label, { ns: 'common' })` και έψαχνε στο `common` κλειδιά που ζουν στο
+// `parking`/`filters`/`building` ⇒ ωμά κλειδιά στο μενού φίλτρων, ζωντανά μετρημένα.
+import { translateFilterLabel } from '@/i18n/filter-label';
 import '@/lib/design-system';
 import React from 'react';
 import { Button } from '@/components/ui/button';
@@ -30,6 +40,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getIconColor } from './icon-colors';
+import { ToolbarIconButton } from './ToolbarIconButton';
 import type { CompactToolbarProps } from './types';
 
 const logger = createModuleLogger('CompactToolbarActions');
@@ -64,62 +75,52 @@ export function CompactToolbarActions({
     }
   };
 
+  /** Το κενό επιλογής — δύο κουμπιά το μοιράζονται, τρία το εξειδικεύουν. */
+  const nothingSelected = selectedItems.length === 0;
+
   return (
     <>
       {/* New Item */}
-      {config.availableActions.newItem && (() => {
-        const IconComponent = NewItemIcon || Plus;
-        const tooltip = getTooltip(config.tooltips.newItem);
-        return (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="sm" className={`${iconSizes.xl} p-0`}
-                onClick={onNewItem} aria-label={tooltip || t('buttons.add')}>
-                <IconComponent className={`${iconSizes.sm} ${getIconColor('newItem')}`} />
-              </Button>
-            </TooltipTrigger>
-            {tooltip && <TooltipContent>{tooltip}</TooltipContent>}
-          </Tooltip>
-        );
-      })()}
+      {config.availableActions.newItem && (
+        <ToolbarIconButton
+          icon={NewItemIcon || Plus}
+          colorKey="newItem"
+          tooltip={getTooltip(config.tooltips.newItem)}
+          fallbackLabel={t('buttons.add')}
+          onClick={onNewItem}
+        />
+      )}
 
       {/* Edit Item */}
-      {config.availableActions.editItem && (() => {
-        const tooltip = getTooltip(config.tooltips.editItem);
-        return (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="sm" className={`${iconSizes.xl} p-0`}
-                onClick={() => hasSelectedContact && onEditItem?.('0')} disabled={!hasSelectedContact}
-                aria-label={tooltip || t('buttons.edit')}>
-                <Edit className={`${iconSizes.sm} ${!hasSelectedContact ? colors.text.muted : getIconColor('editItem')}`} />
-              </Button>
-            </TooltipTrigger>
-            {tooltip && <TooltipContent>{tooltip}</TooltipContent>}
-          </Tooltip>
-        );
-      })()}
+      {config.availableActions.editItem && (
+        <ToolbarIconButton
+          icon={Edit}
+          colorKey="editItem"
+          tooltip={getTooltip(config.tooltips.editItem)}
+          fallbackLabel={t('buttons.edit')}
+          onClick={() => hasSelectedContact && onEditItem?.('0')}
+          disabled={!hasSelectedContact}
+        />
+      )}
 
       {/* Delete Items */}
-      {config.availableActions.deleteItems && (() => {
-        const IconComponent = DeleteIcon || Trash2;
-        const isDisabled = hasSelectedContact !== undefined ? !hasSelectedContact : selectedItems.length === 0;
-        const tooltip = getTooltip(config.tooltips.deleteItems);
-        return (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="sm" className={`${iconSizes.xl} p-0`}
-                onClick={() => onDeleteItems?.(selectedItems)} disabled={isDisabled}
-                aria-label={tooltip || t('buttons.delete')}>
-                <IconComponent className={`${iconSizes.sm} ${isDisabled ? colors.text.muted : getIconColor('deleteItems')}`} />
-              </Button>
-            </TooltipTrigger>
-            {tooltip && <TooltipContent>{tooltip}</TooltipContent>}
-          </Tooltip>
-        );
-      })()}
+      {config.availableActions.deleteItems && (
+        <ToolbarIconButton
+          icon={DeleteIcon || Trash2}
+          colorKey="deleteItems"
+          tooltip={getTooltip(config.tooltips.deleteItems)}
+          fallbackLabel={t('buttons.delete')}
+          onClick={() => onDeleteItems?.(selectedItems)}
+          // ⚠️ Διατηρείται ΑΚΡΙΒΩΣ η αρχική τριαδική: το `hasSelectedContact` έχει
+          // προεπιλογή `false`, άρα δεν είναι ποτέ `undefined` — ο έλεγχος μένει
+          // ως έχει ώστε η αλλαγή να είναι αναδιάταξη, όχι απόφαση.
+          disabled={hasSelectedContact !== undefined ? !hasSelectedContact : nothingSelected}
+        />
+      )}
 
       {/* Filters Dropdown */}
+      {/* ⛔ ΔΕΝ ενοποιείται με το ToolbarIconButton: `DropdownMenuTrigger asChild`
+          παρεμβάλλεται, και το κουμπί κουβαλά σήμα πλήθους ενεργών φίλτρων. */}
       {config.availableActions.filters && config.filterCategories.length > 0 && (
         <DropdownMenu>
           <Tooltip>
@@ -141,13 +142,13 @@ export function CompactToolbarActions({
           <DropdownMenuContent align="end" className="w-56">
             {config.filterCategories.map((category, categoryIndex) => (
               <React.Fragment key={category.id}>
-                <DropdownMenuLabel>{t(category.label, { ns: 'common' })}</DropdownMenuLabel>
+                <DropdownMenuLabel>{translateFilterLabel(t, category.label)}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {category.options.map((option) => (
                   <DropdownMenuCheckboxItem key={option.value}
                     checked={activeFilters.includes(option.value)}
                     onCheckedChange={(checked) => handleFilterChange(option.value, !!checked)}>
-                    {t(option.label, { ns: 'common' })}
+                    {translateFilterLabel(t, option.label)}
                   </DropdownMenuCheckboxItem>
                 ))}
                 {categoryIndex < config.filterCategories.length - 1 && <DropdownMenuSeparator />}
@@ -167,88 +168,64 @@ export function CompactToolbarActions({
       )}
 
       {/* Favorites */}
-      {config.availableActions.favorites && (() => {
-        const tooltip = getTooltip(config.tooltips.favorites);
-        return (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="sm" className={`${iconSizes.xl} p-0`}
-                onClick={() => logger.info('Add to favorites')} disabled={selectedItems.length === 0}
-                aria-label={tooltip || 'Favorites'}>
-                <Star className={`${iconSizes.sm} ${selectedItems.length === 0 ? colors.text.muted : getIconColor('favorites')}`} />
-              </Button>
-            </TooltipTrigger>
-            {tooltip && <TooltipContent>{tooltip}</TooltipContent>}
-          </Tooltip>
-        );
-      })()}
+      {config.availableActions.favorites && (
+        <ToolbarIconButton
+          icon={Star}
+          colorKey="favorites"
+          tooltip={getTooltip(config.tooltips.favorites)}
+          fallbackLabel="Favorites"
+          onClick={() => logger.info('Add to favorites')}
+          disabled={nothingSelected}
+        />
+      )}
 
       {/* Archive */}
-      {config.availableActions.archive && (() => {
-        const tooltip = getTooltip(config.tooltips.archive);
-        return (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="sm" className={`${iconSizes.xl} p-0`}
-                onClick={() => logger.info('Archive selected')} disabled={selectedItems.length === 0}
-                aria-label={tooltip || 'Archive'}>
-                <Archive className={`${iconSizes.sm} ${selectedItems.length === 0 ? colors.text.muted : getIconColor('archive')}`} />
-              </Button>
-            </TooltipTrigger>
-            {tooltip && <TooltipContent>{tooltip}</TooltipContent>}
-          </Tooltip>
-        );
-      })()}
+      {config.availableActions.archive && (
+        <ToolbarIconButton
+          icon={Archive}
+          colorKey="archive"
+          tooltip={getTooltip(config.tooltips.archive)}
+          fallbackLabel="Archive"
+          onClick={() => logger.info('Archive selected')}
+          disabled={nothingSelected}
+        />
+      )}
 
       {/* Export */}
-      {config.availableActions.export && (() => {
-        const tooltip = getTooltip(config.tooltips.export);
-        return (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="sm" className={`${iconSizes.xl} p-0`}
-                onClick={onExport} aria-label={tooltip || t('buttons.export')}>
-                <Download className={`${iconSizes.sm} ${getIconColor('export')}`} />
-              </Button>
-            </TooltipTrigger>
-            {tooltip && <TooltipContent>{tooltip}</TooltipContent>}
-          </Tooltip>
-        );
-      })()}
+      {config.availableActions.export && (
+        <ToolbarIconButton
+          icon={Download}
+          colorKey="export"
+          tooltip={getTooltip(config.tooltips.export)}
+          fallbackLabel={t('buttons.export')}
+          onClick={onExport}
+        />
+      )}
 
       {/* Import */}
-      {config.availableActions.import && (() => {
-        const tooltip = getTooltip(config.tooltips.import);
-        return (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="sm" className={`${iconSizes.xl} p-0`}
-                onClick={onImport} aria-label={tooltip || t('buttons.import')}>
-                <Upload className={`${iconSizes.sm} ${getIconColor('import')}`} />
-              </Button>
-            </TooltipTrigger>
-            {tooltip && <TooltipContent>{tooltip}</TooltipContent>}
-          </Tooltip>
-        );
-      })()}
+      {config.availableActions.import && (
+        <ToolbarIconButton
+          icon={Upload}
+          colorKey="import"
+          tooltip={getTooltip(config.tooltips.import)}
+          fallbackLabel={t('buttons.import')}
+          onClick={onImport}
+        />
+      )}
 
       {/* Refresh */}
-      {config.availableActions.refresh && (() => {
-        const tooltip = getTooltip(config.tooltips.refresh);
-        return (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="sm" className={`${iconSizes.xl} p-0`}
-                onClick={onRefresh} aria-label={tooltip || t('buttons.refresh')}>
-                <RefreshCw className={`${iconSizes.sm} ${getIconColor('refresh')}`} />
-              </Button>
-            </TooltipTrigger>
-            {tooltip && <TooltipContent>{tooltip}</TooltipContent>}
-          </Tooltip>
-        );
-      })()}
+      {config.availableActions.refresh && (
+        <ToolbarIconButton
+          icon={RefreshCw}
+          colorKey="refresh"
+          tooltip={getTooltip(config.tooltips.refresh)}
+          fallbackLabel={t('buttons.refresh')}
+          onClick={onRefresh}
+        />
+      )}
 
       {/* Sort Options Dropdown */}
+      {/* ⛔ ΔΕΝ ενοποιείται — δες το σχόλιο στο dropdown φίλτρων. */}
       {config.availableActions.sorting && config.sortOptions.length > 0 && (
         <DropdownMenu>
           <Tooltip>
@@ -281,116 +258,82 @@ export function CompactToolbarActions({
       )}
 
       {/* Preview */}
-      {config.availableActions.preview && (() => {
-        const tooltip = getTooltip(config.tooltips.preview);
-        return (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="sm" className={`${iconSizes.xl} p-0`}
-                onClick={onPreview} aria-label={tooltip || 'Preview'}>
-                <Eye className={`${iconSizes.sm} ${getIconColor('preview')}`} />
-              </Button>
-            </TooltipTrigger>
-            {tooltip && <TooltipContent>{tooltip}</TooltipContent>}
-          </Tooltip>
-        );
-      })()}
+      {config.availableActions.preview && (
+        <ToolbarIconButton
+          icon={Eye}
+          colorKey="preview"
+          tooltip={getTooltip(config.tooltips.preview)}
+          fallbackLabel="Preview"
+          onClick={onPreview}
+        />
+      )}
 
       {/* Copy */}
-      {config.availableActions.copy && (() => {
-        const tooltip = getTooltip(config.tooltips.copy);
-        return (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="sm" className={`${iconSizes.xl} p-0`}
-                onClick={onCopy} disabled={selectedItems.length === 0} aria-label={tooltip || 'Copy'}>
-                <Copy className={`${iconSizes.sm} ${selectedItems.length === 0 ? colors.text.muted : getIconColor('copy')}`} />
-              </Button>
-            </TooltipTrigger>
-            {tooltip && <TooltipContent>{tooltip}</TooltipContent>}
-          </Tooltip>
-        );
-      })()}
+      {config.availableActions.copy && (
+        <ToolbarIconButton
+          icon={Copy}
+          colorKey="copy"
+          tooltip={getTooltip(config.tooltips.copy)}
+          fallbackLabel="Copy"
+          onClick={onCopy}
+          disabled={nothingSelected}
+        />
+      )}
 
       {/* Share */}
-      {config.availableActions.share && (() => {
-        const tooltip = getTooltip(config.tooltips.share);
-        return (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="sm" className={`${iconSizes.xl} p-0`}
-                onClick={onShare} aria-label={tooltip || 'Share'}>
-                <Share2 className={`${iconSizes.sm} ${getIconColor('share')}`} />
-              </Button>
-            </TooltipTrigger>
-            {tooltip && <TooltipContent>{tooltip}</TooltipContent>}
-          </Tooltip>
-        );
-      })()}
+      {config.availableActions.share && (
+        <ToolbarIconButton
+          icon={Share2}
+          colorKey="share"
+          tooltip={getTooltip(config.tooltips.share)}
+          fallbackLabel="Share"
+          onClick={onShare}
+        />
+      )}
 
       {/* Reports */}
-      {config.availableActions.reports && (() => {
-        const tooltip = getTooltip(config.tooltips.reports);
-        return (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="sm" className={`${iconSizes.xl} p-0`}
-                onClick={onReports} aria-label={tooltip || 'Reports'}>
-                <FileText className={`${iconSizes.sm} ${getIconColor('reports')}`} />
-              </Button>
-            </TooltipTrigger>
-            {tooltip && <TooltipContent>{tooltip}</TooltipContent>}
-          </Tooltip>
-        );
-      })()}
+      {config.availableActions.reports && (
+        <ToolbarIconButton
+          icon={FileText}
+          colorKey="reports"
+          tooltip={getTooltip(config.tooltips.reports)}
+          fallbackLabel="Reports"
+          onClick={onReports}
+        />
+      )}
 
       {/* Settings */}
-      {config.availableActions.settings && (() => {
-        const tooltip = getTooltip(config.tooltips.settings);
-        return (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="sm" className={`${iconSizes.xl} p-0`}
-                onClick={onSettings} aria-label={tooltip || 'Settings'}>
-                <Settings className={`${iconSizes.sm} ${getIconColor('settings')}`} />
-              </Button>
-            </TooltipTrigger>
-            {tooltip && <TooltipContent>{tooltip}</TooltipContent>}
-          </Tooltip>
-        );
-      })()}
+      {config.availableActions.settings && (
+        <ToolbarIconButton
+          icon={Settings}
+          colorKey="settings"
+          tooltip={getTooltip(config.tooltips.settings)}
+          fallbackLabel="Settings"
+          onClick={onSettings}
+        />
+      )}
 
       {/* Favorites Management */}
-      {config.availableActions.favoritesManagement && (() => {
-        const tooltip = getTooltip(config.tooltips.favoritesManagement);
-        return (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="sm" className={`${iconSizes.xl} p-0`}
-                onClick={onFavoritesManagement} aria-label={tooltip || 'Manage favorites'}>
-                <Heart className={`${iconSizes.sm} ${getIconColor('favoritesManagement')}`} />
-              </Button>
-            </TooltipTrigger>
-            {tooltip && <TooltipContent>{tooltip}</TooltipContent>}
-          </Tooltip>
-        );
-      })()}
+      {config.availableActions.favoritesManagement && (
+        <ToolbarIconButton
+          icon={Heart}
+          colorKey="favoritesManagement"
+          tooltip={getTooltip(config.tooltips.favoritesManagement)}
+          fallbackLabel="Manage favorites"
+          onClick={onFavoritesManagement}
+        />
+      )}
 
       {/* Help */}
-      {config.availableActions.help && (() => {
-        const tooltip = getTooltip(config.tooltips.help);
-        return (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="sm" className={`${iconSizes.xl} p-0`}
-                onClick={onHelp} aria-label={tooltip || 'Help'}>
-                <HelpCircle className={`${iconSizes.sm} ${getIconColor('help')}`} />
-              </Button>
-            </TooltipTrigger>
-            {tooltip && <TooltipContent>{tooltip}</TooltipContent>}
-          </Tooltip>
-        );
-      })()}
+      {config.availableActions.help && (
+        <ToolbarIconButton
+          icon={HelpCircle}
+          colorKey="help"
+          tooltip={getTooltip(config.tooltips.help)}
+          fallbackLabel="Help"
+          onClick={onHelp}
+        />
+      )}
     </>
   );
 }

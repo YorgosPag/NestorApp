@@ -86,13 +86,25 @@ export const PARKING_STATUS_LABELS = {
 // 🌐 i18n: All labels converted to i18n keys - 2026-01-18
 // =============================================================================
 
+// 🔴 ADR-823 §14 — ΤΡΙΑ ΚΛΕΙΔΙΑ ΠΟΥ ΔΕΝ ΥΠΗΡΞΑΝ ΠΟΤΕ (μετρημένο 2026-08-27)
+//
+// Τα `building.floors.pilotis` · `.first` · `.rooftop` **δεν υπάρχουν** στο
+// `building.json`, σε καμία από τις δύο γλώσσες. Έβγαιναν **ωμά** στην οθόνη.
+//
+// ⚠️ **ΔΕΝ προστέθηκαν νέα κλειδιά** — υπήρχαν ήδη, αλλού:
+//   • `pilotis` / `rooftop` → `parking:locationZone.*`  («Πυλωτή» · «Δώμα»)
+//     Σωστό και **σημασιολογικά**: για θέση στάθμευσης η πυλωτή και το δώμα είναι
+//     **ζώνες θέσης**, όχι όροφοι κτιρίου.
+//   • `first` → `building:floors.floor1`  («1ος Όροφος»)
+//
+// Νέο κλειδί εκεί που υπάρχει ήδη μετάφραση = διπλότυπο (N.12).
 export const PARKING_FLOOR_LABELS = {
   'basement-2': 'building.floors.basementMinus2',
   'basement-1': 'building.floors.basementMinus1',
   ground: 'building.floors.ground',
-  pilotis: 'building.floors.pilotis',
-  first: 'building.floors.first',
-  rooftop: 'building.floors.rooftop'
+  pilotis: 'parking.locationZone.pilotis',
+  first: 'building.floors.floor1',
+  rooftop: 'parking.locationZone.rooftop'
 } as const;
 
 // =============================================================================
