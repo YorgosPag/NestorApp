@@ -8,7 +8,12 @@
  * το `tailwind.config.ts`. Αντ' αυτού ρωτάμε το **ίδιο το Tailwind**, με τον ίδιο
  * φορτωτή που χρησιμοποιεί ο compiler:
  *
- *     loadConfig('tailwind.config.ts') → resolveConfig() → theme.colors
+ *     loadConfig('tailwind.config.ts') → resolveConfig() → theme.{colors, textColor, …}
+ *
+ * ⚠️ **ΚΑΙ ΟΙ ΔΥΟ ΠΑΛΕΤΕΣ, ΟΧΙ ΜΟΝΟ ΤΟ `theme.colors`** — δες `utilityPalettes`. Ένα utility
+ * μπορεί να **παρακάμψει** το κοινό όνομα (το `text-destructive` λύνεται αλλού
+ * από το `bg-destructive`, ADR-770 §15), και μια ανάγνωση μόνο του `theme.colors` δεν
+ * αποτυγχάνει — **απαντά λάθος**.
  *
  * Έτσι η ίδια κλήση απαντά **και τα δύο** ερωτήματα:
  *   `slate-900` → `"#0f172a"`             σταθερό hex  ⇒ ΜΟΝΟΘΕΜΑΤΙΚΟ
@@ -33,7 +38,7 @@
 
 const path = require('path');
 const { hslToRgb, parseHslToken, parseComputedColor, toHex } = require('./wcag-contrast');
-const { parseColorUtility, tokenize } = require('./tailwind-classes');
+const { parseColorUtility, tokenize, COLOR_UTILITIES } = require('./tailwind-classes');
 
 const TAILWIND_CONFIG = 'tailwind.config.ts';
 
@@ -53,6 +58,7 @@ function loadTailwindColors(repoRoot = process.cwd()) {
 
   const configPath = path.join(key, TAILWIND_CONFIG);
   let colors;
+  let theme;
   try {
     // Ο ΙΔΙΟΣ φορτωτής που χρησιμοποιεί το Tailwind για TS configs (jiti).
     // ⚠️ Η επίλυση ψάχνει ΠΡΩΤΑ στη ρίζα που δόθηκε και μετά δίπλα σε αυτό το αρχείο:
@@ -62,7 +68,8 @@ function loadTailwindColors(repoRoot = process.cwd()) {
     const from = { paths: [key, __dirname] };
     const loadConfig = require(require.resolve('tailwindcss/loadConfig', from));
     const resolveConfig = require(require.resolve('tailwindcss/resolveConfig', from));
-    colors = resolveConfig(loadConfig(configPath)).theme.colors;
+    theme = resolveConfig(loadConfig(configPath)).theme;
+    colors = theme.colors;
   } catch (e) {
     throw new Error(
       `tailwind-class-resolver: αδύνατη η ανάγνωση του ${TAILWIND_CONFIG} (${e.message}) — fail-closed.`,
@@ -72,9 +79,62 @@ function loadTailwindColors(repoRoot = process.cwd()) {
     throw new Error(`tailwind-class-resolver: το ${TAILWIND_CONFIG} δεν έδωσε theme.colors — fail-closed.`);
   }
 
-  const result = { colors, source: TAILWIND_CONFIG };
+  const result = { colors, byUtility: utilityPalettes(theme), source: TAILWIND_CONFIG };
   paletteCache.set(key, result);
   return result;
+}
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * 🔴 ΤΟ `theme.colors` ΔΕΝ ΕΙΝΑΙ Η ΑΠΑΝΤΗΣΗ ΓΙΑ ΚΑΘΕ UTILITY (ADR-770 §16)
+ * ═══════════════════════════════════════════════════════════════════════════════
+ *
+ * Η κεφαλίδα αυτού του αρχείου υπόσχεται *«καμία δεύτερη αλήθεια — ρωτάμε το ίδιο το
+ * Tailwind»*. Η υπόσχεση **έσπασε σιωπηλά** τη στιγμή που το έργο απέκτησε το πρώτο
+ * override ανά utility: το Tailwind παράγει **χωριστές** παλέτες
+ * (`theme.textColor` · `theme.backgroundColor` · `theme.borderColor` · …), κάθε μία
+ * σπαρμένη από το `theme.colors` αλλά **επιτρέποντας παράκαμψη**, και αυτό το αρχείο
+ * ρωτούσε **μόνο** το `theme.colors`.
+ *
+ * 🔑 **Μετρημένο, όχι υποθετικό**: μετά τον διαχωρισμό ρόλου του §15
+ *     `theme.colors.destructive.DEFAULT`     = `hsl(var(--destructive))`   ← ΕΠΙΦΑΝΕΙΑ
+ *     `theme.textColor.destructive.DEFAULT`  = `hsl(var(--text-error) / …)` ← ΜΕΛΑΝΙ
+ * Δηλαδή στο `text-destructive` ο resolver απαντούσε **`--destructive`** ενώ ο compiler
+ * εκπέμπει **`--text-error`**. Ακριβώς η «δεύτερη αλήθεια» που το αρχείο υπάρχει για να
+ * μην υπάρχει — και η **σιωπή** της είναι το επικίνδυνο: καμία εξαίρεση, καμία άγνωστη
+ * κλάση, απλώς **λάθος token με σιγουριά**.
+ *
+ * ⚠️ **ΓΙΑΤΙ ΔΕΝ ΕΙΝΑΙ ΠΡΟΑΙΡΕΤΙΚΟ ΟΡΙΣΜΑ.** Ο πειρασμός ήταν
+ * `resolveClassToken(token, colors, byUtility?)`. Το έργο έχει **μετρημένο** τι κάνει
+ * μια «κλήση που κάθε καλούντας οφείλει να θυμηθεί»: στο ADR-770 §12.4 (`Κ14`) δύο
+ * στους τρεις τη θυμήθηκαν, ο τρίτος **ήταν η ίδια η πύλη**, και το αποτέλεσμα δεν ήταν
+ * σφάλμα αλλά **σιωπηλά λιγότερη κάλυψη**. Άρα η παλέτα ταξιδεύει **ολόκληρη**.
+ *
+ * @param {object} theme Το `resolveConfig(...).theme`.
+ * @returns {Record<string, object>} utility → παλέτα, μόνο για όσα το Tailwind δίνει.
+ */
+function utilityPalettes(theme) {
+  /**
+   * ⚠️ **Ο πίνακας είναι ΠΑΡΑΓΩΓΟΣ του `COLOR_UTILITIES`, όχι παράλληλη λίστα.** Το
+   * `COLOR_UTILITIES` είναι ήδη SSoT για δύο πύλες (3.26 · 3.42)· ένα δεύτερο σύνολο
+   * ονομάτων εδώ θα απέκλινε την πρώτη φορά που κάποιος προσθέσει utility. Ο πίνακας
+   * χαρτογραφεί **μόνο** το όνομα του utility στο όνομα του κλειδιού του θέματος.
+   */
+  const THEME_KEY = {
+    bg: 'backgroundColor',
+    text: 'textColor',
+    border: 'borderColor',
+    ring: 'ringColor',
+    fill: 'fill',
+    stroke: 'stroke',
+  };
+  const out = {};
+  for (const util of COLOR_UTILITIES) {
+    const key = THEME_KEY[util];
+    const palette = key && theme[key];
+    if (palette && typeof palette === 'object') out[util] = palette;
+  }
+  return out;
 }
 
 /** `{DEFAULT: x}` → `x`. Ένα κλαδί χωρίς `DEFAULT` δεν είναι χρώμα από μόνο του. */
@@ -179,6 +239,27 @@ function normalizeColorValue(raw) {
  * @returns {null|{form:string, ...}} `null` όταν το λεκτικό δεν είναι utility χρώματος.
  *   Μορφές: `literal-hex` · `css-var` · `class-unknown` · `not-a-color` · `gradient`.
  */
+/**
+ * **Fail-closed φρουρός σχήματος** — δέχεται ΜΟΝΟ ό,τι επιστρέφει το
+ * `loadTailwindColors`, ποτέ σκέτο `theme.colors`.
+ *
+ * 🔴 **Γιατί σκάει αντί να «τα καταφέρει».** Η σκέτη παλέτα **απαντά** — απλώς απαντά
+ * με το `theme.colors`, δηλαδή αγνοεί κάθε παράκαμψη ανά utility. Μετρημένο: με σκέτη
+ * παλέτα το `text-destructive` γυρίζει `--destructive` ενώ ο compiler εκπέμπει
+ * `--text-error`. **Μια απάντηση που είναι λάθος χωρίς να το λέει είναι χειρότερη από
+ * καμία απάντηση** — είναι το σχήμα «0 = κανείς δεν κοίταξε» σε μορφή ενικού.
+ */
+function assertPalette(candidate) {
+  if (!candidate || typeof candidate !== 'object' || !candidate.byUtility || !candidate.colors) {
+    throw new TypeError(
+      'tailwind-class-resolver: περίμενα το ΑΠΟΤΕΛΕΣΜΑ του loadTailwindColors() ' +
+        '({colors, byUtility, source}), όχι σκέτο theme.colors. Σκέτη παλέτα αγνοεί τις ' +
+        'παρακάμψεις ανά utility (theme.textColor κ.λπ.) και απαντά ΛΑΘΟΣ ΣΙΩΠΗΛΑ — ADR-770 §16.',
+    );
+  }
+  return candidate;
+}
+
 function resolveClassToken(token, colors) {
   const parsed = parseColorUtility(token);
   if (!parsed) return null;
@@ -194,7 +275,27 @@ function resolveClassToken(token, colors) {
     return { ...base, ...value, alpha: parsed.alpha * (value.alphaFromValue ?? 1), arbitrary: true };
   }
 
-  const { value, familyKnown } = lookupColor(colors, parsed.value);
+  /**
+   * 🔑 **Η παλέτα του utility ΠΡΩΤΑ, το `theme.colors` ως έσχατο** — δες
+   * `utilityPalettes` παραπάνω. Το Tailwind σπέρνει κάθε παλέτα utility από το
+   * `theme.colors`, οπότε η αναζήτηση εκεί δίνει **το ίδιο** αποτέλεσμα όπου δεν
+   * υπάρχει παράκαμψη· η εφεδρεία υπάρχει για utilities που το Tailwind **δεν**
+   * υλοποιεί ως χωριστό κλειδί, όχι ως δεύτερη ευκαιρία.
+   *
+   * ⚠️ `familyKnown` από **όποια** παλέτα απάντησε: αλλιώς μια κλάση που υπάρχει στην
+   * παλέτα του utility θα αναφερόταν `not-a-color` επειδή λείπει από το `theme.colors`
+   * — σιωπηλή απόρριψη με άλλο όνομα (το μάθημα του CHECK 3.39, ταξινομητής ρόλων).
+   */
+  const palette = assertPalette(colors);
+  const utilityPalette = palette.byUtility[parsed.util] || null;
+  const basePalette = palette.colors;
+  const primary = utilityPalette ? lookupColor(utilityPalette, parsed.value) : { value: null, familyKnown: false };
+  const { value, familyKnown } = primary.value !== null
+    ? primary
+    : (() => {
+        const fb = lookupColor(basePalette, parsed.value);
+        return { value: fb.value, familyKnown: fb.familyKnown || primary.familyKnown };
+      })();
   if (value === null) {
     // Η οικογένεια υπάρχει αλλά το σκαλί όχι ⇒ η κλάση **δεν παράγει CSS**.
     // Οτιδήποτε άλλο (`text-xs`, `border-[1px]`, `text-center`) απλώς δεν είναι χρώμα.
@@ -225,6 +326,8 @@ function resolveClassString(raw, colors) {
 
 module.exports = {
   loadTailwindColors,
+  assertPalette,
+  utilityPalettes,
   lookupColor,
   normalizeColorValue,
   resolveClassToken,

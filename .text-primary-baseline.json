@@ -2,10 +2,10 @@
   "_meta": {
     "check": "CHECK 3.38",
     "adr": "ADR-770",
-    "description": "Στατική πύλη αντίθεσης UI — χρήσεις του `text-primary` που η στατική ανάλυση ΔΕΝ μπορεί να αποδείξει υγιείς, ανά αρχείο και ανά κατάσταση.",
+    "description": "Στατική πύλη αντίθεσης UI — κάθε `text-*` που λύνεται σε token ΕΠΙΦΑΝΕΙΑΣ (λίστα ΠΑΡΑΓΟΜΕΝΗ από το tailwind.config.ts, ADR-770 §16) και που η στατική ανάλυση ΔΕΝ μπορεί να αποδείξει υγιή, ανά αρχείο και ανά κατάσταση.",
     "generatedBy": "node scripts/check-text-primary-ratchet.js --write-baseline",
-    "totalInvisible": 424,
-    "totalFiles": 229,
+    "totalInvisible": 451,
+    "totalFiles": 234,
     "note": "ΤΟ ΠΛΗΘΟΣ ΔΕΝ ΕΙΝΑΙ ΔΕΙΚΤΗΣ ΥΓΕΙΑΣ. Ο σαρωτής αποδεικνύει βλάβη, όχι υγεία (το φόντο είναι ερώτημα προγόνων ⇒ browser). Η θεραπεία είναι ρόλοι on-* (Material 3), όχι μικρότερος αριθμός — ADR-759 §4.12.2. Άνοιξε ΑΥΤΟ το αρχείο πριν επικαλεστείς αριθμό."
   },
   "files": {
@@ -123,9 +123,6 @@
     "src/components/compositions/NotificationCard/NotificationCard.tsx": {
       "theme-surface": 1
     },
-    "src/components/compositions/PropertyCard/PropertyCard.tsx": {
-      "theme-surface": 1
-    },
     "src/components/compositions/TaskCard/TaskCard.tsx": {
       "theme-surface": 1
     },
@@ -142,6 +139,9 @@
       "theme-surface": 1
     },
     "src/components/contacts/dialogs/ContactIdentityImpactDialog.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/contacts/dialogs/__tests__/CompanyIdentityImpactDialog.test.tsx": {
       "theme-surface": 1
     },
     "src/components/contacts/dynamic/communication/config/CommunicationIcons.ts": {
@@ -163,7 +163,7 @@
       "theme-surface": 1
     },
     "src/components/crm/inbox/attachment-parts.tsx": {
-      "file-light-bg": 1
+      "file-light-bg": 2
     },
     "src/components/crm/inbox/ReactionBubbles.tsx": {
       "theme-surface": 1
@@ -172,6 +172,9 @@
       "theme-surface": 2
     },
     "src/components/crm/inbox/ThreadView.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/crm/inbox/__tests__/ThreadView.test.tsx": {
       "theme-surface": 1
     },
     "src/components/crm/pages/CrmHubPageContent.tsx": {
@@ -219,6 +222,9 @@
     "src/components/obligations/pdf/PDFExportButton/ExportProgressCard.tsx": {
       "theme-surface": 1
     },
+    "src/components/obligations/rich-text/parts/Toolbar.tsx": {
+      "file-light-bg": 1
+    },
     "src/components/obligations/structure-editor/parts/SectionCard.tsx": {
       "theme-surface": 1
     },
@@ -246,9 +252,6 @@
     "src/components/projects/ika/components/WorkerCard.tsx": {
       "theme-surface": 1
     },
-    "src/components/projects/parking/ParkingColumnHeader.tsx": {
-      "theme-surface": 1
-    },
     "src/components/projects/PermitsTab.tsx": {
       "theme-surface": 1
     },
@@ -266,6 +269,9 @@
     },
     "src/components/properties/tabs/CustomerProfileSection.tsx": {
       "theme-surface": 4
+    },
+    "src/components/public-site/PublicSiteHeader.tsx": {
+      "element-light-bg": 1
     },
     "src/components/reports/builder/AIQueryInput.tsx": {
       "theme-surface": 1
@@ -390,9 +396,6 @@
     "src/components/shared/customer-info/components/UnifiedCustomerCard.tsx": {
       "theme-surface": 1
     },
-    "src/components/shared/EscoOccupationPicker.tsx": {
-      "theme-surface": 1
-    },
     "src/components/shared/EscoSkillPicker.tsx": {
       "theme-surface": 2
     },
@@ -438,8 +441,11 @@
     "src/components/shared/space-info/DescriptionNotesCard.tsx": {
       "theme-surface": 1
     },
+    "src/components/shared/__tests__/desktop-only-exit.test.tsx": {
+      "file-light-bg": 1
+    },
     "src/components/sidebar/sidebar-menu-item.tsx": {
-      "theme-surface": 3
+      "theme-surface": 8
     },
     "src/components/sidebar/sidebar-reveal-banner.tsx": {
       "theme-surface": 2
@@ -469,7 +475,7 @@
       "file-light-bg": 1
     },
     "src/components/ui/effects/hover-effects.ts": {
-      "file-light-bg": 4
+      "file-light-bg": 5
     },
     "src/components/ui/effects/hover-text-effects.ts": {
       "theme-surface": 2
@@ -509,6 +515,9 @@
     },
     "src/components/ui/sharing/ShareSurfaceShell.tsx": {
       "theme-surface": 1
+    },
+    "src/components/ui/sidebar-menu.tsx": {
+      "theme-surface": 9
     },
     "src/components/voice-ai/VoiceAIPanel.tsx": {
       "theme-surface": 2
@@ -583,7 +592,7 @@
       "theme-surface": 9
     },
     "src/subapps/accounting/components/invoices/details/__tests__/CancelInvoiceDialog.test.tsx": {
-      "theme-surface": 1
+      "theme-surface": 2
     },
     "src/subapps/accounting/components/invoices/forms/InvoiceForm.tsx": {
       "theme-surface": 1
@@ -625,7 +634,7 @@
       "theme-surface": 1
     },
     "src/subapps/dxf-viewer/config/modal-colors.ts": {
-      "file-light-bg": 2
+      "file-light-bg": 5
     },
     "src/subapps/dxf-viewer/debug/panels/HierarchyDebugPanel.tsx": {
       "theme-surface": 3
@@ -634,7 +643,7 @@
       "theme-surface": 1
     },
     "src/subapps/dxf-viewer/floorplan-background/components/__tests__/FloorplanBackgroundPanel.a11y.test.tsx": {
-      "theme-surface": 1
+      "theme-surface": 2
     },
     "src/subapps/dxf-viewer/ui/components/bim-schedule/ScheduleFilterBar.tsx": {
       "theme-surface": 1
@@ -656,6 +665,12 @@
     },
     "src/subapps/dxf-viewer/ui/ribbon/components/RibbonWallDrawModeWidget.tsx": {
       "theme-surface": 1
+    },
+    "src/subapps/dxf-viewer/ui/ribbon/components/__tests__/OpeningTagLayerToggle.test.tsx": {
+      "theme-surface": 2
+    },
+    "src/subapps/dxf-viewer/ui/ribbon/components/__tests__/RibbonToggleWidget.test.tsx": {
+      "theme-surface": 3
     },
     "src/subapps/geo-canvas/app/GeoCanvasContent.tsx": {
       "theme-surface": 1

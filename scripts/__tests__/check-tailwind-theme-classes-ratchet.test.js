@@ -278,10 +278,10 @@ describe('Π — η μηχανή αναπαράγει το ΜΕΤΡΗΜΕΝΟ ε
   });
 
   test('Π2 — οι τρεις κλάσεις λύνονται στα hex που κατέγραψε το ADR-773', () => {
-    const { colors } = loadTailwindColors(REPO_ROOT);
-    expect(resolveClassToken('text-slate-900', colors).hex).toBe('#0f172a');
-    expect(resolveClassToken('text-slate-600', colors).hex).toBe('#475569');
-    expect(resolveClassToken('text-slate-400', colors).hex).toBe('#94a3b8');
+    const palette = loadTailwindColors(REPO_ROOT);
+    expect(resolveClassToken('text-slate-900', palette).hex).toBe('#0f172a');
+    expect(resolveClassToken('text-slate-600', palette).hex).toBe('#475569');
+    expect(resolveClassToken('text-slate-400', palette).hex).toBe('#94a3b8');
   });
 
   test('Π3 — το `text-slate-900` δίνει 1,02:1 στο ΣΚΟΤΕΙΝΟ `--background` του πραγματικού globals.css', () => {
@@ -341,7 +341,8 @@ describe('Κ — κοκκίωση: τι κρίνεται, τι όχι, και Γ
 
   test('Κ3 — ΚΑΜΙΑ δική μας χαρτογράφηση: η τιμή έρχεται από το πακέτο tailwindcss', () => {
     const twColors = require('tailwindcss/colors');
-    const { colors } = loadTailwindColors(REPO_ROOT);
+    const palette = loadTailwindColors(REPO_ROOT);
+    const { colors } = palette;
     for (const shade of ['50', '400', '600', '900', '950']) {
       expect(lookupColor(colors, `slate-${shade}`).value).toBe(twColors.slate[shade]);
     }
@@ -356,20 +357,22 @@ describe('Κ — κοκκίωση: τι κρίνεται, τι όχι, και Γ
   });
 
   test('Κ4 — τα σημασιολογικά ονόματα του ΕΡΓΟΥ λύνονται σε token, όχι σε hex', () => {
-    const { colors } = loadTailwindColors(REPO_ROOT);
+    const palette = loadTailwindColors(REPO_ROOT);
+    const { colors } = palette;
     for (const cls of ['bg-card', 'text-foreground', 'text-muted-foreground', 'border-border', 'ring-ring']) {
-      const r = resolveClassToken(cls, colors);
+      const r = resolveClassToken(cls, palette);
       expect(r.form).toBe('css-var');
       expect(r.varName).toMatch(/^--/);
     }
   });
 
   test('Κ5 — η αναζήτηση είναι ΑΝΑΔΡΟΜΙΚΗ: `performance-success-bg` = τρία επίπεδα', () => {
-    const { colors } = loadTailwindColors(REPO_ROOT);
+    const palette = loadTailwindColors(REPO_ROOT);
+    const { colors } = palette;
     // Η δύο-επιπέδων εκδοχή γύριζε `not-a-color` για κλάση που ΥΠΑΡΧΕΙ.
-    expect(resolveClassToken('bg-performance-success-bg', colors).varName).toBe('--performance-success-bg');
-    expect(resolveClassToken('bg-bg-enterprise-success', colors).varName).toBe('--bg-success');
-    expect(resolveClassToken('text-sidebar-primary-foreground', colors).varName).toBe('--sidebar-primary-foreground');
+    expect(resolveClassToken('bg-performance-success-bg', palette).varName).toBe('--performance-success-bg');
+    expect(resolveClassToken('bg-bg-enterprise-success', palette).varName).toBe('--bg-success');
+    expect(resolveClassToken('text-sidebar-primary-foreground', palette).varName).toBe('--sidebar-primary-foreground');
   });
 
   test('Κ6 — η γραμματική δέχεται παραλλαγές με αγκύλες χωρίς να τις κόβει', () => {

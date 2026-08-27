@@ -18,6 +18,8 @@
 const fs = require('fs');
 const path = require('path');
 
+const { surfaceInkNames, surfaceInkRegex } = require('./surface-ink-tokens');
+
 /**
  * `text-primary`, `text-primary/70`, `hover:text-primary`, `dark:text-primary`.
  *
@@ -112,15 +114,29 @@ function classify({ matched, suffix, context, fileText, overrideClasses }) {
  * override of `--primary` re-classifies files nobody staged). That is the declared
  * limit of Layer 1 and the reason Layer 1b runs `--all` in CI.
  */
-function scanFiles(files, overrideClasses = []) {
+function scanFiles(files, overrideClasses = [], inkNames = surfaceInkNames()) {
+  /**
+   * 🔑 **Η ΕΜΒΕΛΕΙΑ ΕΙΝΑΙ ΤΟ `inkNames`, ΚΑΙ ΠΑΡΑΓΕΤΑΙ** (ADR-770 §16).
+   *
+   * Μέχρι τις 2026-08-27 εδώ ήταν καρφωμένο το `text-primary` — όχι επειδή ήταν το
+   * **μόνο** token επιφάνειας που χρησιμοποιούνταν ως μελάνι, αλλά επειδή ήταν το μόνο
+   * που **είχε βρεθεί**. Το `--destructive` ήταν η ίδια κλάση ακριβώς, και πέρασε από
+   * δίπλα: μετρήθηκε **1,67:1** σε ζωντανή οθόνη, σε 391 αρχεία.
+   *
+   * ⚠️ Η προεπιλογή **δεν είναι λίστα** — είναι κλήση που ρωτά το `tailwind.config.ts`.
+   * Έτσι (α) κανένας καλούντας δεν **οφείλει να θυμηθεί** να τη δώσει — το μάθημα `Κ14`,
+   * όπου ο ένας στους τρεις που ξέχασε ήταν **η ίδια η πύλη** — και (β) όταν ένα token
+   * διορθωθεί, η πύλη **σβήνει μόνη της** το εύρημα αντί να το κουβαλά για πάντα.
+   */
+  const re = surfaceInkRegex(inkNames);
   const sites = [];
   for (const file of files) {
     if (!fs.existsSync(file)) continue; // staged-deleted file: nothing to classify
     const text = fs.readFileSync(file, 'utf8');
-    if (!text.includes('text-primary')) continue;
-    TEXT_PRIMARY_RE.lastIndex = 0;
+    if (!text.includes('text-')) continue;
+    re.lastIndex = 0;
     let m;
-    while ((m = TEXT_PRIMARY_RE.exec(text)) !== null) {
+    while ((m = re.exec(text)) !== null) {
       const offset = m.index;
       const context = elementContext(text, offset);
       const state = isInsideComment(text, offset)
@@ -139,8 +155,8 @@ function scanFiles(files, overrideClasses = []) {
 }
 
 /** Scan `srcDir` and return one record per occurrence, with an explicit state on each. */
-function scanTextPrimarySites(srcDir, overrideClasses = []) {
-  return scanFiles(walkSourceFiles(srcDir), overrideClasses);
+function scanTextPrimarySites(srcDir, overrideClasses = [], inkNames = surfaceInkNames()) {
+  return scanFiles(walkSourceFiles(srcDir), overrideClasses, inkNames);
 }
 
 module.exports = {

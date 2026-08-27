@@ -59,6 +59,7 @@ const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 
 const { scanFiles, walkSourceFiles } = require('./lib/contrast/text-primary-sites');
+const { surfaceInkNames } = require('./lib/contrast/surface-ink-tokens');
 const { readThemes } = require('./lib/contrast/css-token-themes');
 const { findGluedClasses } = require('./lib/contrast/glued-class');
 const { PROJECT_ROOT, loadBaseline, writeBaselineFile } = require('./lib/ratchet-baseline');
@@ -184,9 +185,13 @@ function printFailure({ regressions, inert, glued }) {
     const how = r.isNewFile ? 'ΝΕΟ ΑΡΧΕΙΟ' : `${r.was} → ${r.now}`;
     console.error(`   🚫 ${r.file} [${r.state}] ${how}`);
   }
-  console.error('\n   Το `text-primary` είναι χρώμα ΕΠΙΦΑΝΕΙΑΣ: στο σκοτεινό θέμα είναι');
-  console.error('   ταυτόσημο με το --card (1,00:1). Για μελάνι χρησιμοποίησε token ΣΚΟΠΟΥ:');
-  console.error('   text-foreground · text-[hsl(var(--text-info))] · --text-success · --text-warning');
+  console.error('\n   Βάφεις ΚΕΙΜΕΝΟ με token ΕΠΙΦΑΝΕΙΑΣ. Δύο μετρημένα παραδείγματα:');
+  console.error('     --primary      σκοτεινό θέμα, ταυτόσημο με το --card  →  1,00:1');
+  console.error('     --destructive  σκοτεινό θέμα, «Αποσύνδεση» σε ζωντανή οθόνη →  1,67:1');
+  console.error('   Για μελάνι χρησιμοποίησε token ΣΚΟΠΟΥ:');
+  console.error('   text-foreground · text-destructive · text-[hsl(var(--text-info))] · --text-success');
+  console.error('\n   Η λίστα των tokens ΠΑΡΑΓΕΤΑΙ από το tailwind.config.ts (ADR-770 §16):');
+  console.error(`   ${surfaceInkNames(PROJECT_ROOT).slice(0, 10).join(' · ')} …`);
   console.error('\n   Μέτρησε: npm run measure:text-primary');
   console.error('   Έμμεση διαφυγή (αιτιολόγησε στον Giorgio): SKIP_TEXT_PRIMARY_RATCHET=1 git commit ...');
 }
@@ -200,7 +205,7 @@ function writeBaseline(overrides) {
     _meta: {
       check: 'CHECK 3.38',
       adr: 'ADR-770',
-      description: 'Στατική πύλη αντίθεσης UI — χρήσεις του `text-primary` που η στατική ανάλυση ΔΕΝ μπορεί να αποδείξει υγιείς, ανά αρχείο και ανά κατάσταση.',
+      description: 'Στατική πύλη αντίθεσης UI — κάθε `text-*` που λύνεται σε token ΕΠΙΦΑΝΕΙΑΣ (λίστα ΠΑΡΑΓΟΜΕΝΗ από το tailwind.config.ts, ADR-770 §16) και που η στατική ανάλυση ΔΕΝ μπορεί να αποδείξει υγιή, ανά αρχείο και ανά κατάσταση.',
       generatedBy: 'node scripts/check-text-primary-ratchet.js --write-baseline',
       totalInvisible: invisible,
       totalFiles: fileCount,

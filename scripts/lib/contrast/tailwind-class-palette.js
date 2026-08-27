@@ -191,7 +191,11 @@ const sideEntry = (entry, resolved, suffix) => ({
  */
 function buildClassPalette(repoRoot, themes) {
   const scope = resolveScope(repoRoot);
-  const { colors, source } = loadTailwindColors(repoRoot);
+  // ⚠️ **Η ΠΑΛΕΤΑ ΤΑΞΙΔΕΥΕΙ ΟΛΟΚΛΗΡΗ** (ADR-770 §16): σκέτο `theme.colors` αγνοεί τις
+  // παρακάμψεις ανά utility (`theme.textColor` κ.λπ.) και απαντά **λάθος σιωπηλά**.
+  // Ο resolver πλέον το **απορρίπτει** αντί να τα καταφέρει.
+  const palette = loadTailwindColors(repoRoot);
+  const { source } = palette;
   const raw = readPaletteFromFiles(scope.files, repoRoot);
 
   const sourceLines = new Map();
@@ -223,7 +227,7 @@ function buildClassPalette(repoRoot, themes) {
 
   for (const entry of raw.entries) {
     const value = entry.hex ?? entry.raw ?? '';
-    const resolved = resolveClassString(value, colors);
+    const resolved = resolveClassString(value, palette);
 
     if (!resolved.colors.length) {
       const kind = entry.form === 'non-color' ? 'not-a-class' : 'literal-value-uncovered';

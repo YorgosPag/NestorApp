@@ -26,6 +26,8 @@ const {
 } = require('../check-text-primary-ratchet');
 const { scanFiles } = require('../lib/contrast/text-primary-sites');
 const { findGluedClasses, GLUED_RULES } = require('../lib/contrast/glued-class');
+const { surfaceInkNames } = require('../lib/contrast/surface-ink-tokens');
+const { loadTailwindColors, resolveClassToken } = require('../lib/contrast/tailwind-class-resolver');
 
 const REPO_ROOT = path.join(__dirname, '..', '..');
 
@@ -221,5 +223,116 @@ describe('Κ — τα όρια είναι δηλωμένα, όχι σιωπηλ�
     const moved = tallyByFile([{ file: 'src/a.tsx', line: 900, state: 'theme-surface' }]);
     const original = tallyByFile([{ file: 'src/a.tsx', line: 12, state: 'theme-surface' }]);
     expect(moved).toEqual(original);
+  });
+});
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * Σ — Η ΕΜΒΕΛΕΙΑ ΠΑΡΑΓΕΤΑΙ (ADR-770 §16): το «πριν» και το «μετά», ΕΚΤΕΛΕΣΜΕΝΑ
+ * ═══════════════════════════════════════════════════════════════════════════════
+ *
+ * Μέχρι τις 2026-08-27 η πύλη ρωτούσε ονομαστικά για το `text-primary`. Το
+ * `--destructive` ήταν **η ίδια κλάση σφάλματος** — χρώμα επιφάνειας ως μελάνι — και
+ * πέρασε από δίπλα: μετρήθηκε **1,67:1** σε ζωντανή οθόνη, σε 391 αρχεία.
+ *
+ * 🔑 Αυτά τα tests **δεν** επικαλούνται τη λίστα· τη **χτίζουν** από δύο πραγματικά
+ * `tailwind.config.ts` και ελέγχουν ότι διαφέρει **ακριβώς** εκεί που πρέπει.
+ */
+describe('Σ — η εμβέλεια παράγεται από το tailwind.config.ts, δεν γράφεται', () => {
+  const NL = String.fromCharCode(10);
+  const GLOBALS = [
+    ':root {',
+    '  --background: 214 95% 93%; --card: 213 92% 95%; --popover: 212 89% 97%;',
+    '  --muted: 212 85% 94%; --secondary: 213 88% 96%; --accent: 211 83% 92%;',
+    '  --primary: 217 91% 60%; --destructive: 0 84.2% 60.2%;',
+    '  --foreground: 222 47% 11%; --text-error: 0 72% 42%;',
+    '}',
+    '.dark {',
+    '  --background: 220 20% 11%; --card: 217 33% 17%; --popover: 220 20% 11%;',
+    '  --muted: 217 27% 11%; --secondary: 217 27% 11%; --accent: 217 27% 11%;',
+    '  --primary: 217 33% 17%; --destructive: 0 62.8% 30.6%;',
+    '  --foreground: 210 40% 98%; --text-error: 0 84% 70%;',
+    '}',
+  ].join(NL);
+
+  /** Μίνι-repo — ο resolver το υποστηρίζει ρητά (λύνει το tailwindcss από το __dirname). */
+  function miniRepo(textColorBlock) {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'tp-scope-'));
+    fs.mkdirSync(path.join(root, 'src', 'app'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src', 'app', 'globals.css'), GLOBALS);
+    fs.writeFileSync(
+      path.join(root, 'tailwind.config.ts'),
+      [
+        'export default {',
+        '  content: [],',
+        '  theme: { extend: {',
+        '    colors: {',
+        '      primary: { DEFAULT: "hsl(var(--primary))" },',
+        '      destructive: { DEFAULT: "hsl(var(--destructive))", foreground: "hsl(var(--foreground))" },',
+        '      card: { DEFAULT: "hsl(var(--card))" },',
+        '    },',
+        textColorBlock,
+        '  } },',
+        '};',
+      ].join(NL),
+    );
+    return root;
+  }
+
+  const PRIN = () => miniRepo('    // καμία παράκαμψη ανά utility');
+  const META = () => miniRepo('    textColor: { destructive: { DEFAULT: "hsl(var(--text-error) / <alpha-value>)" } },');
+
+  test('Σ1 — ΠΡΙΝ τη διόρθωση το `destructive` ΕΙΝΑΙ στην εμβέλεια· ΜΕΤΑ δεν είναι', () => {
+    const before = surfaceInkNames(PRIN());
+    const after = surfaceInkNames(META());
+    expect(before).toContain('destructive');
+    expect(after).not.toContain('destructive');
+    // Και η ΜΟΝΗ διαφορά: αλλιώς το test θα περνούσε για λάθος λόγο.
+    expect(before.filter((n) => !after.includes(n))).toEqual(['destructive']);
+    expect(after.filter((n) => !before.includes(n))).toEqual([]);
+    // Το `primary` μένει και στα δύο — η γενίκευση ΔΕΝ έχασε την αρχική εμβέλεια.
+    expect(after).toContain('primary');
+  });
+
+  test('Σ2 — ο ΙΔΙΟΣ κώδικας: παραβίαση ΠΡΙΝ, καθαρός ΜΕΤΑ — χωρίς να αλλάξει γραμμή', () => {
+    const [file] = fixtureFiles({
+      'UserMenu.tsx': 'export const x = <span className="text-destructive">Αποσύνδεση</span>;',
+    });
+    const before = scanFiles([file], [], surfaceInkNames(PRIN()));
+    const after = scanFiles([file], [], surfaceInkNames(META()));
+    expect(before.map((s) => s.state)).toEqual(['theme-surface']);
+    expect(after).toEqual([]);
+  });
+
+  test('Σ3 — το `bg-destructive` ΔΕΝ κρίνεται: η επιφάνεια είναι ο ΣΩΣΤΟΣ ρόλος', () => {
+    const [file] = fixtureFiles({
+      'DeleteButton.tsx': 'export const x = <button className="bg-destructive text-destructive-foreground">Δ</button>;',
+    });
+    expect(scanFiles([file], [], surfaceInkNames(PRIN()))).toEqual([]);
+  });
+
+  test('Σ4 — ο resolver ρωτά την παλέτα ΤΟΥ UTILITY, όχι μόνο το theme.colors', () => {
+    const palette = loadTailwindColors(META());
+    expect(resolveClassToken('text-destructive', palette).varName).toBe('--text-error');
+    expect(resolveClassToken('bg-destructive', palette).varName).toBe('--destructive');
+    // Χωρίς παράκαμψη, οι δύο συμφωνούν — η παλέτα utility ΣΠΕΡΝΕΤΑΙ από το colors.
+    const legacy = loadTailwindColors(PRIN());
+    expect(resolveClassToken('text-destructive', legacy).varName).toBe('--destructive');
+  });
+
+  test('Σ5 — fail-closed: σκέτο theme.colors ΑΠΟΡΡΙΠΤΕΤΑΙ, δεν απαντά λάθος σιωπηλά', () => {
+    const palette = loadTailwindColors(META());
+    expect(() => resolveClassToken('text-destructive', palette.colors)).toThrow(/loadTailwindColors/);
+  });
+
+  test('Σ6 — fail-closed: παλέτα χωρίς κανένα token επιφάνειας ΣΚΑΕΙ αντί να πει «0»', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'tp-empty-'));
+    fs.mkdirSync(path.join(root, 'src', 'app'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src', 'app', 'globals.css'), ':root { --foreground: 0 0% 0%; }');
+    fs.writeFileSync(
+      path.join(root, 'tailwind.config.ts'),
+      'export default { content: [], theme: { extend: { colors: { ink: "#000000" } } } };',
+    );
+    expect(() => surfaceInkNames(root)).toThrow(/fail-closed/);
   });
 });
