@@ -46,13 +46,21 @@ export interface UseTableFormulaBarMountParams extends TableCellSessionHandlers 
   /** Το δεσμευμένο κείμενο του τρέχοντος κελιού, διαβασμένο από τον καλούντα. */
   readonly initialText: string;
   readonly containerRef: RefObject<HTMLDivElement | null>;
+  /**
+   * 🔴 ADR-739 §69 — «πήγαινε σε αυτή τη διεύθυνση», από το πλαίσιο ονόματος.
+   *
+   * Παράγεται στον καλούντα (`useTableCellDoubleClickEditor`) και όχι εδώ, επειδή η **σειρά**
+   * που τηρεί περιλαμβάνει τη δέσμευση προχείρου — δηλαδή τον ένα δεσμευτή, που ζει εκεί.
+   * Δες `use-table-name-box-goto` για το γιατί η σειρά είναι συμβόλαιο.
+   */
+  readonly onGoTo: (text: string) => boolean;
 }
 
 export function useTableFormulaBarMount(
   params: UseTableFormulaBarMountParams,
 ): TableFormulaBarMount | null {
   const {
-    entity, cursor, initialText, containerRef,
+    entity, cursor, initialText, containerRef, onGoTo,
     onCommit, onMove, onClear, onHistory, onExtend, onSelectAll, onToggleAbsoluteRef,
   } = params;
 
@@ -117,6 +125,11 @@ export function useTableFormulaBarMount(
   return useMemo(() => {
     if (!entity || !cursor || !anchor) return null;
     const { rowId, colId } = cursor.position;
+    // 🔴 §69 — **ΕΝΑ** μοντέλο για τους δύο καταναλωτές αυτής της γραμμής (η ονομασία
+    // εδώ, η μέτρηση/μετάφραση στο πλαίσιο ονόματος). Ο ίδιος απομνημονευμένος (WeakMap)
+    // δρόμος με τη γεωμετρία· μια δεύτερη κλήση μέσα στο φύλλο θα ήταν δεύτερη
+    // αποσειριοποίηση ανά πάτημα πλήκτρου, για ταυτόσημο αποτέλεσμα.
+    const model = resolveTableModel(entity.model);
     return {
       // Σταθερό ανά **πίνακα**, όχι ανά κελί: η γραμμή είναι μόνιμο κέλυφος της συνεδρίας.
       // Ένα κλειδί ανά κελί θα την ξαναέστηνε σε κάθε `Tab` — δηλαδή θα της έκλεβε την
@@ -125,7 +138,9 @@ export function useTableFormulaBarMount(
       props: {
         // Το μοντέλο περνά από τον ΙΔΙΟ απομνημονευμένο (WeakMap) δρόμο με τη γεωμετρία —
         // ίδιο persisted ⇒ ίδιο μοντέλο, καμία δεύτερη αποσειριοποίηση ανά πάτημα πλήκτρου.
-        reference: tableCellReference(resolveTableModel(entity.model), rowId, colId),
+        reference: tableCellReference(model, rowId, colId),
+        model,
+        onGoTo,
         mode: cursor.mode,
         draft: cursor.draft,
         initialText,
@@ -146,7 +161,7 @@ export function useTableFormulaBarMount(
       },
     };
   }, [
-    entity, cursor, anchor, initialText,
+    entity, cursor, anchor, initialText, onGoTo,
     onCommit, onMove, onClear, onHistory, onExtend, onSelectAll, onToggleAbsoluteRef,
   ]);
 }

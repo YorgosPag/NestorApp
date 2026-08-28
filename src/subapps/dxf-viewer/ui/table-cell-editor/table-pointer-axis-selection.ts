@@ -37,7 +37,10 @@ import {
   claimTableCellSessionPointerDown,
 } from './table-cell-session-focus';
 // ADR-739 §27.15 — ο κύκλος ζωής της σύρσης· εδώ ζει μόνο η **έναρξή** της.
-import { startTableCellDrag } from './table-cell-drag-session';
+import {
+  startTableCellDrag,
+  TABLE_DRAG_SIZE_AS_DRAGGED,
+} from './table-cell-drag-session';
 // 🔴 ADR-739 §68 — ο ΕΝΑΣ φρουρός «επιτρέπεται στο δεξί κλικ να μετακινήσει;», και ο ΕΝΑΣ
 // ορισμός του «έπεσε μέσα στην επιλογή;» για άξονες. Κανένα από τα δύο δεν ξαναγράφεται εδώ.
 import { tableContextMenuMayMoveSelection } from './table-context-menu-selection';
@@ -220,6 +223,10 @@ export function handleTableBandMouseDown(params: {
       anchor,
       kind: hit.axis,
       container,
+      // 🔴 §69 — ανακοινώνει **ό,τι σέρνει**. Το εύρος καλύπτει ολόκληρο τον άξονα
+      // (`wholeAxisSelection`), άρα το πλαίσιο ονόματος γράφει τις γραμμές **του πίνακα** —
+      // το ανάλογο του `1048576R x 2C` που δείχνει το Excel για ολόκληρες στήλες φύλλου.
+      sizeReadout: TABLE_DRAG_SIZE_AS_DRAGGED,
       // Το κινούμενο άκρο ακολουθεί μόνο τη θέση **κατά μήκος** του άξονα — γι' αυτό το
       // `tableAxisTickAtFrame` μέσα στο `axisEndAt` αγνοεί τη ζώνη.
       resolveAt: (moveEvent) => axisEndAt(moveEvent, entity, container, transformRef, hit.axis),

@@ -62,6 +62,7 @@ import { clearTableCopyMarquee } from '../../state/table-copy-marquee-store';
 // ADR-739 §31.10 — η **αλυσίδα προς την οθόνη** (κελί ⇒ κουτί ⇒ άγκυρο), εξαχθείσα για τον
 // ίδιο λόγο: αυτό το αρχείο ξαναχτύπησε τις 500 γραμμές.
 import { useTableCellAnchor } from './use-table-cell-anchor';
+import { useTableNameBoxGoto } from './use-table-name-box-goto';
 import {
   useTableFormulaBarMount,
   type TableFormulaBarMount,
@@ -299,6 +300,10 @@ export function useTableCellDoubleClickEditor(
    */
   const commitTableModel = useTableModelCommit({ levelManager, execute });
 
+  // 🔴 ADR-739 §69 — η μετάβαση από το πλαίσιο ονόματος, με τον **ίδιο** δεσμευτή
+  // προχείρου που τηρεί ήδη το ποντίκι (§26.15). Η σειρά ζει στο module.
+  const goToReference = useTableNameBoxGoto({ entity: liveEntity, onCommitPending: commitPendingDraft });
+
   // §66 — οι γραφείς σκηνής (προεπισκόπηση μοντέλου **και** θέσης, commit θέσης) ζουν σε δικό
   // τους module: ήταν ένα ιδιωτικό `useCallback` όσο ο μόνος καταναλωτής έγραφε μοντέλο.
   const sceneWriters = useTableSceneWriters({ levelManager, execute });
@@ -467,6 +472,8 @@ export function useTableCellDoubleClickEditor(
     cursor,
     initialText: target?.cell.text ?? '',
     containerRef,
+    // 🔴 §69 — το πλαίσιο ονόματος ως **πόρτα**: `B7` + `Enter` μετακινεί τον δρομέα.
+    onGoTo: goToReference,
     onCommit: commitText,
     onMove: move,
     onClear: rangeActions.clearSelection,

@@ -12,6 +12,7 @@ import {
   endTableCellDrag,
   isTableCellDragActive,
   startTableCellDrag,
+  TABLE_DRAG_SIZE_AS_DRAGGED,
 } from '../table-cell-drag-session';
 import { setTableCellSelection } from '../../../state/table-cell-cursor-store';
 import {
@@ -47,8 +48,19 @@ function move(clientX = 500, clientY = 400): void {
   );
 }
 
-/** Οι δύο υποχρεωτικές παράμετροι που δεν αφορούν το εκάστοτε test. */
-const BASE = { anchor: ANCHOR, container: CONTAINER } as const;
+/**
+ * Οι υποχρεωτικές παράμετροι που δεν αφορούν το εκάστοτε test.
+ *
+ * 🔴 ADR-739 §69 — το `sizeReadout` μπήκε **υποχρεωτικό** μαζί με το `kind` και το
+ * `container`, και εδώ δηλώνεται η ιστορική συμπεριφορά («ανακοινώνω ό,τι σέρνω»). Η
+ * ανακοίνωση **δεν** ελέγχεται σε αυτό το αρχείο: εδώ μετριέται ο φύλακας του ADR-735,
+ * δηλαδή **πόσες φορές** γράφτηκε — δες `table-drag-size-readout.test.ts` για το τι.
+ */
+const BASE = {
+  anchor: ANCHOR,
+  container: CONTAINER,
+  sizeReadout: TABLE_DRAG_SIZE_AS_DRAGGED,
+} as const;
 
 afterEach(() => {
   endTableCellDrag();

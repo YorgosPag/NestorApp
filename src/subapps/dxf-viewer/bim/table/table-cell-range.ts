@@ -340,6 +340,25 @@ export function tableRangeSize(bounds: TableCellRangeBounds): TableRangeSize {
   };
 }
 
+/**
+ * 🔴 ADR-739 §69 — **πόσο πιάνει αυτή η επιλογή**, από την πρόθεση κατευθείαν σε αριθμούς.
+ *
+ * Η σύνθεση των δύο από πάνω, ονομασμένη επειδή τη ρωτούν δύο μεριές (το πλαίσιο ονόματος
+ * όσο σέρνεται το χέρι, και τα tests του) και επειδή η **σειρά** είναι το ουσιώδες: πρώτα
+ * {@link resolveTableSelectionBounds} — δηλαδή **με** το κούμπωμα σε ολόκληρες συγχωνεύσεις
+ * — και μόνο μετά η αφαίρεση. Η αντίστροφη σειρά θα έδινε `1R x 1C` πάνω σε επιλογή που
+ * φωτίζει τέσσερα κελιά, δηλαδή αριθμό που διαφωνεί με την οθόνη.
+ *
+ * `null` με τη σύμβαση όλου του αρχείου: μπαγιάτικο άκρο ⇒ ο καλών δεν δείχνει τίποτα.
+ */
+export function tableSelectionSize(
+  model: TableModel,
+  selection: TableSelectionSpan,
+): TableRangeSize | null {
+  const bounds = resolveTableSelectionBounds(model, selection);
+  return bounds === null ? null : tableRangeSize(bounds);
+}
+
 /** Είναι η περιοχή ένα και μόνο κελί; Τότε **δεν** είναι πραγματική επιλογή (§4.2). */
 export function isSingleCellRange(bounds: TableCellRangeBounds): boolean {
   return bounds.firstRow === bounds.lastRow && bounds.firstCol === bounds.lastCol;

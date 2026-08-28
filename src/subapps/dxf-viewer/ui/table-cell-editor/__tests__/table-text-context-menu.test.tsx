@@ -49,6 +49,7 @@ import type { TextEditorAnchor } from '../../text-toolbar/TextEditorAnchorLayer'
 // από την οποία κληρονομεί κάθε βαμμένο τμήμα. Χτίζεται από τον ΕΝΑ κατασκευαστή του έργου —
 // ένα χειρόγραφο αντικείμενο εδώ θα ήταν τρίτη έκφραση της προεπιλογής.
 import { baseCellStyle } from '../../../bim/table/table-style';
+import { createTableModel } from '../../../bim/table/table-model-helpers';
 import { hierarchicalTableStyle } from '../../../bim/table/__tests__/hierarchical-table-style-fixture';
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -64,6 +65,9 @@ const ANCHOR: TextEditorAnchor = {
 const NOOP = (): void => {};
 
 const CELL_STYLE = baseCellStyle(hierarchicalTableStyle().rowClasses.data);
+
+/** 🔴 §69 — μοντέλο για το πλαίσιο ονόματος. Άδειο επίτηδες: εδώ δεν σέρνεται τίποτα. */
+const EMPTY_MODEL = createTableModel({ columns: [], rows: [] });
 
 function renderCellEditor(): HTMLElement {
   render(
@@ -102,6 +106,10 @@ function renderFormulaBar(): HTMLInputElement {
   render(
     <TableFormulaBar
       reference={{ a1: 'B2', columnHeader: 'ΠΕΡΙΓΡΑΦΗ', rowIndex: 1, colIndex: 1 }}
+      // 🔴 ADR-739 §69 — η γραμμή τύπων φιλοξενεί πλέον και το **πλαίσιο ονόματος**, που
+      // χρειάζεται μοντέλο (μέτρηση σύρσης) και μετάβαση. Δεν αφορούν αυτό το αρχείο.
+      model={EMPTY_MODEL}
+      onGoTo={() => false}
       mode="edit"
       draft="ΣΚΥΡΟΔΕΜΑ"
       initialText="ΣΚΥΡΟΔΕΜΑ"
@@ -117,7 +125,11 @@ function renderFormulaBar(): HTMLInputElement {
       onToggleAbsoluteRef={NOOP}
     />,
   );
-  const field = document.querySelector('input[type="text"]');
+  // 🔴 ADR-739 §69 — στοχευμένα το πεδίο **τιμής**, όχι «to πρώτο input»: από το §69 η
+  // γραμμή έχει **δύο** πεδία κειμένου, και το πρώτο στο DOM είναι το πλαίσιο ονόματος — πεδίο
+  // **πλοήγησης**, που δεν έχει πρόχειρο να αποκόψει ή να επικολλήσει κανείς. Το κλειδί
+  // είναι η **απόδοση του mock** (κλειδί = κείμενο), άρα σταθερό και αυτο-τεκμηριωμένο.
+  const field = document.querySelector('input[aria-label="table.formulaBar.valueAriaLabel"]');
   if (!(field instanceof HTMLInputElement)) throw new Error('η γραμμή τύπων δεν αποδόθηκε');
   return field;
 }

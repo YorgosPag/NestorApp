@@ -545,6 +545,7 @@
     "formulaBar": {
       "ariaLabel": "Formula bar",
       "referenceAriaLabel": "Cell reference",
+      "dragSize": "{rows}R x {cols}C",
       "valueAriaLabel": "Cell value",
       "symbol": "fx",
       "refusal": {

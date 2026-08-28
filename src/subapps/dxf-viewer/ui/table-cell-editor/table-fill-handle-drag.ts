@@ -112,6 +112,31 @@ export function tryTableFillHandleMouseDown(event: MouseEvent, press: TableFillH
     kind: 'range',
     container: press.container,
     resolveAt: (moveEvent) => cellEndAt(moveEvent, press.entity, press.container, press.transformRef),
+    /**
+     * 🔴 ADR-739 §69 — **Η ΜΟΝΗ ΑΠΟ ΤΙΣ ΤΕΣΣΕΡΙΣ ΠΟΥ ΔΕΝ ΑΝΑΚΟΙΝΩΝΕΙ Ο,ΤΙ ΣΕΡΝΕΙ.**
+     *
+     * Το span που φτάνει εδώ έχει άγκυρα τη **γωνία της λαβής** και τέλος το κελί κάτω από το
+     * χέρι — δηλαδή τη **διαδρομή του χεριού**. Ο χρήστης όμως βλέπει (και θα πάρει) την
+     * **προεπισκόπηση**, που περιλαμβάνει **και την πηγή**: σύρσιμο μιας γραμμής προς τα κάτω
+     * δίνει διαδρομή `2R` αλλά γέμισμα `2R` **μαζί με** την πηγή ⇒ διαφορετικοί αριθμοί για
+     * επιλογή τεσσάρων στηλών. Με ταυτοτική μετάφραση, το πλαίσιο ονόματος θα διαφωνούσε με το
+     * περίγραμμα του **ίδιου καρέ** — και αυτή ακριβώς η κατηγορία σφάλματος (δύο απαντήσεις
+     * για το ίδιο πράγμα μέσα στο ίδιο καρέ) είναι που γέννησε το `tableFillSourceBounds`.
+     *
+     * Ρωτά τα **ίδια** `tableFillPreviewBounds` + `cellAt` που χρησιμοποιεί το `selectFilled`
+     * — δηλαδή αυτό που θα μαρκαριστεί όταν αφήσεις. Η ένδειξη είναι **υπόσχεση**, όχι δεύτερος
+     * υπολογισμός.
+     *
+     * `null` όσο ο στόχος δεν λύνεται (χέρι έξω από το πλέγμα, μπαγιάτικα όρια): καμία ένδειξη
+     * είναι καλύτερη από μαντεψιά — η ίδια σύμβαση με όλο το αρχείο.
+     */
+    sizeReadout: () => {
+      if (target === null) return null;
+      const bounds = tableFillPreviewBounds(source, target);
+      const from = cellAt(model, bounds.firstRow, bounds.firstCol);
+      const to = cellAt(model, bounds.lastRow, bounds.lastCol);
+      return from && to ? { from, to, kind: 'range' } : null;
+    },
     // ADR-754 §5 — ο **ίδιος** κύκλος ζωής, τρίτος παραλήπτης: γράφεται **μόνο** η υπόσχεση.
     write: (span) => {
       target = fillTargetOf(model, source, span.to);

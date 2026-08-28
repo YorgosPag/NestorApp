@@ -62,6 +62,8 @@ import {
 } from '../../bim/table/formula/table-formula-diagnosis';
 import type { FormulaLibraryRejection } from '../../bim/table/formula/library/formula-library-taxonomy';
 import { TextEditorAnchorLayer, type TextEditorAnchor } from '../text-toolbar/TextEditorAnchorLayer';
+// 🔴 ADR-739 §69 — το πλαίσιο ονόματος ως **φύλλο** (ADR-040 κανόνας #4) — δες τη θέση χρήσης.
+import { TableNameBox } from './TableNameBox';
 import { flattenToSingleLine } from './TableCellEditorOverlay';
 // 🔴 ADR-754 §4 — η **ίδια** τοποθέτηση κέρσορα με τον επεξεργαστή κελιού.
 import { useTableCellCaret } from './use-table-cell-caret';
@@ -88,11 +90,21 @@ import {
   type TableCellCursorMode,
 } from '../../state/table-cell-cursor-store';
 import type { TableCellReference } from '../../bim/table/table-cell-reference';
+import type { TableModel } from '../../types/table';
 import type { TableCellSessionHandlers } from './table-cell-session-types';
 
 export interface TableFormulaBarProps extends TableCellSessionHandlers {
   /** Η ονομασία του τρέχοντος κελιού· `null` όταν η ταυτότητα δεν λύνεται στο μοντέλο. */
   readonly reference: TableCellReference | null;
+  /**
+   * 🔴 ADR-739 §69 — το **ζωντανό** μοντέλο, για το πλαίσιο ονόματος και μόνο: εκείνο μετρά
+   * το μέγεθος της σύρσης και μεταφράζει τη διεύθυνση που πληκτρολογείς. Περνά από εδώ και
+   * δεν το ξαναδιαβάζει μόνο του, ώστε ο **ίδιος** απομνημονευμένος δρόμος (WeakMap) να
+   * εξυπηρετεί και τα δύο πεδία — αλλιώς δύο αποσειριοποιήσεις ανά πάτημα πλήκτρου.
+   */
+  readonly model: TableModel;
+  /** 🔴 §69 — «πήγαινε σε αυτή τη διεύθυνση»· δες `use-table-name-box-goto` για τη σειρά. */
+  readonly onGoTo: (text: string) => boolean;
   readonly mode: TableCellCursorMode;
   readonly draft: string;
   /** Το **δεσμευμένο** κείμενο — αυτό που φαίνεται όσο δεν γράφεις. */
@@ -188,7 +200,7 @@ const keepFocusInField = keepTableCellKeyboardOwnership;
 
 export function TableFormulaBar(props: TableFormulaBarProps): React.ReactElement {
   const {
-    reference, mode, draft, initialText, caretIndex, caretRevision, anchor,
+    reference, model, onGoTo, mode, draft, initialText, caretIndex, caretRevision, anchor,
     onCommit, onMove, onClear, onHistory, onExtend, onSelectAll, onToggleAbsoluteRef,
   } = props;
   const { t } = useTranslation('dxf-viewer');
@@ -307,20 +319,12 @@ export function TableFormulaBar(props: TableFormulaBarProps): React.ReactElement
         className="flex h-full w-full items-stretch overflow-hidden rounded-sm border border-border bg-background/95 text-xs shadow-sm backdrop-blur-sm"
         aria-label={t('table.formulaBar.ariaLabel')}
       >
-        {/* Το «πλαίσιο ονόματος»: ταυτότητα (`B3`) + το κείμενο κεφαλίδας ως συμφραζόμενο.
-            Η κεφαλίδα λείπει σιωπηλά όταν ο πίνακας δεν έχει γραμμή κεφαλίδας — φυσιολογικό
-            σε πίνακα υπομνήματος, όχι σφάλμα. */}
-        <span
-          className="flex shrink-0 items-center gap-1.5 border-r border-border px-2 font-mono font-semibold text-foreground"
-          aria-label={t('table.formulaBar.referenceAriaLabel')}
-        >
-          {reference?.a1 ?? ''}
-          {reference?.columnHeader ? (
-            <em className="max-w-32 truncate font-sans text-[10px] font-normal not-italic text-muted-foreground">
-              {reference.columnHeader}
-            </em>
-          ) : null}
-        </span>
+        {/* 🔴 ADR-739 §69 — το «πλαίσιο ονόματος». Ήταν `<span>` εδώ· έγινε **φύλλο** επειδή
+            είναι το μόνο κομμάτι αυτής της γραμμής που αλλάζει σε κάθε κελί που διασχίζει το
+            χέρι μέσα σε μια σύρση (`2R x 2C`), και ο ADR-040 κανόνας #4 απαιτεί ο συνδρομητής
+            υψηλόσυχνης κατάστασης να μην είναι ο ξενιστής του πεδίου γραφής. Δες την κεφαλίδα
+            του `TableNameBox` — εκεί ζει και το γιατί το πεδίο έγινε επεξεργάσιμο. */}
+        <TableNameBox model={model} reference={reference} onGoTo={onGoTo} />
         {/* 🔴 ADR-763 §10 — τα τρία χειριστήρια του Excel, με τη σειρά του Excel.
             Το `fx` ήταν μέχρι σήμερα `<span aria-hidden>`: **σύμβολο, όχι κουμπί**. */}
         <nav className="flex shrink-0 items-stretch border-r border-border">

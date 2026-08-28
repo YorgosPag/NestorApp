@@ -87,7 +87,9 @@ import {
   endTableRangeTransferDrag,
 } from './table-range-transfer-drag';
 // ADR-739 §27.15 — ο κύκλος ζωής της σύρσης ζει σε δικό του module· εδώ μένει η **γεωμετρία**.
-import { endTableCellDrag, startTableCellDrag } from './table-cell-drag-session';
+import {
+  endTableCellDrag, startTableCellDrag, TABLE_DRAG_SIZE_AS_DRAGGED,
+} from './table-cell-drag-session';
 // 🔴 §40.8 — ο ΕΝΑΣ τρόπος προσάρτησης ακροατή σύλληψης στο δοχείο (κοινός με το ⊕, N.18).
 import { useTableContainerMouseDown } from './use-table-container-mousedown';
 // 🔴 ADR-754 §3 — η **τέταρτη** χειρονομία του πίνακα: υπόδειξη κελιού μέσα σε τύπο. Ίδιο
@@ -451,6 +453,9 @@ export function useTableCellPointer(params: UseTableCellPointerParams): void {
     startTableCellDrag({
       anchor: { rowId: hit.rowId, colId: hit.colId },
       kind: 'range',
+      // 🔴 §69 — ανακοινώνει **ό,τι σέρνει**: εδώ το εύρος του χεριού ΕΙΝΑΙ το εύρος που
+      // μαρκάρεται, άρα η μετάφραση είναι ταυτοτική.
+      sizeReadout: TABLE_DRAG_SIZE_AS_DRAGGED,
       // §27.16 Ε1 — το ίδιο δοχείο που δίνει τη γεωμετρία δίνει και την **άκρη**: μία
       // μέτρηση, δύο ερωτήσεις («πού είμαι στον κόσμο;» / «πόσο κοντά στην άκρη;»).
       container,

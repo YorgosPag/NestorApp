@@ -80,7 +80,10 @@ import {
 // γιατί μια μετακίνηση δρομέα θα έσβηνε το πρόχειρο που μόλις πάμε να επεξεργαστούμε.
 import { wholeAxisSelection } from '../../bim/table/table-cell-range';
 import { axisEndAt, cellEndAt } from './table-pointer-axis-selection';
-import { startTableCellDrag } from './table-cell-drag-session';
+import {
+  startTableCellDrag,
+  TABLE_DRAG_SIZE_AS_DRAGGED,
+} from './table-cell-drag-session';
 import {
   claimTableCellPointerGesture,
   claimTableCellSessionPointerDown,
@@ -165,6 +168,10 @@ export function tryTablePointModeMouseDown(event: MouseEvent, press: TablePointM
     kind: gesture.kind,
     container: press.container,
     resolveAt: gesture.resolveAt,
+    // 🔴 §69 — ανακοινώνει **ό,τι σέρνει**, παρόλο που δεν μαρκάρει κελιά: το εύρος που
+    // γράφεται μέσα στον τύπο (`=SUM(A1:B5`) είναι ακριβώς αυτό. Είναι και η στιγμή που η
+    // ένδειξη αξίζει περισσότερο — ο χρήστης χτίζει άθροισμα και ρωτά «πόσα κελιά πιάνω;».
+    sizeReadout: TABLE_DRAG_SIZE_AS_DRAGGED,
     // ADR-754 §5 — ο **ίδιος** κύκλος ζωής σύρσης, άλλος παραλήπτης. Δες `table-cell-drag-session`.
     write: (span) => write(span.to),
     // Ο **φυσικός** τερματισμός — και καλύπτει και το κουμπί που αφέθηκε εκτός παραθύρου (ο

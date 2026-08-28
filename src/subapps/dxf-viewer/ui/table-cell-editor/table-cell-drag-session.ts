@@ -45,6 +45,7 @@
  */
 
 import { setTableCellSelection } from '../../state/table-cell-cursor-store';
+import { setTableDragSpan } from '../../state/table-drag-span-store';
 import {
   edgeAutoPanSample,
   startDragEdgeAutoPan,
@@ -121,7 +122,37 @@ export interface TableCellDragStart {
    * **ακυρώθηκε**, και μια ακύρωση που γράφει μοντέλο είναι το χειρότερο είδος έκπληξης.
    */
   readonly onEnd?: () => void;
+
+  /**
+   * 🔴 ADR-739 §69 — **τι μέγεθος ανακοινώνει αυτή η χειρονομία** στο πλαίσιο ονόματος·
+   * `null` από τη συνάρτηση ⇒ καμία ένδειξη σε αυτό το καρέ.
+   *
+   * ## Γιατί συνάρτηση και όχι σκέτο `boolean`
+   * Επειδή για **μία** από τις τέσσερις χειρονομίες το εύρος που σέρνεται **δεν είναι** το
+   * εύρος που πιάνει ο χρήστης, και η διαφορά είναι ορατή στην οθόνη. Η λαβή συμπλήρωσης
+   * σέρνει από τη **γωνία της λαβής** προς το χέρι — δηλαδή το span της είναι η **διαδρομή
+   * του χεριού**, ενώ ο χρήστης βλέπει (και θα πάρει) την **προεπισκόπηση γεμίσματος**, που
+   * περιλαμβάνει και την πηγή. Ένα `boolean` θα ανακοίνωνε `3R x 1C` ενώ το περίγραμμα
+   * δείχνει `4R x 1C`: το πλαίσιο ονόματος θα διαφωνούσε με το ίδιο του το καρέ.
+   *
+   * ## Γιατί ΥΠΟΧΡΕΩΤΙΚΟ, χωρίς προεπιλογή
+   * Ο ίδιος ακριβώς λόγος με τα {@link TableCellDragStart.kind} και
+   * {@link TableCellDragStart.container}: ο γραφέας που το ξεχνά θα έπαιρνε σιωπηλά σύρση
+   * **χωρίς ένδειξη** — δηλαδή ακριβώς το κενό που κλείνει εδώ, ξαναγεννημένο χωρίς να το
+   * πει κανείς. Οι τρεις χειρονομίες που ανακοινώνουν το ίδιο εύρος που σέρνουν περνούν την
+   * κοινή {@link TABLE_DRAG_SIZE_AS_DRAGGED}, όχι τρία πανομοιότυπα inline lambdas.
+   */
+  readonly sizeReadout: (span: TableSelectionSpan) => TableSelectionSpan | null;
 }
+
+/**
+ * 🔴 ADR-739 §69 — «**ανακοινώνω ό,τι σέρνω**», η απάντηση των τριών από τις τέσσερις.
+ *
+ * Εξαγόμενη σταθερά και όχι `(span) => span` γραμμένο τρεις φορές: τρία αντίγραφα μιας
+ * γραμμής δεν πιάνονται από το jscpd (κάτω από τα 50 tokens) και **αποκλίνουν σιωπηλά** —
+ * το ίδιο ακριβώς επιχείρημα που γέννησε το `extendTableSelectionTo` (§27.16 Ε2).
+ */
+export const TABLE_DRAG_SIZE_AS_DRAGGED = (span: TableSelectionSpan): TableSelectionSpan => span;
 
 /** Οι ακροατές της τρέχουσας σύρσης· `null` όταν δεν σέρνεται τίποτα. */
 let activeTeardown: (() => void) | null = null;
@@ -139,6 +170,19 @@ export function startTableCellDrag(start: TableCellDragStart): void {
   let lastCell: TableCellRef = start.anchor;
   /** ADR-754 §5 — ο παραλήπτης, λυμένος **μία** φορά· δες το {@link TableCellDragStart.write}. */
   const write = start.write ?? setTableCellSelection;
+  /**
+   * 🔴 ADR-739 §69 — η ανακοίνωση μεγέθους, από τον **ίδιο** ένα δρόμο με την εγγραφή.
+   *
+   * Γράφεται **αμέσως στο πάτημα**, πριν κουνηθεί το χέρι: το Excel δείχνει `1R x 1C` από τη
+   * στιγμή που πατάς, όχι από τη στιγμή που φτάνεις σε δεύτερο κελί. Δεν αντιφάσκει με το
+   * «καμία επιλογή ≠ επιλογή 1×1» (§27.15): εκείνο μιλά για το τι **μαρκάρεται**, αυτό για
+   * το τι **ανακοινώνεται** — και ένα σκέτο κλικ σβήνει την ανακοίνωση στο `mouseup` χωρίς
+   * ποτέ να έχει γράψει επιλογή.
+   */
+  const announce = (span: TableSelectionSpan): void => {
+    setTableDragSpan(start.sizeReadout(span));
+  };
+  announce({ from: start.anchor, to: start.anchor, kind: start.kind });
   /**
    * Το τελευταίο συμβάν κίνησης — **η θέση του χεριού**, όχι η θέση στον κόσμο.
    *
@@ -160,8 +204,18 @@ export function startTableCellDrag(start: TableCellDragStart): void {
     if (!cell) return;
     if (cell.rowId === lastCell.rowId && cell.colId === lastCell.colId) return;
     lastCell = cell;
+    const span = { from: start.anchor, to: cell, kind: start.kind };
     // ADR-754 §5 — ο **ίδιος** φύλακας και ο ίδιος κύκλος ζωής για δύο παραλήπτες.
-    write({ from: start.anchor, to: cell, kind: start.kind });
+    write(span);
+    // 🔴 §69 — και ο **τρίτος**: πίσω από τον ίδιο φύλακα «άλλαξε κελί;», άρα η ανακοίνωση
+    // κοστίζει όσο και η εγγραφή — μηδέν καρέ ανά pixel κίνησης (ADR-735).
+    //
+    // ⚠️ **Η ΣΕΙΡΑ ΕΙΝΑΙ ΣΥΜΒΟΛΑΙΟ, ΟΧΙ ΤΥΧΑΙΑ**: το `announce` τρέχει **μετά** το `write`,
+    // γιατί μια χειρονομία επιτρέπεται να ανακοινώνει κάτι που το `write` της μόλις
+    // υπολόγισε. Η λαβή συμπλήρωσης το κάνει ακριβώς αυτό — ανακοινώνει την **προεπισκόπηση
+    // γεμίσματος**, που γεννιέται μέσα στο δικό της `write`. Αντεστραμμένη, η ένδειξη θα
+    // έμενε ένα κελί πίσω σε κάθε καρέ της σύρσης.
+    announce(span);
   };
 
   const onMove = (event: MouseEvent): void => {
@@ -214,6 +268,13 @@ export function startTableCellDrag(start: TableCellDragStart): void {
 export function endTableCellDrag(): void {
   activeTeardown?.();
   activeTeardown = null;
+  // 🔴 ADR-739 §69 — η ανακοίνωση σβήνει **εδώ** και όχι στο `finish()`, δηλαδή και στην
+  // **ακύρωση** (αποπροσάρτηση συνεδρίας, νέα χειρονομία που κλείνει την προηγούμενη). Ο
+  // διαχωρισμός των δύο τερματισμών υπάρχει επειδή μια ακύρωση δεν επιτρέπεται να γράψει
+  // **μοντέλο** (ADR-754 Γ4)· αυτό εδώ δεν είναι μοντέλο, είναι ένα κείμενο έξι χαρακτήρων
+  // — και αν έμενε, το πλαίσιο ονόματος θα κρατούσε για πάντα το `2R x 2C` μιας σύρσης που
+  // κανείς δεν ολοκλήρωσε.
+  setTableDragSpan(null);
 }
 
 /** Σέρνεται κάτι αυτή τη στιγμή; Μόνο για tests και για τον φύλακα αποπροσάρτησης. */

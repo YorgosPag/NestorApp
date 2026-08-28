@@ -545,6 +545,7 @@
     "formulaBar": {
       "ariaLabel": "Γραμμή τύπων",
       "referenceAriaLabel": "Αναφορά κελιού",
+      "dragSize": "{rows}R x {cols}C",
       "valueAriaLabel": "Τιμή κελιού",
       "symbol": "fx",
       "refusal": {
