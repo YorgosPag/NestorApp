@@ -21,7 +21,9 @@ import { pointToArcDistance } from '../../utils/angle-entity-math';
 import { resolveEntityText } from '../../utils/text-node-utils';
 // ADR-737 §18 — SSoT ύψους χαρακτήρα. Το inline `height ?? fontSize ?? 2.5` που ήταν εδώ
 // (α) αγνοούσε το run του `textNode` και (β) στο MTEXT διάβαζε το ύψος ΠΛΑΙΣΙΟΥ.
-import { resolveTextHeight } from './dxf-text-style-extractor';
+// Λεξιλόγιο μεγέθους: το κουτί χτυπήματος πρέπει να μιλά την ΙΔΙΑ γλώσσα με τα γράμματα που
+// βλέπει ο χρήστης — αλλιώς σε 1:200 το κείμενο διπλασιάζεται και το κλικ ψάχνει το μισό.
+import { resolveTextHeightLive } from './dxf-text-style-extractor';
 // ADR-089 — SSoT point-in-bounds· ADR-737 §18 — SSoT εκτίμησης πλάτους (ίδια αναλογία 0.6
 // που ήταν γραμμένη inline εδώ δύο φορές).
 import { SpatialUtils } from '../../core/spatial/SpatialUtils';
@@ -75,14 +77,14 @@ export function testEntityHit(
     return Math.abs(normalizedDist - 1) <= hitTolerance / Math.min(rx, ry);
   }
   if (isTextEntity(entity)) {
-    const height = resolveTextHeight(entity);
+    const height = resolveTextHeightLive(entity);
     return testTextBoxHit(worldPoint, entity, estimateTextWidth(resolveEntityText(entity), height), height, hitTolerance);
   }
   if (isMTextEntity(entity)) {
     // ADR-737 §18 — ΟΧΙ `entity.definedHeight`: αυτό είναι το ύψος του πλαισίου. Το hit-test
     // θέλει ύψος ΧΑΡΑΚΤΗΡΑ, που είναι άλλο μέγεθος (πριν τα δύο μοιράζονταν το όνομα `height`
     // και εδώ διαβαζόταν σιωπηλά το λάθος).
-    const height = resolveTextHeight(entity);
+    const height = resolveTextHeightLive(entity);
     // Το ρητό πλάτος στήλης του MTEXT υπερισχύει· `||` όχι `??` — πλάτος 0 σημαίνει
     // «χωρίς αναδίπλωση», δηλαδή πέφτουμε στην εκτίμηση από το κείμενο.
     const width = entity.width || estimateTextWidth(resolveEntityText(entity), height);

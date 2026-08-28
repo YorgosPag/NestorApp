@@ -30,7 +30,7 @@ import type {
 import type { Point2D } from '../../rendering/types/Types';
 // ADR-737 §18 — SSoT ύψους χαρακτήρα (κουβαλά και το `TEXT_SIZE_LIMITS.DEFAULT_FONT_SIZE`,
 // γι' αυτό ο τοπικός import της σταθεράς έφυγε μαζί με το αντίγραφο της λογικής).
-import { resolveTextHeight } from '../../hooks/canvas/dxf-text-style-extractor';
+import { resolveTextHeightLive } from '../../hooks/canvas/dxf-text-style-extractor';
 // ADR-753 §21 — το ΙΔΙΟ «πού ξεκινούν τα γράμματα» που ρωτούν ο renderer και το explode: ο
 // αποκοπτόμενος χαρακτήρας πρέπει να είναι εκείνος που φαίνεται μέσα στην περιοχή.
 import { anchorOffset, entityAlignmentToAnchor } from '../../text-engine/fonts/text-horizontal-anchor';
@@ -157,7 +157,9 @@ function clipText(e: TextEntity | MTextEntity, region: ClipRegion): Entity[] {
   // ένα σχόλιο δεν είναι σύνδεσμος — οι δύο υλοποιήσεις είχαν ήδη αποκλίνει (η ντόπια έπεφτε
   // σε σκέτο `2.5` αντί για `TEXT_SIZE_LIMITS.DEFAULT_FONT_SIZE` στον flat κλάδο) και η ντόπια
   // διάβαζε `e.height` πάνω σε `TextEntity | MTextEntity`, δηλαδή ύψος ΠΛΑΙΣΙΟΥ για το MTEXT.
-  const charH = resolveTextHeight(e);
+  // Λεξιλόγιο μεγέθους: η περιοχή αποκοπής είναι ΚΟΣΜΟΣ — το ύψος πρέπει να είναι το ίδιο
+  // που ζωγραφίζεται, αλλιώς κόβουμε γράμματα που ο χρήστης βλέπει (ή αντίστροφα).
+  const charH = resolveTextHeightLive(e);
   const charW = charH * 0.6;
   const chars = [...plainText];
   if (chars.length === 0) return [];

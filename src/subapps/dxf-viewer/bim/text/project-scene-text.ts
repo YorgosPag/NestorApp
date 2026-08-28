@@ -16,16 +16,30 @@
  * real one → the ghost jumped / vanished and a corner drag read as a whole-entity move
  * (Giorgio 2026-07-06). Routing both through this SSoT keeps them byte-identical.
  *
- * Pure: zero React / DOM / Firestore / canvas / THREE deps.
+ * Zero React / DOM / canvas / THREE deps.
+ *
+ * 🔑 **ΤΟ ΕΝΑ ΣΗΜΕΙΟ ΟΠΟΥ Η ΚΛΙΜΑΚΑ ΣΧΕΔΙΟΥ ΑΓΓΙΖΕΙ ΤΟ ΚΕΙΜΕΝΟ.** Το ύψος βγαίνει από τον
+ * `resolveTextHeightLive`, δηλαδή περνά από το λεξιλόγιο μεγέθους (`utils/entity-size.ts`)
+ * με τη **ζωντανή** Κλίμακα σχεδίου. Επειδή ΟΛΟΙ οι γεωμετρικοί καταναλωτές —render,
+ * ghost, λαβές, όρια, snap, εκτύπωση, 3D— περνούν από εδώ, δεν υπάρχει διαδρομή στην οποία
+ * το κείμενο να μεγαλώνει αλλά το κουτί του να μένει πίσω. Ένα δεύτερο σημείο μετάφρασης
+ * θα ήταν ακριβώς αυτή η διαδρομή.
+ *
+ * ⚠️ Άρα ΔΕΝ είναι πια «zero Firestore»: διαβάζει τον getter του `drawingScale` store
+ * (καμία συνδρομή, ADR-040) — ίδια απόφαση και ίδιο σχήμα με το `rendering/hitTesting/
+ * bounds-annotation.ts`, που καλεί `scaleBarModelHalfThicknessLive` από «καθαρό» μονοπάτι
+ * ορίων. Η κλίμακα είναι κατάσταση της ΟΨΗΣ· ένα μέγεθος annotative δεν λύνεται χωρίς αυτήν.
  *
  * @see hooks/grips/grip-parametric-text-commits.ts — the commit consumer
  * @see rendering/ghost/apply-entity-preview.ts — the live-ghost consumer
+ * @see hooks/canvas/dxf-text-style-extractor.ts — `resolveTextHeightLive`
  */
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { DxfText } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { DxfTextNode } from '../../text-engine/types';
-import { resolveTextHeight, extractFirstRunStyle } from '../../hooks/canvas/dxf-text-style-extractor';
+import { resolveTextHeightLive, extractFirstRunStyle } from '../../hooks/canvas/dxf-text-style-extractor';
+import type { ScaleIndependentSize } from '../../utils/entity-size';
 import { resolveEntityText } from '../../utils/text-node-utils';
 
 /** Narrow scene shape needed to project a TEXT/MTEXT entity to a flat `DxfText`. */
@@ -40,6 +54,8 @@ export interface TextSceneShape {
   width?: number;       // MTEXT frame
   widthFactor?: number; // simple-TEXT X-scale
   fontFamily?: string;  // ADR-526 Φ5a — flat-font fallback (imported / Τέκτονας text w/o run font)
+  /** Η βάση μέτρησης του ύψους — απόν ⇒ `model` ⇒ ό,τι ίσχυε πάντα (βλ. `BaseEntity.annotationSize`). */
+  annotationSize?: ScaleIndependentSize;
 }
 
 /**
@@ -57,7 +73,10 @@ export function projectSceneTextToDxf(e: TextSceneShape, id: string): DxfText {
   // Πλέον διαβάζει το SSoT `resolveEntityText` (textNode πρώτο, flat ως fallback για legacy
   // οντότητες χωρίς AST) — το ΙΔΙΟ που ήδη χρησιμοποιούσαν hit-test/bounds/click.
   const text = resolveEntityText(e);
-  const height = resolveTextHeight(e);
+  // Το ύψος **αφού** απαντηθεί το «σε τι μετριέται;»: `model` (ή απόν) ⇒ ίδια τιμή με πριν·
+  // `paper` ⇒ mm χαρτιού × Κλίμακα σχεδίου, ο ΙΔΙΟΣ υπολογισμός που ήδη διπλώνει διαστάσεις,
+  // πίνακες και scale-bar (`paperHeightToModel`).
+  const height = resolveTextHeightLive(e);
   // ADR-557 Φ-attachment — carry the derived style (textAlign/textBaseline) so the box
   // SSoT (`resolveTextBox`, via `applyTextGripDrag`) is attachment-aware — i.e. the
   // transform matches the box the user grabbed (TL..BR), not a hard TL.

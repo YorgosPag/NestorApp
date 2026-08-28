@@ -25,7 +25,7 @@
 
 import type { DxfText } from '../../canvas-v2/dxf-canvas/dxf-types';
 // ADR-737 §18 — SSoT ύψους χαρακτήρα (αντικατέστησε το `getTextHeightWithFallback`).
-import { resolveTextHeight } from '../../hooks/canvas/dxf-text-style-extractor';
+import { resolveTextHeightLive } from '../../hooks/canvas/dxf-text-style-extractor';
 import { resolveTextEmBox } from '../../bim/text/text-box';
 import { splitTextLines, resolveLineSpacingRatio } from '../../bim/text/text-lines';
 import { obliqueShearFromAngle } from '../../bim/text/text-oblique';
@@ -142,7 +142,9 @@ export function layoutTextGlyphs(
   // ΠΕΜΠΤΗ διατύπωση της ίδιας αλυσίδας, με **αντίστροφη** προτεραιότητα (fontSize=canonical,
   // height=legacy — το αντίθετο από ό,τι δηλώνει το `entities.ts`). Ο μόνος της καλών ήταν
   // αυτή η γραμμή, και της περνούσε μονίμως `undefined` στο πρώτο όρισμα.
-  const textHeight = resolveTextHeight(entity);
+  // Λεξιλόγιο μεγέθους: «ένα κείμενο έχει το ίδιο μέγεθος σε κάτοψη και σε 3D» — η υπόσχεση
+  // του Φ C.22 παρακάτω ισχύει μόνο αν ΚΑΙ οι δύο δρόμοι ρωτούν την ίδια Κλίμακα σχεδίου.
+  const textHeight = resolveTextHeightLive(entity);
   // ADR-635 Φ C.22 — the atlas cells are EM ratios, so they must be multiplied by the EM the font
   // is drawn at, which is larger than the DXF text height by the face's cap-height ratio. The 2D
   // renderer applies the identical conversion, so a text is the same size in plan and in 3D.

@@ -19,7 +19,9 @@ import { createBoundingBox, type BoundingBox } from './Bounds';
 // the generous superset the spatial-index broad phase uses so it always encloses every line.
 import { textBoxAABB } from '../../bim/text/text-box';
 // ADR-737 §18 — ο SSoT για το ύψος χαρακτήρα (διαβάζει ΠΡΩΤΑ το run του `textNode`).
-import { resolveTextHeight } from '../../hooks/canvas/dxf-text-style-extractor';
+// Λεξιλόγιο μεγέθους: το broad phase οφείλει να περικλείει τα ΖΩΓΡΑΦΙΣΜΕΝΑ γράμματα. Με
+// ύψος προ-κλίμακας, ένα κείμενο σε 1:200 βγαίνει έξω από το δικό του bbox ⇒ ποτέ υποψήφιο.
+import { resolveTextHeightLive } from '../../hooks/canvas/dxf-text-style-extractor';
 // ADR-746 — ο ΕΝΑΣ αναγνώστης των σημείων ορισμού διάστασης (+ φίλτρο μη-πεπερασμένων).
 import { dimDefPoints, isFiniteDimPoint } from '../../systems/dimensions/dimension-def-points';
 import type { DimensionEntity } from '../../types/dimension';
@@ -260,7 +262,7 @@ export function calculateTextBounds(entity: EntityModel, tolerance: number): Bou
   const textEntity = entity as EntityWithText;
   const dxfText = {
     ...(textEntity as unknown as DxfText),
-    height: resolveTextHeight(textEntity),
+    height: resolveTextHeightLive(textEntity),
   };
   const aabb = textBoxAABB(dxfText);
   return createBoundingBox(

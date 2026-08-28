@@ -13,6 +13,18 @@ import type { DxfColor, DxfTextNode, TextRun, TextVerticalAnchor } from '../../t
 import { TEXT_SIZE_LIMITS } from '../../config/text-rendering-config';
 // ADR-635 Φ C.20 — SSoT για το χρώμα ενός run (TrueColor + ACI + κληρονομιά).
 import { resolveRunColorHex } from '../../text-engine/render/run-color';
+// Λεξιλόγιο μεγέθους — η ΜΙΑ απάντηση στο «σε τι μετριέται;». ΔΕΝ είναι δεύτερη μηχανή
+// μετατροπής: τυλίγει το `paperHeightToModel` που ήδη τρέφει διαστάσεις/πίνακες/scale-bar (N.18).
+import {
+  resolveSizeToModel,
+  sizeOrLegacyModel,
+  type ScaleIndependentSize,
+  type SizeContext,
+} from '../../utils/entity-size';
+import type { SceneUnits } from '../../utils/scene-units';
+// Το ζωντανό `drawingScale` SSoT (ADR-375 Φ B.2). Ανάγνωση getter τη στιγμή της κλήσης —
+// **καμία συνδρομή** (ADR-040), ακριβώς όπως `tableMmToWorldLive` / `scaleBarModelHalfThicknessLive`.
+import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 
 /**
  * Entity shape required by the text-style helpers (narrow subset of SceneEntity).
@@ -24,7 +36,16 @@ import { resolveRunColorHex } from '../../text-engine/render/run-color';
  * ακριβώς ώστε να **μην** ταιριάζει. Αν προσθέσεις πεδίο `height` σε νέα οντότητα με
  * σημασία «κουτί», αυτή η υπογραφή θα το καταπιεί ξανά — μην το κάνεις.
  */
-type TextStyledEntity = { textNode?: DxfTextNode; height?: number; fontSize?: number };
+type TextStyledEntity = {
+  textNode?: DxfTextNode;
+  height?: number;
+  fontSize?: number;
+  /**
+   * Η **βάση** μέτρησης του ύψους (`BaseEntity.annotationSize`). Απόν ⇒ `model` ⇒ η αλυσίδα
+   * ύψους παρακάτω απαντά μόνη της, **byte-ίδια** με ό,τι απαντούσε πριν το λεξιλόγιο.
+   */
+  annotationSize?: ScaleIndependentSize;
+};
 
 /**
  * ADR-635 Φ C.26 — THE node → vertical-anchor map. `baselineAnchored` (DXF TEXT group 73 = 0)
@@ -127,4 +148,75 @@ export function resolveTextHeight(entity: TextStyledEntity): number {
   // Γι' αυτό τα 7 σημεία είχαν γράψει το καθένα το δικό του `|| 2.5`: **παρέκαμπταν** τον SSoT
   // επειδή ο SSoT απαντούσε λάθος. Διορθώνεται εδώ, μία φορά, κι έτσι η υιοθέτηση είναι ασφαλής.
   return entity.height || entity.fontSize || TEXT_SIZE_LIMITS.DEFAULT_HEIGHT;
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// ΤΟ ΛΕΞΙΛΟΓΙΟ ΜΕΓΕΘΟΥΣ — «σε τι μετριέται αυτό το ύψος;»
+//
+// Ο `resolveTextHeight` παραπάνω απαντά **πόσο** (μονάδες κόσμου). Δεν απαντά **σε τι** — και
+// αυτή ακριβώς η σιωπή έκανε την Κλίμακα σχεδίου να μεγαλώνει πίνακες, διαστάσεις και
+// scale-bar αλλά **όχι** τα κείμενα: όλα τα άλλα αποθηκεύουν την ΠΡΟΘΕΣΗ («2,5 mm στο χαρτί»)
+// και τη μεταφράζουν στο render· το κείμενο αποθήκευε το ΑΠΟΤΕΛΕΣΜΑ («250 μονάδες»), οπότε η
+// κλίμακα δεν είχε τίποτα να ξαναϋπολογίσει.
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Το ύψος **ως πρόθεση** — καθαρή, χωρίς store και χωρίς κλίμακα.
+ *
+ * 🔑 **Ο κανόνας που κρατά τους writers έξω από το παιχνίδι.** Η βάση `model` ΔΕΝ κουβαλά δική
+ * της τιμή: για `model` η τιμή **είναι** η αλυσίδα ύψους (`resolveTextHeight`). Έτσι κάθε
+ * υπάρχων writer ύψους — grip-resize (`scaleTextNodeRunHeights`), εντολή ΚΛΙΜΑΚΑ
+ * (`scale-entity-transform`), `UpdateTextTransformCommand`, η μπάρα κειμένου — συνεχίζει να
+ * γράφει **εκεί που πάντα έγραφε**, χωρίς να χρειάζεται να μάθει το λεξιλόγιο.
+ *
+ * ⚠️ Η εναλλακτική («η αποθηκευμένη `value` υπερισχύει») δοκιμάστηκε στο χαρτί και **απορρίφθηκε**:
+ * θα σκίαζε την αλυσίδα ύψους, δηλαδή ένα grip-resize σε **εισαγόμενο** κείμενο θα φαινόταν να
+ * μην κάνει τίποτα — μέχρι να ενημερωθούν **και οι τέσσερις** writers. Αυτό είναι κατά λέξη το
+ * σχήμα που υποχρεώνει το AutoCAD να συντηρεί `ANNOUPDATE` / `OBJECTSCALE`.
+ *
+ * ⚠️ Αντίστροφα, για βάση `paper` η τιμή ζει **μόνο** στο `annotationSize.mm` — δεν υπάρχει
+ * δεύτερο σημείο να την κρατήσει. Όποιος writer αλλάξει ύψος σε `paper` κείμενο ΠΡΕΠΕΙ να
+ * γράψει εκεί (μέσω `modelSizeToPaper`). Σήμερα **κανένα** κείμενο δεν είναι `paper` — το
+ * πρώτο θα το γεννήσει το `useTextCreationTool` στο Στάδιο 2, μαζί με τους writers.
+ */
+export function resolveTextSize(entity: TextStyledEntity): ScaleIndependentSize {
+  const modelHeight = resolveTextHeight(entity);
+  // `sizeOrLegacyModel` = όλη η στρατηγική μετάβασης: απόν πεδίο ⇒ `model` ⇒ σημερινή τιμή.
+  const declared = sizeOrLegacyModel(entity.annotationSize, modelHeight);
+  return declared.basis === 'paper' ? declared : { basis: 'model', value: modelHeight };
+}
+
+/**
+ * Ύψος χαρακτήρα σε **μονάδες κόσμου**, στο δοσμένο πλαίσιο κλίμακας. Καθαρή — καμία ανάγνωση
+ * store, ώστε να είναι δοκιμάσιμη και να μπορεί ο καλών να ενέσει τη δική του κλίμακα
+ * (ίδιο σχήμα με `tableMmToWorld` / `scaleBarModelHalfThickness`).
+ *
+ * Οντότητα **χωρίς** `annotationSize` ⇒ `model` ⇒ επιστρέφει **ακριβώς** ό,τι ο
+ * `resolveTextHeight`, ανεξάρτητα από την κλίμακα. Αυτό —και όχι μια υπόσχεση— είναι που
+ * αφήνει τους 21 καταναλωτές του παλιού αναγνώστη αμετάβλητους.
+ */
+export function resolveTextHeightIn(entity: TextStyledEntity, ctx: SizeContext): number {
+  return resolveSizeToModel(resolveTextSize(entity), ctx);
+}
+
+/**
+ * Το ίδιο, με τη **ζωντανή** Κλίμακα σχεδίου (ADR-375) — ο δρόμος που χρησιμοποιεί κάθε
+ * γεωμετρικός καταναλωτής (render, hit-test, όρια, snap, εκτύπωση, 3D, εξαγωγή).
+ *
+ * Ανάγνωση getter τη στιγμή της κλήσης, **καμία συνδρομή** (ADR-040 κανόνας #2): η κλίμακα
+ * αλλάζει ~μία φορά ανά χειρονομία χρήστη, όχι ανά καρέ, και το bitmap cache ήδη ακυρώνεται
+ * σε αλλαγή της (`dxf-bitmap-cache-key.ts` → `drawingScale` στο κλειδί).
+ *
+ * `sceneUnits` προεπιλογή `'mm'` — η κανονική μονάδα της σκηνής (ADR-462) και η **ίδια**
+ * προεπιλογή που έχουν ήδη τα `tableMmToWorldLive` / `scaleBarModelHalfThicknessLive`.
+ * Δεύτερη σύμβαση εδώ θα σήμαινε ότι πίνακας και κείμενο διαφωνούν σε σκηνή σε μέτρα.
+ */
+export function resolveTextHeightLive(
+  entity: TextStyledEntity,
+  sceneUnits: SceneUnits = 'mm',
+): number {
+  return resolveTextHeightIn(entity, {
+    drawingScale: useDrawingScaleStore.getState().drawingScale,
+    sceneUnits,
+  });
 }

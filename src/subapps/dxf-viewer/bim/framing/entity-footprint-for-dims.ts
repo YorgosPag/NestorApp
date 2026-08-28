@@ -27,7 +27,7 @@ import { resolveMemberFootprintVertices } from '../structural/member-footprint-2
 import { wallFootprintPolygon } from '../finishes/wall-footprint-union';
 import { textBoxCornersWorld } from '../text/text-box';
 // ADR-737 §18 — SSoT ύψους χαρακτήρα (run του textNode πρώτα, μετά flat, μετά DIMTXT default).
-import { resolveTextHeight } from '../../hooks/canvas/dxf-text-style-extractor';
+import { resolveTextHeightLive } from '../../hooks/canvas/dxf-text-style-extractor';
 import { getEntityBounds, type BoundsEntity } from '../../systems/zoom/utils/bounds-entity';
 import { arcToPolyline } from '../../utils/geometry/GeometryUtils';
 import { isFinitePoint } from '../../config/geometry-constants';
@@ -64,7 +64,8 @@ export function resolveEntityFootprintForDims(entity: Entity): ReadonlyArray<Poi
         ...(entity as unknown as DxfText),
         // ADR-737 §18 — SSoT: το inline `height || fontSize || 2.5` αγνοούσε το run του
         // `textNode` (άρα έδινε προ-κλίμακας ύψος) και για MTEXT διάβαζε το ύψος πλαισίου.
-        height: resolveTextHeight(entity),
+        // Λεξιλόγιο μεγέθους: οι κυανές clearance dims μετρούν από το ΟΡΑΤΟ κουτί.
+        height: resolveTextHeightLive(entity),
       };
       const corners = textBoxCornersWorld(dxfText);
       // Finite-guard (SSoT `isFinitePoint`): a degenerate text (no glyph metrics / bad width)

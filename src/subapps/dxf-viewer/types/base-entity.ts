@@ -11,6 +11,9 @@
 import type { Point2D } from '../rendering/types/Types';
 import type { LineweightMm } from './scene-types';
 import type { Discipline } from '../bim/discipline/bim-discipline';
+// Λεξιλόγιο μεγέθους — «σε τι μετριέται αυτό;» (utils/entity-size.ts). Type-only: καμία
+// εξάρτηση χρόνου εκτέλεσης, κανένας κύκλος (entity-size → annotation-scale → scene-units).
+import type { ScaleIndependentSize } from '../utils/entity-size';
 
 export interface PreviewGripPoint {
   position: Point2D;
@@ -141,6 +144,32 @@ export interface BaseEntity {
    * existing entity resolves to the correct discipline without migration.
    */
   discipline?: Discipline;
+
+  /**
+   * **Η βάση μέτρησης του μεγέθους αυτής της σημείωσης** — το ΕΝΑ πεδίο που απαντά «ακολουθεί
+   * αυτό το αντικείμενο την Κλίμακα σχεδίου;» (`utils/entity-size.ts`, `followsDrawingScale`).
+   *
+   * - **Απόν ⇒ `model`** (μονάδες κόσμου). Αυτή είναι όλη η στρατηγική μετάβασης: κάθε
+   *   αποθηκευμένη οντότητα που γράφτηκε πριν το λεξιλόγιο αποδίδει **ακριβώς** ό,τι απέδιδε
+   *   χθες. Καμία σιωπηλή αλλαγή σε σχέδιο που ο χρήστης θεωρούσε τελειωμένο (ADR-362).
+   * - **`paper` ⇒ mm χαρτιού**, που η κλίμακα μεταφράζει σε μονάδες κόσμου **στο render**.
+   *   Αυτό —και μόνο αυτό— μεγαλώνει όταν ο χρήστης γυρίσει 1:100 → 1:200.
+   *
+   * ⚠️ **Γιατί `annotationSize` και όχι `size`**: το `size` είναι ΠΙΑΣΜΕΝΟ σε δύο απογόνους με
+   * **άλλη** σημασία — `PointEntity.size` (ακτίνα δείκτη) και `CenterMarkEntity.size` (μήκος
+   * βραχίονα). Δύο μεγέθη, ένα όνομα, είναι ακριβώς το σχήμα που έκανε το `MTextEntity.height`
+   * να διαβάζεται ως ύψος γραμματοσειράς (ADR-737 §18) — δεν το επαναλαμβάνουμε.
+   *
+   * ⚠️ **Γιατί `ScaleIndependentSize` και όχι `EntitySize`**: η βάση `screen` (px, αμετάβλητα
+   * και από το ζουμ) περιγράφει **λαβές/δείκτες/βοηθήματα** — πράγματα που δεν τυπώνονται και
+   * δεν είναι οντότητες. Μια οντότητα με μέγεθος οθόνης θα δηλητηρίαζε το bitmap cache, που
+   * **σκόπιμα** δεν κλειδώνει στο view transform (ADR-726 Φ3). Ο μεταγλωττιστής το κάνει
+   * αδύνατο αντί να το αφήσει σε σύμβαση.
+   *
+   * @see utils/entity-size.ts — το λεξιλόγιο (`resolveSizeToModel`, `modelSizeToPaper`)
+   * @see hooks/canvas/dxf-text-style-extractor.ts — `resolveTextHeightLive`, ο αναγνώστης
+   */
+  annotationSize?: ScaleIndependentSize;
 
   lineweight?: number;
   opacity?: number;
