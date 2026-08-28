@@ -5490,6 +5490,7 @@
       "addedDate": "2026-08-22"
     },
     "esco-search-tokens": {
+      "addedDate": "2026-08-27",
       "ssotFile": "src/lib/esco/search-tokens.ts",
       "description": "ADR-132 — THE ESCO tokenizer, for BOTH ends of the same prefix index. Measured 2026-08-26: the same algorithm lived in FIVE places — the two importers (write side: generateSearchTokens, byte-identical twins), esco.service.ts and esco-skill.service.ts (read side: normalizeForSearch + queryToTokens, byte-identical twins) and ai-pipeline/tools/esco-search-utils.ts (server read side). THREE of the five carried a comment saying 'Same algorithm as ...' — a comment where a module belonged (the ADR-749 'second truth' shape, here with five dialects). WHY IT MATTERS MORE THAN USUAL: Firestore array-contains needs EXACT element equality, so if the write side and the read side normalise differently the search returns an EMPTY LIST with no error, no log and no red test — it reads on screen as 'no such occupation'. Canonical: normalizeEscoText / escoQueryTokens (whole words, read) / escoIndexTokens (every prefix >= ESCO_MIN_TOKEN_LENGTH, write). The importers reach it by relative path (scripts/ cannot use @/ reliably). Anchors: src/lib/esco/__tests__/search-tokens.test.ts (subset contract write<->read over a Greek+English corpus; mutations M18/M19/M20 red).",
       "forbiddenPatterns": [
@@ -5502,6 +5503,7 @@
       "tier": 3
     },
     "esco-relevance": {
+      "addedDate": "2026-08-27",
       "ssotFile": "src/lib/esco/relevance.ts",
       "description": "ADR-132 — THE ESCO relevance ladder (exact 1.0 / prefix 0.9 / secondary key 0.8 / contains 0.7 / alternative 0.6 / token 0.5), once. Measured 2026-08-26: it lived in THREE places and TWO of them had already drifted — esco-skill.service.ts correctly dropped the ISCO rung (skills have no code) but ai-pipeline/tools/esco-search-utils.ts silently dropped the ALTERNATIVE-LABEL rung, so the server enforced 'pick from the list' using a ranking the human never saw. That is not an error that goes red; it is a second judgement. The ORDER of the rungs IS the behaviour: checking 'contains' before 'startsWith' flattens autocomplete. Canonical: judgeEscoRelevance + ESCO_RELEVANCE. Anchors: src/lib/esco/__tests__/relevance.test.ts (mutations M21/M22/M23 red).",
       "forbiddenPatterns": [
@@ -5514,6 +5516,7 @@
       "tier": 3
     },
     "esco-token-search": {
+      "addedDate": "2026-08-27",
       "ssotFile": "src/lib/esco/token-search.ts",
       "description": "ADR-132 — THE prefix search over the ESCO cache (Firestore array-contains + client-side all-tokens filter + relevance sort + shared LRU), for occupations AND skills. Measured 2026-08-26 by CHECK 3.28: esco.service.ts and esco-skill.service.ts were parallel twins with THREE clones between them (65 / 89 / 77 tokens); what actually differed was four things — the collection, the document type, the domain mapping, and one extra rung (the ISCO code, which skills do not have). Those are PARAMETERS, not a reason for a second implementation. The two services went 631 -> 340 lines. Firestore's array-contains takes ONE value per query, which is why the first token queries and the rest filter client-side over limit*2 documents — that is the index contract, not a shortcut. The cache is ONE Map with a namespace per vocabulary: two caches would be two eviction policies that drift (they already had). ALLOWLISTED SECOND READER: ai-pipeline/tools/esco-search-utils.ts runs on the Admin SDK with a deliberate multi-token fallback (try each token until one returns rows) — a different mechanism, not a clone; it shares the ladder via esco-relevance. Anchors: src/lib/esco/__tests__/token-search.test.ts (mutations M24-M28 red).",
       "forbiddenPatterns": [

@@ -349,3 +349,175 @@ describe('Ν — το ορφανό artifact μπλοκάρει ΤΗΝ ΠΥΛΗ, 
     expect(`${red.stdout}${red.stderr}`).toMatch(/zz-orphan-probe/);
   }, 30_000);
 });
+
+/**
+ * =============================================================================
+ * Χ — ΤΙ ΠΑΡΑΓΕΙ Η ΠΗΓΗ, **ΟΛΟΚΛΗΡΟ** (ADR-744 §15 Φ4)
+ * =============================================================================
+ *
+ * 🔴 ΤΟ ΠΕΡΙΣΤΑΤΙΚΟ ΠΟΥ ΤΑ ΓΕΝΝΗΣΕ — ΜΕΤΡΗΜΕΝΟ, ΟΧΙ ΥΠΟΘΕΤΙΚΟ
+ * -----------------------------------------------------------
+ * Το `dafcf62a` (2026-08-20) πρόσθεσε τα per-route slices **και** τη συγχώνευσή
+ * τους στο manifest — **μόνο στον γεννήτορα**. Ο ελεγκτής (Layer 2, CI) έμεινε
+ * με το `renderArtifacts` σκέτο, δηλαδή αναπαρήγαγε **2** artifacts ενώ η πηγή
+ * παράγει **19**. Η πύλη ήταν **δομικά αδύνατο** να περάσει και έμεινε κόκκινη
+ * **8 ημέρες** στο CI. Διαφορά: 17 route entries · `sliceBytes` 192.833 →
+ * 313.750 · `inputsSha256`. **Τρία** top-level κλειδιά, κανένα άλλο.
+ *
+ * ⚠️ ΤΟ ΔΕΥΤΕΡΟ ΚΕΝΟ ΗΤΑΝ ΧΕΙΡΟΤΕΡΟ ΑΠΟ ΤΟ ΠΡΩΤΟ, ΚΑΙ ΕΙΝΑΙ Ο ΛΟΓΟΣ ΤΩΝ Χ3/Χ4:
+ * ένα route slice **μπαγιάτικο ως προς την πηγή** αλλά **συνεπές ως προς το
+ * manifest** περνούσε **και τα δύο** Layers καθαρό — το Layer 1 ρωτά «ταιριάζει
+ * το sha256 που υπέγραψε το manifest;» (ναι), το Layer 2 δεν το κοίταζε καθόλου.
+ * Αυτό δεν είναι υποθετικό σχήμα: είναι **ακριβώς** η κατάσταση που αφήνει πίσω
+ * του ένα μισό regenerate ή ένα cherry-pick.
+ *
+ * 🔑 ΓΙΑΤΙ ΚΑΘΕ ΑΓΚΥΡΑ ΕΧΕΙ ΠΑΡΟΝΟΜΑΣΤΗ: μια «διόρθωση» που κάνει το `--full` να
+ * συγκρίνει το manifest **με τον εαυτό του** γίνεται πράσινη και δεν ελέγχει
+ * τίποτα. Το Χ0 μετρά τι έβλεπε ο ελεγκτής **πριν**, το Χ3 ότι η πύλη είναι
+ * πράσινη **χωρίς** πείραγμα — αλλιώς τα Χ1/Χ4 δεν λένε τίποτα.
+ *
+ * ⚠️ Το Jest εδώ τρέχει με `@swc/jest`, που **ΣΒΗΝΕΙ ΤΟΥΣ ΤΥΠΟΥΣ**: ό,τι
+ * επιβάλλεται εδώ επιβάλλεται από **εκτέλεση**, ποτέ από υπογραφή.
+ * =============================================================================
+ */
+describe('Χ — η αναπαραγωγή του ελεγκτή είναι ΟΛΟΚΛΗΡΗ', () => {
+  const { spawnSync } = require('node:child_process');
+  const { loadConfig } = require('../lib/i18n-shell-slice/config');
+  const P = require('../lib/i18n-shell-slice/plan');
+  const { sha256 } = require('../lib/i18n-shell-slice/slice-build');
+  const { normalize } = require('../check-i18n-shell-slice');
+
+  const CHECKER = path.join(REPO, 'scripts/check-i18n-shell-slice.js');
+  const MANIFEST_REL = 'src/i18n/generated/shell-slice.manifest.json';
+  const config = loadConfig(REPO);
+  const declaredRoutes = Object.keys(config.routeSlices || {}).length;
+  const isRoute = artifactPath => artifactPath.includes(`/${RS.ROUTES_DIR}/`);
+
+  let bare;
+  let complete;
+
+  // Ένας γράφος για όλη την ομάδα: το χτίσιμο κοστίζει ~20s και είναι ΤΟ ΙΔΙΟ
+  // αντικείμενο που θα ξαναχτιζόταν — ο γεννήτορας το περνά για τον ίδιο λόγο.
+  beforeAll(() => {
+    const graph = P.buildModuleGraph(REPO);
+    const plan = P.buildShellPlan(REPO, config, graph);
+    bare = P.renderArtifacts(REPO, config, plan);
+    complete = RS.renderComplete({ projectRoot: REPO, config, plan, graph, rendered: bare });
+  }, 300_000);
+
+  it('Χ0 ΠΑΡΟΝΟΜΑΣΤΗΣ: το `renderArtifacts` ΜΟΝΟ ΤΟΥ δεν παράγει ΚΑΜΙΑ διαδρομή', () => {
+    // Χωρίς αυτόν τον ισχυρισμό, το Χ1 θα ήταν πράσινο ακόμη κι αν το
+    // `renderArtifacts` έφτιαχνε ήδη τα πάντα — δηλαδή δεν θα έλεγε τίποτα.
+    expect(declaredRoutes).toBeGreaterThan(0);
+    expect([...bare.artifacts.keys()].filter(isRoute)).toEqual([]);
+  });
+
+  it('Χ1: το `renderComplete` προσθέτει ΚΑΘΕ δηλωμένη διαδρομή, και το manifest του είναι ΤΑΥΤΟΣΗΜΟ με τον δίσκο', () => {
+    const routePaths = [...complete.rendered.artifacts.keys()].filter(isRoute);
+
+    expect(complete.refused).toEqual([]);
+    expect(routePaths).toHaveLength(declaredRoutes);
+    expect(complete.rendered.artifacts.size).toBe(bare.artifacts.size + declaredRoutes);
+    expect(normalize(complete.rendered.manifestText))
+      .toBe(normalize(fs.readFileSync(path.join(REPO, MANIFEST_REL), 'utf8')));
+  });
+
+  it('Χ2: ΝΤΕΤΕΡΜΙΝΙΣΜΟΣ — δεύτερη κλήση στις ίδιες εισόδους δίνει byte-ίδιο manifest', () => {
+    // Εμβέλεια: η ΣΥΝΘΕΣΗ. Ο ντετερμινισμός ΟΛΗΣ της αλυσίδας (δύο ανεξάρτητα
+    // χτισίματα γράφου ⇒ byte-ίδιο manifest) μετρήθηκε χωριστά· εδώ δεν
+    // ξαναχτίζεται γράφος για να μη διπλασιαστεί ο χρόνος της σουίτας.
+    const graph = P.buildModuleGraph(REPO);
+    const plan = P.buildShellPlan(REPO, config, graph);
+    const rendered = P.renderArtifacts(REPO, config, plan);
+    const again = RS.renderComplete({ projectRoot: REPO, config, plan, graph, rendered });
+
+    expect(again.rendered.manifestText).toBe(complete.rendered.manifestText);
+  }, 300_000);
+
+  /**
+   * ⚠️ ΤΑ Χ0-Χ2 ΚΑΛΟΥΝ ΤΗ ΣΥΝΑΡΤΗΣΗ ΑΠΕΥΘΕΙΑΣ — αποδεικνύουν ότι **παράγει**
+   * σωστά, όχι ότι **κάποιος τη ρωτά**. Αν κάποιος τη βγάλει από το `runFull`,
+   * τα Χ0-Χ2 μένουν ΠΡΑΣΙΝΑ και η πύλη ξαναγίνεται τυφλή στις διαδρομές. Γι'
+   * αυτό εδώ τρέχει το ΠΡΑΓΜΑΤΙΚΟ CLI και κρίνεται ο κωδικός εξόδου του.
+   * (Το ίδιο μάθημα με το Ν3 παραπάνω.)
+   */
+  describe('Χ3/Χ4 — το ΠΡΑΓΜΑΤΙΚΟ CLI, στον πραγματικό δίσκο', () => {
+    const ROUTES_ABS = path.join(REPO, config.outputDir, RS.ROUTES_DIR);
+    const [language] = config.languages;
+
+    let targetRel;
+    let targetAbs;
+    let originalRoute;
+    let originalManifest;
+
+    beforeAll(() => {
+      const [first] = fs.readdirSync(ROUTES_ABS).filter(f => f.endsWith(`.${language}.json`)).sort();
+      expect(first).toBeDefined();
+      targetAbs = path.join(ROUTES_ABS, first);
+      targetRel = [config.outputDir, RS.ROUTES_DIR, first].join('/');
+    });
+
+    beforeEach(() => {
+      originalRoute = fs.readFileSync(targetAbs, 'utf8');
+      originalManifest = fs.readFileSync(path.join(REPO, MANIFEST_REL), 'utf8');
+    });
+
+    // 🛡️ Επαναφορά ΠΑΝΤΑ, byte-ίδια, από μνήμη. ΠΟΤΕ `git checkout`: το δέντρο
+    // είναι κοινό με άλλον πράκτορα και ένα checkout θα έσβηνε ξένη δουλειά.
+    afterEach(() => {
+      if (originalRoute !== undefined) fs.writeFileSync(targetAbs, originalRoute, 'utf8');
+      if (originalManifest !== undefined) {
+        fs.writeFileSync(path.join(REPO, MANIFEST_REL), originalManifest, 'utf8');
+      }
+    });
+
+    const runGate = (...args) => spawnSync(process.execPath, [CHECKER, ...args], {
+      cwd: REPO, encoding: 'utf8',
+    });
+
+    /**
+     * Αλλάζει ΕΝΑ χαρακτήρα μιας τιμής κρατώντας **ίδιο πλήθος bytes**, ώστε το
+     * πείραγμα να μη μετακινήσει κανένα μέγεθος: το `checkRouteLedger` κρίνει
+     * bytes έναντι προϋπολογισμού, και ένα πείραγμα που αλλάζει μέγεθος θα
+     * κοκκίνιζε για **λάθος λόγο** — δηλαδή θα ήταν ψεύτικη άγκυρα.
+     */
+    function tamperSameLength(text) {
+      const match = /: "([^"\\]{4,})"/.exec(text);
+      expect(match).not.toBeNull();
+      const value = match[1];
+      const last = value.codePointAt(value.length - 1);
+      const swapped = last >= 0x391 && last <= 0x3c8
+        ? String.fromCodePoint(last + 1)                 // ελληνικό → ελληνικό (2 bytes → 2 bytes)
+        : (value.slice(-1) === 'x' ? 'y' : 'x');         // ASCII → ASCII (1 byte → 1 byte)
+      const mutated = `${value.slice(0, -1)}${swapped}`;
+
+      expect(Buffer.byteLength(mutated, 'utf8')).toBe(Buffer.byteLength(value, 'utf8'));
+      expect(mutated).not.toBe(value);
+      return text.replace(`: "${value}"`, `: "${mutated}"`);
+    }
+
+    it('Χ3 ΠΑΡΟΝΟΜΑΣΤΗΣ: ΧΩΡΙΣ πείραγμα, ΚΑΙ ΤΑ ΔΥΟ Layers είναι πράσινα', () => {
+      expect(runGate().status).toBe(0);          // Layer 1
+      expect(runGate('--full').status).toBe(0);  // Layer 2 — ΗΤΑΝ ΑΔΥΝΑΤΟ ΩΣ ΤΙΣ 2026-08-28
+    }, 300_000);
+
+    it('Χ4 🔴 ΜΕΤΑΛΛΑΞΗ: «συνεπές αλλά ΜΠΑΓΙΑΤΙΚΟ» ⇒ Layer 1 ΠΡΑΣΙΝΟ, Layer 2 ΚΟΚΚΙΝΟ και ΤΟ ΟΝΟΜΑΖΕΙ', () => {
+      const tampered = tamperSameLength(originalRoute);
+      fs.writeFileSync(targetAbs, tampered, 'utf8');
+
+      // Το manifest ΞΑΝΑΫΠΟΓΡΑΦΕΙ το πειραγμένο artifact: αυτό είναι όλο το νόημα
+      // — η ασυνέπεια εξαφανίζεται, μένει μόνο η ΜΠΑΓΙΑΤΙΚΟΤΗΤΑ ως προς την πηγή.
+      const manifest = JSON.parse(originalManifest);
+      manifest.artifacts[targetRel] = sha256(normalize(tampered));
+      fs.writeFileSync(path.join(REPO, MANIFEST_REL), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+
+      // Layer 1 δεν έχει τρόπο να το δει: ρωτά το manifest, και το manifest συμφωνεί.
+      expect(runGate().status).toBe(0);
+
+      // Layer 2 ρωτά ΤΗΝ ΠΗΓΗ — και τώρα βλέπει τις διαδρομές.
+      const red = runGate('--full');
+      expect(red.status).toBe(1);
+      expect(`${red.stdout}${red.stderr}`).toContain(targetRel);
+    }, 300_000);
+  });
+});

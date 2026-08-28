@@ -73,7 +73,8 @@ const { buildSlices, stableStringify, sha256, fingerprintShellFile } = require('
 const { loadNamespaceBundles } = require('./lib/i18n-namespace-extract');
 const { loadKeyConstants } = require('./lib/i18n-shell-slice/key-extract');
 const { auditLedger, describeFailures, auditRouteLedger, describeRouteFailures } = require('./lib/i18n-shell-slice/ledger');
-const { ROUTES_DIR, routeIdFor } = require('./lib/i18n-shell-slice/route-slices');
+const RS = require('./lib/i18n-shell-slice/route-slices');
+const { ROUTES_DIR, routeIdFor } = RS;
 const { parseModule } = require('./lib/module-graph/parse-module');
 const { readTsPathAliases, resolveSpecifier, toPosix } = require('./lib/module-graph/resolve-specifier');
 
@@ -295,7 +296,11 @@ function runLayerOne(config, stagedFiles) {
 // ─── Layer 2 ─────────────────────────────────────────────────────────────────
 
 function runFull(config) {
-  const plan = buildShellPlan(PROJECT_ROOT, config, buildModuleGraph(PROJECT_ROOT));
+  // ⚠️ Ο γράφος ΚΡΑΤΙΕΤΑΙ. Ήταν inline και πεταγόταν, οπότε ο ελεγκτής δεν
+  // μπορούσε να ρωτήσει τι παράγουν οι διαδρομές — κοστίζει ~20s και είναι
+  // **ο ίδιος** που θα ξαναχτιζόταν (ADR-744 §15 Φ4).
+  const graph = buildModuleGraph(PROJECT_ROOT);
+  const plan = buildShellPlan(PROJECT_ROOT, config, graph);
   if (plan.violations.length > 0) {
     const first = plan.violations[0];
     fail(
@@ -306,7 +311,22 @@ function runFull(config) {
     return;
   }
 
-  const rendered = renderArtifacts(PROJECT_ROOT, config, plan);
+  // 🔴 ADR-744 §15 Φ4 — Η ΑΝΑΠΑΡΑΓΩΓΗ ΠΡΕΠΕΙ ΝΑ ΕΙΝΑΙ **ΟΛΟΚΛΗΡΗ**.
+  // Το `renderArtifacts` δίνει **2** artifacts· η πηγή παράγει **19**. Μέχρι τις
+  // 2026-08-28 αυτός ο βρόχος συνέκρινε 2 και το manifest diff αποτύγχανε πάντα
+  // (17 route entries + sliceBytes + inputsSha256) — πύλη δομικά αδύνατο να
+  // περάσει, **8 ημέρες κόκκινη στο CI**. Ο ίδιος ιδιοκτήτης με τον γεννήτορα:
+  // αντιγραφή εδώ θα ήταν το sibling clone του N.18 / CHECK 3.28.
+  const complete = RS.renderComplete({ projectRoot: PROJECT_ROOT, config, plan, graph, rendered: renderArtifacts(PROJECT_ROOT, config, plan) });
+  if (complete.refused.length > 0) {
+    const first = complete.refused[0];
+    fail(
+      `${complete.refused.length} route slice(s) refuse to emit — unresolved dynamic t(), starting at ${first.url}`,
+      'classify them in .i18n-shell-slice.json → dynamicKeyPolicy',
+    );
+    return;
+  }
+  const rendered = complete.rendered;
   for (const [relPath, text] of rendered.artifacts) {
     const file = path.join(PROJECT_ROOT, relPath);
     const actual = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : null;

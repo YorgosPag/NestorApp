@@ -46,12 +46,9 @@ const {
   deadPolicyEntries,
   renderArtifacts,
   manifestPath,
-  buildManifest,
-  sliceName,
 } = require('./lib/i18n-shell-slice/plan');
-const { stableStringify } = require('./lib/i18n-shell-slice/slice-build');
 const RS = require('./lib/i18n-shell-slice/route-slices');
-const MG = require('./lib/module-graph');
+const { wholeNamespacesOf } = RS;
 const {
   auditLedger,
   describeFailures,
@@ -200,15 +197,14 @@ function main() {
   // ⚠️ Ο γράφος περνιέται, δεν ξαναχτίζεται: κοστίζει ~38s και είναι **ο ίδιος**.
   // Οι διαδρομές χτίζονται ΠΡΙΝ την αναφορά, ώστε η αναφορά να ξέρει ποιες
   // εγγραφές policy υπηρετούν σελίδα και να μην τις πει «νεκρές».
-  const routes = emitRouteSlices(config, plan, rendered, graph);
-  if (routes === null) process.exit(1);
+  const complete = RS.renderComplete({ projectRoot: PROJECT_ROOT, config, plan, graph, rendered });
+  if (complete.refused.length > 0) {
+    reportRefusedRoutes(complete.refused);
+    process.exit(1);
+  }
+  const routes = complete.routes;
   reportPlan(plan, rendered, config, args.explain, routes.map(route => route.unusedPolicy));
 
-  // 🔑 ΤΑ ROUTE SLICES ΥΠΟΓΡΑΦΟΝΤΑΙ ΑΠΟ ΤΟ ΙΔΙΟ MANIFEST — καμία νέα μηχανή
-  // φρεσκάδας. Το `checkArtifactIntegrity` του CHECK 3.34 διατρέχει το
-  // `manifest.artifacts`, οπότε ένα χειρόγραφα πειραγμένο ή μισο-παραγμένο route
-  // slice μπλοκάρει **δωρεάν**. Ένα artifact που κανείς δεν υπογράφει είναι
-  // ακριβώς το σχήμα που το ADR-744 υπάρχει για να καταργήσει.
   // 🔴 ADR-777 §8.38 — Η ΑΡΝΗΣΗ ΤΟΥ ΜΗΤΡΩΟΥ, ΠΡΙΝ ΓΡΑΦΤΕΙ ΤΙΠΟΤΑ. Ένα artifact που
   // ξεπερνά το ταβάνι μιας εγγραφής δεν επιτρέπεται να προσγειωθεί: αυτό ακριβώς
   // συνέβη με το `search-results` (1,6 KB δηλωμένα → 47,8 KB πραγματικά, 11 μέρες).
@@ -239,43 +235,25 @@ function main() {
     process.exit(1);
   }
 
-  const merged = mergeRouteArtifacts({ rendered, routes, config, plan });
-  if (!args.dryRun) writeArtifacts(config, merged);
+  if (!args.dryRun) writeArtifacts(config, complete.rendered);
   if (routes.length > 0) reportRoutes(routes, config.languages[0], routeLedger);
   process.exit(0);
 }
 
-/** Το `rendered`, με τα route slices μέσα στα artifacts ΚΑΙ μέσα στο manifest. */
-function mergeRouteArtifacts({ rendered, routes, config, plan }) {
-  if (routes.length === 0) return rendered;
-  const artifacts = new Map(rendered.artifacts);
-  for (const route of routes) artifacts.set(route.artifactPath, stableStringify(route.resources));
-  const manifest = buildManifest({ config, plan, artifacts, slices: rendered.slices });
-  return { ...rendered, artifacts, manifest, manifestText: stableStringify(manifest) };
-}
-
 /**
- * ADR-744 §8 Φ4 — τα per-route slices, με **την ίδια** μηχανή και τον **ίδιο**
- * φρουρό: ανεπίλυτη δυναμική `t()` ⇒ **άρνηση**, ποτέ σιωπηλά μικρότερο slice.
- * @returns {?object[]} `null` όταν κάποια διαδρομή αρνήθηκε
+ * ADR-744 §8 Φ4 — η **παρουσίαση** της άρνησης: ανεπίλυτη δυναμική `t()` ⇒
+ * **άρνηση**, ποτέ σιωπηλά μικρότερο slice.
+ *
+ * 🔑 Ο **υπολογισμός** ζει στο `RS.renderComplete` (κοινός με τον ελεγκτή)· εδώ
+ * μένει μόνο ό,τι είναι **έξοδος αυτού του εργαλείου**. Ο ελεγκτής μεταφράζει
+ * το ίδιο `refused` σε `fail(...)` — ίδια κρίση, δύο φωνές (πρότυπο `cli.js`).
  */
-function emitRouteSlices(config, plan, rendered, graph) {
-  const declared = Object.keys(config.routeSlices || {});
-  if (declared.length === 0) return [];
-
-  const [language] = config.languages;
-  const shellSlice = JSON.parse(rendered.artifacts.get(MG.toPosix(path.join(config.outputDir, sliceName(language)))) || '{}');
-  const built = RS.buildAllRouteSlices(PROJECT_ROOT, config, graph, shellSlice, wholeNamespacesOf(plan));
-
-  const refused = built.filter(route => route.violations.length > 0);
-  if (refused.length === 0) return built;
-
+function reportRefusedRoutes(refused) {
   console.error(`\n${RED}❌ ${refused.length} route slice(s) ΑΡΝΗΘΗΚΑΝ — ανεπίλυτη δυναμική t()${NC}`);
   for (const route of refused) {
     console.error(`${RED}   ${route.url}${NC}`);
     reportViolations(route.violations);
   }
-  return null;
 }
 
 /** Compact UTF-8 bytes — η **ίδια** μονάδα με το πρώτο κατάστιχο, ώστε τα δύο να συγκρίνονται. */
@@ -337,11 +315,6 @@ function reportRoutes(built, language, audit) {
     + `Κ1 ${axis(ROUTE_SHAPE.PAGE)} σελίδες / ${axis(ROUTE_SHAPE.SECOND_SHELL)} δεύτερα κελύφη${NC}`
   );
   console.log(`${DIM}    (αφαιρεμένα όσα απαντά ήδη το κέλυφος — ένωση θα ήταν ΜΕΓΑΛΥΤΕΡΗ από σήμερα)${NC}`);
-}
-
-/** Τα namespaces που ταξιδεύουν ΟΛΟΚΛΗΡΑ στο κέλυφος — δεν τα ξαναζητά καμία διαδρομή. */
-function wholeNamespacesOf(plan) {
-  return [...plan.wants.entries()].filter(([, want]) => want.whole).map(([namespace]) => namespace);
 }
 
 module.exports = { parseArgs, printHelp, reportViolations, reportPlan, writeArtifacts, main, PROJECT_ROOT };

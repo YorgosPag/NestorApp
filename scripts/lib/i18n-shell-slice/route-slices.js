@@ -35,7 +35,8 @@
 const path = require('node:path');
 
 const MG = require('../module-graph');
-const { buildShellPlan, renderArtifacts } = require('./plan');
+const { buildShellPlan, renderArtifacts, buildManifest, sliceName } = require('./plan');
+const { stableStringify } = require('./slice-build');
 
 const ROUTES_DIR = 'routes';
 
@@ -145,6 +146,80 @@ function buildAllRouteSlices(projectRoot, config, graph, shellSlice, wholeNamesp
     }));
 }
 
+/** Τα namespaces που ταξιδεύουν ΟΛΟΚΛΗΡΑ στο κέλυφος — δεν τα ξαναζητά καμία διαδρομή. */
+function wholeNamespacesOf(plan) {
+  return [...plan.wants.entries()].filter(([, want]) => want.whole).map(([namespace]) => namespace);
+}
+
+/**
+ * ADR-744 §15 Φ4 — **ΤΙ ΠΑΡΑΓΕΙ Η ΤΡΕΧΟΥΣΑ ΠΗΓΗ, ΟΛΟΚΛΗΡΟ**, με έναν ιδιοκτήτη.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΓΙΑΤΙ ΥΠΑΡΧΕΙ ΑΥΤΗ Η ΣΥΝΑΡΤΗΣΗ — ΜΕΤΡΗΜΕΝΟ ΠΕΡΙΣΤΑΤΙΚΟ, ΟΧΙ ΑΙΣΘΗΤΙΚΗ
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Το `renderArtifacts` **δεν** είναι η πλήρης απάντηση: από το `dafcf62a`
+ * (2026-08-20) η πηγή παράγει **και** τα per-route slices. Η σύνθεση των δύο
+ * ζούσε **ιδιωτικά μέσα στον γεννήτορα**, οπότε ο ελεγκτής (Layer 2, CI)
+ * αναπαρήγαγε **ελλιπές** manifest και η πύλη ήταν **δομικά αδύνατο** να
+ * περάσει — κόκκινη **8 ημέρες**. Μετρημένη διαφορά: **17** route entries,
+ * `sliceBytes` 192.833 → **313.750**, και το παραγόμενο `inputsSha256`.
+ * **Τρία** top-level κλειδιά, καμία άλλη γραμμή.
+ *
+ * ⚠️ **ΚΑΙ ΤΟ ΧΕΙΡΟΤΕΡΟ ΚΕΝΟ ΗΤΑΝ ΤΟ ΔΕΥΤΕΡΟ**: ο βρόχος σύγκρισης του Layer 2
+ * διατρέχει το `rendered.artifacts` — **2** εγγραφές. Άρα τα 17 route slices
+ * **δεν συγκρίνονταν ΠΟΤΕ** με ό,τι παράγει η τρέχουσα πηγή. Αλλαγή πηγής που
+ * αγγίζει **μόνο** μια διαδρομή ήταν αόρατη **και στα δύο** Layers: το Layer 1
+ * ελέγχει sha256 **έναντι του manifest**, άρα κατάσταση «συνεπής αλλά
+ * μπαγιάτικη» περνούσε καθαρή.
+ *
+ * 🔑 **ΓΙΑΤΙ ΕΔΩ ΚΑΙ ΟΧΙ ΑΝΤΙΓΡΑΦΗ ΣΤΟΝ ΕΛΕΓΚΤΗ**: γραμμένο δεύτερη φορά θα ήταν
+ * το **sibling clone** που ο N.18 απαγορεύει και το CHECK 3.28 μετρά — ακριβώς
+ * το σχήμα που περιγράφει το `cli.js` («owned once»). Στο `plan.js` δεν χωρά:
+ * αυτό το module **ήδη** κάνει `require('./plan')`, άρα θα γεννιόταν **κύκλος**.
+ *
+ * 🔑 **Η ΓΡΑΜΜΗ ΤΟΥ ΔΙΑΧΩΡΙΣΜΟΥ — ΔΕΔΟΜΕΝΑ, ΟΧΙ ΑΠΟΦΑΣΕΙΣ**: εδώ δεν τυπώνεται
+ * τίποτα και δεν καλείται `process.exit`. Οι αρνήσεις **επιστρέφονται**· ο
+ * γεννήτορας τις τυπώνει και βγαίνει, ο ελεγκτής τις μεταφράζει σε `fail(...)`.
+ * Μια πύλη που **γράφει** ή **τυπώνει** για να κρίνει είναι πύλη που δεν
+ * αποτυγχάνει ποτέ — γι' αυτό εδώ δεν γίνεται **καμία** εγγραφή στον δίσκο:
+ * μόνο το `writeArtifacts` του γεννήτορα γράφει.
+ *
+ * @param {object} args
+ * @param {string} args.projectRoot
+ * @param {object} args.config
+ * @param {object} args.plan     το σχέδιο του **κελύφους**
+ * @param {object} args.graph    ο ΙΔΙΟΣ γράφος που έχτισε το `plan` — δεν ξαναχτίζεται (~20s)
+ * @param {object} args.rendered η έξοδος του `renderArtifacts` για το κέλυφος
+ * @returns {{rendered: object, routes: object[], refused: object[]}}
+ */
+function renderComplete({ projectRoot, config, plan, graph, rendered }) {
+  const declared = Object.keys(config.routeSlices || {});
+  if (declared.length === 0) return { rendered, routes: [], refused: [] };
+
+  const [language] = config.languages;
+  const shellPath = MG.toPosix(path.join(config.outputDir, sliceName(language)));
+  const shellSlice = JSON.parse(rendered.artifacts.get(shellPath) || '{}');
+  const routes = buildAllRouteSlices(projectRoot, config, graph, shellSlice, wholeNamespacesOf(plan));
+
+  const refused = routes.filter(route => route.violations.length > 0);
+  if (refused.length > 0) return { rendered, routes, refused };
+
+  // 🔑 ΤΑ ROUTE SLICES ΥΠΟΓΡΑΦΟΝΤΑΙ ΑΠΟ ΤΟ ΙΔΙΟ MANIFEST — καμία νέα μηχανή
+  // φρεσκάδας. Το `checkArtifactIntegrity` του CHECK 3.34 διατρέχει το
+  // `manifest.artifacts`, οπότε ένα χειρόγραφα πειραγμένο ή μισο-παραγμένο route
+  // slice μπλοκάρει **δωρεάν**. Ένα artifact που κανείς δεν υπογράφει είναι
+  // ακριβώς το σχήμα που το ADR-744 υπάρχει για να καταργήσει.
+  const artifacts = new Map(rendered.artifacts);
+  for (const route of routes) artifacts.set(route.artifactPath, stableStringify(route.resources));
+  const manifest = buildManifest({ config, plan, artifacts, slices: rendered.slices });
+
+  return {
+    rendered: { ...rendered, artifacts, manifest, manifestText: stableStringify(manifest) },
+    routes,
+    refused,
+  };
+}
+
 module.exports = {
   ROUTES_DIR,
   routeIdFor,
@@ -154,4 +229,6 @@ module.exports = {
   subtractShell,
   buildRouteSlice,
   buildAllRouteSlices,
+  wholeNamespacesOf,
+  renderComplete,
 };
