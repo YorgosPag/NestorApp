@@ -17,8 +17,10 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import type { OwnerProperty } from '@/types/owner-property';
+import { DEFAULT_LISTING_AGREEMENT } from '@/types/listing-agreement';
 import {
   AGENCY_ATTESTATION,
+  CUSTOMARY_COMMISSION_PERCENTAGE,
   OWNER_CONSENT,
   type BrokeredListingMandate,
 } from '@/types/owner-property-mandate';
@@ -56,6 +58,12 @@ function mandate(over: Partial<BrokeredListingMandate> = {}): BrokeredListingMan
     confirmation: 'pending',
     confirmedByUserId: null,
     proof: { via: OWNER_CONSENT },
+    agreement: DEFAULT_LISTING_AGREEMENT,
+    compensation: {
+      type: 'percentage',
+      percentage: CUSTOMARY_COMMISSION_PERCENTAGE,
+      vatIncluded: false,
+    },
     decidedAt: null,
     notifiedAt: '2026-08-20T09:00:00.000Z',
     viewedAt: '2026-08-20T12:00:00.000Z',

@@ -27,8 +27,10 @@ import {
   mandateStandingOf,
   type MandateStanding,
 } from '@/lib/mandate/mandate-standing';
+import { DEFAULT_LISTING_AGREEMENT } from '@/types/listing-agreement';
 import {
   AGENCY_ATTESTATION,
+  CUSTOMARY_COMMISSION_PERCENTAGE,
   OWNER_CONSENT,
   type BrokeredListingMandate,
 } from '@/types/owner-property-mandate';
@@ -46,6 +48,12 @@ function mandate(over: Partial<BrokeredListingMandate> = {}): BrokeredListingMan
     confirmation: 'pending',
     confirmedByUserId: null,
     proof: { via: OWNER_CONSENT },
+    agreement: DEFAULT_LISTING_AGREEMENT,
+    compensation: {
+      type: 'percentage',
+      percentage: CUSTOMARY_COMMISSION_PERCENTAGE,
+      vatIncluded: false,
+    },
     decidedAt: null,
     notifiedAt: '2026-08-20T09:00:00.000Z',
     viewedAt: null,

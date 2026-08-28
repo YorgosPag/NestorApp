@@ -184,6 +184,8 @@ async function handler(
     {
       clientContactId: parsedMandate.mandate.clientContactId,
       expiresAt: parsedMandate.mandate.expiresAt,
+      agreement: parsedMandate.mandate.agreement,
+      compensation: parsedMandate.mandate.compensation,
       proof:
         parsedMandate.mandate.via === AGENCY_ATTESTATION
           ? agencyAttestation(ctx.uid, parsedMandate.mandate.documentPath)

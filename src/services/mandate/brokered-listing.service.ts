@@ -48,12 +48,14 @@ import {
   type OwnerPropertyWriteResult,
 } from '@/services/owner-property/owner-property-write.service';
 import type { BrokerageAuthority } from '@/lib/auth/brokerage-authority';
+import type { ListingAgreement } from '@/types/listing-agreement';
 import type { OwnerPropertyDraft } from '@/types/owner-property';
 import {
   AGENCY_ATTESTATION,
   initialConfirmationFor,
   OWNER_CONSENT,
   type BrokeredListingMandate,
+  type MandateCompensation,
   type MandateProof,
 } from '@/types/owner-property-mandate';
 
@@ -66,6 +68,10 @@ export interface BrokeredMandateRequest {
   readonly clientContactId: string;
   readonly expiresAt: string;
   readonly proof: MandateProof;
+  /** Τι είδους εντολή — RESO `ListingAgreement` (ADR-827 §3.1). */
+  readonly agreement: ListingAgreement;
+  /** Οι όροι αμοιβής. **Ιδιωτικοί** — ποτέ στη δημόσια προβολή (ADR-827 §3.4). */
+  readonly compensation: MandateCompensation;
 }
 
 /**
@@ -132,6 +138,11 @@ export async function createBrokeredListing(
     confirmation: initialConfirmationFor(request.proof.via),
     confirmedByUserId: null,
     proof: request.proof,
+    // ⚠️ Οι δύο όροι της σύμβασης έρχονται **αυτούσιοι** από το αίτημα — καμία
+    //    προεπιλογή εδώ. Ένα `?? DEFAULT_LISTING_AGREEMENT` σε αυτή τη γραμμή θα
+    //    δέσμευε τον ιδιοκτήτη σε όρο που **κανείς δεν του έδειξε** (ADR-827 Α4/Α5).
+    agreement: request.agreement,
+    compensation: request.compensation,
     decidedAt: null,
     notifiedAt: null,
     viewedAt: null,

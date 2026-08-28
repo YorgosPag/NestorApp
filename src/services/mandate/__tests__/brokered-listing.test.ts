@@ -15,7 +15,13 @@ import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
 import { validDraft } from '@/lib/owner-property/__tests__/owner-property-fixtures';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import type { OwnerProperty } from '@/types/owner-property';
-import { AGENCY_ATTESTATION, OWNER_CONSENT } from '@/types/owner-property-mandate';
+import { DEFAULT_LISTING_AGREEMENT } from '@/types/listing-agreement';
+import {
+  AGENCY_ATTESTATION,
+  CUSTOMARY_COMMISSION_PERCENTAGE,
+  OWNER_CONSENT,
+  type MandateCompensation,
+} from '@/types/owner-property-mandate';
 import { requireBrokerageCapability } from '@/lib/auth/brokerage-authority';
 
 process.env.MANDATE_CONSENT_SECRET ??= 'δοκιμαστικό-μυστικό-συγκατάθεσης';
@@ -69,6 +75,13 @@ const AUTHORITY = (() => {
 })();
 const FUTURE = '2027-08-20T12:00:00.000Z';
 
+/** Οι όροι αμοιβής — **ιδιωτικοί**· καμία άγκυρα δεν τους περιμένει στη δημόσια προβολή. */
+const COMPENSATION: MandateCompensation = {
+  type: 'percentage',
+  percentage: CUSTOMARY_COMMISSION_PERCENTAGE,
+  vatIncluded: false,
+};
+
 function dbWithContact(emails: unknown): AdminFirestore {
   const fake = new FakeFirestore();
   fake.seed(COLLECTIONS.CONTACTS, CLIENT, { emails });
@@ -99,6 +112,8 @@ describe('🔴 Β — «ρώτα τον πελάτη»: τίποτα δημόσ�
     const db = dbWithContact([{ email: 'kostas@example.gr', isPrimary: true }]);
     const result = await createBrokeredListing(db, AUTHORITY, IDENTITY, validDraft(), {
       clientContactId: CLIENT,
+      agreement: DEFAULT_LISTING_AGREEMENT,
+      compensation: COMPENSATION,
       expiresAt: FUTURE,
       proof: OWNER_CONSENT_PROOF,
     });
@@ -114,6 +129,8 @@ describe('🔴 Β — «ρώτα τον πελάτη»: τίποτα δημόσ�
     const db = dbWithContact([{ email: 'kostas@example.gr', isPrimary: true }]);
     await createBrokeredListing(db, AUTHORITY, IDENTITY, validDraft(), {
       clientContactId: CLIENT,
+      agreement: DEFAULT_LISTING_AGREEMENT,
+      compensation: COMPENSATION,
       expiresAt: FUTURE,
       proof: OWNER_CONSENT_PROOF,
     });
@@ -131,6 +148,8 @@ describe('🔴 Β — «ρώτα τον πελάτη»: τίποτα δημόσ�
     const db = dbWithContact([{ email: 'kostas@example.gr', isPrimary: true }]);
     await createBrokeredListing(db, AUTHORITY, IDENTITY, validDraft(), {
       clientContactId: CLIENT,
+      agreement: DEFAULT_LISTING_AGREEMENT,
+      compensation: COMPENSATION,
       expiresAt: FUTURE,
       proof: OWNER_CONSENT_PROOF,
     });
@@ -150,6 +169,8 @@ describe('🔴 Γ — «έχω υπογεγραμμένο χαρτί»: δημο
     const db = dbWithContact([{ email: 'kostas@example.gr', isPrimary: true }]);
     await createBrokeredListing(db, AUTHORITY, IDENTITY, validDraft(), {
       clientContactId: CLIENT,
+      agreement: DEFAULT_LISTING_AGREEMENT,
+      compensation: COMPENSATION,
       expiresAt: FUTURE,
       proof: agencyAttestation('user_maria'),
     });
@@ -164,6 +185,8 @@ describe('🔴 Γ — «έχω υπογεγραμμένο χαρτί»: δημο
     const db = dbWithContact([{ email: 'kostas@example.gr', isPrimary: true }]);
     await createBrokeredListing(db, AUTHORITY, IDENTITY, validDraft(), {
       clientContactId: CLIENT,
+      agreement: DEFAULT_LISTING_AGREEMENT,
+      compensation: COMPENSATION,
       expiresAt: FUTURE,
       proof: agencyAttestation('user_maria', 'entoles/kostas.pdf'),
     });
@@ -184,6 +207,8 @@ describe('🔴 Γ — «έχω υπογεγραμμένο χαρτί»: δημο
     const db = dbWithContact([{ email: 'kostas@example.gr', isPrimary: true }]);
     await createBrokeredListing(db, AUTHORITY, IDENTITY, validDraft(), {
       clientContactId: CLIENT,
+      agreement: DEFAULT_LISTING_AGREEMENT,
+      compensation: COMPENSATION,
       expiresAt: FUTURE,
       proof: agencyAttestation('user_maria'),
     });
@@ -193,6 +218,8 @@ describe('🔴 Γ — «έχω υπογεγραμμένο χαρτί»: δημο
     const db2 = dbWithContact([{ email: 'kostas@example.gr', isPrimary: true }]);
     await createBrokeredListing(db2, AUTHORITY, IDENTITY, validDraft(), {
       clientContactId: CLIENT,
+      agreement: DEFAULT_LISTING_AGREEMENT,
+      compensation: COMPENSATION,
       expiresAt: FUTURE,
       proof: OWNER_CONSENT_PROOF,
     });
@@ -217,6 +244,8 @@ describe('🔴 Ε — το γραφείο μαθαίνει ΑΝ έμαθε ο π
     const db = dbWithContact([]);
     const result = await createBrokeredListing(db, AUTHORITY, IDENTITY, validDraft(), {
       clientContactId: CLIENT,
+      agreement: DEFAULT_LISTING_AGREEMENT,
+      compensation: COMPENSATION,
       expiresAt: FUTURE,
       proof: OWNER_CONSENT_PROOF,
     });
@@ -233,6 +262,8 @@ describe('🔴 Ε — το γραφείο μαθαίνει ΑΝ έμαθε ο π
     const db = dbWithContact([{ email: 'kostas@example.gr', isPrimary: true }]);
     const result = await createBrokeredListing(db, AUTHORITY, IDENTITY, validDraft(), {
       clientContactId: CLIENT,
+      agreement: DEFAULT_LISTING_AGREEMENT,
+      compensation: COMPENSATION,
       expiresAt: FUTURE,
       proof: OWNER_CONSENT_PROOF,
     });
@@ -246,6 +277,8 @@ describe('🔴 Ε — το γραφείο μαθαίνει ΑΝ έμαθε ο π
     const db = dbWithContact([{ email: 'kostas@example.gr', isPrimary: true }]);
     const result = await createBrokeredListing(db, AUTHORITY, IDENTITY, validDraft(), {
       clientContactId: CLIENT,
+      agreement: DEFAULT_LISTING_AGREEMENT,
+      compensation: COMPENSATION,
       expiresAt: FUTURE,
       proof: OWNER_CONSENT_PROOF,
     });
@@ -262,6 +295,8 @@ describe('🔴 Ε — το γραφείο μαθαίνει ΑΝ έμαθε ο π
     ]);
     const result = await createBrokeredListing(db, AUTHORITY, IDENTITY, validDraft(), {
       clientContactId: CLIENT,
+      agreement: DEFAULT_LISTING_AGREEMENT,
+      compensation: COMPENSATION,
       expiresAt: FUTURE,
       proof: OWNER_CONSENT_PROOF,
     });
@@ -280,6 +315,8 @@ describe('🔴 Φ — άκυρη εντολή δεν γεννά αγγελία',
     const db = dbWithContact([{ email: 'kostas@example.gr', isPrimary: true }]);
     const result = await createBrokeredListing(db, AUTHORITY, IDENTITY, validDraft(), {
       clientContactId: CLIENT,
+      agreement: DEFAULT_LISTING_AGREEMENT,
+      compensation: COMPENSATION,
       expiresAt: '2020-01-01T00:00:00.000Z',
       proof: OWNER_CONSENT_PROOF,
     });

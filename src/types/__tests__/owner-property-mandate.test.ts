@@ -31,9 +31,11 @@ import {
   MANDATE_DEFAULT_DURATION_DAYS,
   MANDATE_INVARIANTS,
   MANDATE_PROOF_VIAS,
+  CUSTOMARY_COMMISSION_PERCENTAGE,
   OWNER_CONSENT,
   type BrokeredListingMandate,
 } from '@/types/owner-property-mandate';
+import { DEFAULT_LISTING_AGREEMENT } from '@/types/listing-agreement';
 import { listingAuthorshipOf } from '@/types/owner-property';
 
 const NOW = '2026-08-20T12:00:00.000Z';
@@ -47,6 +49,12 @@ function brokered(over: Partial<BrokeredListingMandate> = {}): BrokeredListingMa
     confirmation: 'pending',
     confirmedByUserId: null,
     proof: { via: OWNER_CONSENT },
+    agreement: DEFAULT_LISTING_AGREEMENT,
+    compensation: {
+      type: 'percentage',
+      percentage: CUSTOMARY_COMMISSION_PERCENTAGE,
+      vatIncluded: false,
+    },
     decidedAt: null,
     notifiedAt: null,
     viewedAt: null,

@@ -20,7 +20,11 @@ import { MANDATE_STANDINGS } from '@/lib/mandate/mandate-standing';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import type { OwnerProperty } from '@/types/owner-property';
 import type { BrokeredListingMandate } from '@/types/owner-property-mandate';
-import { OWNER_CONSENT } from '@/types/owner-property-mandate';
+import { DEFAULT_LISTING_AGREEMENT } from '@/types/listing-agreement';
+import {
+  CUSTOMARY_COMMISSION_PERCENTAGE,
+  OWNER_CONSENT,
+} from '@/types/owner-property-mandate';
 
 const NOW = '2026-08-21T10:00:00.000Z';
 const OFFICE = 'comp_alfa';
@@ -37,6 +41,12 @@ function brokeredMandate(over: Partial<BrokeredListingMandate> = {}): BrokeredLi
     confirmation: 'pending',
     confirmedByUserId: null,
     proof: { via: OWNER_CONSENT },
+    agreement: DEFAULT_LISTING_AGREEMENT,
+    compensation: {
+      type: 'percentage',
+      percentage: CUSTOMARY_COMMISSION_PERCENTAGE,
+      vatIncluded: false,
+    },
     decidedAt: null,
     notifiedAt: '2026-08-20T09:00:00.000Z',
     viewedAt: null,

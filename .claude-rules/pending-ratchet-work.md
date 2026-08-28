@@ -6,6 +6,27 @@
 > `helvetiker_regular.typeface.json` (MgOpen εκτός SPDX, μηδέν καταναλωτές) και το
 > `Roboto-Regular.ttf` (νεκρό μετά το ADR-803). **CHECK 3.69: baseline 1/8 → 0/6.**
 
+- 🟡 **28/08 — ΕΞΙ ΑΝΤΙΓΡΑΦΑ ΤΟΥ ΙΔΙΟΥ `BrokeredListingMandate` FIXTURE** *(ADR-827 §6, εντοπίστηκε κατά τη Φάση Α)*
+
+  **Τι**: έξι αρχεία test φτιάχνουν το **ίδιο** fixture εντολής με copy-paste — ίδια 10 πεδία,
+  ίδιο `Partial<>` override pattern, μόνο οι τιμές διαφέρουν:
+  `lib/mandate/__tests__/mandate-standing.test.ts` · `lib/owner-property/__tests__/owner-property-fixtures.ts`
+  · `services/mandate/__tests__/mandate-actions.test.ts` · `…/mandate-catalog.test.ts`
+  · `…/mandate-decision-notice.test.ts` · `types/__tests__/owner-property-mandate.test.ts`
+
+  **Η απόδειξη ότι κοστίζει**: η προσθήκη **δύο** υποχρεωτικών πεδίων (`agreement` ·
+  `compensation`) απαίτησε **έξι** πανομοιότυπες επεξεργασίες — συν **δώδεκα** ακόμη στο
+  `brokered-listing.test.ts`. Το επόμενο πεδίο θα κοστίσει το ίδιο.
+
+  **Fix**: ένας `brokeredMandateFixture(over?)` στο `owner-property-fixtures.ts` (**υπάρχει ήδη**
+  ως αρχείο και ήδη το εισάγει το `brokered-listing.test.ts`) και τα άλλα πέντε να τον καλούν.
+
+  ⚠️ **Γιατί δεν έγινε στη Φάση Α**: 6 αρχεία ⇒ κατά τον N.0.2 πάει σε pending, όχι επιτόπου
+  διόρθωση. ⚠️ Και ο N.18 είναι **δομικά τυφλός** εδώ: το Layer 2 του jscpd σαρώνει **μόνο**
+  `src` με ρίζα `check-jscpd-ratchet.js:71` — τα `__tests__` **μέσα** στο `src` μετρώνται, αλλά
+  το `jscpd:diff` τρέχει **μόνο στα staged**, οπότε έξι αρχεία που δεν αγγίζονται μαζί δεν
+  συγκρίνονται ποτέ.
+
 - 🟡 **27/08 — Η ΛΙΣΤΑ `properties` ΗΤΑΝ ΔΟΜΙΚΑ ΚΛΕΙΣΤΗ** — *ο κανόνας διορθώθηκε· **μένει μέτρηση παραγωγής*** *(ADR-823)*
 
   ⚠️ **Η ΑΡΧΙΚΗ ΔΙΑΤΥΠΩΣΗ ΑΥΤΗΣ ΤΗΣ ΕΓΓΡΑΦΗΣ ΗΤΑΝ ΛΑΘΟΣ — και η διόρθωση είναι το εύρημα.**

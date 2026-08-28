@@ -19,11 +19,36 @@
 
 import { z } from 'zod';
 
+import { LISTING_AGREEMENTS, type ListingAgreement } from '@/types/listing-agreement';
 import {
   AGENCY_ATTESTATION,
   OWNER_CONSENT,
+  type MandateCompensation,
   type MandateProofVia,
 } from '@/types/owner-property-mandate';
+
+/**
+ * **Οι όροι αμοιβής, όπως φτάνουν από το δίκτυο** (ADR-827 Α5).
+ *
+ * 🔑 `discriminatedUnion` **και εδώ**, όχι μόνο στον τύπο: ο τύπος δεν φυλά τίποτα σε
+ * χρόνο εκτέλεσης, και ένα σώμα `{ type: 'fixed', percentage: 2 }` θα περνούσε αθόρυβα
+ * σε αφελές σχήμα. Η ίδια άμυνα με το `decisionFrom` της `api/mandate/[token]`.
+ *
+ * ⚠️ **Θετικοί αριθμοί, και το ποσοστό ≤ 100.** Αρνητική αμοιβή δεν είναι όρος που
+ * κάποιος συμφώνησε — είναι πληκτρολόγηση ή επίθεση.
+ */
+const compensationSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('percentage'),
+    percentage: z.number().positive().max(100),
+    vatIncluded: z.boolean(),
+  }),
+  z.object({
+    type: z.literal('fixed'),
+    amountEUR: z.number().positive(),
+    vatIncluded: z.boolean(),
+  }),
+]);
 
 /** Το αίτημα εντολής, όπως φτάνει από το δίκτυο. */
 export const brokeredMandateSchema = z.object({
@@ -31,6 +56,14 @@ export const brokeredMandateSchema = z.object({
   /** ISO ημερομηνία λήξης — η **συμφωνία**, όχι ρολόι. */
   expiresAt: z.string().min(1),
   via: z.enum([OWNER_CONSENT, AGENCY_ATTESTATION]),
+  /**
+   * **Τι είδους εντολή** (ADR-827 §3.1). Χωρίς προεπιλογή **στο σχήμα**: η προεπιλογή
+   * είναι απόφαση της **φόρμας** (`DEFAULT_LISTING_AGREEMENT`), και ένα `.default()`
+   * εδώ θα σήμαινε ότι αίτημα **χωρίς** τον όρο δεσμεύει τον ιδιοκτήτη σε όρο που
+   * κανείς δεν του έδειξε.
+   */
+  agreement: z.enum(LISTING_AGREEMENTS),
+  compensation: compensationSchema,
   /**
    * Μονοπάτι του σαρωμένου εγγράφου εντολής. **Προαιρετικό** — η βεβαίωση στέκει με
    * όνομα και ώρα, όπως ακριβώς στο MLS, όπου το χαρτί δεν ανεβαίνει καν.
@@ -43,6 +76,8 @@ export interface BrokeredMandateInput {
   readonly expiresAt: string;
   readonly via: MandateProofVia;
   readonly documentPath: string | null;
+  readonly agreement: ListingAgreement;
+  readonly compensation: MandateCompensation;
 }
 
 /**
@@ -74,6 +109,8 @@ export function brokeredMandateFromRequest(value: unknown):
       expiresAt: parsed.data.expiresAt,
       via: parsed.data.via,
       documentPath: parsed.data.documentPath ?? null,
+      agreement: parsed.data.agreement,
+      compensation: parsed.data.compensation,
     },
   };
 }

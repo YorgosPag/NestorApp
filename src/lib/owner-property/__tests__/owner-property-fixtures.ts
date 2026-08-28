@@ -13,7 +13,9 @@ import type {
   OwnerPropertyDraft,
   OwnerPropertyMedia,
 } from '@/types/owner-property';
+import { DEFAULT_LISTING_AGREEMENT } from '@/types/listing-agreement';
 import {
+  CUSTOMARY_COMMISSION_PERCENTAGE,
   OWNER_CONSENT,
   type BrokeredListingMandate,
 } from '@/types/owner-property-mandate';
@@ -112,6 +114,12 @@ export function brokeredOwnerProperty(
       confirmation: 'pending',
       confirmedByUserId: null,
       proof: { via: OWNER_CONSENT },
+      agreement: DEFAULT_LISTING_AGREEMENT,
+      compensation: {
+        type: 'percentage',
+        percentage: CUSTOMARY_COMMISSION_PERCENTAGE,
+        vatIncluded: false,
+      },
       decidedAt: null,
       notifiedAt: null,
       viewedAt: null,
