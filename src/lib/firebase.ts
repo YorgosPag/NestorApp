@@ -8,7 +8,7 @@ import {
   connectFirestoreEmulator,
   type Firestore,
 } from 'firebase/firestore';
-import { getAuth, connectAuthEmulator } from 'firebase/auth';
+import { getAuth, connectAuthEmulator, onAuthStateChanged } from 'firebase/auth';
 import { getStorage, connectStorageEmulator } from 'firebase/storage';
 
 const firebaseConfig = {
@@ -50,6 +50,46 @@ function createDb(): Firestore {
 export const db: Firestore = createDb();
 export const auth = getAuth(app);
 export const storage = getStorage(app);
+
+/**
+ * Περιμένει να **λυθεί** η αρχική ταυτότητα του Firebase.
+ *
+ * During SSR hydration, `auth.currentUser` is null even for logged-in users because
+ * Firebase hasn't restored the session yet. This helper resolves once the first
+ * `onAuthStateChanged` callback fires — at that point the auth state is authoritative
+ * (user or null).
+ *
+ * @returns `true` if a user is authenticated, `false` otherwise
+ *
+ * ⚠️ **«Περίμενε να ΜΑΘΕΙΣ» ≠ «περίμενε να ΣΥΝΔΕΘΕΙ»**: επιλύεται στην **πρώτη** απάντηση,
+ * **και όταν αυτή είναι `null`**. Ο αποσυνδεδεμένος δεν κρεμάει ποτέ.
+ *
+ * 🔑 **ΓΙΑΤΙ ΖΕΙ ΕΔΩ (μετακινήθηκε 2026-08-28)**: γεννήθηκε στο
+ * `services/firestore/auth-context.ts` για τη διαδρομή Firestore. Όταν την ίδια απάντηση
+ * χρειάστηκε και η διαδρομή **HTTP** (`lib/api/enterprise-api-client`), το `lib/` θα
+ * εισήγαγε από το `services/` — **ανάποδο στρώμα**, και μετρημένα **έσπασε τρεις σουίτες
+ * στο import** (`ReferenceError: fetch is not defined`: η αλυσίδα τραβούσε το node build
+ * του `firebase/auth`, που τα διπλά του `@/lib/firebase` δεν κόβουν). Η συνάρτηση δεν έχει
+ * **τίποτα** από Firestore: είναι καθαρά Auth, και ζει δίπλα στο `auth` που ρωτά.
+ * Το `auth-context` το **ξανα-εξάγει**, ώστε οι τρεις υπάρχοντες καλούντες να μην αγγιχτούν.
+ *
+ * ⛔ **ΜΗΝ το ξαναγράψεις πάνω στο `auth.authStateReady()`.** Ναι, υπάρχει
+ * (`@firebase/auth 1.12.0`). Αλλά είναι **σημασιολογικά ισοδύναμο**, όχι καλύτερο: η ίδια η
+ * πηγή του SDK το υλοποιεί με `onAuthStateChanged`, και το `registerStateListener` καλεί το
+ * πρώτο callback **μετά** το `_initializationPromise` — ακριβώς η εγγύηση που δίνει και το
+ * παρακάτω. Αλλαγή ⇒ μηδέν παρατηρήσιμο κέρδος, ρίσκο σε **τέσσερις** ζωντανούς καλούντες.
+ */
+export function waitForAuthReady(): Promise<boolean> {
+  // Already initialized — resolve immediately
+  if (auth.currentUser) return Promise.resolve(true);
+
+  return new Promise<boolean>((resolve) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      unsubscribe();
+      resolve(!!user);
+    });
+  });
+}
 
 // ── Firebase Emulator Connection (QA/Dev mode) ───────────────────────
 // When NEXT_PUBLIC_USE_FIREBASE_EMULATOR=true, client SDK connects to local emulators.

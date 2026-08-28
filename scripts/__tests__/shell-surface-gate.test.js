@@ -57,10 +57,49 @@ function runGate(args = []) {
  *
  * ⚠️ Αν το `replace` δεν άλλαξε τίποτα, αποτυγχάνει **ρητά**: μια μετάλλαξη που
  *    δεν μετάλλαξε δεν είναι δοκιμή.
+ *
+ * 🔴 **ΚΑΙ ΑΝ ΤΟ ΣΤΟΧΟ ΤΟ ΒΡΙΣΚΕΙ ΔΥΟ ΦΟΡΕΣ, ΕΠΙΣΗΣ ΟΥΡΛΙΑΖΕΙ** *(2026-08-28)*.
+ *
+ * **Το περιστατικό**: το `String.replace(string, …)` αντικαθιστά **ΜΟΝΟ ΤΗΝ ΠΡΩΤΗ**
+ * εμφάνιση. Το commit `39116219` πρόσθεσε στο `MandateCatalogContent.tsx` ένα δεύτερο
+ * `<section className="flex w-full flex-col gap-6">` — **πάνω** από αυτό που φυλά η πύλη.
+ * Από εκείνη τη στιγμή η μετάλλαξη **Μ1** χτυπούσε λάθος στοιχείο: η πύλη έμενε πράσινη,
+ * και το test κοκκίνιζε λέγοντας *«η πύλη δεν έπιασε»* — ενώ η αλήθεια ήταν *«κανείς δεν
+ * της έδειξε τίποτα»*. **Μετρήθηκε**: μετάλλαξη στην 1η εμφάνιση ⇒ έξοδος `0`· στη 2η ⇒
+ * έξοδος `1` + `content-padding`.
+ *
+ * ⚠️ Το σιωπηλό αστόχημα είναι **χειρότερο** από την αποτυχία: μια μετάλλαξη που πέφτει σε
+ * αδιάφορο σημείο δεν δοκιμάζει τίποτα, και μπορεί κάλλιστα να μείνει **πράσινη** — που
+ * είναι ακριβώς ο ορισμός της ψεύτικης άγκυρας. Άρα η ασάφεια απαγορεύεται **εκ κατασκευής**:
+ * όποιος θέλει τη 2η εμφάνιση, τη **ζητά με αριθμό**.
+ *
+ * @param {number} [occurrence=1] ποια εμφάνιση του `from` να μεταλλαχθεί (1-based).
+ *   Μόνο για στόχους-συμβολοσειρές· ένα `RegExp` το χειρίζεται μόνο του.
  */
-function withMutation(file, from, to, assertFn) {
+function withMutation(file, from, to, assertFn, occurrence = 1) {
   const before = fs.readFileSync(file, 'utf8');
-  const after = before.replace(from, to);
+
+  let after;
+  if (typeof from === 'string') {
+    const parts = before.split(from);
+    const found = parts.length - 1;
+    // Ο μεταλλάκτης ουρλιάζει ΚΑΙ για «δεν βρέθηκε» ΚΑΙ για «βρέθηκε αλλού επίσης».
+    if (found < occurrence) {
+      throw new Error(
+        `withMutation: ο στόχος βρέθηκε ${found} φορές στο ${file}, ζητήθηκε η #${occurrence}.`,
+      );
+    }
+    if (found > 1 && occurrence === 1) {
+      throw new Error(
+        `withMutation: ΑΣΑΦΗΣ στόχος — ${found} εμφανίσεις στο ${file}. ` +
+        'Το replace θα χτυπούσε την 1η σιωπηλά. Δήλωσε ρητά ποια θέλεις (5ο όρισμα).',
+      );
+    }
+    after = parts.slice(0, occurrence).join(from) + to + parts.slice(occurrence).join(from);
+  } else {
+    after = before.replace(from, to);
+  }
+
   expect(after).not.toBe(before); // ο μεταλλάκτης ουρλιάζει
   try {
     fs.writeFileSync(file, after);
@@ -166,6 +205,10 @@ describe('Μ — μεταλλάξεις ΣΤΙΣ ΕΙΣΟΔΟΥΣ', () => {
         expect(r.code).not.toBe(0);
         expect(r.out).toContain('content-padding');
       },
+      // 🔑 **Η ΔΕΥΤΕΡΗ** — η επιφάνεια της **σελίδας**. Η πρώτη ανήκει στο
+      //    `CapabilityNotice` (μπήκε στο `39116219`) και η πύλη **σωστά** δεν τη φυλά:
+      //    δεν είναι σελίδα. Μετρημένο: 1η ⇒ έξοδος 0 · 2η ⇒ έξοδος 1 + `content-padding`.
+      2,
     );
   });
 

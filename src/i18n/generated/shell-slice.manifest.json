@@ -57,7 +57,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "d7fbf685ee63936076299115a6cd840f747ec4f4f7cd7f8ae29f0fae4e73db6b",
+  "inputsSha256": "6a42a5b307ac32f9fa68314ce869547467ac5667caba544fa9ad9e985cd282b7",
   "languages": [
     "el"
   ],
@@ -342,8 +342,9 @@
     "src/lib/a11y/keyboard-scope.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/a11y/use-dialog-focus-restore.ts": "8fd6edd13dfa0351fa57df3a923d8a5bbcf9c8887d24ad13f6a7654922c08b47",
     "src/lib/a11y/use-modal-keyboard-scope.ts": "1aefe4a7211496c61e829d96a460117b612590ed3e64f4ede0d236117ae87c83",
+    "src/lib/api/api-client-transport.ts": "4c1f4b6c42a5e621fdcbe95fdffc557c6e889ab088768e42184a5cbc133bc854",
     "src/lib/api/api-client-types.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
-    "src/lib/api/enterprise-api-client.ts": "c8bb2d93bbff31e093860957965ab99c3346e63f7768a97be06530873027af92",
+    "src/lib/api/enterprise-api-client.ts": "e88e4df6741fac960bb0bed5d0fb7acc7b2409cfef2777d3726649381dea1c18",
     "src/lib/appearance/apply-density.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/appearance/density-boot-script.ts": "7b0eec0a721a4435b2eea8f6043bc6321f3bef9705e34ed137499a8b77a3ca7a",
     "src/lib/appearance/useHydratedTheme.ts": "ddccf0cdd1064ccad3bf349d46c06aeb7b22b5c52a5fe1fe226d08fa4f4acc05",
@@ -458,7 +459,7 @@
     "src/services/file-record/file-record-core.ts": "ee2aaa677691d156b5953b97a32715a748cff19bf322dbb6aaa242c0b8312969",
     "src/services/file-share.service.ts": "1d335be7a5a69aa83ca7ef50f3285975eb9b5fbf705dcd94c96db889248b3d59",
     "src/services/filesystem/file-mutation-gateway.ts": "8cd07fc21f73da3b32d936e8af54d2d7fd560a984389c815a65dde96f5649814",
-    "src/services/firestore/auth-context.ts": "6469725509697e90966698c80e414ee583be2b92202e56979cba4c941aa04a18",
+    "src/services/firestore/auth-context.ts": "1afd6381f092e8e623815c7caf8f8c764bcd473c55d97580aa8364be0d106453",
     "src/services/firestore/firestore-equality.ts": "eead42939f8f71c718c274ee5b0768f64dd01ae111d4a1035254f5b5fe81c738",
     "src/services/firestore/firestore-query.service.ts": "d2068547f20437c2410e7fb1664df09f4e9d444b5f2d71144a659c7f2d1379f8",
     "src/services/firestore/firestore-query.types.ts": "9ae1e268786916f0848cb198f2f671037e11407f8515a9dc5819e56146b95925",
@@ -602,7 +603,7 @@
     "dynamicBoundaries": 18,
     "matchedKeys": 135,
     "routeBoundaries": 0,
-    "shellFiles": 499,
+    "shellFiles": 500,
     "sliceBytes": 313750
   },
   "unresolvableKeys": [

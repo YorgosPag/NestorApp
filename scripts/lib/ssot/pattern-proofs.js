@@ -24,6 +24,22 @@
 'use strict';
 
 module.exports = {
+  // ADR-826 — «έλυσε η αρχική ταυτότητα;» απαντιέται σε ΕΝΑ σημείο. Η απόδειξη εκτελείται
+  // στη ΜΗΧΑΝΗ ΤΗΣ ΠΥΛΗΣ: pattern με 0 ευρήματα είναι *καθαρό* ή *νεκρό*, και μόνο ένα
+  // παράδειγμα που όντως πιάνεται τα ξεχωρίζει (N.12, αδρανείς φρουροί).
+  'firebase-auth-readiness': {
+    shouldMatch: `// Scanner must catch a SECOND definition of the readiness answer:
+export function waitForAuthReady(): Promise<boolean> {
+  return new Promise((resolve) => onAuthStateChanged(auth, (u) => resolve(!!u)));
+}
+export async function waitForAuthReady() { await auth.authStateReady(); return !!auth.currentUser; }`,
+    shouldSkip: `// Scanner must pass SSoT import + usage, and NOT trip on lookalike names:
+import { waitForAuthReady } from '@/lib/firebase';
+if (!auth.currentUser) await waitForAuthReady();
+const ready = await waitForAuthReady();
+export function waitForAuthReadyElsewhere() { return null; }
+const waitForAuthReady2 = () => null;`,
+  },
   'firestore-collections': {
     shouldMatch: `// Scanner must catch raw literal collection / doc IDs:
 db.collection('users');

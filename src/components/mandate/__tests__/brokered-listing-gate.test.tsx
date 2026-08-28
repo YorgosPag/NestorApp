@@ -19,14 +19,22 @@ import React from 'react';
 import { BrokeredListingPageContent } from '../BrokeredListingPageContent';
 import type { CapabilityStatus } from '@/types/organization-capability';
 
-const capability = jest.fn<CapabilityStatus, unknown[]>();
+/**
+ * 🔑 **ΤΟ ΔΙΠΛΟ ΕΝΩΝΕΙ ΤΑΥΤΟΤΗΤΑ ΚΑΙ ΙΚΑΝΟΤΗΤΑ — ΟΠΩΣ Ο ΠΡΑΓΜΑΤΙΚΟΣ ΜΗΧΑΝΙΣΜΟΣ.**
+ *
+ * Ως τις 2026-08-28 εδώ γινόταν mock το `useOrganizationCapability` και **χωριστά** το
+ * `useAuth` — δηλαδή η δοκιμή έστηνε τα δύο σήματα **ανεξάρτητα**, ενώ στην πραγματικότητα
+ * φτάνουν **σε σειρά**, και ακριβώς αυτή η σειρά γεννούσε το ψέμα. Πλέον γίνεται mock ο
+ * ΕΝΑΣ αναγνώστης που τα ενώνει, μαζί με το `settled` — άρα η δοκιμή μπορεί να ρωτήσει
+ * και *«τι λέει η οθόνη όσο ΔΕΝ ξέρει;»*, που πριν ήταν **αδύνατο να διατυπωθεί**.
+ */
+const capabilities = jest.fn<
+  { view: Record<string, CapabilityStatus>; settled: boolean },
+  []
+>();
 
 jest.mock('@/services/realtime/hooks/useOrganizationCapability', () => ({
-  useOrganizationCapability: (...args: unknown[]) => capability(...args),
-}));
-
-jest.mock('@/auth/hooks/useAuth', () => ({
-  useAuth: () => ({ user: { uid: 'u1', companyId: 'comp_alfa' } }),
+  useMyOrganizationCapabilities: () => capabilities(),
 }));
 
 // ⚠️ Το κλειδί επιστρέφεται **αυτούσιο**: η δοκιμή ρωτά *«ποιο μήνυμα διάλεξε η
@@ -52,14 +60,14 @@ jest.mock('@/components/mandate/BrokeredMandateFields', () => ({
   BrokeredMandateFields: () => <div />,
 }));
 
-function renderWith(status: CapabilityStatus): void {
-  capability.mockReturnValue(status);
+function renderWith(status: CapabilityStatus, settled = true): void {
+  capabilities.mockReturnValue({ view: { brokerage_listings: status }, settled });
   render(<BrokeredListingPageContent />);
 }
 
 describe('Κ5 — η φόρμα εντολής αποδίδεται ΜΟΝΟ με ενεργή ικανότητα', () => {
   beforeEach(() => {
-    capability.mockReset();
+    capabilities.mockReset();
   });
 
   /**
@@ -90,10 +98,36 @@ describe('Κ5 — η φόρμα εντολής αποδίδεται ΜΟΝΟ μ�
     },
   );
 
-  /** Ο φρουρός ρωτά για τη **σωστή** ικανότητα, με τον **σωστό** οργανισμό. */
-  it('ρωτά τη ΜΕΣΙΤΙΚΗ ικανότητα του ΔΙΚΟΥ του οργανισμού', () => {
-    renderWith('active');
+  /**
+   * 🔴 **Κ5.β — ΟΣΟ ΔΕΝ ΞΕΡΩ, ΔΕΝ ΜΙΛΑΩ.** *(νέα κατάσταση, 2026-08-28 — η Κ5 δεν
+   * αποδυναμώνεται, αποκτά μία ακόμη)*
+   *
+   * **Μετρημένο ζωντανά σε ΕΓΚΕΚΡΙΜΕΝΟ γραφείο**: σε **5 από 7** αποδόσεις η οθόνη έλεγε
+   * *«δεν έχεις δηλώσει μεσιτική δραστηριότητα»*, επειδή το `companyId` της **αναμονής**
+   * είναι `null` και το `null` διαβαζόταν ως *«δεν έχει οργανισμό»*. Δεν ήταν τρεμόπαιγμα:
+   * το κείμενο διαβαζόταν στην οθόνη.
+   *
+   * ⚠️ Η άρνηση είναι **κατηγορία** προς τον άνθρωπο *(«δεν είσαι εγγεγραμμένος»)*. Το να
+   * την εκφωνεί η οθόνη ενώ **δεν έχει ρωτήσει ακόμη** δεν είναι λεπτομέρεια απόδοσης.
+   *
+   * ⛔ ΜΕΤΑΛΛΑΞΗ: σβήσε τον κλάδο `if (!settled)` ⇒ κόκκινο.
+   */
+  it('Κ5.β — όσο ΔΕΝ ξέρουμε: ούτε φόρμα, ούτε ΚΑΜΙΑ άρνηση', () => {
+    renderWith('unrequested', /* settled */ false);
 
-    expect(capability).toHaveBeenCalledWith('comp_alfa', 'brokerage_listings');
+    expect(screen.queryByTestId('brokered-form')).toBeNull();
+    for (const status of ['unrequested', 'pending', 'revoked'] as const) {
+      expect(screen.queryByText(`auth:brokerage.denyReason.${status}`)).toBeNull();
+    }
+  });
+
+  /**
+   * ✅ **Ο ΔΕΥΤΕΡΟΣ ΠΑΡΟΝΟΜΑΣΤΗΣ**: μια «διόρθωση» που μένει **για πάντα** στο «φορτώνει»
+   * περνά την Κ5.β και σπάει την οθόνη για όλους. Εδώ κρίνεται ότι το `settled` **ανοίγει**.
+   */
+  it('Κ5.γ — μόλις μάθει, μιλά: settled ⇒ η κατάσταση εκφωνείται', () => {
+    renderWith('pending');
+
+    expect(screen.getByText('auth:brokerage.denyReason.pending')).toBeInTheDocument();
   });
 });

@@ -2549,13 +2549,25 @@
     },
     "firestore-auth-context": {
       "ssotFile": "src/services/firestore/auth-context.ts",
-      "description": "Firestore auth context utilities — waitForAuthReady, requireAuthContext. Canonical SSoT for tenant-scoped auth context resolution in Firestore service layer. Re-exported via services/firestore/index.ts. ADR-314 Phase D.3f.",
+      "description": "Firestore auth context — requireAuthContext. Canonical SSoT for tenant-scoped auth context resolution in the Firestore service layer. Re-exported via services/firestore/index.ts. ADR-314 Phase D.3f. ⚠️ 2026-08-28 (ADR-826): το waitForAuthReady ΕΦΥΓΕ από εδώ — δεν είχε τίποτα από Firestore (καθαρά Firebase Auth) και το lib/ που το χρειάστηκε θα εισήγαγε από services/ (ανάποδο στρώμα, μετρημένα έσπασε 3 σουίτες στο import). Ο ιδιοκτήτης του είναι πλέον το module `firebase-auth-readiness`. Εδώ μένει ΞΑΝΑ-ΕΞΑΓΩΓΗ, όχι ορισμός.",
       "forbiddenPatterns": [
-        "export\\s+(async\\s+)?function\\s+(waitForAuthReady|requireAuthContext)\\b"
+        "export\\s+(async\\s+)?function\\s+requireAuthContext\\b"
       ],
       "allowlist": [
         "src/services/firestore/auth-context.ts",
         "src/services/firestore/index.ts"
+      ],
+      "tier": 3
+    },
+    "firebase-auth-readiness": {
+      "addedDate": "2026-08-28",
+      "ssotFile": "src/lib/firebase.ts",
+      "description": "ADR-826 — «έλυσε η αρχική ταυτότητα;» απαντιέται σε ΕΝΑ σημείο: waitForAuthReady, δίπλα στο `auth` που ρωτά. Δύο καταναλωτές, μία υλοποίηση: requireAuthContext (διαδρομή Firestore) και enterprise-api-client.getIdToken (διαδρομή HTTP). ⛔ ΜΗΝ γράψεις δεύτερο — ούτε με auth.authStateReady(): είναι σημασιολογικά ισοδύναμο (το ίδιο το SDK το υλοποιεί με onAuthStateChanged), άρα μηδέν κέρδος και ρίσκο σε τέσσερις ζωντανούς καλούντες. Ο λόγος είναι γραμμένος στο ADR-826 §3.4.",
+      "forbiddenPatterns": [
+        "export\\s+(async\\s+)?function\\s+waitForAuthReady\\b"
+      ],
+      "allowlist": [
+        "src/lib/firebase.ts"
       ],
       "tier": 3
     },

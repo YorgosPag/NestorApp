@@ -13,10 +13,18 @@
  * @see ADR-212 Phase 9 — sleep() centralized
  */
 
-import { auth } from '@/lib/firebase';
+// ⚠️ **Ο ΕΝΑΣ μηχανισμός αναμονής ταυτότητας του έργου** — γεννήθηκε για τη διαδρομή
+//    Firestore (`requireAuthContext`) και εδώ αποκτά τον **δεύτερο** καταναλωτή του.
+//    ⛔ ΜΗΝ γράψεις δεύτερο· ούτε με `auth.authStateReady()` (ο λόγος είναι γραμμένος εκεί).
+import { auth, waitForAuthReady } from '@/lib/firebase';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { generateRequestId as _generateRequestId } from '@/services/enterprise-id.service';
-import { sleep } from '@/lib/async-utils';
+import { sleep, withTimeout } from '@/lib/async-utils';
+// ⚠️ **Οι μηχανικές του καλωδίου, χωρίς κράτος** (ADR-826 §4.3): ήταν ιδιωτικές μέθοδοι
+//    αυτής της κλάσης, αλλά **καμία** δεν άγγιζε το `this`. Έφυγαν όταν το φράγμα
+//    ετοιμότητας ταυτότητας πέρασε το αρχείο τις 500 γραμμές (N.7.1) — **εξαγωγή, όχι
+//    ψαλίδισμα σχολίων**: το όριο ζητά να φύγει ευθύνη.
+import { shouldRetry, calculateBackoff, buildUrl, fetchWithTimeout } from './api-client-transport';
 import { createModuleLogger } from '@/lib/telemetry';
 
 // Re-export all types for consumers
@@ -51,6 +59,27 @@ import {
 
 const logger = createModuleLogger('enterprise-api-client');
 
+/**
+ * 🔴 **ΤΟ ΦΡΑΓΜΑ ΤΗΣ ΑΝΑΜΟΝΗΣ ΤΑΥΤΟΤΗΤΑΣ — και γιατί ΑΚΡΙΒΩΣ αυτός ο αριθμός.**
+ *
+ * **ΔΕΝ είναι διαλεγμένο από το μυαλό κάποιου.** Παράγεται από το φράγμα που το ίδιο το
+ * Firebase SDK βάζει στο δίκτυό του: `DEFAULT_API_TIMEOUT_MS = new Delay(30000, 60000)`,
+ * και το `Delay.get()` επιστρέφει **30 000 ms** σε desktop web *(60 000 μόνο σε Cordova /
+ * React Native)*, ή **5 000** όταν `navigator.onLine === false`.
+ *
+ * ⇒ **Κάθε τιμή κάτω από 30 000 στοιχηματίζει ότι το SDK είναι γρηγορότερο από ό,τι
+ * υπόσχεται** — και όταν χάνει το στοίχημα, ξαναγεννά **ακριβώς** το ελάττωμα που αυτός ο
+ * κώδικας διορθώνει, στον πληθυσμό που το υφίσταται περισσότερο *(αργό κρύο ξεκίνημα)*.
+ * Τα 5 000 επιπλέον είναι περιθώριο για τα σκέλη που **δεν** είναι δίκτυο (IndexedDB).
+ *
+ * 🔑 **Γιατί υπάρχει φράγμα, αφού το δίκτυο είναι ήδη φραγμένο**: το SDK **δεν** φράζει
+ * κολλημένο persistence *(ιδιωτικό παράθυρο, μπλοκαρισμένο IndexedDB)*. Χωρίς φράγμα, εκεί
+ * η οθόνη γυρίζει **για πάντα** — και επειδή τα hooks ζωγραφίζουν το «Δοκιμάστε ξανά»
+ * **από τον κλάδο σφάλματος**, χωρίς σφάλμα ο άνθρωπος χάνει και **την παράκαμψη** που τον
+ * κρατούσε. Δηλαδή «καμία αναμονή» θα ήταν το **μόνο** σενάριο χειρότερο από το σημερινό.
+ */
+const AUTH_READY_TIMEOUT_MS = 35_000;
+
 // =============================================================================
 // ENTERPRISE API CLIENT CLASS
 // =============================================================================
@@ -60,6 +89,23 @@ export class EnterpriseApiClient {
   private currentUser: FirebaseUser | null = null;
   private tokenCache: { token: string; expiresAt: number } | null = null;
   private superAdminCompanyId: string | null = null;
+  /**
+   * Η **αρχική** ετοιμότητα της ταυτότητας — απομνημονευμένη, **τεμπέλικα** δημιουργημένη.
+   *
+   * 🔑 **Απομνημόνευση**: το `buildHeaders` καλείται **μέσα** στον βρόχο `while` των
+   * επαναλήψεων, άρα χωρίς αυτό το πεδίο η αναμονή θα πληρωνόταν έως **τρεις** φορές ανά
+   * αίτημα. Απομνημονεύεται η *αρχική* ετοιμότητα, που είναι ακριβώς η σημασία του όρου:
+   * *«έμαθα ποιος είναι — ή ότι δεν είναι κανείς»*. Δεν οπλίζεται ξανά σε αποσύνδεση,
+   * γιατί τότε το `auth.currentUser` είναι ήδη `null` και η απάντηση πρέπει να είναι
+   * **γρήγορο** `401`, όχι νέα αναμονή.
+   *
+   * 🔴 **ΠΟΤΕ στον constructor.** Το `export const apiClient = …getInstance()` τρέχει στο
+   * **import**· δύο σουίτες φορτώνουν τον πραγματικό client με διπλό `auth` που ορίζει
+   * μόνο `onAuthStateChanged`. Πρόθυμη δημιουργία θα τις έριχνε **πριν** τρέξει καμία
+   * δοκιμή. Και ένα promise που δημιουργείται χωρίς να το περιμένει κανείς μπορεί να
+   * γεννήσει `unhandledrejection` → `ErrorTracker` → `apiClient` → πίσω εδώ.
+   */
+  private authReady: Promise<unknown> | null = null;
 
   static getInstance(): EnterpriseApiClient {
     if (!EnterpriseApiClient.instance) {
@@ -122,7 +168,7 @@ export class EnterpriseApiClient {
       responseType = 'auto',
     } = config;
 
-    const fullUrl = this.buildUrl(url, params);
+    const fullUrl = buildUrl(url, params);
     const requestId = _generateRequestId();
 
     const context: RequestContext = {
@@ -147,7 +193,7 @@ export class EnterpriseApiClient {
         }
 
         this.logRequest(context, attempts, maxRetries);
-        const response = await this.fetchWithTimeout(fullUrl, fetchOptions, timeout);
+        const response = await fetchWithTimeout(fullUrl, fetchOptions, timeout);
         const result = await this.handleResponse<T>(response, context, responseType);
         this.logSuccess(context, response.status);
         return result;
@@ -161,11 +207,18 @@ export class EnterpriseApiClient {
         // fresh token. Force-refresh the ID token once and retry, independent of
         // the normal retry budget so it also works when retry is disabled.
         // Idempotent: the rejected request never reached the route handler.
+        // ⚠️ **«ΑΠΕΡΡΙΨΕ Ο ΔΙΑΚΟΜΙΣΤΗΣ» ≠ «ΔΕΝ ΕΦΥΓΕ ΠΟΤΕ».** Το `getIdToken` πετά κι
+        //    αυτό `401` με τον **ίδιο** κωδικό, όταν η ταυτότητα έχει λυθεί και δεν είναι
+        //    κανείς συνδεδεμένος — αίτημα που **δεν έφυγε** στο δίκτυο. Ανανέωση token εκεί
+        //    είναι εξ ορισμού άσκοπη: ξαναπετά αμέσως, καίγοντας μια επανάληψη. Ο
+        //    `ApiClientError` κρατά το `response` **μόνο** όταν προήλθε από απάντηση —
+        //    άρα η ίδια η δομή του σφάλματος ξεχωρίζει τα δύο, χωρίς νέο λεξιλόγιο.
         if (
           !skipAuth &&
           !authRefreshed &&
           ApiClientError.isApiClientError(error) &&
-          error.statusCode === 401
+          error.statusCode === 401 &&
+          error.response !== undefined
         ) {
           authRefreshed = true;
           forceTokenRefresh = true;
@@ -174,10 +227,10 @@ export class EnterpriseApiClient {
           continue;
         }
 
-        const shouldRetryNow = this.shouldRetry(error, attempts, maxRetries, retry);
+        const shouldRetryNow = shouldRetry(error, attempts, maxRetries, retry);
 
         if (shouldRetryNow) {
-          const delay = this.calculateBackoff(attempts);
+          const delay = calculateBackoff(attempts);
           logger.warn(`[API] Retrying request (${attempts}/${maxRetries}) after ${delay}ms...`);
           await sleep(delay);
           continue;
@@ -198,6 +251,48 @@ export class EnterpriseApiClient {
   private async getIdToken(forceRefresh: boolean = false): Promise<string> {
     if (typeof window === 'undefined') {
       throw new Error('API client cannot run on server - Firebase auth requires browser environment');
+    }
+
+    // 🔴 **Ο ΑΓΩΝΑΣ ΔΡΟΜΟΥ ΤΗΣ ΤΑΥΤΟΤΗΤΑΣ — «ΔΕΝ ΞΕΡΩ ΑΚΟΜΗ» ΔΕΝ ΕΙΝΑΙ «ΔΕΝ ΥΠΑΡΧΕΙ».**
+    //
+    // Ως τις 2026-08-28 η γραμμή παρακάτω πετούσε `401` **συγχρόνως** όταν το Firebase δεν
+    // είχε προλάβει να αποκαταστήσει τη συνεδρία, και το `onAuthStateChanged` του
+    // constructor **απλώς κατέγραφε** τον χρήστη αργότερα — δεν ξαναζητούσε τίποτα.
+    // Μετρημένο ζωντανά: σε φόρτωση σελίδας αναφορών, **0 από 251** αιτήματα έφτασαν στο
+    // δίκτυο. Το «Δοκιμάστε ξανά» δούλευε **πάντα**, γιατί ως τότε η ταυτότητα είχε λυθεί.
+    //
+    // 🔑 **ΕΝΑ σημείο, όχι δέκα.** Πάσχουν **δέκα** hooks με πανομοιότυπο σχήμα
+    // (`useEffect(() => { fetchData(); }, [fetchData])` χωρίς καμία αναφορά σε ταυτότητα).
+    // Μπάλωμα σε κάθε ένα θα ήταν copy-paste οικογένεια (**N.0.2**, **N.18**) που **δεν**
+    // θα προστάτευε το ενδέκατο hook — αυτό που θα γραφτεί αύριο. Η μεταφορά είναι το
+    // μόνο σημείο απ' όπου περνούν **όλοι**.
+    //
+    // 🔑 **ΚΑΙ Ο ΜΗΧΑΝΙΣΜΟΣ ΥΠΗΡΧΕ ΗΔΗ.** Το `waitForAuthReady` δεν γράφτηκε για εδώ: το
+    // `requireAuthContext` εφαρμόζει **αυτή ακριβώς** την πύλη — με σχόλιο που περιγράφει
+    // το ίδιο ελάττωμα — για τη διαδρομή **Firestore**. Η διαδρομή **HTTP** δεν είχε πάρει
+    // ποτέ την ίδια θεραπεία. Δεύτερος **καταναλωτής**, όχι δεύτερος **μηχανισμός**.
+    //
+    // ⚠️ **«Περίμενε να ΜΑΘΕΙΣ» ≠ «περίμενε να ΣΥΝΔΕΘΕΙ»**: η αναμονή τελειώνει στην πρώτη
+    // απάντηση, **και όταν αυτή είναι `null`** — οπότε ο έλεγχος από κάτω πετά κανονικά
+    // `401`, **γρήγορα**. Ο αποσυνδεδεμένος δεν κρεμάει ποτέ.
+    //
+    // ⚠️ **Η πύλη `!auth.currentUser` δεν είναι βελτιστοποίηση, είναι σημασιολογία**: αν
+    // ξέρουμε ήδη ποιος ρωτά, δεν υπάρχει τίποτα να περιμένουμε. Κάθε αίτημα μετά το πρώτο
+    // κοστίζει **μηδέν** — ούτε `await`, ούτε promise. Ίδιο ιδίωμα με το `requireAuthContext`.
+    if (!auth.currentUser) {
+      this.authReady ??= withTimeout(waitForAuthReady(), AUTH_READY_TIMEOUT_MS).catch(
+        (error: unknown) => {
+          // Λήξη ή αστοχία ⇒ **πέφτουμε στη σημερινή συμπεριφορά**: διάβασε ό,τι ξέρεις και
+          // πες την αλήθεια. Το φράγμα δεν μπορεί έτσι **ποτέ** να κάνει κάτι χειρότερο από
+          // πριν — αλλά **δεν σιωπά**: σιωπηλή πτώση θα ξαναέφτιαχνε ακριβώς το αδιάγνωστο
+          // λάθος σφάλμα που μας κόστισε αυτή τη διόρθωση.
+          logger.warn('Auth readiness did not settle; proceeding with what is known', {
+            timeoutMs: AUTH_READY_TIMEOUT_MS,
+            reason: error instanceof Error ? error.message : String(error),
+          });
+        },
+      );
+      await this.authReady;
     }
 
     const user = auth.currentUser || this.currentUser;
@@ -340,50 +435,6 @@ export class EnterpriseApiClient {
 
     try { return await response.json(); }
     catch { return (await response.text()) as T; }
-  }
-
-  // ===========================================================================
-  // RETRY & UTILITIES
-  // ===========================================================================
-
-  private shouldRetry(error: unknown, attempt: number, maxRetries: number, retryEnabled: boolean): boolean {
-    if (!retryEnabled || attempt >= maxRetries) return false;
-    if (error instanceof TypeError && error.message.includes('fetch')) return true;
-    if (ApiClientError.isApiClientError(error)) return error.statusCode >= 500 && error.statusCode < 600;
-    return false;
-  }
-
-  private calculateBackoff(attempt: number): number {
-    const baseDelay = 1000;
-    const maxDelay = 10000;
-    const delay = Math.min(baseDelay * Math.pow(2, attempt - 1), maxDelay);
-    const jitter = delay * 0.2 * (Math.random() - 0.5);
-    return Math.round(delay + jitter);
-  }
-
-  private buildUrl(url: string, params?: Record<string, string | number | boolean>): string {
-    if (!params) return url;
-    const searchParams = new URLSearchParams();
-    Object.entries(params).forEach(([key, value]) => searchParams.set(key, String(value)));
-    const separator = url.includes('?') ? '&' : '?';
-    return `${url}${separator}${searchParams.toString()}`;
-  }
-
-  private async fetchWithTimeout(url: string, options: RequestInit, timeout: number): Promise<Response> {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
-
-    try {
-      const response = await fetch(url, { ...options, signal: controller.signal });
-      clearTimeout(timeoutId);
-      return response;
-    } catch (error) {
-      clearTimeout(timeoutId);
-      if ((error as Error).name === 'AbortError') {
-        throw new ApiClientError(`Request timeout after ${timeout}ms`, 408, 'REQUEST_TIMEOUT');
-      }
-      throw error;
-    }
   }
 
   // ===========================================================================

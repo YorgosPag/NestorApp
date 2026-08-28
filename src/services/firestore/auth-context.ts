@@ -9,32 +9,19 @@
  * - src/services/calendar/AppointmentsRepository.ts
  */
 
-import { auth } from '@/lib/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { auth, waitForAuthReady } from '@/lib/firebase';
 import type { TenantContext } from './firestore-query.types';
 import { getSuperAdminActiveCompanyId } from './super-admin-active-company';
 
 /**
- * Waits for Firebase Auth to finish initializing.
- *
- * During SSR hydration, `auth.currentUser` is null even for logged-in users
- * because Firebase hasn't restored the session yet. This helper resolves once
- * the first `onAuthStateChanged` callback fires — at that point the auth state
- * is authoritative (user or null).
- *
- * @returns `true` if a user is authenticated, `false` otherwise
+ * 🔑 **ΜΕΤΑΚΙΝΗΘΗΚΕ, ΔΕΝ ΔΙΠΛΑΣΙΑΣΤΗΚΕ (2026-08-28).** Ο ορισμός ζούσε εδώ· δεν έχει όμως
+ * **τίποτα** από Firestore — είναι καθαρά Firebase Auth. Όταν την ίδια απάντηση χρειάστηκε
+ * και η διαδρομή HTTP (`lib/api/enterprise-api-client`), το `lib/` θα εισήγαγε από το
+ * `services/` — ανάποδο στρώμα, και μετρημένα έσπασε **τρεις** σουίτες στο import.
+ * Ο ορισμός πήγε δίπλα στο `auth` που ρωτά· εδώ μένει **ξανα-εξαγωγή**, ώστε οι υπάρχοντες
+ * καλούντες (`firestore-query.service.ts`) και τα διπλά τους να μην αγγιχτούν καθόλου.
  */
-export function waitForAuthReady(): Promise<boolean> {
-  // Already initialized — resolve immediately
-  if (auth.currentUser) return Promise.resolve(true);
-
-  return new Promise<boolean>((resolve) => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      unsubscribe();
-      resolve(!!user);
-    });
-  });
-}
+export { waitForAuthReady } from '@/lib/firebase';
 
 /**
  * **«ΔΕΝ ΑΝΗΚΕΙΣ ΣΕ ΕΤΑΙΡΕΙΑ» ΕΙΝΑΙ ΣΧΕΔΙΑΣΜΕΝΗ ΚΑΤΑΣΤΑΣΗ, ΟΧΙ ΒΛΑΒΗ** (ADR-809).

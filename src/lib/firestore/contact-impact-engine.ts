@@ -19,6 +19,10 @@ import 'server-only';
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { createModuleLogger } from '@/lib/telemetry';
+// ⚠️ Ήταν ιδιωτικό `withTimeout` σε αυτό το αρχείο· κεντρικοποιήθηκε 2026-08-28 (N.0.2)
+//    όταν ο `enterprise-api-client` χρειάστηκε την ίδια δουλειά. Η κεντρική εκδοχή
+//    **καθαρίζει το χρονόμετρο**, που η ιδιωτική δεν έκανε.
+import { withTimeout } from '@/lib/async-utils';
 import { tenantScopedDependencyQuery } from './dependency-tenant-scope';
 import {
   getDependenciesForScenario,
@@ -54,19 +58,6 @@ export interface ContactImpactResult {
   readonly blockingCount: number;
   readonly warningCount: number;
   readonly infoCount: number;
-}
-
-// ============================================================================
-// TIMEOUT UTILITY
-// ============================================================================
-
-function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error(`Query timeout after ${ms}ms`)), ms),
-    ),
-  ]);
 }
 
 // ============================================================================

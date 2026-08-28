@@ -22,9 +22,9 @@ import React from 'react';
 import { Link } from '@/lib/workspace/navigation';
 import { useTranslation } from 'react-i18next';
 
-import { useAuth } from '@/auth/hooks/useAuth';
 import { BrokeredMandateFields } from '@/components/mandate/BrokeredMandateFields';
-import { useOrganizationCapability } from '@/services/realtime/hooks/useOrganizationCapability';
+import { useMyOrganizationCapabilities } from '@/services/realtime/hooks/useOrganizationCapability';
+import { isCapabilityActive } from '@/types/organization-capability';
 import { OwnerPropertyFormContent } from '@/components/owner-property/OwnerPropertyFormContent';
 import type { ComboboxOption } from '@/components/ui/searchable-combobox';
 import { nowISO } from '@/lib/date-local';
@@ -80,8 +80,7 @@ const logger = createModuleLogger('BrokeredListingPageContent');
 const CLIENT_PICKER_LIMIT = 500;
 
 export function BrokeredListingPageContent(): React.ReactElement {
-  const { t } = useTranslation([NS, 'auth']);
-  const { user } = useAuth();
+  const { t } = useTranslation([NS, 'auth', 'common-status']);
 
   /**
    * 🔴 **Η ΟΘΟΝΗ ΔΕΝ ΠΡΟΣΦΕΡΕΙ ΠΟΡΤΑ ΠΟΥ ΘΑ ΑΠΑΝΤΗΣΕΙ 403** (ADR-824 §8 Κ5).
@@ -92,7 +91,7 @@ export function BrokeredListingPageContent(): React.ReactElement {
    * **κάθε** γραφείο, και το tooltip του επιλογέα «δουλειάς» το ομολογούσε —
    * *«Δεν αλλάζει δικαιώματα — **μόνο τι εμφανίζεται**»*.
    */
-  const brokerage = useOrganizationCapability(user?.companyId ?? null, 'brokerage_listings');
+  const { view: capabilities, settled } = useMyOrganizationCapabilities();
 
   // 🔑 **Αρχικοποιητής συνάρτησης**: το ρολόι διαβάζεται σε **μία** απόδοση. Ένα
   // `useState(emptyMandateForm(nowISO()))` θα υπολόγιζε νέα προεπιλεγμένη λήξη σε
@@ -141,7 +140,37 @@ export function BrokeredListingPageContent(): React.ReactElement {
   //    άνθρωπος συμπληρώνει και **δεν μπορεί** να υποβάλει είναι χειρότερη από
   //    απουσία: του ζητά δουλειά που θα πεταχτεί. Το μήνυμα λέει **σε ποια
   //    κατάσταση** βρίσκεται και άρα **τι μπορεί να κάνει**.
-  if (brokerage !== 'active') {
+  // 🔴 **ΟΣΟ ΔΕΝ ΞΕΡΩ, ΔΕΝ ΜΙΛΑΩ — ΚΑΙ ΔΕΝ ΕΙΝΑΙ «ΕΝΑ ΚΑΡΕ».**
+  //
+  // Μετρημένο ζωντανά σε **εγκεκριμένο** γραφείο (2026-08-28, ανιχνευτής σε 7 αποδόσεις):
+  //
+  //   1-3  authLoading=true  hasUser=false companyId=null      status=unrequested  ⇒ ΑΡΝΗΣΗ
+  //   4-5  authLoading=true  hasUser=true  companyId=comp_…    status=unrequested  ⇒ ΑΡΝΗΣΗ
+  //   6    authLoading=true  hasUser=true  companyId=comp_…    status=active       ⇒ φόρμα
+  //   7    authLoading=false hasUser=true  companyId=comp_…    status=active       ⇒ φόρμα
+  //
+  // **5 στις 7** αποδόσεις έλεγαν σε νόμιμο μεσιτικό γραφείο *«δεν έχεις δηλώσει μεσιτική
+  // δραστηριότητα»* — αρκετά ώστε το κείμενο να διαβάζεται στην οθόνη, όχι να τρεμοπαίζει.
+  // Αιτία: το `companyId` της **αναμονής** είναι `null`, και το `null` διαβαζόταν ως
+  // *«δεν έχει οργανισμό»* αντί για *«δεν ρώτησα ακόμη»*.
+  //
+  // 🔑 **Το `settled` είναι το ΜΟΝΟ ασφαλές σήμα**: μετρημένο ότι το `authLoading` κλείνει
+  // **τελευταίο** — μετά το `user` **και** μετά το `companyId`. Ένα `user !== null` θα
+  // άνοιγε το στόμα της οθόνης στην απόδοση **4**, δηλαδή θα ξανάφτιαχνε το ίδιο ψέμα σε
+  // μικρότερο παράθυρο. Ίδιο ιδίωμα με το `MandateCatalogContent` (άγκυρα Ο1).
+  if (!settled) {
+    // ⚠️ **Γενικό κλειδί, όχι δανεικό.** Το `offer.mandates.loading` λέει *«Φορτώνουμε τις
+    //    ΕΝΤΟΛΕΣ σας»* — αληθές στον **κατάλογο**, ψευδές σε φόρμα **νέας** καταχώρησης
+    //    *(μετρήθηκε στην οθόνη)*. Το `common-status` ζει **στο κέλυφος**, άρα το κλειδί
+    //    είναι διαθέσιμο σε **κάθε** διαδρομή χωρίς κανένα byte στο slice της.
+    return <p className="text-sm text-muted-foreground">{t('common-status:status.loading')}</p>;
+  }
+
+  // ⚠️ **Το κεντρικό κριτήριο, όχι σύγκριση συμβολοσειράς**: το `isCapabilityActive` είναι
+  //    ο SSoT ορισμός του *«επιτρέπεται η πράξη;»* — και ένα `status is 'active'` type guard.
+  //    Ένα `!== 'active'` εδώ ήταν το δεύτερο αντίγραφο του ίδιου κανόνα (N.0.2).
+  const brokerage = capabilities.brokerage_listings;
+  if (!isCapabilityActive(brokerage)) {
     return (
       <section className="flex flex-col gap-4">
         {/* ⚠️ **Τα ΥΠΑΡΧΟΝΤΑ κλειδιά, κανένα νέο.** Ο τίτλος και ο σύνδεσμος επιστροφής
