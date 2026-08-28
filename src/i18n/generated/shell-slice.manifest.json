@@ -9,8 +9,8 @@
     "src/i18n/generated/routes/login.el.json": "6ba750825f9e8597ac3c9718ed99005e265a55752e1d64217ba48b29fad7f281",
     "src/i18n/generated/routes/mandate__token.el.json": "6e75cdb41998a3f76bb88840249c7b197754548563acc1de2269b9e88099531c",
     "src/i18n/generated/routes/o__workspace__dashboard.el.json": "263a3349d6e3f1e2badbab37f08d81836a102b89054c44e5ffac29cfacafffd0",
-    "src/i18n/generated/routes/o__workspace__listings__mandates.el.json": "acc74d03857daa50427b8bff88d2bcd40e9d1952a442b9e7577c34eedf95c83a",
-    "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "065ac535af7d5c7ac3a0db863d9c73a78e4a93be1a8c123da2d992cd158e9622",
+    "src/i18n/generated/routes/o__workspace__listings__mandates.el.json": "7e0eccebb72e53730402b40e7888225ffcb10e00b86583315b80b44f42499fdb",
+    "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "7a0868007f1b07ce7f07a649cad225c88d2e9fff704a9835f8b9df39625c7d43",
     "src/i18n/generated/routes/offers.el.json": "37f11fe465050e47c3d55037f4cb71f77828554b0f9fe71399f5f1e059966ce8",
     "src/i18n/generated/routes/offers__new.el.json": "202c8267577dd434155ddbe6db9478642d7bd3a5e30bbbb3bacf5cf0d89072f5",
     "src/i18n/generated/routes/offers__offerId.el.json": "b20de67166260f52c4e9eb6d473e2b2a6acc0eefe59d78e3698bed897b3dc8d4",
@@ -57,7 +57,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "e2171ee73cf25150acf6ede85e99153249cae12e533ac74defa420f5050315d2",
+  "inputsSha256": "d7fbf685ee63936076299115a6cd840f747ec4f4f7cd7f8ae29f0fae4e73db6b",
   "languages": [
     "el"
   ],
@@ -237,6 +237,7 @@
     "src/config/jobs-access.ts": "cd9ecbc9f56123a902b624b7ddd6cc52082dc2e7e7fc6b7116c853a86f799821",
     "src/config/jobs-registry.ts": "030b7091aeb5191bbd6abe3ccc9e23a1aa25f586cbed3fe226c07a4b6d9086b7",
     "src/config/jobs-visibility.ts": "ab652f1d2a901b3411b15871f941beac2bb71950a0a2d15129f8bda65e4467ff",
+    "src/config/navigation-capability.ts": "daca95c4762ff89edad554c40cba3a38e9445c840c37454ac33adc6487287622",
     "src/config/navigation.ts": "512c29db1290f050f22f1e5203a3163f444f0259f998399ab21e38bd73398e71",
     "src/config/notification-events.ts": "6c363f1a922d4088abc2ec62f0ab5cc1786496cdbe87083cc0e556af812b56b9",
     "src/config/notification-keys.ts": "d2e8d464ddc860d07e32c60966579815c9927c966a3dc86fdf70f76d45393c7e",
@@ -313,7 +314,7 @@
     "src/hooks/useHasBuildingsWithNoUnits.ts": "2cabeb87e1013037ccf8e73be1ff4060976ec6a8a0db8e77e9ff91b2fd3dde25",
     "src/hooks/useIconSizes.ts": "fbf97823babaf80ed36e89974f45744eb162ef33144fd91d14d0d6db8ed60e37",
     "src/hooks/useInterval.ts": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
-    "src/hooks/useJobFilteredNavigation.ts": "a276bbc143d1f0de2b0728fa41f564aefbf24e10569181843111a1224e04a941",
+    "src/hooks/useJobFilteredNavigation.ts": "aa9aa8d7d389b78e8929c50f8d2f107c0373f58588f70dc938ddf412c2448154",
     "src/hooks/useKeyboardShortcuts.ts": "8fd6edd13dfa0351fa57df3a923d8a5bbcf9c8887d24ad13f6a7654922c08b47",
     "src/hooks/useLayoutClasses.ts": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
     "src/hooks/useMobile.tsx": "7e9a21ad70c199c41a5759f3f25d7b663b0d9e263604d22a408b979e118b39be",
@@ -472,6 +473,7 @@
     "src/services/realtime/hooks/subscription-error-handler.ts": "8f13db01fae1944e35b872fe1657c9e1315a733d558b38895db642308a67b4d9",
     "src/services/realtime/hooks/tenant-scoped-error.ts": "aad28da520d047ef7280e72a53d118f6726c6fa133ba7c6c0de3a68a1941b127",
     "src/services/realtime/hooks/use-realtime-entity-events.ts": "00070fc2701d75d65341bb80e1ef29bc54c395b8e1ef144fddd4dbee8f8feaf3",
+    "src/services/realtime/hooks/useOrganizationCapability.ts": "f98c8dacbdd520e7bff09c81b3f8bd628e318fa4a49b248f9b087fea8dbd9e0b",
     "src/services/realtime/hooks/usePublicListings.ts": "47cac2577b44fc183e16ba30493ae1f9e3209caed09caa3e3abfc8dd1b86afd6",
     "src/services/realtime/hooks/useRealtimeBuildings.ts": "b583deccd367b8c1eab51101e76d1de0ad6a868df4934209bd055cf5d676fdad",
     "src/services/realtime/hooks/useRealtimeProperties.ts": "e3cd736c9ae25a2ab3c62b99b69b6233bb6edfbc4fb7b48a14f8d67f6beaf03a",
@@ -600,8 +602,8 @@
     "dynamicBoundaries": 18,
     "matchedKeys": 135,
     "routeBoundaries": 0,
-    "shellFiles": 497,
-    "sliceBytes": 312146
+    "shellFiles": 499,
+    "sliceBytes": 313750
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

@@ -18,6 +18,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
+import { useAuth } from '@/auth/hooks/useAuth';
+
 import {
   fetchMandateCatalog,
   runMandateAction,
@@ -74,10 +76,43 @@ export function useMandateCatalog(): MandateCatalogApi {
   const [feedback, setFeedback] = useState<CatalogFeedback | null>(null);
   const [epoch, setEpoch] = useState(0);
 
+  // 🔴 **ΠΕΡΙΜΕΝΕ ΤΗΝ ΤΑΥΤΟΤΗΤΑ ΠΡΙΝ ΡΩΤΗΣΕΙΣ** — μετρημένο ζωντανά, 2026-08-28.
+  //
+  // Χωρίς αυτό η οθόνη έγραφε **πάντα** «Οι εντολές δεν φορτώθηκαν» στο πρώτο άνοιγμα,
+  // και δούλευε **μόνο** αν πατούσες «Δοκιμάστε ξανά». Η μέτρηση: στη φόρτωση, **0 από
+  // 251** αιτήματα πήγαιναν στο `/api/owner-properties/brokered` — δηλαδή η αστοχία
+  // συνέβαινε **πριν** από κάθε δίκτυο. Ο `apiClient` πετά συγχρόνως `401` όταν ο
+  // `auth.currentUser` είναι ακόμη `null` (`enterprise-api-client.ts` → `getIdToken`),
+  // και το `onAuthStateChanged` του πελάτη απλώς **καταγράφει** τον χρήστη αργότερα:
+  // δεν ξαναζητά τίποτα. Άρα η πρώτη — και μοναδική — προσπάθεια χανόταν πάντα.
+  //
+  // ⚠️ **Το «περίμενε» δεν είναι εδώ επειδή είναι ευγενικό, αλλά επειδή αλλιώς η οθόνη
+  // ΨΕΥΔΕΤΑΙ**: έλεγε «δεν φορτώθηκαν» ενώ ο διακομιστής δεν ρωτήθηκε ποτέ, και ο
+  // μεσίτης θα συμπέραινε ότι έχει πρόβλημα ο κατάλογός του.
+  //
+  // 🔑 **Το ιδίωμα υπάρχει ήδη** (`useInboxApi`: *«Only fetch when user is
+  // authenticated»*) — δεν γεννιέται νέος μηχανισμός αναμονής.
+  const { user, loading: authLoading } = useAuth();
+  // ⚠️ **Πρωτογενής εξάρτηση, όχι το αντικείμενο**: το `user` του context
+  // ανακατασκευάζεται και θα ξανάτρεχε το effect σε κάθε απόδοση — δηλαδή θα
+  // ξαναδιάβαζε τον κατάλογο σε βρόχο.
+  const userId = user?.uid ?? null;
+
   useEffect(() => {
+    // Όσο δεν ξέρουμε **ποιος** ρωτά, η οθόνη μένει «φορτώνει» — που είναι η αλήθεια.
+    if (authLoading) return;
+
     let alive = true;
     setCatalog(null);
     setLoadFailed(false);
+
+    // Λύθηκε η ταυτότητα και **δεν υπάρχει κανείς**: ο κατάλογος είναι αδύνατος. Αυτό
+    // λέγεται, δεν σιωπά — αλλιώς η οθόνη θα γύριζε για πάντα (`useInboxApi`, ίδια
+    // απόφαση: *«User not authenticated - clear loading and set error»*).
+    if (userId === null) {
+      setLoadFailed(true);
+      return;
+    }
 
     void fetchMandateCatalog().then((load) => {
       if (!alive) return;
@@ -88,7 +123,7 @@ export function useMandateCatalog(): MandateCatalogApi {
     return () => {
       alive = false;
     };
-  }, [epoch]);
+  }, [epoch, authLoading, userId]);
 
   const reload = useCallback(() => setEpoch((value) => value + 1), []);
 

@@ -48,11 +48,16 @@ import {
 } from '@/config/navigation';
 import type { MenuItem } from '@/config/navigation';
 import { filterItemsByJob, summarizeHidden } from '@/config/jobs-visibility';
+import {
+  filterItemsByCapability,
+  type OrganizationCapabilityView,
+} from '@/config/navigation-capability';
 import { computeJobSuggestion, type JobSuggestionOutcome } from '@/config/job-suggestion';
 import { resolveJobAffinity } from '@/config/isco-job-affinity';
 import { useActiveJob } from '@/contexts/ActiveJobContext';
 import { useDeclaredOccupation } from '@/hooks/useDeclaredOccupation';
 import { useEffectivePermissions } from '@/hooks/useEffectivePermissions';
+import { useMyOrganizationCapabilities } from '@/services/realtime/hooks/useOrganizationCapability';
 
 /** Τα τρία δέντρα του sidebar, περασμένα **μόνο** από το φίλτρο δικαιωμάτων. */
 export interface JobMenus {
@@ -69,12 +74,30 @@ export interface JobMenus {
  * του, ο αριθμός της πρότασης θα μπορούσε να μετρά **άλλο δέντρο** από αυτό
  * που βάφει η οθόνη — η ίδια οικογένεια ελαττώματος με το «22 αντί για 9».
  */
-export function buildJobMenus(permissions: readonly string[]): JobMenus {
+export function buildJobMenus(
+  permissions: readonly string[],
+  capabilities: OrganizationCapabilityView,
+): JobMenus {
   const permissionList = [...permissions];
+  // 🔴 **ΤΟ ΤΡΙΤΟ ΦΙΛΤΡΟ ΕΦΑΡΜΟΖΕΤΑΙ ΕΔΩ, ΚΑΙ ΤΟ ΣΗΜΕΙΟ ΕΙΝΑΙ ΟΡΘΟΤΗΤΑ** (ADR-824 Φάση 4).
+  //
+  // Το «Αποκάλυψη κρυμμένων» παρακάτω επιστρέφει τα **αφιλτράριστα** δέντρα
+  // (`pick(menus.main, …)`). Αν η ικανότητα κρινόταν στη βαθμίδα της **δουλειάς**, ένα
+  // κλικ θα **ξαναπρόσφερε** στον αρχιτέκτονα τη μεσιτεία — δουλειά που ο Ν. 4072/2012
+  // επιτρέπει μόνο σε εγγεγραμμένα μεσιτικά γραφεία. Κόβοντας **πριν** χτιστούν τα
+  // δέντρα, το στοιχείο δεν είναι «κρυμμένο» αλλά **ανύπαρκτο** — η ίδια διάκριση που
+  // το `hiddenCount` τεκμηριώνει ήδη για τα δικαιώματα, και ο λόγος που δεν
+  // προσμετράται: δείκτης «+1 κρυμμένο» που δεν αποκαλύπτεται ποτέ είναι υπόσχεση που
+  // η οθόνη δεν μπορεί να τηρήσει.
+  //
+  // ⚠️ **Και οι ΔΥΟ καταναλωτές περνούν από εδώ** — η οθόνη και η **πρόταση** δουλειάς.
+  // Αν η πρόταση μετρούσε δέντρο με τη γραμμή μέσα, ο αριθμός της θα απέκλινε από
+  // αυτόν που βάφει η οθόνη: το «22 αντί για 9» ξαναγεννημένο. Γι' αυτό η παράμετρος
+  // είναι **υποχρεωτική** και όχι προαιρετική με προεπιλογή.
   return {
-    main: getMainMenuItems(permissionList),
-    tools: getToolsMenuItems(permissionList),
-    settings: getSettingsMenuItems(permissionList),
+    main: filterItemsByCapability(getMainMenuItems(permissionList), capabilities),
+    tools: filterItemsByCapability(getToolsMenuItems(permissionList), capabilities),
+    settings: filterItemsByCapability(getSettingsMenuItems(permissionList), capabilities),
   };
 }
 
@@ -118,9 +141,14 @@ export interface JobFilteredNavigation {
 export function useJobFilteredNavigation(): JobFilteredNavigation {
   const { permissions } = useEffectivePermissions();
   const { activeJob, isRevealingHidden, setRevealingHidden } = useActiveJob();
+  // ⚠️ **Το `settled` ΔΕΝ διαβάζεται εδώ, και είναι σκόπιμο.** Όσο δεν ξέρουμε, η όψη
+  // λέει ήδη «μην προσφέρεις» — που είναι **ακριβώς** η σωστή απάντηση για ένα μενού:
+  // μια γραμμή που εμφανίζεται αργοπορημένα είναι ενόχληση, μια γραμμή που δεν έπρεπε
+  // να εμφανιστεί είναι **παράβαση**. Το `settled` αφορά μόνο όποιον **μιλά**.
+  const { view: capabilities } = useMyOrganizationCapabilities();
 
   const computed = useMemo(() => {
-    const menus = buildJobMenus(permissions);
+    const menus = buildJobMenus(permissions, capabilities);
     const results = {
       main: filterItemsByJob(menus.main, activeJob),
       tools: filterItemsByJob(menus.tools, activeJob),
@@ -128,7 +156,7 @@ export function useJobFilteredNavigation(): JobFilteredNavigation {
     };
     const summary = summarizeHidden([results.main, results.tools, results.settings]);
     return { menus, results, summary };
-  }, [permissions, activeJob]);
+  }, [permissions, activeJob, capabilities]);
 
   const onReveal = useCallback(() => setRevealingHidden(true), [setRevealingHidden]);
   const onStopRevealing = useCallback(() => setRevealingHidden(false), [setRevealingHidden]);
@@ -195,9 +223,13 @@ export function useJobSuggestion(dismissed: boolean): JobSuggestionOutcome | nul
   const access = useEffectivePermissions();
   const { activeJob } = useActiveJob();
   const { iscoCode } = useDeclaredOccupation();
+  // ⚠️ **Η ΙΔΙΑ όψη ικανοτήτων με την οθόνη.** Η πρόταση απαντά «τι θα έβλεπες **αν**
+  // δεχτείς» — αν μετρούσε δέντρο που περιέχει γραμμή την οποία η οθόνη δεν βάφει
+  // ποτέ, θα υποσχόταν όφελος που δεν υπάρχει.
+  const { view: capabilities } = useMyOrganizationCapabilities();
 
   return useMemo(() => {
-    const menus = buildJobMenus(access.permissions);
+    const menus = buildJobMenus(access.permissions, capabilities);
     return computeJobSuggestion({
       access,
       activeJob,
@@ -205,5 +237,5 @@ export function useJobSuggestion(dismissed: boolean): JobSuggestionOutcome | nul
       tiebreak: resolveJobAffinity(iscoCode),
       menus: [menus.main, menus.tools, menus.settings],
     });
-  }, [access, activeJob, dismissed, iscoCode]);
+  }, [access, activeJob, dismissed, iscoCode, capabilities]);
 }

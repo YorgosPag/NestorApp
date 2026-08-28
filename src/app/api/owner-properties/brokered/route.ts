@@ -28,7 +28,9 @@ import { withAuth } from '@/lib/auth/middleware';
 import {
   isBrokerageDenial,
   requireBrokerageCapability,
+  type BrokerageAuthority,
 } from '@/lib/auth/brokerage-authority';
+import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { readCompanyCapabilities } from '@/services/company/company-capabilities.reader';
 import type { AuthContext } from '@/lib/auth/types';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
@@ -86,6 +88,49 @@ type BrokeredResponse =
       readonly capabilityStatus: string;
     };
 
+/**
+ * **Ο ΕΝΑΣ ΦΡΟΥΡΟΣ ΤΗΣ ΔΙΑΔΡΟΜΗΣ — ΓΙΑ ΚΑΙ ΤΑ ΔΥΟ ΡΗΜΑΤΑ** (ADR-824 Φάση 4).
+ *
+ * 🔑 **Ο κατάλογος ΕΙΝΑΙ κι αυτός η ρυθμιζόμενη δραστηριότητα.** Ο Ν. 4072/2012 δεν
+ * ρυθμίζει μόνο τη *σύναψη* της εντολής — ρυθμίζει τη **μεσιτεία**, και το «τι εντολές
+ * κρατά αυτό το γραφείο» είναι το χαρτοφυλάκιό της. Ένα γραφείο που δεν επιτρέπεται να
+ * **γεννήσει** εντολή δεν έχει καμία να **διαβάσει**: η απάντηση για κάθε τέτοιο
+ * γραφείο ήταν ούτως ή άλλως άδεια λίστα. Άρα το `403` δεν αφαιρεί δεδομένα, αφαιρεί
+ * την **ψευδαίσθηση** ότι η πόρτα αφορά τον καλούντα.
+ *
+ * 🔴 **ΕΝΑ σχήμα άρνησης, ΕΝΑ σημείο.** Η πρώτη γραφή αντέγραψε το μπλοκ `403` στον
+ * δεύτερο χειριστή. Δύο αντίγραφα σημαίνουν ότι μια μελλοντική αλλαγή στο σχήμα
+ * *(π.χ. προσθήκη `currently_due` κατά Stripe, ADR-824 §5.1)* θα εφαρμοζόταν στο ένα
+ * ρήμα και όχι στο άλλο — και ο πελάτης θα διάβαζε **δύο διαφορετικές** αρνήσεις από
+ * την **ίδια** διεύθυνση. Ο έλεγχος αντιγραφής (N.18) το ονομάζει sibling clone.
+ *
+ * ⚠️ **Επιστρέφει την ΑΠΟΔΕΙΞΗ ή την ΑΠΑΝΤΗΣΗ** — ποτέ `boolean`. Ένα `true/false` θα
+ * ανάγκαζε τη γραφή να ξανακατασκευάσει την απόδειξη, δηλαδή **δεύτερη κρίση** για το
+ * ίδιο ερώτημα· και ο `createBrokeredListing` δέχεται **μόνο** απόδειξη (§6).
+ */
+async function gateBrokerage(
+  adminDb: AdminFirestore,
+  companyId: string,
+): Promise<BrokerageAuthority | NextResponse> {
+  const authority = requireBrokerageCapability(
+    companyId,
+    await readCompanyCapabilities(adminDb, companyId),
+  );
+
+  if (isBrokerageDenial(authority)) {
+    return NextResponse.json(
+      {
+        error: 'BROKERAGE_NOT_ALLOWED',
+        reason: authority.reason,
+        capabilityStatus: authority.status,
+      } as const,
+      { status: 403 },
+    );
+  }
+
+  return authority;
+}
+
 async function handler(
   request: NextRequest,
   ctx: AuthContext,
@@ -103,21 +148,8 @@ async function handler(
   //
   // 🔑 **Μία ανάγνωση εγγράφου, και είναι η ΦΘΗΝΟΤΕΡΗ διαδρομή για την άρνηση**: η
   //    επωνυμία διαβάζεται **μετά**, μόνο για όποιον περνά.
-  const authority = requireBrokerageCapability(
-    ctx.companyId,
-    await readCompanyCapabilities(adminDb, ctx.companyId),
-  );
-
-  if (isBrokerageDenial(authority)) {
-    return NextResponse.json(
-      {
-        error: 'BROKERAGE_NOT_ALLOWED',
-        reason: authority.reason,
-        capabilityStatus: authority.status,
-      } as const,
-      { status: 403 },
-    );
-  }
+  const authority = await gateBrokerage(adminDb, ctx.companyId);
+  if (authority instanceof NextResponse) return authority;
 
   const body: unknown = await request.json().catch(() => null);
 
@@ -195,7 +227,22 @@ async function catalogHandler(
   _request: NextRequest,
   ctx: AuthContext,
 ): Promise<NextResponse<MandateCatalog | { error: string }>> {
-  const catalog = await readMandateCatalog(getAdminFirestore(), ctx.companyId, nowISO());
+  const adminDb = getAdminFirestore();
+
+  // 🔴 **Ο ΙΔΙΟΣ ΦΡΟΥΡΟΣ ΜΕ ΤΗ ΓΡΑΦΗ, ΚΑΙ ΠΡΩΤΟΣ.** Μέχρι τις 2026-08-28 αυτή η γραμμή
+  //    ήταν σκέτο `withAuth`: **οποιοδήποτε** μέλος **οποιουδήποτε** γραφείου έπαιρνε
+  //    `200` και ο κατάλογος αποδιδόταν πλήρης — με κουμπί «Νέα καταχώρηση» — σε
+  //    αρχιτεκτονικό γραφείο. Η **πράξη** ήταν κλειστή· η **επιφάνεια** όχι.
+  const authority = await gateBrokerage(adminDb, ctx.companyId);
+  if (authority instanceof NextResponse) return authority;
+
+  // ⚠️ **Η εμβέλεια παραμένει το `ctx.companyId`, ΟΧΙ το `authority.companyId`.** Είναι
+  //    η ίδια τιμή, και θα ήταν εύκολο να διαβαστεί από την απόδειξη «για συνέπεια».
+  //    Δεν γίνεται: η απόδειξη υπάρχει για να φυλάει τη **ΓΡΑΦΗ** (§6, ώστε να μην
+  //    κριθεί ο ένας οργανισμός και να γραφτεί ο άλλος). Η **ανάγνωση** δεν έχει τέτοιο
+  //    κίνδυνο, και να την περάσουμε από την απόδειξη θα υπονοούσε ότι το `withAuth`
+  //    δεν αρκεί για εμβέλεια — που θα ήταν λάθος μήνυμα σε κάθε άλλη διαδρομή.
+  const catalog = await readMandateCatalog(adminDb, ctx.companyId, nowISO());
   return NextResponse.json(catalog);
 }
 

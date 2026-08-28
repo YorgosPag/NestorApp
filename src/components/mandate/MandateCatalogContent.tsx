@@ -34,6 +34,8 @@ import {
 } from '@/components/mandate/catalog/mandate-catalog-labels';
 import { Button } from '@/components/ui/button';
 import { useMandateCatalog, type MandateCatalogState } from '@/hooks/mandate/useMandateCatalog';
+import { useMyOrganizationCapabilities } from '@/services/realtime/hooks/useOrganizationCapability';
+import { isCapabilityActive, type CapabilityStatus } from '@/types/organization-capability';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
   MANDATE_STANDING_GROUPS,
@@ -190,7 +192,72 @@ function CatalogBody({
   );
 }
 
+/**
+ * 🔴 **Η ΟΘΟΝΗ ΧΩΡΙΣ ΑΔΕΙΑ — ΜΗΝΥΜΑ ΚΑΤΑΣΤΑΣΗΣ, ΚΑΙ ΤΙΠΟΤΑ ΑΛΛΟ** (ADR-824 Φάση 4).
+ *
+ * ⚠️ **Ούτε κουμπί «Νέα καταχώρηση», ούτε λίστα, ούτε το επεξηγηματικό `lead`.** Το
+ * `lead` περιγράφει τη δουλειά *(«κάθε ακίνητο που καταχωρήσατε για λογαριασμό
+ * πελάτη…»)* — σε γραφείο που **δεν επιτρέπεται** να την ασκήσει, είναι διαφήμιση
+ * ρυθμιζόμενης δραστηριότητας. Μένει ο **τίτλος** (ξέρεις πού βρίσκεσαι) και ο
+ * **λόγος** (ξέρεις γιατί δεν προχωράς).
+ *
+ * 🔑 **Τα ίδια τρία κλειδιά που ήδη γράφτηκαν** για τη φόρμα — μία απόδοση ανά
+ * κατάσταση, καμία νέα. «Δεν δήλωσες» ≠ «εκκρεμεί» ≠ «σου ανακλήθηκε» (ADR-824 §5.2).
+ */
+function CapabilityNotice({
+  status,
+}: {
+  readonly status: Exclude<CapabilityStatus, 'active'>;
+}): React.ReactElement {
+  const { t } = useTranslation([CATALOG_NS, 'auth']);
+
+  return (
+    <section className="flex w-full flex-col gap-6">
+      <header className="flex flex-col gap-2">
+        <h1 className="m-0 text-2xl font-semibold text-foreground">
+          {t(CATALOG_KEYS.title)}
+        </h1>
+        <p className="m-0 text-sm text-muted-foreground">
+          {t(`auth:brokerage.denyReason.${status}`)}
+        </p>
+      </header>
+    </section>
+  );
+}
+
+/**
+ * **Ο ΦΡΟΥΡΟΣ ΤΗΣ ΕΠΙΦΑΝΕΙΑΣ** — και ο λόγος που ζει σε **ξεχωριστό** component.
+ *
+ * ⛔ **ΔΕΝ είναι ασφάλεια.** Η πράξη είναι ήδη κλειστή από τον τύπο `BrokerageAuthority`
+ * (ADR-824 §6) και η ανάγνωση από τον ίδιο κριτή στο `GET`. Εδώ ζει **ειλικρίνεια**: μια
+ * πόρτα που οδηγεί σε άρνηση είναι ελάττωμα, όχι ασφάλεια.
+ *
+ * 🔴 **ΓΙΑΤΙ ΔΥΟ COMPONENTS ΚΑΙ ΟΧΙ ΕΝΑ ΜΕ `if`:** ο κανόνας των hooks απαιτεί να
+ * κληθεί το {@link useMandateCatalog} **πριν** από κάθε πρόωρη επιστροφή. Σε ένα
+ * component, ο κατάλογος θα ζητούσε δεδομένα **και για γραφείο χωρίς άδεια** — αίτημα
+ * που ο διακομιστής απαντά πλέον **403**, δηλαδή θόρυβος στα ίχνη και ερώτηση που
+ * ξέρουμε ότι θα απορριφθεί. Με τον διαχωρισμό, ο κατάλογος **δεν μοντάρεται καν**.
+ *
+ * ⚠️ **Το `settled` δεν είναι λεπτομέρεια**: χωρίς αυτό, ένα **εγκεκριμένο** γραφείο θα
+ * έβλεπε για ένα καρέ «δεν έχεις δηλώσει μεσιτική δραστηριότητα» σε κάθε φόρτωση —
+ * ψέμα της οθόνης. Όσο δεν ξέρουμε, λέμε ό,τι λέγαμε πάντα: **φορτώνει**.
+ */
 export function MandateCatalogContent(): React.ReactElement {
+  const { t } = useTranslation([CATALOG_NS]);
+  const { view: capabilities, settled } = useMyOrganizationCapabilities();
+
+  if (!settled) {
+    return <p className="text-muted-foreground">{t(CATALOG_KEYS.loading)}</p>;
+  }
+
+  const brokerage = capabilities.brokerage_listings;
+  if (!isCapabilityActive(brokerage)) return <CapabilityNotice status={brokerage} />;
+
+  return <MandateCatalogForAgency />;
+}
+
+/** Ο κατάλογος **όπως ήταν πάντα** — μοντάρεται μόνο με ενεργή ικανότητα. */
+function MandateCatalogForAgency(): React.ReactElement {
   const { t } = useTranslation([CATALOG_NS]);
   const { view, reload, act, setPresence } = useMandateCatalog();
 
