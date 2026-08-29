@@ -50,6 +50,8 @@ export interface AuthContextType {
    * ⛔ **ΠΟΤΕ ως πηγή δικαιώματος** — είναι **αυτο-δηλωμένο**.
    */
   declaredOccupation: DeclaredOccupation | null;
+  /** **ΑΦΜ** του ίδιου του χρήστη (ADR-827 §9.20). `null` = δεν δηλώθηκε. */
+  vatNumber: string | null;
   /**
    * ADR-798 Φάση 3 (Κ4) — η **δήλωση** του επαγγέλματος από τον ίδιο τον χρήστη.
    *
@@ -60,6 +62,11 @@ export interface AuthContextType {
    * πρόταση δουλειάς και τίποτε άλλο (`isco-job-affinity.ts`).
    */
   updateDeclaredOccupation: (occupation: DeclaredOccupation) => Promise<void>;
+  /**
+   * Γράφει το ΑΦΜ **μέσω του διακομιστή** — ποτέ απευθείας στο Firestore.
+   * @returns `null` αν αποθηκεύτηκε, αλλιώς ο **κωδικός άρνησης** για κλειδί i18n.
+   */
+  updateVatNumber: (raw: string) => Promise<string | null>;
   loading: boolean;
   error: string | null;
   signIn: (email: string, password: string) => Promise<void>;
@@ -125,6 +132,7 @@ async function syncActiveSession(firebaseUser: FirebaseUser): Promise<void> {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<FirebaseAuthUser | null>(null);
   const [declaredOccupation, setDeclaredOccupation] = useState<DeclaredOccupation | null>(null);
+  const [vatNumber, setVatNumber] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mfaRequired, setMfaRequired] = useState(false);
@@ -179,6 +187,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         setUser(null);
         setDeclaredOccupation(null);
+        setVatNumber(null);
         setLoading(false);
         return;
       }
@@ -192,6 +201,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
         setUser(null);
         setDeclaredOccupation(null);
+        setVatNumber(null);
         setLoading(false);
         return;
       }
@@ -212,8 +222,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         logger.warn('[AuthContext] Failed to load custom claims (non-blocking)', { error: claimsError });
       }
 
-      const { occupation } = await syncUserProfileToFirestore(db, firebaseUser, customClaims);
-      setDeclaredOccupation(occupation);
+      const synced = await syncUserProfileToFirestore(db, firebaseUser, customClaims);
+      setDeclaredOccupation(synced.occupation);
+      setVatNumber(synced.vatNumber);
       const authUser = buildAuthUser(firebaseUser, customClaims);
 
       // 🔴 ADR-819 §4.2 — Η ΣΕΙΡΑ ΕΙΝΑΙ ΣΥΜΒΟΛΑΙΟ: ΤΟ COOKIE **ΠΡΙΝ** ΤΟΝ `user`.
@@ -312,6 +323,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const value = useMemo<AuthContextType>(() => ({
     user,
     declaredOccupation,
+    vatNumber,
     loading,
     error,
     signIn: actions.signIn,
@@ -341,6 +353,42 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const uid = auth.currentUser?.uid;
       if (!uid) throw new Error('No authenticated user');
       setDeclaredOccupation(await saveDeclaredOccupation(db, uid, occupation));
+    },
+    /**
+     * 🔴 **ΠΕΡΝΑ ΑΠΟ ΤΟΝ ΔΙΑΚΟΜΙΣΤΗ, ΚΑΙ ΕΙΝΑΙ Ο ΜΟΝΟΣ ΔΡΟΜΟΣ** (ADR-827 §9.20).
+     *
+     * Το `vatNumber` είναι `serverOwnedUserFields()` στα `firestore.rules`, άρα
+     * ένα `setDoc` από εδώ **θα απορριπτόταν** — σωστά: ο **mod-11 ελεγκτής** δεν
+     * εκφράζεται σε κανόνα, και ελεύθερη πελατική γραφή θα σήμαινε «κάθε εννιάδα
+     * ψηφίων είναι ΑΦΜ» ⇒ **σύμβαση με άκυρο στοιχείο** (άρθρο 200 §2).
+     *
+     * 🔑 Η κατάσταση τίθεται από ό,τι **γράφτηκε πραγματικά** (η απάντηση του
+     * διακομιστή), ποτέ από ό,τι πληκτρολογήθηκε — ίδιο δόγμα με το επάγγελμα:
+     * ο γραφέας **κανονικοποιεί** (αφαιρεί κενά), οπότε η οθόνη οφείλει να δει το
+     * αληθινό αποτέλεσμα.
+     */
+    updateVatNumber: async (raw: string): Promise<string | null> => {
+      const response = await fetch('/api/account/vat-number', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ vatNumber: raw }),
+      });
+      const payload: unknown = await response.json();
+
+      if (response.ok && payload !== null && typeof payload === 'object' && 'vatNumber' in payload) {
+        const saved = (payload as { vatNumber: string | null }).vatNumber;
+        setVatNumber(saved);
+        return null;
+      }
+
+      // ⚠️ **Ονομαστικός** λόγος όταν υπάρχει· αλλιώς η γενική βλάβη. Ποτέ τα δύο
+      //    ίδια (N.12): «δεν έγραψα» ≠ «λάθος ΑΦΜ».
+      const reason =
+        payload !== null && typeof payload === 'object' && 'reason' in payload
+          ? String((payload as { reason: unknown }).reason)
+          : null;
+      return reason ?? 'write-failed';
     },
     sendVerificationEmail: actions.sendVerificationEmail,
     mfaRequired,
@@ -382,7 +430,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // context παγώνει στο `null` της πρώτης απόδοσης, και το επάγγελμα θα
     // φαινόταν «μη δηλωμένο» για πάντα — σφάλμα που **καμία** πύλη δεν πιάνει
     // και που στην οθόνη μοιάζει με «ο χρήστης δεν έχει επάγγελμα».
-  }), [actions, declaredOccupation, error, loading, mfaRequired, mfaResolver, user]);
+  }), [actions, declaredOccupation, error, loading, mfaRequired, mfaResolver, user, vatNumber]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

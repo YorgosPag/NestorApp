@@ -21,7 +21,17 @@ const NO_OCCUPATION: DeclaredOccupation = {};
  * ⛔ **ΜΗΝ γράψεις hook που κάνει `getDoc` για να το βρει.** Θα ήταν I/O σε
  * κάθε σελίδα — ακριβώς η προειδοποίηση του `useEffectivePermissions.ts:27-30`.
  */
-export type SyncedProfile = { readonly occupation: DeclaredOccupation };
+export type SyncedProfile = {
+  readonly occupation: DeclaredOccupation;
+  /**
+   * **ΑΦΜ** (ADR-827 §9.20). `null` = δεν δηλώθηκε — **ποτέ** «δεν έχει»: ο άνθρωπος
+   * που δεν ανέθεσε ποτέ εντολή δεν είχε **λόγο** να το δώσει (just-in-time, §9.20 β).
+   *
+   * ⚠️ Διαβάζεται **μόνο**· ο πελάτης **δεν το γράφει** (server-owned στα rules,
+   * γιατί ο mod-11 ελεγκτής δεν εκφράζεται εκεί). Γραφή: `/api/account/vat-number`.
+   */
+  readonly vatNumber: string | null;
+};
 
 /** Κρατά **μόνο** τα τέσσερα πεδία· ό,τι άλλο κουβαλά το έγγραφο δεν αφορά. */
 function readOccupation(data: Record<string, unknown> | undefined): DeclaredOccupation {
@@ -71,13 +81,18 @@ export async function syncUserProfileToFirestore(
         createdAt: now,
         updatedAt: now,
         authProvider,
+        // 🔑 Ο **υποχρεωτικός** τύπος έκανε αυτή τη γραμμή αναπόφευκτη — και σωστά:
+        //    «νέος χρήστης» είναι ακριβώς η στιγμή που κάποιος πρέπει να πει τι
+        //    σημαίνει «δεν δήλωσε ΑΦΜ». Σημαίνει `null`, όχι κενό αλφαριθμητικό
+        //    (ψεύτικο δεδομένο που κάθε επόμενος αναγνώστης θα έπρεπε να φιλτράρει).
+        vatNumber: null,
       };
 
       await setDoc(userDocRef, newProfile, { merge: true });
       logger.info('[AuthContext] User profile created successfully');
       // Νέο έγγραφο ⇒ κανένα δηλωμένο επάγγελμα ακόμη. `unknown`, όχι «κανένα»
       // (ADR-798 §7): η απουσία τιμής ΔΕΝ είναι δήλωση ότι δεν έχει επάγγελμα.
-      return { occupation: NO_OCCUPATION };
+      return { occupation: NO_OCCUPATION, vatNumber: null };
     }
 
     const existingData = userSnapshot.data();
@@ -99,13 +114,30 @@ export async function syncUserProfileToFirestore(
     }, { merge: true });
 
     logger.info('[AuthContext] User profile updated successfully');
-    return { occupation: readOccupation(existingData) };
+    return { occupation: readOccupation(existingData), vatNumber: readVatNumber(existingData) };
   } catch (syncError) {
     logger.warn('[AuthContext] User profile sync failed (non-blocking)', { error: syncError });
     // ⚠️ Ο συγχρονισμός είναι **μη μπλοκαριστικός** εξ αρχής. Αποτυχία ⇒ κενό
     // επάγγελμα, που ο καταναλωτής διαβάζει ως `unknown` — ΠΟΤΕ ως «δεν έχει».
-    return { occupation: NO_OCCUPATION };
+    return { occupation: NO_OCCUPATION, vatNumber: null };
   }
+}
+
+/**
+ * Διαβάζει το ΑΦΜ **αμυντικά** (ADR-827 §9.20).
+ *
+ * 🔑 **Κάθε τιμή που δεν είναι εννιάψηφη συμβολοσειρά διαβάζεται ως `null`.** Το
+ * έγγραφο μπορεί να κουβαλά ό,τι έγραψε μια παλιά μετανάστευση ή ένα import· ο
+ * **αναγνώστης** δεν εκθέτει σκουπίδια σε οθόνη που τα παρουσιάζει ως φορολογικό
+ * στοιχείο. Belt-and-suspenders (N.7.2 #4) με τον γραφέα, που δεν τα γεννά.
+ *
+ * ⚠️ **Χωρίς mod-11 εδώ**: ο ελεγκτής ανήκει στη **γραφή**. Ένας αναγνώστης που
+ * έκρυβε αποθηκευμένο αριθμό επειδή τον βρήκε άκυρο θα έδειχνε **κενό πεδίο** σε
+ * άνθρωπο που έχει δηλώσει — δηλαδή θα τον καλούσε να ξαναγράψει κάτι που υπάρχει.
+ */
+function readVatNumber(data: Record<string, unknown> | undefined): string | null {
+  const value = data?.vatNumber;
+  return typeof value === 'string' && /^\d{9}$/.test(value) ? value : null;
 }
 
 /**
