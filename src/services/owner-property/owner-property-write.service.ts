@@ -73,6 +73,7 @@ import {
 } from '@/types/owner-property-invariants';
 import {
   mandateInvariantViolations,
+  mandateTransitionViolations,
   type MandateInvariant,
   type OwnerPropertyMandate,
 } from '@/types/owner-property-mandate';
@@ -427,39 +428,15 @@ export async function setOwnerPropertyMandate(
   const existing = snapshot.data() as OwnerProperty | undefined;
   if (existing === undefined) return { kind: 'absent' };
 
-  if (termsChanged(existing.mandate, mandate)) {
-    const violations = mandateInvariantViolations(mandate, nowISO());
-    if (violations.length > 0) return { kind: 'invalid-mandate', violations };
-  }
+  // 🔑 **Ο ΚΡΙΤΗΣ ΔΕΝ ΖΕΙ ΠΙΑ ΕΔΩ** (ADR-827 §9.21): εξήχθη στο
+  //    `mandateTransitionViolations`, γιατί η **συναλλαγή της αποδοχής** του Σ3 δεν
+  //    μπορεί να καλέσει αυτή τη συνάρτηση (δέχεται `adminDb`, κάνει δική της
+  //    ανάγνωση). Δεύτερος γραφέας θα ήταν ADR-749· εξαγωγή του κριτή είναι η σωστή
+  //    πράξη — δύο καλούντες, **μία** κρίση.
+  const violations = mandateTransitionViolations(existing.mandate, mandate, nowISO());
+  if (violations.length > 0) return { kind: 'invalid-mandate', violations };
 
   return persist(adminDb, { ...existing, mandate, updatedAt: nowISO() }, 'overwrite');
-}
-
-/**
- * **Άλλαξε η ΣΥΜΦΩΝΙΑ**, ή απλώς αγγίχθηκε το έγγραφο;
- *
- * Η συμφωνία είναι το ζεύγος *(τι είδους εντολή, μέχρι πότε)* — τα **δύο** πεδία που
- * ο νόμος δένει μεταξύ τους (άρθρο 200 §3/§4: το ανώτατο **εξαρτάται** από το είδος).
- *
- * 🔑 **Η μετάβαση `self → brokered` μετράει ως αλλαγή**, και είναι ο λόγος που αυτή η
- * συνάρτηση δεν συγκρίνει απλώς δύο `expiresAt`: όταν το προηγούμενο σκέλος είναι
- * `self`, **δεν υπάρχει** προηγούμενη συμφωνία — άρα ό,τι γράφεται είναι **νέα**
- * σύμβαση εξ ορισμού. Αυτή είναι ακριβώς η διαδρομή της Φάσης Β (ADR-827 §7 Φ.Β).
- *
- * ⚠️ **Η αντίστροφη μετάβαση (`brokered → self`) ΔΕΝ κρίνεται**: είναι **ανάκληση**,
- * και το σκέλος `self` δεν έχει όρους να παραβιάσει. Μια κρίση εκεί θα εμπόδιζε τον
- * ιδιοκτήτη να **βγει** — το ίδιο σφάλμα που το σχόλιο της συνάρτησης απαγορεύει ρητά
- * για τα invariants του ακινήτου.
- */
-function termsChanged(
-  before: OwnerPropertyMandate,
-  after: OwnerPropertyMandate,
-): boolean {
-  if (after.kind === 'self') return false;
-  if (before.kind === 'self') return true;
-  return (
-    before.agreement !== after.agreement || before.expiresAt !== after.expiresAt
-  );
 }
 
 // =============================================================================
