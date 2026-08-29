@@ -41,7 +41,10 @@ import {
   MANDATE_STANDING_GROUPS,
   type MandateStandingGroup,
 } from '@/lib/mandate/mandate-standing';
-import { NEW_BROKERED_LISTING_ROUTE } from '@/lib/mandate/mandate-routes';
+import {
+  MANDATE_INBOX_ROUTE,
+  NEW_BROKERED_LISTING_ROUTE,
+} from '@/lib/mandate/mandate-routes';
 import type { MandateCatalogRow as CatalogRow } from '@/services/mandate/mandate-catalog.service';
 
 // 🧩 ADR-744 §15 (Φ4) — PER-ROUTE SLICE ΤΗΣ `/o/[workspace]/listings/mandates` (ADR-777 §8.39).
@@ -301,12 +304,26 @@ function MandateCatalogForAgency(): React.ReactElement {
         χωρίς διάδρομο είναι το ίδιο σχήμα με τον μηχανισμό που «ήταν χτισμένος και δεν
         τον καλούσε κανείς».
       */}
-      <nav>
+      <nav className="flex flex-wrap gap-2">
         <Link
           href={NEW_BROKERED_LISTING_ROUTE}
           className="inline-block rounded-md border border-border bg-card px-4 py-2 font-medium text-foreground"
         >
           {t(CATALOG_KEYS.create)}
+        </Link>
+        {/*
+          🔴 **ΤΟ ΙΔΙΟ ΜΑΘΗΜΑ, ΤΗΝ ΙΔΙΑ ΣΤΙΓΜΗ ΠΟΥ ΓΕΝΝΙΕΤΑΙ Η ΠΟΡΤΑ** (ADR-827 §9.21).
+          Η γειτονική πόρτα έμεινε **χωρίς διάδρομο** από το §8.33 μέχρι τις 2026-08-21
+          και τη βρήκες μόνο πληκτρολογώντας τη διεύθυνση. Ο σύνδεσμος των εισερχομένων
+          μπαίνει στην **ίδια κίνηση** με τη σελίδα — όχι σε δεύτερο βήμα που κάποιος θα
+          θυμηθεί. *(Και είναι ο καταναλωτής που κρατά το `MANDATE_INBOX_ROUTE` ζωντανό
+          για το dead-code ratchet, CHECK 3.22.)*
+        */}
+        <Link
+          href={MANDATE_INBOX_ROUTE}
+          className="inline-block rounded-md border border-border bg-card px-4 py-2 font-medium text-foreground"
+        >
+          {t(CATALOG_KEYS.inbox)}
         </Link>
       </nav>
 

@@ -57,6 +57,8 @@ export const CATALOG_KEYS = {
   title: `${K}.title`,
   lead: `${K}.lead`,
   create: `${K}.create`,
+  /** ADR-827 §9.21 — ο διάδρομος προς τα εισερχόμενα αιτήματα ανάθεσης. */
+  inbox: `${K}.inbox`,
   loading: `${K}.loading`,
   error: `${K}.error`,
   retry: `${K}.retry`,
