@@ -82,6 +82,7 @@ import { getTableCopyMarquee } from '../../state/table-copy-marquee-store';
 // 🔴 ADR-754 — οι δύο επικαλύψεις των τύπων (Β1 περιγράμματα, Γ4 λαβή). Ζουν χωριστά γιατί
 // είναι οι μόνες που ρωτούν **μοντέλο και δρομέα μαζί** — δες την κεφαλίδα τους.
 import {
+  stampTableFillBadgeOverlay,
   stampTableFillHandleOverlay,
   stampTableFormulaReferenceOverlay,
 } from './table/table-formula-overlays';
@@ -335,6 +336,10 @@ export class TableRenderer extends BaseEntityRenderer {
       // η λαβή και τα δύο περιγράμματα κάθονται πάνω στο **ίδιο** ορθογώνιο εξ ορισμού, όχι
       // κατά σύμπτωση. Το πλήθος κλήσεων `resolveTableModel` ανά καρέ μένει ίδιο.
       stampTableFillHandleOverlay(rc, layout, e, cursor, effectiveRange);
+      // 🔴 ADR-828 Φ4α — **το κουμπί «Επιλογές Αυτόματης Συμπλήρωσης», τελευταίο απ' όλα**:
+      // είναι το μόνο στοιχείο αυτού του καρέ που λειτουργεί ως **κουμπί**, άρα τίποτα δεν
+      // επιτρέπεται να το σκεπάσει. Η κρίση «ζει ακόμη;» ζει στην επικάλυψη — δες εκεί.
+      stampTableFillBadgeOverlay(rc, layout, e, cursor);
     }
 
     // 🔴 ADR-739 §40 — **ΤΟ ⊕ ΤΗΣ ΕΙΣΑΓΩΓΗΣ, ΕΞΩ ΑΠΟ ΤΟ `if (cursor)`.**

@@ -67,6 +67,16 @@ export interface TableCellSessionKeyParams extends Omit<TableCellSessionHandlers
    * «κάλυψης σε νεκρό δίδυμο» που δεν είναι κάλυψη.
    */
   readonly onOpenLink?: () => void;
+  /**
+   * 🔴 ADR-828 Φ4α — `Alt+↓` σε **πλοήγηση**: άνοιξε το μενού του κουμπιού «Επιλογές Αυτόματης
+   * Συμπλήρωσης».
+   *
+   * Προαιρετικό για τον **ίδιο ακριβώς** λόγο με το {@link onOpenLink} από πάνω, και όχι
+   * αντιγράφοντας μια σύμβαση: η γραμμή τύπων **δεν μπορεί** να βρεθεί σε `nav` (το `onFocus`
+   * της περνά τη συνεδρία σε `edit`), άρα εκεί η πρόθεση `fillOptions` δεν παράγεται ποτέ. Μια
+   * υποχρεωτική δέσμευση θα ήταν κώδικας που δεν εκτελείται — «κάλυψη σε νεκρό δίδυμο».
+   */
+  readonly onFillOptions?: () => void;
 }
 
 /** Ο χειριστής `onKeyDown` κάθε πεδίου της συνεδρίας. */
@@ -75,7 +85,7 @@ export function useTableCellSessionKeys(
 ): (event: KeyboardEvent<HTMLElement>) => void {
   const {
     mode, initialText, commit, onMove, onClear, onHistory, onExtend, onSelectAll,
-    onToggleAbsoluteRef, onPassthrough, onOpenLink,
+    onToggleAbsoluteRef, onPassthrough, onOpenLink, onFillOptions,
   } = params;
 
   return useCallback(
@@ -126,6 +136,15 @@ export function useTableCellSessionKeys(
           event.preventDefault();
           onOpenLink?.();
           return;
+        case 'fillOptions':
+          // 🔴 ADR-828 Φ4α — `preventDefault` **πάντα**, ακόμη κι όταν δεν υπάρχει κουμπί να
+          // ανοίξει: το `Alt+↓` είναι συντόμευση του **λειτουργικού** σε αρκετά περιβάλλοντα
+          // και, χωρίς αυτό, ένα `<textarea>` με εστίαση θα το ερμήνευε ως κίνηση κέρσορα. Ο
+          // ίδιος κανόνας που τηρεί ήδη το `F4` δίπλα: η «καμία ενέργεια» οφείλει να είναι
+          // πράγματι καμία, όχι η ενέργεια κάποιου άλλου.
+          event.preventDefault();
+          onFillOptions?.();
+          return;
         case 'absoluteRef':
           // 🔴 ADR-754 Γ3 — `preventDefault` **πάντα**, ακόμη κι όταν δεν υπάρχει αναφορά να
           // κλειδωθεί: το `F4` είναι συντόμευση του **browser** (εστίαση στη γραμμή
@@ -145,7 +164,7 @@ export function useTableCellSessionKeys(
     },
     [
       mode, initialText, commit, onMove, onClear, onHistory, onExtend, onSelectAll,
-      onToggleAbsoluteRef, onPassthrough, onOpenLink,
+      onToggleAbsoluteRef, onPassthrough, onOpenLink, onFillOptions,
     ],
   );
 }

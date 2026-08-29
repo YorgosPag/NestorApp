@@ -23,7 +23,7 @@
  */
 
 import { TABLE_FILL_HANDLE } from '../../../config/color-config';
-import { strokeRectMm, type StampTableContext } from './stamp-table-layout';
+import { strokeRectMm, traceRectMm, type StampTableContext } from './stamp-table-layout';
 import { tableRangeRectMm } from '../../../bim/table/table-cell-range';
 import { tableFillHandleRectMm } from '../../../bim/table/table-fill-handle';
 import type { TableCellRangeBounds } from '../../../bim/table/table-cell-range';
@@ -42,19 +42,14 @@ export function stampTableFillHandle(
   if (!rect) return;
 
   const { ctx } = rc;
-  // Οι τέσσερις κορυφές σε mm, προβεβλημένες ξεχωριστά — δες την κεφαλίδα.
-  const corners = [
-    rc.toScreen(rect.x, rect.y),
-    rc.toScreen(rect.x + rect.w, rect.y),
-    rc.toScreen(rect.x + rect.w, rect.y + rect.h),
-    rc.toScreen(rect.x, rect.y + rect.h),
-  ];
-
   ctx.save();
-  ctx.beginPath();
-  ctx.moveTo(corners[0].x, corners[0].y);
-  for (let i = 1; i < corners.length; i++) ctx.lineTo(corners[i].x, corners[i].y);
-  ctx.closePath();
+  // 🔴 ADR-828 Φ4α (N.0.2) — **οι τέσσερις κορυφές δεν γράφονται πια εδώ.** Ήταν κατά λέξη το
+  // σώμα του {@link appendRectSubpath}, δηλαδή το **τέταρτο** αντίγραφο εκείνης της αριθμητικής
+  // — ακριβώς αυτό που η κεφαλίδα του `traceRectMm` καταγράφει ως «τρεις ευκαιρίες να ξεχάσει
+  // κάποιος τη γωνία». Εντοπίστηκε όταν το κουμπί επιλογών χρειάστηκε το ίδιο σχήμα και θα
+  // γεννούσε **πέμπτο**. Η ζωγραφιά δεν άλλαξε ούτε κατά pixel: το `traceRectMm` προβάλλει τις
+  // ίδιες τέσσερις κορυφές με την ίδια σειρά.
+  traceRectMm(rc, rect);
   ctx.fillStyle = TABLE_FILL_HANDLE.fillHex;
   ctx.fill();
   // Ρητά συμπαγές: ο `stampTableBorders` μπορεί να έχει αφήσει διακεκομμένο μοτίβο πάνω στο

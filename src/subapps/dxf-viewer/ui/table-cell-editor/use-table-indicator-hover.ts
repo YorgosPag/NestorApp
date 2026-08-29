@@ -98,6 +98,10 @@ import { canDeleteAxisTarget } from './table-header-axis-actions';
 import { noteCursorProbe } from '../../systems/cursor/cursor-apply-audit';
 // 🔴 ADR-739 §36 — η επιλογή (ΤΙ πιάνεται) και τα πλήκτρα (ΤΙ θα γίνει αν το πιάσεις).
 import { getTableCellCursor } from '../../state/table-cell-cursor-store';
+// 🔴 ADR-828 Φ4α — το κουμπί «Επιλογές Αυτόματης Συμπλήρωσης». Η **κρίση** είναι καθαρή και
+// κοινή με τον ζωγράφο· εδώ γίνεται μόνο η ανάγνωση, με getter τη στιγμή του συμβάντος (ADR-040).
+import { resolveTableFillBadgeBounds } from '../../bim/table/table-fill-badge';
+import { getTableFillBadge } from '../../state/table-fill-badge-store';
 import {
   tableRangeDragIntentOf,
   type TableRangeIntentModifiers,
@@ -309,6 +313,12 @@ export function useTableIndicatorHover(params: UseTableIndicatorHoverParams): vo
       tableRangeDragIntentOf(modifiers),
       mode,
       fillAnchor,
+      // 🔴 ADR-828 Φ4α — **η ίδια κρίση που κάνει ο ζωγράφος**, με τα ίδια τρία ορίσματα
+      // (ζωντανή οντότητα, δρομέας, μεταβατική κατάσταση). Ο δείκτης οφείλει να πιάνει
+      // ακριβώς το κουμπί που **βλέπει** ο άνθρωπος: μια δεύτερη διατύπωση εδώ θα ήταν
+      // δεύτερη άποψη για το «υπάρχει κουμπί;» μέσα στο ίδιο καρέ — και ο §31 ονομάζει
+      // ρητά αυτή την απόκλιση ως το ψέμα που απαγορεύεται.
+      resolveTableFillBadgeBounds(target, cursorState, getTableFillBadge()),
     );
     // 🔬 §31.11 — η **αιτία**, με τις συντεταγμένες του συμβάντος: αν ο ρόλος ταλαντώνεται ενώ
     // το `y` μένει σταθερό, φταίει όριο κατά τον **οριζόντιο** άξονα (διαχωριστικά στηλών)·

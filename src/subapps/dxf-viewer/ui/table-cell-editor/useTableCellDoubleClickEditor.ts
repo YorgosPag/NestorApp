@@ -51,9 +51,12 @@ import {
   setTableCellCursor,
   useTableCellCursor,
 } from '../../state/table-cell-cursor-store';
+// 🔴 ADR-828 Φ4α — η πληκτρολογιακή πόρτα του κουμπιού συμπλήρωσης. Όλη η γνώση ζει στο module
+// της· εδώ γίνεται μόνο η σύνδεση με τον κόσμο (ζωντανή οντότητα + DOM + δεσμευτής).
+import { useTableFillBadgeKey } from './use-table-fill-badge-key';
 // 🔴 ADR-739 §46 — η **απόφαση** του διπλού κλικ (είσοδος vs άνοιγμα κελιού), σε δικό της
 // module: δεν χρειάζεται τίποτα από το hook, και αυτό εδώ ξαναχτύπησε τις 500 γραμμές (N.7.1).
-import { applyTableDoubleClick } from './table-double-click-gesture';
+import { useTableDoubleClick } from './use-table-double-click';
 // 🔴 ADR-739 §68.9 — ο γραφέας της **χειρονομίας** «όλα» (ενεργό κελί στο A1), σε αντίθεση
 // με την **εντολή** `Ctrl+A` που επιλέγει χωρίς να πλοηγεί.
 import { selectWholeTableFromCorner } from './table-select-all-action';
@@ -128,25 +131,11 @@ export function useTableCellDoubleClickEditor(
   const { execute, undo, redo } = useCommandHistory();
   const cursor = useTableCellCursor();
 
-  /**
-   * ADR-739 §46 — **δύο** χειρονομίες: έξω ⇒ είσοδος σε πλοήγηση, μέσα ⇒ άνοιγμα κελιού. Όλη
-   * η απόφαση ζει στο `table-double-click-gesture` — δεν χρειάζεται τίποτα από το hook, και
-   * αυτό εδώ ξαναχτύπησε τις 500 γραμμές (N.7.1).
-   *
-   * ⚠️ **Καμία εξάρτηση από τον δρομέα**, επίτηδες: το πρόχειρο ζει μέσα του, άρα μια εξάρτηση
-   * θα ξανάφτιαχνε αυτόν τον χειριστή σε κάθε πάτημα πλήκτρου — και ταξιδεύει ως prop μέχρι
-   * τον `CanvasSection`, τον orchestrator που ο ADR-040 απαγορεύει να επαναποδίδεται. Τον
-   * διαβάζει η ίδια η χειρονομία, με getter, τη στιγμή του συμβάντος.
-   */
-  const handleDoubleClick = useCallback(
-    (event: React.MouseEvent<HTMLDivElement>) => {
-      const container = containerRef.current;
-      const transform = transformRef.current;
-      if (!container || !transform) return;
-      applyTableDoubleClick({ event, container, transform, levelManager, getSelectedEntityIds });
-    },
-    [levelManager, getSelectedEntityIds, containerRef, transformRef],
-  );
+  // ADR-739 §46 — δύο χειρονομίες σε ένα συμβάν (είσοδος / άνοιγμα κελιού). Η απόφαση ζει στο
+  // `table-double-click-gesture`, η καλωδίωση στο `use-table-double-click` — δες εκεί το κριτήριο.
+  const handleDoubleClick = useTableDoubleClick({
+    transformRef, containerRef, getSelectedEntityIds, levelManager,
+  });
 
   /**
    * Γράφει κείμενο στο τρέχον κελί ως **ένα** αναιρέσιμο `UpdateEntityCommand`.
@@ -201,8 +190,6 @@ export function useTableCellDoubleClickEditor(
     },
     [cursor, levelManager],
   );
-
-
 
   /**
    * ADR-739 Φ.Δ βήμα 4 — `Ctrl+Z`/`Ctrl+Y` σε **πλοήγηση**, με σημασιολογία Excel.
@@ -299,6 +286,13 @@ export function useTableCellDoubleClickEditor(
    * ξέρει τη διαφορά — δες την κεφαλίδα του `table-axis-resize-drag`.
    */
   const commitTableModel = useTableModelCommit({ levelManager, execute });
+
+  // 🔴 ADR-828 Φ4α — `Alt+↓`: η πληκτρολογιακή πόρτα του κουμπιού «Επιλογές Αυτόματης
+  // Συμπλήρωσης», η διαδρομή που το Excel **δεν έχει καθόλου**. Η σύνδεση ζει εδώ επειδή εδώ
+  // είναι ο ένας τόπος που βλέπει μοντέλο **και** DOM· το γιατί ζει στο module της πόρτας.
+  const openFillOptions = useTableFillBadgeKey({
+    liveTable, containerRef, transformRef, commit: commitTableModel,
+  });
 
   // 🔴 ADR-739 §69 — η μετάβαση από το πλαίσιο ονόματος, με τον **ίδιο** δεσμευτή
   // προχείρου που τηρεί ήδη το ποντίκι (§26.15). Η σειρά ζει στο module.
@@ -400,11 +394,13 @@ export function useTableCellDoubleClickEditor(
         onCut: rangeActions.onCut,
         onPaste: rangeActions.onPaste,
         onOpenLink: openCursorCellLink,
+        // 🔴 ADR-828 Φ4α — δες `openFillOptions` παραπάνω.
+        onFillOptions: openFillOptions,
       },
     };
   }, [
     cursor, target, anchor, commitText, move, history, rangeActions, openCursorCellLink,
-    toggleAbsoluteRef,
+    toggleAbsoluteRef, openFillOptions,
   ]);
 
   /**

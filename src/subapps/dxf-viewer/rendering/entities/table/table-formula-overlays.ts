@@ -29,6 +29,10 @@ import { tableFormulaReferenceSpans } from '../../../bim/table/formula/table-for
 import { resolveTableModel } from '../../../bim/table/table-model-helpers';
 import { getTableFillPreview } from '../../../state/table-fill-preview-store';
 import { stampTableFillHandle, stampTableFillPreview } from './stamp-table-fill-handle';
+// 🔴 ADR-828 Φ4α — η **τρίτη** επικάλυψη «μοντέλο + δρομέας»: το κουμπί επιλογών.
+import { stampTableFillBadge } from './stamp-table-fill-badge';
+import { resolveTableFillBadgeBounds } from '../../../bim/table/table-fill-badge';
+import { getTableFillBadge } from '../../../state/table-fill-badge-store';
 import { stampTableFormulaReferences } from './stamp-table-formula-references';
 import type { StampTableContext } from './stamp-table-layout';
 import type { TableCellRangeBounds } from '../../../bim/table/table-cell-range';
@@ -99,4 +103,31 @@ export function stampTableFillHandleOverlay(
   }
   if (cursor.mode !== 'nav') return;
   if (effectiveRange) stampTableFillHandle(rc, layout, effectiveRange);
+}
+
+/**
+ * 🔴 ADR-828 **Φ4α** — **το κουμπί «Επιλογές Αυτόματης Συμπλήρωσης»**: η **τρίτη** επικάλυψη
+ * που ρωτά μοντέλο και δρομέα μαζί, και γι' αυτό ζει εδώ και όχι στον `TableRenderer`.
+ *
+ * Η τοποθέτηση δεν είναι ευκολία: ο λόγος #1 της κεφαλίδας αυτού του αρχείου **ξαναχτύπησε**
+ * ακριβώς εδώ. Η προσθήκη του κουμπιού απευθείας στον `TableRenderer` τον πήγε **508/500**
+ * (N.7.1) και ο pre-commit hook την μπλόκαρε. Η θεραπεία είναι η ίδια που γέννησε το module:
+ * **εξαγωγή, ποτέ κόψιμο τεκμηρίωσης** — και ο προορισμός ήταν ήδη γραμμένος.
+ *
+ * Ίδιο συμβόλαιο με τα δύο αδέλφια του: η **απόφαση** («ζει το κουμπί;») ζει στην καθαρή
+ * {@link resolveTableFillBadgeBounds}, η **ανάγνωση** γίνεται με getter τη στιγμή του καρέ
+ * (ADR-040), και ο ζωγράφος από κάτω δεν ξέρει ούτε από store ούτε από μοντέλο.
+ *
+ * ⚠️ **Σιωπή, όχι σβήσιμο**: μια μπαγιάτικη σφραγίδα έκδοσης δεν γράφει ποτέ store από εδώ.
+ * Μια παρενέργεια μέσα σε βρόχο ζωγραφικής θα ήταν κατάσταση που αλλάζει ανάλογα με το αν κάτι
+ * είναι ορατό — δες `stamp-table-copy-marquee.ts`, ίδιος κανόνας, ίδιος λόγος.
+ */
+export function stampTableFillBadgeOverlay(
+  rc: StampTableContext,
+  layout: TableLayout,
+  entity: TableEntity,
+  cursor: TableCellCursorState,
+): void {
+  const filled = resolveTableFillBadgeBounds(entity, cursor, getTableFillBadge());
+  if (filled) stampTableFillBadge(rc, layout, filled);
 }

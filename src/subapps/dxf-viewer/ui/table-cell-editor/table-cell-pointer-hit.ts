@@ -69,7 +69,10 @@ import {
 // 🔴 ADR-754 §14 — η λαβή συμπλήρωσης: **πέμπτο κανάλι της ίδιας σάρωσης**, με τον ίδιο δρόμο
 // που ρωτά και ο φρουρός του πατήματος (`table-fill-handle-drag`).
 import { tableFillHandleHitAtFrame } from '../../bim/table/table-fill-handle';
-import type { TableCellRef } from '../../bim/table/table-cell-range';
+// 🔴 ADR-828 Φ4α — το κουμπί «Επιλογές Αυτόματης Συμπλήρωσης»: **έκτο κανάλι** της ίδιας
+// σάρωσης, με τον ίδιο δρόμο που ρωτά και ο φρουρός του πατήματος (`table-fill-badge-press`).
+import { tableFillBadgeHitAtFrame } from '../../bim/table/table-fill-badge';
+import type { TableCellRangeBounds, TableCellRef } from '../../bim/table/table-cell-range';
 import type { TableCellSelection } from '../../state/table-cell-cursor-store';
 import type { TableCellHit, TableEntity, TableEntityGeometry } from '../../types/table-entity';
 import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
@@ -353,6 +356,15 @@ export function tableIndicatorProbeAtWorld(
   // καλών είναι ο **μόνος** που ξέρει να τις διακρίνει — δες τη σύμβαση του `selection` από
   // πάνω: αυτό το module απαντά «**πού** έπεσε αυτό;», ποτέ «τι κατάσταση έχει η εφαρμογή».
   fillAnchor: TableCellRef | null = null,
+  // 🔴 ADR-828 Φ4α — **η γεμισμένη περιοχή, όταν το κουμπί επιλογών ζει**· `null` = κανένα
+  // κουμπί.
+  //
+  // Έρχεται λυμένη και δεν κρίνεται εδώ, με την **ίδια** σύμβαση που κρατά όλο το module
+  // καθαρό (δες `selection` και `fillAnchor` από πάνω): εδώ απαντιέται «**πού** έπεσε αυτό;»,
+  // ποτέ «τι κατάσταση έχει η εφαρμογή». Και η κρίση της είναι ουσιωδώς κατάσταση —
+  // *«έγινε συμπλήρωση, και είναι ακόμη η τελευταία πράξη πάνω σε αυτό το μοντέλο;»* —
+  // δηλαδή ερώτηση που ο ΕΝΑΣ ακροατής κίνησης ξέρει να απαντήσει και αυτό εδώ όχι.
+  fillBadge: TableCellRangeBounds | null = null,
 ): TableIndicatorProbe {
   const geometry = computeTableEntityGeometryLive(entity);
   const probe = indicatorProbeBasis(entity, world, geometry, viewScale);
@@ -385,6 +397,15 @@ export function tableIndicatorProbeAtWorld(
   const fill = fillAnchor
     ? tableFillHandleHitAtFrame(geometry.layout, probe.frame, probe.pxPerMm, range?.bounds ?? null)
     : null;
+  // 🔴 ADR-828 Φ4α — **έκτο κανάλι της ίδιας σάρωσης**: το κουμπί επιλογών κάτω από τη
+  // γεμισμένη περιοχή. Ο **ίδιος** `tableFillBadgeHitAtFrame` που ρωτά και το πάτημα, πάνω στα
+  // **ίδια** όρια — ο άνθρωπος δείχνει με τον δείκτη αυτό που θα πατήσει (§31).
+  const badge = tableFillBadgeHitAtFrame(
+    geometry.layout,
+    probe.frame,
+    probe.pxPerMm,
+    fillBadge,
+  );
   return {
     // §40 — σε απλή επιλογή δεν υπάρχουν ζώνες να φωτιστούν. Ο φύλακας ζει εδώ και όχι στον
     // καλούντα, ώστε ένας δεύτερος καταναλωτής αύριο να μην μπορεί να τον ξεχάσει.
@@ -402,6 +423,7 @@ export function tableIndicatorProbeAtWorld(
       mode,
       remove,
       fill,
+      badge,
     ),
     insert,
     remove,

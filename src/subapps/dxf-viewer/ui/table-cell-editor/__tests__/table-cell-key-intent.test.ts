@@ -111,7 +111,7 @@ describe('τα πλήκτρα που το κελί ΔΕΝ κλέβει ποτέ'
   });
 
   it.each(['ArrowDown', 'F2', 'a', 'Home'])(
-    'Alt+%s ⇒ passthrough — το Alt ανήκει στους επιταχυντές της εφαρμογής',
+    'Alt+%s σε ΓΡΑΦΗ ⇒ passthrough — το Alt ανήκει στους επιταχυντές της εφαρμογής',
     (key) => {
       expect(resolveTableCellKeyIntent(key, { ...NO_MODS, altKey: true }, 'enter')).toEqual({
         kind: 'passthrough',
@@ -155,11 +155,47 @@ describe('τα πλήκτρα που το κελί ΔΕΝ κλέβει ποτέ'
     });
   });
 
-  it.each(ALL_MODES)('Alt+άλλο πλήκτρο σε %s ⇒ passthrough — μόνο το Enter διεκδικείται', (mode) => {
-    expect(resolveTableCellKeyIntent('F', { ...NO_MODS, altKey: true }, mode)).toEqual({
-      kind: 'passthrough',
+  // ── 🔴 ADR-828 Φ4α — Η ΔΕΥΤΕΡΗ ΕΞΑΙΡΕΣΗ ΤΟΥ `Alt`, ΜΕ ΤΟ ΙΔΙΟ ΑΚΡΙΒΩΣ ΣΧΗΜΑ ──
+  //
+  // `Alt+↓` σε **πλοήγηση**: άνοιξε το μενού του κουμπιού «Επιλογές Αυτόματης Συμπλήρωσης».
+  // Η επιλογή του πλήκτρου δεν είναι δική μας εφεύρεση — είναι η σύμβαση των Windows και του
+  // WAI-ARIA APG για «άνοιξε το dropdown του εστιασμένου», και το **ίδιο** πλήκτρο που το Excel
+  // χρησιμοποιεί ήδη για το dropdown επικύρωσης δεδομένων και το μενού AutoFilter.
+  //
+  // 🔴 Το κενό που κλείνει είναι **μετρημένο**: το Excel δεν έχει **καμία** συντόμευση προς αυτό
+  // το κουμπί (δύο ανεξάρτητες αναζητήσεις, 2026-08-29) — άρα η «Συμπλήρωση καθημερινών» είναι
+  // εκεί απρόσιτη χωρίς ποντίκι. Το δικό μας μενού είναι Radix, δηλαδή ήδη πλήρως πλοηγήσιμο·
+  // έλειπε **μόνο** το πλήκτρο που το ανοίγει.
+  //
+  // ⚠️ Οι δύο σημασίες του `Alt+↓` δεν συγκρούονται για τον ίδιο λόγο με το `Alt+Enter` από
+  // πάνω: **ζουν σε διαφορετική κατάσταση**. Σε γραφή το πλήκτρο μένει `passthrough` (το test
+  // των τεσσάρων πλήκτρων παραπάνω το κλειδώνει), γιατί εκεί το κουμπί ούτε ζωγραφίζεται.
+  it('🔴 Alt+↓ σε ΠΛΟΗΓΗΣΗ ⇒ fillOptions — η διαδρομή που το Excel ΔΕΝ έχει', () => {
+    expect(resolveTableCellKeyIntent('ArrowDown', { ...NO_MODS, altKey: true }, 'nav')).toEqual({
+      kind: 'fillOptions',
     });
   });
+
+  it.each(['enter', 'edit'] as const)(
+    'Alt+↓ σε %s ⇒ passthrough — εκεί δεν υπάρχει κουμπί να ανοίξει',
+    (mode) => {
+      expect(resolveTableCellKeyIntent('ArrowDown', { ...NO_MODS, altKey: true }, mode)).toEqual({
+        kind: 'passthrough',
+      });
+    },
+  );
+
+  it.each(ALL_MODES)(
+    'Alt+άλλο πλήκτρο σε %s ⇒ passthrough — διεκδικούνται ΜΟΝΟ το Enter και το ↓',
+    (mode) => {
+      expect(resolveTableCellKeyIntent('F', { ...NO_MODS, altKey: true }, mode)).toEqual({
+        kind: 'passthrough',
+      });
+      expect(resolveTableCellKeyIntent('ArrowUp', { ...NO_MODS, altKey: true }, mode)).toEqual({
+        kind: 'passthrough',
+      });
+    },
+  );
 
   it.each(ALL_MODES)('Escape σε κατάσταση %s ⇒ passthrough — ανήκει ΠΑΝΤΑ στον escape-bus', (mode) => {
     expect(resolveTableCellKeyIntent('Escape', NO_MODS, mode)).toEqual({ kind: 'passthrough' });

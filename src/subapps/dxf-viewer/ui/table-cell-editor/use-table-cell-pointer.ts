@@ -93,6 +93,9 @@ import { useTableContainerMouseDown } from './use-table-container-mousedown';
 // σχήμα με τις τρεις πρώτες — όλη η λογική σε δικό της module, εδώ μόνο ο φρουρός.
 import { tryTablePointModeMouseDown } from './table-point-mode-pointer';
 import { tryTableFillHandleMouseDown } from './table-fill-handle-drag';
+// 🔴 ADR-828 Φ4α — η **έκτη** χειρονομία της γωνίας: το κουμπί «Επιλογές Αυτόματης
+// Συμπλήρωσης». Ίδιο σχήμα με τις προηγούμενες — όλη η γνώση στο module της, εδώ ο φρουρός.
+import { tryTableFillBadgeMouseDown } from './table-fill-badge-press';
 // ADR-739 §43 + §66 — η **έκτη** εξαγωγή: το τετραγωνάκι της γωνίας, όταν αυτό εδώ ξαναχτύπησε
 // τις 500 γραμμές (N.7.1). Εξαγωγή, όχι κόψιμο — δες την κεφαλίδα εκείνου του module.
 import { handleTableCornerMouseDown } from './table-corner-pointer';
@@ -268,21 +271,31 @@ export function useTableCellPointer(params: UseTableCellPointerParams): void {
     // που πιάνεται αλλά δεν φαίνεται». Πριν από τους τέσσερις κλάδους που δεσμεύουν ή
     // μετακινούν, για τον **ίδιο** λόγο με την υπόδειξη: η λαβή κάθεται πάνω στην κορυφή του
     // τελευταίου κελιού, δηλαδή ακριβώς εκεί που ο κλάδος «κελί» θα μετακινούσε τον δρομέα.
-    if (
-      tryTableFillHandleMouseDown(event, {
-        entity,
-        // 🔴 ADR-828 §7.2 — ο **ίδιος** αναγνώστης που ήδη χρησιμοποιεί η μεταφορά περιοχής:
-        // το δεξί σύρσιμο γράφει **μετά** το μενού, δηλαδή μετά από αλληλεπίδραση μέσα στην
-        // οποία χωρά `Ctrl+Z`. Δες `TableFillHandlePress.liveTable`.
-        liveTable,
-        cursor,
-        worldPoint,
-        transform,
-        container,
-        transformRef,
-        commit: onCommitModel,
-      })
-    ) {
+    const fillPress = {
+      entity,
+      // 🔴 ADR-828 §7.2 — ο **ίδιος** αναγνώστης που ήδη χρησιμοποιεί η μεταφορά περιοχής:
+      // το δεξί σύρσιμο γράφει **μετά** το μενού, δηλαδή μετά από αλληλεπίδραση μέσα στην
+      // οποία χωρά `Ctrl+Z`. Δες `TableFillWriter.liveTable`.
+      liveTable,
+      cursor,
+      worldPoint,
+      transform,
+      container,
+      transformRef,
+      commit: onCommitModel,
+    };
+
+    // 🔴 ADR-828 Φ4α — **ΤΟ ΚΟΥΜΠΙ ΕΠΙΛΟΓΩΝ ΠΡΩΤΑ, Η ΛΑΒΗ ΜΕΤΑ.** Η πιο ειδική περίπτωση
+    // πρώτη: το κουμπί ζει μόνο μετά από συμπλήρωση, η λαβή ζει πάντα. Η σειρά **δεν λύνει
+    // διεκδίκηση** —τα δύο είναι χωρικά ξένα κατά κατασκευή, δες `TABLE_FILL_BADGE_GAP_PX`—
+    // αλλά είναι η **ίδια** σειρά που δηλώνει και ο ρόλος δείκτη, όπως απαιτεί ο §31: δύο
+    // διαφορετικές σειρές θα σήμαιναν pixel όπου ο δείκτης υπόσχεται ένα και το κλικ κάνει άλλο.
+    //
+    // Και τα δύο μοιράζονται **ένα** αντικείμενο: η λαβή γεννά το κουμπί (`commitTableFill`),
+    // άρα ένας δεύτερος κόσμος για το δεύτερο θα ήταν δεύτερη άποψη για την ίδια χειρονομία.
+    if (tryTableFillBadgeMouseDown(event, fillPress)) return;
+
+    if (tryTableFillHandleMouseDown(event, fillPress)) {
       return;
     }
 

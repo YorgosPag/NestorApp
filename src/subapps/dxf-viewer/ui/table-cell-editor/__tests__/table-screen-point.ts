@@ -15,6 +15,12 @@
  * διαδρομή έμενε **ανέλεγκτη**: ένα λάθος πρόσημο στο `tableWorldToFrame` είναι αόρατο σε
  * `cos 0 = 1, sin 0 = 0` και σφάλλει **γραμμικά με τη γωνία**.
  *
+ * 🔴 **ADR-828 Φ4α (2026-08-29) — η αλυσίδα ΔΕΝ ζει πια εδώ.** Μετακόμισε σε παραγωγή,
+ * `bim/table/table-frame-screen.ts`, μόλις απέκτησε καταναλωτή **εκτός test**: το `Alt+↓` του
+ * κουμπιού συμπλήρωσης οφείλει να ανοίξει το μενού **στη θέση του κουμπιού**, και ένα τέταρτο
+ * αντίγραφο θα ήταν ακριβώς το σφάλμα που αυτή η κεφαλίδα περιγράφει. Ό,τι ακολουθεί είναι
+ * **καταναλωτές** εκείνης της μίας μηχανής.
+ *
  * ## Ένα πρωτόγονο, δύο ερωτήσεις από πάνω του
  * Το {@link tableFrameScreenPoint} είναι η **μόνη** αλυσίδα· το κελί και η ζώνη διαφέρουν
  * μόνο στο **ποιο** `(u, v)` ρωτούν. Η περιστροφή μπαίνει από το `tableFrameToWorld`, το
@@ -30,10 +36,15 @@
  * @see bim/table/table-indicator-geometry.ts — ΠΟΥ κάθεται η ζώνη (κοινό με ζωγράφο + κλικ)
  */
 
-import { CoordinateTransforms } from '../../../rendering/core/CoordinateTransforms';
+// 🔴 ADR-828 Φ4α — η αλυσίδα **δεν ζει πια εδώ**: μετακόμισε σε παραγωγή
+// (`bim/table/table-frame-screen.ts`) τη στιγμή που την απέκτησε δεύτερος, πραγματικός
+// καταναλωτής — η διαδρομή πληκτρολογίου του κουμπιού συμπλήρωσης. Αυτό το αρχείο είναι πλέον
+// **καταναλωτής**, όχι ιδιοκτήτης· δες την κεφαλίδα εκείνου του module για το γιατί ένα test
+// που προβάλλει με δική του μηχανή μπορεί να συμφωνήσει με τον εαυτό του πάνω σε λάθος
+// γεωμετρία.
+import { tableFrameScreenPoint as projectTableFramePoint } from '../../../bim/table/table-frame-screen';
 import {
   computeTableEntityGeometryLive,
-  tableFrameToWorld,
   tablePxPerMm,
 } from '../../../bim/table/table-entity-geometry';
 import {
@@ -56,6 +67,8 @@ import {
 } from '../../../bim/table/table-axis-boundary';
 // 🔴 ADR-754 §14 — το ΙΔΙΟ τετράγωνο που ζωγραφίζεται και που ρωτούν ο δείκτης και το πάτημα.
 import { tableFillHandleRectMm } from '../../../bim/table/table-fill-handle';
+// 🔴 ADR-828 Φ4α — το ΙΔΙΟ τετράγωνο του κουμπιού που ζωγραφίζεται και που πιάνεται.
+import { tableFillBadgeRectMm } from '../../../bim/table/table-fill-badge';
 // 🔴 ADR-739 §36 — το ΙΔΙΟ ορθογώνιο περιοχής που ζωγραφίζεται και που πιάνεται.
 import { tableRangeRectMm, type TableCellRangeBounds } from '../../../bim/table/table-cell-range';
 import type { TableRectMm } from '../../../bim/table/table-layout-types';
@@ -104,8 +117,7 @@ export function tableFrameScreenPoint(
   view: TableTestView = TABLE_TEST_VIEW,
 ): Point2D {
   const { mmToWorld } = computeTableEntityGeometryLive(entity);
-  const world = tableFrameToWorld(entity, u, v, mmToWorld);
-  return CoordinateTransforms.worldToScreen(world, view.transform, view.viewport);
+  return projectTableFramePoint(entity, u, v, mmToWorld, view.transform, view.viewport);
 }
 
 /** Το σημείο οθόνης στο **κέντρο ενός κελιού** (δείκτες γραμμής/στήλης του μοντέλου). */
@@ -234,6 +246,29 @@ export function tableFillHandleScreenPoint(
   const pxPerMm = tablePxPerMm(geometry.mmToWorld, view.transform.scale);
   const rect = tableFillHandleRectMm(geometry.layout, bounds, pxPerMm);
   if (!rect) throw new Error('Η περιοχή δεν τέμνει τη διάταξη — δεν υπάρχει λαβή να σημαδευτεί');
+  const { u, v } = rectCenterMm(rect);
+  return tableFrameScreenPoint(entity, u, v, view);
+}
+
+/**
+ * 🔴 ADR-828 Φ4α — το σημείο οθόνης στο **κέντρο του κουμπιού «Επιλογές Αυτόματης
+ * Συμπλήρωσης»**, κάτω από τη γεμισμένη περιοχή.
+ *
+ * Ρωτά το `tableFillBadgeRectMm` — **το ίδιο** τετράγωνο που ζωγραφίζεται και που πιάνουν ο
+ * δείκτης, το πάτημα και το `Alt+↓`. Ίδιο επιχείρημα με τους τέσσερις βοηθούς από πάνω, και
+ * εδώ έχει επιπλέον δόντια: το κουμπί ζει **λίγα pixel** κάτω από τη λαβή, οπότε μια δεύτερη
+ * αριθμητική («η γωνία, συν κάτι») θα σημάδευε πότε το ένα και πότε το άλλο ανάλογα με το
+ * ζουμ — δηλαδή θα έδινε test που περνά για λάθος λόγο.
+ */
+export function tableFillBadgeScreenPoint(
+  entity: TableEntity,
+  filled: TableCellRangeBounds,
+  view: TableTestView = TABLE_TEST_VIEW,
+): Point2D {
+  const geometry = computeTableEntityGeometryLive(entity);
+  const pxPerMm = tablePxPerMm(geometry.mmToWorld, view.transform.scale);
+  const rect = tableFillBadgeRectMm(geometry.layout, filled, pxPerMm);
+  if (!rect) throw new Error('Η γεμισμένη περιοχή δεν τέμνει τη διάταξη — δεν υπάρχει κουμπί');
   const { u, v } = rectCenterMm(rect);
   return tableFrameScreenPoint(entity, u, v, view);
 }

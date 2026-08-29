@@ -193,7 +193,7 @@ export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): Reac
   const {
     mode, draft, initialText, caretIndex, caretRevision, anchor, readOnly, runs, cellStyle,
     onCommit, onMove, onClear, onHistory, onExtend, onSelectAll, onToggleAbsoluteRef,
-    onCopy, onCut, onPaste, onOpenLink,
+    onCopy, onCut, onPaste, onOpenLink, onFillOptions,
   } = props;
   const { t } = useTranslation('dxf-viewer');
   const inputRef = useRef<TableRichTextField | null>(null);
@@ -292,6 +292,7 @@ export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): Reac
     onSelectAll,
     onToggleAbsoluteRef,
     onOpenLink,
+    onFillOptions,
     onPassthrough: inlineKeyDown,
   });
 
