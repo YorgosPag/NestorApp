@@ -99,7 +99,7 @@ export class FakeFirestore {
   }
 
   public collection(name: string): FakeCollection {
-    return new FakeCollection(this, this.bucket(name));
+    return new FakeCollection(this, this.bucket(name), name);
   }
 
   public batch(): FakeBatch {
@@ -128,6 +128,140 @@ export class FakeFirestore {
   public countWrite(): void {
     this.writes += 1;
   }
+
+  /**
+   * 🔴 **Ο ΑΝΤΑΓΩΝΙΣΤΗΣ — Η ΣΚΑΝΔΑΛΗ ΠΟΥ ΚΑΝΕΙ ΤΟ CAS ΜΕΤΡΗΣΙΜΟ** (ADR-827 §9.21).
+   *
+   * Καλείται **μία φορά**, αμέσως μετά την **πρώτη** ανάγνωση μιας συναλλαγής, και
+   * μετά μηδενίζεται. Είναι ο τρόπος να γραφτεί *«ο συνάδελφος πρόλαβε ανάμεσα στο
+   * `get` και στο `commit`»* — το **μόνο** σενάριο που το CAS υπάρχει για να πιάσει.
+   *
+   * ⚠️ **Χωρίς αυτό, μια άγκυρα «διπλής αποδοχής» θα ήταν ΨΕΥΔΗΣ**: θα έσπερνε
+   * `accepted` **πριν** την κλήση και θα δοκίμαζε τον απλό φρουρό της φάσης 1, όχι το
+   * ξαναδιάβασμα μέσα στη συναλλαγή. Πράσινο test για μηχανισμό που δεν εκτελέστηκε.
+   */
+  public interfere: (() => void) | null = null;
+
+  /**
+   * 🔴 **ΕΛΕΙΠΕ — ΚΑΙ ΕΙΝΑΙ Η ΕΒΔΟΜΗ ΕΜΦΑΝΙΣΗ ΤΟΥ ΣΧΗΜΑΤΟΣ** «ο πλαστός δεν είχε τη
+   * μέθοδο που μετράει» (ADR-827 §9.21).
+   *
+   * Η αποδοχή του Σ3 **είναι** συναλλαγή: τρεις γραφές ή καμία, με CAS στο `status`.
+   * Χωρίς `runTransaction` εδώ, η κλήση έσκαγε με *«db.runTransaction is not a
+   * function»* — δηλαδή **καμία** άγκυρα δεν μπορούσε να αγγίξει την καρδιά της Φάσης Β.
+   *
+   * ────────────────────────────────────────────────────────────────────────────
+   * 🔑 ΞΑΝΑΕΚΤΕΛΕΙ ΤΟ ΣΩΜΑ ΣΕ ΣΥΓΚΡΟΥΣΗ — ΓΙΑΤΙ ΑΥΤΟ ΚΑΝΕΙ ΚΑΙ ΤΟ ΑΛΗΘΙΝΟ
+   * ────────────────────────────────────────────────────────────────────────────
+   *
+   * Ένας πλαστός που απλώς **σειριοποιεί** τις πράξεις θα ήταν πιο **συγχωρητικός**
+   * από την παραγωγή: δεν θα μπορούσε ποτέ να δείξει ότι το σώμα τρέχει δύο φορές —
+   * δηλαδή θα έκρυβε ακριβώς τη βλάβη που η κεφαλίδα του
+   * `mandate-acceptance.service.ts` απαγορεύει ονομαστικά *(παρενέργεια μέσα στη
+   * συναλλαγή φεύγει **πολλές φορές**)*.
+   *
+   * Ο κύκλος: εκτέλεσε το σώμα με **αναβαλλόμενες** γραφές· πριν το commit, επαλήθευσε
+   * ότι **κάθε** έγγραφο που διαβάστηκε είναι ακόμη όπως το είδαμε. Αν όχι,
+   * **ξαναεκτέλεσε** — μέχρι {@link TRANSACTION_ATTEMPTS}.
+   *
+   * ⚠️ **Η σύγκριση είναι σειριοποίηση, όχι ταυτότητα αντικειμένου**: τα έγγραφα
+   * κλωνοποιούνται σε κάθε ανάγνωση, οπότε μια σύγκριση με `===` θα κοκκίνιζε **πάντα**
+   * και ο πλαστός θα εξαντλούσε τις προσπάθειες σε κάθε συναλλαγή.
+   */
+  public async runTransaction<T>(body: (transaction: FakeTransaction) => Promise<T>): Promise<T> {
+    for (let attempt = 0; attempt < TRANSACTION_ATTEMPTS; attempt += 1) {
+      const transaction = new FakeTransaction(this);
+      const result = await body(transaction);
+
+      if (transaction.readsAreStillValid()) {
+        transaction.flush();
+        return result;
+      }
+    }
+
+    // ⚠️ Το αληθινό Admin SDK πετά `ABORTED` όταν εξαντληθούν οι προσπάθειες. Ένας
+    //    πλαστός που «τα παρατούσε ήσυχα» θα επέστρεφε αποτέλεσμα από εκτέλεση που
+    //    **δεν έγραψε τίποτα** — το χειρότερο δυνατό ψέμα προς την άγκυρα.
+    throw new Error('ABORTED: too much contention');
+  }
+
+  /** Τι λέει **τώρα** ο δίσκος για ένα έγγραφο — για τον έλεγχο φρεσκάδας. */
+  public snapshotOf(collection: string, id: string): string {
+    return JSON.stringify(this.bucket(collection).get(id) ?? null);
+  }
+
+  public write(collection: string, id: string, doc: Doc): void {
+    this.bucket(collection).set(id, doc);
+    this.countWrite();
+  }
+}
+
+/** Πόσες φορές ξαναδοκιμάζει το σώμα μιας συναλλαγής, όπως το Admin SDK. */
+const TRANSACTION_ATTEMPTS = 5;
+
+/**
+ * **Η συναλλαγή**: αναγνώσεις που **καταγράφονται**, γραφές που **αναβάλλονται**.
+ *
+ * ⚠️ **Δεν επιβάλλει «όλα τα get πριν από κάθε write»**, παρότι το αληθινό Firestore
+ * το απαιτεί. Είναι **δηλωμένη** απόκλιση: ο πλαστός εδώ υπάρχει για να κρίνει τη
+ * **δική μας** λογική (CAS, ατομικότητα), και ένας επιπλέον έλεγχος σειράς θα
+ * κοκκίνιζε με μήνυμα άσχετο με το ερώτημα κάθε άγκυρας.
+ */
+export class FakeTransaction {
+  private readonly reads = new Map<string, string>();
+  private readonly writes: (() => void)[] = [];
+  private interfered = false;
+
+  constructor(private readonly db: FakeFirestore) {}
+
+  async get(ref: FakeDocRef): Promise<{ id: string; exists: boolean; data: () => Doc | undefined }> {
+    const snapshot = await ref.get();
+
+    // 🔴 **ΚΑΤΑΓΡΑΦΕΤΑΙ Ο,ΤΙ ΕΠΕΣΤΡΕΨΕ Η ΑΝΑΓΝΩΣΗ — ΟΧΙ Ο,ΤΙ ΛΕΕΙ Ο ΔΙΣΚΟΣ ΤΩΡΑ.**
+    //    Η πρώτη γραφή ρωτούσε ξανά τον δίσκο (`snapshotOf`) και ήταν **λάθος με
+    //    σιωπηλή συνέπεια**: όταν δύο `get` τρέχουν σε `Promise.all`, ο ανταγωνιστής
+    //    προλαβαίνει ανάμεσά τους — και το δεύτερο κατέγραφε την **ήδη αλλαγμένη**
+    //    τιμή ενώ επέστρεφε την παλιά. Δηλαδή ο έλεγχος φρεσκάδας συνέκρινε το νέο με
+    //    το νέο, έβγαινε «έγκυρο», και **η συναλλαγή δέσμευε αγγελία που είχε ήδη
+    //    ανατεθεί αλλού**. Το βρήκε η άγκυρα Α2, όχι η ανάγνωση.
+    this.reads.set(
+      `${ref.collectionName}/${ref.id}`,
+      JSON.stringify(snapshot.data() ?? null),
+    );
+
+    // 🔴 Ο ανταγωνιστής χτυπά **εδώ**: ανάμεσα στην ανάγνωση και στο commit.
+    if (!this.interfered && this.db.interfere !== null) {
+      this.interfered = true;
+      const strike = this.db.interfere;
+      this.db.interfere = null;
+      strike();
+    }
+
+    return snapshot;
+  }
+
+  set(ref: FakeDocRef, doc: Doc): void {
+    this.writes.push(() => this.db.write(ref.collectionName, ref.id, doc));
+  }
+
+  update(ref: FakeDocRef, patch: Doc): void {
+    this.writes.push(() => {
+      void ref.update(patch);
+    });
+  }
+
+  /** Είναι ακόμη αληθινό ό,τι διαβάσαμε; */
+  readsAreStillValid(): boolean {
+    for (const [key, seen] of this.reads) {
+      const [collection, id] = key.split('/');
+      if (this.db.snapshotOf(collection, id) !== seen) return false;
+    }
+    return true;
+  }
+
+  flush(): void {
+    this.writes.forEach((apply) => apply());
+  }
 }
 
 export class FakeDocRef {
@@ -135,6 +269,12 @@ export class FakeDocRef {
     private readonly db: FakeFirestore,
     private readonly bucket: Map<string, Doc>,
     public readonly id: string,
+    /**
+     * ⚠️ **Η συλλογή ταξιδεύει μαζί με την αναφορά**, γιατί η συναλλαγή χρειάζεται
+     * **σταθερό κλειδί** για να θυμάται τι διάβασε. Το Admin SDK το εκθέτει ως
+     * `ref.path`· εδώ αρκεί το όνομα, και είναι ρητό αντί για παραγόμενο.
+     */
+    public readonly collectionName: string = '',
   ) {}
 
   /**
@@ -258,14 +398,33 @@ export class FakeQuery {
     private readonly bucket: Map<string, Doc>,
     private readonly clauses: readonly WhereClause[] = [],
     private readonly cap: number = Number.MAX_SAFE_INTEGER,
+    /**
+     * 🔴 **ΕΛΕΙΠΕ, ΚΑΙ ΗΤΑΝ ΑΚΡΙΒΩΣ ΤΟ ΣΧΗΜΑ ΠΟΥ Ο ΠΛΑΣΤΟΣ ΥΠΑΡΧΕΙ ΓΙΑ ΝΑ ΠΙΑΝΕΙ**
+     * (ADR-827 §9.21, μετρημένο με μετάλλαξη Μ17).
+     *
+     * Το `failReads` ζούσε **μόνο** στο {@link FakeDocRef.get} — δηλαδή **κανένα
+     * ερώτημα** δεν μπορούσε να αποτύχει ποτέ. Κάθε γραφέας που ρωτά με
+     * `where().get()` και επιστρέφει `null` σε βλάβη είχε τον κλάδο του
+     * **ανεκτέλεστο**: *«άγνωστο ≠ κενό»* γραμμένο, δοκιμασμένο **πουθενά**.
+     *
+     * 🔑 **Το βρήκε μετάλλαξη, όχι ανάγνωση**: το «βλάβη ⇒ άδεια εισερχόμενα» βγήκε
+     * **ΠΡΑΣΙΝΟ** ενώ υπήρχε άγκυρα που νόμιζε ότι το φυλά — εκείνη πυροδοτούσε στην
+     * **επόμενη** ανάγνωση (των δημόσιων προβολών), όχι στο ερώτημα.
+     */
+    private readonly failing: () => boolean = () => false,
   ) {}
 
   where(field: string, op: WhereClause['op'], value: unknown): FakeQuery {
-    return new FakeQuery(this.bucket, [...this.clauses, { field, op, value }], this.cap);
+    return new FakeQuery(
+      this.bucket,
+      [...this.clauses, { field, op, value }],
+      this.cap,
+      this.failing,
+    );
   }
 
   limit(n: number): FakeQuery {
-    return new FakeQuery(this.bucket, this.clauses, n);
+    return new FakeQuery(this.bucket, this.clauses, n, this.failing);
   }
 
   /**
@@ -275,6 +434,8 @@ export class FakeQuery {
    * κάθε γραμμή θα είχε `undefined` κλειδί και το test θα ήταν πράσινο.
    */
   async get(): Promise<{ docs: { id: string; data: () => Doc }[]; size: number }> {
+    if (this.failing()) throw new Error('FAKE_FIRESTORE_UNAVAILABLE');
+
     const hits = [...this.bucket.entries()]
       .filter(([, doc]) => this.clauses.every((clause) => matches(doc, clause)))
       .slice(0, this.cap);
@@ -290,12 +451,16 @@ export class FakeCollection extends FakeQuery {
   constructor(
     private readonly db: FakeFirestore,
     private readonly docs: Map<string, Doc>,
+    private readonly name: string,
   ) {
-    super(docs);
+    // ⚠️ **Συνάρτηση, όχι τιμή**: το `failReads` γυρίζει **μετά** τη δημιουργία της
+    //    αναφοράς (`fake.failReads = true` στη μέση ενός test). Ένα στιγμιότυπο εδώ θα
+    //    κρατούσε το `false` της κατασκευής και ο διακόπτης δεν θα έπιανε ποτέ.
+    super(docs, [], undefined, () => db.failReads);
   }
 
   doc(id: string): FakeDocRef {
-    return new FakeDocRef(this.db, this.docs, id);
+    return new FakeDocRef(this.db, this.docs, id, this.name);
   }
 }
 
