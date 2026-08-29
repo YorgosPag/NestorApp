@@ -14,12 +14,24 @@
  * (CHECK 3.28 / N.18) και δύο σημεία που μπορούν να μάθουν διαφορετικό πρόσημο υπολοίπου.
  * Εδώ μένει ό,τι είναι **του γεμίσματος**: τι κουβαλά ένα κελί και πώς ολισθαίνει ο τύπος του.
  *
- * ⚠️ **Δεν** υλοποιείται η **σειρά** του Excel (`1, 2` ⇒ `3, 4, 5`). Είναι ρητή απόφαση, όχι
- * παράλειψη: η ανίχνευση σειράς είναι ολόκληρη δική της σημασιολογία (αριθμητική πρόοδος,
- * ημερομηνίες, μήνες, προσαρμοσμένες λίστες) και το Excel την κάνει **διαφορετικά** ανάλογα με
- * το αν σέρνεις με το αριστερό ή με το δεξί πλήκτρο. Η επανάληψη μοτίβου είναι το
- * **υποσύνολο που δεν μπορεί να εκπλήξει**: δίνει πάντα δεδομένα που ο χρήστης βλέπει ήδη.
- * Καταγράφεται στο ADR ώστε η μέρα που θα προστεθεί να είναι απόφαση.
+ * ## ✅ ADR-828 — Η ΣΕΙΡΑ ΥΛΟΠΟΙΗΘΗΚΕ· εδώ έγραφε «δεν υλοποιείται», και ήταν σωστό ως τότε
+ * Η προηγούμενη έκδοση αυτής της κεφαλίδας δήλωνε ρητά ότι η σειρά του Excel (`1, 2` ⇒
+ * `3, 4, 5`) **δεν** υλοποιείται, ότι ήταν απόφαση και όχι παράλειψη, και ότι «καταγράφεται
+ * στο ADR ώστε η μέρα που θα προστεθεί να είναι **απόφαση**». Αυτή η μέρα ήρθε.
+ *
+ * Η επανάληψη μοτίβου **δεν έφυγε** — παραμένει η προεπιλογή όπου δεν υπάρχει απόδειξη
+ * σειράς, και είναι ολόκληρη η συμπεριφορά με `mode: 'copy'`. Ό,τι προστέθηκε είναι
+ * *πρόσθετο*: μια λωρίδα που **δείχνει** διάταξη τη συνεχίζει.
+ *
+ * Ό,τι δεν είναι της σειράς μένει έξω από τη σειρά, και ο διαχωρισμός είναι ο ίδιος όπως
+ * πάντα: **ο τύπος ολισθαίνει, δεν συνεχίζεται** — η «επόμενη τιμή» ενός `=A1*2` είναι το
+ * `=A2*2`, ποτέ ένας αριθμός.
+ *
+ * ## 🔴 ΔΥΟ ΣΙΩΠΗΛΑ ΣΦΑΛΜΑΤΑ ΔΙΟΡΘΩΘΗΚΑΝ ΜΑΖΙ (ADR-828 §4) — δες τα σχόλια στο `update`
+ * 1. Η **τέταρτη εγγύηση** («ίδιο μοντέλο by-reference όταν τίποτα δεν άλλαξε») ήταν
+ *    **κενή**: κάθε σύρση γεννούσε βήμα undo ακόμη κι όταν δεν άλλαζε χαρακτήρας.
+ * 2. Το γέμισμα **κατέστρεφε δεμένα κελιά** (ADR-767) μαζί με τον δεσμό τους.
+ * Και τα δύο προϋπήρχαν· η σειρά τα έκανε χειρότερα, οπότε έκλεισαν εδώ.
  *
  * ## 🔴 ΓΙΑΤΙ ΔΕΝ ΚΑΛΕΙ ΤΟ `applyTableRangeTransfer`
  * Η πρώτη σκέψη είναι «η συμπλήρωση **είναι** αντιγραφή· φτιάξε σχέδιο μεταφοράς». Δεν είναι,
@@ -40,12 +52,15 @@
  */
 
 import type { PersistedTableModel, TableCell, TableModel } from '../../types/table';
-import { writePersistedCells } from './table-cell-content';
+import { cellText, writePersistedCells } from './table-cell-content';
 import { offsetTableFormula } from './formula/table-formula-offset';
 import { commitCellWrites } from './formula/table-formula-engine';
 import { getCell, resolveTableModel } from './table-model-helpers';
-import { isBlankCell, transferredCell } from './table-range-transfer';
+import { isBlankCell, sameTransferredCell, transferredCell } from './table-range-transfer';
 import { tileTableRange, type TableTiledCell } from './table-range-tiling';
+import { remapCellTextRuns } from './table-cell-run-ops';
+import { isBoundCellWritable } from './binding/table-binding-state';
+import { buildTableFillPlan, type TableFillMode, type TableFillPlan } from './table-fill-plan';
 import type { TableCellRangeBounds, TableCellRef } from './table-cell-range';
 import type { TableFillTarget } from './table-fill-handle';
 
@@ -62,10 +77,16 @@ export function applyTableFill(
   model: PersistedTableModel,
   source: TableCellRangeBounds,
   target: TableFillTarget,
+  mode: TableFillMode = 'auto',
 ): PersistedTableModel {
   const before = resolveTableModel(model);
   const cells = tileTableRange(before, source, target.bounds);
   if (cells.length === 0) return model;
+
+  // 🔴 ADR-828 §4 — **ΜΙΑ ΑΝΙΧΝΕΥΣΗ ΑΝΑ ΛΩΡΙΔΑ, ΟΧΙ ΑΝΑ ΚΕΛΙ.** Ένα γέμισμα 500 γραμμών έχει
+  // 500 στόχους αλλά **μία** πηγή· ανίχνευση μέσα στο `filled()` θα ήταν O(εμβαδόν × πηγή),
+  // δηλαδή το ίδιο σχήμα κόστους που ο χάρτης από κάτω υπάρχει για να αποφύγει.
+  const plan = buildTableFillPlan(before, source, target, mode);
 
   // Ίδιο **τοπικό** κλειδί με τον μαζικό γραφέα: ζει και πεθαίνει μέσα σε αυτή τη συνάρτηση,
   // γι' αυτό δεν περνά από το branded `cellKey()`. Χάρτης και όχι γραμμική αναζήτηση: ένα
@@ -83,9 +104,24 @@ export function applyTableFill(
       model,
       cells.map((fill) => fill.at),
       {
-        update: (existing, at) => filled(before, byTarget.get(refKey(at)), existing),
+        update: (existing, at) => {
+          // 🔴 ADR-828 §4 / ADR-767 — **ΔΕΜΕΝΟ ΚΕΛΙ ΔΕΝ ΓΡΑΦΕΤΑΙ ΑΠΟ ΓΕΜΙΣΜΑ.** Η τιμή του
+          // είναι ό,τι είπε η πηγή για εκείνη τη γραμμή· ένα γέμισμα από πάνω έσβηνε **και
+          // τον δεσμό** (η `transferredCell` δεν τον κουβαλά), δηλαδή έχανε την προέλευση
+          // χωρίς μήνυμα. Η σειρά το επιδεινώνει: αντί για ορατά δεδομένα θα έγραφε
+          // **εφευρεμένα**. Το βέτο αφορά το περιεχόμενο — η «μόνο μορφοποίηση» περνά.
+          if (plan.parts !== 'format' && !isBoundCellWritable(existing)) return null;
+
+          const next = filled(before, byTarget.get(refKey(at)), existing, plan);
+          // 🔴 ADR-828 §4 — **Η ΤΕΤΑΡΤΗ ΕΓΓΥΗΣΗ, ΠΟΥ ΕΛΕΙΠΕ.** Η κεφαλίδα υπόσχεται «ίδιο
+          // μοντέλο by-reference όταν τίποτα δεν άλλαξε», αλλά το `filled()` επιστρέφει
+          // **πάντα** φρέσκο αντικείμενο — άρα ο γραφέας έβλεπε πάντα αλλαγή και κάθε σύρση
+          // γεννούσε βήμα undo, ακόμη κι όταν δεν άλλαζε χαρακτήρας. Το αδελφό μονοπάτι
+          // (`transferContent`) έκανε ήδη αυτόν ακριβώς τον έλεγχο· εδώ είχε ξεχαστεί.
+          return next !== null && sameTransferredCell(existing, next) ? null : next;
+        },
         create: (at) => {
-          const next = filled(before, byTarget.get(refKey(at)), undefined);
+          const next = filled(before, byTarget.get(refKey(at)), undefined, plan);
           // Κενή πηγή σε κενό στόχο: καμία εγγραφή-φάντασμα. Ο αραιός χάρτης σημαίνει ήδη «κενό».
           return next && isBlankCell(next) ? null : next;
         },
@@ -100,8 +136,8 @@ function refKey(ref: TableCellRef): string {
 }
 
 /**
- * Το τελικό κελί: ό,τι κουβαλά η πηγή ({@link transferredCell}, ο ένας ορισμός) με τον τύπο
- * του **ολισθημένο** κατά τη μετατόπιση που υπολόγισε το {@link tileTableRange}.
+ * Το τελικό κελί: ό,τι κουβαλά η πηγή ({@link transferredCell}, ο ένας ορισμός), με τον τύπο
+ * του **ολισθημένο** ή — όταν υπάρχει σειρά — με την **επόμενη τιμή** της.
  *
  * `null` όταν αυτό το κελί δεν ανήκει στο γέμισμα — αμυντικό, δεν συμβαίνει.
  */
@@ -109,16 +145,49 @@ function filled(
   before: TableModel,
   fill: TableTiledCell | undefined,
   existing: TableCell | undefined,
+  plan: TableFillPlan,
 ): TableCell | null {
   if (!fill) return null;
 
   const sourceCell = getCell(before, fill.from.rowId, fill.from.colId);
-  const next = transferredCell(sourceCell, existing);
-  if (next.formula === undefined) return next;
+  const next = transferredCell(sourceCell, existing, plan.parts);
+
+  // 🔴 **ΟΙ ΤΥΠΟΙ ΠΡΩΤΟΙ ΚΑΙ ΠΑΝΤΑ.** Ένας τύπος δεν είναι ΠΟΤΕ σειρά: η «συνέχειά» του είναι
+  // η **ολίσθηση** των αναφορών του (`=A1*2` → `=A2*2`), που είναι ήδη λυμένη και είναι
+  // ολόκληρη η σημασιολογία του `$` (ADR-754 Γ1). Μια σειρά από πάνω θα έσβηνε τον τύπο και
+  // θα άφηνε αριθμό — απώλεια δεδομένων χωρίς μήνυμα. Ο έλεγχος πάει **πριν** τη σειρά, ώστε
+  // να μην εξαρτάται από το αν ο ανιχνευτής θυμήθηκε να απορρίψει τους τύπους.
+  if (next.formula === undefined) return withSeriesText(next, sourceCell, plan.textAt(fill));
 
   const formula = offsetTableFormula(before, next.formula, {
     rows: fill.rows,
     columns: fill.columns,
   });
   return formula === next.formula ? next : { ...next, formula };
+}
+
+/**
+ * Το κελί με την **επόμενη τιμή της σειράς** — ή αυτούσιο, όταν σειρά δεν υπάρχει.
+ *
+ * 🔴 **ADR-753 Φ1 — ΤΑ `runs` ΑΝΑΧΑΡΤΟΓΡΑΦΟΥΝΤΑΙ, ΔΕΝ ΚΛΗΡΟΝΟΜΟΥΝΤΑΙ.** Οι δείκτες τους
+ * δείχνουν σε θέσεις του **παλιού** κειμένου· αλλάζοντας το `'9'` σε `'10'` βγαίνουν εκτός
+ * ορίων **σιωπηλά** — κανένας τύπος δεν το πιάνει και η ζημιά φαίνεται μόνο ως παράξενη
+ * μορφοποίηση, αργότερα.
+ *
+ * Στην πράξη ο κώδικας εδώ δεν προλαβαίνει να χρειαστεί: ο ανιχνευτής **απορρίπτει** ήδη κάθε
+ * λωρίδα που κουβαλά `runs`, οπότε σειρά και πλούσιο κείμενο δεν συνυπάρχουν. Μένει επίτηδες:
+ * μια σωστή διαδρομή που δεν εκτελείται δεν κοστίζει τίποτα, και τη μέρα που η απόρριψη
+ * χαλαρώσει, τα δεδομένα είναι **ήδη** ασφαλή.
+ */
+function withSeriesText(
+  next: TableCell,
+  sourceCell: TableCell | undefined,
+  text: string | null,
+): TableCell {
+  if (text === null) return next;
+
+  // Το `remapCellTextRuns` επιστρέφει `undefined` **μόνο** όταν δεν υπήρχαν `runs` εξαρχής,
+  // οπότε το προαιρετικό πεδίο δεν μπορεί να κρύψει μπαγιάτικους δείκτες κάτω από το spread.
+  const runs = remapCellTextRuns(next.runs, cellText(sourceCell), text);
+  return { ...next, kind: 'text', value: text, ...(runs === undefined ? {} : { runs }) };
 }

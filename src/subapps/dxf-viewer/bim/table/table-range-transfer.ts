@@ -173,19 +173,57 @@ function transferContent(
 export function transferredCell(
   source: TableCell | undefined,
   existing: TableCell | undefined,
+  parts: TableTransferParts = 'all',
 ): TableCell {
   const locked = existing?.locked;
   const lockedField = locked === undefined ? {} : { locked };
-  if (source === undefined) return { kind: 'text', value: '', ...lockedField };
 
+  // «Μόνο μορφοποίηση»: το περιεχόμενο του **στόχου** επιβιώνει ακέραιο — μαζί με τον δεσμό
+  // του, γιατί ένα δεμένο κελί επιτρέπεται να αλλάξει όψη· το βέτο του ADR-767 αφορά την
+  // **τιμή**, όχι το χρώμα.
+  if (parts === 'format') {
+    const bound = existing?.bound;
+    return {
+      ...contentFields(existing),
+      ...formatFields(source),
+      ...(bound === undefined ? {} : { bound }),
+      ...lockedField,
+    };
+  }
+
+  // «Χωρίς μορφοποίηση»: ταξιδεύει το περιεχόμενο, ο στόχος κρατά τη δική του όψη.
+  const style = parts === 'content' ? existing : source;
+  return { ...contentFields(source), ...formatFields(style), ...lockedField };
+}
+
+/**
+ * 🔴 ADR-828 §5 — **ΤΙ ΤΑΞΙΔΕΥΕΙ.** Το Excel προσφέρει «Συμπλήρωση μόνο μορφοποίησης» και
+ * «Συμπλήρωση χωρίς μορφοποίηση»· και οι δύο είναι **αυτή** η ερώτηση, με άλλη απάντηση.
+ *
+ * ⚠️ Ζει εδώ και όχι στη λαβή επίτηδες. Η προειδοποίηση από πάνω — «κάθε πεδίο του
+ * `TableCell` οφείλει να απαριθμείται» — γίνεται **τρεις φορές** επικίνδυνη μόλις οι λίστες
+ * πεδίων γίνουν τρεις. Μία συνάρτηση με παράμετρο έχει ένα σημείο να ξεχάσει κανείς κάτι·
+ * τρεις συναρτήσεις έχουν τρία, και το ξεχασμένο πεδίο δεν σπάει τη μεταγλώττιση.
+ */
+export type TableTransferParts = 'all' | 'content' | 'format';
+
+/** Ό,τι **λέει** ένα κελί. Πηγή `undefined` ⇒ πραγματικά κενό, όχι «άφησέ το ως έχει». */
+function contentFields(cell: TableCell | undefined): TableCell {
+  if (cell === undefined) return { kind: 'text', value: '' };
   return {
-    kind: source.kind,
-    value: source.value,
-    ...(source.formula === undefined ? {} : { formula: source.formula }),
-    ...(source.styleOverride === undefined ? {} : { styleOverride: source.styleOverride }),
-    ...(source.runs === undefined ? {} : { runs: source.runs }),
-    ...(source.diagonal === undefined ? {} : { diagonal: source.diagonal }),
-    ...lockedField,
+    kind: cell.kind,
+    value: cell.value,
+    ...(cell.formula === undefined ? {} : { formula: cell.formula }),
+    ...(cell.runs === undefined ? {} : { runs: cell.runs }),
+  };
+}
+
+/** Ό,τι **δείχνει** ένα κελί. */
+function formatFields(cell: TableCell | undefined): Partial<TableCell> {
+  if (cell === undefined) return {};
+  return {
+    ...(cell.styleOverride === undefined ? {} : { styleOverride: cell.styleOverride }),
+    ...(cell.diagonal === undefined ? {} : { diagonal: cell.diagonal }),
   };
 }
 
@@ -223,7 +261,7 @@ export function isBlankCell(cell: TableCell): boolean {
  * παράκαμψη στυλ περνά **by-reference** από την πηγή στον στόχο, οπότε η ταυτότητα απαντά χωρίς
  * να σειριοποιηθεί τίποτα.
  */
-function sameTransferredCell(a: TableCell, b: TableCell): boolean {
+export function sameTransferredCell(a: TableCell, b: TableCell): boolean {
   return (
     a.kind === b.kind &&
     a.value === b.value &&

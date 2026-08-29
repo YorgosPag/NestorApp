@@ -30,6 +30,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-768-table-format-painter.md
  */
 
+import { positiveMod } from '@/lib/number/positive-mod';
 import type { TableModel } from '../../types/table';
 import type { TableCellRangeBounds, TableCellRef } from './table-cell-range';
 
@@ -122,6 +123,26 @@ export interface TableTiledCell {
   readonly rows: number;
   /** Στήλες στόχου − στήλες πηγής (θετικό = προς τα δεξιά). */
   readonly columns: number;
+  /**
+   * 🔴 ADR-828 §4 — **Η ΘΕΣΗ ΣΤΗ ΣΕΙΡΑ**: `rowIndex − pattern.originRow`. Αρνητική προς τα
+   * πάνω.
+   *
+   * Δεν είναι το ίδιο με το {@link rows}. Το `rows` είναι η **μετατόπιση από το κελί-πηγή
+   * που αντιγράφεται** (κυκλική, ξαναμηδενίζεται σε κάθε επανάληψη του μοτίβου)· αυτό είναι
+   * η **απόσταση από την αρχή του μοτίβου**, που μεγαλώνει μονότονα. Η πρώτη απαντά «τι
+   * αντιγράφω»· η δεύτερη «πόσο μακριά έχω φτάσει», δηλαδή τον **πολλαπλασιαστή του βήματος**
+   * μιας σειράς. Δύο ερωτήσεις, δύο πεδία.
+   *
+   * 🔑 **Γιατί αυτό και όχι ο δείκτης κύκλου.** Ο κύκλος (`⌊(r − αρχή) / γραμμές⌋`)
+   * υπολογίζεται ήδη και πετιέται από το {@link positiveMod}. Θα ήταν όμως το **λάθος**
+   * εξαγόμενο: η σειρά χρειάζεται `patternRow + κύκλος·γραμμές`, που τηλεσκοπεί ακριβώς σε
+   * `r − αρχή`. Εξάγοντας τον κύκλο θα αναγκάζαμε τον καλούντα να ξαναπολλαπλασιάσει —
+   * δηλαδή να **ξαναεκτελέσει** σε δεύτερο module την αποσύνθεση που μόλις έγινε εδώ.
+   * Εξάγεται η **απάντηση**, όχι τα συστατικά της. Ίδια δοκτρίνα με τη μετατόπιση παραπάνω.
+   */
+  readonly rowOrdinal: number;
+  /** `colIndex − pattern.originCol`. Αρνητική προς τα αριστερά. Δες {@link rowOrdinal}. */
+  readonly colOrdinal: number;
 }
 
 /**
@@ -152,16 +173,8 @@ export function tileTableRange(
       from: { rowId: model.rows[sourceRow].id, colId: model.columns[sourceCol].id },
       rows: slot.rowIndex - sourceRow,
       columns: slot.colIndex - sourceCol,
+      rowOrdinal: slot.rowIndex - pattern.originRow,
+      colOrdinal: slot.colIndex - pattern.originCol,
     };
   });
-}
-
-/**
- * Υπόλοιπο **πάντα θετικό**.
- *
- * ⚠️ Το `((v % m) + m) % m` και όχι `v % m`: δες την κεφαλίδα. Το δεύτερο `% m` δεν είναι
- * περιττό — χωρίς αυτό, ένα ήδη θετικό `v` θα γινόταν `v + m`, δηλαδή θα έβγαινε εκτός.
- */
-function positiveMod(value: number, modulus: number): number {
-  return ((value % modulus) + modulus) % modulus;
 }
