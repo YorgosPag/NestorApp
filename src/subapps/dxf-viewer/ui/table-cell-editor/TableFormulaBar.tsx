@@ -169,34 +169,37 @@ function diagnosisMessage(
   }
 }
 
-/**
- * 🔴 ADR-763 §10 — **η εστίαση ΔΕΝ φεύγει από το πεδίο όταν πατιέται ένα από τα τρία κουμπιά.**
- *
- * ## Το πρόβλημα, δομικά
- * Τα κουμπιά κάθονται **μέσα** στη γραμμή τύπων, δηλαδή δίπλα στο πεδίο που κρατά την εστίαση.
- * Ένα `mousedown` πάνω τους μεταφέρει την εστίαση ως **προεπιλεγμένη ενέργεια** — και ο
- * παραλήπτης διαφέρει ανά μηχανή: Chrome εστιάζει το `<button>`, Safari και Firefox ιστορικά
- * **δεν** το εστιάζουν, οπότε το `relatedTarget` του `blur` είναι `null`. Με `null`, ο φύλακας
- * του `useTableCellSessionBlur` δεν μπορεί να απαντήσει «μέλος της συνεδρίας;» και ακολουθεί
- * τον δρόμο της εξόδου: **δέσμευση και κλείσιμο δρομέα** — δηλαδή το κουμπί «Άκυρο» θα
- * δέσμευε, ένα καρέ πριν προλάβει να ακυρώσει.
- *
- * ## 🔴 ADR-753 §25.6 — ΕΦΥΓΕ ΑΠΟ ΕΔΩ· ζούσε σε ΕΝΑ αρχείο και το χρειάζονταν ΔΥΟ
- * Ο ορισμός ήταν τοπικός (`keepFocusInField`) και σωστός — και ακριβώς γι' αυτό το mini
- * toolbar, που έχει το **ίδιο ακριβώς** πρόβλημα με τα ίδια ακριβώς λόγια, δεν τον είχε: το
- * «Έντονα» έπαιρνε το πληκτρολόγιο και το `Enter` ξαναπατούσε το κουμπί. Δύο επιφάνειες πάνω
- * από τον **ίδιο** επεξεργαστή δεν επιτρέπεται να απαντούν διαφορετικά στο «ποιος κατέχει το
- * πληκτρολόγιο;». Ο ορισμός είναι πλέον **ένας**, στο
- * {@link keepTableCellKeyboardOwnership} — και εκεί έγινε **υπό όρο**, που είναι γνήσια
- * βελτίωση και για τα τρία κουμπιά εδώ: όταν κανένα πεδίο δεν κρατά το πληκτρολόγιο, δεν
- * υπάρχει `blur` να προκληθεί ούτε εστίαση να διατηρηθεί, και το κουμπί οφείλει να μπορεί να
- * εστιαστεί κανονικά (WAI-ARIA APG).
- *
- * ⚠️ Belt-and-suspenders (N.7.2 #4): τα κουμπιά φέρουν **επίσης** το
- * {@link TABLE_CELL_SESSION_MARKER}. Αν κάποια μηχανή μεταφέρει την εστίαση παρά το
- * `preventDefault`, ο φύλακας θα δει μέλος της συνεδρίας και πάλι δεν θα κλείσει.
- */
-const keepFocusInField = keepTableCellKeyboardOwnership;
+// ──────────────────────────────────────────────────────────────────────────
+// 🔴 ADR-763 §10 — **η εστίαση ΔΕΝ φεύγει από το πεδίο όταν πατιέται ένα από τα τρία κουμπιά.**
+//
+// ## Το πρόβλημα, δομικά
+// Τα κουμπιά κάθονται **μέσα** στη γραμμή τύπων, δηλαδή δίπλα στο πεδίο που κρατά την εστίαση.
+// Ένα `mousedown` πάνω τους μεταφέρει την εστίαση ως **προεπιλεγμένη ενέργεια** — και ο
+// παραλήπτης διαφέρει ανά μηχανή: Chrome εστιάζει το `<button>`, Safari και Firefox ιστορικά
+// **δεν** το εστιάζουν, οπότε το `relatedTarget` του `blur` είναι `null`. Με `null`, ο φύλακας
+// του `useTableCellSessionBlur` δεν μπορεί να απαντήσει «μέλος της συνεδρίας;» και ακολουθεί
+// τον δρόμο της εξόδου: **δέσμευση και κλείσιμο δρομέα** — δηλαδή το κουμπί «Άκυρο» θα
+// δέσμευε, ένα καρέ πριν προλάβει να ακυρώσει.
+//
+// ## 🔴 ADR-753 §25.6 — ΕΦΥΓΕ ΑΠΟ ΕΔΩ· ζούσε σε ΕΝΑ αρχείο και το χρειάζονταν ΔΥΟ
+// Ο ορισμός ήταν τοπικός (`keepFocusInField`) και σωστός — και ακριβώς γι' αυτό το mini
+// toolbar, που έχει το **ίδιο ακριβώς** πρόβλημα με τα ίδια ακριβώς λόγια, δεν τον είχε: το
+// «Έντονα» έπαιρνε το πληκτρολόγιο και το `Enter` ξαναπατούσε το κουμπί. Δύο επιφάνειες πάνω
+// από τον **ίδιο** επεξεργαστή δεν επιτρέπεται να απαντούν διαφορετικά στο «ποιος κατέχει το
+// πληκτρολόγιο;». Ο ορισμός είναι πλέον **ένας**, στο
+// {@link keepTableCellKeyboardOwnership} — και εκεί έγινε **υπό όρο**, που είναι γνήσια
+// βελτίωση και για τα τρία κουμπιά εδώ: όταν κανένα πεδίο δεν κρατά το πληκτρολόγιο, δεν
+// υπάρχει `blur` να προκληθεί ούτε εστίαση να διατηρηθεί, και το κουμπί οφείλει να μπορεί να
+// εστιαστεί κανονικά (WAI-ARIA APG).
+//
+// ⚠️ Belt-and-suspenders (N.7.2 #4): τα κουμπιά φέρουν **επίσης** το
+// {@link TABLE_CELL_SESSION_MARKER}. Αν κάποια μηχανή μεταφέρει την εστίαση παρά το
+// `preventDefault`, ο φύλακας θα δει μέλος της συνεδρίας και πάλι δεν θα κλείσει.
+//
+// 🔴 ADR-739 §70 — και ο τοπικός **αλίας** `keepFocusInField` έφυγε κι αυτός: ήταν δεύτερο
+// ΟΝΟΜΑ για το ίδιο πράγμα — ακριβώς το σχήμα που περιγράφει η παράγραφος από πάνω, ένα
+// επίπεδο πιο ψηλά. Τα τρία κουμπιά καλούν πλέον τον κανονικό ορισμό με το κανονικό του όνομα.
+// ──────────────────────────────────────────────────────────────────────────
 
 export function TableFormulaBar(props: TableFormulaBarProps): React.ReactElement {
   const {
@@ -334,7 +337,7 @@ export function TableFormulaBar(props: TableFormulaBarProps): React.ReactElement
             aria-label={t('table.insertFunction.rejectAriaLabel')}
             disabled={mode === 'nav'}
             {...TABLE_CELL_SESSION_MARKER}
-            onMouseDown={keepFocusInField}
+            onMouseDown={keepTableCellKeyboardOwnership}
             onClick={cancelTableCellCursorSession}
           >
             ✕
@@ -345,7 +348,7 @@ export function TableFormulaBar(props: TableFormulaBarProps): React.ReactElement
             aria-label={t('table.insertFunction.acceptAriaLabel')}
             disabled={mode === 'nav'}
             {...TABLE_CELL_SESSION_MARKER}
-            onMouseDown={keepFocusInField}
+            onMouseDown={keepTableCellKeyboardOwnership}
             onClick={handleCommit}
           >
             ✓
@@ -355,7 +358,7 @@ export function TableFormulaBar(props: TableFormulaBarProps): React.ReactElement
             className="dxf-formula-bar-button dxf-formula-bar-button-insert"
             aria-label={t('table.insertFunction.openAriaLabel')}
             {...TABLE_CELL_SESSION_MARKER}
-            onMouseDown={keepFocusInField}
+            onMouseDown={keepTableCellKeyboardOwnership}
             onClick={handleInsertFunction}
           >
             {t('table.formulaBar.symbol')}

@@ -22,7 +22,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
+import { keepKeyboardOnNonActivatingSurface } from '@/lib/a11y/non-activating-surface';
 import {
+  commitNumericFieldOnEnter,
   filterNumericDraft,
   commitNumericDraft,
   parseOptionNumber,
@@ -108,15 +110,7 @@ export function StatusBarEditableCombobox({
     [value, onCommit],
   );
 
-  const onKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      e.currentTarget.blur(); // → onBlur commits
-    }
-  }, []);
-
   const padding = unitSuffix ? 'pl-2 pr-12' : 'pl-2 pr-6';
-  const preventBlur = (e: React.MouseEvent): void => e.preventDefault();
 
   return (
     <div className="relative flex items-center">
@@ -130,7 +124,7 @@ export function StatusBarEditableCombobox({
         onFocus={onFocus}
         onChange={(e) => setDraft(filterNumericDraft(e.target.value, config))}
         onBlur={() => commit(draft)}
-        onKeyDown={onKeyDown}
+        onKeyDown={commitNumericFieldOnEnter}
         aria-label={ariaLabel}
         className={`h-6 ${widthClass} text-xs ${padding} rounded border border-border bg-background`}
       />
@@ -145,7 +139,7 @@ export function StatusBarEditableCombobox({
             type="button"
             tabIndex={-1}
             aria-label={ariaLabel}
-            onMouseDown={preventBlur}
+            onMouseDown={keepKeyboardOnNonActivatingSurface}
             className="absolute right-0.5 top-1/2 -translate-y-1/2 flex h-4 w-4 items-center justify-center rounded text-[10px] text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           >
             <span aria-hidden="true">▾</span>

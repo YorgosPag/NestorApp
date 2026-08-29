@@ -29,6 +29,7 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
+import { keepKeyboardOnNonActivatingSurface } from '@/lib/a11y/non-activating-surface';
 import { TABLE_CELL_SESSION_MARKER } from '../table-cell-editor/table-cell-session-focus';
 import { functionArgumentFieldId } from './function-argument-field';
 
@@ -67,21 +68,6 @@ export interface FunctionArgumentFieldProps {
   readonly onToggleCollapse: (index: number) => void;
 }
 
-/**
- * 🔴 Το κουμπί **δεν κλέβει την εστίαση** — ADR-763 §10.1, εφαρμοσμένο εδώ ακέραιο.
- *
- * Το `mousedown` σε `<button>` μεταφέρει την εστίαση ως **προεπιλεγμένη ενέργεια**, και ο
- * παραλήπτης διαφέρει ανά μηχανή. Εδώ η ζημιά είναι διπλή και μετρήσιμη: (α) ο φύλακας του
- * `useTableCellSessionBlur` δεν μπορεί να απαντήσει «μέλος της συνεδρίας;» με `relatedTarget`
- * `null` και ακολουθεί τον δρόμο της εξόδου· (β) χαμένη η εστίαση του κουτιού, η **επόμενη**
- * υπόδειξη δεν έχει κέρσορα να διαβάσει. Το `preventDefault` **και** το σημάδι συνεδρίας είναι
- * belt-and-suspenders (N.7.2 #4), όχι πλεονασμός: το πρώτο αποτρέπει το συμβάν, το δεύτερο
- * απαντά σωστά αν κάποια μηχανή το παραγάγει ούτως ή άλλως.
- */
-function preventFocusSteal(event: React.MouseEvent<HTMLButtonElement>): void {
-  event.preventDefault();
-}
-
 /** Ετικέτα · κουτί · κουμπί — το τρίπτυχο που μοιράζονται η λίστα και η συμπτυγμένη λωρίδα. */
 export function FunctionArgumentField(props: FunctionArgumentFieldProps): React.ReactElement {
   const { index, row, focused, collapsed, toggleLabels } = props;
@@ -116,7 +102,21 @@ export function FunctionArgumentField(props: FunctionArgumentFieldProps): React.
         // μορφές — δηλαδή θα δήλωνε ψέματα για το τι μαζεύεται.
         aria-expanded={!collapsed}
         {...TABLE_CELL_SESSION_MARKER}
-        onMouseDown={preventFocusSteal}
+        // 🔴 Το κουμπί **δεν κλέβει την εστίαση** — ADR-763 §10.1, ADR-739 §70.
+        //
+        // Το `mousedown` σε `<button>` μεταφέρει την εστίαση ως **προεπιλεγμένη ενέργεια**, και
+        // η ζημιά εδώ είναι διπλή και μετρήσιμη: (α) ο φύλακας του `useTableCellSessionBlur` δεν
+        // μπορεί να απαντήσει «μέλος της συνεδρίας;» με `relatedTarget` `null` και ακολουθεί τον
+        // δρόμο της εξόδου· (β) χαμένη η εστίαση του κουτιού, η **επόμενη** υπόδειξη δεν έχει
+        // κέρσορα να διαβάσει.
+        //
+        // ⚠️ Ήταν **τέταρτο** τοπικό αντίγραφο (`preventFocusSteal`), άνευ όρων — δηλαδή έκανε
+        // το κουμπί μη εστιάσιμο με ποντίκι ακόμη κι όταν κανένα πεδίο δεν έγραφε. Ο κοινός
+        // φρουρός είναι **υπό όρο**: γνήσια βελτίωση, όχι απλή μετακόμιση (WAI-ARIA APG).
+        //
+        // Belt-and-suspenders (N.7.2 #4): το κουμπί φέρει **και** το σημάδι συνεδρίας από πάνω —
+        // το πρώτο αποτρέπει το συμβάν, το δεύτερο απαντά σωστά αν κάποια μηχανή το παραγάγει.
+        onMouseDown={keepKeyboardOnNonActivatingSurface}
         onClick={() => props.onToggleCollapse(index)}
       >
         {collapsed ? '⬇' : '⬆'}

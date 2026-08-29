@@ -17,6 +17,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-345-ribbon.md
  */
 
+import type React from 'react';
 import type {
   RibbonCommand,
   RibbonComboboxOption,
@@ -122,4 +123,36 @@ export function commitNumericDraft(
   if (cfg.min !== undefined && n < cfg.min) return null;
   if (cfg.max !== undefined && n > cfg.max) return null;
   return String(n);
+}
+
+/**
+ * 🔴 ADR-739 §70 (Boy Scout, N.0.2) — **«`Enter` δεσμεύει μέσω `blur`»**, μία φορά.
+ *
+ * Ήταν γραμμένο **τρεις** φορές, ταυτόσημα, στα τρία πεδία που ήδη εισάγουν αυτό το module
+ * (`RibbonEditableCombobox`, `StatusBarEditableCombobox`, `RibbonWallDimensionWidget`) — και
+ * το CHECK 3.28 (jscpd) το κατήγγειλε ως **δύο** ακριβείς κλώνους τη στιγμή που τα τρία
+ * αρχεία βρέθηκαν στο ίδιο diff. Μετρημένο ότι **προϋπήρχε** στο HEAD: τα ίδια δύο ζεύγη
+ * βγαίνουν και από τις ανέγγιχτες εκδόσεις.
+ *
+ * ## Γιατί επιστρέφει `boolean` και δεν είναι σκέτος χειριστής
+ * Δύο από τους τρεις καταναλωτές δεν κάνουν **τίποτα άλλο** με το πλήκτρο — εκείνοι το
+ * περνούν κατευθείαν ως `onKeyDown`. Ο τρίτος έχει και βέλη (`ArrowUp`/`ArrowDown`), και
+ * χρειάζεται να ξέρει **αν το πλήκτρο καταναλώθηκε** ώστε να μη συνεχίσει. Ένας χειριστής
+ * που επιστρέφει `void` θα ανάγκαζε τον τρίτο να ξαναρωτήσει `e.key === 'Enter'` — δηλαδή
+ * θα κρατούσε ζωντανό το μισό διπλότυπο, εκεί ακριβώς που είναι πιο εύκολο να ξεχαστεί.
+ *
+ * ⚠️ Η δέσμευση γίνεται από το `onBlur` του πεδίου, **όχι** εδώ: αυτή η συνάρτηση δεν ξέρει
+ * τι σημαίνει «δεσμεύω» για τον καθένα (άλλος γράφει σε store, άλλος καλεί `onCommit`).
+ * Ξέρει μόνο ότι το `Enter` **τερματίζει τη γραφή** — και ο ένας δρόμος τερματισμού που
+ * έχουν ήδη και οι τρεις είναι το `blur`.
+ *
+ * @returns `true` αν το πλήκτρο καταναλώθηκε (ήταν `Enter`), αλλιώς `false`
+ */
+export function commitNumericFieldOnEnter(
+  event: React.KeyboardEvent<HTMLInputElement>,
+): boolean {
+  if (event.key !== 'Enter') return false;
+  event.preventDefault();
+  event.currentTarget.blur();
+  return true;
 }

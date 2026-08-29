@@ -45,6 +45,8 @@ import {
   setWallThicknessMeters,
 } from '../../../bim/walls/wall-dimension-edit';
 import { useWallParamsDispatcher } from '../../wall-advanced-panel/commands/dispatchWallParamPatch';
+import { keepKeyboardOnNonActivatingSurface } from '@/lib/a11y/non-activating-surface';
+import { commitNumericFieldOnEnter } from './buttons/ribbon-combobox-numeric';
 
 export type WallDimension = 'length' | 'height' | 'thickness';
 
@@ -222,10 +224,8 @@ export function RibbonWallDimensionWidget(
   });
 
   const onKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      e.currentTarget.blur();
-    } else if (e.key === 'ArrowUp') {
+    if (commitNumericFieldOnEnter(e)) return;
+    if (e.key === 'ArrowUp') {
       e.preventDefault();
       stepBy(cfg.step);
     } else if (e.key === 'ArrowDown') {
@@ -257,8 +257,6 @@ export function RibbonWallDimensionWidget(
     );
   }
 
-  // Keep input focus when a stepper is pressed (no blur-commit race).
-  const preventBlur = (e: React.MouseEvent): void => e.preventDefault();
 
   return (
     <span className="dxf-ribbon-wall-length">
@@ -304,7 +302,7 @@ export function RibbonWallDimensionWidget(
             tabIndex={-1}
             className={cn('dxf-ribbon-wall-length-step', inputBg)}
             aria-label={t('ribbon.commands.wallEditor.lengthIncrease')}
-            onMouseDown={preventBlur}
+            onMouseDown={keepKeyboardOnNonActivatingSurface}
             onClick={() => stepBy(cfg.step)}
           >
             <span aria-hidden="true">▲</span>
@@ -314,7 +312,7 @@ export function RibbonWallDimensionWidget(
             tabIndex={-1}
             className={cn('dxf-ribbon-wall-length-step', inputBg)}
             aria-label={t('ribbon.commands.wallEditor.lengthDecrease')}
-            onMouseDown={preventBlur}
+            onMouseDown={keepKeyboardOnNonActivatingSurface}
             onClick={() => stepBy(-cfg.step)}
           >
             <span aria-hidden="true">▼</span>

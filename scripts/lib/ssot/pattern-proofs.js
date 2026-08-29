@@ -936,4 +936,27 @@ const outcome = await searchEscoByTokens({ collectionPath, cacheNamespace, rawQu
 where('personaTypes', 'array-contains', 'supplier');
 query.where('commercial.ownerContactIds', 'array-contains', contactId);`,
   },
+
+  // ADR-739 §70 — «ποιος επιτρέπεται να πάρει το πληκτρολόγιο από ανοιχτό πεδίο;». Η απόδειξη
+  // ζωής είναι υποχρεωτική εδώ περισσότερο από αλλού: το ελάττωμα που έκλεισε ήταν ΤΡΙΑ
+  // ταυτόσημα `preventBlur` one-liners κάτω από το όριο των 50 tokens του jscpd — δηλαδή
+  // αόρατα σε κάθε ΑΛΛΟ εργαλείο. Αν αυτό το pattern ήταν νεκρό, κανείς δεν θα το μάθαινε.
+  'non-activating-surface': {
+    shouldMatch: `// Ο σκανάρισμα πρέπει να πιάσει ΤΕΤΑΡΤΟ αντίγραφο του φρουρού:
+  const preventBlur = (e: React.MouseEvent): void => e.preventDefault();
+function keepFocusInField(e) { e.preventDefault(); }
+const preventFocusSteal = (e) => e.preventDefault();
+// ...και κάθε δεύτερη δήλωση του ίδιου του κανόνα:
+export function pressMayMoveKeyboard(target, someoneIsWriting) { return true; }
+export const NON_ACTIVATING_SURFACE = { onMouseDownCapture: guard };`,
+    shouldSkip: `// Κανονική χρήση — ΕΝΑΣ ορισμός, δηλωμένος στο σύνορο:
+import { NON_ACTIVATING_SURFACE, keepKeyboardOnNonActivatingSurface } from '@/lib/a11y/non-activating-surface';
+<div className="dxf-ribbon-tab-bar" {...NON_ACTIVATING_SURFACE}>
+<button onMouseDown={keepKeyboardOnNonActivatingSurface} />
+
+// Και ΔΕΝ πιάνει σκέτο preventDefault σε mousedown — είναι θεμιτό παντού
+// (καταστολή επιλογής, χειρονομίες καμβά, μενού συμφραζομένων):
+onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+const onPointerDown = (e: React.MouseEvent) => e.preventDefault();`,
+  },
 };

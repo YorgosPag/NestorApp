@@ -33,7 +33,9 @@ import type {
   RibbonCommand,
   RibbonComboboxOption,
 } from '../../types/ribbon-types';
+import { keepKeyboardOnNonActivatingSurface } from '@/lib/a11y/non-activating-surface';
 import {
+  commitNumericFieldOnEnter,
   filterNumericDraft,
   commitNumericDraft,
   parseOptionNumber,
@@ -138,13 +140,6 @@ export const RibbonEditableCombobox: React.FC<RibbonEditableComboboxProps> = ({
     },
   });
 
-  const onKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      e.currentTarget.blur(); // → onBlur commits
-    }
-  }, []);
-
   const inputBg = colors.bg.primary;
   const isMixed = value === null && draft === '';
   // The symbol annotates a number; on the mixed em-dash (or a half-typed «-») it would annotate
@@ -155,8 +150,6 @@ export const RibbonEditableCombobox: React.FC<RibbonEditableComboboxProps> = ({
   // «0.9» with no way to know what it means. Punctuation + a physical symbol, not translatable
   // text (N.11).
   const fieldAriaLabel = unitSuffix === undefined ? ariaLabel : `${ariaLabel} (${unitSuffix})`;
-  // Keep input focus when the preset trigger is pressed (no blur-commit race).
-  const preventBlur = (e: React.MouseEvent): void => e.preventDefault();
 
   return (
     <div className="dxf-ribbon-combobox-row">
@@ -187,7 +180,7 @@ export const RibbonEditableCombobox: React.FC<RibbonEditableComboboxProps> = ({
               focusedRef.current = true;
             }}
             onBlur={onBlur}
-            onKeyDown={onKeyDown}
+            onKeyDown={commitNumericFieldOnEnter}
             aria-label={fieldAriaLabel}
             data-command-id={command.id}
           />
@@ -207,7 +200,7 @@ export const RibbonEditableCombobox: React.FC<RibbonEditableComboboxProps> = ({
                 tabIndex={-1}
                 className={cn('dxf-ribbon-editable-combobox-trigger', inputBg)}
                 aria-label={ariaLabel}
-                onMouseDown={preventBlur}
+                onMouseDown={keepKeyboardOnNonActivatingSurface}
               >
                 <span aria-hidden="true">▾</span>
               </button>
