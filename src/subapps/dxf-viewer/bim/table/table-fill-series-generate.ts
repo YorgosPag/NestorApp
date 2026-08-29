@@ -14,9 +14,9 @@
  * @see docs/centralized-systems/reference/adrs/ADR-828-table-autofill-series.md §3
  */
 
-import { calendarNameAt } from '@/lib/date/calendar-name-vocabulary';
 import { applyWrittenWordShape } from '@/utils/greek-text';
 import { formatLocaleNumber } from '@/lib/number/locale-number';
+import { positiveMod } from '@/lib/number/positive-mod';
 import {
   addMonthsClampedUtc,
   addYearsClampedUtc,
@@ -46,13 +46,16 @@ export function tableFillSeriesTextAt(series: TableFillSeries, ordinal: number):
     }
 
     case 'list': {
-      // Η **αναδίπλωση** ζει μέσα στο λεξιλόγιο: `ΔΕΚΕΜΒΡΙΟΣ → ΙΑΝΟΥΑΡΙΟΣ` προς τα εμπρός και
-      // `ΙΑΝΟΥΑΡΙΟΣ → ΔΕΚΕΜΒΡΙΟΣ` προς τα πίσω είναι η **ίδια** έκφραση, όχι δύο κλάδοι.
-      const canonical = calendarNameAt(
-        series.listId,
-        series.start + series.step * ordinal,
-        series.form,
-      );
+      // Η **αναδίπλωση** μετακόμισε εδώ μαζί με τα ονόματα (Φ4β): `ΔΕΚΕΜΒΡΙΟΣ → ΙΑΝΟΥΑΡΙΟΣ`
+      // προς τα εμπρός και `ΙΑΝΟΥΑΡΙΟΣ → ΔΕΚΕΜΒΡΙΟΣ` προς τα πίσω είναι η **ίδια** έκφραση,
+      // όχι δύο κλάδοι — και ο `positiveMod` είναι ο **ένας**, ο ίδιος που χρησιμοποιεί το
+      // λεξιλόγιο για τους ενσωματωμένους μήνες. Δεύτερο υπόλοιπο εδώ θα ήταν δεύτερο σημείο
+      // που μπορεί να μάθει διαφορετικό πρόσημο (δες `lib/number/positive-mod.ts`).
+      //
+      // 🔑 Ο φρουρός `entries.length > 0` δεν χρειάζεται: ο τύπος είναι μη-κενή πλειάδα.
+      const canonical = series.entries[
+        positiveMod(series.start + series.step * ordinal, series.entries.length)
+      ];
       return applyWrittenWordShape(canonical, series.shape);
     }
 

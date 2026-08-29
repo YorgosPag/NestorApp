@@ -140,7 +140,11 @@ describe('αριθμοί', () => {
 describe('λίστες — μήνες και ημέρες', () => {
   it('🔴 ΕΝΑΣ μήνας δίνει ΣΕΙΡΑ — η ασυμμετρία με τον έναν αριθμό', () => {
     const series = detectTableFillSeries(lane('ΙΑΝΟΥΑΡΙΟΣ'));
-    expect(series).toMatchObject({ kind: 'list', listId: 'greek-month', start: 0, step: 1 });
+    // Φ4β: η σειρά κρατά **τα ονόματα**, όχι δείκτη σε μητρώο — γι' αυτό ελέγχεται το
+    // περιεχόμενο (12 μήνες, ξεκινώντας από τη θέση 0) και όχι ένα `listId` που έπαψε να υπάρχει.
+    expect(series).toMatchObject({ kind: 'list', start: 0, step: 1 });
+    expect(series.kind === 'list' && series.entries[0]).toBe('Ιανουάριος');
+    expect(series.kind === 'list' && series.entries).toHaveLength(12);
   });
 
   it('🎯 ΤΟ ΑΙΤΗΜΑ: ΙΑΝΟΥΑΡΙΟΣ δίνει ΦΕΒΡΟΥΑΡΙΟΣ, ΜΑΡΤΙΟΣ, ΑΠΡΙΛΙΟΣ', () => {
@@ -160,7 +164,9 @@ describe('λίστες — μήνες και ημέρες', () => {
 
   it('🔑 η ΓΕΝΙΚΗ συνεχίζεται σε γενική', () => {
     const series = detectTableFillSeries(lane('Ιανουαρίου'));
-    expect(series).toMatchObject({ form: 'genitive' });
+    // Φ4β: το `form` έπαψε να είναι πεδίο της σειράς — επιλύεται στην **ανίχνευση** και
+    // αποτυπώνεται στα ίδια τα ονόματα. Η γενική αναγνωρίζεται όταν το `entries` **είναι** η γενική.
+    expect(series.kind === 'list' && series.entries[0]).toBe('Ιανουαρίου');
     expect(unfold(series, 2)).toEqual(['Φεβρουαρίου', 'Μαρτίου']);
   });
 

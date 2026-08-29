@@ -21,13 +21,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-828-table-autofill-series.md §2
  */
 
-import {
-  calendarNameListLength,
-  matchCalendarName,
-  type CalendarNameMatch,
-} from '@/lib/date/calendar-name-vocabulary';
-import { writtenWordShape } from '@/utils/greek-text';
-import { positiveMod } from '@/lib/number/positive-mod';
+import type { NameListCandidate } from '@/lib/string/name-list-match';
+import { detectListSeries } from './table-fill-series-list-detect';
 import type { DecimalSeparator } from '@/lib/number/locale-number';
 import { cellText } from './table-cell-content';
 import { cellValueToNumber } from './formula/table-formula-value';
@@ -78,6 +73,20 @@ export interface TableFillDetectOptions {
    * που λείπει, ποτέ **είδος** εκεί που δεν υπάρχει.
    */
   readonly forceDateUnit?: TableDateStepUnit;
+
+  /**
+   * 🔴 ADR-828 Φ4β — **ΟΙ ΛΙΣΤΕΣ ΠΟΥ ΕΓΡΑΨΕ Ο ΑΝΘΡΩΠΟΣ**, περασμένες από τον καλούντα.
+   *
+   * Έρχονται **από έξω** και όχι με ανάγνωση αποθετηρίου εδώ μέσα, με την **ίδια σύμβαση**
+   * που έχουν ήδη τα δύο αδέλφια τους: **ο καλών δίνει, ο ανιχνευτής μένει καθαρός**. Η
+   * εναλλακτική θα ήταν να διαβάζει αυτό το αρχείο κατάσταση χρήστη — δηλαδή μια καθαρή
+   * συνάρτηση με κρυφή είσοδο, αδοκίμαστη χωρίς πλαστογράφηση αποθετηρίου.
+   *
+   * ⚠️ Ο καλών τις διαβάζει **τη στιγμή της χειρονομίας** (ADR-040 κανόνας #2), όχι από
+   * στιγμιότυπο render που μπορεί να είναι παλιό: ο άνθρωπος μπορεί να έχει μόλις προσθέσει
+   * μια λίστα και να τραβάει τη λαβή το επόμενο δευτερόλεπτο.
+   */
+  readonly customLists?: readonly NameListCandidate[];
 }
 
 /**
@@ -112,7 +121,7 @@ export function detectTableFillSeries(
   // διατηρείται η γραμμένη μορφή του (δεκαδικό κόμμα, πλήθος δεκαδικών).
   if (isEveryNumber(numbers)) return detectNumericSeries(numbers, texts, options);
 
-  const listSeries = detectListSeries(texts);
+  const listSeries = detectListSeries(texts, options.customLists);
   if (listSeries !== null) return listSeries;
 
   return detectSuffixNumberSeries(texts);
@@ -336,48 +345,6 @@ function inferDateUnitStep(
 
 // ─── Λίστες (μήνες, ημέρες) ─────────────────────────────────────────────────────
 
-/**
- * Όλοι οι σπόροι μέλη της **ίδιας** λίστας και της **ίδιας** στήλης της.
- *
- * ⚠️ Απαιτείται ολόκληρο το κείμενο να είναι το όνομα. Το `Ιανουάριος 2026` **δεν** είναι
- * σειρά λίστας — πηγαίνει στο «κείμενο με ψηφία» και δίνει `Ιανουάριος 2027`.
- * **Δηλωμένη απόκλιση από το Excel** (που θα έδινε `Φεβρουάριος 2026`, γιατί το διαβάζει ως
- * *ημερομηνία*): εδώ δεν υπάρχει είδος κελιού «ημερομηνία» — ημερομηνία είναι αριθμός συν
- * μορφή, και αυτό το κελί είναι κείμενο. Η εναλλακτική θα ήταν να γράφει η σειρά λίστας μέσα
- * σε ένα επίθεμα που **δεν της ανήκει**.
- *
- * Η **στήλη** (`form`) πρέπει να είναι κοινή: `Ιανουάριος, Φεβρουαρίου` δεν είναι σειρά —
- * είναι δύο διαφορετικοί τρόποι γραφής, και η συνέχειά τους δεν ορίζεται.
- */
-function detectListSeries(texts: readonly string[]): TableFillSeries | null {
-  const matches: CalendarNameMatch[] = [];
-  for (const text of texts) {
-    const match = matchCalendarName(text);
-    if (match === null) return null;
-    matches.push(match);
-  }
-
-  const head = matches[0];
-  const uniform = matches.every(
-    (match) => match.listId === head.listId && match.form === head.form,
-  );
-  if (!uniform) return null;
-
-  const shape = writtenWordShape(texts[0]);
-  if (matches.length === 1) {
-    return { kind: 'list', listId: head.listId, form: head.form, shape, start: head.index, step: 1 };
-  }
-
-  const step = exactCyclicStep(
-    matches.map((match) => match.index),
-    calendarNameListLength(head.listId),
-  );
-  if (step === null) return null;
-  return { kind: 'list', listId: head.listId, form: head.form, shape, start: head.index, step };
-}
-
-// ─── Κείμενο με αριθμό στο τέλος ────────────────────────────────────────────────
-
 /** `Στοιχείο 1` ⇒ `Στοιχείο 2`. Το πρόθεμα και το επίθεμα πρέπει να είναι **ταυτόσημα**. */
 function detectSuffixNumberSeries(texts: readonly string[]): TableFillSeries {
   const parts = texts.map((text) => TRAILING_NUMBER.exec(text));
@@ -411,32 +378,4 @@ function exactStep(values: readonly number[]): number | null {
   const step = values[1] - values[0];
   const isExact = values.every((value, i) => i === 0 || value - values[i - 1] === step);
   return isExact ? step : null;
-}
-
-/**
- * Ίδιο, αλλά **κυκλικά**: `Δεκέμβριος → Ιανουάριος` είναι `+1`, όχι `−11`.
- *
- * ⚠️ Το `length` είναι **το μήκος της συγκεκριμένης λίστας** — 12 για μήνες, 7 για ημέρες —
- * και όχι σταθερά. Με καρφωμένο 12, η μετάβαση `Κυριακή → Δευτέρα` (δείκτες 6 → 0) θα
- * υπολογιζόταν ως `+6` αντί για `+1`, δηλαδή το γέμισμα θα πηδούσε μέρες. Το σφάλμα δεν θα
- * φαινόταν σε καμία σειρά μηνών, μόνο σε εκείνες τις ημέρες που περνούν το σαββατοκύριακο.
- */
-function exactCyclicStep(indices: readonly number[], length: number): number | null {
-  if (length <= 0) return null;
-
-  const step = signedCyclicDelta(indices[0], indices[1], length);
-  const isExact = indices.every(
-    (index, i) => i === 0 || signedCyclicDelta(indices[i - 1], index, length) === step,
-  );
-  return isExact ? step : null;
-}
-
-/**
- * Η **μικρότερη κατά απόλυτη τιμή** μετάβαση από το `from` στο `to` πάνω σε κύκλο μήκους
- * `length` — δηλαδή αυτή που θα εννοούσε ο άνθρωπος. Από Δεκέμβριο σε Ιανουάριο είναι ένα
- * βήμα μπροστά, όχι έντεκα πίσω.
- */
-function signedCyclicDelta(from: number, to: number, length: number): number {
-  const forward = positiveMod(to - from, length);
-  return forward > length / 2 ? forward - length : forward;
 }
