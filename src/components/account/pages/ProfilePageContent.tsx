@@ -15,8 +15,9 @@
 
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useEffect, useState } from 'react';
-import { Mail, User as UserIcon, Building2, Briefcase } from 'lucide-react';
+import { Mail, User as UserIcon, Building2, Briefcase, Receipt } from 'lucide-react';
 import { EscoOccupationPicker } from '@/components/shared/EscoOccupationPicker';
+import { VAT_FIELD_KEYS, VAT_REJECTION_KEYS } from '@/components/account/tax-identity-labels';
 import type { DeclaredOccupation } from '@/types/professional-identity';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ProfileAvatarField } from '@/components/account/avatar/ProfileAvatarField';
@@ -33,7 +34,7 @@ import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 export function ProfilePageContent() {
-  const { user, updateUserProfile, updateUserPhoto, declaredOccupation, updateDeclaredOccupation } = useAuth();
+  const { user, updateUserProfile, updateUserPhoto, declaredOccupation, updateDeclaredOccupation, vatNumber, updateVatNumber } = useAuth();
   const { t } = useTranslation(COMMON_NAMESPACES);
   const colors = useSemanticColors();
   const borders = useBorderTokens();
@@ -72,6 +73,14 @@ export function ProfilePageContent() {
   // ADR-798 Φάση 3 (Κ4) — το δηλωμένο επάγγελμα ως κατάσταση φόρμας.
   const [occupation, setOccupation] = useState<DeclaredOccupation>({});
 
+  // ADR-827 §9.20 — το ΑΦΜ ως κατάσταση φόρμας. Ίδιο δόγμα με τα ονόματα: η
+  // αποθηκευμένη τιμή φτάνει **αργότερα** από την πρώτη απόδοση, οπότε ο αρχικός
+  // `useState` θα πάγωνε σε κενό και θα καλούσε τον άνθρωπο να ξαναγράψει.
+  const storedVatNumber = vatNumber ?? '';
+  const [vatInput, setVatInput] = useState(storedVatNumber);
+  /** Ονομαστική άρνηση του διακομιστή — **κλειδί**, ποτέ ελεύθερο κείμενο (N.11). */
+  const [vatIssue, setVatIssue] = useState<string | null>(null);
+
   // 🔴 ΤΟ ΠΡΟΦΙΛ ΦΤΑΝΕΙ **ΑΡΓΟΤΕΡΑ** ΑΠΟ ΤΗΝ ΠΡΩΤΗ ΑΠΟΔΟΣΗ.
   //
   // Το `declaredOccupation` γεμίζει από το `syncUserProfileToFirestore` μετά το
@@ -97,6 +106,10 @@ export function ProfilePageContent() {
     setFamilyName(storedFamilyName);
   }, [storedGivenName, storedFamilyName]);
 
+  useEffect(() => {
+    setVatInput(storedVatNumber);
+  }, [storedVatNumber]);
+
   const handleSave = async () => {
     setIsLoading(true);
     setMessage(null);
@@ -107,6 +120,25 @@ export function ProfilePageContent() {
       // fire-and-forget) και **ιδεμπόταντα**: δεύτερο πάτημα = ίδιο αποτέλεσμα.
       await updateUserProfile(givenName, familyName);
       await updateDeclaredOccupation(occupation);
+
+      // 🔴 **ΤΟ ΤΡΙΤΟ ΑΠΟΘΕΤΗΡΙΟ**: το ΑΦΜ περνά από τον **διακομιστή** (ADR-827
+      //    §9.20) — είναι server-owned στα rules, γιατί ο mod-11 ελεγκτής δεν
+      //    εκφράζεται σε κανόνα Firestore.
+      //
+      // ⚠️ Η άρνησή του **δεν είναι εξαίρεση**: είναι **απάντηση** με όνομα, και
+      //    πρέπει να φτάσει στον άνθρωπο ως **οδηγία διόρθωσης** — όχι ως το
+      //    γενικό «κάτι πήγε στραβά», που δεν του λέει τι να αλλάξει.
+      const vatRejection = await updateVatNumber(vatInput);
+      if (vatRejection !== null) {
+        const key = VAT_REJECTION_KEYS[vatRejection as keyof typeof VAT_REJECTION_KEYS];
+        setVatIssue(key ?? VAT_FIELD_KEYS.saveError);
+        // Τα ονόματα και το επάγγελμα **αποθηκεύτηκαν** — δεν λέμε ψέματα ότι
+        // απέτυχαν όλα. Ο άνθρωπος βλέπει τι ακριβώς έμεινε.
+        setMessage({ type: 'error', text: t(VAT_FIELD_KEYS.saveError) });
+        return;
+      }
+
+      setVatIssue(null);
       setMessage({ type: 'success', text: t('account.profile.saveSuccess') });
     } catch {
       setMessage({ type: 'error', text: t('account.profile.saveError') });
@@ -206,6 +238,51 @@ export function ProfilePageContent() {
             </Label>
             <p className={cn(typography.body.xs, colors.text.muted)}>
               {t('account.profile.occupationHint')}
+            </p>
+          </fieldset>
+
+          {/*
+            🧾 ADR-827 §9.20 — ΤΟ ΑΦΜ.
+
+            ⚠️ **Προαιρετικό, και το λέει η υπόδειξη.** Ζητείται *just-in-time*:
+            χρειάζεται μόνο όποιος αναθέτει εντολή σε γραφείο. Υποχρεωτικό στην
+            εγγραφή θα ήταν φορολογικό δεδομένο **χωρίς σκοπό τη στιγμή της
+            συλλογής** (GDPR 5§1ε) από ανθρώπους που ίσως δεν υπογράψουν ποτέ.
+
+            🔑 Το `inputMode="numeric"` δίνει αριθμητικό πληκτρολόγιο στο κινητό
+            χωρίς να κάνει το πεδίο `type="number"` — εκείνο θα επέτρεπε `e`, `+`
+            και δεκαδικά, και θα έκοβε αρχικά μηδενικά. Το ΑΦΜ είναι **σειρά
+            ψηφίων**, όχι ποσότητα.
+          */}
+          <fieldset className={layout.flexColGap2}>
+            <Label htmlFor="vat-number" className={layout.flexCenterGap2}>
+              <Receipt className={iconSizes.xs} aria-hidden="true" />
+              {t(VAT_FIELD_KEYS.label)}
+            </Label>
+            <Input
+              id="vat-number"
+              value={vatInput}
+              onChange={(event) => {
+                setVatInput(event.target.value);
+                // Η προηγούμενη άρνηση αφορούσε τον **προηγούμενο** αριθμό.
+                setVatIssue(null);
+              }}
+              onBlur={() => setVatInput((current) => current.trim())}
+              placeholder={t(VAT_FIELD_KEYS.placeholder)}
+              inputMode="numeric"
+              autoComplete="off"
+              maxLength={32}
+              disabled={isLoading}
+              aria-invalid={vatIssue !== null}
+              aria-describedby="vat-number-hint"
+            />
+            {vatIssue !== null && (
+              <output role="alert" className={cn(typography.body.xs, colors.text.error)}>
+                {t(vatIssue)}
+              </output>
+            )}
+            <p id="vat-number-hint" className={cn(typography.body.xs, colors.text.muted)}>
+              {t(VAT_FIELD_KEYS.hint)}
             </p>
           </fieldset>
 
