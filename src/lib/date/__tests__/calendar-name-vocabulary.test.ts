@@ -7,14 +7,21 @@
  */
 
 import {
+  CALENDAR_NAME_CANDIDATES,
   CALENDAR_NAME_LISTS,
   GREEK_MONTHS,
-  calendarNameAt,
-  calendarNameListLength,
   matchCalendarName,
   type CalendarNameForm,
 } from '../calendar-name-vocabulary';
+import { matchNameList } from '@/lib/string/name-list-match';
 import { normalizeForLabelMatch } from '@/utils/greek-text';
+
+/** Οι εγγραφές μιας **στήλης**, όπως τις εκθέτει το λεξιλόγιο στον ανιχνευτή σειρών. */
+function entriesOf(listId: string, form: string): readonly string[] {
+  const candidate = CALENDAR_NAME_CANDIDATES.find((c) => c.key === `${listId}:${form}`);
+  expect(candidate).toBeDefined();
+  return candidate!.entries;
+}
 
 describe('δομή του πίνακα', () => {
   it('κάθε εγγραφή έχει κάθε μορφή που δηλώνει η λίστα, μη κενή', () => {
@@ -32,10 +39,10 @@ describe('δομή του πίνακα', () => {
   });
 
   it('μήνες 12, ημέρες 7', () => {
-    expect(calendarNameListLength('greek-month')).toBe(12);
-    expect(calendarNameListLength('english-month')).toBe(12);
-    expect(calendarNameListLength('greek-weekday')).toBe(7);
-    expect(calendarNameListLength('english-weekday')).toBe(7);
+    expect(entriesOf('greek-month', 'full')).toHaveLength(12);
+    expect(entriesOf('english-month', 'full')).toHaveLength(12);
+    expect(entriesOf('greek-weekday', 'full')).toHaveLength(7);
+    expect(entriesOf('english-weekday', 'full')).toHaveLength(7);
   });
 
   /**
@@ -156,45 +163,56 @@ describe('αναγνώριση', () => {
   });
 });
 
-describe('παραγωγή', () => {
-  it('η θέση 0 είναι ο Ιανουάριος στη στήλη που ζητήθηκε', () => {
-    expect(calendarNameAt('greek-month', 0, 'full')).toBe('Ιανουάριος');
-    expect(calendarNameAt('greek-month', 0, 'genitive')).toBe('Ιανουαρίου');
-    expect(calendarNameAt('greek-month', 0, 'abbrev')).toBe('Ιαν');
+/**
+ * 🔴 ADR-828 Φ4β — οι υποψήφιες είναι πλέον το **δημόσιο συμβόλαιο** του λεξιλογίου προς
+ * τον ανιχνευτή σειρών.
+ *
+ * ⚠️ Η **αναδίπλωση** δεν ελέγχεται πια εδώ, και δεν έμεινε ακάλυπτη: μετακόμισε μαζί με τα
+ * ονόματα στη σειρά, και τα tests της ζουν εκεί που ζει τώρα η απάντηση —
+ * `bim/table/__tests__/table-fill-series.test.ts` («μετά τον ΔΕΚΕΜΒΡΙΟ», «προς τα ΠΙΣΩ»,
+ * «οι ΗΜΕΡΕΣ αναδιπλώνονται στις 7»). Ένα test που θα την έλεγχε **και** εδώ θα ήταν
+ * δεύτερος ισχυρισμός για μία συμπεριφορά, δηλαδή δύο σημεία που μπορούν να αποκλίνουν.
+ */
+describe('υποψήφιες προς τον ανιχνευτή σειρών', () => {
+  it('η θέση 0 είναι ο Ιανουάριος σε κάθε στήλη', () => {
+    expect(entriesOf('greek-month', 'full')[0]).toBe('Ιανουάριος');
+    expect(entriesOf('greek-month', 'genitive')[0]).toBe('Ιανουαρίου');
+    expect(entriesOf('greek-month', 'abbrev')[0]).toBe('Ιαν');
   });
 
-  it('αναδιπλώνεται προς τα ΕΜΠΡΟΣ: μετά τον Δεκέμβριο έρχεται ο Ιανουάριος', () => {
-    expect(calendarNameAt('greek-month', 12, 'full')).toBe('Ιανουάριος');
-    expect(calendarNameAt('greek-month', 13, 'full')).toBe('Φεβρουάριος');
+  it('🔑 μία υποψήφια ανά (λίστα × στήλη) — καμία λιγότερη, καμία παραπάνω', () => {
+    const expected = CALENDAR_NAME_LISTS.reduce((sum, list) => sum + list.forms.length, 0);
+    expect(CALENDAR_NAME_CANDIDATES).toHaveLength(expected);
+    expect(new Set(CALENDAR_NAME_CANDIDATES.map((c) => c.key)).size).toBe(expected);
   });
 
-  it('αναδιπλώνεται προς τα ΠΙΣΩ: πριν τον Ιανουάριο έρχεται ο Δεκέμβριος', () => {
-    expect(calendarNameAt('greek-month', -1, 'full')).toBe('Δεκέμβριος');
-    expect(calendarNameAt('greek-month', -13, 'full')).toBe('Δεκέμβριος');
-  });
-
-  it('οι ημέρες αναδιπλώνονται στις 7', () => {
-    expect(calendarNameAt('greek-weekday', 7, 'full')).toBe('Δευτέρα');
-    expect(calendarNameAt('greek-weekday', -1, 'full')).toBe('Κυριακή');
+  it('καμία υποψήφια δεν έχει κενή εγγραφή — το κενό θα γινόταν άδειο κελί', () => {
+    for (const candidate of CALENDAR_NAME_CANDIDATES) {
+      for (const entry of candidate.entries) expect(entry.length).toBeGreaterThan(0);
+    }
   });
 
   /** Αναγνώριση και παραγωγή είναι η **ίδια** ταυτότητα, διαβασμένη προς τις δύο κατευθύνσεις. */
-  it('κάθε εγγραφή γυρίζει στον εαυτό της: αναγνώριση → παραγωγή', () => {
-    for (const list of CALENDAR_NAME_LISTS) {
-      list.entries.forEach((entry, index) => {
-        for (const form of list.forms) {
-          const written = (entry as Record<string, string>)[form];
-          const match = matchCalendarName(written, [list.id]);
-          expect(match).not.toBeNull();
-          expect(calendarNameAt(list.id, match!.index, match!.form)).toBe(
-            calendarNameAt(list.id, index, match!.form),
-          );
-        }
+  it('κάθε εγγραφή γυρίζει στον εαυτό της: αναγνώριση → θέση → ίδια λέξη', () => {
+    for (const candidate of CALENDAR_NAME_CANDIDATES) {
+      candidate.entries.forEach((written, index) => {
+        const match = matchNameList(written, [candidate]);
+        expect(match).not.toBeNull();
+        expect(match!.entries[match!.index]).toBe(written);
+        // Η **πρώτη** εμφάνιση κερδίζει· καμία ημερολογιακή στήλη δεν έχει διπλή εγγραφή,
+        // οπότε εδώ η θέση πρέπει να ταυτίζεται με τον δείκτη του πίνακα.
+        expect(match!.index).toBe(index);
       });
     }
   });
 
-  it('άγνωστη λίστα δίνει κενό αντί να πετάξει', () => {
-    expect(calendarNameListLength('greek-month')).toBe(GREEK_MONTHS.entries.length);
+  it('🔑 το αγγλικό May είναι FULL πριν από ABBREV — αλλιώς η στήλη αλλάζει μορφή στη μέση', () => {
+    const match = matchNameList('May', CALENDAR_NAME_CANDIDATES);
+    expect(match!.key).toBe('english-month:full');
+    expect(match!.entries[match!.index + 1]).toBe('June');
+  });
+
+  it('το μήκος της λίστας μηνών είναι το μήκος του πίνακα δεδομένων', () => {
+    expect(entriesOf('greek-month', 'full')).toHaveLength(GREEK_MONTHS.entries.length);
   });
 });

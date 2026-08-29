@@ -41,7 +41,7 @@
  */
 
 import { normalizeForLabelMatch } from '@/utils/greek-text';
-import { positiveMod } from '@/lib/number/positive-mod';
+import type { NameListCandidate } from '@/lib/string/name-list-match';
 
 /**
  * Ποιες **στήλες** έχει ένας πίνακας ονομάτων.
@@ -244,29 +244,36 @@ export function matchCalendarName(
 }
 
 /**
- * Η εγγραφή `index` της λίστας, στη στήλη `form`, σε **πηγαία** γραφή.
+ * 🔴 ADR-828 Φ4β — **ΟΙ ΕΝΣΩΜΑΤΩΜΕΝΕΣ ΛΙΣΤΕΣ, ΩΣ ΥΠΟΨΗΦΙΕΣ ΣΑΝ ΟΛΕΣ ΤΙΣ ΑΛΛΕΣ.**
  *
- * 🔑 **Αναδιπλώνεται, εμπρός και πίσω.** Ο δείκτης `12` σε μήνες δίνει Ιανουάριο και ο `-1`
- * δίνει Δεκέμβριο — η ίδια έκφραση, χωρίς κλάδο, χάρη στο {@link positiveMod}. Δύο κλάδοι
- * («αν ξεπερνά», «αν είναι αρνητικός») θα ήταν δύο σημεία που μπορούν να μάθουν διαφορετικό
- * πρόσημο, και η ανάστροφη σύρση της λαβής θα χτυπούσε τον δεύτερο πρώτη.
+ * Μία υποψήφια ανά **(λίστα × στήλη)**, γιατί μια στήλη είναι ακριβώς αυτό που είναι μια
+ * λίστα ονομάτων: δώδεκα λέξεις με σειρά. Το «Ιανουαρίου, Φεβρουαρίου…» δεν είναι η ίδια
+ * λίστα με το «Ιανουάριος, Φεβρουάριος…» — είναι **άλλη σειρά λέξεων**, και ο ανιχνευτής
+ * που τις ξεχώριζε με πεδίο `form` τις ξεχωρίζει τώρα με **ταυτότητα**, χωρίς πεδίο.
+ *
+ * 🔑 Έτσι εξαφανίστηκε το `form` από τη σειρά (δες `table-fill-series-types.ts`): μια λίστα
+ * που έγραψε ο άνθρωπος **δεν έχει** στήλες, και ένα πεδίο που για τα μισά είδη δεν σημαίνει
+ * τίποτα είναι σημαία. Η στήλη επιλύεται **τη στιγμή της αναγνώρισης** και μετά δεν χρειάζεται.
+ *
+ * ⚠️ Η **σειρά** είναι σημασιολογία, διπλά: οι στήλες βγαίνουν με τη
+ * {@link CalendarNameList.forms} (γι' αυτό το `May` διαβάζεται `full` και συνεχίζει `June`,
+ * όχι `Jun`), και οι λίστες με τη {@link CALENDAR_NAME_LISTS}. Ο καλών που βάζει τις δικές
+ * του **πριν** από αυτές δηλώνει ότι κερδίζει ο άνθρωπος — δες {@link matchNameList}.
+ *
+ * Υπολογίζεται **μία φορά**: τα δεδομένα είναι σταθερά, όπως και του {@link MATCHES_BY_KEY}.
  */
-export function calendarNameAt(
-  listId: CalendarNameListId,
-  index: number,
-  form: CalendarNameForm,
-): string {
-  const list = listById.get(listId);
-  if (list === undefined) return '';
-
-  const entry = list.entries[positiveMod(index, list.entries.length)];
-  // Αμυντικό: στην πράξη το `form` έρχεται από ταίριασμα της **ίδιας** λίστας, άρα υπάρχει.
-  // Αν κάποτε δεν υπάρχει, η πρώτη δηλωμένη στήλη είναι η μόνη απάντηση που δεν εφευρίσκει.
-  const value = (entry as Partial<Record<CalendarNameForm, string>>)[form];
-  return value ?? entry[list.forms[0]];
-}
-
-/** Πόσες εγγραφές έχει η λίστα — 12 για μήνες, 7 για ημέρες. */
-export function calendarNameListLength(listId: CalendarNameListId): number {
-  return listById.get(listId)?.entries.length ?? 0;
-}
+export const CALENDAR_NAME_CANDIDATES: readonly NameListCandidate[] = (() => {
+  const out: NameListCandidate[] = [];
+  for (const list of CALENDAR_NAME_LISTS) {
+    for (const form of list.forms) {
+      const [first, ...rest] = list.entries.map(
+        (entry) => (entry as Partial<Record<CalendarNameForm, string>>)[form] ?? '',
+      );
+      // Κάθε δηλωμένη λίστα έχει εγγραφές — ο φρουρός υπάρχει για τον **τύπο**, ώστε η
+      // μη-κενή πλειάδα να αποδεικνύεται αντί να δηλώνεται με `as`.
+      if (first === undefined) continue;
+      out.push({ key: `${list.id}:${form}`, entries: [first, ...rest] });
+    }
+  }
+  return out;
+})();
