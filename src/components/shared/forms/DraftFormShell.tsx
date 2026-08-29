@@ -37,7 +37,6 @@
 import React from 'react';
 import { FormProvider, type FieldValues, type UseFormReturn } from 'react-hook-form';
 
-import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { DraftFormValidation } from '@/lib/forms/draft-validation';
 
 import type { ListingCustody } from '@/lib/owner-property/listing-custody';
@@ -45,8 +44,8 @@ import type { ListingCustody } from '@/lib/owner-property/listing-custody';
 import { PersonalCustodyNotice } from '../PersonalCustodyNotice';
 
 import { FormIssues } from './FormIssues';
+import type { DraftFormText } from '@/lib/forms/draft-form-labels';
 
-const NS = 'property-market';
 
 /**
  * Οι τρεις καταστάσεις υποβολής. **Ποτέ** `boolean` + `string`.
@@ -76,7 +75,7 @@ export function DraftFormShell<
   TBlocker extends string,
   TViolation extends string,
 >({
-  keyBase,
+  text,
   custody,
   form,
   editing,
@@ -87,13 +86,21 @@ export function DraftFormShell<
   children,
 }: {
   /**
-   * Η ρίζα του λεξιλογίου, π.χ. `demand` ή `offer`.
+   * **Τα κείμενα, έτοιμα** — ποτέ κλειδιά, ποτέ ρίζα λεξιλογίου.
    *
-   * 🔑 **ΕΝΑ όρισμα για όλα τα κείμενα** (τίτλος · εισαγωγή · κουμπιά · αποτυχία ·
-   * λίστα ελλείψεων): με οκτώ συμβολοσειρές, η κλήση θα ήταν πάλι δίδυμο — δηλαδή ο
-   * κλώνος θα μετακινούνταν από το σώμα στην **υπογραφή**.
+   * 🔴 **ΑΝΤΙΚΑΤΕΣΤΗΣΕ ΤΟ `keyBase: string` (2026-08-29).** Το παλιό σχόλιο εδώ
+   * υποστήριζε το `keyBase` λέγοντας ότι *«με οκτώ συμβολοσειρές, η κλήση θα ήταν
+   * πάλι δίδυμο — ο κλώνος θα μετακινούνταν στην υπογραφή»*. **Η ένσταση ήταν σωστή
+   * και λύθηκε αλλού**: η κλήση περνά **ΕΝΑ** αντικείμενο, που το παράγει ο **ένας**
+   * hook της βάσης του (`useOfferFormLabels` · `useDemandFormLabels`). Το δίδυμο δεν
+   * μετακινήθηκε — **δεν υπάρχει**.
+   *
+   * ⚠️ Το τίμημα του `keyBase` **δεν** ήταν αισθητικό: το κλειδί γινόταν άλυτο
+   * στατικά, η `dynamicKeyPolicy` δήλωνε **και τις δύο** βάσεις σε **κοινό** αρχείο,
+   * και **κάθε** διαδρομή με φόρμα κουβαλούσε **και τα δύο** λεξιλόγια. Πλήρες
+   * σκεπτικό + οι δύο πηγές της πρακτικής: `lib/forms/draft-form-labels.ts`.
    */
-  keyBase: string;
+  text: DraftFormText<TBlocker, TViolation>;
   /**
    * **Σε ποιον χώρο γράφει η πόρτα αυτής της φόρμας** (ADR-820 §5.2).
    *
@@ -119,17 +126,15 @@ export function DraftFormShell<
   /** Τα πεδία **αυτής** της φόρμας — το μόνο που πραγματικά διαφέρει. */
   children: React.ReactNode;
 }): React.ReactElement {
-  const { t } = useTranslation([NS]);
-  const K = `${NS}:${keyBase}.form`;
 
   return (
     <FormProvider {...form}>
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
         <header className="flex flex-col gap-2">
           <h1 className="text-2xl font-semibold text-foreground">
-            {t(editing ? `${K}.editTitle` : `${K}.title`)}
+            {editing ? text('editTitle') : text('title')}
           </h1>
-          <p className="text-sm text-muted-foreground">{t(`${K}.lead`)}</p>
+          <p className="text-sm text-muted-foreground">{text('lead')}</p>
         </header>
 
         {/*
@@ -167,11 +172,11 @@ export function DraftFormShell<
 
         {children}
 
-        <FormIssues validation={validation} keyBase={keyBase} />
+        <FormIssues validation={validation} text={text} />
 
         {submitState === 'failed' && (
           <p aria-live="polite" className="text-sm text-foreground">
-            {t(`${K}.failed`)}
+            {text('failed')}
           </p>
         )}
 
@@ -182,15 +187,17 @@ export function DraftFormShell<
             className="rounded-md border border-border bg-card px-4 py-2 font-medium text-foreground disabled:opacity-50"
           >
             {submitState === 'saving'
-              ? t(`${K}.saving`)
-              : t(editing ? `${K}.save` : `${K}.submit`)}
+              ? text('saving')
+              : editing
+                ? text('save')
+                : text('submit')}
           </button>
           <button
             type="button"
             onClick={onCancel}
             className="rounded-md border border-border px-4 py-2 font-medium text-foreground"
           >
-            {t(`${K}.cancel`)}
+            {text('cancel')}
           </button>
         </div>
       </form>

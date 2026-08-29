@@ -30,32 +30,35 @@
 
 import React from 'react';
 
-import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { DraftFormValidation } from '@/lib/forms/draft-validation';
-
-const NS = 'property-market';
+import type { DraftFormText } from '@/lib/forms/draft-form-labels';
 
 /**
- * **Οι κωδικοί γίνονται κλειδιά i18n** (N.11) — δεν υπάρχει ωμό κείμενο πουθενά.
+ * **Οι κωδικοί γίνονται λέξεις — αλλά ΟΧΙ εδώ** (N.11).
  *
- * @param keyBase — η ρίζα του λεξιλογίου, π.χ. `demand` ή `offer`. Από αυτήν
- *                  παράγονται τα `<base>.formBlocker.*` · `<base>.invariant.*` και η
- *                  επικεφαλίδα — **ένα** όρισμα, ώστε να μην μπορούν να αποκλίνουν.
+ * 🔴 **ΤΟ `keyBase` ΚΑΤΑΡΓΗΘΗΚΕ (2026-08-29).** Ήταν `string` prop από το οποίο
+ * χτίζονταν τρία κλειδιά — δηλαδή **άλυτο στατικά**, με `dynamicKeyPolicy` που
+ * δήλωνε **και** `demand.*` **και** `offer.*` σε αυτό το **κοινό** αρχείο. Αποτέλεσμα:
+ * κάθε διαδρομή με φόρμα κουβαλούσε **και τα δύο** λεξιλόγια *(μετρημένο: 6.072
+ * περιττά bytes)*, και **καμία πύλη i18n δεν έβλεπε τα κλειδιά** — ούτε η CHECK 3.8.
+ *
+ * ⇒ Πλέον δέχεται **έτοιμο κείμενο** από τον μεταφραστή **της βάσης του**. Δες το
+ * πλήρες σκεπτικό και τις δύο πηγές της πρακτικής στο `lib/forms/draft-form-labels.ts`.
+ *
+ * ⚠️ **Καμία κλήση `t()` σε αυτό το αρχείο** — και είναι το ζητούμενο, όχι σύμπτωση.
  */
 export function FormIssues<TDraft, TBlocker extends string, TViolation extends string>({
   validation,
-  keyBase,
+  text,
 }: {
   validation: DraftFormValidation<TDraft, TBlocker, TViolation>;
-  keyBase: string;
+  text: DraftFormText<TBlocker, TViolation>;
 }): React.ReactElement | null {
-  const { t } = useTranslation([NS]);
-
   if (validation.kind === 'ready') return null;
 
   const messages: readonly string[] = [
-    ...validation.blockers.map((blocker) => t(`${NS}:${keyBase}.formBlocker.${blocker}`)),
-    ...validation.violations.map((violation) => t(`${NS}:${keyBase}.invariant.${violation}`)),
+    ...validation.blockers.map((blocker) => text(blocker)),
+    ...validation.violations.map((violation) => text(violation)),
     // Τα `malformed` είναι **ονόματα πεδίων**, όχι μηνύματα: εμφανίζονται μόνο όταν
     // το σχήμα δεν διαβάζεται καθόλου, κατάσταση που η ίδια η φόρμα κάνει σχεδόν
     // αδύνατη (τα αριθμητικά πεδία είναι `type="number"` και ελεγχόμενα).
@@ -66,9 +69,7 @@ export function FormIssues<TDraft, TBlocker extends string, TViolation extends s
 
   return (
     <section aria-live="polite" className="rounded-md border border-border bg-card p-4">
-      <h2 className="text-sm font-semibold text-foreground">
-        {t(`${NS}:${keyBase}.invariant.heading`)}
-      </h2>
+      <h2 className="text-sm font-semibold text-foreground">{text('issuesHeading')}</h2>
       <ul className="mt-2 flex list-disc flex-col gap-1 pl-5 text-sm text-foreground">
         {messages.map((message) => (
           <li key={message}>{message}</li>

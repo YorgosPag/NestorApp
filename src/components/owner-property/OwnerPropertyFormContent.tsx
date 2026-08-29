@@ -66,6 +66,11 @@ import {
 import { useOwnerPropertyDraftMemory } from '@/hooks/owner-property/useOwnerPropertyDraftMemory';
 import { draftIdentityBlockers } from '@/lib/forms/draft-identity';
 import { withExtraBlockers } from '@/lib/forms/draft-validation';
+import {
+  useOfferFormText,
+  type OfferBlocker,
+  type OfferViolation,
+} from '@/components/owner-property/offer-form-labels';
 import type { OwnerPropertyDraft } from '@/types/owner-property';
 import type { OwnerPropertyInvariant } from '@/types/owner-property-invariants';
 import type { PropertyOffer } from '@/types/property-offers';
@@ -198,7 +203,11 @@ export function OwnerPropertyFormContent({
    * κάτι»*, ενώ ο λογαριασμός λέει *«σώσε ό,τι συμπλήρωσες»* — το βήμα που έρχεται
    * **αφού** δοθεί η αξία, ποτέ πριν (§5.2, «useful screen»).
    */
-  const contextBlockers = React.useMemo<readonly string[]>(
+  // 🔑 **ΤΑ ΚΕΙΜΕΝΑ ΤΗΣ ΒΑΣΗΣ «offer»**, από τον ΕΝΑ μεταφραστή της. Κάθε `t()` ζει
+  //    εκεί, με **σταθερά module** — άρα το βλέπει και ο τεμαχιστής και η CHECK 3.8.
+  const formText = useOfferFormText();
+
+  const contextBlockers = React.useMemo<readonly OfferBlocker[]>(
     () => [...(mandate?.blockers ?? []), ...draftIdentityBlockers(user?.uid ?? null)],
     [mandate, user],
   );
@@ -209,13 +218,15 @@ export function OwnerPropertyFormContent({
    * δίδυμο **σειράς** — ποιο εμπόδιο πρώτο, τι γίνεται όταν η φόρμα είναι `ready`
    * αλλά το περιβάλλον όχι.
    *
-   * ⚠️ **Τα ρητά γενικά ορίσματα δεν είναι διακόσμηση**: πλατύνουν το λεξιλόγιο
-   * εμποδίων σε `string`, ώστε τρία ανεξάρτητα λεξιλόγια (`offer` · `mandate` ·
-   * `identity`) να συνυπάρχουν σε μία λίστα οθόνης χωρίς κανένα να «μάθει» τα άλλα.
+   * ⚠️ **Τα ρητά γενικά ορίσματα δεν είναι διακόσμηση** — και από τις 2026-08-29
+   * **δεν είναι πια `string`**: τα τρία ανεξάρτητα λεξιλόγια (`offer` · `mandate` ·
+   * `identity`) ενώνονται **ονομαστικά** στο {@link OfferBlocker}. Το `string` τα
+   * άφηνε να συνυπάρχουν, αλλά **επέτρεπε και κωδικό που δεν έχει κείμενο** — τώρα
+   * αυτό **δεν μεταγλωττίζεται**.
    */
   const validation = React.useMemo(
     () =>
-      withExtraBlockers<OwnerPropertyDraft, string, OwnerPropertyInvariant>(
+      withExtraBlockers<OwnerPropertyDraft, OfferBlocker, OfferViolation>(
         propertyValidation,
         contextBlockers,
       ),
@@ -283,7 +294,10 @@ export function OwnerPropertyFormContent({
 
   return (
     <DraftFormShell
-      keyBase="offer"
+      // 🔑 **ΚΕΙΜΕΝΑ, ΟΧΙ ΡΙΖΑ ΛΕΞΙΛΟΓΙΟΥ** — δες `lib/forms/draft-form-labels.ts`.
+      //    Το `keyBase="offer"` έκανε τα κλειδιά άλυτα στατικά και ανάγκαζε το κοινό
+      //    κέλυφος να δηλώνει **και** τη ρίζα της ζήτησης.
+      text={formText}
       // 🔑 **ΤΟ ΑΚΡΟΑΤΗΡΙΟ ΕΙΝΑΙ Ο ΧΩΡΟΣ** (ADR-820 §5.2). Το `mandate` είναι ήδη ο
       //    διακρίτης των δύο πορτών — «απών για τον ιδιώτη, παρών για το γραφείο»
       //    (§8.33) — και είναι ακριβώς το ίδιο μπιτ που γίνεται `authorCompanyId`:

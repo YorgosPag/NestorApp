@@ -42,6 +42,7 @@ import {
   type DraftFormProps,
   type DraftSubmitState,
 } from '@/components/shared/forms/DraftFormShell';
+import { useDemandFormText } from '@/components/demand/demand-form-labels';
 import {
   EMPTY_DEMAND_FORM,
   type DemandDraft,
@@ -105,6 +106,10 @@ export function DemandFormContent({
   const values = form.watch();
   const validation = React.useMemo(() => validateDemandForm(values), [values]);
 
+  // 🔑 Τα κείμενα της βάσης «demand», από τον ΕΝΑ μεταφραστή της — κάθε `t()` ζει εκεί
+  //    με σταθερά module, ώστε να το βλέπει και ο τεμαχιστής και η CHECK 3.8.
+  const formText = useDemandFormText();
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     if (validation.kind !== 'ready' || user === null) return;
@@ -133,7 +138,8 @@ export function DemandFormContent({
 
   return (
     <DraftFormShell
-      keyBase="demand"
+      // 🔑 Δες `lib/forms/draft-form-labels.ts` — γιατί έφυγε το `keyBase`.
+      text={formText}
       // 🔑 **ΠΑΝΤΑ προσωπική** (ADR-820 §5.2), και δεν είναι προεπιλογή: αυτή η
       //    φόρμα γράφει `authorCompanyId: null` **άνευ όρων** (γρ. 73), και η
       //    απόδοση σε γραφείο είναι **άλλη ροή, με έγκριση πελάτη**. Τη μέρα που θα
