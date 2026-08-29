@@ -17,7 +17,7 @@ jest.mock('@/services/entity-audit.service', () => ({ EntityAuditService: { reco
 jest.mock('@/services/realtime/types', () => ({ SYNC_SOURCE_AI_AGENT: 'ai-agent' }));
 jest.mock('../shared/contact-lookup-search', () => ({ checkContactDuplicates: jest.fn() }));
 
-import { parsePhoneForStorage } from '../shared/contact-lookup-crud';
+import { parsePhoneForStorage } from '../shared/contact-document-builder';
 
 describe('parsePhoneForStorage', () => {
   describe('00-prefix (international dialing)', () => {

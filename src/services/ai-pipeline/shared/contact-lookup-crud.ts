@@ -25,72 +25,146 @@ import type { AuditFieldChange } from '@/types/audit-trail';
 import type { EntitySyncAction, SyncEntityType } from '@/services/realtime/types';
 import { SYNC_SOURCE_AI_AGENT } from '@/services/realtime/types';
 
+import { buildContactDocument, parsePhoneForStorage } from './contact-document-builder';
 import type { CreateContactParams, CreateContactResult } from './contact-lookup-types';
 import { checkContactDuplicates } from './contact-lookup-search';
 
 const logger = createModuleLogger('PIPELINE_CONTACT_CRUD');
 
 // ============================================================================
-// PHONE PARSING (E.164 country-code split)
-// ============================================================================
-
-/**
- * Split an international phone string into countryCode + local number.
- * Handles `+359...` and `00359...` prefixes. Returns raw string if no prefix found.
- * Exported for unit-testing only.
- */
-export function parsePhoneForStorage(raw: string): { number: string; countryCode?: string } {
-  const clean = raw.replace(/[\s\-.() ]+/g, '');
-  const e164 = clean.startsWith('00') ? '+' + clean.slice(2) : clean;
-  if (!e164.startsWith('+')) return { number: clean };
-
-  const rest = e164.slice(1); // digits after '+'
-
-  // 3-digit codes (checked before 2-digit to avoid prefix collision in zones 35x/38x)
-  const CC3 = [
-    '350','351','352','353','354','355','356','357','358','359',
-    '370','371','372','373','374','375','376','377','378','380',
-    '381','382','385','386','387','388','389','420','421','423',
-    '500','501','502','503','504','505','506','507','508','509',
-    '590','591','592','593','594','595','596','597','598','599',
-    '850','852','853','855','856','880','886',
-    '960','961','962','963','964','965','966','967','968','969',
-    '970','971','972','973','974','975','976','977',
-    '992','993','994','995','996','998',
-  ];
-  for (const cc of CC3) {
-    if (rest.startsWith(cc) && rest.length > cc.length) {
-      return { countryCode: '+' + cc, number: rest.slice(cc.length) };
-    }
-  }
-
-  // 2-digit codes
-  const CC2 = [
-    '20','27','30','31','32','33','34','36','39','40','41','43',
-    '44','45','46','47','48','49','51','52','53','54','55','56',
-    '57','58','60','61','62','63','64','65','66','81','82','84',
-    '86','90','91','92','93','94','95','98',
-  ];
-  for (const cc of CC2) {
-    if (rest.startsWith(cc) && rest.length > cc.length) {
-      return { countryCode: '+' + cc, number: rest.slice(cc.length) };
-    }
-  }
-
-  // 1-digit (+1 NANP, +7 Russia/Kazakhstan)
-  if ((rest[0] === '1' || rest[0] === '7') && rest.length > 1) {
-    return { countryCode: '+' + rest[0], number: rest.slice(1) };
-  }
-
-  return { number: rest };
-}
-
-// ============================================================================
-// UPDATE CONTACT FIELD (ADR-145: UC-016)
+// UPDATE / REMOVE CONTACT FIELD (ADR-145: UC-016)
 // ============================================================================
 
 /** Fields that are stored as arrays in Firestore (support arrayUnion) */
 const ARRAY_FIELDS: ReadonlySet<string> = new Set(['phone', 'email']);
+
+/**
+ * Το ίχνος ADR-195 μιας μετάλλαξης πεδίου — **σιωπηλό χωρίς `companyId`**.
+ *
+ * Η σιωπή είναι η προϋπάρχουσα συμπεριφορά και δεν αλλάζει εδώ: επαφή χωρίς
+ * εταιρεία δεν έχει **σε ποιανού** το ιστορικό να γραφτεί.
+ */
+async function recordContactFieldChange(args: {
+  readonly contactId: string;
+  readonly existingData: Record<string, unknown>;
+  readonly change: AuditFieldChange;
+  readonly updatedBy: string;
+}): Promise<void> {
+  const companyId = String(args.existingData.companyId ?? '');
+  if (!companyId) return;
+
+  await EntityAuditService.recordChange({
+    entityType: ENTITY_TYPES.CONTACT,
+    entityId: args.contactId,
+    entityName: String(args.existingData.displayName ?? null) || null,
+    action: 'updated',
+    changes: [args.change],
+    performedBy: args.updatedBy,
+    performedByName: args.updatedBy,
+    companyId,
+  });
+}
+
+/**
+ * ΜΙΑ γραφή πεδίου επαφής — ο κοινός σκελετός των δύο μεταλλάξεων.
+ *
+ * -----------------------------------------------------------------------------
+ * 🔴 ΓΙΑΤΙ ΕΞΗΧΘΗ (CHECK 3.28 / ADR-583 · N.0.2)
+ * -----------------------------------------------------------------------------
+ *
+ * Το `updateContactField` και το `removeContactField` ήταν **δίδυμα στα δύο άκρα**:
+ * ίδιος πρόλογος (`docRef` + `updatedAt`/`lastModifiedBy`) και ίδιος επίλογος
+ * (ανάγνωση για `companyId`, `update`, ίχνος ADR-195). Διέφεραν **μόνο στη μέση** —
+ * τι γράφεται στο πεδίο, και τι λέει η γραμμή του ιστορικού.
+ *
+ * ⚠️ Ο σκελετός **διαβάζει πάντα** την προηγούμενη τιμή, ακόμη κι όταν ο καλών τη
+ * ρίχνει: η ανάγνωση γινόταν ήδη **και στις δύο** διαδρομές (για το `companyId`),
+ * άρα δεν προστίθεται ταξίδι — και ο καλών παραμένει ο **μόνος** που αποφασίζει τι
+ * καταγράφεται.
+ */
+async function applyContactFieldMutation(params: {
+  readonly contactId: string;
+  readonly field: string;
+  readonly updatedBy: string;
+  readonly fieldUpdates: Record<string, unknown>;
+  readonly toChange: (oldValue: AuditFieldChange['oldValue']) => AuditFieldChange;
+  readonly logMessage: string;
+}): Promise<void> {
+  const { contactId, field, updatedBy, fieldUpdates, toChange, logMessage } = params;
+
+  const adminDb = getAdminFirestore();
+  const docRef = adminDb.collection(COLLECTIONS.CONTACTS).doc(contactId);
+
+  const updateData: Record<string, unknown> = {
+    updatedAt: FieldValue.serverTimestamp(),
+    lastModifiedBy: updatedBy,
+    ...fieldUpdates,
+  };
+
+  // ADR-195: canonical entity audit trail (SSoT) — fetch existing for companyId + displayName + oldValue
+  const existingSnap = await docRef.get();
+  const existingData: Record<string, unknown> = existingSnap.exists
+    ? (existingSnap.data() ?? {})
+    : {};
+  const previous = existingData[field];
+  const oldValue =
+    typeof previous === 'string' || typeof previous === 'number' || typeof previous === 'boolean'
+      ? previous
+      : null;
+
+  await docRef.update(updateData);
+
+  await recordContactFieldChange({
+    contactId,
+    existingData,
+    change: toChange(oldValue),
+    updatedBy,
+  });
+
+  logger.info(logMessage, {
+    contactId,
+    field,
+    isArray: ARRAY_FIELDS.has(field),
+    updatedBy,
+  });
+}
+
+/** Τι γράφεται στο πεδίο όταν **προστίθεται** τιμή (arrayUnion για τα πολλαπλά). */
+function buildFieldAddition(field: string, value: string): Record<string, unknown> {
+  if (!ARRAY_FIELDS.has(field)) return { [field]: value };
+
+  if (field === 'phone') {
+    const parsed = parsePhoneForStorage(value);
+    return {
+      phones: FieldValue.arrayUnion({
+        number: parsed.number,
+        ...(parsed.countryCode ? { countryCode: parsed.countryCode } : {}),
+        type: 'mobile',
+        isPrimary: false,
+      }),
+    };
+  }
+
+  if (field === 'email') {
+    return {
+      emails: FieldValue.arrayUnion({
+        email: value.toLowerCase().trim(),
+        type: 'work',
+        isPrimary: false,
+      }),
+    };
+  }
+
+  return {};
+}
+
+/** Τι γράφεται στο πεδίο όταν **καθαρίζεται** (άδειος πίνακας για τα πολλαπλά). */
+function buildFieldClearing(field: string): Record<string, unknown> {
+  if (!ARRAY_FIELDS.has(field)) return { [field]: null };
+  if (field === 'phone') return { phones: [] };
+  if (field === 'email') return { emails: [] };
+  return {};
+}
 
 /**
  * Update a single field on a contact document.
@@ -106,72 +180,15 @@ export async function updateContactField(
   value: string,
   updatedBy: string
 ): Promise<void> {
-  const adminDb = getAdminFirestore();
-  const docRef = adminDb.collection(COLLECTIONS.CONTACTS).doc(contactId);
-
-  const isArray = ARRAY_FIELDS.has(field);
-
-  const updateData: Record<string, unknown> = {
-    updatedAt: FieldValue.serverTimestamp(),
-    lastModifiedBy: updatedBy,
-  };
-
-  if (isArray) {
-    if (field === 'phone') {
-      const parsed = parsePhoneForStorage(value);
-      updateData['phones'] = FieldValue.arrayUnion({
-        number: parsed.number,
-        ...(parsed.countryCode ? { countryCode: parsed.countryCode } : {}),
-        type: 'mobile',
-        isPrimary: false,
-      });
-    } else if (field === 'email') {
-      updateData['emails'] = FieldValue.arrayUnion({
-        email: value.toLowerCase().trim(),
-        type: 'work',
-        isPrimary: false,
-      });
-    }
-  } else {
-    updateData[field] = value;
-  }
-
-  // ADR-195: canonical entity audit trail (SSoT) — fetch existing for companyId + displayName + oldValue
-  const existingSnap = await docRef.get();
-  const existingData = existingSnap.exists ? (existingSnap.data() ?? {}) : {};
-  const oldValue = typeof existingData[field] === 'string'
-    || typeof existingData[field] === 'number'
-    || typeof existingData[field] === 'boolean'
-    ? existingData[field] as string | number | boolean
-    : null;
-  const companyId = String(existingData.companyId ?? '');
-
-  await docRef.update(updateData);
-
-  if (companyId) {
-    await EntityAuditService.recordChange({
-      entityType: ENTITY_TYPES.CONTACT,
-      entityId: contactId,
-      entityName: String(existingData.displayName ?? null) || null,
-      action: 'updated',
-      changes: [{ field, oldValue, newValue: value, label: field }],
-      performedBy: updatedBy,
-      performedByName: updatedBy,
-      companyId,
-    });
-  }
-
-  logger.info('Contact field updated', {
+  await applyContactFieldMutation({
     contactId,
     field,
-    isArray,
     updatedBy,
+    fieldUpdates: buildFieldAddition(field, value),
+    toChange: (oldValue) => ({ field, oldValue, newValue: value, label: field }),
+    logMessage: 'Contact field updated',
   });
 }
-
-// ============================================================================
-// REMOVE CONTACT FIELD (ADR-145: UC-016 REMOVE mode)
-// ============================================================================
 
 /**
  * Remove array entries (phone/email) or clear scalar fields on a contact.
@@ -184,51 +201,13 @@ export async function removeContactField(
   field: string,
   updatedBy: string
 ): Promise<void> {
-  const adminDb = getAdminFirestore();
-  const docRef = adminDb.collection(COLLECTIONS.CONTACTS).doc(contactId);
-
-  const isArray = ARRAY_FIELDS.has(field);
-
-  const updateData: Record<string, unknown> = {
-    updatedAt: FieldValue.serverTimestamp(),
-    lastModifiedBy: updatedBy,
-  };
-
-  if (isArray) {
-    if (field === 'phone') {
-      updateData['phones'] = [];
-    } else if (field === 'email') {
-      updateData['emails'] = [];
-    }
-  } else {
-    updateData[field] = null;
-  }
-
-  // ADR-195: canonical entity audit trail (SSoT) — fetch existing for companyId
-  const existingSnap = await docRef.get();
-  const existingData = existingSnap.exists ? (existingSnap.data() ?? {}) : {};
-  const companyId = String(existingData.companyId ?? '');
-
-  await docRef.update(updateData);
-
-  if (companyId) {
-    await EntityAuditService.recordChange({
-      entityType: ENTITY_TYPES.CONTACT,
-      entityId: contactId,
-      entityName: String(existingData.displayName ?? null) || null,
-      action: 'updated',
-      changes: [{ field, oldValue: null, newValue: null, label: `Διαγραφή ${field}` }],
-      performedBy: updatedBy,
-      performedByName: updatedBy,
-      companyId,
-    });
-  }
-
-  logger.info('Contact field removed', {
+  await applyContactFieldMutation({
     contactId,
     field,
-    isArray,
     updatedBy,
+    fieldUpdates: buildFieldClearing(field),
+    toChange: () => ({ field, oldValue: null, newValue: null, label: `Διαγραφή ${field}` }),
+    logMessage: 'Contact field removed',
   });
 }
 
@@ -327,44 +306,12 @@ export async function createContactServerSide(
     }
   }
 
-  // ── Step 2: Build display name ──
-  const displayName = params.type === 'company'
-    ? params.companyName ?? `${params.firstName} ${params.lastName}`.trim()
-    : `${params.firstName} ${params.lastName}`.trim();
-
-  // ── Step 3: Build Firestore document ──
-  const parsedPhone = params.phone ? parsePhoneForStorage(params.phone) : null;
-
-  const contactDoc: Record<string, unknown> = {
-    type: params.type,
-    status: 'active',
-    isFavorite: false,
-    displayName,
-    firstName: params.firstName ?? null,
-    lastName: params.lastName ?? null,
-    ...(params.type === 'company' && params.companyName
-      ? { companyName: params.companyName }
-      : {}),
-    emails: params.email
-      ? [{ email: params.email, type: 'work', isPrimary: true }]
-      : [],
-    phones: parsedPhone
-      ? [{ number: parsedPhone.number, ...(parsedPhone.countryCode ? { countryCode: parsedPhone.countryCode } : {}), type: 'mobile', isPrimary: true }]
-      : [],
-    addresses: [],
-    companyId: params.companyId,
-    createdBy: params.createdBy,
-    lastModifiedBy: params.createdBy,
-    createdAt: FieldValue.serverTimestamp(),
-    updatedAt: FieldValue.serverTimestamp(),
-    tags: null,
-    notes: null,
-    customFields: null,
-    photoURL: null,
-    vatNumber: null,
-    taxOffice: null,
-    profession: null,
-  };
+  // ── Step 2-3: Build display name + Firestore document ──
+  //
+  // The shape lives in `contact-document-builder` because the ADR-827 Σ3 acceptance
+  // transaction needs the *same* document and cannot call this function (it writes on
+  // its own). One builder, two writers — never two builders (ADR-749).
+  const { displayName, doc: contactDoc } = buildContactDocument(params);
 
   // ── Step 4: Generate enterprise ID ──
   const contactId = generateContactId();
