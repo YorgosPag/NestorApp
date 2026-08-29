@@ -26,6 +26,7 @@ import {
   mandateRequestInvariantViolations,
   type MandateRequest,
   type MandateRequestStatus,
+  sameProposedTerms,
 } from '@/types/mandate-request';
 import { EXCLUSIVE_AGENCY, OPEN_LISTING } from '@/types/listing-agreement';
 import { defaultExpiryFor } from '@/types/owner-property-mandate';
@@ -49,6 +50,7 @@ function request(overrides: Partial<MandateRequest> = {}): MandateRequest {
     seenAt: null,
     decidedAt: null,
     clientContactId: null,
+    supersedesRequestId: null,
     ...overrides,
   };
 }
@@ -336,10 +338,111 @@ describe('Ι — τι δεν επιτρέπεται να γεννηθεί', () =
         }),
         NOW,
       ),
+      // Δ4 (§9.17 δ) — η αλυσίδα αναθεώρησης που δείχνει στον εαυτό της.
+      ...mandateRequestInvariantViolations(
+        request({ supersedesRequestId: 'mreq_test_0001' }),
+        NOW,
+      ),
     ]);
 
     for (const invariant of MANDATE_REQUEST_INVARIANTS) {
       expect(reachable).toContain(invariant);
     }
+  });
+});
+
+// ============================================================================
+// Κ — Δ4: Η ΑΛΥΣΙΔΑ ΑΝΑΘΕΩΡΗΣΗΣ ΚΑΙ Η ΤΑΥΤΟΤΗΤΑ ΤΗΣ ΕΡΩΤΗΣΗΣ (ADR-827 §9.17 δ)
+// ============================================================================
+
+describe('Κ — η αναθεώρηση είναι αλυσίδα, και η ερώτηση έχει ταυτότητα', () => {
+  it('Κ1 — αίτημα που αναθεωρεί ΤΟΝ ΕΑΥΤΟ ΤΟΥ είναι άκυρο', () => {
+    expect(
+      mandateRequestInvariantViolations(
+        request({ supersedesRequestId: 'mreq_test_0001' }),
+        NOW,
+      ),
+    ).toContain('request-supersedes-self');
+  });
+
+  it('Κ2 — αίτημα που αναθεωρεί ΑΛΛΟ αίτημα είναι απολύτως έγκυρο', () => {
+    // ⚠️ Ο φρουρός δεν επιτρέπεται να καταδικάζει τη νόμιμη αναθεώρηση — αλλιώς
+    //    θα ήταν «ποτέ ξανά», που είναι η εναλλακτική που ΑΠΟΡΡΙΦΘΗΚΕ (§9.17 δ).
+    expect(
+      mandateRequestInvariantViolations(
+        request({ supersedesRequestId: 'mreq_test_0000' }),
+        NOW,
+      ),
+    ).toEqual([]);
+  });
+
+  it('Κ3 — και το `null` (πρώτο αίτημα) δεν παράγει τίποτα', () => {
+    expect(mandateRequestInvariantViolations(request(), NOW)).toEqual([]);
+  });
+
+  it('Κ4 — ΙΔΙΟΙ όροι ⇒ ίδια ερώτηση (ιδεμποτησία Stripe)', () => {
+    expect(sameProposedTerms(request().terms, request().terms)).toBe(true);
+    // Και δύο ΞΕΧΩΡΙΣΤΑ αντικείμενα με τις ίδιες τιμές — ποτέ σύγκριση αναφοράς.
+    expect(
+      sameProposedTerms(request().terms, { ...request().terms }),
+    ).toBe(true);
+  });
+
+  it('Κ5 — ΚΑΘΕ ένας από τους τρεις όρους αλλάζει την ταυτότητα, χωριστά', () => {
+    const base = request().terms;
+    // 🔑 Τρεις ανεξάρτητοι ισχυρισμοί: μονή μετάλλαξη σε οποιονδήποτε όρο πρέπει
+    //    να κοκκινίζει ΜΟΝΗ της (το μάθημα του §9.16 γ).
+    expect(sameProposedTerms(base, { ...base, agreement: OPEN_LISTING })).toBe(false);
+    expect(sameProposedTerms(base, { ...base, expiresAt: '2027-01-01T23:59:59.999Z' })).toBe(false);
+    expect(
+      sameProposedTerms(base, {
+        ...base,
+        compensation: { type: 'percentage', percentage: 3, vatIncluded: false },
+      }),
+    ).toBe(false);
+  });
+
+  it('Κ6 — η ΑΜΟΙΒΗ συγκρίνεται ανά σκέλος: τύπος, ποσό, ΦΠΑ — και τα τρία', () => {
+    const base = request().terms;
+    const pct = (o: Partial<{ percentage: number; vatIncluded: boolean }>) => ({
+      ...base,
+      compensation: {
+        type: 'percentage' as const,
+        percentage: 2,
+        vatIncluded: false,
+        ...o,
+      },
+    });
+
+    expect(sameProposedTerms(pct({}), pct({}))).toBe(true);
+    expect(sameProposedTerms(pct({}), pct({ percentage: 2.5 }))).toBe(false);
+    // 🔴 Ο ΦΠΑ ΜΟΝΟΣ ΤΟΥ αλλάζει τι πληρώνει ο άνθρωπος — δεν είναι λεπτομέρεια.
+    expect(sameProposedTerms(pct({}), pct({ vatIncluded: true }))).toBe(false);
+
+    // Άλλο σκέλος της ένωσης εξ ολοκλήρου.
+    expect(
+      sameProposedTerms(pct({}), {
+        ...base,
+        compensation: { type: 'fixed', amountEUR: 2, vatIncluded: false },
+      }),
+    ).toBe(false);
+  });
+
+  it('Κ7 — ΣΤΑΘΕΡΗ αμοιβή: το ποσό και ο ΦΠΑ, χωριστά', () => {
+    const fixed = (amountEUR: number, vatIncluded: boolean) => ({
+      ...request().terms,
+      compensation: { type: 'fixed' as const, amountEUR, vatIncluded },
+    });
+    expect(sameProposedTerms(fixed(3000, false), fixed(3000, false))).toBe(true);
+    expect(sameProposedTerms(fixed(3000, false), fixed(3500, false))).toBe(false);
+    expect(sameProposedTerms(fixed(3000, false), fixed(3000, true))).toBe(false);
+  });
+
+  it('Κ8 — 🔴 Ο ΧΡΟΝΟΣ ΔΕΝ ΕΙΝΑΙ ΟΡΟΣ: δύο πατήματα σε άλλη στιγμή = ΙΔΙΑ ερώτηση', () => {
+    // 🔴 Χωρίς αυτό, ένα `JSON.stringify(request)` θα περνούσε όλες τις παραπάνω
+    //    και θα έκανε ΚΑΘΕ αίτημα μοναδικό — ιδεμποτησία που δεν πυροδοτεί ποτέ.
+    const first = request({ requestedAt: '2026-08-29T10:00:00.000Z' });
+    const second = request({ requestedAt: '2026-08-29T10:00:03.000Z', id: 'mreq_test_0002' });
+    expect(sameProposedTerms(first.terms, second.terms)).toBe(true);
   });
 });
