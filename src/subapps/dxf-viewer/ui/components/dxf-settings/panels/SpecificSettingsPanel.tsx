@@ -30,6 +30,11 @@ import {
   LightingIcon,
   CanvasIcon
 } from '../icons/DxfSettingsIcons';
+// 🔴 ADR-828 Φ4β — οι οκτώ κατηγορίες κουβαλούν ζωγραφισμένα εικονίδια του υποσυστήματος·
+// η ένατη δεν έχει δικό της και δανείζεται από τη **μία** βιβλιοθήκη που ήδη χρησιμοποιεί
+// ολόκληρο το πάνελ (`GeneralSettingsPanel`, το μενού συμπλήρωσης). Ένα νέο ζωγραφισμένο
+// εικονίδιο για μία κατηγορία θα ήταν δεύτερο λεξιλόγιο εικόνων χωρίς λόγο.
+import { ListOrdered } from 'lucide-react';
 
 /**
  * SpecificSettingsPanel - Router for all Specific Settings categories
@@ -81,6 +86,9 @@ const LazyEntitiesCategory = lazy(() => import('../categories/EntitiesCategory')
 const LazyGripsCategory = lazy(() => import('../categories/GripsCategory'));
 const LazyLightingCategory = lazy(() => import('../categories/LightingCategory'));
 const LazyBackgroundCategory = lazy(() => import('../categories/BackgroundCategory'));
+// 🔴 ADR-828 Φ4β — οι προσαρμοσμένες λίστες συμπλήρωσης. Κέλυφος του κοινού διαχειριστή:
+// η **άλλη** πόρτα προς την ίδια επιφάνεια είναι το «Σειρά…» του μενού συμπλήρωσης.
+const LazyAutoFillListsCategory = lazy(() => import('../categories/AutoFillListsCategory'));
 
 // ============================================================================
 // TYPES
@@ -91,7 +99,7 @@ export interface SpecificSettingsPanelProps {
   defaultCategory?: ColorCategory;
 }
 
-type ColorCategory = 'cursor' | 'selection' | 'grid' | 'grips' | 'layers' | 'entities' | 'lighting' | 'background';
+type ColorCategory = 'cursor' | 'selection' | 'grid' | 'grips' | 'layers' | 'entities' | 'lighting' | 'background' | 'autoFillLists';
 
 interface CategoryConfig {
   id: ColorCategory;
@@ -172,6 +180,12 @@ export const SpecificSettingsPanel: React.FC<SpecificSettingsPanelProps> = ({
       title: t('specificSettings.categories.background.title'),
       description: t('specificSettings.categories.background.description'),
       icon: <CanvasIcon />
+    },
+    {
+      id: 'autoFillLists',
+      title: t('specificSettings.categories.autoFillLists.title'),
+      description: t('specificSettings.categories.autoFillLists.description'),
+      icon: <ListOrdered className="w-5 h-5" />
     }
   ];
 
@@ -197,6 +211,8 @@ export const SpecificSettingsPanel: React.FC<SpecificSettingsPanelProps> = ({
         return <LazyLightingCategory />;
       case 'background':
         return <LazyBackgroundCategory />;
+      case 'autoFillLists':
+        return <LazyAutoFillListsCategory />;
       default:
         return <LazySelectionCategory />;
     }

@@ -43,6 +43,9 @@ import {
   type TableFillMenuTarget,
 } from '../table-cell-editor/table-fill-menu-port';
 import { restartTableCellCursorSession } from '../../state/table-cell-cursor-store';
+// 🔴 ADR-828 Φ4β — το «Σειρά…» άνοιγε τίποτα· τώρα ανοίγει τον διαχειριστή λιστών, με τα
+// κελιά που μόλις μαρκαρίστηκαν ως **πρόταση** (Excel *Import from cells*, χωρίς δεύτερη κίνηση).
+import { openAutoFillListsDialog } from '../../state/auto-fill-lists-dialog-store';
 
 /**
  * Ποιες εντολές ανοίγουν, από τη **μία** ανίχνευση που έτρεξε ήδη η χειρονομία.
@@ -97,7 +100,11 @@ export function TableFillOptionsMenu(): React.ReactElement {
       surfaceRef={noSurfaceRef}
     >
       {target ? (
-        <TableFillMenuItems onPick={target.apply} enabled={enabledFrom(target)} />
+        <TableFillMenuItems
+          onPick={target.apply}
+          enabled={enabledFrom(target)}
+          onOpenLists={() => openAutoFillListsDialog(target.seeds)}
+        />
       ) : null}
     </AnchoredMenuShell>
   );

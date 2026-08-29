@@ -35,6 +35,11 @@ import {
   type TableFillMenuTarget,
 } from '@/subapps/dxf-viewer/ui/table-cell-editor/table-fill-menu-port';
 import type { TableFillMode } from '@/subapps/dxf-viewer/bim/table/table-fill-plan';
+// 🔴 ADR-828 Φ4β — το «Σειρά…» δεν είναι πια γκρίζο: ανοίγει τον διαχειριστή λιστών.
+import {
+  __resetAutoFillListsDialogForTests,
+  getAutoFillListsRequest,
+} from '@/subapps/dxf-viewer/state/auto-fill-lists-dialog-store';
 
 void i18next.use(ICU).use(initReactI18next).init({
   lng: 'el',
@@ -56,17 +61,24 @@ function renderMenu() {
 }
 
 /** Άνοιξε το μενού **μέσω της θύρας**, όπως ακριβώς κάνει η χειρονομία. */
-function openWith(offer: TableFillMenuTarget['offer'], apply: (mode: TableFillMode) => void): void {
+function openWith(
+  offer: TableFillMenuTarget['offer'],
+  apply: (mode: TableFillMode) => void,
+  seeds: readonly string[] = [],
+): void {
   const port = getTableFillMenuPort();
   if (port === null) throw new Error('Η θύρα δεν δηλώθηκε — το μενού δεν είναι προσπελάσιμο');
-  act(() => port.open(120, 80, { offer, apply }));
+  act(() => port.open(120, 80, { offer, apply, seeds }));
 }
 
 /** Το item ως στοιχείο του Radix — `data-disabled` είναι ο ένας ορατός δείκτης του «γκρίζο». */
 const item = (label: string): HTMLElement => screen.getByRole('menuitem', { name: label });
 const isDisabled = (label: string): boolean => item(label).hasAttribute('data-disabled');
 
-afterEach(() => setTableFillMenuPort(null));
+afterEach(() => {
+  setTableFillMenuPort(null);
+  __resetAutoFillListsDialogForTests();
+});
 
 // ════════════════════════════════════════════════════════════════════════════════
 describe('🔴 §7.2 — η θύρα ζει όσο το μενού', () => {
@@ -109,13 +121,34 @@ describe('🔴 §7.2 — ο ΕΝΑΣ κανόνας ενεργοποίησης',
     expect(isDisabled(LABELS.fillSeries)).toBe(false);
   });
 
-  it('🔴 οι τρεις ΧΩΡΙΣ ΠΡΑΞΗ μένουν γκρίζες ακόμη κι όταν όλα προσφέρονται (όψη τώρα, πράξη μετά)', () => {
+  /**
+   * ⚠️ **ΗΤΑΝ ΤΡΕΙΣ, ΕΓΙΝΑΝ ΔΥΟ** (ADR-828 Φ4β): το «Σειρά…» απέκτησε πράξη — ανοίγει τον
+   * διαχειριστή προσαρμοσμένων λιστών. Οι δύο τάσεις μένουν γκρίζες, και το test κρατά
+   * **και τις δύο** πλευρές ώστε ένα «όλα ενεργά» να μην περνά σιωπηλά.
+   */
+  it('🔴 οι ΔΥΟ τάσεις μένουν γκρίζες ακόμη κι όταν όλα προσφέρονται (όψη τώρα, πράξη μετά)', () => {
     renderMenu();
     openWith({ series: true, date: true }, () => undefined);
 
     expect(isDisabled(LABELS.linearTrend)).toBe(true);
     expect(isDisabled(LABELS.growthTrend)).toBe(true);
-    expect(isDisabled(LABELS.series)).toBe(true);
+  });
+
+  it('🔑 το «Σειρά…» ΕΝΕΡΓΟΠΟΙΗΘΗΚΕ — ανοίγει τον διαχειριστή λιστών με τους σπόρους', () => {
+    renderMenu();
+    openWith({ series: false, date: false }, () => undefined, ['Ισόγειο', 'Α΄ όροφος']);
+
+    expect(isDisabled(LABELS.series)).toBe(false);
+    act(() => { item(LABELS.series).click(); });
+    // Η πρόταση ταξιδεύει **παγωμένη από το άνοιγμα**: το μενού έχει ήδη κλείσει όταν
+    // ανοίγει ο διάλογος, και η επιλογή δεν υπάρχει πια για να ρωτηθεί.
+    expect(getAutoFillListsRequest()?.seeds).toEqual(['Ισόγειο', 'Α΄ όροφος']);
+  });
+
+  it('⚠️ το «Σειρά…» ΔΕΝ εξαρτάται από την προσφορά — οι λίστες ορίζονται και χωρίς σειρά', () => {
+    renderMenu();
+    openWith({ series: false, date: false }, () => undefined);
+    expect(isDisabled(LABELS.series)).toBe(false);
   });
 });
 

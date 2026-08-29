@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { DxfMenuCommandItem } from '../dxf-context-menu/DxfMenuCommandItem';
 import { DxfMenuSeparator } from '../dxf-context-menu/DxfContextMenu';
+import { ListOrdered } from 'lucide-react';
 import {
   TABLE_FILL_MENU_GROUPS,
   type TableFillMenuCommandId,
@@ -71,7 +72,7 @@ const COMMAND_ICONS: Readonly<Record<TableFillMenuCommandId, LucideIcon | null>>
   fillYears: null,
   linearTrend: TrendingUp,
   growthTrend: null,
-  series: null,
+  series: ListOrdered,
 };
 
 export interface TableFillMenuItemsProps {
@@ -79,6 +80,15 @@ export interface TableFillMenuItemsProps {
   readonly onPick: (mode: TableFillMode) => void;
   /** Ποιες εντολές έχουν νόημα ΤΩΡΑ (σειρά; ημερολόγιο;). */
   readonly enabled: TableFillMenuEnabled;
+  /**
+   * 🔴 ADR-828 Φ4β — **η ΑΛΛΗ πρόθεση**: άνοιξε τον διαχειριστή προσαρμοσμένων λιστών.
+   *
+   * Δεύτερος χάρτης και όχι τρίτη διαδρομή: ο κανόνας του κειμένου από πάνω («χειριστής **και**
+   * μη-`false`») μένει **ακέραιος** — απλώς η εντολή `series` δεν είναι γέμισμα, οπότε τον
+   * χειριστή της τον δίνει άλλος χάρτης. Ένα `mode: 'openLists'` μέσα στο {@link TableFillMode}
+   * θα ήταν χειρότερο: θα έλεγε στη **μηχανή** ότι υπάρχει κατάσταση γεμίσματος που δεν γεμίζει.
+   */
+  readonly onOpenLists?: () => void;
 }
 
 /**
@@ -90,7 +100,7 @@ export interface TableFillMenuItemsProps {
  * πρώτη ομάδα ακουμπά στην κορυφή του μενού.
  */
 export function TableFillMenuItems({
-  onPick, enabled,
+  onPick, enabled, onOpenLists,
 }: TableFillMenuItemsProps): React.ReactElement {
   return (
     <>
@@ -105,7 +115,11 @@ export function TableFillMenuItems({
             // ({@link DxfMenuCommandItem}), οπότε δεν υπάρχει δεύτερο `disabled` να ξεχαστεί.
             const mode = MODE_BY_COMMAND[entry.id];
             const pick =
-              mode !== undefined && enabled[entry.id] !== false ? () => onPick(mode) : undefined;
+              entry.id === 'series'
+                ? onOpenLists
+                : mode !== undefined && enabled[entry.id] !== false
+                  ? () => onPick(mode)
+                  : undefined;
             return (
               <DxfMenuCommandItem
                 key={entry.id}
