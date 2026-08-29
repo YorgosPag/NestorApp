@@ -766,5 +766,10 @@
     "archivedTitle": "This record is in the trash",
     "archivedBody": "You can see it because the link points to it. Restore it to make it active again.",
     "restore": "Restore"
+  },
+  "mandateRequestAnswered": {
+    "acceptedTitle": "{agency} took on the listing \"{title}\"",
+    "revisableTitle": "{agency} asks you to resubmit your request for \"{title}\"",
+    "finalTitle": "{agency} did not take on the listing \"{title}\""
   }
 }

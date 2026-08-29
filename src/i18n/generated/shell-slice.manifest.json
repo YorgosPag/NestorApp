@@ -9,16 +9,17 @@
     "src/i18n/generated/routes/login.el.json": "6ba750825f9e8597ac3c9718ed99005e265a55752e1d64217ba48b29fad7f281",
     "src/i18n/generated/routes/mandate__token.el.json": "6e75cdb41998a3f76bb88840249c7b197754548563acc1de2269b9e88099531c",
     "src/i18n/generated/routes/o__workspace__dashboard.el.json": "263a3349d6e3f1e2badbab37f08d81836a102b89054c44e5ffac29cfacafffd0",
-    "src/i18n/generated/routes/o__workspace__listings__mandates.el.json": "7e0eccebb72e53730402b40e7888225ffcb10e00b86583315b80b44f42499fdb",
+    "src/i18n/generated/routes/o__workspace__listings__mandates.el.json": "a8a76aae60c101e4df75d147abec2fc265e547552533bd0d3d03c13de33d950c",
     "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "d0d4547bb388232b805ad4e945a3cfab17a091593d919240d115f7dd2dab4813",
+    "src/i18n/generated/routes/o__workspace__listings__mandates__requests.el.json": "ae03bdca9f74113f73f1d9768916a9ead7a7eb9e2c4605db73980f7b864b7edf",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile.el.json": "dbde289c17ef57765adec35f9a7a694440d5c9a4b51daa1efdabeaa08955bcf3",
     "src/i18n/generated/routes/offers.el.json": "37f11fe465050e47c3d55037f4cb71f77828554b0f9fe71399f5f1e059966ce8",
-    "src/i18n/generated/routes/offers__mandate__new.el.json": "37d16a858fc44b9314781e2e02e782c92adfa6cd3d15096fd74fca944caa433e",
+    "src/i18n/generated/routes/offers__mandate__new.el.json": "abd2845273a62c9d9eedf7d7b922df4804e63618343359402ae429b28da583e8",
     "src/i18n/generated/routes/offers__new.el.json": "9d98014cdb4b74ee3f728fd2dba26063ad334365848d4206793e44dc5f58ae7c",
     "src/i18n/generated/routes/offers__offerId.el.json": "dd1203cde8e79abc782ded600cc521362762486b6aed0024f703b5c4daad9f26",
     "src/i18n/generated/routes/privacy-policy.el.json": "181e3b315e8ac63a3e927fa8bf073863b2aa706fd66a06f38d936dce70b0cee0",
     "src/i18n/generated/routes/pro.el.json": "0aaaad494729a064036f486e703f6fd3feec33e44c2a72b633b9b38dc5e1f652",
-    "src/i18n/generated/routes/pro__alias.el.json": "b0a167744c0d637ad65ebc8584d4b1dc5bf7dcaa252568b7dfc08487286eba08",
+    "src/i18n/generated/routes/pro__alias.el.json": "c00b6ebdc44237ab59dd62b601274d4276a7d38cc228d5856bf3e8bef6b613b6",
     "src/i18n/generated/routes/terms.el.json": "481f837696b407553f56de16128778617a86f72cf7b27471d61cd5793cf7d288",
     "src/i18n/generated/routes/test-harness__listing-shapes.el.json": "9b6aaaa831492e24807a1c83e0b505dc865c03afbd5638abf8ea2b990422b037",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
@@ -61,7 +62,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "4c6d7d30ff30c97ed9d3f692a701cc753c45797e118a27417e84d035b67d48b8",
+  "inputsSha256": "11617b6a8f02a3f4acf04f161358c0a392f50d732def1bfeff300d7245573ebc",
   "languages": [
     "el"
   ],
@@ -243,7 +244,7 @@
     "src/config/jobs-visibility.ts": "ab652f1d2a901b3411b15871f941beac2bb71950a0a2d15129f8bda65e4467ff",
     "src/config/navigation-capability.ts": "daca95c4762ff89edad554c40cba3a38e9445c840c37454ac33adc6487287622",
     "src/config/navigation.ts": "512c29db1290f050f22f1e5203a3163f444f0259f998399ab21e38bd73398e71",
-    "src/config/notification-events.ts": "6c363f1a922d4088abc2ec62f0ab5cc1786496cdbe87083cc0e556af812b56b9",
+    "src/config/notification-events.ts": "de33f23f0c579145fe67659bba0ffab1a98e193aa34c80a84b7d8f736f559b6c",
     "src/config/notification-keys.ts": "d2e8d464ddc860d07e32c60966579815c9927c966a3dc86fdf70f76d45393c7e",
     "src/config/persona-config.ts": "1abb294d59594082c369ad1d3e4513cbd9bbbfc88a8825714e9fc8b9eb7dd5eb",
     "src/config/smart-navigation-factory.ts": "231a0379e92cf5c38e8e27d0ad8098538ff897ad6053ba759395bdbde8664036",
@@ -608,7 +609,7 @@
     "matchedKeys": 135,
     "routeBoundaries": 0,
     "shellFiles": 500,
-    "sliceBytes": 303526
+    "sliceBytes": 307608
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

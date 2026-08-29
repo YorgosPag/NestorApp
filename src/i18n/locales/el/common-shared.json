@@ -766,5 +766,10 @@
     "archivedTitle": "Αυτή η εγγραφή βρίσκεται στον κάδο",
     "archivedBody": "Τη βλέπεις επειδή ο σύνδεσμος οδηγεί σε αυτήν. Επανάφερέ την για να γίνει ξανά ενεργή.",
     "restore": "Επαναφορά"
+  },
+  "mandateRequestAnswered": {
+    "acceptedTitle": "Το «{agency}» ανέλαβε την αγγελία «{title}»",
+    "revisableTitle": "Το «{agency}» σας ζητά να ξαναστείλετε το αίτημα για «{title}»",
+    "finalTitle": "Το «{agency}» δεν ανέλαβε την αγγελία «{title}»"
   }
 }

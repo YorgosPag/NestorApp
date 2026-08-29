@@ -372,7 +372,8 @@
       "presenceDone": {
         "withdraw": "The listing is off the map. The mandate is unchanged.",
         "restore": "The listing is back on the map."
-      }
+      },
+      "inbox": "Incoming requests"
     },
     "desktopOnly": {
       "title": "Listing a property is done on a computer",
@@ -672,6 +673,62 @@
       "alreadySentTitle": "The request had already been sent",
       "alreadySentLead": "You had already sent exactly this request. No second one was created — the agency sees one.",
       "backToListings": "My properties"
+    },
+    "inbox": {
+      "title": "Incoming mandate requests",
+      "lead": "Owners asking you to take on their listing. You see the property and the terms — not the person.",
+      "empty": "No mandate requests",
+      "emptyHint": "When an owner asks you to take on their listing, it will appear here.",
+      "failed": "Incoming requests could not be loaded.",
+      "retry": "Try again",
+      "loading": "Loading…",
+      "unseen": "{count} not opened yet",
+      "withoutListing": "{count} requests refer to listings that were withdrawn and are not shown.",
+      "truncated": "Showing the first requests. Answer these to see the rest.",
+      "open": "Open",
+      "close": "Close",
+      "backToCatalog": "To the mandate catalogue",
+      "requestedAt": "Sent",
+      "expiresAt": "Proposal valid until",
+      "compensation": "Commission",
+      "agreement": "Mandate type",
+      "revision": "Revision of an earlier request",
+      "decidingFailed": "The decision was not recorded. Please try again.",
+      "anonymity": "The owner's details reach you only if you accept.",
+      "groups": {
+        "actionable": "Waiting for your decision",
+        "lapsed": "Expired without an answer",
+        "decided": "Already decided"
+      },
+      "hints": {
+        "actionable": "The owner is waiting. The proposal stands until the date it states.",
+        "lapsed": "The mandate they propose has already expired, so it cannot be accepted. The owner can send a new proposal.",
+        "decided": "The history of your answers for these listings."
+      },
+      "decisions": {
+        "accepted": "Accept",
+        "declined-revisable": "Not like this — send again",
+        "declined-final": "Final refusal"
+      },
+      "decisionHints": {
+        "accepted": "You take on the listing under these terms. A client record is created and the mandate becomes active immediately.",
+        "declined-revisable": "The owner may send you another request, with any terms — even the same ones.",
+        "declined-final": "They will not be able to send another request for this listing. If they withdraw and republish it, they can."
+      },
+      "decided": {
+        "accepted": "You took it on",
+        "declined-revisable": "You asked for a new proposal",
+        "declined-final": "You refused for good"
+      },
+      "refusals": {
+        "request-absent": "The request was not found.",
+        "request-not-pending": "Someone got there first — the request has already been decided.",
+        "request-lapsed": "The proposal has expired and can no longer be decided.",
+        "listing-withdrawn": "The owner withdrew the listing.",
+        "listing-already-brokered": "The listing has already been assigned.",
+        "identity-incomplete": "The owner has not filled in their VAT number. Without it no brokerage contract can be drawn up — they have been notified.",
+        "mandate-invalid": "The proposed terms are not lawful for this type of mandate."
+      }
     }
   }
 }

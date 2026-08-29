@@ -115,7 +115,8 @@
           "priceChange": "Price change",
           "viewingScheduled": "Viewing scheduled",
           "demandInterest": "Someone is looking for a property like mine",
-          "mandateDecided": "A client answered the mandate I sent them"
+          "mandateDecided": "A client answered the mandate I sent them",
+          "mandateRequestAnswered": "An agency answered your mandate request"
         },
         "tasks": {
           "title": "Tasks",
