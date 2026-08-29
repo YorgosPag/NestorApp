@@ -1,6 +1,6 @@
 /**
  * @fileoverview Άγκυρες της **δημόσιας διεύθυνσης** της βιτρίνας (ADR-827 §9.15 α/β).
- * @related components/mandate/AgencyDirectoryContent · lib/workspace/workspace-scope
+ * @related components/mandate/agency-directory-route · lib/workspace/workspace-scope
  *
  * 🔴 **Γιατί υπάρχει**: η διεύθυνση είναι **τυπωμένη σε κάρτες**. Μια αλλαγή
  * προθέματος δεν σπάει τίποτα ορατά στο δέντρο — σπάει **χαρτιά που κυκλοφορούν**.
@@ -8,7 +8,7 @@
  * κατασκευάσιμη**, χωρίς να το πιάσει τίποτα.
  */
 
-import { AGENCY_DIRECTORY_ROUTE, agencyProfileRoute } from '../AgencyDirectoryContent';
+import { AGENCY_DIRECTORY_ROUTE, agencyProfileRoute } from '../agency-directory-route';
 import { OUTSIDE_WORKSPACE } from '@/lib/workspace/workspace-scope';
 import { extractWorkspaceSegment } from '@/lib/workspace/workspace-path';
 

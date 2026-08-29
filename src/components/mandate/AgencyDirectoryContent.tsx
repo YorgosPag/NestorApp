@@ -62,25 +62,12 @@ import { AGENCY_PUBLIC_NS, DIRECTORY_KEYS } from './agency-directory-labels';
 // ένα `page.tsx` που είναι server component θα το εισήγαγε μόνο στον διακομιστή.
 import routeSlice from '@/i18n/generated/routes/pro.el.json';
 import { registerRouteSlice } from '@/i18n/route-slice';
+// ADR-827 §9.15 — η δημόσια διεύθυνση ζει σε ουδέτερο module: τη ρωτά και ο διακομιστής.
+import { agencyProfileRoute } from './agency-directory-route';
 
 registerRouteSlice(routeSlice);
 
 
-/**
- * Η διαδρομή της βιτρίνας — **μία σταθερά, δύο καταναλωτές** *(η κάρτα εδώ, η
- * επιστροφή από τη σελίδα προφίλ)*.
- *
- * ⚠️ **Ο σύνδεσμος περνά από το ΣΥΝΟΡΟ** (`@/lib/workspace/navigation`, CHECK 3.61)
- * και **όχι** από ωμό `next/link`: ο κριτής του συνόρου βλέπει ότι το `pro` είναι
- * δηλωμένο στο `OUTSIDE_WORKSPACE` και αφήνει τη διεύθυνση **άθικτη**. Με ωμό
- * `next/link` θα «δούλευε» σήμερα και θα έσπαγε τη στιγμή που κάποιος αφαιρούσε τη
- * δήλωση — δηλαδή ο έλεγχος θα ζούσε στο **τίποτα**.
- */
-export const AGENCY_DIRECTORY_ROUTE = '/pro' as const;
-
-export function agencyProfileRoute(alias: string): string {
-  return `${AGENCY_DIRECTORY_ROUTE}/${encodeURIComponent(alias)}`;
-}
 
 function AgencyCard({ profile }: { readonly profile: AgencyProfile }): React.JSX.Element {
   const { t } = useTranslation([AGENCY_PUBLIC_NS]);

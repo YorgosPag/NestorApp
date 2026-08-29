@@ -1,0 +1,418 @@
+'use client';
+
+/**
+ * @fileoverview **Η ΦΟΡΜΑ ΤΟΥ Σ1** — ο ιδιώτης προτείνει όρους σε ένα γραφείο.
+ * @related ADR-827 §9.17 · app/api/mandate-requests/route.ts · lib/mandate/mandate-request-form-values.ts
+ * @module components/mandate/MandateRequestFormContent
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΤΟ ΠΛΑΤΟΣ ΚΑΙ ΤΟ ΚΕΝΟ ΔΕΝ ΓΡΑΦΟΝΤΑΙ ΕΔΩ — ΚΑΙ ΚΑΝΕΝΑ `flex` ΣΤΗΝ ΕΠΙΦΑΝΕΙΑ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Ο κανόνας `[data-shell-measure] { display: grid; … }` φτιάχνει τη **στήλη** του
+ * ταβανιού. Ένα `className="flex flex-col"` στην ίδια την επιφάνεια **νικά κατά σειρά
+ * πηγής** *(το `shell-surface.css` φορτώνεται ΠΡΙΝ τα `@tailwind`, ίδια ειδικότητα)*
+ * ⇒ η στήλη **δεν υπάρχει ποτέ**. ⚠️ Και η **CHECK 3.63 μένει ΠΡΑΣΙΝΗ**: ρωτά *«έγραψες
+ * γεωμετρία με το χέρι;»*, όχι *«ισχύει το `measure` που δήλωσες;»*. Μετρήθηκε ζωντανά
+ * στο §9.15. Το `gap-*` **μένει**: δουλεύει σε grid.
+ *
+ * ⛔ **ΚΑΝΕΝΑ `<SelectItem value="">`** (CHECK 3.48): το Radix **δεσμεύει** το `''` και
+ * ένα κενό `value` πετά σε χρόνο εκτέλεσης, ρίχνοντας **ΟΛΗ** την επιφάνεια. Το
+ * «δεν διάλεξα ακόμη» εκφράζεται με `placeholder`, ποτέ με κενή επιλογή.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * ⛔ ΤΙ ΔΕΝ ΕΧΕΙ ΑΥΤΗ Η ΦΟΡΜΑ, ΚΑΙ ΕΙΝΑΙ ΤΟ ΟΛΟ ΝΟΗΜΑ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * **Κανένα «προαιρετικό μήνυμα προς το γραφείο».** Όσο δελεαστικό κι αν φαίνεται,
+ * είναι **ελεύθερο κείμενο** — δηλαδή η πόρτα από την οποία περνά *«τηλ. 69…»*. Θα
+ * ακύρωνε **και** το §8.2 **και** την τυφλή κρίση του §9.17 θ, με **μηδενική** αλλαγή
+ * σχήματος και χωρίς καμία πύλη να το δει.
+ */
+
+import React from 'react';
+import { useForm } from 'react-hook-form';
+
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { ShellSurface } from '@/core/containers/ShellSurface';
+import { DraftFormShell, type DraftSubmitState } from '@/components/shared/forms/DraftFormShell';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useAuth } from '@/auth/hooks/useAuth';
+// 🔴 **ΤΟ ΣΥΝΟΡΟ, ΟΧΙ ΤΟ ΩΜΟ `next/navigation`** (ADR-787, CHECK 3.61): και τα δύο
+// —σύνδεσμος και δρομολογητής— ρωτούν τον ΙΔΙΟ κριτή για το αν η διεύθυνση ανήκει σε
+// χώρο. Το `/pro/<ψευδώνυμο>` είναι δηλωμένο `OUTSIDE_WORKSPACE`, άρα βγαίνει άθικτο —
+// αλλά με ωμό `useRouter` η ορθότητα θα ζούσε στην **τύχη**: η ίδια γραμμή θα έστελνε
+// τον άνθρωπο εκτός χώρου τη μέρα που η δήλωση άλλαζε, χωρίς κανένα κόκκινο.
+import { Link, useRouter } from '@/lib/workspace/navigation';
+// ⛔ ΤΟ ΡΟΛΟΪ ΕΧΕΙ ΜΙΑ ΠΗΓΗ (module `date-local`, CHECK 3.7): ωμό
+// `new Date().toISOString()` εδώ θα ήταν η Ν-οστή γραφή του ίδιου στιγμιότυπου, και εδώ
+// η στιγμή **κρίνεται** — από αυτήν ξεκινά ο νόμιμος ορίζοντας λήξης (ΑΚ 243).
+import { nowISO } from '@/lib/date-local';
+import {
+  emptyMandateRequestForm,
+  mandateRequestFormBlockers,
+  proposedTermsFrom,
+  type MandateRequestFormValues,
+} from '@/lib/mandate/mandate-request-form-values';
+import { useMyOwnerProperties } from '@/services/realtime/hooks/useMyOwnerProperties';
+import { LISTING_AGREEMENTS } from '@/types/listing-agreement';
+import { LISTING_AGREEMENT_I18N_KEYS } from '@/components/mandate/listing-agreement-labels';
+import type { MandateRequestRejection } from '@/services/mandate/mandate-request.service';
+import type { OwnerProperty } from '@/types/owner-property';
+
+import {
+  MANDATE_REQUEST_NS,
+  REJECTION_KEYS,
+  SCREEN_KEYS,
+  useMandateRequestFormText,
+} from './mandate-request-form-labels';
+
+// 🔴 ADR-744 §18 — Η ΔΗΛΩΣΗ ΔΕΝ ΕΙΝΑΙ ΠΑΡΑΔΟΣΗ. Η εγγραφή ζει στο **client**
+// component και όχι στο `page.tsx`: ένα `page.tsx` που είναι server component θα το
+// εισήγαγε μόνο στον διακομιστή ⇒ ωμά κλειδιά στον πελάτη (Π6).
+import routeSlice from '@/i18n/generated/routes/offers__mandate__new.el.json';
+import { registerRouteSlice } from '@/i18n/route-slice';
+
+registerRouteSlice(routeSlice);
+
+/** Ό,τι έμαθε η οθόνη μετά την υποβολή — ποτέ `boolean` + μήνυμα. */
+type SubmitOutcome =
+  | { readonly kind: 'idle' }
+  | { readonly kind: 'sent'; readonly created: boolean }
+  | { readonly kind: 'refused'; readonly reason: MandateRequestRejection }
+  /** 🔴 **Δεν μάθαμε** — ποτέ ίδιο με άρνηση (N.12). */
+  | { readonly kind: 'unverified' };
+
+export interface MandateRequestFormContentProps {
+  /** Ο οργανισμός του γραφείου, λυμένος από το ψευδώνυμο στον **διακομιστή**. */
+  readonly agencyCompanyId: string;
+  /** Το όνομα που βλέπει ο άνθρωπος — ποτέ ταυτότητα στην οθόνη. */
+  readonly agencyDisplayName: string;
+  /** Η διεύθυνση επιστροφής στη βιτρίνα. */
+  readonly agencyHref: string;
+}
+
+/** Ο επιλογέας ακινήτου — **μόνο** ό,τι μπορεί πράγματι να ανατεθεί (Δ3). */
+function assignable(properties: readonly OwnerProperty[]): readonly OwnerProperty[] {
+  // ⚠️ Το `isPersonalCustody` το εφαρμόζει **ήδη** ο hook, σε δύο σημεία. Εδώ μένουν
+  //    τα δύο που ο hook δεν ξέρει: **ζωντανή** και **χωρίς εντολή**. Ο διακομιστής
+  //    τα ξαναρωτά — αυτό εδώ είναι για να μη δει ο άνθρωπος επιλογή που θα του
+  //    απορριφθεί (N.7.2 #4: κύριος δρόμος + δίχτυ).
+  return properties.filter(
+    (property) => property.lifecycle === 'listed' && property.mandate.kind === 'self',
+  );
+}
+
+export function MandateRequestFormContent({
+  agencyCompanyId,
+  agencyDisplayName,
+  agencyHref,
+}: MandateRequestFormContentProps): React.JSX.Element {
+  const router = useRouter();
+  const { user } = useAuth();
+  const { t } = useTranslation([MANDATE_REQUEST_NS]);
+  const formText = useMandateRequestFormText();
+
+  const [submitState, setSubmitState] = React.useState<DraftSubmitState>('idle');
+  const [outcome, setOutcome] = React.useState<SubmitOutcome>({ kind: 'idle' });
+
+  // ⚠️ Το ρολόι διαβάζεται **μία φορά**, στην προσάρτηση: μια φόρμα που ξαναϋπολογίζει
+  //    το «σήμερα» σε κάθε πληκτρολόγηση θα μετακινούσε το νόμιμο ανώτατο κάτω από τα
+  //    δάχτυλα του ανθρώπου.
+  const [todayISO] = React.useState(() => nowISO());
+
+  const listings = useMyOwnerProperties(user?.uid ?? null);
+  const choices = listings.state === 'ready' ? assignable(listings.properties) : [];
+
+  const form = useForm<MandateRequestFormValues>({
+    defaultValues: emptyMandateRequestForm(todayISO),
+  });
+  const values = form.watch();
+
+  const validation = React.useMemo(() => {
+    const blockers = mandateRequestFormBlockers(values, todayISO);
+    return blockers.length === 0
+      ? ({ kind: 'ready', draft: proposedTermsFrom(values) } as const)
+      : ({ kind: 'incomplete', malformed: [], blockers, violations: [] } as const);
+  }, [values, todayISO]);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+    if (validation.kind !== 'ready') return;
+
+    setSubmitState('saving');
+    setOutcome({ kind: 'idle' });
+
+    const response = await fetch('/api/mandate-requests', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        ownerPropertyId: values.ownerPropertyId,
+        agencyCompanyId,
+        terms: validation.draft,
+      }),
+    }).catch(() => null);
+
+    if (response === null) {
+      setSubmitState('failed');
+      return;
+    }
+
+    const body: unknown = await response.json().catch(() => null);
+    setSubmitState('idle');
+    setOutcome(readOutcome(response.status, body));
+  }
+
+  if (outcome.kind === 'sent') {
+    return (
+      <Outcome
+        title={t(outcome.created ? SCREEN_KEYS.sentTitle : SCREEN_KEYS.alreadySentTitle)}
+        body={t(outcome.created ? SCREEN_KEYS.sentLead : SCREEN_KEYS.alreadySentLead)}
+      />
+    );
+  }
+
+  return (
+    <DraftFormShell
+      text={formText}
+      /*
+        🔴 `company`, ΚΑΙ ΤΟ ΒΡΗΚΕ ΤΟ ΑΝΟΙΓΜΑ ΤΗΣ ΣΕΛΙΔΑΣ — ΟΧΙ ΠΥΛΗ (§9.19).
+
+        Η πρώτη γραφή έλεγε `personal` και ήταν **λάθος ερώτηση**. Το `custody` ρωτά,
+        κατά τη **δική του** τεκμηρίωση, *«ο χώρος που θα γράψει **η πόρτα αυτής της
+        φόρμας**»* — και αυτή η πόρτα γράφει `mreq_*`, έγγραφο του οποίου η εμβέλεια
+        μισθωτή είναι το **`agencyCompanyId`** (`firestore/tenant-config.ts`), όχι ο
+        προσωπικός χώρος. Η **αγγελία** μένει προσωπική· το **έγγραφο που γεννιέται
+        εδώ** δεν είναι αγγελία.
+
+        🔑 **Η συνέπεια στην οθόνη ήταν πραγματική, όχι θεωρητική**: με `personal` το
+        `PersonalCustodyNotice` (ADR-820 §5.2) ανακοίνωνε στον **ιδιοκτήτη**
+        *«Για καταχώρηση με εντολή πελάτη, χρησιμοποίησε τις Εντολές μέσα στον χώρο
+        του γραφείου»* — δηλαδή τον έστελνε στην **οθόνη του μεσίτη**, το ακριβώς
+        αντίθετο από τον σκοπό αυτής της σελίδας. ⚠️ **Καμία πύλη δεν το πιάνει**: το
+        κείμενο έρχεται από `t()`, τα κλειδιά υπάρχουν, η γεωμετρία είναι νόμιμη.
+        Το βρήκε **μόνο** το άνοιγμα της σελίδας (Π1).
+      */
+      custody="company"
+      form={form}
+      editing={false}
+      validation={validation}
+      submitState={submitState}
+      onSubmit={handleSubmit}
+      onCancel={() => router.push(agencyHref)}
+    >
+      <Field label={t(SCREEN_KEYS.agencyLabel)}>
+        <p className="m-0 text-sm font-medium text-foreground">{agencyDisplayName}</p>
+      </Field>
+
+      <Field label={t(SCREEN_KEYS.listingLabel)} hint={t(SCREEN_KEYS.listingHint)}>
+        {choices.length === 0 ? (
+          <p className="m-0 text-sm text-muted-foreground">
+            {t(SCREEN_KEYS.listingsEmpty)}{' '}
+            <Link href="/offers/new" className="font-medium text-foreground underline underline-offset-4">
+              {t(SCREEN_KEYS.listingsEmptyAction)}
+            </Link>
+          </p>
+        ) : (
+          <Select
+            value={values.ownerPropertyId === '' ? undefined : values.ownerPropertyId}
+            onValueChange={(next) => form.setValue('ownerPropertyId', next)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={t(SCREEN_KEYS.listingPlaceholder)} />
+            </SelectTrigger>
+            <SelectContent>
+              {/* ⛔ Κανένα `value=""` — δες την κεφαλίδα (CHECK 3.48). */}
+              {choices.map((property) => (
+                <SelectItem key={property.id} value={property.id}>
+                  {property.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </Field>
+
+      <Field label={t(SCREEN_KEYS.agreementLabel)} hint={t(SCREEN_KEYS.agreementHint)}>
+        <Select
+          value={values.agreement}
+          onValueChange={(next) => form.setValue('agreement', next as MandateRequestFormValues['agreement'])}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {LISTING_AGREEMENTS.map((agreement) => (
+              <SelectItem key={agreement} value={agreement}>
+                {/* 🔑 Ευρετηρίαση **σταθεράς module**, ποτέ `t(fn(x))` — αλλιώς ο
+                    τεμαχιστής βγάζει «unresolved dynamic t()» (Π3). */}
+                {t(LISTING_AGREEMENT_I18N_KEYS[agreement])}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </Field>
+
+      <CompensationField form={form} values={values} />
+
+      <Field label={t(SCREEN_KEYS.expiresLabel)} hint={t(SCREEN_KEYS.expiresHint)}>
+        <Input
+          type="date"
+          value={values.expiresOn}
+          // ⚠️ `min` είναι **βοήθεια**, όχι φρουρός: ο κριτής είναι τα εμπόδια, και ο
+          //    διακομιστής τα ξαναρωτά. Ένα `min` που θα το εμπιστευόμασταν θα ήταν
+          //    φρουρός στον φυλλομετρητή.
+          min={todayISO.slice(0, 10)}
+          onChange={(event) => form.setValue('expiresOn', event.target.value)}
+        />
+      </Field>
+
+      {outcome.kind !== 'idle' && (
+        <p role="alert" className="m-0 rounded-md border border-border bg-card p-3 text-sm text-foreground">
+          {outcome.kind === 'refused'
+            ? t(REJECTION_KEYS[outcome.reason])
+            : t(SCREEN_KEYS.unverified)}
+        </p>
+      )}
+    </DraftFormShell>
+  );
+}
+
+/**
+ * **Η απάντηση του διακομιστή → τι ξέρει η οθόνη.**
+ *
+ * ⚠️ **Το 503 ΔΕΝ ισοπεδώνεται με το 422** (N.12): *«δεν μπόρεσα να ρωτήσω»* στέλνει
+ * τον άνθρωπο να **ξαναδοκιμάσει χωρίς να αλλάξει τίποτα*, ενώ *«δεν επιτρέπεται»*
+ * τον στέλνει να **αλλάξει** κάτι. Ένα κοινό μήνυμα θα τον έβαζε να πειράζει όρους
+ * που ήταν μια χαρά.
+ */
+function readOutcome(status: number, body: unknown): SubmitOutcome {
+  if (status === 503) return { kind: 'unverified' };
+
+  const payload = body as { readonly created?: boolean; readonly reason?: MandateRequestRejection } | null;
+
+  if (status === 200 || status === 201) {
+    return { kind: 'sent', created: payload?.created === true };
+  }
+  if (payload?.reason !== undefined && payload.reason in REJECTION_KEYS) {
+    return { kind: 'refused', reason: payload.reason };
+  }
+  // ⚠️ Κάθε άλλη κατάσταση είναι **αποτυχία που δεν κατονομάζεται** — και το λέμε ως
+  //    «δεν μάθαμε», όχι ως άρνηση που ο άνθρωπος θα προσπαθούσε να διορθώσει.
+  return { kind: 'unverified' };
+}
+
+function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}): React.JSX.Element {
+  return (
+    <section className="flex flex-col gap-1.5">
+      <Label>{label}</Label>
+      {children}
+      {hint !== undefined && <p className="m-0 text-xs text-muted-foreground">{hint}</p>}
+    </section>
+  );
+}
+
+/** Η έκβαση, σε δική της οθόνη — ο άνθρωπος τελείωσε, δεν του ξαναδείχνουμε φόρμα. */
+function Outcome({ title, body }: { title: string; body: string }): React.JSX.Element {
+  const { t } = useTranslation([MANDATE_REQUEST_NS]);
+  return (
+    <ShellSurface as="main" measure="prose" className="gap-4">
+      <h1 className="m-0 text-2xl font-semibold text-foreground">{title}</h1>
+      <p className="m-0 text-sm text-muted-foreground">{body}</p>
+      <nav>
+        <Link href="/offers" className="text-sm font-medium text-foreground underline underline-offset-4">
+          {t(SCREEN_KEYS.backToListings)}
+        </Link>
+      </nav>
+    </ShellSurface>
+  );
+}
+
+/** Η αμοιβή — διακριτή ένωση στην οθόνη, όπως και στον τύπο. */
+function CompensationField({
+  form,
+  values,
+}: {
+  form: ReturnType<typeof useForm<MandateRequestFormValues>>;
+  values: MandateRequestFormValues;
+}): React.JSX.Element {
+  const { t } = useTranslation([MANDATE_REQUEST_NS]);
+  const { compensation } = values;
+
+  return (
+    <Field label={t(SCREEN_KEYS.compensationLabel)} hint={t(SCREEN_KEYS.compensationHint)}>
+      <Select
+        value={compensation.type}
+        onValueChange={(next) =>
+          form.setValue(
+            'compensation',
+            // 🔑 Η αλλαγή σκέλους **ξαναχτίζει** το αντικείμενο, δεν το μπαλώνει: ένα
+            //    `{...compensation, type: next}` θα κουβαλούσε `percentage` μέσα σε
+            //    `fixed` — δηλαδή κατάσταση που ο τύπος δηλώνει **αδύνατη**.
+            next === 'percentage'
+              ? { type: 'percentage', percentage: 2, vatIncluded: compensation.vatIncluded }
+              : { type: 'fixed', amountEUR: 0, vatIncluded: compensation.vatIncluded },
+          )
+        }
+      >
+        <SelectTrigger>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="percentage">{t(SCREEN_KEYS.compensationPercentage)}</SelectItem>
+          <SelectItem value="fixed">{t(SCREEN_KEYS.compensationFixed)}</SelectItem>
+        </SelectContent>
+      </Select>
+
+      <Label className="text-xs text-muted-foreground">
+        {compensation.type === 'percentage'
+          ? t(SCREEN_KEYS.percentageLabel)
+          : t(SCREEN_KEYS.amountLabel)}
+      </Label>
+      <Input
+        type="number"
+        min={0}
+        step={compensation.type === 'percentage' ? 0.1 : 1}
+        value={compensation.type === 'percentage' ? compensation.percentage : compensation.amountEUR}
+        onChange={(event) => {
+          const amount = Number(event.target.value);
+          form.setValue(
+            'compensation',
+            compensation.type === 'percentage'
+              ? { ...compensation, percentage: amount }
+              : { ...compensation, amountEUR: amount },
+          );
+        }}
+      />
+
+      <Label className="flex items-center gap-2 text-xs text-muted-foreground">
+        <input
+          type="checkbox"
+          checked={compensation.vatIncluded}
+          onChange={(event) =>
+            form.setValue('compensation', { ...compensation, vatIncluded: event.target.checked })
+          }
+        />
+        {t(SCREEN_KEYS.vatLabel)}
+      </Label>
+    </Field>
+  );
+}

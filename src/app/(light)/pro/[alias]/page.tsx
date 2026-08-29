@@ -61,6 +61,7 @@ export default async function AgencyProfilePage({ params }: AgencyProfilePagePro
   return (
     <AgencyProfileContent
       companyId={resolution.outcome === 'found' ? resolution.companyId : null}
+      alias={alias}
     />
   );
 }

@@ -64,7 +64,18 @@ import { usePublicPlace } from '@/services/realtime/hooks/usePublicPlace';
 import type { AgencyProfile } from '@/types/agency-profile';
 
 import { AGENCY_PUBLIC_NS, PROFILE_KEYS } from './agency-directory-labels';
-import { AGENCY_DIRECTORY_ROUTE } from './AgencyDirectoryContent';
+import { AGENCY_DIRECTORY_ROUTE } from './agency-directory-route';
+
+/**
+ * **Η διεύθυνση της φόρμας του Σ1** — γραμμένη **εδώ**, όπου ζει το κουμπί.
+ *
+ * ⚠️ `encodeURIComponent` και όχι ωμή παρεμβολή: το ψευδώνυμο έρχεται από τη διεύθυνση
+ * που πάτησε ο επισκέπτης, δηλαδή είναι **είσοδος**. Το `alias-rules.ts` περιορίζει τη
+ * μορφή, αλλά ο περιορισμός ζει στην **εγγραφή** — εδώ φτάνει ό,τι κι αν πληκτρολόγησε.
+ */
+function mandateRequestHref(alias: string): string {
+  return `/offers/mandate/new?agency=${encodeURIComponent(alias)}`;
+}
 
 // 🔴 ADR-744 §18 — Η ΔΗΛΩΣΗ ΔΕΝ ΕΙΝΑΙ ΠΑΡΑΔΟΣΗ. Το route slice έχει δήλωση,
 // artifact και υπογραφή στο manifest — και **δεν φορτώνεται ποτέ** χωρίς αυτές τις
@@ -85,6 +96,15 @@ interface AgencyProfileContentProps {
    * απαντά **ίδια** με «δεν δημοσίευσε».
    */
   readonly companyId: string | null;
+  /**
+   * **Το ψευδώνυμο, όπως το είδε ο άνθρωπος** — η διεύθυνση που πάτησε.
+   *
+   * 🔑 **Ταξιδεύει ως prop και ΔΕΝ παράγεται ξανά**: η αντίστροφη αναζήτηση
+   * `companyId → ψευδώνυμο` θα ήταν **σάρωση**, δηλαδή απαρίθμηση γραφείων — και το
+   * `alias-registry.ts` το δηλώνει ρητά (γι' αυτό το `canonicalAlias` επιστρέφει
+   * `null`). Ίδιο ιδίωμα με την πόρτα δημοσίευσης: **ο πελάτης το δηλώνει**.
+   */
+  readonly alias: string;
 }
 
 /** Μία μικρή, ονομασμένη γραμμή «ετικέτα → τιμή» — τρεις καταναλωτές στη σελίδα. */
@@ -153,6 +173,7 @@ function PlaceFact({ profile }: { readonly profile: AgencyProfile }): React.JSX.
 
 export function AgencyProfileContent({
   companyId,
+  alias,
 }: AgencyProfileContentProps): React.JSX.Element {
   const { t } = useTranslation([AGENCY_PUBLIC_NS]);
   const lookup = usePublicAgency(companyId);
@@ -206,9 +227,22 @@ export function AgencyProfileContent({
       </dl>
 
       <section className="flex flex-col gap-2">
-        {/* 🔶 Β4: αφαίρεσε το `disabled` και δώσε `onClick` — δες την κεφαλίδα. */}
-        <Button type="button" disabled aria-describedby="agency-request-hint">
-          {t(PROFILE_KEYS.requestCta)}
+        {/*
+          ✅ Β4 (2026-08-29 ζ) — Η ΡΑΦΗ ΕΚΛΕΙΣΕ. Το κουμπί δεν είναι πια απενεργοποιημένο.
+
+          🔑 **ΣΥΝΔΕΣΜΟΣ ΚΑΙ ΟΧΙ `onClick`, ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ** (§9.17 α): η φόρμα ζει
+          σε **δική της διεύθυνση** μέσα στο `(me)`, γιατί απαιτεί ταυτότητα και
+          `noindex` — δύο πράγματα που το `(light)` δηλώνει ρητά ότι **δεν** έχει. Ένας
+          διάλογος εδώ θα κρατούσε την κατάσταση **εκτός διεύθυνσης**: ο ανώνυμος που
+          πατά, συνδέεται και γυρίζει, θα τον έβρισκε **κλειστό**.
+
+          ⚠️ Το ψευδώνυμο ταξιδεύει στη διεύθυνση επειδή η σελίδα το **έχει ήδη** — το
+          είδε ο άνθρωπος στη γραμμή διευθύνσεων. Η αντίστροφη αναζήτηση
+          `companyId → ψευδώνυμο` θα ήταν **σάρωση**, δηλαδή απαρίθμηση γραφείων
+          (`alias-registry.ts`, ADR-787 Ε-5 §4 #1).
+        */}
+        <Button asChild aria-describedby="agency-request-hint">
+          <Link href={mandateRequestHref(alias)}>{t(PROFILE_KEYS.requestCta)}</Link>
         </Button>
         <p id="agency-request-hint" className="m-0 text-sm text-muted-foreground">
           {t(PROFILE_KEYS.requestHint)}
