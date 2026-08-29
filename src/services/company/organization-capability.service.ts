@@ -32,6 +32,7 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { EntityAuditService } from '@/services/entity-audit.service';
+import { withdrawAgencyProfile } from '@/services/mandate/agency-profile.service';
 import { nowISO } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
 import {
@@ -91,6 +92,68 @@ const ALLOWED_FROM = {
 // Η ΓΡΑΦΗ — μία διατύπωση
 // =============================================================================
 
+/**
+ * **Πράξη που ΟΦΕΙΛΕΙ να ολοκληρωθεί ΠΡΙΝ γραφτεί η νέα κατάσταση.**
+ *
+ * Επιστρέφει `null` όταν πέτυχε, ή **γιατί** απέτυχε — ποτέ `boolean`: μια αποτυχία
+ * που μπλοκάρει ρυθμιστική απόφαση οφείλει να λέει τι έφταιξε.
+ *
+ * 🔴 **ΓΙΑΤΙ ΠΡΙΝ ΚΑΙ ΟΧΙ ΜΕΤΑ — ΚΑΙ ΓΙΑΤΙ ΔΕΝ ΑΝΤΙΦΑΣΚΕΙ ΜΕ ΤΟ «ΠΡΩΤΑ Η ΑΛΗΘΕΙΑ»**
+ *
+ * Το συμβόλαιο *«πρώτα η απόφαση, μετά το παράγωγο»* (σάρωση αγγελιών,
+ * `agency-listings-sweep.service.ts`) υπάρχει επειδή εκείνο το παράγωγο **δημοσιεύει**:
+ * γραμμένο πρώτο, μια αστοχία θα άφηνε δημόσια αγγελία που **καμία** απόφαση δεν
+ * στηρίζει.
+ *
+ * Ένα παράγωγο **διαγραφής** έχει την **αντίθετη** ασυμμετρία, και γι' αυτό αντιστρέφει
+ * τη σειρά:
+ *
+ * | Σειρά | Αν αποτύχει το παράγωγο | Κατάσταση κόσμου |
+ * |---|---|---|
+ * | γραφή → διαγραφή | κατάσταση `revoked`, βιτρίνα **ζωντανή** | 🔴 γραφείο διαφημίζεται με **ανύπαρκτη άδεια** |
+ * | **διαγραφή → γραφή** | κατάσταση `active`, βιτρίνα **σβηστή** | ✅ γραφείο **που δεν δημοσίευσε** — νόμιμη, συνηθισμένη κατάσταση |
+ *
+ * 🔑 **ΚΑΙ ΤΟ ΑΠΟΦΑΣΙΣΤΙΚΟ: Η ΕΠΙΣΚΕΥΗ.** Με τη σειρά «γραφή → διαγραφή», μια αστοχία
+ * είναι **αδιόρθωτη από την ίδια πόρτα**: η κατάσταση έγινε ήδη `revoked`, και το
+ * `ALLOWED_FROM.revoke` **δεν** περιλαμβάνει το `revoked` ⇒ δεύτερο πάτημα απαντά
+ * `illegal-transition` (409) και **δεν ξαναδοκιμάζει ποτέ** τη διαγραφή. Με τη σειρά
+ * αντεστραμμένη, η αποτυχία αφήνει την κατάσταση **ως είχε** και το ίδιο κουμπί
+ * δουλεύει ξανά. *Φρουρός που κάνει τη θεραπεία αδύνατη είναι το σχήμα του
+ * `provisionWorkspace` (ADR-787 §5.1) — εδώ αποφεύγεται από τη σειρά, όχι από σχόλιο.*
+ *
+ * ⚠️ **Fail-closed, εν γνώσει μας**: αποτυχία εδώ **ματαιώνει** τη ρυθμιστική απόφαση.
+ * Είναι το σωστό πρόσημο — ανάκληση που αφήνει το γραφείο στον κατάλογο είναι
+ * χειρότερη από ανάκληση που αποτυγχάνει **θορυβωδώς** και ξαναπατιέται.
+ */
+type BeforeWrite = () => Promise<string | null>;
+
+/**
+ * **Το ίχνος** — χωριστά, γιατί είναι **παράγωγο** και ποτέ δεν ρίχνει τη μετάβαση.
+ *
+ * ⚠️ Τρέχει **ΜΕΤΑ** τη γραφή: αν αποτύχει, η απόφαση **έχει ήδη ισχύ** και δεν
+ * επιτρέπεται να ακυρωθεί επειδή δεν γράφτηκε η σημείωσή της. Η `recordChange`
+ * καταπίνει η ίδια τα σφάλματά της (επιστρέφει `null`).
+ */
+function recordTransition(
+  companyId: string,
+  performedBy: string,
+  from: CapabilityStatus,
+  to: CapabilityStatus,
+): Promise<string | null> {
+  return EntityAuditService.recordChange({
+    // ⚠️ **Το λεξιλόγιο από το SSoT** (`ENTITY_TYPES`, CHECK 3.7): η κυριολεξία
+    //    `'company'` εδώ θα ήταν δεύτερη γραφή του ίδιου ονόματος.
+    entityType: ENTITY_TYPES.COMPANY,
+    entityId: companyId,
+    entityName: null,
+    action: 'status_changed',
+    changes: [{ field: `capabilities.${CAPABILITY}.status`, oldValue: from, newValue: to }],
+    performedBy,
+    performedByName: null,
+    companyId,
+  });
+}
+
 async function transition(
   adminDb: AdminFirestore,
   companyId: string,
@@ -106,6 +169,8 @@ async function transition(
   performedBy: string,
   allowedFrom: readonly CapabilityStatus[],
   next: (current: OrganizationCapabilityRecord | undefined) => OrganizationCapabilityRecord,
+  /** Δες {@link BeforeWrite}. Απών ⇒ η μετάβαση δεν έχει παράγωγο διαγραφής. */
+  beforeWrite?: BeforeWrite,
 ): Promise<CapabilityTransitionResult> {
   const ref = adminDb.collection(COLLECTIONS.COMPANIES).doc(companyId);
 
@@ -119,6 +184,18 @@ async function transition(
 
     if (!allowedFrom.includes(from)) return { kind: 'illegal-transition', from };
 
+    // 🔴 **ΜΕΤΑ τη νομιμότητα, ΠΡΙΝ τη γραφή** — και οι δύο θέσεις είναι απαραίτητες.
+    //    *Μετά*: μια παράνομη μετάβαση δεν επιτρέπεται να σβήσει τίποτα — αλλιώς ένα
+    //    απορριφθέν πάτημα θα είχε **παρενέργεια**. *Πριν*: δες {@link BeforeWrite}.
+    const failure = await beforeWrite?.();
+    if (failure !== undefined && failure !== null) {
+      logger.error('Το παράγωγο ΜΑΤΑΙΩΣΕ τη μετάβαση — η κατάσταση ΜΕΝΕΙ ΩΣ ΕΙΧΕ', {
+        data: { companyId, capability: CAPABILITY, from },
+        error: failure,
+      });
+      return { kind: 'failed', message: failure };
+    }
+
     const record = next(capabilities?.[CAPABILITY]);
 
     // ⚠️ **`update` με μονοπάτι πεδίου, ΠΟΤΕ `set` ολόκληρου εγγράφου.** Το
@@ -130,22 +207,7 @@ async function transition(
       data: { companyId, capability: CAPABILITY, from, to: record.status },
     });
 
-    // ⚠️ **ΜΕΤΑ τη γραφή, και ΠΟΤΕ δεν ρίχνει τη μετάβαση.** Το ίχνος είναι
-    //    παράγωγο: αν αποτύχει, η απόφαση του υπερδιαχειριστή **έχει ήδη ισχύ** και
-    //    δεν επιτρέπεται να ακυρωθεί επειδή δεν γράφτηκε η σημείωσή της. Η
-    //    `recordChange` καταπίνει η ίδια τα σφάλματά της (επιστρέφει `null`).
-    await EntityAuditService.recordChange({
-      // ⚠️ **Το λεξιλόγιο από το SSoT** (`ENTITY_TYPES`, CHECK 3.7): η κυριολεξία
-      //    `'company'` εδώ θα ήταν δεύτερη γραφή του ίδιου ονόματος.
-      entityType: ENTITY_TYPES.COMPANY,
-      entityId: companyId,
-      entityName: null,
-      action: 'status_changed',
-      changes: [{ field: `capabilities.${CAPABILITY}.status`, oldValue: from, newValue: record.status }],
-      performedBy,
-      performedByName: null,
-      companyId,
-    });
+    await recordTransition(companyId, performedBy, from, record.status);
 
     return { kind: 'applied', status: record.status };
   } catch (error) {
@@ -209,6 +271,30 @@ export function approveBrokerage(
  * ⚠️ **Η δήλωση ΔΙΑΤΗΡΕΙΤΑΙ**: χωρίς αυτήν, ένα ανακληθέν γραφείο δεν θα μπορούσε να
  * απαντήσει *«τι είχα δηλώσει;»* — και ο ρυθμιστικός φάκελος θα έσβηνε μαζί με το
  * δικαίωμα.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΤΟ Π2 ΖΕΙ **ΕΔΩ** — ΚΑΙ ΜΕΧΡΙ ΤΙΣ 2026-08-29 ΔΕΝ ΤΟ ΚΑΛΟΥΣΕ ΚΑΝΕΙΣ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Το αμετάβλητο **Π2** του ADR-827 §9.10 — *«`active` που παύει ⇒ το προφίλ παύει να
+ * υπάρχει»* — ήταν γραμμένο και τεκμηριωμένο στο
+ * {@link withdrawAgencyProfile}, και **καμία διαδρομή δεν το εκτελούσε**: ακριβώς το
+ * σχήμα *«σχόλιο που μοιάζει με έλεγχο»* που μετρά το ADR-749 §5.
+ *
+ * ⚠️ **Ήταν ακίνδυνο μόνο όσο δεν υπήρχε οθόνη δημοσίευσης** — δηλαδή όσο δεν υπήρχε
+ * προφίλ να μείνει ορφανό. Η στιγμή που ανοίγει η βιτρίνα είναι η στιγμή που ένα
+ * ανακληθέν γραφείο θα συνέχιζε να **διαφημίζεται στον κατάλογο με ανύπαρκτη άδεια**.
+ *
+ * 🔑 **ΓΙΑΤΙ ΕΔΩ ΚΑΙ ΟΧΙ ΣΤΗ ΔΙΑΔΡΟΜΗ** *(όπου ζει η σάρωση αγγελιών)*: η ανάκληση της
+ * ικανότητας είναι η **μόνη** μετάβαση που βγαίνει από το `active`. Δεμένο στη
+ * **μετάβαση**, το Π2 ισχύει και για τη διαδρομή που **δεν έχει γραφτεί ακόμη**·
+ * δεμένο στη διαδρομή, θα ξεχνιόταν την πρώτη φορά που θα γεννιόταν δεύτερη.
+ *
+ * ⚠️ **Και ΔΕΝ επαναφέρεται στην επανέγκριση — επίτηδες.** Οι αγγελίες επανέρχονται
+ * αυτόματα γιατί ανήκουν στον **ιδιοκτήτη**, αθώο τρίτο που δεν έφταιξε σε τίποτα. Η
+ * βιτρίνα ανήκει στο **γραφείο** και *η παρουσία της ΕΙΝΑΙ η συγκατάθεση* (§9.10): η
+ * αυτόματη επαναδημοσίευση θα δημοσίευε οργανισμό **που δεν το ξαναζήτησε**. Το
+ * γραφείο ξαναδηλώνει — και αυτή η δεύτερη πράξη είναι το νόημα.
  */
 export function revokeBrokerage(
   adminDb: AdminFirestore,
@@ -216,12 +302,24 @@ export function revokeBrokerage(
   decidedByUserId: string,
   reason: string,
 ): Promise<CapabilityTransitionResult> {
-  return transition(adminDb, companyId, decidedByUserId, ALLOWED_FROM.revoke, (current) => ({
-    status: 'revoked',
-    requirements: [],
-    declaration: current?.declaration ?? null,
+  return transition(
+    adminDb,
+    companyId,
     decidedByUserId,
-    decidedAt: nowISO(),
-    revocationReason: reason,
-  }));
+    ALLOWED_FROM.revoke,
+    (current) => ({
+      status: 'revoked',
+      requirements: [],
+      declaration: current?.declaration ?? null,
+      decidedByUserId,
+      decidedAt: nowISO(),
+      revocationReason: reason,
+    }),
+    // 🔴 **Π2** — δες {@link BeforeWrite} για το γιατί τρέχει **πριν** τη γραφή.
+    //    Ιδεμποτής: γραφείο που ποτέ δεν δημοσιεύτηκε επιστρέφει `withdrawn` το ίδιο.
+    async () => {
+      const outcome = await withdrawAgencyProfile(adminDb, companyId);
+      return outcome.kind === 'withdrawn' ? null : 'AGENCY_PROFILE_WITHDRAWAL_FAILED';
+    },
+  );
 }
