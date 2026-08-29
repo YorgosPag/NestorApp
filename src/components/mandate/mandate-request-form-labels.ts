@@ -65,7 +65,7 @@ export const REJECTION_KEYS: Record<MandateRequestRejection, string> = {
   'listing-already-brokered': 'property-market:mandate.request.listing-already-brokered',
   'agency-absent': 'property-market:mandate.request.agency-absent',
   'request-already-pending': 'property-market:mandate.request.request-already-pending',
-  'request-terms-unchanged': 'property-market:mandate.request.request-terms-unchanged',
+  'request-declined-final': 'property-market:mandate.request.request-declined-final',
 };
 
 /** Τα υπόλοιπα κείμενα της οθόνης — πεδία, υποδείξεις, εκβάσεις. */

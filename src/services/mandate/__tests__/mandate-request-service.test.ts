@@ -16,7 +16,11 @@ import {
 } from '@/services/mandate/mandate-request.service';
 import { EXCLUSIVE_AGENCY, OPEN_LISTING } from '@/types/listing-agreement';
 import type { ListingActor } from '@/lib/owner-property/listing-custody';
-import type { MandateRequest, ProposedMandateTerms } from '@/types/mandate-request';
+import type {
+  MandateRequest,
+  MandateRequestDocument,
+  ProposedMandateTerms,
+} from '@/types/mandate-request';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ο FakeFirestore μιμείται το Admin SDK· η μετάφραση γίνεται ΜΙΑ φορά, εδώ.
 const asAdmin = (fake: FakeFirestore) => fake as unknown as Parameters<typeof submitMandateRequest>[0];
@@ -46,7 +50,14 @@ const DECLARATION: MandateRequestDeclaration = {
 function world(overrides: {
   readonly listing?: Record<string, unknown> | null;
   readonly agencyPublished?: boolean;
-  readonly history?: readonly Partial<MandateRequest>[];
+  /**
+   * ⚠️ **`MandateRequestDocument`, ΟΧΙ `MandateRequest`** — η σπορά γράφει **ωμό
+   * έγγραφο**, όπου το `status` είναι ανοιχτή συμβολοσειρά. Μόνο έτσι εκφράζεται το
+   * **κληροδότημα** (`'declined'`), που είναι ακριβώς η κατάσταση που ο μεταφραστής
+   * του §9.21 υπάρχει για να διαβάσει. Με τον στενό τύπο, η άγκυρα Κ **δεν θα
+   * μπορούσε καν να γραφτεί**.
+   */
+  readonly history?: readonly Partial<MandateRequestDocument>[];
 } = {}): FakeFirestore {
   const fake = new FakeFirestore();
 
@@ -78,7 +89,7 @@ function world(overrides: {
       agencyCompanyId: AGENCY,
       requestedByUserId: UID,
       initiatedBy: 'owner',
-      status: 'declined',
+      status: 'declined-revisable',
       terms: TERMS,
       requestedAt: '2026-08-01T10:00:00.000Z',
       seenAt: null,
@@ -208,17 +219,71 @@ describe('Δ4 — ίδια ερώτηση δεν είναι νέα πράξη (�
     if (first.kind === 'created') expect(stored[0].id).toBe(first.request.id);
   });
 
-  it('Δ4.3 — μετά από ΑΡΝΗΣΗ, ΙΔΙΟΙ όροι ⇒ όχι· το γραφείο έχει ήδη απαντήσει', async () => {
-    const fake = world({ history: [{ id: 'mreq_old', status: 'declined', terms: TERMS }] });
-    expect(await submit(fake, TERMS)).toEqual({
+  it('🔴 Δ4.3 — ΤΟ ΣΗΜΕΙΟ ΠΟΥ ΑΝΤΙΣΤΡΑΦΗΚΕ: μετά από «στείλε ξανά», ΟΙ ΙΔΙΟΙ όροι ΠΕΡΝΟΥΝ', async () => {
+    // ────────────────────────────────────────────────────────────────────────
+    // 🏆 Η ΑΓΚΥΡΑ ΤΟΥ Χ — ΚΑΙ Η ΜΕΤΑΛΛΑΞΗ ΠΟΥ ΟΦΕΙΛΕΙ ΝΑ ΤΗΝ ΚΟΚΚΙΝΙΣΕΙ
+    // ────────────────────────────────────────────────────────────────────────
+    // Μέχρι το §9.21 αυτό εδώ περίμενε **άρνηση** (`request-terms-unchanged`): ο
+    // κριτής ρωτούσε *«άλλαξες κάτι;»*. Ρωτά πλέον *«σου έδωσε δικαίωμα;»* — και το
+    // δικαίωμα το έδωσε **ρητά** ο μεσίτης λέγοντας «στείλε ξανά».
+    //
+    // ⚠️ Αν κάποιος ξαναφέρει το `sameProposedTerms` στη διαδρομή της άρνησης,
+    //    **αυτή η γραμμή κοκκινίζει**. Αυτός είναι ο λόγος ύπαρξής της.
+    const fake = world({
+      history: [{ id: 'mreq_old', status: 'declined-revisable', terms: TERMS }],
+    });
+    const result = await submit(fake, TERMS);
+
+    expect(result.kind).toBe('created');
+    if (result.kind === 'created') {
+      // 🔑 Και η αλυσίδα γράφεται ΚΑΝΟΝΙΚΑ: είναι αναθεώρηση, όχι δεύτερη ερώτηση.
+      expect(result.request.supersedesRequestId).toBe('mreq_old');
+    }
+    expect(fake.all(COLLECTIONS.MANDATE_REQUESTS)).toHaveLength(2);
+  });
+
+  it('🔴 Δ4.3α — ΤΕΛΙΚΟ όχι κλείνει την πόρτα, ΚΑΙ ΜΕ ΤΟΥΣ ΙΔΙΟΥΣ ΚΑΙ ΜΕ ΑΛΛΟΥΣ όρους', async () => {
+    // 🔑 Ο ΠΑΡΟΝΟΜΑΣΤΗΣ ΤΗΣ ΟΜΑΔΑΣ: οι δύο αποφάσεις **διαφέρουν σε εξουσία**. Το
+    //    Δ4.3 δείχνει ότι η μία ανοίγει· αυτό εδώ ότι η άλλη κλείνει. Χωρίς το ζεύγος,
+    //    ένας κριτής που απαντά ΠΑΝΤΑ το ίδιο θα ήταν πράσινος στο ένα από τα δύο.
+    for (const terms of [TERMS, OTHER_TERMS]) {
+      const fake = world({
+        history: [{ id: 'mreq_no', status: 'declined-final', terms: TERMS }],
+      });
+      expect(await submit(fake, terms)).toEqual({
+        kind: 'rejected',
+        reason: 'request-declined-final',
+      });
+      expect(fake.all(COLLECTIONS.MANDATE_REQUESTS)).toHaveLength(1);
+    }
+  });
+
+  it('🔴 Δ4.3β — ΤΟ ΚΛΗΡΟΔΟΤΗΜΑ: παλιό `declined` διαβάζεται ΤΕΛΙΚΟ (fail-closed)', async () => {
+    // ⚠️ Έγγραφο γραμμένο ΠΡΙΝ τη διάσπαση. Η επικίνδυνη γραφή είναι να **πέσει έξω**
+    //    ως άγνωστο: το ιστορικό θα φαινόταν αδειανό και η πόρτα θα άνοιγε σιωπηλά.
+    //    ⇒ Ο σωστός δείκτης ΔΕΝ είναι «δεν έσκασε», είναι «**ΑΡΝΗΘΗΚΕ**».
+    const fake = world({ history: [{ id: 'mreq_palio', status: 'declined', terms: TERMS }] });
+    expect(await submit(fake, OTHER_TERMS)).toEqual({
       kind: 'rejected',
-      reason: 'request-terms-unchanged',
+      reason: 'request-declined-final',
     });
     expect(fake.all(COLLECTIONS.MANDATE_REQUESTS)).toHaveLength(1);
   });
 
+  it('🔴 Δ4.3γ — ΜΗ ΑΝΑΓΝΩΣΙΜΗ κατάσταση κλείνει κι αυτή την πόρτα, δεν εξαφανίζεται', async () => {
+    // Το ίδιο σχήμα με το Ζ3 του τύπου: *άγνωστο ≠ κενό* (ADR-787 Ε-5 §4). Ένα
+    // έγγραφο που δεν διαβάζεται **δεν** είναι έγγραφο που δεν υπάρχει.
+    const fake = world({ history: [{ id: 'mreq_xalasmeno', status: 'ΟΤΙΝΑΝΑΙ', terms: TERMS }] });
+    expect(await submit(fake, OTHER_TERMS)).toEqual({
+      kind: 'rejected',
+      reason: 'request-declined-final',
+    });
+  });
+
   it('Δ4.4 — 🏆 μετά από ΑΡΝΗΣΗ, ΑΛΛΟΙ όροι ⇒ ΑΝΑΘΕΩΡΗΣΗ με αλυσίδα (Autodesk)', async () => {
-    const fake = world({ history: [{ id: 'mreq_old', status: 'declined', terms: TERMS }] });
+    const fake = world({
+      history: [{ id: 'mreq_old', status: 'declined-revisable', terms: TERMS }],
+    });
     const result = await submit(fake, OTHER_TERMS);
 
     expect(result.kind).toBe('created');
@@ -236,9 +301,9 @@ describe('Δ4 — ίδια ερώτηση δεν είναι νέα πράξη (�
     //    που είχε ήδη αντικατασταθεί.
     const fake = world({
       history: [
-        { id: 'mreq_early_ask', status: 'declined', terms: TERMS,
+        { id: 'mreq_early_ask', status: 'declined-revisable', terms: TERMS,
           requestedAt: '2026-08-01T10:00:00.000Z', decidedAt: '2026-08-20T10:00:00.000Z' },
-        { id: 'mreq_late_ask', status: 'declined', terms: OTHER_TERMS,
+        { id: 'mreq_late_ask', status: 'declined-revisable', terms: OTHER_TERMS,
           requestedAt: '2026-08-10T10:00:00.000Z', decidedAt: '2026-08-05T10:00:00.000Z' },
       ],
     });
@@ -278,14 +343,16 @@ describe('Δ4 — ίδια ερώτηση δεν είναι νέα πράξη (�
       id: 'mreq_allou',
       ownerPropertyId: LISTING,
       agencyCompanyId: 'comp_ALLO_grafeio',
-      status: 'declined',
+      status: 'declined-final',
       terms: TERMS,
       decidedAt: '2026-08-02T10:00:00.000Z',
       clientContactId: null,
       supersedesRequestId: null,
     });
 
-    // 🔴 Άρνηση από το γραφείο Α δεν κλειδώνει τον ιδιοκτήτη έξω από το γραφείο Β.
+    // 🔴 **ΤΕΛΙΚΗ** άρνηση από το γραφείο Α δεν κλειδώνει τον ιδιοκτήτη έξω από το
+    //    γραφείο Β — και το `declined-final` είναι ο αυστηρότερος δυνατός μάρτυρας:
+    //    αν η εμβέλεια του ερωτήματος ήταν λάθος, **αυτό** θα το έκλεινε.
     expect((await submit(fake, TERMS)).kind).toBe('created');
   });
 });

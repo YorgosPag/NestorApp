@@ -29,9 +29,16 @@ import 'server-only';
  * |---|---|---|
  * | κανένα αίτημα | **δημιουργία** | **δημιουργία** |
  * | υπάρχει `pending` | **`unchanged`** *(το ίδιο έγγραφο, ιδεμποτησία Stripe)* | `request-already-pending` |
- * | τελευταίο `declined` | `request-terms-unchanged` | **δημιουργία + `supersedesRequestId`** |
+ * | οποιοδήποτε `declined-final` | `request-declined-final` | **ίδιο** — ο κριτής έκλεισε την πόρτα |
+ * | τελευταίο `declined-revisable` | **δημιουργία + `supersedesRequestId`** | **ίδιο** |
  * | τελευταίο `withdrawn` | **δημιουργία** *(«το ξανασκέφτηκα»)* | **δημιουργία** |
  * | υπάρχει `accepted` | ⇒ η αγγελία έχει εντολή ⇒ `listing-already-brokered` | ίδιο |
+ *
+ * 🔴 **ΠΡΟΣΕΞΕ ΤΗ ΓΡΑΜΜΗ ΤΟΥ `declined-revisable`: ΟΙ ΔΥΟ ΣΤΗΛΕΣ ΕΙΝΑΙ ΙΔΙΕΣ.** Εκεί
+ * ακριβώς φεύγει ο Δ4 (`request-terms-unchanged`). Μετά από ρητό *«στείλε ξανά»*, οι
+ * **ίδιοι** όροι είναι νόμιμη υποβολή — γιατί το δικαίωμα το έδωσε **ο κριτής**, και
+ * δεν το υπολογίζουμε εμείς από τη διαφορά. Η μετάλλαξη *«κοίτα και τους όρους»* εδώ
+ * **οφείλει να κοκκινίσει** (άγκυρα Χ).
  *
  * ⚠️ **ΓΙΑΤΙ `request-already-pending` ΚΑΙ ΟΧΙ ΣΙΩΠΗΛΗ ΕΝΗΜΕΡΩΣΗ των όρων**: το
  * εκκρεμές αίτημα μπορεί **αυτή τη στιγμή** να το διαβάζει ο μεσίτης. Έγγραφο που
@@ -40,6 +47,12 @@ import 'server-only';
  *
  * ⚠️ **ΓΙΑΤΙ ΤΟ `withdrawn` ΔΕΝ ΜΕΤΡΑΕΙ**: την απόσυρση την έκανε ο **ίδιος**. Ο
  * κανόνας φυλά την **κρίση του γραφείου**, όχι την αναποφασιστικότητα του ιδιοκτήτη.
+ *
+ * ⚠️ **ΚΑΙ ΤΟ ΚΛΗΡΟΔΟΤΗΜΑ ΔΙΑΒΑΖΕΤΑΙ, ΔΕΝ ΑΓΝΟΕΙΤΑΙ**: έγγραφα γραμμένα πριν το §9.21
+ * λένε `status: 'declined'` — ένα «όχι» χωρίς εξουσία δηλωμένη. Περνούν από το
+ * `mandateRequestFromStored` και γίνονται **`declined-final`** *(fail-closed)*. Ένα
+ * σιωπηλό πέταγμα θα έκανε το ιστορικό να φαίνεται **αδειανό**, δηλαδή θα άνοιγε την
+ * πόρτα που δεν ξέρουμε αν έκλεισε.
  *
  * ────────────────────────────────────────────────────────────────────────────
  * 🔴 ΤΟ ΕΡΩΤΗΜΑ ΔΕΝ ΕΧΕΙ `orderBy`, ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ
@@ -65,9 +78,12 @@ import {
 import { generateMandateRequestId } from '@/services/enterprise-id-convenience';
 import { lookupAgencyProfile } from '@/services/mandate/agency-profile.service';
 import {
+  mandateRequestFromStored,
   mandateRequestInvariantViolations,
+  readStoredRequestStatus,
   sameProposedTerms,
   type MandateRequest,
+  type MandateRequestDocument,
   type MandateRequestInvariant,
   type ProposedMandateTerms,
 } from '@/types/mandate-request';
@@ -105,8 +121,20 @@ export const MANDATE_REQUEST_REJECTIONS = [
   'agency-absent',
   /** Εκκρεμεί ήδη αίτημα με **άλλους** όρους. Απόσυρε το πρώτο. */
   'request-already-pending',
-  /** Το γραφείο έχει **ήδη απαντήσει** σε αυτούς ακριβώς τους όρους. */
-  'request-terms-unchanged',
+  /**
+   * 🔴 Το γραφείο είπε **τελικά όχι** για αυτή την αγγελία (`declined-final`).
+   *
+   * ⛔ **ΑΝΤΙΚΑΤΕΣΤΗΣΕ το `request-terms-unchanged`, ΔΕΝ ΜΠΗΚΕ ΔΙΠΛΑ ΤΟΥ** (ADR-749:
+   * δύο κριτές στο ίδιο ερώτημα). Ο παλιός ρωτούσε *«άλλαξες κάτι;»* — υπολογισμένη
+   * διαφορά όρων, δηλαδή **εικασία** για το τι θα ξαναρωτούσε ο κριτής. Ο νέος ρωτά
+   * *«σου έδωσε δικαίωμα;»* — **ρητή πράξη** εκείνου που έκρινε.
+   *
+   * 🔑 Και η αλλαγή έχει **λειτουργικό** αποτέλεσμα, όχι μόνο σημασιολογικό: μετά από
+   * `declined-revisable` ο ιδιώτης μπορεί να ξαναστείλει **τους ίδιους ακριβώς όρους**
+   * — που είναι ό,τι θέλει ένας μεσίτης που είπε *«στείλε το ξανά, μου ξέφυγε»*, και
+   * ό,τι ο παλιός κανόνας **απαγόρευε**.
+   */
+  'request-declined-final',
 ] as const;
 
 export type MandateRequestRejection = (typeof MANDATE_REQUEST_REJECTIONS)[number];
@@ -240,7 +268,22 @@ async function loadPairHistory(
       .where('ownerPropertyId', '==', declaration.ownerPropertyId)
       .get();
 
-    return found.docs.map((doc) => doc.data() as MandateRequest);
+    return found.docs.map((doc) => {
+      const stored = doc.data() as MandateRequestDocument;
+      const reading = readStoredRequestStatus(stored.status);
+
+      // 🔴 **Η ΕΠΙΣΚΕΥΗ ΛΕΓΕΤΑΙ.** Μια σιωπηλή μετάφραση είναι αλλοίωση: ο επόμενος
+      //    αναγνώστης θα έβλεπε «τελικό όχι» χωρίς να μάθει ποτέ ότι το έγγραφο ήταν
+      //    χαλασμένο — και θα το χρέωνε στον μεσίτη.
+      if (reading.repaired === 'unreadable') {
+        logger.error('[MANDATE-REQUEST] Αίτημα με ΜΗ ΑΝΑΓΝΩΣΙΜΗ κατάσταση — διαβάστηκε ως τελικό όχι', {
+          requestId: doc.id,
+          storedStatus: String(stored.status),
+        });
+      }
+
+      return mandateRequestFromStored(stored);
+    });
   } catch (error) {
     logger.error('[MANDATE-REQUEST] Η ανάγνωση του ιστορικού απέτυχε — άγνωστο, όχι κενό', {
       agencyCompanyId: declaration.agencyCompanyId,
@@ -279,27 +322,49 @@ function judgeAgainstHistory(
       : { kind: 'rejected', reason: 'request-already-pending' };
   }
 
-  const declined = latestDeclined(history);
-  if (declined === null) return { kind: 'proceed', supersedes: null };
+  // 🔴 **ΤΟ ΤΕΛΙΚΟ «ΟΧΙ» ΚΛΕΙΝΕΙ ΤΗΝ ΠΟΡΤΑ ΑΝΕΞΑΡΤΗΤΑ ΑΠΟ ΤΟΥΣ ΟΡΟΥΣ** — εδώ φεύγει
+  //    ο Δ4. Ρωτιέται *«σου έδωσε δικαίωμα;»*, ποτέ *«άλλαξες κάτι;»*.
+  //
+  // ⚠️ **ΟΠΟΙΟΔΗΠΟΤΕ `declined-final`, όχι το ΤΕΛΕΥΤΑΙΟ.** Μια αλυσίδα δεν μπορεί να
+  //    προχωρήσει πέρα από ένα τελικό όχι — αν υπάρχει έστω ένα, κάθε μεταγενέστερο
+  //    αίτημα γεννήθηκε **παρακάμπτοντας** αυτόν εδώ τον κριτή, δηλαδή το έγγραφο λέει
+  //    ότι κάτι έσπασε. Το «τελικό» σημαίνει τελικό: fail-closed, ποτέ «μα το επόμενο
+  //    ήταν πιο ήπιο».
+  if (history.some((request) => request.status === 'declined-final')) {
+    return { kind: 'rejected', reason: 'request-declined-final' };
+  }
 
-  return sameProposedTerms(declined.terms, terms)
-    ? { kind: 'rejected', reason: 'request-terms-unchanged' }
-    : { kind: 'proceed', supersedes: declined.id };
+  const revisable = latestRevisableDecline(history);
+  // 🔑 **Καμία σύγκριση όρων εδώ, και είναι το όλο νόημα**: μετά από ρητό «στείλε
+  //    ξανά», οι **ίδιοι** όροι περνούν. Άγκυρα Χ — η μετάλλαξη που ξαναφέρνει το
+  //    `sameProposedTerms` σε αυτή τη γραμμή οφείλει να κοκκινίσει.
+  return { kind: 'proceed', supersedes: revisable?.id ?? null };
 }
 
 /**
- * **Η τελευταία άρνηση του γραφείου** — `null` όταν δεν υπάρχει.
+ * **Η τελευταία άρνηση ΜΕ ΔΙΚΑΙΩΜΑ ΕΠΑΝΥΠΟΒΟΛΗΣ** — `null` όταν δεν υπάρχει.
+ *
+ * 🔑 **Ο ρόλος της είναι ΜΟΝΟ ο δείκτης της αλυσίδας** (`supersedesRequestId`), όχι η
+ * κρίση: το «περνά ή δεν περνά» το απάντησε ήδη ο έλεγχος του `declined-final` πιο
+ * πάνω. Γι' αυτό επιστρέφει έγγραφο και όχι ετυμηγορία — μια συνάρτηση που έκρινε
+ * **και** ονομάτιζε θα ήταν δύο ερωτήματα σε μία υπογραφή.
  *
  * ⚠️ Ταξινομεί κατά `decidedAt` και **όχι** κατά `requestedAt`: κρίνεται η **στιγμή
  * της απόφασης**, γιατί αυτή είναι που ο ιδιώτης καλείται να αναθεωρήσει. Δύο
  * αιτήματα μπορούν να έχουν γεννηθεί με άλλη σειρά από αυτήν που απαντήθηκαν.
+ *
+ * ⚠️ **Δεν φιλτράρει `withdrawn`**, γιατί δεν χρειάζεται: η απόσυρση δεν είναι
+ * **άρνηση του γραφείου** και δεν έχει `decidedAt` κριτή να αναθεωρηθεί. Το φίλτρο
+ * είναι ονομαστικό πάνω στη μία κατάσταση που δίνει δικαίωμα.
  */
-function latestDeclined(history: readonly MandateRequest[]): MandateRequest | null {
-  const declined = history
-    .filter((request) => request.status === 'declined')
+function latestRevisableDecline(
+  history: readonly MandateRequest[],
+): MandateRequest | null {
+  const revisable = history
+    .filter((request) => request.status === 'declined-revisable')
     .sort((a, b) => Date.parse(b.decidedAt ?? '') - Date.parse(a.decidedAt ?? ''));
 
-  return declined[0] ?? null;
+  return revisable[0] ?? null;
 }
 
 // =============================================================================

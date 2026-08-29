@@ -665,7 +665,7 @@
       "listing-already-brokered": "This listing is already assigned to an agency.",
       "agency-absent": "This agency was not found. It may no longer be published.",
       "request-already-pending": "You have already sent this agency a request for this property, with different terms. Withdraw it first — we do not change a document the agent may already be reading.",
-      "request-terms-unchanged": "The agency has already answered these exact terms. Change something — the type, the commission or the duration — and send again.",
+      "request-declined-final": "This agency has given a final refusal for this listing. You can approach another agency.",
       "unverified": "We could not ask right now. This does not mean anything is wrong — please try again shortly, without changing anything.",
       "sentTitle": "The request was sent",
       "sentLead": "The agency sees the listing and your terms. It will learn who you are only if it accepts.",

@@ -15,16 +15,22 @@
 import {
   DISCLOSED_DATA,
   LAWFUL_BASES,
+  MANDATE_REQUEST_DECISIONS,
   MANDATE_REQUEST_INITIATORS,
   MANDATE_REQUEST_INVARIANTS,
   MANDATE_REQUEST_STATUSES,
+  allowsResubmission,
   disclosedTo,
   hasBeenDisclosed,
+  isMandateRequestDecision,
   isMandateRequestInitiator,
   isMandateRequestStatus,
   isRequestActionable,
+  mandateRequestFromStored,
   mandateRequestInvariantViolations,
+  readStoredRequestStatus,
   type MandateRequest,
+  type MandateRequestDocument,
   type MandateRequestStatus,
   sameProposedTerms,
 } from '@/types/mandate-request';
@@ -65,8 +71,14 @@ describe('Α — τα κλειστά σύνολα, ονομαστικά', () => 
     expect([...MANDATE_REQUEST_STATUSES]).toEqual([
       'pending',
       'accepted',
-      'declined',
+      'declined-revisable',
+      'declined-final',
       'withdrawn',
+    ]);
+    expect([...MANDATE_REQUEST_DECISIONS]).toEqual([
+      'accepted',
+      'declined-revisable',
+      'declined-final',
     ]);
     expect([...LAWFUL_BASES]).toEqual([
       '6-1-b-precontractual',
@@ -85,6 +97,94 @@ describe('Α — τα κλειστά σύνολα, ονομαστικά', () => 
     expect(isMandateRequestInitiator(null)).toBe(false);
     expect(isMandateRequestStatus('pending')).toBe(true);
     expect(isMandateRequestStatus('expired')).toBe(false);
+    // Το κληροδοτημα ΔΕΝ ειναι γραπτη κατασταση — διαβαζεται, δεν γραφεται.
+    expect(isMandateRequestStatus('declined')).toBe(false);
+    expect(isMandateRequestDecision('accepted')).toBe(true);
+    expect(isMandateRequestDecision('declined-final')).toBe(true);
+    // Η αναμονη και η αποσυρση ΔΕΝ ειναι αποφασεις του γραφειου.
+    expect(isMandateRequestDecision('pending')).toBe(false);
+    expect(isMandateRequestDecision('withdrawn')).toBe(false);
+  });
+
+  it('A3 — ΚΑΘΕ ΑΠΟΦΑΣΗ ΕΙΝΑΙ ΚΑΤΑΣΤΑΣΗ: ο τυπος το επιβαλλει, η αγκυρα το ΕΚΤΕΛΕΙ', () => {
+    // Το `satisfies` το εγγυαται σε χρονο μεταγλωττισης — αλλα μια εγγυηση που δεν
+    // μπορει να κοκκινισει ειναι σχολιο (CHECK 3.54).
+    for (const decision of MANDATE_REQUEST_DECISIONS) {
+      expect(MANDATE_REQUEST_STATUSES as readonly string[]).toContain(decision);
+    }
+    // Το αντιστροφο ΔΕΝ ισχυει, επιτηδες: `pending`/`withdrawn` δεν αποφασιστηκαν απο
+    // το γραφειο. Αν καποτε ταυτιστουν τα δυο συνολα, εδω κοκκινιζει.
+    expect(MANDATE_REQUEST_DECISIONS.length).toBeLessThan(MANDATE_REQUEST_STATUSES.length);
+  });
+});
+
+// ============================================================================
+// Χ — Η ΕΞΟΥΣΙΑ ΤΩΝ ΔΥΟ «ΟΧΙ» (§9.21)
+// ============================================================================
+
+describe('Χ — τα δυο «οχι» διαφερουν σε ΕΞΟΥΣΙΑ, οχι σε υφος', () => {
+  it('Χ0 — ο ΠΑΡΟΝΟΜΑΣΤΗΣ: η συναρτηση ΞΕΧΩΡΙΖΕΙ, δεν απαντα παντα το ιδιο', () => {
+    expect(allowsResubmission('declined-revisable')).toBe(true);
+    expect(allowsResubmission('declined-final')).toBe(false);
+  });
+
+  it('Χ1 — «στειλε ξανα» και ΑΠΟΣΥΡΣΗ ανοιγουν την πορτα· ΤΙΠΟΤΑ αλλο', () => {
+    const open = MANDATE_REQUEST_STATUSES.filter(allowsResubmission);
+    expect([...open]).toEqual(['declined-revisable', 'withdrawn']);
+  });
+
+  it('Χ2 — η ΑΠΟΔΟΧΗ δεν ανοιγει πορτα: το ζευγος κλειδωσε', () => {
+    expect(allowsResubmission('accepted')).toBe(false);
+    // Και η αναμονη δεν ειναι «αδεια για δευτερο» — ειναι λογος να ΜΗΝ σταλει δευτερο.
+    expect(allowsResubmission('pending')).toBe(false);
+  });
+});
+
+// ============================================================================
+// Κ — ΤΟ ΚΛΗΡΟΔΟΤΗΜΑ: ΤΟ ΠΑΛΙΟ «ΟΧΙ» ΔΙΑΒΑΖΕΤΑΙ, ΔΕΝ ΑΓΝΟΕΙΤΑΙ (§9.21)
+// ============================================================================
+
+describe('Κ — ο,τι βγαινει απο τη βαση διαβαζεται fail-closed', () => {
+  it('Κ0 — ο ΠΑΡΟΝΟΜΑΣΤΗΣ: εγκυρη κατασταση περνα ΑΘΙΚΤΗ και δηλωνεται ΑΝΕΠΙΣΚΕΥΑΣΤΗ', () => {
+    // Χωρις αυτο, ενας μεταφραστης που απαντα ΠΑΝΤΑ `declined-final` θα ηταν πρασινος
+    // σε καθε επομενο test — και θα εκλεινε σιωπηλα καθε εκκρεμες αιτημα του εργου.
+    for (const status of MANDATE_REQUEST_STATUSES) {
+      expect(readStoredRequestStatus(status)).toEqual({ status, repaired: 'none' });
+    }
+  });
+
+  it('Κ1 — το παλιο `declined` γινεται `declined-final`, ΚΑΙ Η ΕΠΙΣΚΕΥΗ ΛΕΓΕΤΑΙ', () => {
+    expect(readStoredRequestStatus('declined')).toEqual({
+      status: 'declined-final',
+      repaired: 'legacy-declined',
+    });
+  });
+
+  it('Κ2 — ΑΓΝΩΣΤΟ != ΚΕΝΟ: ο,τι δεν διαβαζεται κλεινει την πορτα, δεν εξαφανιζεται', () => {
+    for (const rubbish of ['', 'ΟΤΙΝΑΝΑΙ', 'DECLINED', null, undefined, 7, {}]) {
+      const reading = readStoredRequestStatus(rubbish);
+      expect(reading.status).toBe('declined-final');
+      expect(reading.repaired).toBe('unreadable');
+    }
+  });
+
+  it('Κ3 — ΜΙΑ ΠΗΓΗ: ο μεταφραστης εγγραφου διαβαζει την ΙΔΙΑ συναρτηση', () => {
+    const stored = { ...request(), status: 'declined' } as MandateRequestDocument;
+    const parsed = mandateRequestFromStored(stored);
+
+    expect(parsed.status).toBe('declined-final');
+    // Και ΤΙΠΟΤΑ αλλο δεν αγγιζεται: ο μεταφραστης επισκευαζει ΕΝΑ πεδιο.
+    expect({ ...parsed, status: 'declined' }).toEqual(stored);
+  });
+
+  it('Κ4 — Η ΣΥΝΕΠΕΙΑ ΕΙΝΑΙ Η ΑΣΦΑΛΗΣ: επισκευασμενο αιτημα ΔΕΝ αποκαλυπτει, ΔΕΝ κρινεται', () => {
+    // Ο λογος που το αγνωστο γινεται `declined-final` και οχι `accepted`: καθε καταντη
+    // ερωτηση παιρνει την ασφαλη απαντηση, χωρις δευτερο φρουρο πουθενα.
+    const parsed = mandateRequestFromStored(
+      { ...request(), status: 'ΧΑΛΑΣΜΕΝΟ' } as MandateRequestDocument,
+    );
+    expect(disclosedTo(parsed).engaged).toBe(false);
+    expect(isRequestActionable(parsed, NOW)).toBe(false);
   });
 });
 
@@ -113,13 +213,18 @@ describe('Δ — τι έχει φτάσει στο γραφείο: ΥΠΟΛΟΓ�
     expect(data).toEqual(['listing', 'terms']);
     expect(data).not.toContain('name');
     expect(data).not.toContain('email');
-    expect(data).not.toContain('taxId');
+    expect(data).not.toContain('vatNumber');
+    // Και με το ΠΑΛΙΟ ονομα, ωστε μια «επαναφορα» της μετονομασιας να κοκκινισει.
+    expect(DISCLOSED_DATA as readonly string[]).not.toContain('taxId');
   });
 
   it('🔴 Δ2 — ΑΡΝΗΣΗ και ΑΝΑΚΛΗΣΗ δίνουν ΤΑΥΤΟΣΗΜΗ απάντηση με την αναμονή (§8.4)', () => {
     const pending = disclosedTo(request({ status: 'pending' }));
 
-    for (const status of ['declined', 'withdrawn'] as const) {
+    // ΚΑΙ ΤΑ ΔΥΟ «ΟΧΙ»: διαφερουν σε *τι επιτρεπεται μετα*, ΠΟΤΕ σε *τι εσταλη πριν*.
+    // Ενα `declined-revisable` που αποκαλυπτε λιγο περισσοτερο «επειδη η συζητηση
+    // συνεχιζεται» ειναι η ολισθηρη κλιμακα που το §8.2 κλεινει.
+    for (const status of ['declined-revisable', 'declined-final', 'withdrawn'] as const) {
       const level = disclosedTo(request({ status }));
       expect(level.engaged).toBe(false);
       expect(level.items).toEqual(pending.items);
@@ -132,7 +237,7 @@ describe('Δ — τι έχει φτάσει στο γραφείο: ΥΠΟΛΟΓ�
     );
     const data = level.items.map((i) => i.datum);
 
-    expect(data).toEqual(['listing', 'terms', 'name', 'email', 'taxId']);
+    expect(data).toEqual(['listing', 'terms', 'name', 'email', 'vatNumber']);
     // ⛔ ΤΗΛΕΦΩΝΟ ΟΧΙ: «useful but not objectively necessary» (EDPB 2/2019). Δίνεται
     //    με ξεχωριστή, ρητή πράξη — 6§1α, ανακλητή χωριστά.
     expect(DISCLOSED_DATA as readonly string[]).not.toContain('phone');
@@ -143,13 +248,13 @@ describe('Δ — τι έχει φτάσει στο γραφείο: ΥΠΟΛΟΓ�
       request({ status: 'accepted', clientContactId: 'cont_x' }),
     );
 
-    const taxId = level.items.find((i) => i.datum === 'taxId');
+    const vatNumber = level.items.find((i) => i.datum === 'vatNumber');
     const email = level.items.find((i) => i.datum === 'email');
 
     // Δύο βάσεις, δύο δικαιώματα του υποκειμένου. Ένα σκαλάρ «επίπεδο» θα τα
     // συγχέει και θα έδινε ΛΑΘΟΣ απάντηση σε αίτημα διαγραφής — με σιγουριά.
-    expect(taxId?.basis).toBe('6-1-c');
-    expect(taxId?.erasable).toBe(false);
+    expect(vatNumber?.basis).toBe('6-1-c');
+    expect(vatNumber?.erasable).toBe(false);
     expect(email?.basis).toBe('6-1-b-performance');
     expect(email?.erasable).toBe(true);
   });
@@ -166,8 +271,8 @@ describe('Δ — τι έχει φτάσει στο γραφείο: ΥΠΟΛΟΓ�
     const pending = request({ status: 'pending' });
     const accepted = request({ status: 'accepted', clientContactId: 'cont_x' });
 
-    expect(hasBeenDisclosed(pending, 'taxId')).toBe(false);
-    expect(hasBeenDisclosed(accepted, 'taxId')).toBe(true);
+    expect(hasBeenDisclosed(pending, 'vatNumber')).toBe(false);
+    expect(hasBeenDisclosed(accepted, 'vatNumber')).toBe(true);
     expect(hasBeenDisclosed(pending, 'listing')).toBe(true);
   });
 
@@ -192,7 +297,12 @@ describe('Ζ — το αίτημα λήγει με ΡΟΛΟΪ, όχι με πε�
   });
 
   it('Ζ1 — ό,τι έχει κριθεί δεν ξανακρίνεται', () => {
-    for (const status of ['accepted', 'declined', 'withdrawn'] as const) {
+    for (const status of [
+      'accepted',
+      'declined-revisable',
+      'declined-final',
+      'withdrawn',
+    ] as const) {
       const decided: MandateRequestStatus = status;
       expect(isRequestActionable(request({ status: decided }), NOW)).toBe(false);
     }
@@ -295,7 +405,7 @@ describe('Ι — τι δεν επιτρέπεται να γεννηθεί', () =
     // Άρνηση ΜΕ επαφή — το γραφείο κράτησε άνθρωπο που δεν έπρεπε να λάβει ποτέ.
     expect(
       mandateRequestInvariantViolations(
-        request({ status: 'declined', clientContactId: 'cont_x' }),
+        request({ status: 'declined-revisable', clientContactId: 'cont_x' }),
         NOW,
       ),
     ).toContain('request-contact-inconsistent');
