@@ -61,6 +61,7 @@ import { tileTableRange, type TableTiledCell } from './table-range-tiling';
 import { remapCellTextRuns } from './table-cell-run-ops';
 import { isBoundCellWritable } from './binding/table-binding-state';
 import { buildTableFillPlan, type TableFillMode, type TableFillPlan } from './table-fill-plan';
+import type { NameListCandidate } from '@/lib/string/name-list-match';
 import type { TableCellRangeBounds, TableCellRef } from './table-cell-range';
 import type { TableFillTarget } from './table-fill-handle';
 
@@ -78,6 +79,7 @@ export function applyTableFill(
   source: TableCellRangeBounds,
   target: TableFillTarget,
   mode: TableFillMode = 'auto',
+  customLists: readonly NameListCandidate[] = [],
 ): PersistedTableModel {
   const before = resolveTableModel(model);
   const cells = tileTableRange(before, source, target.bounds);
@@ -86,7 +88,7 @@ export function applyTableFill(
   // 🔴 ADR-828 §4 — **ΜΙΑ ΑΝΙΧΝΕΥΣΗ ΑΝΑ ΛΩΡΙΔΑ, ΟΧΙ ΑΝΑ ΚΕΛΙ.** Ένα γέμισμα 500 γραμμών έχει
   // 500 στόχους αλλά **μία** πηγή· ανίχνευση μέσα στο `filled()` θα ήταν O(εμβαδόν × πηγή),
   // δηλαδή το ίδιο σχήμα κόστους που ο χάρτης από κάτω υπάρχει για να αποφύγει.
-  const plan = buildTableFillPlan(before, source, target, mode);
+  const plan = buildTableFillPlan(before, source, target, mode, customLists);
 
   // Ίδιο **τοπικό** κλειδί με τον μαζικό γραφέα: ζει και πεθαίνει μέσα σε αυτή τη συνάρτηση,
   // γι' αυτό δεν περνά από το branded `cellKey()`. Χάρτης και όχι γραμμική αναζήτηση: ένα

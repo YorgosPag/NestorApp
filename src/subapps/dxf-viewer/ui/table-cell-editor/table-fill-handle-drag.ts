@@ -71,12 +71,17 @@ import {
   tableFillMenuOffer,
   tableFillModeFor,
   tableFillPreviewText,
+  tableFillSourceTexts,
   type TableFillMode,
 } from '../../bim/table/table-fill-plan';
 // 🔴 ADR-828 §7.2 — η θύρα του μενού δεξιού συρσίματος. Ανάγνωση **τη στιγμή της
 // απελευθέρωσης**, ποτέ στιγμιότυπο: δες την κεφαλίδα εκείνου του module για το γιατί η
 // χειρονομία δεν περνά από τον δρομολογητή δεξιού κλικ.
 import { getTableFillMenuPort } from './table-fill-menu-port';
+// 🔴 ADR-828 Φ4β — οι λίστες του ανθρώπου, διαβασμένες **τη στιγμή της χειρονομίας**
+// (ADR-040 κανόνας #2). Σύγχρονη ανάγνωση, ποτέ στιγμιότυπο render: ο άνθρωπος μπορεί να
+// πρόσθεσε λίστα πριν από ένα δευτερόλεπτο και να τραβά τη λαβή τώρα.
+import { autoFillListCandidates } from '../../settings/auto-fill-lists';
 import type { TableEntity, TableFramePoint } from '../../types/table-entity';
 import type { TableLayout } from '../../bim/table/table-layout-types';
 import type { TableModel } from '../../types/table';
@@ -178,13 +183,15 @@ export function tryTableFillHandleMouseDown(event: MouseEvent, press: TableFillH
       hideTableResizeReadout();
       return;
     }
-    const mode = tableFillModeFor(model, source, target, modifiers);
+    const lists = autoFillListCandidates();
+    const mode = tableFillModeFor(model, source, target, modifiers, lists);
     const text = tableFillPreviewText(
       model,
       source,
       target,
       mode,
       tableFillFrontier(source, target),
+      lists,
     );
     // Κενό κείμενο δεν είναι ετικέτα: μια άδεια πινακίδα δίπλα στον δείκτη είναι θόρυβος.
     if (text === null || text === '') hideTableResizeReadout();
@@ -258,14 +265,15 @@ export function tryTableFillHandleMouseDown(event: MouseEvent, press: TableFillH
       // Excel. Δες `table-fill-menu-port.ts` για το γιατί δεν περνά από τον δρομολογητή.
       if (withMenu) {
         getTableFillMenuPort()?.open(release.clientX, release.clientY, {
-          offer: tableFillMenuOffer(model, source, chosen),
+          offer: tableFillMenuOffer(model, source, chosen, autoFillListCandidates()),
+          seeds: tableFillSourceTexts(model, source),
           apply: (mode) => commitFill(chosen, mode),
         });
         return;
       }
 
       // Η **ίδια** ερώτηση που απάντησε η ετικέτα ένα καρέ πριν — ο χρήστης παίρνει ό,τι είδε.
-      commitFill(chosen, tableFillModeFor(model, source, chosen, modifiers));
+      commitFill(chosen, tableFillModeFor(model, source, chosen, modifiers, autoFillListCandidates()));
     },
   });
   return true;
@@ -304,7 +312,7 @@ export function commitTableFill(
 ): void {
   const live = writer.liveTable();
   if (live === null) return;
-  const nextModel = applyTableFill(live.model, source, target, mode);
+  const nextModel = applyTableFill(live.model, source, target, mode, autoFillListCandidates());
   writer.commit(live, nextModel);
   selectFilled(source, target, resolveTableModel(live.model));
   setTableFillBadge({

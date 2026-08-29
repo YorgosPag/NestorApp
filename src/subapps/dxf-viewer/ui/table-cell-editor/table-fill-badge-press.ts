@@ -40,7 +40,8 @@ import {
   tableFillBadgeRectMm,
 } from '../../bim/table/table-fill-badge';
 import { tableFrameClientPoint } from '../../bim/table/table-frame-screen';
-import { tableFillMenuOffer } from '../../bim/table/table-fill-plan';
+import { tableFillMenuOffer, tableFillSourceTexts } from '../../bim/table/table-fill-plan';
+import { autoFillListCandidates } from '../../settings/auto-fill-lists';
 import { resolveTableModel } from '../../bim/table/table-model-helpers';
 import {
   commitTableFill,
@@ -166,7 +167,8 @@ function openBadgeMenu(
 ): void {
   const model = resolveTableModel(entity.model);
   getTableFillMenuPort()?.open(at.x, at.y, {
-    offer: tableFillMenuOffer(model, badge.source, badge.target),
+    offer: tableFillMenuOffer(model, badge.source, badge.target, autoFillListCandidates()),
+    seeds: tableFillSourceTexts(model, badge.source),
     apply: (mode) => commitTableFill(writer, badge.source, badge.target, mode),
   });
 }

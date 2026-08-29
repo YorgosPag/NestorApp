@@ -26,6 +26,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-828-table-autofill-series.md §4
  */
 
+import type { NameListCandidate } from '@/lib/string/name-list-match';
 import { positiveMod } from '@/lib/number/positive-mod';
 import type { TableModel } from '../../types/table';
 import type { TableCellRangeBounds } from './table-cell-range';
@@ -121,12 +122,24 @@ const DATE_UNIT_BY_MODE: Readonly<Partial<Record<TableFillMode, TableDateStepUni
   years: 'year',
 };
 
-/** Το σχέδιο για μια σύρση: ποιος άξονας, ποιες σειρές, τι ταξιδεύει. */
+/**
+ * Το σχέδιο για μια σύρση: ποιος άξονας, ποιες σειρές, τι ταξιδεύει.
+ *
+
+ * 🔴 ADR-828 Φ4β — **ΟΙ ΛΙΣΤΕΣ ΤΟΥ ΑΝΘΡΩΠΟΥ ΤΑΞΙΔΕΥΟΥΝ ΩΣ ΟΡΙΣΜΑ, ΠΟΤΕ ΩΣ ΑΝΑΓΝΩΣΗ.**
+ *
+ * Παράμετρος και όχι ανάγνωση αποθετηρίου μέσα σε αυτό το αρχείο, για τον ίδιο λόγο που το
+ * `forceNumericStep` είναι παράμετρος: **αυτή η στάθμη είναι καθαρή**. Ένα `getSlice()` εδώ
+ * θα την έκανε αδοκίμαστη χωρίς πλαστογράφηση Firestore και θα έκρυβε μια είσοδο από την
+ * υπογραφή. Ο **ένας** τόπος που ξέρει από ρυθμίσεις χρήστη είναι το UI στην άκρη της
+ * αλυσίδας — δες `useAutoFillLists`.
+ */
 export function buildTableFillPlan(
   model: TableModel,
   source: TableCellRangeBounds,
   target: TableFillTarget,
   mode: TableFillMode,
+  customLists: readonly NameListCandidate[] = [],
 ): TableFillPlan {
   const axis: 'row' | 'column' =
     target.direction === 'down' || target.direction === 'up' ? 'row' : 'column';
@@ -147,12 +160,14 @@ export function buildTableFillPlan(
   // **μέσα** στην ανίχνευση, όσο οι σπόροι είναι ακόμη εκεί. Φίλτρο πάνω στο αποτέλεσμα θα
   // ήταν αδύνατο για τον ίδιο λόγο: μια λωρίδα που διαβάστηκε ως «κάθε 28 ημέρες» έχει ήδη
   // πετάξει την πληροφορία ότι οι σπόροι ήταν τέλη μηνών.
-  const options: TableFillDetectOptions =
-    mode === 'series'
+  const options: TableFillDetectOptions = {
+    customLists,
+    ...(mode === 'series'
       ? { forceNumericStep: 1 }
       : DATE_UNIT_BY_MODE[mode] === undefined
         ? {}
-        : { forceDateUnit: DATE_UNIT_BY_MODE[mode] };
+        : { forceDateUnit: DATE_UNIT_BY_MODE[mode] }),
+  };
   const lanes = laneSeeds(model, source, axis).map((seeds) =>
     detectTableFillSeries(seeds, options),
   );
@@ -200,9 +215,12 @@ export function tableFillModeFor(
   source: TableCellRangeBounds,
   target: TableFillTarget,
   modifiers: { readonly ctrlKey: boolean },
+  customLists: readonly NameListCandidate[] = [],
 ): TableFillMode {
   if (!modifiers.ctrlKey) return 'auto';
-  return buildTableFillPlan(model, source, target, 'auto').isSeries ? 'copy' : 'series';
+  return buildTableFillPlan(model, source, target, 'auto', customLists).isSeries
+    ? 'copy'
+    : 'series';
 }
 
 /**
@@ -234,8 +252,9 @@ export function tableFillMenuOffer(
   model: TableModel,
   source: TableCellRangeBounds,
   target: TableFillTarget,
+  customLists: readonly NameListCandidate[] = [],
 ): TableFillMenuOffer {
-  const plan = buildTableFillPlan(model, source, target, 'series');
+  const plan = buildTableFillPlan(model, source, target, 'series', customLists);
   return {
     series: plan.isSeries,
     date: plan.lanes.some((lane) => lane.kind === 'date'),
@@ -264,8 +283,9 @@ export function tableFillPreviewText(
   target: TableFillTarget,
   mode: TableFillMode,
   at: TableFillOrdinals,
+  customLists: readonly NameListCandidate[] = [],
 ): string | null {
-  const plan = buildTableFillPlan(model, source, target, mode);
+  const plan = buildTableFillPlan(model, source, target, mode, customLists);
   const series = plan.textAt(at);
   if (series !== null) return series;
   if (plan.parts === 'format') return null;
@@ -298,6 +318,36 @@ export function tableFillFrontier(
     rowOrdinal: rowEdge - source.firstRow,
     colOrdinal: colEdge - source.firstCol,
   };
+}
+
+/**
+ * 🔴 ADR-828 Φ4β — **ΤΑ ΚΕΙΜΕΝΑ ΤΗΣ ΠΗΓΗΣ**, σε σειρά ανάγνωσης: πάνω→κάτω, αριστερά→δεξιά.
+ *
+ * Ο **ένας** καταναλωτής είναι η πρόταση που δείχνει ο διαχειριστής λιστών όταν ανοίγει από
+ * το «Σειρά…» — δηλαδή η *Import from cells* του Excel και το *Copy List from* του
+ * LibreOffice, χωρίς να τη ζητήσει ο άνθρωπος με δεύτερη κίνηση: τα κελιά είναι ήδη μαρκαρισμένα.
+ *
+ * ⚠️ **Σειρά ανάγνωσης, όχι σειρά λωρίδας**: η {@link laneSeeds} τεμαχίζει κατά τον άξονα του
+ * γεμίσματος, που είναι σωστό για ανίχνευση σειράς και **λάθος** εδώ. Μια στήλη τεσσάρων
+ * ονομάτων και μια γραμμή τεσσάρων ονομάτων πρέπει να δώσουν την **ίδια** λίστα: ο άνθρωπος
+ * που τα έγραψε οριζόντια δεν δήλωσε άλλη διάταξη, δήλωσε την ίδια με άλλο σχήμα.
+ *
+ * ⚠️ Κενά κελιά **παραλείπονται** αντί να σπάσουν: εδώ δεν ανιχνεύεται σειρά (όπου το κενό
+ * είναι δήλωση «δεν υπάρχει δεδομένο»), αλλά **προτείνεται** λίστα. Μια πρόταση που σταματά
+ * στο πρώτο κενό θα έκρυβε τα μισά ονόματα που βλέπει ο άνθρωπος μπροστά του.
+ */
+export function tableFillSourceTexts(
+  model: TableModel,
+  source: TableCellRangeBounds,
+): readonly string[] {
+  const texts: string[] = [];
+  for (let rowIndex = source.firstRow; rowIndex <= source.lastRow; rowIndex += 1) {
+    for (let colIndex = source.firstCol; colIndex <= source.lastCol; colIndex += 1) {
+      const text = cellText(seedAt(model, rowIndex, colIndex).cell).trim();
+      if (text !== '') texts.push(text);
+    }
+  }
+  return texts;
 }
 
 /**
