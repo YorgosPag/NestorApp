@@ -1,0 +1,345 @@
+/**
+ * ADR-827 Φάση Β — **ΤΟ ΑΙΤΗΜΑ ΑΝΑΘΕΣΗΣ**, και τι μαθαίνει το γραφείο.
+ *
+ * 🔴 **Τι φυλά αυτό το αρχείο που κανείς δεν φυλούσε**: το §8.6 απαγορεύει ρητά κάθε
+ * `disclosure_log` / `disclosedFields`, δηλαδή **δεύτερο βιβλίο**. Η μόνη εγγύηση που
+ * απομένει είναι ότι η **καθαρή συνάρτηση** {@link disclosedTo} λέει την αλήθεια — και
+ * μια συνάρτηση χωρίς άγκυρα είναι σχόλιο (CHECK 3.54).
+ *
+ * ⚠️ **Κάθε ομάδα ξεκινά με ΠΑΡΟΝΟΜΑΣΤΗ.** Ένα test που δείχνει μόνο «η άρνηση δεν
+ * αποκαλύπτει τίποτα» είναι πράσινο και όταν η συνάρτηση δεν αποκαλύπτει **ΠΟΤΕ**
+ * τίποτα — δηλαδή όταν είναι σπασμένη προς την ασφαλή μεριά, που εδώ σημαίνει ότι η
+ * οθόνη του ιδιώτη λέει **ψέματα προς τα κάτω**.
+ */
+
+import {
+  DISCLOSED_DATA,
+  LAWFUL_BASES,
+  MANDATE_REQUEST_INITIATORS,
+  MANDATE_REQUEST_INVARIANTS,
+  MANDATE_REQUEST_STATUSES,
+  disclosedTo,
+  hasBeenDisclosed,
+  isMandateRequestInitiator,
+  isMandateRequestStatus,
+  isRequestActionable,
+  mandateRequestInvariantViolations,
+  type MandateRequest,
+  type MandateRequestStatus,
+} from '@/types/mandate-request';
+import { EXCLUSIVE_AGENCY, OPEN_LISTING } from '@/types/listing-agreement';
+import { defaultExpiryFor } from '@/types/owner-property-mandate';
+
+const NOW = '2026-08-29T10:00:00.000Z';
+
+function request(overrides: Partial<MandateRequest> = {}): MandateRequest {
+  return {
+    id: 'mreq_test_0001',
+    ownerPropertyId: 'ownp_test_0001',
+    requestedByUserId: 'user-idiotis',
+    agencyCompanyId: 'comp_grafeio',
+    initiatedBy: 'owner',
+    status: 'pending',
+    terms: {
+      agreement: EXCLUSIVE_AGENCY,
+      compensation: { type: 'percentage', percentage: 2, vatIncluded: false },
+      expiresAt: defaultExpiryFor(EXCLUSIVE_AGENCY, NOW) ?? '',
+    },
+    requestedAt: NOW,
+    seenAt: null,
+    decidedAt: null,
+    clientContactId: null,
+    ...overrides,
+  };
+}
+
+// ============================================================================
+// Α — ΤΟ ΛΕΞΙΛΟΓΙΟ ΕΙΝΑΙ ΚΛΕΙΣΤΟ
+// ============================================================================
+
+describe('Α — τα κλειστά σύνολα, ονομαστικά', () => {
+  it('🔑 Α0 — ο ΠΑΡΟΝΟΜΑΣΤΗΣ: κάθε σύνολο έχει τις τιμές που δηλώνει, όχι λιγότερες', () => {
+    expect([...MANDATE_REQUEST_INITIATORS]).toEqual(['owner', 'agency']);
+    expect([...MANDATE_REQUEST_STATUSES]).toEqual([
+      'pending',
+      'accepted',
+      'declined',
+      'withdrawn',
+    ]);
+    expect([...LAWFUL_BASES]).toEqual([
+      '6-1-b-precontractual',
+      '6-1-b-performance',
+      '6-1-c',
+    ]);
+  });
+
+  it('🔴 Α1 — ΔΕΝ υπάρχει `expired`: η λήξη ΥΠΟΛΟΓΙΖΕΤΑΙ, δεν αποθηκεύεται', () => {
+    expect(MANDATE_REQUEST_STATUSES as readonly string[]).not.toContain('expired');
+  });
+
+  it('Α2 — οι φρουροί τύπου απορρίπτουν ό,τι έρχεται από το δίκτυο', () => {
+    expect(isMandateRequestInitiator('owner')).toBe(true);
+    expect(isMandateRequestInitiator('OWNER')).toBe(false);
+    expect(isMandateRequestInitiator(null)).toBe(false);
+    expect(isMandateRequestStatus('pending')).toBe(true);
+    expect(isMandateRequestStatus('expired')).toBe(false);
+  });
+});
+
+// ============================================================================
+// Δ — Η ΑΠΟΚΑΛΥΨΗ (§8.6)
+// ============================================================================
+
+describe('Δ — τι έχει φτάσει στο γραφείο: ΥΠΟΛΟΓΙΖΕΤΑΙ, δεν καταγράφεται', () => {
+  it('🔑 Δ0 — ο ΠΑΡΟΝΟΜΑΣΤΗΣ: η αποδοχή ΑΛΛΑΖΕΙ την απάντηση', () => {
+    const pending = disclosedTo(request({ status: 'pending' }));
+    const accepted = disclosedTo(
+      request({ status: 'accepted', clientContactId: 'cont_x' }),
+    );
+
+    // Χωρίς αυτό, κάθε επόμενο test θα ήταν πράσινο και με συνάρτηση που
+    // επιστρέφει ΠΑΝΤΑ το ίδιο.
+    expect(accepted.items.length).toBeGreaterThan(pending.items.length);
+    expect(pending.engaged).toBe(false);
+    expect(accepted.engaged).toBe(true);
+  });
+
+  it('🔴 Δ1 — ΠΡΙΝ την αποδοχή ταξιδεύει ΤΙΠΟΤΑ του προσώπου (§8.2)', () => {
+    const level = disclosedTo(request({ status: 'pending' }));
+    const data = level.items.map((i) => i.datum);
+
+    expect(data).toEqual(['listing', 'terms']);
+    expect(data).not.toContain('name');
+    expect(data).not.toContain('email');
+    expect(data).not.toContain('taxId');
+  });
+
+  it('🔴 Δ2 — ΑΡΝΗΣΗ και ΑΝΑΚΛΗΣΗ δίνουν ΤΑΥΤΟΣΗΜΗ απάντηση με την αναμονή (§8.4)', () => {
+    const pending = disclosedTo(request({ status: 'pending' }));
+
+    for (const status of ['declined', 'withdrawn'] as const) {
+      const level = disclosedTo(request({ status }));
+      expect(level.engaged).toBe(false);
+      expect(level.items).toEqual(pending.items);
+    }
+  });
+
+  it('Δ3 — ΜΕΤΑ την αποδοχή: όνομα + ΕΝΑ email + ΑΦΜ — και τίποτε άλλο (§8.3)', () => {
+    const level = disclosedTo(
+      request({ status: 'accepted', clientContactId: 'cont_x' }),
+    );
+    const data = level.items.map((i) => i.datum);
+
+    expect(data).toEqual(['listing', 'terms', 'name', 'email', 'taxId']);
+    // ⛔ ΤΗΛΕΦΩΝΟ ΟΧΙ: «useful but not objectively necessary» (EDPB 2/2019). Δίνεται
+    //    με ξεχωριστή, ρητή πράξη — 6§1α, ανακλητή χωριστά.
+    expect(DISCLOSED_DATA as readonly string[]).not.toContain('phone');
+  });
+
+  it('🔴 Δ4 — ΤΟ ΑΦΜ ΕΧΕΙ ΑΛΛΗ ΒΑΣΗ ΚΑΙ ΔΕΝ ΔΙΑΓΡΑΦΕΤΑΙ (§8.1)', () => {
+    const level = disclosedTo(
+      request({ status: 'accepted', clientContactId: 'cont_x' }),
+    );
+
+    const taxId = level.items.find((i) => i.datum === 'taxId');
+    const email = level.items.find((i) => i.datum === 'email');
+
+    // Δύο βάσεις, δύο δικαιώματα του υποκειμένου. Ένα σκαλάρ «επίπεδο» θα τα
+    // συγχέει και θα έδινε ΛΑΘΟΣ απάντηση σε αίτημα διαγραφής — με σιγουριά.
+    expect(taxId?.basis).toBe('6-1-c');
+    expect(taxId?.erasable).toBe(false);
+    expect(email?.basis).toBe('6-1-b-performance');
+    expect(email?.erasable).toBe(true);
+  });
+
+  it('Δ5 — η αίτηση του ΥΠΟΚΕΙΜΕΝΟΥ είναι προσυμβατική, όχι εκτέλεση', () => {
+    const level = disclosedTo(request({ status: 'pending' }));
+    for (const item of level.items) {
+      expect(item.basis).toBe('6-1-b-precontractual');
+      expect(item.erasable).toBe(true);
+    }
+  });
+
+  it('🔑 Δ6 — ΜΙΑ ΠΗΓΗ: ο βοηθός της οθόνης διαβάζει την ΙΔΙΑ συνάρτηση', () => {
+    const pending = request({ status: 'pending' });
+    const accepted = request({ status: 'accepted', clientContactId: 'cont_x' });
+
+    expect(hasBeenDisclosed(pending, 'taxId')).toBe(false);
+    expect(hasBeenDisclosed(accepted, 'taxId')).toBe(true);
+    expect(hasBeenDisclosed(pending, 'listing')).toBe(true);
+  });
+
+  it('Δ7 — δεν εξαρτάται από ΤΙΠΟΤΑ άλλο πέρα από την κατάσταση', () => {
+    // Ίδια κατάσταση, εντελώς άλλα πεδία ⇒ ίδια απάντηση. Αν κάποτε μπει
+    // «αποκάλυψη επειδή το είδε» (`seenAt`), αυτό εδώ κοκκινίζει.
+    const a = disclosedTo(request({ status: 'pending', seenAt: null }));
+    const b = disclosedTo(
+      request({ status: 'pending', seenAt: NOW, initiatedBy: 'agency' }),
+    );
+    expect(a).toEqual(b);
+  });
+});
+
+// ============================================================================
+// Ζ — ΤΙ ΕΙΝΑΙ ΑΚΟΜΗ ΖΩΝΤΑΝΟ
+// ============================================================================
+
+describe('Ζ — το αίτημα λήγει με ΡΟΛΟΪ, όχι με πεδίο', () => {
+  it('🔑 Ζ0 — ο ΠΑΡΟΝΟΜΑΣΤΗΣ: εκκρεμές αίτημα με έγκυρη διάρκεια ΕΙΝΑΙ ενεργό', () => {
+    expect(isRequestActionable(request(), NOW)).toBe(true);
+  });
+
+  it('Ζ1 — ό,τι έχει κριθεί δεν ξανακρίνεται', () => {
+    for (const status of ['accepted', 'declined', 'withdrawn'] as const) {
+      const decided: MandateRequestStatus = status;
+      expect(isRequestActionable(request({ status: decided }), NOW)).toBe(false);
+    }
+  });
+
+  it('🔴 Ζ2 — ΙΔΙΟ αίτημα, ΔΥΟ ρολόγια, ΔΥΟ απαντήσεις', () => {
+    const req = request();
+    expect(isRequestActionable(req, NOW)).toBe(true);
+    // Μία ημέρα μετά τη λήξη της προτεινόμενης εντολής.
+    expect(isRequestActionable(req, '2027-04-30T10:00:00.000Z')).toBe(false);
+  });
+
+  it('🔴 Ζ3 — μη αναγνώσιμη ημερομηνία ⇒ ΟΧΙ ενεργό (fail-closed, άγνωστο ≠ κενό)', () => {
+    const broken = request({
+      terms: { ...request().terms, expiresAt: 'ΟΧΙ-ΗΜΕΡΟΜΗΝΙΑ' },
+    });
+    expect(isRequestActionable(broken, NOW)).toBe(false);
+    expect(isRequestActionable(request(), 'ΟΧΙ-ΡΟΛΟΪ')).toBe(false);
+  });
+
+  it('🔑 Ζ4 — ΤΟ ΜΑΘΗΜΑ ΤΟΥ Μ3: η ασφάλεια είναι ιδιότητα της ΜΟΡΦΗΣ, όχι φρουρού', () => {
+    // Ο ρητός έλεγχος `Number.isNaN(...)` ήταν **αδρανής**: η μετάλλαξη που τον
+    // αφαιρούσε βγήκε ΠΡΑΣΙΝΗ, γιατί κάθε σύγκριση με NaN απαντά ήδη `false`.
+    // Επικίνδυνη είναι η **λογικά ισοδύναμη αναστροφή** — και μόνο αυτή.
+    const brokenExpiry = Date.parse('ΟΧΙ-ΗΜΕΡΟΜΗΝΙΑ');
+    const now = Date.parse(NOW);
+
+    expect(brokenExpiry > now).toBe(false); // ← η μορφή που χρησιμοποιείται
+    expect(!(brokenExpiry <= now)).toBe(true); // ← η μορφή που ΘΑ ΕΛΕΓΕ «ζωντανό»
+
+    // Άρα: αν κάποιος «απλοποιήσει» σε αναστροφή, το Ζ3 κοκκινίζει. Αυτή η γραμμή
+    // υπάρχει ώστε ο λόγος να μη χαθεί στην επόμενη ανάγνωση.
+    expect(isRequestActionable(
+      request({ terms: { ...request().terms, expiresAt: 'ΟΧΙ-ΗΜΕΡΟΜΗΝΙΑ' } }),
+      NOW,
+    )).toBe(false);
+  });
+});
+
+// ============================================================================
+// Ι — ΤΑ ΑΜΕΤΑΒΛΗΤΑ
+// ============================================================================
+
+describe('Ι — τι δεν επιτρέπεται να γεννηθεί', () => {
+  it('🔑 Ι0 — ο ΠΑΡΟΝΟΜΑΣΤΗΣ: έγκυρο αίτημα δεν παράγει καμία παραβίαση', () => {
+    expect(mandateRequestInvariantViolations(request(), NOW)).toEqual([]);
+  });
+
+  it('Ι1 — αίτημα χωρίς αγγελία ή χωρίς γραφείο', () => {
+    expect(
+      mandateRequestInvariantViolations(request({ ownerPropertyId: '  ' }), NOW),
+    ).toContain('request-listing-missing');
+    expect(
+      mandateRequestInvariantViolations(request({ agencyCompanyId: '' }), NOW),
+    ).toContain('request-agency-missing');
+  });
+
+  it('🔴 Ι2 — ΕΝΑΣ κωδικός για την άκυρη ημερομηνία, όχι δύο', () => {
+    const found = mandateRequestInvariantViolations(
+      request({ terms: { ...request().terms, expiresAt: 'χχχ' } }),
+      NOW,
+    );
+    expect(found).toEqual(['request-expiry-invalid']);
+    // ⚠️ Κάθε σύγκριση με NaN απαντά `false` ⇒ αν συνεχίζαμε τον έλεγχο, το
+    //    «ξεπερνά τον νόμο» θα σιωπούσε πάνω σε χαλασμένο έγγραφο.
+    expect(found).not.toContain('request-expiry-past');
+  });
+
+  it('🔴 Ι3 — ΔΕΝ ΞΑΝΑΓΡΑΦΕΙ ΤΟΝ ΝΟΜΟ: ρωτά την ίδια αρχή με τη δεύτερη πόρτα', () => {
+    // Αποκλειστική εντολή 12 μηνών — άκυρη (άρθρο 200 §4: ανώτατο 8).
+    const tooLong = request({
+      terms: {
+        ...request().terms,
+        agreement: EXCLUSIVE_AGENCY,
+        expiresAt: '2027-08-29T10:00:00.000Z',
+      },
+    });
+    expect(mandateRequestInvariantViolations(tooLong, NOW)).toContain(
+      'request-term-exceeds-statute',
+    );
+
+    // 🔑 Η ΙΔΙΑ διάρκεια σε ΑΠΛΗ εντολή περνά (§3: ανώτατο 12) — δηλαδή το όριο
+    //    έρχεται ΑΠΟ ΤΟ ΕΙΔΟΣ, όχι από σταθερά γραμμένη εδώ.
+    const openListing = request({
+      terms: {
+        ...request().terms,
+        agreement: OPEN_LISTING,
+        expiresAt: '2027-08-29T10:00:00.000Z',
+      },
+    });
+    expect(mandateRequestInvariantViolations(openListing, NOW)).toEqual([]);
+  });
+
+  it('🔴 Ι4 — Η ΕΠΑΦΗ ΓΕΝΝΙΕΤΑΙ ΜΟΝΟ ΜΕ ΤΗΝ ΑΠΟΔΟΧΗ, ΚΑΙ ΠΑΝΤΑ (§8.4)', () => {
+    // Αποδοχή ΧΩΡΙΣ επαφή — η ατομική πράξη έσπασε στη μέση.
+    expect(
+      mandateRequestInvariantViolations(request({ status: 'accepted' }), NOW),
+    ).toContain('request-contact-inconsistent');
+
+    // Άρνηση ΜΕ επαφή — το γραφείο κράτησε άνθρωπο που δεν έπρεπε να λάβει ποτέ.
+    expect(
+      mandateRequestInvariantViolations(
+        request({ status: 'declined', clientContactId: 'cont_x' }),
+        NOW,
+      ),
+    ).toContain('request-contact-inconsistent');
+
+    // Και η σωστή αποδοχή δεν παράγει τίποτα.
+    expect(
+      mandateRequestInvariantViolations(
+        request({ status: 'accepted', clientContactId: 'cont_x' }),
+        NOW,
+      ),
+    ).toEqual([]);
+  });
+
+  it('Ι5 — επιστρέφει ΟΛΑ όσα βρίσκει, όχι το πρώτο', () => {
+    const broken = request({
+      ownerPropertyId: '',
+      agencyCompanyId: '',
+      status: 'accepted',
+    });
+    const found = mandateRequestInvariantViolations(broken, NOW);
+    expect(found).toContain('request-listing-missing');
+    expect(found).toContain('request-agency-missing');
+    expect(found).toContain('request-contact-inconsistent');
+  });
+
+  it('Ι6 — κάθε δηλωμένο αμετάβλητο είναι ΠΡΑΓΜΑΤΙ παραγώγιμο (κανένα νεκρό)', () => {
+    const reachable = new Set<string>([
+      ...mandateRequestInvariantViolations(
+        request({ ownerPropertyId: '', agencyCompanyId: '', status: 'accepted' }),
+        NOW,
+      ),
+      ...mandateRequestInvariantViolations(
+        request({ terms: { ...request().terms, expiresAt: 'χχχ' } }),
+        NOW,
+      ),
+      ...mandateRequestInvariantViolations(request(), '2027-04-30T10:00:00.000Z'),
+      ...mandateRequestInvariantViolations(
+        request({
+          terms: { ...request().terms, expiresAt: '2027-08-29T10:00:00.000Z' },
+        }),
+        NOW,
+      ),
+    ]);
+
+    for (const invariant of MANDATE_REQUEST_INVARIANTS) {
+      expect(reachable).toContain(invariant);
+    }
+  });
+});

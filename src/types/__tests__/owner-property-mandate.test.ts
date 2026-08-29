@@ -28,18 +28,31 @@ import {
   isMandateExpired,
   mandateAllowsPublication,
   mandateInvariantViolations,
-  MANDATE_DEFAULT_DURATION_DAYS,
+  defaultExpiryFor,
   MANDATE_INVARIANTS,
   MANDATE_PROOF_VIAS,
   CUSTOMARY_COMMISSION_PERCENTAGE,
   OWNER_CONSENT,
   type BrokeredListingMandate,
 } from '@/types/owner-property-mandate';
-import { DEFAULT_LISTING_AGREEMENT } from '@/types/listing-agreement';
+import { addMonthsUTC } from '@/lib/date-local';
+import {
+  DEFAULT_LISTING_AGREEMENT,
+  EXCLUSIVE_AGENCY,
+  LISTING_AGREEMENTS,
+  OPEN_LISTING,
+  statutoryTermLimitFor,
+  type ListingAgreement,
+} from '@/types/listing-agreement';
 import { listingAuthorshipOf } from '@/types/owner-property';
 
 const NOW = '2026-08-20T12:00:00.000Z';
-const FUTURE = '2027-08-20T12:00:00.000Z';
+// 🔴 **ΗΤΑΝ `2027-08-20` — δηλαδή ΔΩΔΕΚΑ μήνες σε ΑΠΟΚΛΕΙΣΤΙΚΗ εντολή, που το άρθρο
+//    200 §4 Ν.4072/2012 ΑΠΑΓΟΡΕΥΕΙ** (ανώτατο 8). Το fixture της Φάσης Α έγραφε
+//    άκυρη σύμβαση, και **κανένα** από τα 307 tests δεν το έβλεπε — ο κανόνας δεν
+//    υπήρχε. Ο νέος φρουρός `mandate-term-exceeds-statute` το κοκκίνισε την πρώτη
+//    φορά που έτρεξε (ADR-827 §8.9 α).
+const FUTURE = '2027-02-20T12:00:00.000Z';
 const PAST = '2026-08-19T12:00:00.000Z';
 
 function brokered(over: Partial<BrokeredListingMandate> = {}): BrokeredListingMandate {
@@ -143,8 +156,82 @@ describe('Χ — η εντολή λήγει, και η λήξη δεν είνα�
     expect(mandateAllowsPublication(mandate, '2028-01-01T00:00:00.000Z')).toBe(false);
   });
 
-  it('Χ4 — η προεπιλογή είναι οι 12 μήνες του νόμου', () => {
-    expect(MANDATE_DEFAULT_DURATION_DAYS).toBe(365);
+  it('Χ4 — η προεπιλογή είναι το ΝΟΜΙΜΟ ΑΝΩΤΑΤΟ ΤΟΥ ΕΙΔΟΥΣ, όχι σταθερά', () => {
+    // 🔴 Η προηγούμενη εκδοχή αυτής της άγκυρας κλείδωνε `365` για **κάθε** είδος —
+    //    δηλαδή επικύρωνε ακριβώς το σφάλμα (ADR-827 §8.9 α).
+    expect(defaultExpiryFor(EXCLUSIVE_AGENCY, NOW)).toBe('2027-04-20T12:00:00.000Z');
+    expect(defaultExpiryFor(OPEN_LISTING, NOW)).toBe('2027-08-20T12:00:00.000Z');
+  });
+});
+
+// =============================================================================
+// Σ — ΤΟ ΝΟΜΙΜΟ ΑΝΩΤΑΤΟ ΔΙΑΡΚΕΙΑΣ (ADR-827 §8.9 α · άρθρο 200 §3/§4 Ν.4072/2012)
+// =============================================================================
+
+describe('Σ — η διάρκεια δεν ξεπερνά ό,τι δίνει ο νόμος', () => {
+  it('🔑 Σ0 — ο ΠΑΡΟΝΟΜΑΣΤΗΣ: κάθε είδος έχει όριο, και τα όρια ΔΙΑΦΕΡΟΥΝ', () => {
+    // Χωρίς αυτό, ένας πίνακας με το ίδιο νούμερο παντού θα περνούσε κάθε άλλη
+    // άγκυρα — και ο κανόνας «το είδος ορίζει το ταβάνι» θα ήταν διακοσμητικός.
+    const maxima = LISTING_AGREEMENTS.map((a) => statutoryTermLimitFor(a).maxMonths);
+    expect(maxima).toEqual([8, 8, 8, 12]);
+    expect(new Set(maxima).size).toBeGreaterThan(1);
+  });
+
+  it('Σ1 — ΑΠΟΚΛΕΙΣΤΙΚΗ 12 μηνών ΜΠΛΟΚΑΡΕΤΑΙ (ήταν η προεπιλογή της Φάσης Α)', () => {
+    const illegal = brokered({ expiresAt: '2027-08-20T12:00:00.000Z' });
+    expect(mandateInvariantViolations(illegal, NOW)).toContain(
+      'mandate-term-exceeds-statute',
+    );
+  });
+
+  it('Σ2 — η ΙΔΙΑ διάρκεια σε ΑΠΛΗ εντολή περνά: το είδος ορίζει το όριο', () => {
+    const open = brokered({
+      agreement: OPEN_LISTING,
+      expiresAt: '2027-08-20T12:00:00.000Z',
+    });
+    expect(mandateInvariantViolations(open, NOW)).toEqual([]);
+  });
+
+  it('Σ3 — ΑΚΡΙΒΩΣ στο όριο επιτρέπεται· μία ημέρα πιο πέρα όχι', () => {
+    expect(
+      mandateInvariantViolations(brokered({ expiresAt: '2027-04-20T12:00:00.000Z' }), NOW),
+    ).toEqual([]);
+    expect(
+      mandateInvariantViolations(brokered({ expiresAt: '2027-04-21T12:00:00.000Z' }), NOW),
+    ).toContain('mandate-term-exceeds-statute');
+  });
+
+  it('Σ4 — ΛΗΓΜΕΝΗ εντολή δεν «ξεπερνά» τίποτα: ΕΝΑΣ κωδικός, όχι δύο', () => {
+    // ⚠️ Ο σαρωτής λήξης ξαναγράφει ληγμένες εντολές· δύο κωδικοί για το ίδιο πεδίο
+    //    θα ήταν θόρυβος, και θα έστελναν τον μεσίτη να «μικρύνει» διάρκεια που
+    //    έχει ήδη περάσει.
+    const expired = mandateInvariantViolations(brokered({ expiresAt: PAST }), NOW);
+    expect(expired).toContain('mandate-expiry-past');
+    expect(expired).not.toContain('mandate-term-exceeds-statute');
+  });
+
+  it('Σ5 — ο ΜΗΝΑΣ είναι ημερολογιακός: 31/12 + 2 μήνες = 28/2, ΟΧΙ 3/3', () => {
+    // 🔴 Η παγίδα που καθιστά κάθε `setMonth(+n)` λάθος. Αν το `addMonthsUTC`
+    //    ξεχείλιζε, ο φρουρός θα επέτρεπε διάρκεια **μεγαλύτερη** από τον νόμο —
+    //    δηλαδή θα παραβίαζε ο ίδιος το όριο που επικαλείται.
+    expect(addMonthsUTC('2026-12-31T00:00:00.000Z', 2)).toBe('2027-02-28T00:00:00.000Z');
+    expect(addMonthsUTC('2028-12-31T00:00:00.000Z', 2)).toBe('2029-02-28T00:00:00.000Z');
+    // δίσεκτο: 31/12/2023 + 2 = 29/2/2024
+    expect(addMonthsUTC('2023-12-31T00:00:00.000Z', 2)).toBe('2024-02-29T00:00:00.000Z');
+  });
+
+  it('Σ6 — μη αναγνώσιμη αφετηρία ⇒ null, ΠΟΤΕ NaN που ταξιδεύει', () => {
+    expect(addMonthsUTC('όχι ημερομηνία', 2)).toBeNull();
+    expect(addMonthsUTC('2026-08-20T00:00:00.000Z', 1.5)).toBeNull();
+  });
+
+  it('Σ7 — ο νόμος ΤΑΞΙΔΕΥΕΙ με τον αριθμό: το μήνυμα δεν μπορεί να αποκλίνει', () => {
+    // 🏆 Το `authority` είναι ΠΕΔΙΟ, όχι σχόλιο — γι' αυτό η οθόνη λέει ποια διάταξη
+    //    περιορίζει τον άνθρωπο. Τα MLS λένε «Invalid expiration date».
+    const exclusive = statutoryTermLimitFor(EXCLUSIVE_AGENCY);
+    expect(exclusive.authority).toContain('200');
+    expect(exclusive.jurisdiction).toBe('GR');
+    expect(statutoryTermLimitFor(OPEN_LISTING).authority).not.toBe(exclusive.authority);
   });
 });
 
@@ -259,6 +346,19 @@ describe('Ι — τι δεν επιτρέπεται να γεννηθεί', () =
             documentPath: null,
           },
         }),
+        NOW,
+      ),
+      // ⚠️ Αποκλειστική εντολή δώδεκα μηνών — ό,τι προσυμπλήρωνε η φόρμα ως τις
+      //    2026-08-29 (ADR-827 §8.9 α).
+      ...mandateInvariantViolations(
+        brokered({ expiresAt: '2027-08-20T12:00:00.000Z' }),
+        NOW,
+      ),
+      // 🔴 **Έγγραφο γραμμένο ΠΡΙΝ τη Φάση Α**: το `agreement` δεν υπήρχε ως πεδίο.
+      //    Το `as` είναι σκόπιμο και περιορισμένο — προσομοιώνει **τι κρατά η βάση**,
+      //    όχι τι δηλώνει ο τύπος. Χωρίς αυτή τη γραμμή ο κωδικός θα ήταν αδρανής.
+      ...mandateInvariantViolations(
+        brokered({ agreement: undefined as unknown as ListingAgreement }),
         NOW,
       ),
     ]);

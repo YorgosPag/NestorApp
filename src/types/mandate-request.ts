@@ -1,0 +1,419 @@
+/**
+ * @fileoverview **Η ΠΟΡΤΑ ΤΟΥ ΙΔΙΩΤΗ** — το αίτημα ανάθεσης, και **τι μαθαίνει το γραφείο**.
+ * @related ADR-827 §8 (GDPR) · §8.6 (`disclosedTo`) · §8.7 (το σχήμα) · §9 (η ανακάλυψη)
+ * @module types/mandate-request
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΔΥΟ ΣΧΗΜΑΤΑ, ΟΧΙ ΕΝΑ — ΚΑΙ Η ΔΙΑΦΟΡΑ ΤΟΥΣ ΕΙΝΑΙ Η ΟΛΗ ΑΠΟΦΑΣΗ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * {@link MandateRequest} είναι **ό,τι ξέρει ο διακομιστής**.
+ * {@link MandateRequestForAgency} είναι **ό,τι βλέπει το γραφείο όσο κρίνει**.
+ *
+ * Το `requestedByUserId` **υπάρχει** στο πρώτο και **δεν υπάρχει** στο δεύτερο. Δεν
+ * είναι επανάληψη του `PublicListing` — είναι η **ίδια απόφαση σε δεύτερο επίπεδο**:
+ * το Firestore δεν φιλτράρει πεδία στην ανάγνωση, οπότε εκεί η απομόνωση επιτυγχάνεται
+ * με **το τι γράφεται**· εδώ με **το τι συντίθεται**.
+ *
+ * ⛔ **ΓΙ' ΑΥΤΟ Η ΣΥΛΛΟΓΗ ΔΕΝ ΔΙΑΒΑΖΕΤΑΙ ΠΟΤΕ ΑΠΟ ΠΕΛΑΤΗ** — ούτε από το γραφείο.
+ *    Ένα `allow read` για τον παραλήπτη θα του έδινε το **ωμό** έγγραφο, δηλαδή την
+ *    ταυτότητα του ιδιώτη, όσο κλειστή κι αν είναι η προβολή από πάνω. `firestore.rules`
+ *    λέει `read: false` **και** `write: false`: και οι δύο πλευρές περνούν από τον
+ *    διακομιστή.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🏆 Η ΑΠΟΚΑΛΥΨΗ **ΥΠΟΛΟΓΙΖΕΤΑΙ**, ΔΕΝ ΚΑΤΑΓΡΑΦΕΤΑΙ (§8.6)
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Το **ISO/IEC TS 27560:2023** ζητά *record* + *receipt* — δηλαδή **δεύτερο βιβλίο**,
+ * που μπορεί να αποκλίνει από το τι όντως αποκαλύφθηκε. Σε τομέα όπου η απόκλιση
+ * λέγεται **ψευδής διαβεβαίωση**, αυτό είναι το σχήμα του **ADR-749**.
+ *
+ * Εδώ το *«τι είδε το γραφείο»* είναι **καθαρή συνάρτηση της κατάστασης**
+ * ({@link disclosedTo}), και τη ρωτούν **δύο**: ο διακομιστής όταν συνθέτει την προβολή
+ * *(τι επιτρέπεται να μπει)* και η οθόνη του ιδιώτη *(τι έχει φτάσει)*. **Η απόκλιση
+ * γίνεται δομικά αδύνατη, γιατί δεν υπάρχουν δύο πηγές να διαφωνήσουν.**
+ *
+ * ⛔ **ΚΑΜΙΑ** συλλογή `disclosure_log`, **ΚΑΝΕΝΑ** πεδίο `disclosedFields`.
+ */
+
+import type { ListingAgreement } from '@/types/listing-agreement';
+import { exceedsStatutoryTerm } from '@/types/owner-property-mandate';
+import type { MandateCompensation } from '@/types/owner-property-mandate';
+import type { PublicListing } from '@/types/public-listing';
+
+// =============================================================================
+// 1. ΠΟΙΟΣ ΞΕΚΙΝΗΣΕ — ο ΜΟΝΟΣ διαφοροποιητής των δύο δρόμων (Α1)
+// =============================================================================
+
+/**
+ * **Ποιος έκανε την πρώτη κίνηση.**
+ *
+ * 🔑 **Είναι ο ΜΟΝΟΣ διαφοροποιητής, και αυτό είναι η αρχή Α1.** Ο κατάλογος του §9
+ * και η πρόταση του γραφείου (Φ.Γ) καταλήγουν στην **ΙΔΙΑ** πράξη μετάβασης
+ * `self → brokered`, με τους **ίδιους** ελέγχους. Δύο δρόμοι που γράφουν ο καθένας τα
+ * δικά του πεδία είναι **ADR-749** — δύο βιβλία για ένα γεγονός.
+ *
+ * ⚠️ Αν κάποτε ένα σκέλος αποκτήσει **δικό του** πεδίο, η Α1 έχει ήδη σπάσει: η
+ * διάκριση οφείλει να μένει **προέλευση**, ποτέ **μηχανισμός**.
+ */
+export const MANDATE_REQUEST_INITIATORS = ['owner', 'agency'] as const;
+
+export type MandateRequestInitiator = (typeof MANDATE_REQUEST_INITIATORS)[number];
+
+export function isMandateRequestInitiator(
+  value: unknown,
+): value is MandateRequestInitiator {
+  return (
+    typeof value === 'string' &&
+    (MANDATE_REQUEST_INITIATORS as readonly string[]).includes(value)
+  );
+}
+
+// =============================================================================
+// 2. Η ΚΑΤΑΣΤΑΣΗ — τέσσερις τιμές, καμία «λήξη»
+// =============================================================================
+
+/**
+ * **Πού βρίσκεται το αίτημα.**
+ *
+ * 🔴 **ΔΕΝ ΥΠΑΡΧΕΙ `expired`, ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ.** Ένα αίτημα «λήγει» όταν η **εντολή
+ * που προτείνει** δεν μπορεί πια να ισχύσει — και αυτό **υπολογίζεται** από το
+ * `terms.expiresAt` ({@link isRequestActionable}). Αποθηκευμένο `expired` θα απαιτούσε
+ * **σαρωτή** που το γράφει, δηλαδή:
+ *
+ *   1. δεύτερο βιβλίο που μπορεί να **μη** τρέξει (ένα cron που σταμάτησε ⇒ αιτήματα
+ *      που φαίνονται ζωντανά ενώ είναι νεκρά), και
+ *   2. **δύο** απαντήσεις στο *«ισχύει ακόμη;»* — του πεδίου και του ρολογιού.
+ *
+ * Είναι το **ίδιο δόγμα** με το {@link disclosedTo} και με το `isMandateExpired`:
+ * *η κατάσταση που αποφασίζει είναι η κατάσταση που απαντά*.
+ *
+ * ⚠️ Το `withdrawn` **δεν** είναι πολυτέλεια: χωρίς αυτό, αίτημα που κανείς δεν
+ * απαντά κρατά την αγγελία δεσμευμένη χωρίς έξοδο — και η έξοδος του ιδιοκτήτη είναι
+ * ακριβώς ό,τι φυλά το `agencyRevokedAt` από την άλλη πλευρά.
+ */
+export const MANDATE_REQUEST_STATUSES = [
+  'pending',
+  'accepted',
+  'declined',
+  'withdrawn',
+] as const;
+
+export type MandateRequestStatus = (typeof MANDATE_REQUEST_STATUSES)[number];
+
+export function isMandateRequestStatus(value: unknown): value is MandateRequestStatus {
+  return (
+    typeof value === 'string' &&
+    (MANDATE_REQUEST_STATUSES as readonly string[]).includes(value)
+  );
+}
+
+// =============================================================================
+// 3. ΟΙ ΠΡΟΤΕΙΝΟΜΕΝΟΙ ΟΡΟΙ
+// =============================================================================
+
+/**
+ * **Οι όροι που προτείνονται** — ό,τι θα γίνει `BrokeredListingMandate` στην αποδοχή.
+ *
+ * 🔑 **Τα ΙΔΙΑ τρία πεδία, όχι παρόμοια.** Το `agreement` και το `expiresAt` είναι το
+ * ζεύγος που κρίνει η **δεύτερη πόρτα** (`setOwnerPropertyMandate`, §8.10 β)· η
+ * `compensation` είναι υποχρεωτική επειδή το **άρθρο 200 §2** την απαιτεί στη σύμβαση,
+ * και ο ιδιοκτήτης οφείλει να τη **δει πριν** πει «ναι».
+ *
+ * ⚠️ **Το `expiresAt` ΔΕΝ έχει προεπιλογή εδώ.** Παράγεται από το
+ * `defaultExpiryFor(agreement, fromISO)` — ποτέ σταθερά, ποτέ `setMonth(+n)`
+ * (§8.10 γ: **τρία** σπασμένα `addMonths` στο repo, το ένα έβγαζε «8 μήνες **και δύο
+ * ημέρες**»).
+ */
+export interface ProposedMandateTerms {
+  readonly agreement: ListingAgreement;
+  readonly compensation: MandateCompensation;
+  /** ISO. Παράγεται από `defaultExpiryFor`, κρίνεται από `exceedsStatutoryTerm`. */
+  readonly expiresAt: string;
+}
+
+// =============================================================================
+// 4. ΤΟ ΕΓΓΡΑΦΟ — ό,τι ξέρει ο ΔΙΑΚΟΜΙΣΤΗΣ
+// =============================================================================
+
+/** Το αίτημα, ολόκληρο. **Δεν φεύγει ποτέ από τον διακομιστή ως έχει.** */
+export interface MandateRequest {
+  /** `mreq_*` — ADR-017/N.6. */
+  readonly id: string;
+  /**
+   * **ΔΕΙΚΤΗΣ, ποτέ αντίγραφο** (§8.2). Το γραφείο βλέπει τη **δημόσια προβολή** αυτής
+   * της αγγελίας — ακριβώς ό,τι βλέπει ο κόσμος, ούτε ένα πεδίο παραπάνω.
+   *
+   * ⚠️ **Συνέπεια, δηλωμένη**: αγγελία σε `draft` **δεν** μπορεί να ανατεθεί. Δεν είναι
+   * περιορισμός που προσθέτουμε· είναι η **απουσία** του εγγράφου που θα διάβαζε το
+   * γραφείο.
+   */
+  readonly ownerPropertyId: string;
+  /** Ο ιδιώτης. 🔴 **ΔΕΝ υπάρχει στο {@link MandateRequestForAgency}.** */
+  readonly requestedByUserId: string;
+  readonly agencyCompanyId: string;
+  readonly initiatedBy: MandateRequestInitiator;
+  readonly status: MandateRequestStatus;
+  readonly terms: ProposedMandateTerms;
+  readonly requestedAt: string;
+  /** Το άνοιξε ο παραλήπτης — πρβλ. `viewedAt` της εντολής. `null` όσο δεν το είδε. */
+  readonly seenAt: string | null;
+  readonly decidedAt: string | null;
+  /**
+   * **Γεννιέται ΜΟΝΟ με την αποδοχή** (§8.4), στην ίδια ατομική πράξη. `null` όσο
+   * εκκρεμεί, `null` για πάντα αν απορρίφθηκε.
+   *
+   * 🏆 Γι' αυτό το ερώτημα *«πόσο κρατά τα στοιχεία το γραφείο που αρνήθηκε;»*
+   * **δεν γεννιέται**: δεν έλαβε ποτέ στοιχεία.
+   */
+  readonly clientContactId: string | null;
+}
+
+// =============================================================================
+// 5. Η ΠΡΟΒΟΛΗ — ό,τι βλέπει το ΓΡΑΦΕΙΟ όσο κρίνει
+// =============================================================================
+
+/**
+ * **Κλειστό σχήμα, ΧΩΡΙΣ πεδίο ταυτότητας.**
+ *
+ * 🔴 **Ο φρουρός είναι ΤΥΠΟΣ, όχι κανόνας** (§8.2): δεν «απαγορεύεται» να σταλεί όνομα
+ * — **δεν υπάρχει πεδίο να μπει**. Ίδια άμυνα με το `MandateCompensation` που δεν
+ * μπορεί να εκφραστεί στο `PublicListing`.
+ */
+export interface MandateRequestForAgency {
+  readonly id: string;
+  /** Η **δημόσια** προβολή της αγγελίας, τίποτα άλλο. */
+  readonly listing: PublicListing;
+  readonly terms: ProposedMandateTerms;
+  readonly requestedAt: string;
+  readonly initiatedBy: MandateRequestInitiator;
+}
+
+/**
+ * Ο φρουρός του κλειστού σχήματος — ίδιο κόλπο με `PublicListingOpenGaps`.
+ *
+ * ⚠️ Κάθε προσθήκη πεδίου στο {@link MandateRequestForAgency} είναι **απόφαση
+ * αποκάλυψης**, και διαβάζεται ως τέτοια στο diff.
+ */
+export type MandateRequestForAgencyOpenGaps = never;
+
+// =============================================================================
+// 6. 🏆 Η ΑΠΟΚΑΛΥΨΗ — καθαρή συνάρτηση, δύο ερωτητές, ΜΙΑ απάντηση (§8.6)
+// =============================================================================
+
+/**
+ * **Τι είδους δεδομένο.** Κλειστό σύνολο — ό,τι μπορεί ποτέ να φτάσει στο γραφείο.
+ */
+export const DISCLOSED_DATA = ['listing', 'terms', 'name', 'email', 'taxId'] as const;
+
+export type DisclosedDatum = (typeof DISCLOSED_DATA)[number];
+
+/**
+ * **Η ΝΟΜΙΚΗ ΒΑΣΗ — και γιατί ΔΕΝ αρκεί μια κλίμακα «επιπέδων»** (§8.1).
+ *
+ * Το ερώτημα γεννήθηκε ως δίπολο *«πριν/μετά»*· η μέτρηση το διέψευσε. Τα σκαλιά είναι
+ * **τρία**, και το τρίτο έχει **άλλη βάση**:
+ *
+ * | Σκαλί | Γεγονός | Βάση |
+ * |---|---|---|
+ * | Σ1 | ο ιδιώτης **ζητά** | **6§1β β΄ σκέλος** — προσυμβατικά μέτρα *«at the request of the data subject»* |
+ * | Σ2 | το γραφείο **δέχεται** | **6§1β α΄ σκέλος** — εκτέλεση |
+ * | Σ3 | η **σύμβαση** του άρθρου 200 | **6§1γ** — νομική υποχρέωση |
+ *
+ * 🔴 **Και η διαφορά ΔΕΝ είναι ταξινομική.** Η επεξεργασία υπό **6§1β** σηκώνει
+ * **φορητότητα** (άρθρο 20)· η υπό **6§1γ** όχι — και **δεν διαγράφεται** κατόπιν
+ * αιτήματος. Ένα σκαλάρ «επίπεδο αποκάλυψης» θα έχανε ακριβώς την πληροφορία που
+ * κάνει τη διαφορά, και θα έδινε **λάθος απάντηση σε αίτημα διαγραφής — με σιγουριά**.
+ * Γι' αυτό η {@link disclosedTo} επιστρέφει **δομή**, όχι λέξη.
+ */
+export const LAWFUL_BASES = [
+  '6-1-b-precontractual',
+  '6-1-b-performance',
+  '6-1-c',
+] as const;
+
+export type LawfulBasis = (typeof LAWFUL_BASES)[number];
+
+/** Ένα δεδομένο που **έχει φτάσει** στο γραφείο, με τη βάση του και τη μοίρα του. */
+export interface DisclosedItem {
+  readonly datum: DisclosedDatum;
+  readonly basis: LawfulBasis;
+  /**
+   * **Σβήνεται κατόπιν αιτήματος του υποκειμένου;**
+   *
+   * ⚠️ `false` **μόνο** για το `6-1-c`: εκεί το κρατά ο **ΚΞΧ** (άρθρο 30 §3
+   * Ν.4557/2018, **πέντε έτη**) — υποχρέωση **ποινική**, όχι εμπορική. Η πλατφόρμα
+   * δεν «επιλέγει» να το κρατήσει.
+   */
+  readonly erasable: boolean;
+}
+
+/** Η απάντηση του {@link disclosedTo}. */
+export interface DisclosureLevel {
+  /** Έχει γεννηθεί η εντολή; Καθορίζει **όλα** τα υπόλοιπα. */
+  readonly engaged: boolean;
+  readonly items: readonly DisclosedItem[];
+}
+
+/**
+ * ⚠️ **Σταθερές, όχι κατασκευή ανά κλήση** — ώστε δύο απαντήσεις για την ίδια
+ * κατάσταση να είναι **το ίδιο αντικείμενο**, όχι δύο ίσα.
+ */
+const PRE_CONTRACTUAL_ITEMS: readonly DisclosedItem[] = [
+  { datum: 'listing', basis: '6-1-b-precontractual', erasable: true },
+  { datum: 'terms', basis: '6-1-b-precontractual', erasable: true },
+];
+
+const ENGAGED_ITEMS: readonly DisclosedItem[] = [
+  ...PRE_CONTRACTUAL_ITEMS,
+  { datum: 'name', basis: '6-1-b-performance', erasable: true },
+  { datum: 'email', basis: '6-1-b-performance', erasable: true },
+  // 🔴 Ταξιδεύει με την **ίδια** πράξη της αποδοχής, γιατί εκείνη τη στιγμή γεννιέται
+  //    η σύμβαση που ο νόμος απαιτεί να το περιέχει (άρθρο 200 §2). **Δεν** έχει πεδίο
+  //    στο `MandateRequest`: ΑΦΜ σε εκκρεμές αίτημα είναι δεδομένο σε αναμονή διαρροής.
+  { datum: 'taxId', basis: '6-1-c', erasable: false },
+];
+
+/**
+ * **Τι έχει φτάσει στο γραφείο** — η **μία** απάντηση, για **δύο** ερωτητές (§8.6).
+ *
+ * | Ερωτά | Παίρνει |
+ * |---|---|
+ * | ο **διακομιστής**, όταν συνθέτει το {@link MandateRequestForAgency} | τι **επιτρέπεται** να μπει |
+ * | ο **ιδιώτης**, στην οθόνη του | τι **έχει φτάσει** |
+ *
+ * 🔑 **Η αποδοχή είναι το ΜΟΝΟ γεγονός που μετακινεί τη γραμμή.** `pending`,
+ * `declined`, `withdrawn` δίνουν **ταυτόσημη** απάντηση, και αυτό είναι το νόημα του
+ * §8.4: το γραφείο που αρνήθηκε **δεν έλαβε ποτέ** τίποτα του προσώπου.
+ */
+export function disclosedTo(request: MandateRequest): DisclosureLevel {
+  const engaged = request.status === 'accepted';
+  return {
+    engaged,
+    items: engaged ? ENGAGED_ITEMS : PRE_CONTRACTUAL_ITEMS,
+  };
+}
+
+/**
+ * **Έχει φτάσει αυτό το δεδομένο;** — για την οθόνη, ώστε να μη γράψει δεύτερη λογική.
+ */
+export function hasBeenDisclosed(
+  request: MandateRequest,
+  datum: DisclosedDatum,
+): boolean {
+  return disclosedTo(request).items.some((item) => item.datum === datum);
+}
+
+// =============================================================================
+// 7. ΤΙ ΕΙΝΑΙ ΑΚΟΜΗ ΖΩΝΤΑΝΟ — υπολογισμός, όχι σαρωτής
+// =============================================================================
+
+/**
+ * **Μπορεί ακόμη να κριθεί αυτό το αίτημα;**
+ *
+ * 🔴 **Δύο ερωτήσεις, μία απάντηση — και η δεύτερη είναι ΡΟΛΟΪ, όχι πεδίο**: εκκρεμεί
+ * *(κατάσταση)* **και** η εντολή που προτείνει δεν έχει ήδη λήξει *(χρόνος)*. Ένα
+ * αίτημα που προτείνει `expiresAt` στο παρελθόν είναι **νεκρό στην άφιξη**: αν το
+ * δεχόταν κάποιος, η **δεύτερη πόρτα** θα το απέρριπτε με `mandate-expiry-past`
+ * (§8.10 β) — άρα η οθόνη οφείλει να το ξέρει **πριν** το προσφέρει.
+ *
+ * ⚠️ Άκυρη ημερομηνία ⇒ **όχι ενεργό** (fail-closed). *Άγνωστο ≠ κενό*: το `NaN` δεν
+ * περνά ποτέ ως «δεν έληξε».
+ *
+ * 🔴 **ΚΑΙ Ο ΦΡΟΥΡΟΣ ΤΟΥ `NaN` ΔΕΝ ΓΡΑΦΕΤΑΙ — ΓΙΑΤΙ ΘΑ ΗΤΑΝ ΑΔΡΑΝΗΣ.** Η πρώτη γραφή
+ * είχε `if (Number.isNaN(expiry) || Number.isNaN(now)) return false;` **πριν** τη
+ * σύγκριση. Η μετάλλαξη που τον **αφαιρεί** βγήκε **ΠΡΑΣΙΝΗ** *(μετρημένο 2026-08-29,
+ * Μ3)*: κάθε σύγκριση με `NaN` απαντά ήδη `false`, άρα ο έλεγχος **δεν μπορούσε ποτέ να
+ * αλλάξει αποτέλεσμα**. Είναι ακριβώς ο *«αδρανής φρουρός»* που μετρά το ADR-749 §5 —
+ * γραμμή που **δείχνει** προσοχή χωρίς να **ασκεί** καμία, και που ο επόμενος
+ * αναγνώστης θα διάβαζε ως απόδειξη ότι το θέμα καλύφθηκε.
+ *
+ * ⚠️ **Η ασφάλεια εδώ είναι ιδιότητα της ΜΟΡΦΗΣ, και γι' αυτό η μορφή δεν αλλάζει**: το
+ * `expiry > now` απαντά `false` σε κάθε άγνωστο· το **λογικά ισοδύναμο** `!(expiry <=
+ * now)` απαντά **`true`** — δηλαδή «ζωντανό» για χαλασμένο έγγραφο. Η αναστροφή είναι
+ * η επικίνδυνη γραφή, και είναι αυτή που φυλά η άγκυρα `Ζ3`.
+ */
+export function isRequestActionable(
+  request: MandateRequest,
+  nowISOValue: string,
+): boolean {
+  if (request.status !== 'pending') return false;
+  return Date.parse(request.terms.expiresAt) > Date.parse(nowISOValue);
+}
+
+// =============================================================================
+// 8. ΤΑ ΑΜΕΤΑΒΛΗΤΑ — ΚΑΝΕΝΑΣ ΔΕΥΤΕΡΟΣ ΚΡΙΤΗΣ
+// =============================================================================
+
+/**
+ * **Τι μπορεί να είναι λάθος σε ένα αίτημα.**
+ *
+ * ⚠️ **ΔΕΝ επαναλαμβάνει τον νόμο** — ρωτά την ίδια αρχή με τη δεύτερη πόρτα
+ * (`exceedsStatutoryTerm` → `statutoryTermLimitFor`). Δεύτερο όριο γραμμένο εδώ θα
+ * ήταν ο **τρίτος** αριθμός για το ίδιο ερώτημα (ADR-749).
+ */
+export const MANDATE_REQUEST_INVARIANTS = [
+  /** Δείχνει σε αγγελία; Κενός δείκτης = αίτημα για το τίποτα. */
+  'request-listing-missing',
+  /** Δείχνει σε γραφείο; */
+  'request-agency-missing',
+  /** Το `expiresAt` δεν διαβάζεται ως ημερομηνία. */
+  'request-expiry-invalid',
+  /** Προτείνει εντολή που **έχει ήδη λήξει**. */
+  'request-expiry-past',
+  /** Προτείνει διάρκεια πάνω από το νόμιμο ανώτατο για **αυτό το είδος**. */
+  'request-term-exceeds-statute',
+  /**
+   * 🔴 Αποδοχή **χωρίς** επαφή, ή άρνηση **με** επαφή. Και τα δύο σπάνε το §8.4: η
+   * `cont_*` γεννιέται **μόνο** με την αποδοχή, στην **ίδια** ατομική πράξη.
+   */
+  'request-contact-inconsistent',
+] as const;
+
+export type MandateRequestInvariant = (typeof MANDATE_REQUEST_INVARIANTS)[number];
+
+/**
+ * **Ποια αμετάβλητα παραβιάζει;** — κενός πίνακας σημαίνει «κανένα».
+ *
+ * ⚠️ Επιστρέφει **όλα** όσα βρίσκει, όχι το πρώτο: ο άνθρωπος που διορθώνει θέλει τη
+ * λίστα, όχι μια σκυταλοδρομία. Ίδιο συμβόλαιο με το `mandateInvariantViolations`.
+ */
+export function mandateRequestInvariantViolations(
+  request: MandateRequest,
+  nowISOValue: string,
+): readonly MandateRequestInvariant[] {
+  const found: MandateRequestInvariant[] = [];
+
+  if (request.ownerPropertyId.trim() === '') found.push('request-listing-missing');
+  if (request.agencyCompanyId.trim() === '') found.push('request-agency-missing');
+
+  found.push(...expiryViolations(request, nowISOValue));
+
+  const hasContact = (request.clientContactId ?? '').trim() !== '';
+  if (hasContact !== (request.status === 'accepted')) {
+    found.push('request-contact-inconsistent');
+  }
+
+  return found;
+}
+
+/**
+ * Το σκέλος του χρόνου, χωριστά — ώστε ο έλεγχος να μένει κάτω από τις 40 γραμμές και
+ * η **σειρά** των δύο ερωτήσεων να είναι ορατή: άκυρη ημερομηνία **δεν** ελέγχεται
+ * περαιτέρω, γιατί κάθε σύγκριση με `NaN` απαντά `false` και θα σιωπούσε.
+ */
+function expiryViolations(
+  request: MandateRequest,
+  nowISOValue: string,
+): readonly MandateRequestInvariant[] {
+  const expiry = Date.parse(request.terms.expiresAt);
+  if (Number.isNaN(expiry)) return ['request-expiry-invalid'];
+
+  const found: MandateRequestInvariant[] = [];
+  if (expiry <= Date.parse(nowISOValue)) found.push('request-expiry-past');
+  if (exceedsStatutoryTerm(request.terms.agreement, request.requestedAt, request.terms.expiresAt)) {
+    found.push('request-term-exceeds-statute');
+  }
+  return found;
+}
