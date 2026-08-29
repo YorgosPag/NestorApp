@@ -464,12 +464,15 @@
       "mandate-client-missing": "The mandate does not name a client.",
       "mandate-expiry-invalid": "The expiry date cannot be read.",
       "mandate-expiry-past": "The expiry date is in the past.",
-      "mandate-attestation-not-confirmed": "The mandate attestation was not recorded correctly."
+      "mandate-attestation-not-confirmed": "The mandate attestation was not recorded correctly.",
+      "mandate-term-exceeds-statute": "The term exceeds the statutory maximum for this type of mandate.",
+      "mandate-agreement-invalid": "No valid type of mandate has been declared."
     },
     "formBlocker": {
       "place-unresolved": "Press Locate so the address resolves to a point on the map.",
       "mandate-client-unset": "Choose the client you are listing for.",
       "mandate-expiry-unset": "State the date the mandate runs until.",
+      "mandate-term-illegal": "The term exceeds the statutory maximum. Choose an earlier end date or a different type of mandate.",
       "account-required": "Sign in or create an account so your listing can be saved."
     },
     "lifecycle": {
@@ -536,7 +539,25 @@
       "clientPlaceholder": "Search contacts…",
       "clientHint": "The property owner, as held in your contacts.",
       "untilLabel": "The mandate runs until",
-      "untilHint": "The law gives twelve months when no other term is agreed.",
+      "untilHint": "Maximum term {months} months for this type of mandate — {authority}.",
+      "agreementLabel": "Type of mandate",
+      "agreementHint": "Determines what the owner may do alone, how many agencies may hold a mandate, and how long it may run.",
+      "agreementOptions": {
+        "exclusive-agency": "Exclusive agency, owner retains the right",
+        "exclusive-right-to-sell": "Exclusive right to sell",
+        "exclusive-right-to-lease": "Exclusive right to lease",
+        "open": "Open listing"
+      },
+      "agreementHints": {
+        "exclusive-agency": "You are the only agent, but the owner may sell on their own without owing a fee.",
+        "exclusive-right-to-sell": "You are owed a fee whoever finds the buyer, including the owner.",
+        "exclusive-right-to-lease": "The same, for letting.",
+        "open": "The owner may also instruct other agencies. A fee is owed only to whoever produces the result."
+      },
+      "commissionLabel": "Fee",
+      "commissionHint": "Freely negotiable. The owner sees it before approving, and it never appears on the public listing.",
+      "commissionPercentage": "Percentage of the price (%)",
+      "commissionVatIncluded": "Fee includes VAT",
       "viaLabel": "How you hold the mandate",
       "viaOwnerConsent": "Ask the owner now",
       "viaOwnerConsentHint": "We send them a link. The listing goes live once they answer yes.",
@@ -547,6 +568,65 @@
         "no-address": "The contact has no email — the owner was NOT notified.",
         "failed": "The notice to the owner was not sent."
       }
+    },
+    "showcase": {
+      "title": "Your agency's storefront",
+      "lead": "Say that you want to be found. Until you do, your agency appears nowhere — and that is the correct starting point.",
+      "aliasLabel": "Your address",
+      "aliasHint": "The link you hand out on a card, a sign or a referral. It is your workspace alias and is not changed from here.",
+      "nameLabel": "Business name",
+      "nameHint": "How you want people to see you. It is written explicitly for publication — nothing is copied automatically from your company record.",
+      "namePlaceholder": "The agency's business name",
+      "gemiLabel": "GEMI number",
+      "gemiHint": "The proof that the agency exists and is licensed. Without it the directory becomes names that merely claim to be agents.",
+      "gemiPlaceholder": "e.g. 123456789000",
+      "placeLabel": "Where you operate",
+      "placeHint": "Used only for neutral geographic ordering. There is no ranking, rating or paid placement.",
+      "noChannel": "The storefront publishes no phone number and no email. The only action it offers is a written request with a date and terms — as the law requires for a brokerage contract.",
+      "publish": "Publish to the directory",
+      "publishing": "Publishing…",
+      "publishedAt": "Published {date}",
+      "republish": "Update storefront",
+      "withdraw": "Withdraw from the directory",
+      "withdrawing": "Withdrawing…",
+      "withdrawHint": "Withdrawing erases the storefront. Your listings are not affected.",
+      "statusPublished": "You appear in the directory",
+      "statusNotPublished": "You appear nowhere",
+      "notAllowed": "The agency directory requires an approved brokerage capacity.",
+      "failed": "The action did not complete. Please try again.",
+      "rejection": {
+        "agency-profile-alias-missing": "Your workspace does not have an address yet.",
+        "agency-profile-name-missing": "Write the business name people will see.",
+        "agency-profile-gemi-missing": "The GEMI number is required for the directory."
+      }
+    },
+    "directory": {
+      "title": "Estate agencies",
+      "lead": "Agencies that chose, themselves, to be found here. The order is alphabetical: no ranking, no rating, no paid placement.",
+      "loading": "Loading directory…",
+      "empty": "No agency has published a showcase yet.",
+      "emptyHint": "When an agency declares it wants to be found, it will appear here.",
+      "failed": "We could not load the directory. Please try again shortly.",
+      "count": "{count, plural, one {# agency} other {# agencies}}",
+      "gemi": "GEMI {number}",
+      "open": "View this agency"
+    },
+    "profile": {
+      "loading": "Loading…",
+      "absentTitle": "There is no showcase at this address",
+      "absentLead": "This link does not match a published agency. It may not exist, or it may no longer be published.",
+      "absentAction": "See all agencies",
+      "failedTitle": "We could not show this agency",
+      "failedLead": "Something blocked the read. This does not mean the agency is gone — please try again shortly.",
+      "gemiLabel": "GEMI number",
+      "gemiHint": "The General Commercial Registry number is the proof that the agency exists and is licensed.",
+      "placeLabel": "Area of activity",
+      "placeUnknown": "Not declared",
+      "publishedAt": "Published since {date}",
+      "requestCta": "Ask them to take on your property",
+      "requestHint": "A written request with a date and terms will be drawn up. Nothing of yours is sent until the agency accepts.",
+      "noChannel": "This agency publishes no phone number and no email — by design. A brokerage contract is concluded in writing, and a phone call leaves no record that protects you.",
+      "backToDirectory": "All agencies"
     }
   }
 }
