@@ -291,3 +291,80 @@ export function containsWordSequence(
   }
   return false;
 }
+
+// ============================================================================
+// WRITTEN SHAPE (ADR-828 §1 — how a word was *written*, so a generated one can match)
+// ============================================================================
+
+/**
+ * How a word was **written** — everything that a canonical vocabulary entry cannot carry.
+ *
+ * The AutoFill series needs this because Excel parity means the output mirrors the shape of
+ * the input: dragging `ΙΑΝΟΥΑΡΙΟΣ` must produce `ΦΕΒΡΟΥΑΡΙΟΣ` and dragging `Ιανουάριος` must
+ * produce `Φεβρουάριος`. Case and accents are **mechanical**, so they are re-applied rather
+ * than stored twelve times over. (Greek grammatical case is *not* mechanical — `Ιανουαρίου`
+ * is unreachable from `Ιανουάριος` by any transform — so that one is stored, as a column of
+ * the vocabulary table itself.)
+ */
+export interface WrittenWordShape {
+  readonly casing: 'upper' | 'lower' | 'title' | 'mixed';
+  /** Did the original carry an accent? Greek capitals drop it by orthography, not by accident. */
+  readonly accented: boolean;
+}
+
+/** True when the string contains at least one letter — punctuation and digits case-fold to themselves. */
+function hasLetter(text: string): boolean {
+  return /\p{L}/u.test(text);
+}
+
+/**
+ * Read the written shape of a word.
+ *
+ * `'mixed'` is the honest answer for anything that is not one of the three regular shapes
+ * (`iPhone`, `McDonald`, `ΙΑΝουάριος`). It is not a failure code: it tells
+ * {@link applyWrittenWordShape} to leave the canonical form alone, because any guess would be
+ * a re-spelling of a word the user typed deliberately.
+ */
+export function writtenWordShape(word: string): WrittenWordShape {
+  const accented = stripAccents(word) !== word;
+  if (!hasLetter(word)) return { casing: 'mixed', accented };
+  if (word === word.toUpperCase()) return { casing: 'upper', accented };
+  if (word === word.toLowerCase()) return { casing: 'lower', accented };
+
+  const head = word.slice(0, 1);
+  const tail = word.slice(1);
+  const isTitle = head === head.toUpperCase() && tail === tail.toLowerCase();
+  return { casing: isTitle ? 'title' : 'mixed', accented };
+}
+
+/**
+ * Re-clothe a canonical vocabulary entry (`'Φεβρουάριος'`) in the shape of the seed.
+ *
+ * ⚠️ **THE ORDER IS THE CORRECTNESS: accents first, capitals second.** Measured on node v20:
+ *
+ * ```
+ * 'Ιανουάριος'.toUpperCase()               → 'ΙΑΝΟΥΆΡΙΟΣ'   ← keeps the accent (WRONG)
+ * stripAccents('Ιανουάριος').toUpperCase() → 'ΙΑΝΟΥΑΡΙΟΣ'   ← right
+ * ```
+ *
+ * Greek orthography drops the accent on capitals; JavaScript's default case mapping does not
+ * know that. `toLocaleUpperCase('el-GR')` does — but it **requires full ICU**, which a pure
+ * utility layer is not entitled to assume is present in every build and every test runner.
+ * So `'upper'` always strips, regardless of `accented`: there is no such thing as an accented
+ * Greek capital to preserve.
+ *
+ * The cost of the ICU-free choice, stated openly: `Μάιος` uppercases to `ΜΑΙΟΣ` where the
+ * orthography would prefer `ΜΑΪΟΣ` (diaeresis, not accent). This matches the spelling already
+ * used by the calendar vocabulary, so nothing regresses — but a native speaker will notice.
+ */
+export function applyWrittenWordShape(canonical: string, shape: WrittenWordShape): string {
+  if (shape.casing === 'mixed') return canonical;
+
+  // A seed written without accents wants its continuation without accents too — someone
+  // typing `ιανουαριος` is not going to welcome `φεβρουάριος` back.
+  const base = shape.accented ? canonical : stripAccents(canonical);
+
+  if (shape.casing === 'upper') return stripAccents(base).toUpperCase();
+  if (shape.casing === 'lower') return base.toLowerCase();
+  return toGreekTitleCase(base);
+}

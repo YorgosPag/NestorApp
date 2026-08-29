@@ -101,3 +101,44 @@ export function parseLocaleNumber(raw: string, opts: LocaleNumberOptions = {}): 
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : null;
 }
+
+/** How a number should be written back out — the mirror of what {@link parseLocaleNumber} reads. */
+export interface LocaleNumberFormat {
+  readonly decimalSeparator: DecimalSeparator;
+  readonly decimals: number;
+  /** Thousands grouping with the *other* separator: `1.200,50`. */
+  readonly grouped: boolean;
+}
+
+/**
+ * 🔴 ADR-828 §3 — The **inverse** of {@link parseLocaleNumber}: number → text, in the
+ * separator the author was already using.
+ *
+ * This module has always been able to *read* `12,50` and had no way to *write* it back. The
+ * gap mattered the moment AutoFill had to continue a series: a seed of `10,5` stepping by
+ * `0,5` would emit `11.5` — a dot in the middle of a comma column, i.e. the fill silently
+ * changing the convention of the user's own sheet.
+ *
+ * ⚠️ Deliberately **not** `Intl.NumberFormat`. That formats for a *locale*; this formats for
+ * a **document** — the separator is whatever the neighbouring cells already use, which may
+ * have nothing to do with the viewer's UI language. Routing through `Intl` would make the
+ * same table fill differently for two people looking at the same file.
+ */
+export function formatLocaleNumber(value: number, format: LocaleNumberFormat): string {
+  if (!Number.isFinite(value)) return '';
+
+  const fixed = Math.abs(value).toFixed(format.decimals);
+  const [whole, fraction] = fixed.split('.');
+  const grouped = format.grouped
+    ? whole.replace(/\B(?=(\d{3})+(?!\d))/g, OTHER_SEPARATOR[format.decimalSeparator])
+    : whole;
+
+  // The sign is read off the *rounded* magnitude, not the input: `-0.4` at zero decimals
+  // rounds to `0`, and `-0` is not a number anyone typed.
+  const isZero = /^0*$/.test(whole) && (fraction === undefined || /^0*$/.test(fraction));
+  const sign = value < 0 && !isZero ? '-' : '';
+
+  return fraction === undefined
+    ? `${sign}${grouped}`
+    : `${sign}${grouped}${format.decimalSeparator}${fraction}`;
+}
