@@ -25,13 +25,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { withAuth } from '@/lib/auth/middleware';
-import {
-  isBrokerageDenial,
-  requireBrokerageCapability,
-  type BrokerageAuthority,
-} from '@/lib/auth/brokerage-authority';
-import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
-import { readCompanyCapabilities } from '@/services/company/company-capabilities.reader';
+// 🔴 Ο φρουρός ζει στο **ΕΝΑ** σημείο (`lib/auth/brokerage-gate`), γιατί η Φάση Β του
+//    ADR-827 γέννησε **δεύτερη διεύθυνση** που κάνει την ίδια ερώτηση — δες §9.13.
+import { gateBrokerage, type BrokerageDeniedResponse } from '@/lib/auth/brokerage-gate';
 import type { AuthContext } from '@/lib/auth/types';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
@@ -82,54 +78,7 @@ type BrokeredResponse =
    * ⚠️ **Το `capabilityStatus` ταξιδεύει**: *«δεν δήλωσες ποτέ»* ≠ *«εκκρεμεί»* ≠
    * *«σου ανακλήθηκε»* — τρεις **διαφορετικές** θεραπείες στην οθόνη.
    */
-  | {
-      readonly error: 'BROKERAGE_NOT_ALLOWED';
-      readonly reason: string;
-      readonly capabilityStatus: string;
-    };
-
-/**
- * **Ο ΕΝΑΣ ΦΡΟΥΡΟΣ ΤΗΣ ΔΙΑΔΡΟΜΗΣ — ΓΙΑ ΚΑΙ ΤΑ ΔΥΟ ΡΗΜΑΤΑ** (ADR-824 Φάση 4).
- *
- * 🔑 **Ο κατάλογος ΕΙΝΑΙ κι αυτός η ρυθμιζόμενη δραστηριότητα.** Ο Ν. 4072/2012 δεν
- * ρυθμίζει μόνο τη *σύναψη* της εντολής — ρυθμίζει τη **μεσιτεία**, και το «τι εντολές
- * κρατά αυτό το γραφείο» είναι το χαρτοφυλάκιό της. Ένα γραφείο που δεν επιτρέπεται να
- * **γεννήσει** εντολή δεν έχει καμία να **διαβάσει**: η απάντηση για κάθε τέτοιο
- * γραφείο ήταν ούτως ή άλλως άδεια λίστα. Άρα το `403` δεν αφαιρεί δεδομένα, αφαιρεί
- * την **ψευδαίσθηση** ότι η πόρτα αφορά τον καλούντα.
- *
- * 🔴 **ΕΝΑ σχήμα άρνησης, ΕΝΑ σημείο.** Η πρώτη γραφή αντέγραψε το μπλοκ `403` στον
- * δεύτερο χειριστή. Δύο αντίγραφα σημαίνουν ότι μια μελλοντική αλλαγή στο σχήμα
- * *(π.χ. προσθήκη `currently_due` κατά Stripe, ADR-824 §5.1)* θα εφαρμοζόταν στο ένα
- * ρήμα και όχι στο άλλο — και ο πελάτης θα διάβαζε **δύο διαφορετικές** αρνήσεις από
- * την **ίδια** διεύθυνση. Ο έλεγχος αντιγραφής (N.18) το ονομάζει sibling clone.
- *
- * ⚠️ **Επιστρέφει την ΑΠΟΔΕΙΞΗ ή την ΑΠΑΝΤΗΣΗ** — ποτέ `boolean`. Ένα `true/false` θα
- * ανάγκαζε τη γραφή να ξανακατασκευάσει την απόδειξη, δηλαδή **δεύτερη κρίση** για το
- * ίδιο ερώτημα· και ο `createBrokeredListing` δέχεται **μόνο** απόδειξη (§6).
- */
-async function gateBrokerage(
-  adminDb: AdminFirestore,
-  companyId: string,
-): Promise<BrokerageAuthority | NextResponse> {
-  const authority = requireBrokerageCapability(
-    companyId,
-    await readCompanyCapabilities(adminDb, companyId),
-  );
-
-  if (isBrokerageDenial(authority)) {
-    return NextResponse.json(
-      {
-        error: 'BROKERAGE_NOT_ALLOWED',
-        reason: authority.reason,
-        capabilityStatus: authority.status,
-      } as const,
-      { status: 403 },
-    );
-  }
-
-  return authority;
-}
+  | BrokerageDeniedResponse;
 
 async function handler(
   request: NextRequest,

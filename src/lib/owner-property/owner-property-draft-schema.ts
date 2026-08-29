@@ -51,6 +51,8 @@
 
 import { z } from 'zod';
 
+import { placeRefSchema } from '@/lib/geo/place-ref-schema';
+
 import {
   PROPERTY_TYPES,
   type PropertyTypeCanonical,
@@ -119,10 +121,10 @@ const offer = z.discriminatedUnion('kind', [
  * φόρμας: κενή συμβολοσειρά εδώ θα ήταν **δείκτης προς το πουθενά** που περνά για
  * δεσμό — και θα ταξίδευε αυτούσιος στη δημόσια προβολή.
  */
-const placeRef = z.object({
-  landId: z.string().min(1),
-  buildingId: z.string().min(1).nullable(),
-});
+// 🔴 **ΜΙΑ ΚΡΙΣΗ ΓΙΑ ΕΝΑΝ ΤΥΠΟ** — το σχήμα μετακόμισε στο `lib/geo/place-ref-schema`
+//    όταν η βιτρίνα του γραφείου (ADR-827 §9.10) απέκτησε **το ίδιο** `PlaceRef`.
+//    Αφημένο ιδιωτικό εδώ, θα είχε γραφτεί δεύτερη φορά (N.18).
+const placeRef = placeRefSchema;
 
 /** Η θέση — η ίδια διακριτή ένωση με τον τύπο (Α5 §3). */
 const place = z.discriminatedUnion('kind', [
