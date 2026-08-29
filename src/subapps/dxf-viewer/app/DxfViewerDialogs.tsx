@@ -39,7 +39,7 @@ import {
   OpeningSchedulePdfHost, ThermalEnvelopeHost, BimScheduleHost, TopoRibbonHost, AdminLayerManagerPalette, ExternalReferencesPalette, ExternalReferencesAutoResolveHost, TitleBlockBindingPalette,
   ImportedMeshBoqHost,
   ImportedMeshMaterialMapHost,
-  DxfAiChatPanel, ColumnPerimeterConfirmDialog, GapCloseConfirmDialog, ColumnAdoptSizeDialog, ColumnBecomesWallDialog, ShearWallExtentDialog, SectionRelationshipDialog, ColumnBatchFillConfirmDialog, AutoDimensionOptionsDialog, DxfSymbolDetectConfirmDialog, ColumnPromoteConfirmDialog, HatchOverlapConfirmDialog, TableRangeOverwriteConfirmDialog, TableMergeDiscardConfirmDialog, TableInsertFunctionDialog, TableFunctionArgumentsDialog, TableFormatCellsDialogHost, PrintHost, ExportHost, StampHost, AiTitleBlockHost, RevisionsHost, TitleBlockLibraryDialogHost, ColumnDetailHost, FoundationDetailHost, BeamDetailHost,
+  DxfAiChatPanel, ColumnPerimeterConfirmDialog, GapCloseConfirmDialog, ColumnAdoptSizeDialog, ColumnBecomesWallDialog, ShearWallExtentDialog, SectionRelationshipDialog, ColumnBatchFillConfirmDialog, AutoDimensionOptionsDialog, DxfSymbolDetectConfirmDialog, ColumnPromoteConfirmDialog, HatchOverlapConfirmDialog, TableRangeOverwriteConfirmDialog, TableMergeDiscardConfirmDialog, TableInsertFunctionDialog, TableFunctionArgumentsDialog, TableFormatCellsDialogHost, AutoFillListsDialogHost, TableSortDialogHost, PrintHost, ExportHost, StampHost, AiTitleBlockHost, RevisionsHost, TitleBlockLibraryDialogHost, ColumnDetailHost, FoundationDetailHost, BeamDetailHost,
   SlabDetailHost, FloorManagementDialogHost, MatchPropertiesDialogHost,
 } from './dxf-viewer-lazy-components';
 
@@ -198,6 +198,10 @@ export function DxfViewerDialogs(props: DxfViewerDialogsProps): React.JSX.Elemen
             στόχο ΕΞΩ από την επιλογή (δεξί κλικ στο E5 με μαρκαρισμένο το B2:D4) και ο ξενιστής
             δεν έχει τρόπο να το μαντέψει. Δες την κεφαλίδα του host. */}
         <TableFormatCellsDialogHost />
+        {/* 🔴 ADR-828 Φ4β — ο διαχειριστής λιστών, όταν τον ζητά το «Σειρά…» του μενού συμπλήρωσης. */}
+        <AutoFillListsDialogHost />
+        {/* 🔴 ADR-828 Φ4β — η «Προσαρμοσμένη ταξινόμηση…» του μενού περιοχής. */}
+        <TableSortDialogHost />
         {/* ADR-763 Φ2 — «Ορίσματα συνάρτησης»: το «OK» του προηγούμενου ανοίγει αυτόν.
             Το `levelManager` είναι για τη **ζωντανή αποτίμηση** (Φ2.3): το `= 20` δίπλα σε
             κάθε όρισμα θέλει το μοντέλο του πίνακα, δηλαδή τη σκηνή. */}

@@ -731,7 +731,6 @@
         "delete": "Delete",
         "save": "Save",
         "cancel": "Cancel",
-        "importFromCells": "Import from selected cells",
         "nameLabel": "List name",
         "namePlaceholder": "e.g. Floors",
         "entriesLabel": "Entries — one per line",
@@ -747,8 +746,7 @@
           "too-few-entries": "At least {minEntries} entries are needed — one word has no next.",
           "too-many-entries": "The entries exceed {maxEntries}.",
           "entry-too-long": "An entry exceeds {maxEntryLength} characters.",
-          "too-many-lists": "You have reached {maxLists} lists. Delete one to add another.",
-          "no-selection": "Select cells in the table first."
+          "too-many-lists": "You have reached {maxLists} lists. Delete one to add another."
         }
       }
     }

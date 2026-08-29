@@ -98,6 +98,11 @@ export const TableInsertFunctionDialog = React.lazy(() => import('../ui/dialogs/
 // Μέχρι το §60 κάθε εκκινητής ζωγράφιζε τον δικό του — αδύνατο για συντόμευση, που δεν έχει
 // component. Gate-at-mount: ο host ακούει μόνο το ελαφρύ store.
 export const TableFormatCellsDialogHost = React.lazy(() => import('../ui/components/table-format-toolbar/format-cells-dialog/TableFormatCellsDialogHost').then(mod => ({ default: mod.TableFormatCellsDialogHost })));
+// 🔴 ADR-828 Φ4β — gate-at-mount: το δέντρο του διαχειριστή λιστών (φόρμα, κατάλογος,
+// συνδρομή στο `UserSettings`) φορτώνεται μόνο όταν κάποιος ζητήσει τον διάλογο.
+export const AutoFillListsDialogHost = React.lazy(() => import('../ui/components/auto-fill-lists/AutoFillListsDialogHost').then(mod => ({ default: mod.AutoFillListsDialogHost })));
+// 🔴 ADR-828 Φ4β — ο διάλογος «Προσαρμοσμένη ταξινόμηση…», gate-at-mount όπως τα αδέλφια του.
+export const TableSortDialogHost = React.lazy(() => import('../ui/components/table-sort/TableSortDialogHost').then(mod => ({ default: mod.TableSortDialogHost })));
 // ADR-763 Φ2 — «Ορίσματα συνάρτησης»: το δεύτερο βήμα της ίδιας εντολής, όπου η κλήση γεμίζει.
 //
 // 🔴 Ο ΜΟΝΟΣ ΔΙΑΛΟΓΟΣ ΤΟΥ ΑΡΧΕΙΟΥ ΜΕ PRELOAD — ΚΑΙ ΔΕΝ ΕΙΝΑΙ ΒΕΛΤΙΣΤΟΠΟΙΗΣΗ ΤΑΧΥΤΗΤΑΣ.

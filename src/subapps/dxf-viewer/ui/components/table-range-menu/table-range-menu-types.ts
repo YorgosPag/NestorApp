@@ -31,6 +31,7 @@ import type {
   TableMergeCommandId,
   TableMergeState,
 } from '../../../bim/table/table-range-merge-ops';
+import type { TableRangeMenuSortChildId } from './table-range-menu-commands';
 import type { TableCellRangeBounds } from '../../../bim/table/table-cell-range';
 
 /**
@@ -118,6 +119,17 @@ export interface TableRangeCommandActions {
   readonly onInsert: (bounds: TableCellRangeBounds) => void | Promise<void>;
   readonly onDelete: (bounds: TableCellRangeBounds) => void | Promise<void>;
   readonly onClearContents: (bounds: TableCellRangeBounds) => void | Promise<void>;
+  /**
+   * 🔴 ADR-828 Φ4β — **«Ταξινόμηση ▶»**: γρήγορη ταξινόμηση ή ο διάλογος.
+   *
+   * Παραμετρική ως προς τα όρια όπως οι έξι αδελφές της, και για τον ίδιο λόγο: το μενού
+   * επιβιώνει για την επόμενη εντολή, και ένα `Ctrl+Z` ενδιάμεσα πρέπει να σημαίνει «καμία
+   * πράξη» αντί για γραφή σε κελιά που δεν υπάρχουν πια.
+   */
+  readonly onSort: (
+    bounds: TableCellRangeBounds,
+    child: TableRangeMenuSortChildId,
+  ) => void | Promise<void>;
 }
 
 /**

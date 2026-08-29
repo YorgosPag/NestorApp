@@ -55,6 +55,8 @@ import {
   type TableRangeMenuCommandId,
   type TableRangeMenuEnabled,
   type TableRangeMenuEntry,
+  type TableRangeMenuSortChildId,
+  type TableRangeMenuSubmenuChild,
   type TableRangeMenuSubmenuEntry,
   type TableRangeMenuSubmenuId,
 } from './table-range-menu-commands';
@@ -82,6 +84,18 @@ export interface TableRangeMenuActions {
    * χρειάστηκε να θυμηθεί πού μπαίνει· η ημέρα που απέκτησε πράξη το άνοιξε **μόνο του**.
    */
   readonly onFormatCells: () => void;
+  /**
+   * 🔴 ADR-828 Φ4β — **«Ταξινόμηση ▶», το υπομενού που περίμενε γραμμένο**.
+   *
+   * ⚠️ **Προαιρετικό** επίτηδες, και αυτό είναι ο μηχανισμός: όταν η περιοχή δεν έχει τι να
+   * ταξινομήσει (μία γραμμή), ο καλών **δεν δίνει χειριστή** και ο πυροδότης μένει γκρίζος —
+   * ο **ίδιος** κανόνας που κρατά γκρίζες τις υπόλοιπες εντολές χωρίς πράξη, χωρίς δεύτερη
+   * σημαία `disabled` να ξεχαστεί κάπου.
+   *
+   * ⚠️ Το `'byColor'` / `'byFontColor'` **δεν** περνούν από εδώ ποτέ: δεν υπάρχει διάταξη
+   * χρωμάτων στο έργο, και μια σιωπηλή υποχώρηση σε αλφαβητική θα ήταν ψέμα στο όνομα του item.
+   */
+  readonly onSort?: (child: TableRangeMenuSortChildId) => void;
 }
 
 export interface TableRangeMenuItemsProps {
@@ -155,30 +169,60 @@ function commandHandlers(
  * item που δεν ανοίγει — δηλαδή ακριβώς το «κουμπί που δεν κάνει τίποτα» του Α17.
  */
 function RangeMenuSubmenu({
-  entry,
+  entry, onSort,
 }: {
   readonly entry: TableRangeMenuSubmenuEntry;
+  readonly onSort?: (child: TableRangeMenuSortChildId) => void;
 }): React.ReactElement {
   const { t } = useTranslation('dxf-viewer');
   const Icon = SUBMENU_ICONS[entry.id];
+  // 🔑 Ο **ίδιος** κανόνας μια στάθμη πιο μέσα: ένα παιδί ανοίγει μόνο αν υπάρχει
+  // χειριστής γι' αυτό. Το φίλτρο δεν έχει κανέναν, οπότε μένει ολόκληρο γκρίζο όπως ήταν.
+  const childHandler = (child: TableRangeMenuSubmenuChild): (() => void) | undefined =>
+    entry.id === 'sort' && onSort !== undefined && SORTABLE_CHILDREN.has(child.id)
+      ? () => onSort(child.id as TableRangeMenuSortChildId)
+      : undefined;
+  const isOpen = entry.children.some((child) => childHandler(child) !== undefined);
 
   return (
     <DropdownMenuSub>
-      <DxfMenuSubTrigger disabled className="opacity-40">
+      <DxfMenuSubTrigger disabled={!isOpen} className={isOpen ? undefined : 'opacity-40'}>
         <DxfMenuIcon><Icon size={ICON_SIZE} aria-hidden="true" /></DxfMenuIcon>
         <DxfMenuLabel>{t(entry.labelKey)}</DxfMenuLabel>
         <DxfMenuShortcut>{SUBMENU_ARROW}</DxfMenuShortcut>
       </DxfMenuSubTrigger>
       <DxfMenuSubContent>
-        {entry.children.map((child) => (
-          <DxfMenuItem key={child.id} disabled>
-            <DxfMenuLabel>{t(child.labelKey)}</DxfMenuLabel>
-          </DxfMenuItem>
-        ))}
+        {entry.children.map((child) => {
+          const handler = childHandler(child);
+          return (
+            <DxfMenuItem
+              key={child.id}
+              disabled={handler === undefined}
+              onSelect={handler}
+            >
+              <DxfMenuLabel>{t(child.labelKey)}</DxfMenuLabel>
+            </DxfMenuItem>
+          );
+        })}
       </DxfMenuSubContent>
     </DropdownMenuSub>
   );
 }
+
+/**
+ * 🔴 **Ποια παιδιά της «Ταξινόμησης» έχουν πράξη** — τρία από τα πέντε.
+ *
+ * Τα δύο που λείπουν (`byColor`, `byFontColor`) ταξινομούν κατά **χρώμα κελιού**, και το έργο
+ * δεν έχει διάταξη χρωμάτων: ποιο πράσινο έρχεται πριν από ποιο κόκκινο δεν είναι ερώτηση με
+ * απάντηση, είναι ερώτηση που ο άνθρωπος πρέπει να **δηλώσει** (στο Excel τη δηλώνει στον
+ * ίδιο διάλογο «Προσαρμοσμένη ταξινόμηση»). Μένουν γκρίζα, γραμμένα, στη θέση τους —
+ * ακριβώς όπως έμενε ολόκληρο αυτό το υπομενού μέχρι σήμερα.
+ */
+const SORTABLE_CHILDREN: ReadonlySet<string> = new Set<TableRangeMenuSortChildId>([
+  'ascending',
+  'descending',
+  'custom',
+]);
 
 /** «Επιλογές επικόλλησης:» — ετικέτα χωρίς αυλάκι εικονιδίου, ίδιο σχήμα με τον τίτλο. */
 function RangeMenuHeading({ labelKey }: { readonly labelKey: string }): React.ReactElement {
@@ -191,14 +235,15 @@ function RangeMenuHeading({ labelKey }: { readonly labelKey: string }): React.Re
 }
 
 function RangeMenuEntry({
-  entry, handlers, enabled,
+  entry, handlers, enabled, onSort,
 }: {
   readonly entry: TableRangeMenuEntry;
   readonly handlers: Readonly<Partial<Record<TableRangeMenuCommandId, () => void>>>;
   readonly enabled: TableRangeMenuEnabled;
+  readonly onSort?: (child: TableRangeMenuSortChildId) => void;
 }): React.ReactElement {
   if (entry.kind === 'heading') return <RangeMenuHeading labelKey={entry.labelKey} />;
-  if (entry.kind === 'submenu') return <RangeMenuSubmenu entry={entry} />;
+  if (entry.kind === 'submenu') return <RangeMenuSubmenu entry={entry} onSort={onSort} />;
 
   // 🔴 Ο ΕΝΑΣ κανόνας: χειριστής **και** μη-`false`. Ό,τι λείπει από τον χάρτη χειριστών δεν
   // μπορεί να ανοίξει, ό,τι απαγόρευσε ο καλών δεν μπορεί να ανοίξει — καμία τρίτη διαδρομή.
@@ -239,6 +284,7 @@ export function TableRangeMenuItems({
               entry={entry}
               handlers={handlers}
               enabled={enabled}
+              onSort={actions.onSort}
             />
           ))}
         </React.Fragment>

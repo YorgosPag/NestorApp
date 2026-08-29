@@ -211,6 +211,15 @@ const TableRangeContextMenuInner = forwardRef<TableRangeContextMenuHandle, Table
      * ξέρει σε ποια κελιά γράφει, γιατί τότε θα μπορούσε να κρατήσει μπαγιάτικα όρια. Τα όρια
      * τα δίνει ο {@link runOnRange} τη στιγμή του πατήματος, από τον **τρέχοντα** στόχο.
      */
+    /**
+     * 🔴 ADR-828 Φ4β — **έχει αυτή η περιοχή τι να ταξινομήσει;**
+     *
+     * Πάνω από μία γραμμή, αλλιώς όχι. Η ερώτηση ζει εδώ και όχι στη μηχανή γιατί είναι
+     * ερώτηση **όψης**: η μηχανή θα απαντούσε `already-sorted` (σωστά, μία γραμμή είναι πάντα
+     * ταξινομημένη) και το item θα ήταν ενεργό και άπρακτο — «κουμπί που δεν κάνει τίποτα».
+     */
+    const sortableRows = target !== null && target.bounds.lastRow > target.bounds.firstRow;
+
     const menuActions = useMemo<TableRangeMenuActions>(
       () => ({
         onCut: () => runOnRange(rangeActions.onCut),
@@ -230,8 +239,23 @@ const TableRangeContextMenuInner = forwardRef<TableRangeContextMenuHandle, Table
           ιδιοκτήτη): φέρει το ίδιο σημάδι συνεδρίας με τον διάλογο, άρα τα δύο συνυπάρχουν.
         */
         onFormatCells: () => runOnRange(formatActions.onOpenFormatCells),
+        /*
+          🔴 ADR-828 Φ4β — «Ταξινόμηση ▶»: **ο ίδιος** δρόμος εκτέλεσης με κάθε άλλη εντολή.
+          Το {@link runOnRange} κλείνει το μενού **πριν** εκτελέσει, που είναι απαραίτητο και
+          εδώ: το `custom` ανοίγει διάλογο, και με το `role="menu"` ζωντανό το `FocusScope` του
+          Radix θα τραβούσε πίσω κάθε εστίαση — δηλαδή ο άνθρωπος θα έβλεπε επιλογείς που **δεν
+          συμπληρώνονται με πληκτρολόγιο**. Το ίδιο μάθημα με τη «Μορφοποίηση κελιών…» (§61).
+
+          ⚠️ Το υπομενού είναι γκρίζο όταν δεν υπάρχει χειριστής — γι' αυτό δίνεται
+          **μόνο** όταν η περιοχή έχει τι να ταξινομήσει (πάνω από μία γραμμή). Χωρίς αυτό, ο
+          άνθρωπος θα πατούσε «Α→Ω» πάνω σε ένα κελί και δεν θα γινόταν τίποτα — ακριβώς το
+          «κουμπί που δεν κάνει τίποτα» του Α17.
+        */
+        onSort: sortableRows
+          ? (child) => runOnRange((bounds) => rangeActions.onSort(bounds, child))
+          : undefined,
       }),
-      [runOnRange, rangeActions, formatActions],
+      [runOnRange, rangeActions, formatActions, sortableRows],
     );
 
     return (

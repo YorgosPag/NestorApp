@@ -1475,6 +1475,28 @@
           "3": "range_lookup is a logical value: FALSE for an exact match, TRUE or omitted for an approximate match on a sorted first column."
         }
       }
+    },
+    "sortDialog": {
+      "title": "Custom sort",
+      "description": "Sort the range {range} by one or more criteria.",
+      "hasHeader": "First row is a header",
+      "columnLabel": "Column",
+      "orderLabel": "Order",
+      "ascending": "Ascending",
+      "descending": "Descending",
+      "byListLabel": "By list",
+      "naturalOrder": "Natural order",
+      "addLevel": "Add level",
+      "removeLevel": "Remove level",
+      "apply": "Sort",
+      "cancel": "Cancel",
+      "refusal": {
+        "stale-range": "The range no longer exists — try again.",
+        "no-criteria": "Pick a column inside the range.",
+        "merged-range": "The range contains merged cells. Unmerge them first.",
+        "already-sorted": "The range is already sorted this way.",
+        "target-missing": "The table is no longer reachable."
+      }
     }
   },
   "scene": {

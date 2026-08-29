@@ -24,7 +24,6 @@ export const AUTO_FILL_LISTS_KEYS = {
   delete: `${PREFIX}.delete`,
   save: `${PREFIX}.save`,
   cancel: `${PREFIX}.cancel`,
-  importFromCells: `${PREFIX}.importFromCells`,
   nameLabel: `${PREFIX}.nameLabel`,
   namePlaceholder: `${PREFIX}.namePlaceholder`,
   entriesLabel: `${PREFIX}.entriesLabel`,

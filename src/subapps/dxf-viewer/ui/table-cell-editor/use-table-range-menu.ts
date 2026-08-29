@@ -52,6 +52,8 @@ import {
 // 🔴 ADR-739 §61 — η **πέμπτη** υποδοχή του διαλόγου «Μορφοποίηση κελιών», και η κανονική του
 // Excel. Η υποδοχή δεν ζωγραφίζει τίποτα: λέει `open(…)` με τον στόχο του κανόνα Α22.
 import { openTableFormatCellsDialog } from '../../state/table-format-cells-dialog-store';
+import { openTableSortDialog } from '../../state/table-sort-dialog-store';
+import { applyTableSort } from '../../bim/table/table-sort-plan';
 import { resolveTableStyle } from '../../bim/table/table-entity-geometry';
 import { getAllLayers } from '../../stores/LayerStore';
 import { useLiveTableMutation } from './use-table-model-commit';
@@ -385,6 +387,36 @@ export function useTableRangeMenu(params: UseTableRangeMenuParams): TableRangeMe
         // πάνω, δηλαδή ο κανόνας Α22 αυτούσιος (στόχος τα όρια του δεξιού κλικ, όχι η επιλογή).
         // Χωρίς καρτέλα **επίτηδες**: το Excel ανοίγει στην τελευταία που είδε ο χρήστης.
         onOpenFormatCells: (bounds) => openTableFormatCellsDialog({ target: formatTarget(bounds) }),
+        /*
+          🔴 ADR-828 Φ4β — **«Ταξινόμηση ▶», τρία παιδιά με πράξη.**
+
+          Ο **ίδιος** `formatTarget` και ο ίδιος κανόνας Α22 με τη μορφοποίηση: ταξινομούνται
+          τα όρια που άνοιξε το δεξί κλικ, όχι η ζωντανή επιλογή.
+
+          ⚠️ Η γρήγορη ταξινόμηση (Α→Ω, Ω→Α) διαβάζει την **πρώτη στήλη της περιοχής** και
+          **δεν** μαντεύει «τρέχουσα περιοχή» γύρω από ένα κελί, όπως κάνει το Excel. Η
+          μαντεψιά εκείνη είναι δική της μηχανή («current region»), και μια πρόχειρη εκδοχή
+          της θα ταξινομούσε σιωπηλά **περισσότερα κελιά από όσα βλέπει μαρκαρισμένα ο
+          άνθρωπος** — δηλαδή θα μετακινούσε δεδομένα εκτός οθόνης. Χωρίς μαρκαρισμένη
+          περιοχή πολλών γραμμών, το υπομενού μένει γκρίζο (δες `menuCommands`).
+
+          ⚠️ Η κεφαλίδα εδώ είναι **`false`**: το δεξί κλικ σε μαρκαρισμένη περιοχή σημαίνει
+          «ταξινόμησε ό,τι μάρκαρα». Ο διακόπτης κεφαλίδας ζει στον διάλογο, όπου ο άνθρωπος
+          τον βλέπει και τον αλλάζει.
+        */
+        onSort: (bounds, child) => {
+          if (child === 'custom') {
+            openTableSortDialog({ target: formatTarget(bounds), range: bounds });
+            return;
+          }
+          applyFormat((model) =>
+            applyTableSort(model, {
+              range: bounds,
+              criteria: [{ columnIndex: bounds.firstCol, descending: child === 'descending' }],
+              hasHeader: false,
+            }),
+          );
+        },
       },
       /*
         🔴 §54 — οι **έξι εντολές δεδομένων**, παραμετρικές ως προς τα όρια για τον ίδιο λόγο
