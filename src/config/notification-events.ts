@@ -78,6 +78,20 @@ export const NOTIFICATION_EVENT_TYPES = {
    * Το **ποια** απάντηση το λέει το κλειδί τίτλου.
    */
   PROPERTIES_MANDATE_DECIDED: 'properties.mandateDecided',
+  /**
+   * ADR-827 §9.21 — **το γραφείο απάντησε στο αίτημα ανάθεσης**, ναι ή όχι.
+   *
+   * 🔴 **ΞΕΧΩΡΙΣΤΟ ΓΕΓΟΝΟΣ ΑΠΟ ΤΟ `PROPERTIES_MANDATE_DECIDED`, ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ.**
+   * Ο αγωγός είναι **αντίστροφος**: εκείνο πάει *γραφείο ← ιδιοκτήτης*, αυτό
+   * *ιδιώτης ← γραφείο*. Ο διακόπτης προτίμησης όμως **ανήκει στον παραλήπτη** —
+   * δανεισμός του ίδιου γεγονότος θα σήμαινε ότι ο ιδιώτης φιλτράρεται από ρύθμιση
+   * που ο **μεσίτης** γύρισε, ή το αντίστροφο. Δύο ακροατήρια, δύο διακόπτες.
+   *
+   * 🔑 **Ένα γεγονός για τις ΤΡΕΙΣ απαντήσεις, όχι τρία**: ο διακόπτης ρωτά *«θες να
+   * μαθαίνεις τι απάντησε το γραφείο;»*. Άνθρωπος που θέλει το «ναι» και όχι το «όχι»
+   * δεν είναι σενάριο που υπάρχει. Το **ποια** απάντηση το λέει το κλειδί τίτλου.
+   */
+  PROPERTIES_MANDATE_REQUEST_ANSWERED: 'properties.mandateRequestAnswered',
   // Tasks Events
   TASKS_DUE_TODAY: 'tasks.dueToday',
   TASKS_OVERDUE: 'tasks.overdue',
@@ -202,6 +216,12 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_MANDATE_DECIDED]: {
     category: 'properties',
     settingKey: 'mandateDecided',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
+  },
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_MANDATE_REQUEST_ANSWERED]: {
+    category: 'properties',
+    settingKey: 'mandateRequestAnswered',
     isMandatory: false,
     defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
   },

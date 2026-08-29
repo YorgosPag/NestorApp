@@ -122,6 +122,17 @@ export interface PropertiesNotificationSettings {
    * μια αγγελία που εξαφανίστηκε χωρίς να ξέρει γιατί.
    */
   mandateDecided: boolean;
+  /**
+   * 🎯 ADR-827 §9.21 — «**το γραφείο δέχτηκε**» / «**σου ζητά να ξαναστείλεις**» /
+   * «**αρνήθηκε**».
+   *
+   * ⚠️ **Προεπιλογή `true`, με τον ίδιο κανόνα**: ειδοποίησε για ό,τι ο χρήστης **δεν
+   * μπορεί να δει μόνος του**. Ο ιδιώτης **δομικά δεν μπορεί** να διαβάσει το αίτημά
+   * του — το `mandate_requests` έχει `read: false` **και για εκείνον**. Με προεπιλογή
+   * `false` θα έστελνε αίτημα σε κουτί και δεν θα μάθαινε **ποτέ** την απάντηση,
+   * ακριβώς η κατάσταση που ολόκληρη η Φάση Β ήρθε να τερματίσει.
+   */
+  mandateRequestAnswered: boolean;
 }
 
 /**
@@ -308,6 +319,7 @@ export const DEFAULT_PROPERTIES_SETTINGS: PropertiesNotificationSettings = {
   newBuilding: true,
   demandInterest: true,
   mandateDecided: true,
+  mandateRequestAnswered: true,
 };
 
 /**

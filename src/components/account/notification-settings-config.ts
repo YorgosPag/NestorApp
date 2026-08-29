@@ -71,6 +71,10 @@ export const CATEGORY_CONFIGS: CategoryConfig[] = [
       // ADR-777 §8.34 — «ο πελάτης απάντησε στην εντολή». Ίδιος λόγος με το από πάνω:
       // διακόπτης χωρίς γραμμή εδώ είναι διακόπτης που **κανείς δεν μπορεί να γυρίσει**.
       { key: 'mandateDecided', labelKey: 'account.notificationSettings.categories.properties.mandateDecided' },
+      // ADR-827 §9.21 — «το γραφείο απάντησε στο αίτημά σου». Ίδιος λόγος με τα δύο
+      // από πάνω: διακόπτης χωρίς γραμμή εδώ είναι διακόπτης που **κανείς δεν μπορεί
+      // να γυρίσει** (ADR-749 §5).
+      { key: 'mandateRequestAnswered', labelKey: 'account.notificationSettings.categories.properties.mandateRequestAnswered' },
     ],
   },
   {
