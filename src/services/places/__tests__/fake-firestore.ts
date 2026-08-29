@@ -169,6 +169,52 @@ export class FakeDocRef {
   }
 
   /**
+   * 🔴 **ΕΛΕΙΠΕ — ΚΑΙ ΕΙΝΑΙ Η ΠΕΜΠΤΗ ΕΜΦΑΝΙΣΗ ΤΟΥ ΙΔΙΟΥ ΣΧΗΜΑΤΟΣ** (ADR-827 §9.13).
+   *
+   * Ο γραφέας του κύκλου ζωής της ικανότητας
+   * (`services/company/organization-capability.service.ts`) κάνει **μόνο** `update()`
+   * με **μονοπάτι πεδίου** — και επειδή ο πλαστός δεν το είχε, **καμία** άγκυρα δεν
+   * μπορούσε να τρέξει πάνω του: μηδέν αρχεία test τον ανέφεραν, δηλαδή ο ρυθμιστικός
+   * κύκλος ζωής ήταν **αδοκίμαστος** χωρίς να το δηλώνει τίποτα.
+   *
+   * 🔑 **ΤΟ ΜΟΝΟΠΑΤΙ ΠΕΔΙΟΥ ΕΙΝΑΙ ΤΟ ΟΛΟ ΝΟΗΜΑ, ΟΧΙ ΛΕΠΤΟΜΕΡΕΙΑ.** Το
+   * `update({ 'capabilities.brokerage_listings': record })` **δεν** γράφει κλειδί με
+   * τελεία: γράφει **εμφωλευμένα**, **διατηρώντας τα αδέλφια**. Ένας πλαστός με σκέτο
+   * `Object.assign` θα κρατούσε `settings` και `plan` κατά τύχη (γιατί δεν τα αγγίζει)
+   * αλλά θα έφτιαχνε κλειδί `"capabilities.brokerage_listings"` — και κάθε ανάγνωση
+   * μέσω {@link readPath} θα έβρισκε `undefined`. Δηλαδή **ο πλαστός θα δοκίμαζε
+   * γραφή που η παραγωγή δεν κάνει.**
+   *
+   * ⚠️ **Πετά όταν το έγγραφο ΔΕΝ υπάρχει** — όπως το Admin SDK (`NOT_FOUND`). Ο
+   * γραφέας βασίζεται σε αυτό: ρωτά πρώτα `get()` και επιστρέφει `absent`. Ένας
+   * πλαστός που «δημιουργούσε» σιωπηλά θα έκρυβε ακριβώς αυτόν τον κλάδο.
+   */
+  async update(patch: Doc): Promise<void> {
+    const current = this.bucket.get(this.id);
+    if (current === undefined) throw new Error(`NOT_FOUND: ${this.id}`);
+
+    // ⚠️ Αντίγραφο, ποτέ επιτόπια μετάλλαξη: οι άγκυρες κρατούν στιγμιότυπα από
+    //    προηγούμενες αναγνώσεις, και ένα κοινόχρηστο αντικείμενο θα τα άλλαζε
+    //    αναδρομικά — πράσινο test για κατάσταση που δεν υπήρξε ποτέ.
+    const next: Doc = structuredClone(current);
+
+    for (const [path, value] of Object.entries(patch)) {
+      const keys = path.split('.');
+      const leaf = keys.pop() as string;
+      let node = next;
+      for (const key of keys) {
+        const child = node[key];
+        if (child === null || typeof child !== 'object') node[key] = {};
+        node = node[key] as Doc;
+      }
+      node[leaf] = value;
+    }
+
+    this.bucket.set(this.id, next);
+    this.db.countWrite();
+  }
+
+  /**
    * 🔴 **ΕΛΕΙΠΕ, ΚΑΙ Η ΑΠΟΥΣΙΑ ΤΟΥ ΕΚΡΥΒΕ ΜΙΣΗ ΣΥΜΠΕΡΙΦΟΡΑ** (§8.33).
    *
    * Ο γραφέας της δημόσιας προβολής κάνει **δύο** πράξεις: γράφει όταν η αγγελία
