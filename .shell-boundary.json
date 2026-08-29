@@ -37,6 +37,10 @@
     {
       "module": "src/services/realtime/hooks/usePublicListings.ts",
       "names": ["usePublicListings", "usePublicListing", "useListingLedger"]
+    },
+    {
+      "module": "src/services/realtime/hooks/usePublicAgencies.ts",
+      "names": ["usePublicAgencies", "usePublicAgency"]
     }
   ],
   "$publicDataHooksWhy": "Η ΔΕΥΤΕΡΗ, ΑΝΕΞΑΡΤΗΤΗ ερώτηση (Κ2): «τι κάνει μια επιφάνεια δημόσια;» — ο ΚΑΤΑΝΑΛΩΤΗΣ της, όχι ο φάκελός της. Χωρίς αυτό, «μετακίνησα τη δημόσια σελίδα στο (app)» θα ήταν αυτο-συνεπές και η πύλη ΠΡΑΣΙΝΗ πάνω στο ίδιο το ελάττωμα. ⚠️ Το `computeListingLedger` του ΙΔΙΟΥ module ΔΕΝ είναι εδώ, μετρημένα: είναι καθαρή συνάρτηση και τη χρησιμοποιεί το ΕΣΩΤΕΡΙΚΟ /test-harness/listing-shapes, που νόμιμα φοράει κέλυφος. Ένα αντιδραστικό hook διαβάζει τη δημόσια προβολή· μια καθαρή συνάρτηση απλώς υπολογίζει."
