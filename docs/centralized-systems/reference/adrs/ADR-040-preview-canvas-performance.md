@@ -6277,3 +6277,26 @@ pan/zoom ⇒ χρειάζονται `transform`, που είναι **υψηλή�
 και αυτό είναι σωστό: ο φρουρός δεν επιτρέπεται να κρίνει μόνος του τι είναι «αθώο».
 
 **Files**: MOD `components/dxf-layout/canvas-layer-stack-types.ts` (import type only).
+
+## 2026-08-29 — ADR-828 §7.2: το μενού του δεξιού συρσίματος μπαίνει ως **overlay χωρίς props** (CHECK 6B stage)
+
+Νέο mount στο `CanvasSectionOverlays`, **μηδέν** νέα συνδρομή στον orchestrator. Το
+`TableFillOptionsMenu` δεν παίρνει props — και είναι απόφαση, όχι συντόμευση: ολόκληρη η
+πράξη (πηγή, στόχος, και η **ΜΙΑ** διαδρομή εγγραφής) ζει ήδη στη χειρονομία που μόλις
+τελείωσε και ταξιδεύει μαζί με τον στόχο. Δεύτερο μονοπάτι props θα σήμαινε **δεύτερη**
+ανάγνωση της σκηνής και δεύτερη διαδρομή εγγραφής για το ίδιο γέμισμα, δηλαδή δύο ευκαιρίες
+να διαφωνήσει το μενού με τη σύρση που είδε ο άνθρωπος.
+
+Ίδιο κριτήριο με τα δύο υπάρχοντα φύλλα χωρίς props της ίδιας επιφάνειας
+(`TableResizeReadoutOverlay`, `TableLinkPicker`): ο orchestrator δεν μαθαίνει τίποτα που δεν
+χρειάζεται.
+
+⚠️ **Η θύρα κρατά προσαρμογέα, όχι το handle** — κανόνας #2 αυτού του ADR («event-time reads
+via getter, όχι snapshot»), μία στάθμη πιο μέσα: το `useImperativeHandle` **ξαναφτιάχνει** το
+αντικείμενο όποτε αλλάξουν οι εξαρτήσεις του, οπότε θύρα που κρατούσε το handle θα κρατούσε
+στιγμιότυπο. Ο προσαρμογέας διαβάζει το `ref.current` **τη στιγμή του ανοίγματος**.
+
+**Files**: MOD `components/dxf-layout/CanvasSectionOverlays.tsx` (+1 import, +1 mount)· NEW
+`ui/components/TableFillOptionsMenu.tsx`, `ui/components/table-fill-menu/` (διάταξη + στοιχεία),
+`ui/table-cell-editor/table-fill-menu-port.ts` (η θύρα — ο δρομολογητής δεξιού κλικ
+**καταπνίγει** κάθε μενού μετά από δεξί σύρσιμο, άρα η χειρονομία το ανοίγει μόνη της).

@@ -60,6 +60,9 @@ import {
   type TableTextToolbarHandle,
 } from '../../ui/components/TableTextMiniToolbar';
 import { TableLinkPicker } from '../../ui/components/TableLinkPicker';
+// 🔴 ADR-828 §7.2 — μενού δεξιού συρσίματος της λαβής συμπλήρωσης. **Χωρίς props**:
+// όλη η πράξη ταξιδεύει με τον στόχο — δες την κεφαλίδα του component.
+import { TableFillOptionsMenu } from '../../ui/components/TableFillOptionsMenu';
 import { SelectionCyclingPopover } from '../../systems/selection/SelectionCyclingPopover';
 // ADR-659 — overlap «⧉ N» badge (store-driven leaf, no props).
 import { OverlapCountBadge } from '../../systems/selection/OverlapCountBadge';
@@ -210,6 +213,10 @@ export const CanvasSectionOverlays: React.FC<CanvasSectionOverlaysProps> = (p) =
           του πίνακα χωρίς ποντίκι. Χωρίς προπ, όπως το tooltip: όλη η κατάσταση έρχεται από
           το χαμηλόσυχνο store της, άρα ο orchestrator δεν αποκτά συνδρομή (ADR-040). */}
       <TableLinkPicker />
+      {/* 🔴 ADR-828 §7.2 — δεξί **σύρσιμο** της λαβής: αντιγραφή / σειρά / μόνο μορφή /
+          χωρίς μορφή, και οι τέσσερις μονάδες ημερολογίου. Η χειρονομία το ανοίγει μόνη της
+          (θύρα), γιατί ο δρομολογητής δεξιού κλικ **καταπνίγει** κάθε μενού μετά από δεξί σύρσιμο. */}
+      <TableFillOptionsMenu />
     </>
   );
 };

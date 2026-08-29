@@ -1243,6 +1243,21 @@
       "autoContrastHint": "White or black — whichever stands out against the background",
       "dialogTitle": "Text colour"
     },
+    "fillMenu": {
+      "items": {
+        "copyCells": "Copy Cells",
+        "fillSeries": "Fill Series",
+        "formatOnly": "Fill Formatting Only",
+        "withoutFormat": "Fill Without Formatting",
+        "fillDays": "Fill Days",
+        "fillWeekdays": "Fill Weekdays",
+        "fillMonths": "Fill Months",
+        "fillYears": "Fill Years",
+        "linearTrend": "Linear Trend",
+        "growthTrend": "Growth Trend",
+        "series": "Series..."
+      }
+    },
     "fillColor": {
       "trigger": "Fill colour",
       "openMenu": "Fill colour palette",
