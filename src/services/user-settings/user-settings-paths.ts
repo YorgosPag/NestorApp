@@ -11,6 +11,7 @@
  */
 
 import type {
+  AutoFillListsSlice,
   CadTogglesSettingsSlice,
   CursorSettingsSlice,
   DxfSettingsSlice,
@@ -26,6 +27,7 @@ export type SliceValueMap = {
   'dxfViewer.dxfSettings': DxfSettingsSlice;
   'dxfViewer.snap': SnapSettingsSlice;
   'dxfViewer.cadToggles': CadTogglesSettingsSlice;
+  'dxfViewer.autoFillLists': AutoFillListsSlice;
 };
 
 /** Read a slice from the in-memory doc by its `dxfViewer.<key>` path. */

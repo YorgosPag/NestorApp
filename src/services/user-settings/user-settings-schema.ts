@@ -125,6 +125,60 @@ const cadTogglesSchema = z.object({
   snapStep: z.number().min(0).optional(),
 });
 
+// ─── Auto-fill custom lists (ADR-828 Φ4β) ───────────────────────────────
+
+/**
+ * 🔴 ADR-828 §5 — **ΤΑ ΟΡΙΑ ΕΙΝΑΙ ΔΗΛΩΜΕΝΑ, ΓΙΑ ΝΑ ΜΗΝ ΚΟΒΕΙ ΚΑΝΕΙΣ ΣΙΩΠΗΛΑ.**
+ *
+ * Το Excel αποθηκεύει *«probably the first 255 entries»* μιας προσαρμοσμένης λίστας και
+ * **δεν το λέει σε κανέναν**: η εκατοστή πέμπτη εγγραφή απλώς λείπει την επόμενη φορά.
+ * Εδώ το «πολύ μεγάλο» γίνεται **σφάλμα επικύρωσης** — ή χωρά, ή ο άνθρωπος το μαθαίνει.
+ *
+ * 🔑 **Εξάγονται** επίτηδες: το ίδιο νούμερο που απορρίπτει η επικύρωση πρέπει να είναι
+ * αυτό που δείχνει η διεπαφή πριν το πατήσει ο άνθρωπος. Δύο χειρόγραφα νούμερα θα
+ * απέκλιναν, και η απόκλιση θα φαινόταν ως «το κουμπί δεν κάνει τίποτα».
+ *
+ * ⚠️ Το ανώτατο γινόμενο (20 × 200 × 120 ≈ 480 KB) μένει κάτω από το **1 MiB ανά έγγραφο**
+ * του Firestore με περιθώριο για τα υπόλοιπα slices. Αν κάποτε ανέβουν, ανεβαίνουν
+ * με **νέο υπολογισμό**, όχι με αίσθηση.
+ */
+export const AUTO_FILL_LIST_LIMITS = {
+  /** Πόσες λίστες μπορεί να έχει ένας άνθρωπος. */
+  maxLists: 20,
+  /** Πόσες εγγραφές μία λίστα. */
+  maxEntries: 200,
+  /**
+   * 🔑 **Δύο** και όχι μία: μια λίστα με ένα όνομα δεν έχει «επόμενο» — είναι
+   * αντιγραφή μεταμφιεσμένη σε σειρά, και η αναδίπλωσή της θα έγραφε την ίδια λέξη ξανά και ξανά.
+   */
+  minEntries: 2,
+  /** Μήκος μιας εγγραφής σε χαρακτήρες. */
+  maxEntryLength: 120,
+  /** Μήκος του ονόματος της λίστας. */
+  maxNameLength: 60,
+} as const;
+
+/**
+ * Μία προσαρμοσμένη λίστα.
+ *
+ * 🔑 **Η ταυτότητα είναι το όνομα** — κανένα συνθετικό `id`. Γίνεται γιατί μετά τον
+ * Δρόμο Α (ADR-828 §Φ4β) **καμία σειρά δεν κρατά δείκτη σε λίστα**: κρατά τα ίδια τα
+ * ονόματα. Άρα μετονομασία ή διαγραφή λίστας **δεν μπορεί** να ορφανέψει τίποτα — η
+ * αναφορά που θα έσπαγε δεν υπάρχει εξ ορισμού. Το `id` θα ήταν δεύτερη ταυτότητα χωρίς
+ * κανέναν να τη ρωτά.
+ */
+const autoFillListSchema = z.object({
+  name: z.string().trim().min(1).max(AUTO_FILL_LIST_LIMITS.maxNameLength),
+  entries: z
+    .array(z.string().trim().min(1).max(AUTO_FILL_LIST_LIMITS.maxEntryLength))
+    .min(AUTO_FILL_LIST_LIMITS.minEntries)
+    .max(AUTO_FILL_LIST_LIMITS.maxEntries),
+});
+
+const autoFillListsSchema = z.object({
+  lists: z.array(autoFillListSchema).max(AUTO_FILL_LIST_LIMITS.maxLists),
+});
+
 // ─── Top-level document ─────────────────────────────────────────────────────
 
 export const USER_SETTINGS_SCHEMA_VERSION = 1 as const;
@@ -140,6 +194,7 @@ export const userSettingsSchema = z.object({
       dxfSettings: dxfSettingsSliceSchema.optional(),
       snap: snapSettingsSchema.optional(),
       cadToggles: cadTogglesSchema.optional(),
+      autoFillLists: autoFillListsSchema.optional(),
     })
     .optional(),
   updatedAt: z.unknown().optional(),
@@ -152,6 +207,9 @@ export type RulersGridSettingsSlice = z.infer<typeof rulersGridSettingsSchema>;
 export type DxfSettingsSlice = z.infer<typeof dxfSettingsSliceSchema>;
 export type SnapSettingsSlice = z.infer<typeof snapSettingsSchema>;
 export type CadTogglesSettingsSlice = z.infer<typeof cadTogglesSchema>;
+export type AutoFillListsSlice = z.infer<typeof autoFillListsSchema>;
+/** Μία προσαρμοσμένη λίστα — όνομα + οι εγγραφές της, με τη σειρά που τις έγραψε ο άνθρωπος. */
+export type AutoFillList = AutoFillListsSlice['lists'][number];
 
 /** All known slice paths under `dxfViewer`. Used by repository.update<T>(path, ...). */
 export type DxfViewerSlicePath =
@@ -159,4 +217,5 @@ export type DxfViewerSlicePath =
   | 'dxfViewer.rulersGrid'
   | 'dxfViewer.dxfSettings'
   | 'dxfViewer.snap'
-  | 'dxfViewer.cadToggles';
+  | 'dxfViewer.cadToggles'
+  | 'dxfViewer.autoFillLists';

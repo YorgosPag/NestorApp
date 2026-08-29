@@ -19,6 +19,9 @@ export {
   type DxfSettingsSlice,
   type SnapSettingsSlice,
   type DxfViewerSlicePath,
+  AUTO_FILL_LIST_LIMITS,
+  type AutoFillList,
+  type AutoFillListsSlice,
 } from './user-settings-schema';
 export { buildUserPreferencesDocId } from './user-settings-id';
 export {
