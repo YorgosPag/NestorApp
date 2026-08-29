@@ -726,7 +726,7 @@
         "request-lapsed": "The proposal has expired and can no longer be decided.",
         "listing-withdrawn": "The owner withdrew the listing.",
         "listing-already-brokered": "The listing has already been assigned.",
-        "identity-incomplete": "The owner has not filled in their VAT number. Without it no brokerage contract can be drawn up — they have been notified.",
+        "identity-incomplete": "The owner has not filled in their VAT number, and no brokerage contract can be drawn up without it. The request STAYS open: contact them and press Accept again.",
         "mandate-invalid": "The proposed terms are not lawful for this type of mandate."
       }
     }
