@@ -40,6 +40,8 @@ import { useSceneSnapTargetSync } from './use-scene-snap-target-sync';
 // ADR-060 — «Κάθετη γραμμή»: reset του κλειδωμένου κάθετου άξονα σε αλλαγή εργαλείου / cancel.
 import { perpendicularAxisLockStore } from '../../bim/placement/perpendicular-axis-lock-store';
 import { useUnifiedDrawing } from './useUnifiedDrawing';
+// ADR-032 §1 — το δίχτυ ασφαλείας της στιγμής του κλικ (ο κριτής ζει στο systems/tools).
+import { armDrawingOnClick } from './arm-drawing-on-click';
 import { useSnapContext } from '../../snapping/context/SnapContext';
 import { useSnapManager } from '../../snapping/hooks/useSnapManager';
 import { useCanvasOperations } from '../interfaces/useCanvasOperations';
@@ -255,6 +257,14 @@ export function useDrawingHandlers(
       });
     }
 
+    // 🛡️ ADR-032 §1 — δίχτυ ασφαλείας: ρωτά τον ΙΔΙΟ κριτή με τον δεσμό, αλλά **τη
+    // στιγμή του κλικ** (όλο το γιατί ζει στο `arm-drawing-on-click.ts`).
+    armDrawingOnClick({
+      machineTool: drawingState.currentTool,
+      machineAcceptsPoints: drawingState.isDrawing,
+      startDrawing,
+    });
+
     // 🎯 ADR-047: CLOSE POLYGON ON FIRST-POINT CLICK (AutoCAD/BricsCAD pattern) — SSoT helper in
     // drawing-handler-utils (distance uses the RAW point, pre-snap; returns true when it closed).
     if (tryAutoClosePolygon(p, {
@@ -382,7 +392,7 @@ export function useDrawingHandlers(
       const allPoints = [...drawingState.tempPoints, finalPoint];
       onMeasurementComplete(allPoints, activeTool as ToolType);
     }
-  }, [activeTool, drawingState.tempPoints, addPoint, finishPolyline, onEntityCreated, onToolChange, canvasOps, applySnap, previewCanvasRef, onMeasurementComplete]);
+  }, [activeTool, drawingState.tempPoints, drawingState.currentTool, drawingState.isDrawing, startDrawing, addPoint, finishPolyline, onEntityCreated, onToolChange, canvasOps, applySnap, previewCanvasRef, onMeasurementComplete]);
 
   const onDrawingHover = useCallback((p: Pt | null) => {
     // ADR-563 Φ4-Α: the cut-line tool owns the PreviewCanvas via its own RAF

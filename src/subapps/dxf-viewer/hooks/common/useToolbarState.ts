@@ -10,8 +10,6 @@ const DEBUG_TOOLBAR_STATE = false;
 
 import { useState, useCallback } from 'react';
 import type { ToolType } from '../../ui/toolbar/types';
-import type { MeasurementType } from '../../types/measurements';
-import type { DrawingTool } from '../drawing/useUnifiedDrawing';
 
 export function useToolbarState() {
   // UI State - activeTool removed, now managed by parent
@@ -33,10 +31,14 @@ export function useToolbarState() {
   const [showPlantsPlanPanel, setShowPlantsPlanPanel] = useState(false);
 
   // Tool change handler
+  /**
+   * ADR-032 §1 — **αυτή η συνάρτηση ΔΕΝ οπλίζει πια εργαλεία.**
+   * Κάνει δύο πράγματα, και τα δύο ανήκουν εδώ: (α) ακυρώνει ό,τι τρέχει (`^C^C`),
+   * (β) δρομολογεί τα zoom, που είναι **ενέργειες**, όχι εργαλεία με κατάσταση.
+   * Ο οπλισμός ζει στον έναν κριτή — βλ. `systems/tools/drawing-tool-arming`.
+   */
   const handleToolChange = useCallback((
     tool: ToolType,
-    onMeasurementStart: (type: MeasurementType) => void,
-    onDrawingStart: (tool: DrawingTool) => void,
     onZoomAction: (action: string) => void,
     onCancel: () => void
   ) => {
@@ -60,22 +62,19 @@ export function useToolbarState() {
     
     // activeTool is now managed by parent - no local setActiveTool
 
-    if (tool === 'measure-distance' || tool === 'measure-distance-continuous') {
-      // 🏢 ENTERPRISE (2026-01-27): Distance measurement tools (single + continuous)
-      // Both use same drawing logic but continuous doesn't stop after 2nd point
-      onDrawingStart(tool as DrawingTool);
-    } else if (tool === 'measure-area') {
-
-      onDrawingStart('measure-area');
-    } else if (tool === 'measure-angle') {
-      // measure-angle uses same logic as polyline tool but keeps its own identity
-      onDrawingStart('measure-angle');
-    } else if (tool.startsWith('measure-')) {
-      const measurementType = tool.replace('measure-', '') as MeasurementType;
-      onMeasurementStart(measurementType);
-    } else if (['line', 'rectangle', 'circle', 'circle-diameter', 'circle-2p-diameter', 'polyline', 'polygon', 'hatch'].includes(tool)) {
-      onDrawingStart(tool as DrawingTool);
-    }
+    // ── ΟΠΛΙΣΜΟΣ: ΔΕΝ ΑΠΟΦΑΣΙΖΕΤΑΙ ΕΔΩ (ADR-032 §1) ─────────────────────────────
+    // 🔴 Εδώ ζούσε **πέμπτος** κατάλογος εργαλείων: μια χειρόγραφη 8άδα
+    // `['line','rectangle','circle','circle-diameter','circle-2p-diameter','polyline',
+    // 'polygon','hatch']` που καλούσε `onDrawingStart`. Είχε **αποκλίνει** από το
+    // `TOOL_DEFINITIONS` (`category: 'drawing'`): το `table`, το `opening-info-tag`, το
+    // `scale-bar`, τα `arc-*`, τα `circle-3p/best-fit/...` **δεν ήταν μέσα**.
+    //
+    // Το θανατηφόρο ήταν ο **συνδυασμός** με το `onCancel()` δύο δεκάδες γραμμές πιο πάνω:
+    // ο αφοπλισμός ήταν **καθολικός**, ο οπλισμός **8 εργαλεία**. Ό,τι έπεφτε στη διαφορά
+    // αφοπλιζόταν και δεν ξαναοπλιζόταν ποτέ — «το εργαλείο που δείχνει ενεργό και είναι
+    // νεκρό». Το `onCancel()` **μένει** (είναι το `^C^C` της κορδέλας του AutoCAD, σωστό)·
+    // ο οπλισμός έφυγε στον έναν κριτή (`resolveDrawingArming`) που ρωτούν **και** ο δεσμός
+    // **και** το κλικ. Ένας αφοπλιστής, ένας οπλιστής, μηδέν κατάλογοι εδώ.
   }, []);
 
   // UI toggle handlers

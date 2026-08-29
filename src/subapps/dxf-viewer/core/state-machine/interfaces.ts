@@ -303,8 +303,31 @@ export type TransitionRule = {
  * Based on formal state machine theory
  */
 export const TRANSITION_RULES: readonly TransitionRule[] = [
-  // From IDLE
+  // ── SELECT_TOOL: δεκτό από ΚΑΘΕ κατάσταση (ADR-032 §1) ────────────────────
+  // 🔴 Μέχρι 2026-08-29 υπήρχε **μόνο** ο κανόνας `from: 'IDLE'`. Το `send()` κάνει
+  // `return` όταν δεν βρει transition, **σιωπηλά** — άρα κάθε `SELECT_TOOL` από
+  // TOOL_READY/PREVIEWING/COLLECTING_POINTS/COMPLETING/COMPLETED/CANCELLED **έπεφτε στο
+  // κενό**. Δύο μετρημένες συνέπειες:
+  //   1. Η μηχανή δεν ξαναοπλιζόταν όταν ο άνθρωπος ξαναδήλωνε το ίδιο εργαλείο.
+  //   2. **Αλλαγή εργαλείου στη μέση σχεδίασης άφηνε τη μηχανή στο ΠΑΛΙΟ εργαλείο** —
+  //      το φάντασμα έδειχνε το νέο (διαβάζει `toolStateStore`), το commit έγραφε το παλιό.
+  //
+  // Η σημασιολογία είναι του AutoCAD/BricsCAD: κάθε macro κορδέλας ξεκινά με `^C^C` —
+  // «άκυρο ό,τι τρέχει, μετά ξεκίνα». Δηλαδή **η επιλογή εργαλείου ΕΙΝΑΙ επαναφορά της
+  // πράξης σχεδίασης**, όχι αίτημα που μπορεί να απορριφθεί.
+  //
+  // ⚠️ Το `computeNewContext('SELECT_TOOL')` ξεκινά από `DEFAULT_DRAWING_CONTEXT`, άρα
+  // **μηδενίζει τα σημεία**. Γι' αυτό ο καλών ΔΕΝ ξαναοπλίζει όταν η μηχανή είναι ήδη
+  // οπλισμένη για το ίδιο εργαλείο — ο φρουρός ζει στο `resolveDrawingArming`
+  // (systems/tools/drawing-tool-arming.ts), όχι εδώ: εδώ είναι το «τι ΕΠΙΤΡΕΠΕΤΑΙ»,
+  // εκεί το «τι ΠΡΕΠΕΙ».
   { from: 'IDLE', to: 'TOOL_READY', on: 'SELECT_TOOL' },
+  { from: 'TOOL_READY', to: 'TOOL_READY', on: 'SELECT_TOOL' },
+  { from: 'COLLECTING_POINTS', to: 'TOOL_READY', on: 'SELECT_TOOL' },
+  { from: 'PREVIEWING', to: 'TOOL_READY', on: 'SELECT_TOOL' },
+  { from: 'COMPLETING', to: 'TOOL_READY', on: 'SELECT_TOOL' },
+  { from: 'COMPLETED', to: 'TOOL_READY', on: 'SELECT_TOOL' },
+  { from: 'CANCELLED', to: 'TOOL_READY', on: 'SELECT_TOOL' },
 
   // From TOOL_READY
   { from: 'TOOL_READY', to: 'COLLECTING_POINTS', on: 'ADD_POINT' },

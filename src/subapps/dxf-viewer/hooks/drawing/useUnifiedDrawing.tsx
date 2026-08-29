@@ -76,7 +76,6 @@ export function useUnifiedDrawing() {
   const {
     context: machineContext,
     isDrawing: machineIsDrawing,
-    canAddPoint,
     selectTool: machineSelectTool,
     deselectTool: machineDeselectTool,
     addPoint: machineAddPoint,
@@ -84,6 +83,8 @@ export function useUnifiedDrawing() {
     complete: machineComplete,
     cancel: machineCancel,
     reset: machineReset,
+    // ADR-032 §1 — η ΙΔΙΑ η μηχανή, για αναγνώσεις τη ΣΤΙΓΜΗ ΤΟΥ ΓΕΓΟΝΟΤΟΣ (βλ. `addPoint`).
+    machine,
   } = useDrawingMachine({ useGlobal: true });
 
   const [localState, setLocalState] = useState<{
@@ -147,11 +148,18 @@ export function useUnifiedDrawing() {
    * @returns true if the drawing was completed (entity created and added to scene)
    */
   const addPoint = useCallback((worldPoint: Point2D, _transform: { worldToScreen: (point: Point2D) => Point2D; screenToWorld: (point: Point2D) => Point2D }): boolean => {
-    if (!canAddPoint) return false;
+    // 🔴 ADR-032 §1 / ADR-040 κανόνας #2 — ΑΝΑΓΝΩΣΗ ΤΗ ΣΤΙΓΜΗ ΤΟΥ ΓΕΓΟΝΟΤΟΣ, ΟΧΙ SNAPSHOT.
+    // Μέχρι 2026-08-29 η πύλη ήταν το `canAddPoint` — τιμή παγωμένη στο **render**. Όταν το
+    // δίχτυ ασφαλείας του `onDrawingPoint` οπλίζει τη μηχανή **μέσα στον ίδιο handler**, το
+    // snapshot παραμένει `false` και το κλικ θα πέθαινε ακριβώς εκεί που μόλις σώθηκε.
+    // Το ίδιο ισχύει για τα `points`/`toolType`: μετά από συγχρονο οπλισμό το snapshot
+    // περιγράφει το **προηγούμενο** εργαλείο. Η μηχανή είναι singleton — τη ρωτάμε.
+    const liveContext = machine.getState().context;
+    if (!machine.canAddPoint()) return false;
 
     machineAddPoint(worldPoint);
-    const newTempPoints = [...machineContext.points, worldPoint];
-    const currentTool = (machineContext.toolType as DrawingTool) || 'select';
+    const newTempPoints = [...(liveContext.points as Point2D[]), worldPoint];
+    const currentTool = (liveContext.toolType as DrawingTool) || 'select';
 
     // ── Continuous measurement: create entity every 2 points, keep last ──
     if (currentTool === 'measure-distance-continuous' && newTempPoints.length >= 2 && newTempPoints.length % 2 === 0) {
@@ -227,7 +235,7 @@ export function useUnifiedDrawing() {
     const partialPreview = createPartialPreview(currentTool, newTempPoints);
     setLocalState(prev => ({ ...prev, previewEntity: partialPreview }));
     return false;
-  }, [canAddPoint, machineAddPoint, machineContext.points, machineContext.toolType, createEntityFromTool, currentLevelId, getLevelScene, setLevelScene, setMode, machineComplete, machineReset, machineDeselectTool]);
+  }, [machine, machineAddPoint, createEntityFromTool, currentLevelId, getLevelScene, setLevelScene, setMode, machineComplete, machineReset, machineDeselectTool, machineSelectTool]);
 
   const updatePreview = useCallback((mousePoint: Point2D, _transform: { worldToScreen: (point: Point2D) => Point2D; screenToWorld: (point: Point2D) => Point2D }) => {
     const machineTool = (machineContext.toolType as DrawingTool) || 'select';

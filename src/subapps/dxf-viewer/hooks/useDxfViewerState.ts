@@ -8,13 +8,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useCanvasOperations } from './interfaces/useCanvasOperations';
 import type { ToolType } from '../ui/toolbar/types';
-import type { DrawingTool } from './drawing/useUnifiedDrawing';
 import { useGripContext } from '../providers/GripProvider';
 import { useToolbarState } from './common/useToolbarState';
 import { useSceneState } from './scene/useSceneState';
 import { useDrawingHandlers } from './drawing/useDrawingHandlers';
 import { useSnapContext } from '../snapping/context/SnapContext';
-import type { MeasurementType } from '../types/measurements';
 // 🏢 ENTERPRISE (2026-01-26): Command History for Undo/Redo - ADR-032
 import { useCommandHistory } from '../core/commands';
 // 🏢 ENTERPRISE (2026-01-30): Centralized Tool State Store - ADR Tool Persistence
@@ -293,29 +291,14 @@ export function useDxfViewerState() {
       else if (action === 'zoom-reset') canvasActions.resetToOrigin();
     };
 
-    const onMeasurementStart = (type: MeasurementType) => {
-      const measurementTool: DrawingTool | null = (() => {
-        if (type === 'distance') return 'measure-distance';
-        if (type === 'distance-continuous') return 'measure-distance-continuous';
-        if (type === 'area') return 'measure-area';
-        if (type === 'angle') return 'measure-angle';
-        if (type === 'linear') return 'measure-distance';
-        if (type === 'angular') return 'measure-angle';
-        return null;
-      })();
-
-      if (measurementTool) {
-        drawingHandlers.startDrawing(measurementTool);
-      }
-    };
-
-    // 🏢 ENTERPRISE (2026-01-27): Connect drawing/measurement tools to unified drawing system
-    // Both onMeasurementStart and onDrawingStart call the same startDrawing from useUnifiedDrawing
-    // This enables measure-angle, measure-area, measure-distance, line, rectangle, etc.
+    // ADR-032 §1 — ο οπλισμός ΔΕΝ γίνεται εδώ. Ήταν δύο callbacks (`onMeasurementStart`,
+    // `onDrawingStart`) που κατέληγαν και τα δύο στο ΙΔΙΟ `startDrawing`, φιλτραρισμένα από
+    // δύο χειρόγραφους καταλόγους μέσα στο `useToolbarState` — και οι δύο αποκλίνοντες από
+    // το `TOOL_DEFINITIONS`. Πλέον υπάρχει **ένας** κριτής (`resolveDrawingArming`) που
+    // ρωτούν ο δεσμός (`useDrawingMachineArming`) και το κλικ (`onDrawingPoint`).
+    // Εδώ μένει μόνο το `^C^C` + η δρομολόγηση των zoom **ενεργειών**.
     toolbarState.handleToolChange(
       tool,
-      onMeasurementStart, // ✅ MEASUREMENT TOOLS: measure-angle, measure-area, measure-distance
-      drawingHandlers.startDrawing, // ✅ DRAWING TOOLS: line, rectangle, circle, polyline, polygon
       onZoomAction,
       drawingHandlers.cancelAllOperations // ✅ CANCEL: Stop any ongoing drawing/measurement
     );

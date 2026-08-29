@@ -19,7 +19,9 @@
 
 import React, { useRef, useEffect, useState, type RefObject, type MutableRefObject } from 'react';
 import { globalRulerStore } from '../../settings-provider';
-import { isDrawingTool, isMeasurementTool, isInDrawingMode } from '../../systems/tools/ToolStateManager';
+import { isInDrawingMode } from '../../systems/tools/ToolStateManager';
+// ADR-032 §1 — ο ΕΝΑΣ δεσμός «δηλωμένο εργαλείο → οπλισμένη μηχανή».
+import { useDrawingMachineArming } from '../drawing/useDrawingMachineArming';
 import { useDrawingHandlers } from '../../hooks/drawing/useDrawingHandlers';
 import type { RulerSettings } from '../../systems/rulers-grid/config';
 import type { OverlayEditorMode } from '../../overlays/types';
@@ -27,7 +29,6 @@ import type { SceneModel } from '../../types/scene';
 import type { Entity } from '../../types/entities';
 import type { PreviewCanvasHandle } from '../../canvas-v2/preview-canvas';
 import type { Point2D } from '../../rendering/types/Types';
-import type { DrawingTool } from '../../hooks/drawing/useUnifiedDrawing';
 import type { ToolType } from '../../ui/toolbar/types';
 import type { SelectedGrip } from './useCanvasMouse';
 
@@ -163,22 +164,22 @@ export function useCanvasEffects({
     drawingHandlersRef.current = drawingHandlers;
   }, [drawingHandlers]);
 
-  // === Auto-start drawing when tool changes ===
-  // Entity-picking angle tools are handled by useAngleEntityMeasurement (not the drawing pipeline)
-  const ENTITY_PICKING_TOOLS: ReadonlySet<string> = new Set([
-    'measure-angle-constraint', 'measure-angle-line-arc', 'measure-angle-two-arcs',
-  ]);
-  useEffect(() => {
-    // Skip auto-start for entity-picking tools — they use their own state machine
-    if (ENTITY_PICKING_TOOLS.has(activeTool)) return;
-
-    const isDrawing = isDrawingTool(activeTool);
-    const isMeasurement = isMeasurementTool(activeTool);
-
-    if ((isDrawing || isMeasurement) && drawingHandlersRef.current?.startDrawing) {
-      drawingHandlersRef.current.startDrawing(activeTool as DrawingTool);
-    }
-  }, [activeTool]);
+  // === Keep the drawing machine armed for the declared tool (ADR-032 §1) ===
+  // 🔴 Ήταν επιτόπου `useEffect` με εξάρτηση `[activeTool]` — δηλαδή άκουγε την
+  // **αλλαγή τιμής**, ενώ ο αφοπλισμός (`useToolbarState:44 → onCancel()`) γίνεται **χωρίς**
+  // αλλαγή τιμής ⇒ εργαλείο που δείχνει ενεργό και είναι νεκρό. Τώρα ο δεσμός παρακολουθεί
+  // τη **ΔΙΑΦΩΝΙΑ** των δύο αληθειών — και ζει σε δικό του module ώστε να μπορεί να
+  // **εκτελεστεί από άγκυρα** χωρίς όλο το δέντρο του καμβά (§7 — καμία σουίτα δεν ρώταγε
+  // «οπλίζεται η μηχανή όταν επιλέγεται εργαλείο που είναι ήδη επιλεγμένο;»).
+  //
+  // ⚠️ Το δίχτυ ασφαλείας της στιγμής του κλικ ζει στο `useDrawingHandlers.onDrawingPoint`
+  // (N.7.2 #4 — belt-and-suspenders). Και τα δύο καλούν τον **ίδιο** κριτή.
+  useDrawingMachineArming({
+    declaredTool: activeTool,
+    machineTool: drawingHandlers.drawingState.currentTool,
+    machineAcceptsPoints: drawingHandlers.drawingState.isDrawing,
+    startDrawing: drawingHandlers.startDrawing,
+  });
 
   // === Bridge ref for context menu (does drawing have temp points?) ===
   const hasUnifiedDrawingPointsRef = useRef(() =>
