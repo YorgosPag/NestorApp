@@ -82,4 +82,19 @@ export abstract class PublicRegistryIdGenerators extends BimEntityIdGenerators {
    * `properties`. Δες `types/public-listing.ts`: *«ταυτότητα παραγόμενη, όχι νέα»*.
    */
   generateOwnerPropertyId(): string { return this.generateId(P.OWNER_PROPERTY).id; }
+
+  /**
+   * ADR-827 §8.7 — id ενός **ΑΙΤΗΜΑΤΟΣ ΑΝΑΘΕΣΗΣ** (`mreq_*`).
+   *
+   * 🔴 **ΔΙΑΚΟΜΙΣΤΗΣ ΜΟΝΟ, και ο λόγος ΔΕΝ είναι ο ίδιος με του `land_*`.** Εκεί το
+   * κριτήριο ήταν *«ποιους αφορά ένα λάθος»*· εδώ είναι ότι το αίτημα έχει **δύο
+   * μέρη** και **κανένα** από τα δύο δεν γράφει το έγγραφο: το `mandate_requests` έχει
+   * `read: false` **και** `write: false` (§8.2). Ταυτότητα γεννημένη στον πελάτη θα
+   * προϋπέθετε πελάτη που γράφει — που εδώ **δεν υπάρχει**.
+   *
+   * ⚠️ Η **εντολή** που γεννιέται από την αποδοχή **δεν παίρνει δική της ταυτότητα**:
+   * είναι πεδίο μέσα στο `ownp_*` *(«αλλάζει χέρια, όχι ταυτότητα»)*. Αυτό εδώ
+   * ταυτοποιεί το **αίτημα**, που επιβιώνει και της άρνησης.
+   */
+  generateMandateRequestId(): string { return this.generateId(P.MANDATE_REQUEST).id; }
 }
