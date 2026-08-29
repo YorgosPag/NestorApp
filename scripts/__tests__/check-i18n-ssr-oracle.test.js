@@ -154,7 +154,19 @@ describe('Π — άγκυρες στο πραγματικό δέντρο', () =>
     expect(onDisk).toBe(routes.length);
     expect(routes.length).toBeGreaterThan(100);
     expect(routes.map((route) => route.url)).toContain('/');
-    expect(routes.map((route) => route.url)).toContain('/spaces/parking');
+    // 🔴 **ΜΠΑΓΙΑΤΙΚΟ ΑΠΟ ΤΟ ADR-787 §5.3, ΔΙΟΡΘΩΘΗΚΕ 2026-08-29.** Η άγκυρα ζητούσε
+    //    `/spaces/parking` — διεύθυνση που **ΜΕΤΑΚΟΜΙΣΕ** πίσω από το πρόθεμα χώρου
+    //    στο `5ff0baa2` (*«όλες οι σελίδες προϊόντος κάτω από /o/[workspace]»*). Ο
+    //    απαριθμητής δούλευε σωστά· η **προσδοκία** έδειχνε σε διεύθυνση που δεν
+    //    υπάρχει, οπότε η πύλη ήταν **μονίμως κόκκινη** και άρα ανενεργή.
+    //
+    // ⚠️ Το **νόημα** της γραμμής δεν αλλάζει: *«ο απαριθμητής βρίσκει ΒΑΘΙΑ
+    //    εμφωλευμένη διαδρομή, με δυναμικό τμήμα στη μέση»* — και τώρα το ελέγχει
+    //    στη διεύθυνση που **όντως σερβίρεται** — με το **συνθετικό** τμήμα του Π2
+    //    (`ssr-probe`) στη θέση του `[workspace]`, όπως το γράφει ο ίδιος ο
+    //    απαριθμητής. Γι' αυτό η γραμμή είναι πλέον **διπλά** χρήσιμη: κλειδώνει
+    //    ταυτόχρονα το βάθος **και** την αντικατάσταση της δυναμικής παραμέτρου.
+    expect(routes.map((route) => route.url)).toContain('/o/ssr-probe/spaces/parking');
     // route groups `(auth)` ΔΕΝ εμφανίζονται στο URL
     expect(routes.map((route) => route.url)).toContain('/login');
     expect(routes.some((route) => route.url.includes('('))).toBe(false);
