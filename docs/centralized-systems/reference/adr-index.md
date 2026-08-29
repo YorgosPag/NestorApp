@@ -1572,6 +1572,7 @@
 | **ADR-815** | Η ασφαλής ανάγνωση του θέματος: **ένας** ιδιοκτήτης, όχι τρία `mounted` | ✅ APPROVED | [View](./adrs/ADR-815-theme-hydration-ownership.md) |
 | **ADR-816** | Η τυπογραφία της πρόζας: **το πλάτος της γραμμής και το διάστιχο** | ✅ APPROVED | [View](./adrs/ADR-816-prose-typography.md) |
 | **ADR-827** | Η ανάθεση **υπάρχουσας** αγγελίας σε μεσιτικό γραφείο | 🟡 Φάση Α | [View](./adrs/ADR-827-listing-mandate-assignment.md) |
+| **ADR-828** | Αυτόματη συμπλήρωση **σειρών** στη λαβή του πίνακα (parity Excel) | 🟡 Φ1-Φ3 κλειστές | [View](./adrs/ADR-828-table-autofill-series.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---
