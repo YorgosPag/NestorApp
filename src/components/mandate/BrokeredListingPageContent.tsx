@@ -233,7 +233,9 @@ export function BrokeredListingPageContent(): React.ReactElement {
               onChange={setMandate}
             />
           ),
-          blockers: mandateFormBlockers(mandate),
+          // ⚠️ Το ρολόι περνιέται **ρητά**: η νομιμότητα της διάρκειας μετριέται από
+          //    τώρα, και ο κριτής δεν διαβάζει ρολόι μόνος του (δοκιμασιμότητα).
+          blockers: mandateFormBlockers(mandate, nowISO()),
           request: mandateRequestFrom(mandate),
           onNotify: (outcome) => setNotify(outcome ?? { kind: 'failed' }),
         }}
