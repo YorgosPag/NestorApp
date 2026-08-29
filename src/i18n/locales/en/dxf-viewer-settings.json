@@ -720,6 +720,36 @@
       "background": {
         "title": "Canvas Background",
         "description": "DXF canvas background color"
+      },
+      "autoFillLists": {
+        "title": "Fill lists",
+        "description": "Your own series for the fill handle",
+        "intro": "Your lists continue from the fill handle just like months do. They follow your account on every computer.",
+        "empty": "You haven't defined any lists yet.",
+        "add": "New list",
+        "edit": "Edit",
+        "delete": "Delete",
+        "save": "Save",
+        "cancel": "Cancel",
+        "importFromCells": "Import from selected cells",
+        "nameLabel": "List name",
+        "namePlaceholder": "e.g. Floors",
+        "entriesLabel": "Entries — one per line",
+        "entriesPlaceholder": "Ground floor\nFirst floor\nSecond floor",
+        "entryCount": "{count} entries",
+        "limits": "Up to {maxLists} lists, up to {maxEntries} entries each.",
+        "builtIn": "Built in: months and weekdays, in Greek and English.",
+        "priority": "If a word belongs to both your list and a built-in one, yours wins.",
+        "rejection": {
+          "empty-name": "Give the list a name.",
+          "duplicate-name": "A list with this name already exists.",
+          "name-too-long": "The name exceeds {maxNameLength} characters.",
+          "too-few-entries": "At least {minEntries} entries are needed — one word has no next.",
+          "too-many-entries": "The entries exceed {maxEntries}.",
+          "entry-too-long": "An entry exceeds {maxEntryLength} characters.",
+          "too-many-lists": "You have reached {maxLists} lists. Delete one to add another.",
+          "no-selection": "Select cells in the table first."
+        }
       }
     }
   },
