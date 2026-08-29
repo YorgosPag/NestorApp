@@ -18,39 +18,29 @@
  *
  * Καθαρό, μηδέν I/O, καμία εξάρτηση σε React/Firestore — ο Λ2 το φτάνει (άγκυρα καθαρότητας).
  */
-import { normalizeForLabelMatch } from '@/utils/greek-text';
+import { daysInMonth } from '@/lib/date/calendar-arithmetic';
+import {
+  matchCalendarName,
+  type CalendarNameForm,
+} from '@/lib/date/calendar-name-vocabulary';
 
 /**
- * Οι μήνες σε **ονομαστική και γενική**, γιατί το σχέδιο χρησιμοποιεί και τις δύο:
- * «ΙΟΥΛΙΟΣ 2026» (πινακίδα) και «30 Ιουλίου 2026» (πρόζα σώματος).
- *
- * Τα κλειδιά είναι ήδη κανονικοποιημένα με {@link normalizeForLabelMatch} — δηλαδή χωρίς
- * τόνους, πεζά, χωρίς στίξη. Δεν γράφονται με το χέρι σε δύο μορφές: ο πίνακας κρατά την
- * **πηγαία** γραφή και η κανονικοποίηση γίνεται μία φορά, παρακάτω.
+ * 🔴 ADR-828 §1 — **ΟΙ ΜΗΝΕΣ ΜΕΤΑΚΟΜΙΣΑΝ.** Ζούσαν εδώ, ιδιωτικοί, σε ονομαστική και γενική,
+ * γιατί το σχέδιο χρησιμοποιεί και τις δύο: «ΙΟΥΛΙΟΣ 2026» (πινακίδα) και «30 Ιουλίου 2026»
+ * (πρόζα σώματος). Όταν η λαβή συμπλήρωσης του πίνακα χρειάστηκε **την ίδια** ερώτηση για
+ * τον ίδιο λόγο, το δεύτερο αντίγραφο θα ήταν δύο πίνακες που μπορούν να μάθουν διαφορετική
+ * ορθογραφία. Πλέον ζουν στο {@link module:lib/date/calendar-name-vocabulary}.
  *
  * ⚠️ **Δεδομένα αναγνώρισης, ΟΧΙ κείμενο διεπαφής** — δεν περνούν από `t()` (ADR-759 §5.6).
- * Μεταφρασμένα, το ίδιο αρχείο θα διαβαζόταν αλλιώς σε αγγλικό περιβάλλον.
+ * Ο κανόνας δεν άλλαξε με τη μετακόμιση· τον κουβαλά το ίδιο το λεξιλόγιο.
+ *
+ * 🔑 **ΤΟ ΦΙΛΤΡΟ ΔΕΝ ΕΙΝΑΙ ΔΙΑΚΟΣΜΗΣΗ.** Το κοινό λεξιλόγιο ξέρει και **συντομογραφίες**
+ * («Ιαν», «Μαρ»), τις οποίες αυτός ο αναγνώστης **ποτέ δεν ήξερε**. Το {@link TEXTUAL}
+ * δέχεται κάθε λέξη 3+ γραμμάτων, άρα χωρίς τον περιορισμό ένα «ΜΑΡ 2026» σε πινακίδα θα
+ * άρχιζε **σιωπηλά** να διαβάζεται ως Μάρτιος. Η διεύρυνση ενός κανόνα ανάγνωσης εγγράφου
+ * είναι απόφαση με συνέπειες στη βάση — ποτέ παρενέργεια ανακατασκευής.
  */
-const GREEK_MONTH_SOURCES: readonly (readonly [number, readonly string[]])[] = [
-  [1, ['ΙΑΝΟΥΑΡΙΟΣ', 'ΙΑΝΟΥΑΡΙΟΥ']],
-  [2, ['ΦΕΒΡΟΥΑΡΙΟΣ', 'ΦΕΒΡΟΥΑΡΙΟΥ']],
-  [3, ['ΜΑΡΤΙΟΣ', 'ΜΑΡΤΙΟΥ']],
-  [4, ['ΑΠΡΙΛΙΟΣ', 'ΑΠΡΙΛΙΟΥ']],
-  [5, ['ΜΑΙΟΣ', 'ΜΑΙΟΥ']],
-  [6, ['ΙΟΥΝΙΟΣ', 'ΙΟΥΝΙΟΥ']],
-  [7, ['ΙΟΥΛΙΟΣ', 'ΙΟΥΛΙΟΥ']],
-  [8, ['ΑΥΓΟΥΣΤΟΣ', 'ΑΥΓΟΥΣΤΟΥ']],
-  [9, ['ΣΕΠΤΕΜΒΡΙΟΣ', 'ΣΕΠΤΕΜΒΡΙΟΥ']],
-  [10, ['ΟΚΤΩΒΡΙΟΣ', 'ΟΚΤΩΒΡΙΟΥ']],
-  [11, ['ΝΟΕΜΒΡΙΟΣ', 'ΝΟΕΜΒΡΙΟΥ']],
-  [12, ['ΔΕΚΕΜΒΡΙΟΣ', 'ΔΕΚΕΜΒΡΙΟΥ']],
-];
-
-const MONTH_BY_NAME: ReadonlyMap<string, number> = new Map(
-  GREEK_MONTH_SOURCES.flatMap(([index, names]) =>
-    names.map((name) => [normalizeForLabelMatch(name), index] as const),
-  ),
-);
+const TITLEBLOCK_MONTH_FORMS: readonly CalendarNameForm[] = ['full', 'genitive'];
 
 /** Πόσο ακριβής είναι η ανάγνωση — **δηλωμένη**, ποτέ συμπερασμένη από το αν το ISO είναι `null`. */
 export type SurveyDatePrecision = 'day' | 'month' | 'year' | 'none';
@@ -78,12 +68,10 @@ const MAX_YEAR = 2100;
 
 const isPlausibleYear = (year: number): boolean => year >= MIN_YEAR && year <= MAX_YEAR;
 
-/** Πόσες μέρες έχει ο μήνας — ώστε η «31/02» να **μην** γίνει σιωπηλά 3 Μαρτίου. */
-function daysInMonth(year: number, month: number): number {
-  // `Date.UTC(y, m, 0)` = η τελευταία μέρα του μήνα `m` (1-based) — χωρίς βιβλιοθήκη και
-  // χωρίς τοπική ζώνη ώρας, που εδώ θα ήταν σφάλμα: μια ημερομηνία εγγράφου δεν έχει ώρα.
-  return new Date(Date.UTC(year, month, 0)).getUTCDate();
-}
+// 🔴 ADR-828 §1 — το `daysInMonth` («ώστε η *31/02* να **μην** γίνει σιωπηλά 3 Μαρτίου»)
+// μετακόμισε στο `@/lib/date/calendar-arithmetic`: η σειρά ημερομηνιών της λαβής συμπλήρωσης
+// χρειάζεται **τον ίδιο** κανόνα ψαλιδίσματος, και δύο αντίγραφά του θα ήταν δύο σημεία που
+// μπορούν να μάθουν διαφορετικό τέλος μήνα — διαφορά που φαίνεται στην **τιμή**, όχι στην όψη.
 
 const iso = (year: number, month: number, day: number): string =>
   `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -153,8 +141,11 @@ export function parseSurveyDate(raw: string): ParsedSurveyDate {
 
 /** `[, ημέρα?, μήνας-λέξη, έτος]` → ημερομηνία ή μήνας. `null` όταν η λέξη δεν είναι μήνας. */
 function fromTextualMonth(match: RegExpExecArray): ParsedSurveyDate | null {
-  const month = MONTH_BY_NAME.get(normalizeForLabelMatch(match[2]));
-  if (month === undefined) return null;
+  // Ο δείκτης του λεξιλογίου είναι **0-based** (Ιανουάριος = 0)· ο μήνας εδώ είναι 1-based,
+  // όπως τον θέλει το ISO. Η μετατόπιση γίνεται **μία** φορά, στο σύνορο.
+  const found = matchCalendarName(match[2], ['greek-month'], TITLEBLOCK_MONTH_FORMS);
+  if (found === null) return null;
+  const month = found.index + 1;
 
   const year = Number(match[3]);
   if (!isPlausibleYear(year)) return null;
