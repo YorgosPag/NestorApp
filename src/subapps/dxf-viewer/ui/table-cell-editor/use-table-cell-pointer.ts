@@ -75,10 +75,7 @@ import {
 // στην άκρη του πίνακα, όπου ο φύλακας μπλοκάρει και ο pointer δεν δρα.
 import { tableEventWorldPoint, tablePointerHitAtWorld } from './table-cell-pointer-hit';
 // 🔴 ADR-739 §68 — ο ΕΝΑΣ γραφέας του «το δεξί κλικ εγκαθιστά τον στόχο του» (full parity Excel).
-import {
-  installTableCellMenuSelection,
-  installTableCornerMenuSelection,
-} from './table-context-menu-selection';
+import { installTableCellMenuSelection } from './table-context-menu-selection';
 import { tableRangeGrabAtWorld } from './table-range-grab';
 // 🔴 ADR-739 §36 ΦΑΣΗ 3 — η **τρίτη** χειρονομία του πίνακα: μεταφορά περιοχής από το
 // περίγραμμά της. Ίδιο σχήμα με τις δύο πρώτες, δικό της module (η γεωμετρία μένει εδώ).
@@ -96,6 +93,9 @@ import { useTableContainerMouseDown } from './use-table-container-mousedown';
 // σχήμα με τις τρεις πρώτες — όλη η λογική σε δικό της module, εδώ μόνο ο φρουρός.
 import { tryTablePointModeMouseDown } from './table-point-mode-pointer';
 import { tryTableFillHandleMouseDown } from './table-fill-handle-drag';
+// ADR-739 §43 + §66 — η **έκτη** εξαγωγή: το τετραγωνάκι της γωνίας, όταν αυτό εδώ ξαναχτύπησε
+// τις 500 γραμμές (N.7.1). Εξαγωγή, όχι κόψιμο — δες την κεφαλίδα εκείνου του module.
+import { handleTableCornerMouseDown } from './table-corner-pointer';
 // ADR-739 §66 — η **πέμπτη** χειρονομία: μετακίνηση της οντότητας από τη γωνία. Εδώ μένει μόνο
 // ο τερματισμός· την ίδια τη σύρση την οπλίζει ο ιδιοκτήτης των γραφέων σκηνής (`onCornerPress`).
 import { endTableMoveDrag } from './table-move-drag';
@@ -271,6 +271,10 @@ export function useTableCellPointer(params: UseTableCellPointerParams): void {
     if (
       tryTableFillHandleMouseDown(event, {
         entity,
+        // 🔴 ADR-828 §7.2 — ο **ίδιος** αναγνώστης που ήδη χρησιμοποιεί η μεταφορά περιοχής:
+        // το δεξί σύρσιμο γράφει **μετά** το μενού, δηλαδή μετά από αλληλεπίδραση μέσα στην
+        // οποία χωρά `Ctrl+Z`. Δες `TableFillHandlePress.liveTable`.
+        liveTable,
         cursor,
         worldPoint,
         transform,
@@ -320,28 +324,11 @@ export function useTableCellPointer(params: UseTableCellPointerParams): void {
       return;
     }
 
-    // 🔴 ADR-739 §43 — **ΤΟ ΤΕΤΡΑΓΩΝΑΚΙ ΤΗΣ ΓΩΝΙΑΣ**: όλα τα κελιά, με ένα κλικ (Excel parity).
-    // 🔴 §66 — **και η μετακίνηση του πίνακα**, όταν το χέρι σύρει αντί να πατήσει.
+    // 🔴 ADR-739 §43 + §66 — **ΤΟ ΤΕΤΡΑΓΩΝΑΚΙ ΤΗΣ ΓΩΝΙΑΣ**: όλα τα κελιά με ένα κλικ, και η
+    // μετακίνηση της οντότητας όταν το χέρι σύρει. Όλη η χειρονομία ζει στο module της —
+    // εξαγωγή με την ίδια αφορμή και το ίδιο σχήμα με το `table-pointer-axis-selection`.
     if (pointerHit?.where === 'select-all-corner') {
-      claimTableCellSessionPointerDown();
-      // §27.15 — και η χειρονομία, όπως στη ζώνη: η δήλωση φυλάει τη σύρση επιλογής κελιών από
-      // το body-drag του ADR-560. ⚠️ §66: **δεν** είναι αυτή που εμποδίζει τη μετακίνηση εδώ —
-      // το §29 σβήνει το hover, άρα το body-drag είναι ήδη δομικά αδύνατο σε λειτουργία πίνακα.
-      claimTableCellPointerGesture();
-      // 🔴 §68 — το δεξί **εγκαθιστά τον στόχο του** και παραδίδεται. Η πράξη ήταν ήδη εδώ, ένα
-      // στρώμα πιο πάνω (μέσα στη θύρα του μενού)· κατέβηκε ώστε **και οι τρεις** διαδρομές
-      // δεξιού κλικ να γράφουν στο ίδιο σημείο. Δες την κεφαλίδα του module.
-      if (!primary) {
-        installTableCornerMenuSelection(entity);
-        return;
-      }
-      // 🔑 **ΚΑΜΙΑ δέσμευση προχείρου εδώ** — και είναι μετρημένο, όχι παράλειψη: το `Ctrl+A`
-      // δεν δεσμεύει (`use-table-cell-session-keys`, `case 'selectAll'`), γιατί η επιλογή είναι
-      // κατάσταση **διεπαφής** και δεν αγγίζει το μοντέλο (§6.6) — ούτε μετακινεί τον δρομέα,
-      // άρα το πρόχειρο μένει εκεί που το άφησε ο χρήστης. Ένα `onCommitPending()` εδώ θα έκανε
-      // τη γωνία να συμπεριφέρεται **αλλιώς από το ίδιο της το πλήκτρο**. Το ίδιο ισχύει και για
-      // τη μετακίνηση: αλλάζει τη **θέση** της οντότητας, όχι κελί.
-      onCornerPress(event, container);
+      handleTableCornerMouseDown(event, { entity, primary, container, onCornerPress });
       return;
     }
 

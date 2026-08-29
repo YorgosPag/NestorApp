@@ -55,6 +55,11 @@ import {
   setTableCellSelection,
 } from '../../../state/table-cell-cursor-store';
 import { __resetTableCellSessionFocusForTests } from '../table-cell-session-focus';
+import {
+  setTableFillMenuPort,
+  type TableFillMenuTarget,
+} from '../table-fill-menu-port';
+import { useTableResizeReadoutStore } from '../../../state/table-resize-readout-store';
 import type { TableCellRangeBounds } from '../../../bim/table/table-cell-range';
 import type { PersistedTableModel } from '../../../types/table';
 import type { TableEntity } from '../../../types/table-entity';
@@ -84,6 +89,15 @@ describe('🔴 ADR-754 §14.9 — η λαβή συμπλήρωσης, από τ�
     return getPersistedCellText(model, rowId(row), colId(col));
   };
 
+  /**
+   * Η ετικέτα-φάντασμα, όπως τη διαβάζει ο ζωγράφος.
+   *
+   * 🔴 ADR-828 §7.2 — **ανέβηκε εδώ** όταν απέκτησε δεύτερο καταναλωτή: το δεξί σύρσιμο
+   * ισχυρίζεται ότι η ετικέτα **σωπαίνει**, και ένας δεύτερος ορισμός του «τι λέει η ετικέτα»
+   * θα ήταν δεύτερη ευκαιρία να διαφωνήσουν οι δύο ισχυρισμοί.
+   */
+  const label = (): string | null => useTableResizeReadoutStore.getState().text;
+
   /** Ο χρήστης έχει το κελί ενεργό, σε **πλοήγηση** — η μόνη κατάσταση όπου ζει η λαβή. */
   function navigateTo(row: number, col: number): void {
     act(() => {
@@ -91,11 +105,15 @@ describe('🔴 ADR-754 §14.9 — η λαβή συμπλήρωσης, από τ�
     });
   }
 
-  function pressOn(point: Point2D): void {
+  /**
+   * 🔴 ADR-828 §7.2 — το `button` έγινε παράμετρος όταν **δύο** πλήκτρα απέκτησαν νόημα πάνω
+   * στη λαβή. Προεπιλογή το αριστερό: καμία υπάρχουσα κλήση δεν άλλαξε.
+   */
+  function pressOn(point: Point2D, button = 0): void {
     act(() => {
       canvas.dispatchEvent(
         new MouseEvent('mousedown', {
-          button: 0,
+          button,
           clientX: point.x,
           clientY: point.y,
           bubbles: true,
@@ -105,17 +123,25 @@ describe('🔴 ADR-754 §14.9 — η λαβή συμπλήρωσης, από τ�
     });
   }
 
-  function dragOver(point: Point2D): void {
+  /** `buttons` είναι **μάσκα**, όχι δείκτης: 1 = αριστερό κρατιέται, 2 = δεξί. */
+  function dragOver(point: Point2D, buttons = 1): void {
     act(() => {
       document.dispatchEvent(
-        new MouseEvent('mousemove', { buttons: 1, bubbles: true, clientX: point.x, clientY: point.y }),
+        new MouseEvent('mousemove', { buttons, bubbles: true, clientX: point.x, clientY: point.y }),
       );
     });
   }
 
-  function release(): void {
+  function release(button = 0, point?: Point2D): void {
     act(() => {
-      document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+      document.dispatchEvent(
+        new MouseEvent('mouseup', {
+          button,
+          bubbles: true,
+          clientX: point?.x ?? 0,
+          clientY: point?.y ?? 0,
+        }),
+      );
     });
   }
 
@@ -288,6 +314,280 @@ describe('🔴 ADR-754 §14.9 — η λαβή συμπλήρωσης, από τ�
       pressOn(tableFillHandleScreenPoint(entity, oneCell(2, 1)));
       release();
 
+      expect(onCommitModel).not.toHaveBeenCalled();
+    });
+  });
+
+  /**
+   * 🔴 **ADR-828 §5 — ΤΟ `Ctrl` ΑΛΛΑΖΕΙ ΤΗΝ ΑΠΑΝΤΗΣΗ ΧΩΡΙΣ ΝΑ ΚΟΥΝΗΘΕΙ ΤΟ ΧΕΡΙ.**
+   *
+   * Το αποφασιστικό είναι η **σειρά** των συμβάντων: το πλήκτρο πατιέται **μετά** την τελευταία
+   * κίνηση του ποντικιού και **πριν** το `mouseup`. Αν η υλοποίηση διάβαζε το `ctrlKey` από
+   * κάποιο `MouseEvent`, θα έβλεπε την **παλιά** κατάσταση και αυτά τα tests θα ήταν κόκκινα —
+   * που είναι ακριβώς ο λόγος που γράφτηκαν έτσι.
+   */
+  describe('🔴 ADR-828 §5 — το Ctrl αντιστρέφει την προεπιλογή', () => {
+    /** Πάτημα/άφημα του `Control` **χωρίς** καμία κίνηση ποντικιού ανάμεσα. */
+    function holdCtrl(down: boolean): void {
+      act(() => {
+        window.dispatchEvent(
+          down
+            ? new KeyboardEvent('keydown', { key: 'Control', ctrlKey: true })
+            : new KeyboardEvent('keyup', { key: 'Control', ctrlKey: false }),
+        );
+      });
+    }
+
+    afterEach(() => {
+      holdCtrl(false);
+    });
+
+    it('🔑 μήνας + Ctrl ⇒ ΑΝΤΙΓΡΑΦΗ αντί για σειρά', () => {
+      type(2, 1, 'ΙΑΝΟΥΑΡΙΟΣ');
+      mount();
+      navigateTo(2, 1);
+
+      pressOn(tableFillHandleScreenPoint(entity, oneCell(2, 1)));
+      dragOver(tableCellScreenPoint(entity, 4, 1));
+      holdCtrl(true);
+      release();
+
+      expect([3, 4].map((r) => filledText(r, 1))).toEqual(['ΙΑΝΟΥΑΡΙΟΣ', 'ΙΑΝΟΥΑΡΙΟΣ']);
+    });
+
+    it('🔑 ένας αριθμός + Ctrl ⇒ ΣΕΙΡΑ αντί για αντιγραφή', () => {
+      type(2, 1, '10');
+      mount();
+      navigateTo(2, 1);
+
+      pressOn(tableFillHandleScreenPoint(entity, oneCell(2, 1)));
+      dragOver(tableCellScreenPoint(entity, 4, 1));
+      holdCtrl(true);
+      release();
+
+      expect([3, 4].map((r) => filledText(r, 1))).toEqual(['11', '12']);
+    });
+
+    it('χωρίς Ctrl οι ίδιες δύο πηγές δίνουν το αντίθετο — η αναστροφή είναι πραγματική', () => {
+      type(2, 1, 'ΙΑΝΟΥΑΡΙΟΣ');
+      mount();
+      navigateTo(2, 1);
+      fillFrom(oneCell(2, 1), 4, 1);
+
+      expect([3, 4].map((r) => filledText(r, 1))).toEqual(['ΦΕΒΡΟΥΑΡΙΟΣ', 'ΜΑΡΤΙΟΣ']);
+    });
+
+    it('🔴 το Ctrl που ΑΦΕΘΗΚΕ πριν το mouseup δεν μετράει — μετράει η τελική πρόθεση', () => {
+      type(2, 1, 'ΙΑΝΟΥΑΡΙΟΣ');
+      mount();
+      navigateTo(2, 1);
+
+      pressOn(tableFillHandleScreenPoint(entity, oneCell(2, 1)));
+      dragOver(tableCellScreenPoint(entity, 4, 1));
+      holdCtrl(true);
+      holdCtrl(false);
+      release();
+
+      expect([3, 4].map((r) => filledText(r, 1))).toEqual(['ΦΕΒΡΟΥΑΡΙΟΣ', 'ΜΑΡΤΙΟΣ']);
+    });
+
+    /**
+     * 🔴 **ADR-828 §5 — Η ΕΤΙΚΕΤΑ-ΦΑΝΤΑΣΜΑ ΕΙΝΑΙ ΥΠΟΣΧΕΣΗ, ΟΧΙ ΔΙΑΚΟΣΜΗΣΗ.**
+     *
+     * Δείχνει **τι θα γράψει το κελί που κρατά ο δείκτης** — το ίδιο που θα γράψει και το
+     * `mouseup`. Αν οι δύο απαντήσεις προέρχονταν από διαφορετικούς υπολογισμούς, η ετικέτα θα
+     * μπορούσε να υπόσχεται `ΜΑΡΤΙΟΣ` και το κελί να παίρνει κάτι άλλο· γι' αυτό ρωτούν το
+     * **ίδιο** σχέδιο. Εδώ κλειδώνεται ακριβώς αυτή η ταυτότητα.
+     */
+    describe('η ετικέτα-φάντασμα', () => {
+
+      it('🔑 δείχνει την τιμή του ΤΕΛΕΥΤΑΙΟΥ κελιού — και είναι αυτή που τελικά γράφεται', () => {
+        type(2, 1, 'ΙΑΝΟΥΑΡΙΟΣ');
+        mount();
+        navigateTo(2, 1);
+
+        pressOn(tableFillHandleScreenPoint(entity, oneCell(2, 1)));
+        dragOver(tableCellScreenPoint(entity, 4, 1));
+        const promised = label();
+        release();
+
+        expect(promised).toBe('ΜΑΡΤΙΟΣ');
+        expect(filledText(4, 1)).toBe(promised);
+      });
+
+      it('🔑 ακολουθεί το Ctrl χωρίς κίνηση ποντικιού', () => {
+        type(2, 1, 'ΙΑΝΟΥΑΡΙΟΣ');
+        mount();
+        navigateTo(2, 1);
+
+        pressOn(tableFillHandleScreenPoint(entity, oneCell(2, 1)));
+        dragOver(tableCellScreenPoint(entity, 4, 1));
+        expect(label()).toBe('ΜΑΡΤΙΟΣ');
+
+        holdCtrl(true);
+        expect(label()).toBe('ΙΑΝΟΥΑΡΙΟΣ');
+        release();
+      });
+
+    /**
+     * 🔴 Χωρίς σειρά, η ετικέτα δείχνει την τιμή που θα **αντιγραφεί** — δεν σιωπά.
+     *
+     * Η πρώτη υλοποίηση σιωπούσε, με σκεπτικό «το περίγραμμα το λέει ήδη». Το test του `Ctrl`
+     * παρακάτω το ανέτρεψε: η ετικέτα **εξαφανιζόταν** τη στιγμή του πατήματος, δηλαδή η μόνη
+     * ορατή ένδειξη ότι η πρόθεση άλλαξε ήταν η **απουσία** ένδειξης. Αυτό διαβάζεται ως
+     * σφάλμα, όχι ως πληροφορία.
+     */
+      it('🔴 χωρίς σειρά δείχνει την τιμή που θα ΑΝΤΙΓΡΑΦΕΙ — δεν σιωπά', () => {
+        type(2, 1, 'Δοκός');
+        mount();
+        navigateTo(2, 1);
+
+        pressOn(tableFillHandleScreenPoint(entity, oneCell(2, 1)));
+        dragOver(tableCellScreenPoint(entity, 4, 1));
+
+        expect(label()).toBe('Δοκός');
+        release();
+      });
+
+      it('σβήνει στο mouseup', () => {
+        type(2, 1, 'ΙΑΝΟΥΑΡΙΟΣ');
+        mount();
+        navigateTo(2, 1);
+        fillFrom(oneCell(2, 1), 4, 1);
+
+        expect(label()).toBeNull();
+      });
+    });
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  /**
+   * 🔴 ADR-828 §7.2 — **ΤΟ ΔΕΞΙ ΣΥΡΣΙΜΟ ΡΩΤΑΕΙ ΑΝΤΙ ΝΑ ΓΡΑΨΕΙ.**
+   *
+   * Τρία πράγματα κλειδώνονται εδώ, και κανένα δεν φαίνεται στην καθαρή στάθμη:
+   *
+   *  1. **Η χειρονομία επιβιώνει.** Ο φρουρός της συνεδρίας ρωτούσε `(buttons & 1) === 0` —
+   *     αληθές από το **πρώτο** `mousemove` μιας δεξιάς σύρσης, δηλαδή η σύρση θα τερμάτιζε
+   *     πριν κουνηθεί το χέρι και το μενού θα άνοιγε πάνω στο κελί εκκίνησης.
+   *  2. **Καμία εγγραφή στην απελευθέρωση.** Ένα `Escape` πάνω στο μενού πρέπει να αφήνει τον
+   *     πίνακα **ανέγγιχτο**· αν το `onEnd` έγραφε «και μετά ρωτάμε», η ακύρωση θα ήταν ψέμα.
+   *  3. **Η προσφορά είναι πραγματική.** Το μενού δεν μαντεύει ποιες εντολές ανοίγουν: παίρνει
+   *     την απάντηση της **ίδιας** ανίχνευσης που θα εκτελέσει.
+   */
+  describe('🔴 §7.2 — δεξί σύρσιμο της λαβής: το μενού επιλογών', () => {
+    let opened: { x: number; y: number; target: TableFillMenuTarget } | null;
+
+    beforeEach(() => {
+      opened = null;
+      setTableFillMenuPort({
+        open: (x, y, target) => {
+          opened = { x, y, target };
+        },
+      });
+    });
+
+    afterEach(() => setTableFillMenuPort(null));
+
+    /** Η ολόκληρη χειρονομία με το **δεξί** πλήκτρο: πιάσε, σύρε, άσε. */
+    function rightFillFrom(source: TableCellRangeBounds, toRow: number, toCol: number): void {
+      const drop = tableCellScreenPoint(entity, toRow, toCol);
+      pressOn(tableFillHandleScreenPoint(entity, source), 2);
+      dragOver(drop, 2);
+      release(2, drop);
+    }
+
+    it('🔴 ανοίγει το μενού στο σημείο απελευθέρωσης και ΔΕΝ γράφει τίποτα', () => {
+      type(2, 1, 'ΙΑΝΟΥΑΡΙΟΣ');
+      mount();
+      navigateTo(2, 1);
+      const drop = tableCellScreenPoint(entity, 4, 1);
+      rightFillFrom(oneCell(2, 1), 4, 1);
+
+      expect(onCommitModel).not.toHaveBeenCalled();
+      expect(opened).not.toBeNull();
+      expect(opened?.x).toBeCloseTo(drop.x);
+      expect(opened?.y).toBeCloseTo(drop.y);
+    });
+
+    it('🔴 Ο ΔΙΑΧΩΡΙΣΤΗΣ: η ΑΡΙΣΤΕΡΗ σύρση γράφει και ΔΕΝ ανοίγει μενού', () => {
+      // Χωρίς αυτόν, ένα «ανοίγει πάντα» θα περνούσε το test από πάνω και θα έσπαγε την
+      // προεπιλεγμένη χειρονομία — που είναι η συνηθισμένη.
+      type(2, 1, 'ΙΑΝΟΥΑΡΙΟΣ');
+      mount();
+      navigateTo(2, 1);
+      fillFrom(oneCell(2, 1), 4, 1);
+
+      expect(opened).toBeNull();
+      expect(onCommitModel).toHaveBeenCalledTimes(1);
+    });
+
+    it('🔴 η επιλογή από το μενού γράφει ΜΙΑ φορά — και ό,τι ζητήθηκε', () => {
+      type(2, 1, 'ΙΑΝΟΥΑΡΙΟΣ');
+      mount();
+      navigateTo(2, 1);
+      rightFillFrom(oneCell(2, 1), 4, 1);
+
+      // «Αντιγραφή κελιών» πάνω σε μήνα: η προεπιλογή θα έδινε ΦΕΒΡΟΥΑΡΙΟΣ/ΜΑΡΤΙΟΣ.
+      act(() => opened?.target.apply('copy'));
+
+      expect(onCommitModel).toHaveBeenCalledTimes(1);
+      expect(filledText(3, 1)).toBe('ΙΑΝΟΥΑΡΙΟΣ');
+      expect(filledText(4, 1)).toBe('ΙΑΝΟΥΑΡΙΟΣ');
+    });
+
+    it('🔑 «Συμπλήρωση σειράς» πάνω στον ίδιο μήνα δίνει τη σειρά — δύο εντολές, δύο εκβάσεις', () => {
+      type(2, 1, 'ΙΑΝΟΥΑΡΙΟΣ');
+      mount();
+      navigateTo(2, 1);
+      rightFillFrom(oneCell(2, 1), 4, 1);
+      act(() => opened?.target.apply('series'));
+
+      expect(filledText(3, 1)).toBe('ΦΕΒΡΟΥΑΡΙΟΣ');
+      expect(filledText(4, 1)).toBe('ΜΑΡΤΙΟΣ');
+    });
+
+    it('🔴 Η ΠΡΟΣΦΟΡΑ: κείμενο ⇒ ούτε σειρά ούτε ημερολόγιο· μονήρης αριθμός ⇒ σειρά', () => {
+      // Ο μονήρης αριθμός είναι η **αποφασιστική** περίπτωση: με `'auto'` δεν είναι σειρά (§2),
+      // αλλά η εντολή «Συμπλήρωση σειράς» υπάρχει ακριβώς γι' αυτόν. Ρωτώντας με `'auto'` το
+      // item θα ήταν γκρίζο εκεί που το Excel το θέλει ενεργό.
+      type(2, 1, 'Δοκός');
+      type(2, 2, '10');
+      mount();
+
+      navigateTo(2, 1);
+      rightFillFrom(oneCell(2, 1), 4, 1);
+      expect(opened?.target.offer).toEqual({ series: false, date: false });
+
+      navigateTo(2, 2);
+      rightFillFrom(oneCell(2, 2), 4, 2);
+      expect(opened?.target.offer).toEqual({ series: true, date: false });
+    });
+
+    it('🔑 η ετικέτα-φάντασμα ΣΩΠΑΙΝΕΙ στο δεξί σύρσιμο — τίποτα δεν έχει αποφασιστεί ακόμη', () => {
+      type(2, 1, 'ΙΑΝΟΥΑΡΙΟΣ');
+      mount();
+      navigateTo(2, 1);
+
+      pressOn(tableFillHandleScreenPoint(entity, oneCell(2, 1)), 2);
+      dragOver(tableCellScreenPoint(entity, 4, 1), 2);
+
+      // Με το αριστερό, η ίδια στιγμή δείχνει «ΜΑΡΤΙΟΣ» (test παραπάνω). Εδώ μια τέτοια
+      // ετικέτα θα ήταν υπόσχεση που το μενού σχεδιάστηκε να μπορεί να αθετήσει.
+      expect(label()).toBeNull();
+      release(2);
+    });
+
+    it('🔑 δεξί ΚΛΙΚ χωρίς σύρσιμο δεν ανοίγει αυτό το μενού — δεν υπάρχει γέμισμα να ρυθμιστεί', () => {
+      // Εκεί ο δρομολογητής δεξιού κλικ δουλεύει κανονικά (δεν έχει `rightDragMoved`) και
+      // εμφανίζει το μενού **κελιών**, όπως στο Excel.
+      type(2, 1, 'ΙΑΝΟΥΑΡΙΟΣ');
+      mount();
+      navigateTo(2, 1);
+
+      pressOn(tableFillHandleScreenPoint(entity, oneCell(2, 1)), 2);
+      release(2);
+
+      expect(opened).toBeNull();
       expect(onCommitModel).not.toHaveBeenCalled();
     });
   });

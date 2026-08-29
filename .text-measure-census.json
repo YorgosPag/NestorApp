@@ -40,6 +40,7 @@
     "src/subapps/dxf-viewer/canvas-v2/dxf-canvas/__tests__/dxf-viewport-culling.test.ts": "c2ada715462c152c",
     "src/subapps/dxf-viewer/export/formats/__tests__/table-typography-specimen.test.ts": "8148a152cbb62a74",
     "src/subapps/dxf-viewer/hooks/__tests__/grip-computation-text.test.ts": "4e5090cb3bead37f",
+    "src/subapps/dxf-viewer/hooks/canvas/__tests__/text-annotation-size-adoption.test.ts": "1c35e5aa8b2fa156",
     "src/subapps/dxf-viewer/rendering/entities/__tests__/text-vertical-anchor.test.ts": "0c7838b8198ab796",
     "src/subapps/dxf-viewer/rendering/entities/table/__tests__/table-link-paint.test.ts": "935dc4cdf54ae24f",
     "src/subapps/dxf-viewer/rendering/entities/table/__tests__/table-rotated-text.test.ts": "f433f398aa7baad7",
@@ -60,7 +61,7 @@
     "src/subapps/dxf-viewer/ui/table-cell-editor/__tests__/table-active-cell-move.test.tsx": "30dbc0ac4a4bf3b2",
     "src/subapps/dxf-viewer/ui/table-cell-editor/__tests__/table-cell-editor-leaves-layout-alone.test.ts": "553e3aa09be73199",
     "src/subapps/dxf-viewer/ui/table-cell-editor/__tests__/table-double-click-entry.test.tsx": "ad58fa6397b67f04",
-    "src/subapps/dxf-viewer/ui/table-cell-editor/__tests__/table-fill-handle-drag.test.tsx": "c24aaa61a768b8ac",
+    "src/subapps/dxf-viewer/ui/table-cell-editor/__tests__/table-fill-handle-drag.test.tsx": "0efb6a5d80283f54",
     "src/subapps/dxf-viewer/ui/table-cell-editor/__tests__/table-format-painter-click.test.tsx": "372c9feeb1b80553",
     "src/subapps/dxf-viewer/ui/table-cell-editor/__tests__/table-range-transfer-drag.test.ts": "18fe985aa0ea24fb",
     "src/subapps/dxf-viewer/ui/table-cell-editor/__tests__/use-table-mode-entry.test.tsx": "f5450cbccc40fb2d"
@@ -358,6 +359,13 @@
       "dropped": []
     },
     {
+      "file": "src/subapps/dxf-viewer/hooks/canvas/__tests__/text-annotation-size-adoption.test.ts",
+      "glyph": 0,
+      "css": 0,
+      "nominal": 6,
+      "dropped": []
+    },
+    {
       "file": "src/subapps/dxf-viewer/rendering/entities/__tests__/text-vertical-anchor.test.ts",
       "glyph": 12,
       "css": 0,
@@ -487,7 +495,7 @@
       "file": "src/subapps/dxf-viewer/ui/table-cell-editor/__tests__/table-fill-handle-drag.test.tsx",
       "glyph": 0,
       "css": 0,
-      "nominal": 9,
+      "nominal": 25,
       "dropped": []
     },
     {

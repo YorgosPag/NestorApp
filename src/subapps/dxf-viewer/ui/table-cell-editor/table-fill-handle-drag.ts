@@ -46,6 +46,7 @@ import {
   resolveTableFillTarget,
   tableFillHandleHitAtFrame,
   tableFillPreviewBounds,
+  type TableFillTarget,
 } from '../../bim/table/table-fill-handle';
 // 🔴 ADR-739 §36.9 — η ερώτηση «ποια περιοχή εννοεί ο χρήστης» μετακόμισε σε δικό της module
 // όταν απέκτησε **τέταρτο** καταναλωτή που δεν αφορά λαβή: τη μετακίνηση περιγράμματος.
@@ -57,12 +58,53 @@ import { cellEndAt } from './table-pointer-axis-selection';
 import { claimTableCellPointerGesture, claimTableCellSessionPointerDown } from './table-cell-session-focus';
 import { setTableCellSelection, type TableCellCursorState } from '../../state/table-cell-cursor-store';
 import { clearTableFillPreview, setTableFillPreview } from '../../state/table-fill-preview-store';
-import type { TableEntity } from '../../types/table-entity';
+// 🔴 ADR-828 Φ4α — το κουμπί «Επιλογές Αυτόματης Συμπλήρωσης» οπλίζεται από τη **μία** εγγραφή,
+// δηλαδή από ένα σημείο για τις τρεις αφορμές. Δες `commitTableFill`.
+import { setTableFillBadge } from '../../state/table-fill-badge-store';
+import {
+  hideTableResizeReadout,
+  showTableResizeReadout,
+} from '../../state/table-resize-readout-store';
+import { readModifierSnapshot } from '../../keyboard/modifier-snapshot';
+import {
+  tableFillFrontier,
+  tableFillMenuOffer,
+  tableFillModeFor,
+  tableFillPreviewText,
+  type TableFillMode,
+} from '../../bim/table/table-fill-plan';
+// 🔴 ADR-828 §7.2 — η θύρα του μενού δεξιού συρσίματος. Ανάγνωση **τη στιγμή της
+// απελευθέρωσης**, ποτέ στιγμιότυπο: δες την κεφαλίδα εκείνου του module για το γιατί η
+// χειρονομία δεν περνά από τον δρομολογητή δεξιού κλικ.
+import { getTableFillMenuPort } from './table-fill-menu-port';
+import type { TableEntity, TableFramePoint } from '../../types/table-entity';
+import type { TableLayout } from '../../bim/table/table-layout-types';
 import type { TableModel } from '../../types/table';
 import type { ViewTransform } from '../../rendering/types/Types';
 
+/**
+ * 🔴 ADR-828 §7.2 / Φ4α — **ΟΛΟ Ο ΚΟΣΜΟΣ ΠΟΥ ΧΡΕΙΑΖΕΤΑΙ Η ΜΙΑ ΕΓΓΡΑΦΗ**: ποιος διαβάζει τη
+ * σκηνή **τώρα**, και ποιος γράφει.
+ *
+ * Εξήχθη από το {@link TableFillHandlePress} όταν απέκτησε **τρίτο** καλούντα που δεν είναι
+ * πάτημα λαβής: το κουμπί επιλογών (πάτημα **και** `Alt+↓`). Εκείνοι δεν έχουν —και δεν
+ * πρέπει να αποκτήσουν— `worldPoint`, `container` ή `transformRef`· έχουν όμως ακριβώς αυτά
+ * τα δύο. Ένα όρισμα `press` εκεί θα ζητούσε από το πληκτρολόγιο να κατασκευάσει ψεύτικη
+ * χειρονομία ποντικιού για να μπορέσει να γράψει.
+ */
+export interface TableFillWriter {
+  /**
+   * 🔴 ADR-828 §7.2 — ο **αναγνώστης** της οντότητας, για όποιον γράφει **αργότερα**.
+   *
+   * `null` ⇒ ο πίνακας δεν υπάρχει πια (undo, αλλαγή ορόφου) και η σωστή πράξη είναι **καμία**.
+   */
+  readonly liveTable: () => TableEntity | null;
+  /** Η **ΜΙΑ** διαδρομή εγγραφής μοντέλου — η ίδια που χρησιμοποιεί η μεταφορά περιοχής. */
+  readonly commit: (entity: TableEntity, model: TableEntity['model']) => void;
+}
+
 /** Ό,τι ξέρει ο φρουρός του ποντικιού τη στιγμή του πατήματος. */
-export interface TableFillHandlePress {
+export interface TableFillHandlePress extends TableFillWriter {
   /** Η **ζωντανή** οντότητα του δρομέα. */
   readonly entity: TableEntity;
   readonly cursor: TableCellCursorState;
@@ -71,8 +113,6 @@ export interface TableFillHandlePress {
   readonly transform: ViewTransform;
   readonly container: HTMLElement;
   readonly transformRef: RefObject<ViewTransform>;
-  /** Η **ΜΙΑ** διαδρομή εγγραφής μοντέλου — η ίδια που χρησιμοποιεί η μεταφορά περιοχής. */
-  readonly commit: (entity: TableEntity, model: TableEntity['model']) => void;
 }
 
 /**
@@ -82,7 +122,10 @@ export interface TableFillHandlePress {
  * `false` ⇒ ο κανονικός δρόμος τρέχει αυτούσιος. Η άρνηση είναι η **συνηθισμένη** έκβαση.
  */
 export function tryTableFillHandleMouseDown(event: MouseEvent, press: TableFillHandlePress): boolean {
-  if (event.button !== 0) return false;
+  // 🔴 ADR-828 §7.2 — **ΔΥΟ ΠΛΗΚΤΡΑ ΠΙΑΝΟΥΝ ΤΗ ΛΑΒΗ**, με διαφορετική κατάληξη: το αριστερό
+  // γράφει την προεπιλογή, το δεξί **ρωτά**. Το μεσαίο είναι pan του καμβά και δεν μας αφορά.
+  const withMenu = event.button === 2;
+  if (event.button !== 0 && !withMenu) return false;
   // Σε γραφή η λαβή δεν φαίνεται — δες το ρητό όριο στην κεφαλίδα.
   if (press.cursor.mode !== 'nav') return false;
 
@@ -107,9 +150,53 @@ export function tryTableFillHandleMouseDown(event: MouseEvent, press: TableFillH
   claimTableCellPointerGesture();
 
   let target = resolveTableFillTarget(source, { row: source.lastRow, col: source.lastCol });
+  // 🔴 ADR-828 §5 — η **πρόθεση**, χωριστά από τη **θέση**. Διαβάζεται μία φορά εδώ και
+  // ενημερώνεται από τον παρατηρητή· ποτέ από το `MouseEvent`, που είναι παγωμένο στιγμιότυπο.
+  let modifiers = readModifierSnapshot();
+
+  /**
+   * Η ετικέτα-φάντασμα: **τι θα πάρει το κελί που κρατά ο δείκτης** — η υπόσχεση που το
+   * `mouseup` οφείλει να τηρήσει, γιατί βγαίνει από το **ίδιο** σχέδιο.
+   *
+   * Το κόστος είναι O(**πηγή**), όχι O(στόχου): το σχέδιο σαρώνει μόνο τα κελιά-σπόρους, που
+   * είναι συνήθως ένα. Γι' αυτό επιτρέπεται να ξαναχτίζεται σε κάθε καρέ της σύρσης, πίσω από
+   * τον ίδιο φύλακα «άλλαξε κελί;» με την υπόλοιπη χειρονομία.
+   */
+  /** Η **μία** εγγραφή, δεμένη σε αυτή τη χειρονομία. Δες {@link commitTableFill}. */
+  const commitFill = (chosen: TableFillTarget, mode: TableFillMode): void => {
+    commitTableFill(press, source, chosen, mode);
+  };
+
+  const showFillLabel = (): void => {
+    // 🔴 ADR-828 §7.2 — **ΣΤΟ ΔΕΞΙ ΣΥΡΣΙΜΟ Η ΕΤΙΚΕΤΑ ΣΩΠΑΙΝΕΙ**, και είναι ο ίδιος κανόνας
+    // που τη γέννησε: *η ετικέτα λέει πάντα κάτι αληθινό*. Εκεί δεν έχει αποφασιστεί ακόμη
+    // **τίποτα** — η πρόθεση θα δοθεί στο μενού, μετά την απελευθέρωση. Μια ετικέτα που
+    // διαφημίζει τη σειρά και μετά ο χρήστης διαλέγει «Αντιγραφή κελιών» θα ήταν υπόσχεση που
+    // η ίδια η χειρονομία σχεδιάστηκε να αθετεί. Το **μέγεθος** της περιοχής εξακολουθεί να
+    // ανακοινώνεται (`sizeReadout`): εκείνο είναι γεγονός, όχι πρόθεση.
+    if (target === null || withMenu) {
+      hideTableResizeReadout();
+      return;
+    }
+    const mode = tableFillModeFor(model, source, target, modifiers);
+    const text = tableFillPreviewText(
+      model,
+      source,
+      target,
+      mode,
+      tableFillFrontier(source, target),
+    );
+    // Κενό κείμενο δεν είναι ετικέτα: μια άδεια πινακίδα δίπλα στον δείκτη είναι θόρυβος.
+    if (text === null || text === '') hideTableResizeReadout();
+    else showTableResizeReadout(text);
+  };
+
   startTableCellDrag({
     anchor,
     kind: 'range',
+    // 🔴 ADR-828 §7.2 — **το πλήκτρο που κρατά τη χειρονομία**. Χωρίς αυτό, ο φρουρός
+    // `(buttons & 1) === 0` της συνεδρίας θα τερμάτιζε τη δεξιά σύρση στο πρώτο `mousemove`.
+    button: withMenu ? 2 : 0,
     container: press.container,
     resolveAt: (moveEvent) => cellEndAt(moveEvent, press.entity, press.container, press.transformRef),
     /**
@@ -145,17 +232,91 @@ export function tryTableFillHandleMouseDown(event: MouseEvent, press: TableFillH
           ? null
           : { entityId: press.entity.id, bounds: tableFillPreviewBounds(source, target) },
       );
+      showFillLabel();
     },
+    // 🔴 ADR-828 §5 — το `Ctrl` πατήθηκε ή αφέθηκε **χωρίς** να κουνηθεί το χέρι. Εδώ γράφεται
+    // μόνο η πρόθεση· την επανα-δημοσίευση την κάνει η ίδια η συνεδρία, αμέσως μετά.
+    //
+    // 🔴 §7.2 — **απών στο δεξί σύρσιμο**, και όχι για οικονομία: εκεί το `Ctrl` δεν σημαίνει
+    // τίποτα (την πρόθεση τη δίνει το μενού), οπότε ένας παρατηρητής θα ήταν σκέτο κόστος σε
+    // κάθε πάτημα πλήκτρου του κόσμου — ακριβώς αυτό που η προαιρετικότητα του `onModifier`
+    // υπάρχει για να αποφύγει.
+    onModifier: withMenu
+      ? undefined
+      : (next) => {
+          modifiers = next;
+        },
     // 🔴 Το μοντέλο γράφεται **μία φορά**, εδώ. Δες την κεφαλίδα.
-    onEnd: () => {
+    onEnd: (release) => {
       clearTableFillPreview();
+      hideTableResizeReadout();
       if (target === null) return;
-      const live = press.entity;
-      press.commit(live, applyTableFill(live.model, source, target));
-      selectFilled(source, target, model);
+      const chosen = target;
+
+      // 🔴 §7.2 — **ΤΟ ΔΕΞΙ ΡΩΤΑΕΙ.** Καμία εγγραφή εδώ: το μενού κρατά την πράξη και τη
+      // λύνει όταν —και **αν**— ο άνθρωπος διαλέξει. Ένα `Escape` δεν γράφει τίποτα, όπως στο
+      // Excel. Δες `table-fill-menu-port.ts` για το γιατί δεν περνά από τον δρομολογητή.
+      if (withMenu) {
+        getTableFillMenuPort()?.open(release.clientX, release.clientY, {
+          offer: tableFillMenuOffer(model, source, chosen),
+          apply: (mode) => commitFill(chosen, mode),
+        });
+        return;
+      }
+
+      // Η **ίδια** ερώτηση που απάντησε η ετικέτα ένα καρέ πριν — ο χρήστης παίρνει ό,τι είδε.
+      commitFill(chosen, tableFillModeFor(model, source, chosen, modifiers));
     },
   });
   return true;
+}
+
+/**
+ * 🔴 ADR-828 §7.2 — **Η ΜΙΑ ΕΓΓΡΑΦΗ**, κοινή σε **τρεις** αφορμές.
+ *
+ * Το αριστερό σύρσιμο τη φτάνει αμέσως με τη δική του πρόθεση· το δεξί τη φτάνει από το μενού,
+ * αργότερα και με άλλη· και από τη Φ4α τη φτάνει **και το κουμπί επιλογών** — με πάτημα ή με
+ * `Alt+↓`, ώρες μετά τη χειρονομία. Ο κώδικας που γράφει είναι ο **ίδιος** σε όλες, αλλιώς οι
+ * διαδρομές θα μπορούσαν να αποκλίνουν στο τι μαρκάρεται μετά, δηλαδή στο μόνο σημείο όπου η
+ * απόκλιση δεν είναι ορατή σε κανένα test που κοιτά μοντέλο.
+ *
+ * ⚠️ Διαβάζει τη σκηνή **τώρα** ({@link TableFillWriter.liveTable}), όχι από το πάτημα:
+ * `null` ⇒ ο πίνακας δεν υπάρχει πια (undo, αλλαγή ορόφου) και η σωστή πράξη είναι **καμία**.
+ *
+ * ## 🔴 Φ4α — ΕΔΩ ΟΠΛΙΖΕΤΑΙ ΤΟ ΚΟΥΜΠΙ, ΚΑΙ ΓΙ' ΑΥΤΟ ΕΠΑΝ-ΟΠΛΙΖΕΤΑΙ ΔΩΡΕΑΝ
+ * Επειδή αυτή είναι η **μία** εγγραφή, το κουμπί γεννιέται από κάθε συμπλήρωση χωρίς να το
+ * ξέρει καμία από τις τρεις αφορμές — και, κρίσιμο, **ξαναγεννιέται** όταν ο άνθρωπος διαλέξει
+ * κάτι από το ίδιο του το μενού: εκείνη η επιλογή περνά από εδώ, άρα γράφει νέα σφραγίδα
+ * έκδοσης. Έτσι μπορεί να δοκιμάσει «σειρά», να δει, και να γυρίσει σε «αντιγραφή» — Excel
+ * parity, με **μηδέν** γραμμές αφιερωμένες στην επαν-όπλιση.
+ *
+ * ⚠️ Η σφραγίδα είναι το **νέο** μοντέλο, όχι το `live.model`: το `UpdateEntityCommand` γράφει
+ * ακριβώς την αναφορά που του δόθηκε, οπότε από την επόμενη ανάγνωση η οντότητα **ταυτίζεται**
+ * με αυτό. Αν η εγγραφή αποτύχει σιωπηλά (κανένας ενεργός όροφος), η οντότητα κρατά την **παλιά**
+ * αναφορά ⇒ η σφραγίδα είναι μπαγιάτικη από τη γέννησή της ⇒ κανένα κουμπί. Αστοχία **προς τη
+ * σιωπή**, που είναι η μόνη ανεκτή κατεύθυνση για affordance που υπόσχεται πράξη.
+ */
+export function commitTableFill(
+  writer: TableFillWriter,
+  source: TableCellRangeBounds,
+  target: TableFillTarget,
+  mode: TableFillMode,
+): void {
+  const live = writer.liveTable();
+  if (live === null) return;
+  const nextModel = applyTableFill(live.model, source, target, mode);
+  writer.commit(live, nextModel);
+  selectFilled(source, target, resolveTableModel(live.model));
+  setTableFillBadge({
+    entityId: live.id,
+    source,
+    target,
+    // Η **ίδια** ένωση που μόλις μαρκαρίστηκε — δες `tableFillPreviewBounds`. Δεύτερος
+    // υπολογισμός εδώ θα ήταν δεύτερη απάντηση στο «ποια περιοχή γέμισε», και το κουμπί θα
+    // μπορούσε να καθίσει κάτω από άλλο ορθογώνιο από αυτό που φωτίζεται.
+    filled: tableFillPreviewBounds(source, target),
+    modelRef: nextModel,
+  });
 }
 
 /**
@@ -198,10 +359,48 @@ function fillSourceBounds(model: TableModel, cursor: TableCellCursorState): Tabl
  * `__tests__/table-fill-handle-drag.test.tsx`, που εκτελεί τη **ζωντανή** χειρονομία.
  */
 function isOnHandle(press: TableFillHandlePress, source: TableCellRangeBounds): boolean {
-  const geometry = computeTableEntityGeometryLive(press.entity);
-  const pxPerMm = tablePxPerMm(tableMmToWorldLive(), press.transform.scale);
-  const frame = tableWorldToFrame(press.entity, press.worldPoint, geometry.mmToWorld);
-  return tableFillHandleHitAtFrame(geometry.layout, frame, pxPerMm, source) !== null;
+  const probe = tableFillPressFrame(press);
+  return tableFillHandleHitAtFrame(probe.layout, probe.frame, probe.pxPerMm, source) !== null;
+}
+
+/**
+ * 🔴 ADR-828 Φ4α — **Η ΒΑΣΗ ΚΑΘΕ ΕΡΩΤΗΣΗΣ ΤΗΣ ΓΩΝΙΑΣ**: διάταξη, κλίμακα χαρτιού, κλίμακα px.
+ *
+ * Εξήχθη όταν η ίδια τριάδα απέκτησε **τρίτο** καταναλωτή: τη λαβή (πάτημα), το κουμπί
+ * επιλογών (πάτημα) και το **πληκτρολόγιο** του κουμπιού, που δεν έχει σημείο αλλά χρειάζεται
+ * ολόκληρη τη βάση για να βρει **πού** να αγκυρώσει το μενού.
+ *
+ * ⚠️ Το `pxPerMm` βγαίνει από το {@link tableMmToWorldLive} και **όχι** από το `mmToWorld` της
+ * γεωμετρίας — η διατύπωση διατηρείται **ακέραιη** από τον φρουρό της λαβής. Δεν είναι
+ * στολίδι: αν οι δύο αποκλίνουν σε κάποια κλίμακα σχεδίου, η αλλαγή της εδώ θα μετακινούσε τη
+ * ζώνη σύλληψης της λαβής χωρίς κανείς να το ζητήσει — δηλαδή θα ήταν σιωπηλή αλλαγή
+ * συμπεριφοράς κρυμμένη μέσα σε εξαγωγή.
+ *
+ * ⚠️ Ίδιο σχήμα με το `indicatorProbeBasis`, αλλά **χωρίς τον φύλακα LOD** του: εκείνος ρωτά
+ * «ζωγραφίζεται ο δείκτης σε αυτό το ζουμ;», ερώτηση που δεν αφορά ούτε τη λαβή ούτε το
+ * κουμπί — και τα δύο ζωγραφίζονται όσο υπάρχει δρομέας, ανεξάρτητα από τις ζώνες.
+ */
+export interface TableFillFrameBasis {
+  readonly layout: TableLayout;
+  readonly mmToWorld: number;
+  readonly pxPerMm: number;
+}
+
+export function tableFillFrameBasis(entity: TableEntity, viewScale: number): TableFillFrameBasis {
+  const geometry = computeTableEntityGeometryLive(entity);
+  return {
+    layout: geometry.layout,
+    mmToWorld: geometry.mmToWorld,
+    pxPerMm: tablePxPerMm(tableMmToWorldLive(), viewScale),
+  };
+}
+
+/** Η ίδια βάση, **με το σημείο του πατήματος** μεταφρασμένο στο πλαίσιο του πίνακα. */
+export function tableFillPressFrame(
+  press: TableFillHandlePress,
+): TableFillFrameBasis & { readonly frame: TableFramePoint } {
+  const basis = tableFillFrameBasis(press.entity, press.transform.scale);
+  return { ...basis, frame: tableWorldToFrame(press.entity, press.worldPoint, basis.mmToWorld) };
 }
 
 /** Το κελί κάτω από το χέρι, μεταφρασμένο σε **δείκτες**, και από εκεί σε υπόσχεση. */

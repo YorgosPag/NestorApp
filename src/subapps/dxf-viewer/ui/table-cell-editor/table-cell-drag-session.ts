@@ -47,6 +47,10 @@
 import { setTableCellSelection } from '../../state/table-cell-cursor-store';
 import { setTableDragSpan } from '../../state/table-drag-span-store';
 import {
+  observeModifierSnapshot,
+  type ModifierSnapshot,
+} from '../../keyboard/modifier-snapshot';
+import {
   edgeAutoPanSample,
   startDragEdgeAutoPan,
   stopDragEdgeAutoPan,
@@ -80,6 +84,28 @@ export interface TableCellDragStart {
    * ακριβώς το κενό που κλείνει εδώ, ξαναγεννημένο χωρίς να το πει κανείς.
    */
   readonly container: HTMLElement;
+
+  /**
+   * 🔴 ADR-828 §7.2 — **ΠΟΙΟ ΠΛΗΚΤΡΟ ΚΡΑΤΑ ΑΥΤΗ ΤΗ ΧΕΙΡΟΝΟΜΙΑ**· προεπιλογή: το αριστερό.
+   *
+   * Το δεξί σύρσιμο της λαβής συμπλήρωσης (Excel: σέρνεις με το δεξί, αφήνεις, διαλέγεις από
+   * μενού) είναι **η ίδια χειρονομία** με τις πέντε προηγούμενες — κουμπί κάτω, ακολούθα το
+   * χέρι, γράψε μόνο όταν αλλάζει κελί, auto-pan στην άκρη, τερμάτισε στο `mouseup` όπου κι αν
+   * γίνει. Αλλάζει **ένα bit**: ποιο κουμπί σημαίνει «κρατιέμαι ακόμη».
+   *
+   * ## Γιατί ΔΕΝ αρκούσε η υπάρχουσα μάσκα
+   * Ο φρουρός `(event.buttons & 1) === 0` ρωτά «αφέθηκε το **αριστερό**;» — σε δεξί σύρσιμο
+   * είναι αληθής από το **πρώτο** `mousemove`, οπότε η χειρονομία θα τερμάτιζε πριν κουνηθεί
+   * το χέρι. Δεύτερος βρόχος `mousemove` για το δεξί θα ήταν structural clone ολόκληρου του
+   * κύκλου ζωής (N.18 / CHECK 3.28)· εδώ η γενίκευση κοστίζει έναν αριθμό.
+   *
+   * ## 🔑 Και το `mouseup` ρωτά **αυτό** το πλήκτρο
+   * Ήταν «τερμάτισε σε οποιοδήποτε `mouseup`». Με δύο πλήκτρα στο παιχνίδι η διατύπωση γίνεται
+   * λάθος: ένα δεξί σύρσιμο θα τερμάτιζε από **αριστερό** κλικ, δηλαδή θα άνοιγε το μενού
+   * επιλογών χωρίς κανείς να αφήσει το δεξί. Η αυστηροποίηση ισχύει και προς τα πίσω και είναι
+   * βελτίωση: πλέον ένα δεξί κλικ στη μέση μιας σύρσης επιλογής δεν την σκοτώνει.
+   */
+  readonly button?: 0 | 2;
 
   /**
    * 🔴 ADR-754 §5 — **τι γράφεται σε κάθε αλλαγή κελιού**· προεπιλογή: η επιλογή του δρομέα.
@@ -120,8 +146,14 @@ export interface TableCellDragStart {
    * αφέθηκε εκτός παραθύρου). Ένα `endTableCellDrag()` από αλλού —αποπροσάρτηση συνεδρίας,
    * νέα χειρονομία που κλείνει την προηγούμενη— **δεν** το τρέχει: εκεί η χειρονομία
    * **ακυρώθηκε**, και μια ακύρωση που γράφει μοντέλο είναι το χειρότερο είδος έκπληξης.
+   *
+   * 🔴 ADR-828 §7.2 — δέχεται **το συμβάν που τερμάτισε**, δηλαδή **πού ήταν το χέρι**. Το
+   * χρειάζεται το δεξί σύρσιμο της λαβής: το μενού επιλογών ανοίγει **εκεί που αφέθηκε το
+   * κουμπί**, όπως κάθε μενού συμφραζομένων. Η εναλλακτική —δικός του ακροατής `mousemove`
+   * για να κρατά «τελευταία θέση»— θα ήταν **τρίτο** αντίγραφο μιας τιμής που αυτό το αρχείο
+   * ήδη κρατά ({@link lastEvent}), δηλαδή ακριβώς το σφάλμα που περιγράφει το `onModifier`.
    */
-  readonly onEnd?: () => void;
+  readonly onEnd?: (release: MouseEvent) => void;
 
   /**
    * 🔴 ADR-739 §69 — **τι μέγεθος ανακοινώνει αυτή η χειρονομία** στο πλαίσιο ονόματος·
@@ -143,6 +175,26 @@ export interface TableCellDragStart {
    * κοινή {@link TABLE_DRAG_SIZE_AS_DRAGGED}, όχι τρία πανομοιότυπα inline lambdas.
    */
   readonly sizeReadout: (span: TableSelectionSpan) => TableSelectionSpan | null;
+
+  /**
+   * 🔴 ADR-828 §5 — **Η ΠΡΟΘΕΣΗ ΑΛΛΑΞΕ ΧΩΡΙΣ ΝΑ ΚΟΥΝΗΘΕΙ ΤΟ ΧΕΡΙ.**
+   *
+   * Απόν ⇒ η χειρονομία δεν ενδιαφέρεται για `Ctrl`/`Shift` και **κανένας** παρατηρητής δεν
+   * εγγράφεται. Παρόν ⇒ καλείται σε κάθε αλλαγή, και αμέσως μετά η χειρονομία **ξαναδημοσιεύει**
+   * το τρέχον span, ώστε η προεπισκόπηση να απαντήσει στο πλήκτρο **χωρίς** να περιμένει
+   * επόμενη κίνηση ποντικιού.
+   *
+   * ## Γιατί ζει εδώ και όχι μέσα στη λαβή
+   * Ο μηχανισμός είναι τρία πράγματα μαζί — παρατηρητής, «τελευταία γνωστή θέση», και
+   * ξεπέρασμα του φύλακα «άλλαξε κελί;» — και **και τα τρία** ζουν ήδη σε αυτό το αρχείο. Μια
+   * δεύτερη υλοποίηση μέσα στη λαβή θα κρατούσε δικό της `lastEvent` δίπλα σε αυτό εδώ: δύο
+   * αντίγραφα της ίδιας αλήθειας, που αποκλίνουν την πρώτη φορά που κάποιος αγγίξει το ένα.
+   *
+   * ⚠️ Το ωμό `MouseEvent.ctrlKey` **δεν** αρκεί: είναι παγωμένο στιγμιότυπο της στιγμής που
+   * γεννήθηκε το συμβάν, οπότε ένα `Ctrl` που μόλις πατήθηκε θα φαινόταν μόνο στην επόμενη
+   * κίνηση — δηλαδή ακριβώς η καθυστέρηση που ο παρατηρητής ήρθε να καταργήσει.
+   */
+  readonly onModifier?: (modifiers: ModifierSnapshot) => void;
 }
 
 /**
@@ -170,6 +222,9 @@ export function startTableCellDrag(start: TableCellDragStart): void {
   let lastCell: TableCellRef = start.anchor;
   /** ADR-754 §5 — ο παραλήπτης, λυμένος **μία** φορά· δες το {@link TableCellDragStart.write}. */
   const write = start.write ?? setTableCellSelection;
+  /** 🔴 ADR-828 §7.2 — το πλήκτρο της χειρονομίας, και η μάσκα του στο `MouseEvent.buttons`. */
+  const ownButton = start.button ?? 0;
+  const heldMask = ownButton === 2 ? 2 : 1;
   /**
    * 🔴 ADR-739 §69 — η ανακοίνωση μεγέθους, από τον **ίδιο** ένα δρόμο με την εγγραφή.
    *
@@ -222,12 +277,29 @@ export function startTableCellDrag(start: TableCellDragStart): void {
     // Το κουμπί αφέθηκε εκτός παραθύρου (ή το `mouseup` χάθηκε): τερμάτισε. Χωρίς αυτό, η
     // επιλογή θα ακολουθούσε τον κέρσορα **χωρίς πατημένο κουμπί** — μια σύρση-φάντασμα που
     // ο χρήστης δεν μπορεί να σταματήσει.
-    if ((event.buttons & 1) === 0) {
-      finish();
+    //
+    // 🔴 ADR-828 §7.2 — η μάσκα ρωτά **το πλήκτρο αυτής της χειρονομίας**, όχι πάντα το
+    // αριστερό. Δες {@link TableCellDragStart.button}.
+    if ((event.buttons & heldMask) === 0) {
+      finish(event);
       return;
     }
     lastEvent = event;
     applyAt(event);
+  };
+
+  /**
+   * 🔴 ADR-828 §5 — ξαναδημοσιεύει το **τρέχον** span, χωρίς να ρωτήσει το ποντίκι.
+   *
+   * ⚠️ **Παρακάμπτει επίτηδες τον φύλακα «άλλαξε κελί;»** του {@link applyAt}. Εκείνος υπάρχει
+   * για να μη γίνεται δουλειά ανά pixel κίνησης· εδώ όμως δεν κινήθηκε τίποτα — άλλαξε η
+   * **πρόθεση**, και το κελί είναι σκοπίμως το ίδιο. Περνώντας από το `applyAt`, το πάτημα του
+   * `Ctrl` θα απορριπτόταν από τον φύλακα και δεν θα φαινόταν ποτέ.
+   */
+  const republish = (): void => {
+    const span = { from: start.anchor, to: lastCell, kind: start.kind };
+    write(span);
+    announce(span);
   };
 
   /**
@@ -239,16 +311,30 @@ export function startTableCellDrag(start: TableCellDragStart): void {
    * Η σειρά είναι υποχρεωτική: **πρώτα** ξηλώνονται οι ακροατές. Το `onEnd` γράφει τη σκηνή,
    * δηλαδή παράγει συμβάντα· ακροατής που ζει ακόμη θα τα άκουγε ως συνέχεια της σύρσης.
    */
-  const finish = (): void => {
+  const finish = (release: MouseEvent): void => {
     const done = start.onEnd;
     endTableCellDrag();
-    done?.();
+    done?.(release);
   };
 
-  const onUp = (): void => finish();
+  // 🔴 ADR-828 §7.2 — τερματίζει **το πλήκτρο που ξεκίνησε**, όχι όποιο να 'ναι. Δες
+  // {@link TableCellDragStart.button}: με δύο πλήκτρα στο παιχνίδι, το «οποιοδήποτε mouseup»
+  // θα έκλεινε μια δεξιά σύρση από αριστερό κλικ.
+  const onUp = (event: MouseEvent): void => {
+    if (event.button === ownButton) finish(event);
+  };
 
   document.addEventListener('mousemove', onMove);
   document.addEventListener('mouseup', onUp);
+  // Καμία εγγραφή όταν η χειρονομία δεν ρωτά: ένας παρατηρητής που δεν έχει τι να απαντήσει
+  // είναι σκέτο κόστος σε κάθε πάτημα πλήκτρου του κόσμου.
+  const stopModifiers =
+    start.onModifier === undefined
+      ? null
+      : observeModifierSnapshot((modifiers) => {
+          start.onModifier?.(modifiers);
+          republish();
+        });
   // §27.16 Ε1 — η άκρη. Το auto-pan δεν ξέρει τίποτα για κελιά: του δίνουμε «πού είναι το
   // χέρι» και μας λέει «το κάδρο μετακινήθηκε, ξαναρώτα».
   startDragEdgeAutoPan({
@@ -261,6 +347,7 @@ export function startTableCellDrag(start: TableCellDragStart): void {
     document.removeEventListener('mousemove', onMove);
     document.removeEventListener('mouseup', onUp);
     stopDragEdgeAutoPan();
+    stopModifiers?.();
   };
 }
 
