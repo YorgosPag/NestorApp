@@ -57,6 +57,7 @@ import React from 'react';
 import { Link } from '@/lib/workspace/navigation';
 import { Button } from '@/components/ui/button';
 import { ShellSurface } from '@/core/containers/ShellSurface';
+import { formatLongDate } from '@/lib/intl-formatting';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { usePublicAgency } from '@/services/realtime/hooks/usePublicAgencies';
 import { usePublicPlace } from '@/services/realtime/hooks/usePublicPlace';
@@ -191,7 +192,7 @@ export function AgencyProfileContent({
       <header className="flex flex-col gap-1">
         <h1 className="m-0 text-2xl font-semibold text-foreground">{profile.displayName}</h1>
         <p className="m-0 text-sm text-muted-foreground">
-          {t(PROFILE_KEYS.publishedAt, { date: profile.publishedAt })}
+          {t(PROFILE_KEYS.publishedAt, { date: formatLongDate(profile.publishedAt) })}
         </p>
       </header>
 

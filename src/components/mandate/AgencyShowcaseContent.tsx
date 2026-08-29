@@ -46,6 +46,7 @@ import {
 } from '@/components/mandate/agency-showcase-labels';
 import { useAgencyShowcase, type ShowcaseFailure } from '@/hooks/mandate/useAgencyShowcase';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { formatLongDate } from '@/lib/intl-formatting';
 import { useWorkspaceAlias } from '@/lib/workspace/navigation';
 
 // 🧩 ADR-744 §15 (Φ4) — PER-ROUTE SLICE. Χωρίς αυτή τη γραμμή η οθόνη βάφει **ωμά
@@ -247,7 +248,7 @@ export function AgencyShowcaseContent(): React.ReactElement {
         <span className="text-sm text-muted-foreground">
           {published === null
             ? t(SHOWCASE_KEYS.withdrawHint)
-            : t(SHOWCASE_KEYS.publishedAt, { date: published.publishedAt })}
+            : t(SHOWCASE_KEYS.publishedAt, { date: formatLongDate(published.publishedAt) })}
         </span>
       </footer>
     </section>

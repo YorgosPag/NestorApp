@@ -32,6 +32,38 @@ export const formatDate = (date: Date | string | number, options?: Intl.DateTime
 };
 
 /**
+ * Format a date the way a PUBLIC-FACING surface should read it: month as a WORD.
+ *
+ * WHY THIS EXISTS AS ONE FUNCTION, not an options literal repeated at call sites
+ * (ADR-827 section 9.16 e):
+ *
+ *   Two showcase screens printed a raw ISO instant on screen —
+ *   "Published 2026-08-29T14:00:48.842Z". Nobody reads `T`, `Z` or milliseconds, and
+ *   the `Z` is UTC, so the text stated a wall-clock time that is NOT the reader's.
+ *   No gate catches this: the label itself comes from `t()`, so it is not a hardcoded
+ *   string; it is not geometry; no i18n key is missing. Only opening the page found it.
+ *
+ *   The fix is a formatting DECISION — "public surfaces spell the month out" — and a
+ *   decision belongs in exactly one place. Repeating
+ *   `{ day: 'numeric', month: 'long', year: 'numeric' }` at each call site would make
+ *   the decision editable in N places and therefore divergent (ADR-749).
+ *
+ * Renders in the VIEWER'S timezone, which is the point: the instant is stored in UTC
+ * and read by a human somewhere else.
+ *
+ * DO NOT reduce this to `formatDate(date, { month: 'long' })` on the grounds that
+ * `formatDate` already defaults `day` and `year`. Stating all three PINS the promise
+ * here: caller options win the spread, so this public surface is immune to a change of
+ * `formatDate`'s defaults made for the app's dense internal screens. Measured: removing
+ * a field from ONE level alone leaves the output intact (the anchor's mutation run went
+ * green); removing it from BOTH goes red. Belt-and-suspenders (N.7.2 #4), not redundancy.
+ *
+ * @see formatDate for the compact numeric form used inside the app's dense surfaces.
+ */
+export const formatLongDate = (date: Date | string | number): string =>
+  formatDate(date, { day: 'numeric', month: 'long', year: 'numeric' });
+
+/**
  * Format date and time according to current locale
  *
  * ENTERPRISE: Handles both explicit style options (dateStyle/timeStyle)

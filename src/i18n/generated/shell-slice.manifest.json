@@ -60,7 +60,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "3d57ec656b23c0436055a68f8026c364ea88f7aa7cacf8030e96531616138291",
+  "inputsSha256": "af32b936ec6c10f9c3cd94bb21243bcda4a3f673d70df71161f334c9c37f7eb4",
   "languages": [
     "el"
   ],
@@ -385,7 +385,7 @@
     "src/lib/geocoding/geocoding-types.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/hash/sha256.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/intl-domain.ts": "0980bb7d12043530ae65d338ce5643384fcd733994f0387aa342d5c448b4cccc",
-    "src/lib/intl-formatting.ts": "e998dbd7705af10801a619bcba84616b145696750127540829d09da07008626e",
+    "src/lib/intl-formatting.ts": "193b6b3266d5db8fe88265de8fdd4c069dee39a8d1805bbbf727ca16ff902a63",
     "src/lib/intl-utils.ts": "926a8c5f3e1e00f67ec39e339d2897159cda589c191fce2bcb881d04eb1e60eb",
     "src/lib/json-utils.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/listings/listing-coverage.ts": "01e2eeed0cb00c7d501432df25edf4e07e7d3c24c9e3c6509aff1b2deeaa913c",

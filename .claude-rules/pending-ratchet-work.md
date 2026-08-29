@@ -6,6 +6,37 @@
 > `helvetiker_regular.typeface.json` (MgOpen εκτός SPDX, μηδέν καταναλωτές) και το
 > `Roboto-Regular.ttf` (νεκρό μετά το ADR-803). **CHECK 3.69: baseline 1/8 → 0/6.**
 
+- 🔶 **29/08 — Η «ΜΑΚΡΑ ΗΜΕΡΟΜΗΝΙΑ ΒΙΤΡΙΝΑΣ» ΓΡΑΦΤΗΚΕ 5 ΦΟΡΕΣ** *(ADR-827 §9.16 ε, εντοπίστηκε φτιάχνοντας το `formatLongDate`)*
+
+  **Τι**: το literal `{ day: 'numeric', month: 'long', year: 'numeric' }` επαναλαμβάνεται σε
+  **5 κλήσεις / 3 αρχεία**:
+  `components/building-showcase/BuildingShowcaseSpecs.tsx:57,63` ·
+  `components/project-showcase/ProjectShowcaseSpecs.tsx:45,51` ·
+  `subapps/procurement/components/RfqHistoryTab.tsx:48`.
+
+  **Γιατί είναι χρέος**: δεν είναι επανάληψη κώδικα — είναι επανάληψη **ΑΠΟΦΑΣΗΣ**
+  *(«δημόσια/αναφορική επιφάνεια ⇒ ο μήνας γράφεται ολογράφως»)*. Απόφαση γραμμένη σε 5
+  σημεία είναι απόφαση που **μπορεί να αποκλίνει**: την ημέρα που η μία οθόνη περάσει σε
+  σύντομο μήνα, οι άλλες τέσσερις δεν θα το μάθουν ποτέ (ADR-749).
+
+  ⚠️ **Δεν το πιάνει καμία πύλη**: το `jscpd` (CHECK 3.28) μετρά **tokens** και ένα literal
+  επιλογών είναι κάτω από το `min-tokens: 50`· το `ssot:discover` (3.18) σαρώνει
+  `src/config|utils|lib` σε `maxdepth 1`, δηλαδή **δεν ανοίγει** το `src/components` ούτε
+  το `src/subapps`.
+
+  **Ο κανονικός τόπος υπάρχει πλέον**: `lib/intl-formatting.ts` → `formatLongDate()`,
+  με άγκυρα `lib/__tests__/intl-long-date.test.ts` *(10 tests· μεταλλάξεις **5/5 κόκκινες**,
+  και οι δύο που χρειάστηκαν **διπλή** μετάλλαξη τεκμηριώνονται στο ίδιο αρχείο)*.
+
+  **Το fix**: αντικατάσταση των 5 κλήσεων με `formatLongDate(x)` + αφαίρεση του πλέον
+  αχρείαστου `formatDate` import όπου μένει ορφανό. ⛔ **ΜΗΝ** αγγίξεις το
+  `subapps/dxf-viewer/bim/table/table-cell-format.ts:381` — εκεί το ίδιο literal είναι
+  **εγγραφή σε μητρώο μορφών που επιλέγει ο χρήστης**, όχι απόφαση οθόνης. Ίδια γραφή,
+  **άλλο ερώτημα**.
+
+  **Γιατί όχι τώρα**: 3 αρχεία σε **3 ξένους τομείς** *(κτίρια, έργα, προμήθειες)*, εκτός
+  ADR-827 — θα μόλυνε θεματικό commit. N.0.2, σκέλος «4+ αρχεία ⇒ pending».
+
 - 🔴 **29/08 — ΤΡΙΑ ΑΝΤΙΓΡΑΦΑ ΤΟΥ `addMonths`, ΚΑΙ ΤΑ ΤΡΙΑ ΜΕ ΤΟ ΙΔΙΟ ΣΦΑΛΜΑ** *(ADR-827 §8.9 α, εντοπίστηκε γράφοντας το πλαφόν διάρκειας)*
 
   **Τι**: `lib/counterproposal-engine.ts:35` · `lib/draw-schedule-engine.ts:29` ·
