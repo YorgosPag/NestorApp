@@ -194,6 +194,10 @@
     "src/app/(light)/pro/[alias]/page.tsx": {
       "budget": 3400,
       "reason": "ADR-827 §9.6 #2 — ΜΕΤΡΗΜΕΝΟ 2026-08-29: 2.685 bytes, ΕΝΑ namespace (property-market), υποδεντρα mandate.profile + mandate.directory (ο συνδεσμος επιστροφης). Ειναι ~3x το αδελφο /pro και δεν ειναι σπαταλη: η σελιδα αποδιδει ΤΕΣΣΕΡΙΣ ρητες καταστασεις (loading/found/absent/error) και ΚΑΘΕ μια εχει δικο της κειμενο — το «δεν υπαρχει» και το «δεν μπορεσα να ρωτησω» ΔΕΝ επιτρεπεται να μοιραζονται προταση (N.12), αρα ουτε κλειδι. 🔑 Καθε t() ειναι ΕΠΙΛΥΣΙΜΟ χωρις dynamicKeyPolicy: ολα ευρετηριαζουν σταθερα module (PROFILE_KEYS / DIRECTORY_KEYS) στο agency-directory-labels.ts, ποτε δυναμικο κλειδι."
+    },
+    "src/app/(me)/offers/mandate/new/page.tsx": {
+      "budget": 7000,
+      "reason": "ADR-827 §9.17 α — Η ΦΟΡΜΑ ΤΟΥ Σ1: ο ιδιωτης προτεινει ορους σε ενα γραφειο. ΓΙΑΤΙ ΔΙΚΗ ΤΗΣ ΔΙΕΥΘΥΝΣΗ ΚΑΙ ΟΧΙ ΔΙΑΛΟΓΟΣ ΣΤΟ /pro/<ψευδωνυμο>: η φορμα απαιτει ΤΑΥΤΟΤΗΤΑ (ο επιλογεας ρωταει useMyOwnerProperties) και οφειλει να μην ευρετηριαζεται. Το (light) δηλωνει στο .shell-boundary.json «οι ΔΗΜΟΣΙΕΣ οθονες ακινητων»· μια φορμα ταυτοτητας εκει κανει τη δηλωση ΨΕΥΔΗ, και η δηλωση ειναι το συμβολαιο που φυλα η CHECK 3.52. Το (me) δινει φρουρο ταυτοτητας + noindex ΔΟΜΙΚΑ, απο το layout του. ΓΙΑΤΙ ΟΧΙ shell: η οθονη ανοιγει ΜΙΑ φορα ανα αναθεση· στο κελυφος θα ταξιδευε σε καθε διαδρομη. ΓΙΑΤΙ ΧΡΕΙΑΖΕΤΑΙ ΚΑΘΟΛΟΥ: το property-market φτανει sliced και κανενα κλειδι του mandate.request δεν ειναι μεσα — χωρις το per-route slice η φορμα βαφει ωμα κλειδια στο πρωτο καρε (CHECK 3.51). 🔑 Καθε t() ειναι ΕΠΙΛΥΣΙΜΟ χωρις dynamicKeyPolicy: ολα ευρετηριαζουν σταθερες module (TEXT_KEYS / SCREEN_KEYS / REJECTION_KEYS στο mandate-request-form-labels.ts, LISTING_AGREEMENT_I18N_KEYS στο listing-agreement-labels.ts) — ποτε παρεμβολη, ποτε t(fn(x))."
     }
   }
 }

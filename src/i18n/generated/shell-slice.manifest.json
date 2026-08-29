@@ -13,6 +13,7 @@
     "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "d0d4547bb388232b805ad4e945a3cfab17a091593d919240d115f7dd2dab4813",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile.el.json": "dbde289c17ef57765adec35f9a7a694440d5c9a4b51daa1efdabeaa08955bcf3",
     "src/i18n/generated/routes/offers.el.json": "37f11fe465050e47c3d55037f4cb71f77828554b0f9fe71399f5f1e059966ce8",
+    "src/i18n/generated/routes/offers__mandate__new.el.json": "37d16a858fc44b9314781e2e02e782c92adfa6cd3d15096fd74fca944caa433e",
     "src/i18n/generated/routes/offers__new.el.json": "9d98014cdb4b74ee3f728fd2dba26063ad334365848d4206793e44dc5f58ae7c",
     "src/i18n/generated/routes/offers__offerId.el.json": "dd1203cde8e79abc782ded600cc521362762486b6aed0024f703b5c4daad9f26",
     "src/i18n/generated/routes/privacy-policy.el.json": "181e3b315e8ac63a3e927fa8bf073863b2aa706fd66a06f38d936dce70b0cee0",
@@ -60,7 +61,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "af32b936ec6c10f9c3cd94bb21243bcda4a3f673d70df71161f334c9c37f7eb4",
+  "inputsSha256": "4c6d7d30ff30c97ed9d3f692a701cc753c45797e118a27417e84d035b67d48b8",
   "languages": [
     "el"
   ],
@@ -607,7 +608,7 @@
     "matchedKeys": 135,
     "routeBoundaries": 0,
     "shellFiles": 500,
-    "sliceBytes": 297423
+    "sliceBytes": 303526
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
