@@ -61,7 +61,7 @@ export {
   generateApyCertificateId, generateServicePresetId, generateCustomCategoryId, generateCustomerBalanceId,
   generateFiscalPeriodId, generateAccountingAuditLogId, generateFeedbackId,
   generatePipelineAuditId, generateEntityAuditId, generateContractId,
-  generatePipelineQueueId, generateVoiceCommandId, generateBrokerageId,
+  generatePipelineQueueId, generateVoiceCommandId, generateBrokerageId, generateMandateRequestId,
   generateCommissionId, generatePaymentPlanId, generatePlanGroupId,
   generatePaymentRecordId, generateLoanId, generateChequeId, generatePhotoId,
   generateAttachmentId, generateFileId, generateDeterministicFileId, generateShareId, generateDispatchId, generatePendingId,

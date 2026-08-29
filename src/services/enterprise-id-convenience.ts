@@ -138,6 +138,10 @@ export const generateContractId = () => enterpriseIdService.generateContractId()
 export const generatePipelineQueueId = () => enterpriseIdService.generatePipelineQueueId();
 export const generateVoiceCommandId = () => enterpriseIdService.generateVoiceCommandId();
 export const generateBrokerageId = () => enterpriseIdService.generateBrokerageId();
+// ADR-827 §9.17 — ΤΟ ΑΙΤΗΜΑ ΑΝΑΘΕΣΗΣ. Η μέθοδος υπήρχε στην κλάση από τη Φάση Α·
+// το facade δεν την εξήγαγε, οπότε η ΜΟΝΑΔΙΚΗ πηγή ταυτοτήτων (N.6) ήταν άφταστη
+// από τον γραφέα και θα γεννιόταν χειρόγραφο id.
+export const generateMandateRequestId = () => enterpriseIdService.generateMandateRequestId();
 export const generateCommissionId = () => enterpriseIdService.generateCommissionId();
 
 // Payment Plan & Installments (ADR-234)

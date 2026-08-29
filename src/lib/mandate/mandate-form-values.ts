@@ -25,6 +25,7 @@ import {
   DEFAULT_LISTING_AGREEMENT,
   type ListingAgreement,
 } from '@/types/listing-agreement';
+import { endOfDay, toDateInputValue } from './mandate-term-window';
 
 /**
  * Ό,τι πληκτρολογεί ο μεσίτης για την εντολή.
@@ -70,7 +71,7 @@ export function emptyMandateForm(todayISO: string): MandateFormValues {
     // ⚠️ `?? ''` και **όχι** σιωπηλή σημερινή: αν η αφετηρία δεν διαβάζεται, η φόρμα
     //    οφείλει να **σταματήσει** στο `mandate-expiry-unset`, όχι να προτείνει
     //    ημερομηνία που κανείς δεν υπολόγισε.
-    expiresOn: until?.slice(0, 10) ?? '',
+    expiresOn: toDateInputValue(until),
     via: OWNER_CONSENT,
     documentPath: null,
     agreement: DEFAULT_LISTING_AGREEMENT,
@@ -161,15 +162,4 @@ export function mandateRequestFrom(values: MandateFormValues): {
     agreement: values.agreement,
     compensation: values.compensation,
   };
-}
-
-/**
- * `yyyy-mm-dd` → **τέλος** εκείνης της ημέρας, ως ISO.
- *
- * 🔑 Εξήχθη ώστε ο **κριτής** και ο **αποστολέας** να μιλούν για την ίδια στιγμή. Δύο
- * γραφές του ίδιου `T23:59:59.999Z` είναι ακριβώς το είδος διπλότυπου που αποκλίνει
- * σιωπηλά — και εδώ η απόκλιση θα ήταν **ένα ολόκληρο εικοσιτετράωρο** στο όριο.
- */
-function endOfDay(yyyyMmDd: string): string {
-  return `${yyyyMmDd}T23:59:59.999Z`;
 }
