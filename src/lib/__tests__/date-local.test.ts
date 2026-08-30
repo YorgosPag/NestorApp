@@ -20,6 +20,7 @@ import {
   fieldToISO,
   combineDateAndTime,
   splitDateAndTime,
+  intervalsOverlap,
 } from '../date-local';
 
 const ISO = '2026-01-15T10:30:00.000Z';
@@ -308,5 +309,65 @@ describe('splitDateAndTime', () => {
   it('uses the fallback time when the value is unreadable', () => {
     expect(splitDateAndTime(null).time).toBe('09:00');
     expect(splitDateAndTime({ foo: 'bar' }, '08:30').time).toBe('08:30');
+  });
+});
+
+/**
+ * `intervalsOverlap` — half-open `[start, end)`, the `tstzrange` convention.
+ *
+ * The half-open boundary is not a detail: it is what makes *back-to-back*
+ * contracts possible. With closed intervals a mandate expiring at the exact
+ * instant the next one begins would collide for one millisecond, and the owner
+ * would be forced to leave a gap without ever learning why.
+ *
+ * @see lib/mandate/mandate-conflict.ts — the caller that depends on this
+ */
+describe('intervalsOverlap', () => {
+  const A = '2027-01-01T00:00:00.000Z';
+  const B = '2027-06-01T00:00:00.000Z';
+  const C = '2027-12-01T00:00:00.000Z';
+
+  it('back-to-back intervals do NOT overlap — the half-open boundary', () => {
+    expect(intervalsOverlap(A, B, B, C)).toBe(false);
+    expect(intervalsOverlap(B, C, A, B)).toBe(false);
+  });
+
+  it('a single shared instant IS an overlap', () => {
+    expect(intervalsOverlap(A, B, '2027-05-31T23:59:59.999Z', C)).toBe(true);
+  });
+
+  it('containment counts, in both directions', () => {
+    expect(intervalsOverlap(A, C, B, '2027-07-01T00:00:00.000Z')).toBe(true);
+    expect(intervalsOverlap(B, '2027-07-01T00:00:00.000Z', A, C)).toBe(true);
+  });
+
+  it('disjoint intervals do not overlap', () => {
+    expect(intervalsOverlap(A, B, C, '2028-01-01T00:00:00.000Z')).toBe(false);
+  });
+
+  it('a null/undefined end means "open ended", not "unreadable"', () => {
+    expect(intervalsOverlap(A, null, C, null)).toBe(true);
+    expect(intervalsOverlap(A, undefined, C, undefined)).toBe(true);
+    // Open-ended still respects the start: nothing before A can reach it.
+    expect(intervalsOverlap(C, null, A, B)).toBe(false);
+  });
+
+  it('an unreadable instant yields null — never false (unknown is not "clear")', () => {
+    // Returning false here would report "no overlap" for data we could not read,
+    // which in the mandate judge would let a second exclusive through.
+    expect(intervalsOverlap('not-a-date', B, A, C)).toBeNull();
+    expect(intervalsOverlap(A, 'not-a-date', A, C)).toBeNull();
+    expect(intervalsOverlap(A, B, null, C)).toBeNull();
+  });
+
+  it('a backwards interval yields null — it does not describe a range', () => {
+    expect(intervalsOverlap(C, A, A, B)).toBeNull();
+    expect(intervalsOverlap(A, B, C, A)).toBeNull();
+  });
+
+  it('reads the serialised Firestore shapes, like every other helper here', () => {
+    expect(
+      intervalsOverlap({ seconds: Date.parse(A) / 1000, nanoseconds: 0 }, B, A, C),
+    ).toBe(true);
   });
 });

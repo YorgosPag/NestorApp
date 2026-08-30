@@ -59,6 +59,8 @@ function mandate(over: Partial<BrokeredListingMandate> = {}): BrokeredListingMan
     viewedAt: null,
     consentNonce: 'nonce-1',
     expiresAt: daysFromNow(300),
+    scope: ['sell'],
+    startsAt: NOW,
     ...over,
   };
 }
