@@ -2,7 +2,7 @@
 
 /**
  * @fileoverview **ΤΙ ΑΠΑΝΤΗΣΕ Ο ΔΙΑΚΟΜΙΣΤΗΣ** — ο λόγος, **και η διέξοδος**.
- * @related ADR-834 §8 · components/mandate/mandate-request-form-labels.ts
+ * @related ADR-834 §6.2 · components/mandate/mandate-request-form-labels.ts
  * @module components/mandate/MandateRequestOutcomeNotice
  *
  * ────────────────────────────────────────────────────────────────────────────
@@ -67,7 +67,7 @@ export function MandateRequestOutcomeNotice({
       {/*
         🔑 **ΣΧΗΜΑ P2B ΑΡΘΡΟ 4 — ΛΟΓΟΣ **ΚΑΙ** ΔΥΝΑΤΟΤΗΤΑ ΔΙΟΡΘΩΣΗΣ.** Μια άρνηση που
         λέει *«λείπουν τα στοιχεία σου»* χωρίς να πει **πού**, αφήνει τον άνθρωπο να
-        ψάξει μενού — και είναι ακριβώς το αδιέξοδο που το ADR-834 §8 θεραπεύει.
+        ψάξει μενού — και είναι ακριβώς το αδιέξοδο που το ADR-834 §6.2 θεραπεύει.
       */}
       {remedy !== null && (
         <Link

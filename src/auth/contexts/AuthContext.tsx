@@ -341,7 +341,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     },
     resetPassword: actions.resetPassword,
     /**
-     * 🔴 **ADR-834 §8 — ΤΟ ΔΕΥΤΕΡΟ ΑΠΟΘΕΤΗΡΙΟ, ΠΟΥ ΕΛΕΙΠΕ ΟΛΟΚΛΗΡΟ.**
+     * 🔴 **ADR-834 §6.2 — ΤΟ ΔΕΥΤΕΡΟ ΑΠΟΘΕΤΗΡΙΟ, ΠΟΥ ΕΛΕΙΠΕ ΟΛΟΚΛΗΡΟ.**
      *
      * Το `actions.updateUserProfile` γράφει **Firebase Auth + `localStorage`**· το
      * `users/{uid}` δεν το άγγιζε **κανείς** (μετρημένο ζωντανά: `givenName: null`

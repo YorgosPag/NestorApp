@@ -2,7 +2,7 @@ import 'server-only';
 
 /**
  * @fileoverview **ΞΕΡΟΥΜΕ ΠΟΙΟΣ ΥΠΟΓΡΑΦΕΙ;** — ο ΕΝΑΣ κριτής, και οι δύο πόρτες.
- * @related ADR-834 §8 · ADR-827 §8.3 · §9.20 · services/mandate/mandate-request.service.ts
+ * @related ADR-834 §6.2 · ADR-827 §8.3 · §9.20 · services/mandate/mandate-request.service.ts
  * @module services/mandate/mandate-owner-identity
  *
  * ────────────────────────────────────────────────────────────────────────────
@@ -50,7 +50,7 @@ import 'server-only';
  *
  * 1. Το `null` **ΕΙΝΑΙ το κατάλοιπο** του περιστατικού της 2026-08-24
  *    (`useAuthActions.ts`, ΣΤΡΩΜΑ 2). Εφεδρεία = σκέπασμα **γνωστής** βλάβης· η
- *    θεραπεία είναι η γραφή που λείπει (ADR-834 §8, `saveProfileNames`).
+ *    θεραπεία είναι η γραφή που λείπει (ADR-834 §6.2, `saveProfileNames`).
  * 2. **Κανένας από τους μεγάλους δεν ταυτοποιεί συμβαλλόμενο με OAuth display
  *    name**: Stripe Connect (KYC) και DocuSign ζητούν **νομικό** όνομα, χωριστά
  *    πεδία. Το `displayName` είναι **παραγόμενο κείμενο οθόνης** — και το σπάσιμό

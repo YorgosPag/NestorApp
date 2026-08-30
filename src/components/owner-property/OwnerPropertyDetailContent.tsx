@@ -40,8 +40,11 @@ import { setOwnerListingLifecycle } from '@/services/owner-property/owner-proper
 import { useMyOwnerProperty } from '@/services/realtime/hooks/useMyOwnerProperties';
 import type { OwnerProperty } from '@/types/owner-property';
 
+import { ownerMandateViews } from '@/lib/mandate/owner-mandate-view';
+
 import { PlaceInterestPanel } from '@/components/demand/PlaceInterestPanel';
 import { usePlaceInterest } from '@/hooks/demand/usePlaceInterest';
+import { OwnerMandatePanel } from './OwnerMandatePanel';
 import { OwnerPropertyCard } from './OwnerPropertyCard';
 import { OwnerPropertyFormContent } from './OwnerPropertyFormContent';
 
@@ -124,7 +127,15 @@ function OwnerPropertyView({
   //    σκέτο — δηλαδή *«**δικαιούται**;»*, όχι *«**έφτασε**;»*. Ο σύνδεσμος από κάτω
   //    οδηγούσε σε **κενή σελίδα** κάθε φορά που ο γραφέας της προβολής είχε αποτύχει,
   //    ακριβώς το «*χειρότερος από κανέναν*» που το ίδιο του το σχόλιο απαγορεύει.
-  const onMap = ownerListingVisibility(property, nowISO()) === 'published';
+  // ⚠️ **ΕΝΑ ρολόι για ΟΛΗ την όψη**, διαβασμένο μία φορά: με δύο κλήσεις, ο κριτής
+  //    δημοσίευσης και ο ταξινομητής της εντολής μπορούν να πέσουν σε **διαφορετική
+  //    μέρα** — και η οθόνη θα έλεγε «στον χάρτη» για εντολή που μόλις έληξε.
+  const atISO = nowISO();
+  const onMap = ownerListingVisibility(property, atISO) === 'published';
+  // 🏆 **ADR-834 — Η ΠΡΩΤΗ ΠΡΟΒΟΛΗ ΤΗΣ ΑΚΜΗΣ.** Η σχέση **ήδη ταξιδεύει** μέσα στο
+  //    έγγραφο· μέχρι σήμερα καμία γραμμή δεν τη ζωγράφιζε. Ο ταξινομητής είναι **ο
+  //    ίδιος** με του καταλόγου του γραφείου — αλλάζουν μόνο τα κείμενα.
+  const mandateViews = ownerMandateViews(property, atISO);
   // ⚠️ Στην **κορυφή** του component, ποτέ μέσα στο JSX: ένας hook που ζει σε έκφραση
   // γνωρίσματος διαβάζεται ως υπό όρους από τον επόμενο αναγνώστη, ακόμη κι όταν δεν
   // είναι — και η πρώτη φορά που κάποιος τον τυλίξει σε `{onMap && …}` σπάει σιωπηλά.
@@ -133,6 +144,17 @@ function OwnerPropertyView({
   return (
     <div className="flex flex-col gap-4">
       <OwnerPropertyCard property={property} />
+
+      {/*
+        🏆 **ΑΜΕΣΩΣ ΜΕΤΑ ΤΗΝ ΚΑΡΤΑ, ΚΑΙ ΠΡΙΝ ΤΟ ΔΟΛΩΜΑ** — σειρά-συμβόλαιο: *«ποιος
+        διαχειρίζεται αυτό το σπίτι και με ποιους όρους»* προηγείται του *«N άνθρωποι
+        ψάχνουν κάτι σαν το δικό σας»*. Ο άνθρωπος που έχει δώσει αποκλειστική εντολή
+        οφείλει να το δει **πριν** του προταθεί οποιαδήποτε επόμενη κίνηση.
+
+        ⚠️ Χωρίς εντολή, το πλαίσιο **δεν αποδίδεται καθόλου** — ο ιδιώτης χωρίς
+        μεσίτη δεν έχει λόγο να διαβάσει για μεσιτεία στη σελίδα του σπιτιού του.
+      */}
+      <OwnerMandatePanel views={mandateViews} />
 
       {/*
         🎯 **ΤΟ ΔΟΛΩΜΑ ΤΟΥ §12.6, ADR-777 Ε2** — «N άνθρωποι ψάχνουν κάτι σαν το δικό

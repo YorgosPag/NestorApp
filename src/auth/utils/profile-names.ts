@@ -1,6 +1,6 @@
 /**
  * @fileoverview **ΤΟ ΟΝΟΜΑ ΩΣ ΔΗΛΩΣΗ** — ένας κριτής, δύο αποθετήρια.
- * @related ADR-834 §8 · auth/contexts/auth-context/useAuthActions.ts · auth-context-profile.ts
+ * @related ADR-834 §6.2 · auth/contexts/auth-context/useAuthActions.ts · auth-context-profile.ts
  * @module auth/utils/profile-names
  *
  * ────────────────────────────────────────────────────────────────────────────

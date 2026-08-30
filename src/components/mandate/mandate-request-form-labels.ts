@@ -123,7 +123,7 @@ export const REJECTION_KEYS: Record<MandateRequestRejection, string> = {
    */
   'listing-conflicting-mandate': 'property-market:mandate.request.listing-conflicting-mandate',
   /**
-   * 🔴 **ADR-834 §8** — η μόνη άρνηση αυτού του πίνακα που αφορά **τον ίδιο** τον
+   * 🔴 **ADR-834 §6.2** — η μόνη άρνηση αυτού του πίνακα που αφορά **τον ίδιο** τον
    * άνθρωπο που πάτησε, και η μόνη με **διέξοδο μέσα στην οθόνη** ({@link REJECTION_REMEDY}).
    */
   'identity-incomplete': 'property-market:mandate.request.identity-incomplete',

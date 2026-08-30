@@ -507,6 +507,43 @@
       "area": "{area} sqm",
       "floor": "Floor {floor}",
       "bedrooms": "{count, plural, one {# bedroom} other {# bedrooms}}"
+    },
+    "mandate": {
+      "title": "The mandate on this property",
+      "lead": "The terms in force, as you agreed them. A mandate does not stop you from managing your own listing.",
+      "agencyLabel": "Agency",
+      "agencyUnknown": "No agency was recorded",
+      "agencyUnnamed": "Agency without a public profile",
+      "roleLabel": "Type of mandate",
+      "roleUnknown": "No type was recorded",
+      "scopeLabel": "Covers",
+      "scopeUnknown": "No transactions were recorded",
+      "periodLabel": "Period",
+      "periodOpenStart": "No recorded start",
+      "feeLabel": "Fee",
+      "feePercentage": "{value}% of the price",
+      "feeFixed": "{value} flat",
+      "feeVatIncluded": "VAT included",
+      "feeVatExcluded": "plus VAT",
+      "proofLabel": "How it arose",
+      "expiresIn": "{count, plural, one {expires in # day} other {expires in # days}}",
+      "contactNote": "Changes to the terms are made in writing with the agency. You have their contact details from your own agreement.",
+      "standing": {
+        "unannounced-live": "In force",
+        "never-notified": "Awaiting your confirmation",
+        "link-revoked": "The confirmation link was cancelled",
+        "expiring-soon": "In force, expiring soon",
+        "awaiting-decision": "Awaiting your answer",
+        "awaiting-view": "An agency claims a mandate you have not confirmed",
+        "declined": "You declined it",
+        "expired": "Expired",
+        "expired-unanswered": "Expired without an answer from you",
+        "live": "In force"
+      },
+      "proof": {
+        "owner-consent": "You requested it",
+        "agency-attestation": "The agency declared it"
+      }
     }
   },
   "mandate": {

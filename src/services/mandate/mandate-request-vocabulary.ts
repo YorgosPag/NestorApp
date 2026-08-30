@@ -1,6 +1,6 @@
 /**
  * @fileoverview **ΓΙΑΤΙ ΔΕΝ ΓΡΑΦΤΗΚΕ ΤΟ ΑΙΤΗΜΑ** — το λεξιλόγιο, ποτέ η πράξη.
- * @related services/mandate/mandate-request.service.ts (ο ΓΡΑΦΕΑΣ) · ADR-827 §9.17 · ADR-834 §8
+ * @related services/mandate/mandate-request.service.ts (ο ΓΡΑΦΕΑΣ) · ADR-827 §9.17 · ADR-834 §6.2
  * @module services/mandate/mandate-request-vocabulary
  *
  * ────────────────────────────────────────────────────────────────────────────
@@ -82,7 +82,7 @@ export const MANDATE_REQUEST_REJECTIONS = [
    */
   'listing-conflicting-mandate',
   /**
-   * 🔴 **ΤΟ ΠΡΟΦΙΛ ΤΟΥ ΙΔΙΟΥ ΤΟΥ ΑΙΤΟΥΝΤΟΣ ΔΕΝ ΟΝΟΜΑΖΕΙ ΣΥΜΒΑΛΛΟΜΕΝΟ** (ADR-834 §8).
+   * 🔴 **ΤΟ ΠΡΟΦΙΛ ΤΟΥ ΙΔΙΟΥ ΤΟΥ ΑΙΤΟΥΝΤΟΣ ΔΕΝ ΟΝΟΜΑΖΕΙ ΣΥΜΒΑΛΛΟΜΕΝΟ** (ADR-834 §6.2).
    *
    * ⚠️ **Είναι ο ΜΟΝΟΣ κωδικός αυτού του συνόλου που δεν αφορά την αγγελία ή το
    * γραφείο — αφορά ΕΚΕΙΝΟΝ ΠΟΥ ΠΑΤΗΣΕ.** Και γι' αυτό είναι ο μόνος με **ενεργή

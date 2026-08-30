@@ -507,6 +507,43 @@
       "area": "{area} τ.μ.",
       "floor": "Όροφος {floor}",
       "bedrooms": "{count, plural, one {# υπνοδωμάτιο} other {# υπνοδωμάτια}}"
+    },
+    "mandate": {
+      "title": "Η ανάθεση αυτού του ακινήτου",
+      "lead": "Οι όροι που ισχύουν, όπως τους συμφωνήσατε. Η ανάθεση δεν εμποδίζει να διαχειρίζεστε την αγγελία σας.",
+      "agencyLabel": "Γραφείο",
+      "agencyUnknown": "Δεν καταγράφηκε ποιο γραφείο",
+      "agencyUnnamed": "Γραφείο χωρίς δημόσια βιτρίνα",
+      "roleLabel": "Είδος ανάθεσης",
+      "roleUnknown": "Δεν καταγράφηκε είδος",
+      "scopeLabel": "Πράξεις",
+      "scopeUnknown": "Δεν καταγράφηκαν πράξεις",
+      "periodLabel": "Περίοδος",
+      "periodOpenStart": "Χωρίς καταγεγραμμένη έναρξη",
+      "feeLabel": "Αμοιβή",
+      "feePercentage": "{value}% επί της τιμής",
+      "feeFixed": "{value} σταθερά",
+      "feeVatIncluded": "με ΦΠΑ",
+      "feeVatExcluded": "πλέον ΦΠΑ",
+      "proofLabel": "Πώς προκύπτει",
+      "expiresIn": "{count, plural, one {λήγει σε # μέρα} other {λήγει σε # μέρες}}",
+      "contactNote": "Οι αλλαγές στους όρους γίνονται εγγράφως με το γραφείο. Τα στοιχεία επικοινωνίας τα έχετε από τη μεταξύ σας συμφωνία.",
+      "standing": {
+        "unannounced-live": "Ισχύει",
+        "never-notified": "Εκκρεμεί η επιβεβαίωσή σας",
+        "link-revoked": "Ο σύνδεσμος επιβεβαίωσης ακυρώθηκε",
+        "expiring-soon": "Ισχύει και λήγει σύντομα",
+        "awaiting-decision": "Περιμένει την απάντησή σας",
+        "awaiting-view": "Ένα γραφείο δηλώνει ανάθεση που δεν έχετε επιβεβαιώσει",
+        "declined": "Την απορρίψατε",
+        "expired": "Έληξε",
+        "expired-unanswered": "Έληξε χωρίς να απαντήσετε ποτέ",
+        "live": "Ισχύει"
+      },
+      "proof": {
+        "owner-consent": "Τη ζητήσατε εσείς",
+        "agency-attestation": "Τη δήλωσε το γραφείο"
+      }
     }
   },
   "mandate": {
