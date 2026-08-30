@@ -7700,6 +7700,9 @@
     "dropPreviewRight": "Αγκύρωση δεξιά κατά την απόθεση"
   },
   "table": {
+    "worksheet": {
+      "defaultName": "Φύλλο{index}"
+    },
     "resize": {
       "width": "Πλάτος",
       "height": "Ύψος",

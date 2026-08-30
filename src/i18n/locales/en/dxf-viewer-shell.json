@@ -7700,6 +7700,9 @@
     "dropPreviewRight": "Dock right on drop"
   },
   "table": {
+    "worksheet": {
+      "defaultName": "Sheet{index}"
+    },
     "resize": {
       "width": "Width",
       "height": "Height",
