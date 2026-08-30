@@ -10,7 +10,7 @@
  * διασχίζει την ίδια αλυσίδα με το ζωντανό καρέ:
  *
  * ```
- *   entity → resolveWorksheetFields → tableWorksheetTabLayout → stampTableWorksheetTabs
+ *   entity → resolveWorksheetFields → tableWorksheetTabStrip → stampTableWorksheetStrip
  * ```
  *
  * @see rendering/entities/table/stamp-table-chrome.ts — ο ένας καλών
@@ -23,7 +23,7 @@ import { stampTableChromeControls } from '../stamp-table-chrome';
 import { createPaintLog, createRc, totalDrawCalls, type PaintLog } from './table-paint-recorder';
 import { buildTableEntity } from '../../../../bim/table/build-table-entity';
 import { computeTableEntityGeometryLive } from '../../../../bim/table/table-entity-geometry';
-import { tableWorksheetTabLayout } from '../../../../bim/table/table-worksheet-tabs-geometry';
+import { tableWorksheetTabStrip } from '../../../../bim/table/table-worksheet-tabs-geometry';
 import {
   clearTableIndicatorHover,
   setTableIndicatorHover,
@@ -65,8 +65,33 @@ describe('ADR-833 Φ3 — τι ζωγραφίζεται', () => {
     expect(new Set(log.texts.map((t) => t.text)).size).toBe(3);
   });
 
-  it('🔑 ΕΝΑ φύλλο ⇒ ΚΑΜΙΑ λωρίδα (χειριστήριο χωρίς τίποτα να ελέγξει)', () => {
-    expect(totalDrawCalls(paint(tableWith(1)))).toBe(0);
+  /**
+   * 🔴 **ADR-833 Φάση 4 — Η ΑΓΚΥΡΑ ΤΗΣ ΦΑΣΗΣ 3 ΑΝΑΤΡΕΠΕΤΑΙ ΡΗΤΑ.**
+   *
+   * Έλεγε «ένα φύλλο ⇒ καμία λωρίδα», και ήταν σωστή όσο η λωρίδα **μόνο** άλλαζε ενεργό
+   * φύλλο. Με το ⊕ η λωρίδα έχει δουλειά ακόμη και με ένα φύλλο — και ο κανόνας που την
+   * κρατούσε («ό,τι φαίνεται, δρα») είναι **ο ίδιος** που τώρα την επιβάλλει.
+   *
+   * ⚠️ Ο έλεγχος μένει **δύο σκελών** επίτηδες: ζωγραφίζεται **κάτι**, και εκείνο το κάτι
+   * **δεν είναι δεύτερη καρτέλα** (μία ετικέτα, μία μόνο).
+   */
+  it('🔑 ΕΝΑ φύλλο ⇒ λωρίδα με ΜΙΑ καρτέλα και το ⊕ (η ανατροπή της Φάσης 4)', () => {
+    const log = paint(tableWith(1));
+    expect(totalDrawCalls(log)).toBeGreaterThan(0);
+    expect(log.texts).toHaveLength(1);
+  });
+
+  it('🔴 το ⊕ ΔΕΝ βάφεται ποτέ με το ενεργό μπλε — δεν είναι φύλλο, δεν είναι «το τρέχον»', () => {
+    const log = paint(tableWith(3));
+    // Τρεις καρτέλες: μία ενεργή. Το ⊕ προσθέτει **ουδέτερο** γέμισμα, ποτέ δεύτερο ενεργό.
+    expect(log.fills.filter((f) => f === TABLE_INDICATOR.activeFillHex)).toHaveLength(1);
+    expect(log.fills.filter((f) => f === TABLE_INDICATOR.fillHex)).toHaveLength(3);
+  });
+
+  it('hover στο ⊕ ⇒ πλύσιμο, και μόνο ένα', () => {
+    const entity = tableWith(3);
+    setTableIndicatorHover({ entityId: entity.id, target: { kind: 'worksheet-add' } });
+    expect(paint(entity).fills.filter((f) => f === TABLE_INDICATOR.hoverWashRgba)).toHaveLength(1);
   });
 
   it('η ενεργή καρτέλα βάφεται με το ΕΝΕΡΓΟ μπλε, οι υπόλοιπες με το ουδέτερο γκρι', () => {
@@ -74,7 +99,8 @@ describe('ADR-833 Φ3 — τι ζωγραφίζεται', () => {
     const active = log.fills.filter((f) => f === TABLE_INDICATOR.activeFillHex);
     const idle = log.fills.filter((f) => f === TABLE_INDICATOR.fillHex);
     expect(active).toHaveLength(1);
-    expect(idle).toHaveLength(2);
+    // Δύο ανενεργές καρτέλες **και** το ⊕, που φοράει το ίδιο ουδέτερο γέμισμα.
+    expect(idle).toHaveLength(3);
   });
 
   it('🔴 ΔΙΠΛΗ ΚΩΔΙΚΟΠΟΙΗΣΗ (πύλη 3.41): η ενεργή δηλώνεται ΚΑΙ με βάρος, όχι μόνο με χρώμα', () => {
@@ -109,14 +135,14 @@ describe('🔴 ADR-833 Φ3 — LOD: ΔΕΝ ζωγραφίζεται ΚΑΙ ΔΕ�
     expect(totalDrawCalls(paint(entity, tiny))).toBe(0);
     // Το hit-test ρωτά **αυτό**: αν έδινε στόχους ενώ ο ζωγράφος σιωπά, θα ήταν ψέμα της οθόνης.
     expect(
-      tableWorksheetTabLayout(entity.worksheets, entity.activeWorksheetId, layout.widthMm, layout.heightMm, tiny),
-    ).toEqual([]);
+      tableWorksheetTabStrip(entity.worksheets, entity.activeWorksheetId, layout.widthMm, layout.heightMm, tiny),
+    ).toEqual({ tabs: [], add: null });
   });
 
   it('πάνω από το κατώφλι: και τα δύο ζουν', () => {
     expect(totalDrawCalls(paint(entity))).toBeGreaterThan(0);
     expect(
-      tableWorksheetTabLayout(entity.worksheets, entity.activeWorksheetId, layout.widthMm, layout.heightMm, PX_PER_MM),
+      tableWorksheetTabStrip(entity.worksheets, entity.activeWorksheetId, layout.widthMm, layout.heightMm, PX_PER_MM).tabs,
     ).toHaveLength(3);
   });
 });
@@ -149,9 +175,9 @@ describe('ADR-833 Φ3 — η ετικέτα κόβεται, το ορθογών�
     };
     const slotsOf = (entity: TableEntity) => {
       const layout = computeTableEntityGeometryLive(entity).layout;
-      return tableWorksheetTabLayout(
+      return tableWorksheetTabStrip(
         entity.worksheets, entity.activeWorksheetId, layout.widthMm, layout.heightMm, PX_PER_MM,
-      );
+      ).tabs;
     };
     const namedSlots = slotsOf(named);
     const anonymousSlots = slotsOf(base);

@@ -30,9 +30,12 @@ import type { TableLayout } from '../../../bim/table/table-layout-types';
 import type { TableEntity } from '../../../types/table-entity';
 // 🔴 ADR-833 Φάση 3 — η λωρίδα καρτελών: γεωμετρία → ζωγράφος, με τον **ίδιο** πίνακα slots
 // που καταναλώνει και το πάτημα. Δες την κεφαλίδα της γεωμετρίας.
-import { tableWorksheetTabLayout } from '../../../bim/table/table-worksheet-tabs-geometry';
+import { tableWorksheetTabStrip } from '../../../bim/table/table-worksheet-tabs-geometry';
 import { resolveWorksheetFields } from '../../../bim/table/table-worksheet-resolve';
-import { stampTableWorksheetTabs } from './stamp-table-worksheet-tabs';
+import {
+  stampTableWorksheetStrip,
+  type TableWorksheetStripHover,
+} from './stamp-table-worksheet-tabs';
 import { getTableIndicatorHover } from '../../../state/table-indicator-hover-store';
 import { stampTableInsertControl } from './stamp-table-insert-control';
 import { getTableInsertControl } from '../../../state/table-insert-control-store';
@@ -80,22 +83,17 @@ export function stampTableChromeControls(
   // `entity.worksheets`: μια οντότητα της παλιάς μορφής δεν έχει κανένα από τα δύο πεδία, και
   // η ωμή ανάγνωση θα έδινε «μηδέν φύλλα» — δηλαδή σιωπηλά καμία λωρίδα, για πάντα.
   const { worksheets, activeWorksheetId } = resolveWorksheetFields(entity);
-  const tabs = tableWorksheetTabLayout(
+  const strip = tableWorksheetTabStrip(
     worksheets,
     activeWorksheetId,
     layout.widthMm,
     layout.heightMm,
     rc.pxPerMm,
   );
-  if (tabs.length > 0) {
+  if (strip.tabs.length > 0 || strip.add) {
     // Ίδιος κανόνας ανάγνωσης με κάθε άλλο store εδώ: getter τη στιγμή του καρέ (ADR-040), και
     // **φιλτραρισμένο ως προς ΑΥΤΟΝ** τον πίνακα — δύο πίνακες στη σκηνή δεν μοιράζονται hover.
-    const hover = getTableIndicatorHover();
-    const hovered =
-      hover?.entityId === entityId && hover.target.kind === 'worksheet-tab'
-        ? hover.target.worksheetId
-        : null;
-    stampTableWorksheetTabs(rc, tabs, hovered);
+    stampTableWorksheetStrip(rc, strip, stripHoverOf(entityId));
   }
 
   // 🔴 ADR-739 §42 — **το ⊖ της διαγραφής, ΠΡΙΝ το ⊕.**
@@ -129,4 +127,20 @@ export function stampTableChromeControls(
       heightMm: layout.heightMm,
     });
   }
+}
+
+/**
+ * 🔴 ADR-833 Φάση 4 — **η ΜΙΑ μετάφραση** «τι λέει ο hover» → «τι φωτίζεται στη λωρίδα», για
+ * **αυτόν** τον πίνακα.
+ *
+ * Το φιλτράρισμα ως προς το `entityId` ζει εδώ και όχι στον ζωγράφο: ο ζωγράφος δεν έχει λόγο
+ * να ξέρει ότι υπάρχουν δύο πίνακες στη σκηνή, και ένα δεύτερο σημείο που το θυμάται είναι ένα
+ * σημείο που μπορεί να το ξεχάσει.
+ */
+function stripHoverOf(entityId: string): TableWorksheetStripHover {
+  const hover = getTableIndicatorHover();
+  if (hover?.entityId !== entityId) return null;
+  if (hover.target.kind === 'worksheet-tab') return { kind: 'tab', id: hover.target.worksheetId };
+  if (hover.target.kind === 'worksheet-add') return { kind: 'add' };
+  return null;
 }

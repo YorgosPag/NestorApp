@@ -1,5 +1,6 @@
 /**
- * ADR-833 Φάση 3 — **Η ΛΩΡΙΔΑ ΚΑΡΤΕΛΩΝ ΦΥΛΛΩΝ**, κάτω από τον πίνακα.
+ * ADR-833 Φάσεις 3+4 — **Η ΛΩΡΙΔΑ ΚΑΡΤΕΛΩΝ ΦΥΛΛΩΝ**, κάτω από τον πίνακα: οι καρτέλες **και**
+ * το ⊕ της προσθήκης.
  *
  * Το κάτοπτρο του `stamp-table-indicator.ts` στην κάτω ακμή, και τηρεί **αυτούσιους** τους
  * τρεις κανόνες εκείνου, γιατί είναι το ίδιο πρόβλημα:
@@ -36,8 +37,19 @@
 
 import { TABLE_INDICATOR } from '../../../config/color-config';
 import { TABLE_WORKSHEET_TAB_LABEL_PADDING_PX } from '../../../bim/table/table-worksheet-tabs-geometry';
-import type { TableWorksheetTabSlot } from '../../../bim/table/table-worksheet-tabs-geometry';
+import type {
+  TableWorksheetStrip,
+  TableWorksheetTabSlot,
+} from '../../../bim/table/table-worksheet-tabs-geometry';
+// 🔴 ADR-833 Φάση 4 — **η ΜΙΑ ακτίνα χειριστηρίου του έργου**, ίδια με τα ⊕/⊖ των ζωνών: ένα
+// `+` σε αυτόν τον πίνακα έχει ΕΝΑ μέγεθος, ανεξάρτητα από το σχήμα που το περιβάλλει.
+import { TABLE_INSERT_CONTROL_RADIUS_PX } from '../../../bim/table/table-insert-control';
+import {
+  stampTableControlGlyph,
+  tableControlGlyphArmPx,
+} from './stamp-table-control-glyph';
 import { worksheetDisplayName } from '../../../bim/table/table-worksheet-name';
+import type { TableRectMm } from '../../../bim/table/table-layout-types';
 import type { TableWorksheetId } from '../../../types/table-worksheet';
 import {
   fillTableChromeRect,
@@ -49,19 +61,66 @@ import { fitCanvasTextToWidth } from '../shared/canvas-text-fit';
 import { stampFrameText, tableCellFont, type StampTableContext } from './stamp-table-layout';
 
 /**
- * Ζωγραφίζει τη λωρίδα. Κενά `slots` ⇒ **τίποτα**, και αυτό δεν είναι φύλακας εδώ: είναι η
- * απάντηση της γεωμετρίας στις τρεις πύλες της (πλήθος φύλλων, LOD, χωρητικότητα). Ο ζωγράφος
+ * Τι είναι φωτισμένο μέσα στη λωρίδα — **μία** τιμή, όχι δύο παράμετροι.
+ *
+ * Δύο ορίσματα (`hoveredTabId` + `addHovered`) θα ήταν δύο πράγματα που ο καλών πρέπει να
+ * θυμάται να κρατά συμφωνημένα, και ο δείκτης φωτίζει **ένα** πράγμα κάθε στιγμή — ακριβώς ο
+ * λόγος που το ίδιο το store έχει **ένα** πεδίο `target` και όχι ένα ανά είδος.
+ */
+export type TableWorksheetStripHover =
+  | { readonly kind: 'tab'; readonly id: TableWorksheetId }
+  | { readonly kind: 'add' }
+  | null;
+
+/**
+ * Ζωγραφίζει τη λωρίδα. Κενή λωρίδα ⇒ **τίποτα**, και αυτό δεν είναι φύλακας εδώ: είναι η
+ * απάντηση της γεωμετρίας στις τρεις πύλες της (LOD, χωρητικότητα, πλήθος φύλλων). Ο ζωγράφος
  * δεν κρίνει ορατότητα — αν την έκρινε, θα υπήρχε κατάσταση όπου ζωγραφίζεται κάτι που δεν
  * πιάνεται (ή το αντίστροφο), που είναι ψέμα της οθόνης.
  */
-export function stampTableWorksheetTabs(
+export function stampTableWorksheetStrip(
   rc: StampTableContext,
-  slots: readonly TableWorksheetTabSlot[],
-  hoveredId: TableWorksheetId | null,
+  strip: TableWorksheetStrip,
+  hover: TableWorksheetStripHover,
 ): void {
-  for (const slot of slots) {
-    stampWorksheetTab(rc, slot, slot.id === hoveredId);
+  for (const slot of strip.tabs) {
+    stampWorksheetTab(rc, slot, hover?.kind === 'tab' && hover.id === slot.id);
   }
+  if (strip.add) stampWorksheetAddButton(rc, strip.add, hover?.kind === 'add');
+}
+
+/**
+ * 🔴 **ADR-833 Φάση 4 — ΤΟ ⊕ ΤΗΣ ΠΡΟΣΘΗΚΗΣ ΦΥΛΛΟΥ.**
+ *
+ * ## Γιατί ορθογώνιο και όχι δίσκος, όπως τα ⊕/⊖ των ζωνών
+ * Εκείνα κάθονται στο **κενό** γύρω από τον πίνακα, όπου δεν υπάρχει τίποτα να μοιάσουν· εδώ το
+ * κουμπί ζει **μέσα στη λωρίδα**, δίπλα-δίπλα με καρτέλες. Ένας δίσκος θα διάβαζε ως ξένο σώμα
+ * — και, χειρότερα, θα υποσχόταν **άλλη κατηγορία** πράξης από τη γειτονιά του. Το Excel, τα
+ * Sheets και το Numbers συμφωνούν και τα τρία: το «νέο φύλλο» φοράει το σχήμα της λωρίδας.
+ *
+ * 🔑 Οι **τρεις κινήσεις βαψίματος είναι οι ίδιες** με της καρτέλας (γέμισμα → πλύσιμο hover →
+ * περίγραμμα), από την ίδια πηγή — αλλά **ποτέ ενεργό γέμισμα**: το ⊕ δεν είναι φύλλο, δεν
+ * μπορεί να είναι «το τρέχον». Το μπλε είναι δεσμευμένο για την **επιλογή**, και ένα κουμπί που
+ * το φοράει θα έλεγε ψέματα για το τι βλέπει ο χρήστης.
+ *
+ * Το σύμβολο έρχεται από τον **ΕΝΑ** ζωγράφο συμβόλου και με την **ΙΔΙΑ** ακτίνα με τα άλλα δύο
+ * χειριστήρια — δες την εισαγωγή.
+ */
+function stampWorksheetAddButton(
+  rc: StampTableContext,
+  rectMm: TableRectMm,
+  hovered: boolean,
+): void {
+  fillTableChromeRect(rc, rectMm, false);
+  if (hovered) washTableChromeRect(rc, rectMm);
+  strokeTableChromeRect(rc, rectMm);
+  stampTableControlGlyph(
+    rc,
+    { u: rectMm.x + rectMm.w / 2, v: rectMm.y + rectMm.h / 2 },
+    tableControlGlyphArmPx(TABLE_INSERT_CONTROL_RADIUS_PX),
+    'plus',
+    { glyphHex: TABLE_INDICATOR.textHex, glyphWidthPx: TABLE_INDICATOR.lineWidthPx },
+  );
 }
 
 /**
