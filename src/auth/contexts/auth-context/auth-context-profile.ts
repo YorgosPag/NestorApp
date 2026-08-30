@@ -2,6 +2,7 @@ import { deleteField, doc, getDoc, increment, setDoc, type Firestore } from 'fir
 import type { User as FirebaseUser } from 'firebase/auth';
 import type { UserProfileDocument } from '@/auth/types/auth.types';
 import type { DeclaredOccupation } from '@/types/professional-identity';
+import { composedDisplayName, type ProfileNames } from '@/auth/utils/profile-names';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -202,6 +203,74 @@ export async function saveDeclaredOccupation(
   await setDoc(doc(db, COLLECTIONS.USERS, uid), payload, { merge: true });
   logger.info('[AuthContext] Declared occupation saved', { classified: escoUri !== undefined });
   return written;
+}
+
+/**
+ * ADR-834 §8 — **ΤΟ ΟΝΟΜΑ ΦΤΑΝΕΙ ΕΠΙΤΕΛΟΥΣ ΣΤΟ `users/{uid}`**.
+ *
+ * ═════════════════════════════════════════════════════════════════════════════
+ * 🔴 ΤΟ ΕΛΑΤΤΩΜΑ ΠΟΥ ΘΕΡΑΠΕΥΕΙ — ΜΕΤΡΗΜΕΝΟ ΣΤΗ ΖΩΝΤΑΝΗ ΒΑΣΗ, 2026-08-30
+ *
+ * Τα `givenName`/`familyName` του `users/{uid}` ήταν πεδία που **ΚΑΝΕΙΣ ΔΕΝ
+ * ΕΓΡΑΦΕ**. Και οι τέσσερις διαδρομές το προσπερνούσαν:
+ *
+ * | Διαδρομή | Πού έγραφε | Firestore |
+ * |---|---|---|
+ * | `/profile` → `updateUserProfile` | Firebase Auth + `localStorage` | **όχι** |
+ * | Google → `completeProfile` | ο **ίδιος** πυρήνας | **όχι** |
+ * | `signUp` (email/password) | Firebase Auth + `localStorage` | **όχι** |
+ * | `syncUserProfileToFirestore` (κάθε login) | `displayName`, `photoURL`, claims | **δεν τα αγγίζει** |
+ *
+ * Ο **μόνος** γραφέας τους ήταν το `/api/admin/ensure-user-profile` — που **κανείς
+ * δεν καλεί** (grep: μηδέν κλήσεις, ένα σχόλιο). Ζωντανή απόδειξη:
+ * `users/WKBWEg3D…` έχει `givenName: null`, `familyName: null` και
+ * `displayName: "Georgios Pagonis"` — δηλαδή η εφαρμογή **ξέρει** το όνομα και το
+ * έγγραφο **δεν το έχει**, εδώ και μήνες.
+ *
+ * ⚠️ **ΓΙ' ΑΥΤΟ ΕΠΡΕΠΕ ΝΑ ΓΡΑΦΤΕΙ ΠΡΙΝ ΤΟΝ ΚΡΙΤΗ.** Ο κριτής ταυτότητας του
+ * ADR-834 διαβάζει το `users/{uid}` και στέλνει τον άνθρωπο στο `/profile` να
+ * διορθώσει. Χωρίς αυτή τη γραφή, εκείνος θα έγραφε το όνομά του, θα πατούσε
+ * Αποθήκευση — και η άρνηση θα επέμενε **για πάντα**. Άρνηση που ο άνθρωπος **δεν
+ * μπορεί** να λύσει είναι χειρότερη από τη σιωπή που αντικαθιστά.
+ * ═════════════════════════════════════════════════════════════════════════════
+ * 🔑 ΓΙΑΤΙ ΕΔΩ — Η ΙΔΙΑ ΑΠΟΦΑΣΗ ΜΕ ΤΟ ΕΠΑΓΓΕΛΜΑ, ΓΙΑ ΤΟΝ ΙΔΙΟ ΛΟΓΟ
+ *
+ * Το `useAuthActions` **δεν αγγίζει Firestore πουθενά** (δες την κεφαλίδα του
+ * {@link saveDeclaredOccupation}). Δύο αποθετήρια, δύο ιδιοκτήτες: **αυτό** το
+ * αρχείο κατέχει ήδη το `users/{uid}` από τον πελάτη.
+ * ═════════════════════════════════════════════════════════════════════════════
+ * ⚠️ Ο ΚΡΙΤΗΣ ΤΗΣ ΚΕΝΗΣ ΦΟΡΜΑΣ **ΔΕΝ ΞΑΝΑΓΡΑΦΕΤΑΙ ΕΔΩ**
+ *
+ * Το «και τα δύο κενά ⇒ καμία αλλαγή» κρίνεται **μία** φορά, στο
+ * `isNameDeclaration`, και φτάνει εδώ ως **τύπος**: ο καλών δεν έχει `ProfileNames`
+ * να δώσει παρά μόνο όταν η έκβαση είναι `declared`. Ένα δεύτερο `if` εδώ θα ήταν ο
+ * καθρέφτης του ADR-749 πάνω σε **γνωστό** περιστατικό απώλειας δεδομένων.
+ *
+ * ⚠️ **Γράφεται και το `displayName`, και είναι σκόπιμο**: αλλιώς το έγγραφο θα
+ * έμενε ασύμφωνο μέχρι το **επόμενο login** (μόνο τότε το ξαναγράφει ο συγχρονισμός
+ * από το Firebase Auth). Η τιμή είναι **παραγόμενη** από τα δύο πεδία — ποτέ
+ * δεύτερη δήλωση.
+ *
+ * ⛔ **ΚΑΝΕΝΑ `deleteField()` εδώ**, σε αντίθεση με το επάγγελμα: εκεί το κενό είναι
+ * **ρητή ανάκληση** του ανθρώπου· εδώ το κενό δεν φτάνει ποτέ (δες παραπάνω), και
+ * μια διαγραφή θα ήταν ακριβώς το περιστατικό της 24/08 με άλλο όνομα.
+ */
+export async function saveProfileNames(
+  db: Firestore,
+  uid: string,
+  names: ProfileNames,
+): Promise<void> {
+  await setDoc(
+    doc(db, COLLECTIONS.USERS, uid),
+    {
+      givenName: names.givenName.trim(),
+      familyName: names.familyName.trim(),
+      displayName: composedDisplayName(names),
+      updatedAt: new Date(),
+    },
+    { merge: true },
+  );
+  logger.info('[AuthContext] Profile names persisted to users/{uid}');
 }
 
 /**

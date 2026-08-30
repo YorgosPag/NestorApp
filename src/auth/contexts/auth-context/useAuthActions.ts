@@ -18,6 +18,11 @@ import type { FirebaseAuthUser, SignUpData } from '@/auth/types/auth.types';
 import { safeSetItem, STORAGE_KEYS } from '@/lib/storage';
 import { createModuleLogger } from '@/lib/telemetry';
 import { readPermissionsClaim } from '@/lib/auth/claim-permissions';
+import {
+  composedDisplayName,
+  isNameDeclaration,
+  type ProfileNames,
+} from '@/auth/utils/profile-names';
 import { getAuthErrorMessage } from './auth-context-errors';
 
 const logger = createModuleLogger('AuthContextActions');
@@ -34,6 +39,35 @@ interface UseAuthActionsParams {
     verifyTotpForSignIn: (resolver: MultiFactorResolver, code: string, hintIndex: number) => Promise<{ result: string; error?: string }>;
   };
 }
+
+/**
+ * **Τι απέγινε η δήλωση ονόματος** — κλειστό σύνολο, ποτέ `boolean` + τιμή.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΓΙΑΤΙ ΥΠΑΡΧΕΙ: ΤΟ `unchanged` ΔΕΝ ΕΠΙΤΡΕΠΕΤΑΙ ΝΑ ΦΤΑΣΕΙ ΣΤΟ FIRESTORE
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Πριν το ADR-834 η συνάρτηση επέστρεφε `{ displayName, uid }` και **οι δύο**
+ * περιπτώσεις έμοιαζαν ίδιες: η «καμία αλλαγή» γύριζε το **παλιό** `displayName`,
+ * δηλαδή ένα κείμενο που ο καλών δεν μπορούσε να ξεχωρίσει από νέο. Όσο ο μόνος
+ * καταναλωτής ήταν η κατάσταση της οθόνης, δεν πείραζε.
+ *
+ * ⚠️ **Με δεύτερο αποθετήριο πειράζει, και είναι ακριβώς το περιστατικό της
+ * 2026-08-24 ξαναγεννημένο**: ένας γραφέας που έγραφε άνευ όρων ό,τι του γύρισε θα
+ * αντέγραφε το «καμία αλλαγή» στο `users/{uid}` ως **γραφή**. Το κλειστό σύνολο το
+ * κάνει **αδύνατο να εκφραστεί**: χωρίς `kind: 'declared'` δεν υπάρχουν `names` να
+ * γραφτούν.
+ */
+export type ProfileNamesOutcome =
+  /** Και τα δύο πεδία κενά ⇒ **μη-εντολή**. Τίποτα δεν γράφτηκε, πουθενά. */
+  | { readonly kind: 'unchanged'; readonly uid: string; readonly displayName: string }
+  /** Ο άνθρωπος **δήλωσε**. Γράφτηκε σε Auth + `localStorage`· το Firestore ακολουθεί. */
+  | {
+      readonly kind: 'declared';
+      readonly uid: string;
+      readonly displayName: string;
+      readonly names: ProfileNames;
+    };
 
 /**
  * 🏆 ΣΤΡΩΜΑ 1 — **ΡΩΤΑ ΤΟΝ ΠΑΡΟΧΟ, ΜΗΝ ΜΑΝΤΕΨΕΙΣ** (ADR-798, ζωντανό εύρημα).
@@ -206,7 +240,7 @@ export function useAuthActions(params: UseAuthActionsParams) {
       const result = await createUserWithEmailAndPassword(auth, email, password);
 
       if (result.user) {
-        const displayName = `${givenName} ${familyName}`.trim();
+        const displayName = composedDisplayName({ givenName, familyName });
         await updateProfile(result.user, { displayName });
         safeSetItem(`${STORAGE_KEYS.AUTH_GIVEN_NAME_PREFIX}${result.user.uid}`, givenName);
         safeSetItem(`${STORAGE_KEYS.AUTH_FAMILY_NAME_PREFIX}${result.user.uid}`, familyName);
@@ -278,13 +312,14 @@ export function useAuthActions(params: UseAuthActionsParams) {
   // given/family name on the Firebase user and local storage. Callers add their own
   // post-step (profile-complete flag, user-state shape) so no logic is duplicated.
   const applyProfileNames = useCallback(
-    async (givenName: string, familyName: string): Promise<{ displayName: string; uid: string }> => {
+    async (givenName: string, familyName: string): Promise<ProfileNamesOutcome> => {
       if (!auth.currentUser) {
         throw new Error('No authenticated user');
       }
       setError(null);
       const { uid } = auth.currentUser;
-      const composed = `${givenName} ${familyName}`.trim();
+      const names: ProfileNames = { givenName, familyName };
+      const composed = composedDisplayName(names);
 
       // 🔴 ΣΤΡΩΜΑ 2 — Η ΚΕΝΗ ΦΟΡΜΑ ΔΕΝ ΕΙΝΑΙ ΕΝΤΟΛΗ ΔΙΑΓΡΑΦΗΣ.
       //
@@ -305,35 +340,49 @@ export function useAuthActions(params: UseAuthActionsParams) {
       //
       // ⚠️ Η **μερική** συμπλήρωση γράφεται κανονικά: μόνο το «και τα δύο κενά»
       // είναι μη-εντολή. Αλλιώς δεν θα μπορούσες να αφαιρέσεις μόνο το επώνυμο.
-      if (composed.length === 0) {
-        return { displayName: auth.currentUser.displayName ?? '', uid };
+      //
+      // 🔑 **ΚΑΙ Ο ΚΡΙΤΗΣ ΕΞΗΧΘΗ** (ADR-834 §8): τον ρωτά πλέον **και** ο γραφέας του
+      //    `users/{uid}`. Γραμμένος δεύτερη φορά εκεί, η πρώτη απόκλιση θα έσβηνε το
+      //    όνομα από το ένα αποθετήριο και θα το κρατούσε στο άλλο — το περιστατικό
+      //    ξαναγεννημένο **μισό**, που είναι και το δυσκολότερο να παρατηρηθεί.
+      if (!isNameDeclaration(names)) {
+        return { kind: 'unchanged', uid, displayName: auth.currentUser.displayName ?? '' };
       }
 
       await updateProfile(auth.currentUser, { displayName: composed });
       safeSetItem(`${STORAGE_KEYS.AUTH_GIVEN_NAME_PREFIX}${uid}`, givenName);
       safeSetItem(`${STORAGE_KEYS.AUTH_FAMILY_NAME_PREFIX}${uid}`, familyName);
-      return { displayName: composed, uid };
+      return { kind: 'declared', uid, displayName: composed, names };
     },
     [auth, setError],
   );
 
-  const updateUserProfile = useCallback(async (givenName: string, familyName: string): Promise<void> => {
+  // ⚠️ **ΕΠΙΣΤΡΕΦΟΥΝ ΤΗΝ ΕΚΒΑΣΗ, ΚΑΙ ΔΕΝ ΕΙΝΑΙ ΔΙΑΡΡΟΗ ΛΕΠΤΟΜΕΡΕΙΑΣ** (ADR-834 §8):
+  //    το `users/{uid}` ζει σε **άλλο αποθετήριο** και ο γραφέας του δεν ανήκει εδώ
+  //    (δες την κεφαλίδα του `saveDeclaredOccupation` — ίδια απόφαση, ίδιος λόγος).
+  //    Ο συνθέτης (`AuthContext`) οφείλει να μάθει **αν δηλώθηκε κάτι**, αλλιώς θα
+  //    γράφει το «καμία αλλαγή» ως αλλαγή.
+  const updateUserProfile = useCallback(async (givenName: string, familyName: string): Promise<ProfileNamesOutcome> => {
     try {
-      const { displayName } = await applyProfileNames(givenName, familyName);
+      const outcome = await applyProfileNames(givenName, familyName);
+      const { displayName } = outcome;
       setUser((prev) => prev ? { ...prev, displayName, givenName, familyName } : null);
       logger.info('[AuthContext] Profile updated:', { displayName });
+      return outcome;
     } catch (error) {
       handleError(error);
       throw error;
     }
   }, [applyProfileNames, handleError, setUser]);
 
-  const completeProfile = useCallback(async (givenName: string, familyName: string): Promise<void> => {
+  const completeProfile = useCallback(async (givenName: string, familyName: string): Promise<ProfileNamesOutcome> => {
     try {
-      const { displayName, uid } = await applyProfileNames(givenName, familyName);
+      const outcome = await applyProfileNames(givenName, familyName);
+      const { displayName, uid } = outcome;
       safeSetItem(`${STORAGE_KEYS.AUTH_PROFILE_COMPLETE_PREFIX}${uid}`, 'true');
       setUser((prev) => prev ? { ...prev, displayName, givenName, familyName, profileIncomplete: false } : null);
       logger.info('[AuthContext] Profile completed for Google user:', { displayName });
+      return outcome;
     } catch (error) {
       handleError(error);
       throw error;

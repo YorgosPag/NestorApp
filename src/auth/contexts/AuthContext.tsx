@@ -24,6 +24,7 @@ import {
 } from './auth-context/auth-context-session';
 import {
   saveDeclaredOccupation,
+  saveProfileNames,
   syncUserProfileToFirestore,
 } from './auth-context/auth-context-profile';
 import type { DeclaredOccupation } from '@/types/professional-identity';
@@ -339,9 +340,41 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
     },
     resetPassword: actions.resetPassword,
-    updateUserProfile: actions.updateUserProfile,
+    /**
+     * 🔴 **ADR-834 §8 — ΤΟ ΔΕΥΤΕΡΟ ΑΠΟΘΕΤΗΡΙΟ, ΠΟΥ ΕΛΕΙΠΕ ΟΛΟΚΛΗΡΟ.**
+     *
+     * Το `actions.updateUserProfile` γράφει **Firebase Auth + `localStorage`**· το
+     * `users/{uid}` δεν το άγγιζε **κανείς** (μετρημένο ζωντανά: `givenName: null`
+     * σε λογαριασμό με `displayName: "Georgios Pagonis"`). Ο κριτής ταυτότητας του
+     * ADR-834 διαβάζει **το έγγραφο** — άρα χωρίς αυτή τη γραμμή η άρνησή του θα
+     * ήταν **αδιέξοδο**: ο άνθρωπος διορθώνει και τίποτα δεν αλλάζει.
+     *
+     * 🔑 **Ίδιο σχήμα με το επάγγελμα ακριβώς από κάτω**: ο γραφέας του Firestore
+     * ζει στο `auth-context-profile.ts`, όχι στο `useAuthActions`. Δύο αποθετήρια,
+     * δύο ιδιοκτήτες, **ένας** κριτής για το «δηλώθηκε κάτι;».
+     *
+     * ⚠️ **Το `unchanged` ΔΕΝ γράφει**, και το επιβάλλει ο **τύπος**: μόνο η έκβαση
+     * `declared` κουβαλά `names`. Είναι η θεραπεία της 2026-08-24, μεταφερμένη στο
+     * δεύτερο αποθετήριο **χωρίς** να ξαναγραφτεί ο κανόνας.
+     */
+    updateUserProfile: async (givenName: string, familyName: string) => {
+      const outcome = await actions.updateUserProfile(givenName, familyName);
+      if (outcome.kind === 'declared') {
+        await saveProfileNames(db, outcome.uid, outcome.names);
+      }
+    },
     updateUserPhoto: actions.updateUserPhoto,
-    completeProfile: actions.completeProfile,
+    /**
+     * ⚠️ **ΚΑΙ ΕΔΩ, ΚΑΙ ΕΙΝΑΙ Η ΠΙΟ ΣΗΜΑΝΤΙΚΗ ΑΠΟ ΤΙΣ ΔΥΟ**: αυτή είναι η διαδρομή
+     * του χρήστη **Google**, δηλαδή ακριβώς εκείνου που δεν πέρασε ποτέ από φόρμα
+     * εγγραφής και του οποίου τα δύο πεδία έμεναν `null` για πάντα (§2.1 ρίζα).
+     */
+    completeProfile: async (givenName: string, familyName: string) => {
+      const outcome = await actions.completeProfile(givenName, familyName);
+      if (outcome.kind === 'declared') {
+        await saveProfileNames(db, outcome.uid, outcome.names);
+      }
+    },
     // ADR-798 Φάση 3 (Κ4) — ζει **εδώ** και όχι στο `useAuthActions`: εκείνο
     // γράφει σε Firebase Auth + localStorage και **δεν αγγίζει Firestore**
     // πουθενά, ενώ το επάγγελμα ζει στο `users/{uid}`. Δύο αποθετήρια, δύο
