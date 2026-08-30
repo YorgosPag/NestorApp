@@ -23,6 +23,7 @@ import { isPubliclyListed } from '@/services/listings/public-listing-projection'
 import {
   isAgencyRevoked,
   mandateAllowsPublication,
+  mandatesOf,
 } from '@/types/owner-property-mandate';
 import type { OwnerProperty } from '@/types/owner-property';
 
@@ -48,9 +49,19 @@ function live(agencyRevokedAt: string | null) {
  */
 function legacyMandate(): OwnerProperty {
   const property = live(null);
-  const { agencyRevokedAt: _absent, ...mandate } = property.mandate as Record<string, unknown>;
-  return { ...property, mandate } as OwnerProperty;
+  const { agencyRevokedAt: _absent, ...mandate } = mandatesOf(property)[0] as unknown as Record<
+    string,
+    unknown
+  >;
+  return { ...property, mandates: [mandate] } as unknown as OwnerProperty;
 }
+
+/**
+ * ⚠️ **`mandatesOf`, ΠΟΤΕ ωμό `.mandates`** (ADR-832): αυτή η σουίτα φτιάχνει
+ * επίτηδες **μπαγιάτικα** έγγραφα, και ο συμβατός αναγνώστης είναι ο μόνος που τα
+ * διαβάζει και στα δύο σχήματα.
+ */
+const soleMandate = (property: OwnerProperty) => mandatesOf(property)[0]!;
 
 describe('Κ6 — η ανάκληση της άδειας αποσύρει τις υπάρχουσες αγγελίες', () => {
   /**
@@ -70,7 +81,7 @@ describe('Κ6 — η ανάκληση της άδειας αποσύρει τι�
    */
   it('με ανακληθείσα άδεια ΦΕΥΓΕΙ από τον χάρτη', () => {
     expect(onPublicMap(live(REVOKED_AT))).toBe(false);
-    expect(mandateAllowsPublication(live(REVOKED_AT).mandate, AT)).toBe(false);
+    expect(mandateAllowsPublication(soleMandate(live(REVOKED_AT)), AT)).toBe(false);
   });
 
   /**
@@ -86,8 +97,8 @@ describe('Κ6 — η ανάκληση της άδειας αποσύρει τι�
   it('εντολή ΧΩΡΙΣ το πεδίο (μπαγιάτικο έγγραφο) μένει στον χάρτη', () => {
     const legacy = legacyMandate();
 
-    expect('agencyRevokedAt' in legacy.mandate).toBe(false);
-    expect(isAgencyRevoked(legacy.mandate)).toBe(false);
+    expect('agencyRevokedAt' in soleMandate(legacy)).toBe(false);
+    expect(isAgencyRevoked(soleMandate(legacy))).toBe(false);
     expect(onPublicMap(legacy)).toBe(true);
   });
 
@@ -110,8 +121,11 @@ describe('Κ6 — η ανάκληση της άδειας αποσύρει τι�
   it('η αγγελία του ιδιώτη μένει ανέπαφη', () => {
     const owner = validOwnerProperty();
 
-    expect(owner.mandate.kind).toBe('self');
-    expect(isAgencyRevoked(owner.mandate)).toBe(false);
+    // 🔑 **Κενός πίνακας ΕΙΝΑΙ ο ιδιώτης** (ADR-832 §5.4): ο τύπος `self` έπαψε να
+    //    υπάρχει ως σκέλος, γιατί η **απουσία** εντολής δεν χρειάζεται όνομα. Ο
+    //    ισχυρισμός μένει ο ίδιος — δεν υπάρχει τίποτα να ανακληθεί.
+    expect(mandatesOf(owner)).toHaveLength(0);
+    expect(mandatesOf(owner).some(isAgencyRevoked)).toBe(false);
     expect(onPublicMap(owner)).toBe(true);
   });
 });

@@ -15,6 +15,7 @@ import {
   type MandateRequestDeclaration,
 } from '@/services/mandate/mandate-request.service';
 import { EXCLUSIVE_AGENCY, OPEN_LISTING } from '@/types/listing-agreement';
+import { brokeredMandate } from '@/lib/owner-property/__tests__/owner-property-fixtures';
 import type { ListingActor } from '@/lib/owner-property/listing-custody';
 import type {
   MandateRequest,
@@ -36,9 +37,31 @@ const TERMS: ProposedMandateTerms = {
   agreement: EXCLUSIVE_AGENCY,
   compensation: { type: 'percentage', percentage: 2, vatIncluded: false },
   expiresAt: '2027-04-29T23:59:59.999Z',
+  scope: ['sell'],
+  startsAt: NOW,
 };
 
 const OTHER_TERMS: ProposedMandateTerms = { ...TERMS, agreement: OPEN_LISTING };
+
+/**
+ * **Η κατάληψη ΞΕΝΟΥ γραφείου** που ζει ήδη μέσα στην αγγελία (ADR-832).
+ *
+ * ⚠️ `confirmation: 'confirmed'` **επίτηδες**: μόνο τότε η εντολή είναι δεσμευτική
+ * (`bindingMandates` → `isMandateAttributable`). Με `pending` οι άγκυρες Φ4 θα
+ * πρασίνιζαν επειδή ο κριτής **δεν είδε τίποτα** — όχι επειδή έκρινε.
+ *
+ * 🔑 Ο χτίστης είναι **δανεικός** (`owner-property-fixtures`), όχι δεύτερος: δεκατρία
+ * πεδία αντιγραμμένα εδώ θα ήταν κλώνος που το CHECK 3.28 μπλοκάρει.
+ */
+const FOREIGN_EXCLUSIVE_SELL = brokeredMandate({
+  agencyCompanyId: 'comp_allo',
+  agreement: EXCLUSIVE_AGENCY,
+  confirmation: 'confirmed',
+  confirmedByUserId: UID,
+  scope: ['sell'],
+  startsAt: '2026-08-01T00:00:00.000Z',
+  expiresAt: '2027-03-12T23:59:59.999Z',
+});
 
 const DECLARATION: MandateRequestDeclaration = {
   ownerPropertyId: LISTING,
@@ -67,7 +90,7 @@ function world(overrides: {
       authorUserId: UID,
       authorCompanyId: null,
       lifecycle: 'listed',
-      mandate: { kind: 'self' },
+      mandates: [], mandatesExpireAt: null,
       ...(overrides.listing ?? {}),
     });
   }
@@ -155,11 +178,86 @@ describe('Φ — οι φρουροί του Σ1', () => {
     });
   });
 
-  it('Φ4 — αγγελία που ΕΧΕΙ ΗΔΗ εντολή δεν ξανα-ανατίθεται', async () => {
+  // ==========================================================================
+  // Φ4 — Η ΚΑΤΑΛΗΨΗ (ADR-832)
+  //
+  // 🔴 **ΑΥΤΗ Η ΑΓΚΥΡΑ ΞΑΝΑΓΡΑΦΤΗΚΕ, ΔΕΝ «ΠΕΡΑΣΕ».** Έλεγε *«αγγελία που ΕΧΕΙ ΗΔΗ
+  //    εντολή δεν ξανα-ανατίθεται»* και **χαρακτήριζε το ελάττωμα**: ο παλιός φρουρός
+  //    ήταν `mandate.kind !== 'self'` — *«έχει γραφείο; όχι»* — που **δεν ρωτούσε το
+  //    είδος** και έκρινε **τρία στα τέσσερα** σενάρια λάθος (ADR-832 §1). Η άγκυρα
+  //    πρασίνιζε **επειδή** ο κώδικας ήταν λάθος· να την «διορθώναμε» για να ξαναγίνει
+  //    πράσινη θα ήταν να ξανακλειδώσουμε το σφάλμα (μάθημα CHECK 5C / ADR-587).
+  //
+  //    Ο κανόνας δεν είναι «υπάρχει εντολή;» — είναι:
+  //    `ίδιος πόρος ∧ επικάλυψη χρόνου ∧ ασύμβατοι τρόποι`. Τα τρία σκέλη έχουν από
+  //    μία άγκυρα, ώστε κάθε ένα να μπορεί να **κοκκινίσει μόνο του**.
+  // ==========================================================================
+
+  it('Φ4 — ΤΡΟΠΟΣ: δεύτερη ΑΠΟΚΛΕΙΣΤΙΚΗ στον ίδιο πόρο ⇒ `listing-conflicting-mandate`', async () => {
     const fake = world({
-      listing: { mandate: { kind: 'brokered', agencyCompanyId: 'comp_allo' } },
+      listing: { mandates: [FOREIGN_EXCLUSIVE_SELL], mandatesExpireAt: FOREIGN_EXCLUSIVE_SELL.expiresAt },
     });
-    expect(await submit(fake)).toEqual({ kind: 'rejected', reason: 'listing-already-brokered' });
+
+    // ⚠️ **ΟΧΙ `listing-already-brokered`**: εκείνο λέει *«το ζεύγος έκλεισε»* (δες
+    //    §5.7) — δεν έχει διέξοδο. Αυτό λέει *«**άλλος** κρατά δικαίωμα ως τότε»*, και
+    //    ο άνθρωπος μπορεί να **προγραμματίσει** εντολή μετά τη λήξη.
+    expect(await submit(fake)).toEqual({
+      kind: 'rejected',
+      reason: 'listing-conflicting-mandate',
+    });
+  });
+
+  it('Φ4α — ΤΡΟΠΟΣ: ΑΠΛΗ δίπλα σε ΑΠΛΗ περνά — είναι ο ΟΡΙΣΜΟΣ της απλής', async () => {
+    const shared = { ...FOREIGN_EXCLUSIVE_SELL, agreement: OPEN_LISTING };
+    const fake = world({ listing: { mandates: [shared], mandatesExpireAt: shared.expiresAt } });
+
+    // 🔑 Ο παλιός φρουρός απέρριπτε **και** αυτό — δηλαδή απαγόρευε τη μόνη μορφή
+    //    εντολής που ο νόμος φτιάχνει για να μοιράζεται.
+    expect((await submit(fake, OTHER_TERMS)).kind).toBe('created');
+  });
+
+  it('Φ4β — ΠΟΡΟΣ: αποκλειστική ΠΩΛΗΣΗΣ δεν εμποδίζει εντολή ΕΚΜΙΣΘΩΣΗΣ (άρθρο 200 §4)', async () => {
+    const fake = world({
+      listing: { mandates: [FOREIGN_EXCLUSIVE_SELL], mandatesExpireAt: FOREIGN_EXCLUSIVE_SELL.expiresAt },
+    });
+
+    // 🔑 Ο πόρος είναι `(ακίνητο × πράξη)`, όχι το ακίνητο. «Ίδιο **περιεχόμενο**».
+    expect((await submit(fake, { ...TERMS, scope: ['leaseOut'] })).kind).toBe('created');
+  });
+
+  it('Φ4γ — ΧΡΟΝΟΣ: ΔΙΑΔΟΧΙΚΗ εντολή περνά — δεν συνυπάρχουν ποτέ', async () => {
+    const fake = world({
+      listing: { mandates: [FOREIGN_EXCLUSIVE_SELL], mandatesExpireAt: FOREIGN_EXCLUSIVE_SELL.expiresAt },
+    });
+
+    // 🏆 **Η δυνατότητα που κανένα MLS δεν προσφέρει**: «η ξένη αποκλειστική λήγει
+    //    τότε — κλείσε εντολή που αρχίζει μετά». Ημι-ανοιχτό `[από, ως)` ⇒ η έναρξη
+    //    **ακριβώς** στη λήξη της άλλης δεν επικαλύπτεται.
+    const after = await submit(fake, {
+      ...TERMS,
+      startsAt: FOREIGN_EXCLUSIVE_SELL.expiresAt,
+      expiresAt: '2027-09-30T23:59:59.999Z',
+    });
+    expect(after.kind).toBe('created');
+  });
+
+  it('Φ4δ — 🔴 ΒΛΑΒΗ ≠ ΚΑΘΑΡΟ: εντολή με ΑΝΑΓΝΩΣΤΗ διάρκεια δίνει `unavailable`, ποτέ «πέρασε»', async () => {
+    const broken = { ...FOREIGN_EXCLUSIVE_SELL, expiresAt: 'ΟΧΙ-ΗΜΕΡΟΜΗΝΙΑ' };
+    const fake = world({ listing: { mandates: [broken], mandatesExpireAt: null } });
+
+    // 🔴 N.12: «δεν μπόρεσα να κρίνω» **δεν** είναι «κανείς δεν κρατά». Ένα `created`
+    //    εδώ θα έγραφε δεύτερη αποκλειστική **επειδή** δεν διαβάστηκε η πρώτη.
+    expect(await submit(fake)).toEqual({ kind: 'unavailable' });
+    expect(fake.all(COLLECTIONS.MANDATE_REQUESTS)).toHaveLength(0);
+  });
+
+  it('Φ4ε — ΤΟ ΙΔΙΟ γραφείο δεν συγκρούεται με τον εαυτό του: ανανέωση, όχι δεύτερη κατάληψη', async () => {
+    const mine = { ...FOREIGN_EXCLUSIVE_SELL, agencyCompanyId: AGENCY };
+    const fake = world({ listing: { mandates: [mine], mandatesExpireAt: mine.expiresAt } });
+
+    // ⚠️ Χωρίς αυτό, **κάθε ανανέωση αποκλειστικής** θα μπλόκαρε στην ίδια της την
+    //    προηγούμενη. Ο φρουρός του ζεύγους είναι αλλού (`judgeAgainstHistory`).
+    expect((await submit(fake)).kind).toBe('created');
   });
 
   it('Φ5 — 🔴 ΜΗ ΔΗΜΟΣΙΕΥΜΕΝΟ γραφείο απαντά «δεν υπάρχει» — η διαρροή του §9.4', async () => {

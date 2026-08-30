@@ -47,7 +47,7 @@ describe('🔴 Θ — η πόρτα της εντολής κρίνει ό,τι �
     const db = dbWith(existing);
 
     const result = await setOwnerPropertyMandate(db, existing.id, {
-      ...existing.mandate,
+      ...existing.mandates[0]!,
       expiresAt: '2026-12-01T00:00:00.000Z',
     });
 
@@ -59,7 +59,7 @@ describe('🔴 Θ — η πόρτα της εντολής κρίνει ό,τι �
     const db = dbWith(existing);
 
     const result = await setOwnerPropertyMandate(db, existing.id, {
-      ...existing.mandate,
+      ...existing.mandates[0]!,
       expiresAt: TOO_FAR,
     });
 
@@ -74,7 +74,7 @@ describe('🔴 Θ — η πόρτα της εντολής κρίνει ό,τι �
     const db = dbWith(existing);
 
     const result = await setOwnerPropertyMandate(db, existing.id, {
-      ...existing.mandate,
+      ...existing.mandates[0]!,
       agreement: OPEN_LISTING,
       expiresAt: '2027-06-01T00:00:00.000Z',
     });
@@ -93,7 +93,7 @@ describe('🔴 Θ — η πόρτα της εντολής κρίνει ό,τι �
     const db = dbWith(existing);
 
     const result = await setOwnerPropertyMandate(db, existing.id, {
-      ...existing.mandate,
+      ...existing.mandates[0]!,
       agreement: 'exclusive-agency',
     });
 
@@ -107,21 +107,51 @@ describe('🔴 Θ — η πόρτα της εντολής κρίνει ό,τι �
     const expired = brokeredOwnerProperty({ expiresAt: PAST });
     const db = dbWith(expired);
 
-    const result = await setOwnerPropertyMandate(db, expired.id, expired.mandate);
+    const result = await setOwnerPropertyMandate(db, expired.id, expired.mandates[0]!);
 
     expect(result.kind).toBe('saved');
   });
 
-  it('Θ5 — ΑΝΑΚΛΗΣΗ (brokered → self) δεν κρίνεται ΠΟΤΕ: η έξοδος μένει ανοιχτή', async () => {
-    // ⚠️ Ο ιδιοκτήτης πρέπει να μπορεί να βγει **ακόμη κι αν** η εντολή έχει γίνει
-    //    άκυρη στο μεταξύ. Μια πύλη που τον εμποδίζει να ανακαλέσει τον κλειδώνει
-    //    έξω από την έξοδο — και εδώ η έξοδος είναι δικαίωμα στην περιουσία του.
-    const illegal = brokeredOwnerProperty({ expiresAt: TOO_FAR });
-    const db = dbWith(illegal);
+  it('🔴 Θ5 — ΔΕΥΤΕΡΗ ΑΠΛΗ εντολή σε ΑΛΛΟ γραφείο ΓΡΑΦΕΤΑΙ (ADR-832)', async () => {
+    // 🔴 **Η ΠΡΑΞΗ ΠΟΥ ΗΤΑΝ ΔΟΜΙΚΑ ΑΔΥΝΑΤΗ.** Με ενικό `mandate`, η δεύτερη ανάθεση
+    //    **αντικαθιστούσε** την πρώτη· με τον έλεγχο `kind !== 'self'` ούτε καν
+    //    έφτανε εδώ. Τώρα οι δύο συνυπάρχουν — που είναι ο **ορισμός** της απλής
+    //    εντολής (`OPEN_LISTING`: «σε οποιονδήποτε αριθμό γραφείων»).
+    const existing = brokeredOwnerProperty({
+      agreement: OPEN_LISTING,
+      agencyCompanyId: 'comp_alfa',
+      confirmation: 'confirmed',
+    });
+    const db = dbWith(existing);
 
-    const result = await setOwnerPropertyMandate(db, illegal.id, { kind: 'self' });
+    const result = await setOwnerPropertyMandate(db, existing.id, {
+      ...existing.mandates[0]!,
+      agencyCompanyId: 'comp_beta',
+    });
 
     expect(result.kind).toBe('saved');
+    if (result.kind !== 'saved') return;
+    expect(result.property.mandates).toHaveLength(2);
+  });
+
+  it('🔴 Θ5β — ΔΕΥΤΕΡΗ ΑΠΟΚΛΕΙΣΤΙΚΗ σε άλλο γραφείο ΑΠΟΡΡΙΠΤΕΤΑΙ, με όνομα', async () => {
+    const existing = brokeredOwnerProperty({
+      agreement: 'exclusive-right-to-sell',
+      agencyCompanyId: 'comp_alfa',
+      confirmation: 'confirmed',
+    });
+    const db = dbWith(existing);
+
+    const result = await setOwnerPropertyMandate(db, existing.id, {
+      ...existing.mandates[0]!,
+      agencyCompanyId: 'comp_beta',
+    });
+
+    expect(result.kind).toBe('invalid-mandate');
+    if (result.kind !== 'invalid-mandate') return;
+    expect(result.violations).toContain('mandate-conflicts-existing');
+    // 🏆 **ΤΟ ΟΝΟΜΑ ΤΑΞΙΔΕΥΕΙ** — εδώ ξεπερνάμε το «Invalid» των MLS.
+    expect(result.conflicts?.[0]?.with.agencyCompanyId).toBe('comp_alfa');
   });
 
   it('Θ6 — αλλαγή ΜΟΝΟ της έγκρισης δεν κρίνεται: η συγκατάθεση δεν είναι νέα σύμβαση', async () => {
@@ -129,7 +159,7 @@ describe('🔴 Θ — η πόρτα της εντολής κρίνει ό,τι �
     const db = dbWith(existing);
 
     const result = await setOwnerPropertyMandate(db, existing.id, {
-      ...existing.mandate,
+      ...existing.mandates[0]!,
       confirmation: 'confirmed',
       decidedAt: '2026-08-29T10:00:00.000Z',
     });

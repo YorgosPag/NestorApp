@@ -16,7 +16,9 @@
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
-import { EXCLUSIVE_AGENCY } from '@/types/listing-agreement';
+import { EXCLUSIVE_AGENCY, OPEN_LISTING } from '@/types/listing-agreement';
+import { mandatesOf } from '@/types/owner-property-mandate';
+import { brokeredMandate } from '@/lib/owner-property/__tests__/owner-property-fixtures';
 import type { MandateRequest } from '@/types/mandate-request';
 import type { OwnerProperty } from '@/types/owner-property';
 
@@ -89,6 +91,8 @@ const TERMS = {
   agreement: EXCLUSIVE_AGENCY,
   compensation: { type: 'percentage' as const, percentage: 2, vatIncluded: false },
   expiresAt: '2027-04-29T23:59:59.999Z',
+  scope: ['sell'],
+  startsAt: NOW,
 };
 
 /** Ένας κόσμος όπου **όλα** είναι εντάξει — κάθε δοκιμή χαλάει ΕΝΑ πράγμα. */
@@ -121,7 +125,7 @@ function world(over: {
       authorUserId: OWNER_UID,
       authorCompanyId: null,
       lifecycle: 'listed',
-      mandate: { kind: 'self' },
+      mandates: [], mandatesExpireAt: null,
       updatedAt: '2026-08-20T10:00:00.000Z',
       ...(over.listing ?? {}),
     });
@@ -191,9 +195,11 @@ describe('Α — τρεις γραφές, μία πράξη', () => {
 
     // 2. Η εντολή γράφτηκε, και είναι **επιβεβαιωμένη χωρίς σύνδεσμο**: η συγκατάθεση
     //    ΕΙΝΑΙ το ίδιο το αίτημα (§8.4).
-    const mandate = storedListing(fake).mandate;
-    expect(mandate.kind).toBe('brokered');
-    if (mandate.kind === 'brokered') {
+    // ⚠️ **`mandatesOf`, ΠΟΤΕ ωμό `.mandates`** (ADR-832): ο κόσμος ξεκινά από
+    //    έγγραφο **χωρίς** τον πληθυντικό — έτσι ζουν τα `self` της ζωντανής βάσης.
+    const mandate = mandatesOf(storedListing(fake))[0];
+    expect(mandate?.kind).toBe('brokered');
+    if (mandate !== undefined) {
       expect(mandate.confirmation).toBe('confirmed');
       expect(mandate.consentNonce).toBeNull();
       expect(mandate.confirmedByUserId).toBe(OWNER_UID);
@@ -241,26 +247,77 @@ describe('Α — τρεις γραφές, μία πράξη', () => {
     });
 
     expect(storedContacts(fake)).toHaveLength(0);
-    expect(storedListing(fake).mandate.kind).toBe('self');
+    // 🔑 **Κενός πίνακας ΕΙΝΑΙ το παλιό `self`** (ADR-832 §5.4) — η απουσία εντολής
+    //    δεν χρειάζεται όνομα, και ο συμβατός αναγνώστης το λέει και για τα δύο σχήματα.
+    expect(mandatesOf(storedListing(fake))).toHaveLength(0);
     expect(republished).toEqual([]);
   });
 
-  it('🔴 Α2 — Η ΑΓΓΕΛΙΑ ΑΝΑΤΕΘΗΚΕ ΑΛΛΟΥ ΣΤΟ ΜΕΤΑΞΥ: τίποτα δεν γράφτηκε', async () => {
-    // Η φάση 1 είδε `self`· ο ανταγωνιστής δέσμευσε την αγγελία πριν το commit.
+  it('🔴 Α2 — Η ΑΓΓΕΛΙΑ ΚΑΤΑΛΗΦΘΗΚΕ ΑΠΟΚΛΕΙΣΤΙΚΑ ΣΤΟ ΜΕΤΑΞΥ: τίποτα δεν γράφτηκε', async () => {
+    // ────────────────────────────────────────────────────────────────────────
+    // 🔴 **ΑΥΤΗ Η ΑΓΚΥΡΑ ΞΑΝΑΓΡΑΦΤΗΚΕ** (ADR-832). Απαιτούσε
+    // `reason: 'listing-already-brokered'` — τον κωδικό του φρουρού
+    // `mandate.kind !== 'self'`, δηλαδή *«υπάρχει γραφείο; τέλος»*. Εκείνος ο
+    // φρουρός **έφυγε**, γιατί απέρριπτε και τις τρεις νόμιμες περιπτώσεις
+    // (απλή · άλλη πράξη · διαδοχική). Στη θέση του κρίνει ο κριτής κατάληψης,
+    // και ο λόγος είναι πλουσιότερος: όχι *«έχει εντολή»* αλλά **ποιος** κρατά
+    // **ποια πράξη** και **ως πότε**.
+    //
+    // ⚠️ Γι' αυτό ο ανταγωνιστής εδώ γράφει **ΑΠΟΚΛΕΙΣΤΙΚΗ στην ΙΔΙΑ πράξη**:
+    // μια απλή, ή μια αποκλειστική εκμίσθωσης, θα περνούσε — και **σωστά**.
+    // ────────────────────────────────────────────────────────────────────────
     const fake = world();
+    const rival = brokeredMandate({
+      agencyCompanyId: 'comp_antagwnistis',
+      agreement: EXCLUSIVE_AGENCY,
+      confirmation: 'confirmed',
+      clientContactId: 'cont_allou',
+      scope: ['sell'],
+      startsAt: '2026-08-01T00:00:00.000Z',
+      expiresAt: '2027-08-01T00:00:00.000Z',
+    });
     fake.interfere = () => {
       fake.seed(COLLECTIONS.OWNER_PROPERTIES, LISTING, {
         ...storedListing(fake),
-        mandate: { kind: 'brokered', clientContactId: 'cont_allou' },
+        mandates: [rival],
+        mandatesExpireAt: rival.expiresAt,
       });
     };
 
-    expect(await decide(fake)).toEqual({
-      kind: 'refused',
-      reason: 'listing-already-brokered',
-    });
+    const result = await decide(fake);
+    expect(result.kind).toBe('refused');
+    if (result.kind === 'refused') {
+      expect(result.reason).toBe('mandate-invalid');
+      // 🔑 **Ο κωδικός λέει «υπάρχει σύγκρουση», όχι «με ποιον»** — το όνομα του
+      //    αντιπάλου είναι δεδομένο και ταξιδεύει χωριστά (ADR-832 §5.7).
+      expect(result.violations).toContain('mandate-conflicts-existing');
+    }
     expect(storedContacts(fake)).toHaveLength(0);
     expect(storedRequest(fake).status).toBe('pending');
+  });
+
+  it('🏆 Α2α — ΑΠΛΗ κατάληψη ξένου γραφείου ΔΕΝ εμποδίζει την αποδοχή απλής', async () => {
+    // 🏆 Ο παρονομαστής της Α2: χωρίς αυτήν, η Α2 θα περνούσε και με φρουρό
+    //    «υπάρχει εντολή; τέλος» — δηλαδή δεν θα ξεχώριζε το σωστό από το λάθος.
+    const fake = world({ request: { terms: { ...TERMS, agreement: OPEN_LISTING } } });
+    const neighbour = brokeredMandate({
+      agencyCompanyId: 'comp_geitonas',
+      agreement: OPEN_LISTING,
+      confirmation: 'confirmed',
+      clientContactId: 'cont_allou',
+      scope: ['sell'],
+      startsAt: '2026-08-01T00:00:00.000Z',
+      expiresAt: '2027-08-01T00:00:00.000Z',
+    });
+    fake.seed(COLLECTIONS.OWNER_PROPERTIES, LISTING, {
+      ...storedListing(fake),
+      mandates: [neighbour],
+      mandatesExpireAt: neighbour.expiresAt,
+    });
+
+    expect((await decide(fake)).kind).toBe('decided');
+    // ⚠️ Και η ξένη κατάληψη **έμεινε**: η αποδοχή προσθέτει, δεν αντικαθιστά.
+    expect(mandatesOf(storedListing(fake))).toHaveLength(2);
   });
 
   it('Α3 — αίτημα ήδη κριμένο δεν ξανακρίνεται', async () => {
@@ -390,7 +447,7 @@ describe('Δ — το γραφείο που αρνήθηκε δεν έλαβε �
       await decide(fake, decision);
 
       expect(storedContacts(fake)).toHaveLength(0);
-      expect(storedListing(fake).mandate.kind).toBe('self');
+      expect(mandatesOf(storedListing(fake))).toHaveLength(0);
       expect(storedRequest(fake).clientContactId).toBeNull();
       expect(republished).toEqual([]);
       expect(audited).toHaveLength(0);

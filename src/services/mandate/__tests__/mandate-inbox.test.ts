@@ -29,6 +29,8 @@ const TERMS = {
   agreement: EXCLUSIVE_AGENCY,
   compensation: { type: 'percentage' as const, percentage: 2, vatIncluded: false },
   expiresAt: '2027-04-29T23:59:59.999Z',
+  scope: ['sell'],
+  startsAt: NOW,
 };
 
 const asAdmin = (fake: FakeFirestore) =>
