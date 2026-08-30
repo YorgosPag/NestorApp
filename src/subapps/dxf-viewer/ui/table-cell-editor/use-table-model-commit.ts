@@ -28,7 +28,7 @@ import { buildTableModelCommand } from '../../bim/table/table-cell-edit-session'
 // προχείρου. Ο **ζωγράφος** έχει το δομικό δίχτυ· εδώ σταματά ο παλμός.
 import { clearTableCopyMarquee } from '../../state/table-copy-marquee-store';
 import type { TableEntity } from '../../types/table-entity';
-import type { ICommand } from '../../core/commands';
+import type { ICommand, ISceneManager } from '../../core/commands';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
 import { activeTableModel } from '../../bim/table/table-worksheet-resolve';
 import type { PersistedTableModel } from '../../types/table';
@@ -50,15 +50,33 @@ export interface UseTableModelCommitParams {
  */
 export type TableModelCommit = (entity: TableEntity, nextModel: PersistedTableModel) => boolean;
 
-export function useTableModelCommit(params: UseTableModelCommitParams): TableModelCommit {
+/**
+ * 🔴 **ADR-833 Φάση 4 — Ο ΠΥΡΗΝΑΣ: «φτιάξε εντολή πίνακα και εκτέλεσέ την».**
+ *
+ * ## Γιατί εξήχθη, και γιατί ΠΡΙΝ γραφτεί ο δεύτερος καταναλωτής
+ * Οι πράξεις **φύλλων** (προσθήκη/διαγραφή/μετονομασία/αναδιάταξη + πολυφυλλική εισαγωγή)
+ * χρειάζονται **ακριβώς** την ίδια ακολουθία: όροφος → adapter → κατασκευαστής εντολής →
+ * `execute` → σβήσιμο μυρμηγκιών. Ένα δεύτερο `useTableWorksheetCommit` με αυτό το σώμα θα ήταν
+ * ο sibling clone που πιάνει το CHECK 3.28 (jscpd, N.18) — και το ακριβό δεν είναι οι οκτώ
+ * γραμμές: είναι ότι το δεύτερο αντίγραφο είναι πάντα εκείνο που **ξεχνά** τα μυρμήγκια.
+ *
+ * Ο καλών δίνει **μόνο** τη διαφορά: ποιος κατασκευαστής εντολής, με ποια ορίσματα.
+ *
+ * 🔑 Η **επιλογή** του κατασκευαστή μένει στον καλούντα και δεν γίνεται παράμετρος-διακόπτης:
+ * ένα `kind: 'model' | 'worksheets'` εδώ θα ήταν ένα σώμα με δύο συμπεριφορές κρυμμένες σε
+ * `if` — η ακριβώς αντίθετη κίνηση από SSoT (ίδιο επιχείρημα με το `stamp-table-chrome-rect`).
+ */
+export type TableCommandCommit = (build: (sceneManager: ISceneManager) => ICommand | null) => boolean;
+
+export function useTableCommandCommit(params: UseTableModelCommitParams): TableCommandCommit {
   const { levelManager, execute } = params;
 
-  return useCallback(
-    (entity: TableEntity, nextModel: PersistedTableModel): boolean => {
+  return useCallback<TableCommandCommit>(
+    (build) => {
       const { currentLevelId, getLevelScene, setLevelScene } = levelManager;
       if (!currentLevelId || !setLevelScene) return false;
       const sceneManager = createLevelSceneManagerAdapter(getLevelScene, setLevelScene, currentLevelId);
-      const command = buildTableModelCommand(entity, nextModel, sceneManager);
+      const command = build(sceneManager);
       if (!command) return false;
       execute(command);
       // 🔴 ADR-739 §48 — **η αλλαγή σβήνει τα μυρμήγκια** (Excel parity): το περίγραμμα
@@ -74,6 +92,20 @@ export function useTableModelCommit(params: UseTableModelCommitParams): TableMod
       return true;
     },
     [levelManager, execute],
+  );
+}
+
+/**
+ * Οντότητα + νέο μοντέλο → **μία** εντολή, μέσα από τον {@link useTableCommandCommit}.
+ *
+ * Μένει ως **όνομα πρόθεσης** και όχι ως παραλλαγή υλοποίησης: οι ~δέκα καλούντες του λένε
+ * «γράψε αυτό το μοντέλο», και δεν έχουν λόγο να ξέρουν ότι υπάρχει adapter σκηνής.
+ */
+export function useTableModelCommit(params: UseTableModelCommitParams): TableModelCommit {
+  const commit = useTableCommandCommit(params);
+  return useCallback(
+    (entity, nextModel) => commit((sceneManager) => buildTableModelCommand(entity, nextModel, sceneManager)),
+    [commit],
   );
 }
 

@@ -1,7 +1,18 @@
 'use client';
 
 /**
- * ADR-833 Φάση 3 — **ΤΟ ΠΑΤΗΜΑ ΜΙΑΣ ΚΑΡΤΕΛΑΣ ΦΥΛΛΟΥ**: ο πίνακας δείχνει εκείνο το φύλλο.
+ * ADR-833 Φάσεις 3+4 — **ΤΟ ΠΑΤΗΜΑ ΜΕΣΑ ΣΤΗ ΛΩΡΙΔΑ ΦΥΛΛΩΝ**: καρτέλα ⇒ ο πίνακας δείχνει
+ * εκείνο το φύλλο· ⊕ ⇒ γεννιέται νέο φύλλο στο τέλος.
+ *
+ * ## 🔴 ΔΥΟ ΠΡΑΞΕΙΣ, ΔΥΟ ΔΙΑΔΡΟΜΕΣ ΕΓΓΡΑΦΗΣ — και η διάκριση είναι το νόημα της Φάσης 4
+ * ```
+ *   καρτέλα → ΑΛΛΑΖΕΙ ΤΟ ΠΟΙΟ ΒΛΕΠΕΙΣ → applyTableScenePatch → ΚΑΝΕΝΑ βήμα undo (Excel parity)
+ *   ⊕       → ΑΛΛΑΖΕΙ ΤΟ ΤΙ ΥΠΑΡΧΕΙ   → UpdateEntityCommand  → ΕΝΑ βήμα undo
+ * ```
+ * Ζουν στον **ίδιο** ακροατή επειδή μοιράζονται τη χειρονομία (ίδια λωρίδα, ίδιο `mousedown` σε
+ * σύλληψη, ίδια διεκδίκηση του ζευγαρωτού `mouseup`), **όχι** επειδή μοιράζονται σημασιολογία.
+ * Ένας γραφέας για τα δύο θα σήμαινε είτε στοίβα αναίρεσης γεμάτη «άλλαξα καρτέλα», είτε νέο
+ * φύλλο που το `Ctrl+Z` δεν παίρνει πίσω.
  *
  * Τέταρτος καταναλωτής του {@link useTableArmedControlClick}, δίπλα στο `⊕` (§40), στο `⊖`
  * (§42) και στο πινέλο (ADR-768). **Καμία νέα διαδρομή συμβάντος**: ίδιο `mousedown` σε
@@ -30,41 +41,61 @@
  */
 
 import { type RefObject } from 'react';
+import { useCommandHistory } from '../../core/commands';
 import { getTableIndicatorHover } from '../../state/table-indicator-hover-store';
 import { planWorksheetActivation } from '../../bim/table/table-worksheet-activate';
+import { newWorksheetModel, planWorksheetAdd } from '../../bim/table/table-worksheet-ops';
 import { tableCursorFor } from '../../state/table-cell-cursor-scope';
 import { setTableCellCursor } from '../../state/table-cell-cursor-store';
 import { applyTableScenePatch } from './table-scene-patch';
 import { useTableArmedControlClick } from './use-table-armed-control-click';
+import { useTableWorksheetApply } from './use-table-worksheet-apply';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
 import type { TableWorksheetId } from '../../types/table-worksheet';
 
-/** Η καρτέλα κάτω από το χέρι, στη μορφή που δέχεται ο κοινός ακροατής. */
-interface ArmedWorksheetTab {
-  readonly entityId: string;
-  readonly worksheetId: TableWorksheetId;
-}
+/**
+ * Τι της λωρίδας είναι οπλισμένο, στη μορφή που δέχεται ο κοινός ακροατής.
+ *
+ * Διακριτή ένωση και όχι «ταυτότητα ή `null`»: το ⊕ **δεν είναι φύλλο**. Δες τη δήλωση του
+ * `'worksheet-add'` στο `table-pointer-hit-kinds.ts` για το τι κοστίζει ένα προσποιητό φύλλο.
+ */
+type ArmedWorksheetStrip =
+  | { readonly entityId: string; readonly kind: 'tab'; readonly worksheetId: TableWorksheetId }
+  | { readonly entityId: string; readonly kind: 'add' };
 
 export interface UseTableWorksheetTabClickParams {
   readonly containerRef: RefObject<HTMLDivElement | null>;
   readonly levelManager: LevelManagerLike;
 }
 
-/** Αλλάζει ενεργό φύλλο όταν πατηθεί η καρτέλα του, όσο υπάρχει πίνακας στο προσκήνιο. */
+/** Εκτελεί ό,τι υπόσχεται η λωρίδα φύλλων, όσο υπάρχει πίνακας στο προσκήνιο. */
 export function useTableWorksheetTabClick(params: UseTableWorksheetTabClickParams): void {
   const { containerRef, levelManager } = params;
+  const { execute } = useCommandHistory();
+  const applyWorksheet = useTableWorksheetApply({ levelManager, execute });
 
-  useTableArmedControlClick<ArmedWorksheetTab>({
+  useTableArmedControlClick<ArmedWorksheetStrip>({
     containerRef,
     levelManager,
-    // Καμία φάση να ελεγχθεί, σε αντίθεση με τα ⊕/⊖: η καρτέλα δεν έχει `nearby` — το
-    // ορθογώνιο που φαίνεται **είναι** ο στόχος. Δες το `TablePointerHit`.
+    // Καμία φάση να ελεγχθεί, σε αντίθεση με τα ⊕/⊖ των ζωνών: ούτε η καρτέλα ούτε το ⊕ της
+    // λωρίδας έχουν `nearby` — το ορθογώνιο που φαίνεται **είναι** ο στόχος. Δες το
+    // `TablePointerHit`.
     resolveArmed: () => {
       const hover = getTableIndicatorHover();
-      if (!hover || hover.target.kind !== 'worksheet-tab') return null;
-      return { entityId: hover.entityId, worksheetId: hover.target.worksheetId };
+      if (hover?.target.kind === 'worksheet-add') return { entityId: hover.entityId, kind: 'add' };
+      if (hover?.target.kind !== 'worksheet-tab') return null;
+      return { entityId: hover.entityId, kind: 'tab', worksheetId: hover.target.worksheetId };
     },
     run: (live, armed) => {
+      if (armed.kind === 'add') {
+        // 🔴 **Εντολή, όχι μπάλωμα σκηνής.** Το νέο φύλλο είναι **δεδομένα**: ένα `Ctrl+Z`
+        // οφείλει να το πάρει πίσω. Δες την κεφαλίδα για τη γραμμή που χωρίζει τις δύο πράξεις.
+        //
+        // ⚠️ Ο δρομέας **δεν** ακολουθεί: το σχέδιο δηλώνει ρητά `restoreCursor: null`, γιατί
+        // η προσθήκη φύλλου δεν είναι είσοδος σε λειτουργία πίνακα.
+        applyWorksheet(live, planWorksheetAdd(live, newWorksheetModel(live)));
+        return;
+      }
       // 🔴 Ο δρομέας διαβάζεται με τον **ΕΝΑ** φύλακα (`tableCursorFor`: ίδιος πίνακας **και**
       // ίδιο ενεργό φύλλο), τη στιγμή του συμβάντος. `null` σημαίνει «απλή επιλογή» — ο χρήστης
       // δεν είναι μέσα στον πίνακα, άρα δεν υπάρχει δρομέας ούτε να θυμηθούμε ούτε να
