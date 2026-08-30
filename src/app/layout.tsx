@@ -9,6 +9,7 @@ import { I18nProvider } from '@/components/providers/I18nProvider';
 import { TourProvider, TourRenderer } from '@/components/ui/ProductTour';
 import { SuperAdminCompanyProvider } from '@/contexts/SuperAdminCompanyContext';
 import { densityBootScript } from '@/lib/appearance/density-boot-script';
+import { NotificationDrawer } from '@/components/NotificationDrawer.enterprise';
 
 /**
  * =============================================================================
@@ -108,6 +109,29 @@ export default function RootLayout({
                   {/* 🔑 ΚΑΝΕΝΑ ΚΕΛΥΦΟΣ ΕΔΩ. Το layout του route group αποφασίζει
                       (ADR-777 §8.12): `(app)` φοράει · `(auth)`/`(light)`/`(bare)` όχι. */}
                   {children}
+                  {/*
+                    🔴 Ο ΚΑΘΟΛΙΚΟΣ DRAWER ΕΙΔΟΠΟΙΗΣΕΩΝ (ADR-834 §6 Φάση Α).
+
+                    Ζούσε στο `(app)/layout.tsx`, δηλαδή ΜΟΝΟ πίσω από οργανισμό —
+                    ενώ ο αγωγός ειδοποιήσεων είναι ΤΑΥΤΟΤΗΤΑΣ (`userId`), όχι χώρου.
+                    Ο ιδιώτης του `(me)` έπαιρνε ειδοποιήσεις που ΚΑΜΙΑ οθόνη του δεν
+                    απέδιδε (ADR-834 §2.5α).
+
+                    🔑 ΕΔΩ ΚΑΙ ΟΧΙ ΣΤΟ `ShellUtilities`, με δύο μετρημένους λόγους:
+                    (α) εκείνο δηλώνει ρητά ότι ΔΕΝ αποδίδει landmark, ενώ αυτός είναι
+                    overlay ολόκληρης της σελίδας· (β) ο `app-header` έχει
+                    `backdrop-filter`, που γεννά CONTAINING BLOCK — ένας `position:
+                    fixed` απόγονος θα ακινητοποιούνταν ΜΕΣΑ στην κεφαλίδα.
+
+                    ⚠️ ΜΗΔΕΝ DOM όσο είναι κλειστός (`if (!isOpen) return null`), άρα
+                    το `(bare)` — που δηλώνει «αποδίδει μηδέν DOM, επίτηδες» και
+                    φυλάγεται από 40 golden snapshots — μένει ΑΝΕΠΑΦΟ. Και δεν μπορεί
+                    να ανοίξει εκεί: το καμπανάκι που τον ανοίγει ζει στο
+                    `ShellUtilities`, που το `(bare)` δηλωμένα δεν φοράει.
+
+                    ⚠️ ΜΕΣΑ στον `AuthProvider`: διαβάζει ταυτότητα (`useAuth`).
+                  */}
+                  <NotificationDrawer />
                 </UserRoleProvider>
                 </SuperAdminCompanyProvider>
               </AuthProvider>

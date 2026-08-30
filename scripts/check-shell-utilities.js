@@ -49,8 +49,18 @@
  *  μπλοκάρει επίσης (δύο αλήθειες που διαφωνούν, ADR-749).
  *  ⇒ *«δήλωσε, ή σβήσε τη δήλωση»*
  *
- *  **Κ3 — ΙΔΙΟΚΤΗΣΙΑ**: τα τρία καθολικά σύμβολα εισάγονται **μόνο** από τον
- *  ιδιοκτήτη. ⇒ *«πάψε να συναρμολογείς δικό σου»*
+ *  **Κ3 — ΙΔΙΟΚΤΗΣΙΑ**: τα καθολικά σύμβολα του μητρώου εισάγονται **μόνο** από
+ *  τον ιδιοκτήτη — **και τα αποδίδει όλα**. ⇒ *«πάψε να συναρμολογείς δικό σου»*
+ *
+ *  ⚠️ **ΠΟΣΑ ΕΙΝΑΙ ΔΕΝ ΓΡΑΦΕΤΑΙ ΕΔΩ, ΕΠΙΤΗΔΕΣ.** Ο αριθμός ζει στο
+ *  `universalSymbols` του `.shell-utilities.json` και **διαβάζεται**· ήταν 3 ως
+ *  τις 2026-08-30 και έγινε 4 με το καμπανάκι (ADR-834). Πρόζα που αντιγράφει
+ *  αριθμό **παλιώνει** — μετρημένο τεκμηριωμένα σε N.12 · N.18 · CHECK 3.38.
+ *
+ *  🔴 **ΤΟ ΔΕΥΤΕΡΟ ΣΚΕΛΟΣ («και τα αποδίδει») ΠΡΟΣΤΕΘΗΚΕ 2026-08-30.** Ως τότε
+ *  ο Κ3β ρωτούσε μόνο «εισάγει;», και μετάλλαξη στο **πραγματικό** δέντρο έδειξε
+ *  ότι η αφαίρεση **οποιουδήποτε** στοιχείου JSX άφηνε την πύλη πράσινη — **4
+ *  στα 4**. Δες {@link OWNER_STATES.SILENT}.
  *
  * 🔑 **Ο Κ3 ΕΙΝΑΙ Ο ΛΟΓΟΣ ΠΟΥ Ο Κ1 ΕΙΝΑΙ ΑΓΚΥΡΑ.** Ο Κ1 είναι από κατασκευή
  * ικανοποιήσιμος με **τέταρτο** cluster δίπλα στον ιδιοκτήτη — θα έμενε
@@ -83,7 +93,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const TREE = require('./lib/shell-boundary/tree');
-const { createReachability, toPosix } = require('./lib/shell-utilities/reach');
+const { createReachability, toPosix, importBindings } = require('./lib/shell-utilities/reach');
 
 const RED = '\x1b[31m';
 const GREEN = '\x1b[32m';
@@ -140,12 +150,38 @@ const SYMBOL_ORDER = [...SYMBOL_BLOCKING, SYMBOL_STATES.OWNER_SITE, SYMBOL_STATE
 const OWNER_STATES = Object.freeze({
   /** ⛔ Ο δηλωμένος ιδιοκτήτης δεν υπάρχει. */
   MISSING: 'owner-missing',
-  /** ⛔ Υπάρχει, αλλά δεν εισάγει και τα τρία — υπόσχεση χωρίς αντίκρισμα. */
+  /** ⛔ Υπάρχει, αλλά δεν **εισάγει** όλα τα καθολικά — υπόσχεση χωρίς αντίκρισμα. */
   INCOMPLETE: 'owner-incomplete',
+  /**
+   * ⛔ **Εισάγει και ΔΕΝ αποδίδει** — ADR-834, μετρημένο 2026-08-30.
+   *
+   * 🔴 **ΔΕΝ είναι το ίδιο με το `INCOMPLETE`, και η θεραπεία είναι ΑΛΛΗ**: εκεί
+   * λείπει η **εισαγωγή**, εδώ λείπει το **στοιχείο JSX**. Δύο καταστάσεις, ποτέ
+   * μία με «ή» — ο κανόνας Κ1 αυτού του ίδιου αρχείου.
+   *
+   * 🔴 **ΠΩΣ ΒΡΕΘΗΚΕ**: μετάλλαξη στο **πραγματικό** δέντρο, όχι σε μίνι-repo.
+   * Αφαίρεση του `<UserMenu/>`, του `<LanguageSwitcher/>`, του `<ThemeToggle/>`
+   * **ή** του `<NotificationBell/>` από τον ιδιοκτήτη — με την **εισαγωγή να
+   * μένει** — άφηνε την πύλη **πράσινη**, **4 στα 4**. Δηλαδή: **κάθε** οθόνη
+   * της εφαρμογής μπορούσε να πάψει να δίνει τη γλώσσα, το θέμα ή τον
+   * λογαριασμό, και το όργανο που υπάρχει **ακριβώς** γι' αυτό δεν θα το έλεγε.
+   *
+   * 🔑 **Ίδιο σχήμα με το μάθημα που το ίδιο αυτό αρχείο ήδη κουβαλά**: *«ο Κ3
+   * είναι ο λόγος που ο Κ1 είναι άγκυρα»*. Ο Κ3β ρωτούσε **«εισάγει;»** ενώ ο
+   * σκοπός του ήταν **«προσφέρει;»** — και η διάκριση ήταν **ήδη γνωστή** ένα
+   * επίπεδο πιο πάνω: η μετάλλαξη `Μ2` ρωτά ακριβώς *«εισάγεται αλλά ΔΕΝ
+   * αποδίδεται»* για τις **σελίδες**. Έλειπε **μόνο** για τα περιεχόμενα του
+   * ίδιου του ιδιοκτήτη.
+   *
+   * ⚠️ **ΚΑΜΙΑ νέα μηχανή**: η απάντηση δίνεται από το **υπάρχον**
+   * `reach.jsxNamesOf` + `importBindings` — ο ίδιος περίπατος στοιχείων JSX που
+   * ήδη τροφοδοτεί το `renderedTargetsOf` και τον Κ1.
+   */
+  SILENT: 'owner-silent',
   /** ✅ */
   OK: 'owner-ok',
 });
-const OWNER_BLOCKING = [OWNER_STATES.MISSING, OWNER_STATES.INCOMPLETE];
+const OWNER_BLOCKING = [OWNER_STATES.MISSING, OWNER_STATES.INCOMPLETE, OWNER_STATES.SILENT];
 const OWNER_ORDER = [...OWNER_BLOCKING, OWNER_STATES.OK];
 
 // ---------------------------------------------------------------------------
@@ -187,7 +223,7 @@ function collectFiles(projectRoot, dir = 'src', out = []) {
  * υπάρχει, γιατί κάθε εισαγωγή γράφει τον ειδικευτή της αυτολεξεί.
  *
  * ⚠️ **Ο ΑΝΑΛΥΤΗΣ ΜΕΝΕΙ ΚΡΙΤΗΣ, ΟΧΙ ΤΟ REGEX**: το ίδιο το `ShellUtilities`
- * γράφει τα τρία ονόματα και σε **πρόζα** μέσα στο docblock του, όπως και αυτό
+ * γράφει τα ονόματα και σε **πρόζα** μέσα στο docblock του, όπως και αυτό
  * το αρχείο. Κριτήριο κειμένου θα κοκκίνιζε πάνω στην **τεκμηρίωση της
  * θεραπείας** — το σχήμα `Κ7β` του CHECK 3.50.
  */
@@ -216,16 +252,48 @@ function auditSymbols(projectRoot, cfg, reach, files) {
   return findings;
 }
 
-/** Κ3 (β) — ο ιδιοκτήτης υπάρχει ΚΑΙ εισάγει **και τα τρία**. */
+/**
+ * Κ3 (β) — ο ιδιοκτήτης υπάρχει, **εισάγει** και **ΑΠΟΔΙΔΕΙ** κάθε καθολικό.
+ *
+ * 🔴 **ΤΟ ΔΕΥΤΕΡΟ ΣΚΕΛΟΣ ΠΡΟΣΤΕΘΗΚΕ 2026-08-30** (ADR-834). Ως τότε η συνάρτηση
+ * ρωτούσε **μόνο** «εισάγει;», και μετάλλαξη στο **πραγματικό** δέντρο έδειξε ότι
+ * η αφαίρεση **οποιουδήποτε** από τα στοιχεία JSX άφηνε την πύλη πράσινη —
+ * **4 στα 4**. Δες {@link OWNER_STATES.SILENT} για το πλήρες σκεπτικό.
+ *
+ * ⚠️ **`null` σημαίνει ΑΔΙΑΦΑΝΕΣ, ποτέ «κενό»** — το `jsxNamesOf` επιστρέφει
+ * `null` όταν το αρχείο δεν διαβάζεται/αναλύεται. Ένα αδιάφανο αρχείο κρίνεται
+ * **σιωπηλό** (fail-closed), γιατί η εναλλακτική είναι να περνά ό,τι σπάει τον
+ * αναλυτή — ακριβώς το «0 = κανείς δεν κοίταξε» που κυνηγά αυτή η πύλη.
+ */
 function auditOwner(projectRoot, cfg, reach) {
   const ownerAbs = toPosix(path.join(projectRoot, cfg.owner));
   const mod = reach.graph.modules.get(ownerAbs);
-  if (!mod) return { file: cfg.owner, state: OWNER_STATES.MISSING, missing: cfg.universalSymbols };
+  const none = { unrendered: [] };
+  if (!mod) {
+    return { file: cfg.owner, state: OWNER_STATES.MISSING, missing: cfg.universalSymbols, ...none };
+  }
+
   const specs = new Set([...(mod.imports ?? []), ...(mod.reExports ?? [])].map((i) => i.spec));
   const missing = cfg.universalSymbols.filter((s) => !specs.has(s));
-  return missing.length > 0
-    ? { file: cfg.owner, state: OWNER_STATES.INCOMPLETE, missing }
-    : { file: cfg.owner, state: OWNER_STATES.OK, missing: [] };
+  if (missing.length > 0) {
+    return { file: cfg.owner, state: OWNER_STATES.INCOMPLETE, missing, ...none };
+  }
+
+  // 🔑 Ο ΙΔΙΟΣ περίπατος στοιχείων JSX που τροφοδοτεί τον Κ1 — καμία δεύτερη μηχανή.
+  const names = reach.jsxNamesOf(ownerAbs);
+  const rendered = new Set();
+  if (names !== null) {
+    const bindings = importBindings(mod);
+    for (const local of names) {
+      const binding = bindings.get(local);
+      if (binding !== undefined) rendered.add(binding.spec);
+    }
+  }
+  const unrendered = cfg.universalSymbols.filter((s) => !rendered.has(s));
+
+  return unrendered.length > 0
+    ? { file: cfg.owner, state: OWNER_STATES.SILENT, missing: [], unrendered }
+    : { file: cfg.owner, state: OWNER_STATES.OK, missing: [], unrendered: [] };
 }
 
 /**

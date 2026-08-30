@@ -32,7 +32,6 @@ import { AppHeader } from '@/components/app-header';
 import { AppSidebar } from '@/components/app-sidebar';
 import { GlobalErrorSetup } from '@/components/GlobalErrorSetup';
 import { NavigationProvider } from '@/components/navigation';
-import { NotificationDrawer } from '@/components/NotificationDrawer.enterprise';
 import { GlobalFileUploadToast } from '@/components/layout/GlobalFileUploadToast';
 import { MainContentBridge } from '@/components/layout/MainContentBridge';
 import { useRoutePrefetch } from '@/components/layout/useRoutePrefetch';
@@ -112,7 +111,6 @@ function AppShellBody({
 function GlobalSurfaces() {
   return (
     <>
-      <NotificationDrawer />
       <VoiceAIPanel />
       <GlobalFileUploadToast />
       <GlobalErrorSetup />

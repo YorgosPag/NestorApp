@@ -245,6 +245,44 @@ describe('Κ3 — ιδιοκτησία των καθολικών συμβόλω�
     expect(result.owner.missing).toEqual(['@/components/header/user-menu']);
   });
 
+  /**
+   * 🔴 Μ10 — Η ΜΕΤΑΛΛΑΞΗ ΠΟΥ ΕΠΕΖΗΣΕ ΕΠΙ ΤΕΣΣΕΡΙΣ ΜΕΡΕΣ ΣΤΟ ΠΡΑΓΜΑΤΙΚΟ ΔΕΝΤΡΟ.
+   *
+   * Ως τις 2026-08-30 ο `auditOwner` ρωτούσε **μόνο** «εισάγει;». Μετάλλαξη στο
+   * **πραγματικό** δέντρο (ADR-834) αφαίρεσε το στοιχείο JSX **καθενός** από τα
+   * καθολικά, **κρατώντας** την εισαγωγή: η πύλη έμεινε **πράσινη 4 στα 4**.
+   *
+   * ⇒ Κάθε οθόνη της εφαρμογής μπορούσε να πάψει να δίνει γλώσσα/θέμα/λογαριασμό
+   * και **το όργανο που υπάρχει ακριβώς γι' αυτό δεν θα το έλεγε**.
+   *
+   * 🔑 Η διάκριση ήταν **ήδη γνωστή** ένα επίπεδο πιο πάνω — η `Μ2` ρωτά
+   * *«εισάγεται αλλά ΔΕΝ αποδίδεται»* για τις **σελίδες**. Έλειπε μόνο για τα
+   * περιεχόμενα του **ίδιου του ιδιοκτήτη**.
+   *
+   * ⚠️ Η εισαγωγή **μένει** επίτηδες: αλλιώς η άγκυρα θα δοκίμαζε την `Μ8`
+   * (`owner-incomplete`) και θα ήταν **δίδυμο**, όχι νέα ερώτηση.
+   */
+  test('Μ10 — ο ιδιοκτήτης ΕΙΣΑΓΕΙ και ΔΕΝ ΑΠΟΔΙΔΕΙ ⇒ owner-silent (ΟΧΙ owner-incomplete)', () => {
+    const { result } = run((f) => {
+      f[OWNER] =
+        "import { LanguageSwitcher } from '@/components/header/language-switcher';\n" +
+        "import { ThemeToggle } from '@/components/header/theme-toggle';\n" +
+        "import { UserMenu } from '@/components/header/user-menu';\n" +
+        // ⚠️ Το `UserMenu` εισάγεται και **ΔΕΝ** μπαίνει στο JSX.
+        'export const ShellUtilities = () => <div><LanguageSwitcher /><ThemeToggle /></div>;\n';
+    });
+    expect(result.owner.state).toBe(GATE.OWNER_STATES.SILENT);
+    expect(result.owner.unrendered).toEqual(['@/components/header/user-menu']);
+    // 🔑 ΚΥΡΙΟΛΕΞΙΑ, ΟΧΙ `toBe(SSOT.x)`: μια σύγκριση της σταθεράς με τον εαυτό της
+    //    επιβιώνει της μετάλλαξης (μετρημένο 2026-08-30). Η υπόσχεση προς τον
+    //    άνθρωπο είναι ότι ΑΥΤΗ η κατάσταση ΜΠΛΟΚΑΡΕΙ — γράφεται αυτολεξεί.
+    expect(GATE.OWNER_STATES.SILENT).toBe('owner-silent');
+    expect(GATE.OWNER_BLOCKING).toContain('owner-silent');
+    expect(GATE.blockingOf(result).length).toBeGreaterThan(0);
+    // …και ΔΕΝ συγχέεται με το «δεν εισάγει»: άλλη κατάσταση, άλλη θεραπεία.
+    expect(result.owner.missing).toEqual([]);
+  });
+
   test('Μ9 — ο δηλωμένος ιδιοκτήτης δεν υπάρχει ⇒ owner-missing (fail-closed)', () => {
     const { result } = run((f) => {
       const cfg = JSON.parse(f['.shell-utilities.json']);
