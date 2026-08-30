@@ -51,8 +51,9 @@ import {
   type ListingAgreement,
 } from '@/types/listing-agreement';
 import type { ProposedMandateTerms } from '@/types/mandate-request';
+import type { OfferKind } from '@/types/property-offers';
 
-import { endOfDay, toDateInputValue } from './mandate-term-window';
+import { endOfDay, startOfDay, toDateInputValue } from './mandate-term-window';
 
 /**
  * Ό,τι πληκτρολογεί ο **ιδιοκτήτης**.
@@ -65,6 +66,27 @@ export interface MandateRequestFormValues {
   readonly ownerPropertyId: string;
   /** `yyyy-mm-dd` — η μορφή του `<input type="date">`, όχι ISO στιγμή. */
   readonly expiresOn: string;
+  /**
+   * `yyyy-mm-dd` — **από πότε** ισχύει (ADR-832).
+   *
+   * 🏆 **Ρητό πεδίο, επειδή υπάρχει ΠΡΟΓΡΑΜΜΑΤΙΣΜΕΝΗ εντολή**: *«η αποκλειστική του
+   * άλλου γραφείου λήγει 12/03 — κλείσε εντολή που αρχίζει 13/03»*. Χωρίς αυτό ο
+   * ιδιοκτήτης θα έπρεπε να **θυμηθεί** να ξαναμπεί τη σωστή μέρα, δηλαδή η πλατφόρμα
+   * θα του έλεγε «όχι» σε κάτι απολύτως νόμιμο.
+   *
+   * ⚠️ **Ο νόμος μετριέται ΑΠΟ ΕΔΩ**, όχι από «σήμερα» — δες τα εμπόδια λήξης.
+   */
+  readonly startsOn: string;
+  /**
+   * **Ποιες πράξεις αναθέτει** — το «ίδιο περιεχόμενο» του άρθρου 200 §4 (ADR-832).
+   *
+   * 🔴 **Γεννιέται ΚΕΝΟ, και δεν παράγεται από τις διαθέσεις του ακινήτου.** Στη
+   * διαδρομή του **γραφείου** (`/api/owner-properties/brokered`) παράγεται, γιατί εκεί
+   * το γραφείο γεννά αγγελία **και** εντολή στην ίδια πράξη· εδώ το δικαίωμα το δίνει
+   * **ο ιδιοκτήτης**, και μια σιωπηλή προεπιλογή θα του έπαιρνε δικαίωμα που δεν έδωσε
+   * — ακριβώς η μετάλλαξη που το `mandate-scope-empty` υπάρχει για να αποκλείσει.
+   */
+  readonly scope: readonly OfferKind[];
   readonly agreement: ListingAgreement;
   readonly compensation: MandateCompensation;
 }
@@ -83,6 +105,11 @@ export function emptyMandateRequestForm(todayISO: string): MandateRequestFormVal
   return {
     ownerPropertyId: '',
     expiresOn: toDateInputValue(defaultExpiryFor(DEFAULT_LISTING_AGREEMENT, todayISO)),
+    // ⚠️ **Σήμερα, και ΔΕΝ είναι σιωπηλή μαντεψιά**: «ισχύει από τώρα» ήταν η **μόνη**
+    //    συμπεριφορά που υπήρξε ποτέ, άρα η προεπιλογή δεν αφαιρεί τίποτα από κανέναν.
+    //    Το `scope` είναι το αντίθετο — εκεί η προεπιλογή θα **έδινε** δικαίωμα.
+    startsOn: toDateInputValue(todayISO),
+    scope: [],
     agreement: DEFAULT_LISTING_AGREEMENT,
     compensation: {
       type: 'percentage',
@@ -114,6 +141,22 @@ export const MANDATE_REQUEST_FORM_BLOCKERS = [
   'request-term-illegal',
   /** Αμοιβή μηδέν ή αρνητική — όρος που δεν είναι όρος. */
   'request-compensation-invalid',
+  /**
+   * 🔴 **Καμία πράξη δεν επιλέχθηκε** (ADR-832). Εντολή που δεν λέει **για τι**
+   * δίνεται δεν καταλαμβάνει τίποτα — και δεν ισοπεδώνεται σε «όλες»: δες το
+   * `scope` της {@link MandateRequestFormValues}.
+   */
+  'request-scope-unset',
+  /** Δεν δηλώθηκε έναρξη, ή δεν διαβάζεται ως ημερομηνία (ADR-832). */
+  'request-start-unset',
+  /**
+   * 🔴 **Λήγει πριν αρχίσει** — ανάποδο διάστημα.
+   *
+   * ⚠️ **Δικός του κωδικός**, όχι μαζί με το `request-expiry-past`: εκεί ο άνθρωπος
+   * διορθώνει τη **λήξη**· εδώ μπορεί κάλλιστα να θέλει να διορθώσει την **έναρξη**.
+   * Ένα κοινό μήνυμα θα τον έστελνε στο λάθος πεδίο.
+   */
+  'request-start-after-expiry',
 ] as const;
 
 export type MandateRequestFormBlocker = (typeof MANDATE_REQUEST_FORM_BLOCKERS)[number];
@@ -130,6 +173,8 @@ export function mandateRequestFormBlockers(
   const found: MandateRequestFormBlocker[] = [];
 
   if (values.ownerPropertyId.trim() === '') found.push('request-listing-unset');
+  // ⚠️ **Κενό σύνολο πράξεων δεν είναι «όλες»** — δες τον κωδικό.
+  if (values.scope.length === 0) found.push('request-scope-unset');
   found.push(...expiryBlockers(values, todayISO));
   if (!isPositiveCompensation(values.compensation)) {
     found.push('request-compensation-invalid');
@@ -150,14 +195,31 @@ function expiryBlockers(
   todayISO: string,
 ): readonly MandateRequestFormBlocker[] {
   if (Number.isNaN(Date.parse(values.expiresOn))) return ['request-expiry-unset'];
+  if (Number.isNaN(Date.parse(values.startsOn))) return ['request-start-unset'];
 
   // ⚠️ **Τέλος της ημέρας**, ίδια σύμβαση με ό,τι στέλνεται. Αλλιώς η φόρμα θα έκρινε
   //    **άλλη** στιγμή από αυτήν που υποβάλλει.
   const expiresAt = endOfDay(values.expiresOn);
+  const startsAt = startOfDay(values.startsOn);
   const found: MandateRequestFormBlocker[] = [];
 
   if (Date.parse(expiresAt) <= Date.parse(todayISO)) found.push('request-expiry-past');
-  if (exceedsStatutoryTerm(values.agreement, todayISO, expiresAt)) {
+  if (Date.parse(expiresAt) < Date.parse(startsAt)) {
+    // ⚠️ **Και σταματά**: με ανάποδο διάστημα ο έλεγχος διάρκειας θα μετρούσε
+    //    **αρνητικό** χρόνο και θα απαντούσε «νόμιμο» — αδρανής φρουρός.
+    found.push('request-start-after-expiry');
+    return found;
+  }
+
+  // 🔴 **Ο ΝΟΜΟΣ ΜΕΤΡΙΕΤΑΙ ΑΠΟ ΤΗΝ ΕΝΑΡΞΗ** (ADR-832 §5.8), όχι από «σήμερα». Ως τις
+  //    2026-08-30 περνούσε το `todayISO` — σωστό όσο κάθε εντολή γεννιόταν ενεργή.
+  //    Με **προγραμματισμένη** εντολή, οκτάμηνη αποκλειστική που αρχίζει σε έξι μήνες
+  //    μετριόταν ως δεκατετράμηνη: η φόρμα θα εμπόδιζε **νόμιμη** συμφωνία.
+  //
+  // ⚠️ **Ο ίδιος κριτής με τον διακομιστή** (`exceedsStatutoryTerm` →
+  //    `statutoryTermLimitFor`). Δεύτερο όριο εδώ θα ήταν ο τρίτος αριθμός για το ίδιο
+  //    ερώτημα (ADR-749).
+  if (exceedsStatutoryTerm(values.agreement, startsAt, expiresAt)) {
     found.push('request-term-illegal');
   }
 
@@ -192,5 +254,10 @@ export function proposedTermsFrom(values: MandateRequestFormValues): ProposedMan
     agreement: values.agreement,
     compensation: values.compensation,
     expiresAt: endOfDay(values.expiresOn),
+    // ⚠️ **ΑΡΧΗ της ημέρας**, συμμετρικά με το `endOfDay` της λήξης — και από το
+    //    **ίδιο** module. Ένα `endOfDay` και εδώ θα έκανε την εντολή να αρχίζει στις
+    //    23:59, δηλαδή θα έχανε σχεδόν ολόκληρη την πρώτη της μέρα.
+    startsAt: startOfDay(values.startsOn),
+    scope: values.scope,
   };
 }

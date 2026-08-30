@@ -71,7 +71,11 @@ export default async function MandateConsentPage({
   // αναμονή είναι σκόπιμη: fire-and-forget σε serverless σημαίνει ότι η εγγραφή
   // μπορεί να **μην ολοκληρωθεί ποτέ** όταν η συνάρτηση παγώσει μετά την απάντηση.
   // Το κόστος είναι μία ανάγνωση που κάνει το `null` έλεγχο και σταματά.
-  await markMandateViewed(adminDb, lookup.request.ownerPropertyId);
+  await markMandateViewed(
+    adminDb,
+    lookup.request.ownerPropertyId,
+    lookup.request.nonce,
+  );
 
   const agencyName = await readCompanyPublicName(adminDb, lookup.request.authorCompanyId);
 

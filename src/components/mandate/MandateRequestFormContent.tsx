@@ -31,11 +31,10 @@
  */
 
 import React from 'react';
+import dynamic from 'next/dynamic';
 import { useForm } from 'react-hook-form';
 
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -57,6 +56,7 @@ import { Link, useRouter } from '@/lib/workspace/navigation';
 // `new Date().toISOString()` εδώ θα ήταν η Ν-οστή γραφή του ίδιου στιγμιότυπου, και εδώ
 // η στιγμή **κρίνεται** — από αυτήν ξεκινά ο νόμιμος ορίζοντας λήξης (ΑΚ 243).
 import { nowISO } from '@/lib/date-local';
+import { endOfDay, startOfDay } from '@/lib/mandate/mandate-term-window';
 import {
   emptyMandateRequestForm,
   mandateRequestFormBlockers,
@@ -66,6 +66,18 @@ import {
 import { useMyOwnerProperties } from '@/services/realtime/hooks/useMyOwnerProperties';
 import { LISTING_AGREEMENTS } from '@/types/listing-agreement';
 import { LISTING_AGREEMENT_I18N_KEYS } from '@/components/mandate/listing-agreement-labels';
+import { OFFER_KIND_I18N_KEYS } from '@/components/mandate/offer-kind-labels';
+import { OFFER_KINDS, type OfferKind } from '@/types/property-offers';
+import { FormOptionsField } from '@/components/shared/forms/form-field-primitives';
+// 🏆 ADR-832 §4 — ο ιδιοκτήτης βλέπει ΠΡΙΝ προσπαθήσει. Ο **κανόνας** ζει στο
+//    `mandate-occupancy-notice` και καλεί τον ΙΔΙΟ κριτή με τον διακομιστή· εδώ
+//    γίνεται μόνο η σύνδεση με τα πληκτρολογημένα.
+import { occupancyNotice } from '@/lib/mandate/mandate-occupancy-notice';
+import { mandatesOf } from '@/types/owner-property-mandate';
+const MandateOccupancyPanel = dynamic(
+  () => import('@/components/mandate/MandateOccupancyPanel').then((m) => m.MandateOccupancyPanel),
+  { ssr: false },
+);
 import type { MandateRequestRejection } from '@/services/mandate/mandate-request.service';
 import type { OwnerProperty } from '@/types/owner-property';
 import type { ProposedMandateTerms } from '@/types/mandate-request';
@@ -76,6 +88,7 @@ import { withExtraBlockers, type DraftFormValidation } from '@/lib/forms/draft-v
 import { TaxIdentityField } from '@/components/account/TaxIdentityField';
 import { useInFlowTaxIdentity } from '@/hooks/account/useInFlowTaxIdentity';
 
+import { CompensationField, Field } from './mandate-request-form-fields';
 import {
   MANDATE_REQUEST_NS,
   REJECTION_KEYS,
@@ -116,7 +129,12 @@ function assignable(properties: readonly OwnerProperty[]): readonly OwnerPropert
   //    τα ξαναρωτά — αυτό εδώ είναι για να μη δει ο άνθρωπος επιλογή που θα του
   //    απορριφθεί (N.7.2 #4: κύριος δρόμος + δίχτυ).
   return properties.filter(
-    (property) => property.lifecycle === 'listed' && property.mandate.kind === 'self',
+    // 🔴 **ΠΑΥΕΙ ΝΑ ΑΠΑΙΤΕΙ «ΚΑΜΙΑ ΕΝΤΟΛΗ»** (ADR-832). Έγραφε `mandate.kind === 'self'`
+    //    ⇒ ακίνητο με **απλή** εντολή σε ένα γραφείο εξαφανιζόταν από τον επιλογέα, και
+    //    ο ιδιοκτήτης δεν μάθαινε ποτέ γιατί λείπει το δικό του σπίτι. Ο πραγματικός
+    //    κριτής (σύγκρουση) χρειάζεται τους **όρους**, που εδώ δεν είναι γνωστοί: ο
+    //    διακομιστής τους κρίνει, και η άρνηση επιστρέφει **με όνομα**.
+    (property) => property.lifecycle === 'listed',
   );
 }
 
@@ -164,6 +182,40 @@ export function MandateRequestFormContent({
   // 🔑 **Η ΠΟΛΙΤΙΚΗ ΖΕΙ ΣΤΟΝ HOOK** ({@link useInFlowTaxIdentity}): πότε γράφεται,
   //    τι σημαίνει το κενό, πότε δεν φεύγει αίτημα. Αυτή η φόρμα **ρωτά**, δεν κρίνει.
   const taxIdentity = useInFlowTaxIdentity();
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // 🏆 Η ΚΑΤΑΛΗΨΗ, ΠΡΙΝ ΤΟ ΠΑΤΗΜΑ (ADR-832 §4 #2)
+  // ════════════════════════════════════════════════════════════════════════════
+  //
+  // ⚠️ **ΔΕΝ είναι φρουρός και ΔΕΝ απενεργοποιεί το κουμπί.** Βλέπει ό,τι έχει ο
+  //    πελάτης· ο διακομιστής κρίνει με τα **φρέσκα**, μέσα σε συναλλαγή. Ένα κουμπί
+  //    κλειδωμένο από πρόβλεψη θα έκλεινε τον δρόμο σε άνθρωπο που έχει δίκιο.
+  const selected = choices.find((property) => property.id === values.ownerPropertyId) ?? null;
+  const notice = React.useMemo(() => {
+    if (selected === null) return { kind: 'free' } as const;
+    return occupancyNotice(
+      // ⚠️ **`mandatesOf`, ΠΟΤΕ ωμό `.mandates`**: τα έγγραφα ιδιώτη της ζωντανής
+      //    βάσης δεν έχουν τον πληθυντικό, και σκέτο `.length` πάνω τους ρίχνει τη
+      //    σελίδα κάθε ιδιοκτήτη.
+      mandatesOf(selected),
+      // 🔑 **`null` όσο δεν έχει διαλέξει πράξεις** — χωρίς `scope` δεν υπάρχει
+      //    ερώτημα σύγκρουσης, και η οθόνη δεν απαντά σε ερώτημα που δεν τέθηκε.
+      values.scope.length === 0
+        ? null
+        : {
+            agencyCompanyId,
+            agreement: values.agreement,
+            scope: values.scope,
+            // 🔴 **ΤΗΝ ΙΔΙΑ ΣΤΙΓΜΗ ΠΟΥ ΥΠΟΒΑΛΛΕΙ, ΠΟΤΕ ΩΜΟ `yyyy-mm-dd`.** Το
+            //    `proposedTermsFrom` στέλνει `startOfDay`/`endOfDay`· μια πρόβλεψη
+            //    που κρίνει **μεσάνυχτα** και υποβάλλει **23:59** διαφωνεί με τον
+            //    εαυτό της ακριβώς στο άκρο που έχει σημασία: τη **διαδοχή**.
+            startsAt: startOfDay(values.startsOn),
+            expiresAt: endOfDay(values.expiresOn),
+          },
+      todayISO,
+    );
+  }, [selected, values.scope, values.agreement, values.startsOn, values.expiresOn, agencyCompanyId, todayISO]);
 
   const baseValidation = React.useMemo<
     DraftFormValidation<ProposedMandateTerms, MandateRequestBlocker, never>
@@ -317,6 +369,42 @@ export function MandateRequestFormContent({
 
       <CompensationField form={form} values={values} />
 
+      {/*
+        🏆 **ΑΜΕΣΩΣ ΜΕΤΑ ΤΟΝ ΕΠΙΛΟΓΕΑ, ΚΑΙ ΕΙΝΑΙ ΣΕΙΡΑ-ΣΥΜΒΟΛΑΙΟ**: η κατάληψη είναι
+        ιδιότητα **του ακινήτου**, όχι των όρων. Ο άνθρωπος πρέπει να τη δει τη
+        στιγμή που διαλέγει σπίτι — όχι αφού συμπληρώσει αμοιβή και ημερομηνίες για
+        κάτι που δεν μπορεί να πάρει.
+      */}
+      <MandateOccupancyPanel
+        notice={notice}
+        // ⚠️ **Το ΜΟΝΟ όνομα που ξέρει με βεβαιότητα αυτή η οθόνη.** Δες το `nameOf`
+        //    στο πάνελ για το γιατί δεν ψάχνουμε τα υπόλοιπα από τον πελάτη.
+        nameOf={(companyId) => (companyId === agencyCompanyId ? agencyDisplayName : null)}
+        onScheduleFrom={(yyyyMmDd) => form.setValue('startsOn', yyyyMmDd)}
+      />
+
+      <Field label={t(SCREEN_KEYS.scopeLabel)} hint={t(SCREEN_KEYS.scopeHint)}>
+        {/* 🔑 **Ο ΥΠΑΡΧΩΝ** πολλαπλός επιλογέας (Α9), ποτέ δεύτερος: το CHECK 3.28
+            μπλόκαρε ήδη μια φορά το δίδυμο `single`/`multiple`. */}
+        <FormOptionsField<MandateRequestFormValues, OfferKind>
+          control={form.control}
+          name="scope"
+          mode="multiple"
+          options={OFFER_KINDS}
+          labelOf={(kind) => t(OFFER_KIND_I18N_KEYS[kind])}
+        />
+      </Field>
+
+      <Field label={t(SCREEN_KEYS.startsLabel)} hint={t(SCREEN_KEYS.startsHint)}>
+        <Input
+          type="date"
+          value={values.startsOn}
+          // ⚠️ `min` είναι **βοήθεια**, όχι φρουρός — ίδιο δόγμα με τη λήξη παρακάτω.
+          min={todayISO.slice(0, 10)}
+          onChange={(event) => form.setValue('startsOn', event.target.value)}
+        />
+      </Field>
+
       <Field label={t(SCREEN_KEYS.expiresLabel)} hint={t(SCREEN_KEYS.expiresHint)}>
         <Input
           type="date"
@@ -389,24 +477,6 @@ function readOutcome(status: number, body: unknown): SubmitOutcome {
   return { kind: 'unverified' };
 }
 
-function Field({
-  label,
-  hint,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  children: React.ReactNode;
-}): React.JSX.Element {
-  return (
-    <section className="flex flex-col gap-1.5">
-      <Label>{label}</Label>
-      {children}
-      {hint !== undefined && <p className="m-0 text-xs text-muted-foreground">{hint}</p>}
-    </section>
-  );
-}
-
 /** Η έκβαση, σε δική της οθόνη — ο άνθρωπος τελείωσε, δεν του ξαναδείχνουμε φόρμα. */
 function Outcome({ title, body }: { title: string; body: string }): React.JSX.Element {
   const { t } = useTranslation([MANDATE_REQUEST_NS]);
@@ -420,76 +490,5 @@ function Outcome({ title, body }: { title: string; body: string }): React.JSX.El
         </Link>
       </nav>
     </ShellSurface>
-  );
-}
-
-/** Η αμοιβή — διακριτή ένωση στην οθόνη, όπως και στον τύπο. */
-function CompensationField({
-  form,
-  values,
-}: {
-  form: ReturnType<typeof useForm<MandateRequestFormValues>>;
-  values: MandateRequestFormValues;
-}): React.JSX.Element {
-  const { t } = useTranslation([MANDATE_REQUEST_NS]);
-  const { compensation } = values;
-
-  return (
-    <Field label={t(SCREEN_KEYS.compensationLabel)} hint={t(SCREEN_KEYS.compensationHint)}>
-      <Select
-        value={compensation.type}
-        onValueChange={(next) =>
-          form.setValue(
-            'compensation',
-            // 🔑 Η αλλαγή σκέλους **ξαναχτίζει** το αντικείμενο, δεν το μπαλώνει: ένα
-            //    `{...compensation, type: next}` θα κουβαλούσε `percentage` μέσα σε
-            //    `fixed` — δηλαδή κατάσταση που ο τύπος δηλώνει **αδύνατη**.
-            next === 'percentage'
-              ? { type: 'percentage', percentage: 2, vatIncluded: compensation.vatIncluded }
-              : { type: 'fixed', amountEUR: 0, vatIncluded: compensation.vatIncluded },
-          )
-        }
-      >
-        <SelectTrigger>
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="percentage">{t(SCREEN_KEYS.compensationPercentage)}</SelectItem>
-          <SelectItem value="fixed">{t(SCREEN_KEYS.compensationFixed)}</SelectItem>
-        </SelectContent>
-      </Select>
-
-      <Label className="text-xs text-muted-foreground">
-        {compensation.type === 'percentage'
-          ? t(SCREEN_KEYS.percentageLabel)
-          : t(SCREEN_KEYS.amountLabel)}
-      </Label>
-      <Input
-        type="number"
-        min={0}
-        step={compensation.type === 'percentage' ? 0.1 : 1}
-        value={compensation.type === 'percentage' ? compensation.percentage : compensation.amountEUR}
-        onChange={(event) => {
-          const amount = Number(event.target.value);
-          form.setValue(
-            'compensation',
-            compensation.type === 'percentage'
-              ? { ...compensation, percentage: amount }
-              : { ...compensation, amountEUR: amount },
-          );
-        }}
-      />
-
-      <Label className="flex items-center gap-2 text-xs text-muted-foreground">
-        <input
-          type="checkbox"
-          checked={compensation.vatIncluded}
-          onChange={(event) =>
-            form.setValue('compensation', { ...compensation, vatIncluded: event.target.checked })
-          }
-        />
-        {t(SCREEN_KEYS.vatLabel)}
-      </Label>
-    </Field>
   );
 }
