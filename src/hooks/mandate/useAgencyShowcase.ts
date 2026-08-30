@@ -39,6 +39,10 @@ import { useAuth } from '@/auth/hooks/useAuth';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { AgencyProfile } from '@/types/agency-profile';
+import {
+  isCapabilityStatus,
+  type CapabilityStatus,
+} from '@/types/organization-capability';
 import type { AgencyProfileRejection } from '@/services/mandate/agency-profile.service';
 import type { PlaceRef } from '@/types/geo/public-place';
 
@@ -63,7 +67,27 @@ export type ShowcaseFailure =
   | { readonly kind: 'rejected'; readonly reason: AgencyProfileRejection }
   | { readonly kind: 'alias-not-owned' }
   | { readonly kind: 'alias-unverified' }
-  | { readonly kind: 'not-allowed' }
+  /**
+   * 🔴 **ΚΟΥΒΑΛΑ ΤΗΝ ΚΑΤΑΣΤΑΣΗ — ΚΑΙ ΜΕΧΡΙ ΤΙΣ 2026-08-30 ΔΕΝ ΤΗΝ ΚΟΥΒΑΛΟΥΣΕ.**
+   *
+   * Το 403 του `gateBrokerage` στέλνει **τρία** πεδία (`error` · `reason` ·
+   * `capabilityStatus`), ο κριτής γράφει **ξεχωριστό** κείμενο για καθεμία από τις
+   * τρεις καταστάσεις που αρνούνται, και τα κείμενα υπάρχουν **σε δύο γλώσσες** —
+   * και ο `failureOf` τα **πετούσε όλα**, αφήνοντας `{ kind: 'not-allowed' }` σκέτο.
+   * Ο ιδρυτής διάβαζε ένα γενικό *«δεν επιτρέπεται»* ενώ ο διακομιστής του είχε ήδη
+   * πει **αν εκκρεμεί, αν ανακλήθηκε, ή αν δεν δήλωσε ποτέ** — τρεις καταστάσεις με
+   * **τρεις διαφορετικές θεραπείες**: περίμενε · διάβασε τον λόγο · δήλωσε.
+   *
+   * ⚠️ Ίδιο ακριβώς σχήμα με το `ALIAS_NOT_OWNED ≠ ALIAS_UNVERIFIED` δύο γραμμές πιο
+   * πάνω, που το ίδιο αυτό αρχείο ξεχωρίζει **με σχόλιο που εξηγεί γιατί**.
+   *
+   * 🔑 **`null` = «η πόρτα αρνήθηκε αλλά δεν ονόμασε κατάσταση»**, ποτέ «δεν ξέρω άρα
+   * unrequested». Είναι το ίδιο δόγμα με το `settled` του αναγνώστη ικανοτήτων:
+   * *άγνωστο ≠ κενό*. Το συναντά όποιος μιλά σε **παλιότερο** διακομιστή, και του
+   * αξίζει το γενικό μήνυμα — όχι μια εικασία που θα του έλεγε να ξαναδηλώσει κάτι
+   * που ίσως ήδη εκκρεμεί.
+   */
+  | { readonly kind: 'not-allowed'; readonly status: CapabilityStatus | null }
   | { readonly kind: 'failed' };
 
 export interface ShowcaseDeclaration {
@@ -96,6 +120,13 @@ async function failureOf(response: Response): Promise<ShowcaseFailure | null> {
   const body = (await response.json().catch(() => null)) as {
     error?: string;
     reason?: AgencyProfileRejection;
+    /**
+     * ⚠️ **`unknown`, ΟΧΙ `CapabilityStatus`** — και η διαφορά δεν είναι τυπική. Το
+     * σώμα είναι **σύρμα**: ένας ισχυρισμός τύπου εδώ θα ήταν υπόσχεση που κανείς δεν
+     * επαληθεύει, και η πρώτη τιμή εκτός συνόλου θα ζωγράφιζε **ωμό κλειδί**. Ο
+     * `isCapabilityStatus` είναι που τη μετατρέπει σε γνώση.
+     */
+    capabilityStatus?: unknown;
   } | null;
 
   switch (body?.error) {
@@ -107,8 +138,14 @@ async function failureOf(response: Response): Promise<ShowcaseFailure | null> {
       return { kind: 'alias-not-owned' };
     case 'ALIAS_UNVERIFIED':
       return { kind: 'alias-unverified' };
-    case 'BROKERAGE_NOT_ALLOWED':
-      return { kind: 'not-allowed' };
+    case 'BROKERAGE_NOT_ALLOWED': {
+      // ⚠️ **Τοπική σταθερά, ΟΧΙ διπλή ανάγνωση του `body?.…`**: το `switch (body?.error)`
+      //    στενεύει το **πεδίο**, ποτέ το `body`, οπότε δύο εμφανίσεις της ίδιας
+      //    διαδρομής θα ήταν δύο **διαφορετικές** εκφράσεις για τον μεταγλωττιστή — και
+      //    η δεύτερη θα ζητούσε έλεγχο που δεν έγινε.
+      const wire = body?.capabilityStatus;
+      return { kind: 'not-allowed', status: isCapabilityStatus(wire) ? wire : null };
+    }
     default:
       return { kind: 'failed' };
   }

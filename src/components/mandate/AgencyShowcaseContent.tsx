@@ -44,6 +44,8 @@ import {
   SHOWCASE_NS,
   SHOWCASE_REJECTION_KEYS,
 } from '@/components/mandate/agency-showcase-labels';
+import { BROKERAGE_DENY_NS, BROKERAGE_DENY_REASON_KEYS } from '@/lib/auth/brokerage-authority';
+import { isCapabilityActive } from '@/types/organization-capability';
 import { useAgencyShowcase, type ShowcaseFailure } from '@/hooks/mandate/useAgencyShowcase';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatLongDate } from '@/lib/intl-formatting';
@@ -73,13 +75,37 @@ registerRouteSlice(routeSlice);
  * πολιτική.
  */
 function FailureMessage({ failure }: { readonly failure: ShowcaseFailure }): React.ReactElement {
-  const { t } = useTranslation([SHOWCASE_NS]);
+  // 🔑 **Δύο namespaces, και το δεύτερο δεν είναι δικό μας**: ο λόγος της άρνησης είναι
+  //    η φωνή του **κριτή** (`auth:brokerage.denyReason.*`), όχι της βιτρίνας. Ένα
+  //    αντίγραφο των τριών κειμένων στο `property-market` θα ήταν δεύτερο λεξιλόγιο
+  //    για την ίδια πρόταση — και θα απέκλινε στην πρώτη διόρθωση διατύπωσης.
+  const { t } = useTranslation([SHOWCASE_NS, BROKERAGE_DENY_NS]);
 
   if (failure.kind === 'rejected') {
     return <>{t(SHOWCASE_REJECTION_KEYS[failure.reason])}</>;
   }
   if (failure.kind === 'not-allowed') {
-    return <>{t(SHOWCASE_KEYS.notAllowed)}</>;
+    // 🔴 **ΤΡΕΙΣ ΑΡΝΗΣΕΙΣ, ΤΡΕΙΣ ΘΕΡΑΠΕΙΕΣ — ΚΑΙ ΜΕΧΡΙ ΣΗΜΕΡΑ ΕΛΕΓΑΝ ΤΟ ΙΔΙΟ.**
+    //
+    //    Ο `gateBrokerage` απαντά **ονομαστικά** ποια κατάσταση βρήκε, ο κριτής έχει
+    //    **γραμμένο** κείμενο για καθεμία σε **δύο** γλώσσες, και η οθόνη ζωγράφιζε ένα
+    //    γενικό «δεν επιτρέπεται». Η διαφορά δεν είναι διατύπωση: το `pending` σημαίνει
+    //    **περίμενε**, το `revoked` σημαίνει **διάβασε τον λόγο**, το `unrequested`
+    //    σημαίνει **δήλωσε**. Ένα κοινό μήνυμα στέλνει και τους τρεις στο ίδιο αδιέξοδο.
+    //
+    //    ⚠️ **Ευρετηρίαση σε σταθερά module, ΠΟΤΕ το `reason` του σύρματος**: το δεύτερο
+    //    θα ήταν δυναμικό κλειδί από **είσοδο** — αόρατο στη CHECK 3.8 και στον τεμαχιστή
+    //    του ADR-744. Ίδιο ιδίωμα με το `SHOWCASE_REJECTION_KEYS` δύο γραμμές πιο πάνω,
+    //    που **γι' αυτόν ακριβώς τον λόγο** αντικατέστησε ένα `t(failureKey(failure))`.
+    //
+    //    ⚠️ Το `isCapabilityActive` δεν είναι διακοσμητικό: ο πίνακας **δεν έχει** κλειδί
+    //    για το `active` (μια ενεργή ικανότητα δεν αρνείται ποτέ), και το `null` σημαίνει
+    //    «η πόρτα δεν ονόμασε κατάσταση». Και οι δύο πέφτουν στο γενικό — **συνειδητά**.
+    return failure.status !== null && !isCapabilityActive(failure.status) ? (
+      <>{t(BROKERAGE_DENY_REASON_KEYS[failure.status])}</>
+    ) : (
+      <>{t(SHOWCASE_KEYS.notAllowed)}</>
+    );
   }
   // ⚠️ *«δεν είναι η διεύθυνσή σου»* και *«δεν μπόρεσα να ρωτήσω»* μοιράζονται σήμερα
   //    το γενικό μήνυμα, αλλά παραμένουν **χωριστές τιμές** στον τύπο: την ημέρα που

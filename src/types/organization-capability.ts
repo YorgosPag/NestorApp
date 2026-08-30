@@ -93,6 +93,26 @@ export const CAPABILITY_STATUSES = ['unrequested', 'pending', 'active', 'revoked
 export type CapabilityStatus = (typeof CAPABILITY_STATUSES)[number];
 
 /**
+ * **Είναι αυτή η τιμή κατάσταση ικανότητας;** — ο κριτής για ό,τι έρχεται **απ' έξω**.
+ *
+ * 🔑 **Γιατί χρειάζεται, ενώ ο τύπος «το εγγυάται»**: ο τύπος εγγυάται μόνο ό,τι
+ * γεννιέται **μέσα** στη μεταγλώττιση. Η κατάσταση ταξιδεύει και στο **σύρμα** —
+ * το 403 του {@link ../lib/auth/brokerage-gate!BrokerageDeniedResponse} τη στέλνει ως
+ * `string` — και εκεί είναι **είσοδος**, όχι δεδομένο μας. Ίδιο σκεπτικό με το
+ * `encodeURIComponent` της βιτρίνας: ο περιορισμός ζει στην **εγγραφή**, ενώ εδώ
+ * φτάνει ό,τι κι αν απάντησε ο διακομιστής *(π.χ. παλιότερη έκδοση που δεν στέλνει
+ * ακόμη το πεδίο)*.
+ *
+ * ⚠️ **Ο δίδυμος του {@link isOrganizationCapability}, επίτηδες** — ίδιο σχήμα, ίδιο
+ * αρχείο, ίδιο κλειστό σύνολο. Ένας δεύτερος κριτής γραμμένος στον πελάτη θα ήταν
+ * **δεύτερο βιβλίο** για το ίδιο σύνολο (ADR-749), και θα απέκλινε τη μέρα που
+ * προστεθεί πέμπτη κατάσταση.
+ */
+export function isCapabilityStatus(value: unknown): value is CapabilityStatus {
+  return (CAPABILITY_STATUSES as readonly unknown[]).includes(value);
+}
+
+/**
  * **Η ΜΟΝΗ κατάσταση που επιτρέπει την πράξη.**
  *
  * 🔴 **Γραμμένη ΘΕΤΙΚΑ (`=== 'active'`), ποτέ αρνητικά.** Ένα `!== 'unrequested'` θα
