@@ -43,6 +43,7 @@
 import { createExternalStore } from '../stores/createExternalStore';
 import { markSystemsDirty } from '../rendering/core/frame-scheduler-api';
 import type { TableIndicatorHit } from '../bim/table/table-indicator-geometry';
+import type { TableWorksheetId } from '../types/table-worksheet';
 
 /**
  * 🔴 ADR-739 §43 — **ΠΟΙΟ ΚΟΜΜΑΤΙ ΤΟΥ ΔΕΙΚΤΗ** είναι κάτω από το ποντίκι.
@@ -63,7 +64,19 @@ export type TableIndicatorHoverTarget =
   /** Ένα γράμμα στήλης ή ένας αριθμός γραμμής (§30). */
   | { readonly kind: 'tick'; readonly hit: TableIndicatorHit }
   /** Το τετραγωνάκι της συμβολής — το κουμπί «επιλογή όλων» (§43). */
-  | { readonly kind: 'select-all' };
+  | { readonly kind: 'select-all' }
+  /**
+   * 🔴 ADR-833 Φάση 3 — **μια καρτέλα φύλλου**, στη λωρίδα κάτω από τον πίνακα.
+   *
+   * Τέταρτο κομμάτι του **ίδιου** δείκτη, με το **ίδιο** σκεπτικό που κράτησε τη γωνία εδώ
+   * αντί για πέμπτο store (δες παραπάνω): ο σκελετός θα ήταν ταυτόσημος (`entityId` + φορτίο),
+   * δηλαδή sibling clone που πιάνει το CHECK 3.28 — και θα ήταν και λάθος τοποθεσία, γιατί
+   * ο δείκτης φωτίζει **ένα** πράγμα κάθε στιγμή και αυτό είναι ήδη το νόημα του ενός πεδίου.
+   *
+   * ⚠️ Κουβαλά **ταυτότητα φύλλου**, όχι θέση στη λωρίδα: η λωρίδα κυλά (παράγωγο παράθυρο
+   * υπερχείλισης), άρα η θέση δεν είναι σταθερή ανάμεσα σε δύο καρέ — ενώ το φύλλο είναι.
+   */
+  | { readonly kind: 'worksheet-tab'; readonly worksheetId: TableWorksheetId };
 
 /** Το κομμάτι του δείκτη κάτω από το ποντίκι, μαζί με τον πίνακα στον οποίο ανήκει. */
 export interface TableIndicatorHoverState {
@@ -89,6 +102,9 @@ const store = createExternalStore<TableIndicatorHoverState | null>(null);
  */
 function targetIdOf(target: TableIndicatorHoverTarget): string {
   if (target.kind === 'select-all') return 'select-all';
+  // ADR-833 Φ3 — πρόθεμα, για τον ίδιο λόγο με τα `col:`/`row:`: ένα `ws0` δεν επιτρέπεται να
+  // συγκριθεί ίσο με στήλη που τυχαίνει να λέγεται το ίδιο.
+  if (target.kind === 'worksheet-tab') return `ws:${target.worksheetId}`;
   return target.hit.axis === 'column' ? `col:${target.hit.colId}` : `row:${target.hit.rowId}`;
 }
 
