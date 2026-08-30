@@ -47,7 +47,7 @@ import { Spinner } from '@/components/ui/spinner';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Centralized routes
-import { ACCOUNT_ROUTES, AUTH_ROUTES } from '@/lib/routes';
+import { AUTH_ROUTES, resolveAccountRoute } from '@/lib/routes';
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -202,7 +202,15 @@ export function UserMenu({ signedOut }: Readonly<{ signedOut?: React.ReactNode }
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem
-            onClick={() => router.push(ACCOUNT_ROUTES.root)}
+            /* 🔴 **Ο ΠΡΟΟΡΙΣΜΟΣ ΚΡΙΝΕΤΑΙ, ΔΕΝ ΕΙΝΑΙ ΣΤΑΘΕΡΟΣ — και ήταν ΖΩΝΤΑΝΟ 404.**
+               Έγραφε `ACCOUNT_ROUTES.root`, δηλαδή `/account`. Αυτό το μενού
+               αποδίδεται **και στους πέντε κόσμους** (`ShellUtilities`, CHECK 3.72),
+               και για τον **ιδιώτη** το ψευδώνυμο είναι `null` ⇒ ο `workspaceHref`
+               αφήνει τη διεύθυνση άθικτη ⇒ `/account`, **που δεν έχει σελίδα**: ο
+               κατάλογος `account/` ζει αποκλειστικά κάτω από `o/[workspace]/`.
+               ⚠️ Η κρίση δεν γίνεται **εδώ**: τη δίνει έτοιμη ο ΕΝΑΣ επιλυτής, με το
+               **ίδιο** `hasOrganization` που κρίνει και την προσγείωση. */
+            onClick={() => router.push(resolveAccountRoute({ companyId: user?.companyId }))}
             className={layout.cursorPointer}
           >
             <User className={`${layout.buttonIconSpacing} ${iconSizes.sm}`} />

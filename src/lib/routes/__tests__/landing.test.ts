@@ -26,7 +26,16 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 
 import { MY_OFFERS_ROUTE } from '@/lib/owner-property/owner-property-routes';
-import { AUTH_ROUTES, PRIVATE_SPACE_HOME, resolvePostLoginRoute } from '@/lib/routes';
+import {
+  ACCOUNT_ROUTES,
+  AUTH_ROUTES,
+  PRIVATE_PROFILE_ROUTE,
+  PRIVATE_SPACE_HOME,
+  resolveAccountRoute,
+  resolvePostLoginRoute,
+} from '@/lib/routes';
+import { isInsideWorkspace } from '@/lib/workspace/workspace-scope';
+import { workspacePath } from '@/lib/workspace/workspace-path';
 import { REPO_ROOT, readRepoCode, readRepoFile, stripComments } from '@/test-utils/read-source';
 
 /**
@@ -65,6 +74,7 @@ const findDashboardPage = (): string => {
 };
 
 const PENDING = 'src/app/(app)/pending-approval/page.tsx';
+const USER_MENU = 'src/components/header/user-menu.tsx';
 const AUTH_CONTEXT = 'src/lib/auth/auth-context.ts';
 
 /**
@@ -234,5 +244,109 @@ describe('Δ — ο ΠΑΡΟΝΟΜΑΣΤΗΣ: η ουρά έγκρισης ΔΕ�
     // που ζητά είσοδο σε ΞΕΝΟ γραφείο πρέπει να συνεχίσει να περιμένει.
     expect(AUTH_ROUTES.pendingApproval).toBe('/pending-approval');
     expect(read(PENDING).length).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * **ΤΟ ΣΥΝΟΛΟ ΤΩΝ ΔΙΕΥΘΥΝΣΕΩΝ ΠΟΥ ΣΕΡΒΙΡΕΙ ΠΡΑΓΜΑΤΙΚΑ Ο ΔΙΣΚΟΣ.**
+ *
+ * 🔑 Παράγεται από τα `page.tsx`, **ποτέ γραμμένο με το χέρι**: τα route groups
+ * `(x)` **δεν εμφανίζονται** στη διεύθυνση, και ακριβώς αυτό ήταν το τυφλό σημείο
+ * που γέννησε το `ConditionalAppShell` (ADR-777 §8.12) — κάθε χειρόγραφη λίστα
+ * διαδρομών σε αυτό το repo έχει αποκλίνει.
+ */
+const servedUrls = (): ReadonlySet<string> => {
+  const urls = new Set<string>();
+  for (const file of collectTsFiles(join(REPO_ROOT, 'src', 'app'))) {
+    const rel = relative(REPO_ROOT, file).split(sep).join('/');
+    if (!rel.endsWith('/page.tsx')) continue;
+    const url = rel
+      .replace(/^src\/app/, '')
+      .replace(/\/page\.tsx$/, '')
+      .replace(/\/\([^/]+\)/g, '');
+    urls.add(url === '' ? '/' : url);
+  }
+  return urls;
+};
+
+/** Η διεύθυνση **όπως τη ζει ο φυλλομετρητής** — με πρόθεμα μόνο αν ο κριτής το λέει. */
+const asBrowserUrl = (href: string): string =>
+  isInsideWorkspace(href) ? workspacePath('[workspace]', href) : href;
+
+describe('Λ — ο λογαριασμός ΕΧΕΙ σπίτι, και για τους ΔΥΟ ανθρώπους', () => {
+  /**
+   * 🔴 **ΤΟ ΕΛΑΤΤΩΜΑ ΠΟΥ ΤΗΝ ΓΕΝΝΗΣΕ — ΖΩΝΤΑΝΟ, ΜΕΤΡΗΜΕΝΟ 2026-08-30.**
+   *
+   * Το `UserMenu` έστελνε **πάντα** στο `ACCOUNT_ROUTES.root` (`/account`), και
+   * αποδίδεται **και στους πέντε κόσμους** (`ShellUtilities`, CHECK 3.72). Για τον
+   * ιδιώτη το ψευδώνυμο είναι `null` ⇒ ο `workspaceHref` αφήνει τη διεύθυνση άθικτη
+   * ⇒ `/account`, **που δεν έχει σελίδα**: ο κατάλογος `account/` ζει αποκλειστικά
+   * κάτω από `o/[workspace]/`. Το κουμπί «Λογαριασμός» ήταν **404 για κάθε ιδιώτη**.
+   *
+   * ⛔ ΜΕΤΑΛΛΑΞΗ: γύρνα το `resolveAccountRoute` σε σκέτο `ACCOUNT_ROUTES.root` ⇒ κόκκινο.
+   */
+  it('Λ1: ο ιδιώτης παίρνει ΤΗ ΔΙΚΗ ΤΟΥ σελίδα, το γραφείο τον κόμβο του', () => {
+    expect(resolveAccountRoute({})).toBe(PRIVATE_PROFILE_ROUTE);
+    expect(resolveAccountRoute({ companyId: null })).toBe(PRIVATE_PROFILE_ROUTE);
+    // Κενή συμβολοσειρά = **απουσία** (`extractCustomClaims`, fail-closed).
+    expect(resolveAccountRoute({ companyId: '' })).toBe(PRIVATE_PROFILE_ROUTE);
+    expect(resolveAccountRoute({ companyId: 'comp_x' })).toBe(ACCOUNT_ROUTES.root);
+  });
+
+  /**
+   * 🏆 **Η ΑΓΚΥΡΑ ΤΗΣ ΚΛΑΣΗΣ, ΟΧΙ ΤΟΥ ΔΕΙΓΜΑΤΟΣ.** Δεν ρωτά «γράφτηκε η σωστή
+   * συμβολοσειρά;» αλλά **«υπάρχει σελίδα εκεί;»** — και τη ρωτά για **αμφότερους**
+   * τους ανθρώπους, διαβάζοντας τον **δίσκο**.
+   *
+   * ⚠️ Αυτό ακριβώς το ερώτημα έλειπε **τέσσερις** φορές στο repo: `/unauthorized`
+   * (ADR-787 §5.3 ξ) · `/workspace/new` (άγκυρα Κ1) · `/home` (ADR-819 §8) · και τώρα
+   * `/account`. Κάθε φορά ένα κουμπί οδηγούσε σε διεύθυνση **χωρίς σελίδα**.
+   *
+   * ⛔ ΜΕΤΑΛΛΑΞΗ 1: σβήσε το `src/app/(me)/profile/page.tsx` ⇒ κόκκινο.
+   * ⛔ ΜΕΤΑΛΛΑΞΗ 2: σβήσε τη δήλωση `profile` από το `OUTSIDE_WORKSPACE` ⇒ ο κριτής
+   *    κρίνει «εντός», η διεύθυνση γίνεται `/o/[workspace]/profile` ⇒ κόκκινο.
+   */
+  it('Λ2: ΚΑΘΕ απάντηση του επιλυτή αντιστοιχεί σε ΥΠΑΡΚΤΗ σελίδα στον δίσκο', () => {
+    const served = servedUrls();
+
+    for (const identity of [{}, { companyId: 'comp_x' }]) {
+      const href = resolveAccountRoute(identity);
+      expect(served.has(asBrowserUrl(href))).toBe(true);
+    }
+  });
+
+  /**
+   * 🔑 **Ο ιδιωτικός προορισμός ΟΦΕΙΛΕΙ να ζει εκτός προθέματος** — αλλιώς ο ίδιος ο
+   * `Link` του συνόρου θα τον έστελνε σε `/o/<ψευδώνυμο>/profile`, για άνθρωπο που
+   * **εξ ορισμού δεν έχει ψευδώνυμο**.
+   *
+   * ⚠️ Και ο **παρονομαστής**: το `account` πρέπει να μείνει **εντός**, αλλιώς οι πέντε
+   * οθόνες λογαριασμού του γραφείου χάνουν το πρόθεμά τους. Ένα τμήμα, μία απάντηση —
+   * γι' αυτό ο ιδιώτης πήρε **δικό του** τμήμα.
+   */
+  it('Λ3: το /profile είναι ΕΚΤΟΣ χώρου, και το /account ΜΕΝΕΙ εντός', () => {
+    expect(isInsideWorkspace(PRIVATE_PROFILE_ROUTE)).toBe(false);
+    expect(isInsideWorkspace(ACCOUNT_ROUTES.root)).toBe(true);
+
+    for (const route of Object.values(ACCOUNT_ROUTES)) {
+      expect(isInsideWorkspace(route)).toBe(true);
+    }
+  });
+
+  /**
+   * 🔴 **ΔΕΙΧΝΕΙ ΣΤΗΝ ΚΛΗΣΗ, ΟΧΙ ΣΤΟ `import`** — μετρημένο μάθημα (ADR-827 §9.22 Π3):
+   * άγκυρα που ζητούσε **σκέτο όνομα** έμεινε πράσινη ενώ ο έλεγχος είχε αφαιρεθεί,
+   * γιατί το όνομα **επιβιώνει στη γραμμή εισαγωγής**. Εδώ ζητιέται η **πλοήγηση**.
+   *
+   * ⚠️ Διαβάζεται με `readCode` *(χωρίς σχόλια)*: το ίδιο το αρχείο **εξηγεί σε σχόλιο**
+   * τι έγραφε πριν, και ένας έλεγχος στην ωμή πηγή θα κρινόταν από την **τεκμηρίωση**.
+   *
+   * ⛔ ΜΕΤΑΛΛΑΞΗ: ξαναγράψε `router.push(ACCOUNT_ROUTES.root)` ⇒ κόκκινο.
+   */
+  it('Λ4: το μενού ΚΑΛΕΙ τον επιλυτή — δεν έχει σταθερό προορισμό', () => {
+    const src = readCode(USER_MENU);
+
+    expect(src).toMatch(/router\s*\.\s*push\s*\(\s*resolveAccountRoute\s*\(/);
+    expect(src).not.toMatch(/router\s*\.\s*push\s*\(\s*[\w.]*ACCOUNT_ROUTES\s*\./);
   });
 });

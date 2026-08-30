@@ -12,7 +12,7 @@
     "src/i18n/generated/routes/o__workspace__listings__mandates.el.json": "a8a76aae60c101e4df75d147abec2fc265e547552533bd0d3d03c13de33d950c",
     "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "d0d4547bb388232b805ad4e945a3cfab17a091593d919240d115f7dd2dab4813",
     "src/i18n/generated/routes/o__workspace__listings__mandates__requests.el.json": "63036227b351055f2c06f1f5a66b5c64df6ed4e4073bbda8645f2a8cfa4ff1ec",
-    "src/i18n/generated/routes/o__workspace__settings__agency-profile.el.json": "dbde289c17ef57765adec35f9a7a694440d5c9a4b51daa1efdabeaa08955bcf3",
+    "src/i18n/generated/routes/o__workspace__settings__agency-profile.el.json": "ad07888d36224ae5529faf8c8cdee20054379f98b0c1621eefad3e45f0867de1",
     "src/i18n/generated/routes/offers.el.json": "37f11fe465050e47c3d55037f4cb71f77828554b0f9fe71399f5f1e059966ce8",
     "src/i18n/generated/routes/offers__mandate__new.el.json": "7ef9cdca8e3a47c9a12c402915467d61cdfd87906a6a383cde08d60cf5e0e9fd",
     "src/i18n/generated/routes/offers__new.el.json": "9d98014cdb4b74ee3f728fd2dba26063ad334365848d4206793e44dc5f58ae7c",
@@ -20,6 +20,7 @@
     "src/i18n/generated/routes/privacy-policy.el.json": "181e3b315e8ac63a3e927fa8bf073863b2aa706fd66a06f38d936dce70b0cee0",
     "src/i18n/generated/routes/pro.el.json": "0aaaad494729a064036f486e703f6fd3feec33e44c2a72b633b9b38dc5e1f652",
     "src/i18n/generated/routes/pro__alias.el.json": "c00b6ebdc44237ab59dd62b601274d4276a7d38cc228d5856bf3e8bef6b613b6",
+    "src/i18n/generated/routes/profile.el.json": "e56491b916ea646622e9ca6c69dcba8eac0fca9d52f973b82ed89afd2ffae79e",
     "src/i18n/generated/routes/terms.el.json": "481f837696b407553f56de16128778617a86f72cf7b27471d61cd5793cf7d288",
     "src/i18n/generated/routes/test-harness__listing-shapes.el.json": "9b6aaaa831492e24807a1c83e0b505dc865c03afbd5638abf8ea2b990422b037",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
@@ -62,7 +63,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "a42e00fcfe785ee4304a455e76d4098a988177b2de9107261b24e82019dcee90",
+  "inputsSha256": "f04476429b68b65c8f117f537bb75f1fdc13eaadf807118c9df5a31e007ef398",
   "languages": [
     "el"
   ],
@@ -335,10 +336,11 @@
     "src/i18n/bundle-registry.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/i18n/compat-translate.ts": "3dab4013f93a07d9f961602ec9f756f4d96ac8d437880a41c6226c607a07efdf",
     "src/i18n/config.ts": "8ee00904e9954f1a1201f0870876064b438f0ad71c615d9f64f2499528d4c76c",
-    "src/i18n/hooks/useLanguagePreference.ts": "b33ecd5786a67b2567bd7b4d18a2b1a6d6105db4117472223c76745adcd3f381",
+    "src/i18n/hooks/useLanguagePreference.ts": "29fbfbea8502066472016543bb4c8449d0225922d2ad2893449b2fa9a51ccb13",
     "src/i18n/hooks/useTranslation.ts": "2d879b473c2c3997c7ab929baa31c5b297512c69e77ea006184ede362e8154e5",
+    "src/i18n/language-switch-preload.ts": "00928eee2f1286a965fa94196c51293d5bb586b3fd63759fe196ff20b53224ba",
     "src/i18n/languages.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
-    "src/i18n/lazy-config.ts": "d924cd25c0a5e70b517818a3627d59eda6d6619f288c009def40abb220572454",
+    "src/i18n/lazy-config.ts": "13d72fde454f1386e7ca9b19d0d6864a0f895858dedefafb2c488f1986df93b6",
     "src/i18n/namespace-bundles.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/i18n/namespace-compat.ts": "54fa081677bd35c50b24ed5914d8c0a343b23f82fa50f33ac0ac931e011a165c",
     "src/i18n/namespace-loaders.ts": "53f9651c24119fbf90aaf22ee183327ffca30bcc57c3fa1a955d903f269b45eb",
@@ -400,7 +402,7 @@
     "src/lib/properties/price-resolver.ts": "8bce354c57b171a702e82c2e934d75ef30bc5443c42a88e10d6282847e04150a",
     "src/lib/routes/accountRoutes.ts": "b82193379953e61a92c5adeb40bcb33597727241d6b6d920b57b2ae361242f01",
     "src/lib/routes/authRoutes.ts": "c8ea68cb2c0498af015c642dd1958a71daee1ea8e1d821ee13980443dc6bdc36",
-    "src/lib/routes/landing.ts": "051d6c163accef7cb3a256f44c4781b7a09482ab6bbd77e7d521f7ba23921d95",
+    "src/lib/routes/landing.ts": "2cbede12097044eb0f2c0802c2fbbe5fedb9dd9d56abb0006405253aa1d5881b",
     "src/lib/safe-fire-and-forget.ts": "7e6568024ebd6120e865d1681fa6dcf3db98600fc116d33b97e02f07dfef5375",
     "src/lib/share-utils.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/sidebar-utils.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -608,8 +610,8 @@
     "dynamicBoundaries": 18,
     "matchedKeys": 135,
     "routeBoundaries": 0,
-    "shellFiles": 500,
-    "sliceBytes": 309366
+    "shellFiles": 501,
+    "sliceBytes": 313909
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
