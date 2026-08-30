@@ -39,13 +39,18 @@ const FM = (gate, over = {}) => ({
   mechanism: 'ZERO TOL', baseline: 'no baseline', tests: '', escape: '', ...over,
 });
 const inv = (runs, rows) => ({ runs: new Set(runs), rows: new Set(rows) });
+const { mutateText } = require('./_mutate');
 
-/** Μετάλλαξη που ΟΥΡΛΙΑΖΕΙ αν δεν άλλαξε τίποτα. */
+/**
+ * Μετάλλαξη που ΟΥΡΛΙΑΖΕΙ αν δεν άλλαξε τίποτα.
+ *
+ * 🔑 **Ο κανόνας ζει στο `./_mutate` (2026-08-30)**. Εδώ η επαναφορά δεν χρειάζεται — όλα
+ * γίνονται σε **προσωρινή ρίζα** — γι' αυτό καλείται ο **καθαρός** κανόνας και όχι η
+ * τελετουργία του δίσκου. Κερδίζει τον **φρουρό ασάφειας** που δεν είχε.
+ */
 function mutate(file, from, to) {
   const before = fs.readFileSync(file, 'utf8');
-  const after = before.replace(from, to);
-  if (after === before) throw new Error(`ΑΚΥΡΗ ΜΕΤΑΛΛΑΞΗ — τίποτα δεν άλλαξε σε ${path.basename(file)}`);
-  fs.writeFileSync(file, after, 'utf8');
+  fs.writeFileSync(file, mutateText(before, from, to, { label: path.basename(file) }), 'utf8');
 }
 
 // ═══ Κ — το συμβόλαιο του αναγνώστη ═══════════════════════════════════════════

@@ -37,6 +37,8 @@ const {
   collectPages,
 } = require('../lib/shell-surface/scan');
 
+const { withMutation: mutateRealFile } = require('./_mutate');
+
 const REPO = path.resolve(__dirname, '..', '..');
 const GATE = path.join(REPO, 'scripts', 'check-shell-surface.js');
 const OWNER = path.join(REPO, 'src', 'components', 'layout', 'MainContentBridge.tsx');
@@ -74,39 +76,28 @@ function runGate(args = []) {
  * όποιος θέλει τη 2η εμφάνιση, τη **ζητά με αριθμό**.
  *
  * @param {number} [occurrence=1] ποια εμφάνιση του `from` να μεταλλαχθεί (1-based).
- *   Μόνο για στόχους-συμβολοσειρές· ένα `RegExp` το χειρίζεται μόνο του.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * 🔑 **ΤΟ ΣΩΜΑ ΜΕΤΑΚΟΜΙΣΕ ΣΤΟ `./_mutate` (2026-08-30) — ΚΑΙ ΟΧΙ ΓΙΑ ΚΑΛΛΩΠΙΣΜΟ**
+ * ─────────────────────────────────────────────────────────────────────────────
+ * **Το περιστατικό**: τρεις άγκυρες αυτού του αρχείου *(`Β-Μ7`, `Γ-Μ2`, `Γ-Μ3`)* ήταν
+ * **δομικά κόκκινες στα Windows**, σε **κάθε** εκτέλεση. Ο στόχος τους είναι πολυγραμμικός
+ * και γράφεται με `\n` — όπως κάθε συμβολοσειρά JavaScript — ενώ το `.shell-surface.json`
+ * στον δίσκο έχει **CRLF** *(μετρημένο: 57 CRLF / 0 LF)*. Το `String.split(στόχος)` είναι
+ * **κυριολεκτικό** ⇒ *«ο στόχος βρέθηκε 0 φορές»* ⇒ **κόκκινο για λάθος λόγο**.
+ *
+ * 🔴 Το τίμημα δεν ήταν μπλοκαρισμένο commit *(ο hook τρέχει το **script**, όχι αυτά τα
+ * tests, και στο CI με LF περνούσαν)*. Ήταν ότι ο άνθρωπος **δεν μπορούσε ποτέ να
+ * επαληθεύσει τοπικά** ότι τρεις κανόνες της πύλης πυροδοτούν — δηλαδή θόρυβος που
+ * **εκπαιδεύει να αγνοείς κόκκινα**.
+ *
+ * ⚠️ **ΓΙΑΤΙ ΟΧΙ regex μόνο στους τρεις**: θεράπευε το **δείγμα**. Μετρήθηκε ότι είναι
+ * **κλάση** — **επτά** αρχεία test μεταλλάσσουν πραγματικό αρχείο του δέντρου, με επτά
+ * διαφορετικά συμβόλαια, και **ένα** από τα επτά είχε τον φρουρό ασάφειας που τεκμηριώνεται
+ * παραπάνω. Ο κανόνας ζει πλέον σε **ΕΝΑ** σημείο, με **δικές του** μεταλλάξεις.
  */
 function withMutation(file, from, to, assertFn, occurrence = 1) {
-  const before = fs.readFileSync(file, 'utf8');
-
-  let after;
-  if (typeof from === 'string') {
-    const parts = before.split(from);
-    const found = parts.length - 1;
-    // Ο μεταλλάκτης ουρλιάζει ΚΑΙ για «δεν βρέθηκε» ΚΑΙ για «βρέθηκε αλλού επίσης».
-    if (found < occurrence) {
-      throw new Error(
-        `withMutation: ο στόχος βρέθηκε ${found} φορές στο ${file}, ζητήθηκε η #${occurrence}.`,
-      );
-    }
-    if (found > 1 && occurrence === 1) {
-      throw new Error(
-        `withMutation: ΑΣΑΦΗΣ στόχος — ${found} εμφανίσεις στο ${file}. ` +
-        'Το replace θα χτυπούσε την 1η σιωπηλά. Δήλωσε ρητά ποια θέλεις (5ο όρισμα).',
-      );
-    }
-    after = parts.slice(0, occurrence).join(from) + to + parts.slice(occurrence).join(from);
-  } else {
-    after = before.replace(from, to);
-  }
-
-  expect(after).not.toBe(before); // ο μεταλλάκτης ουρλιάζει
-  try {
-    fs.writeFileSync(file, after);
-    assertFn(runGate());
-  } finally {
-    fs.writeFileSync(file, before);
-  }
+  return mutateRealFile(file, from, to, () => assertFn(runGate()), { occurrence });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

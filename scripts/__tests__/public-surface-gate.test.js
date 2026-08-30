@@ -44,6 +44,7 @@ beforeAll(() => {
 afterAll(() => { try { fs.rmSync(ROOT, { recursive: true, force: true }); } catch { /* καθαρισμός */ } });
 
 const run = (surface) => scanPublicSurface({ projectRoot: ROOT, manifest: { surface } });
+const { withMutation: mutateRealFile } = require('./_mutate');
 
 const DECLARED_ALPHA = [{
   file: `${GUARDED_PREFIX}types/pub.ts`,
@@ -106,14 +107,17 @@ describe('Κ — οι τρεις ΑΝΕΞΑΡΤΗΤΟΙ κανόνες (ποτέ
 
 // ═════════════════════════════════════════════════════════════════════════════
 describe('Μ — μεταλλάξεις ΣΤΙΣ ΕΙΣΟΔΟΥΣ (ο μεταλλάκτης ουρλιάζει αν δεν άλλαξε τίποτα)', () => {
-  /** Μεταλλάσσει αρχείο, τρέχει, επαναφέρει — και απαιτεί ότι το κείμενο ΟΝΤΩΣ άλλαξε. */
+  /**
+   * Μεταλλάσσει αρχείο, τρέχει, επαναφέρει.
+   *
+   * 🔑 **Ο κανόνας ζει στο `./_mutate` (2026-08-30)** — μαζί με άλλα έξι σημεία που έκαναν
+   * το ίδιο με έξι διαφορετικά συμβόλαια. Εδώ κερδίζει δύο πράγματα που δεν είχε: εύρεση
+   * **ανεξάρτητη από τα τέλη γραμμής**, και **φρουρό ασάφειας** (το `String.replace` χτυπούσε
+   * σιωπηλά την 1η εμφάνιση, άρα μια μετάλλαξη μπορούσε να δοκιμάζει σημείο που κανείς
+   * δεν διάλεξε).
+   */
   function mutate(rel, from, to, surface) {
-    const abs = path.join(ROOT, rel);
-    const before = fs.readFileSync(abs, 'utf8');
-    const after = before.replace(from, to);
-    if (after === before) throw new Error(`Η ΜΕΤΑΛΛΑΞΗ ΔΕΝ ΑΛΛΑΞΕ ΤΙΠΟΤΑ σε ${rel}`);
-    fs.writeFileSync(abs, after, 'utf8');
-    try { return run(surface); } finally { fs.writeFileSync(abs, before, 'utf8'); }
+    return mutateRealFile(path.join(ROOT, rel), from, to, () => run(surface));
   }
 
   it('Μ1. ΝΕΑ διαρροή σε δηλωμένο αρχείο, ΑΔΗΛΩΤΟ σύμβολο ⇒ ΜΠΛΟΚ', () => {

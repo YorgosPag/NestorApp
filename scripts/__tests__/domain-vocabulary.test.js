@@ -56,15 +56,20 @@ function run(root, extra = {}) {
   });
 }
 
-/** Μεταλλάσσει ΜΙΑ φορά και ΟΥΡΛΙΑΖΕΙ αν δεν άλλαξε τίποτα. */
+/**
+ * Μεταλλάσσει ΜΙΑ φορά και ΟΥΡΛΙΑΖΕΙ αν δεν άλλαξε τίποτα.
+ *
+ * 🔑 **Ο κανόνας ζει στο `./_mutate` (2026-08-30)**. Προσωρινή ρίζα ⇒ καμία επαναφορά ⇒
+ * καλείται ο **καθαρός** κανόνας, όχι η τελετουργία του δίσκου. Το «ΜΙΑ φορά» παύει να είναι
+ * **ελπίδα** και γίνεται **απαίτηση**: δύο εμφανίσεις πλέον ουρλιάζουν, αντί να χτυπηθεί
+ * σιωπηλά η πρώτη.
+ */
 function mutate(root, rel, from, to) {
   const p = path.join(root, rel);
-  const before = fs.readFileSync(p, 'utf8');
-  if (!before.includes(from)) throw new Error(`ΑΚΥΡΗ ΜΕΤΑΛΛΑΞΗ: το pattern δεν βρέθηκε στο ${rel}`);
-  const after = before.replace(from, to);
-  if (after === before) throw new Error(`ΑΚΥΡΗ ΜΕΤΑΛΛΑΞΗ: δεν άλλαξε τίποτα στο ${rel}`);
-  fs.writeFileSync(p, after);
+  fs.writeFileSync(p, mutateText(fs.readFileSync(p, 'utf8'), from, to, { label: rel }));
 }
+
+const { mutateText } = require('./_mutate');
 
 function mutateConfig(root, fn) {
   const p = path.join(root, '.domain-vocabulary.json');

@@ -23,8 +23,9 @@
 'use strict';
 
 const fs = require('node:fs');
-const os = require('node:os');
 const path = require('node:path');
+
+const { withMutation: mutateRealFile } = require('./_mutate');
 
 const {
   loadCollectionsMap,
@@ -458,7 +459,13 @@ describe('8. 🧬 MUTATION TESTING — σπάμε τον σαρωτή και α�
    *
    *  1. **Η μετάλλαξη δεν ταιριάζει** (αλλαγμένο κείμενο, CRLF σε multi-line
    *     pattern) ⇒ ο κώδικας μένει ανέπαφος, το test περνά, κανείς δεν το ξέρει.
-   *     Άμυνα: `expect(original.includes(find)).toBe(true)` **πριν** τρέξει.
+   *     ✅ **ΛΥΘΗΚΕ ΣΤΗ ΡΙΖΑ, 2026-08-30**: η εύρεση ανήκει πλέον στο `./_mutate`, που
+   *     ψάχνει τον στόχο **ανεξάρτητα από τα τέλη γραμμής** και ουρλιάζει με όνομα αν
+   *     λείπει. Η παγίδα ήταν **γραμμένη εδώ σωστά αλλά ανυπεράσπιστη**: το αδελφό
+   *     αρχείο `shell-surface-gate.test.js` την έπαθε **ακριβώς** έτσι — τρεις άγκυρες
+   *     δομικά κόκκινες στα Windows, επειδή το `.shell-surface.json` έχει CRLF.
+   *     🔑 Και κερδίζει τον **φρουρό ασάφειας** που έλειπε από εδώ: το `String.replace`
+   *     χτυπούσε σιωπηλά την 1η εμφάνιση — ακριβώς το περιστατικό του `Μ0` παρακάτω.
    *
    *  2. **Το Jest έχει ΔΙΚΟ ΤΟΥ module registry.** Το `delete require.cache[…]`
    *     δεν το αγγίζει καθόλου: το αρχείο στον δίσκο αλλάζει, αλλά η συνάρτηση
@@ -467,28 +474,19 @@ describe('8. 🧬 MUTATION TESTING — σπάμε τον σαρωτή και α�
    *     Άμυνα: `jest.resetModules()` + `jest.isolateModules()`.
    */
   function withMutation(targetFile, find, replace, run) {
-    const original = fs.readFileSync(targetFile, 'utf8');
-    expect(original.includes(find)).toBe(true);          // παγίδα 1 — προσγειώθηκε;
-    const mutated = original.replace(find, replace);
-    expect(mutated).not.toBe(original);
-
-    // Αντίγραφο ασφαλείας εκτός repo, ώστε διακοπή να μην αφήσει μεταλλαγμένο αρχείο.
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ts-mut-'));
-    fs.writeFileSync(path.join(dir, path.basename(targetFile)), original, 'utf8');
-
     let result;
     try {
-      fs.writeFileSync(targetFile, mutated, 'utf8');
-      jest.resetModules();                                // παγίδα 2 — καθάρισε ΤΟ registry του Jest
-      jest.isolateModules(() => {
-        const fresh = require(SCANNER);
-        // Απόδειξη ότι φορτώθηκε το ΜΕΤΑΛΛΑΓΜΕΝΟ: το κείμενο στον δίσκο άλλαξε
-        // ΚΑΙ το module ξαναδιαβάστηκε μέσα σε αυτό το isolate scope.
-        expect(fs.readFileSync(targetFile, 'utf8')).toBe(mutated);
-        result = run(fresh);
+      mutateRealFile(targetFile, find, replace, (mutated) => {
+        jest.resetModules();                              // παγίδα 2 — καθάρισε ΤΟ registry του Jest
+        jest.isolateModules(() => {
+          const fresh = require(SCANNER);
+          // Απόδειξη ότι φορτώθηκε το ΜΕΤΑΛΛΑΓΜΕΝΟ: το κείμενο στον δίσκο άλλαξε
+          // ΚΑΙ το module ξαναδιαβάστηκε μέσα σε αυτό το isolate scope.
+          expect(fs.readFileSync(targetFile, 'utf8')).toBe(mutated);
+          result = run(fresh);
+        });
       });
     } finally {
-      fs.writeFileSync(targetFile, original, 'utf8');
       jest.resetModules();
     }
     return result;

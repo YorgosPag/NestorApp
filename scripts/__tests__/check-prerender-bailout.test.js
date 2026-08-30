@@ -59,17 +59,27 @@ function miniRepo(files) {
   return {
     root,
     judge: () => J.judgeAll(root),
-    /** ⚠️ Ουρλιάζει αν η μετάλλαξη δεν άλλαξε τίποτα. */
+    /**
+     * ⚠️ Ουρλιάζει αν η μετάλλαξη δεν άλλαξε τίποτα.
+     *
+     * 🔑 **Ο κανόνας ζει στο `./_mutate` (2026-08-30)**, μαζί με άλλα έξι σημεία. Προσωρινό
+     * δέντρο ⇒ καμία επαναφορά ⇒ καλείται ο **καθαρός** κανόνας.
+     *
+     * 🔴 **ΚΑΙ ΕΔΩ Η ΣΗΜΑΣΙΟΛΟΓΙΑ ΕΓΙΝΕ ΡΗΤΗ**: το παλιό `split(from).join(to)` άλλαζε
+     * **ΟΛΕΣ** τις εμφανίσεις — σωστό για αυτές τις άγκυρες *(που σπέρνουν το ίδιο μοτίβο σε
+     * πολλές διαδρομές)*, αλλά **πουθενά γραμμένο**. Ο κοινός κανόνας απαγορεύει την ασάφεια
+     * εκ κατασκευής, οπότε το «όλες» **δηλώνεται** (`all: true`) αντί να συμβαίνει σιωπηλά.
+     * Χωρίς τη δήλωση θα ούρλιαζε — και θα είχε δίκιο.
+     */
     mutate(rel, from, to) {
       const abs = path.join(root, rel);
-      const before = fs.readFileSync(abs, 'utf8');
-      const after = before.split(from).join(to);
-      if (after === before) throw new Error(`Η ΜΕΤΑΛΛΑΞΗ ΔΕΝ ΑΛΛΑΞΕ ΤΙΠΟΤΑ: "${from}" δεν βρέθηκε στο ${rel}`);
-      fs.writeFileSync(abs, after);
+      fs.writeFileSync(abs, mutateText(fs.readFileSync(abs, 'utf8'), from, to, { all: true, label: rel }));
     },
     cleanup: () => fs.rmSync(root, { recursive: true, force: true }),
   };
 }
+
+const { mutateText } = require('./_mutate');
 
 function statesOf(result) {
   return Object.fromEntries(result.records.map(r => [r.file, r.state]));
