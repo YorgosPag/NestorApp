@@ -63,6 +63,9 @@ import type {
 } from '../../types/table';
 import { MAX_TABLE_COLUMN_COUNT, MAX_TABLE_DATA_ROW_COUNT } from './build-table-entity';
 import { indexById, insertionIndexFor, type TableAxis } from './table-cell-order';
+// 🔴 ADR-833 Φάση 4 — ο ΕΝΑΣ γεννήτορας τοπικής ταυτότητας πίνακα (N.18: η εξαγωγή έγινε
+// ΠΡΙΝ γεννηθεί ο τρίτος κλώνος, όπως στα `stamp-table-chrome-rect` / `stamp-table-control-disc`).
+import { nextPrefixedId } from './table-next-id';
 import { rebuildTableEdgesOnDelete } from './table-edge-model';
 import { dropTableRowLink } from './table-row-link-model';
 import { cellKey } from './table-model-helpers';
@@ -78,24 +81,16 @@ const ID_PREFIX: Readonly<Record<TableAxis, string>> = { row: 'r', column: 'c' }
 /**
  * Η επόμενη ελεύθερη ταυτότητα του άξονα — δες την Απόφαση 1 στην κεφαλίδα.
  *
- * Αγνοεί ταυτότητες που δεν ακολουθούν το μοτίβο (π.χ. τα `d0` του adapter του ADR-622):
- * δεν χρειάζεται να τις κατανοήσει, μόνο να **μη συγκρουστεί** μαζί τους — γι' αυτό υπάρχει
- * και ο τελικός βρόχος επαλήθευσης.
+ * 🔴 **ADR-833 Φάση 4 — το σώμα ΜΕΤΑΚΟΜΙΣΕ, δεν αντιγράφηκε.** Το μοτίβο «μέγιστο+1 με
+ * βρόχο επαλήθευσης» απέκτησε **τρίτο** καταναλωτή (η προσθήκη φύλλου εργασίας), και το
+ * `types/table-worksheet.ts` είχε γράψει **από πριν** ότι τότε εξάγεται σε κοινό SSoT. Ζει
+ * πλέον στο {@link nextPrefixedId} — μαζί με την αιτιολόγηση του βρόχου, που είναι ακριβώς
+ * το κομμάτι που ξεχνά κάθε δεύτερο αντίγραφο.
+ *
+ * Εδώ μένει **μόνο** η γνώση που ανήκει στον άξονα: ποιο πρόθεμα φοράει ο καθένας.
  */
 function nextAxisId(existingIds: readonly string[], axis: TableAxis): string {
-  const prefix = ID_PREFIX[axis];
-  const taken = new Set(existingIds);
-  const pattern = new RegExp(`^${prefix}(\\d+)$`, 'u');
-
-  let next = 0;
-  for (const id of existingIds) {
-    const match = pattern.exec(id);
-    if (match) next = Math.max(next, Number.parseInt(match[1], 10) + 1);
-  }
-  // Το `while` δεν είναι διακοσμητικό: αν ο πίνακας κουβαλά ήδη ένα χειροποίητο `c9`
-  // **χωρίς** να έχει `c0…c8`, το μέγιστο+1 μπορεί να πέσει πάνω σε υπάρχον όνομα.
-  while (taken.has(`${prefix}${next}`)) next++;
-  return `${prefix}${next}`;
+  return nextPrefixedId(existingIds, ID_PREFIX[axis]);
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
