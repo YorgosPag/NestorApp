@@ -413,14 +413,15 @@
     "message": "«{fileName}» will fill the table. The data it holds now will be replaced.",
     "undoNote": "This can be undone with Ctrl+Z.",
     "replaceButton": "Replace content",
+    "addSheetsButton": "Add as sheets",
     "newTableButton": "New table beside",
     "cancel": "Cancel"
   },
   "tableXlsx": {
     "emptyWorkbook": "The file contains no worksheets.",
-    "onlyFirstSheet": "The workbook has {count} worksheets — only the first («{name}») was imported.",
     "clipped": "Not everything fit: {rows} rows and {columns} columns were left out.",
-    "importedAsNewTable": "The data went into a new table beside — the existing one is untouched."
+    "sheetsAdded": "{count, plural, one {# worksheet was added.} other {# worksheets were added.}}",
+    "sheetsReplaced": "{count, plural, one {The table now holds # worksheet.} other {The table now holds # worksheets.}}"
   },
   "tableMergeDiscard": {
     "title": "Only the upper-left value will be kept",

@@ -40,27 +40,37 @@ export interface TableWarningConfirmDialogProps {
   readonly onConfirm: () => void;
   readonly onCancel: () => void;
   /**
-   * 🔴 ADR-833 §1.4 — **η τρίτη απάντηση**, προαιρετική: μια πράξη που δίνει στον χρήστη ό,τι
-   * ζητά **χωρίς** την καταστροφή (π.χ. «Νέος πίνακας» αντί για αντικατάσταση).
+   * 🔴 ADR-833 §1.4 → Φάση 4 — **οι μη καταστροφικές απαντήσεις**, προαιρετικές: πράξεις που
+   * δίνουν στον χρήστη ό,τι ζητά **χωρίς** την καταστροφή («Προσθήκη ως φύλλα», «Νέος πίνακας
+   * δίπλα»).
    *
-   * Απόν ⇒ ο διάλογος μένει **ακριβώς** ο δυαδικός που ήταν, με τα ίδια δύο κουμπιά: κανένας
-   * από τους δεκατρείς υπάρχοντες καταναλωτές δεν αλλάζει. Προαιρετικό και όχι δεύτερο
-   * component, γιατί ο κανόνας εστίασης (δες κεφαλίδα) πρέπει να μείνει σε **ένα** σημείο —
-   * ένα δεύτερο σώμα θα ήταν ακριβώς ο κλώνος 11 γραμμών που γέννησε αυτό το αρχείο.
+   * Κενές/απούσες ⇒ ο διάλογος μένει **ακριβώς** ο δυαδικός που ήταν, με τα ίδια δύο κουμπιά:
+   * κανένας από τους δεκατρείς υπάρχοντες καταναλωτές δεν αλλάζει. Πίνακας και όχι δεύτερο
+   * component, γιατί ο κανόνας εστίασης (δες κεφαλίδα) πρέπει να μείνει σε **ένα** σημείο — ένα
+   * δεύτερο σώμα θα ήταν ακριβώς ο κλώνος 11 γραμμών που γέννησε αυτό το αρχείο.
    *
-   * Κάθεται **ανάμεσα** στην καταστροφική και στο «Άκυρο»: οι NN/g συνιστούν τη σειρά
-   * «επικίνδυνο → εναλλακτικό → άρνηση», ώστε το μάτι να συναντά την ασφαλή διέξοδο τελευταίο
+   * ⚠️ **Πίνακας, όχι δεύτερο προαιρετικό ζεύγος** (`alternative2Label`/`onAlternative2`): η
+   * Φάση 4 έφερε τη **δεύτερη** ασφαλή διέξοδο, και ένα δεύτερο ζεύγος θα καλούσε το τρίτο.
+   * Το πλήθος είναι δεδομένο του καλούντος, όχι του σώματος.
+   *
+   * Κάθονται **ανάμεσα** στην καταστροφική και στο «Άκυρο»: οι NN/g συνιστούν τη σειρά
+   * «επικίνδυνο → εναλλακτικά → άρνηση», ώστε το μάτι να συναντά την ασφαλή διέξοδο τελευταίο
    * και το πληκτρολόγιο να την έχει ήδη εστιασμένη.
    */
-  readonly alternativeLabel?: string;
-  readonly onAlternative?: () => void;
+  readonly alternatives?: readonly TableWarningAlternative[];
+}
+
+/** Μια μη καταστροφική διέξοδος του διαλόγου: τι λέει, τι κάνει. */
+export interface TableWarningAlternative {
+  readonly label: string;
+  readonly onSelect: () => void;
 }
 
 export function TableWarningConfirmDialog(
   props: TableWarningConfirmDialogProps,
 ): React.ReactElement | null {
   const { title, message, undoNote, confirmLabel, cancelLabel, onConfirm, onCancel } = props;
-  const { alternativeLabel, onAlternative } = props;
+  const alternatives = props.alternatives ?? [];
   if (typeof document === 'undefined') return null;
 
   return createPortal(
@@ -77,12 +87,19 @@ export function TableWarningConfirmDialog(
           >
             {confirmLabel}
           </button>
-          {/* Η τρίτη απάντηση, όταν υπάρχει: ό,τι ζητά ο χρήστης, χωρίς την καταστροφή. */}
-          {alternativeLabel !== undefined && onAlternative !== undefined && (
-            <button type="button" className="dxf-modal-button" onClick={onAlternative}>
-              {alternativeLabel}
+          {/* Οι ασφαλείς διέξοδοι, με τη σειρά που τις έδωσε ο καλών: ό,τι ζητά ο χρήστης,
+              χωρίς την καταστροφή. Κλειδί η **ετικέτα** — είναι ό,τι διακρίνει τη μία από την
+              άλλη, και δεν επιτρέπεται να επαναληφθεί μέσα στον ίδιο διάλογο. */}
+          {alternatives.map((alternative) => (
+            <button
+              key={alternative.label}
+              type="button"
+              className="dxf-modal-button"
+              onClick={alternative.onSelect}
+            >
+              {alternative.label}
             </button>
-          )}
+          ))}
           {/* 🔴 Η εστίαση στο ΑΣΦΑΛΕΣ — δες την κεφαλίδα για τη μέτρηση πίσω από αυτό. */}
           <button type="button" autoFocus className="dxf-modal-button" onClick={onCancel}>
             {cancelLabel}

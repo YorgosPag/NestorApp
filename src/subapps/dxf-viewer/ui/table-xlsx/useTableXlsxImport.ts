@@ -1,50 +1,59 @@
 'use client';
 
 /**
- * ADR-833 §1.4 — **τι γίνεται με το αρχείο `.xlsx` που διάλεξε ο χρήστης.**
+ * ADR-833 §1.4 → **Φάση 4** — **τι γίνεται με το αρχείο `.xlsx` που διάλεξε ο χρήστης.**
  *
  * Δύο εντολές, δύο προθέσεις, **μία** διαδρομή ανάγνωσης:
  *
  * ```
- *   Άνοιγμα           →  ο πίνακας ΓΙΝΕΤΑΙ το αρχείο   →  ρωτά: αντικατάσταση ή νέος;
+ *   Άνοιγμα           →  ο πίνακας ΓΙΝΕΤΑΙ το αρχείο   →  ρωτά: αντικατάσταση, φύλλα, ή νέος;
  *   Εισαγωγή αρχείου  →  το αρχείο ΠΡΟΣΤΙΘΕΤΑΙ         →  δεν ρωτά ποτέ, τίποτα δεν χάνεται
  * ```
  *
- * ## 🔴 Γνωστό ενδιάμεσο (ADR-833 Φάση 1 → Φάση 4)
+ * ## 🔴 ΤΟ ΓΝΩΣΤΟ ΕΝΔΙΑΜΕΣΟ ΕΚΛΕΙΣΕ — «ένα βιβλίο μέσα, ένα βιβλίο έξω»
  *
- * Η τελική σημασιολογία της «Εισαγωγής» είναι **νέα φύλλα εργασίας στον ίδιο πίνακα** — και
- * ένα βιβλίο με τρία φύλλα θα γεμίζει τρεις καρτέλες. Σήμερα το `TableEntity` **δεν έχει
- * φύλλα** (Φάση 2 τα προσθέτει), οπότε το ίδιο συμβόλαιο εκφράζεται με τον μόνο τρόπο που
- * υπάρχει: **νέα οντότητα πίνακα δίπλα στην υπάρχουσα**.
+ * Η Φάση 1 είχε γράψει την υπόσχεση αυτούσια: *«Η τελική σημασιολογία της «Εισαγωγής» είναι
+ * **νέα φύλλα εργασίας στον ίδιο πίνακα** […] Σήμερα το `TableEntity` **δεν έχει φύλλα**,
+ * οπότε το ίδιο συμβόλαιο εκφράζεται με τον μόνο τρόπο που υπάρχει: νέα οντότητα πίνακα δίπλα
+ * στην υπάρχουσα.»* Τα φύλλα ήρθαν στη Φάση 2· εδώ η υπόσχεση γίνεται κώδικας.
  *
- * Η **αρχή** που ζήτησε ο Giorgio τηρείται ακέραιη και στις δύο εκδοχές — *«κανένα υπάρχον
- * δεδομένο δεν κινδυνεύει»*. Αυτό που αλλάζει στη Φάση 4 είναι **πού** κάθονται τα νέα
- * δεδομένα, όχι το αν επιβιώνουν τα παλιά. Και όσο τα φύλλα λείπουν, ο χρήστης **το μαθαίνει
- * με μήνυμα**, δεν το ανακαλύπτει.
+ * ⚠️ Η **ανάγνωση** δεν άλλαξε ούτε γραμμή: το `readXlsxWorksheets` επέστρεφε **πάντα** όλα τα
+ * φύλλα του βιβλίου, στη σειρά, με τα ονόματά τους. Αυτό που έφυγε είναι μια **σιωπή**: ο
+ * καλών κρατούσε επίτηδες μόνο το πρώτο και το έλεγε με μήνυμα (`tableXlsx.onlyFirstSheet`).
+ * Το κλειδί σβήστηκε μαζί με τον λόγο ύπαρξής του.
+ *
+ * ## Καμία σιωπηλή απώλεια — ο κανόνας μένει ακέραιος
+ * Ό,τι δεν χώρεσε **λέγεται με αριθμό**, και τώρα αθροίζεται σε **ολόκληρο** το βιβλίο: ένα
+ * φύλλο 2000 γραμμών ανάμεσα σε δώδεκα δεν επιτρέπεται να κοπεί χωρίς να το μάθει κανείς
+ * επειδή τα υπόλοιπα έντεκα χώρεσαν.
  *
  * @module subapps/dxf-viewer/ui/table-xlsx/useTableXlsxImport
- * @see bim/table/import/xlsx-to-worksheets.ts — ο αναγνώστης
+ * @see bim/table/import/xlsx-to-worksheets.ts — ο αναγνώστης (αμετάβλητος από τη Φάση 1)
  * @see bim/table/import/worksheet-to-model.ts — πλέγμα → μοντέλο
+ * @see bim/table/table-worksheet-ops.ts — πού προσγειώνονται τα φύλλα (οι δύο σχεδιαστές)
  */
 
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { readXlsxWorksheets } from '../../bim/table/import/xlsx-to-worksheets';
-import { worksheetGridToModel } from '../../bim/table/import/worksheet-to-model';
+import { workbookToWorksheetDrafts } from '../../bim/table/import/workbook-to-worksheet-drafts';
 import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { CreateEntityCommand } from '../../core/commands/entity-commands/CreateEntityCommand';
-import { buildTableModelCommand } from '../../bim/table/table-cell-edit-session';
 import { computeTableEntityGeometryLive } from '../../bim/table/table-entity-geometry';
 import { requestTableXlsxOpenConfirm } from '../../bim/table/table-xlsx-open-confirm-store';
 import { tableWorksheetsPatch } from '../../bim/table/table-worksheet-write';
-import { FIRST_TABLE_WORKSHEET_ID } from '../../types/table-worksheet';
-import type { TableWorksheet } from '../../types/table-worksheet';
+import { buildTableWorksheetCommand } from '../../bim/table/table-worksheet-command';
+import {
+  buildWorksheets,
+  planWorksheetsAppend,
+  planWorksheetsReplace,
+  type TableWorksheetDraft,
+} from '../../bim/table/table-worksheet-ops';
 import type { TableEntity } from '../../types/table-entity';
 import type { ICommand } from '../../core/commands';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
 import type { SceneEntity } from '../../hooks/canvas/dxf-scene-entity-converter';
 import type { SceneUnits } from '../../utils/scene-units';
-import type { PersistedTableModel } from '../../types/table';
 
 /** Τα δεκτά αρχεία — και οι δύο μορφές βιβλίου του Excel (με και χωρίς μακροεντολές). */
 export const TABLE_XLSX_ACCEPT = '.xlsx,.xlsm';
@@ -83,110 +92,110 @@ export function useTableXlsxImport(params: UseTableXlsxImportParams): TableXlsxI
   const { t } = useTranslation('dxf-viewer-shell');
 
   /**
-   * Η κοινή διαδρομή: αρχείο → πρώτο φύλλο → μοντέλο, **με αναφορά** για ό,τι δεν χώρεσε.
+   * Η κοινή διαδρομή: αρχείο → **όλα** τα φύλλα → προσχέδια, με αναφορά για ό,τι κόπηκε.
    * `null` όταν το βιβλίο δεν έχει κανένα φύλλο (και το λέει).
+   *
+   * ⚠️ Το κόψιμο αθροίζεται σε **ολόκληρο** το βιβλίο και αναφέρεται **μία** φορά: δώδεκα
+   * μηνύματα για δώδεκα φύλλα θα ήταν θόρυβος που ο χρήστης κλείνει χωρίς να διαβάσει —
+   * δηλαδή η σιωπηλή απώλεια θα επέστρεφε από την πίσω πόρτα.
    */
-  const readFirstSheet = useCallback(
-    async (file: File) => {
+  const readAllSheets = useCallback(
+    async (file: File): Promise<readonly TableWorksheetDraft[] | null> => {
       const sheets = await readXlsxWorksheets(await file.arrayBuffer());
       if (sheets.length === 0) {
         notify(t('tableXlsx.emptyWorkbook'));
         return null;
       }
-      const result = { ...worksheetGridToModel(sheets[0].grid), name: sheets[0].name };
-      // 🔴 Καμία σιωπηλή απώλεια — τρία διαφορετικά «δεν μπήκαν όλα», τρία μηνύματα.
-      if (sheets.length > 1) {
-        notify(t('tableXlsx.onlyFirstSheet', { count: sheets.length, name: sheets[0].name }));
+      // 🔑 Η **μετατροπή** και η **άθροιση του κοψίματος** ζουν σε καθαρή συνάρτηση: εδώ μένει
+      // μόνο το «ποιος το λέει στον χρήστη», που είναι η μία γνώση που δεν είναι καθαρή.
+      const { drafts, droppedRows, droppedColumns } = workbookToWorksheetDrafts(sheets);
+      if (droppedRows > 0 || droppedColumns > 0) {
+        notify(t('tableXlsx.clipped', { rows: droppedRows, columns: droppedColumns }));
       }
-      if (result.droppedRows > 0 || result.droppedColumns > 0) {
-        notify(t('tableXlsx.clipped', {
-          rows: result.droppedRows,
-          columns: result.droppedColumns,
-        }));
-      }
-      return result;
+      return drafts;
     },
     [notify, t],
+  );
+
+  /** Η **μία** διαδρομή εντολής φύλλων αυτού του hook — ίδιο σχήμα με το `useTableWorksheetApply`. */
+  const applyPlan = useCallback(
+    (entity: TableEntity, drafts: readonly TableWorksheetDraft[], mode: 'append' | 'replace'): void => {
+      const { currentLevelId, getLevelScene, setLevelScene } = levelManager;
+      if (!currentLevelId || !setLevelScene) return;
+      const sceneManager = createLevelSceneManagerAdapter(getLevelScene, setLevelScene, currentLevelId);
+      const plan = mode === 'append'
+        ? planWorksheetsAppend(entity, drafts)
+        : planWorksheetsReplace(entity, drafts);
+      const command = buildTableWorksheetCommand(entity, plan, sceneManager);
+      if (!command) return;
+      execute(command);
+      notify(t(mode === 'append' ? 'tableXlsx.sheetsAdded' : 'tableXlsx.sheetsReplaced', {
+        count: drafts.length,
+      }));
+    },
+    [execute, levelManager, notify, t],
   );
 
   /**
    * Νέα οντότητα πίνακα δίπλα στην πηγή — μία εντολή, ένα `Ctrl+Z`.
    *
-   * ## 🔴 ADR-833 Φάση 2 — ΤΟ ΦΥΛΛΟ ΕΙΝΑΙ **ΚΑΙΝΟΥΡΓΙΟ**, ΟΧΙ ΑΝΤΙΓΡΑΦΟ
+   * ## 🔴 ADR-833 Φάση 2 → 4 — ΤΑ ΦΥΛΛΑ ΕΙΝΑΙ **ΚΑΙΝΟΥΡΓΙΑ**, ΟΧΙ ΑΝΤΙΓΡΑΦΟ
    * Το `...source` δίνει στρώση, στυλ, γωνία — ό,τι είναι ιδιότητα του **χαρτιού**. Τα φύλλα
-   * **δεν** κληρονομούνται: ο νέος πίνακας γεννιέται με **ένα** φύλλο, το φύλλο του αρχείου.
+   * **δεν** κληρονομούνται: ο νέος πίνακας γεννιέται με **τα φύλλα του αρχείου**, όλα τους.
    * Χωρίς τη ρητή αντικατάσταση, ο νέος πίνακας θα ξεκινούσε με **αντίγραφο των φύλλων της
    * πηγής** — μαζί με τον δεσμό τους σε πηγή δεδομένων που δεν τον αφορά.
    *
    * Το `tableWorksheetsPatch` καθαρίζει ταυτόχρονα ό,τι κουβαλά η πηγή από την **παλιά** μορφή:
    * ένα `model` που θα ταξίδευε μέσα από το `...source` θα ήταν μπαγιάτικος καθρέφτης πάνω σε
    * ολοκαίνουργια οντότητα.
-   *
-   * ✅ **Το όνομα του φύλλου του Excel επιβιώνει.** Το βιβλίο μας είπε πώς λέγεται το φύλλο· ένα
-   * νεογέννητο φύλλο δεν έχει όνομα που να διακινδυνεύει, οπότε το υιοθετεί. (Η «αντικατάσταση
-   * περιεχομένου» δεν το κάνει — εκεί το φύλλο **υπάρχει** και το όνομά του μπορεί να είναι
-   * επιλογή του χρήστη. Δεδομένο χρήστη δεν ξαναγράφεται ποτέ σιωπηλά.)
    */
   const createTableBeside = useCallback(
-    (source: TableEntity, model: PersistedTableModel, worksheetName: string): void => {
+    (source: TableEntity, drafts: readonly TableWorksheetDraft[]): void => {
       const { currentLevelId, getLevelScene, setLevelScene } = levelManager;
       if (!currentLevelId || !setLevelScene) return;
       const sceneManager = createLevelSceneManagerAdapter(getLevelScene, setLevelScene, currentLevelId);
-      const worksheet: TableWorksheet = worksheetName
-        ? { id: FIRST_TABLE_WORKSHEET_ID, name: worksheetName, model }
-        : { id: FIRST_TABLE_WORKSHEET_ID, model };
+      const worksheets = buildWorksheets(drafts);
       const entityData: Omit<SceneEntity, 'id'> = {
         ...source,
         position: nextTablePosition(source, sceneUnits),
-        ...tableWorksheetsPatch(source, [worksheet]),
-        activeWorksheetId: FIRST_TABLE_WORKSHEET_ID,
+        ...tableWorksheetsPatch(source, worksheets),
+        activeWorksheetId: worksheets[0].id,
         // Η παράγωγη γεωμετρία ΔΕΝ αντιγράφεται: ξαναϋπολογίζεται από το νέο μοντέλο, και ένα
         // αντίγραφο της παλιάς θα ήταν μπαγιάτικο πλαίσιο γύρω από άλλα δεδομένα.
         geometry: undefined,
       } as unknown as Omit<SceneEntity, 'id'>;
       execute(new CreateEntityCommand(entityData, sceneManager));
+      notify(t('tableXlsx.sheetsReplaced', { count: worksheets.length }));
     },
-    [execute, levelManager, sceneUnits],
-  );
-
-  /** Αντικατάσταση του περιεχομένου του **ίδιου** πίνακα — η ΜΙΑ διαδρομή commit (§6.6). */
-  const replaceModel = useCallback(
-    (entity: TableEntity, model: PersistedTableModel): void => {
-      const { currentLevelId, getLevelScene, setLevelScene } = levelManager;
-      if (!currentLevelId || !setLevelScene) return;
-      const sceneManager = createLevelSceneManagerAdapter(getLevelScene, setLevelScene, currentLevelId);
-      const command = buildTableModelCommand(entity, model, sceneManager);
-      if (command) execute(command);
-    },
-    [execute, levelManager],
+    [execute, levelManager, notify, sceneUnits, t],
   );
 
   const onOpenFilePicked = useCallback(
     async (file: File): Promise<void> => {
       const entity = getSelectedTable();
       if (!entity) return;
-      const result = await readFirstSheet(file);
-      if (!result) return;
+      const drafts = await readAllSheets(file);
+      if (!drafts) return;
       // 🔴 Η ερώτηση γίνεται **αφού** διαβαστεί το αρχείο: ένας διάλογος «αντικατάσταση;» για
       // αρχείο που τελικά δεν διαβάζεται θα ήταν ερώτηση χωρίς αντικείμενο.
       const action = await requestTableXlsxOpenConfirm({ fileName: file.name });
-      if (action === 'replace') replaceModel(entity, result.model);
-      else if (action === 'new-table') createTableBeside(entity, result.model, result.name);
+      if (action === 'replace') applyPlan(entity, drafts, 'replace');
+      else if (action === 'add-sheets') applyPlan(entity, drafts, 'append');
+      else if (action === 'new-table') createTableBeside(entity, drafts);
     },
-    [createTableBeside, getSelectedTable, readFirstSheet, replaceModel],
+    [applyPlan, createTableBeside, getSelectedTable, readAllSheets],
   );
 
   const onImportFilePicked = useCallback(
     async (file: File): Promise<void> => {
       const entity = getSelectedTable();
       if (!entity) return;
-      const result = await readFirstSheet(file);
-      if (!result) return;
+      const drafts = await readAllSheets(file);
+      if (!drafts) return;
       // Καμία ερώτηση: η «Εισαγωγή» δεν αγγίζει τίποτα υπάρχον, εξ ορισμού.
-      createTableBeside(entity, result.model, result.name);
-      notify(t('tableXlsx.importedAsNewTable'));
+      applyPlan(entity, drafts, 'append');
     },
-    [createTableBeside, getSelectedTable, notify, readFirstSheet, t],
+    [applyPlan, getSelectedTable, readAllSheets],
   );
 
   return { onOpenFilePicked, onImportFilePicked };
