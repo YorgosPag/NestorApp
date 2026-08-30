@@ -698,7 +698,9 @@
       "request-scope-unset": "Select at least one transaction.",
       "request-start-unset": "State when it starts.",
       "request-start-after-expiry": "It ends before it starts. Correct the start or the end.",
-      "listing-conflicting-mandate": "Another agency holds a right over a transaction you asked for. See above until when."
+      "listing-conflicting-mandate": "Another agency holds a right over a transaction you asked for. See above until when.",
+      "identity-incomplete": "Your profile is incomplete: a brokerage mandate needs both your full name and your VAT number. Fill them in on your profile and send the request again — the terms you entered are not lost.",
+      "identity-incomplete-action": "Open my profile"
     },
     "inbox": {
       "title": "Incoming mandate requests",
@@ -751,7 +753,7 @@
         "request-not-pending": "Someone got there first — the request has already been decided.",
         "request-lapsed": "The proposal has expired and can no longer be decided.",
         "listing-withdrawn": "The owner withdrew the listing.",
-        "identity-incomplete": "The owner has not filled in their VAT number, and no brokerage contract can be drawn up without it. The request STAYS open: contact them and press Accept again.",
+        "identity-incomplete": "The owner has not filled in their identity details (full name or VAT number), and no brokerage contract can be drawn up without them. The request STAYS open: contact them and press Accept again.",
         "mandate-invalid": "The proposed terms are not lawful for this type of mandate."
       }
     }
