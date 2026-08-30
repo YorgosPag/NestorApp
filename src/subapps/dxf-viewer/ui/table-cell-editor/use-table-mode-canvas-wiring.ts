@@ -38,6 +38,8 @@ import { useTableInsertControlClick } from './use-table-insert-control-click';
 import { useTableDeleteControlClick } from './use-table-delete-control-click';
 // 🔴 ADR-768 Βήμα 5 — το **βάψιμο**: ίδια διαδρομή συμβάντος με ⊕/⊖, άλλο store, άλλη πράξη.
 import { useTableFormatPainterClick } from './use-table-format-painter-click';
+// 🔴 ADR-833 Φάση 3 — η **αλλαγή φύλλου**: ίδια διαδρομή συμβάντος με ⊕/⊖/πινέλο, άλλη πράξη.
+import { useTableWorksheetTabClick } from './use-table-worksheet-tab-click';
 import type { TableEntity } from '../../types/table-entity';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
@@ -214,6 +216,27 @@ export function useTableModeCanvasWiring(params: UseTableModeCanvasWiringParams)
    * ζωντανό πίνακα κάτω από το χέρι.
    */
   useTableFormatPainterClick({
+    containerRef,
+    levelManager,
+  });
+
+  /**
+   * 🔴 ADR-833 Φάση 3 — το **πάτημα** μιας καρτέλας φύλλου. Τέταρτος καταναλωτής του
+   * `useTableArmedControlClick`, με το ίδιο σχήμα και τους ίδιους δύο λόγους:
+   *
+   * - **Καμία συνθήκη προσάρτησης** (§40.9): ο φρουρός που μετράει είναι το `resolveArmed()`,
+   *   που απαντά `null` όποτε ο hover δεν έχει γράψει καρτέλα — και ο hover δεν γράφει καρτέλα
+   *   χωρίς ζωντανό ή επιλεγμένο πίνακα κάτω από το χέρι. Δηλαδή ο φρουρός ήταν ήδη δύο
+   *   στρώσεις πιο κάτω, στη γεωμετρία.
+   * - **Χωριστά από τον hover**, όχι μέσα του: ο hover είναι ρητά **παθητικός** (το pan ζει
+   *   πάνω στο `mousemove`), το κλικ **πρέπει** να καταναλώνει. Δύο αντίθετες συμβάσεις δεν
+   *   χωρούν σε έναν ακροατή.
+   *
+   * ⚠️ Η λωρίδα ζει και σε **απλή επιλογή**, όχι μόνο σε λειτουργία πίνακα — γι' αυτό ο
+   * ακροατής ζει **εδώ**, δίπλα στους τρεις που έχουν ήδη αυτή την ιδιότητα, και όχι στον
+   * `use-table-cell-pointer` που ζει μόνο όσο υπάρχει δρομέας.
+   */
+  useTableWorksheetTabClick({
     containerRef,
     levelManager,
   });

@@ -35,6 +35,7 @@
 
 import { useCallback, useMemo } from 'react';
 import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+import { applyTableScenePatch } from './table-scene-patch';
 import { UpdateEntityCommand } from '../../core/commands/entity-commands/UpdateEntityCommand';
 import type { TableEntity } from '../../types/table-entity';
 import type { Point2D } from '../../rendering/types/Types';
@@ -69,17 +70,13 @@ export function useTableSceneWriters(params: UseTableSceneWritersParams): TableS
    * Νέο αντικείμενο οντότητας ⇒ οι απομνημονεύσεις της διάταξης ακυρώνονται από μόνες τους
    * (η ταυτότητα ΕΙΝΑΙ η έκδοση, δες `resizeTableColumnLeftOfEdge`).
    */
+  // 🔴 ADR-833 Φάση 3 (N.18) — το **σώμα** μετακόμισε στο `table-scene-patch.ts` τη στιγμή που
+  // απέκτησε καταναλωτή εκτός hook (η αλλαγή καρτέλας, στον ακροατή των οπλισμένων
+  // χειριστηρίων). Εδώ μένει η **σταθεροποίηση ταυτότητας** για τα `useMemo` από κάτω, που
+  // είναι όλη η δουλειά ενός `useCallback` — δες την κεφαλίδα εκείνου του module.
   const previewPatch = useCallback(
-    (entity: TableEntity, patch: Partial<TableEntity>): void => {
-      const { currentLevelId, getLevelScene, setLevelScene } = levelManager;
-      if (!currentLevelId || !setLevelScene) return;
-      const scene = getLevelScene(currentLevelId);
-      if (!scene) return;
-      setLevelScene(currentLevelId, {
-        ...scene,
-        entities: scene.entities.map((e) => (e.id === entity.id ? { ...entity, ...patch } : e)),
-      });
-    },
+    (entity: TableEntity, patch: Partial<TableEntity>): void =>
+      applyTableScenePatch(levelManager, entity, patch),
     [levelManager],
   );
 
