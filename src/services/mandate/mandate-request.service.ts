@@ -77,6 +77,12 @@ import {
 } from '@/lib/owner-property/listing-custody';
 import { generateMandateRequestId } from '@/services/enterprise-id-convenience';
 import { lookupAgencyProfile } from '@/services/mandate/agency-profile.service';
+import { readOwnerIdentity } from '@/services/mandate/mandate-owner-identity';
+import type {
+  MandateRequestDeclaration,
+  MandateRequestRejection,
+  MandateRequestWriteResult,
+} from '@/services/mandate/mandate-request-vocabulary';
 import {
   mandateRequestFromStored,
   mandateRequestInvariantViolations,
@@ -84,7 +90,6 @@ import {
   sameProposedTerms,
   type MandateRequest,
   type MandateRequestDocument,
-  type MandateRequestInvariant,
   type ProposedMandateTerms,
 } from '@/types/mandate-request';
 import { mandateConflicts } from '@/lib/mandate/mandate-conflict';
@@ -95,85 +100,15 @@ import type { OwnerProperty } from '@/types/owner-property';
 const logger = createModuleLogger('mandate-request.service');
 
 // =============================================================================
-// 1. ΤΟ ΛΕΞΙΛΟΓΙΟ ΤΩΝ ΑΡΝΗΣΕΩΝ — κωδικοί, ποτέ κείμενο (N.11)
+// 1. ΤΟ ΛΕΞΙΛΟΓΙΟ ΤΩΝ ΑΡΝΗΣΕΩΝ — ζει σε ΔΙΚΟ ΤΟΥ αρχείο (ADR-834 §8)
 // =============================================================================
-
-/**
- * **Γιατί δεν γράφτηκε το αίτημα** — κλειστό σύνολο, κάθε κωδικός γίνεται κλειδί i18n.
- *
- * 🔴 **ΤΟ `agency-absent` ΣΚΕΠΑΖΕΙ ΔΥΟ ΑΛΗΘΕΙΕΣ, ΚΑΙ ΕΙΝΑΙ ΤΟ ΙΔΙΟ ΤΟ §9.4.** Γραφείο
- * που **δεν δημοσιεύεται** και ψευδώνυμο που **δεν υπάρχει** απαντούν **ταυτόσημα**.
- * Αν τα ξεχωρίζαμε, η πόρτα θα γινόταν **μαντείο** *«υπάρχει τέτοιος οργανισμός;»* —
- * δηλαδή απαρίθμηση ένα ερώτημα τη φορά, ακριβώς ό,τι απαγορεύει το ADR-787 Ε-5 §4 #1.
- *
- * ⚠️ **Η ΒΛΑΒΗ ΔΕΝ ΕΙΝΑΙ ΕΔΩ.** *«Δεν μπόρεσα να ρωτήσω»* είναι `kind: 'unavailable'`
- * και φεύγει ως **503** — ποτέ ως άρνηση (N.12: *άγνωστο ≠ κενό*). Ένα
- * `agency-absent` σε βλάβη θα έστελνε τον άνθρωπο μακριά από γραφείο που **υπάρχει**.
- */
-export const MANDATE_REQUEST_REJECTIONS = [
-  /** Η αγγελία δεν υπάρχει — **ή δεν είναι δική σου**. Ποτέ χωριστά (§9.4). */
-  'listing-absent',
-  /** Αποσυρμένη αγγελία **δεν έχει δημόσια προβολή** ⇒ αίτημα για το τίποτα. */
-  'listing-not-live',
-  /**
-   * Έχει **ήδη** εντολή. Για την προεπιλεγμένη `EXCLUSIVE_AGENCY` μια δεύτερη
-   * ανάθεση θα ήταν **παράβαση της ίδιας της σύμβασης** που το σύστημα συνέταξε.
-   */
-  'listing-already-brokered',
-  /** Το γραφείο δεν δημοσιεύεται — **ταυτόσημο** με «δεν υπάρχει». */
-  'agency-absent',
-  /** Εκκρεμεί ήδη αίτημα με **άλλους** όρους. Απόσυρε το πρώτο. */
-  'request-already-pending',
-  /**
-   * 🔴 Το γραφείο είπε **τελικά όχι** για αυτή την αγγελία (`declined-final`).
-   *
-   * ⛔ **ΑΝΤΙΚΑΤΕΣΤΗΣΕ το `request-terms-unchanged`, ΔΕΝ ΜΠΗΚΕ ΔΙΠΛΑ ΤΟΥ** (ADR-749:
-   * δύο κριτές στο ίδιο ερώτημα). Ο παλιός ρωτούσε *«άλλαξες κάτι;»* — υπολογισμένη
-   * διαφορά όρων, δηλαδή **εικασία** για το τι θα ξαναρωτούσε ο κριτής. Ο νέος ρωτά
-   * *«σου έδωσε δικαίωμα;»* — **ρητή πράξη** εκείνου που έκρινε.
-   *
-   * 🔑 Και η αλλαγή έχει **λειτουργικό** αποτέλεσμα, όχι μόνο σημασιολογικό: μετά από
-   * `declined-revisable` ο ιδιώτης μπορεί να ξαναστείλει **τους ίδιους ακριβώς όρους**
-   * — που είναι ό,τι θέλει ένας μεσίτης που είπε *«στείλε το ξανά, μου ξέφυγε»*, και
-   * ό,τι ο παλιός κανόνας **απαγόρευε**.
-   */
-  'request-declined-final',
-  /**
-   * 🔴 **ΣΥΓΚΡΟΥΕΤΑΙ ΜΕ ΖΩΝΤΑΝΗ ΕΝΤΟΛΗ ΑΛΛΟΥ ΓΡΑΦΕΙΟΥ** (ADR-832).
-   *
-   * ⚠️ **ΔΕΝ είναι το `listing-already-brokered`, και η διαφορά δεν είναι λεπτολογία.**
-   * Εκείνο σημαίνει *«αυτό το ζεύγος έχει ήδη κλείσει»* — το ίδιο γραφείο, ήδη
-   * αποδεκτό. Αυτό σημαίνει *«**άλλος** κρατά δικαίωμα που δεν χωρά δίπλα στο δικό
-   * σου»* — και έχει **διέξοδο**: άλλη πράξη, άλλη περίοδος, ή απλή αντί για
-   * αποκλειστική. Ένας κοινός κωδικός θα έκρυβε και τους τρεις δρόμους.
-   */
-  'listing-conflicting-mandate',
-] as const;
-
-export type MandateRequestRejection = (typeof MANDATE_REQUEST_REJECTIONS)[number];
-
-/**
- * **Τι απέγινε η προσπάθεια** — κλειστό σύνολο, ποτέ `boolean` + μήνυμα.
- *
- * 🔑 Το `unchanged` **δεν είναι σφάλμα**: είναι η **επιτυχία** της ιδεμποτησίας. Ο
- * άνθρωπος που πάτησε δύο φορές πρέπει να δει το **αίτημά του**, όχι μια άρνηση για
- * κάτι που πέτυχε.
- */
-export type MandateRequestWriteResult =
-  | { readonly kind: 'created'; readonly request: MandateRequest }
-  | { readonly kind: 'unchanged'; readonly request: MandateRequest }
-  | { readonly kind: 'rejected'; readonly reason: MandateRequestRejection }
-  | { readonly kind: 'invalid'; readonly violations: readonly MandateRequestInvariant[] }
-  /** 🔴 **Δεν μάθαμε** — ποτέ ίδιο με άρνηση. */
-  | { readonly kind: 'unavailable' }
-  | { readonly kind: 'failed' };
-
-/** Ό,τι δηλώνει ο ιδιώτης. **Καμία ταυτότητα** — εκείνη έρχεται από την απόδειξη. */
-export interface MandateRequestDeclaration {
-  readonly ownerPropertyId: string;
-  readonly agencyCompanyId: string;
-  readonly terms: ProposedMandateTerms;
-}
+//
+// 🔑 **Μετακόμισε στο `mandate-request-vocabulary.ts`, και δεν ήταν καλλωπισμός**:
+//    πελατικά αρχεία ζητούσαν το κλειστό σύνολο από **αυτόν** τον `server-only`
+//    γραφέα. Δες την κεφαλίδα εκεί — το γιατί, με τη μέτρηση.
+//
+// ⛔ **ΜΗΝ ξαναγράψεις κωδικό άρνησης εδώ.** Ο τύπος θα «δούλευε»· η οθόνη που τον
+//    ονομάζει, όχι — και ο άνθρωπος θα έβλεπε ωμό κωδικό.
 
 // =============================================================================
 // 2. Η ΠΡΑΞΗ
@@ -229,6 +164,29 @@ export async function submitMandateRequest(
 
   const verdict = judgeAgainstHistory(history, declaration.terms);
   if (verdict.kind !== 'proceed') return verdict;
+
+  // 🔴 **Ο ΕΝΑΣ ΚΡΙΤΗΣ ΤΑΥΤΟΤΗΤΑΣ** (ADR-834 §8) — ο **ίδιος** που θα ξανατρέξει στην
+  //    αποδοχή, με τα φρέσκα. Μέχρι σήμερα έτρεχε **μόνο εκεί**: ο ιδιώτης υπέβαλλε
+  //    χωρίς έλεγχο και η άρνηση έσκαγε σε **άλλον άνθρωπο**, μέρες αργότερα, ενώ ο
+  //    μόνος που μπορούσε να τη λύσει δεν τη μάθαινε ποτέ (N.7.2 #1).
+  //
+  // ⚠️ **ΤΕΛΕΥΤΑΙΟΣ, ΚΑΙ Η ΘΕΣΗ ΕΙΝΑΙ ΑΠΟΦΑΣΗ — ΤΡΕΙΣ ΛΟΓΟΙ**:
+  //    1. **Η σειρά των φρουρών από πάνω είναι συμβόλαιο** (δες την κεφαλίδα): πρώτα
+  //       *«είναι δικό σου;»*, μετά *«υπάρχει το γραφείο;»*. Παρεμβολή στη μέση θα
+  //       άλλαζε τι μαθαίνει ο καλών και με ποια σειρά.
+  //    2. **Η ταυτότητα είναι προϋπόθεση της ΣΥΜΒΑΣΗΣ, όχι της εγκυρότητας του
+  //       αιτήματος.** Άνθρωπος με μπαγιάτικο σύνδεσμο προς **ξένη** αγγελία πρέπει
+  //       να μάθει *αυτό*, όχι να σταλεί να συμπληρώσει το προφίλ του άδικα.
+  //    3. **Ιδεμποτησία**: το `unchanged` του Δ4 επιστρέφει **πριν** από εδώ, άρα το
+  //       δεύτερο πάτημα δεν πληρώνει δεύτερη ανάγνωση — και δεν μπορεί να γυρίσει
+  //       άρνηση για αίτημα που **υπάρχει ήδη**.
+  const identity = await readOwnerIdentity(adminDb, actor.uid);
+  // ⚠️ *«Δεν μπόρεσα να ρωτήσω»* φεύγει ως **503**, ποτέ ως «λείπει το ΑΦΜ σου»: θα
+  //    έστελνε τον άνθρωπο να διορθώσει κάτι που είναι ήδη σωστό (N.12).
+  if (identity.kind === 'unavailable') return { kind: 'unavailable' };
+  if (identity.kind === 'incomplete') {
+    return { kind: 'rejected', reason: 'identity-incomplete' };
+  }
 
   return writeRequest(adminDb, actor, declaration, verdict.supersedes, nowISO);
 }

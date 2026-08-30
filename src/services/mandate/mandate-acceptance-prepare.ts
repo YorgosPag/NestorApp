@@ -26,11 +26,13 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
-import { isValidGreekVat } from '@/lib/validation/vat-validation';
 import { buildContactDocument } from '@/services/ai-pipeline/shared/contact-document-builder';
 import { findContactByEmail } from '@/services/ai-pipeline/shared/contact-lookup-search';
 import { generateContactId } from '@/services/enterprise-id-convenience';
-import type { UserProfileDocument } from '@/auth/types/auth.types';
+import {
+  readOwnerIdentity,
+  type OwnerIdentity,
+} from '@/services/mandate/mandate-owner-identity';
 import type { MandateRequest } from '@/types/mandate-request';
 import type { OwnerProperty } from '@/types/owner-property';
 import {
@@ -74,7 +76,7 @@ export async function prepare(
   const property = await readListing(adminDb, input.request.ownerPropertyId);
   if ('kind' in property) return property;
 
-  const identity = await readOwnerIdentity(adminDb, input.request.requestedByUserId);
+  const identity = await ownerIdentityFor(adminDb, input.request.requestedByUserId);
   if ('kind' in identity) return identity;
 
   const contact = await resolveClientContact(adminDb, input, identity);
@@ -139,53 +141,37 @@ async function readListing(
   }
 }
 
-/** Ό,τι ταξιδεύει από το προφίλ του ιδιώτη στην επαφή — **και τίποτα άλλο** (§8.3). */
-interface OwnerIdentity {
-  readonly givenName: string;
-  readonly familyName: string;
-  readonly email: string;
-  readonly vatNumber: string;
-}
-
 /**
- * **Η ταυτότητα του ιδιώτη, τη ΣΤΙΓΜΗ της αποδοχής.**
+ * **Η ταυτότητα του ιδιώτη, τη ΣΤΙΓΜΗ της αποδοχής** — ο ΕΝΑΣ κριτής, μεταφρασμένος
+ * στο λεξιλόγιο **αυτής** της πόρτας.
  *
- * 🔑 **Πηγή, όχι αποτύπωμα** (§9.20): διαβάζεται από το `users/{uid}` και **αντιγράφεται**
- * στην επαφή. Το αντίγραφο δεν ακολουθεί τον άνθρωπο αν αργότερα διορθώσει το προφίλ
- * του — ίδιο δόγμα με τη διεύθυνση χρέωσης ενός τιμολογίου.
+ * 🔴 **Ο ΚΡΙΤΗΣ ΕΦΥΓΕ ΑΠΟ ΕΔΩ ΚΑΙ ΕΓΙΝΕ SSoT** (ADR-834 §8,
+ * {@link ../../services/mandate/mandate-owner-identity}) — γιατί έτρεχε **μόνο εδώ**,
+ * δηλαδή μόνο στη μεριά του **γραφείου**, ενώ ο άνθρωπος που μπορεί να διορθώσει
+ * περνά από **άλλη** πόρτα. Ήταν ο **αδρανής φρουρός** που το αρχείο αυτό
+ * προειδοποιεί δέκα γραμμές πιο κάτω να μη γεννηθεί.
  *
- * ⚠️ **Το ΑΦΜ επικυρώνεται ΞΑΝΑ εδώ, με τον ΥΠΑΡΧΟΝΤΑ ελεγκτή.** Δεν είναι δυσπιστία
- * προς τη δική μας πόρτα: το πεδίο είναι `server-owned` και γράφεται **μόνο** από το
- * `/api/account/vat-number`, αλλά αυτή η ανάγνωση συμβαίνει **μήνες αργότερα** και
- * παράγει **νομικό κείμενο**. Ο έλεγχος κοστίζει έναν βρόχο εννέα ψηφίων.
+ * ⚠️ **Ο έλεγχος ΕΔΩ ΜΕΝΕΙ, και είναι η ΑΜΥΝΑ.** Ό,τι κρίθηκε στην υποβολή μπορεί να
+ * έχει αλλάξει· εδώ κρίνονται τα **φρέσκα** δεδομένα, τη στιγμή που γεννιέται το
+ * νομικό κείμενο. Μετακινήθηκε η **γνώση**, ποτέ η άμυνα (N.7.2 #4).
+ *
+ * 🔑 **Και η μετάφραση γίνεται εδώ, όχι στον κριτή**: το `identity-incomplete` αυτής
+ * της πόρτας είναι `MandateDecisionRefusal`· της άλλης είναι `MandateRequestRejection`.
+ * Ίδιο όνομα, **δύο** κλειστά σύνολα — ένας κριτής που γεννούσε άρνηση θα ανάγκαζε το
+ * ένα λεξιλόγιο να γνωρίζει το άλλο.
  */
-async function readOwnerIdentity(
+async function ownerIdentityFor(
   adminDb: AdminFirestore,
   uid: string,
 ): Promise<OwnerIdentity | Refusal> {
-  try {
-    const snapshot = await adminDb.collection(COLLECTIONS.USERS).doc(uid).get();
-    const profile = snapshot.data() as UserProfileDocument | undefined;
-    if (profile === undefined) return { kind: 'refused', reason: 'identity-incomplete' };
-
-    const vatNumber = (profile.vatNumber ?? '').trim();
-    const email = (profile.email ?? '').trim();
-    if (!isValidGreekVat(vatNumber) || email === '') {
+  const reading = await readOwnerIdentity(adminDb, uid);
+  switch (reading.kind) {
+    case 'complete':
+      return reading.identity;
+    case 'incomplete':
       return { kind: 'refused', reason: 'identity-incomplete' };
-    }
-
-    return {
-      givenName: (profile.givenName ?? '').trim(),
-      familyName: (profile.familyName ?? '').trim(),
-      email,
-      vatNumber,
-    };
-  } catch (error) {
-    logger.error('[MANDATE-ACCEPT] Η ανάγνωση της ταυτότητας απέτυχε — άγνωστο, όχι κενό', {
-      uid,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return { kind: 'unavailable' };
+    case 'unavailable':
+      return { kind: 'unavailable' };
   }
 }
 

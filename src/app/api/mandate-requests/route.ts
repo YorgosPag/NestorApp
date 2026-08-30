@@ -58,10 +58,8 @@ import {
 } from '@/lib/auth/personal-scope-middleware';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
-import {
-  submitMandateRequest,
-  type MandateRequestRejection,
-} from '@/services/mandate/mandate-request.service';
+import { submitMandateRequest } from '@/services/mandate/mandate-request.service';
+import type { MandateRequestRejection } from '@/services/mandate/mandate-request-vocabulary';
 import { LISTING_AGREEMENTS } from '@/types/listing-agreement';
 import type { MandateRequest, MandateRequestInvariant } from '@/types/mandate-request';
 

@@ -10,10 +10,8 @@
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
-import {
-  submitMandateRequest,
-  type MandateRequestDeclaration,
-} from '@/services/mandate/mandate-request.service';
+import { submitMandateRequest } from '@/services/mandate/mandate-request.service';
+import type { MandateRequestDeclaration } from '@/services/mandate/mandate-request-vocabulary';
 import { EXCLUSIVE_AGENCY, OPEN_LISTING } from '@/types/listing-agreement';
 import { brokeredMandate } from '@/lib/owner-property/__tests__/owner-property-fixtures';
 import type { ListingActor } from '@/lib/owner-property/listing-custody';
@@ -81,8 +79,30 @@ function world(overrides: {
    * μπορούσε καν να γραφτεί**.
    */
   readonly history?: readonly Partial<MandateRequestDocument>[];
+  /**
+   * 🔴 **ADR-834 §8 — Η ΤΑΥΤΟΤΗΤΑ ΤΟΥ ΑΙΤΟΥΝΤΟΣ.**
+   *
+   * ⚠️ **Πλήρης εξ ορισμού, και είναι ο ΠΑΡΟΝΟΜΑΣΤΗΣ**: χωρίς αυτήν, **κάθε** άγκυρα
+   * αυτού του αρχείου θα πρασίνιζε επειδή ο γραφέας αρνείται στο **τελευταίο** βήμα —
+   * δηλαδή τα Φ1-Φ4 θα έλεγχαν κριτές που **δεν έφτασαν ποτέ να μιλήσουν**. Κάθε
+   * δοκιμή χαλάει **ΕΝΑ** πράγμα· αυτή η γραμμή κρατά τα υπόλοιπα σωστά.
+   */
+  readonly owner?: Record<string, unknown> | null;
 } = {}): FakeFirestore {
   const fake = new FakeFirestore();
+
+  if (overrides.owner !== null) {
+    fake.seed(COLLECTIONS.USERS, UID, {
+      uid: UID,
+      givenName: 'Γεώργιος',
+      familyName: 'Παγώνης',
+      email: 'idiotis@example.com',
+      // ⚠️ Έγκυρο κατά **mod-11** — ο κριτής το επαληθεύει πραγματικά. Ένας
+      //    αυθαίρετος εννιαψήφιος θα έκανε τον παρονομαστή ψεύτικο.
+      vatNumber: '094259216',
+      ...(overrides.owner ?? {}),
+    });
+  }
 
   if (overrides.listing !== null) {
     fake.seed(COLLECTIONS.OWNER_PROPERTIES, LISTING, {
@@ -452,5 +472,56 @@ describe('Δ4 — ίδια ερώτηση δεν είναι νέα πράξη (�
     //    γραφείο Β — και το `declined-final` είναι ο αυστηρότερος δυνατός μάρτυρας:
     //    αν η εμβέλεια του ερωτήματος ήταν λάθος, **αυτό** θα το έκλεινε.
     expect((await submit(fake, TERMS)).kind).toBe('created');
+  });
+});
+
+// ============================================================================
+// Τ — Η ΤΑΥΤΟΤΗΤΑ ΤΟΥ ΑΙΤΟΥΝΤΟΣ (ADR-834 §8)
+// ============================================================================
+
+/**
+ * 🔴 **ΤΟ ΕΛΑΤΤΩΜΑ**: ο κριτής ταυτότητας έτρεχε **μόνο στην αποδοχή**, στη μεριά του
+ * ΓΡΑΦΕΙΟΥ. Αυτός ο γραφέας είχε **μηδέν** αναφορές σε ταυτότητα ⇒ ο ιδιώτης υπέβαλλε
+ * χωρίς έλεγχο και η άρνηση έσκαγε σε **άλλον άνθρωπο**, αργότερα.
+ */
+describe('Τ — ο ΕΝΑΣ κριτής ταυτότητας, στη ΣΤΙΓΜΗ που ο άνθρωπος μπορεί να διορθώσει', () => {
+  it('Τ0 🔑 ΠΑΡΟΝΟΜΑΣΤΗΣ: με πλήρη ταυτότητα, ο ΙΔΙΟΣ κόσμος γράφει κανονικά', async () => {
+    expect((await submit(world())).kind).toBe('created');
+  });
+
+  it('Τ1 🔴 ΑΝΩΝΥΜΟ ΠΡΟΦΙΛ ⇒ άρνηση ΕΔΩ, όχι στην αποδοχή — και ΚΑΜΙΑ γραφή', async () => {
+    // Ακριβώς το ζωντανό `users/WKBWEg3D…`: ΑΦΜ και email σωστά, ονόματα `null`.
+    const fake = world({ owner: { givenName: null, familyName: null } });
+
+    expect(await submit(fake)).toEqual({ kind: 'rejected', reason: 'identity-incomplete' });
+    // 🔑 Το αίτημα **δεν γεννιέται**: αλλιώς θα κάθεται στα εισερχόμενα του γραφείου
+    //    ως δουλειά που **κανείς εκεί δεν μπορεί να τελειώσει**.
+    expect(fake.all(COLLECTIONS.MANDATE_REQUESTS)).toHaveLength(0);
+  });
+
+  it('Τ2 🔴 ΧΩΡΙΣ ΑΦΜ ⇒ η ΙΔΙΑ άρνηση (μία θεραπεία, μία οθόνη, ένας κωδικός)', async () => {
+    const fake = world({ owner: { vatNumber: null } });
+    expect(await submit(fake)).toEqual({ kind: 'rejected', reason: 'identity-incomplete' });
+  });
+
+  it('Τ3 🔴 Η ΣΕΙΡΑ ΤΩΝ ΦΡΟΥΡΩΝ: ΞΕΝΗ αγγελία απαντά listing-absent, ΟΧΙ ταυτότητα', async () => {
+    // ⚠️ Ο άνθρωπος με μπαγιάτικο σύνδεσμο πρέπει να μάθει **αυτό**, όχι να σταλεί
+    //    να συμπληρώσει προφίλ για αγγελία που δεν είναι δική του.
+    const fake = world({
+      listing: { authorUserId: 'allos-anthropos' },
+      owner: { givenName: null, familyName: null },
+    });
+    expect(await submit(fake)).toEqual({ kind: 'rejected', reason: 'listing-absent' });
+  });
+
+  it('Τ4 🔑 ΙΔΕΜΠΟΤΗΣΙΑ: υπάρχον ταυτόσημο αίτημα επιστρέφεται, ΔΕΝ αρνείται', async () => {
+    // Το `unchanged` του Δ4 κρίνεται **πριν** την ταυτότητα: ο άνθρωπος που πάτησε
+    //    δεύτερη φορά έχει **ήδη** το αίτημά του — μια άρνηση εδώ θα του έλεγε ότι
+    //    απέτυχε κάτι που **πέτυχε**.
+    const fake = world({
+      history: [{ id: 'mreq_pending', status: 'pending', terms: TERMS, decidedAt: null }],
+      owner: { givenName: null, familyName: null },
+    });
+    expect((await submit(fake, TERMS)).kind).toBe('unchanged');
   });
 });
