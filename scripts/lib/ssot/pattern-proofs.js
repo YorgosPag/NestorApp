@@ -24,6 +24,30 @@
 'use strict';
 
 module.exports = {
+  // ADR-832 — «ΣΥΓΚΡΟΥΟΝΤΑΙ ΑΥΤΕΣ ΟΙ ΔΥΟ ΕΝΤΟΛΕΣ;» απαντιέται σε ΕΝΑ σημείο.
+  //
+  // 🔴 Το σήμα είναι ο **ορισμός συνάρτησης**, όχι η κλήση, και δοκιμάστηκε το αντίθετο:
+  // patterns που στόχευαν τον χειρόγραφο έλεγχο (`mandate.kind !== 'self'` ·
+  // `mandates.length > 0`) **μετρήθηκαν πριν μπουν** και έπιαναν **12 στα 13** — και τα
+  // δώδεκα ήταν **σχόλια** που αφηγούνται το ελάττωμα. Ο σαρωτής είναι grep-based και δεν
+  // ξεχωρίζει σχόλιο από κώδικα ⇒ >90% ψευδώς θετικά, πολύ πάνω από τον πήχη του ≤10%.
+  // Απορρίφθηκαν· η απαγόρευση μένει **γραμμένη** στο `description`, όπου τη διαβάζει
+  // άνθρωπος. Ένα pattern που παράγει θόρυβο δεν είναι φρουρός.
+  'mandate-conflict': {
+    shouldMatch: `// Scanner must catch a SECOND implementation of the occupancy rule:
+export function mandateConflicts(candidate, existing) {
+  return existing.some((o) => o.scope.some((k) => candidate.scope.includes(k)));
+}
+function modesCompatible(a, b) { return a === 'shared' && b === 'shared'; }
+export function lockModeFor(agreement) { return agreement === 'open' ? 'shared' : 'exclusive'; }`,
+    shouldSkip: `// Scanner must pass SSoT import + usage, and NOT trip on lookalike names:
+import { mandateConflicts } from '@/lib/mandate/mandate-conflict';
+import { lockModeFor, modesCompatible } from '@/types/listing-agreement';
+const verdict = mandateConflicts(occupancyOf(candidate), bindingMandates(existing).map(occupancyOf));
+if (modesCompatible(lockModeFor(a), lockModeFor(b))) return;
+const mandateConflictsCount = verdict.conflicts.length;
+export function mandateConflictsSummary(verdict) { return verdict.kind; }`,
+  },
   // ADR-826 — «έλυσε η αρχική ταυτότητα;» απαντιέται σε ΕΝΑ σημείο. Η απόδειξη εκτελείται
   // στη ΜΗΧΑΝΗ ΤΗΣ ΠΥΛΗΣ: pattern με 0 ευρήματα είναι *καθαρό* ή *νεκρό*, και μόνο ένα
   // παράδειγμα που όντως πιάνεται τα ξεχωρίζει (N.12, αδρανείς φρουροί).

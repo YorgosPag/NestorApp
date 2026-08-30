@@ -5541,6 +5541,22 @@
         "src/services/ai-pipeline/tools/esco-search-utils.ts"
       ],
       "tier": 3
+    },
+    "mandate-conflict": {
+      "addedDate": "2026-08-30",
+      "ssotFile": "src/lib/mandate/mandate-conflict.ts",
+      "description": "ADR-832 — «ΣΥΓΚΡΟΥΟΝΤΑΙ ΑΥΤΕΣ ΟΙ ΔΥΟ ΕΝΤΟΛΕΣ;» απαντιέται σε ΕΝΑ σημείο: `mandateConflicts` (κανόνας) + `lockModeFor`/`modesCompatible` (λεξιλόγιο τρόπου, types/listing-agreement.ts) + `intervalsOverlap` (τελεστής χρόνου, lib/date-local.ts). Ο κανόνας είναι `ίδιος πόρος ∧ επικάλυψη χρόνου ∧ ασύμβατοι τρόποι` — το EXCLUDE USING GIST της PostgreSQL με τρίτο σκέλος τον πίνακα shared/exclusive. ΑΠΑΓΟΡΕΥΕΤΑΙ δεύτερη υλοποίηση: (α) χειρόγραφος έλεγχος «έχει ήδη εντολή;» πάνω στο μοντέλο (`mandate.kind !== 'self'`, `mandates.length > 0`, `mandates.length !== 0`) — ΑΥΤΟ ΑΚΡΙΒΩΣ ήταν το ελάττωμα: έκρινε ΤΡΙΑ ΣΤΑ ΤΕΣΣΕΡΑ σενάρια λάθος (απλή εντολή σε δεύτερο γραφείο · αποκλειστική πώλησης vs εντολή εκμίσθωσης · διαδοχικές εντολές), επειδή δεν ρωτούσε ΤΟ ΕΙΔΟΣ· (β) χειρόγραφος έλεγχος επικάλυψης διαστημάτων (`startsAt < other.expiresAt && …`) — ο τελεστής είναι το `intervalsOverlap`, που επιστρέφει `null` (όχι `false`) σε μη αναγνώσιμο άκρο· (γ) δεύτερος πίνακας συμβατότητας τρόπων. 🔴 ΓΙΑΤΙ: ο ίδιος κριτής τρέχει σε ΤΕΣΣΕΡΑ σημεία (υποβολή αιτήματος · αποδοχή μέσα σε συναλλαγή · `setOwnerPropertyMandate` · η ΟΘΟΝΗ, μέσω `mandate-occupancy-notice`). Δεύτερος κανόνας θα σήμαινε οθόνη που ΔΙΑΦΩΝΕΙ με τον διακομιστή — ο άνθρωπος βλέπει «εντάξει» και εισπράττει «όχι». ⛔ Ο ΧΡΟΝΙΚΟΣ ΦΙΛΤΡΑΡΙΣΜΑΤΟΣ ΑΝΗΚΕΙ ΣΤΟΝ ΚΡΙΤΗ: οι καλούντες περνούν `bindingMandates`, ΠΟΤΕ `activeMandates` — το χρονικό φίλτρο έκρυβε τις χαλασμένες εντολές πριν φτάσουν στον κριτή («άγνωστο» γινόταν «καθαρό», N.12) και ήταν διπλός έλεγχος. ⛔ ΤΟ `mandatesExpireAt` ΕΙΝΑΙ ΕΥΡΕΤΗΡΙΟ, ΠΟΤΕ ΚΡΙΤΗΣ: «έληξε;» το απαντά το `isMandateExpired` πάνω στην ίδια την εντολή.",
+      "forbiddenPatterns": [
+        "function\\s+mandateConflicts\\s*\\(",
+        "function\\s+modesCompatible\\s*\\(",
+        "function\\s+lockModeFor\\s*\\("
+      ],
+      "allowlist": [
+        "src/lib/mandate/mandate-conflict.ts",
+        "src/lib/mandate/mandate-occupancy-notice.ts",
+        "src/types/listing-agreement.ts",
+        "src/types/owner-property-mandate.ts"
+      ]
     }
   }
 }
