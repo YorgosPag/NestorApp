@@ -43,8 +43,8 @@ import {
 import { indicatorProbeBasis } from './table-indicator-probe-basis';
 // 🔴 ADR-833 Φάση 3 — η καρτέλα φύλλου: **έβδομο κανάλι** της ίδιας σάρωσης, με τον ίδιο δρόμο
 // που ρωτά και ο ζωγράφος. Δικό της module (N.7.1) — δες την κεφαλίδα εκείνου.
-import { tableWorksheetTabAtWorld } from './table-worksheet-tab-probe';
-import type { TableWorksheetTabSlot } from '../../bim/table/table-worksheet-tabs-geometry';
+import { tableWorksheetStripAtWorld } from './table-worksheet-tab-probe';
+import type { TableWorksheetStripHit } from '../../bim/table/table-worksheet-tabs-geometry';
 // 🔴 ADR-739 §43 — το κουμπί «επιλογή όλων» της γωνίας: **μία** ερώτηση περιοχής, κοινή με τον
 // ρόλο δείκτη και τον ζωγράφο.
 import { isTableSelectAllCornerAtFrame } from '../../bim/table/table-select-all-corner';
@@ -166,8 +166,12 @@ export function tablePointerHitAtWorld(
   // **παραίτηση**: όταν κάποτε ακουμπήσουν, νικά η λαβή. Η λαβή είναι **δομική** πράξη και δεν
   // έχει δεύτερο δρόμο· η καρτέλα είναι **πλοήγηση** και έχει (η διπλανή της, ή το επόμενο
   // κλικ). Ίδιο κριτήριο με το §27.11: σε αμφισβήτηση νικά αυτός που δεν έχει εναλλακτική.
-  const tab = tableWorksheetTabAtWorld(entity, world, geometry, viewScale);
-  if (tab) return { where: 'worksheet-tab', tab };
+  const strip = tableWorksheetStripAtWorld(entity, world, geometry, viewScale);
+  if (strip) {
+    // ADR-833 Φάση 4 — η λωρίδα απαντά **μία** φορά για δύο πράγματα· εδώ μόνο μεταφράζεται σε
+    // λεξιλόγιο του χάρτη χτυπημάτων. Καμία δεύτερη σάρωση, καμία δεύτερη σειρά προτεραιότητας.
+    return strip.kind === 'tab' ? { where: 'worksheet-tab', tab: strip.tab } : { where: 'worksheet-add' };
+  }
   const cell = tableCellAtWorld(entity, world, geometry);
   return cell ? { where: 'cell', cell } : null;
 }
@@ -364,9 +368,9 @@ export function tableIndicatorProbeAtWorld(
   // πίνακας είναι απλώς **επιλεγμένος**, χωρίς να μπεις μέσα του. Ο ίδιος κανόνας ανακάλυψης
   // που έβγαλε το ⊕ έξω από τον δρομέα (§40): ένα χειριστήριο που φαίνεται μόνο αφού μπεις
   // στη λειτουργία το βρίσκει μόνο όποιος ήδη ξέρει ότι υπάρχει.
-  const worksheetTab = tableWorksheetTabAtWorld(entity, world, geometry, viewScale);
+  const worksheetStrip = tableWorksheetStripAtWorld(entity, world, geometry, viewScale);
   return {
-    worksheetTab,
+    worksheetStrip,
     // §40 — σε απλή επιλογή δεν υπάρχουν ζώνες να φωτιστούν. Ο φύλακας ζει εδώ και όχι στον
     // καλούντα, ώστε ένας δεύτερος καταναλωτής αύριο να μην μπορεί να τον ξεχάσει.
     hit:
@@ -384,10 +388,11 @@ export function tableIndicatorProbeAtWorld(
       remove,
       fill,
       badge,
-      // 🔴 ADR-833 Φάση 3 — **έβδομο όρισμα, ήδη απαντημένο.** Ο ρόλος δείκτη πρέπει να δει την
-      // καρτέλα, αλλιώς πάνω της μένει το σταυρόνημα — δηλαδή ο δείκτης υπόσχεται λάσο σε
+      // 🔴 ADR-833 Φάσεις 3+4 — **έβδομο όρισμα, ήδη απαντημένο.** Ο ρόλος δείκτη πρέπει να δει
+      // τη λωρίδα, αλλιώς πάνω της μένει το σταυρόνημα — δηλαδή ο δείκτης υπόσχεται λάσο σε
       // pixel που το πάτημα καταναλώνει (§31). Σκέτο `boolean`: δες τη δήλωση της παραμέτρου.
-      worksheetTab !== null,
+      // **Καρτέλα και ⊕ μαζί**: και τα δύο είναι κουμπιά, και ο δείκτης δεν τα ξεχωρίζει.
+      worksheetStrip !== null,
     ),
     insert,
     remove,
@@ -423,7 +428,8 @@ export interface TableIndicatorProbe {
    */
   readonly selectAll: boolean;
   /**
-   * 🔴 ADR-833 Φάση 3 — ποια **καρτέλα φύλλου** είναι κάτω από το χέρι· `null` = καμία.
+   * 🔴 ADR-833 Φάσεις 3+4 — τι της **λωρίδας φύλλων** είναι κάτω από το χέρι: καρτέλα, το ⊕,
+   * ή `null` = τίποτα.
    *
    * Κουβαλά ολόκληρο το `slot` (θέση στο βιβλίο + το ίδιο το φύλλο) και όχι σκέτη ταυτότητα:
    * ο ένας καταναλωτής το γράφει στον hover, ο άλλος το εκτελεί στο πάτημα, και **κανείς από
@@ -431,7 +437,7 @@ export interface TableIndicatorProbe {
    * στην κίνηση και το πάτημα μπορεί να απαντήσει αλλιώς (άλλαξε το zoom, το παράθυρο
    * υπερχείλισης μετακινήθηκε), δηλαδή ο χρήστης θα άλλαζε σε φύλλο που δεν στόχευσε.
    */
-  readonly worksheetTab: TableWorksheetTabSlot | null;
+  readonly worksheetStrip: TableWorksheetStripHit | null;
 }
 
 /**
@@ -445,7 +451,7 @@ const EMPTY_PROBE: TableIndicatorProbe = {
   insert: null,
   remove: null,
   selectAll: false,
-  worksheetTab: null,
+  worksheetStrip: null,
 };
 
 /** Σε ποια υποδιαίρεση ζώνης έπεσε το συμβάν· `null` όταν ο δείκτης δεν ζωγραφίζεται καν (LOD). */

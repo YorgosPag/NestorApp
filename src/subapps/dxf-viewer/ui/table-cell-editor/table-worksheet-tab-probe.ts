@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * ADR-833 Φάση 3 — **ΠΟΙΑ ΚΑΡΤΕΛΑ ΦΥΛΛΟΥ ΕΙΝΑΙ ΚΑΤΩ ΑΠΟ ΤΟ ΣΗΜΕΙΟ;**
+ * ADR-833 Φάσεις 3+4 — **ΤΙ ΤΗΣ ΛΩΡΙΔΑΣ ΦΥΛΛΩΝ ΕΙΝΑΙ ΚΑΤΩ ΑΠΟ ΤΟ ΣΗΜΕΙΟ;** (καρτέλα ή ⊕)
  *
  * Δικό του module και όχι άλλη μια ιδιωτική συνάρτηση μέσα στο `table-cell-pointer-hit.ts`,
  * για δύο ανεξάρτητους λόγους — και ο πρώτος είναι ο πεζός:
@@ -17,8 +17,8 @@
  *     δείκτης φωτίζει καρτέλα που δεν ζωγραφίστηκε ποτέ.
  *
  * 🔑 **ΔΕΝ ξαναγράφει γεωμετρία.** Δανείζεται τη βάση ({@link indicatorProbeBasis} — μία
- * απάντηση για το LOD, κοινή με κάθε άλλη ερώτηση δείκτη) και ρωτά τον **ίδιο** πίνακα
- * `TableWorksheetTabSlot[]` που καταναλώνει ο ζωγράφος. Ό,τι πατιέται είναι ό,τι φαίνεται —
+ * απάντηση για το LOD, κοινή με κάθε άλλη ερώτηση δείκτη) και ρωτά την **ίδια** λωρίδα
+ * (`TableWorksheetStrip`) που καταναλώνει ο ζωγράφος. Ό,τι πατιέται είναι ό,τι φαίνεται —
  * δομικά, όχι κατά σύμβαση.
  *
  * @module subapps/dxf-viewer/ui/table-cell-editor/table-worksheet-tab-probe
@@ -30,40 +30,40 @@
 import { indicatorProbeBasis } from './table-indicator-probe-basis';
 import { resolveWorksheetFields } from '../../bim/table/table-worksheet-resolve';
 import {
-  tableWorksheetTabAtFrame,
-  tableWorksheetTabLayout,
-  type TableWorksheetTabSlot,
+  tableWorksheetStripAtFrame,
+  tableWorksheetTabStrip,
+  type TableWorksheetStripHit,
 } from '../../bim/table/table-worksheet-tabs-geometry';
 import type { Point2D } from '../../rendering/types/Types';
 import type { TableEntity, TableEntityGeometry } from '../../types/table-entity';
 
 /**
- * Η καρτέλα κάτω από το σημείο, ή `null` — κάτω από το LOD, έξω από τη λωρίδα, ή σε πίνακα
- * που δεν έχει λωρίδα καθόλου (ένα φύλλο, ή πολύ στενός).
+ * Τι είναι κάτω από το σημείο **μέσα στη λωρίδα** — καρτέλα, το ⊕, ή `null` (κάτω από το LOD,
+ * έξω από τη λωρίδα, ή σε πίνακα που δεν έχει λωρίδα καθόλου).
  *
  * ⚠️ Η γεωμετρία έρχεται ως όρισμα και **δεν** υπολογίζεται εδώ: και οι δύο καλούντες την
  * έχουν ήδη υπολογίσει μία φορά για ολόκληρη τη σάρωσή τους. Ένα `computeTableEntityGeometryLive`
  * εδώ θα ήταν δεύτερος υπολογισμός διάταξης **ανά κίνηση ποντικιού** — ακριβώς το κόστος που
  * ο χάρτης χτυπημάτων απέφυγε ρητά όταν εξήγαγε τη βάση του.
  */
-export function tableWorksheetTabAtWorld(
+export function tableWorksheetStripAtWorld(
   entity: TableEntity,
   world: Point2D,
   geometry: TableEntityGeometry,
   viewScale: number,
-): TableWorksheetTabSlot | null {
+): TableWorksheetStripHit | null {
   const probe = indicatorProbeBasis(entity, world, geometry, viewScale);
   if (!probe) return null;
   // 🔴 Η ΜΙΑ ΠΥΛΗ των φύλλων, ποτέ ωμό `entity.worksheets`: μια οντότητα της παλιάς μορφής δεν
   // έχει κανένα από τα δύο πεδία, και η ωμή ανάγνωση θα έδινε «μηδέν φύλλα» — δηλαδή λωρίδα
   // ζωγραφισμένη (ο ζωγράφος ρωτά σωστά) και **απίαστη**. Ακριβώς το σχήμα του §40.8.
   const { worksheets, activeWorksheetId } = resolveWorksheetFields(entity);
-  const slots = tableWorksheetTabLayout(
+  const strip = tableWorksheetTabStrip(
     worksheets,
     activeWorksheetId,
     geometry.layout.widthMm,
     geometry.layout.heightMm,
     probe.pxPerMm,
   );
-  return tableWorksheetTabAtFrame(slots, probe.frame);
+  return tableWorksheetStripAtFrame(strip, probe.frame);
 }

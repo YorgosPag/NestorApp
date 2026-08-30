@@ -76,7 +76,16 @@ export type TableIndicatorHoverTarget =
    * ⚠️ Κουβαλά **ταυτότητα φύλλου**, όχι θέση στη λωρίδα: η λωρίδα κυλά (παράγωγο παράθυρο
    * υπερχείλισης), άρα η θέση δεν είναι σταθερή ανάμεσα σε δύο καρέ — ενώ το φύλλο είναι.
    */
-  | { readonly kind: 'worksheet-tab'; readonly worksheetId: TableWorksheetId };
+  | { readonly kind: 'worksheet-tab'; readonly worksheetId: TableWorksheetId }
+  /**
+   * 🔴 ADR-833 Φάση 4 — **το ⊕ της προσθήκης φύλλου**, στο τέλος της ίδιας λωρίδας.
+   *
+   * **Χωρίς φορτίο**, όπως η γωνία «επιλογή όλων» και για τον ίδιο ακριβώς λόγο: το ⊕ είναι
+   * **ένα** ανά πίνακα και δεν έχει ούτε ταυτότητα (ποιο;) ούτε φάση (πατιέται;) — το `entityId`
+   * του καλούντος αρκεί για να ξεχωρίσει δύο πίνακες στην ίδια σκηνή. Ένα πεδίο εδώ θα ήταν
+   * σχήμα που υπόσχεται διακρίσεις οι οποίες δεν υπάρχουν.
+   */
+  | { readonly kind: 'worksheet-add' };
 
 /** Το κομμάτι του δείκτη κάτω από το ποντίκι, μαζί με τον πίνακα στον οποίο ανήκει. */
 export interface TableIndicatorHoverState {
@@ -105,6 +114,8 @@ function targetIdOf(target: TableIndicatorHoverTarget): string {
   // ADR-833 Φ3 — πρόθεμα, για τον ίδιο λόγο με τα `col:`/`row:`: ένα `ws0` δεν επιτρέπεται να
   // συγκριθεί ίσο με στήλη που τυχαίνει να λέγεται το ίδιο.
   if (target.kind === 'worksheet-tab') return `ws:${target.worksheetId}`;
+  // ADR-833 Φ4 — σταθερή ταυτότητα, όπως το `select-all`: το ⊕ είναι ένα ανά πίνακα.
+  if (target.kind === 'worksheet-add') return 'ws-add';
   return target.hit.axis === 'column' ? `col:${target.hit.colId}` : `row:${target.hit.rowId}`;
 }
 
