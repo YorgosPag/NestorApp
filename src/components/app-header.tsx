@@ -11,10 +11,7 @@ import { HelpButton } from "@/components/header/help-button"
 import { VoiceAssistantButton } from "@/components/header/voice-assistant-button"
 import { CompanySwitcher } from "@/components/header/CompanySwitcher"
 import { JobSwitch } from "@/components/header/JobSwitch"
-import { NotificationBell } from "@/components/NotificationBell.enterprise"
-import { useFirestoreNotifications } from "@/hooks/useFirestoreNotifications"
 import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors"
-import { useAuth } from "@/auth/contexts/AuthContext"
 import { useTranslation } from "@/i18n/hooks/useTranslation"
 import { cn } from "@/lib/utils"
 import { TRANSITION_PRESETS, HOVER_BACKGROUND_EFFECTS } from "@/components/ui/effects"
@@ -31,19 +28,11 @@ const GlobalSearchDialog = dynamic(
 )
 
 export function AppHeader() {
-  // 🔐 Get authenticated user
-  const { user } = useAuth();
   const { t } = useTranslation(COMMON_NAMESPACES);
 
   // 🔍 Global Search Dialog state
   const [searchOpen, setSearchOpen] = React.useState(false);
 
-  // ✅ FIRESTORE: Real-time notifications με onSnapshot
-  // 🏢 ENTERPRISE: Uses authenticated user ID, disabled when not logged in
-  useFirestoreNotifications({
-    userId: user?.uid ?? '',
-    enabled: Boolean(user?.uid)
-  });
 
   // 🌉 BRIDGE: Semantic colors
   const colors = useSemanticColors();
@@ -102,8 +91,6 @@ export function AppHeader() {
           <JobSwitch />
           <CompanySwitcher />
           <Separator orientation="vertical" className="h-6 hidden sm:block" />
-          <NotificationBell />
-          <Separator orientation="vertical" className="h-6 hidden sm:block" />
           <VoiceAssistantButton />
           <Separator orientation="vertical" className="h-6 hidden sm:block" />
           <HelpButton />
@@ -116,9 +103,23 @@ export function AppHeader() {
             έδινε δύο από τις τρεις, και ΚΑΝΕΙΣ δεν τις έδινε στο (light)/(me).
 
             ⚠️ Ό,τι ΜΕΝΕΙ εδώ πάνω είναι σκόπιμα ΜΗ καθολικό: το `JobSwitch` και
-            ο `CompanySwitcher` προϋποθέτουν οργανισμό· ο `NotificationBell`,
-            ο `VoiceAssistantButton` και το `HelpButton` είναι χαρακτηριστικά
-            ΤΗΣ ΕΦΑΡΜΟΓΗΣ, όχι υποσχέσεις του κελύφους.
+            ο `CompanySwitcher` προϋποθέτουν οργανισμό· ο `VoiceAssistantButton`
+            και το `HelpButton` είναι χαρακτηριστικά ΤΗΣ ΕΦΑΡΜΟΓΗΣ, όχι
+            υποσχέσεις του κελύφους.
+
+            🔴 Ο `NotificationBell` ΕΦΥΓΕ ΑΠΟ ΕΔΩ (ADR-834 §2.5α, 2026-08-30).
+            Αυτή η ίδια παράγραφος τον απαριθμούσε ως «χαρακτηριστικό ΤΗΣ
+            ΕΦΑΡΜΟΓΗΣ» — και ήταν ΓΡΑΜΜΕΝΗ ΑΠΟΦΑΣΗ, δηλαδή χειρότερη από
+            παράλειψη: ο επόμενος θα τη σεβόταν. Μετρήθηκε ψευδής σε ΠΕΝΤΕ
+            κρίκους, όλους ΤΑΥΤΟΤΗΤΑΣ και όχι χώρου — ο κανόνας Firestore ρωτά
+            `userId == auth.uid` (γρ. 1430), το `tenant-config.ts:40` δηλώνει
+            `mode: userId`, και το `useFirestoreNotifications` χειρίζεται ΡΗΤΑ
+            την απουσία εταιρείας. Ο ιδιώτης έπαιρνε «το γραφείο απάντησε» και
+            ΚΑΜΙΑ οθόνη του δεν το απέδιδε.
+
+            ⚠️ Και η ΣΥΝΔΡΟΜΗ έφυγε μαζί του. Ζούσε εδώ ενώ το καμπανάκι ζούσε
+            αλλού — ΔΥΟ αρχεία για ΕΝΑ γεγονός, και ακριβώς αυτό έκανε τη βλάβη
+            δυνατή. Πλέον «υπάρχει καμπανάκι» ⟺ «τρέχει συνδρομή», δομικά.
 
             ⚠️ ΚΑΜΙΑ αλλαγή στη σειρά γλώσσα → θέμα → λογαριασμός: το WCAG 2.2
             SC 3.2.3 (AA) απαιτεί «the same relative order each time». Η σειρά

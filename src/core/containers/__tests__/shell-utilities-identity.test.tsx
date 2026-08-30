@@ -28,6 +28,15 @@ import { ShellUtilities } from '@/core/containers/ShellUtilities';
 
 let currentUser: { uid: string; email: string; displayName: string | null; photoURL: string | null } | null = null;
 
+// ⚠️ Η ΣΥΝΔΡΟΜΗ, ΟΧΙ Η ΔΥΝΑΤΟΤΗΤΑ (ADR-834): το καμπανάκι κατέχει πλέον το
+//    `useFirestoreNotifications`, που ανοίγει `onSnapshot` στο Firestore. Αυτή η
+//    άγκυρα κρίνει ΤΗ ΓΩΝΙΑ ΤΗΣ ΤΑΥΤΟΤΗΤΑΣ — ποιος βλέπει τι — και το mock αφορά
+//    ΜΟΝΟ τον αγωγό δεδομένων. ⛔ ΜΗΝ κάνεις mock το ΙΔΙΟ ΤΟ ΚΑΜΠΑΝΑΚΙ: θα έκρυβε
+//    ακριβώς αυτό που το Κ4/Κ4β μετρούν.
+jest.mock('@/hooks/useFirestoreNotifications', () => ({
+  useFirestoreNotifications: () => undefined,
+}));
+
 jest.mock('@/auth', () => ({
   useAuth: () => ({ user: currentUser, signOut: jest.fn() }),
 }));
@@ -106,7 +115,7 @@ describe('ADR-809 — η γωνία της ταυτότητας', () => {
     expect(screen.queryByText('userMenu.menuLabel')).not.toBeInTheDocument();
   });
 
-  test('Κ4 — οι ΤΡΕΙΣ δυνατότητες, με ΣΤΑΘΕΡΗ ΣΕΙΡΑ (το μόνο που απαιτεί το WCAG)', () => {
+  test('Κ4 — οι ΤΕΣΣΕΡΙΣ δυνατότητες, με ΣΤΑΘΕΡΗ ΣΕΙΡΑ (το μόνο που απαιτεί το WCAG)', () => {
     // 🔑 Το **SC 3.2.3** (AA) απαιτεί «the same relative order each time» — και
     // αυτό είναι **ΟΛΟ** όσο δίνει το πρότυπο (το SC 3.2.6 λέει ρητά ότι η
     // **απουσία** δεν είναι παραβίαση). Άρα η σειρά είναι το μόνο που αξίζει
@@ -117,17 +126,42 @@ describe('ADR-809 — η γωνία της ταυτότητας', () => {
     currentUser = SIGNED_IN;
     const { container } = render(<ShellUtilities />);
 
+    // ⚠️ ΚΑΙ `aria-label`, ΟΧΙ ΜΟΝΟ `textContent` (ADR-834): το καμπανάκι είναι
+    //    εικονίδιο — το ΠΡΟΣΒΑΣΙΜΟ όνομά του ζει στο `aria-label`. Συλλέκτης μόνο
+    //    κειμένου θα το έβλεπε ΚΕΝΟ, και η άγκυρα θα ήταν πράσινη πάνω σε
+    //    δυνατότητα που λείπει: «0 = κανείς δεν κοίταξε», μέσα στην ίδια την άγκυρα.
     const labels = [...container.querySelectorAll('button')]
-      .map((b) => b.textContent ?? '')
+      .map((b) => `${b.getAttribute('aria-label') ?? ''} ${b.textContent ?? ''}`)
       .join('\u0000');
     const at = (needle: string) => labels.indexOf(needle);
 
     expect(at('header.changeLanguage')).toBeGreaterThan(-1);
     expect(at('theme.toggle')).toBeGreaterThan(-1);
+    // 🔴 Η ΤΕΤΑΡΤΗ (ADR-834 §6 Φάση Α) — ο ιδιώτης έπαιρνε ειδοποιήσεις που
+    //    ΚΑΜΙΑ οθόνη του δεν απέδιδε, γιατί το καμπανάκι ζούσε μόνο στο `(app)`.
+    expect(at('notifications.title')).toBeGreaterThan(-1);
     expect(at('userMenu.menuLabel')).toBeGreaterThan(-1);
-    // γλώσσα → θέμα → λογαριασμός
+    // γλώσσα → θέμα → ειδοποιήσεις → λογαριασμός
     expect(at('header.changeLanguage')).toBeLessThan(at('theme.toggle'));
-    expect(at('theme.toggle')).toBeLessThan(at('userMenu.menuLabel'));
+    expect(at('theme.toggle')).toBeLessThan(at('notifications.title'));
+    expect(at('notifications.title')).toBeLessThan(at('userMenu.menuLabel'));
+  });
+
+  /**
+   * 🔴 ADR-834 — ΤΟ ΚΑΜΠΑΝΑΚΙ ΑΚΟΛΟΥΘΕΙ ΤΗΝ ΤΑΥΤΟΤΗΤΑ, ΟΠΩΣ ΤΟ `UserMenu`.
+   *
+   * Χωρίς αυτό, το Κ4 θα ήταν ικανοποιημένο και από καμπανάκι που αποδίδεται
+   * **στον ανώνυμο** — δηλαδή από υπόσχεση ειδοποιήσεων σε άνθρωπο που δεν έχει
+   * καμία. Ίδιος λόγος με τα Κ1/Κ2, για τη **δεύτερη** δυνατότητα που κρίνει
+   * ταυτότητα.
+   */
+  test('Κ4β — ο ανώνυμος ΔΕΝ βλέπει καμπανάκι (η δυνατότητα ακολουθεί την ταυτότητα)', () => {
+    currentUser = ANONYMOUS;
+    const { container } = render(<ShellUtilities signedOutAction={door} />);
+    const seen = [...container.querySelectorAll('button')]
+      .map((b) => b.getAttribute('aria-label') ?? '')
+      .join('\u0000');
+    expect(seen).not.toContain('notifications.title');
   });
 
   test('Κ5 — ΧΩΡΙΣ δηλωμένη πόρτα, ο ανώνυμος δεν παίρνει τίποτα στη θέση της', () => {

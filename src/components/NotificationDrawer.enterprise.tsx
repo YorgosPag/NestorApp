@@ -4,7 +4,7 @@
 'use client';
 
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
-import { create } from 'zustand';
+import { useNotificationDrawer } from '@/stores/notificationDrawer';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useRouter } from '@/lib/workspace/navigation';
@@ -29,13 +29,10 @@ import '@/lib/design-system';
 
 const logger = createModuleLogger('NotificationDrawer');
 
-type DrawerState = { isOpen: boolean; open: () => void; close: () => void; };
-
-export const useNotificationDrawer = create<DrawerState>(set => ({
-  isOpen: false,
-  open: () => set({ isOpen: true }),
-  close: () => set({ isOpen: false })
-}));
+// 🔑 Ο ΔΙΑΚΟΠΤΗΣ ΖΕΙ ΣΤΟ `stores/notificationDrawer` (ADR-834). Ήταν εδώ, και
+//    όποιος ήθελε μόνο να ΑΝΟΙΞΕΙ το συρτάρι φόρτωνε ΟΛΟΚΛΗΡΟ αυτό το αρχείο —
+//    μαζί με `useAuth` → `AuthContext` → firebase/auth. Το μέτρησε άγκυρα που
+//    κοκκίνισε (`shell-utilities-identity.test.tsx`), όχι ανάγνωση.
 
 const iconMap: Record<Severity, React.ComponentType<{ className?: string }>> = {
   success: CheckCircle,

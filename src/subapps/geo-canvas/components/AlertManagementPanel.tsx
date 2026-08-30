@@ -24,7 +24,7 @@ import type { Alert, RuleContext, RuleEvaluationResult } from '@geo-alert/core/a
 
 
 // Existing UI Patterns
-import { useNotificationDrawer } from '@/components/NotificationDrawer.enterprise';
+import { useNotificationDrawer } from '@/stores/notificationDrawer';
 
 // Integration Bridge
 import { useAlertNotifications } from '../integrations/AlertNotificationBridge';

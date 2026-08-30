@@ -81,6 +81,7 @@ import React from 'react';
 
 import { LanguageSwitcher } from '@/components/header/language-switcher';
 import { ThemeToggle } from '@/components/header/theme-toggle';
+import { NotificationBell } from '@/components/NotificationBell.enterprise';
 import { UserMenu } from '@/components/header/user-menu';
 
 /**
@@ -114,6 +115,34 @@ export function ShellUtilities({
       */}
       <LanguageSwitcher />
       <ThemeToggle />
+      {/*
+        🔴 **Η ΤΕΤΑΡΤΗ ΚΑΘΟΛΙΚΗ ΔΥΝΑΤΟΤΗΤΑ** (ADR-834 §6 Φάση Α).
+
+        Ήταν στο `app-header.tsx`, με **γραμμένη** δικαιολόγηση ότι είναι
+        *«χαρακτηριστικό ΤΗΣ ΕΦΑΡΜΟΓΗΣ, όχι υπόσχεση του κελύφους»*. Μετρήθηκε
+        **ψευδής**: ο αγωγός ειδοποιήσεων είναι **ταυτότητας**, όχι χώρου — ο
+        κανόνας Firestore ρωτά `userId == auth.uid`, το `tenant-config.ts:40`
+        δηλώνει `mode: 'userId'`, και το `useFirestoreNotifications` χειρίζεται
+        **ρητά** την απουσία εταιρείας. Ο ιδιώτης έπαιρνε ειδοποίηση που **καμία
+        οθόνη του δεν απέδιδε** (ADR-834 §2.5α).
+
+        ⚠️ **Η ΣΕΙΡΑ ΤΩΝ ΤΡΙΩΝ ΔΕΝ ΑΛΛΑΞΕ** — γλώσσα → θέμα → λογαριασμός. Το
+        καμπανάκι μπαίνει **δίπλα στον λογαριασμό**, όπου το βάζουν και οι
+        μεγάλοι (GitHub · Atlassian · Carbon), και όπου ζει η **ταυτότητα**.
+        Το SC 3.2.3 φυλά τη **σχετική** σειρά· η ένθεση την αφήνει ανέπαφη.
+
+        🔑 **Το φύλλο αυτοκρύβεται** (`if (!user) return null`), όπως το
+        `UserMenu`. ⛔ **ΜΗΝ** βάλεις εδώ `useAuth()` — δεύτερη απάντηση στο
+        «υπάρχει άνθρωπος;», που το `.shell-utilities.json` απαγορεύει ονομαστικά.
+
+        ⚠️ **Ο drawer ΔΕΝ είναι εδώ, και είναι απόφαση**: αυτό το αρχείο δηλώνει
+        ότι **δεν αποδίδει landmark**, ενώ ο drawer είναι overlay ολόκληρης της
+        σελίδας με `position: fixed`. Μια κεφαλίδα με `backdrop-filter` γεννά
+        **containing block** και θα τον **ακινητοποιούσε μέσα της**. Ζει στο
+        ριζικό `layout.tsx` — **μία** ένθεση, **πέντε** κόσμοι, μηδέν DOM όσο
+        είναι κλειστός (`if (!isOpen) return null`).
+      */}
+      <NotificationBell />
       {/*
         🔑 **Ο λογαριασμός Ή η πόρτα του ανωνύμου — ΠΟΤΕ ΚΑΙ ΤΑ ΔΥΟ, και ο
         διαχωρισμός γίνεται ΜΕΣΑ στο `UserMenu`.**

@@ -64,7 +64,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "31bfa5535d0c79a5289e8a6d15edd6242b2d6c18065685109e35ed1a3e16c81d",
+  "inputsSha256": "2979d6103cfcc2afb3f9e61b72af9d3c1b60acbbab09a74fd5ea6396e80201b9",
   "languages": [
     "el"
   ],
@@ -623,6 +623,7 @@
         "common": {
           "keys": [
             "header.changeLanguage",
+            "notifications.title",
             "theme.dark",
             "theme.light",
             "theme.system",
@@ -642,6 +643,7 @@
         "common-account": {
           "keys": [
             "header.changeLanguage",
+            "notifications.title",
             "theme.dark",
             "theme.light",
             "theme.system",
@@ -665,6 +667,7 @@
         "common-actions": {
           "keys": [
             "header.changeLanguage",
+            "notifications.title",
             "theme.dark",
             "theme.light",
             "theme.system",
@@ -684,6 +687,7 @@
         "common-empty-states": {
           "keys": [
             "header.changeLanguage",
+            "notifications.title",
             "theme.dark",
             "theme.light",
             "theme.system",
@@ -703,6 +707,7 @@
         "common-navigation": {
           "keys": [
             "header.changeLanguage",
+            "notifications.title",
             "theme.dark",
             "theme.light",
             "theme.system",
@@ -722,6 +727,7 @@
         "common-photos": {
           "keys": [
             "header.changeLanguage",
+            "notifications.title",
             "theme.dark",
             "theme.light",
             "theme.system",
@@ -741,6 +747,7 @@
         "common-sales": {
           "keys": [
             "header.changeLanguage",
+            "notifications.title",
             "theme.dark",
             "theme.light",
             "theme.system",
@@ -760,6 +767,7 @@
         "common-shared": {
           "keys": [
             "header.changeLanguage",
+            "notifications.title",
             "theme.dark",
             "theme.light",
             "theme.system",
@@ -779,6 +787,7 @@
         "common-status": {
           "keys": [
             "header.changeLanguage",
+            "notifications.title",
             "theme.dark",
             "theme.light",
             "theme.system",
@@ -798,6 +807,7 @@
         "common-validation": {
           "keys": [
             "header.changeLanguage",
+            "notifications.title",
             "theme.dark",
             "theme.light",
             "theme.system",
@@ -2550,7 +2560,7 @@
   "shellFiles": {
     "src/api/notificationClient.ts": "048d34aa4acec745ae14aa31a61c903866077d4d9a46ab8a90629d340aea38a0",
     "src/app/(app)/admin/layout.tsx": "f32631e240f9572a87fbaad86622e2730dada7877d258dfdebb340eada2c2516",
-    "src/app/(app)/layout.tsx": "8afaa21730076901c47acd559c4864e339d372eaedde4069e77fe78a134d287a",
+    "src/app/(app)/layout.tsx": "e14bcbd03ded08f7d1d62a955433f8925860143ab59efbf46f85c3a441be12b3",
     "src/app/(app)/o/[workspace]/account/layout.tsx": "92a9a69d8282018214a0a85bc89098299187e467f306b16a0362f93b5835d325",
     "src/app/(app)/o/[workspace]/dxf/viewer/layout.tsx": "5d8006221c9a546e995faff3a451269dd788fb8feb4a320e620d2790aa41aabc",
     "src/app/(app)/o/[workspace]/layout.tsx": "714fcc4772120dce207200fa220a85026b9b26426977d93729b1262c3130a9fc",
@@ -2561,7 +2571,7 @@
     "src/app/(light)/layout.tsx": "1426d0f8c95c31fbff7fbcc5c3db492adc4d9393dce082febda32e44a6aa62eb",
     "src/app/(light)/page.tsx": "5c172b3fe1ab0a4e69b4b635dbe8a4ff96f057cdb6a893599eae948a37a18a0c",
     "src/app/(me)/layout.tsx": "cf1eabbc3afc6f0b57cde6075635d8e58d54b4b0e8fe49645fe60f4c79dd27fa",
-    "src/app/layout.tsx": "d50625c57d9f5e7c92bf16f6a140f496c56b463f521f3d18b2f9eaccc60e4b20",
+    "src/app/layout.tsx": "d90063411e742ed897b6d39da651eb17432953c843c455aed6ebca50163e9529",
     "src/auth/components/AuthScreenChrome.tsx": "9bb87577155e7391892741c916eedbb9b1decfce476115e33d8bd6f892a717c4",
     "src/auth/components/ProtectedRoute.tsx": "856ebd62823da579a2fbe9e0c4aae72c378d09f8ce044c6ff7c133d0e395c67c",
     "src/auth/contexts/AuthContext.tsx": "fb23f2921aafeb6d65b37ec59e74739014fbb0b60bc418c41c36d5d80fc8dac2",
@@ -2574,11 +2584,11 @@
     "src/auth/hooks/useAuth.ts": "2c3f64bad43714d2f7e5cabf304b8d8bb3cd1bf83f9c66774067fe65d10fec81",
     "src/auth/types/auth.types.ts": "95c71fbfc50da8bbae44a8509a13db12b6175c3dd960bb1b2e0187825e968204",
     "src/components/GlobalErrorSetup.tsx": "ba9a1ad830faba610671a7d69599f4aae5147c9c009207f80e016b831f545e40",
-    "src/components/NotificationBell.enterprise.tsx": "001b786e354d79152b9004f46021d208a089aea9f8b31a0efd255c0e4fcd84d1",
-    "src/components/NotificationDrawer.enterprise.tsx": "a582890f403e1ec40c06b2476d33f21ef2b29b98785e14a82286f0fddf389a21",
+    "src/components/NotificationBell.enterprise.tsx": "62b3b5f863cb5e399240e02dabe4395af201663b9223d39cdbd5a1c26680f92b",
+    "src/components/NotificationDrawer.enterprise.tsx": "eb8cff36a645033d823b5364ee749064a9e0625f0a922571e89cc2b729b59189",
     "src/components/admin/ai-inbox/AIInboxUnauthorized.tsx": "0e290ffff352296dd64c982569feb49c4a05bff0c000b327d34b9c7396c0a2c2",
     "src/components/admin/layout/AdminSidebar.tsx": "17521acfe76c3e6ec90e72e601e7c4324f5cc6f3a0f77742706d658dab58ed0a",
-    "src/components/app-header.tsx": "22c5949bbf360782329d0540ebe4f4294b0011f4c007a04fe0afad82022d0b98",
+    "src/components/app-header.tsx": "b2b3764fe88f023abfe556185a50513433d2b3384d1fbc291e4d107d6c7960aa",
     "src/components/app-sidebar.tsx": "81de2275b5a0b18f89a52d4fd53868897f8a50ae14b77560dfdf509cd4217a02",
     "src/components/core/AdvancedFilters/types.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/components/generic/config/photo-config/styling/colors.ts": "49664378ba12496215630613e47937572e59891b2f75d71303162187e99d7105",
@@ -2743,7 +2753,7 @@
     "src/core/badges/badge-label-key.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/core/containers/PageContainer.tsx": "86e6be0e84bbc0fb7ccc86167856ebcf5591b2d8f9dad105c8b2154dc66b04c8",
     "src/core/containers/ShellSurface.tsx": "f1da2f889d0e940653d7ce4c6fc81cd2572fc1bb518cb6b68eb919ceedae8a6b",
-    "src/core/containers/ShellUtilities.tsx": "1085d45b1ebded751deb3c8e68f4255066d3881f8e8f6faaa19aea4b6b92578d",
+    "src/core/containers/ShellUtilities.tsx": "373d8db02487c2e8172ed48e2cd6ca3d8d3d85ab9dc9cd69899078544ead36f2",
     "src/core/modals/PhotoPreviewModal.tsx": "7c5e31eb1379318b5e669781308793b295df20cc307406f538eb1cba542558a5",
     "src/core/modals/photo-preview-helpers.ts": "01cc5afcf1fda44f44da434e8a9af4b6fd0821db6ba750aa3c057cf40f04a880",
     "src/core/modals/usePhotoPreviewModal.ts": "901aa3520a09f56748db4acf095f4d36915baba81b2aa2b7749590363cd65273",
@@ -2970,6 +2980,7 @@
     "src/services/websocket/WebSocketService.ts": "811b7bf7d87b64f58a2472bc041c3ad545b811ad77d52812bac2ccca29ae96ca",
     "src/services/workspace.service.ts": "7b5effa79ecf1fd597c54cb8c68aebccfe80d21393d25df4cdeecd00b15b40e6",
     "src/stores/notificationCenter.ts": "c4f8f29729db4f02dbacd6bf6178ab476ee82489f80ebb86893f83434e98db98",
+    "src/stores/notificationDrawer.ts": "26784d39d3eb3bc4018df6929cd1650198dbd9f4fa338ec44b1539b0c774ac9e",
     "src/stores/voiceCommandStore.ts": "336596aa084185b15bada8f4231a7b8f91e0c4a2dd109e1532f37a0d1800fbeb",
     "src/styles/design-tokens/core/spacing.ts": "3b07162c1cdd384cf1db5c5d03c6157c268621800a541299de8791b01fbe0067",
     "src/styles/design-tokens/generated/appearance.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -3070,7 +3081,7 @@
     "dynamicBoundaries": 18,
     "matchedKeys": 135,
     "routeBoundaries": 0,
-    "shellFiles": 501,
+    "shellFiles": 502,
     "sliceBytes": 321765
   },
   "unresolvableKeys": [
