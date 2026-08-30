@@ -101,6 +101,26 @@ import type { TableFramePoint } from '../../types/table-entity';
 import type { TableRectMm } from './table-layout-types';
 import type { TableWorksheet, TableWorksheetId } from '../../types/table-worksheet';
 
+
+// ──────────────────────────────────────────────────────────────────────────────
+// ⛏️ CHECK 3.22 (knip) — ΤΙ ΕΙΝΑΙ ΔΗΜΟΣΙΟ ΕΔΩ, ΚΑΙ ΓΙΑΤΙ ΤΟΣΟ ΛΙΓΟ
+// ──────────────────────────────────────────────────────────────────────────────
+//
+// Δημόσια είναι **μόνο** όσα καταναλώνει παραγωγικός κώδικας: η διάταξη, το hit-test, ο τύπος
+// του slot, και το περιθώριο ετικέτας (ο ζωγράφος). Τα υπόλοιπα — χωρητικότητα, παράθυρο,
+// μεγέθη σε mm, κατώφλι πλήθους — είναι **ιδιωτικά**.
+//
+// Ο πεζός λόγος: το `knip` εξαιρεί ρητά τα `__tests__` από το `project`, οπότε μια εξαγωγή που
+// την καταναλώνουν **μόνο** tests μετριέται ως νεκρή και ανεβάζει το ratchet (CHECK 3.22).
+//
+// 🔑 Ο ουσιαστικός λόγος είναι καλύτερος, και είναι γραμμένος δίπλα, στο
+// `table-copy-marquee-suppression.test.ts`: εκείνη η λειτουργία είχε **15 πράσινα tests και δεν
+// δούλευε**, επειδή τα tests ρωτούσαν τα **εσωτερικά** αντί για την αλυσίδα. Και οι τρεις
+// είσοδοι του παραθύρου (πλήθος, ενεργός δείκτης, χωρητικότητα) είναι **ήδη** ορίσματα του
+// {@link tableWorksheetTabLayout} — πλήθος = τα φύλλα, ενεργός = το `activeWorksheetId`,
+// χωρητικότητα = `widthMm × pxPerMm`. Άρα κάθε αναλλοίωτη ελέγχεται από τη **δημόσια είσοδο**,
+// χωρίς να χρειάζεται καμία από αυτές τις εξαγωγές.
+
 /**
  * Το πλάτος μιας καρτέλας σε **px οθόνης** — **ενιαίο**, ποτέ κατά περιεχόμενο.
  *
@@ -129,7 +149,7 @@ import type { TableWorksheet, TableWorksheetId } from '../../types/table-workshe
  * μέτρηση, γιατί η ετικέτα είναι **διακόσμηση** και το ορθογώνιο ο **στόχος** (ίδιος
  * διαχωρισμός με το `MIN_TICK_LABEL_PX` του δείκτη: η λωρίδα μένει, το γράμμα φεύγει).
  */
-export const TABLE_WORKSHEET_TAB_WIDTH_PX = 64;
+const TABLE_WORKSHEET_TAB_WIDTH_PX = 64;
 
 /**
  * Το εσωτερικό περιθώριο της ετικέτας μέσα στην καρτέλα, **ανά πλευρά**, σε px οθόνης.
@@ -155,10 +175,10 @@ export const TABLE_WORKSHEET_TAB_LABEL_PADDING_PX = 8;
  * ⚠️ **Η Φάση 4 κατεβάζει αυτόν τον αριθμό στο 1**, όταν η λωρίδα αποκτήσει το `⊕` της
  * προσθήκης φύλλου — και τότε θα είναι αλλαγή **μιας γραμμής**, εδώ, με τον λόγο δίπλα της.
  */
-export const MIN_TABLE_WORKSHEET_TAB_COUNT = 2;
+const MIN_TABLE_WORKSHEET_TAB_COUNT = 2;
 
 /** Τα μεγέθη της λωρίδας σε **sheet-mm**, στην τρέχουσα κλίμακα οθόνης. */
-export interface TableWorksheetTabsMm {
+interface TableWorksheetTabsMm {
   /** Πλάτος μιας καρτέλας. */
   readonly tabWidthMm: number;
   /**
@@ -177,7 +197,7 @@ export interface TableWorksheetTabsMm {
  * **διεπαφής**, όχι γεωμετρία σχεδίου — μια καρτέλα σε mm χαρτιού θα γινόταν αδιάβαστη σε
  * zoom-out και τεράστια σε zoom-in. Ίδιος λόγος, ίδια λέξη, με το `tableIndicatorBandsMm`.
  */
-export function tableWorksheetTabsMm(pxPerMm: number): TableWorksheetTabsMm {
+function tableWorksheetTabsMm(pxPerMm: number): TableWorksheetTabsMm {
   return {
     tabWidthMm: TABLE_WORKSHEET_TAB_WIDTH_PX / pxPerMm,
     tabHeightMm: TABLE_INDICATOR.columnBandPx / pxPerMm,
@@ -192,13 +212,13 @@ export function tableWorksheetTabsMm(pxPerMm: number): TableWorksheetTabsMm {
  * ο περιορισμός που κάνει το πρόβλημα υπερχείλισης **στενότερο** από των μεγάλων παικτών, και
  * ο λόγος που η απάντηση δεν μπορεί να είναι «απλώς μεγάλωσε τη λωρίδα».
  */
-export function tableWorksheetTabCapacity(widthMm: number, pxPerMm: number): number {
+function tableWorksheetTabCapacity(widthMm: number, pxPerMm: number): number {
   if (!(pxPerMm > 0) || !Number.isFinite(pxPerMm)) return 0;
   return Math.floor((widthMm * pxPerMm) / TABLE_WORKSHEET_TAB_WIDTH_PX);
 }
 
 /** Ποιες θέσεις του πίνακα φύλλων είναι ορατές: `[start, start + length)`. */
-export interface TableWorksheetTabWindow {
+interface TableWorksheetTabWindow {
   readonly start: number;
   readonly length: number;
 }
@@ -215,7 +235,7 @@ export interface TableWorksheetTabWindow {
  * γεννιούνται προς τα δεξιά (η προσθήκη της Φάσης 4 βάζει το νέο στο τέλος), άρα «μπροστά»
  * είναι η κατεύθυνση που ο χρήστης εξερευνά.
  */
-export function tableWorksheetTabWindow(
+function tableWorksheetTabWindow(
   count: number,
   activeIndex: number,
   capacity: number,

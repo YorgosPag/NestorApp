@@ -12,14 +12,15 @@
  *     αλλάξει την οπή, το test κοκκινίζει πριν προλάβει ο χρήστης να πατήσει λάθος πράγμα.
  */
 
+// 🔑 **ΜΟΝΟ Η ΔΗΜΟΣΙΑ ΕΙΣΟΔΟΣ.** Τα εσωτερικά (χωρητικότητα, παράθυρο, μεγέθη σε mm) είναι
+// ιδιωτικά επίτηδες — δες την αντίστοιχη σημείωση στο module. Και οι τρεις είσοδοι του
+// παραθύρου είναι ήδη ορίσματα εδώ: **πλήθος** = τα φύλλα, **ενεργός** = το `activeWorksheetId`,
+// **χωρητικότητα** = `widthMm × pxPerMm`. Άρα τίποτα δεν χάνεται σε κάλυψη, και κάθε αναλλοίωτη
+// ελέγχεται στην αλυσίδα που τρέχει πραγματικά.
 import {
-  MIN_TABLE_WORKSHEET_TAB_COUNT,
-  TABLE_WORKSHEET_TAB_WIDTH_PX,
+  TABLE_WORKSHEET_TAB_LABEL_PADDING_PX,
   tableWorksheetTabAtFrame,
-  tableWorksheetTabCapacity,
   tableWorksheetTabLayout,
-  tableWorksheetTabWindow,
-  tableWorksheetTabsMm,
 } from '../table-worksheet-tabs-geometry';
 // 🔴 Η πηγή του κενού και του LOD — οι δύο σταθερές που η λωρίδα **καταναλώνει** αντί να τις
 // ξαναγράψει. Τα tests τις ρωτούν από εκεί, ώστε μια αλλαγή τους να μη «διορθωθεί» εδώ σιωπηλά.
@@ -41,6 +42,33 @@ const PX_PER_MM = 10;
 const WIDTH_MM = 120;
 const HEIGHT_MM = 40;
 
+/**
+ * Το πλάτος καρτέλας σε px, **μετρημένο από τη διάταξη** αντί για εισαγόμενη σταθερά.
+ *
+ * Δεν είναι φορμαλισμός: μια εισαγόμενη σταθερά θα έκανε τα tests να συμφωνούν με τον **αριθμό**
+ * και όχι με τη **συμπεριφορά** — δηλαδή θα έμεναν πράσινα ακόμη κι αν η διάταξη έπαυε να τον
+ * χρησιμοποιεί. Εδώ ρωτιέται ό,τι ζωγραφίζεται.
+ */
+let measured: number | null = null;
+function tabWidthPx(): number {
+  // Νωχελικό: το `sheets()` χρειάζεται δηλώσεις που ζουν πιο κάτω στο module.
+  measured ??= tableWorksheetTabLayout(
+    sheets(2), FIRST_TABLE_WORKSHEET_ID, WIDTH_MM, HEIGHT_MM, PX_PER_MM,
+  )[0].rectMm.w * PX_PER_MM;
+  return measured;
+}
+
+/** Πίνακας φτιαγμένος ώστε να χωρά **ακριβώς** `capacity` καρτέλες — η τρίτη είσοδος, ως πλάτος. */
+function layoutForCapacity(count: number, activeIndex: number, capacity: number) {
+  return tableWorksheetTabLayout(
+    sheets(count),
+    tableWorksheetId(`ws${activeIndex}`),
+    capacity * tabWidthPx(),
+    60,
+    1,
+  );
+}
+
 /** Ένα ελάχιστο persisted μοντέλο — τα κελιά δεν παίζουν ρόλο σε καθαρή γεωμετρία λωρίδας. */
 const EMPTY_MODEL = { columns: [], rows: [], cells: [], merges: [] };
 
@@ -53,20 +81,24 @@ function sheets(count: number): readonly TableWorksheet[] {
 
 describe('ADR-833 Φ3 — μεγέθη και το κενό της κάτω ακμής', () => {
   it('το ύψος της λωρίδας είναι Η ΙΔΙΑ σταθερά με τις ζώνες δείκτη (κανένας νέος αριθμός)', () => {
-    const tabs = tableWorksheetTabsMm(PX_PER_MM);
-    expect(tabs.tabHeightMm * PX_PER_MM).toBeCloseTo(TABLE_INDICATOR.columnBandPx);
-    expect(tabs.tabWidthMm * PX_PER_MM).toBeCloseTo(TABLE_WORKSHEET_TAB_WIDTH_PX);
+    const [tab] = tableWorksheetTabLayout(sheets(2), FIRST_TABLE_WORKSHEET_ID, WIDTH_MM, HEIGHT_MM, PX_PER_MM);
+    expect(tab.rectMm.h * PX_PER_MM).toBeCloseTo(TABLE_INDICATOR.columnBandPx);
   });
 
   it('🔴 το κενό είναι Ο ΠΕΜΠΤΟΣ ΚΑΤΑΝΑΛΩΤΗΣ του `TABLE_INDICATOR_GRIP_CLEARANCE_PX`', () => {
-    expect(tableWorksheetTabsMm(PX_PER_MM).gapMm * PX_PER_MM)
-      .toBeCloseTo(TABLE_INDICATOR_GRIP_CLEARANCE_PX);
+    const [tab] = tableWorksheetTabLayout(sheets(2), FIRST_TABLE_WORKSHEET_ID, WIDTH_MM, HEIGHT_MM, PX_PER_MM);
+    expect((tab.rectMm.y - HEIGHT_MM) * PX_PER_MM).toBeCloseTo(TABLE_INDICATOR_GRIP_CLEARANCE_PX);
   });
 
   it('τα μεγέθη είναι σε px ΟΘΟΝΗΣ: διπλό zoom ⇒ μισά mm, ίδια px', () => {
-    const zoomed = tableWorksheetTabsMm(PX_PER_MM * 2);
-    expect(zoomed.tabWidthMm * (PX_PER_MM * 2)).toBeCloseTo(TABLE_WORKSHEET_TAB_WIDTH_PX);
-    expect(zoomed.gapMm * (PX_PER_MM * 2)).toBeCloseTo(TABLE_INDICATOR_GRIP_CLEARANCE_PX);
+    const [tab] = tableWorksheetTabLayout(sheets(2), FIRST_TABLE_WORKSHEET_ID, WIDTH_MM, HEIGHT_MM, PX_PER_MM * 2);
+    expect(tab.rectMm.w * (PX_PER_MM * 2)).toBeCloseTo(tabWidthPx());
+    expect((tab.rectMm.y - HEIGHT_MM) * (PX_PER_MM * 2)).toBeCloseTo(TABLE_INDICATOR_GRIP_CLEARANCE_PX);
+    expect(tab.rectMm.h * (PX_PER_MM * 2)).toBeCloseTo(TABLE_INDICATOR.columnBandPx);
+  });
+
+  it('το περιθώριο ετικέτας ζει στο ΙΔΙΟ σπίτι με το πλάτος που το παρήγαγε', () => {
+    expect(TABLE_WORKSHEET_TAB_LABEL_PADDING_PX * 2).toBeLessThan(tabWidthPx());
   });
 
   it('🔴 Η ΛΑΒΗ ΣΥΜΠΛΗΡΩΣΗΣ ΤΕΛΕΙΩΝΕΙ ΠΡΙΝ ΑΡΧΙΣΕΙ Η ΚΑΡΤΕΛΑ — αριθμητικά, όχι κατά σύμπτωση', () => {
@@ -93,7 +125,7 @@ describe('ADR-833 Φ3 — η λωρίδα ζει ΚΑΤΩ από το πλέγμ
 
   it('οι καρτέλες είναι συνεχόμενες από την αριστερή ακμή του πλέγματος', () => {
     slots.forEach((slot, seat) => {
-      expect(slot.rectMm.x).toBeCloseTo((seat * TABLE_WORKSHEET_TAB_WIDTH_PX) / PX_PER_MM);
+      expect(slot.rectMm.x).toBeCloseTo((seat * tabWidthPx()) / PX_PER_MM);
     });
   });
 
@@ -123,10 +155,11 @@ describe('ADR-833 Φ3 — η λωρίδα ζει ΚΑΤΩ από το πλέγμ
 });
 
 describe('ADR-833 Φ3 — οι τρεις πύλες: πλήθος, LOD, χωρητικότητα', () => {
-  it('ένα φύλλο ⇒ καμία λωρίδα (χειριστήριο χωρίς τίποτα να ελέγξει)', () => {
-    expect(MIN_TABLE_WORKSHEET_TAB_COUNT).toBe(2);
+  it('ένα φύλλο ⇒ καμία λωρίδα· δύο ⇒ λωρίδα (το κατώφλι, ως συμπεριφορά)', () => {
     expect(tableWorksheetTabLayout(sheets(1), FIRST_TABLE_WORKSHEET_ID, WIDTH_MM, HEIGHT_MM, PX_PER_MM))
       .toEqual([]);
+    expect(tableWorksheetTabLayout(sheets(2), FIRST_TABLE_WORKSHEET_ID, WIDTH_MM, HEIGHT_MM, PX_PER_MM))
+      .toHaveLength(2);
   });
 
   it('🔴 κάτω από το LOD του δείκτη ⇒ καμία λωρίδα, ΑΚΟΜΗ ΚΑΙ ΟΤΑΝ ΧΩΡΑΝΕ ΚΑΡΤΕΛΕΣ', () => {
@@ -137,7 +170,7 @@ describe('ADR-833 Φ3 — οι τρεις πύλες: πλήθος, LOD, χωρ�
     //
     // ⚠️ Γραμμένο έτσι επειδή η πρώτη εκδοχή του (0,1 px/mm) **έμεινε πράσινη σε μετάλλαξη**
     // που έσβηνε την πύλη LOD: την έκοβε ήδη η χωρητικότητα. Ήταν σχόλιο, όχι άγκυρα.
-    expect(tableWorksheetTabCapacity(200, 1)).toBeGreaterThan(0);
+    expect(layoutForCapacity(3, 0, 3)).toHaveLength(3); // το ίδιο πλάτος, με ύψος πάνω από το LOD
     expect(tableWorksheetTabLayout(sheets(3), FIRST_TABLE_WORKSHEET_ID, 200, 2, 1)).toEqual([]);
     // Και ο ίδιος πίνακας με ύψος πάνω από το κατώφλι ⇒ λωρίδα. Χωρίς αυτό, το test θα περνούσε
     // και με «επιστρέφει πάντα κενό».
@@ -146,42 +179,49 @@ describe('ADR-833 Φ3 — οι τρεις πύλες: πλήθος, LOD, χωρ�
 
   it('δεν χωρά ούτε μία καρτέλα ⇒ ούτε ζωγραφίζεται ούτε πιάνεται (τα δύο ΜΑΖΙ)', () => {
     // Πίνακας 60 mm × 1 px/mm = 60 px πλάτος: περνά το LOD (≥48), δεν χωρά καρτέλα (64 px).
-    expect(tableWorksheetTabCapacity(60, 1)).toBe(0);
+    expect(tabWidthPx()).toBeGreaterThan(60);
     expect(tableWorksheetTabLayout(sheets(3), FIRST_TABLE_WORKSHEET_ID, 60, 60, 1)).toEqual([]);
   });
 
   it('εκφυλισμένη προβολή (μη θετικό pxPerMm) ⇒ κενό, ποτέ NaN', () => {
-    expect(tableWorksheetTabCapacity(WIDTH_MM, 0)).toBe(0);
     expect(tableWorksheetTabLayout(sheets(3), FIRST_TABLE_WORKSHEET_ID, WIDTH_MM, HEIGHT_MM, 0))
+      .toEqual([]);
+    expect(tableWorksheetTabLayout(sheets(3), FIRST_TABLE_WORKSHEET_ID, WIDTH_MM, HEIGHT_MM, NaN))
       .toEqual([]);
   });
 });
 
 describe('ADR-833 Φ3 — το παράθυρο υπερχείλισης είναι ΠΑΡΑΓΩΓΟ', () => {
+  /** Ποιες θέσεις του βιβλίου είναι ορατές — διαβασμένες από τα ίδια τα slots. */
+  const visible = (count: number, active: number, capacity: number): number[] =>
+    layoutForCapacity(count, active, capacity).map((slot) => slot.index);
+
   it('όλα χωρούν ⇒ όλα ορατά, από την αρχή', () => {
-    expect(tableWorksheetTabWindow(3, 0, 10)).toEqual({ start: 0, length: 3 });
+    expect(visible(3, 0, 10)).toEqual([0, 1, 2]);
   });
 
   it('🔑 Η ΕΝΕΡΓΗ ΚΑΡΤΕΛΑ ΕΙΝΑΙ ΠΑΝΤΑ ΟΡΑΤΗ — για κάθε θέση, σε κάθε χωρητικότητα', () => {
-    for (let count = 1; count <= 20; count++) {
+    for (let count = 2; count <= 14; count++) {
       for (let active = 0; active < count; active++) {
-        for (let capacity = 1; capacity <= 8; capacity++) {
-          const view = tableWorksheetTabWindow(count, active, capacity);
-          expect(active).toBeGreaterThanOrEqual(view.start);
-          expect(active).toBeLessThan(view.start + view.length);
+        for (let capacity = 1; capacity <= 6; capacity++) {
+          const slots = layoutForCapacity(count, active, capacity);
+          expect(slots.map((s) => s.index)).toContain(active);
+          // …και είναι **η** ενεργή, όχι απλώς παρούσα.
+          expect(slots.find((s) => s.active)?.index).toBe(active);
         }
       }
     }
   });
 
-  it('το παράθυρο μένει ΜΕΣΑ στα όρια και έχει το σωστό μήκος', () => {
-    for (let count = 1; count <= 20; count++) {
+  it('το παράθυρο μένει ΜΕΣΑ στα όρια, είναι ΣΥΝΕΧΟΜΕΝΟ και έχει το σωστό μήκος', () => {
+    for (let count = 2; count <= 14; count++) {
       for (let active = 0; active < count; active++) {
-        for (let capacity = 1; capacity <= 8; capacity++) {
-          const view = tableWorksheetTabWindow(count, active, capacity);
-          expect(view.length).toBe(Math.min(count, capacity));
-          expect(view.start).toBeGreaterThanOrEqual(0);
-          expect(view.start + view.length).toBeLessThanOrEqual(count);
+        for (let capacity = 1; capacity <= 6; capacity++) {
+          const seen = visible(count, active, capacity);
+          expect(seen).toHaveLength(Math.min(count, capacity));
+          expect(seen[0]).toBeGreaterThanOrEqual(0);
+          expect(seen[seen.length - 1]).toBeLessThan(count);
+          seen.forEach((index, seat) => expect(index).toBe(seen[0] + seat));
         }
       }
     }
@@ -192,27 +232,26 @@ describe('ADR-833 Φ3 — το παράθυρο υπερχείλισης είν�
     const capacity = 3;
     let active = 0;
     const seen = new Set<number>([active]);
-    // Περπάτημα προς τα δεξιά: κάθε φορά πατάμε τη δεξιότερη ορατή.
     for (let step = 0; step < 40 && seen.size < count; step++) {
-      const view = tableWorksheetTabWindow(count, active, capacity);
-      for (let i = view.start; i < view.start + view.length; i++) seen.add(i);
-      const next = view.start + view.length - 1;
+      const window = visible(count, active, capacity);
+      window.forEach((index) => seen.add(index));
+      const next = window[window.length - 1];
       if (next === active) break;
       active = next;
     }
     expect(seen.size).toBe(count);
   });
 
-  it('υπερχείλιση: το παράθυρο κόβεται στο ΔΕΞΙ άκρο χωρίς κενές θέσεις', () => {
-    expect(tableWorksheetTabWindow(10, 9, 4)).toEqual({ start: 6, length: 4 });
-    expect(tableWorksheetTabWindow(10, 0, 4)).toEqual({ start: 0, length: 4 });
+  it('υπερχείλιση: το παράθυρο κόβεται στα άκρα χωρίς κενές θέσεις', () => {
+    expect(visible(10, 9, 4)).toEqual([6, 7, 8, 9]);
+    expect(visible(10, 0, 4)).toEqual([0, 1, 2, 3]);
   });
 
   it('το `index` του slot είναι η θέση στο ΒΙΒΛΙΟ, όχι στη λωρίδα (τα ονόματα δεν κυλούν)', () => {
-    // 3 καρτέλες χωρητικότητα (64×3 = 192 px ≤ 200 px), 8 φύλλα, ενεργό το 5ο.
-    const slots = tableWorksheetTabLayout(sheets(8), tableWorksheetId('ws5'), 20, 20, 10);
+    const slots = layoutForCapacity(8, 5, 3);
     expect(slots.map((s) => s.index)).toEqual([4, 5, 6]);
-    expect(slots.map((s) => s.rectMm.x)).toEqual([0, 6.4, 12.8]);
+    // Οι θέσεις **στη λωρίδα** ξαναρχίζουν από το μηδέν — η ταυτότητα όχι.
+    slots.forEach((slot, seat) => expect(slot.rectMm.x).toBeCloseTo(seat * tabWidthPx()));
     expect(slots.find((s) => s.active)?.index).toBe(5);
   });
 
@@ -283,8 +322,12 @@ describe('ADR-833 Φ3 — η λαβή συμπλήρωσης και η καρτ�
     );
     expect(handle).not.toBeNull();
 
-    const tabs = tableWorksheetTabsMm(PX_PER_MM);
-    const stripTopMm = layout.heightMm + tabs.gapMm;
+    // Η κορυφή της λωρίδας διαβάζεται **από τη διάταξη** — καμία δεύτερη έκφραση του κενού.
+    const twoSheets = { ...entity, worksheets: [entity.worksheets[0], { ...entity.worksheets[0], id: tableWorksheetId('ws1') }] };
+    const [tab] = tableWorksheetTabLayout(
+      twoSheets.worksheets, twoSheets.activeWorksheetId, layout.widthMm, layout.heightMm, PX_PER_MM,
+    );
+    const stripTopMm = tab.rectMm.y;
     const handleOutwardMm = TABLE_FILL_HANDLE_OUTWARD_APERTURE_PX / PX_PER_MM;
     // Η **εξωτερική εμβέλεια** της λαβής (ορθογώνιο + οπή προς τα έξω) μένει πάνω από τη λωρίδα.
     expect(handle!.y + handle!.h + handleOutwardMm).toBeLessThanOrEqual(stripTopMm);
