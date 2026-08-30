@@ -12,9 +12,10 @@
  * πριν καν γραφτεί η λειτουργία. Η εξαγωγή δεν είναι αισθητική: είναι το **προαπαιτούμενο**.
  *
  * Η τομή δεν είναι αυθαίρετη — είναι το ήδη υπάρχον `if (selected)` μπλοκ, δηλαδή ό,τι
- * ζωγραφίζεται **επειδή ο πίνακας είναι επιλεγμένος και έξω από το πλέγμα**. Η λωρίδα
- * καρτελών φύλλων (ADR-833 Φάση 3) απαντά στην **ίδια** ερώτηση και θα προστεθεί εδώ, όχι
- * σε τρίτο σημείο.
+ * ζωγραφίζεται **επειδή ο πίνακας είναι επιλεγμένος και έξω από το πλέγμα**.
+ *
+ * ✅ **ΚΑΙ Η ΠΡΟΒΛΕΨΗ ΕΠΑΛΗΘΕΥΤΗΚΕ**: η λωρίδα καρτελών φύλλων (ADR-833 Φάση 3) απαντά στην
+ * **ίδια** ερώτηση και μπήκε εδώ, όχι σε τρίτο σημείο.
  *
  * ⚠️ **Καθαρή μετακίνηση**: τα σχόλια των δύο περιστατικών (§40 ανακάλυψη κατά Word, §42
  * στοίβαξη πλυσίματος) ήρθαν **αυτούσια** — δεν συνοψίστηκαν. Ένα σχόλιο που εξηγεί γιατί
@@ -26,6 +27,13 @@
 
 import type { StampTableContext } from './stamp-table-layout';
 import type { TableLayout } from '../../../bim/table/table-layout-types';
+import type { TableEntity } from '../../../types/table-entity';
+// 🔴 ADR-833 Φάση 3 — η λωρίδα καρτελών: γεωμετρία → ζωγράφος, με τον **ίδιο** πίνακα slots
+// που καταναλώνει και το πάτημα. Δες την κεφαλίδα της γεωμετρίας.
+import { tableWorksheetTabLayout } from '../../../bim/table/table-worksheet-tabs-geometry';
+import { resolveWorksheetFields } from '../../../bim/table/table-worksheet-resolve';
+import { stampTableWorksheetTabs } from './stamp-table-worksheet-tabs';
+import { getTableIndicatorHover } from '../../../state/table-indicator-hover-store';
 import { stampTableInsertControl } from './stamp-table-insert-control';
 import { getTableInsertControl } from '../../../state/table-insert-control-store';
 import { stampTableDeleteControl } from './stamp-table-delete-control';
@@ -51,14 +59,45 @@ import { tableIndicatorBandsMm } from '../../../bim/table/table-indicator-geomet
  * αλλά τίποτα δεν επιτρέπεται να σκεπάσει αυτό, γιατί είναι το μόνο στοιχείο του πίνακα που
  * λειτουργεί ως κουμπί.
  *
- * @param entityId Φιλτράρισμα ως προς ΑΥΤΟΝ τον πίνακα: δύο πίνακες στη σκηνή δεν μοιράζονται
- *   χειριστήριο — ο ίδιος έλεγχος που κάνει ήδη ο hover των ζωνών και ο δρομέας.
+ * @param entity Η **ζωντανή** οντότητα. Ήταν `entityId` μέχρι τη Φάση 3· η λωρίδα καρτελών
+ *   χρειάζεται τα **φύλλα** της, όχι μόνο την ταυτότητά της. Το φιλτράρισμα ως προς ΑΥΤΟΝ τον
+ *   πίνακα μένει ακέραιο (δύο πίνακες στη σκηνή δεν μοιράζονται χειριστήριο ούτε hover) — απλώς
+ *   η ταυτότητα διαβάζεται πλέον από την οντότητα, δηλαδή δεν μπορεί να δοθεί ξένη.
  */
 export function stampTableChromeControls(
   rc: StampTableContext,
-  entityId: string,
+  entity: TableEntity,
   layout: TableLayout,
 ): void {
+  const entityId = entity.id;
+  // 🔴 ADR-833 Φάση 3 — **Η ΛΩΡΙΔΑ ΠΡΩΤΗ**, και η σειρά δεν λύνει επικάλυψη: η λωρίδα ζει στην
+  // **κάτω** ακμή, τα δύο χειριστήρια στην πάνω και την αριστερή (δες
+  // `tableInsertControlOuterPx`). Δηλώνει προτεραιότητα **στοίβαξης**: τα `⊖`/`⊕` είναι τα
+  // μόνα στοιχεία του πίνακα που λειτουργούν ως **κουμπιά**, και τίποτα δεν επιτρέπεται να τα
+  // σκεπάσει — ούτε καν χρώμιο πλοήγησης που σήμερα δεν τα ακουμπά.
+  //
+  // ⚠️ Τα φύλλα ζητούνται από τη **ΜΙΑ ΠΥΛΗ** (`resolveWorksheetFields`), ποτέ ως ωμό
+  // `entity.worksheets`: μια οντότητα της παλιάς μορφής δεν έχει κανένα από τα δύο πεδία, και
+  // η ωμή ανάγνωση θα έδινε «μηδέν φύλλα» — δηλαδή σιωπηλά καμία λωρίδα, για πάντα.
+  const { worksheets, activeWorksheetId } = resolveWorksheetFields(entity);
+  const tabs = tableWorksheetTabLayout(
+    worksheets,
+    activeWorksheetId,
+    layout.widthMm,
+    layout.heightMm,
+    rc.pxPerMm,
+  );
+  if (tabs.length > 0) {
+    // Ίδιος κανόνας ανάγνωσης με κάθε άλλο store εδώ: getter τη στιγμή του καρέ (ADR-040), και
+    // **φιλτραρισμένο ως προς ΑΥΤΟΝ** τον πίνακα — δύο πίνακες στη σκηνή δεν μοιράζονται hover.
+    const hover = getTableIndicatorHover();
+    const hovered =
+      hover?.entityId === entityId && hover.target.kind === 'worksheet-tab'
+        ? hover.target.worksheetId
+        : null;
+    stampTableWorksheetTabs(rc, tabs, hovered);
+  }
+
   // 🔴 ADR-739 §42 — **το ⊖ της διαγραφής, ΠΡΙΝ το ⊕.**
   //
   // Η σειρά δεν λύνει επικάλυψη (το ⊕ ζει έξω από τη ζώνη, το ⊖ μέσα της) — δηλώνει

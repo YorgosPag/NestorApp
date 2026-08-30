@@ -66,10 +66,18 @@ import {
 import { tableSelectAllTriangleMm } from '../../../bim/table/table-select-all-corner';
 import type { TableRectMm } from '../../../bim/table/table-layout-types';
 import { TABLE_INDICATOR } from '../../../config/color-config';
+// 🔴 ADR-833 Φ3 (N.18) — οι τρεις κινήσεις βαψίματος ενός ορθογωνίου χρωμίου ζούσαν εδώ ως
+// ιδιωτικές, με **δύο** καταναλωτές μέσα σε αυτό το αρχείο. Η λωρίδα καρτελών ήταν ο τρίτος —
+// και ένα αντίγραφο σε δεύτερο αρχείο θα ήταν sibling clone (CHECK 3.28). Δες την κεφαλίδα
+// εκείνου για το γιατί ΔΕΝ συγχωνεύτηκαν σε μία παραμετρική συνάρτηση.
+import {
+  fillTableChromeRect,
+  strokeTableChromeRect,
+  washTableChromeRect,
+} from './stamp-table-chrome-rect';
 import {
   stampFrameText,
   tableCellFont,
-  traceRectMm,
   type StampTableContext,
 } from './stamp-table-layout';
 
@@ -141,9 +149,9 @@ export function stampTableIndicator(rc: StampTableContext, bands: TableIndicator
  * επιτρέπεται να θολώσει τη στιγμή ακριβώς που ο χρήστης το στοχεύει.
  */
 function stampTick(rc: StampTableContext, tick: TableIndicatorTick, rect: TableRectMm): void {
-  fillTick(rc, rect, tick.active);
-  if (tick.hovered) washTick(rc, rect);
-  strokeTick(rc, rect);
+  fillTableChromeRect(rc, rect, tick.active);
+  if (tick.hovered) washTableChromeRect(rc, rect);
+  strokeTableChromeRect(rc, rect);
   stampLabel(rc, tick, rect);
 }
 
@@ -160,7 +168,7 @@ function stampTick(rc: StampTableContext, tick: TableIndicatorTick, rect: TableR
  * βγαίνουν μόνα τους από το {@link TABLE_INDICATOR}.
  *
  * ## ⚠️ Το περίγραμμα είναι ΝΕΟ, και είναι απόφαση
- * Μέχρι το §43 η γωνία ζωγραφιζόταν με σκέτο `fillTick(..., false)` — χωρίς `strokeTick`. Ήταν
+ * Μέχρι το §43 η γωνία ζωγραφιζόταν με σκέτο γέμισμα — χωρίς περίγραμμα. Ήταν
  * σωστό όσο ήταν **διακοσμητικό γέμισμα**: ένα κενό τετράγωνο δεν χρειάζεται να δηλώσει όρια.
  * Από τη στιγμή που έγινε **κουμπί** χρειάζεται: το τετράγωνο κάθεται μόνο του, με κενό
  * `gapMm` και από τις δύο ζώνες (δες `tableIndicatorCornerRectMm`), και χωρίς περίγραμμα το
@@ -172,9 +180,9 @@ function stampSelectAllCorner(
   corner: TableSelectAllCornerState,
 ): void {
   const rect = tableIndicatorCornerRectMm(bandsMm);
-  fillTick(rc, rect, corner.active);
-  if (corner.hovered) washTick(rc, rect);
-  strokeTick(rc, rect);
+  fillTableChromeRect(rc, rect, corner.active);
+  if (corner.hovered) washTableChromeRect(rc, rect);
+  strokeTableChromeRect(rc, rect);
   stampSelectAllTriangle(rc, bandsMm, corner.active);
 }
 
@@ -211,44 +219,6 @@ function stampSelectAllTriangle(
 // `tracePath`), ταυτόσημη με εκείνη του αδελφού ζωγράφου. Το CHECK 3.28 (jscpd, N.18) την
 // έπιασε ως sibling clone — σωστά: δύο αντίγραφα σημαίνουν δύο ευκαιρίες να ξεχάσει
 // κάποιος ότι ο πίνακας **περιστρέφεται**. Μία διαδρομή, δύο ζωγράφοι.
-
-function fillTick(rc: StampTableContext, rect: TableRectMm, active: boolean): void {
-  const { ctx } = rc;
-  ctx.save();
-  ctx.fillStyle = active ? TABLE_INDICATOR.activeFillHex : TABLE_INDICATOR.fillHex;
-  traceRectMm(rc, rect);
-  ctx.fill();
-  ctx.restore();
-}
-
-/**
- * ADR-739 §30 — το ημιδιαφανές στρώμα του hover, **πάνω σε ό,τι κι αν** έχει ήδη ζωγραφιστεί.
- *
- * Δεν ξέρει — και δεν επιτρέπεται να ξέρει — αν από κάτω είναι το ουδέτερο γκρι ή το ενεργό
- * μπλε. Αυτή ακριβώς η άγνοια είναι που κάνει **έναν** κανόνα να απαντά και στις δύο
- * καταστάσεις· δες το σκεπτικό στο {@link TABLE_INDICATOR.hoverWashRgba}.
- */
-function washTick(rc: StampTableContext, rect: TableRectMm): void {
-  const { ctx } = rc;
-  ctx.save();
-  ctx.fillStyle = TABLE_INDICATOR.hoverWashRgba;
-  traceRectMm(rc, rect);
-  ctx.fill();
-  ctx.restore();
-}
-
-function strokeTick(rc: StampTableContext, rect: TableRectMm): void {
-  const { ctx } = rc;
-  ctx.save();
-  ctx.strokeStyle = TABLE_INDICATOR.lineHex;
-  ctx.lineWidth = TABLE_INDICATOR.lineWidthPx;
-  // Ρητά συμπαγής: το `stampTableBorders` μπορεί να έχει αφήσει διακεκομμένο μοτίβο πάνω
-  // στο ίδιο context — το `save/restore` προστατεύει τη ΔΙΚΗ μας κλήση, όχι την επόμενη.
-  ctx.setLineDash([]);
-  traceRectMm(rc, rect);
-  ctx.stroke();
-  ctx.restore();
-}
 
 /**
  * Η ετικέτα, κεντραρισμένη στο ορθογώνιο και **γερμένη με τον πίνακα** — δες την κεφαλίδα.
