@@ -305,7 +305,7 @@ export function useTableIndicatorHover(params: UseTableIndicatorHoverParams): vo
         : null;
     // ΜΙΑ ανάγνωση γεωμετρίας, δύο απαντήσεις — δες την κεφαλίδα του `tableIndicatorProbeAtWorld`
     // για το γιατί δεν είναι δύο κλήσεις (θα ήταν δύο υπολογισμοί ανά κίνηση ποντικιού).
-    const { hit, cursor, insert, remove, selectAll } = tableIndicatorProbeAtWorld(
+    const { hit, cursor, insert, remove, selectAll, worksheetTab } = tableIndicatorProbeAtWorld(
       target,
       world,
       transform.scale,
@@ -336,7 +336,13 @@ export function useTableIndicatorHover(params: UseTableIndicatorHoverParams): vo
         ? { entityId: target.id, target: { kind: 'tick', hit } }
         : selectAll
           ? { entityId: target.id, target: { kind: 'select-all' } }
-          : null,
+          // 🔴 ADR-833 Φάση 3 — **τέταρτο κομμάτι του ίδιου δείκτη**, τελευταίο στην ίδια
+          // αλυσίδα. Η θέση δεν λύνει διεκδίκηση (η λωρίδα είναι γεωμετρικά ξένη προς ζώνες
+          // και γωνία, δες τη γεωμετρία της) — κρατά τον ίδιο κανόνα: ο δείκτης φωτίζει **ένα**
+          // πράγμα κάθε στιγμή, και μια κατάσταση «και τα δύο» δεν έχει νόημα.
+          : worksheetTab
+            ? { entityId: target.id, target: { kind: 'worksheet-tab', worksheetId: worksheetTab.id } }
+            : null,
     );
     setTableIndicatorCursor(cursor);
     // §40 — το τρίτο κανάλι της **ίδιας** σάρωσης. Ο φύλακας «άλλαξε κάτι;» ζει μέσα στον
