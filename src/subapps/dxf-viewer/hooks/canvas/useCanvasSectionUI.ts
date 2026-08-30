@@ -25,6 +25,8 @@ import { useTableModeEntry } from '../../ui/table-cell-editor/use-table-mode-ent
 // που ρωτά ο ΕΝΑΣ δρομολογητής δεξιού κλικ (`useCanvasContextMenu`).
 import { useTableHeaderMenu } from '../../ui/table-cell-editor/use-table-header-menu';
 import { useTableRangeMenu } from '../../ui/table-cell-editor/use-table-range-menu';
+// 🔴 ADR-833 Φάση 4 — η τέταρτη θύρα δεξιού κλικ πίνακα (PRIORITY 1.35): καρτέλα φύλλου.
+import { useTableWorksheetMenu } from '../../ui/table-cell-editor/use-table-worksheet-menu';
 // 🔴 ADR-739 §52 — η **τρίτη** θύρα πίνακα: η μορφοποίηση προς την κορδέλα. Δεν επιστρέφει
 // τίποτα και δεν μοντάρει επιφάνεια — δημοσιεύει getters που ρωτά ο ribbon bridge, ο οποίος
 // ζει σε άλλο κλαδί του δέντρου (`DxfViewerTopBar`) και δεν μπορεί να πάρει props από εδώ
@@ -112,6 +114,9 @@ export function useCanvasSectionUI({
   const tableHeaderMenu = useTableHeaderMenu({ containerRef, transformRef, levelManager });
   // ADR-750 Φ4 — δεύτερη θύρα δεξιού κλικ (PRIORITY 1.45): περιγράμματα σε επιλογή κελιών.
   const tableRangeMenu = useTableRangeMenu({ containerRef, transformRef, levelManager });
+  // ADR-833 Φάση 4 — το μενού της καρτέλας φύλλου. Ίδιο σχήμα μονταρίσματος με τα από πάνω·
+  // ο στόχος του όμως έρχεται από το **hover store**, όχι από νέο hit-test (δες την κεφαλίδα).
+  const tableWorksheetMenu = useTableWorksheetMenu({ containerRef, transformRef, levelManager });
   // ADR-751 Φ8.β — τρίτη θύρα δεξιού κλικ (PRIORITY 1.44): σύνδεσμος μέσα σε κελί. Χωρίς
   // παραμέτρους επίτηδες — ο στόχος έρχεται από το hover store, όχι από νέο hit-test.
   const tableLinkMenu = useTableLinkMenu();
@@ -171,5 +176,5 @@ export function useCanvasSectionUI({
   // region preview (τρέχει ΤΕΛΕΥΤΑΙΟ → οδηγεί το ΙΔΙΟ RegionPerimeterPreviewStore όταν
   // είναι ενεργό το εργαλείο μπάνιου· αλλιώς καθαρό passthrough).
   const { handleMouseMoveWithBathroomPreview } = useBathroomAutoArrangeMouseMove({ handleMouseMove: handleMouseMoveWithRegionPreview, activeTool, levelManager });
-  return { textEditor, tableCellEditor, tableHeaderMenu, tableRangeMenu, tableLinkMenu, tableTextToolbar, handleDoubleClick, handleMouseMoveWithAutoArea: handleMouseMoveWithBathroomPreview };
+  return { textEditor, tableCellEditor, tableHeaderMenu, tableRangeMenu, tableWorksheetMenu, tableLinkMenu, tableTextToolbar, handleDoubleClick, handleMouseMoveWithAutoArea: handleMouseMoveWithBathroomPreview };
 }

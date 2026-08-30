@@ -33,16 +33,11 @@ import { Copy, ExternalLink } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { TextLinkKind } from '@/lib/validation/text-link-segments';
 import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DxfMenuContent,
-  DxfMenuHiddenTrigger,
   DxfMenuIcon,
   DxfMenuItem,
   DxfMenuLabel,
-  DxfMenuSeparator,
 } from './dxf-context-menu/DxfContextMenu';
-import { useAnchoredContextMenu } from './dxf-context-menu/use-anchored-context-menu';
+import { DxfAnchoredMenu } from './dxf-context-menu/DxfAnchoredMenu';
 import { LINK_ACTION_KEY, LINK_COPY_KEY } from '../../bim/table/table-link-labels';
 
 /**
@@ -76,32 +71,23 @@ const TableCellLinkContextMenuInner = forwardRef<
   const { t } = useTranslation('dxf-viewer');
 
   /**
-   * Ο κύκλος ζωής (τέσσερις καταστάσεις + τοποθέτηση + ΕΝΑΣ δρόμος εξόδου) είναι **κοινός**
-   * με το μενού περιγραμμάτων και ζει σε ένα σημείο — το CHECK 3.28 τον χαρακτήρισε δίδυμο
-   * 32 γραμμών μόλις γεννήθηκε αυτό εδώ.
+   * Ο κύκλος ζωής **και το κέλυφος** ζουν σε ένα σημείο ({@link DxfAnchoredMenu}): το πρώτο
+   * εξήχθη στο ADR-751 Φ8.β όταν αυτό εδώ το αντέγραψε (32 γραμμές / 138 tokens), το δεύτερο
+   * στο ADR-833 Φάση 4 όταν το **τέταρτο** μενού το αντέγραψε με τη σειρά του (14 / 61).
    *
    * ⚠️ Χωρίς `onClosed`, και **δεν είναι παράλειψη**: το μενού περιγραμμάτων ζει μέσα σε
    * συνεδρία επεξεργασίας και πρέπει να την ξαναζωντανέψει. Ο σύνδεσμος είναι χαρακτηριστικό
    * **απλής προβολής** (Α4) — δεν υπάρχει συνεδρία να επιστρέψει.
    */
-  const { triggerRef, isOpen, target, onOpenChange } =
-    useAnchoredContextMenu<TableLinkMenuTarget>(ref);
-
   return (
-    <DropdownMenu open={isOpen} onOpenChange={onOpenChange}>
-      <DropdownMenuTrigger asChild>
-        <DxfMenuHiddenTrigger ref={triggerRef} />
-      </DropdownMenuTrigger>
-
-      {target ? (
-        <DxfMenuContent>
-          {/* Ο τίτλος δείχνει τον προορισμό όπως τον έγραψε ο χρήστης: το `tel:2310788493`
-              δεν λέει τίποτα σε κανέναν, ενώ το «2310-788493» είναι αυτό που βλέπει. */}
-          <DxfMenuItem disabled>
-            <DxfMenuLabel>{target.text}</DxfMenuLabel>
-          </DxfMenuItem>
-          <DxfMenuSeparator />
-
+    <DxfAnchoredMenu<TableLinkMenuTarget>
+      handleRef={ref}
+      // Ο τίτλος δείχνει τον προορισμό όπως τον έγραψε ο χρήστης: το `tel:2310788493` δεν λέει
+      // τίποτα σε κανέναν, ενώ το «2310-788493» είναι αυτό που βλέπει.
+      title={(target) => target.text}
+    >
+      {(target) => (
+        <>
           <DxfMenuItem onSelect={() => onOpen(target)}>
             <DxfMenuIcon><ExternalLink size={15} aria-hidden="true" /></DxfMenuIcon>
             <DxfMenuLabel>{t(LINK_ACTION_KEY[target.kind])}</DxfMenuLabel>
@@ -111,9 +97,9 @@ const TableCellLinkContextMenuInner = forwardRef<
             <DxfMenuIcon><Copy size={15} aria-hidden="true" /></DxfMenuIcon>
             <DxfMenuLabel>{t(LINK_COPY_KEY[target.kind])}</DxfMenuLabel>
           </DxfMenuItem>
-        </DxfMenuContent>
-      ) : null}
-    </DropdownMenu>
+        </>
+      )}
+    </DxfAnchoredMenu>
   );
 });
 

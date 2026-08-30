@@ -29,6 +29,8 @@ import { usePolygonMode3DStore } from '../../bim-3d/stores/PolygonMode3DStore';
 // το δεξί κλικ ΠΡΙΝ το μενού οντότητας. Ανάγνωση module τη στιγμή του συμβάντος — ίδιο μοτίβο
 // με το Polygon Mode 3D παραπάνω· δες την κεφαλίδα της θύρας για το γιατί όχι prop.
 import { getTableHeaderMenuPort } from '../../ui/table-cell-editor/table-header-menu-port';
+// 🔴 ADR-833 Φάση 4 — η **τέταρτη** θύρα πίνακα, και η μόνη έξω από το πλέγμα: η λωρίδα φύλλων.
+import { getTableWorksheetMenuPort } from '../../ui/table-cell-editor/table-worksheet-menu-port';
 import { getTableRangeMenuPort } from '../../ui/table-cell-editor/table-range-menu-port';
 // ADR-751 Φ8.β — ο σύνδεσμος κελιού διεκδικεί το δεξί κλικ ΠΡΙΝ από τα περιγράμματα· δες τη
 // θύρα για το γιατί η σειρά είναι 1.44 → 1.45 και όχι το αντίστροφο.
@@ -227,6 +229,16 @@ export function useCanvasContextMenu({
         drawingMenuRef.current?.open(e.clientX, e.clientY);
         return;
       }
+
+      // PRIORITY 1.35: 🔴 ADR-833 Φάση 4 — **καρτέλα φύλλου εργασίας**, στη λωρίδα κάτω από
+      // τον πίνακα. ΠΡΩΤΗ από τις τέσσερις θύρες πίνακα: είναι η μόνη που ζει **έξω** από το
+      // πλέγμα, σε pixel που καμία άλλη δεν ονομάζει, και η **πιο ειδική** ερώτηση («αυτό το
+      // φύλλο» αντί για «αυτός ο πίνακας»). Γεωμετρική διεκδίκηση δεν υπάρχει σήμερα — η θέση
+      // δηλώνει προτεραιότητα για την ημέρα που κάποιος μεγαλώσει μια ζώνη.
+      //
+      // ⚠️ Απαντά `false` και για το ⊕: εκείνο δεν έχει μενού (ούτε στο Excel), οπότε το δεξί
+      // κλικ πάνω του πέφτει κανονικά στο μενού οντότητας.
+      if (getTableWorksheetMenuPort()?.open(e.clientX, e.clientY)) return;
 
       // PRIORITY 1.4: ADR-739 Φ.Δ βήμα 9 — ζώνες δείκτη πίνακα (γράμματα στηλών / αριθμοί
       // γραμμών). ΠΡΙΝ το μενού οντότητας: σε λειτουργία πίνακα ο πίνακας ΕΙΝΑΙ η επιλεγμένη

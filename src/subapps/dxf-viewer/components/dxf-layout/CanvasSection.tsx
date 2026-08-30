@@ -50,13 +50,10 @@ import { useGripHoverMenuController } from '../../hooks/grips/useGripHoverMenuCo
 import { useGuideActions } from '../../hooks/state/useGuideActions';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
 import { useConstructionPointState } from '../../hooks/state/useConstructionPointState';
+import { useCanvasMenuRefs } from '../../hooks/canvas/use-canvas-menu-refs';
 import { usePromptDialog } from '../../systems/prompt-dialog';
 import { useNotifications } from '../../../../providers/NotificationProvider'; import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { type DrawingContextMenuHandle } from '../../ui/components/DrawingContextMenu';
 import { SnapOverrideOrchestrator } from '../../snapping/overrides/SnapOverrideOrchestrator';
-import { type EntityContextMenuHandle } from '../../ui/components/EntityContextMenu';
-import { type GuideContextMenuHandle } from '../../ui/components/GuideContextMenu';
-import { type GuideBatchContextMenuHandle } from '../../ui/components/GuideBatchContextMenu';
 import type { ToolType } from '../../ui/toolbar/types';
 import { useTouchGestures } from '../../hooks/gestures/useTouchGestures';
 import { useResponsiveLayout as useResponsiveLayoutForCanvas } from '@/components/contacts/dynamic/hooks/useResponsiveLayout';
@@ -268,11 +265,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     setDragPreviewPosition: unified.setDragPreviewPosition,
     universalSelection, onMeasurementComplete: guideWorkflows.handleMeasurementComplete,
   });
-  // === Context menu refs ===
-  const drawingMenuRef = useRef<DrawingContextMenuHandle>(null);
-  const entityMenuRef = useRef<EntityContextMenuHandle>(null);
-  const guideMenuRef = useRef<GuideContextMenuHandle>(null);
-  const guideBatchMenuRef = useRef<GuideBatchContextMenuHandle>(null);
+  // === Context menu refs (ADR-040 — μία συστάδα, ο ενορχηστρωτής δεν τις διαβάζει ποτέ) ===
+  const { drawingMenuRef, entityMenuRef, guideMenuRef, guideBatchMenuRef } = useCanvasMenuRefs();
   // === Modify tools (ADR-349/350 — extracted to useModifyTools for CanvasSection size budget) ===
   const { rotationTool, moveTool, mirrorTool, scaleTool, stretchTool, trimTool, extendTool, offsetTool, filletTool, chamferTool, arrayPolarTool, arrayPathTool, wallSplitTool, wallAttachTool, stairAddTurnTool, wallMergeTool, wallGapOpeningTool, copyTool, handleRotationAnglePrompt } = useModifyTools({
     activeTool, selectedEntityIds, setSelectedEntityIds, levelManager, executeCommand,
@@ -423,7 +417,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     onSnapOverrideMenuRequest: (x: number, y: number) => drawingMenuRef.current?.open(x, y),
   });
   // ADR-739 Φ.Δ βήμα 9 — το `tableHeaderMenu` είναι ΜΟΝΟ ref+props για μοντάρισμα· τη σύνδεση με το δεξί κλικ την κάνει θύρα module (`table-header-menu-port`) — καμία νέα συνδρομή εδώ (ADR-040).
-  const { textEditor, tableCellEditor, tableHeaderMenu, tableRangeMenu, tableLinkMenu, tableTextToolbar, handleDoubleClick, handleMouseMoveWithAutoArea } = useCanvasSectionUI({
+  const { textEditor, tableCellEditor, tableHeaderMenu, tableRangeMenu, tableWorksheetMenu, tableLinkMenu, tableTextToolbar, handleDoubleClick, handleMouseMoveWithAutoArea } = useCanvasSectionUI({
     transformRef, containerRef, activeTool, executeCommand,
     getSelectedEntityIds, dxfScene, handleMouseMove: unified.handleMouseMove,
     levelManager, currentOverlays, transformScale: transform.scale,
@@ -490,6 +484,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         tableFormulaBar={tableCellEditor.formulaBar}
         tableHeaderMenu={tableHeaderMenu}
         tableRangeMenu={tableRangeMenu}
+        tableWorksheetMenu={tableWorksheetMenu}
         tableLinkMenu={tableLinkMenu}
         tableTextToolbar={tableTextToolbar}
         selectionCycling={{ onSelectEntity: handleCycleEntitySelect }}

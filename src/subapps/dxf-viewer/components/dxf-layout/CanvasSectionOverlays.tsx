@@ -52,6 +52,13 @@ import {
   TableCellLinkContextMenu,
   type TableCellLinkContextMenuHandle,
 } from '../../ui/components/TableCellLinkContextMenu';
+// 🔴 ADR-833 Φάση 4 — το τέταρτο μενού δεξιού κλικ πίνακα, και ο in-place επεξεργαστής της
+// μετονομασίας: το ένα ανοίγει imperative μέσω ref, ο άλλος είναι micro-leaf πάνω σε store.
+import {
+  TableWorksheetContextMenu,
+  type TableWorksheetContextMenuHandle,
+} from '../../ui/components/TableWorksheetContextMenu';
+import { TableWorksheetRenameOverlay } from '../../ui/table-cell-editor/TableWorksheetRenameOverlay';
 // 🔴 ADR-739 §67 — δεξί κλικ **μέσα** σε πεδίο κειμένου της συνεδρίας (κελί ή γραμμή τύπων):
 // **μόνο** το mini toolbar, χωρίς μενού (§67.10, μετρημένο στο Excel). Ανοίγει imperative μέσω
 // θύρας — αλλά τη θύρα του **δεν** τη ρωτά ο δρομολογητής του καμβά: τη ρωτούν τα ίδια τα πεδία.
@@ -99,6 +106,12 @@ type TableLinkMenuMount = {
   props: Omit<React.ComponentProps<typeof TableCellLinkContextMenu>, 'ref'>;
 };
 
+// ADR-833 Φάση 4 — το μενού της καρτέλας φύλλου, ίδιο συμβόλαιο με τα τρία από πάνω.
+type TableWorksheetMenuMount = {
+  ref: React.RefObject<TableWorksheetContextMenuHandle | null>;
+  props: Omit<React.ComponentProps<typeof TableWorksheetContextMenu>, 'ref'>;
+};
+
 // ADR-739 §67 — η τέταρτη επιφάνεια δεξιού κλικ πίνακα, ίδιο συμβόλαιο μονταρίσματος με τα
 // τρία μενού από πάνω — με τη διαφορά ότι εδώ δεν υπάρχει μενού, μόνο η γραμμή εργαλείων.
 type TableTextToolbarMount = {
@@ -132,6 +145,8 @@ export interface CanvasSectionOverlaysProps {
   // μονταρισμένο πάντα, ανοίγει imperative μέσω ref, αόρατο όσο δεν έχει στόχο.
   tableRangeMenu: TableRangeMenuMount;
   tableLinkMenu: TableLinkMenuMount;
+  // ADR-833 Φάση 4 — ίδια σύμβαση: μονταρισμένο πάντα, ανοίγει imperative, αόρατο χωρίς στόχο.
+  tableWorksheetMenu: TableWorksheetMenuMount;
   // ADR-739 §67 — η γραμμή του κειμένου: ίδια σύμβαση με τα τρία από πάνω (μονταρισμένη πάντα,
   // αόρατη όσο δεν έχει στόχο), αλλά η θύρα της ανοίγει από τα **πεδία**, όχι από τον καμβά.
   tableTextToolbar: TableTextToolbarMount;
@@ -193,6 +208,16 @@ export const CanvasSectionOverlays: React.FC<CanvasSectionOverlaysProps> = (p) =
         ref={p.tableLinkMenu.ref as React.Ref<TableCellLinkContextMenuHandle>}
         {...p.tableLinkMenu.props}
       />
+      {/* 🔴 ADR-833 Φάση 4 — δεξί κλικ πάνω σε **καρτέλα φύλλου**: νέο φύλλο, μετονομασία,
+          μετακίνηση αριστερά/δεξιά, διαγραφή. Πέντε εντολές, όχι οι εννιά του Excel — δες την
+          κεφαλίδα του component για το τι λείπει και γιατί. */}
+      <TableWorksheetContextMenu
+        ref={p.tableWorksheetMenu.ref as React.Ref<TableWorksheetContextMenuHandle>}
+        {...p.tableWorksheetMenu.props}
+      />
+      {/* 🔴 ADR-833 Φάση 4 — η in-place μετονομασία της καρτέλας. Φύλλο χωρίς props, όπως ο
+          αδελφός του info-tag (ADR-612): όλη η κατάσταση έρχεται από το store της. */}
+      <TableWorksheetRenameOverlay />
       {/* 🔴 ADR-739 §67 — δεξί κλικ ΜΕΣΑ σε πεδίο κειμένου της συνεδρίας: **μόνο** το mini
           toolbar τυπογραφίας, χωρίς μενού — ακριβώς όπως το Excel σε κατάσταση Επεξεργασίας
           (§67.10). Χωρίς αυτό ο browser έδειχνε το native μενού του, γιατί τα δύο πεδία ζουν

@@ -968,6 +968,17 @@
       "deleteColumns": "Delete {count} columns",
       "formatCells": "Format Cells..."
     },
+    "worksheetMenu": {
+      "title": "Sheet: {name}",
+      "add": "New sheet",
+      "rename": "Rename",
+      "delete": "Delete sheet",
+      "moveLeft": "Move left",
+      "moveRight": "Move right"
+    },
+    "worksheetRename": {
+      "fieldLabel": "Worksheet name"
+    },
     "formatToolbar": {
       "columnLabel": "Format column {label}",
       "rowLabel": "Format row {label}",

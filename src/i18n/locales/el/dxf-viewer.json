@@ -968,6 +968,17 @@
       "deleteColumns": "Διαγραφή {count} στηλών",
       "formatCells": "Μορφοποίηση κελιών..."
     },
+    "worksheetMenu": {
+      "title": "Φύλλο: {name}",
+      "add": "Νέο φύλλο",
+      "rename": "Μετονομασία",
+      "delete": "Διαγραφή φύλλου",
+      "moveLeft": "Μετακίνηση αριστερά",
+      "moveRight": "Μετακίνηση δεξιά"
+    },
+    "worksheetRename": {
+      "fieldLabel": "Όνομα φύλλου εργασίας"
+    },
     "formatToolbar": {
       "columnLabel": "Μορφοποίηση στήλης {label}",
       "rowLabel": "Μορφοποίηση γραμμής {label}",
