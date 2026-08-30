@@ -15,12 +15,8 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import type { OwnerProperty } from '@/types/owner-property';
-import { DEFAULT_LISTING_AGREEMENT } from '@/types/listing-agreement';
-import {
-  CUSTOMARY_COMMISSION_PERCENTAGE,
-  OWNER_CONSENT,
-  type BrokeredListingMandate,
-} from '@/types/owner-property-mandate';
+import { mandatesOf, type BrokeredListingMandate } from '@/types/owner-property-mandate';
+import { brokeredMandate } from '@/lib/owner-property/__tests__/owner-property-fixtures';
 
 process.env.MANDATE_CONSENT_SECRET ??= 'δοκιμαστικό-μυστικό-συγκατάθεσης';
 
@@ -45,29 +41,23 @@ const NOW = '2026-08-21T10:00:00.000Z';
 const LISTING = 'ownp_a';
 const CLIENT = 'cont_kostas';
 
+/**
+ * 🔑 Ο χτίστης είναι **δανεικός** (`owner-property-fixtures`), όχι δεύτερος: τα
+ * δεκατρία πεδία της εντολής γραμμένα ξανά εδώ ήταν κλώνος που το CHECK 3.28
+ * μπλοκάρει. Εδώ μένει **μόνο** ό,τι αφορά την ειδοποίηση: ο πελάτης και το nonce.
+ */
 function mandate(
   nonce: string | null,
   over: Partial<BrokeredListingMandate> = {},
 ): BrokeredListingMandate {
-  return {
-    kind: 'brokered',
+  return brokeredMandate({
     clientContactId: CLIENT,
-    confirmation: 'pending',
-    confirmedByUserId: null,
-    proof: { via: OWNER_CONSENT },
-    agreement: DEFAULT_LISTING_AGREEMENT,
-    compensation: {
-      type: 'percentage',
-      percentage: CUSTOMARY_COMMISSION_PERCENTAGE,
-      vatIncluded: false,
-    },
-    decidedAt: null,
     notifiedAt: '2026-08-20T09:00:00.000Z',
-    viewedAt: null,
     consentNonce: nonce,
     expiresAt: '2027-08-20T12:00:00.000Z',
+    startsAt: NOW,
     ...over,
-  };
+  });
 }
 
 function world(
@@ -101,9 +91,15 @@ function world(
   return fake as unknown as AdminFirestore;
 }
 
+/**
+ * ⚠️ **`mandatesOf`, ΠΟΤΕ ωμό `.mandates`** (ADR-832): ο κόσμος αυτής της σουίτας
+ * σπέρνει επίτηδες το **παλιό ενικό** πεδίο — έτσι ζουν τα έγγραφα της ζωντανής
+ * βάσης, και η ειδοποίηση τα συναντά **πριν** γραφτεί οτιδήποτε. Σκέτο `.mandates[0]`
+ * πάνω τους πετά `TypeError`, δηλαδή η άγκυρα θα κοκκίνιζε για τον **λάθος** λόγο.
+ */
 async function stored(db: AdminFirestore): Promise<BrokeredListingMandate> {
   const snap = await db.collection(COLLECTIONS.OWNER_PROPERTIES).doc(LISTING).get();
-  return (snap.data() as OwnerProperty).mandate as BrokeredListingMandate;
+  return mandatesOf(snap.data() as OwnerProperty)[0]!;
 }
 
 beforeEach(() => {
@@ -119,7 +115,7 @@ describe('🔴 Β — η σφραγίδα «το άνοιξε»', () => {
     const db = world('nonce-1');
     expect((await stored(db)).viewedAt).toBeNull();
 
-    await markMandateViewed(db, LISTING);
+    await markMandateViewed(db, LISTING, 'nonce-1');
     expect((await stored(db)).viewedAt).not.toBeNull();
   });
 
@@ -127,10 +123,10 @@ describe('🔴 Β — η σφραγίδα «το άνοιξε»', () => {
     // Η **πρώτη** ματιά είναι το γεγονός. Αν κάθε φόρτωση ξανάγραφε, το πεδίο θα
     // έλεγε «πότε το είδε τελευταία» — άλλο πράγμα — και κάθε refresh θα ήταν εγγραφή.
     const db = world('nonce-1');
-    await markMandateViewed(db, LISTING);
+    await markMandateViewed(db, LISTING, 'nonce-1');
     const first = (await stored(db)).viewedAt;
 
-    await markMandateViewed(db, LISTING);
+    await markMandateViewed(db, LISTING, 'nonce-1');
     expect((await stored(db)).viewedAt).toBe(first);
   });
 
@@ -140,12 +136,12 @@ describe('🔴 Β — η σφραγίδα «το άνοιξε»', () => {
       id: LISTING,
       authorUserId: 'u',
       authorCompanyId: null,
-      mandate: { kind: 'self' },
+      mandates: [], mandatesExpireAt: null,
       title: 'Δικό μου',
       lifecycle: 'listed',
     });
     await expect(
-      markMandateViewed(fake as unknown as AdminFirestore, LISTING),
+      markMandateViewed(fake as unknown as AdminFirestore, LISTING, 'nonce-1'),
     ).resolves.toBeUndefined();
   });
 
@@ -153,7 +149,7 @@ describe('🔴 Β — η σφραγίδα «το άνοιξε»', () => {
     const fake = new FakeFirestore();
     fake.failReads = true;
     await expect(
-      markMandateViewed(fake as unknown as AdminFirestore, LISTING),
+      markMandateViewed(fake as unknown as AdminFirestore, LISTING, 'nonce-1'),
     ).resolves.toBeUndefined();
   });
 });

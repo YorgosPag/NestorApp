@@ -52,6 +52,12 @@ function brokeredMandate(over: Partial<BrokeredListingMandate> = {}): BrokeredLi
     viewedAt: null,
     consentNonce: 'nonce-1',
     expiresAt: daysFromNow(300),
+    scope: ['sell'],
+    startsAt: NOW,
+    // ADR-832
+    agencyCompanyId: 'comp_office',
+    startsAt: '2026-08-01T09:00:00.000Z',
+    scope: ['sell'],
     ...over,
   };
 }
@@ -61,7 +67,7 @@ function listing(id: string, over: Partial<OwnerProperty> = {}): OwnerProperty {
     id,
     authorUserId: 'user_maria',
     authorCompanyId: OFFICE,
-    mandate: brokeredMandate(),
+    mandates: [brokeredMandate()],
     title: `Ακίνητο ${id}`,
     type: 'plot',
     areaSqm: 500,
@@ -116,7 +122,7 @@ describe('🔴 Τ — ο κατάλογος βλέπει ΜΟΝΟ τις εντ�
     const { db } = dbWith(
       listing('ownp_self', {
         authorCompanyId: OFFICE,
-        mandate: { kind: 'self' },
+        mandates: [], mandatesExpireAt: null,
       }),
     );
 
@@ -140,10 +146,10 @@ describe('🔴 Σ — ταξινόμηση κατά ΕΠΕΙΓΟΝ, όχι κα�
   it('Σ1 — «περιμένουν εσάς» πρώτα, «ενεργές» τελευταίες', async () => {
     const { db } = dbWith(
       listing('ownp_live', {
-        mandate: brokeredMandate({ confirmation: 'confirmed', expiresAt: daysFromNow(200) }),
+        mandates: [brokeredMandate({ confirmation: 'confirmed', expiresAt: daysFromNow(200) })],
       }),
-      listing('ownp_waiting', { mandate: brokeredMandate() }),
-      listing('ownp_silent', { mandate: brokeredMandate({ notifiedAt: null }) }),
+      listing('ownp_waiting', { mandates: [brokeredMandate()] }),
+      listing('ownp_silent', { mandates: [brokeredMandate({ notifiedAt: null })] }),
     );
 
     const catalog = await readMandateCatalog(db, OFFICE, NOW);
@@ -156,8 +162,8 @@ describe('🔴 Σ — ταξινόμηση κατά ΕΠΕΙΓΟΝ, όχι κα�
 
   it('Σ2 — μέσα στην ίδια κατάσταση: ό,τι λήγει πρώτο, πρώτο', async () => {
     const { db } = dbWith(
-      listing('ownp_far', { mandate: brokeredMandate({ expiresAt: daysFromNow(200) }) }),
-      listing('ownp_near', { mandate: brokeredMandate({ expiresAt: daysFromNow(20) }) }),
+      listing('ownp_far', { mandates: [brokeredMandate({ expiresAt: daysFromNow(200) })] }),
+      listing('ownp_near', { mandates: [brokeredMandate({ expiresAt: daysFromNow(20) })] }),
     );
 
     const catalog = await readMandateCatalog(db, OFFICE, NOW);
@@ -167,10 +173,10 @@ describe('🔴 Σ — ταξινόμηση κατά ΕΠΕΙΓΟΝ, όχι κα�
   it('Σ3 — οι ληγμένες πάνε ΤΕΛΟΣ μέσα στην ομάδα τους, δεν συγκρίνονται', async () => {
     const { db } = dbWith(
       listing('ownp_expired_a', {
-        mandate: brokeredMandate({ confirmation: 'confirmed', expiresAt: daysFromNow(-2) }),
+        mandates: [brokeredMandate({ confirmation: 'confirmed', expiresAt: daysFromNow(-2) })],
       }),
       listing('ownp_expired_b', {
-        mandate: brokeredMandate({ confirmation: 'confirmed', expiresAt: daysFromNow(-40) }),
+        mandates: [brokeredMandate({ confirmation: 'confirmed', expiresAt: daysFromNow(-40) })],
       }),
     );
 
@@ -194,7 +200,7 @@ describe('🔴 Γ — τι κουβαλά κάθε γραμμή', () => {
   it('Γ2 — επαφή που ΔΕΝ υπάρχει δίνει `null`, όχι κενή συμβολοσειρά', async () => {
     // `null` σημαίνει «η εντολή δείχνει σε επαφή που χάθηκε» — δουλειά για το γραφείο.
     const { db } = dbWith(
-      listing('ownp_a', { mandate: brokeredMandate({ clientContactId: 'cont_ghost' }) }),
+      listing('ownp_a', { mandates: [brokeredMandate({ clientContactId: 'cont_ghost' })] }),
     );
     const [row] = (await readMandateCatalog(db, OFFICE, NOW)).rows;
     expect(row.clientName).toBeNull();
@@ -204,11 +210,11 @@ describe('🔴 Γ — τι κουβαλά κάθε γραμμή', () => {
     const { db } = dbWith(
       listing('ownp_pending'),
       listing('ownp_confirmed', {
-        mandate: brokeredMandate({ confirmation: 'confirmed', expiresAt: daysFromNow(200) }),
+        mandates: [brokeredMandate({ confirmation: 'confirmed', expiresAt: daysFromNow(200) })],
       }),
       listing('ownp_withdrawn', {
         lifecycle: 'withdrawn',
-        mandate: brokeredMandate({ confirmation: 'confirmed', expiresAt: daysFromNow(200) }),
+        mandates: [brokeredMandate({ confirmation: 'confirmed', expiresAt: daysFromNow(200) })],
       }),
     );
 
@@ -245,8 +251,8 @@ describe('🔴 Λ — η λογιστική κλείνει και τυπώνει
   it('Λ2 — το άθροισμα του πίνακα ΙΣΟΥΤΑΙ με τις γραμμές', async () => {
     const { db } = dbWith(
       listing('ownp_a'),
-      listing('ownp_b', { mandate: brokeredMandate({ notifiedAt: null }) }),
-      listing('ownp_c', { mandate: brokeredMandate({ confirmation: 'declined' }) }),
+      listing('ownp_b', { mandates: [brokeredMandate({ notifiedAt: null })] }),
+      listing('ownp_c', { mandates: [brokeredMandate({ confirmation: 'declined' })] }),
       listing('ownp_ignored', { authorCompanyId: OTHER_OFFICE }),
     );
 

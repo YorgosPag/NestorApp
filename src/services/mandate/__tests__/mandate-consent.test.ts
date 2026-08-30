@@ -70,8 +70,8 @@ describe('Δ — ο σύνδεσμος δείχνει τη σωστή ερώτη
     const lookup = await readMandateConsentRequest(db, link.token);
 
     expect(lookup.ok).toBe(true);
-    if (lookup.ok && property.mandate.kind === 'brokered') {
-      expect(lookup.request.mandateExpiresAt).toBe(property.mandate.expiresAt);
+    if (lookup.ok && property.mandates[0] !== undefined) {
+      expect(lookup.request.mandateExpiresAt).toBe(property.mandates[0]?.expiresAt);
       expect(lookup.request.mandateExpiresAt).not.toBe(link.expiresAtISO);
     }
   });
@@ -170,7 +170,8 @@ describe('🔴 Α — έξι λόγοι, και κανένας δεν συμπτ
 describe('🔴 Ν — το «ναι» του ιδιοκτήτη φτάνει στο έγγραφο', () => {
   async function storedMandate(db: AdminFirestore) {
     const snap = await db.collection(COLLECTIONS.OWNER_PROPERTIES).doc(LISTING_ID).get();
-    return (snap.data() as OwnerProperty).mandate;
+    // ADR-832: μία εντολή σε αυτά τα σενάρια — η πρώτη ΕΙΝΑΙ η ζητούμενη.
+    return (snap.data() as OwnerProperty).mandates[0]!;
   }
 
   it('🔑 Ν1 — «ναι» ⇒ `confirmed` + ΧΡΟΝΟΣ, στο ίδιο έγγραφο', async () => {
@@ -178,8 +179,8 @@ describe('🔴 Ν — το «ναι» του ιδιοκτήτη φτάνει σ�
 
     // Ο παρονομαστής: πριν την απάντηση είναι σε αναμονή, χωρίς χρόνο.
     const before = await storedMandate(db);
-    expect(before.kind === 'brokered' && before.confirmation).toBe('pending');
-    expect(before.kind === 'brokered' && before.decidedAt).toBeNull();
+    expect(before.confirmation).toBe('pending');
+    expect(before.decidedAt).toBeNull();
 
     expect(await recordMandateDecision(db, link.token, 'confirmed')).toEqual({
       ok: true,
@@ -187,8 +188,8 @@ describe('🔴 Ν — το «ναι» του ιδιοκτήτη φτάνει σ�
     });
 
     const after = await storedMandate(db);
-    expect(after.kind === 'brokered' && after.confirmation).toBe('confirmed');
-    expect(after.kind === 'brokered' && after.decidedAt).not.toBeNull();
+    expect(after.confirmation).toBe('confirmed');
+    expect(after.decidedAt).not.toBeNull();
   });
 
   it('Ν2 — «όχι» ⇒ `declined`, και η εντολή ΔΕΝ σβήνεται', async () => {
@@ -196,10 +197,9 @@ describe('🔴 Ν — το «ναι» του ιδιοκτήτη φτάνει σ�
     await recordMandateDecision(db, link.token, 'declined');
 
     const mandate = await storedMandate(db);
-    expect(mandate.kind).toBe('brokered');
-    expect(mandate.kind === 'brokered' && mandate.confirmation).toBe('declined');
+        expect(mandate.confirmation).toBe('declined');
     // Ο πελάτης του γραφείου μένει καταγραμμένος: «αρνήθηκε» δεν είναι «δεν υπήρξε».
-    expect(mandate.kind === 'brokered' && mandate.clientContactId).toBe(CLIENT);
+    expect(mandate.clientContactId).toBe(CLIENT);
   });
 
   it('🔑 Ν3 — ο ΙΔΙΟΣ σύνδεσμος αλλάζει γνώμη — ΔΕΝ καίγεται στη χρήση', async () => {
@@ -214,7 +214,7 @@ describe('🔴 Ν — το «ναι» του ιδιοκτήτη φτάνει σ�
     });
 
     const mandate = await storedMandate(db);
-    expect(mandate.kind === 'brokered' && mandate.confirmation).toBe('declined');
+    expect(mandate.confirmation).toBe('declined');
   });
 
   it('🔴 Ν4 — ΠΑΛΙΟΣ σύνδεσμος ΔΕΝ γράφει τίποτα', async () => {
@@ -227,7 +227,7 @@ describe('🔴 Ν — το «ναι» του ιδιοκτήτη φτάνει σ�
       reason: 'superseded',
     });
     const mandate = await storedMandate(db);
-    expect(mandate.kind === 'brokered' && mandate.confirmation).toBe('pending');
+    expect(mandate.confirmation).toBe('pending');
   });
 
   it('🔴 Ν5 — σύνδεσμος ΑΛΛΟΥ πελάτη ΔΕΝ γράφει τίποτα', async () => {
@@ -239,7 +239,7 @@ describe('🔴 Ν — το «ναι» του ιδιοκτήτη φτάνει σ�
       reason: 'client-mismatch',
     });
     const mandate = await storedMandate(db);
-    expect(mandate.kind === 'brokered' && mandate.confirmation).toBe('pending');
+    expect(mandate.confirmation).toBe('pending');
   });
 });
 

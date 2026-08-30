@@ -69,6 +69,12 @@ function mandate(over: Partial<BrokeredListingMandate> = {}): BrokeredListingMan
     viewedAt: '2026-08-20T12:00:00.000Z',
     consentNonce: 'nonce-old',
     expiresAt: daysFromNow(300),
+    scope: ['sell'],
+    startsAt: NOW,
+    // ADR-832
+    agencyCompanyId: OFFICE,
+    startsAt: '2026-08-01T09:00:00.000Z',
+    scope: ['sell'],
     ...over,
   };
 }
@@ -91,7 +97,8 @@ function world(options: WorldOptions = {}): AdminFirestore {
     id: LISTING,
     authorUserId: 'user_maria',
     authorCompanyId: options.authorCompanyId === undefined ? OFFICE : options.authorCompanyId,
-    mandate: mandate(options.mandate),
+    mandates: [mandate(options.mandate)],
+    mandatesExpireAt: mandate(options.mandate).expiresAt,
     title: 'Οικόπεδο Κώστα',
     type: 'plot',
     areaSqm: 1000,
@@ -109,7 +116,7 @@ function world(options: WorldOptions = {}): AdminFirestore {
 
 async function storedMandate(db: AdminFirestore): Promise<BrokeredListingMandate> {
   const snap = await db.collection(COLLECTIONS.OWNER_PROPERTIES).doc(LISTING).get();
-  return (snap.data() as OwnerProperty).mandate as BrokeredListingMandate;
+  return (snap.data() as OwnerProperty).mandates[0]! as BrokeredListingMandate;
 }
 
 beforeEach(() => {
@@ -149,7 +156,7 @@ describe('🔴 Ε — ποιος επιτρέπεται να ενεργήσει'
       id: LISTING,
       authorUserId: 'user_maria',
       authorCompanyId: OFFICE,
-      mandate: { kind: 'self' },
+      mandates: [], mandatesExpireAt: null,
       title: 'Δικό μου',
       lifecycle: 'listed',
     });

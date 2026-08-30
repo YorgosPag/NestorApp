@@ -77,6 +77,8 @@ const AUTHORITY = (() => {
 //    Ν.4072/2012 απαγορεύει (ανώτατο 8). Δεύτερο αντίγραφο του ίδιου άκυρου fixture
 //    (ADR-827 §8.9 α) — και τα δύο πέρασαν από τη Φάση Α χωρίς να τα δει κανείς.
 const FUTURE = '2027-02-20T12:00:00.000Z';
+/** Η έναρξη της εντολής στα σενάρια — ADR-832. */
+const NOW = '2026-08-20T09:00:00.000Z';
 
 /** Οι όροι αμοιβής — **ιδιωτικοί**· καμία άγκυρα δεν τους περιμένει στη δημόσια προβολή. */
 const COMPENSATION: MandateCompensation = {
@@ -118,13 +120,15 @@ describe('🔴 Β — «ρώτα τον πελάτη»: τίποτα δημόσ�
       agreement: DEFAULT_LISTING_AGREEMENT,
       compensation: COMPENSATION,
       expiresAt: FUTURE,
+      scope: ['sell'],
+      startsAt: NOW,
       proof: OWNER_CONSENT_PROOF,
     });
 
     expect(result.write.kind).toBe('saved');
-    const mandate = (await storedProperty(db)).mandate;
-    expect(mandate.kind === 'brokered' && mandate.confirmation).toBe('pending');
-    expect(mandate.kind === 'brokered' && mandate.proof.via).toBe(OWNER_CONSENT);
+    const mandate = (await storedProperty(db)).mandates[0]!;
+    expect(mandate.confirmation).toBe('pending');
+    expect(mandate.proof.via).toBe(OWNER_CONSENT);
     expect(await isPublished(db)).toBe(false);
   });
 
@@ -135,11 +139,13 @@ describe('🔴 Β — «ρώτα τον πελάτη»: τίποτα δημόσ�
       agreement: DEFAULT_LISTING_AGREEMENT,
       compensation: COMPENSATION,
       expiresAt: FUTURE,
+      scope: ['sell'],
+      startsAt: NOW,
       proof: OWNER_CONSENT_PROOF,
     });
 
-    const mandate = (await storedProperty(db)).mandate;
-    expect(mandate.kind === 'brokered' && mandate.consentNonce).toEqual(expect.any(String));
+    const mandate = (await storedProperty(db)).mandates[0]!;
+    expect(mandate.consentNonce).toEqual(expect.any(String));
     // Το κλειδί anti-spam **είναι** το nonce ⇒ ο σύνδεσμος στο μήνυμα ανήκει σε αυτή
     // ακριβώς την πρόσκληση, και όχι σε κάποια προηγούμενη.
     expect(enqueued[0]?.idempotencyKey).toBe(
@@ -154,6 +160,8 @@ describe('🔴 Β — «ρώτα τον πελάτη»: τίποτα δημόσ�
       agreement: DEFAULT_LISTING_AGREEMENT,
       compensation: COMPENSATION,
       expiresAt: FUTURE,
+      scope: ['sell'],
+      startsAt: NOW,
       proof: OWNER_CONSENT_PROOF,
     });
 
@@ -175,12 +183,14 @@ describe('🔴 Γ — «έχω υπογεγραμμένο χαρτί»: δημο
       agreement: DEFAULT_LISTING_AGREEMENT,
       compensation: COMPENSATION,
       expiresAt: FUTURE,
+      scope: ['sell'],
+      startsAt: NOW,
       proof: agencyAttestation('user_maria'),
     });
 
-    const mandate = (await storedProperty(db)).mandate;
-    expect(mandate.kind === 'brokered' && mandate.confirmation).toBe('confirmed');
-    expect(mandate.kind === 'brokered' && mandate.proof.via).toBe(AGENCY_ATTESTATION);
+    const mandate = (await storedProperty(db)).mandates[0]!;
+    expect(mandate.confirmation).toBe('confirmed');
+    expect(mandate.proof.via).toBe(AGENCY_ATTESTATION);
     expect(await isPublished(db)).toBe(true);
   });
 
@@ -191,11 +201,13 @@ describe('🔴 Γ — «έχω υπογεγραμμένο χαρτί»: δημο
       agreement: DEFAULT_LISTING_AGREEMENT,
       compensation: COMPENSATION,
       expiresAt: FUTURE,
+      scope: ['sell'],
+      startsAt: NOW,
       proof: agencyAttestation('user_maria', 'entoles/kostas.pdf'),
     });
 
-    const mandate = (await storedProperty(db)).mandate;
-    if (mandate.kind === 'brokered' && mandate.proof.via === AGENCY_ATTESTATION) {
+    const mandate = (await storedProperty(db)).mandates[0]!;
+    if (mandate.proof.via === AGENCY_ATTESTATION) {
       expect(mandate.proof.attestedByUserId).toBe('user_maria');
       expect(mandate.proof.documentPath).toBe('entoles/kostas.pdf');
       expect(mandate.proof.attestedAt).toEqual(expect.any(String));
@@ -203,7 +215,7 @@ describe('🔴 Γ — «έχω υπογεγραμμένο χαρτί»: δημο
       throw new Error('η βεβαίωση χάθηκε');
     }
     // Και ο **πελάτης** δεν έχει «αποφασίσει» τίποτα: το χαρτί το βεβαιώνει το γραφείο.
-    expect(mandate.kind === 'brokered' && mandate.decidedAt).toBeNull();
+    expect(mandate.decidedAt).toBeNull();
   });
 
   it('🏆 Γ3 — το μήνυμα είναι ΑΛΛΟ: ενημέρωση με δικαίωμα αντίρρησης, όχι ερώτηση', async () => {
@@ -213,6 +225,8 @@ describe('🔴 Γ — «έχω υπογεγραμμένο χαρτί»: δημο
       agreement: DEFAULT_LISTING_AGREEMENT,
       compensation: COMPENSATION,
       expiresAt: FUTURE,
+      scope: ['sell'],
+      startsAt: NOW,
       proof: agencyAttestation('user_maria'),
     });
     const attestationBody = String(enqueued[0]?.content ?? '');
@@ -224,6 +238,8 @@ describe('🔴 Γ — «έχω υπογεγραμμένο χαρτί»: δημο
       agreement: DEFAULT_LISTING_AGREEMENT,
       compensation: COMPENSATION,
       expiresAt: FUTURE,
+      scope: ['sell'],
+      startsAt: NOW,
       proof: OWNER_CONSENT_PROOF,
     });
     const consentBody = String(enqueued[0]?.content ?? '');
@@ -250,12 +266,14 @@ describe('🔴 Ε — το γραφείο μαθαίνει ΑΝ έμαθε ο π
       agreement: DEFAULT_LISTING_AGREEMENT,
       compensation: COMPENSATION,
       expiresAt: FUTURE,
+      scope: ['sell'],
+      startsAt: NOW,
       proof: OWNER_CONSENT_PROOF,
     });
 
     expect(result.notify).toEqual({ kind: 'no-address' });
-    const mandate = (await storedProperty(db)).mandate;
-    expect(mandate.kind === 'brokered' && mandate.notifiedAt).toBeNull();
+    const mandate = (await storedProperty(db)).mandates[0]!;
+    expect(mandate.notifiedAt).toBeNull();
     // Η καταχώρηση **έγινε** — η σιωπή του ταχυδρόμου δεν ακυρώνει τη δουλειά.
     expect(result.write.kind).toBe('saved');
   });
@@ -268,12 +286,14 @@ describe('🔴 Ε — το γραφείο μαθαίνει ΑΝ έμαθε ο π
       agreement: DEFAULT_LISTING_AGREEMENT,
       compensation: COMPENSATION,
       expiresAt: FUTURE,
+      scope: ['sell'],
+      startsAt: NOW,
       proof: OWNER_CONSENT_PROOF,
     });
 
     expect(result.notify).toEqual({ kind: 'failed' });
-    const mandate = (await storedProperty(db)).mandate;
-    expect(mandate.kind === 'brokered' && mandate.notifiedAt).toBeNull();
+    const mandate = (await storedProperty(db)).mandates[0]!;
+    expect(mandate.notifiedAt).toBeNull();
   });
 
   it('🔑 Ε3 — ο ΠΑΡΟΝΟΜΑΣΤΗΣ: όταν φύγει, το `notifiedAt` γράφεται', async () => {
@@ -283,12 +303,14 @@ describe('🔴 Ε — το γραφείο μαθαίνει ΑΝ έμαθε ο π
       agreement: DEFAULT_LISTING_AGREEMENT,
       compensation: COMPENSATION,
       expiresAt: FUTURE,
+      scope: ['sell'],
+      startsAt: NOW,
       proof: OWNER_CONSENT_PROOF,
     });
 
     expect(result.notify).toEqual({ kind: 'sent', to: 'kostas@example.gr' });
-    const mandate = (await storedProperty(db)).mandate;
-    expect(mandate.kind === 'brokered' && mandate.notifiedAt).toEqual(expect.any(String));
+    const mandate = (await storedProperty(db)).mandates[0]!;
+    expect(mandate.notifiedAt).toEqual(expect.any(String));
   });
 
   it('🔴 Ε4 — στέλνει στο ΚΥΡΙΟ email, όχι στο πρώτο της λίστας', async () => {
@@ -301,6 +323,8 @@ describe('🔴 Ε — το γραφείο μαθαίνει ΑΝ έμαθε ο π
       agreement: DEFAULT_LISTING_AGREEMENT,
       compensation: COMPENSATION,
       expiresAt: FUTURE,
+      scope: ['sell'],
+      startsAt: NOW,
       proof: OWNER_CONSENT_PROOF,
     });
 
@@ -321,6 +345,8 @@ describe('🔴 Φ — άκυρη εντολή δεν γεννά αγγελία',
       agreement: DEFAULT_LISTING_AGREEMENT,
       compensation: COMPENSATION,
       expiresAt: '2020-01-01T00:00:00.000Z',
+      scope: ['sell'],
+      startsAt: NOW,
       proof: OWNER_CONSENT_PROOF,
     });
 
@@ -336,6 +362,10 @@ describe('🔴 Φ — άκυρη εντολή δεν γεννά αγγελία',
     const result = await createBrokeredListing(db, AUTHORITY, IDENTITY, validDraft(), {
       clientContactId: '   ',
       expiresAt: FUTURE,
+      // ⚠️ Η κατάληψη δηλώνεται **πάντα** (ADR-832) — η άγκυρα χαλάει ΕΝΑ πράγμα,
+      //    τον πελάτη, και ένα δεύτερο κενό θα την έκανε να πρασινίζει για λάθος λόγο.
+      scope: ['sell'],
+      startsAt: NOW,
       proof: OWNER_CONSENT_PROOF,
     });
 
