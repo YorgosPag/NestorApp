@@ -78,7 +78,47 @@ const getInitialLanguage = (): Language => {
 
 // Initialize i18n with minimal resources
 i18n
-  .use(ICU)
+  // 🔴 ADR-830 — ΤΟ CACHE ΤΟΥ ICU ΠΡΕΠΕΙ ΝΑ ΑΚΥΡΩΝΕΤΑΙ. ΤΑ DEFAULTS **ΔΕΝ** ΤΟ ΚΑΝΟΥΝ.
+  //
+  // ⛔ Το σκέτο `.use(ICU)` ήταν **σιωπηλά χαλασμένο**. Το `i18next-icu` κρατά
+  // memoized `IntlMessageFormat` ανά `"<γλώσσα>.<ns>.<κλειδί>"` και ξέρει να το
+  // αδειάζει — αλλά **μόνο** αν του δοθούν `bindI18n` / `bindI18nStore`, που έχουν
+  // **`''` ως default**. Χωρίς αυτά, οι δύο `clearCache()` handlers της βιβλιοθήκης
+  // **δεν εγγράφονται ΠΟΤΕ** και το cache ζει όσο η καρτέλα.
+  //
+  // 🔬 ΤΙ ΕΣΠΑΓΕ, ΜΕΤΡΗΜΕΝΟ ΣΤΟΝ BROWSER (30/08/2026):
+  // Αλλαγή γλώσσας el→en ενώ η οθόνη ζει. Ο switcher προφορτώνει μόνο τα
+  // `COMMON_NAMESPACES`, οπότε για κάθε **lazy** namespace υπάρχει ένα καρέ όπου
+  // `lng==='en'` αλλά το bundle δεν έχει προσγειωθεί ⇒ το i18next λύνει από το
+  // `fallbackLng: 'el'` και επιστρέφει **ελληνικό** κείμενο. Το ICU το αποθηκεύει
+  // κάτω από το κλειδί **`en.…`** — γιατί το `memKey` κρατά τη γλώσσα που
+  // **ζητήθηκε**, όχι εκείνη από την οποία **λύθηκε**. Όταν λίγα ms μετά φτάνει το
+  // πραγματικό αγγλικό bundle, ο store ενημερώνεται σωστά αλλά **κανείς δεν ρωτά
+  // ξανά τον store**: η οθόνη μένει ελληνική **οριστικά**, σε κάθε σελίδα.
+  //
+  // ⚠️ Η δεύτερη δικλείδα της βιβλιοθήκης (`memoizeFallback: false`) είναι εδώ
+  // **ανίκανη**: φυλάει με `hadSuccessfulLookup = info.resolved.res`, δηλαδή
+  // *«βρέθηκε κείμενο»* — που είναι **αληθές και για fallback**. Άλλη μια εμφάνιση
+  // του «πράσινο επειδή κανείς δεν ρώτησε το σωστό ερώτημα»: *βρέθηκε* δεν σημαίνει
+  // *βρέθηκε στη γλώσσα που ζητήθηκε*. Γι' αυτό η άμυνα είναι η **ακύρωση**.
+  //
+  // 🔑 **`added` ΕΙΝΑΙ ΤΟ ΚΡΙΣΙΜΟ, ΟΧΙ ΤΟ `languageChanged`.** Το `languageChanged`
+  // πιάνει μόνο την αλλαγή γλώσσας· το `added` πιάνει **ολόκληρη την κλάση** — κάθε
+  // φορά που κείμενο προσγειώνεται **μετά** το πρώτο render: lazy `loadNamespace`,
+  // route slice (ADR-744 §15), HMR. Ένα cache που γεμίζει από fallback και δεν
+  // ακυρώνεται όταν φτάνει η αλήθεια είναι το ελάττωμα· η αλήθεια φτάνει με `added`.
+  //
+  // ⚠️ **ΜΗΝ το «λύσεις» με `memoize: false`**: θα ξανα-μεταγλωττίζε κάθε ICU μήνυμα
+  // σε κάθε render, σε κάθε λίστα, για πάντα — πληρώνει μόνιμο κόστος σε hot path για
+  // ένα πρόβλημα φρεσκάδας. ⚠️ **ΜΗΝ το «λύσεις» προφορτώνοντας κι άλλα namespaces
+  // στον switcher**: το fallback καρέ θα εξακολουθεί να υπάρχει για όποιο namespace
+  // δεν μπήκε στη λίστα — δηλαδή θεραπεύει το **δείγμα**, όχι την **κλάση**.
+  .use(
+    new ICU({
+      bindI18n: 'languageChanged',
+      bindI18nStore: 'added removed',
+    }),
+  )
   .use(pseudoPostProcessor)
   .use(initReactI18next)
   .init({
@@ -120,6 +160,35 @@ recordShellBootstrap(DEFAULT_LANGUAGE, SHELL_NAMESPACES, shellWholeNamespaces);
 
 // Preload critical namespaces after initialization
 if (typeof window !== 'undefined') {
+  // 🌐 ADR-830 — ΤΟ `<html lang>` ΑΚΟΛΟΥΘΕΙ ΤΗ ΓΛΩΣΣΑ. ΗΤΑΝ ΚΑΡΦΩΜΕΝΟ ΣΤΟ `el`.
+  //
+  // Το `app/layout.tsx` γράφει `<html lang="el">` και **σωστά**: είναι Server
+  // Component και το `getInitialLanguage()` επιστρέφει σκόπιμα πάντα
+  // `DEFAULT_LANGUAGE`, ώστε server και πελάτης να συμφωνούν στο πρώτο καρέ.
+  // Μετρήθηκε όμως (30/08/2026) ότι **κανείς δεν το διόρθωνε ποτέ μετά**: με την
+  // οθόνη ολόκληρη στα αγγλικά, το `document.documentElement.lang` έμενε `el`.
+  //
+  // 🔑 **ΓΙΑΤΙ ΕΧΕΙ ΣΗΜΑΣΙΑ**: το `lang` δεν είναι διακοσμητικό. Είναι η **μόνη**
+  // δήλωση που διαβάζουν ο αναγνώστης οθόνης (για να διαλέξει φωνή — αγγλικά
+  // διαβασμένα με ελληνική προφορά είναι ακατάληπτα), ο συλλαβισμός του browser, ο
+  // ορθογράφος και οι μηχανές αναζήτησης. Είναι ρητή απαίτηση **WCAG 3.1.1**.
+  //
+  // 🔴 **ΕΔΩ, ΚΑΙ ΟΧΙ ΣΕ COMPONENT**: η αυθεντία της γλώσσας είναι το i18next. Ένα
+  // `useEffect` σε κάποιο provider θα ήταν **δεύτερος** ιδιοκτήτης του ίδιου
+  // attribute, ελεύθερος να αποκλίνει και σιωπηλά ανενεργός σε όποιο δέντρο δεν τον
+  // περιλαμβάνει (π.χ. `global-error.tsx`, που έχει δικό του `<html>`). Ο listener
+  // ζει δίπλα στην αυθεντία, τρέχει μία φορά, και είναι ιδεμποτικός.
+  //
+  // ⚠️ Το `pseudo` **είναι** έγκυρη τιμή εδώ: δηλώνει «όχι φυσική γλώσσα» και
+  // εμποδίζει τον αναγνώστη οθόνης να προφέρει τα `[[~~ … ~~]]` ως ελληνικά.
+  const syncDocumentLanguage = (language: string): void => {
+    if (document.documentElement.lang !== language) {
+      document.documentElement.lang = language;
+    }
+  };
+  i18n.on('languageChanged', syncDocumentLanguage);
+  syncDocumentLanguage(i18n.language);
+
   // Client-side only - 🏢 ENTERPRISE: Immediate preload (no delay)
   (async () => {
     const saved = safeGetItem(STORAGE_KEYS.PREFERRED_LANGUAGE, '');

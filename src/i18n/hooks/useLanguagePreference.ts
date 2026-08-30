@@ -69,6 +69,7 @@ import {
   loadNamespace,
   type Namespace,
 } from '../lazy-config';
+import { resolveNamespacesToPreload } from '../language-switch-preload';
 import { isHumanLanguage, type Language } from '../languages';
 
 const logger = createModuleLogger('useLanguagePreference');
@@ -123,7 +124,7 @@ export function useLanguagePreference(
 
   const setLanguage = useCallback(
     async (language: Language): Promise<LanguagePreferenceOutcome> => {
-      const wanted = namespaceKey ? (namespaceKey.split('|') as Namespace[]) : [];
+      const wanted = resolveNamespacesToPreload(namespaceKey);
 
       // 0. Τα κείμενα της οθόνης που κοιτάζει **τώρα** ο χρήστης.
       //    ⚠️ Μη μοιραίο: αν αποτύχει ένα namespace, η γλώσσα αλλάζει ούτως ή

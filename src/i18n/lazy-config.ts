@@ -1,6 +1,5 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import ICU from 'i18next-icu';
 
 import { createModuleLogger } from '@/lib/telemetry';
 import { getNamespaceLoader, type TranslationData } from './namespace-loaders';

@@ -1574,6 +1574,8 @@
 | **ADR-827** | Η ανάθεση **υπάρχουσας** αγγελίας σε μεσιτικό γραφείο | 🟡 Φάση Α | [View](./adrs/ADR-827-listing-mandate-assignment.md) |
 | **ADR-828** | Αυτόματη συμπλήρωση **σειρών** στη λαβή του πίνακα (parity Excel) | 🟡 Φ1-Φ3 κλειστές | [View](./adrs/ADR-828-table-autofill-series.md) |
 | **ADR-829** | Η επιφάνεια που **ανοίγει** και ο διακομιστής που **αρνείται** (η τομή ήταν ∅) | ✅ DXF viewer κλειστό · 🟠 4+2 ανοιχτά | [View](./adrs/ADR-829-surface-authority-reachability.md) |
+| **ADR-830** | Η **μετάφραση που έφτασε** και κανείς δεν ξαναρώτησε (ICU cache χωρίς ακύρωση) | ✅ Κλειστό · 🟠 §8 fallback καρέ | [View](./adrs/ADR-830-icu-cache-invalidation.md) |
+| **ADR-831** | Η **λίστα που θυμόταν** και το **μητρώο που ήξερε** (προφόρτωση πριν την αλλαγή γλώσσας) | ✅ Κλειστό — επαληθευμένο ζωντανά (0ms) | [View](./adrs/ADR-831-language-switch-preload.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---
