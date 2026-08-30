@@ -1,7 +1,19 @@
 /**
  * =============================================================================
- * POST /api/admin/organization-capabilities/brokerage — Η ΡΥΘΜΙΣΤΙΚΗ ΑΠΟΦΑΣΗ
+ * /api/admin/organization-capabilities/brokerage — Η ΠΟΡΤΑ ΤΟΥ ΡΥΘΜΙΣΤΗ
  * =============================================================================
+ *
+ * **`GET`** *«ποιους να κρίνω;»* · **`POST`** *«κρίνω»*.
+ *
+ * 🔑 **ΔΥΟ ΡΗΜΑΤΑ, ΕΝΑΣ ΘΕΜΑΤΟΦΥΛΑΚΑΣ — και δεν είναι οικονομία αρχείων.** Η απαρίθμηση και
+ * η απόφαση μοιράζονται **τον ίδιο φρουρό** (`BYPASS_ROLES`) και **το ίδιο λεξιλόγιο
+ * καταστάσεων**. Χωριστές διαδρομές θα ήταν δύο σημεία που απαντούν *«ποιος επιτρέπεται εδώ;»*
+ * — δηλαδή δύο σημεία που μπορούν να αποκλίνουν, με το επικίνδυνο σκέλος να είναι **αυτό που
+ * ξεχνιέται**.
+ *
+ * ⚠️ Το `GET` **προϋπήρχε ως κενό**: υπήρχε ολόκληρη μηχανή απόφασης και **καμία** διαδρομή
+ * που να λέει ποιος περιμένει. Ο υπερδιαχειριστής μπορούσε να αποφασίσει μόνο για `companyId`
+ * που ήξερε ήδη **απ' έξω** (ADR-824 §12.13).
  *
  * `approve` ⇒ `pending → active` · `revoke` ⇒ `pending|active → revoked`.
  *
@@ -33,11 +45,16 @@ import { BYPASS_ROLES } from '@/lib/auth/roles';
 import { nowISO } from '@/lib/date-local';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { readCapabilityApplicants } from '@/services/company/organization-capability.reader';
 import {
   approveBrokerage,
   revokeBrokerage,
   type CapabilityTransitionResult,
 } from '@/services/company/organization-capability.service';
+import {
+  isCapabilityStatus,
+  type OrganizationCapability,
+} from '@/types/organization-capability';
 import { applyAgencyRevocation } from '@/services/mandate/agency-listings-sweep.service';
 
 /**
@@ -46,6 +63,15 @@ import { applyAgencyRevocation } from '@/services/mandate/agency-listings-sweep.
  * ενέκρινα» δεν γεννά ερώτηση. Διακριτή ένωση, ώστε ο λόγος να **μην μπορεί** να
  * λείψει από τη μία περίπτωση.
  */
+/**
+ * Η ικανότητα που κατέχει **αυτή** η διαδρομή.
+ *
+ * ⚠️ Γραμμένη **μία** φορά και τυποποιημένη ως `OrganizationCapability`: αν κάποτε
+ * μετονομαστεί στο κλειστό σύνολο, εδώ **δεν μεταγλωττίζεται** αντί να ψάχνει σιωπηλά
+ * εταιρείες που δεν υπάρχουν.
+ */
+const CAPABILITY: OrganizationCapability = 'brokerage_listings';
+
 const decisionSchema = z.discriminatedUnion('decision', [
   z.object({ decision: z.literal('approve'), companyId: z.string().trim().min(1).max(128) }),
   z.object({
@@ -93,6 +119,43 @@ async function handler(request: NextRequest, ctx: AuthContext): Promise<NextResp
 
   return respond(result, sweep.swept);
 }
+
+/**
+ * **Η ΑΠΑΡΙΘΜΗΣΗ** — `GET ?status=pending` *(προεπιλογή: `pending`)*.
+ *
+ * 🔑 **Η κατάσταση κρίνεται από τον ΕΝΑ κριτή κλειστού συνόλου** (`isCapabilityStatus`), τον
+ * ίδιο που ήδη φυλάει ό,τι έρχεται απ' έξω στην οθόνη της άρνησης (§12.11). Ένα δεύτερο
+ * `z.enum([...])` εδώ θα ήταν **δεύτερη απογραφή** των τεσσάρων καταστάσεων — και θα πάλιωνε
+ * ακριβώς τη μέρα που προστεθεί πέμπτη.
+ *
+ * ⛔ **Το `unrequested` απορρίπτεται ΡΗΤΑ, με 400 και όνομα.** Δεν είναι γραμμένη τιμή αλλά
+ * **προεπιλογή για την απουσία εγγραφής**: ένα ερώτημα ισότητας πάνω σε πεδίο που δεν υπάρχει
+ * γυρίζει **κενό**, δηλαδή θα απαντούσε *«κανείς»* για το σύνολο που περιέχει **σχεδόν
+ * όλους**. Σιωπηλή άδεια λίστα είναι χειρότερη από σφάλμα: **μοιάζει με απάντηση**.
+ */
+async function listHandler(request: NextRequest): Promise<NextResponse> {
+  const requested = request.nextUrl.searchParams.get('status') ?? 'pending';
+
+  if (!isCapabilityStatus(requested)) {
+    return NextResponse.json({ error: 'UNKNOWN_STATUS' }, { status: 400 });
+  }
+
+  const page = await readCapabilityApplicants(getAdminFirestore(), CAPABILITY, requested);
+
+  if (page === null) {
+    return NextResponse.json({ error: 'STATUS_NOT_ENUMERABLE', status: requested }, { status: 400 });
+  }
+
+  return NextResponse.json(page);
+}
+
+export const GET = withSensitiveRateLimit(
+  withAuth(
+    async (request: NextRequest, _ctx: AuthContext, _cache: PermissionCache) =>
+      listHandler(request),
+    { requiredGlobalRoles: BYPASS_ROLES },
+  ),
+);
 
 export const POST = withSensitiveRateLimit(
   withAuth(

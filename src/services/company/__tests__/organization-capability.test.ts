@@ -30,10 +30,12 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
-import type {
-  BrokerageDeclaration,
-  CapabilityStatus,
-  OrganizationCapabilities,
+import {
+  CAPABILITY_STATUSES,
+  canDeclareCapability,
+  type BrokerageDeclaration,
+  type CapabilityStatus,
+  type OrganizationCapabilities,
 } from '@/types/organization-capability';
 import type { AgencyProfile } from '@/types/agency-profile';
 import {
@@ -345,4 +347,51 @@ describe('Γ — τι γράφεται στο έγγραφο του οργανι
       }),
     );
   });
+});
+
+// ============================================================================
+// Κ13ζ — Η ΟΘΟΝΗ ΚΑΙ Ο ΓΡΑΦΕΑΣ ΣΥΜΦΩΝΟΥΝ, ΚΑΙ ΤΟ ΑΠΟΔΕΙΚΝΥΕΙ Η ΕΚΤΕΛΕΣΗ
+// ============================================================================
+
+/**
+ * 🔴 **ΤΟ ΕΡΩΤΗΜΑ: ΕΙΝΑΙ ΤΟ `canDeclareCapability` ΔΕΥΤΕΡΟ ΒΙΒΛΙΟ;**
+ *
+ * Η οθόνη του ιδρυτή (`BrokerageCapabilityContent`) αποφασίζει αν θα ζωγραφίσει τη
+ * φόρμα ρωτώντας το `canDeclareCapability`. Η **αυθεντία** όμως της μετάβασης είναι ο
+ * πίνακας `ALLOWED_FROM` αυτού του αρχείου, που είναι `server-only` και **δομικά
+ * απρόσιτος** στον φυλλομετρητή. Δύο βιβλία για την ίδια μετάβαση μπορούν να
+ * αποκλίνουν — και η απόκλιση **δεν σκάει**:
+ *
+ * | Απόκλιση | Τι βλέπει ο άνθρωπος |
+ * |---|---|
+ * | οθόνη επιτρέπει, γραφέας αρνείται | συμπληρώνει τη φόρμα και τρώει **409** |
+ * | οθόνη αρνείται, γραφέας επιτρέπει | 🔴 **δεν μπορεί να δηλώσει ΠΟΤΕ** — σιωπηλά |
+ *
+ * ⇒ Η συμφωνία **εκτελείται**: για καθεμία από τις τέσσερις καταστάσεις καλείται ο
+ * **πραγματικός** γραφέας πάνω σε πραγματικό έγγραφο, και το αποτέλεσμά του
+ * συγκρίνεται με ό,τι υπόσχεται η οθόνη. Είναι το ίδιο δόγμα με το Κ12 *(«η άγκυρα
+ * καλεί τον γραφέα, γιατί η πύλη σιωπά»)*.
+ *
+ * ⛔ ΜΕΤΑΛΛΑΞΗ: πρόσθεσε ή αφαίρεσε κατάσταση από το `ALLOWED_FROM.declare` ⇒ κόκκινο.
+ * ⛔ ΜΕΤΑΛΛΑΞΗ: γύρνα το `canDeclareCapability` σε `() => true` ⇒ κόκκινο.
+ */
+describe('Κ13ζ — η υπόσχεση της οθόνης ισούται με την πράξη του γραφέα', () => {
+  it.each(CAPABILITY_STATUSES.map((status) => [status] as const))(
+    'από %s: ό,τι λέει η οθόνη, το κάνει ο γραφέας',
+    async (status: CapabilityStatus) => {
+      const { fake, admin } = harness(status, false);
+
+      const result = await declareBrokerage(admin, COMPANY, DECLARATION);
+      const accepted = result.kind === 'applied';
+
+      // ✅ ΘΕΤΙΚΟΣ ΣΥΝΟΔΟΣ: ο γραφέας **έτρεξε** και απάντησε αναγνωρίσιμα — η
+      //    σύγκριση παρακάτω δεν κρίνει σιωπή.
+      expect(['applied', 'illegal-transition']).toContain(result.kind);
+      expect(accepted).toBe(canDeclareCapability(status));
+
+      // Και η **συνέπεια** στη βάση συμφωνεί με την απάντηση: δεκτή δήλωση ⇒ `pending`,
+      // απορριφθείσα ⇒ η κατάσταση **έμεινε ως είχε**.
+      expect(await statusOf(fake)).toBe(accepted ? 'pending' : status);
+    },
+  );
 });

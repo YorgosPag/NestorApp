@@ -36,6 +36,23 @@ import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('company-public-name.reader');
 
 /**
+ * **ΤΙ ΜΕΤΡΑΕΙ ΩΣ ΕΠΩΝΥΜΙΑ** — η κρίση, χωριστά από την ανάγνωση.
+ *
+ * 🔑 **Ζει χωριστά επειδή ο ΔΕΥΤΕΡΟΣ καταναλωτής δεν κάνει ανάγνωση κατά ταυτότητα**: ο
+ * αναγνώστης του ρυθμιστή (`organization-capability.reader.ts`) παίρνει τα **ίδια** έγγραφα
+ * `companies/{id}` από **ερώτημα**, οπότε δεύτερη ανάγνωση ανά γραμμή θα ήταν N+1 κλήσεις για
+ * πληροφορία που **κρατά ήδη στα χέρια του**.
+ *
+ * ⚠️ Χωρίς αυτή τη συνάρτηση, εκείνος θα αντέγραφε το `typeof … === 'string' && trim() !== ''`
+ * — δηλαδή θα γεννιόταν **δεύτερη απάντηση** στο *«τι είναι έγκυρη επωνυμία;»*, και οι δύο
+ * θα μπορούσαν να αποκλίνουν σιωπηλά *(π.χ. η μία να δεχτεί κενό, η άλλη όχι)*.
+ */
+export function companyPublicNameOf(data: unknown): string | null {
+  const name = (data as { name?: unknown } | undefined)?.name;
+  return typeof name === 'string' && name.trim() !== '' ? name : null;
+}
+
+/**
  * **Η επωνυμία, ή `null`.**
  *
  * ⚠️ **`null` σε κάθε αστοχία, ποτέ εξαίρεση και ποτέ κείμενο-μπαλαντέρ.** Οι
@@ -52,8 +69,7 @@ export async function readCompanyPublicName(
 
   try {
     const snapshot = await adminDb.collection(COLLECTIONS.COMPANIES).doc(companyId).get();
-    const name = (snapshot.data() as { name?: unknown } | undefined)?.name;
-    return typeof name === 'string' && name.trim() !== '' ? name : null;
+    return companyPublicNameOf(snapshot.data());
   } catch (error) {
     logger.error('Η επωνυμία του γραφείου δεν διαβάστηκε', {
       data: { companyId },

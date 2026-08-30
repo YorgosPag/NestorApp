@@ -46,7 +46,9 @@ import { db } from '@/lib/firebase';
 import { createModuleLogger } from '@/lib/telemetry';
 import {
   ORGANIZATION_CAPABILITIES,
+  capabilityDisclosureOf,
   capabilityStatusOf,
+  type CapabilityDisclosure,
   type CapabilityStatus,
   type OrganizationCapabilities,
   type OrganizationCapability,
@@ -68,6 +70,21 @@ function emptyView(): OrganizationCapabilityView {
   ) as OrganizationCapabilityView;
 }
 
+/**
+ * **Ο ολικός χάρτης αποκαλύψεων** — κλειδί για κάθε ικανότητα, τιμή `null` όπου δεν υπάρχει
+ * εγγραφή. Δες το {@link disclosuresOf} για το γιατί **ολικός** και όχι `Partial`.
+ */
+export type OrganizationCapabilityDisclosures = Readonly<
+  Record<OrganizationCapability, CapabilityDisclosure | null>
+>;
+
+/** **Καμία αποκάλυψη** — η προεπιλογή όταν δεν ξέρουμε τίποτα, ή όταν η ανάγνωση απέτυχε. */
+function emptyDisclosures(): OrganizationCapabilityDisclosures {
+  return Object.fromEntries(
+    ORGANIZATION_CAPABILITIES.map((capability) => [capability, null]),
+  ) as OrganizationCapabilityDisclosures;
+}
+
 /** Το ωμό έγγραφο → **όλες** οι καταστάσεις, μέσα από τον ΕΝΑ μεταφραστή. */
 function viewOf(capabilities: OrganizationCapabilities | undefined): OrganizationCapabilityView {
   return Object.fromEntries(
@@ -76,6 +93,39 @@ function viewOf(capabilities: OrganizationCapabilities | undefined): Organizatio
       capabilityStatusOf(capabilities, capability),
     ]),
   ) as OrganizationCapabilityView;
+}
+
+/**
+ * Το ωμό έγγραφο → **όλες** οι αποκαλύψεις, μέσα από τον ΕΝΑ μεταφραστή.
+ *
+ * 🔑 **Ολικός χάρτης, όπως και η όψη** — παράγεται από το κλειστό σύνολο, ποτέ γραμμένος στο
+ * χέρι. Η **τιμή** μπορεί να είναι `null` *(«κανείς δεν ζήτησε»)*, το **κλειδί** ποτέ: με
+ * `Partial` κάθε καταναλωτής θα χρειαζόταν δική του σιωπηλή προεπιλογή για ικανότητα που
+ * λείπει — δηλαδή απόφαση παρμένη από τον τύπο αντί για άνθρωπο.
+ */
+function disclosuresOf(
+  capabilities: OrganizationCapabilities | undefined,
+): OrganizationCapabilityDisclosures {
+  return Object.fromEntries(
+    ORGANIZATION_CAPABILITIES.map((capability) => [
+      capability,
+      capabilityDisclosureOf(capabilities, capability),
+    ]),
+  ) as OrganizationCapabilityDisclosures;
+}
+
+/**
+ * **Η ΚΡΙΣΗ ΩΣ ΚΑΘΑΡΗ ΣΥΝΑΡΤΗΣΗ** — ό,τι δημοσιεύει ο αναγνώστης, χωρίς Firestore.
+ *
+ * ⚠️ Ζει χωριστά **επίτηδες**, με το ίδιο σκεπτικό που δηλώνει ήδη το
+ * `use-public-place.test.ts`: *«μέσα σε `useEffect` θα μπορούσε να ελεγχθεί μόνο με
+ * προσομοίωση Firestore, δηλαδή σε κόσμο που δεν υπάρχει»*. Έτσι ο χειριστής του
+ * στιγμιότυπου μένει **μία κλήση χωρίς λογική**, και η λογική ελέγχεται ολόκληρη.
+ */
+export function capabilitiesStateOf(
+  capabilities: OrganizationCapabilities | undefined,
+): OrganizationCapabilitiesState {
+  return { view: viewOf(capabilities), disclosures: disclosuresOf(capabilities), settled: true };
 }
 
 /**
@@ -97,6 +147,17 @@ function viewOf(capabilities: OrganizationCapabilities | undefined): Organizatio
  */
 export interface OrganizationCapabilitiesState {
   readonly view: OrganizationCapabilityView;
+  /**
+   * **ΤΙ ΝΑ ΠΕΙ Η ΟΘΟΝΗ** — για όποιον **μιλά**, ποτέ για όποιον κρύβει.
+   *
+   * 🔑 **Ταξιδεύει ΧΩΡΙΣΤΑ από την όψη, με το ίδιο σκεπτικό που χωρίζει το `settled`.**
+   * Όποιος **κρύβει** (το μενού) ρωτά μόνο το `view`: εκεί κάθε άγνοια και κάθε αστοχία
+   * είναι ήδη «μην προσφέρεις». Όποιος **μιλά** (η οθόνη του ιδρυτή) χρειάζεται το
+   * *«γιατί»* — και μια ανάκληση χωρίς λόγο είναι σιωπή που δεν διορθώνεται.
+   *
+   * ⚠️ `null` = **δεν υπάρχει εγγραφή**, ποτέ «δεν ξέρω». Το «δεν ξέρω» είναι το `settled`.
+   */
+  readonly disclosures: OrganizationCapabilityDisclosures;
   /** `false` = **δεν ξέρω ακόμη**. Ποτέ «δεν ζήτησε». */
   readonly settled: boolean;
 }
@@ -127,7 +188,7 @@ function subscribeToCapabilities(
       const capabilities = (
         snapshot.data() as { capabilities?: OrganizationCapabilities } | undefined
       )?.capabilities;
-      publish({ view: viewOf(capabilities), settled: true });
+      publish(capabilitiesStateOf(capabilities));
     },
     (error: Error) => {
       logger.error('Οι ικανότητες του οργανισμού δεν διαβάστηκαν — η οθόνη ΚΡΥΒΕΙ', {
@@ -137,7 +198,7 @@ function subscribeToCapabilities(
       // 🔴 **Αστοχία = ΓΝΩΣΤΟ «όχι», όχι αιώνια άγνοια.** Ένα `settled: false` εδώ θα
       // άφηνε την οθόνη να γυρίζει για πάντα όταν ο κανόνας Firestore αρνείται —
       // δηλαδή θα αντάλλασσε ψέμα με κόλλημα. Fail-closed **και** τερματίζει.
-      publish({ view: emptyView(), settled: true });
+      publish({ view: emptyView(), disclosures: emptyDisclosures(), settled: true });
     },
   );
 }
@@ -147,6 +208,7 @@ export function useOrganizationCapabilityView(
 ): OrganizationCapabilitiesState {
   const [state, setState] = useState<OrganizationCapabilitiesState>(() => ({
     view: emptyView(),
+    disclosures: emptyDisclosures(),
     settled: false,
   }));
 
@@ -154,13 +216,13 @@ export function useOrganizationCapabilityView(
     const tenant = companyId?.trim() ?? '';
 
     if (tenant === '') {
-      setState({ view: emptyView(), settled: true });
+      setState({ view: emptyView(), disclosures: emptyDisclosures(), settled: true });
       return;
     }
 
     // ⚠️ **Πίσω σε «δεν ξέρω» σε κάθε αλλαγή οργανισμού.** Χωρίς αυτό, μετά από αλλαγή
     // χώρου η οθόνη θα μιλούσε με **βεβαιότητα** για τον προηγούμενο.
-    setState({ view: emptyView(), settled: false });
+    setState({ view: emptyView(), disclosures: emptyDisclosures(), settled: false });
 
     return subscribeToCapabilities(tenant, setState);
   }, [companyId]);
@@ -223,7 +285,10 @@ export function useMyOrganizationCapabilities(): OrganizationCapabilitiesState {
   const state = useOrganizationCapabilityView(user?.companyId ?? null);
 
   return useMemo(
-    () => (authLoading ? { view: state.view, settled: false } : state),
+    () =>
+      authLoading
+        ? { view: state.view, disclosures: state.disclosures, settled: false }
+        : state,
     [authLoading, state],
   );
 }

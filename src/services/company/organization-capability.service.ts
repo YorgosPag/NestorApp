@@ -36,6 +36,7 @@ import { withdrawAgencyProfile } from '@/services/mandate/agency-profile.service
 import { nowISO } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
 import {
+  capabilityStatusFieldPath,
   capabilityStatusOf,
   type BrokerageDeclaration,
   type CapabilityStatus,
@@ -147,7 +148,7 @@ function recordTransition(
     entityId: companyId,
     entityName: null,
     action: 'status_changed',
-    changes: [{ field: `capabilities.${CAPABILITY}.status`, oldValue: from, newValue: to }],
+    changes: [{ field: capabilityStatusFieldPath(CAPABILITY), oldValue: from, newValue: to }],
     performedBy,
     performedByName: null,
     companyId,
