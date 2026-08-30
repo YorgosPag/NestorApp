@@ -471,6 +471,79 @@ describe('Ν — το ορφανό artifact μπλοκάρει ΤΗΝ ΠΥΛΗ, 
 
 /**
  * =============================================================================
+ * Ε — ΟΙ ΕΙΣΟΔΟΙ ΤΩΝ ΔΙΑΔΡΟΜΩΝ ΕΧΟΥΝ ΑΠΟΤΥΠΩΜΑΤΑ (ADR-744 §21)
+ * =============================================================================
+ *
+ * 🔴 ΤΟ ΠΕΡΙΣΤΑΤΙΚΟ, ΜΕΤΡΗΜΕΝΟ ΖΩΝΤΑΝΑ (2026-08-30). Το working tree μοιράζεται με
+ * δεύτερο πράκτορα. Το `MandateCatalogContent.tsx` άλλαξε **ανάμεσα** στο `generate`
+ * και στο `commit`, **δύο** route artifacts βγήκαν εκτός συγχρονισμού — και το Layer 1
+ * **δεν είπε τίποτα**, γιατί το αρχείο δεν είναι shell module και το
+ * `manifest.shellFiles` δεν το περιείχε. Οι **509** είσοδοι των κλειστοτήτων διαδρομών
+ * δεν είχαν **καμία** εγγραφή.
+ *
+ * 🏆 Η αρχή είναι του **Bazel** — παραγόμενο = **δηλωμένο σύνολο εισόδων**,
+ * κατακερματισμένο· αλλάζει είσοδος ⇒ μπαγιάτικη έξοδος **εξ ορισμού**. Την είχαμε ήδη
+ * για το κέλυφος, και **μόνο** γι' αυτό.
+ * =============================================================================
+ */
+describe('Ε — οι είσοδοι των διαδρομών έχουν αποτυπώματα (§21)', () => {
+  const { spawnSync } = require('node:child_process');
+  const CHECKER = path.join(REPO, 'scripts/check-i18n-shell-slice.js');
+  const manifest = JSON.parse(fs.readFileSync(path.join(REPO, 'src/i18n/generated/shell-slice.manifest.json'), 'utf8'));
+
+  it('Ε0 ΠΑΡΟΝΟΜΑΣΤΗΣ: το `routeFiles` ΥΠΑΡΧΕΙ και δεν είναι κενό', () => {
+    // Χωρίς αυτό, τα Ε1-Ε3 θα ήταν πράσινα επειδή **δεν κοίταξαν τίποτα**.
+    expect(Object.keys(manifest.routeFiles || {}).length).toBeGreaterThan(0);
+  });
+
+  it('Ε1: ΚΑΜΙΑ επικάλυψη με το `shellFiles` — ένα αρχείο, ΜΙΑ απάντηση', () => {
+    // Το αποτύπωμα είναι ΤΟΠΙΚΟ στο αρχείο, άρα διπλή εγγραφή είναι διπλότυπο που
+    // μπορεί να ΑΠΟΚΛΙΝΕΙ — και τότε ποια κερδίζει το κρίνει η σειρά ανάγνωσης.
+    const overlap = Object.keys(manifest.routeFiles).filter(file => file in manifest.shellFiles);
+    expect(overlap).toEqual([]);
+  });
+
+  it('Ε2: κάθε δηλωμένη διαδρομή έχει ΤΟΥΛΑΧΙΣΤΟΝ μία είσοδο σε έναν από τους δύο πίνακες', () => {
+    // Διαδρομή χωρίς καμία αποτυπωμένη είσοδο σημαίνει «κανείς δεν φυλάει την πηγή της».
+    const known = new Set([...Object.keys(manifest.shellFiles), ...Object.keys(manifest.routeFiles)]);
+    for (const [id, entry] of Object.entries(manifest.routes)) {
+      expect({ id, covered: known.has(entry.page) }).toEqual({ id, covered: true });
+    }
+  });
+
+  /**
+   * ⚠️ ΤΟ Ε0-Ε2 ΚΟΙΤΑΖΟΥΝ ΔΕΔΟΜΕΝΑ. Αν κάποιος βγάλει το `routeFiles` από την ερώτηση
+   * του `checkStagedShellFiles`, μένουν **ΠΡΑΣΙΝΑ** και η πύλη ξαναγίνεται τυφλή. Γι'
+   * αυτό εδώ τρέχει το **ΠΡΑΓΜΑΤΙΚΟ CLI** και κρίνεται ο κωδικός εξόδου του.
+   */
+  it('Ε3 🔴 ΜΕΤΑΛΛΑΞΗ: αλλαγή σε module ΔΙΑΔΡΟΜΗΣ ⇒ Layer 1 ΚΟΚΚΙΝΟ (ήταν σιωπηλό)', () => {
+    // Το θύμα διαβάζεται ΑΠΟ ΤΟ MANIFEST, ποτέ καρφωμένο: μια χειρόγραφη διαδρομή εδώ
+    // θα σάπιζε τη μέρα που το αρχείο μετακομίσει, και η άγκυρα θα γινόταν διακοσμητική.
+    const victim = Object.keys(manifest.routeFiles).find(file => /\.tsx?$/.test(file));
+    expect(victim).toBeDefined();
+
+    const abs = path.join(REPO, victim);
+    const original = fs.readFileSync(abs, 'utf8');
+    const run = () => spawnSync(process.execPath, [CHECKER, victim], { cwd: REPO, encoding: 'utf8' });
+    try {
+      expect(run().status).toBe(0);                       // ο παρονομαστής
+
+      // Νέα ακμή εισαγωγής = αλλαγή στο `importSpecs`, δηλαδή στο ΙΔΙΟ το αποτύπωμα.
+      fs.writeFileSync(abs, `import { useMemo as __probe } from 'react';\n${original}`, 'utf8');
+      const red = run();
+      expect(red.status).toBe(1);
+      expect(`${red.stdout}${red.stderr}`).toContain(victim);
+    } finally {
+      // 🛡️ Επαναφορά ΠΑΝΤΑ, byte-ίδια, από μνήμη. ΠΟΤΕ `git checkout`: το δέντρο είναι
+      // κοινό με άλλον πράκτορα και ένα checkout θα έσβηνε ΞΕΝΗ δουλειά.
+      fs.writeFileSync(abs, original, 'utf8');
+    }
+    expect(fs.readFileSync(abs, 'utf8')).toBe(original);
+  }, 60_000);
+});
+
+/**
+ * =============================================================================
  * Χ — ΤΙ ΠΑΡΑΓΕΙ Η ΠΗΓΗ, **ΟΛΟΚΛΗΡΟ** (ADR-744 §15 Φ4)
  * =============================================================================
  *

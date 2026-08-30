@@ -285,7 +285,22 @@ function checkRouteLocaleDrift(config, manifest) {
   return null;
 }
 
-/** C. a staged shell module whose i18n surface or import edges moved. */
+/**
+ * C. a staged **input** whose i18n surface or import edges moved.
+ *
+ * 🔴 ADR-744 §21 — ΩΣ ΤΙΣ 2026-08-30 ΡΩΤΟΥΣΕ ΜΟΝΟ ΤΟ `shellFiles`, ΚΑΙ ΤΟ ΠΛΗΡΩΣΑΜΕ.
+ * Μετρημένο ζωντανά: το `MandateCatalogContent.tsx` άλλαξε ανάμεσα στο `generate` και
+ * στο `commit`, **δύο** route artifacts βγήκαν εκτός συγχρονισμού, και εδώ το `continue`
+ * το προσπέρασε **σιωπηλά** — γιατί δεν είναι shell module. Το Layer 1 δεν είχε
+ * **καμία** εγγραφή για τις **509** εισόδους των κλειστοτήτων διαδρομών.
+ *
+ * 🏆 Η ΑΡΧΗ ΤΟΥ BAZEL: παραγόμενο = **δηλωμένο σύνολο εισόδων**, κατακερματισμένο.
+ * Αλλάζει είσοδος ⇒ μπαγιάτικη έξοδος, **εξ ορισμού**. Το είχαμε — για τις μισές.
+ *
+ * ⚠️ ΔΥΟ ΠΙΝΑΚΕΣ, ΜΙΑ ΑΠΑΝΤΗΣΗ ΑΝΑ ΑΡΧΕΙΟ: το `routeFiles` **δεν** επαναλαμβάνει όσα
+ * είναι ήδη κέλυφος (220 από τα 509), γιατί το αποτύπωμα είναι **τοπικό στο αρχείο** —
+ * διπλή εγγραφή θα ήταν διπλότυπο που μπορεί να **αποκλίνει**.
+ */
 function checkStagedShellFiles(config, manifest, stagedFiles) {
   const context = {
     bundles: loadNamespaceBundles(PROJECT_ROOT),
@@ -293,12 +308,15 @@ function checkStagedShellFiles(config, manifest, stagedFiles) {
     excludeConsumers: config.excludeConsumers,
   };
   const graph = { modules: new Map(), projectRoot: PROJECT_ROOT };
+  const routeFiles = manifest.routeFiles || {};
 
   for (const relFile of stagedFiles) {
-    const recorded = manifest.shellFiles[relFile];
+    const inShell = relFile in manifest.shellFiles;
+    const recorded = inShell ? manifest.shellFiles[relFile] : routeFiles[relFile];
     if (recorded === undefined) continue;
+    const role = inShell ? 'shell module' : 'module a declared route slice is built from';
     const abs = toPosix(path.join(PROJECT_ROOT, relFile));
-    if (!fs.existsSync(abs)) return `${relFile} is a shell module in the manifest but no longer exists.`;
+    if (!fs.existsSync(abs)) return `${relFile} is a ${role} in the manifest but no longer exists.`;
     try {
       graph.modules.set(abs, parseModule(abs, fs.readFileSync(abs, 'utf8')));
     } catch {
@@ -306,7 +324,7 @@ function checkStagedShellFiles(config, manifest, stagedFiles) {
     }
     const analysis = analyseFile(PROJECT_ROOT, relFile, graph, context);
     if (fingerprintShellFile(analysis) !== recorded) {
-      return `${relFile} is a shell module and its i18n surface or its imports changed — the slice may no longer cover it.`;
+      return `${relFile} is a ${role} and its i18n surface or its imports changed — the slice may no longer cover it.`;
     }
   }
   return null;

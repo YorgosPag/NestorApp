@@ -122,6 +122,12 @@ function buildRouteSlice(projectRoot, config, graph, pageFile, shellSlice, whole
     // πώς να ξανακλαδέψει τη διαδρομή από τα locales, και μια μπαγιάτικη μετάφραση
     // περνά κάθε commit (μετρημένο: `✅ OK` πάνω σε artifact χωρίς 20 κλειδιά).
     wants: plan.wants,
+    // 🔴 ADR-744 §21 — ΤΑ ΑΠΟΤΥΠΩΜΑΤΑ ΤΩΝ ΕΙΣΟΔΩΝ ΤΗΣ ΔΙΑΔΡΟΜΗΣ. Το `perFile` ΕΧΕΙ ΗΔΗ
+    // υπολογισμένο `fingerprint` ανά αρχείο (plan.js) — απλώς **δεν ταξίδευε ποτέ**.
+    // Χωρίς αυτό, αλλαγή σε module κλειστότητας διαδρομής (π.χ. προσθήκη `t()`) είναι
+    // ΑΟΡΑΤΗ στο Layer 1: το `manifest.shellFiles` δεν το περιέχει, γιατί δεν είναι
+    // shell module. Μετρημένο ζωντανά (2026-08-30, ADR-834 του άλλου agent).
+    perFile: plan.perFile,
     violations: plan.violations,
     // ⚠️ Χρειάζεται για να μη χαρακτηριστεί «νεκρή» μια εγγραφή policy που
     // υπηρετεί **διαδρομή** και όχι το κέλυφος: μια ψεύτικη προειδοποίηση
