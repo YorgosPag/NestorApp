@@ -27,12 +27,14 @@
 import React, { useRef } from 'react';
 import { act, render } from '@testing-library/react';
 import { buildTableEntity } from '../../../bim/table/build-table-entity';
+import { tableWorksheetId } from '../../../types/table-worksheet';
 import {
   TABLE_TEST_VIEW,
   tableBandScreenPoint,
   tableCellScreenPoint,
   tableFrameScreenPoint,
   tableInsertControlScreenPoint,
+  tableWorksheetStripScreenPoint,
 } from './table-screen-point';
 import { computeTableEntityGeometryLive } from '../../../bim/table/table-entity-geometry';
 import { TABLE_CELL_SESSION_MARKER } from '../table-cell-session-focus';
@@ -307,6 +309,71 @@ describe('🔴 ADR-739 §29 — ο καμβάς παραιτείται όσο ζ
      * **κενό σχέδιο** ⇒ lasso ⇒ `blur` ⇒ θάνατος συνεδρίας: έξοδος **κατά λάθος**, δηλαδή
      * ακριβώς αυτό που το §29 ήρθε να καταργήσει. Το τρίτο anchor το κλειδώνει.
      */
+    /**
+     * 🔴 **ADR-833 Φάσεις 3+4 — Η ΛΩΡΙΔΑ ΦΥΛΛΩΝ, ΜΕ ΤΗΝ ΙΔΙΑ ΑΣΥΜΜΕΤΡΙΑ ΚΑΙ ΜΙΑ ΛΕΞΗ ΠΑΡΑΠΑΝΩ.**
+     *
+     * Η λωρίδα ζει **έξω** από το πλέγμα, σε θετικό `v` πέρα από την οπή λαβής — δηλαδή σε
+     * pixel που ο φύλακας δεν είχε λόγο να ονομάσει. Χωρίς τη λέξη της, θα ήταν ορατή,
+     * φωτισμένη στο hover, και **άφταστη** (§40.8, προεξοφλημένο στη Φάση 3).
+     *
+     * 🔑 Και το `dblclick` **περνά** — η μόνη περίπτωση αυτής της συνάρτησης που το χρειάζεται:
+     * από τη Φάση 4 το διπλό κλικ σε καρτέλα ανοίγει **μετονομασία**. Χωρίς αυτό, η χειρονομία
+     * θα δούλευε σε **απλή επιλογή** και θα ήταν νεκρή **μέσα** στη λειτουργία πίνακα — ακριβώς
+     * το σύμπτωμα που ο ιδιοκτήτης μέτρησε στο §40.8.
+     */
+    describe('🔴 ADR-833 — η λωρίδα φύλλων: καρτέλα και ⊕', () => {
+      /** Πίνακας με **δύο** φύλλα ⇒ η λωρίδα υπάρχει με βεβαιότητα, μαζί με το ⊕. */
+      function twoSheets(): TableEntity {
+        const base = buildTableEntity({ x: 0, y: 0 }, {}, 'table-1', 'layer-0');
+        return {
+          ...base,
+          worksheets: [
+            base.worksheets[0],
+            { id: tableWorksheetId('ws1'), model: base.worksheets[0].model },
+          ],
+        };
+      }
+
+      beforeEach(() => {
+        unmount?.();
+        entity = twoSheets();
+        mountHarness({ entity });
+      });
+
+      it('🔴 ✅ το `mousedown` πάνω σε ΚΑΡΤΕΛΑ ΦΤΑΝΕΙ — αλλιώς η καρτέλα δεν πατιέται ποτέ', () => {
+        const point = tableWorksheetStripScreenPoint(entity, { kind: 'tab', seat: 1 });
+        expect(point).not.toBeNull();
+        dispatchAt('mousedown', point!);
+        expect(seenByCanvas).toEqual(['mousedown']);
+      });
+
+      it('🔴 ✅ το `mousedown` πάνω στο ⊕ ΦΤΑΝΕΙ — ίδια λωρίδα, ίδιος ακροατής', () => {
+        const point = tableWorksheetStripScreenPoint(entity, { kind: 'add' });
+        expect(point).not.toBeNull();
+        dispatchAt('mousedown', point!);
+        expect(seenByCanvas).toEqual(['mousedown']);
+      });
+
+      it('🔴 ✅ ΤΟ `dblclick` ΣΕ ΚΑΡΤΕΛΑ ΦΤΑΝΕΙ — εκεί ανοίγει η μετονομασία (Φάση 4)', () => {
+        const point = tableWorksheetStripScreenPoint(entity, { kind: 'tab', seat: 0 });
+        dispatchAt('dblclick', point!);
+        expect(seenByCanvas).toEqual(['dblclick']);
+      });
+
+      it('🔴 ⛔ το `mouseup` στο ΙΔΙΟ σημείο ΔΕΝ φτάνει — εκεί γεννιέται η επιλογή οντότητας', () => {
+        const point = tableWorksheetStripScreenPoint(entity, { kind: 'tab', seat: 1 });
+        dispatchAt('mouseup', point!);
+        expect(seenByCanvas).toEqual([]);
+      });
+
+      it('⛔ ούτε `click` / `contextmenu` πάνω στη λωρίδα', () => {
+        const point = tableWorksheetStripScreenPoint(entity, { kind: 'add' });
+        dispatchAt('click', point!);
+        dispatchAt('contextmenu', point!, { button: 2 });
+        expect(seenByCanvas).toEqual([]);
+      });
+    });
+
     describe('🔴 ADR-768 — το οπλισμένο πινέλο βάφει και σε ΑΛΛΟΝ πίνακα', () => {
       /** Ο στόχος γράφεται από τον ΕΝΑ γραφέα (hover)· εδώ δηλώνεται απευθείας, ως συμβόλαιο. */
       function armPaintTargetElsewhere(): void {

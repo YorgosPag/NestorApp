@@ -103,7 +103,7 @@ export function useTableCommandCommit(params: UseTableModelCommitParams): TableC
  */
 export function useTableModelCommit(params: UseTableModelCommitParams): TableModelCommit {
   const commit = useTableCommandCommit(params);
-  return useCallback(
+  return useCallback<TableModelCommit>(
     (entity, nextModel) => commit((sceneManager) => buildTableModelCommand(entity, nextModel, sceneManager)),
     [commit],
   );

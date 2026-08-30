@@ -71,6 +71,9 @@ import { tableFillHandleRectMm } from '../../../bim/table/table-fill-handle';
 import { tableFillBadgeRectMm } from '../../../bim/table/table-fill-badge';
 // 🔴 ADR-739 §36 — το ΙΔΙΟ ορθογώνιο περιοχής που ζωγραφίζεται και που πιάνεται.
 import { tableRangeRectMm, type TableCellRangeBounds } from '../../../bim/table/table-cell-range';
+// 🔴 ADR-833 Φ3/Φ4 — η ΙΔΙΑ λωρίδα που ζωγραφίζεται και που πιάνεται (καρτέλες **και** ⊕).
+import { tableWorksheetTabStrip } from '../../../bim/table/table-worksheet-tabs-geometry';
+import { resolveWorksheetFields } from '../../../bim/table/table-worksheet-resolve';
 import type { TableRectMm } from '../../../bim/table/table-layout-types';
 import type { TableEntity } from '../../../types/table-entity';
 import type { Point2D, ViewTransform, Viewport } from '../../../rendering/types/Types';
@@ -310,4 +313,39 @@ export function tableIndicatorCornerScreenPoint(
   // Ίδιος κανόνας με το `tableBandScreenPoint`: το ΖΩΓΡΑΦΙΣΜΕΝΟ κουτί, όχι δεύτερη αριθμητική.
   const { u, v } = rectCenterMm(tableIndicatorCornerRectMm(bands));
   return tableFrameScreenPoint(entity, u, v, view);
+}
+
+/**
+ * 🔴 ADR-833 Φάσεις 3+4 — **το κέντρο μιας καρτέλας φύλλου ή του ⊕**, σε pixel οθόνης.
+ *
+ * Ρωτά την **ίδια** διάταξη λωρίδας που καταναλώνουν ο ζωγράφος και το hit-test — ποτέ δικό
+ * του υπολογισμό: ένα test που προβάλλει με δική του μηχανή μπορεί να συμφωνήσει με τον εαυτό
+ * του πάνω σε λάθος γεωμετρία (δες την κεφαλίδα).
+ *
+ * `null` όταν η λωρίδα δεν έχει εκείνο το κομμάτι — ο καλών οφείλει να το κρίνει, ώστε ένα
+ * test να μην περνά επειδή «δεν υπήρχε τίποτα να πατηθεί».
+ */
+export function tableWorksheetStripScreenPoint(
+  entity: TableEntity,
+  part: { readonly kind: 'tab'; readonly seat: number } | { readonly kind: 'add' },
+  view: TableTestView = TABLE_TEST_VIEW,
+): Point2D | null {
+  const geometry = computeTableEntityGeometryLive(entity);
+  const { worksheets, activeWorksheetId } = resolveWorksheetFields(entity);
+  const strip = tableWorksheetTabStrip(
+    worksheets,
+    activeWorksheetId,
+    geometry.layout.widthMm,
+    geometry.layout.heightMm,
+    tablePxPerMm(geometry.mmToWorld, view.transform.scale),
+  );
+  const rectMm: TableRectMm | null | undefined =
+    part.kind === 'add' ? strip.add : strip.tabs[part.seat]?.rectMm;
+  if (!rectMm) return null;
+  return tableFrameScreenPoint(
+    entity,
+    rectMm.x + rectMm.w / 2,
+    rectMm.y + rectMm.h / 2,
+    view,
+  );
 }
