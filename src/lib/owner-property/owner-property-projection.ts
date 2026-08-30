@@ -41,6 +41,7 @@ import {
   type ProjectableProperty,
 } from '@/services/listings/public-listing-projection';
 import type { PublishOutcome } from '@/services/listings/publish-public-listing';
+import { mandatesOf } from '@/types/owner-property-mandate';
 import {
   isOwnerPropertyOnTheMarket,
   listingAuthorshipOf,
@@ -139,7 +140,7 @@ export function projectableFromOwnerProperty(
      * λέει το `authorship`, και τα δύο πεδία **δεν** συμπτύσσονται: μια αγγελία
      * γραφείου του οποίου η επωνυμία δεν διαβάστηκε είναι **ακόμη** αγγελία γραφείου.
      */
-    authorship: listingAuthorshipOf(property.mandate),
+    authorship: listingAuthorshipOf(mandatesOf(property)),
     agencyName,
   };
 }

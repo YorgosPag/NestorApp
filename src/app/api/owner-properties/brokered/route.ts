@@ -32,10 +32,6 @@ import type { AuthContext } from '@/lib/auth/types';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { brokeredMandateFromRequest } from '@/lib/owner-property/brokered-mandate-schema';
-import {
-  ownerPropertyDraftFromRequest,
-  ownerPropertyIdFromRequest,
-} from '@/lib/owner-property/owner-property-draft-schema';
 import { readCompanyPublicName } from '@/services/company/company-public-name.reader';
 import {
   agencyAttestation,
@@ -55,6 +51,7 @@ import {
   respondToWrite,
   type OwnerPropertyResponse,
 } from '../_shared/respond';
+import { readOwnerPropertyDraftRequest } from '../_shared/read-draft-request';
 
 /**
  * Ό,τι φεύγει επιπλέον της κοινής απάντησης: **τι έγινε με το μήνυμα**.
@@ -100,13 +97,13 @@ async function handler(
   const authority = await gateBrokerage(adminDb, ctx.companyId);
   if (authority instanceof NextResponse) return authority;
 
-  const body: unknown = await request.json().catch(() => null);
-
-  const id = ownerPropertyIdFromRequest((body as { id?: unknown } | null)?.id);
-  if (id === null) return respondToMalformed(['id']);
-
-  const parsedDraft = ownerPropertyDraftFromRequest(body);
+  // 🔑 Σώμα → ταυτότητα → προσχέδιο, από τη ΜΙΑ διατύπωση που μοιράζεται με την πόρτα
+  // του ιδιώτη (CHECK 3.28 μέτρησε το δίδυμο). Το ωμό σώμα ταξιδεύει πίσω επειδή η
+  // εντολή ζει **μόνο** εδώ — και `json()` δεν ξαναδιαβάζεται.
+  const parsedDraft = await readOwnerPropertyDraftRequest(request);
   if (!parsedDraft.ok) return respondToMalformed(parsedDraft.malformed);
+
+  const { body, id } = parsedDraft;
 
   const parsedMandate = brokeredMandateFromRequest(
     (body as { mandate?: unknown } | null)?.mandate,
@@ -135,6 +132,16 @@ async function handler(
       expiresAt: parsedMandate.mandate.expiresAt,
       agreement: parsedMandate.mandate.agreement,
       compensation: parsedMandate.mandate.compensation,
+      // ── ADR-832 ────────────────────────────────────────────────────────────
+      // 🔑 **Εδώ —και ΜΟΝΟ εδώ— το `scope` παράγεται από τις διαθέσεις**, και είναι
+      //    σωστό: σε αυτή τη διαδρομή το γραφείο **γεννά** την αγγελία μαζί με την
+      //    εντολή που ήδη κρατά, οπότε οι δύο δηλώσεις είναι **μία πράξη** του ίδιου
+      //    προσώπου. Στη διαδρομή του ιδιώτη (`/api/mandate-requests`) το `scope`
+      //    έρχεται **ρητά από αυτόν** — εκεί η παραγωγή θα του έπαιρνε δικαίωμα που
+      //    δεν έδωσε.
+      scope: parsedDraft.draft.offers.map((offer) => offer.kind),
+      // ⚠️ Η εντολή αρχίζει **τώρα**: το γραφείο βεβαιώνει σύμβαση που ήδη ισχύει.
+      startsAt: nowISO(),
       proof:
         parsedMandate.mandate.via === AGENCY_ATTESTATION
           ? agencyAttestation(ctx.uid, parsedMandate.mandate.documentPath)

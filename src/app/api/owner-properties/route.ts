@@ -58,10 +58,6 @@ import {
 } from '@/lib/auth/personal-scope-middleware';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import {
-  ownerPropertyDraftFromRequest,
-  ownerPropertyIdFromRequest,
-} from '@/lib/owner-property/owner-property-draft-schema';
 import { createOwnerProperty } from '@/services/owner-property/owner-property-write.service';
 
 import {
@@ -69,6 +65,7 @@ import {
   respondToWrite,
   type OwnerPropertyResponse,
 } from './_shared/respond';
+import { readOwnerPropertyDraftRequest } from './_shared/read-draft-request';
 
 /**
  * **Νέα αγγελία ιδιοκτήτη** — και **δημοσίευση στην ίδια πράξη**.
@@ -82,18 +79,12 @@ async function handler(
   request: NextRequest,
   actor: ApiActor,
 ): Promise<NextResponse<OwnerPropertyResponse>> {
-  // ⚠️ `json()` πετά σε κατεστραμμένο σώμα — και ένα ακάλυπτο `throw` εδώ θα γινόταν
-  // **500**, δηλαδή «δικό μας λάθος» για κάτι που έστειλε ο πελάτης.
-  const body: unknown = await request.json().catch(() => null);
-
-  // 🔴 Η ταυτότητα κρίνεται **πριν** το προσχέδιο, και είναι σειρά-συμβόλαιο: ένα
-  // έγκυρο προσχέδιο με **άκυρη** ταυτότητα δεν έχει πού να γραφτεί, οπότε το να
-  // κριθεί πρώτο το περιεχόμενο θα ανέφερε λάθος πεδίο στον άνθρωπο.
-  const id = ownerPropertyIdFromRequest((body as { id?: unknown } | null)?.id);
-  if (id === null) return respondToMalformed(['id']);
-
-  const parsed = ownerPropertyDraftFromRequest(body);
+  // 🔑 Σώμα → ταυτότητα → προσχέδιο, με **αυτή** τη σειρά, από τη ΜΙΑ διατύπωση που
+  // μοιράζεται με την πόρτα του μεσίτη (CHECK 3.28 μέτρησε το δίδυμο).
+  const parsed = await readOwnerPropertyDraftRequest(request);
   if (!parsed.ok) return respondToMalformed(parsed.malformed);
+
+  const { id } = parsed;
 
   return respondToWrite(
     await createOwnerProperty(
@@ -101,7 +92,8 @@ async function handler(
       // ⚠️ `actor.ctx.uid` **χωρίς διάκριση χώρου**, και είναι σωστό: το `uid` υπάρχει
       // και στα δύο μέλη της ένωσης. Μια διάκριση εδώ θα ήταν φρουρός χωρίς
       // ετυμηγορία — και τα δύο σκέλη θα έγραφαν την ίδια γραμμή.
-      { id, authorUserId: actor.ctx.uid, authorCompanyId: null, mandate: { kind: 'self' } },
+      // ADR-832: κενός πίνακας = ο ιδιώτης μόνος του. Καμία εντολή, κανένα sentinel.
+      { id, authorUserId: actor.ctx.uid, authorCompanyId: null, mandates: [] },
       parsed.draft,
     ),
   );

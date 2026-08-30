@@ -263,7 +263,7 @@ describe('🔴 Μ — καμία αγγελία γραφείου στον κόσ
 
     // Ο παρονομαστής: η **έγκριση υπάρχει** — άρα το `null` οφείλεται στη λήξη και
     // μόνο σε αυτήν.
-    expect(expired.mandate.kind).toBe('brokered');
+    expect(expired.mandates).toHaveLength(1);
     expect(publish(expired)).toBeNull();
 
     // ⚠️ Και το έγγραφο **δεν άλλαξε**: η αγγελία εξαφανίζεται από τον κόσμο, ο
