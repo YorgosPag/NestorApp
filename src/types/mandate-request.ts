@@ -40,6 +40,7 @@
 import type { ListingAgreement } from '@/types/listing-agreement';
 import { exceedsStatutoryTerm } from '@/types/owner-property-mandate';
 import type { MandateCompensation } from '@/types/owner-property-mandate';
+import type { OfferKind } from '@/types/property-offers';
 import type { PublicListing } from '@/types/public-listing';
 
 // =============================================================================
@@ -268,6 +269,24 @@ export interface ProposedMandateTerms {
   readonly compensation: MandateCompensation;
   /** ISO. Παράγεται από `defaultExpiryFor`, κρίνεται από `exceedsStatutoryTerm`. */
   readonly expiresAt: string;
+  /**
+   * **Για ποιες πράξεις** ζητείται η εντολή (ADR-832) — το «περιεχόμενο» του
+   * άρθρου 200 §4.
+   *
+   * 🔑 **Μέρος των ΟΡΩΝ, και όχι συμπέρασμα από τις διαθέσεις της αγγελίας.** Ένα
+   * ακίνητο μπορεί να είναι **και** προς πώληση **και** προς εκμίσθωση, και ο
+   * ιδιοκτήτης να θέλει να αναθέσει **μόνο** τη μία. Παραγόμενο από τα `offers` θα
+   * του έδινε το γραφείο δικαίωμα που δεν του έδωσε — σιωπηλά, και ανεπανόρθωτα.
+   */
+  readonly scope: readonly OfferKind[];
+  /**
+   * ISO — **από πότε** ισχύει.
+   *
+   * 🏆 Επιτρέπει την **προγραμματισμένη** εντολή: *«η αποκλειστική του άλλου γραφείου
+   * λήγει 12/03 — ζητώ ανάθεση από 13/03»*. Καμία πλατφόρμα της αγοράς δεν το
+   * προσφέρει, γιατί καμία δεν μοντελοποιεί την εντολή ως **διάστημα**.
+   */
+  readonly startsAt: string;
 }
 
 // =============================================================================
@@ -669,6 +688,17 @@ export const MANDATE_REQUEST_INVARIANTS = [
   /** Προτείνει διάρκεια πάνω από το νόμιμο ανώτατο για **αυτό το είδος**. */
   'request-term-exceeds-statute',
   /**
+   * 🔴 **Έναρξη που δεν διαβάζεται, ή είναι ΜΕΤΑ τη λήξη** (ADR-832).
+   *
+   * ⚠️ **Δεν είναι το `request-expiry-invalid`**, και η διαφορά είναι μετρήσιμη: το
+   * νόμιμο ανώτατο μετριέται **από την έναρξη**, και κάθε σύγκριση με `NaN` απαντά
+   * `false`. Χωρίς αυτόν τον κωδικό, ένα χαλασμένο `startsAt` θα έκανε τον φρουρό του
+   * νόμου να **σιωπήσει** — δηλαδή θα περνούσε αίτημα οποιασδήποτε διάρκειας
+   * (N.12: «άγνωστο» δεν γίνεται «καθαρό»). Ίδιο ζεύγος με το `mandate-start-invalid`
+   * της ίδιας της εντολής.
+   */
+  'request-start-invalid',
+  /**
    * 🔴 Αποδοχή **χωρίς** επαφή, ή άρνηση **με** επαφή. Και τα δύο σπάνε το §8.4: η
    * `cont_*` γεννιέται **μόνο** με την αποδοχή, στην **ίδια** ατομική πράξη.
    */
@@ -730,7 +760,24 @@ function expiryViolations(
 
   const found: MandateRequestInvariant[] = [];
   if (expiry <= Date.parse(nowISOValue)) found.push('request-expiry-past');
-  if (exceedsStatutoryTerm(request.terms.agreement, request.requestedAt, request.terms.expiresAt)) {
+
+  // 🔴 **Η ΑΦΕΤΗΡΙΑ ΤΟΥ ΝΟΜΟΥ ΕΙΝΑΙ Η ΕΝΑΡΞΗ, ΟΧΙ Η ΣΤΙΓΜΗ ΤΟΥ ΑΙΤΗΜΑΤΟΣ** (ADR-832
+  //    §5.8). Ως τις 2026-08-30 εδώ περνούσε το `request.requestedAt`, και ήταν σωστό
+  //    όσο κάθε εντολή γεννιόταν **ενεργή**. Με **προγραμματισμένη** εντολή παύει να
+  //    είναι: οκτάμηνη αποκλειστική που αρχίζει σε έξι μήνες μετριόταν ως
+  //    **δεκατετράμηνη** και ο φρουρός του νόμου εμπόδιζε **νόμιμη** συμφωνία.
+  //
+  // ⚠️ **Ο ίδιος κριτής, όχι δεύτερος**: το `exceedsStatutoryTerm` ρωτά το
+  //    `statutoryTermLimitFor` — τον ΕΝΑ τόπο όπου ζει ο νόμος (ADR-749).
+  const start = Date.parse(request.terms.startsAt);
+  if (Number.isNaN(start) || expiry < start) {
+    // ⚠️ **Και σταματά εδώ**: με μη αναγνώσιμη αφετηρία ο έλεγχος διάρκειας θα
+    //    συνέκρινε με `NaN` και θα απαντούσε `false` — αδρανής φρουρός.
+    found.push('request-start-invalid');
+    return found;
+  }
+
+  if (exceedsStatutoryTerm(request.terms.agreement, request.terms.startsAt, request.terms.expiresAt)) {
     found.push('request-term-exceeds-statute');
   }
   return found;

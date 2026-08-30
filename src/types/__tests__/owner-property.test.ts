@@ -187,7 +187,9 @@ describe('newOwnerProperty — τα γεγονότα του συστήματος
       id: 'ownp_x',
       authorUserId: 'user-9',
       authorCompanyId: null,
-      mandate: { kind: 'self' },
+      // 🔑 **Κενός πίνακας ΕΙΝΑΙ ο ιδιώτης** (ADR-832 §5.4) — η απουσία εντολής δεν
+      //    χρειάζεται όνομα, και το παλιό `{ kind: 'self' }` ήταν ακριβώς αυτό.
+      mandates: [],
     });
     expect(property.lifecycle).toBe('listed');
     expect(property.id).toBe('ownp_x');

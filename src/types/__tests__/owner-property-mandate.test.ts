@@ -28,6 +28,7 @@ import {
   isMandateExpired,
   mandateAllowsPublication,
   mandateInvariantViolations,
+  mandateWriteVerdict,
   defaultExpiryFor,
   MANDATE_INVARIANTS,
   MANDATE_PROOF_VIAS,
@@ -39,6 +40,7 @@ import { addMonthsUTC } from '@/lib/date-local';
 import {
   DEFAULT_LISTING_AGREEMENT,
   EXCLUSIVE_AGENCY,
+  EXCLUSIVE_RIGHT_TO_SELL,
   LISTING_AGREEMENTS,
   OPEN_LISTING,
   statutoryTermLimitFor,
@@ -73,6 +75,12 @@ function brokered(over: Partial<BrokeredListingMandate> = {}): BrokeredListingMa
     viewedAt: null,
     consentNonce: null,
     expiresAt: FUTURE,
+    // ── ADR-832: τα τρία της κατάληψης ──────────────────────────────────────
+    agencyCompanyId: 'comp_grafeio',
+    // ⚠️ Η έναρξη είναι το `NOW` της σουίτας: ο νόμος μετρά **από εδώ**, οπότε τα
+    //    όρια διάρκειας (Σ) μένουν ακριβώς όσα ήταν όταν μετρούσαν «από τώρα».
+    startsAt: NOW,
+    scope: ['sell'],
     ...over,
   };
 }
@@ -361,6 +369,23 @@ describe('Ι — τι δεν επιτρέπεται να γεννηθεί', () =
         brokered({ agreement: undefined as unknown as ListingAgreement }),
         NOW,
       ),
+      // ── ADR-832 ────────────────────────────────────────────────────────────
+      // Εντολή που δεν λέει για ποια πράξη δίνεται.
+      ...mandateInvariantViolations(brokered({ scope: [] }), NOW),
+      // 🔴 Οι δύο κωδικοί της σύγκρουσης γεννιούνται από τον κριτή **της γραφής**,
+      //    όχι από τα invariants της μεμονωμένης εντολής — γιατί είναι **σχέση**
+      //    ανάμεσα σε δύο εντολές, όχι ιδιότητα της μίας. Χωρίς αυτές τις δύο
+      //    γραμμές θα ήταν αδρανείς κωδικοί (ADR-749 §5).
+      ...mandateWriteVerdict(
+        brokered({ agencyCompanyId: 'comp_b', agreement: EXCLUSIVE_RIGHT_TO_SELL }),
+        [brokered({ agencyCompanyId: 'comp_a', confirmation: 'confirmed' })],
+        NOW,
+      ).violations,
+      ...mandateWriteVerdict(
+        brokered({ agencyCompanyId: 'comp_b' }),
+        [brokered({ agencyCompanyId: 'comp_a', confirmation: 'confirmed', startsAt: 'χαλασμένο' })],
+        NOW,
+      ).violations,
     ]);
     for (const code of MANDATE_INVARIANTS) expect(produced).toContain(code);
   });
@@ -372,14 +397,15 @@ describe('Ι — τι δεν επιτρέπεται να γεννηθεί', () =
 
 describe('Υ — η προέλευση της αγγελίας παράγεται, δεν δηλώνεται', () => {
   it('🔑 Υ1 — το `LISTING_AUTHORSHIPS` απέκτησε καταναλωτή', () => {
-    expect(listingAuthorshipOf({ kind: 'self' })).toBe('owner-declared');
-    expect(listingAuthorshipOf(brokered())).toBe('agency');
+    // ADR-832: κενός πίνακας ΕΙΝΑΙ το παλιό `self` — η απουσία δεν χρειάζεται όνομα.
+    expect(listingAuthorshipOf([])).toBe('owner-declared');
+    expect(listingAuthorshipOf([brokered()])).toBe('agency');
   });
 
   it('Υ2 — η υπογραφή ΔΕΝ εξαρτάται από την έγκριση, μόνο από το ποιος γράφει', () => {
     // Μια εντολή σε αναμονή είναι **εξίσου** «από γραφείο». Το αν φτάνει στον κόσμο
     // είναι άλλη ερώτηση, και την απαντά το `mandateAllowsPublication`.
-    expect(listingAuthorshipOf(brokered({ confirmation: 'confirmed' }))).toBe('agency');
-    expect(listingAuthorshipOf(brokered({ confirmation: 'declined' }))).toBe('agency');
+    expect(listingAuthorshipOf([brokered({ confirmation: 'confirmed' })])).toBe('agency');
+    expect(listingAuthorshipOf([brokered({ confirmation: 'declined' })])).toBe('agency');
   });
 });

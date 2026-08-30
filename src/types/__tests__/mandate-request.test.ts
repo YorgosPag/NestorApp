@@ -51,6 +51,8 @@ function request(overrides: Partial<MandateRequest> = {}): MandateRequest {
       agreement: EXCLUSIVE_AGENCY,
       compensation: { type: 'percentage', percentage: 2, vatIncluded: false },
       expiresAt: defaultExpiryFor(EXCLUSIVE_AGENCY, NOW) ?? '',
+      scope: ['sell'],
+      startsAt: NOW,
     },
     requestedAt: NOW,
     seenAt: null,
@@ -431,6 +433,41 @@ describe('Ι — τι δεν επιτρέπεται να γεννηθεί', () =
     expect(found).toContain('request-contact-inconsistent');
   });
 
+  it('🔴 Ι7 — ΑΔΙΑΒΑΣΤΗ ΕΝΑΡΞΗ ΔΕΝ ΣΙΩΠΑ ΤΟΝ ΝΟΜΟ (ADR-832)', () => {
+    // 🔴 Ο νόμος μετριέται **από την έναρξη**, και κάθε σύγκριση με `NaN` απαντά
+    //    `false`. Χωρίς τον δικό του κωδικό, χαλασμένο `startsAt` θα έκανε το
+    //    `request-term-exceeds-statute` **αδρανές** — αίτημα οποιασδήποτε διάρκειας
+    //    θα περνούσε (N.12: «άγνωστο» δεν γίνεται «καθαρό»).
+    const found = mandateRequestInvariantViolations(
+      request({
+        terms: { ...request().terms, startsAt: 'ΟΧΙ-ΗΜΕΡΟΜΗΝΙΑ', expiresAt: '2099-01-01T00:00:00.000Z' },
+      }),
+      NOW,
+    );
+    expect(found).toContain('request-start-invalid');
+    // ⚠️ Και **δεν** ισχυρίζεται ότι έκρινε τη διάρκεια: δεν μπόρεσε.
+    expect(found).not.toContain('request-term-exceeds-statute');
+  });
+
+  it('🏆 Ι8 — ΠΡΟΓΡΑΜΜΑΤΙΣΜΕΝΗ εντολή δεν είναι παράνομη (ADR-832 §5.8)', () => {
+    // 🏆 Οκτάμηνη αποκλειστική που **αρχίζει σε έξι μήνες**. Μετρημένη από «τώρα»
+    //    ήταν δεκατετράμηνη ⇒ απορριπτόταν. Μετρημένη από την **έναρξη**, είναι
+    //    ακριβώς αυτό που ο νόμος επιτρέπει — και είναι η δυνατότητα που κανένα MLS
+    //    δεν προσφέρει (ADR-832 §4 #3).
+    expect(
+      mandateRequestInvariantViolations(
+        request({
+          terms: {
+            ...request().terms,
+            startsAt: '2027-02-28T00:00:00.000Z',
+            expiresAt: '2027-08-28T23:59:59.999Z',
+          },
+        }),
+        NOW,
+      ),
+    ).toEqual([]);
+  });
+
   it('Ι6 — κάθε δηλωμένο αμετάβλητο είναι ΠΡΑΓΜΑΤΙ παραγώγιμο (κανένα νεκρό)', () => {
     const reachable = new Set<string>([
       ...mandateRequestInvariantViolations(
@@ -451,6 +488,11 @@ describe('Ι — τι δεν επιτρέπεται να γεννηθεί', () =
       // Δ4 (§9.17 δ) — η αλυσίδα αναθεώρησης που δείχνει στον εαυτό της.
       ...mandateRequestInvariantViolations(
         request({ supersedesRequestId: 'mreq_test_0001' }),
+        NOW,
+      ),
+      // ADR-832 — **ανάποδο διάστημα**: λήγει πριν αρχίσει.
+      ...mandateRequestInvariantViolations(
+        request({ terms: { ...request().terms, startsAt: '2027-06-01T00:00:00.000Z' } }),
         NOW,
       ),
     ]);

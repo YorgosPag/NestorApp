@@ -64,8 +64,10 @@ import {
   type PropertyOffer,
 } from '@/types/property-offers';
 import {
-  mandateAllowsPublication,
-  type OwnerPropertyMandate,
+  mandatesOf,
+  hasAnyActiveMandate,
+  nextMandateExpiry,
+  type BrokeredListingMandate,
 } from '@/types/owner-property-mandate';
 import type { ListingAuthorship } from '@/types/public-listing';
 import type { PublishOutcome } from '@/services/listings/publish-public-listing';
@@ -262,8 +264,43 @@ export interface OwnerProperty {
    * πεδίο `mandate`: μια σταθερά σε πεδίο είναι φρουρός που δεν πυροδοτεί»*. Ο λόγος
    * ήταν σωστός **και προσωρινός**: πλέον το πεδίο **πυροδοτεί**, γιατί υπάρχει
    * διαδρομή που γράφει `brokered`.
+   *
+   * ────────────────────────────────────────────────────────────────────────
+   * 🔴 ΠΛΗΘΥΝΤΙΚΟΣ, ΚΑΙ ΗΤΑΝ ΕΝΙΚΟΣ ΩΣ ΤΙΣ 2026-08-30 (ADR-832)
+   * ────────────────────────────────────────────────────────────────────────
+   *
+   * Ο ενικός **δεν ήταν απλοποίηση — ήταν σιωπηλή απαγόρευση**. Το λεξιλόγιο του
+   * RESO που το έργο υιοθέτησε περιέχει την **απλή εντολή** (`OPEN_LISTING`), που
+   * ορίζεται *«σε οποιονδήποτε αριθμό γραφείων»*· με **ένα** πεδίο, η δεύτερη
+   * ανάθεση ήταν **δομικά αδύνατη**, και ο μόνος έλεγχος
+   * (`mandate.kind !== 'self'`) την απέρριπτε **χωρίς να ρωτήσει το είδος**. Η
+   * λέξη «Απλή» στην οθόνη δεν είχε καμία συνέπεια.
+   *
+   * 🔑 **Κενός πίνακας ΕΙΝΑΙ το παλιό `self`** — καμία τιμή-φρουρός. Ο ιδιώτης που
+   * γράφει το σπίτι του δεν έχει «εντολή τύπου εαυτός»· **δεν έχει εντολή**. Το
+   * `{ kind: 'self' }` ήταν sentinel για κατάσταση που εκφράζεται με απουσία, και
+   * η απουσία δεν χρειάζεται όνομα.
+   *
+   * ⚠️ **ΜΗΝ διαβάσεις αυτόν τον πίνακα ωμό.** Το *«ποια ισχύει τώρα»* το απαντούν
+   * οι επιλογείς {@link activeMandates} / {@link activeMandateFor} — ζωντανή
+   * σημαίνει **εγκεκριμένη ∧ άρχισε ∧ δεν έληξε ∧ το γραφείο επιτρέπεται**, και
+   * χειρόγραφο `filter` σε σημείο χρήσης θα ξεχνούσε τα μισά.
    */
-  readonly mandate: OwnerPropertyMandate;
+  readonly mandates: readonly BrokeredListingMandate[];
+
+  /**
+   * **Η πρώτη λήξη ανάμεσα στις δεσμευτικές εντολές** — `null` όταν δεν υπάρχει καμία.
+   *
+   * 🔴 **ΠΕΔΙΟ-ΕΥΡΕΤΗΡΙΟ, ΠΟΤΕ ΠΗΓΗ ΑΛΗΘΕΙΑΣ.** Υπάρχει **μόνο** επειδή το Firestore
+   * δεν κάνει ανισότητα σε πεδίο μέσα σε πίνακα αντικειμένων, και ο σαρωτής λήξης
+   * χρειάζεται να **βρει** τα έγγραφα. Παράγεται από το {@link nextMandateExpiry} και
+   * γράφεται **στην ίδια συναλλαγή** με το {@link OwnerProperty.mandates} — ένας
+   * γραφέας, καμία απόκλιση δυνατή.
+   *
+   * ⛔ **ΜΗΝ το ρωτήσεις «έληξε;»** — αυτό το απαντά το `isMandateExpired` πάνω στην
+   * ίδια την εντολή. Δεύτερος κριτής εδώ θα ήταν, κατά γράμμα, ADR-749.
+   */
+  readonly mandatesExpireAt: string | null;
 
   // ── §25.6: ΕΙΔΟΣ + ΕΜΒΑΔΟΝ ────────────────────────────────────────────────
   readonly type: PropertyType;
@@ -399,7 +436,11 @@ export function isOwnerPropertyOnTheMarket(
 ): boolean {
   return (
     isLiveOwnerProperty(property) &&
-    mandateAllowsPublication(property.mandate, nowISOValue)
+    // 🔑 **Καμία εντολή = ο ιδιώτης μόνος του ⇒ δημοσιεύεται.** Ήταν το σκέλος `self`
+    //    του `mandateAllowsPublication`, και η σημασιολογία μένει **ταυτόσημη**: μία
+    //    τουλάχιστον ζωντανή εντολή, ή καμία καθόλου. Ό,τι έχει **μόνο** ληγμένες ή
+    //    ανακληθείσες εξακολουθεί να **μην** φτάνει στον κόσμο.
+    (mandatesOf(property).length === 0 || hasAnyActiveMandate(mandatesOf(property), nowISOValue))
   );
 }
 
@@ -416,9 +457,13 @@ export function isOwnerPropertyOnTheMarket(
  * έγραφε το ένα χωρίς το άλλο. Ίδιο σκεπτικό με το `commercialStatus` της **Α20**.
  */
 export function listingAuthorshipOf(
-  mandate: OwnerPropertyMandate,
+  mandates: readonly BrokeredListingMandate[],
 ): ListingAuthorship {
-  return mandate.kind === 'brokered' ? 'agency' : 'owner-declared';
+  // ⚠️ **ΟΠΟΙΑΔΗΠΟΤΕ εντολή, όχι μόνο ζωντανή** — και είναι η παλιά σημασιολογία
+  //    αυτούσια (`kind === 'brokered'` δεν ρωτούσε λήξη). Το ερώτημα είναι *«ποιος
+  //    **δηλώνει** αυτή την αγγελία»*: μια εντολή που έληξε χθες δεν κάνει την
+  //    αγγελία ξαφνικά «γραμμένη από τον ιδιοκτήτη».
+  return mandates.length > 0 ? 'agency' : 'owner-declared';
 }
 
 /** Τα **ζωντανά** είδη διάθεσης της καταχώρησης. */
@@ -454,7 +499,8 @@ export interface OwnerPropertyAuthorship {
   readonly id: string;
   readonly authorUserId: string;
   readonly authorCompanyId: string | null;
-  readonly mandate: OwnerPropertyMandate;
+  /** Δες {@link OwnerProperty.mandates} — κενός πίνακας = ο ιδιώτης μόνος του. */
+  readonly mandates: readonly BrokeredListingMandate[];
 }
 
 /**
@@ -484,7 +530,9 @@ export function newOwnerProperty(
     id: authorship.id,
     authorUserId: authorship.authorUserId,
     authorCompanyId: authorship.authorCompanyId,
-    mandate: authorship.mandate,
+    mandates: authorship.mandates,
+    // ⚠️ **Παράγεται, ποτέ δεν δηλώνεται** — δες `OwnerProperty.mandatesExpireAt`.
+    mandatesExpireAt: nextMandateExpiry(authorship.mandates),
     ...draft,
     lifecycle: 'listed',
     createdAt: now,
