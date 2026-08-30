@@ -60,6 +60,7 @@ import {
 import type { TableCellCursorState } from '../../state/table-cell-cursor-store';
 import type { TableEntity } from '../../types/table-entity';
 import type { ViewTransform } from '../../rendering/types/Types';
+import { activeTableModel } from '../../bim/table/table-worksheet-resolve';
 
 /** Το κινούμενο άκρο μιας σύρσης **κελιών**· `null` έξω από το πλέγμα (η επιλογή μένει). */
 export function cellEndAt(
@@ -95,7 +96,7 @@ export function axisEndAt(
   axis: 'column' | 'row',
 ): TableCellRef | null {
   const tick = axisTickAt(event, entity, container, transformRef, axis);
-  return tick ? (wholeAxisSelection(entity.model, tick)?.to ?? null) : null;
+  return tick ? (wholeAxisSelection(activeTableModel(entity), tick)?.to ?? null) : null;
 }
 
 /** Σε ποια στήλη/γραμμή δείχνει το συμβάν **κατά μήκος** του άξονα· `null` έξω από αυτόν. */
@@ -132,10 +133,10 @@ export function selectWholeAxis(entity: TableEntity, hit: TableIndicatorHit): Ta
   // παράγει ο ΕΝΑΣ ορισμός. Ο άξονας **δεν κουμπώνει** σε συγχωνεύσεις: ο πίνακας της
   // σκηνής έχει τίτλο συγχωνευμένο σε όλες τις στήλες, και χωρίς αυτή τη λέξη το «κλικ στο
   // B» μάρκαρε **ολόκληρο τον πίνακα** (Giorgio, 02/08).
-  const selection = wholeAxisSelection(entity.model, hit);
+  const selection = wholeAxisSelection(activeTableModel(entity), hit);
   if (!selection) return null;
 
-  setTableCellCursor(entity.id, tableCursorAt(selection.from.rowId, selection.from.colId), 'nav');
+  setTableCellCursor(entity, tableCursorAt(selection.from.rowId, selection.from.colId), 'nav');
   setTableCellSelection(selection);
   return selection.from;
 }
@@ -165,7 +166,7 @@ export function extendWholeAxis(
   selection: TableSelectionSpan | null | undefined,
 ): TableCellRef | null {
   if (!selection || selection.kind !== hit.axis) return null;
-  const target = wholeAxisSelection(entity.model, hit);
+  const target = wholeAxisSelection(activeTableModel(entity), hit);
   if (!target) return null;
   // Ο ΕΝΑΣ επεκτατής — ο ίδιος που εξυπηρετεί το `Shift+βέλος` (§27.16 Ε2).
   const extended = extendTableSelectionTo(selection, target.to);
@@ -272,7 +273,7 @@ function installAxisMenuSelection(
 ): void {
   if (!tableContextMenuMayMoveSelection(cursor)) return;
 
-  const target = resolveTableAxisActionTarget(resolveTableModel(entity.model), hit, cursor.selection);
+  const target = resolveTableAxisActionTarget(resolveTableModel(activeTableModel(entity)), hit, cursor.selection);
   // `null` ⇒ μπαγιάτικη ταυτότητα άξονα μετά από undo: καμία μαντεψιά, καμία εγγραφή.
   if (!target || target.insideSelection) return;
 

@@ -49,6 +49,7 @@ import type {
 } from '../../types/table';
 import type { TableEntity } from '../../types/table-entity';
 import { MIN_TABLE_COLUMN_WIDTH_MM } from '../../types/table-entity';
+import { FIRST_TABLE_WORKSHEET_ID } from '../../types/table-worksheet';
 import { createTableModel, toPersistedTableModel } from './table-model-helpers';
 import { BUILTIN_TABLE_STYLE_IDS } from './table-style-presets';
 
@@ -293,6 +294,10 @@ export function buildTableEntity(
     position: { x: position.x, y: position.y },
     angleRad: 0,
     styleId: BUILTIN_TABLE_STYLE_IDS.STANDARD,
-    model: buildTableModel(opts),
+    // ADR-833 Φάση 2 — **ένα** φύλλο, χωρίς όνομα. Το όνομα είναι δεδομένο **χρήστη** και ο
+    // χρήστης δεν έγραψε κανένα· η προεπιλογή («Φύλλο1») ανήκει στην παρουσίαση και ακολουθεί τη
+    // ζωντανή γλώσσα. Δες `types/table-worksheet.ts` §3 για το γιατί αυτό δεν είναι παράλειψη.
+    worksheets: [{ id: FIRST_TABLE_WORKSHEET_ID, model: buildTableModel(opts) }],
+    activeWorksheetId: FIRST_TABLE_WORKSHEET_ID,
   };
 }

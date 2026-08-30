@@ -56,6 +56,7 @@ import { useTableCellPointer } from '../use-table-cell-pointer';
 import { resolveTableSelectionBounds, type TableCellRef } from '../../../bim/table/table-cell-range';
 import type { TableEntity } from '../../../types/table-entity';
 import type { ViewTransform } from '../../../rendering/types/Types';
+import { activeTableModel } from '../../../bim/table/table-worksheet-resolve';
 
 // Η ΙΔΙΑ προβολή που χρησιμοποιεί ο βοηθός `table-screen-point` — δύο αντίγραφα εδώ θα
 // σήμαιναν ότι το test πατά αλλού απ' ό,τι υπολόγισε, χωρίς κανένα ίχνος.
@@ -144,7 +145,7 @@ describe('🔴 ADR-739 §26.15 — το κλικ στον καμβά και η �
     // Ο χρήστης είναι ήδη **μέσα** στον πίνακα (διπλό κλικ / `Enter`) στο κελί A3.
     setTableCellCursor(
       entity.id,
-      tableCursorAt(entity.model.rows[2].id, entity.model.columns[0].id),
+      tableCursorAt(activeTableModel(entity).rows[2].id, activeTableModel(entity).columns[0].id),
       'nav',
     );
     const view = render(
@@ -229,8 +230,8 @@ describe('🔴 ADR-739 §26.15 — το κλικ στον καμβά και η �
 
     const cursor = getTableCellCursor();
     expect(cursor).not.toBeNull();
-    expect(cursor?.position.rowId).toBe(entity.model.rows[2].id);
-    expect(cursor?.position.colId).toBe(entity.model.columns[2].id);
+    expect(cursor?.position.rowId).toBe(activeTableModel(entity).rows[2].id);
+    expect(cursor?.position.colId).toBe(activeTableModel(entity).columns[2].id);
     expect(isTableCellSessionElement(document.activeElement)).toBe(true);
   });
 
@@ -240,8 +241,8 @@ describe('🔴 ADR-739 §26.15 — το κλικ στον καμβά και η �
 
     expect(getTableCellCursor()).not.toBeNull();
     expect(onSelectTo).toHaveBeenCalledWith({
-      rowId: entity.model.rows[3].id,
-      colId: entity.model.columns[2].id,
+      rowId: activeTableModel(entity).rows[3].id,
+      colId: activeTableModel(entity).columns[2].id,
     });
     expect(isTableCellSessionElement(document.activeElement)).toBe(true);
   });
@@ -272,7 +273,7 @@ describe('🔴 ADR-739 §26.15 — το κλικ στον καμβά και η �
     /** Τα κελιά που πραγματικά θα μαρκαριστούν — η ερώτηση του **χρήστη**, όχι του store. */
     function selectedBounds() {
       const selection = getTableCellCursor()?.selection;
-      return selection ? resolveTableSelectionBounds(entity.model, selection) : null;
+      return selection ? resolveTableSelectionBounds(activeTableModel(entity), selection) : null;
     }
 
     it('🔴 κλικ στο «A» → Shift+κλικ στο «C» ⇒ ΤΡΕΙΣ ολόκληρες στήλες', () => {
@@ -283,7 +284,7 @@ describe('🔴 ADR-739 §26.15 — το κλικ στον καμβά και η �
 
       expect(selectedBounds()).toEqual({
         firstRow: 0,
-        lastRow: entity.model.rows.length - 1,
+        lastRow: activeTableModel(entity).rows.length - 1,
         firstCol: 0,
         lastCol: 2,
       });
@@ -297,7 +298,7 @@ describe('🔴 ADR-739 §26.15 — το κλικ στον καμβά και η �
 
       expect(selectedBounds()).toEqual({
         firstRow: 0,
-        lastRow: entity.model.rows.length - 1,
+        lastRow: activeTableModel(entity).rows.length - 1,
         firstCol: 0,
         lastCol: 2,
       });
@@ -323,7 +324,7 @@ describe('🔴 ADR-739 §26.15 — το κλικ στον καμβά και η �
       nextFrame();
 
       const selection = getTableCellCursor()?.selection;
-      expect(selection?.from.colId).toBe(entity.model.columns[0].id);
+      expect(selection?.from.colId).toBe(activeTableModel(entity).columns[0].id);
       expect(selection?.kind).toBe('column');
     });
 
@@ -335,7 +336,7 @@ describe('🔴 ADR-739 §26.15 — το κλικ στον καμβά και η �
 
       expect(selectedBounds()).toEqual({
         firstRow: 0,
-        lastRow: entity.model.rows.length - 1,
+        lastRow: activeTableModel(entity).rows.length - 1,
         firstCol: 2,
         lastCol: 2,
       });
@@ -353,7 +354,7 @@ describe('🔴 ADR-739 §26.15 — το κλικ στον καμβά και η �
         firstRow: 2,
         lastRow: 2,
         firstCol: 0,
-        lastCol: entity.model.columns.length - 1,
+        lastCol: activeTableModel(entity).columns.length - 1,
       });
     });
 
@@ -367,7 +368,7 @@ describe('🔴 ADR-739 §26.15 — το κλικ στον καμβά και η �
         firstRow: 0,
         lastRow: 2,
         firstCol: 0,
-        lastCol: entity.model.columns.length - 1,
+        lastCol: activeTableModel(entity).columns.length - 1,
       });
     });
   });
@@ -420,7 +421,7 @@ describe('🔴 ADR-739 §26.15 — το κλικ στον καμβά και η �
       nextFrame();
 
       expect(getTableCellCursor()?.position).toEqual(
-        expect.objectContaining({ rowId: entity.model.rows[3].id, colId: entity.model.columns[2].id }),
+        expect.objectContaining({ rowId: activeTableModel(entity).rows[3].id, colId: activeTableModel(entity).columns[2].id }),
       );
       // Ό,τι γράφεται δεσμεύεται πρώτα — **ίδιο** συμβόλαιο με το αριστερό κλικ (§26.15).
       expect(onCommitPending).toHaveBeenCalled();
@@ -484,7 +485,7 @@ describe('🔴 ADR-739 §26.15 — το κλικ στον καμβά και η �
       act(() => {
         setTableCellCursor(
           entity.id,
-          tableCursorAt(entity.model.rows[2].id, entity.model.columns[0].id),
+          tableCursorAt(activeTableModel(entity).rows[2].id, activeTableModel(entity).columns[0].id),
           'enter',
           '777',
         );
@@ -499,7 +500,7 @@ describe('🔴 ADR-739 §26.15 — το κλικ στον καμβά και η �
       // Ο έλεγχος της **σειράς**, όχι μόνο της κλήσης: τη στιγμή της δέσμευσης ο δρομέας
       // ήταν ακόμα στο κελί που αφήνεις. Αλλιώς το κείμενο θα γραφόταν στο ΝΕΟ κελί —
       // σιωπηλή αλλοίωση δεδομένων, χειρότερη από την απώλεια.
-      expect(commitPendingAtColumn).toEqual([entity.model.columns[0].id]);
+      expect(commitPendingAtColumn).toEqual([activeTableModel(entity).columns[0].id]);
     });
 
     it('🔴 κλικ στη ζώνη δείκτη ⇒ το ίδιο (μετακινεί κι αυτό το ενεργό κελί)', () => {
@@ -507,7 +508,7 @@ describe('🔴 ADR-739 §26.15 — το κλικ στον καμβά και η �
       pressOn(canvas, columnBandScreenPoint(entity, 1));
 
       expect(onCommitPending).toHaveBeenCalledTimes(1);
-      expect(commitPendingAtColumn).toEqual([entity.model.columns[0].id]);
+      expect(commitPendingAtColumn).toEqual([activeTableModel(entity).columns[0].id]);
     });
 
     it('`Shift+κλικ` ΔΕΝ δεσμεύει — η επέκταση περιοχής δεν αγγίζει το μοντέλο', () => {
@@ -559,7 +560,7 @@ describe('🔴 ADR-739 §26.15 — το κλικ στον καμβά και η �
     /** Τα κελιά που πραγματικά μαρκαρίστηκαν — η ερώτηση του χρήστη, όχι του store. */
     function selectedBounds() {
       const selection = getTableCellCursor()?.selection;
-      return selection ? resolveTableSelectionBounds(entity.model, selection) : null;
+      return selection ? resolveTableSelectionBounds(activeTableModel(entity), selection) : null;
     }
 
     /** Κίνηση με **πατημένο** κουμπί, στο `document` — ό,τι ακριβώς στέλνει ο browser. */
@@ -615,8 +616,8 @@ describe('🔴 ADR-739 §26.15 — το κλικ στον καμβά και η �
       dragOver(cellScreenPoint(entity, 4, 2));
       releaseDrag();
 
-      expect(getTableCellCursor()?.position.rowId).toBe(entity.model.rows[2].id);
-      expect(getTableCellCursor()?.position.colId).toBe(entity.model.columns[0].id);
+      expect(getTableCellCursor()?.position.rowId).toBe(activeTableModel(entity).rows[2].id);
+      expect(getTableCellCursor()?.position.colId).toBe(activeTableModel(entity).columns[0].id);
     });
 
     it('🔴 ΣΥΡΣΗ ΣΤΗ ΖΩΝΗ: από το «A» ως το «C» ⇒ ΤΡΕΙΣ ολόκληρες στήλες', () => {
@@ -631,7 +632,7 @@ describe('🔴 ADR-739 §26.15 — το κλικ στον καμβά και η �
 
       expect(selectedBounds()).toEqual({
         firstRow: 0,
-        lastRow: entity.model.rows.length - 1,
+        lastRow: activeTableModel(entity).rows.length - 1,
         firstCol: 0,
         lastCol: 2,
       });
@@ -656,7 +657,7 @@ describe('🔴 ADR-739 §26.15 — το κλικ στον καμβά και η �
     act(() => {
       setTableCellCursor(
         entity.id,
-        tableCursorAt(entity.model.rows[2].id, entity.model.columns[0].id),
+        tableCursorAt(activeTableModel(entity).rows[2].id, activeTableModel(entity).columns[0].id),
         'edit',
         '777',
       );

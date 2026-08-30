@@ -53,6 +53,7 @@ import { useTableModelCommit } from './use-table-model-commit';
 import type { TableInsertControlTarget } from '../../bim/table/table-insert-control';
 import type { PersistedTableModel } from '../../types/table';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
+import { activeTableModel } from '../../bim/table/table-worksheet-resolve';
 
 export interface UseTableInsertControlClickParams {
   readonly containerRef: RefObject<HTMLDivElement | null>;
@@ -88,10 +89,10 @@ export function useTableInsertControlClick(params: UseTableInsertControlClickPar
       return state && state.control.phase === 'armed' ? state : null;
     },
     run: (live, state) => {
-      const nextModel = applyInsert(live.model, state.control.target);
+      const nextModel = applyInsert(activeTableModel(live), state.control.target);
       // Το φράγμα πλήθους (`canInsert*`) απάντησε «όχι» ⇒ καμία εντολή, κανένα ιστορικό. Η
       // ταυτότητα κατά αναφορά είναι η ΙΔΙΑ σύμβαση no-op που χρησιμοποιεί ήδη το μενού ζωνών.
-      if (nextModel === live.model) return;
+      if (nextModel === activeTableModel(live)) return;
       commitModel(live, nextModel);
     },
   });

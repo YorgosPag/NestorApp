@@ -38,6 +38,7 @@ import type { TableTextLinkSpan } from './table-layout-types';
 import { computeTableEntityGeometryLive } from './table-entity-geometry';
 import { tableCellReference } from './table-cell-reference';
 import { resolveTableModel } from './table-model-helpers';
+import { activeTableModel } from './table-worksheet-resolve';
 
 /**
  * Ένας σύνδεσμος μαζί με **πού κάθεται**, σε γλώσσα που καταλαβαίνει ο χρήστης.
@@ -72,7 +73,7 @@ export function collectTableCellLinks(
   sceneUnits: SceneUnits = 'mm',
 ): readonly TableCellLinkEntry[] {
   const { layout } = computeTableEntityGeometryLive(entity, sceneUnits);
-  const model = resolveTableModel(entity.model);
+  const model = resolveTableModel(activeTableModel(entity));
 
   const rowOrder = orderIndex(layout.rows);
   const colOrder = orderIndex(layout.columns);

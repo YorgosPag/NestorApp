@@ -27,13 +27,14 @@ import {
 } from '../../../state/function-arguments-dialog-store';
 import { drawingFormulaGrammar } from '../formula/table-formula-grammar';
 import { filledArgumentCount } from '../formula/catalog/formula-call-text';
+import { setTableCellCursorById } from './make-table-entity';
 
 const POSITION = { rowIndex: 0, columnIndex: 0, anchorColumnIndex: 0 };
 const SEPARATOR = drawingFormulaGrammar().argumentSeparator;
 
 /** Ο δρομέας σε ανοιχτή γραφή με το `=SUM()` που μόλις έγραψε η Φάση 1. */
 function openOnSum(restore: Parameters<typeof openFunctionArgumentsDialog>[0]['restore']): void {
-  setTableCellCursor('table-1', POSITION, 'edit', '=SUM()', 5);
+  setTableCellCursorById('table-1', POSITION, 'edit', '=SUM()', 5);
   openFunctionArgumentsDialog({
     functionName: 'SUM',
     frame: { prefix: '=SUM(', suffix: ')' },
@@ -57,7 +58,7 @@ describe('ADR-763 §15 — άνοιγμα και κατάσταση', () => {
   });
 
   it('🔴 το άνοιγμα ΔΕΝ ξαναγράφει το κελί — το πρόχειρο το έγραψε ο καλών', () => {
-    setTableCellCursor('table-1', POSITION, 'edit', '=SUM()', 5);
+    setTableCellCursorById('table-1', POSITION, 'edit', '=SUM()', 5);
     const before = getTableCellCursor();
     openFunctionArgumentsDialog({
       functionName: 'SUM',
@@ -164,7 +165,7 @@ describe('ADR-763 §15 — τι επαναφέρει το «Άκυρο»', () =>
   });
 
   it('ΓΡΑΦΗ: επαναφέρει το ακριβές κείμενο και τη θέση κέρσορα', () => {
-    setTableCellCursor('table-1', POSITION, 'edit', '=B2*SUM()', 8);
+    setTableCellCursorById('table-1', POSITION, 'edit', '=B2*SUM()', 8);
     openFunctionArgumentsDialog({
       functionName: 'SUM',
       frame: { prefix: '=B2*SUM(', suffix: ')' },
@@ -182,7 +183,7 @@ describe('ADR-763 §15 — τι επαναφέρει το «Άκυρο»', () =>
   it('🔴 η επαναφορά σε ΓΡΑΦΗ ξαναστήνει τη συνεδρία — αλλιώς χάνεται το πληκτρολόγιο', () => {
     // Το `setTableCellCursorDraftAt` σκοπίμως δεν αγγίζει τη συνεδρία, οπότε χωρίς ρητή
     // επανεκκίνηση η εστίαση θα έμενε στο ξεμονταρισμένο κουτί ορίσματος.
-    setTableCellCursor('table-1', POSITION, 'edit', '=SUM()', 5);
+    setTableCellCursorById('table-1', POSITION, 'edit', '=SUM()', 5);
     const sessionBefore = getTableCellCursor()?.sessionId ?? 0;
     openFunctionArgumentsDialog({
       functionName: 'SUM',

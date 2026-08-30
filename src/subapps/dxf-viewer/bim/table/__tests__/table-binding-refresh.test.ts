@@ -33,6 +33,7 @@ import { buildCoordinateTable } from '../../../systems/topography/deliverables/s
 import type { ExportableTable } from '../../schedule/types';
 import type { TopoPoint } from '../../../systems/topography/topo-types';
 import type { TableSourceContext } from '../binding/table-source-resolver';
+import { activeTableModel } from '../table-worksheet-resolve';
 import type {
   PersistedTableModel,
   TableBinding,
@@ -362,13 +363,13 @@ describe('refreshTableBinding — η ορχήστρα του §5', () => {
     // 🔴 ADR-769 §11 — η **απόδειξη** ότι η μονάδα οθόνης έπρεπε να μπει ως **αριθμός** και όχι
     // ως κείμενο: το `SUM` εξακολουθεί να αθροίζει τη δεμένη στήλη (1 + 4 = 5 m). Με
     // `formatCellForDisplay` το κελί θα κρατούσε `"1.000"` και ο τύπος θα έδινε **μηδέν**.
-    const withFormula = commitCellWrites(writeCellInput(seeded.model, 'r1', 'cSum', '=SUM(B2:B3)'));
+    const withFormula = commitCellWrites(writeCellInput(activeTableModel(seeded), 'r1', 'cSum', '=SUM(B2:B3)'));
     expect(cellOf(withFormula, 'r1', 'cSum')?.value).toBe(5);
 
     const moved = refreshTableBinding({
       model: withFormula, binding: seeded.binding, context: ctx([P1, P2_MOVED]),
     });
     if (moved.status !== 'refreshed') throw new Error('expected refreshed');
-    expect(cellOf(moved.model, 'r1', 'cSum')?.value).toBe(5.5);
+    expect(cellOf(activeTableModel(moved), 'r1', 'cSum')?.value).toBe(5.5);
   });
 });

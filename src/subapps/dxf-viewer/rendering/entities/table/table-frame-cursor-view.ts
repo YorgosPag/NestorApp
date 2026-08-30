@@ -37,6 +37,7 @@ import type { TableLayout, TableRectMm } from '../../../bim/table/table-layout-t
 import type { TableCellCursorState } from '../../../state/table-cell-cursor-store';
 import type { TableEntity } from '../../../types/table-entity';
 import type { TableCellRef } from './stamp-table-layout';
+import { activeTableModel } from '../../../bim/table/table-worksheet-resolve';
 
 /**
  * ADR-739 Φ.Δ βήμα 3 — ποιο κελί **δεν** ζωγραφίζει ο καμβάς.
@@ -119,7 +120,7 @@ export function tableFrameSelectionView(
   layout: TableLayout,
 ): TableFrameSelectionView | null {
   if (!cursor.selection) return null;
-  const model = resolveTableModel(entity.model);
+  const model = resolveTableModel(activeTableModel(entity));
   // ADR-739 §27.15 — ο ζωγράφος **δεν ερμηνεύει**: ρωτά τον ΕΝΑ δρόμο «τι διάλεξε ο χρήστης →
   // ποια κελιά είναι μέσα», που ξέρει μόνος του πότε κουμπώνει.
   const bounds = resolveTableSelectionBounds(model, cursor.selection);
@@ -169,7 +170,7 @@ export function tableFrameEffectiveRange(
   selectionBounds: TableCellRangeBounds | undefined,
 ): TableCellRangeBounds | null {
   return tableEffectiveRangeBounds(
-    resolveTableModel(entity.model),
+    resolveTableModel(activeTableModel(entity)),
     { rowId: cursor.position.rowId, colId: cursor.position.colId },
     selectionBounds ?? null,
   );

@@ -44,6 +44,7 @@ import type { TableLayout, TableRectMm } from './table-layout-types';
 import type { TableFramePoint, TableEntity } from '../../types/table-entity';
 import type { TableCellCursorState } from '../../state/table-cell-cursor-store';
 import type { TableFillBadgeState } from '../../state/table-fill-badge-store';
+import { activeTableModel } from './table-worksheet-resolve';
 
 /**
  * Η **πλευρά** του κουμπιού σε px οθόνης — 16, όσο και το smart tag του Excel.
@@ -206,6 +207,6 @@ export function resolveTableFillBadgeBounds(
 ): TableCellRangeBounds | null {
   if (!badge || badge.entityId !== entity.id) return null;
   if (cursor?.entityId !== entity.id || cursor.mode !== 'nav') return null;
-  if (badge.modelRef !== entity.model) return null;
+  if (badge.modelRef !== activeTableModel(entity)) return null;
   return badge.filled;
 }

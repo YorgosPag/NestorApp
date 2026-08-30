@@ -99,6 +99,7 @@ import type {
 import type { TableToolbarExtrasState } from '../components/table-format-toolbar/table-toolbar-extras';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
 import type { ViewTransform } from '../../rendering/types/Types';
+import { activeTableModel } from '../../bim/table/table-worksheet-resolve';
 
 export interface UseTableRangeMenuParams {
   readonly containerRef: RefObject<HTMLDivElement | null>;
@@ -157,7 +158,7 @@ export function useTableRangeMenu(params: UseTableRangeMenuParams): TableRangeMe
       const live = liveTable();
       const selection = getTableCellCursor()?.selection;
       if (!live || !selection || selection.kind === 'range') return null;
-      const selected = resolveTableSelectionBounds(resolveTableModel(live.model), selection);
+      const selected = resolveTableSelectionBounds(resolveTableModel(activeTableModel(live)), selection);
       return selected && sameTableRangeBounds(selected, bounds) ? selection.kind : null;
     },
     [liveTable],
@@ -178,7 +179,7 @@ export function useTableRangeMenu(params: UseTableRangeMenuParams): TableRangeMe
       return {
         // 🔴 ADR-739 §63 — δες `FormatTarget.entityId`: ο στόχος κουβαλά **ποιος** πίνακας.
         entityId: live.id,
-        model: live.model,
+        model: activeTableModel(live),
         style: resolveTableStyle(live),
         scope: { kind: 'range' as const, bounds },
         // ADR-040 κανόνας #2 — getter τη στιγμή του συμβάντος· αυτό το hook ζει στον
@@ -310,7 +311,7 @@ export function useTableRangeMenu(params: UseTableRangeMenuParams): TableRangeMe
       const world = tableEventWorldPoint({ clientX, clientY }, container, transform);
       if (!world) return null;
       const hit = tablePointerHitAtWorld(live, world, transform.scale);
-      const model = resolveTableModel(live.model);
+      const model = resolveTableModel(activeTableModel(live));
 
       // 🔴 §43 — το τετραγωνάκι της γωνίας. Το Excel δείχνει εκεί το μενού **ΚΕΛΙΟΥ**, όχι της
       // κεφαλίδας — μετρήθηκε στα δύο στιγμιότυπα της 04/08 και τα ξεχωρίζουν τα ίδια τα items

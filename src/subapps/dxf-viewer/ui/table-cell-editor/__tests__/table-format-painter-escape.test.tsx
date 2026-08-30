@@ -36,6 +36,7 @@ import {
   setTableCellCursor,
 } from '../../../state/table-cell-cursor-store';
 import type { TableFormatBrush } from '../../../bim/table/table-format-payload';
+import { setTableCellCursorById } from '../../../bim/table/__tests__/make-table-entity';
 
 const BRUSH = { facets: new Set(), rows: 1, columns: 1, cells: [] } as unknown as TableFormatBrush;
 
@@ -78,7 +79,7 @@ describe('🔴 ADR-768 Α6 — το `Esc` του πινέλου, στο σκαλ
     __resetTableFormatPainterForTests();
     __resetTableCellCursorStoreForTests();
     // Ο δρομέας είναι προϋπόθεση του οπλισμού — και ταυτόχρονα ο λόγος που ο editor ακούει.
-    setTableCellCursor('t1', { rowId: 'r0', colId: 'c0', anchorColId: 'c0' }, 'nav');
+    setTableCellCursorById('t1', { rowId: 'r0', colId: 'c0', anchorColId: 'c0' }, 'nav');
   });
 
   afterEach(() => {

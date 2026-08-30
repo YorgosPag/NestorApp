@@ -54,6 +54,7 @@ import type { TableBindingRefreshResult } from '../../bim/table/binding/table-bi
 import type { TableFreshness } from '../../bim/table/binding/table-binding-state';
 import type { TableEntity } from '../../types/table-entity';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
+import { activeTableBinding, activeTableModel } from '../../bim/table/table-worksheet-resolve';
 
 /** Ό,τι μπορεί να ζητήσει μια επιφάνεια για τον **δεσμό** ενός πίνακα. */
 export interface TableBindingPort {
@@ -112,13 +113,13 @@ export function useTableBindingActions(
 
   const refresh = useCallback(() => {
     const live = table();
-    const binding = live?.binding;
+    const binding = live ? activeTableBinding(live) : undefined;
     if (!live || !binding) return;
 
     // Τα δεδομένα διαβάζονται **τη στιγμή του πατήματος** από τη ΜΙΑ γέφυρα — όχι από
     // στιγμιότυπο render, που θα ήταν μπαγιάτικο ακριβώς όταν έχει σημασία.
     const result = refreshTableBinding({
-      model: live.model,
+      model: activeTableModel(live),
       binding,
       context: readTableSourceContext(),
     });
@@ -139,7 +140,7 @@ export function useTableBindingActions(
 
   const check = useCallback(() => {
     const live = table();
-    const binding = live?.binding;
+    const binding = live ? activeTableBinding(live) : undefined;
     if (!live || !binding) return;
     setTableBindingFreshness(live.id, assessTableFreshness(binding, readTableSourceContext()));
   }, [table]);
@@ -171,10 +172,10 @@ export function useTableBindingActions(
   const lastChecked = useRef<{ id: string; model: unknown } | null>(null);
   useEffect(() => {
     const live = table();
-    if (!live?.binding) return;
+    if (!live || !activeTableBinding(live)) return;
     const previous = lastChecked.current;
-    if (previous?.id === live.id && previous.model === live.model) return;
-    lastChecked.current = { id: live.id, model: live.model };
+    if (previous?.id === live.id && previous.model === activeTableModel(live)) return;
+    lastChecked.current = { id: live.id, model: activeTableModel(live) };
     check();
   });
 
@@ -182,7 +183,10 @@ export function useTableBindingActions(
 
   return useMemo<TableBindingPort>(
     () => ({
-      isBound: () => table()?.binding !== undefined,
+      isBound: () => {
+        const live = table();
+        return live !== null && activeTableBinding(live) !== undefined;
+      },
       refresh,
       check,
     }),

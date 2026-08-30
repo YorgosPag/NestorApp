@@ -79,6 +79,7 @@ import {
 } from '../../state/table-cell-cursor-store';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
 import type { TableModel } from '../../types/table';
+import { activeTableModel } from '../../bim/table/table-worksheet-resolve';
 
 /** Ταυτότητα μόνιμης θέσης — σύμβαση `<subapp>.<panel>`, σταθερή για πάντα. */
 const FN_ARGS_PANEL_ID: FloatingPanelId = 'dxf.function-arguments';
@@ -168,7 +169,7 @@ export const TableFunctionArgumentsDialog: React.FC<TableFunctionArgumentsDialog
    */
   const preview = useMemo(
     () => functionArgumentsPreview({
-      model: activeTableModel(levelManager),
+      model: resolveCursorTableModel(levelManager),
       functionName: state.functionName,
       frame: state.frame,
       values: state.values,
@@ -285,11 +286,11 @@ export const TableFunctionArgumentsDialog: React.FC<TableFunctionArgumentsDialog
  * `resolveTableModel` (η μία απομνημονευμένη αποσειριοποίηση, WeakMap). Μια δεύτερη διαδρομή
  * εδώ θα σήμαινε ότι ο διάλογος αποτιμά πάνω σε **άλλο** μοντέλο από αυτό που ζωγραφίζεται.
  */
-function activeTableModel(levelManager: LevelManagerLike): TableModel | null {
+function resolveCursorTableModel(levelManager: LevelManagerLike): TableModel | null {
   const cursor = getTableCellCursor();
   if (cursor === null) return null;
   const entity = resolveTableById(levelManager, cursor.entityId);
-  return entity ? resolveTableModel(entity.model) : null;
+  return entity ? resolveTableModel(activeTableModel(entity)) : null;
 }
 
 /** Η αποθηκευμένη μεταφρασμένη υπογραφή, ή `''` για τις μη τεκμηριωμένες. */

@@ -32,6 +32,7 @@ import type { TableFormulaBarProps } from './TableFormulaBar';
 import type { TableCellCursorState } from '../../state/table-cell-cursor-store';
 import type { TableEntity } from '../../types/table-entity';
 import type { TableCellSessionHandlers } from './table-cell-session-types';
+import { activeTableModel } from '../../bim/table/table-worksheet-resolve';
 
 /** Ό,τι χρειάζεται ο καλών για να στήσει την όψη — ίδιο σχήμα με τον επεξεργαστή κελιού. */
 export interface TableFormulaBarMount {
@@ -129,7 +130,7 @@ export function useTableFormulaBarMount(
     // εδώ, η μέτρηση/μετάφραση στο πλαίσιο ονόματος). Ο ίδιος απομνημονευμένος (WeakMap)
     // δρόμος με τη γεωμετρία· μια δεύτερη κλήση μέσα στο φύλλο θα ήταν δεύτερη
     // αποσειριοποίηση ανά πάτημα πλήκτρου, για ταυτόσημο αποτέλεσμα.
-    const model = resolveTableModel(entity.model);
+    const model = resolveTableModel(activeTableModel(entity));
     return {
       // Σταθερό ανά **πίνακα**, όχι ανά κελί: η γραμμή είναι μόνιμο κέλυφος της συνεδρίας.
       // Ένα κλειδί ανά κελί θα την ξαναέστηνε σε κάθε `Tab` — δηλαδή θα της έκλεβε την

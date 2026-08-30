@@ -32,12 +32,12 @@ import {
 import {
   __resetTableCellCursorStoreForTests,
   closeTableCellCursor,
-  setTableCellCursor,
 } from '../table-cell-cursor-store';
 import { tableCursorAt } from '../../bim/table/table-cell-navigation';
 import { ALL_TABLE_FORMAT_FACETS, type TableFormatBrush } from '../../bim/table/table-format-payload';
 import { TABLE_GENERAL_FORMAT } from '../../types/table-cell-format';
 import type { TableBorderSpec } from '../../types/table-edges';
+import { setTableCellCursorById } from '../../bim/table/__tests__/make-table-entity';
 
 jest.mock('../../rendering/core/frame-scheduler-api', () => ({
   markSystemsDirty: jest.fn(),
@@ -76,7 +76,7 @@ function brushStamped(stamp: string): TableFormatBrush {
 
 /** Ανοίγει συνεδρία κελιού στον πίνακα `entityId` — η προϋπόθεση κάθε οπλισμού. */
 function openSessionOn(entityId: string): void {
-  setTableCellCursor(entityId, tableCursorAt('r1', 'c1'), 'nav');
+  setTableCellCursorById(entityId, tableCursorAt('r1', 'c1'), 'nav');
 }
 
 beforeEach(() => {
@@ -175,7 +175,7 @@ describe('🔴 ο ιδιοκτήτης κύκλου ζωής — ο ΔΡΟΜΕΑ
     openSessionOn('tbl_1');
     armTableFormatPainter(brushStamped('#ff0000'), 'once');
 
-    setTableCellCursor('tbl_1', tableCursorAt('r9', 'c9'), 'edit', 'πληκτρολογώ');
+    setTableCellCursorById('tbl_1', tableCursorAt('r9', 'c9'), 'edit', 'πληκτρολογώ');
 
     expect(getTableFormatPainterState()).toBe('once');
   });

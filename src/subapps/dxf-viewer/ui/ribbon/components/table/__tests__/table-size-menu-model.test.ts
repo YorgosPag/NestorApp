@@ -10,6 +10,7 @@ import {
   TABLE_FIXED_ROW_COUNT,
   buildTableEntity,
 } from '../../../../../bim/table/build-table-entity';
+import { activeTableModel } from '../../../../../bim/table/table-worksheet-resolve';
 import {
   MAX_TOTAL_TABLE_ROWS,
   MIN_TOTAL_TABLE_ROWS,
@@ -114,7 +115,7 @@ describe('table-size-menu-model — ισοδυναμία με τον builder (ο
         `tbl_${total}`,
         'layer_0',
       );
-      expect(entity.model.rows).toHaveLength(total);
+      expect(activeTableModel(entity).rows).toHaveLength(total);
     }
   });
 
@@ -126,13 +127,13 @@ describe('table-size-menu-model — ισοδυναμία με τον builder (ο
       'tbl_5x2',
       'layer_0',
     );
-    expect(entity.model.columns).toHaveLength(5);
-    expect(entity.model.rows).toHaveLength(2);
+    expect(activeTableModel(entity).columns).toHaveLength(5);
+    expect(activeTableModel(entity).rows).toHaveLength(2);
   });
 
   it('ο πίνακας γεννιέται ΕΝΤΕΛΩΣ ΚΕΝΟΣ — καμία κεφαλίδα, καμία συγχώνευση', () => {
     const entity = buildTableEntity(ORIGIN, { columnCount: 5, dataRowCount: 0 }, 'tbl', 'layer_0');
-    expect(entity.model.cells).toHaveLength(0);
-    expect(entity.model.merges).toHaveLength(0);
+    expect(activeTableModel(entity).cells).toHaveLength(0);
+    expect(activeTableModel(entity).merges).toHaveLength(0);
   });
 });

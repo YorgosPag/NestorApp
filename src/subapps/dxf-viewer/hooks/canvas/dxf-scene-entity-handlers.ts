@@ -23,6 +23,8 @@
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 // ADR-507 — HATCH_RENDER_FIELDS passthrough SSoT (anti-drift· βλ. bim/hatch/hatch-render-fields.ts).
 import { pickHatchRenderFields } from '../../bim/hatch/hatch-render-fields';
+// ADR-833 §0.1 — TABLE_RENDER_FIELDS passthrough SSoT (anti-drift· βλ. bim/table/table-render-fields.ts).
+import { pickTableRenderFields } from '../../bim/table/table-render-fields';
 // ADR-363 — SSoT sub-entity wrapping (slab/slab-opening/opening/stair/dimension →
 // nested payload field). Shared with the drag-preview wrapper (draw-real-entity-preview).
 import { dxfSubEntityPayload } from '../../canvas-v2/dxf-canvas/dxf-types';
@@ -370,12 +372,15 @@ export const TO_DXF_HANDLERS: Partial<Record<EntityType, ToDxfHandler>> = {
     // απλώνονται στο ανώτατο επίπεδο· η ΠΑΡΑΓΩΓΗ `geometry` σκόπιμα ΔΕΝ προωθείται
     // (ξαναϋπολογίζεται στην απόδοση). Χωρίς αυτή τη γραμμή ο φρεσκο-τοποθετημένος
     // πίνακας πέφτει στο `default` → null → αόρατος και χωρίς λαβές (η παγίδα ADR-583).
+    //
+    // ADR-833 §0.1 (anti-drift) — τα πεδία ΔΕΝ απαριθμούνται πλέον εδώ: ήταν χειρόγραφη λίστα,
+    // κάτοπτρο εκείνης του `dxf-renderer-entity-model.ts` και του τύπου `DxfTable`. ΕΝΑ SSoT,
+    // ίδιο ιδίωμα με το `pickImageRenderFields` (ADR-736 §5.3).
     if (!isTableEntity(entity)) return null;
     const tbl = entity as TableEntity;
     return {
       ...base, type: 'table' as const,
-      position: tbl.position, angleRad: tbl.angleRad, styleId: tbl.styleId,
-      model: tbl.model, binding: tbl.binding, breaking: tbl.breaking,
+      ...pickTableRenderFields(tbl),
     } as DxfEntityUnion;
   },
   'mep-segment': (entity, base) => {

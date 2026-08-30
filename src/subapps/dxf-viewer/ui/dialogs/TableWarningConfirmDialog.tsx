@@ -39,12 +39,28 @@ export interface TableWarningConfirmDialogProps {
   readonly cancelLabel: string;
   readonly onConfirm: () => void;
   readonly onCancel: () => void;
+  /**
+   * 🔴 ADR-833 §1.4 — **η τρίτη απάντηση**, προαιρετική: μια πράξη που δίνει στον χρήστη ό,τι
+   * ζητά **χωρίς** την καταστροφή (π.χ. «Νέος πίνακας» αντί για αντικατάσταση).
+   *
+   * Απόν ⇒ ο διάλογος μένει **ακριβώς** ο δυαδικός που ήταν, με τα ίδια δύο κουμπιά: κανένας
+   * από τους δεκατρείς υπάρχοντες καταναλωτές δεν αλλάζει. Προαιρετικό και όχι δεύτερο
+   * component, γιατί ο κανόνας εστίασης (δες κεφαλίδα) πρέπει να μείνει σε **ένα** σημείο —
+   * ένα δεύτερο σώμα θα ήταν ακριβώς ο κλώνος 11 γραμμών που γέννησε αυτό το αρχείο.
+   *
+   * Κάθεται **ανάμεσα** στην καταστροφική και στο «Άκυρο»: οι NN/g συνιστούν τη σειρά
+   * «επικίνδυνο → εναλλακτικό → άρνηση», ώστε το μάτι να συναντά την ασφαλή διέξοδο τελευταίο
+   * και το πληκτρολόγιο να την έχει ήδη εστιασμένη.
+   */
+  readonly alternativeLabel?: string;
+  readonly onAlternative?: () => void;
 }
 
 export function TableWarningConfirmDialog(
   props: TableWarningConfirmDialogProps,
 ): React.ReactElement | null {
   const { title, message, undoNote, confirmLabel, cancelLabel, onConfirm, onCancel } = props;
+  const { alternativeLabel, onAlternative } = props;
   if (typeof document === 'undefined') return null;
 
   return createPortal(
@@ -61,6 +77,12 @@ export function TableWarningConfirmDialog(
           >
             {confirmLabel}
           </button>
+          {/* Η τρίτη απάντηση, όταν υπάρχει: ό,τι ζητά ο χρήστης, χωρίς την καταστροφή. */}
+          {alternativeLabel !== undefined && onAlternative !== undefined && (
+            <button type="button" className="dxf-modal-button" onClick={onAlternative}>
+              {alternativeLabel}
+            </button>
+          )}
           {/* 🔴 Η εστίαση στο ΑΣΦΑΛΕΣ — δες την κεφαλίδα για τη μέτρηση πίσω από αυτό. */}
           <button type="button" autoFocus className="dxf-modal-button" onClick={onCancel}>
             {cancelLabel}

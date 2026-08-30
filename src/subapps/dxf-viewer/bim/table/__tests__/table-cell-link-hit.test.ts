@@ -18,6 +18,7 @@ import { computeTableEntityGeometryLive, tableFrameToWorld } from '../table-enti
 import type { TableStyle } from '../table-style';
 import type { TableCell, TableColumn, TableRow } from '../../../types/table';
 import type { TableEntity } from '../../../types/table-entity';
+import { tableWorksheetFields } from './make-table-entity';
 
 const STYLE: TableStyle = BUILTIN_TABLE_STYLES.find(
   (s) => s.id === BUILTIN_TABLE_STYLE_IDS.STANDARD,
@@ -47,7 +48,7 @@ function entityWith(value: TableCell['value']): TableEntity {
     position: { x: 0, y: 0 },
     angleRad: 0,
     styleId: BUILTIN_TABLE_STYLE_IDS.STANDARD,
-    model: toPersistedTableModel(modelWith(value)),
+    ...tableWorksheetFields(toPersistedTableModel(modelWith(value))),
   };
 }
 

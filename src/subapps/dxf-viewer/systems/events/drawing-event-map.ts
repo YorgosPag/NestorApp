@@ -342,6 +342,19 @@ export interface DrawingEventMap extends MepAutoDesignEventMap, BimEventMap, Top
   // (`AttachImageHost` listens). Emitted by the ribbon Insert → «Εικόνα» action.
   // Αδελφός του `dxf:import-tek-requested`: ζητά επιλογέα, δεν μεταφέρει αρχείο.
   'dxf:attach-image-requested': Record<string, never>;
+  // ADR-833 §1.3 — Άνοιγμα του επιλογέα αρχείων για τις δύο εντολές `.xlsx` της contextual
+  // καρτέλας «Ιδιότητες Πίνακα» (`TableXlsxImportHost` ακούει). Αδελφοί του
+  // `dxf:attach-image-requested`: ζητούν επιλογέα, δεν μεταφέρουν αρχείο.
+  //
+  // ⚠️ **Δύο συμβάντα, όχι ένα με σημαία `mode`.** Ο πειρασμός ήταν
+  // `{ mode: 'open' | 'import' }`· απορρίφθηκε γιατί οι δύο εντολές έχουν **διαφορετικό
+  // αποδέκτη απόφασης**: το «Άνοιγμα» ρωτά τον χρήστη (αντικατάσταση ή νέος πίνακας) ενώ η
+  // «Εισαγωγή» δεν ρωτά ποτέ. Μια σημαία θα έκρυβε αυτή τη διαφορά μέσα σε ένα `if` του
+  // παραλήπτη, δηλαδή θα την έκανε **αόρατη** στο σημείο που εκπέμπεται.
+  /** Ο πίνακας **γίνεται** το αρχείο: ο χρήστης αποφασίζει αντικατάσταση ή νέος πίνακας. */
+  'dxf:table-open-xlsx-requested': Record<string, never>;
+  /** Το αρχείο **προστίθεται**: κανένα υπάρχον δεδομένο δεν κινδυνεύει, καμία ερώτηση. */
+  'dxf:table-import-xlsx-requested': Record<string, never>;
   // ADR-726 §13.1 — Deliver an already-picked File to the ONE import path
   // (`handleFileImportWithEncoding`) from OUTSIDE the provider tree. Sibling of
   // `dxf:import-tek-requested`, which asks for a picker; this one carries the result.

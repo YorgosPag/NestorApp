@@ -23,6 +23,7 @@ import {
 } from '../../../bim/table/table-cell-range';
 import type { CellSpan, PersistedTableModel, TableColumn, TableRow } from '../../../types/table';
 import type { TableEntity } from '../../../types/table-entity';
+import { setTableCellCursorById } from '../../../bim/table/__tests__/make-table-entity';
 
 function buildModel(rowCount: number, colCount: number, merges: readonly CellSpan[] = []) {
   const columns: TableColumn[] = Array.from({ length: colCount }, (_, c) => ({
@@ -56,7 +57,7 @@ beforeEach(() => {
 describe('selectWholeTable', () => {
   it('🔴 γράφει επιλογή που καλύπτει ΟΛΟΚΛΗΡΟ το πλέγμα', () => {
     const model = buildModel(4, 3);
-    setTableCellCursor('tbl-1', tableCursorAt('r3', 'c2'), 'nav');
+    setTableCellCursorById('tbl-1', tableCursorAt('r3', 'c2'), 'nav');
 
     const written = selectWholeTable(model);
 
@@ -76,7 +77,7 @@ describe('selectWholeTable', () => {
    * **σιωπηλά** τη μία από τις δύο συμπεριφορές.
    */
   it('🔴 ΔΕΝ μετακινεί το ενεργό κελί (η ΕΝΤΟΛΗ — `Ctrl+A`)', () => {
-    setTableCellCursor('tbl-1', tableCursorAt('r3', 'c2'), 'nav');
+    setTableCellCursorById('tbl-1', tableCursorAt('r3', 'c2'), 'nav');
     const before = getTableCellCursor()?.position;
 
     selectWholeTable(buildModel(4, 3));
@@ -85,14 +86,14 @@ describe('selectWholeTable', () => {
   });
 
   it('το είδος είναι `range` — κανένα τέταρτο είδος «όλα»', () => {
-    setTableCellCursor('tbl-1', tableCursorAt('r1', 'c1'), 'nav');
+    setTableCellCursorById('tbl-1', tableCursorAt('r1', 'c1'), 'nav');
     selectWholeTable(buildModel(2, 2));
     expect(getTableCellCursor()?.selection?.kind).toBe('range');
   });
 
   it('είναι ιδεμποτής — δεύτερη κλήση δίνει την ίδια επιλογή', () => {
     const model = buildModel(3, 3);
-    setTableCellCursor('tbl-1', tableCursorAt('r1', 'c1'), 'nav');
+    setTableCellCursorById('tbl-1', tableCursorAt('r1', 'c1'), 'nav');
     selectWholeTable(model);
     const first = getTableCellCursor()?.selection;
     selectWholeTable(model);
@@ -104,7 +105,7 @@ describe('selectWholeTable', () => {
    * θα ήταν μπαγιάτικη αναφορά που ο ζωγράφος θα προσπαθούσε να λύσει σε κάθε καρέ.
    */
   it('χωρίς γραμμές ή χωρίς στήλες ⇒ `null` και ΚΑΜΙΑ επιλογή', () => {
-    setTableCellCursor('tbl-1', tableCursorAt('r1', 'c1'), 'nav');
+    setTableCellCursorById('tbl-1', tableCursorAt('r1', 'c1'), 'nav');
     expect(selectWholeTable(buildModel(0, 3))).toBeNull();
     expect(selectWholeTable(buildModel(3, 0))).toBeNull();
     expect(getTableCellCursor()?.selection).toBeFalsy();
@@ -120,7 +121,7 @@ describe('selectWholeTable', () => {
  */
 describe('🔴 §68.9 selectWholeTableFromCorner — η ΧΕΙΡΟΝΟΜΙΑ', () => {
   it('🔴 μετακινεί το ενεργό κελί στο A1 (Excel: το Name Box γράφει A1)', () => {
-    setTableCellCursor('tbl-1', tableCursorAt('r3', 'c2'), 'nav');
+    setTableCellCursorById('tbl-1', tableCursorAt('r3', 'c2'), 'nav');
 
     selectWholeTableFromCorner(buildEntity(4, 3));
 
@@ -136,7 +137,7 @@ describe('🔴 §68.9 selectWholeTableFromCorner — η ΧΕΙΡΟΝΟΜΙΑ', (
    * «επιλογή όλων» που δεν επιλέγει τίποτα.
    */
   it('🔴 η επιλογή ΕΠΙΒΙΩΝΕΙ της μετακίνησης του δρομέα (σειρά: δρομέας → επιλογή)', () => {
-    setTableCellCursor('tbl-1', tableCursorAt('r3', 'c2'), 'nav');
+    setTableCellCursorById('tbl-1', tableCursorAt('r3', 'c2'), 'nav');
     const model = buildModel(4, 3);
 
     const written = selectWholeTableFromCorner(buildEntity(4, 3));
@@ -157,7 +158,7 @@ describe('🔴 §68.9 selectWholeTableFromCorner — η ΧΕΙΡΟΝΟΜΙΑ', (
    * §29.15 — και ο δρομέας προσγειώνεται στην **άγκυρα**, όχι σε καλυμμένο κελί.
    */
   it('🔴 συγχωνευμένος τίτλος A1:C1 ⇒ ο δρομέας πάει στην ΑΓΚΥΡΑ, ποτέ σε καλυμμένο κελί', () => {
-    setTableCellCursor('tbl-1', tableCursorAt('r3', 'c2'), 'nav');
+    setTableCellCursorById('tbl-1', tableCursorAt('r3', 'c2'), 'nav');
     const merges: readonly CellSpan[] = [
       { anchorRowId: 'r1', anchorColId: 'c1', rowSpan: 1, colSpan: 3 },
     ];
@@ -168,7 +169,7 @@ describe('🔴 §68.9 selectWholeTableFromCorner — η ΧΕΙΡΟΝΟΜΙΑ', (
   });
 
   it('εκφυλισμένο μοντέλο ⇒ `null`, ΚΑΜΙΑ επιλογή και ΚΑΜΙΑ μετακίνηση', () => {
-    setTableCellCursor('tbl-1', tableCursorAt('r1', 'c1'), 'nav');
+    setTableCellCursorById('tbl-1', tableCursorAt('r1', 'c1'), 'nav');
     const before = getTableCellCursor()?.position;
 
     expect(selectWholeTableFromCorner(buildEntity(0, 3))).toBeNull();

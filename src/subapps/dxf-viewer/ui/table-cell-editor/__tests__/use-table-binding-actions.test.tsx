@@ -158,10 +158,19 @@ describe('🔴 refresh — καμία εντολή όταν τίποτα δεν 
 
     // Δύο εντολές θα άφηναν ένα `Ctrl+Z` να επαναφέρει τα νούμερα κρατώντας το νέο
     // αποτύπωμα — δηλαδή πίνακα που δηλώνει «ενημερωμένος» δείχνοντας τα παλιά.
-    const patch = (executed[0] as unknown as { patch: Record<string, unknown> }).patch;
-    expect(patch.model).toBeDefined();
-    expect(patch.binding).toBeDefined();
-    expect((patch.binding as { revision: string }).revision).toBe(revisionFor([P1, P2_MOVED]));
+    //
+    // 🔴 ADR-833 Φάση 2 — τα δύο ζουν πλέον στο **ίδιο φύλλο**, οπότε η ατομικότητα που αυτό
+    // το anchor φυλά έγινε **δομική**: ένα αντικείμενο, μία αντικατάσταση, αδύνατο να χωριστούν.
+    // Ο έλεγχος ρωτά το ίδιο πράγμα στο νέο σχήμα — και **ονομαστικά** τα δύο πεδία, όχι απλώς
+    // «κάτι γράφτηκε»: με ένα μόνο από τα δύο, ο πίνακας θα δήλωνε «ενημερωμένος» δείχνοντας
+    // τα παλιά νούμερα.
+    const patch = (executed[0] as unknown as {
+      patch: { worksheets?: readonly { model?: unknown; binding?: { revision: string } }[] };
+    }).patch;
+    expect(patch.worksheets).toHaveLength(1);
+    expect(patch.worksheets?.[0].model).toBeDefined();
+    expect(patch.worksheets?.[0].binding).toBeDefined();
+    expect(patch.worksheets?.[0].binding?.revision).toBe(revisionFor([P1, P2_MOVED]));
   });
 });
 

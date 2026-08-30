@@ -115,6 +115,8 @@ import {
 } from '../../keyboard/modifier-snapshot';
 import type { TableEntity } from '../../types/table-entity';
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
+import { tableForCursor } from '../../state/table-cell-cursor-scope';
+import { activeTableModel } from '../../bim/table/table-worksheet-resolve';
 
 /**
  * Ο **ένας** καθαρισμός και των δύο καναλιών, με **σταθερή** ταυτότητα.
@@ -289,7 +291,8 @@ export function useTableIndicatorHover(params: UseTableIndicatorHoverParams): vo
     // μοιράζονται δρομέα, και η ερώτηση «είναι δικός μου;» δεν επιτρέπεται να απαντηθεί δύο
     // φορές με δύο διατυπώσεις (εδώ ζητούνται πλέον **τρία** πεδία του: επιλογή, θέση, μορφή).
     const liveCursor = getTableCellCursor();
-    const cursorState = liveCursor?.entityId === target.id ? liveCursor : null;
+    // 🔴 ADR-833 Φάση 2 — «δικός μου» = πίνακας **και** ενεργό φύλλο· ο ΕΝΑΣ φύλακας.
+    const cursorState = tableForCursor(target, liveCursor) ? liveCursor : null;
     const selection = cursorState?.selection ?? null;
     // 🔴 ADR-754 §14 — **Η ΛΑΒΗ ΖΕΙ ΜΟΝΟ ΣΕ ΠΛΟΗΓΗΣΗ.** Ο ίδιος φρουρός που έχουν ήδη ο
     // ζωγράφος (`stampTableFillHandleOverlay`) και το πάτημα (`tryTableFillHandleMouseDown`):
@@ -351,7 +354,7 @@ export function useTableIndicatorHover(params: UseTableIndicatorHoverParams): vo
     // υπάρχει τίποτα έγκυρο να βαφτεί κόκκινο, και ένα ⊖ χωρίς στόχο θα ήταν κουμπί που δεν
     // ξέρει τι σβήνει.
     const removeTarget = remove
-      ? resolveTableAxisActionTarget(resolveTableModel(target.model), remove.hit, selection)
+      ? resolveTableAxisActionTarget(resolveTableModel(activeTableModel(target)), remove.hit, selection)
       : null;
     setTableDeleteControl(
       // 🔴 §42 — **ΚΑΝΕΝΑ ⊖ ΟΤΑΝ Η ΔΙΑΓΡΑΦΗ ΔΕΝ ΕΠΙΤΡΕΠΕΤΑΙ.**
@@ -368,7 +371,7 @@ export function useTableIndicatorHover(params: UseTableIndicatorHoverParams): vo
       //
       // Οι **ίδιες** δύο συναρτήσεις που ρωτά το μενού, με το **πλήθος του στόχου** και όχι με
       // `1` (§27.17): με τέσσερις στήλες μαρκαρισμένες σε πίνακα τεσσάρων, το ⊖ δεν υπάρχει.
-      remove && removeTarget && canDeleteAxisTarget(target.model, removeTarget)
+      remove && removeTarget && canDeleteAxisTarget(activeTableModel(target), removeTarget)
         ? { entityId: target.id, control: remove, target: removeTarget }
         : null,
     );

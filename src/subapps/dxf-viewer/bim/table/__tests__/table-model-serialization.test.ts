@@ -48,6 +48,8 @@ import type {
   TableRow,
 } from '../../../types/table';
 import type { TableEntity } from '../../../types/table-entity';
+import { tableWorksheetFields } from './make-table-entity';
+import { activeTableModel } from '../table-worksheet-resolve';
 
 // ── Εργαλεία ────────────────────────────────────────────────────────────────
 
@@ -98,7 +100,7 @@ function makeEntity(model: PersistedTableModel = makePersisted()): TableEntity {
     position: { x: 100, y: 200 },
     angleRad: 0,
     styleId: BUILTIN_TABLE_STYLE_IDS.STANDARD,
-    model,
+    ...tableWorksheetFields(model),
   };
 }
 
@@ -109,15 +111,15 @@ describe('JSON round-trip — αυτό ακριβώς κάνουν save/reload �
     const entity = makeEntity();
     const revived: TableEntity = JSON.parse(JSON.stringify(entity));
 
-    expect(revived.model.cells).toHaveLength(4);
-    expect(revived.model.cells).toEqual(entity.model.cells);
+    expect(activeTableModel(revived).cells).toHaveLength(4);
+    expect(activeTableModel(revived).cells).toEqual(activeTableModel(entity).cells);
   });
 
   it('τα κελιά είναι ΑΝΑΓΝΩΣΙΜΑ μετά την αναβίωση — όχι απλώς παρόντα', () => {
     // Το «παρόντα» θα ικανοποιούνταν και από σκουπίδια· η ερώτηση είναι αν ο πίνακας
     // ξαναδιαβάζεται σαν πίνακας.
     const revived: TableEntity = JSON.parse(JSON.stringify(makeEntity()));
-    const model = resolveTableModel(revived.model);
+    const model = resolveTableModel(activeTableModel(revived));
 
     expect(getCell(model, 'r2', 'c1')?.value).toBe('Δοκός Δ1');
     expect(getCell(model, 'r2', 'c2')?.value).toBe(12.5);
@@ -144,15 +146,15 @@ describe('deepClone — η διαδρομή του UpdateEntityCommand / DeleteE
     // και ο πίνακας «επανερχόταν» άδειος — απώλεια δεδομένων, όχι σφάλμα εμφάνισης.
     const snapshot = deepClone(makeEntity());
 
-    expect(snapshot.model.cells).toHaveLength(4);
-    expect(getCell(resolveTableModel(snapshot.model), 'r1', 'c2')?.value).toBe('Ποσότητα');
+    expect(activeTableModel(snapshot).cells).toHaveLength(4);
+    expect(getCell(resolveTableModel(activeTableModel(snapshot)), 'r1', 'c2')?.value).toBe('Ποσότητα');
   });
 
   it('το στιγμιότυπο είναι ΑΝΕΞΑΡΤΗΤΟ αντίγραφο (αλλαγή στο ένα δεν αγγίζει το άλλο)', () => {
     const entity = makeEntity();
     const snapshot = deepClone(entity);
-    expect(snapshot.model.cells).not.toBe(entity.model.cells);
-    expect(snapshot.model.cells[0]).not.toBe(entity.model.cells[0]);
+    expect(activeTableModel(snapshot).cells).not.toBe(activeTableModel(entity).cells);
+    expect(activeTableModel(snapshot).cells[0]).not.toBe(activeTableModel(entity).cells[0]);
   });
 });
 
@@ -246,16 +248,16 @@ describe('resolveTableModel — απομνημόνευση με κλειδί τ�
     // επέστρεφε νέο αντικείμενο κάθε φορά, το WeakMap του `resolveTableLayout` θα αστοχούσε
     // σε **κάθε** καρέ και η μηχανή διάταξης θα έτρεχε 60 φορές το δευτερόλεπτο.
     const entity = makeEntity();
-    const first = resolveTableModel(entity.model);
+    const first = resolveTableModel(activeTableModel(entity));
     for (let frame = 0; frame < 10; frame++) {
-      expect(resolveTableModel(entity.model)).toBe(first);
+      expect(resolveTableModel(activeTableModel(entity))).toBe(first);
     }
   });
 
   it('ένα σύρσιμο λαβής (νέο αντικείμενο μοντέλου) ΑΚΥΡΩΝΕΙ τη μνήμη, χωρίς invalidate()', () => {
     const entity = makeEntity();
-    const before = resolveTableModel(entity.model);
-    const edited: PersistedTableModel = { ...entity.model, columns: [COLUMNS[1], COLUMNS[0]] };
+    const before = resolveTableModel(activeTableModel(entity));
+    const edited: PersistedTableModel = { ...activeTableModel(entity), columns: [COLUMNS[1], COLUMNS[0]] };
     expect(resolveTableModel(edited)).not.toBe(before);
   });
 });

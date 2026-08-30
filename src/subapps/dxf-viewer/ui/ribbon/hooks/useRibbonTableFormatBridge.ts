@@ -67,6 +67,7 @@ import {
   writeTableClipboardCommand,
   writeTableDecimalStep,
   writeTableIndentStep,
+  writeTableXlsxCommand,
   writeTableFontFamily,
   writeTableFormatToggle,
 } from './bridge/table-format-field-routing';
@@ -197,6 +198,14 @@ export function useRibbonTableFormatBridge(): RibbonTableFormatBridge {
   };
 
   const onAction = (commandKey: string): void => {
+    // 🔴 ADR-833 §1.3 — **ΠΡΙΝ από τη θύρα, και η σειρά είναι το νόημα.** Οι δύο εντολές
+    // `.xlsx` δεν γράφουν μορφοποίηση: ζητούν **επιλογέα αρχείων**, δηλαδή DOM. Πίσω από το
+    // `if (!port) return` θα κληρονομούσαν έναν φύλακα που δεν τις αφορά — και μια στιγμή που
+    // η θύρα δεν έχει ακόμη δηλωθεί θα σήμαινε κουμπί που «δεν κάνει τίποτα», σιωπηλά.
+    //
+    // Η μεταφορά είναι το ίδιο ιδίωμα με το «Εικόνα» (ADR-736 §6): action → EventBus → κρυφό
+    // `<input type="file">` σε host. Το ribbon δεν αγγίζει DOM και ο host δεν ξέρει από ribbon.
+    if (writeTableXlsxCommand(commandKey)) return;
     const port = getTableFormatPort();
     if (!port) return;
     // 🔴 §56 — **ΠΡΩΤΑ τα δεκαδικά, και η σειρά είναι υποχρεωτική.** Τα δύο νέα κλειδιά ζουν

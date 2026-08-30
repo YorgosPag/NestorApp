@@ -39,6 +39,7 @@ import type { TableCell, TableColumn, TableRow } from '../../../types/table';
 import type { TableEdgeEntry } from '../../../types/table-edges';
 import type { TableEntity } from '../../../types/table-entity';
 import type { Entity, HatchEntity, LineEntity, TextEntity } from '../../../types/entities';
+import { tableWorksheetFields } from '../../../bim/table/__tests__/make-table-entity';
 
 // ── Το σενάριο: ο ΣΗΜΕΡΙΝΟΣ πίνακας του χρήστη ──────────────────────────────
 //
@@ -115,7 +116,7 @@ const ENTITY: TableEntity = {
   position: { x: 0, y: 0 },
   angleRad: 0,
   styleId: BUILTIN_TABLE_STYLE_IDS.STANDARD,
-  model: toPersistedTableModel(model()),
+  ...tableWorksheetFields(toPersistedTableModel(model())),
   // Ένα ΚΛΗΡΟΝΟΜΗΜΕΝΟ χρώμα οντότητας, σκόπιμα διαφορετικό από κάθε χρώμα του στυλ: κάθε
   // primitive που «ξεχνά» να δηλώσει το δικό του θα το φορέσει και θα προδοθεί.
   color: '#FF00FF',
@@ -319,7 +320,7 @@ function typoModel(): ReturnType<typeof createTableModel> {
 }
 
 const TYPO_ENTITY: TableEntity = {
-  ...ENTITY, id: 'ent_typo', model: toPersistedTableModel(typoModel()),
+  ...ENTITY, id: 'ent_typo', ...tableWorksheetFields(toPersistedTableModel(typoModel())),
 } as TableEntity;
 
 /** Ο συντελεστής sheet-mm → world του σεναρίου (κλίμακα σχεδίου — ένας αριθμός, δύο κλήσεις). */

@@ -84,8 +84,12 @@ import { getTableFillMenuPort } from './table-fill-menu-port';
 import { autoFillListCandidates } from '../../settings/auto-fill-lists';
 import type { TableEntity, TableFramePoint } from '../../types/table-entity';
 import type { TableLayout } from '../../bim/table/table-layout-types';
-import type { TableModel } from '../../types/table';
+import type {
+  PersistedTableModel,
+  TableModel,
+} from '../../types/table';
 import type { ViewTransform } from '../../rendering/types/Types';
+import { activeTableModel } from '../../bim/table/table-worksheet-resolve';
 
 /**
  * 🔴 ADR-828 §7.2 / Φ4α — **ΟΛΟ Ο ΚΟΣΜΟΣ ΠΟΥ ΧΡΕΙΑΖΕΤΑΙ Η ΜΙΑ ΕΓΓΡΑΦΗ**: ποιος διαβάζει τη
@@ -105,7 +109,7 @@ export interface TableFillWriter {
    */
   readonly liveTable: () => TableEntity | null;
   /** Η **ΜΙΑ** διαδρομή εγγραφής μοντέλου — η ίδια που χρησιμοποιεί η μεταφορά περιοχής. */
-  readonly commit: (entity: TableEntity, model: TableEntity['model']) => void;
+  readonly commit: (entity: TableEntity, model: PersistedTableModel) => void;
 }
 
 /** Ό,τι ξέρει ο φρουρός του ποντικιού τη στιγμή του πατήματος. */
@@ -134,7 +138,7 @@ export function tryTableFillHandleMouseDown(event: MouseEvent, press: TableFillH
   // Σε γραφή η λαβή δεν φαίνεται — δες το ρητό όριο στην κεφαλίδα.
   if (press.cursor.mode !== 'nav') return false;
 
-  const model = resolveTableModel(press.entity.model);
+  const model = resolveTableModel(activeTableModel(press.entity));
   const source = fillSourceBounds(model, press.cursor);
   if (!source) return false;
   if (!isOnHandle(press, source)) return false;
@@ -298,7 +302,7 @@ export function tryTableFillHandleMouseDown(event: MouseEvent, press: TableFillH
  * έκδοσης. Έτσι μπορεί να δοκιμάσει «σειρά», να δει, και να γυρίσει σε «αντιγραφή» — Excel
  * parity, με **μηδέν** γραμμές αφιερωμένες στην επαν-όπλιση.
  *
- * ⚠️ Η σφραγίδα είναι το **νέο** μοντέλο, όχι το `live.model`: το `UpdateEntityCommand` γράφει
+ * ⚠️ Η σφραγίδα είναι το **νέο** μοντέλο, όχι το `activeTableModel(live)`: το `UpdateEntityCommand` γράφει
  * ακριβώς την αναφορά που του δόθηκε, οπότε από την επόμενη ανάγνωση η οντότητα **ταυτίζεται**
  * με αυτό. Αν η εγγραφή αποτύχει σιωπηλά (κανένας ενεργός όροφος), η οντότητα κρατά την **παλιά**
  * αναφορά ⇒ η σφραγίδα είναι μπαγιάτικη από τη γέννησή της ⇒ κανένα κουμπί. Αστοχία **προς τη
@@ -312,9 +316,9 @@ export function commitTableFill(
 ): void {
   const live = writer.liveTable();
   if (live === null) return;
-  const nextModel = applyTableFill(live.model, source, target, mode, autoFillListCandidates());
+  const nextModel = applyTableFill(activeTableModel(live), source, target, mode, autoFillListCandidates());
   writer.commit(live, nextModel);
-  selectFilled(source, target, resolveTableModel(live.model));
+  selectFilled(source, target, resolveTableModel(activeTableModel(live)));
   setTableFillBadge({
     entityId: live.id,
     source,

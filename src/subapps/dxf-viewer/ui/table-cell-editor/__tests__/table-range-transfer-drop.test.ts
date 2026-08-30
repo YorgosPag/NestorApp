@@ -37,6 +37,7 @@ import { BUILTIN_TABLE_STYLE_IDS } from '../../../bim/table/table-style-presets'
 import type { TableRangeTransferPlan } from '../../../bim/table/table-range-transfer-types';
 import type { TableRangeTransferPreview } from '../../../state/table-range-transfer-store';
 import type { TableEntity } from '../../../types/table-entity';
+import { tableWorksheetFields } from '../../../bim/table/__tests__/make-table-entity';
 import type {
   PersistedTableModel,
   TableCellEntry,
@@ -83,7 +84,7 @@ function entityOf(model: PersistedTableModel): TableEntity {
     position: { x: 0, y: 0 },
     angleRad: 0,
     styleId: BUILTIN_TABLE_STYLE_IDS.STANDARD,
-    model,
+    ...tableWorksheetFields(model),
   };
 }
 

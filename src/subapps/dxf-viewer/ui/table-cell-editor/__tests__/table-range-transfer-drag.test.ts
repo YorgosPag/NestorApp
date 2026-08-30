@@ -47,6 +47,7 @@ import {
 import type { TableSelectionSpan } from '../../../bim/table/table-cell-range';
 import type { TableEntity } from '../../../types/table-entity';
 import type { ViewTransform } from '../../../rendering/types/Types';
+import { tableWorksheetFields } from '../../../bim/table/__tests__/make-table-entity';
 import type {
   PersistedTableModel,
   TableCellEntry,
@@ -106,7 +107,7 @@ function makeEntity(): TableEntity {
     position: { x: 0, y: 0 },
     angleRad: 0,
     styleId: BUILTIN_TABLE_STYLE_IDS.STANDARD,
-    model: persisted(),
+    ...tableWorksheetFields(persisted()),
   };
 }
 

@@ -20,7 +20,7 @@
  *
  * ## 🔑 Η διαφορά από το {@link useTableModelCommit} — και γιατί ΔΕΝ ενοποιήθηκαν
  * Εκείνο είναι η **μία διαδρομή commit του μοντέλου** και κουβαλά δύο πράγματα που ανήκουν
- * αποκλειστικά στο μοντέλο: τον φύλακα ταυτότητας `nextModel === entity.model` (εγγύηση των
+ * αποκλειστικά στο μοντέλο: τον φύλακα ταυτότητας `nextModel === activeTableModel(entity)` (εγγύηση των
  * καθαρών πράξεων του §6.6) και το σβήσιμο των μυρμηγκιών του προχείρου (§48). Η **θέση** δεν
  * έχει καμία από τις δύο σημασίες: μια μετακίνηση δεν ακυρώνει πρόχειρο, και η ισότητα
  * σημείων είναι σύγκριση **τιμής**, όχι αναφοράς. Ένα κοινό «commit οτιδήποτε» θα έπρεπε να
@@ -40,6 +40,11 @@ import type { TableEntity } from '../../types/table-entity';
 import type { Point2D } from '../../rendering/types/Types';
 import type { ICommand } from '../../core/commands';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
+import {
+  tableWorksheetsPatch,
+  worksheetsWithActiveModel,
+} from '../../bim/table/table-worksheet-write';
+import type { PersistedTableModel } from '../../types/table';
 
 export interface UseTableSceneWritersParams {
   readonly levelManager: LevelManagerLike;
@@ -48,7 +53,7 @@ export interface UseTableSceneWritersParams {
 
 export interface TableSceneWriters {
   /** §31.9 — ζωντανή προεπισκόπηση **μοντέλου** (σύρση μεγέθους, λαβή συμπλήρωσης). */
-  readonly previewModel: (entity: TableEntity, model: TableEntity['model']) => void;
+  readonly previewModel: (entity: TableEntity, model: PersistedTableModel) => void;
   /** §66 — ζωντανή προεπισκόπηση **θέσης** (μετακίνηση από τη γωνία). */
   readonly previewPosition: (entity: TableEntity, position: Point2D) => void;
   /** §66 — η τελική θέση ως **μία** εντολή αναίρεσης. */
@@ -96,7 +101,12 @@ export function useTableSceneWriters(params: UseTableSceneWritersParams): TableS
 
   return useMemo(
     (): TableSceneWriters => ({
-      previewModel: (entity, model) => previewPatch(entity, { model }),
+      // 🔴 ADR-833 Φάση 2 — και η προεπισκόπηση γράφει **φύλλα**, από το ίδιο SSoT με τις δύο
+      // εντολές. Μια δεύτερη σύνθεση εδώ («βάλε το μοντέλο στο ενεργό φύλλο») θα ήταν η τρίτη
+      // απάντηση στο ίδιο ερώτημα — και η μία που θα ξεχνούσε τον καθαρισμό της παλιάς μορφής,
+      // αφήνοντας το `model` να επιβιώσει δίπλα στα φύλλα ως μπαγιάτικος καθρέφτης.
+      previewModel: (entity, model) =>
+        previewPatch(entity, tableWorksheetsPatch(entity, worksheetsWithActiveModel(entity, model))),
       previewPosition: (entity, position) => previewPatch(entity, { position }),
       commitPosition,
     }),

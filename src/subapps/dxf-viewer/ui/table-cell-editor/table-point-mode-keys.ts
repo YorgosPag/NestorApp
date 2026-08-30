@@ -35,6 +35,7 @@ import { toggleFormulaReferenceAbsolute } from '../../bim/table/formula/table-fo
 import { activeTableCellSessionCaret } from './table-cell-session-focus';
 import { setTableCellCursorDraftAt } from '../../state/table-cell-cursor-store';
 import type { TableEntity } from '../../types/table-entity';
+import { activeTableModel } from '../../bim/table/table-worksheet-resolve';
 
 /**
  * `F4` — κλειδώνει/ξεκλειδώνει την αναφορά όπου κάθεται ο δρομέας, κυκλικά.
@@ -50,7 +51,7 @@ export function toggleTableFormulaAbsoluteRef(entity: TableEntity, draft: string
 
   // Ο ΙΔΙΟΣ απομνημονευμένος (WeakMap) δρόμος που περνά και η γεωμετρία — ίδιο persisted ⇒
   // ίδιο μοντέλο, καμία δεύτερη αποσειριοποίηση ανά πάτημα πλήκτρου.
-  const model = resolveTableModel(entity.model);
+  const model = resolveTableModel(activeTableModel(entity));
   const edit = toggleFormulaReferenceAbsolute(model, draft, caretIndex);
   if (!edit) return false;
 

@@ -6,6 +6,8 @@ import { pickTextRenderFields } from '../../bim/text/text-render-fields';
 import { pickHatchRenderFields } from '../../bim/hatch/hatch-render-fields';
 // ADR-736 §5.3 — ο τρίτος αδελφός: IMAGE_RENDER_FIELDS (βλ. bim/image/image-render-fields.ts).
 import { pickImageRenderFields } from '../../bim/image/image-render-fields';
+// ADR-833 §0.1 — ο τέταρτος αδελφός: TABLE_RENDER_FIELDS (βλ. bim/table/table-render-fields.ts).
+import { pickTableRenderFields } from '../../bim/table/table-render-fields';
 // ADR-642 Φ2-B — complex linetype (embedded text) def carried onto the EntityModel so the
 // per-entity render seam (`strokeStyledEntityPolyline`) can draw `──GAS──` along the geometry.
 import type { ComplexLinetypeDef } from '../../config/complex-linetype-types';
@@ -213,10 +215,13 @@ export function buildEntityModelFromDxf(
       // ADR-739 Φ.Γ — γενικός πίνακας (αδελφός του opening-info-tag). Παράμετροι στο ανώτατο
       // επίπεδο· ο TableRenderer παράγει τη διάταξη μέσω computeTableEntityGeometryLive
       // (απομνημονευμένη). Το `geometry` ΔΕΝ προωθείται — είναι παράγωγο, ξαναφτιάχνεται.
+      //
+      // ADR-833 §0.1 (anti-drift) — τα πεδία ΔΕΝ απαριθμούνται πλέον εδώ, για τον ίδιο λόγο που
+      // έπαψαν να απαριθμούνται στο `case 'image'`: ήταν χειρόγραφη λίστα, κάτοπτρο εκείνης του
+      // `TO_DXF_HANDLERS.table` και του τύπου `DxfTable` — τρία αντίγραφα, κανένα δεμένο. ΕΝΑ SSoT.
       return {
         ...base, type: 'table',
-        position: entity.position, angleRad: entity.angleRad, styleId: entity.styleId,
-        model: entity.model, binding: entity.binding, breaking: entity.breaking,
+        ...pickTableRenderFields(entity),
       } as unknown as Entity;
     case 'image':
       // ADR-651 Φάση Ε — lightweight non-BIM raster image (sibling of scale-bar/opening-info-tag).

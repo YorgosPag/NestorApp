@@ -35,6 +35,7 @@ import type { TableCellRef } from '../../bim/table/table-cell-range';
 import type { TableEntity } from '../../types/table-entity';
 import type { ICommand } from '../../core/commands';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
+import { activeTableModel } from '../../bim/table/table-worksheet-resolve';
 
 export interface UseTablePasteApplyParams {
   readonly levelManager: LevelManagerLike;
@@ -90,8 +91,8 @@ export function useTablePasteApply(params: UseTablePasteApplyParams): TablePaste
       }
 
       const result = source.kind === 'internal'
-        ? pasteTableClipboard(live.model, resolveTableStyle(live), source.payload, anchor, request)
-        : pasteTsvIntoTable(live.model, anchor, source.grid);
+        ? pasteTableClipboard(activeTableModel(live), resolveTableStyle(live), source.payload, anchor, request)
+        : pasteTsvIntoTable(activeTableModel(live), anchor, source.grid);
 
       commitModel(live, result.model);
       reportPaste(result, source.kind === 'external');

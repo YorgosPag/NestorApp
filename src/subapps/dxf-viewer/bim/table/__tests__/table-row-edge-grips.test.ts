@@ -26,8 +26,10 @@ import { createTableModel, toPersistedTableModel } from '../table-model-helpers'
 import { BUILTIN_TABLE_STYLE_IDS } from '../table-style-presets';
 import { MIN_TABLE_ROW_HEIGHT_MM } from '../../../types/table-entity';
 import { useDrawingScaleStore } from '../../../state/drawing-scale-store';
-import type { TableColumn, TableRow } from '../../../types/table';
+import type { PersistedTableModel, TableColumn, TableRow } from '../../../types/table';
 import type { TableEntity } from '../../../types/table-entity';
+import { tableWorksheetFields } from './make-table-entity';
+import { activeTableModel } from '../table-worksheet-resolve';
 
 beforeEach(() => {
   useDrawingScaleStore.setState({ drawingScale: 1 });
@@ -53,7 +55,7 @@ function makeEntity(rowCount = 3, colCount = 2): TableEntity {
     position: { x: 100, y: 200 },
     angleRad: 0,
     styleId: BUILTIN_TABLE_STYLE_IDS.STANDARD,
-    model: toPersistedTableModel(createTableModel({ columns, rows })),
+    ...tableWorksheetFields(toPersistedTableModel(createTableModel({ columns, rows }))),
   };
 }
 
@@ -138,32 +140,42 @@ describe('resizeTableRowAboveEdge — ποια γραμμή κρατά την α
   it('επιστρέφει ΝΕΟ αντικείμενο μοντέλου — η ταυτότητα ΕΙΝΑΙ η έκδοση (ακύρωση μνήμης)', () => {
     const entity = makeEntity(3);
     const model = resizeTableRowAboveEdge(entity, 1, 20);
-    expect(model).not.toBe(entity.model);
-    expect(model!.columns).toBe(entity.model.columns); // ό,τι δεν άλλαξε μένει ΤΟ ΙΔΙΟ
+    expect(model).not.toBe(activeTableModel(entity));
+    expect(model!.columns).toBe(activeTableModel(entity).columns); // ό,τι δεν άλλαξε μένει ΤΟ ΙΔΙΟ
   });
 });
 
 // ── 3. Το σύρσιμο της λαβής ─────────────────────────────────────────────────
+
+/**
+ * 🔴 ADR-833 Φάση 2 — **το μοντέλο που βλέπει ο χρήστης μετά το μπάλωμα.**
+ *
+ * Το `applyTableGripDrag` γράφει πλέον `worksheets`, όχι `model`. Το test ρωτά ό,τι ρωτά και η
+ * οθόνη — **εφάρμοσε το μπάλωμα, διάβασε το ενεργό φύλλο** — άρα δεν εξαρτάται από **πώς**
+ * ταξιδεύει η αλλαγή, μόνο από **τι φτάνει**.
+ */
+const patched = (entity: TableEntity, patch: Partial<TableEntity>): PersistedTableModel =>
+  activeTableModel({ ...entity, ...patch });
 
 describe('applyTableGripDrag — `table-row-edge`', () => {
   it('σύρσιμο ΚΑΤΩ μεγαλώνει τη γραμμή από πάνω (ο άξονας y της σκηνής δείχνει πάνω)', () => {
     const entity = makeEntity(3);
     // Η λαβή του πρώτου εσωτερικού ορίου: (100, 192) στη σκηνή. Σύρσιμο 6 μονάδες κάτω.
     const patch = applyTableGripDrag(TABLE_ROW_KIND, entity, { x: 100, y: 192 }, { x: 0, y: -6 });
-    expect(heightOf(patch.model!, 'r0')).toBe(14);
+    expect(heightOf(patched(entity, patch), 'r0')).toBe(14);
   });
 
   it('η ΟΡΙΖΟΝΤΙΑ συνιστώσα αγνοείται — η λαβή έχει έναν βαθμό ελευθερίας', () => {
     const entity = makeEntity(3);
     const patch = applyTableGripDrag(TABLE_ROW_KIND, entity, { x: 100, y: 192 }, { x: 40, y: 0 });
-    expect(heightOf(patch.model!, 'r0')).toBe(8);
+    expect(heightOf(patched(entity, patch), 'r0')).toBe(8);
   });
 
   it('🔴 διαλέγει το ΠΛΗΣΙΕΣΤΕΡΟ όριο στη θέση της λαβής, όχι πάντα το πρώτο', () => {
     const entity = makeEntity(3);
     // Η λαβή του ΔΕΥΤΕΡΟΥ ορίου: (100, 184). Χωρίς σωστή αντιστοίχιση θα άλλαζε η `r0`.
     const patch = applyTableGripDrag(TABLE_ROW_KIND, entity, { x: 100, y: 184 }, { x: 0, y: -4 });
-    expect(heightOf(patch.model!, 'r1')).toBe(12);
-    expect(heightOf(patch.model!, 'r0')).toBe(8);
+    expect(heightOf(patched(entity, patch), 'r1')).toBe(12);
+    expect(heightOf(patched(entity, patch), 'r0')).toBe(8);
   });
 });

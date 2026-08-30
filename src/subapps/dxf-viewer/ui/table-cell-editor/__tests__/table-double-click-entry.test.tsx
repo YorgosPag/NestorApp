@@ -47,6 +47,7 @@ import { useDrawingScaleStore } from '../../../state/drawing-scale-store';
 import type { TableCell, TableColumn, TableRow } from '../../../types/table';
 import type { TableEntity } from '../../../types/table-entity';
 import type { Point2D, ViewTransform } from '../../../rendering/types/Types';
+import { setTableCellCursorById } from '../../../bim/table/__tests__/make-table-entity';
 
 const { transform: TRANSFORM, viewport: VIEWPORT } = TABLE_TEST_VIEW;
 
@@ -215,7 +216,7 @@ describe('🔴 ADR-739 §46 — ΑΡΝΗΤΙΚΗ ΑΠΟΔΕΙΞΗ: μέσα στ
     // Το δίδυμο του προηγούμενου: αν η είσοδος αύξανε κι αυτή, ο αριθμός θα έπαυε να
     // σημαίνει «ο κώδικας τοποθέτησε κέρσορα» και θα γινόταν μετρητής κλικ.
     const view = renderEditor();
-    act(() => { setTableCellCursor('tbl_other', tableCursorAt('r1', 'c1'), 'nav'); });
+    act(() => { setTableCellCursorById('tbl_other', tableCursorAt('r1', 'c1'), 'nav'); });
     const before = getTableCellCursor()?.caretRevision ?? -1;
 
     doubleClickAt(view, tableCellScreenPoint(ENTITY, 1, 0));
@@ -227,7 +228,7 @@ describe('🔴 ADR-739 §46 — ΑΡΝΗΤΙΚΗ ΑΠΟΔΕΙΞΗ: μέσα στ
     // Το κριτήριο είναι «μέσα σε **αυτόν** τον πίνακα», όχι «υπάρχει δρομέας κάπου». Με το
     // δεύτερο, ένα διπλό κλικ σε δεύτερο πίνακα θα άνοιγε κατευθείαν κελί.
     const view = renderEditor();
-    act(() => { setTableCellCursor('tbl_other', tableCursorAt('r1', 'c1'), 'edit', 'ξένο'); });
+    act(() => { setTableCellCursorById('tbl_other', tableCursorAt('r1', 'c1'), 'edit', 'ξένο'); });
 
     doubleClickAt(view, tableCellScreenPoint(ENTITY, 1, 0));
     expect(getTableCellCursor()).toMatchObject({ entityId: ENTITY.id, mode: 'nav', draft: '' });

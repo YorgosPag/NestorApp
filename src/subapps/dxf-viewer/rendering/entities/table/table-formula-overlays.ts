@@ -39,6 +39,7 @@ import type { TableCellRangeBounds } from '../../../bim/table/table-cell-range';
 import type { TableCellCursorState } from '../../../state/table-cell-cursor-store';
 import type { TableLayout } from '../../../bim/table/table-layout-types';
 import type { TableEntity } from '../../../types/table-entity';
+import { activeTableModel } from '../../../bim/table/table-worksheet-resolve';
 
 /**
  * 🔴 ADR-754 Β1 — τα χρωματιστά περιγράμματα των κελιών που **διαβάζει** ο τύπος που γράφεται
@@ -64,7 +65,7 @@ export function stampTableFormulaReferenceOverlay(
   cursor: TableCellCursorState,
 ): void {
   if (!cursor.draft) return;
-  const model = resolveTableModel(entity.model);
+  const model = resolveTableModel(activeTableModel(entity));
   stampTableFormulaReferences(rc, layout, tableFormulaReferenceSpans(model, cursor.draft));
 }
 

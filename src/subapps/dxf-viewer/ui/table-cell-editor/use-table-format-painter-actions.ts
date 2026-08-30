@@ -61,6 +61,7 @@ import { ESC_PRIORITY } from '../../systems/escape-bus/escape-priority';
 import { useEscapeHandler } from '../../systems/escape-bus/useEscapeHandler';
 import type { TableCellRangeBounds } from '../../bim/table/table-cell-range';
 import type { TableEntity } from '../../types/table-entity';
+import { activeTableModel } from '../../bim/table/table-worksheet-resolve';
 
 /**
  * Ό,τι μπορεί να ζητήσει μια **επιφάνεια** από το πινέλο.
@@ -106,7 +107,7 @@ export function useTableFormatPainterActions(
       // 🔴 `null` ⇒ **μπαγιάτικα όρια** (τρύπα στο ορθογώνιο μετά από undo). Η μηχανή αρνείται
       // αντί να βάψει μισό μοτίβο· εδώ η άρνηση σημαίνει «μην οπλίσεις», ποτέ «μάντεψε».
       const brush = captureTableFormatBrush(
-        live.model,
+        activeTableModel(live),
         resolveTableStyle(live),
         source,
         // Βήμα 5 = **όλες** οι όψεις. Η επιλογή ιδιοτήτων (Α3, AutoCAD «Property Settings») είναι

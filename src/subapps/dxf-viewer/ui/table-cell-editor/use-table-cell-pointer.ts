@@ -115,13 +115,11 @@ import {
   claimTableCellSessionPointerDown,
   isTableCellSessionElement,
 } from './table-cell-session-focus';
-import {
-  setTableCellCursor,
-  type TableCellCursorState,
-} from '../../state/table-cell-cursor-store';
+import { setTableCellCursor, type TableCellCursorState } from '../../state/table-cell-cursor-store';
 import type { TableCellRef } from '../../bim/table/table-cell-range';
 import type { TableEntity } from '../../types/table-entity';
 import type { ViewTransform } from '../../rendering/types/Types';
+import type { PersistedTableModel } from '../../types/table';
 
 export interface UseTableCellPointerParams {
   readonly cursor: TableCellCursorState | null;
@@ -176,9 +174,9 @@ export interface UseTableCellPointerParams {
    * Γράφει τη σκηνή **χωρίς** να καταγράψει αναίρεση — δες την κεφαλίδα του
    * `table-axis-resize-drag` για το γιατί ο διαχωρισμός ζει εδώ και όχι εκεί.
    */
-  readonly onPreviewModel: (entity: TableEntity, model: TableEntity['model']) => void;
+  readonly onPreviewModel: (entity: TableEntity, model: PersistedTableModel) => void;
   /** §31.9 — το τελικό πλάτος ως **μία** εντολή αναίρεσης, στο `mouseup`. */
-  readonly onCommitModel: (entity: TableEntity, model: TableEntity['model']) => void;
+  readonly onCommitModel: (entity: TableEntity, model: PersistedTableModel) => void;
 }
 
 export function useTableCellPointer(params: UseTableCellPointerParams): void {
@@ -440,7 +438,7 @@ export function useTableCellPointer(params: UseTableCellPointerParams): void {
     // Απλό κλικ: **νέα** στήλη αγκύρωσης (`tableCursorAt`) — ένα κλικ ξεκινά καινούρια
     // σειρά καταχώρισης, άρα το επόμενο `Enter` επιστρέφει ΕΔΩ. Κατάσταση `nav`: έδειξες
     // κελί, δεν άρχισες να γράφεις· η γραφή ξεκινά με τον πρώτο χαρακτήρα (Excel).
-    setTableCellCursor(entity.id, tableCursorAt(hit.rowId, hit.colId), 'nav');
+    setTableCellCursor(entity, tableCursorAt(hit.rowId, hit.colId), 'nav');
 
     // 🔴 ADR-739 §27.15 — από εδώ αρχίζει η **σύρση**. Καμία επιλογή δεν γράφεται τώρα:
     // ένα σκέτο κλικ πρέπει να μείνει σκέτο κλικ («καμία επιλογή ≠ επιλογή 1×1», ρητή

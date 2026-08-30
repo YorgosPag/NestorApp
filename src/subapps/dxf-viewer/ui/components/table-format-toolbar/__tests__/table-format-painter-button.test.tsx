@@ -47,6 +47,7 @@ import {
 } from '../../../../state/table-cell-cursor-store';
 import type { TableFormatBrush } from '../../../../bim/table/table-format-payload';
 import type { RovingItemProps } from '../use-roving-toolbar';
+import { setTableCellCursorById } from '../../../../bim/table/__tests__/make-table-entity';
 
 // Ίδιο μοτίβο με τα αδέλφια tests της γραμμής: ο πραγματικός `loadNamespace` κάνει δυναμικό
 // import αρχείων που δεν χρειάζονται εδώ — το bundle δίνεται έτοιμο παρακάτω.
@@ -129,7 +130,7 @@ describe('🔴 ADR-768 Δ1 — το κουμπί του πινέλου μορφ�
     __resetTableCellCursorStoreForTests();
     // Το `armTableFormatPainter` αρνείται χωρίς ζωντανό δρομέα — και σωστά: «οπλισμένο χωρίς
     // στόχο» είναι κολλημένη διεπαφή. Εδώ ο δρομέας υπάρχει, ώστε να δοκιμάζεται το κουμπί.
-    setTableCellCursor('t1', { rowId: 'r0', colId: 'c0', anchorColId: 'c0' }, 'nav');
+    setTableCellCursorById('t1', { rowId: 'r0', colId: 'c0', anchorColId: 'c0' }, 'nav');
   });
 
   afterEach(() => {

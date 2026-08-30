@@ -59,6 +59,7 @@ import { getTableFillBadge, type TableFillBadgeState } from '../../state/table-f
 import type { TableCellCursorState } from '../../state/table-cell-cursor-store';
 import type { TableEntity } from '../../types/table-entity';
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
+import { activeTableModel } from '../../bim/table/table-worksheet-resolve';
 
 /**
  * 🔴 **Ο ΦΡΟΥΡΟΣ ΤΟΥ ΠΑΤΗΜΑΤΟΣ.** `true` ⇒ αυτό το πάτημα ήταν το κουμπί· το κατανάλωσε
@@ -165,7 +166,7 @@ function openBadgeMenu(
   writer: TableFillWriter,
   at: Point2D,
 ): void {
-  const model = resolveTableModel(entity.model);
+  const model = resolveTableModel(activeTableModel(entity));
   getTableFillMenuPort()?.open(at.x, at.y, {
     offer: tableFillMenuOffer(model, badge.source, badge.target, autoFillListCandidates()),
     seeds: tableFillSourceTexts(model, badge.source),

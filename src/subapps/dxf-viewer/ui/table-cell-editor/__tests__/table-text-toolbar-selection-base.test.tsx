@@ -35,9 +35,9 @@ import {
 } from '../table-text-menu-port';
 import {
   __resetTableCellCursorStoreForTests,
-  setTableCellCursor,
   setTableCellCursorDraft,
 } from '../../../state/table-cell-cursor-store';
+import { setTableCellCursorById } from '../../../bim/table/__tests__/make-table-entity';
 import { resetGlobalCommandHistory } from '../../../core/commands';
 import { buildTableCellEditCommand } from '../../../bim/table/table-cell-edit-session';
 import { createLevelSceneManagerAdapter } from '../../../systems/entity-creation/LevelSceneManagerAdapter';
@@ -46,6 +46,7 @@ import type { SceneModel } from '../../../types/scene';
 import type { TableEntity } from '../../../types/table-entity';
 import type { LevelManagerLike } from '../../../hooks/canvas/canvas-click-types';
 import type { TableTextToolbarHandle } from '../../components/table-text-menu/table-text-toolbar-types';
+import { activeTableModel } from '../../../bim/table/table-worksheet-resolve';
 
 const LEVEL = 'level-1';
 const ENTITY = 'table-1';
@@ -87,7 +88,7 @@ function harness(model: PersistedTableModel) {
     (scene as unknown as { entities: TableEntity[] }).entities[0];
 
   const cellOf = (): TableCell | undefined => {
-    const cells = entity().model.cells as unknown as [string, string, TableCell][];
+    const cells = activeTableModel(entity()).cells as unknown as [string, string, TableCell][];
     return cells.find(([r, c]) => r === AT.rowId && c === AT.colId)?.[2];
   };
 
@@ -143,7 +144,7 @@ describe('🔴 ADR-753 §25 — η βάση των δεικτών ταξιδεύ
     const h = harness(tableModel());
     const view = mountToolbar(h.levelManager);
 
-    setTableCellCursor(ENTITY, AT, 'edit');
+    setTableCellCursorById(ENTITY, AT, 'edit');
     act(() => { setTableCellCursorDraft(TEXT); });
     expect(getTableTextMenuPort()!.open(0, 0, fieldWithSelection(TEXT, 2, 4))).toBe(true);
 
@@ -158,7 +159,7 @@ describe('🔴 ADR-753 §25 — η βάση των δεικτών ταξιδεύ
     const h = harness(tableModel());
     const view = mountToolbar(h.levelManager);
 
-    setTableCellCursor(ENTITY, AT, 'edit');
+    setTableCellCursorById(ENTITY, AT, 'edit');
     // Η απόκλιση: το store κρατά «ΝΕΣΤ», το πεδίο δείχνει «ΝΕΣΤΩΡ». Οι δείκτες μετρήθηκαν στο
     // **πεδίο** — άρα το κείμενο που φτάνει στο μοντέλο οφείλει να είναι εκείνο.
     act(() => { setTableCellCursorDraft('ΝΕΣΤ'); });
@@ -178,7 +179,7 @@ describe('🔴 ADR-753 §25 — η βάση των δεικτών ταξιδεύ
 
     // Σε πλοήγηση το πρόχειρο του δρομέα είναι `''` **εξ ορισμού** (δες το store), ενώ η γραμμή
     // τύπων δείχνει το **δεσμευμένο** κείμενο. Μαρκάρω εκεί δύο γράμματα και πατάω «Β».
-    setTableCellCursor(ENTITY, AT, 'nav');
+    setTableCellCursorById(ENTITY, AT, 'nav');
     const bar = document.createElement('input');
     bar.type = 'text';
     bar.value = TEXT;
@@ -203,7 +204,7 @@ describe('🔴 ADR-753 §25 — η βάση των δεικτών ταξιδεύ
     const h = harness(tableModel());
     const view = mountToolbar(h.levelManager);
 
-    setTableCellCursor(ENTITY, AT, 'edit');
+    setTableCellCursorById(ENTITY, AT, 'edit');
     act(() => { setTableCellCursorDraft(TEXT); });
     expect(getTableTextMenuPort()!.open(0, 0, fieldWithSelection(TEXT, 2, 4))).toBe(true);
 

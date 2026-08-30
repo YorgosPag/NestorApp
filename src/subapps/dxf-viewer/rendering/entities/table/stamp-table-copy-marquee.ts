@@ -12,7 +12,7 @@
  * εδώ**: ο `TableRenderer` κρατά ήδη τη ζωντανή οντότητα κάθε καρέ.
  *
  * Άρα η ερώτηση μπαίνει εκεί όπου η απάντηση δεν κοστίζει. Το κριτήριο είναι **σύγκριση
- * αναφοράς** (`entity.model !== marquee.modelRef`), και στηρίζεται σε τεκμηριωμένο δόγμα του
+ * αναφοράς** (`activeTableModel(entity) !== marquee.modelRef`), και στηρίζεται σε τεκμηριωμένο δόγμα του
  * έργου: *η ταυτότητα του μοντέλου ΕΙΝΑΙ η έκδοσή του* — το `buildTableModelCommand`
  * επιστρέφει `null` όταν τίποτα δεν άλλαξε, δηλαδή νέα αναφορά ⇒ πραγματική αλλαγή. Έτσι
  * «γράψιμο σε κελί σβήνει τα μυρμήγκια» (Excel parity) βγαίνει **χωρίς καμία γραμμή σε καμία
@@ -50,6 +50,7 @@ import {
 import type { TableLayout, TableRectMm } from '../../../bim/table/table-layout-types';
 import type { TableCopyMarqueeState } from '../../../state/table-copy-marquee-store';
 import type { TableEntity } from '../../../types/table-entity';
+import { activeTableModel } from '../../../bim/table/table-worksheet-resolve';
 
 /**
  * Το ορθογώνιο των μυρμηγκιών **αυτού** του πίνακα, ή `null` όταν δεν πρέπει να φανεί τίποτα.
@@ -70,7 +71,7 @@ export function resolveTableCopyMarqueeRect(
   marquee: TableCopyMarqueeState | null,
 ): TableRectMm | null {
   if (!marquee || marquee.entityId !== entity.id) return null;
-  if (marquee.modelRef !== entity.model) return null;
+  if (marquee.modelRef !== activeTableModel(entity)) return null;
   return tableRangeRectMm(layout, marquee.bounds);
 }
 
@@ -121,7 +122,7 @@ export function tableCopyMarqueeCoversRange(
 ): boolean {
   if (!marquee || !rangeBounds) return false;
   if (marquee.entityId !== entity.id) return false;
-  if (marquee.modelRef !== entity.model) return false;
+  if (marquee.modelRef !== activeTableModel(entity)) return false;
   return tableRangeBoundsEqual(marquee.bounds, rangeBounds);
 }
 

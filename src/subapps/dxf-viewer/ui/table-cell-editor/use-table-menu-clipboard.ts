@@ -72,6 +72,7 @@ import { useTablePasteApply } from './use-table-paste-apply';
 import type { TableEntity } from '../../types/table-entity';
 import type { ICommand } from '../../core/commands';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
+import { activeTableModel } from '../../bim/table/table-worksheet-resolve';
 
 export interface UseTableMenuClipboardParams {
   readonly levelManager: LevelManagerLike;
@@ -128,7 +129,7 @@ export function useTableMenuClipboard(
     async (bounds: TableCellRangeBounds): Promise<TableEntity | null> => {
       const live = liveTable();
       if (!live) return null;
-      const text = tableRangeToClipboardText(live.model, bounds);
+      const text = tableRangeToClipboardText(activeTableModel(live), bounds);
       if (text === null) return null;
       if (!(await writeClipboardText(text))) {
         notifications.warning(t('table.clipboard.writeDenied'));
@@ -138,7 +139,7 @@ export function useTableMenuClipboard(
       // και όχι στους καλούντες. Η αποτυχία φόρτωσης (μπαγιάτικα όρια) **δεν** ακυρώνει την
       // αντιγραφή: το κείμενο γράφτηκε ήδη έξω και είναι χρήσιμο — απλώς δεν θα υπάρχει πλούσιο
       // φορτίο, και ο επιλυτής θα το δει ως «ξένο κείμενο», που είναι η αλήθεια.
-      const payload = captureTableClipboard(live.model, resolveTableStyle(live), bounds);
+      const payload = captureTableClipboard(activeTableModel(live), resolveTableStyle(live), bounds);
       if (payload) setTableClipboard(payload);
       return live;
     },
@@ -150,7 +151,7 @@ export function useTableMenuClipboard(
       const live = await writeRange(bounds);
       // §48 — μυρμήγκια **μόνο** όταν η αντιγραφή όντως έγινε: αλλιώς το περίγραμμα θα υποσχόταν
       // πρόχειρο που ποτέ δεν γράφτηκε.
-      if (live) setTableCopyMarquee(live.id, bounds, live.model);
+      if (live) setTableCopyMarquee(live.id, bounds, activeTableModel(live));
     },
     [writeRange],
   );
@@ -170,7 +171,7 @@ export function useTableMenuClipboard(
       const live = liveTable();
       // Η γωνία της επικόλλησης είναι το **πάνω-αριστερά** κελί του στόχου — το πρώτο που
       // απαριθμεί ο ΕΝΑΣ ορισμός των κελιών μιας περιοχής, ποτέ δεύτερη αριθμητική.
-      const anchor = live ? tableRangeCellRefs(resolveTableModel(live.model), bounds)[0] : undefined;
+      const anchor = live ? tableRangeCellRefs(resolveTableModel(activeTableModel(live)), bounds)[0] : undefined;
       if (!live || anchor === undefined) return;
 
       // §57 — ο κανόνας των πέντε καταστάσεων ζει **καθαρός** και κοινός με το `Ctrl+V`· εδώ

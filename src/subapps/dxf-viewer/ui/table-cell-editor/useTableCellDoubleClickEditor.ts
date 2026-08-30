@@ -38,6 +38,7 @@ import { useModalKeyboardScope } from '@/lib/a11y/use-modal-keyboard-scope';
 import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { useCommandHistory } from '../../core/commands';
 import { resolveTableById } from './table-entity-lookup';
+import { tableForCursor } from '../../state/table-cell-cursor-scope';
 import { useTableCursorCommands } from './use-table-cursor-commands';
 import { useLiveTable } from './use-live-table';
 import { resolveTableModel } from '../../bim/table/table-model-helpers';
@@ -95,6 +96,7 @@ import { useTableCellCommitRequest } from './use-table-cell-commit-request';
 import { useTableCellWriteBack } from './use-table-cell-write-back';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
 import type { ViewTransform } from '../../rendering/types/Types';
+import { activeTableModel } from '../../bim/table/table-worksheet-resolve';
 
 interface UseTableCellDoubleClickEditorParams {
   readonly transformRef: React.RefObject<ViewTransform>;
@@ -185,8 +187,8 @@ export function useTableCellDoubleClickEditor(
       // Το entity κρατά απλό JSON (Φ.Δ Λύση Α)· το `resolveTableModel` είναι ο ΙΔΙΟΣ
       // απομνημονευμένος (WeakMap) δρόμος που περνά και η γεωμετρία — ίδιο persisted ⇒
       // ίδιο μοντέλο, άρα καμία δεύτερη αποσειριοποίηση ανά πάτημα πλήκτρου.
-      const next = moveTableCursor(resolveTableModel(entity.model), cursor.position, m);
-      if (next) setTableCellCursor(cursor.entityId, next, 'nav');
+      const next = moveTableCursor(resolveTableModel(activeTableModel(entity)), cursor.position, m);
+      if (next) setTableCellCursor(entity, next, 'nav');
     },
     [cursor, levelManager],
   );
@@ -239,7 +241,13 @@ export function useTableCellDoubleClickEditor(
    * Κόστος: μία `Array.find` ανά απόδοση όταν υπάρχει δρομέας — δηλαδή ανά πάτημα πλήκτρου,
    * όχι ανά καρέ.
    */
-  const liveEntity = cursor ? resolveTableById(levelManager, cursor.entityId) : null;
+  // 🔴 ADR-833 Φάση 2 — **και το φύλλο**: ο δρομέας ενός φύλλου δεν δίνει οντότητα όσο ενεργό
+  // είναι άλλο. Ο ίδιος φύλακας με το `useLiveTable`, από το **ίδιο** SSoT — αλλά εδώ σε χρόνο
+  // απόδοσης, γιατί η τιμή μπαίνει στις εξαρτήσεις ~10 hooks.
+  const liveEntity = tableForCursor(
+    cursor ? resolveTableById(levelManager, cursor.entityId) : null,
+    cursor,
+  );
 
   /**
    * 🔴 ADR-739 §36 ΦΑΣΗ 4 — **η ίδια ανάγνωση, αλλά σε χρόνο χειριστή.** Το {@link liveEntity}

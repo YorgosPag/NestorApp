@@ -36,6 +36,8 @@ import { useDrawingScaleStore } from '../../../state/drawing-scale-store';
 import { createMockSceneManager } from '../../../core/commands/__tests__/mock-scene-manager';
 import type { TableCell, TableColumn, TableRow } from '../../../types/table';
 import type { TableEntity } from '../../../types/table-entity';
+import { tableWorksheetFields } from './make-table-entity';
+import { activeTableModel } from '../table-worksheet-resolve';
 
 beforeEach(() => {
   useDrawingScaleStore.setState({ drawingScale: 1 });
@@ -70,7 +72,7 @@ function entityWith(cells: [string, string, TableCell][]): TableEntity {
     position: { x: 100, y: 200 },
     angleRad: 0,
     styleId: BUILTIN_TABLE_STYLE_IDS.STANDARD,
-    model: toPersistedTableModel(createTableModel({ columns: COLUMNS, rows: ROWS, cells })),
+    ...tableWorksheetFields(toPersistedTableModel(createTableModel({ columns: COLUMNS, rows: ROWS, cells }))),
   };
 }
 
@@ -133,11 +135,11 @@ describe('buildTableCellEditCommand — ο φρουρός, ανεξάρτητα 
 
   it('🔴 ΤΟ ΜΟΝΤΕΛΟ ΔΕΝ ΑΓΓΙΖΕΤΑΙ ΚΑΝ — η άρνηση προηγείται της γραφής', () => {
     const entity = entityWith([['r2', 'c1', BOUND]]);
-    const before = entity.model;
+    const before = activeTableModel(entity);
 
     buildTableCellEditCommand(entity, 'r2', 'c1', 'ΧΕΙΡΟΚΙΝΗΤΟ', createMockSceneManager());
 
-    expect(entity.model).toBe(before);
+    expect(activeTableModel(entity)).toBe(before);
   });
 
   it('παρακαμμένο κελί γράφεται κανονικά — ο δεσμός δεν είναι φυλακή (Δ2)', () => {

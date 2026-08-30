@@ -42,6 +42,7 @@ import type React from 'react';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { resolveTableCellEditTarget } from '../../bim/table/table-cell-edit-session';
 import { tableCursorAt } from '../../bim/table/table-cell-navigation';
+import { tableForCursor } from '../../state/table-cell-cursor-scope';
 import { getTableCellCursor, setTableCellCursor } from '../../state/table-cell-cursor-store';
 import { resolveDxfCanvasBackgroundHex } from '../../config/color-config';
 import { caretIndexOfClick, cellEditorFrameLive } from './table-cell-editor-frame-live';
@@ -112,8 +113,12 @@ export function applyTableDoubleClick(params: TableDoubleClickParams): void {
   //
   // ⚠️ Το κριτήριο είναι «μέσα σε **ΑΥΤΟΝ**», όχι «υπάρχει δρομέας κάπου»: με το δεύτερο, ένα
   // διπλό κλικ σε **δεύτερο** πίνακα θα άνοιγε κατευθείαν κελί, παραλείποντας την είσοδο.
-  if (cursorNow?.entityId !== entity.id) {
-    setTableCellCursor(entity.id, position, 'nav');
+  //
+  // 🔴 ADR-833 Φάση 2 — και «ΑΥΤΟΣ» σημαίνει **αυτό το φύλλο**: μετά από αλλαγή καρτέλας η
+  // είσοδος πρέπει να ξαναγίνει, αλλιώς το πρώτο διπλό κλικ θα άνοιγε κελί με δρομέα που
+  // γεννήθηκε αλλού. Ο ΕΝΑΣ φύλακας, από το `table-cell-cursor-scope`.
+  if (!tableForCursor(entity, cursorNow)) {
+    setTableCellCursor(entity, position, 'nav');
     return;
   }
 
@@ -127,5 +132,5 @@ export function applyTableDoubleClick(params: TableDoubleClickParams): void {
   // αυτό ο δείκτης θα ήταν διακοσμητικός: το `<textarea>` ζει ήδη με ταυτόσημο React `key`,
   // άρα κανένα remount, άρα το `useLayoutEffect` του κέρσορα δεν θα ξανάτρεχε ποτέ.
   const frame = cellEditorFrameLive(target, entity.angleRad, resolveDxfCanvasBackgroundHex());
-  setTableCellCursor(entity.id, position, 'edit', target.text, caretIndexOfClick(target, frame));
+  setTableCellCursor(entity, position, 'edit', target.text, caretIndexOfClick(target, frame));
 }

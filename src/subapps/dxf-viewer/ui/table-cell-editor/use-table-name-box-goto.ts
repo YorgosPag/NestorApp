@@ -43,6 +43,7 @@ import {
   setTableCellSelection,
 } from '../../state/table-cell-cursor-store';
 import type { TableEntity } from '../../types/table-entity';
+import { activeTableModel } from '../../bim/table/table-worksheet-resolve';
 
 export interface UseTableNameBoxGotoParams {
   /** Η **ζωντανή** οντότητα του δρομέα· `null` όταν ο πίνακας χάθηκε από κάτω του. */
@@ -69,11 +70,11 @@ export function useTableNameBoxGoto(params: UseTableNameBoxGotoParams): (text: s
       if (!entity) return false;
       // Ο **ίδιος** απομνημονευμένος (WeakMap) δρόμος με τη γεωμετρία και τη γραμμή τύπων —
       // ίδιο persisted ⇒ ίδιο μοντέλο, καμία δεύτερη αποσειριοποίηση ανά πάτημα `Enter`.
-      const target = parseTableNameBoxReference(resolveTableModel(entity.model), text);
+      const target = parseTableNameBoxReference(resolveTableModel(activeTableModel(entity)), text);
       if (target === null) return false;
 
       onCommitPending();
-      setTableCellCursor(entity.id, target.position, 'nav');
+      setTableCellCursor(entity, target.position, 'nav');
       // Μόνο όταν γράφτηκε εύρος: ένα σκέτο `B7` **δεν** μαρκάρει (§27.15, «καμία επιλογή ≠
       // επιλογή 1×1»). Το `setTableCellCursor` από πάνω έχει ήδη διαλύσει ό,τι υπήρχε.
       if (target.selection !== null) setTableCellSelection(target.selection);

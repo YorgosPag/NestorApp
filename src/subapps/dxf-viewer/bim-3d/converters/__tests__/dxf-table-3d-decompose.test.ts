@@ -34,6 +34,7 @@ import {
   table3DSurfaceHex,
 } from '../dxf-table-3d-decompose';
 import { appendEntitySegments } from '../dxf-underlay-segments';
+import { tableWorksheetFields } from '../../../bim/table/__tests__/make-table-entity';
 
 // ── Το σενάριο: δύο γραμμές × δύο στήλες, κεφαλίδα ΕΝΤΟΝΗ και ΒΑΜΜΕΝΗ ────────────────
 // Ίδιο σχήμα με το test ισοτιμίας εξαγωγής: η κεφαλίδα κουβαλά `bold` + `fillColorHex` ως
@@ -72,7 +73,7 @@ const ENTITY: TableEntity = {
   position: { x: 0, y: 0 },
   angleRad: 0,
   styleId: BUILTIN_TABLE_STYLE_IDS.STANDARD,
-  model: toPersistedTableModel(model()),
+  ...tableWorksheetFields(toPersistedTableModel(model())),
   // Κληρονομημένο χρώμα οντότητας, σκόπιμα διαφορετικό από κάθε χρώμα του στυλ: κάθε κομμάτι
   // που «ξεχνά» να δηλώσει το δικό του θα το φορέσει και θα προδοθεί.
   color: '#FF00FF',
@@ -146,11 +147,11 @@ describe('ADR-739 Φ.Θ — τα γεμίσματα κελιών φτάνουν 
   });
 
   it('πίνακας χωρίς βαμμένα κελιά → κανένα γέμισμα (μηδέν κόστος όπου δεν χρειάζεται)', () => {
-    const plain = { ...ENTITY, model: toPersistedTableModel(createTableModel({
+    const plain = { ...ENTITY, ...tableWorksheetFields(toPersistedTableModel(createTableModel({
       columns: COLUMNS,
       rows: [{ id: 'rd', rowClass: 'data' }],
       cells: [['rd', 'c1', cell('1')]] as Array<[string, string, TableCell]>,
-    })) } as TableEntity;
+    }))) } as TableEntity;
     expect(decomposeTableForUnderlay3D(plain, SCALE, 'mm', DARK_SURFACE).fills).toEqual([]);
   });
 });
@@ -314,14 +315,14 @@ describe('ADR-739 Φ.Θ — η σύνδεση με τον χτίστη του ο
 describe('ADR-739 §60 — η ΓΩΝΙΑ ΚΕΛΙΟΥ φτάνει στο 3Δ', () => {
   const rotated = (deg: number): TableEntity => ({
     ...ENTITY,
-    model: toPersistedTableModel(createTableModel({
+    ...tableWorksheetFields(toPersistedTableModel(createTableModel({
       columns: COLUMNS,
       rows: [
         { id: 'rh', rowClass: 'header', styleOverride: { textRotationDeg: deg } },
         { id: 'rd', rowClass: 'data' },
       ],
       cells: CELLS,
-    })),
+    }))),
   }) as TableEntity;
 
   const rotationOfHeader = (deg: number): number | undefined => headerText(

@@ -54,6 +54,8 @@ import type { TableEntity } from '../../../types/table-entity';
 // ο καταγραφέας — που διάβαζε μόνο `fillText` — έβλεπε ΚΕΝΟ. Δες `_glyph-paint-text`.
 import { installStubFontPair } from '../../../text-engine/fonts/__tests__/_stub-font';
 import { installGlyphTextCapture, paintedText } from '../../../text-engine/fonts/__tests__/_glyph-paint-text';
+import { tableWorksheetFields } from './make-table-entity';
+import { activeTableModel } from '../table-worksheet-resolve';
 
 let __restoreFaces: () => void;
 let __restoreGlyphIndex: () => void;
@@ -101,7 +103,7 @@ function entityWith(cell: TableCell): TableEntity {
     position: { x: 0, y: 0 },
     angleRad: 0,
     styleId: BUILTIN_TABLE_STYLE_IDS.STANDARD,
-    model: toPersistedTableModel(modelWith(cell)),
+    ...tableWorksheetFields(toPersistedTableModel(modelWith(cell))),
   };
 }
 
@@ -235,10 +237,10 @@ describe('ADR-739 Φ.Δ βήμα 5 — η περικοπή ΔΕΝ αγγίζει
     // περικομμένο κελί, μετά `Tab` ⇒ θα αποθηκευόταν το κομμένο. Ο επεξεργαστής διαβάζει από
     // το μοντέλο και ΟΧΙ από τη διάταξη (`table-cell-edit-session.ts`) — εδώ κλειδώνεται.
     const entity = entityWith(cell);
-    expect(getPersistedCellText(entity.model, 'r1', 'c1')).toBe(LONG_TEXT);
+    expect(getPersistedCellText(activeTableModel(entity), 'r1', 'c1')).toBe(LONG_TEXT);
     // Και μετά από round-trip JSON (αποθήκευση σκηνής / undo), που είναι όπου θα φαινόταν.
     const reloaded: TableEntity = JSON.parse(JSON.stringify(entity));
-    expect(getPersistedCellText(reloaded.model, 'r1', 'c1')).toBe(LONG_TEXT);
+    expect(getPersistedCellText(activeTableModel(reloaded), 'r1', 'c1')).toBe(LONG_TEXT);
   });
 
   it('η εξαγωγή σε DXF περιέχει το ΚΟΜΜΕΝΟ κείμενο — αυτό ΕΙΝΑΙ το ζητούμενο', () => {

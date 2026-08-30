@@ -44,6 +44,7 @@ import { getTableCellCursor } from './table-cell-cursor-store';
 import { startMarchingAntsPulse } from './table-copy-marquee-pulse';
 import type { TableCellRangeBounds } from '../bim/table/table-cell-range';
 import type { TableEntity } from '../types/table-entity';
+import type { PersistedTableModel } from '../types/table';
 
 /**
  * 🔴 **ΓΙΑΤΙ ΔΕΝ ΥΠΑΡΧΕΙ ΣΚΕΛΟΣ «ΑΠΟΚΟΠΗ»** — και γιατί δεν είναι παράλειψη
@@ -66,7 +67,7 @@ export interface TableCopyMarqueeState {
   readonly entityId: string;
   readonly bounds: TableCellRangeBounds;
   /** Η **σφραγίδα έκδοσης** του πίνακα τη στιγμή της αντιγραφής — δες την κεφαλίδα. */
-  readonly modelRef: TableEntity['model'];
+  readonly modelRef: PersistedTableModel;
   /** Η αφετηρία της κίνησης, σε `performance.now()`. */
   readonly startedAtMs: number;
 }
@@ -131,7 +132,7 @@ export function getTableCopyMarquee(): TableCopyMarqueeState | null {
 export function setTableCopyMarquee(
   entityId: string,
   bounds: TableCellRangeBounds,
-  modelRef: TableEntity['model'],
+  modelRef: PersistedTableModel,
 ): void {
   commit({ entityId, bounds, modelRef, startedAtMs: performance.now() });
 }

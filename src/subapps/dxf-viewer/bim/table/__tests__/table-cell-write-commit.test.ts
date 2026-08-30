@@ -44,6 +44,7 @@ import type {
   TableRowId,
 } from '../../../types/table';
 import type { TableCellRangeBounds } from '../table-cell-range';
+import { activeTableModel } from '../table-worksheet-resolve';
 
 const measureText: TableTextMeasurer = (text, heightMm) => text.length * heightMm * 0.6;
 const ANCHOR_ALIGN: TableCellAlign = 'TL';
@@ -179,7 +180,7 @@ describe('κάθε γραφέας περιεχομένου διαδίδει στ
 
   it('ΕΠΙΚΟΛΛΗΣΗ ξαναϋπολογίζει', () => {
     const pasted = pasteTsvIntoTable(withSum(), at('r1', 'cA'), [['5'], ['5'], ['5']]);
-    expect(sumValue(pasted.model)).toBe(15);
+    expect(sumValue(activeTableModel(pasted))).toBe(15);
   });
 
   it('ΓΕΜΙΣΜΑ λαβής ξαναϋπολογίζει', () => {

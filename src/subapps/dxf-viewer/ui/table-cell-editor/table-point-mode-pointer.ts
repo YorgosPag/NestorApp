@@ -102,6 +102,7 @@ import type { TablePointerHit } from './table-cell-pointer-hit';
 import type { TableModel } from '../../types/table';
 import type { TableEntity } from '../../types/table-entity';
 import type { ViewTransform } from '../../rendering/types/Types';
+import { activeTableModel } from '../../bim/table/table-worksheet-resolve';
 
 /** Ό,τι ξέρει ο φρουρός του ποντικιού τη στιγμή του πατήματος. */
 export interface TablePointModePress {
@@ -207,7 +208,7 @@ function resolvePressState(press: TablePointModePress): PointPressState | null {
   if (!target) return null;
   // Ο ΙΔΙΟΣ απομνημονευμένος (WeakMap) δρόμος που περνά και η γεωμετρία — ίδιο persisted ⇒
   // ίδιο μοντέλο, καμία δεύτερη αποσειριοποίηση ανά πάτημα.
-  const model = resolveTableModel(press.entity.model);
+  const model = resolveTableModel(activeTableModel(press.entity));
   const state = resolveFormulaPointState(model, target.formulaText, target.caretIndex);
   return state.kind === 'off' ? null : { model, state, target };
 }

@@ -15,6 +15,7 @@ import { BUILTIN_TABLE_STYLE_IDS } from '../../bim/table/table-style-presets';
 import type { Entity } from '../../types/entities';
 import type { TableCell, TableColumn, TableRow } from '../../types/table';
 import type { TableEntity } from '../../types/table-entity';
+import { tableWorksheetFields } from '../../bim/table/__tests__/make-table-entity';
 
 const COLUMN: TableColumn = {
   id: 'cA',
@@ -32,13 +33,13 @@ function tableWith(values: readonly (readonly [string, TableCell])[]): TableEnti
     position: { x: 0, y: 0 },
     angleRad: 0,
     styleId: BUILTIN_TABLE_STYLE_IDS.STANDARD,
-    model: toPersistedTableModel(
+    ...tableWorksheetFields(toPersistedTableModel(
       createTableModel({
         columns: [COLUMN],
         rows: ROWS,
         cells: values.map(([rowId, cell]) => [rowId, 'cA', cell] as const).slice(),
       }),
-    ),
+    )),
   };
 }
 

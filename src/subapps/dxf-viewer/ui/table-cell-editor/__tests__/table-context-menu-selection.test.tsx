@@ -48,14 +48,15 @@ import {
 import { __resetTableCellSessionFocusForTests } from '../table-cell-session-focus';
 import type { TableEntity } from '../../../types/table-entity';
 import type { Point2D } from '../../../rendering/types/Types';
+import { activeTableModel } from '../../../bim/table/table-worksheet-resolve';
 
 describe('🔴 ADR-739 §68 — το δεξί κλικ μετακινεί την επιλογή (Excel parity)', () => {
   let entity: TableEntity;
   let canvas: HTMLElement;
   let onCommitPending: jest.Mock;
 
-  const rowId = (index: number): string => entity.model.rows[index].id;
-  const colId = (index: number): string => entity.model.columns[index].id;
+  const rowId = (index: number): string => activeTableModel(entity).rows[index].id;
+  const colId = (index: number): string => activeTableModel(entity).columns[index].id;
   const cellRef = (row: number, col: number) => ({ rowId: rowId(row), colId: colId(col) });
 
   beforeEach(() => {
@@ -65,7 +66,7 @@ describe('🔴 ADR-739 §68 — το δεξί κλικ μετακινεί την
     entity = buildTableEntity({ x: 0, y: 0 }, {}, 'table-1', 'layer-0');
     // Ο χρήστης είναι ήδη μέσα στη λειτουργία πίνακα, με ενεργό το **A1** — ακριβώς το
     // στιγμιότυπο του ιδιοκτήτη.
-    setTableCellCursor(entity.id, tableCursorAt(rowId(0), colId(0)), 'nav');
+    setTableCellCursor(entity, tableCursorAt(rowId(0), colId(0)), 'nav');
     const view = render(
       <TablePointerHarness entity={entity} onCommitPending={onCommitPending} />,
     );
@@ -96,7 +97,7 @@ describe('🔴 ADR-739 §68 — το δεξί κλικ μετακινεί την
   function currentBounds(): TableCellRangeBounds | null {
     const selection = getTableCellCursor()?.selection;
     return selection
-      ? resolveTableSelectionBounds(resolveTableModel(entity.model), selection)
+      ? resolveTableSelectionBounds(resolveTableModel(activeTableModel(entity)), selection)
       : null;
   }
 
@@ -169,7 +170,7 @@ describe('🔴 ADR-739 §68 — το δεξί κλικ μετακινεί την
      */
     it.each(['enter', 'edit'] as const)('mode «%s» ⇒ το πρόχειρο επιβιώνει και ο δρομέας μένει', (mode) => {
       act(() => {
-        setTableCellCursor(entity.id, tableCursorAt(rowId(0), colId(0)), mode, '=SUM(');
+        setTableCellCursor(entity, tableCursorAt(rowId(0), colId(0)), mode, '=SUM(');
       });
 
       rightPressAt(tableCellScreenPoint(entity, 1, 1));
@@ -187,7 +188,7 @@ describe('🔴 ADR-739 §68 — το δεξί κλικ μετακινεί την
 
       expect(currentBounds()).toEqual({
         firstRow: 0,
-        lastRow: entity.model.rows.length - 1,
+        lastRow: activeTableModel(entity).rows.length - 1,
         firstCol: 1,
         lastCol: 1,
       });
@@ -201,7 +202,7 @@ describe('🔴 ADR-739 §68 — το δεξί κλικ μετακινεί την
         firstRow: 1,
         lastRow: 1,
         firstCol: 0,
-        lastCol: entity.model.columns.length - 1,
+        lastCol: activeTableModel(entity).columns.length - 1,
       });
       expect(getTableCellCursor()?.selection?.kind).toBe('row');
     });
@@ -238,7 +239,7 @@ describe('🔴 ADR-739 §68 — το δεξί κλικ μετακινεί την
       expect(getTableCellCursor()?.selection?.kind).toBe('column');
       expect(currentBounds()).toEqual({
         firstRow: 0,
-        lastRow: entity.model.rows.length - 1,
+        lastRow: activeTableModel(entity).rows.length - 1,
         firstCol: 2,
         lastCol: 2,
       });

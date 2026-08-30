@@ -59,6 +59,7 @@ import { getTableCellCursor, subscribeTableCellCursor } from './table-cell-curso
 import type { TableCellRangeBounds } from '../bim/table/table-cell-range';
 import type { TableFillTarget } from '../bim/table/table-fill-handle';
 import type { TableEntity } from '../types/table-entity';
+import type { PersistedTableModel } from '../types/table';
 
 /**
  * 🔴 **ΜΟΝΟ ΔΕΔΟΜΕΝΑ — καμία συνάρτηση, κανένα closure.**
@@ -79,7 +80,7 @@ export interface TableFillBadgeState {
   /** Η **ένωση** πηγής και στόχου — το ορθογώνιο κάτω από το οποίο κάθεται το κουμπί. */
   readonly filled: TableCellRangeBounds;
   /** Η **σφραγίδα έκδοσης** του πίνακα τη στιγμή της συμπλήρωσης — δες την κεφαλίδα. */
-  readonly modelRef: TableEntity['model'];
+  readonly modelRef: PersistedTableModel;
 }
 
 /** Ο ζωγράφος που πρέπει να μάθει ότι κάτι άλλαξε — ίδιο μοτίβο με τα αδελφά stores. */

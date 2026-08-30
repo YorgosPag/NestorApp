@@ -32,6 +32,9 @@
 // 🔴 Το ΕΝΑ σεντινέλι «καμία επιλογή» του έργου. Το Radix Select δεσμεύει το `''` για δική του
 // χρήση, οπότε ένα `<SelectItem value="">` είναι δομικά ανέκφραστο — δες `readTableFontFamilyCombobox`.
 import { SELECT_CLEAR_VALUE, isSelectClearValue } from '@/config/domain-constants';
+// 🔴 ADR-833 §1.3 — το ίδιο ιδίωμα «action → συμβάν → κρυφό input» με το «Εικόνα» (ADR-736 §6)
+// και το Tekton (ADR-526): η κορδέλα δεν αγγίζει DOM.
+import { EventBus } from '../../../../systems/events/EventBus';
 import {
   isTableAlignActive,
   nextTableAlign,
@@ -68,6 +71,7 @@ import {
   TABLE_FORMAT_OVERFLOW_CHOICE,
   TABLE_FORMAT_RIBBON_KEYS,
   TABLE_FORMAT_ROTATION_PRESET,
+  TABLE_XLSX_COMMAND_EVENT,
   isTableFormatAlignKey,
   isTableFormatNumberKey,
   isTableFormatOverflowKey,
@@ -391,4 +395,30 @@ export function writeTableFontFamily(port: TableFormatPort, value: string): void
 /** Είναι το κλειδί της οικογένειας; Ρωτιέται και από τους δύο δρόμους του combobox. */
 export function isTableFontFamilyKey(commandKey: string): boolean {
   return commandKey === TABLE_FORMAT_RIBBON_KEYS.fontFamily;
+}
+
+/**
+ * 🔴 ADR-833 §1.3 — **οι δύο εντολές `.xlsx`**· `false` ⇒ δεν ήταν δικό μου κλειδί.
+ *
+ * ## ⚠️ ΠΡΕΠΕΙ ΝΑ ΚΛΗΘΕΙ **ΠΡΙΝ** ΤΟΝ ΦΥΛΑΚΑ ΤΗΣ ΘΥΡΑΣ
+ * Όχι για τον λόγο των τριών από πάνω (εκείνοι φυλάγονται από λάθος **κλάδο**), αλλά για
+ * λόγο **εξάρτησης**: αυτές οι δύο εντολές δεν γράφουν τίποτα στον πίνακα — ζητούν
+ * **επιλογέα αρχείων**. Πίσω από το `if (!port) return` θα κληρονομούσαν προϋπόθεση που δεν
+ * τις αφορά, και μια στιγμή όπου η θύρα δεν έχει δηλωθεί ακόμη θα έδινε κουμπί που δεν κάνει
+ * **τίποτα, σιωπηλά** — το ακριβώς ίδιο αποτέλεσμα με τα τρία περιστατικά λάθος κλάδου.
+ *
+ * ## Γιατί EventBus και όχι κλήση
+ * Ένα `<input type="file">` είναι DOM, και η κορδέλα είναι δεδομένα. Το ιδίωμα υπάρχει ήδη
+ * δύο φορές (`dxf:attach-image-requested` ADR-736 §6, `dxf:import-tek-requested` ADR-526):
+ * action → συμβάν → κρυφό input σε host. Ο host δεν ξέρει από κορδέλα, η κορδέλα δεν αγγίζει
+ * DOM, και ο επιλογέας μπορεί αύριο να κληθεί από μενού δεξιού κλικ χωρίς δεύτερο καλώδιο.
+ *
+ * Καμία θύρα ως παράμετρος — **επίτηδες**: αν κάποια μέρα χρειαστεί, θα σημαίνει ότι η
+ * εντολή απέκτησε άποψη για το περιεχόμενο, και τότε ανήκει σε άλλον γραφέα.
+ */
+export function writeTableXlsxCommand(commandKey: string): boolean {
+  const event = TABLE_XLSX_COMMAND_EVENT[commandKey];
+  if (event === undefined) return false;
+  EventBus.emit(event, {});
+  return true;
 }

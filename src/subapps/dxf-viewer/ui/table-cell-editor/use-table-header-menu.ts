@@ -110,6 +110,7 @@ import type {
 } from '../components/TableHeaderContextMenu';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
 import type { ViewTransform, Viewport } from '../../rendering/types/Types';
+import { activeTableModel } from '../../bim/table/table-worksheet-resolve';
 
 export interface UseTableHeaderMenuParams {
   readonly containerRef: RefObject<HTMLDivElement | null>;
@@ -205,7 +206,7 @@ export function useTableHeaderMenu(params: UseTableHeaderMenuParams): TableHeade
       const live = liveTable();
       if (!live) return null;
       return resolveTableAxisActionTarget(
-        resolveTableModel(live.model),
+        resolveTableModel(activeTableModel(live)),
         hit,
         getTableCellCursor()?.selection,
       );
@@ -284,7 +285,7 @@ export function useTableHeaderMenu(params: UseTableHeaderMenuParams): TableHeade
       // το ίδιο πράγμα και ένα αντίγραφο εδώ θα ήταν δεύτερη απάντηση στο «ποιο ορθογώνιο
       // είναι μια μαρκαρισμένη στήλη;». Ο πειρασμός των δύο γραμμών αριθμητικής
       // (`firstCol: target.firstIndex, …`) εξηγείται εκεί.
-      return tableFormatScopeBounds(live.model, scope);
+      return tableFormatScopeBounds(activeTableModel(live), scope);
     },
     [liveTable, formatScope],
   );
@@ -304,7 +305,7 @@ export function useTableHeaderMenu(params: UseTableHeaderMenuParams): TableHeade
       return {
         // 🔴 ADR-739 §63 — δες `FormatTarget.entityId`: ο στόχος κουβαλά **ποιος** πίνακας.
         entityId: live.id,
-        model: live.model,
+        model: activeTableModel(live),
         style: resolveTableStyle(live),
         scope,
         // ADR-739 Φ.Ε/Φ4 — τα χρώματα του σχεδίου διαβάζονται με **getter τη στιγμή του
@@ -345,7 +346,10 @@ export function useTableHeaderMenu(params: UseTableHeaderMenuParams): TableHeade
       // διάλογος θα ισοπέδωνε μια μαρκαρισμένη στήλη σε κελιά. Χωρίς καρτέλα επίτηδες: το Excel
       // ανοίγει στην **τελευταία που είδε ο χρήστης** (δες την κεφαλίδα του store).
       onFormatCells: (hit) => openTableFormatCellsDialog({ target: formatTarget(hit) }),
-      resolveState: (hit) => resolveHeaderState(liveTable()?.model ?? null, axisTarget(hit)),
+      resolveState: (hit) => {
+        const live = liveTable();
+        return resolveHeaderState(live ? activeTableModel(live) : null, axisTarget(hit));
+      },
       resolveFormat: (hit) => resolveTableFormatSnapshot(formatTarget(hit)),
       // 🔴 §52 — τα πέντε σώματα **μετακόμισαν** στο `table-format-commands.ts` τη στιγμή που
       // η κορδέλα και το μενού των κελιών ζήτησαν τα ίδια. Το σκεπτικό του καθενός (μεικτό ⇒

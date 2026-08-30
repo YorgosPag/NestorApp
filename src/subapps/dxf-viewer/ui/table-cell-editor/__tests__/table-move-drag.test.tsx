@@ -32,6 +32,7 @@ import { useTableCellPointer } from '../use-table-cell-pointer';
 import { DXF_TIMING } from '../../../config/dxf-timing';
 import type { Point2D, ViewTransform } from '../../../rendering/types/Types';
 import type { TableEntity } from '../../../types/table-entity';
+import { activeTableModel } from '../../../bim/table/table-worksheet-resolve';
 
 const { transform: TRANSFORM, viewport: VIEWPORT } = TABLE_TEST_VIEW;
 
@@ -82,7 +83,7 @@ describe('🔴 ADR-739 §66 — παρατεταμένο κλικ στη γων�
   beforeEach(() => {
     __resetTableCellCursorStoreForTests();
     entity = buildTableEntity({ x: 0, y: 0 }, {}, 'table-1', 'layer-0');
-    setTableCellCursor(entity.id, tableCursorAt(entity.model.rows[1].id, entity.model.columns[0].id), 'nav');
+    setTableCellCursor(entity, tableCursorAt(activeTableModel(entity).rows[1].id, activeTableModel(entity).columns[0].id), 'nav');
     spy = { previews: [], commits: [] };
     const view = render(<MoveHarness entity={entity} spy={spy} />);
     canvas = view.getByTestId('canvas');

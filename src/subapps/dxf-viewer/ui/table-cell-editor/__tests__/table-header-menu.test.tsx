@@ -52,6 +52,11 @@ import type { ICommand } from '../../../core/commands';
 import type { TableEntity } from '../../../types/table-entity';
 import type { LevelManagerLike } from '../../../hooks/canvas/canvas-click-types';
 import type { ViewTransform } from '../../../rendering/types/Types';
+import { activeTableModel } from '../../../bim/table/table-worksheet-resolve';
+import {
+  setTableCellCursorById,
+  tableWorksheetFields,
+} from '../../../bim/table/__tests__/make-table-entity';
 
 const executed: ICommand[] = [];
 
@@ -135,15 +140,15 @@ function seedTitleMerge(harness: Harness): void {
   const table = harness.entity();
   const merged: TableEntity = {
     ...table,
-    model: {
-      ...table.model,
+    ...tableWorksheetFields({
+      ...activeTableModel(table),
       merges: [{
-        anchorRowId: table.model.rows[0].id,
-        anchorColId: table.model.columns[0].id,
+        anchorRowId: activeTableModel(table).rows[0].id,
+        anchorColId: activeTableModel(table).columns[0].id,
         rowSpan: 1,
-        colSpan: table.model.columns.length,
+        colSpan: activeTableModel(table).columns.length,
       }],
-    },
+    }),
   };
   const scene = harness.levelManager.getLevelScene(LEVEL_ID);
   harness.levelManager.setLevelScene(LEVEL_ID, {
@@ -200,7 +205,7 @@ describe('🔴 μενού ζωνών δείκτη — από το δεξί κλ�
     const point = tableBandScreenPoint(harness.entity(), 'column', 1);
     expect(getTableHeaderMenuPort()?.getHit(point.x, point.y)).toEqual({
       axis: 'column',
-      colId: harness.entity().model.columns[1].id,
+      colId: activeTableModel(harness.entity()).columns[1].id,
       index: 1,
     });
   });
@@ -211,7 +216,7 @@ describe('🔴 μενού ζωνών δείκτη — από το δεξί κλ�
     const point = tableBandScreenPoint(harness.entity(), 'row', 2);
     expect(getTableHeaderMenuPort()?.getHit(point.x, point.y)).toEqual({
       axis: 'row',
-      rowId: harness.entity().model.rows[2].id,
+      rowId: activeTableModel(harness.entity()).rows[2].id,
       index: 2,
     });
   });
@@ -225,13 +230,13 @@ describe('🔴 μενού ζωνών δείκτη — από το δεξί κλ�
     seedTitleMerge(harness);
     openCursor(harness);
     const view = mount(harness);
-    const before = harness.entity().model;
+    const before = activeTableModel(harness.entity());
 
     act(() => {
       view.result.current.props.onInsertAfter({ axis: 'column', colId: before.columns[1].id, index: 1 });
     });
 
-    const after = harness.entity().model;
+    const after = activeTableModel(harness.entity());
     expect(executed).toHaveLength(1);
     expect(after.columns).toHaveLength(before.columns.length + 1);
     expect(after.columns[1].id).toBe(before.columns[1].id);
@@ -242,7 +247,7 @@ describe('🔴 μενού ζωνών δείκτη — από το δεξί κλ�
   it('🔴 «Διαγραφή γραμμής» ⇒ μία εντολή, ΚΑΙ ο δρομέας μένει σε κελί που ΥΠΑΡΧΕΙ', () => {
     openCursor(harness);
     const view = mount(harness);
-    const before = harness.entity().model;
+    const before = activeTableModel(harness.entity());
     const doomedRowId = before.rows[before.rows.length - 1].id;
 
     act(() => {
@@ -253,7 +258,7 @@ describe('🔴 μενού ζωνών δείκτη — από το δεξί κλ�
       });
     });
 
-    const after = harness.entity().model;
+    const after = activeTableModel(harness.entity());
     expect(executed).toHaveLength(1);
     expect(after.rows.map((r) => r.id)).not.toContain(doomedRowId);
 
@@ -268,7 +273,7 @@ describe('🔴 μενού ζωνών δείκτη — από το δεξί κλ�
     const view = mount(harness);
     const state = view.result.current.props.resolveState({
       axis: 'column',
-      colId: harness.entity().model.columns[0].id,
+      colId: activeTableModel(harness.entity()).columns[0].id,
       index: 0,
     });
     // Το `count: 1` δεν είναι διακοσμητικό: είναι η ίδια τιμή που εκτελεί η πράξη και που
@@ -281,7 +286,7 @@ describe('🔴 μενού ζωνών δείκτη — από το δεξί κλ�
     const view = mount(harness);
     const state = view.result.current.props.resolveState({
       axis: 'row',
-      rowId: harness.entity().model.rows[2].id,
+      rowId: activeTableModel(harness.entity()).rows[2].id,
       index: 2,
     });
     expect(state.label).toBe('3');
@@ -296,7 +301,7 @@ describe('🔴 μενού ζωνών δείκτη — από το δεξί κλ�
 
     expect(getTableCellCursor()?.sessionId).toBe(before + 1);
     // Ο δρομέας ΔΕΝ κουνήθηκε: ξαναπιάνεις το πληκτρολόγιο, δεν πλοηγείσαι.
-    expect(getTableCellCursor()?.position.rowId).toBe(harness.entity().model.rows[0].id);
+    expect(getTableCellCursor()?.position.rowId).toBe(activeTableModel(harness.entity()).rows[0].id);
   });
 });
 
@@ -355,7 +360,7 @@ describe('🔴 στραμμένος πίνακας — η γωνιακή δια�
 
   it.each(ANGLES)('🔴 βρίσκει ΚΑΘΕ στήλη σε γωνία %f rad — καμία ολίσθηση γείτονα', (angleRad) => {
     const harness = rotated(angleRad);
-    const columns = harness.entity().model.columns;
+    const columns = activeTableModel(harness.entity()).columns;
 
     for (let index = 0; index < columns.length; index++) {
       const point = tableBandScreenPoint(harness.entity(), 'column', index);
@@ -369,7 +374,7 @@ describe('🔴 στραμμένος πίνακας — η γωνιακή δια�
 
   it.each(ANGLES)('🔴 βρίσκει ΚΑΘΕ γραμμή σε γωνία %f rad — η αριστερή ζώνη δεν γέρνει στην πάνω', (angleRad) => {
     const harness = rotated(angleRad);
-    const rows = harness.entity().model.rows;
+    const rows = activeTableModel(harness.entity()).rows;
 
     for (let index = 0; index < rows.length; index++) {
       const point = tableBandScreenPoint(harness.entity(), 'row', index);
@@ -408,20 +413,20 @@ describe('🔴 στραμμένος πίνακας — η γωνιακή δια�
   it.each(ANGLES)('🔴 ΔΙΑΚΡΙΝΕΙ τη στροφή: το άστροφο σημείο ΔΕΝ δίνει την ίδια στήλη σε %f rad', (angleRad) => {
     const straight = createHarness(0, ANCHOR);
     created.push(straight);
-    const index = straight.entity().model.columns.length - 1;
+    const index = activeTableModel(straight.entity()).columns.length - 1;
     const straightPoint = tableBandScreenPoint(straight.entity(), 'column', index);
 
     const harness = rotated(angleRad);
     expect(getTableHeaderMenuPort()?.getHit(straightPoint.x, straightPoint.y)).not.toEqual({
       axis: 'column',
-      colId: harness.entity().model.columns[index].id,
+      colId: activeTableModel(harness.entity()).columns[index].id,
       index,
     });
   });
 
   it('🔴 η ετικέτα του μενού είναι αυτή της στήλης που πατήθηκε — όχι της γειτονικής', () => {
     const harness = rotated(0.35);
-    const columns = harness.entity().model.columns;
+    const columns = activeTableModel(harness.entity()).columns;
     const point = tableBandScreenPoint(harness.entity(), 'column', 1);
     const hit = getTableHeaderMenuPort()?.getHit(point.x, point.y);
 
@@ -481,7 +486,7 @@ describe('🔴 αριστερό κλικ στη ζώνη — επιλογή ΟΛ
     mountPointer();
     clickAt(tableBandScreenPoint(harness.entity(), 'column', 1));
 
-    const model = harness.entity().model;
+    const model = activeTableModel(harness.entity());
     const cursor = getTableCellCursor();
     expect(cursor?.selection).toEqual({
       from: { rowId: model.rows[0].id, colId: model.columns[1].id },
@@ -500,7 +505,7 @@ describe('🔴 αριστερό κλικ στη ζώνη — επιλογή ΟΛ
     mountPointer();
     clickAt(tableBandScreenPoint(harness.entity(), 'row', 2));
 
-    const model = harness.entity().model;
+    const model = activeTableModel(harness.entity());
     expect(getTableCellCursor()?.selection).toEqual({
       from: { rowId: model.rows[2].id, colId: model.columns[0].id },
       to: { rowId: model.rows[2].id, colId: model.columns[model.columns.length - 1].id },
@@ -727,8 +732,8 @@ describe('🔴 το Escape κλείνει το μενού — και δεν το
 
 /** Ο χρήστης μπήκε στον πίνακα (διπλό κλικ / `Enter`) — χωρίς αυτό δεν υπάρχουν ζώνες. */
 function openCursor(harness: Harness): void {
-  const model = harness.entity().model;
-  setTableCellCursor('table-1', tableCursorAt(model.rows[0].id, model.columns[0].id), 'nav');
+  const model = activeTableModel(harness.entity());
+  setTableCellCursorById('table-1', tableCursorAt(model.rows[0].id, model.columns[0].id), 'nav');
 }
 
 /**
@@ -811,13 +816,13 @@ describe('🔴 πολλαπλή επιλογή άξονα — η πράξη ακ
     const view = mount(harness);
     selectColumnsAtoB();
 
-    const before = harness.entity().model;
+    const before = activeTableModel(harness.entity());
     expect(before.columns).toHaveLength(3);
     const doomed = [before.columns[0].id, before.columns[1].id];
 
     act(() => { view.result.current.props.onDelete(hitAt('column', 1)); });
 
-    const after = harness.entity().model;
+    const after = activeTableModel(harness.entity());
     expect(after.columns.map((c) => c.id)).toEqual([before.columns[2].id]);
     expect(after.columns.some((c) => doomed.includes(c.id))).toBe(false);
     // Ένα βήμα undo για μια πράξη του χρήστη — όχι δύο επειδή έτυχε να είναι δύο στήλες.
@@ -831,7 +836,7 @@ describe('🔴 πολλαπλή επιλογή άξονα — η πράξη ακ
 
     act(() => { view.result.current.props.onDelete(hitAt('column', 1)); });
 
-    const after = harness.entity().model;
+    const after = activeTableModel(harness.entity());
     const cursor = getTableCellCursor();
     expect(after.columns.some((c) => c.id === cursor?.position.colId)).toBe(true);
     expect(after.rows.some((r) => r.id === cursor?.position.rowId)).toBe(true);
@@ -852,11 +857,11 @@ describe('🔴 πολλαπλή επιλογή άξονα — η πράξη ακ
     openCursor(harness);
     const view = mount(harness);
     selectColumnsAtoB();
-    const before = harness.entity().model.columns.length;
+    const before = activeTableModel(harness.entity()).columns.length;
 
     act(() => { view.result.current.props.onInsertBefore(hitAt('column', 1)); });
 
-    expect(harness.entity().model.columns).toHaveLength(before + 2);
+    expect(activeTableModel(harness.entity()).columns).toHaveLength(before + 2);
     expect(executed).toHaveLength(1);
   });
 
@@ -872,7 +877,7 @@ describe('🔴 πολλαπλή επιλογή άξονα — η πράξη ακ
     expect(state).toMatchObject({ label: 'A:C', count: 3, canDelete: false });
 
     act(() => { view.result.current.props.onDelete(hitAt('column', 1)); });
-    expect(harness.entity().model.columns).toHaveLength(3);
+    expect(activeTableModel(harness.entity()).columns).toHaveLength(3);
     expect(executed).toHaveLength(0);
   });
 
@@ -880,11 +885,11 @@ describe('🔴 πολλαπλή επιλογή άξονα — η πράξη ακ
     openCursor(harness);
     const view = mount(harness);
     selectColumnsAtoB();
-    const before = harness.entity().model;
+    const before = activeTableModel(harness.entity());
 
     act(() => { view.result.current.props.onDelete(hitAt('column', 2)); });
 
-    expect(harness.entity().model.columns.map((c) => c.id))
+    expect(activeTableModel(harness.entity()).columns.map((c) => c.id))
       .toEqual([before.columns[0].id, before.columns[1].id]);
   });
 
@@ -896,12 +901,12 @@ describe('🔴 πολλαπλή επιλογή άξονα — η πράξη ακ
     pointer.rerender();
     clickBand('row', 3, true);
 
-    const before = harness.entity().model;
+    const before = activeTableModel(harness.entity());
     const doomed = before.rows.slice(1, 4).map((r) => r.id);
 
     act(() => { view.result.current.props.onDelete(hitAt('row', 2)); });
 
-    const after = harness.entity().model;
+    const after = activeTableModel(harness.entity());
     expect(after.rows).toHaveLength(before.rows.length - 3);
     expect(after.rows.some((r) => doomed.includes(r.id))).toBe(false);
     expect(executed).toHaveLength(1);
@@ -970,7 +975,7 @@ describe('🔴 πολλαπλή επιλογή άξονα — ΚΑΙ η μορφ
     expect(getTableCellCursor()?.selection?.kind).toBe('column');
   }
 
-  const columns = () => harness.entity().model.columns;
+  const columns = () => activeTableModel(harness.entity()).columns;
 
   it('🔴 «Β» με δύο μαρκαρισμένες στήλες ⇒ ΚΑΙ ΟΙ ΔΥΟ έντονες, με ΜΙΑ εντολή', () => {
     openCursor(harness);
@@ -1076,7 +1081,7 @@ describe('🔴 πολλαπλή επιλογή άξονα — ΚΑΙ η μορφ
 
     act(() => { view.result.current.props.resolveBorderMenu(hitAt('column', 1)).onApply('outside'); });
 
-    const edges = harness.entity().model.edges ?? [];
+    const edges = activeTableModel(harness.entity()).edges ?? [];
     const verticalAt = (colId: string) =>
       edges.some(([orientation, , col]) => orientation === 'V' && col === colId);
 

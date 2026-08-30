@@ -408,6 +408,20 @@
     "replaceButton": "Αντικατάσταση",
     "cancel": "Άκυρο"
   },
+  "tableXlsxOpen": {
+    "title": "Άνοιγμα αρχείου Excel",
+    "message": "Το «{fileName}» θα γεμίσει τον πίνακα. Τα δεδομένα που έχει τώρα θα αντικατασταθούν.",
+    "undoNote": "Η ενέργεια αναιρείται με Ctrl+Z.",
+    "replaceButton": "Αντικατάσταση περιεχομένου",
+    "newTableButton": "Νέος πίνακας δίπλα",
+    "cancel": "Άκυρο"
+  },
+  "tableXlsx": {
+    "emptyWorkbook": "Το αρχείο δεν περιέχει κανένα φύλλο εργασίας.",
+    "onlyFirstSheet": "Το βιβλίο έχει {count} φύλλα εργασίας — μπήκε μόνο το πρώτο («{name}»).",
+    "clipped": "Δεν χώρεσαν όλα: {rows} γραμμές και {columns} στήλες έμειναν εκτός.",
+    "importedAsNewTable": "Τα δεδομένα μπήκαν σε νέο πίνακα δίπλα — ο υπάρχων έμεινε ανέπαφος."
+  },
   "tableMergeDiscard": {
     "title": "Θα κρατηθεί μόνο η επάνω αριστερή τιμή",
     "message": "{count, plural, one {# κελί της περιοχής έχει περιεχόμενο που θα χαθεί.} other {# κελιά της περιοχής έχουν περιεχόμενο που θα χαθεί.}}",
@@ -2194,7 +2208,8 @@
       "tableFont": "Γραμματοσειρά",
       "tableAlign": "Στοίχιση",
       "tableNumber": "Αριθμός",
-      "tableData": "Δεδομένα"
+      "tableData": "Δεδομένα",
+      "tableFile": "Αρχείο"
     },
     "minimizeStates": {
       "full": "Πλήρης Προβολή",
@@ -5585,7 +5600,11 @@
         "deleteColumn": "Διαγραφή στήλης",
         "selectAll": "Επιλογή όλων",
         "refreshBinding": "Ανανέωση",
-        "autoFitRowHeight": "Αυτόματο ύψος γραμμής"
+        "autoFitRowHeight": "Αυτόματο ύψος γραμμής",
+        "openXlsx": "Άνοιγμα",
+        "openXlsxTooltip": "Άνοιγμα αρχείου Excel — ο πίνακας γεμίζει με τα δεδομένα του",
+        "importXlsx": "Εισαγωγή αρχείου",
+        "importXlsxTooltip": "Προσθήκη των φύλλων ενός αρχείου Excel — τα υπάρχοντα δεδομένα μένουν"
       },
       "tableFormat": {
         "bold": "Έντονα",

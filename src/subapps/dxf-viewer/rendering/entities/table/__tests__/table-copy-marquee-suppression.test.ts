@@ -43,6 +43,8 @@ import type { TableCopyMarqueeState } from '../../../../state/table-copy-marquee
 import type { TableCellCursorState } from '../../../../state/table-cell-cursor-store';
 import type { TableColumn, TableRow, CellSpan } from '../../../../types/table';
 import type { TableEntity } from '../../../../types/table-entity';
+import { tableWorksheetFields } from '../../../../bim/table/__tests__/make-table-entity';
+import { activeTableModel } from '../../../../bim/table/table-worksheet-resolve';
 
 const COLUMNS: TableColumn[] = [
   { id: 'c1', sizing: { kind: 'fixed', widthMm: 30 }, valueType: 'text', align: 'left' },
@@ -61,7 +63,7 @@ function entityWith(merges: CellSpan[] = []): TableEntity {
     position: { x: 0, y: 0 },
     angleRad: 0,
     styleId: BUILTIN_TABLE_STYLE_IDS.STANDARD,
-    model: toPersistedTableModel(createTableModel({ columns: COLUMNS, rows: ROWS, merges })),
+    ...tableWorksheetFields(toPersistedTableModel(createTableModel({ columns: COLUMNS, rows: ROWS, merges }))),
   };
 }
 
@@ -93,7 +95,7 @@ function boundsCopiedByCtrlC(
   entity: TableEntity,
   cursor: TableCellCursorState,
 ): TableCellRangeBounds | null {
-  const model = resolveTableModel(entity.model);
+  const model = resolveTableModel(activeTableModel(entity));
   const selectionBounds = cursor.selection
     ? resolveTableSelectionBounds(model, cursor.selection)
     : null;
@@ -106,7 +108,7 @@ function marqueeAfterCtrlC(
 ): TableCopyMarqueeState {
   const bounds = boundsCopiedByCtrlC(entity, cursor);
   if (!bounds) throw new Error('το σενάριο απαιτεί ορίσιμη περιοχή');
-  return { entityId: entity.id, bounds, modelRef: entity.model, startedAtMs: 0 };
+  return { entityId: entity.id, bounds, modelRef: activeTableModel(entity), startedAtMs: 0 };
 }
 
 /** Η ίδια διαδρομή που τρέχει ο `TableRenderer.drawTable` για ΑΥΤΟ το καρέ. */

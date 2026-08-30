@@ -74,6 +74,7 @@ import { tableRangeRectMm, type TableCellRangeBounds } from '../../../bim/table/
 import type { TableRectMm } from '../../../bim/table/table-layout-types';
 import type { TableEntity } from '../../../types/table-entity';
 import type { Point2D, ViewTransform, Viewport } from '../../../rendering/types/Types';
+import { activeTableModel } from '../../../bim/table/table-worksheet-resolve';
 
 /** Καμία ενεργή υποδιαίρεση: το «πού είναι» δεν εξαρτάται από το «τι είναι μαρκαρισμένο». */
 const NO_ACTIVE = new Set<never>();
@@ -128,8 +129,8 @@ export function tableCellScreenPoint(
   view: TableTestView = TABLE_TEST_VIEW,
 ): Point2D {
   const { layout } = computeTableEntityGeometryLive(entity);
-  const rowId = entity.model.rows[rowIndex].id;
-  const colId = entity.model.columns[colIndex].id;
+  const rowId = activeTableModel(entity).rows[rowIndex].id;
+  const colId = activeTableModel(entity).columns[colIndex].id;
   const cell = layout.cells.find((c) => c.rowId === rowId && c.colId === colId);
   if (!cell) throw new Error(`Το κελί ${rowIndex}/${colIndex} δεν υπάρχει στη διάταξη`);
   return tableFrameScreenPoint(

@@ -32,6 +32,9 @@ import {
 import { useDrawingScaleStore } from '../../../state/drawing-scale-store';
 import type { TableColumn, TableRow } from '../../../types/table';
 import type { TableEntity } from '../../../types/table-entity';
+import { tableWorksheetFields, type TableEntityTestOverrides } from './make-table-entity';
+import { activeTableModel } from '../table-worksheet-resolve';
+import type { PersistedTableModel } from '../../../types/table';
 
 /**
  * ⚠️ Ο πίνακας είναι **annotative**: hit-test, όρια και λαβές διαβάζουν τη ΖΩΝΤΑΝΗ κλίμακα
@@ -60,7 +63,7 @@ const persistedModel = (input: Parameters<typeof createTableModel>[0]) =>
   toPersistedTableModel(createTableModel(input));
 
 /** 60mm × 16mm στο (100, 200)· ο πίνακας απλώνεται δεξιά και **κάτω** (y: 200 → 184). */
-function makeEntity(overrides: Partial<TableEntity> = {}): TableEntity {
+function makeEntity({ model, binding, ...rest }: TableEntityTestOverrides = {}): TableEntity {
   return {
     id: 'tbl_1',
     type: 'table',
@@ -68,8 +71,8 @@ function makeEntity(overrides: Partial<TableEntity> = {}): TableEntity {
     position: { x: 100, y: 200 },
     angleRad: 0,
     styleId: BUILTIN_TABLE_STYLE_IDS.STANDARD,
-    model: persistedModel({ columns: COLUMNS, rows: ROWS }),
-    ...overrides,
+    ...tableWorksheetFields(model ?? persistedModel({ columns: COLUMNS, rows: ROWS }), binding),
+    ...rest,
   };
 }
 
@@ -318,8 +321,8 @@ describe('applyTableGripDrag', () => {
     const patch = applyTableGripDrag(
       TABLE_COLUMN_KIND, e, { x: 140, y: 200 }, { x: 10, y: 0 },
     );
-    expect(patch.model?.columns[0].sizing).toEqual({ kind: 'fixed', widthMm: 50 });
-    expect(patch.model?.columns[1].sizing).toEqual({ kind: 'fixed', widthMm: 20 });
+    expect(patched(e, patch).columns[0].sizing).toEqual({ kind: 'fixed', widthMm: 50 });
+    expect(patched(e, patch).columns[1].sizing).toEqual({ kind: 'fixed', widthMm: 20 });
   });
 
   it('όριο στήλης σε ΣΤΡΑΜΜΕΝΟ πίνακα: μετριέται στο πλαίσιο, όχι στην οθόνη', () => {
@@ -329,14 +332,15 @@ describe('applyTableGripDrag', () => {
     // Στις 90° ο άξονας +u της σελίδας δείχνει +y στη σκηνή, άρα «10mm δεξιά στο χαρτί»
     // = delta (0, +10) στη σκηνή. Ένας αφελής υπολογισμός σε x θα έδινε 40, όχι 50.
     const patch = applyTableGripDrag(TABLE_COLUMN_KIND, e, edge, { x: 0, y: 10 });
-    expect(patch.model?.columns[0].sizing).toEqual({ kind: 'fixed', widthMm: 50 });
+    expect(patched(e, patch).columns[0].sizing).toEqual({ kind: 'fixed', widthMm: 50 });
   });
 
   it('όριο στήλης: το σύρσιμο κάτω από το ελάχιστο κόβεται (στήλη μηδενικού πλάτους δεν είναι στήλη)', () => {
+    const e = makeEntity();
     const patch = applyTableGripDrag(
-      TABLE_COLUMN_KIND, makeEntity(), { x: 140, y: 200 }, { x: -100, y: 0 },
+      TABLE_COLUMN_KIND, e, { x: 140, y: 200 }, { x: -100, y: 0 },
     );
-    expect(patch.model?.columns[0].sizing).toEqual({
+    expect(patched(e, patch).columns[0].sizing).toEqual({
       kind: 'fixed', widthMm: MIN_TABLE_COLUMN_WIDTH_MM,
     });
   });
@@ -346,10 +350,21 @@ describe('applyTableGripDrag', () => {
     const patch = applyTableGripDrag(
       TABLE_COLUMN_KIND, e, { x: 140, y: 200 }, { x: 10, y: 0 },
     );
-    expect(patch.model).not.toBe(e.model);
-    expect(e.model.columns[0].sizing).toEqual({ kind: 'fixed', widthMm: 40 }); // αμετάβλητο
+    expect(patched(e, patch)).not.toBe(activeTableModel(e));
+    expect(activeTableModel(e).columns[0].sizing).toEqual({ kind: 'fixed', widthMm: 40 }); // αμετάβλητο
   });
 });
+
+/**
+ * 🔴 ADR-833 Φάση 2 — **το μοντέλο που βλέπει ο χρήστης μετά το μπάλωμα.**
+ *
+ * Το `applyTableGripDrag` γράφει πλέον `worksheets`, όχι `model`: το πεδίο έφυγε από την
+ * οντότητα. Το test ρωτά ό,τι ρωτά και η οθόνη — **εφάρμοσε το μπάλωμα, διάβασε το ενεργό
+ * φύλλο** — αντί να κοιτάζει το σχήμα του μπαλώματος. Έτσι η άγκυρα δεν εξαρτάται από **πώς**
+ * ταξιδεύει η αλλαγή, μόνο από **τι φτάνει**.
+ */
+const patched = (e: TableEntity, patch: Partial<TableEntity>): PersistedTableModel =>
+  activeTableModel({ ...e, ...patch });
 
 // ── Οι 8 περιμετρικές λαβές (ADR-739 Φ.Γ, Giorgio 2026-08-03) ────────────────
 
@@ -373,11 +388,11 @@ describe('applyTableGripDrag — λαβές κουτιού (γωνίες + μέ�
     expect(patch.position).toEqual({ x: 100, y: 200 }); // η αντίθετη γωνία ΔΕΝ κουνήθηκε
     expect(sizeOf(e, patch)).toEqual({ widthMm: 72, heightMm: 24 }); // ×1.2 και ×1.5
     // Η κλιμάκωση είναι ΑΝΑΛΟΓΙΚΗ, όχι «όλο στην τελευταία στήλη».
-    expect(patch.model?.columns.map((c) => c.sizing)).toEqual([
+    expect(patched(e, patch).columns.map((c) => c.sizing)).toEqual([
       { kind: 'fixed', widthMm: 48 }, // 40 × 1.2
       { kind: 'fixed', widthMm: 24 }, // 20 × 1.2
     ]);
-    expect(patch.model?.rows.map((r) => r.heightMm)).toEqual([12, 12]); // 8 × 1.5
+    expect(patched(e, patch).rows.map((r) => r.heightMm)).toEqual([12, 12]); // 8 × 1.5
   });
 
   it('γωνία ΠΑΝΩ-ΑΡΙΣΤΕΡΑ: μετακινεί την άγκυρα, κρατώντας ακίνητη την κάτω-δεξιά', () => {
@@ -396,7 +411,7 @@ describe('applyTableGripDrag — λαβές κουτιού (γωνίες + μέ�
     expect(patch.position).toEqual({ x: 100, y: 200 }); // η αντίθετη (δυτική) ακμή κρατά
     expect(sizeOf(e, patch)).toEqual({ widthMm: 72, heightMm: 16 }); // ύψος ΑΘΙΚΤΟ
     // ΚΑΙ, κρίσιμο: οι γραμμές δεν αποκτούν καν ρητό ύψος — δεν τις άγγιξε κανείς.
-    expect(patch.model?.rows).toEqual(e.model.rows);
+    expect(patched(e, patch).rows).toEqual(activeTableModel(e).rows);
   });
 
   it('μεσοπλευρική κάτω: αλλάζει μόνο το ύψος, οι στήλες μένουν ως έχουν', () => {
@@ -404,7 +419,7 @@ describe('applyTableGripDrag — λαβές κουτιού (γωνίες + μέ�
     const patch = applyTableGripDrag('table-edge-s', e, { x: 130, y: 184 }, { x: 999, y: -8 });
 
     expect(sizeOf(e, patch)).toEqual({ widthMm: 60, heightMm: 24 });
-    expect(patch.model?.columns).toEqual(e.model.columns);
+    expect(patched(e, patch).columns).toEqual(activeTableModel(e).columns);
   });
 
   /**
@@ -428,12 +443,12 @@ describe('applyTableGripDrag — λαβές κουτιού (γωνίες + μέ�
     const e = makeEntity();
     const patch = applyTableGripDrag('table-corner-se', e, { x: 160, y: 184 }, { x: -500, y: 500 });
 
-    for (const col of patch.model!.columns) {
+    for (const col of patched(e, patch).columns) {
       expect(col.sizing).toMatchObject({ kind: 'fixed' });
       expect((col.sizing as { widthMm: number }).widthMm)
         .toBeGreaterThanOrEqual(MIN_TABLE_COLUMN_WIDTH_MM);
     }
-    for (const row of patch.model!.rows) {
+    for (const row of patched(e, patch).rows) {
       expect(row.heightMm).toBeGreaterThanOrEqual(MIN_TABLE_ROW_HEIGHT_MM);
     }
   });
@@ -457,8 +472,8 @@ describe('applyTableGripDrag — λαβές κουτιού (γωνίες + μέ�
     const before = computeTableEntityGeometry(e, 1, 'mm').layout.heightMm;
     const patch = applyTableGripDrag('table-edge-s', e, { x: 130, y: 200 - before }, { x: 0, y: -before });
 
-    expect(e.model.rows[0].heightMm).toBeUndefined(); // η αφετηρία ήταν όντως κληρονομημένη
-    for (const row of patch.model!.rows) expect(row.heightMm).toBeGreaterThan(0);
+    expect(activeTableModel(e).rows[0].heightMm).toBeUndefined(); // η αφετηρία ήταν όντως κληρονομημένη
+    for (const row of patched(e, patch).rows) expect(row.heightMm).toBeGreaterThan(0);
     expect(sizeOf(e, patch).heightMm).toBeCloseTo(before * 2);
   });
 });

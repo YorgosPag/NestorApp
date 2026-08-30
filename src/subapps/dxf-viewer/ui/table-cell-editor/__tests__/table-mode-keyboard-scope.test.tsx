@@ -59,6 +59,7 @@ import { BUILTIN_TABLE_STYLE_IDS } from '../../../bim/table/table-style-presets'
 import { useDrawingScaleStore } from '../../../state/drawing-scale-store';
 import type { TableColumn, TableRow } from '../../../types/table';
 import type { TableEntity } from '../../../types/table-entity';
+import { tableWorksheetFields } from '../../../bim/table/__tests__/make-table-entity';
 
 // ── Fixture: ο ίδιος πίνακας 60mm × 16mm με τα αδελφά tests ────────────────────
 
@@ -78,7 +79,7 @@ const ENTITY: TableEntity = {
   position: { x: 100, y: 200 },
   angleRad: 0,
   styleId: BUILTIN_TABLE_STYLE_IDS.STANDARD,
-  model: toPersistedTableModel(createTableModel({ columns: COLUMNS, rows: ROWS })),
+  ...tableWorksheetFields(toPersistedTableModel(createTableModel({ columns: COLUMNS, rows: ROWS }))),
 };
 
 /**
@@ -114,7 +115,7 @@ function renderEditor(entities: readonly TableEntity[] = [ENTITY]) {
 /** Μπες στον πίνακα όπως το διπλό κλικ: δρομέας στο (r1,c1), κατάσταση γραφής. */
 function enterTable(): void {
   act(() => {
-    setTableCellCursor(ENTITY.id, tableCursorAt('r1', 'c1'), 'edit', 'αρχικό');
+    setTableCellCursor(ENTITY, tableCursorAt('r1', 'c1'), 'edit', 'αρχικό');
   });
 }
 
@@ -202,7 +203,7 @@ describe('ADR-739 Φ.Δ βήμα 4 — το scope του πληκτρολογί�
     const view = renderEditor();
     enterTable();
     act(() => {
-      setTableCellCursor(ENTITY.id, tableCursorAt('r1', 'c2'), 'nav');
+      setTableCellCursor(ENTITY, tableCursorAt('r1', 'c2'), 'nav');
       view.rerender();
     });
     expect(depth()).toBe(1);

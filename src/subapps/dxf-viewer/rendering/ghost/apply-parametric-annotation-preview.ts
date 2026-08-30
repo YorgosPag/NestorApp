@@ -32,6 +32,7 @@ import { showTableResizeReadout } from '../../state/table-resize-readout-store';
 import { applyImageGripDrag } from '../../bim/image/image-grips';
 import type { ImageEntity } from '../../types/image';
 import { ShiftKeyTracker } from '../../keyboard/ShiftKeyTracker';
+import { activeTableModel } from '../../bim/table/table-worksheet-resolve';
 
 /** Ο hot-grip κύκλος περιστροφής (επιλεγμένο κέντρο + άγκυρα στο mousedown). */
 type RotateCtx = { readonly pivot: Point2D; readonly anchor: Point2D };
@@ -123,7 +124,9 @@ function tableGhostWithReadout(
 
   const readout = tableResizeReadoutForModels(
     entity as TableEntity,
-    (ghost as TableEntity).model,
+    // ADR-833 Φάση 2 — το μοντέλο του **ενεργού φύλλου** του φαντάσματος: η σύρση μεγέθους
+    // αλλάζει το φύλλο που βλέπει ο χρήστης, και η ένδειξη διαβάζει ό,τι ακριβώς γράφτηκε.
+    activeTableModel(ghost as TableEntity),
   );
   if (readout) showTableResizeReadout(readout);
   return ghost;

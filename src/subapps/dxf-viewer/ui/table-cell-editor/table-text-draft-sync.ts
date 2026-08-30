@@ -46,6 +46,7 @@ import { getPersistedCellText } from '../../bim/table/table-cell-content';
 import { resolveTableCellWriteRoute } from '../../bim/table/write-back/table-cell-write-route';
 import type { TableCellRef } from '../../bim/table/table-cell-range';
 import type { PersistedTableModel, TableBinding } from '../../types/table';
+import { activeTableModel } from '../../bim/table/table-worksheet-resolve';
 
 /** Ό,τι χρειάζεται για να αποφασιστεί αν το πρόχειρο **επιτρέπεται** να γραφτεί. */
 export interface PendingDraftSync {
@@ -67,7 +68,7 @@ export interface PendingDraftSync {
  *   αλλιώς                  →  γράψε, με τον ΕΝΑ δρόμο
  * ```
  *
- * ⚠️ Ο φρουρός διαδρομής ρωτά το **μοντέλο που περνά ως όρισμα** και όχι το `entity.model`: σε
+ * ⚠️ Ο φρουρός διαδρομής ρωτά το **μοντέλο που περνά ως όρισμα** και όχι το `activeTableModel(entity)`: σε
  * μια αλυσίδα καθαρών μετασχηματισμών τα δύο μπορεί να έχουν ήδη αποκλίνει, και η ερώτηση
  * «γράφεται αυτό το κελί;» πρέπει να απαντηθεί πάνω στην κατάσταση που **όντως** θα γραφτεί.
  *

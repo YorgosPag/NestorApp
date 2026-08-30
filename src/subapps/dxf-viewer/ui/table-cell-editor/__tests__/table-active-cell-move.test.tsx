@@ -60,6 +60,8 @@ import type { TableIndicatorCursorRole } from '../../../bim/table/table-indicato
 import type { PersistedTableModel } from '../../../types/table';
 import type { TableEntity } from '../../../types/table-entity';
 import type { Point2D } from '../../../rendering/types/Types';
+import { activeTableModel } from '../../../bim/table/table-worksheet-resolve';
+import { tableWorksheetFields } from '../../../bim/table/__tests__/make-table-entity';
 
 const { transform: TRANSFORM, viewport: VIEWPORT } = TABLE_TEST_VIEW;
 
@@ -68,8 +70,8 @@ describe('🔴 ADR-739 §36.9 — το περίγραμμα του ΕΝΕΡΓΟ�
   let onCommitModel: jest.Mock;
   let canvas: HTMLElement;
 
-  const rowId = (index: number): string => entity.model.rows[index].id;
-  const colId = (index: number): string => entity.model.columns[index].id;
+  const rowId = (index: number): string => activeTableModel(entity).rows[index].id;
+  const colId = (index: number): string => activeTableModel(entity).columns[index].id;
   const oneCell = (row: number, col: number): TableCellRangeBounds =>
     ({ firstRow: row, lastRow: row, firstCol: col, lastCol: col });
   const cellRef = (row: number, col: number) => ({ rowId: rowId(row), colId: colId(col) });
@@ -119,7 +121,7 @@ describe('🔴 ADR-739 §36.9 — το περίγραμμα του ΕΝΕΡΓΟ�
   /** Ο χρήστης έχει το κελί ενεργό, σε **πλοήγηση**. */
   function navigateTo(row: number, col: number): void {
     act(() => {
-      setTableCellCursor(entity.id, tableCursorAt(rowId(row), colId(col)), 'nav');
+      setTableCellCursor(entity, tableCursorAt(rowId(row), colId(col)), 'nav');
     });
   }
 
@@ -149,7 +151,7 @@ describe('🔴 ADR-739 §36.9 — το περίγραμμα του ΕΝΕΡΓΟ�
 
   /** Γράψε κείμενο σε κελί **πριν** το mount — το μοντέλο είναι immutable, η οντότητα νέα. */
   function type(row: number, col: number, text: string): void {
-    entity = { ...entity, model: writeCellInput(entity.model, rowId(row), colId(col), text).model };
+    entity = { ...entity, ...tableWorksheetFields(writeCellInput(activeTableModel(entity), rowId(row), colId(col), text).model) };
   }
 
   /** 🔴 Ρητό mount, **μετά** το στήσιμο: δύο mounted harness δίνουν πράσινο για λάθος λόγο. */

@@ -30,6 +30,8 @@ import { buildDxfImportSaveContext } from './dxf-import-save-context';
 import { CreateBlockDialogHost } from '../ui/panels/block-library/CreateBlockDialogHost';
 // ADR-736 §6 — «Εικόνα»: κρυφός επιλογέας αρχείου + ανέβασμα + όπλισμα του placement tool.
 import { AttachImageHost } from '../ui/attach-image/AttachImageHost';
+// ADR-833 §1.3 — ο ξενιστής του επιλογέα `.xlsx` (κρυφό input + οι δύο listeners της κορδέλας).
+import { TableXlsxImportHostLeaf } from '../ui/table-xlsx/TableXlsxImportHostLeaf';
 import type { DxfViewerCallbacksReturn } from './useDxfViewerCallbacks';
 import type { DxfViewerUiState } from './useDxfViewerUiState';
 import {
@@ -39,7 +41,7 @@ import {
   OpeningSchedulePdfHost, ThermalEnvelopeHost, BimScheduleHost, TopoRibbonHost, AdminLayerManagerPalette, ExternalReferencesPalette, ExternalReferencesAutoResolveHost, TitleBlockBindingPalette,
   ImportedMeshBoqHost,
   ImportedMeshMaterialMapHost,
-  DxfAiChatPanel, ColumnPerimeterConfirmDialog, GapCloseConfirmDialog, ColumnAdoptSizeDialog, ColumnBecomesWallDialog, ShearWallExtentDialog, SectionRelationshipDialog, ColumnBatchFillConfirmDialog, AutoDimensionOptionsDialog, DxfSymbolDetectConfirmDialog, ColumnPromoteConfirmDialog, HatchOverlapConfirmDialog, TableRangeOverwriteConfirmDialog, TableMergeDiscardConfirmDialog, TableInsertFunctionDialog, TableFunctionArgumentsDialog, TableFormatCellsDialogHost, AutoFillListsDialogHost, TableSortDialogHost, PrintHost, ExportHost, StampHost, AiTitleBlockHost, RevisionsHost, TitleBlockLibraryDialogHost, ColumnDetailHost, FoundationDetailHost, BeamDetailHost,
+  DxfAiChatPanel, ColumnPerimeterConfirmDialog, GapCloseConfirmDialog, ColumnAdoptSizeDialog, ColumnBecomesWallDialog, ShearWallExtentDialog, SectionRelationshipDialog, ColumnBatchFillConfirmDialog, AutoDimensionOptionsDialog, DxfSymbolDetectConfirmDialog, ColumnPromoteConfirmDialog, HatchOverlapConfirmDialog, TableRangeOverwriteConfirmDialog, TableMergeDiscardConfirmDialog, TableXlsxOpenConfirmDialog, TableInsertFunctionDialog, TableFunctionArgumentsDialog, TableFormatCellsDialogHost, AutoFillListsDialogHost, TableSortDialogHost, PrintHost, ExportHost, StampHost, AiTitleBlockHost, RevisionsHost, TitleBlockLibraryDialogHost, ColumnDetailHost, FoundationDetailHost, BeamDetailHost,
   SlabDetailHost, FloorManagementDialogHost, MatchPropertiesDialogHost,
 } from './dxf-viewer-lazy-components';
 
@@ -117,6 +119,10 @@ export function DxfViewerDialogs(props: DxfViewerDialogsProps): React.JSX.Elemen
         }}
       />
       <AttachImageHost />
+      {/* ADR-833 §1.3 — ο επιλογέας των δύο εντολών `.xlsx` της καρτέλας «Ιδιότητες Πίνακα».
+          Φύλλο με δικές του εξαρτήσεις: η επιλογή αλλάζει σε κάθε κλικ και δεν επιτρέπεται να
+          ξανα-αποδώσει τους 28 hosts αυτού του δέντρου (ίδιος λόγος με το BimScheduleHostLeaf). */}
+      <TableXlsxImportHostLeaf levelManager={levelManager} />
       <React.Suspense fallback={hiddenFallback}>
         <TestsModal
           isOpen={ui.testsModalOpen}
@@ -191,6 +197,8 @@ export function DxfViewerDialogs(props: DxfViewerDialogsProps): React.JSX.Elemen
         <TableRangeOverwriteConfirmDialog />
         {/* ADR-755 — ρώτα πριν χάσεις: συγχώνευση κρατά μόνο την επάνω αριστερή τιμή. */}
         <TableMergeDiscardConfirmDialog />
+        {/* ADR-833 §1.4 — «Άνοιγμα» αρχείου Excel: αντικατάσταση περιεχομένου ή νέος πίνακας; */}
+        <TableXlsxOpenConfirmDialog />
         {/* ADR-763 — «Εισαγωγή συνάρτησης»: ο κατάλογος πίσω από το `fx` της γραμμής τύπων. */}
         <TableInsertFunctionDialog />
         {/* 🔴 ADR-739 §61 — «Μορφοποίηση κελιών»: ο ΕΝΑΣ ξενιστής. Χωρίς props επίτηδες — και ο

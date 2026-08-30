@@ -9,6 +9,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { RibbonTableMenuWidget } from '../RibbonTableMenuWidget';
 import { useTableOptionsStore } from '../../../../../state/table-options-store';
+import { activeTableModel } from '../../../../../bim/table/table-worksheet-resolve';
 import {
   DEFAULT_TABLE_COLUMN_COUNT,
   DEFAULT_TABLE_DATA_ROW_COUNT,
@@ -138,10 +139,10 @@ describe('RibbonTableMenuWidget — το συμβόλαιο του κλικ', ()
 
     const { columnCount, dataRowCount } = useTableOptionsStore.getState();
     const entity = buildTableEntity({ x: 0, y: 0 }, { columnCount, dataRowCount }, 'tbl', 'layer_0');
-    expect(entity.model.cells).toHaveLength(0);
-    expect(entity.model.merges).toHaveLength(0);
-    expect(entity.model.columns).toHaveLength(5);
-    expect(entity.model.rows).toHaveLength(2);
+    expect(activeTableModel(entity).cells).toHaveLength(0);
+    expect(activeTableModel(entity).merges).toHaveLength(0);
+    expect(activeTableModel(entity).columns).toHaveLength(5);
+    expect(activeTableModel(entity).rows).toHaveLength(2);
   });
 });
 

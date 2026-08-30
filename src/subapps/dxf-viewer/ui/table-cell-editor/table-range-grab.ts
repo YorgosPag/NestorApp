@@ -35,6 +35,7 @@ import type { TableRangeGrab } from '../../bim/table/table-range-drop-target';
 import type { TableRectMm } from '../../bim/table/table-layout-types';
 import type { TableEntity, TableEntityGeometry } from '../../types/table-entity';
 import type { Point2D } from '../../rendering/types/Types';
+import { activeTableModel } from '../../bim/table/table-worksheet-resolve';
 
 /** Ό,τι χρειάζεται η χειρονομία για να ξεκινήσει — δες {@link tableRangeGrabAtWorld}. */
 export interface TableRangeGrabHit {
@@ -83,7 +84,7 @@ export function activeTableRange(
   selection: TableCellSelection | null,
   activeCell: TableCellRef | null,
 ): { readonly bounds: TableCellRangeBounds; readonly rectMm: TableRectMm } | null {
-  const model = resolveTableModel(entity.model);
+  const model = resolveTableModel(activeTableModel(entity));
   // Μπαγιάτικο άκρο (undo / διαγραφή γραμμής) ⇒ **καμία** επιλογή, όχι μισή. Ίδια σύμβαση με
   // κάθε άλλον καταναλωτή: ο καλών δεν μαντεύει — και εδώ το `null` έχει συνέχεια, γιατί το
   // ενεργό κελί υπάρχει ούτως ή άλλως.
@@ -144,8 +145,8 @@ export function tableRangeGrabAtWorld(
 
   const hit = tableCellAtFrame(geometry.layout, probe.frame);
   if (!hit) return null;
-  const row = indexById(entity.model.rows).get(hit.rowId);
-  const col = indexById(entity.model.columns).get(hit.colId);
+  const row = indexById(activeTableModel(entity).rows).get(hit.rowId);
+  const col = indexById(activeTableModel(entity).columns).get(hit.colId);
   if (row === undefined || col === undefined) return null;
 
   const { firstRow, lastRow, firstCol, lastCol } = range.bounds;

@@ -133,7 +133,7 @@ describe('πότε η είσοδος ΔΕΝ ενεργεί', () => {
 
   it('🔴 είσαι ΗΔΗ μέσα ⇒ false — το `Enter` δεν πετά τον δρομέα πίσω στο πρώτο κελί', () => {
     const { result } = render();
-    act(() => { setTableCellCursor(ENTITY.id, tableCursorAt('r2', 'c2'), 'nav'); });
+    act(() => { setTableCellCursor(ENTITY, tableCursorAt('r2', 'c2'), 'nav'); });
     act(() => { expect(result.current.enterTableMode('nav')).toBe(false); });
 
     // Η θέση του χρήστη διατηρήθηκε.

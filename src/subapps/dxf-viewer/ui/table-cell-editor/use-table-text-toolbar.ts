@@ -86,6 +86,8 @@ import type { TableToggleFormatKey } from '../components/table-format-toolbar/Ta
 import type { TextHeightStepDirection } from '../../bim/table/table-text-height-scale';
 import type { PersistedTableModel, TableAxisStyleOverride } from '../../types/table';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
+import { activeTableBinding, activeTableModel } from '../../bim/table/table-worksheet-resolve';
+import { tableForCursor } from '../../state/table-cell-cursor-scope';
 
 export interface UseTableTextToolbarParams {
   readonly levelManager: LevelManagerLike;
@@ -200,8 +202,10 @@ export function useTableTextToolbar(params: UseTableTextToolbarParams): TableTex
   const formatTarget = useCallback((): TableTextFormatTarget | null => {
     const cursor = getTableCellCursor();
     const live = liveTable();
-    if (!cursor || !live || cursor.entityId !== live.id) return null;
-    const model = resolveTableModel(live.model);
+    // 🔴 ADR-833 Φάση 2 — ο ΕΝΑΣ φύλακας «ποιος πίνακας, ποιο φύλλο» (το `liveTable()` τον
+    // εφαρμόζει ήδη· η ρητή κλήση κρατά τον έλεγχο **ένα** ερώτημα και όχι δύο διατυπώσεις).
+    if (!tableForCursor(live, cursor)) return null;
+    const model = resolveTableModel(activeTableModel(live));
     const { rowId, colId } = cursor.position;
     const cell: TableCellRef = { rowId, colId };
     const bounds = resolveTableSelectionBounds(model, {
@@ -213,10 +217,10 @@ export function useTableTextToolbar(params: UseTableTextToolbarParams): TableTex
     });
     if (!bounds) return null;
 
-    const chars = charsScope(live.model, cell, cursor.draft);
+    const chars = charsScope(activeTableModel(live), cell, cursor.draft);
     return {
       entityId: live.id,
-      model: live.model,
+      model: activeTableModel(live),
       style: resolveTableStyle(live),
       bounds,
       scope: chars ?? { kind: 'range', bounds },
@@ -244,7 +248,7 @@ export function useTableTextToolbar(params: UseTableTextToolbarParams): TableTex
         prepare: (next: PersistedTableModel) => tableModelWithPendingDraft(next, {
           cell,
           draft: chars.range.text,
-          binding: live.binding,
+          binding: activeTableBinding(live),
         }),
       }),
     };

@@ -51,6 +51,11 @@ import type { TableCellRangeBounds } from '../../../bim/table/table-cell-range';
 import type { PersistedTableModel } from '../../../types/table';
 import type { TableEntity } from '../../../types/table-entity';
 import type { Point2D } from '../../../rendering/types/Types';
+import { activeTableModel } from '../../../bim/table/table-worksheet-resolve';
+import {
+  setTableCellCursorById,
+  tableWorksheetFields,
+} from '../../../bim/table/__tests__/make-table-entity';
 
 describe('🔴 ADR-828 Φ4α — το κουμπί «Επιλογές Αυτόματης Συμπλήρωσης», από άκρη σε άκρη', () => {
   let entity: TableEntity;
@@ -59,8 +64,8 @@ describe('🔴 ADR-828 Φ4α — το κουμπί «Επιλογές Αυτόμ
   let rerender: (ui: React.ReactElement) => void;
   let openMenu: jest.Mock;
 
-  const rowId = (index: number): string => entity.model.rows[index].id;
-  const colId = (index: number): string => entity.model.columns[index].id;
+  const rowId = (index: number): string => activeTableModel(entity).rows[index].id;
+  const colId = (index: number): string => activeTableModel(entity).columns[index].id;
 
   const oneCell = (row: number, col: number): TableCellRangeBounds =>
     ({ firstRow: row, lastRow: row, firstCol: col, lastCol: col });
@@ -90,7 +95,7 @@ describe('🔴 ADR-828 Φ4α — το κουμπί «Επιλογές Αυτόμ
 
   function navigateTo(row: number, col: number): void {
     act(() => {
-      setTableCellCursor(entity.id, tableCursorAt(rowId(row), colId(col)), 'nav');
+      setTableCellCursor(entity, tableCursorAt(rowId(row), colId(col)), 'nav');
     });
   }
 
@@ -138,7 +143,7 @@ describe('🔴 ADR-828 Φ4α — το κουμπί «Επιλογές Αυτόμ
    * ό,τι θα ενημέρωνε η σκηνή: το ίδιο ακριβώς `model` που πήγε στο commit.
    */
   function sceneAdvances(): void {
-    entity = { ...entity, model: lastModel() };
+    entity = { ...entity, ...tableWorksheetFields(lastModel()) };
     act(() => {
       rerender(<TablePointerHarness entity={entity} onCommitModel={onCommitModel} />);
     });
@@ -161,7 +166,7 @@ describe('🔴 ADR-828 Φ4α — το κουμπί «Επιλογές Αυτόμ
     setTableFillMenuPort({ open: openMenu });
     onCommitModel = jest.fn();
     entity = buildTableEntity({ x: 0, y: 0 }, { columnCount: 5, dataRowCount: 3 }, 'table-1', 'layer-0');
-    entity = { ...entity, model: writeCellInput(entity.model, entity.model.rows[2].id, entity.model.columns[1].id, '10').model };
+    entity = { ...entity, ...tableWorksheetFields(writeCellInput(activeTableModel(entity), activeTableModel(entity).rows[2].id, activeTableModel(entity).columns[1].id, '10').model) };
   });
 
   afterEach(() => {
@@ -192,7 +197,7 @@ describe('🔴 ADR-828 Φ4α — το κουμπί «Επιλογές Αυτόμ
 
       // Η ίδια κρίση που κάνει ο ζωγράφος κάθε καρέ. Χωρίς σωστή σφραγίδα θα ήταν `null` —
       // δηλαδή κουμπί που κανείς δεν βλέπει ποτέ, με πράσινα tests από πάνω του.
-      expect(getTableFillBadge()!.modelRef).toBe(entity.model);
+      expect(getTableFillBadge()!.modelRef).toBe(activeTableModel(entity));
       expect(resolveTableFillBadgeBounds(entity, { entityId: 'table-1', mode: 'nav' } as never, getTableFillBadge()))
         .toEqual({ firstRow: 2, lastRow: 4, firstCol: 1, lastCol: 1 });
     });
@@ -234,7 +239,7 @@ describe('🔴 ADR-828 Φ4α — το κουμπί «Επιλογές Αυτόμ
       sceneAdvances();
       // Excel parity: το κουμπί δεν σβήνει από τη δική του επιλογή — ξαναγεννιέται με τη νέα
       // σφραγίδα, γιατί η επιλογή περνά από την **ίδια** εγγραφή που το γέννησε.
-      expect(getTableFillBadge()!.modelRef).toBe(entity.model);
+      expect(getTableFillBadge()!.modelRef).toBe(activeTableModel(entity));
 
       pressOn(tableFillBadgeScreenPoint(entity, getTableFillBadge()!.filled));
       act(() => menuTarget().apply('copy'));
@@ -326,7 +331,7 @@ describe('🔴 ADR-828 Φ4α — το κουμπί «Επιλογές Αυτόμ
       navigateTo(2, 1);
       fillFrom(oneCell(2, 1), 4, 1);
 
-      act(() => setTableCellCursor('table-2', tableCursorAt(rowId(0), colId(0)), 'nav'));
+      act(() => setTableCellCursorById('table-2', tableCursorAt(rowId(0), colId(0)), 'nav'));
       expect(getTableFillBadge()).toBeNull();
     });
   });

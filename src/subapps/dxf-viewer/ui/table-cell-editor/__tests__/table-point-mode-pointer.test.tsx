@@ -49,6 +49,7 @@ import { useTableCellPointer } from '../use-table-cell-pointer';
 import type { TableCellRef } from '../../../bim/table/table-cell-range';
 import type { TableEntity } from '../../../types/table-entity';
 import type { ViewTransform } from '../../../rendering/types/Types';
+import { activeTableModel } from '../../../bim/table/table-worksheet-resolve';
 
 const { transform: TRANSFORM, viewport: VIEWPORT } = TABLE_TEST_VIEW;
 
@@ -126,7 +127,7 @@ describe('🔴 ADR-754 — υπόδειξη κελιού με το ποντίκ�
     act(() => {
       setTableCellCursor(
         entity.id,
-        tableCursorAt(entity.model.rows[0].id, entity.model.columns[0].id),
+        tableCursorAt(activeTableModel(entity).rows[0].id, activeTableModel(entity).columns[0].id),
         'edit',
         draft,
       );
@@ -206,8 +207,8 @@ describe('🔴 ADR-754 — υπόδειξη κελιού με το ποντίκ�
       expect(getTableCellCursor()?.draft).toBe('=E4');
       // 🔴 Το ουσιώδες: αν ο δρομέας μετακινηθεί, ο χρήστης χάνει το κελί που γράφει — και
       // το `setTableCellCursor` **σβήνει το πρόχειρο** περνώντας από πάνω του.
-      expect(getTableCellCursor()?.position.colId).toBe(entity.model.columns[0].id);
-      expect(getTableCellCursor()?.position.rowId).toBe(entity.model.rows[0].id);
+      expect(getTableCellCursor()?.position.colId).toBe(activeTableModel(entity).columns[0].id);
+      expect(getTableCellCursor()?.position.rowId).toBe(activeTableModel(entity).rows[0].id);
       expect(onCommitPending).not.toHaveBeenCalled();
       expect(onSelectTo).not.toHaveBeenCalled();
     });
@@ -270,7 +271,7 @@ describe('🔴 ADR-754 — υπόδειξη κελιού με το ποντίκ�
       pressOn(tableBandScreenPoint(entity, 'column', 4));
 
       expect(getTableCellCursor()?.draft).toBe('=E1:E5');
-      expect(getTableCellCursor()?.position.colId).toBe(entity.model.columns[0].id);
+      expect(getTableCellCursor()?.position.colId).toBe(activeTableModel(entity).columns[0].id);
       expect(onCommitPending).not.toHaveBeenCalled();
     });
 
@@ -342,7 +343,7 @@ describe('🔴 ADR-754 — υπόδειξη κελιού με το ποντίκ�
       pressOn(E4());
 
       expect(onCommitPending).toHaveBeenCalledTimes(1);
-      expect(getTableCellCursor()?.position.colId).toBe(entity.model.columns[4].id);
+      expect(getTableCellCursor()?.position.colId).toBe(activeTableModel(entity).columns[4].id);
     });
 
     it('🔴 τύπος αλλά ΚΑΝΕΝΑ εστιασμένο πεδίο ⇒ κανονικός δρόμος', () => {
@@ -363,7 +364,7 @@ describe('🔴 ADR-754 — υπόδειξη κελιού με το ποντίκ�
       writeFormula('=A12', 3);
       pressOn(E4());
 
-      expect(getTableCellCursor()?.position.colId).toBe(entity.model.columns[4].id);
+      expect(getTableCellCursor()?.position.colId).toBe(activeTableModel(entity).columns[4].id);
     });
   });
 });

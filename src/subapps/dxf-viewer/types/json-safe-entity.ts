@@ -54,6 +54,7 @@
 
 import type { TableModel } from './table';
 import type { TableEntity } from './table-entity';
+import type { TableWorksheet } from './table-worksheet';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Ο τύπος
@@ -150,11 +151,27 @@ type AssertNotJsonSafe<T> = IsJsonSafe<T> extends true ? never : true;
 
 /**
  * Η οντότητα πίνακα ταξιδεύει ακέραιη. Αν κάποιος ξαναβάλει `Map` στο `TableEntity` —
- * κατευθείαν ή μέσα από `PersistedTableModel` / `TableEntityGeometry` / `TableLayout` —
- * αυτή η γραμμή δεν μεταγλωττίζεται.
+ * κατευθείαν ή μέσα από `TableWorksheet` / `PersistedTableModel` / `TableEntityGeometry` /
+ * `TableLayout` — αυτή η γραμμή δεν μεταγλωττίζεται.
  */
 const _TABLE_ENTITY_IS_JSON_SAFE: AssertJsonSafe<TableEntity> = true;
 void _TABLE_ENTITY_IS_JSON_SAFE;
+
+/**
+ * 🔴 ADR-833 Φάση 2 — **και το ίδιο το φύλλο εργασίας, ρητά.**
+ *
+ * Ο έλεγχος από πάνω το καλύπτει ήδη *σήμερα*, γιατί το `TableEntity` κρατά τα φύλλα του. Αυτή η
+ * γραμμή φυλά κάτι άλλο: ένα `TableWorksheet` που θα ταξίδευε **χωρίς** την οντότητά του — στο
+ * πρόχειρο (αντιγραφή φύλλου), σε εντολή αναίρεσης πράξης φύλλου (Φάση 4), σε εξαγωγή (Φάση 6).
+ * Ο μοναδικός φύλακας μέσω της οντότητας θα σιωπούσε ακριβώς τη μέρα που το φύλλο θα ζούσε μόνο
+ * του, δηλαδή **τότε** που θα είχε σημασία.
+ *
+ * ⚠️ Ελέγχει επίσης ότι το **branded** `TableWorksheetId` περνά: αν κάποιος «απλοποιήσει» τη
+ * σειρά των κλάδων του {@link JsonSafe} και τα πρωτόγονα πάψουν να δοκιμάζονται πρώτα, το branded
+ * string θα χαρτογραφηθεί πάνω στα `keyof String` και **αυτή** η γραμμή θα κοκκινίσει.
+ */
+const _TABLE_WORKSHEET_IS_JSON_SAFE: AssertJsonSafe<TableWorksheet> = true;
+void _TABLE_WORKSHEET_IS_JSON_SAFE;
 
 /**
  * Το `TableModel` (με τον `Map`) **οφείλει** να απορρίπτεται: είναι το ευρετήριο μνήμης,

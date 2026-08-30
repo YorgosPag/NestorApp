@@ -38,6 +38,7 @@ import type { TableSourceContext } from './table-source-resolver';
 import type { TableFreshnessUnknown } from './table-binding-state';
 import type { Entity } from '../../../types/entities';
 import type { TableEntity } from '../../../types/table-entity';
+import { activeTableBinding } from '../table-worksheet-resolve';
 
 /** Ένας πίνακας του οποίου τα νούμερα **δεν** είναι αυτά της πηγής του. */
 export interface StaleBoundTable {
@@ -67,8 +68,11 @@ export interface BoundTableExportVerdict {
 
 /** Δεμένος πίνακας = οντότητα `table` **με** `binding`. Ο `static` δεν αφορά αυτόν τον έλεγχο. */
 function boundTables(entities: readonly Entity[]): TableEntity[] {
+  // 🔴 ADR-833 Φάση 2 — «δεμένος» σημαίνει **το ενεργό φύλλο** είναι δεμένο: ο δεσμός μετακόμισε
+  // μέσα στο φύλλο, γιατί ό,τι αναγεννά **γραμμές** ανήκει στο φύλλο που τις κρατά.
   return entities.filter(
-    (entity): entity is TableEntity => entity.type === 'table' && (entity as TableEntity).binding !== undefined,
+    (entity): entity is TableEntity =>
+      entity.type === 'table' && activeTableBinding(entity as TableEntity) !== undefined,
   );
 }
 
@@ -88,8 +92,9 @@ export function assessBoundTablesForExport(
 
   const tables = boundTables(entities);
   for (const table of tables) {
-    if (table.binding === undefined) continue;
-    const verdict = assessTableFreshness(table.binding, context);
+    const binding = activeTableBinding(table);
+    if (binding === undefined) continue;
+    const verdict = assessTableFreshness(binding, context);
     if (verdict.status === 'stale') {
       stale.push({ entityId: table.id, freshRevision: verdict.freshRevision });
     } else if (verdict.status === 'unknown') {

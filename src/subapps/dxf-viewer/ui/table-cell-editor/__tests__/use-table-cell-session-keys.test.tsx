@@ -19,6 +19,7 @@ import {
 } from '../../../state/table-cell-cursor-store';
 import { tableCursorAt } from '../../../bim/table/table-cell-navigation';
 import type { TableCellCursorMode } from '../../../state/table-cell-cursor-store';
+import { setTableCellCursorById } from '../../../bim/table/__tests__/make-table-entity';
 
 function keyEvent(key: string, mod: Partial<KeyboardEvent> = {}): React.KeyboardEvent<HTMLElement> {
   return {
@@ -66,7 +67,7 @@ describe('useTableCellSessionKeys', () => {
   it('`F2` από πλοήγηση σπέρνει το πρόχειρο από το ΔΕΣΜΕΥΜΕΝΟ κείμενο', () => {
     // Χωρίς αυτό, το `F2` ανοίγει κενό πεδίο και το επόμενο `Tab` σβήνει το κελί — το
     // μετρημένο σφάλμα του βήματος 4, εδώ κλειδωμένο για **δύο** πεδία αντί για ένα.
-    setTableCellCursor('tbl', tableCursorAt('r1', 'c1'), 'nav');
+    setTableCellCursorById('tbl', tableCursorAt('r1', 'c1'), 'nav');
     const { fire } = setup('nav');
     fire(keyEvent('F2'));
     expect(getTableCellCursor()?.mode).toBe('edit');

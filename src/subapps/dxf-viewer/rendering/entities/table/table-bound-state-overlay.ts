@@ -49,6 +49,7 @@ import { stampTableBoundState } from './stamp-table-bound-state';
 import type { StampTableContext } from './stamp-table-layout';
 import type { TableCellLayout, TableColumnLayout } from '../../../bim/table/table-layout-types';
 import type { TableEntity } from '../../../types/table-entity';
+import { activeTableBinding, activeTableModel } from '../../../bim/table/table-worksheet-resolve';
 
 /**
  * Ζωγραφίζει τον δείκτη δεσμού αυτού του πίνακα — ή τίποτα, αν δεν υπάρχει δεσμός.
@@ -67,10 +68,10 @@ export function stampTableBoundStateOverlay(
   columns: readonly TableColumnLayout[],
   visibleCells: readonly TableCellLayout[],
 ): void {
-  const model = entity.model;
+  const model = activeTableModel(entity);
   // 🔴 ADR-769 Δ7 — ο δεσμός ταξιδεύει μαζί: η **γραψιμότητα** της στήλης απαντιέται από το
   // μητρώο **της πηγής**, οπότε η λωρίδα δεν μπορεί να κριθεί από το μοντέλο μόνο του.
-  const strips = boundColumnStripsMm(model, entity.binding, columns);
+  const strips = boundColumnStripsMm(model, activeTableBinding(entity), columns);
   const marks = boundExceptionMarks(model, visibleCells);
   if (strips.length === 0 && marks.length === 0) return;
 

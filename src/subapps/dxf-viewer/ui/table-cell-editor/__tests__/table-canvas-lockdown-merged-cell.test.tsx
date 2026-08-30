@@ -78,6 +78,7 @@ import { BUILTIN_TABLE_STYLE_IDS } from '../../../bim/table/table-style-presets'
 import { useDrawingScaleStore } from '../../../state/drawing-scale-store';
 import type { CellSpan, TableColumn, TableRow } from '../../../types/table';
 import type { TableEntity } from '../../../types/table-entity';
+import { tableWorksheetFields } from '../../../bim/table/__tests__/make-table-entity';
 
 // ── Fixture: ΤΟ ΣΧΗΜΑ ΤΟΥ ΠΡΑΓΜΑΤΙΚΟΥ ΠΙΝΑΚΑ ΤΗΣ ΣΚΗΝΗΣ ──────────────────────────
 // Τίτλος στη γραμμή 1 συγχωνευμένος σε **όλες** τις στήλες — ακριβώς το
@@ -102,7 +103,7 @@ const ENTITY: TableEntity = {
   position: { x: 100, y: 200 },
   angleRad: 0,
   styleId: BUILTIN_TABLE_STYLE_IDS.STANDARD,
-  model: toPersistedTableModel(createTableModel({ columns: COLUMNS, rows: ROWS, merges: MERGES })),
+  ...tableWorksheetFields(toPersistedTableModel(createTableModel({ columns: COLUMNS, rows: ROWS, merges: MERGES }))),
 };
 
 function makeLevelManager(entities: readonly TableEntity[]) {
@@ -133,7 +134,7 @@ function renderEditor(entities: readonly TableEntity[] = [ENTITY]) {
 
 /** Το ίδιο που κάνει το `selectWholeAxis`: δρομέας στην **αρχή** του άξονα, σε πλοήγηση. */
 const putCursorAt = (rowId: string, colId: string, mode: 'nav' | 'edit' = 'nav'): void => {
-  act(() => { setTableCellCursor(ENTITY.id, tableCursorAt(rowId, colId), mode); });
+  act(() => { setTableCellCursor(ENTITY, tableCursorAt(rowId, colId), mode); });
 };
 
 beforeEach(() => {

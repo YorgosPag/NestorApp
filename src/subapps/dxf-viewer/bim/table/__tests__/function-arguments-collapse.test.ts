@@ -11,7 +11,6 @@
 
 import {
   __resetTableCellCursorStoreForTests,
-  setTableCellCursor,
 } from '../../../state/table-cell-cursor-store';
 import {
   __resetFunctionArgumentsDialogForTests,
@@ -23,11 +22,12 @@ import {
   setFunctionArgumentValue,
   toggleFunctionArgumentCollapse,
 } from '../../../state/function-arguments-dialog-store';
+import { setTableCellCursorById } from './make-table-entity';
 
 const POSITION = { rowIndex: 0, columnIndex: 0, anchorColumnIndex: 0 };
 
 function openOnSum(): void {
-  setTableCellCursor('table-1', POSITION, 'edit', '=SUM()', 5);
+  setTableCellCursorById('table-1', POSITION, 'edit', '=SUM()', 5);
   openFunctionArgumentsDialog({
     functionName: 'SUM',
     frame: { prefix: '=SUM(', suffix: ')' },

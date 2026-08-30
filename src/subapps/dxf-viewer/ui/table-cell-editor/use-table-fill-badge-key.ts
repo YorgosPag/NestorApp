@@ -27,6 +27,7 @@ import { tryOpenTableFillBadgeMenuByKey } from './table-fill-badge-press';
 import { getTableCellCursor } from '../../state/table-cell-cursor-store';
 import type { TableEntity } from '../../types/table-entity';
 import type { ViewTransform } from '../../rendering/types/Types';
+import type { PersistedTableModel } from '../../types/table';
 
 export interface UseTableFillBadgeKeyParams {
   /** Ο **αναγνώστης** της οντότητας — ποτέ τιμή του render· δες παρακάτω. */
@@ -34,7 +35,7 @@ export interface UseTableFillBadgeKeyParams {
   readonly containerRef: React.RefObject<HTMLDivElement | null>;
   readonly transformRef: React.RefObject<ViewTransform>;
   /** Η **ΜΙΑ** διαδρομή εγγραφής μοντέλου του πίνακα. */
-  readonly commit: (entity: TableEntity, model: TableEntity['model']) => void;
+  readonly commit: (entity: TableEntity, model: PersistedTableModel) => void;
 }
 
 /**

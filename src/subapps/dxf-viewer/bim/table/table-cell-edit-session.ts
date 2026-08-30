@@ -28,7 +28,13 @@ import type { SceneUnits } from '../../utils/scene-units';
 import type { ICommand, ISceneManager } from '../../core/commands';
 import { UpdateEntityCommand } from '../../core/commands/entity-commands/UpdateEntityCommand';
 import type { TextAlign } from '../structural/detail-sheet/detail-sheet-types';
-import type { TableCellTextRun, TableColumnId, TableRowId } from '../../types/table';
+import type {
+  PersistedTableModel,
+  TableBinding,
+  TableCellTextRun,
+  TableColumnId,
+  TableRowId,
+} from '../../types/table';
 import type { TableEntity } from '../../types/table-entity';
 // 🔴 ADR-753 §28 — η **μία** αναζήτηση αποθηκευμένου κελιού· τα `runs` ταξιδεύουν με το κείμενό
 // τους (δες το πεδίο `TableCellEditTarget.runs`).
@@ -44,6 +50,12 @@ import {
 import type { TableCellLayout, TableRectMm } from './table-layout-types';
 import { cellBaselineYMm } from './table-layout-align';
 import type { TableCellStyle } from './table-style';
+import { activeTableBinding, activeTableModel, resolveWorksheets } from './table-worksheet-resolve';
+import {
+  tableWorksheetsPatch,
+  worksheetsWithActiveModel,
+  worksheetsWithActiveModelAndBinding,
+} from './table-worksheet-write';
 import {
   computeTableEntityGeometryLive,
   tableCellAtWorld,
@@ -210,14 +222,14 @@ function buildEditTarget(
   clickOffsetMm?: number,
 ): TableCellEditTarget {
   const { rect, style } = cell;
-  const runs = findPersistedCell(entity.model, cell.rowId, cell.colId)?.runs;
+  const runs = findPersistedCell(activeTableModel(entity), cell.rowId, cell.colId)?.runs;
   return {
     rowId: cell.rowId,
     colId: cell.colId,
     // ADR-739 Φ.Ζ — **πηγαίο** σε κελί τύπου, κείμενο σε κάθε άλλο. Ό,τι επιστρέφεται εδώ
     // το δείχνουν **και** ο επεξεργαστής μέσα στο κελί **και** η γραμμή τύπων (μέσω του
     // `initialText`): μία ερώτηση, μία απάντηση, καμία πιθανότητα να διαφωνήσουν.
-    text: cellInputText(entity.model, cell.rowId, cell.colId),
+    text: cellInputText(activeTableModel(entity), cell.rowId, cell.colId),
     // 🔴 ADR-753 §28 — διαβασμένα από το **ίδιο** μοντέλο, στην ίδια αναπνοή με το κείμενο.
     // Δες το σχόλιο του πεδίου: χωριστή ανάγνωση σημαίνει δείκτες πάνω σε άλλο κείμενο.
     ...(runs !== undefined && { runs }),
@@ -238,7 +250,7 @@ function buildEditTarget(
     // ⚠️ Κελί συντεταγμένης **δέχεται** πληκτρολόγηση: η γραφή έχει παραλήπτη, απλώς δεν
     // είναι το μοντέλο. Δες `isTableCellTypeable`.
     readOnly: !isTableCellTypeable(
-      resolveTableCellWriteRoute(entity.model, entity.binding, cell.rowId, cell.colId),
+      resolveTableCellWriteRoute(activeTableModel(entity), activeTableBinding(entity), cell.rowId, cell.colId),
     ),
   };
 }
@@ -275,7 +287,7 @@ export function buildTableCellEditCommand(
   // περνά από το `useTableCellWriteBack`. Αν γραφόταν **και** εδώ, ο πίνακας θα κρατούσε
   // αντίγραφο της τιμής δίπλα στην πηγή — δηλαδή θα έσπαγε το Α2 («ΕΝΑΣ ιδιοκτήτης») τη στιγμή
   // ακριβώς που το υλοποιεί.
-  if (resolveTableCellWriteRoute(entity.model, entity.binding, rowId, colId).kind !== 'model') {
+  if (resolveTableCellWriteRoute(activeTableModel(entity), activeTableBinding(entity), rowId, colId).kind !== 'model') {
     return null;
   }
   // 🔴 ADR-739 Φ.Ζ — **η γραφή και ο επαναϋπολογισμός είναι ΕΝΑΣ μετασχηματισμός**, μέσα
@@ -283,7 +295,7 @@ export function buildTableCellEditCommand(
   // δεύτερη εντολή, ένα `Ctrl+Z` θα ανέτρεπε τα αποτελέσματα αφήνοντας τον τύπο — ή το
   // αντίστροφο. Η ατομικότητα βγαίνει δωρεάν από την **καθαρότητα** των δύο συναρτήσεων,
   // ακριβώς όπως η επικόλληση 20 κελιών γίνεται ένα βήμα (δες `buildTableModelCommand`).
-  const recalculated = commitCellWrites(writeCellInput(entity.model, rowId, colId, nextText));
+  const recalculated = commitCellWrites(writeCellInput(activeTableModel(entity), rowId, colId, nextText));
   return buildTableModelCommand(entity, recalculated, sceneManager);
 }
 
@@ -311,11 +323,16 @@ export function buildTableCellEditCommand(
  */
 export function buildTableModelCommand(
   entity: TableEntity,
-  nextModel: TableEntity['model'],
+  nextModel: PersistedTableModel,
   sceneManager: ISceneManager,
 ): ICommand | null {
-  if (nextModel === entity.model) return null;
-  return new UpdateEntityCommand(entity.id, { model: nextModel }, sceneManager);
+  // 🔴 ADR-833 Φάση 2 — ο φύλακας ταυτότητας **ανέβηκε ένα επίπεδο** και λέει ακριβώς το ίδιο:
+  // το `worksheetsWithActiveModel` επιστρέφει τον **ίδιο** πίνακα φύλλων by-reference όταν το
+  // μοντέλο του ενεργού φύλλου δεν άλλαξε. Ό,τι ίσχυε για το `nextModel === entity.model`
+  // ισχύει αυτούσιο εδώ — δες `bim/table/table-worksheet-write.ts`.
+  const worksheets = worksheetsWithActiveModel(entity, nextModel);
+  if (worksheets === resolveWorksheets(entity)) return null;
+  return new UpdateEntityCommand(entity.id, tableWorksheetsPatch(entity, worksheets), sceneManager);
 }
 
 /**
@@ -352,12 +369,18 @@ export function buildTableModelCommand(
  */
 export function buildTableBindingRefreshCommand(
   entity: TableEntity,
-  nextModel: TableEntity['model'],
-  nextBinding: TableEntity['binding'],
+  nextModel: PersistedTableModel,
+  nextBinding: TableBinding | undefined,
   sceneManager: ISceneManager,
 ): ICommand | null {
-  if (nextModel === entity.model && nextBinding === entity.binding) return null;
-  return new UpdateEntityCommand(entity.id, { model: nextModel, binding: nextBinding }, sceneManager);
+  // 🔴 ADR-833 Φάση 2 — τα δύο πεδία ζουν πλέον στο **ίδιο φύλλο**, οπότε η ατομικότητα που
+  // αυτή η συνάρτηση υπάρχει για να εξασφαλίσει έγινε **δομική**: ένα αντικείμενο, μία
+  // αντικατάσταση, αδύνατο να χωριστούν. Ο διπλός φύλακας μένει διπλός — μέσα στο
+  // `worksheetsWithActiveModelAndBinding`, που επιστρέφει την ίδια αναφορά όταν **κανένα** από
+  // τα δύο δεν άλλαξε.
+  const worksheets = worksheetsWithActiveModelAndBinding(entity, nextModel, nextBinding);
+  if (worksheets === resolveWorksheets(entity)) return null;
+  return new UpdateEntityCommand(entity.id, tableWorksheetsPatch(entity, worksheets), sceneManager);
 }
 
 export function buildTableStyleCommand(

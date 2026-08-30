@@ -21,14 +21,24 @@
 
 import { useCallback } from 'react';
 import { getTableCellCursor } from '../../state/table-cell-cursor-store';
+import { tableForCursor } from '../../state/table-cell-cursor-scope';
 import { resolveTableById } from './table-entity-lookup';
 import type { TableEntity } from '../../types/table-entity';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
 
-/** `null` χωρίς ενεργό δρομέα ή όταν η οντότητα δεν υπάρχει πια στη σκηνή. */
+/**
+ * `null` χωρίς ενεργό δρομέα, όταν η οντότητα δεν υπάρχει πια στη σκηνή — **ή όταν ο δρομέας
+ * ανήκει σε φύλλο εργασίας που δεν είναι πια το ενεργό** (ADR-833 Φάση 2).
+ *
+ * 🔴 Ο τρίτος λόγος δεν είναι επιπλέον έλεγχος, είναι **ο ορισμός**: «ο πίνακας του δρομέα»
+ * παύει να υπάρχει τη στιγμή που ο δρομέας δείχνει αλλού. Κάθε καταναλωτής χειρίζεται ήδη το
+ * `null` (`if (!live) return`), οπότε η ασφάλεια έρχεται **χωρίς καμία γραμμή** στα ~15 σημεία
+ * που ζητούν τον ζωντανό πίνακα — και χωρίς κανένα από αυτά να μπορεί να την ξεχάσει.
+ */
 export function useLiveTable(levelManager: LevelManagerLike): () => TableEntity | null {
   return useCallback((): TableEntity | null => {
     const cursor = getTableCellCursor();
-    return cursor ? resolveTableById(levelManager, cursor.entityId) : null;
+    if (!cursor) return null;
+    return tableForCursor(resolveTableById(levelManager, cursor.entityId), cursor);
   }, [levelManager]);
 }

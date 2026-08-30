@@ -14,7 +14,7 @@
  *
  * ```
  *   1. ο ΣΤΟΧΟΣ      →  entityId | θέση | επιλογή | mode        (συνδρομή στο store του δρομέα)
- *   2. το ΜΟΝΤΕΛΟ    →  ταυτότητα του `live.model`              (effect χωρίς deps, με φύλακα)
+ *   2. το ΜΟΝΤΕΛΟ    →  ταυτότητα του `activeTableModel(live)`              (effect χωρίς deps, με φύλακα)
  * ```
  *
  * ⚠️ **Το `draft` λείπει από την υπογραφή επίτηδες** — και είναι ολόκληρη η διαφορά ανάμεσα σε
@@ -90,6 +90,7 @@ import {
 } from './table-format-port';
 import type { PersistedTableModel } from '../../types/table';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
+import { activeTableModel } from '../../bim/table/table-worksheet-resolve';
 
 export interface UseTableFormatActionsParams {
   readonly levelManager: LevelManagerLike;
@@ -134,7 +135,7 @@ export function useTableFormatActions(params: UseTableFormatActionsParams): void
     const cursor = getTableCellCursor();
     const live = cursorTable();
     if (!cursor || !live) return null;
-    return tableFormatScopeOf(live.model, cursor.position, cursor.selection);
+    return tableFormatScopeOf(activeTableModel(live), cursor.position, cursor.selection);
   }, [cursorTable]);
 
   /**
@@ -149,7 +150,7 @@ export function useTableFormatActions(params: UseTableFormatActionsParams): void
     (): ReturnType<TableFormatPort['bounds']> => {
       const live = table();
       const current = scope();
-      return live && current ? tableFormatScopeBounds(live.model, current) : null;
+      return live && current ? tableFormatScopeBounds(activeTableModel(live), current) : null;
     },
     [table, scope],
   );
@@ -163,7 +164,7 @@ export function useTableFormatActions(params: UseTableFormatActionsParams): void
       // 🔴 ADR-739 §63 — **ποιος** πίνακας, μαζί με **τι** μοντέλο: οι δύο μαζί είναι ο στόχος.
       // Χωριστά, το «πού γράφω» ξαναμαντεύεται τη στιγμή της γραφής (δες `FormatTarget.entityId`).
       entityId: live.id,
-      model: live.model,
+      model: activeTableModel(live),
       style: resolveTableStyle(live),
       scope: current,
       layerColors: getAllLayers().map((layer) => layer.color),
@@ -269,7 +270,7 @@ export function useTableFormatActions(params: UseTableFormatActionsParams): void
     ): TableFormatCommitPlan => {
       const live = resolveTableById(levelManager, target.entityId);
       const plan = planTableFormatCommit({
-        liveModel: live?.model ?? null,
+        liveModel: live ? activeTableModel(live) : null,
         baseModel: target.model,
         draftModel: model,
       });
@@ -286,7 +287,7 @@ export function useTableFormatActions(params: UseTableFormatActionsParams): void
     canReset: (): boolean => {
       const live = cursorTable();
       const current = scope();
-      return live !== null && current !== null && canResetTableFormatScope(live.model, current);
+      return live !== null && current !== null && canResetTableFormatScope(activeTableModel(live), current);
     },
     borders,
     merge,
@@ -370,7 +371,8 @@ export function useTableFormatActions(params: UseTableFormatActionsParams): void
   // ── Σήμα 2: το μοντέλο (undo/redo, εξωτερική ενημέρωση). Δες την κεφαλίδα. ──────────────
   const lastModelRef = useRef<PersistedTableModel | null>(null);
   useEffect(() => {
-    const model = table()?.model ?? null;
+    const live = table();
+    const model = live ? activeTableModel(live) : null;
     if (model === lastModelRef.current) return;
     lastModelRef.current = model;
     notifyTableFormatPort();

@@ -40,6 +40,7 @@ import { fingerprintExportableTable } from '../binding/table-binding-fingerprint
 import { buildCoordinateTable } from '../../../systems/topography/deliverables/survey-tables';
 import type { TopoPoint } from '../../../systems/topography/topo-types';
 import type { TableSourceContext } from '../binding/table-source-resolver';
+import { activeTableModel } from '../table-worksheet-resolve';
 import type {
   PersistedTableModel,
   TableBinding,
@@ -90,8 +91,8 @@ describe('Δ1 — το δεμένο κελί είναι read-only εξ ορισ�
   it('μετά από ρητό ξεκλείδωμα, το κελί γράφεται — ο δεσμός όμως ΔΕΝ σπάει', () => {
     const { model } = filled();
     const unlocked = { model: commitCellWrites(overrideBoundCell(model, 'r1', 'cX', 9999)) };
-    expect(isBoundCellWritable(cellOf(unlocked.model, 'r1', 'cX'))).toBe(true);
-    expect(cellOf(unlocked.model, 'r1', 'cX')?.bound?.sourceValue).toBe(1000);
+    expect(isBoundCellWritable(cellOf(activeTableModel(unlocked), 'r1', 'cX'))).toBe(true);
+    expect(cellOf(activeTableModel(unlocked), 'r1', 'cX')?.bound?.sourceValue).toBe(1000);
   });
 
   it('🔴 δεν υπερφορτώνει το `locked` — αυτό δηλώνει την ΑΝΤΙΘΕΤΗ κατεύθυνση', () => {
@@ -171,7 +172,7 @@ describe('Δ2 — το refresh ΔΕΝ πατάει τον άνθρωπο', () =>
     if (conflicted.status !== 'refreshed') throw new Error('expected refreshed');
 
     const again = refreshTableBinding({
-      model: conflicted.model, binding: conflicted.binding, context: ctx([{ ...P1, x: 1111 }, P2]),
+      model: activeTableModel(conflicted), binding: conflicted.binding, context: ctx([{ ...P1, x: 1111 }, P2]),
     });
     // Σιωπηλό σβήσιμο της σύγκρουσης θα ήταν η αντικατάσταση του Δ2, με ένα βήμα καθυστέρηση.
     expect(classifyBoundCell(cellOf(again.model, 'r1', 'cX'))).toBe('conflict');
@@ -197,7 +198,7 @@ describe('«Επαναφορά στην πηγή» — ανά κελί ΚΑΙ σ
     const conflicted = refreshTableBinding({ model: m, binding, context: ctx([{ ...P1, x: 1111 }, P2]) });
     if (conflicted.status !== 'refreshed') throw new Error('expected refreshed');
 
-    const reset = { model: commitCellWrites(resetAllBoundCellsToSource(conflicted.model)) };
+    const reset = { model: commitCellWrites(resetAllBoundCellsToSource(activeTableModel(conflicted))) };
     expect(cellOf(reset.model, 'r1', 'cX')?.value).toBe(1111);
     expect(cellOf(reset.model, 'r2', 'cCode')?.value).toBe('Κ2');
     expect(classifyBoundCell(cellOf(reset.model, 'r1', 'cX'))).toBe('bound');
@@ -216,7 +217,7 @@ describe('«Επαναφορά στην πηγή» — ανά κελί ΚΑΙ σ
     const conflicted = refreshTableBinding({ model: overridden, binding, context: ctx([{ ...P1, x: 1111 }, P2]) });
     if (conflicted.status !== 'refreshed') throw new Error('expected refreshed');
 
-    const kept = keepOverrideOverSource(conflicted.model, 'r1', 'cX');
+    const kept = keepOverrideOverSource(activeTableModel(conflicted), 'r1', 'cX');
     expect(classifyBoundCell(cellOf(kept, 'r1', 'cX'))).toBe('overridden');
     expect(cellOf(kept, 'r1', 'cX')?.value).toBe(9999);
     // Η βάση μένει η **φρέσκια** τιμή: μια μελλοντική αλλαγή της πηγής θα ξαναδηλωθεί.

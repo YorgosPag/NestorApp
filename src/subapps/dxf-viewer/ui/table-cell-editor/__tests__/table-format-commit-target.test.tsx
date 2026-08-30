@@ -21,8 +21,8 @@
  * ```
  *
  * Η δεύτερη είναι **αλλοίωση δεδομένων**: το `mutate` του `useLiveTableMutation` είναι
- * `() => model`, δηλαδή **αγνοεί εντελώς** το `live.model` και επιστρέφει ξένο μοντέλο· και ο
- * φύλακας `nextModel === live.model` δεν σώζει, γιατί πρόκειται για διαφορετικά αντικείμενα.
+ * `() => model`, δηλαδή **αγνοεί εντελώς** το `activeTableModel(live)` και επιστρέφει ξένο μοντέλο· και ο
+ * φύλακας `nextModel === activeTableModel(live)` δεν σώζει, γιατί πρόκειται για διαφορετικά αντικείμενα.
  *
  * @see bim/table/table-format-commit-plan.ts — το κριτήριο
  * @see ui/table-cell-editor/use-table-format-actions.ts — ο εκδότης που δοκιμάζεται εδώ
@@ -57,6 +57,8 @@ import type { PersistedTableModel } from '../../../types/table';
 import type { SceneModel } from '../../../types/scene';
 import type { TableEntity } from '../../../types/table-entity';
 import type { LevelManagerLike } from '../../../hooks/canvas/canvas-click-types';
+import { activeTableModel } from '../../../bim/table/table-worksheet-resolve';
+import { setTableCellCursorById } from '../../../bim/table/__tests__/make-table-entity';
 
 const LEVEL = 'level-1';
 
@@ -99,7 +101,7 @@ function harness(entities: readonly TableEntity[]) {
   const tags = (): Record<string, string> => {
     const out: Record<string, string> = {};
     for (const e of (scene as unknown as { entities: TableEntity[] }).entities) {
-      out[e.id] = (e.model as unknown as { tag: string }).tag;
+      out[e.id] = (activeTableModel(e) as unknown as { tag: string }).tag;
     }
     return out;
   };
@@ -115,7 +117,7 @@ function harness(entities: readonly TableEntity[]) {
 function targetFor(entity: TableEntity): FormatTarget {
   return {
     entityId: entity.id,
-    model: entity.model,
+    model: activeTableModel(entity),
     style: {} as FormatTarget['style'],
     scope: { kind: 'range', bounds: { firstRow: 0, lastRow: 0, firstCol: 0, lastCol: 0 } },
     layerColors: [],
@@ -141,7 +143,7 @@ describe('§63 — η θύρα γράφει στον ΣΤΟΧΟ, ποτέ στο
     // Ο χρήστης άνοιξε τον διάλογο στον Α και μετά μπήκε σε κελί του **Β** (ο διάλογος είναι
     // αιωρούμενος, άρα αυτό είναι απολύτως δυνατό).
     const target = targetFor(tableA);
-    setTableCellCursor('B', { rowId: 'r1', colId: 'c1' }, 'nav');
+    setTableCellCursorById('B', { rowId: 'r1', colId: 'c1' }, 'nav');
 
     const plan = getTableFormatPort()!.commitModel(target, model('Α-πειραγμένο'));
 

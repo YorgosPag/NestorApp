@@ -74,6 +74,8 @@ import { useTableArmedControlClick } from './use-table-armed-control-click';
 import { useTableModelCommit } from './use-table-model-commit';
 import type { TableEntity } from '../../types/table-entity';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
+import { activeTableModel } from '../../bim/table/table-worksheet-resolve';
+import type { PersistedTableModel } from '../../types/table';
 
 export interface UseTableFormatPainterClickParams {
   readonly containerRef: RefObject<HTMLDivElement | null>;
@@ -115,7 +117,7 @@ export function useTableFormatPainterClick(params: UseTableFormatPainterClickPar
 function paintOnce(
   live: TableEntity,
   target: TableFormatPaintTargetState,
-  commitModel: (entity: TableEntity, model: TableEntity['model']) => boolean,
+  commitModel: (entity: TableEntity, model: PersistedTableModel) => boolean,
 ): void {
   // 🔴 §40.8 / Φ4 — **η κατανάλωση προηγείται του αποτελέσματος**, και ο κανόνας «μία χρήση» ζει
   // μέσα στο store. Σε «κλειδωμένο» το φορτίο επιστρέφεται χωρίς να αλλάξει τίποτα.
@@ -126,8 +128,8 @@ function paintOnce(
   // (ADR-739 §52). Καμία αριθμητική εδώ: μια χειρόγραφη μετατροπή ταυτότητας σε δείκτη θα ήταν
   // δεύτερη άποψη για το τι σημαίνει «αυτό το κελί» σε συγχωνευμένη περιοχή.
   const position = tableCursorAt(target.rowId, target.colId);
-  const scope = tableFormatScopeOf(live.model, position, null);
-  const bounds = scope ? tableFormatScopeBounds(live.model, scope) : null;
+  const scope = tableFormatScopeOf(activeTableModel(live), position, null);
+  const bounds = scope ? tableFormatScopeBounds(activeTableModel(live), scope) : null;
   // Μπαγιάτικη ταυτότητα (undo ανάμεσα στην κίνηση και το πάτημα): κανένα βάψιμο, κανένα
   // ιστορικό — αλλά το πινέλο έχει ήδη καταναλωθεί, και είναι το σωστό (§40.8).
   if (!bounds) return;
@@ -135,10 +137,10 @@ function paintOnce(
   // 🔴 ADR-753 §29 — `'flatten'`: το πινέλο βάφει **ξένο** περιεχόμενο. Χωρίς ισοπέδωση, το
   // βάψιμο θα ήταν αόρατο ακριβώς πάνω στα γράμματα που ο χρήστης είχε μορφοποιήσει — και είναι
   // η τεκμηριωμένη συμπεριφορά του Excel («replaces all formatting, doesn't merge»).
-  const nextModel = paintTableFormat(live.model, resolveTableStyle(live), brush, bounds, 'flatten');
+  const nextModel = paintTableFormat(activeTableModel(live), resolveTableStyle(live), brush, bounds, 'flatten');
   // 🔴 Α5 — **ΧΩΡΙΣ ΔΕΥΤΕΡΟ ΦΥΛΑΚΑ «άλλαξε κάτι;», ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ.**
   //
-  // Η πρώτη γραφή έβαζε εδώ `if (nextModel !== live.model)`. Ο έλεγχος με μεταλλάξεις τον
+  // Η πρώτη γραφή έβαζε εδώ `if (nextModel !== activeTableModel(live))`. Ο έλεγχος με μεταλλάξεις τον
   // χαρακτήρισε **αδρανή**: αφαιρέθηκε και **καμία** άγκυρα δεν κοκκίνισε, γιατί ο πραγματικός
   // φύλακας ζει μία στρώση πιο κάτω (`buildTableModelCommand:284` → `null` σε ίδια ταυτότητα)
   // και το `commitModel` επιστρέφει `false` χωρίς να αγγίξει το ιστορικό.
@@ -152,5 +154,5 @@ function paintOnce(
 
   // 🔴 Ο δρομέας μετακινείται **πάντα**, ακόμη και σε άκαρπο βάψιμο: απαντά «πού είμαι», όχι «τι
   // πέτυχε». Κατάσταση `nav` και **κανένα πρόχειρο** — το βάψιμο δεν είναι πρόσκληση για γραφή.
-  setTableCellCursor(live.id, position, 'nav');
+  setTableCellCursor(live, position, 'nav');
 }

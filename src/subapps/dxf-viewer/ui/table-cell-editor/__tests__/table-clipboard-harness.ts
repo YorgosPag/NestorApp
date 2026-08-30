@@ -25,6 +25,8 @@ import type { ICommand } from '../../../core/commands';
 import type { PersistedTableModel } from '../../../types/table';
 import type { TableEntity } from '../../../types/table-entity';
 import type { LevelManagerLike } from '../../../hooks/canvas/canvas-click-types';
+import { tableWorksheetFields } from '../../../bim/table/__tests__/make-table-entity';
+import { activeTableModel } from '../../../bim/table/table-worksheet-resolve';
 
 export const HARNESS_LEVEL_ID = 'level-1';
 export const HARNESS_TABLE_ID = 'table-1';
@@ -42,7 +44,9 @@ export interface TableClipboardHarness {
 export function createTableClipboardHarness(model: PersistedTableModel): TableClipboardHarness {
   const table: TableEntity = {
     ...buildTableEntity({ x: 0, y: 0 }, {}, HARNESS_TABLE_ID, 'layer-0'),
-    model,
+    // ADR-833 Φάση 2 — το μοντέλο μπαίνει στο **φύλλο**· ένα σκέτο `model` δίπλα στα φύλλα θα
+    // ήταν αόρατο (ο αναγνώστης προτιμά τα φύλλα) και το δείγμα θα δοκίμαζε **άδειο** πίνακα.
+    ...tableWorksheetFields(model),
   };
   let scene = { entities: [table] } as unknown as ReturnType<LevelManagerLike['getLevelScene']>;
 
@@ -60,5 +64,11 @@ export function createTableClipboardHarness(model: PersistedTableModel): TableCl
   const commands: ICommand[] = [];
   const execute = (command: ICommand): void => { commands.push(command); command.execute(); };
 
-  return { levelManager, liveTable, execute, commands, currentModel: () => liveTable()!.model };
+  return {
+    levelManager,
+    liveTable,
+    execute,
+    commands,
+    currentModel: () => activeTableModel(liveTable()!),
+  };
 }

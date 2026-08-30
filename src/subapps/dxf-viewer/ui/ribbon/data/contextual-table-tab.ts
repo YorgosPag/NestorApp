@@ -175,5 +175,55 @@ export const CONTEXTUAL_TABLE_TAB: RibbonTab = {
         },
       ],
     },
+    {
+      /**
+       * 🔴 ADR-833 §1.3 — **το panel «Αρχείο»: `.xlsx` μέσα κι έξω.**
+       *
+       * ⚠️ **Ορατό ΠΑΝΤΑ — και αυτό είναι η απόφαση, όχι παράλειψη.** Ο προφανής πειρασμός
+       * ήταν να μπουν τα δύο κουμπιά στο διπλανό panel «Δεδομένα», που μιλά ήδη για την πηγή
+       * του πίνακα. Θα ήταν **λάθος**: εκείνο κουβαλά `visibilityKey: panels.data` και
+       * **εξαφανίζεται σε πίνακα χωρίς δεσμό** (ADR-767) — δηλαδή σε κάθε συνηθισμένο πίνακα,
+       * που είναι ακριβώς αυτός που θέλει να ανοίξει ένα αρχείο. Το «Άνοιγμα» θα φαινόταν
+       * μόνο σε όποιον **ήδη** έχει δεδομένα από αλλού.
+       *
+       * Ούτε μοιράζεται τον φύλακα των «Γραμμές & Στήλες»/«Επιλογή»: εκείνα ρωτούν «ποιας
+       * γραμμής;» και θέλουν δρομέα. Το «Άνοιγμα» δεν ρωτά τίποτα — γεμίζει ολόκληρο τον
+       * πίνακα, όπως το *File ▸ Open* δεν χρειάζεται επιλεγμένο κελί.
+       */
+      id: 'table-properties-file',
+      labelKey: 'ribbon.panels.tableFile',
+      keepsTableCellSession: true,
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'tableProps.openXlsx',
+                labelKey: 'ribbon.commands.tableProps.openXlsx',
+                tooltipKey: 'ribbon.commands.tableProps.openXlsxTooltip',
+                icon: 'table-open-xlsx',
+                commandKey: actions.openXlsx,
+                action: actions.openXlsx,
+              },
+            },
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'tableProps.importXlsx',
+                labelKey: 'ribbon.commands.tableProps.importXlsx',
+                tooltipKey: 'ribbon.commands.tableProps.importXlsxTooltip',
+                icon: 'table-import-xlsx',
+                commandKey: actions.importXlsx,
+                action: actions.importXlsx,
+              },
+            },
+          ],
+        },
+      ],
+    },
   ],
 };

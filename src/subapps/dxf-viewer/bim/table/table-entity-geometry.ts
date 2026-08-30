@@ -52,6 +52,7 @@ import type { Bbox } from '../../types/coordinate-space';
 // (το άλλο στο αδελφό module). Το CHECK 3.28 (jscpd) ΔΕΝ τα έπιανε: `min-tokens: 50`,
 // ο βρόχος είναι ~30 tokens — μετρημένο, γραμμένο στο ADR-793 §4.1.
 import { bboxOf } from '../geometry/shared/xy-bounds';
+import { activeTableModel } from './table-worksheet-resolve';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // 1. Η ΜΙΑ γέφυρα μονάδων
@@ -253,7 +254,7 @@ export function computeTableEntityGeometry(
   const style = resolveTableStyle(entity);
   // Το entity κρατά απλό JSON (Φ.Δ Λύση Α)· ο `Map` είναι παράγωγος και απομνημονευμένος,
   // οπότε οι δύο WeakMaps αλυσιδώνονται: ίδιο persisted ⇒ ίδιο μοντέλο ⇒ ίδια διάταξη.
-  const layout = resolveTableLayout(resolveTableModel(entity.model), style, surfaceHex);
+  const layout = resolveTableLayout(resolveTableModel(activeTableModel(entity)), style, surfaceHex);
   const mmToWorld = tableMmToWorld(drawingScale, sceneUnits);
 
   // TL → TR → BR → BL (δεξιόστροφα στο πλαίσιο του χαρτιού· η αναστροφή y τα κάνει

@@ -27,6 +27,7 @@ import { BUILTIN_TABLE_STYLE_IDS, BUILTIN_TABLE_STYLES } from '../table-style-pr
 import type { TableStyle } from '../table-style';
 import type { TableColumn, TableRow } from '../../../types/table';
 import type { TableEntity } from '../../../types/table-entity';
+import { tableWorksheetFields, type TableEntityTestOverrides } from './make-table-entity';
 
 // ── Εργαλεία ────────────────────────────────────────────────────────────────
 
@@ -54,7 +55,7 @@ const ROWS: TableRow[] = [
  * ⚠️ Το `model` της οντότητας είναι πλέον **απλό JSON** (Φ.Δ Λύση Α)· ο `Map` παράγεται
  * απομνημονευμένα από το `resolveTableModel` μέσα στη γεωμετρία.
  */
-function makeEntity(overrides: Partial<TableEntity> = {}): TableEntity {
+function makeEntity({ model, binding, ...rest }: TableEntityTestOverrides = {}): TableEntity {
   return {
     id: 'tbl_1',
     type: 'table',
@@ -62,8 +63,8 @@ function makeEntity(overrides: Partial<TableEntity> = {}): TableEntity {
     position: { x: 100, y: 200 },
     angleRad: 0,
     styleId: BUILTIN_TABLE_STYLE_IDS.STANDARD,
-    model: toPersistedTableModel(createTableModel({ columns: COLUMNS, rows: ROWS })),
-    ...overrides,
+    ...tableWorksheetFields(model ?? toPersistedTableModel(createTableModel({ columns: COLUMNS, rows: ROWS })), binding),
+    ...rest,
   };
 }
 

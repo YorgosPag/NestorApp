@@ -42,6 +42,8 @@ import {
 } from '../../../state/table-options-store';
 import { createEntityFromTool } from '../../../hooks/drawing/drawing-entity-builders';
 import { generatePreviewEntity } from '../../../hooks/drawing/drawing-preview-generator';
+import { activeTableModel } from '../table-worksheet-resolve';
+import { worksheetsWithActiveModel } from '../table-worksheet-write';
 
 const ORIGIN = { x: 1000, y: -250 };
 
@@ -64,7 +66,11 @@ function withCells(entity: TableEntity): TableEntity {
     ['r1', 'c1', { kind: 'text', value: 'Περιγραφή' }],
     ['r1', 'c2', { kind: 'text', value: 'Ποσότητα' }],
   ];
-  return { ...entity, model: { ...entity.model, cells } };
+  // ADR-833 Φάση 2 — τα κελιά μπαίνουν στο **ενεργό φύλλο**, μέσω του SSoT της γραφής.
+  return {
+    ...entity,
+    worksheets: worksheetsWithActiveModel(entity, { ...activeTableModel(entity), cells }),
+  };
 }
 
 /** Τα κελιά ως λεξικό «γραμμή/στήλη → κείμενο» — συγκρίσιμο πριν και μετά το ταξίδι. */
@@ -87,7 +93,7 @@ const EXPECTED_CELLS: Record<string, string> = {
 
 describe('ADR-739 Φ.Δ — σχήμα προεπιλεγμένου πίνακα', () => {
   it('5 γραμμές × 3 στήλες, ΚΑΝΕΝΑ σπαρμένο κελί', () => {
-    const { model } = makeTable();
+    const model = activeTableModel(makeTable());
     expect(model.rows).toHaveLength(1 + 1 + DEFAULT_TABLE_DATA_ROW_COUNT);
     expect(model.rows).toHaveLength(5);
     expect(model.columns).toHaveLength(DEFAULT_TABLE_COLUMN_COUNT);
@@ -95,14 +101,14 @@ describe('ADR-739 Φ.Δ — σχήμα προεπιλεγμένου πίνακα
   });
 
   it('1 title + 1 header + 3 data — η σειρά της τεκμηρίωσης του ACAD_TABLE', () => {
-    const { model } = makeTable();
+    const model = activeTableModel(makeTable());
     expect(model.rows.map((r) => r.rowClass)).toEqual([
       'title', 'header', 'data', 'data', 'data',
     ]);
   });
 
   it('όλες οι στήλες fixed 40mm (sheet-mm — ποτέ hug σε κενό πίνακα)', () => {
-    const { model } = makeTable();
+    const model = activeTableModel(makeTable());
     for (const column of model.columns) {
       expect(column.sizing).toEqual({ kind: 'fixed', widthMm: DEFAULT_TABLE_COLUMN_WIDTH_MM });
     }
@@ -112,11 +118,11 @@ describe('ADR-739 Φ.Δ — σχήμα προεπιλεγμένου πίνακα
     // Ο πίνακας γεννιόταν με «ΠΙΝΑΚΑΣ» + «Α/Α · Περιγραφή · Ποσότητα». Σε σχεδιαστικό
     // καμβά αυτό δεν είναι διευκόλυνση: είναι εικασία για το τι πίνακα φτιάχνει ο χρήστης
     // (υπόμνημα; ποσότητες; καρτέλα έργου;) και δουλειά σβησίματος πριν την πρώτη εγγραφή.
-    expect(cellTextMap(makeTable().model)).toEqual({});
+    expect(cellTextMap(activeTableModel(makeTable()))).toEqual({});
   });
 
   it('🔴 ΚΑΜΙΑ συγχώνευση — η ζώνη τίτλου είναι πράξη του χρήστη, όχι δώρο', () => {
-    expect(makeTable().model.merges).toEqual([]);
+    expect(activeTableModel(makeTable()).merges).toEqual([]);
   });
 
   it('το κλικ είναι η πάνω-αριστερή γωνία, όρθιος, με το built-in standard στυλ', () => {
@@ -132,7 +138,7 @@ describe('ADR-739 Φ.Δ — σχήμα προεπιλεγμένου πίνακα
   });
 
   it('τα κελιά είναι ακολουθία, ΟΧΙ Map (το θεμέλιο της Λύσης Α)', () => {
-    const { model } = makeTable();
+    const model = activeTableModel(makeTable());
     expect(Array.isArray(model.cells)).toBe(true);
     expect(model.cells instanceof Map).toBe(false);
   });
@@ -144,21 +150,21 @@ describe('ADR-739 Φ.Δ — ο πίνακας επιβιώνει το ταξίδ
   it('JSON round-trip (αποθήκευση / πρόχειρο / λανθάνουσα μνήμη): ΟΛΑ τα κελιά', () => {
     const entity = withCells(makeTable());
     const revived: TableEntity = JSON.parse(JSON.stringify(entity));
-    expect(revived.model.cells).toHaveLength(4);
-    expect(cellTextMap(revived.model)).toEqual(EXPECTED_CELLS);
-    expect(revived.model.rows).toHaveLength(5);
-    expect(revived.model.columns).toHaveLength(3);
+    expect(activeTableModel(revived).cells).toHaveLength(4);
+    expect(cellTextMap(activeTableModel(revived))).toEqual(EXPECTED_CELLS);
+    expect(activeTableModel(revived).rows).toHaveLength(5);
+    expect(activeTableModel(revived).columns).toHaveLength(3);
   });
 
   it('deepClone (το μονοπάτι του undo): ΟΛΑ τα κελιά', () => {
     const cloned = deepClone(withCells(makeTable()));
-    expect(cloned.model.cells).toHaveLength(4);
-    expect(cellTextMap(cloned.model)).toEqual(EXPECTED_CELLS);
+    expect(activeTableModel(cloned).cells).toHaveLength(4);
+    expect(cellTextMap(activeTableModel(cloned))).toEqual(EXPECTED_CELLS);
   });
 
   it('μετά το ταξίδι το μοντέλο ξαναγίνεται δουλεύσιμος Map με τα ίδια κελιά', () => {
     const revived: TableEntity = JSON.parse(JSON.stringify(withCells(makeTable())));
-    const resolved = resolveTableModel(revived.model);
+    const resolved = resolveTableModel(activeTableModel(revived));
     // Ο αριθμός των κελιών του χάρτη είναι το σημείο όπου ένα `{}` θα φαινόταν ως 0.
     expect(resolved.cells.size).toBe(4);
     expect(resolved.rows).toHaveLength(5);
@@ -235,7 +241,7 @@ describe('ADR-739 Φ.Δ — preview ≡ commit', () => {
   it('ΤΟ ΙΔΙΟ αντικείμενο μοντέλου — απόδειξη ότι το mapping είναι ένα', () => {
     // Ταυτότητα, όχι ισότητα: είναι ΚΑΙ ο δείκτης ότι η μνήμη του μοντέλου κρατά, άρα η
     // διάταξη δεν ξαναϋπολογίζεται σε κάθε καρέ του φαντάσματος (§6 / ADR-735).
-    expect(ghost().model).toBe(commit().model);
+    expect(activeTableModel(ghost())).toBe(activeTableModel(commit()));
   });
 
   it('το φάντασμα είναι σημασμένο ως WYSIWYG preview, το commit όχι', () => {
@@ -266,25 +272,25 @@ describe('ADR-739 Φ.Δ — ζωντανές επιλογές του εργαλ�
   it('το store διαβάζεται τη στιγμή του κλικ (event-time, καμία συνδρομή)', () => {
     useTableOptionsStore.getState().setColumnCount(5);
     useTableOptionsStore.getState().setDataRowCount(10);
-    const { model } = buildTableEntityFromLiveOptions(ORIGIN, 'tbl_live', 'lyr_test');
+    const model = activeTableModel(buildTableEntityFromLiveOptions(ORIGIN, 'tbl_live', 'lyr_test'));
     expect(model.columns).toHaveLength(5);
     expect(model.rows).toHaveLength(12); // title + header + 10 data
   });
 
   it('πλατύτερος πίνακας μένει εξίσου κενός — το πλήθος στηλών δεν γεννά περιεχόμενο', () => {
-    const { model } = buildTableEntity(ORIGIN, { columnCount: 5 }, 'tbl_wide', 'lyr_test');
+    const model = activeTableModel(buildTableEntity(ORIGIN, { columnCount: 5 }, 'tbl_wide', 'lyr_test'));
     expect(model.columns).toHaveLength(5);
     expect(model.cells).toHaveLength(0);
     expect(model.merges).toHaveLength(0);
   });
 
   it('εκφυλισμένες επιλογές δεν παράγουν αόρατο πίνακα', () => {
-    const { model } = buildTableEntity(
+    const model = activeTableModel(buildTableEntity(
       ORIGIN,
       { columnCount: 0, dataRowCount: -3, columnWidthMm: 0.001 },
       'tbl_degenerate',
       'lyr_test',
-    );
+    ));
     expect(model.columns).toHaveLength(1);
     expect(model.rows).toHaveLength(2); // title + header, μηδέν δεδομένα
     expect(model.merges).toHaveLength(0);
@@ -325,23 +331,23 @@ describe('ADR-739 Φ.Δ — το φράγμα του σχήματος φράζε
   };
 
   it('NaN και στα τρία μεγέθη ⇒ ΠΡΟΕΠΙΛΟΓΗ (όχι μηδέν, ποτέ εξαίρεση)', () => {
-    const { model } = build({ columnCount: NaN, dataRowCount: NaN, columnWidthMm: NaN });
+    const model = activeTableModel(build({ columnCount: NaN, dataRowCount: NaN, columnWidthMm: NaN }));
     expect(model.columns).toHaveLength(DEFAULT_TABLE_COLUMN_COUNT);
     expect(model.rows).toHaveLength(2 + DEFAULT_TABLE_DATA_ROW_COUNT);
     expect(fixedWidth(model)).toBe(DEFAULT_TABLE_COLUMN_WIDTH_MM);
   });
 
   it('`columnCount: NaN` ΔΕΝ παράγει αόρατη οντότητα (`i < NaN` = ψευδές από την αρχή)', () => {
-    expect(build({ columnCount: NaN }).model.columns.length).toBeGreaterThan(0);
+    expect(activeTableModel(build({ columnCount: NaN })).columns.length).toBeGreaterThan(0);
   });
 
   it('`columnCount: Infinity` ΔΕΝ γίνεται άπειρος βρόχος (πάγωμα καρτέλας + OOM)', () => {
-    expect(build({ columnCount: Number.POSITIVE_INFINITY }).model.columns)
+    expect(activeTableModel(build({ columnCount: Number.POSITIVE_INFINITY })).columns)
       .toHaveLength(DEFAULT_TABLE_COLUMN_COUNT);
   }, 2000);
 
   it('`-Infinity` πέφτει κι αυτό στην προεπιλογή, όχι στο κάτω άκρο', () => {
-    expect(build({ dataRowCount: Number.NEGATIVE_INFINITY }).model.rows)
+    expect(activeTableModel(build({ dataRowCount: Number.NEGATIVE_INFINITY })).rows)
       .toHaveLength(2 + DEFAULT_TABLE_DATA_ROW_COUNT);
   });
 
@@ -362,17 +368,17 @@ describe('ADR-739 Φ.Δ — το φράγμα του σχήματος φράζε
   });
 
   it('τεράστια πλήθη κόβονται στο άνω όριο — «άπειρος βρόχος» και «500.000 στήλες» ταυτίζονται', () => {
-    const { model } = build({ columnCount: 500_000, dataRowCount: 999_999 });
+    const model = activeTableModel(build({ columnCount: 500_000, dataRowCount: 999_999 }));
     expect(model.columns).toHaveLength(MAX_TABLE_COLUMN_COUNT);
     expect(model.rows).toHaveLength(2 + MAX_TABLE_DATA_ROW_COUNT);
   }, 10_000);
 
   it('τεράστιο πλάτος κόβεται στη μεγάλη πλευρά του A0', () => {
-    expect(fixedWidth(build({ columnWidthMm: 1e9 }).model)).toBe(MAX_TABLE_COLUMN_WIDTH_MM);
+    expect(fixedWidth(activeTableModel(build({ columnWidthMm: 1e9 })))).toBe(MAX_TABLE_COLUMN_WIDTH_MM);
   });
 
   it('πεπερασμένες εκφυλισμένες τιμές ΚΟΒΟΝΤΑΙ στα άκρα (δεν πέφτουν σε προεπιλογή)', () => {
-    const { model } = build({ columnCount: 0, dataRowCount: -3, columnWidthMm: 0.001 });
+    const model = activeTableModel(build({ columnCount: 0, dataRowCount: -3, columnWidthMm: 0.001 }));
     expect(model.columns).toHaveLength(1);
     expect(model.rows).toHaveLength(2);
     expect(fixedWidth(model)).toBe(MIN_TABLE_COLUMN_WIDTH_MM);

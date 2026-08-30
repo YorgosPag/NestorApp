@@ -45,6 +45,7 @@ import { useCommandHistory } from '../../core/commands';
 import type { TableCellRangeBounds } from '../../bim/table/table-cell-range';
 import type { TableEntity } from '../../types/table-entity';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
+import { activeTableModel } from '../../bim/table/table-worksheet-resolve';
 
 export interface UseTableMergeActionsParams {
   readonly levelManager: LevelManagerLike;
@@ -80,7 +81,7 @@ export function useTableMergeActions(params: UseTableMergeActionsParams): TableM
 
         // Η ερώτηση μπαίνει **πριν** από κάθε εγγραφή και μόνο όταν έχει νόημα: με μηδέν κελιά
         // προς απώλεια η συγχώνευση εκτελείται σιωπηλά, ίδια σύμβαση με τη μεταφορά περιοχής.
-        const discarded = tableMergeDiscardedCells(live.model, bounds, commandId);
+        const discarded = tableMergeDiscardedCells(activeTableModel(live), bounds, commandId);
         if (discarded > 0 && (await requestTableMergeDiscardConfirm(discarded)) !== 'merge') return;
 
         // Το **στυλ** διαβάζεται μία φορά (δεν εξαρτάται από το μοντέλο)· η **στοίχιση** μέσα
@@ -97,7 +98,7 @@ export function useTableMergeActions(params: UseTableMergeActionsParams): TableM
       resolveState: (bounds) => {
         const live = liveTable();
         return live
-          ? tableMergeState(live.model, bounds)
+          ? tableMergeState(activeTableModel(live), bounds)
           : { merged: false, canMerge: false };
       },
     }),

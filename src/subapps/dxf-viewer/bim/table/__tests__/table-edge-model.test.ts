@@ -46,6 +46,8 @@ import { BUILTIN_TABLE_STYLE_IDS } from '../table-style-presets';
 import type { PersistedTableModel, TableColumn, TableRow } from '../../../types/table';
 import type { TableBorderSpec, TableEdgeEntry, TableEdgeKey } from '../../../types/table-edges';
 import type { TableEntity } from '../../../types/table-entity';
+import { tableWorksheetFields } from './make-table-entity';
+import { activeTableModel } from '../table-worksheet-resolve';
 
 // ── Εργαλεία ────────────────────────────────────────────────────────────────
 
@@ -85,7 +87,7 @@ function makeEntity(model: PersistedTableModel): TableEntity {
     position: { x: 100, y: 200 },
     angleRad: 0,
     styleId: BUILTIN_TABLE_STYLE_IDS.STANDARD,
-    model,
+    ...tableWorksheetFields(model),
   };
 }
 
@@ -165,13 +167,13 @@ describe('JSON round-trip — αυτό ακριβώς κάνουν save/reload �
     const entity = makeEntity(makePersisted(EDGES));
     const revived: TableEntity = JSON.parse(JSON.stringify(entity));
 
-    expect(revived.model.edges).toHaveLength(2);
-    expect(revived.model.edges).toEqual(entity.model.edges);
+    expect(activeTableModel(revived).edges).toHaveLength(2);
+    expect(activeTableModel(revived).edges).toEqual(activeTableModel(entity).edges);
   });
 
   it('είναι ΑΝΑΓΝΩΣΙΜΕΣ μετά την αναβίωση — όχι απλώς παρούσες', () => {
     const revived: TableEntity = JSON.parse(JSON.stringify(makeEntity(makePersisted(EDGES))));
-    const model = resolveTableModel(revived.model);
+    const model = resolveTableModel(activeTableModel(revived));
 
     expect(model.edges.get(tableEdgeKey('H', 'r2', 'c1'))).toEqual(PEN);
     expect(model.edges.get(tableEdgeKey('V', 'r2', TABLE_EDGE_END))).toEqual(OTHER_PEN);

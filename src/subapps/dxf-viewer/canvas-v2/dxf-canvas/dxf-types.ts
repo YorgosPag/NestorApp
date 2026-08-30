@@ -49,6 +49,9 @@ import type { ScaleBarEntity } from '../../types/scale-bar';
 import type { OpeningInfoTagEntity } from '../../types/opening-info-tag';
 // ADR-739 Φ.Γ — γενικός πίνακας για το DXF render pipeline.
 import type { TableEntity } from '../../types/table-entity';
+// ADR-833 §0.1 — τα ονόματα των πεδίων απόδοσης του πίνακα ζουν σε ΕΝΑ σημείο· αυτός ο τύπος
+// τα **παράγει** με `Pick` αντί να τα απαριθμεί τρίτη φορά (βλ. bim/table/table-render-fields.ts).
+import type { TableRenderField } from '../../bim/table/table-render-fields';
 // ADR-651 Φάση Ε — standalone raster image lightweight entity for DXF render pipeline.
 import type { ImageEntity } from '../../types/image';
 // ADR-662 Φάση 2β (Δρόμος Γ) — thin/derived topo surface entity for DXF render pipeline.
@@ -524,15 +527,16 @@ export interface DxfOpeningInfoTag extends DxfEntity {
  * διάταξης και ο adapter — παράγεται κατ' απαίτηση από το `resolveTableModel`
  * (`bim/table/table-model-helpers.ts`), ποτέ δεν αποθηκεύεται. Πλήρης αιτιολόγηση στο
  * `types/table-entity.ts`.
+ *
+ * 🔴 **ADR-833 §0.1** — τα πεδία **δεν απαριθμούνται πια εδώ**. Ήταν η **τρίτη** χειρόγραφη
+ * αντιγραφή της ίδιας λίστας (οι άλλες δύο: `dxf-scene-entity-handlers.ts` και
+ * `dxf-renderer-entity-model.ts`), και τρία ασύνδετα αντίγραφα είναι ακριβώς το σχήμα που
+ * έριξε σιωπηλά το `sourcePath` της εικόνας **με 32/32 tests πράσινα** (ADR-736 §5.3). Πλέον
+ * ο τύπος **παράγεται** από το `TABLE_RENDER_FIELDS`: πρόσθεσε πεδίο εκεί και το ταξιδεύουν
+ * και οι δύο προβολές **και** το δηλώνει αυτός ο τύπος — αυτόματα.
  */
-export interface DxfTable extends DxfEntity {
+export interface DxfTable extends DxfEntity, Pick<TableEntity, TableRenderField> {
   type: 'table';
-  position: TableEntity['position'];
-  angleRad: TableEntity['angleRad'];
-  styleId: TableEntity['styleId'];
-  model: TableEntity['model'];
-  binding?: TableEntity['binding'];
-  breaking?: TableEntity['breaking'];
 }
 
 /**

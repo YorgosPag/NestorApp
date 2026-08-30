@@ -20,7 +20,7 @@
  * σε άλλο μοντέλο σημαίνουν **άλλα κελιά**. Γι' αυτό η γραφή περνά από **φύλακα ταυτότητας**: αν
  * το ζωντανό μοντέλο δεν είναι **το ίδιο by-reference** με εκείνο της στιγμής της απόθεσης, η
  * μεταφορά **εγκαταλείπεται σιωπηλά**. Είναι η ίδια εγγύηση που ήδη προστατεύει το
- * `useLiveTableMutation` (`next === live.model`), εφαρμοσμένη στον **χρόνο** αντί για την τιμή.
+ * `useLiveTableMutation` (`next === activeTableModel(live)`), εφαρμοσμένη στον **χρόνο** αντί για την τιμή.
  *
  * Το σιωπηλά είναι επιλογή: η εναλλακτική —να γράψει πάνω σε μοντέλο που δεν σχεδίασε— είναι
  * ακριβώς η καταστροφή που αυτή η φάση υπάρχει για να αποτρέψει, ενώ το «δεν έγινε τίποτα» είναι
@@ -49,13 +49,15 @@ import { tableCursorAt } from '../../bim/table/table-cell-navigation';
 import type { TableCellRangeBounds } from '../../bim/table/table-cell-range';
 import type { TableRangeTransferPlan } from '../../bim/table/table-range-transfer-types';
 import type { TableEntity } from '../../types/table-entity';
+import { activeTableModel } from '../../bim/table/table-worksheet-resolve';
+import type { PersistedTableModel } from '../../types/table';
 
 /** Ό,τι χρειάζεται η **γραφή** — καθαρά από τη γεωμετρία της σύρσης. */
 export interface TableRangeDropTarget {
   /** Η οντότητα τη στιγμή του πατήματος — η βάση πάνω στην οποία σχεδιάστηκε η μεταφορά. */
   readonly entity: TableEntity;
   /** Η **ΜΙΑ** διαδρομή commit του πίνακα — δες `use-table-model-commit`. */
-  readonly commit: (entity: TableEntity, model: TableEntity['model']) => void;
+  readonly commit: (entity: TableEntity, model: PersistedTableModel) => void;
   /**
    * 🔴 Η **ζωντανή** οντότητα τη στιγμή που ρωτιέται, ποτέ στιγμιότυπο (ADR-040: *«event
    * handlers MUST receive getters, not snapshot values»*). Εδώ δεν είναι απλώς σωστή πρακτική —
@@ -94,7 +96,7 @@ export function completeTableRangeTransfer(
   plan: TableRangeTransferPlan,
   lastFrame: TableRangeTransferPreview | null,
 ): void {
-  const doomed = tableRangeOverwrittenCells(target.entity.model, plan);
+  const doomed = tableRangeOverwrittenCells(activeTableModel(target.entity), plan);
   if (doomed === 0) {
     writeTransfer(target, plan);
     return;
@@ -108,7 +110,7 @@ export function completeTableRangeTransfer(
     if (action !== 'replace') return;
     const atAnswer = target.liveTable();
     // Δες την κεφαλίδα: το σχέδιο ανήκει στη σκηνή που το γέννησε.
-    if (!atDrop || !atAnswer || atAnswer.model !== atDrop.model) return;
+    if (!atDrop || !atAnswer || activeTableModel(atAnswer) !== activeTableModel(atDrop)) return;
     writeTransfer(target, plan);
   });
 }
@@ -127,7 +129,7 @@ export function completeTableRangeTransfer(
  */
 function writeTransfer(target: TableRangeDropTarget, plan: TableRangeTransferPlan): void {
   const { entity, commit } = target;
-  commit(entity, applyTableRangeTransfer(entity.model, plan));
+  commit(entity, applyTableRangeTransfer(activeTableModel(entity), plan));
   selectTransferred(entity, plan.destination);
 }
 
@@ -143,7 +145,7 @@ function writeTransfer(target: TableRangeDropTarget, plan: TableRangeTransferPla
  * κλικ ξεκινά καινούρια), οπότε η περιοχή γράφεται **μετά**.
  */
 function selectTransferred(entity: TableEntity, destination: TableCellRangeBounds): void {
-  const { rows, columns } = entity.model;
+  const { rows, columns } = activeTableModel(entity);
   // Η μεταφορά **δεν** προσθέτει ούτε αφαιρεί γραμμές/στήλες (§36.5: μετάθεση θέσεων, όχι
   // αλλαγή πλήθους), οπότε οι ταυτότητες του αρχικού μοντέλου ισχύουν ακέραιες στο νέο.
   const firstRow = rows[destination.firstRow];
@@ -152,7 +154,7 @@ function selectTransferred(entity: TableEntity, destination: TableCellRangeBound
   const lastCol = columns[destination.lastCol];
   if (!firstRow || !lastRow || !firstCol || !lastCol) return;
 
-  setTableCellCursor(entity.id, tableCursorAt(firstRow.id, firstCol.id), 'nav');
+  setTableCellCursor(entity, tableCursorAt(firstRow.id, firstCol.id), 'nav');
   setTableCellSelection({
     from: { rowId: firstRow.id, colId: firstCol.id },
     to: { rowId: lastRow.id, colId: lastCol.id },

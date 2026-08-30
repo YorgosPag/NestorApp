@@ -20,6 +20,8 @@ import { useDrawingScaleStore } from '../../../state/drawing-scale-store';
 import { createMockSceneManager } from '../../../core/commands/__tests__/mock-scene-manager';
 import type { TableCell, TableColumn, TableRow } from '../../../types/table';
 import type { TableEntity } from '../../../types/table-entity';
+import { tableWorksheetFields, type TableEntityTestOverrides } from './make-table-entity';
+import { activeTableModel } from '../table-worksheet-resolve';
 
 beforeEach(() => {
   useDrawingScaleStore.setState({ drawingScale: 1 });
@@ -40,7 +42,7 @@ const persistedModel = (input: Parameters<typeof createTableModel>[0]) =>
   toPersistedTableModel(createTableModel(input));
 
 /** 60mm × 16mm στο (100, 200) — ίδια γεωμετρία με το `table-entity-interaction.test.ts`. */
-function makeEntity(overrides: Partial<TableEntity> = {}): TableEntity {
+function makeEntity({ model, binding, ...rest }: TableEntityTestOverrides = {}): TableEntity {
   return {
     id: 'tbl_1',
     type: 'table',
@@ -48,8 +50,8 @@ function makeEntity(overrides: Partial<TableEntity> = {}): TableEntity {
     position: { x: 100, y: 200 },
     angleRad: 0,
     styleId: BUILTIN_TABLE_STYLE_IDS.STANDARD,
-    model: persistedModel({ columns: COLUMNS, rows: ROWS }),
-    ...overrides,
+    ...tableWorksheetFields(model ?? persistedModel({ columns: COLUMNS, rows: ROWS }), binding),
+    ...rest,
   };
 }
 
@@ -218,7 +220,7 @@ describe('buildTableCellEditCommand', () => {
 
     command?.execute();
     const updated = sceneManager.store.get(e.id) as TableEntity;
-    expect(updated.model.cells.find(([r, c]) => r === 'r1' && c === 'c1')?.[2].value).toBe('Νέο');
+    expect(activeTableModel(updated).cells.find(([r, c]) => r === 'r1' && c === 'c1')?.[2].value).toBe('Νέο');
   });
 
   it('undo επαναφέρει το προηγούμενο κείμενο', () => {
@@ -230,7 +232,7 @@ describe('buildTableCellEditCommand', () => {
     command.execute();
     command.undo();
     const restored = sceneManager.store.get(e.id) as TableEntity;
-    expect(restored.model.cells.find(([r, c]) => r === 'r1' && c === 'c1')?.[2].value).toBe('Παλιό');
+    expect(activeTableModel(restored).cells.find(([r, c]) => r === 'r1' && c === 'c1')?.[2].value).toBe('Παλιό');
   });
 
   it('νέο κελί (πριν κενό) ⇒ επιστρέφει command, ΟΧΙ null', () => {
@@ -240,15 +242,15 @@ describe('buildTableCellEditCommand', () => {
     expect(command).not.toBeNull();
     command?.execute();
     const updated = sceneManager.store.get(e.id) as TableEntity;
-    expect(updated.model.cells.find(([r, c]) => r === 'r1' && c === 'c1')?.[2].value).toBe('Πρώτο');
+    expect(activeTableModel(updated).cells.find(([r, c]) => r === 'r1' && c === 'c1')?.[2].value).toBe('Πρώτο');
   });
 
   it('το `entity` εισόδου δεν μεταλλάσσεται ποτέ (η ίδια εγγύηση καθαρότητας του `setPersistedCellText`)', () => {
     const e = makeEntity({
       model: persistedModel({ columns: COLUMNS, rows: ROWS, cells: [['r1', 'c1', text('Παλιό')]] }),
     });
-    const before = e.model;
+    const before = activeTableModel(e);
     buildTableCellEditCommand(e, 'r1', 'c1', 'Νέο', createMockSceneManager([e]));
-    expect(e.model).toBe(before);
+    expect(activeTableModel(e)).toBe(before);
   });
 });

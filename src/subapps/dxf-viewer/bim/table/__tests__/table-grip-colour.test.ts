@@ -41,6 +41,7 @@ import {
 } from '../../../config/color-config';
 import type { TableColumn, TableRow } from '../../../types/table';
 import type { TableEntity } from '../../../types/table-entity';
+import { tableWorksheetFields } from './make-table-entity';
 
 beforeEach(() => {
   useDrawingScaleStore.setState({ drawingScale: 1 });
@@ -64,7 +65,7 @@ const entity: TableEntity = {
   position: { x: 0, y: 0 },
   angleRad: 0,
   styleId: BUILTIN_TABLE_STYLE_IDS.STANDARD,
-  model: toPersistedTableModel(createTableModel({ columns: COLUMNS, rows: ROWS })),
+  ...tableWorksheetFields(toPersistedTableModel(createTableModel({ columns: COLUMNS, rows: ROWS }))),
 };
 
 /** `#RRGGBB` → κανάλια. Το SSoT χρωμάτων γράφει πάντα 6ψήφια hex. */

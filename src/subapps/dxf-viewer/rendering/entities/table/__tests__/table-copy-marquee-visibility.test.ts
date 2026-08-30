@@ -20,6 +20,8 @@ import type { TableCellRangeBounds } from '../../../../bim/table/table-cell-rang
 import type { TableCopyMarqueeState } from '../../../../state/table-copy-marquee-store';
 import type { TableColumn, TableRow } from '../../../../types/table';
 import type { TableEntity } from '../../../../types/table-entity';
+import { tableWorksheetFields } from '../../../../bim/table/__tests__/make-table-entity';
+import { activeTableModel } from '../../../../bim/table/table-worksheet-resolve';
 
 const COLUMNS: TableColumn[] = [
   { id: 'c1', sizing: { kind: 'fixed', widthMm: 30 }, valueType: 'text', align: 'left' },
@@ -37,7 +39,7 @@ const ENTITY: TableEntity = {
   position: { x: 0, y: 0 },
   angleRad: 0,
   styleId: BUILTIN_TABLE_STYLE_IDS.STANDARD,
-  model: toPersistedTableModel(createTableModel({ columns: COLUMNS, rows: ROWS })),
+  ...tableWorksheetFields(toPersistedTableModel(createTableModel({ columns: COLUMNS, rows: ROWS }))),
 };
 
 const BOUNDS: TableCellRangeBounds = { firstRow: 0, lastRow: 1, firstCol: 0, lastCol: 1 };
@@ -45,7 +47,7 @@ const BOUNDS: TableCellRangeBounds = { firstRow: 0, lastRow: 1, firstCol: 0, las
 const marqueeFor = (entity: TableEntity, entityId = entity.id): TableCopyMarqueeState => ({
   entityId,
   bounds: BOUNDS,
-  modelRef: entity.model,
+  modelRef: activeTableModel(entity),
   startedAtMs: 0,
 });
 
@@ -70,7 +72,7 @@ describe('🔴 ADR-739 §48 — πότε φαίνονται τα μυρμήγκ�
     // σβήνει χωρίς καμία γραμμή σε καμία διαδρομή εγγραφής, ούτε σημερινή ούτε μελλοντική.
     const edited: TableEntity = {
       ...ENTITY,
-      model: toPersistedTableModel(createTableModel({ columns: COLUMNS, rows: ROWS })),
+      ...tableWorksheetFields(toPersistedTableModel(createTableModel({ columns: COLUMNS, rows: ROWS }))),
     };
     expect(resolveTableCopyMarqueeRect(edited, layoutOf(edited), marqueeFor(ENTITY))).toBeNull();
   });

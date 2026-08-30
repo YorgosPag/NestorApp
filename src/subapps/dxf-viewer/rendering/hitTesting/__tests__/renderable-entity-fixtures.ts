@@ -23,6 +23,7 @@ import type { TableEntity } from '../../../types/table-entity';
 // να χτιστεί με τον κανονικό κατασκευαστή, αλλιώς τα `CellKey` θα ήταν άκυρα.
 import { createTableModel, toPersistedTableModel } from '../../../bim/table/table-model-helpers';
 import { BUILTIN_TABLE_STYLE_IDS } from '../../../bim/table/table-style-presets';
+import { tableWorksheetFields } from '../../../bim/table/__tests__/make-table-entity';
 
 /** Ένα καθαρό, πεπερασμένο bbox — ό,τι παράγει κάθε `compute*Geometry()` για τα BIM. */
 const BBOX = { min: { x: 0, y: 0, z: 0 }, max: { x: 100, y: 50, z: 30 } };
@@ -54,7 +55,11 @@ const TABLE_FIXTURE = {
   position: { x: 0, y: 0 },
   angleRad: 0,
   styleId: BUILTIN_TABLE_STYLE_IDS.STANDARD,
-  model: toPersistedTableModel(
+  // 🔴 ADR-833 Φάση 2 — **φύλλα εργασίας**, όχι σκέτο μοντέλο. Το `entity-json-roundtrip-
+  // coverage.test.ts` κάνει assert πάνω σε αυτό το δείγμα, οπότε αν εδώ έμενε η παλιά μορφή, ο
+  // φρουρός θα δοκίμαζε σχήμα που η παραγωγή **δεν παράγει πια** — δηλαδή θα ήταν πράσινος πάνω
+  // σε λάθος ερώτηση.
+  ...tableWorksheetFields(toPersistedTableModel(
     createTableModel({
       columns: [
         { id: 'c1', sizing: { kind: 'fixed', widthMm: 40 }, valueType: 'text', align: 'left' },
@@ -71,7 +76,7 @@ const TABLE_FIXTURE = {
         ['r2', 'c2', { kind: 'text', value: 12.5 }],
       ],
     }),
-  ),
+  )),
 } satisfies Omit<TableEntity, 'id' | 'type' | 'layerId'>;
 
 /** Τα γεωμετρικά πεδία που ζητά ΚΑΘΕ τύπος από τον `BoundsCalculator`. */

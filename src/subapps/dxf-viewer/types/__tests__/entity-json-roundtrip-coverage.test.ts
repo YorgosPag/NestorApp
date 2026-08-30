@@ -56,6 +56,8 @@ import {
 } from '../../bim/table/table-model-helpers';
 import { BUILTIN_TABLE_STYLE_IDS } from '../../bim/table/table-style-presets';
 import { isTableEntity } from '../table-entity';
+import { activeTableModel } from '../../bim/table/table-worksheet-resolve';
+import { tableWorksheetFields } from '../../bim/table/__tests__/make-table-entity';
 import type { EntityType } from '../base-entity';
 import type { TableEntity } from '../table-entity';
 import type { TableModel } from '../table';
@@ -255,7 +257,7 @@ function makeRealTableEntity(): TableEntity {
     position: { x: 100, y: 200 },
     angleRad: 0,
     styleId: BUILTIN_TABLE_STYLE_IDS.STANDARD,
-    model: toPersistedTableModel(
+    ...tableWorksheetFields(toPersistedTableModel(
       createTableModel({
         columns: [
           { id: 'c1', sizing: { kind: 'fixed', widthMm: 40 }, valueType: 'text', align: 'left' },
@@ -280,7 +282,7 @@ function makeRealTableEntity(): TableEntity {
           ['V', 'r2', '$end', { visible: true, colorHex: '#00aa00', widthMm: 0.13, dashMm: [1, 1] }],
         ],
       }),
-    ),
+    )),
   };
 }
 
@@ -325,8 +327,8 @@ describe('ΠΙΝΑΚΑΣ — με το ΠΡΑΓΜΑΤΙΚΟ σχήμα της ο
 
   it('round-trip + deepClone ταυτοτικά, με ΓΕΜΑΤΑ κελιά (4/4) ΚΑΙ ρητές ακμές (2/2)', () => {
     const entity = makeRealTableEntity();
-    expect(entity.model.cells).toHaveLength(4);
-    expect(entity.model.edges).toHaveLength(2);
+    expect(activeTableModel(entity).cells).toHaveLength(4);
+    expect(activeTableModel(entity).edges).toHaveLength(2);
     expect(findRoundTripDivergences(entity, JSON.parse(JSON.stringify(entity)), 'table')).toEqual([]);
     expect(findRoundTripDivergences(entity, deepClone(entity), 'table')).toEqual([]);
   });
@@ -338,12 +340,22 @@ describe('ΠΙΝΑΚΑΣ — με το ΠΡΑΓΜΑΤΙΚΟ σχήμα της ο
     // απλό αντικείμενο — δηλαδή ο φρουρός θα σιωπούσε ακριβώς όταν χανόταν κάτι.
     // ADR-739 Επίπεδο Β — το `rowLinks` είναι το τρίτο, με την ίδια αρχή «λίστα στο αρχείο,
     // ευρετήριο στη μνήμη»: ο `Map` εδώ είναι ΣΩΣΤΟΣ, αρκεί να μη φτάσει ποτέ στην οντότητα.
-    const withRuntimeModel = { ...makeRealTableEntity(), model: createTableModel({ columns: [], rows: [] }) };
+    //
+    // 🔴 ADR-833 Φάση 2 — **ΚΑΙ ΤΟ ΒΑΘΟΣ ΜΕΓΑΛΩΣΕ**: το μοντέλο ζει πλέον μέσα σε
+    // `worksheets[]`, δηλαδή ο ανιχνευτής πρέπει να διασχίσει **πίνακα αντικειμένων** για να
+    // φτάσει στους `Map`. Ένας ρηχός ανιχνευτής θα έμενε πράσινος ακριβώς επειδή το πεδίο
+    // μετακόμισε — η σιωπή που αυτό το αρχείο υπάρχει για να μην υπάρχει. Το μονοπάτι στο
+    // μήνυμα το **ονομάζει**: `table.worksheets[0].model.cells → Map`.
+    const entity = makeRealTableEntity();
+    const withRuntimeModel = {
+      ...entity,
+      worksheets: [{ ...entity.worksheets[0], model: createTableModel({ columns: [], rows: [] }) }],
+    };
     const paths = findJsonUnsafePaths(withRuntimeModel, 'table');
     expect(paths).toHaveLength(3);
-    expect(paths.some((p) => p.includes('table.model.cells → Map'))).toBe(true);
-    expect(paths.some((p) => p.includes('table.model.edges → Map'))).toBe(true);
-    expect(paths.some((p) => p.includes('table.model.rowLinks → Map'))).toBe(true);
+    expect(paths.some((p) => p.includes('worksheets[0].model.cells → Map'))).toBe(true);
+    expect(paths.some((p) => p.includes('worksheets[0].model.edges → Map'))).toBe(true);
+    expect(paths.some((p) => p.includes('worksheets[0].model.rowLinks → Map'))).toBe(true);
   });
 });
 
@@ -362,8 +374,8 @@ describe('ΤΟ ΚΟΙΝΟ FIXTURE ΤΟΥ ADR-587 — ίδιο σχήμα με τ
     const entity = makeEntityModel('table');
     expect(isTableEntity(entity)).toBe(true);
     if (!isTableEntity(entity)) return; // στένεμα τύπου· το expect από πάνω είναι ο έλεγχος
-    expect(Array.isArray(entity.model.cells)).toBe(true);
-    expect(entity.model.cells.length).toBeGreaterThanOrEqual(2);
+    expect(Array.isArray(activeTableModel(entity).cells)).toBe(true);
+    expect(activeTableModel(entity).cells.length).toBeGreaterThanOrEqual(2);
   });
 
   it('τα κελιά φτάνουν ΣΤΗ ΜΗΧΑΝΗ: το `resolveTableModel` τα ξαναβρίσκει στη θέση τους', () => {
@@ -375,7 +387,7 @@ describe('ΤΟ ΚΟΙΝΟ FIXTURE ΤΟΥ ADR-587 — ίδιο σχήμα με τ
     const entity = makeEntityModel('table');
     expect(isTableEntity(entity)).toBe(true);
     if (!isTableEntity(entity)) return;
-    const model = resolveTableModel(entity.model);
+    const model = resolveTableModel(activeTableModel(entity));
     expect(cellText(getCell(model, 'r1', 'c1'))).toBe('Στοιχείο');
     expect(cellText(getCell(model, 'r2', 'c2'))).toBe('12.5');
   });

@@ -30,6 +30,8 @@ import { clearTableCopyMarquee } from '../../state/table-copy-marquee-store';
 import type { TableEntity } from '../../types/table-entity';
 import type { ICommand } from '../../core/commands';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
+import { activeTableModel } from '../../bim/table/table-worksheet-resolve';
+import type { PersistedTableModel } from '../../types/table';
 
 export interface UseTableModelCommitParams {
   readonly levelManager: LevelManagerLike;
@@ -46,13 +48,13 @@ export interface UseTableModelCommitParams {
  * δεσμευτής εξυπηρετεί και τον καταναλωτή που κρατά την οντότητα σε render (πρόχειρο) και
  * εκείνον που τη διαβάζει με getter (μενού ζωνών).
  */
-export type TableModelCommit = (entity: TableEntity, nextModel: TableEntity['model']) => boolean;
+export type TableModelCommit = (entity: TableEntity, nextModel: PersistedTableModel) => boolean;
 
 export function useTableModelCommit(params: UseTableModelCommitParams): TableModelCommit {
   const { levelManager, execute } = params;
 
   return useCallback(
-    (entity: TableEntity, nextModel: TableEntity['model']): boolean => {
+    (entity: TableEntity, nextModel: PersistedTableModel): boolean => {
       const { currentLevelId, getLevelScene, setLevelScene } = levelManager;
       if (!currentLevelId || !setLevelScene) return false;
       const sceneManager = createLevelSceneManagerAdapter(getLevelScene, setLevelScene, currentLevelId);
@@ -84,7 +86,7 @@ export function useTableModelCommit(params: UseTableModelCommitParams): TableMod
  * ίδιο commit — δηλαδή το ίδιο ακριβώς σχήμα που γέννησε το `useTableModelCommit`, ένα επίπεδο
  * ψηλότερα. Η επανάληψη σταματά εδώ.
  *
- * 🔴 Ο έλεγχος `next === live.model` **δεν είναι βελτιστοποίηση**: οι καθαρές πράξεις του
+ * 🔴 Ο έλεγχος `next === activeTableModel(live)` **δεν είναι βελτιστοποίηση**: οι καθαρές πράξεις του
  * ADR-750 επιστρέφουν το ίδιο αντικείμενο by-reference όταν καμία τιμή δεν αλλάζει, και ένα
  * commit εκεί θα έγραφε βήμα undo που δεν αναιρεί τίποτα — «πάτησα δεύτερη φορά το ίδιο κουμπί
  * και τώρα το `Ctrl+Z` δεν κάνει τίποτα».
@@ -96,7 +98,7 @@ export function useTableModelCommit(params: UseTableModelCommitParams): TableMod
  */
 export function useLiveTableMutation(
   params: UseTableModelCommitParams & { readonly liveTable: () => TableEntity | null },
-): (mutate: (model: TableEntity['model']) => TableEntity['model']) => void {
+): (mutate: (model: PersistedTableModel) => PersistedTableModel) => void {
   const { levelManager, execute, liveTable } = params;
   const commitModel = useTableModelCommit({ levelManager, execute });
 
@@ -104,8 +106,8 @@ export function useLiveTableMutation(
     (mutate) => {
       const live = liveTable();
       if (!live) return;
-      const nextModel = mutate(live.model);
-      if (nextModel === live.model) return;
+      const nextModel = mutate(activeTableModel(live));
+      if (nextModel === activeTableModel(live)) return;
       commitModel(live, nextModel);
     },
     [liveTable, commitModel],

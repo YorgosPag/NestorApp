@@ -44,6 +44,12 @@ import {
 } from '../../types/table-entity';
 import type { TableLayout } from './table-layout-types';
 import { computeTableEntityGeometryLive, tableFrameToWorld } from './table-entity-geometry';
+import { activeTableModel } from './table-worksheet-resolve';
+import {
+  tableWorksheetsPatch,
+  worksheetsWithActiveModel,
+} from './table-worksheet-write';
+import type { PersistedTableModel } from '../../types/table';
 import {
   rectCornerWorld,
   rectEdgeWorld,
@@ -167,9 +173,9 @@ function tableResizeLimits(layout: TableLayout, mmToWorld: number): RectResizeLi
  * εμφανίζονται στη διάταξη (δεν συμβαίνει σε υγιές μοντέλο) μένουν άθικτες αντί να
  * μαντέψουμε πλάτος γι' αυτές.
  */
-function scaleColumns(entity: TableEntity, layout: TableLayout, sx: number): TableEntity['model']['columns'] {
+function scaleColumns(entity: TableEntity, layout: TableLayout, sx: number): PersistedTableModel['columns'] {
   const widthById = new Map(layout.columns.map((c) => [c.id, c.widthMm]));
-  return entity.model.columns.map((col) => {
+  return activeTableModel(entity).columns.map((col) => {
     const widthMm = widthById.get(col.id);
     if (widthMm === undefined) return col;
     return {
@@ -188,9 +194,9 @@ function scaleColumns(entity: TableEntity, layout: TableLayout, sx: number): Tab
  * από το μοντέλο: αλλιώς μια γραμμή που κληρονομεί ύψος από την κλάση της θα κλιμακωνόταν
  * από το `undefined`.
  */
-function scaleRows(entity: TableEntity, layout: TableLayout, sy: number): TableEntity['model']['rows'] {
+function scaleRows(entity: TableEntity, layout: TableLayout, sy: number): PersistedTableModel['rows'] {
   const heightById = new Map(layout.rows.map((r) => [r.id, r.heightMm]));
-  return entity.model.rows.map((row) => {
+  return activeTableModel(entity).rows.map((row) => {
     const heightMm = heightById.get(row.id);
     if (heightMm === undefined) return row;
     return { ...row, heightMm: Math.max(heightMm * sy, MIN_TABLE_ROW_HEIGHT_MM) };
@@ -211,10 +217,10 @@ function scaleTableModel(
   layout: TableLayout,
   sx: number,
   sy: number,
-): TableEntity['model'] | null {
+): PersistedTableModel | null {
   if (sx === 1 && sy === 1) return null;
   return {
-    ...entity.model,
+    ...activeTableModel(entity),
     ...(sx === 1 ? {} : { columns: scaleColumns(entity, layout, sx) }),
     ...(sy === 1 ? {} : { rows: scaleRows(entity, layout, sy) }),
   };
@@ -267,8 +273,11 @@ export function applyTableBoxDrag(
     next.halfWidth / frame.halfWidth,
     next.halfLength / frame.halfLength,
   );
+  // 🔴 ADR-833 Φάση 2 — το μπάλωμα γράφει **φύλλα**, όχι `model`: το πεδίο έφυγε από την
+  // οντότητα, και ένα `{ model }` εδώ θα ήταν μπάλωμα που **δεν πατάει σε τίποτα** — η λαβή θα
+  // σταματούσε να αλλάζει μέγεθος **σιωπηλά**. Ο ΕΝΑΣ γραφέας: `table-worksheet-write.ts`.
   return {
     position: rectCornerWorld(next, TABLE_ANCHOR_CORNER),
-    ...(model ? { model } : {}),
+    ...(model ? tableWorksheetsPatch(entity, worksheetsWithActiveModel(entity, model)) : {}),
   };
 }

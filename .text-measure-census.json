@@ -1,8 +1,8 @@
 {
   "$doc": "ADR-799 Φάση 2 / CHECK 3.64 — ΠΑΡΑΤΗΡΗΣΗ, όχι ευρετικό. Παράγεται από `npm run text-measure:census`.",
   "generatedFrom": {
-    "src/subapps/dxf-viewer/accessibility/__tests__/focus-2d-link-note.test.ts": "c283daa76bc6d85f",
-    "src/subapps/dxf-viewer/bim-3d/converters/__tests__/dxf-table-3d-decompose.test.ts": "3cb5e70c2aa49431",
+    "src/subapps/dxf-viewer/accessibility/__tests__/focus-2d-link-note.test.ts": "259292ea39825371",
+    "src/subapps/dxf-viewer/bim-3d/converters/__tests__/dxf-table-3d-decompose.test.ts": "87824e142c556e08",
     "src/subapps/dxf-viewer/bim-3d/converters/__tests__/glyph-atlas-text-layout.test.ts": "ba850bb7e680d3bd",
     "src/subapps/dxf-viewer/bim-3d/converters/__tests__/glyph-atlas-text-mesh.test.ts": "ca3bbc7a59b7a3b5",
     "src/subapps/dxf-viewer/bim-3d/grips/__tests__/dxf-entity-outline.test.ts": "5a229b394c5f715f",
@@ -14,17 +14,18 @@
     "src/subapps/dxf-viewer/bim/structural/detail-sheet/__tests__/column-detail-schedule.test.ts": "c510b538aece50b2",
     "src/subapps/dxf-viewer/bim/structural/detail-sheet/__tests__/footing-detail-sheet.test.ts": "43d6d158b822fb10",
     "src/subapps/dxf-viewer/bim/structural/detail-sheet/__tests__/slab-detail-sheet.test.ts": "e28a614e27e92c34",
-    "src/subapps/dxf-viewer/bim/table/__tests__/table-binding-export.test.ts": "627caaf9e461d473",
-    "src/subapps/dxf-viewer/bim/table/__tests__/table-bound-readonly.test.ts": "168044a1463c6725",
-    "src/subapps/dxf-viewer/bim/table/__tests__/table-cell-clipping.test.ts": "08fc9a945b761387",
-    "src/subapps/dxf-viewer/bim/table/__tests__/table-cell-edit-session.test.ts": "a66e556de877b1c3",
-    "src/subapps/dxf-viewer/bim/table/__tests__/table-cell-link-hit.test.ts": "cb1122418ea62018",
-    "src/subapps/dxf-viewer/bim/table/__tests__/table-cell-link-index.test.ts": "751efd0e716fb015",
+    "src/subapps/dxf-viewer/bim/table/__tests__/table-binding-export.test.ts": "398f2a6083e53ab7",
+    "src/subapps/dxf-viewer/bim/table/__tests__/table-bound-readonly.test.ts": "6efaac4a2e4c2726",
+    "src/subapps/dxf-viewer/bim/table/__tests__/table-cell-clipping.test.ts": "1993fbfa3f3d2221",
+    "src/subapps/dxf-viewer/bim/table/__tests__/table-cell-edit-session.test.ts": "6ac85da11f2a112b",
+    "src/subapps/dxf-viewer/bim/table/__tests__/table-cell-link-hit.test.ts": "92acf6682853cba6",
+    "src/subapps/dxf-viewer/bim/table/__tests__/table-cell-link-index.test.ts": "8a8f31278d875987",
     "src/subapps/dxf-viewer/bim/table/__tests__/table-cell-link-spans.test.ts": "edc059820ad27e34",
     "src/subapps/dxf-viewer/bim/table/__tests__/table-cell-shrink.test.ts": "4677658c935dc968",
     "src/subapps/dxf-viewer/bim/table/__tests__/table-cell-styled-spans.test.ts": "1c2a26a4807de08f",
     "src/subapps/dxf-viewer/bim/table/__tests__/table-layout-cache-font-tier.test.ts": "7b3996ba9292657c",
     "src/subapps/dxf-viewer/bim/table/__tests__/table-link-export.test.ts": "90601fc9aa347718",
+    "src/subapps/dxf-viewer/bim/table/__tests__/table-worksheet-resolve.test.ts": "4f43184257d37405",
     "src/subapps/dxf-viewer/bim/text/__tests__/text-bounds-sites-parity.test.ts": "6692a23b2000ac10",
     "src/subapps/dxf-viewer/bim/text/__tests__/text-box-horizontal.test.ts": "ba3e3792e77db71a",
     "src/subapps/dxf-viewer/bim/text/__tests__/text-box-multiline.test.ts": "2182181b0ea3bb95",
@@ -38,7 +39,7 @@
     "src/subapps/dxf-viewer/bim/text/__tests__/text-layout-vertical-align.test.ts": "047335166b2710e7",
     "src/subapps/dxf-viewer/canvas-v2/dxf-canvas/__tests__/dxf-paint-trace.test.ts": "08a83fded76b7d5c",
     "src/subapps/dxf-viewer/canvas-v2/dxf-canvas/__tests__/dxf-viewport-culling.test.ts": "c2ada715462c152c",
-    "src/subapps/dxf-viewer/export/formats/__tests__/table-typography-specimen.test.ts": "8148a152cbb62a74",
+    "src/subapps/dxf-viewer/export/formats/__tests__/table-typography-specimen.test.ts": "062173f4a5e257b5",
     "src/subapps/dxf-viewer/hooks/__tests__/grip-computation-text.test.ts": "4e5090cb3bead37f",
     "src/subapps/dxf-viewer/hooks/canvas/__tests__/text-annotation-size-adoption.test.ts": "1c35e5aa8b2fa156",
     "src/subapps/dxf-viewer/rendering/entities/__tests__/text-vertical-anchor.test.ts": "0c7838b8198ab796",
@@ -58,13 +59,14 @@
     "src/subapps/dxf-viewer/text-engine/fonts/__tests__/glyph-tracking.test.ts": "7bf8a830c9ea64b0",
     "src/subapps/dxf-viewer/text-engine/fonts/__tests__/text-advance.test.ts": "c28568e1d061c1db",
     "src/subapps/dxf-viewer/text-engine/fonts/text-advance.ts": "2160ba5677b3dc92",
-    "src/subapps/dxf-viewer/ui/table-cell-editor/__tests__/table-active-cell-move.test.tsx": "30dbc0ac4a4bf3b2",
-    "src/subapps/dxf-viewer/ui/table-cell-editor/__tests__/table-cell-editor-leaves-layout-alone.test.ts": "553e3aa09be73199",
-    "src/subapps/dxf-viewer/ui/table-cell-editor/__tests__/table-double-click-entry.test.tsx": "ad58fa6397b67f04",
-    "src/subapps/dxf-viewer/ui/table-cell-editor/__tests__/table-fill-handle-drag.test.tsx": "0efb6a5d80283f54",
-    "src/subapps/dxf-viewer/ui/table-cell-editor/__tests__/table-format-painter-click.test.tsx": "372c9feeb1b80553",
-    "src/subapps/dxf-viewer/ui/table-cell-editor/__tests__/table-range-transfer-drag.test.ts": "18fe985aa0ea24fb",
-    "src/subapps/dxf-viewer/ui/table-cell-editor/__tests__/use-table-mode-entry.test.tsx": "f5450cbccc40fb2d"
+    "src/subapps/dxf-viewer/ui/table-cell-editor/__tests__/table-active-cell-move.test.tsx": "4900f36d73e7b85c",
+    "src/subapps/dxf-viewer/ui/table-cell-editor/__tests__/table-cell-editor-leaves-layout-alone.test.ts": "73c93180d92d9732",
+    "src/subapps/dxf-viewer/ui/table-cell-editor/__tests__/table-double-click-entry.test.tsx": "b3f8b38be67b8e31",
+    "src/subapps/dxf-viewer/ui/table-cell-editor/__tests__/table-fill-badge-press.test.tsx": "18d4278819e7fd88",
+    "src/subapps/dxf-viewer/ui/table-cell-editor/__tests__/table-fill-handle-drag.test.tsx": "bec5ad4b29ca48e4",
+    "src/subapps/dxf-viewer/ui/table-cell-editor/__tests__/table-format-painter-click.test.tsx": "706f59da7dc94ca6",
+    "src/subapps/dxf-viewer/ui/table-cell-editor/__tests__/table-range-transfer-drag.test.ts": "f8409b5bc5c9de9e",
+    "src/subapps/dxf-viewer/ui/table-cell-editor/__tests__/use-table-mode-entry.test.tsx": "bf0bdaa1482dd0d9"
   },
   "observations": [
     {
@@ -252,6 +254,13 @@
       "dropped": []
     },
     {
+      "file": "src/subapps/dxf-viewer/bim/table/__tests__/table-worksheet-resolve.test.ts",
+      "glyph": 0,
+      "css": 0,
+      "nominal": 2,
+      "dropped": []
+    },
+    {
       "file": "src/subapps/dxf-viewer/bim/text/__tests__/text-bounds-sites-parity.test.ts",
       "glyph": 78,
       "css": 0,
@@ -411,7 +420,7 @@
       "file": "src/subapps/dxf-viewer/services/__tests__/hit-test-entity-model-coverage.test.ts",
       "glyph": 0,
       "css": 0,
-      "nominal": 7,
+      "nominal": 3,
       "dropped": []
     },
     {
@@ -489,6 +498,13 @@
       "glyph": 0,
       "css": 0,
       "nominal": 4,
+      "dropped": []
+    },
+    {
+      "file": "src/subapps/dxf-viewer/ui/table-cell-editor/__tests__/table-fill-badge-press.test.tsx",
+      "glyph": 0,
+      "css": 0,
+      "nominal": 26,
       "dropped": []
     },
     {

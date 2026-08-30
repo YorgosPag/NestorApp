@@ -89,19 +89,15 @@ import {
 import { tableColumnTicks, tableRowTicks } from '../../bim/table/table-cell-reference';
 // ADR-739 Φ.Δ βήμα 2 — ο δρομέας διαβάζεται με getter τη στιγμή του καρέ (ADR-040), ποτέ
 // ως συνδρομή: ο ζωγράφος μένει καθαρό φύλλο.
-import { getTableCellCursor, type TableCellCursorState } from '../../state/table-cell-cursor-store';
+import { type TableCellCursorState } from '../../state/table-cell-cursor-store';
+import { tableCursorFor } from '../../state/table-cell-cursor-scope';
 // ADR-739 §30 — η λωρίδα κάτω από το ποντίκι, με τον ΙΔΙΟ κανόνα: getter τη στιγμή του
 // καρέ, καμία συνδρομή. Ο γραφέας ζητά καρέ μόνο όταν αλλάζει υποδιαίρεση.
 import { getTableIndicatorHover } from '../../state/table-indicator-hover-store';
-// 🔴 ADR-739 §40 — το ⊕ της εισαγωγής (Word parity): ζωγραφίζεται σε **επιλογή** και σε
-// λειτουργία πίνακα, γι' αυτό ζει έξω από το `if (cursor)`.
-import { getTableInsertControl } from '../../state/table-insert-control-store';
-import { stampTableInsertControl } from './table/stamp-table-insert-control';
-// 🔴 ADR-739 §42 — το ⊖ της διαγραφής: ο ζωγράφος, ο στόχος του, και το ορθογώνιο που θα φύγει.
-import { stampTableDeleteControl } from './table/stamp-table-delete-control';
-import { getTableDeleteControl } from '../../state/table-delete-control-store';
-import { tableDeleteSpanRectMm } from '../../bim/table/table-delete-control';
-import { tableIndicatorBandsMm } from '../../bim/table/table-indicator-geometry';
+// 🔴 ADR-739 §40/§42 — τα χειριστήρια-κουμπιά (⊕ εισαγωγής Word-parity, ⊖ διαγραφής):
+// ζωγραφίζονται σε **επιλογή** και σε λειτουργία πίνακα, γι' αυτό ζουν έξω από το `if (cursor)`.
+// ADR-833 §0.2 — ένα import αντί για έξι· το σώμα και τα δύο περιστατικά ζουν στο module.
+import { stampTableChromeControls } from './table/stamp-table-chrome';
 // 🔴 ADR-767 Δ4 — ο δείκτης δεσμού: **λωρίδα ανά δεμένη στήλη** (Δ8) + σημάδι στα κελιά που
 // αποκλίνουν. Ο ίδιος κανόνας ανάγνωσης με κάθε άλλο store εδώ: getter τη στιγμή του καρέ.
 // ⚠️ Ζωγραφίζεται **έξω** από το `if (cursor)` και **έξω** από το `if (selected)`: είναι
@@ -169,7 +165,7 @@ export class TableRenderer extends BaseEntityRenderer {
     // ΕΝΑ σημείο απόφασης για τον δρομέα: και «ποιο κελί πλαισιώνεται» και «ποιο κελί δεν
     // ζωγραφίζεται» βγαίνουν από την ίδια ανάγνωση — δύο αναγνώσεις θα μπορούσαν να δουν
     // διαφορετική κατάσταση μέσα στο ίδιο καρέ.
-    const cursor = selected ? this.cursorOf(e.id) : null;
+    const cursor = selected ? this.cursorOf(e) : null;
     // 🔴 ADR-739 §41 — **ΜΙΑ** αναζήτηση του ενεργού κελιού, **δύο** καταναλωτές: η τρύπα της
     // σκίασης και ο δρομέας. Δύο αναζητήσεις θα ήταν δύο ευκαιρίες να απαντήσουν αλλιώς μέσα
     // στο ίδιο καρέ — δηλαδή σκίαση που τρυπά ένα κελί ενώ το πλαίσιο στέκεται σε άλλο.
@@ -342,58 +338,15 @@ export class TableRenderer extends BaseEntityRenderer {
       stampTableFillBadgeOverlay(rc, layout, e, cursor);
     }
 
-    // 🔴 ADR-739 §40 — **ΤΟ ⊕ ΤΗΣ ΕΙΣΑΓΩΓΗΣ, ΕΞΩ ΑΠΟ ΤΟ `if (cursor)`.**
+    // 🔴 ADR-739 §40/§42 — **τα χειριστήρια-κουμπιά (⊖ διαγραφής, ⊕ εισαγωγής), ΕΞΩ ΑΠΟ ΤΟ
+    // `if (cursor)`**: εμφανίζονται μόλις αγγίξεις τον πίνακα, χωρίς να μπεις μέσα του (Word
+    // parity). Ο φύλακας είναι το `selected` — το ίδιο που ήδη φυλά τον δρομέα πιο πάνω.
     //
-    // Η θέση αυτού του μπλοκ **είναι** η προδιαγραφή, όχι λεπτομέρεια στοίβαξης. Ο Giorgio το
-    // ζήτησε ως full parity με το Word (04/08), όπου το ⊕ εμφανίζεται μόλις αγγίξεις τον
-    // πίνακα — χωρίς να μπεις μέσα του. Μέσα στο `if (cursor)` θα ζωγραφιζόταν **μόνο** μετά
-    // από διπλό κλικ, δηλαδή θα το έβρισκε μόνο όποιος ήδη ξέρει ότι υπάρχει: ακριβώς η
-    // αστοχία ανακάλυψης που το §31.8 μέτρησε ζωντανά δύο φορές.
-    //
-    // Ο φύλακας είναι το `selected` — το ίδιο που ήδη φυλά τον δρομέα λίγες γραμμές πιο πάνω.
-    // Καλύπτει **και τις δύο** καταστάσεις με μία συνθήκη, γιατί σε λειτουργία πίνακα η
-    // οντότητα είναι επιλεγμένη ούτως ή άλλως (`const cursor = selected ? … : null`). Ποια από
-    // τις δύο τρέχει το ξέρει η **γεωμετρία** (`TableInsertControlMode`), όχι ο ζωγράφος: εδώ
-    // ζωγραφίζεται ό,τι απάντησε η σάρωση, στη θέση που εκείνη υπολόγισε.
-    //
-    // Τελευταίο σε ολόκληρη τη διαδρομή, και μετά το φάντασμα: κάθεται **έξω** από το πλέγμα,
-    // άρα δεν σκεπάζει δεδομένα — αλλά τίποτα δεν επιτρέπεται να σκεπάσει **αυτό**, γιατί
-    // είναι το μόνο στοιχείο του πίνακα που λειτουργεί ως κουμπί.
-    if (selected) {
-      // 🔴 ADR-739 §42 — **το ⊖ της διαγραφής, ΠΡΙΝ το ⊕.**
-      //
-      // Η σειρά δεν λύνει επικάλυψη (το ⊕ ζει έξω από τη ζώνη, το ⊖ μέσα της) — δηλώνει
-      // **στοίβαξη του πλυσίματος**: η κόκκινη προεπισκόπηση καλύπτει ζώνη + κενό + πλέγμα,
-      // και τίποτα δεν επιτρέπεται να την αφήσει να περάσει πάνω από το ⊕. Με αντίστροφη
-      // σειρά, ένα ⊖ οπλισμένο στην πρώτη στήλη θα ξέπλενε τον δίσκο της εισαγωγής από δίπλα.
-      //
-      // ⚠️ Το ορθογώνιο υπολογίζεται **εδώ** από τον στόχο που κουβαλά το store, ποτέ από τη
-      // λωρίδα κάτω από το ποντίκι: με τρεις στήλες μαρκαρισμένες φεύγουν τρεις (§27.17), και
-      // η προεπισκόπηση οφείλει να βάψει ό,τι ακριβώς θα σβήσει το πάτημα.
-      const remove = getTableDeleteControl();
-      if (remove?.entityId === e.id) {
-        stampTableDeleteControl(
-          rc,
-          remove.control,
-          tableDeleteSpanRectMm(
-            layout,
-            remove.target.axis,
-            remove.target.firstIndex,
-            remove.target.lastIndex,
-            tableIndicatorBandsMm(rc.pxPerMm),
-          ),
-        );
-      }
-      const insert = getTableInsertControl();
-      // Φιλτραρισμένο ως προς ΑΥΤΟΝ τον πίνακα: δύο πίνακες στη σκηνή δεν μοιράζονται
-      // χειριστήριο — ο ίδιος έλεγχος που κάνει ήδη ο hover των ζωνών και ο δρομέας.
-      if (insert?.entityId === e.id) {
-        stampTableInsertControl(rc, insert.control, {
-          widthMm: layout.widthMm,
-          heightMm: layout.heightMm,
-        });
-      }
-    }
+    // ADR-833 §0.2 — το σώμα μετακόμισε στο `stamp-table-chrome.ts` (ο `TableRenderer` ήταν
+    // στις 494/500 γραμμές, δηλαδή η πύλη μεγέθους θα μπλόκαρε την επόμενη κλήση). Η τομή
+    // είναι σημασιολογική, όχι αριθμητική: εκεί ζει ό,τι ζωγραφίζεται **επειδή ο πίνακας
+    // είναι επιλεγμένος και έξω από το πλέγμα** — και εκεί θα μπει η λωρίδα καρτελών.
+    if (selected) stampTableChromeControls(rc, e.id, layout);
   }
 
   /**
@@ -412,9 +365,12 @@ export class TableRenderer extends BaseEntityRenderer {
    * `Tab` θα ζητούσε πλήρη ανακατασκευή N οντοτήτων. Ο δρομέας υπάρχει ούτως ή άλλως μόνο
    * όσο ο πίνακας είναι επιλεγμένος, άρα η συνθήκη δεν κρύβει τίποτα.
    */
-  private cursorOf(entityId: string): TableCellCursorState | null {
-    const cursor = getTableCellCursor();
-    return cursor && cursor.entityId === entityId ? cursor : null;
+  private cursorOf(entity: TableEntity): TableCellCursorState | null {
+    // 🔴 ADR-833 Φάση 2 — «δικός μου» σημαίνει **ίδιος πίνακας ΚΑΙ ίδιο ενεργό φύλλο**. Ο έλεγχος
+    // δεν γράφεται εδώ: ζει στο `state/table-cell-cursor-scope.ts`, μαζί με τους υπόλοιπους
+    // δρόμους «δρομέας ↔ πίνακας». Χωρίς αυτό, ο ζωγράφος θα σχεδίαζε το πλαίσιο του δρομέα του
+    // φύλλου Α πάνω από τα κελιά του Β — και ο χρήστης θα πληκτρολογούσε εκεί που το βλέπει.
+    return tableCursorFor(entity);
   }
 
   /**

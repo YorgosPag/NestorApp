@@ -39,6 +39,8 @@ import { computeTableCellEditorFrame } from '../table-cell-editor-frame';
 import { cellFontBandPx, cellTextWidthPx } from '../table-cell-text-metrics';
 import type { TableCell, TableColumn, TableRow } from '../../../types/table';
 import type { TableEntity } from '../../../types/table-entity';
+import { tableWorksheetFields } from '../../../bim/table/__tests__/make-table-entity';
+import { activeTableModel } from '../../../bim/table/table-worksheet-resolve';
 
 /** Πολύ μακρύ για στήλη 20 mm σε **κάθε** βαθμίδα μέτρησης — πρέπει να κόβει πάντα. */
 const LONG_TEXT = 'ΠΕΡΙΓΡΑΦΗ ΕΡΓΑΣΙΑΣ ΠΟΛΥ ΜΑΚΡΙΑ ΓΙΑ ΤΟ ΚΕΛΙ ΤΗΣ';
@@ -69,7 +71,7 @@ function entityWith(cell: TableCell): TableEntity {
     position: { x: 0, y: 0 },
     angleRad: 0,
     styleId: BUILTIN_TABLE_STYLE_IDS.STANDARD,
-    model: toPersistedTableModel(modelWith(cell)),
+    ...tableWorksheetFields(toPersistedTableModel(modelWith(cell))),
   };
 }
 
@@ -121,14 +123,14 @@ describe('🔴 ADR-739 Φ.Δ βήμα 6 — ο επεκτεταμένος επε
   it('το ΜΟΝΤΕΛΟ μένει ακέραιο — καμία απώλεια δεδομένων του χρήστη', () => {
     const entity = entityWith(CELL);
     editorFrameFor(entity, LONG_TEXT);
-    expect(getPersistedCellText(entity.model, 'r1', 'c1')).toBe(LONG_TEXT);
+    expect(getPersistedCellText(activeTableModel(entity), 'r1', 'c1')).toBe(LONG_TEXT);
   });
 
   it('🔴 ΜΕΤΑ ΤΟ COMMIT ο πίνακας ξαναδείχνει κομμένο (η επέκταση δεν «κόλλησε» πουθενά)', () => {
     const entity = entityWith(CELL);
     editorFrameFor(entity, `${LONG_TEXT} ΚΑΙ ΑΛΛΟ`);
 
-    const committed = setPersistedCellText(entity.model, 'r1', 'c1', `${LONG_TEXT} ΚΑΙ ΑΛΛΟ`).model;
+    const committed = setPersistedCellText(activeTableModel(entity), 'r1', 'c1', `${LONG_TEXT} ΚΑΙ ΑΛΛΟ`).model;
     const run = layoutTable(modelWith({ kind: 'text', value: `${LONG_TEXT} ΚΑΙ ΑΛΛΟ` }), STANDARD)
       .cells[0]?.texts[0];
 

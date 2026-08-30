@@ -57,6 +57,7 @@ import type { SceneLayer, SceneModel } from '../../../types/scene-types';
 // απλό και το έντονο θα έφταναν σε tier 1 ενώ το πλάγιο θα έμενε σε tier 3 — ο ισχυρισμός
 // θα σύγκρινε **ΔΥΟ ΔΙΑΦΟΡΕΤΙΚΑ ΟΡΓΑΝΑ** και θα ήταν πράσινος για λάθος λόγο (CHECK 3.64).
 import { installStubFontFaces } from '../../../text-engine/fonts/__tests__/_stub-font';
+import { tableWorksheetFields } from '../../../bim/table/__tests__/make-table-entity';
 
 let __restoreFaces: () => void;
 beforeAll(() => { __restoreFaces = installStubFontFaces(); });
@@ -170,7 +171,7 @@ function specimenDxf(rows: readonly SpecimenRow[]): string {
     position: { x: 0, y: 0 },
     angleRad: 0,
     styleId: BUILTIN_TABLE_STYLE_IDS.STANDARD,
-    model: toPersistedTableModel(specimenModel(rows)),
+    ...tableWorksheetFields(toPersistedTableModel(specimenModel(rows))),
   } as TableEntity;
   const scene: SceneModel = {
     entities: [entity],

@@ -45,6 +45,7 @@ import type { ICommand } from '../../../core/commands';
 import type { TableEntity } from '../../../types/table-entity';
 import type { LevelManagerLike } from '../../../hooks/canvas/canvas-click-types';
 import type { ViewTransform } from '../../../rendering/types/Types';
+import { activeTableModel } from '../../../bim/table/table-worksheet-resolve';
 
 const executed: ICommand[] = [];
 
@@ -100,7 +101,7 @@ function createHarness(): Harness {
 
 /** Πόσες στήλες έχει **τώρα** ο πίνακας στη σκηνή — το αποτέλεσμα, όχι η πρόθεση. */
 function columnCount(table: TableEntity): number {
-  return resolveTableModel(table.model).columns.length;
+  return resolveTableModel(activeTableModel(table)).columns.length;
 }
 
 /**

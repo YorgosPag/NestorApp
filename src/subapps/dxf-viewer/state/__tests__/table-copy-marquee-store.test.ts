@@ -26,6 +26,7 @@ import {
 } from '../table-copy-marquee-store';
 import { startMarchingAntsPulse } from '../table-copy-marquee-pulse';
 import type { TableCellRangeBounds } from '../../bim/table/table-cell-range';
+import { setTableCellCursorById } from '../../bim/table/__tests__/make-table-entity';
 
 const BOUNDS: TableCellRangeBounds = { firstRow: 0, lastRow: 1, firstCol: 0, lastCol: 1 };
 const MODEL = { marker: 'v1' } as unknown as Parameters<typeof setTableCopyMarquee>[2];
@@ -40,7 +41,7 @@ beforeEach(() => {
   jest.useFakeTimers();
   __resetTableCellCursorStoreForTests();
   __resetTableCopyMarqueeForTests();
-  setTableCellCursor(ENTITY_ID, tableCursorAt('r1', 'c1'), 'nav');
+  setTableCellCursorById(ENTITY_ID, tableCursorAt('r1', 'c1'), 'nav');
 });
 
 afterEach(() => {
@@ -93,7 +94,7 @@ describe('🔴 ADR-739 §48 — ο παλμός ΕΙΝΑΙ ο φρουρός ζ�
 
   it('🔴 μετάβαση σε ΑΛΛΟΝ πίνακα ⇒ σβήνει', () => {
     setTableCopyMarquee(ENTITY_ID, BOUNDS, MODEL);
-    setTableCellCursor('tbl_other', tableCursorAt('r1', 'c1'), 'nav');
+    setTableCellCursorById('tbl_other', tableCursorAt('r1', 'c1'), 'nav');
     flushFrames(3);
     expect(getTableCopyMarquee()).toBeNull();
   });
@@ -101,7 +102,7 @@ describe('🔴 ADR-739 §48 — ο παλμός ΕΙΝΑΙ ο φρουρός ζ�
   it('🔴 ΑΡΝΗΤΙΚΗ ΑΠΟΔΕΙΞΗ — όσο ο δρομέας ζει στον ΙΔΙΟ πίνακα, το marquee ΕΠΙΒΙΩΝΕΙ', () => {
     // Χωρίς αυτό, ένας φρουρός που σβήνει τα πάντα θα ήταν πράσινος στα δύο από πάνω.
     setTableCopyMarquee(ENTITY_ID, BOUNDS, MODEL);
-    setTableCellCursor(ENTITY_ID, tableCursorAt('r3', 'c2'), 'nav');
+    setTableCellCursorById(ENTITY_ID, tableCursorAt('r3', 'c2'), 'nav');
     flushFrames(60);
     expect(getTableCopyMarquee()).not.toBeNull();
   });

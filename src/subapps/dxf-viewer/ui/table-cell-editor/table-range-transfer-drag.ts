@@ -87,6 +87,7 @@ import type { TableIndicatorCursorRole } from '../../bim/table/table-indicator-c
 import type { TableRangeTransferPlan } from '../../bim/table/table-range-transfer-types';
 import type { TableEntity } from '../../types/table-entity';
 import type { ViewTransform } from '../../rendering/types/Types';
+import { activeTableModel } from '../../bim/table/table-worksheet-resolve';
 
 /**
  * Ό,τι χρειάζεται η χειρονομία για να ζήσει — τη γεωμετρία τη διαβάζει μόνη της, ζωντανά.
@@ -298,7 +299,7 @@ function resolveTransferFrame(
   const held: TableIndicatorCursorRole = intent.copy ? 'range-copy' : 'range-move';
   const geometry = computeTableEntityGeometryLive(entity);
   const asked = tableRangeDropRequest({
-    model: entity.model,
+    model: activeTableModel(entity),
     layout: geometry.layout,
     // ADR-040 — η προβολή διαβάζεται **τη στιγμή του συμβάντος**: ο χρήστης μπορεί να ζουμάρει
     // με τον τροχό ενώ σέρνει.
@@ -309,7 +310,7 @@ function resolveTransferFrame(
   });
   if (!asked.ok) return refusedFrame(entity.id, null);
 
-  const planned = planTableRangeTransfer(entity.model, asked.request);
+  const planned = planTableRangeTransfer(activeTableModel(entity), asked.request);
   if (planned.ok) {
     return {
       cursor: held,
@@ -325,7 +326,7 @@ function resolveTransferFrame(
     };
   }
 
-  const dropped = tableRangeDroppedRect(entity.model, source, asked.request.to);
+  const dropped = tableRangeDroppedRect(activeTableModel(entity), source, asked.request.to);
   if (planned.reason !== 'no-movement') return refusedFrame(entity.id, dropped);
   return {
     cursor: held,

@@ -23,6 +23,7 @@ import {
   setTableCellCursorDraftAt,
 } from '../../../state/table-cell-cursor-store';
 import { useTableCellCommitRequest } from '../../../ui/table-cell-editor/use-table-cell-commit-request';
+import { setTableCellCursorById } from './make-table-entity';
 
 const POSITION = { rowIndex: 2, columnIndex: 3, anchorColumnIndex: 3 };
 
@@ -43,7 +44,7 @@ beforeEach(() => {
 describe('«Δέσμευσε και βγες» — η σειρά ΕΙΝΑΙ το συμβόλαιο', () => {
   it('🔴 δεσμεύει το ΠΡΟΧΕΙΡΟ και μετά κλείνει τη γραφή', () => {
     const committed: string[] = [];
-    setTableCellCursor('table-1', POSITION, 'edit', '=SUM(D1;D2)', 11);
+    setTableCellCursorById('table-1', POSITION, 'edit', '=SUM(D1;D2)', 11);
     const view = mountServer(committed);
 
     requestTableCellCursorCommit();
@@ -54,7 +55,7 @@ describe('«Δέσμευσε και βγες» — η σειρά ΕΙΝΑΙ το
   });
 
   it('🔴 το κελί ΒΓΑΙΝΕΙ από τη γραφή, στο ίδιο κελί', () => {
-    setTableCellCursor('table-1', POSITION, 'edit', '=SUM(D1;D2)', 11);
+    setTableCellCursorById('table-1', POSITION, 'edit', '=SUM(D1;D2)', 11);
     const view = mountServer([]);
 
     requestTableCellCursorCommit();
@@ -68,7 +69,7 @@ describe('«Δέσμευσε και βγες» — η σειρά ΕΙΝΑΙ το
   });
 
   it('νέο `sessionId` ⇒ το `<textarea>` ξεφορτώνεται πραγματικά', () => {
-    setTableCellCursor('table-1', POSITION, 'edit', '=SUM(D1)', 8);
+    setTableCellCursorById('table-1', POSITION, 'edit', '=SUM(D1)', 8);
     const before = getTableCellCursor()?.sessionId ?? 0;
     const view = mountServer([]);
 
@@ -82,7 +83,7 @@ describe('«Δέσμευσε και βγες» — η σειρά ΕΙΝΑΙ το
 describe('Η ΙΔΕΜΠΟΤΙΑ — ένα «OK», ένα βήμα αναίρεσης', () => {
   it('🔴 ένα αίτημα ⇒ ΜΙΑ δέσμευση, όσα render κι αν ακολουθήσουν', () => {
     const committed: string[] = [];
-    setTableCellCursor('table-1', POSITION, 'edit', '=SUM(D1)', 8);
+    setTableCellCursorById('table-1', POSITION, 'edit', '=SUM(D1)', 8);
     const view = mountServer(committed);
 
     requestTableCellCursorCommit();
@@ -95,7 +96,7 @@ describe('Η ΙΔΕΜΠΟΤΙΑ — ένα «OK», ένα βήμα αναίρε�
 
   it('🔴 δρομέας που ΚΟΥΒΑΛΑ αίτημα προηγούμενης συνεδρίας ΔΕΝ ξαναδεσμεύεται στο μοντάρισμα', () => {
     const first: string[] = [];
-    setTableCellCursor('table-1', POSITION, 'edit', '=SUM(D1)', 8);
+    setTableCellCursorById('table-1', POSITION, 'edit', '=SUM(D1)', 8);
     const served = mountServer(first);
     requestTableCellCursorCommit();
     served.rerender();
@@ -105,7 +106,7 @@ describe('Η ΙΔΕΜΠΟΤΙΑ — ένα «OK», ένα βήμα αναίρε�
     // Ο μετρητής **δεν** μηδενίζεται (αύξων για όλη τη ζωή του store). Ένας νέος
     // εξυπηρετητής —ξαναστήσιμο πίνακα, αλλαγή ορόφου— θα έβλεπε τιμή > 0 και, με αφετηρία
     // `0`, θα δέσμευε κελί που **κανείς δεν ζήτησε**.
-    setTableCellCursor('table-1', POSITION, 'edit', 'Σκυρόδεμα C20/25', 16);
+    setTableCellCursorById('table-1', POSITION, 'edit', 'Σκυρόδεμα C20/25', 16);
     const second: string[] = [];
     const fresh = mountServer(second);
     fresh.rerender();
@@ -116,7 +117,7 @@ describe('Η ΙΔΕΜΠΟΤΙΑ — ένα «OK», ένα βήμα αναίρε�
 
 describe('ΟΙ ΑΡΝΗΣΕΙΣ — αίτημα που κανείς δεν θα εξυπηρετούσε δεν γεννιέται', () => {
   it('σε πλοήγηση δεν γράφεται αίτημα', () => {
-    setTableCellCursor('table-1', POSITION, 'nav');
+    setTableCellCursorById('table-1', POSITION, 'nav');
     const before = getTableCellCursor();
     requestTableCellCursorCommit();
     expect(getTableCellCursor()).toEqual(before);
@@ -129,7 +130,7 @@ describe('ΟΙ ΑΡΝΗΣΕΙΣ — αίτημα που κανείς δεν θα
 
   it('η ζωντανή εγγραφή του διαλόγου ΔΕΝ πυροδοτεί δέσμευση', () => {
     const committed: string[] = [];
-    setTableCellCursor('table-1', POSITION, 'edit', '=SUM()', 5);
+    setTableCellCursorById('table-1', POSITION, 'edit', '=SUM()', 5);
     const view = mountServer(committed);
 
     // Κάθε πληκτρολόγηση/υπόδειξη γράφει πρόχειρο — καμία δεν είναι «OK».

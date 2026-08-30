@@ -91,6 +91,7 @@ import { tableClipboardScope } from './table-cell-key-intent';
 import type { TableEntity } from '../../types/table-entity';
 import type { ICommand } from '../../core/commands';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
+import { activeTableModel } from '../../bim/table/table-worksheet-resolve';
 
 export interface UseTableRangeActionsParams {
   readonly cursor: TableCellCursorState | null;
@@ -135,7 +136,7 @@ export function useTableRangeActions(params: UseTableRangeActionsParams): TableR
    */
   const currentBounds = useCallback((): TableCellRangeBounds | null => {
     if (!cursor || !entity) return null;
-    const model = resolveTableModel(entity.model);
+    const model = resolveTableModel(activeTableModel(entity));
     // 🔴 ADR-739 §48.12 — **ΚΥΡΙΟΛΕΚΤΙΚΑ Η ΙΔΙΑ ΣΥΝΑΡΤΗΣΗ ΠΟΥ ΡΩΤΑ Ο ΖΩΓΡΑΦΟΣ.**
     //
     // Εδώ έγραφε `resolveTableSelectionBounds(model, selection ?? {from: pos, to: pos, kind})` —
@@ -162,7 +163,7 @@ export function useTableRangeActions(params: UseTableRangeActionsParams): TableR
   const extend = useCallback(
     (move: TableCursorMove) => {
       if (!cursor || !entity) return;
-      const model = resolveTableModel(entity.model);
+      const model = resolveTableModel(activeTableModel(entity));
       // Η γωνία που ΜΕΝΕΙ είναι το ενεργό κελί (ή το ήδη σταθερό `from` μιας ανοιχτής
       // επιλογής)· κουνιέται μόνο το `to`. Αυτή ΕΙΝΑΙ η διαφορά `βέλος` ↔ `Shift+βέλος`.
       const current = cursor.selection ?? {
@@ -207,13 +208,13 @@ export function useTableRangeActions(params: UseTableRangeActionsParams): TableR
     // σκεπτικό — γιατί το «ενεργό κελί δεν μετακινείται» και γιατί το είδος είναι `'range'` —
     // ζει εκεί, δίπλα στον κώδικα που το εκτελεί. Εδώ μένει μόνο ο φύλακας «υπάρχει δρομέας;»,
     // που είναι η γνώση **της συνεδρίας**, όχι της πράξης.
-    selectWholeTable(resolveTableModel(entity.model));
+    selectWholeTable(resolveTableModel(activeTableModel(entity)));
   }, [cursor, entity]);
 
   const clearSelection = useCallback(() => {
     const bounds = currentBounds();
     if (!bounds || !entity) return;
-    commitModel(entity, clearTableRange(entity.model, bounds));
+    commitModel(entity, clearTableRange(activeTableModel(entity), bounds));
   }, [currentBounds, entity, commitModel]);
 
   // ── Πρόχειρο ──────────────────────────────────────────────────────────────
@@ -222,7 +223,7 @@ export function useTableRangeActions(params: UseTableRangeActionsParams): TableR
   const rangeAsTsv = useCallback((): string | null => {
     const bounds = currentBounds();
     if (!bounds || !entity) return null;
-    return tableRangeToClipboardText(entity.model, bounds);
+    return tableRangeToClipboardText(activeTableModel(entity), bounds);
   }, [currentBounds, entity]);
 
   /** `true` όταν το πρόχειρο ανήκει στην **περιοχή**· `false` ⇒ ο browser κάνει τη δουλειά. */
@@ -253,7 +254,7 @@ export function useTableRangeActions(params: UseTableRangeActionsParams): TableR
       // **κατά ταυτότητα** το ίδιο ορθογώνιο.
       const bounds = currentBounds();
       if (bounds && entity) {
-        const payload = captureTableClipboard(entity.model, resolveTableStyle(entity), bounds);
+        const payload = captureTableClipboard(activeTableModel(entity), resolveTableStyle(entity), bounds);
         if (payload) setTableClipboard(payload);
       }
       return true;
@@ -275,7 +276,7 @@ export function useTableRangeActions(params: UseTableRangeActionsParams): TableR
       // απόκλισης — και το TSV **δεν** ξέρει όρια, οπότε μια κοινή επιστροφή θα ήταν το να
       // μάθει κάτι που δεν το αφορά.
       const bounds = currentBounds();
-      if (bounds && entity) setTableCopyMarquee(entity.id, bounds, entity.model);
+      if (bounds && entity) setTableCopyMarquee(entity.id, bounds, activeTableModel(entity));
     },
     [writeRangeToClipboard, currentBounds, entity],
   );
@@ -322,6 +323,6 @@ export function resolveTableSelectionSize(
   entity: TableEntity | null,
 ): { readonly rows: number; readonly columns: number } | null {
   if (!cursor || !entity || !cursor.selection) return null;
-  const bounds = resolveTableSelectionBounds(resolveTableModel(entity.model), cursor.selection);
+  const bounds = resolveTableSelectionBounds(resolveTableModel(activeTableModel(entity)), cursor.selection);
   return bounds ? tableRangeSize(bounds) : null;
 }

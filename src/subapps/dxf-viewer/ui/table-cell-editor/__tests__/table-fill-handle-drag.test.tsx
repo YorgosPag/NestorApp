@@ -64,6 +64,8 @@ import type { TableCellRangeBounds } from '../../../bim/table/table-cell-range';
 import type { PersistedTableModel } from '../../../types/table';
 import type { TableEntity } from '../../../types/table-entity';
 import type { Point2D } from '../../../rendering/types/Types';
+import { activeTableModel } from '../../../bim/table/table-worksheet-resolve';
+import { tableWorksheetFields } from '../../../bim/table/__tests__/make-table-entity';
 
 /**
  * 🔴 §36.9 — **ο harness μετακόμισε** στο `table-pointer-harness.tsx` όταν η μετακίνηση
@@ -79,8 +81,8 @@ describe('🔴 ADR-754 §14.9 — η λαβή συμπλήρωσης, από τ�
   const oneCell = (row: number, col: number): TableCellRangeBounds =>
     ({ firstRow: row, lastRow: row, firstCol: col, lastCol: col });
 
-  const rowId = (index: number): string => entity.model.rows[index].id;
-  const colId = (index: number): string => entity.model.columns[index].id;
+  const rowId = (index: number): string => activeTableModel(entity).rows[index].id;
+  const colId = (index: number): string => activeTableModel(entity).columns[index].id;
 
   /** Το κείμενο ενός κελιού στο **μοντέλο που παραδόθηκε στο commit**. */
   const filledText = (row: number, col: number): string => {
@@ -101,7 +103,7 @@ describe('🔴 ADR-754 §14.9 — η λαβή συμπλήρωσης, από τ�
   /** Ο χρήστης έχει το κελί ενεργό, σε **πλοήγηση** — η μόνη κατάσταση όπου ζει η λαβή. */
   function navigateTo(row: number, col: number): void {
     act(() => {
-      setTableCellCursor(entity.id, tableCursorAt(rowId(row), colId(col)), 'nav');
+      setTableCellCursor(entity, tableCursorAt(rowId(row), colId(col)), 'nav');
     });
   }
 
@@ -154,7 +156,7 @@ describe('🔴 ADR-754 §14.9 — η λαβή συμπλήρωσης, από τ�
 
   /** Γράψε κείμενο σε κελί **πριν** το mount — το μοντέλο είναι immutable, η οντότητα νέα. */
   function type(row: number, col: number, text: string): void {
-    entity = { ...entity, model: writeCellInput(entity.model, rowId(row), colId(col), text).model };
+    entity = { ...entity, ...tableWorksheetFields(writeCellInput(activeTableModel(entity), rowId(row), colId(col), text).model) };
   }
 
   /**
@@ -299,7 +301,7 @@ describe('🔴 ADR-754 §14.9 — η λαβή συμπλήρωσης, από τ�
       // ένα τετραγωνάκι που **δεν βλέπει**.
       mount();
       act(() => {
-        setTableCellCursor(entity.id, tableCursorAt(rowId(2), colId(1)), 'edit', '777');
+        setTableCellCursor(entity, tableCursorAt(rowId(2), colId(1)), 'edit', '777');
       });
       fillFrom(oneCell(2, 1), 4, 1);
 

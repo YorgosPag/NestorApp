@@ -68,6 +68,7 @@ import type { RefObject } from 'react';
 import type { TableEntity } from '../../types/table-entity';
 import type { ViewTransform } from '../../rendering/types/Types';
 import type { TableResizeAxis } from '../../bim/table/table-resize-axis';
+import type { PersistedTableModel } from '../../types/table';
 
 // Ο άξονας ζει στο `bim/` και **επανεξάγεται** εδώ: τον χρειάζεται και η καθαρή ένδειξη
 // μεγέθους, που δεν επιτρέπεται να εισάγει από το `ui/`.
@@ -145,9 +146,9 @@ export interface TableAxisResizeParams {
   readonly container: HTMLElement;
   readonly transformRef: RefObject<ViewTransform>;
   /** Ζωντανή προεπισκόπηση, σε κάθε καρέ — καμία καταγραφή αναίρεσης. */
-  readonly preview: (entity: TableEntity, model: TableEntity['model']) => void;
+  readonly preview: (entity: TableEntity, model: PersistedTableModel) => void;
   /** Το τελικό μέγεθος ως **μία** εντολή. */
-  readonly commit: (entity: TableEntity, model: TableEntity['model']) => void;
+  readonly commit: (entity: TableEntity, model: PersistedTableModel) => void;
 }
 
 /**
@@ -163,7 +164,7 @@ export function beginTableAxisResize(
   params: TableAxisResizeParams,
 ): void {
   const { entity, edgeIndex, container, transformRef, preview, commit } = params;
-  const modelAt = (edgeMm: number): TableEntity['model'] | null =>
+  const modelAt = (edgeMm: number): PersistedTableModel | null =>
     axis === 'column'
       ? resizeTableColumnLeftOfEdge(entity, edgeIndex, edgeMm)
       : resizeTableRowAboveEdge(entity, edgeIndex, edgeMm);
@@ -217,8 +218,8 @@ export interface TableAxisResizePress {
   readonly transformRef: RefObject<ViewTransform>;
   /** §26.15 — ό,τι γράφεται δεσμεύεται πριν αλλάξει η διάταξη κάτω από τον δρομέα. */
   readonly commitPending: () => void;
-  readonly preview: (entity: TableEntity, model: TableEntity['model']) => void;
-  readonly commit: (entity: TableEntity, model: TableEntity['model']) => void;
+  readonly preview: (entity: TableEntity, model: PersistedTableModel) => void;
+  readonly commit: (entity: TableEntity, model: PersistedTableModel) => void;
 }
 
 /** `true` όταν το πάτημα ήταν διαχωριστικό και καταναλώθηκε εδώ. */

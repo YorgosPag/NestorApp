@@ -53,6 +53,7 @@ import type { TableCellRangeBounds } from '../../bim/table/table-cell-range';
 import type { TableBorderSpec } from '../../types/table-edges';
 import type { TableEntity } from '../../types/table-entity';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
+import { activeTableModel } from '../../bim/table/table-worksheet-resolve';
 
 export interface UseTableBorderActionsParams {
   readonly levelManager: LevelManagerLike;
@@ -108,7 +109,7 @@ export function useTableBorderActions(params: UseTableBorderActionsParams): Tabl
       },
       canReset: (bounds) => {
         const live = liveTable();
-        return live ? hasExplicitTableRangeBorders(live.model, bounds) : false;
+        return live ? hasExplicitTableRangeBorders(activeTableModel(live), bounds) : false;
       },
       applyDiagonal: (bounds, commandId) => {
         const live = liveTable();
@@ -121,7 +122,7 @@ export function useTableBorderActions(params: UseTableBorderActionsParams): Tabl
       },
       canClearDiagonals: (bounds) => {
         const live = liveTable();
-        return live ? hasTableRangeDiagonals(live.model, bounds) : false;
+        return live ? hasTableRangeDiagonals(activeTableModel(live), bounds) : false;
       },
       resolvePencil: () => {
         const live = liveTable();

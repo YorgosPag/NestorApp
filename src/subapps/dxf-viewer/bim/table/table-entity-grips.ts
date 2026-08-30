@@ -74,6 +74,12 @@ import {
 } from './table-box-grips';
 import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import { rotateEntityGripDrag } from '../grips/grip-math';
+import { activeTableModel } from './table-worksheet-resolve';
+import {
+  tableWorksheetsPatch,
+  worksheetsWithActiveModel,
+} from './table-worksheet-write';
+import type { PersistedTableModel } from '../../types/table';
 import {
   GRIP_TABLE_COLUMN_EDGE_COLOR,
   GRIP_TABLE_ROW_EDGE_COLOR,
@@ -304,7 +310,10 @@ function resizeColumnAtEdge(
 
   const newEdge = tableWorldToFrame(entity, translatePoint(gripWorldPos, delta), mmToWorld);
   const model = resizeTableColumnLeftOfEdge(entity, leftIndex + 1, newEdge.u);
-  return model ? { model } : {};
+  // 🔴 ADR-833 Φάση 2 — το μπάλωμα γράφει **φύλλα**, όχι `model`: το πεδίο έφυγε από την
+  // οντότητα, και ένα `{ model }` εδώ θα ήταν μπάλωμα που **δεν πατάει σε τίποτα** — η λαβή θα
+  // σταματούσε να αλλάζει μέγεθος **σιωπηλά**. Ο ΕΝΑΣ γραφέας: `table-worksheet-write.ts`.
+  return model ? tableWorksheetsPatch(entity, worksheetsWithActiveModel(entity, model)) : {};
 }
 
 /**
@@ -325,21 +334,21 @@ export function resizeTableColumnLeftOfEdge(
   entity: TableEntity,
   edgeIndex: number,
   newEdgeUMm: number,
-): TableEntity['model'] | null {
+): PersistedTableModel | null {
   const { layout } = computeTableEntityGeometryLive(entity);
   const leftIndex = edgeIndex - 1;
   if (leftIndex < 0 || leftIndex >= layout.columns.length) return null;
 
   const widthMm = Math.max(newEdgeUMm - layout.columns[leftIndex].xMm, MIN_TABLE_COLUMN_WIDTH_MM);
   const columnId = layout.columns[leftIndex].id;
-  const columns = entity.model.columns.map((col) =>
+  const columns = activeTableModel(entity).columns.map((col) =>
     col.id === columnId ? { ...col, sizing: { kind: 'fixed' as const, widthMm } } : col,
   );
   // Το `model` του entity είναι απλό JSON (Φ.Δ Λύση Α) — το `columns` όμως είναι πίνακας
   // και στα δύο σχήματα, άρα το spread μένει ακριβώς όπως ήταν. Νέο αντικείμενο ⇒ οι δύο
   // απομνημονεύσεις ακυρώνονται από μόνες τους σε σειρά (`resolveTableModel` →
   // `resolveTableLayout`): η ταυτότητα ΕΙΝΑΙ η έκδοση.
-  return { ...entity.model, columns };
+  return { ...activeTableModel(entity), columns };
 }
 
 /**
@@ -363,7 +372,7 @@ function resizeRowAtEdge(
 
   const newEdge = tableWorldToFrame(entity, translatePoint(gripWorldPos, delta), mmToWorld);
   const model = resizeTableRowAboveEdge(entity, edgeIndex, newEdge.v);
-  return model ? { model } : {};
+  return model ? tableWorksheetsPatch(entity, worksheetsWithActiveModel(entity, model)) : {};
 }
 
 /**
@@ -381,19 +390,19 @@ export function resizeTableRowAboveEdge(
   entity: TableEntity,
   edgeIndex: number,
   newEdgeVMm: number,
-): TableEntity['model'] | null {
+): PersistedTableModel | null {
   const { layout } = computeTableEntityGeometryLive(entity);
   const aboveIndex = edgeIndex - 1;
   if (aboveIndex < 0 || aboveIndex >= layout.rows.length) return null;
 
   const heightMm = Math.max(newEdgeVMm - layout.rows[aboveIndex].yMm, MIN_TABLE_ROW_HEIGHT_MM);
   const rowId = layout.rows[aboveIndex].id;
-  const rows = entity.model.rows.map((row) =>
+  const rows = activeTableModel(entity).rows.map((row) =>
     row.id === rowId ? { ...row, heightMm } : row,
   );
   // Νέο αντικείμενο ⇒ οι δύο απομνημονεύσεις ακυρώνονται σε σειρά (`resolveTableModel` →
   // `resolveTableLayout`): η ταυτότητα ΕΙΝΑΙ η έκδοση. Ίδια σύμβαση με τις στήλες.
-  return { ...entity.model, rows };
+  return { ...activeTableModel(entity), rows };
 }
 
 /**

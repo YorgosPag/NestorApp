@@ -408,6 +408,20 @@
     "replaceButton": "Replace",
     "cancel": "Cancel"
   },
+  "tableXlsxOpen": {
+    "title": "Open Excel file",
+    "message": "«{fileName}» will fill the table. The data it holds now will be replaced.",
+    "undoNote": "This can be undone with Ctrl+Z.",
+    "replaceButton": "Replace content",
+    "newTableButton": "New table beside",
+    "cancel": "Cancel"
+  },
+  "tableXlsx": {
+    "emptyWorkbook": "The file contains no worksheets.",
+    "onlyFirstSheet": "The workbook has {count} worksheets — only the first («{name}») was imported.",
+    "clipped": "Not everything fit: {rows} rows and {columns} columns were left out.",
+    "importedAsNewTable": "The data went into a new table beside — the existing one is untouched."
+  },
   "tableMergeDiscard": {
     "title": "Only the upper-left value will be kept",
     "message": "{count, plural, one {# cell in the range has content that will be discarded.} other {# cells in the range have content that will be discarded.}}",
@@ -2194,7 +2208,8 @@
       "tableFont": "Font",
       "tableAlign": "Alignment",
       "tableNumber": "Number",
-      "tableData": "Data"
+      "tableData": "Data",
+      "tableFile": "File"
     },
     "minimizeStates": {
       "full": "Full Ribbon",
@@ -5585,7 +5600,11 @@
         "deleteColumn": "Delete column",
         "selectAll": "Select all",
         "refreshBinding": "Refresh",
-        "autoFitRowHeight": "AutoFit Row Height"
+        "autoFitRowHeight": "AutoFit Row Height",
+        "openXlsx": "Open",
+        "openXlsxTooltip": "Open an Excel file — the table is filled with its data",
+        "importXlsx": "Import file",
+        "importXlsxTooltip": "Add the worksheets of an Excel file — existing data is kept"
       },
       "tableFormat": {
         "bold": "Bold",

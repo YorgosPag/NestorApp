@@ -17,6 +17,9 @@
  */
 
 import { makeKeySetGuard } from './make-key-set-guard';
+// 🔴 ADR-833 §1.3 — ο χάρτης εντολής→συμβάντος δένεται στο μητρώο συμβάντων: όνομα που δεν
+// δηλώθηκε εκεί **δεν μεταγλωττίζεται** εδώ. Type-only ⇒ μηδέν runtime εξάρτηση.
+import type { DrawingEventMap } from '../../../../systems/events/drawing-event-map';
 import type { TableAlignChoice } from '../../../../bim/table/table-align-ops';
 import type { TableOverflowChoice } from '../../../../bim/table/table-overflow-ops';
 import type { TableIndentStepDirection } from '../../../../bim/table/table-indent-ops';
@@ -183,6 +186,28 @@ export const TABLE_PROPERTIES_RIBBON_KEYS = {
      * panel *Data* → «Download from Source».
      */
     refreshBinding: 'tableProps.actions.refreshBinding',
+    /**
+     * 🔴 ADR-833 §1.3 — **«Άνοιγμα»**: ο πίνακας γίνεται το αρχείο `.xlsx` που θα διαλέξει
+     * ο χρήστης.
+     *
+     * Ζει στην «Ιδιότητες Πίνακα» για τον ίδιο λόγο με την «Ανανέωση»: απαντά στο «τι
+     * **είναι** ο πίνακας» (από πού ήρθε το περιεχόμενό του), όχι στο «πώς φαίνεται». Θέση
+     * του Excel: *File ▸ Open* — ποτέ μέσα στη μορφοποίηση.
+     *
+     * ⚠️ **Δεν** μοιράζεται τον φύλακα του panel «Δεδομένα» (`panels.data`): εκείνο κρύβεται
+     * σε πίνακα **χωρίς δεσμό**, δηλαδή σε κάθε συνηθισμένο πίνακα — και ένα «Άνοιγμα» που
+     * εμφανίζεται μόνο σε ήδη δεμένους πίνακες θα ήταν αόρατο ακριβώς σε όποιον το χρειάζεται.
+     */
+    openXlsx: 'tableProps.actions.openXlsx',
+    /**
+     * 🔴 ADR-833 §1.3 — **«Εισαγωγή αρχείου»**: το `.xlsx` **προστίθεται** σε ό,τι υπάρχει.
+     *
+     * Διακριτή εντολή και όχι σημαία του «Ανοίγματος», γιατί απαντά σε **άλλη** ερώτηση:
+     * εκείνο λέει «*αυτός ο πίνακας είναι πλέον αυτό το αρχείο*», αυτό λέει «*κράτα ό,τι
+     * έχεις και βάλε και τούτο δίπλα*». Δύο ερωτήσεις, δύο κουμπιά — η ίδια διαίρεση που
+     * κάνει το Excel ανάμεσα σε *Open* και *Move or Copy Sheet ▸ To book*.
+     */
+    importXlsx: 'tableProps.actions.importXlsx',
   },
   /**
    * 🔴 Τα δύο panels που **κρύβονται χωρίς δρομέα**.
@@ -349,6 +374,24 @@ export const TABLE_FORMAT_INDENT_DIRECTION: Readonly<
 export const TABLE_FORMAT_CLIPBOARD_COMMAND: Readonly<Record<string, 'cut' | 'copy'>> = {
   [TABLE_FORMAT_RIBBON_KEYS.actions.cut]: 'cut',
   [TABLE_FORMAT_RIBBON_KEYS.actions.copy]: 'copy',
+};
+
+/**
+ * 🔴 ADR-833 §1.3 — **ποιο συμβάν ζητά ποιον επιλογέα**: «Άνοιγμα» ή «Εισαγωγή αρχείου».
+ *
+ * Χάρτης και όχι δύο `if`, για τον ίδιο λόγο με τους τέσσερις από πάνω: η αντιστοίχιση
+ * «κλειδί → πρόθεση» είναι **δεδομένο**, και ένα ξεχασμένο `return` σε αλυσίδα `if` δίνει
+ * κουμπί που εκπέμπει **λάθος** συμβάν — δηλαδή «Εισαγωγή» που αντικαθιστά τον πίνακα.
+ *
+ * ⚠️ Ο τύπος είναι δεμένος στο {@link DrawingEventMap}: ένα συμβάν που δεν δηλώθηκε εκεί δεν
+ * μεταγλωττίζεται εδώ. Χωρίς αυτό, μια ορθογραφική διαφορά στο όνομα θα ήταν συμβάν που
+ * **κανείς δεν ακούει** — κουμπί που δεν κάνει τίποτα, σιωπηλά.
+ */
+export const TABLE_XLSX_COMMAND_EVENT: Readonly<
+  Record<string, Extract<keyof DrawingEventMap, `dxf:table-${string}-xlsx-requested`>>
+> = {
+  [TABLE_PROPERTIES_RIBBON_KEYS.actions.openXlsx]: 'dxf:table-open-xlsx-requested',
+  [TABLE_PROPERTIES_RIBBON_KEYS.actions.importXlsx]: 'dxf:table-import-xlsx-requested',
 };
 
 export const isTableFormatComboboxKey = makeKeySetGuard<TableFormatComboboxKey>([

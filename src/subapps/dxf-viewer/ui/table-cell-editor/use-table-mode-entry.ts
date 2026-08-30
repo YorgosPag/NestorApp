@@ -55,6 +55,7 @@ import {
 } from '../../state/table-cell-cursor-store';
 import { resolveSelectedTable } from './table-entity-lookup';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
+import { activeTableModel } from '../../bim/table/table-worksheet-resolve';
 
 interface UseTableModeEntryParams {
   readonly getSelectedEntityIds: () => readonly string[];
@@ -83,7 +84,7 @@ export function useTableModeEntry(params: UseTableModeEntryParams): TableModeEnt
 
       // Το ίδιο απομνημονευμένο (WeakMap) μονοπάτι που περνά και η γεωμετρία — ίδιο
       // persisted ⇒ ίδιο μοντέλο, καμία δεύτερη αποσειριοποίηση.
-      const position = tableFirstCursorPosition(resolveTableModel(entity.model));
+      const position = tableFirstCursorPosition(resolveTableModel(activeTableModel(entity)));
       if (!position) return false;
 
       // 🔴 ΤΟ ΠΡΟΧΕΙΡΟ ΠΡΕΠΕΙ ΝΑ ΣΠΑΡΘΕΙ — αλλιώς το `F2` ΣΒΗΝΕΙ το κελί.
@@ -106,7 +107,7 @@ export function useTableModeEntry(params: UseTableModeEntryParams): TableModeEnt
         : '';
       // Κανένα `caretIndex`: το `F2` δεν έχει σημείο, άρα ο κέρσορας πάει στο **τέλος** —
       // ίδια σημασιολογία με το `F2` του Excel και με το `Tab`.
-      setTableCellCursor(entity.id, position, mode, draft);
+      setTableCellCursor(entity, position, mode, draft);
       return true;
     },
     [getSelectedEntityIds, levelManager],

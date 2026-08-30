@@ -91,6 +91,8 @@ export const HatchOverlapConfirmDialog = React.lazy(() => import('../ui/dialogs/
 export const TableRangeOverwriteConfirmDialog = React.lazy(() => import('../ui/dialogs/TableRangeOverwriteConfirmDialog').then(mod => ({ default: mod.TableRangeOverwriteConfirmDialog })));
 // ADR-755 — «θα κρατηθεί μόνο η επάνω αριστερή τιμή» (συγχώνευση κελιών πάνω σε περιεχόμενο).
 export const TableMergeDiscardConfirmDialog = React.lazy(() => import('../ui/dialogs/TableMergeDiscardConfirmDialog').then(mod => ({ default: mod.TableMergeDiscardConfirmDialog })));
+// ADR-833 §1.4 — «Άνοιγμα» αρχείου Excel: ο ΜΟΝΟΣ διάλογος του πίνακα με τρεις απαντήσεις.
+export const TableXlsxOpenConfirmDialog = React.lazy(() => import('../ui/dialogs/TableXlsxOpenConfirmDialog').then(mod => ({ default: mod.TableXlsxOpenConfirmDialog })));
 // ADR-763 — «Εισαγωγή συνάρτησης» (fx της γραμμής τύπων), parity με τον ομώνυμο διάλογο του Excel.
 export const TableInsertFunctionDialog = React.lazy(() => import('../ui/dialogs/TableInsertFunctionDialog').then(mod => ({ default: mod.TableInsertFunctionDialog })));
 // 🔴 ADR-739 §61 — «Μορφοποίηση κελιών»: ο **ΕΝΑΣ** ξενιστής των πέντε υποδοχών (δύο βελάκια

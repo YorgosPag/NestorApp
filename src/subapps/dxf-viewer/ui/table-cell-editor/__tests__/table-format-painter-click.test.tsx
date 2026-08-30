@@ -56,6 +56,11 @@ import type { ICommand } from '../../../core/commands';
 import type { TableEntity } from '../../../types/table-entity';
 import type { LevelManagerLike } from '../../../hooks/canvas/canvas-click-types';
 import type { ViewTransform } from '../../../rendering/types/Types';
+import { activeTableModel } from '../../../bim/table/table-worksheet-resolve';
+import {
+  setTableCellCursorById,
+  tableWorksheetFields,
+} from '../../../bim/table/__tests__/make-table-entity';
 
 const executed: ICommand[] = [];
 
@@ -108,10 +113,10 @@ interface Harness {
 function withStampedSourceCell(entity: TableEntity): TableEntity {
   return {
     ...entity,
-    model: {
-      ...entity.model,
+    ...tableWorksheetFields({
+      ...activeTableModel(entity),
       cells: [
-        ...entity.model.cells,
+        ...activeTableModel(entity).cells,
         [
           `r${HEADER_ROW}`,
           'c0',
@@ -122,7 +127,7 @@ function withStampedSourceCell(entity: TableEntity): TableEntity {
           },
         ],
       ],
-    },
+    }),
   } as TableEntity;
 }
 
@@ -196,7 +201,7 @@ describe('🔴 ADR-768 Βήμα 5 — το πινέλο μορφοποίησης
     // Ο δρομέας ζει στον πίνακα-**πηγή**: αυτό είναι που κάνει τη λειτουργία πίνακα ενεργή, και
     // ταυτόχρονα η προϋπόθεση που απαιτεί το `armTableFormatPainter`.
     act(() => {
-      setTableCellCursor(SOURCE_ID, { rowId: 'r0', colId: 'c0', anchorColId: 'c0' }, 'nav');
+      setTableCellCursorById(SOURCE_ID, { rowId: 'r0', colId: 'c0', anchorColId: 'c0' }, 'nav');
     });
 
     const view = render(
@@ -225,7 +230,7 @@ describe('🔴 ADR-768 Βήμα 5 — το πινέλο μορφοποίησης
   function armFromHeader(mode: 'once' | 'locked'): void {
     const live = harness.source();
     const brush = captureTableFormatBrush(
-      live.model,
+      activeTableModel(live),
       resolveTableStyle(live),
       { firstRow: HEADER_ROW, lastRow: HEADER_ROW, firstCol: 0, lastCol: 0 },
       ALL_TABLE_FORMAT_FACETS,
@@ -243,7 +248,7 @@ describe('🔴 ADR-768 Βήμα 5 — το πινέλο μορφοποίησης
 
   /** Η **επιλυμένη** μορφή ενός κελιού — ό,τι βλέπει ο χρήστης, όχι η αποθηκευμένη παράκαμψη. */
   function formatOf(entity: TableEntity, row: number): unknown {
-    return readTableCellFormat(entity.model, resolveTableStyle(entity), {
+    return readTableCellFormat(activeTableModel(entity), resolveTableStyle(entity), {
       rowId: `r${row}`,
       colId: 'c0',
     });

@@ -47,6 +47,7 @@ import {
 } from '../../../bim/table/table-cell-range';
 import type { TableEntity } from '../../../types/table-entity';
 import type { ViewTransform } from '../../../rendering/types/Types';
+import { activeTableModel } from '../../../bim/table/table-worksheet-resolve';
 
 const { transform: TRANSFORM, viewport: VIEWPORT } = TABLE_TEST_VIEW;
 
@@ -82,7 +83,7 @@ function CornerHarness({ entity }: { readonly entity: TableEntity }): React.Reac
 /** Τα όρια της τρέχουσας επιλογής, όπως τα διαβάζει ο ζωγράφος — ποτέ ωμό `selection`. */
 function currentBounds(entity: TableEntity) {
   const selection = getTableCellCursor()?.selection;
-  return selection ? resolveTableSelectionBounds(resolveTableModel(entity.model), selection) : null;
+  return selection ? resolveTableSelectionBounds(resolveTableModel(activeTableModel(entity)), selection) : null;
 }
 
 describe('🔴 ADR-739 §43 — το τετραγωνάκι της γωνίας επιλέγει ΟΛΟΚΛΗΡΟ τον πίνακα', () => {
@@ -96,7 +97,7 @@ describe('🔴 ADR-739 §43 — το τετραγωνάκι της γωνίας 
     // αυτό είναι η μισή προδιαγραφή (δες το test του ενεργού κελιού παρακάτω).
     setTableCellCursor(
       entity.id,
-      tableCursorAt(entity.model.rows[2].id, entity.model.columns[1].id),
+      tableCursorAt(activeTableModel(entity).rows[2].id, activeTableModel(entity).columns[1].id),
       'nav',
     );
     const view = render(<CornerHarness entity={entity} />);
@@ -125,7 +126,7 @@ describe('🔴 ADR-739 §43 — το τετραγωνάκι της γωνίας 
 
     const bounds = currentBounds(entity);
     expect(bounds).not.toBeNull();
-    expect(isTableWholeGridRange(resolveTableModel(entity.model), bounds!)).toBe(true);
+    expect(isTableWholeGridRange(resolveTableModel(activeTableModel(entity)), bounds!)).toBe(true);
   });
 
   /**
@@ -143,13 +144,13 @@ describe('🔴 ADR-739 §43 — το τετραγωνάκι της γωνίας 
    */
   it('🔴 §68.9 το ΕΝΕΡΓΟ ΚΕΛΙ πάει στο A1 (Excel: το Name Box γράφει A1)', () => {
     // `beforeEach`: ενεργό το κελί (γραμμή 3, στήλη B) — ρητά **όχι** το A1.
-    expect(getTableCellCursor()?.position.rowId).not.toBe(entity.model.rows[0].id);
+    expect(getTableCellCursor()?.position.rowId).not.toBe(activeTableModel(entity).rows[0].id);
 
     pressAt(tableIndicatorCornerScreenPoint(entity));
 
     const position = getTableCellCursor()?.position;
-    expect(position?.rowId).toBe(entity.model.rows[0].id);
-    expect(position?.colId).toBe(entity.model.columns[0].id);
+    expect(position?.rowId).toBe(activeTableModel(entity).rows[0].id);
+    expect(position?.colId).toBe(activeTableModel(entity).columns[0].id);
   });
 
   /**
@@ -162,7 +163,7 @@ describe('🔴 ADR-739 §43 — το τετραγωνάκι της γωνίας 
   it('🔴 §68.9 η ΕΝΤΟΛΗ (Ctrl+A) δεν ακολουθεί: ο γραφέας της αφήνει το ενεργό κελί ήσυχο', () => {
     const before = getTableCellCursor()?.position;
 
-    selectWholeTable(resolveTableModel(entity.model));
+    selectWholeTable(resolveTableModel(activeTableModel(entity)));
 
     expect(getTableCellCursor()?.position).toEqual(before);
   });
@@ -181,7 +182,7 @@ describe('🔴 ADR-739 §43 — το τετραγωνάκι της γωνίας 
 
     const bounds = currentBounds(entity);
     expect(bounds).not.toBeNull();
-    expect(isTableWholeGridRange(resolveTableModel(entity.model), bounds!)).toBe(false);
+    expect(isTableWholeGridRange(resolveTableModel(activeTableModel(entity)), bounds!)).toBe(false);
   });
 
   it('κλικ μέσα σε κελί ⇒ καμία «επιλογή όλων» (ο κλάδος του κελιού μένει ανέπαφος)', () => {
@@ -189,7 +190,7 @@ describe('🔴 ADR-739 §43 — το τετραγωνάκι της γωνίας 
 
     const bounds = currentBounds(entity);
     if (bounds) {
-      expect(isTableWholeGridRange(resolveTableModel(entity.model), bounds)).toBe(false);
+      expect(isTableWholeGridRange(resolveTableModel(activeTableModel(entity)), bounds)).toBe(false);
     }
   });
 
@@ -211,7 +212,7 @@ describe('🔴 ADR-739 §43 — το τετραγωνάκι της γωνίας 
 
     const bounds = currentBounds(entity);
     expect(bounds).not.toBeNull();
-    expect(isTableWholeGridRange(resolveTableModel(entity.model), bounds!)).toBe(true);
+    expect(isTableWholeGridRange(resolveTableModel(activeTableModel(entity)), bounds!)).toBe(true);
   });
 
   /**
@@ -224,8 +225,8 @@ describe('🔴 ADR-739 §43 — το τετραγωνάκι της γωνίας 
     pressAt(tableIndicatorCornerScreenPoint(entity), 2);
 
     const position = getTableCellCursor()?.position;
-    expect(position?.rowId).toBe(entity.model.rows[0].id);
-    expect(position?.colId).toBe(entity.model.columns[0].id);
+    expect(position?.rowId).toBe(activeTableModel(entity).rows[0].id);
+    expect(position?.colId).toBe(activeTableModel(entity).columns[0].id);
   });
 });
 

@@ -36,6 +36,7 @@ import type { TableEntity } from '../../types/table-entity';
 import type { PersistedTableModel } from '../../types/table';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
 import type { ICommand } from '../../core/commands';
+import { activeTableModel } from '../../bim/table/table-worksheet-resolve';
 
 export interface UseTableAxisActionApplyParams {
   readonly levelManager: LevelManagerLike;
@@ -63,13 +64,13 @@ export function useTableAxisActionApply(
     (live, mutate, pick) => {
       const cursor = getTableCellCursor();
       if (!cursor) return false;
-      const nextModel = mutate(live.model);
+      const nextModel = mutate(activeTableModel(live));
       // Ταυτότητα κατά αναφορά = η σύμβαση no-op ολόκληρου του `table-row-column-ops`: το
       // φράγμα πλήθους απάντησε «όχι» ⇒ καμία εντολή, κανένα βήμα undo που δεν αναιρεί τίποτα.
-      if (nextModel === live.model) return false;
+      if (nextModel === activeTableModel(live)) return false;
       if (!commitModel(live, nextModel)) return false;
       const position = survivingCursor(nextModel, cursor.position, pick);
-      if (position) setTableCellCursor(live.id, position, 'nav');
+      if (position) setTableCellCursor(live, position, 'nav');
       return true;
     },
     [commitModel],

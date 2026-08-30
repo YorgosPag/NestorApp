@@ -33,6 +33,8 @@ import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformSt
 import type { SceneUnits } from '../../utils/scene-units';
 import type { TableEntity } from '../../types/table-entity';
 import type { TableResizeAxis } from './table-resize-axis';
+import { activeTableModel } from './table-worksheet-resolve';
+import type { PersistedTableModel } from '../../types/table';
 
 const NS = 'dxf-viewer-shell';
 
@@ -90,10 +92,10 @@ export function tableResizeReadoutText(input: TableResizeReadoutInput): string {
  */
 export function tableResizeReadoutForModels(
   before: TableEntity,
-  afterModel: TableEntity['model'],
+  afterModel: PersistedTableModel,
   sceneUnits: SceneUnits = 'mm',
 ): string | null {
-  const changed = changedAxisSize(before.model, afterModel);
+  const changed = changedAxisSize(activeTableModel(before), afterModel);
   if (!changed) return null;
 
   const { mmToWorld } = computeTableEntityGeometryLive(before);
@@ -114,8 +116,8 @@ export function tableResizeReadoutForModels(
  * σενάριο που η ίδια η χειρονομία δεν μπορεί να παραγάγει.
  */
 function changedAxisSize(
-  before: TableEntity['model'],
-  after: TableEntity['model'],
+  before: PersistedTableModel,
+  after: PersistedTableModel,
 ): { readonly axis: TableResizeAxis; readonly sizeMm: number } | null {
   for (let i = 0; i < after.columns.length; i++) {
     const next = after.columns[i]?.sizing;

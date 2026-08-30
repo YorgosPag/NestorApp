@@ -26,6 +26,8 @@ import type { TopoPoint } from '../../../systems/topography/topo-types';
 import type { TableSourceContext } from '../binding/table-source-resolver';
 import type { TableEntity } from '../../../types/table-entity';
 import type { Entity } from '../../../types/entities';
+import { tableWorksheetFields } from './make-table-entity';
+import { activeTableModel } from '../table-worksheet-resolve';
 import type {
   PersistedTableModel,
   TableBinding,
@@ -60,7 +62,7 @@ function tableEntity(model: PersistedTableModel, binding?: TableBinding): TableE
     position: { x: 0, y: 0 },
     angleRad: 0,
     styleId: BUILTIN_TABLE_STYLE_IDS.STANDARD,
-    model,
+    ...tableWorksheetFields(model, binding),
     ...(binding === undefined ? {} : { binding }),
   } as TableEntity;
 }
@@ -168,7 +170,7 @@ describe('§9 — «Ctrl+Z μετά από refresh: ΜΙΑ χειρονομία,
   it('η ανανέωση παράγει ΕΝΑ νέο μοντέλο — άρα μία εντολή, ένα βήμα αναίρεσης', () => {
     const first = refreshTableBinding({ model: emptyModel(), binding: BINDING, context: ctx([P1, P2]) });
     if (first.status !== 'refreshed') throw new Error('expected refreshed');
-    // `buildTableModelCommand` συγκρίνει **ταυτότητα** μοντέλου (`nextModel === entity.model`).
+    // `buildTableModelCommand` συγκρίνει **ταυτότητα** μοντέλου (`nextModel === activeTableModel(entity)`).
     // Ένα μοντέλο ⇒ μία `UpdateEntityCommand`, ανεξάρτητα από το πλήθος των κελιών που άλλαξαν.
     expect(first.model).not.toBe(emptyModel());
   });
@@ -177,7 +179,7 @@ describe('§9 — «Ctrl+Z μετά από refresh: ΜΙΑ χειρονομία,
     const first = refreshTableBinding({ model: emptyModel(), binding: BINDING, context: ctx([P1, P2]) });
     if (first.status !== 'refreshed') throw new Error('expected refreshed');
     const again = refreshTableBinding({ model: first.model, binding: first.binding, context: ctx([P1, P2]) });
-    // Το `buildTableModelCommand` επιστρέφει `null` όταν `nextModel === entity.model`: η
+    // Το `buildTableModelCommand` επιστρέφει `null` όταν `nextModel === activeTableModel(entity)`: η
     // ταυτότητα by-reference του early cutoff **είναι** ο μηχανισμός που το εγγυάται.
     expect(again.model).toBe(first.model);
   });

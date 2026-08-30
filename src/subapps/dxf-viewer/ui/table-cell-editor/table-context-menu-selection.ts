@@ -66,6 +66,7 @@ import { tableContextMenuMovesSelection } from './table-range-menu-target';
 import type { TableCellRef } from '../../bim/table/table-cell-range';
 import type { TableCellCursorState } from '../../state/table-cell-cursor-store';
 import type { TableEntity } from '../../types/table-entity';
+import { activeTableModel } from '../../bim/table/table-worksheet-resolve';
 
 /**
  * Ό,τι χρειάζεται **κάθε** από τις τρεις διαδρομές: ποιος πίνακας, τι ισχύει τώρα, και πώς
@@ -121,12 +122,12 @@ export function installTableCellMenuSelection(
   // Ο φρουρός της κεφαλίδας — ο πρώτος έλεγχος, όχι ο τελευταίος: ό,τι ακολουθεί γράφει.
   if (!tableContextMenuMayMoveSelection(cursor)) return;
 
-  const model = resolveTableModel(entity.model);
+  const model = resolveTableModel(activeTableModel(entity));
   const active: TableCellRef = { rowId: cursor.position.rowId, colId: cursor.position.colId };
   if (!tableContextMenuMovesSelection(model, cell, active, cursor.selection)) return;
 
   commitPending();
-  setTableCellCursor(entity.id, tableCursorAt(cell.rowId, cell.colId), 'nav');
+  setTableCellCursor(entity, tableCursorAt(cell.rowId, cell.colId), 'nav');
 }
 
 /**

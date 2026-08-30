@@ -2,7 +2,8 @@
  * ADR-739 Φάση Γ — **η οντότητα πίνακα στη σκηνή** (`TableEntity`).
  *
  * Ό,τι χρειάζεται ένας πίνακας για να ζήσει στον καμβά, **γύρω** από το αναλλοίωτο
- * `TableModel` του `types/table.ts`: πού είναι, πόσο στραμμένος, με ποιο στυλ. Αδελφός
+ * `TableModel` του `types/table.ts`: πού είναι, πόσο στραμμένος, με ποιο στυλ, και **ποια
+ * φύλλα εργασίας** κρατά (ADR-833 Φ2). Αδελφός
  * των `ScaleBarEntity` / `OpeningInfoTagEntity` (ADR-583 Φ2 / ADR-612): απλό
  * `extends BaseEntity`, ρέει στο generic `Entity[]` της σκηνής, **καμία** εξαγωγή IFC,
  * **κανένα** 3D mesh, **καμία** δική του συλλογή Firestore → σκόπιμα **εκτός**
@@ -25,13 +26,15 @@
  * επιβάλλει το μάθημα του ADR-716.
  *
  * ## Το `geometry` είναι ΠΑΡΑΓΩΓΟ — ποτέ πηγή
- * Πηγή αλήθειας είναι τα `position` / `angleRad` / `styleId` / `model`. Το `geometry`
+ * Πηγή αλήθειας είναι τα `position` / `angleRad` / `styleId` / `worksheets`. Το `geometry`
  * είναι λανθάνουσα μνήμη που ξαναφτιάχνεται από το
  * `computeTableEntityGeometry` — **ποτέ** δεν γράφεται με το χέρι, **ποτέ** δεν
  * ταξιδεύει σε snapshot (ίδια σύμβαση με το `OpeningInfoTagEntity.geometry`).
  *
  * @module subapps/dxf-viewer/types/table-entity
  * @see types/table.ts — το μοντέλο (καθαρό, κοινό στα 4 backends)
+ * @see types/table-worksheet.ts — το φύλλο εργασίας (ADR-833 Φ2)
+ * @see bim/table/table-worksheet-resolve.ts — ο ΕΝΑΣ αναγνώστης των φύλλων
  * @see bim/table/table-entity-geometry.ts — η παράγωγη γεωμετρία + frame↔world
  * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §4, §4.1, §6
  */
@@ -39,12 +42,11 @@
 import type { Point2D } from '../rendering/types/Types';
 import type { BaseEntity } from './entities';
 import type {
-  PersistedTableModel,
-  TableBinding,
   TableBreaking,
   TableColumnId,
   TableRowId,
 } from './table';
+import type { TableWorksheet, TableWorksheetId } from './table-worksheet';
 import type { TableLayout } from '../bim/table/table-layout-types';
 // ADR-794 — ΕΝΑ όνομα ανά ΧΩΡΟ, ΠΟΤΕ ανά ΑΝΤΙΚΕΙΜΕΝΟ — δεν υπάρχει TableBBox στον Revit.
 import type { Bbox } from './coordinate-space';
@@ -151,8 +153,11 @@ export interface TableEntity extends BaseEntity {
   styleId: string;
 
   /**
-   * Το περιεχόμενο, σε **απλό JSON** ({@link PersistedTableModel}): τα κελιά είναι
-   * ακολουθία τριάδων, όχι `Map`.
+   * 🔴 ADR-833 Φάση 2 — **ΤΑ ΦΥΛΛΑ ΕΡΓΑΣΙΑΣ**: ο πίνακας δεν είναι φύλλο, είναι **βιβλίο**.
+   *
+   * Μη κενό εξ ορισμού — κάθε πίνακας έχει τουλάχιστον ένα φύλλο, όπως κάθε βιβλίο του Excel.
+   * Τα κελιά ζουν **αποκλειστικά** μέσα σε {@link TableWorksheet.model}, σε **απλό JSON**
+   * (`PersistedTableModel`): ακολουθία τριάδων, όχι `Map`.
    *
    * Αυτή είναι η μορφή που **ταξιδεύει** — αποθήκευση σκηνής, `deepClone` για undo,
    * διαγραφή+αναίρεση: και τα τρία περνούν από `JSON.stringify`, όπου ένας `Map` θα
@@ -163,11 +168,27 @@ export interface TableEntity extends BaseEntity {
    * Ο `TableModel` με τον `Map` — αυτόν που δέχονται η μηχανή διάταξης και ο adapter του
    * ADR-622 — **παράγεται κατ' απαίτηση** από το `resolveTableModel`, ακριβώς όπως ήδη
    * ισχύει για το {@link TableEntity.geometry}: παράγωγη μνήμη, ποτέ πηγή.
+   *
+   * ⚠️ **ΜΗΝ το διαβάσεις απευθείας.** Ο **ΕΝΑΣ** αναγνώστης είναι το
+   * `bim/table/table-worksheet-resolve.ts` (`resolveWorksheets` / `activeTableModel`): μόνο
+   * εκείνο ξέρει ότι υπάρχουν και οντότητες γραμμένες **πριν** υπάρξουν φύλλα, που κουβαλούν
+   * `model`/`binding` κατευθείαν πάνω τους (`types/table-entity-legacy.ts`).
    */
-  model: PersistedTableModel;
+  worksheets: readonly TableWorksheet[];
 
-  /** Απόν ⇒ `static` (ο χρήστης πληκτρολόγησε τα κελιά). Φ.ΣΤ/Η. */
-  binding?: TableBinding;
+  /**
+   * 🔴 ADR-833 Φάση 2 — **ποιο φύλλο βλέπει ο χρήστης.**
+   *
+   * Ζει στην **οντότητα** και όχι σε store επειδή επιβιώνει της αποθήκευσης — ακριβώς όπως το
+   * `activeTab` του Excel, που γράφεται μέσα στο βιβλίο. Αλλά **δεν είναι βήμα αναίρεσης**:
+   * γράφεται με τον γραφέα χωρίς ιστορικό (`previewPatch`), γιατί ούτε το Excel βάζει την
+   * ενεργοποίηση φύλλου στο undo stack — ο χρήστης που πατά `Ctrl+Z` θέλει πίσω τα **δεδομένα**
+   * του, όχι την καρτέλα του.
+   *
+   * ⚠️ Ταυτότητα που δεν δείχνει σε υπάρχον φύλλο **δεν είναι σφάλμα**: το `activeWorksheet`
+   * πέφτει ρητά στο πρώτο φύλλο. Δες εκεί γιατί η ανοχή είναι σχεδιασμός και όχι παράλειψη.
+   */
+  activeWorksheetId: TableWorksheetId;
 
   /** AutoCAD table breaking. Δηλωμένο από τη Φ.Α· ο καταναλωτής έρχεται με τη Φ.Δ. */
   breaking?: TableBreaking;

@@ -34,6 +34,7 @@ import { tableCursorAt } from '../../bim/table/table-cell-navigation';
 import { resolveTableModel } from '../../bim/table/table-model-helpers';
 import type { TableEntity } from '../../types/table-entity';
 import type { TableModel } from '../../types/table';
+import { activeTableModel } from '../../bim/table/table-worksheet-resolve';
 
 /**
  * Μαρκάρει **όλα** τα κελιά αυτού του πίνακα και επιστρέφει τα όρια που γράφτηκαν· `null` σε
@@ -114,12 +115,12 @@ export function selectWholeTable(model: TableModel): TableCellRangeBounds | null
  * το μαθαίνουν και οι δύο πόρτες δωρεάν.
  */
 export function selectWholeTableFromCorner(entity: TableEntity): TableCellRangeBounds | null {
-  const model = resolveTableModel(entity.model);
+  const model = resolveTableModel(activeTableModel(entity));
   const whole = tableWholeGridRange(model);
   if (!whole) return null;
 
   setTableCellCursor(
-    entity.id,
+    entity,
     tableCursorAt(model.rows[whole.firstRow].id, model.columns[whole.firstCol].id),
     'nav',
   );

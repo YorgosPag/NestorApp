@@ -54,6 +54,7 @@ import { useCommandHistory } from '../../core/commands';
 import type { TableStructurePort } from './table-format-port';
 import type { TableEntity } from '../../types/table-entity';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
+import { activeTableModel } from '../../bim/table/table-worksheet-resolve';
 
 export interface UseTableStructureActionsParams {
   readonly levelManager: LevelManagerLike;
@@ -79,7 +80,7 @@ export function useTableStructureActions(
       if (!live || !cursor) return null;
       const id = axis === 'row' ? cursor.position.rowId : cursor.position.colId;
       return resolveTableAxisActionTarget(
-        resolveTableModel(live.model),
+        resolveTableModel(activeTableModel(live)),
         axisTargetOf(axis, id),
         cursor.selection,
       );
@@ -119,7 +120,7 @@ export function useTableStructureActions(
       canDeleteAxis: (axis) => {
         const live = table();
         const target = axisTarget(axis);
-        return live !== null && target !== null && canDeleteAxisTarget(live.model, target);
+        return live !== null && target !== null && canDeleteAxisTarget(activeTableModel(live), target);
       },
       // 🔴 ADR-739 §58 Γ2 — **ο ίδιος στόχος με τη «Διαγραφή γραμμής»** (§27.17), ο ίδιος
       // εκτελεστής (§42). Δεύτερος κανόνας επιλογής γραμμών θα σήμαινε ότι το ίδιο μαρκάρισμα
@@ -128,11 +129,11 @@ export function useTableStructureActions(
       canAutoFitRowHeight: () => {
         const live = table();
         const target = axisTarget('row');
-        return live !== null && target !== null && canAutoFitAxisHeight(live.model, target);
+        return live !== null && target !== null && canAutoFitAxisHeight(activeTableModel(live), target);
       },
       selectAll: () => {
         const live = table();
-        if (live) selectWholeTable(resolveTableModel(live.model));
+        if (live) selectWholeTable(resolveTableModel(activeTableModel(live)));
       },
     }),
     [table, levelManager, execute, axisTarget, runAxisAction],

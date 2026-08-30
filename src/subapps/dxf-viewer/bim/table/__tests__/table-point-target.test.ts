@@ -35,6 +35,7 @@ import { tableFormulaReferenceSpans } from '../formula/table-formula-reference-s
 import { createTableModel } from '../table-model-helpers';
 import { TABLE_CELL_SESSION_MARKER } from '../../../ui/table-cell-editor/table-cell-session-focus';
 import type { TableColumn, TableModel, TableRow } from '../../../types/table';
+import { setTableCellCursorById } from './make-table-entity';
 
 const COLUMNS: TableColumn[] = ['c1', 'c2', 'c3', 'c4', 'c5'].map((id) => ({
   id,
@@ -59,7 +60,7 @@ const [SESSION_ATTRIBUTE, SESSION_VALUE] = Object.entries(TABLE_CELL_SESSION_MAR
 
 /** Ο δρομέας σε ανοιχτή γραφή με το `=SUM()` που έγραψε η Φάση 1, και ο διάλογος πάνω του. */
 function openArgumentsOnSum(): void {
-  setTableCellCursor('table-1', POSITION, 'edit', '=SUM()', 5);
+  setTableCellCursorById('table-1', POSITION, 'edit', '=SUM()', 5);
   openFunctionArgumentsDialog({
     functionName: 'SUM',
     frame: { prefix: '=SUM(', suffix: ')' },
@@ -201,7 +202,7 @@ describe('Η ΣΕΙΡΑ ΤΩΝ ΣΤΟΧΩΝ — ο διάλογος ρωτιέτ
   });
 
   it('χωρίς διάλογο, ο στόχος είναι το πρόχειρο του κελιού', () => {
-    setTableCellCursor('table-1', POSITION, 'edit', '=', 1);
+    setTableCellCursorById('table-1', POSITION, 'edit', '=', 1);
     const cell = document.createElement('textarea');
     cell.setAttribute(SESSION_ATTRIBUTE, SESSION_VALUE);
     cell.value = '=';
@@ -215,7 +216,7 @@ describe('Η ΣΕΙΡΑ ΤΩΝ ΣΤΟΧΩΝ — ο διάλογος ρωτιέτ
   });
 
   it('χωρίς διάλογο ΚΑΙ χωρίς εστιασμένο πεδίο ⇒ καμία υπόδειξη', () => {
-    setTableCellCursor('table-1', POSITION, 'edit', '=', 1);
+    setTableCellCursorById('table-1', POSITION, 'edit', '=', 1);
     const cursor = getTableCellCursor();
     expect(resolveTablePointTarget(cursor as NonNullable<typeof cursor>)).toBeNull();
   });

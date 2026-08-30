@@ -18,6 +18,7 @@ import { createTableModel, toPersistedTableModel } from '../table-model-helpers'
 import { BUILTIN_TABLE_STYLE_IDS } from '../table-style-presets';
 import type { TableCell, TableColumn, TableRow } from '../../../types/table';
 import type { TableEntity } from '../../../types/table-entity';
+import { tableWorksheetFields } from './make-table-entity';
 
 const COLUMNS: TableColumn[] = [
   { id: 'cA', sizing: { kind: 'fixed', widthMm: 120 }, valueType: 'text', align: 'left' },
@@ -40,7 +41,7 @@ function entityWith(cells: readonly CellTriple[]): TableEntity {
     position: { x: 0, y: 0 },
     angleRad: 0,
     styleId: BUILTIN_TABLE_STYLE_IDS.STANDARD,
-    model: toPersistedTableModel(model),
+    ...tableWorksheetFields(toPersistedTableModel(model)),
   };
 }
 

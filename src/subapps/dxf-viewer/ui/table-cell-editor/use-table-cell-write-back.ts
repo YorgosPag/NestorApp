@@ -52,6 +52,7 @@ import { useCommandHistory } from '../../core/commands';
 import type { TableColumnId, TableRowId } from '../../types/table';
 import type { TableEntity } from '../../types/table-entity';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
+import { activeTableBinding, activeTableModel } from '../../bim/table/table-worksheet-resolve';
 
 /**
  * Χειρίστηκε αυτό το commit ο write-back;
@@ -75,13 +76,13 @@ export function useTableCellWriteBack(levelManager: LevelManagerLike): TableCell
 
   return useCallback(
     (entity, rowId, colId, nextText) => {
-      const binding = entity.binding;
+      const binding = activeTableBinding(entity);
       if (!binding) return false;
 
       // Τα δεδομένα διαβάζονται **τη στιγμή του commit** — όχι από στιγμιότυπο απόδοσης, που
       // θα ήταν μπαγιάτικο ακριβώς τη στιγμή που ο CAS του Δ3 το χρειάζεται φρέσκο.
       const request = askTableWriteBack({
-        model: entity.model,
+        model: activeTableModel(entity),
         binding,
         context: readTableSourceContext(),
         rowId,
