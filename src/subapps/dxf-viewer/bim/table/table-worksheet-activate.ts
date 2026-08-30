@@ -100,7 +100,7 @@ export function planWorksheetActivation(
   return {
     patch: { ...tableWorksheetsPatch(entity, next), activeWorksheetId: targetId },
     // Ο δρομέας επαναφέρεται **μόνο** αν υπήρχε. Δες το πεδίο.
-    restoreCursor: cursor ? landingCursor(target) : null,
+    restoreCursor: cursor ? worksheetLandingCursor(target) : null,
   };
 }
 
@@ -134,8 +134,14 @@ function rememberCursor(
  * θα έδινε δρομέα σε **ανύπαρκτο** κελί: το `moveTableCursor` απορρίπτει μπαγιάτικη αφετηρία
  * (`return null`), δηλαδή ο χρήστης θα έβλεπε πλαίσιο και **κανένα βέλος δεν θα δούλευε**.
  * Σφάλμα χωρίς εξαίρεση και χωρίς ίχνος — ακριβώς η κλάση που κυνήγησε ολόκληρη η Φάση 2.
+ *
+ * 🔑 **ADR-833 Φάση 4 — εξάγεται, γιατί απέκτησε δεύτερο καλούντα.** Η **διαγραφή** του ενεργού
+ * φύλλου κάνει κάποιο άλλο φύλλο ενεργό, δηλαδή ρωτά **το ίδιο ακριβώς** ερώτημα («πού
+ * προσγειώνεται ο δρομέας στο φύλλο που ανοίγει;»). Ένα δεύτερο σώμα στο `table-worksheet-ops`
+ * θα ήταν sibling clone (N.18) — και, χειρότερα, θα ήταν το αντίγραφο που ξεχνά την
+ * **επικύρωση** της μνήμης, δηλαδή θα ξαναγεννούσε ακριβώς το σφάλμα που περιγράφεται από πάνω.
  */
-function landingCursor(target: TableWorksheet): TableCursorPosition | null {
+export function worksheetLandingCursor(target: TableWorksheet): TableCursorPosition | null {
   // Ο **ίδιος** απομνημονευμένος (WeakMap) δρόμος που περνά και η γεωμετρία: ίδιο persisted ⇒
   // ίδιο μοντέλο, άρα καμία δεύτερη αποσειριοποίηση για μια ερώτηση ύπαρξης.
   const model = resolveTableModel(target.model);
