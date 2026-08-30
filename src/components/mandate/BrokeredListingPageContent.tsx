@@ -23,6 +23,10 @@ import { Link } from '@/lib/workspace/navigation';
 import { useTranslation } from 'react-i18next';
 
 import { BrokeredMandateFields } from '@/components/mandate/BrokeredMandateFields';
+import {
+  BROKERAGE_DENY_REASON_KEYS,
+  BROKERAGE_SETTINGS,
+} from '@/lib/auth/brokerage-authority';
 import { useMyOrganizationCapabilities } from '@/services/realtime/hooks/useOrganizationCapability';
 import { isCapabilityActive } from '@/types/organization-capability';
 import { OwnerPropertyFormContent } from '@/components/owner-property/OwnerPropertyFormContent';
@@ -177,10 +181,23 @@ export function BrokeredListingPageContent(): React.ReactElement {
             είναι οι ίδιοι με την κανονική οθόνη — αλλάζει **μόνο** το μήνυμα, που
             έχει ήδη τρεις γραμμένες αποδόσεις (μία ανά κατάσταση). */}
         <h1 className="text-xl font-semibold text-foreground">{t(`${K}.newTitle`)}</h1>
+        {/* 🔴 **ΕΥΡΕΤΗΡΙΑΣΗ ΣΕ ΣΤΑΘΕΡΑ MODULE, ΟΧΙ ΠΑΡΕΜΒΟΛΗ** (ADR-824 §12.14). Ως τις
+            2026-08-30 εδώ ζούσε ένα ``t(`auth:brokerage.denyReason.${brokerage}`)``:
+            δυναμικό κλειδί, δηλαδή **αόρατο στη CHECK 3.8** *(που διαβάζει κυριολεκτικά
+            ορίσματα)* — μια μετονομασία στα locales θα ζωγράφιζε **ωμό κλειδί** και η
+            πύλη θα έμενε πράσινη. Ο πίνακας υπήρχε ήδη, μία εισαγωγή μακριά.
+            🔑 Το `isCapabilityActive` από πάνω **έχει ήδη στενέψει** τον τύπο σε ό,τι
+            αρνείται, άρα η ευρετηρίαση είναι ολική — χωρίς fallback, χωρίς `??`. */}
         <p className="text-sm text-muted-foreground">
-          {t(`auth:brokerage.denyReason.${brokerage}`)}
+          {t(BROKERAGE_DENY_REASON_KEYS[brokerage])}
         </p>
-        <nav>
+        <nav className="flex flex-wrap gap-4">
+          {/* 🔴 **Η ΥΠΟΣΧΕΣΗ ΟΔΗΓΕΙ ΚΑΠΟΥ** (ADR-824 §12.14): το `denyReason.revoked`
+              λέει *«δες τον λόγο στις ρυθμίσεις του οργανισμού»*, και η οθόνη τον
+              **έδειχνε χωρίς δρόμο**. Μετρήθηκε ζωντανά 2026-08-30. */}
+          <Link href={BROKERAGE_SETTINGS.route} className="text-sm underline">
+            {t(BROKERAGE_SETTINGS.linkKey)}
+          </Link>
           <Link href={MANDATE_CATALOG_ROUTE} className="text-sm text-muted-foreground">
             {t('property-market:offer.mandates.backToCatalog')}
           </Link>

@@ -51,6 +51,12 @@ jest.mock('@/auth/hooks/useAuth', () => ({
 
 jest.mock('@/lib/workspace/navigation', () => ({
   useWorkspaceAlias: () => 'test-agency',
+  // ⚠️ **Το `href` περνά ΑΥΤΟΥΣΙΟ** *(χωρίς το πρόθεμα χώρου, που το προσθέτει το
+  //    πραγματικό σύνορο)*: έτσι η άγκυρα μπορεί να ρωτήσει **πού δείχνει** ο σύνδεσμος
+  //    — που είναι ακριβώς η υπόσχεση του `denyReason.revoked`.
+  Link: ({ href, children }: { href: string; children: React.ReactNode }) => (
+    <a href={href}>{children}</a>
+  ),
 }));
 
 /**
@@ -122,7 +128,38 @@ describe('Κ10 — κάθε κατάσταση που αρνείται λέει 
     async (status) => {
       answerWith(denialBody(status));
 
-      expect(await publishAndReadAlert()).toBe(BROKERAGE_DENY_REASON_KEYS[status]);
+      const alert = await publishAndReadAlert();
+
+      // ⚠️ **`toContain` και όχι `toBe` από τις 2026-08-30 (ADR-824 §12.14)**: η άρνηση
+      //    κουβαλά πλέον **και τον δρόμο** *(σύνδεσμος προς τις ρυθμίσεις μεσιτείας)*.
+      //    Η χαλάρωση **πληρώνεται αμέσως** από τον αρνητικό έλεγχο από κάτω: το γενικό
+      //    μήνυμα εξακολουθεί να **απαγορεύεται**, άρα η άγκυρα δεν έχασε δύναμη.
+      expect(alert).toContain(BROKERAGE_DENY_REASON_KEYS[status]);
+      expect(alert).not.toContain(SHOWCASE_KEYS.notAllowed);
+    },
+  );
+
+  /**
+   * 🔴 **Η ΥΠΟΣΧΕΣΗ ΤΟΥ ΚΕΙΜΕΝΟΥ ΟΔΗΓΕΙ ΟΝΤΩΣ ΚΑΠΟΥ** (ADR-824 §12.14).
+   *
+   * Το `denyReason.revoked` λέει *«δες τον λόγο **στις ρυθμίσεις του οργανισμού**»* —
+   * και μέχρι σήμερα **δεν υπήρχε τέτοια σελίδα**, ούτε σύνδεσμος. Η άγκυρα ρωτά και
+   * τα δύο: ότι ο δρόμος **προσφέρεται**, και ότι δείχνει **στη σωστή διεύθυνση**.
+   *
+   * ⛔ ΜΕΤΑΛΛΑΞΗ: σβήσε τον `<Link>` από το `FailureMessage` ⇒ κόκκινο.
+   * ⛔ ΜΕΤΑΛΛΑΞΗ: άλλαξε τη διαδρομή του συνδέσμου ⇒ κόκκινο.
+   */
+  it.each(['unrequested', 'pending', 'revoked'] as const)(
+    'το «%s» προσφέρει τον ΔΡΟΜΟ προς τις ρυθμίσεις μεσιτείας',
+    async (status) => {
+      answerWith(denialBody(status));
+      await publishAndReadAlert();
+
+      const link = screen.getByRole('link');
+      // ✅ ΘΕΤΙΚΟΣ ΣΥΝΟΔΟΣ: ο σύνδεσμος **υπάρχει και έχει κείμενο**…
+      expect(link.textContent).not.toBe('');
+      // …και δείχνει **εκεί που υπόσχεται το κείμενο του κριτή**.
+      expect(link.getAttribute('href')).toBe('/settings/brokerage');
     },
   );
 

@@ -25,6 +25,10 @@
  */
 
 import React from 'react';
+import {
+  BROKERAGE_DENY_REASON_KEYS,
+  BROKERAGE_SETTINGS,
+} from '@/lib/auth/brokerage-authority';
 import { Link } from '@/lib/workspace/navigation';
 import { MandateCatalogRow } from '@/components/mandate/catalog/MandateCatalogRow';
 import {
@@ -220,9 +224,24 @@ function CapabilityNotice({
         <h1 className="m-0 text-2xl font-semibold text-foreground">
           {t(CATALOG_KEYS.title)}
         </h1>
+        {/* 🔴 **ΕΥΡΕΤΗΡΙΑΣΗ ΣΕ ΣΤΑΘΕΡΑ MODULE, ΟΧΙ ΠΑΡΕΜΒΟΛΗ** (ADR-824 §12.14). Ως τις
+            2026-08-30 εδώ ζούσε ένα ``t(`auth:brokerage.denyReason.${status}`)``:
+            δυναμικό κλειδί, δηλαδή **αόρατο στη CHECK 3.8** *(που διαβάζει κυριολεκτικά
+            ορίσματα)* — μια μετονομασία στα locales θα ζωγράφιζε **ωμό κλειδί** και η
+            πύλη θα έμενε πράσινη. Ο πίνακας υπήρχε ήδη, μία εισαγωγή μακριά. */}
         <p className="m-0 text-sm text-muted-foreground">
-          {t(`auth:brokerage.denyReason.${status}`)}
+          {t(BROKERAGE_DENY_REASON_KEYS[status])}
         </p>
+        {/* 🔴 **Η ΥΠΟΣΧΕΣΗ ΟΔΗΓΕΙ ΚΑΠΟΥ** (ADR-824 §12.14). Μετρημένο ζωντανά
+            2026-08-30: αυτή ακριβώς η οθόνη έγραφε *«Η μεσιτική δυνατότητα του
+            γραφείου σου έχει ανακληθεί. **Δες τον λόγο στις ρυθμίσεις του
+            οργανισμού**»* — και **δεν πρόσφερε κανέναν δρόμο** προς εκεί. Η ίδια
+            κλάση με το §1 του Γ.3α, σε **δεύτερη** οθόνη. */}
+        <nav>
+          <Link href={BROKERAGE_SETTINGS.route} className="text-sm underline">
+            {t(BROKERAGE_SETTINGS.linkKey)}
+          </Link>
+        </nav>
       </header>
     </section>
   );

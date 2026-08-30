@@ -37,19 +37,25 @@
 import React from 'react';
 
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { HintedField } from '@/components/ui/hinted-field';
 import {
   SHOWCASE_KEYS,
   SHOWCASE_NS,
   SHOWCASE_REJECTION_KEYS,
 } from '@/components/mandate/agency-showcase-labels';
-import { BROKERAGE_DENY_NS, BROKERAGE_DENY_REASON_KEYS } from '@/lib/auth/brokerage-authority';
+import {
+  BROKERAGE_DENY_NS,
+  BROKERAGE_DENY_REASON_KEYS,
+  BROKERAGE_SETTINGS,
+} from '@/lib/auth/brokerage-authority';
 import { isCapabilityActive } from '@/types/organization-capability';
 import { useAgencyShowcase, type ShowcaseFailure } from '@/hooks/mandate/useAgencyShowcase';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatLongDate } from '@/lib/intl-formatting';
-import { useWorkspaceAlias } from '@/lib/workspace/navigation';
+// ⚠️ **Ο σύνδεσμος από το ΣΥΝΟΡΟ** (CHECK 3.61): το πρόθεμα χώρου το προσθέτει εκείνο.
+//    Ένα ωμό `next/link` εδώ θα έστελνε τον μεσίτη σε `/settings/brokerage` **χωρίς
+//    χώρο** — δηλαδή σε διαδρομή που δεν υπάρχει.
+import { Link, useWorkspaceAlias } from '@/lib/workspace/navigation';
 
 // 🧩 ADR-744 §15 (Φ4) — PER-ROUTE SLICE. Χωρίς αυτή τη γραμμή η οθόνη βάφει **ωμά
 //    κλειδιά στο πρώτο καρέ** (CHECK 3.51). **ΕΔΩ**, όχι στο `page.tsx`: τα Server και
@@ -101,8 +107,22 @@ function FailureMessage({ failure }: { readonly failure: ShowcaseFailure }): Rea
     //    ⚠️ Το `isCapabilityActive` δεν είναι διακοσμητικό: ο πίνακας **δεν έχει** κλειδί
     //    για το `active` (μια ενεργή ικανότητα δεν αρνείται ποτέ), και το `null` σημαίνει
     //    «η πόρτα δεν ονόμασε κατάσταση». Και οι δύο πέφτουν στο γενικό — **συνειδητά**.
+    //
+    //    🔴 **ΚΑΙ ΤΟ ΚΕΙΜΕΝΟ ΔΕΙΧΝΕΙ ΠΛΕΟΝ ΚΑΠΟΥ** (ADR-824 §12.14). Το
+    //    `denyReason.revoked` έλεγε *«δες τον λόγο **στις ρυθμίσεις του οργανισμού**»*
+    //    και οι ρυθμίσεις **δεν είχαν τέτοια σελίδα** — υπόσχεση χωρίς τόπο, η ίδια
+    //    κλάση με τα τέσσερα ζωντανά 404 του έργου. Ο σύνδεσμος ζει **εδώ**, στο σημείο
+    //    του εμποδίου, και **όχι** ως μόνιμη γραμμή μενού: μια γραμμή ορατή σε όλους θα
+    //    διαφήμιζε ρυθμιζόμενη δραστηριότητα σε όποιον δεν τη ζήτησε ποτέ — ο κανόνας
+    //    είναι γραμμένος στο `isCapabilityKnownToOrganization`. Όποιος φτάνει εδώ έχει
+    //    **ήδη επιχειρήσει** την πράξη: δεν του διαφημίζουμε, του **απαντάμε**.
     return failure.status !== null && !isCapabilityActive(failure.status) ? (
-      <>{t(BROKERAGE_DENY_REASON_KEYS[failure.status])}</>
+      <>
+        {t(BROKERAGE_DENY_REASON_KEYS[failure.status])}{' '}
+        <Link href={BROKERAGE_SETTINGS.route} className="underline">
+          {t(BROKERAGE_SETTINGS.linkKey)}
+        </Link>
+      </>
     ) : (
       <>{t(SHOWCASE_KEYS.notAllowed)}</>
     );
@@ -111,52 +131,6 @@ function FailureMessage({ failure }: { readonly failure: ShowcaseFailure }): Rea
   //    το γενικό μήνυμα, αλλά παραμένουν **χωριστές τιμές** στον τύπο: την ημέρα που
   //    αποκτήσουν δικό τους κείμενο, η αλλαγή γίνεται εδώ και μόνο εδώ.
   return <>{t(SHOWCASE_KEYS.failed)}</>;
-}
-
-/**
- * ⚠️ **Δέχεται ΚΕΙΜΕΝΟ, όχι κλειδιά — και είναι απόφαση, όχι στιλ.** Η πρώτη γραφή
- * περνούσε `labelKey`/`hintKey` και καλούσε `t(labelKey)` εδώ μέσα: **τρία** από τα
- * τέσσερα ανεπίλυτα `t()` που μπλόκαραν τον γεννήτορα. Με το κείμενο να έρχεται
- * έτοιμο, **κάθε** κλήση `t()` ζει στον γονέα με **κυριολεκτικό** κλειδί — ορατή και
- * στον τεμαχιστή και στη CHECK 3.8.
- */
-interface FieldProps {
-  readonly id: string;
-  readonly label: string;
-  readonly hint: string;
-  readonly placeholder?: string;
-  readonly value: string;
-  readonly readOnly?: boolean;
-  readonly onChange?: (value: string) => void;
-}
-
-function Field({
-  id,
-  label,
-  hint,
-  placeholder,
-  value,
-  readOnly,
-  onChange,
-}: FieldProps): React.ReactElement {
-  const hintId = `${id}-hint`;
-
-  return (
-    <div className="flex flex-col gap-1.5">
-      <Label htmlFor={id}>{label}</Label>
-      <Input
-        id={id}
-        value={value}
-        readOnly={readOnly}
-        aria-describedby={hintId}
-        placeholder={placeholder}
-        onChange={(event) => onChange?.(event.target.value)}
-      />
-      <p id={hintId} className="m-0 text-sm text-muted-foreground">
-        {hint}
-      </p>
-    </div>
-  );
 }
 
 export function AgencyShowcaseContent(): React.ReactElement {
@@ -208,14 +182,14 @@ export function AgencyShowcaseContent(): React.ReactElement {
       </p>
 
       <section className="flex flex-col gap-4">
-        <Field
+        <HintedField
           id="showcase-alias"
           label={t(SHOWCASE_KEYS.aliasLabel)}
           hint={t(SHOWCASE_KEYS.aliasHint)}
           value={alias}
           readOnly
         />
-        <Field
+        <HintedField
           id="showcase-name"
           label={t(SHOWCASE_KEYS.nameLabel)}
           hint={t(SHOWCASE_KEYS.nameHint)}
@@ -223,7 +197,7 @@ export function AgencyShowcaseContent(): React.ReactElement {
           value={displayName}
           onChange={setDisplayName}
         />
-        <Field
+        <HintedField
           id="showcase-gemi"
           label={t(SHOWCASE_KEYS.gemiLabel)}
           hint={t(SHOWCASE_KEYS.gemiHint)}
