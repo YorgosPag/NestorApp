@@ -227,6 +227,64 @@ function checkRouteLedger(config, manifest) {
   return `route ledger — ${describeRouteFailures(audit.failures, shellBytes)}`;
 }
 
+/**
+ * B3. 🔴 ADR-744 §20 (Β2β) — **ΤΟ ROUTE SLICE, ΞΑΝΑΚΛΑΔΕΜΕΝΟ ΑΠΟ ΤΑ ΣΗΜΕΡΙΝΑ LOCALES.**
+ *
+ * ΜΕΤΡΗΜΕΝΟ ΤΟ ΠΕΡΙΣΤΑΤΙΚΟ ΠΟΥ ΤΟ ΓΕΝΝΗΣΕ (2026-08-30): τα 20 νέα κλειδιά του ADR-832
+ * ήταν **μέσα** στα `el/property-market.json`, το `routes/offers__mandate__new.el.json`
+ * **δεν είχε κανένα**, και αυτή η πύλη τύπωσε **`✅ CHECK 3.34 OK`**. Το `checkLocaleDrift`
+ * ρωτά μόνο για το **κέλυφος**· τα route slices κρίνονταν μόνο με sha256 έναντι του
+ * manifest, δηλαδή «**συνεπές αλλά μπαγιάτικο**» ήταν καθαρό. Το commit θα έβαφε ωμά
+ * κλειδιά σε δύο πεδία που ο νόμος απαιτεί, και θα το έπιανε **μόνο** το CI.
+ *
+ * 🔑 ΓΙΑΤΙ ΕΙΝΑΙ ΕΞΑΚΡΙΒΩΣ, ΟΧΙ ΠΡΟΣΕΓΓΙΣΗ: τα `wants` της διαδρομής είναι η **ίδια η
+ * έξοδος του γεννήτορα** (manifest §20), και το `buildSlices` + `subtractShell` που
+ * τρέχουν εδώ είναι **τα ίδια modules** που τρέχει ο γεννήτορας. Καμία δεύτερη
+ * υλοποίηση, κανένας γράφος, μηδέν κόστος στο pre-commit.
+ *
+ * ⚠️ Ο παρονομαστής είναι το **κέλυφος του δίσκου** — και αυτό είναι σωστό εδώ: αν ο
+ * δίσκος είναι μπαγιάτικος, το λένε ήδη τα Α/Β με καλύτερο μήνυμα, και τώρα πλέον
+ * **και τα δύο** αναφέρονται στο ίδιο πέρασμα (καμία πρόωρη έξοδος).
+ */
+function checkRouteLocaleDrift(config, manifest) {
+  const declared = manifest.routes;
+  if (!declared || Object.keys(declared).length === 0) return null;
+
+  const [language] = manifest.languages;
+  const shellRel = toPosix(path.join(config.outputDir, `shell-slice.${language}.json`));
+  const shellFile = path.join(PROJECT_ROOT, shellRel);
+  if (!fs.existsSync(shellFile)) return null;   // το checkArtifactIntegrity το λέει καλύτερα
+  let shellResources;
+  try {
+    shellResources = JSON.parse(fs.readFileSync(shellFile, 'utf8'));
+  } catch {
+    return `${shellRel} is not valid JSON.`;
+  }
+
+  const whole = Object.entries(manifest.wants || {})
+    .filter(([, want]) => want && want.whole === true)
+    .map(([namespace]) => namespace);
+  const readNamespace = makeNamespaceReader(PROJECT_ROOT, config);
+
+  for (const [id, entry] of Object.entries(declared)) {
+    const slices = buildSlices({
+      wants: hydrateWants(entry.wants),
+      languages: manifest.languages,
+      readNamespace,
+    });
+    const expected = stableStringify(
+      RS.subtractShell(slices.resources[language] || {}, shellResources, whole),
+    );
+    const relPath = toPosix(path.join(config.outputDir, ROUTES_DIR, `${id}.${language}.json`));
+    const file = path.join(PROJECT_ROOT, relPath);
+    if (!fs.existsSync(file)) return `${relPath} is missing.`;
+    if (normalize(expected) !== normalize(fs.readFileSync(file, 'utf8'))) {
+      return `${relPath} no longer matches the locale files — a translation ${entry.page} ships was edited without regenerating.`;
+    }
+  }
+  return null;
+}
+
 /** C. a staged shell module whose i18n surface or import edges moved. */
 function checkStagedShellFiles(config, manifest, stagedFiles) {
   const context = {
@@ -278,15 +336,24 @@ function runLayerOne(config, stagedFiles) {
     fail(`${manifestPath(config)} is missing or unreadable — the shell slice has never been generated.`);
     return;
   }
-  const reason =
-    checkArtifactIntegrity(manifest) ||
-    checkLedgerBudget(config, manifest) ||
-    checkRouteLedger(config, manifest) ||
-    checkLocaleDrift(config, manifest) ||
-    checkStagedShellFiles(config, manifest, stagedFiles) ||
-    checkNewlyResolvableSpecs(manifest, stagedFiles);
+  // 🔴 ADR-744 §20 (Β2) — ΚΑΜΙΑ ΑΛΥΣΙΔΑ `||`, ΓΙΑ ΤΟΝ ΙΔΙΟ ΛΟΓΟ ΜΕ ΤΟΝ ΓΕΝΝΗΤΟΡΑ.
+  // Το `a || b || c` σημαίνει «ο πρώτος που μιλά σκοτώνει τους υπόλοιπους»: όσο ένα
+  // artifact ήταν χειρόγραφα πειραγμένο, **κανείς** δεν μάθαινε ποτέ ότι ταυτόχρονα
+  // μια διαδρομή ήταν εκτός ταβανιού. Ο άνθρωπος διόρθωνε, ξανάτρεχε, έβρισκε το
+  // επόμενο — ένα σφάλμα ανά κύκλο. Τώρα τρέχουν ΟΛΑ και αναφέρονται ΟΛΑ.
+  const reasons = [
+    checkArtifactIntegrity(manifest),
+    checkLedgerBudget(config, manifest),
+    checkRouteLedger(config, manifest),
+    checkLocaleDrift(config, manifest),
+    checkRouteLocaleDrift(config, manifest),
+    checkStagedShellFiles(config, manifest, stagedFiles),
+    checkNewlyResolvableSpecs(manifest, stagedFiles),
+  ].filter(reason => reason !== null && reason !== undefined);
 
-  if (reason) fail(reason);
+  if (reasons.length > 0) {
+    fail(reasons.length === 1 ? reasons[0] : `${reasons.length} ευρήματα:\n     · ${reasons.join('\n     · ')}`);
+  }
   console.log(
     `${GREEN}  ✅ CHECK 3.34 OK — shell slice matches ${Object.keys(manifest.wants).length} namespace(s) / ` +
     `${manifest.stats.matchedKeys} keys ${DIM}(${manifest.stats.sliceBytes} bytes, ${manifest.stats.shellFiles} shell modules)${NC}`
@@ -404,6 +471,7 @@ module.exports = {
   checkLedgerBudget,
   checkRouteLedger,
   checkLocaleDrift,
+  checkRouteLocaleDrift,
   checkStagedShellFiles,
   checkNewlyResolvableSpecs,
   runLayerOne,

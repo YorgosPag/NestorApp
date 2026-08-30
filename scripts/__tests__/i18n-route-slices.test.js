@@ -178,7 +178,17 @@ describe('Λ — το κατάστιχο των διαδρομών (§8.43)', ()
   const SHELL_BYTES = bytesOf(readJson(path.join(REPO, 'src/i18n/generated/shell-slice.el.json')));
   /** ΜΕΤΡΗΜΕΝΟ 2026-08-21: το `/properties/[id]` θα κόστιζε τόσα, σε 48 namespaces. */
   const PROPERTIES_ID_BYTES = 240521;
-  const ok = { budget: 10_000, reason: 'άγκυρα' };
+  /**
+   * ADR-744 §20 — μια **σφραγισμένη μέτρηση** με αλυσίδα που κλείνει. Το `budget`
+   * καταργήθηκε: το ταβάνι δεν δηλώνεται πια, **υπολογίζεται** (`sealed × 1,25`).
+   */
+  const seal = sealed => ({
+    sealed,
+    sealedAt: '2026-08-30',
+    reason: 'άγκυρα',
+    history: [{ from: 0, to: sealed, at: '2026-08-30', why: 'άγκυρα' }],
+  });
+  const ok = seal(10_000);
 
   const observe = () => Object.keys(config.routeSlices).map(page => ({
     id: RS.routeIdFor(page),
@@ -188,7 +198,7 @@ describe('Λ — το κατάστιχο των διαδρομών (§8.43)', ()
 
   it('Λ1: σκέτο `reason` ΑΠΟΡΡΙΠΤΕΤΑΙ — πρόζα δεν είναι προϋπολογισμός (§8.38 στον αδελφό)', () => {
     expect(() => L.auditRouteLedger({ p: { reason: 'μόνο λόγια' } }, [], 1000))
-      .toThrow(/budget/);
+      .toThrow(/sealed/);
     // …και το μήνυμα ΟΝΟΜΑΖΕΙ το σωστό κατάστιχο, αλλιώς ο αναγνώστης ψάχνει αλλού.
     expect(() => L.auditRouteLedger({ p: 'κάποτε ήταν συμβολοσειρά' }, [], 1000))
       .toThrow(/routeSlices\.p/);
@@ -212,7 +222,7 @@ describe('Λ — το κατάστιχο των διαδρομών (§8.43)', ()
     // η απόδειξη είναι ότι το Κ1 μιλά ΑΚΟΜΑ ΚΑΙ ΟΤΑΝ το Κ2 σιωπά.
     expect(PROPERTIES_ID_BYTES).toBeGreaterThan(SHELL_BYTES);
     const audit = L.auditRouteLedger(
-      { 'src/app/(app)/properties/[id]/page.tsx': { budget: 999_999, reason: 'υποθετικό' } },
+      { 'src/app/(app)/properties/[id]/page.tsx': seal(999_999) },
       [{ id: 'properties__id', page: 'src/app/(app)/properties/[id]/page.tsx', actual: PROPERTIES_ID_BYTES }],
       SHELL_BYTES,
     );
@@ -223,14 +233,14 @@ describe('Λ — το κατάστιχο των διαδρομών (§8.43)', ()
 
   it('Λ4: Κ1 και Κ2 είναι ΑΝΕΞΑΡΤΗΤΑ — ένας κανόνας με «ή» θα έπεφτε και στις δύο φορές', () => {
     // (α) εντός ταβανιού, αλλά ≥ κέλυφος ⇒ μόνο το Κ1 μιλά.
-    const k1 = L.auditRouteLedger({ p: { budget: 999_999, reason: 'r' } },
+    const k1 = L.auditRouteLedger({ p: seal(999_999) },
       [{ id: 'p', page: 'p', actual: SHELL_BYTES }], SHELL_BYTES);
     expect(k1.entries[0].budgetVerdict).toBe(L.ROUTE_BUDGET.WITHIN);
     expect(k1.entries[0].shapeVerdict).toBe(L.ROUTE_SHAPE.SECOND_SHELL);
     expect(k1.failures).toHaveLength(1);
 
     // (β) μικροσκοπικό σε σχέση με το κέλυφος, αλλά πάνω από το ταβάνι ⇒ μόνο το Κ2.
-    const k2 = L.auditRouteLedger({ p: { budget: 1_000, reason: 'r' } },
+    const k2 = L.auditRouteLedger({ p: seal(1_000) },
       [{ id: 'p', page: 'p', actual: 5_000 }], SHELL_BYTES);
     expect(k2.entries[0].budgetVerdict).toBe(L.ROUTE_BUDGET.OVER);
     expect(k2.entries[0].shapeVerdict).toBe(L.ROUTE_SHAPE.PAGE);
@@ -259,8 +269,8 @@ describe('Λ — το κατάστιχο των διαδρομών (§8.43)', ()
   it('Λ8: ΚΑΝΕΝΑΣ ΑΡΙΘΜΟΣ ΔΕΝ ΣΙΩΠΑ ΤΟ Κ1 — το κατώφλι είναι παραγόμενο, όχι δηλωμένο', () => {
     // Η μετάλλαξη που θα «διόρθωνε» ένα κόκκινο Κ2 — ανέβασμα του ταβανιού — αφήνει το
     // Κ1 κόκκινο. Αυτός είναι όλος ο λόγος που οι δύο κανόνες δεν είναι ένας.
-    for (const budget of [1, 1_000, 240_521, 10_000_000]) {
-      const audit = L.auditRouteLedger({ p: { budget, reason: 'r' } },
+    for (const sealed of [1, 1_000, 240_521, 10_000_000]) {
+      const audit = L.auditRouteLedger({ p: seal(sealed) },
         [{ id: 'p', page: 'p', actual: PROPERTIES_ID_BYTES }], SHELL_BYTES);
       expect(audit.entries[0].shapeVerdict).toBe(L.ROUTE_SHAPE.SECOND_SHELL);
       expect(audit.failures.length).toBeGreaterThan(0);
@@ -281,13 +291,122 @@ describe('Λ — το κατάστιχο των διαδρομών (§8.43)', ()
       const write = routeSlices => fs.writeFileSync(
         path.join(dir, '.i18n-shell-slice.json'), JSON.stringify({ routeSlices }), 'utf8',
       );
-      write({ 'src/app/x/page.tsx': { budget: 1000, reason: 'ok' } });
+      write({ 'src/app/x/page.tsx': seal(1000) });
       expect(() => loadConfig(dir)).not.toThrow();          // ο παρονομαστής
       write({ 'src/app/x/page.tsx': { reason: 'μόνο πρόζα' } });
-      expect(() => loadConfig(dir)).toThrow(/routeSlices.*budget/s);
+      expect(() => loadConfig(dir)).toThrow(/routeSlices.*sealed/s);
+      // 🔴 ADR-744 §20 — ΚΑΙ ΤΟ ΠΑΛΙΟ ΣΧΗΜΑ ΑΠΟΡΡΙΠΤΕΤΑΙ ΕΔΩ, ΘΟΡΥΒΩΔΩΣ. Δύο σχήματα
+      // στο ίδιο μητρώο = δύο λίστες που αποκλίνουν, το ακριβές ελάττωμα του ADR-744.
+      write({ 'src/app/x/page.tsx': { budget: 1000, reason: 'ok' } });
+      expect(() => loadConfig(dir)).toThrow(/budget.*καταργήθηκε/s);
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
+  });
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+   * ADR-744 §20 — Κ3: ΟΙ ΑΓΚΥΡΕΣ ΤΗΣ ΠΡΟΕΛΕΥΣΗΣ ΤΟΥ ΑΡΙΘΜΟΥ
+   * ═══════════════════════════════════════════════════════════════════════════ */
+
+  it('Λ11: ΔΕΝ ΥΠΑΡΧΕΙ ΑΡΙΘΜΟΣ ΝΑ ΑΝΕΒΑΣΕΙΣ — το ταβάνι ΠΑΡΑΓΕΤΑΙ από τη σφράγιση', () => {
+    // Η μετάλλαξη που το παλιό σχήμα επέτρεπε: «κοκκίνισε; γράψε μεγαλύτερο νούμερο».
+    // Εδώ ΔΕΝ υπάρχει πεδίο ταβανιού· η μόνη κίνηση είναι να αλλάξει η ΜΕΤΡΗΣΗ.
+    expect(L.ceilingFor(1_000)).toBe(1_250);
+    expect(L.ceilingFor(7_900)).toBe(9_875);
+    const audit = L.auditRouteLedger({ p: seal(1_000) }, [{ id: 'p', page: 'p', actual: 1_251 }], SHELL_BYTES);
+    expect(audit.entries[0].budgetVerdict).toBe(L.ROUTE_BUDGET.OVER);
+    expect(audit.entries[0].ceiling).toBe(1_250);
+    // …και το μήνυμα ΟΝΟΜΑΖΕΙ τη σφράγιση και το περιθώριο, όχι σκέτο «over budget»:
+    // ο αναγνώστης πρέπει να μάθει ΑΠΟ ΠΟΥ βγήκε ο αριθμός, αλλιώς ξαναγράφει bump.
+    expect(L.describeRouteFailures(audit.failures, SHELL_BYTES)).toMatch(/σφράγιση 1000 της 2026-08-30 \+ 25% περιθώριο/);
+  });
+
+  it('Λ12: το `history` είναι ΑΡΙΘΜΗΤΙΚΗ, όχι ημερολόγιο — αλυσίδα που δεν κλείνει ΜΠΛΟΚΑΡΕΙ', () => {
+    const chain = history => ({ sealed: 900, sealedAt: '2026-08-30', reason: 'r', history });
+    // (α) το βήμα δεν ξεκινά εκεί που τελείωσε το προηγούμενο
+    expect(() => L.parseRouteDeclaration('p', chain([
+      { from: 0, to: 500, at: '2026-08-01', why: 'γέννηση' },
+      { from: 600, to: 900, at: '2026-08-30', why: 'αύξηση' },
+    ]))).toThrow(/αλυσίδα ΔΕΝ κλείνει/);
+    // (β) η αλυσίδα δεν καταλήγει στη σφράγιση ⇒ ο αριθμός άλλαξε χωρίς να το πει κανείς
+    expect(() => L.parseRouteDeclaration('p', chain([
+      { from: 0, to: 500, at: '2026-08-01', why: 'γέννηση' },
+    ]))).toThrow(/καταλήγει στα 500 αλλά το `sealed` λέει 900/);
+    // (γ) σφράγιση ΧΩΡΙΣ καθόλου αιτιολογία = «bump» με άλλο όνομα
+    expect(() => L.parseRouteDeclaration('p', { sealed: 900, sealedAt: '2026-08-30', reason: 'r', history: [] }))
+      .toThrow(/history/);
+    // (δ) βήμα με κενό `why` — η αιτιολογία είναι ΟΛΟΣ ο λόγος ύπαρξης του history
+    expect(() => L.parseRouteDeclaration('p', chain([{ from: 0, to: 900, at: '2026-08-30', why: '   ' }])))
+      .toThrow(/why/);
+    // (ε) «πέρσι» δεν είναι ημερομηνία
+    expect(() => L.parseRouteDeclaration('p', chain([{ from: 0, to: 900, at: 'πέρσι', why: 'w' }])))
+      .toThrow(/ΥΥΥΥ-ΜΜ-ΗΗ/);
+    // …και η νόμιμη αλυσίδα περνά, αλλιώς όλα τα παραπάνω θα ήταν «πάντα σκάει».
+    expect(L.parseRouteDeclaration('p', chain([
+      { from: 0, to: 500, at: '2026-08-01', why: 'γέννηση' },
+      { from: 500, to: 900, at: '2026-08-30', why: 'η σελίδα απέκτησε πεδίο' },
+    ])).ceiling).toBe(1_125);
+  });
+
+  /**
+   * ⚠️ ΑΥΤΗ Η ΑΓΚΥΡΑ ΓΕΝΝΗΘΗΚΕ ΛΑΘΟΣ ΚΑΙ ΔΙΟΡΘΩΘΗΚΕ ΠΡΙΝ ΚΛΕΙΔΩΣΕΙ. Η πρώτη γραφή
+   * σάρωνε το `why` για απαγορευμένες φράσεις (`/για να γίνει πράσινο/`) — και
+   * **κοκκίνισε αμέσως**, γιατί η νόμιμη αιτιολογία του `/offers/mandate/new`
+   * **ΠΑΡΑΘΕΤΕΙ** τη φράση για να την αντικρούσει. Έλεγχος πρόζας δεν διακρίνει
+   * «το λέω» από «το κατηγορώ»: είναι το ίδιο σφάλμα που το §8.38 ονομάζει
+   * «πρόζα δεν είναι προϋπολογισμός», με τους ρόλους αντεστραμμένους.
+   *
+   * Ό,τι μπορεί να κριθεί **δομικά** κρίνεται δομικά· η ποιότητα της αιτιολογίας
+   * είναι δουλειά **ανθρώπου σε review**, όπως ακριβώς το `Binary-Size:` footer.
+   */
+  it('Λ13: ΤΟ ΠΡΑΓΜΑΤΙΚΟ ΜΗΤΡΩΟ — κάθε αλυσίδα κλείνει, καμία σφράγιση δεν είναι από το μέλλον', () => {
+    const pages = Object.keys(config.routeSlices);
+    expect(pages.length).toBeGreaterThan(0);
+    const today = new Date().toISOString().slice(0, 10);
+    for (const page of pages) {
+      const declaration = L.parseRouteDeclaration(page, config.routeSlices[page]);
+      // Η αλυσίδα καταλήγει ΑΚΡΙΒΩΣ στη σφράγιση (το `parseRouteDeclaration` το
+      // επιβάλλει· εδώ ασκείται πάνω στο ΠΡΑΓΜΑΤΙΚΟ αρχείο, όχι σε fixture).
+      expect(declaration.history[declaration.history.length - 1].to).toBe(declaration.sealed);
+      expect(declaration.sealedAt <= today).toBe(true);
+      for (const step of declaration.history) {
+        // Μια αιτιολογία μιας λέξης είναι «bump» με άλλο όνομα. Το μήκος δεν
+        // αποδεικνύει ποιότητα — αποδεικνύει ότι κάποιος ΚΑΘΙΣΕ και έγραψε.
+        expect(step.why.trim().length).toBeGreaterThan(40);
+        expect(step.at <= today).toBe(true);
+      }
+    }
+  });
+
+  it('Λ14: 🔴 Β2 — Η ΑΡΝΗΣΗ ΔΕΝ ΔΙΑΒΑΖΕΤΑΙ ΩΣ «ΕΝΤΟΣ ΤΑΒΑΝΙΟΥ»', () => {
+    // ΤΟ ΠΕΡΙΣΤΑΤΙΚΟ: ένα slice που αρνήθηκε να εκπεμφθεί είναι ΕΛΛΙΠΕΣ, άρα τα bytes
+    // του είναι ΚΑΤΩ ΦΡΑΓΜΑ. Χωρίς ρητή κατάσταση θα περνούσε ως «WITHIN» — «δεν
+    // κρίθηκε» με τη στολή του «κρίθηκε και πέρασε».
+    const audit = L.auditRouteLedger(
+      { p: seal(10_000) },
+      [{ id: 'p', page: 'p', actual: 42, refused: true }],
+      SHELL_BYTES,
+    );
+    expect(audit.entries[0].presence).toBe(L.ROUTE_PRESENCE.REFUSED);
+    expect(audit.entries[0].budgetVerdict).toBeNull();   // ΔΕΝ κρίθηκε…
+    expect(audit.entries[0].shapeVerdict).toBeNull();
+    expect(audit.failures).toHaveLength(1);              // …και ΜΕΤΡΑΕΙ ως αποτυχία
+    expect(L.describeRouteFailures(audit.failures, SHELL_BYTES)).toMatch(/ΔΕΝ ΚΡΙΘΗΚΕ.*ΚΑΤΩ ΦΡΑΓΜΑ/s);
+    // …και η λογιστική ΚΛΕΙΝΕΙ με την άρνηση μέσα (ζυγίζει και στις δύο πλευρές).
+    expect(audit.entries).toHaveLength(1);
+  });
+
+  it('Λ15: ο ΤΖΟΓΟΣ ανακοινώνεται — σφράγιση που πάλιωσε κρύβει την επόμενη παλινδρόμηση', () => {
+    // Το μάθημα ADR-598 (8× τζόγος επί 40 ημέρες) και το πρότυπο PHPStan
+    // `reportUnmatchedIgnoredErrors`: καταστολή που δεν χρειάζεται πια ΕΙΝΑΙ ελάττωμα.
+    const audit = L.auditRouteLedger({ p: seal(10_000) }, [{ id: 'p', page: 'p', actual: 4_000 }], SHELL_BYTES);
+    expect(audit.failures).toHaveLength(0);                    // ΔΕΝ μπλοκάρει…
+    const lines = L.announceRouteSlack(audit.entries);
+    expect(lines).toHaveLength(1);                             // …αλλά ΜΙΛΑΕΙ
+    expect(lines[0]).toMatch(/6000 bytes κάτω από τη σφράγιση/);
+    // …και σιωπά όταν δεν υπάρχει τζόγος, αλλιώς θα ήταν μόνιμος θόρυβος.
+    const tight = L.auditRouteLedger({ p: seal(10_000) }, [{ id: 'p', page: 'p', actual: 9_900 }], SHELL_BYTES);
+    expect(L.announceRouteSlack(tight.entries)).toHaveLength(0);
   });
 
   it('Λ9: η λογιστική που ΔΕΝ κλείνει σκάει με ΟΝΟΜΑ — δεν επιστρέφει σιωπηλά', () => {
@@ -501,7 +620,22 @@ describe('Χ — η αναπαραγωγή του ελεγκτή είναι ΟΛ
       expect(runGate('--full').status).toBe(0);  // Layer 2 — ΗΤΑΝ ΑΔΥΝΑΤΟ ΩΣ ΤΙΣ 2026-08-28
     }, 300_000);
 
-    it('Χ4 🔴 ΜΕΤΑΛΛΑΞΗ: «συνεπές αλλά ΜΠΑΓΙΑΤΙΚΟ» ⇒ Layer 1 ΠΡΑΣΙΝΟ, Layer 2 ΚΟΚΚΙΝΟ και ΤΟ ΟΝΟΜΑΖΕΙ', () => {
+    /**
+     * 🔴 ΑΥΤΗ Η ΑΓΚΥΡΑ ΑΝΤΙΣΤΡΑΦΗΚΕ ΣΤΙΣ 2026-08-30 (ADR-744 §20 / Β2β), ΚΑΙ Η
+     * ΑΝΤΙΣΤΡΟΦΗ ΕΙΝΑΙ Η ΒΕΛΤΙΩΣΗ.
+     *
+     * Ως τότε έλεγε **«Layer 1 ΠΡΑΣΙΝΟ»** — και ήταν αλήθεια: το Layer 1 ρωτούσε
+     * μόνο «ταιριάζει το sha256 που υπέγραψε το manifest;». Δηλαδή η άγκυρα
+     * **κατέγραφε τυφλό σημείο ως προδιαγραφή**. Το τι κόστιζε μετρήθηκε ζωντανά:
+     * με τα 20 νέα κλειδιά του ADR-832 μέσα στα locales και το route artifact
+     * χωρίς κανένα, το pre-commit τύπωνε `✅ CHECK 3.34 OK` και θα άφηνε να περάσει
+     * commit που βάφει ωμά κλειδιά σε δύο πεδία που ο νόμος απαιτεί.
+     *
+     * Τώρα το manifest κουβαλά τα `wants` **κάθε διαδρομής**, οπότε το Layer 1
+     * ξανακλαδεύει τη διαδρομή από τα σημερινά locales — **χωρίς γράφο**, δηλαδή
+     * χωρίς κόστος στο pre-commit. Το κενό που περιέγραφε αυτή η άγκυρα **έκλεισε**.
+     */
+    it('Χ4 🔴 ΜΕΤΑΛΛΑΞΗ: «συνεπές αλλά ΜΠΑΓΙΑΤΙΚΟ» ⇒ ΚΑΙ ΤΑ ΔΥΟ Layers ΚΟΚΚΙΝΑ και ΤΟ ΟΝΟΜΑΖΟΥΝ', () => {
       const tampered = tamperSameLength(originalRoute);
       fs.writeFileSync(targetAbs, tampered, 'utf8');
 
@@ -511,10 +645,14 @@ describe('Χ — η αναπαραγωγή του ελεγκτή είναι ΟΛ
       manifest.artifacts[targetRel] = sha256(normalize(tampered));
       fs.writeFileSync(path.join(REPO, MANIFEST_REL), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
 
-      // Layer 1 δεν έχει τρόπο να το δει: ρωτά το manifest, και το manifest συμφωνεί.
-      expect(runGate().status).toBe(0);
+      // Layer 1 ΤΟ ΒΛΕΠΕΙ ΠΛΕΟΝ: ξανακλαδεύει τη διαδρομή από τα locales και βρίσκει
+      // τιμή που δεν συμφωνεί. (ΗΤΑΝ `.toBe(0)` — και αυτό ήταν το ελάττωμα.)
+      const layerOne = runGate();
+      expect(layerOne.status).toBe(1);
+      expect(`${layerOne.stdout}${layerOne.stderr}`).toContain(targetRel);
 
-      // Layer 2 ρωτά ΤΗΝ ΠΗΓΗ — και τώρα βλέπει τις διαδρομές.
+      // Layer 2 ρωτά ΤΗΝ ΠΗΓΗ — και εξακολουθεί να το βλέπει, από άλλο μονοπάτι.
+      // ΔΥΟ ανεξάρτητοι φρουροί: αν σπάσει ο ένας, ο άλλος μιλά ακόμη.
       const red = runGate('--full');
       expect(red.status).toBe(1);
       expect(`${red.stdout}${red.stderr}`).toContain(targetRel);
