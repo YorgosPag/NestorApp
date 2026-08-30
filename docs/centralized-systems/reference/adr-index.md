@@ -1576,6 +1576,7 @@
 | **ADR-829** | Η επιφάνεια που **ανοίγει** και ο διακομιστής που **αρνείται** (η τομή ήταν ∅) | ✅ DXF viewer κλειστό · 🟠 4+2 ανοιχτά | [View](./adrs/ADR-829-surface-authority-reachability.md) |
 | **ADR-830** | Η **μετάφραση που έφτασε** και κανείς δεν ξαναρώτησε (ICU cache χωρίς ακύρωση) | ✅ Κλειστό · 🟠 §8 fallback καρέ | [View](./adrs/ADR-830-icu-cache-invalidation.md) |
 | **ADR-831** | Η **λίστα που θυμόταν** και το **μητρώο που ήξερε** (προφόρτωση πριν την αλλαγή γλώσσας) | ✅ Κλειστό — επαληθευμένο ζωντανά (0ms) | [View](./adrs/ADR-831-language-switch-preload.md) |
+| **ADR-834** | **Η ακμή του δικτύου**: η σχέση δεν αντιγράφεται, **παράγεται** από την πράξη | 🔵 Απόφαση — καμία γραμμή κώδικα | [View](./adrs/ADR-834-network-relationship-edge.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---
