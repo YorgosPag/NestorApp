@@ -157,7 +157,22 @@ export function useInFlowTaxIdentity(): InFlowTaxIdentity {
     [commit],
   );
 
-  const blockers = React.useMemo(() => taxIdentityBlockers(vatNumber), [vatNumber]);
+  /**
+   * 🔴 **ΤΟ ΑΝΟΙΧΤΟ ΖΗΤΗΜΑ ΝΙΚΑΕΙ ΤΗΝ ΑΠΟΥΣΙΑ, ΚΑΙ Η ΣΕΙΡΑ ΕΙΝΑΙ ΣΥΜΒΟΛΑΙΟ.**
+   *
+   * Όσο υπάρχει `issueKey`, το πεδίο δείχνει έναν αριθμό που ο διακομιστής
+   * **απέρριψε** — άρα **διαφορετικό** από αυτόν που θα ταξιδέψει. Η φόρμα δεν
+   * επιτρέπεται να φύγει σε αυτή την κατάσταση, ακόμη κι όταν το context κρατά
+   * τέλεια έγκυρο ΑΦΜ *(που είναι ακριβώς η περίπτωση που ξέφυγε)*.
+   *
+   * ⚠️ **Ένα εμπόδιο τη φορά, ποτέ δύο**: αν έλειπε **και** το ΑΦΜ **και** υπήρχε
+   * ένσταση, δύο μηνύματα θα έλεγαν το ίδιο πράγμα με άλλα λόγια. Το ανοιχτό
+   * ζήτημα είναι το **πιο πρόσφατο γεγονός**, άρα αυτό που ο άνθρωπος αναγνωρίζει.
+   */
+  const blockers = React.useMemo<readonly TaxIdentityBlocker[]>(
+    () => (issueKey !== null ? ['tax-identity-unsaved'] : taxIdentityBlockers(vatNumber)),
+    [issueKey, vatNumber],
+  );
 
   return { value, onChange, onCommit, issueKey, blockers };
 }

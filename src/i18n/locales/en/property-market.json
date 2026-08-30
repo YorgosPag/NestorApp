@@ -662,6 +662,7 @@
       "request-term-illegal": "The duration exceeds the lawful maximum for this type of agreement.",
       "request-compensation-invalid": "State a commission greater than zero.",
       "tax-identity-required": "Your tax ID is missing. Enter it in this form — Greek law (art. 200 §2, L.4072/2012) requires it for the mandate agreement, and the agency sees it only after it accepts your request.",
+      "tax-identity-unsaved": "The number in the tax ID field was not saved — the previous one would be sent. Correct it, or clear the field to restore it.",
       "listing-absent": "This listing was not found among yours.",
       "listing-not-live": "The listing is withdrawn, so the agency has nothing to see. Restore it first.",
       "listing-already-brokered": "This listing is already assigned to an agency.",

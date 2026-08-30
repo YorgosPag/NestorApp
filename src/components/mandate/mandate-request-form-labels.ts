@@ -79,6 +79,14 @@ export const TEXT_KEYS: Record<DraftFormSlot | MandateRequestBlocker, string> = 
    * **άλλη** δικαιολόγηση, και ένα κοινό κείμενο θα ήταν σωστό σε καμία από τις δύο.
    */
   'tax-identity-required': 'property-market:mandate.request.tax-identity-required',
+
+  /**
+   * ⚠️ **Δεν λέει «λάθος ΑΦΜ»** — αυτό το λέει ήδη το **ίδιο το πεδίο**, ονομαστικά
+   * (`vat-check-digit-invalid`). Εδώ λέει τη **συνέπεια για την υποβολή**: ο αριθμός
+   * που βλέπεις δεν είναι αυτός που θα σταλεί. Δύο μηνύματα, δύο διαφορετικές
+   * πληροφορίες — ίδιο σχήμα με το «error summary + inline detail» του GOV.UK.
+   */
+  'tax-identity-unsaved': 'property-market:mandate.request.tax-identity-unsaved',
 };
 
 /**

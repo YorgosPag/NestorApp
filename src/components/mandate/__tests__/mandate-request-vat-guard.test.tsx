@@ -87,8 +87,13 @@ describe('Κ — ο κριτής της φορολογικής ταυτότητ�
     // Αν κάποιος «απλοποιήσει» βάζοντας το εμπόδιο στο `DRAFT_IDENTITY_BLOCKERS`,
     // το `offer-form-labels.ts` θα απαιτούσε κλειδί για μήνυμα που **δεν δείχνει ποτέ**.
     const offerLabels = repoFile('src/components/owner-property/offer-form-labels.ts');
-    expect(TAX_IDENTITY_BLOCKERS).toEqual(['tax-identity-required']);
-    expect(offerLabels).not.toContain('tax-identity-required');
+    // ⚠️ Βρόχος πάνω στο **κλειστό σύνολο**, ποτέ καρφωμένο πλήθος: μια τρίτη τιμή
+    //    αύριο πρέπει να **κληρονομεί** τον έλεγχο, όχι να τον σπάει (μετρημένο
+    //    2026-08-30, όταν το `tax-identity-unsaved` κοκκίνισε αυτή τη γραμμή).
+    expect(TAX_IDENTITY_BLOCKERS.length).toBeGreaterThan(0);
+    for (const code of TAX_IDENTITY_BLOCKERS) {
+      expect(offerLabels).not.toContain(code);
+    }
   });
 });
 
@@ -215,6 +220,47 @@ describe('Ρ — η πολιτική της ροής (ΣΥΜΠΕΡΙΦΟΡΑ, ό
     expect(result.current.issueKey).not.toBe(VAT_FIELD_KEYS.saveError);
   });
 
+  it('Ρ8 — 🔴🔴 ΤΟ ΕΥΡΗΜΑ ΤΗΣ ΖΩΝΤΑΝΗΣ ΕΠΑΛΗΘΕΥΣΗΣ: αποθηκευμένο ΕΓΚΥΡΟ + απορριφθέν στην οθόνη ⇒ Η ΦΟΡΜΑ ΔΕΝ ΦΕΥΓΕΙ', async () => {
+    // Μετρημένο ζωντανά 2026-08-30: το κουμπί έμενε **ενεργό** και θα έστελνε τον
+    // ΠΑΛΙΟ αριθμό ενώ το πεδίο έδειχνε τον απορριφθέντα. Καμία πύλη δεν το έπιανε.
+    currentVat = '094259216';
+    updateVatNumber.mockResolvedValue('vat-check-digit-invalid');
+    const { result } = renderHook(() => useInFlowTaxIdentity());
+
+    // Ο παρονομαστής: με αποθηκευμένο έγκυρο, καμία ένσταση ⇒ κανένα εμπόδιο.
+    expect(result.current.blockers).toEqual([]);
+
+    await act(async () => {
+      result.current.onCommit('094014202');
+    });
+
+    expect(result.current.issueKey).not.toBeNull();
+    // 🔑 ΟΝΟΜΑΣΤΙΚΑ «δεν σώθηκε», ΠΟΤΕ «λείπει» — ο άνθρωπος ΕΧΕΙ ΑΦΜ.
+    expect(result.current.blockers).toEqual(['tax-identity-unsaved']);
+    expect(result.current.blockers).not.toContain('tax-identity-required');
+  });
+
+  it('Ρ9 — το άδειασμα του πεδίου ΛΥΝΕΙ το ανοιχτό ζήτημα και επαναφέρει τον αποθηκευμένο', async () => {
+    currentVat = '094259216';
+    updateVatNumber.mockResolvedValue('vat-format-invalid');
+    const { result } = renderHook(() => useInFlowTaxIdentity());
+
+    await act(async () => {
+      result.current.onCommit('123');
+    });
+    expect(result.current.blockers).toEqual(['tax-identity-unsaved']);
+
+    // Η **δεύτερη** διαδρομή διαφυγής που υπόσχεται το κείμενο του εμποδίου.
+    await act(async () => {
+      result.current.onChange('');
+      result.current.onCommit('');
+    });
+
+    expect(result.current.issueKey).toBeNull();
+    expect(result.current.value).toBe('094259216');
+    expect(result.current.blockers).toEqual([]);
+  });
+
   it('Ρ7 — η επόμενη πληκτρολόγηση σβήνει ένσταση που αφορούσε ΑΛΛΟΝ αριθμό', async () => {
     updateVatNumber.mockResolvedValue('vat-format-invalid');
     const { result } = renderHook(() => useInFlowTaxIdentity());
@@ -248,6 +294,21 @@ describe('Ε — το εμπόδιο ΕΧΕΙ κείμενο, και στις δ
       expect(text).not.toContain('tax-identity-required');
       // Η οδηγία οφείλει να κατονομάζει **τι** λείπει — αλλιώς δεν είναι οδηγία.
       expect(text.toLowerCase()).toMatch(lang === 'el' ? /αφμ/ : /tax id/);
+    }
+  });
+
+  it('Ε3 — ΚΑΘΕ κωδικός του λεξιλογίου έχει κείμενο, σε ΚΑΙ ΤΙΣ ΔΥΟ γλώσσες', () => {
+    // 🔑 Βρόχος πάνω στο **κλειστό σύνολο**, όχι χειρόγραφη λίστα: τέταρτος κωδικός
+    //    αύριο κοκκινίζει **εδώ** αν ξεχάσει locale, χωρίς να το θυμηθεί κανείς.
+    for (const code of TAX_IDENTITY_BLOCKERS) {
+      for (const bundle of [elMarket, enMarket]) {
+        const text = (bundle as { mandate: { request: Record<string, string> } }).mandate.request[
+          code
+        ];
+        expect(typeof text === 'string' && text.length > 0).toBe(true);
+        expect(text).not.toContain(code);
+      }
+      expect(TEXT_KEYS[code]).toBe(`property-market:mandate.request.${code}`);
     }
   });
 });

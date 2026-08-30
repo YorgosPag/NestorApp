@@ -14,7 +14,7 @@
     "src/i18n/generated/routes/o__workspace__listings__mandates__requests.el.json": "63036227b351055f2c06f1f5a66b5c64df6ed4e4073bbda8645f2a8cfa4ff1ec",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile.el.json": "dbde289c17ef57765adec35f9a7a694440d5c9a4b51daa1efdabeaa08955bcf3",
     "src/i18n/generated/routes/offers.el.json": "37f11fe465050e47c3d55037f4cb71f77828554b0f9fe71399f5f1e059966ce8",
-    "src/i18n/generated/routes/offers__mandate__new.el.json": "e2243d758b03673b058e019e4efdc164a3161a60d46a11be22c0e17788f18fc9",
+    "src/i18n/generated/routes/offers__mandate__new.el.json": "7ef9cdca8e3a47c9a12c402915467d61cdfd87906a6a383cde08d60cf5e0e9fd",
     "src/i18n/generated/routes/offers__new.el.json": "9d98014cdb4b74ee3f728fd2dba26063ad334365848d4206793e44dc5f58ae7c",
     "src/i18n/generated/routes/offers__offerId.el.json": "dd1203cde8e79abc782ded600cc521362762486b6aed0024f703b5c4daad9f26",
     "src/i18n/generated/routes/privacy-policy.el.json": "181e3b315e8ac63a3e927fa8bf073863b2aa706fd66a06f38d936dce70b0cee0",
@@ -62,7 +62,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "b2c1a495c2c2e61d9259ce7cc868635690a6137491be06d17ab84533b68f270e",
+  "inputsSha256": "a42e00fcfe785ee4304a455e76d4098a988177b2de9107261b24e82019dcee90",
   "languages": [
     "el"
   ],
@@ -609,7 +609,7 @@
     "matchedKeys": 135,
     "routeBoundaries": 0,
     "shellFiles": 500,
-    "sliceBytes": 309110
+    "sliceBytes": 309366
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
