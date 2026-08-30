@@ -118,6 +118,10 @@ function buildRouteSlice(projectRoot, config, graph, pageFile, shellSlice, whole
     page: MG.toPosix(pageFile),
     artifactPath: sliceFileFor(config, routeIdFor(pageFile), language),
     resources: subtractShell(full, shellSlice, wholeNamespaces),
+    // ADR-744 §20 (Β2β) — ΤΑΞΙΔΕΥΟΥΝ ΩΣ ΤΟ MANIFEST. Χωρίς αυτά το Layer 1 δεν έχει
+    // πώς να ξανακλαδέψει τη διαδρομή από τα locales, και μια μπαγιάτικη μετάφραση
+    // περνά κάθε commit (μετρημένο: `✅ OK` πάνω σε artifact χωρίς 20 κλειδιά).
+    wants: plan.wants,
     violations: plan.violations,
     // ⚠️ Χρειάζεται για να μη χαρακτηριστεί «νεκρή» μια εγγραφή policy που
     // υπηρετεί **διαδρομή** και όχι το κέλυφος: μια ψεύτικη προειδοποίηση
@@ -211,7 +215,7 @@ function renderComplete({ projectRoot, config, plan, graph, rendered }) {
   // ακριβώς το σχήμα που το ADR-744 υπάρχει για να καταργήσει.
   const artifacts = new Map(rendered.artifacts);
   for (const route of routes) artifacts.set(route.artifactPath, stableStringify(route.resources));
-  const manifest = buildManifest({ config, plan, artifacts, slices: rendered.slices });
+  const manifest = buildManifest({ config, plan, artifacts, slices: rendered.slices, routes });
 
   return {
     rendered: { ...rendered, artifacts, manifest, manifestText: stableStringify(manifest) },

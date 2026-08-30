@@ -26,7 +26,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const { parseDeclaration } = require('./ledger');
+const { parseDeclaration, parseRouteDeclaration } = require('./ledger');
 
 const CONFIG_FILE = '.i18n-shell-slice.json';
 
@@ -158,8 +158,12 @@ function loadConfig(projectRoot) {
   // ⚠️ ADR-777 §8.43 — ΤΟ ΙΔΙΟ ΓΙΑ ΤΟΝ ΑΔΕΛΦΟ. Το `routeSlices` δήλωνε μόνο `reason` ενώ
   // ο μηχανισμός του είναι ΑΦΑΙΡΕΣΗ: ένα slice που ξεπερνά το κέλυφος δεν είναι σελίδα,
   // είναι δεύτερο κέλυφος. Μετρημένο: το `/properties/[id]` θα ήταν 145,2% του κελύφους.
+  // 🔴 ADR-744 §20 — ΚΑΙ ΤΟ ΣΧΗΜΑ ΤΟΥ ΑΛΛΑΞΕ: δηλώνεται ΜΕΤΡΗΣΗ (`sealed`) με αλυσίδα
+  // αιτιολογίας (`history`) που ΚΛΕΙΝΕΙ αριθμητικά· το ταβάνι ΥΠΟΛΟΓΙΖΕΤΑΙ. Ένα σκέτο
+  // `budget` απορρίπτεται ΕΔΩ, στη φόρτωση, ώστε καμία διαδρομή κώδικα να μη δει ποτέ
+  // τα δύο σχήματα ταυτόχρονα — δύο σχήματα είναι δύο λίστες που αποκλίνουν.
   for (const [page, value] of Object.entries(config.routeSlices)) {
-    parseDeclaration(page, value, 'routeSlices');
+    parseRouteDeclaration(page, value);
   }
   return config;
 }

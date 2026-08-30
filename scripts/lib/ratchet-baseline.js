@@ -367,6 +367,12 @@ module.exports = {
   writeBaselineFile,
   isRegression,
   compareSets,
+  // ⚠️ ΕΞΑΓΕΤΑΙ ΑΠΟ 2026-08-30 (ADR-744 §20). Ζούσε ιδιωτικό, οπότε **μόνο** οι δύο
+  // CLI αυτού του αρχείου μπορούσαν να ρωτήσουν «πόσο τζόγο έχει το ταβάνι;». Η
+  // 27η πύλη που το χρειάστηκε — το κατάστιχο διαδρομών του CHECK 3.34 — δεν έχει
+  // baseline αρχείο και άρα ΔΕΝ περνά από `runRatchetCli`· χωρίς αυτή τη γραμμή θα
+  // έγραφε **δεύτερη** υλοποίηση της ίδιας ανακοίνωσης (N.18 / CHECK 3.28).
+  announceSlack,
   runRatchetCli,
   runSetRatchetCli,
   printHelp,
