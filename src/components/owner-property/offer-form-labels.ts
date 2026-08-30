@@ -72,6 +72,14 @@ export const TEXT_KEYS: Record<DraftFormSlot | OfferBlocker | OfferViolation, st
   'mandate-attestation-not-confirmed': 'property-market:offer.invariant.mandate-attestation-not-confirmed',
   'mandate-term-exceeds-statute': 'property-market:offer.invariant.mandate-term-exceeds-statute',
   'mandate-agreement-invalid': 'property-market:offer.invariant.mandate-agreement-invalid',
+  // ── ADR-832: η εντολή ως κατάληψη πόρου ─────────────────────────────────────
+  'mandate-scope-empty': 'property-market:offer.invariant.mandate-scope-empty',
+  'mandate-start-invalid': 'property-market:offer.invariant.mandate-start-invalid',
+  // ⚠️ Το κείμενο λέει **ότι** υπάρχει σύγκρουση, όχι **με ποιον**: το «ποιος» είναι
+  //    δεδομένο (`MandateConflict`) και ταξιδεύει χωριστά — αλλιώς κάθε γραφείο θα
+  //    ήθελε δικό του κλειδί.
+  'mandate-conflicts-existing': 'property-market:offer.invariant.mandate-conflicts-existing',
+  'mandate-conflict-undetermined': 'property-market:offer.invariant.mandate-conflict-undetermined',
 };
 
 /** Ο **ΕΝΑΣ** μεταφραστής αυτής της βάσης. */

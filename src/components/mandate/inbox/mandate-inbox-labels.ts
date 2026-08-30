@@ -92,7 +92,6 @@ export const REFUSAL_KEYS: Record<MandateDecisionRefusal, string> = {
   'request-not-pending': 'property-market:mandate.inbox.refusals.request-not-pending',
   'request-lapsed': 'property-market:mandate.inbox.refusals.request-lapsed',
   'listing-withdrawn': 'property-market:mandate.inbox.refusals.listing-withdrawn',
-  'listing-already-brokered': 'property-market:mandate.inbox.refusals.listing-already-brokered',
   'identity-incomplete': 'property-market:mandate.inbox.refusals.identity-incomplete',
   'mandate-invalid': 'property-market:mandate.inbox.refusals.mandate-invalid',
 };

@@ -70,6 +70,11 @@ export const TEXT_KEYS: Record<DraftFormSlot | MandateRequestBlocker, string> = 
   'request-term-illegal': 'property-market:mandate.request.request-term-illegal',
   'request-compensation-invalid': 'property-market:mandate.request.request-compensation-invalid',
 
+  // ── ADR-832 — η κατάληψη ως όρος της φόρμας ────────────────────────────────
+  'request-scope-unset': 'property-market:mandate.request.request-scope-unset',
+  'request-start-unset': 'property-market:mandate.request.request-start-unset',
+  'request-start-after-expiry': 'property-market:mandate.request.request-start-after-expiry',
+
   /**
    * 🔑 **Η ΔΕΥΤΕΡΗ ΠΗΓΗ, ΣΤΗΝ ΙΔΙΑ ΛΙΣΤΑ** — και το κλειδί ζει σε **αυτή** τη βάση,
    * όχι στο `common-account`, παρότι ο **κριτής** είναι κοινός.
@@ -104,11 +109,44 @@ export const REJECTION_KEYS: Record<MandateRequestRejection, string> = {
   'agency-absent': 'property-market:mandate.request.agency-absent',
   'request-already-pending': 'property-market:mandate.request.request-already-pending',
   'request-declined-final': 'property-market:mandate.request.request-declined-final',
+  /**
+   * 🔴 **ΕΛΕΙΠΕ, ΚΑΙ Ο ΤΥΠΟΣ ΤΟ ΕΔΕΙΞΕ** (ADR-832). Ο κωδικός γεννήθηκε στον γραφέα
+   * του Σ1 και ταξίδευε ως τα σύνορα — αλλά **καμία οθόνη δεν τον ονόμαζε**, οπότε η
+   * φόρμα τον διάβαζε ως «δεν μάθαμε» και έλεγε στον άνθρωπο *«δοκιμάστε ξανά χωρίς
+   * να αλλάξετε τίποτα»*. Δηλαδή ακριβώς το **λάθος**: εδώ πρέπει να αλλάξει κάτι.
+   *
+   * ⚠️ **Δεν είναι το `listing-already-brokered`.** Εκείνο λέει *«το ζεύγος έκλεισε»*
+   * και δεν έχει διέξοδο· αυτό λέει *«άλλος κρατά δικαίωμα ως τότε»* — και το
+   * μήνυμα **στέλνει στη διέξοδο** (μεταγενέστερη έναρξη ή απλή εντολή), που το
+   * `MandateOccupancyNotice` έχει ήδη δείξει στην οθόνη.
+   */
+  'listing-conflicting-mandate': 'property-market:mandate.request.listing-conflicting-mandate',
 };
 
 /** Τα υπόλοιπα κείμενα της οθόνης — πεδία, υποδείξεις, εκβάσεις. */
 export const SCREEN_KEYS = {
   agencyLabel: 'property-market:mandate.request.agencyLabel',
+
+  // ── ADR-832 — τα δύο νέα πεδία ────────────────────────────────────────────
+  scopeLabel: 'property-market:mandate.request.scopeLabel',
+  scopeHint: 'property-market:mandate.request.scopeHint',
+  startsLabel: 'property-market:mandate.request.startsLabel',
+  startsHint: 'property-market:mandate.request.startsHint',
+
+  // ── ADR-832 — το πάνελ της κατάληψης (Φ5) ─────────────────────────────────
+  occupancyTitle: 'property-market:mandate.request.occupancyTitle',
+  occupancyHeld: 'property-market:mandate.request.occupancyHeld',
+  occupancyBlocked: 'property-market:mandate.request.occupancyBlocked',
+  occupancyUndetermined: 'property-market:mandate.request.occupancyUndetermined',
+  occupancyHolderOther: 'property-market:mandate.request.occupancyHolderOther',
+  occupancyEntry: 'property-market:mandate.request.occupancyEntry',
+  occupancyEntryOpen: 'property-market:mandate.request.occupancyEntryOpen',
+  occupancyReasonExisting: 'property-market:mandate.request.occupancyReasonExisting',
+  occupancyReasonCandidate: 'property-market:mandate.request.occupancyReasonCandidate',
+  occupancyAvailableFrom: 'property-market:mandate.request.occupancyAvailableFrom',
+  occupancyAvailableAction: 'property-market:mandate.request.occupancyAvailableAction',
+  occupancyNoWait: 'property-market:mandate.request.occupancyNoWait',
+
   listingLabel: 'property-market:mandate.request.listingLabel',
   listingPlaceholder: 'property-market:mandate.request.listingPlaceholder',
   listingHint: 'property-market:mandate.request.listingHint',
