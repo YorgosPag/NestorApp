@@ -329,12 +329,21 @@ describe('Π — η ραφή, και το δίχτυ που ΔΕΝ αφαιρέ�
   });
 
   it('Π3 — 🔴🔴 ΤΟ ΔΙΧΤΥ ΤΟΥ Σ3 ΕΠΙΒΙΩΣΕ: ο φρουρός μετακόμισε, η άμυνα ΕΜΕΙΝΕ', () => {
-    const prepare = repoFile('src/services/mandate/mandate-acceptance-prepare.ts');
+    // 🔴 **Ο ΚΡΙΤΗΣ ΕΞΗΧΘΗ ΞΑΝΑ, ΚΑΙ ΠΙΟ ΜΑΚΡΙΑ** (ADR-834 §8): το mod-11 έφυγε από
+    //    την **ετοιμασία** και ζει στο `mandate-owner-identity.ts`, ώστε να το ρωτά
+    //    **και** η πόρτα υποβολής. Η άγκυρα ακολουθεί τον κριτή — δεν καρφώνεται σε
+    //    αρχείο.
+    const judge = repoFile('src/services/mandate/mandate-owner-identity.ts');
     // 🔴 **Η ΚΛΗΣΗ, ΟΧΙ ΤΟ ΟΝΟΜΑ** — μετρημένο 2026-08-29 με μετάλλαξη Μ8: η πρώτη
     //    γραφή αυτής της άγκυρας ζητούσε σκέτο `'isValidGreekVat'` και **έμεινε
     //    πράσινη** ενώ ο έλεγχος είχε αφαιρεθεί, γιατί το όνομα **επιβίωνε στη
     //    γραμμή εισαγωγής**. Άγκυρα που δείχνει σε `import` δεν φυλά τίποτα.
-    expect(prepare).toContain('!isValidGreekVat(vatNumber)');
+    expect(judge).toContain('!isValidGreekVat(vatNumber)');
+
+    // ⚠️ Και η **ετοιμασία** εξακολουθεί να ρωτά **αυτόν** και να μεταφράζει σε
+    //    άρνηση. Χωρίς αυτό, ο κριτής θα μπορούσε να μείνει σωστός και **ακάλεστος**.
+    const prepare = repoFile('src/services/mandate/mandate-acceptance-prepare.ts');
+    expect(prepare).toContain('await readOwnerIdentity(adminDb, uid)');
     expect(prepare).toContain("reason: 'identity-incomplete'");
   });
 

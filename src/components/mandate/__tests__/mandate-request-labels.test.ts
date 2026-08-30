@@ -37,7 +37,7 @@ import {
   everyOfferKindNamed,
 } from '@/components/mandate/offer-kind-labels';
 import { MANDATE_REQUEST_FORM_BLOCKERS } from '@/lib/mandate/mandate-request-form-values';
-import { MANDATE_REQUEST_REJECTIONS } from '@/services/mandate/mandate-request.service';
+import { MANDATE_REQUEST_REJECTIONS } from '@/services/mandate/mandate-request-vocabulary';
 import { OFFER_KINDS } from '@/types/property-offers';
 import { LISTING_AGREEMENTS } from '@/types/listing-agreement';
 

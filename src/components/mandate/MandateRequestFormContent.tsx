@@ -78,7 +78,7 @@ const MandateOccupancyPanel = dynamic(
   () => import('@/components/mandate/MandateOccupancyPanel').then((m) => m.MandateOccupancyPanel),
   { ssr: false },
 );
-import type { MandateRequestRejection } from '@/services/mandate/mandate-request.service';
+import type { MandateRequestRejection } from '@/services/mandate/mandate-request-vocabulary';
 import type { OwnerProperty } from '@/types/owner-property';
 import type { ProposedMandateTerms } from '@/types/mandate-request';
 // 🔴 **Ο ΦΡΟΥΡΟΣ ΤΟΥ ΑΦΜ ΜΕΤΑΚΟΜΙΣΕ ΕΔΩ** (ADR-827 §9.21 ι #1 · §9.20 β).
@@ -89,6 +89,7 @@ import { TaxIdentityField } from '@/components/account/TaxIdentityField';
 import { useInFlowTaxIdentity } from '@/hooks/account/useInFlowTaxIdentity';
 
 import { CompensationField, Field } from './mandate-request-form-fields';
+import { MandateRequestOutcomeNotice } from './MandateRequestOutcomeNotice';
 import {
   MANDATE_REQUEST_NS,
   REJECTION_KEYS,
@@ -442,12 +443,15 @@ export function MandateRequestFormContent({
         disabled={submitState === 'saving'}
       />
 
-      {outcome.kind !== 'idle' && (
-        <p role="alert" className="m-0 rounded-md border border-border bg-card p-3 text-sm text-foreground">
-          {outcome.kind === 'refused'
-            ? t(REJECTION_KEYS[outcome.reason])
-            : t(SCREEN_KEYS.unverified)}
-        </p>
+      {/*
+        ⚠️ Το `sent` **δεν** φτάνει ποτέ εδώ — έχει **δική του οθόνη** ({@link Outcome}).
+        Μένουν οι δύο που κρατούν τον άνθρωπο στη φόρμα: η ονομαστική άρνηση και το
+        «δεν μάθαμε», που το `null` ξεχωρίζει (N.12).
+      */}
+      {(outcome.kind === 'refused' || outcome.kind === 'unverified') && (
+        <MandateRequestOutcomeNotice
+          reason={outcome.kind === 'refused' ? outcome.reason : null}
+        />
       )}
     </DraftFormShell>
   );

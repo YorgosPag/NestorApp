@@ -23,7 +23,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { DraftFormSlot, DraftFormText } from '@/lib/forms/draft-form-labels';
 import type { TaxIdentityBlocker } from '@/lib/forms/draft-identity';
 import type { MandateRequestFormBlocker } from '@/lib/mandate/mandate-request-form-values';
-import type { MandateRequestRejection } from '@/services/mandate/mandate-request.service';
+import { PRIVATE_PROFILE_ROUTE } from '@/lib/routes/accountRoutes';
+import type { MandateRequestRejection } from '@/services/mandate/mandate-request-vocabulary';
 
 export const MANDATE_REQUEST_NS = 'property-market';
 
@@ -121,6 +122,52 @@ export const REJECTION_KEYS: Record<MandateRequestRejection, string> = {
    * `MandateOccupancyNotice` έχει ήδη δείξει στην οθόνη.
    */
   'listing-conflicting-mandate': 'property-market:mandate.request.listing-conflicting-mandate',
+  /**
+   * 🔴 **ADR-834 §8** — η μόνη άρνηση αυτού του πίνακα που αφορά **τον ίδιο** τον
+   * άνθρωπο που πάτησε, και η μόνη με **διέξοδο μέσα στην οθόνη** ({@link REJECTION_REMEDY}).
+   */
+  'identity-incomplete': 'property-market:mandate.request.identity-incomplete',
+};
+
+/**
+ * **Η ΔΙΕΞΟΔΟΣ ΚΑΘΕ ΑΡΝΗΣΗΣ** — λόγος **και** δυνατότητα διόρθωσης (σχήμα P2B άρθρο 4).
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΓΙΑΤΙ ΠΛΗΡΗΣ `Record` ΜΕ `null`, ΚΑΙ ΟΧΙ `Partial`
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Ένα `Partial<…>` θα σήμαινε *«όποιος έχει, έχει»* — δηλαδή ο **ένατος** κωδικός θα
+ * γεννιόταν **σιωπηλά χωρίς διέξοδο**, και κανείς δεν θα το παρατηρούσε ποτέ. Ο
+ * πλήρης πίνακας κάνει την ερώτηση **υποχρεωτική**: *«μπορεί ο άνθρωπος να κάνει κάτι
+ * γι' αυτό, εδώ και τώρα;»*. Το `null` είναι **απάντηση**, όχι παράλειψη.
+ *
+ * ⚠️ **Τα οκτώ `null` ΔΕΝ είναι αδιαφορία.** `listing-absent` ⇒ ο σύνδεσμος είναι
+ * μπαγιάτικος· `listing-conflicting-mandate` ⇒ η διέξοδος είναι **αλλαγή όρων μέσα
+ * στην ίδια φόρμα**, που ο άνθρωπος ήδη βλέπει. Ένας σύνδεσμος εκεί θα τον έβγαζε από
+ * τη δουλειά του για να τον ξαναφέρει πίσω.
+ *
+ * 🔑 **Ο σύνδεσμος είναι σταθερά, όχι κείμενο**: το `/profile` δηλώνεται **μία** φορά
+ * (`PRIVATE_PROFILE_ROUTE`) και είναι δηλωμένο **εκτός χώρου** στο `OUTSIDE_WORKSPACE`
+ * (CHECK 3.60) — γι' αυτό ο `Link` του συνόρου **δεν** το προθεματοποιεί με
+ * `/o/<ψευδώνυμο>`, που θα ήταν διεύθυνση **χωρίς σελίδα**.
+ */
+export interface RejectionRemedy {
+  readonly href: string;
+  readonly labelKey: string;
+}
+
+export const REJECTION_REMEDY: Record<MandateRequestRejection, RejectionRemedy | null> = {
+  'listing-absent': null,
+  'listing-not-live': null,
+  'listing-already-brokered': null,
+  'agency-absent': null,
+  'request-already-pending': null,
+  'request-declined-final': null,
+  'listing-conflicting-mandate': null,
+  'identity-incomplete': {
+    href: PRIVATE_PROFILE_ROUTE,
+    labelKey: 'property-market:mandate.request.identity-incomplete-action',
+  },
 };
 
 /** Τα υπόλοιπα κείμενα της οθόνης — πεδία, υποδείξεις, εκβάσεις. */
