@@ -779,13 +779,37 @@ export function hasAnyActiveMandate(
  * στο σχήμα της εντολής**: εκείνος ξέρει από πόρους, διαστήματα και τρόπους, όχι από
  * `consentNonce` και `viewedAt`. Η μετάφραση ζει **εδώ**, μία φορά — αλλιώς κάθε
  * καλών θα την έγραφε μόνος, με τα δικά του πεδία και τα δικά του λάθη.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΤΑ ΤΡΙΑ `??` ΚΛΕΙΝΟΥΝ **ΖΩΝΤΑΝΟ CRASH** — ΜΕΤΡΗΜΕΝΟ 2026-08-30
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Το **μοναδικό** έγγραφο εντολής της ζωντανής βάσης (`owner_properties/ownp_bc548607…`)
+ * γράφτηκε **πριν** το ADR-832 και **δεν έχει** `agencyCompanyId`, `scope`, `startsAt`.
+ * Αυτή η γέφυρα τα αντέγραφε `undefined`, και το `sharedResources` του κριτή καλεί
+ * `other.scope.includes(…)` ⇒ **`TypeError`** ⇒ **λευκή οθόνη** στη φόρμα αιτήματος
+ * ανάθεσης, μόλις ο ιδιοκτήτης διάλεγε **το δικό του** ακίνητο.
+ *
+ * 🔑 **Και οι τρεις τιμές είναι η ΣΩΣΤΗ απάντηση, όχι κατευνασμός** — το ίδιο το
+ * {@link mandatesOf} το είχε ήδη υποσχεθεί: *«παλιό `brokered` γίνεται πίνακας ενός —
+ * με τα τρία νέα πεδία **κενά**»*:
+ *
+ * | Πεδίο | Κενό σημαίνει | Ποιος το λέει |
+ * |---|---|---|
+ * | `scope: []` | **δεν καταλαμβάνει τίποτα** | {@link MandateOccupancy.scope} — «έγκυρη κατάσταση» |
+ * | `startsAt: ''` | **μη αναγνώσιμο διάστημα** ⇒ `undetermined` | N.12: *άγνωστο ≠ κενό* |
+ * | `agencyCompanyId: ''` | κενή ταυτότητα **δεν ταιριάζει με καμία πραγματική** | ίδιο ιδίωμα με CHECK 3.35 |
+ *
+ * ⛔ **ΜΗΝ «διορθώσεις» το `startsAt` σε `decidedAt` ή σε «σήμερα»**: θα παρήγαγε
+ * **επινοημένο** διάστημα και ο κριτής θα απαντούσε `clear` ή `conflicts` με βεβαιότητα
+ * που **κανείς δεν έχει**. Το `undetermined` λέει την αλήθεια, και η οθόνη το δείχνει.
  */
 export function occupancyOf(mandate: BrokeredListingMandate): MandateOccupancy {
   return {
-    agencyCompanyId: mandate.agencyCompanyId,
+    agencyCompanyId: mandate.agencyCompanyId ?? '',
     agreement: mandate.agreement,
-    scope: mandate.scope,
-    startsAt: mandate.startsAt,
+    scope: mandate.scope ?? [],
+    startsAt: mandate.startsAt ?? '',
     expiresAt: mandate.expiresAt,
   };
 }

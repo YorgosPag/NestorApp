@@ -34,6 +34,7 @@ import {
   MANDATE_PROOF_VIAS,
   CUSTOMARY_COMMISSION_PERCENTAGE,
   OWNER_CONSENT,
+  occupancyOf,
   type BrokeredListingMandate,
 } from '@/types/owner-property-mandate';
 import { addMonthsUTC } from '@/lib/date-local';
@@ -407,5 +408,67 @@ describe('Υ — η προέλευση της αγγελίας παράγετα�
     // είναι άλλη ερώτηση, και την απαντά το `mandateAllowsPublication`.
     expect(listingAuthorshipOf([brokered({ confirmation: 'confirmed' })])).toBe('agency');
     expect(listingAuthorshipOf([brokered({ confirmation: 'declined' })])).toBe('agency');
+  });
+});
+
+// ============================================================================
+// Γ — Η ΓΕΦΥΡΑ ΠΡΟΣ ΤΟΝ ΚΡΙΤΗ ΣΥΓΚΡΟΥΣΗΣ, ΚΑΙ ΤΟ ΚΛΗΡΟΔΟΤΗΜΑ (ADR-834)
+// ============================================================================
+
+describe('Γ — `occupancyOf` πάνω σε έγγραφο ΠΡΙΝ το ADR-832', () => {
+  /**
+   * 🔴 **ΖΩΝΤΑΝΟ CRASH, ΜΕΤΡΗΜΕΝΟ 2026-08-30.** Το μοναδικό έγγραφο εντολής της βάσης
+   * (`owner_properties/ownp_bc548607…`) **δεν έχει** `agencyCompanyId`, `scope`,
+   * `startsAt`. Η γέφυρα τα αντέγραφε `undefined`, και το `sharedResources` του κριτή
+   * καλεί `other.scope.includes(…)` ⇒ **TypeError** ⇒ **λευκή οθόνη** στη φόρμα
+   * αιτήματος ανάθεσης, μόλις ο ιδιοκτήτης διάλεγε **το δικό του** ακίνητο.
+   */
+  const LEGACY = {
+    kind: 'brokered',
+    clientContactId: 'cont_da84f8c4',
+    confirmation: 'confirmed',
+    confirmedByUserId: 'WKBWEg3D',
+    proof: { via: OWNER_CONSENT },
+    agreement: 'exclusive-agency',
+    compensation: { type: 'percentage', percentage: 2, vatIncluded: false },
+    decidedAt: '2026-08-30T06:27:46.094Z',
+    notifiedAt: null,
+    viewedAt: null,
+    consentNonce: null,
+    expiresAt: '2027-04-30T23:59:59.999Z',
+    agencyRevokedAt: null,
+  } as unknown as BrokeredListingMandate;
+
+  it('Γ-1 🔴 κενό `scope` είναι ΠΙΝΑΚΑΣ — αλλιώς ο κριτής πετά TypeError', () => {
+    const occupancy = occupancyOf(LEGACY);
+
+    expect(Array.isArray(occupancy.scope)).toBe(true);
+    expect(occupancy.scope).toEqual([]);
+    // 🔑 Η ΕΚΤΕΛΕΣΗ, όχι ο τύπος: αυτή ακριβώς η κλήση έριχνε τη σελίδα.
+    expect(() => occupancy.scope.includes('sell')).not.toThrow();
+  });
+
+  it('Γ-2 άγνωστη έναρξη μένει ΜΗ ΑΝΑΓΝΩΣΙΜΗ ⇒ ο κριτής λέει «δεν ξέρω» (N.12)', () => {
+    // ⛔ ΜΗΝ γίνει `decidedAt` ή «σήμερα»: θα παρήγαγε ΕΠΙΝΟΗΜΕΝΟ διάστημα και ο
+    //    κριτής θα απαντούσε με βεβαιότητα που κανείς δεν έχει.
+    expect(occupancyOf(LEGACY).startsAt).toBe('');
+    expect(Number.isNaN(Date.parse(occupancyOf(LEGACY).startsAt))).toBe(true);
+  });
+
+  it('Γ-3 κενή ταυτότητα γραφείου ΔΕΝ ταιριάζει με καμία πραγματική', () => {
+    expect(occupancyOf(LEGACY).agencyCompanyId).toBe('');
+    expect(occupancyOf(LEGACY).agencyCompanyId).not.toBe('comp_9c7c1a50');
+  });
+
+  it('Γ-4 🔑 ΠΑΡΟΝΟΜΑΣΤΗΣ: σύγχρονη εντολή περνά ΑΥΤΟΥΣΙΑ', () => {
+    const modern = { ...LEGACY, agencyCompanyId: 'comp_alfa', scope: ['sell'], startsAt: '2026-08-01T00:00:00.000Z' } as BrokeredListingMandate;
+
+    expect(occupancyOf(modern)).toEqual({
+      agencyCompanyId: 'comp_alfa',
+      agreement: 'exclusive-agency',
+      scope: ['sell'],
+      startsAt: '2026-08-01T00:00:00.000Z',
+      expiresAt: '2027-04-30T23:59:59.999Z',
+    });
   });
 });
