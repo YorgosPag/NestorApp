@@ -467,7 +467,11 @@
       "mandate-expiry-past": "The expiry date is in the past.",
       "mandate-attestation-not-confirmed": "The mandate attestation was not recorded correctly.",
       "mandate-term-exceeds-statute": "The term exceeds the statutory maximum for this type of mandate.",
-      "mandate-agreement-invalid": "No valid type of mandate has been declared."
+      "mandate-agreement-invalid": "No valid type of mandate has been declared.",
+      "mandate-scope-empty": "The mandate does not say which transaction it covers. Choose sale, letting or exchange.",
+      "mandate-start-invalid": "The start date is unreadable or falls after the expiry.",
+      "mandate-conflicts-existing": "An existing mandate does not allow this agreement.",
+      "mandate-conflict-undetermined": "We could not check the existing mandates. Please try again."
     },
     "formBlocker": {
       "place-unresolved": "Press Locate so the address resolves to a point on the map.",
@@ -674,7 +678,27 @@
       "sentLead": "The agency sees the listing and your terms. It will learn who you are only if it accepts.",
       "alreadySentTitle": "The request had already been sent",
       "alreadySentLead": "You had already sent exactly this request. No second one was created — the agency sees one.",
-      "backToListings": "My properties"
+      "backToListings": "My properties",
+      "occupancyTitle": "Who holds this property",
+      "occupancyHeld": "A mandate already exists. Your terms stand alongside it.",
+      "occupancyBlocked": "Your terms cannot stand alongside what is already in force.",
+      "occupancyUndetermined": "We could not check what is in force. Send it — the agency will judge.",
+      "occupancyHolderOther": "Another agency",
+      "occupancyEntry": "{agency} — {agreement} for {resource}, until {until}",
+      "occupancyEntryOpen": "{agency} — {agreement} for {resource}, no end date",
+      "occupancyReasonExisting": "Holds an exclusive right until then.",
+      "occupancyReasonCandidate": "You ask for an exclusive while open listings apply.",
+      "occupancyAvailableFrom": "Free from {date}.",
+      "occupancyAvailableAction": "Start {date}",
+      "occupancyNoWait": "Waiting will not help. Ask for an open listing, or withdraw the existing ones.",
+      "scopeLabel": "For which transactions?",
+      "scopeHint": "Binds only what you select. An exclusive to sell does not block letting elsewhere.",
+      "startsLabel": "In force from",
+      "startsHint": "May be a future date — e.g. after another mandate expires.",
+      "request-scope-unset": "Select at least one transaction.",
+      "request-start-unset": "State when it starts.",
+      "request-start-after-expiry": "It ends before it starts. Correct the start or the end.",
+      "listing-conflicting-mandate": "Another agency holds a right over a transaction you asked for. See above until when."
     },
     "inbox": {
       "title": "Incoming mandate requests",
@@ -727,7 +751,6 @@
         "request-not-pending": "Someone got there first — the request has already been decided.",
         "request-lapsed": "The proposal has expired and can no longer be decided.",
         "listing-withdrawn": "The owner withdrew the listing.",
-        "listing-already-brokered": "The listing has already been assigned.",
         "identity-incomplete": "The owner has not filled in their VAT number, and no brokerage contract can be drawn up without it. The request STAYS open: contact them and press Accept again.",
         "mandate-invalid": "The proposed terms are not lawful for this type of mandate."
       }
