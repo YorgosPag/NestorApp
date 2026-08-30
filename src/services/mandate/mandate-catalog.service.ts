@@ -62,6 +62,7 @@ import type { Contact } from '@/types/contacts/contracts';
 import { getContactDisplayName } from '@/types/contacts/helpers';
 import { isOwnerPropertyOnTheMarket, type OwnerProperty } from '@/types/owner-property';
 import type { BrokeredListingMandate } from '@/types/owner-property-mandate';
+import { mandatesOf } from '@/types/owner-property-mandate';
 
 const logger = createModuleLogger('mandate-catalog.service');
 
@@ -231,7 +232,7 @@ async function readOfficeMandates(
     // ⚠️ Το φίλτρο είναι **απαραίτητο, όχι αμυντικό**: το `authorCompanyId` υπάρχει και
     // σε αγγελίες που δεν είναι εντολές (θα ήταν `null` για ιδιώτη, αλλά ένα μελλοντικό
     // εταιρικό `self` θα περνούσε). Ο κατάλογος μιλά **μόνο** για εντολές.
-    .filter((property) => property.mandate.kind === 'brokered');
+    .filter((property) => mandatesOf(property).length > 0);
 
   return { properties, truncated };
 }
@@ -242,7 +243,11 @@ function toCatalogRow(
   clientNames: ReadonlyMap<string, string>,
   nowISOValue: string,
 ): MandateCatalogRow {
-  const mandate = property.mandate as BrokeredListingMandate;
+  // ⚠️ **Η ΠΡΩΤΗ εντολή του καταλόγου, και ο κατάλογος είναι ΤΟΥ ΓΡΑΦΕΙΟΥ** — το
+  //    ερώτημα φιλτράρει ήδη σε `authorCompanyId`, οπότε εδώ φτάνουν αγγελίες που
+  //    το γραφείο κατέγραψε. Το `as` έφυγε: ο τύπος είναι πλέον σωστός εξ αρχής.
+  const mandate = mandatesOf(property)[0];
+  if (mandate === undefined) return null;
   const standing = mandateStandingOf(mandate, nowISOValue);
 
   return {
@@ -298,7 +303,7 @@ export async function readMandateCatalog(
 
   const clientNames = await readClientNames(adminDb, [
     ...new Set(
-      properties.map((p) => (p.mandate as BrokeredListingMandate).clientContactId),
+      properties.flatMap((p) => p.mandates.map((m) => m.clientContactId)),
     ),
   ]);
 

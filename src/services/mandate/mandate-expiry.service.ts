@@ -45,8 +45,10 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { nowISO } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
-import { setOwnerPropertyMandate } from '@/services/owner-property/owner-property-write.service';
+import { republishOwnerProperty } from '@/services/owner-property/owner-property-publication.service';
 import { isOwnerPropertyOnTheMarket, type OwnerProperty } from '@/types/owner-property';
+import { nextMandateExpiry } from '@/types/owner-property-mandate';
+import { mandatesOf } from '@/types/owner-property-mandate';
 
 const logger = createModuleLogger('mandate-expiry.service');
 
@@ -93,7 +95,13 @@ export async function retireExpiredMandates(
   // πελάτη: το μόνο αποτέλεσμα είναι ότι δημόσιες προβολές ΚΑΤΕΒΑΙΝΟΥΝ.
   const snapshot = await adminDb
     .collection(COLLECTIONS.OWNER_PROPERTIES)
-    .where('mandate.expiresAt', '<=', at)
+    // 🔴 **ΤΟ ΠΕΔΙΟ-ΕΥΡΕΤΗΡΙΟ, ΚΑΙ ΟΧΙ ΠΙΑ `mandate.expiresAt`** (ADR-832). Οι εντολές
+    //    είναι πλέον **πίνακας**, και το Firestore ΔΕΝ κάνει ανισότητα σε πεδίο μέσα
+    //    σε πίνακα αντικειμένων: το παλιό ερώτημα δεν θα έσπαγε με σφάλμα, θα
+    //    επέστρεφε **τίποτα** — δηλαδή οι ληγμένες αγγελίες θα έμεναν στον χάρτη για
+    //    πάντα, σιωπηλά. Το `mandatesExpireAt` παράγεται από το `nextMandateExpiry`
+    //    και γράφεται από τον **ίδιο** γραφέα με τις εντολές.
+    .where('mandatesExpireAt', '<=', at)
     .limit(SCAN_LIMIT + 1)
     .get();
 
@@ -114,9 +122,40 @@ export async function retireExpiredMandates(
       alreadyOff += 1;
     }
 
-    const result = await setOwnerPropertyMandate(adminDb, property.id, property.mandate);
-    if (result.kind === 'saved') retired += 1;
-    else failed += 1;
+    // 🔑 **ΑΝΑΔΗΜΟΣΙΕΥΣΗ, ΚΑΙ ΟΧΙ ΠΙΑ ΓΡΑΦΗ ΕΝΤΟΛΗΣ** (ADR-832). Ως τις 2026-08-30 ο
+    //    σαρωτής καλούσε `setOwnerPropertyMandate(…, property.mandate)` — ξανάγραφε
+    //    δηλαδή την **ίδια** εντολή, με μόνο σκοπό να πυροδοτήσει την επανασύνθεση
+    //    της προβολής. Ήταν παράκαμψη, και κόστιζε: ο γραφέας της εντολής **κρίνει**,
+    //    οπότε ο σαρωτής χρειαζόταν ρητή εξαίρεση για να μην κοκκινίζει στο
+    //    `mandate-expiry-past` πάνω σε ληγμένες — που είναι ακριβώς ό,τι σαρώνει.
+    //
+    // ⚠️ Τώρα ζητά **αυτό που θέλει**: ξαναχτίσιμο της δημόσιας προβολής. Καμία
+    //    εγγραφή στην εντολή, καμία κρίση να παρακαμφθεί, κανένα πεδίο σε κίνδυνο.
+    const result = await republishOwnerProperty(adminDb, property);
+    if (result.publish === 'failed') {
+      failed += 1;
+      continue;
+    }
+    retired += 1;
+
+    // 🔴 **ΤΟ ΕΥΡΕΤΗΡΙΟ ΠΡΟΧΩΡΑ, ΑΛΛΙΩΣ Ο ΣΑΡΩΤΗΣ ΔΕΝ ΤΕΡΜΑΤΙΖΕΙ.** Η ληγμένη εντολή
+    //    μένει στο έγγραφο (τίποτα δεν σβήνεται, δες την κεφαλίδα), άρα χωρίς αυτή τη
+    //    γραφή το ίδιο έγγραφο θα ξαναγυρνούσε σε **κάθε** πέρασμα, για πάντα.
+    //
+    // ⚠️ Γράφεται **μόνο** το πεδίο-ευρετήριο, με `update` και όχι `set`: καμία
+    //    εντολή δεν αγγίζεται, κανένας κριτής δεν παρακάμπτεται.
+    const nextAt = nextMandateExpiry(mandatesOf(property), at);
+    try {
+      await adminDb
+        .collection(COLLECTIONS.OWNER_PROPERTIES)
+        .doc(doc.id)
+        .update({ mandatesExpireAt: nextAt });
+    } catch (error) {
+      logger.error('Το ευρετήριο λήξης δεν προχώρησε', {
+        data: { ownerPropertyId: doc.id },
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   const report: MandateExpiryReport = {

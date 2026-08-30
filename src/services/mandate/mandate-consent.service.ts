@@ -54,6 +54,7 @@ import { announceMandateDecision } from '@/services/mandate/mandate-decision-not
 import { setOwnerPropertyMandate } from '@/services/owner-property/owner-property-write.service';
 import type { OwnerProperty } from '@/types/owner-property';
 import type { BrokeredListingMandate } from '@/types/owner-property-mandate';
+import { mandatesOf } from '@/types/owner-property-mandate';
 
 const logger = createModuleLogger('mandate-consent.service');
 
@@ -213,13 +214,17 @@ export async function readMandateConsentRequest(
 
   const property = snapshot.data() as OwnerProperty | undefined;
   if (property === undefined) return { ok: false, reason: 'listing-absent' };
-  if (property.mandate.kind !== 'brokered') return { ok: false, reason: 'not-brokered' };
+  if (mandatesOf(property).length === 0) return { ok: false, reason: 'not-brokered' };
 
-  const mandate = property.mandate;
+  // 🔑 **ΤΟ NONCE ΕΙΝΑΙ Η ΤΑΥΤΟΤΗΤΑ ΤΗΣ ΠΡΟΣΚΛΗΣΗΣ** — και με τον πληθυντικό γίνεται
+  //    και ο **επιλογέας** της εντολής. Ο σύνδεσμος που κρατά ο ιδιοκτήτης δείχνει
+  //    σε **μία** συγκεκριμένη πρόσκληση· ένα `mandates[0]` εδώ θα τον έκανε να
+  //    εγκρίνει την εντολή **άλλου γραφείου**.
+  const mandate = mandatesOf(property).find((m) => m.consentNonce === nonce);
+  if (mandate === undefined) return { ok: false, reason: 'superseded' };
   if (mandate.clientContactId !== clientContactId) {
     return { ok: false, reason: 'client-mismatch' };
   }
-  if (mandate.consentNonce !== nonce) return { ok: false, reason: 'superseded' };
 
   return {
     ok: true,
@@ -273,15 +278,19 @@ export async function recordMandateDecision(
     .get();
 
   const property = snapshot.data() as OwnerProperty | undefined;
-  if (property === undefined || property.mandate.kind !== 'brokered') {
-    return { ok: false, reason: 'listing-absent' };
-  }
+  if (property === undefined) return { ok: false, reason: 'listing-absent' };
 
-  const previous = property.mandate.confirmation;
+  // 🔑 **Η ΠΡΟΣΚΛΗΣΗ ΔΙΑΛΕΓΕΙ ΤΗΝ ΕΝΤΟΛΗ** — δες `readConsentTarget`. Ο σύνδεσμος
+  //    που πάτησε ο ιδιοκτήτης αφορά **μία** πρόσκληση· χωρίς αυτό το φίλτρο θα
+  //    ενέκρινε ό,τι έτυχε να είναι πρώτο στον πίνακα.
+  const current = mandatesOf(property).find((m) => m.consentNonce === lookup.request.nonce);
+  if (current === undefined) return { ok: false, reason: 'listing-absent' };
+
+  const previous = current.confirmation;
   const decidedAt = nowISO();
 
   const next: BrokeredListingMandate = {
-    ...property.mandate,
+    ...current,
     confirmation: decision,
     decidedAt,
   };
@@ -304,7 +313,7 @@ export async function recordMandateDecision(
     await announceMandateDecision(adminDb, {
       ownerPropertyId: lookup.request.ownerPropertyId,
       listingTitle: property.title,
-      clientContactId: property.mandate.clientContactId,
+      clientContactId: current.clientContactId,
       recipientUserId: property.authorUserId,
       tenantId: property.authorCompanyId,
       previous,
@@ -345,6 +354,12 @@ export async function recordMandateDecision(
 export async function markMandateViewed(
   adminDb: AdminFirestore,
   ownerPropertyId: string,
+  /**
+   * 🔑 **Ποια πρόσκληση άνοιξε** (ADR-832). Χωρίς αυτό, η σφραγίδα «το είδε» θα
+   * έπεφτε σε αυθαίρετη εντολή — και το *«πόσο γρήγορα απαντά ο ιδιοκτήτης;»* θα
+   * μετρούσε **άλλο** γραφείο από αυτό που έστειλε τον σύνδεσμο.
+   */
+  consentNonce: string,
 ): Promise<void> {
   try {
     const snapshot = await adminDb
@@ -353,11 +368,14 @@ export async function markMandateViewed(
       .get();
 
     const property = snapshot.data() as OwnerProperty | undefined;
-    if (property === undefined || property.mandate.kind !== 'brokered') return;
-    if (property.mandate.viewedAt !== null) return;
+    if (property === undefined) return;
+
+    const mandate = mandatesOf(property).find((m) => m.consentNonce === consentNonce);
+    if (mandate === undefined) return;
+    if (mandate.viewedAt !== null) return;
 
     await setOwnerPropertyMandate(adminDb, ownerPropertyId, {
-      ...property.mandate,
+      ...mandate,
       viewedAt: nowISO(),
     });
   } catch (error) {

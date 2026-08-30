@@ -32,6 +32,7 @@ import 'server-only';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { mandatesOf } from '@/types/owner-property-mandate';
 import { createModuleLogger } from '@/lib/telemetry';
 import { republishOwnerProperty } from '@/services/owner-property/owner-property-publication.service';
 import type { OwnerProperty } from '@/types/owner-property';
@@ -85,15 +86,23 @@ export async function applyAgencyRevocation(
   for (const doc of snapshot.docs) {
     const property = { ...(doc.data() as OwnerProperty), id: doc.id };
 
-    // ⚠️ Ο ιδιώτης **δεν αγγίζεται ποτέ**, ακόμη κι αν βρεθεί εδώ: το `self` δεν έχει
-    //    εντολή γραφείου και η ρυθμιζόμενη πράξη είναι **αποκλειστικά** το `brokered`
-    //    σκέλος (ADR-824 §7). Ο τύπος το κάνει ήδη αδύνατο· ο έλεγχος το κάνει **ορατό**.
-    if (property.mandate.kind !== 'brokered') continue;
+    // ⚠️ Ο ιδιώτης **δεν αγγίζεται ποτέ**: χωρίς εντολή δεν υπάρχει ρυθμιζόμενη
+    //    πράξη (ADR-824 §7). Κενός πίνακας ⇒ προσπερνάμε.
+    if (mandatesOf(property).length === 0) continue;
 
-    const updated: OwnerProperty = {
-      ...property,
-      mandate: { ...property.mandate, agencyRevokedAt: revokedAt },
-    };
+    // 🔴 **ΜΟΝΟ ΟΙ ΕΝΤΟΛΕΣ ΑΥΤΟΥ ΤΟΥ ΓΡΑΦΕΙΟΥ** (ADR-832). Η ανάκληση αφορά **έναν**
+    //    οργανισμό· από τη στιγμή που η ίδια αγγελία μπορεί να κρατά εντολές δύο
+    //    γραφείων, ένα σκέτο «σημάδεψε την εντολή» θα τιμωρούσε **αθώο τρίτο** —
+    //    γραφείο με απολύτως ενεργή άδεια θα έχανε τη δημόσια προβολή του επειδή
+    //    ένας ανταγωνιστής του τιμωρήθηκε.
+    const marked = mandatesOf(property).map((mandate) =>
+      mandate.agencyCompanyId === companyId
+        ? { ...mandate, agencyRevokedAt: revokedAt }
+        : mandate,
+    );
+    if (marked.every((mandate, index) => mandate === mandatesOf(property)[index])) continue;
+
+    const updated: OwnerProperty = { ...property, mandates: marked };
 
     try {
       await adminDb
