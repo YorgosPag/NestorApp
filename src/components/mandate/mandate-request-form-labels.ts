@@ -21,10 +21,30 @@
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { DraftFormSlot, DraftFormText } from '@/lib/forms/draft-form-labels';
+import type { TaxIdentityBlocker } from '@/lib/forms/draft-identity';
 import type { MandateRequestFormBlocker } from '@/lib/mandate/mandate-request-form-values';
 import type { MandateRequestRejection } from '@/services/mandate/mandate-request.service';
 
 export const MANDATE_REQUEST_NS = 'property-market';
+
+/**
+ * **Τα εμπόδια αυτής της οθόνης — ΔΥΟ πηγές, μία ένωση** (ADR-827 §9.21 ι #1).
+ *
+ * 🔑 Ίδιο σχήμα με το `OfferBlocker` της φόρμας προσφοράς
+ * (`offer-form-labels.ts:37`), και είναι **σκόπιμο**: όποιος διαβάσει το ένα,
+ * αναγνωρίζει το άλλο.
+ *
+ * | Πηγή | Τι βλέπει | Πού κρίνεται |
+ * |---|---|---|
+ * | `MandateRequestFormBlocker` | ό,τι **πληκτρολόγησε** ο άνθρωπος | `mandate-request-form-values.ts` |
+ * | `TaxIdentityBlocker` | το **περιβάλλον** — έχει δηλώσει ΑΦΜ; | `lib/forms/draft-identity.ts` |
+ *
+ * ⚠️ Το δεύτερο **δεν μπορούσε** να ζει στο `mandateRequestFormBlockers(values)`:
+ * εκείνο βλέπει **μόνο** `values`, και το ΑΦΜ δεν είναι πεδίο του αιτήματος — είναι
+ * **ταυτότητα**, και το §8.2 απαγορεύει ρητά στοιχεία ταυτότητας μέσα στο σχήμα που
+ * ταξιδεύει προς το γραφείο. Η συγχώνευση γίνεται στο SSoT (`withExtraBlockers`).
+ */
+export type MandateRequestBlocker = MandateRequestFormBlocker | TaxIdentityBlocker;
 
 /**
  * Το **ΕΝΩΜΕΝΟ** λεξιλόγιο αυτής της βάσης — θέσεις κελύφους + εμπόδια φόρμας.
@@ -33,7 +53,7 @@ export const MANDATE_REQUEST_NS = 'property-market';
  * `mandate-request-form-values.ts`): αυτή η φόρμα δεν έχει σκέλος `violations`, γιατί
  * **καμία** τιμή της δεν μπορεί να το γεμίσει.
  */
-export const TEXT_KEYS: Record<DraftFormSlot | MandateRequestFormBlocker, string> = {
+export const TEXT_KEYS: Record<DraftFormSlot | MandateRequestBlocker, string> = {
   title: 'property-market:mandate.request.title',
   editTitle: 'property-market:mandate.request.editTitle',
   lead: 'property-market:mandate.request.lead',
@@ -49,6 +69,16 @@ export const TEXT_KEYS: Record<DraftFormSlot | MandateRequestFormBlocker, string
   'request-expiry-past': 'property-market:mandate.request.request-expiry-past',
   'request-term-illegal': 'property-market:mandate.request.request-term-illegal',
   'request-compensation-invalid': 'property-market:mandate.request.request-compensation-invalid',
+
+  /**
+   * 🔑 **Η ΔΕΥΤΕΡΗ ΠΗΓΗ, ΣΤΗΝ ΙΔΙΑ ΛΙΣΤΑ** — και το κλειδί ζει σε **αυτή** τη βάση,
+   * όχι στο `common-account`, παρότι ο **κριτής** είναι κοινός.
+   *
+   * ⚠️ Και είναι απόφαση: το μήνυμα πρέπει να πει *γιατί εδώ και τώρα* — *«ο νόμος
+   * το απαιτεί για τη σύμβαση ανάθεσης»*. Το ίδιο εμπόδιο σε άλλη οθόνη θα ήθελε
+   * **άλλη** δικαιολόγηση, και ένα κοινό κείμενο θα ήταν σωστό σε καμία από τις δύο.
+   */
+  'tax-identity-required': 'property-market:mandate.request.tax-identity-required',
 };
 
 /**
@@ -95,8 +125,8 @@ export const SCREEN_KEYS = {
   backToListings: 'property-market:mandate.request.backToListings',
 } as const;
 
-/** Ο **ΕΝΑΣ** μεταφραστής αυτής της βάσης. */
-export function useMandateRequestFormText(): DraftFormText<MandateRequestFormBlocker, never> {
+/** Ο **ΕΝΑΣ** μεταφραστής αυτής της βάσης — **και των δύο** πηγών εμποδίων. */
+export function useMandateRequestFormText(): DraftFormText<MandateRequestBlocker, never> {
   const { t } = useTranslation([MANDATE_REQUEST_NS]);
   return (id) => t(TEXT_KEYS[id]);
 }

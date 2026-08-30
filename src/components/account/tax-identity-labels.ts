@@ -33,20 +33,59 @@ import type { TaxIdentityRejection } from '@/services/account/tax-identity.servi
  * διαγραφή κλειδιού από τα locales δεν κοκκινίζει τίποτα.
  *
  * 🔑 Το πρόθεμα εξοικονομεί **δεκαοκτώ χαρακτήρες** και κοστίζει **ολόκληρη την
- * πύλη**. Εδώ γράφονται ολόκληρα, ώστε το `grep 'account.profile.vatNumberHint'`
+ * πύλη**. Εδώ γράφονται ολόκληρα, ώστε το `grep 'account.taxIdentity.hint'`
  * να τα βρίσκει και η 3.8 να μπορεί να τα κρίνει.
  */
 
 /** Λόγος άρνησης → κλειδί i18n. **Σταθερά module** — δες την κεφαλίδα. */
 export const VAT_REJECTION_KEYS: Record<TaxIdentityRejection, string> = {
-  'vat-format-invalid': 'account.profile.vat-format-invalid',
-  'vat-check-digit-invalid': 'account.profile.vat-check-digit-invalid',
+  'vat-format-invalid': 'common-account:account.taxIdentity.vat-format-invalid',
+  'vat-check-digit-invalid': 'common-account:account.taxIdentity.vat-check-digit-invalid',
 };
 
 /** Τα σταθερά κείμενα του πεδίου — ίδιος λόγος, ίδιο σχήμα. */
 export const VAT_FIELD_KEYS = {
-  label: 'account.profile.vatNumber',
-  placeholder: 'account.profile.vatNumberPlaceholder',
-  hint: 'account.profile.vatNumberHint',
-  saveError: 'account.profile.vatSaveError',
+  label: 'common-account:account.taxIdentity.label',
+  placeholder: 'common-account:account.taxIdentity.placeholder',
+  hint: 'common-account:account.taxIdentity.hint',
+  saveError: 'common-account:account.taxIdentity.saveError',
 } as const;
+
+/**
+ * 🔑 **Ο πίνακας ιδωμένος ως αναζήτηση** — ώστε ο χαρτογράφος παρακάτω να μη
+ * χρειάζεται **κανέναν ισχυρισμό τύπου**.
+ *
+ * ⚠️ Το `updateVatNumber` επιστρέφει `string | null`, όπου η συμβολοσειρά είναι
+ * **είτε** ονομαστική άρνηση **είτε** `'write-failed'` — δηλαδή τιμή που ο
+ * μεταγλωττιστής **δεν μπορεί** να στενέψει σε `TaxIdentityRejection`. Ένα
+ * `as TaxIdentityRejection` θα ήταν **χειροκίνητος ισχυρισμός ακριβώς εκεί που η
+ * υπόθεση είναι ψευδής** (το `'write-failed'` **δεν** ανήκει στην ένωση), και θα
+ * επέστρεφε `undefined` μεταμφιεσμένο σε `string`.
+ */
+const VAT_REJECTION_LOOKUP: Readonly<Record<string, string | undefined>> = VAT_REJECTION_KEYS;
+
+/**
+ * **Η απάντηση του γραφέα → το κλειδί που διαβάζει ο άνθρωπος.** Ένας χαρτογράφος,
+ * δύο καταναλωτές *(η οθόνη προφίλ και η φόρμα του Σ1)*.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΓΙΑΤΙ ΣΥΝΑΡΤΗΣΗ ΚΑΙ ΟΧΙ ΔΥΟ ΓΡΑΜΜΕΣ ΣΕ ΚΑΘΕ ΚΑΤΑΝΑΛΩΤΗ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Οι «δύο γραμμές» κρύβουν **μία απόφαση**: *τι γίνεται με λόγο που ο πίνακας δεν
+ * ξέρει;* Γραμμένη δύο φορές, θα απέκλινε — και η απόκλιση θα ήταν **αόρατη**,
+ * γιατί και οι δύο εκδοχές «δουλεύουν». Ο ένας θα έδειχνε το γενικό σφάλμα, ο
+ * άλλος **ωμό κωδικό** σε άνθρωπο που κοιτάζει έναν φαινομενικά σωστό αριθμό.
+ *
+ * 🔑 **Η προεπιλογή είναι το `saveError`, ΠΟΤΕ ο ωμός κωδικός** (N.11): το
+ * `'write-failed'` σημαίνει *«δεν μπόρεσα να γράψω»*, και το κείμενό του λέει
+ * ρητά *«ο αριθμός σας δεν άλλαξε»* — ώστε ο άνθρωπος να **ξαναδοκιμάσει το ίδιο**,
+ * αντί να αλλάξει έναν σωστό αριθμό (N.12: βλάβη ≠ άρνηση).
+ *
+ * @param rejection Ό,τι επέστρεψε το `useAuth().updateVatNumber` — `null` = γράφτηκε.
+ * @returns Κλειδί i18n, ή `null` όταν δεν υπάρχει τίποτα να ειπωθεί.
+ */
+export function vatIssueKey(rejection: string | null): string | null {
+  if (rejection === null) return null;
+  return VAT_REJECTION_LOOKUP[rejection] ?? VAT_FIELD_KEYS.saveError;
+}

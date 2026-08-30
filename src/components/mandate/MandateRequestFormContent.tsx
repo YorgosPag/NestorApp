@@ -68,12 +68,20 @@ import { LISTING_AGREEMENTS } from '@/types/listing-agreement';
 import { LISTING_AGREEMENT_I18N_KEYS } from '@/components/mandate/listing-agreement-labels';
 import type { MandateRequestRejection } from '@/services/mandate/mandate-request.service';
 import type { OwnerProperty } from '@/types/owner-property';
+import type { ProposedMandateTerms } from '@/types/mandate-request';
+// 🔴 **Ο ΦΡΟΥΡΟΣ ΤΟΥ ΑΦΜ ΜΕΤΑΚΟΜΙΣΕ ΕΔΩ** (ADR-827 §9.21 ι #1 · §9.20 β).
+//    Ο κριτής, ο γραφέας και η συγχώνευση ζουν στα SSoT τους — αυτή η φόρμα **ρωτά**,
+//    δεν κρίνει και δεν γράφει.
+import { withExtraBlockers, type DraftFormValidation } from '@/lib/forms/draft-validation';
+import { TaxIdentityField } from '@/components/account/TaxIdentityField';
+import { useInFlowTaxIdentity } from '@/hooks/account/useInFlowTaxIdentity';
 
 import {
   MANDATE_REQUEST_NS,
   REJECTION_KEYS,
   SCREEN_KEYS,
   useMandateRequestFormText,
+  type MandateRequestBlocker,
 } from './mandate-request-form-labels';
 
 // 🔴 ADR-744 §18 — Η ΔΗΛΩΣΗ ΔΕΝ ΕΙΝΑΙ ΠΑΡΑΔΟΣΗ. Η εγγραφή ζει στο **client**
@@ -138,12 +146,56 @@ export function MandateRequestFormContent({
   });
   const values = form.watch();
 
-  const validation = React.useMemo(() => {
+  // ════════════════════════════════════════════════════════════════════════════
+  // ΤΟ ΑΦΜ — Η ΤΑΥΤΟΤΗΤΑ ΠΟΥ ΘΑ ΜΠΕΙ ΣΤΗ ΣΥΜΒΑΣΗ (ADR-827 §9.21 ι #1)
+  // ════════════════════════════════════════════════════════════════════════════
+  //
+  // 🔴 **ΓΙΑΤΙ ΕΔΩ ΚΑΙ ΟΧΙ ΣΤΟ Σ3.** Πριν, ο ιδιώτης **χωρίς ΑΦΜ** υπέβαλλε
+  //    κανονικά και το πρόβλημα το ανακάλυπτε **το γραφείο**, πατώντας «Αποδοχή»:
+  //    άρνηση `identity-incomplete`, σε αδιέξοδο που **μόνο ο ιδιώτης** μπορούσε να
+  //    λύσει και **δεν το έβλεπε**. Το §9.20 β το είχε ήδη γράψει — *just-in-time,
+  //    ποτέ στην εγγραφή*: ζητιέται τη στιγμή που **η συναλλαγή** το χρειάζεται.
+  //
+  // ⚠️ **Ο ΕΛΕΓΧΟΣ ΤΟΥ Σ3 ΜΕΝΕΙ ΚΑΙ ΔΕΝ ΑΦΑΙΡΕΙΤΑΙ** — γίνεται **δίχτυ**
+  //    (N.7.2 #4), παύει να είναι ο μόνος δρόμος. Παράγει **νομικό** κείμενο, και
+  //    κανένας πελάτης δεν είναι φρουρός: αίτημα που παρακάμπτει αυτή τη φόρμα
+  //    οφείλει να συναντήσει την ίδια άρνηση.
+  //
+  // 🔑 **Η ΠΟΛΙΤΙΚΗ ΖΕΙ ΣΤΟΝ HOOK** ({@link useInFlowTaxIdentity}): πότε γράφεται,
+  //    τι σημαίνει το κενό, πότε δεν φεύγει αίτημα. Αυτή η φόρμα **ρωτά**, δεν κρίνει.
+  const taxIdentity = useInFlowTaxIdentity();
+
+  const baseValidation = React.useMemo<
+    DraftFormValidation<ProposedMandateTerms, MandateRequestBlocker, never>
+  >(() => {
     const blockers = mandateRequestFormBlockers(values, todayISO);
     return blockers.length === 0
-      ? ({ kind: 'ready', draft: proposedTermsFrom(values) } as const)
-      : ({ kind: 'incomplete', malformed: [], blockers, violations: [] } as const);
+      ? { kind: 'ready', draft: proposedTermsFrom(values) }
+      : { kind: 'incomplete', malformed: [], blockers, violations: [] };
   }, [values, todayISO]);
+
+  /**
+   * 🔑 **Η ΣΥΓΧΩΝΕΥΣΗ ΖΕΙ ΣΤΟ SSoT, ΟΧΙ ΕΔΩ** — δεύτερος καταναλωτής του
+   * {@link withExtraBlockers}, μετά τη φόρμα προσφοράς.
+   *
+   * Η τεκμηρίωσή του **προέβλεψε ονομαστικά αυτή τη στιγμή**: *«Μέχρι σήμερα η
+   * συγχώνευση ήταν γραμμένη μέσα στο `OwnerPropertyFormContent`, για έναν
+   * καταναλωτή (την εντολή). Με τον δεύτερο (**την ταυτότητα**) θα γινόταν δίδυμο —
+   * και το δίδυμο δεν θα ήταν στον κώδικα αλλά στη **σειρά**»*.
+   *
+   * ⚠️ **ΜΙΑ λίστα, ποτέ δύο**: το εμπόδιο του ΑΦΜ εμφανίζεται στο **ίδιο**
+   * `FormIssues` με τα υπόλοιπα, ώστε ο άνθρωπος να βλέπει **πόσο κοντά είναι**.
+   * Δεύτερη λίστα «τι λείπει» θα τον άφηνε να διορθώσει τη μία και να μη μάθει ποτέ
+   * γιατί το κουμπί μένει ανενεργό.
+   */
+  const validation = React.useMemo(
+    () =>
+      withExtraBlockers<ProposedMandateTerms, MandateRequestBlocker, never>(
+        baseValidation,
+        taxIdentity.blockers,
+      ),
+    [baseValidation, taxIdentity.blockers],
+  );
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -276,6 +328,31 @@ export function MandateRequestFormContent({
           onChange={(event) => form.setValue('expiresOn', event.target.value)}
         />
       </Field>
+
+      {/*
+        🔴 **ΤΕΛΕΥΤΑΙΟ, ΚΑΙ ΕΙΝΑΙ ΣΕΙΡΑ-ΣΥΜΒΟΛΑΙΟ** — το ίδιο που έχει ήδη γράψει η
+        φόρμα προσφοράς για τον λογαριασμό: όλα τα προηγούμενα πεδία λένε
+        *«συμπλήρωσε κάτι»*, ενώ η ταυτότητα λέει *«υπόγραψε ό,τι συμπλήρωσες»* — το
+        βήμα που έρχεται **αφού** δοθεί η αξία, ποτέ πριν (ADR-660 §5.2, «useful
+        screen»). Ο άνθρωπος που θα συναντούσε το ΑΦΜ **πρώτο** θα το διάβαζε ως
+        φραγμό εισόδου σε μια φόρμα που δεν έχει ακόμη δει.
+
+        🔑 **ΠΑΝΤΑ ΟΡΑΤΟ, ΠΟΤΕ «ΕΜΦΑΝΙΖΕΤΑΙ ΟΤΑΝ ΛΕΙΠΕΙ».** Δύο λόγοι, και οι δύο
+        μετρημένοι:
+        1. Το ΑΦΜ είναι **όρος της σύμβασης** που προτείνεται εδώ — ο άνθρωπος
+           οφείλει να δει **ποιος αριθμός** θα ταξιδέψει, όπως βλέπει το ακίνητο,
+           τη λήξη και την αμοιβή.
+        2. Πεδίο που **εξαφανίζεται** μόλις συμπληρωθεί μετακινεί την εστίαση χωρίς
+           να το ζητήσει κανείς — τεκμηριωμένη αστοχία προσβασιμότητας της
+           προοδευτικής αποκάλυψης (WCAG 3.3.1 / 4.1.3).
+      */}
+      <TaxIdentityField
+        value={taxIdentity.value}
+        onChange={taxIdentity.onChange}
+        onCommit={taxIdentity.onCommit}
+        issueKey={taxIdentity.issueKey}
+        disabled={submitState === 'saving'}
+      />
 
       {outcome.kind !== 'idle' && (
         <p role="alert" className="m-0 rounded-md border border-border bg-card p-3 text-sm text-foreground">

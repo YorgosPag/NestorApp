@@ -15,9 +15,10 @@
 
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useEffect, useState } from 'react';
-import { Mail, User as UserIcon, Building2, Briefcase, Receipt } from 'lucide-react';
+import { Mail, User as UserIcon, Building2, Briefcase } from 'lucide-react';
 import { EscoOccupationPicker } from '@/components/shared/EscoOccupationPicker';
-import { VAT_FIELD_KEYS, VAT_REJECTION_KEYS } from '@/components/account/tax-identity-labels';
+import { VAT_FIELD_KEYS, vatIssueKey } from '@/components/account/tax-identity-labels';
+import { TaxIdentityField } from '@/components/account/TaxIdentityField';
 import type { DeclaredOccupation } from '@/types/professional-identity';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ProfileAvatarField } from '@/components/account/avatar/ProfileAvatarField';
@@ -130,8 +131,11 @@ export function ProfilePageContent() {
       //    γενικό «κάτι πήγε στραβά», που δεν του λέει τι να αλλάξει.
       const vatRejection = await updateVatNumber(vatInput);
       if (vatRejection !== null) {
-        const key = VAT_REJECTION_KEYS[vatRejection as keyof typeof VAT_REJECTION_KEYS];
-        setVatIssue(key ?? VAT_FIELD_KEYS.saveError);
+        // 🔑 **Ο ΕΝΑΣ χαρτογράφος** (`vatIssueKey`), κοινός με τον Σ1: το «τι γίνεται
+        //    με λόγο που ο πίνακας δεν ξέρει» είναι **μία** απόφαση, όχι δύο γραμμές
+        //    ανά οθόνη. Ο παλιός ισχυρισμός `as keyof typeof …` ήταν **ψευδής** για
+        //    το `'write-failed'`, που δεν ανήκει στην ένωση.
+        setVatIssue(vatIssueKey(vatRejection));
         // Τα ονόματα και το επάγγελμα **αποθηκεύτηκαν** — δεν λέμε ψέματα ότι
         // απέτυχαν όλα. Ο άνθρωπος βλέπει τι ακριβώς έμεινε.
         setMessage({ type: 'error', text: t(VAT_FIELD_KEYS.saveError) });
@@ -254,37 +258,28 @@ export function ProfilePageContent() {
             και δεκαδικά, και θα έκοβε αρχικά μηδενικά. Το ΑΦΜ είναι **σειρά
             ψηφίων**, όχι ποσότητα.
           */}
-          <fieldset className={layout.flexColGap2}>
-            <Label htmlFor="vat-number" className={layout.flexCenterGap2}>
-              <Receipt className={iconSizes.xs} aria-hidden="true" />
-              {t(VAT_FIELD_KEYS.label)}
-            </Label>
-            <Input
-              id="vat-number"
-              value={vatInput}
-              onChange={(event) => {
-                setVatInput(event.target.value);
-                // Η προηγούμενη άρνηση αφορούσε τον **προηγούμενο** αριθμό.
-                setVatIssue(null);
-              }}
-              onBlur={() => setVatInput((current) => current.trim())}
-              placeholder={t(VAT_FIELD_KEYS.placeholder)}
-              inputMode="numeric"
-              autoComplete="off"
-              maxLength={32}
-              disabled={isLoading}
-              aria-invalid={vatIssue !== null}
-              aria-describedby="vat-number-hint"
-            />
-            {vatIssue !== null && (
-              <output role="alert" className={cn(typography.body.xs, colors.text.error)}>
-                {t(vatIssue)}
-              </output>
-            )}
-            <p id="vat-number-hint" className={cn(typography.body.xs, colors.text.muted)}>
-              {t(VAT_FIELD_KEYS.hint)}
-            </p>
-          </fieldset>
+          {/*
+            🔴 **ΕΞΗΧΘΗ 2026-08-29 (ADR-827 §9.21 ι #1).** Εδώ ζούσαν ~30 γραμμές JSX
+            που ο **Σ1** χρειάστηκε αυτούσιες — και η δεύτερη γραφή τους θα ήταν
+            δομικό δίδυμο (**CHECK 3.28** · **N.18**). Η **συμπεριφορά αυτής της
+            οθόνης δεν άλλαξε**: το πεδίο εξακολουθεί να γράφεται από το **ένα**
+            κουμπί «Αποθήκευση» παρακάτω, μαζί με τα ονόματα και το επάγγελμα.
+
+            ⚠️ **Κανένα `onCommit` εδώ, και είναι απόφαση**: γραφή στο blur θα
+            έσπαγε τη σύμβαση *«τρία αποθετήρια, ένα κουμπί»* που αυτή η οθόνη
+            δηλώνει στο {@link handleSave} — ο άνθρωπος θα έβλεπε το ΑΦΜ να
+            αποθηκεύεται μόνο του ενώ τα διπλανά πεδία περιμένουν.
+          */}
+          <TaxIdentityField
+            value={vatInput}
+            onChange={(next) => {
+              setVatInput(next);
+              // Η προηγούμενη άρνηση αφορούσε τον **προηγούμενο** αριθμό.
+              setVatIssue(null);
+            }}
+            issueKey={vatIssue}
+            disabled={isLoading}
+          />
 
           <fieldset className={layout.flexColGap2}>
             <Label htmlFor="email" className={layout.flexCenterGap2}>
