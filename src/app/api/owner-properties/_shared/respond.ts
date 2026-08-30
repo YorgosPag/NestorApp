@@ -16,7 +16,7 @@
 
 import { NextResponse } from 'next/server';
 
-import type { OwnerPropertyWriteResult } from '@/services/owner-property/owner-property-write.service';
+import type { OwnerPropertyWriteResult } from '@/services/owner-property/owner-property-write-result';
 import type { PublishOutcome } from '@/services/listings/publish-public-listing';
 import type { OwnerProperty } from '@/types/owner-property';
 import type { PlaceRefVerdict } from '@/services/places/public-place-read.service';

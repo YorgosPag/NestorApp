@@ -71,6 +71,7 @@ import {
 import { setOwnerPropertyMandate } from '@/services/owner-property/owner-property-write.service';
 import type { OwnerProperty } from '@/types/owner-property';
 import {
+  mandatesOf,
   AGENCY_ATTESTATION,
   type BrokeredListingMandate,
 } from '@/types/owner-property-mandate';
@@ -127,9 +128,11 @@ async function prepare(
   if (custody.kind !== 'company' || custody.companyId !== companyId) {
     return { ok: false, reason: 'absent' };
   }
-  if (stored.mandate.kind !== 'brokered') return { ok: false, reason: 'not-brokered' };
-
-  const mandate: BrokeredListingMandate = stored.mandate;
+  // 🔑 **Η εντολή ΤΟΥ ΓΡΑΦΕΙΟΥ ΠΟΥ ΕΝΕΡΓΕΙ** (ADR-832) — ποτέ «η πρώτη». Ο μεσίτης
+  //    που ξαναστέλνει σύνδεσμο ενεργεί πάνω στη **δική του** σύμβαση· σε αγγελία με
+  //    δύο εντολές, ένα `mandates[0]` θα του έδινε τα κουμπιά του ανταγωνιστή του.
+  const mandate = mandatesOf(stored).find((m) => m.agencyCompanyId === companyId);
+  if (mandate === undefined) return { ok: false, reason: 'not-brokered' };
   const verdict = verdictFor(action, mandateStandingOf(mandate, nowISOValue));
   if (!verdict.allowed) return { ok: false, reason: verdict.refusal };
 

@@ -54,12 +54,7 @@ import {
 import { nowISO } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
 import { republishOwnerProperty } from '@/services/owner-property/owner-property-publication.service';
-import type { PublishOutcome } from '@/services/listings/publish-public-listing';
-import {
-  PLACE_REF_TREATMENT,
-  verifyPlaceRef,
-  type PlaceRefVerdict,
-} from '@/services/places/public-place-read.service';
+import { PLACE_REF_TREATMENT, verifyPlaceRef } from '@/services/places/public-place-read.service';
 import {
   newOwnerProperty,
   type OwnerProperty,
@@ -67,78 +62,16 @@ import {
   type OwnerPropertyDraft,
   type OwnerPropertyLifecycle,
 } from '@/types/owner-property';
+import { ownerPropertyInvariantViolations } from '@/types/owner-property-invariants';
 import {
-  ownerPropertyInvariantViolations,
-  type OwnerPropertyInvariant,
-} from '@/types/owner-property-invariants';
-import {
+  mandatesOf,
   mandateInvariantViolations,
-  mandateTransitionViolations,
-  type MandateInvariant,
-  type OwnerPropertyMandate,
+  mandateWriteVerdict,
+  type BrokeredListingMandate,
 } from '@/types/owner-property-mandate';
+import type { OwnerPropertyWriteResult } from '@/services/owner-property/owner-property-write-result';
 
 const logger = createModuleLogger('owner-property-write.service');
-
-// =============================================================================
-// 1. ΤΟ ΑΠΟΤΕΛΕΣΜΑ — ρητές καταστάσεις, ποτέ εξαίρεση ως ροή ελέγχου
-// =============================================================================
-
-/**
- * Τι έγινε.
- *
- * 🔑 **Τέσσερις καταστάσεις, και καμία δεν συμπτύσσεται.** Το `invalid` σημαίνει *«η
- * αγγελία σου λέει κάτι αντιφατικό»* — ο άνθρωπος μπορεί να το διορθώσει, και ξέρουμε
- * **ακριβώς ποιο** πεδίο (οι κωδικοί γίνονται κλειδιά i18n, N.11). Το `absent`
- * σημαίνει *«δεν υπάρχει **για σένα**»*. Το `failed` σημαίνει *«δεν φτάσαμε»* — δεν
- * έχει τι να διορθώσει. Ένα κοινό «κάτι πήγε στραβά» θα τον έστελνε να αλλάξει
- * κείμενο που ήταν ήδη σωστό.
- *
- * ⚠️ **Το `publish` ταξιδεύει ΜΑΖΙ με το `saved`, και δεν είναι διακοσμητικό.** Ο
- * γραφέας της προβολής **δεν πετά ποτέ** (*«η αποτυχία της δημόσιας προβολής δεν
- * επιτρέπεται να ακυρώσει την αποθήκευση του κατόχου»*), οπότε χωρίς αυτό το πεδίο
- * το «αποθηκεύτηκε» θα σήμαινε ταυτόχρονα *«είναι στον χάρτη»* και *«είναι στη βάση
- * αλλά όχι στον χάρτη»* — **δύο πολύ διαφορετικά πράγματα για τον ιδιοκτήτη**, και το
- * §8.16 δεσμεύτηκε ότι του τα λέμε.
- */
-export type OwnerPropertyWriteResult =
-  | { readonly kind: 'saved'; readonly property: OwnerProperty; readonly publish: PublishOutcome }
-  | { readonly kind: 'invalid'; readonly violations: readonly OwnerPropertyInvariant[] }
-  /**
-   * 🔑 **Η ΕΝΤΟΛΗ ΑΠΟΡΡΙΠΤΕΤΑΙ ΞΕΧΩΡΙΣΤΑ ΑΠΟ ΤΟ ΑΚΙΝΗΤΟ (§8.33)**, και δεν είναι
-   * λεπτολογία: το `invalid` λέει *«η **αγγελία** σου λέει κάτι αντιφατικό»* — λάθος
-   * σε πεδίο που ο άνθρωπος βλέπει στη φόρμα του ακινήτου. Αυτό λέει *«η **εντολή**
-   * σου δεν στέκει»* — άλλο μέρος της οθόνης, άλλα πεδία, άλλη διόρθωση. Ένας κοινός
-   * κάδος θα έστελνε τον μεσίτη να ψάχνει το εμβαδόν επειδή έβαλε λήξη στο χθες.
-   */
-  | { readonly kind: 'invalid-mandate'; readonly violations: readonly MandateInvariant[] }
-  | { readonly kind: 'absent' }
-  /**
-   * 🔴 **Ο ΔΕΣΜΟΣ ΠΡΟΣ ΤΟ ΕΠΙΠΕΔΟ Α ΔΕΝ ΔΕΙΧΝΕΙ ΠΟΥΘΕΝΑ** — και ξεχωρίζει από το
-   * `invalid` γιατί **ο άνθρωπος δεν το βλέπει στη φόρμα**: κάθε άλλο `invalid` είναι
-   * αντίφαση **μέσα** στην αγγελία (πώληση χωρίς τιμή), κρίσιμη από **καθαρή
-   * συνάρτηση** που τρέχει και η οθόνη. Αυτό απαιτεί **ανάγνωση βάσης** και άρα
-   * **δεν μπορεί** να ζήσει στα invariants — μια απόπειρα να μπει εκεί θα έκανε τη
-   * φόρμα και τον διακομιστή να απαντούν **διαφορετικά** στο ίδιο κλειστό σύνολο
-   * (σχήμα ADR-749).
-   *
-   * ⚠️ **Η ετυμηγορία ταξιδεύει**: *«δεν είναι καν ταυτότητα τόπου»* και *«η γη
-   * υπάρχει, το κτίριο όχι»* έχουν την **ίδια** θεραπεία (διόρθωσε τον δεσμό) αλλά
-   * **άλλο μήνυμα**, και η οθόνη το χρειάζεται για να δείξει το σωστό.
-   */
-  | { readonly kind: 'invalid-place-link'; readonly verdict: PlaceRefVerdict }
-  /**
-   * 🔴 **ΔΕΝ ΜΑΘΑΜΕ** — και **ΠΟΤΕ** δεν συγχωνεύεται με το από πάνω.
-   *
-   * Το `verifyPlaceRef` επιστρέφει `'unavailable'` όταν η ερώτηση **δεν
-   * απαντήθηκε**. Διαβασμένο ως «δεν υπάρχει», μια στιγμιαία αστοχία της βάσης θα
-   * έλεγε στον άνθρωπο *«αυτό το κτίριο δεν υπάρχει»* και θα τον έστελνε να
-   * **φτιάξει δεύτερη ταυτότητα** για φυσικό κτίριο που έχει ήδη μία — δηλαδή θα
-   * παρήγαγε ακριβώς το διπλότυπο που όλο το επίπεδο Α υπάρχει για να αποτρέψει.
-   * Η διάκριση έχει **ήδη πληρωθεί μία φορά** (SPEC-777A §13.7.2, εύρημα #5).
-   */
-  | { readonly kind: 'place-link-unverified' }
-  | { readonly kind: 'failed'; readonly message: string };
 
 /**
  * Αποθηκεύει το έγγραφο **και** ξαναγράφει την προβολή του. Η **μία** διατύπωση.
@@ -261,7 +194,15 @@ export async function createOwnerProperty(
   const violations = ownerPropertyInvariantViolations(draft);
   if (violations.length > 0) return { kind: 'invalid', violations };
 
-  const mandateViolations = mandateInvariantViolations(authorship.mandate, nowISO());
+  // ⚠️ **Κάθε εντολή κρίνεται χωριστά** (ADR-832): η αγγελία μπορεί να γεννηθεί με
+  //    περισσότερες από μία, και μια παράβαση σε **οποιαδήποτε** ακυρώνει τη γραφή.
+  //    Οι κωδικοί συγχωνεύονται χωρίς διπλότυπα — ο άνθρωπος δεν χρειάζεται να δει
+  //    δύο φορές «η λήξη λείπει» επειδή έλειπε σε δύο εντολές.
+  const mandateViolations = [
+    ...new Set(
+      authorship.mandates.flatMap((mandate) => mandateInvariantViolations(mandate, nowISO())),
+    ),
+  ];
   if (mandateViolations.length > 0) {
     return { kind: 'invalid-mandate', violations: mandateViolations };
   }
@@ -412,31 +353,81 @@ export async function setOwnerPropertyLifecycle(
  * δημοσιευμένες** — χειρότερο από το πρόβλημα που λύνουμε. Ομοίως η συγκατάθεση
  * αλλάζει `confirmation`/`decidedAt`, **όχι** τους όρους.
  *
- * ⇒ Η **συμφωνία** είναι το ζεύγος `(agreement, expiresAt)`. Αλλάζει αυτό ⇒ υπάρχει
+ * ⇒ Η **συμφωνία** είναι *(είδος, έναρξη, λήξη, πράξεις)*. Αλλάζει αυτό ⇒ υπάρχει
  * **νέα σύμβαση** ⇒ κρίνεται. Δεν αλλάζει ⇒ το έγγραφο απλώς αγγίχθηκε.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΣΥΝΑΛΛΑΓΗ, ΚΑΙ ΗΤΑΝ «ΔΙΑΒΑΣΕ ΜΕΤΑ ΓΡΑΨΕ» ΩΣ ΤΙΣ 2026-08-30 (ADR-832)
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Όσο η αγγελία κρατούσε **μία** εντολή, η μη ατομικότητα ήταν ανεκτή: η τελευταία
+ * γραφή νικούσε, και το αποτέλεσμα ήταν πάντα **μία έγκυρη** εντολή. Από τη στιγμή
+ * που ο κριτής ρωτά *«συγκρούεσαι με τις υπάρχουσες;»*, το κενό ανάμεσα στην ανάγνωση
+ * και τη γραφή γίνεται **παράθυρο για δύο αποκλειστικές**: δύο αιτήματα που διαβάζουν
+ * ταυτόχρονα βλέπουν και τα δύο «καθαρό» και γράφουν και τα δύο.
+ *
+ * 🔑 **Και δεν χρειάστηκε δεύτερη συλλογή για να κλείσει.** Επειδή οι εντολές ζουν
+ * **μέσα** στο έγγραφο της αγγελίας, μία ανάγνωση **κατά ταυτότητα** μέσα στη
+ * συναλλαγή βλέπει **όλες** τις καταλήψεις — που είναι ακριβώς ο περιορισμός του
+ * Firestore (οι συναλλαγές δεν δέχονται φιλτραρισμένα ερωτήματα). Το πρότυπο
+ * «βοηθητική συλλογή-φρουρός» θα ήταν **δεύτερο βιβλίο που πρέπει να συμφωνεί με το
+ * πρώτο** (ADR-749) — εδώ **η κατάσταση που αποφασίζει είναι η κατάσταση που απαντά**.
  */
 export async function setOwnerPropertyMandate(
   adminDb: AdminFirestore,
   ownerPropertyId: string,
-  mandate: OwnerPropertyMandate,
+  mandate: BrokeredListingMandate,
 ): Promise<OwnerPropertyWriteResult> {
-  const snapshot = await adminDb
-    .collection(COLLECTIONS.OWNER_PROPERTIES)
-    .doc(ownerPropertyId)
-    .get();
+  const ref = adminDb.collection(COLLECTIONS.OWNER_PROPERTIES).doc(ownerPropertyId);
+  const now = nowISO();
 
-  const existing = snapshot.data() as OwnerProperty | undefined;
-  if (existing === undefined) return { kind: 'absent' };
+  let outcome: OwnerPropertyWriteResult | { readonly kind: 'proceed'; readonly property: OwnerProperty };
+  try {
+    outcome = await adminDb.runTransaction(async (tx) => {
+      const snapshot = await tx.get(ref);
+      const existing = snapshot.data() as OwnerProperty | undefined;
+      if (existing === undefined) return { kind: 'absent' } as const;
 
-  // 🔑 **Ο ΚΡΙΤΗΣ ΔΕΝ ΖΕΙ ΠΙΑ ΕΔΩ** (ADR-827 §9.21): εξήχθη στο
-  //    `mandateTransitionViolations`, γιατί η **συναλλαγή της αποδοχής** του Σ3 δεν
-  //    μπορεί να καλέσει αυτή τη συνάρτηση (δέχεται `adminDb`, κάνει δική της
-  //    ανάγνωση). Δεύτερος γραφέας θα ήταν ADR-749· εξαγωγή του κριτή είναι η σωστή
-  //    πράξη — δύο καλούντες, **μία** κρίση.
-  const violations = mandateTransitionViolations(existing.mandate, mandate, nowISO());
-  if (violations.length > 0) return { kind: 'invalid-mandate', violations };
+      // 🔑 **Ο ΚΡΙΤΗΣ ΔΕΝ ΖΕΙ ΕΔΩ** (ADR-827 §9.21): ζει στο `mandateWriteVerdict`,
+      //    γιατί η **συναλλαγή της αποδοχής** του Σ3 δεν μπορεί να καλέσει αυτή τη
+      //    συνάρτηση. Δεύτερος γραφέας θα ήταν ADR-749· εξαγωγή του κριτή είναι η
+      //    σωστή πράξη — δύο καλούντες, **μία** κρίση.
+      const verdict = mandateWriteVerdict(mandate, mandatesOf(existing), now);
+      if (verdict.violations.length > 0) {
+        return {
+          kind: 'invalid-mandate',
+          violations: verdict.violations,
+          conflicts: verdict.conflicts,
+        } as const;
+      }
 
-  return persist(adminDb, { ...existing, mandate, updatedAt: nowISO() }, 'overwrite');
+      // ⚠️ **ΑΝΤΙΚΑΤΑΣΤΑΣΗ ΑΝΑ ΓΡΑΦΕΙΟ, ΟΧΙ ΠΡΟΣΘΗΚΗ.** Νέοι όροι προς γραφείο που
+      //    ήδη κρατά εντολή είναι **η ίδια σύμβαση αναθεωρημένη** — μια `push` θα
+      //    άφηνε την παλιά ζωντανή δίπλα στη νέα, δηλαδή θα γεννούσε τη σύγκρουση
+      //    που αυτός ο κώδικας υπάρχει για να αποτρέψει.
+      const property: OwnerProperty = {
+        ...existing,
+        mandates: [
+          ...mandatesOf(existing).filter((m) => m.agencyCompanyId !== mandate.agencyCompanyId),
+          mandate,
+        ],
+        updatedAt: now,
+      };
+      tx.set(ref, property);
+      return { kind: 'proceed', property } as const;
+    });
+  } catch (error) {
+    return failure('Η εντολή δεν αποθηκεύτηκε', ownerPropertyId, error);
+  }
+
+  if (outcome.kind !== 'proceed') return outcome;
+
+  // ⚠️ **Η αναδημοσίευση ΕΞΩ από τη συναλλαγή**, και είναι απαίτηση: γράφει σε **άλλη**
+  //    συλλογή (δημόσια προβολή) και θα διεύρυνε το σύνολο εγγράφων που η συναλλαγή
+  //    κλειδώνει, χωρίς να κερδίζει ατομικότητα που κάποιος χρειάζεται — η προβολή
+  //    είναι **παράγωγο** και ξαναχτίζεται.
+  const republished = await republishOwnerProperty(adminDb, outcome.property);
+  return { kind: 'saved', property: republished.property, publish: republished.publish };
 }
 
 // =============================================================================

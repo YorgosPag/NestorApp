@@ -73,6 +73,11 @@ import type {
 } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
+import {
+  mandatesOf,
+  mandateWriteVerdict,
+  nextMandateExpiry,
+} from '@/types/owner-property-mandate';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { EntityAuditService } from '@/services/entity-audit.service';
@@ -162,6 +167,26 @@ async function commit(
       const stale = casViolation(requestSnap.data(), propertySnap.data(), input.agencyCompanyId);
       if (stale !== null) return stale;
 
+      // 🔴 **ΟΙ ΚΑΤΑΛΗΨΕΙΣ ΔΙΑΒΑΖΟΝΤΑΙ ΑΠΟ ΤΟ ΦΡΕΣΚΟ ΕΓΓΡΑΦΟ ΤΗΣ ΣΥΝΑΛΛΑΓΗΣ.**
+      //    Ως τις 2026-08-30 η γραφή χτιζόταν πάνω στο `prepared.existingMandates`,
+      //    που έρχεται από τη **φάση 1** — δηλαδή από `.get()` **έξω** από τη
+      //    συναλλαγή. Το σχόλιο εδώ ισχυριζόταν ότι «διαβάστηκε από αυτή τη
+      //    συναλλαγή»· το `propertySnap` υπήρχε και **απορριπτόταν**.
+      //
+      // 🔴 Το κόστος **δεν ήταν μόνο** μια σύγκρουση που ξεφεύγει: ήταν **ΑΠΩΛΕΙΑ
+      //    ΔΕΔΟΜΕΝΩΝ**. Εντολή που γράφτηκε από τρίτο γραφείο στο ενδιάμεσο
+      //    **εξαφανιζόταν** από τον πίνακα, γιατί η γραφή έστελνε ολόκληρο τον
+      //    **παλιό** πίνακα συν τη νέα. Μια άγκυρα το μέτρησε (Α2).
+      const occupations = mandatesOf(propertySnap.data() as OwnerProperty);
+
+      // 🔑 **Ο ΙΔΙΟΣ ΚΡΙΤΗΣ, ΞΑΝΑ, ΜΕ ΤΑ ΦΡΕΣΚΑ** — όχι δεύτερος. Η φάση 1 απαντά
+      //    *«αξίζει να προσπαθήσουμε;»*· **αυτή** είναι η μόνη που δεσμεύει, γιατί
+      //    είναι η μόνη μέσα στο παράθυρο του CAS.
+      const verdict = mandateWriteVerdict(prepared.mandate, occupations, input.nowISO);
+      if (verdict.violations.length > 0) {
+        return { kind: 'refused', reason: 'mandate-invalid', violations: verdict.violations };
+      }
+
       if (prepared.contactDoc !== null) {
         transaction.set(
           adminDb.collection(COLLECTIONS.CONTACTS).doc(prepared.clientContactId),
@@ -169,8 +194,19 @@ async function commit(
         );
       }
 
+      // 🔴 **ΠΡΟΣΘΗΚΗ ΣΤΟΝ ΠΙΝΑΚΑ, ΜΕ ΑΝΤΙΚΑΤΑΣΤΑΣΗ ΑΝΑ ΓΡΑΦΕΙΟ** (ADR-832) — ίδια
+      //    σημασιολογία με τον `setOwnerPropertyMandate`. Η **δική** μας εντολή
+      //    αντικαθίσταται (ανανέωση όρων)· κάθε **ξένη** μένει ανέπαφη.
+      const mandates = [
+        ...occupations.filter((m) => m.agencyCompanyId !== prepared.mandate.agencyCompanyId),
+        prepared.mandate,
+      ];
+
       transaction.update(propertyRef, {
-        mandate: prepared.mandate,
+        mandates,
+        // ⚠️ **Το ευρετήριο γράφεται ΜΑΖΙ**, ποτέ σε δεύτερη πράξη — αλλιώς υπάρχει
+        //    στιγμή όπου ο σαρωτής λήξης δεν βλέπει την εντολή που μόλις γεννήθηκε.
+        mandatesExpireAt: nextMandateExpiry(mandates),
         updatedAt: input.nowISO,
       });
 
@@ -221,9 +257,9 @@ function casViolation(
   if (listing === undefined || listing.lifecycle !== 'listed') {
     return { kind: 'refused', reason: 'listing-withdrawn' };
   }
-  if (listing.mandate.kind !== 'self') {
-    return { kind: 'refused', reason: 'listing-already-brokered' };
-  }
+  // 🔴 **Ο ΕΛΕΓΧΟΣ ΤΗΣ ΣΥΓΚΡΟΥΣΗΣ ΕΓΙΝΕ ΣΤΟ `mandateWriteVerdict`** (ADR-832), με τους
+  //    όρους στο χέρι. Ένα `mandates.length > 0` εδώ θα ήταν το παλιό λάθος με νέα
+  //    ρούχα: θα απέρριπτε τη **δεύτερη απλή** εντολή, που είναι νόμιμη.
 
   return null;
 }

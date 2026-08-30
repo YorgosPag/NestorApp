@@ -45,11 +45,12 @@ import {
 import {
   createOwnerProperty,
   setOwnerPropertyMandate,
-  type OwnerPropertyWriteResult,
 } from '@/services/owner-property/owner-property-write.service';
+import type { OwnerPropertyWriteResult } from '@/services/owner-property/owner-property-write-result';
 import type { BrokerageAuthority } from '@/lib/auth/brokerage-authority';
 import type { ListingAgreement } from '@/types/listing-agreement';
 import type { OwnerPropertyDraft } from '@/types/owner-property';
+import type { OfferKind } from '@/types/property-offers';
 import {
   AGENCY_ATTESTATION,
   initialConfirmationFor,
@@ -72,6 +73,10 @@ export interface BrokeredMandateRequest {
   readonly agreement: ListingAgreement;
   /** Οι όροι αμοιβής. **Ιδιωτικοί** — ποτέ στη δημόσια προβολή (ADR-827 §3.4). */
   readonly compensation: MandateCompensation;
+  /** ISO — από πότε ισχύει (ADR-832). Δες `BrokeredListingMandate.startsAt`. */
+  readonly startsAt: string;
+  /** Για ποιες πράξεις (ADR-832) — το «περιεχόμενο» του άρθρου 200 §4. */
+  readonly scope: readonly OfferKind[];
 }
 
 /**
@@ -150,6 +155,13 @@ export async function createBrokeredListing(
     expiresAt: request.expiresAt,
     // Το γραφείο μόλις κρίθηκε ενεργό από τον φρουρό — δες `authority`.
     agencyRevokedAt: null,
+    // ── ADR-832: η κατάληψη ────────────────────────────────────────────────
+    // ⚠️ **Το γραφείο διαβάζεται ΑΠΟ ΤΗΝ ΑΠΟΔΕΙΞΗ**, ίδιο δόγμα με το
+    //    `authorCompanyId` παρακάτω: έτσι είναι αδύνατο να κριθεί ο ένας
+    //    οργανισμός και να καταλάβει τον πόρο ο άλλος.
+    agencyCompanyId: authority.companyId,
+    startsAt: request.startsAt,
+    scope: request.scope,
   };
 
   const write = await createOwnerProperty(
@@ -158,7 +170,7 @@ export async function createBrokeredListing(
       id: identity.id,
       authorUserId: identity.authorUserId,
       authorCompanyId: authority.companyId,
-      mandate,
+      mandates: [mandate],
     },
     draft,
   );

@@ -87,6 +87,9 @@ import {
   type MandateRequestInvariant,
   type ProposedMandateTerms,
 } from '@/types/mandate-request';
+import { mandateConflicts } from '@/lib/mandate/mandate-conflict';
+import { bindingMandates, occupancyOf } from '@/types/owner-property-mandate';
+import { mandatesOf } from '@/types/owner-property-mandate';
 import type { OwnerProperty } from '@/types/owner-property';
 
 const logger = createModuleLogger('mandate-request.service');
@@ -135,6 +138,16 @@ export const MANDATE_REQUEST_REJECTIONS = [
    * ό,τι ο παλιός κανόνας **απαγόρευε**.
    */
   'request-declined-final',
+  /**
+   * 🔴 **ΣΥΓΚΡΟΥΕΤΑΙ ΜΕ ΖΩΝΤΑΝΗ ΕΝΤΟΛΗ ΑΛΛΟΥ ΓΡΑΦΕΙΟΥ** (ADR-832).
+   *
+   * ⚠️ **ΔΕΝ είναι το `listing-already-brokered`, και η διαφορά δεν είναι λεπτολογία.**
+   * Εκείνο σημαίνει *«αυτό το ζεύγος έχει ήδη κλείσει»* — το ίδιο γραφείο, ήδη
+   * αποδεκτό. Αυτό σημαίνει *«**άλλος** κρατά δικαίωμα που δεν χωρά δίπλα στο δικό
+   * σου»* — και έχει **διέξοδο**: άλλη πράξη, άλλη περίοδος, ή απλή αντί για
+   * αποκλειστική. Ένας κοινός κωδικός θα έκρυβε και τους τρεις δρόμους.
+   */
+  'listing-conflicting-mandate',
 ] as const;
 
 export type MandateRequestRejection = (typeof MANDATE_REQUEST_REJECTIONS)[number];
@@ -192,6 +205,25 @@ export async function submitMandateRequest(
     return { kind: 'rejected', reason: 'agency-absent' };
   }
 
+  // 🔴 **Η ΣΥΓΚΡΟΥΣΗ ΚΡΙΝΕΤΑΙ ΕΔΩ** (ADR-832) — με τον **ίδιο** κριτή που θα τρέξει
+  //    ξανά στην αποδοχή. Δύο φορές δεν είναι διπλότυπο: εδώ γλιτώνει τον άνθρωπο από
+  //    αίτημα που θα απορριφθεί· εκεί φυλά τη γραφή από ό,τι άλλαξε στο ενδιάμεσο.
+  const occupancyVerdict = mandateConflicts(
+    {
+      agencyCompanyId: declaration.agencyCompanyId,
+      agreement: declaration.terms.agreement,
+      scope: declaration.terms.scope,
+      startsAt: declaration.terms.startsAt,
+      expiresAt: declaration.terms.expiresAt,
+    },
+    bindingMandates(mandatesOf(listing)).map(occupancyOf),
+  );
+  // ⚠️ *«Δεν μπόρεσα να κρίνω»* φεύγει ως **503**, ποτέ ως άρνηση (N.12).
+  if (occupancyVerdict.kind === 'undetermined') return { kind: 'unavailable' };
+  if (occupancyVerdict.kind === 'conflicts') {
+    return { kind: 'rejected', reason: 'listing-conflicting-mandate' };
+  }
+
   const history = await loadPairHistory(adminDb, declaration);
   if (history === null) return { kind: 'unavailable' };
 
@@ -241,10 +273,16 @@ async function loadOwnListing(
   if (property.lifecycle !== 'listed') {
     return { kind: 'rejected', reason: 'listing-not-live' };
   }
-  if (property.mandate.kind !== 'self') {
-    return { kind: 'rejected', reason: 'listing-already-brokered' };
-  }
-
+  // 🔴 **Ο ΕΛΕΓΧΟΣ «ΕΧΕΙ ΗΔΗ ΓΡΑΦΕΙΟ;» ΕΦΥΓΕ ΑΠΟ ΕΔΩ** (ADR-832), και δεν
+  //    αντικαταστάθηκε από ισοδύναμο: **δεν υπήρχε ισοδύναμο**. Έγραφε
+  //    `mandate.kind !== 'self'` — δηλαδή απέρριπτε κάθε δεύτερη ανάθεση **χωρίς να
+  //    ρωτήσει το είδος της εντολής**, και μαζί με τη δεύτερη *αποκλειστική* (σωστά)
+  //    απέρριπτε και τη δεύτερη **απλή** (λάθος), και την εντολή **άλλης πράξης**
+  //    (λάθος), και τη **διαδοχική** (λάθος). Τρία στα τέσσερα.
+  //
+  // 🔑 Ο πραγματικός κριτής χρειάζεται **τους όρους που προτείνονται** — είδος,
+  //    διάστημα, πράξεις — που εδώ δεν είναι γνωστοί. Τρέχει στο
+  //    {@link judgeAgainstOccupancy}, μετά τη φόρτωση.
   return property;
 }
 

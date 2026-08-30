@@ -34,7 +34,8 @@ import type { UserProfileDocument } from '@/auth/types/auth.types';
 import type { MandateRequest } from '@/types/mandate-request';
 import type { OwnerProperty } from '@/types/owner-property';
 import {
-  mandateTransitionViolations,
+  mandatesOf,
+  mandateWriteVerdict,
   OWNER_CONSENT,
   type BrokeredListingMandate,
 } from '@/types/owner-property-mandate';
@@ -52,6 +53,14 @@ export interface Prepared {
   readonly kind: 'ready';
   readonly property: OwnerProperty;
   readonly mandate: BrokeredListingMandate;
+  /**
+   * ⛔ **ΔΕΝ ταξιδεύουν οι υπάρχουσες εντολές, και είναι ΤΟ ΔΙΟΡΘΩΜΕΝΟ ΛΑΘΟΣ.** Το
+   * πεδίο υπήρχε με σχόλιο *«όπως διαβάστηκαν από τη συναλλαγή»* — **ψευδές**: η
+   * φάση 1 διαβάζει με σκέτο `.get()`, **έξω** από κάθε συναλλαγή. Ο γραφέας που τις
+   * εμπιστευόταν έχτιζε τον νέο πίνακα πάνω σε **μπαγιάτικο** αντίγραφο και
+   * **έσβηνε** ό,τι είχε γραφτεί στο ενδιάμεσο. Ο γραφέας διαβάζει πλέον το
+   * `propertySnap` της **δικής του** συναλλαγής (`mandate-acceptance.service.ts`).
+   */
   readonly clientContactId: string;
   /** `null` όταν η επαφή **υπάρχει ήδη** — τότε δεν γράφεται τίποτα. */
   readonly contactDoc: Record<string, unknown> | null;
@@ -76,9 +85,9 @@ export async function prepare(
   // 🔑 **Ο ΙΔΙΟΣ ΚΡΙΤΗΣ ΜΕ ΤΗ ΔΕΥΤΕΡΗ ΠΟΡΤΑ** (`setOwnerPropertyMandate`), εξηγμένος
   //    ώστε να καλείται και από εδώ. ⛔ **ΜΗΝ γράψεις δεύτερο**: ένα όριο διάρκειας
   //    που ισχύει στη μία από τις δύο διαδρομές είναι αδρανής φρουρός (ADR-749 §5).
-  const violations = mandateTransitionViolations(property.mandate, mandate, input.nowISO);
-  if (violations.length > 0) {
-    return { kind: 'refused', reason: 'mandate-invalid', violations };
+  const verdict = mandateWriteVerdict(mandate, mandatesOf(property), input.nowISO);
+  if (verdict.violations.length > 0) {
+    return { kind: 'refused', reason: 'mandate-invalid', violations: verdict.violations };
   }
 
   return {
@@ -114,9 +123,12 @@ async function readListing(
     if (property.lifecycle !== 'listed') {
       return { kind: 'refused', reason: 'listing-withdrawn' };
     }
-    if (property.mandate.kind !== 'self') {
-      return { kind: 'refused', reason: 'listing-already-brokered' };
-    }
+    // 🔴 **Ο ΕΛΕΓΧΟΣ ΕΓΙΝΕ ΚΡΙΤΗΣ ΣΥΓΚΡΟΥΣΗΣ** (ADR-832). Έγραφε
+    //    `mandate.kind !== 'self'` — απέρριπτε κάθε δεύτερη ανάθεση χωρίς να ρωτήσει
+    //    το είδος, δηλαδή απαγόρευε και την **απλή** εντολή που υπάρχει ακριβώς για
+    //    να επιτρέπεται. Ο πραγματικός κριτής τρέχει στο `mandateWriteVerdict`, με
+    //    τους όρους στο χέρι — και ο φρουρός εδώ θα ήταν πλέον **δεύτερη απάντηση**
+    //    στο ίδιο ερώτημα (ADR-749).
     return { ...property, id: ownerPropertyId };
   } catch (error) {
     logger.error('[MANDATE-ACCEPT] Η ανάγνωση της αγγελίας απέτυχε — άγνωστο, όχι κενό', {
@@ -290,5 +302,12 @@ function brokeredMandateFrom(
     consentNonce: null,
     expiresAt: request.terms.expiresAt,
     agencyRevokedAt: null,
+    // ── ADR-832: η κατάληψη ────────────────────────────────────────────────
+    // ⚠️ Και τα τρία **αυτούσια από το αίτημα**, με τον ίδιο λόγο: είναι όροι που ο
+    //    ιδιοκτήτης **είδε και ενέκρινε**. Παραγόμενο `scope` από τις διαθέσεις της
+    //    αγγελίας θα έδινε στο γραφείο πράξη που δεν του ανατέθηκε.
+    agencyCompanyId: request.agencyCompanyId,
+    startsAt: request.terms.startsAt,
+    scope: request.terms.scope,
   };
 }
