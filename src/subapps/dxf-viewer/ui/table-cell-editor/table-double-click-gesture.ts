@@ -47,6 +47,10 @@ import { getTableCellCursor, setTableCellCursor } from '../../state/table-cell-c
 import { resolveDxfCanvasBackgroundHex } from '../../config/color-config';
 import { caretIndexOfClick, cellEditorFrameLive } from './table-cell-editor-frame-live';
 import { resolveSelectedTable, resolveTableById } from './table-entity-lookup';
+// 🔴 ADR-833 Φάση 4 — η **τρίτη** χειρονομία του ίδιου διπλού κλικ: μετονομασία καρτέλας.
+import { computeTableEntityGeometryLive } from '../../bim/table/table-entity-geometry';
+import { tableWorksheetStripAtWorld } from './table-worksheet-tab-probe';
+import { openWorksheetRename } from './table-worksheet-rename-open';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
 import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
 
@@ -99,7 +103,40 @@ export function applyTableDoubleClick(params: TableDoubleClickParams): void {
     ?? resolveSelectedTable(levelManager, getSelectedEntityIds);
   if (!entity) return;
 
-  const target = resolveTableCellEditTarget(entity, eventWorldPoint(event, container, transform));
+  const world = eventWorldPoint(event, container, transform);
+
+  // ── 🔴 ADR-833 Φάση 4 — ΜΕΤΟΝΟΜΑΣΙΑ ΚΑΡΤΕΛΑΣ, ΠΡΙΝ ΑΠΟ ΚΑΘΕ ΑΛΛΗ ΕΡΜΗΝΕΙΑ ────────────
+  //
+  // Το διπλό κλικ σε καρτέλα φύλλου είναι η **πιο συνηθισμένη** χειρονομία μετονομασίας σε
+  // κάθε φύλλο υπολογισμού (Excel, Sheets, Numbers) — δηλαδή αυτή που ο χρήστης δοκιμάζει
+  // πρώτη, χωρίς να του τη δείξει κανείς. Το §31.8 έχει ήδη μετρήσει **δύο** αστοχίες
+  // ανακάλυψης σε αυτό ακριβώς το σύστημα· εδώ η χειρονομία υπάρχει **πριν** από το σύμπτωμα.
+  //
+  // 🔑 Η σειρά δεν λύνει διεκδίκηση: η λωρίδα ζει **έξω** από το πλέγμα, οπότε το
+  // `resolveTableCellEditTarget` από κάτω θα απαντούσε `null` ούτως ή άλλως. Γράφεται πρώτη
+  // ώστε η ερώτηση «είναι καρτέλα;» να μην μπορεί ποτέ να πέσει **μετά** από μια σιωπηλή
+  // έξοδο — το σχήμα λάθους του §40.8, όπου ένα χειριστήριο ήταν ορατό και άφταστο.
+  // ΜΙΑ ανάγνωση γεωμετρίας για τις δύο ερωτήσεις (πού είναι η λωρίδα, πόσο είναι το mm):
+  // δύο κλήσεις θα ήταν δύο υπολογισμοί διάταξης μέσα στο ίδιο συμβάν.
+  const geometry = computeTableEntityGeometryLive(entity);
+  const strip = tableWorksheetStripAtWorld(entity, world, geometry, transform.scale);
+  if (strip) {
+    // ⚠️ **Μόνο** η καρτέλα ανοίγει μετονομασία. Το ⊕ δεν έχει όνομα — και δεν παίρνει δεύτερη
+    // σημασία στο διπλό κλικ: το πρώτο του πάτημα έφτιαξε ήδη φύλλο, οπότε ένα δεύτερο θα
+    // έφτιαχνε **δύο** και ο χρήστης δεν ζήτησε κανένα από τα δύο συνειδητά.
+    if (strip.kind === 'tab') {
+      openWorksheetRename({
+        entity,
+        tab: strip.tab,
+        mmToWorld: geometry.mmToWorld,
+        container,
+        transform,
+      });
+    }
+    return;
+  }
+
+  const target = resolveTableCellEditTarget(entity, world);
   if (!target) return;
   // **Νέα** στήλη αγκύρωσης και στους δύο δρόμους: το κλικ ξεκινά νέα σειρά καταχώρισης, άρα
   // το επόμενο Enter επιστρέφει ΕΔΩ.
