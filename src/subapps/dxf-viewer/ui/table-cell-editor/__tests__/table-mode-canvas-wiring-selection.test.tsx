@@ -28,6 +28,16 @@
  * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §40.9
  */
 
+// 🔴 ADR-833 Φ5Β — ο φύλακας χωρητικότητας **μιλά στον άνθρωπο** όταν αρνείται (`useTableWorksheetAdd`
+// → `useNotifications`), και ο provider ζει έξω από αυτό το δέντρο. Άπραγο mock, ίδιο με το
+// `table-canvas-lockdown-merged-cell`: αυτή η σουίτα δεν μετρά μηνύματα.
+jest.mock('@/providers/NotificationProvider', () => ({
+  useNotifications: () => ({
+    success: jest.fn(), error: jest.fn(), info: jest.fn(), warning: jest.fn(),
+    notify: jest.fn(), loading: jest.fn(), showConfirmDialog: jest.fn(),
+  }),
+}));
+
 import React, { useRef } from 'react';
 import { act, render } from '@testing-library/react';
 import { buildTableEntity } from '../../../bim/table/build-table-entity';

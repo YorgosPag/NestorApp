@@ -48,7 +48,7 @@ import { tableCursorFor } from '../../state/table-cell-cursor-scope';
 import { setTableCellCursor } from '../../state/table-cell-cursor-store';
 import { applyTableScenePatch } from './table-scene-patch';
 import { useTableArmedControlClick } from './use-table-armed-control-click';
-import { useTableWorksheetAdd, useTableWorksheetApply } from './use-table-worksheet-apply';
+import { useTableWorksheetAdd } from './use-table-worksheet-apply';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
 import type { TableWorksheetId } from '../../types/table-worksheet';
 
@@ -71,7 +71,6 @@ export interface UseTableWorksheetTabClickParams {
 export function useTableWorksheetTabClick(params: UseTableWorksheetTabClickParams): void {
   const { containerRef, levelManager } = params;
   const { execute } = useCommandHistory();
-  const applyWorksheet = useTableWorksheetApply({ levelManager, execute });
   const addWorksheet = useTableWorksheetAdd({ levelManager, execute });
 
   useTableArmedControlClick<ArmedWorksheetStrip>({

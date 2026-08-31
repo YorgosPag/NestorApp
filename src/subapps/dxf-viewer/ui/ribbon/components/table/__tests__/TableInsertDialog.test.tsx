@@ -13,7 +13,8 @@ import {
   DEFAULT_TABLE_COLUMN_WIDTH_MM,
 } from '../../../../../bim/table/build-table-entity';
 import { MIN_TABLE_COLUMN_WIDTH_MM } from '../../../../../types/table-entity';
-import { MAX_TOTAL_TABLE_ROWS, MIN_TOTAL_TABLE_ROWS } from '../table-size-menu-model';
+import { MAX_TABLE_COLUMNS, MAX_TOTAL_TABLE_ROWS, MIN_TOTAL_TABLE_ROWS } from '../table-size-menu-model';
+import { MAX_TABLE_GRID_CELLS } from '../../../../../bim/table/table-capacity';
 
 jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -97,11 +98,14 @@ describe('TableInsertDialog — υποβολή', () => {
 });
 
 describe('TableInsertDialog — τα άκρα κόβονται, δεν πετούν σφάλμα', () => {
-  it('τεράστιο πλήθος στηλών κόβεται στο όριο του builder', () => {
+  it('🔴 ADR-833 Φ5Β — τεράστιο πλήθος στηλών κόβεται στο ΓΙΝΟΜΕΝΟ που θα γεννηθεί', () => {
     renderDialog();
     fireEvent.change(fields()[0], { target: { value: '999999' } });
     confirm();
-    expect(mockConfirm.mock.calls[0][0].columnCount).toBe(MAX_TABLE_COLUMN_COUNT);
+    const { columnCount, totalRowCount } = mockConfirm.mock.calls[0][0];
+    expect(columnCount * totalRowCount).toBeLessThanOrEqual(MAX_TABLE_GRID_CELLS);
+    expect(columnCount).toBeLessThanOrEqual(MAX_TABLE_COLUMNS);
+    expect(columnCount).toBeGreaterThan(1);
   });
 
   it('μία γραμμή ανεβαίνει στο ελάχιστο — ο τίτλος και η κεφαλίδα υπάρχουν πάντα', () => {

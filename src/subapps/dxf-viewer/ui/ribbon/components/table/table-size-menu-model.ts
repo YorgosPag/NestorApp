@@ -24,12 +24,13 @@
  */
 
 import {
-  MAX_TABLE_COLUMN_COUNT,
   MAX_TABLE_DATA_ROW_COUNT,
   TABLE_FIXED_ROW_COUNT,
   sanitizeTableColumnCount,
   sanitizeTableDataRowCount,
 } from '../../../../bim/table/build-table-entity';
+import { fitTableGrid } from '../../../../bim/table/table-capacity';
+import { MAX_TABLE_COLUMN_COUNT } from '../../../../bim/table/table-ooxml-limits';
 
 /** Μέγεθος στο λεξιλόγιο **του χρήστη**: στήλες × γραμμές που θα δει στην οθόνη. */
 export interface TableMenuSize {
@@ -44,8 +45,8 @@ export interface TableMenuSize {
 
 /**
  * 10 × 8 — οι διαστάσεις του Word. Δεν είναι αυθαίρετες: το πλέγμα καλύπτει το **συνηθισμένο**
- * και ο διάλογος «Εισαγωγή πίνακα…» τα άκρα (έως 256 × 1002). Μεγαλύτερο πλέγμα θα έκανε τις
- * κυψελίδες μικρότερες από στόχο ποντικιού χωρίς να καλύψει ούτως ή άλλως το εύρος.
+ * και ο διάλογος «Εισαγωγή πίνακα…» τα άκρα. Μεγαλύτερο πλέγμα θα έκανε τις κυψελίδες
+ * μικρότερες από στόχο ποντικιού χωρίς να καλύψει ούτως ή άλλως το εύρος.
  */
 export const TABLE_SIZE_GRID_COLUMNS = 10;
 export const TABLE_SIZE_GRID_ROWS = 8;
@@ -83,7 +84,19 @@ export function toMenuSize(columnCount: number, dataRowCount: number): TableMenu
 export function sanitizeMenuSize(raw: TableMenuSize): TableMenuSize {
   const columnCount = sanitizeTableColumnCount(raw.columnCount);
   const dataRowCount = sanitizeTableDataRowCount(totalRowsToDataRowCount(raw.totalRowCount));
-  return { columnCount, totalRowCount: dataRowCountToTotalRows(dataRowCount) };
+
+  // 🔴 ADR-833 Φ5Β — **και το ΓΙΝΟΜΕΝΟ, γιατί αλλιώς το μενού λέει άλλα από όσα κάνει.**
+  // Οι δύο καθαριστές βλέπουν έναν άξονα ο καθένας· το `resolveShape` όμως κόβει το πλέγμα
+  // στο γινόμενο πριν χτίσει. Χωρίς αυτή τη γραμμή το μενού θα εμφάνιζε «10.000 × 10.000»
+  // και ο πίνακας θα γεννιόταν άλλος — ακριβώς το «UI που λέει άλλα από αυτά που κάνει»
+  // που το ίδιο το `build-table-entity` ονομάζει ψέμα. **Ο ίδιος** κανόνας, ένας καλών
+  // παραπάνω (N.18): καμία δεύτερη διατύπωση του «τι χωράει».
+  const fitted = fitTableGrid(dataRowCountToTotalRows(dataRowCount), columnCount, MIN_TOTAL_TABLE_ROWS);
+  // ⚠️ **Εδώ υπήρχε `Math.max(MIN_TOTAL_TABLE_ROWS, …)` και ΑΦΑΙΡΕΘΗΚΕ** (μετάλλαξη M44,
+  // Φ5Β): το `fitTableGrid` δέχεται το δάπεδο ως **όρισμα** και εγγυάται ήδη ότι δεν
+  // επιστρέφει λιγότερες. Ήταν πλεονασμός δίπλα σε εγγύηση που τον κάλυπτε — και ένας
+  // δεύτερος τόπος όπου το δάπεδο θα μπορούσε να αποκλίνει από τον πρώτο.
+  return { columnCount: fitted.columnCount, totalRowCount: fitted.rowCount };
 }
 
 // ──────────────────────────────────────────────────────────────────────────────

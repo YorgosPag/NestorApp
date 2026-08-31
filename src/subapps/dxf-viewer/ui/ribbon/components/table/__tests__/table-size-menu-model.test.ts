@@ -6,10 +6,10 @@
  */
 
 import {
-  MAX_TABLE_COLUMN_COUNT,
   TABLE_FIXED_ROW_COUNT,
   buildTableEntity,
 } from '../../../../../bim/table/build-table-entity';
+import { MAX_TABLE_COLUMN_COUNT } from '../../../../../bim/table/table-ooxml-limits';
 import { activeTableModel } from '../../../../../bim/table/table-worksheet-resolve';
 import {
   MAX_TOTAL_TABLE_ROWS,
@@ -23,6 +23,7 @@ import {
   toMenuSize,
   totalRowsToDataRowCount,
 } from '../table-size-menu-model';
+import { MAX_TABLE_GRID_CELLS } from '../../../../../bim/table/table-capacity';
 
 const ORIGIN = { x: 0, y: 0 };
 
@@ -90,10 +91,20 @@ describe('table-size-menu-model — καθαρισμός', () => {
     expect(Number.isFinite(size.totalRowCount)).toBe(true);
   });
 
-  it('φράσσει στα άκρα του builder, χωρίς κυριολεκτικές τιμές στο test', () => {
+  it('🔴 ADR-833 Φ5Β — φράσσει στο ΓΙΝΟΜΕΝΟ, όχι σε δύο ανεξάρτητα άκρα', () => {
+    // Μέχρι τη Φ5Β το μενού έκοβε **ανά άξονα** και εμφάνιζε «256 × 1002» — ζεύγος
+    // διαστάσεων, που το §5.6.4 απέδειξε ότι δεν προστατεύει τίποτα. Πλέον η οθόνη δείχνει
+    // ό,τι **όντως θα γεννηθεί**: το πυκνό πλέγμα του `MAX_TABLE_GRID_CELLS`.
     const huge = sanitizeMenuSize({ columnCount: 999_999, totalRowCount: 999_999 });
-    expect(huge.columnCount).toBe(MAX_TABLE_COLUMN_COUNT);
-    expect(huge.totalRowCount).toBe(MAX_TOTAL_TABLE_ROWS);
+    expect(huge.columnCount * huge.totalRowCount).toBeLessThanOrEqual(MAX_TABLE_GRID_CELLS);
+    // …και δεν καταρρέει σε εκφυλισμένο σχήμα: και οι δύο άξονες μένουν χρησιμοποιήσιμοι.
+    expect(huge.columnCount).toBeGreaterThan(1);
+    expect(huge.totalRowCount).toBeGreaterThanOrEqual(MIN_TOTAL_TABLE_ROWS);
+  });
+
+  it('🔑 …και οι δύο ράγες του OOXML εξακολουθούν να δεσμεύουν', () => {
+    const wide = sanitizeMenuSize({ columnCount: 999_999, totalRowCount: 2 });
+    expect(wide.columnCount).toBeLessThanOrEqual(MAX_TABLE_COLUMN_COUNT);
   });
 
   it('σύνολο κάτω από το δάπεδο ανεβαίνει στο ελάχιστο', () => {
