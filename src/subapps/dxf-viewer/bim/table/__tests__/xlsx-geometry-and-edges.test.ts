@@ -169,6 +169,63 @@ describe('ADR-833 §5.7 — η ΑΟΡΑΤΗ ακμή δεν ζωγραφίζετ
   });
 });
 
+describe('ADR-833 §5.7 — η ΕΞΑΓΩΓΗ ρωτά ΔΙΑΦΟΡΕΤΙΚΗ ακμή για κάθε πλευρά', () => {
+  it('🔴 πάνω ≠ κάτω: η κάθε πλευρά διαβάζεται από τη ΔΙΚΗ της θέση πλέγματος', async () => {
+    // Δύο γραμμές, και η **ενδιάμεση** ακμή είναι σκόπιμα παχύτερη από την κορυφή. Αν ο
+    // γραφέας ρωτούσε την ίδια θέση για πάνω και κάτω, οι δύο πλευρές θα έβγαιναν ίδιες και
+    // ο πίνακας θα έχανε κάθε οριζόντιο τονισμό (γραμμή συνόλων, διαχωριστικό κεφαλίδας).
+    const thick = { visible: true, colorHex: '#000000', widthMm: 1 } as const;
+    const model = toPersistedTableModel(
+      createTableModel({
+        columns: [{ id: 'c0', sizing: { kind: 'fixed', widthMm: 40 }, valueType: 'text', align: 'left' }],
+        rows: [
+          { id: 'r0', rowClass: 'data' },
+          { id: 'r1', rowClass: 'data' },
+        ],
+        cells: [],
+        merges: [],
+        edges: [['H', 'r1', 'c0', thick]],
+      }),
+    );
+    const blob = await tableWorksheetsToXlsxBlob(
+      [{ id: tableWorksheetId('ws0'), name: 'Φ', model }],
+      STYLE,
+    );
+    const reloaded = new ExcelJS.Workbook();
+    await reloaded.xlsx.load(await blob.arrayBuffer());
+    const first = reloaded.worksheets[0].getCell(1, 1);
+    expect(first.border?.bottom?.style).toBe('thick');
+    expect(first.border?.top?.style).not.toBe('thick');
+  });
+
+  it('🔴 αριστερά ≠ δεξιά — ο ίδιος έλεγχος στον ΚΑΤΑΚΟΡΥΦΟ άξονα', async () => {
+    // Ο οριζόντιος άξονας από μόνος του δεν φυλάει τον κατακόρυφο: μετρήθηκε (μετάλλαξη M69,
+    // «δεξιά = αριστερή») ότι έμενε πράσινη όσο υπήρχε μόνο ο πρώτος έλεγχος.
+    const thick = { visible: true, colorHex: '#000000', widthMm: 1 } as const;
+    const model = toPersistedTableModel(
+      createTableModel({
+        columns: [
+          { id: 'c0', sizing: { kind: 'fixed', widthMm: 40 }, valueType: 'text', align: 'left' },
+          { id: 'c1', sizing: { kind: 'fixed', widthMm: 40 }, valueType: 'text', align: 'left' },
+        ],
+        rows: [{ id: 'r0', rowClass: 'data' }],
+        cells: [],
+        merges: [],
+        edges: [['V', 'r0', 'c1', thick]],
+      }),
+    );
+    const blob = await tableWorksheetsToXlsxBlob(
+      [{ id: tableWorksheetId('ws0'), name: 'Φ', model }],
+      STYLE,
+    );
+    const reloaded = new ExcelJS.Workbook();
+    await reloaded.xlsx.load(await blob.arrayBuffer());
+    const first = reloaded.worksheets[0].getCell(1, 1);
+    expect(first.border?.right?.style).toBe('thick');
+    expect(first.border?.left?.style).not.toBe('thick');
+  });
+});
+
 describe('ADR-833 §5.7 — στοίχιση: το «Γενικά» του Excel ΔΕΝ καρφώνεται', () => {
   it('🔴 κελί με ΜΟΝΟ κατακόρυφη στοίχιση δεν αποκτά οριζόντια παράκαμψη', async () => {
     const sheet = await reload((s) => {
