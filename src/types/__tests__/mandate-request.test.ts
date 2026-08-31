@@ -495,11 +495,37 @@ describe('Ι — τι δεν επιτρέπεται να γεννηθεί', () =
         request({ terms: { ...request().terms, startsAt: '2027-06-01T00:00:00.000Z' } }),
         NOW,
       ),
+      // 🔴 ADR-835 Ε-10 — **μηδενική διάρκεια**: αρχίζει και λήγει την ίδια στιγμή.
+      //    Ως 2026-08-31 περνούσε ως έγκυρο (ο έλεγχος ήταν `expiry < start`).
+      ...mandateRequestInvariantViolations(
+        request({
+          terms: {
+            ...request().terms,
+            startsAt: request().terms.expiresAt,
+          },
+        }),
+        NOW,
+      ),
     ]);
 
     for (const invariant of MANDATE_REQUEST_INVARIANTS) {
       expect(reachable).toContain(invariant);
     }
+  });
+
+  it('🔴 Ι7 — ΜΗΔΕΝΙΚΗ διάρκεια: δικός της κωδικός, και ΣΤΑΜΑΤΑ (Ε-10)', () => {
+    // ⚠️ Το κάτοπτρο του `mandate-term-empty` της ίδιας της εντολής — και τα **δύο**
+    //    σημεία είχαν το **ίδιο** κενό, γιατί και τα δύο έγραφαν `expiry < start`.
+    const empty = mandateRequestInvariantViolations(
+      request({ terms: { ...request().terms, startsAt: request().terms.expiresAt } }),
+      NOW,
+    );
+
+    expect(empty).toContain('request-term-empty');
+    expect(empty).not.toContain('request-start-invalid');
+    // …και ο έλεγχος του νόμου ΔΕΝ τρέχει πάνω σε άκυρο διάστημα: μηδενική διάρκεια
+    // «δεν ξεπερνά όριο» — αληθές αλλά άσχετο, και θα ήταν θόρυβος δίπλα στο σφάλμα.
+    expect(empty).not.toContain('request-term-exceeds-statute');
   });
 });
 

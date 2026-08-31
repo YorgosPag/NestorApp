@@ -51,7 +51,7 @@
  * **Layering**: leaf — καθαροί τύποι + καθαρές συναρτήσεις. Καμία εξάρτηση από δίκτυο.
  */
 
-import { addMonthsUTC } from '@/lib/date-local';
+import { addMonthsUTC, intervalShape } from '@/lib/date-local';
 import { endOfDay, toDateInputValue } from '@/lib/mandate/mandate-term-window';
 import type { CommissionType } from '@/types/brokerage';
 import {
@@ -997,6 +997,28 @@ export const MANDATE_INVARIANTS = [
    */
   'mandate-start-invalid',
   /**
+   * 🔴 **ΑΡΧΙΖΕΙ ΚΑΙ ΛΗΓΕΙ ΤΗΝ ΙΔΙΑ ΣΤΙΓΜΗ** — εντολή **μηδενικής διάρκειας**.
+   *
+   * ⚠️ **ΞΕΧΩΡΙΣΤΟΣ ΚΩΔΙΚΑΣ ΑΠΟ ΤΟ {@link MANDATE_INVARIANTS} `mandate-start-invalid`,
+   * ΚΑΙ Ο ΛΟΓΟΣ ΕΙΝΑΙ Η ΘΕΡΑΠΕΙΑ**: εκεί ο άνθρωπος πρέπει να **αντιστρέψει** τα άκρα
+   * ή να διορθώσει τη **μορφή**· εδώ πρέπει να **προσθέσει διάρκεια**. Ένας κοινός
+   * κωδικός θα τον έστελνε να διορθώσει σωστά συμπληρωμένα πεδία — ίδιο σκεπτικό με
+   * το ζεύγος `mandate-expiry-past` / `mandate-term-exceeds-statute`.
+   *
+   * 🔴 **ΗΤΑΝ ΚΕΝΟ ΤΟΥ ΦΡΟΥΡΟΥ, ΜΕΤΡΗΜΕΝΟ 2026-08-31** (ADR-835 §16.3β · Ε-10): ο
+   * έλεγχος ήταν `expiry < start`, **αυστηρός**, άρα το `expiry === start` περνούσε.
+   * Το αποτέλεσμα ήταν **αποκλειστικότητα που δεν καλύπτει καμία μέρα**: αποθηκευόταν,
+   * εμφανιζόταν, και **δεν εμπόδιζε κανέναν** — ενώ ο ιδιοκτήτης πίστευε ότι έδωσε
+   * αποκλειστικό δικαίωμα. Η ίδια αστοχία υπήρχε και στο αίτημα
+   * (`request-term-empty`), δηλαδή σε **δύο** από τις τρεις πόρτες.
+   *
+   * 🔑 Η **τρίτη** πόρτα —η φόρμα— ήταν ήδη ασφαλής, και όχι κατά τύχη: γράφει
+   * `startOfDay(…)` → `endOfDay(…)`, οπότε ίδια ημέρα δίνει διάστημα **μιας ημέρας**.
+   * ⛔ **ΜΗΝ «απλοποιήσεις» εκείνη τη σύμβαση** — είναι ο λόγος που το κενό δεν
+   * φτάνει ποτέ από την οθόνη.
+   */
+  'mandate-term-empty',
+  /**
    * 🔴 **ΣΥΓΚΡΟΥΕΤΑΙ ΜΕ ΖΩΝΤΑΝΗ ΕΝΤΟΛΗ ΑΛΛΟΥ ΓΡΑΦΕΙΟΥ** (ADR-832) — ίδιος πόρος,
    * επικαλυπτόμενος χρόνος, ασύμβατοι τρόποι.
    *
@@ -1018,6 +1040,21 @@ export const MANDATE_INVARIANTS = [
 
 export type MandateInvariant = (typeof MANDATE_INVARIANTS)[number];
 
+/**
+ * **Είναι αυτό παραβίαση εντολής που ξέρουμε;** — ο φρουρός του συνόρου (ADR-834 §6.5.ε).
+ *
+ * 🔴 **Ξεχωριστός από τον {@link isOwnerPropertyInvariant}, και ο λόγος είναι μετρημένος**:
+ * το `_shared/respond.ts` στέλνει το **ίδιο** πεδίο `violations` για **δύο** λεξιλόγια —
+ * `INVALID_LISTING` (παραβιάσεις **αγγελίας**) και `INVALID_MANDATE` (παραβιάσεις
+ * **εντολής**). Ένας κοινός φρουρός θα δεχόταν κωδικό εντολής εκεί που η οθόνη περιμένει
+ * κωδικό αγγελίας — **σωστά δεδομένα, λάθος θεραπεία**.
+ */
+export function isMandateInvariant(value: unknown): value is MandateInvariant {
+  return (
+    typeof value === 'string' && (MANDATE_INVARIANTS as readonly string[]).includes(value)
+  );
+}
+
 /** Τι πρέπει να ισχύει για να γεννηθεί εντολή. **Όλες** οι παραβιάσεις, ποτέ η πρώτη. */
 export function mandateInvariantViolations(
   mandate: OwnerPropertyMandate,
@@ -1032,13 +1069,39 @@ export function mandateInvariantViolations(
   if (Number.isNaN(expiry)) found.push('mandate-expiry-invalid');
   else if (expiry <= Date.parse(nowISOValue)) found.push('mandate-expiry-past');
 
-  // 🔴 **Η ΑΡΧΗ ΤΟΥ ΔΙΑΣΤΗΜΑΤΟΣ** (ADR-832). Έναρξη που δεν διαβάζεται — ή που
-  //    βρίσκεται **μετά** τη λήξη — δεν περιγράφει διάστημα· και ο κριτής σύγκρουσης
-  //    απαντά `undetermined` σε τέτοιο δεδομένο αντί να το κρίνει σιωπηλά. Καλύτερα
-  //    να μη γεννηθεί καθόλου.
-  const start = Date.parse(mandate.startsAt);
-  if (Number.isNaN(start) || (!Number.isNaN(expiry) && expiry < start)) {
-    found.push('mandate-start-invalid');
+  // 🔴 **ΤΟ ΣΧΗΜΑ ΤΟΥ ΔΙΑΣΤΗΜΑΤΟΣ** (ADR-832 · ADR-835 Ε-10). Έναρξη που δεν
+  //    διαβάζεται — ή που βρίσκεται **μετά** τη λήξη — δεν περιγράφει διάστημα· και ο
+  //    κριτής σύγκρουσης απαντά `undetermined` σε τέτοιο δεδομένο αντί να το κρίνει
+  //    σιωπηλά. Καλύτερα να μη γεννηθεί καθόλου.
+  //
+  // 🔴 **ΤΟ `empty` ΕΧΕΙ ΔΙΚΟ ΤΟΥ ΚΩΔΙΚΑ, ΚΑΙ ΕΙΝΑΙ ΕΥΡΗΜΑ ΤΗΣ ΦΑΣΗΣ Φ2 (ADR-835
+  //    §16.3β)**: ως 2026-08-31 ο έλεγχος ήταν `expiry < start` — **αυστηρός** — άρα
+  //    εντολή που **αρχίζει και λήγει την ίδια στιγμή** περνούσε ως έγκυρη. Είναι
+  //    αποκλειστικότητα που **δεν καλύπτει καμία μέρα**: αποθηκευόταν, εμφανιζόταν
+  //    «ενεργή», και δεν εμπόδιζε κανέναν. Ξεχωριστός κωδικός γιατί η **θεραπεία**
+  //    είναι άλλη — *«πρόσθεσε διάρκεια»*, όχι *«αντίστρεψε τα άκρα»*.
+  //
+  // ⚠️ `switch` **χωρίς `default`**: κλειστό σύνολο, ώστε πέμπτο σχήμα να μη
+  //    μεταγλωττίζεται μέχρι κάποιος να απαντήσει «και αυτό;».
+  const termShape = intervalShape(mandate.startsAt, mandate.expiresAt);
+  switch (termShape) {
+    case 'proper':
+      break;
+    case 'empty':
+      found.push('mandate-term-empty');
+      break;
+    case 'reversed':
+      found.push('mandate-start-invalid');
+      break;
+    case 'unreadable':
+      // ⚠️ **Μη αναγνώσιμη ΛΗΞΗ έχει ήδη τον δικό της κωδικό** δύο γραμμές πάνω. Εδώ
+      //    κατηγορούμε την **έναρξη** μόνο όταν φταίει εκείνη — αλλιώς ένα χαλασμένο
+      //    πεδίο θα παρήγαγε **δύο** κατηγορίες και ο άνθρωπος θα κυνηγούσε λάθος
+      //    πεδίο. Το `null` ρωτά **μόνο** για την αρχή (ανοιχτό τέλος = έγκυρο).
+      if (intervalShape(mandate.startsAt, null) === 'unreadable') {
+        found.push('mandate-start-invalid');
+      }
+      break;
   }
 
   // ⚠️ **Κενό `scope` = εντολή για καμία πράξη.** Δες τον κωδικό για το γιατί δεν
@@ -1061,9 +1124,10 @@ export function mandateInvariantViolations(
   if (!isListingAgreement(mandate.agreement)) {
     found.push('mandate-agreement-invalid');
   } else if (
-    !Number.isNaN(expiry) &&
-    !Number.isNaN(start) &&
-    expiry >= start &&
+    // 🔑 **Μόνο σε ΓΝΗΣΙΟ διάστημα** — ένα όνομα αντί για τρεις χειρόγραφους ελέγχους
+    //    (`!isNaN(expiry) && !isNaN(start) && expiry >= start`). Ταυτόσημη σημασία:
+    //    μηδενική διάρκεια **ποτέ** δεν ξεπερνά όριο, και έχει ήδη δικό της κωδικό.
+    termShape === 'proper' &&
     expiry > Date.parse(nowISOValue) &&
     exceedsStatutoryTerm(mandate.agreement, mandate.startsAt, mandate.expiresAt)
   ) {

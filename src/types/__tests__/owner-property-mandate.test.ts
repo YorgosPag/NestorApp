@@ -388,8 +388,37 @@ describe('Ι — τι δεν επιτρέπεται να γεννηθεί', () =
         [brokered({ agencyCompanyId: 'comp_a', confirmation: 'confirmed', startsAt: 'χαλασμένο' })],
         NOW,
       ).violations,
+      // ── ADR-835 Ε-10 ───────────────────────────────────────────────────────
+      // 🔴 **Εντολή ΜΗΔΕΝΙΚΗΣ ΔΙΑΡΚΕΙΑΣ**: αρχίζει και λήγει την ίδια στιγμή. Ως
+      //    2026-08-31 περνούσε **ως έγκυρη** (ο έλεγχος ήταν `expiry < start`,
+      //    αυστηρός) — αποκλειστικότητα που δεν κάλυπτε **καμία** μέρα.
+      ...mandateInvariantViolations(brokered({ startsAt: FUTURE, expiresAt: FUTURE }), NOW),
     ]);
     for (const code of MANDATE_INVARIANTS) expect(produced).toContain(code);
+  });
+
+  it('🔴 Ι7 — ΜΗΔΕΝΙΚΗ διάρκεια: δικός της κωδικός, ΟΧΙ ο κωδικός του ανάποδου (Ε-10)', () => {
+    // ⚠️ Η **θεραπεία** είναι άλλη — «πρόσθεσε διάρκεια» έναντι «αντίστρεψε τα άκρα».
+    //    Ένας κοινός κωδικός θα έστελνε τον άνθρωπο να διορθώσει σωστά πεδία.
+    const empty = mandateInvariantViolations(
+      brokered({ startsAt: FUTURE, expiresAt: FUTURE }),
+      NOW,
+    );
+    expect(empty).toContain('mandate-term-empty');
+    expect(empty).not.toContain('mandate-start-invalid');
+
+    // …και το ανάποδο κρατά **τον δικό του**, χωρίς να δανείζεται τον νέο.
+    const reversed = mandateInvariantViolations(
+      brokered({ startsAt: FUTURE, expiresAt: NOW }),
+      NOW,
+    );
+    expect(reversed).toContain('mandate-start-invalid');
+    expect(reversed).not.toContain('mandate-term-empty');
+
+    // 🔑 Ο ΠΑΡΟΝΟΜΑΣΤΗΣ: γνήσιο διάστημα δεν παράγει **κανένα** από τα δύο.
+    const proper = mandateInvariantViolations(brokered(), NOW);
+    expect(proper).not.toContain('mandate-term-empty');
+    expect(proper).not.toContain('mandate-start-invalid');
   });
 });
 

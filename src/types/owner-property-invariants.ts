@@ -106,6 +106,24 @@ export const OWNER_PROPERTY_INVARIANTS = [
 
 export type OwnerPropertyInvariant = (typeof OWNER_PROPERTY_INVARIANTS)[number];
 
+/**
+ * **Είναι αυτό παραβίαση που ξέρουμε;** — ο φρουρός του συνόρου (ADR-834 §6.5.ε).
+ *
+ * 🔴 Οι παραβιάσεις ταξιδεύουν **από τον διακομιστή** (422 `INVALID_LISTING`) και
+ * καταλήγουν **κλειδιά** στο `TEXT_KEYS`. Ο πελάτης έκανε `Array.isArray(x)` και μετά
+ * τυφλό `as OwnerPropertyInvariant[]` — δηλαδή **κάθε** πίνακας περνούσε, με **κάθε**
+ * περιεχόμενο. Ένας άγνωστος κωδικός εκεί δεν είναι κενό μήνυμα: είναι **ωμό κλειδί**
+ * ζωγραφισμένο στην οθόνη.
+ *
+ * ⚠️ Επικυρώνεται **στοιχείο-προς-στοιχείο**, ποτέ ο πίνακας συνολικά.
+ */
+export function isOwnerPropertyInvariant(value: unknown): value is OwnerPropertyInvariant {
+  return (
+    typeof value === 'string' &&
+    (OWNER_PROPERTY_INVARIANTS as readonly string[]).includes(value)
+  );
+}
+
 /** Θετικός, πεπερασμένος αριθμός. `null`/`0`/αρνητικό/`NaN` → όχι. */
 function isPositive(value: number | null | undefined): boolean {
   return typeof value === 'number' && Number.isFinite(value) && value > 0;

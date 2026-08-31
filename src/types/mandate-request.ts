@@ -37,6 +37,7 @@
  * ⛔ **ΚΑΜΙΑ** συλλογή `disclosure_log`, **ΚΑΝΕΝΑ** πεδίο `disclosedFields`.
  */
 
+import { intervalShape } from '@/lib/date-local';
 import type { ListingAgreement } from '@/types/listing-agreement';
 import { exceedsStatutoryTerm } from '@/types/owner-property-mandate';
 import type { MandateCompensation } from '@/types/owner-property-mandate';
@@ -738,6 +739,17 @@ export const MANDATE_REQUEST_INVARIANTS = [
    */
   'request-start-invalid',
   /**
+   * 🔴 **Αρχίζει και λήγει την ΙΔΙΑ στιγμή** — αίτημα για εντολή **μηδενικής
+   * διάρκειας**, δηλαδή για δικαίωμα που δεν καλύπτει καμία μέρα.
+   *
+   * ⚠️ **Ξεχωριστός από το {@link MANDATE_REQUEST_INVARIANTS} `request-start-invalid`
+   * επειδή η ΘΕΡΑΠΕΙΑ είναι άλλη**: εκεί *«αντίστρεψε τα άκρα / διόρθωσε τη μορφή»*,
+   * εδώ *«πρόσθεσε διάρκεια»*. Κάτοπτρο του `mandate-term-empty` της ίδιας της εντολής
+   * — και υπάρχει επειδή **και οι δύο** πόρτες είχαν το **ίδιο** κενό: έλεγχο
+   * `expiry < start` με **αυστηρή** ανισότητα (ADR-835 §16.3β · Ε-10, μετρημένο).
+   */
+  'request-term-empty',
+  /**
    * 🔴 Αποδοχή **χωρίς** επαφή, ή άρνηση **με** επαφή. Και τα δύο σπάνε το §8.4: η
    * `cont_*` γεννιέται **μόνο** με την αποδοχή, στην **ίδια** ατομική πράξη.
    */
@@ -808,12 +820,26 @@ function expiryViolations(
   //
   // ⚠️ **Ο ίδιος κριτής, όχι δεύτερος**: το `exceedsStatutoryTerm` ρωτά το
   //    `statutoryTermLimitFor` — τον ΕΝΑ τόπο όπου ζει ο νόμος (ADR-749).
-  const start = Date.parse(request.terms.startsAt);
-  if (Number.isNaN(start) || expiry < start) {
-    // ⚠️ **Και σταματά εδώ**: με μη αναγνώσιμη αφετηρία ο έλεγχος διάρκειας θα
-    //    συνέκρινε με `NaN` και θα απαντούσε `false` — αδρανής φρουρός.
-    found.push('request-start-invalid');
-    return found;
+  // ⚠️ **Και σταματά σε κάθε μη γνήσιο σχήμα**: με μη αναγνώσιμη ή ανάποδη αφετηρία ο
+  //    έλεγχος διάρκειας θα συνέκρινε με `NaN` (ή με αρνητικό χρόνο) και θα απαντούσε
+  //    «νόμιμο» — αδρανής φρουρός. Με **μηδενική** διάρκεια θα απαντούσε επίσης
+  //    «νόμιμο», και θα ήταν αληθές αλλά άσχετο: το αίτημα είναι ήδη άκυρο.
+  //
+  // 🔴 **ΤΟ `empty` ΠΡΟΣΤΕΘΗΚΕ 2026-08-31 (ADR-835 Ε-10)**: ο έλεγχος ήταν
+  //    `expiry < start` — **αυστηρός** — άρα αίτημα που αρχίζει και λήγει την **ίδια
+  //    στιγμή** περνούσε ως έγκυρο και γεννούσε εντολή που **δεν καταλαμβάνει τίποτα**.
+  //
+  // ⚠️ `switch` **χωρίς `default`**: κλειστό σύνολο σχημάτων (δες `intervalShape`).
+  switch (intervalShape(request.terms.startsAt, request.terms.expiresAt)) {
+    case 'proper':
+      break;
+    case 'empty':
+      found.push('request-term-empty');
+      return found;
+    case 'reversed':
+    case 'unreadable':
+      found.push('request-start-invalid');
+      return found;
   }
 
   if (exceedsStatutoryTerm(request.terms.agreement, request.terms.startsAt, request.terms.expiresAt)) {
