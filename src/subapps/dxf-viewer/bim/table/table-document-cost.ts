@@ -159,7 +159,7 @@ export function measureWorksheetCost(worksheet: TableWorksheet): WorksheetCost {
     modelBytes: measureModelBytes(model),
     // Οι τρεις ακολουθίες μετριούνται **χωριστά**: μόνο έτσι η κάθε οριακή τιμή είναι
     // ανεξάρτητη από το σχήμα του δείγματος (δες την κεφαλίδα του `TableDocumentCost`).
-    cellsBytes: serializedByteLength(model),
+    cellsBytes: serializedByteLength(model.cells),
     columnsBytes: serializedByteLength(model.columns),
     rowsBytes: serializedByteLength(model.rows),
     rowCount: model.rows.length,
