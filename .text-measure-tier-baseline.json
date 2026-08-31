@@ -1,6 +1,6 @@
 {
   "$doc": "CHECK 3.64 / ADR-799 Φάση 2 — ΡΑΤΣΕΤΑ ΚΑΤΑ ΤΑΥΤΟΤΗΤΑ. Ο αριθμός ΔΕΝ είναι δείκτης υγείας.",
-  "generatedAt": 61,
+  "generatedAt": 66,
   "violations": [],
   "declarations": [
     "src/subapps/dxf-viewer/bim-3d/converters/__tests__/dxf-table-3d-decompose.test.ts",
@@ -10,6 +10,8 @@
     "src/subapps/dxf-viewer/bim/structural/detail-sheet/__tests__/footing-detail-sheet.test.ts",
     "src/subapps/dxf-viewer/bim/structural/detail-sheet/__tests__/slab-detail-sheet.test.ts",
     "src/subapps/dxf-viewer/bim/table/__tests__/table-cell-styled-spans.test.ts",
+    "src/subapps/dxf-viewer/bim/table/__tests__/table-to-xlsx.test.ts",
+    "src/subapps/dxf-viewer/bim/table/__tests__/xlsx-format-round-trip.test.ts",
     "src/subapps/dxf-viewer/bim/text/__tests__/text-layout-vertical-align.test.ts",
     "src/subapps/dxf-viewer/ui/table-cell-editor/__tests__/table-format-painter-click.test.tsx"
   ]

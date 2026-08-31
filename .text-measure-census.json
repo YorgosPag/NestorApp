@@ -25,7 +25,9 @@
     "src/subapps/dxf-viewer/bim/table/__tests__/table-cell-styled-spans.test.ts": "1c2a26a4807de08f",
     "src/subapps/dxf-viewer/bim/table/__tests__/table-layout-cache-font-tier.test.ts": "7b3996ba9292657c",
     "src/subapps/dxf-viewer/bim/table/__tests__/table-link-export.test.ts": "90601fc9aa347718",
+    "src/subapps/dxf-viewer/bim/table/__tests__/table-to-xlsx.test.ts": "b03862c90349c56a",
     "src/subapps/dxf-viewer/bim/table/__tests__/table-worksheet-resolve.test.ts": "4f43184257d37405",
+    "src/subapps/dxf-viewer/bim/table/__tests__/xlsx-format-round-trip.test.ts": "4e3804e7a62688fb",
     "src/subapps/dxf-viewer/bim/text/__tests__/text-bounds-sites-parity.test.ts": "6692a23b2000ac10",
     "src/subapps/dxf-viewer/bim/text/__tests__/text-box-horizontal.test.ts": "ba3e3792e77db71a",
     "src/subapps/dxf-viewer/bim/text/__tests__/text-box-multiline.test.ts": "2182181b0ea3bb95",
@@ -64,7 +66,7 @@
     "src/subapps/dxf-viewer/ui/table-cell-editor/__tests__/table-double-click-entry.test.tsx": "b3f8b38be67b8e31",
     "src/subapps/dxf-viewer/ui/table-cell-editor/__tests__/table-fill-badge-press.test.tsx": "18d4278819e7fd88",
     "src/subapps/dxf-viewer/ui/table-cell-editor/__tests__/table-fill-handle-drag.test.tsx": "bec5ad4b29ca48e4",
-    "src/subapps/dxf-viewer/ui/table-cell-editor/__tests__/table-format-painter-click.test.tsx": "706f59da7dc94ca6",
+    "src/subapps/dxf-viewer/ui/table-cell-editor/__tests__/table-format-painter-click.test.tsx": "04a1f3ac64583915",
     "src/subapps/dxf-viewer/ui/table-cell-editor/__tests__/table-range-transfer-drag.test.ts": "f8409b5bc5c9de9e",
     "src/subapps/dxf-viewer/ui/table-cell-editor/__tests__/use-table-mode-entry.test.tsx": "bf0bdaa1482dd0d9"
   },
@@ -254,11 +256,30 @@
       "dropped": []
     },
     {
+      "file": "src/subapps/dxf-viewer/bim/table/__tests__/table-to-xlsx.test.ts",
+      "glyph": 0,
+      "css": 0,
+      "nominal": 48,
+      "dropped": [
+        "bold",
+        "italic"
+      ]
+    },
+    {
       "file": "src/subapps/dxf-viewer/bim/table/__tests__/table-worksheet-resolve.test.ts",
       "glyph": 0,
       "css": 0,
       "nominal": 2,
       "dropped": []
+    },
+    {
+      "file": "src/subapps/dxf-viewer/bim/table/__tests__/xlsx-format-round-trip.test.ts",
+      "glyph": 0,
+      "css": 0,
+      "nominal": 6,
+      "dropped": [
+        "bold"
+      ]
     },
     {
       "file": "src/subapps/dxf-viewer/bim/text/__tests__/text-bounds-sites-parity.test.ts",
