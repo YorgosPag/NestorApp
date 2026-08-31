@@ -14,7 +14,7 @@ import {
   insertTableColumns,
   insertTableRows,
 } from '../table-row-column-bulk-ops';
-import { MAX_TABLE_COLUMN_COUNT } from '../build-table-entity';
+import { MAX_TABLE_GRID_CELLS } from '../table-capacity';
 import { getPersistedCellText } from '../table-model-helpers';
 import type { PersistedTableModel, TableCellEntry } from '../../../types/table';
 
@@ -117,17 +117,19 @@ describe('insertTableColumns / insertTableRows', () => {
   });
 
   it('🔴 ΟΛΑ Ή ΤΙΠΟΤΑ στο φράγμα: πλήθος που δεν χωρά ⇒ ΚΑΜΙΑ εισαγωγή', () => {
+    // ADR-833 Φ5Β — το φράγμα είναι πλέον το **πυκνό γινόμενο**. Η ερώτηση που φυλάει αυτή η
+    // άγκυρα μένει η ίδια και είναι η σημαντική: με τρεις στήλες μαρκαρισμένες, η πράξη
+    // ρωτά «χωρούν **και οι τρεις**;» — μια εισαγωγή που σταματά στη μέση αφήνει βήμα undo
+    // που δεν αναιρεί αυτό που ζήτησε ο χρήστης.
     const base = model();
+    const columnCount = MAX_TABLE_GRID_CELLS / base.rows.length - 1;
     const nearFull: PersistedTableModel = {
       ...base,
-      columns: Array.from({ length: MAX_TABLE_COLUMN_COUNT - 1 }, (_, i) => ({
-        ...base.columns[0],
-        id: `c${i}`,
-      })),
+      columns: Array.from({ length: columnCount }, (_, i) => ({ ...base.columns[0], id: `c${i}` })),
       merges: [],
     };
     expect(insertTableColumns(nearFull, 0, 3)).toBe(nearFull);
-    expect(insertTableColumns(nearFull, 0, 1).columns).toHaveLength(MAX_TABLE_COLUMN_COUNT);
+    expect(insertTableColumns(nearFull, 0, 1).columns).toHaveLength(columnCount + 1);
   });
 
   it('πλήθος 0 ή αρνητικό ⇒ το ίδιο μοντέλο by-reference', () => {

@@ -22,9 +22,9 @@ import {
   DEFAULT_TABLE_COLUMN_COUNT,
   DEFAULT_TABLE_COLUMN_WIDTH_MM,
   DEFAULT_TABLE_DATA_ROW_COUNT,
-  MAX_TABLE_COLUMN_COUNT,
   MAX_TABLE_COLUMN_WIDTH_MM,
   MAX_TABLE_DATA_ROW_COUNT,
+  TABLE_FIXED_ROW_COUNT,
   buildTableEntity,
   buildTableModel,
 } from '../build-table-entity';
@@ -43,6 +43,8 @@ import {
 import { createEntityFromTool } from '../../../hooks/drawing/drawing-entity-builders';
 import { generatePreviewEntity } from '../../../hooks/drawing/drawing-preview-generator';
 import { activeTableModel } from '../table-worksheet-resolve';
+import { MAX_TABLE_GRID_CELLS } from '../table-capacity';
+import { MAX_TABLE_COLUMN_COUNT, MAX_TABLE_TOTAL_ROW_COUNT } from '../table-ooxml-limits';
 import { worksheetsWithActiveModel } from '../table-worksheet-write';
 
 const ORIGIN = { x: 1000, y: -250 };
@@ -367,10 +369,33 @@ describe('ADR-739 Φ.Δ — το φράγμα του σχήματος φράζε
     }
   });
 
-  it('τεράστια πλήθη κόβονται στο άνω όριο — «άπειρος βρόχος» και «500.000 στήλες» ταυτίζονται', () => {
+  it('🔴 ADR-833 Φ5Β — τεράστια πλήθη κόβονται στο ΓΙΝΟΜΕΝΟ, όχι σε ζεύγος διαστάσεων', () => {
+    // Το «500.000 στήλες» και ο «άπειρος βρόχος» εξακολουθούν να ταυτίζονται — αλλά ο κριτής
+    // άλλαξε: μέχρι τη Φ5Β ήταν δύο ανεξάρτητα άνω όρια (256 / 1000), που το §5.6.4 απέδειξε
+    // ότι δεν προστατεύουν τίποτα. Τώρα ο πίνακας που γεννιέται οφείλει να **χωρά στο πυκνό
+    // γινόμενο** — αλλιώς η διάταξή του κοστίζει πάνω από τον προϋπολογισμό του ενός
+    // δευτερολέπτου, σε **κάθε** δεσμευμένη αλλαγή.
     const model = activeTableModel(build({ columnCount: 500_000, dataRowCount: 999_999 }));
-    expect(model.columns).toHaveLength(MAX_TABLE_COLUMN_COUNT);
-    expect(model.rows).toHaveLength(2 + MAX_TABLE_DATA_ROW_COUNT);
+    expect(model.columns.length * model.rows.length).toBeLessThanOrEqual(MAX_TABLE_GRID_CELLS);
+    // …και δεν καταρρέει σε «ένα κελί»: το κόψιμο κρατά **στήλες** και κόβει γραμμές.
+    expect(model.columns.length).toBeGreaterThan(1);
+    expect(model.rows.length).toBeGreaterThanOrEqual(TABLE_FIXED_ROW_COUNT);
+  }, 10_000);
+
+  it('🔴 οι γραμμές ΔΕΔΟΜΕΝΩΝ παράγονται από τη ράγα ΜΕΙΟΝ τις σταθερές — όχι δεύτερη τιμή', () => {
+    // Το πρότυπο μετρά **συνολικές** γραμμές· αυτό το module μιλά **δεδομένων**. Χωρίς την
+    // αφαίρεση, ένας πίνακας στο «μέγιστο» θα είχε δύο γραμμές παραπάνω από όσες γράφονται
+    // σε `.xlsx` — και θα το ανακάλυπτε ο χρήστης στην εξαγωγή.
+    expect(MAX_TABLE_DATA_ROW_COUNT).toBe(MAX_TABLE_TOTAL_ROW_COUNT - TABLE_FIXED_ROW_COUNT);
+    expect(MAX_TABLE_DATA_ROW_COUNT).toBeLessThan(MAX_TABLE_TOTAL_ROW_COUNT);
+  });
+
+  it('🔑 …και οι δύο ράγες του OOXML δεσμεύουν ΞΕΧΩΡΙΣΤΑ από το γινόμενο', () => {
+    // Ο εκφυλισμένος πίνακας (μία γραμμή × πάρα πολλές στήλες) περνά το γινόμενο και **δεν**
+    // εξάγεται σε `.xlsx`. Χωρίς αυτή τη γραμμή, το κόψιμο θα ήταν σωστό για την οθόνη και
+    // λάθος για το αρχείο.
+    const model = activeTableModel(build({ columnCount: 500_000, dataRowCount: 0 }));
+    expect(model.columns.length).toBeLessThanOrEqual(MAX_TABLE_COLUMN_COUNT);
   }, 10_000);
 
   it('τεράστιο πλάτος κόβεται στη μεγάλη πλευρά του A0', () => {
@@ -395,6 +420,8 @@ describe('ADR-739 Φ.Δ — το φράγμα του σχήματος φράζε
     const state = useTableOptionsStore.getState();
     expect(state.columnCount).toBe(DEFAULT_TABLE_COLUMN_COUNT);
     expect(state.columnWidthMm).toBe(DEFAULT_TABLE_COLUMN_WIDTH_MM);
-    expect(state.dataRowCount).toBe(MAX_TABLE_DATA_ROW_COUNT);
+    // Ο **store** καθαρίζει ανά άξονα (ράγα OOXML)· το γινόμενο το επιβάλλει ο `resolveShape`
+    // τη στιγμή της κατασκευής. Δύο ερωτήσεις, δύο σημεία — δες `build-table-entity`.
+    expect(state.dataRowCount).toBe(10_000);
   });
 });

@@ -35,6 +35,7 @@ import {
   setPersistedCellFormula,
   setPersistedCellText,
 } from '../table-model-helpers';
+import { clipTableCellText } from '../table-ooxml-limits';
 import { evaluateTableFormula } from './table-formula-eval';
 import { readCellRefValue } from './table-formula-ref-scope';
 import { alternateFormulaGrammar, drawingFormulaGrammar } from './table-formula-grammar';
@@ -76,8 +77,26 @@ export function writeCellInput(
   model: PersistedTableModel,
   rowId: TableRowId,
   colId: TableColumnId,
-  text: string,
+  rawText: string,
 ): PendingCellWrites {
+  // 🔴 ADR-833 Φ5Β — **η ράγα του μήκους μπαίνει ΕΔΩ και πουθενά αλλού.**
+  // Μέχρι τη Φάση 5Β **καμία** διαδρομή δεν φράζε το μήκος κειμένου κελιού (μετρημένο
+  // 31/08: το `32767` δεν υπήρχε στο `src/`), ενώ η Φάση 6 υποσχέθηκε **εξαγωγή σε
+  // `.xlsx`** — και το ίδιο το OOXML περιορίζει την τιμή κελιού στους 32.767 χαρακτήρες.
+  // Δηλαδή ένα μακρύτερο κελί δεν είναι «μεγάλο», είναι **μη εξαγώγιμο**.
+  //
+  // 🔑 Η θέση δεν είναι επιλογή ευκολίας: αυτή η συνάρτηση είναι η **ΜΙΑ διακλάδωση `=`**
+  // από την οποία περνά κάθε κείμενο χρήστη — πληκτρολόγηση, πρόχειρο του δρομέα,
+  // επικόλληση TSV, εισαγωγή `.xlsx`. Φραγή σε οποιονδήποτε καλούντα θα ήταν φραγή που οι
+  // άλλοι τρεις παρακάμπτουν χωρίς να το ξέρουν (ίδιο σκεπτικό με το `resolveShape` του
+  // `build-table-entity`).
+  //
+  // ⚠️ Ο **τύπος** κόβεται κι αυτός, και πρέπει: το πηγαίο κείμενο ενός τύπου γράφεται στο
+  // `.xlsx` ως `<f>` και υπόκειται στο ίδιο όριο. Το κόψιμο ενός τύπου τον καθιστά κατά
+  // κανόνα μη αναλύσιμο, οπότε πέφτει στον κλάδο «μένει κείμενο, αυτούσιο» — ο χρήστης
+  // βλέπει ό,τι έμεινε και το διορθώνει, αντί για σιωπηλά λάθος αποτέλεσμα.
+  const { text } = clipTableCellText(rawText);
+
   if (!isFormulaInput(text)) return setPersistedCellText(model, rowId, colId, text);
 
   const formula = parseWithFallback(resolveTableModel(model), text);

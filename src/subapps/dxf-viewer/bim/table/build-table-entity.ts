@@ -52,6 +52,9 @@ import { MIN_TABLE_COLUMN_WIDTH_MM } from '../../types/table-entity';
 import { FIRST_TABLE_WORKSHEET_ID } from '../../types/table-worksheet';
 import { createTableModel, toPersistedTableModel } from './table-model-helpers';
 import { BUILTIN_TABLE_STYLE_IDS } from './table-style-presets';
+import { MAX_TABLE_COLUMN_COUNT, MAX_TABLE_TOTAL_ROW_COUNT } from './table-ooxml-limits';
+import { fitTableGrid } from './table-capacity';
+
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Προεπιλογές — AutoCAD parity (1 γραμμή Title, 1 Header, οι υπόλοιπες Data)
@@ -77,23 +80,31 @@ export const TABLE_FIXED_ROW_COUNT = 2;
 export const DEFAULT_TABLE_COLUMN_WIDTH_MM = 40;
 
 /**
- * Άνω όρια. Πρακτικά, «άπειρος βρόχος» και «500.000 στήλες» είναι το ίδιο πράγμα: και τα
- * δύο παγώνουν την καρτέλα. Τα νούμερα δεν είναι αυθαίρετα — βγαίνουν από το **χαρτί**
- * (§4.1: ό,τι είναι διάταξη είναι χαρτί):
+ * 🔴 ADR-833 Φ5Β — **ΤΑ ΑΝΩ ΟΡΙΑ ΑΛΛΑΞΑΝ ΙΔΙΟΚΤΗΤΗ.**
  *
- * - **256 στήλες** × το ελάχιστο πλάτος των {@link MIN_TABLE_COLUMN_WIDTH_MM} (4mm) =
- *   1.024mm, δηλαδή σχεδόν ολόκληρο το μήκος ενός A0 (1.189mm). Πλατύτερος πίνακας δεν
- *   τυπώνεται σε κανένα φύλλο της σειράς ISO.
- * - **1.000 γραμμές** × το προεπιλεγμένο ύψος γραμμής των 8mm = 8 μέτρα χαρτιού· διπλάσιο
- *   από το «500×8» που το ίδιο το μοντέλο (`types/table.ts`) αναφέρει ως παράδειγμα
- *   **μεγάλου** πίνακα.
- * - **Πλάτος στήλης** πάνω από 1.189mm (η μεγάλη πλευρά του A0) δεν είναι στήλη.
+ * Μέχρι τη Φάση 5Β εδώ ζούσαν δύο αριθμοί (**256 στήλες / 1.000 γραμμές**) με αιτιολόγηση
+ * το **χαρτί**. Η αιτιολόγηση δεν επιβίωσε — δες `table-ooxml-limits.ts` για το γιατί
+ * (ίσχυε μόνο στο ελάχιστο πλάτος στήλης· και ο πίνακας έπαψε να είναι μόνο σχέδιο από τη
+ * στιγμή που διαβάζει και γράφει `.xlsx`). Πλέον υπάρχουν **δύο ερωτήσεις με δύο
+ * ιδιοκτήτες**, και καμία από τις δύο δεν είναι ζεύγος διαστάσεων:
+ *
+ * ```
+ *   «γράφεται σε .xlsx;»          → table-ooxml-limits   (ράγες του προτύπου)
+ *   «μένει ζωντανή η επιφάνεια;»  → table-capacity       (ΠΥΚΝΟ γινόμενο, μετρημένο)
+ *   «χωράει στο έγγραφο;»         → table-capacity       (bytes, μετρημένα)
+ * ```
+ *
+ * Το `MAX_TABLE_DATA_ROW_COUNT` **παράγεται** από τη ράγα του προτύπου μείον τις σταθερές
+ * γραμμές: το πρότυπο μετρά **συνολικές** γραμμές, αυτό το module μιλά **δεδομένων**, και
+ * μια δεύτερη χειρόγραφη τιμή θα ήταν δύο απαντήσεις στο ίδιο ερώτημα.
+ *
+ * ⚠️ Το `MAX_TABLE_COLUMN_WIDTH_MM` **μένει**: εκεί το επιχείρημα του χαρτιού είναι
+ * ακέραιο — μια **στήλη** φαρδύτερη από τη μεγάλη πλευρά ενός A0 δεν είναι στήλη.
  *
  * Το όριο **κόβει** (clamp), δεν πετά εξαίρεση: όποιος γράψει έναν τεράστιο αριθμό παίρνει
  * τον μεγαλύτερο πίνακα που έχει νόημα, όχι σφάλμα.
  */
-export const MAX_TABLE_COLUMN_COUNT = 256;
-export const MAX_TABLE_DATA_ROW_COUNT = 1000;
+export const MAX_TABLE_DATA_ROW_COUNT = MAX_TABLE_TOTAL_ROW_COUNT - TABLE_FIXED_ROW_COUNT;
 export const MAX_TABLE_COLUMN_WIDTH_MM = 1189;
 
 const TITLE_ROW_INDEX = 0;
@@ -190,10 +201,25 @@ export function sanitizeTableColumnWidthMm(value: number | undefined): number {
  *   επόμενος καλών παρακάμπτει χωρίς να το ξέρει.
  */
 function resolveShape(opts: BuildTableOptions): TableShape {
+  const columnWidthMm = sanitizeTableColumnWidthMm(opts.columnWidthMm);
+  // 🔴 ADR-833 Φ5Β — **το ΓΙΝΟΜΕΝΟ επιβάλλεται εδώ, όχι στους δύο καθαριστές.**
+  // Οι `sanitizeTableColumnCount` / `sanitizeTableDataRowCount` βλέπουν **έναν** άξονα ο
+  // καθένας, άρα κανένας τους δεν μπορεί να απαντήσει «χωράει το πλέγμα;» — δύο νόμιμοι
+  // αριθμοί (16.000 στήλες, 16.000 γραμμές) δίνουν πλέγμα 256 εκατομμυρίων κελιών. Το
+  // `fitTableGrid` είναι ο **ίδιος** κανόνας που κόβει και την εισαγωγή `.xlsx`: μία
+  // διατύπωση του «τι χωράει», δύο καλούντες.
+  const fitted = fitTableGrid(
+    TABLE_FIXED_ROW_COUNT + sanitizeTableDataRowCount(opts.dataRowCount),
+    sanitizeTableColumnCount(opts.columnCount),
+    // Ο τίτλος και η κεφαλίδα γεννιούνται **πάντα** ({@link buildRows}), άρα οι στήλες
+    // οφείλουν να κοπούν απέναντι σε αυτές — αλλιώς ένα αίτημα «500.000 στήλες» παρήγαγε
+    // πίνακα 16.384 × 2 = 32.768 πυκνά κελιά, πάνω από το ίδιο το όριο.
+    TABLE_FIXED_ROW_COUNT,
+  );
   return {
-    columnCount: sanitizeTableColumnCount(opts.columnCount),
-    dataRowCount: sanitizeTableDataRowCount(opts.dataRowCount),
-    columnWidthMm: sanitizeTableColumnWidthMm(opts.columnWidthMm),
+    columnCount: fitted.columnCount,
+    dataRowCount: Math.max(0, fitted.rowCount - TABLE_FIXED_ROW_COUNT),
+    columnWidthMm,
   };
 }
 

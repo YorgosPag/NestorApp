@@ -61,7 +61,7 @@ import type {
   TableRow,
   TableRowId,
 } from '../../types/table';
-import { MAX_TABLE_COLUMN_COUNT, MAX_TABLE_DATA_ROW_COUNT } from './build-table-entity';
+import { canGrowTableGrid } from './table-capacity';
 import { indexById, insertionIndexFor, type TableAxis } from './table-cell-order';
 // 🔴 ADR-833 Φάση 4 — ο ΕΝΑΣ γεννήτορας τοπικής ταυτότητας πίνακα (N.18: η εξαγωγή έγινε
 // ΠΡΙΝ γεννηθεί ο τρίτος κλώνος, όπως στα `stamp-table-chrome-rect` / `stamp-table-control-disc`).
@@ -206,13 +206,18 @@ function shrinkSpansOnDelete(
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Φράγματα — τα ίδια όρια με το εργοστάσιο του πίνακα
+// Φράγματα — η ΜΙΑ αρχή χωρητικότητας, ρωτημένη πριν από την πράξη
 // ──────────────────────────────────────────────────────────────────────────────
-
-/** Γραμμές **δεδομένων**: ό,τι μετρά το {@link MAX_TABLE_DATA_ROW_COUNT}, και ό,τι γεννάμε. */
-function dataRowCount(model: PersistedTableModel): number {
-  return model.rows.reduce((count, row) => count + (row.rowClass === 'data' ? 1 : 0), 0);
-}
+//
+// 🔴 ADR-833 Φ5Β — **η ερώτηση άλλαξε, και μαζί της η μονάδα.** Μέχρι τη Φάση 5Β τα δύο
+// φράγματα ρωτούσαν **ανά άξονα** (`γραμμές δεδομένων ≤ 1000`, `στήλες ≤ 256`), δηλαδή ένα
+// **ζεύγος διαστάσεων** — που το §5.6.4 απέδειξε δύο φορές ότι δεν προστατεύει τίποτα.
+// Πλέον ρωτούν το **ΠΥΚΝΟ ΓΙΝΟΜΕΝΟ** (`table-capacity`), γιατί αυτό ακριβώς πληρώνει το
+// `placeCells`: ~32 µs ανά πυκνό κελί, σε **κάθε** δεσμευμένη αλλαγή.
+//
+// ⚠️ Και μετρά **ΟΛΕΣ** τις γραμμές, όχι μόνο τις `data`: ο τίτλος και η κεφαλίδα περνούν
+// κι εκείνοι από τον βρόχο της διάταξης. Ο παλιός μετρητής `dataRowCount` έφυγε γι' αυτόν
+// ακριβώς τον λόγο — μετρούσε τη σωστή ποσότητα για **λάθος** ερώτηση.
 
 /**
  * ADR-739 §27.17 — το `count` είναι **το πλήθος της πράξης**, όχι διακοσμητικό.
@@ -226,11 +231,11 @@ function dataRowCount(model: PersistedTableModel): number {
  * άξονα, χειριστήριο «+»): ο ίδιος ορισμός, με ρητό πλήθος όταν χρειάζεται.
  */
 export function canInsertTableRow(model: PersistedTableModel, count = 1): boolean {
-  return count >= 1 && dataRowCount(model) + count <= MAX_TABLE_DATA_ROW_COUNT;
+  return count >= 1 && canGrowTableGrid(model, { rows: count });
 }
 
 export function canInsertTableColumn(model: PersistedTableModel, count = 1): boolean {
-  return count >= 1 && model.columns.length + count <= MAX_TABLE_COLUMN_COUNT;
+  return count >= 1 && canGrowTableGrid(model, { columns: count });
 }
 
 /** Μηδέν γραμμές = πίνακας χωρίς ύψος = αόρατη οντότητα (ίδιο σκεπτικό με το `sanitizeCount`). */

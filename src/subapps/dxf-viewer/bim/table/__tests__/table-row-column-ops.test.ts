@@ -16,7 +16,7 @@ import {
   insertTableColumn,
   insertTableRow,
 } from '../table-row-column-ops';
-import { MAX_TABLE_COLUMN_COUNT, MAX_TABLE_DATA_ROW_COUNT } from '../build-table-entity';
+import { MAX_TABLE_GRID_CELLS } from '../table-capacity';
 import { getPersistedCellText } from '../table-model-helpers';
 import type { PersistedTableModel, TableCellEntry } from '../../../types/table';
 
@@ -84,16 +84,45 @@ describe('insertTableRow', () => {
     expect(insertTableRow(base, 4).merges[0].rowSpan).toBe(2); // ακριβώς μετά — Excel: όχι
   });
 
-  it('στο πλήρες όριο γραμμών δεδομένων επιστρέφει το ΙΔΙΟ μοντέλο by-reference', () => {
+  it('🔴 ADR-833 Φ5Β — στο πλήρες ΓΙΝΟΜΕΝΟ επιστρέφει το ΙΔΙΟ μοντέλο by-reference', () => {
+    // Το φράγμα δεν είναι πια «≤ N γραμμές δεδομένων» αλλά «γραμμές × στήλες ≤ όριο»: το
+    // κόστος που πληρώνεται είναι το **πυκνό** πέρασμα του `placeCells`, όχι το πλήθος
+    // γραμμών (ADR-833 §5.8.1).
+    const base = model();
+    const rowCount = MAX_TABLE_GRID_CELLS / base.columns.length;
     const full: PersistedTableModel = {
-      ...model(),
-      rows: Array.from({ length: MAX_TABLE_DATA_ROW_COUNT }, (_, i) => ({
-        id: `r${i}`,
-        rowClass: 'data' as const,
-      })),
+      ...base,
+      rows: Array.from({ length: rowCount }, (_, i) => ({ id: `r${i}`, rowClass: 'data' as const })),
     };
     expect(canInsertTableRow(full)).toBe(false);
     expect(insertTableRow(full, 0)).toBe(full);
+  });
+
+  it('🔑 …και ΜΙΑ γραμμή λιγότερο επιτρέπεται — το όριο δεν είναι «περίπου»', () => {
+    const base = model();
+    const rowCount = MAX_TABLE_GRID_CELLS / base.columns.length - 1;
+    const nearFull: PersistedTableModel = {
+      ...base,
+      rows: Array.from({ length: rowCount }, (_, i) => ({ id: `r${i}`, rowClass: 'data' as const })),
+    };
+    expect(canInsertTableRow(nearFull)).toBe(true);
+  });
+
+  it('🔴 μετρά ΟΛΕΣ τις γραμμές, όχι μόνο τις `data`: ο τίτλος και η κεφαλίδα ζωγραφίζονται', () => {
+    // Ο παλιός φύλακας ρωτούσε `dataRowCount`. Ο τίτλος και η κεφαλίδα όμως περνούν κι
+    // εκείνοι από τον βρόχο της διάταξης, άρα κοστίζουν — και ένα φράγμα που τους αγνοεί
+    // αφήνει το πλέγμα να ξεπεράσει τον προϋπολογισμό κατά όσο ακριβώς κοστίζουν.
+    const base = model();
+    const rowCount = MAX_TABLE_GRID_CELLS / base.columns.length;
+    const withFixedRows: PersistedTableModel = {
+      ...base,
+      rows: Array.from({ length: rowCount }, (_, i) => ({
+        id: `r${i}`,
+        rowClass: (i === 0 ? 'title' : i === 1 ? 'header' : 'data') as 'title' | 'header' | 'data',
+      })),
+    };
+    // Με μέτρηση μόνο των `data` θα έμεναν «δύο θέσεις ελεύθερες» και ο φύλακας θα έλεγε ναι.
+    expect(canInsertTableRow(withFixedRows)).toBe(false);
   });
 });
 
@@ -141,17 +170,25 @@ describe('insertTableColumn', () => {
     expect(insertTableColumn(base, 1).merges[0].colSpan).toBe(3);
   });
 
-  it('στο πλήρες όριο στηλών επιστρέφει το ΙΔΙΟ μοντέλο by-reference', () => {
+  it('🔴 ADR-833 Φ5Β — στο πλήρες ΓΙΝΟΜΕΝΟ επιστρέφει το ΙΔΙΟ μοντέλο by-reference', () => {
     const base = model();
+    const columnCount = MAX_TABLE_GRID_CELLS / base.rows.length;
     const full: PersistedTableModel = {
       ...base,
-      columns: Array.from({ length: MAX_TABLE_COLUMN_COUNT }, (_, i) => ({
-        ...base.columns[0],
-        id: `c${i}`,
-      })),
+      columns: Array.from({ length: columnCount }, (_, i) => ({ ...base.columns[0], id: `c${i}` })),
     };
     expect(canInsertTableColumn(full)).toBe(false);
     expect(insertTableColumn(full, 0)).toBe(full);
+  });
+
+  it('🔑 …και ΜΙΑ στήλη λιγότερο επιτρέπεται', () => {
+    const base = model();
+    const columnCount = MAX_TABLE_GRID_CELLS / base.rows.length - 1;
+    const nearFull: PersistedTableModel = {
+      ...base,
+      columns: Array.from({ length: columnCount }, (_, i) => ({ ...base.columns[0], id: `c${i}` })),
+    };
+    expect(canInsertTableColumn(nearFull)).toBe(true);
   });
 });
 
