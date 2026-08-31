@@ -62,6 +62,15 @@ export interface TableWorksheetMenuTarget {
   readonly worksheetId: TableWorksheetId;
   /** Το όνομα **όπως το βλέπει ο άνθρωπος** — ρητό ή προεπιλεγμένο. Ποτέ η ταυτότητα. */
   readonly name: string;
+  /**
+   * 🔴 ADR-833 Φ5Β — «χωρά **άλλο** φύλλο ο πίνακας;» (μερίδιο εγγράφου, `table-capacity`).
+   *
+   * Ταξιδεύει με τον στόχο όπως και οι υπόλοιπες σημαίες, παρότι το «Νέο φύλλο» **δεν** έχει
+   * στόχο: η σημαία αφορά τον **πίνακα**, και ο στόχος είναι το μόνο πράγμα που παγώνει τη
+   * στιγμή του ανοίγματος. Δεύτερο κανάλι γι' αυτήν τη μία σημαία θα ήταν δεύτερη στιγμή
+   * μέτρησης — δηλαδή ακριβώς η ασυμφωνία που η κεφαλίδα από πάνω αποτρέπει.
+   */
+  readonly canAdd: boolean;
   readonly canDelete: boolean;
   readonly canMoveLeft: boolean;
   readonly canMoveRight: boolean;
@@ -104,7 +113,7 @@ const TableWorksheetContextMenuInner = forwardRef<
     >
       {(target) => (
         <>
-          <DxfMenuItem onClick={onAdd}>
+          <DxfMenuItem disabled={!target.canAdd} onClick={onAdd}>
             <DxfMenuIcon><Plus size={16} aria-hidden="true" /></DxfMenuIcon>
             <DxfMenuLabel>{t('table.worksheetMenu.add')}</DxfMenuLabel>
           </DxfMenuItem>

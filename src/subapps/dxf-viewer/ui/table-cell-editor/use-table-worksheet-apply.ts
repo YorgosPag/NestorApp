@@ -33,7 +33,12 @@
  */
 
 import { useCallback } from 'react';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useNotifications } from '@/providers/NotificationProvider';
 import { buildTableWorksheetCommand } from '../../bim/table/table-worksheet-command';
+import { newWorksheetModel, planWorksheetAdd } from '../../bim/table/table-worksheet-ops';
+import { checkWorksheetsFitShare } from '../../bim/table/table-capacity';
+import { resolveWorksheets } from '../../bim/table/table-worksheet-resolve';
 import { setTableCellCursor } from '../../state/table-cell-cursor-store';
 import { useTableCommandCommit, type UseTableModelCommitParams } from './use-table-model-commit';
 import type { TableWorksheetPlan } from '../../bim/table/table-worksheet-ops';
@@ -69,5 +74,57 @@ export function useTableWorksheetApply(params: UseTableModelCommitParams): Table
       return true;
     },
     [commit],
+  );
+}
+
+/** Πόσα MB είναι αυτά τα bytes, σε **ένα** δεκαδικό — η μονάδα με την οποία μιλά το όριο. */
+function megabytes(bytes: number): string {
+  return (bytes / (1024 * 1024)).toFixed(1);
+}
+
+/**
+ * 🔴 ADR-833 Φ5Β — **Ο ΕΝΑΣ ΔΡΟΜΟΣ ΠΡΟΣΘΗΚΗΣ ΦΥΛΛΟΥ**: σχεδίασε, εφάρμοσε, και **πες το με
+ * αριθμό** όταν ο πίνακας δεν χωρά άλλο.
+ *
+ * ## Γιατί δεν αρκεί το `useTableWorksheetApply`
+ * Εκείνο εφαρμόζει ένα σχέδιο· δεν ξέρει **γιατί** ένα σχέδιο είναι `null`. Και από τη Φάση
+ * 5Β το `null` της προσθήκης έχει καινούργια σημασία — «δεν χωρά» — που **οφείλει** να
+ * φτάσει στον άνθρωπο: μια σιωπηλά αδρανής πράξη είναι η ίδια «σιωπηλή απώλεια» που το
+ * §5.6.5 απαγόρευσε, απλώς με άλλο πρόσωπο. Το ⊕ που δεν κάνει τίποτα και δεν λέει τίποτα
+ * είναι χειρότερο από άρνηση: ο χρήστης νομίζει ότι έσπασε η εφαρμογή.
+ *
+ * ## Γιατί ΕΔΩ και όχι στους δύο καλούντες
+ * Οι πόρτες είναι **δύο** (το ⊕ της λωρίδας, το «Νέο φύλλο» του μενού) και είναι η **ίδια**
+ * πράξη. Δύο αντίγραφα της τριάδας «σχέδιο → εφαρμογή → μήνυμα» θα ήταν ο sibling clone του
+ * N.18, και το δεύτερο αντίγραφο θα ξεχνούσε το μήνυμα — ακριβώς όπως το πέμπτο αντίγραφο
+ * θα ξεχνούσε τον δρομέα (δες την κεφαλίδα του module).
+ *
+ * ⚠️ Η μέτρηση για το **μήνυμα** γίνεται μόνο στον κλάδο της άρνησης: στη συνηθισμένη
+ * περίπτωση δεν πληρώνεται κανένα `stringify` παραπάνω από αυτό που έκανε ήδη ο σχεδιαστής.
+ */
+export type TableWorksheetAdd = (live: TableEntity) => boolean;
+
+export function useTableWorksheetAdd(params: UseTableModelCommitParams): TableWorksheetAdd {
+  const apply = useTableWorksheetApply(params);
+  const { t } = useTranslation('dxf-viewer');
+  const notifications = useNotifications();
+
+  return useCallback<TableWorksheetAdd>(
+    (live) => {
+      const plan = planWorksheetAdd(live, newWorksheetModel(live));
+      if (plan) return apply(live, plan);
+
+      // Ο αριθμός δεν επινοείται εδώ: ρωτιέται η **ίδια** αρχή που αρνήθηκε.
+      const verdict = checkWorksheetsFitShare(resolveWorksheets(live));
+      notifications.warning(
+        t('table.worksheetMenu.full', {
+          usedMb: megabytes(verdict.bytes),
+          limitMb: megabytes(verdict.limit),
+        }),
+        { duration: 6000 },
+      );
+      return false;
+    },
+    [apply, notifications, t],
   );
 }

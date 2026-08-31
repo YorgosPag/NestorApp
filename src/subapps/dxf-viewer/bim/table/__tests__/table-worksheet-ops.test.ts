@@ -17,7 +17,6 @@ import {
   planWorksheetRename,
   planWorksheetsAppend,
   planWorksheetsReplace,
-  worksheetMenuState,
 } from '../table-worksheet-ops';
 import { buildTableModel } from '../build-table-entity';
 import { worksheetDisplayName } from '../table-worksheet-name';
@@ -41,7 +40,7 @@ const ID = (index: number) => tableWorksheetId(`ws${index}`);
 describe('planWorksheetAdd — το νέο φύλλο πάει ΣΤΟ ΤΕΛΟΣ, και γίνεται ενεργό', () => {
   it('προσαρτά ένα φύλλο στο τέλος με φρέσκια ταυτότητα', () => {
     const plan = planWorksheetAdd(book(2), EMPTY);
-    expect(plan.worksheets.map((sheet) => sheet.id)).toEqual(['ws0', 'ws1', 'ws2']);
+    expect(plan?.worksheets.map((sheet) => sheet.id)).toEqual(['ws0', 'ws1', 'ws2']);
   });
 
   it('το νέο φύλλο γίνεται το ενεργό — αλλιώς η πράξη μοιάζει να μην έκανε τίποτα', () => {
@@ -51,7 +50,7 @@ describe('planWorksheetAdd — το νέο φύλλο πάει ΣΤΟ ΤΕΛΟΣ
 
   it('🔴 ΣΤΟ ΤΕΛΟΣ ⇒ κανένα ανώνυμο φύλλο δεν μετονομάζεται', () => {
     const before = resolveWorksheets(book(3)).map((sheet, index) => worksheetDisplayName(sheet, index));
-    const after = planWorksheetAdd(book(3), EMPTY).worksheets.map((sheet, index) =>
+    const after = planWorksheetAdd(book(3), EMPTY)?.worksheets.map((sheet, index) =>
       worksheetDisplayName(sheet, index),
     );
     expect(after.slice(0, before.length)).toEqual(before);
@@ -74,7 +73,7 @@ describe('planWorksheetAdd — το νέο φύλλο πάει ΣΤΟ ΤΕΛΟΣ
       ],
       activeWorksheetId: tableWorksheetId('ws0'),
     };
-    expect(planWorksheetAdd(entity, EMPTY).worksheets[2].id).toBe('ws8');
+    expect(planWorksheetAdd(entity, EMPTY)?.worksheets[2].id).toBe('ws8');
   });
 });
 
@@ -271,44 +270,12 @@ describe('πολυφυλλική εισαγωγή — προορισμός κα�
   });
 });
 
-describe('worksheetMenuState — οι σημαίες ρωτούν τους ΙΔΙΟΥΣ σχεδιαστές', () => {
-  it('μοναδικό φύλλο: τίποτα δεν επιτρέπεται', () => {
-    expect(worksheetMenuState(book(1), ID(0))).toEqual({
-      index: 0,
-      canDelete: false,
-      canMoveLeft: false,
-      canMoveRight: false,
-    });
-  });
-
-  it('πρώτο από τρία: όχι αριστερά, ναι δεξιά, ναι διαγραφή', () => {
-    expect(worksheetMenuState(book(3), ID(0))).toEqual({
-      index: 0,
-      canDelete: true,
-      canMoveLeft: false,
-      canMoveRight: true,
-    });
-  });
-
-  it('τελευταίο από τρία: ναι αριστερά, όχι δεξιά', () => {
-    expect(worksheetMenuState(book(3), ID(2))).toMatchObject({
-      index: 2,
-      canMoveLeft: true,
-      canMoveRight: false,
-    });
-  });
-
-  it('άγνωστος στόχος ⇒ null (το μενού δεν ανοίγει σε φάντασμα)', () => {
-    expect(worksheetMenuState(book(3), tableWorksheetId('ws9'))).toBeNull();
-  });
-});
-
 describe('η οντότητα ΠΑΛΙΑΣ μορφής περνά από την ΙΔΙΑ πύλη', () => {
   it('η προσθήκη σε αναβαθμιζόμενη οντότητα δίνει `ws1`, όχι διπλότυπο `ws0`', () => {
     const legacy = { ...makeTableEntity() } as TableEntity;
     // Η οντότητα έχει ήδη φύλλα (νέα μορφή) — αλλά ο έλεγχος είναι ότι ο γεννήτορας ρωτά τον
     // ΕΝΑ αναγνώστη, ποτέ το ωμό `entity.worksheets`.
     expect(activeWorksheet(legacy).id).toBe('ws0');
-    expect(planWorksheetAdd(legacy, EMPTY).worksheets[1].id).toBe('ws1');
+    expect(planWorksheetAdd(legacy, EMPTY)?.worksheets[1].id).toBe('ws1');
   });
 });

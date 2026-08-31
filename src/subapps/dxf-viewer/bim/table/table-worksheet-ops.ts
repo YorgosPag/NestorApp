@@ -87,6 +87,7 @@ import {
   type TableWorksheet,
   type TableWorksheetId,
 } from '../../types/table-worksheet';
+import { fitWorksheetsToShare } from './table-capacity';
 
 /**
  * Το πρόθεμα του χώρου ονομάτων των φύλλων — **το ίδιο** που κουβαλά ήδη το
@@ -113,6 +114,16 @@ export interface TableWorksheetPlan {
    * δρομέα. Ίδια σύμβαση —και ίδιος λόγος— με το `TableWorksheetActivation.restoreCursor`.
    */
   readonly restoreCursor?: TableCursorPosition | null;
+  /**
+   * 🔴 ADR-833 Φ5Β — πόσα φύλλα **δεν χώρεσαν** στο μερίδιο του πίνακα και κόπηκαν.
+   *
+   * Απόν/`0` ⇒ χώρεσαν όλα. Ταξιδεύει **μέσα στο σχέδιο** και δεν συνάγεται με αφαίρεση από
+   * τον καλούντα: ο ίδιος κανόνας με το `TablePasteResult` — ό,τι χάθηκε το λέει εκείνος που
+   * το έκοψε, γιατί μόνο αυτός ξέρει **γιατί**. Και δεν είναι θεωρητικό: μέχρι τη Φάση 5Β η
+   * προσθήκη φύλλων ήταν η **μόνη αφύλαχτη πόρτα** — κάθε φύλλο ελεγχόταν μόνο του και
+   * κανείς δεν ρωτούσε το άθροισμα, οπότε ένα βιβλίο 12 φύλλων έμπαινε με μία εντολή.
+   */
+  readonly droppedWorksheets?: number;
 }
 
 /**
@@ -198,11 +209,26 @@ export function buildWorksheets(drafts: readonly TableWorksheetDraft[]): readonl
 export function planWorksheetAdd(
   entity: TableEntity,
   model: PersistedTableModel,
-): TableWorksheetPlan {
+): TableWorksheetPlan | null {
   const worksheets = resolveWorksheets(entity);
   const [created] = withFreshIds(worksheets, [{ model }]);
+  const next = [...worksheets, created];
+
+  // 🔴 ADR-833 Φ5Β — **ΑΡΝΗΣΗ, όχι κόψιμο**, και η ασυμμετρία με την εισαγωγή είναι σκόπιμη:
+  // εδώ δεν υπάρχει τίποτα να σωθεί. Ένα κενό φύλλο είναι πράξη «όλα ή τίποτα» — μισό φύλλο
+  // δεν υπάρχει — ενώ ένα βιβλίο 12 φύλλων κουβαλά δουλειά που αξίζει να μπει μερικώς.
+  // Είναι η σημασιολογία των Google Sheets («this action **would increase** the number of
+  // cells above the limit»): η απάντηση δίνεται πάνω στο **προβλεπόμενο** βιβλίο, πριν
+  // γραφτεί οτιδήποτε.
+  //
+  // ⚠️ `null` σημαίνει «καμία εντολή», όπως ακριβώς και στους αδελφούς σχεδιαστές
+  // (`planWorksheetDelete`, `planWorksheetMove`). Ο **καλών** είναι υπεύθυνος να το πει στον
+  // άνθρωπο — δες `useTableWorksheetAdd`: μια σιωπηλά αδρανής πράξη θα ήταν ακριβώς η
+  // «σιωπηλή απώλεια» που το §5.6.5 απαγόρευσε, με άλλο πρόσωπο.
+  if (fitWorksheetsToShare(next).droppedWorksheets > 0) return null;
+
   return {
-    worksheets: [...worksheets, created],
+    worksheets: next,
     activeWorksheetId: created.id,
     restoreCursor: null,
   };
@@ -377,10 +403,30 @@ export function planWorksheetsAppend(
   if (drafts.length === 0) return null;
   const worksheets = resolveWorksheets(entity);
   const created = withFreshIds(worksheets, drafts);
+
+  // 🔴 ADR-833 Φ5Β — **ΚΟΨΙΜΟ, όχι άρνηση** (η αντίστροφη επιλογή από το `planWorksheetAdd`,
+  // και για τον αντίστροφο λόγο): εδώ υπάρχει δουλειά του χρήστη μέσα στο αρχείο, και μια
+  // ολική άρνηση θα την πετούσε όλη επειδή δεν χώρεσε το τελευταίο φύλλο. Το ADR-833 έχει
+  // ήδη αυτό το λεξιλόγιο για την εισαγωγή (`tableXlsx.clipped`): **κόψε και πες το με
+  // αριθμό**.
+  const fitted = fitWorksheetsToShare([...worksheets, ...created]);
+
+  // Τα υπάρχοντα φύλλα **δεν** κόβονται ποτέ: αν δεν χωρά ούτε ένα εισαγόμενο, το σχέδιο
+  // παράγει το ίδιο βιβλίο και ο κατασκευαστής εντολής το κρίνει no-op. Το «τίποτα δεν
+  // μπήκε» το λέει το `droppedWorksheets`, που φτάνει στον καλούντα **ακόμη κι όταν δεν
+  // υπάρχει εντολή** — αλλιώς η αποτυχία θα ήταν αόρατη.
+  //
+  // 🔴 **Ο ΑΡΙΘΜΟΣ ΕΙΝΑΙ ΤΩΝ ΕΙΣΑΓΟΜΕΝΩΝ, ΟΧΙ ΤΟΥ ΚΟΨΙΜΑΤΟΣ** — και το βρήκε μετάλλαξη.
+  // Το `fitWorksheetsToShare` κόβει από το τέλος μέχρι να χωρέσει· αν το **υπάρχον** βιβλίο
+  // ξεπερνά ήδη το μερίδιο (πίνακας φτιαγμένος με τα παλιά όρια), κόβει και δικά του φύλλα
+  // και το `droppedWorksheets` του γίνεται **6** ενώ ο χρήστης πρόσθεσε **ένα**. Το μήνυμα
+  // θα κατηγορούσε την πράξη για απώλεια που δεν προκάλεσε.
+  const accepted = Math.max(0, fitted.worksheets.length - worksheets.length);
   return {
-    worksheets: [...worksheets, ...created],
-    activeWorksheetId: created[0].id,
+    worksheets: accepted > 0 ? fitted.worksheets : worksheets,
+    ...(accepted > 0 && { activeWorksheetId: created[0].id }),
     restoreCursor: null,
+    droppedWorksheets: drafts.length - accepted,
   };
 }
 
@@ -406,46 +452,25 @@ export function planWorksheetsReplace(
   drafts: readonly TableWorksheetDraft[],
 ): TableWorksheetPlan | null {
   if (drafts.length === 0) return null;
-  const worksheets = buildWorksheets(drafts);
+  // Ίδιο κόψιμο με την προσθήκη, και **πρέπει** να είναι το ίδιο: η «Αντικατάσταση» δεν είναι
+  // άλλη ερώτηση χωρητικότητας, είναι η ίδια ερώτηση σε άδειο βιβλίο.
+  const fitted = fitWorksheetsToShare(buildWorksheets(drafts));
+
+  // 🔴 **ΕΛΑΤΤΩΜΑ ΠΟΥ ΒΡΗΚΕ ΜΕΤΑΛΛΑΞΗ (M42, Φ5Β).** Εδώ υπήρχε `if (…length === 0) return
+  // null`. Το `null` όμως σημαίνει ταυτόχρονα «καμία εντολή» **και** «κανένα
+  // `droppedWorksheets` να πει ο καλών» — δηλαδή ένα βιβλίο ενός φύλλου που δεν χωρά στο
+  // μερίδιο απέτυχε **σιωπηλά**: ο χρήστης πατούσε «Αντικατάσταση περιεχομένου» και δεν
+  // γινόταν απολύτως τίποτα, χωρίς μήνυμα. Είναι κατά λέξη η «σιωπηλή απώλεια» που το
+  // §5.6.5 απαγόρευσε, μπαίνοντας από την πίσω πόρτα ενός κωδικού επιστροφής.
+  //
+  // Τώρα κρατά τα **υπάρχοντα** φύλλα (ο κατασκευαστής εντολής θα κρίνει σωστά no-op) και
+  // αφήνει τον αριθμό να ταξιδέψει — ίδια δομή με το `planWorksheetsAppend`, και για τον
+  // ίδιο λόγο.
+  const accepted = fitted.worksheets.length;
   return {
-    worksheets,
-    activeWorksheetId: worksheets[0].id,
+    worksheets: accepted > 0 ? fitted.worksheets : resolveWorksheets(entity),
+    ...(accepted > 0 && { activeWorksheetId: fitted.worksheets[0].id }),
     restoreCursor: null,
-  };
-}
-
-/**
- * Ό,τι πρέπει να ξέρει το μενού καρτέλας **τη στιγμή που ανοίγει**, όχι στο τελευταίο render.
- *
- * Ίδιο σχήμα —και ίδιος λόγος— με το `resolveHeaderState` του μενού ζωνών: οι σημαίες «μπορώ;»
- * απαντιούνται τη στιγμή του ανοίγματος, αλλιώς ένα `Ctrl+Z` ενδιάμεσα θα άφηνε item ενεργό
- * ενώ η πράξη δεν επιτρέπεται πια.
- */
-export interface TableWorksheetMenuState {
-  readonly index: number;
-  readonly canDelete: boolean;
-  readonly canMoveLeft: boolean;
-  readonly canMoveRight: boolean;
-}
-
-/**
- * Οι τρεις σημαίες του μενού, από την **ίδια** πηγή που θα εκτελέσει τις πράξεις.
- *
- * 🔑 Δεν επαναδιατυπώνει κανέναν κανόνα: ρωτά τους **ίδιους** σχεδιαστές. Μια δεύτερη
- * διατύπωση του «μπορώ να διαγράψω;» εδώ θα ήταν η πρώτη ευκαιρία το μενού να δείχνει ενεργό
- * ό,τι ο σχεδιαστής αρνείται — ή, χειρότερα, γκρίζο ό,τι επιτρέπεται.
- */
-export function worksheetMenuState(
-  entity: TableEntity,
-  targetId: TableWorksheetId,
-): TableWorksheetMenuState | null {
-  const worksheets = resolveWorksheets(entity);
-  const index = worksheets.findIndex((sheet) => sheet.id === targetId);
-  if (index < 0) return null;
-  return {
-    index,
-    canDelete: planWorksheetDelete(entity, targetId, null) !== null,
-    canMoveLeft: planWorksheetMove(entity, targetId, index - 1) !== null,
-    canMoveRight: planWorksheetMove(entity, targetId, index + 1) !== null,
+    droppedWorksheets: fitted.droppedWorksheets,
   };
 }

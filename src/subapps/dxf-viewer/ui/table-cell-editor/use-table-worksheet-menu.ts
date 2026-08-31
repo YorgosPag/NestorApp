@@ -35,19 +35,17 @@ import { useCommandHistory } from '../../core/commands';
 import { getTableIndicatorHover } from '../../state/table-indicator-hover-store';
 import { planWorksheetActivation } from '../../bim/table/table-worksheet-activate';
 import {
-  newWorksheetModel,
-  planWorksheetAdd,
   planWorksheetDelete,
   planWorksheetMove,
-  worksheetMenuState,
 } from '../../bim/table/table-worksheet-ops';
+import { worksheetMenuState } from '../../bim/table/table-worksheet-menu-state';
 import { worksheetDisplayName } from '../../bim/table/table-worksheet-name';
 import { resolveWorksheets } from '../../bim/table/table-worksheet-resolve';
 import { tableCursorFor } from '../../state/table-cell-cursor-scope';
 import { applyTableScenePatch } from './table-scene-patch';
 import { resolveTableById } from './table-entity-lookup';
 import { openWorksheetRenameById } from './table-worksheet-rename-open';
-import { useTableWorksheetApply } from './use-table-worksheet-apply';
+import { useTableWorksheetAdd, useTableWorksheetApply } from './use-table-worksheet-apply';
 import {
   getTableWorksheetMenuPort,
   setTableWorksheetMenuPort,
@@ -78,6 +76,7 @@ export function useTableWorksheetMenu(
   const { containerRef, transformRef, levelManager } = params;
   const { execute } = useCommandHistory();
   const applyWorksheet = useTableWorksheetApply({ levelManager, execute });
+  const addWorksheet = useTableWorksheetAdd({ levelManager, execute });
   const menuRef = useRef<TableWorksheetContextMenuHandle | null>(null);
 
   /**
@@ -119,7 +118,11 @@ export function useTableWorksheetMenu(
       // σημασιολογία με το ⊕ της λωρίδας — μία απάντηση στο «πού πάει το νέο φύλλο».
       onAdd: () => {
         const hovered = hoveredTable();
-        if (hovered) applyWorksheet(hovered.live, planWorksheetAdd(hovered.live, newWorksheetModel(hovered.live)));
+        // 🔴 ADR-833 Φ5Β — **ο ΕΝΑΣ δρόμος προσθήκης φύλλου**, ίδιος με το ⊕ της λωρίδας:
+        // σχεδιάζει, εφαρμόζει, και **λέει με αριθμό** όταν ο πίνακας δεν χωρά άλλο. Δύο
+        // αντίγραφα της ίδιας τριάδας θα ήταν ο sibling clone του N.18 — και, ως συνήθως,
+        // το ακριβό δεν είναι οι γραμμές: το δεύτερο αντίγραφο θα ξεχνούσε το **μήνυμα**.
+        if (hovered) addWorksheet(hovered.live);
       },
       onRename: (target) => {
         const hovered = hoveredTable();
@@ -145,7 +148,7 @@ export function useTableWorksheetMenu(
         applyWorksheet(hovered.live, planWorksheetDelete(hovered.live, target.worksheetId, cursor));
       },
     }),
-    [applyWorksheet, hoveredTable, moveBy, containerRef, transformRef],
+    [addWorksheet, applyWorksheet, hoveredTable, moveBy, containerRef, transformRef],
   );
 
   useEffect(() => {
@@ -170,6 +173,7 @@ export function useTableWorksheetMenu(
           // Το **ορατό** όνομα, από τον ΕΝΑ επιλυτή: ο τίτλος του μενού και η ετικέτα της
           // καρτέλας δεν επιτρέπεται να διαφωνήσουν για το πώς λέγεται το φύλλο.
           name: worksheetDisplayName(sheet, state.index),
+          canAdd: state.canAdd,
           canDelete: state.canDelete,
           canMoveLeft: state.canMoveLeft,
           canMoveRight: state.canMoveRight,
