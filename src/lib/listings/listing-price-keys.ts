@@ -29,14 +29,19 @@
 import type { MissingPriceReason, PriceSource } from '@/lib/properties/price-resolver';
 
 /**
- * **Γιατί δεν υπάρχει τιμή.** Οι τρεις καταστάσεις **δεν** είναι εναλλάξιμες: η
- * πρώτη λέει «δεν είναι στην αγορά» (σωστή απουσία), οι άλλες δύο «είναι, αλλά
- * κανείς δεν καταχώρησε αριθμό» (κενό δεδομένων που ο κάτοχος μπορεί να κλείσει).
+ * **Γιατί δεν υπάρχει τιμή.** Οι καταστάσεις **δεν** είναι εναλλάξιμες: η πρώτη λέει
+ * «δεν είναι στην αγορά» (σωστή απουσία), οι υπόλοιπες «είναι, αλλά κανείς δεν
+ * καταχώρησε αριθμό» (κενό δεδομένων που ο κάτοχος μπορεί να κλείσει).
  */
 export const MISSING_PRICE_KEY: Readonly<Record<MissingPriceReason, string>> = {
   'not-listed': 'search-results:card.priceMissing.notListed',
   'sale-price-missing': 'search-results:card.priceMissing.salePriceMissing',
   'rent-price-missing': 'search-results:card.priceMissing.rentPriceMissing',
+  // ⚠️ **Δεν είναι συνώνυμο του `not-listed`, είναι το αντίθετό του** (ADR-835 §4.4):
+  // το κατάλυμα **είναι** στην αγορά — απλώς σε άξονα που το επτάτιμο λεξιλόγιο δεν
+  // ονομάζει. Κοινό κείμενο με το «δεν διατίθεται» θα έλεγε ψέματα στον επισκέπτη και
+  // θα έκρυβε από τον κάτοχο ένα κενό που **μπορεί** να κλείσει.
+  'nightly-rate-missing': 'search-results:card.priceMissing.nightlyRateMissing',
 };
 
 /**
@@ -59,5 +64,10 @@ export const PRICE_ROLE_KEY: Readonly<Record<PriceSource, string>> = {
   'commercial.askingPrice': 'search-results:detail.price.role.asking',
   'commercial.finalPrice': 'search-results:detail.price.role.final',
   'commercial.rentPrice': 'search-results:detail.price.role.rent',
+  // 🔴 **Η ετικέτα ΕΙΝΑΙ η μονάδα, και εδώ είναι υποχρεωτική.** «65 €» δίπλα σε «650 €»
+  // διαφέρουν κατά τριάντα φορές και μοιάζουν ίδια· ο ρόλος είναι το μόνο που τα
+  // ξεχωρίζει. Ο σκόπελος γράφτηκε ρητά στο ADR-835 §4.4: *«η οθόνη δεν επιτρέπεται να
+  // γράψει “65 €” με τη μορφή που γράφει τιμή πώλησης»*.
+  'commercial.nightlyRate': 'search-results:detail.price.role.nightly',
   'legacy.price': 'search-results:detail.price.role.legacy',
 };

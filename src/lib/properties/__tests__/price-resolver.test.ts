@@ -469,3 +469,100 @@ describe('Κ12 — a rented unit closes on its RENT, not on a sale figure', () =
     });
   });
 });
+
+// =============================================================================
+// Κ13 — Ο ΤΡΙΤΟΣ ΡΟΛΟΣ: «ΑΝΑ ΒΡΑΔΥ» ΔΕΝ ΕΙΝΑΙ «ΑΝΑ ΜΗΝΑ» (ADR-835 §4.4)
+// =============================================================================
+
+/**
+ * 🔴 **Οι πέντε άγκυρες εδώ κρίνουν πέντε ΞΕΧΩΡΙΣΤΕΣ αποφάσεις**, όχι πέντε παραλλαγές
+ * της ίδιας. Καθεμιά αντιστοιχεί σε μια πρόταση του ADR-835 §4.4 που, αν παραβιαστεί,
+ * παράγει **διαφορετικό** σφάλμα στην οθόνη.
+ */
+describe('Κ13 — η βραχυχρόνια απαντά όπου το επτάτιμο λεξιλόγιο σιωπά', () => {
+  it('Κ13.1 — κατάλυμα ΜΟΝΟ προς διανυκτέρευση δίνει ρόλο `nightly`, ποτέ `rent`', () => {
+    // Το `commercialStatus` είναι `unavailable` **σωστά** (καμία προβολή, §4.2). Πριν
+    // το ADR-835 αυτό κατέληγε σε `missing / not-listed` — δηλαδή η οθόνη έλεγε «δεν
+    // διατίθεται» για κατάλυμα που **είναι** στην αγορά.
+    const result = resolveDisplayPrice(
+      unit({
+        commercialStatus: 'unavailable',
+        offerKinds: ['leaseShort'],
+        commercial: { nightlyRate: 65 },
+      }),
+    );
+
+    expect(result).toEqual({
+      kind: 'priced',
+      headline: { role: 'nightly', amount: 65, source: 'commercial.nightlyRate' },
+      secondary: null,
+    });
+  });
+
+  it('Κ13.2 — χωρίς τιμή διανυκτέρευσης η αιτία ΔΕΝ είναι «δεν διατίθεται»', () => {
+    // Η διάκριση είναι όλη η ουσία: το `not-listed` λέει «δεν είναι στην αγορά» —
+    // **ψέμα** εδώ — ενώ το `nightly-rate-missing` λέει «είναι, λείπει ο αριθμός»,
+    // που είναι κενό δεδομένων που ο κάτοχος **μπορεί** να κλείσει.
+    const result = resolveDisplayPrice(
+      unit({ commercialStatus: 'unavailable', offerKinds: ['leaseShort'], commercial: {} }),
+    );
+
+    expect(result).toEqual({ kind: 'missing', reason: 'nightly-rate-missing' });
+  });
+
+  it('Κ13.3 — η ΠΩΛΗΣΗ δεν χάνει τη θέση της όταν συνυπάρχει με διανυκτέρευση', () => {
+    // §4.7: συνύπαρξη, ποτέ φράχτης. Το παλιό λεξιλόγιο **αποδεικνύει** ενεργή πώληση,
+    // άρα ο νέος άξονας δεν επιτρέπεται να την επισκιάσει: αλλιώς ένα ακίνητο 250.000 €
+    // θα εμφανιζόταν στην κάρτα ως «65 €».
+    const result = resolveDisplayPrice(
+      unit({
+        commercialStatus: 'for-sale',
+        offerKinds: ['leaseShort', 'sell'],
+        commercial: { askingPrice: 250_000, nightlyRate: 65 },
+      }),
+    );
+
+    expect(result).toEqual({
+      kind: 'priced',
+      headline: { role: 'sale', amount: 250_000, source: 'commercial.askingPrice' },
+      secondary: null,
+    });
+  });
+
+  it('Κ13.4 — ακίνητο ΜΟΝΟ προς αντιπαροχή μένει `not-listed`, αμετάβλητο', () => {
+    // Η μη-παλινδρόμηση των 41 καταναλωτών, ως άγκυρα: το `exchange` είναι επίσης
+    // είδος χωρίς προβολή, και ο πίνακας το χαρτογραφεί ρητά σε **καμία** τιμή. Ένα
+    // ποσοστό γραμμένο στη θέση τιμής θα εμφανιζόταν ως «35 €».
+    const result = resolveDisplayPrice(
+      unit({ commercialStatus: 'unavailable', offerKinds: ['exchange'], commercial: {} }),
+    );
+
+    expect(result).toEqual({ kind: 'missing', reason: 'not-listed' });
+  });
+
+  it('Κ13.5 — χωρίς `offerKinds` τίποτα δεν αλλάζει (η σιωπή μένει σιωπή)', () => {
+    // Το πεδίο είναι προαιρετικό, και η απουσία του **δεν** είναι κενό: κάθε καλών
+    // που δεν το κουβαλά παίρνει ακριβώς τη σημερινή απάντηση.
+    const before = resolveDisplayPrice(unit({ commercialStatus: 'unavailable', commercial: {} }));
+    const withRate = resolveDisplayPrice(
+      unit({ commercialStatus: 'unavailable', commercial: { nightlyRate: 65 } }),
+    );
+
+    expect(before).toEqual({ kind: 'missing', reason: 'not-listed' });
+    expect(withRate).toEqual({ kind: 'missing', reason: 'not-listed' });
+  });
+
+  it('Κ13.6 — ο ρόλος ταξιδεύει και στην παλιά επιφάνεια (`getEffectivePrice.mode`)', () => {
+    // Το `EffectivePriceMode` **είναι** το `PriceRole`. Αν ο τρίτος ρόλος δεν έφτανε
+    // εδώ, οι παλιοί καταναλωτές θα διάβαζαν τιμή βραδιάς νομίζοντας ότι είναι πώληση.
+    expect(
+      getEffectivePrice(
+        unit({
+          commercialStatus: 'unavailable',
+          offerKinds: ['leaseShort'],
+          commercial: { nightlyRate: 65 },
+        }),
+      ),
+    ).toEqual({ amount: 65, mode: 'nightly' });
+  });
+});

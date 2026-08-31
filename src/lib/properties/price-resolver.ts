@@ -12,6 +12,13 @@
  *                             price as secondary **when it differs**
  *   - all other statuses    → `commercial.askingPrice ?? commercial.finalPrice ?? legacy price`
  *
+ * **A third axis answers where the seven-value vocabulary is silent** (ADR-835 §4.4).
+ * `leaseShort` has NO projection into `commercialStatus` on purpose, so a property
+ * offered only for short stays reads as `unavailable` — true for the old vocabulary,
+ * and useless for the reader. When, and only when, the status-driven answer is
+ * `missing / not-listed`, this module asks `offerKinds` — the axis where nothing is
+ * lost — and answers with the `nightly` role. See {@link ROLE_WHERE_LEGACY_IS_SILENT}.
+ *
  * **Absence is a STATE, never a zero.** `resolveDisplayPrice` returns an
  * explicit `missing` variant carrying the reason, so a caller can tell
  * "not on the market" apart from "on the market, but nobody recorded a price".
@@ -32,6 +39,7 @@ import {
   isListedCommercialStatus,
   type CommercialStatus,
 } from '@/constants/commercial-statuses';
+import { KINDS_WITHOUT_LEGACY_PROJECTION } from '@/lib/offers/derive-commercial-status';
 
 /**
  * Structural input — deliberately NOT tied to a named `Property` type.
@@ -47,7 +55,20 @@ export interface PricedPropertyLike {
     askingPrice?: number | null;
     finalPrice?: number | null;
     rentPrice?: number | null;
+    /** Price **per night** (ADR-835 §4.4). Never a monthly rent, never a sale price. */
+    nightlyRate?: number | null;
   } | null;
+  /**
+   * The lossless axis — `offerKinds` (ADR-777 Α20).
+   *
+   * **Optional, and the absence is not a gap.** Every caller that does not carry it
+   * gets exactly today's behaviour, because this field is consulted only where the
+   * status-driven path already gave up. Typed as `readonly string[]` rather than
+   * `readonly OfferKind[]` for the same reason the whole interface is structural:
+   * the raw Firestore document reaches here untyped, and a named type would force
+   * an `as` on every caller.
+   */
+  offerKinds?: readonly string[] | null;
   /** @deprecated legacy flat price field — used as last-resort fallback. */
   price?: number | null;
 }
@@ -56,14 +77,22 @@ export interface PricedPropertyLike {
 // 1. RESOLVED SHAPE — amount + role + provenance
 // =============================================================================
 
-/** Which side of the deal a resolved amount belongs to. */
-export type PriceRole = 'sale' | 'rent';
+/**
+ * Which side of the deal a resolved amount belongs to.
+ *
+ * `nightly` is a **third role, not a variant of `rent`** (ADR-835 §4.4): 65 and 650
+ * are both euro amounts for "living here", and only the role tells them apart. A
+ * screen that renders a nightly rate the way it renders a monthly rent is off by a
+ * factor of thirty — silently.
+ */
+export type PriceRole = 'sale' | 'rent' | 'nightly';
 
 /** Exactly which field the amount was read from. Never inferred, never guessed. */
 export type PriceSource =
   | 'commercial.askingPrice'
   | 'commercial.finalPrice'
   | 'commercial.rentPrice'
+  | 'commercial.nightlyRate'
   | 'legacy.price';
 
 /** A price that exists, with its role and its origin. */
@@ -78,13 +107,18 @@ export interface ResolvedPrice {
  *   - `not-listed`          — the unit is not on the market; absence is correct.
  *   - `sale-price-missing`  — listed for sale, but no asking price was recorded.
  *   - `rent-price-missing`  — listed for rent, but no rent was recorded.
+ *   - `nightly-rate-missing`— offered for short stays, but no nightly rate was
+ *                             recorded. A distinct reason from `not-listed`, because
+ *                             it is the opposite claim: the property **is** on the
+ *                             market, on an axis the old vocabulary cannot name.
  *
- * The last two are data gaps the owner can close; the first is not.
+ * All but the first are data gaps the owner can close; `not-listed` is not.
  */
 export type MissingPriceReason =
   | 'not-listed'
   | 'sale-price-missing'
-  | 'rent-price-missing';
+  | 'rent-price-missing'
+  | 'nightly-rate-missing';
 
 /**
  * The display verdict.
@@ -133,6 +167,48 @@ const FINALIZED_STATUSES: ReadonlySet<string> = new Set<string>(
 );
 
 // =============================================================================
+// 2b. THE THIRD AXIS — what to answer where the seven-value vocabulary is silent
+// =============================================================================
+
+/** What a projection-less offer kind answers about price. */
+interface SilentAxisAnswer {
+  /** The amount it carries, with its role and provenance — or `null` if unrecorded. */
+  readonly resolve: (input: PricedPropertyLike) => ResolvedPrice | null;
+  /** How to name the absence. Never `not-listed`: the property IS on the market. */
+  readonly whenAbsent: MissingPriceReason;
+}
+
+/**
+ * **What each projection-less offer kind answers** — or `null` when it answers nothing
+ * about price (ADR-835 §4.4).
+ *
+ * 🔴 **The key is `KINDS_WITHOUT_LEGACY_PROJECTION`, and that is the whole point.**
+ * These are exactly the kinds `deriveCommercialStatus` declared it cannot express, so
+ * they are exactly the kinds whose price the status can never reach. Keying the table
+ * off the *same* constant means a fifth projection-less kind **does not compile** here
+ * until someone states what it answers — the guard sits on the cause, not beside it.
+ *
+ * ⚠️ **`exchange → null` is a statement, not a hole.** Its amount is a *percentage*,
+ * and a percentage rendered where a price belongs reads as "50 €" — the lie
+ * `deriveCommercialAmounts` already refuses to tell. Mapping it to `null` keeps
+ * today's verdict for exchange-only properties (`not-listed`) **identical**, now with
+ * the reason written down instead of emerging from the absence of a branch.
+ *
+ * ⚠️ **One table, not two parallel ones.** "Which amount" and "how to name its
+ * absence" are answers to the same question and travel together; two tables keyed the
+ * same way are the shape that drifts silently (CHECK 3.34).
+ */
+const ANSWER_WHERE_LEGACY_IS_SILENT: Readonly<
+  Record<(typeof KINDS_WITHOUT_LEGACY_PROJECTION)[number], SilentAxisAnswer | null>
+> = {
+  exchange: null,
+  leaseShort: {
+    resolve: (input) => resolveNightlyPrice(input),
+    whenAbsent: 'nightly-rate-missing',
+  },
+};
+
+// =============================================================================
 // 3. RESOLUTION
 // =============================================================================
 
@@ -166,6 +242,11 @@ function resolveSalePrice(input: PricedPropertyLike): ResolvedPrice | null {
 function resolveRentPrice(input: PricedPropertyLike): ResolvedPrice | null {
   const commercial = input.commercial ?? {};
   return pickPriced('rent', [[commercial.rentPrice, 'commercial.rentPrice']]);
+}
+
+function resolveNightlyPrice(input: PricedPropertyLike): ResolvedPrice | null {
+  const commercial = input.commercial ?? {};
+  return pickPriced('nightly', [[commercial.nightlyRate, 'commercial.nightlyRate']]);
 }
 
 /**
@@ -219,8 +300,17 @@ function missingReasonFor(statusKey: string): MissingPriceReason {
  * no path that returns `0` for a property whose price was never recorded.
  */
 export function resolveDisplayPrice(input: PricedPropertyLike): DisplayPrice {
-  const statusKey = statusKeyOf(input);
+  return answerFromLegacyVocabulary(input, statusKeyOf(input));
+}
 
+/**
+ * The seven-value vocabulary's own answer — unchanged since ADR-777 §8.2 — with the
+ * **one** place it admits it knows nothing handed over to {@link answerFromOfferKinds}.
+ */
+function answerFromLegacyVocabulary(
+  input: PricedPropertyLike,
+  statusKey: string,
+): DisplayPrice {
   if (PURE_RENT_STATUSES.has(statusKey)) {
     const rent = resolveRentPrice(input);
     return rent
@@ -241,9 +331,58 @@ export function resolveDisplayPrice(input: PricedPropertyLike): DisplayPrice {
     return { kind: 'missing', reason: 'sale-price-missing' };
   }
 
-  return sale
-    ? { kind: 'priced', headline: sale, secondary: null }
-    : { kind: 'missing', reason: missingReasonFor(statusKey) };
+  if (sale) return { kind: 'priced', headline: sale, secondary: null };
+
+  const reason = missingReasonFor(statusKey);
+  return reason === 'not-listed'
+    ? answerFromOfferKinds(input)
+    : { kind: 'missing', reason };
+}
+
+/**
+ * **The third axis, asked in exactly one place** (ADR-835 §4.4).
+ *
+ * 🔴 **Why here and nowhere earlier — the rule in one sentence:** the old vocabulary
+ * is consulted first because everything it *does* say is **proven** (`for-sale` proves
+ * a live sale offer, `sold` proves a closed one — see `offerKindsFromLegacyStatus`),
+ * and `not-listed` is the single verdict where it declared it proves **nothing**. So
+ * this axis never overrules a fact; it only speaks into a stated silence.
+ *
+ * ⚠️ **This is what makes the addition provably non-regressive for all 41 consumers.**
+ * `not-listed` is today a dead end — the function returns `missing` and stops. No
+ * existing input can change verdict here, because no document carried `leaseShort` in
+ * `offerKinds` before this ADR shipped. The proof is structural, not a sample.
+ *
+ * ⚠️ **A missing nightly rate is `nightly-rate-missing`, never `not-listed`.** The
+ * property *is* on the market; saying otherwise would be the false negative this whole
+ * module exists to prevent — "absence is a state, never a zero", and never a lie.
+ *
+ * ⛔ **Nightly is a headline, never a `secondary`.** The `secondary` slot means "the
+ * second number the reader would otherwise go and find", and it is already spoken for
+ * by the two combinations the old vocabulary itself produces (`for-sale-and-rent`,
+ * `sold`). A property that is for sale **and** offered nightly has three prices and
+ * two slots; overloading the slot would make it mean different things per input. The
+ * nightly rate stays reachable through `offerKinds`, which loses nothing — the same
+ * declared trade-off `deriveCommercialStatus` makes one layer down.
+ */
+function answerFromOfferKinds(input: PricedPropertyLike): DisplayPrice {
+  const offered = input.offerKinds ?? [];
+
+  // ⚠️ Iterated in the constant's own order, never the document's: two properties with
+  // the same offers written in a different order must resolve to the same price.
+  for (const kind of KINDS_WITHOUT_LEGACY_PROJECTION) {
+    if (!offered.includes(kind)) continue;
+
+    const answer = ANSWER_WHERE_LEGACY_IS_SILENT[kind];
+    if (answer === null) continue;
+
+    const price = answer.resolve(input);
+    return price
+      ? { kind: 'priced', headline: price, secondary: null }
+      : { kind: 'missing', reason: answer.whenAbsent };
+  }
+
+  return { kind: 'missing', reason: 'not-listed' };
 }
 
 // =============================================================================

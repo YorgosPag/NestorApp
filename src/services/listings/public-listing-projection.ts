@@ -86,6 +86,8 @@ export interface ProjectableProperty {
     readonly askingPrice?: number | null;
     readonly finalPrice?: number | null;
     readonly rentPrice?: number | null;
+    /** Τιμή **ανά διανυκτέρευση** (ADR-835). Παράγεται από `deriveCommercialAmounts`. */
+    readonly nightlyRate?: number | null;
   } | null;
   readonly areas?: { readonly gross?: number | null } | null;
   /** @deprecated επίπεδο πεδίο· διαβάζεται ως έσχατο εφεδρικό. */
@@ -362,6 +364,9 @@ export function projectListingShape(
       askingPrice: numberOrNull(commercial?.askingPrice),
       finalPrice: numberOrNull(commercial?.finalPrice),
       rentPrice: numberOrNull(commercial?.rentPrice),
+      // ⚠️ Ίδιος **ωμός** χειρισμός με τα τρία από πάνω: η προβολή δεν λύνει τιμή —
+      // τη λύνει ο ΕΝΑΣ `price-resolver` στην οθόνη (δες τη σημείωση του σχήματος).
+      nightlyRate: numberOrNull(commercial?.nightlyRate),
     },
     // 🔶 Η εικόνα μπαίνει όταν υπάρξει ο παραγωγός της (Α19, κανόνας 31: **προ-ψημένο
     // artifact από το μοντέλο**, ποτέ ανέβασμα χρήστη). Μέχρι τότε `null` = «δεν

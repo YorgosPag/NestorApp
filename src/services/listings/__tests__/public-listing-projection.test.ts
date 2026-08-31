@@ -229,7 +229,14 @@ describe('Κ4 — η προβολή δεν κουβαλά ΚΑΜΙΑ ταυτό�
 describe('Κ5 — τιμή: ωμοί αριθμοί, καμία δεύτερη μηχανή', () => {
   it('περνούν αυτούσιοι ώστε να τους λύσει ο ΥΠΑΡΧΩΝ SSoT τιμής', () => {
     const listing = buildPublicListing(REAL_MAISONETTE, NO_PLACE, AT)!;
-    expect(listing.commercial).toEqual({ askingPrice: 200000, finalPrice: null, rentPrice: null });
+    expect(listing.commercial).toEqual({
+      askingPrice: 200000,
+      finalPrice: null,
+      rentPrice: null,
+      // ADR-835 §4.5 — το τέταρτο ποσό ταξιδεύει **ωμό**, όπως τα τρία από πάνω.
+      // `null` εδώ επειδή αυτό το ακίνητο δεν διατίθεται για διανυκτέρευση.
+      nightlyRate: null,
+    });
   });
 
   it('το 0 είναι ΤΙΜΗ, η απουσία είναι null — δεν συγχέονται', () => {
