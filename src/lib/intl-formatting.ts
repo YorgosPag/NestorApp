@@ -199,6 +199,35 @@ export const formatPriceWithUnit = (price: number, unit: string, currency: strin
 // ============================================================================
 
 /**
+ * Join fragments into ONE locale-correct enumeration — "a, b and c" / «α, β και γ».
+ *
+ * WHY THIS EXISTS (ADR-834 section 6.4.b):
+ *
+ *   A screen that composes a sentence out of parts must not own the conjunction.
+ *   `parts.join(', ')` yields «δικά σας, δημοσιευμένα» — no «και», wrong in every
+ *   language; `parts.join(' and ')` hardcodes English into a Greek-first product,
+ *   which rule N.11 forbids outright. `Intl.ListFormat` already knows the separator,
+ *   the conjunction and the Oxford-comma policy of every locale we ship, so nobody
+ *   has to write — or translate — a joining rule.
+ *
+ * WARNING: this is for enumerating COMPLETE, self-standing fragments that each agree
+ * with one FIXED head noun. It is NOT a licence to build sentences by concatenation:
+ * interpolating variable content into varying grammatical roles breaks word order,
+ * gender and case (the well-documented i18n "word order problem"). Anything with a
+ * variable subject belongs in ONE complete ICU template instead.
+ *
+ * @param parts   already-translated fragments, in the order they should read
+ * @param type    'conjunction' = "a and b" (default) | 'disjunction' = "a or b"
+ */
+export const formatList = (
+  parts: readonly string[],
+  type: Intl.ListFormatType = 'conjunction'
+): string => {
+  const locale = getCurrentLocale();
+  return new Intl.ListFormat(locale, { style: 'long', type }).format(parts);
+};
+
+/**
  * Compare strings according to current locale collation rules
  */
 export const compareByLocale = (a: string, b: string): number => {

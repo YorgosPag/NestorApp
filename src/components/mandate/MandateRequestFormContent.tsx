@@ -79,7 +79,6 @@ const MandateOccupancyPanel = dynamic(
   { ssr: false },
 );
 import type { MandateRequestRejection } from '@/services/mandate/mandate-request-vocabulary';
-import type { OwnerProperty } from '@/types/owner-property';
 import type { ProposedMandateTerms } from '@/types/mandate-request';
 // 🔴 **Ο ΦΡΟΥΡΟΣ ΤΟΥ ΑΦΜ ΜΕΤΑΚΟΜΙΣΕ ΕΔΩ** (ADR-827 §9.21 ι #1 · §9.20 β).
 //    Ο κριτής, ο γραφέας και η συγχώνευση ζουν στα SSoT τους — αυτή η φόρμα **ρωτά**,
@@ -88,6 +87,8 @@ import { withExtraBlockers, type DraftFormValidation } from '@/lib/forms/draft-v
 import { TaxIdentityField } from '@/components/account/TaxIdentityField';
 import { useInFlowTaxIdentity } from '@/hooks/account/useInFlowTaxIdentity';
 
+import { formatList } from '@/lib/intl-formatting';
+import { assignableListings, listingEligibilityHint } from './listing-eligibility';
 import { CompensationField, Field } from './mandate-request-form-fields';
 import { MandateRequestOutcomeNotice } from './MandateRequestOutcomeNotice';
 import {
@@ -123,21 +124,11 @@ export interface MandateRequestFormContentProps {
   readonly agencyHref: string;
 }
 
-/** Ο επιλογέας ακινήτου — **μόνο** ό,τι μπορεί πράγματι να ανατεθεί (Δ3). */
-function assignable(properties: readonly OwnerProperty[]): readonly OwnerProperty[] {
-  // ⚠️ Το `isPersonalCustody` το εφαρμόζει **ήδη** ο hook, σε δύο σημεία. Εδώ μένουν
-  //    τα δύο που ο hook δεν ξέρει: **ζωντανή** και **χωρίς εντολή**. Ο διακομιστής
-  //    τα ξαναρωτά — αυτό εδώ είναι για να μη δει ο άνθρωπος επιλογή που θα του
-  //    απορριφθεί (N.7.2 #4: κύριος δρόμος + δίχτυ).
-  return properties.filter(
-    // 🔴 **ΠΑΥΕΙ ΝΑ ΑΠΑΙΤΕΙ «ΚΑΜΙΑ ΕΝΤΟΛΗ»** (ADR-832). Έγραφε `mandate.kind === 'self'`
-    //    ⇒ ακίνητο με **απλή** εντολή σε ένα γραφείο εξαφανιζόταν από τον επιλογέα, και
-    //    ο ιδιοκτήτης δεν μάθαινε ποτέ γιατί λείπει το δικό του σπίτι. Ο πραγματικός
-    //    κριτής (σύγκρουση) χρειάζεται τους **όρους**, που εδώ δεν είναι γνωστοί: ο
-    //    διακομιστής τους κρίνει, και η άρνηση επιστρέφει **με όνομα**.
-    (property) => property.lifecycle === 'listed',
-  );
-}
+// 🔴 **Ο ΕΠΙΛΟΓΕΑΣ ΕΦΥΓΕ ΑΠΟ ΕΔΩ** (ADR-834 §6.4.β). Ήταν ένα `filter` γραμμένο στην
+//    οθόνη, και η **υπόσχεσή** του ήταν μια πρόταση σε JSON τρία αρχεία μακριά — δύο
+//    πηγές για ένα γεγονός, που **απέκλιναν** και το έμαθε άνθρωπος αφού συμπλήρωσε
+//    ολόκληρη τη φόρμα. Πλέον ζουν δεμένα στο `listing-eligibility`: το ίδιο κλειστό
+//    σύνολο κριτηρίων **φιλτράρει** και **γράφει** την πρόταση.
 
 export function MandateRequestFormContent({
   agencyCompanyId,
@@ -158,7 +149,7 @@ export function MandateRequestFormContent({
   const [todayISO] = React.useState(() => nowISO());
 
   const listings = useMyOwnerProperties(user?.uid ?? null);
-  const choices = listings.state === 'ready' ? assignable(listings.properties) : [];
+  const choices = listings.state === 'ready' ? assignableListings(listings.properties) : [];
 
   const form = useForm<MandateRequestFormValues>({
     defaultValues: emptyMandateRequestForm(todayISO),
@@ -320,7 +311,12 @@ export function MandateRequestFormContent({
         <p className="m-0 text-sm font-medium text-foreground">{agencyDisplayName}</p>
       </Field>
 
-      <Field label={t(SCREEN_KEYS.listingLabel)} hint={t(SCREEN_KEYS.listingHint)}>
+      {/* 🔑 Η υπόδειξη **δεν** διαβάζεται από κλειδί: τη **γράφει** το ίδιο κλειστό
+          σύνολο κριτηρίων που μόλις παρήγαγε το `choices` (ADR-834 §6.4.β). */}
+      <Field
+        label={t(SCREEN_KEYS.listingLabel)}
+        hint={listingEligibilityHint(t, formatList)}
+      >
         {choices.length === 0 ? (
           <p className="m-0 text-sm text-muted-foreground">
             {t(SCREEN_KEYS.listingsEmpty)}{' '}

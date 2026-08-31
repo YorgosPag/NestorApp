@@ -36,6 +36,7 @@ import {
   OFFER_KIND_I18N_KEYS,
   everyOfferKindNamed,
 } from '@/components/mandate/offer-kind-labels';
+import { LISTING_ELIGIBILITY_I18N_KEYS } from '@/components/mandate/listing-eligibility';
 import { MANDATE_REQUEST_FORM_BLOCKERS } from '@/lib/mandate/mandate-request-form-values';
 import { MANDATE_REQUEST_REJECTIONS } from '@/services/mandate/mandate-request-vocabulary';
 import { OFFER_KINDS } from '@/types/property-offers';
@@ -61,6 +62,9 @@ const TABLES: readonly (readonly [string, Readonly<Record<string, string>>])[] =
   ['SCREEN_KEYS', SCREEN_KEYS],
   ['LISTING_AGREEMENT_I18N_KEYS', LISTING_AGREEMENT_I18N_KEYS],
   ['OFFER_KIND_I18N_KEYS', OFFER_KIND_I18N_KEYS],
+  // 🔴 ADR-834 §6.4.β — τα θραύσματα που **συνθέτουν** την υπόσχεση του επιλογέα. Ένα
+  //    κριτήριο χωρίς λέξεις θα έβγαζε ωμό κλειδί **μέσα** στη μέση της πρότασης.
+  ['LISTING_ELIGIBILITY_I18N_KEYS', LISTING_ELIGIBILITY_I18N_KEYS],
 ];
 
 describe('🔴 Ρ — κάθε κείμενο της φόρμας του Σ1 υπάρχει, σε ΔΥΟ γλώσσες', () => {
