@@ -21,6 +21,8 @@ import {
   combineDateAndTime,
   splitDateAndTime,
   intervalsOverlap,
+  intervalShape,
+  INTERVAL_SHAPES,
 } from '../date-local';
 
 const ISO = '2026-01-15T10:30:00.000Z';
@@ -369,5 +371,103 @@ describe('intervalsOverlap', () => {
     expect(
       intervalsOverlap({ seconds: Date.parse(A) / 1000, nanoseconds: 0 }, B, A, C),
     ).toBe(true);
+  });
+
+  /**
+   * 🔴 ADR-835 Ε-10 — ΤΟ ΚΕΝΟ ΔΙΑΣΤΗΜΑ ΔΕΝ ΤΕΜΝΕΙ ΤΙΠΟΤΑ, **ΠΑΝΤΟΥ**.
+   *
+   * Ως 2026-08-31 εδώ ζούσε ο τύπος του Joda-Time, που είναι ακριβής για **γνήσια**
+   * διαστήματα και **απροσδιόριστος** για το κενό. Το Joda το τεκμηριώνει κιόλας:
+   * `[09:00,10:00) overlaps [09:00,09:00)` = `false` αλλά
+   * `[09:00,10:00) overlaps [09:30,09:30)` = **`true`**.
+   *
+   * 🔑 **Οι τρεις θέσεις μαζί είναι ο κανόνας** — μία μόνη θα περνούσε και με τον παλιό
+   * κώδικα. Η μεσαία είναι εκείνη που κοκκίνιζε.
+   */
+  describe('🔴 το ΚΕΝΟ διάστημα (`από === ως`)', () => {
+    const EMPTY = '2027-03-01T00:00:00.000Z';
+
+    it('δεν τέμνει διάστημα που το ΠΕΡΙΕΧΕΙ — η θέση που ήταν ΑΣΥΝΕΠΗΣ', () => {
+      expect(intervalsOverlap(EMPTY, EMPTY, A, C)).toBe(false);
+      expect(intervalsOverlap(A, C, EMPTY, EMPTY)).toBe(false);
+    });
+
+    it('δεν τέμνει ούτε στην ΑΡΧΗ ούτε στο ΤΕΛΟΣ ενός διαστήματος', () => {
+      expect(intervalsOverlap(A, A, A, C)).toBe(false);
+      expect(intervalsOverlap(C, C, A, C)).toBe(false);
+    });
+
+    it('δεν τέμνει ούτε τον ΕΑΥΤΟ του — `∅ ∩ ∅ = ∅`', () => {
+      expect(intervalsOverlap(EMPTY, EMPTY, EMPTY, EMPTY)).toBe(false);
+    });
+
+    it('🔴 απαντά `false`, ΠΟΤΕ `null` — το κενό διαβάζεται μια χαρά, δεν είναι άγνωστο', () => {
+      // Ένα `null` εδώ θα έκανε το **γνωστό** άγνωστο — ο N.12 ανάποδα.
+      expect(intervalsOverlap(EMPTY, EMPTY, A, C)).not.toBeNull();
+    });
+
+    it('🔑 ο ΠΑΡΟΝΟΜΑΣΤΗΣ: μία στιγμή διάρκειας ΤΕΜΝΕΙ κανονικά', () => {
+      // Χωρίς αυτό, υλοποίηση που απαντά «ποτέ» θα περνούσε όλα τα παραπάνω.
+      expect(intervalsOverlap(EMPTY, '2027-03-01T00:00:00.001Z', A, C)).toBe(true);
+    });
+  });
+});
+
+/**
+ * `intervalShape` — το **όνομα** του ζεύγους, ώστε ο τομέας να μη ρωτά με `boolean`.
+ *
+ * Τέσσερα σχήματα, **τέσσερις θεραπείες**: `proper` (τίποτα) · `empty` (πρόσθεσε
+ * διάρκεια) · `reversed` (αντίστρεψε τα άκρα) · `unreadable` (διόρθωσε τη μορφή).
+ */
+describe('intervalShape', () => {
+  const A = '2027-01-01T00:00:00.000Z';
+  const B = '2027-06-01T00:00:00.000Z';
+
+  it('γνήσιο διάστημα ⇒ `proper`', () => {
+    expect(intervalShape(A, B)).toBe('proper');
+  });
+
+  it('ΑΝΟΙΧΤΟ τέλος είναι `proper`, όχι βλάβη — «δεν λήγει» είναι έγκυρη σύμβαση', () => {
+    expect(intervalShape(A, null)).toBe('proper');
+    expect(intervalShape(A, undefined)).toBe('proper');
+  });
+
+  it('ίδια άκρα ⇒ `empty`', () => {
+    expect(intervalShape(A, A)).toBe('empty');
+  });
+
+  it('λήξη πριν την έναρξη ⇒ `reversed`', () => {
+    expect(intervalShape(B, A)).toBe('reversed');
+  });
+
+  it('μη αναγνώσιμο άκρο ⇒ `unreadable`, από ΟΠΟΙΑ πλευρά κι αν είναι', () => {
+    expect(intervalShape('όχι-ημερομηνία', B)).toBe('unreadable');
+    expect(intervalShape(A, 'όχι-ημερομηνία')).toBe('unreadable');
+    expect(intervalShape('', B)).toBe('unreadable');
+  });
+
+  it('🔑 ΚΛΕΙΣΤΟ ΣΥΝΟΛΟ, εκτελεσμένο: κάθε απάντηση είναι δηλωμένο όνομα (CHECK 3.54)', () => {
+    // Ο τύπος το εγγυάται ήδη· αυτό υπάρχει ώστε η εγγύηση να μπορεί να ΚΟΚΚΙΝΙΣΕΙ.
+    const answers = [
+      intervalShape(A, B),
+      intervalShape(A, null),
+      intervalShape(A, A),
+      intervalShape(B, A),
+      intervalShape('σκουπίδι', B),
+    ];
+
+    for (const answer of answers) {
+      expect(INTERVAL_SHAPES).toContain(answer);
+    }
+    // …και τα ΤΕΣΣΕΡΑ ονόματα είναι ΠΡΟΣΙΤΑ — αλλιώς κάποιο θα ήταν αδρανής φρουρός.
+    expect(new Set(answers)).toEqual(new Set(INTERVAL_SHAPES));
+  });
+
+  it('🔑 συμφωνεί με τον τελεστή: ΜΟΝΟ το `proper` μπορεί να τέμνει', () => {
+    // Ο τελεστής χτίζεται πάνω στο ΙΔΙΟ ανάγνωσμα — αυτό το κρατά αληθές.
+    expect(intervalsOverlap(A, A, A, B)).toBe(false); // empty
+    expect(intervalsOverlap(B, A, A, B)).toBeNull(); // reversed
+    expect(intervalsOverlap('χ', A, A, B)).toBeNull(); // unreadable
+    expect(intervalsOverlap(A, B, A, B)).toBe(true); // proper
   });
 });
