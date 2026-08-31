@@ -49,6 +49,7 @@ import {
   planWorksheetsReplace,
   type TableWorksheetDraft,
 } from '../../bim/table/table-worksheet-ops';
+import { fitWorksheetsToShare } from '../../bim/table/table-capacity';
 import type { TableEntity } from '../../types/table-entity';
 import type { ICommand } from '../../core/commands';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
@@ -137,11 +138,22 @@ export function useTableXlsxImport(params: UseTableXlsxImportParams): TableXlsxI
       const plan = mode === 'append'
         ? planWorksheetsAppend(entity, drafts)
         : planWorksheetsReplace(entity, drafts);
+
+      // 🔴 ADR-833 Φ5Β — **το κόψιμο λέγεται ΠΡΙΝ από την εντολή, και ανεξάρτητα από αυτήν.**
+      // Όταν δεν χώρεσε **κανένα** φύλλο, ο σχεδιαστής παράγει το ίδιο βιβλίο και ο
+      // κατασκευαστής εντολής επιστρέφει σωστά `null` — δηλαδή η πρόωρη επιστροφή από κάτω θα
+      // κατάπινε ακριβώς το μήνυμα που έχει τη μεγαλύτερη σημασία («τίποτα δεν μπήκε»). Ίδιο
+      // σχήμα με το `tableXlsx.clipped` λίγο πιο πάνω: ό,τι κόπηκε λέγεται μία φορά, με αριθμό.
+      const dropped = plan?.droppedWorksheets ?? 0;
+      if (dropped > 0) notify(t('tableXlsx.sheetsDropped', { count: dropped }));
+
       const command = buildTableWorksheetCommand(entity, plan, sceneManager);
       if (!command) return;
       execute(command);
       notify(t(mode === 'append' ? 'tableXlsx.sheetsAdded' : 'tableXlsx.sheetsReplaced', {
-        count: drafts.length,
+        // Το πλήθος είναι όσα **μπήκαν**, όχι όσα προσφέρθηκαν: ένα «Προστέθηκαν 12 φύλλα»
+        // δίπλα σε «3 δεν χώρεσαν» θα ήταν δύο αριθμοί που διαφωνούν στην ίδια οθόνη.
+        count: drafts.length - dropped,
       }));
     },
     [execute, levelManager, notify, t],
@@ -165,7 +177,14 @@ export function useTableXlsxImport(params: UseTableXlsxImportParams): TableXlsxI
       const { currentLevelId, getLevelScene, setLevelScene } = levelManager;
       if (!currentLevelId || !setLevelScene) return;
       const sceneManager = createLevelSceneManagerAdapter(getLevelScene, setLevelScene, currentLevelId);
-      const worksheets = buildWorksheets(drafts);
+      // 🔴 ADR-833 Φ5Β — **η τρίτη πόρτα του ίδιου μεριδίου.** Ο νέος πίνακας είναι νέα
+      // οντότητα, αλλά το μερίδιο είναι **ανά πίνακα**, όχι ανά πράξη: ένα βιβλίο που δεν
+      // χωρά σε υπάρχοντα πίνακα δεν χωρά ούτε σε καινούργιο. Χωρίς αυτή τη γραμμή, η
+      // «Νέος πίνακας δίπλα» θα ήταν η παράκαμψη που ακυρώνει τις άλλες δύο.
+      const { worksheets, droppedWorksheets } = fitWorksheetsToShare(buildWorksheets(drafts));
+      if (droppedWorksheets > 0) notify(t('tableXlsx.sheetsDropped', { count: droppedWorksheets }));
+      if (worksheets.length === 0) return;
+
       const entityData: Omit<SceneEntity, 'id'> = {
         ...source,
         position: nextTablePosition(source, sceneUnits),

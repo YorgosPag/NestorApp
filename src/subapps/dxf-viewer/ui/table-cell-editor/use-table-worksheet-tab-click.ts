@@ -44,12 +44,11 @@ import { type RefObject } from 'react';
 import { useCommandHistory } from '../../core/commands';
 import { getTableIndicatorHover } from '../../state/table-indicator-hover-store';
 import { planWorksheetActivation } from '../../bim/table/table-worksheet-activate';
-import { newWorksheetModel, planWorksheetAdd } from '../../bim/table/table-worksheet-ops';
 import { tableCursorFor } from '../../state/table-cell-cursor-scope';
 import { setTableCellCursor } from '../../state/table-cell-cursor-store';
 import { applyTableScenePatch } from './table-scene-patch';
 import { useTableArmedControlClick } from './use-table-armed-control-click';
-import { useTableWorksheetApply } from './use-table-worksheet-apply';
+import { useTableWorksheetAdd, useTableWorksheetApply } from './use-table-worksheet-apply';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
 import type { TableWorksheetId } from '../../types/table-worksheet';
 
@@ -73,6 +72,7 @@ export function useTableWorksheetTabClick(params: UseTableWorksheetTabClickParam
   const { containerRef, levelManager } = params;
   const { execute } = useCommandHistory();
   const applyWorksheet = useTableWorksheetApply({ levelManager, execute });
+  const addWorksheet = useTableWorksheetAdd({ levelManager, execute });
 
   useTableArmedControlClick<ArmedWorksheetStrip>({
     containerRef,
@@ -93,7 +93,11 @@ export function useTableWorksheetTabClick(params: UseTableWorksheetTabClickParam
         //
         // ⚠️ Ο δρομέας **δεν** ακολουθεί: το σχέδιο δηλώνει ρητά `restoreCursor: null`, γιατί
         // η προσθήκη φύλλου δεν είναι είσοδος σε λειτουργία πίνακα.
-        applyWorksheet(live, planWorksheetAdd(live, newWorksheetModel(live)));
+        //
+        // 🔴 ADR-833 Φ5Β — **ο ΕΝΑΣ δρόμος**, ο ίδιος με το «Νέο φύλλο» του μενού: όταν ο
+        // πίνακας έχει φτάσει το μερίδιό του, η πράξη αρνείται και το **λέει με αριθμό**
+        // αντί να μείνει σιωπηλά αδρανής.
+        addWorksheet(live);
         return;
       }
       // 🔴 Ο δρομέας διαβάζεται με τον **ΕΝΑ** φύλακα (`tableCursorFor`: ίδιος πίνακας **και**
