@@ -119,6 +119,17 @@ export function tableFormulaReferenceSpans(
 
   let at = 0;
   while (at < tokens.length) {
+    // 🔴 ADR-833 Φάση 7 — **μια ΔΙΑ-ΦΥΛΛΙΚΗ αναφορά δεν έχει τι να χρωματίσει ΕΔΩ.**
+    // Χωρίς αυτό, ο βρόχος προσπερνούσε το `Φύλλο2` (δεν λύνεται ως διεύθυνση), έπεφτε στο
+    // `A1` και ζωγράφιζε περίγραμμα γύρω από το `A1` **του τρέχοντος φύλλου** — δηλαδή
+    // ορατό ψέμα: ο τύπος διαβάζει άλλο κελί από αυτό που δείχνει η οθόνη. Στο
+    // `=Φύλλο2!A1:B2` το έκανε **δύο** φορές.
+    const qualified = qualifiedReferenceLength(tokens, at);
+    if (qualified > 0) {
+      at += qualified;
+      continue;
+    }
+
     const scanned = scanReference(model, tokens, at);
     if (scanned === null) {
       at += 1;
@@ -145,6 +156,34 @@ export function tableFormulaReferenceSpans(
   }
 
   return spans;
+}
+
+/**
+ * 🔴 ADR-833 Φάση 7 — **πόσες μονάδες πιάνει μια δια-φυλλική αναφορά** που ξεκινά εδώ, ή `0`.
+ *
+ * `Φύλλο2!A1` ⇒ **3** · `Φύλλο2!A1:B2` ⇒ **5** · `'Τιμές 2024'!A1` ⇒ **3**.
+ *
+ * ## Γιατί μετριέται ΟΛΟΚΛΗΡΗ, και όχι απλώς «αγνόησε το όνομα»
+ * Το εύρος είναι **μία** αναφορά με πέντε μονάδες. Ένα απλό «το `Φύλλο2` δεν είναι κελί,
+ * προχώρα ένα» αφήνει τον βρόχο να φτάσει στο `A1` — και μετά, μέσω του `:`, και στο `B2`:
+ * δύο περιγράμματα σε κελιά που **κανείς δεν διαβάζει**. Είναι η ίδια απόφαση που πήρε ήδη
+ * το {@link scanReference} για το ενδοφυλλικό εύρος, με τον ίδιο λόγο.
+ *
+ * ⚠️ Δέχεται **και** το εισαγωγικό όνομα (`'Τιμές 2024'`): λεξικά είναι άλλο είδος μονάδας,
+ * σημασιολογικά η ίδια θέση — και ένα από τα δύο ξεχασμένο θα άφηνε ακριβώς τη μισή τρύπα.
+ */
+function qualifiedReferenceLength(tokens: readonly TableFormulaToken[], at: number): number {
+  const head = tokens[at];
+  if (head?.kind !== 'name' && head?.kind !== 'quotedName') return 0;
+
+  const bang = tokens[at + 1];
+  if (bang?.kind !== 'punct' || bang.value !== '!') return 0;
+  if (tokens[at + 2]?.kind !== 'name') return 0;
+
+  const separator = tokens[at + 3];
+  const tail = tokens[at + 4];
+  const isRange = separator?.kind === 'punct' && separator.value === ':' && tail?.kind === 'name';
+  return isRange ? 5 : 3;
 }
 
 /**

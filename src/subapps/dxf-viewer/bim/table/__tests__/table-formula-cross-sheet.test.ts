@@ -65,6 +65,8 @@ import {
 } from '../table-worksheet-book';
 import { worksheetsAfterHomeChange } from '../table-worksheet-formulas';
 import { makeTableEntity } from './make-table-entity';
+import { tableFormulaReferenceSpans } from '../formula/table-formula-reference-spans';
+import { resolveFormulaPointState } from '../formula/table-formula-point-state';
 import { tableWorksheetsToXlsxBlob } from '../export/table-to-xlsx';
 import { BUILTIN_TABLE_STYLES, BUILTIN_TABLE_STYLE_IDS } from '../table-style-presets';
 
@@ -847,5 +849,45 @@ describe('Θ. η εξαγωγή γράφει δια-φυλλικούς τύπο�
     const worksheets = (entity.worksheets ?? []).filter((sheet) => sheet.id !== 'ws1');
     const after: TableEntity = { ...entity, worksheets };
     expect(sourceAt(after, 0, 'r1', 'c1')).toBe(`=SUM(${REF})`);
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Ι. Ο ΕΠΕΞΕΡΓΑΣΤΗΣ — τι ΒΛΕΠΕΙ και τι ΕΠΙΤΡΕΠΕΤΑΙ να πατήσει ο άνθρωπος
+// ══════════════════════════════════════════════════════════════════════════════
+
+describe('Ι. η γραμμή τύπων δεν λέει ψέματα για δια-φυλλική αναφορά', () => {
+  const GRID = createTableModel({ columns: COLUMNS, rows: ROWS });
+
+  it('🔴 δια-φυλλική αναφορά ΔΕΝ χρωματίζει κελί του τρέχοντος φύλλου', () => {
+    // Το `Φύλλο2` δεν λύνεται ως διεύθυνση, οπότε ο σαρωτής το προσπερνούσε και έπεφτε στο
+    // `A1` — ζωγραφίζοντας περίγραμμα γύρω από κελί που ο τύπος **δεν διαβάζει**.
+    expect(tableFormulaReferenceSpans(GRID, '=Φύλλο2!A1')).toEqual([]);
+    expect(tableFormulaReferenceSpans(GRID, "='Τιμές 2024'!A1")).toEqual([]);
+  });
+
+  it('🔴 ούτε ΤΟ ΕΥΡΟΣ της: το `=Φύλλο2!A1:B2` έδινε ΔΥΟ ψεύτικα περιγράμματα', () => {
+    expect(tableFormulaReferenceSpans(GRID, '=Φύλλο2!A1:B2')).toEqual([]);
+  });
+
+  it('η ΤΟΠΙΚΗ αναφορά δίπλα στη δια-φυλλική χρωματίζεται κανονικά', () => {
+    // Ο φύλακας οφείλει να καταναλώνει **ακριβώς** τη δια-φυλλική και τίποτα παραπάνω.
+    const spans = tableFormulaReferenceSpans(GRID, '=Φύλλο2!A1+B2');
+    expect(spans).toHaveLength(1);
+    expect(spans[0].bounds.firstRow).toBe(1);
+    expect(spans[0].bounds.firstCol).toBe(1);
+  });
+
+  it('🔑 η ΥΠΟΔΕΙΞΗ είναι ΚΛΕΙΣΤΗ μέσα σε δια-φυλλική αναφορά — κανένα κλικ δεν τη διαφθείρει', () => {
+    // Το §5.9.4 δηλώνει ότι η υπόδειξη ανάμεσα σε φύλλα δεν υπάρχει. Εδώ καρφώνεται ότι το
+    // όριο είναι **ασφαλές**: ένα κλικ μετά από `=Φύλλο2!A1` δεν αντικαθιστά το `A1` με κελί
+    // του **τρέχοντος** φύλλου — που θα ήταν σιωπηλά λάθος φύλλο.
+    const draft = '=Φύλλο2!A1';
+    expect(resolveFormulaPointState(GRID, draft, draft.length).kind).toBe('off');
+    expect(resolveFormulaPointState(GRID, '=Φύλλο2!', '=Φύλλο2!'.length).kind).toBe('off');
+  });
+
+  it('η υπόδειξη παραμένει ΑΝΟΙΧΤΗ για τοπική αναφορά, όπως πριν τη φάση', () => {
+    expect(resolveFormulaPointState(GRID, '=A1', 3).kind).not.toBe('off');
   });
 });
