@@ -61,7 +61,13 @@ function respond(outcome: ConsentOutcome): NextResponse<DecisionResponse> {
         ? 410
         : outcome.reason === 'write-failed'
           ? 500
-          : 400;
+          : // ⚠️ **503 και ΟΧΙ 400**: λείπει ρύθμιση **δική μας**, ο σύνδεσμος του
+            //    ανθρώπου μπορεί να είναι έγκυρος. Ένα 4xx εδώ λέει «φταις εσύ» σε
+            //    κάθε αναγνώστη — άνθρωπο, log και παρακολούθηση — για κάτι που
+            //    **μόνο εμείς** μπορούμε να διορθώσουμε (δες `ConsentRejection`).
+            outcome.reason === 'service-unavailable'
+            ? 503
+            : 400;
 
   return NextResponse.json({ ok: false, reason: outcome.reason }, { status });
 }

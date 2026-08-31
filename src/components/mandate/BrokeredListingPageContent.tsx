@@ -23,6 +23,10 @@ import { Link } from '@/lib/workspace/navigation';
 import { useTranslation } from 'react-i18next';
 
 import { BrokeredMandateFields } from '@/components/mandate/BrokeredMandateFields';
+import type { ClientsLoad } from '@/components/mandate/BrokeredMandateFields';
+import { CLIENT_NAME_KEYS } from '@/components/mandate/catalog/mandate-catalog-labels';
+import { primaryEmailOf } from '@/lib/contacts/primary-email';
+import { CLIENT_NAME_KNOWN, clientNameFrom } from '@/lib/mandate/mandate-client-name';
 import {
   BROKERAGE_DENY_REASON_KEYS,
   BROKERAGE_SETTINGS,
@@ -42,6 +46,7 @@ import {
 import { getAllContacts } from '@/services/contacts-query.service';
 import type { BrokeredNotifyOutcome } from '@/services/owner-property/owner-property.service';
 import { getContactDisplayName } from '@/types/contacts';
+import type { Contact } from '@/types/contacts';
 import { createModuleLogger } from '@/lib/telemetry';
 
 // 🧩 ADR-744 §15 (Φ4) — PER-ROUTE SLICE ΤΗΣ ΔΙΑΔΡΟΜΗΣ `/listings/mandates/new` (ADR-777 §8.36).
@@ -83,6 +88,53 @@ const logger = createModuleLogger('BrokeredListingPageContent');
  */
 const CLIENT_PICKER_LIMIT = 500;
 
+/**
+ * **Ο,ΤΙ ΔΙΑΒΑΣΑΜΕ** — ξεχωριστό από **ό,τι ζωγραφίζουμε** ({@link ClientsLoad}).
+ *
+ * 🔑 **Γιατί κρατάμε τις επαφές και όχι τις έτοιμες επιλογές**: η ετικέτα της ανώνυμης
+ * επαφής είναι **μεταφρασμένο κείμενο**. Αν το `.map()` γινόταν μέσα στο effect (που
+ * τρέχει **μία φορά**, στο άνοιγμα), η αλλαγή γλώσσας — που το κέλυφος προσφέρει σε
+ * **κάθε** οθόνη (CHECK 3.72) — θα άφηνε τον επιλογέα στην παλιά γλώσσα ενώ όλη η
+ * υπόλοιπη σελίδα γύριζε. Το κείμενο παράγεται στην **απόδοση**, όπου ζει το `t`.
+ */
+type ClientsSource =
+  | { readonly kind: 'loading' }
+  | { readonly kind: 'ready'; readonly contacts: readonly Contact[] }
+  | { readonly kind: 'failed' };
+
+/**
+ * **Η ΓΡΑΜΜΗ ΤΟΥ ΠΕΛΑΤΗ ΣΤΟΝ ΕΠΙΛΟΓΕΑ** — και γιατί δεν είναι ποτέ κενή.
+ *
+ * 🔴 Ήταν σκέτο `label: getContactDisplayName(contact)`. Για επαφή με
+ * `firstName: ''` / `lastName: ''` αυτό δίνει **`' '`** ⇒ **κενή γραμμή** στο dropdown
+ * (μετρημένη ζωντανά 2026-08-31: 1 στις 9). Και η κενή γραμμή δεν είναι μόνο άσχημη —
+ * το κλικ πάνω της είχε ήδη **προσγειωθεί σε άλλη επαφή**.
+ *
+ * ✅ **Καμία νέα θεραπεία και κανένα νέο λεξιλόγιο**: το {@link clientNameFrom} και το
+ * κλειδί `clientUnnamed` γράφτηκαν στο §6.5.δ **γι' αυτό ακριβώς** και ζωγραφίζουν ήδη
+ * σωστά στον κατάλογο εντολών. Ο επιλογέας απλώς **δεν τα ρωτούσε** — ίδιο ελάττωμα,
+ * **δεύτερη επιφάνεια**.
+ *
+ * 🔑 **ΤΟ ΔΕΥΤΕΡΕΥΟΝ ΚΕΙΜΕΝΟ ΔΕΝ ΕΙΝΑΙ ΔΙΑΚΟΣΜΗΣΗ — ΕΙΝΑΙ Ο ΔΙΑΧΩΡΙΣΤΗΣ.** Μόλις δύο
+ * ανώνυμες επαφές πάρουν την **ίδια** ετικέτα, ο επιλογέας δεν μπορεί να τις ξεχωρίσει
+ * από το κείμενο· και το `handleBlur` του λύνει την ταυτότητα **από την ετικέτα**.
+ * Χωρίς διαχωριστή η θεραπεία του κενού θα γεννούσε τη **σύγκρουση**.
+ *
+ * ⚠️ **Και είναι το `primaryEmailOf`, ο ΙΔΙΟΣ κριτής που χρησιμοποιεί ο ειδοποιητής**
+ * (`mandate-invitation.service.ts`). Άρα ο μεσίτης βλέπει **ακριβώς** τη διεύθυνση στην
+ * οποία θα σταλεί η εντολή — και βλέπει την **απουσία** της **πριν** δεσμευτεί, αντί να
+ * το μάθει από ένα `no-address` μετά. Δύο διαφορετικοί κριτές εδώ θα σήμαιναν οθόνη
+ * που υπόσχεται παράδοση σε διεύθυνση που κανείς δεν θα χρησιμοποιούσε.
+ */
+function clientOptionFrom(contact: Contact, unnamedLabel: string): ComboboxOption {
+  const named = clientNameFrom(getContactDisplayName(contact));
+  return {
+    value: contact.id,
+    label: named.kind === CLIENT_NAME_KNOWN ? named.name : unnamedLabel,
+    secondaryLabel: primaryEmailOf(contact.emails) ?? undefined,
+  };
+}
+
 export function BrokeredListingPageContent(): React.ReactElement {
   const { t } = useTranslation([NS, 'auth', 'common-status']);
 
@@ -103,7 +155,7 @@ export function BrokeredListingPageContent(): React.ReactElement {
   const [mandate, setMandate] = React.useState<MandateFormValues>(() =>
     emptyMandateForm(nowISO()),
   );
-  const [clients, setClients] = React.useState<readonly ComboboxOption[]>([]);
+  const [clientsSource, setClientsSource] = React.useState<ClientsSource>({ kind: 'loading' });
   const [notify, setNotify] = React.useState<BrokeredNotifyOutcome | null>(null);
 
   React.useEffect(() => {
@@ -120,25 +172,34 @@ export function BrokeredListingPageContent(): React.ReactElement {
     void getAllContacts({ limitCount: CLIENT_PICKER_LIMIT })
       .then(({ contacts }) => {
         if (!alive) return;
-        setClients(
-          contacts.map((contact) => ({
-            value: contact.id,
-            label: getContactDisplayName(contact),
-          })),
-        );
+        setClientsSource({ kind: 'ready', contacts });
       })
       .catch((error: unknown) => {
-        // ⚠️ **Η αποτυχία λέγεται, δεν σιωπά.** Μια κενή λίστα επαφών φαίνεται
-        // ταυτόσημη με «δεν έχεις επαφές», και ο μεσίτης θα έψαχνε τον πελάτη του σε
-        // λίστα που δεν φορτώθηκε ποτέ.
+        if (!alive) return;
+        // ⚠️ **Η αποτυχία λέγεται, δεν σιωπά — ΚΑΙ ΣΤΟΝ ΑΝΘΡΩΠΟ.** Μέχρι σήμερα
+        // γραφόταν **μόνο** εδώ, στα logs: ο μεσίτης έβλεπε άδειο πεδίο και συμπέραινε
+        // ότι δεν έχει τις επαφές του. Το `kind: 'failed'` είναι αυτό που το φέρνει
+        // στην οθόνη (`ClientsLoad`) — ένα `logger.error` δεν είναι μήνυμα προς χρήστη.
         logger.error('Οι επαφές δεν φορτώθηκαν για τον επιλογέα πελάτη', {
           error: error instanceof Error ? error.message : String(error),
         });
+        setClientsSource({ kind: 'failed' });
       });
     return () => {
       alive = false;
     };
   }, []);
+
+  // **Ο,τι διαβάσαμε → ό,τι ζωγραφίζουμε.** Το κείμενο παράγεται εδώ, στην απόδοση,
+  // ώστε η αλλαγή γλώσσας να το ξαναγράφει — δες {@link ClientsSource}.
+  const clients: ClientsLoad = React.useMemo(() => {
+    if (clientsSource.kind !== 'ready') return clientsSource;
+    const unnamedLabel = t(CLIENT_NAME_KEYS.unnamed);
+    return {
+      kind: 'ready',
+      options: clientsSource.contacts.map((contact) => clientOptionFrom(contact, unnamedLabel)),
+    };
+  }, [clientsSource, t]);
 
   // 🔴 **ΟΛΟΚΛΗΡΗ η φόρμα λείπει, όχι απενεργοποιημένο κουμπί.** Μια φόρμα που ο
   //    άνθρωπος συμπληρώνει και **δεν μπορεί** να υποβάλει είναι χειρότερη από

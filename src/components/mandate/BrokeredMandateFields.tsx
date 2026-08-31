@@ -59,6 +59,30 @@ import {
 const NS = 'property-market';
 const K = `${NS}:mandate.office`;
 
+/**
+ * **ΤΡΕΙΣ ΚΟΣΜΟΙ, ΟΧΙ ΕΝΑΣ ΚΕΝΟΣ ΠΙΝΑΚΑΣ** (ADR-834 §6.5.στ).
+ *
+ * 🔴 Ο επιλογέας έπαιρνε `readonly ComboboxOption[]`, οπότε **«φορτώνει»**,
+ * **«απέτυχε»** και **«δεν έχεις επαφές»** έφταναν στην οθόνη ως το **ίδιο** κενό —
+ * και η οθόνη διάλεγε το τρίτο. Μετρημένο ζωντανά 2026-08-31: ο μεσίτης έβλεπε πεδίο
+ * που δεν άνοιγε τίποτα, χωρίς **καμία** ένδειξη γιατί, ενώ οι επαφές του υπήρχαν
+ * (9 στη βάση). Το `.catch()` της σελίδας **έγραφε** την αποτυχία — στα logs, όπου
+ * κανένας μεσίτης δεν κοιτάζει.
+ *
+ * 🔑 **Ίδιο δόγμα με το {@link MandateClientName} (§6.5.δ) και το `notifyOutcome`**:
+ * όταν δύο κόσμοι θέλουν **διαφορετική** ενέργεια από τον άνθρωπο — *ανανέωσε τη
+ * σελίδα* ⇄ *πρόσθεσε τον πελάτη στις Επαφές* — δεν επιτρέπεται να μοιράζονται
+ * αναπαράσταση.
+ *
+ * ⛔ **ΜΗΝ το ξανακάνεις σκέτο πίνακα με `isLoading` δίπλα**: δύο ανεξάρτητα πεδία
+ * επιτρέπουν τον **αδύνατο** συνδυασμό «φορτώνει **και** απέτυχε», και κάποιος θα τον
+ * γράψει. Η ένωση τον κάνει **μη εκφράσιμο**.
+ */
+export type ClientsLoad =
+  | { readonly kind: 'loading' }
+  | { readonly kind: 'ready'; readonly options: readonly ComboboxOption[] }
+  | { readonly kind: 'failed' };
+
 /** Τα κλειδιά κάθε δρόμου — **παράγονται από το κλειστό σύνολο**, ποτέ χειρόγραφη λίστα. */
 const VIA_KEY: Record<MandateProofVia, { label: string; hint: string }> = {
   [OWNER_CONSENT]: { label: 'viaOwnerConsent', hint: 'viaOwnerConsentHint' },
@@ -81,8 +105,19 @@ function ClientField({
   values,
   clients,
   onChange,
-}: FieldProps & { readonly clients: readonly ComboboxOption[] }): React.ReactElement {
+}: FieldProps & { readonly clients: ClientsLoad }): React.ReactElement {
   const { t } = useTranslation([NS]);
+
+  // ⚠️ **Μεμονωμένος πίνακας ανά κατάσταση, όχι ανά απόδοση.** Το
+  // `options={[...clients]}` γεννούσε **νέα ταυτότητα πίνακα σε κάθε render**, και το
+  // `SearchableCombobox` έχει το `options` στις εξαρτήσεις του effect συγχρονισμού —
+  // δηλαδή δουλειά χωρίς καταναλωτή σε κάθε πληκτρολόγηση της φόρμας. Ίδιο σχήμα με το
+  // `selector ?? []` που έχει ήδη κοστίσει βρόχο σε αυτό το δέντρο.
+  const options = React.useMemo(
+    () => (clients.kind === 'ready' ? [...clients.options] : []),
+    [clients],
+  );
+
   return (
     <div className="flex flex-col gap-1.5">
       {/*
@@ -93,12 +128,28 @@ function ClientField({
       */}
       <span className="text-sm font-medium text-foreground">{t(`${K}.clientLabel`)}</span>
       <SearchableCombobox
-        options={[...clients]}
+        options={options}
         value={values.clientContactId}
         onValueChange={(clientContactId) => onChange({ ...values, clientContactId })}
         placeholder={t(`${K}.clientPlaceholder`)}
+        isLoading={clients.kind === 'loading'}
+        emptyMessage={t(`${K}.clientsEmpty`)}
       />
       <p className="text-xs text-muted-foreground">{t(`${K}.clientHint`)}</p>
+
+      {/*
+        🔴 **Η ΑΠΟΤΥΧΙΑ ΦΤΑΝΕΙ ΣΤΟΝ ΑΝΘΡΩΠΟ, ΟΧΙ ΜΟΝΟ ΣΤΑ LOGS.** Και το κείμενο λέει
+        ρητά *«δεν σημαίνει ότι δεν έχετε»*: αυτό ακριβώς ήταν το ελάττωμα — ο μεσίτης
+        συμπέραινε ότι έφταιγαν τα δεδομένα του.
+      */}
+      {clients.kind === 'failed' && (
+        <p role="alert" className="text-xs text-destructive">{t(`${K}.clientsFailed`)}</p>
+      )}
+
+      {/* Ο **τρίτος** κόσμος: ρωτήσαμε, απάντησε, και όντως δεν υπάρχει καμία επαφή. */}
+      {clients.kind === 'ready' && clients.options.length === 0 && (
+        <p className="text-xs text-muted-foreground">{t(`${K}.clientsNone`)}</p>
+      )}
     </div>
   );
 }
@@ -282,7 +333,7 @@ export function BrokeredMandateFields({
   onChange,
 }: {
   values: MandateFormValues;
-  clients: readonly ComboboxOption[];
+  clients: ClientsLoad;
   onChange: (next: MandateFormValues) => void;
 }): React.ReactElement {
   const { t } = useTranslation([NS]);

@@ -293,3 +293,68 @@ describe('🔴 Χ — η απόφαση φτάνει στη ΔΗΜΟΣΙΑ ΠΡ�
     expect(flat).not.toContain('user-1');
   });
 });
+
+
+// =============================================================================
+// Υ — ΠΟΙΟΝ ΚΑΤΗΓΟΡΕΙ Η ΟΘΟΝΗ (ADR-834 §6.5.στ)
+// =============================================================================
+
+/**
+ * 🔴 **ΜΕΤΡΗΜΕΝΟ ΣΤΗΝ ΠΑΡΑΓΩΓΗ 2026-08-31**: το `MANDATE_CONSENT_SECRET` λείπει από
+ * το Netcup. Ο ιδιοκτήτης πάτησε τον σύνδεσμό του και διάβασε *«Ο σύνδεσμος δεν είναι
+ * έγκυρος»* — δηλαδή η οθόνη τον **κατηγόρησε** για δική μας παράλειψη ρύθμισης, και
+ * η μόνη ενέργεια που του πρότεινε (υποψιάσου τον αποστολέα) ήταν **λάθος**.
+ *
+ * ⚠️ **Ο ίδιος ο σύνδεσμος είναι ΕΓΚΥΡΟΣ** — αυτός είναι ο παρονομαστής παρακάτω, και
+ * είναι που κάνει τον ισχυρισμό μη κενό: δεν αρνούμαστε επειδή κάτι φταίει σε αυτόν.
+ */
+describe('🔴 Υ — όταν λείπει ΤΟ ΔΙΚΟ ΜΑΣ μυστικό, δεν φταίει ο άνθρωπος', () => {
+  it('ΠΑΡΟΝΟΜΑΣΤΗΣ — ο ΙΔΙΟΣ σύνδεσμος γίνεται δεκτός όσο το μυστικό υπάρχει', async () => {
+    const { link, db } = withLiveLink();
+
+    const lookup = await readMandateConsentRequest(db, link.token);
+
+    expect(lookup.ok).toBe(true);
+  });
+
+  it('χωρίς το μυστικό ⇒ `service-unavailable`, ΠΟΤΕ `link-invalid`', async () => {
+    // Ο σύνδεσμος εκδίδεται ΜΕ μυστικό — ακριβώς όπως τα ήδη σταλμένα email.
+    const { link, db } = withLiveLink();
+
+    const kept = process.env.MANDATE_CONSENT_SECRET;
+    delete process.env.MANDATE_CONSENT_SECRET;
+    try {
+      const lookup = await readMandateConsentRequest(db, link.token);
+
+      expect(lookup).toEqual({ ok: false, reason: 'service-unavailable' });
+      // 🔴 Ο ισχυρισμός που πονάει: η παλιά συμπεριφορά ήταν ΑΚΡΙΒΩΣ αυτή η τιμή.
+      expect(lookup).not.toEqual({ ok: false, reason: 'link-invalid' });
+    } finally {
+      process.env.MANDATE_CONSENT_SECRET = kept;
+    }
+  });
+
+  it('η διάκριση ΔΕΝ ισοπεδώνεται προς την άλλη μεριά — πλαστός σύνδεσμος μένει `link-invalid`', async () => {
+    // Χωρίς αυτό, ένα «γύρνα πάντα service-unavailable» θα περνούσε — και θα λέγαμε
+    // «δεν φταις εσύ» σε κάποιον που όντως στέλνει σκουπίδια.
+    const { db } = withLiveLink();
+
+    const lookup = await readMandateConsentRequest(db, 'ό,τι-νά-ναι');
+
+    expect(lookup).toEqual({ ok: false, reason: 'link-invalid' });
+  });
+
+  it('και η ΓΡΑΦΗ λέει το ίδιο — μία αιτία, ένας υπαίτιος σε κάθε πόρτα', async () => {
+    const { link, db } = withLiveLink();
+
+    const kept = process.env.MANDATE_CONSENT_SECRET;
+    delete process.env.MANDATE_CONSENT_SECRET;
+    try {
+      const outcome = await recordMandateDecision(db, link.token, 'confirmed');
+
+      expect(outcome).toEqual({ ok: false, reason: 'service-unavailable' });
+    } finally {
+      process.env.MANDATE_CONSENT_SECRET = kept;
+    }
+  });
+});

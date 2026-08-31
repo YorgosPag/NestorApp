@@ -584,7 +584,8 @@
         "not-brokered": "This listing has no agency mandate.",
         "client-mismatch": "This link does not match this mandate.",
         "superseded": "There is a newer message from the agency. Please use the most recent link.",
-        "write-failed": "Your answer was not recorded. Please try again."
+        "write-failed": "Your answer was not recorded. Please try again.",
+        "service-unavailable": "We cannot check this link right now. There is nothing wrong with your link - please try again shortly, or let the agency know."
       }
     },
     "office": {
@@ -593,6 +594,9 @@
       "clientLabel": "Client",
       "clientPlaceholder": "Search contacts…",
       "clientHint": "The property owner, as held in your contacts.",
+      "clientsEmpty": "No contact matches",
+      "clientsNone": "No contacts found. Add the client to your Contacts first.",
+      "clientsFailed": "Contacts could not be loaded - that is not the same as having none. Refresh the page.",
       "untilLabel": "The mandate runs until",
       "untilHint": "Maximum term {months} months for this type of mandate — {authority}.",
       "agreementLabel": "Type of mandate",
