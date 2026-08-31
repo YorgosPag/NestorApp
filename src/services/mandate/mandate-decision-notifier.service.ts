@@ -53,6 +53,10 @@ import {
   NOTIFICATION_EVENT_TYPES,
   SOURCE_SERVICES,
 } from '@/config/notification-events';
+import {
+  clientNameFrom,
+  CLIENT_NAME_KNOWN,
+} from '@/lib/mandate/mandate-client-name';
 import { createModuleLogger } from '@/lib/telemetry';
 import { dispatchNotification } from '@/server/notifications/notification-orchestrator';
 import type { Contact } from '@/types/contacts/contracts';
@@ -98,8 +102,18 @@ async function clientNameOf(
   // διακριτής μπορεί να λείπει ⇒ `undefined`. Εδώ η συνέπεια θα ήταν χειρότερη από
   // λάθος όνομα: η ειδοποίηση **δεν θα έφευγε καθόλου**, και ο μεσίτης δεν θα μάθαινε
   // ποτέ ότι ο πελάτης απάντησε.
-  const name: unknown = getContactDisplayName(contact);
-  return typeof name === 'string' && name.trim() !== '' ? name.trim() : clientContactId;
+  //
+  // 🔑 **Ο κριτής είναι ΕΝΑΣ** (ADR-834 §6.5.δ, N.0.2): το *«μετράει αυτό ως όνομα;»* το
+  //    απαντά το {@link clientNameFrom}, ο ίδιος που χρησιμοποιεί ο κατάλογος. Ήταν
+  //    γραμμένο **δύο φορές** (`typeof … && .trim() !== ''`) — ίδια ουσία, άλλο σημείο,
+  //    και η μία γραφή θα άλλαζε χωρίς την άλλη.
+  //
+  // ⚠️ **Η ΑΠΑΝΤΗΣΗ μένει διαφορετική, και είναι σωστό**: ο κατάλογος επιστρέφει
+  //    **ονομασμένη άγνοια** (η οθόνη έχει λέξεις γι' αυτήν)· εδώ χρειάζεται
+  //    **συμβολοσειρά πάντα**, γιατί μπαίνει σε σώμα email. Κοινός **κριτής**, όχι
+  //    κοινή έξοδος.
+  const named = clientNameFrom(getContactDisplayName(contact));
+  return named.kind === CLIENT_NAME_KNOWN ? named.name : clientContactId;
 }
 
 /**

@@ -64,7 +64,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "1aa1f7f1ce3ffc54dbfa9e463c674ced350f6b5e150665685f20fc53d4f1f8f8",
+  "inputsSha256": "708544a2d25bcf0692056e90145e32d6511f9878306c5dc73be7385258d00af4",
   "languages": [
     "el"
   ],
@@ -314,7 +314,7 @@
     "src/services/mandate/mandate-catalog.client.ts": "69f79edb85185acb80424ad0338bf17d12619a5dceeaec6b874ee1c699059378",
     "src/services/mandate/mandate-catalog.service.ts": "56869cb4424ea7f9f02d7251030c1d1130dd8f8f2754f360cbde608bb10d883b",
     "src/services/mandate/mandate-consent.service.ts": "15764fb3477975923039879c5d21f9316eb21b3542d7757fa0fbdaa9fd0c1646",
-    "src/services/mandate/mandate-decision-notifier.service.ts": "e3e77fc41f4982cd159d37d7b73b09e63be6faa69989419e4be20dbd4b52bee6",
+    "src/services/mandate/mandate-decision-notifier.service.ts": "4691e7b76f3322775459a83cbed7cb040d7843ca9fd2d2ed46d8175aa616b4a1",
     "src/services/mandate/mandate-decision-vocabulary.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/services/mandate/mandate-email-texts.ts": "36447d4bec3d582dc9279738c63d91671934b5c62dcc1392c0cdb744a15c17f9",
     "src/services/mandate/mandate-inbox.client.ts": "e39d58edb9e06fae3b785de2f7e46bba249e17cfdde528c78740d5829c459e62",

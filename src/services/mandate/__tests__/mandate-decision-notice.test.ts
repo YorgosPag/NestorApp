@@ -173,6 +173,24 @@ describe('🔴 Ε — «ο Κώστας απάντησε»', () => {
     expect(dispatched[0]?.titleKey).toBe('mandateDecision.confirmedTitle');
   });
 
+  it('🔴 Ε1β — ΤΟ ΟΝΟΜΑ ΤΟΥ ΠΕΛΑΤΗ ΦΤΑΝΕΙ ΣΤΗΝ ΕΙΔΟΠΟΙΗΣΗ, όχι το αναγνωριστικό', async () => {
+    // 🔴 **ΚΕΝΟ ΠΟΥ ΜΕΤΡΗΘΗΚΕ 2026-08-31** (ADR-834 §6.5.δ): μετάλλαξη που έκανε τον
+    //    ειδοποιητή να επιστρέφει **πάντα** το `clientContactId` **ΕΠΕΖΗΣΕ** — κανείς
+    //    δεν έλεγχε ποτέ ότι ο μεσίτης διαβάζει *«Ο/Η Κώστας Παπαδόπουλος ενέκρινε»*
+    //    και όχι *«Ο/Η cont_kostas ενέκρινε»*. Οι υπάρχουσες άγκυρες έκριναν
+    //    **ποιος** ειδοποιείται και **με ποιο κλειδί**· όχι **τι διαβάζει**.
+    const link = issueMandateConsentLink(LISTING, CLIENT);
+    const db = world(link.nonce);
+
+    await recordMandateDecision(db, link.token, 'confirmed');
+
+    const params = dispatched[0]?.titleParams as { client?: string } | undefined;
+    expect(params?.client).toBe('Κώστας Παπαδόπουλος');
+    // ⚠️ Η εφεδρεία στο αναγνωριστικό είναι **σκόπιμη** (καλύτερη από κενό), αλλά ΔΕΝ
+    //    επιτρέπεται να είναι η κανονική διαδρομή για επαφή που έχει όνομα.
+    expect(params?.client).not.toBe(CLIENT);
+  });
+
   it('Ε2 — η ΑΡΝΗΣΗ ειδοποιεί κι αυτή, με άλλο κείμενο', async () => {
     const link = issueMandateConsentLink(LISTING, CLIENT);
     const db = world(link.nonce);
