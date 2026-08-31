@@ -1,0 +1,151 @@
+/**
+ * 🔴 ADR-833 §5.7.1 — **Η ΜΗΧΑΝΙΚΗ ΤΟΥ ΒΙΒΛΙΟΥ `.xlsx`**, χωρίς καμία γνώση του τι είναι πίνακας.
+ *
+ * ## Γιατί γεννήθηκε: η γραμμή «μηχανική ↔ λεξιλόγιο»
+ * Ο `xlsx-exporter.ts` ήξερε **δύο** πράγματα μαζί: πώς φτιάχνεται ένα βιβλίο (δυναμική
+ * εισαγωγή, μεταδεδομένα, ονόματα φύλλων, `Blob`, κατέβασμα) **και** πώς μοιάζει ένας
+ * `ExportableTable`. Το πρώτο είναι κοινό· το δεύτερο είναι **ένα** λεξιλόγιο από τα δύο που
+ * έχει το έργο, και το άλλο —ο πίνακας του ADR-739— **δεν χωρά** σε αυτό (τύποι, περιγράμματα,
+ * στυλ ανά κελί, συγχωνεύσεις ανά κελί, ύψη γραμμών). Άρα η μηχανική σηκώθηκε ένα επίπεδο:
+ *
+ * ```
+ *   ΕΔΩ (μηχανική)  ──┬── xlsx-exporter.ts     πόρτα Α: ExportableTable   (ADR-363/650)
+ *                     └── bim/table/export/    πόρτα Β: TableWorksheet[]  (ADR-833 Φ6)
+ * ```
+ *
+ * ⚠️ **Δεν γεννήθηκε `src/lib/xlsx/`**: ένα καθολικό όνομα θα δήλωνε αυθεντία που **οκτώ**
+ * υπάρχοντες γραφείς `.xlsx` του repo δεν υπακούν — δηλαδή ένα ακόμη «`0` που σημαίνει *κανείς
+ * δεν κοίταξε*». Η κατεύθυνση `bim/table → bim/schedule` υπάρχει ήδη (`types/table.ts` εισάγει
+ * `ScheduleColumnValueType` από εδώ, «ΕΠΑΝΑΧΡΗΣΗ ADR-363»).
+ *
+ * ## 🔴 ΤΟ ΕΥΡΗΜΑ ΤΗΣ ΕΞΑΓΩΓΗΣ: ΤΑ ΔΙΠΛΑ ΟΝΟΜΑΤΑ ΦΥΛΛΩΝ ΕΡΙΧΝΑΝ ΤΟΝ ΓΟΝΙΟ
+ * Μετρημένο με εκτέλεση σε `exceljs` 4.4.0 — και οι **τρεις** περιπτώσεις πετούν εξαίρεση:
+ *
+ * ```
+ *   addWorksheet('Α') ×2   →  «Worksheet name already exists: Α»
+ *   addWorksheet('a:b')    →  «cannot include any of the following characters: * ? : \ / [ ]»
+ *   addWorksheet('')       →  «The name can't be empty.»
+ * ```
+ *
+ * Ο παλιός `safeSheetName` κάλυπτε τις **δύο** τελευταίες και **όχι** την πρώτη. Δηλαδή
+ * `tablesToXlsxBlob` με δύο ενότητες ίδιου τίτλου **έσκαγε** — και, χειρότερα, δύο **διαφορετικοί**
+ * τίτλοι που ταυτίζονται στους 31 πρώτους χαρακτήρες έσκαγαν κι εκείνοι, δηλαδή η ίδια η
+ * περικοπή **παρήγαγε** τη σύγκρουση. Δεν είχε αναφερθεί επειδή ο μόνος καλών (φάκελος
+ * τοπογραφικού, ADR-650 M7) δίνει τέσσερις σταθερούς, ξεχωριστούς τίτλους.
+ *
+ * ## 🔑 ΓΙΑΤΙ Η ΜΟΝΑΔΙΚΟΤΗΤΑ ΕΠΙΒΑΛΛΕΤΑΙ **ΕΔΩ** ΚΑΙ ΟΧΙ ΣΤΟ ΜΟΝΤΕΛΟ
+ * Η Φάση 4 αποφάσισε ρητά ότι τα φύλλα του πίνακα **επιτρέπεται** να έχουν ίδιο όνομα: *«το
+ * `(2)` του Excel λύνει πρόβλημα που εμείς δεν έχουμε»* — και είναι σωστό, γιατί εκεί η
+ * ταυτότητα είναι το `id`, όχι το όνομα. Το **αρχείο** όμως έχει ακριβώς αυτό το πρόβλημα: το
+ * OOXML δείχνει φύλλα **κατά όνομα** (`'Φύλλο 2'!A1`). Άρα η σύμβαση `(2)` μπαίνει στο
+ * **σύνορο της εξαγωγής**, όπου λύνει πραγματικό πρόβλημα, και **δεν** μολύνει το μοντέλο.
+ * Ίδιος κανόνας με το `cellDisplayText` (ADR-760): η **παρουσίαση** προσαρμόζεται, η **τιμή** όχι.
+ *
+ * @module subapps/dxf-viewer/bim/schedule/exporters/xlsx-workbook
+ * @see ./xlsx-exporter.ts — πόρτα Α
+ * @see bim/table/export/table-to-xlsx.ts — πόρτα Β
+ * @see docs/centralized-systems/reference/adrs/ADR-833-table-xlsx-import-and-worksheets.md §5.7.1
+ */
+
+import type ExcelJS from 'exceljs';
+import { triggerExportDownload } from '@/lib/exports/trigger-export-download';
+
+/** Ο τύπος MIME ενός βιβλίου OOXML — μία δήλωση, όσοι γραφείς κι αν υπάρξουν. */
+export const XLSX_MIME_TYPE =
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+/** Το Excel κόβει τα ονόματα φύλλων στους 31 χαρακτήρες. */
+export const XLSX_WORKSHEET_NAME_MAX = 31;
+
+/**
+ * Οι χαρακτήρες που το Excel **απαγορεύει** σε όνομα φύλλου: `* ? : \ / [ ]`.
+ * Αντικαθίστανται με κενό αντί να σβήνονται — το `Α/Β` γίνεται `Α Β` και όχι `ΑΒ`, που θα
+ * ένωνε δύο λέξεις που ο χρήστης είχε χωρίσει.
+ */
+const FORBIDDEN_NAME_CHARS = /[[\]:*?/\\]/g;
+
+/**
+ * Ένα όνομα φύλλου καθαρισμένο ώστε το Excel να το δεχτεί — **χωρίς** ακόμη τον έλεγχο
+ * μοναδικότητας, που απαιτεί να βλέπεις ολόκληρο το βιβλίο.
+ *
+ * ⚠️ Η απόστροφος στην **αρχή ή στο τέλος** κόβεται επίσης, και δεν είναι καλλωπισμός: το
+ * OOXML γράφει τις αναφορές μεταξύ φύλλων ως `'Όνομα Φύλλου'!A1`, οπότε ένα όνομα που ξεκινά
+ * ή τελειώνει σε `'` παράγει αναφορά που **δεν αναλύεται** (και είναι ακριβώς η σύνταξη που
+ * ζητά η Φάση 7).
+ */
+function sanitizeWorksheetName(raw: string, fallback: string): string {
+  const cleaned = raw
+    .replace(FORBIDDEN_NAME_CHARS, ' ')
+    .trim()
+    .replace(/^'+|'+$/g, '')
+    .trim()
+    .slice(0, XLSX_WORKSHEET_NAME_MAX);
+  return cleaned.length > 0 ? cleaned : fallback;
+}
+
+/**
+ * Τα ονόματα με τα οποία θα γραφτούν **αυτά ακριβώς** τα φύλλα, **στη σειρά τους**: καθαρά,
+ * κομμένα στα 31, και **μοναδικά**.
+ *
+ * ## Η σύμβαση της διπλοεγγραφής είναι του Excel: `Όνομα` → `Όνομα (2)` → `Όνομα (3)`
+ * Και όταν το επίθεμα δεν χωρά στους 31 χαρακτήρες, **κόβεται η βάση**, όχι το επίθεμα: ένα
+ * όνομα που τελειώνει σε `(2` δεν είναι απλώς άσχημο — δεν λέει πια «το δεύτερο».
+ *
+ * 🔴 **Η σύγκριση είναι case-insensitive, ΑΥΣΤΗΡΟΤΕΡΑ από τον `exceljs`.** Ο `exceljs` συγκρίνει
+ * με `===` και θα δεχόταν `Φύλλο` + `φύλλο`· το **Excel** τα θεωρεί το ίδιο όνομα και θα
+ * αρνιόταν να ανοίξει το βιβλίο. Γράφουμε αρχείο **για το Excel**, όχι για τη βιβλιοθήκη —
+ * άρα ισχύει ο αυστηρότερος από τους δύο κανόνες.
+ *
+ * @param rawNames Τα ονόματα όπως τα θέλει ο καλών· κενό ⇒ παίρνει τη **θέση** του (1-based).
+ */
+export function xlsxWorksheetNames(rawNames: readonly string[]): readonly string[] {
+  const taken = new Set<string>();
+  return rawNames.map((raw, index) => {
+    const base = sanitizeWorksheetName(raw, `${index + 1}`);
+    let candidate = base;
+    let attempt = 2;
+    while (taken.has(candidate.toLowerCase())) {
+      const suffix = ` (${attempt})`;
+      candidate = base.slice(0, XLSX_WORKSHEET_NAME_MAX - suffix.length) + suffix;
+      attempt += 1;
+    }
+    taken.add(candidate.toLowerCase());
+    return candidate;
+  });
+}
+
+/**
+ * Ένα άδειο βιβλίο, με τα μεταδεδομένα του συμπληρωμένα.
+ *
+ * ⚠️ **Δυναμική εισαγωγή**, όπως κάθε καταναλωτής του `exceljs` στο repo: τα ~600 KB μένουν
+ * έξω από το κύριο bundle (ADR-040) και τα πληρώνει μόνο όποιος πράγματι εξάγει.
+ *
+ * ⚠️ **Καμία δήλωση γραμματοσειράς βιβλίου** — και είναι απόφαση, όχι παράλειψη: η προεπιλογή
+ * μένει **Calibri 11**, δηλαδή ακριβώς η υπόθεση πάνω στην οποία το
+ * `@/lib/spreadsheet/excel-sheet-units` μεταφράζει χιλιοστά σε χαρακτήρες. Μια δήλωση εδώ θα
+ * άλλαζε το Max Digit Width και θα έκανε **κάθε πλάτος στήλης λάθος**, σιωπηλά.
+ */
+export async function createXlsxWorkbook(creator: string): Promise<ExcelJS.Workbook> {
+  const ExcelJSLib = (await import('exceljs')).default;
+  const workbook = new ExcelJSLib.Workbook();
+  workbook.creator = creator;
+  workbook.created = new Date();
+  return workbook;
+}
+
+/** Το βιβλίο ως `Blob` έτοιμο για κατέβασμα ή για έλεγχο μεγέθους σε test χωρίς DOM. */
+export async function xlsxWorkbookToBlob(workbook: ExcelJS.Workbook): Promise<Blob> {
+  const buffer = await workbook.xlsx.writeBuffer();
+  return new Blob([buffer], { type: XLSX_MIME_TYPE });
+}
+
+/**
+ * Κατέβασμα με την **κατάληξη ήδη βαλμένη**.
+ *
+ * Ζει εδώ και όχι στον καλούντα ώστε η κατάληξη να μη γίνει δεύτερο κυριολεκτικό `.xlsx` σε
+ * κάθε πόρτα — το ίδιο σκεπτικό με το `XLSX_MIME_TYPE` από πάνω. Το ίδιο το κατέβασμα μένει
+ * στο SSoT του έργου (`@/lib/exports/trigger-export-download`).
+ */
+export function downloadXlsxBlob(blob: Blob, filenameWithoutExtension: string): void {
+  triggerExportDownload({ blob, filename: `${filenameWithoutExtension}.xlsx` });
+}

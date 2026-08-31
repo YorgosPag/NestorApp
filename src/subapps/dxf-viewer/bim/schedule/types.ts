@@ -53,8 +53,18 @@ export interface ScheduleColumnDef {
   readonly i18nKey: string;
   readonly valueType: ScheduleColumnValueType;
   readonly align: ScheduleColumnAlign;
-  /** xlsx/PDF column width hint (chars OR mm — exporter-specific). */
-  readonly widthHint?: number;
+  /**
+   * 🔴 ADR-833 §5.7.2 — πλάτος στήλης σε **χαρακτήρες Excel**, όπως το εννοεί το
+   * `column.width` του `exceljs` — **ποτέ χιλιοστά**. Για τη μετάφραση προς/από mm
+   * υπάρχει **μία** αρχή: `@/lib/spreadsheet/excel-sheet-units`.
+   *
+   * ⚠️ Λεγόταν `widthHint` και το σχόλιό του έλεγε *«chars OR mm — exporter-specific»*:
+   * **το ίδιο πεδίο με δύο μονάδες**, και ποια ισχύει το ήξερε μόνο ο καταναλωτής — το σχήμα
+   * που το ADR-716 έχει τιμωρήσει. Το grep έδειξε ότι ο δεύτερος καταναλωτής (mm) **δεν
+   * υπήρξε ποτέ** και ότι **κανείς δεν έθετε το πεδίο**, άρα η διόρθωση ήταν δωρεάν:
+   * η μονάδα μπήκε στο **όνομα**, όπως κάθε `*Mm`/`*Px`/`*Deg` του viewer.
+   */
+  readonly widthChars?: number;
 }
 
 // ─── Row + Schedule ──────────────────────────────────────────────────────────

@@ -21,7 +21,6 @@
  */
 
 import type ExcelJS from 'exceljs';
-import { triggerExportDownload } from '@/lib/exports/trigger-export-download';
 import type {
   ExportableTable,
   ExportableTableSection,
@@ -30,14 +29,25 @@ import type {
 } from '../types';
 import type { HeaderTranslator } from './csv-exporter';
 import { formatCellForXlsx, xlsxNumFmtFor } from './value-formatters';
+import {
+  createXlsxWorkbook,
+  downloadXlsxBlob,
+  xlsxWorkbookToBlob,
+  xlsxWorksheetNames,
+} from './xlsx-workbook';
 
-/** Excel forbids `[]:*?/\` in sheet names and caps them at 31 chars. */
-const SHEET_NAME_MAX = 31;
+/** Ό,τι γράφει ο δημιουργός στα μεταδεδομένα του βιβλίου αυτής της πόρτας. */
+const WORKBOOK_CREATOR = 'Nestor Pagonis · BIM Schedule';
 
-function safeSheetName(name: string, fallback: string): string {
-  const cleaned = name.replace(/[[\]:*?/\\]/g, ' ').trim().slice(0, SHEET_NAME_MAX);
-  return cleaned.length > 0 ? cleaned : fallback;
-}
+/**
+ * Το όνομα του **μοναδικού** φύλλου της μονοπίνακης εξαγωγής.
+ *
+ * ⚠️ Δεν περνά από i18n **επίτηδες**: είναι δεδομένο που γράφεται μέσα στο αρχείο και
+ * ταξιδεύει σε τρίτους, οπότε μια μετάφραση θα πάγωνε τη γλώσσα του εξαγωγέα μέσα στο
+ * παραδοτέο — η ίδια επιλογή που κάνει το `types/table-worksheet.ts` §3 όταν αρνείται
+ * να αποθηκεύσει `t('…')` ως όνομα φύλλου.
+ */
+const DEFAULT_SHEET_NAME = 'Πίνακας';
 
 // ─── Style constants ─────────────────────────────────────────────────────────
 
@@ -61,7 +71,7 @@ const TITLE_FONT: Partial<ExcelJS.Font> = {
 // ─── Column width hint ──────────────────────────────────────────────────────
 
 function widthFor(col: ScheduleColumnDef): number {
-  if (col.widthHint !== undefined) return col.widthHint;
+  if (col.widthChars !== undefined) return col.widthChars;
   // Heuristic per value type
   switch (col.valueType) {
     case 'text':              return 22;
@@ -136,21 +146,6 @@ function writeSheet(
   }
 }
 
-async function newWorkbook(): Promise<ExcelJS.Workbook> {
-  const ExcelJSLib = (await import('exceljs')).default;
-  const workbook = new ExcelJSLib.Workbook();
-  workbook.creator = 'Nestor Pagonis · BIM Schedule';
-  workbook.created = new Date();
-  return workbook;
-}
-
-async function workbookToBlob(workbook: ExcelJS.Workbook): Promise<Blob> {
-  const buffer = await workbook.xlsx.writeBuffer();
-  return new Blob([buffer], {
-    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  });
-}
-
 // ─── Public API ──────────────────────────────────────────────────────────────
 
 /**
@@ -162,17 +157,15 @@ export async function tablesToXlsxBlob(
   sections: readonly ExportableTableSection[],
   translateHeader: HeaderTranslator,
 ): Promise<Blob> {
-  const workbook = await newWorkbook();
+  const workbook = await createXlsxWorkbook(WORKBOOK_CREATOR);
+  // 🔴 ADR-833 §5.7.1 — τα ονόματα λύνονται με **ολόκληρο** το βιβλίο μπροστά, γιατί η
+  // μοναδικότητα δεν είναι ιδιότητα ενός ονόματος. Μέχρι σήμερα ο καθαρισμός γινόταν ανά
+  // ενότητα και δύο ίδιοι τίτλοι **έριχναν** τον `addWorksheet` με εξαίρεση.
+  const names = xlsxWorksheetNames(sections.map((section) => section.title));
   sections.forEach((section, i) => {
-    writeSheet(
-      workbook,
-      safeSheetName(section.title, `${i + 1}`),
-      section.title,
-      section.table,
-      translateHeader,
-    );
+    writeSheet(workbook, names[i], section.title, section.table, translateHeader);
   });
-  return workbookToBlob(workbook);
+  return xlsxWorkbookToBlob(workbook);
 }
 
 /**
@@ -184,9 +177,9 @@ export async function scheduleToXlsxBlob(
   options: ScheduleExportOptions,
   translateHeader: HeaderTranslator,
 ): Promise<Blob> {
-  const workbook = await newWorkbook();
-  writeSheet(workbook, 'Πίνακας', options.title, schedule, translateHeader);
-  return workbookToBlob(workbook);
+  const workbook = await createXlsxWorkbook(WORKBOOK_CREATOR);
+  writeSheet(workbook, DEFAULT_SHEET_NAME, options.title, schedule, translateHeader);
+  return xlsxWorkbookToBlob(workbook);
 }
 
 /**
@@ -198,5 +191,5 @@ export async function downloadScheduleAsXlsx(
   translateHeader: HeaderTranslator,
 ): Promise<void> {
   const blob = await scheduleToXlsxBlob(schedule, options, translateHeader);
-  triggerExportDownload({ blob, filename: `${options.filename}.xlsx` });
+  downloadXlsxBlob(blob, options.filename);
 }
