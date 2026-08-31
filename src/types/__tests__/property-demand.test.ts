@@ -170,7 +170,10 @@ describe('🔴 Λ — καμία δεύτερη αλήθεια στον άξον
     // δεν θα μεταγλωττίζεται καν — και αυτό είναι το ζητούμενο.
     const all = demand({ seeks: [...OFFER_KINDS] });
     expect(demandInvariantViolations(all)).toEqual([]);
-    expect(all.seeks).toEqual(['sell', 'leaseOut', 'exchange']);
+    // ⚠️ **Χειρόγραφα, επίτηδες** — δεύτερη φωνή απέναντι στο `OFFER_KINDS`. Ένα
+    // `toEqual([...OFFER_KINDS])` θα συνέκρινε τη σταθερά με τον εαυτό της και θα
+    // έμενε πράσινο σε **οποιαδήποτε** αλλαγή του λεξιλογίου, ακόμη και σε διαγραφή.
+    expect(all.seeks).toEqual(['sell', 'leaseOut', 'exchange', 'leaseShort']);
   });
 });
 

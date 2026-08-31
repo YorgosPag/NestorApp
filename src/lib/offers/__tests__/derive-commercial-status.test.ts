@@ -7,9 +7,13 @@
  * το ADR-777 §8.7 πλήρωσε ήδη μία φορά, και που στη Φ.1 του ADR-771 άφησε **170
  * tests πράσινα πάνω σε αλλαγμένη συμπεριφορά**.
  *
- * 🔑 **ΚΛΕΙΣΤΗ ΚΑΛΥΨΗ.** Κρίνονται **και οι 12** συνδυασμοί `kind × lifecycle`
- * (3 × 4), ρητά και ονομαστικά, ώστε τέταρτο είδος ή πέμπτος κύκλος ζωής να μην
+ * 🔑 **ΚΛΕΙΣΤΗ ΚΑΛΥΨΗ.** Κρίνονται **και οι 16** συνδυασμοί `kind × lifecycle`
+ * (4 × 4), ρητά και ονομαστικά, ώστε πέμπτο είδος ή πέμπτος κύκλος ζωής να μην
  * μπορεί να προσγειωθεί χωρίς να αποφασίσει κάποιος τι σημαίνει.
+ *
+ * ✅ **ΚΑΙ ΑΚΡΙΒΩΣ ΑΥΤΟ ΕΓΙΝΕ** (ADR-835, 2026-08-31): το `leaseShort` **κοκκίνισε**
+ * αυτόν τον πίνακα πριν προλάβει να φτάσει σε οθόνη. Οι τέσσερις νέες γραμμές δεν
+ * είναι κόστος — είναι η **απόδειξη** ότι ο φρουρός δουλεύει.
  */
 
 import {
@@ -30,6 +34,7 @@ import {
   type OfferLifecycle,
   type PropertyOffer,
   type SellOffer,
+  type ShortLeaseOffer,
 } from '@/types/property-offers';
 import {
   COMMERCIAL_STATUSES,
@@ -52,6 +57,39 @@ function exchange(lifecycle: OfferLifecycle, percentage: number | null = 35): Ex
   return { id: `offr_exch_${lifecycle}`, kind: 'exchange', lifecycle, percentage };
 }
 
+function leaseShort(
+  lifecycle: OfferLifecycle,
+  nightlyRate: number | null = 65,
+): ShortLeaseOffer {
+  return {
+    id: `offr_stay_${lifecycle}`,
+    kind: 'leaseShort',
+    lifecycle,
+    nightlyRate,
+    minNights: null,
+    maxGuests: null,
+  };
+}
+
+/**
+ * Ένα δείγμα κάθε είδους — **`switch` χωρίς `default`**, ώστε πέμπτο είδος να μη
+ * μεταγλωττίζεται εδώ. Ήταν φωλιασμένη τριαδική έκφραση, που **έπεφτε σιωπηλά** στο
+ * `exchange` για κάθε άγνωστο είδος: η εξαντλητική δοκιμή θα έμενε πράσινη ελέγχοντας
+ * την αντιπαροχή **τέσσερις** φορές, δηλαδή «πράσινο επειδή ρώτησα λάθος ερώτηση».
+ */
+function offerOf(kind: OfferKind, lifecycle: OfferLifecycle): PropertyOffer {
+  switch (kind) {
+    case 'sell':
+      return sell(lifecycle);
+    case 'leaseOut':
+      return leaseOut(lifecycle);
+    case 'exchange':
+      return exchange(lifecycle);
+    case 'leaseShort':
+      return leaseShort(lifecycle);
+  }
+}
+
 // =============================================================================
 // Μ0 — Η ΒΑΘΜΟΝΟΜΗΣΗ: το λεξιλόγιο δεν μεγάλωσε
 // =============================================================================
@@ -65,12 +103,7 @@ describe('Μ0 — καμία όγδοη τιμή (Α20 σημείο 1)', () => {
     // Κάθε δυνατός συνδυασμός ενός είδους με έναν κύκλο ζωής.
     for (const kind of OFFER_KINDS) {
       for (const lifecycle of OFFER_LIFECYCLES) {
-        const offer: PropertyOffer =
-          kind === 'sell'
-            ? sell(lifecycle)
-            : kind === 'leaseOut'
-              ? leaseOut(lifecycle)
-              : exchange(lifecycle);
+        const offer: PropertyOffer = offerOf(kind, lifecycle);
 
         expect(COMMERCIAL_STATUSES).toContain(deriveCommercialStatus([offer]));
       }
@@ -79,7 +112,7 @@ describe('Μ0 — καμία όγδοη τιμή (Α20 σημείο 1)', () => {
 });
 
 // =============================================================================
-// Κ1 — ΚΛΕΙΣΤΗ ΚΑΛΥΨΗ: 3 είδη × 4 κύκλοι ζωής = 12, χειρόγραφα
+// Κ1 — ΚΛΕΙΣΤΗ ΚΑΛΥΨΗ: 4 είδη × 4 κύκλοι ζωής = 16, χειρόγραφα
 // =============================================================================
 
 describe('Κ1 — ο πλήρης πίνακας μονής διάθεσης (χειρόγραφος)', () => {
@@ -99,6 +132,18 @@ describe('Κ1 — ο πλήρης πίνακας μονής διάθεσης (χ
     ['αντιπαροχή δεσμευμένη', exchange('reserved'),   'unavailable'],
     ['αντιπαροχή κλεισμένη', exchange('closed'),      'unavailable'],
     ['αντιπαροχή αποσυρμένη', exchange('withdrawn'),  'unavailable'],
+    // --- ΒΡΑΧΥΧΡΟΝΙΑ — καμία προβολή, σε ΚΑΝΕΝΑΝ κύκλο ζωής (ADR-835 §4.2) ---
+    //
+    // 🔴 Η **κλεισμένη** και η **δεσμευμένη** είναι οι δύο γραμμές που θα ήταν εύκολο
+    // να γραφτούν λάθος, και είναι λάθος **με νόημα**:
+    //   · `closed` → **ΟΧΙ `rented`**: μια ολοκληρωμένη διαμονή αφήνει το κατάλυμα
+    //     ξανά ελεύθερο αύριο, ενώ το `rented` σημαίνει «έφυγε από την αγορά».
+    //   · `reserved` → **ΟΧΙ `reserved`**: κρατημένες είναι κάποιες **ημέρες**, όχι
+    //     το ακίνητο. Το επτάτιμο λεξιλόγιο δεν έχει λέξη για ημέρες.
+    ['βραχυχρόνια ενεργή',     leaseShort('active'),    'unavailable'],
+    ['βραχυχρόνια δεσμευμένη', leaseShort('reserved'),  'unavailable'],
+    ['βραχυχρόνια κλεισμένη',  leaseShort('closed'),    'unavailable'],
+    ['βραχυχρόνια αποσυρμένη', leaseShort('withdrawn'), 'unavailable'],
   ];
 
   it.each(TABLE)('%s → %s', (_label, offer, expected) => {
@@ -107,7 +152,7 @@ describe('Κ1 — ο πλήρης πίνακας μονής διάθεσης (χ
 
   it('ο πίνακας καλύπτει ΚΑΘΕ συνδυασμό — κλειστή λογιστική', () => {
     expect(TABLE).toHaveLength(OFFER_KINDS.length * OFFER_LIFECYCLES.length);
-    expect(TABLE).toHaveLength(12);
+    expect(TABLE).toHaveLength(16);
   });
 });
 
@@ -471,5 +516,39 @@ describe('Π2 — τα 6 δημόσια έγγραφα αποκτούν είδο
     for (const [, status] of LIVE) {
       expect(offerKindsFromLegacyStatus(status).length).toBeGreaterThan(0);
     }
+  });
+});
+
+// =============================================================================
+// Κ13 — Η ΑΓΚΥΡΑ ΤΟΥ ADR-835 §13: **ΑΟΡΑΤΟ ΣΤΟ ΠΑΛΙΟ, ΟΡΑΤΟ ΣΤΟ ΝΕΟ**
+// =============================================================================
+
+/**
+ * 🔴 **Η σύζευξη είναι το ζητούμενο, όχι τα δύο σκέλη χωριστά.** Το πρώτο σκέλος μόνο
+ * του θα ήταν ικανοποιημένο και από ένα ακίνητο **που δεν υπάρχει στην αγορά**· το
+ * δεύτερο μόνο του δεν αποκλείει το `for-rent`. Μαζί λένε ακριβώς αυτό που αποφάσισε
+ * το §4.2: *«δεν χάνεται, αλλά δεν μολύνει»*.
+ */
+describe('Κ13 — ακίνητο ΜΟΝΟ προς βραχυχρόνια', () => {
+  const offers = [leaseShort('active')];
+
+  it('η ΚΑΤΑΣΤΑΣΗ δεν το ονομάζει — και ποτέ ως `for-rent`', () => {
+    expect(deriveCommercialStatus(offers)).toBe('unavailable');
+    expect(deriveCommercialStatus(offers)).not.toBe('for-rent');
+  });
+
+  it('ο ΑΞΟΝΑΣ το κουβαλά — εκεί δεν χάνεται τίποτα', () => {
+    expect(deriveOfferKinds(offers)).toContain('leaseShort');
+  });
+
+  it('και η απώλεια είναι ΟΝΟΜΑΣΜΕΝΗ, όχι σιωπηλή', () => {
+    expect(offerKindsWithoutLegacyProjection(offers)).toEqual(['leaseShort']);
+  });
+
+  it('η ΑΝΤΙΣΤΡΟΦΗ δεν το εφευρίσκει από το `unavailable`', () => {
+    // Το `unavailable` είναι **διάζευξη** (καμία ζωντανή Ή μόνο είδη χωρίς προβολή).
+    // Μια αντίστροφη που μάντευε `['leaseShort']` θα μετέτρεπε παραδεγμένη άγνοια σε
+    // ισχυρισμό — και θα έβγαζε καταλύματα εκεί που δεν υπάρχουν.
+    expect(offerKindsFromLegacyStatus('unavailable')).toEqual([]);
   });
 });

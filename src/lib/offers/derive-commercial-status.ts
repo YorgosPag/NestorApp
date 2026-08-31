@@ -25,10 +25,15 @@
  * 3 → 7 listed τιμές). Άρα μια διάθεση `exchange` **δεν έχει πού να προβληθεί**.
  *
  * **Η απόφαση: προβάλλεται σε `unavailable`, ρητά και με όνομα**
- * ({@link EXCHANGE_HAS_NO_LEGACY_PROJECTION}). Δηλαδή το παλιό λεξιλόγιο λέει
+ * ({@link KINDS_WITHOUT_LEGACY_PROJECTION}). Δηλαδή το παλιό λεξιλόγιο λέει
  * *«δεν είναι στην αγορά **που εγώ ξέρω**»* — που είναι **αληθές**, αντί να πει
  * «προς πώληση» που θα ήταν **ψέμα στην οθόνη** (η αντιπαροχή δεν έχει τιμή· θα
  * εμφανιζόταν ως πώληση χωρίς ποσό).
+ *
+ * 🔴 **ΚΑΙ ΤΟ ΙΔΙΟ ΙΣΧΥΕΙ ΓΙΑ ΤΗ ΒΡΑΧΥΧΡΟΝΙΑ** (ADR-835 §4.2): μια διάθεση
+ * `leaseShort` προβάλλεται επίσης σε `unavailable` — **όχι** σε `for-rent`. Εκεί όμως
+ * ο λόγος δεν είναι ότι «λείπει η λέξη», είναι ότι **η λέξη υπάρχει και είναι λάθος**:
+ * το `for-rent` θα ήταν **αληθοφανές ψέμα**, χειρότερο από την παραδεγμένη σιωπή.
  *
  * ⚠️ **Η αντιπαροχή ΔΕΝ εξαφανίζεται** — γίνεται ορατή από τον **νέο άξονα**:
  * το denormalized `offerKinds` την κουβαλά, και το `firestore.rules` αποκτά
@@ -58,18 +63,33 @@ import {
 /**
  * Τα είδη διάθεσης που **δεν έχουν** αντίστοιχο στο `COMMERCIAL_STATUSES`.
  *
- * Υπάρχει ως **ονομασμένη σταθερά** και όχι ως σιωπηλό `else`, ώστε ένα τέταρτο
+ * Υπάρχει ως **ονομασμένη σταθερά** και όχι ως σιωπηλό `else`, ώστε ένα νέο
  * είδος να μην προβληθεί κατά λάθος σε «διαθέσιμο»: η παράλειψη γίνεται
  * **δηλωμένη**, όχι τυχαία (μάθημα CHECK 3.44 — *«σιωπηλή απόρριψη με άλλο
  * όνομα»*).
+ *
+ * ✅ **ΚΑΙ ΤΟ ΤΕΤΑΡΤΟ ΕΙΔΟΣ ΗΡΘΕ** (ADR-835 §4.2, 2026-08-31). Το σχόλιο παραπάνω
+ * γράφτηκε **πριν** υπάρξει το `leaseShort` και προέβλεψε ονομαστικά αυτή τη στιγμή·
+ * η μόνη αλλαγή ήταν το **όνομα** της σταθεράς, από ενικό σε πληθυντικό.
+ *
+ * 🔴 **Γιατί το `leaseShort` ΔΕΝ προβάλλεται σε `'for-rent'` — απόφαση ΠΡΟΪΟΝΤΟΣ, όχι
+ * τεχνική λεπτομέρεια.** Αν προβαλλόταν, **κάθε** αναζήτηση «ενοικίαση» θα γέμιζε με
+ * καταλύματα διακοπών. Ο άνθρωπος που ψάχνει **σπίτι να μείνει** και ο άνθρωπος που
+ * ψάχνει **σπίτι για δέκα μέρες** δεν ψάχνουν το ίδιο πράγμα, και η ισοπέδωσή τους
+ * είναι ακριβώς ο θόρυβος που κάνει τα σημερινά portal δυσανάγνωστα. Η **αλήθεια**
+ * ζει στο `offerKinds` ({@link deriveOfferKinds}), που **δεν χάνει τίποτα**.
+ *
+ * ⚠️ Και για τον ίδιο λόγο το `COMMERCIAL_STATUSES` μένει **επτά τιμές, καμία νέα**:
+ * τέταρτο είδος συναλλαγής θα έδινε **2⁴−1 = 15** listed τιμές (ADR-777 §8.5).
  */
-export const EXCHANGE_HAS_NO_LEGACY_PROJECTION = [
+export const KINDS_WITHOUT_LEGACY_PROJECTION = [
   'exchange',
+  'leaseShort',
 ] as const satisfies readonly OfferKind[];
 
 /** `true` αν το είδος **μπορεί** να προβληθεί στο παλιό λεξιλόγιο. */
 function hasLegacyProjection(kind: OfferKind): boolean {
-  return !(EXCHANGE_HAS_NO_LEGACY_PROJECTION as readonly string[]).includes(kind);
+  return !(KINDS_WITHOUT_LEGACY_PROJECTION as readonly string[]).includes(kind);
 }
 
 // =============================================================================
@@ -116,9 +136,17 @@ export function deriveCommercialStatus(
   const closed = kindsInLifecycle(live, 'closed');
   if (closed.has('sell')) return 'sold';
   if (closed.has('leaseOut')) return 'rented';
-  // Μόνο `exchange` κλεισμένη ⇒ δεν προβάλλεται· συνεχίζουμε στους επόμενους
-  // κύκλους, ώστε μια παράλληλη ενεργή πώληση να μη χαθεί.
+  // Μόνο είδη χωρίς προβολή κλεισμένα ⇒ δεν προβάλλονται· συνεχίζουμε στους
+  // επόμενους κύκλους, ώστε μια παράλληλη ενεργή πώληση να μη χαθεί.
+  //
+  // ⚠️ Μια **κλεισμένη** βραχυχρόνια δεν είναι «νοικιάστηκε»: το `rented` σημαίνει
+  // «το ακίνητο έφυγε από την αγορά επειδή μισθώθηκε», ενώ μια ολοκληρωμένη διαμονή
+  // αφήνει το κατάλυμα **ξανά διαθέσιμο αύριο**. Ίδιο λεξιλόγιο, αντίθετη σημασία.
 
+  // ⚠️ Το `reserved` ρωτιέται **ονομαστικά για τα δύο είδη που προβάλλονται**, ποτέ
+  // «οποιοδήποτε reserved»: μια δεσμευμένη **βραχυχρόνια** δεν κάνει το ακίνητο
+  // «κρατημένο» — κρατημένες είναι κάποιες **ημέρες**, και το επτάτιμο λεξιλόγιο δεν
+  // έχει λέξη γι' αυτό. Η κατάληψη ημερών ζει στον κριτή του ADR-832 (ADR-835 §4.3).
   const reserved = kindsInLifecycle(live, 'reserved');
   if (reserved.has('sell') || reserved.has('leaseOut')) return 'reserved';
 
@@ -130,8 +158,8 @@ export function deriveCommercialStatus(
   if (hasSell) return 'for-sale';
   if (hasLease) return 'for-rent';
 
-  // Έφτασε εδώ ⇒ ό,τι ζωντανό υπάρχει είναι είδος χωρίς προβολή (σήμερα:
-  // μόνο `exchange`). Η αντιπαροχή ζει στο `offerKinds`, όχι εδώ.
+  // Έφτασε εδώ ⇒ ό,τι ζωντανό υπάρχει είναι είδος χωρίς προβολή (`exchange` ή
+  // `leaseShort`). Ζουν στο `offerKinds`, όχι εδώ.
   return 'unavailable';
 }
 
@@ -179,6 +207,18 @@ export interface DerivedCommercialAmounts {
   readonly askingPrice: number | null;
   readonly finalPrice: number | null;
   readonly rentPrice: number | null;
+  /**
+   * Τιμή **ανά διανυκτέρευση** (ADR-835 §4.4).
+   *
+   * 🔴 **Είναι τέταρτο ΠΕΔΙΟ ΠΟΣΟΥ, όχι τέταρτη κατάσταση** — και γι' αυτό επιτρέπεται
+   * εκεί που η όγδοη `CommercialStatus` απαγορεύτηκε. Το παλιό σχήμα ποσών **δεν είναι
+   * κλειστό λεξιλόγιο**: είναι σακούλα αριθμών με ρόλο ο καθένας, και ο ρόλος «ανά
+   * βράδυ» **δεν συγχέεται** με κανέναν από τους τρεις. Χωρίς αυτό το πεδίο η τιμή της
+   * βραχυχρόνιας θα σταματούσε στη διάθεση και **καμία οθόνη δεν θα τη διάβαζε ποτέ**
+   * — δηλαδή ένα `nightlyRate` που κανείς δεν μπορεί να δει, που είναι ο ορισμός του
+   * «φρουρός χωρίς απόδειξη ζωής» (ADR-749 §5).
+   */
+  readonly nightlyRate: number | null;
 }
 
 /**
@@ -198,10 +238,15 @@ export interface DerivedCommercialAmounts {
  * {@link deriveOfferKinds}, ώστε τα δύο να μη διαφωνούν ποτέ για το ίδιο έγγραφο.
  *
  * ⚠️ **Το `percentage` της αντιπαροχής ΔΕΝ χαρτογραφείται πουθενά, και είναι
- * δηλωμένη απώλεια** — τρίτη μορφή του {@link EXCHANGE_HAS_NO_LEGACY_PROJECTION}: το
- * παλιό σχήμα έχει **τρία πεδία ευρώ** και **κανένα ποσοστού**. Ένα ποσοστό γραμμένο
+ * δηλωμένη απώλεια** — τρίτη μορφή του {@link KINDS_WITHOUT_LEGACY_PROJECTION}: το
+ * παλιό σχήμα έχει **πεδία ευρώ** και **κανένα ποσοστού**. Ένα ποσοστό γραμμένο
  * σε `askingPrice` θα εμφανιζόταν ως **«50 €»** στην κάρτα — ψέμα με νούμερο. Η
  * αντιπαροχή γίνεται ορατή από το `offerKinds`, όπως ορίζει η Α20.
+ *
+ * ✅ **Η βραχυχρόνια ΔΕΝ έχει την ίδια τύχη, και η διαφορά είναι διδακτική**: το
+ * `nightlyRate` **είναι ευρώ**, άρα χωράει στο παλιό σχήμα ποσών με **δικό του πεδίο**
+ * και δικό του ρόλο ({@link DerivedCommercialAmounts.nightlyRate}). Η αντιπαροχή δεν
+ * χωράει επειδή είναι **άλλη μονάδα**, όχι επειδή είναι νέα.
  */
 export function deriveCommercialAmounts(
   offers: readonly PropertyOffer[] | null | undefined,
@@ -209,18 +254,32 @@ export function deriveCommercialAmounts(
   let askingPrice: number | null = null;
   let finalPrice: number | null = null;
   let rentPrice: number | null = null;
+  let nightlyRate: number | null = null;
 
   for (const offer of offers ?? []) {
     if (!isLiveOffer(offer)) continue;
-    if (offer.kind === 'sell') {
-      askingPrice = offer.askingPrice ?? null;
-      finalPrice = offer.finalPrice ?? null;
-    } else if (offer.kind === 'leaseOut') {
-      rentPrice = offer.rentPrice ?? null;
+    // ⚠️ `switch` και όχι αλυσίδα `else if`: **το ίδιο κλειστό σύνολο, ο ίδιος
+    // φρουρός**. Η αλυσίδα δεχόταν σιωπηλά ένα πέμπτο είδος ως «δεν φέρνει ποσό» —
+    // ακριβώς το σιωπηλό `default` που το `offer-amount.ts` απαγορεύει δίπλα.
+    // Το `exchange` απαντά **ρητά «τίποτα»**: το ποσοστό δεν είναι ευρώ (δες τη
+    // δηλωμένη απώλεια παρακάτω).
+    switch (offer.kind) {
+      case 'sell':
+        askingPrice = offer.askingPrice ?? null;
+        finalPrice = offer.finalPrice ?? null;
+        break;
+      case 'leaseOut':
+        rentPrice = offer.rentPrice ?? null;
+        break;
+      case 'leaseShort':
+        nightlyRate = offer.nightlyRate ?? null;
+        break;
+      case 'exchange':
+        break;
     }
   }
 
-  return { askingPrice, finalPrice, rentPrice };
+  return { askingPrice, finalPrice, rentPrice, nightlyRate };
 }
 
 // =============================================================================
@@ -343,7 +402,7 @@ export function offerKindsWithoutLegacyProjection(
 // ⚠️ Οι δύο διαζεύξεις **δεν είναι κενό υλοποίησης** — είναι οι **ίδιες** δηλωμένες
 // απώλειες που το αρχείο ήδη ονομάζει παραπάνω: η μία στο σχόλιο του βήματος 3
 // (*«το παλιό λεξιλόγιο δεν μπορεί να πει “κρατημένο προς πώληση ΚΑΙ προς
-// ενοικίαση”»*), η άλλη στο {@link EXCHANGE_HAS_NO_LEGACY_PROJECTION}. Μια
+// ενοικίαση”»*), η άλλη στο {@link KINDS_WITHOUT_LEGACY_PROJECTION}. Μια
 // αντίστροφη που μάντευε `['sell']` για το `reserved` θα μετέτρεπε **παραδεγμένη
 // άγνοια σε ισχυρισμό** — ακριβώς το fallback «άδειο = όλα» που απαγορεύτηκε ρητά.
 //
@@ -377,7 +436,7 @@ const KINDS_PROVEN_BY_LEGACY_STATUS: Readonly<
   rented: ['leaseOut'],
   // Διάζευξη: `sell` **Ή** `leaseOut` — δηλωμένη απώλεια του βήματος 3.
   reserved: [],
-  // Διάζευξη: καμία ζωντανή **Ή** μόνο `exchange` ({@link EXCHANGE_HAS_NO_LEGACY_PROJECTION}).
+  // Διάζευξη: καμία ζωντανή **Ή** μόνο `exchange` ({@link KINDS_WITHOUT_LEGACY_PROJECTION}).
   unavailable: [],
 };
 
