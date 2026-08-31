@@ -40,6 +40,7 @@
  */
 
 import { createConfirmStore } from '../../stores/createConfirmStore';
+import type { XlsxUnsupportedFinding } from './import/xlsx-unsupported-scan';
 
 /** Απόκριση χρήστη. Το `Esc` και το «Άκυρο» δίνουν το **ίδιο** — `cancel`. */
 export type TableXlsxOpenAction = 'replace' | 'add-sheets' | 'new-table' | 'cancel';
@@ -48,9 +49,17 @@ export interface TableXlsxOpenState {
   readonly open: boolean;
   /** Το όνομα του αρχείου που διάλεξε ο χρήστης· κενό μόνο όσο ο διάλογος είναι κλειστός. */
   readonly fileName: string;
+  /**
+   * 🔴 ADR-833 §5.7.5 — **τι δεν θα κρατηθεί**, μετρημένο, ώστε να ειπωθεί ΠΡΙΝ την απάντηση.
+   *
+   * Ταξιδεύει στην κατάσταση με το **ίδιο** σκεπτικό που ταξιδεύει το όνομα αρχείου (δες πιο
+   * πάνω): ο χρήστης δεν μπορεί να κρίνει μια αντικατάσταση χωρίς να ξέρει τι μπαίνει — ούτε
+   * χωρίς να ξέρει **τι δεν** μπαίνει.
+   */
+  readonly unsupported: readonly XlsxUnsupportedFinding[];
 }
 
-const CLOSED: TableXlsxOpenState = { open: false, fileName: '' };
+const CLOSED: TableXlsxOpenState = { open: false, fileName: '', unsupported: [] };
 
 const _store = createConfirmStore<TableXlsxOpenState, TableXlsxOpenAction>(CLOSED);
 
@@ -59,8 +68,16 @@ const _store = createConfirmStore<TableXlsxOpenState, TableXlsxOpenAction>(CLOSE
  * απόκριση και επιστρέφει Promise με την επιλογή του χρήστη.
  */
 export const requestTableXlsxOpenConfirm = (
-  params: { readonly fileName: string },
-): Promise<TableXlsxOpenAction> => _store.request({ open: true, fileName: params.fileName });
+  params: {
+    readonly fileName: string;
+    readonly unsupported?: readonly XlsxUnsupportedFinding[];
+  },
+): Promise<TableXlsxOpenAction> =>
+  _store.request({
+    open: true,
+    fileName: params.fileName,
+    unsupported: params.unsupported ?? [],
+  });
 
 /** Καλείται από τον διάλογο — από **κάθε** έξοδό του (κουμπιά, `Esc`). */
 export const resolveTableXlsxOpen = (action: TableXlsxOpenAction): void => _store.resolve(action);

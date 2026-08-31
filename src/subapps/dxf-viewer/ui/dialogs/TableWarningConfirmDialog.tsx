@@ -58,6 +58,25 @@ export interface TableWarningConfirmDialogProps {
    * και το πληκτρολόγιο να την έχει ήδη εστιασμένη.
    */
   readonly alternatives?: readonly TableWarningAlternative[];
+  /**
+   * 🔴 ADR-833 §5.7.5 — **η απαρίθμηση**: τι δεν κρατιέται, με τον αριθμό του, **πριν** ο
+   * χρήστης απαντήσει.
+   *
+   * Ομαδοποιημένη λίστα και όχι πρόταση μέσα στο {@link message}: το μήνυμα απαντά στο *«τι θα
+   * γίνει;»*, αυτό στο *«τι θα χάσω;»* — δύο ερωτήσεις, και η δεύτερη έχει **πλήθος**. Χωμένη
+   * στο μήνυμα θα ήταν παράγραφος που ο χρήστης προσπερνά, δηλαδή η σιωπηλή απώλεια από την
+   * πίσω πόρτα (§5.6.5).
+   *
+   * Κενή/απούσα ⇒ ο διάλογος μένει **ακριβώς** ο ίδιος· κανένας από τους δεκατρείς υπάρχοντες
+   * καταναλωτές δεν αλλάζει, με το ίδιο σκεπτικό του {@link alternatives}.
+   */
+  readonly details?: readonly TableWarningDetailGroup[];
+}
+
+/** Μία βαθμίδα της απαρίθμησης: ο τίτλος της και οι γραμμές της. */
+export interface TableWarningDetailGroup {
+  readonly title: string;
+  readonly items: readonly string[];
 }
 
 /** Μια μη καταστροφική διέξοδος του διαλόγου: τι λέει, τι κάνει. */
@@ -71,6 +90,7 @@ export function TableWarningConfirmDialog(
 ): React.ReactElement | null {
   const { title, message, undoNote, confirmLabel, cancelLabel, onConfirm, onCancel } = props;
   const alternatives = props.alternatives ?? [];
+  const details = props.details ?? [];
   if (typeof document === 'undefined') return null;
 
   return createPortal(
@@ -78,6 +98,18 @@ export function TableWarningConfirmDialog(
       <div className="dxf-modal-card dxf-modal-card-warning">
         <h2 className="dxf-modal-title dxf-modal-title-warning">{title}</h2>
         <p className="dxf-modal-note-warning">{message}</p>
+        {/* 🔴 ADR-833 §5.7.5 — ό,τι δεν κρατιέται, **πριν** την απάντηση. Σημασιολογικά
+            λίστες: είναι απαρίθμηση, όχι παράγραφος (κανόνας N.4). */}
+        {details.map((group) => (
+          <section key={group.title} className="dxf-modal-body">
+            <strong>{group.title}</strong>
+            <ul>
+              {group.items.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </section>
+        ))}
         <p className="dxf-modal-body">{undoNote}</p>
         <div className="dxf-modal-actions dxf-modal-actions-stack">
           <button

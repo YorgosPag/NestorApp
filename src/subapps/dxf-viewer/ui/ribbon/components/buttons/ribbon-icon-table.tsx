@@ -22,8 +22,9 @@ import {
   AlignCenter, AlignLeft, AlignRight,
   AlignVerticalJustifyCenter, AlignVerticalJustifyEnd, AlignVerticalJustifyStart,
   BetweenHorizontalEnd, BetweenHorizontalStart, BetweenVerticalEnd, BetweenVerticalStart,
-  Columns3, Copy, Euro, IndentDecrease, IndentIncrease, Percent, RefreshCw, RotateCcw,
-  Rows3, Scissors, Shrink, SquareDashedMousePointer, UnfoldVertical, WrapText,
+  Columns3, Copy, Euro, FileDown, FilePlus2, FolderOpen, IndentDecrease, IndentIncrease,
+  Percent, RefreshCw, RotateCcw, Rows3, Scissors, Shrink, SquareDashedMousePointer,
+  UnfoldVertical, WrapText,
 } from 'lucide-react';
 
 /**
@@ -147,6 +148,16 @@ export function resolveTableRibbonIcon(
     // «επαναφορά μορφοποίησης» παραπάνω, και δύο εντολές του **ίδιου** πίνακα με το ίδιο
     // εικονίδιο θα ήταν δύο κουμπιά που μοιάζουν ίδια και κάνουν άσχετα πράγματα.
     case 'table-refresh-binding': return <RefreshCw width={px} height={px} className={className} />;
+
+    // ── ADR-833 — το panel «Αρχείο»: `.xlsx` μέσα κι έξω ─────────────────────────────
+    // 🔴 Οι δύο πρώτες υπήρχαν ως **κλειδιά χωρίς γλυφή** από τη Φάση 1 και έπεφταν στην
+    // τελεία-προεπιλογή του `RibbonButtonIcon` — δηλαδή τρία κουμπιά με το ίδιο σημάδι.
+    // Διορθώθηκε μαζί με την τρίτη (Boy Scout, N.0.2), και οι τρεις γλυφές λένε την
+    // **κατεύθυνση**, που είναι ακριβώς αυτό που τα ξεχωρίζει:
+    //   άνοιγμα = ο πίνακας ΓΙΝΕΤΑΙ το αρχείο · εισαγωγή = ΠΡΟΣΤΙΘΕΤΑΙ · εξαγωγή = ΦΕΥΓΕΙ.
+    case 'table-open-xlsx': return <FolderOpen width={px} height={px} className={className} />;
+    case 'table-import-xlsx': return <FilePlus2 width={px} height={px} className={className} />;
+    case 'table-export-xlsx': return <FileDown width={px} height={px} className={className} />;
 
     // ── §56: οι έξι θέσεις στοίχισης ─────────────────────────────────────────────────
     // Τα ίδια εικονίδια με το mini toolbar (`TableAlignMenu`).

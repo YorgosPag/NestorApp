@@ -208,6 +208,14 @@ export const TABLE_PROPERTIES_RIBBON_KEYS = {
      * κάνει το Excel ανάμεσα σε *Open* και *Move or Copy Sheet ▸ To book*.
      */
     importXlsx: 'tableProps.actions.importXlsx',
+    /**
+     * 🔴 ADR-833 Φάση 6 — **«Αποθήκευση ως .xlsx»**: ο πίνακας φεύγει, με **όλα** του τα φύλλα.
+     *
+     * Ζει στο ίδιο panel «Αρχείο» με τα δύο αδέλφια του, γιατί απαντά στην ίδια οικογένεια
+     * ερωτήσεων («από πού ήρθε / πού πάει το περιεχόμενο») — θέση του Excel: *File ▸ Save As*.
+     * Δεν είναι στη «Μορφοποίηση»: η εξαγωγή **δεν αλλάζει** πώς φαίνεται ο πίνακας.
+     */
+    exportXlsx: 'tableProps.actions.exportXlsx',
   },
   /**
    * 🔴 Τα δύο panels που **κρύβονται χωρίς δρομέα**.
@@ -392,6 +400,7 @@ export const TABLE_XLSX_COMMAND_EVENT: Readonly<
 > = {
   [TABLE_PROPERTIES_RIBBON_KEYS.actions.openXlsx]: 'dxf:table-open-xlsx-requested',
   [TABLE_PROPERTIES_RIBBON_KEYS.actions.importXlsx]: 'dxf:table-import-xlsx-requested',
+  [TABLE_PROPERTIES_RIBBON_KEYS.actions.exportXlsx]: 'dxf:table-export-xlsx-requested',
 };
 
 export const isTableFormatComboboxKey = makeKeySetGuard<TableFormatComboboxKey>([

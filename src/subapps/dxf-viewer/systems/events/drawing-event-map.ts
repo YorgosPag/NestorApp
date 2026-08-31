@@ -343,7 +343,7 @@ export interface DrawingEventMap extends MepAutoDesignEventMap, BimEventMap, Top
   // Αδελφός του `dxf:import-tek-requested`: ζητά επιλογέα, δεν μεταφέρει αρχείο.
   'dxf:attach-image-requested': Record<string, never>;
   // ADR-833 §1.3 — Άνοιγμα του επιλογέα αρχείων για τις δύο εντολές `.xlsx` της contextual
-  // καρτέλας «Ιδιότητες Πίνακα» (`TableXlsxImportHost` ακούει). Αδελφοί του
+  // καρτέλας «Ιδιότητες Πίνακα» (`TableXlsxHost` ακούει). Αδελφοί του
   // `dxf:attach-image-requested`: ζητούν επιλογέα, δεν μεταφέρουν αρχείο.
   //
   // ⚠️ **Δύο συμβάντα, όχι ένα με σημαία `mode`.** Ο πειρασμός ήταν
@@ -355,6 +355,15 @@ export interface DrawingEventMap extends MepAutoDesignEventMap, BimEventMap, Top
   'dxf:table-open-xlsx-requested': Record<string, never>;
   /** Το αρχείο **προστίθεται**: κανένα υπάρχον δεδομένο δεν κινδυνεύει, καμία ερώτηση. */
   'dxf:table-import-xlsx-requested': Record<string, never>;
+  /**
+   * 🔴 ADR-833 Φάση 6 — **ο πίνακας φεύγει**: κατέβασμα `.xlsx` με ΟΛΑ του τα φύλλα.
+   *
+   * ⚠️ Τρίτο συμβάν και όχι σημαία των δύο από πάνω, με τον **ίδιο** λόγο που εκείνα είναι δύο:
+   * η κατεύθυνση είναι αντίθετη και ο αποδέκτης της απόφασης άλλος. Και, σε αντίθεση με τα δύο,
+   * αυτό **δεν ζητά επιλογέα** — δεν υπάρχει αρχείο να διαλέξει κανείς, υπάρχει αρχείο να
+   * γεννηθεί.
+   */
+  'dxf:table-export-xlsx-requested': Record<string, never>;
   // ADR-726 §13.1 — Deliver an already-picked File to the ONE import path
   // (`handleFileImportWithEncoding`) from OUTSIDE the provider tree. Sibling of
   // `dxf:import-tek-requested`, which asks for a picker; this one carries the result.

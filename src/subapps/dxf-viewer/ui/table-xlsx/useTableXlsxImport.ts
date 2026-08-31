@@ -54,6 +54,8 @@ import type { ICommand } from '../../core/commands';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
 import type { SceneEntity } from '../../hooks/canvas/dxf-scene-entity-converter';
 import type { SceneUnits } from '../../utils/scene-units';
+import type { XlsxUnsupportedFinding } from '../../bim/table/import/xlsx-unsupported-scan';
+import { xlsxUnsupportedSummary } from './xlsx-unsupported-groups';
 
 /** Τα δεκτά αρχεία — και οι δύο μορφές βιβλίου του Excel (με και χωρίς μακροεντολές). */
 export const TABLE_XLSX_ACCEPT = '.xlsx,.xlsm';
@@ -68,6 +70,12 @@ export interface UseTableXlsxImportParams {
   readonly getSelectedTable: () => TableEntity | null;
   readonly sceneUnits: SceneUnits;
   readonly notify: (message: string) => void;
+}
+
+/** Ό,τι βγάζει η κοινή ανάγνωση: τα προσχέδια **και** ο απολογισμός του τι δεν κρατήθηκε. */
+interface ReadSheets {
+  readonly drafts: readonly TableWorksheetDraft[];
+  readonly unsupported: readonly XlsxUnsupportedFinding[];
 }
 
 export interface TableXlsxImport {
@@ -100,8 +108,11 @@ export function useTableXlsxImport(params: UseTableXlsxImportParams): TableXlsxI
    * δηλαδή η σιωπηλή απώλεια θα επέστρεφε από την πίσω πόρτα.
    */
   const readAllSheets = useCallback(
-    async (file: File): Promise<readonly TableWorksheetDraft[] | null> => {
-      const sheets = await readXlsxWorksheets(await file.arrayBuffer());
+    async (file: File): Promise<ReadSheets | null> => {
+      const { worksheets: sheets, unsupported } = await readXlsxWorksheets(
+        await file.arrayBuffer(),
+        file.name,
+      );
       if (sheets.length === 0) {
         notify(t('tableXlsx.emptyWorkbook'));
         return null;
@@ -112,7 +123,7 @@ export function useTableXlsxImport(params: UseTableXlsxImportParams): TableXlsxI
       if (droppedRows > 0 || droppedColumns > 0) {
         notify(t('tableXlsx.clipped', { rows: droppedRows, columns: droppedColumns }));
       }
-      return drafts;
+      return { drafts, unsupported };
     },
     [notify, t],
   );
@@ -174,14 +185,18 @@ export function useTableXlsxImport(params: UseTableXlsxImportParams): TableXlsxI
     async (file: File): Promise<void> => {
       const entity = getSelectedTable();
       if (!entity) return;
-      const drafts = await readAllSheets(file);
-      if (!drafts) return;
+      const read = await readAllSheets(file);
+      if (!read) return;
       // 🔴 Η ερώτηση γίνεται **αφού** διαβαστεί το αρχείο: ένας διάλογος «αντικατάσταση;» για
-      // αρχείο που τελικά δεν διαβάζεται θα ήταν ερώτηση χωρίς αντικείμενο.
-      const action = await requestTableXlsxOpenConfirm({ fileName: file.name });
-      if (action === 'replace') applyPlan(entity, drafts, 'replace');
-      else if (action === 'add-sheets') applyPlan(entity, drafts, 'append');
-      else if (action === 'new-table') createTableBeside(entity, drafts);
+      // αρχείο που τελικά δεν διαβάζεται θα ήταν ερώτηση χωρίς αντικείμενο — και, από τη Φάση 6,
+      // επιπλέον επειδή **μόνο μετά την ανάγνωση** ξέρουμε τι δεν θα κρατηθεί (§5.7.5).
+      const action = await requestTableXlsxOpenConfirm({
+        fileName: file.name,
+        unsupported: read.unsupported,
+      });
+      if (action === 'replace') applyPlan(entity, read.drafts, 'replace');
+      else if (action === 'add-sheets') applyPlan(entity, read.drafts, 'append');
+      else if (action === 'new-table') createTableBeside(entity, read.drafts);
     },
     [applyPlan, createTableBeside, getSelectedTable, readAllSheets],
   );
@@ -190,12 +205,16 @@ export function useTableXlsxImport(params: UseTableXlsxImportParams): TableXlsxI
     async (file: File): Promise<void> => {
       const entity = getSelectedTable();
       if (!entity) return;
-      const drafts = await readAllSheets(file);
-      if (!drafts) return;
+      const read = await readAllSheets(file);
+      if (!read) return;
       // Καμία ερώτηση: η «Εισαγωγή» δεν αγγίζει τίποτα υπάρχον, εξ ορισμού.
-      applyPlan(entity, drafts, 'append');
+      applyPlan(entity, read.drafts, 'append');
+      // 🔴 …αλλά ο κανόνας «καμία σιωπηλή απώλεια» δεν εξαρτάται από το αν υπάρχει διάλογος: η
+      // απαρίθμηση φεύγει από το **ίδιο** κανάλι που ήδη λέει τι δεν χώρεσε (§5.7.5).
+      const summary = xlsxUnsupportedSummary(read.unsupported, t);
+      if (summary !== '') notify(t('tableXlsx.unsupportedNotice', { summary }));
     },
-    [applyPlan, getSelectedTable, readAllSheets],
+    [applyPlan, getSelectedTable, notify, readAllSheets, t],
   );
 
   return { onOpenFilePicked, onImportFilePicked };

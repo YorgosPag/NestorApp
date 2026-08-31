@@ -421,7 +421,21 @@
     "emptyWorkbook": "The file contains no worksheets.",
     "clipped": "Not everything fit: {rows} rows and {columns} columns were left out.",
     "sheetsAdded": "{count, plural, one {# worksheet was added.} other {# worksheets were added.}}",
-    "sheetsReplaced": "{count, plural, one {The table now holds # worksheet.} other {The table now holds # worksheets.}}"
+    "sheetsReplaced": "{count, plural, one {The table now holds # worksheet.} other {The table now holds # worksheets.}}",
+    "unsupportedNotice": "Imported, but something was not kept: {summary}",
+    "unsupported": {
+      "functionalityTitle": "Will not work:",
+      "fidelityTitle": "Will not show:",
+      "formulas": "{count, plural, one {# formula — comes in as a value and will not recalculate} other {# formulas — come in as values and will not recalculate}}",
+      "conditionalFormatting": "{count, plural, one {# conditional formatting rule} other {# conditional formatting rules}}",
+      "dataValidation": "{count, plural, one {# cell with data validation} other {# cells with data validation}}",
+      "macros": "Macros — the file declares them in its extension",
+      "numberFormats": "{count, plural, one {# cell with an unrecognised number format} other {# cells with unrecognised number formats}}",
+      "images": "{count, plural, one {# image} other {# images}}",
+      "definedNames": "{count, plural, one {# named range} other {# named ranges}}",
+      "excelTables": "{count, plural, one {# Excel table (filtering and style)} other {# Excel tables (filtering and style)}}",
+      "limit": "The check sees what the reader reads; charts and pivot tables are not counted."
+    }
   },
   "tableMergeDiscard": {
     "title": "Only the upper-left value will be kept",
@@ -5605,7 +5619,9 @@
         "openXlsx": "Open",
         "openXlsxTooltip": "Open an Excel file — the table is filled with its data",
         "importXlsx": "Import file",
-        "importXlsxTooltip": "Add the worksheets of an Excel file — existing data is kept"
+        "importXlsxTooltip": "Add the worksheets of an Excel file — existing data is kept",
+        "exportXlsx": "Save as",
+        "exportXlsxTooltip": "Export the table to an Excel file — every worksheet, with its formatting"
       },
       "tableFormat": {
         "bold": "Bold",

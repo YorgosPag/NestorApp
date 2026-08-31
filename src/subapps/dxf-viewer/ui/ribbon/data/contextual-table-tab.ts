@@ -221,6 +221,20 @@ export const CONTEXTUAL_TABLE_TAB: RibbonTab = {
                 action: actions.importXlsx,
               },
             },
+            {
+              // 🔴 ADR-833 Φάση 6 — η **τρίτη** πόρτα του ίδιου panel, και η μόνη που δείχνει
+              // προς τα έξω. Μέχρι σήμερα ο πίνακας δεν είχε **καμία** εξαγωγή.
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'tableProps.exportXlsx',
+                labelKey: 'ribbon.commands.tableProps.exportXlsx',
+                tooltipKey: 'ribbon.commands.tableProps.exportXlsxTooltip',
+                icon: 'table-export-xlsx',
+                commandKey: actions.exportXlsx,
+                action: actions.exportXlsx,
+              },
+            },
           ],
         },
       ],

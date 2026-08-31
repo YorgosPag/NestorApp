@@ -31,7 +31,7 @@ import { CreateBlockDialogHost } from '../ui/panels/block-library/CreateBlockDia
 // ADR-736 §6 — «Εικόνα»: κρυφός επιλογέας αρχείου + ανέβασμα + όπλισμα του placement tool.
 import { AttachImageHost } from '../ui/attach-image/AttachImageHost';
 // ADR-833 §1.3 — ο ξενιστής του επιλογέα `.xlsx` (κρυφό input + οι δύο listeners της κορδέλας).
-import { TableXlsxImportHostLeaf } from '../ui/table-xlsx/TableXlsxImportHostLeaf';
+import { TableXlsxHostLeaf } from '../ui/table-xlsx/TableXlsxHostLeaf';
 import type { DxfViewerCallbacksReturn } from './useDxfViewerCallbacks';
 import type { DxfViewerUiState } from './useDxfViewerUiState';
 import {
@@ -122,7 +122,7 @@ export function DxfViewerDialogs(props: DxfViewerDialogsProps): React.JSX.Elemen
       {/* ADR-833 §1.3 — ο επιλογέας των δύο εντολών `.xlsx` της καρτέλας «Ιδιότητες Πίνακα».
           Φύλλο με δικές του εξαρτήσεις: η επιλογή αλλάζει σε κάθε κλικ και δεν επιτρέπεται να
           ξανα-αποδώσει τους 28 hosts αυτού του δέντρου (ίδιος λόγος με το BimScheduleHostLeaf). */}
-      <TableXlsxImportHostLeaf levelManager={levelManager} />
+      <TableXlsxHostLeaf levelManager={levelManager} />
       <React.Suspense fallback={hiddenFallback}>
         <TestsModal
           isOpen={ui.testsModalOpen}

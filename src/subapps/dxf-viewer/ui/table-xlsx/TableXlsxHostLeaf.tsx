@@ -15,7 +15,7 @@
  * απεριόριστος χρόνος, μέσα στον οποίο ο χρήστης μπορεί να έχει αλλάξει επιλογή ή να έχει κάνει
  * `Ctrl+Z`. Ένα στιγμιότυπο κλεισμένο σε render θα έγραφε σε πίνακα που δεν είναι πια εκεί.
  *
- * @see ./TableXlsxImportHost.tsx — το κρυφό input + οι listeners
+ * @see ./TableXlsxHost.tsx — το κρυφό input + οι listeners
  */
 
 import React from 'react';
@@ -25,17 +25,17 @@ import { useCommandHistory } from '../../core/commands';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { resolveSceneUnits } from '../../utils/scene-units';
 import { resolveSelectedTable } from '../table-cell-editor/table-entity-lookup';
-import { TableXlsxImportHost } from './TableXlsxImportHost';
+import { TableXlsxHost } from './TableXlsxHost';
 
 /** Ίδιος ορισμός με τον `DxfViewerDialogs` — ο διαχειριστής δεν εξάγει δικό του τύπο. */
 type LevelManager = ReturnType<typeof useLevels>;
 
-export interface TableXlsxImportHostLeafProps {
+export interface TableXlsxHostLeafProps {
   readonly levelManager: LevelManager;
 }
 
-export const TableXlsxImportHostLeaf = React.memo(function TableXlsxImportHostLeaf(
-  props: TableXlsxImportHostLeafProps,
+export const TableXlsxHostLeaf = React.memo(function TableXlsxHostLeaf(
+  props: TableXlsxHostLeafProps,
 ): React.JSX.Element {
   const { levelManager } = props;
   const selectionIds = useSelectedEntityIds();
@@ -60,7 +60,7 @@ export const TableXlsxImportHostLeaf = React.memo(function TableXlsxImportHostLe
   );
 
   return (
-    <TableXlsxImportHost
+    <TableXlsxHost
       levelManager={levelManager}
       execute={execute}
       getSelectedTable={getSelectedTable}

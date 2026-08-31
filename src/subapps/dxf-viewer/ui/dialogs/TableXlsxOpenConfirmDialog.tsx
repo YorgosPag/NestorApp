@@ -21,6 +21,12 @@
  * Η εστίαση μένει στο **«Άκυρο»**, όπως σε κάθε αδελφό: ο κανόνας ζει στο κοινό σώμα
  * ({@link TableWarningConfirmDialog}) και δεν ξαναγράφεται εδώ.
  *
+ * ## 🔴 ADR-833 Φάση 6 — **η απαρίθμηση λέγεται ΕΔΩ, πριν την απάντηση**
+ * Η στάση του §5.6.5 («*καμία σιωπηλή απώλεια*») γίνεται οθόνη: ό,τι το αρχείο δηλώνει και ο
+ * πίνακας δεν κρατά μπαίνει ως **λίστα με αριθμούς**, σε δύο βαθμίδες («δεν θα λειτουργούν» /
+ * «δεν θα φαίνονται») — το σχήμα του Compatibility Checker του Excel, με τη διαφορά ότι εκείνο
+ * το κάνει στην **αποθήκευση** και εμείς στο **άνοιγμα**, όπου ο χρήστης μπορεί ακόμη να πει όχι.
+ *
  * ## Το `Esc` ζει σε δικό του σκαλί
  * `ESC_PRIORITY.BLOCKING_CONFIRM` (P1050) και όχι `MODAL_DIALOG` (P1000): εκεί κάθεται ήδη ο
  * inline editor του κελιού, που μπορεί να είναι **ζωντανός ταυτόχρονα** με αυτόν τον διάλογο.
@@ -39,6 +45,7 @@ import {
   resolveTableXlsxOpen,
   subscribeTableXlsxOpen,
 } from '../../bim/table/table-xlsx-open-confirm-store';
+import { xlsxUnsupportedGroups } from '../table-xlsx/xlsx-unsupported-groups';
 
 export const TableXlsxOpenConfirmDialog: React.FC = () => {
   const { t } = useTranslation('dxf-viewer-shell');
@@ -67,6 +74,7 @@ export const TableXlsxOpenConfirmDialog: React.FC = () => {
       title={t('tableXlsxOpen.title')}
       message={t('tableXlsxOpen.message', { fileName: state.fileName })}
       undoNote={t('tableXlsxOpen.undoNote')}
+      details={xlsxUnsupportedGroups(state.unsupported, t)}
       confirmLabel={t('tableXlsxOpen.replaceButton')}
       cancelLabel={t('tableXlsxOpen.cancel')}
       onConfirm={() => resolveTableXlsxOpen('replace')}
