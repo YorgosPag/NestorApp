@@ -34,6 +34,7 @@
 import { useCallback } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useNotifications } from '@/providers/NotificationProvider';
+import { MAX_TABLE_CELL_CHARACTERS } from '../../bim/table/table-ooxml-limits';
 import type { TablePasteResult } from '../../bim/table/table-range-clipboard';
 
 /**
@@ -77,6 +78,18 @@ export function useTablePasteReport(): (result: TablePasteResult, external: bool
       }
       if (result.skippedMergedCells > 0) {
         parts.push(t('table.clipboard.pasteMergedSkipped', { count: result.skippedMergedCells }));
+      }
+      // 🔴 ADR-833 Φ5Β — **τρίτος, ξεχωριστός λόγος απώλειας**: το κείμενο ενός κελιού κόπηκε
+      // στη ράγα του OOXML (32.767 χαρακτήρες). Δεν αθροίζεται με τα άλλα δύο και δεν
+      // συνάγεται από αυτά: ένα κελί μπορεί να **μπήκε μια χαρά** και να έχει χάσει μια
+      // παράγραφο μέσα του — απώλεια που ο χρήστης δεν έχει κανέναν τρόπο να δει.
+      if (result.clippedTextCells > 0) {
+        parts.push(
+          t('table.clipboard.pasteTextClipped', {
+            count: result.clippedTextCells,
+            limit: MAX_TABLE_CELL_CHARACTERS,
+          }),
+        );
       }
       if (parts.length > 0) {
         notifications.warning(t('table.clipboard.pasteClipped', { detail: parts.join(' · ') }), {

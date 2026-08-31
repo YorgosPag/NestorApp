@@ -9,11 +9,11 @@
 
 import { worksheetGridToModel } from '../worksheet-to-model';
 import {
-  MAX_TABLE_COLUMN_COUNT,
-  MAX_TABLE_DATA_ROW_COUNT,
   TABLE_FIXED_ROW_COUNT,
 } from '../../build-table-entity';
 import { resolveTableModel, cellKey } from '../../table-model-helpers';
+import { MAX_TABLE_GRID_CELLS } from '../../table-capacity';
+import { MAX_TABLE_COLUMN_COUNT } from '../../table-ooxml-limits';
 import type { PersistedTableModel } from '../../../../types/table';
 
 /** Η τιμή που βλέπει ο χρήστης στο κελί (r, c) — μέσω του ΠΡΑΓΜΑΤΙΚΟΥ αναγνώστη κελιών. */
@@ -73,20 +73,47 @@ describe('worksheetGridToModel — θεσιακή ταύτιση 1:1', () => {
 });
 
 describe('worksheetGridToModel — τα όρια ΑΝΑΦΕΡΟΝΤΑΙ, δεν σιωπούν', () => {
-  it('φύλλο πάνω από το όριο γραμμών: κόβεται ΚΑΙ το λέει με αριθμό', () => {
-    const total = TABLE_FIXED_ROW_COUNT + MAX_TABLE_DATA_ROW_COUNT;
-    const grid = Array.from({ length: total + 37 }, (_, r) => [`r${r}`]);
+  // 🔴 ADR-833 Φ5Β — το κόψιμο ρωτά πλέον το **ΠΥΚΝΟ ΓΙΝΟΜΕΝΟ**, όχι δύο άνω όρια ανά άξονα.
+  // Τα πλέγματα εδώ είναι **αραιά επίτηδες** (μία γεμάτη γραμμή, οι υπόλοιπες κενές): το
+  // ζητούμενο είναι οι **διαστάσεις** που προσφέρονται, και ένα γεμάτο πλέγμα 31.250 κελιών
+  // θα έκανε τη σουίτα να τρέχει λεπτά χωρίς να προσθέτει τίποτα στην ερώτηση.
+  const COLUMNS = 100;
+  const FITTING_ROWS = MAX_TABLE_GRID_CELLS / COLUMNS; // 312,5 → 312 μετά το `Math.floor`
+
+  it('φύλλο πάνω από το ΓΙΝΟΜΕΝΟ: κόβεται σε γραμμές ΚΑΙ το λέει με αριθμό', () => {
+    const wide = Array.from({ length: COLUMNS }, (_, c) => `c${c}`);
+    const offeredRows = Math.floor(FITTING_ROWS) + 37;
+    const grid = [wide, ...Array.from({ length: offeredRows - 1 }, () => [] as string[])];
+
     const result = worksheetGridToModel(grid);
-    expect(result.offeredRows).toBe(total + 37);
+    expect(result.offeredRows).toBe(offeredRows);
     expect(result.droppedRows).toBe(37);
-    expect(resolveTableModel(result.model).rows).toHaveLength(total);
+    // 🔑 Και το κόψιμο έγινε στις **γραμμές**: οι στήλες είναι το σχήμα των δεδομένων και
+    // κρατιούνται (ADR-833 §5.8.3).
+    expect(result.droppedColumns).toBe(0);
+    expect(resolveTableModel(result.model).columns).toHaveLength(COLUMNS);
   });
 
-  it('φύλλο πάνω από το όριο στηλών: κόβεται ΚΑΙ το λέει με αριθμό', () => {
-    const grid = [Array.from({ length: MAX_TABLE_COLUMN_COUNT + 5 }, (_, c) => `c${c}`)];
-    const result = worksheetGridToModel(grid);
-    expect(result.offeredColumns).toBe(MAX_TABLE_COLUMN_COUNT + 5);
+  it('🔑 …και ο πίνακας που γεννιέται ΧΩΡΑΕΙ όντως στο όριο — όχι «περίπου»', () => {
+    const wide = Array.from({ length: COLUMNS }, (_, c) => `c${c}`);
+    const grid = [wide, ...Array.from({ length: 5_000 }, () => [] as string[])];
+    const model = resolveTableModel(worksheetGridToModel(grid).model);
+    expect(model.rows.length * model.columns.length).toBeLessThanOrEqual(MAX_TABLE_GRID_CELLS);
+  });
+
+  it('φύλλο πάνω από τη ΡΑΓΑ των στηλών: κόβεται ΚΑΙ το λέει με αριθμό', () => {
+    // Οι στήλες κόβονται απέναντι στις **αναπόφευκτες** γραμμές (τίτλος + κεφαλίδα), άρα το
+    // ταβάνι τους εδώ είναι το γινόμενο διά δύο — και είναι **κάτω** από τη ράγα του OOXML.
+    const ceiling = MAX_TABLE_GRID_CELLS / TABLE_FIXED_ROW_COUNT;
+    const row: string[] = [];
+    row[0] = 'πρώτη';
+    row[ceiling + 4] = 'τελευταία';
+    row.length = ceiling + 5;
+
+    const result = worksheetGridToModel([row]);
+    expect(result.offeredColumns).toBe(ceiling + 5);
     expect(result.droppedColumns).toBe(5);
+    expect(ceiling).toBeLessThan(MAX_TABLE_COLUMN_COUNT);
   });
 
   it('κενό φύλλο ⇒ κενός πίνακας, ΟΧΙ σφάλμα', () => {

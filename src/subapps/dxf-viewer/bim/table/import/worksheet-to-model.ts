@@ -33,12 +33,7 @@
 
 import type { PersistedTableModel } from '../../../types/table';
 import type { TsvGrid } from '@/lib/spreadsheet/tsv';
-import {
-  buildTableModel,
-  MAX_TABLE_COLUMN_COUNT,
-  MAX_TABLE_DATA_ROW_COUNT,
-  TABLE_FIXED_ROW_COUNT,
-} from '../build-table-entity';
+import { buildTableModel, TABLE_FIXED_ROW_COUNT } from '../build-table-entity';
 import { pasteTsvIntoTable } from '../table-range-clipboard';
 import { applyWorksheetFormat } from './worksheet-format-apply';
 import type { ImportedWorksheetFormat } from './xlsx-worksheet-format';
@@ -90,14 +85,24 @@ export function worksheetGridToModel(
     };
   }
 
-  // Ο πίνακας έχει ΠΑΝΤΑ τις δύο σταθερές γραμμές (τίτλος + κεφαλίδα), οπότε το «σύνολο
-  // γραμμών» που ζητάει το φύλλο μεταφράζεται σε «γραμμές δεδομένων» αφαιρώντας τες.
-  const fitRows = Math.min(offeredRows, TABLE_FIXED_ROW_COUNT + MAX_TABLE_DATA_ROW_COUNT);
-  const fitColumns = Math.min(offeredColumns, MAX_TABLE_COLUMN_COUNT);
-
+  // 🔴 ADR-833 Φ5Β — **ΤΟ ΚΟΨΙΜΟ ΕΧΕΙ ΕΝΑ ΣΠΙΤΙ, ΚΑΙ ΕΙΝΑΙ ΤΟ ΕΡΓΟΣΤΑΣΙΟ.**
+  //
+  // Εδώ υπήρχαν δύο `Math.min`, ένα ανά άξονα — που το §5.6.4 απέδειξε ότι δεν προστατεύουν
+  // τίποτα: ένα φύλλο 5.000 στηλών × 5.000 γραμμών περνούσε **και τις δύο** συγκρίσεις (κάθε
+  // άξονας κάτω από τη ράγα του) και παρήγαγε πλέγμα 25 εκατομμυρίων κελιών.
+  //
+  // 🔑 Η πρώτη διόρθωση της Φ5Β έβαλε εδώ ένα `fitTableGrid(...)` — και **μετάλλαξη το
+  // απέδειξε περιττό**: το `buildTableModel` περνά από το `resolveShape`, που εφαρμόζει
+  // **τον ίδιο** κανόνα. Με τον τοπικό υπολογισμό σβησμένο, η συμπεριφορά ήταν **ταυτόσημη**
+  // (M33). Δηλαδή ήταν δεύτερη διατύπωση του «τι χωράει», που δεν μπορούσε ποτέ να
+  // διαφωνήσει — και το μόνο που πρόσθετε ήταν ένα σημείο να ξεχαστεί.
+  //
+  // ⚠️ Άρα οι **προσφερόμενες** διαστάσεις πάνε ωμές στο εργοστάσιο, κι εκείνο κόβει. Το
+  // «τι δεν χώρεσε» εξακολουθεί να μετριέται **παρακάτω**, από αυτό που πράγματι μπήκε
+  // (`pasted.fitted*`) — ποτέ από πρόβλεψη.
   const empty = buildTableModel({
-    columnCount: fitColumns,
-    dataRowCount: Math.max(0, fitRows - TABLE_FIXED_ROW_COUNT),
+    columnCount: offeredColumns,
+    dataRowCount: Math.max(0, offeredRows - TABLE_FIXED_ROW_COUNT),
   });
 
   // Η άγκυρα: το **πρώτο** κελί του πίνακα. Διαβάζεται από το ίδιο το μοντέλο και όχι από

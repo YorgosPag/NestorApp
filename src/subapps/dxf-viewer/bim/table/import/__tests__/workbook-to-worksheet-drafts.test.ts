@@ -9,7 +9,8 @@
  */
 
 import { workbookToWorksheetDrafts } from '../workbook-to-worksheet-drafts';
-import { MAX_TABLE_COLUMN_COUNT, MAX_TABLE_DATA_ROW_COUNT, TABLE_FIXED_ROW_COUNT } from '../../build-table-entity';
+import { TABLE_FIXED_ROW_COUNT } from '../../build-table-entity';
+import { MAX_TABLE_GRID_CELLS } from '../../table-capacity';
 import { resolveTableModel } from '../../table-model-helpers';
 import type { ImportedWorksheet } from '../xlsx-to-worksheets';
 
@@ -61,7 +62,20 @@ describe('🔴 ADR-833 Φ4 — ΟΛΑ τα φύλλα, στη σειρά του 
 });
 
 describe('🔴 ADR-833 Φ4 — ΚΑΜΙΑ ΣΙΩΠΗΛΗ ΑΠΩΛΕΙΑ: το κόψιμο ΑΘΡΟΙΖΕΤΑΙ', () => {
-  const tooManyRows = TABLE_FIXED_ROW_COUNT + MAX_TABLE_DATA_ROW_COUNT + 5;
+  // 🔴 ADR-833 Φ5Β — τα υπερμεγέθη πλέγματα είναι **αραιά επίτηδες** (μία γεμάτη γραμμή, οι
+  // υπόλοιπες κενές): το ζητούμενο είναι οι **διαστάσεις** που προσφέρονται και το άθροισμα
+  // του κοψίματος, όχι το περιεχόμενο. Με γεμάτα πλέγματα στο νέο όριο η σουίτα έτρεχε
+  // **επτά λεπτά** — και δεν ρωτούσε τίποτα παραπάνω.
+  const COLUMNS = 100;
+  const FITTING_ROWS = Math.floor(MAX_TABLE_GRID_CELLS / COLUMNS);
+
+  /** Πλέγμα με **μία** γεμάτη γραμμή και `rows − 1` κενές — ίδιες διαστάσεις, μηδέν κόστος. */
+  function sparseGrid(rows: number, cols: number, tag: string): string[][] {
+    const wide = Array.from({ length: cols }, (_, c) => `${tag}:0,${c}`);
+    return [wide, ...Array.from({ length: rows - 1 }, () => [] as string[])];
+  }
+
+  const tooManyRows = FITTING_ROWS + 5;
 
   it('βιβλίο που χωρά ⇒ μηδέν κόψιμο', () => {
     const { droppedRows, droppedColumns } = workbookToWorksheetDrafts(BOOK);
@@ -72,7 +86,7 @@ describe('🔴 ADR-833 Φ4 — ΚΑΜΙΑ ΣΙΩΠΗΛΗ ΑΠΩΛΕΙΑ: το κ
   it('🔴 ΕΝΑ μεγάλο φύλλο ανάμεσα σε μικρά ΔΕΝ κρύβεται πίσω τους', () => {
     const book: readonly ImportedWorksheet[] = [
       { name: 'μικρό', grid: grid(2, 2, 'A') },
-      { name: 'τεράστιο', grid: grid(tooManyRows, 2, 'B') },
+      { name: 'τεράστιο', grid: sparseGrid(tooManyRows, COLUMNS, 'B') },
       { name: 'μικρό 2', grid: grid(2, 2, 'C') },
     ];
     expect(workbookToWorksheetDrafts(book).droppedRows).toBe(5);
@@ -80,15 +94,15 @@ describe('🔴 ADR-833 Φ4 — ΚΑΜΙΑ ΣΙΩΠΗΛΗ ΑΠΩΛΕΙΑ: το κ
 
   it('το κόψιμο ΔΥΟ φύλλων προστίθεται, δεν αντικαθίσταται από το τελευταίο', () => {
     const book: readonly ImportedWorksheet[] = [
-      { name: 'α', grid: grid(tooManyRows, 2, 'A') },
-      { name: 'β', grid: grid(tooManyRows, 2, 'B') },
+      { name: 'α', grid: sparseGrid(tooManyRows, COLUMNS, 'A') },
+      { name: 'β', grid: sparseGrid(tooManyRows, COLUMNS, 'B') },
     ];
     expect(workbookToWorksheetDrafts(book).droppedRows).toBe(10);
   });
 
   it('οι στήλες μετριούνται χωριστά από τις γραμμές', () => {
     const book: readonly ImportedWorksheet[] = [
-      { name: 'πλατύ', grid: grid(2, MAX_TABLE_COLUMN_COUNT + 3, 'A') },
+      { name: 'πλατύ', grid: sparseGrid(2, MAX_TABLE_GRID_CELLS / TABLE_FIXED_ROW_COUNT + 3, 'A') },
     ];
     const result = workbookToWorksheetDrafts(book);
     expect(result.droppedColumns).toBe(3);

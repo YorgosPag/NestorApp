@@ -72,6 +72,7 @@ import {
 // 🔴 ADR-739 Φ.Ζ — ο γραφέας που **καταλαβαίνει** `=`, και ο επαναϋπολογισμός που ακολουθεί.
 // Δες την κεφαλίδα: η επικόλληση έγραφε ωμό κείμενο και δεν ξαναϋπολόγιζε τίποτα.
 import { commitCellWrites, writeCellInput } from './formula/table-formula-engine';
+import { clipTableCellText } from './table-ooxml-limits';
 import type { TableCellRangeBounds, TableCellRef } from './table-cell-range';
 import { tableRangeCellRefs } from './table-cell-range';
 
@@ -162,6 +163,17 @@ export interface TablePasteResult {
    * κελιά που χωρούσαν μια χαρά.
    */
   readonly skippedMergedCells: number;
+  /**
+   * 🔴 ADR-833 Φ5Β — κελιά των οποίων το **κείμενο** κόπηκε στη ράγα του OOXML (32.767
+   * χαρακτήρες, `table-ooxml-limits`).
+   *
+   * **Τρίτος, ξεχωριστός λόγος απώλειας** — και γι' αυτό τρίτος αριθμός: ένα κελί μπορεί να
+   * μην μπήκε επειδή τελείωσε ο πίνακας, επειδή έπεσε πάνω σε συγχώνευση, **ή** επειδή το
+   * περιεχόμενό του δεν χωρά στο πρότυπο. Τα τρία δεν αθροίζονται και δεν συνάγονται με
+   * αφαίρεση: ο χρήστης που έχασε 3 στήλες δεν έχει κανέναν τρόπο να μαντέψει ότι
+   * **επιπλέον** κόπηκε μια παράγραφος μέσα σε ένα κελί που φαίνεται να μπήκε μια χαρά.
+   */
+  readonly clippedTextCells: number;
 }
 
 /**
@@ -206,6 +218,7 @@ export function pasteTsvIntoTable(
     fittedRows,
     fittedColumns,
     skippedMergedCells: written.skippedMergedCells,
+    clippedTextCells: written.clippedTextCells,
   };
 }
 
@@ -219,6 +232,7 @@ export function pasteTsvIntoTable(
  */
 interface TableGridWrite extends PendingCellWrites {
   readonly skippedMergedCells: number;
+  readonly clippedTextCells: number;
 }
 
 /**
@@ -248,6 +262,7 @@ function writeGridCells(
   const written: CellWriteTarget[] = [];
   let next = persisted;
   let skippedMergedCells = 0;
+  let clippedTextCells = 0;
 
   for (let r = 0; r < fitted.rows; r++) {
     for (let c = 0; c < fitted.columns; c++) {
@@ -262,14 +277,22 @@ function writeGridCells(
       // λιγότερα κελιά δεν σβήνει τα υπόλοιπα — δεν πρόσφερε τιμή γι' αυτά.
       const value = grid[r][c];
       if (value === undefined) continue;
-      const cellWritten = writeCellInput(next, rowId, colId, value);
+      // 🔴 ADR-833 Φ5Β — η ίδια ράγα που επιβάλλει το `writeCellInput`, ρωτημένη **εδώ για
+      // να μετρηθεί**. Δεν είναι δεύτερη φραγή (N.18): είναι η ίδια καθαρή συνάρτηση, και
+      // η επιβολή παραμένει **μία**, μέσα στον γραφέα. Ο λόγος που ρωτιέται δεύτερη φορά
+      // είναι ότι μόνο εδώ υπάρχει κάποιος να **κρατήσει τον αριθμό** — ο γραφέας
+      // επιστρέφει μοντέλο, όχι αναφορά, και μια αναφορά μέσα του θα υποχρέωνε και τους
+      // τέσσερις άλλους καλούντες να την κουβαλούν χωρίς να τη χρειάζονται.
+      const clipped = clipTableCellText(value);
+      if (clipped.clippedCharacters > 0) clippedTextCells++;
+      const cellWritten = writeCellInput(next, rowId, colId, clipped.text);
       if (cellWritten.model === next) continue;
       next = cellWritten.model;
       written.push(...cellWritten.written);
     }
   }
 
-  return { model: next, written, skippedMergedCells };
+  return { model: next, written, skippedMergedCells, clippedTextCells };
 }
 
 // 🔴 ADR-739 §50 — ο ιδιωτικός `recalculatedAfter` **ανυψώθηκε** σε `commitCellWrites`
@@ -339,5 +362,6 @@ function emptyResult(
     fittedRows: 0,
     fittedColumns: 0,
     skippedMergedCells: 0,
+    clippedTextCells: 0,
   };
 }
