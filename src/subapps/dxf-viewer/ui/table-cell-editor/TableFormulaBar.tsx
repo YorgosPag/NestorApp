@@ -54,6 +54,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §25
  */
 
+import { MAX_TABLE_CELL_CHARACTERS } from '../../bim/table/table-ooxml-limits';
 import React, { useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
@@ -368,6 +369,12 @@ export function TableFormulaBar(props: TableFormulaBarProps): React.ReactElement
           ref={inputRef}
           type="text"
           spellCheck={false}
+          // 🔴 ADR-833 Φ5Β — η ράγα του OOXML (32.767 χαρακτήρες/κελί), εδώ **δωρεάν**: το
+          // πεδίο είναι πραγματικό `<input>`, οπότε ο browser σταματά να δέχεται μόνος του.
+          // Το κελί δεν μπορεί να το κάνει έτσι (είναι `contenteditable`) και το πληρώνει με
+          // ρητό φρουρό `beforeinput` — ίδια συμπεριφορά, δύο μηχανισμοί, γιατί δύο διαφορετικά
+          // πεδία. Ό,τι δεν μπήκε ποτέ δεν χάθηκε ποτέ: δεν χρειάζεται μήνυμα.
+          maxLength={MAX_TABLE_CELL_CHARACTERS}
           value={value}
           className="min-w-0 flex-1 bg-transparent px-2 text-foreground outline-none"
           aria-label={t('table.formulaBar.valueAriaLabel')}
