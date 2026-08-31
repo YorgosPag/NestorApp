@@ -303,7 +303,7 @@ function toCatalogRow(
     // 🔑 **Μέσω του SSoT αναγνώστη, ΠΟΤΕ σκέτο `mandate.notifyOutcome`**: το πεδίο
     //    λείπει από κάθε εντολή γραμμένη πριν από το §6.5.δ, και ένα `undefined` σε
     //    `Record` ευρετηρίαση θα τύπωνε **κενό** — η άγνοια θα ξαναγινόταν αόρατη.
-    notifyOutcome: mandate.notifyOutcome,
+    notifyOutcome: notifyOutcomeOf(mandate),
     viewedAt: mandate.viewedAt,
     decidedAt: mandate.decidedAt,
     proofVia: mandate.proof.via,
