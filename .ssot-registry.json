@@ -5544,18 +5544,27 @@
     },
     "mandate-conflict": {
       "addedDate": "2026-08-30",
-      "ssotFile": "src/lib/mandate/mandate-conflict.ts",
-      "description": "ADR-832 — «ΣΥΓΚΡΟΥΟΝΤΑΙ ΑΥΤΕΣ ΟΙ ΔΥΟ ΕΝΤΟΛΕΣ;» απαντιέται σε ΕΝΑ σημείο: `mandateConflicts` (κανόνας) + `lockModeFor`/`modesCompatible` (λεξιλόγιο τρόπου, types/listing-agreement.ts) + `intervalsOverlap` (τελεστής χρόνου, lib/date-local.ts). Ο κανόνας είναι `ίδιος πόρος ∧ επικάλυψη χρόνου ∧ ασύμβατοι τρόποι` — το EXCLUDE USING GIST της PostgreSQL με τρίτο σκέλος τον πίνακα shared/exclusive. ΑΠΑΓΟΡΕΥΕΤΑΙ δεύτερη υλοποίηση: (α) χειρόγραφος έλεγχος «έχει ήδη εντολή;» πάνω στο μοντέλο (`mandate.kind !== 'self'`, `mandates.length > 0`, `mandates.length !== 0`) — ΑΥΤΟ ΑΚΡΙΒΩΣ ήταν το ελάττωμα: έκρινε ΤΡΙΑ ΣΤΑ ΤΕΣΣΕΡΑ σενάρια λάθος (απλή εντολή σε δεύτερο γραφείο · αποκλειστική πώλησης vs εντολή εκμίσθωσης · διαδοχικές εντολές), επειδή δεν ρωτούσε ΤΟ ΕΙΔΟΣ· (β) χειρόγραφος έλεγχος επικάλυψης διαστημάτων (`startsAt < other.expiresAt && …`) — ο τελεστής είναι το `intervalsOverlap`, που επιστρέφει `null` (όχι `false`) σε μη αναγνώσιμο άκρο· (γ) δεύτερος πίνακας συμβατότητας τρόπων. 🔴 ΓΙΑΤΙ: ο ίδιος κριτής τρέχει σε ΤΕΣΣΕΡΑ σημεία (υποβολή αιτήματος · αποδοχή μέσα σε συναλλαγή · `setOwnerPropertyMandate` · η ΟΘΟΝΗ, μέσω `mandate-occupancy-notice`). Δεύτερος κανόνας θα σήμαινε οθόνη που ΔΙΑΦΩΝΕΙ με τον διακομιστή — ο άνθρωπος βλέπει «εντάξει» και εισπράττει «όχι». ⛔ Ο ΧΡΟΝΙΚΟΣ ΦΙΛΤΡΑΡΙΣΜΑΤΟΣ ΑΝΗΚΕΙ ΣΤΟΝ ΚΡΙΤΗ: οι καλούντες περνούν `bindingMandates`, ΠΟΤΕ `activeMandates` — το χρονικό φίλτρο έκρυβε τις χαλασμένες εντολές πριν φτάσουν στον κριτή («άγνωστο» γινόταν «καθαρό», N.12) και ήταν διπλός έλεγχος. ⛔ ΤΟ `mandatesExpireAt` ΕΙΝΑΙ ΕΥΡΕΤΗΡΙΟ, ΠΟΤΕ ΚΡΙΤΗΣ: «έληξε;» το απαντά το `isMandateExpired` πάνω στην ίδια την εντολή.",
+      "ssotFile": "src/lib/occupancy/occupancy-conflict.ts",
+      "description": "ADR-832 + ADR-835 Φ2 — «ΣΥΓΚΡΟΥΟΝΤΑΙ ΑΥΤΕΣ ΟΙ ΔΥΟ ΚΑΤΑΛΗΨΕΙΣ;» απαντιέται σε ΕΝΑ σημείο: `occupancyConflicts` (ο κανόνας, lib/occupancy/occupancy-conflict.ts) + `modesCompatible` (τρόπος, lib/occupancy/occupancy-mode.ts) + `sharedResources`/`resourcesIntersect` (πόρος ως ΣΥΝΟΛΟ ΧΩΡΩΝ, lib/occupancy/occupancy-resource.ts) + `intervalsOverlap` (χρόνος, lib/date-local.ts). Ο κανόνας είναι `τέμνονται οι πόροι ∧ επικάλυψη χρόνου ∧ ασύμβατοι τρόποι` — το EXCLUDE USING GIST της PostgreSQL με τρίτο σκέλος τον πίνακα shared/exclusive. 🔴 ΔΥΟ ΚΑΤΑΝΑΛΩΤΕΣ, ΚΑΙ ΕΙΝΑΙ Η ΑΠΟΔΕΙΞΗ: `lib/mandate/mandate-conflict.ts` (εντολές, πολιτική `replaces`) και `lib/stay/stay-conflict.ts` (κρατήσεις, πολιτική `conflicts`). Ο καθένας κάνει ΜΟΝΟ μετάφραση μοντέλου→`Occupancy`· κανένας δεν ξαναγράφει κανόνα. ΑΠΑΓΟΡΕΥΕΤΑΙ δεύτερη υλοποίηση: (α) χειρόγραφος έλεγχος «έχει ήδη εντολή;» πάνω στο μοντέλο (`mandate.kind !== 'self'`, `mandates.length > 0`) — ΑΥΤΟ ΑΚΡΙΒΩΣ ήταν το ελάττωμα: έκρινε ΤΡΙΑ ΣΤΑ ΤΕΣΣΕΡΑ σενάρια λάθος, επειδή δεν ρωτούσε ΤΟ ΕΙΔΟΣ· (β) χειρόγραφος έλεγχος επικάλυψης διαστημάτων (`startsAt < other.expiresAt && …`) — ο τελεστής είναι το `intervalsOverlap`, που επιστρέφει `null` (όχι `false`) σε μη αναγνώσιμο άκρο· (γ) δεύτερος πίνακας συμβατότητας τρόπων· (δ) 🔴 χειρόγραφος έλεγχος ΧΩΡΟΥ με ΙΣΟΤΗΤΑ (`a.spaceId === b.spaceId`) — ο πόρος είναι ΣΥΝΟΛΟ (ADR-835 §4.12): `spaceId: null` σημαίνει ΟΛΟΚΛΗΡΟ και τέμνει κάθε δωμάτιο, αλλιώς «κράτηση ολόκληρου + κράτηση δωματίου» απαντά clear ⇒ ΔΥΟ ΟΙΚΟΓΕΝΕΙΕΣ ΣΤΗΝ ΠΟΡΤΑ· (ε) 🔴 σιωπηλός κανόνας «ίδιος κάτοχος ⇒ αγνόησέ τον» μέσα σε βρόχο — είναι ΔΗΛΩΜΕΝΗ πολιτική (`SameHolderPolicy`): ψευδής για κρατήσεις ⇒ σιωπηλή διπλοκράτηση. 🔴 ΓΙΑΤΙ: ο ίδιος κριτής τρέχει σε ΤΕΣΣΕΡΑ σημεία της εντολής (υποβολή αιτήματος · αποδοχή μέσα σε συναλλαγή · `setOwnerPropertyMandate` · η ΟΘΟΝΗ μέσω `mandate-occupancy-notice`) και θα τρέξει στην έγκριση κράτησης. Δεύτερος κανόνας θα σήμαινε οθόνη που ΔΙΑΦΩΝΕΙ με τον διακομιστή — ο άνθρωπος βλέπει «εντάξει» και εισπράττει «όχι». ⛔ ΤΟ ΧΡΟΝΙΚΟ ΦΙΛΤΡΑΡΙΣΜΑ ΑΝΗΚΕΙ ΣΤΟΝ ΚΡΙΤΗ: οι καλούντες περνούν `bindingMandates` / `occupyingStays` (φίλτρο ΚΑΤΑΣΤΑΣΗΣ), ΠΟΤΕ χρονικό — εκείνο έκρυβε τις χαλασμένες εγγραφές πριν φτάσουν στον κριτή («άγνωστο» γινόταν «καθαρό», N.12) και ήταν διπλός έλεγχος. ⛔ ΤΟ `mandatesExpireAt` ΚΑΙ ΤΟ `StayBooking.propertyId` ΕΙΝΑΙ ΕΥΡΕΤΗΡΙΑ, ΠΟΤΕ ΚΡΙΤΕΣ.",
       "forbiddenPatterns": [
+        "function\\s+occupancyConflicts\\s*\\(",
         "function\\s+mandateConflicts\\s*\\(",
+        "function\\s+stayConflicts\\s*\\(",
         "function\\s+modesCompatible\\s*\\(",
+        "function\\s+resourcesIntersect\\s*\\(",
+        "function\\s+sharedResources\\s*\\(",
         "function\\s+lockModeFor\\s*\\("
       ],
       "allowlist": [
+        "src/lib/occupancy/occupancy-conflict.ts",
+        "src/lib/occupancy/occupancy-mode.ts",
+        "src/lib/occupancy/occupancy-resource.ts",
         "src/lib/mandate/mandate-conflict.ts",
         "src/lib/mandate/mandate-occupancy-notice.ts",
+        "src/lib/stay/stay-conflict.ts",
         "src/types/listing-agreement.ts",
-        "src/types/owner-property-mandate.ts"
+        "src/types/owner-property-mandate.ts",
+        "src/types/stay-booking.ts"
       ]
     }
   }

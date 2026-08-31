@@ -35,18 +35,29 @@ module.exports = {
   // άνθρωπος. Ένα pattern που παράγει θόρυβο δεν είναι φρουρός.
   'mandate-conflict': {
     shouldMatch: `// Scanner must catch a SECOND implementation of the occupancy rule:
+export function occupancyConflicts(candidate, existing, policy) { return { kind: 'clear' }; }
 export function mandateConflicts(candidate, existing) {
   return existing.some((o) => o.scope.some((k) => candidate.scope.includes(k)));
 }
+export function stayConflicts(candidate, existing) { return existing.length === 0; }
 function modesCompatible(a, b) { return a === 'shared' && b === 'shared'; }
+function resourcesIntersect(a, b) { return a.spaceId === b.spaceId; }
+function sharedResources(a, b) { return a.filter((x) => b.includes(x)); }
 export function lockModeFor(agreement) { return agreement === 'open' ? 'shared' : 'exclusive'; }`,
     shouldSkip: `// Scanner must pass SSoT import + usage, and NOT trip on lookalike names:
+import { occupancyConflicts } from '@/lib/occupancy/occupancy-conflict';
+import { sharedResources } from '@/lib/occupancy/occupancy-resource';
+import { modesCompatible } from '@/lib/occupancy/occupancy-mode';
 import { mandateConflicts } from '@/lib/mandate/mandate-conflict';
-import { lockModeFor, modesCompatible } from '@/types/listing-agreement';
+import { stayConflicts } from '@/lib/stay/stay-conflict';
+import { lockModeFor } from '@/types/listing-agreement';
 const verdict = mandateConflicts(occupancyOf(candidate), bindingMandates(existing).map(occupancyOf));
+const nights = stayConflicts(candidate, occupyingStays(existing));
 if (modesCompatible(lockModeFor(a), lockModeFor(b))) return;
+const contested = sharedResources(a.resources, b.resources);
 const mandateConflictsCount = verdict.conflicts.length;
-export function mandateConflictsSummary(verdict) { return verdict.kind; }`,
+export function mandateConflictsSummary(verdict) { return verdict.kind; }
+export function stayConflictsSummary(verdict) { return verdict.kind; }`,
   },
   // ADR-826 — «έλυσε η αρχική ταυτότητα;» απαντιέται σε ΕΝΑ σημείο. Η απόδειξη εκτελείται
   // στη ΜΗΧΑΝΗ ΤΗΣ ΠΥΛΗΣ: pattern με 0 ευρήματα είναι *καθαρό* ή *νεκρό*, και μόνο ένα
