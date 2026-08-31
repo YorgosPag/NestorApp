@@ -61,6 +61,7 @@ import {
   type MandateRequestForAgency,
 } from '@/types/mandate-request';
 import type { PublicListing } from '@/types/public-listing';
+import { publicListingFromDocument } from '@/lib/listings/public-listing-from-document';
 
 const logger = createModuleLogger('mandate-inbox.service');
 
@@ -238,10 +239,14 @@ async function readListingsFor(
 
     const found = new Map<string, PublicListing>();
     snapshots.forEach((snapshot, index) => {
-      const data = snapshot.data();
-      if (data !== undefined) {
-        found.set(ids[index], { ...(data as PublicListing), id: ids[index] });
-      }
+      // ── ADR-839 — **το ίδιο σύνορο με τον πελάτη**, παρότι εδώ τρέχει Admin SDK.
+      //
+      // 🔑 Αυτό ακριβώς το σημείο είναι ο λόγος που η πύλη είναι **καθαρή
+      //    συνάρτηση** και όχι `FirestoreDataConverter`: ο converter ανήκει στο
+      //    client SDK και δεν φτάνει ποτέ εδώ, άρα θα άφηνε αυτή τη γραμμή με το
+      //    `as` — δεύτερος κριτής για την ίδια ερώτηση (ADR-749).
+      const listing = publicListingFromDocument(snapshot.data(), ids[index]);
+      if (listing !== null) found.set(ids[index], listing);
     });
     return found;
   } catch (error) {

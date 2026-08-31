@@ -29,8 +29,60 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { PublicListing, ListingLedger } from '@/types/public-listing';
 import { listingMapShape, isMappedShape } from '@/lib/listings/listing-map-shape';
+import { readStoredListing } from '@/lib/listings/public-listing-from-document';
 
 const logger = createModuleLogger('usePublicListings');
+
+// ============================================================================
+// ΤΟ ΣΥΝΟΡΟ (ADR-839)
+// ============================================================================
+//
+// 🔴 **Καμία από τις δύο συναρτήσεις δεν ξέρει το σχήμα** — το ρωτούν. Πριν το
+//    ADR-839 και οι δύο διαδρομές έγραφαν `data() as PublicListing`, δηλαδή
+//    **δήλωναν** ό,τι δεν είχαν ελέγξει· η αγγελία `ownp_330a5a4b…` έπεσε στην
+//    παραγωγή ακριβώς εκεί. Εδώ μένει μόνο το «τι κάνω με την απάντηση».
+
+/** Ό,τι χρειάζεται η ανάγνωση από ένα στιγμιότυπο — ώστε οι δύο διαδρομές να μοιράζονται τύπο. */
+interface ListingSnapshotLike {
+  readonly id: string;
+  data(): unknown;
+}
+
+/**
+ * **Πόσα έγγραφα ζητούν επανασύνθεση** — καταγράφεται, δεν διορθώνεται εδώ.
+ *
+ * ⚠️ **ΓΙΑΤΙ ΔΕΝ ΓΡΑΦΕΙ ΠΙΣΩ ο αναγνώστης (lazy migration), όσο κι αν το προτείνει
+ * το πρότυπο του document store**: ο πελάτης **δεν έχει** δικαίωμα εγγραφής στο
+ * `public_listings` — γράφει **μόνο** ο διακομιστής (`read: if true`, καμία
+ * `write`). Ένα write-back-on-read θα απαιτούσε διαδρομή που επιτρέπει σε
+ * **ανώνυμο** επισκέπτη να πυροδοτεί εγγραφές, δηλαδή θα αντάλλασσε μια λευκή
+ * οθόνη με ένα διάνυσμα DoS. Η επανασύνθεση ανήκει στο batch (`rebuildAllPublicListings`),
+ * και ο επισκέπτης βλέπει ήδη σωστά γιατί η μετάφραση έγινε **στη μνήμη**.
+ */
+function reportStaleListings(staleCount: number, total: number): void {
+  if (staleCount === 0) return;
+  logger.warn('Δημόσιες προβολές σε παλαιότερη έκδοση σχήματος — εκκρεμεί επανασύνθεση', {
+    data: { stale: staleCount, total },
+  });
+}
+
+/** Λίστα στιγμιότυπων → αγγελίες. Ό,τι δεν είναι καν αντικείμενο **πέφτει**, δεν σκάει. */
+function readListingSnapshots(docs: readonly ListingSnapshotLike[]): readonly PublicListing[] {
+  const reads = docs.map((snapshot) => readStoredListing(snapshot.data(), snapshot.id));
+
+  reportStaleListings(reads.filter((read) => read?.needsRebuild).length, docs.length);
+
+  return reads.flatMap((read) => (read === null ? [] : [read.listing]));
+}
+
+/** Ένα στιγμιότυπο → η έκβαση της αναζήτησης. Άμορφο έγγραφο = **δεν υπάρχει αγγελία**. */
+function readSingleListing(raw: unknown, id: string): PublicListingLookup {
+  const read = readStoredListing(raw, id);
+  if (read === null) return { state: 'absent' };
+
+  reportStaleListings(read.needsRebuild ? 1 : 0, 1);
+  return { state: 'found', listing: read.listing };
+}
 
 export interface PublicListingsState {
   readonly listings: readonly PublicListing[];
@@ -54,7 +106,7 @@ export function usePublicListings(): PublicListingsState {
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        setListings(snapshot.docs.map((doc) => doc.data() as PublicListing));
+        setListings(readListingSnapshots(snapshot.docs));
         setLoading(false);
       },
       (err: Error) => {
@@ -138,7 +190,7 @@ export function usePublicListing(id: string): PublicListingLookup {
       (snapshot) => {
         setLookup(
           snapshot.exists()
-            ? { state: 'found', listing: snapshot.data() as PublicListing }
+            ? readSingleListing(snapshot.data(), snapshot.id)
             : { state: 'absent' }
         );
       },

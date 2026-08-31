@@ -65,7 +65,7 @@
     "search-results",
     "short-stay"
   ],
-  "inputsSha256": "747344be78c6f717cc37909d96d234c69ae3926211366fd5b28c1c9eba33b96e",
+  "inputsSha256": "a36848e77201338b9858ac6b33e6f52409410e7e5973a14d8ba163a632e7b826",
   "languages": [
     "el"
   ],
@@ -314,7 +314,7 @@
     "src/services/esco.service.ts": "6ec46535a495e3bdd33b195df832d024f8cfa3d232bdce47decf328321d1eef2",
     "src/services/listings/legality-projection.ts": "a88bc62c2d2e65a3eed1ab5215e12e0fab6e0155255d8649037e1b26e05efcd4",
     "src/services/listings/public-listing-projection.ts": "8970a52260b38664902b567cdd041f0ce686618f63fe6b753851698c71fda747",
-    "src/services/listings/publish-public-listing.ts": "e77403f5fc0e59abc62766d04dfbed0c5f8649086b805b277818f69a1134875e",
+    "src/services/listings/publish-public-listing.ts": "767f21807b7b866d60bb1b8dfea591c8e36e8898a56b30d735925e81279c456b",
     "src/services/mandate/agency-profile.service.ts": "1cd6917d618bca9eefeea7fcef940ad6ab69bb14517ca50f5de71116e4306cf7",
     "src/services/mandate/mandate-actions.service.ts": "fbc3af70f18b64922dfab6397fab704fd12d42cbd32e78e63322dde8b5d74608",
     "src/services/mandate/mandate-catalog.client.ts": "69f79edb85185acb80424ad0338bf17d12619a5dceeaec6b874ee1c699059378",
@@ -324,7 +324,7 @@
     "src/services/mandate/mandate-decision-vocabulary.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/services/mandate/mandate-email-texts.ts": "36447d4bec3d582dc9279738c63d91671934b5c62dcc1392c0cdb744a15c17f9",
     "src/services/mandate/mandate-inbox.client.ts": "e39d58edb9e06fae3b785de2f7e46bba249e17cfdde528c78740d5829c459e62",
-    "src/services/mandate/mandate-inbox.service.ts": "eadfe093750cb7660a8236900846ff5d277235f0e5e3f80beada89e7c6679802",
+    "src/services/mandate/mandate-inbox.service.ts": "9e777bad2116a4822d78a4e3162ccc3a8f0887b8b008074cc473a7633c423405",
     "src/services/mandate/mandate-invitation.service.ts": "2c8edb86c7dfd354abf11d71bc68bd54f6d595c968fd36188fa5cea0608e5b6a",
     "src/services/mandate/mandate-request-vocabulary.ts": "4d704e90135da7facf1f3fe55f9eb3801b21ca006ce61fa0a48227b77850eb5d",
     "src/services/onboarding/onboarding-types.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -3271,6 +3271,8 @@
     "src/lib/listings/listing-filters.ts": "b0ced7fc27e45ce841f3859a0a174c83c2eb1b7ad1f11b2460f08cd87737972f",
     "src/lib/listings/listing-map-shape.ts": "10781da0d2016406c2389a524898b7c497fc759056875a698840e738119800ab",
     "src/lib/listings/listing-routes.ts": "b923f8af7e5c011d93d1e0d9974851fee69183450fadb85bc7f93eb3ce736bae",
+    "src/lib/listings/public-listing-from-document.ts": "63b67194ce12526e5933fa82ed2b9405f2f62e0924c4f788c2eff41f1fffe244",
+    "src/lib/listings/public-listing-schema.ts": "d050ad06cb8a3b9b347260dd9cbdc71466c059f74d33d7946d7e6e6cdcac7f87",
     "src/lib/location/location-provenance.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/media/media-mime.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/occupancy/occupancy-conflict.ts": "fce79b54f1996729dc9363d98711e50108304d4af0b7ae5f4650d5f4a76d3149",
@@ -3364,7 +3366,7 @@
     "src/services/realtime/hooks/tenant-scoped-error.ts": "aad28da520d047ef7280e72a53d118f6726c6fa133ba7c6c0de3a68a1941b127",
     "src/services/realtime/hooks/use-realtime-entity-events.ts": "00070fc2701d75d65341bb80e1ef29bc54c395b8e1ef144fddd4dbee8f8feaf3",
     "src/services/realtime/hooks/useOrganizationCapability.ts": "f98c8dacbdd520e7bff09c81b3f8bd628e318fa4a49b248f9b087fea8dbd9e0b",
-    "src/services/realtime/hooks/usePublicListings.ts": "47cac2577b44fc183e16ba30493ae1f9e3209caed09caa3e3abfc8dd1b86afd6",
+    "src/services/realtime/hooks/usePublicListings.ts": "e728ad7ce8cd4ac541596f5e245db70656327c7d5a8402907ed38b0d03f9d3d3",
     "src/services/realtime/hooks/useRealtimeBuildings.ts": "b583deccd367b8c1eab51101e76d1de0ad6a868df4934209bd055cf5d676fdad",
     "src/services/realtime/hooks/useRealtimeProperties.ts": "e3cd736c9ae25a2ab3c62b99b69b6233bb6edfbc4fb7b48a14f8d67f6beaf03a",
     "src/services/realtime/types.ts": "3f55257ee4e425ae42d9f98089c9f64c2fe6a0f7b1ac753dbbaffe6f94e193ab",
@@ -3493,7 +3495,7 @@
     "dynamicBoundaries": 18,
     "matchedKeys": 135,
     "routeBoundaries": 0,
-    "shellFiles": 514,
+    "shellFiles": 516,
     "sliceBytes": 333543
   },
   "unresolvableKeys": [

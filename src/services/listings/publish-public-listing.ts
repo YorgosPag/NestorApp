@@ -26,6 +26,7 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { nowISO } from '@/lib/date-local';
+import { PUBLIC_LISTING_SCHEMA_VERSION } from '@/lib/listings/public-listing-schema';
 import {
   buildPublicListing,
   addressToPositionCandidate,
@@ -189,7 +190,19 @@ export async function writeListingProjection(
       return 'withdrawn';
     }
 
-    await ref.set(listing);
+    // ── ADR-839 — Η ΣΦΡΑΓΙΔΑ ΕΚΔΟΣΗΣ ────────────────────────────────────────
+    //
+    // 🔑 **Μπαίνει ΕΔΩ και όχι στην προβολή, επίτηδες.** Το `PublicListing` είναι
+    //    το κλειστό σχήμα του §25.6 — *«ακριβώς τα 5 βασικά + 3 ειδικά, ΠΟΤΕ
+    //    περισσότερα»* — και η έκδοση **δεν είναι περιεχόμενο αγγελίας**: κανείς
+    //    επισκέπτης δεν τη διαβάζει. Είναι μεταδεδομένο **αποθήκευσης**, άρα
+    //    ανήκει στη στιγμή της αποθήκευσης· διαφορετικά η επόμενη οθόνη θα
+    //    ρωτούσε ευλόγως «τι κάνει μια έκδοση σχήματος μέσα στην κάρτα;».
+    //
+    // ⚠️ **Ο αναγνώστης τη διαβάζει μέσω `storedSchemaVersion`**, που απαντά `1`
+    //    όταν λείπει — άρα κάθε έγγραφο γραμμένο πριν από σήμερα έχει ήδη σωστή
+    //    απάντηση χωρίς να το αγγίξει κανείς.
+    await ref.set({ ...listing, schemaVersion: PUBLIC_LISTING_SCHEMA_VERSION });
     return 'published';
   } catch (error) {
     return reportProjectionFailure(listingId, error);
