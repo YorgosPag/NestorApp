@@ -280,7 +280,8 @@
   "offerKind": {
     "sell": "Πώληση",
     "leaseOut": "Ενοικίαση",
-    "exchange": "Αντιπαροχή"
+    "exchange": "Αντιπαροχή",
+    "leaseShort": "Βραχυχρόνια μίσθωση"
   },
   "offerLifecycle": {
     "active": "Ενεργή",

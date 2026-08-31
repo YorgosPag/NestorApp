@@ -67,12 +67,14 @@
     "priceMissing": {
       "notListed": "Not available",
       "salePriceMissing": "No sale price recorded",
-      "rentPriceMissing": "No rent recorded"
+      "rentPriceMissing": "No rent recorded",
+      "nightlyRateMissing": "No nightly rate recorded"
     },
     "offer": {
       "sell": "Sale",
       "leaseOut": "Rent",
-      "exchange": "Land-for-flats"
+      "exchange": "Land-for-flats",
+      "leaseShort": "Short stay"
     },
     "authorship": {
       "agency": "From agency: {name}",
@@ -97,6 +99,7 @@
         "asking": "Asking price",
         "final": "Final sale price",
         "rent": "Monthly rent",
+        "nightly": "Price per night",
         "legacy": "Recorded price"
       }
     },

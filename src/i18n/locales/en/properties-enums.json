@@ -280,7 +280,8 @@
   "offerKind": {
     "sell": "Sale",
     "leaseOut": "Rental",
-    "exchange": "Land-for-Property Exchange"
+    "exchange": "Land-for-Property Exchange",
+    "leaseShort": "Short-Term Rental"
   },
   "offerLifecycle": {
     "active": "Active",

@@ -60,7 +60,8 @@
         "help": "Pick at least one. Without it, the request would match everything.",
         "sell": "I want to buy",
         "leaseOut": "I want to rent",
-        "exchange": "I am looking for land for a build-to-share deal"
+        "exchange": "I am looking for land for a build-to-share deal",
+        "leaseShort": "I am looking for a place to stay for a few nights"
       },
       "place": {
         "legend": "Where?",
@@ -390,10 +391,11 @@
     },
     "offerKind": {
       "label": "What do you want to do with the property?",
-      "help": "You can pick more than one — for example both for sale and for rent.",
+      "help": "You can pick more than one — for example both for sale and for short stays.",
       "sell": "Sale",
       "leaseOut": "Rent",
-      "exchange": "Land-for-flats exchange"
+      "exchange": "Land-for-flats exchange",
+      "leaseShort": "Short-term rental"
     },
     "placeAnswer": {
       "label": "Where is it?",
@@ -424,6 +426,9 @@
       "askingPriceLabel": "Asking price (EUR)",
       "rentPriceLabel": "Monthly rent (EUR)",
       "exchangePercentageLabel": "Landowner share (%)",
+      "nightlyRateLabel": "Price per night (EUR)",
+      "minNightsLabel": "Minimum nights",
+      "maxGuestsLabel": "Maximum guests",
       "priceHelp": "Without a price the listing is not published — that is the rule of every serious marketplace.",
       "placeQueryLabel": "Address or area",
       "placeQueryPlaceholder": "e.g. Egnatia 147, Thessaloniki",
@@ -458,10 +463,12 @@
     },
     "invariant": {
       "heading": "The listing is not saved yet:",
-      "no-live-offer": "Choose what you want to do with the property — sale, rent or land-for-flats exchange.",
+      "no-live-offer": "Choose what you want to do with the property — sale, rent, land-for-flats exchange or short-term rental.",
       "duplicate-offer-kind": "The same kind of offer was declared twice.",
-      "offer-amount-missing": "An offer is missing its amount: price for sale, rent for renting, share for exchange.",
+      "offer-amount-missing": "An offer is missing its amount: price for sale, rent for renting, share for exchange, price per night for short-term rental.",
       "exchange-percentage-out-of-range": "The landowner share must be between 1 and 100.",
+      "short-lease-min-nights-invalid": "Minimum nights must be at least 1. Leave the field empty if you do not want a limit.",
+      "short-lease-max-guests-invalid": "Maximum guests must be at least 1. Leave the field empty if you do not want a limit.",
       "type-missing": "Choose a property type.",
       "area-not-positive": "Enter an area greater than zero.",
       "title-missing": "Give the listing a title.",
