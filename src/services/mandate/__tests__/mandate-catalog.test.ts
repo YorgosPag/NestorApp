@@ -49,6 +49,7 @@ function brokeredMandate(over: Partial<BrokeredListingMandate> = {}): BrokeredLi
     },
     decidedAt: null,
     notifiedAt: '2026-08-20T09:00:00.000Z',
+    notifyOutcome: null,
     viewedAt: null,
     consentNonce: 'nonce-1',
     expiresAt: daysFromNow(300),
@@ -97,6 +98,11 @@ function dbWith(...listings: readonly OwnerProperty[]): {
     firstName: 'Κώστας',
     lastName: 'Παπαδόπουλος',
   });
+  // 🔴 ADR-834 §6.5.δ — **ΕΠΑΦΗ ΠΟΥ ΥΠΑΡΧΕΙ ΚΑΙ ΔΕΝ ΕΧΕΙ ΟΝΟΜΑ.** Είναι το ζωντανό
+  //    σχήμα που έκανε τον κατάλογο να γράφει *«Η επαφή δεν βρέθηκε»* για επαφή που
+  //    **βρέθηκε**: ο διακριτής `type` λείπει, άρα το `getContactDisplayName`
+  //    επιστρέφει `undefined` πάνω σε ωμό έγγραφο βάσης.
+  fake.seed(COLLECTIONS.CONTACTS, 'cont_anonymo', { emails: [] });
   for (const item of listings) {
     fake.seed(COLLECTIONS.OWNER_PROPERTIES, item.id, item as unknown as Record<string, unknown>);
   }
@@ -194,16 +200,53 @@ describe('🔴 Γ — τι κουβαλά κάθε γραμμή', () => {
   it('Γ1 — το όνομα του πελάτη βγαίνει από τον ΕΝΑ κανονικό τόπο', async () => {
     const { db } = dbWith(listing('ownp_a'));
     const [row] = (await readMandateCatalog(db, OFFICE, NOW)).rows;
-    expect(row.clientName).toBe('Κώστας Παπαδόπουλος');
+    expect(row.clientName).toEqual({ kind: 'known', name: 'Κώστας Παπαδόπουλος' });
   });
 
-  it('Γ2 — επαφή που ΔΕΝ υπάρχει δίνει `null`, όχι κενή συμβολοσειρά', async () => {
-    // `null` σημαίνει «η εντολή δείχνει σε επαφή που χάθηκε» — δουλειά για το γραφείο.
+  it('Γ2 — επαφή που ΔΕΝ υπάρχει ονομάζεται `missing`, όχι κενή συμβολοσειρά', async () => {
+    // ⚠️ **ΗΤΑΝ `toBeNull()` ως το ADR-834 §6.5.δ**, και το `null` κουβαλούσε **δύο**
+    //    κόσμους — «χάθηκε η επαφή» και «η επαφή δεν έχει όνομα». Πλέον ονομάζεται:
+    //    η εντολή δείχνει σε επαφή που χάθηκε, δουλειά για το γραφείο.
     const { db } = dbWith(
       listing('ownp_a', { mandates: [brokeredMandate({ clientContactId: 'cont_ghost' })] }),
     );
     const [row] = (await readMandateCatalog(db, OFFICE, NOW)).rows;
-    expect(row.clientName).toBeNull();
+    expect(row.clientName).toEqual({ kind: 'missing' });
+  });
+
+  it('🔴 Γ2β — ΤΟ ΠΕΡΙΣΤΑΤΙΚΟ: επαφή που ΥΠΑΡΧΕΙ χωρίς όνομα ⇒ `unnamed`, ΟΧΙ `missing`', async () => {
+    // 🔴 **Η υπηρεσία ΗΞΕΡΕ ήδη τη διαφορά και την ΠΕΤΟΥΣΕ** (ADR-834 §6.5.γ #3): ο
+    //    αναγνώστης ονομάτων έκανε `continue` **και** για την ανύπαρκτη **και** για
+    //    την ανώνυμη, οπότε ο καλών έβλεπε την ίδια απουσία. Το γραφείο στελνόταν να
+    //    ψάξει διαγραμμένη επαφή που **δεν διαγράφηκε ποτέ**.
+    const { db } = dbWith(
+      listing('ownp_a', { mandates: [brokeredMandate({ clientContactId: 'cont_anonymo' })] }),
+    );
+    const [row] = (await readMandateCatalog(db, OFFICE, NOW)).rows;
+    expect(row.clientName).toEqual({ kind: 'unnamed' });
+  });
+
+  it('🔴 Γ2γ — και η ΑΙΤΙΑ της σιωπής ταξιδεύει στη γραμμή', async () => {
+    // Χωρίς αυτό, η οθόνη θα ξαναμάντευε: το `notifiedAt: null` είναι **ένα bit** για
+    // τρεις κόσμους (§6.5.δ). Ο παρονομαστής είναι το `Γ2δ` από κάτω.
+    const { db } = dbWith(
+      listing('ownp_a', {
+        mandates: [brokeredMandate({ notifiedAt: null, notifyOutcome: 'failed' })],
+      }),
+    );
+    const [row] = (await readMandateCatalog(db, OFFICE, NOW)).rows;
+    expect(row.notifyOutcome).toBe('failed');
+  });
+
+  it('🔑 Γ2δ — ο ΠΑΡΟΝΟΜΑΣΤΗΣ: κληροδοτημένη εντολή ΧΩΡΙΣ το πεδίο δίνει `null`', async () => {
+    // ⚠️ Το `as` παρακάτω αναπαράγει **ακριβώς** το ωμό έγγραφο του Firestore: το
+    //    πεδίο **λείπει**, δεν είναι `null`. Ένα `undefined` που έφτανε στην οθόνη θα
+    //    τύπωνε **κενό** — η άγνοια ξανά αόρατη.
+    const legacy = brokeredMandate();
+    delete (legacy as { notifyOutcome?: unknown }).notifyOutcome;
+    const { db } = dbWith(listing('ownp_a', { mandates: [legacy] }));
+    const [row] = (await readMandateCatalog(db, OFFICE, NOW)).rows;
+    expect(row.notifyOutcome).toBeNull();
   });
 
   it('Γ3 — το «είναι στον χάρτη;» ακολουθεί τον ΕΝΑ κριτή δημοσίευσης', async () => {

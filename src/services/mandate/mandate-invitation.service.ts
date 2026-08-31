@@ -41,6 +41,13 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { enqueueMessage } from '@/server/comms/orchestrator';
 import { mandateTextsFor, type MandateMessageKind } from '@/services/mandate/mandate-email-texts';
 import { MESSAGE_PRIORITIES } from '@/types/communications';
+// 🔴 ADR-834 §6.5.δ — **ΤΟ ΛΕΞΙΛΟΓΙΟ ΕΙΝΑΙ ΕΝΑ, ΚΑΙ ΔΕΝ ΖΕΙ ΕΔΩ.** Ως το §6.5.δ οι
+//    τρεις εκβάσεις ήταν **ωμά αλφαριθμητικά αυτού του αρχείου** και **καμία δεν
+//    αποθηκευόταν** — άρα η οθόνη δεν είχε τι να διαβάσει και μάντευε. Τώρα η έκβαση
+//    σφραγίζεται πάνω στην εντολή, οπότε ο **γραφέας** και ο **αναγνώστης** οφείλουν
+//    να μιλούν την ίδια γλώσσα· δεύτερη γραφή των ίδιων τριών λέξεων εδώ θα ήταν
+//    ακριβώς ο αδελφός κλώνος του N.18, αόρατος σε κάθε αναζήτηση ονόματος.
+import { NOTIFY_FAILED, NOTIFY_NO_ADDRESS, NOTIFY_SENT } from '@/types/owner-property-mandate';
 
 const logger = createModuleLogger('mandate-invitation.service');
 
@@ -56,12 +63,25 @@ export function consentUrl(token: string): string {
   return `${base.replace(/\/+$/, '')}/mandate/${encodeURIComponent(token)}`;
 }
 
-/** Πώς πήγε η αποστολή — **ρητά**, γιατί το γραφείο πρέπει να το μάθει. */
+/**
+ * Πώς πήγε η αποστολή — **ρητά**, γιατί το γραφείο πρέπει να το μάθει.
+ *
+ * 🔑 **Τα `kind` ΔΕΝ είναι κυριολεξίες αυτού του αρχείου**: είναι το
+ * `MandateNotifyOutcome`, το λεξιλόγιο που **αποθηκεύεται** πάνω στην εντολή
+ * (ADR-834 §6.5.δ). Έτσι το `notify.kind` του καλούντα μπαίνει **αυτούσιο** στο
+ * `notifyOutcome`, χωρίς κανέναν μεταφραστή στη μέση — και ένας μεταφραστής είναι
+ * ακριβώς ο τόπος όπου δύο λεξιλόγια αποκλίνουν σιωπηλά.
+ *
+ * ⚠️ **Το `to` μένει ΕΔΩ και δεν αποθηκεύεται**: είναι η απάντηση **της στιγμής**
+ * προς την οθόνη που μόλις πάτησε το κουμπί. Στη βάση ζει ήδη το `clientContactId`,
+ * και μια δεύτερη γραφή της διεύθυνσης θα ήταν αντίγραφο προσωπικού δεδομένου που
+ * παλιώνει μόνο του.
+ */
 export type NotifyOutcome =
-  | { readonly kind: 'sent'; readonly to: string }
+  | { readonly kind: typeof NOTIFY_SENT; readonly to: string }
   /** Η επαφή **δεν έχει email**. Δεν είναι σφάλμα — είναι κατάσταση του κόσμου. */
-  | { readonly kind: 'no-address' }
-  | { readonly kind: 'failed' };
+  | { readonly kind: typeof NOTIFY_NO_ADDRESS }
+  | { readonly kind: typeof NOTIFY_FAILED };
 
 /** Η διεύθυνση και η γλώσσα του πελάτη, από την **επαφή** του γραφείου. */
 async function readClientChannel(
@@ -117,7 +137,7 @@ export async function sendMandateInvitation(
   invitation: MandateInvitation,
 ): Promise<NotifyOutcome> {
   const channel = await readClientChannel(adminDb, invitation.clientContactId);
-  if (channel.email === null) return { kind: 'no-address' };
+  if (channel.email === null) return { kind: NOTIFY_NO_ADDRESS };
 
   const wording = mandateTextsFor(kind, channel.language);
   const url = consentUrl(invitation.token);
@@ -137,12 +157,12 @@ export async function sendMandateInvitation(
       idempotencyKey: invitation.idempotencyKey,
     });
 
-    return result.success ? { kind: 'sent', to: channel.email } : { kind: 'failed' };
+    return result.success ? { kind: NOTIFY_SENT, to: channel.email } : { kind: NOTIFY_FAILED };
   } catch (error) {
     logger.error('Το μήνυμα προς τον ιδιοκτήτη δεν μπήκε στην ουρά', {
       data: { clientContactId: invitation.clientContactId },
       error: error instanceof Error ? error.message : String(error),
     });
-    return { kind: 'failed' };
+    return { kind: NOTIFY_FAILED };
   }
 }

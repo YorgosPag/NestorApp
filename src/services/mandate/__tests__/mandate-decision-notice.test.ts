@@ -53,6 +53,7 @@ function mandate(
   return brokeredMandate({
     clientContactId: CLIENT,
     notifiedAt: '2026-08-20T09:00:00.000Z',
+    notifyOutcome: null,
     consentNonce: nonce,
     expiresAt: '2027-08-20T12:00:00.000Z',
     startsAt: NOW,

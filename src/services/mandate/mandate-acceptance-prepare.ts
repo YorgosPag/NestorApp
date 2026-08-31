@@ -284,6 +284,13 @@ function brokeredMandateFrom(
     compensation: request.terms.compensation,
     decidedAt: request.requestedAt,
     notifiedAt: null,
+    // 🔴 **`null` = «ΚΑΜΙΑ ΑΠΟΠΕΙΡΑ ΔΕΝ ΚΑΤΑΓΡΑΦΗΚΕ», και εδώ είναι κυριολεκτικά
+    //    αληθές** (ADR-834 §6.5.δ): αυτή η διαδρομή **δεν στέλνει τίποτα** — ο
+    //    ιδιώτης ζήτησε ο ίδιος την εντολή, δεν του ζητήθηκε τίποτα. Ένα
+    //    `NOTIFY_FAILED` εδώ θα ονόμαζε αποτυχία **ανύπαρκτης** προσπάθειας, και ο
+    //    κατάλογος θα έλεγε στον μεσίτη να «δοκιμάσει ξανά» κάτι που ποτέ δεν
+    //    δοκιμάστηκε.
+    notifyOutcome: null,
     viewedAt: null,
     consentNonce: null,
     expiresAt: request.terms.expiresAt,

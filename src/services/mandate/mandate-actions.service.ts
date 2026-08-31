@@ -73,6 +73,8 @@ import type { OwnerProperty } from '@/types/owner-property';
 import {
   mandatesOf,
   AGENCY_ATTESTATION,
+  NOTIFY_NO_ADDRESS,
+  NOTIFY_SENT,
   type BrokeredListingMandate,
 } from '@/types/owner-property-mandate';
 
@@ -182,13 +184,40 @@ export async function resendMandateInvitation(
   // κόσμου με **συγκεκριμένη θεραπεία**· «δεν μπήκε στην ουρά» είναι δικό μας
   // πρόβλημα με θεραπεία «ξαναδοκίμασε». Ένας κοινός κωδικός θα έστελνε τον μεσίτη να
   // πατά το κουμπί ξανά και ξανά για επαφή που **δεν έχει πού να λάβει**.
-  if (notify.kind === 'no-address') return { ok: false, reason: 'no-address' };
-  if (notify.kind !== 'sent') return { ok: false, reason: 'write-failed' };
+  // 🔴 **Η ΑΠΟΤΥΧΙΑ ΣΦΡΑΓΙΖΕΤΑΙ ΚΙ ΑΥΤΗ — ΧΩΡΙΣ ΝΑ ΑΓΓΙΞΕΙ ΤΙΠΟΤΑ ΑΛΛΟ** (§6.5.δ).
+  // Ως τις 2026-08-31 αυτές οι δύο γραμμές γύριζαν **αμέσως**, χωρίς καμία γραφή: ο
+  // μεσίτης έβλεπε το μήνυμα άρνησης **μία φορά**, και μόλις έφευγε από την οθόνη η
+  // αιτία **χανόταν** — η επόμενη φόρτωση του καταλόγου ξαναμάντευε από το ίδιο ένα
+  // bit. Το DocuSign κρατά το `autoRespondedReason` **πάνω στον παραλήπτη** ακριβώς
+  // για αυτόν τον λόγο: η αιτία πρέπει να επιβιώνει της οθόνης που τη γέννησε.
+  //
+  // ⚠️ **ΓΡΑΦΕΤΑΙ ΜΟΝΟ Η ΕΚΒΑΣΗ.** Το `consentNonce` **δεν** αγγίζεται (ο σύνδεσμος
+  // που κρατά ο Κώστας μένει ζωντανός — δες παραπάνω), ούτε το `notifiedAt`, ούτε το
+  // `viewedAt`: ο κόσμος δεν προχώρησε, απλώς **μάθαμε γιατί δεν προχώρησε**.
+  //
+  // ⚠️ **Η επιστρεφόμενη αιτία ΔΕΝ εξαρτάται από αυτή τη γραφή**, επίτηδες. Αν η
+  // σφράγιση αποτύχει, ο μεσίτης παίρνει **την ίδια** απάντηση που έπαιρνε πάντα· δεν
+  // μετατρέπουμε ένα «δεν έχει email» σε «δοκιμάστε ξανά» επειδή απέτυχε μια
+  // δευτερεύουσα καταγραφή. Η οθόνη μαθαίνει την αλήθεια της στιγμής· η βάση μαθαίνει
+  // ό,τι προλάβει.
+  if (notify.kind !== NOTIFY_SENT) {
+    await setOwnerPropertyMandate(adminDb, ownerPropertyId, {
+      ...mandate,
+      notifyOutcome: notify.kind,
+    });
+    return {
+      ok: false,
+      reason: notify.kind === NOTIFY_NO_ADDRESS ? 'no-address' : 'write-failed',
+    };
+  }
 
   const written = await setOwnerPropertyMandate(adminDb, ownerPropertyId, {
     ...mandate,
     consentNonce: link.nonce,
     notifiedAt: nowISO(),
+    // 🔑 **Στην ΙΔΙΑ γραφή με το `notifiedAt`** (§6.5.δ) — «πότε» και «πώς πήγε»
+    // δεν επιτρέπεται να αποκλίνουν, γιατί μαζί απαντούν στο *«τι να κάνω τώρα;»*.
+    notifyOutcome: NOTIFY_SENT,
     // ⚠️ **Το `viewedAt` μηδενίζεται, και είναι σωστό**: το «το είδε» αφορούσε την
     // **προηγούμενη** πρόσκληση, που μόλις έπαψε να ισχύει. Κρατώντας το, ο κατάλογος
     // θα έλεγε «το διάβασε και σιωπά» για μήνυμα που **μόλις** στάλθηκε.

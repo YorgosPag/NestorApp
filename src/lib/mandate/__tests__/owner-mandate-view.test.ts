@@ -42,6 +42,7 @@ const LIVE_LEGACY = {
   compensation: { type: 'percentage', percentage: 2, vatIncluded: false },
   decidedAt: '2026-08-30T06:27:46.094Z',
   notifiedAt: null,
+  notifyOutcome: null,
   viewedAt: null,
   consentNonce: null,
   expiresAt: '2027-04-30T23:59:59.999Z',

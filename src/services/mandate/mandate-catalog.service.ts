@@ -58,11 +58,20 @@ import {
   type MandateStanding,
   type MandateStandingGroup,
 } from '@/lib/mandate/mandate-standing';
+import {
+  clientNameFrom,
+  CLIENT_NAME_IS_MISSING,
+  CLIENT_NAME_KNOWN,
+  type MandateClientName,
+} from '@/lib/mandate/mandate-client-name';
 import type { Contact } from '@/types/contacts/contracts';
 import { getContactDisplayName } from '@/types/contacts/helpers';
 import { isOwnerPropertyOnTheMarket, type OwnerProperty } from '@/types/owner-property';
-import type { BrokeredListingMandate } from '@/types/owner-property-mandate';
-import { mandatesOf } from '@/types/owner-property-mandate';
+import type {
+  BrokeredListingMandate,
+  MandateNotifyOutcome,
+} from '@/types/owner-property-mandate';
+import { mandatesOf, notifyOutcomeOf } from '@/types/owner-property-mandate';
 
 const logger = createModuleLogger('mandate-catalog.service');
 
@@ -81,13 +90,14 @@ export interface MandateCatalogRow {
   readonly ownerPropertyId: string;
   readonly listingTitle: string;
   /**
-   * Το όνομα του πελάτη, ή `null` όταν η επαφή **δεν βρέθηκε**.
+   * Το όνομα του πελάτη — ή **ποια από τις δύο άγνοιες** ισχύει (ADR-834 §6.5.δ).
    *
-   * ⚠️ `null` **δεν** σημαίνει «ανώνυμος»: σημαίνει ότι η εντολή δείχνει σε επαφή που
-   * δεν υπάρχει πια. Η οθόνη οφείλει να το πει, όχι να δείξει κενό — είναι δουλειά
-   * για το γραφείο, όχι διακόσμηση.
+   * 🔴 **Ήταν `string | null`, και το `null` κουβαλούσε ΔΥΟ κόσμους**: «η επαφή
+   * διαγράφηκε» και «η επαφή υπάρχει χωρίς όνομα». Η οθόνη τύπωνε *«Η επαφή δεν
+   * βρέθηκε»* και για τα δύο — δηλαδή έστελνε τον μεσίτη να ψάξει διαγραμμένη επαφή
+   * που **δεν** διαγράφηκε. Δες {@link MandateClientName} για τις δύο θεραπείες.
    */
-  readonly clientName: string | null;
+  readonly clientName: MandateClientName;
   readonly clientContactId: string;
   readonly standing: MandateStanding;
   readonly group: MandateStandingGroup;
@@ -95,6 +105,14 @@ export interface MandateCatalogRow {
   readonly daysLeft: number | null;
   readonly expiresAt: string;
   readonly notifiedAt: string | null;
+  /**
+   * 🔴 **ΓΙΑΤΙ ΔΕΝ ΕΦΤΑΣΕ ΤΟ ΜΗΝΥΜΑ** — `null` = καμία καταγεγραμμένη απόπειρα.
+   *
+   * Ταξιδεύει **δίπλα** στο {@link notifiedAt} και ποτέ αντί για αυτό: εκείνο απαντά
+   * *«πότε»*, αυτό *«πώς πήγε»*. Χωρίς αυτό, η γραμμή «Δεν στάλθηκε ποτέ» έπρεπε να
+   * **μαντέψει** την αιτία από ένα bit (ADR-834 §6.5.δ).
+   */
+  readonly notifyOutcome: MandateNotifyOutcome | null;
   readonly viewedAt: string | null;
   readonly decidedAt: string | null;
   /** `owner-consent` ⇄ `agency-attestation` — **η προέλευση, ποτέ κρυμμένη**. */
@@ -141,19 +159,32 @@ const URGENCY_RANK = new Map<MandateStanding, number>(
  * ⚠️ **Το όνομα βγαίνει από το {@link getContactDisplayName}**, τον έναν τόπο που ξέρει
  * ότι μια επαφή μπορεί να είναι άνθρωπος, εταιρεία ή υπηρεσία. Ένα χειρόγραφο
  * `firstName + lastName` εδώ θα έγραφε **κενό** για κάθε εταιρικό πελάτη.
+ *
+ * 🔴 **ΤΟ `continue` ΗΤΑΝ Η ΡΙΖΑ ΤΟΥ ΨΕΜΑΤΟΣ** (ADR-834 §6.5.δ). Έβγαζε από τον χάρτη
+ * **και** την ανύπαρκτη επαφή **και** την ανώνυμη, οπότε ο καλών έβλεπε την ίδια
+ * απουσία και τύπωνε *«Η επαφή δεν βρέθηκε»* για επαφή που **βρέθηκε**. Πλέον ο
+ * χάρτης κρατά **ονομασμένη κατάσταση** για κάθε ταυτότητα που ζητήθηκε — η άγνοια
+ * **ταξιδεύει**, δεν εξαφανίζεται.
  */
 async function readClientNames(
   adminDb: AdminFirestore,
   contactIds: readonly string[],
-): Promise<Map<string, string>> {
-  const names = new Map<string, string>();
+): Promise<Map<string, MandateClientName>> {
+  const names = new Map<string, MandateClientName>();
   if (contactIds.length === 0) return names;
 
   const refs = contactIds.map((id) => adminDb.collection(COLLECTIONS.CONTACTS).doc(id));
   const snapshots = await adminDb.getAll(...refs);
 
   for (const snapshot of snapshots) {
-    if (!snapshot.exists) continue;
+    // 🔑 **«Δεν υπάρχει έγγραφο» ΕΙΝΑΙ απάντηση, και γράφεται.** Το `getAll` επιστρέφει
+    //    στιγμιότυπο για **κάθε** αναφορά, υπαρκτή ή όχι — άρα εδώ γεμίζει ο χάρτης με
+    //    όλες τις ταυτότητες που ζητήθηκαν, και η απουσία από τον χάρτη παύει να είναι
+    //    φορέας νοήματος.
+    if (!snapshot.exists) {
+      names.set(snapshot.id, CLIENT_NAME_IS_MISSING);
+      continue;
+    }
     const contact = { ...(snapshot.data() as object), id: snapshot.id } as Contact;
 
     // 🔴 **Ο ΕΛΕΓΧΟΣ ΤΥΠΟΥ ΕΙΝΑΙ ΥΠΟΧΡΕΩΤΙΚΟΣ, ΚΑΙ ΤΟ ΕΠΙΑΣΕ ΑΓΚΥΡΑ.** Το
@@ -167,14 +198,19 @@ async function readClientNames(
     // είναι σωστή για τον τύπο που δηλώνει· **εμείς** είμαστε αυτοί που της δίνουμε
     // κάτι που δεν το επαλήθευσε κανείς. Ο ισχυρισμός τύπου είναι δικός μας, άρα και
     // η ευθύνη.
-    const name: unknown = getContactDisplayName(contact);
-    if (typeof name !== 'string' || name.trim() === '') {
+    //
+    // ⚠️ **Ο ΕΛΕΓΧΟΣ ΜΕΝΕΙ ΑΚΕΡΑΙΟΣ — αλλάζει ΜΟΝΟ τι επιστρέφεται** (ADR-834 §6.5.δ):
+    //    ήταν `continue` (η επαφή γινόταν «δεν βρέθηκε»), τώρα είναι **τρίτη
+    //    ονομασμένη κατάσταση**, ακριβώς όπως λύθηκε η γραμμή κατάληψης με το
+    //    `occupancyScopeUnknown`. Ο κριτής ζει στο `clientNameFrom`, ώστε το «τι
+    //    μετράει ως όνομα» να απαντιέται σε **ένα** σημείο.
+    const named = clientNameFrom(getContactDisplayName(contact));
+    if (named.kind !== CLIENT_NAME_KNOWN) {
       logger.warn('Επαφή εντολής χωρίς αναγνώσιμο όνομα', {
         data: { clientContactId: snapshot.id },
       });
-      continue;
     }
-    names.set(snapshot.id, name.trim());
+    names.set(snapshot.id, named);
   }
 
   return names;
@@ -240,7 +276,7 @@ async function readOfficeMandates(
 /** **Μία γραμμή** — η σύνθεση, χωρίς καμία απόφαση δικής της. */
 function toCatalogRow(
   property: OwnerProperty,
-  clientNames: ReadonlyMap<string, string>,
+  clientNames: ReadonlyMap<string, MandateClientName>,
   nowISOValue: string,
 ): MandateCatalogRow {
   // ⚠️ **Η ΠΡΩΤΗ εντολή του καταλόγου, και ο κατάλογος είναι ΤΟΥ ΓΡΑΦΕΙΟΥ** — το
@@ -253,13 +289,21 @@ function toCatalogRow(
   return {
     ownerPropertyId: property.id,
     listingTitle: property.title,
-    clientName: clientNames.get(mandate.clientContactId) ?? null,
+    // ⚠️ **Το `??` ΔΕΝ είναι σιωπηλή προεπιλογή**: ο χάρτης γεμίζει από `getAll`, που
+    //    επιστρέφει στιγμιότυπο για **κάθε** ταυτότητα που ζητήθηκε — άρα η μόνη
+    //    διαδρομή που φτάνει εδώ χωρίς εγγραφή είναι ταυτότητα που **δεν ζητήθηκε
+    //    καθόλου**, και για εκείνη «δεν βρέθηκε επαφή» είναι **η ίδια** απάντηση.
+    clientName: clientNames.get(mandate.clientContactId) ?? CLIENT_NAME_IS_MISSING,
     clientContactId: mandate.clientContactId,
     standing,
     group: groupOfStanding(standing),
     daysLeft: daysUntilExpiry(mandate, nowISOValue),
     expiresAt: mandate.expiresAt,
     notifiedAt: mandate.notifiedAt,
+    // 🔑 **Μέσω του SSoT αναγνώστη, ΠΟΤΕ σκέτο `mandate.notifyOutcome`**: το πεδίο
+    //    λείπει από κάθε εντολή γραμμένη πριν από το §6.5.δ, και ένα `undefined` σε
+    //    `Record` ευρετηρίαση θα τύπωνε **κενό** — η άγνοια θα ξαναγινόταν αόρατη.
+    notifyOutcome: mandate.notifyOutcome,
     viewedAt: mandate.viewedAt,
     decidedAt: mandate.decidedAt,
     proofVia: mandate.proof.via,

@@ -56,6 +56,7 @@ function mandate(over: Partial<BrokeredListingMandate> = {}): BrokeredListingMan
     },
     decidedAt: null,
     notifiedAt: '2026-08-20T09:00:00.000Z',
+    notifyOutcome: null,
     viewedAt: null,
     consentNonce: 'nonce-1',
     expiresAt: daysFromNow(300),

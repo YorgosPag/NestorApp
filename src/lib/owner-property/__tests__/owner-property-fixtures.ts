@@ -128,6 +128,7 @@ export function brokeredMandate(
     },
     decidedAt: null,
     notifiedAt: null,
+    notifyOutcome: null,
     viewedAt: null,
     consentNonce: null,
     expiresAt: '2027-08-11T09:00:00.000Z',
