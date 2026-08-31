@@ -27,10 +27,16 @@ import {
   applyListingFilters,
   parseListingFilters,
   serializeListingFilters,
+  stayQueryOf,
 } from '@/lib/listings/listing-filters';
+import { computeStayLedger } from '@/lib/listings/stay-ledger';
+import { stayAvailabilityFor, saleExposureOf } from '@/lib/stay/stay-availability';
+import type { StayAvailabilityAnswer } from '@/lib/stay/stay-availability-vocabulary';
 import { listingMapShape, isMappedShape } from '@/lib/listings/listing-map-shape';
 import { useViewportClass } from '@/hooks/media/useViewportClass';
 import { ListingLedgerBar } from './ListingLedgerBar';
+import { StayFilterFields } from './StayFilterFields';
+import { StayLedgerBar } from './StayLedgerBar';
 import { ResultsList } from './ResultsList';
 import { ResultsMap } from './ResultsMap';
 import { ResultsSheet } from './ResultsSheet';
@@ -81,6 +87,37 @@ export function SearchResultsContent() {
 
   const ledger = useListingLedger(visible);
 
+  /**
+   * 🔴 **Ο ΧΡΟΝΟΣ — ΚΑΙ ΤΟ ΣΥΝΟΡΟ ΤΟΥ §3.2, ΣΕ ΜΙΑ ΜΕΤΑΒΛΗΤΗ.**
+   *
+   * Ο κριτής κατάληψης χρειάζεται τις **κρατήσεις**, που είναι **ιδιωτικές**: ο
+   * ανώνυμος επισκέπτης δεν επιτρέπεται να τις διαβάσει, και το ADR-835 §4.5
+   * απαγορεύει ρητά να ταξιδέψει ημερολόγιο μέσα στο `PublicListing`. Άρα η
+   * διαθεσιμότητα απαντιέται **στον διακομιστή**, και φτάνει εδώ ως **απάντηση**.
+   *
+   * ⚠️ **Ο διακομιστής είναι Φ5** — η συλλογή κρατήσεων δεν υπάρχει ακόμη. Ως τότε
+   * το ημερολόγιο κάθε αγγελίας είναι **`undeclared`**, και η μηχανή απαντά
+   * ειλικρινά `unknown`: *«κανείς δεν δήλωσε ημερολόγιο»*. Αυτό **δεν** είναι
+   * προσωρινό ψέμα — είναι η **αλήθεια** για τα σημερινά δεδομένα, και η γραμμή
+   * λογιστικής τη λέει με **αριθμό** αντί να δείξει άδεια λίστα.
+   *
+   * 🔑 Οι όροι διαμονής (`maxGuests`/`minNights`) και το `not-a-stay` απαντιούνται
+   * **ήδη σωστά** από σήμερα: ζουν στο `PublicListing.stay`, όχι στο ημερολόγιο.
+   */
+  const stayQuery = useMemo(() => stayQueryOf(filters), [filters]);
+
+  const stayLedger = useMemo(() => {
+    // 🔴 **ΜΕΤΡΑ ΠΑΝΤΑ ΤΟ ΙΔΙΟ `visible`, ΑΚΟΜΗ ΚΑΙ ΧΩΡΙΣ ΕΡΩΤΗΣΗ.** Ένα κενό σύνολο
+    //    εδώ θα έδινε `total: 0` ενώ η πρώτη διαμέριση μετρά **N** — και το
+    //    `ledgersAgree` θα φώναζε **σωστά**, για λάθος λόγο. Χωρίς ερώτηση κάθε
+    //    αγγελία είναι `unknown` (*«δεν ρωτήσαμε»*), και το άθροισμα κλείνει.
+    const answerFor = (listing: (typeof visible)[number]): StayAvailabilityAnswer | undefined =>
+      stayQuery === null
+        ? undefined
+        : stayAvailabilityFor(listing, stayQuery, { kind: 'undeclared' }, saleExposureOf(listing));
+    return computeStayLedger(visible, answerFor);
+  }, [visible, stayQuery]);
+
   return (
     // 🔴 `flex-1 min-h-0`, ΟΧΙ `h-screen`: η οθόνη ζει τώρα **κάτω από κεφαλίδα**, και
     // ένα σταθερό ύψος παραθύρου θα έσπρωχνε το κάτω μέρος του χάρτη εκτός οθόνης. Το
@@ -124,6 +161,19 @@ export function SearchResultsContent() {
         <h1 className="text-lg font-semibold text-foreground">{t('search-results:page.title')}</h1>
         {/* Η λογιστική τυπώνεται ΠΑΝΤΑ — ακόμη και στο μηδέν, ακόμη και στη φόρτωση. */}
         <ListingLedgerBar ledger={ledger} className="mt-1" />
+        {/*
+          🔴 **ΔΥΟ ΓΡΑΜΜΕΣ, ΔΥΟ ΔΙΑΜΕΡΙΣΕΙΣ ΤΟΥ ΙΔΙΟΥ ΣΥΝΟΛΟΥ** (ADR-835 §4.6).
+          «Πού;» και «πότε;» δεν είναι κάδοι της ίδιας μέτρησης: ένα ακίνητο είναι
+          **ταυτόχρονα** στον χάρτη **και** κρατημένο. Η δεύτερη γραμμή ελέγχει ότι
+          κλείνουν **και οι δύο στο ίδιο σύνολο**, και φωνάζει αν όχι.
+        */}
+        <StayLedgerBar
+          stay={stayLedger}
+          position={ledger}
+          asked={stayQuery !== null}
+          className="mt-1"
+        />
+        <StayFilterFields filters={filters} className="mt-2" />
         {loading && <p className="mt-1 text-sm text-muted-foreground">{t('search-results:page.loading')}</p>}
         {error && <p role="alert" className="mt-1 text-sm text-destructive">{t('search-results:page.error')}</p>}
       </header>
