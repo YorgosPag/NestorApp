@@ -36,7 +36,7 @@ import { SearchableCombobox } from '@/components/ui/searchable-combobox';
 import type { ComboboxOption } from '@/components/ui/searchable-combobox';
 import { VoiceMicButton } from '@/components/voice-input/VoiceMicButton';
 import { useAuth } from '@/auth/contexts/AuthContext';
-import { combineDateAndTime } from '@/lib/date-local';
+import { combineDateAndTime } from '@/lib/date-form-fields';
 import {
   CRM_TASK_TYPES,
   CRM_TASK_TYPE_CREATABLE_VALUES,

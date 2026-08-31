@@ -18,11 +18,10 @@ import {
   daysUntilOrNull,
   MS_PER_DAY,
   fieldToISO,
-  combineDateAndTime,
-  splitDateAndTime,
   intervalsOverlap,
   intervalShape,
   INTERVAL_SHAPES,
+  utcDateOf,
 } from '../date-local';
 
 const ISO = '2026-01-15T10:30:00.000Z';
@@ -247,74 +246,6 @@ describe('daysSinceOrNull / daysUntilOrNull', () => {
 });
 
 /**
- * The form-field pair: the CRM task dialogs hold a date and an "HH:MM" string in
- * two separate controls, and must round-trip them through a single `dueDate`.
- *
- * @see ADR-584 — extracted from 4 copy-pasted call sites
- */
-describe('combineDateAndTime', () => {
-  it('puts the time onto the date', () => {
-    const result = combineDateAndTime(new Date('2026-01-15T00:00:00'), '14:45');
-    expect(result.getHours()).toBe(14);
-    expect(result.getMinutes()).toBe(45);
-  });
-
-  it('zeroes seconds and millis so equal form values compare equal', () => {
-    const seeded = new Date('2026-01-15T00:00:00');
-    seeded.setSeconds(37, 421);
-    const result = combineDateAndTime(seeded, '09:00');
-    expect(result.getSeconds()).toBe(0);
-    expect(result.getMilliseconds()).toBe(0);
-  });
-
-  it('does not mutate the date it is given', () => {
-    const original = new Date('2026-01-15T08:00:00');
-    combineDateAndTime(original, '23:59');
-    expect(original.getHours()).toBe(8);
-  });
-
-  // A half-typed time field must never produce an Invalid Date the caller then
-  // writes to Firestore.
-  it('falls back to midnight for an unparseable time instead of Invalid Date', () => {
-    const result = combineDateAndTime(new Date('2026-01-15T08:30:00'), '');
-    expect(result.getHours()).toBe(0);
-    expect(result.getMinutes()).toBe(0);
-    expect(Number.isNaN(result.getTime())).toBe(false);
-  });
-
-  it('treats a missing minutes half as zero', () => {
-    const result = combineDateAndTime(new Date('2026-01-15T00:00:00'), '14');
-    expect(result.getHours()).toBe(14);
-    expect(result.getMinutes()).toBe(0);
-  });
-});
-
-describe('splitDateAndTime', () => {
-  it('round-trips with combineDateAndTime', () => {
-    const combined = combineDateAndTime(new Date('2026-01-15T00:00:00'), '14:45');
-    expect(splitDateAndTime(combined).time).toBe('14:45');
-  });
-
-  it('pads single-digit hours and minutes to the "HH:MM" the input expects', () => {
-    const split = splitDateAndTime(new Date('2026-01-15T09:05:00'));
-    expect(split.time).toBe('09:05');
-  });
-
-  // The reason this helper goes through normalizeToDate rather than checking for
-  // toDate() itself — the ad-hoc version it replaced dropped these.
-  it('reads a JSON-serialised Timestamp that has no toDate()', () => {
-    const at = new Date('2026-01-15T16:20:00');
-    const split = splitDateAndTime({ seconds: at.getTime() / 1000, nanoseconds: 0 });
-    expect(split.time).toBe('16:20');
-  });
-
-  it('uses the fallback time when the value is unreadable', () => {
-    expect(splitDateAndTime(null).time).toBe('09:00');
-    expect(splitDateAndTime({ foo: 'bar' }, '08:30').time).toBe('08:30');
-  });
-});
-
-/**
  * `intervalsOverlap` — half-open `[start, end)`, the `tstzrange` convention.
  *
  * The half-open boundary is not a detail: it is what makes *back-to-back*
@@ -469,5 +400,64 @@ describe('intervalShape', () => {
     expect(intervalsOverlap(B, A, A, B)).toBeNull(); // reversed
     expect(intervalsOverlap('χ', A, A, B)).toBeNull(); // unreadable
     expect(intervalsOverlap(A, B, A, B)).toBe(true); // proper
+  });
+});
+
+// =============================================================================
+// utcDateOf — Η ΑΝΤΙΣΤΡΟΦΗ, ΟΧΙ ΜΟΡΦΟΠΟΙΗΣΗ (ADR-835 Φ3)
+// =============================================================================
+
+describe('utcDateOf — στιγμή → ημερολογιακή ημέρα, σε UTC', () => {
+  it('ΕΙΝΑΙ ΑΝΤΙΣΤΡΟΦΗ: ό,τι διαβάστηκε ως ημέρα, γυρνά ΙΔΙΟ', () => {
+    for (const day of ['2026-08-12', '2026-01-01', '2026-12-31', '2024-02-29']) {
+      expect(utcDateOf(Date.parse(day))).toBe(day);
+    }
+  });
+
+  /**
+   * 🔴 **ΑΥΤΗ Η ΑΓΚΥΡΑ ΓΡΑΦΤΗΚΕ ΕΠΕΙΔΗ Η ΠΡΟΗΓΟΥΜΕΝΗ ΑΠΕΤΥΧΕ ΣΕ ΔΟΚΙΜΗ ΜΕΤΑΛΛΑΞΗΣ**
+   * (ADR-835 Φ3, 2026-08-31). Η μετάλλαξη `getUTCDate()` → `getDate()` **ΕΠΕΖΗΣΕ**:
+   * η μηχανή δοκιμών τρέχει σε **UTC+3**, όπου το `Date.parse('2026-08-12')` (UTC
+   * μεσάνυχτα) πέφτει στις **03:00 τοπικά** — **ίδια μέρα**. Δηλαδή η δοκιμή
+   * επιβεβαίωνε τη σωστή απάντηση **χωρίς να μπορεί να δει τη λάθος**.
+   *
+   * 🔑 **Η θεραπεία είναι ΔΥΟ στιγμές, μία εκατέρωθεν των μεσανυχτών UTC**: η
+   * `23:30Z` αλλάζει μέρα σε **κάθε θετική** μετατόπιση (ανατολικά), η `00:30Z` σε
+   * **κάθε αρνητική** (δυτικά). Μαζί καλύπτουν **κάθε** ζώνη εκτός του ίδιου του UTC.
+   *
+   * ⚠️ **ΔΗΛΩΝΕΤΑΙ ΤΙ ΔΕΝ ΑΠΟΔΕΙΚΝΥΕΙ**: σε μηχανή που τρέχει **ακριβώς σε UTC** η
+   * μετάλλαξη είναι **ισοδύναμη** και καμία δοκιμή δεν μπορεί να τη σκοτώσει. Ο
+   * ισχυρισμός παρακάτω το λέει **δυνατά** αντί να σιωπήσει — μια πράσινη γραμμή που
+   * σημαίνει «δεν κοίταξα» είναι ακριβώς το σχήμα που το έργο κυνηγά (N.12).
+   */
+  it('🔴 ΔΙΑΒΑΖΕΙ UTC, ΟΧΙ ΤΟΠΙΚΗ ΩΡΑ — και η άγκυρα το ΒΛΕΠΕΙ', () => {
+    // Και οι δύο είναι **12 Αυγούστου σε UTC**, ό,τι κι αν λέει το ρολόι του μηχανήματος.
+    expect(utcDateOf(Date.parse('2026-08-12T23:30:00Z'))).toBe('2026-08-12');
+    expect(utcDateOf(Date.parse('2026-08-12T00:30:00Z'))).toBe('2026-08-12');
+
+    // 🔑 Ο αυτοέλεγχος της άγκυρας: δηλώνει αν αυτή η μηχανή μπορεί να διακρίνει.
+    const offsetMinutes = new Date(Date.parse('2026-08-12')).getTimezoneOffset();
+    if (offsetMinutes === 0) {
+      // Ειλικρινής δήλωση αντί για ψευδές πράσινο. Δεν αποτυγχάνει: η μηχανή απλώς
+      // δεν έχει τη διάκριση να παρατηρήσει, και αυτό είναι γεγονός του περιβάλλοντος.
+      expect(offsetMinutes).toBe(0);
+      return;
+    }
+    // Σε κάθε ΑΛΛΗ ζώνη, τουλάχιστον μία από τις δύο στιγμές πέφτει σε άλλη τοπική
+    // μέρα — άρα μια τοπική υλοποίηση θα είχε ήδη κοκκινίσει παραπάνω.
+    const east = new Date(Date.parse('2026-08-12T23:30:00Z'));
+    const west = new Date(Date.parse('2026-08-12T00:30:00Z'));
+    expect(
+      east.getDate() !== east.getUTCDate() || west.getDate() !== west.getUTCDate(),
+    ).toBe(true);
+  });
+
+  it('συμπληρώνει μηδενικά σε μήνα και μέρα', () => {
+    expect(utcDateOf(Date.parse('2026-03-05'))).toBe('2026-03-05');
+  });
+
+  it('🔴 μη πεπερασμένη τιμή ⇒ `null`, ΠΟΤΕ «Invalid Date» που ταξιδεύει', () => {
+    expect(utcDateOf(Number.NaN)).toBeNull();
+    expect(utcDateOf(Number.POSITIVE_INFINITY)).toBeNull();
   });
 });

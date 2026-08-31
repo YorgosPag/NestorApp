@@ -27,7 +27,7 @@ import {
   TASK_TYPE_ICONS,
   type ActivityItem,
 } from '@/components/crm/dashboard/TasksTab';
-import { combineDateAndTime, splitDateAndTime } from '@/lib/date-local';
+import { combineDateAndTime, splitDateAndTime } from '@/lib/date-form-fields';
 import {
   CRM_TASK_TYPES,
   CRM_TASK_TYPE_VALUES,

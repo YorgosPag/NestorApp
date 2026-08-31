@@ -27,7 +27,7 @@ import { TaskDialogShell } from '@/components/crm/shared/TaskDialogShell';
 import { TaskFormField } from '@/components/crm/shared/TaskFormField';
 
 import { updateTaskWithPolicy } from '@/services/crm/crm-mutation-gateway';
-import { combineDateAndTime, splitDateAndTime } from '@/lib/date-local';
+import { combineDateAndTime, splitDateAndTime } from '@/lib/date-form-fields';
 import {
   CRM_TASK_TYPES,
   CRM_TASK_TYPE_VALUES,

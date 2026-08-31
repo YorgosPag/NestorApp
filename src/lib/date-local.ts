@@ -103,6 +103,44 @@ export function fieldToISO(
 export const MS_PER_DAY = 86_400_000;
 
 /**
+ * **Στιγμή → ημερολογιακή ημέρα `YYYY-MM-DD`, σε UTC.**
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΓΙΑΤΙ ΕΔΩ, ΚΑΙ ΓΙΑΤΙ **UTC** ΕΝΩ ΤΟ {@link todayLocalDate} ΕΙΝΑΙ ΤΟΠΙΚΟ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Τα δύο απαντούν σε **διαφορετικές ερωτήσεις**, και η διαφορά δεν είναι ύφος:
+ *
+ * | Συνάρτηση | Ερώτηση | Γιατί αυτή η ζώνη |
+ * |---|---|---|
+ * | {@link todayLocalDate} | *«τι μέρα είναι **για τον άνθρωπο μπροστά στην οθόνη**;»* | ο άνθρωπος ζει σε τοπική ώρα· UTC θα του έλεγε «αύριο» στις 02:00 |
+ * | `utcDateOf` | *«ποια **ημερολογιακή ημέρα** είναι αυτή η στιγμή που ήδη διαβάσαμε;»* | η στιγμή ήρθε από `YYYY-MM-DD` που το {@link normalizeToDate} διάβασε **ως UTC μεσάνυχτα**· τοπική ανάγνωση θα την **γύριζε μια μέρα πίσω** δυτικά του Γκρίνουιτς |
+ *
+ * ⚠️ **Είναι ΑΝΤΙΣΤΡΟΦΗ, όχι μορφοποίηση**: `utcDateOf(Date.parse('2026-08-12'))`
+ * οφείλει να δώσει **ακριβώς** `'2026-08-12'`. Ένα `getFullYear()` εδώ σπάει αυτή την
+ * ταυτότητα σε **κάθε** ζώνη με αρνητική μετατόπιση — σιωπηλά, και μόνο για μερίδα
+ * των χρηστών.
+ *
+ * 🔴 **ΜΕΤΡΗΜΕΝΟ ΔΙΠΛΟΤΥΠΟ (N.0.2, 2026-08-31):** `lib/counterproposal-engine.ts:38`
+ * (`split('T')[0]`) · `lib/draw-schedule-engine.ts:33` (ίδιο) ·
+ * `lib/date/quarter-helpers.ts:64,82,83` (`slice(0, 10)`). **Δεν** μεταναστεύουν σε
+ * αυτό το commit: είναι ξένος τομέας (οικονομικές μηχανές) και η μετανάστευση θέλει
+ * τις δικές τους άγκυρες. Καταγράφονται, και **αυτό εδώ δεν είναι έκτο αντίγραφο —
+ * είναι ο κανονικός τόπος όπου θα δείξουν τα πέντε** *(ίδια κίνηση με το
+ * {@link addMonthsUTC})*.
+ *
+ * @param ms — στιγμή σε χιλιοστά. Μη πεπερασμένη τιμή ⇒ `null`, ποτέ `'Invalid Date'`
+ *   που ταξιδεύει *(ίδιο δόγμα με το {@link normalizeToMillisOrNull})*.
+ */
+export function utcDateOf(ms: number): string | null {
+  if (!Number.isFinite(ms)) return null;
+  const date = new Date(ms);
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  return `${date.getUTCFullYear()}-${month}-${day}`;
+}
+
+/**
  * **Πρόσθεσε ΜΗΝΕΣ σε μια στιγμή** — με τη σύμβαση που περιμένει ο άνθρωπος και
  * απαιτεί ο νόμος: *«η ίδια μέρα του μήνα, ή η **τελευταία** αν δεν υπάρχει»*.
  *
@@ -418,51 +456,6 @@ export function daysSinceOrNull(val: unknown, now: number = Date.now()): number 
 export function daysUntilOrNull(val: unknown, now: number = Date.now()): number | null {
   const ms = normalizeToMillisOrNull(val);
   return ms === null ? null : (ms - now) / MS_PER_DAY;
-}
-
-/**
- * Ημερομηνία + ώρα `"HH:MM"` → ένα Date.
- *
- * SSoT για το `time.split(':').map(Number)` + `setHours(h, m, 0, 0)` ζευγάρι, που
- * ήταν αντιγραμμένο σε 4 σημεία (CalendarCreateDialog, TaskEditDialog,
- * TaskDetailPanel ×2). Δεν μεταλλάσσει το `date` που του δίνεις.
- *
- * Μη έγκυρη ώρα → η ημερομηνία επιστρέφεται με μηδενισμένη ώρα, ποτέ `Invalid Date`.
- *
- * @see ADR-584
- */
-export function combineDateAndTime(date: Date, time: string): Date {
-  const [hours, minutes] = time.split(':').map(Number);
-  const combined = new Date(date);
-  combined.setHours(
-    Number.isFinite(hours) ? hours : 0,
-    Number.isFinite(minutes) ? minutes : 0,
-    0,
-    0
-  );
-  return combined;
-}
-
-/**
- * Timestamp / Date / string / number → `{ date, time: "HH:MM" }`.
- *
- * Η αντίστροφη του {@link combineDateAndTime}, για να γεμίζουν τα form fields από
- * ένα αποθηκευμένο `dueDate`. Χτίζει πάνω στο {@link normalizeToDate} αντί να
- * ξαναελέγχει μόνη της για `toDate` — έτσι πιάνει και τα JSON-serialised
- * Timestamps (`{ seconds }` / `{ _seconds }`) που η παλιά ad-hoc `parseDueDate`
- * έχανε.
- *
- * @see ADR-584
- */
-export function splitDateAndTime(
-  val: unknown,
-  fallbackTime = '09:00'
-): { date: Date; time: string } {
-  const d = normalizeToDate(val);
-  if (!d) return { date: new Date(), time: fallbackTime };
-  const hh = String(d.getHours()).padStart(2, '0');
-  const mm = String(d.getMinutes()).padStart(2, '0');
-  return { date: d, time: `${hh}:${mm}` };
 }
 
 /**
