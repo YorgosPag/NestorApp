@@ -23,6 +23,7 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     id: 'l1',
     commercialStatus: 'for-sale',
     commercial: { askingPrice: 200000, finalPrice: null, rentPrice: null, nightlyRate: null },
+    stay: null,
     coverImage: null,
     type: 'apartment',
     areaSqm: 95,
@@ -31,6 +32,7 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     floor: 1,
     bedrooms: 3,
     title: 'Δοκιμή',
+    legality: [],
     projectedAt: AT,
     ...over,
   };
