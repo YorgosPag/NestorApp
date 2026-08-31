@@ -152,18 +152,58 @@ export function OwnerBasicsFields(): React.ReactElement {
 // 3. ΟΙ ΔΙΑΘΕΣΕΙΣ — ο άξονας της Α20, με την Α22 δίπλα του
 // =============================================================================
 
-/** Ποιο πεδίο ποσού ανήκει σε ποιο είδος — **ο τύπος το ξέρει, εδώ απλώς ονομάζεται**. */
-const AMOUNT_FIELD: Readonly<Record<OfferKind, keyof OwnerPropertyFormValues>> = {
-  sell: 'askingPrice',
-  leaseOut: 'rentPrice',
-  exchange: 'exchangePercentage',
-};
+/** Ένα αριθμητικό πεδίο που ζητά μια διάθεση: **πού γράφεται, πώς λέγεται, από πού αρχίζει**. */
+interface OfferNumberField {
+  /** Το πεδίο της **επίπεδης** φόρμας που το κρατά. */
+  readonly name: keyof OwnerPropertyFormValues;
+  /**
+   * Το **πλήρες** κλειδί ετικέτας, με namespace.
+   *
+   * 🔴 **Πλήρες και όχι κατάληξη, και ο λόγος μετρήθηκε.** Η πρώτη γραφή κρατούσε μόνο
+   * το `askingPriceLabel` και το σημείο κλήσης έγραφε `` t(`${K}.form.${field.labelKey}`) ``·
+   * ο τεμαχιστής (ADR-744) **δεν επιλύει** την κατάληξη, οπότε υποχωρούσε στο **ολόκληρο
+   * πρόθεμα `offer.form`** — δηλαδή η ακρίβεια που είχε ο παλιός πίνακας (τρία ονομαστικά
+   * κλειδιά) **χανόταν σιωπηλά**. Με πλήρες κλειδί σε τιμή σταθεράς module, το `t(x)`
+   * επιλύεται ονομαστικά, όπως ακριβώς στο `OFFER_KIND_I18N_KEYS`.
+   */
+  readonly labelKey: string;
+  /** Το κατώτατο δεκτό, ώστε ο περιηγητής να μη δέχεται καν το `0`. */
+  readonly min: number;
+}
 
-/** Το κλειδί ετικέτας κάθε ποσού. Παράλληλος πίνακας **επίτηδες κλειστός**. */
-const AMOUNT_LABEL: Readonly<Record<OfferKind, string>> = {
-  sell: 'askingPriceLabel',
-  leaseOut: 'rentPriceLabel',
-  exchange: 'exchangePercentageLabel',
+/**
+ * **Ποια αριθμητικά ζητά κάθε είδος διάθεσης** — ένας πίνακας, όχι δύο παράλληλοι.
+ *
+ * 🔴 **Ήταν ΔΥΟ πίνακες (`AMOUNT_FIELD` + `AMOUNT_LABEL`) και ενοποιήθηκαν** όταν η
+ * βραχυχρόνια έφερε **τρία** πεδία αντί για ένα (ADR-835 §4.1). Ο διαχωρισμός θα
+ * απαιτούσε **τρίτο** παράλληλο πίνακα για τα κατώτατα όρια, δηλαδή τρεις λίστες με το
+ * ίδιο κλειδί που μπορούν να αποκλίνουν σιωπηλά — το ακριβές σχήμα που μέτρησε το
+ * CHECK 3.34 (δύο λίστες namespace, απόκλιση **κατά 63**). Με **έναν** πίνακα, το
+ * πεδίο, το όνομά του και το όριό του **δεν μπορούν να ξεχωρίσουν**.
+ *
+ * ⚠️ Ο τύπος `Record<OfferKind, …>` μένει **κλειστός**: πέμπτο είδος **δεν
+ * μεταγλωττίζεται** μέχρι κάποιος να δηλώσει τι ζητά — ακόμη κι αν η απάντηση είναι
+ * «τίποτα», που τότε γράφεται ως κενός πίνακας και **φαίνεται**.
+ *
+ * ⚠️ **Η σειρά μέσα στον πίνακα είναι η σειρά της οθόνης**, και είναι σημασιολογική:
+ * πρώτα το **ποσό** (χωρίς αυτό δεν δημοσιεύεται — Α22), μετά οι **όροι** (που
+ * επιτρέπεται να μείνουν κενοί).
+ */
+const OFFER_NUMBER_FIELDS: Readonly<Record<OfferKind, readonly OfferNumberField[]>> = {
+  sell: [
+    { name: 'askingPrice', labelKey: 'property-market:offer.form.askingPriceLabel', min: 1 },
+  ],
+  leaseOut: [
+    { name: 'rentPrice', labelKey: 'property-market:offer.form.rentPriceLabel', min: 1 },
+  ],
+  exchange: [
+    { name: 'exchangePercentage', labelKey: 'property-market:offer.form.exchangePercentageLabel', min: 1 },
+  ],
+  leaseShort: [
+    { name: 'nightlyRate', labelKey: 'property-market:offer.form.nightlyRateLabel', min: 1 },
+    { name: 'minNights', labelKey: 'property-market:offer.form.minNightsLabel', min: 1 },
+    { name: 'maxGuests', labelKey: 'property-market:offer.form.maxGuestsLabel', min: 1 },
+  ],
 };
 
 /**
@@ -171,7 +211,12 @@ const AMOUNT_LABEL: Readonly<Record<OfferKind, string>> = {
  *
  * 🔑 **ΕΔΩ ΖΕΙ Η ΑΝΤΙΠΑΡΟΧΗ**, και δεν χρειάστηκε καμία επινόηση: το `OFFER_KINDS`
  * την ονομάζει από την **Α20** και το `ExchangeOffer` κουβαλά **ΠΟΣΟΣΤΟ**, όχι τιμή.
- * Είναι η **μόνη** από τις τρεις που κανένα ελληνικό portal δεν εκφράζει ως προσφορά.
+ * Είναι η **μόνη** από τις τέσσερις που κανένα ελληνικό portal δεν εκφράζει ως προσφορά.
+ *
+ * 🔑 **ΚΑΙ ΕΔΩ ΖΕΙ Η ΒΡΑΧΥΧΡΟΝΙΑ** (ADR-835). Είναι το **τέταρτο τσεκ**, όχι δεύτερη
+ * φόρμα και όχι δεύτερη καρτέλα: όλα τα portal της αγοράς τη χωρίζουν σε **ξεχωριστό
+ * αντικείμενο**, και μετά πληρώνουν για να ξαναενώσουν τα δύο. Εδώ το ίδιο διαμέρισμα
+ * μπορεί να δηλωθεί ταυτόχρονα **προς πώληση και προς διανυκτέρευση**, με μία υποβολή.
  *
  * 🔴 **Το ποσό εμφανίζεται ΜΟΝΟ για τα τσεκαρισμένα είδη — αυτό είναι ο κανόνας 3.**
  * Και η **Α22** είναι δίπλα του γραμμένη: *«χωρίς τιμή δεν δημοσιεύεται»*, με τον λόγο
@@ -202,16 +247,18 @@ export function OwnerOffersField(): React.ReactElement {
         ⚠️ Η σειρά ακολουθεί το `OFFER_KINDS` και **όχι** τη σειρά που τσέκαρε ο
         άνθρωπος: τα πεδία δεν επιτρέπεται να αναπηδούν όταν αλλάζει η επιλογή του.
       */}
-      {OFFER_KINDS.filter((kind) => chosen?.includes(kind)).map((kind) => (
-        <FormInputField<OwnerPropertyFormValues>
-          key={kind}
-          control={control}
-          name={AMOUNT_FIELD[kind]}
-          kind="number"
-          label={t(`${K}.form.${AMOUNT_LABEL[kind]}`)}
-          min={1}
-        />
-      ))}
+      {OFFER_KINDS.filter((kind) => chosen?.includes(kind)).flatMap((kind) =>
+        OFFER_NUMBER_FIELDS[kind].map((field) => (
+          <FormInputField<OwnerPropertyFormValues>
+            key={field.name}
+            control={control}
+            name={field.name}
+            kind="number"
+            label={t(field.labelKey)}
+            min={field.min}
+          />
+        )),
+      )}
 
       {(chosen?.length ?? 0) > 0 && (
         <p className="text-sm text-muted-foreground">{t(`${K}.form.priceHelp`)}</p>

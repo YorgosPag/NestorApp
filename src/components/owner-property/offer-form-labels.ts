@@ -61,6 +61,9 @@ export const TEXT_KEYS: Record<DraftFormSlot | OfferBlocker | OfferViolation, st
   'duplicate-offer-kind': 'property-market:offer.invariant.duplicate-offer-kind',
   'offer-amount-missing': 'property-market:offer.invariant.offer-amount-missing',
   'exchange-percentage-out-of-range': 'property-market:offer.invariant.exchange-percentage-out-of-range',
+  // ── ADR-835: η βραχυχρόνια ως τέταρτη διάθεση ───────────────────────────────
+  'short-lease-min-nights-invalid': 'property-market:offer.invariant.short-lease-min-nights-invalid',
+  'short-lease-max-guests-invalid': 'property-market:offer.invariant.short-lease-max-guests-invalid',
   'exchange-requires-land': 'property-market:offer.invariant.exchange-requires-land',
   'type-missing': 'property-market:offer.invariant.type-missing',
   'area-not-positive': 'property-market:offer.invariant.area-not-positive',

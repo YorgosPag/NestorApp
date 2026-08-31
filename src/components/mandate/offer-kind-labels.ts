@@ -31,6 +31,7 @@ export const OFFER_KIND_I18N_KEYS: Record<OfferKind, string> = {
   sell: `${K}.sell`,
   leaseOut: `${K}.leaseOut`,
   exchange: `${K}.exchange`,
+  leaseShort: `${K}.leaseShort`,
 };
 
 /**

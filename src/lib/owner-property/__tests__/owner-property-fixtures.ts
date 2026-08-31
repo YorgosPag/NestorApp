@@ -22,7 +22,7 @@ import {
 } from '@/types/owner-property-mandate';
 import type { OfferKind, OfferLifecycle, PropertyOffer } from '@/types/property-offers';
 
-/** Μια διάθεση με ρητό ποσό — **μία** γεννήτρια για τα τρία είδη. */
+/** Μια διάθεση με ρητό ποσό — **μία** γεννήτρια για τα τέσσερα είδη. */
 export function offerOf(
   kind: OfferKind,
   amount: number | null,
@@ -36,6 +36,10 @@ export function offerOf(
       return { id, kind, lifecycle, rentPrice: amount };
     case 'exchange':
       return { id, kind, lifecycle, percentage: amount };
+    // ⚠️ Οι δύο όροι διαμονής μένουν `null`: η γεννήτρια δίνει **το ποσό**, και ένα
+    // προεπιλεγμένο `minNights` θα έκανε κάθε δοκιμή να κρίνει τιμή που δεν έβαλε.
+    case 'leaseShort':
+      return { id, kind, lifecycle, nightlyRate: amount, minNights: null, maxGuests: null };
   }
 }
 

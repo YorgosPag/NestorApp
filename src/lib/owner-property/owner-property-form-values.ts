@@ -110,6 +110,17 @@ export const ownerPropertyFormSchema = z.object({
   askingPrice: optionalNumber,
   rentPrice: optionalNumber,
   exchangePercentage: optionalNumber,
+  // ── ADR-835 §4.1: Η ΒΡΑΧΥΧΡΟΝΙΑ ─────────────────────────────────────────
+  /** Τιμή **ανά διανυκτέρευση**. Το ποσό της διάθεσης — χωρίς αυτό δεν δημοσιεύεται. */
+  nightlyRate: optionalNumber,
+  /**
+   * ⚠️ **Οι δύο όροι διαμονής είναι ΠΡΟΑΙΡΕΤΙΚΟΙ και μένουν προαιρετικοί.** Ο κάτοχος
+   * που δεν βάζει ελάχιστο δεν έχει «ημιτελή» αγγελία — έχει αγγελία **χωρίς όριο**,
+   * που είναι νόμιμη απάντηση. Το invariant τους πιάνει μόνο το `0`/αρνητικό, δηλαδή
+   * αριθμό που ακυρώνει τη διάθεση στην οποία ανήκει.
+   */
+  minNights: optionalNumber,
+  maxGuests: optionalNumber,
 
   // ── §25.6: ΘΕΣΗ ─────────────────────────────────────────────────────────
   placeAnswer: z.enum(PLACE_ANSWERS),
@@ -172,6 +183,9 @@ export const EMPTY_OWNER_PROPERTY_FORM: OwnerPropertyFormValues = {
   askingPrice: null,
   rentPrice: null,
   exchangePercentage: null,
+  nightlyRate: null,
+  minNights: null,
+  maxGuests: null,
   placeAnswer: 'declared',
   placeQuery: '',
   placePoint: null,
@@ -236,6 +250,15 @@ function offerFrom(
       return { id, kind: 'leaseOut', lifecycle: 'active', rentPrice: values.rentPrice };
     case 'exchange':
       return { id, kind: 'exchange', lifecycle: 'active', percentage: values.exchangePercentage };
+    case 'leaseShort':
+      return {
+        id,
+        kind: 'leaseShort',
+        lifecycle: 'active',
+        nightlyRate: values.nightlyRate,
+        minNights: values.minNights,
+        maxGuests: values.maxGuests,
+      };
   }
 }
 
@@ -321,6 +344,7 @@ export function ownerPropertyFormFrom(
   const sell = property.offers.find((offer) => offer.kind === 'sell');
   const lease = property.offers.find((offer) => offer.kind === 'leaseOut');
   const exchange = property.offers.find((offer) => offer.kind === 'exchange');
+  const stay = property.offers.find((offer) => offer.kind === 'leaseShort');
   const declared = property.place.kind === 'declared' ? property.place : null;
 
   return {
@@ -333,6 +357,13 @@ export function ownerPropertyFormFrom(
     askingPrice: sell?.kind === 'sell' ? sell.askingPrice : null,
     rentPrice: lease?.kind === 'leaseOut' ? lease.rentPrice : null,
     exchangePercentage: exchange?.kind === 'exchange' ? exchange.percentage : null,
+    // ⚠️ **Και τα τρία πεδία διαβάζονται μαζί, από την ΙΔΙΑ διάθεση.** Ένα `find` ανά
+    // πεδίο θα ήταν τρεις σαρώσεις για ένα αντικείμενο· χειρότερα, θα επέτρεπε στα
+    // τρία να προέλθουν από **διαφορετικές** διαθέσεις την ημέρα που το
+    // `hasDuplicateLiveOfferKind` χαλαρώσει για τα rate plans (ADR-835 §6.3).
+    nightlyRate: stay?.kind === 'leaseShort' ? stay.nightlyRate : null,
+    minNights: stay?.kind === 'leaseShort' ? stay.minNights : null,
+    maxGuests: stay?.kind === 'leaseShort' ? stay.maxGuests : null,
     placeAnswer: declared === null ? 'declined' : 'declared',
     placeQuery: declared?.label ?? '',
     placePoint: declared?.point ?? null,
