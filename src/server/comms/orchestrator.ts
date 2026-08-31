@@ -8,6 +8,7 @@ import { type HumanLanguage } from '@/i18n/languages';
 import { emailTextsFor } from '@/server/comms/email-texts';
 import { generateMessageId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
+import { sanitizeForFirestore } from '@/utils/firestore-sanitize';
 const logger = createModuleLogger('CommsOrchestrator');
 
 // ============================================================================
@@ -297,7 +298,17 @@ async function enqueueMessageForChannel(
     const enterpriseId = generateMessageId();
     const collectionRef = collection(COLLECTIONS.MESSAGES);
     const docRef = doc(collectionRef, enterpriseId);
-    await setDoc(docRef, messageRecord);
+    // 🔴 ADR-834 §6.5.γ — **ΚΑΘΕ ΕΞΕΡΧΟΜΕΝΟ ΜΗΝΥΜΑ ΕΠΕΦΤΕ ΕΔΩ, ΣΙΩΠΗΛΑ.**
+    // Το `metadata` κουβαλά `templateId` / `campaignId` / `variables` **αυτούσια** από
+    // τον καλούντα, και ένας καλών που δεν τα δίνει (π.χ. η πρόσκληση συγκατάθεσης)
+    // παράγει `undefined`. Το Admin SDK **δεν** έχει `ignoreUndefinedProperties` σε
+    // αυτό το έργο ⇒ το `set` πετά, το `safeDbOperation` επιστρέφει το fallback
+    // (`null`), το `enqueueMessage` γυρνά `success: false` — και ο καλών το ονομάζει
+    // `failed`, χωρίς κανείς να μάθει **γιατί**. Μετρημένο 2026-08-31: **μηδέν**
+    // έγγραφα με `direction: 'outbound'` σε ολόκληρη τη συλλογή.
+    // ✅ Το SSoT υπάρχει ήδη και το δηλώνει στην κεφαλίδα του: *«MUST be called on
+    // every write operation»* — απλώς δεν είχε κληθεί ΕΔΩ.
+    await setDoc(docRef, sanitizeForFirestore(messageRecord));
 
     // Log for debugging
     logger.info(`📝 ${channel.toUpperCase()} message queued:`, {

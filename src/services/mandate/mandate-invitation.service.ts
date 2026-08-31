@@ -29,7 +29,14 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { primaryEmailOf } from '@/lib/contacts/primary-email';
-import { formatDate } from '@/lib/intl-formatting';
+// 🔴 ADR-834 §6.5.γ — **ΤΟ ΤΕΤΑΡΤΟ ΜΕΛΟΣ ΤΗΣ ΙΔΙΑΣ ΚΛΑΣΗΣ, ΚΑΙ ΤΟ ΜΟΝΟ ΠΟΥ ΕΙΝΑΙ
+//    ΤΟ ΙΔΙΟ ΤΟ ΕΓΓΡΑΦΟ.** Ήταν `formatDate` — δηλαδή η ζώνη του **διακομιστή** πάνω σε
+//    `…T23:59:59.999Z` ⇒ το μήνυμα έγραφε *«θα ισχύει μέχρι 01/05/2027»* ενώ ο μεσίτης
+//    δήλωσε **30/04/2027** (μετρημένο ζωντανά στην ουρά, §6.5.α #12). Οι τρεις οθόνες
+//    **πληροφορούν**· το άρθρο 200 §1 Ν.4072/2012 δέχεται ρητά *«τα μηνύματα
+//    ηλεκτρονικού ταχυδρομείου»* ως **έγγραφο τύπο** της μεσιτικής σύμβασης — άρα εδώ η
+//    λάθος ημέρα δεν είναι παρουσίαση, είναι **ο όρος που στέλνεται εγγράφως**.
+import { formatTermDay } from '@/lib/mandate/mandate-term-window';
 import { createModuleLogger } from '@/lib/telemetry';
 import { enqueueMessage } from '@/server/comms/orchestrator';
 import { mandateTextsFor, type MandateMessageKind } from '@/services/mandate/mandate-email-texts';
@@ -123,7 +130,7 @@ export async function sendMandateInvitation(
       content: wording.body(
         invitation.agencyName,
         invitation.listingTitle,
-        formatDate(invitation.expiresAt),
+        formatTermDay(invitation.expiresAt),
         url,
       ),
       priority: MESSAGE_PRIORITIES.HIGH,
