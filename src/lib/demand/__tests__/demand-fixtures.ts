@@ -51,6 +51,8 @@ export function listing(overrides: Partial<PublicListing> = {}): PublicListing {
     id: 'prop_1',
     commercialStatus: 'for-sale',
     commercial: { askingPrice: 200_000, finalPrice: null, rentPrice: null, nightlyRate: null },
+    // ADR-835 §4.5 — η ουδέτερη αγγελία είναι **πώληση**, άρα `stay: null`.
+    stay: null,
     coverImage: null,
     type: 'apartment',
     areaSqm: 100,
@@ -64,6 +66,7 @@ export function listing(overrides: Partial<PublicListing> = {}): PublicListing {
     floor: 2,
     bedrooms: 3,
     title: 'Δοκιμή',
+    legality: [],
     projectedAt: NOW_ISO,
     ...overrides,
   };

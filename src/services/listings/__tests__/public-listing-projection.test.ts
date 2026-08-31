@@ -162,8 +162,84 @@ describe('Κ4 — η προβολή δεν κουβαλά ΚΑΜΙΑ ταυτό�
       // προσώπου (απόφαση Giorgio 2026-08-20). Δες `Υ1`-`Υ3` πιο κάτω.
       'agencyName',
       'areaSqm', 'authorship', 'bedrooms', 'commercial', 'commercialStatus', 'coverImage',
-      'floor', 'id', 'offerKinds', 'place', 'position', 'projectedAt', 'title', 'type',
+      'floor', 'id',
+      // 🔴 **ΤΕΤΑΡΤΗ ΦΟΡΑ ΠΟΥ ΑΥΤΗ Η ΑΓΚΥΡΑ ΚΟΚΚΙΝΙΣΕ (ADR-838, 2026-08-31)** — και
+      // πάλι έκανε τη δουλειά της. Το `legality` πέρασε από **γραμμένη** απόφαση:
+      // δημοσιεύεται η **ΒΑΘΜΙΔΑ** και, όπου ο νόμος το **ΑΠΑΙΤΕΙ**, ο **αριθμός
+      // μητρώου** (ΑΜΑ: «σε εμφανές σημείο… σε κάθε μέσο προβολής», πρόστιμο από
+      // 5.000 € · ενεργειακή κατηγορία: άρθρο 12 Ν.4122/2013). **Ποτέ έγγραφο**: το
+      // `LegalityClaim` δεν **έχει** πεδίο εγγράφου, και η πύλη της τιμής ζει σε **ένα**
+      // σημείο (`legalitySignalFor`). Ο φρουρός ζει στην ομάδα `Ε4` του
+      // `lib/legality/__tests__/legality-signal.test.ts`.
+      'legality',
+      'offerKinds', 'place', 'position', 'projectedAt',
+      // 🔴 **ΤΡΙΤΗ ΦΟΡΑ ΠΟΥ ΑΥΤΗ Η ΑΓΚΥΡΑ ΚΟΚΚΙΝΙΣΕ (ADR-835 Φ3, 2026-08-31)** — και
+      // πάλι έκανε τη δουλειά της. Το `stay` πέρασε από **γραμμένη** απόφαση (§4.5):
+      // τρία πεδία, **κανένα ημερολόγιο**, για τρεις δεσμευτικούς λόγους
+      // (δημοσιοποίηση επιχειρηματικού δεδομένου τρίτου · βάρος Α19 · ακυρότητα σε
+      // κάθε κράτηση). Ο φρουρός ότι δεν θα γίνει ημερολόγιο ζει στην ομάδα `Η` του
+      // `lib/stay/__tests__/stay-availability.test.ts`.
+      'stay',
+      'title', 'type',
     ]);
+  });
+
+  // ===========================================================================
+  // Σ — ΟΙ ΟΡΟΙ ΔΙΑΜΟΝΗΣ ΕΙΝΑΙ ΔΕΜΕΝΟΙ ΣΤΟ `leaseShort` (ADR-835 §4.5)
+  // ===========================================================================
+
+  describe('🔴 Σ — ο δεσμός `leaseShort` ⇄ `stay`, ΚΑΙ ΠΡΟΣ ΤΙΣ ΔΥΟ ΚΑΤΕΥΘΥΝΣΕΙΣ', () => {
+    it('Σ1 — ΧΩΡΙΣ `leaseShort` το `stay` είναι `null`, ΠΟΤΕ αντικείμενο με μηδενικά', () => {
+      // Ένα `{ minNights: null, maxGuests: null, … }` εδώ θα σήμαινε «κατάλυμα που
+      // δεν δήλωσε τίποτα» (`terms-unknown`) και θα κατηγορούσε τον κάτοχο ενός
+      // ακινήτου **προς πώληση** για πεδία που δεν του ζητήθηκαν ποτέ.
+      const listing = buildPublicListing(REAL_MAISONETTE, NO_PLACE, AT)!;
+      expect(listing.offerKinds).not.toContain('leaseShort');
+      expect(listing.stay).toBeNull();
+    });
+
+    it('Σ2 — ΜΕ `leaseShort` το `stay` ΥΠΑΡΧΕΙ και κουβαλά τους όρους', () => {
+      const listing = buildPublicListing(
+        {
+          ...REAL_MAISONETTE,
+          commercialStatus: 'for-rent',
+          offerKinds: ['leaseShort'],
+          stay: { minNights: 3, maxGuests: 5 },
+        },
+        NO_PLACE,
+        AT,
+      )!;
+      expect(listing.stay).toEqual({ minNights: 3, maxGuests: 5, nextAvailableFrom: null });
+    });
+
+    it('🔴 Σ3 — το `nextAvailableFrom` είναι ΠΑΝΤΑ `null` εδώ: το ημερολόγιο ΔΕΝ ζει στην προβολή', () => {
+      // Δηλωμένο κενό, όχι παράλειψη: το γεμίζει ο γραφέας της Φ5, που βλέπει τις
+      // κρατήσεις. Αν κάποτε γεμίσει **εδώ**, κάποιος έφερε το ημερολόγιο στην
+      // προβολή — και αυτή η γραμμή είναι το σημείο όπου το μαθαίνουμε.
+      const listing = buildPublicListing(
+        {
+          ...REAL_MAISONETTE,
+          commercialStatus: 'for-rent',
+          offerKinds: ['leaseShort'],
+          stay: { minNights: 3, maxGuests: 5 },
+        },
+        NO_PLACE,
+        AT,
+      )!;
+      expect(listing.stay?.nextAvailableFrom).toBeNull();
+    });
+
+    it('🔴 Σ4 — όροι ΧΩΡΙΣ `leaseShort` στο `offerKinds` ΔΕΝ γράφονται: το είδος αποφασίζει', () => {
+      // Το ρεαλιστικό σενάριο: **αποσυρμένη** βραχυχρόνια. Οι όροι μένουν στο έγγραφο,
+      // το `offerKinds` λέει «όχι» — και η κάρτα δεν επιτρέπεται να λέει «ελάχιστο 3
+      // νύχτες» για κατάλυμα που δεν νοικιάζεται πια.
+      const listing = buildPublicListing(
+        { ...REAL_MAISONETTE, stay: { minNights: 3, maxGuests: 5 } },
+        NO_PLACE,
+        AT,
+      )!;
+      expect(listing.stay).toBeNull();
+    });
   });
 
   // ===========================================================================

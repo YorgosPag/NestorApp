@@ -34,6 +34,7 @@ import {
   deriveCommercialStatus,
   deriveOfferKinds,
 } from '@/lib/offers/derive-commercial-status';
+import { deriveStayTerms } from '@/lib/offers/derive-stay-terms';
 import {
   addressToPositionCandidate,
   isPubliclyListed,
@@ -106,6 +107,10 @@ export function projectableFromOwnerProperty(
     commercialStatus: deriveCommercialStatus(marketOffers),
     offerKinds: deriveOfferKinds(marketOffers),
     commercial: deriveCommercialAmounts(marketOffers),
+    // ⚠️ **Τέταρτη ανάγνωση των ΙΔΙΩΝ διαθέσεων** (ADR-835 §4.5), με τον **ίδιο**
+    //    φρουρό `isLiveOffer`: μια αποσυρμένη βραχυχρόνια δεν δίνει όρους, όπως δεν
+    //    δίνει ούτε ποσό. Ζει σε δικό της αρχείο — δες `derive-stay-terms.ts`.
+    stay: deriveStayTerms(marketOffers),
 
     // ── §25.6: είδος + εμβαδόν, όροφος, υπνοδωμάτια ──────────────────────────
     areas: { gross: property.areaSqm },

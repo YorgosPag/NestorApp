@@ -49,6 +49,8 @@ import {
   LISTED_COMMERCIAL_STATUSES,
   type CommercialStatus,
 } from '@/constants/commercial-statuses';
+import type { LegalityClaim } from '@/lib/legality/legality-claim';
+import { projectLegality, type LegalityBearingProperty } from './legality-projection';
 import { OFFER_KINDS, type OfferKind } from '@/types/property-offers';
 import { offerKindsFromLegacyStatus } from '@/lib/offers/derive-commercial-status';
 import type { PropertyType } from '@/types/property';
@@ -57,6 +59,7 @@ import type {
   ListingAuthorship,
   ListingPosition,
   PublicListing,
+  PublicListingStay,
   UnknownPositionReason,
 } from '@/types/public-listing';
 import { outranksForLocation } from '@/lib/location/location-provenance';
@@ -88,6 +91,17 @@ export interface ProjectableProperty {
     readonly rentPrice?: number | null;
     /** Τιμή **ανά διανυκτέρευση** (ADR-835). Παράγεται από `deriveCommercialAmounts`. */
     readonly nightlyRate?: number | null;
+  } | null;
+  /**
+   * **Οι όροι διαμονής** (ADR-835 §4.5). Παράγονται από `deriveStayTerms`.
+   *
+   * ⚠️ **`null`/απόν = δεν υπάρχει ζωντανή βραχυχρόνια διάθεση.** Η διάκριση από ένα
+   * αντικείμενο με μηδενικά είναι ολόκληρος κάδος της αναζήτησης — δες
+   * `deriveStayTerms`.
+   */
+  readonly stay?: {
+    readonly minNights?: number | null;
+    readonly maxGuests?: number | null;
   } | null;
   readonly areas?: { readonly gross?: number | null } | null;
   /** @deprecated επίπεδο πεδίο· διαβάζεται ως έσχατο εφεδρικό. */
@@ -121,6 +135,12 @@ export interface ProjectableProperty {
    * είναι δήλωση ιδιώτη — δηλαδή θα **αφαιρούσε** γνώση που έχουμε. Άγκυρα: `Υ3`.
    */
   readonly authorship?: ListingAuthorship | null;
+  /**
+   * **Οι αξιώσεις νομιμότητας** (Α17 · ADR-838). Δες {@link LegalityBearingProperty}
+   * για το δηλωμένο κενό: **κανένας γραφέας δεν τις γράφει ακόμη**, και καμία αξίωση
+   * **δεν παράγεται** από υπάρχοντα πεδία.
+   */
+  readonly legality?: readonly LegalityClaim[] | null;
   /**
    * Η επωνυμία του γραφείου, όταν υπάρχει. Δες {@link PublicListing.agencyName} για
    * το δηλωμένο κενό των αγγελιών **έργων**.
@@ -307,6 +327,34 @@ function projectedOfferKinds(property: ProjectableProperty): OfferKind[] {
 }
 
 /**
+ * **Οι όροι διαμονής στη δημόσια προβολή** — ή `null`, δεμένο στο `offerKinds`.
+ *
+ * 🔴 **Ο ΔΕΣΜΟΣ ΕΙΝΑΙ ΜΟΝΟΜΕΡΗΣ ΚΑΙ ΣΚΟΠΙΜΟΣ: το `leaseShort` ΑΠΟΦΑΣΙΖΕΙ.** Το
+ * `offerKinds` που φτάνει εδώ έχει ήδη περάσει από το {@link projectedOfferKinds},
+ * δηλαδή είναι η **μία** απάντηση στο *«τι διατίθεται»*. Αν το `stay` κρινόταν
+ * ανεξάρτητα (π.χ. «υπάρχουν όροι ⇒ γράψ' τους»), θα υπήρχαν **δύο** απαντήσεις στο
+ * *«είναι κατάλυμα;»* — και θα διαφωνούσαν ακριβώς εκεί που πονάει: σε ακίνητο με
+ * **αποσυρμένη** βραχυχρόνια, όπου το `offerKinds` λέει «όχι» και οι όροι υπάρχουν
+ * ακόμη στο έγγραφο.
+ *
+ * ⚠️ **`nextAvailableFrom: null` ΠΑΝΤΑ, σήμερα — και είναι ΔΗΛΩΜΕΝΟ ΚΕΝΟ, όχι
+ * παράλειψη.** Είναι παράγωγο του **ημερολογίου**, και το ημερολόγιο **δεν ζει στην
+ * προβολή** (§4.5, τρεις δεσμευτικοί λόγοι). Θα το γεμίσει ο γραφέας της **Φ5**, που
+ * βλέπει τις κρατήσεις. Ως τότε `null` = *«δεν το ξέρουμε»*, που είναι η **αλήθεια**.
+ */
+function projectStay(
+  property: ProjectableProperty,
+  offerKinds: readonly OfferKind[],
+): PublicListingStay | null {
+  if (!offerKinds.includes('leaseShort')) return null;
+  return {
+    minNights: numberOrNull(property.stay?.minNights),
+    maxGuests: numberOrNull(property.stay?.maxGuests),
+    nextAvailableFrom: null,
+  };
+}
+
+/**
  * Ακίνητο + τόπος → **δημόσια αγγελία**, ή `null` αν δεν δημοσιεύεται.
  *
  * 🔑 **Το `null` δεν είναι σφάλμα — είναι εντολή διαγραφής.** Ο γραφέας το μεταφράζει
@@ -356,6 +404,10 @@ export function projectListingShape(
   projectedAt: string
 ): PublicListing {
   const commercial = property.commercial ?? null;
+  // 🔑 Υπολογίζεται **μία** φορά και μοιράζεται: το `stay` είναι δεμένο στο
+  //    `leaseShort` αυτού **ακριβώς** του πίνακα — δεύτερη κλήση θα ήταν δεύτερη
+  //    απάντηση στο «τι διατίθεται», ελεύθερη να αποκλίνει (δες `projectStay`).
+  const offerKinds = projectedOfferKinds(property);
 
   return {
     id: property.id,
@@ -368,13 +420,15 @@ export function projectListingShape(
       // τη λύνει ο ΕΝΑΣ `price-resolver` στην οθόνη (δες τη σημείωση του σχήματος).
       nightlyRate: numberOrNull(commercial?.nightlyRate),
     },
+    // ── ADR-835 §4.5 — οι όροι διαμονής· **ποτέ** ημερολόγιο. Δες `projectStay`.
+    stay: projectStay(property, offerKinds),
     // 🔶 Η εικόνα μπαίνει όταν υπάρξει ο παραγωγός της (Α19, κανόνας 31: **προ-ψημένο
     // artifact από το μοντέλο**, ποτέ ανέβασμα χρήστη). Μέχρι τότε `null` = «δεν
     // υπάρχει», και η οθόνη οφείλει να το πει — ποτέ εξωτερικό placeholder (§25.5.2).
     coverImage: null,
     type: (property.type ?? 'apartment') as PropertyType,
     areaSqm: numberOrNull(property.areas?.gross) ?? numberOrNull(property.area),
-    offerKinds: projectedOfferKinds(property),
+    offerKinds,
     position: resolveListingPosition(place, property.locationDisclosure),
     // 🔑 **Ο δεσμός προς το επίπεδο Α ταξιδεύει ΑΥΤΟΥΣΙΟΣ** — καμία κρίση, καμία
     // λύση, καμία εικασία. Είναι δήλωση του κατόχου («*το ακίνητό μου είναι σε αυτό
@@ -389,6 +443,8 @@ export function projectListingShape(
     bedrooms: numberOrNull(property.layout?.bedrooms),
     title: (property.name ?? '').trim(),
     // §8.33 — δες τον κανόνα της απουσίας στο `ProjectableProperty.authorship`.
+    // ── Α17 (ADR-838) — η ΒΑΘΜΙΔΑ φεύγει, το έγγραφο ποτέ. Δες projectLegality.
+    legality: projectLegality(property, offerKinds, projectedAt),
     authorship: property.authorship ?? 'agency',
     agencyName: property.agencyName ?? null,
     projectedAt,
