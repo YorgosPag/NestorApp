@@ -12,7 +12,7 @@ import {
   orderBy, limit, startAfter, DocumentSnapshot, QueryConstraint,
   writeBatch, serverTimestamp, QuerySnapshot,
 } from 'firebase/firestore';
-import { db, auth } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 import {
   Contact, ContactType, isIndividualContact, isCompanyContact,
   AddressInfo, ContactStatus,
@@ -126,12 +126,31 @@ export async function getAllContacts(options?: {
   lastDoc?: DocumentSnapshot;
   cursorId?: string | null;
 }): Promise<{ contacts: Contact[]; lastDoc: DocumentSnapshot | null; nextCursor: string | null }> {
-  const currentUser = auth.currentUser;
-  if (!currentUser) {
-    logger.warn('getAllContacts called without authentication — returning empty');
-    return { contacts: [], lastDoc: null, nextCursor: null };
-  }
-
+  // 🔴 **ΚΑΜΙΑ ΠΡΟΩΡΗ ΕΠΙΣΤΡΟΦΗ ΓΙΑ «ΔΕΝ ΞΕΡΩ ΑΚΟΜΗ ΠΟΙΟΣ ΡΩΤΑ»** (ADR-834 §6.5.στ).
+  //
+  // Εδώ υπήρχε `if (!auth.currentUser) return { contacts: [] }`. Το `auth.currentUser` είναι
+  // `null` για τα πρώτα χιλιοστά μετά τη φόρτωση — το Firebase αποκαθιστά τη συνεδρία
+  // **ασύγχρονα**. Άρα κάθε καταναλωτής που ρωτούσε στο mount έπαιρνε **κενή σελίδα που
+  // φαίνεται ταυτόσημη με «δεν έχεις επαφές»**, και το `useEffect(…, [])` δεν ξαναρωτά ποτέ.
+  //
+  // 🔑 **Η ΘΕΡΑΠΕΙΑ ΗΤΑΝ ΗΔΗ ΕΝΑ ΒΗΜΑ ΠΙΟ ΚΑΤΩ, ΚΑΙ ΑΥΤΟΣ Ο ΦΡΟΥΡΟΣ ΤΗΝ ΠΡΟΛΑΒΑΙΝΕ.**
+  // Το `buildContactsQuery` καλεί `requireAuthContext()`, που κάνει ακριβώς το σωστό:
+  // `if (!auth.currentUser) await waitForAuthReady()` — και το σχόλιό του ονομάζει αυτήν
+  // ακριβώς την κλάση («early-mounted consumers … throw … even though the user IS logged
+  // in»). Η πρόωρη επιστροφή έκοβε τη ροή **πριν** φτάσει εκεί: ο σωστός φρουρός υπήρχε
+  // και **δεν εκτελέστηκε ποτέ** — αδρανής φρουρός (σχήμα ADR-749 §5).
+  //
+  // ⚠️ **ΚΑΙ Η ΑΠΟΤΥΧΙΑ ΜΙΛΑΕΙ**: αν η ταυτότητα λυθεί και δεν υπάρχει κανείς, το
+  // `requireAuthContext` **πετά** (`AUTHENTICATION_ERROR`) αντί να προσποιηθεί κενό
+  // αποτέλεσμα. Αυτό είναι το δόγμα που το ίδιο αρχείο έχει ΗΔΗ αγκυρωμένο για τον χρήστη
+  // χωρίς claim εταιρείας («αποτυγχάνει **ΟΡΑΤΑ**», `contacts-query-tenant-scope.test.ts`)
+  // — ήταν **δύο δόγματα στην ίδια συνάρτηση** για την ίδια ερώτηση «μπορώ να ρωτήσω;»:
+  // το ένα φώναζε, το άλλο ψιθύριζε ψέματα.
+  //
+  // ⛔ **ΜΗΝ ξαναβάλεις πρόωρο έλεγχο `auth.currentUser` εδώ.** Θα χανόταν ξανά η αναμονή,
+  // και **οκτώ** σημεία κλήσης θα ξαναέβλεπαν σιωπηλά κενή λίστα. Και οι οκτώ είναι ήδη
+  // μέσα σε `try`/`.catch` — η απόρριψη είναι μέρος του συμβολαίου, η σιωπή δεν ήταν.
+  // Άγκυρα: `contacts-query-auth-readiness.test.ts`.
   const q = await buildContactsQuery(options);
   const qs = await getDocs(q);
   const contacts = mapDocs<Contact>(qs as unknown as QuerySnapshot<Contact>);
@@ -194,12 +213,10 @@ export async function searchContacts(searchOptions: {
   searchTerm?: string; type?: ContactType; tags?: string[]; city?: string;
   hasPhone?: boolean; hasEmail?: boolean; createdAfter?: Date; createdBefore?: Date;
 }): Promise<Contact[]> {
-  const currentUser = auth.currentUser;
-  if (!currentUser) {
-    logger.warn('searchContacts called without authentication — returning empty');
-    return [];
-  }
-
+  // 🔴 Ίδια κλάση με το `getAllContacts` — δες το σχόλιο εκεί. Το
+  // `firestoreQueryService.getAll` καλεί κι αυτό `requireAuthContext()`, άρα περιμένει
+  // την ταυτότητα και αποτυγχάνει ορατά. Η πρόωρη επιστροφή εδώ έκανε την αναζήτηση να
+  // λέει «κανένα αποτέλεσμα» για ερώτηση που **δεν εστάλη ποτέ**.
   const constraints: QueryConstraint[] = [];
   if (searchOptions.type) constraints.push(where('type', '==', searchOptions.type));
 

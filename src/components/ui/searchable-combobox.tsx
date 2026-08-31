@@ -22,7 +22,6 @@ import { Spinner } from '@/components/ui/spinner';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverAnchor } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { normalizeForSearch } from '@/utils/greek-text';
 import { useDropdownTokens } from '@/hooks/useDropdownTokens';
 import '@/lib/design-system';
 import {
@@ -31,6 +30,8 @@ import {
   DEFAULT_MAX_DISPLAYED,
   DEFAULT_DEBOUNCE_MS,
 } from './searchable-combobox-types';
+// 🔑 «Ποια επιλογή εννοεί ο άνθρωπος;» — καθαρές συναρτήσεις, δοκιμάσιμες χωρίς DOM.
+import { filterOptions, resolveOptionByText } from './searchable-combobox-matching';
 
 export type { ComboboxOption, SearchableComboboxProps } from './searchable-combobox-types';
 
@@ -123,26 +124,11 @@ export function SearchableCombobox({
     };
   }, [inputValue, debounceMs]);
 
-  // Filtered + limited options
-  const filtered = useMemo(() => {
-    if (!debouncedQuery.trim()) return options.slice(0, maxDisplayed);
-
-    const normalizedQuery = normalizeForSearch(debouncedQuery);
-    const matches = options.filter((option) => {
-      const normalizedLabel = normalizeForSearch(option.label);
-      const normalizedSecondary = option.secondaryLabel
-        ? normalizeForSearch(option.secondaryLabel)
-        : '';
-      const normalizedValue = normalizeForSearch(option.value);
-      return (
-        normalizedLabel.includes(normalizedQuery) ||
-        normalizedSecondary.includes(normalizedQuery) ||
-        normalizedValue.includes(normalizedQuery)
-      );
-    });
-
-    return matches.slice(0, maxDisplayed);
-  }, [options, debouncedQuery, maxDisplayed]);
+  // Filtered + limited options — το κριτήριο ζει στο `searchable-combobox-matching`.
+  const filtered = useMemo(
+    () => filterOptions(options, debouncedQuery, maxDisplayed),
+    [options, debouncedQuery, maxDisplayed],
+  );
 
   // Reset highlight when filtered list changes
   useEffect(() => {
@@ -225,17 +211,16 @@ export function SearchableCombobox({
     // Small delay to allow click on option to register
     setTimeout(() => {
       if (!allowFreeText && inputValue) {
-        // If not free text, validate that the input matches an option
-        const match = options.find(
-          (o) => normalizeForSearch(o.label) === normalizeForSearch(inputValue),
-        );
+        // 🔴 Η ταυτότητα αποφασίζεται από την **ΤΙΜΗ** — δες
+        //    `searchable-combobox-matching.ts` για το γιατί (ADR-834 §6.5.στ).
+        const { incumbent, match } = resolveOptionByText(options, value, inputValue);
+
         if (match) {
           onValueChange(match.value, match);
           setInputValue(match.label);
         } else {
           // Revert to last valid value
-          const currentOption = options.find((o) => o.value === value);
-          setInputValue(currentOption?.label ?? value);
+          setInputValue(incumbent?.label ?? value);
         }
       }
       setOpen(false);
