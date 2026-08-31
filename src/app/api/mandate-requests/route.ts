@@ -44,9 +44,9 @@ import 'server-only';
  */
 
 import { NextResponse, type NextRequest } from 'next/server';
-import { z } from 'zod';
 
 import { readJsonBody } from '@/lib/api/json-body';
+import { mandateRequestBodySchema } from './mandate-request-body';
 // ⛔ ΤΟ ΡΟΛΟΪ ΕΧΕΙ ΜΙΑ ΠΗΓΗ (`.ssot-registry.json` → module `date-local`, CHECK 3.7):
 // ωμό `new Date().toISOString()` εδώ θα ήταν η Ν-οστή γραφή του ίδιου στιγμιότυπου —
 // και σε αυτή τη διαδρομή η στιγμή **κρίνεται** (λήξη εντολής, AK 243), δεν τυπώνεται.
@@ -60,42 +60,13 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { submitMandateRequest } from '@/services/mandate/mandate-request.service';
 import type { MandateRequestRejection } from '@/services/mandate/mandate-request-vocabulary';
-import { LISTING_AGREEMENTS } from '@/types/listing-agreement';
 import type { MandateRequest, MandateRequestInvariant } from '@/types/mandate-request';
 
-/**
- * **Οι όροι, όπως τους προτείνει ο ΙΔΙΩΤΗΣ** (Δ5).
- *
- * ⚠️ **Διακριτή ένωση για την αμοιβή, ποτέ πεδία με `null`** — ίδιο σχήμα με τον τύπο
- * {@link MandateCompensation}. Ένα «ποσοστό χωρίς ποσοστό» πρέπει να είναι **αδύνατο
- * να εκφραστεί**, όχι να απορρίπτεται από έλεγχο που κάποιος θα ξεχάσει.
- *
- * ⚠️ **Το `expiresAt` ΔΕΝ ελέγχεται εδώ ως προς τον νόμο.** Ο κριτής είναι το
- * `exceedsStatutoryTerm`, μέσω των αμετάβλητων του αιτήματος — ο **ίδιος** που κρίνει
- * τη φόρμα. Δεύτερο όριο γραμμένο εδώ θα ήταν ο **τρίτος** αριθμός για το ίδιο ερώτημα.
- */
-const termsSchema = z.object({
-  agreement: z.enum(LISTING_AGREEMENTS),
-  expiresAt: z.string().max(64),
-  compensation: z.discriminatedUnion('type', [
-    z.object({
-      type: z.literal('percentage'),
-      percentage: z.number().nonnegative().max(100),
-      vatIncluded: z.boolean(),
-    }),
-    z.object({
-      type: z.literal('fixed'),
-      amountEUR: z.number().nonnegative(),
-      vatIncluded: z.boolean(),
-    }),
-  ]),
-});
-
-const requestSchema = z.object({
-  ownerPropertyId: z.string().max(128),
-  agencyCompanyId: z.string().max(128),
-  terms: termsSchema,
-});
+// 🔴 **ΤΟ ΣΧΗΜΑ ΕΦΥΓΕ ΑΠΟ ΕΔΩ, ΚΑΙ ΔΕΝ ΗΤΑΝ ΚΑΛΛΩΠΙΣΜΟΣ** (ADR-832, ζωντανό
+//    περιστατικό 2026-08-30): γραμμένο **μέσα** στη διαδρομή, δίπλα σε `server-only`
+//    και Firebase Admin, **καμία άγκυρα δεν μπορούσε να το εκτελέσει** — και έμεινε
+//    πίσω από τον τύπο για μήνες, αφαιρώντας **σιωπηλά** τα `scope`/`startsAt` από
+//    κάθε αίτημα. Δες `mandate-request-body.ts` και {@link PROPOSED_MANDATE_TERM_FIELDS}.
 
 type MandateRequestResponse =
   /** 🔑 Και το `unchanged` επιστρέφει το αίτημα: η ιδεμποτησία είναι **επιτυχία**. */
@@ -110,7 +81,7 @@ async function submitHandler(
   request: NextRequest,
   actor: ApiActor,
 ): Promise<NextResponse<MandateRequestResponse>> {
-  const parsed = await readJsonBody(request, requestSchema);
+  const parsed = await readJsonBody(request, mandateRequestBodySchema);
   if ('rejected' in parsed) return parsed.rejected;
 
   const result = await submitMandateRequest(
