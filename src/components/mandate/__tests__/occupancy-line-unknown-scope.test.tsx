@@ -49,6 +49,11 @@ const UNKNOWN_SCOPE: MandateOccupancy = {
   agencyCompanyId: AGENCY,
   agreement: EXCLUSIVE_AGENCY,
   scope: [],
+  // ⚠️ **Το `startsAt` είναι υποχρεωτικό πεδίο του κριτή.** Έλειπε στην πρώτη γραφή:
+  //    εδώ δεν φαινόταν *(η οθόνη ζωγραφίζει, δεν κρίνει)*, αλλά στο
+  //    `mandate-hint-claims.test.ts` έκανε τον κριτή να απαντά `undetermined`.
+  //    Συμπληρώνεται εδώ ώστε το fixture να μη διδάσκει λάθος σχήμα (N.0.2).
+  startsAt: '2026-08-31T00:00:00.000Z',
   expiresAt: '2027-04-30T23:59:59.999Z',
 };
 
