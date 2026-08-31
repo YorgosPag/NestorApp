@@ -40,6 +40,8 @@ import {
   TABLE_FIXED_ROW_COUNT,
 } from '../build-table-entity';
 import { pasteTsvIntoTable } from '../table-range-clipboard';
+import { applyWorksheetFormat } from './worksheet-format-apply';
+import type { ImportedWorksheetFormat } from './xlsx-worksheet-format';
 
 /**
  * Τι μπήκε και **τι δεν χώρεσε**.
@@ -74,13 +76,13 @@ function widestRow(grid: TsvGrid): number {
  */
 export function worksheetGridToModel(
   grid: TsvGrid,
-  columnWidthMm?: number,
+  format?: ImportedWorksheetFormat,
 ): WorksheetImportResult {
   const offeredRows = grid.length;
   const offeredColumns = widestRow(grid);
   if (offeredRows === 0 || offeredColumns === 0) {
     return {
-      model: buildTableModel({ columnWidthMm }),
+      model: buildTableModel(),
       offeredRows,
       offeredColumns,
       droppedRows: 0,
@@ -96,7 +98,6 @@ export function worksheetGridToModel(
   const empty = buildTableModel({
     columnCount: fitColumns,
     dataRowCount: Math.max(0, fitRows - TABLE_FIXED_ROW_COUNT),
-    columnWidthMm,
   });
 
   // Η άγκυρα: το **πρώτο** κελί του πίνακα. Διαβάζεται από το ίδιο το μοντέλο και όχι από
@@ -105,7 +106,10 @@ export function worksheetGridToModel(
   const pasted = pasteTsvIntoTable(empty, anchor, grid);
 
   return {
-    model: pasted.model,
+    // 🔴 ADR-833 Φάση 6 — **η μορφοποίηση μπαίνει ΜΕΤΑ το κείμενο**, και όχι από ευκολία: το
+    // `pasteTsvIntoTable` είναι που αποφασίζει ποια κελιά υπάρχουν, και μια παράκαμψη στυλ σε
+    // κελί που η επικόλληση δεν γέννησε θα ήταν εγγραφή-φάντασμα.
+    model: format === undefined ? pasted.model : applyWorksheetFormat(pasted.model, format),
     offeredRows,
     offeredColumns,
     droppedRows: offeredRows - pasted.fittedRows,

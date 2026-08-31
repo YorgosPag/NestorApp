@@ -55,7 +55,7 @@ export interface WorkbookImportResult {
 export function workbookToWorksheetDrafts(
   sheets: readonly ImportedWorksheet[],
 ): WorkbookImportResult {
-  const results = sheets.map((sheet) => worksheetGridToModel(sheet.grid));
+  const results = sheets.map((sheet) => worksheetGridToModel(sheet.grid, sheet.format));
   return {
     drafts: sheets.map((sheet, index) =>
       // Δες την κεφαλίδα: κενό όνομα ⇒ **απόν** πεδίο, ποτέ `name: ''`.

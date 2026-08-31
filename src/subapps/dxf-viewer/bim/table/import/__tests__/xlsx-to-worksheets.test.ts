@@ -38,28 +38,28 @@ async function buildWorkbook(): Promise<ArrayBuffer> {
 
 describe('readXlsxWorksheets — ΟΛΑ τα φύλλα, όχι μόνο το πρώτο', () => {
   it('🔴 επιστρέφει ΚΑΙ ΤΑ ΤΡΙΑ φύλλα, με τα ονόματά τους, στη σειρά του βιβλίου', async () => {
-    const sheets = await readXlsxWorksheets(await buildWorkbook());
+    const { worksheets: sheets } = await readXlsxWorksheets(await buildWorkbook());
     // Αν κάποιος «απλοποιήσει» σε `workbook.worksheets[0]`, εδώ γίνεται 1.
     expect(sheets).toHaveLength(3);
     expect(sheets.map((s) => s.name)).toEqual(['Πωλήσεις', 'Κόστη', 'Τρίτο']);
   });
 
   it('τα δεδομένα του πρώτου φύλλου φτάνουν κατά θέση', async () => {
-    const [first] = await readXlsxWorksheets(await buildWorkbook());
+    const [first] = (await readXlsxWorksheets(await buildWorkbook())).worksheets;
     expect(first.grid[0][0]).toBe('Είδος');
     expect(first.grid[1][0]).toBe('Τσιμέντο');
     expect(first.grid[1][1]).toBe('120');
   });
 
   it('🔴 η ΚΕΝΗ γραμμή 3 επιβιώνει — το «Σίδερο» μένει στη γραμμή 4', async () => {
-    const [first] = await readXlsxWorksheets(await buildWorkbook());
+    const [first] = (await readXlsxWorksheets(await buildWorkbook())).worksheets;
     // Αν οι κενές πέφτονταν (η παγίδα του `eachRow`), το «Σίδερο» θα καθόταν στο index 2.
     expect(first.grid[2].every((c) => c === '')).toBe(true);
     expect(first.grid[3][0]).toBe('Σίδερο');
   });
 
   it('ο τύπος `B2*2` δίνει το ΑΠΟΤΕΛΕΣΜΑ, όχι «[object Object]» ούτε το κείμενο του τύπου', async () => {
-    const [first] = await readXlsxWorksheets(await buildWorkbook());
+    const [first] = (await readXlsxWorksheets(await buildWorkbook())).worksheets;
     // Η συνειδητή απόφαση 2 της κεφαλίδας: τιμές, όχι τύποι — αλλά ΠΟΤΕ σκουπίδια.
     expect(first.grid[3][1]).toBe('240');
     expect(first.grid[3][1]).not.toContain('object');
@@ -68,6 +68,6 @@ describe('readXlsxWorksheets — ΟΛΑ τα φύλλα, όχι μόνο το π
   it('βιβλίο χωρίς φύλλα ⇒ κενός πίνακας, ΟΧΙ εξαίρεση', async () => {
     const wb = new ExcelJS.Workbook();
     const buffer = (await wb.xlsx.writeBuffer()) as ArrayBuffer;
-    await expect(readXlsxWorksheets(buffer)).resolves.toEqual([]);
+    await expect(readXlsxWorksheets(buffer)).resolves.toMatchObject({ worksheets: [] });
   });
 });
