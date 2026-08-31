@@ -29,7 +29,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
-import { formatDate } from '@/lib/intl-formatting';
+import { formatTermDay } from '@/lib/mandate/mandate-term-window';
 
 // 🧩 ADR-744 §15 (Φ4) — PER-ROUTE SLICE ΤΗΣ `/mandate/[token]` (ADR-777 §8.39).
 //
@@ -131,7 +131,7 @@ export function MandateConsentContent({
         <div className="flex flex-col gap-0.5">
           <dt className="text-muted-foreground">{t(`${K}.untilLabel`)}</dt>
           <dd className="font-medium text-card-foreground">
-            {formatDate(view.mandateExpiresAt)}
+            {formatTermDay(view.mandateExpiresAt)}
           </dd>
         </div>
       </dl>

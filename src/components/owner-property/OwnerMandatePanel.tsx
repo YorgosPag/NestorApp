@@ -29,6 +29,7 @@ import React from 'react';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrency, formatDate } from '@/lib/intl-formatting';
+import { formatTermDay } from '@/lib/mandate/mandate-term-window';
 import type { OwnerMandateView } from '@/lib/mandate/owner-mandate-view';
 import { usePublicAgency } from '@/services/realtime/hooks/usePublicAgencies';
 import { LISTING_AGREEMENT_I18N_KEYS } from '@/components/mandate/listing-agreement-labels';
@@ -90,8 +91,13 @@ function periodTextOf(
   view: OwnerMandateView,
   t: (key: string) => string,
 ): string {
-  const from = view.startsAt === null ? t(OWNER_MANDATE_KEYS.periodOpenStart) : formatDate(view.startsAt);
-  return `${from} — ${formatDate(view.expiresAt)}`;
+  // 🔴 **`formatTermDay`, ΠΟΤΕ `formatDate` ΕΔΩ** (ADR-834 §5.2). Τα δύο άκρα είναι
+  //    **πολιτικές ημέρες** σε UTC· η μορφοποίηση σε τοπική ζώνη μετακινούσε **μόνο**
+  //    τη λήξη (`T23:59:59.999Z`) και άφηνε την έναρξη (`T00:00:00.000Z`) ακίνητη —
+  //    δηλαδή η ίδια παύλα διάβαζε τα δύο της άκρα με **δύο** συμβάσεις.
+  const from =
+    view.startsAt === null ? t(OWNER_MANDATE_KEYS.periodOpenStart) : formatTermDay(view.startsAt);
+  return `${from} — ${formatTermDay(view.expiresAt)}`;
 }
 
 /** Η μία σχέση, ολόκληρη. */
@@ -131,6 +137,9 @@ function OwnerMandateCard({ view }: { view: OwnerMandateView }): React.JSX.Eleme
         <Detail label={t(OWNER_MANDATE_KEYS.feeLabel)}>{feeTextOf(view, t)}</Detail>
         <Detail label={t(OWNER_MANDATE_KEYS.proofLabel)}>
           {t(OWNER_PROOF_KEYS[view.proofVia])}
+          {/* ⚠️ **`formatDate` εδώ είναι το ΣΩΣΤΟ**: το `decidedAt` είναι πραγματική
+              στιγμή («πότε πάτησε ο άνθρωπος»), όχι πολιτική ημέρα — οφείλει να
+              διαβάζεται στη ζώνη του αναγνώστη. Δες `formatTermDay`. */}
           {view.decidedAt !== null && ` · ${formatDate(view.decidedAt)}`}
         </Detail>
       </dl>

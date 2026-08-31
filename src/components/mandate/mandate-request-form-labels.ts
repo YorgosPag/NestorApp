@@ -188,6 +188,14 @@ export const SCREEN_KEYS = {
   occupancyHolderOther: 'property-market:mandate.request.occupancyHolderOther',
   occupancyEntry: 'property-market:mandate.request.occupancyEntry',
   occupancyEntryOpen: 'property-market:mandate.request.occupancyEntryOpen',
+  /**
+   * 🔴 **Η ΤΡΙΤΗ ΚΑΤΑΣΤΑΣΗ ΤΗΣ ΓΡΑΜΜΗΣ ΚΑΤΑΛΗΨΗΣ** (ADR-834 §5.2) — *«ξέρω ποιος, ξέρω
+   * ως πότε, **δεν** ξέρω για ποιες πράξεις»*. Το κληροδοτημένο έγγραφο (προ-ADR-832)
+   * έχει `scope: []` και η οθόνη τύπωνε **κενό** στη θέση της λίστας, δηλαδή
+   * παρουσίαζε την άγνοια ως έγκυρη απάντηση. Δίδυμο του {@link occupancyHolderOther},
+   * που κάνει ήδη ακριβώς αυτό για το άγνωστο **όνομα**.
+   */
+  occupancyScopeUnknown: 'property-market:mandate.request.occupancyScopeUnknown',
   occupancyReasonExisting: 'property-market:mandate.request.occupancyReasonExisting',
   occupancyReasonCandidate: 'property-market:mandate.request.occupancyReasonCandidate',
   occupancyAvailableFrom: 'property-market:mandate.request.occupancyAvailableFrom',

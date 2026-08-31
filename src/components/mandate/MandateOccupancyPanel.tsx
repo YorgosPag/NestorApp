@@ -40,7 +40,7 @@ import type {
 import type { MandateOccupancy } from '@/lib/mandate/mandate-conflict';
 import { LISTING_AGREEMENT_I18N_KEYS } from '@/components/mandate/listing-agreement-labels';
 import { OFFER_KIND_I18N_KEYS } from '@/components/mandate/offer-kind-labels';
-import { toDateInputValue } from '@/lib/mandate/mandate-term-window';
+import { formatTermDay, toDateInputValue } from '@/lib/mandate/mandate-term-window';
 
 import { MANDATE_REQUEST_NS, SCREEN_KEYS } from './mandate-request-form-labels';
 
@@ -163,8 +163,17 @@ function OccupancyLine({
     agreement: t(LISTING_AGREEMENT_I18N_KEYS[occupancy.agreement]),
     // ⚠️ Ευρετηρίαση **σταθεράς module**, ποτέ `t(\`…${kind}\`)` — αλλιώς ο τεμαχιστής
     //    βγάζει «unresolved dynamic t()» και το κλειδί λείπει από το slice.
-    resource: kinds.map((kind) => t(OFFER_KIND_I18N_KEYS[kind])).join(' · '),
-    until: toDateInputValue(occupancy.expiresAt),
+    //
+    // 🔴 **ΤΟ ΚΕΝΟ ΕΙΧΕ ΟΝΟΜΑ ΓΙΑ ΤΟΝ ΚΑΤΟΧΟ ΚΑΙ ΔΕΝ ΕΙΧΕ ΓΙΑ ΤΙΣ ΠΡΑΞΕΙΣ**
+    //    (ADR-834 §5.2). Το κληροδοτημένο έγγραφο (προ-ADR-832) έχει `scope: []`, και
+    //    το `join` σε κενό πίνακα δίνει **κενή συμβολοσειρά** — η οθόνη τύπωνε
+    //    *«Άλλο γραφείο — Αποκλειστική, με δικαίωμα του ιδιοκτήτη για , ως 2027-04-30»*,
+    //    δηλαδή **παρουσίαζε την άγνοια ως έγκυρη λίστα**. Η γραμμή από πάνω κάνει ήδη
+    //    ακριβώς το σωστό για το άγνωστο **όνομα** (`?? occupancyHolderOther`)· η
+    //    άγνοια για τις **πράξεις** έμενε ανώνυμη. Πλέον ονομάζεται.
+    resource:
+      kinds.map((kind) => t(OFFER_KIND_I18N_KEYS[kind])).join(' · '),
+    until: formatTermDay(occupancy.expiresAt),
   };
 
   return (
