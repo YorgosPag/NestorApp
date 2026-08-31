@@ -35,6 +35,7 @@ import type {
   TableRow,
 } from '../../../types/table';
 import type { TableCellRangeBounds } from '../table-cell-range';
+import { bookOf } from './formula-book-fixture';
 
 const measureText: TableTextMeasurer = (text, heightMm) => text.length * heightMm * 0.6;
 
@@ -86,7 +87,7 @@ function apply(
   id: TableMergeCommandId,
   align: TableCellAlign = CURRENT_ALIGN,
 ): PersistedTableModel {
-  return applyTableMergeCommand(model, b, id, align);
+  return applyTableMergeCommand(bookOf(model),model, b, id, align);
 }
 
 function text(rowId: string, colId: string, value: string): TableCellEntry {

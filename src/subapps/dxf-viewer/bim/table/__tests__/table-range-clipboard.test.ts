@@ -30,6 +30,7 @@ import type {
   TableRow,
   TableRowId,
 } from '../../../types/table';
+import { bookOf, commitPendingForTest } from './formula-book-fixture';
 
 const COLUMNS: TableColumn[] = ['c0', 'c1', 'c2'].map((id) => ({
   id,
@@ -105,7 +106,7 @@ describe('tableRangeToTsvGrid — η περιοχή ως ορθογώνιο πλ
 
 describe('pasteTsvIntoTable — η γωνία είναι το ενεργό κελί', () => {
   it('γράφει το πλέγμα με πάνω-αριστερή γωνία το ενεργό κελί', () => {
-    const result = pasteTsvIntoTable(persisted(), ref('r1', 'c1'), [['x', 'y']]);
+    const result = pasteTsvIntoTable(bookOf(persisted()),persisted(), ref('r1', 'c1'), [['x', 'y']]);
     expect(readGrid(result.model)).toEqual([
       ['', '', ''],
       ['', 'x', 'y'],
@@ -117,7 +118,7 @@ describe('pasteTsvIntoTable — η γωνία είναι το ενεργό κε�
     // Έξι κελιά γραμμένα, **ένα** αντικείμενο μοντέλου: ο καλών φτιάχνει ένα και μόνο
     // `UpdateEntityCommand`. Δεν υπάρχει ενδιάμεση κατάσταση να αναιρεθεί χωριστά.
     const before = persisted();
-    const result = pasteTsvIntoTable(before, ref('r0', 'c0'), [
+    const result = pasteTsvIntoTable(bookOf(before),before, ref('r0', 'c0'), [
       ['a', 'b', 'c'],
       ['d', 'e', 'f'],
     ]);
@@ -132,20 +133,20 @@ describe('pasteTsvIntoTable — η γωνία είναι το ενεργό κε�
   it('🔴 ΚΑΘΑΡΗ: το μοντέλο εισόδου δεν αγγίζεται', () => {
     const before = persisted([text('r0', 'c0', 'αρχικό')]);
     const snapshot = readGrid(before);
-    pasteTsvIntoTable(before, ref('r0', 'c0'), [['νέο', 'x']]);
+    pasteTsvIntoTable(bookOf(before),before, ref('r0', 'c0'), [['νέο', 'x']]);
     expect(readGrid(before)).toEqual(snapshot);
   });
 
   it('επικόλληση ΙΔΙΩΝ τιμών ⇒ το ΙΔΙΟ μοντέλο by-reference (καμία εντολή, κανένα undo)', () => {
     const before = persisted([text('r0', 'c0', 'ίδιο')]);
-    expect(pasteTsvIntoTable(before, ref('r0', 'c0'), [['ίδιο']]).model).toBe(before);
+    expect(pasteTsvIntoTable(bookOf(before),before, ref('r0', 'c0'), [['ίδιο']]).model).toBe(before);
   });
 
   // ── §4.3: κόβεται, δεν μεγαλώνει ─────────────────────────────────────────
 
   it('🔴 §4.3 — ό,τι δεν χωράει ΚΟΒΕΤΑΙ· ο πίνακας ΔΕΝ αποκτά γραμμές', () => {
     // 3 γραμμές προσφέρονται με αφετηρία την τελευταία ⇒ χωράει **μία**.
-    const result = pasteTsvIntoTable(persisted(), ref('r2', 'c0'), [['α'], ['β'], ['γ']]);
+    const result = pasteTsvIntoTable(bookOf(persisted()),persisted(), ref('r2', 'c0'), [['α'], ['β'], ['γ']]);
 
     expect({ offered: result.offeredRows, fitted: result.fittedRows }).toEqual({ offered: 3, fitted: 1 });
     expect(readGrid(result.model)).toEqual([
@@ -156,7 +157,7 @@ describe('pasteTsvIntoTable — η γωνία είναι το ενεργό κε�
   });
 
   it('§4.3 — το ίδιο κατά ΣΤΗΛΕΣ', () => {
-    const result = pasteTsvIntoTable(persisted(), ref('r0', 'c2'), [['α', 'β', 'γ']]);
+    const result = pasteTsvIntoTable(bookOf(persisted()),persisted(), ref('r0', 'c2'), [['α', 'β', 'γ']]);
     expect({ offered: result.offeredColumns, fitted: result.fittedColumns }).toEqual({
       offered: 3,
       fitted: 1,
@@ -165,7 +166,7 @@ describe('pasteTsvIntoTable — η γωνία είναι το ενεργό κε�
   });
 
   it('πλέγμα που χωράει ολόκληρο δεν αναφέρει καμία απώλεια', () => {
-    const result = pasteTsvIntoTable(persisted(), ref('r0', 'c0'), [['α', 'β']]);
+    const result = pasteTsvIntoTable(bookOf(persisted()),persisted(), ref('r0', 'c0'), [['α', 'β']]);
     expect({
       rows: result.fittedRows === result.offeredRows,
       cols: result.fittedColumns === result.offeredColumns,
@@ -179,7 +180,7 @@ describe('pasteTsvIntoTable — η γωνία είναι το ενεργό κε�
     // Κείμενο σε καλυμμένο κελί δεν ζωγραφίζεται πουθενά: θα εξαφανιζόταν από την οθόνη
     // ενώ θα υπήρχε στο αρχείο — η χειρότερη δυνατή έκβαση.
     const merge: CellSpan = { anchorRowId: 'r0', anchorColId: 'c0', rowSpan: 1, colSpan: 3 };
-    const result = pasteTsvIntoTable(persisted([], [merge]), ref('r0', 'c0'), [['α', 'β', 'γ']]);
+    const result = pasteTsvIntoTable(bookOf(persisted([], [merge])),persisted([], [merge]), ref('r0', 'c0'), [['α', 'β', 'γ']]);
 
     expect(result.skippedMergedCells).toBe(2);
     expect(readGrid(result.model)[0]).toEqual(['α', '', '']);
@@ -189,7 +190,7 @@ describe('pasteTsvIntoTable — η γωνία είναι το ενεργό κε�
 
   it('ακανόνιστο πλέγμα: κοντή γραμμή ΔΕΝ σβήνει τα κελιά για τα οποία δεν πρόσφερε τιμή', () => {
     const before = persisted([text('r1', 'c1', 'μένει')]);
-    const result = pasteTsvIntoTable(before, ref('r0', 'c0'), [['α', 'β'], ['γ']]);
+    const result = pasteTsvIntoTable(bookOf(before),before, ref('r0', 'c0'), [['α', 'β'], ['γ']]);
     expect(readGrid(result.model)).toEqual([
       ['α', 'β', ''],
       ['γ', 'μένει', ''],
@@ -199,18 +200,18 @@ describe('pasteTsvIntoTable — η γωνία είναι το ενεργό κε�
 
   it('κενό πλέγμα ⇒ τίποτα δεν αλλάζει, τίποτα δεν σβήνεται', () => {
     const before = persisted([text('r0', 'c0', 'μένει')]);
-    expect(pasteTsvIntoTable(before, ref('r0', 'c0'), []).model).toBe(before);
+    expect(pasteTsvIntoTable(bookOf(before),before, ref('r0', 'c0'), []).model).toBe(before);
   });
 
   it('μπαγιάτικο ενεργό κελί ⇒ μηδέν γραμμένα, ίδιο μοντέλο — ποτέ σιωπηλή επιτυχία', () => {
     const before = persisted();
-    const result = pasteTsvIntoTable(before, ref('r9', 'c9'), [['α']]);
+    const result = pasteTsvIntoTable(bookOf(before),before, ref('r9', 'c9'), [['α']]);
     expect({ model: result.model, fitted: result.fittedRows }).toEqual({ model: before, fitted: 0 });
   });
 
   it('κενό κελί στο προσφερόμενο πλέγμα ΣΒΗΝΕΙ τον προορισμό — είναι υπαρκτή τιμή', () => {
     const before = persisted([text('r0', 'c0', 'παλιό')]);
-    expect(getPersistedCellText(pasteTsvIntoTable(before, ref('r0', 'c0'), [['']]).model, 'r0', 'c0')).toBe('');
+    expect(getPersistedCellText(pasteTsvIntoTable(bookOf(before),before, ref('r0', 'c0'), [['']]).model, 'r0', 'c0')).toBe('');
   });
 });
 
@@ -219,7 +220,7 @@ describe('pasteTsvIntoTable — η γωνία είναι το ενεργό κε�
 describe('clearTableRange — το Delete αδειάζει ΟΛΗ την περιοχή, με ένα undo', () => {
   it('αδειάζει κάθε κελί μέσα στα όρια και μόνο αυτά', () => {
     const before = persisted([text('r0', 'c0', 'μέσα'), text('r2', 'c2', 'έξω')]);
-    const after = clearTableRange(before, { firstRow: 0, lastRow: 1, firstCol: 0, lastCol: 1 });
+    const after = clearTableRange(bookOf(before),before, { firstRow: 0, lastRow: 1, firstCol: 0, lastCol: 1 });
     expect(readGrid(after)).toEqual([
       ['', '', ''],
       ['', '', ''],
@@ -229,7 +230,7 @@ describe('clearTableRange — το Delete αδειάζει ΟΛΗ την περ�
 
   it('ήδη κενή περιοχή ⇒ ΙΔΙΟ μοντέλο by-reference (κανένα βήμα undo από το πουθενά)', () => {
     const before = persisted();
-    expect(clearTableRange(before, FULL)).toBe(before);
+    expect(clearTableRange(bookOf(before),before, FULL)).toBe(before);
   });
 });
 
@@ -249,7 +250,7 @@ const TOTAL = ref('r2', 'c0');
 
 /** Πίνακας με **ζωντανό** τύπο στο `A3`, ήδη υπολογισμένο (όπως θα ερχόταν από commit). */
 function withTotalFormula(cells: TableCellEntry[] = []): PersistedTableModel {
-  return commitCellWrites(writeCellInput(persisted(cells), TOTAL.rowId, TOTAL.colId, '=SUM(A1:A2)'));
+  return commitPendingForTest(writeCellInput(bookOf(persisted(cells)),persisted(cells), TOTAL.rowId, TOTAL.colId, '=SUM(A1:A2)'));
 }
 
 const totalOf = (model: PersistedTableModel): string =>
@@ -260,45 +261,45 @@ describe('🔴 επικόλληση ⇒ ΕΠΑΝΑΫΠΟΛΟΓΙΣΜΟΣ των 
     const before = withTotalFormula([text('r0', 'c0', '1'), text('r1', 'c0', '2')]);
     expect(totalOf(before)).toBe('3');
 
-    const after = pasteTsvIntoTable(before, ref('r0', 'c0'), [['5'], ['7']]).model;
+    const after = pasteTsvIntoTable(bookOf(before),before, ref('r0', 'c0'), [['5'], ['7']]).model;
     expect(totalOf(after)).toBe('12');
   });
 
   it('ο τύπος ανανεώνεται ΚΑΙ όταν η επικόλληση αγγίζει μόνο ΜΕΡΟΣ του εύρους του', () => {
     const before = withTotalFormula([text('r0', 'c0', '1'), text('r1', 'c0', '2')]);
-    const after = pasteTsvIntoTable(before, ref('r1', 'c0'), [['10']]).model;
+    const after = pasteTsvIntoTable(bookOf(before),before, ref('r1', 'c0'), [['10']]).model;
     expect(totalOf(after)).toBe('11');
   });
 
   it('επικόλληση εκτός του εύρους ⇒ ο τύπος ΔΕΝ αλλάζει (καμία επινοημένη διάδοση)', () => {
     const before = withTotalFormula([text('r0', 'c0', '1'), text('r1', 'c0', '2')]);
-    const after = pasteTsvIntoTable(before, ref('r0', 'c1'), [['999']]).model;
+    const after = pasteTsvIntoTable(bookOf(before),before, ref('r0', 'c1'), [['999']]).model;
     expect(totalOf(after)).toBe('3');
   });
 
   it('ίδιες τιμές ⇒ ΙΔΙΟ μοντέλο by-reference, παρότι υπάρχει τύπος στον πίνακα', () => {
     const before = withTotalFormula([text('r0', 'c0', '1'), text('r1', 'c0', '2')]);
-    expect(pasteTsvIntoTable(before, ref('r0', 'c0'), [['1'], ['2']]).model).toBe(before);
+    expect(pasteTsvIntoTable(bookOf(before),before, ref('r0', 'c0'), [['1'], ['2']]).model).toBe(before);
   });
 });
 
 describe('🔴 επικόλληση ⇒ το `=` ΑΝΑΓΝΩΡΙΖΕΤΑΙ, όπως και από το πληκτρολόγιο', () => {
   it('κείμενο `=SUM(A1:A2)` από το πρόχειρο γίνεται ΤΥΠΟΣ και δίνει το αποτέλεσμά του', () => {
     const before = persisted([text('r0', 'c0', '4'), text('r1', 'c0', '6')]);
-    const after = pasteTsvIntoTable(before, TOTAL, [['=SUM(A1:A2)']]).model;
+    const after = pasteTsvIntoTable(bookOf(before),before, TOTAL, [['=SUM(A1:A2)']]).model;
     // '10' ⇒ έγινε τύπος. '=SUM(A1:A2)' ⇒ αποθηκεύτηκε ωμό κείμενο (η παλιά συμπεριφορά).
     expect(totalOf(after)).toBe('10');
   });
 
   it('τύπος που ΔΕΝ αναλύεται μένει κείμενο αυτούσιο — τίποτα δεν χάνεται', () => {
-    const after = pasteTsvIntoTable(persisted(), ref('r0', 'c0'), [['=1+']]).model;
+    const after = pasteTsvIntoTable(bookOf(persisted()),persisted(), ref('r0', 'c0'), [['=1+']]).model;
     expect(getPersistedCellText(after, 'r0' as TableRowId, 'c0' as TableColumnId)).toBe('=1+');
   });
 
   it('επικολλημένος τύπος υπολογίζεται ΜΑΖΙ με τα δεδομένα της ίδιας επικόλλησης', () => {
     // Ένα πέρασμα: τα `3`/`4` και ο τύπος που τα αθροίζει έρχονται στο ΙΔΙΟ πλέγμα. Χωρίς
     // τον επαναϋπολογισμό στο τέλος, ο τύπος θα διάβαζε κελιά που δεν είχαν γραφτεί ακόμα.
-    const after = pasteTsvIntoTable(persisted(), ref('r0', 'c0'), [
+    const after = pasteTsvIntoTable(bookOf(persisted()),persisted(), ref('r0', 'c0'), [
       ['3'],
       ['4'],
       ['=SUM(A1:A2)'],
@@ -310,13 +311,13 @@ describe('🔴 επικόλληση ⇒ το `=` ΑΝΑΓΝΩΡΙΖΕΤΑΙ, ό�
 describe('🔴 Delete σε περιοχή ⇒ ΕΠΑΝΑΫΠΟΛΟΓΙΣΜΟΣ (η ίδια κλάση σφάλματος)', () => {
   it('άδειασμα της στήλης μηδενίζει το άθροισμα που τη διάβαζε', () => {
     const before = withTotalFormula([text('r0', 'c0', '1'), text('r1', 'c0', '2')]);
-    const after = clearTableRange(before, { firstRow: 0, lastRow: 1, firstCol: 0, lastCol: 0 });
+    const after = clearTableRange(bookOf(before),before, { firstRow: 0, lastRow: 1, firstCol: 0, lastCol: 0 });
     expect(totalOf(after)).toBe('0');
   });
 
   it('άδειασμα εκτός του εύρους ⇒ ο τύπος ΔΕΝ αλλάζει', () => {
     const before = withTotalFormula([text('r0', 'c0', '1'), text('r1', 'c0', '2'), text('r0', 'c2', 'x')]);
-    const after = clearTableRange(before, { firstRow: 0, lastRow: 0, firstCol: 2, lastCol: 2 });
+    const after = clearTableRange(bookOf(before),before, { firstRow: 0, lastRow: 0, firstCol: 2, lastCol: 2 });
     expect(totalOf(after)).toBe('3');
   });
 });

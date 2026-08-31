@@ -49,6 +49,8 @@ import { isBlankCell, transferredCell } from './table-range-transfer';
 import { tileTableTarget, type TableTiledSlot } from './table-range-tiling';
 import { writePersistedCells } from './table-cell-content';
 import { commitCellWrites } from './formula/table-formula-engine';
+import { bookWithHome, type TableFormulaWorkbook } from './formula/table-formula-workbook';
+
 import { offsetTableFormula } from './formula/table-formula-offset';
 import { buildMergeIndex, cellKey, indexById, resolveTableModel } from './table-model-helpers';
 import { ALL_TABLE_FORMAT_FACETS, type TableFormatFacetSet } from './table-format-payload';
@@ -93,6 +95,7 @@ export const FULL_TABLE_PASTE: TablePasteRequest = {
  * για επικόλληση που δεν έφερε τίποτα νέο (ADR-739 §6.6).
  */
 export function pasteTableClipboard(
+  book: TableFormulaWorkbook,
   model: PersistedTableModel,
   style: TableStyle,
   payload: TableClipboardPayload,
@@ -103,7 +106,7 @@ export function pasteTableClipboard(
   const region = pastedRegion(resolved, payload, anchor);
   if (region === null) return emptyResult(model, payload);
 
-  const content = pasteContent(model, resolved, payload, anchor, region, request.content);
+  const content = pasteContent(book, model, resolved, payload, anchor, region, request.content);
   // Η μορφή γράφεται **μετά** το περιεχόμενο και πάνω στο αποτέλεσμά του: ο ζωγράφος αγγίζει
   // μόνο `styleOverride`/`diagonal`/ακμές, οπότε η σειρά δεν αλλάζει τιμές — αλλά η αντίστροφη
   // θα έγραφε πάνω σε κελιά που δεν υπάρχουν ακόμη στον αραιό χάρτη.
@@ -167,6 +170,7 @@ function pastedRegion(
 
 /** Ο διακλαδωτής του περιεχομένου — τρεις δρόμοι, κανένας τους δεύτερος γραφέας. */
 function pasteContent(
+  book: TableFormulaWorkbook,
   model: PersistedTableModel,
   resolved: TableModel,
   payload: TableClipboardPayload,
@@ -185,9 +189,9 @@ function pasteContent(
   // κεφαλίδα του `table-clipboard-payload.ts`: είναι η κατασκευή που κάνει αποδείξιμο ότι το
   // «Επικόλληση Τιμών» δίνει ό,τι ακριβώς θα έδινε το ίδιο αντίγραφο μέσα από το Excel.
   if (content === 'values') {
-    return pasteTsvIntoTable(model, anchor, clipboardTextToTableGrid(payload.text));
+    return pasteTsvIntoTable(book, model, anchor, clipboardTextToTableGrid(payload.text));
   }
-  return pasteCells(model, resolved, payload, region);
+  return pasteCells(book, model, resolved, payload, region);
 }
 
 /**
@@ -198,6 +202,7 @@ function pasteContent(
  * `commitCellWrites` που χρεώνεται τον επαναϋπολογισμό ώστε να μην μπορεί να ξεχαστεί (§47.5).
  */
 function pasteCells(
+  book: TableFormulaWorkbook,
   model: PersistedTableModel,
   resolved: TableModel,
   payload: TableClipboardPayload,
@@ -218,10 +223,13 @@ function pasteCells(
   const byTarget = new Map<string, TableTiledSlot>();
   for (const slot of targets) byTarget.set(refKey(slot.at.rowId, slot.at.colId), slot);
 
+  // Το σπίτι του βιβλίου είναι το πλέγμα **στο οποίο προσγειώνεται** η επικόλληση: εκεί
+  // ψάχνονται οι σχετικές αναφορές, ενώ οι δια-φυλλικές κρατούν το δικό τους φύλλο.
+  const here = bookWithHome(book, resolved);
   const written = writePersistedCells(model, targets.map((slot) => slot.at), {
-    update: (existing, at) => pastedCell(resolved, payload, byTarget.get(refKey(at.rowId, at.colId)), existing),
+    update: (existing, at) => pastedCell(here, payload, byTarget.get(refKey(at.rowId, at.colId)), existing),
     create: (at) => {
-      const next = pastedCell(resolved, payload, byTarget.get(refKey(at.rowId, at.colId)), undefined);
+      const next = pastedCell(here, payload, byTarget.get(refKey(at.rowId, at.colId)), undefined);
       // Κενή πηγή σε κελί που δεν υπάρχει: καμία εγγραφή-φάντασμα. Ο αραιός χάρτης σημαίνει ήδη «κενό».
       return next !== null && isBlankCell(next) ? null : next;
     },
@@ -229,7 +237,7 @@ function pasteCells(
 
   return {
     ...regionCounts(region, payload),
-    model: commitCellWrites(written),
+    model: commitCellWrites(here, written),
     skippedMergedCells: slots.length - targets.length,
   };
 }
@@ -252,7 +260,7 @@ function pasteCells(
  * λάθος αριθμός σε παραδοτέο (ADR-720).
  */
 function pastedCell(
-  target: TableModel,
+  target: TableFormulaWorkbook,
   payload: TableClipboardPayload,
   slot: TableTiledSlot | undefined,
   existing: TableCell | undefined,

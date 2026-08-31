@@ -28,6 +28,7 @@
  */
 
 import { commitCellWrites } from '../formula/table-formula-engine';
+import type { TableFormulaWorkbook } from '../formula/table-formula-workbook';
 import { fingerprintExportableTable } from './table-binding-fingerprint';
 import { resolveTableSource } from './table-source-resolver';
 import { applyBoundSourceToCells, hasBoundColumns } from './table-binding-cells';
@@ -37,6 +38,13 @@ import type { CellWriteTarget } from '../table-cell-content';
 import type { PersistedTableModel, TableBinding } from '../../../types/table';
 
 export interface TableBindingRefreshInput {
+  /**
+   * 🔴 ADR-833 Φάση 7 — **το βιβλίο ταξιδεύει με το αίτημα**, όπως ήδη ο στόχος (ADR-769 Α22).
+   * Η ανανέωση γράφει κελιά και **χρεώνεται** τον επαναϋπολογισμό (§47.5)· ένας τύπος που
+   * διαβάζει άλλο φύλλο δεν επιτρέπεται να γίνει `#REF!` επειδή η γέφυρα δεδομένων δεν ήξερε
+   * ότι υπάρχουν άλλα φύλλα.
+   */
+  readonly book: TableFormulaWorkbook;
   readonly model: PersistedTableModel;
   readonly binding: TableBinding;
   readonly context: TableSourceContext;
@@ -117,7 +125,7 @@ export function refreshTableBinding(input: TableBindingRefreshInput): TableBindi
   const fill = applyBoundSourceToCells(model, resolution.table);
   return {
     status: 'refreshed',
-    model: commitCellWrites(fill.pending),
+    model: commitCellWrites(input.book, fill.pending),
     binding: { ...binding, revision },
     conflicts: fill.conflicts,
     unknownSourceKeys: fill.unknownSourceKeys,

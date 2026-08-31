@@ -33,6 +33,7 @@ import {
 } from '../../../systems/topography/topo-survey-point-resolve';
 import type { PersistedTableModel, TableBinding, TableColumn, TableRow } from '../../../types/table';
 import type { TopoPoint } from '../../../systems/topography/topo-types';
+import { bookOf, commitPendingForTest } from './formula-book-fixture';
 
 // ─── Σκηνικό: η αποτύπωση και ο πίνακάς της ──────────────────────────────────
 
@@ -63,7 +64,7 @@ function emptyModel(): PersistedTableModel {
 
 /** Ο πίνακας **γεμισμένος από την πηγή** — η πραγματική διαδρομή του ADR-767 §5. */
 function filled(points: readonly TopoPoint[]): PersistedTableModel {
-  return commitCellWrites(applyBoundSourceToCells(emptyModel(), buildCoordinateTable(points)).pending);
+  return commitPendingForTest(applyBoundSourceToCells(emptyModel(), buildCoordinateTable(points)).pending);
 }
 
 const ctx = (points: readonly TopoPoint[]) => ({ topoPoints: points });
@@ -73,7 +74,7 @@ const ctx = (points: readonly TopoPoint[]) => ({ topoPoints: points });
 describe('ADR-769 — ο πίνακας ζητάει, η κορυφή μετακινείται ΑΚΡΙΒΩΣ εκεί', () => {
   it('🔴 ο ΕΠΕΞΕΡΓΑΣΤΗΣ δείχνει ΜΕΤΡΑ — ό,τι βλέπει ο άνθρωπος είναι ό,τι πληκτρολογεί', () => {
     // Η γραμμή που ΔΕΝ ήταν πράσινη πριν: το κελί έδειχνε `391698400`.
-    expect(cellInputText(filled([P1, P2]), 'r2', 'cX')).toBe('391698.4');
+    expect(cellInputText(bookOf(filled([P1, P2])),filled([P1, P2]), 'r2', 'cX')).toBe('391698.4');
   });
 
   it('🏆 γράφω 391698.5 και η κορυφή προσγειώνεται στα 391698500 mm — Υ και Ζ ΑΝΕΓΓΙΧΤΑ', () => {

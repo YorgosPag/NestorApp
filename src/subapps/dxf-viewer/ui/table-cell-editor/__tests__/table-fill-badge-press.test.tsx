@@ -56,6 +56,7 @@ import {
   setTableCellCursorById,
   tableWorksheetFields,
 } from '../../../bim/table/__tests__/make-table-entity';
+import { bookOf } from '../../../bim/table/__tests__/formula-book-fixture';
 
 describe('🔴 ADR-828 Φ4α — το κουμπί «Επιλογές Αυτόματης Συμπλήρωσης», από άκρη σε άκρη', () => {
   let entity: TableEntity;
@@ -166,7 +167,7 @@ describe('🔴 ADR-828 Φ4α — το κουμπί «Επιλογές Αυτόμ
     setTableFillMenuPort({ open: openMenu });
     onCommitModel = jest.fn();
     entity = buildTableEntity({ x: 0, y: 0 }, { columnCount: 5, dataRowCount: 3 }, 'table-1', 'layer-0');
-    entity = { ...entity, ...tableWorksheetFields(writeCellInput(activeTableModel(entity), activeTableModel(entity).rows[2].id, activeTableModel(entity).columns[1].id, '10').model) };
+    entity = { ...entity, ...tableWorksheetFields(writeCellInput(bookOf(activeTableModel(entity)),activeTableModel(entity), activeTableModel(entity).rows[2].id, activeTableModel(entity).columns[1].id, '10').model) };
   });
 
   afterEach(() => {

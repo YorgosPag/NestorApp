@@ -116,7 +116,12 @@ function commitSort(
   const port = getTableFormatPort();
   if (!port) return 'target-missing';
 
-  const next = applyTableSort(request.target.model, {
+  // 🔴 ADR-833 Φάση 7 — **ζωντανό** βιβλίο, στιγμιότυπο μοντέλου: δες `formulaBookFor`. Χωρίς
+  // πίνακα δεν υπάρχει βιβλίο, και τότε δεν υπάρχει και στόχος να γραφτεί.
+  const book = port.formulaBookFor(request.target);
+  if (!book) return 'target-missing';
+
+  const next = applyTableSort(book, request.target.model, {
     range: request.range,
     criteria,
     hasHeader,

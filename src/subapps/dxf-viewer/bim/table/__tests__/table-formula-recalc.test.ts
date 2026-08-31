@@ -25,6 +25,7 @@ import {
   commitCellWrites,
   writeCellInput,
 } from '../formula/table-formula-engine';
+import { bookOf, commitPendingForTest } from './formula-book-fixture';
 
 const COLUMNS: TableColumn[] = ['c1', 'c2'].map((id) => ({
   id,
@@ -58,7 +59,7 @@ function edit(
   colId: string,
   text: string,
 ): PersistedTableModel {
-  return commitCellWrites(writeCellInput(model, rowId, colId, text));
+  return commitPendingForTest(writeCellInput(bookOf(model),model, rowId, colId, text));
 }
 
 describe('γραφή κελιού — η μία διακλάδωση `=`', () => {
@@ -77,7 +78,7 @@ describe('γραφή κελιού — η μία διακλάδωση `=`', () =>
     expect(cell?.value).toBe(5);
     // Ο καμβάς διαβάζει την τιμή· η γραμμή τύπων το πηγαίο.
     expect(getPersistedCellText(model, 'r3', 'c1')).toBe('5');
-    expect(cellInputText(model, 'r3', 'c1')).toBe('=(2*5)/2');
+    expect(cellInputText(bookOf(model),model, 'r3', 'c1')).toBe('=(2*5)/2');
   });
 
   it('τύπος που δεν αναλύεται μένει ΚΕΙΜΕΝΟ, αυτούσιος', () => {
@@ -156,7 +157,7 @@ describe('🔑 δομικές πράξεις — η υπόσχεση του §11
     const withSum = edit(makeModel(), 'r3', 'c1', '=SUM(A1:A2)');
     expect(cellValue(withSum, 'r3', 'c1')).toBe(30);
 
-    const grown = insertTableRow(withSum, 0);
+    const grown = insertTableRow(bookOf(withSum),withSum, 0);
 
     // Το αποτέλεσμα μένει 30: οι αναφορές δείχνουν σε **ταυτότητες**, όχι σε θέσεις.
     expect(cellValue(grown, 'r3', 'c1')).toBe(30);
@@ -164,16 +165,16 @@ describe('🔑 δομικές πράξεις — η υπόσχεση του §11
 
   it('…και η γραμμή τύπων δείχνει ΜΟΝΗ ΤΗΣ τη νέα διεύθυνση', () => {
     const withSum = edit(makeModel(), 'r3', 'c1', '=SUM(A1:A2)');
-    expect(cellInputText(withSum, 'r3', 'c1')).toBe('=SUM(A1:A2)');
+    expect(cellInputText(bookOf(withSum),withSum, 'r3', 'c1')).toBe('=SUM(A1:A2)');
 
-    const grown = insertTableRow(withSum, 0);
+    const grown = insertTableRow(bookOf(withSum),withSum, 0);
     // Κανείς δεν ξαναέγραψε τον τύπο — το `A1` απλώς λέγεται πλέον `A2`.
-    expect(cellInputText(grown, 'r3', 'c1')).toBe('=SUM(A2:A3)');
+    expect(cellInputText(bookOf(grown),grown, 'r3', 'c1')).toBe('=SUM(A2:A3)');
   });
 
   it('…και ο ΕΠΟΜΕΝΟΣ υπολογισμός διαβάζει ακόμα τα σωστά κελιά', () => {
     const withSum = edit(makeModel(), 'r3', 'c1', '=SUM(A1:A2)');
-    const grown = insertTableRow(withSum, 0);
+    const grown = insertTableRow(bookOf(withSum),withSum, 0);
 
     // Το `r1` έχει μετακινηθεί στη θέση 2 (λέγεται πλέον `A2`) — ο τύπος το βρίσκει.
     const changed = edit(grown, 'r1', 'c1', '100');
@@ -183,8 +184,8 @@ describe('🔑 δομικές πράξεις — η υπόσχεση του §11
   it('εύρος ΜΕΣΑ στο οποίο μπήκε γραμμή επεκτείνεται, όπως στο Excel', () => {
     const withSum = edit(makeModel(), 'r3', 'c1', '=SUM(A1:A2)');
     // Νέα γραμμή **ανάμεσα** στα δύο άκρα του εύρους.
-    const grown = insertTableRow(withSum, 1);
-    expect(cellInputText(grown, 'r3', 'c1')).toBe('=SUM(A1:A3)');
+    const grown = insertTableRow(bookOf(withSum),withSum, 1);
+    expect(cellInputText(bookOf(grown),grown, 'r3', 'c1')).toBe('=SUM(A1:A3)');
 
     const [newRowId] = grown.rows.filter((row) => !ROWS.some((old) => old.id === row.id));
     const filled = edit(grown, newRowId.id, 'c1', '5');

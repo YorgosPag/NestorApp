@@ -38,6 +38,7 @@
  * @see bim/table/table-cell-edit-session.ts — η ίδια αλυσίδα, τη στιγμή της δέσμευσης
  */
 
+import type { TableFormulaWorkbook } from '../../bim/table/formula/table-formula-workbook';
 import {
   commitCellWrites,
   writeCellInput,
@@ -80,6 +81,7 @@ export interface PendingDraftSync {
  * ισχύει και στις δύο διαδρομές. Ό,τι κερδίζεται εδώ είναι ένας αναλυτής τύπων ανά πάτημα.
  */
 export function tableModelWithPendingDraft(
+  book: TableFormulaWorkbook,
   model: PersistedTableModel,
   sync: PendingDraftSync,
 ): PersistedTableModel {
@@ -88,5 +90,5 @@ export function tableModelWithPendingDraft(
   if (resolveTableCellWriteRoute(model, binding, cell.rowId, cell.colId).kind !== 'model') {
     return model;
   }
-  return commitCellWrites(writeCellInput(model, cell.rowId, cell.colId, draft));
+  return commitCellWrites(book, writeCellInput(book, model, cell.rowId, cell.colId, draft));
 }

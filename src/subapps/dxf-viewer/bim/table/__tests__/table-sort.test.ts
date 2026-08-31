@@ -29,6 +29,7 @@ import type {
   TableRow,
   TableRowId,
 } from '../../../types/table';
+import { bookOf } from './formula-book-fixture';
 
 const COLUMNS: TableColumn[] = ['c0', 'c1'].map((id) => ({
   id,
@@ -80,7 +81,7 @@ describe('φυσική σειρά', () => {
       text('r2', 'c0', 'Γέφυρα'),
       text('r3', 'c0', 'Βάθρο'),
     ]);
-    expect(column0(applyTableSort(model, { range: ALL, criteria: byColumn0(), hasHeader: false })))
+    expect(column0(applyTableSort(bookOf(model),model, { range: ALL, criteria: byColumn0(), hasHeader: false })))
       .toEqual(['Ακρόβαθρο', 'Βάθρο', 'Γέφυρα', 'Δοκός']);
   });
 
@@ -92,7 +93,7 @@ describe('φυσική σειρά', () => {
       text('r3', 'c0', 'Δ'),
     ]);
     expect(
-      column0(applyTableSort(model, { range: ALL, criteria: byColumn0(true), hasHeader: false })),
+      column0(applyTableSort(bookOf(model),model, { range: ALL, criteria: byColumn0(true), hasHeader: false })),
     ).toEqual(['Δ', 'Γ', 'Β', 'Α']);
   });
 
@@ -104,7 +105,7 @@ describe('φυσική σειρά', () => {
       text('r3', 'c0', 3),
     ]);
     // Ως κείμενο θα έδινε «100, 25, 3, 9» — το κλασικό σφάλμα λεξικογραφικής ταξινόμησης.
-    expect(column0(applyTableSort(model, { range: ALL, criteria: byColumn0(), hasHeader: false })))
+    expect(column0(applyTableSort(bookOf(model),model, { range: ALL, criteria: byColumn0(), hasHeader: false })))
       .toEqual(['3', '9', '25', '100']);
   });
 
@@ -118,10 +119,10 @@ describe('φυσική σειρά', () => {
       text('r0', 'c0', 'Β'),
       text('r2', 'c0', 'Α'),
     ]);
-    expect(column0(applyTableSort(model, { range: ALL, criteria: byColumn0(), hasHeader: false })))
+    expect(column0(applyTableSort(bookOf(model),model, { range: ALL, criteria: byColumn0(), hasHeader: false })))
       .toEqual(['Α', 'Β', '', '']);
     expect(
-      column0(applyTableSort(model, { range: ALL, criteria: byColumn0(true), hasHeader: false })),
+      column0(applyTableSort(bookOf(model),model, { range: ALL, criteria: byColumn0(true), hasHeader: false })),
     ).toEqual(['Β', 'Α', '', '']);
   });
 });
@@ -148,7 +149,7 @@ describe('🎯 ΤΟ ΑΙΤΗΜΑ — ταξινόμηση ΜΕ ΛΙΣΤΑ', () =
     ]);
     // Αλφαβητικά θα έδινε «Απρίλιος, Ιανουάριος, Μάρτιος, Φεβρουάριος» — καμία σύγκριση
     // κειμένου δεν μπορεί να ανακαλύψει τη διάταξη του ημερολογίου.
-    expect(column0(applyTableSort(model, { range: ALL, criteria: MONTHS, hasHeader: false })))
+    expect(column0(applyTableSort(bookOf(model),model, { range: ALL, criteria: MONTHS, hasHeader: false })))
       .toEqual(['Ιανουάριος', 'Φεβρουάριος', 'Μάρτιος', 'Απρίλιος']);
   });
 
@@ -160,7 +161,7 @@ describe('🎯 ΤΟ ΑΙΤΗΜΑ — ταξινόμηση ΜΕ ΛΙΣΤΑ', () =
       text('r3', 'c0', 'Απρίλιος'),
     ]);
     const descending = MONTHS.map((c) => ({ ...c, descending: true }));
-    expect(column0(applyTableSort(model, { range: ALL, criteria: descending, hasHeader: false })))
+    expect(column0(applyTableSort(bookOf(model),model, { range: ALL, criteria: descending, hasHeader: false })))
       .toEqual(['Απρίλιος', 'Μάρτιος', 'Φεβρουάριος', 'Ιανουάριος']);
   });
 
@@ -176,7 +177,7 @@ describe('🎯 ΤΟ ΑΙΤΗΜΑ — ταξινόμηση ΜΕ ΛΙΣΤΑ', () =
       text('r2', 'c0', 'Άλφα'),
       text('r3', 'c0', 'Ιανουάριος'),
     ]);
-    expect(column0(applyTableSort(model, { range: ALL, criteria: MONTHS, hasHeader: false })))
+    expect(column0(applyTableSort(bookOf(model),model, { range: ALL, criteria: MONTHS, hasHeader: false })))
       .toEqual(['Ιανουάριος', 'Φεβρουάριος', 'Άλφα', 'Ωμέγα']);
   });
 
@@ -185,7 +186,7 @@ describe('🎯 ΤΟ ΑΙΤΗΜΑ — ταξινόμηση ΜΕ ΛΙΣΤΑ', () =
       text('r0', 'c0', 'ΜΑΡΤΙΟΣ'),
       text('r1', 'c0', 'ιανουαριος'),
     ]);
-    expect(column0(applyTableSort(model, { range: ALL, criteria: MONTHS, hasHeader: false })))
+    expect(column0(applyTableSort(bookOf(model),model, { range: ALL, criteria: MONTHS, hasHeader: false })))
       .toEqual(['ιανουαριος', 'ΜΑΡΤΙΟΣ', '', '']);
   });
 });
@@ -198,7 +199,7 @@ describe('🔴 ό,τι ταξιδεύει με τη γραμμή', () => {
       text('r1', 'c0', 'Α'), text('r1', 'c1', 'άλφα'),
       text('r2', 'c0', 'Β'), text('r2', 'c1', 'βήτα'),
     ]);
-    const next = applyTableSort(model, { range: ALL, criteria: byColumn0(), hasHeader: false });
+    const next = applyTableSort(bookOf(model),model, { range: ALL, criteria: byColumn0(), hasHeader: false });
     expect(ROWS.map((row) => getPersistedCellText(next, row.id, 'c1' as TableColumnId)))
       .toEqual(['άλφα', 'βήτα', 'γάμμα', '']);
   });
@@ -224,7 +225,7 @@ describe('🔴 ό,τι ταξιδεύει με τη γραμμή', () => {
     });
     // Ο τύπος ζει **έξω** από την ταξινομούμενη περιοχή και δείχνει **μέσα** της, στο κελί
     // που κρατά το 30 — δηλαδή στη γραμμή που η ταξινόμηση θα στείλει τελευταία.
-    const formula = parseTableFormula(base, '=B1');
+    const formula = parseTableFormula(bookOf(base), '=B1');
     expect(formula).not.toBeNull();
     const model = toPersistedTableModel(
       createTableModel({
@@ -245,7 +246,7 @@ describe('🔴 ό,τι ταξιδεύει με τη γραμμή', () => {
       }),
     );
 
-    const sorted = applyTableSort(model, {
+    const sorted = applyTableSort(bookOf(model),model, {
       range: { firstRow: 0, lastRow: 2, firstCol: 0, lastCol: 1 },
       criteria: byColumn0(),
       hasHeader: false,
@@ -268,7 +269,7 @@ describe('κεφαλίδα', () => {
       text('r3', 'c0', 'Β'),
     ]);
     // Χωρίς τον διακόπτη, το «Περιγραφή» θα ταξινομούνταν σαν δεδομένο και θα κατέβαινε.
-    expect(column0(applyTableSort(model, { range: ALL, criteria: byColumn0(), hasHeader: true })))
+    expect(column0(applyTableSort(bookOf(model),model, { range: ALL, criteria: byColumn0(), hasHeader: true })))
       .toEqual(['Περιγραφή', 'Α', 'Β', 'Γ']);
   });
 });
@@ -323,7 +324,7 @@ describe('🔴 πότε ΑΡΝΕΙΤΑΙ, και με ποιον λόγο', () =
       hasHeader: false,
     })).toEqual({ ok: false, reason: 'already-sorted' });
     // Και ο εφαρμοστής δίνει το **ίδιο** μοντέλο by-reference.
-    expect(applyTableSort(already, { range: ALL, criteria: byColumn0(), hasHeader: false }))
+    expect(applyTableSort(bookOf(already),already, { range: ALL, criteria: byColumn0(), hasHeader: false }))
       .toBe(already);
   });
 });
@@ -337,7 +338,7 @@ describe('πολλαπλά επίπεδα', () => {
       text('r2', 'c0', 'Α'), text('r2', 'c1', 'β'),
       text('r3', 'c0', 'Β'), text('r3', 'c1', 'γ'),
     ]);
-    const next = applyTableSort(model, {
+    const next = applyTableSort(bookOf(model),model, {
       range: ALL,
       criteria: [
         { columnIndex: 0, descending: false },

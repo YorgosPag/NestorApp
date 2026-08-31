@@ -55,6 +55,8 @@ import type { PersistedTableModel, TableCell, TableModel } from '../../types/tab
 import { cellText, writePersistedCells } from './table-cell-content';
 import { offsetTableFormula } from './formula/table-formula-offset';
 import { commitCellWrites } from './formula/table-formula-engine';
+import { bookWithHome, type TableFormulaWorkbook } from './formula/table-formula-workbook';
+
 import { getCell, resolveTableModel } from './table-model-helpers';
 import { isBlankCell, sameTransferredCell, transferredCell } from './table-range-transfer';
 import { tileTableRange, type TableTiledCell } from './table-range-tiling';
@@ -75,6 +77,7 @@ import type { TableFillTarget } from './table-fill-handle';
  * μόνο προς τη μία κατεύθυνση**. Ίδιος κανόνας, ίδιος λόγος με το `transferContent`.
  */
 export function applyTableFill(
+  book: TableFormulaWorkbook,
   model: PersistedTableModel,
   source: TableCellRangeBounds,
   target: TableFillTarget,
@@ -82,6 +85,8 @@ export function applyTableFill(
   customLists: readonly NameListCandidate[] = [],
 ): PersistedTableModel {
   const before = resolveTableModel(model);
+  // Το σπίτι είναι το πλέγμα **πριν** το γέμισμα: εκεί μετριέται η μετατόπιση κάθε αναφοράς.
+  const here = bookWithHome(book, before);
   const cells = tileTableRange(before, source, target.bounds);
   if (cells.length === 0) return model;
 
@@ -102,6 +107,7 @@ export function applyTableFill(
   // (`cells.map(cellKey)`) ήταν **υπερσύνολο** — περιλάμβανε και τα κελιά όπου το γέμισμα
   // δεν άλλαξε τίποτα, δηλαδή άνοιγε τον γράφο για διαδρομές που δεν είχαν αφορμή.
   return commitCellWrites(
+    here,
     writePersistedCells(
       model,
       cells.map((fill) => fill.at),
@@ -114,7 +120,7 @@ export function applyTableFill(
           // **εφευρεμένα**. Το βέτο αφορά το περιεχόμενο — η «μόνο μορφοποίηση» περνά.
           if (plan.parts !== 'format' && !isBoundCellWritable(existing)) return null;
 
-          const next = filled(before, byTarget.get(refKey(at)), existing, plan);
+          const next = filled(here, before, byTarget.get(refKey(at)), existing, plan);
           // 🔴 ADR-828 §4 — **Η ΤΕΤΑΡΤΗ ΕΓΓΥΗΣΗ, ΠΟΥ ΕΛΕΙΠΕ.** Η κεφαλίδα υπόσχεται «ίδιο
           // μοντέλο by-reference όταν τίποτα δεν άλλαξε», αλλά το `filled()` επιστρέφει
           // **πάντα** φρέσκο αντικείμενο — άρα ο γραφέας έβλεπε πάντα αλλαγή και κάθε σύρση
@@ -123,7 +129,7 @@ export function applyTableFill(
           return next !== null && sameTransferredCell(existing, next) ? null : next;
         },
         create: (at) => {
-          const next = filled(before, byTarget.get(refKey(at)), undefined, plan);
+          const next = filled(here, before, byTarget.get(refKey(at)), undefined, plan);
           // Κενή πηγή σε κενό στόχο: καμία εγγραφή-φάντασμα. Ο αραιός χάρτης σημαίνει ήδη «κενό».
           return next && isBlankCell(next) ? null : next;
         },
@@ -144,6 +150,7 @@ function refKey(ref: TableCellRef): string {
  * `null` όταν αυτό το κελί δεν ανήκει στο γέμισμα — αμυντικό, δεν συμβαίνει.
  */
 function filled(
+  book: TableFormulaWorkbook,
   before: TableModel,
   fill: TableTiledCell | undefined,
   existing: TableCell | undefined,
@@ -161,7 +168,7 @@ function filled(
   // να μην εξαρτάται από το αν ο ανιχνευτής θυμήθηκε να απορρίψει τους τύπους.
   if (next.formula === undefined) return withSeriesText(next, sourceCell, plan.textAt(fill));
 
-  const formula = offsetTableFormula(before, next.formula, {
+  const formula = offsetTableFormula(book, next.formula, {
     rows: fill.rows,
     columns: fill.columns,
   });

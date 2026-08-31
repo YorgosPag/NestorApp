@@ -42,6 +42,7 @@ import type {
 import type { TableCellRef } from '../table-cell-range';
 import { cellPairIndices } from '../table-cell-order';
 import { indexById } from '../table-model-helpers';
+import { gridOfRef, type TableFormulaWorkbook } from './table-formula-workbook';
 import { rewriteTableFormulaRefs, type TableFormulaRefLeaf } from './table-formula-rewrite';
 
 /**
@@ -78,22 +79,22 @@ export function tableFormulaOffsetBetween(
  * `table-formula-rewrite.ts` για το γιατί η ταυτότητα αντικειμένου δεν είναι βελτιστοποίηση.
  */
 export function offsetTableFormula(
-  model: TableModel,
+  book: TableFormulaWorkbook,
   formula: TableFormula,
   offset: TableFormulaOffset,
 ): TableFormula {
-  const root = offsetTableFormulaRefs(model, formula.root, offset);
+  const root = offsetTableFormulaRefs(book, formula.root, offset);
   return root === formula.root ? formula : { ...formula, root };
 }
 
 /** Η ίδια πράξη σε επίπεδο κόμβου — για καλούντες που κρατούν δέντρο, όχι αποθηκευμένο τύπο. */
 export function offsetTableFormulaRefs(
-  model: TableModel,
+  book: TableFormulaWorkbook,
   node: TableFormulaNode,
   offset: TableFormulaOffset,
 ): TableFormulaNode {
   if (offset.rows === 0 && offset.columns === 0) return node;
-  const shift = createShift(model, offset);
+  const shift = createShift(book, offset);
   return rewriteTableFormulaRefs(node, (leaf) => shiftLeaf(leaf, shift));
 }
 
@@ -107,11 +108,18 @@ type ShiftRef = (cell: TableFormulaCellRef) => TableFormulaCellRef | null;
  * είναι ότι η μετάφραση `ταυτότητα ⇄ δείκτης` γράφεται σε **ένα** σημείο, όπου φαίνεται μαζί
  * ο έλεγχος ορίων και για τους δύο άξονες.
  */
-function createShift(model: TableModel, offset: TableFormulaOffset): ShiftRef {
-  const rowIndex = indexById(model.rows);
-  const colIndex = indexById(model.columns);
-
+function createShift(book: TableFormulaWorkbook, offset: TableFormulaOffset): ShiftRef {
   return (cell) => {
+    // 🔴 ADR-833 Φάση 7 — **το πλέγμα είναι της αναφοράς, όχι του τύπου.** Ένα `=Φύλλο2!A1`
+    // που αντιγράφεται μια γραμμή κάτω γίνεται `=Φύλλο2!A2`, και το «μια γραμμή κάτω»
+    // μετριέται πάνω στις γραμμές **του Φύλλου2** — που μπορεί να έχει εντελώς άλλο πλήθος.
+    // Δεμένα ευρετήρια «μία φορά» εδώ θα ήταν λάθος πλέγμα· το `indexById` είναι ήδη
+    // απομνημονευμένο σε `WeakMap` ανά πίνακα, άρα η ανά αναφορά ερώτηση δεν κοστίζει.
+    const model = gridOfRef(book, cell);
+    if (model === null) return null;
+    const rowIndex = indexById(model.rows);
+    const colIndex = indexById(model.columns);
+
     const fromRow = rowIndex.get(cell.rowId);
     const fromCol = colIndex.get(cell.colId);
     const row = shiftAxis(fromRow, cell.absoluteRow, offset.rows, model.rows.length);

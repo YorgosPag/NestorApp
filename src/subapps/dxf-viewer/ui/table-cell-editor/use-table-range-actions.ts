@@ -91,6 +91,7 @@ import { tableClipboardScope } from './table-cell-key-intent';
 import type { TableEntity } from '../../types/table-entity';
 import type { ICommand } from '../../core/commands';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
+import { tableEntityFormulaBook } from '../../bim/table/table-worksheet-book';
 import { activeTableModel } from '../../bim/table/table-worksheet-resolve';
 
 export interface UseTableRangeActionsParams {
@@ -214,7 +215,10 @@ export function useTableRangeActions(params: UseTableRangeActionsParams): TableR
   const clearSelection = useCallback(() => {
     const bounds = currentBounds();
     if (!bounds || !entity) return;
-    commitModel(entity, clearTableRange(activeTableModel(entity), bounds));
+    commitModel(
+      entity,
+      clearTableRange(tableEntityFormulaBook(entity), activeTableModel(entity), bounds),
+    );
   }, [currentBounds, entity, commitModel]);
 
   // ── Πρόχειρο ──────────────────────────────────────────────────────────────

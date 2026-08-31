@@ -48,6 +48,7 @@ import type { TableBorderSpec, TableEdgeEntry, TableEdgeKey } from '../../../typ
 import type { TableEntity } from '../../../types/table-entity';
 import { tableWorksheetFields } from './make-table-entity';
 import { activeTableModel } from '../table-worksheet-resolve';
+import { bookOf } from './formula-book-fixture';
 
 // ── Εργαλεία ────────────────────────────────────────────────────────────────
 
@@ -302,13 +303,13 @@ describe('insertTableRow — το παράπονο Π5 του Excel είναι �
   ]);
 
   it('εισαγωγή στη μέση ΔΕΝ μετακινεί καμία ακμή — ίδια αναφορά, μηδέν δουλειά', () => {
-    const next = insertTableRow(withEdges, 1);
+    const next = insertTableRow(bookOf(withEdges),withEdges, 1);
     expect(next.rows).toHaveLength(ROWS.length + 1);
     expect(next.edges).toBe(withEdges.edges);
   });
 
   it('εισαγωγή στην ΚΟΡΥΦΗ αφήνει το περίγραμμα στην ίδια γραμμή δεδομένων', () => {
-    const next = insertTableRow(withEdges, 0);
+    const next = insertTableRow(bookOf(withEdges),withEdges, 0);
     expect(edgeNames(next)).toEqual(edgeNames(withEdges));
   });
 });
@@ -318,7 +319,7 @@ describe('insertTableRow — το παράπονο Π5 του Excel είναι �
 describe('deleteTableRow — «το σύνορο μετακομίζει, το τμήμα φεύγει»', () => {
   it('η οριζόντια ακμή της σβησμένης γραμμής ΜΕΤΑΚΟΜΙΖΕΙ στην επόμενη επιζώσα', () => {
     const model = makePersisted([['H', 'r2', 'c1', PEN]]);
-    const next = deleteTableRow(model, 'r2');
+    const next = deleteTableRow(bookOf(model),model, 'r2');
     expect(edgeNames(next)).toEqual(['H:r3:c1']);
     expect(next.edges?.[0][3]).toEqual(PEN);
   });
@@ -331,7 +332,7 @@ describe('deleteTableRow — «το σύνορο μετακομίζει, το τ
       ['H', 'r1', 'c1', PEN],
       ['H', 'r1', 'c2', PEN],
     ]);
-    const next = deleteTableRow(model, 'r1');
+    const next = deleteTableRow(bookOf(model),model, 'r1');
     expect(edgeNames(next)).toEqual(['H:r2:c1', 'H:r2:c2']);
   });
 
@@ -340,7 +341,7 @@ describe('deleteTableRow — «το σύνορο μετακομίζει, το τ
       ['H', 'r2', 'c1', PEN],
       ['H', 'r3', 'c1', OTHER_PEN],
     ]);
-    const next = deleteTableRow(model, 'r2');
+    const next = deleteTableRow(bookOf(model),model, 'r2');
     expect(edgeNames(next)).toEqual(['H:r3:c1']);
     expect(next.edges?.[0][3]).toEqual(OTHER_PEN);
   });
@@ -351,30 +352,30 @@ describe('deleteTableRow — «το σύνορο μετακομίζει, το τ
       ['V', 'r2', TABLE_EDGE_END, PEN],
       ['V', 'r3', 'c1', OTHER_PEN],
     ]);
-    const next = deleteTableRow(model, 'r2');
+    const next = deleteTableRow(bookOf(model),model, 'r2');
     expect(edgeNames(next)).toEqual(['V:r3:c1']);
   });
 
   it('η κάτω ακμή του ΠΙΝΑΚΑ (`$end`) δεν επηρεάζεται ποτέ — δεν ανήκε σε γραμμή', () => {
     const model = makePersisted([['H', TABLE_EDGE_END, 'c1', PEN]]);
-    expect(edgeNames(deleteTableRow(model, 'r3'))).toEqual(['H:$end:c1']);
-    expect(edgeNames(deleteTableRow(model, 'r1'))).toEqual(['H:$end:c1']);
+    expect(edgeNames(deleteTableRow(bookOf(model),model, 'r3'))).toEqual(['H:$end:c1']);
+    expect(edgeNames(deleteTableRow(bookOf(model),model, 'r1'))).toEqual(['H:$end:c1']);
   });
 
   it('διαγραφή της ΤΕΛΕΥΤΑΙΑΣ γραμμής: το σύνορό της παύει όντως να υπάρχει', () => {
     // Η γραμμή ανάμεσα σε r2 και r3 δεν έχει πού να μετακομίσει — και δεν πρέπει: το
     // εξωτερικό περίγραμμα το κρατά το `$end`, που τώρα κάθεται κάτω από την r2.
     const model = makePersisted([['H', 'r3', 'c1', PEN]]);
-    expect(deleteTableRow(model, 'r3').edges ?? []).toEqual([]);
+    expect(deleteTableRow(bookOf(model),model, 'r3').edges ?? []).toEqual([]);
   });
 
   it('καμία ακμή στη σβησμένη γραμμή ⇒ ΙΔΙΑ αναφορά (καμία ψεύτικη αλλαγή)', () => {
     const model = makePersisted([['H', 'r3', 'c1', PEN]]);
-    expect(deleteTableRow(model, 'r2').edges).toBe(model.edges);
+    expect(deleteTableRow(bookOf(model),model, 'r2').edges).toBe(model.edges);
   });
 
   it('πίνακας χωρίς καθόλου ακμές δεν αποκτά πεδίο από τη διαγραφή', () => {
-    expect(deleteTableRow(makePersisted(), 'r2').edges).toBeUndefined();
+    expect(deleteTableRow(bookOf(makePersisted()),makePersisted(), 'r2').edges).toBeUndefined();
   });
 });
 
@@ -385,13 +386,13 @@ describe('deleteTableColumn — η ίδια συμμετρία, ανεστραμ
       ['H', 'r2', 'c1', OTHER_PEN],
       ['H', 'r2', 'c2', PEN],
     ]);
-    const next = deleteTableColumn(model, 'c1');
+    const next = deleteTableColumn(bookOf(model),model, 'c1');
     expect(edgeNames(next)).toEqual(['H:r2:c2', 'V:r2:c2']);
   });
 
   it('η δεξιά ακμή του ΠΙΝΑΚΑ (`$end`) δεν επηρεάζεται', () => {
     const model = makePersisted([['V', 'r2', TABLE_EDGE_END, PEN]]);
-    expect(edgeNames(deleteTableColumn(model, 'c2'))).toEqual(['V:r2:$end']);
+    expect(edgeNames(deleteTableColumn(bookOf(model),model, 'c2'))).toEqual(['V:r2:$end']);
   });
 });
 

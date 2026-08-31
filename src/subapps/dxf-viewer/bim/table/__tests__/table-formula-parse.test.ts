@@ -10,6 +10,7 @@ import { createTableModel } from '../table-model-helpers';
 import type { TableColumn, TableModel, TableRow } from '../../../types/table';
 import { parseTableFormula, isFormulaInput } from '../formula/table-formula-parse';
 import { printTableFormula } from '../formula/table-formula-print';
+import { bookOf } from './formula-book-fixture';
 
 const COLUMNS: TableColumn[] = ['c1', 'c2', 'c3'].map((id) => ({
   id,
@@ -24,8 +25,8 @@ const MODEL: TableModel = createTableModel({ columns: COLUMNS, rows: ROWS, cells
 
 /** `κείμενο → δέντρο → κείμενο`, σε μία κίνηση. */
 function reprint(text: string): string | null {
-  const formula = parseTableFormula(MODEL, text);
-  return formula === null ? null : printTableFormula(MODEL, formula);
+  const formula = parseTableFormula(bookOf(MODEL), text);
+  return formula === null ? null : printTableFormula(bookOf(MODEL), formula);
 }
 
 describe('isFormulaInput — τι είναι δήλωση τύπου', () => {
@@ -80,12 +81,12 @@ describe('συντακτική αποτυχία ⇒ `null` (ο καλών κρα
   ['=1+', '=SUM(', '=(1+2', '=1++', '=', '=@3', '=SUM(A1:A2:A3)', '="ανοιχτό'])(
     '«%s» δεν είναι τύπος',
     (text) => {
-      expect(parseTableFormula(MODEL, text)).toBeNull();
+      expect(parseTableFormula(bookOf(MODEL), text)).toBeNull();
     },
   );
 
   it('κείμενο χωρίς `=` δεν αναλύεται ποτέ ως τύπος', () => {
-    expect(parseTableFormula(MODEL, '1+1')).toBeNull();
+    expect(parseTableFormula(bookOf(MODEL), '1+1')).toBeNull();
   });
 
   /**
@@ -114,20 +115,20 @@ describe('συντακτική αποτυχία ⇒ `null` (ο καλών κρα
 
 describe('δέσιμο αναφορών', () => {
   it('το `A1` γίνεται ταυτότητες, όχι κείμενο', () => {
-    const formula = parseTableFormula(MODEL, '=A1');
+    const formula = parseTableFormula(bookOf(MODEL), '=A1');
     expect(formula?.root).toEqual({ kind: 'ref', cell: { rowId: 'r1', colId: 'c1' } });
   });
 
   it('τα πεζά είναι ίδια αναφορά με τα κεφαλαία', () => {
-    expect(parseTableFormula(MODEL, '=b3')).toEqual(parseTableFormula(MODEL, '=B3'));
+    expect(parseTableFormula(bookOf(MODEL), '=b3')).toEqual(parseTableFormula(bookOf(MODEL), '=B3'));
   });
 
   it('αναφορά εκτός πλέγματος παγώνει ως `#REF!` — ο τύπος ΔΕΝ απορρίπτεται', () => {
-    expect(parseTableFormula(MODEL, '=A99')?.root).toEqual({ kind: 'error', code: '#REF!' });
+    expect(parseTableFormula(bookOf(MODEL), '=A99')?.root).toEqual({ kind: 'error', code: '#REF!' });
   });
 
   it('εύρος με άκρο εκτός πλέγματος είναι ολόκληρο `#REF!`', () => {
-    expect(parseTableFormula(MODEL, '=SUM(A1:A99)')?.root).toEqual({
+    expect(parseTableFormula(bookOf(MODEL), '=SUM(A1:A99)')?.root).toEqual({
       kind: 'call',
       name: 'SUM',
       args: [{ kind: 'error', code: '#REF!' }],
@@ -138,15 +139,15 @@ describe('δέσιμο αναφορών', () => {
 describe('όρια', () => {
   it('υπερβολικό φώλιασμα απορρίπτεται αντί να εξαντλήσει τη στοίβα', () => {
     const deep = `=${'('.repeat(200)}1${')'.repeat(200)}`;
-    expect(parseTableFormula(MODEL, deep)).toBeNull();
+    expect(parseTableFormula(bookOf(MODEL), deep)).toBeNull();
   });
 });
 
 describe('JSON — ο τύπος ταξιδεύει ακέραιος', () => {
   it('επιβιώνει σε `JSON.parse(JSON.stringify(...))` χωρίς απώλεια', () => {
-    const formula = parseTableFormula(MODEL, '=SUM(A1:A3)/COUNT(A1:A3)');
+    const formula = parseTableFormula(bookOf(MODEL), '=SUM(A1:A3)/COUNT(A1:A3)');
     const travelled = JSON.parse(JSON.stringify(formula));
     expect(travelled).toEqual(formula);
-    expect(printTableFormula(MODEL, travelled)).toBe('=SUM(A1:A3)/COUNT(A1:A3)');
+    expect(printTableFormula(bookOf(MODEL), travelled)).toBe('=SUM(A1:A3)/COUNT(A1:A3)');
   });
 });

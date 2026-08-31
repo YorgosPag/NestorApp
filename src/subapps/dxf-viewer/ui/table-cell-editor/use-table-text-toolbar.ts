@@ -87,6 +87,7 @@ import type { TextHeightStepDirection } from '../../bim/table/table-text-height-
 import type { PersistedTableModel, TableAxisStyleOverride } from '../../types/table';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
 import { activeTableBinding, activeTableModel } from '../../bim/table/table-worksheet-resolve';
+import { tableEntityFormulaBook } from '../../bim/table/table-worksheet-book';
 import { tableForCursor } from '../../state/table-cell-cursor-scope';
 
 export interface UseTableTextToolbarParams {
@@ -245,7 +246,8 @@ export function useTableTextToolbar(params: UseTableTextToolbarParams): TableTex
       // Η βάση **ταξιδεύει τώρα μέσα στον στόχο** (ADR-769: «η βάση σύγκρισης ταξιδεύει με το
       // αίτημα»), οπότε δεν υπάρχει δεύτερη πηγή να διαλέξει λάθος κανείς.
       ...(chars === null ? {} : {
-        prepare: (next: PersistedTableModel) => tableModelWithPendingDraft(next, {
+        prepare: (next: PersistedTableModel) =>
+          tableModelWithPendingDraft(tableEntityFormulaBook(live), next, {
           cell,
           draft: chars.range.text,
           binding: activeTableBinding(live),

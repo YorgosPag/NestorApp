@@ -51,6 +51,7 @@ import type { TableCellLayout, TableRectMm } from './table-layout-types';
 import { cellBaselineYMm } from './table-layout-align';
 import type { TableCellStyle } from './table-style';
 import { activeTableBinding, activeTableModel, resolveWorksheets } from './table-worksheet-resolve';
+import { tableEntityFormulaBook } from './table-worksheet-book';
 import {
   tableWorksheetsPatch,
   worksheetsWithActiveModel,
@@ -229,7 +230,12 @@ function buildEditTarget(
     // ADR-739 Φ.Ζ — **πηγαίο** σε κελί τύπου, κείμενο σε κάθε άλλο. Ό,τι επιστρέφεται εδώ
     // το δείχνουν **και** ο επεξεργαστής μέσα στο κελί **και** η γραμμή τύπων (μέσω του
     // `initialText`): μία ερώτηση, μία απάντηση, καμία πιθανότητα να διαφωνήσουν.
-    text: cellInputText(activeTableModel(entity), cell.rowId, cell.colId),
+    text: cellInputText(
+      tableEntityFormulaBook(entity),
+      activeTableModel(entity),
+      cell.rowId,
+      cell.colId,
+    ),
     // 🔴 ADR-753 §28 — διαβασμένα από το **ίδιο** μοντέλο, στην ίδια αναπνοή με το κείμενο.
     // Δες το σχόλιο του πεδίου: χωριστή ανάγνωση σημαίνει δείκτες πάνω σε άλλο κείμενο.
     ...(runs !== undefined && { runs }),
@@ -295,7 +301,15 @@ export function buildTableCellEditCommand(
   // δεύτερη εντολή, ένα `Ctrl+Z` θα ανέτρεπε τα αποτελέσματα αφήνοντας τον τύπο — ή το
   // αντίστροφο. Η ατομικότητα βγαίνει δωρεάν από την **καθαρότητα** των δύο συναρτήσεων,
   // ακριβώς όπως η επικόλληση 20 κελιών γίνεται ένα βήμα (δες `buildTableModelCommand`).
-  const recalculated = commitCellWrites(writeCellInput(activeTableModel(entity), rowId, colId, nextText));
+  // 🔴 ADR-833 Φάση 7 — **το ίδιο βιβλίο και για τις δύο πόρτες**: ο αναλυτής το χρειάζεται
+  // για να λύσει το `Φύλλο2!` σε ταυτότητα, ο επαναϋπολογισμός για να **διαβάσει** εκείνο το
+  // φύλλο. Δύο βιβλία εδώ θα σήμαιναν ότι ένας τύπος μπορεί να δεθεί σε φύλλο που ο
+  // αξιολογητής δεν βλέπει.
+  const book = tableEntityFormulaBook(entity);
+  const recalculated = commitCellWrites(
+    book,
+    writeCellInput(book, activeTableModel(entity), rowId, colId, nextText),
+  );
   return buildTableModelCommand(entity, recalculated, sceneManager);
 }
 

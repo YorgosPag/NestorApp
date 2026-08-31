@@ -49,6 +49,7 @@ import { tableCursorAt } from '../../bim/table/table-cell-navigation';
 import type { TableCellRangeBounds } from '../../bim/table/table-cell-range';
 import type { TableRangeTransferPlan } from '../../bim/table/table-range-transfer-types';
 import type { TableEntity } from '../../types/table-entity';
+import { tableEntityFormulaBook } from '../../bim/table/table-worksheet-book';
 import { activeTableModel } from '../../bim/table/table-worksheet-resolve';
 import type { PersistedTableModel } from '../../types/table';
 
@@ -129,7 +130,10 @@ export function completeTableRangeTransfer(
  */
 function writeTransfer(target: TableRangeDropTarget, plan: TableRangeTransferPlan): void {
   const { entity, commit } = target;
-  commit(entity, applyTableRangeTransfer(activeTableModel(entity), plan));
+  commit(
+    entity,
+    applyTableRangeTransfer(tableEntityFormulaBook(entity), activeTableModel(entity), plan),
+  );
   selectTransferred(entity, plan.destination);
 }
 

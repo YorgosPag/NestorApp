@@ -37,6 +37,7 @@ import type {
   TableFormatFacet,
   TableRowId,
 } from '../../../types/table';
+import { bookOf, commitPendingForTest } from './formula-book-fixture';
 
 const STYLE = hierarchicalTableStyle();
 
@@ -77,7 +78,7 @@ const FORMATS: TablePasteRequest = { content: 'none', facets: ALL_TABLE_FORMAT_F
 
 /** Πληκτρολόγηση χρήστη — η ΜΙΑ διαδρομή που καταλαβαίνει το `=`. */
 function type(m: PersistedTableModel, row: number, col: number, input: string): PersistedTableModel {
-  return commitCellWrites(writeCellInput(m, `r${row}` as TableRowId, `c${col}` as TableColumnId, input));
+  return commitPendingForTest(writeCellInput(bookOf(m),m, `r${row}` as TableRowId, `c${col}` as TableColumnId, input));
 }
 
 const read = (m: PersistedTableModel, row: number, col: number): string =>
@@ -101,7 +102,7 @@ function roundTrip(
 ): PersistedTableModel {
   const payload = captureTableClipboard(m, STYLE, source);
   if (!payload) throw new Error('το πρόχειρο δεν φόρτωσε');
-  return pasteTableClipboard(m, STYLE, payload, ref(target.row, target.col), request).model;
+  return pasteTableClipboard(bookOf(m),m, STYLE, payload, ref(target.row, target.col), request).model;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -247,7 +248,7 @@ describe('Ο πίνακας ΔΕΝ μεγαλώνει μόνος του', () => 
     const payload = captureTableClipboard(m, STYLE, { firstRow: 1, lastRow: 2, firstCol: 0, lastCol: 0 });
     if (!payload) throw new Error('το πρόχειρο δεν φόρτωσε');
     // Τελευταία γραμμή (r6): χωρά μόνο η πρώτη από τις δύο.
-    const result = pasteTableClipboard(m, STYLE, payload, ref(6, 0), FULL);
+    const result = pasteTableClipboard(bookOf(m),m, STYLE, payload, ref(6, 0), FULL);
     expect(result).toMatchObject({ offeredRows: 2, fittedRows: 1 });
   });
 });

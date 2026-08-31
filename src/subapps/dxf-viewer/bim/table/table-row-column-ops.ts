@@ -70,6 +70,7 @@ import { rebuildTableEdgesOnDelete } from './table-edge-model';
 import { dropTableRowLink } from './table-row-link-model';
 import { cellKey } from './table-model-helpers';
 import { recalculateAllTableFormulas } from './formula/table-formula-engine';
+import type { TableFormulaWorkbook } from './formula/table-formula-workbook';
 import { healTableFormulaRefsOnDelete } from './formula/table-formula-structural-heal';
 
 const ID_PREFIX: Readonly<Record<TableAxis, string>> = { row: 'r', column: 'c' };
@@ -261,7 +262,11 @@ export function canDeleteTableColumn(model: PersistedTableModel, count = 1): boo
  * σήμερα κανέναν τρόπο** να την ξαναχαρακτηρίσει. Χωρίς `heightMm` ⇒ το ύψος το δίνει το
  * στυλ, όπως σε κάθε νέα γραμμή του εργοστασίου.
  */
-export function insertTableRow(model: PersistedTableModel, atIndex: number): PersistedTableModel {
+export function insertTableRow(
+  book: TableFormulaWorkbook,
+  model: PersistedTableModel,
+  atIndex: number,
+): PersistedTableModel {
   if (!canInsertTableRow(model)) return model;
 
   const at = clampIndex(atIndex, model.rows.length);
@@ -282,7 +287,7 @@ export function insertTableRow(model: PersistedTableModel, atIndex: number): Per
 
   // Απόφαση 2: κανένα κελί δεν αγγίζεται — η σειρά γραμμή × στήλη διατηρείται αυτούσια,
   // αφού η νέα γραμμή είναι κενή και οι υπόλοιπες κρατούν τη σχετική τους σειρά.
-  return recalculateAllTableFormulas({
+  return recalculateAllTableFormulas(book, {
     ...model,
     rows,
     merges: growSpansOnInsert(model.merges, 'row', ids, at),
@@ -300,6 +305,7 @@ export function insertTableRow(model: PersistedTableModel, atIndex: number): Per
  * και δύο στήλες που διαβάζουν το ίδιο κλειδί πηγής είναι πραγματικό σφάλμα, όχι διευκόλυνση.
  */
 export function insertTableColumn(
+  book: TableFormulaWorkbook,
   model: PersistedTableModel,
   atIndex: number,
 ): PersistedTableModel {
@@ -324,7 +330,7 @@ export function insertTableColumn(
   const columns = model.columns.slice();
   columns.splice(at, 0, column);
 
-  return recalculateAllTableFormulas({
+  return recalculateAllTableFormulas(book, {
     ...model,
     columns,
     merges: growSpansOnInsert(model.merges, 'column', ids, at),
@@ -345,6 +351,7 @@ export function insertTableColumn(
  * `table-edge-model.ts`.
  */
 export function deleteTableRow(
+  book: TableFormulaWorkbook,
   model: PersistedTableModel,
   rowId: TableRowId,
 ): PersistedTableModel {
@@ -362,7 +369,7 @@ export function deleteTableRow(
 
   // ADR-764 (Β) — και **ΜΕΤΑ** την αφαίρεση: ό,τι δείχνει σε ταυτότητα που δεν ζει πια
   // αποτιμάται `#REF!`. Μαζί με το (Α) είναι **μία** μεταβολή, άρα ένα βήμα undo.
-  return recalculateAllTableFormulas({
+  return recalculateAllTableFormulas(book, {
     ...next,
     cells: rebuildCells(next, healed.cells, (entry) => entry[0] !== rowId, anchorMoves),
     edges: rebuildTableEdgesOnDelete(next, model.edges, 'row', rowId, model.rows[at + 1]?.id),
@@ -374,6 +381,7 @@ export function deleteTableRow(
 
 /** Το ίδιο για στήλη — ίδιες τέσσερις εγγυήσεις (κελιά, εύρη, ακμές, ταυτότητα by-reference). */
 export function deleteTableColumn(
+  book: TableFormulaWorkbook,
   model: PersistedTableModel,
   colId: TableColumnId,
 ): PersistedTableModel {
@@ -387,7 +395,7 @@ export function deleteTableColumn(
   const columns = model.columns.filter((column) => column.id !== colId);
   const next = { ...healed, columns, merges: spans };
 
-  return recalculateAllTableFormulas({
+  return recalculateAllTableFormulas(book, {
     ...next,
     cells: rebuildCells(next, healed.cells, (entry) => entry[1] !== colId, anchorMoves),
     edges: rebuildTableEdgesOnDelete(

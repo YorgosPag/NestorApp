@@ -50,6 +50,7 @@ import { __resetTableClipboardForTests } from '../../../state/table-clipboard-st
 import { cellText, getCell, resolveTableModel } from '../../../bim/table/table-model-helpers';
 import type { TableCellRangeBounds } from '../../../bim/table/table-cell-range';
 import type { PersistedTableModel } from '../../../types/table';
+import { bookOf } from '../../../bim/table/__tests__/formula-book-fixture';
 
 const A1_B2: TableCellRangeBounds = { firstRow: 0, lastRow: 1, firstCol: 0, lastCol: 1 };
 
@@ -116,7 +117,7 @@ describe('η καθαρή γέφυρα TSV — ΕΝΑΣ σειριοποιητή
     const grid = clipboardTextToTableGrid(text as string);
     expect(grid).toEqual([['a\tb', 'B'], ['C', 'D']]);
 
-    const target = pasteTsvIntoTable(model(), { rowId: 'r0', colId: 'c0' }, grid);
+    const target = pasteTsvIntoTable(bookOf(model()),model(), { rowId: 'r0', colId: 'c0' }, grid);
     expect(textAt(target.model, 'r0', 'c0')).toBe('a\tb');
     expect(textAt(target.model, 'r1', 'c1')).toBe('D');
   });

@@ -33,6 +33,7 @@ import type { TableColumnLayout } from '../table-layout-types';
 import type { PersistedTableModel, TableBinding, TableColumn, TableRow } from '../../../types/table';
 import type { TableEntity } from '../../../types/table-entity';
 import type { TopoPoint } from '../../../systems/topography/topo-types';
+import { commitPendingForTest } from './formula-book-fixture';
 
 // ─── Σκηνικό ─────────────────────────────────────────────────────────────────
 
@@ -62,7 +63,7 @@ function baseModel(): PersistedTableModel {
 }
 
 function boundEntity(): TableEntity {
-  const model = commitCellWrites(
+  const model = commitPendingForTest(
     applyBoundSourceToCells(baseModel(), buildCoordinateTable([P1, P2])).pending,
   );
   return { id: 'tbl-1', type: 'table', model, binding: BINDING } as unknown as TableEntity;

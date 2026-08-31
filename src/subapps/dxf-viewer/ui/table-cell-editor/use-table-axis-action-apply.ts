@@ -36,6 +36,8 @@ import type { TableEntity } from '../../types/table-entity';
 import type { PersistedTableModel } from '../../types/table';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
 import type { ICommand } from '../../core/commands';
+import { tableEntityFormulaBook } from '../../bim/table/table-worksheet-book';
+import type { TableFormulaWorkbook } from '../../bim/table/formula/table-formula-workbook';
 import { activeTableModel } from '../../bim/table/table-worksheet-resolve';
 
 export interface UseTableAxisActionApplyParams {
@@ -47,7 +49,7 @@ export interface UseTableAxisActionApplyParams {
 /** Εφαρμόζει μια δομική πράξη άξονα· `false` όταν δεν έγινε τίποτα (no-op ή αποτυχία commit). */
 export type TableAxisActionApply = (
   live: TableEntity,
-  mutate: (model: PersistedTableModel) => PersistedTableModel,
+  mutate: (model: PersistedTableModel, book: TableFormulaWorkbook) => PersistedTableModel,
   pick: SurvivorPick,
 ) => boolean;
 
@@ -64,7 +66,7 @@ export function useTableAxisActionApply(
     (live, mutate, pick) => {
       const cursor = getTableCellCursor();
       if (!cursor) return false;
-      const nextModel = mutate(activeTableModel(live));
+      const nextModel = mutate(activeTableModel(live), tableEntityFormulaBook(live));
       // Ταυτότητα κατά αναφορά = η σύμβαση no-op ολόκληρου του `table-row-column-ops`: το
       // φράγμα πλήθους απάντησε «όχι» ⇒ καμία εντολή, κανένα βήμα undo που δεν αναιρεί τίποτα.
       if (nextModel === activeTableModel(live)) return false;

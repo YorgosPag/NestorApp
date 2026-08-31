@@ -40,6 +40,7 @@ import { createTableModel, resolveTableModel, toPersistedTableModel } from '../t
 import { deleteTableRow, insertTableRow } from '../table-row-column-ops';
 import type { PersistedTableModel, TableColumn, TableRow } from '../../../types/table';
 import type { TableRowLink, TableRowLinkEntry } from '../../../types/table-row-link';
+import { bookOf } from './formula-book-fixture';
 
 // ── Εργαλεία ────────────────────────────────────────────────────────────────
 
@@ -193,7 +194,7 @@ describe('toPersistedTableRowLinks — ντετερμινιστική σειρά
 
 describe('deleteTableRow — ο δεσμός φεύγει μαζί με τη γραμμή', () => {
   it('ο δεσμός της σβησμένης γραμμής δεν επιβιώνει', () => {
-    const next = deleteTableRow(makePersisted([['r1', IDS_LINK]]), 'r1');
+    const next = deleteTableRow(bookOf(makePersisted([['r1', IDS_LINK]])),makePersisted([['r1', IDS_LINK]]), 'r1');
     expect(next.rowLinks).toBeUndefined();
   });
 
@@ -202,7 +203,7 @@ describe('deleteTableRow — ο δεσμός φεύγει μαζί με τη γ�
       ['r0', QUERY_LINK],
       ['r1', IDS_LINK],
     ]);
-    expect(linkedRowIds(deleteTableRow(model, 'r1'))).toEqual(['r0']);
+    expect(linkedRowIds(deleteTableRow(bookOf(model),model, 'r1'))).toEqual(['r0']);
   });
 
   it('🔴 η ΑΝΑΚΥΚΛΩΣΗ ΤΑΥΤΟΤΗΤΑΣ δεν αναστήνει νεκρό δεσμό', () => {
@@ -210,8 +211,8 @@ describe('deleteTableRow — ο δεσμός φεύγει μαζί με τη γ�
     // προσθέτοντας νέα, εκείνη παίρνει ΞΑΝΑ το ίδιο id. Χωρίς το κλάδεμα στη διαγραφή, η νέα
     // γραμμή θα κληρονομούσε σιωπηλά ποσότητες που δεν της ανήκουν — σφάλμα ΤΙΜΗΣ.
     const withLink = makePersisted([['r2', IDS_LINK]]);
-    const afterDelete = deleteTableRow(withLink, 'r2');
-    const afterInsert = insertTableRow(afterDelete, 'r1', 'after');
+    const afterDelete = deleteTableRow(bookOf(withLink),withLink, 'r2');
+    const afterInsert = insertTableRow(bookOf(afterDelete),afterDelete, 'r1', 'after');
 
     expect(afterInsert.rows.map((r) => r.id)).toContain('r2');
     expect(afterInsert.rowLinks).toBeUndefined();
@@ -219,11 +220,11 @@ describe('deleteTableRow — ο δεσμός φεύγει μαζί με τη γ�
 
   it('γραμμή χωρίς δεσμό ⇒ το ΙΔΙΟ αντικείμενο by-reference', () => {
     const model = makePersisted([['r0', IDS_LINK]]);
-    expect(deleteTableRow(model, 'r1').rowLinks).toBe(model.rowLinks);
+    expect(deleteTableRow(bookOf(model),model, 'r1').rowLinks).toBe(model.rowLinks);
   });
 
   it('πίνακας χωρίς δεσμούς μένει χωρίς πεδίο', () => {
-    expect(deleteTableRow(makePersisted(), 'r1').rowLinks).toBeUndefined();
+    expect(deleteTableRow(bookOf(makePersisted()),makePersisted(), 'r1').rowLinks).toBeUndefined();
   });
 });
 

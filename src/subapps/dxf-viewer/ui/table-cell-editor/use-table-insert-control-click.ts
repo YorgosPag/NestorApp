@@ -36,6 +36,8 @@
 
 import { type RefObject } from 'react';
 import { useCommandHistory } from '../../core/commands';
+import { tableEntityFormulaBook } from '../../bim/table/table-worksheet-book';
+import type { TableFormulaWorkbook } from '../../bim/table/formula/table-formula-workbook';
 import {
   canInsertTableColumn,
   canInsertTableRow,
@@ -89,7 +91,11 @@ export function useTableInsertControlClick(params: UseTableInsertControlClickPar
       return state && state.control.phase === 'armed' ? state : null;
     },
     run: (live, state) => {
-      const nextModel = applyInsert(activeTableModel(live), state.control.target);
+      const nextModel = applyInsert(
+        tableEntityFormulaBook(live),
+        activeTableModel(live),
+        state.control.target,
+      );
       // Το φράγμα πλήθους (`canInsert*`) απάντησε «όχι» ⇒ καμία εντολή, κανένα ιστορικό. Η
       // ταυτότητα κατά αναφορά είναι η ΙΔΙΑ σύμβαση no-op που χρησιμοποιεί ήδη το μενού ζωνών.
       if (nextModel === activeTableModel(live)) return;
@@ -106,11 +112,12 @@ export function useTableInsertControlClick(params: UseTableInsertControlClickPar
  * μεριά, και θα ήταν αόρατη σε κάθε test που δεν μετρά **ποια** στήλη μεγάλωσε.
  */
 function applyInsert(
+  book: TableFormulaWorkbook,
   model: PersistedTableModel,
   target: TableInsertControlTarget,
 ): PersistedTableModel {
   if (target.axis === 'column') {
-    return canInsertTableColumn(model) ? insertTableColumn(model, target.line) : model;
+    return canInsertTableColumn(model) ? insertTableColumn(book, model, target.line) : model;
   }
-  return canInsertTableRow(model) ? insertTableRow(model, target.line) : model;
+  return canInsertTableRow(model) ? insertTableRow(book, model, target.line) : model;
 }

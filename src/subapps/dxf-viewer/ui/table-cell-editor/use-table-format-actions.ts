@@ -90,6 +90,7 @@ import {
 } from './table-format-port';
 import type { PersistedTableModel } from '../../types/table';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
+import { tableEntityFormulaBook } from '../../bim/table/table-worksheet-book';
 import { activeTableModel } from '../../bim/table/table-worksheet-resolve';
 
 export interface UseTableFormatActionsParams {
@@ -280,6 +281,13 @@ export function useTableFormatActions(params: UseTableFormatActionsParams): void
       if (plan.status === 'accepted' && live) commitEntityModel(live, plan.model);
       return plan;
     },
+    // 🔴 ADR-833 Φάση 7 — **ο ίδιος εντοπισμός** με το `commitModel` από πάνω, μία γραμμή: ένας
+    // δεύτερος τρόπος να βρεθεί ο πίνακας θα άφηνε τον διάλογο να αποτιμά πάνω σε άλλο βιβλίο
+    // από αυτό που θα γράψει.
+    formulaBookFor: (target: Parameters<TableFormatPort['commitModel']>[0]) => {
+      const live = resolveTableById(levelManager, target.entityId);
+      return live ? tableEntityFormulaBook(live) : null;
+    },
     // 🔴 ADR-739 §60 — η αφετηρία κάθε προσχεδίου. **Ο ίδιος** `formatTarget` που τροφοδοτεί
     // ήδη κάθε ανάγνωση αυτής της θύρας: μια δεύτερη κατασκευή στόχου για τον διάλογο θα άφηνε
     // ανοιχτό το παράθυρο να διαβάσει ο διάλογος **άλλο** μοντέλο από τα κουμπιά δίπλα του.
@@ -338,6 +346,7 @@ export function useTableFormatActions(params: UseTableFormatActionsParams): void
     reset: () => latest.current.reset(),
     canReset: () => latest.current.canReset(),
     commitModel: (target, model) => latest.current.commitModel(target, model),
+    formulaBookFor: (target) => latest.current.formulaBookFor(target),
     formatTarget: () => latest.current.formatTarget(),
     get borders() { return latest.current.borders; },
     get merge() { return latest.current.merge; },

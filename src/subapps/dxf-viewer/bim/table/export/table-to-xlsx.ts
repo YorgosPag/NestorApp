@@ -51,6 +51,8 @@ import { indexById, resolveTableModel } from '../table-model-helpers';
 import { layoutTable } from '../table-layout';
 import type { TableStyle } from '../table-style';
 import { worksheetDisplayName } from '../table-worksheet-name';
+import { worksheetNamingFrom, worksheetsFormulaBook } from '../table-worksheet-book';
+import { bookWithHome, type TableFormulaWorkbook } from '../formula/table-formula-workbook';
 import { writeXlsxCell } from './table-cell-to-xlsx';
 
 /** Ό,τι γράφει ο δημιουργός στα μεταδεδομένα του βιβλίου αυτής της πόρτας. */
@@ -112,6 +114,7 @@ function writeMerges(sheet: ExcelJS.Worksheet, model: PersistedTableModel): void
 function writeWorksheet(
   workbook: ExcelJS.Workbook,
   name: string,
+  book: TableFormulaWorkbook,
   worksheet: TableWorksheet,
   style: TableStyle,
 ): void {
@@ -129,6 +132,7 @@ function writeWorksheet(
     writeXlsxCell(
       sheet.getCell(resolved.rowIndex + 1, resolved.colIndex + 1),
       resolved,
+      bookWithHome(book, resolvedModel),
       resolvedModel,
       style,
     );
@@ -153,8 +157,13 @@ export async function tableWorksheetsToXlsxBlob(
   const names = xlsxWorksheetNames(
     worksheets.map((worksheet, index) => worksheetDisplayName(worksheet, index)),
   );
+  // 🔴 ADR-833 §5.9.3 — **οι τύποι ρωτούν ΤΑ ΙΔΙΑ ονόματα με τις καρτέλες του αρχείου.** Δύο
+  // ονοματοδοσίες εδώ θα σήμαιναν βιβλίο όπου το `'Κόστη (2)'!A1` δείχνει σε φύλλο που δεν
+  // λέγεται έτσι — δηλαδή αρχείο που το Excel αρνείται να ανοίξει.
+  const naming = worksheetNamingFrom(worksheets, names);
   worksheets.forEach((worksheet, index) => {
-    writeWorksheet(workbook, names[index], worksheet, style);
+    const book = worksheetsFormulaBook(worksheets, worksheet.id, naming);
+    writeWorksheet(workbook, names[index], book, worksheet, style);
   });
   return xlsxWorkbookToBlob(workbook);
 }

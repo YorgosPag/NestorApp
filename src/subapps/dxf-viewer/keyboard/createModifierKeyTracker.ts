@@ -58,6 +58,17 @@ export interface CreateModifierKeyTrackerOptions {
   modifierNames?: readonly string[];
 }
 
+/** Συμβάν που όντως απαντά στην ερώτηση «κρατιέται αυτός ο modifier;». */
+type ModifierStateCarrier = { getModifierState: (key: string) => boolean };
+
+/**
+ * ⚠️ **ΕΛΕΓΧΟΣ ΣΥΜΠΕΡΙΦΟΡΑΣ, ΟΧΙ `instanceof`.** Το `instanceof KeyboardEvent` αποτυγχάνει
+ * σε συμβάν που ήρθε από **άλλο realm** (iframe, επέκταση): εκεί ο κατασκευαστής
+ * είναι άλλος, αλλά η μέθοδος υπάρχει και λέει την αλήθεια. Ρωτάμε αυτό που θα καλέσουμε.
+ */
+const carriesModifierState = (e: Event): e is Event & ModifierStateCarrier =>
+  typeof (e as Partial<ModifierStateCarrier>).getModifierState === 'function';
+
 /** Builds a vanilla singleton-shaped modifier-key tracker sharing the SSoT lifecycle. */
 export function createModifierKeyTracker(
   options: CreateModifierKeyTrackerOptions
@@ -76,9 +87,19 @@ export function createModifierKeyTracker(
    * Κάθε `KeyboardEvent`/`PointerEvent` κουβαλά **φρέσκια** κατάσταση modifiers· το
    * `getModifierState` είναι η τυποποιημένη ερώτηση. Άρα ο tracker δεν χρειάζεται να
    * **θυμάται** — αρκεί να **ρωτά**.
+   *
+   * 🔴 **ΤΟ ΠΑΡΑΘΥΡΟ ΕΙΝΑΙ ΑΝΟΙΧΤΗ ΠΟΡΤΑ, ΟΧΙ ΕΓΓΥΗΣΗ ΤΥΠΟΥ.** Ένας ακροατής
+   * `keydown` σε `window` capture δέχεται **ό,τι κάνει `dispatchEvent` οποιοσδήποτε**:
+   * επέκταση φυλλομετρητή, βιβλιοθήκη, dev overlay — ή συνθετικό `new Event('keydown')`.
+   * Το σκέτο `Event` **δεν** έχει `getModifierState`· μόνο τα `KeyboardEvent`/`MouseEvent`
+   * το έχουν. Η υπόθεση ότι κάθε συμβάν το κουβαλά **έριξε ολόκληρη την
+   * εφαρμογή** (`TypeError: e.getModifierState is not a function`) — και μάλιστα από
+   * μονοπάτι που εξ ορισμού είναι **μόνο θεραπευτικό**. Ένας θεραπευτής που δεν
+   * μπορεί να ρωτήσει **σιωπά**· η μετάβαση παραμένει η αυθεντία.
    */
-  const resyncFrom = (e: KeyboardEvent | MouseEvent): boolean => {
+  const resyncFrom = (e: Event): boolean => {
     if (!modifierNames || modifierNames.length === 0) return false;
+    if (!carriesModifierState(e)) return false;
     setPressed(modifierNames.some((name) => e.getModifierState(name)));
     return true;
   };

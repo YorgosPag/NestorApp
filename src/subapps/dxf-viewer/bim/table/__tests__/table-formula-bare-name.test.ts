@@ -23,6 +23,7 @@ import type {
   TableColumn,
   TableRow,
 } from '../../../types/table';
+import { bookOf, commitPendingForTest } from './formula-book-fixture';
 
 /**
  * Πίνακας 3 × 4 με `A3 = 5`, δηλαδή **ακριβώς** το φύλλο του στιγμιότυπου: ο λογικός έλεγχος
@@ -42,7 +43,7 @@ function sheet(): PersistedTableModel {
 
 /** Το κελί `D3` μετά τη δέσμευση: τι **είδους** κελί έγινε και τι **τιμή** κρατά. */
 function commit(text: string): { kind: string; value: unknown } {
-  const model = commitCellWrites(writeCellInput(sheet(), 'r3', 'cD', text));
+  const model = commitPendingForTest(writeCellInput(bookOf(sheet()),sheet(), 'r3', 'cD', text));
   const cell = model.cells.find(([r, c]) => r === 'r3' && c === 'cD')?.[2];
   return { kind: cell?.kind ?? 'missing', value: cell?.value };
 }
@@ -50,8 +51,8 @@ function commit(text: string): { kind: string; value: unknown } {
 /** `κείμενο → δέντρο → κείμενο` πάνω στο ίδιο φύλλο. */
 function reprint(text: string): string | null {
   const model = resolveTableModel(sheet());
-  const formula = parseTableFormula(model, text);
-  return formula === null ? null : printTableFormula(model, formula);
+  const formula = parseTableFormula(bookOf(model), text);
+  return formula === null ? null : printTableFormula(bookOf(model), formula);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -83,7 +84,7 @@ describe('ADR-765 — η δέσμευση από τον διάλογο δεν ε
 describe('ADR-765 — «Αποτέλεσμα =» γεμίζει, όπως στο Excel', () => {
   it('κάθε άγνωστο όρισμα δείχνει `#NAME?`, και το αποτέλεσμα επίσης', () => {
     const preview = functionArgumentsPreview({
-      model: resolveTableModel(sheet()),
+      book: bookOf(resolveTableModel(sheet())),
       functionName: 'IF',
       frame: { prefix: '=IF(', suffix: ')' },
       values: ['A3>0', 'ΣΩΣΤΟ', 'ΛΑΘΟΣ'],
@@ -95,12 +96,12 @@ describe('ADR-765 — «Αποτέλεσμα =» γεμίζει, όπως στο
   });
 
   it('η ζωντανή αποτίμηση απαντά **σφάλμα**, όχι `null` (που ο διάλογος δείχνει κενό)', () => {
-    expect(previewFormulaValue(resolveTableModel(sheet()), '=ΣΩΣΤΟ')).toBe('#NAME?');
+    expect(previewFormulaValue(bookOf(resolveTableModel(sheet())), '=ΣΩΣΤΟ')).toBe('#NAME?');
   });
 
   it('το ημιτελές μένει `null` — η σιωπή είναι σωστή ΜΟΝΟ όσο ο χρήστης πληκτρολογεί', () => {
-    expect(previewFormulaValue(resolveTableModel(sheet()), '=1+')).toBeNull();
-    expect(previewFormulaValue(resolveTableModel(sheet()), '=SUM(')).toBeNull();
+    expect(previewFormulaValue(bookOf(resolveTableModel(sheet())), '=1+')).toBeNull();
+    expect(previewFormulaValue(bookOf(resolveTableModel(sheet())), '=SUM(')).toBeNull();
   });
 });
 

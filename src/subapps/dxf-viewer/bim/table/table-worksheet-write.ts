@@ -48,6 +48,7 @@ import {
   preWorksheetsFieldsOf,
   resolveWorksheets,
 } from './table-worksheet-resolve';
+import { worksheetsAfterHomeChange } from './table-worksheet-formulas';
 import type { PersistedTableModel, TableBinding } from '../../types/table';
 import type { TableEntity } from '../../types/table-entity';
 import type { TableWorksheet } from '../../types/table-worksheet';
@@ -81,7 +82,19 @@ function withActiveWorksheet(
   const replacement = next(active);
   // Ταυτότητα μέσα ⇒ ταυτότητα έξω. Δες την κεφαλίδα: εδώ κρέμονται και οι οκτώ φύλακες no-op.
   if (replacement === active) return worksheets;
-  return worksheets.map((sheet) => (sheet === active ? replacement : sheet));
+  const replaced = worksheets.map((sheet) => (sheet === active ? replacement : sheet));
+
+  // 🔴 ADR-833 §5.9.2 — **ΕΔΩ φτάνει η αλλαγή στα ΑΛΛΑ φύλλα.** Αυτή η συνάρτηση είναι το ένα
+  // σημείο όπου ένα μοντέλο γίνεται βιβλίο («κάθε γραφέας πινάκων περνά από εδώ — και μόνο από
+  // εδώ»), άρα είναι και το ένα σημείο όπου ένας τύπος του Φύλλου3 μπορεί να μάθει ότι το
+  // Φύλλο1 άλλαξε. Ο επαναϋπολογισμός δεν είναι προαιρετικός και δεν ανατίθεται σε καλούντα
+  // που μπορεί να τον ξεχάσει (ADR-764 §47.5).
+  //
+  // ⚠️ **Μόνο όταν άλλαξε ΜΟΝΤΕΛΟ**: μια ανανέωση που άγγιξε μόνο τον δεσμό δεν μπορεί να
+  // κάνει μπαγιάτικο κανέναν τύπο, και ο φύλακας by-reference το λέει χωρίς καμία σάρωση.
+  return replacement.model === active.model
+    ? replaced
+    : worksheetsAfterHomeChange(replaced, active.id, active.model);
 }
 
 /**

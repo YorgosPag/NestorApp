@@ -41,6 +41,7 @@ import type {
   TableColumn,
   TableRow,
 } from '../../../types/table';
+import { bookOf, commitPendingForTest } from './formula-book-fixture';
 
 // ─── Τα δεδομένα ──────────────────────────────────────────────────────────────
 
@@ -197,7 +198,7 @@ describe('fingerprintExportableTable — ΠΕΡΙΕΧΟΜΕΝΟ, ποτέ ρολ
 
 describe('refreshTableBinding — η ορχήστρα του §5', () => {
   it('γεμίζει κάθε στήλη από το ΔΙΚΟ της sourceKey, με τη σειρά των γραμμών δεδομένων', () => {
-    const result = refreshTableBinding({ model: boundModel(), binding: binding(''), context: ctx([P1, P2]) });
+    const result = refreshTableBinding({ book: bookOf(boundModel()), model: boundModel(), binding: binding(''), context: ctx([P1, P2]) });
     expect(result.status).toBe('refreshed');
     if (result.status !== 'refreshed') return;
 
@@ -211,7 +212,7 @@ describe('refreshTableBinding — η ορχήστρα του §5', () => {
   });
 
   it('🔴 ADR-769 §11 — η ΒΑΣΗ μένει ΩΜΗ ενώ το κελί δείχνει μονάδες οθόνης', () => {
-    const result = refreshTableBinding({ model: boundModel(), binding: binding(''), context: ctx([P1, P2]) });
+    const result = refreshTableBinding({ book: bookOf(boundModel()), model: boundModel(), binding: binding(''), context: ctx([P1, P2]) });
     if (result.status !== 'refreshed') throw new Error('expected refreshed');
     // Οι δύο πρέπει να **διαφέρουν** εδώ: ίδιες τιμές θα σήμαιναν ότι κάποιος από τους δύο
     // δρόμους ξέχασε τη μονάδα του — και ο CAS του Δ3 συγκρίνει τη βάση με **την πηγή**.
@@ -220,13 +221,13 @@ describe('refreshTableBinding — η ορχήστρα του §5', () => {
   });
 
   it('🔴 η γραμμή ΚΕΦΑΛΙΔΑΣ δεν αγγίζεται — τα δεδομένα πάνε σε γραμμές δεδομένων', () => {
-    const result = refreshTableBinding({ model: boundModel(), binding: binding(''), context: ctx([P1, P2]) });
+    const result = refreshTableBinding({ book: bookOf(boundModel()), model: boundModel(), binding: binding(''), context: ctx([P1, P2]) });
     if (result.status !== 'refreshed') throw new Error('expected refreshed');
     expect(cellOf(result.model, 'rHead', 'cIdx')?.value).toBe('Α/Α');
   });
 
   it('🔴 σημείο ΧΩΡΙΣ υψόμετρο γράφει ΚΕΝΟ, ποτέ 0 (ADR-720 / §8 #8)', () => {
-    const result = refreshTableBinding({ model: boundModel(), binding: binding(''), context: ctx([P1, P3_NO_Z]) });
+    const result = refreshTableBinding({ book: bookOf(boundModel()), model: boundModel(), binding: binding(''), context: ctx([P1, P3_NO_Z]) });
     if (result.status !== 'refreshed') throw new Error('expected refreshed');
     // Ένα κατασκευασμένο `0.000` σε πίνακα συντεταγμένων που υπογράφεται είναι δηλωμένη
     // μέτρηση που κανείς δεν πήρε — και ρέει κατευθείαν σε νομικό παραδοτέο.
@@ -237,13 +238,13 @@ describe('refreshTableBinding — η ορχήστρα του §5', () => {
   });
 
   it('κάθε γεμισμένο κελί κρατά τη ΒΑΣΗ του (sourceValue) — αλλιώς δεν υπάρχει συγχώνευση αργότερα', () => {
-    const result = refreshTableBinding({ model: boundModel(), binding: binding(''), context: ctx([P1, P2]) });
+    const result = refreshTableBinding({ book: bookOf(boundModel()), model: boundModel(), binding: binding(''), context: ctx([P1, P2]) });
     if (result.status !== 'refreshed') throw new Error('expected refreshed');
     expect(cellOf(result.model, 'r1', 'cX')?.bound).toEqual({ sourceValue: 1000 });
   });
 
   it('το νέο revision είναι το αποτύπωμα των δεδομένων που ΓΡΑΦΤΗΚΑΝ', () => {
-    const result = refreshTableBinding({ model: boundModel(), binding: binding(''), context: ctx([P1, P2]) });
+    const result = refreshTableBinding({ book: bookOf(boundModel()), model: boundModel(), binding: binding(''), context: ctx([P1, P2]) });
     if (result.status !== 'refreshed') throw new Error('expected refreshed');
     expect(result.binding.revision).toBe(fingerprintExportableTable(buildCoordinateTable([P1, P2])));
   });
@@ -251,10 +252,11 @@ describe('refreshTableBinding — η ορχήστρα του §5', () => {
   // ── Early cutoff ──
 
   it('🏆 EARLY CUTOFF: ίδια δεδομένα ⇒ «unchanged» και το ΙΔΙΟ μοντέλο by-reference', () => {
-    const first = refreshTableBinding({ model: boundModel(), binding: binding(''), context: ctx([P1, P2]) });
+    const first = refreshTableBinding({ book: bookOf(boundModel()), model: boundModel(), binding: binding(''), context: ctx([P1, P2]) });
     if (first.status !== 'refreshed') throw new Error('expected refreshed');
 
     const again = refreshTableBinding({
+      book: bookOf(first.model),
       model: first.model,
       binding: first.binding,
       context: ctx([P1, P2]),
@@ -271,20 +273,21 @@ describe('refreshTableBinding — η ορχήστρα του §5', () => {
     // Salsa «backdating»: το κρίσιμο δεν είναι «δεν ξανατρέξαμε», είναι «το αποτέλεσμα
     // βγήκε ίδιο ⇒ η διάδοση σταματά». Εδώ τα σημεία είναι **νέα αντικείμενα** με τις ίδιες
     // τιμές: αν το κριτήριο ήταν ταυτότητα αναφοράς και όχι περιεχόμενο, θα κοκκίνιζε.
-    const first = refreshTableBinding({ model: boundModel(), binding: binding(''), context: ctx([P1, P2]) });
+    const first = refreshTableBinding({ book: bookOf(boundModel()), model: boundModel(), binding: binding(''), context: ctx([P1, P2]) });
     if (first.status !== 'refreshed') throw new Error('expected refreshed');
 
     const clones = [{ ...P1 }, { ...P2 }];
-    const again = refreshTableBinding({ model: first.model, binding: first.binding, context: ctx(clones) });
+    const again = refreshTableBinding({ book: bookOf(first.model), model: first.model, binding: first.binding, context: ctx(clones) });
     expect(again.status).toBe('unchanged');
     expect(again.model).toBe(first.model);
   });
 
   it('αλλαγή κορυφής ⇒ νέα τιμή ΚΑΙ νέο revision', () => {
-    const first = refreshTableBinding({ model: boundModel(), binding: binding(''), context: ctx([P1, P2]) });
+    const first = refreshTableBinding({ book: bookOf(boundModel()), model: boundModel(), binding: binding(''), context: ctx([P1, P2]) });
     if (first.status !== 'refreshed') throw new Error('expected refreshed');
 
     const second = refreshTableBinding({
+      book: bookOf(first.model),
       model: first.model,
       binding: first.binding,
       context: ctx([P1, P2_MOVED]),
@@ -306,7 +309,7 @@ describe('refreshTableBinding — η ορχήστρα του §5', () => {
         valueType: 'text', align: 'left', sourceKey: 'δεν-υπάρχει',
       }],
     };
-    const result = refreshTableBinding({ model: withGhost, binding: binding(''), context: ctx([P1, P2]) });
+    const result = refreshTableBinding({ book: bookOf(withGhost), model: withGhost, binding: binding(''), context: ctx([P1, P2]) });
     if (result.status !== 'refreshed') throw new Error('expected refreshed');
     expect(result.unknownSourceKeys).toEqual(['δεν-υπάρχει']);
     // Η στήλη-φάντασμα μένει **κενή**, δεν γεμίζει με τίποτα.
@@ -319,7 +322,7 @@ describe('refreshTableBinding — η ορχήστρα του §5', () => {
       ...model,
       columns: model.columns.map(({ sourceKey: _drop, ...rest }) => rest),
     };
-    const result = refreshTableBinding({ model: unbound, binding: binding(''), context: ctx([P1, P2]) });
+    const result = refreshTableBinding({ book: bookOf(unbound), model: unbound, binding: binding(''), context: ctx([P1, P2]) });
     expect(result.status).toBe('no-bound-columns');
   });
 
@@ -329,6 +332,7 @@ describe('refreshTableBinding — η ορχήστρα του §5', () => {
     // αλλάζει ταυτότητες — ακριβώς η κλάση που έκλεισε το ADR-764 — και θα την έκανε ένας
     // μηχανισμός που κανείς δεν κάλεσε. Άρα: **λέγεται**.
     const result = refreshTableBinding({
+      book: bookOf(boundModel()),
       model: boundModel(), binding: binding(''), context: ctx([P1, P2, P3_NO_Z]),
     });
     if (result.status !== 'refreshed') throw new Error('expected refreshed');
@@ -356,17 +360,18 @@ describe('refreshTableBinding — η ορχήστρα του §5', () => {
         id: 'cSum', sizing: { kind: 'fixed', widthMm: 20 }, valueType: 'text', align: 'right',
       }],
     };
-    const seeded = refreshTableBinding({ model: withSum, binding: binding(''), context: ctx([P1, P2]) });
+    const seeded = refreshTableBinding({ book: bookOf(withSum), model: withSum, binding: binding(''), context: ctx([P1, P2]) });
     if (seeded.status !== 'refreshed') throw new Error('expected refreshed');
 
     // Τύπος που αθροίζει τη δεμένη στήλη X (B2:B3 = οι δύο γραμμές δεδομένων).
     // 🔴 ADR-769 §11 — η **απόδειξη** ότι η μονάδα οθόνης έπρεπε να μπει ως **αριθμός** και όχι
     // ως κείμενο: το `SUM` εξακολουθεί να αθροίζει τη δεμένη στήλη (1 + 4 = 5 m). Με
     // `formatCellForDisplay` το κελί θα κρατούσε `"1.000"` και ο τύπος θα έδινε **μηδέν**.
-    const withFormula = commitCellWrites(writeCellInput(activeTableModel(seeded), 'r1', 'cSum', '=SUM(B2:B3)'));
+    const withFormula = commitPendingForTest(writeCellInput(bookOf(activeTableModel(seeded)),activeTableModel(seeded), 'r1', 'cSum', '=SUM(B2:B3)'));
     expect(cellOf(withFormula, 'r1', 'cSum')?.value).toBe(5);
 
     const moved = refreshTableBinding({
+      book: bookOf(withFormula),
       model: withFormula, binding: seeded.binding, context: ctx([P1, P2_MOVED]),
     });
     if (moved.status !== 'refreshed') throw new Error('expected refreshed');

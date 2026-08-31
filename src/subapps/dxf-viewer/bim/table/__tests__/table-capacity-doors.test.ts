@@ -44,6 +44,7 @@ import { makeTableEntity, tableWorksheetsFields } from './make-table-entity';
 import { createTableModel, toPersistedTableModel } from '../table-model-helpers';
 import type { TableEntity } from '../../../types/table-entity';
 import type { PersistedTableModel, TableCell, TableCellStyleOverride } from '../../../types/table';
+import { bookOf } from './formula-book-fixture';
 
 // ── Εργαλεία ────────────────────────────────────────────────────────────────
 
@@ -139,12 +140,12 @@ describe('ΠΟΡΤΑ 6 — μήκος κειμένου: η ράγα ζει στ�
   const colId = model.columns[0].id;
 
   it('🔴 κείμενο πάνω από τη ράγα ΚΟΒΕΤΑΙ — αλλιώς παράγουμε `.xlsx` που το Excel δεν δέχεται', () => {
-    const written = writeCellInput(model, rowId, colId, 'x'.repeat(40_000));
+    const written = writeCellInput(bookOf(model),model, rowId, colId, 'x'.repeat(40_000));
     expect(getPersistedCellText(written.model, rowId, colId)).toHaveLength(MAX_TABLE_CELL_CHARACTERS);
   });
 
   it('κείμενο που χωρά περνά αυτούσιο — η ράγα δεν αγγίζει τη συνηθισμένη χρήση', () => {
-    const written = writeCellInput(model, rowId, colId, 'Δοκός Δ1');
+    const written = writeCellInput(bookOf(model),model, rowId, colId, 'Δοκός Δ1');
     expect(getPersistedCellText(written.model, rowId, colId)).toBe('Δοκός Δ1');
   });
 
@@ -152,13 +153,13 @@ describe('ΠΟΡΤΑ 6 — μήκος κειμένου: η ράγα ζει στ�
     // Η τέταρτη εγγύηση του γραφέα (ADR-739 Φ.Δ) τρέχει σε **κάθε** δέσμευση κελιού. Αν το
     // κόψιμο γεννούσε νέο string κάθε φορά, κάθε `Enter` σε αμετάβλητο κελί θα παρήγαγε βήμα
     // undo για το τίποτα.
-    const first = writeCellInput(model, rowId, colId, 'Κ12').model;
-    expect(writeCellInput(first, rowId, colId, 'Κ12').model).toBe(first);
+    const first = writeCellInput(bookOf(model),model, rowId, colId, 'Κ12').model;
+    expect(writeCellInput(bookOf(first),first, rowId, colId, 'Κ12').model).toBe(first);
   });
 
   it('🔴 και ο ΤΥΠΟΣ κόβεται κι αυτός — γράφεται κι εκείνος στο `.xlsx`', () => {
     const longFormula = `=SUM(${'A1,'.repeat(20_000)}A2)`;
-    const written = writeCellInput(model, rowId, colId, longFormula);
+    const written = writeCellInput(bookOf(model),model, rowId, colId, longFormula);
     // Ό,τι κι αν έγινε με την ανάλυση, τίποτα πάνω από τη ράγα δεν αποθηκεύτηκε.
     const stored = written.model.cells.find(([r, c]) => r === rowId && c === colId);
     expect(JSON.stringify(stored).length).toBeLessThan(longFormula.length);
@@ -174,7 +175,7 @@ describe('ΠΟΡΤΑ 3 — επικόλληση: τρεις αιτίες απώ�
   const anchor = { rowId: model.rows[2].id, colId: model.columns[0].id };
 
   it('🔴 κελί με μακρύ κείμενο ΜΕΤΡΙΕΤΑΙ ξεχωριστά — δεν κρύβεται πίσω από τις γραμμές', () => {
-    const result = pasteTsvIntoTable(model, anchor, [['x'.repeat(40_000)], ['κοντό']]);
+    const result = pasteTsvIntoTable(bookOf(model),model, anchor, [['x'.repeat(40_000)], ['κοντό']]);
     expect(result.clippedTextCells).toBe(1);
     // …και δεν είναι «κόπηκε γραμμή»: όλες οι γραμμές χώρεσαν.
     expect(result.fittedRows).toBe(2);
@@ -182,18 +183,18 @@ describe('ΠΟΡΤΑ 3 — επικόλληση: τρεις αιτίες απώ�
   });
 
   it('μπαγιάτικο ενεργό κελί ⇒ ΟΛΑ μηδέν, και το κόψιμο κειμένου μαζί — ποτέ σιωπηλή επιτυχία', () => {
-    const stale = pasteTsvIntoTable(model, { rowId: 'rΦΑΝΤΑΣΜΑ', colId: 'cΦΑΝΤΑΣΜΑ' }, [['α']]);
+    const stale = pasteTsvIntoTable(bookOf(model),model, { rowId: 'rΦΑΝΤΑΣΜΑ', colId: 'cΦΑΝΤΑΣΜΑ' }, [['α']]);
     expect(stale.fittedRows).toBe(0);
     expect(stale.clippedTextCells).toBe(0);
   });
 
   it('επικόλληση που χωρά ολόκληρη δεν αναφέρει κόψιμο κειμένου', () => {
-    const result = pasteTsvIntoTable(model, anchor, [['α', 'β'], ['γ', 'δ']]);
+    const result = pasteTsvIntoTable(bookOf(model),model, anchor, [['α', 'β'], ['γ', 'δ']]);
     expect(result.clippedTextCells).toBe(0);
   });
 
   it('🔑 …και το κομμένο κελί ΜΠΗΚΕ — κόψιμο, όχι άρνηση ολόκληρης της επικόλλησης', () => {
-    const result = pasteTsvIntoTable(model, anchor, [['x'.repeat(40_000)]]);
+    const result = pasteTsvIntoTable(bookOf(model),model, anchor, [['x'.repeat(40_000)]]);
     expect(getPersistedCellText(result.model, anchor.rowId, anchor.colId)).toHaveLength(
       MAX_TABLE_CELL_CHARACTERS,
     );
@@ -288,7 +289,7 @@ describe('🔑 Ό,τι φτιάχτηκε με τα ΠΑΛΙΑ όρια εξακ
     expect(legacy.rows.length * legacy.columns.length).toBeGreaterThan(MAX_TABLE_GRID_CELLS);
     expect(getPersistedCellText(legacy, 'r0', 'c0')).toBe('ΠΑΛΙΟΣ');
     // …και μπορεί να δεχτεί **περιεχόμενο**, απλώς όχι νέες γραμμές.
-    const written = writeCellInput(legacy, 'r5', 'c5', 'ΝΕΟ');
+    const written = writeCellInput(bookOf(legacy),legacy, 'r5', 'c5', 'ΝΕΟ');
     expect(getPersistedCellText(written.model, 'r5', 'c5')).toBe('ΝΕΟ');
   });
 });

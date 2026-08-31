@@ -49,6 +49,7 @@
 
 import type ExcelJS from 'exceljs';
 import { triggerExportDownload } from '@/lib/exports/trigger-export-download';
+import { uniqueSheetNames } from '@/lib/spreadsheet/unique-sheet-names';
 
 /** Ο τύπος MIME ενός βιβλίου OOXML — μία δήλωση, όσοι γραφείς κι αν υπάρξουν. */
 export const XLSX_MIME_TYPE =
@@ -99,19 +100,17 @@ function sanitizeWorksheetName(raw: string, fallback: string): string {
  * @param rawNames Τα ονόματα όπως τα θέλει ο καλών· κενό ⇒ παίρνει τη **θέση** του (1-based).
  */
 export function xlsxWorksheetNames(rawNames: readonly string[]): readonly string[] {
-  const taken = new Set<string>();
-  return rawNames.map((raw, index) => {
-    const base = sanitizeWorksheetName(raw, `${index + 1}`);
-    let candidate = base;
-    let attempt = 2;
-    while (taken.has(candidate.toLowerCase())) {
-      const suffix = ` (${attempt})`;
-      candidate = base.slice(0, XLSX_WORKSHEET_NAME_MAX - suffix.length) + suffix;
-      attempt += 1;
-    }
-    taken.add(candidate.toLowerCase());
-    return candidate;
-  });
+  // 🔴 ADR-833 §5.9.1 — η **μοναδικοποίηση** έφυγε από εδώ σε SSoT, γιατί απέκτησε **δεύτερο**
+  // σύνορο: η γραμμή τύπων της Φάσης 7 γράφει `'Κόστη (2)'!A1` με τον **ίδιο** κανόνα, και δύο
+  // αντίγραφα του «πώς μοναδικοποιείται ένα όνομα» θα σήμαιναν ότι το αρχείο και η οθόνη
+  // μπορούν κάποτε να ονομάσουν αλλιώς το **ίδιο** φύλλο (N.18).
+  //
+  // ⚠️ Η **εξυγίανση** μένει εδώ και μόνο εδώ: είναι όρος του μορφότυπου (`* ? : \ / [ ]`,
+  // 31 χαρακτήρες), όχι της οθόνης. Είναι η **μία** δηλωμένη διαφορά των δύο πελατών.
+  return uniqueSheetNames(
+    rawNames.map((raw, index) => sanitizeWorksheetName(raw, `${index + 1}`)),
+    XLSX_WORKSHEET_NAME_MAX,
+  );
 }
 
 /**

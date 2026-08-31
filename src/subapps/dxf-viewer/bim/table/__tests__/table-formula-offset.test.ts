@@ -20,6 +20,7 @@ import {
   offsetTableFormula,
   tableFormulaOffsetBetween,
 } from '../formula/table-formula-offset';
+import { bookOf } from './formula-book-fixture';
 
 const COLUMNS: TableColumn[] = ['c1', 'c2', 'c3', 'c4', 'c5'].map((id) => ({
   id,
@@ -44,11 +45,10 @@ const MODEL: TableModel = createTableModel({ columns: COLUMNS, rows: ROWS, cells
  * γραμματική σε ανάλυση **και** εκτύπωση — αλλιώς το test θα μετρούσε τη διαφορά τους.
  */
 function shift(text: string, rows: number, columns: number): string {
-  const formula = parseTableFormula(MODEL, text, CANONICAL_FORMULA_GRAMMAR);
+  const formula = parseTableFormula(bookOf(MODEL), text, CANONICAL_FORMULA_GRAMMAR);
   if (formula === null) throw new Error(`Δεν αναλύθηκε: ${text}`);
-  return printTableFormula(
-    MODEL,
-    offsetTableFormula(MODEL, formula, { rows, columns }),
+  return printTableFormula(bookOf(MODEL),
+    offsetTableFormula(bookOf(MODEL), formula, { rows, columns }),
     CANONICAL_FORMULA_GRAMMAR,
   );
 }
@@ -129,23 +129,23 @@ describe('🔴 εκτός πλέγματος ⇒ #REF!, ποτέ σιωπηλή 
  */
 describe('🔴 ταυτότητα by-reference', () => {
   it('μηδενική μετατόπιση ⇒ ΤΟ ΙΔΙΟ αντικείμενο', () => {
-    const formula = parseTableFormula(MODEL, '=A1+B2');
-    expect(offsetTableFormula(MODEL, formula!, { rows: 0, columns: 0 })).toBe(formula);
+    const formula = parseTableFormula(bookOf(MODEL), '=A1+B2');
+    expect(offsetTableFormula(bookOf(MODEL), formula!, { rows: 0, columns: 0 })).toBe(formula);
   });
 
   it('🔑 τύπος με ΜΟΝΟ κλειδωμένες αναφορές ⇒ ΤΟ ΙΔΙΟ αντικείμενο, παρότι η μετατόπιση ≠ 0', () => {
-    const formula = parseTableFormula(MODEL, '=$A$1+$B$2*3');
-    expect(offsetTableFormula(MODEL, formula!, { rows: 2, columns: 1 })).toBe(formula);
+    const formula = parseTableFormula(bookOf(MODEL), '=$A$1+$B$2*3');
+    expect(offsetTableFormula(bookOf(MODEL), formula!, { rows: 2, columns: 1 })).toBe(formula);
   });
 
   it('τύπος χωρίς καμία αναφορά ⇒ ΤΟ ΙΔΙΟ αντικείμενο', () => {
-    const formula = parseTableFormula(MODEL, '=1+2*3');
-    expect(offsetTableFormula(MODEL, formula!, { rows: 1, columns: 1 })).toBe(formula);
+    const formula = parseTableFormula(bookOf(MODEL), '=1+2*3');
+    expect(offsetTableFormula(bookOf(MODEL), formula!, { rows: 1, columns: 1 })).toBe(formula);
   });
 
   it('μία σχετική αναφορά αρκεί για νέο αντικείμενο', () => {
-    const formula = parseTableFormula(MODEL, '=$A$1+B2');
-    expect(offsetTableFormula(MODEL, formula!, { rows: 1, columns: 0 })).not.toBe(formula);
+    const formula = parseTableFormula(bookOf(MODEL), '=$A$1+B2');
+    expect(offsetTableFormula(bookOf(MODEL), formula!, { rows: 1, columns: 0 })).not.toBe(formula);
   });
 });
 

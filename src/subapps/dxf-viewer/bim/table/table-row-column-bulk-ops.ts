@@ -38,6 +38,7 @@ import {
   insertTableColumn,
   insertTableRow,
 } from './table-row-column-ops';
+import type { TableFormulaWorkbook } from './formula/table-formula-workbook';
 import type { PersistedTableModel, TableColumnId, TableRowId } from '../../types/table';
 
 /**
@@ -49,20 +50,22 @@ import type { PersistedTableModel, TableColumnId, TableRowId } from '../../types
  * είναι η σωστή μεριά να πέσει κανείς όταν το μοντέλο δεν συμφωνεί με το `hit`.
  */
 export function deleteTableRows(
+  book: TableFormulaWorkbook,
   model: PersistedTableModel,
   rowIds: readonly TableRowId[],
 ): PersistedTableModel {
   if (!canDeleteTableRow(model, rowIds.length)) return model;
-  return rowIds.reduce((next, rowId) => deleteTableRow(next, rowId), model);
+  return rowIds.reduce((next, rowId) => deleteTableRow(book, next, rowId), model);
 }
 
 /** Το ίδιο για στήλες — ίδιες τέσσερις εγγυήσεις, ίδιο «όλα ή τίποτα». */
 export function deleteTableColumns(
+  book: TableFormulaWorkbook,
   model: PersistedTableModel,
   colIds: readonly TableColumnId[],
 ): PersistedTableModel {
   if (!canDeleteTableColumn(model, colIds.length)) return model;
-  return colIds.reduce((next, colId) => deleteTableColumn(next, colId), model);
+  return colIds.reduce((next, colId) => deleteTableColumn(book, next, colId), model);
 }
 
 /**
@@ -73,24 +76,26 @@ export function deleteTableColumns(
  * το μπλοκ των `count` καταλήγει ακριβώς εκεί που δείχνει ο δείκτης.
  */
 export function insertTableRows(
+  book: TableFormulaWorkbook,
   model: PersistedTableModel,
   atIndex: number,
   count: number,
 ): PersistedTableModel {
   if (count < 1 || !canInsertTableRow(model, count)) return model;
   let next = model;
-  for (let i = 0; i < count; i++) next = insertTableRow(next, atIndex);
+  for (let i = 0; i < count; i++) next = insertTableRow(book, next, atIndex);
   return next;
 }
 
 /** Το ίδιο για στήλες — η κληρονομιά μορφοποίησης από τη στήλη αναφοράς ισχύει για όλες. */
 export function insertTableColumns(
+  book: TableFormulaWorkbook,
   model: PersistedTableModel,
   atIndex: number,
   count: number,
 ): PersistedTableModel {
   if (count < 1 || !canInsertTableColumn(model, count)) return model;
   let next = model;
-  for (let i = 0; i < count; i++) next = insertTableColumn(next, atIndex);
+  for (let i = 0; i < count; i++) next = insertTableColumn(book, next, atIndex);
   return next;
 }

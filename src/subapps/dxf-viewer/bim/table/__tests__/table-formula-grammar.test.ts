@@ -49,6 +49,7 @@ import {
   writeCellInput,
 } from '../formula/table-formula-engine';
 import { createTableModel } from '../table-model-helpers';
+import { bookOf, commitPendingForTest } from './formula-book-fixture';
 
 const COLUMNS: TableColumn[] = ['cA', 'cB', 'cC'].map((id) => ({
   id,
@@ -138,21 +139,21 @@ describe('🔴 2 — ΑΝΤΙΣΤΡΕΨΙΜΟΤΗΤΑ: round-trip σε κάθε 
   );
 
   it.each(cases)('%s #%i — «%s» επιβιώνει', (_name, _index, text, grammar) => {
-    const formula = parseTableFormula(MODEL, text, grammar);
+    const formula = parseTableFormula(bookOf(MODEL), text, grammar);
     expect(formula).not.toBeNull();
     // Το πρώτο πέρασμα μπορεί να κανονικοποιήσει (πεζά, κενά)· το **δεύτερο** οφείλει να
     // είναι σταθερό σημείο, αλλιώς κάθε άνοιγμα κελιού θα ξαναέγραφε τον τύπο.
-    const printed = printTableFormula(MODEL, formula!, grammar);
-    const again = parseTableFormula(MODEL, printed, grammar);
+    const printed = printTableFormula(bookOf(MODEL), formula!, grammar);
+    const again = parseTableFormula(bookOf(MODEL), printed, grammar);
     expect(again).not.toBeNull();
-    expect(printTableFormula(MODEL, again!, grammar)).toBe(printed);
+    expect(printTableFormula(bookOf(MODEL), again!, grammar)).toBe(printed);
   });
 });
 
 describe('🔴 3 — ΤΑΥΤΟΣΗΜΙΑ: η γραφή δεν αγγίζει το μοντέλο', () => {
   it.each(EQUIVALENT)('«%s» και «%s» δίνουν το ΙΔΙΟ δέντρο', (canonical, semicolon) => {
-    const left = parseTableFormula(MODEL, canonical, CANONICAL_FORMULA_GRAMMAR);
-    const right = parseTableFormula(MODEL, semicolon, SEMICOLON_FORMULA_GRAMMAR);
+    const left = parseTableFormula(bookOf(MODEL), canonical, CANONICAL_FORMULA_GRAMMAR);
+    const right = parseTableFormula(bookOf(MODEL), semicolon, SEMICOLON_FORMULA_GRAMMAR);
     expect(left).not.toBeNull();
     expect(right).toEqual(left);
   });
@@ -174,8 +175,8 @@ describe('🔴 4 — Η ΕΦΕΔΡΕΙΑ ΔΕΝ ΥΠΕΡΙΣΧΥΕΙ ΠΟΤΕ', 
   const corpus = EQUIVALENT.flatMap(([canonical, semicolon]) => [canonical, semicolon]);
 
   it.each(corpus)('«%s»', (text) => {
-    const primary = parseTableFormula(MODEL, text, drawingFormulaGrammar());
-    const stored = commitCellWrites(writeCellInput(EMPTY, 'r1', 'cA', text));
+    const primary = parseTableFormula(bookOf(MODEL), text, drawingFormulaGrammar());
+    const stored = commitPendingForTest(writeCellInput(bookOf(EMPTY),EMPTY, 'r1', 'cA', text));
     const cell = stored.cells.find(([r, c]) => r === 'r1' && c === 'cA')?.[2];
 
     if (primary === null) {
@@ -194,7 +195,7 @@ describe('🎯 Η ΑΓΚΥΡΑ ΤΟΥ ΙΔΙΟΚΤΗΤΗ — το στιγμιό
   function snapshot(a1: string): PersistedTableModel {
     let model = EMPTY;
     const write = (r: string, c: string, text: string) => {
-      model = commitCellWrites(writeCellInput(model, r, c, text));
+      model = commitPendingForTest(writeCellInput(bookOf(model),model, r, c, text));
     };
     write('r2', 'cA', '20');
     write('r3', 'cA', '30');
@@ -219,7 +220,7 @@ describe('🎯 Η ΑΓΚΥΡΑ ΤΟΥ ΙΔΙΟΚΤΗΤΗ — το στιγμιό
 
   it('η γραμμή τύπων ξαναγράφει και τις δύο στη γραφή του σχεδίου', () => {
     for (const written of ['=CONCATENATE(A2;" ";A3)', '=CONCATENATE(A2," ",A3)']) {
-      expect(cellInputText(snapshot(written), 'r1', 'cA')).toBe('=CONCATENATE(A2;" ";A3)');
+      expect(cellInputText(bookOf(snapshot(written)),snapshot(written), 'r1', 'cA')).toBe('=CONCATENATE(A2;" ";A3)');
     }
   });
 
@@ -253,7 +254,7 @@ describe('η μοναδική αμφισημία, ρητά τεκμηριωμέ�
    * ελληνική ανάγνωση — όπως ακριβώς στο ελληνικό Excel. Δεν «διορθώνεται»· δηλώνεται.
    */
   it('`=MROUND(7,3)` σε ελληνικό σχέδιο είναι ΕΝΑ όρισμα (7,3), όχι δύο', () => {
-    const formula = parseTableFormula(MODEL, '=MROUND(7,3)', drawingFormulaGrammar());
+    const formula = parseTableFormula(bookOf(MODEL), '=MROUND(7,3)', drawingFormulaGrammar());
     expect(formula?.root).toEqual({
       kind: 'call',
       name: 'MROUND',
@@ -262,7 +263,7 @@ describe('η μοναδική αμφισημία, ρητά τεκμηριωμέ�
   });
 
   it('το ίδιο κείμενο στην κανονική γραμματική είναι ΔΥΟ ορίσματα', () => {
-    const formula = parseTableFormula(MODEL, '=MROUND(7,3)', CANONICAL_FORMULA_GRAMMAR);
+    const formula = parseTableFormula(bookOf(MODEL), '=MROUND(7,3)', CANONICAL_FORMULA_GRAMMAR);
     expect(formula?.root).toEqual({
       kind: 'call',
       name: 'MROUND',

@@ -33,12 +33,15 @@ import type { TableModel } from '../../../types/table';
 import type {
   TableFormula,
   TableFormulaBinaryOp,
+  TableFormulaCellRef,
   TableFormulaNode,
 } from '../../../types/table-formula';
+import type { TableWorksheetId } from '../../../types/table-ids';
 import type { TableFormulaGrammar } from '../../../types/table-formula-grammar';
 import { createTableModel } from '../table-model-helpers';
 import { isWrittenAddressShape, resolveWrittenCellRef } from './table-formula-absolute';
 import { drawingFormulaGrammar } from './table-formula-grammar';
+import { soleWorksheetBook, type TableFormulaWorkbook } from './table-formula-workbook';
 import {
   FORMULA_PREFIX,
   tokenizeFormula,
@@ -75,7 +78,7 @@ export function isFormulaInput(text: string): boolean {
  * πρώτη δεν βγάζει νόημα (ADR-761, ανεκτική εφεδρεία). Απούσα ⇒ η γραμματική του σχεδίου.
  */
 export function parseTableFormula(
-  model: TableModel,
+  book: TableFormulaWorkbook,
   text: string,
   grammar: TableFormulaGrammar = drawingFormulaGrammar(),
 ): TableFormula | null {
@@ -85,7 +88,7 @@ export function parseTableFormula(
   const tokens = tokenizeFormula(trimmed.slice(FORMULA_PREFIX.length), grammar);
   if (tokens === null || tokens.length === 0) return null;
 
-  const reader: Reader = { model, tokens, grammar, at: 0, depth: 0 };
+  const reader: Reader = { book, tokens, grammar, at: 0, depth: 0 };
   const root = parseBinary(reader, 0);
   if (root === null || reader.at !== tokens.length) return null;
   return { root };
@@ -106,7 +109,7 @@ export function parseTableFormula(
  * η ερώτηση δεν έχει.
  */
 export function isParseableFormula(text: string, grammar: TableFormulaGrammar): boolean {
-  return parseTableFormula(GRAMMAR_PROBE_MODEL, text, grammar) !== null;
+  return parseTableFormula(GRAMMAR_PROBE_BOOK, text, grammar) !== null;
 }
 
 /**
@@ -115,9 +118,23 @@ export function isParseableFormula(text: string, grammar: TableFormulaGrammar): 
  */
 const GRAMMAR_PROBE_MODEL: TableModel = createTableModel({ columns: [], rows: [], cells: [] });
 
+/**
+ * Το ίδιο κενό πλέγμα ως **βιβλίο ενός φύλλου**, σταθερό για τον ίδιο λόγο.
+ *
+ * ⚠️ Χωρίς λεξιλόγιο ονομάτων (`NO_WORKSHEET_NAMING`) — και αυτό **δεν** αλλοιώνει την
+ * απάντηση: ένα `=Φύλλο2!A1` παραμένει συντακτικά τύπος και εδώ, γιατί το άγνωστο φύλλο
+ * είναι αποτυχία **δεσίματος** (⇒ κόμβος `#REF!`), όχι σύνταξης. Ίδιο σκεπτικό με το
+ * `=A99` σε πίνακα πέντε γραμμών, δες την τεκμηρίωση από πάνω.
+ */
+const GRAMMAR_PROBE_BOOK: TableFormulaWorkbook = soleWorksheetBook(GRAMMAR_PROBE_MODEL);
+
 /** Η θέση της ανάγνωσης. Μεταβλητή επίτηδες: ο αναλυτής είναι ένα πέρασμα, όχι δομή. */
 interface Reader {
-  readonly model: TableModel;
+  /**
+   * 🔴 ADR-833 Φάση 7 — ήταν `model` και έγινε **βιβλίο**: η μετάφραση `A1 → ταυτότητες`
+   * χρειάζεται το πλέγμα **του φύλλου που ονομάστηκε**, όχι πάντα του δικού μας.
+   */
+  readonly book: TableFormulaWorkbook;
   readonly tokens: readonly TableFormulaToken[];
   /** Η γραμματική με την οποία σαρώθηκαν οι μονάδες — **η ίδια** που τις διαβάζει πίσω. */
   readonly grammar: TableFormulaGrammar;
@@ -210,6 +227,13 @@ function parsePrimary(reader: Reader): TableFormulaNode | null {
     reader.at += 1;
     return parseAfterName(reader, token.value);
   }
+  // 🔴 ADR-833 Φάση 7 — ένα εισαγωγικό όνομα είναι **πάντα** όνομα φύλλου: δεν υπάρχει άλλη
+  // θέση στη γραμματική όπου να σημαίνει κάτι. Χωρίς `!` από πίσω είναι συντακτικό σφάλμα,
+  // δηλαδή ο τύπος μένει **κείμενο** και ο χρήστης βλέπει ό,τι πληκτρολόγησε.
+  if (token.kind === 'quotedName') {
+    reader.at += 1;
+    return parseSheetQualified(reader, token.value);
+  }
   return parseGroup(reader);
 }
 
@@ -255,14 +279,60 @@ const BOOLEAN_LITERALS: Readonly<Record<string, boolean>> = { TRUE: true, FALSE:
 function parseAfterName(reader: Reader, name: string): TableFormulaNode | null {
   if (peekPunct(reader) === '(') return parseCall(reader, name);
 
+  // 🔴 ADR-833 Φάση 7 — **το `!` προηγείται ΚΑΘΕ άλλης ερμηνείας**, και η σειρά είναι η
+  // σημασία: ένα φύλλο μπορεί να λέγεται `A1`, `TRUE` ή `SUM`, και σε καθεμία από αυτές τις
+  // περιπτώσεις το `!` που ακολουθεί λέει ρητά *«αυτό ήταν όνομα φύλλου»*. Ένα βήμα πιο
+  // κάτω, το `=A1!B2` θα διαβαζόταν ως αναφορά στο κελί `A1` ακολουθούμενη από σκουπίδια.
+  if (peekPunct(reader) === '!') return parseSheetQualified(reader, name);
+
   const literal = BOOLEAN_LITERALS[name.toUpperCase()];
   if (literal !== undefined) return { kind: 'boolean', value: literal };
 
   if (peekPunct(reader) === ':' || isWrittenAddressShape(name)) {
-    return parseReference(reader, name);
+    return parseReference(reader, name, HOME_SHEET);
   }
   return { kind: 'name', name };
 }
+
+/**
+ * 🔴 ADR-833 Φάση 7 — **`Φύλλο2!A1`**: το όνομα φύλλου λύνεται σε **ταυτότητα** εδώ, μία φορά,
+ * και μετά πετιέται — ακριβώς όπως το `A1` γίνεται `rowId`/`colId` δύο γραμμές παρακάτω.
+ *
+ * ## Άγνωστο φύλλο ⇒ `#REF!`, όχι «δεν είναι τύπος»
+ * Είναι αποτυχία **δεσίματος**, όχι σύνταξης — η ίδια κρίση που παίρνει ήδη το `=A99` σε
+ * πίνακα πέντε γραμμών (δες την κεφαλίδα του module). Ο τύπος αποθηκεύεται και το κελί δείχνει
+ * `#REF!`, που είναι ό,τι ακριβώς δείχνει και το Excel για φύλλο που διαγράφηκε.
+ *
+ * ⚠️ Οι μονάδες της διεύθυνσης **καταναλώνονται κανονικά** πριν επιστραφεί το σφάλμα. Μια
+ * πρόωρη έξοδος θα άφηνε το `A1` πίσω, ο έλεγχος `reader.at !== tokens.length` θα κοκκίνιζε,
+ * και το `=Φύλλο9!A1` θα γινόταν **σκέτο κείμενο** αντί για `#REF!` — δύο διαφορετικές
+ * απαντήσεις στο ίδιο λάθος, ανάλογα με το αν ο χρήστης έγραψε υπαρκτό φύλλο.
+ */
+function parseSheetQualified(reader: Reader, sheetName: string): TableFormulaNode | null {
+  if (!eatPunct(reader, '!')) return null;
+  const address = peek(reader);
+  if (address?.kind !== 'name') return null;
+  reader.at += 1;
+
+  const id = reader.book.naming.idOf(sheetName);
+  return parseReference(reader, address.value, id === null ? UNKNOWN_SHEET : namedSheet(id));
+}
+
+/**
+ * Το φύλλο μιας **γραμμένης** διεύθυνσης. Διακριτή ένωση και όχι `TableWorksheetId | null`:
+ * υπάρχουν **τρεις** καταστάσεις που δεν επιτρέπεται να συγχυστούν — «δεν γράφτηκε φύλλο»,
+ * «γράφτηκε και βρέθηκε», «γράφτηκε και **δεν** βρέθηκε» — και η τρίτη είναι η μόνη που
+ * παράγει `#REF!`. Με `null` για δύο από αυτές, ένα `=Φύλλο9!A1` θα διαβαζόταν σιωπηλά ως
+ * αναφορά στο **δικό μας** φύλλο.
+ */
+type WrittenSheet =
+  | { readonly kind: 'home' }
+  | { readonly kind: 'named'; readonly id: TableWorksheetId }
+  | { readonly kind: 'unknown' };
+
+const HOME_SHEET: WrittenSheet = { kind: 'home' };
+const UNKNOWN_SHEET: WrittenSheet = { kind: 'unknown' };
+const namedSheet = (id: TableWorksheetId): WrittenSheet => ({ kind: 'named', id });
 
 /**
  * Λίστα ορισμάτων χωρισμένη με τον διαχωριστή **της γραμματικής**. Καμία συνάρτηση χωρίς
@@ -318,17 +388,57 @@ function parseArgument(reader: Reader): TableFormulaNode | null {
  * ιδιοκτήτης του «τι σημαίνει μια γραμμένη διεύθυνση» — πεζά, bijective base-26, όρια
  * πλέγματος και, από το ADR-754 Γ2, η αποκόλληση του `$`.
  */
-function parseReference(reader: Reader, name: string): TableFormulaNode {
-  const from = resolveWrittenCellRef(reader.model, name);
+function parseReference(reader: Reader, name: string, sheet: WrittenSheet): TableFormulaNode {
+  const from = resolveAddress(reader, name, sheet);
 
   if (peekPunct(reader) === ':') {
     const next = reader.tokens[reader.at + 1];
     if (next?.kind !== 'name') return { kind: 'error', code: '#REF!' };
     reader.at += 2;
-    const to = resolveWrittenCellRef(reader.model, next.value);
+    // 🔴 ADR-833 Φάση 7 — **το άκρο κληρονομεί το φύλλο του πρώτου**, όπως στο Excel: το
+    // `Φύλλο2!A1:B5` σημαίνει `Φύλλο2!A1:Φύλλο2!B5`. Ένα εύρος με άκρα σε δύο φύλλα δεν είναι
+    // ορθογώνιο — δες `sameSheetRefs` — και η κληρονομιά το κάνει **αδύνατο να εκφραστεί** από
+    // αυτή τη διαδρομή, αντί να το απορρίπτει παρακάτω.
+    const to = resolveAddress(reader, next.value, sheet);
     if (from === null || to === null) return { kind: 'error', code: '#REF!' };
     return { kind: 'range', from, to };
   }
 
   return from === null ? { kind: 'error', code: '#REF!' } : { kind: 'ref', cell: from };
+}
+
+/**
+ * Μια γραμμένη διεύθυνση → ταυτότητες, **στο πλέγμα του φύλλου της**.
+ *
+ * ⚠️ Το `worksheetId` μπαίνει **μόνο** όταν γράφτηκε ρητά. Ένα άνευ όρων πεδίο θα υλοποιούσε
+ * το σπίτι σε κάθε αναφορά κάθε τύπου — δηλαδή θα άλλαζε το JSON **κάθε υπάρχοντος πίνακα**
+ * χωρίς να προσθέτει πληροφορία, και θα κατέστρεφε την εγγύηση «σχέδιο που μόνο διαβάστηκε
+ * μένει byte-identical» (ADR-833 §5.2).
+ */
+function resolveAddress(
+  reader: Reader,
+  name: string,
+  sheet: WrittenSheet,
+): TableFormulaCellRef | null {
+  if (sheet.kind === 'unknown') return null;
+  const sheetId = sheet.kind === 'named' ? sheet.id : reader.book.homeId;
+  const model = reader.book.sheets.get(sheetId);
+  if (model === undefined) return null;
+
+  const ref = resolveWrittenCellRef(model, name);
+  if (ref === null) return null;
+
+  // 🔴 ADR-833 Φάση 7 — **ΤΟ ΔΙΚΟ ΜΑΣ ΦΥΛΛΟ ΓΡΑΜΜΕΝΟ ΡΗΤΑ ΚΑΝΟΝΙΚΟΠΟΙΕΙΤΑΙ ΣΕ ΑΠΟΥΣΙΑ.**
+  // Το `=Φύλλο1!A1` πληκτρολογημένο **μέσα** στο Φύλλο1 σημαίνει ό,τι και το `=A1`. Το Excel
+  // κάνει ακριβώς την ίδια κανονικοποίηση, και εδώ κερδίζει τρία πράγματα ταυτόχρονα:
+  //
+  //  1. **Το JSON μένει byte-identical** για κάθε τύπο που δεν βγαίνει από το φύλλο του.
+  //  2. Η γραμμή τύπων δεν αποκτά πρόθεμα που ο χρήστης δεν χρειάζεται να δει.
+  //  3. 🔑 **`worksheetId` παρόν ⟺ ΞΕΝΟ φύλλο** — και αυτό το κάνει κατηγόρημα που μπορεί να
+  //     ρωτηθεί **χωρίς βιβλίο**. Πάνω του στηρίζονται η μετακόμιση (`table-formula-remap`)
+  //     και η δομική θεραπεία, που είναι πράξεις **ενός** πλέγματος και οφείλουν να αφήνουν
+  //     τις ξένες αναφορές άθικτες. Χωρίς την κανονικοποίηση, ένα `=Φύλλο1!A1` γραμμένο στο
+  //     Φύλλο1 θα ήταν «ξένο» για εκείνες και θα **έπαυε σιωπηλά** να ακολουθεί τις γραμμές του.
+  if (sheet.kind !== 'named' || sheet.id === reader.book.homeId) return ref;
+  return { ...ref, worksheetId: sheet.id };
 }

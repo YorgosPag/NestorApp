@@ -40,6 +40,7 @@ import type { TableCellFill, TableRangeTransferPlan } from './table-range-transf
 import type { TableCellRangeBounds, TableCellRef } from './table-cell-range';
 import type { TableSortOutcome, TableSortRequest } from './table-sort-types';
 import { compareBySortCriteria, type TableSortKey } from './table-sort-order';
+import type { TableFormulaWorkbook } from './formula/table-formula-workbook';
 import { applyTableRangeTransfer } from './table-range-transfer';
 import { buildMergeIndex, cellKey, getCell, resolveTableModel } from './table-model-helpers';
 import { cellText } from './table-cell-content';
@@ -101,11 +102,12 @@ export function planTableSort(
  * να ελέγξει δύο πράγματα, και μια άρνηση δεν πρέπει να γεννά βήμα undo για το τίποτα.
  */
 export function applyTableSort(
+  book: TableFormulaWorkbook,
   model: PersistedTableModel,
   request: TableSortRequest,
 ): PersistedTableModel {
   const outcome = planTableSort(resolveTableModel(model), request);
-  return outcome.ok ? applyTableRangeTransfer(model, outcome.plan.transfer) : model;
+  return outcome.ok ? applyTableRangeTransfer(book, model, outcome.plan.transfer) : model;
 }
 
 /**

@@ -23,7 +23,6 @@
  * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §9
  */
 
-import type { TableModel } from '../../../types/table';
 import type {
   TableFormula,
   TableFormulaBinaryOp,
@@ -32,9 +31,14 @@ import type {
 } from '../../../types/table-formula';
 import type { TableFormulaGrammar } from '../../../types/table-formula-grammar';
 import { tableColumnLetter, tableRowNumber } from '../table-cell-reference';
-import { formatAbsoluteReference } from './table-formula-absolute';
+import { formatAbsoluteReference, isWrittenAddressShape } from './table-formula-absolute';
+import {
+  gridOfRef,
+  sheetIdOfRef,
+  type TableFormulaWorkbook,
+} from './table-formula-workbook';
 import { drawingFormulaGrammar } from './table-formula-grammar';
-import { FORMULA_PREFIX } from './table-formula-lex';
+import { FORMULA_PREFIX, isBareNameLexeme } from './table-formula-lex';
 import { isLiveCellRef } from './table-formula-ref-scope';
 import { FORMULA_ERROR, isFormulaError, type TableFormulaValue } from './table-formula-value';
 
@@ -73,11 +77,11 @@ const ATOM_PRECEDENCE = Number.POSITIVE_INFINITY;
  * κείμενο. Το test round-trip το απαιτεί και στις δύο.
  */
 export function printTableFormula(
-  model: TableModel,
+  book: TableFormulaWorkbook,
   formula: TableFormula,
   grammar: TableFormulaGrammar = drawingFormulaGrammar(),
 ): string {
-  return FORMULA_PREFIX + printNode(model, formula.root, grammar);
+  return FORMULA_PREFIX + printNode(book, formula.root, grammar);
 }
 
 /**
@@ -122,7 +126,7 @@ function printBoolean(value: boolean): string {
 
 /** Ένας κόμβος ως κείμενο, χωρίς περιτύλιγμα. */
 function printNode(
-  model: TableModel,
+  book: TableFormulaWorkbook,
   node: TableFormulaNode,
   grammar: TableFormulaGrammar,
 ): string {
@@ -134,19 +138,19 @@ function printNode(
     case 'boolean':
       return printBoolean(node.value);
     case 'ref':
-      return printRef(model, node.cell);
+      return printRef(book, node.cell);
     case 'range':
-      return printRange(model, node.from, node.to);
+      return printRange(book, node.from, node.to);
     case 'unary':
-      return node.op + wrap(model, node.operand, UNARY_PRECEDENCE, grammar);
+      return node.op + wrap(book, node.operand, UNARY_PRECEDENCE, grammar);
     case 'binary':
-      return printBinary(model, node, grammar);
+      return printBinary(book, node, grammar);
     case 'call':
       return `${node.name}(${node.args
-        .map((arg) => printNode(model, arg, grammar))
+        .map((arg) => printNode(book, arg, grammar))
         .join(grammar.argumentSeparator)})`;
     case 'group':
-      return `(${printNode(model, node.inner, grammar)})`;
+      return `(${printNode(book, node.inner, grammar)})`;
     case 'error':
       return node.code;
     // 🔴 ADR-765 — **αυτούσιο**, χωρίς κανονικοποίηση. Σε αντίθεση με το `call`, δεν υπάρχει
@@ -187,30 +191,97 @@ function printNumber(value: number, grammar: TableFormulaGrammar): string {
  * Τα δολάρια δεν γράφονται εδώ: τα συνθέτει ο ένας ιδιοκτήτης τους, ώστε η σειρά
  * `$στήλη$γραμμή` να μην υπάρχει ως γνώση σε δύο αρχεία.
  */
-function printRef(model: TableModel, cell: TableFormulaCellRef): string {
+function printRef(
+  book: TableFormulaWorkbook,
+  cell: TableFormulaCellRef,
+  withSheet = true,
+): string {
   // 🔴 ADR-764 — **το ίδιο** κατηγόρημα που ρωτά ο αξιολογητής. Πριν, ο εκτυπωτής έκρινε με
   // δικό του κριτήριο (κενό γράμμα / μηδενικός αριθμός) — σωστό, αλλά **δεύτερος** ορισμός
   // του «υπάρχει». Η μέρα που θα διαφωνούσαν είναι η μέρα που η γραμμή τύπων γράφει `#REF!`
   // ενώ το κελί δείχνει αριθμό.
-  if (!isLiveCellRef(model, cell)) return REF_ERROR;
+  if (!isLiveCellRef(book, cell)) return REF_ERROR;
+  const model = gridOfRef(book, cell);
+  if (model === null) return REF_ERROR;
+
   const letter = tableColumnLetter(model, cell.colId);
   const number = tableRowNumber(model, cell.rowId);
-  return formatAbsoluteReference(letter, String(number), cell);
+  const address = formatAbsoluteReference(letter, String(number), cell);
+  if (!withSheet) return address;
+
+  // 🔴 ADR-833 Φάση 7 — **το `#REF!` του προθέματος καταπίνει ΟΛΟΚΛΗΡΗ την αναφορά.**
+  // Βρέθηκε από μετάλλαξη: η συνένωση έδινε `#REF!A1`, δηλαδή κείμενο που δεν είναι ούτε
+  // σφάλμα ούτε διεύθυνση — και ο αναλυτής δεν το ξαναδιαβάζει. Μια αναφορά της οποίας το
+  // φύλλο δεν έχει όνομα σε **αυτό** το σύνορο δεν είναι «μισή αναφορά»· είναι άγνωστη.
+  const prefix = sheetPrefix(book, cell);
+  return prefix === REF_ERROR ? REF_ERROR : prefix + address;
+}
+
+/**
+ * 🔴 ADR-833 Φάση 7 — **`Φύλλο2!`**, ή κενό όταν η αναφορά ζει στο δικό μας φύλλο.
+ *
+ * ## Το όνομα ΠΑΡΑΓΕΤΑΙ — δεν αποθηκεύτηκε ποτέ
+ * Ο τύπος κρατά **ταυτότητα** (§5.9.1). Το ορατό όνομα το δίνει η ονοματοδοσία **αυτού** του
+ * συνόρου, τη στιγμή της ερώτησης — γι' αυτό μια μετονομασία φύλλου αλλάζει ό,τι γράφει η
+ * γραμμή τύπων **χωρίς κανείς να πειράξει τύπο**, και γι' αυτό ο ίδιος τύπος γράφεται
+ * `=Φύλλο2!A1` σε ελληνικό UI και `=Sheet2!A1` σε αγγλικό. Είναι η **ίδια** πρόταση που
+ * γράφει η κεφαλίδα για το `A1`, ένα επίπεδο πιο έξω.
+ *
+ * ⚠️ Φύλλο που δεν έχει όνομα σε αυτό το σύνορο ⇒ `#REF!` **ολόκληρη η αναφορά**, όχι σκέτη
+ * διεύθυνση: μια διεύθυνση χωρίς το φύλλο της θα διαβαζόταν πίσω ως αναφορά στο **δικό μας**
+ * φύλλο — σιωπηλά, και με αριθμό. Στην πράξη το φύλλο έχει ήδη κοπεί ή διαγραφεί, οπότε το
+ * {@link isLiveCellRef} έχει προλάβει· ο φύλακας μένει γιατί η ονοματοδοσία είναι
+ * **παράμετρος** και ένα σύνορο χωρίς λεξιλόγιο (`NO_WORKSHEET_NAMING`) είναι νόμιμο.
+ */
+function sheetPrefix(book: TableFormulaWorkbook, cell: TableFormulaCellRef): string {
+  const id = sheetIdOfRef(book, cell);
+  if (id === book.homeId) return '';
+  const name = book.naming.nameOf(id);
+  return name === null ? REF_ERROR : `${quoteWorksheetName(name)}!`;
+}
+
+/**
+ * Το όνομα φύλλου όπως μπαίνει σε τύπο: γυμνό όταν γίνεται, σε απόστροφους όταν πρέπει.
+ *
+ * ## Το κριτήριο ΔΕΝ γράφεται εδώ — το ρωτάμε τον λεξικογράφο
+ * «Χωρίς εισαγωγικά» σημαίνει ακριβώς «ο **ίδιος** σαρωτής που θα το ξαναδιαβάσει το βλέπει ως
+ * μία μονάδα» ({@link isBareNameLexeme}). Μια χειρόγραφη λίστα χαρακτήρων εδώ θα ήταν δεύτερος
+ * ορισμός του «τι είναι όνομα» (N.18) — και ο εκτυπωτής θα παρήγαγε κείμενο που ο αναλυτής
+ * απορρίπτει, δηλαδή τύπο που ο χρήστης δεν μπορεί να ξανασώσει.
+ *
+ * ⚠️ Το **σχήμα διεύθυνσης** (`A1`, `$B$2`) παίρνει εισαγωγικά παρόλο που ο **δικός μας**
+ * αναλυτής δεν θα μπερδευόταν (το `!` κρίνεται πριν από κάθε άλλη ερμηνεία). Ο λόγος είναι
+ * **έξω** από εμάς: το ίδιο κείμενο γράφεται και στο `.xlsx`, και το Excel εκεί απαιτεί τα
+ * εισαγωγικά. Ένα βιβλίο που δεν ανοίγει είναι χειρότερο από δύο περιττούς χαρακτήρες.
+ *
+ * Η διπλή απόστροφος είναι η σύμβαση διαφυγής του Excel, ίδια με το `""` του κειμένου.
+ */
+function quoteWorksheetName(name: string): string {
+  if (isBareNameLexeme(name) && !isWrittenAddressShape(name)) return name;
+  return `'${name.replace(/'/gu, "''")}'`;
 }
 
 /**
  * `A1:B5`. Αν **οποιοδήποτε** άκρο έσβησε, ολόκληρο το εύρος γίνεται `#REF!`: ένα εύρος με
  * ένα άκρο άγνωστο δεν είναι «μισό εύρος», είναι άγνωστο εύρος.
  */
-function printRange(model: TableModel, from: TableFormulaCellRef, to: TableFormulaCellRef): string {
-  const start = printRef(model, from);
-  const end = printRef(model, to);
+function printRange(
+  book: TableFormulaWorkbook,
+  from: TableFormulaCellRef,
+  to: TableFormulaCellRef,
+): string {
+  const start = printRef(book, from);
+  // 🔴 ADR-833 Φάση 7 — **το φύλλο γράφεται ΜΙΑ φορά**, στο αριστερό άκρο: `Φύλλο2!A1:B5`.
+  // Έτσι το γράφει το Excel, και έτσι το διαβάζει πίσω ο αναλυτής μας (το δεξί άκρο
+  // **κληρονομεί** το φύλλο του αριστερού). Ένα `Φύλλο2!A1:Φύλλο2!B5` θα ήταν αληθές αλλά
+  // θορυβώδες — και θα έσπαγε τη συμμετρία εκτυπωτή/αναλυτή που απαιτεί το test round-trip.
+  const end = printRef(book, to, false);
   return start === REF_ERROR || end === REF_ERROR ? REF_ERROR : `${start}:${end}`;
 }
 
 /** Δυαδικός κόμβος με τις **ελάχιστες** παρενθέσεις που διατηρούν το δέντρο. */
 function printBinary(
-  model: TableModel,
+  book: TableFormulaWorkbook,
   node: Extract<TableFormulaNode, { kind: 'binary' }>,
   grammar: TableFormulaGrammar,
 ): string {
@@ -218,8 +289,8 @@ function printBinary(
   // Η δύναμη είναι δεξιά-προσεταιριστική, οι υπόλοιποι αριστερά: γι' αυτό η ισοπαλία απαιτεί
   // παρένθεση στο **αντίθετο** σκέλος από τη φορά προσεταιρισμού.
   const tieOnLeft = node.op === '^';
-  const left = wrap(model, node.left, precedence, grammar, tieOnLeft);
-  const right = wrap(model, node.right, precedence, grammar, !tieOnLeft);
+  const left = wrap(book, node.left, precedence, grammar, tieOnLeft);
+  const right = wrap(book, node.right, precedence, grammar, !tieOnLeft);
   return `${left}${node.op}${right}`;
 }
 
@@ -228,13 +299,13 @@ function printBinary(
  * όταν δένει το ίδιο και βρίσκεται στο σκέλος που ο προσεταιρισμός δεν καλύπτει.
  */
 function wrap(
-  model: TableModel,
+  book: TableFormulaWorkbook,
   node: TableFormulaNode,
   parentPrecedence: number,
   grammar: TableFormulaGrammar,
   parenthesizeTie = false,
 ): string {
-  const text = printNode(model, node, grammar);
+  const text = printNode(book, node, grammar);
   const own = precedenceOf(node);
   const needs = own < parentPrecedence || (own === parentPrecedence && parenthesizeTie);
   return needs ? `(${text})` : text;

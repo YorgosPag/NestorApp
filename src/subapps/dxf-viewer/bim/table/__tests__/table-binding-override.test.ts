@@ -47,6 +47,7 @@ import type {
   TableColumn,
   TableRow,
 } from '../../../types/table';
+import { bookOf, commitPendingForTest } from './formula-book-fixture';
 
 const P1: TopoPoint = { x: 1000, y: 2000, z: 3000, code: 'Κ1' };
 const P2: TopoPoint = { x: 4000, y: 5000, z: 6000, code: 'Κ2' };
@@ -70,7 +71,7 @@ function emptyBoundModel(): PersistedTableModel {
 
 /** Γεμισμένος από τα {@link P1}/{@link P2} — η αφετηρία κάθε σεναρίου παρακάτω. */
 function filled(): { model: PersistedTableModel; binding: TableBinding } {
-  const result = refreshTableBinding({ model: emptyBoundModel(), binding: BINDING, context: ctx([P1, P2]) });
+  const result = refreshTableBinding({ book: bookOf(emptyBoundModel()), model: emptyBoundModel(), binding: BINDING, context: ctx([P1, P2]) });
   if (result.status !== 'refreshed') throw new Error('η αφετηρία πρέπει να γεμίζει');
   return { model: result.model, binding: result.binding };
 }
@@ -90,7 +91,7 @@ describe('Δ1 — το δεμένο κελί είναι read-only εξ ορισ�
 
   it('μετά από ρητό ξεκλείδωμα, το κελί γράφεται — ο δεσμός όμως ΔΕΝ σπάει', () => {
     const { model } = filled();
-    const unlocked = { model: commitCellWrites(overrideBoundCell(model, 'r1', 'cX', 9999)) };
+    const unlocked = { model: commitPendingForTest(overrideBoundCell(model, 'r1', 'cX', 9999)) };
     expect(isBoundCellWritable(cellOf(activeTableModel(unlocked), 'r1', 'cX'))).toBe(true);
     expect(cellOf(activeTableModel(unlocked), 'r1', 'cX')?.bound?.sourceValue).toBe(1000);
   });
@@ -112,14 +113,14 @@ describe('classifyBoundCell — τέσσερις ρητές καταστάσει
     expect(classifyBoundCell(undefined)).toBe('unbound');
     expect(classifyBoundCell(cellOf(model, 'r1', 'cX'))).toBe('bound');
 
-    const overridden = commitCellWrites(overrideBoundCell(model, 'r1', 'cX', 9999));
+    const overridden = commitPendingForTest(overrideBoundCell(model, 'r1', 'cX', 9999));
     expect(classifyBoundCell(cellOf(overridden, 'r1', 'cX'))).toBe('overridden');
   });
 
   it('η ΣΥΓΚΡΟΥΣΗ είναι δική της κατάσταση — μόνο η ArchiCAD έχει έστω δύο τεκμηριωμένες', () => {
     const { model, binding } = filled();
-    const overridden = commitCellWrites(overrideBoundCell(model, 'r1', 'cX', 9999));
-    const after = refreshTableBinding({ model: overridden, binding, context: ctx([{ ...P1, x: 1111 }, P2]) });
+    const overridden = commitPendingForTest(overrideBoundCell(model, 'r1', 'cX', 9999));
+    const after = refreshTableBinding({ book: bookOf(overridden), model: overridden, binding, context: ctx([{ ...P1, x: 1111 }, P2]) });
     if (after.status !== 'refreshed') throw new Error('expected refreshed');
     expect(classifyBoundCell(cellOf(after.model, 'r1', 'cX'))).toBe('conflict');
   });
@@ -130,9 +131,9 @@ describe('classifyBoundCell — τέσσερις ρητές καταστάσει
 describe('Δ2 — το refresh ΔΕΝ πατάει τον άνθρωπο', () => {
   it('🔴 refresh πάνω σε παρακαμμένο κελί ΔΕΝ αλλάζει την ανθρώπινη τιμή', () => {
     const { model, binding } = filled();
-    const overridden = commitCellWrites(overrideBoundCell(model, 'r1', 'cX', 9999));
+    const overridden = commitPendingForTest(overrideBoundCell(model, 'r1', 'cX', 9999));
 
-    const after = refreshTableBinding({ model: overridden, binding, context: ctx([{ ...P1, x: 1111 }, P2]) });
+    const after = refreshTableBinding({ book: bookOf(overridden), model: overridden, binding, context: ctx([{ ...P1, x: 1111 }, P2]) });
     if (after.status !== 'refreshed') throw new Error('expected refreshed');
     // Το AutoCAD εδώ θα έγραφε `1111` πάνω από το `9999` και το Excel θα είχε ήδη σβήσει
     // τον δεσμό. Εμείς κρατάμε **και τα δύο**.
@@ -143,10 +144,10 @@ describe('Δ2 — το refresh ΔΕΝ πατάει τον άνθρωπο', () =>
 
   it('🏆 παράκαμψη + πηγή ΑΜΕΤΑΒΛΗΤΗ ⇒ ΚΑΜΙΑ σύγκρουση — η βάση κάνει τη διαφορά', () => {
     const { model, binding } = filled();
-    const overridden = commitCellWrites(overrideBoundCell(model, 'r1', 'cX', 9999));
+    const overridden = commitPendingForTest(overrideBoundCell(model, 'r1', 'cX', 9999));
 
     // Ίδια σημεία: η πηγή δεν κουνήθηκε. Ο άνθρωπος έχει ήδη αποφασίσει — καμία ενόχληση.
-    const after = refreshTableBinding({ model: overridden, binding, context: ctx([P1, P2]) });
+    const after = refreshTableBinding({ book: bookOf(overridden), model: overridden, binding, context: ctx([P1, P2]) });
     if (after.status === 'unresolved' || after.status === 'no-bound-columns') throw new Error('bad status');
     if (after.status === 'refreshed') expect(after.conflicts).toEqual([]);
     expect(classifyBoundCell(cellOf(after.model, 'r1', 'cX'))).toBe('overridden');
@@ -155,8 +156,8 @@ describe('Δ2 — το refresh ΔΕΝ πατάει τον άνθρωπο', () =>
 
   it('τα ΜΗ παρακαμμένα κελιά ενημερώνονται κανονικά στο ίδιο refresh', () => {
     const { model, binding } = filled();
-    const overridden = commitCellWrites(overrideBoundCell(model, 'r1', 'cX', 9999));
-    const after = refreshTableBinding({ model: overridden, binding, context: ctx([P1, P2_MOVED]) });
+    const overridden = commitPendingForTest(overrideBoundCell(model, 'r1', 'cX', 9999));
+    const after = refreshTableBinding({ book: bookOf(overridden), model: overridden, binding, context: ctx([P1, P2_MOVED]) });
     if (after.status !== 'refreshed') throw new Error('expected refreshed');
     // ADR-769 §11 — **μονάδες ΟΘΟΝΗΣ** στο κελί (4500 mm ⇒ 4,5 m)· η **ωμή** τιμή ζει στο
     // `sourceValue`, που είναι η βάση σύγκρισης με την πηγή. Δες `table-binding-cells`.
@@ -167,11 +168,12 @@ describe('Δ2 — το refresh ΔΕΝ πατάει τον άνθρωπο', () =>
 
   it('η σύγκρουση ΔΕΝ σβήνεται από επόμενο refresh — μόνο από άνθρωπο', () => {
     const { model, binding } = filled();
-    const overridden = commitCellWrites(overrideBoundCell(model, 'r1', 'cX', 9999));
-    const conflicted = refreshTableBinding({ model: overridden, binding, context: ctx([{ ...P1, x: 1111 }, P2]) });
+    const overridden = commitPendingForTest(overrideBoundCell(model, 'r1', 'cX', 9999));
+    const conflicted = refreshTableBinding({ book: bookOf(overridden), model: overridden, binding, context: ctx([{ ...P1, x: 1111 }, P2]) });
     if (conflicted.status !== 'refreshed') throw new Error('expected refreshed');
 
     const again = refreshTableBinding({
+      book: bookOf(activeTableModel(conflicted)),
       model: activeTableModel(conflicted), binding: conflicted.binding, context: ctx([{ ...P1, x: 1111 }, P2]),
     });
     // Σιωπηλό σβήσιμο της σύγκρουσης θα ήταν η αντικατάσταση του Δ2, με ένα βήμα καθυστέρηση.
@@ -184,8 +186,8 @@ describe('Δ2 — το refresh ΔΕΝ πατάει τον άνθρωπο', () =>
 describe('«Επαναφορά στην πηγή» — ανά κελί ΚΑΙ συνολικά (Figma per-property + reset all)', () => {
   it('ανά κελί: η τιμή γίνεται ξανά της πηγής και το κελί ξανακλειδώνει', () => {
     const { model } = filled();
-    const overridden = commitCellWrites(overrideBoundCell(model, 'r1', 'cX', 9999));
-    const reset = { model: commitCellWrites(resetBoundCellToSource(overridden, 'r1', 'cX')) };
+    const overridden = commitPendingForTest(overrideBoundCell(model, 'r1', 'cX', 9999));
+    const reset = { model: commitPendingForTest(resetBoundCellToSource(overridden, 'r1', 'cX')) };
     expect(cellOf(reset.model, 'r1', 'cX')?.value).toBe(1000);
     expect(classifyBoundCell(cellOf(reset.model, 'r1', 'cX'))).toBe('bound');
     expect(isBoundCellWritable(cellOf(reset.model, 'r1', 'cX'))).toBe(false);
@@ -193,12 +195,12 @@ describe('«Επαναφορά στην πηγή» — ανά κελί ΚΑΙ σ
 
   it('συνολικά: καθαρίζει ΚΑΘΕ παράκαμψη και ΚΑΘΕ σύγκρουση, τίποτε άλλο', () => {
     const { model, binding } = filled();
-    let m = commitCellWrites(overrideBoundCell(model, 'r1', 'cX', 9999));
-    m = commitCellWrites(overrideBoundCell(m, 'r2', 'cCode', 'χειροκίνητο'));
-    const conflicted = refreshTableBinding({ model: m, binding, context: ctx([{ ...P1, x: 1111 }, P2]) });
+    let m = commitPendingForTest(overrideBoundCell(model, 'r1', 'cX', 9999));
+    m = commitPendingForTest(overrideBoundCell(m, 'r2', 'cCode', 'χειροκίνητο'));
+    const conflicted = refreshTableBinding({ book: bookOf(m), model: m, binding, context: ctx([{ ...P1, x: 1111 }, P2]) });
     if (conflicted.status !== 'refreshed') throw new Error('expected refreshed');
 
-    const reset = { model: commitCellWrites(resetAllBoundCellsToSource(activeTableModel(conflicted))) };
+    const reset = { model: commitPendingForTest(resetAllBoundCellsToSource(activeTableModel(conflicted))) };
     expect(cellOf(reset.model, 'r1', 'cX')?.value).toBe(1111);
     expect(cellOf(reset.model, 'r2', 'cCode')?.value).toBe('Κ2');
     expect(classifyBoundCell(cellOf(reset.model, 'r1', 'cX'))).toBe('bound');
@@ -208,13 +210,13 @@ describe('«Επαναφορά στην πηγή» — ανά κελί ΚΑΙ σ
   it('🔴 συνολική επαναφορά ΧΩΡΙΣ καμία παράκαμψη ⇒ ΤΟ ΙΔΙΟ μοντέλο by-reference', () => {
     // Η τέταρτη εγγύηση του γραφέα (ADR-739 §50), ταξιδεμένη: κανένα βήμα undo για το τίποτα.
     const { model } = filled();
-    expect(commitCellWrites(resetAllBoundCellsToSource(model))).toBe(model);
+    expect(commitPendingForTest(resetAllBoundCellsToSource(model))).toBe(model);
   });
 
   it('«κράτα το δικό μου»: η σύγκρουση λύνεται, η παράκαμψη ΕΠΙΒΙΩΝΕΙ', () => {
     const { model, binding } = filled();
-    const overridden = commitCellWrites(overrideBoundCell(model, 'r1', 'cX', 9999));
-    const conflicted = refreshTableBinding({ model: overridden, binding, context: ctx([{ ...P1, x: 1111 }, P2]) });
+    const overridden = commitPendingForTest(overrideBoundCell(model, 'r1', 'cX', 9999));
+    const conflicted = refreshTableBinding({ book: bookOf(overridden), model: overridden, binding, context: ctx([{ ...P1, x: 1111 }, P2]) });
     if (conflicted.status !== 'refreshed') throw new Error('expected refreshed');
 
     const kept = keepOverrideOverSource(activeTableModel(conflicted), 'r1', 'cX');

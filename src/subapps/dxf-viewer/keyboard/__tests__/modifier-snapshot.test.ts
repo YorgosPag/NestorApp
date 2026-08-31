@@ -108,6 +108,26 @@ describe('Β — αυτο-ίαση: το επόμενο συμβάν λέει τ
     expect(seen).toEqual([{ ctrlKey: false, shiftKey: false }]);
   });
 
+  it('Β5 — 🔴 ΣΥΜΒΑΝ ΧΩΡΙΣ `getModifierState` ΔΕΝ ΡΙΧΝΕΙ ΤΗΝ ΕΦΑΡΜΟΓΗ', () => {
+    // Το `window` capture είναι **ανοιχτή πόρτα**: σκέτο `Event('keydown')` στέλνει
+    // επέκταση, βιβλιοθήκη ή dev overlay — και το `resyncFrom` πετούσε
+    // `TypeError: e.getModifierState is not a function`, ρίχνοντας την οθόνη.
+    CtrlKeyTracker._setForTest(true);
+    expect(() => window.dispatchEvent(new Event('keydown'))).not.toThrow();
+    // …και ο συγχρονισμός **σιωπά**: συμβάν που δεν μπορεί να απαντήσει
+    // δεν γίνεται «όχι» — η μετάβαση παραμένει η αυθεντία.
+    expect(CtrlKeyTracker.getSnapshot()).toBe(true);
+  });
+
+  it('Β6 — το ίδιο από την πλευρά του ποντικιού (`mousemove`/`mousedown`)', () => {
+    // Ο ίδιος ακροατής είναι γραμμένος σε τρία συμβάντα· μια άγκυρα μόνο
+    // στο `keydown` θα άφηνε τις άλλες δύο πόρτες αφύλακτες.
+    ShiftKeyTracker._setForTest(true);
+    expect(() => window.dispatchEvent(new Event('mousemove'))).not.toThrow();
+    expect(() => window.dispatchEvent(new Event('mousedown'))).not.toThrow();
+    expect(ShiftKeyTracker.getSnapshot()).toBe(true);
+  });
+
   it('Β4 — ΜΗ-modifier tracker ΔΕΝ συγχρονίζεται (το `getModifierState("q")` δεν έχει νόημα)', () => {
     QKeyTracker._setForTest(true);
     window.dispatchEvent(new MouseEvent('mousemove', {}));

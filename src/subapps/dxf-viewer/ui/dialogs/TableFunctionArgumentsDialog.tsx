@@ -60,7 +60,8 @@ import { FORMULA_CATALOG } from '../../bim/table/formula/catalog/formula-catalog
 import { filledArgumentCount } from '../../bim/table/formula/catalog/formula-call-text';
 import { functionArgumentsPreview } from '../../bim/table/formula/catalog/formula-argument-preview';
 import { drawingFormulaGrammar } from '../../bim/table/formula/table-formula-grammar';
-import { resolveTableModel } from '../../bim/table/table-model-helpers';
+import { tableEntityFormulaBook } from '../../bim/table/table-worksheet-book';
+import type { TableFormulaWorkbook } from '../../bim/table/formula/table-formula-workbook';
 import { resolveTableById } from '../table-cell-editor/table-entity-lookup';
 import {
   cancelFunctionArgumentsDialog,
@@ -169,7 +170,7 @@ export const TableFunctionArgumentsDialog: React.FC<TableFunctionArgumentsDialog
    */
   const preview = useMemo(
     () => functionArgumentsPreview({
-      model: resolveCursorTableModel(levelManager),
+      book: resolveCursorFormulaBook(levelManager),
       functionName: state.functionName,
       frame: state.frame,
       values: state.values,
@@ -286,11 +287,16 @@ export const TableFunctionArgumentsDialog: React.FC<TableFunctionArgumentsDialog
  * `resolveTableModel` (η μία απομνημονευμένη αποσειριοποίηση, WeakMap). Μια δεύτερη διαδρομή
  * εδώ θα σήμαινε ότι ο διάλογος αποτιμά πάνω σε **άλλο** μοντέλο από αυτό που ζωγραφίζεται.
  */
-function resolveCursorTableModel(levelManager: LevelManagerLike): TableModel | null {
+function resolveCursorFormulaBook(
+  levelManager: LevelManagerLike,
+): TableFormulaWorkbook | null {
   const cursor = getTableCellCursor();
   if (cursor === null) return null;
   const entity = resolveTableById(levelManager, cursor.entityId);
-  return entity ? resolveTableModel(activeTableModel(entity)) : null;
+  // 🔴 ADR-833 Φάση 7 — **βιβλίο, όχι μοντέλο**: ο διάλογος αποτιμά με τον ίδιο αναγνώστη που
+  // αποτιμά η δέσμευση (ADR-764 §8.2), και εκείνος βλέπει όλα τα φύλλα. Ο εντοπισμός μένει ο
+  // ίδιος ΕΝΑΣ (`resolveTableById`)· άλλαξε μόνο τι παραδίδεται.
+  return entity ? tableEntityFormulaBook(entity) : null;
 }
 
 /** Η αποθηκευμένη μεταφρασμένη υπογραφή, ή `''` για τις μη τεκμηριωμένες. */

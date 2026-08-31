@@ -410,8 +410,8 @@ export function useTableRangeMenu(params: UseTableRangeMenuParams): TableRangeMe
             openTableSortDialog({ target: formatTarget(bounds), range: bounds });
             return;
           }
-          applyFormat((model) =>
-            applyTableSort(model, {
+          applyFormat((model, book) =>
+            applyTableSort(book, model, {
               range: bounds,
               criteria: [{ columnIndex: bounds.firstCol, descending: child === 'descending' }],
               hasHeader: false,
@@ -444,7 +444,7 @@ export function useTableRangeMenu(params: UseTableRangeMenuParams): TableRangeMe
           // §6.6 — **η ίδια** ουρά με κάθε άλλη αλλαγή πίνακα: ένα `UpdateEntityCommand`, ένα
           // `Ctrl+Z`. Το `clearTableRange` ξαναϋπολογίζει μόνο του τους τύπους (§50), οπότε
           // ένα `=SUM(...)` πάνω από τα κελιά που άδειασαν δεν μένει με μπαγιάτικο άθροισμα.
-          applyFormat((model) => clearTableRange(model, bounds));
+          applyFormat((model, book) => clearTableRange(book, model, bounds));
         },
       },
       resolveTarget: describeTarget,

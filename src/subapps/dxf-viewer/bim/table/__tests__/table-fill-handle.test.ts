@@ -34,6 +34,7 @@ import {
 } from '../table-indicator-geometry';
 import type { TableCellRangeBounds } from '../table-cell-range';
 import type { TableLayout } from '../table-layout-types';
+import { bookOf } from './formula-book-fixture';
 
 const COLUMNS: TableColumn[] = ['c1', 'c2', 'c3', 'c4', 'c5'].map((id) => ({
   id,
@@ -53,7 +54,7 @@ const base = (): PersistedTableModel =>
 
 /** Γράψε κείμενο/τύπο σε κελί, με δείκτες. */
 function type(model: PersistedTableModel, row: number, col: number, text: string) {
-  return writeCellInput(model, ROWS[row].id, COLUMNS[col].id, text).model;
+  return writeCellInput(bookOf(model),model, ROWS[row].id, COLUMNS[col].id, text).model;
 }
 
 const at = (row: number, col: number) => ({ row, col });
@@ -62,7 +63,7 @@ const rect = (firstRow: number, lastRow: number, firstCol: number, lastCol: numb
 
 /** Ο τύπος **όπως τον βλέπει ο χρήστης** στη γραμμή τύπων. */
 const formulaAt = (model: PersistedTableModel, row: number, col: number) =>
-  cellInputText(model, ROWS[row].id, COLUMNS[col].id);
+  cellInputText(bookOf(model),model, ROWS[row].id, COLUMNS[col].id);
 
 /** Η **τιμή** — η απόδειξη ότι ο επαναϋπολογισμός έτρεξε. */
 const valueAt = (model: PersistedTableModel, row: number, col: number) =>
@@ -380,7 +381,7 @@ describe('🔑 μοτίβο και σειρά', () => {
     let model = type(base(), 0, 0, '10');
     model = type(model, 1, 0, '20');
 
-    const next = applyTableFill(model, rect(0, 1, 0, 0), {
+    const next = applyTableFill(bookOf(model),model, rect(0, 1, 0, 0), {
       direction: 'down',
       bounds: rect(2, 4, 0, 0),
     });
@@ -392,7 +393,7 @@ describe('🔑 μοτίβο και σειρά', () => {
     let model = type(base(), 0, 0, '10');
     model = type(model, 1, 0, '20');
 
-    const next = applyTableFill(
+    const next = applyTableFill(bookOf(model),
       model,
       rect(0, 1, 0, 0),
       { direction: 'down', bounds: rect(2, 4, 0, 0) },
@@ -407,7 +408,7 @@ describe('🔑 μοτίβο και σειρά', () => {
     let model = type(base(), 3, 0, '10');
     model = type(model, 4, 0, '20');
 
-    const next = applyTableFill(
+    const next = applyTableFill(bookOf(model),
       model,
       rect(3, 4, 0, 0),
       { direction: 'up', bounds: rect(0, 2, 0, 0) },
@@ -422,7 +423,7 @@ describe('🔑 μοτίβο και σειρά', () => {
     let model = type(base(), 3, 0, '10');
     model = type(model, 4, 0, '20');
 
-    const next = applyTableFill(model, rect(3, 4, 0, 0), {
+    const next = applyTableFill(bookOf(model),model, rect(3, 4, 0, 0), {
       direction: 'up',
       bounds: rect(0, 2, 0, 0),
     });
@@ -434,7 +435,7 @@ describe('🔑 μοτίβο και σειρά', () => {
   it('🎯 ΤΟ ΑΙΤΗΜΑ, από άκρη σε άκρη: ΙΑΝΟΥΑΡΙΟΣ ⇒ ΦΕΒΡΟΥΑΡΙΟΣ, ΜΑΡΤΙΟΣ, ΑΠΡΙΛΙΟΣ', () => {
     const model = type(base(), 0, 0, 'ΙΑΝΟΥΑΡΙΟΣ');
 
-    const next = applyTableFill(model, rect(0, 0, 0, 0), {
+    const next = applyTableFill(bookOf(model),model, rect(0, 0, 0, 0), {
       direction: 'down',
       bounds: rect(1, 3, 0, 0),
     });
@@ -449,7 +450,7 @@ describe('🔑 μοτίβο και σειρά', () => {
   it('🎯 ΤΟ ΑΙΤΗΜΑ: ΔΕΥΤΕΡΑ ⇒ ΤΡΙΤΗ, ΤΕΤΑΡΤΗ', () => {
     const model = type(base(), 0, 0, 'ΔΕΥΤΕΡΑ');
 
-    const next = applyTableFill(model, rect(0, 0, 0, 0), {
+    const next = applyTableFill(bookOf(model),model, rect(0, 0, 0, 0), {
       direction: 'down',
       bounds: rect(1, 2, 0, 0),
     });
@@ -460,7 +461,7 @@ describe('🔑 μοτίβο και σειρά', () => {
   it('🔴 καθαρό κείμενο εξακολουθεί να ΑΝΤΙΓΡΑΦΕΤΑΙ — η προεπιλογή δεν έγινε επιθετική', () => {
     const model = type(base(), 0, 0, 'Δοκός');
 
-    const next = applyTableFill(model, rect(0, 0, 0, 0), {
+    const next = applyTableFill(bookOf(model),model, rect(0, 0, 0, 0), {
       direction: 'down',
       bounds: rect(1, 2, 0, 0),
     });
@@ -472,12 +473,12 @@ describe('🔑 μοτίβο και σειρά', () => {
     const model = type(base(), 0, 0, '10');
     const bounds = { direction: 'down' as const, bounds: rect(1, 2, 0, 0) };
 
-    expect([1, 2].map((r) => valueAt(applyTableFill(model, rect(0, 0, 0, 0), bounds), r, 0))).toEqual(
+    expect([1, 2].map((r) => valueAt(applyTableFill(bookOf(model),model, rect(0, 0, 0, 0), bounds), r, 0))).toEqual(
       ['10', '10'],
     );
     expect(
       [1, 2].map((r) =>
-        valueAt(applyTableFill(model, rect(0, 0, 0, 0), bounds, 'series'), r, 0),
+        valueAt(applyTableFill(bookOf(model),model, rect(0, 0, 0, 0), bounds, 'series'), r, 0),
       ),
     ).toEqual(['11', '12']);
   });
@@ -487,7 +488,7 @@ describe('🔑 μοτίβο και σειρά', () => {
     let model = type(base(), 0, 0, 'Δοκός');
     model = type(model, 1, 0, 'Δοκός');
 
-    const next = applyTableFill(model, rect(0, 0, 0, 0), {
+    const next = applyTableFill(bookOf(model),model, rect(0, 0, 0, 0), {
       direction: 'down',
       bounds: rect(1, 1, 0, 0),
     });
@@ -497,7 +498,7 @@ describe('🔑 μοτίβο και σειρά', () => {
 
   it('η ΠΗΓΗ μένει ακέραιη', () => {
     const model = type(base(), 0, 0, '10');
-    const next = applyTableFill(model, rect(0, 0, 0, 0), {
+    const next = applyTableFill(bookOf(model),model, rect(0, 0, 0, 0), {
       direction: 'down',
       bounds: rect(1, 2, 0, 0),
     });
@@ -506,7 +507,7 @@ describe('🔑 μοτίβο και σειρά', () => {
 
   it('κενό γέμισμα ⇒ ΤΟ ΙΔΙΟ μοντέλο by-reference (κανένα βήμα undo για το τίποτα)', () => {
     const model = base();
-    expect(applyTableFill(model, rect(0, 0, 0, 0), { direction: 'down', bounds: rect(1, 2, 0, 0) }))
+    expect(applyTableFill(bookOf(model),model, rect(0, 0, 0, 0), { direction: 'down', bounds: rect(1, 2, 0, 0) }))
       .toBe(model);
   });
 });
@@ -522,7 +523,7 @@ describe('🔴 οι τύποι ολισθαίνουν — και το `$` του
     model = type(model, 2, 0, '30');
     model = type(model, 0, 1, '=A1*2');
 
-    const next = applyTableFill(model, rect(0, 0, 1, 1), {
+    const next = applyTableFill(bookOf(model),model, rect(0, 0, 1, 1), {
       direction: 'down',
       bounds: rect(1, 2, 1, 1),
     });
@@ -538,7 +539,7 @@ describe('🔴 οι τύποι ολισθαίνουν — και το `$` του
     model = type(model, 4, 0, '3');
     model = type(model, 0, 1, '=A1*$A$5');
 
-    const next = applyTableFill(model, rect(0, 0, 1, 1), {
+    const next = applyTableFill(bookOf(model),model, rect(0, 0, 1, 1), {
       direction: 'down',
       bounds: rect(1, 1, 1, 1),
     });
@@ -552,7 +553,7 @@ describe('🔴 οι τύποι ολισθαίνουν — και το `$` του
     model = type(model, 0, 1, '20');
     model = type(model, 1, 0, '=A1*2');
 
-    const next = applyTableFill(model, rect(1, 1, 0, 0), {
+    const next = applyTableFill(bookOf(model),model, rect(1, 1, 0, 0), {
       direction: 'right',
       bounds: rect(1, 1, 1, 1),
     });
@@ -565,7 +566,7 @@ describe('🔴 οι τύποι ολισθαίνουν — και το `$` του
     let model = type(base(), 0, 0, '7');
     model = type(model, 0, 1, '=$A1');
 
-    const next = applyTableFill(model, rect(0, 0, 1, 1), {
+    const next = applyTableFill(bookOf(model),model, rect(0, 0, 1, 1), {
       direction: 'right',
       bounds: rect(0, 0, 2, 3),
     });
@@ -578,7 +579,7 @@ describe('🔴 οι τύποι ολισθαίνουν — και το `$` του
     let model = type(base(), 4, 0, '1');
     model = type(model, 0, 1, '=A1');
 
-    const next = applyTableFill(model, rect(0, 0, 1, 1), {
+    const next = applyTableFill(bookOf(model),model, rect(0, 0, 1, 1), {
       direction: 'up',
       bounds: rect(0, 0, 1, 1),
     });

@@ -49,6 +49,7 @@ import { resolveCellOverflow } from '../table-cell-overflow';
 import { resolveTableEdgeSpec } from '../table-edge-resolve';
 import { isFormulaError } from '../formula/table-formula-value';
 import { printTableFormula } from '../formula/table-formula-print';
+import type { TableFormulaWorkbook } from '../formula/table-formula-workbook';
 import type { TableStyle } from '../table-style';
 import { xlsxBorderFor } from './table-border-to-xlsx';
 import { xlsxNumFmtForCellFormat } from './table-format-to-numfmt';
@@ -78,12 +79,12 @@ const HORIZONTAL_BY_LETTER: Readonly<Record<string, ExcelJS.Alignment['horizonta
  * κρατά μόνο το αποτέλεσμα), μετά ο **κωδικός σφάλματος** (γιατί είναι `string` και θα
  * περνούσε για κείμενο), και τέλος η σκέτη τιμή.
  */
-function cellValueFor(resolved: TableResolvedCell, model: TableModel): ExcelJS.CellValue {
+function cellValueFor(resolved: TableResolvedCell, book: TableFormulaWorkbook): ExcelJS.CellValue {
   const cell = resolved.cell;
   if (cell === undefined) return null;
 
   if (cell.kind === 'formula' && cell.formula !== undefined) {
-    const printed = printTableFormula(model, cell.formula, CANONICAL_FORMULA_GRAMMAR);
+    const printed = printTableFormula(book, cell.formula, CANONICAL_FORMULA_GRAMMAR);
     return {
       formula: printed.slice(FORMULA_PREFIX_LENGTH),
       result: resultValueFor(cell.value),
@@ -207,10 +208,15 @@ function borderFor(
 export function writeXlsxCell(
   target: ExcelJS.Cell,
   resolved: TableResolvedCell,
+  book: TableFormulaWorkbook,
   model: TableModel,
   style: TableStyle,
 ): void {
-  target.value = cellValueFor(resolved, model);
+  // 🔴 ADR-833 Φάση 7 — **ο εκτυπωτής ρωτά το σύνορο ΤΟΥ ΑΡΧΕΙΟΥ για τα ονόματα φύλλων**, όχι
+  // την οθόνη: το `.xlsx` δείχνει φύλλα **κατά όνομα** και τα ονόματά του είναι εξυγιασμένα και
+  // μοναδικοποιημένα (`xlsxWorksheetNames`). Ένας τύπος που έγραφε το ορατό όνομα θα παρήγαγε
+  // βιβλίο που **δεν ανοίγει** — ή, χειρότερα, που δείχνει σε λάθος ομώνυμο φύλλο.
+  target.value = cellValueFor(resolved, book);
 
   const numFmt = xlsxNumFmtForCellFormat(
     resolveCellNumberFormat(resolved.overrides, resolved.column.valueType),

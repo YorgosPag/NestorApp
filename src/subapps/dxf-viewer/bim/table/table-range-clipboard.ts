@@ -72,6 +72,8 @@ import {
 // 🔴 ADR-739 Φ.Ζ — ο γραφέας που **καταλαβαίνει** `=`, και ο επαναϋπολογισμός που ακολουθεί.
 // Δες την κεφαλίδα: η επικόλληση έγραφε ωμό κείμενο και δεν ξαναϋπολόγιζε τίποτα.
 import { commitCellWrites, writeCellInput } from './formula/table-formula-engine';
+import { bookWithHome, type TableFormulaWorkbook } from './formula/table-formula-workbook';
+
 import { clipTableCellText } from './table-ooxml-limits';
 import type { TableCellRangeBounds, TableCellRef } from './table-cell-range';
 import { tableRangeCellRefs } from './table-cell-range';
@@ -190,6 +192,7 @@ export interface TablePasteResult {
  * κελί είναι η **αρχή**, όχι το σχήμα.
  */
 export function pasteTsvIntoTable(
+  book: TableFormulaWorkbook,
   persisted: PersistedTableModel,
   activeCell: TableCellRef,
   grid: TsvGrid,
@@ -206,13 +209,13 @@ export function pasteTsvIntoTable(
   const fittedRows = Math.max(Math.min(offeredRows, model.rows.length - start.row), 0);
   const fittedColumns = Math.max(Math.min(offeredColumns, model.columns.length - start.col), 0);
 
-  const written = writeGridCells(persisted, model, start, grid, {
+  const written = writeGridCells(bookWithHome(book, model), persisted, model, start, grid, {
     rows: fittedRows,
     columns: fittedColumns,
   });
 
   return {
-    model: commitCellWrites(written),
+    model: commitCellWrites(bookWithHome(book, model), written),
     offeredRows,
     offeredColumns,
     fittedRows,
@@ -252,6 +255,7 @@ interface TableGridWrite extends PendingCellWrites {
  * να διαδώσει, και ο περιττός κόμβος θα κόστιζε πέρασμα του γράφου για το τίποτα.
  */
 function writeGridCells(
+  book: TableFormulaWorkbook,
   persisted: PersistedTableModel,
   model: TableModel,
   start: { readonly row: number; readonly col: number },
@@ -292,7 +296,7 @@ function writeGridCells(
       // διαβάσει αυτή τη γραμμή.
       const clipped = clipTableCellText(value);
       if (clipped.clippedCharacters > 0) clippedTextCells++;
-      const cellWritten = writeCellInput(next, rowId, colId, clipped.text);
+      const cellWritten = writeCellInput(book, next, rowId, colId, clipped.text);
       if (cellWritten.model === next) continue;
       next = cellWritten.model;
       written.push(...cellWritten.written);
@@ -325,6 +329,7 @@ function writeGridCells(
  * περνά από το ίδιο `asTextCell`.
  */
 export function clearTableRange(
+  book: TableFormulaWorkbook,
   persisted: PersistedTableModel,
   bounds: TableCellRangeBounds,
 ): PersistedTableModel {
@@ -343,7 +348,7 @@ export function clearTableRange(
   // Ο επαναϋπολογισμός δεν είναι πια χωριστό βήμα που πρέπει να θυμηθεί ο καλών: ένα
   // `=SUM(A1:A20)` πάνω από στήλη που μόλις άδειασε **δεν μπορεί** να δείχνει το άθροισμα
   // δεδομένων που δεν υπάρχουν πια, γιατί ο τύπος επιστροφής δεν επιτρέπει να παραλειφθεί.
-  return commitCellWrites(clearPersistedCells(persisted, targets));
+  return commitCellWrites(bookWithHome(book, model), clearPersistedCells(persisted, targets));
 }
 
 /** Πού αρχίζει η επικόλληση, σε δείκτες· `null` για μπαγιάτικο ενεργό κελί. */

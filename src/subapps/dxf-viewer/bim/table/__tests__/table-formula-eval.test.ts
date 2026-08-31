@@ -12,6 +12,7 @@ import { parseTableFormula } from '../formula/table-formula-parse';
 import { CANONICAL_FORMULA_GRAMMAR } from '../../../types/table-formula-grammar';
 import { evaluateTableFormula, type TableFormulaScope } from '../formula/table-formula-eval';
 import { toCellValue } from '../formula/table-formula-value';
+import { bookOf } from './formula-book-fixture';
 
 const COLUMNS: TableColumn[] = ['c1', 'c2'].map((id) => ({
   id,
@@ -34,7 +35,9 @@ const MODEL: TableModel = createTableModel({ columns: COLUMNS, rows: ROWS, cells
 
 /** Ο ίδιος αναγνώστης που δίνει ο επαναϋπολογισμός: κελί που λείπει **είναι** κενό. */
 const SCOPE: TableFormulaScope = {
-  model: MODEL,
+  // 🔴 ADR-833 Φάση 7 — ο αξιολογητής δέχεται **βιβλίο**: μία αναφορά μπορεί να ζει σε άλλο
+  // φύλλο. Εδώ η αλήθεια είναι ότι υπάρχει **ένα** φύλλο, και το λέει το ρητό όνομα.
+  book: bookOf(MODEL),
   valueAt: (ref) => getCell(MODEL, ref.rowId, ref.colId)?.value ?? '',
 };
 
@@ -49,7 +52,7 @@ const SCOPE: TableFormulaScope = {
  * ρητά ότι η **σημασιολογία είναι η ίδια** και στις δύο γραφές.
  */
 function evaluate(text: string): string | number | null {
-  const formula = parseTableFormula(MODEL, text, CANONICAL_FORMULA_GRAMMAR);
+  const formula = parseTableFormula(bookOf(MODEL), text, CANONICAL_FORMULA_GRAMMAR);
   if (formula === null) throw new Error(`Δεν αναλύθηκε: ${text}`);
   return toCellValue(evaluateTableFormula(SCOPE, formula));
 }

@@ -34,6 +34,8 @@
 import type { PersistedTableModel } from '../../../types/table';
 import type { TsvGrid } from '@/lib/spreadsheet/tsv';
 import { buildTableModel, TABLE_FIXED_ROW_COUNT } from '../build-table-entity';
+import { soleWorksheetBook } from '../formula/table-formula-workbook';
+import { resolveTableModel } from '../table-model-helpers';
 import { pasteTsvIntoTable } from '../table-range-clipboard';
 import { applyWorksheetFormat } from './worksheet-format-apply';
 import type { ImportedWorksheetFormat } from './xlsx-worksheet-format';
@@ -108,7 +110,16 @@ export function worksheetGridToModel(
   // Η άγκυρα: το **πρώτο** κελί του πίνακα. Διαβάζεται από το ίδιο το μοντέλο και όχι από
   // σύμβαση ονομασίας (`c0`/`r0`) — ο εργοστασιάρχης είναι ο ιδιοκτήτης των ids, όχι εμείς.
   const anchor = { rowId: empty.rows[0].id, colId: empty.columns[0].id };
-  const pasted = pasteTsvIntoTable(empty, anchor, grid);
+  // 🔴 ADR-833 Φάση 7 — **εδώ πράγματι δεν υπάρχουν άλλα φύλλα**: το πλέγμα γεννιέται τώρα
+  // από το αρχείο και δεν ανήκει ακόμη σε κανένα βιβλίο. Η ρητή κατασκευή το λέει, αντί να
+  // το υπονοεί μια σιωπηλή προεπιλογή — και οι τύποι του `.xlsx` έρχονται ούτως ή άλλως
+  // **ως τιμές** (§5.7), οπότε καμία δια-φυλλική αναφορά δεν περνά από εδώ.
+  const pasted = pasteTsvIntoTable(
+    soleWorksheetBook(resolveTableModel(empty)),
+    empty,
+    anchor,
+    grid,
+  );
 
   return {
     // 🔴 ADR-833 Φάση 6 — **η μορφοποίηση μπαίνει ΜΕΤΑ το κείμενο**, και όχι από ευκολία: το

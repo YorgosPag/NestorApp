@@ -161,7 +161,7 @@ export function useTableMenuClipboard(
       // Αντιγραφή **και μετά** άδειασμα: με την αντίστροφη σειρά το πρόχειρο θα γέμιζε με κενά
       // κελιά. Και μόνο αν η αντιγραφή πέτυχε — αλλιώς θα σβήναμε δεδομένα που δεν μπήκαν
       // πουθενά (μια άρνηση προχείρου δεν επιτρέπεται να γίνει απώλεια).
-      if (await writeRange(bounds)) applyModel((model) => clearTableRange(model, bounds));
+      if (await writeRange(bounds)) applyModel((model, book) => clearTableRange(book, model, bounds));
     },
     [writeRange, applyModel],
   );

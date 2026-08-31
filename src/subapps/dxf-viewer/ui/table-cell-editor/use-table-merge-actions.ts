@@ -87,8 +87,9 @@ export function useTableMergeActions(params: UseTableMergeActionsParams): TableM
         // Το **στυλ** διαβάζεται μία φορά (δεν εξαρτάται από το μοντέλο)· η **στοίχιση** μέσα
         // στον μετασχηματισμό, πάνω στο μοντέλο που όντως θα γραφτεί.
         const style = resolveTableStyle(live);
-        runOnLive((model) =>
+        runOnLive((model, book) =>
           applyTableMergeCommand(
+            book,
             model,
             bounds,
             commandId,

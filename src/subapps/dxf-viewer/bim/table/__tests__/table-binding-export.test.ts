@@ -34,6 +34,7 @@ import type {
   TableColumn,
   TableRow,
 } from '../../../types/table';
+import { bookOf, commitPendingForTest } from './formula-book-fixture';
 
 const P1: TopoPoint = { x: 1000, y: 2000, z: 3000, code: 'Κ1' };
 const P2: TopoPoint = { x: 4000, y: 5000, z: 6000, code: 'Κ2' };
@@ -69,7 +70,7 @@ function tableEntity(model: PersistedTableModel, binding?: TableBinding): TableE
 
 /** Ο ίδιος πίνακας, γεμισμένος — μία φορά ανά σενάριο δεσμού. */
 function filled(): { model: PersistedTableModel; binding: TableBinding } {
-  const result = refreshTableBinding({ model: emptyModel(), binding: BINDING, context: ctx([P1, P2]) });
+  const result = refreshTableBinding({ book: bookOf(emptyModel()), model: emptyModel(), binding: BINDING, context: ctx([P1, P2]) });
   if (result.status !== 'refreshed') throw new Error('η αφετηρία πρέπει να γεμίζει');
   return { model: result.model, binding: result.binding };
 }
@@ -104,7 +105,7 @@ describe('Δ4 — «δεμένο»/«παρακαμμένο»/«μπαγιάτι
 
   it('🔴 ΠΑΡΑΚΑΜΜΕΝΟ κελί δεν αφήνει ίχνος στην εξαγωγή — μόνο η τιμή του', () => {
     const { model, binding } = filled();
-    const overridden = commitCellWrites(overrideBoundCell(model, 'r1', 'cX', 9999));
+    const overridden = commitPendingForTest(overrideBoundCell(model, 'r1', 'cX', 9999));
     const exported = decompose(tableEntity(overridden, binding));
     const plain = decompose(tableEntity(stripBinding(overridden)));
     expect(exported).toEqual(plain);
@@ -168,7 +169,7 @@ describe('assessBoundTablesForExport — ο φραγμός εμφανίζετα�
 
 describe('§9 — «Ctrl+Z μετά από refresh: ΜΙΑ χειρονομία, ΕΝΑ undo»', () => {
   it('η ανανέωση παράγει ΕΝΑ νέο μοντέλο — άρα μία εντολή, ένα βήμα αναίρεσης', () => {
-    const first = refreshTableBinding({ model: emptyModel(), binding: BINDING, context: ctx([P1, P2]) });
+    const first = refreshTableBinding({ book: bookOf(emptyModel()), model: emptyModel(), binding: BINDING, context: ctx([P1, P2]) });
     if (first.status !== 'refreshed') throw new Error('expected refreshed');
     // `buildTableModelCommand` συγκρίνει **ταυτότητα** μοντέλου (`nextModel === activeTableModel(entity)`).
     // Ένα μοντέλο ⇒ μία `UpdateEntityCommand`, ανεξάρτητα από το πλήθος των κελιών που άλλαξαν.
@@ -176,9 +177,9 @@ describe('§9 — «Ctrl+Z μετά από refresh: ΜΙΑ χειρονομία,
   });
 
   it('🔴 ανανέωση ΧΩΡΙΣ αλλαγή ⇒ ίδιο μοντέλο ⇒ ΚΑΝΕΝΑ βήμα undo', () => {
-    const first = refreshTableBinding({ model: emptyModel(), binding: BINDING, context: ctx([P1, P2]) });
+    const first = refreshTableBinding({ book: bookOf(emptyModel()), model: emptyModel(), binding: BINDING, context: ctx([P1, P2]) });
     if (first.status !== 'refreshed') throw new Error('expected refreshed');
-    const again = refreshTableBinding({ model: first.model, binding: first.binding, context: ctx([P1, P2]) });
+    const again = refreshTableBinding({ book: bookOf(first.model), model: first.model, binding: first.binding, context: ctx([P1, P2]) });
     // Το `buildTableModelCommand` επιστρέφει `null` όταν `nextModel === activeTableModel(entity)`: η
     // ταυτότητα by-reference του early cutoff **είναι** ο μηχανισμός που το εγγυάται.
     expect(again.model).toBe(first.model);

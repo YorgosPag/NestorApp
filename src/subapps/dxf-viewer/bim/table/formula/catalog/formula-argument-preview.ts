@@ -31,6 +31,7 @@
  */
 
 import type { TableModel } from '../../../../types/table';
+import type { TableFormulaWorkbook } from '../table-formula-workbook';
 import { previewFormulaValue } from '../table-formula-engine';
 import { FORMULA_PREFIX } from '../table-formula-lex';
 import { printFormulaValue } from '../table-formula-print';
@@ -51,7 +52,14 @@ export interface FunctionArgumentsPreview {
 
 export interface FunctionArgumentsPreviewParams {
   /** `null` όταν ο πίνακας χάθηκε από κάτω (undo, αλλαγή επιπέδου) — τότε όλα είναι `''`. */
-  readonly model: TableModel | null;
+  /**
+   * 🔴 ADR-833 Φάση 7 — ήταν `model` και έγινε **βιβλίο**: η προεπισκόπηση οφείλει να
+   * υπόσχεται **ό,τι ακριβώς** θα έδινε η δέσμευση, και η δέσμευση βλέπει όλα τα φύλλα.
+   * Με σκέτο μοντέλο, ένα `=SUM(Φύλλο2!A1:A5)` θα έδειχνε `#REF!` στον διάλογο και
+   * σωστό αριθμό στο κελί — δηλαδή η ακριβώς αντίστροφη διαφωνία από εκείνη που έκλεισε
+   * ο ADR-764 §8.2 ενοποιώντας τον έναν αναγνώστη.
+   */
+  readonly book: TableFormulaWorkbook | null;
   readonly functionName: string;
   readonly frame: FormulaCallFrame;
   readonly values: readonly string[];
@@ -64,13 +72,13 @@ const NOTHING: FunctionArgumentsPreview = { perArgument: [], call: '', result: '
 export function functionArgumentsPreview(
   params: FunctionArgumentsPreviewParams,
 ): FunctionArgumentsPreview {
-  const { model, functionName, frame, values, separator } = params;
-  if (model === null) return { ...NOTHING, perArgument: values.map(() => '') };
+  const { book, functionName, frame, values, separator } = params;
+  if (book === null) return { ...NOTHING, perArgument: values.map(() => '') };
 
   return {
-    perArgument: values.map((value) => evaluate(model, FORMULA_PREFIX + value)),
-    call: evaluate(model, callText(functionName, values, separator)),
-    result: evaluate(model, buildFormulaCallDraft(frame, values, separator).draft),
+    perArgument: values.map((value) => evaluate(book, FORMULA_PREFIX + value)),
+    call: evaluate(book, callText(functionName, values, separator)),
+    result: evaluate(book, buildFormulaCallDraft(frame, values, separator).draft),
   };
 }
 
@@ -96,7 +104,7 @@ function callText(functionName: string, values: readonly string[], separator: st
  * (`=SUM(A1;`) καταλήγουν και τα δύο στη γκρι οδηγία «τι περιμένω εδώ», που είναι η χρήσιμη
  * πληροφορία εκείνη τη στιγμή.
  */
-function evaluate(model: TableModel, text: string): string {
-  const value = previewFormulaValue(model, text);
+function evaluate(book: TableFormulaWorkbook, text: string): string {
+  const value = previewFormulaValue(book, text);
   return value === null ? '' : printFormulaValue(value);
 }

@@ -62,6 +62,7 @@ import type { TableEntity } from '../../../types/table-entity';
 import type { Point2D } from '../../../rendering/types/Types';
 import { activeTableModel } from '../../../bim/table/table-worksheet-resolve';
 import { tableWorksheetFields } from '../../../bim/table/__tests__/make-table-entity';
+import { bookOf } from '../../../bim/table/__tests__/formula-book-fixture';
 
 const { transform: TRANSFORM, viewport: VIEWPORT } = TABLE_TEST_VIEW;
 
@@ -151,7 +152,7 @@ describe('🔴 ADR-739 §36.9 — το περίγραμμα του ΕΝΕΡΓΟ�
 
   /** Γράψε κείμενο σε κελί **πριν** το mount — το μοντέλο είναι immutable, η οντότητα νέα. */
   function type(row: number, col: number, text: string): void {
-    entity = { ...entity, ...tableWorksheetFields(writeCellInput(activeTableModel(entity), rowId(row), colId(col), text).model) };
+    entity = { ...entity, ...tableWorksheetFields(writeCellInput(bookOf(activeTableModel(entity)),activeTableModel(entity), rowId(row), colId(col), text).model) };
   }
 
   /** 🔴 Ρητό mount, **μετά** το στήσιμο: δύο mounted harness δίνουν πράσινο για λάθος λόγο. */

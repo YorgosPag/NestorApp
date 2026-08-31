@@ -44,14 +44,18 @@ import type { TableFormulaBinaryOp } from '../../../types/table-formula';
 import type { TableFormulaGrammar } from '../../../types/table-formula-grammar';
 
 /**
- * Τα σημεία στίξης της γραμματικής: ομαδοποίηση, χωρισμός ορισμάτων, εύρος.
+ * Τα σημεία στίξης της γραμματικής: ομαδοποίηση, χωρισμός ορισμάτων, εύρος, **φύλλο**.
+ *
+ * 🔴 ADR-833 Φάση 7 — το `!` είναι **σημείο στίξης**, όχι τελεστής: δεν συνδυάζει δύο τιμές,
+ * **προσδιορίζει** μια διεύθυνση (`Φύλλο2!A1`). Ως τελεστής θα έμπαινε σε πίνακα προτεραιότητας
+ * όπου δεν έχει καμία θέση, και το `=1!2` θα γινόταν συντακτικά αποδεκτό.
  *
  * Ο διαχωριστής είναι **ένωση και των δύο** πιθανών χαρακτήρων επειδή ο τύπος περιγράφει τι
  * *μπορεί* να παραχθεί, ενώ η {@link TableFormulaGrammar} αποφασίζει τι *παράγεται* σε κάθε
  * σάρωση. Ένας τύπος ανά γραμματική θα σήμαινε γενικευμένους (`<G>`) καταναλωτές για ένα
  * ερώτημα που κανείς τους δεν κάνει.
  */
-export type TableFormulaPunct = '(' | ')' | ',' | ';' | ':';
+export type TableFormulaPunct = '(' | ')' | ',' | ';' | ':' | '!';
 
 /**
  * Μια λεκτική μονάδα **χωρίς θέση** — ό,τι αναγνωρίζει ένας σαρωτής. Το `name` καλύπτει
@@ -63,6 +67,20 @@ export type TableFormulaLexeme =
   | { readonly kind: 'number'; readonly value: number }
   | { readonly kind: 'text'; readonly value: string }
   | { readonly kind: 'name'; readonly value: string }
+  /**
+   * 🔴 ADR-833 Φάση 7 — **όνομα φύλλου σε απλά εισαγωγικά**: `'Τιμές 2024'`, `'Ο''Νιλ'`.
+   *
+   * ## Γιατί ΔΕΝ γίνεται απλώς `name`
+   * Θα ήταν μια γραμμή λιγότερη και **σιωπηλό σφάλμα τιμής**: ένα φύλλο μπορεί κάλλιστα να
+   * λέγεται `A1`, οπότε το `='A1'` (χωρίς `!`) θα περνούσε από τον `isWrittenAddressShape` και
+   * θα γινόταν **αναφορά στο κελί A1** αντί για σφάλμα. Ο χρήστης θα έβλεπε αριθμό που δεν
+   * ζήτησε. Ως δικό του είδος, το εισαγωγικό όνομα είναι νόμιμο **μόνο** πριν από `!` — και ο
+   * αναλυτής το επιβάλλει.
+   *
+   * ⚠️ Η τιμή είναι **ξεσκαρταρισμένη**: το `''` μέσα στα εισαγωγικά είναι ένα `'`, η ίδια
+   * σύμβαση που έχει ήδη το κυριολεκτικό κειμένου με τα `""` (και η ίδια που γράφει το Excel).
+   */
+  | { readonly kind: 'quotedName'; readonly value: string }
   | { readonly kind: 'op'; readonly value: TableFormulaBinaryOp }
   | { readonly kind: 'punct'; readonly value: TableFormulaPunct };
 
@@ -105,7 +123,7 @@ const ONE_CHAR_OPERATORS = ['^', '*', '/', '+', '-', '&', '=', '<', '>'] as cons
  * τέταρτος είναι ο διαχωριστής, και είναι όλη η διαφορά.
  */
 function punctuationOf(grammar: TableFormulaGrammar): readonly string[] {
-  return ['(', ')', ':', grammar.argumentSeparator];
+  return ['(', ')', ':', '!', grammar.argumentSeparator];
 }
 
 /** True για ψηφίο ή για τη δεκαδική υποδιαστολή **αυτής** της γραμματικής. */
@@ -156,6 +174,16 @@ const NAME_PART = /[\p{L}\p{Nd}_.$]/u;
 const QUOTE = '"';
 
 /**
+ * Το εισαγωγικό **ονόματος φύλλου** — απλή απόστροφος, η σύμβαση του Excel για ονόματα που
+ * δεν είναι απλά (`='Τιμές 2024'!A1`). Διπλή μέσα στο όνομα ⇒ μία κυριολεκτική.
+ *
+ * ⚠️ Δύο **διαφορετικά** εισαγωγικά για δύο **διαφορετικά** πράγματα, ακριβώς όπως στο Excel:
+ * τα `"` περικλείουν **τιμή** κειμένου, τα `'` περικλείουν **όνομα**. Ένα κοινό εισαγωγικό θα
+ * έκανε το `="Φύλλο 2"!A1` να μοιάζει νόμιμο.
+ */
+const NAME_QUOTE = "'";
+
+/**
  * True όταν ο χαρακτήρας μπορεί να **συνεχίσει** ένα `name` ή `number` που ήδη ξεκίνησε.
  *
  * Απαντά σε μία μόνο ερώτηση, και τη ρωτά ο επεξεργαστής (ADR-754): «ο δρομέας κάθεται στη
@@ -173,6 +201,30 @@ export function continuesLexeme(
 ): boolean {
   if (char === undefined) return false;
   return NAME_PART.test(char) || startsNumber(char, grammar);
+}
+
+/**
+ * 🔴 ADR-833 Φάση 7 — **διαβάζεται αυτό το κείμενο πίσω ως ΕΝΑ σκέτο `name`;**
+ *
+ * Τη ρωτά ο εκτυπωτής, και μόνο αυτός: ένα όνομα φύλλου γράφεται **χωρίς** εισαγωγικά ακριβώς
+ * όταν ο **ίδιος** σαρωτής που θα το ξαναδιαβάσει το βλέπει ως μία μονάδα. Ένα `Τιμές 2024`
+ * θα γινόταν **δύο** μονάδες, οπότε το `=Τιμές 2024!A1` δεν θα ήταν καν τύπος.
+ *
+ * ## Γιατί ΕΔΩ και όχι στον εκτυπωτή
+ * Η απάντηση **είναι** τα `NAME_START`/`NAME_PART` αυτού του αρχείου. Μια χειρόγραφη λίστα
+ * χαρακτήρων στον εκτυπωτή θα ήταν **δεύτερος ορισμός του «τι είναι όνομα»** (N.18), που
+ * αποκλίνει την πρώτη μέρα που η γραμματική δεχτεί νέο χαρακτήρα — ακριβώς η κλάση που έκλεισε
+ * ήδη το {@link continuesLexeme}. Και είναι **αυστηρότερο από το Excel** χωρίς κόστος: ένα
+ * ελληνικό όνομα περνά άθικτο (`\p{L}`), ένα με κενό παίρνει εισαγωγικά.
+ *
+ * ⚠️ Το κενό κείμενο απαντά `false`: δεν είναι μονάδα, είναι απουσία.
+ */
+export function isBareNameLexeme(text: string): boolean {
+  if (text.length === 0 || !NAME_START.test(text[0])) return false;
+  for (const char of text) {
+    if (!NAME_PART.test(char)) return false;
+  }
+  return true;
 }
 
 /**
@@ -246,6 +298,7 @@ function scanToken(source: string, at: number, grammar: TableFormulaGrammar): Sc
   if (startsNumber(char, grammar)) return scanNumber(source, at, grammar);
   if (NAME_START.test(char)) return scanName(source, at);
   if (char === QUOTE) return scanText(source, at);
+  if (char === NAME_QUOTE) return scanQuotedName(source, at);
   if (punctuationOf(grammar).includes(char)) {
     return { token: { kind: 'punct', value: char as TableFormulaPunct }, next: at + 1 };
   }
@@ -324,6 +377,33 @@ function scanText(source: string, at: number): Scanned | null {
     end += 1;
   }
   return null; // αλφαριθμητικό που δεν έκλεισε ποτέ
+}
+
+/**
+ * Όνομα φύλλου σε απόστροφους· `''` μέσα του σημαίνει μία απόστροφος (σύμβαση Excel).
+ *
+ * `null` για όνομα που **δεν έκλεισε** — ίδια στάση με το αλφαριθμητικό: ο τύπος δεν είναι
+ * τύπος, μένει κείμενο, και ο χρήστης βλέπει ό,τι πληκτρολόγησε.
+ *
+ * ⚠️ Το **κενό** όνομα (`''`) επιστρέφει κι εκείνο `null`, και όχι κενή μονάδα: κανένα φύλλο
+ * δεν μπορεί να λέγεται «τίποτα» (ο επιλυτής ονόματος δίνει πάντα μη κενό, δες
+ * `worksheetDisplayName`), άρα ένα κενό εισαγωγικό όνομα είναι **σίγουρα** λάθος πληκτρολόγηση
+ * — και η σιωπηλή αποδοχή του θα γεννούσε `#REF!` που ο χρήστης δεν θα μπορούσε να εξηγήσει.
+ */
+function scanQuotedName(source: string, at: number): Scanned | null {
+  let value = '';
+  let end = at + 1;
+  while (end < source.length) {
+    if (source[end] === NAME_QUOTE) {
+      if (source[end + 1] !== NAME_QUOTE) {
+        return value.length === 0 ? null : { token: { kind: 'quotedName', value }, next: end + 1 };
+      }
+      end += 1; // διπλή απόστροφος ⇒ κυριολεκτική
+    }
+    value += source[end];
+    end += 1;
+  }
+  return null; // όνομα που δεν έκλεισε ποτέ
 }
 
 /** Τελεστής — **δύο χαρακτήρες πρώτα**, αλλιώς το `<=` θα διαβαζόταν ως `<` και `=`. */

@@ -32,6 +32,7 @@ import type {
   TableColumn,
   TableRow,
 } from '../../../types/table';
+import { bookOf, commitPendingForTest } from './formula-book-fixture';
 
 const measureText: TableTextMeasurer = (text, heightMm) => text.length * heightMm * 0.6;
 
@@ -172,7 +173,7 @@ describe('🔴 η αποθηκευμένη τιμή δεν αλλάζει ΠΟΤ
     ];
     const rows: TableRow[] = [{ id: 'r1', rowClass: 'data', heightMm: 6 }];
     const base: PersistedTableModel = { columns, rows, cells: [], merges: [] };
-    return commitCellWrites(writeCellInput(base, 'r1', 'cA', '=DATE(2026,8,5)'));
+    return commitPendingForTest(writeCellInput(bookOf(base),base, 'r1', 'cA', '=DATE(2026,8,5)'));
   };
 
   // 🔴 **ΑΝΑΘΕΩΡΗΘΗΚΕ ΑΠΟ ΤΟ ADR-761.** Αυτό το σχόλιο έγραφε ότι ο πίνακας μιλά την
@@ -191,7 +192,7 @@ describe('🔴 η αποθηκευμένη τιμή δεν αλλάζει ΠΟΤ
     expect(layout.cells[0].texts[0]?.text).toBe('05/08/2026');
 
     // (β) η γραμμή τύπων δείχνει το ΠΗΓΑΙΟ
-    expect(cellInputText(model, 'r1', 'cA')).toBe('=DATE(2026;8;5)');
+    expect(cellInputText(bookOf(model),model, 'r1', 'cA')).toBe('=DATE(2026;8;5)');
 
     // (γ) η ΑΠΟΘΗΚΕΥΜΕΝΗ τιμή παραμένει ο ωμός σειριακός
     expect(model.cells[0][2].value).toBe(46239);
@@ -217,7 +218,7 @@ describe('🔴 η αποθηκευμένη τιμή δεν αλλάζει ΠΟΤ
     };
     // Το `A1` δείχνει `0,33`. Ο τύπος που το διαβάζει οφείλει να δει **το ένα τρίτο**, όχι
     // το 0,33 — αλλιώς η μορφοποίηση θα ήταν σφάλμα τιμής (ADR-720), όχι εμφάνισης.
-    const model = commitCellWrites(writeCellInput(base, 'r1', 'cB', '=A1*3'));
+    const model = commitPendingForTest(writeCellInput(bookOf(base),base, 'r1', 'cB', '=A1*3'));
 
     const layout = layoutTable(resolveTableModel(model), STANDARD, { measureText });
     expect(layout.cells[0].texts[0]?.text).toBe('0,33');
@@ -345,7 +346,7 @@ describe('🔴 τύπος που επιστρέφει ημερομηνία δε�
     ];
     const rows: TableRow[] = [{ id: 'r1', rowClass: 'data', heightMm: 6 }];
     const base: PersistedTableModel = { columns, rows, cells: [], merges: [] };
-    return commitCellWrites(writeCellInput(base, 'r1', 'cA', input));
+    return commitPendingForTest(writeCellInput(bookOf(base),base, 'r1', 'cA', input));
   }
 
   const painted = (model: PersistedTableModel): string | undefined =>

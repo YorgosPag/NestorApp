@@ -89,6 +89,7 @@ import type {
   TableModel,
 } from '../../types/table';
 import type { ViewTransform } from '../../rendering/types/Types';
+import { tableEntityFormulaBook } from '../../bim/table/table-worksheet-book';
 import { activeTableModel } from '../../bim/table/table-worksheet-resolve';
 
 /**
@@ -316,7 +317,14 @@ export function commitTableFill(
 ): void {
   const live = writer.liveTable();
   if (live === null) return;
-  const nextModel = applyTableFill(activeTableModel(live), source, target, mode, autoFillListCandidates());
+  const nextModel = applyTableFill(
+    tableEntityFormulaBook(live),
+    activeTableModel(live),
+    source,
+    target,
+    mode,
+    autoFillListCandidates(),
+  );
   writer.commit(live, nextModel);
   selectFilled(source, target, resolveTableModel(activeTableModel(live)));
   setTableFillBadge({

@@ -19,6 +19,7 @@ import type {
   TableRow,
 } from '../../../types/table';
 import { commitCellWrites, writeCellInput } from '../formula/table-formula-engine';
+import { bookOf, commitPendingForTest } from './formula-book-fixture';
 
 const COLUMNS: TableColumn[] = ['c1', 'c2', 'c3', 'c4'].map((id) => ({
   id,
@@ -66,7 +67,7 @@ const BASE: PersistedTableModel = toPersistedTableModel(
 
 /** **Ακριβώς** η ζωντανή αλυσίδα: γράψε στο `D5`, ξαναϋπολόγισε, διάβασε την τιμή. */
 function result(text: string): string | number | null {
-  const written = commitCellWrites(writeCellInput(BASE, 'r5', 'c4', text));
+  const written = commitPendingForTest(writeCellInput(bookOf(BASE),BASE, 'r5', 'c4', text));
   return written.cells.find(([r, c]) => r === 'r5' && c === 'c4')?.[2].value ?? null;
 }
 

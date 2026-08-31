@@ -23,7 +23,6 @@
  * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §9
  */
 
-import type { TableModel } from '../../../types/table';
 import type {
   TableFormula,
   TableFormulaBinaryOp,
@@ -32,6 +31,11 @@ import type {
 } from '../../../types/table-formula';
 import { cellPairIndices } from '../table-cell-order';
 import { isLiveCellRef } from './table-formula-ref-scope';
+import {
+  gridOfRef,
+  sameSheetRefs,
+  type TableFormulaWorkbook,
+} from './table-formula-workbook';
 import { TABLE_FORMULA_FUNCTIONS } from './table-formula-functions';
 import { TABLE_FORMULA_SPECIAL_FORMS } from './table-formula-special-forms';
 import {
@@ -47,9 +51,16 @@ import {
   type TableFormulaValue,
 } from './table-formula-value';
 
-/** Τι χρειάζεται ο αξιολογητής από τον κόσμο έξω από αυτόν. */
+/**
+ * Τι χρειάζεται ο αξιολογητής από τον κόσμο έξω από αυτόν.
+ *
+ * 🔴 ADR-833 Φάση 7 — ήταν `model: TableModel` και έγινε **βιβλίο**. Δεν είναι μετονομασία:
+ * ένα `=Φύλλο2!A1` σημαίνει ότι η ίδια αξιολόγηση αγγίζει **δύο** πλέγματα, και ο αξιολογητής
+ * δεν επιτρέπεται να μαντέψει ποιο. Το «απόν φύλλο ⇒ το σπίτι μου» το απαντά ο ΕΝΑΣ επιλυτής
+ * ({@link gridOfRef}), ποτέ ο κάθε κόμβος μόνος του.
+ */
 export interface TableFormulaScope {
-  readonly model: TableModel;
+  readonly book: TableFormulaWorkbook;
   /** Η τιμή ενός κελιού **τώρα** — κενό αλφαριθμητικό για κελί που δεν υπάρχει. */
   readonly valueAt: (cell: TableFormulaCellRef) => TableFormulaValue;
 }
@@ -208,11 +219,15 @@ function evaluateArgument(scope: TableFormulaScope, node: TableFormulaNode): Tab
   // **`0`** — αριθμός που κανείς δεν μέτρησε (ADR-720), τη στιγμή που η γραμμή τύπων δίπλα
   // του έγραφε `#REF!`. Η κανονική συρρίκνωση του Excel έχει ήδη γίνει πριν φτάσουμε εδώ
   // (`table-formula-structural-heal.ts`): ό,τι μένει νεκρό, είναι πράγματι νεκρό.
-  if (!isLiveCellRef(scope.model, bare.from) || !isLiveCellRef(scope.model, bare.to)) {
+  //
+  // 🔴 ADR-833 Φάση 7 — και **τρίτος** τρόπος να είναι νεκρό ένα άκρο: το φύλλο του να μην
+  // υπάρχει πια. Το `isLiveCellRef` τον καλύπτει ήδη (η ίδια ραφή, ADR-764 §2), οπότε εδώ
+  // δεν προστέθηκε **καμία** γραμμή γι' αυτόν.
+  if (!isLiveCellRef(scope.book, bare.from) || !isLiveCellRef(scope.book, bare.to)) {
     return { kind: 'value', value: FORMULA_ERROR.reference };
   }
 
-  const { cells, rows, cols } = expandRangeShape(scope.model, bare.from, bare.to);
+  const { cells, rows, cols } = expandRangeShape(scope.book, bare.from, bare.to);
   return { kind: 'list', values: cells.map((cell) => scope.valueAt(cell)), rows, cols };
 }
 
@@ -232,11 +247,11 @@ function unwrapGroups(node: TableFormulaNode): TableFormulaNode {
  * επινοηθεί ορθογώνιο που κανείς δεν ζήτησε.
  */
 export function expandRange(
-  model: TableModel,
+  book: TableFormulaWorkbook,
   from: TableFormulaCellRef,
   to: TableFormulaCellRef,
 ): readonly TableFormulaCellRef[] {
-  return expandRangeShape(model, from, to).cells;
+  return expandRangeShape(book, from, to).cells;
 }
 
 /** Το ορθογώνιο **με τις διαστάσεις του** — δες {@link TableFormulaArgument.rows}. */
@@ -253,10 +268,18 @@ export interface ExpandedRange {
  * αλλάξει η κανονικοποίηση των άκρων.
  */
 export function expandRangeShape(
-  model: TableModel,
+  book: TableFormulaWorkbook,
   from: TableFormulaCellRef,
   to: TableFormulaCellRef,
 ): ExpandedRange {
+  // 🔴 ADR-833 Φάση 7 — **ένα εύρος ζει σε ΕΝΑ φύλλο.** Το `Φύλλο2!A1:Φύλλο3!B5` δεν είναι
+  // ορθογώνιο· είναι δύο διευθύνσεις με `:` ανάμεσα, και το Excel το απορρίπτει κι εκείνο.
+  // Ο αναλυτής δεν το παράγει, αλλά ο φύλακας μένει εδώ γιατί εδώ **παράγεται** το ορθογώνιο:
+  // χωρίς αυτόν, μια μελλοντική διαδρομή (επικόλληση, μετατόπιση) που έφτιαχνε ασύμφωνα άκρα
+  // θα ζωγράφιζε ορθογώνιο του **λάθος** φύλλου, σιωπηλά.
+  const model = gridOfRef(book, from);
+  if (model === null || !sameSheetRefs(book, from, to)) return { cells: [], rows: 0, cols: 0 };
+
   // 🔴 ADR-764 / N.18 — **το ΤΕΤΑΡΤΟ δίδυμο**, επιτέλους μετακομισμένο. Οι έξι γραμμές
   // «`indexById` × 2, τέσσερα `get`, δύο φρουροί» είχαν εξαχθεί στο {@link cellPairIndices}
   // ακριβώς επειδή είχαν ήδη γεννηθεί τρεις φορές — αυτή εδώ έμεινε πίσω και το `jscpd` δεν
@@ -269,10 +292,16 @@ export function expandRangeShape(
   const firstCol = Math.min(pair.fromCol, pair.toCol);
   const lastCol = Math.max(pair.fromCol, pair.toCol);
 
+  // ⚠️ Το φύλλο μπαίνει στα παραγόμενα κελιά **μόνο όταν γράφτηκε ρητά**, με την ίδια σύμβαση
+  // παράλειψης που έχει η διεύθυνση (`απόν ⇒ το σπίτι μου`). Ένα άνευ όρων `worksheetId: …`
+  // θα υλοποιούσε το σπίτι σε **κάθε** κελί κάθε ενδοφυλλικού εύρους — δηλαδή θα φούσκωνε τον
+  // αραιό χάρτη κλειδιών του γράφου χωρίς να προσθέτει καμία πληροφορία.
+  const sheet = from.worksheetId === undefined ? {} : { worksheetId: from.worksheetId };
+
   const cells: TableFormulaCellRef[] = [];
   for (let r = firstRow; r <= lastRow; r += 1) {
     for (let c = firstCol; c <= lastCol; c += 1) {
-      cells.push({ rowId: model.rows[r].id, colId: model.columns[c].id });
+      cells.push({ ...sheet, rowId: model.rows[r].id, colId: model.columns[c].id });
     }
   }
   return { cells, rows: lastRow - firstRow + 1, cols: lastCol - firstCol + 1 };

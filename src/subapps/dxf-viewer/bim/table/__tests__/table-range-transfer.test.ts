@@ -32,6 +32,7 @@ import type {
   TableRowId,
 } from '../../../types/table';
 import type { TableBorderSpec, TableEdgeEntry } from '../../../types/table-edges';
+import { bookOf } from './formula-book-fixture';
 
 const COLUMNS: TableColumn[] = ['c0', 'c1', 'c2', 'c3'].map((id) => ({
   id,
@@ -87,7 +88,7 @@ function planOf(model: PersistedTableModel, request: TableRangeTransferRequest):
 }
 
 function transfer(model: PersistedTableModel, request: TableRangeTransferRequest): PersistedTableModel {
-  return applyTableRangeTransfer(model, planOf(model, request));
+  return applyTableRangeTransfer(bookOf(model),model, planOf(model, request));
 }
 
 const move = (source: TableRangeTransferRequest['source'], to: ReturnType<typeof ref>) =>

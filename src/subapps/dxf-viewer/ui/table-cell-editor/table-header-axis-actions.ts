@@ -26,6 +26,7 @@ import {
   canInsertTableColumn,
   canInsertTableRow,
 } from '../../bim/table/table-row-column-ops';
+import type { TableFormulaWorkbook } from '../../bim/table/formula/table-formula-workbook';
 import {
   deleteTableColumns,
   deleteTableRows,
@@ -51,7 +52,15 @@ export interface SurvivorPick {
 
 /** Τι κάνει μια δομική πράξη: η μεταβολή, και πού κάθεται ο δρομέας μετά από αυτήν. */
 export interface AxisActionPlan {
-  readonly mutate: (model: PersistedTableModel) => PersistedTableModel;
+  /**
+   * 🔴 ADR-833 Φάση 7 — δέχεται **και βιβλίο**: μια διαγραφή γραμμής ξαναϋπολογίζει τύπους,
+   * και ένας τύπος μπορεί να διαβάζει άλλο φύλλο. Το βιβλίο το δίνει ο εκτελεστής, που έχει
+   * ήδη τη ζωντανή οντότητα — ο σχεδιαστής μένει καθαρός.
+   */
+  readonly mutate: (
+    model: PersistedTableModel,
+    book: TableFormulaWorkbook,
+  ) => PersistedTableModel;
   readonly pick: SurvivorPick;
 }
 
@@ -67,10 +76,10 @@ export type AxisActionPlanner = (target: TableAxisActionTarget) => AxisActionPla
  */
 export function deleteAxisTarget(target: TableAxisActionTarget): AxisActionPlan {
   return {
-    mutate: (model) =>
+    mutate: (model, book) =>
       target.axis === 'row'
-        ? deleteTableRows(model, target.ids)
-        : deleteTableColumns(model, target.ids),
+        ? deleteTableRows(book, model, target.ids)
+        : deleteTableColumns(book, model, target.ids),
     pick: survivorAt(target.axis, target.firstIndex),
   };
 }
@@ -87,10 +96,10 @@ export function insertAt(side: 'before' | 'after'): AxisActionPlanner {
   return (target) => {
     const at = side === 'before' ? target.firstIndex : target.lastIndex + 1;
     return {
-      mutate: (model) =>
+      mutate: (model, book) =>
         target.axis === 'row'
-          ? insertTableRows(model, at, target.count)
-          : insertTableColumns(model, at, target.count),
+          ? insertTableRows(book, model, at, target.count)
+          : insertTableColumns(book, model, at, target.count),
       pick: survivorAt(target.axis, at),
     };
   };

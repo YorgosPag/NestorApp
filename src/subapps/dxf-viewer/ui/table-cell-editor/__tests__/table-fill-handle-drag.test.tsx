@@ -66,6 +66,7 @@ import type { TableEntity } from '../../../types/table-entity';
 import type { Point2D } from '../../../rendering/types/Types';
 import { activeTableModel } from '../../../bim/table/table-worksheet-resolve';
 import { tableWorksheetFields } from '../../../bim/table/__tests__/make-table-entity';
+import { bookOf } from '../../../bim/table/__tests__/formula-book-fixture';
 
 /**
  * 🔴 §36.9 — **ο harness μετακόμισε** στο `table-pointer-harness.tsx` όταν η μετακίνηση
@@ -156,7 +157,7 @@ describe('🔴 ADR-754 §14.9 — η λαβή συμπλήρωσης, από τ�
 
   /** Γράψε κείμενο σε κελί **πριν** το mount — το μοντέλο είναι immutable, η οντότητα νέα. */
   function type(row: number, col: number, text: string): void {
-    entity = { ...entity, ...tableWorksheetFields(writeCellInput(activeTableModel(entity), rowId(row), colId(col), text).model) };
+    entity = { ...entity, ...tableWorksheetFields(writeCellInput(bookOf(activeTableModel(entity)),activeTableModel(entity), rowId(row), colId(col), text).model) };
   }
 
   /**

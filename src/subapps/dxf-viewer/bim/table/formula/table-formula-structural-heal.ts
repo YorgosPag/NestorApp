@@ -44,9 +44,11 @@
  * @see docs/centralized-systems/reference/adrs/ADR-764-structural-ops-formula-recalc.md §3
  */
 
-import type { PersistedTableModel, TableCellEntry } from '../../../types/table';
+import type { PersistedTableModel } from '../../../types/table';
 import type { TableFormulaCellRef, TableFormulaNode } from '../../../types/table-formula';
+import type { TableWorksheetId } from '../../../types/table-ids';
 import { indexById, type TableAxis } from '../table-cell-order';
+import { mapTableFormulaTrees } from './table-formula-cells';
 import { rewriteTableFormulaRefs } from './table-formula-rewrite';
 
 /** Το σκέλος της αναφοράς που ζει πάνω σε αυτόν τον άξονα. */
@@ -65,13 +67,53 @@ function withAxisId(ref: TableFormulaCellRef, axis: TableAxis, id: string): Tabl
   return axis === 'row' ? { ...ref, rowId: id } : { ...ref, colId: id };
 }
 
-/** Ό,τι χρειάζεται η συρρίκνωση από τον άξονα, υπολογισμένο **μία** φορά ανά πράξη. */
-interface AxisCut {
+/**
+ * Ό,τι χρειάζεται η συρρίκνωση από τον άξονα, υπολογισμένο **μία** φορά ανά πράξη.
+ *
+ * 🔴 ADR-833 Φάση 7 — έγινε **δημόσιο σχέδιο** και απέκτησε το {@link TableAxisCut.refSheet}.
+ * Ο λόγος: μια διαγραφή γραμμής στο Φύλλο1 πρέπει να συρρικνώσει **και** το
+ * `=SUM(Φύλλο1!A1:A4)` που ζει στο **Φύλλο2**. Το πλέγμα που κόπηκε και το μοντέλο του οποίου
+ * οι τύποι ξαναγράφονται **έπαψαν να είναι το ίδιο πράγμα**, οπότε το σχέδιο ταξιδεύει από το
+ * ένα στο άλλο αντί να ξαναϋπολογίζεται — και ο υπολογισμός του (`indexById` πάνω στη σειρά
+ * **πριν**) γίνεται μία φορά για όλα τα φύλλα που το χρειάζονται.
+ */
+export interface TableAxisCut {
   readonly axis: TableAxis;
   /** Η σειρά **πριν** τη διαγραφή — η ίδια ακολουθία που ευρετηριάζει το `order`. */
   readonly items: readonly { readonly id: string }[];
   readonly order: ReadonlyMap<string, number>;
   readonly removedIndex: number;
+  /**
+   * 🔑 **Ποια `worksheetId` κουβαλούν οι αναφορές που αφορά αυτή η κοπή.**
+   *
+   * - `undefined` ⇒ οι αναφορές **του ίδιου** του κομμένου φύλλου (ο αναλυτής κανονικοποιεί
+   *   το ρητό δικό μας φύλλο σε απουσία — δες `table-formula-parse.ts`).
+   * - ταυτότητα ⇒ οι αναφορές **ξένων** φύλλων προς το κομμένο.
+   *
+   * Χωρίς αυτό, η θεραπεία θα δούλευε πάνω στο **ζεύγος ταυτοτήτων μόνο** και θα συρρίκνωνε
+   * εύρη που δείχνουν σε **άλλο** φύλλο: κάθε φύλλο ξεκινά από τον ίδιο κατασκευαστή, άρα
+   * `r0`/`c0` υπάρχουν παντού και θα ταίριαζαν κατά λάθος.
+   */
+  readonly refSheet: TableWorksheetId | undefined;
+}
+
+/**
+ * Το σχέδιο μιας κοπής, υπολογισμένο από το πλέγμα **ΠΡΙΝ** — ή `null` όταν η ταυτότητα δεν
+ * ήταν ποτέ εκεί.
+ *
+ * Δες την κεφαλίδα για το γιατί «πριν» και όχι «μετά»: ο επιζών γείτονας είναι γνώσιμος **μόνο
+ * όσο η σβησμένη ταυτότητα βρίσκεται ακόμη στη σειρά**.
+ */
+export function planTableAxisCut(
+  items: readonly { readonly id: string }[],
+  axis: TableAxis,
+  removedId: string,
+  refSheet: TableWorksheetId | undefined,
+): TableAxisCut | null {
+  const order = indexById(items);
+  const removedIndex = order.get(removedId);
+  if (removedIndex === undefined) return null;
+  return { axis, items, order, removedIndex, refSheet };
 }
 
 /**
@@ -83,8 +125,13 @@ interface AxisCut {
  */
 function shrinkRange(
   node: Extract<TableFormulaNode, { kind: 'range' }>,
-  cut: AxisCut,
+  cut: TableAxisCut,
 ): TableFormulaNode {
+  // 🔴 ADR-833 Φάση 7 — **ρωτά ΠΡΩΤΑ αν το εύρος δείχνει στο κομμένο φύλλο.** Οι δείκτες από
+  // κάτω δεν ξέρουν από φύλλα: θα έβρισκαν το `r0` ενός **άλλου** φύλλου και θα το
+  // συρρίκνωναν σιωπηλά. Αρκεί να ρωτηθεί **ένα** άκρο — ο αναλυτής δεν παράγει ποτέ εύρος
+  // με άκρα σε δύο φύλλα (`sameSheetRefs`).
+  if (node.from.worksheetId !== cut.refSheet) return node;
   const fromIndex = cut.order.get(axisIdOf(node.from, cut.axis));
   const toIndex = cut.order.get(axisIdOf(node.to, cut.axis));
   // Άκρο που έχει ήδη σβηστεί σε προηγούμενη πράξη: δεν το «διορθώνουμε» μαντεύοντας —
@@ -128,23 +175,33 @@ export function healTableFormulaRefsOnDelete(
   axis: TableAxis,
   removedId: string,
 ): PersistedTableModel {
-  const items: readonly { readonly id: string }[] = axis === 'row' ? model.rows : model.columns;
-  const order = indexById(items);
-  const removedIndex = order.get(removedId);
-  if (removedIndex === undefined) return model;
+  // Το κομμένο πλέγμα **είναι** αυτό το μοντέλο, άρα οι αναφορές που αφορά είναι οι δικές του:
+  // `refSheet: undefined`. Η ξένη περίπτωση περνά από το {@link healTableFormulaRefs} με
+  // σχέδιο φτιαγμένο **μία** φορά — δες `table-worksheet-formulas.ts`.
+  const cut = planTableAxisCut(
+    axis === 'row' ? model.rows : model.columns,
+    axis,
+    removedId,
+    undefined,
+  );
+  return cut === null ? model : healTableFormulaRefs(model, cut);
+}
 
-  const cut: AxisCut = { axis, items, order, removedIndex };
-  let changed = false;
-  const cells: readonly TableCellEntry[] = model.cells.map((entry) => {
-    const [rowId, colId, cell] = entry;
-    if (cell.kind !== 'formula' || cell.formula === undefined) return entry;
-    const root = rewriteTableFormulaRefs(cell.formula.root, (leaf) =>
-      leaf.kind === 'range' ? shrinkRange(leaf, cut) : leaf,
-    );
-    if (root === cell.formula.root) return entry;
-    changed = true;
-    return [rowId, colId, { ...cell, formula: { ...cell.formula, root } }] as TableCellEntry;
-  });
-
-  return changed ? { ...model, cells } : model;
+/**
+ * 🔴 ADR-833 Φάση 7 — **η ίδια θεραπεία, σε ΟΠΟΙΟΔΗΠΟΤΕ μοντέλο**: τα εύρη που δείχνουν στο
+ * κομμένο φύλλο συρρικνώνονται, όπου κι αν ζουν οι τύποι τους.
+ *
+ * Το `model` **δεν** είναι απαραίτητα το φύλλο που κόπηκε: ένα `=SUM(Φύλλο1!A1:A4)` γραμμένο
+ * στο Φύλλο2 έχει **ακριβώς** την ίδια ανάγκη με ένα `=SUM(A1:A4)` γραμμένο στο Φύλλο1, και
+ * το Excel τα συρρικνώνει και τα δύο. Η διαφορά ζει **μόνο** στο
+ * {@link TableAxisCut.refSheet}, δηλαδή σε δεδομένο — όχι σε δεύτερη συνάρτηση.
+ */
+export function healTableFormulaRefs(
+  model: PersistedTableModel,
+  cut: TableAxisCut,
+): PersistedTableModel {
+  // 🔴 N.18 — ίδιος βρόχος με τη μετακόμιση, **ένα** σπίτι: δες `table-formula-cells.ts`.
+  return mapTableFormulaTrees(model, (root) =>
+    rewriteTableFormulaRefs(root, (leaf) => (leaf.kind === 'range' ? shrinkRange(leaf, cut) : leaf)),
+  );
 }

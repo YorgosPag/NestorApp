@@ -44,9 +44,10 @@
  * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §36
  */
 
-import type { CellKey, PersistedTableModel, TableCellEntry } from '../../../types/table';
+import type { CellKey, PersistedTableModel } from '../../../types/table';
 import type { TableFormulaCellRef, TableFormulaNode } from '../../../types/table-formula';
 import { cellKey } from '../table-model-helpers';
+import { mapTableFormulaTrees } from './table-formula-cells';
 import { rewriteTableFormulaRefs } from './table-formula-rewrite';
 
 /**
@@ -74,17 +75,10 @@ export function remapTableFormulaRefs(
 ): PersistedTableModel {
   if (moved.size === 0) return model;
 
-  let changed = false;
-  const cells: readonly TableCellEntry[] = model.cells.map((entry) => {
-    const [rowId, colId, cell] = entry;
-    if (cell.kind !== 'formula' || cell.formula === undefined) return entry;
-    const root = remapNode(cell.formula.root, moved);
-    if (root === cell.formula.root) return entry;
-    changed = true;
-    return [rowId, colId, { ...cell, formula: { ...cell.formula, root } }] as TableCellEntry;
-  });
-
-  return changed ? { ...model, cells } : model;
+  // 🔴 N.18 — ο βρόχος «πέρασε τα κελιά τύπου, κράτα ταυτότητα» ζει σε **ένα** σπίτι: το
+  // `jscpd` τον μέτρησε ως κλώνο με τη δομική θεραπεία (8 γρ. / 60 tokens). Εδώ μένει **μόνο**
+  // η σημασιολογία της μετακόμισης, που είναι και το μόνο που διαφέρει.
+  return mapTableFormulaTrees(model, (root) => remapNode(root, moved));
 }
 
 /**
@@ -120,8 +114,26 @@ function remapRef(
   node: Extract<TableFormulaNode, { kind: 'ref' }>,
   moved: TableFormulaRefRelocation,
 ): TableFormulaNode {
+  if (isForeignRef(node.cell)) return node;
   const next = moved.get(cellKey(node.cell.rowId, node.cell.colId));
   return next === undefined ? node : { kind: 'ref', cell: { ...node.cell, ...next } };
+}
+
+/**
+ * 🔴 ADR-833 Φάση 7 — **δείχνει αυτή η αναφορά σε ΑΛΛΟ φύλλο;**
+ *
+ * Η μετακόμιση είναι πράξη **ενός** πλέγματος: η απεικόνιση «ποιο πήγε πού» φτιάχτηκε από τα
+ * κελιά **αυτού** του φύλλου, και τα κλειδιά της είναι σκέτα `rowId+colId`. Μια αναφορά προς
+ * το Φύλλο2 έχει **τυχαία** το ίδιο ζεύγος ταυτοτήτων (κάθε φύλλο ξεκινά από τον ίδιο
+ * κατασκευαστή, άρα `r0`/`c0` υπάρχουν παντού — ADR-833 §5.2) και θα ταίριαζε **κατά λάθος**:
+ * μια μετακίνηση περιοχής στο Φύλλο1 θα μετακινούσε σιωπηλά και τις αναφορές **προς** το
+ * Φύλλο2. Αριθμός που μοιάζει σωστός και δεν είναι — ακριβώς η κλάση του ADR-720.
+ *
+ * 🔑 Το κατηγόρημα δεν χρειάζεται βιβλίο επειδή ο **αναλυτής κανονικοποιεί**: `worksheetId`
+ * παρόν σημαίνει **πάντα** ξένο φύλλο (δες `resolveAddress` στο `table-formula-parse.ts`).
+ */
+function isForeignRef(cell: TableFormulaCellRef): boolean {
+  return cell.worksheetId !== undefined;
 }
 
 /**
@@ -142,6 +154,9 @@ function remapRange(
   node: Extract<TableFormulaNode, { kind: 'range' }>,
   moved: TableFormulaRefRelocation,
 ): TableFormulaNode {
+  // Αρκεί **ένα** ξένο άκρο: ένα εύρος με άκρα σε δύο φύλλα δεν παράγεται από τον αναλυτή, και
+  // ένα ξένο εύρος δεν αφορά καθόλου αυτή τη μετακόμιση. Δες {@link isForeignRef}.
+  if (isForeignRef(node.from) || isForeignRef(node.to)) return node;
   const from = moved.get(cellKey(node.from.rowId, node.from.colId));
   const to = moved.get(cellKey(node.to.rowId, node.to.colId));
   if (from === undefined || to === undefined) return node;

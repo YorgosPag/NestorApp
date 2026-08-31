@@ -22,11 +22,9 @@ import type {
   CellKey,
   PersistedTableModel,
   TableColumnId,
-  TableModel,
   TableRowId,
 } from '../../../types/table';
 import type { TableFormula } from '../../../types/table-formula';
-import type { ScheduleCellValue } from '../../schedule/types';
 import type { PendingCellWrites } from '../table-cell-content';
 import {
   cellKey,
@@ -41,7 +39,13 @@ import { readCellRefValue } from './table-formula-ref-scope';
 import { alternateFormulaGrammar, drawingFormulaGrammar } from './table-formula-grammar';
 import { isFormulaInput, parseTableFormula } from './table-formula-parse';
 import { printTableFormula } from './table-formula-print';
-import { evaluateTableFormulas } from './table-formula-recalc';
+import {
+  evaluateWorkbookFormulas,
+  type WorkbookCellAddress,
+  type WorkbookFormulaResults,
+} from './table-formula-recalc';
+import { withRecalculatedValues } from './table-formula-cells';
+import { bookWithHome, type TableFormulaWorkbook } from './table-formula-workbook';
 import type { TableFormulaValue } from './table-formula-value';
 
 /**
@@ -51,12 +55,23 @@ import type { TableFormulaValue } from './table-formula-value';
  * άλλη υλοποίηση (δοκιμαστική διπλή, ή αυριανή βιβλιοθήκη) χωρίς να αλλάξει τύπο.
  */
 export interface TableFormulaEngine {
-  evaluate(model: TableModel, changed: readonly CellKey[]): ReadonlyMap<CellKey, ScheduleCellValue>;
+  /**
+   * 🔴 ADR-833 Φάση 7 — ήταν `evaluate(model, changed)` **αυτούσιο** από το ADR-739 §9.2 και
+   * έμεινε άθικτο επί τρία ADR. Η Φάση 7 το κάνει **βιβλίο**, γιατί ένας τύπος που διαβάζει
+   * άλλο φύλλο δεν χωρά σε καμία εκδοχή του παλιού: ο γράφος **δεν έχει τον κόμβο**.
+   *
+   * Ο λόγος 1 του §9.2 (**αναστρεψιμότητα**) επιβιώνει ακέραιος: ο υπόλοιπος πίνακας
+   * εξακολουθεί να ξέρει **μόνο** αυτή τη γραμμή, ό,τι κι αν κάνει από κάτω.
+   */
+  evaluate(
+    book: TableFormulaWorkbook,
+    changed: readonly WorkbookCellAddress[],
+  ): WorkbookFormulaResults;
 }
 
 /** Η υλοποίηση της Φ.Ζ: δικός μας αναλυτής, δικός μας γράφος, μηδέν εξάρτηση. */
 export const tableFormulaEngine: TableFormulaEngine = {
-  evaluate: evaluateTableFormulas,
+  evaluate: evaluateWorkbookFormulas,
 };
 
 /**
@@ -74,6 +89,7 @@ export const tableFormulaEngine: TableFormulaEngine = {
  * υπολόγιζε το καθένα μόνο του, το πρώτο θα διάβαζε κελιά που δεν έχουν γραφτεί ακόμα.
  */
 export function writeCellInput(
+  book: TableFormulaWorkbook,
   model: PersistedTableModel,
   rowId: TableRowId,
   colId: TableColumnId,
@@ -106,7 +122,10 @@ export function writeCellInput(
 
   if (!isFormulaInput(text)) return setPersistedCellText(model, rowId, colId, text);
 
-  const formula = parseWithFallback(resolveTableModel(model), text);
+  // 🔴 ADR-833 Φάση 7 — **η ίδια η πόρτα εγκαθιστά το ζωντανό πλέγμα** στο βιβλίο. Ο καλών δεν
+  // μπορεί να δώσει βιβλίο που διαφωνεί με το μοντέλο που γράφεται, γιατί δεν του ζητείται να
+  // το συγχρονίσει: η συνέπεια είναι **δομική**, όχι σύμβαση που θυμάται ο καθένας.
+  const formula = parseWithFallback(bookWithHome(book, resolveTableModel(model)), text);
   return formula === null
     ? setPersistedCellText(model, rowId, colId, text)
     : setPersistedCellFormula(model, rowId, colId, formula);
@@ -134,11 +153,11 @@ export function writeCellInput(
  * {@link cellInputText} στη γραμματική του σχεδίου. Ακριβώς όπως το Excel ξαναγράφει τους
  * τύπους σου όταν αλλάξεις το List Separator των Windows.
  */
-function parseWithFallback(model: TableModel, text: string): TableFormula | null {
+function parseWithFallback(book: TableFormulaWorkbook, text: string): TableFormula | null {
   const grammar = drawingFormulaGrammar();
-  const primary = parseTableFormula(model, text, grammar);
+  const primary = parseTableFormula(book, text, grammar);
   if (primary !== null) return primary;
-  return parseTableFormula(model, text, alternateFormulaGrammar(grammar));
+  return parseTableFormula(book, text, alternateFormulaGrammar(grammar));
 }
 
 /**
@@ -172,15 +191,18 @@ function parseWithFallback(model: TableModel, text: string): TableFormula | null
  * χρήστης πληκτρολογεί, όχι σφάλμα: ο καλών δεν δείχνει τίποτα και ξαναρωτά στον επόμενο
  * χαρακτήρα.
  */
-export function previewFormulaValue(model: TableModel, text: string): TableFormulaValue | null {
+export function previewFormulaValue(
+  book: TableFormulaWorkbook,
+  text: string,
+): TableFormulaValue | null {
   if (!isFormulaInput(text)) return null;
-  const formula = parseWithFallback(model, text);
+  const formula = parseWithFallback(book, text);
   if (formula === null) return null;
   // 🔴 ADR-764 — **ο ίδιος** αναγνώστης με τον επαναϋπολογισμό, όχι ο ίδιος **κανόνας**
   // γραμμένος δεύτερη φορά. Ήταν κυριολεκτικά η ίδια γραμμή σε δύο αρχεία· από τη στιγμή που
   // η μία απέκτησε τη διάκριση «κενό vs δεν υπάρχει», η άλλη θα υποσχόταν στον διάλογο
   // αριθμό εκεί όπου η δέσμευση δίνει `#REF!`.
-  return evaluateTableFormula({ model, valueAt: (ref) => readCellRefValue(model, ref) }, formula);
+  return evaluateTableFormula({ book, valueAt: (ref) => readCellRefValue(book, ref) }, formula);
 }
 
 /**
@@ -200,9 +222,13 @@ export function previewFormulaValue(model: TableModel, text: string): TableFormu
  * Κανένα κελί δεν άλλαξε ⇒ **το ίδιο** μοντέλο by-reference: καμία εντολή, κανένα βήμα undo
  * για το τίποτα. Ο γράφος δεν ανοίγεται καν — δεν υπάρχει τίποτα να διαδοθεί.
  */
-export function commitCellWrites(pending: PendingCellWrites): PersistedTableModel {
+export function commitCellWrites(
+  book: TableFormulaWorkbook,
+  pending: PendingCellWrites,
+): PersistedTableModel {
   if (pending.written.length === 0) return pending.model;
   return recalculateTableModel(
+    book,
     pending.model,
     pending.written.map((target) => cellKey(target.rowId, target.colId)),
   );
@@ -221,13 +247,14 @@ export function commitCellWrites(pending: PendingCellWrites): PersistedTableMode
  * και δεν περνά ποτέ από εδώ — όπως ακριβώς σε Excel, Sheets και AutoCAD.
  */
 export function cellInputText(
+  book: TableFormulaWorkbook,
   model: PersistedTableModel,
   rowId: TableRowId,
   colId: TableColumnId,
 ): string {
   const cell = model.cells.find(([r, c]) => r === rowId && c === colId)?.[2];
   if (cell?.kind === 'formula' && cell.formula !== undefined) {
-    return printTableFormula(resolveTableModel(model), cell.formula);
+    return printTableFormula(bookWithHome(book, resolveTableModel(model)), cell.formula);
   }
   return getPersistedCellText(model, rowId, colId);
 }
@@ -237,22 +264,25 @@ export function cellInputText(
  * ή το ίδιο by-reference όταν καμία τιμή δεν άλλαξε.
  */
 export function recalculateTableModel(
+  book: TableFormulaWorkbook,
   model: PersistedTableModel,
   changed: readonly CellKey[],
 ): PersistedTableModel {
-  const results = tableFormulaEngine.evaluate(resolveTableModel(model), changed);
-  if (results.size === 0) return model;
-
-  let touched = false;
-  const cells = model.cells.map((entry) => {
-    const [rowId, colId, cell] = entry;
-    const next = results.get(cellKey(rowId, colId));
-    if (next === undefined || next === cell.value) return entry;
-    touched = true;
-    return [rowId, colId, { ...cell, value: next }] as const;
-  });
-
-  return touched ? { ...model, cells } : model;
+  const home = bookWithHome(book, resolveTableModel(model));
+  const results = tableFormulaEngine.evaluate(
+    home,
+    changed.map((key) => ({ worksheetId: home.homeId, key })),
+  );
+  // 🔴 ADR-833 Φάση 7 — **εδώ γράφεται ΜΟΝΟ το σπίτι**, και είναι σκόπιμο: ο τύπος επιστροφής
+  // είναι **ένα** μοντέλο, άρα δεν έχει πού να βάλει τα αποτελέσματα των άλλων φύλλων. Εκείνα
+  // τα γράφει η **πύλη του βιβλίου** (`table-worksheet-recalc.ts`), το ένα σημείο όπου ένα
+  // μοντέλο γίνεται βιβλίο. Δύο εμβέλειες, δύο τύποι επιστροφής — και ο καθένας **χρεώνει**
+  // τη δική του, όπως απαιτεί το ADR-764 §47.5.
+  const mine = results.get(home.homeId);
+  if (mine === undefined || mine.size === 0) return model;
+  // 🔴 N.18 — η γραφή των τιμών **με εγγύηση ταυτότητας** ζει σε ένα σπίτι: το `jscpd` τη
+  // μέτρησε ως κλώνο με την πύλη του βιβλίου (33 γρ. / 66 tokens).
+  return withRecalculatedValues(model, mine);
 }
 
 /**
@@ -278,10 +308,13 @@ export function recalculateTableModel(
  * ακέραιη: όσα κλειδιά κι αν δοθούν, νέο αντικείμενο γεννιέται **μόνο** αν κάποια τιμή όντως
  * άλλαξε.
  */
-export function recalculateAllTableFormulas(model: PersistedTableModel): PersistedTableModel {
+export function recalculateAllTableFormulas(
+  book: TableFormulaWorkbook,
+  model: PersistedTableModel,
+): PersistedTableModel {
   const changed: CellKey[] = [];
   for (const [rowId, colId, cell] of model.cells) {
     if (cell.kind === 'formula' && cell.formula !== undefined) changed.push(cellKey(rowId, colId));
   }
-  return changed.length === 0 ? model : recalculateTableModel(model, changed);
+  return changed.length === 0 ? model : recalculateTableModel(book, model, changed);
 }

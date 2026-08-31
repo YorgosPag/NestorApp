@@ -54,16 +54,26 @@
  */
 
 import type { PersistedTableModel, TableBinding, TableColumnId, TableRowId } from './table';
+import type { TableWorksheetId } from './table-ids';
 
 /**
  * Σταθερή ταυτότητα φύλλου εργασίας — **branded**, με το ίδιο ιδίωμα και τον ίδιο λόγο με το
- * `CellKey` (`types/table-ids.ts`): η **μόνη** νόμιμη πηγή είναι το {@link tableWorksheetId},
- * ώστε να μην μπορεί να μπει γυμνό string που έτυχε να είναι `entityId` ή `rowId`.
+ * `CellKey`: η **μόνη** νόμιμη πηγή είναι το {@link tableWorksheetId}, ώστε να μην μπορεί να
+ * μπει γυμνό string που έτυχε να είναι `entityId` ή `rowId`.
+ *
+ * 🔴 **ADR-833 Φάση 7 — ο ΤΥΠΟΣ ζει πλέον στο `types/table-ids.ts`** και εδώ **επανεξάγεται**.
+ * Ο λόγος είναι ο κύκλος που η Φάση 7 γέννησε: η διεύθυνση ενός τύπου απέκτησε φύλλο, άρα το
+ * `types/table-formula.ts` χρειάζεται αυτή την ταυτότητα — και το `types/table.ts` εισάγει ήδη
+ * το `table-formula`, ενώ αυτό εδώ εισάγει το `table`. Δες την κεφαλίδα του `table-ids.ts`:
+ * είναι **κατά λέξη** ο κύκλος που εκείνο το αρχείο υπάρχει για να κόβει (ADR-750 §6.1).
+ *
+ * 🔑 Μετακόμισε **μόνο ο τύπος**. Η βεβαίωση και η πρώτη ταυτότητα μένουν εδώ, γιατί το
+ * `table-ids.ts` είναι **μηδέν runtime** — ίδιος διαχωρισμός με το `CellKey`/`cellKey`.
  *
  * ⚠️ Επιβιώνει ακέραιη το JSON round-trip: το `JsonSafe` δοκιμάζει τα **πρωτόγονα πρώτα**,
  * ακριβώς για να μη θεωρηθεί ένα branded string αντικείμενο (δες `types/json-safe-entity.ts`).
  */
-export type TableWorksheetId = string & { readonly __tableWorksheetIdBrand: unique symbol };
+export type { TableWorksheetId };
 
 /**
  * Η **μόνη** νόμιμη πηγή ταυτότητας φύλλου. Καθαρή, μηδέν παρενέργειες.

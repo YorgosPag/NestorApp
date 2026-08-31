@@ -31,6 +31,8 @@ import type { TableEntity } from '../../types/table-entity';
 import type { ICommand, ISceneManager } from '../../core/commands';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
 import { activeTableModel } from '../../bim/table/table-worksheet-resolve';
+import { tableEntityFormulaBook } from '../../bim/table/table-worksheet-book';
+import type { TableFormulaWorkbook } from '../../bim/table/formula/table-formula-workbook';
 import type { PersistedTableModel } from '../../types/table';
 
 export interface UseTableModelCommitParams {
@@ -130,7 +132,9 @@ export function useTableModelCommit(params: UseTableModelCommitParams): TableMod
  */
 export function useLiveTableMutation(
   params: UseTableModelCommitParams & { readonly liveTable: () => TableEntity | null },
-): (mutate: (model: PersistedTableModel) => PersistedTableModel) => void {
+): (
+  mutate: (model: PersistedTableModel, book: TableFormulaWorkbook) => PersistedTableModel,
+) => void {
   const { levelManager, execute, liveTable } = params;
   const commitModel = useTableModelCommit({ levelManager, execute });
 
@@ -138,7 +142,12 @@ export function useLiveTableMutation(
     (mutate) => {
       const live = liveTable();
       if (!live) return;
-      const nextModel = mutate(activeTableModel(live));
+      // 🔴 ADR-833 Φάση 7 — **το βιβλίο φτάνει στον μετασχηματιστή, δεν το ψάχνει εκείνος.**
+      // Έξι μετασχηματιστές περνούν από εδώ (καθάρισμα, συγχώνευση, μορφοποίηση, περιγράμματα,
+      // κεφαλίδες, γραμμή εργαλείων) και ο καθένας τους θα χρειαζόταν το ίδιο `liveTable()` που
+      // αυτό το hook **έχει ήδη**. Ένα βιβλίο ανά καλούντα θα ήταν έξι ευκαιρίες να δοθεί
+      // βιβλίο άλλου πίνακα — δηλαδή δια-φυλλικές αναφορές που γίνονται σιωπηλά `#REF!`.
+      const nextModel = mutate(activeTableModel(live), tableEntityFormulaBook(live));
       if (nextModel === activeTableModel(live)) return;
       commitModel(live, nextModel);
     },

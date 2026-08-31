@@ -11,6 +11,7 @@
 import { nextPrefixedId } from '../table-next-id';
 import { buildTableModel } from '../build-table-entity';
 import { insertTableColumn, insertTableRow } from '../table-row-column-ops';
+import { bookOf } from './formula-book-fixture';
 
 describe('nextPrefixedId — μέγιστο+1, με βρόχο επαλήθευσης', () => {
   it('δίνει το πρώτο όνομα σε κενό σύνολο', () => {
@@ -83,7 +84,7 @@ describe('nextPrefixedId — μέγιστο+1, με βρόχο επαλήθευ�
 describe('nextAxisId — ο πρώτος καταναλωτής, αμετάβλητος μετά την εξαγωγή', () => {
   it('η εισαγωγή στήλης δίνει το επόμενο `c<N>`, όχι διπλότυπο', () => {
     const model = buildTableModel({ columnCount: 3, dataRowCount: 1 });
-    const next = insertTableColumn(model, 0);
+    const next = insertTableColumn(bookOf(model),model, 0);
     const ids = next.columns.map((column) => column.id);
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids).toContain('c3');
@@ -91,7 +92,7 @@ describe('nextAxisId — ο πρώτος καταναλωτής, αμετάβλ�
 
   it('η εισαγωγή γραμμής δίνει το επόμενο `r<N>`, όχι διπλότυπο', () => {
     const model = buildTableModel({ columnCount: 2, dataRowCount: 3 });
-    const next = insertTableRow(model, 2);
+    const next = insertTableRow(bookOf(model),model, 2);
     const ids = next.rows.map((row) => row.id);
     expect(new Set(ids).size).toBe(ids.length);
   });

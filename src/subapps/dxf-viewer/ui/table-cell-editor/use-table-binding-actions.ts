@@ -54,6 +54,7 @@ import type { TableBindingRefreshResult } from '../../bim/table/binding/table-bi
 import type { TableFreshness } from '../../bim/table/binding/table-binding-state';
 import type { TableEntity } from '../../types/table-entity';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
+import { tableEntityFormulaBook } from '../../bim/table/table-worksheet-book';
 import { activeTableBinding, activeTableModel } from '../../bim/table/table-worksheet-resolve';
 
 /** Ό,τι μπορεί να ζητήσει μια επιφάνεια για τον **δεσμό** ενός πίνακα. */
@@ -119,6 +120,7 @@ export function useTableBindingActions(
     // Τα δεδομένα διαβάζονται **τη στιγμή του πατήματος** από τη ΜΙΑ γέφυρα — όχι από
     // στιγμιότυπο render, που θα ήταν μπαγιάτικο ακριβώς όταν έχει σημασία.
     const result = refreshTableBinding({
+      book: tableEntityFormulaBook(live),
       model: activeTableModel(live),
       binding,
       context: readTableSourceContext(),

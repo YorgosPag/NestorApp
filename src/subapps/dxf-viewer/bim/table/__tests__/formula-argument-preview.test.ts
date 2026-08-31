@@ -12,6 +12,7 @@ import { functionArgumentsPreview } from '../formula/catalog/formula-argument-pr
 import { createTableModel } from '../table-model-helpers';
 import { drawingFormulaGrammar } from '../formula/table-formula-grammar';
 import type { TableCellEntry, TableColumn, TableModel, TableRow } from '../../../types/table';
+import { bookOf } from './formula-book-fixture';
 
 const COLUMNS: TableColumn[] = ['c1', 'c2'].map((id) => ({
   id,
@@ -38,7 +39,9 @@ function previewOf(
   frame = { prefix: `=${functionName}(`, suffix: ')' },
   model: TableModel | null = MODEL,
 ) {
-  return functionArgumentsPreview({ model, functionName, frame, values, separator: SEPARATOR });
+  // 🔴 ADR-833 Φάση 7 — η προεπισκόπηση αποτιμά με **βιβλίο**, όπως και η δέσμευση.
+  const book = model === null ? null : bookOf(model);
+  return functionArgumentsPreview({ book, functionName, frame, values, separator: SEPARATOR });
 }
 
 describe('ΤΟ ΚΥΚΛΩΜΑ — δείχνω κελί, βλέπω τιμή', () => {

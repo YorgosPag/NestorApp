@@ -60,6 +60,7 @@ import type { TableNumberFormatState } from '../components/table-format-toolbar/
 import type { TableToggleFormatKey } from '../components/table-format-toolbar/TableFormatSection';
 import type { TableBindingPort } from './use-table-binding-actions';
 import type { TableFormatPainterPort } from './use-table-format-painter-actions';
+import type { TableFormulaWorkbook } from '../../bim/table/formula/table-formula-workbook';
 import type { FormatTarget } from './table-format-snapshot';
 import type { TableMenuClipboardActions } from './use-table-menu-clipboard';
 import type { TableBorderActions } from './use-table-border-actions';
@@ -256,6 +257,17 @@ export interface TableFormatPort {
     target: FormatTarget,
     model: PersistedTableModel,
   ) => TableFormatCommitPlan;
+  /**
+   * 🔴 ADR-833 Φάση 7 — **ΤΟ ΒΙΒΛΙΟ ΤΟΥ ΣΤΟΧΟΥ**, ή `null` όταν ο πίνακας δεν ζει πια.
+   *
+   * Ο {@link FormatTarget} κουβαλά **στιγμιότυπο** μοντέλου (Α22: «ο στόχος ταξιδεύει με το
+   * αίτημα»), και αυτό είναι σωστό για την **κρίση**. Το βιβλίο όμως πρέπει να είναι
+   * **ζωντανό**: ένας αιωρούμενος διάλογος ζει πέρα από τη συνεδρία που τον γέννησε, και τα
+   * άλλα φύλλα μπορεί να έχουν αλλάξει στο μεταξύ. Γι' αυτό δεν μπαίνει στον στόχο αλλά
+   * ρωτιέται εδώ, με τον **ίδιο** εντοπισμό (`resolveTableById`) που κάνει ήδη το
+   * {@link TableFormatPort.commitModel} — ADR-040 κανόνας #2: *getter τη στιγμή της κλήσης*.
+   */
+  readonly formulaBookFor: (target: FormatTarget) => TableFormulaWorkbook | null;
   /**
    * 🔴 ADR-739 §60 — **η ΑΦΕΤΗΡΙΑ ενός προσχεδίου**: μοντέλο + στυλ + στόχος + χρώματα σχεδίου,
    * σε μία ερώτηση, **τη στιγμή που ο χρήστης πατά** (ADR-040 κανόνας #2).

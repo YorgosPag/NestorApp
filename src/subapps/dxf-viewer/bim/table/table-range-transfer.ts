@@ -69,6 +69,8 @@ import { buildTableEdgeIndex, setTableEdges } from './table-edge-model';
 import { TABLE_BORDER_EVERY_SIDE, tableRangeSideEdges } from './table-range-border-ops';
 import { cellKey, getCell, resolveTableModel } from './table-model-helpers';
 import { recalculateTableModel } from './formula/table-formula-engine';
+import { bookWithHome, type TableFormulaWorkbook } from './formula/table-formula-workbook';
+
 import {
   offsetTableFormula,
   tableFormulaOffsetBetween,
@@ -88,12 +90,13 @@ import { remapTableFormulaRefs, type TableFormulaRefRelocation } from './formula
  * 5. **επαναϋπολογισμός** — τελευταίος, γιατί διαβάζει ό,τι έγραψαν και τα τέσσερα.
  */
 export function applyTableRangeTransfer(
+  book: TableFormulaWorkbook,
   model: PersistedTableModel,
   plan: TableRangeTransferPlan,
 ): PersistedTableModel {
   const withContent = transferContent(model, plan).model;
   const withFormulas = plan.intent.copy
-    ? offsetCopiedFormulas(withContent, plan).model
+    ? offsetCopiedFormulas(book, withContent, plan).model
     : remapTableFormulaRefs(withContent, relocationOf(plan));
   const withMerges = transferMerges(withFormulas, plan);
   const withEdges = transferEdges(model, withMerges, plan);
@@ -103,7 +106,7 @@ export function applyTableRangeTransfer(
   // κανένας γραφέας κελιών δεν είδε. Το {@link touchedKeys} μένει γι' αυτόν ακριβώς τον λόγο
   // — και είναι ούτως ή άλλως **υπερσύνολο** των δύο εκκρεμοτήτων, αφού και οι δύο γράφουν
   // μόνο μέσα στα `plan.fills`.
-  return recalculateTableModel(withEdges, touchedKeys(plan));
+  return recalculateTableModel(book, withEdges, touchedKeys(plan));
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -317,10 +320,14 @@ function relocationOf(plan: TableRangeTransferPlan): TableFormulaRefRelocation {
  * ⚠️ Η **πηγή** δεν αγγίζεται ποτέ: στην αντιγραφή δεν είναι στόχος κανενός γεμίσματος.
  */
 function offsetCopiedFormulas(
+  book: TableFormulaWorkbook,
   model: PersistedTableModel,
   plan: TableRangeTransferPlan,
 ): PendingCellWrites {
   const resolved = resolveTableModel(model);
+  // Το σπίτι είναι το πλέγμα στο οποίο προσγειώνονται τα αντίγραφα· οι δια-φυλλικές αναφορές
+  // κρατούν το δικό τους φύλλο και ολισθαίνουν πάνω στο **δικό εκείνου** πλέγμα.
+  const here = bookWithHome(book, resolved);
   const shifts = new Map<string, TableFormulaOffset>();
   for (const fill of plan.fills) {
     if (fill.from === null) continue;
@@ -336,7 +343,7 @@ function offsetCopiedFormulas(
       update: (existing, target) => {
         const offset = shifts.get(refKey(target));
         if (offset === undefined || existing.formula === undefined) return null;
-        const formula = offsetTableFormula(resolved, existing.formula, offset);
+        const formula = offsetTableFormula(here, existing.formula, offset);
         return formula === existing.formula ? null : { ...existing, formula };
       },
       // Κελί χωρίς εγγραφή δεν έχει τύπο να ολισθήσει. Η **γέννηση** εγγραφών έγινε ήδη

@@ -45,6 +45,7 @@ import type {
 } from '../../../types/table';
 import type { TableCellRangeBounds } from '../table-cell-range';
 import { activeTableModel } from '../table-worksheet-resolve';
+import { bookOf, commitPendingForTest } from './formula-book-fixture';
 
 const measureText: TableTextMeasurer = (text, heightMm) => text.length * heightMm * 0.6;
 const ANCHOR_ALIGN: TableCellAlign = 'TL';
@@ -81,7 +82,7 @@ function withSum(): PersistedTableModel {
     ['r3', 'cA', { kind: 'text', value: 30 }],
   ];
   const base: PersistedTableModel = { columns, rows, cells, merges: [] };
-  return commitCellWrites(writeCellInput(base, 'r1', 'cB', '=SUM(A1:A3)'));
+  return commitPendingForTest(writeCellInput(bookOf(base),base, 'r1', 'cB', '=SUM(A1:A3)'));
 }
 
 /** Η **αποθηκευμένη** τιμή του μάρτυρα — αυτό που ταξιδεύει σε εξαγωγή και DXF. */
@@ -135,7 +136,7 @@ describe('PendingCellWrites — η πέμπτη εγγύηση του γραφέ
 
   it('`commitCellWrites` σε κενή εκκρεμότητα επιστρέφει το ΙΔΙΟ μοντέλο by-reference', () => {
     const model = withSum();
-    expect(commitCellWrites({ model, written: [] })).toBe(model);
+    expect(commitPendingForTest({ model, written: [] })).toBe(model);
   });
 });
 
@@ -153,14 +154,14 @@ describe('κάθε γραφέας περιεχομένου διαδίδει στ
   it('🔴 §47.5 — ΣΥΓΧΩΝΕΥΣΗ που καταπίνει το `A2` ξαναϋπολογίζει το άθροισμα', () => {
     // Η συγχώνευση `A1:A2` αδειάζει το καλυμμένο `A2` (το περιεχόμενο ζει στην άγκυρα).
     // Πριν το §50 το άθροισμα έμενε **60** — δεδομένα που δεν υπάρχουν πια, και στο DXF.
-    const merged = applyTableMergeCommand(withSum(), rangeOf(0, 1, 0, 0), 'merge', ANCHOR_ALIGN);
+    const merged = applyTableMergeCommand(bookOf(withSum()),withSum(), rangeOf(0, 1, 0, 0), 'merge', ANCHOR_ALIGN);
 
     expect(sumValue(merged)).toBe(40); // 10 + 30 — το 20 καταπόθηκε
     expect(sumOnCanvas(merged)).toBe('40');
   });
 
   it('ΣΥΓΧΩΝΕΥΣΗ ΚΑΙ ΚΕΝΤΡΑΡΙΣΜΑ — ο επαναϋπολογισμός δεν χάνεται από το δεύτερο πέρασμα', () => {
-    const merged = applyTableMergeCommand(
+    const merged = applyTableMergeCommand(bookOf(withSum()),
       withSum(),
       rangeOf(0, 1, 0, 0),
       'mergeCenter',
@@ -174,18 +175,18 @@ describe('κάθε γραφέας περιεχομένου διαδίδει στ
   });
 
   it('`Delete` σε περιοχή ξαναϋπολογίζει', () => {
-    const cleared = clearTableRange(withSum(), rangeOf(1, 2, 0, 0)); // A2:A3
+    const cleared = clearTableRange(bookOf(withSum()),withSum(), rangeOf(1, 2, 0, 0)); // A2:A3
     expect(sumValue(cleared)).toBe(10);
   });
 
   it('ΕΠΙΚΟΛΛΗΣΗ ξαναϋπολογίζει', () => {
-    const pasted = pasteTsvIntoTable(withSum(), at('r1', 'cA'), [['5'], ['5'], ['5']]);
+    const pasted = pasteTsvIntoTable(bookOf(withSum()),withSum(), at('r1', 'cA'), [['5'], ['5'], ['5']]);
     expect(sumValue(activeTableModel(pasted))).toBe(15);
   });
 
   it('ΓΕΜΙΣΜΑ λαβής ξαναϋπολογίζει', () => {
     // Το `A1` (=10) γεμίζει προς τα κάτω μέχρι το `A3`: το άθροισμα γίνεται 30.
-    const filled = applyTableFill(withSum(), rangeOf(0, 0, 0, 0), {
+    const filled = applyTableFill(bookOf(withSum()),withSum(), rangeOf(0, 0, 0, 0), {
       bounds: rangeOf(0, 2, 0, 0),
       axis: 'row',
     });
@@ -193,7 +194,7 @@ describe('κάθε γραφέας περιεχομένου διαδίδει στ
   });
 
   it('ΜΟΝΗ ΠΛΗΚΤΡΟΛΟΓΗΣΗ ξαναϋπολογίζει', () => {
-    const typed = commitCellWrites(writeCellInput(withSum(), 'r2', 'cA', '0'));
+    const typed = commitPendingForTest(writeCellInput(bookOf(withSum()),withSum(), 'r2', 'cA', '0'));
     expect(sumValue(typed)).toBe(40);
   });
 });

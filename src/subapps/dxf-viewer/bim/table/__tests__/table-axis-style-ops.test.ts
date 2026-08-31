@@ -24,6 +24,7 @@ import {
 import { insertTableColumn, insertTableRow } from '../table-row-column-ops';
 import { hierarchicalTableStyle } from './hierarchical-table-style-fixture';
 import type { PersistedTableModel } from '../../../types/table';
+import { bookOf } from './formula-book-fixture';
 
 // ── Εργαλεία ────────────────────────────────────────────────────────────────
 
@@ -141,19 +142,19 @@ describe('clearAxisStyleOverride — η επιστροφή στο στυλ', () 
 describe('🔴 κληρονομιά σε εισαγωγή — ο λόγος ύπαρξης του μοντέλου επιπέδου άξονα', () => {
   it('νέα στήλη κληρονομεί το `styleOverride` της στήλης-αναφοράς', () => {
     const bold = setAxisStyleField(model(), 'column', 'c1', 'bold', true);
-    const grown = insertTableColumn(bold, 1);
+    const grown = insertTableColumn(bookOf(bold),bold, 1);
     expect(grown.columns[1].styleOverride).toEqual({ bold: true });
   });
 
   it('νέα γραμμή κληρονομεί το `styleOverride` της γραμμής-αναφοράς', () => {
     const italic = setAxisStyleField(model(), 'row', 'r1', 'italic', true);
-    const grown = insertTableRow(italic, 1);
+    const grown = insertTableRow(bookOf(italic),italic, 1);
     expect(grown.rows[1].styleOverride).toEqual({ italic: true });
   });
 
   it('άβαφη αναφορά ⇒ άβαφο νέο στοιχείο (καμία εφεύρεση παράκαμψης)', () => {
-    expect(insertTableColumn(model(), 0).columns[0].styleOverride).toBeUndefined();
-    expect(insertTableRow(model(), 1).rows[1].styleOverride).toBeUndefined();
+    expect(insertTableColumn(bookOf(model()),model(), 0).columns[0].styleOverride).toBeUndefined();
+    expect(insertTableRow(bookOf(model()),model(), 1).rows[1].styleOverride).toBeUndefined();
   });
 
   it('η νέα γραμμή ΔΕΝ κληρονομεί το `borderTop` (δείκτης συνόλων, όχι μορφοποίηση)', () => {
@@ -163,7 +164,7 @@ describe('🔴 κληρονομιά σε εισαγωγή — ο λόγος ύπ
         r.id === 'r2' ? { ...r, borderTop: { visible: true, colorHex: '#000', widthMm: 0.5 } } : r,
       ),
     };
-    expect(insertTableRow(withTotalRule, 2).rows[2].borderTop).toBeUndefined();
+    expect(insertTableRow(bookOf(withTotalRule),withTotalRule, 2).rows[2].borderTop).toBeUndefined();
   });
 });
 

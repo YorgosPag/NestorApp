@@ -79,6 +79,7 @@ import { buildTableModel } from './build-table-entity';
 import { nextPrefixedId } from './table-next-id';
 import { worksheetLandingCursor } from './table-worksheet-activate';
 import { activeTableModel, activeWorksheet, resolveWorksheets } from './table-worksheet-resolve';
+import { worksheetsAfterRemoval } from './table-worksheet-formulas';
 import type { TableCursorPosition } from './table-cell-navigation';
 import type { PersistedTableModel } from '../../types/table';
 import type { TableEntity } from '../../types/table-entity';
@@ -290,7 +291,14 @@ export function planWorksheetDelete(
   const index = worksheets.findIndex((sheet) => sheet.id === targetId);
   if (index < 0) return null;
 
-  const remaining = worksheets.filter((_, at) => at !== index);
+  // 🔴 ADR-833 Φάση 7 — **ο επαναϋπολογισμός μπαίνει ΜΕΣΑ στην πράξη**, με τον ίδιο λόγο που ο
+  // ADR-764 έβαλε εκεί τον μετασχηματισμό: μία εντολή, **ένα** `Ctrl+Z`. Ένα `=Φύλλο2!A1` σε
+  // άλλο φύλλο έχει από τώρα `#REF!` και στη **γραμμή τύπων** και στην **αποθηκευμένη τιμή** —
+  // χωρίς αυτό, η δεύτερη θα έμενε ο παλιός αριθμός και θα ταξίδευε σε DXF και σε `.xlsx`.
+  const remaining = worksheetsAfterRemoval(
+    worksheets.filter((_, at) => at !== index),
+    [targetId],
+  );
   // Το φύλλο που φεύγει δεν είναι απαραίτητα το ενεργό: δεξί κλικ σε **άλλη** καρτέλα είναι η
   // συνηθισμένη περίπτωση, και τότε δεν αλλάζει τίποτα στο ενεργό.
   if (activeWorksheet(entity).id !== targetId) return { worksheets: remaining };

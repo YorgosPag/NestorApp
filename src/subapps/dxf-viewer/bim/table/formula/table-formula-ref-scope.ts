@@ -22,24 +22,42 @@
  * ευκαιρίες να διαφωνήσουν — και η μέρα που θα διαφωνούσαν θα ήταν η μέρα που η γραμμή τύπων
  * γράφει `#REF!` ενώ το κελί δείχνει αριθμό, δηλαδή **το σφάλμα του ADR-764 ανάποδα**.
  *
+ * ## 🔴 ADR-833 Φάση 7 — Η ΙΔΙΑ ΕΡΩΤΗΣΗ, ΜΕ ΕΝΑ ΦΥΛΛΟ ΠΑΡΑΠΑΝΩ
+ * Με το `=Φύλλο2!A1` το «υπάρχει;» απέκτησε **τρίτο** τρόπο να είναι ψευδές: όχι μόνο σβησμένη
+ * γραμμή και σβησμένη στήλη, αλλά **σβησμένο φύλλο**. Μέχρι τη Φάση 6 η διαγραφή φύλλου δεν
+ * ορφάνευε τίποτα (§5.5) — από τη Φάση 7 ορφανεύει.
+ *
+ * 🔑 Το τρίτο σκέλος μπήκε **εδώ και μόνο εδώ**, στην υπάρχουσα ραφή. Ένας δεύτερος έλεγχος
+ * «ζει αυτό το φύλλο;» αλλού θα ξαναγεννούσε **ακριβώς** τη διαφωνία που αυτό το αρχείο
+ * υπάρχει για να κλείσει: τη μέρα που θα διαφωνούσαν, η γραμμή τύπων θα έγραφε `#REF!` ενώ το
+ * κελί θα έδειχνε αριθμό. Γι' αυτό οι δύο συναρτήσεις δέχονται πλέον **βιβλίο** αντί για
+ * μοντέλο, και ρωτούν τον ΕΝΑ επιλυτή πλέγματος (`gridOfRef`).
+ *
  * @module subapps/dxf-viewer/bim/table/formula/table-formula-ref-scope
  * @see bim/table/formula/table-formula-recalc.ts — ο ένας καταναλωτής: ο επαναϋπολογισμός
  * @see bim/table/formula/table-formula-print.ts — ο άλλος: η γραμμή τύπων
  * @see docs/centralized-systems/reference/adrs/ADR-764-structural-ops-formula-recalc.md §2
  */
 
-import type { TableModel } from '../../../types/table';
 import type { TableFormulaCellRef } from '../../../types/table-formula';
 import { getCell, indexById } from '../table-model-helpers';
 import { FORMULA_ERROR, type TableFormulaValue } from './table-formula-value';
+import { gridOfRef, type TableFormulaWorkbook } from './table-formula-workbook';
 
 /**
- * `true` όταν **και οι δύο** ταυτότητες της αναφοράς υπάρχουν ακόμη στο πλέγμα.
+ * `true` όταν **και το φύλλο** και **οι δύο** ταυτότητες της αναφοράς υπάρχουν ακόμη.
  *
  * Ρωτά το `indexById` — τον **φθηνό** τρόπο (WeakMap ανά πίνακα, ADR-739 §36), τον ίδιο που
  * χρησιμοποιεί ήδη το `expandRangeShape`. Καμία σάρωση, καμία δεύτερη δομή.
+ *
+ * ⚠️ Ο έλεγχος του φύλλου προηγείται **αναγκαστικά**: χωρίς πλέγμα δεν υπάρχουν γραμμές να
+ * ρωτηθούν. Και το `null` του {@link gridOfRef} καλύπτει **δύο** αιτίες με μία απάντηση —
+ * φύλλο που διαγράφηκε, και φύλλο που κόπηκε από το μερίδιο χωρητικότητας (§5.8) — γιατί για
+ * τον τύπο είναι το ίδιο γεγονός: *«αυτό που έδειχνα δεν είναι πια εδώ»*.
  */
-export function isLiveCellRef(model: TableModel, ref: TableFormulaCellRef): boolean {
+export function isLiveCellRef(book: TableFormulaWorkbook, ref: TableFormulaCellRef): boolean {
+  const model = gridOfRef(book, ref);
+  if (model === null) return false;
   return indexById(model.rows).has(ref.rowId) && indexById(model.columns).has(ref.colId);
 }
 
@@ -52,8 +70,12 @@ export function isLiveCellRef(model: TableModel, ref: TableFormulaCellRef): bool
  * (`firstError` / `isFormulaError`), οπότε ένα `=B1*2` πάνω σε `#REF!` δίνει `#REF!` και όχι
  * `0` — χωρίς να χρειαστεί ούτε μία γραμμή σε καμία συνάρτηση.
  */
-export function readCellRefValue(model: TableModel, ref: TableFormulaCellRef): TableFormulaValue {
-  if (!isLiveCellRef(model, ref)) return FORMULA_ERROR.reference;
+export function readCellRefValue(
+  book: TableFormulaWorkbook,
+  ref: TableFormulaCellRef,
+): TableFormulaValue {
+  const model = gridOfRef(book, ref);
+  if (model === null || !isLiveCellRef(book, ref)) return FORMULA_ERROR.reference;
   // Κελί που δεν υπάρχει στον αραιό χάρτη **είναι** κενό — δες `setPersistedCellText`.
   return getCell(model, ref.rowId, ref.colId)?.value ?? '';
 }

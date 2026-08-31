@@ -44,6 +44,8 @@ import type { TableRectBounds } from './table-range-merge-snap';
 import { mergeSpanBounds, tableRectsIntersect } from './table-range-merge-snap';
 import { cellText, clearPersistedCells, writePersistedCellStyles } from './table-cell-content';
 import { commitCellWrites } from './formula/table-formula-engine';
+import { bookWithHome, type TableFormulaWorkbook } from './formula/table-formula-workbook';
+
 import { indexById } from './table-model-helpers';
 import { resolveCellStyle, type TableStyle } from './table-style';
 
@@ -220,6 +222,7 @@ export function tableMergeDiscardedCells(
  *   {@link centeredAlign} για το γιατί δεν μαντεύεται.
  */
 export function applyTableMergeCommand(
+  book: TableFormulaWorkbook,
   model: PersistedTableModel,
   bounds: TableCellRangeBounds,
   commandId: TableMergeCommandId,
@@ -236,7 +239,7 @@ export function applyTableMergeCommand(
     ? [...model.merges.filter((span) => !plan.removed.includes(span)), ...plan.added]
     : model.merges;
 
-  const afterCells = writeCells(model, plan, anchorAlign);
+  const afterCells = writeCells(book, model, plan, anchorAlign);
   if (!mergesChanged && afterCells === model) return model;
   return mergesChanged ? { ...afterCells, merges: nextMerges } : afterCells;
 }
@@ -389,11 +392,12 @@ function intersectingSpans(
  * δεν συμμετέχει στον γράφο εξαρτήσεων, οπότε δεύτερο πέρασμα θα ήταν πέρασμα για το τίποτα.
  */
 function writeCells(
+  book: TableFormulaWorkbook,
   model: PersistedTableModel,
   plan: MergePlan,
   anchorAlign: TableCellAlign,
 ): PersistedTableModel {
-  const emptied = commitCellWrites(clearPersistedCells(model, plan.covered));
+  const emptied = commitCellWrites(book, clearPersistedCells(model, plan.covered));
   if (plan.centered.length === 0) return emptied;
 
   const align = centeredAlign(anchorAlign);

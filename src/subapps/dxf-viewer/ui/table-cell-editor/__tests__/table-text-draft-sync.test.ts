@@ -11,6 +11,7 @@
 import { tableModelWithPendingDraft } from '../table-text-draft-sync';
 import { getPersistedCellText } from '../../../bim/table/table-cell-content';
 import type { PersistedTableModel, TableCell } from '../../../types/table';
+import { bookOf } from '../../../bim/table/__tests__/formula-book-fixture';
 
 const AT = { rowId: 'r1', colId: 'c0' };
 
@@ -27,7 +28,7 @@ const textOf = (m: PersistedTableModel): string => getPersistedCellText(m, 'r1',
 
 describe('🔴 το πρόχειρο φτάνει στο μοντέλο ΠΡΙΝ γραφτούν οι δείκτες', () => {
   it('🔴 άδειο κελί + πληκτρολογημένο κείμενο ⇒ το κείμενο μπαίνει', () => {
-    const next = tableModelWithPendingDraft(model(), {
+    const next = tableModelWithPendingDraft(bookOf(model()),model(), {
       cell: AT, draft: 'ΝΕΣΤΩΡ', binding: undefined,
     });
     expect(textOf(next)).toBe('ΝΕΣΤΩΡ');
@@ -35,7 +36,7 @@ describe('🔴 το πρόχειρο φτάνει στο μοντέλο ΠΡΙΝ
 
   it('🔴 ΙΔΙΟ κείμενο ⇒ ΤΟ ΙΔΙΟ μοντέλο by-reference — κανένα βήμα undo για το τίποτα', () => {
     const before = model({ kind: 'text', value: 'ΝΕΣΤΩΡ' });
-    expect(tableModelWithPendingDraft(before, {
+    expect(tableModelWithPendingDraft(bookOf(before),before, {
       cell: AT, draft: 'ΝΕΣΤΩΡ', binding: undefined,
     })).toBe(before);
   });
@@ -48,14 +49,14 @@ describe('🔴 το πρόχειρο φτάνει στο μοντέλο ΠΡΙΝ
       value: 'ΝΕΣΤΩΡ',
       runs: [{ start: 0, end: 2, style: { bold: true } }],
     });
-    const next = tableModelWithPendingDraft(before, {
+    const next = tableModelWithPendingDraft(bookOf(before),before, {
       cell: AT, draft: 'ΧΝΕΣΤΩΡ', binding: undefined,
     });
     expect(next.cells[0][2].runs).toEqual([{ start: 1, end: 3, style: { bold: true } }]);
   });
 
   it('🔴 πρόχειρο που είναι ΤΥΠΟΣ περνά από τον ΕΝΑ δρόμο — γίνεται κελί τύπου', () => {
-    const next = tableModelWithPendingDraft(model(), {
+    const next = tableModelWithPendingDraft(bookOf(model()),model(), {
       cell: AT, draft: '=1+1', binding: undefined,
     });
     expect(next.cells[0][2].kind).toBe('formula');
@@ -67,7 +68,7 @@ describe('🔴 ο φρουρός: κελί που ΔΕΝ γράφεται στο
     // Ο ίδιος φρουρός με το `buildTableCellEditCommand`: η τιμή ανήκει στην **οντότητα-πηγή**,
     // και ένα αντίγραφό της στον πίνακα θα έσπαγε το «ΕΝΑΣ ιδιοκτήτης» του ADR-769.
     const before = model({ kind: 'text', value: '12.50', bound: { field: 'area' } } as TableCell);
-    const next = tableModelWithPendingDraft(before, {
+    const next = tableModelWithPendingDraft(bookOf(before),before, {
       cell: AT,
       draft: '99',
       binding: {

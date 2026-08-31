@@ -29,6 +29,7 @@ import type {
   TableRow,
   TableRowId,
 } from '../../../types/table';
+import { bookOf, commitPendingForTest } from './formula-book-fixture';
 
 const COLUMNS: TableColumn[] = ['c0', 'c1', 'c2'].map((id) => ({
   id,
@@ -52,13 +53,13 @@ function base(): PersistedTableModel {
  * το κελί θα κρατούσε κενή τιμή και οι έλεγχοι θα μετρούσαν κάτι που ο χρήστης δεν βλέπει ποτέ.
  */
 function type(model: PersistedTableModel, rowId: string, colId: string, input: string): PersistedTableModel {
-  return commitCellWrites(writeCellInput(model, row(rowId), col(colId), input));
+  return commitPendingForTest(writeCellInput(bookOf(model),model, row(rowId), col(colId), input));
 }
 
 function transfer(model: PersistedTableModel, request: TableRangeTransferRequest): PersistedTableModel {
   const outcome = planTableRangeTransfer(model, request);
   if (!outcome.ok) throw new Error(`Το σχέδιο απορρίφθηκε: ${outcome.reason}`);
-  return applyTableRangeTransfer(model, outcome.plan);
+  return applyTableRangeTransfer(bookOf(model),model, outcome.plan);
 }
 
 const at = (rowId: string, colId: string) => ({ rowId: row(rowId), colId: col(colId) });
@@ -84,7 +85,7 @@ describe('🔴 §36 remapTableFormulaRefs — η εγγύηση ταυτότητ
     // Μόνο το μεσαίο κελί του εύρους μετακόμισε ⇒ το εύρος μένει ακέραιο. Αν ακολουθούσε το
     // ένα άκρο, το `A1:A3` θα παραμορφωνόταν σε σχήμα που κανείς δεν έγραψε.
     expect(remapTableFormulaRefs(model, halfMoved)).toBe(model);
-    expect(cellInputText(model, row('r3'), col('c2'))).toBe('=SUM(A1:A3)');
+    expect(cellInputText(bookOf(model),model, row('r3'), col('c2'))).toBe('=SUM(A1:A3)');
   });
 });
 
@@ -105,7 +106,7 @@ describe('🔴 §36 μετακίνηση — «κάθε αναφορά σε κε
     });
 
     // Χωρίς την επαναχαρτογράφηση, ο τύπος θα έδειχνε σε **άδειο** κελί και θα έδινε 0.
-    expect(cellInputText(next, row('r3'), col('c2'))).toBe('=B2*2');
+    expect(cellInputText(bookOf(next),next, row('r3'), col('c2'))).toBe('=B2*2');
     expect(getPersistedCellText(next, row('r3'), col('c2'))).toBe('20');
   });
 
@@ -120,7 +121,7 @@ describe('🔴 §36 μετακίνηση — «κάθε αναφορά σε κε
       shiftAxis: 'down',
     });
 
-    expect(cellInputText(next, row('r2'), col('c0'))).toBe('=C1+1');
+    expect(cellInputText(bookOf(next),next, row('r2'), col('c0'))).toBe('=C1+1');
     expect(getPersistedCellText(next, row('r2'), col('c0'))).toBe('8');
   });
 
@@ -135,7 +136,7 @@ describe('🔴 §36 μετακίνηση — «κάθε αναφορά σε κε
       shiftAxis: 'down',
     });
 
-    expect(cellInputText(next, row('r2'), col('c1'))).toBe('=A3*3');
+    expect(cellInputText(bookOf(next),next, row('r2'), col('c1'))).toBe('=A3*3');
     expect(getPersistedCellText(next, row('r2'), col('c1'))).toBe('12');
   });
 });
@@ -160,11 +161,11 @@ describe('✅ §36 αντιγραφή — ΤΟ PARITY ΕΚΛΕΙΣΕ (ADR-754 Γ
 
     const next = copyDown(model);
 
-    expect(cellInputText(next, row('r1'), col('c1'))).toBe('=A2*2');
+    expect(cellInputText(bookOf(next),next, row('r1'), col('c1'))).toBe('=A2*2');
     expect(getPersistedCellText(next, row('r1'), col('c1'))).toBe('18');
 
     // Και η πηγή μένει ακέραιη — το parity που ίσχυε ήδη.
-    expect(cellInputText(next, row('r0'), col('c1'))).toBe('=A1*2');
+    expect(cellInputText(bookOf(next),next, row('r0'), col('c1'))).toBe('=A1*2');
   });
 
   /** 🔑 Η άλλη μισή πρόθεση, που τώρα **μπορεί να εκφραστεί**: το `$` κρατά την αναφορά. */
@@ -175,7 +176,7 @@ describe('✅ §36 αντιγραφή — ΤΟ PARITY ΕΚΛΕΙΣΕ (ADR-754 Γ
 
     const next = copyDown(model);
 
-    expect(cellInputText(next, row('r1'), col('c1'))).toBe('=$A$1*2');
+    expect(cellInputText(bookOf(next),next, row('r1'), col('c1'))).toBe('=$A$1*2');
     expect(getPersistedCellText(next, row('r1'), col('c1'))).toBe('10');
   });
 
@@ -198,7 +199,7 @@ describe('✅ §36 αντιγραφή — ΤΟ PARITY ΕΚΛΕΙΣΕ (ADR-754 Γ
     });
 
     // Το `A1` μετακόμισε στο `A2` ⇒ ο τύπος το ακολουθεί, **κρατώντας** τα δολάρια του.
-    expect(cellInputText(next, row('r0'), col('c2'))).toBe('=$A$2*2');
+    expect(cellInputText(bookOf(next),next, row('r0'), col('c2'))).toBe('=$A$2*2');
     expect(getPersistedCellText(next, row('r0'), col('c2'))).toBe('10');
   });
 
