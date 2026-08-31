@@ -189,7 +189,7 @@ export const SCREEN_KEYS = {
   occupancyEntry: 'property-market:mandate.request.occupancyEntry',
   occupancyEntryOpen: 'property-market:mandate.request.occupancyEntryOpen',
   /**
-   * 🔴 **Η ΤΡΙΤΗ ΚΑΤΑΣΤΑΣΗ ΤΗΣ ΓΡΑΜΜΗΣ ΚΑΤΑΛΗΨΗΣ** (ADR-834 §5.2) — *«ξέρω ποιος, ξέρω
+   * 🔴 **Η ΤΡΙΤΗ ΚΑΤΑΣΤΑΣΗ ΤΗΣ ΓΡΑΜΜΗΣ ΚΑΤΑΛΗΨΗΣ** (ADR-834 §6.5) — *«ξέρω ποιος, ξέρω
    * ως πότε, **δεν** ξέρω για ποιες πράξεις»*. Το κληροδοτημένο έγγραφο (προ-ADR-832)
    * έχει `scope: []` και η οθόνη τύπωνε **κενό** στη θέση της λίστας, δηλαδή
    * παρουσίαζε την άγνοια ως έγκυρη απάντηση. Δίδυμο του {@link occupancyHolderOther},
