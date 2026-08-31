@@ -51,6 +51,7 @@
  * **Layering**: leaf — καθαρές συναρτήσεις, μηδέν I/O, μηδέν ρολόι.
  */
 
+import { spacesIntersect, type SpaceRef } from '@/lib/spaces/space-ref';
 import type { OfferKind } from '@/types/property-offers';
 
 // =============================================================================
@@ -70,7 +71,7 @@ import type { OfferKind } from '@/types/property-offers';
  * σύγκρουση** — και μάλιστα σε ολόκληρο τον κατάλογο. Το μπαλαντέρ **πρέπει** να έχει
  * σύνορο.
  */
-export interface OccupancyResource {
+export interface OccupancyResource extends SpaceRef {
   /** Το ακίνητο. **Ο περιέκτης**, ποτέ το άτομο. */
   readonly propertyId: string;
   /**
@@ -118,8 +119,11 @@ export function resourcesIntersect(
   b: OccupancyResource,
 ): boolean {
   if (a.kind !== b.kind) return false;
-  if (a.propertyId !== b.propertyId) return false;
-  return a.spaceId === null || b.spaceId === null || a.spaceId === b.spaceId;
+  // 🔑 Τα ερωτήματα 2+3 είναι **ο κανόνας του χώρου**, και ζουν στο SSoT του (ADR-838
+  //    §4.1). Γραμμένα εδώ, η νομιμότητα θα τα αντέγραφε — και η αντιγραφή που
+  //    αποκλίνει σε αυτό το ερώτημα λέγεται «διπλοκράτηση» ή «νόμιμο», ανάλογα με το
+  //    ποιος ρωτά. Το kind μένει εδώ επίτηδες: είναι η **πράξη**, όχι ο χώρος.
+  return spacesIntersect(a, b);
 }
 
 /**
