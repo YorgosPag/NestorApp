@@ -43,7 +43,7 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
   return {
     id: 'prop_a0000001',
     commercialStatus: 'for-sale',
-    commercial: { askingPrice: 200000, finalPrice: null, rentPrice: null },
+    commercial: { askingPrice: 200000, finalPrice: null, rentPrice: null, nightlyRate: null },
     coverImage: null,
     type: 'apartment',
     areaSqm: 95,

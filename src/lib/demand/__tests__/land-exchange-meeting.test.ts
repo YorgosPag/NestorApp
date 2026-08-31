@@ -44,7 +44,7 @@ const OWNER_PLOT = listing({
   type: 'plot',
   offerKinds: ['exchange'],
   commercialStatus: 'unavailable',
-  commercial: { askingPrice: null, finalPrice: null, rentPrice: null },
+  commercial: { askingPrice: null, finalPrice: null, rentPrice: null, nightlyRate: null },
   areaSqm: 480,
   floor: null,
   bedrooms: null,

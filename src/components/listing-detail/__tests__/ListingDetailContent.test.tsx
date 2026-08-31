@@ -69,7 +69,7 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
   return {
     id: 'prop_a0000001',
     commercialStatus: 'for-sale',
-    commercial: { askingPrice: 200000, finalPrice: null, rentPrice: null },
+    commercial: { askingPrice: 200000, finalPrice: null, rentPrice: null, nightlyRate: null },
     coverImage: null,
     type: 'apartment',
     areaSqm: 95,
@@ -203,7 +203,7 @@ describe('Ο4 — κάθε ποσό λέει τι είναι', () => {
       state: 'found',
       listing: listing({
         commercialStatus: 'sold',
-        commercial: { askingPrice: 200000, finalPrice: 185000, rentPrice: null },
+        commercial: { askingPrice: 200000, finalPrice: 185000, rentPrice: null, nightlyRate: null },
       }),
     });
     expect(screen.getByText('search-results:detail.price.role.final')).toBeInTheDocument();
@@ -213,7 +213,7 @@ describe('Ο4 — κάθε ποσό λέει τι είναι', () => {
   it('χωρίς τιμή ⇒ ονομασμένη αιτία, ποτέ «0 €»', () => {
     renderWith({
       state: 'found',
-      listing: listing({ commercial: { askingPrice: null, finalPrice: null, rentPrice: null } }),
+      listing: listing({ commercial: { askingPrice: null, finalPrice: null, rentPrice: null, nightlyRate: null } }),
     });
     expect(
       screen.getByText('search-results:card.priceMissing.salePriceMissing')

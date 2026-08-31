@@ -46,7 +46,7 @@ import { NOW_ISO, TODAY, demand, facts, listing } from './demand-fixtures';
 const DORMANT = facts({
   listing: listing({
     commercialStatus: 'unavailable',
-    commercial: { askingPrice: null, finalPrice: null, rentPrice: null },
+    commercial: { askingPrice: null, finalPrice: null, rentPrice: null, nightlyRate: null },
     offerKinds: [],
   }),
 });
@@ -61,7 +61,7 @@ const OFFERED = facts();
 const PARTIAL = facts({
   listing: listing({
     commercialStatus: 'unavailable',
-    commercial: { askingPrice: 200_000, finalPrice: null, rentPrice: null },
+    commercial: { askingPrice: 200_000, finalPrice: null, rentPrice: null, nightlyRate: null },
     offerKinds: [],
   }),
 });

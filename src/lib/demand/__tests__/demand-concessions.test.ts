@@ -67,7 +67,7 @@ describe('🔴 Β — «με +20.000 € υπάρχουν 6» αναπαράγε
       facts({
         listing: listing({
           id: `prop_${over}`,
-          commercial: { askingPrice: 250_000 + over, finalPrice: null, rentPrice: null },
+          commercial: { askingPrice: 250_000 + over, finalPrice: null, rentPrice: null, nightlyRate: null },
         }),
       }),
     );

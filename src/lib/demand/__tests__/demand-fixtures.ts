@@ -50,7 +50,7 @@ export function listing(overrides: Partial<PublicListing> = {}): PublicListing {
   return {
     id: 'prop_1',
     commercialStatus: 'for-sale',
-    commercial: { askingPrice: 200_000, finalPrice: null, rentPrice: null },
+    commercial: { askingPrice: 200_000, finalPrice: null, rentPrice: null, nightlyRate: null },
     coverImage: null,
     type: 'apartment',
     areaSqm: 100,

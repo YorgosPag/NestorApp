@@ -41,7 +41,7 @@ function answer(d: PropertyDemand, listings: readonly PublicListing[], others: r
 function overBy(over: number, id: string): PublicListing {
   return listing({
     id,
-    commercial: { askingPrice: 250_000 + over, finalPrice: null, rentPrice: null },
+    commercial: { askingPrice: 250_000 + over, finalPrice: null, rentPrice: null, nightlyRate: null },
   });
 }
 
@@ -135,7 +135,7 @@ describe('🔴 η σειρά των ερωτήσεων είναι συμβόλα
   it('το ΤΑΙΡΙΑΣΜΑ νικά την πρόταση — κανείς δεν θέλει συμβουλή όταν βρήκε', () => {
     const d = demand({ features: { ...NO_DEMAND_FEATURES, priceMax: 250_000 } });
     const result = answer(d, [
-      listing({ id: 'prop_ok', commercial: { askingPrice: 200_000, finalPrice: null, rentPrice: null } }),
+      listing({ id: 'prop_ok', commercial: { askingPrice: 200_000, finalPrice: null, rentPrice: null, nightlyRate: null } }),
       overBy(10_000, 'prop_near'),
     ]);
 
@@ -188,7 +188,7 @@ describe('🔴 Λ — δύο ανεξάρτητα αθροίσματα, και �
   it('κλείνει σε πλούσιο σενάριο', () => {
     const d = demand({ features: { ...NO_DEMAND_FEATURES, priceMax: 250_000 } });
     const result = answer(d, [
-      listing({ id: 'a', commercial: { askingPrice: 100_000, finalPrice: null, rentPrice: null } }),
+      listing({ id: 'a', commercial: { askingPrice: 100_000, finalPrice: null, rentPrice: null, nightlyRate: null } }),
       overBy(5_000, 'b'),
       listing({ id: 'c', offerKinds: ['leaseOut'] }),
     ]);

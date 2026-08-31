@@ -94,9 +94,9 @@ describe('🔴 Θ — `match` ⇒ τα προβεβλημένα φίλτρα Τ�
     facts({ listing: listing({ floor: null }) }),
     facts({ listing: listing({ floor: 4 }) }),
     facts({
-      listing: listing({ commercial: { askingPrice: null, finalPrice: null, rentPrice: null } }),
+      listing: listing({ commercial: { askingPrice: null, finalPrice: null, rentPrice: null, nightlyRate: null } }),
     }),
-    facts({ listing: listing({ commercial: { askingPrice: 300_000, finalPrice: null, rentPrice: null } }) }),
+    facts({ listing: listing({ commercial: { askingPrice: 300_000, finalPrice: null, rentPrice: null, nightlyRate: null } }) }),
     facts({ listing: listing({ position: { kind: 'unknown', reason: 'never-asked' } }) }),
     facts({
       listing: listing({
@@ -288,7 +288,7 @@ describe('🔴 Μ — «με +20.000 € υπάρχουν 6» ΥΠΟΛΟΓΙΖΕ
   it('🔴 αγγελία ΧΩΡΙΣ τιμή δεν παράγει ψεύτικο «πόσο λείπει»', () => {
     const d = demand({ features: { ...NO_DEMAND_FEATURES, priceMax: 180_000 } });
     const f = facts({
-      listing: listing({ commercial: { askingPrice: null, finalPrice: null, rentPrice: null } }),
+      listing: listing({ commercial: { askingPrice: null, finalPrice: null, rentPrice: null, nightlyRate: null } }),
     });
     const result = matchDemandAgainstListing(d, f, TODAY);
 
@@ -347,7 +347,7 @@ describe('🔴 Λ — κλειστή λογιστική στα αποτελέσ�
     const d = demand({ features: { ...NO_DEMAND_FEATURES, priceMax: 190_000 } });
     const candidates = [
       facts(), // 200.000 → near-miss (+10.000)
-      facts({ listing: listing({ commercial: { askingPrice: 150_000, finalPrice: null, rentPrice: null } }) }), // match
+      facts({ listing: listing({ commercial: { askingPrice: 150_000, finalPrice: null, rentPrice: null, nightlyRate: null } }) }), // match
       facts({ listing: listing({ offerKinds: ['leaseOut'] }) }), // no-match (κατηγορικό)
     ];
 

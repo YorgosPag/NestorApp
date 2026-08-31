@@ -18,7 +18,7 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
   return {
     id: 'l1',
     commercialStatus: 'for-sale',
-    commercial: { askingPrice: 200000, finalPrice: null, rentPrice: null },
+    commercial: { askingPrice: 200000, finalPrice: null, rentPrice: null, nightlyRate: null },
     coverImage: null,
     type: 'apartment',
     areaSqm: 95,
@@ -155,7 +155,7 @@ describe('Φ2 — φιλτράρεται ο ΣΩΣΤΟΣ άξονας (Α20)', (
   it('η τιμή περνά από τον SSoT — ενοίκιο κρίνεται ως ενοίκιο, όχι ως τιμή πώλησης', () => {
     const rental = listing({
       commercialStatus: 'for-rent',
-      commercial: { askingPrice: null, finalPrice: null, rentPrice: 500 },
+      commercial: { askingPrice: null, finalPrice: null, rentPrice: 500, nightlyRate: null },
       offerKinds: ['leaseOut'],
     });
     expect(applyListingFilters([rental], { ...EMPTY_LISTING_FILTERS, priceMax: 600 })).toHaveLength(1);

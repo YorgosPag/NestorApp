@@ -53,7 +53,7 @@ function fixture(id: string, title: string, position: PublicListing['position'])
   return {
     id, title, position,
     commercialStatus: 'for-sale',
-    commercial: { askingPrice: 200000, finalPrice: null, rentPrice: null },
+    commercial: { askingPrice: 200000, finalPrice: null, rentPrice: null, nightlyRate: null },
     coverImage: null, type: 'apartment', areaSqm: 90,
     offerKinds: ['sell'], floor: 2, bedrooms: 2, projectedAt: AT,
   };
