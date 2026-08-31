@@ -26,6 +26,9 @@ import { EXCLUSIVE_RIGHT_TO_LEASE, EXCLUSIVE_RIGHT_TO_SELL, LISTING_AGREEMENTS, 
 import {
   CANDIDATE_IS_EXCLUSIVE,
   EXISTING_IS_EXCLUSIVE,
+} from '@/lib/occupancy/occupancy-conflict';
+
+import {
   everyAgreementHasLockMode,
   mandateConflicts,
   type MandateOccupancy,

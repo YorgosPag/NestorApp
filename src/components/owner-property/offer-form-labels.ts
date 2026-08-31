@@ -78,6 +78,9 @@ export const TEXT_KEYS: Record<DraftFormSlot | OfferBlocker | OfferViolation, st
   // ── ADR-832: η εντολή ως κατάληψη πόρου ─────────────────────────────────────
   'mandate-scope-empty': 'property-market:offer.invariant.mandate-scope-empty',
   'mandate-start-invalid': 'property-market:offer.invariant.mandate-start-invalid',
+  // ⚠️ **Δικό του κλειδί, όχι μαζί με το παραπάνω** (ADR-835 Ε-10): «αντίστρεψε τα
+  //    άκρα» και «πρόσθεσε διάρκεια» είναι δύο διαφορετικές κινήσεις του ανθρώπου.
+  'mandate-term-empty': 'property-market:offer.invariant.mandate-term-empty',
   // ⚠️ Το κείμενο λέει **ότι** υπάρχει σύγκρουση, όχι **με ποιον**: το «ποιος» είναι
   //    δεδομένο (`MandateConflict`) και ταξιδεύει χωριστά — αλλιώς κάθε γραφείο θα
   //    ήθελε δικό του κλειδί.

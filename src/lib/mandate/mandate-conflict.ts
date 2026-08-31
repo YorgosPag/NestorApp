@@ -1,10 +1,12 @@
 /**
- * @fileoverview **ΣΥΓΚΡΟΥΟΝΤΑΙ ΑΥΤΕΣ ΟΙ ΔΥΟ ΕΝΤΟΛΕΣ;** — ο κριτής της αποκλειστικότητας.
- * @related types/listing-agreement.ts · types/property-offers.ts · lib/date-local.ts
+ * @fileoverview **ΣΥΓΚΡΟΥΟΝΤΑΙ ΑΥΤΕΣ ΟΙ ΔΥΟ ΕΝΤΟΛΕΣ;** — ο **ΠΡΩΤΟΣ** καταναλωτής
+ *   του κριτή κατάληψης. Ο κανόνας ζει στο `lib/occupancy/`· εδώ ζει η **μετάφραση**.
+ * @related lib/occupancy/occupancy-conflict.ts · types/listing-agreement.ts ·
+ *   types/property-offers.ts
  * @module lib/mandate/mandate-conflict
  *
  * ────────────────────────────────────────────────────────────────────────────
- * 🔴 ΤΙ ΕΛΕΙΠΕ, ΜΕΤΡΗΜΕΝΟ
+ * 🔴 ΤΙ ΕΛΕΙΠΕ, ΜΕΤΡΗΜΕΝΟ (ADR-832 — ο λόγος που γεννήθηκε ο κριτής)
  * ────────────────────────────────────────────────────────────────────────────
  *
  * Ο μόνος έλεγχος ήταν `property.mandate.kind !== 'self'` — *«έχει ήδη γραφείο; όχι»*.
@@ -21,24 +23,29 @@
  * το `allowsOtherAgencies` υπήρχε με **μηδέν καλούντες** (ADR-749 §5, αδρανής φρουρός).
  *
  * ────────────────────────────────────────────────────────────────────────────
- * 🏆 ΤΟ ΣΧΗΜΑ — ΤΡΙΑ ΣΚΕΛΗ, ΚΑΝΕΝΑ ΑΡΚΕΤΟ ΜΟΝΟ ΤΟΥ
+ * 🔑 ΤΙ ΑΛΛΑΞΕ ΣΤΗ Φ2 ΤΟΥ ADR-835 — **ΛΕΠΤΟΣ ΚΑΤΑΝΑΛΩΤΗΣ, ΟΧΙ ΔΕΥΤΕΡΟΣ ΚΑΝΟΝΑΣ**
  * ────────────────────────────────────────────────────────────────────────────
  *
  * ```
- * σύγκρουση(Α,Β) = ίδιος πόρος(Α,Β) ∧ επικάλυψη χρόνου(Α,Β) ∧ ¬συμβατοί τρόποι(Α,Β)
+ *  MandateOccupancy ──μετάφραση──► Occupancy<MandateOccupancy> ──► occupancyConflicts()
+ *  MandateConflict  ◄─μετάφραση── OccupancyConflict<…>                (ο ΕΝΑΣ κριτής)
  * ```
  *
- * Είναι κατά λέξη το `EXCLUDE USING GIST (πόρος WITH =, διάστημα WITH &&)` της
- * PostgreSQL — ο κανονικός τρόπος να εκφραστεί *«δύο συμβάσεις δεν επικαλύπτονται»* —
- * με **τρίτο** σκέλος τον πίνακα συμβατότητας shared/exclusive, που η PostgreSQL δεν
- * χρειάζεται επειδή τα κλειδώματά της είναι πάντα αποκλειστικά. Εμάς μας χρειάζεται:
- * η **απλή** εντολή υπάρχει ακριβώς για να μοιράζεται.
+ * Ο κανόνας (τομή πόρων ∧ επικάλυψη χρόνου ∧ ασύμβατοι τρόποι) **έφυγε** στο
+ * `lib/occupancy/occupancy-conflict.ts`, όπου απέκτησε **δεύτερο** καταναλωτή: τις
+ * κρατήσεις (`lib/stay/stay-conflict.ts`). Εδώ έμεινε **μόνο** ό,τι ξέρει η εντολή:
  *
- * 🔑 **Ο πόρος ΔΕΝ είναι το ακίνητο — είναι `(ακίνητο × πράξη)`.** Το «ίδιο
- * περιεχόμενο» του άρθρου 200 §4 έχει **ήδη λεξιλόγιο** στο έργο: το `OFFER_KINDS`
- * (`sell` · `leaseOut` · `exchange`). Καμία επινόηση, κανένα δεύτερο λεξιλόγιο —
- * και εξηγεί γιατί το **RESO** ξεχωρίζει `Exclusive Right To Sell` από `…To Lease`:
- * δεν είναι δύο γεύσεις της ίδιας ιδέας, είναι **δύο πόροι**.
+ * | Τι μεταφράζεται | Πώς |
+ * |---|---|
+ * | **κάτοχος** | `agencyCompanyId` → `holderId` |
+ * | **τρόπος** | `agreement` → `lockModeFor(agreement)` — η γνώση αυτού του τομέα |
+ * | **πόρος** | `scope` → **ολόκληρο** το ακίνητο σε κάθε πράξη ({@link wholeProperty}) |
+ * | **πολιτική** | {@link MANDATE_OCCUPANCY_POLICY} = `'replaces'` |
+ *
+ * 🔑 **Η δημόσια επιφάνεια ΔΕΝ άλλαξε**: `MandateOccupancy` · `MandateConflict` ·
+ * `MandateConflictVerdict` · `mandateConflicts()` λένε ό,τι έλεγαν, στους ίδιους 13
+ * καταναλωτές. Η γενίκευση αποδεικνύεται από τον **δεύτερο** καταναλωτή, όχι από
+ * αναδιάταξη του πρώτου.
  *
  * ────────────────────────────────────────────────────────────────────────────
  * ⛔ ΤΙ ΔΕΝ ΕΙΝΑΙ ΑΥΤΟ ΤΟ ΑΡΧΕΙΟ
@@ -60,13 +67,15 @@
  * **Layering**: leaf — καθαρές συναρτήσεις, μηδέν I/O, μηδέν ρολόι.
  */
 
-import { intervalsOverlap } from '@/lib/date-local';
 import {
-  lockModeFor,
-  modesCompatible,
-  type ListingAgreement,
-  type MandateLockMode,
-} from '@/types/listing-agreement';
+  occupancyConflicts,
+  type Occupancy,
+  type OccupancyConflictReason,
+  type OccupancyPolicy,
+} from '@/lib/occupancy/occupancy-conflict';
+import { OCCUPANCY_MODES } from '@/lib/occupancy/occupancy-mode';
+import { wholeProperty } from '@/lib/occupancy/occupancy-resource';
+import { lockModeFor, type ListingAgreement } from '@/types/listing-agreement';
 import type { OfferKind } from '@/types/property-offers';
 
 // =============================================================================
@@ -74,7 +83,7 @@ import type { OfferKind } from '@/types/property-offers';
 // =============================================================================
 
 /**
- * **Μια κατάληψη**: ποιος κρατά τι, σε ποιες πράξεις, από πότε ως πότε.
+ * **Μια κατάληψη εντολής**: ποιος κρατά, σε ποιες πράξεις, από πότε ως πότε.
  *
  * 🔑 **Σκόπιμα ΔΕΝ είναι το `BrokeredListingMandate`.** Είναι το **ελάχιστο** που
  * χρειάζεται ο κριτής — ίδιο ιδίωμα με το `SalesDisplayEligibilityInput`
@@ -101,57 +110,20 @@ export interface MandateOccupancy {
   readonly expiresAt: string | null;
 }
 
-// =============================================================================
-// 2. ΤΙ ΕΙΔΟΥΣ ΣΥΓΚΡΟΥΣΗ — γιατί η διάκριση δίνει ΔΙΕΞΟΔΟ
-// =============================================================================
-
-/**
- * **Ποιος από τους δύο αποκλείει.**
- *
- * 🏆 **ΕΔΩ ΞΕΠΕΡΝΑΜΕ ΤΑ MLS, ΚΑΙ ΔΕΝ ΕΙΝΑΙ ΡΗΤΟΡΙΚΟ.** Το πρότυπο NAR λύνει το ίδιο
- * πρόβλημα με **δήλωση του μεσίτη** και **αφαίρεση εκ των υστέρων**· ο άνθρωπος που
- * απορρίπτεται βλέπει *«Invalid»* και **δεν μαθαίνει ποτέ τι μπορεί να κάνει**.
- *
- * Οι δύο λόγοι έχουν **διαφορετική θεραπεία**, και γι' αυτό είναι δύο:
- *
- * | Λόγος | Τι σημαίνει | Τι **μπορεί** ο άνθρωπος |
- * |---|---|---|
- * | {@link EXISTING_IS_EXCLUSIVE} | κάποιος **ήδη** κρατά αποκλειστικό δικαίωμα | τίποτα ως τη λήξη — αλλά μπορεί να **προγραμματίσει** εντολή που αρχίζει μετά |
- * | {@link CANDIDATE_IS_EXCLUSIVE} | ζητά **αποκλειστική** ενώ υπάρχουν απλές | να ζητήσει **απλή**, ή να αποσύρει τις υπάρχουσες |
- *
- * ⚠️ Ένας κοινός κωδικός θα έλεγε *«δεν γίνεται»* και στις δύο — δηλαδή θα έκρυβε
- * **δύο ανοιχτούς δρόμους**. Ίδιο σκεπτικό με το ζεύγος `mandate-expiry-past` /
- * `mandate-term-exceeds-statute` (`owner-property-mandate.ts:518`).
- */
-export const EXISTING_IS_EXCLUSIVE = 'existing-is-exclusive';
-
-/** Δες {@link EXISTING_IS_EXCLUSIVE} για το γιατί είναι δύο και όχι ένας. */
-export const CANDIDATE_IS_EXCLUSIVE = 'candidate-is-exclusive';
-
-export const MANDATE_CONFLICT_REASONS = [
-  EXISTING_IS_EXCLUSIVE,
-  CANDIDATE_IS_EXCLUSIVE,
-] as const;
-
-export type MandateConflictReason = (typeof MANDATE_CONFLICT_REASONS)[number];
-
 /** **Μία συγκεκριμένη σύγκρουση** — με ποιον, σε ποια πράξη, γιατί. */
 export interface MandateConflict {
   /** Η κατάληψη που εμποδίζει. Φέρνει μαζί της **λήξη** ⇒ η οθόνη λέει «ως πότε». */
   readonly with: MandateOccupancy;
   /** **Σε ποια πράξη** συγκρούονται. Δύο πράξεις ⇒ δύο εγγραφές, ποτέ μία «γενική». */
   readonly resource: OfferKind;
-  readonly reason: MandateConflictReason;
+  readonly reason: OccupancyConflictReason;
 }
 
 /**
  * **Η ετυμηγορία** — κλειστό σύνολο, ποτέ `boolean`.
  *
  * 🔴 **Το `undetermined` ΔΕΝ είναι «καθαρό» και ΔΕΝ είναι «σύγκρουση»** (N.12: *άγνωστο
- * ≠ κενό*). Προκύπτει από **βλάβη δεδομένου** — ημερομηνία που δεν διαβάζεται,
- * διάστημα ανάποδο. Ένα `clear` εκεί θα **επέτρεπε** δεύτερη αποκλειστική επειδή δεν
- * μπορέσαμε να διαβάσουμε την πρώτη· ένα `conflicts` θα απέρριπτε νόμιμη συμφωνία
- * κατηγορώντας αθώο γραφείο. Ο καλών **πρέπει** να αποφασίσει τι σημαίνει.
+ * ≠ κενό*). Δες τον γενικό τύπο στο `lib/occupancy/occupancy-conflict.ts`.
  */
 export type MandateConflictVerdict =
   | { readonly kind: 'clear' }
@@ -159,27 +131,64 @@ export type MandateConflictVerdict =
   | { readonly kind: 'undetermined'; readonly unreadable: readonly MandateOccupancy[] };
 
 // =============================================================================
-// 3. Ο ΚΡΙΤΗΣ
+// 2. Η ΜΕΤΑΦΡΑΣΗ ΠΡΟΣ ΤΟΝ ΚΡΙΤΗ
 // =============================================================================
 
-/** Οι πράξεις που μοιράζονται και οι δύο καταλήψεις. Κενό ⇒ **άλλος πόρος**. */
-function sharedResources(
-  a: MandateOccupancy,
-  b: MandateOccupancy,
-): readonly OfferKind[] {
-  return a.scope.filter((kind) => b.scope.includes(kind));
-}
+/**
+ * **Ο ΑΝΩΝΥΜΟΣ ΠΟΡΟΣ-ΡΙΖΑ ΤΩΝ ΕΝΤΟΛΩΝ.**
+ *
+ * 🔑 Οι εντολές ζουν **μέσα** στο έγγραφο του ακινήτου (ADR-832 §5.6): *«μία ανάγνωση
+ * κατά ταυτότητα μέσα στη συναλλαγή βλέπει όλες τις καταλήψεις»*. Άρα κάθε σύνολο που
+ * φτάνει στον κριτή ανήκει σε **ένα** ακίνητο, και ο πόρος-ρίζα δεν χρειάζεται όνομα.
+ *
+ * ⚠️ **ΔΕΝ είναι sentinel «άγνωστο»**, και ο γενικός κριτής δεν τον ερμηνεύει: είναι
+ * απλώς ένα σύνορο για το μπαλαντέρ `spaceId: null`. Χωρίς σύνορο, δύο **διαφορετικά**
+ * ακίνητα καταλαμβανόμενα ολόκληρα θα τέμνονταν.
+ *
+ * ⚠️ Το `#` το κάνει **αδύνατο** να συμπέσει με enterprise id (`ownp_*`), ώστε η μέρα
+ * που κάποιος περάσει πραγματικό `propertyId` να μη συμπέσει σιωπηλά με αυτό.
+ */
+const MANDATE_RESOURCE_ROOT = '#mandates-of-one-property';
 
 /**
- * **Ποιος από τους δύο αποκλείει;** — καλείται **μόνο** όταν είναι ασύμβατοι.
+ * **Ο ίδιος κάτοχος ⇒ ΑΝΤΙΚΑΤΑΣΤΑΣΗ** — η δηλωμένη πολιτική της εντολής.
  *
- * ⚠️ Η σειρά δεν είναι αυθαίρετη: η **υπάρχουσα** αποκλειστική προηγείται, γιατί
- * είναι το εμπόδιο που ο άνθρωπος **δεν μπορεί** να παρακάμψει. Όταν αποκλείουν και
- * οι δύο, το χρήσιμο μήνυμα είναι *«κάποιος ήδη κρατά»*, όχι *«ζητάς πολλά»*.
+ * 🔑 Νέοι όροι προς γραφείο που ήδη κρατά εντολή είναι **ανανέωση**, όχι δεύτερη
+ * κατάληψη — άλλο ερώτημα, άλλος κριτής (`judgeAgainstHistory`). Χωρίς αυτό, κάθε
+ * ανανέωση αποκλειστικής θα μπλόκαρε στην **ίδια της την προηγούμενη**.
+ *
+ * 🔴 **Και είναι ΑΚΡΙΒΩΣ ΤΟ ΑΝΤΙΘΕΤΟ για τις κρατήσεις** (`STAY_OCCUPANCY_POLICY` =
+ * `'conflicts'`). Όσο ο κανόνας ζούσε ως `if` μέσα στον βρόχο, ο δεύτερος
+ * καταναλωτής θα τον κληρονομούσε **αθόρυβα** — και η αθόρυβη κληρονομιά εκεί λέγεται
+ * **διπλοκράτηση**.
  */
-function reasonFor(existingMode: MandateLockMode): MandateConflictReason {
-  return existingMode === 'exclusive' ? EXISTING_IS_EXCLUSIVE : CANDIDATE_IS_EXCLUSIVE;
+export const MANDATE_OCCUPANCY_POLICY: OccupancyPolicy = { sameHolder: 'replaces' };
+
+/**
+ * **Η εντολή ως κατάληψη πόρου.**
+ *
+ * ⚠️ **Ο πόρος είναι ΟΛΟΚΛΗΡΟ το ακίνητο** (`spaceId: null`) σε κάθε πράξη του
+ * `scope`, και δεν είναι παράλειψη: μια εντολή μεσιτείας αφορά **πάντα** ολόκληρο το
+ * ακίνητο (ADR-835 §4.12 — *«η γενίκευση είναι προς τα πάνω»*). Σύνολο ενός στοιχείου
+ * με μπαλαντέρ συμπεριφέρεται **ακριβώς** όπως ο παλιός πόρος `(ακίνητο × πράξη)`.
+ */
+function toOccupancy(mandate: MandateOccupancy): Occupancy<MandateOccupancy> {
+  return {
+    // 🔑 Η εντολή είναι **πεδίο** μέσα στο ακίνητο, όχι έγγραφο: *«αλλάζει χέρια, όχι
+    //    ταυτότητα»* (ADR-827 Α3). Τη θέση της ταυτότητας την παίρνει η πολιτική.
+    occupancyId: null,
+    holderId: mandate.agencyCompanyId,
+    mode: lockModeFor(mandate.agreement),
+    resources: wholeProperty(MANDATE_RESOURCE_ROOT, mandate.scope),
+    startsAt: mandate.startsAt,
+    expiresAt: mandate.expiresAt,
+    source: mandate,
+  };
 }
+
+// =============================================================================
+// 3. Η ΔΗΜΟΣΙΑ ΕΠΙΦΑΝΕΙΑ
+// =============================================================================
 
 /**
  * **Μπορεί αυτή η εντολή να σταθεί δίπλα σε εκείνες;**
@@ -200,59 +209,40 @@ export function mandateConflicts(
   candidate: MandateOccupancy,
   existing: readonly MandateOccupancy[],
 ): MandateConflictVerdict {
-  const candidateMode = lockModeFor(candidate.agreement);
+  const verdict = occupancyConflicts(
+    toOccupancy(candidate),
+    existing.map(toOccupancy),
+    MANDATE_OCCUPANCY_POLICY,
+  );
 
-  const conflicts: MandateConflict[] = [];
-  const unreadable: MandateOccupancy[] = [];
-
-  for (const other of existing) {
-    // 🔑 **ΤΟ ΙΔΙΟ ΓΡΑΦΕΙΟ ΔΕΝ ΣΥΓΚΡΟΥΕΤΑΙ ΜΕ ΤΟΝ ΕΑΥΤΟ ΤΟΥ.** Νέοι όροι προς
-    //    γραφείο που ήδη κρατά εντολή είναι **αντικατάσταση**, όχι δεύτερη
-    //    κατάληψη — άλλο ερώτημα, άλλος κριτής (`judgeAgainstHistory`). Χωρίς αυτό,
-    //    κάθε ανανέωση αποκλειστικής θα μπλόκαρε στην **ίδια της την προηγούμενη**.
-    if (other.agencyCompanyId === candidate.agencyCompanyId) continue;
-
-    const shared = sharedResources(candidate, other);
-    if (shared.length === 0) continue;
-
-    const overlaps = intervalsOverlap(
-      candidate.startsAt,
-      candidate.expiresAt,
-      other.startsAt,
-      other.expiresAt,
-    );
-
-    // 🔴 «Δεν μπόρεσα να κρίνω» — συλλέγεται, **δεν** σιωπά. Δες τον τύπο.
-    if (overlaps === null) {
-      unreadable.push(other);
-      continue;
-    }
-    if (!overlaps) continue;
-
-    const otherMode = lockModeFor(other.agreement);
-    if (modesCompatible(candidateMode, otherMode)) continue;
-
-    // ⚠️ **Μία εγγραφή ανά πράξη**, όχι μία «γενική» ανά γραφείο: ο άνθρωπος που
-    //    εμποδίζεται στην πώληση αλλά **όχι** στην εκμίσθωση πρέπει να το μάθει.
-    for (const resource of shared) {
-      conflicts.push({ with: other, resource, reason: reasonFor(otherMode) });
-    }
+  if (verdict.kind === 'conflicts') {
+    return {
+      kind: 'conflicts',
+      // ⚠️ Ο πόρος **ξεντύνεται** πίσω σε σκέτη πράξη: για την εντολή ο χώρος είναι
+      //    πάντα «ολόκληρο», άρα μια δομή `{ propertyId, spaceId }` στην οθόνη θα
+      //    ήταν **θόρυβος που δεν διακρίνει τίποτα**.
+      conflicts: verdict.conflicts.map((conflict) => ({
+        with: conflict.with.source,
+        resource: conflict.resource.kind,
+        reason: conflict.reason,
+      })),
+    };
   }
 
-  // 🔴 **Η ΒΛΑΒΗ ΝΙΚΑ ΤΟ «ΚΑΘΑΡΟ», ΑΛΛΑ ΟΧΙ ΤΗ ΣΥΓΚΡΟΥΣΗ.** Αν βρέθηκε έστω μία
-  //    πραγματική σύγκρουση, η απάντηση είναι **όχι** — και είναι απόδειξη, όχι
-  //    εικασία· ό,τι κι αν έκρυβε το χαλασμένο έγγραφο δεν την ανατρέπει. Αν όμως
-  //    **δεν** βρέθηκε καμία, δεν επιτρέπεται να πούμε «καθαρό» ενώ κάτι δεν
-  //    διαβάστηκε: εκεί ακριβώς θα περνούσε η δεύτερη αποκλειστική.
-  if (conflicts.length > 0) return { kind: 'conflicts', conflicts };
-  if (unreadable.length > 0) return { kind: 'undetermined', unreadable };
+  if (verdict.kind === 'undetermined') {
+    return {
+      kind: 'undetermined',
+      unreadable: verdict.unreadable.map((occupancy) => occupancy.source),
+    };
+  }
+
   return { kind: 'clear' };
 }
 
 /**
  * **Ο ΠΑΡΟΝΟΜΑΣΤΗΣ**: κάθε είδος εντολής έχει δηλωμένο τρόπο κατάληψης.
  *
- * 🔑 Ο τύπος `Record<ListingAgreement, MandateLockMode>` το εγγυάται ήδη· αυτό υπάρχει
+ * 🔑 Ο τύπος `Record<ListingAgreement, OccupancyMode>` το εγγυάται ήδη· αυτό υπάρχει
  * ώστε η εγγύηση να μπορεί να **κοκκινίσει** και όχι μόνο να μη μεταγλωττίζεται
  * (CHECK 3.54 — *«μπορεί αυτό το αρχείο test να κοκκινίσει κάτι;»*). Ίδια κίνηση με
  * το `everyAgreementNamed()` του `listing-agreement-labels.ts`.
@@ -261,6 +251,6 @@ export function everyAgreementHasLockMode(
   agreements: readonly ListingAgreement[],
 ): boolean {
   return agreements.every((agreement) =>
-    (['shared', 'exclusive'] as const).includes(lockModeFor(agreement)),
+    (OCCUPANCY_MODES as readonly string[]).includes(lockModeFor(agreement)),
   );
 }

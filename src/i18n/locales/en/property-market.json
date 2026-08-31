@@ -482,6 +482,7 @@
       "mandate-agreement-invalid": "No valid type of mandate has been declared.",
       "mandate-scope-empty": "The mandate does not say which transaction it covers. Choose sale, letting or exchange.",
       "mandate-start-invalid": "The start date is unreadable or falls after the expiry.",
+      "mandate-term-empty": "The mandate starts and expires at the same moment, so it covers no days. Give it a longer term.",
       "mandate-conflicts-existing": "An existing mandate does not allow this agreement.",
       "mandate-conflict-undetermined": "We could not check the existing mandates. Please try again."
     },

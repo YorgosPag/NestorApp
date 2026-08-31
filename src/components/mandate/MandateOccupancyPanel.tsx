@@ -33,7 +33,8 @@
 import React from 'react';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { EXISTING_IS_EXCLUSIVE, type MandateConflict } from '@/lib/mandate/mandate-conflict';
+import { EXISTING_IS_EXCLUSIVE } from '@/lib/occupancy/occupancy-conflict';
+import type { MandateConflict } from '@/lib/mandate/mandate-conflict';
 import type {
   MandateOccupancyNotice,
 } from '@/lib/mandate/mandate-occupancy-notice';

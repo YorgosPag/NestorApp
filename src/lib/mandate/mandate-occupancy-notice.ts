@@ -42,9 +42,9 @@
  * **Layering**: leaf.
  */
 
+import { EXISTING_IS_EXCLUSIVE } from '@/lib/occupancy/occupancy-conflict';
 import {
   mandateConflicts,
-  EXISTING_IS_EXCLUSIVE,
   type MandateConflict,
   type MandateOccupancy,
 } from '@/lib/mandate/mandate-conflict';

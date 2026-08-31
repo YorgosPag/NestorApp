@@ -17,8 +17,8 @@ import {
 import {
   CANDIDATE_IS_EXCLUSIVE,
   EXISTING_IS_EXCLUSIVE,
-  type MandateOccupancy,
-} from '@/lib/mandate/mandate-conflict';
+} from '@/lib/occupancy/occupancy-conflict';
+import type { MandateOccupancy } from '@/lib/mandate/mandate-conflict';
 import { EXCLUSIVE_AGENCY, OPEN_LISTING } from '@/types/listing-agreement';
 import { brokeredMandate } from '@/lib/owner-property/__tests__/owner-property-fixtures';
 
