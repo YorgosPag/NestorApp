@@ -800,6 +800,7 @@
 | **ADR-814** | Ο δείκτης των ADR: **πρόσθεσε χωρίς να καταστρέψεις** | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-814-adr-index-preserve-decisions.md) |
 | **ADR-815** | Η ασφαλής ανάγνωση του θέματος: **ένας** ιδιοκτήτης, όχι τρία `mounted` | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-815-theme-hydration-ownership.md) |
 | **ADR-816** | Η τυπογραφία της πρόζας: **το πλάτος της γραμμής και το διάστιχο** | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-816-prose-typography.md) |
+| **ADR-838** | **Η νομιμότητα ως κλίμακα με προέλευση (Α17)** — τέσσερις βαθμίδες, υποκείμενο **σύνολο χώρων**, και **δεκαέξι κελιά** διάθεσης × αξίωσης όπου κανένα δεν σιωπά. **Οριζόντιο**· γεννήθηκε από ADR-835 Φ4 | ✅ Αποδεκτό — υλοποιήθηκε | [View](./adrs/ADR-838-legality-as-sourced-scale.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | 2026-01-01 | Uncategorized | [📄](./adrs/ADR-UI-001.md) |
 
 ---
