@@ -1,4 +1,5 @@
 import { getErrorMessage } from '@/lib/error-utils';
+import { serializedByteLength } from '@/lib/serialized-size';
 import { storage } from '../../../lib/firebase';
 import { ref, uploadBytes, getDownloadURL, getBytes } from 'firebase/storage';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
@@ -92,8 +93,14 @@ export async function validateForSaveImpl(
 }> {
   dxfLogger.debug('Running enterprise security validation', { fileName });
 
-  // Estimate file size from scene JSON (reuse caller's serialisation when available).
-  const estimatedFileSize = precomputedSizeBytes ?? JSON.stringify(scene, null, 0).length;
+  // Μέγεθος σκηνής **σε bytes UTF-8** — το ίδιο νούμερο που ανεβαίνει στο δίκτυο.
+  // 🔴 ADR-833 Φ5Α: εδώ ήταν `JSON.stringify(scene, null, 0).length`, δηλαδή **μονάδες
+  // UTF-16**. Στα ελληνικά η διαφορά είναι ×1,45 (μετρημένο, CHECK 3.34 §8.43: 163.749
+  // αντί για 240.521) και πάντα **προς τα κάτω** — δηλαδή το όριο των 25 MB δεν
+  // μπλόκαρε ποτέ όταν έπρεπε· άφηνε το ανέβασμα να αποτύχει στο δίκτυο, όπου το μήνυμα
+  // δεν λέει τι να κόψεις. Το ίδιο αρχείο μετρούσε ήδη σωστά για το ανέβασμα (γρ. 170),
+  // άρα η **ίδια** σκηνή έβγαζε δύο μεγέθη ανάλογα με το ποιος ρώτησε.
+  const estimatedFileSize = precomputedSizeBytes ?? serializedByteLength(scene);
 
   // Run complete validation workflow
   const validationResults = DxfSecurityValidator.validateDxfUpload({
