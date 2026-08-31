@@ -181,6 +181,12 @@ describe('ΠΟΡΤΑ 3 — επικόλληση: τρεις αιτίες απώ�
     expect(result.offeredRows).toBe(2);
   });
 
+  it('μπαγιάτικο ενεργό κελί ⇒ ΟΛΑ μηδέν, και το κόψιμο κειμένου μαζί — ποτέ σιωπηλή επιτυχία', () => {
+    const stale = pasteTsvIntoTable(model, { rowId: 'rΦΑΝΤΑΣΜΑ', colId: 'cΦΑΝΤΑΣΜΑ' }, [['α']]);
+    expect(stale.fittedRows).toBe(0);
+    expect(stale.clippedTextCells).toBe(0);
+  });
+
   it('επικόλληση που χωρά ολόκληρη δεν αναφέρει κόψιμο κειμένου', () => {
     const result = pasteTsvIntoTable(model, anchor, [['α', 'β'], ['γ', 'δ']]);
     expect(result.clippedTextCells).toBe(0);

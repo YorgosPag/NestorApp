@@ -93,7 +93,7 @@ import type { PersistedTableModel } from '../../types/table';
  * στο κεντρικό αρχείο θα δει το όριο κελιών **να μην κουνιέται**, χωρίς να υπάρχει λάθος
  * πουθενά. Το τοπικό όνομα μένει γιατί εδώ η τιμή είναι **διαιρετέος**, όχι καθυστέρηση.
  */
-export const TABLE_LAYOUT_BUDGET_MS = DXF_TIMING.QUOTA.TABLE_LAYOUT_BUDGET;
+export const TABLE_LAYOUT_BUDGET_MS = DXF_TIMING.lifecycle.TABLE_LAYOUT_BUDGET;
 
 /**
  * Ο **μετρημένος** ρυθμός: µs ανά πυκνό κελί, στην κατασκευή διάταξης.
@@ -268,13 +268,14 @@ export function fitTableGrid(
   );
   if (columnCount === 0) return { rowCount: 0, columnCount: 0 };
 
+  // ⚠️ **Η ράγα ΓΡΑΜΜΩΝ δεν ελέγχεται εδώ, και ΑΦΑΙΡΕΘΗΚΕ** (μετάλλαξη M50, Φ5Β): για να
+  // δέσμευε, θα έπρεπε το `MAX_TABLE_GRID_CELLS / columnCount` να ξεπερνά το 1.048.576 —
+  // δηλαδή `columnCount = 0`, που επιστρέφει **δύο γραμμές πιο πάνω**. Ήταν αυστηρά νεκρός
+  // κώδικας. Η ράγα εξακολουθεί να ελέγχεται στο {@link fitsTableGrid}, όπου η μηδενική
+  // στήλη είναι **προσιτή** είσοδος και η ράγα έχει τι να πει.
   const rowCount = Math.max(
     minRowCount,
-    Math.min(
-      offeredRows,
-      MAX_TABLE_TOTAL_ROW_COUNT,
-      Math.floor(MAX_TABLE_GRID_CELLS / columnCount),
-    ),
+    Math.min(offeredRows, Math.floor(MAX_TABLE_GRID_CELLS / columnCount)),
   );
   return { rowCount, columnCount };
 }
