@@ -6,6 +6,7 @@ import {
   parseListingFilters,
   serializeListingFilters,
   applyListingFilters,
+  stayQueryOf,
   EMPTY_LISTING_FILTERS,
   DEFAULT_SEARCH_RADIUS_KM,
 } from '../listing-filters';
@@ -19,6 +20,7 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     id: 'l1',
     commercialStatus: 'for-sale',
     commercial: { askingPrice: 200000, finalPrice: null, rentPrice: null, nightlyRate: null },
+    stay: null,
     coverImage: null,
     type: 'apartment',
     areaSqm: 95,
@@ -27,6 +29,7 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     floor: 1,
     bedrooms: 3,
     title: 'Δοκιμή',
+    legality: [],
     projectedAt: AT,
     ...over,
   };
@@ -45,6 +48,13 @@ describe('Φ1 — τα φίλτρα ζουν στη διεύθυνση και ε
       // περνούσε τον έλεγχο `!== null` και θα έσκαγε στη σειριοποίηση — που είναι
       // ακριβώς ό,τι έκανε την πρώτη φορά, και γι' αυτό γράφεται.
       near: null,
+      // 🔴 **ΔΕΥΤΕΡΗ ΕΜΦΑΝΙΣΗ ΤΟΥ ΙΔΙΟΥ, 2026-08-31 (ADR-835 Φ3).** Ο χρονικός
+      // άξονας μπήκε στο κλειστό σχήμα και αυτή η δοκιμή **κοκκίνισε αμέσως** με
+      // `Cannot read properties of undefined (reading 'checkIn')` — δηλαδή έκανε
+      // ακριβώς τη δουλειά που περιγράφει η παραπάνω παράγραφος. Τα ρητά `null`
+      // **μένουν**: είναι ο λόγος που το επόμενο πεδίο θα πιαστεί κι αυτό.
+      stayWindow: null,
+      guests: null,
     };
     expect(parseListingFilters(serializeListingFilters(filters))).toEqual(filters);
   });
@@ -203,5 +213,108 @@ describe('Φ3 — GeoJSON: η γεωμετρία κουβαλά το νόημα'
     const ring = geom.coordinates[0];
     expect(ring).toHaveLength(4);
     expect(ring[0]).toEqual(ring[ring.length - 1]);
+  });
+});
+
+// =============================================================================
+// Ο ΧΡΟΝΟΣ ΣΤΗ ΔΙΕΥΘΥΝΣΗ (ADR-835 Φ3)
+// =============================================================================
+
+describe('Χ — ο χρόνος ταξιδεύει στη διεύθυνση, ΚΑΙ ΓΥΡΝΑΕΙ ΙΔΙΟΣ', () => {
+  const WITH_TIME = {
+    ...EMPTY_LISTING_FILTERS,
+    stayWindow: { checkIn: '2026-08-10', checkOut: '2026-08-17' },
+    guests: 4,
+  };
+
+  it('🔴 ROUND-TRIP: κωδικοποίηση → αποκωδικοποίηση δίνει ΤΑ ΙΔΙΑ φίλτρα', () => {
+    expect(parseListingFilters(serializeListingFilters(WITH_TIME))).toEqual(WITH_TIME);
+  });
+
+  it('🔴 …και παραμένει σταθερό σε ΔΕΥΤΕΡΟ πέρασμα (ιδεμποτεντικό)', () => {
+    const once = parseListingFilters(serializeListingFilters(WITH_TIME));
+    expect(parseListingFilters(serializeListingFilters(once))).toEqual(once);
+  });
+
+  it('τα κενά χρονικά φίλτρα ΔΕΝ γράφονται στη διεύθυνση', () => {
+    expect(serializeListingFilters(EMPTY_LISTING_FILTERS).toString()).toBe('');
+  });
+
+  it('🔴 ΜΙΣΟ ΠΑΡΑΘΥΡΟ ΑΓΝΟΕΙΤΑΙ — `in` χωρίς `out` δεν είναι μισή ερώτηση', () => {
+    expect(parseListingFilters(new URLSearchParams('in=2026-08-10')).stayWindow).toBeNull();
+    expect(parseListingFilters(new URLSearchParams('out=2026-08-17')).stayWindow).toBeNull();
+  });
+
+  it('🔴 ΑΝΑΠΟΔΟ και ΚΕΝΟ διάστημα απορρίπτονται ΣΤΗΝ ΠΟΡΤΑ (Ε-10)', () => {
+    expect(parseListingFilters(new URLSearchParams('in=2026-08-17&out=2026-08-10')).stayWindow).toBeNull();
+    expect(parseListingFilters(new URLSearchParams('in=2026-08-10&out=2026-08-10')).stayWindow).toBeNull();
+  });
+
+  it('🔴 …ενώ ΓΝΗΣΙΟ διάστημα περνά — ο παρονομαστής', () => {
+    expect(parseListingFilters(new URLSearchParams('in=2026-08-10&out=2026-08-11')).stayWindow).toEqual({
+      checkIn: '2026-08-10',
+      checkOut: '2026-08-11',
+    });
+  });
+
+  it('🔴 ΣΤΙΓΜΗ ΜΕ ΩΡΑ ΔΕΝ ΕΙΝΑΙ ΗΜΕΡΑ — απορρίπτεται', () => {
+    // Ο `intervalShape` θα τη διάβαζε μια χαρά· ο τύπος όμως υπόσχεται **ημέρα**, και
+    // μισή μέρα μέσα σε ημι-ανοιχτό διάστημα νυχτών αλλάζει σιωπηλά τη διαδοχή.
+    const params = new URLSearchParams('in=2026-08-10T12:00:00Z&out=2026-08-17');
+    expect(parseListingFilters(params).stayWindow).toBeNull();
+  });
+
+  it('🔴 σκουπίδια στη διεύθυνση δεν σκάνε την οθόνη', () => {
+    const params = new URLSearchParams('in=χθες&out=αύριο&guests=πολλοί');
+    const filters = parseListingFilters(params);
+    expect(filters.stayWindow).toBeNull();
+    expect(filters.guests).toBeNull();
+  });
+
+  it('🔴 `guests` δέχεται ΜΟΝΟ θετικό ακέραιο — 0 και 2,5 δεν είναι άνθρωποι', () => {
+    expect(parseListingFilters(new URLSearchParams('guests=0')).guests).toBeNull();
+    expect(parseListingFilters(new URLSearchParams('guests=-2')).guests).toBeNull();
+    expect(parseListingFilters(new URLSearchParams('guests=2.5')).guests).toBeNull();
+    expect(parseListingFilters(new URLSearchParams('guests=2')).guests).toBe(2);
+  });
+});
+
+describe('Χ2 — `stayQueryOf`: ο ΜΟΝΑΔΙΚΟΣ κατασκευαστής του χρονικού ερωτήματος', () => {
+  it('παράθυρο + άτομα ⇒ ερώτημα', () => {
+    expect(
+      stayQueryOf({
+        ...EMPTY_LISTING_FILTERS,
+        stayWindow: { checkIn: '2026-08-10', checkOut: '2026-08-17' },
+        guests: 4,
+      }),
+    ).toEqual({ checkIn: '2026-08-10', checkOut: '2026-08-17', guests: 4 });
+  });
+
+  it('🔴 ΧΩΡΙΣ παράθυρο ⇒ `null`, όσα άτομα κι αν δηλώθηκαν', () => {
+    expect(stayQueryOf({ ...EMPTY_LISTING_FILTERS, guests: 4 })).toBeNull();
+  });
+
+  it('🔴 `guests: null` ΔΕΝ γίνεται 1 — δεν ρωτάμε σιωπηλά «ένα άτομο»', () => {
+    const query = stayQueryOf({
+      ...EMPTY_LISTING_FILTERS,
+      stayWindow: { checkIn: '2026-08-10', checkOut: '2026-08-17' },
+    });
+    expect(query?.guests).toBeNull();
+  });
+});
+
+describe('Χ3 — 🔴 Ο ΧΡΟΝΟΣ ΔΕΝ ΕΞΑΦΑΝΙΖΕΙ ΤΙΠΟΤΑ', () => {
+  it('🔴 ημερομηνίες + άτομα ΔΕΝ αλλάζουν το ποιες αγγελίες δείχνονται', () => {
+    // Η καρδιά του ADR-835 §4.6: όλοι οι άλλοι κρύβουν ό,τι δεν ταιριάζει στις
+    // ημερομηνίες. Εμείς το **μετράμε** (`stay-ledger.ts`). Ένα `return false` στο
+    // `matchesListingFilters` θα ισοπέδωνε και τους εννέα κάδους σε σιωπή.
+    const listings = [listing({ id: 'a' }), listing({ id: 'b', offerKinds: ['leaseShort'] })];
+    const withTime = {
+      ...EMPTY_LISTING_FILTERS,
+      stayWindow: { checkIn: '2026-08-10', checkOut: '2026-08-17' },
+      guests: 8,
+    };
+    expect(applyListingFilters(listings, withTime)).toHaveLength(2);
+    expect(applyListingFilters(listings, EMPTY_LISTING_FILTERS)).toHaveLength(2);
   });
 });

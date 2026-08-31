@@ -36,6 +36,8 @@ import type { GeoPoint } from '@/types/geo/coordinates';
 import { isLandPropertyType } from '@/constants/property-types';
 import { getEffectivePrice } from '@/lib/properties/price-resolver';
 import { distanceMeters } from '@/lib/geo/geo-distance';
+import { intervalShape } from '@/lib/date-local';
+import type { StayQuery } from '@/lib/stay/stay-availability-vocabulary';
 
 /**
  * **Ο γεωγραφικός άξονας** — η απάντηση της οθόνης 1 στο *«πού ψάχνεις;»* (Α3).
@@ -57,6 +59,25 @@ export interface ListingGeoFilter {
   readonly radiusKm: number;
 }
 
+/**
+ * **Ο ΧΡΟΝΙΚΟΣ ΑΞΟΝΑΣ** — η απάντηση στο *«πότε;»* (ADR-835 §4.6).
+ *
+ * 🔑 **Αντικείμενο `| null`, ΠΟΤΕ δύο επίπεδα πεδία** — ίδιο ιδίωμα με το
+ * {@link ListingGeoFilter}, και για τον **ίδιο ακριβώς λόγο**: μια άφιξη χωρίς
+ * αναχώρηση δεν είναι «σχεδόν ερώτηση», είναι **μη ερώτηση**. Δύο `string | null`
+ * πεδία θα επέτρεπαν στον τύπο να εκφράσει τη μισή, και κάθε καταναλωτής θα έπρεπε να
+ * θυμάται τον έλεγχο — δηλαδή θα τον ξεχνούσε κάποιος.
+ *
+ * ⚠️ **Ημι-ανοιχτό `[checkIn, checkOut)`** (§16 · ADR-832 §5.2): η μέρα αναχώρησης
+ * **είναι** μέρα άφιξης του επόμενου. **Μην το αγγίξεις.**
+ */
+export interface ListingStayWindow {
+  /** ISO `YYYY-MM-DD` — η άφιξη. Ανήκει στο διάστημα. */
+  readonly checkIn: string;
+  /** ISO `YYYY-MM-DD` — η αναχώρηση. **ΔΕΝ** ανήκει στο διάστημα. */
+  readonly checkOut: string;
+}
+
 /** Κλειστό σχήμα — κάθε φίλτρο της οθόνης 2, και κανένα άλλο. */
 export interface ListingFilters {
   /** Κενό = «όλες οι διαθέσεις», **όχι** «καμία». */
@@ -69,6 +90,18 @@ export interface ListingFilters {
   readonly bedroomsMin: number | null;
   /** `null` = «όπου να 'ναι». Δες {@link ListingGeoFilter}. */
   readonly near: ListingGeoFilter | null;
+
+  // ── Ο ΧΡΟΝΟΣ (ADR-835 Φ3) ─────────────────────────────────────────────────
+  /** `null` = «οποτεδήποτε» — καμία χρονική ερώτηση. Δες {@link ListingStayWindow}. */
+  readonly stayWindow: ListingStayWindow | null;
+  /**
+   * Πόσα άτομα· `null` = **δεν ρωτήθηκε**, ποτέ «ένα».
+   *
+   * 🔑 **Ανεξάρτητο από το {@link ListingFilters.stayWindow}, επίτηδες**: ο επισκέπτης
+   * μπορεί να ξέρει *πόσοι* είναι πριν ξέρει *πότε*, και το αντίστροφο. Δεμένο μέσα
+   * στο παράθυρο, η μία ερώτηση θα ήταν **ανέκφραστη χωρίς την άλλη**.
+   */
+  readonly guests: number | null;
 }
 
 /** Προεπιλεγμένη ακτίνα όταν η διεύθυνση δεν τη δηλώνει. Πόλη-κλίμακα. */
@@ -83,6 +116,8 @@ export const EMPTY_LISTING_FILTERS: ListingFilters = {
   areaMax: null,
   bedroomsMin: null,
   near: null,
+  stayWindow: null,
+  guests: null,
 };
 
 // ============================================================================
@@ -100,6 +135,9 @@ const PARAM = {
   lat: 'lat',
   lng: 'lng',
   radiusKm: 'r',
+  checkIn: 'in',
+  checkOut: 'out',
+  guests: 'guests',
 } as const;
 
 /**
@@ -140,6 +178,61 @@ function readOfferKinds(params: URLSearchParams): readonly OfferKind[] {
   return params.getAll(PARAM.offer).filter((k): k is OfferKind => known.has(k));
 }
 
+/**
+ * **Αυστηρή ημερολογιακή μέρα `YYYY-MM-DD`** — τίποτα άλλο.
+ *
+ * 🔴 **ΓΙΑΤΙ REGEX ΚΑΙ ΟΧΙ ΣΚΕΤΟ `intervalShape`.** Ο αναγνώστης στιγμών δέχεται
+ * **πολλές** μορφές (`2026-08-10T12:00:00Z`, `Timestamp`, …) και θα τις έκρινε μια
+ * χαρά. Αλλά ο τύπος {@link ListingStayWindow} υπόσχεται **ημέρα**, και μια στιγμή με
+ * **ώρα** μέσα σε ημι-ανοιχτό διάστημα νυχτών αλλάζει σιωπηλά τη σημασία της
+ * αναχώρησης — δηλαδή θα έκανε τη **διαδοχή** δύο κρατήσεων να επικαλύπτεται κατά
+ * μισή μέρα, στην πιο ακριβή δυνατή θέση.
+ *
+ * ⚠️ Ο έλεγχος είναι **μορφής**, όχι υπαρκτότητας: το `2026-02-31` περνά εδώ και
+ * κόβεται από το {@link intervalShape} παρακάτω, που το διαβάζει ως στιγμή.
+ */
+const CALENDAR_DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+function readDay(params: URLSearchParams, key: string): string | null {
+  const raw = params.get(key)?.trim() ?? '';
+  return CALENDAR_DAY.test(raw) ? raw : null;
+}
+
+/**
+ * Διεύθυνση → χρονικό παράθυρο, ή `null`.
+ *
+ * ⚠️ **Απαιτούνται ΚΑΙ ΤΑ ΔΥΟ άκρα** — ίδιος κανόνας με το `lat`/`lng`: μισό παράθυρο
+ * δεν είναι μισή ερώτηση, είναι **καμία**.
+ *
+ * 🔴 **ΚΑΙ ΤΟ ΔΙΑΣΤΗΜΑ ΠΡΕΠΕΙ ΝΑ ΕΙΝΑΙ `proper`** — ο φρουρός του Ε-10, στη μία θέση
+ * που ο κόσμος γράφει ημερομηνίες με το χέρι. Ένα **κενό** (`in === out`) θα ήταν
+ * αίτημα **μηδέν νυχτών**· ένα **ανάποδο** (`out < in`) δεν περιγράφει διάστημα. Και
+ * τα δύο θα ταξίδευαν σε κάθε κοινοποιημένο σύνδεσμο, και ο κριτής θα τα έκρινε
+ * **ασυνεπώς** (§17: *«η ίδια μηδενική διαμονή συγκρούεται ή όχι ανάλογα με το πού
+ * πέφτει»*). Απορρίπτονται **εδώ**, στην πόρτα.
+ */
+function readStayWindow(params: URLSearchParams): ListingStayWindow | null {
+  const checkIn = readDay(params, PARAM.checkIn);
+  const checkOut = readDay(params, PARAM.checkOut);
+  if (checkIn === null || checkOut === null) return null;
+  if (intervalShape(checkIn, checkOut) !== 'proper') return null;
+  return { checkIn, checkOut };
+}
+
+/**
+ * Διεύθυνση → πλήθος ατόμων, ή `null`.
+ *
+ * ⚠️ **Θετικός ακέραιος, ή τίποτα.** Το `0` δεν είναι «χαλαρό φίλτρο» — είναι αίτημα
+ * για **κανέναν επισκέπτη**, και το `2,5` δεν είναι άνθρωποι. Ο `readNumber` δέχεται
+ * και τα δύο (είναι πεπερασμένα), οπότε ο περιορισμός ανήκει **εδώ**: το ίδιο μάθημα
+ * με το *«ακτίνα ≤ 0 ⇒ αγνοείται ολόκληρο το φίλτρο»*.
+ */
+function readGuests(params: URLSearchParams): number | null {
+  const value = readNumber(params, PARAM.guests);
+  if (value === null || !Number.isInteger(value) || value < 1) return null;
+  return value;
+}
+
 /** Διεύθυνση → φίλτρα. **Άγνωστη τιμή αγνοείται**, ποτέ δεν σκάει η οθόνη. */
 export function parseListingFilters(params: URLSearchParams): ListingFilters {
   return {
@@ -151,6 +244,8 @@ export function parseListingFilters(params: URLSearchParams): ListingFilters {
     areaMax: readNumber(params, PARAM.areaMax),
     bedroomsMin: readNumber(params, PARAM.bedroomsMin),
     near: readGeoFilter(params),
+    stayWindow: readStayWindow(params),
+    guests: readGuests(params),
   };
 }
 
@@ -171,6 +266,7 @@ export function serializeListingFilters(filters: ListingFilters): URLSearchParam
     [PARAM.areaMin, filters.areaMin],
     [PARAM.areaMax, filters.areaMax],
     [PARAM.bedroomsMin, filters.bedroomsMin],
+    [PARAM.guests, filters.guests],
   ];
   for (const [key, value] of numbers) {
     if (value !== null) params.set(key, String(value));
@@ -183,7 +279,36 @@ export function serializeListingFilters(filters: ListingFilters): URLSearchParam
     params.set(PARAM.lng, String(filters.near.center.lng));
     params.set(PARAM.radiusKm, String(filters.near.radiusKm));
   }
+  // ⚠️ **Τα δύο άκρα γράφονται μαζί ή καθόλου**, ίδιος κανόνας με τα γεωγραφικά: ένα
+  // `in` χωρίς `out` δεν είναι μερικώς χρήσιμο — το `readStayWindow` το απορρίπτει,
+  // άρα θα ταξίδευε σιωπηλά ως σκουπίδι σε κάθε κοινοποιημένο σύνδεσμο.
+  if (filters.stayWindow !== null) {
+    params.set(PARAM.checkIn, filters.stayWindow.checkIn);
+    params.set(PARAM.checkOut, filters.stayWindow.checkOut);
+  }
   return params;
+}
+
+/**
+ * **Ο ΜΟΝΑΔΙΚΟΣ ΚΑΤΑΣΚΕΥΑΣΤΗΣ ΤΟΥ ΧΡΟΝΙΚΟΥ ΕΡΩΤΗΜΑΤΟΣ** — φίλτρα → {@link StayQuery}.
+ *
+ * @returns το ερώτημα, ή `null` όταν ο επισκέπτης **δεν ρώτησε χρόνο**.
+ *
+ * 🔑 **Εδώ ενώνονται οι δύο ανεξάρτητοι άξονες** (παράθυρο · άτομα) στο σχήμα που
+ * περιμένει η μηχανή διαθεσιμότητας. Ένας δεύτερος κατασκευαστής σε component θα ήταν
+ * η θέση όπου κάποιος θα έγραφε `guests: filters.guests ?? 1` — δηλαδή θα υπόσχονταν
+ * σιωπηλά «ένα άτομο» για κάθε αναζήτηση χωρίς αριθμό.
+ *
+ * ⚠️ **Χωρίς παράθυρο δεν υπάρχει ερώτημα, όσα άτομα κι αν δηλώθηκαν.** Η
+ * διαθεσιμότητα είναι **ερώτηση χρόνου**· η χωρητικότητα μόνη της δεν την κάνει.
+ */
+export function stayQueryOf(filters: ListingFilters): StayQuery | null {
+  if (filters.stayWindow === null) return null;
+  return {
+    checkIn: filters.stayWindow.checkIn,
+    checkOut: filters.stayWindow.checkOut,
+    guests: filters.guests,
+  };
 }
 
 // ============================================================================
@@ -213,7 +338,33 @@ export function withinRange(
   return (min === null || value >= min) && (max === null || value <= max);
 }
 
-/** Ταιριάζει αυτή η αγγελία; **Καθαρή συνάρτηση** — ίδια απάντηση σε χάρτη και λίστα. */
+/**
+ * Ταιριάζει αυτή η αγγελία; **Καθαρή συνάρτηση** — ίδια απάντηση σε χάρτη και λίστα.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 Ο ΧΡΟΝΟΣ ΚΑΙ ΤΑ ΑΤΟΜΑ **ΔΕΝ ΦΙΛΤΡΑΡΟΥΝ ΕΔΩ** — ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ, ΟΧΙ ΠΑΡΑΛΕΙΨΗ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Αυτή η συνάρτηση **εξαφανίζει** ό,τι δεν ταιριάζει. Είναι σωστό για τιμή, εμβαδόν
+ * και είδος — και θα ήταν **καταστροφικό** για τον χρόνο, γιατί θα έκανε ακριβώς αυτό
+ * που το ADR-835 §4.6 υπάρχει για να **μην** κάνουμε:
+ *
+ *   «*the search algorithm **completely hides** unavailable listings rather than
+ *   suggesting nearby dates or showing partially available properties*»
+ *
+ * Ένα `return false` για «κρατημένο» θα εξαφάνιζε **και** τα καταλύματα χωρίς δηλωμένο
+ * ημερολόγιο, **και** εκείνα που είναι ελεύθερα 5 από τις 7 νύχτες σου, **και** κάθε
+ * ακίνητο που δεν είναι κατάλυμα — δηλαδή θα ισοπέδωνε σε σιωπή **και τους εννέα**
+ * κάδους που το `lib/stay/stay-availability-vocabulary.ts` υπάρχει για να ονομάσει.
+ *
+ * ✅ **Ο χρόνος απαντιέται με ΟΝΟΜΑ και μετριέται στη ΛΟΓΙΣΤΙΚΗ**
+ * (`lib/listings/stay-ledger.ts`), ποτέ με εξαφάνιση. Δύο διαφορετικές πράξεις:
+ * *«ποια δείχνουμε»* (εδώ) και *«τι απαντά η καθεμιά στις ημερομηνίες σου»* (εκεί).
+ *
+ * ⚠️ Το **ίδιο** ισχύει για το `guests`, με τον ίδιο ακριβώς λόγο: ένα κατάλυμα που
+ * **δεν δήλωσε** χωρητικότητα δεν είναι «δεν χωράει» — και η εξαφάνισή του θα
+ * τιμωρούσε τον κάτοχο για πεδίο που κανείς δεν του ζήτησε (N.12).
+ */
 export function matchesListingFilters(listing: PublicListing, filters: ListingFilters): boolean {
   if (filters.offerKinds.length > 0) {
     if (!listing.offerKinds.some((k) => filters.offerKinds.includes(k))) return false;
