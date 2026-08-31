@@ -49,6 +49,38 @@
   πρώτα οι τρεις διορθώσεις, μετά `ssot:registry` + `ssot:baseline` σε **καθαρό** δέντρο.
   Αλλιώς ο φρουρός γεννιέται κόκκινος και κάποιος θα τον σβήσει για να περάσει.
 
+- 🔶 **31/08 — ΟΚΤΩ ΓΡΑΦΕΙΣ `.xlsx` ΞΑΝΑΓΡΑΦΟΥΝ ΤΗ ΜΗΧΑΝΙΚΗ ΤΟΥ ΒΙΒΛΙΟΥ** *(ADR-833 §5.7.1, εντοπίστηκε γράφοντας τη δεύτερη πόρτα εξαγωγής της Φάσης 6)*
+
+  **Τι**: η μηχανική «άνοιξε βιβλίο → ονόμασε φύλλα → γράψε bytes → κατέβασε» εξήχθη στο
+  `bim/schedule/exporters/xlsx-workbook.ts` και έχει **δύο** καταναλωτές (schedule + πίνακας).
+  Οι υπόλοιποι **οκτώ** την ξαναγράφουν, ο καθένας με δικό του `new Blob([...], { type })`
+  και δικό του χειρισμό ονομάτων:
+
+  ```
+    src/services/report-engine/report-excel-exporter.ts
+    src/services/report-engine/builder-excel-exporter.ts
+    src/services/report-engine/builder-excel-analysis.ts
+    src/services/payment-export/payment-excel-exporter.ts
+    src/services/gantt-export/gantt-excel-exporter.ts
+    src/services/milestone-export/milestone-excel-exporter.ts
+    src/subapps/accounting/services/export/excel-exporter.ts
+    src/lib/export/analytics-xlsx.ts
+  ```
+
+  **Γιατί δεν είναι καλλωπισμός**: το πρώτο πράγμα που βρήκε η Φάση 6 γράφοντας τη δεύτερη
+  πόρτα ήταν ότι **τα διπλά ονόματα φύλλων ρίχνουν τον `addWorksheet` με εξαίρεση** — και ότι
+  η **περικοπή στους 31 χαρακτήρες μπορεί να ΓΕΝΝΗΣΕΙ** τη σύγκρουση από δύο διαφορετικούς
+  τίτλους. Οι οκτώ έχουν **τον ίδιο** λανθάνοντα κίνδυνο, ο καθένας ανεξέλεγκτα.
+
+  **Fix**: `createXlsxWorkbook` / `xlsxWorkbookToBlob` / `xlsxWorksheetNames` /
+  `downloadXlsxBlob` από το ένα module. ⚠️ Πιθανή μετακόμιση της μηχανικής σε `src/lib/` όταν
+  οι καταναλωτές πάψουν να είναι μόνο του subapp — **όχι πριν**: ένας φάκελος με καθολικό όνομα
+  που οκτώ γραφείς δεν υπακούν είναι «`0` που σημαίνει *κανείς δεν κοίταξε*» (N.11/N.12).
+
+  **Μέγεθος**: 8 αρχεία, 5 τομείς (αναφορές / πληρωμές / gantt / λογιστική / analytics) ⇒
+  **δεν** είναι «μικρό διπλότυπο» του N.0.2. Καμία λειτουργική αλλαγή δεν απαιτείται από τη
+  Φάση 6 — ο εντοπισμός είναι Boy Scout, η εκτέλεση χρειάζεται δικό της παράθυρο.
+
 - 🔶 **29/08 — ΤΑ ΔΕΚΑΕΞΙ ΚΛΕΙΔΙΑ ΤΟΥ `BrokeredMandateFields` ΧΤΙΖΟΝΤΑΙ ΜΕ ΠΑΡΕΜΒΟΛΗ** *(ADR-827 §9.19 ε #4, εντοπίστηκε γράφοντας το `listing-agreement-labels.ts` της Φάσης Β (ζ))*
 
   **Τι**: `components/mandate/BrokeredMandateFields.tsx` — **και οι 16** κλήσεις `t()`
