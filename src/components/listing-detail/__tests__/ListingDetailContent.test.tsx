@@ -26,6 +26,8 @@ import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 import { ListingDetailContent } from '../ListingDetailContent';
+import { LEGALITY_CLAIM_KINDS } from '@/lib/legality/legality-claim';
+import { legalitySignalsFor } from '@/lib/legality/legality-signal';
 import type { PublicListing } from '@/types/public-listing';
 import type { PublicListingLookup } from '@/services/realtime/hooks/usePublicListings';
 
@@ -70,6 +72,7 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     id: 'prop_a0000001',
     commercialStatus: 'for-sale',
     commercial: { askingPrice: 200000, finalPrice: null, rentPrice: null, nightlyRate: null },
+    stay: null,
     coverImage: null,
     type: 'apartment',
     areaSqm: 95,
@@ -78,6 +81,10 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     floor: 1,
     bedrooms: 3,
     title: 'Διαμέρισμα στην Εγνατία',
+    // 🔑 **ΠΑΡΑΓΟΜΕΝΟ, όχι γραμμένο** (ADR-838): αν το fixture έγραφε τις γραμμές στο
+    //    χέρι, θα ήταν **δεύτερη ελλιπής λίστα** δίπλα στον πίνακα — ακριβώς το
+    //    σχήμα «δύο λίστες που επιβεβαιώνουν η μία την άλλη» που η Φ3 πλήρωσε (§18.7).
+    legality: legalitySignalsFor([], ['sell'], [{ propertyId: 'prop_a0000001', spaceId: null }], AT, LEGALITY_CLAIM_KINDS),
     projectedAt: AT,
     ...over,
   };
@@ -252,11 +259,25 @@ describe('Ο5 — ο χάρτης δεν προσποιείται', () => {
 // ============================================================================
 
 describe('Ο6 — ό,τι δεν δημοσιεύουμε, το λέμε', () => {
-  it('και τα τρία θέματα εμφανίζονται, με τη νομιμότητα πρώτη', () => {
+  it('τα δύο θέματα που ΜΕΝΟΥΝ ανοιχτά εμφανίζονται — η νομιμότητα ΟΧΙ πια', () => {
+    // 🔴 Η ΑΓΚΥΡΑ ΕΛΕΓΕ «και τα ΤΡΙΑ θέματα… με τη νομιμότητα ΠΡΩΤΗ». Το ADR-838 την
+    //    έκανε δεδομένο, οπότε η γραμμή έφυγε — και το `queryByText` από κάτω κρατά τη
+    //    διαφορά **ορατή**: επαναφορά της θα σήμαινε ότι η σελίδα ξαναδηλώνει κενό που
+    //    έχει ήδη κλείσει, ενώ από δίπλα δείχνει το περιεχόμενό του.
     renderWith({ state: 'found', listing: listing() });
-    for (const subject of ['legality', 'floorplan', 'dossier']) {
+    for (const subject of ['floorplan', 'dossier']) {
       expect(screen.getByText(`search-results:detail.open.${subject}`)).toBeInTheDocument();
     }
+    expect(screen.queryByText('search-results:detail.open.legality')).not.toBeInTheDocument();
+  });
+
+  it('🔴 η ΝΟΜΙΜΟΤΗΤΑ είναι πλέον ΔΕΔΟΜΕΝΟ — με βαθμίδα, πηγή, και «δεν δηλώθηκε» με όνομα', () => {
+    renderWith({ state: 'found', listing: listing() });
+    expect(screen.getByText('legality:heading')).toBeInTheDocument();
+    // Το fixture δεν κουβαλά αξιώσεις ⇒ ο γραφέας γράφει γραμμές `undeclared`/
+    // `not-applicable`. Και τα δύο ΕΧΟΥΝ κείμενο: η σιωπή θα διαβαζόταν «δεν έχει».
+    expect(screen.getAllByText('legality:state.undeclared').length).toBeGreaterThan(0);
+    expect(screen.getByText('legality:disclaimer')).toBeInTheDocument();
   });
 
   it('⛔ καμία εικόνα ⇒ ονομασμένη απουσία, ΠΟΤΕ ξένο placeholder', () => {

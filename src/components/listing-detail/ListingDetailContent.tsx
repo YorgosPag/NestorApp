@@ -68,6 +68,7 @@ import type { PublicListing } from '@/types/public-listing';
 import { ListingPriceBlock } from './ListingPriceBlock';
 import { ListingAttributeList } from './ListingAttributeList';
 import { ListingPositionSection } from './ListingPositionSection';
+import { ListingLegality } from './ListingLegality';
 import { ListingOpenSubjects } from './ListingOpenSubjects';
 
 // ⚠️ Εμβέλεια MODULE, όχι render και όχι effect: τρέχει **πριν** αποδοθεί
@@ -249,6 +250,8 @@ function ListingDetailBody({
           <ListingPriceBlock listing={listing} />
           <ListingOffers listing={listing} />
           <ListingAttributeList listing={listing} />
+          {/* A17 (ADR-838) — i nomimotita einai pleon DEDOMENO, oxi dilomeno keno. */}
+          <ListingLegality listing={listing} />
           <ListingOpenSubjects />
         </aside>
       </div>
