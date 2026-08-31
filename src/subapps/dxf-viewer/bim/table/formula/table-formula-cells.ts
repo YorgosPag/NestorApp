@@ -28,7 +28,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-833-table-xlsx-import-and-worksheets.md §5.9
  */
 
-import type { CellKey, PersistedTableModel, TableCellEntry, TableFormulaNode } from '../../../types/table';
+import type { CellKey, PersistedTableModel, TableCellEntry } from '../../../types/table';
+import type { TableFormulaNode } from '../../../types/table-formula';
 import type { ScheduleCellValue } from '../../schedule/types';
 import { cellKey } from '../table-model-helpers';
 
