@@ -1,3 +1,31 @@
 {
-  "model": "opus"
+  "model": "opus",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"C:/Nestor_Pagonis/.claude/hooks/heavy-mutex.js\" acquire",
+            "timeout": 10,
+            "statusMessage": "Ελεγχος φρενου βαριων εργασιων..."
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"C:/Nestor_Pagonis/.claude/hooks/heavy-mutex.js\" release",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  },
+  "todoFeatureEnabled": true
 }
