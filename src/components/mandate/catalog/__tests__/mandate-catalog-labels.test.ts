@@ -24,7 +24,9 @@ import {
   ACTION_LABEL_KEYS,
   CATALOG_KEYS,
   CATALOG_NS,
+  CLIENT_NAME_KEYS,
   GROUP_LABEL_KEYS,
+  NEVER_NOTIFIED_HINT_KEYS,
   PROOF_LABEL_KEYS,
   PRESENCE_DONE_KEYS,
   PRESENCE_LABEL_KEYS,
@@ -71,6 +73,12 @@ const ALL_KEYS: ReadonlyArray<readonly [string, string]> = [
   ...Object.entries(GROUP_LABEL_KEYS).map(([name, key]) => [`group.${name}`, key] as const),
   ...Object.entries(STANDING_LABEL_KEYS).map(([name, key]) => [`standing.${name}`, key] as const),
   ...Object.entries(STANDING_HINT_KEYS).map(([name, key]) => [`hint.${name}`, key] as const),
+  // 🔴 ADR-834 §6.5.δ — ο **δεύτερος άξονας** της θεραπείας μπαίνει στο ΙΔΙΟ κλειστό
+  // σύνολο: μια αιτία χωρίς λέξεις είναι ωμό κλειδί στην οθόνη, ό,τι κι αν την επέλεξε.
+  ...Object.entries(NEVER_NOTIFIED_HINT_KEYS).map(
+    ([name, key]) => [`neverNotifiedHint.${name}`, key] as const,
+  ),
+  ...Object.entries(CLIENT_NAME_KEYS).map(([name, key]) => [`clientName.${name}`, key] as const),
   ...Object.entries(PROOF_LABEL_KEYS).map(([name, key]) => [`proof.${name}`, key] as const),
   ...Object.entries(ACTION_LABEL_KEYS).map(([name, key]) => [`action.${name}`, key] as const),
   ...Object.entries(ACTION_DONE_KEYS).map(([name, key]) => [`done.${name}`, key] as const),

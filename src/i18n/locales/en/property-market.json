@@ -302,6 +302,7 @@
       "emptyHint": "When you list a client property we send them a link to approve it. Here you will see who answered, who never even opened the message, and which mandate is close to expiring.",
       "truncated": "Showing the first {count} mandates. There are more.",
       "clientUnknown": "Contact not found",
+      "clientUnnamed": "Contact has no name",
       "clientLabel": "Client",
       "expiresIn": "{count, plural, one {Expires in # day} other {Expires in # days}}",
       "expiredLabel": "Expired",
@@ -331,7 +332,7 @@
       },
       "standingHint": {
         "unannounced-live": "The listing is already on the map, but the owner has never received a notice. Send it to them.",
-        "never-notified": "The contact had no email address when the listing was created. Add one and send again.",
+        "never-notified": "No message has gone out to the owner. Press “Resend” — the reason will be recorded.",
         "link-revoked": "You revoked the link, so the client can no longer answer. Send a new one if you want them to continue.",
         "expiring-soon": "The agreement is ending. Renewal needs a new written mandate, not an extension.",
         "awaiting-decision": "They opened the link and have not decided yet. A phone call usually does it.",
@@ -340,6 +341,10 @@
         "expired": "The mandate ended and the listing came off the map. A new agreement is needed.",
         "expired-unanswered": "The deadline passed without the owner ever answering.",
         "live": "All good. The listing is on the map."
+      },
+      "neverNotifiedHint": {
+        "no-address": "The contact has no email address, so there is nowhere to send the link. Add one on their card and send again.",
+        "failed": "The contact details are fine — the message never entered the send queue. Press “Resend”."
       },
       "proof": {
         "owner-consent": "Owner approval",

@@ -29,6 +29,8 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { allowedActionsFor, type MandateAction } from '@/lib/mandate/mandate-actions';
+import { CLIENT_NAME_KNOWN } from '@/lib/mandate/mandate-client-name';
+import { NEVER_NOTIFIED } from '@/lib/mandate/mandate-standing';
 import { presenceActionFor, type PresenceAction } from '@/lib/owner-property/listing-presence';
 import type { MandateCatalogRow as CatalogRow } from '@/services/mandate/mandate-catalog.service';
 
@@ -39,6 +41,9 @@ import {
   PRESENCE_LABEL_KEYS,
   CATALOG_KEYS,
   CATALOG_NS,
+  CLIENT_NAME_KEYS,
+  NEVER_NOTIFIED_HINT_KEYS,
+  NOTIFY_UNRECORDED,
   PROOF_LABEL_KEYS,
   REJECTION_KEYS,
   STANDING_HINT_KEYS,
@@ -104,8 +109,16 @@ function RowFacts({ row }: { readonly row: CatalogRow }): React.ReactElement {
     <dl className="m-0 flex flex-wrap gap-x-6 gap-y-1 text-sm text-muted-foreground">
       <div className="flex gap-1">
         <dt>{t(CATALOG_KEYS.clientLabel)}:</dt>
+        {/*
+          🔴 **ΤΡΕΙΣ ΚΟΣΜΟΙ, ΤΡΙΑ ΚΕΙΜΕΝΑ** (ADR-834 §6.5.δ). Ήταν `row.clientName ??
+          t(clientUnknown)` — δηλαδή *«Η επαφή δεν βρέθηκε»* και για επαφή που
+          **βρέθηκε** χωρίς όνομα. Ο μεσίτης έψαχνε διαγραμμένη επαφή που δεν
+          διαγράφηκε ποτέ.
+        */}
         <dd className="m-0 text-foreground">
-          {row.clientName ?? t(CATALOG_KEYS.clientUnknown)}
+          {row.clientName.kind === CLIENT_NAME_KNOWN
+            ? row.clientName.name
+            : t(CLIENT_NAME_KEYS[row.clientName.kind])}
         </dd>
       </div>
       <div className="flex gap-1">
@@ -159,8 +172,23 @@ export function MandateCatalogRow({
         <p className="m-0 text-sm font-medium text-foreground">
           {t(STANDING_LABEL_KEYS[row.standing])}
         </p>
+        {/*
+          🔴 **Η ΘΕΡΑΠΕΙΑ ΔΙΑΒΑΖΕΙ ΔΥΟ ΑΞΟΝΕΣ, ΟΧΙ ΕΝΑΝ** (ADR-834 §6.5.δ). Ήταν
+          `STANDING_HINT_KEYS[row.standing]` — και για το «Δεν στάλθηκε ποτέ» έλεγε
+          *«η επαφή δεν είχε email»* χωρίς κανείς να το έχει καταγράψει. Η αιτία
+          ταξιδεύει τώρα στο `row.notifyOutcome`.
+
+          ⛔ **ΜΗΝ το τυλίξεις σε συνάρτηση** — δοκιμάστηκε και **μετρήθηκε**: ο
+          generator του route slice (ADR-744) διαβάζει τριαδικό και πίνακα σταθερών,
+          αλλά **όχι κλήση**, και αρνήθηκε να εκπέμψει ⇒ ωμά κλειδιά σε αυτή την
+          οθόνη. Δες το `NEVER_NOTIFIED_HINT_KEYS` για ολόκληρη τη μέτρηση.
+        */}
         <p className="m-0 text-sm text-muted-foreground">
-          {t(STANDING_HINT_KEYS[row.standing])}
+          {t(
+            row.standing === NEVER_NOTIFIED
+              ? NEVER_NOTIFIED_HINT_KEYS[row.notifyOutcome ?? NOTIFY_UNRECORDED]
+              : STANDING_HINT_KEYS[row.standing],
+          )}
         </p>
       </header>
 
