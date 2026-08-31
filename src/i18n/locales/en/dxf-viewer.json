@@ -974,7 +974,8 @@
       "rename": "Rename",
       "delete": "Delete sheet",
       "moveLeft": "Move left",
-      "moveRight": "Move right"
+      "moveRight": "Move right",
+      "full": "The table has reached its share ({usedMb} of {limitMb} MB). Delete worksheets or rows before adding a new worksheet."
     },
     "worksheetRename": {
       "fieldLabel": "Worksheet name"
@@ -1286,6 +1287,7 @@
       "pasteClippedRows": "{fitted} of {offered, plural, one {# row} other {# rows}}",
       "pasteClippedColumns": "{fitted} of {offered, plural, one {# column} other {# columns}}",
       "pasteMergedSkipped": "{count, plural, one {# cell was skipped} other {# cells were skipped}} because of a merge",
+      "pasteTextClipped": "{count, plural, one {# cell was clipped} other {# cells were clipped}} at the {limit}-character limit",
       "pastePlainText": "Pasting from a spreadsheet inserts plain text — formatting is not carried over. Excel sends the values of formulas, not the formulas themselves; text starting with \"=\" is recognised as a formula and evaluated.",
       "pasteEmpty": "The clipboard has no text to paste",
       "readDenied": "The browser did not allow reading the clipboard. Use Ctrl+V inside the cell.",

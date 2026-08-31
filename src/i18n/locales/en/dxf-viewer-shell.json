@@ -420,6 +420,7 @@
   "tableXlsx": {
     "emptyWorkbook": "The file contains no worksheets.",
     "clipped": "Not everything fit: {rows} rows and {columns} columns were left out.",
+    "sheetsDropped": "{count, plural, one {# worksheet did not fit the table share and was not added.} other {# worksheets did not fit the table share and were not added.}}",
     "sheetsAdded": "{count, plural, one {# worksheet was added.} other {# worksheets were added.}}",
     "sheetsReplaced": "{count, plural, one {The table now holds # worksheet.} other {The table now holds # worksheets.}}",
     "unsupportedNotice": "Imported, but something was not kept: {summary}",
