@@ -128,6 +128,24 @@ describe('ownerPropertyInvariantViolations — ΟΛΕΣ, ποτέ η πρώτη'
       // Χωρίς αυτή τη γραμμή ο νέος κωδικός θα περνούσε «κατά τύχη», μαζί με το
       // out-of-range — δηλαδή ο φρουρός θα είχε απόδειξη ζωής που δεν είναι δική του.
       ...ownerPropertyInvariantViolations(validDraft({ offers: [offerOf('exchange', 40)] })),
+      // ADR-835 — οι δύο όροι διαμονής, **ΧΩΡΙΣΤΑ ο καθένας**: μια είσοδος με `0` και
+      // στα δύο θα άναβε και τους δύο κωδικούς και θα άφηνε αναπόδεικτο ότι ο καθένας
+      // κρίνει **το δικό του** πεδίο. Το `nightlyRate` μένει έγκυρο ώστε να μη
+      // συμπαρασύρεται το `offer-amount-missing`.
+      ...ownerPropertyInvariantViolations(
+        validDraft({
+          offers: [
+            { id: 'offr_stay', kind: 'leaseShort', lifecycle: 'active', nightlyRate: 65, minNights: 0, maxGuests: 4 },
+          ],
+        }),
+      ),
+      ...ownerPropertyInvariantViolations(
+        validDraft({
+          offers: [
+            { id: 'offr_stay', kind: 'leaseShort', lifecycle: 'active', nightlyRate: 65, minNights: 2, maxGuests: 0 },
+          ],
+        }),
+      ),
       ...ownerPropertyInvariantViolations(validDraft({ type: '' })),
       ...ownerPropertyInvariantViolations(validDraft({ areaSqm: null })),
       ...ownerPropertyInvariantViolations(validDraft({ title: '' })),

@@ -37,6 +37,8 @@ function offerOf(
       return { id, kind, lifecycle, rentPrice: amount };
     case 'exchange':
       return { id, kind, lifecycle, percentage: amount };
+    case 'leaseShort':
+      return { id, kind, lifecycle, nightlyRate: amount, minNights: null, maxGuests: null };
   }
 }
 

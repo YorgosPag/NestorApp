@@ -15,7 +15,7 @@
  * είναι **lossy προβολή** της.
  *
  * 🔴 **Και το «lossy» δεν είναι θεωρία, είναι η αιτία ύπαρξης αυτού του αρχείου:**
- * μια **αντιπαροχή** προβάλλεται σε `'unavailable'` ({@link EXCHANGE_HAS_NO_LEGACY_PROJECTION}),
+ * μια **αντιπαροχή** προβάλλεται σε `'unavailable'` ({@link KINDS_WITHOUT_LEGACY_PROJECTION}),
  * και το `'unavailable'` **δεν απαιτεί καμία τιμή** από τα δύο κατηγορήματα. Δηλαδή
  * ένα ακίνητο **μόνο προς αντιπαροχή, με ποσοστό `null`**, περνά τους υπάρχοντες
  * ελέγχους **καθαρό**: η Α22 δεν το φρουρεί επειδή **δομικά δεν μπορεί να το δει**.
@@ -28,8 +28,9 @@
  *
  * Το {@link PropertyOffer} είναι **διακριτή ένωση**: το `SellOffer` **έχει**
  * `askingPrice`, το `LeaseOutOffer` **έχει** `rentPrice`, το `ExchangeOffer` **έχει**
- * `percentage` — και το καθένα **δεν μπορεί να εκφράσει** τα άλλα δύο. Άρα το «ποιο
- * ποσό;» απαντιέται από τον **μεταγλωττιστή**, και εδώ μένει μόνο το «**υπάρχει**;».
+ * `percentage`, το `ShortLeaseOffer` **έχει** `nightlyRate` — και το καθένα **δεν
+ * μπορεί να εκφράσει** τα άλλα. Άρα το «ποιο ποσό;» απαντιέται από τον
+ * **μεταγλωττιστή**, και εδώ μένει μόνο το «**υπάρχει**;».
  *
  * Ένας χειρόγραφος πίνακας `kind → όνομα πεδίου` θα ήταν **δεύτερη αλήθεια** που
  * αποκλίνει την ημέρα που θα προστεθεί τέταρτο είδος — ενώ το `switch` πάνω στο
@@ -48,7 +49,7 @@
 import { isLiveOffer, type PropertyOffer } from '@/types/property-offers';
 
 // =============================================================================
-// 1. ΤΑ ΟΡΙΑ ΤΟΥ ΠΟΣΟΣΤΟΥ — ονομασμένα, ώστε να μη γραφτούν ως ωμοί αριθμοί
+// 1. ΤΑ ΟΡΙΑ ΤΩΝ ΑΡΙΘΜΩΝ ΜΙΑΣ ΔΙΑΘΕΣΗΣ — ονομασμένα, ποτέ ωμοί αριθμοί
 // =============================================================================
 
 /**
@@ -65,6 +66,21 @@ import { isLiveOffer, type PropertyOffer } from '@/types/property-offers';
  */
 export const EXCHANGE_PERCENTAGE_MIN_EXCLUSIVE = 0;
 export const EXCHANGE_PERCENTAGE_MAX_INCLUSIVE = 100;
+
+/**
+ * Το κατώτατο **δηλώσιμο** όριο των δύο όρων διαμονής (ADR-835 §4.1).
+ *
+ * 🔴 **«Δεν δηλώθηκε» και «δηλώθηκε μηδέν» ΔΕΝ είναι το ίδιο, και μόνο το δεύτερο
+ * είναι σφάλμα.** Το `null` σημαίνει *«ο κάτοχος δεν έβαλε όριο»* — απολύτως νόμιμο,
+ * και **δεν** εμποδίζει τη δημοσίευση. Το `0` σημαίνει *«μηδέν διανυκτερεύσεις»* ή
+ * *«μηδέν επισκέπτες»*, δηλαδή κατάλυμα όπου **κανείς δεν μπορεί να μείνει** — αριθμός
+ * που ακυρώνει την ίδια τη διάθεση στην οποία ανήκει.
+ *
+ * ⚠️ **ΜΙΑ σταθερά για τα δύο πεδία, όχι δύο ίδιες**: το κατώφλι είναι το **ίδιο
+ * ερώτημα** («ένα, τουλάχιστον;») και δύο σταθερές με την τιμή `1` θα ήταν δύο
+ * αριθμοί που μπορούν να αποκλίνουν χωρίς να το προσέξει κανείς.
+ */
+export const STAY_LIMIT_MIN_INCLUSIVE = 1;
 
 // =============================================================================
 // 2. ΤΟ ΠΟΣΟ ΜΙΑΣ ΔΙΑΘΕΣΗΣ
@@ -91,6 +107,8 @@ export function offerAmount(offer: PropertyOffer): number | null {
       return offer.rentPrice ?? null;
     case 'exchange':
       return offer.percentage ?? null;
+    case 'leaseShort':
+      return offer.nightlyRate ?? null;
   }
 }
 
@@ -129,6 +147,42 @@ export function offerPercentageOutOfRange(offer: PropertyOffer): boolean {
   );
 }
 
+/**
+ * `true` αν το δηλωμένο **ελάχιστο διανυκτερεύσεων** δεν είναι αριθμός διανυκτερεύσεων.
+ *
+ * ⚠️ **Ξεχωριστό από το {@link offerAmountMissing}, με τον ίδιο λόγο που το ποσοστό
+ * εκτός εύρους είναι ξεχωριστό**: εδώ ο άνθρωπος **έβαλε** κάτι, απλώς όχι κάτι που
+ * μπορεί να ισχύσει. Το μήνυμα «λείπει» θα τον έστελνε να ψάξει άδειο πεδίο.
+ *
+ * ⚠️ Και **ξεχωριστό από το {@link offerMaxGuestsInvalid}**, παρότι το κατώφλι είναι
+ * κοινό: η οθόνη οφείλει να πει **ποιο** από τα δύο πεδία — «δύο αριθμοί λάθος» δεν
+ * λέει σε ποιο να πάει.
+ */
+export function offerMinNightsInvalid(offer: PropertyOffer): boolean {
+  if (offer.kind !== 'leaseShort') return false;
+  return isDeclaredButBelowStayMinimum(offer.minNights);
+}
+
+/** `true` αν ο δηλωμένος **μέγιστος αριθμός επισκεπτών** δεν είναι αριθμός ανθρώπων. */
+export function offerMaxGuestsInvalid(offer: PropertyOffer): boolean {
+  if (offer.kind !== 'leaseShort') return false;
+  return isDeclaredButBelowStayMinimum(offer.maxGuests);
+}
+
+/**
+ * «Δηλώθηκε, αλλά κάτω από το κατώφλι» — **η μία** ανάγνωση των δύο όρων διαμονής.
+ *
+ * 🔑 `null` ⇒ `false` **επίτηδες**: η μη δήλωση δεν είναι σφάλμα (δες
+ * {@link STAY_LIMIT_MIN_INCLUSIVE}). Ένα μη πεπερασμένο ⇒ επίσης `false`, με το **ίδιο**
+ * σκεπτικό που ήδη εφαρμόζει το {@link offerPercentageOutOfRange}: «δεν είναι καν
+ * αριθμός» είναι ερώτημα **σχήματος**, και το σχήμα το κρίνει το `zod`, όχι ο κριτής.
+ */
+function isDeclaredButBelowStayMinimum(value: number | null): boolean {
+  if (value === null || value === undefined) return false;
+  if (!Number.isFinite(value)) return false;
+  return value < STAY_LIMIT_MIN_INCLUSIVE;
+}
+
 // =============================================================================
 // 3. Η ΚΛΕΙΣΤΗ ΕΙΚΟΝΑ ΕΝΟΣ ΑΚΙΝΗΤΟΥ
 // =============================================================================
@@ -151,6 +205,10 @@ export interface OfferAmountGaps {
   readonly missing: readonly PropertyOffer['kind'][];
   /** Είδη με ποσοστό **εκτός εύρους** (σήμερα: μόνο `exchange`). */
   readonly percentageOutOfRange: readonly PropertyOffer['kind'][];
+  /** Είδη με **ελάχιστο διανυκτερεύσεων** που δεν είναι διανυκτερεύσεις. */
+  readonly minNightsInvalid: readonly PropertyOffer['kind'][];
+  /** Είδη με **μέγιστο επισκεπτών** που δεν είναι άνθρωποι. */
+  readonly maxGuestsInvalid: readonly PropertyOffer['kind'][];
 }
 
 /** Τα κενά ποσού των **ζωντανών** διαθέσεων. Όλα, ποτέ το πρώτο. */
@@ -159,12 +217,16 @@ export function liveOfferAmountGaps(
 ): OfferAmountGaps {
   const missing: PropertyOffer['kind'][] = [];
   const percentageOutOfRange: PropertyOffer['kind'][] = [];
+  const minNightsInvalid: PropertyOffer['kind'][] = [];
+  const maxGuestsInvalid: PropertyOffer['kind'][] = [];
 
   for (const offer of offers ?? []) {
     if (!isLiveOffer(offer)) continue;
     if (offerAmountMissing(offer)) missing.push(offer.kind);
     if (offerPercentageOutOfRange(offer)) percentageOutOfRange.push(offer.kind);
+    if (offerMinNightsInvalid(offer)) minNightsInvalid.push(offer.kind);
+    if (offerMaxGuestsInvalid(offer)) maxGuestsInvalid.push(offer.kind);
   }
 
-  return { missing, percentageOutOfRange };
+  return { missing, percentageOutOfRange, minNightsInvalid, maxGuestsInvalid };
 }
