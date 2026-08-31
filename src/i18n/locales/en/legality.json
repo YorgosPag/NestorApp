@@ -1,0 +1,30 @@
+{
+  "heading": "Legal standing",
+  "intro": "We show what has been declared and who vouches for it — never \"legal\" or \"illegal\".",
+  "disclaimer": "We do not rule on a property's legal standing. We record the declaration and where it came from.",
+  "kind": {
+    "short-stay-registry": "Short-stay property registry number (AMA)",
+    "building-identity": "Building identity or engineer's certificate",
+    "arbitrary-settlement": "Settlement of unpermitted works",
+    "energy-performance": "Energy performance class"
+  },
+  "state": {
+    "undeclared": "Not declared",
+    "declared": "Declared",
+    "expired": "Expired",
+    "expiry-unknown": "No validity period declared",
+    "not-applicable": "Does not apply to this offer"
+  },
+  "tier": {
+    "self-declared": "Stated by the owner",
+    "document-provided": "A document exists, unreviewed",
+    "professional-attested": "Attested by a professional",
+    "registry-verified": "Verified against the registry"
+  },
+  "number": "Number: {value}",
+  "expiredAfter": "Valid until {date}",
+  "assertedAt": "Declared on {date}",
+  "source": "Source: {statute}",
+  "undeclaredNote": "The gap belongs to the owner — it does not mean something is wrong.",
+  "expiryUnknownNote": "We never asked how long it stays valid. This gap is ours."
+}

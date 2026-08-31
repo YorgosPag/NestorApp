@@ -52,6 +52,7 @@ export const SUPPORTED_NAMESPACES = [
   'properties-enums',
   'properties-viewer',
   'search-results',   // ADR-777 A3 — δημοσια οθονη 2 (χαρτης + λιστα)
+  'short-stay',       // ADR-835 F3 — o xronos stin anazitisi (vraxyxronia diamoni)
   'property-market',  // ADR-777 8.38 — ζητηση + προσφορα + εντολη (ο,τι συντασσει ο ανθρωπος)
   'crm',
   'navigation',
@@ -80,6 +81,7 @@ export const SUPPORTED_NAMESPACES = [
   'payments',   // 🏢 Payment plans, installments, loans, cheques, reports (ADR-234)
   'attendance', // 🏢 Worker attendance check-in/out (ADR-170)
   'legal',      // 🏢 Legal pages — privacy policy, terms, data deletion
+  'legality',   // ADR-838 A17 — nomimotita os klimaka me proelefsi (orizontia)
   'reports',    // 🏢 Enterprise Reports System (ADR-265)
   'report-builder',         // 🏢 Dynamic Report Builder UI (ADR-268)
   'report-builder-domains', // 🏢 Report Builder domain/field labels (ADR-268)

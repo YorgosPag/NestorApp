@@ -1,0 +1,27 @@
+{
+  "legend": "When, and how many?",
+  "checkIn": "Check-in",
+  "checkOut": "Check-out",
+  "guests": "Guests",
+  "guestsAny": "Haven't decided",
+  "clear": "Clear the dates",
+  "hint": "We don't hide what doesn't fit — we count it and tell you why.",
+  "rangeInvalid": "Check-out must be after check-in. We won't fix the date for you.",
+  "ledger": {
+    "total": "{count, plural, one {# listing} other {# listings}}",
+    "idle": "Enter dates to see what is free.",
+    "imbalanced": "The time count doesn't balance — this is an error, not a state.",
+    "disagree": "The two counts report different totals — this is an error, not a state.",
+    "kind": {
+      "free": "{count} free",
+      "conditional": "{count} conditional",
+      "occupied": "{count} booked",
+      "unknown": "{count} with no declared calendar",
+      "unreadable": "{count} with a calendar we couldn't read",
+      "terms-unknown": "{count} with no declared capacity",
+      "over-capacity": "{count} smaller than your party",
+      "below-min-nights": "{count} with a longer minimum stay",
+      "not-a-stay": "{count} are not short-stay places"
+    }
+  }
+}

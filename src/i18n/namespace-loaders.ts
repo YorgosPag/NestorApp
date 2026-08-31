@@ -49,6 +49,7 @@ function getElLoader(namespace: Namespace): NamespaceLoader | null {
     case 'properties-enums': return () => import('./locales/el/properties-enums.json');
     case 'properties-viewer': return () => import('./locales/el/properties-viewer.json');
     case 'search-results': return () => import('./locales/el/search-results.json');
+    case 'short-stay': return () => import('./locales/el/short-stay.json');
     case 'property-market': return () => import('./locales/el/property-market.json');
     case 'crm': return () => import('./locales/el/crm.json');
     case 'crm-inbox': return () => import('./locales/el/crm-inbox.json');
@@ -98,6 +99,7 @@ function getElLoader(namespace: Namespace): NamespaceLoader | null {
     case 'payments-cost-calc': return () => import('./locales/el/payments-cost-calc.json');
     case 'attendance': return () => import('./locales/el/attendance.json');
     case 'legal': return () => import('./locales/el/legal.json');
+    case 'legality': return () => import('./locales/el/legality.json');
     case 'reports': return () => import('./locales/el/reports.json');
     case 'reports-extended': return () => import('./locales/el/reports-extended.json');
     case 'cash-flow': return () => import('./locales/el/cash-flow.json');
@@ -162,6 +164,7 @@ function getEnLoader(namespace: Namespace): NamespaceLoader | null {
     case 'properties-enums': return () => import('./locales/en/properties-enums.json');
     case 'properties-viewer': return () => import('./locales/en/properties-viewer.json');
     case 'search-results': return () => import('./locales/en/search-results.json');
+    case 'short-stay': return () => import('./locales/en/short-stay.json');
     case 'property-market': return () => import('./locales/en/property-market.json');
     case 'crm': return () => import('./locales/en/crm.json');
     case 'crm-inbox': return () => import('./locales/en/crm-inbox.json');
@@ -211,6 +214,7 @@ function getEnLoader(namespace: Namespace): NamespaceLoader | null {
     case 'payments-cost-calc': return () => import('./locales/en/payments-cost-calc.json');
     case 'attendance': return () => import('./locales/en/attendance.json');
     case 'legal': return () => import('./locales/en/legal.json');
+    case 'legality': return () => import('./locales/en/legality.json');
     case 'reports': return () => import('./locales/en/reports.json');
     case 'reports-extended': return () => import('./locales/en/reports-extended.json');
     case 'cash-flow': return () => import('./locales/en/cash-flow.json');

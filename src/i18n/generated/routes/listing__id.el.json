@@ -87,6 +87,36 @@
       "pinRadiusTitle": "Πινέζα - Ακτίνα: {radius}m"
     }
   },
+  "legality": {
+    "assertedAt": "Δηλώθηκε {date}",
+    "disclaimer": "Δεν αποφαινόμαστε για τη νομιμότητα ενός ακινήτου. Καταγράφουμε τη δήλωση και την προέλευσή της.",
+    "expiredAfter": "Ίσχυε έως {date}",
+    "expiryUnknownNote": "Δεν ρωτήσαμε ως πότε ισχύει. Το κενό είναι δικό μας.",
+    "heading": "Νομιμότητα",
+    "intro": "Δείχνουμε τι έχει δηλωθεί και ποιος το βεβαιώνει — ποτέ «νόμιμο» ή «μη νόμιμο».",
+    "kind": {
+      "arbitrary-settlement": "Τακτοποίηση",
+      "building-identity": "Ταυτότητα κτιρίου ή βεβαίωση μηχανικού",
+      "energy-performance": "Ενεργειακή κατηγορία",
+      "short-stay-registry": "Αριθμός Μητρώου Ακινήτου (ΑΜΑ)"
+    },
+    "number": "Αριθμός: {value}",
+    "source": "Πηγή: {statute}",
+    "state": {
+      "declared": "Δηλωμένο",
+      "expired": "Έχει λήξει",
+      "expiry-unknown": "Χωρίς δηλωμένη ισχύ",
+      "not-applicable": "Δεν αφορά αυτή τη διάθεση",
+      "undeclared": "Δεν έχει δηλωθεί"
+    },
+    "tier": {
+      "document-provided": "Υπάρχει έγγραφο, δεν έχει ελεγχθεί",
+      "professional-attested": "Βεβαιωμένο από επαγγελματία",
+      "registry-verified": "Επαληθευμένο στο μητρώο",
+      "self-declared": "Κατά δήλωση του ιδιοκτήτη"
+    },
+    "undeclaredNote": "Το κενό ανήκει στον κάτοχο — δεν σημαίνει ότι υπάρχει πρόβλημα."
+  },
   "properties-enums": {
     "types": {
       "apartment": "Διαμέρισμα",
