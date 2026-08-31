@@ -1577,6 +1577,7 @@
 | **ADR-830** | Η **μετάφραση που έφτασε** και κανείς δεν ξαναρώτησε (ICU cache χωρίς ακύρωση) | ✅ Κλειστό · 🟠 §8 fallback καρέ | [View](./adrs/ADR-830-icu-cache-invalidation.md) |
 | **ADR-831** | Η **λίστα που θυμόταν** και το **μητρώο που ήξερε** (προφόρτωση πριν την αλλαγή γλώσσας) | ✅ Κλειστό — επαληθευμένο ζωντανά (0ms) | [View](./adrs/ADR-831-language-switch-preload.md) |
 | **ADR-834** | **Η ακμή του δικτύου**: η σχέση δεν αντιγράφεται, **παράγεται** από την πράξη | 🔵 Απόφαση — καμία γραμμή κώδικα | [View](./adrs/ADR-834-network-relationship-edge.md) |
+| **ADR-835** | Η **βραχυχρόνια μίσθωση** ως τέταρτη διάθεση, και η **κράτηση ως κατάληψη** | 🔵 Απόφαση — καμία γραμμή κώδικα | [View](./adrs/ADR-835-short-term-rental-as-offer-kind.md) |
 | **ADR-UI-001** | Visual Primitive Ownership & Semantic Tokens | ✅ APPROVED | [View](./adrs/ADR-UI-001.md) |
 
 ---
