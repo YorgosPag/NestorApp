@@ -23,7 +23,7 @@
  * και γράφει με `create()`, που **πετά** αν υπάρχει.
  */
 
-import { apiClient } from '@/lib/api/enterprise-api-client';
+import { apiClient, apiErrorBodyOf } from '@/lib/api/enterprise-api-client';
 import { createModuleLogger } from '@/lib/telemetry';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
 import type {
@@ -31,7 +31,14 @@ import type {
   OwnerPropertyDraft,
   OwnerPropertyLifecycle,
 } from '@/types/owner-property';
-import type { OwnerPropertyInvariant } from '@/types/owner-property-invariants';
+import {
+  isOwnerPropertyInvariant,
+  type OwnerPropertyInvariant,
+} from '@/types/owner-property-invariants';
+import {
+  isMandateInvariant,
+  type MandateInvariant,
+} from '@/types/owner-property-mandate';
 import type { PublishOutcome } from '@/services/listings/publish-public-listing';
 
 const logger = createModuleLogger('owner-property.service');
@@ -71,7 +78,19 @@ const API_BASE = '/api/owner-properties';
  */
 export type OwnerListingResult =
   | { readonly kind: 'saved'; readonly property: OwnerProperty; readonly publish: PublishOutcome }
-  | { readonly kind: 'invalid'; readonly violations: readonly OwnerPropertyInvariant[] }
+  /**
+   * 🔴 **ΔΥΟ ΛΕΞΙΛΟΓΙΑ, ΕΝΑ ΠΕΔΙΟ** — ADR-834 §6.5.ε.
+   *
+   * Το `_shared/respond.ts` στέλνει `violations` για **δύο** αρνήσεις: `INVALID_LISTING`
+   * *(παραβιάσεις **αγγελίας**)* και `INVALID_MANDATE` *(παραβιάσεις **εντολής**)*. Ως
+   * τις 2026-08-31 αυτή η γραμμή δήλωνε **μόνο** το πρώτο — και ήταν αβλαβές **μόνο
+   * επειδή δεν έφτανε τίποτα**. Μόλις το σώμα άρχισε να φτάνει, ένας κωδικός εντολής
+   * θα παρουσιαζόταν ως κωδικός αγγελίας: **σωστά δεδομένα, λάθος θεραπεία**.
+   */
+  | {
+      readonly kind: 'invalid';
+      readonly violations: readonly (OwnerPropertyInvariant | MandateInvariant)[];
+    }
   | { readonly kind: 'failed'; readonly message: string };
 
 interface WriteResponse {
@@ -86,11 +105,38 @@ interface WriteResponse {
  * Χωρίς αυτή τη μετάφραση, ένα 422 με ονομασμένους κωδικούς θα κατέληγε «κάτι πήγε
  * στραβά» — δηλαδή θα πετούσαμε ακριβώς την πληροφορία που το §8.16 δεσμεύτηκε να
  * δώσει στον άνθρωπο.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΚΑΙ ΑΚΡΙΒΩΣ ΑΥΤΟ ΣΥΝΕΒΑΙΝΕ — ΤΟ ΣΧΟΛΙΟ ΠΕΡΙΕΓΡΑΦΕ ΤΟ ΚΑΚΟ ΠΟΥ ΔΕΝ ΑΠΕΤΡΕΨΕ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Ως τις 2026-08-31 η «μετάφραση» ζητούσε `cause.data.violations` — πεδίο που η
+ * `ApiClientError` **δεν είχε ποτέ** ⇒ **πάντα `null`** ⇒ κάθε 422 κατέληγε «κάτι πήγε
+ * στραβά», ακριβώς όπως προειδοποιεί η παράγραφος από πάνω. Οι παράγραφοι που
+ * περιγράφουν συμπεριφορά είναι **προδιαγραφές**, και οφείλουν να **εκτελούνται**
+ * (ADR-834 §7): αυτή δεν εκτελούνταν από **καμία** άγκυρα, γι' αυτό έζησε.
+ *
+ * ⚠️ **ΔΗΛΩΜΕΝΟ ΟΡΙΟ**: κανένα component **δεν αποδίδει ακόμη** αυτές τις παραβιάσεις
+ * *(το `OwnerPropertyFormContent` γράφει «το `invalid` δεν πρέπει να φτάσει εδώ», γιατί
+ * ο **ίδιος** κριτής τρέχει και στις δύο πλευρές)*. Άρα η διόρθωση **ανοίγει τον
+ * δρόμο** — δεν αλλάζει οθόνη σήμερα. Ο δρόμος χρειάζεται όταν οι δύο κριτές
+ * **αποκλίνουν**, που είναι ακριβώς η στιγμή που ο άνθρωπος μένει χωρίς εξήγηση.
  */
-function violationsOf(cause: unknown): readonly OwnerPropertyInvariant[] | null {
-  const body = (cause as { data?: { violations?: unknown } } | null)?.data;
-  const violations = body?.violations;
-  return Array.isArray(violations) ? (violations as OwnerPropertyInvariant[]) : null;
+function violationsOf(
+  cause: unknown,
+): readonly (OwnerPropertyInvariant | MandateInvariant)[] | null {
+  const body = apiErrorBodyOf(cause);
+  if (body === null || !Array.isArray(body.violations)) return null;
+
+  const named = body.violations.filter(
+    (value): value is OwnerPropertyInvariant | MandateInvariant =>
+      isOwnerPropertyInvariant(value) || isMandateInvariant(value),
+  );
+
+  // ⚠️ **Κενή λίστα ⇒ `null`, ΟΧΙ «άκυρο χωρίς λόγους».** Το δεύτερο θα ζωγράφιζε
+  //    **λευκό πλαίσιο σφάλματος**: ο άνθρωπος βλέπει ότι κάτι χάλασε και δεν μαθαίνει
+  //    τι. Αόρατο στους τύπους — το `Array.isArray([])` είναι `true`.
+  return named.length > 0 ? named : null;
 }
 
 /** Η **μία** μετάφραση αστοχίας — ώστε να μη γραφτεί σε καθεμία από τις τρεις πράξεις. */

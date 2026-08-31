@@ -85,10 +85,14 @@ function FeedbackLine({ feedback }: { readonly feedback: CatalogFeedback }): Rea
     return <p className="text-sm text-muted-foreground">{t(REJECTION_KEYS[result.reason])}</p>;
   }
 
+  // 🔴 ADR-834 §6.5.ε — **ΕΔΩ ΖΟΥΣΕ ΔΕΥΤΕΡΟΣ ΚΛΑΔΟΣ ΠΡΟΣ ΤΑ `REJECTION_KEYS`**, για
+  //    `outcome.ok === false`. Ήταν **δομικά ανέφικτος**: ο διακομιστής στέλνει 200 μόνο
+  //    για επιτυχία. Δύο πόρτες προς το ίδιο λεξιλόγιο, και **καμία από τις δύο δεν
+  //    άνοιγε ποτέ** — η μία επειδή ο μεταφραστής ήταν σπασμένος, η άλλη επειδή η
+  //    κατάσταση δεν υπάρχει. Η επικύρωση έγινε **στο σύνορο** (`mandate-catalog.client`),
+  //    όπου η αδύνατη απάντηση ονομάζεται αντί να αγνοηθεί· εδώ ο τύπος πλέον εγγυάται
+  //    επιτυχία, και ο κλάδος **δεν μεταγλωττίζεται καν**.
   const { outcome } = result;
-  if (!outcome.ok) {
-    return <p className="text-sm text-muted-foreground">{t(REJECTION_KEYS[outcome.reason])}</p>;
-  }
   if (outcome.action === 'revoke') {
     return <p className="text-sm text-muted-foreground">{t(ACTION_DONE_KEYS.revoke)}</p>;
   }

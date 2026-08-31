@@ -9,7 +9,7 @@
  * συνηθισμένος «διορθωτής» της κυκλικότητας είναι το `import type` που φαίνεται να
  * δουλεύει μέχρι κάποιος να χρειαστεί τον **πίνακα** και όχι τον τύπο.
  *
- * **Layering**: leaf — μόνο σταθερές, καμία εισαγωγή, κανένα I/O.
+ * **Layering**: leaf — μόνο σταθερές **και ο φρουρός τους**, καμία εισαγωγή, κανένα I/O.
  */
 
 /**
@@ -76,3 +76,25 @@ export const MANDATE_DECISION_REFUSALS = [
 ] as const;
 
 export type MandateDecisionRefusal = (typeof MANDATE_DECISION_REFUSALS)[number];
+
+/**
+ * **Είναι αυτό λόγος άρνησης που ξέρουμε;**
+ *
+ * 🔴 **Ο φρουρός του συνόρου** (ADR-834 §6.5.ε): ο λόγος έρχεται **από το δίκτυο** —
+ * `{ error: 'DECISION_REFUSED', reason: … }` — και καταλήγει **κλειδί** στο
+ * `REFUSAL_KEYS`. Ως τις 2026-08-31 ο πελάτης έκανε `as MandateDecisionRefusal` πάνω σε
+ * ωμή συμβολοσειρά· το σχόλιο το αποκαλούσε *«ειλικρινές»*, και **ήταν** — αλλά για
+ * σχήμα που **δεν έφτανε ποτέ**. Μόλις το σώμα άρχισε να φτάνει, το τυφλό cast έγινε
+ * **ωμό κλειδί στην οθόνη**.
+ *
+ * ⚠️ **Το σύνολο του διπλανού τομέα ΜΟΙΑΖΕΙ επικίνδυνα** (`MandateActionRejection`:
+ * `absent` · `expired` · `write-failed`). Δύο λεξιλόγια, δύο φρουροί — **ποτέ κοινός**:
+ * ένας κωδικός του ενός που περνούσε ως κωδικός του άλλου θα ζωγράφιζε **λάθος
+ * θεραπεία** σε σωστά δεδομένα.
+ */
+export function isMandateDecisionRefusal(value: unknown): value is MandateDecisionRefusal {
+  return (
+    typeof value === 'string' &&
+    (MANDATE_DECISION_REFUSALS as readonly string[]).includes(value)
+  );
+}

@@ -13,11 +13,12 @@
  * ένωση αποτελεσμάτων** — η οθόνη δεν πιάνει εξαιρέσεις.
  */
 
-import { apiClient } from '@/lib/api/enterprise-api-client';
+import { apiClient, apiErrorBodyOf } from '@/lib/api/enterprise-api-client';
 import { createModuleLogger } from '@/lib/telemetry';
-import type {
-  MandateAction,
-  MandateActionRejection,
+import {
+  isMandateActionRejection,
+  type MandateAction,
+  type MandateActionRejection,
 } from '@/lib/mandate/mandate-actions';
 import type { MandateActionOutcome } from '@/services/mandate/mandate-actions.service';
 import type { MandateCatalog } from '@/services/mandate/mandate-catalog.service';
@@ -45,16 +46,56 @@ export async function fetchMandateCatalog(): Promise<CatalogLoad> {
 /**
  * Ο λόγος απόρριψης όπως τον έστειλε ο διακομιστής, ή `null` όταν η αποτυχία ήταν
  * **δικτύου** — δύο πράγματα που η οθόνη πρέπει να πει διαφορετικά.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΤΙ ΕΓΡΑΦΕ ΕΔΩ ΩΣ ΤΙΣ 2026-08-31, ΚΑΙ ΓΙΑΤΙ ΗΤΑΝ ΑΟΡΑΤΟ (ADR-834 §6.5.ε)
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * ```ts
+ * const body = (cause as { data?: { error?: unknown } } | null)?.data;   // ⛔
+ * return typeof error === 'string' ? (error as MandateActionRejection) : null;
+ * ```
+ *
+ * Δύο λάθη μαζί, και **το ένα έκρυβε το άλλο**:
+ *
+ * 1. **Ελλιπές** — η `ApiClientError` **δεν είχε ποτέ** πεδίο `data` *(το όνομα ήταν
+ *    μισοθυμημένο Axios: εκεί λέγεται `error.response.data`)* ⇒ **πάντα `null`** ⇒ κάθε
+ *    άρνηση γινόταν *«δεν υπήρξε απάντηση, ελέγξτε τη σύνδεσή σας»*. Μετρημένο ζωντανά:
+ *    ο διακομιστής είπε `409 {"error":"no-address"}` και ο μεσίτης διάβασε «δικτυακό».
+ * 2. **Υπερβολικά επιτρεπτικό** — το δομικό cast ταιριάζει σε **οποιοδήποτε** throwable
+ *    με πεδίο `data` *(π.χ. σφάλμα Firebase)*, και το `as` δεχόταν **οποιαδήποτε**
+ *    συμβολοσειρά ως λόγο. Όσο το (1) δεν πυροδοτούσε ποτέ, το (2) ήταν αθέατο.
+ *
+ * ✅ Τώρα: ο **ΕΝΑΣ** κριτής ({@link apiErrorBodyOf} — ρωτά `isApiClientError`, το SSoT
+ * με 20+ σημεία κλήσης) **και** ο φρουρός του κλειστού συνόλου.
+ *
+ * 🔑 **Η επιλογή πεδίου μένει ΕΔΩ, τοπικά.** Αυτή η πόρτα βάζει τον λόγο **μέσα** στο
+ * `error`· η αδελφή της *(εισερχόμενα)* τον βάζει σε ξεχωριστό `reason` πίσω από τον
+ * διακριτή `DECISION_REFUSED`, επειδή εκεί ο **κωδικός κατάστασης δεν επιτρέπεται να
+ * αποκαλύψει ύπαρξη** (ADR-787 Ε-5). Η διαφορά είναι **απόφαση ασφαλείας** — ένας
+ * γενικός `rejectionFrom(cause, field, guard)` θα την έκρυβε ακριβώς από τον αναγνώστη
+ * που πρέπει να τη δει.
  */
 function rejectionOf(cause: unknown): MandateActionRejection | null {
-  const body = (cause as { data?: { error?: unknown } } | null)?.data;
-  const error = body?.error;
-  return typeof error === 'string' ? (error as MandateActionRejection) : null;
+  const body = apiErrorBodyOf(cause);
+  if (body === null) return null;
+
+  return isMandateActionRejection(body.error) ? body.error : null;
 }
+
+/**
+ * **Η ΕΠΙΤΥΧΙΑ, ΞΕΧΩΡΙΣΤΑ ΑΠΟ ΤΗΝ ΕΝΩΣΗ ΤΟΥ ΔΙΑΚΟΜΙΣΤΗ** — ADR-834 §6.5.ε.
+ *
+ * 🔴 Το `MandateActionOutcome` περιέχει και `ok: false`, αλλά ο διακομιστής στέλνει
+ * **200 ΜΟΝΟ** για `ok: true` *(κάθε άρνηση φεύγει 404/409/502 — `respondToAction`)*.
+ * Άρα ο τύπος στο `done` **υποσχόταν κατάσταση που δεν φτάνει ποτέ**, και η οθόνη
+ * κουβαλούσε γι' αυτήν **δεύτερο** κλάδο προς τα `REJECTION_KEYS` — δομικά ανέφικτο.
+ */
+export type MandateActionSuccess = Extract<MandateActionOutcome, { ok: true }>;
 
 /** Τι έγινε με την **πράξη**. */
 export type ActionResult =
-  | { readonly kind: 'done'; readonly outcome: MandateActionOutcome }
+  | { readonly kind: 'done'; readonly outcome: MandateActionSuccess }
   | { readonly kind: 'rejected'; readonly reason: MandateActionRejection }
   | { readonly kind: 'failed'; readonly message: string };
 
@@ -74,6 +115,19 @@ export async function runMandateAction(
       `${CATALOG_URL}/${encodeURIComponent(ownerPropertyId)}`,
       { action },
     );
+
+    // 🔴 **ΤΟ ΣΥΝΟΡΟ ΕΠΙΚΥΡΩΝΕΙ — parse, don't validate** (ADR-834 §6.5.ε).
+    //    Σήμερα ο διακομιστής **δεν** στέλνει 200 με `ok: false`. Ένα σκέτο στένεμα
+    //    τύπου θα το εμπιστευόταν σιωπηλά, και αν κάποτε άλλαζε, η **άρνηση θα
+    //    παρουσιαζόταν ως επιτυχία** — χειρότερο από το ελάττωμα που κλείνουμε. Εδώ η
+    //    αδύνατη κατάσταση **ανιχνεύεται και ονομάζεται**: ο τύπος παύει να ψεύδεται
+    //    χωρίς να αγοράζουμε τυφλότητα.
+    if (!outcome.ok) {
+      return isMandateActionRejection(outcome.reason)
+        ? { kind: 'rejected', reason: outcome.reason }
+        : { kind: 'failed', message: 'unexpected-success-envelope' };
+    }
+
     return { kind: 'done', outcome };
   } catch (cause) {
     const reason = rejectionOf(cause);

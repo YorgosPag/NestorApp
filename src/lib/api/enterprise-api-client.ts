@@ -41,6 +41,10 @@ export {
   hasContentTypeHeader,
   isBinaryRequestBody,
   shouldSerializeBodyAsJson,
+  // 🔴 ADR-834 §6.5.ε — ο ΕΝΑΣ κριτής του σώματος άρνησης, για τους τρεις αναγνώστες
+  //    που τον παρέκαμπταν ο καθένας με δικό του δομικό cast.
+  apiErrorBodyOf,
+  errorFieldsFrom,
 } from './api-client-types';
 
 import type {
@@ -55,6 +59,7 @@ import {
   ContractViolationError,
   shouldSerializeBodyAsJson,
   hasContentTypeHeader,
+  errorFieldsFrom,
 } from './api-client-types';
 
 const logger = createModuleLogger('enterprise-api-client');
@@ -354,39 +359,34 @@ export class EnterpriseApiClient {
       return this.parseResponseBody<T>(response, context, responseType);
     }
 
-    let errorMessage = statusText || 'Request failed';
-    let errorCode = `HTTP_${status}`;
-    let errorDetails: string | undefined;
-
+    // 🔴 ADR-834 §6.5.ε — το σώμα **επιβιώνει**. Το `.json()` καταναλώνει το stream μία
+    //    φορά· ό,τι δεν κρατηθεί εδώ χάνεται οριστικά (δες `ApiClientError.errorBody`).
+    //    `undefined` όταν το σώμα δεν είναι JSON (π.χ. HTML 502 από proxy) — ποτέ `{}`.
+    let errorBody: unknown;
     try {
-      const errorBody = await response.json();
-      if (errorBody && typeof errorBody === 'object') {
-        errorMessage = (errorBody as Record<string, unknown>).error as string || errorMessage;
-        errorCode = (errorBody as Record<string, unknown>).errorCode as string || errorCode;
-        // Preserve the server's technical `details` (the real cause) instead of discarding it.
-        errorDetails = (errorBody as Record<string, unknown>).details as string | undefined;
-      }
-    } catch { /* use default message */ }
+      errorBody = await response.json();
+    } catch { /* μη-JSON σώμα: μένει undefined, τα defaults παρακάτω αναλαμβάνουν */ }
+
+    const fields = errorFieldsFrom(errorBody);
 
     if (status === 401) this.tokenCache = null;
 
-    const ERROR_MAP: Record<number, { msg: string; code: string }> = {
-      401: { msg: 'Authentication required', code: 'AUTHENTICATION_REQUIRED' },
-      403: { msg: 'Access denied', code: 'ACCESS_DENIED' },
-      404: { msg: 'Resource not found', code: 'NOT_FOUND' },
-      409: { msg: 'Version conflict', code: 'VERSION_CONFLICT' },
-      422: { msg: 'Validation failed', code: 'VALIDATION_ERROR' },
-      429: { msg: 'Too many requests', code: 'RATE_LIMIT_EXCEEDED' },
-    };
+    // ⚠️ **Σειρά ΤΑΥΤΟΣΗΜΗ με πριν, και ο ΕΝΑΣ πίνακας που έφυγε ήταν ΝΕΚΡΟΣ.**
+    //    Εδώ ζούσε ένα `ERROR_MAP` με έξι ζεύγη *(401 «Authentication required», 409
+    //    «Version conflict», …)*, που διαβαζόταν ως `errorMessage || mapped?.msg` και
+    //    `errorCode || mapped?.code`. Και τα δύο αριστερά σκέλη ήταν **πάντα truthy**
+    //    (`statusText || 'Request failed'` · `HTTP_${status}`) ⇒ **κανένα** από τα δώδεκα
+    //    δεν διαβάστηκε ποτέ. Η αφαίρεσή του είναι **ισοδύναμη** — καμία συμπεριφορά δεν
+    //    αλλάζει· απλώς ο κώδικας παύει να υπόσχεται εναλλακτική που δεν είχε (ADR-834 §7).
 
-    const mapped = ERROR_MAP[status];
     throw new ApiClientError(
-      errorMessage || mapped?.msg || 'Server error',
+      fields.message || statusText || 'Request failed',
       status,
-      errorCode || mapped?.code || 'SERVER_ERROR',
+      fields.errorCode || `HTTP_${status}`,
       response,
       context.requestId,
-      errorDetails
+      fields.details,
+      errorBody
     );
   }
 

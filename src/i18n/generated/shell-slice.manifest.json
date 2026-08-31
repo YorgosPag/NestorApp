@@ -25,8 +25,8 @@
     "src/i18n/generated/routes/terms.el.json": "481f837696b407553f56de16128778617a86f72cf7b27471d61cd5793cf7d288",
     "src/i18n/generated/routes/test-harness__listing-shapes.el.json": "9b6aaaa831492e24807a1c83e0b505dc865c03afbd5638abf8ea2b990422b037",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "3147174176bea9fd1b1843bad078b0ae42ce562f4ea56d960b265693c043ead5",
-    "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
+    "src/i18n/generated/shell-slice.el.json": "8dd1577e92241a4f8479709f1d85007902e007ecd297c384f00f6f8faff8fb20",
+    "src/i18n/generated/shell-slice.whole.json": "baab7e9d185a06b3ee1d8467d7096d2549e39c5ca21642817535a2539992a2df"
   },
   "boundaries": {
     "dynamic": [
@@ -62,9 +62,10 @@
     "common-validation",
     "landing",
     "navigation",
-    "search-results"
+    "search-results",
+    "short-stay"
   ],
-  "inputsSha256": "b283ba9a4ce6c1e6a5c69cb3ddd58b80e520a62313500b3839ddb31342617309",
+  "inputsSha256": "a4f860c7ff3255ca71503f980ac970103744e5c2db637893d78e9ce2a48d7d7c",
   "languages": [
     "el"
   ],
@@ -86,7 +87,8 @@
     "parking",
     "projects",
     "property-market",
-    "search-results"
+    "search-results",
+    "short-stay"
   ],
   "routeFiles": {
     "src/app/(app)/data-deletion/page.tsx": "b5869d2e0a20b13b9b7b31f179595ce7dca7d2d0f4d78d1397e8aaffaedb6455",
@@ -175,7 +177,7 @@
     "src/components/mandate/agency-directory-labels.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/components/mandate/agency-directory-route.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/components/mandate/agency-showcase-labels.ts": "229f5b2259849f673758f5301d0f32253186d498db8645be544b28a7b3a9b73b",
-    "src/components/mandate/catalog/MandateCatalogRow.tsx": "b2edd8167db41a38bc8127395620d373d2c75e9834a958fb1bdb2958df7c41ba",
+    "src/components/mandate/catalog/MandateCatalogRow.tsx": "2a53f0deebe217433b17498e1cc1e325cf0b9985365aebd16f961ddd8ec16fc9",
     "src/components/mandate/catalog/mandate-catalog-labels.ts": "3c90a71bdd190fc70cf6a80ba89e1cfb290d388831f37265b6606cdcc7d12704",
     "src/components/mandate/inbox/MandateInboxRow.tsx": "a856828741f26c3c7a8636a54cb770918f625190f471c5f9f2d06b5a78de1852",
     "src/components/mandate/inbox/mandate-inbox-labels.ts": "2857f123a71a3d76278c7454928421a06824627e535c57d1945f5787e1941e87",
@@ -277,15 +279,14 @@
     "src/lib/mandate/mandate-client-name.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/mandate/mandate-conflict.ts": "e8b2654967f10965431ea208a967ad8fcd3a11c16556d4f4820692b871ae795a",
     "src/lib/mandate/mandate-form-values.ts": "f454c273fa768fcb6a4bec914ac478863dedbefe3cf95a8ed91573a93461bc36",
-    "src/lib/mandate/mandate-occupancy-notice.ts": "4efe2f044887a152dc726cc497a99ec4a077fe5fcc9ea7cb9995221373c02f1a",
+    "src/lib/mandate/mandate-occupancy-notice.ts": "cab4f1492690a3e32c6a9161dbde4c2eea032a6b26068726f6d40a2a2821519f",
     "src/lib/mandate/mandate-request-form-values.ts": "7e9be40027c67b7a58c69ef69b1f220fe926849e5bff09c3ce657e9a4f6f6de3",
     "src/lib/mandate/mandate-routes.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/mandate/mandate-standing.ts": "b30500bc4466542a91ca478aada505b0b8a097b0386d532747de99cbc758cdfc",
     "src/lib/mandate/mandate-term-window.ts": "b0862fc1c7339be12ae58f95e05f5fb2901b13a5be45f6128627ebde587622af",
     "src/lib/mandate/owner-mandate-view.ts": "458a8b53a6c4840cd26733f035816067928c0d072e09fa030d25c888745d05d4",
-    "src/lib/occupancy/occupancy-conflict.ts": "fce79b54f1996729dc9363d98711e50108304d4af0b7ae5f4650d5f4a76d3149",
-    "src/lib/occupancy/occupancy-mode.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
-    "src/lib/occupancy/occupancy-resource.ts": "2462ab81199ebf51496c3936cd43391944141154b4b9db8f956fa8afa12a39cc",
+    "src/lib/occupancy/occupancy-horizon.ts": "1bc3e1ebab7ed90e4dd97fc3b95868f1ede116f6d5aea84abec6901952abafca",
+    "src/lib/offers/derive-stay-terms.ts": "2462ab81199ebf51496c3936cd43391944141154b4b9db8f956fa8afa12a39cc",
     "src/lib/offers/offer-amount.ts": "2462ab81199ebf51496c3936cd43391944141154b4b9db8f956fa8afa12a39cc",
     "src/lib/owner-property/listing-custody.ts": "a7a82a6304f9466e4ef424561f83d66ca37d7dca6662af4c06616de64c41205e",
     "src/lib/owner-property/listing-presence.ts": "87a59b57bf6bce032b979726f82b52c53f1b08ac7b1a537f3901c6b5617397cd",
@@ -293,7 +294,7 @@
     "src/lib/owner-property/owner-property-draft-schema.ts": "0b1b744eceeefde4872b24d066ae3f251727a2f337ab5bd86c92f2f08f9485a4",
     "src/lib/owner-property/owner-property-form-validation.ts": "8b89295ec92ccb7f1df65ec50a48b3fbe65eb0224cc72bb4b0bb79d998638bdb",
     "src/lib/owner-property/owner-property-form-values.ts": "7e5276ac0f122d3e8ba62a7007927ee216c393bd8a05dbaa00fd00ae8aeb9121",
-    "src/lib/owner-property/owner-property-projection.ts": "67e29aed35208262c1140965d5599f777bdc4f15e2995092a0c167ebbc719f4d",
+    "src/lib/owner-property/owner-property-projection.ts": "eaebbc04b4539cb228c2a462de3de2228340ef538bce95364d7eda85bd94070b",
     "src/lib/places/place-claim-validation.ts": "a157fcedd9f80412f18309f840076e298026c2e857bbbdddd48fb647b262fe0b",
     "src/lib/places/place-claim.ts": "73eb20571bf6ef6cc5e04a3b4ad3647c2b73a5f5a6b64652713e96eebfea4f77",
     "src/lib/tokens/signed-token.ts": "c9f5a1fce3869194506ea66622febcc052b469949f7f0bef1009723f27a4e820",
@@ -327,7 +328,7 @@
     "src/services/owner-property/owner-property-publication.service.ts": "703455286d440f8d3ab8a551cc5bdce6258dc9307b1b9bf003278a54188b8b4d",
     "src/services/owner-property/owner-property-write-result.ts": "f3242ab2df3c8e39c387a63ce6d9d25d986478d3d86bd9519e05a05cff7f55a5",
     "src/services/owner-property/owner-property-write.service.ts": "e9aa6c8c2a49cadc15fc002bba52ca8cc39ff53bb04ad5da8b97c3fa34d8d63a",
-    "src/services/owner-property/owner-property.service.ts": "1ba57aa79f6c09c8b5a39836067f4d60e0488eb3846f95d057c34b23d77f4e70",
+    "src/services/owner-property/owner-property.service.ts": "02aebcb7d7ef6940aacdc744804c0ce5f09a0fcbeaab72d4a63990505473574b",
     "src/services/places/public-place-read.service.ts": "6cd71cfce1471cf63ae2dc08dcc81732a75e950d65c0c200bd97f87ffe1b884d",
     "src/services/profile/avatar-image.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/services/profile/avatar-render.ts": "a1fbb4a368bc6b8624ec723f78128f7d9d89080a747c64b0ac590cf35b386508",
@@ -3178,7 +3179,7 @@
     "src/i18n/lazy-config.ts": "13d72fde454f1386e7ca9b19d0d6864a0f895858dedefafb2c488f1986df93b6",
     "src/i18n/namespace-bundles.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/i18n/namespace-compat.ts": "54fa081677bd35c50b24ed5914d8c0a343b23f82fa50f33ac0ac931e011a165c",
-    "src/i18n/namespace-loaders.ts": "53f9651c24119fbf90aaf22ee183327ffca30bcc57c3fa1a955d903f269b45eb",
+    "src/i18n/namespace-loaders.ts": "b6097c8fec4f448a573777c8cfa1b1e0eeb175a0b97e4b70e8db6493a2e8215a",
     "src/i18n/pseudo-post-processor.ts": "36b77ab41d90b6545bac0a64f6a17336374a4cfa6fdde89b961b7bc48a5cd5e3",
     "src/i18n/unresolved-key.ts": "45d824a09cac8ce40aead2f90fe2405c9da4421e6b9766f1c55cbded0affb491",
     "src/lib/a11y/keyboard-scope.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -3228,11 +3229,14 @@
     "src/lib/intl-utils.ts": "926a8c5f3e1e00f67ec39e339d2897159cda589c191fce2bcb881d04eb1e60eb",
     "src/lib/json-utils.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/listings/listing-coverage.ts": "01e2eeed0cb00c7d501432df25edf4e07e7d3c24c9e3c6509aff1b2deeaa913c",
-    "src/lib/listings/listing-filters.ts": "4c82f1612891faebb510d5e3b303002031a261abc05906c2ba25438696a7a87a",
+    "src/lib/listings/listing-filters.ts": "b0ced7fc27e45ce841f3859a0a174c83c2eb1b7ad1f11b2460f08cd87737972f",
     "src/lib/listings/listing-map-shape.ts": "10781da0d2016406c2389a524898b7c497fc759056875a698840e738119800ab",
     "src/lib/listings/listing-routes.ts": "b923f8af7e5c011d93d1e0d9974851fee69183450fadb85bc7f93eb3ce736bae",
     "src/lib/location/location-provenance.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/media/media-mime.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
+    "src/lib/occupancy/occupancy-conflict.ts": "fce79b54f1996729dc9363d98711e50108304d4af0b7ae5f4650d5f4a76d3149",
+    "src/lib/occupancy/occupancy-mode.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
+    "src/lib/occupancy/occupancy-resource.ts": "2462ab81199ebf51496c3936cd43391944141154b4b9db8f956fa8afa12a39cc",
     "src/lib/offers/derive-commercial-status.ts": "29fe36af92d0e3fb1ad7c2f06e0e7065b2cfb97da9025790ae6c2d84693b373e",
     "src/lib/owner-property/owner-property-routes.ts": "b923f8af7e5c011d93d1e0d9974851fee69183450fadb85bc7f93eb3ce736bae",
     "src/lib/properties/price-resolver.ts": "46bb0913578361182cc61a022e2079b374d3a2ec6ac9c832ab17fe4d50a1c820",
@@ -3245,6 +3249,8 @@
     "src/lib/social-sharing/SocialSharingPlatforms.tsx": "0fbec2423b4140ef043cb7375a7fc39473b87aae1153ac349a8581196a58872f",
     "src/lib/stale-cache.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/state/createExternalStore.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
+    "src/lib/stay/stay-availability-vocabulary.ts": "4a9e4ebf87e2bf1ed9a6958eff7f94726fe49e3de75a5a1fd761fecee7ede143",
+    "src/lib/stay/stay-free-runs.ts": "69fb4bfb99da7160ef37b13f615777aa84bfca6139629fbcb0eddc122d899e01",
     "src/lib/storage/safe-storage.ts": "879d2197935e76a9e9ff074ebd3bf5689f3bbb45166d26fab1cbe7f4c68153de",
     "src/lib/telegram/chat-id-validator.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/telemetry/Logger.ts": "8cea2ea4dca81ce41893b77846b2b927e64552429df5d13b1f77c6e758dc518d",
@@ -3447,8 +3453,8 @@
     "dynamicBoundaries": 18,
     "matchedKeys": 135,
     "routeBoundaries": 0,
-    "shellFiles": 504,
-    "sliceBytes": 329542
+    "shellFiles": 509,
+    "sliceBytes": 331378
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
@@ -3711,6 +3717,7 @@
     "src/i18n/namespace-loaders.ts → ./locales/el/saved-reports.json",
     "src/i18n/namespace-loaders.ts → ./locales/el/search-results.json",
     "src/i18n/namespace-loaders.ts → ./locales/el/settings.json",
+    "src/i18n/namespace-loaders.ts → ./locales/el/short-stay.json",
     "src/i18n/namespace-loaders.ts → ./locales/el/showcase.json",
     "src/i18n/namespace-loaders.ts → ./locales/el/storage.json",
     "src/i18n/namespace-loaders.ts → ./locales/el/surveyRecord.json",
@@ -3815,6 +3822,7 @@
     "src/i18n/namespace-loaders.ts → ./locales/en/saved-reports.json",
     "src/i18n/namespace-loaders.ts → ./locales/en/search-results.json",
     "src/i18n/namespace-loaders.ts → ./locales/en/settings.json",
+    "src/i18n/namespace-loaders.ts → ./locales/en/short-stay.json",
     "src/i18n/namespace-loaders.ts → ./locales/en/showcase.json",
     "src/i18n/namespace-loaders.ts → ./locales/en/storage.json",
     "src/i18n/namespace-loaders.ts → ./locales/en/surveyRecord.json",
@@ -6774,6 +6782,11 @@
       "prefixes": [
         "landing.coverage"
       ],
+      "whole": true
+    },
+    "short-stay": {
+      "keys": [],
+      "prefixes": [],
       "whole": true
     }
   }

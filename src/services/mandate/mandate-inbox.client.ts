@@ -17,10 +17,13 @@
  * ένωση αποτελεσμάτων** — η οθόνη δεν πιάνει εξαιρέσεις.
  */
 
-import { apiClient } from '@/lib/api/enterprise-api-client';
+import { apiClient, apiErrorBodyOf } from '@/lib/api/enterprise-api-client';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { MandateInbox } from '@/services/mandate/mandate-inbox.service';
-import type { MandateDecisionRefusal } from '@/services/mandate/mandate-decision-vocabulary';
+import {
+  isMandateDecisionRefusal,
+  type MandateDecisionRefusal,
+} from '@/services/mandate/mandate-decision-vocabulary';
 import type {
   MandateRequestDecision,
   MandateRequestForAgency,
@@ -85,14 +88,35 @@ export type DecisionResult =
  * Ο λόγος άρνησης όπως τον έστειλε ο διακομιστής, ή `null` όταν η αποτυχία ήταν
  * **δικτύου** — δύο πράγματα που η οθόνη πρέπει να πει διαφορετικά.
  *
- * ⚠️ **Το `as` είναι ειλικρινές**: το σώμα έρχεται από το δίκτυο και ο πελάτης **δεν**
- * ξαναεπικυρώνει το κλειστό σύνολο. Η οθόνη το χρησιμοποιεί **μόνο** ως κλειδί σε
- * πίνακα κειμένων, και άγνωστος κωδικός πέφτει στο γενικό μήνυμα — ποτέ σε ωμό κλειδί.
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΤΟ ΣΧΟΛΙΟ ΠΟΥ ΗΤΑΝ ΕΔΩ ΕΛΕΓΕ ΑΛΗΘΕΙΑ ΓΙΑ ΚΟΣΜΟ ΠΟΥ ΔΕΝ ΥΠΗΡΧΕ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Έγραφε *«το `as` είναι ειλικρινές … άγνωστος κωδικός πέφτει στο γενικό μήνυμα, ποτέ
+ * σε ωμό κλειδί»*. **Ίσχυε — αλλά μόνο επειδή δεν έφτανε ΤΙΠΟΤΑ**: ο αναγνώστης ζητούσε
+ * `cause.data.*`, πεδίο που η `ApiClientError` **δεν είχε ποτέ**, άρα επέστρεφε **πάντα
+ * `null`** και **κάθε** άρνηση γινόταν *«η απόφαση δεν καταγράφηκε»*. Οι **έξι**
+ * ονομασμένοι λόγοι — καθένας με **δική του θεραπεία** — δεν φάνηκαν ποτέ. Μόλις το
+ * σώμα άρχισε να φτάνει, το τυφλό `as` θα γινόταν **ωμό κλειδί στην οθόνη** (ADR-834
+ * §6.5.ε).
+ *
+ * ✅ Τώρα ο κόσμος υπάρχει, και ο φρουρός μαζί του.
+ *
+ * 🔑 **ΓΙΑΤΙ ΔΥΟ ΠΕΔΙΑ ΕΔΩ ΚΑΙ ΕΝΑ ΣΤΟΝ ΚΑΤΑΛΟΓΟ** — δεν είναι ασυνέπεια, είναι
+ * **ασφάλεια**: αυτή η πόρτα απαντά **422 σε ΚΑΘΕ άρνηση, ποτέ 404/403**, ώστε ο
+ * κωδικός κατάστασης να **μην αποκαλύπτει την ύπαρξη** αιτήματος ανάθεσης προς
+ * ανταγωνιστή (ADR-787 Ε-5). Αφού ο κωδικός δεν μπορεί να ξεχωρίσει, ο λόγος χρειάζεται
+ * **δικό του** πεδίο πίσω από τον διακριτή. Είναι δύο έγκυρα προφίλ RFC 9457 με
+ * διαφορετικά extension members — **όχι** δύο τρόποι να πεις το ίδιο.
+ *
+ * ⚠️ **Ο διακριτής ελέγχεται ΠΡΩΤΟΣ και δεν παρακάμπτεται.** Ένα `reason` χωρίς αυτόν
+ * θα σήμαινε ότι διαβάζουμε πεδίο από σχήμα που δεν αναγνωρίσαμε.
  */
 function refusalOf(cause: unknown): MandateDecisionRefusal | null {
-  const body = (cause as { data?: { error?: unknown; reason?: unknown } } | null)?.data;
-  if (body?.error !== 'DECISION_REFUSED') return null;
-  return typeof body.reason === 'string' ? (body.reason as MandateDecisionRefusal) : null;
+  const body = apiErrorBodyOf(cause);
+  if (body === null || body.error !== 'DECISION_REFUSED') return null;
+
+  return isMandateDecisionRefusal(body.reason) ? body.reason : null;
 }
 
 /**

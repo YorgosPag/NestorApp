@@ -37,15 +37,18 @@ export function isMandateAction(value: unknown): value is MandateAction {
 }
 
 /** Γιατί **η κατάσταση** δεν δέχεται την πράξη. */
-export type StandingRefusal =
+export const STANDING_REFUSALS = [
   /** Ο ιδιοκτήτης είπε «όχι». Τερματική — το DocuSign λέει το ίδιο για το `Declined`. */
-  | 'declined'
+  'declined',
   /** Η συμφωνία τελείωσε· πρόσκληση σε νεκρή εντολή δεν ζητά τίποτα υπαρκτό. */
-  | 'expired'
+  'expired',
   /** Ανάκληση σε εντολή που **δεν εκκρεμεί** — κλειδώνει τον ιδιοκτήτη έξω. */
-  | 'not-pending'
+  'not-pending',
   /** Ο σύνδεσμος **είναι ήδη** ανακλημένος· δεν υπάρχει τίποτα να ανακληθεί. */
-  | 'already-revoked';
+  'already-revoked',
+] as const;
+
+export type StandingRefusal = (typeof STANDING_REFUSALS)[number];
 
 /**
  * **Κάθε λόγος που μια πράξη δεν έγινε** — οι λόγοι της κατάστασης **συν** εκείνοι που
@@ -55,13 +58,27 @@ export type StandingRefusal =
  * για να διαλέξει μήνυμα. Ένα `server-only` module σαν τόπος του θα ανάγκαζε κάθε
  * component να κάνει `import type` από αρχείο που **δεν επιτρέπεται** να φορτώσει —
  * δουλεύει (ο τύπος σβήνεται), αλλά δηλώνει λάθος πράγμα για το ποιος ανήκει πού.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΓΙΑΤΙ ΕΙΝΑΙ **ΠΙΝΑΚΑΣ** ΚΑΙ ΟΧΙ ΣΚΕΤΗ ΕΝΩΣΗ — ADR-834 §6.5.ε
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Ως τις 2026-08-31 ήταν **μόνο τύπος**: υπήρχε στη μεταγλώττιση και **πουθενά** στην
+ * εκτέλεση. Άρα ο πελάτης που δεχόταν τον λόγο **από το δίκτυο** δεν είχε τίποτα να
+ * ρωτήσει, και έκανε `as MandateActionRejection` πάνω σε **ωμή συμβολοσειρά** — τυφλό
+ * cast που δέχεται **οτιδήποτε**. Ένα κλειστό σύνολο που δεν μπορεί να ερωτηθεί
+ * **δεν φυλάει τίποτα**· είναι σχόλιο με σύνταξη τύπου.
+ *
+ * ⚠️ Το `[...STANDING_REFUSALS, …] as const` **διατηρεί** τη σχέση υποσυνόλου *και* τους
+ * literal τύπους ⇒ τα `switch` του {@link verdictFor} μένουν **εξαντλητικά**: νέος λόγος
+ * εδώ **δεν μεταγλωττίζεται** μέχρι κάποιος να αποφασίσει τι σημαίνει.
  */
-export type MandateActionRejection =
-  | StandingRefusal
+export const MANDATE_ACTION_REJECTIONS = [
+  ...STANDING_REFUSALS,
   /** Δεν υπάρχει **για αυτό το γραφείο**. Καλύπτει και «δεν υπάρχει» και «ξένο». */
-  | 'absent'
+  'absent',
   /** Υπάρχει, αλλά είναι αγγελία ιδιώτη — δεν έχει εντολή να ξαναστείλεις. */
-  | 'not-brokered'
+  'not-brokered',
   /**
    * 🔴 **Η επαφή ΔΕΝ ΕΧΕΙ EMAIL.** Ξεχωριστός λόγος από το `write-failed`, και είναι
    * **η ίδια η θεραπεία** της κατάστασης `never-notified`: το γραφείο πατά
@@ -69,9 +86,29 @@ export type MandateActionRejection =
    * στην επαφή»*, όχι *«δοκιμάστε ξανά»* — η δεύτερη στέλνει τον άνθρωπο να πατά το
    * ίδιο κουμπί για πάντα.
    */
-  | 'no-address'
+  'no-address',
   /** Δεν ολοκληρώθηκε η γραφή ή η ουρά μηνυμάτων απάντησε αρνητικά. */
-  | 'write-failed';
+  'write-failed',
+] as const;
+
+export type MandateActionRejection = (typeof MANDATE_ACTION_REJECTIONS)[number];
+
+/**
+ * **Είναι αυτό λόγος άρνησης που ξέρουμε;**
+ *
+ * 🔴 Ο φρουρός του συνόρου: ο λόγος έρχεται **από το δίκτυο** και καταλήγει **κλειδί σε
+ * πίνακα κειμένων**. Χωρίς αυτόν, ένας άγνωστος κωδικός θα ζωγραφιζόταν ως **ωμό
+ * κλειδί** στην οθόνη — ή, χειρότερα, ως `undefined`.
+ *
+ * ⚠️ Ο έλεγχος `typeof` **δεν** είναι περιττός: το `includes` δέχεται `unknown` και θα
+ * περνούσε αντικείμενα ή `null` χωρίς παράπονο.
+ */
+export function isMandateActionRejection(value: unknown): value is MandateActionRejection {
+  return (
+    typeof value === 'string' &&
+    (MANDATE_ACTION_REJECTIONS as readonly string[]).includes(value)
+  );
+}
 
 export type ActionVerdict =
   | { readonly allowed: true }
