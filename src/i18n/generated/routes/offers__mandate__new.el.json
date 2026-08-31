@@ -90,6 +90,7 @@
       "offerKind": {
         "exchange": "Αντιπαροχή",
         "leaseOut": "Ενοικίαση",
+        "leaseShort": "Βραχυχρόνια μίσθωση",
         "sell": "Πώληση"
       }
     }
