@@ -42,7 +42,7 @@
  * **Layering**: leaf.
  */
 
-import { EXISTING_IS_EXCLUSIVE } from '@/lib/occupancy/occupancy-conflict';
+import { earliestFreeStart } from '@/lib/occupancy/occupancy-horizon';
 import {
   mandateConflicts,
   type MandateConflict,
@@ -123,35 +123,22 @@ export function visibleOccupancies(
 }
 
 /**
- * 🏆 **ΑΠΟ ΠΟΤΕ ΕΙΝΑΙ ΕΛΕΥΘΕΡΟΣ Ο ΠΟΡΟΣ;** — `null` όταν η αναμονή δεν βοηθά.
+ * 🏆 **ΑΠΟ ΠΟΤΕ ΕΙΝΑΙ ΕΛΕΥΘΕΡΟΣ Ο ΠΟΡΟΣ;** — **ΕΠΑΝΕΞΑΓΩΓΗ**, όχι δεύτερη γραφή.
  *
- * ⚠️ **Μόνο οι συγκρούσεις τύπου {@link EXISTING_IS_EXCLUSIVE} έχουν ημερομηνία.**
- * Όταν ο **υποψήφιος** είναι ο αποκλειστικός (`candidate-is-exclusive`), το εμπόδιο
- * δεν είναι ο χρόνος αλλά η **αξίωση**: ο άνθρωπος λύνει το πρόβλημα ζητώντας
- * **απλή** εντολή, ή αποσύροντας τις υπάρχουσες — και μια ημερομηνία εκεί θα του
- * έλεγε να **περιμένει άδικα**.
+ * 🔴 **ΜΕΤΑΚΟΜΙΣΕ στο `lib/occupancy/occupancy-horizon.ts` (ADR-835 Φ3), και ο λόγος
+ * είναι ότι ΠΟΤΕ ΔΕΝ ΗΤΑΝ ΤΩΝ ΕΝΤΟΛΩΝ.** Διάβαζε `conflict.reason` και
+ * `conflict.with.expiresAt` — **δύο πεδία του ίδιου του κριτή**, μηδέν από τον τομέα
+ * της μεσιτείας. Ήταν δεμένο εδώ μόνο από τον **τύπο** του, δηλαδή κατά λάθος.
  *
- * ⚠️ **`Infinity` μέσω `null`**: κατάληψη **ανοιχτής** διάρκειας δεν ελευθερώνεται
- * ποτέ, άρα καταπίνει το μέγιστο. Ένα `?? 0` εδώ θα έβγαζε ημερομηνία στο παρελθόν —
- * δηλαδή θα υποσχόταν διαθεσιμότητα που δεν υπάρχει.
+ * Ο **δεύτερος** καταναλωτής (η βραχυχρόνια: *«κρατημένο ως 14/08»*) το ζήτησε
+ * αυτούσιο. Μια δεύτερη γραφή εκεί θα ήταν **δίδυμο αόρατο στο `ssot:discover`**
+ * (name-based) — ακριβώς το σχήμα που το N.18 υπάρχει για να πιάσει.
+ *
+ * ⚠️ Επανεξάγεται ώστε **καμία** υπάρχουσα εισαγωγή και **καμία** υπάρχουσα άγκυρα
+ * (`mandate-occupancy-notice.test.ts` Ξ) να μη χρειαστεί να αλλάξει: μετακινήθηκε ο
+ * **ορισμός**, όχι οι καταναλωτές (κανόνας 19).
  */
-export function earliestFreeStart(
-  conflicts: readonly MandateConflict[],
-): string | null {
-  const waitable = conflicts.filter((conflict) => conflict.reason === EXISTING_IS_EXCLUSIVE);
-  if (waitable.length === 0) return null;
-
-  let latest: string | null = null;
-  for (const conflict of waitable) {
-    const until = conflict.with.expiresAt;
-    // 🔴 Ανοιχτή διάρκεια ⇒ **καμία** ημερομηνία, και τερματίζουμε: κανένα άλλο
-    //    σκέλος δεν μπορεί να τη φέρει πίσω.
-    if (until === null) return null;
-    if (Number.isNaN(Date.parse(until))) return null;
-    if (latest === null || Date.parse(until) > Date.parse(latest)) latest = until;
-  }
-  return latest;
-}
+export { earliestFreeStart };
 
 /**
  * **Η εικόνα που δείχνει η οθόνη** — μία κλήση, μία απάντηση.
