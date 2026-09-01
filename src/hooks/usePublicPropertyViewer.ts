@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useSharedProperties } from '@/contexts/SharedPropertiesProvider';
+import { usePropertyEditCapability } from '@/hooks/usePropertyEditCapability';
 import type { Property } from '@/types/property-viewer';
 import type { FilterState } from '@/types/property-viewer';
 import { DEFAULT_FILTERS } from '@/types/property-viewer';
@@ -26,9 +27,14 @@ import { getEffectivePrice } from '@/lib/properties/price-resolver';
 // ============================================================================
 
 /**
- * Hook για το `/properties` — **read-only mirror** του Units page: ίδια δεδομένα,
- * μηδέν δυνατότητα επεξεργασίας. Φιλτράρει τα actively available ακίνητα μέσω του
- * SSoT gate και απενεργοποιεί κάθε edit capability.
+ * Hook για το `/properties`: **ίδια δεδομένα** με το Units page (ίδιος provider),
+ * φιλτραρισμένα από το SSoT gate εμφάνισης.
+ *
+ * 🔴 **Η ΕΠΙΚΕΦΑΛΙΔΑ ΕΛΕΓΕ «ΜΗΔΕΝ ΔΥΝΑΤΟΤΗΤΑ ΕΠΕΞΕΡΓΑΣΙΑΣ» — ΕΠΑΨΕ ΝΑ ΙΣΧΥΕΙ**
+ * (ADR-840 Α4, Σ2). Δεν είναι πια «read-only mirror»: το `isReadOnly` **παράγεται
+ * από τον ρόλο** ({@link usePropertyEditCapability}). Ήταν σταθερά — δηλαδή το αν
+ * μπορείς να επεξεργαστείς εξαρτιόταν από **ποιο κουμπί του μενού πάτησες**, όχι
+ * από το ποιος είσαι.
  *
  * ⚠️ **«Public» εδώ σημαίνει «read-only», ΟΧΙ «ανώνυμος»** — και μέχρι τις 2026-08-10
  * σήμαινε και τα δύο, λανθασμένα:
@@ -54,10 +60,18 @@ import { getEffectivePrice } from '@/lib/properties/price-resolver';
  * `floorId` που δεν υπάρχει. Η δημόσια επιφάνεια είναι οι οθόνες `/search`,
  * `/search/results`, `/listing/[id]`, που διαβάζουν `usePublicListings`.
  *
- * ⇒ Ο hook κάνει πλέον **μία** δουλειά: τον συνδεδεμένο read-only viewer.
+ * ⇒ Ο hook κάνει πλέον **μία** δουλειά: τον **συνδεδεμένο** viewer — με τη
+ * δυνατότητα επεξεργασίας να **ρωτιέται**, όχι να προεξοφλείται.
  */
 export function usePublicPropertyViewer() {
   const { properties: allProperties, floors, isLoading } = useSharedProperties();
+
+  /**
+   * ADR-840 Α4 / Σ2 — **η δυνατότητα έρχεται από τον ΡΟΛΟ, όχι από τη διεύθυνση.**
+   * Δες την επικεφαλίδα του {@link usePropertyEditCapability} για το τι ήταν εδώ
+   * πριν (σταθερά `isReadOnly: true`) και γιατί ήταν σφάλμα.
+   */
+  const { canEdit } = usePropertyEditCapability();
 
   // Local state για UI controls
   const [selectedPropertyIds, setSelectedPropertyIds] = useState<string[]>([]);
@@ -322,7 +336,15 @@ export function usePublicPropertyViewer() {
     isConnecting: false,
     firstConnectionPoint: null,
     
-    // Mark as read-only for components
-    isReadOnly: true,
+    /**
+     * 🔑 **ΔΕΝ ΕΙΝΑΙ ΠΙΑ ΣΤΑΘΕΡΑ** (ADR-840 Α4). Η ίδια οθόνη προσαρμόζεται στον
+     * άνθρωπο, αντί ο άνθρωπος να διαλέγει πόρτα.
+     *
+     * ⚠️ **ΜΗΝ το γυρίσεις σε `true` «για σιγουριά»**: η ασφάλεια δεν κατοικεί
+     * εδώ. Ο φύλακας είναι ο διακομιστής (`checkPermission`), και ένα `true`
+     * εδώ κρύβει από **δικαιούχο** — σφάλμα χωρίς μήνυμα, ακριβώς αυτό που
+     * αυτό το στάδιο διόρθωσε.
+     */
+    isReadOnly: !canEdit,
   };
 }

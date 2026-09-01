@@ -2,7 +2,11 @@ import type { ViewerProps, PublicViewerHookShape } from '../../property-manageme
 
 /**
  * 🏢 ENTERPRISE: Build ViewerProps from PublicViewerHookShape
- * Keeps only the read-only capabilities that the public viewer actually supports.
+ * Keeps only the capabilities that this viewer surface actually supports.
+ *
+ * ⚠️ **ADR-840 Σ2 — ΕΔΩ ΖΟΥΣΕ Η ΤΡΙΤΗ ΣΤΑΘΕΡΑ.** Η γραμμή έγραφε `isReadOnly: true`
+ * αγνοώντας ολότελα το `h.isReadOnly` που της έδινε ο hook: δηλαδή ακόμη κι αν ο
+ * hook αποφάσιζε σωστά, ο μεταφορέας το **ξαναέγραφε**. Ο μεταφορέας **μεταφέρει**.
  */
 export function buildViewerProps(h: PublicViewerHookShape): ViewerProps {
   const adaptedPolygonSelect = (id: string | null): void => {
@@ -34,6 +38,6 @@ export function buildViewerProps(h: PublicViewerHookShape): ViewerProps {
     groups: h.groups,
     isConnecting: false,
     firstConnectionPoint: h.firstConnectionPoint,
-    isReadOnly: true,
+    isReadOnly: h.isReadOnly,
   };
 }

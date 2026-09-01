@@ -19,6 +19,7 @@
 
 import React from 'react';
 import { useSearchParams } from 'next/navigation';
+import { usePropertyEditCapability } from '@/hooks/usePropertyEditCapability';
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { PropertyList } from '@/components/property-viewer/PropertyList';
@@ -71,6 +72,8 @@ export function ListLayout({
   viewerProps: ReadOnlyViewerContextProps;
 }) {
   const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
+  /** ADR-840 Α4 — δες το σχόλιο πάνω από το `detailsPanel`. */
+  const { canEdit } = usePropertyEditCapability();
   // 🏢 ENTERPRISE: Centralized spacing tokens - NO hardcoded values
   const layout = useLayoutClasses();
   const spacing = useSpacingTokens();
@@ -182,12 +185,26 @@ export function ListLayout({
    * στην ευρεία, φύλλο στη στενή. Δύο γραμμένες κλήσεις θα ήταν δίδυμο (CHECK 3.28) και,
    * χειρότερα, δύο σημεία που θα αποκλίνουν σιωπηλά.
    */
+  /**
+   * 🔴 **ADR-840 Α4 / Σ2 — ΕΔΩ ΖΟΥΣΕ Η ΤΕΤΑΡΤΗ ΣΤΑΘΕΡΑ**, ως **γυμνό** `isReadOnly`
+   * (δηλαδή `true`). Το πάνελ έμενε κλειδωμένο ακόμη κι όταν ο hook αποφάσιζε
+   * διαφορετικά — δηλαδή η απόφαση του ρόλου **δεν έφτανε ποτέ** εδώ.
+   *
+   * 🔑 **Ρωτιέται, δεν περνιέται.** Το ADR-840 §6 απαγορεύει ρητά το `canEdit` ως
+   * prop που ταξιδεύει χέρι-χέρι: θα ήταν το ίδιο σφάλμα σε νέα μορφή («σωστό
+   * στην πρώτη σελίδα, ξεχασμένο στη δεύτερη»). Το φύλλο **ζητά** την απάντηση
+   * από το SSoT — μηδέν νέα props, μηδέν αλλαγή τύπων σε τρία στρώματα.
+   *
+   * ⚠️ Το `isReadOnly` του πάνελ οδηγεί **και τη διάταξη** (ADR-258D: flex με
+   * καρφωμένο υποσέλιδο αντί για `ScrollArea`) — άρα δεν είναι μόνο άδεια, είναι
+   * και μορφή. Και τα δύο πρέπει να ακολουθούν τον ίδιο ρόλο.
+   */
   const detailsPanel = (
     <PropertyDetailsPanel
       propertyIds={selectedPropertyIds}
       onSelectFloor={handleSelectFloor}
       properties={properties}
-      isReadOnly
+      isReadOnly={!canEdit}
     />
   );
 

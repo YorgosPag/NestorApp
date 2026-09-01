@@ -71,7 +71,11 @@ export type ViewerProps = {
   setIsConnecting?: (v: boolean) => void;
   firstConnectionPoint: Property | null;
   setFirstConnectionPoint?: (v: Property | null) => void;
-  isReadOnly: true;
+  /**
+   * ADR-840 Α4 — **`boolean`, όχι literal `true`.** Ο τύπος **επέβαλλε** τη
+   * σταθερά: όσο έγραφε `true`, καμία τιμή από ρόλο δεν χωρούσε εδώ.
+   */
+  isReadOnly: boolean;
 };
 
 /**
@@ -198,5 +202,9 @@ export type PublicViewerHookShape = {
   firstConnectionPoint: null;
 
   // read-only marker
-  isReadOnly: true;
+  /**
+   * ADR-840 Α4 — **`boolean`, όχι literal `true`.** Ο τύπος **επέβαλλε** τη
+   * σταθερά: όσο έγραφε `true`, καμία τιμή από ρόλο δεν χωρούσε εδώ.
+   */
+  isReadOnly: boolean;
 };

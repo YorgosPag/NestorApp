@@ -43,6 +43,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { cn } from '@/lib/utils';
 import { useGuardedPropertyMutation } from '@/hooks/useGuardedPropertyMutation';
+import { usePropertyEditCapability } from '@/hooks/usePropertyEditCapability';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { translatePropertyMutationError } from '@/services/property/property-mutation-feedback';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
@@ -56,7 +57,7 @@ export function PropertyDetailsContent({
   unit, // Support for UniversalTabsRenderer compatibility
   data, // Support for UniversalTabsRenderer compatibility
   onSelectFloor,
-  isReadOnly = false,
+  isReadOnly: isReadOnlyRequested = false,
   // 🏢 ENTERPRISE: Edit mode props from parent (UnitsSidebar) - Pattern A
   isEditMode: externalEditMode,
   onToggleEditMode: externalToggleEditMode,
@@ -83,9 +84,36 @@ export function PropertyDetailsContent({
   const { quick } = useBorderTokens();
   const spacing = useSpacingTokens();
   const iconSizes = useIconSizes();
+
   const typography = useTypography();
   const { error: notifyError } = useNotifications();
   const { confirm: confirmWarning, dialogProps: floorWarningDialogProps } = useConfirmDialog();
+
+  // ==========================================================================
+  // 🔴 ADR-840 Α4 / Σ2 — ΤΟ ΔΑΠΕΔΟ ΕΞΟΥΣΙΟΔΟΤΗΣΗΣ
+  // ==========================================================================
+  //
+  // **Γιατί ΕΔΩ και όχι στους καλούντες**: αυτό το component είναι το **σημείο
+  // σύγκλισης** και των δύο οθονών ακινήτων — το `PropertyDetailsPanel` το
+  // αποδίδει και στους **δύο** κλάδους του, και ο `UniversalTabsRenderer` το
+  // φέρνει στο `/spaces/properties`. Ένα prop που ταξιδεύει χέρι-χέρι μέχρι εδώ
+  // θα ήταν το σφάλμα του §6 σε νέα μορφή· η ερώτηση **ρωτιέται** στο φύλλο.
+  //
+  // 🔴 **ΤΙ ΔΙΟΡΘΩΝΕΙ, ΜΕΤΡΗΜΕΝΟ**: το `/spaces/properties` (`UnitsPageContent`,
+  //    478 γρ.) δεν περνούσε `isReadOnly` **πουθενά** — δηλαδή πρόσφερε πλήρη
+  //    επεξεργασία σε **κάθε** ρόλο που φτάνει στη σελίδα, ακόμη και σε αυτούς
+  //    που ο κατάλογος τους δίνει **μόνο** `:view`. Ήταν ο **καθρέφτης** του
+  //    ίδιου ελαττώματος: η μία πόρτα κλείδωνε τους πάντες, η άλλη κανέναν.
+  //
+  // 🔒 **ΜΟΝΟΤΟΝΗ ΣΥΝΘΕΣΗ — ΤΟ prop ΜΟΝΟ ΠΡΟΣΘΕΤΕΙ ΠΕΡΙΟΡΙΣΜΟ, ΠΟΤΕ ΔΕΝ ΤΟΝ
+  //    ΑΦΑΙΡΕΙ.** Είναι ο ίδιος κανόνας «ταβάνι» που ήδη διέπει τα
+  //    `BYPASS_ROLES` / `ADMINISTRATIVE_ROLES` (`lib/auth/roles.ts`, πρότυπο
+  //    permissions-boundary του AWS: *ceilings only subtract*). Έτσι ένας
+  //    καλών **δεν μπορεί** να ξεκλειδώσει επεξεργασία γράφοντας
+  //    `isReadOnly={false}` — μπορεί μόνο να κλειδώσει παραπάνω, π.χ. επειδή η
+  //    δική του επιφάνεια δεν έχει πού να γράψει.
+  const editCapability = usePropertyEditCapability();
+  const isReadOnly = isReadOnlyRequested || !editCapability.canEdit;
 
   // 🏢 ENTERPRISE: Edit mode - prefer external props (from UnitsSidebar), fallback to local state
   const [localEditMode, setLocalEditMode] = useState(false);

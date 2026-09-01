@@ -34,6 +34,14 @@ jest.mock('@/contexts/SharedPropertiesProvider', () => ({
   useSharedProperties: (...args: unknown[]) => mockUseSharedProperties(...args),
 }));
 
+// ADR-840 Σ2: ο δημόσιος viewer **ρωτά πλέον τον ρόλο** (`usePropertyEditCapability`
+// → ο ΕΝΑΣ PEP `useCapability` → ο ΕΝΑΣ κριτής `lib/auth/authority`). Προσομοιώνεται
+// **μόνο η ταυτότητα**: κριτής και κατάλογος ρόλων τρέχουν αληθινοί.
+const mockUseAuth = jest.fn(() => ({ user: { globalRole: 'internal_user' }, loading: false }));
+jest.mock('@/auth/hooks/useAuth', () => ({
+  useAuth: () => mockUseAuth(),
+}));
+
 // ⚠️ **Καμία προσομοίωση δημόσιου hook** — ο `usePublicPropertyViewer` έχασε το
 // ανώνυμο σκέλος του (ADR-777 Β2β): διέρρεε ολόκληρο το έγγραφο και, μετρημένα,
 // παρήγαγε **πάντα κενή** λίστα. Πλέον διαβάζει **μόνο** το `useSharedProperties`.
@@ -355,10 +363,35 @@ describe('usePublicPropertyViewer — empty-FilterState contract', () => {
     expect(result.current.filters).toEqual(EXPECTED_EMPTY_FILTERS);
   });
 
-  it('παραμένει read-only mirror (οι δυνατότητες editing μένουν κλειστές)', () => {
+  /**
+   * 🔴 **Ο ΧΑΡΑΚΤΗΡΙΣΜΟΣ ΑΛΛΑΞΕ ΕΠΙΤΗΔΕΣ** (ADR-840 Α4 / Σ2). Ο έλεγχος έγραφε
+   * `expect(isReadOnly).toBe(true)` και **περνούσε πάντα**, γιατί μετρούσε
+   * **σταθερά** (`usePublicPropertyViewer.ts:326`) — δηλαδή επικύρωνε ακριβώς το
+   * ελάττωμα: το αν μπορείς να επεξεργαστείς εξαρτιόταν από **ποια πόρτα μπήκες**.
+   *
+   * Πλέον μετρά τη **σύνδεση**: ίδιος hook, ίδια δεδομένα, **δύο** άνθρωποι,
+   * **δύο** απαντήσεις. Ένα σκέλος μόνο θα ήταν μισή απόδειξη.
+   */
+  it('ρόλος ΧΩΡΙΣ :update → κλειστή επεξεργασία', () => {
+    mockUseAuth.mockReturnValue({ user: { globalRole: 'internal_user' }, loading: false });
     const { result } = renderHook(() => usePublicPropertyViewer());
 
     expect(result.current.isReadOnly).toBe(true);
+  });
+
+  it('ρόλος ΜΕ :update → ανοιχτή επεξεργασία, στην ΙΔΙΑ οθόνη', () => {
+    mockUseAuth.mockReturnValue({ user: { globalRole: 'company_admin' }, loading: false });
+    const { result } = renderHook(() => usePublicPropertyViewer());
+
+    expect(result.current.isReadOnly).toBe(false);
+  });
+
+  it('τα εργαλεία καμβά μένουν κλειστά ανεξαρτήτως ρόλου (δεν έχουν συρματωθεί — Σ3)', () => {
+    mockUseAuth.mockReturnValue({ user: { globalRole: 'company_admin' }, loading: false });
+    const { result } = renderHook(() => usePublicPropertyViewer());
+
+    // ⚠️ Δηλωμένο, όχι σιωπηλό: αυτή η επιφάνεια **δεν έχει** μεταλλάξεις καμβά.
+    // Η ενοποίηση με τον επεξεργάσιμο viewer είναι το Σ3 (ADR-840 §7).
     expect(result.current.activeTool).toBeNull();
     expect(result.current.isConnecting).toBe(false);
   });

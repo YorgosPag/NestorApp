@@ -84,6 +84,13 @@ jest.mock('@/components/property-viewer/PropertyList', () => ({
   PropertyList: () => <div data-testid="property-list" />,
 }));
 
+// ADR-840 Σ2: το `ListLayout` **ρωτά** πλέον τον ρόλο για το `isReadOnly` του
+// πάνελ (πριν ήταν γυμνή σταθερά). Εδώ μετριέται η **διάταξη**, όχι η
+// εξουσιοδότηση — άρα προσομοιώνεται μόνο η ταυτότητα.
+jest.mock('@/auth/hooks/useAuth', () => ({
+  useAuth: () => ({ user: { globalRole: 'internal_user' }, loading: false }),
+}));
+
 jest.mock('@/components/property-viewer/PropertyDetailsPanel', () => ({
   PropertyDetailsPanel: () => <div data-testid="details-panel" />,
 }));
