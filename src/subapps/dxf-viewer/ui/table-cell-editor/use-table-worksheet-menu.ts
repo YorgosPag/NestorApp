@@ -80,19 +80,24 @@ export function useTableWorksheetMenu(
   const menuRef = useRef<TableWorksheetContextMenuHandle | null>(null);
 
   /**
-   * Ο πίνακας του **hover**, τη στιγμή της κλήσης· `null` όταν ο δείκτης δεν στέκεται σε
-   * καρτέλα ή ο πίνακας χάθηκε από κάτω του.
+   * Ο **ζωντανός** πίνακας του παγωμένου στόχου· `null` όταν έφυγε από τη σκηνή όσο το μενού
+   * ήταν ανοιχτό (π.χ. `Ctrl+Z` που τον αναιρεί).
+   *
+   * 🔴 **ΠΟΤΕ ξανά από το hover store.** Ο δείκτης είναι σωστός στο **άνοιγμα** και σβηστός
+   * στην **εκτέλεση**: ένα μενού Radix βάζει `pointer-events: none` στο `body`, ο καμβάς
+   * παίρνει `mouseleave` και ο `use-table-indicator-hover` καθαρίζει — όπως οφείλει, γιατί ο
+   * άνθρωπος πράγματι δεν δείχνει πια την καρτέλα. Όσο η ταυτότητα διαβαζόταν εκεί, **και οι
+   * πέντε** εντολές έβγαιναν σιωπηλά χωρίς να κάνουν τίποτα (ζωντανή επαλήθευση 2026-09-01,
+   * άγκυρες στο `__tests__/table-worksheet-menu-actions.test.tsx`).
    *
    * ⚠️ **Όχι** `useLiveTable`: εκείνο ρωτά τον **δρομέα**, και η λωρίδα ζει και σε **απλή
    * επιλογή** — χωρίς δρομέα. Το μενού θα ήταν νεκρό ακριβώς στην κατάσταση όπου η λωρίδα
    * είναι πιο ορατή.
    */
-  const hoveredTable = useCallback(() => {
-    const hover = getTableIndicatorHover();
-    if (hover?.target.kind !== 'worksheet-tab') return null;
-    const live = resolveTableById(levelManager, hover.entityId);
-    return live ? { live, worksheetId: hover.target.worksheetId } : null;
-  }, [levelManager]);
+  const liveOf = useCallback(
+    (target: TableWorksheetMenuTarget) => resolveTableById(levelManager, target.entityId),
+    [levelManager],
+  );
 
   /**
    * Μία θέση αριστερά ή δεξιά — **απόλυτη** θέση προς τον σχεδιαστή, όχι κατεύθυνση.
@@ -103,34 +108,34 @@ export function useTableWorksheetMenu(
    */
   const moveBy = useCallback(
     (step: number, target: TableWorksheetMenuTarget): void => {
-      const hovered = hoveredTable();
-      if (!hovered) return;
-      const index = resolveWorksheets(hovered.live).findIndex((sheet) => sheet.id === target.worksheetId);
+      const live = liveOf(target);
+      if (!live) return;
+      const index = resolveWorksheets(live).findIndex((sheet) => sheet.id === target.worksheetId);
       if (index < 0) return;
-      applyWorksheet(hovered.live, planWorksheetMove(hovered.live, target.worksheetId, index + step));
+      applyWorksheet(live, planWorksheetMove(live, target.worksheetId, index + step));
     },
-    [applyWorksheet, hoveredTable],
+    [applyWorksheet, liveOf],
   );
 
   const actions = useMemo<TableWorksheetMenuProps>(
     () => ({
       // Το «Νέο φύλλο» δεν χρειάζεται στόχο: πάει **πάντα** στο τέλος (Απόφαση 1). Η ίδια
       // σημασιολογία με το ⊕ της λωρίδας — μία απάντηση στο «πού πάει το νέο φύλλο».
-      onAdd: () => {
-        const hovered = hoveredTable();
+      onAdd: (target) => {
+        const live = liveOf(target);
         // 🔴 ADR-833 Φ5Β — **ο ΕΝΑΣ δρόμος προσθήκης φύλλου**, ίδιος με το ⊕ της λωρίδας:
         // σχεδιάζει, εφαρμόζει, και **λέει με αριθμό** όταν ο πίνακας δεν χωρά άλλο. Δύο
         // αντίγραφα της ίδιας τριάδας θα ήταν ο sibling clone του N.18 — και, ως συνήθως,
         // το ακριβό δεν είναι οι γραμμές: το δεύτερο αντίγραφο θα ξεχνούσε το **μήνυμα**.
-        if (hovered) addWorksheet(hovered.live);
+        if (live) addWorksheet(live);
       },
       onRename: (target) => {
-        const hovered = hoveredTable();
+        const live = liveOf(target);
         const container = containerRef.current;
         const transform = transformRef.current;
-        if (!hovered || !container || !transform) return;
+        if (!live || !container || !transform) return;
         openWorksheetRenameById({
-          entity: hovered.live,
+          entity: live,
           worksheetId: target.worksheetId,
           container,
           transform,
@@ -139,16 +144,16 @@ export function useTableWorksheetMenu(
       onMoveLeft: (target) => moveBy(-1, target),
       onMoveRight: (target) => moveBy(1, target),
       onDelete: (target) => {
-        const hovered = hoveredTable();
-        if (!hovered) return;
+        const live = liveOf(target);
+        if (!live) return;
         // 🔴 Ο δρομέας διαβάζεται με τον **ΕΝΑ** φύλακα, τη στιγμή της πράξης: αν ο χρήστης
         // ήταν μέσα στον πίνακα, ο δρομέας πρέπει να προσγειωθεί στον **διάδοχο** — αλλιώς
         // μένει δεμένος σε φύλλο που δεν υπάρχει πια και κάθε βέλος πέφτει στο κενό.
-        const cursor = tableCursorFor(hovered.live)?.position ?? null;
-        applyWorksheet(hovered.live, planWorksheetDelete(hovered.live, target.worksheetId, cursor));
+        const cursor = tableCursorFor(live)?.position ?? null;
+        applyWorksheet(live, planWorksheetDelete(live, target.worksheetId, cursor));
       },
     }),
-    [addWorksheet, applyWorksheet, hoveredTable, moveBy, containerRef, transformRef],
+    [addWorksheet, applyWorksheet, liveOf, moveBy, containerRef, transformRef],
   );
 
   useEffect(() => {
@@ -169,6 +174,9 @@ export function useTableWorksheetMenu(
 
         const sheet = resolveWorksheets(live)[state.index];
         menuRef.current?.open(x, y, {
+          // 🔴 Η ταυτότητα του πίνακα ΠΑΓΩΝΕΙ εδώ, μαζί με το φύλλο και τις σημαίες: είναι η
+          // τελευταία στιγμή που ο δείκτης είναι ακόμη ζωντανός. Δες το `liveOf` παραπάνω.
+          entityId: hover.entityId,
           worksheetId,
           // Το **ορατό** όνομα, από τον ΕΝΑ επιλυτή: ο τίτλος του μενού και η ετικέτα της
           // καρτέλας δεν επιτρέπεται να διαφωνήσουν για το πώς λέγεται το φύλλο.

@@ -59,6 +59,21 @@ import type { TableWorksheetId } from '../../types/table-worksheet';
  * Ένα `Ctrl+Z` ενδιάμεσα θα άφηνε item ενεργό ενώ η πράξη δεν επιτρέπεται πια.
  */
 export interface TableWorksheetMenuTarget {
+  /**
+   * 🔴 ADR-833 Φ4 — **ΠΟΙΟΥ ΠΙΝΑΚΑ**, παγωμένο μαζί με τα υπόλοιπα.
+   *
+   * Έλειπε, και η απουσία του **σκότωνε και τις πέντε εντολές**: ο καταναλωτής ξαναρωτούσε τον
+   * δείκτη (`table-indicator-hover-store`) τη στιγμή της **εκτέλεσης**, δηλαδή αφού το μενού
+   * είχε ήδη πάρει τον δείκτη — το άνοιγμα ενός μενού βάζει `pointer-events: none` στο `body`,
+   * ο καμβάς παίρνει `mouseleave` και ο δείκτης σβήνει, **σωστά**. Κάθε εντολή έβρισκε `null`
+   * και έβγαινε σιωπηλά (ζωντανή επαλήθευση 2026-09-01).
+   *
+   * Η ταυτότητα και όχι η ίδια η οντότητα, για τον λόγο που ισχύει σε ολόκληρο το ADR-833: το
+   * μενού μπορεί να μείνει ανοιχτό όσο ένα `Ctrl+Z` αλλάζει τη σκηνή από κάτω, οπότε η
+   * **ζωντανή** οντότητα ξαναδιαβάζεται από τον ΕΝΑ επιλυτή (`resolveTableById`) τη στιγμή της
+   * πράξης. Παγώνει το «ποιος», ποτέ το «τι».
+   */
+  readonly entityId: string;
   readonly worksheetId: TableWorksheetId;
   /** Το όνομα **όπως το βλέπει ο άνθρωπος** — ρητό ή προεπιλεγμένο. Ποτέ η ταυτότητα. */
   readonly name: string;
@@ -77,7 +92,7 @@ export interface TableWorksheetMenuTarget {
 }
 
 export interface TableWorksheetMenuProps {
-  readonly onAdd: () => void;
+  readonly onAdd: (target: TableWorksheetMenuTarget) => void;
   readonly onRename: (target: TableWorksheetMenuTarget) => void;
   readonly onMoveLeft: (target: TableWorksheetMenuTarget) => void;
   readonly onMoveRight: (target: TableWorksheetMenuTarget) => void;
@@ -113,7 +128,7 @@ const TableWorksheetContextMenuInner = forwardRef<
     >
       {(target) => (
         <>
-          <DxfMenuItem disabled={!target.canAdd} onClick={onAdd}>
+          <DxfMenuItem disabled={!target.canAdd} onClick={() => onAdd(target)}>
             <DxfMenuIcon><Plus size={16} aria-hidden="true" /></DxfMenuIcon>
             <DxfMenuLabel>{t('table.worksheetMenu.add')}</DxfMenuLabel>
           </DxfMenuItem>
