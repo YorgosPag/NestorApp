@@ -183,11 +183,28 @@ describe('ADR-840 Α4 — καμία σταθερά read-only δεν επέζη�
     expect(readCode(file)).not.toMatch(pattern);
   });
 
-  test('το `ListLayout` δεν περνά πια γυμνό `isReadOnly` στο πάνελ', () => {
-    const source = readCode('src/features/read-only-viewer/components/ListLayout.tsx');
+  /**
+   * 🔴 **ΑΥΤΗ Η ΑΓΚΥΡΑ ΑΝΤΙΣΤΡΑΦΗΚΕ ΑΠΟ ΤΗ ΖΩΝΤΑΝΗ ΕΠΑΛΗΘΕΥΣΗ** (2026-09-01).
+   *
+   * Απαιτούσε `isReadOnly={!canEdit}` στο `ListLayout` — και **ήταν λάθος**: στην
+   * οθόνη, η φόρμα επεξεργασίας **δεν χωράει** στη στήλη των ~260px και κόβεται
+   * οριζόντια. Το εμπόδιο είναι **ο χώρος**, όχι η άδεια, και ο σχεδιασμός του
+   * χώρου είναι το **Σ3**.
+   *
+   * Πλέον η άγκυρα φυλάει το **αντίθετο**: ότι η σταθερά έχει **γραπτό δομικό
+   * λόγο** και **δείκτη στο Σ3**. Σταθερά χωρίς λόγο είναι ακριβώς το ελάττωμα
+   * που έλυσε το Σ2· σταθερά **με** μετρημένο λόγο είναι απόφαση.
+   */
+  test('το `ListLayout` κλειδώνει με ΔΟΜΙΚΟ λόγο, όχι σιωπηλά', () => {
+    const file = 'src/features/read-only-viewer/components/ListLayout.tsx';
 
-    expect(source).toContain('isReadOnly={!canEdit}');
-    expect(source).not.toMatch(/^\s+isReadOnly$/m);
+    // Ο δείκτης ζει στα σχόλια — γι' αυτό διαβάζεται το ΠΛΗΡΕΣ αρχείο εδώ.
+    const withComments = fs.readFileSync(path.join(repoRoot, file), 'utf8');
+    expect(withComments).toMatch(/ADR-840 Σ2/);
+    expect(withComments).toMatch(/Σ3/);
+
+    // …και ο κώδικας δεν ρωτά ρόλο που δεν μπορεί να τιμήσει (θα ήταν νεκρός).
+    expect(readCode(file)).not.toMatch(/usePropertyEditCapability/);
   });
 
   test('το δάπεδο εξουσιοδότησης είναι ΜΟΝΟΤΟΝΟ (το prop μόνο προσθέτει)', () => {
