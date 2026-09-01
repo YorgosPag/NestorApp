@@ -79,7 +79,15 @@ export const DEMAND_CONCESSIONS = [
   'area-ceiling',
   /** Δέξου λιγότερα υπνοδωμάτια. */
   'bedrooms-floor',
-  /** Μεγάλωσε την ακτίνα. */
+  /**
+   * Μεγάλωσε τον χωρικό όρο — ακτίνα (**Ζ1**) **ή** βάθος μετώπου (**Ζ4 δομημένη**).
+   *
+   * 🔑 **Ένας κωδικός για δύο σχήματα ορίου, επίτηδες — ίδιο σκεπτικό με το
+   * `distanceOverMetres`** ({@link DemandGaps}): και τα δύο απαντούν την **ίδια**
+   * ερώτηση («πόσα μέτρα παραπάνω;»), απλώς πάνω σε άλλο σχήμα ορίου. Δύο κωδικοί θα
+   * ήταν δεύτερη αλήθεια για ένα μέγεθος, και η οθόνη θα έπρεπε να διαλέγει ποιον να
+   * δείξει — ενώ το `demand.place.kind` ήδη το ξέρει.
+   */
   'search-radius',
 ] as const;
 
@@ -189,7 +197,14 @@ function concessionBase(
     case 'area-ceiling':
       return features.areaMax;
     case 'search-radius':
-      return place.kind === 'near' ? place.radiusKm * 1000 : null;
+      // **Ζ1** ⇒ μέτρα από km· **Ζ4 δομημένη** ⇒ ήδη μέτρα, καμία μετατροπή. Το
+      // ίδιο δηλωμένο όριο που η μηχανή ταιριάσματος ξεπερνά στο `distanceOverMetres`
+      // — άρα η ίδια αναλογία 15% ({@link MAX_RELATIVE_CONCESSION}) βγάζει νόημα και
+      // στα δύο: «*+15% απόσταση από τον άξονα*» είναι εξίσου λογική υποχώρηση με
+      // «*+15% ακτίνα*».
+      if (place.kind === 'near') return place.radiusKm * 1000;
+      if (place.kind === 'frontage') return place.depthMetres;
+      return null;
     case 'bedrooms-floor':
       // Αδιέξοδο εκ κατασκευής: ο διακριτός άξονας απαντήθηκε πριν φτάσει εδώ.
       return null;

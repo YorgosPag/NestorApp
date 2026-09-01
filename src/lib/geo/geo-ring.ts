@@ -42,10 +42,11 @@
  */
 
 import type { GeoOutline, GeoPoint } from '@/types/geo/coordinates';
-// ⚠️ Μόνο η **σταθερά**, όχι η συνάρτηση: το `geoOutlineBoundingCircle` δέχεται τη
-// μέτρηση ως **παράμετρο** και αυτό δεν αλλάζει. Το `geo-distance` είναι φύλλο χωρίς
-// εξαρτήσεις, οπότε η εισαγωγή δεν κάνει αυτό το module λιγότερο φύλλο.
-import { EARTH_RADIUS_METERS } from './geo-distance';
+// ⚠️ Η ισαπέχουσα προβολή σε τοπικά μέτρα ζει πλέον στο `geo-local-frame.ts` — ο
+// άξονας δρόμου (`geo-line.ts`) τη χρειάζεται με άλλο origin (αρχή, όχι κέντρο
+// βάρους) και η αντιγραφή θα έφτιαχνε δίδυμο (CHECK 3.28). Ο δακτύλιος περνά πάντα
+// {@link vertexCentroid} ως origin — αυτό ήταν η προηγούμενη (ιδιωτική) συμπεριφορά.
+import { toLocalMetres } from './geo-local-frame';
 
 /**
  * Είναι το σημείο **μέσα** στον δακτύλιο;
@@ -158,26 +159,6 @@ const MIN_BOUNDING_RADIUS_KM = 0.01;
 // =============================================================================
 
 /**
- * Οι κορυφές σε **τοπικά μέτρα**, γύρω από το κέντρο βάρους τους.
- *
- * Ισαπέχουσα κυλινδρική (equirectangular) προβολή: `x` κατά μήκος του παραλλήλου,
- * `y` κατά μήκος του μεσημβρινού. Το σφάλμα είναι **δεύτερης τάξης** ως προς το
- * άνοιγμα του σχήματος — για οικόπεδο ή κτίριο (δεκάδες έως εκατοντάδες μέτρα) είναι
- * κάτω από το **0,01 %**, δηλαδή ασύγκριτα μικρότερο από την ακρίβεια ενός σχεδίου
- * με το δάχτυλο. Η ίδια δηλωμένη παραδοχή με το {@link isPointInGeoOutline}.
- */
-function toLocalMetres(outline: GeoOutline): readonly { x: number; y: number }[] {
-  const origin = vertexCentroid(outline);
-  const metresPerDegree = (Math.PI / 180) * EARTH_RADIUS_METERS;
-  const cosLat = Math.cos((origin.lat * Math.PI) / 180);
-
-  return outline.map((vertex) => ({
-    x: (vertex.lng - origin.lng) * metresPerDegree * cosLat,
-    y: (vertex.lat - origin.lat) * metresPerDegree,
-  }));
-}
-
-/**
  * Το **εμβαδόν** που περικλείει ο δακτύλιος, σε m².
  *
  * 🔑 **Δεν είναι διακοσμητικό: είναι το `areaSqm` της {@link PublicLand}.** Όταν ο
@@ -196,7 +177,7 @@ function toLocalMetres(outline: GeoOutline): readonly { x: number; y: number }[]
 export function geoOutlineAreaSqm(outline: GeoOutline): number {
   if (outline.length < 3) return 0;
 
-  const points = toLocalMetres(outline);
+  const points = toLocalMetres(outline, vertexCentroid(outline));
   let twiceSignedArea = 0;
   for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
     twiceSignedArea += points[j].x * points[i].y - points[i].x * points[j].y;
@@ -256,7 +237,7 @@ function segmentsProperlyCross(
 export function isSimpleGeoOutline(outline: GeoOutline): boolean {
   if (outline.length < 4) return true;
 
-  const points = toLocalMetres(outline);
+  const points = toLocalMetres(outline, vertexCentroid(outline));
   const n = points.length;
 
   for (let i = 0; i < n; i++) {

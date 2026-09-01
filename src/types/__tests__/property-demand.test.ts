@@ -214,6 +214,38 @@ describe('🔴 Ε — κλειστό σύνολο invariants, και κανέν�
         },
       },
     ],
+    [
+      'axis-degenerate',
+      {
+        place: {
+          kind: 'frontage',
+          streetName: null,
+          // 🔑 **Όλες οι κορυφές στο ίδιο σημείο** — άξονας χωρίς φορά, το ακριβές
+          // γεγονός που ο κωδικός κρίνει (όχι «πολύ μικρός», αλλά «χωρίς διεύθυνση»).
+          axis: [
+            { lat: 40.6, lng: 22.9 },
+            { lat: 40.6, lng: 22.9 },
+          ],
+          side: 'both',
+          depthMetres: 20,
+        },
+      },
+    ],
+    [
+      'depth-not-positive',
+      {
+        place: {
+          kind: 'frontage',
+          streetName: 'Μεγάλου Αλεξάνδρου',
+          axis: [
+            { lat: 40.6, lng: 22.9 },
+            { lat: 40.6, lng: 23.0 },
+          ],
+          side: 'left',
+          depthMetres: 0,
+        },
+      },
+    ],
     ['proximity-not-positive', { proximity: [{ kind: 'school', maxMetres: 0 }] }],
     [
       'proximity-duplicated',

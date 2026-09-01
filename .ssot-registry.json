@@ -287,7 +287,7 @@
     },
     "storage-public-upload": {
       "ssotFile": "src/services/storage-admin/public-upload.service.ts",
-      "description": "Server-side publicly-accessible uploads must go through uploadPublicFile(). Three failure modes blocked: (1) makePublic() silently no-ops on UBLA-enabled buckets making storage.googleapis.com URLs return 403; (2) hardcoded storage.googleapis.com URL templates assume public ACL; (3) bucket.file().save() without prior FILES/{fileId} pre-claim races against onStorageFinalize orphan-cleanup which deletes the file hundreds of ms after upload (ADR-327 incident 2026-04-27). The pre-claim must be written BEFORE save() — uploadPublicFile() does this atomically. Reading legacy storage.googleapis.com URLs already persisted on documents is the download twin's job (src/lib/firebaseAdmin-storage.ts, allowlisted) — it strips the prefix, it never mints a public URL.",
+      "description": "Server-side publicly-accessible uploads must go through uploadPublicFile(). Three failure modes blocked: (1) makePublic() silently no-ops on UBLA-enabled buckets making storage.googleapis.com URLs return 403; (2) hardcoded storage.googleapis.com URL templates assume public ACL; (3) bucket.file().save() without prior FILES/{fileId} pre-claim races against onStorageFinalize orphan-cleanup which deletes the file hundreds of ms after upload (ADR-327 incident 2026-04-27). The pre-claim must be written BEFORE save() — uploadPublicFile() does this atomically. Reading legacy storage.googleapis.com URLs already persisted on documents is the download twin's job (src/lib/firebaseAdmin-storage.ts, allowlisted) — it strips the prefix, it never mints a public URL. ADR-841 A12 EXCEPTION (2026-09-01): the public shelf writes to a SECOND, separate bucket (GCS_PUBLIC_MEDIA_BUCKET, EUROPE-WEST1, UBLA + allUsers:objectViewer at BUCKET level) and none of the three failure modes above applies there. (1) no makePublic() is called — the grant is bucket-wide IAM, which is exactly what the GCS built-in edge cache requires; (2) the storage.googleapis.com URL is valid BY CONSTRUCTION on that bucket, it does not assume a per-object ACL; (3) orphan-cleanup binds functions.storage.object() with NO bucket argument (functions/src/storage/orphan-cleanup.ts:110), i.e. the DEFAULT bucket only — it never fires on the public shelf, so there is no pre-claim race to lose. Crucially, uploadPublicFile() is NOT the right canonical here by its own documentation: it uploads PRIVATELY and returns an auth-gated proxy URL (/api/storage/file/{path}), and its own 'When NOT to use this' section excludes unauthenticated contexts — routing the shelf through it would break anonymous reads. public-shelf.service.ts is the SOLE writer of that bucket and storage-path-public-shelf.ts is the SOLE key/URL builder for it; they are the SSoT for the public bucket, not a bypass of the SSoT for the private one.",
       "forbiddenPatterns": [
         "\\.makePublic\\(\\)",
         "https://storage\\.googleapis\\.com/\\$\\{",
@@ -303,7 +303,9 @@
         "src/services/showcase-core/",
         "src/services/floorplans/",
         "src/app/api/properties/",
-        "functions/"
+        "functions/",
+        "src/services/listings/public-shelf.service.ts",
+        "src/services/upload/utils/storage-path-public-shelf.ts"
       ],
       "tier": 2
     },

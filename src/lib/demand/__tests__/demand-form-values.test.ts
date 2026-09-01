@@ -17,10 +17,10 @@ import {
   PLACE_KINDS_NOT_IN_FORM,
   demandDraftFrom,
   demandFormBlockers,
-  demandFormFrom,
   demandFormSchema,
   type DemandFormValues,
 } from '../demand-form-values';
+import { demandFormFrom } from '../demand-form-load';
 import { validateDemandForm } from '../demand-form-validation';
 import { DEMAND_LIFE_PRESETS, applyLifePreset } from '../demand-life-presets';
 import {
@@ -101,11 +101,21 @@ describe('🔴 Ρ — ζήτηση → φόρμα → ζήτηση είναι Τ
       { lat: 40.7, lng: 23.0 },
     ];
 
+    // `as const`: το `axis` της Ζ4 δομημένης είναι `GeoPolyline` — πλειάδα
+    // ≥2 στοιχείων, όχι απλός πίνακας (βλ. `types/geo/coordinates.ts`). Το `outline`
+    // παραπάνω μένει απλός πίνακας επίτηδες: το `GeoOutline` δεν έχει αυτόν τον
+    // περιορισμό.
+    const axis = [
+      { lat: 40.6, lng: 22.9 },
+      { lat: 40.6, lng: 23.0 },
+    ] as const;
+
     const places = [
       { kind: 'anywhere' },
       { kind: 'near', center: { lat: 40.64, lng: 22.94 }, radiusKm: 7 },
       { kind: 'place', landId: 'land_1', buildingId: 'pbld_1' },
       { kind: 'area', outline },
+      { kind: 'frontage', streetName: 'Εγνατίας', axis, side: 'right', depthMetres: 25 },
     ] as const satisfies readonly PropertyDemand['place'][];
 
     // Ολότητα: κάθε μορφή του μοντέλου δοκιμάζεται — αλλιώς η άγκυρα θα «ξεχνούσε»
@@ -144,6 +154,7 @@ describe('🔴 Ρ — ζήτηση → φόρμα → ζήτηση είναι Τ
     expect([...FORM_PLACE_KINDS, ...PLACE_KINDS_NOT_IN_FORM].sort()).toEqual([
       'anywhere',
       'area',
+      'frontage',
       'near',
       'place',
     ]);
@@ -198,6 +209,25 @@ describe('🔴 η επικύρωση καλεί την ΙΔΙΑ αρχή με τ
     const result = validateDemandForm(values);
     if (result.kind !== 'incomplete') throw new Error('αναμενόταν incomplete');
     expect(result.blockers).toContain('place-unresolved');
+    expect(result.violations).toHaveLength(0);
+  });
+
+  it('🔑 «μέτωπο δρόμου» χωρίς σχεδιασμένο άξονα ⇒ `frontage-axis-missing`, ΟΧΙ invariant', () => {
+    // Ίδια θεραπεία με το `place-unresolved`: δεν είναι άκυρη ζήτηση — δεν είναι
+    // ζήτηση ακόμη, γιατί ο άνθρωπος δεν έχει τραβήξει καμία γραμμή.
+    const noAxis: DemandFormValues = { ...FULL, placeKind: 'frontage', frontageAxis: null };
+    expect(demandFormBlockers(parse(noAxis))).toEqual(['frontage-axis-missing']);
+
+    const oneVertex: DemandFormValues = {
+      ...FULL,
+      placeKind: 'frontage',
+      frontageAxis: [{ lat: 40.6, lng: 22.9 }],
+    };
+    expect(demandFormBlockers(parse(oneVertex))).toEqual(['frontage-axis-missing']);
+
+    const result = validateDemandForm(noAxis);
+    if (result.kind !== 'incomplete') throw new Error('αναμενόταν incomplete');
+    expect(result.blockers).toContain('frontage-axis-missing');
     expect(result.violations).toHaveLength(0);
   });
 

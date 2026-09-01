@@ -37,6 +37,7 @@ import {
 import { DemandPlaceResolver } from './DemandPlaceResolver';
 import { PlaceIdentityField } from '@/components/geo/PlaceIdentityField';
 import { DemandAreaOutline } from './DemandAreaOutline';
+import { DemandFrontageField } from './DemandFrontageField';
 import { DemandProximityField } from './DemandProximityField';
 
 const NS = 'property-market';
@@ -115,6 +116,13 @@ export function DemandPlaceField(): React.ReactElement {
           onDrawn={(outline) => setValue('placeOutline', outline, { shouldDirty: true })}
         />
       )}
+
+      {/*
+        **Ζ4 δομημένη** — «μόνο η νότια πλευρά, μόνο αυτά τα 200 μέτρα». Δικός της
+        άξονας + πλευρά + βάθος, γι' αυτό διαβάζει/γράφει τη φόρμα η ίδια αντί να
+        περνούν τέσσερα props — ίδιο ιδίωμα με το {@link DemandProximityField}.
+      */}
+      {placeKind === 'frontage' && <DemandFrontageField />}
     </DemandFieldset>
   );
 }

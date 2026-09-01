@@ -54,6 +54,7 @@
 import type { PropertyDemand } from '@/types/property-demand';
 import {
   NEAR_MISS_MAX_AXES,
+  isCategoricalBlocker,
   isMeasurableBlocker,
   type DemandBlocker,
   type DemandGaps,
@@ -145,7 +146,12 @@ export function matchDemandAgainstListing(
  */
 export function decideVerdict(blockers: readonly DemandBlocker[]): DemandVerdict {
   if (blockers.length === 0) return 'match';
-  if (blockers.some((blocker) => !isMeasurableBlocker(blocker))) return 'no-match';
+  // ⚠️ **ΚΑΤΗΓΟΡΙΚΟ, ΟΧΙ «μη μετρήσιμο»** — η διάκριση έγινε ουσιαστική όταν γεννήθηκε
+  // η τρίτη τάξη ({@link UNCERTAIN_BLOCKERS}). Ένα εμπόδιο **άγνοιας** δεν είναι
+  // κλειστή υπόθεση: η αγγελία **μπορεί** να ταιριάζει και απλώς δεν το ξέρουμε, άρα
+  // περνά στο μονοπάτι του «κοντινού αποτελέσματος» με τον λόγο **γραμμένο**. Το παλιό
+  // `!isMeasurableBlocker(...)` θα την έριχνε σιωπηλά στα `rejected`.
+  if (blockers.some(isCategoricalBlocker)) return 'no-match';
   return blockers.length <= NEAR_MISS_MAX_AXES ? 'near-miss' : 'no-match';
 }
 

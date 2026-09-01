@@ -40,6 +40,49 @@ export const FIREBASE_STORAGE_BUCKET =
   process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ??
   `${GCP_PROJECT_ID}.firebasestorage.app`;
 
+/**
+ * **ΤΟ ΔΗΜΟΣΙΟ ΡΑΦΙ** — ο ΜΟΝΟΣ κάδος που διαβάζει ανώνυμος (ADR-841 §7 Α12).
+ *
+ * 🔴 **ΓΙΑΤΙ ΔΕΥΤΕΡΟΣ ΚΑΔΟΣ ΚΑΙ ΟΧΙ ΠΡΟΘΕΜΑ ΣΤΟΝ ΥΠΑΡΧΟΝΤΑ — μετρημένο, όχι προτίμηση.**
+ *
+ * Το built-in edge cache της Cloud Storage απαιτεί, αυτολεξεί, *«The object is publicly
+ * accessible»* — δηλαδή `allUsers` σε **επίπεδο IAM**. Ένας κανόνας `allow read: if true`
+ * στο `storage.rules` **δεν** το ικανοποιεί: το object παραμένει ιδιωτικό για το IAM,
+ * οπότε **κάθε** ανώνυμη ανάγνωση χτυπά origin και πληρώνεται. Το ίδιο ισχύει για signed
+ * URLs (URL ανά χρήστη ⇒ ~100% cache miss).
+ *
+ * 🔑 **Και η ακτίνα έκρηξης γίνεται ΔΟΜΙΚΗ αντί για υπό συνθήκη**: η ερώτηση παύει να
+ * είναι *«είναι σωστό το `match`;»* και γίνεται *«σε ποιον κάδο είναι τα bytes;»*.
+ * Το `storage.rules` **δεν αγγίζεται** — το ανάλλοιωτό του (**μηδέν** `allow read: if true`
+ * σε 673 γραμμές) επιβιώνει, και το φυλάει πλέον άγκυρα.
+ *
+ * ⚠️ **ΜΗΝ βάλεις εδώ ό,τι δεν δημοσιεύτηκε με ΠΡΑΞΗ.** Ο κάδος είναι δημόσιος
+ * **ολόκληρος** (UBLA + `allUsers:objectViewer`): δεν υπάρχει «λιγότερο δημόσιο» object
+ * μέσα του, και αυτό είναι το χαρακτηριστικό του — όχι παράλειψη.
+ *
+ * @see services/upload/utils/storage-path-public-shelf — ο κατασκευαστής κλειδιών
+ * @see services/listings/public-shelf.service — ο ΜΟΝΟΣ γραφέας
+ */
+export const GCS_PUBLIC_MEDIA_BUCKET =
+  process.env.GCS_PUBLIC_MEDIA_BUCKET ?? `${GCP_PROJECT_ID}-public-media`;
+
+/**
+ * Ρυθμίσεις του δημόσιου ραφιού.
+ *
+ * ⚠️ **`EUROPE-WEST1` σκόπιμα**: ο κανονικός κάδος μετρήθηκε σε **`US-EAST1`**
+ * (2026-09-01) — λάθος ήπειρος για ελληνικό κοινό. Το `GCS_BACKUP_BUCKET_CONFIG` από
+ * πάνω δηλώνει ήδη ΕΕ, οπότε αυτή είναι η **γραμμένη** προτίμηση του έργου, όχι νέα.
+ *
+ * ⚠️ **`uniformBucketLevelAccess` ΕΝΕΡΓΟ**: απενεργοποιεί τα per-object ACL μέσα στον
+ * κάδο ⇒ κανένα object δεν μπορεί να αποκλίνει από την πολιτική του κάδου, προς
+ * **καμία** κατεύθυνση. Μία επιχορήγηση, ελέγξιμη με μία εντολή.
+ */
+export const GCS_PUBLIC_MEDIA_BUCKET_CONFIG = {
+  location: 'EUROPE-WEST1',
+  storageClass: 'STANDARD' as const,
+  uniformBucketLevelAccess: true,
+} as const;
+
 // ---------------------------------------------------------------------------
 // Bucket metadata (for auto-creation)
 // ---------------------------------------------------------------------------

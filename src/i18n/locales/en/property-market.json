@@ -76,7 +76,25 @@
         "failed": "The lookup did not respond. Please try again shortly.",
         "radiusLabel": "Radius (km)",
         "place": "This building or plot",
-        "area": "This area on the map"
+        "area": "This area on the map",
+        "frontage": "On this street"
+      },
+      "frontage": {
+        "legend": "Which stretch of the street?",
+        "help": "Draw the stretch of street you care about on the map, pick a side, and say how deep it still counts as “on the street”.",
+        "streetLabel": "Street",
+        "streetPlaceholder": "Street name (optional)",
+        "gestureAxis": "Tap the start and end of the stretch on the map",
+        "gestureSide": "Now tap the side you care about",
+        "gestureDone": "The stretch is set",
+        "reset": "Reset",
+        "sideLegend": "Which side?",
+        "sideLeft": "Left (in the direction you drew)",
+        "sideRight": "Right (in the direction you drew)",
+        "sideBoth": "Both sides",
+        "sideHelp": "A street can bend — “north” or “south” does not stay fixed along its length. The direction you drew it in is a fixed reference, which is why we say left/right relative to that.",
+        "depthLabel": "Depth from the street (m)",
+        "depthHelp": "The further back from the street frontage, the less it counts as “on the street”. This depth sets that limit."
       },
       "timing": {
         "legend": "When do you need it?",
@@ -145,13 +163,16 @@
       "radius-not-positive": "The radius must be greater than zero.",
       "outline-degenerate": "The drawn area encloses nothing.",
       "proximity-not-positive": "A neighbourhood distance is zero or negative.",
-      "proximity-duplicated": "The same kind of neighbourhood requirement was declared twice."
+      "proximity-duplicated": "The same kind of neighbourhood requirement was declared twice.",
+      "axis-degenerate": "The frontage axis has no direction — all its points are the same, so there is no “left” or “right”. Draw it again, with a start and an end at different points.",
+      "depth-not-positive": "The depth must be greater than zero."
     },
     "formBlocker": {
       "place-unresolved": "Press “Locate” so the area resolves to a point on the map.",
       "window-incomplete": "Fill in both ends of the period.",
       "place-not-identified": "Show on the map which building or plot you mean.",
-      "area-not-drawn": "Draw the area — at least three vertices."
+      "area-not-drawn": "Draw the area — at least three vertices.",
+      "frontage-axis-missing": "Draw the street axis on the map — at least two points."
     },
     "answer": {
       "heading": "What exists today",
@@ -172,7 +193,8 @@
       "area-outline": "the exact shape of the area",
       "place-identity": "the specific property",
       "floor-range": "the floor",
-      "proximity": "the neighbourhood requirements"
+      "proximity": "the neighbourhood requirements",
+      "frontage-axis": "the street frontage axis"
     },
     "concession": {
       "heading": "How much is missing",
@@ -210,6 +232,9 @@
       "outside-area": "Outside the area you drew",
       "not-available-then": "Not available in the period you asked for",
       "proximity-too-far": "Farther away than you asked",
+      "wrong-side": "It is on the other side of the street",
+      "side-unresolved": "We do not know yet which side of the street it is on",
+      "outside-frontage": "Outside the street stretch you set, or set back deeper than the depth you specified",
       "count": "{count}"
     },
     "competition": {
@@ -242,6 +267,8 @@
       "near": "Within {radiusKm} km",
       "area": "In a drawn area",
       "place": "At a specific property",
+      "frontage": "{side, select, left {Left side} right {Right side} both {Both sides} other {Side}} of the street",
+      "frontageNamed": "{side, select, left {Left side} right {Right side} both {Both sides} other {Side}} of {street}",
       "now": "Now",
       "window": "From {fromDate} to {toDate}",
       "whenever": "Whenever it comes up",

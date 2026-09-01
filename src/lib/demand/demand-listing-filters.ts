@@ -78,6 +78,12 @@ export const DEMAND_AXES_LOST_IN_FILTERS = [
   'area-outline',
   /** **Ζ3/Ζ5** — «αυτό το κτίριο». Καμία παράμετρος διεύθυνσης δεν το εκφράζει. */
   'place-identity',
+  /**
+   * **Ζ4 δομημένη** — ο άξονας γίνεται κύκλος, και η **πλευρά** εξαφανίζεται μαζί
+   * του: ένας κύκλος δεν μπορεί να πει «*μόνο η δεξιά μεριά*». Ίδιο σχήμα απώλειας
+   * με το `area-outline` — γι' αυτό μοιράζεται τη λέξη «κύκλος», όχι το ίδιο πεδίο.
+   */
+  'frontage-axis',
   /** **Ζ5** — ο όροφος. Το `ListingFilters` δεν έχει άξονα ορόφου (μετρημένο). */
   'floor-range',
   /** **Ζ6** — «σχολείο ≤ 500 μ.». Απαιτεί άντληση σημείων ενδιαφέροντος. */
@@ -106,6 +112,7 @@ export function axesLostProjectingDemand(
 
   if (demand.timing.kind !== 'now') lost.push('timing');
   if (demand.place.kind === 'area') lost.push('area-outline');
+  if (demand.place.kind === 'frontage') lost.push('frontage-axis');
   if (demand.place.kind === 'place') lost.push('place-identity');
   if (demand.features.floorMin !== null || demand.features.floorMax !== null) {
     lost.push('floor-range');
@@ -137,6 +144,13 @@ function metresBetween(a: GeoPoint, b: GeoPoint): number {
  * — και μια στένωση που εξαρτάται από το αν κάποιος θυμήθηκε να περάσει κάτι είναι
  * ακριβώς η σιωπηλή απώλεια που το συμβόλαιο «υπερσύνολο» απαγορεύει. Η ταυτότητα του
  * ακινήτου κρίνεται στη **μηχανή**, όπου η λίστα απωλειών τη στέλνει.
+ *
+ * 🔑 **Το `frontage` γίνεται κύκλος, όπως το `area` — και ο κύκλος πρέπει να
+ * ΠΕΡΙΕΧΕΙ ολόκληρο το μέτωπο, όχι μόνο τον άξονα.** Ο περικλείων κύκλος των κορυφών
+ * του άξονα ({@link geoOutlineBoundingCircle}) αγνοεί το `depthMetres` — ένα σημείο
+ * ακριβώς πάνω στο επιτρεπτό βάθος, δίπλα σε μια άκρη του τμήματος, θα έμενε **εκτός**
+ * του κύκλου. Γι' αυτό η ακτίνα μεγαλώνει κατά το βάθος: υπερσύνολο σε **δύο**
+ * διαστάσεις (μήκος άξονα **και** βάθος), όχι μόνο στη μία.
  */
 function projectPlace(place: DemandPlace): ProjectedGeo {
   switch (place.kind) {
@@ -147,6 +161,17 @@ function projectPlace(place: DemandPlace): ProjectedGeo {
       return { center: place.center, radiusKm: place.radiusKm };
     case 'area':
       return geoOutlineBoundingCircle(place.outline, metresBetween);
+    case 'frontage': {
+      // Ο άξονας (`GeoPolyline`) είναι δομικά ένας δακτύλιος με ≥2 κορυφές —
+      // `geoOutlineBoundingCircle` δεν ξέρει τη διαφορά, και δεν τη χρειάζεται: εδώ
+      // δεν ρωτάμε «περιέχει;», ρωτάμε «ποιος κύκλος περικλείει αυτές τις κορυφές;».
+      const axisCircle = geoOutlineBoundingCircle(place.axis, metresBetween);
+      if (axisCircle === null) return null;
+      return {
+        center: axisCircle.center,
+        radiusKm: axisCircle.radiusKm + place.depthMetres / 1000,
+      };
+    }
   }
 }
 

@@ -70,6 +70,12 @@ export const NOTIFICATION_EVENT_TYPES = {
   /** ADR-777 Ε2 · SPEC-777B §12.6 — «N άνθρωποι ζητούν το ακίνητό σας». */
   PROPERTIES_DEMAND_INTEREST: 'properties.demandInterest',
   /**
+   * ADR-777 §12.6 — η αντίθετη κατεύθυνση: «βγήκε αγγελία που ταιριάζει στη
+   * ζήτησή σου». Ένα γεγονός ανά **ζεύγος** (ζήτηση, αγγελία) —
+   * {@link demandListingMatchEventId} το κάνει ρητό στο ίδιο το κλειδί, όχι εδώ.
+   */
+  PROPERTIES_DEMAND_LISTING_MATCH: 'properties.demandListingMatch',
+  /**
    * ADR-777 §8.34 — **ο ιδιοκτήτης απάντησε στην εντολή**, ναι ή όχι.
    *
    * 🔑 **Ένα γεγονός για τις δύο απαντήσεις, ΟΧΙ δύο.** Ο διακόπτης προτίμησης
@@ -210,6 +216,16 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_DEMAND_INTEREST]: {
     category: 'properties',
     settingKey: 'demandInterest',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
+  },
+  /**
+   * ⚠️ **`isMandatory: false`, ίδιος λόγος με το `PROPERTIES_DEMAND_INTEREST`.**
+   * Εμπορική είδηση, όχι ασφάλεια — ο ζητών που έκλεισε τον διακόπτη έχει δίκιο.
+   */
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_DEMAND_LISTING_MATCH]: {
+    category: 'properties',
+    settingKey: 'demandListingMatch',
     isMandatory: false,
     defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
   },

@@ -46,6 +46,7 @@
 import { runAiLearning } from '@/lib/cron/jobs/ai-learning.job';
 import { runBackup } from '@/lib/cron/jobs/backup.job';
 import { runDemandInterestAnnounce } from '@/lib/cron/jobs/demand-interest-announce.job';
+import { runDemandListingMatchAnnounce } from '@/lib/cron/jobs/demand-listing-match-announce.job';
 import { runOutboundEmailFlush } from '@/lib/cron/jobs/outbound-email-flush.job';
 import { runEmailIngestion } from '@/lib/cron/jobs/email-ingestion.job';
 import { runFilePurge } from '@/lib/cron/jobs/file-purge.job';
@@ -251,6 +252,29 @@ export const CRON_SCHEDULE: readonly CronJobDefinition[] = [
     maxRuntimeMinutes: 5,
     leaseMinutes: 10,
     run: runDemandInterestAnnounce,
+  },
+  {
+    slug: 'demand-listing-match-announce',
+    path: '/api/cron/demand-listing-match-announce',
+    description: 'Ειδοποίηση ζητούντων: «βγήκε αγγελία που ταιριάζει στη ζήτησή σου»',
+    enabled: true,
+    // 🔑 **Ωριαία, όπως το `demand-interest-announce` — και για τον ΙΔΙΟ λόγο**: αυτή
+    // είναι η αντίθετη κατεύθυνση της ίδιας αγοράς, όχι συντήρηση. Η καθυστέρηση
+    // κοστίζει τη συμφωνία, όχι χώρο.
+    //
+    // ⚠️ **Λεπτό 35, όχι 15.** Το `demand-interest-announce` κατέχει ήδη το λεπτό 15
+    // της ώρας· δύο ωριαία jobs στο ίδιο λεπτό θα χτυπούσαν Firestore ταυτόχρονα για
+    // ασύνδετες σαρώσεις χωρίς κανέναν λόγο να συμπέσουν. Το 35 επίσης **δεν**
+    // συμπίπτει με το `*/10` του `outbound-email-flush` (0·10·20·30·40·50) — τρεις
+    // εργασίες, τρία διαφορετικά λεπτά, καμία σύμπτωση φόρτου.
+    schedule: '35 * * * *',
+    timezone: CRON_TIMEZONE,
+    // Ίδια στενά όρια με το αδελφό job: 24 φορές τη μέρα, ένα κολλημένο πέρασμα
+    // πρέπει να ακουστεί μέσα σε ώρα.
+    checkinMarginMinutes: 10,
+    maxRuntimeMinutes: 5,
+    leaseMinutes: 10,
+    run: runDemandListingMatchAnnounce,
   },
   {
     slug: 'outbound-email-flush',

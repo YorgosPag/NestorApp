@@ -117,6 +117,7 @@
           "priceChange": "Price change",
           "viewingScheduled": "Viewing scheduled",
           "demandInterest": "Someone is looking for a property like mine",
+          "demandListingMatch": "A listing matching my demand was published",
           "mandateDecided": "A client answered the mandate I sent them",
           "mandateRequestAnswered": "An agency answered your mandate request"
         },

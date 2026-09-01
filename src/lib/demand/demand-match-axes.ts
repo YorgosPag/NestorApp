@@ -26,8 +26,11 @@ import { getEffectivePrice } from '@/lib/properties/price-resolver';
 import { withinRange } from '@/lib/listings/listing-filters';
 import { isPointInGeoOutline } from '@/lib/geo/geo-ring';
 import { distanceMeters } from '@/lib/geo/geo-distance';
+import { metresOutsideFrontage, sideOfPolyline } from '@/lib/geo/geo-line';
+import type { LocationProvenance } from '@/lib/location/location-provenance';
+import type { PlacePosition } from '@/types/geo/public-place';
 import type { PublicListing } from '@/types/public-listing';
-import type { DemandTiming, PropertyDemand } from '@/types/property-demand';
+import type { DemandPlace, DemandTiming, PropertyDemand } from '@/types/property-demand';
 import {
   NO_GAPS,
   type DemandBlocker,
@@ -130,7 +133,7 @@ export function spatialOutcome(
     };
   }
 
-  // `near` και `area` απαιτούν και τα δύο **γνωστή** θέση.
+  // `near`, `area` και `frontage` απαιτούν και τα τρία **γνωστή** θέση.
   const position = facts.listing.position;
   if (position.kind !== 'known') {
     return { blockers: ['position-unknown'], distanceOverMetres: null };
@@ -141,10 +144,93 @@ export function spatialOutcome(
     return { blockers: inside ? [] : ['outside-area'], distanceOverMetres: null };
   }
 
+  // 🔴 **ΡΗΤΟ NARROWING, ΟΧΙ CAST.** Μέχρι εδώ το `place` έχει αποκλείσει
+  // `anywhere`/`place`/`area` — μένουν `near` και `frontage`. Χωρίς αυτόν τον κλάδο ο
+  // μεταγλωττιστής θα άφηνε το `place.center` παρακάτω να διαβαστεί πάνω σε `frontage`
+  // (όπου δεν υπάρχει), και η 5η μορφή θα έσπαγε **σιωπηλά** στο πρώτο πραγματικό
+  // ταίριασμα αντί να μη μεταγλωττίζεται.
+  if (place.kind === 'frontage') {
+    return frontageOutcome(place, position);
+  }
+
   const metres = distanceMeters(place.center, position.point);
   const limitMetres = place.radiusKm * 1000;
   if (metres <= limitMetres) return { blockers: [], distanceOverMetres: null };
   return { blockers: ['outside-radius'], distanceOverMetres: metres - limitMetres };
+}
+
+/**
+ * **Ζ4 δομημένη** — η κρίση του μετώπου, με τη σειρά που ζητά ο ίδιος ο τύπος
+ * ({@link DemandPlace}, κλάδος `frontage`): πρώτα το **βάθος**, μετά η **πλευρά**.
+ *
+ * 🔑 **Το βάθος κρίνεται ΠΡΙΝ την πλευρά.** Δεν έχει νόημα «λάθος πλευρά» για ένα
+ * σημείο 3 χλμ. μακριά από τον άξονα — αυτό είναι απλώς έξω από το μέτωπο, ό,τι κι αν
+ * λέει η γεωμετρία της πλευράς εκεί.
+ */
+function frontageOutcome(
+  place: Extract<DemandPlace, { kind: 'frontage' }>,
+  position: Extract<PlacePosition, { kind: 'known' }>,
+): { blockers: DemandBlocker[]; distanceOverMetres: number | null } {
+  const outsideByMetres = metresOutsideFrontage(position.point, place.axis, place.depthMetres);
+  if (outsideByMetres > 0) {
+    return { blockers: ['outside-frontage'], distanceOverMetres: outsideByMetres };
+  }
+
+  // «Και οι δύο πλευρές» δεν ρωτά ποτέ ποια πλευρά — δεν υπάρχει εμπόδιο να κριθεί.
+  if (place.side === 'both') return { blockers: [], distanceOverMetres: null };
+
+  if (!sideJudgeableFrom(position)) {
+    return { blockers: ['side-unresolved'], distanceOverMetres: null };
+  }
+
+  const side = sideOfPolyline(position.point, place.axis);
+  // Πάνω στη γραμμή = χωρίς πλευρά, ό,τι κι αν ζητήθηκε.
+  if (side === 'on') return { blockers: ['side-unresolved'], distanceOverMetres: null };
+  if (side !== place.side) return { blockers: ['wrong-side'], distanceOverMetres: null };
+
+  return { blockers: [], distanceOverMetres: null };
+}
+
+/**
+ * Οι προελεύσεις θέσης στις οποίες επιτρέπεται να στηριχθεί κρίση **πλευράς**.
+ *
+ * 🔴 **Γιατί ΑΚΡΙΒΩΣ αυτές, και γιατί ονομασμένη σταθερά αντί για σκόρπιο `||`.** Ένας
+ * δρόμος έχει πλάτος 8–20 μ. — δηλαδή ένα σφάλμα θέσης μικρότερο από αυτό δεν αλλάζει
+ * ποτέ την απάντηση «ποια πλευρά», ενώ ένα μεγαλύτερο μπορεί να την αναστρέψει. Θα
+ * ήταν φυσικό να εκφραστεί ως κατώφλι σε **μέτρα** πάνω στο σφάλμα θέσης — αλλά αυτό
+ * το κατώφλι **δεν υπάρχει πουθενά στον κώδικα**: το `GeocodingAccuracy`
+ * (`geocoding-thresholds.ts`) κωδικοποιεί μόνο βαθμούς εμπιστοσύνης του geocoder, ποτέ
+ * μέτρα σφάλματος. Ένα εφευρημένο κατώφλι σε μέτρα θα ήταν αριθμός **χωρίς
+ * προέλευση** — ακριβώς ό,τι το `PlacePosition.accuracy` υπάρχει για να αποτρέψει.
+ *
+ * Άρα κρίνουμε με το λεξιλόγιο που **υπάρχει ήδη**: θέση **ανθρώπινη ή μετρημένη**
+ * (`manual`/`drawn`/`survey`/`bim` — η ίδια η {@link PlacePosition} δεν τους δίνει
+ * καν πεδίο `accuracy`, γιατί δεν είναι συμπέρασμα μηχανής) επιτρέπεται πάντα· μια
+ * γεωκωδικοποιημένη θέση επιτρέπεται **μόνο** στο ανώτατο σκαλί (`'exact'`, ROOFTOP).
+ *
+ * ⚠️ **Το `'osm'` ΔΕΝ είναι εδώ, και είναι απόφαση — όχι παράλειψη.** Το OSM δεν είναι
+ * ούτε «άνθρωπος έδειξε *αυτό* το σημείο για *αυτή* τη ζήτηση» ούτε «geocoder με
+ * βαθμολογημένη ακρίβεια»: είναι κόμβος/περίγραμμα τρίτου χωρίς καμία συνοδευτική
+ * μέτρηση σφάλματος στον τύπο μας — η {@link PlacePosition} για `osm` δεν κουβαλά
+ * `accuracy` καθόλου, όπως ακριβώς και το `manual`, αλλά εδώ η θέση **δεν την έδειξε
+ * άνθρωπος για το συγκεκριμένο ερώτημα** παρά αντλήθηκε ζωντανά. Δεν υπάρχει
+ * μετρήσιμος λόγος να το εμπιστευτούμε **περισσότερο** από `geocoded/approximate` —
+ * και η Α5 απαγορεύει ρητά να μετατρέπεται άγνοια σε ισχυρισμό. Άρα `osm` πέφτει σε
+ * `side-unresolved`, ίδια θεραπεία με κάθε άλλη μη-αξιόπιστη προέλευση.
+ */
+const PROVENANCES_TRUSTED_FOR_SIDE = [
+  'manual',
+  'drawn',
+  'survey',
+  'bim',
+] as const satisfies readonly LocationProvenance[];
+
+/** `true` αν η θέση της αγγελίας είναι αρκετά αξιόπιστη ώστε να κριθεί **πλευρά**. */
+function sideJudgeableFrom(position: Extract<PlacePosition, { kind: 'known' }>): boolean {
+  if (position.provenance === 'geocoded') return position.accuracy === 'exact';
+  return (PROVENANCES_TRUSTED_FOR_SIDE as readonly LocationProvenance[]).includes(
+    position.provenance,
+  );
 }
 
 /** Χρονικός άξονας — «τι θα υπάρχει **τότε**». */

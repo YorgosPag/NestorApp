@@ -40,6 +40,8 @@ import {
   createAgencyIdentityResolver,
   type AgencyIdentityResolver,
 } from '@/services/company/company-public-name.reader';
+import type { PublicShelfSource } from '@/services/upload/utils/storage-path-public-shelf';
+import { reconcilePublicShelf } from './public-shelf.service';
 
 const logger = createModuleLogger('publish-public-listing');
 
@@ -244,6 +246,19 @@ export async function writeListingProjection(
 
     if (!listing) {
       await ref.delete();
+      // ── ADR-841 Α12.6 — Η ΑΠΟΣΥΡΣΗ ΣΥΜΒΑΙΝΕΙ ΚΑΙ ΣΤΑ BYTES ────────────────
+      //
+      // 🔴 **Χωρίς αυτή τη γραμμή το ράφι θα ήταν διαρροή που ΜΕΓΑΛΩΝΕΙ**: η αγγελία
+      //    φεύγει από τον χάρτη, οι φωτογραφίες της μένουν δημόσια αναγνώσιμες για
+      //    πάντα, και **κανείς δεν θα το μάθαινε** — δεν υπάρχει οθόνη που να τις
+      //    δείχνει πια.
+      //
+      // 🔑 **Κενό σύνολο, όχι «σβήσε τα»**: είναι η ίδια πράξη με το `set()` από
+      //    κάτω, με άλλη τιμή. Ο γραφέας δεν έχει δύο συμπεριφορές — έχει **μία**,
+      //    και η απόσυρση είναι η περίπτωσή της όπου το επιθυμητό σύνολο είναι ∅.
+      //    Γι' αυτό η **επαναφορά** (`lifecycle: 'listed'` ξανά) δουλεύει χωρίς
+      //    τίποτε επιπλέον: ξαναπερνά από εδώ με μη-κενό σύνολο.
+      await reconcileShelfSafely(listingId, []);
       return 'withdrawn';
     }
 
@@ -260,9 +275,44 @@ export async function writeListingProjection(
     //    όταν λείπει — άρα κάθε έγγραφο γραμμένο πριν από σήμερα έχει ήδη σωστή
     //    απάντηση χωρίς να το αγγίξει κανείς.
     await ref.set({ ...listing, schemaVersion: PUBLIC_LISTING_SCHEMA_VERSION });
+
+    // ── ADR-841 Α12.6 — ΤΟ ΡΑΦΙ ΓΙΝΕΤΑΙ ΑΚΡΙΒΩΣ ΟΣΟ ΛΕΕΙ Η ΕΠΙΛΟΓΗ ────────────
+    //
+    // ⚠️ **ΜΕΤΑ το `set`, όχι πριν**: αν η συμφιλίωση αποτύχει, το δημόσιο έγγραφο
+    //    έχει ήδη γραφτεί και η αγγελία **υπάρχει** — απλώς χωρίς εικόνες. Η
+    //    αντίστροφη σειρά θα μπορούσε να αφήσει bytes δημοσιευμένα για αγγελία που
+    //    δεν γράφτηκε ποτέ, δηλαδή **ορφανά που κανείς δεν θα συμφιλίωνε**.
+    //
+    // 🔴 **Σήμερα το σύνολο είναι ΚΕΝΟ, και αυτό ΕΙΝΑΙ η απόδειξη** (Α12.10): όσο
+    //    κανείς δεν έχει διαλέξει τι δημοσιεύει, η συμφιλίωση **αποδεικνύει σε κάθε
+    //    γραφή** ότι το ράφι μένει άδειο — μηδέν διαρροή, μετρημένα και όχι
+    //    υποσχεμένα. Το `publishedMedia` το γεμίζει η **Φ3**.
+    await reconcileShelfSafely(listingId, property.publishedMedia ?? []);
+
     return 'published';
   } catch (error) {
     return reportProjectionFailure(listingId, error);
+  }
+}
+
+/**
+ * Συμφιλιώνει το δημόσιο ράφι **χωρίς ποτέ να ρίξει τη δημοσίευση**.
+ *
+ * 🔑 **Η αστοχία του ραφιού δεν ακυρώνει την αγγελία** — ίδιο συμβόλαιο με τον γραφέα
+ * της προβολής. Αλλά **ονομάζεται**: το `reconcilePublicShelf` επιστρέφει `'failed'`
+ * αντί να πετάξει, και η επόμενη επανασύνθεση το διορθώνει. Η διαφορά ανάμεσα σε
+ * «σιωπηλά μπαγιάτικο» και «γνωστά εκκρεμές».
+ */
+async function reconcileShelfSafely(
+  listingId: string,
+  sources: readonly PublicShelfSource[]
+): Promise<void> {
+  const report = await reconcilePublicShelf(listingId, sources);
+
+  if (report.outcome === 'failed') {
+    logger.error('Το δημόσιο ράφι δεν συμφιλιώθηκε — η αγγελία γράφτηκε, τα αρχεία ΟΧΙ', {
+      propertyId: listingId,
+    });
   }
 }
 

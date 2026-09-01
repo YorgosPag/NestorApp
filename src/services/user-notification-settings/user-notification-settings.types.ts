@@ -112,6 +112,21 @@ export interface PropertiesNotificationSettings {
    */
   demandInterest: boolean;
   /**
+   * 🎯 ADR-777 §12.6 — η αντίθετη κατεύθυνση: «**βγήκε αγγελία που ταιριάζει στη
+   * ζήτησή σου**».
+   *
+   * ⚠️ **Προεπιλογή `true`, ίδιος κανόνας με το `demandInterest`.** Η ζήτηση είναι
+   * το ανάλογο του *limit order*: κάθεται και περιμένει να εμφανιστεί ταίριασμα, και
+   * ο χρήστης δεν έχει τρόπο να το μάθει **παρά μόνο** αν ξανανοίξει χειροκίνητα την
+   * οθόνη της — δηλαδή δομικά ίδια κατάσταση με τον ιδιοκτήτη που δεν μπορεί να δει
+   * ποιος τον ψάχνει. Χωρίς προεπιλεγμένη ειδοποίηση, το χαρακτηριστικό υπάρχει και
+   * δεν φτάνει ποτέ σε άνθρωπο.
+   *
+   * ⚠️ Ο χρήστης το κλείνει από τις ρυθμίσεις — μια ειδοποίηση που δεν σβήνει είναι
+   * ενόχληση, όχι υπηρεσία.
+   */
+  demandListingMatch: boolean;
+  /**
    * 🎯 ADR-777 §8.34 — «**ο Κώστας ενέκρινε**» / «**ο Κώστας αρνήθηκε**».
    *
    * ⚠️ **Προεπιλογή `true`, με τον ίδιο κανόνα**: ειδοποίησε για ό,τι ο χρήστης
@@ -318,6 +333,7 @@ export const DEFAULT_PROPERTIES_SETTINGS: PropertiesNotificationSettings = {
   viewingScheduled: true,
   newBuilding: true,
   demandInterest: true,
+  demandListingMatch: true,
   mandateDecided: true,
   mandateRequestAnswered: true,
 };

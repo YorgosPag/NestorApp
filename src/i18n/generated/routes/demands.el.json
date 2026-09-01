@@ -69,6 +69,8 @@
         "anyType": "Κάθε είδος",
         "anywhere": "Οπουδήποτε",
         "area": "Σε σχεδιασμένη περιοχή",
+        "frontage": "{side, select, left {Αριστερή πλευρά} right {Δεξιά πλευρά} both {Και οι δύο πλευρές} other {Πλευρά}} του δρόμου",
+        "frontageNamed": "{side, select, left {Αριστερή πλευρά} right {Δεξιά πλευρά} both {Και οι δύο πλευρές} other {Πλευρά}} της οδού {street}",
         "near": "Σε ακτίνα {radiusKm} χλμ.",
         "noPriceLimit": "Χωρίς όριο ποσού",
         "now": "Τώρα",

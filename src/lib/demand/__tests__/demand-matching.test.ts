@@ -21,7 +21,9 @@ import {
   DEMAND_BLOCKERS,
   NEAR_MISS_MAX_AXES,
   decideVerdict,
+  isCategoricalBlocker,
   isMeasurableBlocker,
+  isUncertainBlocker,
   matchDemand,
   matchDemandAgainstListing,
   demandResultsBalance,
@@ -33,7 +35,8 @@ import {
   listingFiltersFromDemand,
 } from '../demand-listing-filters';
 import { matchesListingFilters } from '@/lib/listings/listing-filters';
-import { NO_DEMAND_FEATURES, type PropertyDemand } from '@/types/property-demand';
+import { EARTH_RADIUS_METERS } from '@/lib/geo/geo-distance';
+import { NO_DEMAND_FEATURES, type FrontageSide, type PropertyDemand } from '@/types/property-demand';
 import type { PublicListing } from '@/types/public-listing';
 
 // =============================================================================
@@ -45,7 +48,17 @@ import type { PublicListing } from '@/types/public-listing';
  * σουίτα. Γραμμένα δύο φορές θα απέκλιναν — και μια δοκιμή που περνά επειδή το
  * **fixture** της είναι διαφορετικό δηλώνει κάλυψη που δεν υπάρχει.
  */
-import { TODAY, demand, facts, listing } from './demand-fixtures';
+import { NOW_ISO, TODAY, demand, facts, listing } from './demand-fixtures';
+
+/**
+ * Άξονας δρόμου Δύση→Ανατολή (ίδιο πλάτος `lat`), για τα σενάρια της **Ζ4
+ * δομημένης**. Με αυτή τη φορά, «βόρεια του άξονα» είναι πάντα `'left'` και «νότια»
+ * πάντα `'right'` — βλ. τη σύμβαση προσήμου του `sideOfPolyline` (`geo-line.ts`).
+ */
+const FRONTAGE_AXIS = [
+  { lat: 40.6, lng: 22.9 },
+  { lat: 40.6, lng: 23.0 },
+] as const;
 
 // =============================================================================
 // Θ — ΤΟ ΘΕΩΡΗΜΑ ΥΠΕΡΣΥΝΟΛΟΥ
@@ -78,6 +91,9 @@ describe('🔴 Θ — `match` ⇒ τα προβεβλημένα φίλτρα Τ�
       },
     }),
     demand({ place: { kind: 'place', landId: 'land_1', buildingId: null } }),
+    demand({
+      place: { kind: 'frontage', streetName: 'Εγνατίας', axis: FRONTAGE_AXIS, side: 'both', depthMetres: 50 },
+    }),
     demand({ timing: { kind: 'now' } }),
     demand({ timing: { kind: 'window', fromDate: '2027-01-01', toDate: '2027-12-31' } }),
     demand({ proximity: [{ kind: 'school', maxMetres: 400 }] }),
@@ -98,6 +114,13 @@ describe('🔴 Θ — `match` ⇒ τα προβεβλημένα φίλτρα Τ�
     }),
     facts({ listing: listing({ commercial: { askingPrice: 300_000, finalPrice: null, rentPrice: null, nightlyRate: null } }) }),
     facts({ listing: listing({ position: { kind: 'unknown', reason: 'never-asked' } }) }),
+    facts({
+      listing: listing({
+        // Κοντά στον `FRONTAGE_AXIS` — για να χτυπήσει και το `frontage` της
+        // λίστας `DEMANDS` με πραγματικό `match`, όχι μόνο άρνηση.
+        position: { kind: 'known', provenance: 'manual', point: { lat: 40.6005, lng: 22.95 }, locatedAt: NOW_ISO },
+      }),
+    }),
     facts({
       listing: listing({
         position: {
@@ -216,6 +239,47 @@ describe('🔴 Ζ — κάθε εμπόδιο πυροδοτεί σε πραγμ
       facts(),
     ],
     [
+      'outside-frontage',
+      demand({
+        place: { kind: 'frontage', streetName: 'Εγνατίας', axis: FRONTAGE_AXIS, side: 'both', depthMetres: 20 },
+      }),
+      facts({
+        listing: listing({
+          position: { kind: 'known', provenance: 'manual', point: { lat: 40.55, lng: 22.95 }, locatedAt: NOW_ISO },
+        }),
+      }),
+    ],
+    [
+      'wrong-side',
+      demand({
+        place: { kind: 'frontage', streetName: 'Εγνατίας', axis: FRONTAGE_AXIS, side: 'right', depthMetres: 100 },
+      }),
+      facts({
+        // Βόρεια του άξονα ⇒ `'left'` — η ζήτηση θέλει `'right'`.
+        listing: listing({
+          position: { kind: 'known', provenance: 'manual', point: { lat: 40.6005, lng: 22.95 }, locatedAt: NOW_ISO },
+        }),
+      }),
+    ],
+    [
+      'side-unresolved',
+      demand({
+        place: { kind: 'frontage', streetName: 'Εγνατίας', axis: FRONTAGE_AXIS, side: 'left', depthMetres: 100 },
+      }),
+      facts({
+        // `geocoded`/`approximate` δεν είναι αρκετά ακριβές για κρίση πλευράς.
+        listing: listing({
+          position: {
+            kind: 'known',
+            provenance: 'geocoded',
+            accuracy: 'approximate',
+            point: { lat: 40.6005, lng: 22.95 },
+            locatedAt: NOW_ISO,
+          },
+        }),
+      }),
+    ],
+    [
       'not-available-then',
       demand({ timing: { kind: 'window', fromDate: '2027-01-01', toDate: '2027-06-30' } }),
       facts({ availability: { from: '2029-01-01', to: null } }),
@@ -329,12 +393,39 @@ describe('Π — πολιτική: πότε «κοντά» και πότε «ό�
     expect(decideVerdict(['offer-kind', 'price-above'])).toBe('no-match');
   });
 
-  it('🔑 ο χαρακτηρισμός μετρήσιμο/κατηγορικό είναι κλειστός', () => {
+  it('🔑 ο χαρακτηρισμός σε ΤΡΕΙΣ τάξεις είναι κλειστός και τα σύνολα ξένα', () => {
     const measurable = DEMAND_BLOCKERS.filter(isMeasurableBlocker);
-    const categorical = DEMAND_BLOCKERS.filter((b) => !isMeasurableBlocker(b));
-    expect(measurable.length + categorical.length).toBe(DEMAND_BLOCKERS.length);
+    const categorical = DEMAND_BLOCKERS.filter(isCategoricalBlocker);
+    const uncertain = DEMAND_BLOCKERS.filter(isUncertainBlocker);
+
+    // Κάλυψη: κάθε φραγμός ανήκει κάπου.
+    expect(measurable.length + categorical.length + uncertain.length).toBe(DEMAND_BLOCKERS.length);
+    // Ξένα σύνολα: κανένας φραγμός δεν ανήκει σε δύο τάξεις.
+    for (const blocker of DEMAND_BLOCKERS) {
+      const classes = [isMeasurableBlocker, isCategoricalBlocker, isUncertainBlocker].filter((is) =>
+        is(blocker),
+      );
+      expect(classes).toHaveLength(1);
+    }
     expect(categorical).toContain('position-unknown');
     expect(measurable).toContain('outside-radius');
+    expect(uncertain).toContain('side-unresolved');
+  });
+
+  it('🔴 Η ΑΓΝΟΙΑ ΔΕΝ ΕΙΝΑΙ ΑΡΝΗΣΗ — «side-unresolved» ⇒ near-miss, ΠΟΤΕ no-match', () => {
+    // 🔴 Η ΑΓΚΥΡΑ ΤΗΣ ΑΠΟΦΑΣΗΣ. Το `side-unresolved` γεννήθηκε κατηγορικό, και ήταν
+    // λάθος: το ADR-777 μετρά **54%** των κτιρίων του κέντρου Θεσσαλονίκης χωρίς
+    // διεύθυνση στο OSM ⇒ η άγνοια πλευράς είναι **ο κανόνας**, όχι η εξαίρεση. Ως
+    // κατηγορικό, θα έκρυβε την πλειοψηφία της αγοράς από τον άνθρωπο που όρισε
+    // προσεκτικά «νότια πλευρά» — και **χωρίς αυτό το test η επαναφορά του λάθους
+    // θα ήταν αόρατη**: κάθε άλλη δοκιμή ελέγχει `blockers`, καμία την ετυμηγορία.
+    expect(decideVerdict(['side-unresolved'])).toBe('near-miss');
+    expect(decideVerdict(['side-unresolved', 'price-above'])).toBe('near-miss');
+
+    // Αλλά η άγνοια ΔΕΝ ξεπλένει κλειστή υπόθεση: μαζί με κατηγορικό, no-match.
+    expect(decideVerdict(['side-unresolved', 'offer-kind'])).toBe('no-match');
+    // Και η «λάθος πλευρά» παραμένει κλειστή υπόθεση — ξέρουμε, και είναι όχι.
+    expect(decideVerdict(['wrong-side'])).toBe('no-match');
   });
 });
 
@@ -409,4 +500,141 @@ describe('Χ — ο τέταρτος άξονας', () => {
     const f = facts({ availability: { from: null, to: '2026-12-31' } });
     expect(matchDemandAgainstListing(d, f, TODAY).blockers).toContain('not-available-then');
   });
+});
+
+// =============================================================================
+// Ο — Η ΚΡΙΣΗ ΤΟΥ ΜΕΤΩΠΟΥ (Ζ4 δομημένη): σειρά, «both», provenance
+// =============================================================================
+
+/** Ζήτηση μετώπου με βολικές προεπιλογές, παρακάμπτοντας μόνο ό,τι χρειάζεται το σενάριο. */
+function frontageDemand(overrides: {
+  side?: FrontageSide;
+  depthMetres?: number;
+}): PropertyDemand {
+  return demand({
+    place: {
+      kind: 'frontage',
+      streetName: 'Εγνατίας',
+      axis: FRONTAGE_AXIS,
+      side: overrides.side ?? 'right',
+      depthMetres: overrides.depthMetres ?? 20,
+    },
+  });
+}
+
+describe('🔴 Ο — «βάθος ΠΡΙΝ πλευρά» και «both» χωρίς εμπόδιο πλευράς', () => {
+  it('🔑 σημείο ΕΞΩ από το βάθος ΚΑΙ στη λάθος πλευρά ⇒ ΜΟΝΟ outside-frontage', () => {
+    // Βόρεια (`'left'`) — λάθος πλευρά για ζήτηση `'right'` — αλλά 5+ χλμ. μακριά,
+    // πολύ πέρα από τα 20 μ. βάθος. Αν η πλευρά κρινόταν πρώτη, θα εμφανιζόταν και
+    // «wrong-side» — και αυτό είναι ακριβώς το λάθος που η σειρά του τύπου απαγορεύει.
+    const d = frontageDemand({ side: 'right', depthMetres: 20 });
+    const f = facts({
+      listing: listing({
+        position: { kind: 'known', provenance: 'manual', point: { lat: 40.65, lng: 22.95 }, locatedAt: NOW_ISO },
+      }),
+    });
+    expect(matchDemandAgainstListing(d, f, TODAY).blockers).toEqual(['outside-frontage']);
+  });
+
+  it('«both» δεν ρωτά ποτέ ποια πλευρά — καμία σε ΟΛΟΚΛΗΡΟ το εύρος περνάει', () => {
+    const d = frontageDemand({ side: 'both', depthMetres: 100 });
+    for (const point of [{ lat: 40.6005, lng: 22.95 }, { lat: 40.5995, lng: 22.95 }]) {
+      const f = facts({
+        listing: listing({ position: { kind: 'known', provenance: 'manual', point, locatedAt: NOW_ISO } }),
+      });
+      expect(matchDemandAgainstListing(d, f, TODAY).verdict).toBe('match');
+    }
+  });
+
+  it('🔑 πάνω στη γραμμή ⇒ side-unresolved, ΑΚΟΜΗ ΚΑΙ με αξιόπιστη προέλευση', () => {
+    // Η εμπιστοσύνη στην προέλευση απαντά «μπορώ να κρίνω πλευρά;» — όχι «ποια είναι
+    // η πλευρά;». Πάνω στη γραμμή δεν υπάρχει πλευρά να κριθεί, ό,τι κι αν εμπιστευτούμε.
+    const d = frontageDemand({ side: 'left', depthMetres: 20 });
+    const f = facts({
+      listing: listing({
+        position: { kind: 'known', provenance: 'manual', point: { lat: 40.6, lng: 22.95 }, locatedAt: NOW_ISO },
+      }),
+    });
+    expect(matchDemandAgainstListing(d, f, TODAY).blockers).toContain('side-unresolved');
+  });
+
+  it('η απόσταση του «outside-frontage» είναι ΑΚΡΙΒΩΣ distanceToPolyline − depth', () => {
+    const d = frontageDemand({ side: 'both', depthMetres: 20 });
+    const point = { lat: 40.55, lng: 22.95 };
+    const f = facts({
+      listing: listing({ position: { kind: 'known', provenance: 'manual', point, locatedAt: NOW_ISO } }),
+    });
+
+    const metresPerDegree = (Math.PI / 180) * EARTH_RADIUS_METERS;
+    const expectedDistance = Math.abs(point.lat - FRONTAGE_AXIS[0].lat) * metresPerDegree - 20;
+
+    const result = matchDemandAgainstListing(d, f, TODAY);
+    expect(result.blockers).toContain('outside-frontage');
+    expect(result.gaps.distanceOverMetres).toBeCloseTo(expectedDistance, 0);
+  });
+});
+
+describe('🔴 Ο — ποιες προελεύσεις επιτρέπεται να κρίνουν πλευρά (ADR-777, §7 Ζ4 δομημένη)', () => {
+  /** Βόρεια του άξονα (`'left'`), εντός βάθους — μόνο η ΑΞΙΟΠΙΣΤΙΑ ποικίλλει. */
+  const NORTH_POINT = { lat: 40.6005, lng: 22.95 };
+
+  const TRUSTED: ReadonlyArray<readonly [string, PublicListing['position']]> = [
+    ['manual', { kind: 'known', provenance: 'manual', point: NORTH_POINT, locatedAt: NOW_ISO }],
+    ['drawn', { kind: 'known', provenance: 'drawn', point: NORTH_POINT, locatedAt: NOW_ISO }],
+    ['survey', { kind: 'known', provenance: 'survey', point: NORTH_POINT, locatedAt: NOW_ISO }],
+    ['bim', { kind: 'known', provenance: 'bim', point: NORTH_POINT, locatedAt: NOW_ISO }],
+    [
+      'geocoded/exact',
+      { kind: 'known', provenance: 'geocoded', accuracy: 'exact', point: NORTH_POINT, locatedAt: NOW_ISO },
+    ],
+  ];
+
+  const UNTRUSTED: ReadonlyArray<readonly [string, PublicListing['position']]> = [
+    [
+      'geocoded/interpolated',
+      { kind: 'known', provenance: 'geocoded', accuracy: 'interpolated', point: NORTH_POINT, locatedAt: NOW_ISO },
+    ],
+    [
+      'geocoded/approximate',
+      { kind: 'known', provenance: 'geocoded', accuracy: 'approximate', point: NORTH_POINT, locatedAt: NOW_ISO },
+    ],
+    [
+      'geocoded/center',
+      { kind: 'known', provenance: 'geocoded', accuracy: 'center', point: NORTH_POINT, locatedAt: NOW_ISO },
+    ],
+    [
+      'osm',
+      {
+        kind: 'known',
+        provenance: 'osm',
+        point: NORTH_POINT,
+        locatedAt: NOW_ISO,
+        osmRef: { elementType: 'way', elementId: '123', seenAt: NOW_ISO },
+      },
+    ],
+  ];
+
+  for (const [label, position] of TRUSTED) {
+    it(`🔑 «${label}» κρίνει πλευρά — σωστή πλευρά (\`'left'\`) περνάει ΧΩΡΙΣ side-unresolved`, () => {
+      const d = frontageDemand({ side: 'left', depthMetres: 100 });
+      const f = facts({ listing: listing({ position }) });
+      expect(matchDemandAgainstListing(d, f, TODAY).blockers).not.toContain('side-unresolved');
+    });
+
+    it(`«${label}» κρίνει πλευρά — λάθος πλευρά (\`'right'\`) ⇒ wrong-side`, () => {
+      const d = frontageDemand({ side: 'right', depthMetres: 100 });
+      const f = facts({ listing: listing({ position }) });
+      expect(matchDemandAgainstListing(d, f, TODAY).blockers).toContain('wrong-side');
+    });
+  }
+
+  for (const [label, position] of UNTRUSTED) {
+    it(`🔴 «${label}» ΔΕΝ κρίνει πλευρά ⇒ side-unresolved, όχι μάντεμα`, () => {
+      const d = frontageDemand({ side: 'left', depthMetres: 100 });
+      const f = facts({ listing: listing({ position }) });
+      const result = matchDemandAgainstListing(d, f, TODAY);
+      expect(result.blockers).toContain('side-unresolved');
+      expect(result.blockers).not.toContain('wrong-side');
+    });
+  }
 });

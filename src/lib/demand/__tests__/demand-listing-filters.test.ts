@@ -118,6 +118,31 @@ describe('🔴 Χ — ο κύκλος ΠΕΡΙΚΛΕΙΕΙ το πολύγωνο
     );
     expect(filters.near).toBeNull();
   });
+
+  it('🔑 `frontage` → κύκλος που περιέχει ΚΑΘΕ κορυφή του άξονα ΚΑΙ το βάθος', () => {
+    const axis = [
+      { lat: 40.6, lng: 22.9 },
+      { lat: 40.6, lng: 23.0 },
+    ] as const;
+    const filters = listingFiltersFromDemand(
+      demand({
+        place: { kind: 'frontage', streetName: 'Εγνατίας', axis, side: 'both', depthMetres: 20 },
+      }),
+    );
+    expect(filters.near).not.toBeNull();
+
+    const { center, radiusKm } = filters.near!;
+    // 🔴 Δεν αρκεί να περιέχει τις κορυφές του άξονα — πρέπει να περιέχει και τη ζώνη
+    // βάθους γύρω τους. Χωρίς το `+ depth`, ένα σημείο ακριβώς στο όριο του μετώπου,
+    // δίπλα σε άκρη του τμήματος, θα έμενε ΕΞΩ από τον κύκλο — δηλαδή η προβολή θα
+    // ΣΤΕΝΕΥΕ, ακριβώς αυτό που το συμβόλαιο απαγορεύει.
+    for (const vertex of axis) {
+      // Ίδια ανοχή δεύτερης φωνής με το `area` παραπάνω (1 χιλιοστό) — εδώ προστίθεται
+      // στο μετρημένο άθροισμα, όχι στο κατώφλι, γιατί το βάθος (20 μ.) προστίθεται
+      // ήδη ΜΕΣΑ στο `radiusKm` που παράγει ο κώδικας.
+      expect(greatCircleKm(center, vertex) + 0.02).toBeLessThanOrEqual(radiusKm + 1e-6);
+    }
+  });
 });
 
 // =============================================================================
@@ -138,6 +163,21 @@ describe('🔴 Α — η λίστα απωλειών: ούτε ψεύτικη π
   const CASES: ReadonlyArray<readonly [string, Partial<PropertyDemand>]> = [
     ['timing', { timing: { kind: 'whenever' } }],
     ['area-outline', { place: { kind: 'area', outline: SQUARE } }],
+    [
+      'frontage-axis',
+      {
+        place: {
+          kind: 'frontage',
+          streetName: null,
+          axis: [
+            { lat: 40.6, lng: 22.9 },
+            { lat: 40.6, lng: 23.0 },
+          ],
+          side: 'both',
+          depthMetres: 20,
+        },
+      },
+    ],
     ['place-identity', { place: { kind: 'place', landId: 'land_1', buildingId: null } }],
     ['floor-range', { features: { ...NO_DEMAND_FEATURES, floorMin: 3 } }],
     ['proximity', { proximity: [{ kind: 'school', maxMetres: 400 }] }],

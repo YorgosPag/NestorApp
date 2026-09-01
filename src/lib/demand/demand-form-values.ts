@@ -51,22 +51,26 @@ import { OFFER_KINDS } from '@/types/property-offers';
 import {
   DEMAND_LIFE_CONTEXTS,
   DEMAND_PROXIMITY_KINDS,
+  FRONTAGE_SIDES,
   NO_DEMAND_FEATURES,
   type DemandFeatures,
   type DemandLifeContext,
   type DemandPlace,
   type DemandProximity,
   type DemandTiming,
+  type FrontageSide,
   type PropertyDemand,
 } from '@/types/property-demand';
+import type { GeoPoint, GeoPolyline } from '@/types/geo/coordinates';
 import { DEFAULT_SEARCH_RADIUS_KM } from '@/lib/listings/listing-filters';
+import { isGeoPolyline } from '@/lib/geo/geo-line';
 
 // =============================================================================
 // 1. ΟΙ ΜΟΡΦΕΣ ΧΩΡΟΥ ΠΟΥ Η ΦΟΡΜΑ ΜΠΟΡΕΙ ΝΑ ΕΚΦΡΑΣΕΙ **ΣΗΜΕΡΑ**
 // =============================================================================
 
 /**
- * ✅ **ΤΟ ΚΕΝΟ ΕΚΛΕΙΣΕ** — και οι **τέσσερις** μορφές του {@link DemandPlace} συντάσσονται.
+ * ✅ **ΤΟ ΚΕΝΟ ΕΚΛΕΙΣΕ ΞΑΝΑ** — και οι **πέντε** μορφές του {@link DemandPlace} συντάσσονται.
  *
  * Μέχρι τις 2026-08-11 εδώ ζούσαν **δύο** μορφές, με γραπτό λόγο για κάθε απουσία:
  *
@@ -78,12 +82,19 @@ import { DEFAULT_SEARCH_RADIUS_KM } from '@/lib/listings/listing-filters';
  * 🔑 **Και τα δύο ξεκλείδωσαν με ΔΕΔΟΜΕΝΑ/ΕΠΙΦΑΝΕΙΑ, ακριβώς όπως προβλεπόταν** — το
  * μοντέλο δεν άλλαξε ούτε κατά ένα πεδίο. Η πρόβλεψη του Β1 («*αυτή η λίστα μεγαλώνει
  * και ο μεταγλωττιστής δείχνει κάθε σημείο που την υποθέτει*») επαληθεύτηκε κατά λέξη.
+ *
+ * 🔴 **Και ήρθε η μέρα που το `PLACE_KINDS_NOT_IN_FORM` προέβλεψε.** Η **Ζ4 δομημένη**
+ * `frontage` προστέθηκε στο μοντέλο *μετά* το παραπάνω κλείσιμο κενού — και βρήκε εδώ
+ * την ίδια συνθήκη ξεκλειδώματος: **δεδομένα** (`sideOfPolyline` / `metresOutsideFrontage`
+ * του `lib/geo/geo-line.ts`) + **επιφάνεια** (η ίδια χειρονομία σχεδίασης άξονα με το
+ * `area`, όχι νέο widget). Ξανά **μηδέν** αλλαγή στο μοντέλο.
  */
 export const FORM_PLACE_KINDS = [
   'anywhere',
   'near',
   'place',
   'area',
+  'frontage',
 ] as const satisfies readonly DemandPlace['kind'][];
 
 export type FormPlaceKind = (typeof FORM_PLACE_KINDS)[number];
@@ -91,12 +102,12 @@ export type FormPlaceKind = (typeof FORM_PLACE_KINDS)[number];
 /**
  * Οι μορφές που **υπάρχουν στο μοντέλο** αλλά η φόρμα δεν συντάσσει.
  *
- * ✅ **Κενό από τις 2026-08-11.** Παραμένει ως **ρητή δήλωση** και δεν διαγράφεται: το
- * `satisfies` κρατά το κενό σύνολο **δεμένο** με το `DemandPlace['kind']`, οπότε μια
- * **πέμπτη** μορφή χώρου που θα προστεθεί αύριο έχει ήδη εδώ τη θέση της να δηλωθεί
- * ως «δεν συντάσσεται ακόμη» — αντί να προστεθεί σιωπηλά και να λείπει από την οθόνη
- * χωρίς κανείς να το πει. Ο έλεγχος ολότητας του `demand-form-values.test.ts` το
- * διαβάζει.
+ * ✅ **Κενό από τις 2026-08-11, και ΞΑΝΑ κενό μετά την προσθήκη της `frontage`.**
+ * Παραμένει ως **ρητή δήλωση** και δεν διαγράφεται: το `satisfies` κρατά το κενό
+ * σύνολο **δεμένο** με το `DemandPlace['kind']`, οπότε μια **έκτη** μορφή χώρου που θα
+ * προστεθεί αύριο έχει ήδη εδώ τη θέση της να δηλωθεί ως «δεν συντάσσεται ακόμη» —
+ * αντί να προστεθεί σιωπηλά και να λείπει από την οθόνη χωρίς κανείς να το πει. Ο
+ * έλεγχος ολότητας του `demand-form-values.test.ts` το διαβάζει.
  */
 export const PLACE_KINDS_NOT_IN_FORM = [] as const satisfies readonly DemandPlace['kind'][];
 
@@ -153,6 +164,24 @@ export const demandFormSchema = z.object({
     .nullable(),
   /** **Ζ4** — το σχεδιασμένο περίγραμμα. `null` = δεν έχει σχεδιαστεί ακόμη. */
   placeOutline: z.array(z.object({ lat: z.number(), lng: z.number() })).nullable(),
+  /**
+   * **Ζ4 δομημένη** — το όνομα του δρόμου όπως το είπε ο άνθρωπος. Ποτέ αυθεντία
+   * (βλ. {@link DemandPlace}, κλάδος `frontage`) — κενό = δεν το έδωσε.
+   */
+  frontageStreetName: z.string(),
+  /**
+   * **Ζ4 δομημένη** — ο άξονας του τμήματος. `null` = δεν έχει σχεδιαστεί ακόμη.
+   *
+   * ⚠️ **Ίδιο σχήμα με το `placeOutline`, ΟΧΙ το `geoPointSchema`.** Το
+   * `geoPointSchema` απαντά «*ένα σημείο, ή κανένα*» (μία πινέζα) — εδώ η ερώτηση
+   * είναι «*λίστα κορυφών, ή καμία λίστα ακόμη*», που είναι το ίδιο σχήμα με το
+   * περίγραμμα της Ζ4, όχι με μια μεμονωμένη πινέζα.
+   */
+  frontageAxis: z.array(z.object({ lat: z.number(), lng: z.number() })).nullable(),
+  /** **Ζ4 δομημένη** — ποια πλευρά ζητά ο άνθρωπος. Προεπιλογή `'both'`. */
+  frontageSide: z.enum(FRONTAGE_SIDES),
+  /** **Ζ4 δομημένη** — πόσο βαθιά μετράει ακόμη ως «πάνω στον δρόμο». */
+  frontageDepthMetres: optionalNumber,
 
   // ── ΧΡΟΝΟΣ ──────────────────────────────────────────────────────────────
   timingKind: z.enum(['now', 'window', 'whenever']),
@@ -185,11 +214,26 @@ export type DemandFormValues = z.input<typeof demandFormSchema>;
 export type DemandFormParsed = z.output<typeof demandFormSchema>;
 
 /**
+ * 🔴 **Το προεπιλεγμένο βάθος μετώπου, σε μέτρα.**
+ *
+ * **40** — το τυπικό βάθος οικοδομικού τετραγώνου με πρόσοψη δρόμου στην ελληνική
+ * πολεοδομική πρακτική (ρυμοτομική γραμμή → πίσω όριο οικοπέδου συνηθισμένου
+ * τετραγώνου). Είναι **αφετηρία**, όχι νόμος: ο άνθρωπος τη βλέπει συμπληρωμένη και
+ * την αλλάζει — 20 μ. για ένα κατάστημα, 80+ για οικόπεδο προς αντιπαροχή. Το ίδιο
+ * ιδίωμα με το {@link DEFAULT_SEARCH_RADIUS_KM}: αριθμός που **προτείνει**, ποτέ που
+ * αποφασίζει σιωπηλά για λογαριασμό του χρήστη.
+ */
+export const DEFAULT_FRONTAGE_DEPTH_METRES = 40;
+
+/**
  * Η **κενή** φόρμα.
  *
  * ⚠️ Η ακτίνα ξεκινά στο {@link DEFAULT_SEARCH_RADIUS_KM} — την **ίδια** σταθερά που
  * χρησιμοποιεί η οθόνη 1. Ένας δεύτερος αριθμός εδώ θα σήμαινε ότι «κοντά» σημαίνει
  * άλλο πράγμα ανάλογα με το από πού μπήκε ο χρήστης.
+ *
+ * ⚠️ Η προεπιλεγμένη πλευρά μετώπου είναι `'both'` — «*ό,τι αφήνεις κενό, δεν το θέτω
+ * ως όρο*», το ίδιο συμβόλαιο με κάθε άλλο πεδίο αυτής της φόρμας (Α14 §17.2).
  */
 export const EMPTY_DEMAND_FORM: DemandFormValues = {
   seeks: [],
@@ -199,6 +243,10 @@ export const EMPTY_DEMAND_FORM: DemandFormValues = {
   radiusKm: DEFAULT_SEARCH_RADIUS_KM,
   placeRef: null,
   placeOutline: null,
+  frontageStreetName: '',
+  frontageAxis: null,
+  frontageSide: 'both',
+  frontageDepthMetres: DEFAULT_FRONTAGE_DEPTH_METRES,
   timingKind: 'now',
   fromDate: '',
   toDate: '',
@@ -230,6 +278,7 @@ export type DemandDraft = Pick<
   PropertyDemand,
   'seeks' | 'place' | 'timing' | 'features' | 'proximity' | 'lifeContext'
 >;
+
 
 /**
  * Ο χωρικός άξονας — επίπεδα πεδία → διακριτή ένωση.
@@ -264,6 +313,24 @@ function placeFrom(values: DemandFormParsed): DemandPlace {
   // επιλογέας κτιρίου παράγει `placeRef`, όχι `placeOutline`.
   if (values.placeKind === 'area' && values.placeOutline !== null && values.placeOutline.length >= 3) {
     return { kind: 'area', outline: values.placeOutline };
+  }
+
+  // **Ζ4 δομημένη** — άξονας δρόμου. Προέλευση **πάντα ανθρώπινη**, ίδιο σκεπτικό με
+  // το `area`: ο σχεδιαστής άξονα παράγει `frontageAxis`, ποτέ άξονα αντλημένο από OSM
+  // (§13.4). Το `depthMetres` πέφτει στην προεπιλογή **μόνο** όταν το πεδίο είναι
+  // κενό — όχι όταν είναι `0`, που είναι δικό του invariant (`depth-not-positive`).
+  if (
+    values.placeKind === 'frontage' &&
+    values.frontageAxis !== null &&
+    isGeoPolyline(values.frontageAxis)
+  ) {
+    return {
+      kind: 'frontage',
+      streetName: values.frontageStreetName === '' ? null : values.frontageStreetName,
+      axis: values.frontageAxis,
+      side: values.frontageSide,
+      depthMetres: values.frontageDepthMetres ?? DEFAULT_FRONTAGE_DEPTH_METRES,
+    };
   }
 
   return { kind: 'anywhere' };
@@ -304,67 +371,14 @@ export function demandDraftFrom(values: DemandFormParsed): DemandDraft {
 }
 
 // =============================================================================
-// 4. ΖΗΤΗΣΗ → ΦΟΡΜΑ (επεξεργασία)
+// 4. ΖΗΤΗΣΗ → ΦΟΡΜΑ — εξήχθη στο `demand-form-load.ts` (N.7.1, όριο 500 γραμμών)
 // =============================================================================
-
-/**
- * Τι έγινε όταν ζητήθηκε να ανοίξει υπάρχουσα ζήτηση για επεξεργασία.
- *
- * 🔴 **Δύο ρητές καταστάσεις, ποτέ `DemandFormValues | null`.** Το `null` θα σήμαινε
- * ταυτόχρονα «δεν φορτώθηκε» και «δεν υποστηρίζεται εδώ» — δύο πράγματα με **εντελώς
- * διαφορετική** θεραπεία για τον άνθρωπο: το πρώτο του λέει να ξαναδοκιμάσει, το
- * δεύτερο ότι η ζήτησή του είναι **μια χαρά** αλλά αυτή η οθόνη δεν τη συντάσσει
- * ακόμη. Ίδιο ιδίωμα με το `PublicListingLookup`.
- */
-export type DemandFormLoad =
-  | { readonly kind: 'editable'; readonly values: DemandFormValues }
-  | { readonly kind: 'place-not-editable'; readonly placeKind: DemandPlace['kind'] };
-
-/** **Ζήτηση → φόρμα**, ή ονομασμένη άρνηση. */
-export function demandFormFrom(demand: PropertyDemand): DemandFormLoad {
-  if (!(FORM_PLACE_KINDS as readonly string[]).includes(demand.place.kind)) {
-    return { kind: 'place-not-editable', placeKind: demand.place.kind };
-  }
-
-  const near = demand.place.kind === 'near' ? demand.place : null;
-  const identified = demand.place.kind === 'place' ? demand.place : null;
-  const drawn = demand.place.kind === 'area' ? demand.place : null;
-  const window = demand.timing.kind === 'window' ? demand.timing : null;
-
-  return {
-    kind: 'editable',
-    values: {
-      seeks: [...demand.seeks],
-      // ⚠️ **Η μορφή διαβάζεται από την οντότητα, όχι συνάγεται από το τι είναι
-      // γεμάτο.** Ένα `near === null ? 'anywhere' : 'near'` ήταν σωστό όσο υπήρχαν
-      // δύο μορφές· με τέσσερις θα έστελνε κάθε Ζ3/Ζ5 και κάθε Ζ4 πίσω ως
-      // «οπουδήποτε» — δηλαδή θα **έσβηνε τον τόπο** κάθε φορά που κάποιος άνοιγε τη
-      // ζήτησή του για επεξεργασία.
-      placeKind: demand.place.kind,
-      placeQuery: '',
-      placeCenter: near?.center ?? null,
-      radiusKm: near?.radiusKm ?? DEFAULT_SEARCH_RADIUS_KM,
-      placeRef:
-        identified === null
-          ? null
-          : { landId: identified.landId, buildingId: identified.buildingId },
-      placeOutline: drawn === null ? null : drawn.outline.map((vertex) => ({ ...vertex })),
-      timingKind: demand.timing.kind,
-      fromDate: window?.fromDate ?? '',
-      toDate: window?.toDate ?? '',
-      types: [...demand.features.types],
-      priceMin: demand.features.priceMin,
-      priceMax: demand.features.priceMax,
-      areaMin: demand.features.areaMin,
-      areaMax: demand.features.areaMax,
-      bedroomsMin: demand.features.bedroomsMin,
-      floorMin: demand.features.floorMin,
-      floorMax: demand.features.floorMax,
-      proximity: demand.proximity.map((p) => ({ ...p })),
-      lifeContext: demand.lifeContext,
-    },
-  };
-}
+//
+// ⚠️ **Split, όχι trim.** Το αρχείο πέρασε τις 500 γραμμές όταν προστέθηκε η **Ζ4
+// δομημένη** (`frontage`) — και η μετάφραση «ζήτηση → φόρμα» είναι η κατεύθυνση με
+// τον **λιγότερο** αριθμό εξωτερικών καταναλωτών (μόνο η δοκιμή αυτού του module),
+// άρα η μετακίνησή της δεν αγγίζει κανέναν άλλο σημείο εισαγωγής. Βλ. `demand-form-load.ts`
+// για `demandFormFrom` / `DemandFormLoad`.
 
 // =============================================================================
 // 5. ΤΙ ΕΜΠΟΔΙΖΕΙ ΤΗΝ ΥΠΟΒΟΛΗ — πέρα από τα invariants της οντότητας
@@ -393,6 +407,15 @@ export const DEMAND_FORM_BLOCKERS = [
   'place-not-identified',
   /** **Ζ4** — διάλεξε «αυτή την περιοχή» αλλά το σχήμα δεν έχει τρεις κορυφές. */
   'area-not-drawn',
+  /**
+   * **Ζ4 δομημένη** — διάλεξε «μέτωπο δρόμου» αλλά ο άξονας έχει λιγότερα από 2 σημεία.
+   *
+   * ⚠️ **Δεν είναι το `axis-degenerate` της οντότητας.** Εκείνο κρίνει *«έχουν
+   * διεύθυνση αυτά τα σημεία;»* — ερώτηση που προϋποθέτει ήδη 2 σημεία (ο τύπος
+   * {@link GeoPolyline} το εγγυάται). Αυτό εδώ κρίνει *«υπάρχουν καν αρκετά σημεία;»*
+   * — ερώτηση της **φόρμας**, πριν φτάσει καν στην πύλη της οντότητας.
+   */
+  'frontage-axis-missing',
   /** Διάλεξε παράθυρο αλλά λείπει άκρο. */
   'window-incomplete',
 ] as const;
@@ -411,6 +434,12 @@ export function demandFormBlockers(values: DemandFormParsed): DemandFormBlocker[
   }
   if (values.placeKind === 'area' && (values.placeOutline === null || values.placeOutline.length < 3)) {
     found.push('area-not-drawn');
+  }
+  if (
+    values.placeKind === 'frontage' &&
+    (values.frontageAxis === null || values.frontageAxis.length < 2)
+  ) {
+    found.push('frontage-axis-missing');
   }
   if (values.timingKind === 'window' && (values.fromDate === '' || values.toDate === '')) {
     found.push('window-incomplete');

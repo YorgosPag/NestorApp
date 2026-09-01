@@ -44,6 +44,7 @@ export const TEXT_KEYS: Record<DraftFormSlot | DemandFormBlocker | DemandInvaria
   'place-not-identified': 'property-market:demand.formBlocker.place-not-identified',
   'area-not-drawn': 'property-market:demand.formBlocker.area-not-drawn',
   'window-incomplete': 'property-market:demand.formBlocker.window-incomplete',
+  'frontage-axis-missing': 'property-market:demand.formBlocker.frontage-axis-missing',
 
   'seeks-empty': 'property-market:demand.invariant.seeks-empty',
   'seeks-duplicated': 'property-market:demand.invariant.seeks-duplicated',
@@ -51,6 +52,8 @@ export const TEXT_KEYS: Record<DraftFormSlot | DemandFormBlocker | DemandInvaria
   'range-inverted': 'property-market:demand.invariant.range-inverted',
   'radius-not-positive': 'property-market:demand.invariant.radius-not-positive',
   'outline-degenerate': 'property-market:demand.invariant.outline-degenerate',
+  'axis-degenerate': 'property-market:demand.invariant.axis-degenerate',
+  'depth-not-positive': 'property-market:demand.invariant.depth-not-positive',
   'proximity-not-positive': 'property-market:demand.invariant.proximity-not-positive',
   'proximity-duplicated': 'property-market:demand.invariant.proximity-duplicated',
 };
