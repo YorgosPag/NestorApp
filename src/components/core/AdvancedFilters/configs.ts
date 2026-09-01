@@ -2,7 +2,6 @@ export { PROPERTY_AREA_RANGE_PRESETS } from './configs/shared';
 export {
   propertyListFiltersConfig,
   propertyFiltersConfig,
-  defaultPropertyFilters,
   defaultUnitFilters,
 } from './configs/propertyFiltersConfig';
 export {

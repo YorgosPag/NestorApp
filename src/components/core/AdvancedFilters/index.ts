@@ -33,7 +33,6 @@ export {
   defaultTaskFilters,
   defaultAIInboxFilters,
   defaultOperatorInboxFilters,
-  defaultPropertyFilters,
   defaultFileFilters,
   crmDashboardFiltersConfig,
   defaultCrmDashboardFilters
@@ -83,7 +82,6 @@ export type {
   UnitFilterState,
   BuildingFilterState,
   ProjectFilterState,
-  PropertyFilterState,
   // ADR-051: Unified range types
   NumericRange,
   DateRange,

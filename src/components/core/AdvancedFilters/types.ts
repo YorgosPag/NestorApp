@@ -328,20 +328,18 @@ export interface ProjectFilterState extends GenericFilterState {
   hasIssues?: boolean;
 }
 
-// 🏢 ENTERPRISE: Property Filter State for public property viewer
-// Used in /properties page for customer-facing property search
-export interface PropertyFilterState extends GenericFilterState {
-  searchTerm: string;
-  propertyType: string[];
-  status: string[];
-  priceRange: {
-    min?: number;
-    max?: number;
-  };
-  areaRange: {
-    min?: number;
-    max?: number;
-  };
-  floor: string[];
-  features: string[];
-}
+/**
+ * 🔴 **ΤΟ `PropertyFilterState` ΔΙΑΓΡΑΦΗΚΕ** (ADR-840 §5 Α3).
+ *
+ * Ήταν το **φτωχότερο** από τρία λεξιλόγια φίλτρων για την ίδια οθόνη: **επτά** πεδία,
+ * χωρίς `project` και χωρίς `building`. Επειδή ο πίνακας μιλούσε αυτόν τον τύπο ενώ η
+ * μηχανή από κάτω μιλούσε `FilterState`, υπήρχε **χειρόγραφος μεταφραστής επτά πεδίων**
+ * μέσα σε component — αντιγραμμένος **αυτούσιος** σε δύο αρχεία. Και επειδή ο τύπος δεν
+ * είχε τα δύο πεδία, ο μεταφραστής δεν είχε τι να μεταφέρει: στο `/properties` **δεν
+ * μπορούσες να φιλτράρεις κατά έργο ή κτίριο**, ενώ η μηχανή το υποστήριζε.
+ *
+ * ➜ Το λεξιλόγιο είναι το `FilterState` (`@/types/property-viewer`) — υπερσύνολο, και
+ *   ήδη κοινό στους hooks και των δύο οθονών.
+ *
+ * ⚠️ **ΜΗΝ το ξαναγεννήσεις ως «ένωση»**: θα ήταν τέταρτο λεξιλόγιο. Δες ADR-840 §6.
+ */

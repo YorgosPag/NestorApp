@@ -36,12 +36,9 @@ import { PropertyCard } from './components/PropertyCard';
 import { PropertyListCard } from '@/domain';
 import { UnifiedDashboard } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
-import {
-  AdvancedFiltersPanel,
-  propertyFiltersConfig,
-  defaultPropertyFilters
-} from '@/components/core/AdvancedFilters';
-import type { PropertyFilterState } from '@/components/core/AdvancedFilters';
+import { AdvancedFiltersPanel, propertyFiltersConfig } from '@/components/core/AdvancedFilters';
+import { usePropertyFiltersConfig } from '@/components/core/AdvancedFilters/hooks/usePropertyFiltersConfig';
+import { DEFAULT_FILTERS } from '@/types/property-viewer';
 import type { ViewMode as CoreViewMode } from '@/core/headers';
 import { gridPatterns } from '@/styles/design-tokens';
 import '@/lib/design-system';
@@ -57,36 +54,21 @@ export function PropertyGridView() {
   // Local state
   const [showDashboard, setShowDashboard] = useState(false);
   const [showFilters, _setShowFilters] = useState(false);
-  const [enterpriseFilters, setEnterpriseFilters] = useState<PropertyFilterState>(defaultPropertyFilters);
+
+  /**
+   * ADR-840 Σ1 — **ΜΙΑ κατάσταση φίλτρων, όχι δύο.** Ο πίνακας γράφει κατευθείαν στη
+   * μηχανή (`filters` / `handleFiltersChange` του hook). Ο χειρόγραφος μεταφραστής των
+   * επτά πεδίων που ζούσε εδώ **διαγράφηκε**: ήταν αντιγραμμένος αυτούσιος και στο
+   * `PropertyManagementPageContent`, και επειδή ο τύπος του πίνακα δεν είχε `project`
+   * ούτε `building`, **αυτά τα δύο φίλτρα δεν έφταναν ποτέ στη μηχανή** (ADR-840 §4.1).
+   */
+  const filtersConfig = usePropertyFiltersConfig(properties, propertyFiltersConfig);
 
   const {
     viewMode, setViewMode,
     availableProperties,
     filteredProperties,
   } = usePropertyGridFilters(properties, filters);
-
-  // Handle enterprise filter changes
-  const handleEnterpriseFilterChange = (newFilters: Partial<PropertyFilterState>) => {
-    const updated = { ...enterpriseFilters, ...newFilters };
-    setEnterpriseFilters(updated);
-
-    // Map to hook's filter format
-    handleFiltersChange({
-      searchTerm: updated.searchTerm || '',
-      propertyType: updated.propertyType || [],
-      status: updated.status || [],
-      priceRange: {
-        min: updated.priceRange?.min ?? undefined,
-        max: updated.priceRange?.max ?? undefined,
-      },
-      areaRange: {
-        min: updated.areaRange?.min ?? undefined,
-        max: updated.areaRange?.max ?? undefined,
-      },
-      floor: updated.floor || [],
-      features: updated.features || [],
-    });
-  };
 
   // 🏢 ENTERPRISE: Dashboard stats
   const dashboardStatsFormatted: DashboardStat[] = useMemo(() => [
@@ -149,8 +131,8 @@ export function PropertyGridView() {
           }}
           breadcrumb={<NavigationBreadcrumb />}
           search={{
-            value: enterpriseFilters.searchTerm || '',
-            onChange: (term) => handleEnterpriseFilterChange({ searchTerm: term }),
+            value: filters.searchTerm || '',
+            onChange: (term) => handleFiltersChange({ searchTerm: term }),
             placeholder: t('grid.search.placeholder')
           }}
           actions={{
@@ -185,9 +167,10 @@ export function PropertyGridView() {
       {/* Same structure as Units page - separate container below Dashboard */}
       <div className="hidden md:block">
         <AdvancedFiltersPanel
-          config={propertyFiltersConfig}
-          filters={enterpriseFilters}
-          onFiltersChange={(updated) => handleEnterpriseFilterChange(updated)}
+          config={filtersConfig}
+          filters={filters}
+          onFiltersChange={handleFiltersChange}
+          defaultFilters={DEFAULT_FILTERS}
         />
       </div>
 
@@ -195,9 +178,10 @@ export function PropertyGridView() {
       {showFilters && (
         <div className="md:hidden">
           <AdvancedFiltersPanel
-            config={propertyFiltersConfig}
-            filters={enterpriseFilters}
-            onFiltersChange={(updated) => handleEnterpriseFilterChange(updated)}
+            config={filtersConfig}
+            filters={filters}
+            onFiltersChange={handleFiltersChange}
+            defaultFilters={DEFAULT_FILTERS}
             defaultOpen
           />
         </div>

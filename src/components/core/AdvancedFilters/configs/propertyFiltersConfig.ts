@@ -1,5 +1,12 @@
-import type { FilterPanelConfig, PropertyFilterState, PropertyListFilterState } from '../types';
-import { AFO, COMMON_FILTER_LABELS, FL, FT, PROPERTY_FILTER_LABELS, SP, UNIFIED_STATUS_FILTER_LABELS } from './shared';
+import type { FilterPanelConfig, PropertyListFilterState } from '../types';
+import {
+  BUILDING_FILTER_FIELD,
+  FLOOR_FILTER_FIELD,
+  PROJECT_FILTER_FIELD,
+  PROPERTY_FEATURE_FILTERS,
+  propertyTypeFilterField,
+} from './property-filter-fields';
+import { COMMON_FILTER_LABELS, FL, FT, PROPERTY_FILTER_LABELS, SP, UNIFIED_STATUS_FILTER_LABELS } from './shared';
 
 export const propertyListFiltersConfig: FilterPanelConfig = {
   title: FT.units,
@@ -68,61 +75,14 @@ export const propertyListFiltersConfig: FilterPanelConfig = {
     {
       id: "secondary-filters",
       fields: [
-        {
-          id: "project",
-          type: "select",
-          label: FL.project,
-          placeholder: SP.project_placeholder,
-          width: 1,
-          ariaLabel: "Project filter",
-          options: [
-            { value: "all", label: PROPERTY_FILTER_LABELS.ALL_PROJECTS },
-          ],
-        },
-        {
-          id: "building",
-          type: "select",
-          label: FL.building,
-          placeholder: SP.building_placeholder,
-          width: 1,
-          ariaLabel: "Building filter",
-          options: [
-            { value: "all", label: PROPERTY_FILTER_LABELS.ALL_BUILDINGS },
-          ],
-        },
-        {
-          id: "floor",
-          type: "select",
-          label: FL.floor,
-          placeholder: SP.floor_placeholder,
-          width: 1,
-          ariaLabel: "Floor filter",
-          options: [{ value: "all", label: PROPERTY_FILTER_LABELS.ALL_FLOORS }],
-        },
-        {
-          id: "type",
-          type: "select",
-          label: FL.property_type,
-          placeholder: SP.type_placeholder,
-          width: 1,
-          ariaLabel: "Property type filter",
-          options: [{ value: "all", label: PROPERTY_FILTER_LABELS.ALL_TYPES }],
-        },
+        PROJECT_FILTER_FIELD,
+        BUILDING_FILTER_FIELD,
+        FLOOR_FILTER_FIELD,
+        propertyTypeFilterField("type"),
       ],
     },
   ],
-  advancedFilters: {
-    show: true,
-    title: FT.advanced,
-    options: [
-      { id: "parking", label: AFO.parking, category: "features" },
-      { id: "storage", label: AFO.storage, category: "features" },
-      { id: "fireplace", label: AFO.fireplace, category: "features" },
-      { id: "view", label: AFO.view, category: "features" },
-      { id: "pool", label: AFO.pool, category: "features" },
-    ],
-    categories: ["features"],
-  },
+  advancedFilters: PROPERTY_FEATURE_FILTERS,
 };
 
 // Contact Filters Configuration
@@ -180,6 +140,20 @@ export const propertyFiltersConfig: FilterPanelConfig = {
       ],
     },
     {
+      /**
+       * ADR-840 §4.1 — **Η ΣΕΙΡΑ ΠΟΥ ΕΛΕΙΠΕ.** Ο πίνακας αυτός δεν είχε «έργο» ούτε
+       * «κτίριο»: όχι από απόφαση, αλλά επειδή ο τύπος του δεν είχε τα πεδία, άρα ο
+       * χειρόγραφος μεταφραστής δεν είχε τι να μεταφέρει. Η μηχανή από κάτω τα
+       * υποστήριζε **πάντα** (`FilterState.project` / `.building`).
+       *
+       * ⚠️ Οι επιλογές εδώ είναι **μόνο η βάση**: τις πραγματικές τις εγχέει το
+       * `usePropertyFiltersConfig` από τα ίδια τα ακίνητα. Πίνακας με μοναδική επιλογή
+       * «όλα» είναι διακοσμητικός — ζήτα τον hook, μη χρησιμοποιείς τη σταθερά ωμή.
+       */
+      id: "property-location",
+      fields: [PROJECT_FILTER_FIELD, BUILDING_FILTER_FIELD],
+    },
+    {
       id: "property-ranges",
       fields: [
         {
@@ -201,41 +175,24 @@ export const propertyFiltersConfig: FilterPanelConfig = {
           min: parseInt(process.env.NEXT_PUBLIC_FILTER_AREA_MIN || "0"),
           max: parseInt(process.env.NEXT_PUBLIC_FILTER_AREA_MAX || "500"),
         },
-        {
-          id: "floor",
-          type: "select",
-          label: FL.floor,
-          placeholder: SP.floor_placeholder,
-          ariaLabel: "Floor filter",
-          width: 1,
-          options: [{ value: "all", label: PROPERTY_FILTER_LABELS.ALL_FLOORS }],
-        },
+        FLOOR_FILTER_FIELD,
       ],
     },
   ],
-  advancedFilters: {
-    show: true,
-    title: FT.advanced,
-    options: [
-      { id: "parking", label: AFO.parking, category: "features" },
-      { id: "storage", label: AFO.storage, category: "features" },
-      { id: "view", label: AFO.view, category: "features" },
-      { id: "fireplace", label: AFO.fireplace, category: "features" },
-    ],
-    categories: ["features"],
-  },
+  advancedFilters: PROPERTY_FEATURE_FILTERS,
 };
 
-// Default Property Filters
-export const defaultPropertyFilters: PropertyFilterState = {
-  searchTerm: "",
-  propertyType: [],
-  status: [],
-  priceRange: { min: undefined, max: undefined },
-  areaRange: { min: undefined, max: undefined },
-  floor: [],
-  features: [],
-};
+/**
+ * 🔴 **ΤΟ `defaultPropertyFilters` ΔΙΑΓΡΑΦΗΚΕ** (ADR-840 Σ1).
+ *
+ * Ήταν **δεύτερη μηδενική τιμή** για την ίδια έννοια: το `DEFAULT_FILTERS` του
+ * `types/property-viewer.ts` υπάρχει ήδη, δίπλα στον τύπο του, και είναι **υπερσύνολο**
+ * (έχει `project` · `building` · `coverage`). Δύο μηδενικές τιμές σημαίνουν δύο
+ * απαντήσεις στο *«τι σημαίνει άδειο φίλτρο;»*, και ο «καθαρισμός» κατέληγε σε άλλη
+ * κατάσταση ανάλογα με το ποια από τις δύο ρώτησε ο καλών.
+ *
+ * ➜ Ζήτα το `DEFAULT_FILTERS` από το `@/types/property-viewer`.
+ */
 
 // Default filter states - unchanged for backward compatibility
 export const defaultUnitFilters: PropertyListFilterState = {

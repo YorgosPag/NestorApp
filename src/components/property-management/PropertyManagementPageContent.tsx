@@ -23,12 +23,9 @@ import { PropertiesHeader } from './page/PropertiesHeader';
 import { ReadOnlyPropertyViewerLayout } from '@/features/read-only-viewer';
 import { UnifiedDashboard } from './dashboard/UnifiedDashboard';
 import type { DashboardStat } from './dashboard/UnifiedDashboard';
-import {
-  AdvancedFiltersPanel,
-  propertyFiltersConfig,
-  defaultPropertyFilters
-} from '@/components/core/AdvancedFilters';
-import type { PropertyFilterState } from '@/components/core/AdvancedFilters';
+import { AdvancedFiltersPanel, propertyFiltersConfig } from '@/components/core/AdvancedFilters';
+import { usePropertyFiltersConfig } from '@/components/core/AdvancedFilters/hooks/usePropertyFiltersConfig';
+import { DEFAULT_FILTERS } from '@/types/property-viewer';
 import { useUrlPreselect } from '@/features/property-management/hooks/useUrlPreselect';
 import { useViewerProps } from '@/features/property-management/hooks/useViewerProps';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -48,8 +45,11 @@ export function PropertyManagementPageContent() {
   // Local state for UI controls
   const [showFilters, setShowFilters] = useState(false);
 
-  // Enterprise filters state (mapped from hook state)
-  const [enterpriseFilters, setEnterpriseFilters] = useState<PropertyFilterState>(defaultPropertyFilters);
+  /**
+   * ADR-840 Σ1 — **ΜΙΑ κατάσταση φίλτρων.** Δες το δίδυμο σχόλιο στο `PropertyGridView`:
+   * ο μεταφραστής των επτά πεδίων ζούσε **αυτούσιος** και στα δύο αρχεία.
+   */
+  const filtersConfig = usePropertyFiltersConfig(hookState.properties, propertyFiltersConfig);
 
   // URL preselection
   useUrlPreselect({
@@ -90,29 +90,6 @@ export function PropertyManagementPageContent() {
     },
   ], [hookState.dashboardStats, t]);
 
-  // Handle enterprise filter changes
-  const handleEnterpriseFilterChange = (newFilters: Partial<PropertyFilterState>) => {
-    const updated = { ...enterpriseFilters, ...newFilters };
-    setEnterpriseFilters(updated);
-
-    // Map to hook's filter format
-    hookState.handleFiltersChange({
-      searchTerm: updated.searchTerm || '',
-      propertyType: updated.propertyType || [],
-      status: updated.status || [],
-      priceRange: {
-        min: updated.priceRange?.min ?? undefined,
-        max: updated.priceRange?.max ?? undefined,
-      },
-      areaRange: {
-        min: updated.areaRange?.min ?? undefined,
-        max: updated.areaRange?.max ?? undefined,
-      },
-      floor: updated.floor || [],
-      features: updated.features || [],
-    });
-  };
-
   return (
     <section
       className={`h-full flex flex-col overflow-hidden ${colors.bg.primary}`}
@@ -124,8 +101,8 @@ export function PropertyManagementPageContent() {
         setViewMode={hookState.setViewMode}
         showDashboard={hookState.showDashboard}
         setShowDashboard={hookState.setShowDashboard}
-        searchTerm={enterpriseFilters.searchTerm || ''}
-        setSearchTerm={(term) => handleEnterpriseFilterChange({ searchTerm: term })}
+        searchTerm={hookState.filters.searchTerm || ''}
+        setSearchTerm={(term) => hookState.handleFiltersChange({ searchTerm: term })}
         availableCount={hookState.filteredProperties.length}
         showFilters={showFilters}
         setShowFilters={setShowFilters}
@@ -143,9 +120,10 @@ export function PropertyManagementPageContent() {
       {/* Same structure as Units page - separate container below Dashboard */}
       <div className="hidden md:block">
         <AdvancedFiltersPanel
-          config={propertyFiltersConfig}
-          filters={enterpriseFilters}
-          onFiltersChange={(updated) => handleEnterpriseFilterChange(updated)}
+          config={filtersConfig}
+          filters={hookState.filters}
+          onFiltersChange={hookState.handleFiltersChange}
+          defaultFilters={DEFAULT_FILTERS}
         />
       </div>
 
@@ -153,9 +131,10 @@ export function PropertyManagementPageContent() {
       {showFilters && (
         <div className="md:hidden">
           <AdvancedFiltersPanel
-            config={propertyFiltersConfig}
-            filters={enterpriseFilters}
-            onFiltersChange={(updated) => handleEnterpriseFilterChange(updated)}
+            config={filtersConfig}
+            filters={hookState.filters}
+            onFiltersChange={hookState.handleFiltersChange}
+            defaultFilters={DEFAULT_FILTERS}
             defaultOpen
           />
         </div>
