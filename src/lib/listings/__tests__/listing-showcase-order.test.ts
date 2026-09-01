@@ -38,6 +38,7 @@ function listingOf(id: string, title: string, projectedAt = AT): PublicListing {
     commercial: { askingPrice: 1, finalPrice: null, rentPrice: null, nightlyRate: null },
     stay: null,
     coverImage: null,
+    gallery: [],
     type: 'apartment',
     areaSqm: 90,
     offerKinds: ['sell'],

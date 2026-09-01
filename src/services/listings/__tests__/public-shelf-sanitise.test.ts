@@ -29,7 +29,7 @@ import sharp from 'sharp';
 
 import {
   ShelfSanitiseError,
-  sanitiseImageForShelf,
+  sanitiseImageVariants,
   PUBLIC_SHELF_MAX_EDGE_PX,
 } from '../public-shelf-sanitise';
 
@@ -75,16 +75,29 @@ describe('Κ0 — ΤΟ ΔΕΙΓΜΑ ΟΝΤΩΣ ΚΟΥΒΑΛΑΕΙ ΑΥΤΟ ΠΟ�
   });
 });
 
+/**
+ * **Το ΚΑΝΟΝΙΚΟ παράγωγο** — το μεγαλύτερο, αυτό που γίνεται ο στόχος του `src`.
+ *
+ * 🔴 **Η σουίτα δείχνει στη ΖΩΝΤΑΝΗ είσοδο, όχι σε δίδυμο** (2026-09-01): μέχρι σήμερα
+ * καλούσε έναν καθαριστή **μονού πλάτους** που, μετά τη Φ3, **δεν τον καλούσε κανείς
+ * στην παραγωγή** — δηλαδή οι άγκυρες του EXIF θα φύλαγαν κώδικα που δεν τρέχει.
+ * Ο μονός καθαριστής **διαγράφηκε**· εδώ ρωτιέται ο πραγματικός.
+ */
+async function sanitiseCanonical(input: Buffer) {
+  const variants = await sanitiseImageVariants(input);
+  return variants[variants.length - 1];
+}
+
 describe('Κ1 — ο καθαριστής αφαιρεί ΚΑΘΕ μεταδεδομένο, όχι μόνο το GPS', () => {
   it('η έξοδος δεν έχει ΚΑΝΕΝΑ EXIF block', async () => {
-    const clean = await sanitiseImageForShelf(await photoWithGps());
+    const clean = await sanitiseCanonical(await photoWithGps());
 
     // 🔑 Ισχυρότερο από «δεν βρήκα GPS»: δεν υπάρχει ΠΟΥ να κρυφτεί GPS.
     expect((await sharp(clean.bytes).metadata()).exif).toBeUndefined();
   });
 
   it('το GPS και η ταυτότητα της συσκευής ΕΞΑΦΑΝΙΖΟΝΤΑΙ', async () => {
-    const clean = await sanitiseImageForShelf(await photoWithGps());
+    const clean = await sanitiseCanonical(await photoWithGps());
 
     // 🔑 **Η ΙΣΧΥΡΟΤΕΡΗ ΔΥΝΑΤΗ ΑΠΟΔΕΙΞΗ, και είναι η εξαίρεση**: το `exifr` πετά
     //    «Unknown file format» επειδή στο καθαρό WebP δεν υπάρχει **κανένα δοχείο**
@@ -108,14 +121,14 @@ describe('Κ1 — ο καθαριστής αφαιρεί ΚΑΘΕ μεταδεδ
   });
 
   it('ούτε ως ωμά bytes δεν επιβιώνει η υπογραφή της συσκευής', async () => {
-    const clean = await sanitiseImageForShelf(await photoWithGps());
+    const clean = await sanitiseCanonical(await photoWithGps());
     expect(clean.bytes.includes(Buffer.from('NestorTestCamera'))).toBe(false);
   });
 });
 
 describe('Κ2 — ο καθαρισμός δεν ΚΑΤΑΣΤΡΕΦΕΙ αυτό που προστατεύει', () => {
   it('παράγει WebP με δηλωμένο τύπο και πραγματικές διαστάσεις', async () => {
-    const clean = await sanitiseImageForShelf(await photoWithGps(120, 90));
+    const clean = await sanitiseCanonical(await photoWithGps(120, 90));
 
     expect(clean.ext).toBe('webp');
     expect(clean.contentType).toBe('image/webp');
@@ -125,7 +138,7 @@ describe('Κ2 — ο καθαρισμός δεν ΚΑΤΑΣΤΡΕΦΕΙ αυτό
   });
 
   it('φράσσει τη ΜΕΓΑΛΗ πλευρά χωρίς να μεγεθύνει τη μικρή', async () => {
-    const wide = await sanitiseImageForShelf(
+    const wide = await sanitiseCanonical(
       await sharp({
         create: {
           width: PUBLIC_SHELF_MAX_EDGE_PX + 800,
@@ -155,7 +168,7 @@ describe('Κ2 — ο καθαρισμός δεν ΚΑΤΑΣΤΡΕΦΕΙ αυτό
     const tagged = await sharp(rotated).withMetadata({ orientation: 6 }).jpeg().toBuffer();
     expect((await sharp(tagged).metadata()).orientation).toBe(6); // το δείγμα όντως το λέει
 
-    const clean = await sanitiseImageForShelf(tagged);
+    const clean = await sanitiseCanonical(tagged);
 
     expect({ w: clean.width, h: clean.height }).toEqual({ w: 50, h: 100 });
   });
@@ -163,8 +176,8 @@ describe('Κ2 — ο καθαρισμός δεν ΚΑΤΑΣΤΡΕΦΕΙ αυτό
 
 describe('Κ3 — ό,τι δεν είναι εικόνα ΔΕΝ αποκτά διεύθυνση', () => {
   it('απορρίπτει κενά bytes με ονομασμένη αιτία', async () => {
-    await expect(sanitiseImageForShelf(Buffer.alloc(0))).rejects.toBeInstanceOf(ShelfSanitiseError);
-    await expect(sanitiseImageForShelf(Buffer.alloc(0))).rejects.toMatchObject({
+    await expect(sanitiseImageVariants(Buffer.alloc(0))).rejects.toBeInstanceOf(ShelfSanitiseError);
+    await expect(sanitiseImageVariants(Buffer.alloc(0))).rejects.toMatchObject({
       failure: 'empty',
     });
   });
@@ -173,6 +186,39 @@ describe('Κ3 — ό,τι δεν είναι εικόνα ΔΕΝ αποκτά δ�
     // 🔴 Χωρίς διεύθυνση δεν υπάρχει δημοσίευση (Α12.7): ένα PE header δεν μπορεί να
     // φτάσει ποτέ στο ράφι, γιατί δεν βγαίνει κλειδί για κάτι που δεν καθαρίστηκε.
     const fake = Buffer.concat([Buffer.from('MZ'), Buffer.alloc(2048, 0x41)]);
-    await expect(sanitiseImageForShelf(fake)).rejects.toMatchObject({ failure: 'undecodable' });
+    await expect(sanitiseImageVariants(fake)).rejects.toMatchObject({ failure: 'undecodable' });
+  });
+});
+
+describe('Κ4 — Η ΕΓΓΥΗΣΗ ΙΣΧΥΕΙ ΓΙΑ ΚΑΘΕ ΠΑΡΑΓΩΓΟ, ΟΧΙ ΜΟΝΟ ΓΙΑ ΤΟ ΚΑΝΟΝΙΚΟ', () => {
+  it('🔴 ΚΑΝΕΝΑ από τα τρία πλάτη δεν κουβαλά EXIF ή υπογραφή συσκευής', async () => {
+    // Χωρίς αυτό, ένα μικρότερο παράγωγο θα μπορούσε να γεννηθεί από **άλλη** διαδρομή
+    // που ξέχασε τον καθαρισμό — και θα δημοσιευόταν με GPS, ακυρώνοντας το
+    // `locationDisclosure: 'declined'` της Α5 (ADR-841 §7 Α12.7).
+    const variants = await sanitiseImageVariants(await photoWithGps(3000, 2000));
+
+    expect(variants).toHaveLength(3);
+    for (const variant of variants) {
+      expect((await sharp(variant.bytes).metadata()).exif).toBeUndefined();
+      expect(variant.bytes.includes(Buffer.from('NestorTestCamera'))).toBe(false);
+      expect(variant.contentType).toBe('image/webp');
+    }
+    expect(variants.map((variant) => variant.width)).toEqual([640, 1280, PUBLIC_SHELF_MAX_EDGE_PX]);
+  });
+
+  it('🔑 ο προσανατολισμός EXIF εφαρμόζεται ΜΙΑ φορά και τον κληρονομούν ΟΛΑ', async () => {
+    const upright = await sharp({
+      create: { width: 2000, height: 1000, channels: 3, background: { r: 9, g: 9, b: 9 } },
+    })
+      .jpeg()
+      .toBuffer();
+    const tagged = await sharp(upright).withMetadata({ orientation: 6 }).jpeg().toBuffer();
+
+    const variants = await sanitiseImageVariants(tagged);
+
+    // Orientation 6 ⇒ 2000×1000 γίνεται 1000×2000: **κάθε** παράγωγο είναι όρθιο.
+    for (const variant of variants) {
+      expect(variant.height).toBeGreaterThan(variant.width);
+    }
   });
 });

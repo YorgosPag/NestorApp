@@ -22,7 +22,8 @@
  *
  * 🔑 **Η φάση είναι ΤΟΠΙΚΗ κατάσταση οθόνης, όχι πεδίο του μοντέλου.** Το
  * `DemandPlace.frontage` δεν έχει «η πλευρά δεν επιλέχθηκε ακόμη» — το `side` είναι
- * πάντα μία από τις {@link FRONTAGE_SIDES} (προεπιλογή `'left'`, ίδιο ιδίωμα με το
+ * πάντα μία από τις {@link FRONTAGE_SIDES} (προεπιλογή `'both'` = «δεν το θέτω ως όρο»,
+ * ίδιο ιδίωμα με το
  * `radiusKm` που κρατά προεπιλεγμένη τιμή ακόμη κι όταν ο άξονας δεν είναι ενεργός).
  * Δύο ξεχωριστές οθόνες θα ήταν ψεύτικο δίλημμα: η ζώνη προεπισκόπησης υπάρχει από τη
  * στιγμή που ο άξονας κλειδώνει, με ό,τι πλευρά/βάθος έχει ήδη η φόρμα.
@@ -41,7 +42,11 @@ import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { vertexCentroid } from '@/lib/geo/geo-ring';
 import { frontagePolylineOutline, isGeoPolyline, sideOfPolyline } from '@/lib/geo/geo-line';
-import { DEFAULT_FRONTAGE_DEPTH_METRES, type DemandFormValues } from '@/lib/demand/demand-form-values';
+import {
+  DEFAULT_FRONTAGE_DEPTH_METRES,
+  EMPTY_DEMAND_FORM,
+  type DemandFormValues,
+} from '@/lib/demand/demand-form-values';
 import { FRONTAGE_SIDES, type FrontageSide } from '@/types/property-demand';
 import type { GeoOutline, GeoPoint } from '@/types/geo/coordinates';
 
@@ -58,10 +63,14 @@ const K = `${NS}:demand.form.frontage`;
  * ⚠️ Ο εξαγωγέας κλειδιών διαβάζει **τιμές σταθεράς module** (βλ. header του
  * `demand-form-labels.ts`): ένα μετασχηματισμένο template (κεφαλαιοποίηση πρώτου
  * γράμματος) θα ήταν «unresolved dynamic t()» ακριβώς όπως το `{...A, ...B}` που ήδη
- * καταγγέλθηκε εκεί. Εξάγεται ώστε το {@link DemandSummary} να μη γράψει δεύτερο
- * πίνακα για τις **ίδιες** τρεις ετικέτες.
+ * καταγγέλθηκε εκεί.
+ *
+ * ⚠️ **ΔΕΝ εξάγεται**, και το σχόλιο εδώ έλεγε το αντίθετο: κανείς έξω από αυτό το
+ * αρχείο δεν το ζητά σήμερα, και export χωρίς καταναλωτή είναι νεκρό (CHECK 3.22).
+ * Όταν το {@link DemandSummary} χρειαστεί τις **ίδιες** τρεις ετικέτες, εξάγεται
+ * **τότε** — αντί να γραφτεί δεύτερος πίνακας.
  */
-export const FRONTAGE_SIDE_LABEL_KEYS: Record<FrontageSide, string> = {
+const FRONTAGE_SIDE_LABEL_KEYS: Record<FrontageSide, string> = {
   left: `${K}.sideLeft`,
   right: `${K}.sideRight`,
   both: `${K}.sideBoth`,
@@ -91,7 +100,7 @@ export function DemandFrontageField(): React.ReactElement {
       }
       const polyline = isGeoPolyline(axis) ? axis : null;
       if (polyline === null) return;
-      const judged = sideOfPolyline(polyline, point);
+      const judged = sideOfPolyline(point, polyline);
       // `'on'` δεν κρίνει τίποτα — το σημείο πάτησε πάνω στον άξονα, όχι σε πλευρά.
       if (judged === 'left' || judged === 'right') {
         setValue('frontageSide', judged, { shouldDirty: true });
@@ -110,7 +119,12 @@ export function DemandFrontageField(): React.ReactElement {
   const resetAll = useCallback(() => {
     // Το όνομα οδού **δεν** σβήνει: είναι ανεξάρτητη ετικέτα, όχι μέρος του σχεδίου.
     setValue('frontageAxis', [], { shouldDirty: true });
-    setValue('frontageSide', FRONTAGE_SIDES[0], { shouldDirty: true });
+    // ⚠️ **Η επαναφορά επιστρέφει στο «δεν το θέτω ως όρο», όχι στην πρώτη τιμή του
+    // πίνακα.** Το `FRONTAGE_SIDES[0]` είναι `'left'` — δηλαδή η «καθαρή» κατάσταση θα
+    // επέβαλλε σιωπηλά **πλευρά**, όρο που ο άνθρωπος δεν ζήτησε. Η ουδέτερη τιμή είναι
+    // αυτή του {@link EMPTY_DEMAND_FORM}, και διαβάζεται **από εκεί** ώστε οι δύο να μην
+    // αποκλίνουν.
+    setValue('frontageSide', EMPTY_DEMAND_FORM.frontageSide, { shouldDirty: true });
     setValue('frontageDepthMetres', DEFAULT_FRONTAGE_DEPTH_METRES, { shouldDirty: true });
     setPhase('axis');
   }, [setValue]);

@@ -39,6 +39,7 @@ function listing(id: string, mapped: boolean): PublicListing {
     commercial: { askingPrice: null, finalPrice: null, rentPrice: null, nightlyRate: 80 },
     stay: { minNights: null, maxGuests: 4, nextAvailableFrom: null },
     coverImage: null,
+    gallery: [],
     type: 'apartment',
     areaSqm: 60,
     offerKinds: ['leaseShort'],

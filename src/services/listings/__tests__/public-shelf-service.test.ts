@@ -36,25 +36,59 @@ interface SavedObject {
   readonly bytes: Buffer;
   readonly contentType?: string;
   readonly cacheControl?: string;
+  /**
+   * 🔴 **Ο ψεύτικος κάδος απέκτησε μεταδεδομένα, γιατί ο αληθινός ΤΑ ΧΡΗΣΙΜΟΠΟΙΕΙ**
+   * (ADR-841 §7 Α2.3): η επαναχρησιμοποίηση παραγώγων ρωτά *«ίδια πηγή; ίδια
+   * συνταγή;»* πάνω στα custom metadata. Ένας κάδος χωρίς αυτά θα έκανε τη σουίτα
+   * να μετρά **άλλη** διαδρομή από αυτήν που τρέχει στην παραγωγή.
+   */
+  readonly custom?: Record<string, string>;
+  /** Η **γενιά** — αλλάζει σε κάθε επανεγγραφή, όπως στο GCS. */
+  readonly generation: number;
 }
+
+let generationCounter = 0;
 
 class FakeBucket {
   readonly objects = new Map<string, SavedObject>();
   saveCalls = 0;
   deleteCalls = 0;
+  downloadCalls = 0;
+
+  /** Γράφει ωμά, όπως ένα `gsutil cp` — χωρίς να περάσει από τον γραφέα μας. */
+  put(name: string, bytes: Buffer): void {
+    generationCounter += 1;
+    this.objects.set(name, { bytes, generation: generationCounter });
+  }
 
   file(name: string) {
+    const bucket = this;
     return {
       name,
+      get metadata() {
+        const found = bucket.objects.get(name);
+        return { generation: String(found?.generation ?? ''), metadata: found?.custom };
+      },
+      getMetadata: async () => {
+        const found = bucket.objects.get(name);
+        if (!found) throw new Error(`no such object: ${name}`);
+        return [{ generation: String(found.generation) }];
+      },
       save: async (
         bytes: Buffer,
-        options?: { contentType?: string; metadata?: { cacheControl?: string } },
+        options?: {
+          contentType?: string;
+          metadata?: { cacheControl?: string; metadata?: Record<string, string> };
+        },
       ) => {
         this.saveCalls += 1;
+        generationCounter += 1;
         this.objects.set(name, {
           bytes,
           contentType: options?.contentType,
           cacheControl: options?.metadata?.cacheControl,
+          custom: options?.metadata?.metadata,
+          generation: generationCounter,
         });
       },
       delete: async () => {
@@ -62,6 +96,7 @@ class FakeBucket {
         this.objects.delete(name);
       },
       download: async (): Promise<[Buffer]> => {
+        this.downloadCalls += 1;
         const found = this.objects.get(name);
         if (!found) throw new Error(`no such object: ${name}`);
         return [found.bytes];
@@ -100,7 +135,7 @@ async function givenPrivatePhoto(path: string, tint: number): Promise<{ privateS
   })
     .jpeg()
     .toBuffer();
-  privateBucket.objects.set(path, { bytes });
+  privateBucket.put(path, bytes);
   return { privateStoragePath: path };
 }
 
@@ -113,6 +148,7 @@ beforeEach(() => {
   privateBucket.objects.clear();
   shelf.saveCalls = 0;
   shelf.deleteCalls = 0;
+  privateBucket.downloadCalls = 0;
 });
 
 // ---------------------------------------------------------------------------
@@ -139,8 +175,8 @@ describe('Κ1 — δημοσίευση: το ράφι αποκτά ΑΚΡΙΒΩ�
     const source = await givenPrivatePhoto('owner_properties/u1/ownp_77aa21bc/a.jpg', 200);
     const report = await reconcilePublicShelf(LISTING, [source]);
 
-    expect(report.published[0]?.url).toContain('https://storage.googleapis.com/');
-    expect(report.published[0]?.url).not.toContain('firebasestorage');
+    expect(report.published[0]?.canonical.url).toContain('https://storage.googleapis.com/');
+    expect(report.published[0]?.canonical.url).not.toContain('firebasestorage');
   });
 
   it('🔑 δημοσιεύει ΚΑΘΑΡΙΣΜΕΝΑ bytes — όχι το πρωτότυπο', async () => {
@@ -231,7 +267,7 @@ describe('Κ4 — Η ΑΠΟΜΟΝΩΣΗ: η μία αγγελία δεν αγγ�
 
   it('ΔΕΝ αγγίζει αντικείμενα που δεν αναγνωρίζει', async () => {
     // Ο ανεκτικός αναγνώστης: ό,τι δεν είναι δικής μας μορφής ΜΕΝΕΙ.
-    shelf.objects.set(`listings/${LISTING}/ksenο-arxeio.txt`, { bytes: Buffer.from('x') });
+    shelf.put(`listings/${LISTING}/ksenο-arxeio.txt`, Buffer.from('x'));
 
     await reconcilePublicShelf(LISTING, []);
 
@@ -242,7 +278,7 @@ describe('Κ4 — Η ΑΠΟΜΟΝΩΣΗ: η μία αγγελία δεν αγγ�
 describe('Κ5 — ΑΝΘΕΚΤΙΚΟΤΗΤΑ: μια χαλασμένη πηγή δεν ρίχνει τη δημοσίευση', () => {
   it('δημοσιεύει τις καλές και ΜΕΤΡΑΕΙ τις απορριφθείσες', async () => {
     const good = await givenPrivatePhoto('owner_properties/u1/good.jpg', 200);
-    privateBucket.objects.set('owner_properties/u1/broken.jpg', { bytes: Buffer.from('MZ not an image') });
+    privateBucket.put('owner_properties/u1/broken.jpg', Buffer.from('MZ not an image'));
 
     const report = await reconcilePublicShelf(LISTING, [
       good,
@@ -271,5 +307,110 @@ describe('Κ5 — ΑΝΘΕΚΤΙΚΟΤΗΤΑ: μια χαλασμένη πηγή
 
     expect(report.outcome).toBe('failed');
     expect(shelfKeys()).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Φ3 — τα παράγωγα (ADR-841 §7 Α2.2 · Α2.3)
+// ---------------------------------------------------------------------------
+
+/** Ένα **μεγάλο** πρωτότυπο, ώστε τα τρία πλάτη να δώσουν **διαφορετικά** bytes. */
+async function givenLargePrivatePhoto(path: string): Promise<{ privateStoragePath: string }> {
+  const bytes = await sharp({
+    create: { width: 1400, height: 1000, channels: 3, background: { r: 10, g: 120, b: 200 } },
+  })
+    .jpeg()
+    .toBuffer();
+  privateBucket.put(path, bytes);
+  return { privateStoragePath: path };
+}
+
+describe('Κ6 — ΤΑ ΠΑΡΑΓΩΓΑ: κάθε πλάτος έχει ΔΙΚΗ ΤΟΥ διεύθυνση, ένα manifest τα δένει', () => {
+  it('ένα μεγάλο πρωτότυπο δίνει ΤΡΙΑ διακριτά αντικείμενα, σε αύξον πλάτος', async () => {
+    const source = await givenLargePrivatePhoto('owner_properties/u1/big.jpg');
+
+    const report = await reconcilePublicShelf(LISTING, [source]);
+
+    const [image] = report.published;
+    expect(image.variants).toHaveLength(3);
+    expect(image.variants.map((v) => v.width)).toEqual([640, 1280, 1400]);
+    // 🔑 Το κανονικό είναι το **μεγαλύτερο**, και είναι μέσα στα παράγωγα.
+    expect(image.canonical).toEqual(image.variants[2]);
+    expect(new Set(image.variants.map((v) => v.key)).size).toBe(3);
+    expect(shelfKeys()).toHaveLength(3);
+  });
+
+  it('🏆 μικρό πρωτότυπο ⇒ τα περιττά παράγωγα ΕΞΑΦΑΝΙΖΟΝΤΑΙ ΜΟΝΑ ΤΟΥΣ', async () => {
+    // Με `withoutEnlargement`, μια 60x40 δίνει για ΚΑΙ ΤΑ ΤΡΙΑ πλάτη τα ΙΔΙΑ bytes ⇒
+    // ίδιο sha256 ⇒ **ένα** αντικείμενο. Κανένας κανόνας δεν το απέτρεψε — η
+    // διεύθυνση περιεχομένου το κάνει δομικά (ADR-841 §7 Α2.2).
+    const source = await givenPrivatePhoto('owner_properties/u1/small.jpg', 200);
+
+    const report = await reconcilePublicShelf(LISTING, [source]);
+
+    expect(report.published[0].variants).toHaveLength(1);
+    expect(shelfKeys()).toHaveLength(1);
+  });
+
+  it('η ΑΠΟΣΥΡΣΗ παίρνει ΟΛΑ τα παράγωγα, όχι μόνο το κανονικό', async () => {
+    const source = await givenLargePrivatePhoto('owner_properties/u1/big.jpg');
+    await reconcilePublicShelf(LISTING, [source]);
+    expect(shelfKeys()).toHaveLength(3);
+
+    const report = await reconcilePublicShelf(LISTING, []);
+
+    expect(report.removed).toBe(3);
+    expect(shelfKeys()).toEqual([]);
+  });
+});
+
+describe('Κ7 — ΕΠΑΝΑΧΡΗΣΙΜΟΠΟΙΗΣΗ: η δεύτερη αποθήκευση δεν ξανακατεβάζει τίποτα', () => {
+  it('ίδια πηγή + ίδια συνταγή ⇒ ΜΗΔΕΝ κατεβάσματα, μηδέν εγγραφές', async () => {
+    const source = await givenLargePrivatePhoto('owner_properties/u1/big.jpg');
+    await reconcilePublicShelf(LISTING, [source]);
+
+    privateBucket.downloadCalls = 0;
+    shelf.saveCalls = 0;
+
+    const report = await reconcilePublicShelf(LISTING, [source]);
+
+    // 🔴 **Αυτό είναι όλο το νόημα της Α2.3**: η συμφιλίωση τρέχει σε κάθε αποθήκευση
+    //    του κατόχου, και χωρίς αυτό θα κατέβαζε + ξανακωδικοποιούσε κάθε φωτογραφία.
+    expect(privateBucket.downloadCalls).toBe(0);
+    expect(shelf.saveCalls).toBe(0);
+    expect(report.published[0].variants).toHaveLength(3);
+    expect(shelfKeys()).toHaveLength(3);
+  });
+
+  it('🔴 ΑΝΤΙΚΑΤΑΣΤΑΘΗΚΕ το πρωτότυπο ⇒ ΝΕΑ γενιά ⇒ ξανακατεβαίνει και τα παλιά φεύγουν', async () => {
+    const source = await givenLargePrivatePhoto('owner_properties/u1/big.jpg');
+    await reconcilePublicShelf(LISTING, [source]);
+    const before = shelfKeys();
+
+    // ο κάτοχος ανεβάζει ΑΛΛΗ φωτογραφία στο ΙΔΙΟ μονοπάτι
+    const replaced = await sharp({
+      create: { width: 1400, height: 1000, channels: 3, background: { r: 220, g: 20, b: 20 } },
+    })
+      .jpeg()
+      .toBuffer();
+    privateBucket.put(source.privateStoragePath, replaced);
+    privateBucket.downloadCalls = 0;
+
+    await reconcilePublicShelf(LISTING, [source]);
+
+    expect(privateBucket.downloadCalls).toBe(1);
+    expect(shelfKeys()).toHaveLength(3);
+    expect(shelfKeys()).not.toEqual(before);
+  });
+
+  it('τα μεταδεδομένα ΔΕΝ κουβαλούν το ιδιωτικό μονοπάτι — ούτε ένα κομμάτι του', async () => {
+    // 🔴 Ο `legacyObjectReader` δίνει `objects.get`, που επιστρέφει **και τα
+    //    μεταδεδομένα**: ωμό μονοπάτι εκεί μέσα = διαρροή του `userId` σε ανώνυμο.
+    const source = await givenLargePrivatePhoto('owner_properties/u-secret-42/big.jpg');
+    await reconcilePublicShelf(LISTING, [source]);
+
+    const serialised = JSON.stringify([...shelf.objects.values()].map((o) => o.custom));
+    expect(serialised).not.toContain('u-secret-42');
+    expect(serialised).not.toContain('owner_properties');
   });
 });

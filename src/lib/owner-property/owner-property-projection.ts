@@ -43,6 +43,7 @@ import {
 } from '@/services/listings/public-listing-projection';
 import type { PublishOutcome } from '@/services/listings/publish-public-listing';
 import { mandatesOf } from '@/types/owner-property-mandate';
+import { publishedOwnerMediaSources } from '@/lib/owner-property/owner-media-publication';
 import { NO_AGENCY_IDENTITY, type PublicAgencyIdentity } from '@/types/public-listing';
 import {
   isOwnerPropertyOnTheMarket,
@@ -152,6 +153,22 @@ export function projectableFromOwnerProperty(
      */
     authorship: listingAuthorshipOf(mandatesOf(property)),
     agency,
+
+    /**
+     * 🔴 **Η ΑΝΘΡΩΠΙΝΗ ΠΡΑΞΗ ΦΤΑΝΕΙ ΣΤΟ ΡΑΦΙ** (ADR-841 §7 Α2) — και είναι **η μία
+     * γραμμή** που έλειπε: η Φ2 άφησε το `publishedMedia` **δηλωμένο κενό** επειδή
+     * *«κανένας γραφέας δεν το γεμίζει»* (Α12.10). Αυτός είναι ο γραφέας.
+     *
+     * 🔑 **Το κριτήριο ΔΕΝ γράφεται εδώ.** Ζει στο {@link publishedOwnerMediaSources},
+     * γιατί την ίδια ερώτηση *(«τι βλέπει ο κόσμος;»)* τη ρωτά **και η οθόνη του
+     * κατόχου** — δύο `filter` σε δύο αρχεία θα απέκλιναν σιωπηλά, και ο άνθρωπος θα
+     * έβλεπε «δημοσιεύονται 30» ενώ ο κόσμος θα έβλεπε 24.
+     *
+     * ⚠️ **Καμία ένδειξη «απόσυρσης» δεν χρειάζεται**: όταν ο κάτοχος ξεδιαλέξει μια
+     * φωτογραφία, το σύνολο **μικραίνει** και η συμφιλίωση της Α12.6 τη **σβήνει** από
+     * τον κάδο. Η αφαίρεση δεν είναι συμβάν — είναι το ίδιο πέρασμα με άλλη τιμή.
+     */
+    publishedMedia: publishedOwnerMediaSources(property.media),
   };
 }
 

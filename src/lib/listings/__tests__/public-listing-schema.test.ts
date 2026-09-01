@@ -41,6 +41,7 @@ const PRODUCTION_V1: StoredListingDocument = {
   commercialStatus: 'for-sale',
   commercial: { askingPrice: 150000, finalPrice: null, rentPrice: null },
   coverImage: null,
+  gallery: [],
   type: 'plot',
   areaSqm: 500,
   offerKinds: ['sell'],

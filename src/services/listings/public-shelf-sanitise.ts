@@ -47,11 +47,49 @@ const logger = createModuleLogger('public-shelf-sanitise');
  */
 export const PUBLIC_SHELF_MAX_EDGE_PX = 2560;
 
+/**
+ * 🏆 **ΤΑ ΠΛΑΤΗ ΠΟΥ ΔΗΜΟΣΙΕΥΟΝΤΑΙ** — η γκάμα παραγώγων της **Φ3** (ADR-841 §7 Α2.2).
+ *
+ * Η γραμμή από πάνω έλεγε *«εδώ ορίζεται **ένα** κανονικό μέγεθος … τα πολλαπλά μεγέθη
+ * ανά breakpoint ανήκουν στη Φ3»*. Αυτή είναι η Φ3, και η απάντηση ήταν το πρότυπο του
+ * **OCI image manifest**: κάθε παράγωγο **καθαρίζεται χωριστά** ⇒ αποκτά **δικό του
+ * sha256** ⇒ δικό του κλειδί· η **σύνδεσή** τους ζει **μία** φορά, στο
+ * `ListingImage.sources` της προβολής — ποτέ στο όνομα του αρχείου.
+ *
+ * ⚠️ **ΔΟΜΙΚΑ ΑΝΩΤΕΡΟ ΑΠΟ ΤΗ ZILLOW, ΟΧΙ ΑΠΛΩΣ ΔΙΑΦΟΡΕΤΙΚΟ**: εκείνη βάζει τη διάσταση
+ * **στο μονοπάτι** (`uncropped_scaled_within_1536_1152`), άρα ο πελάτης **κατασκευάζει**
+ * URL και μπορεί να ζητήσει παράγωγο που δεν υπάρχει. Εδώ κάθε γραμμή του `srcset`
+ * **γεννήθηκε από bytes που ανέβηκαν** — 404 παραγώγου **δεν υπάρχει**.
+ *
+ * 🔑 **Το μικρό πρωτότυπο λύνεται ΜΟΝΟ ΤΟΥ**: με `withoutEnlargement`, μια φωτογραφία
+ * 800px δίνει για τα 1280 **και** τα 2560 **τα ίδια ακριβώς bytes** ⇒ ίδιο sha256 ⇒
+ * **ένα** αντικείμενο. Τα περιττά παράγωγα εξαφανίζονται μόνα τους· δεν χρειάστηκε
+ * κανόνας να τα αποφύγει.
+ *
+ * ⚠️ **Αύξουσα σειρά, και το τελευταίο ΕΙΝΑΙ το {@link PUBLIC_SHELF_MAX_EDGE_PX}** — η
+ * προβολή διαβάζει το τελευταίο ως «κανονικό». Άγκυρα φυλάει και τα δύο.
+ */
+export const PUBLIC_SHELF_VARIANT_WIDTHS = [640, 1280, PUBLIC_SHELF_MAX_EDGE_PX] as const;
+
 /** Ποιότητα WebP — ισορροπία που κρατά τα τεκμήρια ευανάγνωστα (κατόψεις, κείμενα). */
 export const PUBLIC_SHELF_WEBP_QUALITY = 82;
 
 /** Ο τύπος περιεχομένου που δηλώνει ο γραφέας στο αντικείμενο του ραφιού. */
 export const PUBLIC_SHELF_IMAGE_CONTENT_TYPE = 'image/webp';
+
+/**
+ * 🔴 **Η ΥΠΟΓΡΑΦΗ ΤΗΣ ΣΥΝΤΑΓΗΣ — ΠΑΡΑΓΟΜΕΝΗ, ΠΟΤΕ ΓΡΑΜΜΕΝΗ ΜΕ ΤΟ ΧΕΡΙ** (Α2.3).
+ *
+ * Ταξιδεύει ως μεταδεδομένο κάθε δημοσιευμένου αντικειμένου, ώστε η συμφιλίωση να
+ * μπορεί να απαντήσει *«αυτό το παράγωγο βγήκε από τη ΣΗΜΕΡΙΝΗ συνταγή;»* **χωρίς να
+ * αποκωδικοποιήσει τίποτα**.
+ *
+ * ⚠️ **Παράγεται από τις ίδιες τις σταθερές επίτηδες.** Ένα χειρόγραφο `'v1'` θα
+ * ξεχνιόταν στην πρώτη αλλαγή ποιότητας, και τα **παλιά** παράγωγα θα έμεναν
+ * δημοσιευμένα ως «σωστά» — η κλάση σφάλματος «αριθμός γραμμένος με το χέρι που
+ * πάλιωσε» που αυτό το ADR έχει τεκμηριώσει **τέσσερις** φορές.
+ */
+export const PUBLIC_SHELF_RECIPE = `webp:q${PUBLIC_SHELF_WEBP_QUALITY}:w${PUBLIC_SHELF_VARIANT_WIDTHS.join('-')}`;
 
 // ---------------------------------------------------------------------------
 // Τύποι
@@ -81,48 +119,55 @@ export class ShelfSanitiseError extends Error {
 // Ο καθαριστής
 // ---------------------------------------------------------------------------
 
+
 /**
- * **Ωμή εικόνα → δημοσιεύσιμα bytes**, χωρίς κανένα μεταδεδομένο του ανθρώπου.
+ * **Ωμή εικόνα → ΟΛΑ τα δημοσιεύσιμα παράγωγα**, ένα ανά {@link PUBLIC_SHELF_VARIANT_WIDTHS}.
  *
- * Τι φεύγει: EXIF *(GPS, συσκευή, ώρα λήψης, σειριακός αριθμός φακού)*, IPTC, XMP,
- * ενσωματωμένα thumbnails *(που κρατούν **δικό τους** αντίγραφο των μεταδεδομένων)*
- * και το χρωματικό προφίλ.
+ * 🔑 **ΜΙΑ αποκωδικοποίηση, Ν κωδικοποιήσεις.** Το `clone()` του `sharp` μοιράζεται την
+ * **ίδια** αποκωδικοποιημένη εικόνα σε πολλούς αγωγούς εξόδου — τρεις χωριστές
+ * `sharp(input)` θα αποκωδικοποιούσαν το ίδιο JPEG **τρεις** φορές, που είναι το
+ * ακριβότερο βήμα ολόκληρης της διαδρομής.
  *
- * 🔑 **ΤΟ `.rotate()` ΕΙΝΑΙ ΑΠΑΡΑΙΤΗΤΟ ΚΑΙ ΔΕΝ ΕΙΝΑΙ ΚΑΛΛΩΠΙΣΜΟΣ.** Ο προσανατολισμός
- * μιας φωτογραφίας κινητού ζει **μέσα στο EXIF**. Αν αφαιρέσεις το EXIF χωρίς να τον
- * εφαρμόσεις πρώτα, η δημοσιευμένη εικόνα βγαίνει **γυρισμένη στο πλάι** — δηλαδή ο
- * καθαρισμός θα κατέστρεφε ό,τι υποτίθεται ότι προστατεύει. Το `.rotate()` **χωρίς
- * όρισμα** εφαρμόζει τη στροφή του EXIF και μετά την πετά.
+ * ⚠️ **Το `.rotate()` μπαίνει ΠΡΙΝ το `clone()`**, ώστε ο προσανατολισμός του EXIF να
+ * εφαρμοστεί **μία** φορά και να τον κληρονομήσουν όλα τα παράγωγα. Ένα παράγωγο
+ * γυρισμένο στο πλάι δίπλα σε δύο σωστά θα ήταν χειρότερο από τρία λάθος.
  *
- * ⚠️ **`withMetadata()` ΠΟΤΕ.** Το `sharp` δεν αντιγράφει μεταδεδομένα από μόνο του·
- * η **μόνη** διαδρομή που θα τα επανέφερε είναι εκείνη η κλήση. Άγκυρα την φυλάει.
+ * 🔑 **Ταυτόσημα παράγωγα ΔΕΝ φιλτράρονται εδώ** — τα φιλτράρει η **διεύθυνσή** τους:
+ * ίδια bytes ⇒ ίδιο sha256 ⇒ ίδιο κλειδί. Ένα `distinct()` εδώ θα ήταν δεύτερος κριτής
+ * ταυτότητας δίπλα στο content-addressing, ελεύθερος να διαφωνήσει μαζί του.
  *
  * @throws {ShelfSanitiseError} όταν τα bytes δεν είναι αποκωδικοποιήσιμη εικόνα.
  */
-export async function sanitiseImageForShelf(input: Buffer): Promise<SanitisedShelfAsset> {
+export async function sanitiseImageVariants(
+  input: Buffer,
+): Promise<readonly SanitisedShelfAsset[]> {
+  return decodableOrThrow(input, (decoded) =>
+    Promise.all(PUBLIC_SHELF_VARIANT_WIDTHS.map((width) => encodeOne(decoded.clone(), width))),
+  );
+}
+
+/**
+ * **Ο ΕΝΑΣ ΦΡΟΥΡΟΣ ΤΗΣ ΑΠΟΚΩΔΙΚΟΠΟΙΗΣΗΣ** — κενό, στραμμένο, ή ονομασμένη αποτυχία.
+ *
+ * 🔑 **Εξήχθη επειδή το ΜΕΤΡΗΣΕ πύλη, όχι επειδή φάνηκε ωραίο** (N.18 / CHECK 3.28): οι
+ * δύο δημόσιες είσοδοι είχαν **ταυτόσημο** έλεγχο κενού και **ταυτόσημο** `catch` — 10
+ * γραμμές δίδυμα μέσα στο ίδιο αρχείο, δηλαδή ακριβώς το σχήμα *«κεντρικοποιείς το Α,
+ * γράφεις το Β ως δίδυμο»*.
+ *
+ * ⚠️ **Το `.rotate()` μπαίνει ΕΔΩ, μία φορά.** Είναι απόφαση του **πρωτοτύπου** — αν
+ * ζούσε στους δύο καλούντες, ο ένας θα μπορούσε κάποτε να το χάσει και να δημοσιεύσει
+ * φωτογραφίες κινητού **γυρισμένες στο πλάι**.
+ */
+async function decodableOrThrow<T>(
+  input: Buffer,
+  produce: (decoded: sharp.Sharp) => Promise<T>,
+): Promise<T> {
   if (input.length === 0) {
     throw new ShelfSanitiseError('empty', 'Κενά bytes — δεν υπάρχει εικόνα να καθαριστεί');
   }
 
   try {
-    const { data, info } = await sharp(input, { failOn: 'error' })
-      .rotate()
-      .resize({
-        width: PUBLIC_SHELF_MAX_EDGE_PX,
-        height: PUBLIC_SHELF_MAX_EDGE_PX,
-        fit: 'inside',
-        withoutEnlargement: true,
-      })
-      .webp({ quality: PUBLIC_SHELF_WEBP_QUALITY })
-      .toBuffer({ resolveWithObject: true });
-
-    return {
-      bytes: data,
-      ext: 'webp',
-      contentType: PUBLIC_SHELF_IMAGE_CONTENT_TYPE,
-      width: info.width,
-      height: info.height,
-    };
+    return await produce(sharp(input, { failOn: 'error' }).rotate());
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     logger.warn('Το αρχείο δεν είναι αποκωδικοποιήσιμη εικόνα — δεν δημοσιεύεται', {
@@ -131,4 +176,35 @@ export async function sanitiseImageForShelf(input: Buffer): Promise<SanitisedShe
     });
     throw new ShelfSanitiseError('undecodable', message);
   }
+}
+
+/**
+ * **Ένας αγωγός `sharp` → ένα δημοσιεύσιμο παράγωγο.** Ο κοινός πυρήνας των δύο εισόδων.
+ *
+ * ⚠️ **Δέχεται αγωγό ΗΔΗ στραμμένο** και δεν ξανακαλεί `.rotate()`: η στροφή είναι
+ * απόφαση του **πρωτοτύπου**, όχι του παραγώγου, και πρέπει να συμβεί **μία** φορά πριν
+ * τον κλώνο — αλλιώς κάθε παράγωγο θα την ξαναέπαιρνε από μεταδεδομένα που έχουν ήδη
+ * καταναλωθεί.
+ */
+async function encodeOne(
+  pipeline: sharp.Sharp,
+  maxEdgePx: number,
+): Promise<SanitisedShelfAsset> {
+  const { data, info } = await pipeline
+    .resize({
+      width: maxEdgePx,
+      height: maxEdgePx,
+      fit: 'inside',
+      withoutEnlargement: true,
+    })
+    .webp({ quality: PUBLIC_SHELF_WEBP_QUALITY })
+    .toBuffer({ resolveWithObject: true });
+
+  return {
+    bytes: data,
+    ext: 'webp',
+    contentType: PUBLIC_SHELF_IMAGE_CONTENT_TYPE,
+    width: info.width,
+    height: info.height,
+  };
 }

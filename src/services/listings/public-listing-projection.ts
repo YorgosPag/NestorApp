@@ -55,11 +55,13 @@ import { offerKindsFromLegacyStatus } from '@/lib/offers/derive-commercial-statu
 import type { PropertyType } from '@/types/property';
 import type { GeocodingAccuracy } from '@/lib/geocoding/geocoding-types';
 import type {
+  ListingImageSource,
   ListingPosition,
   PublicListing,
   PublicListingStay,
   UnknownPositionReason,
 } from '@/types/public-listing';
+import { LISTING_GALLERY_ALT_KEY } from '@/lib/listings/listing-images';
 import { outranksForLocation } from '@/lib/location/location-provenance';
 
 // ============================================================================
@@ -316,6 +318,12 @@ export function projectListingShape(
     // artifact από το μοντέλο**, ποτέ ανέβασμα χρήστη). Μέχρι τότε `null` = «δεν
     // υπάρχει», και η οθόνη οφείλει να το πει — ποτέ εξωτερικό placeholder (§25.5.2).
     coverImage: null,
+    // 🔴 **ΚΕΝΟΣ ΠΙΝΑΚΑΣ = «ΤΟ ΡΑΦΙ ΔΕΝ ΕΧΕΙ ΡΩΤΗΘΕΙ ΑΚΟΜΗ», όχι «δεν έχει φωτογραφίες».**
+    //    Αυτή η συνάρτηση είναι **καθαρή**: τα URL των παραγώγων γεννιούνται από το
+    //    **sha256 των καθαρισμένων bytes**, δηλαδή δεν υπάρχουν πριν τρέξει η
+    //    συμφιλίωση. Τα δένει ο γραφέας, με το {@link withPublishedGallery}, **αφού**
+    //    μάθει τι πραγματικά κάθεται στον κάδο (ADR-841 §7 Α2.2).
+    gallery: [],
     type: (property.type ?? 'apartment') as PropertyType,
     areaSqm: numberOrNull(property.areas?.gross) ?? numberOrNull(property.area),
     offerKinds,
@@ -385,4 +393,55 @@ export function addressToPositionCandidate(
     return { kind: 'known', provenance: 'geocoded', point, locatedAt, accuracy };
   }
   return { kind: 'known', provenance: 'manual', point, locatedAt };
+}
+
+// ---------------------------------------------------------------------------
+// Η ΣΥΝΔΕΣΗ ΤΩΝ ΠΑΡΑΓΩΓΩΝ — το manifest (ADR-841 §7 Α2.2)
+// ---------------------------------------------------------------------------
+
+/**
+ * **Μια δημοσιευμένη εικόνα, όπως τη μαθαίνει ο γραφέας από το ράφι.**
+ *
+ * ⚠️ **Δομικός τύπος και ΟΧΙ ο τύπος της υπηρεσίας**: το `public-shelf.service` σέρνει
+ * `firebase-admin` και `sharp`, και αυτό το αρχείο δηλώνει ρητά ότι είναι **καθαρό**.
+ * Η μία γραμμή μετάφρασης στον γραφέα είναι φθηνότερη από μια εξάρτηση που θα έκανε την
+ * προβολή αδύνατη να δοκιμαστεί χωρίς κάδο.
+ */
+export interface ProjectedShelfImage {
+  readonly url: string;
+  readonly width: number;
+  readonly height: number;
+  readonly sources: readonly ListingImageSource[];
+}
+
+/**
+ * **Η αγγελία με τη συλλογή της δεμένη** — η στιγμή που το έγγραφο γίνεται *manifest*.
+ *
+ * 🔑 **ΕΝΑΣ γραφέας του πεδίου, εδώ.** Ο πειρασμός ήταν ένα `{ ...listing, gallery }`
+ * μέσα στον `writeListingProjection`, δίπλα στο `schemaVersion`. Αλλά το `schemaVersion`
+ * είναι μεταδεδομένο **αποθήκευσης** *(κανείς επισκέπτης δεν το διαβάζει)*, ενώ η
+ * συλλογή είναι **περιεχόμενο αγγελίας** — και το περιεχόμενο συντίθεται σε αυτό το
+ * αρχείο, αλλιώς το κλειστό σχήμα θα είχε **δύο** τόπους σύνθεσης.
+ *
+ * 🔑 **Και το `altKey` μπαίνει ΕΔΩ, μία φορά**: είναι απόφαση **αποκάλυψης** *(τι λέμε
+ * σε όποιον δεν βλέπει την εικόνα)*, όχι λεπτομέρεια απόδοσης. Δες
+ * {@link LISTING_GALLERY_ALT_KEY} για το γιατί δεν είναι κενό και δεν περιγράφει.
+ *
+ * ⚠️ **Η σειρά ταξιδεύει αυτούσια** από τη συμφιλίωση, που την πήρε αυτούσια από την
+ * επιλογή του κατόχου *(Α2.1)*. Καμία ταξινόμηση σε κανένα από τα τρία σημεία.
+ */
+export function withPublishedGallery(
+  listing: PublicListing,
+  images: readonly ProjectedShelfImage[],
+): PublicListing {
+  return {
+    ...listing,
+    gallery: images.map((image) => ({
+      url: image.url,
+      width: image.width,
+      height: image.height,
+      altKey: LISTING_GALLERY_ALT_KEY,
+      sources: image.sources,
+    })),
+  };
 }

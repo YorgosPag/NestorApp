@@ -237,8 +237,14 @@ function AgencyListings({ companyId }: { readonly companyId: string }): React.JS
         //    (`orderShowcaseListings`) — καμία `sort()` σε αυτό το αρχείο, ίδιος
         //    κανόνας με τον αδελφό κατάλογο: η σειρά είναι **απόφαση με διεύθυνση**.
         <ul className="m-0 flex list-none flex-col gap-2 p-0">
-          {listings.map((listing) => (
-            <ListingCard key={listing.id} listing={listing} showAuthorship={false} />
+          {/* Η πρώτη κάρτα είναι το στοιχείο LCP **και εδώ** — δες ADR-841 §7 Α2.4. */}
+          {listings.map((listing, index) => (
+            <ListingCard
+              key={listing.id}
+              listing={listing}
+              showAuthorship={false}
+              priority={index === 0}
+            />
           ))}
         </ul>
       )}

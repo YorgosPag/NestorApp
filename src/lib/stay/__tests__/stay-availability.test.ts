@@ -45,6 +45,7 @@ function listingOf(
     commercial: { askingPrice: null, finalPrice: null, rentPrice: null, nightlyRate: 80 },
     stay,
     coverImage: null,
+    gallery: [],
     type: 'apartment',
     areaSqm: 60,
     offerKinds,

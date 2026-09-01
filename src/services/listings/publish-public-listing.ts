@@ -22,7 +22,7 @@
  * διεύθυνσης θα άφηνε **κάθε** αγγελία του έργου με παλιά θέση, σιωπηλά.
  */
 
-import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
+import type { DocumentReference, Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { nowISO } from '@/lib/date-local';
@@ -30,18 +30,21 @@ import { PUBLIC_LISTING_SCHEMA_VERSION } from '@/lib/listings/public-listing-sch
 import {
   buildPublicListing,
   addressToPositionCandidate,
+  withPublishedGallery,
   type ProjectableProperty,
   type PlaceKnowledge,
   type ListingPositionCandidate,
   type AddressLike,
+  type ProjectedShelfImage,
 } from './public-listing-projection';
 import type { PlaceRef } from '@/types/geo/public-place';
+import type { PublicListing } from '@/types/public-listing';
 import {
   createAgencyIdentityResolver,
   type AgencyIdentityResolver,
 } from '@/services/company/company-public-name.reader';
 import type { PublicShelfSource } from '@/services/upload/utils/storage-path-public-shelf';
-import { reconcilePublicShelf } from './public-shelf.service';
+import { reconcilePublicShelf, type PublicShelfImage } from './public-shelf.service';
 
 const logger = createModuleLogger('publish-public-listing');
 
@@ -274,20 +277,7 @@ export async function writeListingProjection(
     // ⚠️ **Ο αναγνώστης τη διαβάζει μέσω `storedSchemaVersion`**, που απαντά `1`
     //    όταν λείπει — άρα κάθε έγγραφο γραμμένο πριν από σήμερα έχει ήδη σωστή
     //    απάντηση χωρίς να το αγγίξει κανείς.
-    await ref.set({ ...listing, schemaVersion: PUBLIC_LISTING_SCHEMA_VERSION });
-
-    // ── ADR-841 Α12.6 — ΤΟ ΡΑΦΙ ΓΙΝΕΤΑΙ ΑΚΡΙΒΩΣ ΟΣΟ ΛΕΕΙ Η ΕΠΙΛΟΓΗ ────────────
-    //
-    // ⚠️ **ΜΕΤΑ το `set`, όχι πριν**: αν η συμφιλίωση αποτύχει, το δημόσιο έγγραφο
-    //    έχει ήδη γραφτεί και η αγγελία **υπάρχει** — απλώς χωρίς εικόνες. Η
-    //    αντίστροφη σειρά θα μπορούσε να αφήσει bytes δημοσιευμένα για αγγελία που
-    //    δεν γράφτηκε ποτέ, δηλαδή **ορφανά που κανείς δεν θα συμφιλίωνε**.
-    //
-    // 🔴 **Σήμερα το σύνολο είναι ΚΕΝΟ, και αυτό ΕΙΝΑΙ η απόδειξη** (Α12.10): όσο
-    //    κανείς δεν έχει διαλέξει τι δημοσιεύει, η συμφιλίωση **αποδεικνύει σε κάθε
-    //    γραφή** ότι το ράφι μένει άδειο — μηδέν διαρροή, μετρημένα και όχι
-    //    υποσχεμένα. Το `publishedMedia` το γεμίζει η **Φ3**.
-    await reconcileShelfSafely(listingId, property.publishedMedia ?? []);
+    await writeWithShelf(ref, listingId, listing, property.publishedMedia ?? []);
 
     return 'published';
   } catch (error) {
@@ -314,6 +304,91 @@ async function reconcileShelfSafely(
       propertyId: listingId,
     });
   }
+}
+
+/**
+ * **Η ΓΡΑΦΗ ΠΟΥ ΞΕΡΕΙ ΤΙ ΕΙΚΟΝΕΣ ΕΧΕΙ** — συμφιλίωση, δέσιμο, `set`, αντιστάθμιση.
+ *
+ *
+ * 🔴 **Η Φ2 έγραφε ρητά «ΜΕΤΑ το `set`, όχι πριν», και η Φ3 το ανέτρεψε — με λόγο.**
+ *    Το κλειδί κάθε παραγώγου είναι το **sha256 των καθαρισμένων bytes**, δηλαδή τα
+ *    URL **δεν υπάρχουν** πριν τρέξει η συμφιλίωση. Με την παλιά σειρά το έγγραφο
+ *    δεν θα μπορούσε ποτέ να ξέρει τι URL έχει.
+ *
+ * 🏆 **ΚΑΙ Η ΝΕΑ ΣΕΙΡΑ ΕΙΝΑΙ ΑΥΣΤΗΡΑ ΚΑΛΥΤΕΡΗ, ΟΧΙ ΑΠΛΩΣ ΑΝΑΓΚΑΙΑ**: η συλλογή
+ *    χτίζεται **ΑΠΟ ΤΗΝ ΑΝΑΦΟΡΑ** του ραφιού, άρα το έγγραφο είναι **δομικά ανίκανο**
+ *    να διαφημίσει εικόνα που δεν κάθεται στον κάδο. Μια φωτογραφία που απορρίφθηκε
+ *    στον καθαρισμό (`rejected`) απλώς **δεν μπαίνει** — κανείς δεν χρειάζεται να το
+ *    θυμηθεί.
+ *
+ * ⚠️ **Ο παλιός φόβος ονομάζεται και αντισταθμίζεται**: bytes δημοσιευμένα για
+ *    αγγελία που δεν γράφτηκε ποτέ. Αν το `set` αποτύχει, το `catch` **αδειάζει το
+ *    ράφι** ({@link withdrawShelfAfterFailure}) — αντισταθμιστική πράξη, το ίδιο
+ *    ιδίωμα με την απόσυρση. Και ακόμη κι αν χαθεί κι εκείνη (κατάρρευση διεργασίας),
+ *    η **επόμενη** συμφιλίωση της ίδιας αγγελίας τα σβήνει: το `deleteExtra` τρέχει
+ *    **πάντα**, ανεξάρτητα από το τι έγινε πριν.
+ */
+async function writeWithShelf(
+  ref: DocumentReference,
+  listingId: string,
+  listing: PublicListing,
+  sources: readonly PublicShelfSource[]
+): Promise<void> {
+  const shelf = await reconcilePublicShelf(listingId, sources);
+
+  if (shelf.outcome === 'failed') {
+    logger.error('Το δημόσιο ράφι δεν συμφιλιώθηκε — η αγγελία γράφεται ΧΩΡΙΣ εικόνες', {
+      propertyId: listingId,
+    });
+  }
+
+  try {
+    await ref.set({
+      ...withPublishedGallery(listing, shelf.published.map(toProjectedImage)),
+      schemaVersion: PUBLIC_LISTING_SCHEMA_VERSION,
+    });
+  } catch (error) {
+    await withdrawShelfAfterFailure(listingId, shelf.published.length);
+    throw error;
+  }
+}
+
+/**
+ * **Ό,τι είδε το ράφι, στη γλώσσα της ΚΑΘΑΡΗΣ προβολής** — μία γραμμή μετάφρασης.
+ *
+ * 🔑 Υπάρχει ώστε το `public-listing-projection.ts` να μη χρειαστεί ποτέ να εισαγάγει
+ * τον τύπο της υπηρεσίας: εκείνο το αρχείο δηλώνει ρητά ότι είναι **καθαρό**, και η
+ * υπηρεσία σέρνει `firebase-admin` **και** `sharp`.
+ *
+ * ⚠️ Το `sources` παίρνει **όλα** τα παράγωγα, όχι μόνο το κανονικό: αυτό ακριβώς είναι
+ * το `srcset`, και είναι ο λόγος που η αναφορά τα κρατά **ομαδοποιημένα** (Α2.2).
+ */
+function toProjectedImage(image: PublicShelfImage): ProjectedShelfImage {
+  return {
+    url: image.canonical.url,
+    width: image.canonical.width,
+    height: image.canonical.height,
+    sources: image.variants.map((variant) => ({ url: variant.url, width: variant.width })),
+  };
+}
+
+/**
+ * **Η ΑΝΤΙΣΤΑΘΜΙΣΗ**: το `set` απέτυχε αφού τα bytes είχαν ήδη δημοσιευτεί.
+ *
+ * 🔑 **Δεν είναι «καθάρισμα», είναι η ίδια πράξη με άλλη τιμή**: κενό σύνολο ⇒ το
+ * πρόθεμα αδειάζει. Ο γραφέας εξακολουθεί να έχει **μία** συμπεριφορά.
+ *
+ * ⚠️ **Δεν πετά ποτέ, και δεν καταπίνει το αρχικό σφάλμα**: ο καλών ξαναρίχνει εκείνο.
+ * Μια αποτυχία εδώ θα έκρυβε την αιτία πίσω από το σύμπτωμα.
+ */
+async function withdrawShelfAfterFailure(listingId: string, published: number): Promise<void> {
+  if (published === 0) return;
+
+  logger.warn('Η προβολή δεν γράφτηκε — αποσύρονται τα bytes που είχαν ήδη δημοσιευτεί', {
+    propertyId: listingId,
+    published,
+  });
+  await reconcileShelfSafely(listingId, []);
 }
 
 /** Η **μία** διατύπωση της αποτυχίας — ώστε να μη γραφτεί σε κάθε γραφέα ξανά. */

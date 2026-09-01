@@ -485,7 +485,11 @@
       "accountRequired": "Files upload once you sign in. Fill in the rest now — the account is asked for at the end.",
       "empty": "You have not uploaded any files.",
       "remove": "Remove",
-      "privateNote": "Your files are private and are not published in the listing. The card image is produced from the property model.",
+      "publish": "Publish",
+      "makeFirst": "Make it first",
+      "firstBadge": "1st in the listing",
+      "publishedCount": "{published} of {max} are published. The first one is the card image.",
+      "privateNote": "Your files are private. Only the ones you select are published in the listing, and only after their metadata (location, device, capture time) has been stripped.",
       "signIn": "Sign in"
     },
     "invariant": {

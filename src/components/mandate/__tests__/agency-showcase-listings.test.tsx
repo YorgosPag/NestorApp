@@ -91,6 +91,7 @@ function listingOf(id: string, title: string): PublicListing {
     commercial: { askingPrice: 200000, finalPrice: null, rentPrice: null, nightlyRate: null },
     stay: null,
     coverImage: null,
+    gallery: [],
     type: 'apartment',
     areaSqm: 90,
     offerKinds: ['sell'],

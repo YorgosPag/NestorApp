@@ -48,13 +48,19 @@ export function ResultsList({ mapped, unmapped, highlightedId, onHover, filterQu
           <p className="p-4 text-sm text-muted-foreground">{t('search-results:list.empty')}</p>
         ) : (
           <ul className="space-y-2 p-3">
-            {mapped.map((listing) => (
+            {/*
+              🔑 **ΜΟΝΟ Η ΠΡΩΤΗ ΚΑΡΤΑ ΕΙΝΑΙ «ΥΨΗΛΗΣ»** (ADR-841 §7 Α2.4): η θέση είναι
+              γνώση **της λίστας**, όχι της κάρτας — και πολλές εικόνες υψηλής
+              προτεραιότητας **ακυρώνουν η μία την άλλη**.
+            */}
+            {mapped.map((listing, index) => (
               <ListingCard
                 key={listing.id}
                 listing={listing}
                 isHighlighted={listing.id === highlightedId}
                 onHover={onHover}
                 filterQuery={filterQuery}
+                priority={index === 0}
               />
             ))}
           </ul>

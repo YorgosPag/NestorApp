@@ -18,17 +18,27 @@
  * αρχείο θα ήταν φράγμα σε ακριβώς αυτό που η Α14 άνοιξε.
  *
  * ────────────────────────────────────────────────────────────────────────────
- * ⛔ ΤΑ ΑΡΧΕΙΑ ΕΙΝΑΙ **ΙΔΙΩΤΙΚΑ**, ΚΑΙ ΤΟ ΛΕΜΕ ΣΤΟΝ ΑΝΘΡΩΠΟ
+ * ⛔ ΙΔΙΩΤΙΚΑ ΕΞ ΟΡΙΣΜΟΥ — ΔΗΜΟΣΙΑ **ΜΟΝΟ ΜΕ ΠΡΑΞΗ** (ADR-841 §7 Α2.7)
  * ────────────────────────────────────────────────────────────────────────────
  *
- * Ο **κανόνας 31** (Α19) απαγορεύει ρητά την εικόνα χρήστη ως πρώτο καρέ: *«παράγεται
- * ΑΠΟ ΤΟ ΜΟΝΤΕΛΟ, ποτέ από ανέβασμα χρήστη — αλλιώς **μπορεί να πει ψέματα**»*. Ο
- * κανόνας του Storage δίνει ανάγνωση **μόνο στον κάτοχο**, και το `PublicListing`
- * κρατά `coverImage: null`.
+ * Ο **κανόνας 31** (Α19) απαγορεύει ρητά την εικόνα χρήστη ως **πρώτο καρέ**:
+ * *«παράγεται ΑΠΟ ΤΟ ΜΟΝΤΕΛΟ, ποτέ από ανέβασμα χρήστη — αλλιώς **μπορεί να πει
+ * ψέματα**»*. Ο κανόνας **δεν κάμπτεται**: το `PublicListing.coverImage` παραμένει
+ * `null` μέχρι να υπάρξει ο παραγωγός του (Φ4).
  *
- * 🔑 **Και η οθόνη το δηλώνει** (`media.privateNote`), αντί να το υπονοήσει. Ένας
- * άνθρωπος που ανεβάζει φωτογραφίες περιμένοντας να τις δει η αγορά και δεν συμβαίνει
- * τίποτα, **δεν έχει τρόπο να καταλάβει γιατί** — και θα το θεωρήσει βλάβη.
+ * 🔑 **Αυτό που άλλαξε στη Φ3 είναι ότι γεννήθηκε ΔΕΥΤΕΡΗ ΕΡΩΤΗΣΗ**, με δικό της πεδίο:
+ * το `gallery` — *«τι **ΔΕΙΧΝΕΙ** ο κάτοχος;»* απέναντι στο *«τι **ΕΙΝΑΙ** το κτίριο;»*.
+ * Δύο πεδία, δύο παραγωγοί, κανένα ψέμα (Α2.6).
+ *
+ * 🔴 **Η ΕΠΙΛΟΓΗ ΕΙΝΑΙ OPT-IN, ΚΑΙ ΔΕΝ ΕΙΝΑΙ ΟΥΔΕΤΕΡΗ ΠΡΟΤΙΜΗΣΗ** (Α2.7): κάθε αρχείο
+ * που ανέβηκε **πριν** από σήμερα το έκανε κάτω από **γραπτή** υπόσχεση ιδιωτικότητας.
+ * Ένα opt-out θα άλλαζε **αναδρομικά** εκείνο το συμβόλαιο και θα δημοσίευε την
+ * ταυτότητα που ανέβηκε **κατά λάθος**.
+ *
+ * 🔑 **Και η οθόνη το δηλώνει** (`media.privateNote`), αντί να το υπονοήσει — με το
+ * κείμενο **αλλαγμένο μαζί με τον κώδικα**. Μια οθόνη που υπόσχεται *«δεν
+ * δημοσιεύονται»* δίπλα σε ένα κουτάκι «δημοσίευση» δεν είναι απλώς μπαγιάτικη: είναι
+ * **ψέμα σε ενεργή οθόνη**.
  */
 
 import React from 'react';
@@ -41,6 +51,13 @@ import { useOwnerPropertyMedia } from '@/hooks/owner-property/useOwnerPropertyMe
 import { hasDraftIdentity } from '@/lib/forms/draft-identity';
 import { AUTH_ROUTES } from '@/lib/routes';
 import type { OwnerPropertyFormValues } from '@/lib/owner-property/owner-property-form-values';
+import {
+  PUBLISHED_MEDIA_LIMIT,
+  isLeadOwnerMedia,
+  publishedOwnerMedia,
+  withOwnerMediaFirst,
+} from '@/lib/owner-property/owner-media-publication';
+import { OwnerPropertyMediaItem } from './OwnerPropertyMediaItem';
 
 const NS = 'property-market';
 const K = `${NS}:offer.media`;
@@ -72,6 +89,8 @@ export function OwnerPropertyMediaField({
   const accountMissing = !hasDraftIdentity(authorUserId) || state.state === 'accountRequired';
 
   const media = form.watch('media') ?? [];
+  // 🔑 **Ο ΙΔΙΟΣ κριτής με τον γραφέα** — δες το σκεπτικό του `owner-media-publication`.
+  const published = publishedOwnerMedia(media);
 
   async function handleFiles(event: React.ChangeEvent<HTMLInputElement>): Promise<void> {
     const files = Array.from(event.target.files ?? []);
@@ -91,6 +110,34 @@ export function OwnerPropertyMediaField({
         shouldDirty: true,
       });
     }
+  }
+
+  /**
+   * **Η επιλογή δημοσίευσης** — γράφεται στη φόρμα, όχι σε δεύτερη κατάσταση.
+   *
+   * ⚠️ Διαβάζεται **η τρέχουσα** τιμή (`getValues`) και όχι το `media` του κλεισίματος,
+   * ίδιος λόγος με το ανέβασμα: δύο γρήγορα κλικ θα έγραφαν το ένα πάνω στο άλλο.
+   */
+  function handleTogglePublished(storagePath: string, next: boolean): void {
+    form.setValue(
+      'media',
+      (form.getValues('media') ?? []).map((item) =>
+        item.storagePath === storagePath ? { ...item, published: next } : item,
+      ),
+      { shouldDirty: true },
+    );
+  }
+
+  /**
+   * **«Να μπει πρώτη»** — μετακίνηση μέσα στον **ίδιο** πίνακα (ADR-841 §7 Α2.1).
+   *
+   * ⛔ **Κανένα πεδίο σειράς**: η σειρά που βλέπει ο κάτοχος **είναι** η σειρά που
+   * φεύγει, και δεν υπάρχει δεύτερη λίστα να μείνει πίσω.
+   */
+  function handleMakeFirst(storagePath: string): void {
+    form.setValue('media', [...withOwnerMediaFirst(form.getValues('media') ?? [], storagePath)], {
+      shouldDirty: true,
+    });
   }
 
   function handleRemove(storagePath: string): void {
@@ -156,25 +203,40 @@ export function OwnerPropertyMediaField({
         {media.length === 0 ? (
           <p className="text-sm text-muted-foreground">{t(`${K}.empty`)}</p>
         ) : (
-          <ul className="flex flex-col gap-1">
-            {media.map((item) => (
-              <li
-                key={item.storagePath}
-                className="flex items-center justify-between gap-3 text-sm text-foreground"
-              >
-                <span>{item.fileName}</span>
-                <button
-                  type="button"
-                  onClick={() => handleRemove(item.storagePath)}
-                  className="rounded-md border border-border px-2 py-1 text-xs font-medium text-foreground"
-                >
-                  {t(`${K}.remove`)}
-                </button>
-              </li>
-            ))}
-          </ul>
+          <>
+            <ul className="m-0 flex list-none flex-col p-0">
+              {media.map((item) => (
+                <OwnerPropertyMediaItem
+                  key={item.storagePath}
+                  item={item}
+                  isLead={isLeadOwnerMedia(media, item.storagePath)}
+                  canPublish={published.length < PUBLISHED_MEDIA_LIMIT}
+                  onTogglePublished={handleTogglePublished}
+                  onMakeFirst={handleMakeFirst}
+                  onRemove={handleRemove}
+                />
+              ))}
+            </ul>
+            {/*
+              🔑 **Ο μετρητής διαβάζει τον ΙΔΙΟ SSoT με τον γραφέα του ραφιού** — άρα ο
+              αριθμός εδώ **δεν μπορεί** να διαφωνήσει με το τι φεύγει στον κόσμο.
+            */}
+            <p aria-live="polite" className="text-xs text-muted-foreground">
+              {t(`${K}.publishedCount`, {
+                count: published.length,
+                max: PUBLISHED_MEDIA_LIMIT,
+              })}
+            </p>
+          </>
         )}
 
+        {/*
+          🔴 **Η ΥΠΟΣΧΕΣΗ ΑΛΛΑΞΕ ΜΑΖΙ ΜΕ ΤΟΝ ΚΩΔΙΚΑ** (ADR-841 §7 Α2.7). Έλεγε *«τα
+          αρχεία σου είναι ιδιωτικά και **δεν δημοσιεύονται**»* — αληθές μέχρι τη Φ3,
+          **ψέμα σε ενεργή οθόνη** από τη στιγμή που υπάρχει το κουτάκι από πάνω.
+          Η νέα διατύπωση κρατά την υπόσχεση **κατά γράμμα** για κάθε αρχείο που δεν
+          διάλεξε ο άνθρωπος — που είναι, εξ ορισμού, **όλα τα υπάρχοντα**.
+        */}
         <p className="text-sm text-muted-foreground">{t(`${K}.privateNote`)}</p>
       </div>
     </FormFieldset>

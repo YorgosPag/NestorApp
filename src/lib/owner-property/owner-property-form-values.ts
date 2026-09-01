@@ -153,6 +153,12 @@ export const ownerPropertyFormSchema = z.object({
       fileName: z.string(),
       sizeBytes: z.number(),
       uploadedAt: z.string(),
+      /**
+       * 🔴 **ΤΟ ΜΟΝΟ ΠΕΔΙΟ ΕΙΣΟΔΟΥ ΤΗΣ ΓΡΑΜΜΗΣ** (ADR-841 §7 Α2.7) — και είναι
+       * **προαιρετικό επίτηδες**: κάθε αρχείο που ανέβηκε πριν από σήμερα **δεν το
+       * έχει**, και η απουσία του οφείλει να διαβάζεται *«ιδιωτικό»*, ποτέ «άγνωστο».
+       */
+      published: z.boolean().optional(),
     }),
   ),
 });

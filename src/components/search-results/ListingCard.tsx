@@ -36,6 +36,16 @@ import { MISSING_PRICE_KEY } from '@/lib/listings/listing-price-keys';
 import { listingDetailHref } from '@/lib/listings/listing-routes';
 import type { PublicListing } from '@/types/public-listing';
 import { formatCurrency } from '@/lib/intl-formatting';
+import { listingImageSrcSet, listingLeadImage } from '@/lib/listings/listing-images';
+
+/**
+ * Πόσο πλατιά αποδίδεται η εικόνα της κάρτας — **δήλωση διάταξης, όχι εικασία**.
+ *
+ * Η λίστα είναι μία στήλη ~22rem δίπλα στον χάρτη σε οθόνη, και πλήρους πλάτους σε
+ * κινητό. Χωρίς `sizes` ο περιηγητής υποθέτει **100vw** και κατεβάζει το μεγαλύτερο
+ * παράγωγο για μια εικόνα 350px — δηλαδή το `srcset` θα ήταν κόστος χωρίς όφελος.
+ */
+const CARD_IMAGE_SIZES = '(min-width: 1024px) 22rem, 100vw';
 
 /**
  * ⚠️ **ΤΡΙΑ ΠΕΔΙΑ ΕΓΙΝΑΝ ΠΡΟΑΙΡΕΤΙΚΑ (2026-09-01, ADR-841 §7 Α6) — ΚΑΙ ΔΕΝ ΕΙΝΑΙ
@@ -70,6 +80,18 @@ interface ListingCardProps {
    * **άλλο ορατό στοιχείο της σελίδας** αφαιρεί πληροφορία που ο επισκέπτης δικαιούται.
    */
   readonly showAuthorship?: boolean;
+  /**
+   * **Είναι αυτή η κάρτα το στοιχείο LCP της οθόνης;** (ADR-841 §7 Α2.4)
+   *
+   * 🔴 **Η κάρτα ΔΕΝ ξέρει τη θέση της — τη λέει η λίστα.** Ένας υπολογισμός εδώ μέσα
+   * θα ήταν αδύνατος: η ίδια κάρτα ζει σε **δύο** οθόνες *(αποτελέσματα · βιτρίνα)*,
+   * και σε καμία από τις δύο δεν βλέπει τους αδελφούς της.
+   *
+   * ⚠️ **ΜΟΝΟ ΜΙΑ κάρτα ανά οθόνη το παίρνει.** Πολλές εικόνες «υψηλής
+   * προτεραιότητας» **ακυρώνουν η μία την άλλη** — το μετρημένο όφελος
+   * *(LCP 2,6s → 1,9s, Google Flights)* προϋποθέτει ότι είναι **μία**.
+   */
+  readonly priority?: boolean;
 }
 
 export function ListingCard({
@@ -78,9 +100,11 @@ export function ListingCard({
   onHover,
   filterQuery = '',
   showAuthorship = true,
+  priority = false,
 }: ListingCardProps) {
   const { t } = useTranslation(['search-results']);
   const price = resolveDisplayPrice(listing);
+  const image = listingLeadImage(listing);
 
   return (
     <li>
@@ -98,6 +122,36 @@ export function ListingCard({
             isHighlighted ? 'border-ring bg-accent' : 'border-border',
           ].join(' ')}
         >
+          {/*
+            🔴 **Η ΚΑΡΤΑ ΑΠΕΚΤΗΣΕ ΕΙΚΟΝΑ** (ADR-841 §7 Α2) — μέχρι σήμερα η οθόνη
+            αποτελεσμάτων ήταν **λίστα κειμένου**, με μηδέν `<img>`.
+
+            ⚠️ **Η ΑΠΟΥΣΙΑ ΔΕΝ ΓΕΜΙΖΕΙ.** Καμία εικόνα-θέσης, κανένα εικονίδιο σπιτιού:
+            μια κάρτα με ξένη εικόνα διαβάζεται ως **αληθινή φωτογραφία που δεν δείχνει
+            αυτό το ακίνητο** (§25.5.2). Χωρίς εικόνα, η κάρτα μένει αυτό που ήταν.
+
+            🔑 **`aspect-[4/3]` + `width`/`height` μαζί**: το πρώτο δίνει στη θήκη
+            **σταθερό ύψος πριν φορτώσει τίποτα** *(το CLS της λίστας, όπου ο χρήστης
+            σαρώνει και πατά)*· τα δεύτερα λένε στον περιηγητή τον **λόγο** των bytes.
+            Το `object-cover` κόβει τη διαφορά — όπως ακριβώς κάνει η Zillow στα
+            thumbnails των αποτελεσμάτων (~4:3).
+          */}
+          {image !== null && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={image.url}
+              srcSet={listingImageSrcSet(image)}
+              sizes={CARD_IMAGE_SIZES}
+              width={image.width}
+              height={image.height}
+              alt={t(image.altKey, { index: 1, total: listing.gallery.length })}
+              loading={priority ? 'eager' : 'lazy'}
+              fetchPriority={priority ? 'high' : 'auto'}
+              decoding="async"
+              className="mb-2 aspect-[4/3] w-full rounded-md border border-border object-cover"
+            />
+          )}
+
           <h3 className="truncate text-sm font-medium text-foreground">{listing.title}</h3>
 
           <p className="mt-1 text-base font-semibold text-foreground">

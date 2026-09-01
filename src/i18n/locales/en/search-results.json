@@ -104,7 +104,10 @@
       }
     },
     "media": {
-      "absent": "There is no image for this property yet. We do not put someone else's photo in its place: it would show a different property and be read as this one."
+      "absent": "There is no image for this property yet. We do not put someone else's photo in its place: it would show a different property and be read as this one.",
+      "title": "Photos",
+      "galleryAlt": "Photo {index} of {total} — provided by the owner",
+      "ownerNote": "The photos are the owner’s own material, selected by them."
     },
     "attributes": {
       "heading": "Property details",

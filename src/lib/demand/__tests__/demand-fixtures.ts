@@ -54,6 +54,7 @@ export function listing(overrides: Partial<PublicListing> = {}): PublicListing {
     // ADR-835 §4.5 — η ουδέτερη αγγελία είναι **πώληση**, άρα `stay: null`.
     stay: null,
     coverImage: null,
+    gallery: [],
     type: 'apartment',
     areaSqm: 100,
     offerKinds: ['sell'],

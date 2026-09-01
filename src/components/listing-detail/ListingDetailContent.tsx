@@ -70,6 +70,7 @@ import { ListingAttributeList } from './ListingAttributeList';
 import { ListingPositionSection } from './ListingPositionSection';
 import { ListingLegality } from './ListingLegality';
 import { ListingOpenSubjects } from './ListingOpenSubjects';
+import { ListingGallery } from './ListingGallery';
 
 // ⚠️ Εμβέλεια MODULE, όχι render και όχι effect: τρέχει **πριν** αποδοθεί
 // οτιδήποτε, στον server και στον client, χωρίς κύκλο ζωής React να το καθυστερεί.
@@ -110,37 +111,6 @@ function DetailNotice({
         </Link>
       </nav>
     </main>
-  );
-}
-
-/** Η εικόνα εξωφύλλου, **ή η ονομασμένη απουσία της** — ποτέ ξένο placeholder (§25.5.2). */
-function CoverImage({ listing }: { readonly listing: PublicListing }) {
-  const { t } = useTranslation(['search-results']);
-
-  if (listing.coverImage === null) {
-    return (
-      <p className="rounded-lg border border-dashed border-border bg-muted/40 p-4 text-sm text-muted-foreground">
-        {t('search-results:detail.media.absent')}
-      </p>
-    );
-  }
-
-  return (
-    /*
-      ⚠️ `width`/`height` **υποχρεωτικά** στο σχήμα, και εδώ φαίνεται γιατί: χωρίς
-      αυτά ο περιηγητής δεν κρατά τον χώρο πριν φορτώσει η εικόνα και το περιεχόμενο
-      «πηδά» — το CLS < 0,1 που η Α19 δεσμεύτηκε **αριθμητικά**.
-      eslint-disable-next-line @next/next/no-img-element -- η πηγή είναι εξωτερική
-      και δεν περνά από τον optimizer· βλ. ADR-777 §8.11.
-    */
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={listing.coverImage.url}
-      width={listing.coverImage.width}
-      height={listing.coverImage.height}
-      alt={t(listing.coverImage.altKey)}
-      className="w-full rounded-lg border border-border object-cover"
-    />
   );
 }
 
@@ -242,7 +212,7 @@ function ListingDetailBody({
       */}
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="flex flex-col gap-4">
-          <CoverImage listing={listing} />
+          <ListingGallery listing={listing} />
           <ListingPositionSection listing={listing} />
         </div>
 

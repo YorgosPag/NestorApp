@@ -222,6 +222,29 @@ describe('🔴 Ι — το ιδιωτικό ΔΕΝ ταξιδεύει στη δ�
     expect(validOwnerProperty().media).toHaveLength(1);
     expect(publish(validOwnerProperty())?.coverImage).toBeNull();
   });
+
+  it('🔴 Ι3 — ΚΑΙ ΤΟ ΡΑΦΙ ΜΕΝΕΙ ΑΔΕΙΟ ΟΣΟ ΔΕΝ ΤΟ ΕΙΠΕ Ο ΑΝΘΡΩΠΟΣ (ADR-841 §7 Α2.7)', () => {
+    // Το ίδιο αρχείο, η ίδια διαδρομή γραφέα — και **καμία πηγή** στο ράφι, γιατί
+    // κανείς δεν πάτησε «δημοσίευση». Αυτή είναι η **ολόκληρη** διαδρομή, όχι το
+    // `filter` απομονωμένο: αν κάποιος αφαιρέσει το κριτήριο από τη μία ή την άλλη
+    // πλευρά, η φωτογραφία του κατόχου βγαίνει στον κόσμο **χωρίς πράξη του**.
+    const projected = projectableFromOwnerProperty(validOwnerProperty(), AT);
+
+    expect(validOwnerProperty().media).toHaveLength(1);
+    expect(projected.publishedMedia).toEqual([]);
+  });
+
+  it('🔑 Ι4 — με ρητή επιλογή, ΚΑΙ ΤΟΤΕ ΜΟΝΟ, το μονοπάτι φτάνει στο ράφι', () => {
+    const property = validOwnerProperty();
+    const chosen = {
+      ...property,
+      media: property.media.map((item) => ({ ...item, published: true })),
+    };
+
+    expect(projectableFromOwnerProperty(chosen, AT).publishedMedia).toEqual([
+      { privateStoragePath: property.media[0].storagePath },
+    ]);
+  });
 });
 
 

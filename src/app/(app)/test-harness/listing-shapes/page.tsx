@@ -56,7 +56,7 @@ function fixture(id: string, title: string, position: PublicListing['position'])
     commercial: { askingPrice: 200000, finalPrice: null, rentPrice: null, nightlyRate: null },
     // ADR-835 §4.5 — δεν είναι κατάλυμα: `stay` **null**, ποτέ αντικείμενο με μηδενικά.
     stay: null,
-    coverImage: null, type: 'apartment', areaSqm: 90,
+    coverImage: null, gallery: [], type: 'apartment', areaSqm: 90,
     offerKinds: ['sell'], floor: 2, bedrooms: 2,
     // Α17 (ADR-838) — το εργαστήριο δείχνει **σχήματα θέσης**· η νομιμότητα έχει δικές
     // της άγκυρες. Κενός πίνακας = «κανείς δεν ρώτησε», που είναι και η αλήθεια εδώ.
