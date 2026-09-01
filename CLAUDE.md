@@ -307,7 +307,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 ### Pre-commit checks (summary):
 
 <!-- BEGIN GENERATED GATE INDEX — ΜΗΝ ΤΟ ΓΡΑΨΕΙΣ ΣΤΟ ΧΕΡΙ. Πηγή: docs/gates/3.NN.md · αναπαραγωγή: npm run gate-index:generate
-     fingerprint: sha256:caf80b57a275a03c277afb222138472a6b4102c2523897ff834c48882c8b09d9 -->
+     fingerprint: sha256:8d5ce7caca1afb7040b63d50444a5eb4259db1ad7f6a961fc9cab0bd40401a12 -->
 | CHECK | Goal | Mode | Baseline |
 |-------|------|------|----------|
 | **3.8** | **Missing i18n keys** (ADR-777) — `t('key')` **και** `t('ns:key')` χωρίς αντιστοιχία στα locales · 📘 `docs/gates/3.8.md` | RATCHET | `.i18n-missing-keys-baseline.json` |
@@ -368,6 +368,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 | **3.71** | **Πύλη των διπλών κλειδιών locale** (ADR-810) — «δηλώνεται κλειδί **ΔΥΟ ΦΟΡΕΣ στο ίδιο αντικείμενο** ενός locale JSON;» · `npm run test:locale-dup-keys` · `SKIP_LOCALE_DUPLICATE_KEYS=1` · 📘 `docs/gates/3.71.md` | ⛔ ZERO TOL | — |
 | **3.72** | **Πύλη των καθολικών δυνατοτήτων** (ADR-809) — «προσφέρει **αυτή η οθόνη** στον άνθρωπο τη **γλώσσα**, το **θέμα** και τον **λογαριασμό** του, και αν όχι το είπε κάποιος **με λόγο**;» · `npm run test:shell-utilities` · `SKIP_SHELL_UTILITIES=1` · 📘 `docs/gates/3.72.md` | ⛔ ZERO TOL | — |
 | **3.73** | **Πύλη λεξιλογίου τομέα** (ADR-812) — «είναι κάθε δήλωση που **απαριθμεί** το λεξιλόγιο **ΔΕΜΕΝΗ στη ρίζα του**;» · `npm run test:domain-vocabulary` · `SKIP_DOMAIN_VOCABULARY=1` · 📘 `docs/gates/3.73.md` | ⛔ ZERO TOL | — |
+| **3.74** | **Πύλη του συνόρου ανάγνωσης αγγελίας** (ADR-839) — «διαβάζει κάποιος δημόσια αγγελία **χωρίς να περάσει από το σύνορο**;» · `npm run test:listing-read-boundary` · `SKIP_LISTING_READ_BOUNDARY=1` · 📘 `docs/gates/3.74.md` | ⛔ ZERO TOL | — |
 
 **📘 Πλήρες ιστορικό ανά πύλη** (περιστατικά, μετρήσεις, «⚠️ ΜΗΝ», απορριφθείσες εναλλακτικές):
 `docs/gates/<αριθμός>.md` — ή `npm run gate:explain 3.63`.
@@ -381,8 +382,8 @@ Suggestion: Do /clear and give me the command again cleanly.
 φορές (N.12 · N.18 · CHECK 3.38). Στη γραμμή μένει ο **δείκτης**, και ο γεννήτορας
 επαληθεύει ότι **λύνεται**. Άνοιξε το JSON.
 
-📊 Πύλες που **τρέχουν**: **68** (εκτελεστής 60 + hook 18) ·
-γραμμές εδώ: **55** · αδήλωτες: **11** (εκστρατεία που τελειώνει στο μηδέν).
+📊 Πύλες που **τρέχουν**: **69** (εκτελεστής 61 + hook 18) ·
+γραμμές εδώ: **56** · αδήλωτες: **11** (εκστρατεία που τελειώνει στο μηδέν).
 *Αυτοί οι αριθμοί είναι **παραγόμενοι** — η προηγούμενη χειρόγραφη εκδοχή τους είχε ήδη*
 *αποκλίνει (έγραφε «48 γραμμές» και «61 πύλες»).*
 

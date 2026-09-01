@@ -187,6 +187,8 @@
     "test:locale-dup-keys": "jest scripts/__tests__/locale-duplicate-keys.test.js",
     "domain-vocabulary:report": "node scripts/check-domain-vocabulary.js",
     "test:domain-vocabulary": "jest scripts/__tests__/domain-vocabulary.test.js",
+    "listing-read-boundary:report": "node scripts/check-public-listing-read-boundary.js",
+    "test:listing-read-boundary": "jest src/lib/listings/__tests__/public-listing-schema.test.ts scripts/__tests__/public-listing-read-boundary.test.js",
     "unbound:report": "node scripts/check-unbound-identifiers.js --report",
     "unbound:check": "node scripts/check-unbound-identifiers.js --all",
     "test:unbound-identifiers": "jest scripts/__tests__/unbound-identifiers-gate.test.js",

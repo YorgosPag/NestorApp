@@ -53,7 +53,7 @@ import {
 import { createModuleLogger } from '@/lib/telemetry';
 import { dispatchNotification } from '@/server/notifications/notification-orchestrator';
 import type { MandateRequestDecision } from '@/types/mandate-request';
-import type { PublicListing } from '@/types/public-listing';
+import { publicListingFromDocument } from '@/lib/listings/public-listing-from-document';
 
 const logger = createModuleLogger('mandate-request-notifier.service');
 
@@ -165,9 +165,20 @@ async function listingTitleOf(
       .doc(ownerPropertyId)
       .get();
 
-    // ⚠️ Το `as` πέφτει σε **ωμό έγγραφο**: ο τίτλος μπορεί να λείπει από παλιό
-    //    στιγμιότυπο, οπότε ελέγχεται ως `unknown` και όχι ως εγγυημένη συμβολοσειρά.
-    const title: unknown = (snapshot.data() as PublicListing | undefined)?.title;
+    // ── ADR-839 — **ΤΟ ΣΧΟΛΙΟ ΕΔΩ ΕΙΧΕ ΗΔΗ ΔΕΙ ΤΗΝ ΚΛΑΣΗ, ΚΑΙ ΤΗ ΜΠΑΛΩΣΕ ΤΟΠΙΚΑ.**
+    //
+    // Έγραφε: *«ο τίτλος μπορεί να λείπει από παλιό στιγμιότυπο»* — σωστή
+    // παρατήρηση, λάθος εμβέλεια. Η θεραπεία ήταν ένα `unknown` **σε αυτή τη
+    // γραμμή**, οπότε η ίδια αλήθεια για τα **υπόλοιπα 17 πεδία** έμεινε
+    // αδιατύπωτη· τρεις μήνες αργότερα το `legality` έριξε τη δημόσια σελίδα.
+    // Πλέον το ερώτημα «τι λείπει από παλιό στιγμιότυπο;» απαντιέται **μία φορά**,
+    // στο σύνορο, για **όλα** τα πεδία.
+    // 🔶 **ΔΗΛΩΜΕΝΟ ΟΡΙΟ**: ο έλεγχος `unknown` μένει, και δεν είναι περίσσευμα.
+    //    Η αλυσίδα εγγυάται τα πεδία που **πρόσθεσε** (v2 και πάνω)· για τα
+    //    αρχικά της v1 η εγγύηση είναι ο γραφέας, όχι η μετάφραση. Εδώ ο τίτλος
+    //    ταξιδεύει σε **μήνυμα προς άνθρωπο**, όπου ένα `undefined.trim()` θα
+    //    έριχνε την ειδοποίηση ολόκληρη — άρα η φθηνή άμυνα αξίζει.
+    const title: unknown = publicListingFromDocument(snapshot.data(), ownerPropertyId)?.title;
     return typeof title === 'string' && title.trim() !== '' ? title.trim() : ownerPropertyId;
   } catch (error) {
     logger.warn('Ο τίτλος της αγγελίας δεν διαβάστηκε — το μήνυμα φεύγει με αναγνωριστικό', {
