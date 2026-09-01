@@ -78,6 +78,48 @@ export interface AnchoredMenuState<T> {
    * γραμμή περνούν κι αυτά από εδώ με το μενού **ήδη** κλειστό.
    */
   readonly closeMenuKeepTarget: () => void;
+  /**
+   * 🔴 ADR-833 Φ4 — **η εντολή που ΠΑΙΡΝΕΙ ΤΗΝ ΕΣΤΙΑΣΗ τρέχει όταν το μενού την έχει
+   * ΠΑΡΑΔΩΣΕΙ** — και το «πότε» δεν το μαντεύουμε: το λέει το ίδιο το μενού.
+   *
+   * ## Το περιστατικό (μετρημένο, 2026-09-01)
+   * «Δεξί κλικ σε καρτέλα → Μετονομασία» άνοιγε το `<input>` και το έχανε **στο ίδιο καρέ**.
+   * Το ίχνος εστίασης, από την άγκυρα:
+   * ```
+   *   focusin  menuContent      ← το μενού πήρε την εστίαση όταν άνοιξε
+   *   focusin  INPUT(rename)    ← ο επεξεργαστής μοντάρεται με `autoFocus`
+   *   focusout INPUT(rename)    ← ⚡ η ΠΑΓΙΔΑ του μενού τον τραβά πίσω
+   *   focusin  menuContent      ← …και κερδίζει
+   * ```
+   * Το `<input>` έκανε `blur`, ο `onBlur={commit}` **σωστά** το διάβασε ως «ο άνθρωπος
+   * έφυγε», δέσμευσε με **ίδιο όνομα** (no-op) και έκλεισε. Δηλαδή: το κουτί άνοιγε πάντα
+   * και **πέθαινε πάντα**, σιωπηλά, χωρίς σφάλμα.
+   *
+   * 🔑 Η αιτία δεν είναι ο επεξεργαστής: είναι ότι η **παγίδα εστίασης** ενός `modal` μενού
+   * Radix μένει **οπλισμένη** στο διάστημα ανάμεσα στο «ο άνθρωπος διάλεξε εντολή» και στο
+   * «το μενού ξεφορτώθηκε». Η παγίδα ζει σε **passive** effect, το `autoFocus` σε **layout**
+   * — άρα ο επεξεργαστής προλαβαίνει να εστιαστεί ενώ η παγίδα ακούει ακόμη. Καμία σειρά
+   * κλήσεων στον καταναλωτή δεν το αποφεύγει, και το `onClosed` **δεν αρκεί**: καλείται
+   * σύγχρονα, μέσα στο ίδιο συμβάν.
+   *
+   * ⚠️ **Ο χρόνος δεν μετριέται με ρολόι.** Δεν μπαίνει `setTimeout`/`rAF` «να προλάβει»: το
+   * Radix **ανακοινώνει** τη στιγμή που παραδίδει την εστίαση ({@link onCloseAutoFocus},
+   * `AUTOFOCUS_ON_UNMOUNT`), δηλαδή αφού η παγίδα έχει αποσυρθεί. Είναι το ίδιο μάθημα με το
+   * «early cutoff αντί για ρολόι» του ADR-766: το γεγονός υπάρχει — μη μαντεύεις διάρκεια.
+   *
+   * **Μία** εκκρεμής πράξη τη φορά (μία επιλογή ⇒ ένα μενού που κλείνει). Δεύτερη κλήση πριν
+   * το κλείσιμο αντικαθιστά — δεν σωρεύεται ουρά που κανείς δεν ζήτησε.
+   */
+  readonly runAfterClose: (action: () => void) => void;
+  /**
+   * Ο χειριστής που δίνει το κέλυφος στο περιεχόμενο του Radix. **Δεν** είναι δημόσια
+   * σημασιολογία: είναι η καλωδίωση του {@link runAfterClose}.
+   *
+   * 🔑 Παρεμβαίνει **μόνο** όταν υπάρχει εκκρεμής πράξη. Χωρίς αυτήν, το Radix κάνει ό,τι
+   * κάνει πάντα (επιστροφή στον trigger) — άρα **μηδέν** αλλαγή συμπεριφοράς για κάθε μενού
+   * και κάθε εντολή που δεν διεκδικεί την εστίαση.
+   */
+  readonly onCloseAutoFocus: (event: Event) => void;
 }
 
 /**
@@ -133,5 +175,37 @@ export function useAnchoredContextMenu<T>(
     onClosed?.();
   }, [isOpen, onClosed]);
 
-  return { triggerRef, isOpen, target, onOpenChange, anchor, setTarget, closeMenuKeepTarget };
+  // 🔴 ADR-833 Φ4 — δες τη δήλωση του `runAfterClose`. Σε `ref` και όχι σε state: η πράξη
+  // καταναλώνεται μέσα σε συμβάν του DOM, όχι σε render, και ένα state θα ζητούσε καρέ που
+  // κανείς δεν χρειάζεται.
+  const pendingRef = useRef<(() => void) | null>(null);
+
+  const runAfterClose = useCallback((action: () => void) => {
+    pendingRef.current = action;
+  }, []);
+
+  const onCloseAutoFocus = useCallback((event: Event) => {
+    const action = pendingRef.current;
+    // Κανείς δεν διεκδικεί την εστίαση ⇒ **μην αγγίξεις τίποτα**: το Radix επιστρέφει στον
+    // trigger, όπως σε κάθε άλλο μενού.
+    if (!action) return;
+    pendingRef.current = null;
+    // …αλλιώς ο κρυφός trigger θα την έκλεβε από αυτό που μόλις άνοιξε. Το `preventDefault`
+    // ακυρώνει **μόνο** τον εσωτερικό χειριστή του Radix (`composeEventHandlers` με
+    // `checkForDefaultPrevented`), όχι το κλείσιμο.
+    event.preventDefault();
+    action();
+  }, []);
+
+  return {
+    triggerRef,
+    isOpen,
+    target,
+    onOpenChange,
+    anchor,
+    setTarget,
+    closeMenuKeepTarget,
+    runAfterClose,
+    onCloseAutoFocus,
+  };
 }

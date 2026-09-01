@@ -126,14 +126,20 @@ const TableWorksheetContextMenuInner = forwardRef<
       // Το όνομα είναι το **ορατό**, ίδιο με την καρτέλα.
       title={(target) => t('table.worksheetMenu.title', { name: target.name })}
     >
-      {(target) => (
+      {(target, runAfterClose) => (
         <>
           <DxfMenuItem disabled={!target.canAdd} onClick={() => onAdd(target)}>
             <DxfMenuIcon><Plus size={16} aria-hidden="true" /></DxfMenuIcon>
             <DxfMenuLabel>{t('table.worksheetMenu.add')}</DxfMenuLabel>
           </DxfMenuItem>
 
-          <DxfMenuItem onClick={() => onRename(target)}>
+          {/* 🔴 ADR-833 Φ4 — **η ΜΟΝΗ εντολή που ανοίγει επιφάνεια εισόδου**, άρα η μόνη που
+              περνά από το `runAfterClose`. Χωρίς αυτό, η παγίδα εστίασης του μενού που μόλις
+              έκλεισε τραβούσε την εστίαση πίσω από το `<input>` της μετονομασίας **στο ίδιο
+              καρέ**· ο `onBlur={commit}` το διάβαζε —σωστά— ως «ο άνθρωπος έφυγε» και το
+              κουτί έκλεινε πριν προλάβει να φανεί. Ίχνος εστίασης και σκεπτικό:
+              `useAnchoredContextMenu.runAfterClose`. */}
+          <DxfMenuItem onClick={() => runAfterClose(() => onRename(target))}>
             <DxfMenuIcon><Pencil size={16} aria-hidden="true" /></DxfMenuIcon>
             <DxfMenuLabel>{t('table.worksheetMenu.rename')}</DxfMenuLabel>
           </DxfMenuItem>

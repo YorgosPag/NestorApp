@@ -48,8 +48,15 @@ export interface DxfAnchoredMenuProps<T> {
   readonly handleRef: React.Ref<AnchoredMenuHandle<T>>;
   /** Πώς ονομάζεται ο στόχος. Κείμενο, ποτέ εντολή: το item είναι πάντα απενεργοποιημένο. */
   readonly title: (target: T) => React.ReactNode;
-  /** Οι εντολές, με τον **παγωμένο** στόχο. Καλείται μόνο όσο υπάρχει στόχος. */
-  readonly children: (target: T) => React.ReactNode;
+  /**
+   * Οι εντολές, με τον **παγωμένο** στόχο. Καλείται μόνο όσο υπάρχει στόχος.
+   *
+   * 🔴 ADR-833 Φ4 — το δεύτερο όρισμα είναι για τη **μία** κατηγορία εντολών που ανοίγει
+   * επιφάνεια **εισόδου** (πεδίο, διάλογος): τυλίγοντάς την, η εντολή τρέχει όταν το μενού
+   * έχει παραδώσει την εστίαση. Δες `useAnchoredContextMenu.runAfterClose` για το ίχνος
+   * εστίασης που το επέβαλε. Κάθε άλλη εντολή το αγνοεί — και **οφείλει** να το αγνοεί.
+   */
+  readonly children: (target: T, runAfterClose: (action: () => void) => void) => React.ReactNode;
 }
 
 export function DxfAnchoredMenu<T>({
@@ -57,7 +64,8 @@ export function DxfAnchoredMenu<T>({
   title,
   children,
 }: DxfAnchoredMenuProps<T>): React.ReactElement {
-  const { triggerRef, isOpen, target, onOpenChange } = useAnchoredContextMenu<T>(handleRef);
+  const { triggerRef, isOpen, target, onOpenChange, runAfterClose, onCloseAutoFocus } =
+    useAnchoredContextMenu<T>(handleRef);
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={onOpenChange}>
@@ -66,12 +74,12 @@ export function DxfAnchoredMenu<T>({
       </DropdownMenuTrigger>
 
       {target ? (
-        <DxfMenuContent>
+        <DxfMenuContent onCloseAutoFocus={onCloseAutoFocus}>
           <DxfMenuItem disabled>
             <DxfMenuLabel>{title(target)}</DxfMenuLabel>
           </DxfMenuItem>
           <DxfMenuSeparator />
-          {children(target)}
+          {children(target, runAfterClose)}
         </DxfMenuContent>
       ) : null}
     </DropdownMenu>
