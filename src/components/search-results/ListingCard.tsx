@@ -37,15 +37,48 @@ import { listingDetailHref } from '@/lib/listings/listing-routes';
 import type { PublicListing } from '@/types/public-listing';
 import { formatCurrency } from '@/lib/intl-formatting';
 
+/**
+ * ⚠️ **ΤΡΙΑ ΠΕΔΙΑ ΕΓΙΝΑΝ ΠΡΟΑΙΡΕΤΙΚΑ (2026-09-01, ADR-841 §7 Α6) — ΚΑΙ ΔΕΝ ΕΙΝΑΙ
+ * ΧΑΛΑΡΩΣΗ.** Η κάρτα απέκτησε **δεύτερη** οθόνη *(η βιτρίνα `/pro/<ψευδώνυμο>`)* όπου
+ * **δεν υπάρχει χάρτης να επισημανθεί και δεν υπάρχουν φίλτρα να ταξιδέψουν**. Οι
+ * εναλλακτικές ήταν να περνά εκείνη ψεύτικες τιμές *(`() => {}`, `''`)* — δηλαδή να
+ * λέει «χάρτης» εκεί που δεν υπάρχει — ή να γεννηθεί **δεύτερη κάρτα αγγελίας**, που
+ * είναι ακριβώς το διπλότυπο που ο κανόνας N.0.2 απαγορεύει.
+ *
+ * 🔑 Ο **πυρήνας** είναι το `listing`. Τα υπόλοιπα είναι **συμφραζόμενα της οθόνης 2**,
+ * και η οθόνη 2 εξακολουθεί να τα περνά **ρητά**.
+ */
 interface ListingCardProps {
   readonly listing: PublicListing;
-  readonly isHighlighted: boolean;
-  readonly onHover: (id: string | null) => void;
+  /** Επισημασμένη από τον χάρτη; Χωρίς χάρτη, **ποτέ**. */
+  readonly isHighlighted?: boolean;
+  /** Ο δεσμός λίστα → χάρτης. Χωρίς χάρτη, **δεν υπάρχει τι να ειδοποιηθεί**. */
+  readonly onHover?: (id: string | null) => void;
   /** Τα ενεργά φίλτρα ως ερώτημα — ταξιδεύουν μαζί με τον επισκέπτη στην οθόνη 3. */
-  readonly filterQuery: string;
+  readonly filterQuery?: string;
+  /**
+   * **Λέει η κάρτα ποιος δημοσίευσε;**
+   *
+   * 🔴 **`false` ΜΟΝΟ όταν το λέει ήδη η ΙΔΙΑ Η ΣΕΛΙΔΑ.** Η γραμμή υπογραφής απαντά
+   * *«με ποιον μιλάω;»* — στη βιτρίνα ενός γραφείου η απάντηση είναι ο **τίτλος** της
+   * σελίδας, και επαναλαμβανόμενη σε κάθε κάρτα γίνεται θόρυβος που **μειώνει τη
+   * σάρωση** (ίδιο μετρημένο σκεπτικό Baymard με το «5 βασικά + 3 ειδικά»).
+   *
+   * ⛔ **ΔΕΝ είναι διακόπτης ύφους και ΔΕΝ γίνεται `false` για να «καθαρίσει» η οθόνη.**
+   * Η προέλευση είναι **συμμόρφωση**, όχι διακόσμηση *(ADR-841 §7 Α1.5: Οδηγία
+   * 2005/29/ΕΚ άρθρο 7(4)(β) · ΔΕΕ C-146/16)*. Απόκρυψη χωρίς να την αναλαμβάνει
+   * **άλλο ορατό στοιχείο της σελίδας** αφαιρεί πληροφορία που ο επισκέπτης δικαιούται.
+   */
+  readonly showAuthorship?: boolean;
 }
 
-export function ListingCard({ listing, isHighlighted, onHover, filterQuery }: ListingCardProps) {
+export function ListingCard({
+  listing,
+  isHighlighted = false,
+  onHover,
+  filterQuery = '',
+  showAuthorship = true,
+}: ListingCardProps) {
   const { t } = useTranslation(['search-results']);
   const price = resolveDisplayPrice(listing);
 
@@ -53,10 +86,10 @@ export function ListingCard({ listing, isHighlighted, onHover, filterQuery }: Li
     <li>
       <Link
         href={listingDetailHref(listing.id, filterQuery)}
-        onMouseEnter={() => onHover(listing.id)}
-        onMouseLeave={() => onHover(null)}
-        onFocus={() => onHover(listing.id)}
-        onBlur={() => onHover(null)}
+        onMouseEnter={() => onHover?.(listing.id)}
+        onMouseLeave={() => onHover?.(null)}
+        onFocus={() => onHover?.(listing.id)}
+        onBlur={() => onHover?.(null)}
         className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <article
@@ -126,6 +159,7 @@ export function ListingCard({ listing, isHighlighted, onHover, filterQuery }: Li
             🔑 **Η οθόνη δεν άλλαξε γραμμή για να συμβεί αυτό**, και αυτό ήταν το
             εύρημα: δεν έλειπε μηχανή, έλειπε **μία κλήση** στον διακομιστή.
           */}
+          {showAuthorship ? (
           <p className="mt-2 text-xs text-muted-foreground">
             {listing.authorship === 'owner-declared'
               ? t('search-results:card.authorship.ownerDeclared')
@@ -133,6 +167,7 @@ export function ListingCard({ listing, isHighlighted, onHover, filterQuery }: Li
                 ? t('search-results:card.authorship.agencyAnonymous')
                 : t('search-results:card.authorship.agency', { name: listing.agencyName })}
           </p>
+          ) : null}
         </article>
       </Link>
     </li>

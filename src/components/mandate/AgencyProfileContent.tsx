@@ -59,7 +59,9 @@ import { Button } from '@/components/ui/button';
 import { ShellSurface } from '@/core/containers/ShellSurface';
 import { formatLongDate } from '@/lib/intl-formatting';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { ListingCard } from '@/components/search-results/ListingCard';
 import { usePublicAgency } from '@/services/realtime/hooks/usePublicAgencies';
+import { usePublicAgencyListings } from '@/services/realtime/hooks/usePublicListings';
 import { usePublicPlace } from '@/services/realtime/hooks/usePublicPlace';
 import type { AgencyProfile } from '@/types/agency-profile';
 
@@ -171,6 +173,79 @@ function PlaceFact({ profile }: { readonly profile: AgencyProfile }): React.JSX.
   return <Fact label={t(PROFILE_KEYS.placeLabel)} value={value} />;
 }
 
+/**
+ * **ΤΙ ΕΧΕΙ ΣΤΗΝ ΑΓΟΡΑ** — η δεύτερη μισή της βιτρίνας (ADR-841 §7 Α6).
+ *
+ * Μέχρι τις 2026-09-01 η σελίδα έλεγε **ποιος** είναι το γραφείο και **τίποτα** για το
+ * τι πουλά. Το εμπόδιο δεν ήταν σχεδιαστικό: το `PublicListing` είχε **επωνυμία** και
+ * **καμία ταυτότητα**, άρα το φίλτρο θα ήταν πάνω σε συμβολοσειρά οθόνης — δύο γραφεία
+ * με ίδιο όνομα θα έδειχναν το ένα τις αγγελίες του άλλου, και μια **μετονομασία** θα
+ * άδειαζε τη βιτρίνα χωρίς να αλλάξει τίποτα στην πραγματικότητα. Η Α1 έδωσε το
+ * `agencyId`· αυτή η ενότητα το ξοδεύει.
+ *
+ * 🔑 **Η ΚΑΡΤΑ ΕΙΝΑΙ Η ΙΔΙΑ ΜΕ ΤΗΣ ΟΘΟΝΗΣ 2** ({@link ListingCard}) — δεύτερη κάρτα
+ * αγγελίας θα ήταν το διπλότυπο του N.0.2, και θα απέκλινε στην πρώτη αλλαγή του
+ * σχήματος *(η οθόνη 2 έμαθε ήδη τρία νέα πεδία μέσα σε δύο εβδομάδες)*. Και **δεν
+ * κοστίζει i18n**: το `search-results` είναι **εγγυημένο namespace του κελύφους**
+ * (`.i18n-shell-slice.json`), άρα τα κλειδιά της κάρτας ταξιδεύουν ήδη σε κάθε
+ * διαδρομή — το route slice αυτής της σελίδας δεν μεγαλώνει καθόλου γι' αυτές.
+ *
+ * ⚠️ **`showAuthorship={false}` — και είναι το ΜΟΝΟ σημείο που επιτρέπεται.** Η
+ * υπογραφή απαντά *«με ποιον μιλάω;»*· εδώ την απαντά ο **τίτλος** της σελίδας, δύο
+ * ενότητες πιο πάνω. Επαναλαμβανόμενη σε κάθε κάρτα θα ήταν θόρυβος, όχι διαφάνεια.
+ *
+ * 🔴 **ΤΕΣΣΕΡΙΣ ΚΑΤΑΣΤΑΣΕΙΣ, ΚΑΙ ΚΑΜΙΑ ΔΕΝ ΣΥΓΧΩΝΕΥΕΤΑΙ** — ίδιος κανόνας με την
+ * υπόλοιπη σελίδα: *«δεν έχει αγγελίες»* λέει στον επισκέπτη **ρώτα τον απευθείας**,
+ * ενώ *«δεν μπόρεσα να ρωτήσω»* λέει **ξαναδοκίμασε**. Ένα κοινό «τίποτα εδώ» θα τον
+ * έστελνε μακριά από γραφείο που **έχει** ακίνητα (N.12).
+ *
+ * 🔶 **Η ΘΕΣΗ ΤΗΣ ΕΝΟΤΗΤΑΣ ΕΙΝΑΙ ΑΝΑΣΤΡΕΨΙΜΗ, ΚΑΙ ΜΠΑΙΝΕΙ ΤΕΛΕΥΤΑΙΑ ΕΠΙΤΗΔΕΣ.** Το
+ * ADR-827 §9.8 αποφάσισε ότι *«το προφίλ ΕΙΝΑΙ ΚΟΥΜΠΙ»* — το αίτημα ανάθεσης είναι η
+ * μία πράξη της σελίδας. Μια λίστα **πάνω** από εκείνο θα το έσπρωχνε κάτω από το
+ * ταβάνι της οθόνης, δηλαδή θα **ανέτρεπε σιωπηλά** μετρημένη απόφαση άλλου εγγράφου.
+ * Αν ο Giorgio τη θέλει ψηλότερα, είναι **μετακίνηση ενός μπλοκ** — αλλά τότε το §9.8
+ * ενημερώνεται μαζί.
+ */
+function AgencyListings({ companyId }: { readonly companyId: string }): React.JSX.Element {
+  const { t } = useTranslation([AGENCY_PUBLIC_NS]);
+  const { listings, loading, error } = usePublicAgencyListings(companyId);
+
+  return (
+    <section className="flex flex-col gap-3">
+      <header className="flex flex-col gap-0.5">
+        <h2 className="m-0 text-lg font-semibold text-foreground">
+          {t(PROFILE_KEYS.listingsTitle)}
+        </h2>
+        {!loading && error === null && listings.length > 0 ? (
+          <p className="m-0 text-sm text-muted-foreground">
+            {t(PROFILE_KEYS.listingsCount, { count: listings.length })}
+          </p>
+        ) : null}
+      </header>
+
+      {loading ? (
+        <p className="m-0 text-sm text-muted-foreground">{t(PROFILE_KEYS.listingsLoading)}</p>
+      ) : error !== null ? (
+        <p className="m-0 text-sm text-muted-foreground">{t(PROFILE_KEYS.listingsFailed)}</p>
+      ) : listings.length === 0 ? (
+        <>
+          <p className="m-0 text-sm text-muted-foreground">{t(PROFILE_KEYS.listingsEmpty)}</p>
+          <p className="m-0 text-sm text-muted-foreground">{t(PROFILE_KEYS.listingsEmptyHint)}</p>
+        </>
+      ) : (
+        // ⚠️ Οι αγγελίες φτάνουν **ήδη ταξινομημένες** από το hook
+        //    (`orderShowcaseListings`) — καμία `sort()` σε αυτό το αρχείο, ίδιος
+        //    κανόνας με τον αδελφό κατάλογο: η σειρά είναι **απόφαση με διεύθυνση**.
+        <ul className="m-0 flex list-none flex-col gap-2 p-0">
+          {listings.map((listing) => (
+            <ListingCard key={listing.id} listing={listing} showAuthorship={false} />
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 export function AgencyProfileContent({
   companyId,
   alias,
@@ -258,6 +333,15 @@ export function AgencyProfileContent({
       <p className="m-0 rounded-md border border-border bg-card p-3 text-sm text-muted-foreground">
         {t(PROFILE_KEYS.noChannel)}
       </p>
+
+      {/*
+        🔴 **ADR-841 §7 (Α6) — Η ΒΙΤΡΙΝΑ ΔΕΙΧΝΕΙ ΤΑ ΑΚΙΝΗΤΑ ΤΗΣ.** Το `companyId` είναι
+        εδώ **μη-null εξ ορισμού**: αν ήταν `null`, η αναζήτηση θα είχε ήδη βγει
+        `absent` και η σελίδα δεν θα έφτανε ποτέ σε αυτό το σημείο. Ο τύπος το λέει
+        μέσω του `profile.companyId`, που είναι η **ταυτότητα του ίδιου εγγράφου** που
+        μόλις διαβάστηκε — όχι το prop, που μπορεί να είναι `null`.
+      */}
+      <AgencyListings companyId={profile.companyId} />
 
       <nav>
         <Link

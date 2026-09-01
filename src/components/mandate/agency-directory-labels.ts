@@ -51,4 +51,16 @@ export const PROFILE_KEYS = {
   requestHint: `${P}.requestHint`,
   noChannel: `${P}.noChannel`,
   backToDirectory: `${P}.backToDirectory`,
+  // ── ADR-841 §7 (Α6) — ΤΙ ΠΟΥΛΑ, ΟΧΙ ΜΟΝΟ ΠΟΙΟΣ ΕΙΝΑΙ ──────────────────────
+  //
+  // ⚠️ **Το `listingsFailed` ΔΕΝ συγχωνεύεται με το `listingsEmpty`** (N.12): «δεν
+  //    μπόρεσα να ρωτήσω» και «δεν έχει αγγελίες» είναι **διαφορετικές αλήθειες** για
+  //    τον επισκέπτη — η μία λέει «ξαναδοκίμασε», η άλλη «ρώτα τον απευθείας». Ίδια
+  //    διάκριση με τα `absentTitle` ⇄ `failedTitle` δύο γραμμές πιο πάνω.
+  listingsTitle: `${P}.listingsTitle`,
+  listingsCount: `${P}.listingsCount`,
+  listingsLoading: `${P}.listingsLoading`,
+  listingsEmpty: `${P}.listingsEmpty`,
+  listingsEmptyHint: `${P}.listingsEmptyHint`,
+  listingsFailed: `${P}.listingsFailed`,
 } as const;

@@ -17,7 +17,7 @@
  * ρωτά *«απαντούν ΤΑΥΤΟΣΗΜΑ;»* και όχι *«απορρίπτει το κενό;»*.
  */
 
-import { agencyDoorFor } from '../usePublicAgencies';
+import { agencyDoorFor } from '@/lib/agency/agency-door';
 
 const REAL = 'comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757';
 

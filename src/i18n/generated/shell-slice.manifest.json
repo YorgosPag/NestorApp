@@ -20,7 +20,7 @@
     "src/i18n/generated/routes/offers__offerId.el.json": "c31696a9e7137ec472ed8627bb4857c1e426260436fccd499c258a2cef7a3d22",
     "src/i18n/generated/routes/privacy-policy.el.json": "181e3b315e8ac63a3e927fa8bf073863b2aa706fd66a06f38d936dce70b0cee0",
     "src/i18n/generated/routes/pro.el.json": "0aaaad494729a064036f486e703f6fd3feec33e44c2a72b633b9b38dc5e1f652",
-    "src/i18n/generated/routes/pro__alias.el.json": "c00b6ebdc44237ab59dd62b601274d4276a7d38cc228d5856bf3e8bef6b613b6",
+    "src/i18n/generated/routes/pro__alias.el.json": "04a511635cc2c010bb5c9cc3bfced32ae3e7e76b5c59ebf6470989576239d67a",
     "src/i18n/generated/routes/profile.el.json": "e56491b916ea646622e9ca6c69dcba8eac0fca9d52f973b82ed89afd2ffae79e",
     "src/i18n/generated/routes/terms.el.json": "481f837696b407553f56de16128778617a86f72cf7b27471d61cd5793cf7d288",
     "src/i18n/generated/routes/test-harness__listing-shapes.el.json": "9b6aaaa831492e24807a1c83e0b505dc865c03afbd5638abf8ea2b990422b037",
@@ -65,7 +65,7 @@
     "search-results",
     "short-stay"
   ],
-  "inputsSha256": "b3815cf637f6b24aefbc86616fe02e9c4bcbec0ff0c6ad004ccf97987bf7a151",
+  "inputsSha256": "1d2d1a2aba1265347fd8fd926f0bd7b0ffeead88a11287296b8844f7ed06876c",
   "languages": [
     "el"
   ],
@@ -165,7 +165,7 @@
     "src/components/listing-detail/ListingPositionSection.tsx": "180fa77c3941aa93cf9a952035a2bf6d6c898aa5f27a69dd605a8969be82e07a",
     "src/components/listing-detail/ListingPriceBlock.tsx": "a4e7d8d65c8215961d9d4f44d7318c7dc784c356c0b155055232d47d9adce8a7",
     "src/components/mandate/AgencyDirectoryContent.tsx": "582c08a47ff28a815a5dbbf27334b63b90afbe0ac66e9b9753fe1907f6220d9a",
-    "src/components/mandate/AgencyProfileContent.tsx": "a9a27a791b07f2df39c917680abde9f8f97a09bc7823b7c3732c14ec8987fc5d",
+    "src/components/mandate/AgencyProfileContent.tsx": "18564a4aaf0e23e8e88c0032122ff75cc57ba4ca7fd45eddfc049c13c75baec3",
     "src/components/mandate/AgencyShowcaseContent.tsx": "038cf59662001318e0ca4eb098ed72d1985a01283a7f7d66d252ea5e2302391a",
     "src/components/mandate/BrokeredListingPageContent.tsx": "cabb12205ba753d61180786846648792ddfc25a1ae48d4bc951d469b703cfbed",
     "src/components/mandate/BrokeredMandateFields.tsx": "f7d33f6e55bf7665d93c240916dd964555b161ffb03b995c1b3c75f52e3cd542",
@@ -200,6 +200,7 @@
     "src/components/owner-property/offer-form-labels.ts": "84450453f446381b56960c061358d49f5cdb22f91beec2b6851b52c36f2d69d0",
     "src/components/owner-property/owner-mandate-labels.ts": "adcfbdb334735a6e95e59baa8a884cb44a94b6b6121d3f6bace70d87f91785c2",
     "src/components/projects/ika/map-shared/map-styles.ts": "f8d164ffcb83a5eaa2f491f51117203407d7fac4d3a1b78d2d28e49afc99a1b7",
+    "src/components/search-results/ListingCard.tsx": "c0729d7b126888535be44c1f3bc164be7d2cdeceec5288c98b3862009af51323",
     "src/components/search-results/ListingLedgerBar.tsx": "fe19b6ee40de7e137aa57dab65308b80f04872e4de13ddc20f41f4013db09e30",
     "src/components/search-results/ResultsMap.tsx": "9dc8657bcc511b716011cfa894927828e40fd4e1f6d82fc27927813affe7f4fb",
     "src/components/settings/brokerage/BrokerageCapabilityContent.tsx": "7e57255e158e46a57151edda2e6b81d8341b2cb6b020e3e72d5456cf002a12cd",
@@ -248,7 +249,7 @@
     "src/hooks/owner-property/useOwnerPropertyMedia.ts": "78217b2e2633d096137d135102eab0dae27aa1cb53bd8ad252325049267e1a4d",
     "src/hooks/useClickOutside.ts": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
     "src/i18n/route-slice.ts": "cef4139f7e7dae3606e6d8a153f72f3351646f4cb13c613e4e6560f991702459",
-    "src/lib/agency/agency-directory-order.ts": "6c60294f7ea85c066417d272233e5541cbaedf859654551658a7280261127087",
+    "src/lib/agency/agency-directory-order.ts": "a232dbd5be6d41c0ea847730f39a166a1c0a3a743337397e41b6f0ba563a970c",
     "src/lib/auth/brokerage-authority.ts": "147a6776dcc3e020043fb913dd34d48af38c33afaa7b66243b779e4eea412c5c",
     "src/lib/contacts/primary-email.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/demand/demand-aggregate.ts": "78e1df376b7bf05793d4ce7abf2e098af8c5c331921cca126c09fd0137eb8e90",
@@ -339,7 +340,7 @@
     "src/services/realtime/hooks/useMyDemands.ts": "e1c165204cd83dfe89cdcc508e4a6d4b95288f0f1c7140e2e1d3a9b4c31021b3",
     "src/services/realtime/hooks/useMyOwnerProperties.ts": "3d889986a63888a032bd73b760d53f89da7e27b44f107443452815aa256a3b46",
     "src/services/realtime/hooks/useOwnedDocuments.ts": "3aece721b2c3ed3aa7306dd9be4bb57b35cb2970a2a0fd650178cf34c650c53e",
-    "src/services/realtime/hooks/usePublicAgencies.ts": "ed7f2a00534269df64b1fd9e37fd26dc4341b78388528fd5edc22223d758af6a",
+    "src/services/realtime/hooks/usePublicAgencies.ts": "a4f830416604c82da9052e0efa90fde9d27b3674252a00e4943c28e6ec6b4170",
     "src/services/realtime/hooks/usePublicPlace.ts": "c9c824b226fdf6d13ff620bbaf9113b1317c3967002f7e86e29485a243c08091",
     "src/services/upload/image-asset-upload.ts": "66fafaa97e378cf5f506307cdc1024b70a39c54d6002cbcce2c45620bb405ad8",
     "src/services/upload/utils/storage-path-user.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -2319,6 +2320,12 @@
             "mandate.profile.failedTitle",
             "mandate.profile.gemiHint",
             "mandate.profile.gemiLabel",
+            "mandate.profile.listingsCount",
+            "mandate.profile.listingsEmpty",
+            "mandate.profile.listingsEmptyHint",
+            "mandate.profile.listingsFailed",
+            "mandate.profile.listingsLoading",
+            "mandate.profile.listingsTitle",
             "mandate.profile.loading",
             "mandate.profile.noChannel",
             "mandate.profile.placeLabel",
@@ -2328,6 +2335,25 @@
             "mandate.profile.requestHint"
           ],
           "prefixes": [],
+          "whole": false
+        },
+        "search-results": {
+          "keys": [
+            "card.areaSqm",
+            "card.authorship.agency",
+            "card.authorship.agencyAnonymous",
+            "card.authorship.ownerDeclared",
+            "card.bedrooms",
+            "card.floor",
+            "card.groundFloor",
+            "card.priceMissing.nightlyRateMissing",
+            "card.priceMissing.notListed",
+            "card.priceMissing.rentPriceMissing",
+            "card.priceMissing.salePriceMissing"
+          ],
+          "prefixes": [
+            "card.offer"
+          ],
           "whole": false
         }
       }
@@ -3220,6 +3246,7 @@
     "src/lib/a11y/keyboard-scope.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/a11y/use-dialog-focus-restore.ts": "8fd6edd13dfa0351fa57df3a923d8a5bbcf9c8887d24ad13f6a7654922c08b47",
     "src/lib/a11y/use-modal-keyboard-scope.ts": "1aefe4a7211496c61e829d96a460117b612590ed3e64f4ede0d236117ae87c83",
+    "src/lib/agency/agency-door.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/api/api-client-transport.ts": "4c1f4b6c42a5e621fdcbe95fdffc557c6e889ab088768e42184a5cbc133bc854",
     "src/lib/api/api-client-types.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/api/enterprise-api-client.ts": "e88e4df6741fac960bb0bed5d0fb7acc7b2409cfef2777d3726649381dea1c18",
@@ -3271,6 +3298,7 @@
     "src/lib/listings/listing-filters.ts": "b0ced7fc27e45ce841f3859a0a174c83c2eb1b7ad1f11b2460f08cd87737972f",
     "src/lib/listings/listing-map-shape.ts": "10781da0d2016406c2389a524898b7c497fc759056875a698840e738119800ab",
     "src/lib/listings/listing-routes.ts": "b923f8af7e5c011d93d1e0d9974851fee69183450fadb85bc7f93eb3ce736bae",
+    "src/lib/listings/listing-showcase-order.ts": "0b419572fec4e0efd798b6ffdd15ac4385be8430ecc9785dd48e1ad550ea8556",
     "src/lib/listings/public-listing-from-document.ts": "63b67194ce12526e5933fa82ed2b9405f2f62e0924c4f788c2eff41f1fffe244",
     "src/lib/listings/public-listing-schema.ts": "3f309c71b261ca33437d1cb036a68623b1d2727fdf19f54bafbbbe54caa3d992",
     "src/lib/location/location-provenance.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -3279,6 +3307,7 @@
     "src/lib/occupancy/occupancy-mode.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/occupancy/occupancy-resource.ts": "c4e27446e66b8a1860fe5abe51e30729a49b8836cc72812ff025a710e85ba19f",
     "src/lib/offers/derive-commercial-status.ts": "29fe36af92d0e3fb1ad7c2f06e0e7065b2cfb97da9025790ae6c2d84693b373e",
+    "src/lib/ordering/total-name-order.ts": "6c174c936bb0286a58ba7b4187ac0f1037eb95526ecd51c2abbd594f39b2ea1a",
     "src/lib/owner-property/owner-property-routes.ts": "b923f8af7e5c011d93d1e0d9974851fee69183450fadb85bc7f93eb3ce736bae",
     "src/lib/properties/price-resolver.ts": "46bb0913578361182cc61a022e2079b374d3a2ec6ac9c832ab17fe4d50a1c820",
     "src/lib/routes/accountRoutes.ts": "b82193379953e61a92c5adeb40bcb33597727241d6b6d920b57b2ae361242f01",
@@ -3366,7 +3395,7 @@
     "src/services/realtime/hooks/tenant-scoped-error.ts": "aad28da520d047ef7280e72a53d118f6726c6fa133ba7c6c0de3a68a1941b127",
     "src/services/realtime/hooks/use-realtime-entity-events.ts": "00070fc2701d75d65341bb80e1ef29bc54c395b8e1ef144fddd4dbee8f8feaf3",
     "src/services/realtime/hooks/useOrganizationCapability.ts": "f98c8dacbdd520e7bff09c81b3f8bd628e318fa4a49b248f9b087fea8dbd9e0b",
-    "src/services/realtime/hooks/usePublicListings.ts": "e728ad7ce8cd4ac541596f5e245db70656327c7d5a8402907ed38b0d03f9d3d3",
+    "src/services/realtime/hooks/usePublicListings.ts": "9a57d99d824d7868b495fd2de5d02e5c67a500739416be2011d76a2b7630257f",
     "src/services/realtime/hooks/useRealtimeBuildings.ts": "b583deccd367b8c1eab51101e76d1de0ad6a868df4934209bd055cf5d676fdad",
     "src/services/realtime/hooks/useRealtimeProperties.ts": "e3cd736c9ae25a2ab3c62b99b69b6233bb6edfbc4fb7b48a14f8d67f6beaf03a",
     "src/services/realtime/types.ts": "3f55257ee4e425ae42d9f98089c9f64c2fe6a0f7b1ac753dbbaffe6f94e193ab",
@@ -3495,8 +3524,8 @@
     "dynamicBoundaries": 18,
     "matchedKeys": 135,
     "routeBoundaries": 0,
-    "shellFiles": 516,
-    "sliceBytes": 333543
+    "shellFiles": 519,
+    "sliceBytes": 334408
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

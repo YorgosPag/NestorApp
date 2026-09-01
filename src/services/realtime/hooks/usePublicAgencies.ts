@@ -44,6 +44,7 @@ import { collection, doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
+import { agencyDoorFor } from '@/lib/agency/agency-door';
 import { orderAgencies } from '@/lib/agency/agency-directory-order';
 import type { AgencyProfile } from '@/types/agency-profile';
 
@@ -129,37 +130,6 @@ export type PublicAgencyLookup =
   | { readonly state: 'found'; readonly profile: AgencyProfile }
   | { readonly state: 'absent' }
   | { readonly state: 'error'; readonly message: string };
-
-/**
- * **Η ΠΟΡΤΑ: ρωτάμε καθόλου;** — η κρίση του §9.4, βγαλμένη από το `useEffect`.
- *
- * ────────────────────────────────────────────────────────────────────────────
- * 🔴 ΓΙΑΤΙ ΞΕΧΩΡΙΣΤΗ, ΚΑΘΑΡΗ ΣΥΝΑΡΤΗΣΗ
- * ────────────────────────────────────────────────────────────────────────────
- *
- * Είναι **τρεις γραμμές**, και θα ήταν φυσικό να μείνουν μέσα στο effect. Δεν
- * μένουν, για τον λόγο που το `usePublicPlace` γράφει στην κεφαλίδα του: μια κρίση
- * μέσα σε `useEffect` ελέγχεται **μόνο** με προσομοίωση Firestore — δηλαδή σε κόσμο
- * που δεν υπάρχει — και η **σιωπηλή** εκδοχή της περνά κάθε άγκυρα.
- *
- * 🔑 **Και εδώ η κρίση είναι κανόνας ιδιωτικότητας, όχι άμυνα εισόδου.** Το `null`
- * *(«το ψευδώνυμο δεν λύθηκε»)* και η κενή συμβολοσειρά οφείλουν να δώσουν **την ίδια
- * απάντηση με το «λύθηκε αλλά δεν δημοσίευσε»**. Αν κάποιος «βελτίωνε» το `null` σε
- * `{ state: 'error' }` — που μοιάζει πιο ειλικρινές — η σελίδα θα γινόταν **μαντείο**:
- * σφάλμα για ανύπαρκτο ψευδώνυμο, «δεν δημοσιεύεται» για υπαρκτό. Δηλαδή απαρίθμηση
- * γραφείων, ένα ερώτημα τη φορά (Ε-5 §4 #1).
- *
- * ⚠️ Και το πρακτικό: το `doc(db, …, '')` **πετά**, δηλαδή λευκή οθόνη από εξαίρεση
- * μέσα σε effect.
- */
-export function agencyDoorFor(
-  companyId: string | null,
-): { readonly kind: 'ask'; readonly companyId: string } | { readonly kind: 'absent' } {
-  if (companyId === null) return { kind: 'absent' };
-
-  const trimmed = companyId.trim();
-  return trimmed === '' ? { kind: 'absent' } : { kind: 'ask', companyId: trimmed };
-}
 
 /**
  * **Η μία βιτρίνα, ζωντανά** — η ανάγνωση της σελίδας προφίλ.

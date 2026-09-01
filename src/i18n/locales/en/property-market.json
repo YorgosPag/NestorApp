@@ -685,7 +685,13 @@
       "requestCta": "Ask them to take on your property",
       "requestHint": "A written request with a date and terms will be drawn up. Nothing of yours is sent until the agency accepts.",
       "noChannel": "This agency publishes no phone number and no email — by design. A brokerage contract is concluded in writing, and a phone call leaves no record that protects you.",
-      "backToDirectory": "All agencies"
+      "backToDirectory": "All agencies",
+      "listingsTitle": "What it has on the market right now",
+      "listingsCount": "{count, plural, one {# listing} other {# listings}}",
+      "listingsLoading": "Loading listings…",
+      "listingsEmpty": "This agency has no published listings right now.",
+      "listingsEmptyHint": "That does not mean it is not working — it means it has published nothing here. You can still ask it to take on your own property.",
+      "listingsFailed": "We could not load its listings. The agency is there — please try again shortly."
     },
     "request": {
       "title": "Request an assignment",
