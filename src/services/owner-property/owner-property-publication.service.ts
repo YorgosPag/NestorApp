@@ -23,7 +23,7 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { nowISO } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
-import { readCompanyPublicName } from '@/services/company/company-public-name.reader';
+import { readPublicAgencyIdentity } from '@/services/company/company-public-name.reader';
 import {
   placeKnowledgeFromOwnerProperty,
   projectableFromOwnerProperty,
@@ -56,7 +56,7 @@ async function republishOwnerListing(
 ): Promise<PublishOutcome> {
   const at = nowISO();
 
-  // 🔑 **Η επωνυμία διαβάζεται ΕΔΩ, τη στιγμή της δημοσίευσης** (§8.33) — μία ανάγνωση
+  // 🔑 **Η ταυτότητα διαβάζεται ΕΔΩ, τη στιγμή της δημοσίευσης** (§8.33) — μία ανάγνωση
   // εγγράφου ανά **γραφή**, όχι ανά ανάγνωση αγγελίας. Ο ιδιώτης δεν πληρώνει τίποτα:
   // το `authorCompanyId` του είναι `null` και ο αναγνώστης επιστρέφει αμέσως.
   //
@@ -65,12 +65,21 @@ async function republishOwnerListing(
   // επόμενη επανασύνθεση. Είναι το ίδιο συμβόλαιο που έχει ήδη κάθε πεδίο αυτής της
   // προβολής (`title`, `commercialStatus`): η προβολή είναι **στιγμιότυπο**, και το
   // `projectedAt` λέει πότε τραβήχτηκε.
-  const agencyName = await readCompanyPublicName(adminDb, property.authorCompanyId);
+  //
+  // ✅ **ΚΑΙ ΤΟ ΠΑΡΑΘΥΡΟ ΕΚΛΕΙΣΕ** (ADR-841 §7 Α1.6): η **μία** διαδρομή που
+  //    μετονομάζει εταιρεία καλεί πλέον την {@link republishListingsForCompany}. Η
+  //    σημείωση από πάνω μένει γιατί περιγράφει το **συμβόλαιο** — στιγμιότυπο, όχι
+  //    ζωντανή σύνδεση· αυτό που άλλαξε είναι ότι κάποιος **σκανδαλίζει** τη
+  //    διόρθωση αντί να την περιμένει.
+  //
+  // 🔑 **Η ταυτότητα ταξιδεύει ΜΑΖΙ με το όνομα** ώστε η επανασύνθεση να είναι
+  //    **επισκευή** (ξαναρωτά την πηγή) και όχι δεύτερη μαντεψιά.
+  const agency = await readPublicAgencyIdentity(adminDb, property.authorCompanyId);
 
   return writeListingProjection(
     adminDb,
     property.id,
-    projectableFromOwnerProperty(property, at, agencyName),
+    projectableFromOwnerProperty(property, at, agency),
     placeKnowledgeFromOwnerProperty(property, at),
     at,
   );

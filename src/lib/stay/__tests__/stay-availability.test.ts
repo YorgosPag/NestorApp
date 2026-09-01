@@ -54,6 +54,7 @@ function listingOf(
     bedrooms: 2,
     authorship: 'owner-declared',
     agencyName: null,
+    agencyId: null,
     title: 'Κατάλυμα',
     legality: [],
     projectedAt: '2026-08-01T00:00:00.000Z',

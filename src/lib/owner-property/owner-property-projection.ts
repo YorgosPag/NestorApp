@@ -43,6 +43,7 @@ import {
 } from '@/services/listings/public-listing-projection';
 import type { PublishOutcome } from '@/services/listings/publish-public-listing';
 import { mandatesOf } from '@/types/owner-property-mandate';
+import { NO_AGENCY_IDENTITY, type PublicAgencyIdentity } from '@/types/public-listing';
 import {
   isOwnerPropertyOnTheMarket,
   listingAuthorshipOf,
@@ -69,7 +70,7 @@ import {
 export function projectableFromOwnerProperty(
   property: OwnerProperty,
   atISO: string,
-  agencyName: string | null = null,
+  agency: PublicAgencyIdentity = NO_AGENCY_IDENTITY,
 ): ProjectableProperty {
   /**
    * 🔴 **Η ΑΠΟΣΥΡΣΗ ΕΚΦΡΑΖΕΤΑΙ ΩΣ «ΚΑΜΙΑ ΔΙΑΘΕΣΗ», ΟΧΙ ΩΣ ΔΕΥΤΕΡΟ ΚΡΙΤΗΡΙΟ.**
@@ -136,7 +137,7 @@ export function projectableFromOwnerProperty(
      * το ίδιο γεγονός, και θα απέκλινε την πρώτη φορά που κάποιος έγραφε το ένα
      * χωρίς το άλλο — ίδιο σκεπτικό με το `commercialStatus` της Α20.
      *
-     * ⚠️ **Η επωνυμία περνιέται από τον καλούντα και ΔΕΝ διαβάζεται εδώ.** Αυτό το
+     * ⚠️ **Η ταυτότητα περνιέται από τον καλούντα και ΔΕΝ διαβάζεται εδώ.** Αυτό το
      * αρχείο είναι **leaf**: καθαρές συναρτήσεις, καμία Firestore. Μια ανάγνωση
      * εταιρείας εδώ μέσα θα το έκανε αδύνατο να δοκιμαστεί χωρίς βάση — και θα
      * έκρυβε ένα αίτημα δικτύου μέσα σε συνάρτηση που λέγεται «μετάφραση».
@@ -144,9 +145,13 @@ export function projectableFromOwnerProperty(
      * ⚠️ **`null` σημαίνει «δεν ξέρουμε επωνυμία», ΟΧΙ «ιδιώτης».** Το δεύτερο το
      * λέει το `authorship`, και τα δύο πεδία **δεν** συμπτύσσονται: μια αγγελία
      * γραφείου του οποίου η επωνυμία δεν διαβάστηκε είναι **ακόμη** αγγελία γραφείου.
+     *
+     * 🔑 **ΕΝΑ όρισμα, ΔΥΟ πεδία** (ADR-841 §7 Α1): ήταν σκέτη συμβολοσειρά μέχρι τις
+     * 2026-09-01. Ταυτότητα και όνομα ταξιδεύουν πλέον **δεμένα**, ώστε να μην μπορεί
+     * η επωνυμία της Α να βρεθεί δίπλα στην ταυτότητα της Β.
      */
     authorship: listingAuthorshipOf(mandatesOf(property)),
-    agencyName,
+    agency,
   };
 }
 

@@ -51,6 +51,7 @@ const PRODUCTION_V1: StoredListingDocument = {
   title: 'TEST-2 ADR-834',
   authorship: 'owner-declared',
   agencyName: null,
+  agencyId: null,
   projectedAt: '2026-08-31T06:46:59.692Z',
 };
 

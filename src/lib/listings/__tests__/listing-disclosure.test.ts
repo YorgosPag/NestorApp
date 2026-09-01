@@ -58,6 +58,9 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     place: null,
     authorship: 'agency',
     agencyName: null,
+    // ✅ **ADR-841 §7 (Α1)** — και η Κ1 κοκκίνισε ξανά, όπως οφείλει: ο παρονομαστής
+    //    οφείλει να είναι **πλήρης**, αλλιώς δεν είναι παρονομαστής (μάθημα 31/08).
+    agencyId: null,
     floor: 1,
     bedrooms: 3,
     title: 'Δοκιμή',

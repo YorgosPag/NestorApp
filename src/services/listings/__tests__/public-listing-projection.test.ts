@@ -160,6 +160,12 @@ describe('Κ4 — η προβολή δεν κουβαλά ΚΑΜΙΑ ταυτό�
       // μπήκαν**, και αυτό είναι η δουλειά της. Πέρασαν από απόφαση: η **κλάση**
       // προέλευσης δεν είναι ταυτότητα, και η **επωνυμία** είναι επιχείρησης, ποτέ
       // προσώπου (απόφαση Giorgio 2026-08-20). Δες `Υ1`-`Υ3` πιο κάτω.
+      // 🔴 **ΠΕΜΠΤΗ ΦΟΡΑ ΠΟΥ ΑΥΤΗ Η ΑΓΚΥΡΑ ΚΟΚΚΙΝΙΣΕ (ADR-841 §7 Α1, 2026-09-01)** —
+      // το `agencyId` πέρασε από **γραμμένη** απόφαση: είναι το `companyId`, που το
+      // `firestore.rules` δίνει **ήδη** σε ανώνυμο αναγνώστη ως κλειδί του
+      // `agency_profiles/{companyId}`. Δεν ανοίγει πόρτα — δίνει **συνδεσιμότητα**,
+      // και είναι ό,τι κάνει την επωνυμία **επαληθεύσιμη** αντί για ανεπιβεβαίωτη.
+      'agencyId',
       'agencyName',
       'areaSqm', 'authorship', 'bedrooms', 'commercial', 'commercialStatus', 'coverImage',
       'floor', 'id',
@@ -247,24 +253,41 @@ describe('Κ4 — η προβολή δεν κουβαλά ΚΑΜΙΑ ταυτό�
   // ===========================================================================
 
   describe('🔴 Υ — ο επισκέπτης μαθαίνει ΤΙ ΕΙΔΟΥΣ γνώση είναι αυτή η γραμμή', () => {
-    it('🔑 Υ1 — αγγελία ΓΡΑΦΕΙΟΥ κουβαλά κλάση ΚΑΙ επωνυμία', () => {
+    it('🔑 Υ1 — αγγελία ΓΡΑΦΕΙΟΥ κουβαλά κλάση ΚΑΙ επωνυμία ΚΑΙ ταυτότητα', () => {
       const listing = buildPublicListing(
-        { ...REAL_MAISONETTE, authorship: 'agency', agencyName: 'ΑΛΦΑ ΜΕΣΙΤΙΚΗ' },
+        {
+          ...REAL_MAISONETTE,
+          authorship: 'agency',
+          agency: { id: 'comp_alfa', name: 'ΑΛΦΑ ΜΕΣΙΤΙΚΗ' },
+        },
         NO_PLACE,
         AT,
       )!;
       expect(listing.authorship).toBe('agency');
       expect(listing.agencyName).toBe('ΑΛΦΑ ΜΕΣΙΤΙΚΗ');
+      // ADR-841 §7 (Α1.6): χωρίς την ταυτότητα, η επωνυμία είναι **ανεπαλήθευτη**.
+      expect(listing.agencyId).toBe('comp_alfa');
     });
 
-    it('🔴 Υ2 — αγγελία ΙΔΙΩΤΗ: καμία επωνυμία υπάρχει καν ως τιμή', () => {
+    it('🔴 Υ2 — αγγελία ΙΔΙΩΤΗ: ούτε επωνυμία ούτε ΤΑΥΤΟΤΗΤΑ υπάρχει καν ως τιμή', () => {
       const listing = buildPublicListing(
-        { ...REAL_MAISONETTE, authorship: 'owner-declared', agencyName: null },
+        { ...REAL_MAISONETTE, authorship: 'owner-declared', agency: null },
         NO_PLACE,
         AT,
       )!;
       expect(listing.authorship).toBe('owner-declared');
       expect(listing.agencyName).toBeNull();
+      expect(listing.agencyId).toBeNull();
+    });
+
+    it('🔑 Υ4 — ΓΡΑΦΕΙΟ ΧΩΡΙΣ ΕΠΩΝΥΜΙΑ: η ταυτότητα ΕΠΙΖΕΙ — αλλιώς δεν ξέρουμε ποιον να ξαναρωτήσουμε', () => {
+      const listing = buildPublicListing(
+        { ...REAL_MAISONETTE, agency: { id: 'comp_anonymo', name: null } },
+        NO_PLACE,
+        AT,
+      )!;
+      expect(listing.agencyName).toBeNull();
+      expect(listing.agencyId).toBe('comp_anonymo');
     });
 
     it('🔑 Υ3 — ΑΠΟΥΣΙΑ ⇒ `agency`, γιατί ο μόνος παραγωγός που το παραλείπει είναι το `properties`', () => {
@@ -277,6 +300,7 @@ describe('Κ4 — η προβολή δεν κουβαλά ΚΑΜΙΑ ταυτό�
       // πάντα). Ένα `owner-declared` εδώ θα **αφαιρούσε** γνώση που έχουμε.
       expect(listing.authorship).toBe('agency');
       expect(listing.agencyName).toBeNull();
+      expect(listing.agencyId).toBeNull();
     });
   });
 

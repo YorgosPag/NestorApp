@@ -50,6 +50,7 @@ function listing(id: string, mapped: boolean): PublicListing {
     bedrooms: 2,
     authorship: 'owner-declared',
     agencyName: null,
+    agencyId: null,
     title: `Κατάλυμα ${id}`,
     legality: [],
     projectedAt: '2026-08-01T00:00:00.000Z',

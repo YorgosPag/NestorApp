@@ -278,12 +278,30 @@ describe('🔴 Μ — καμία αγγελία γραφείου στον κόσ
     ).toBeNull();
   });
 
-  it('🔑 Μ6 — και ΚΑΜΙΑ ταυτότητα του γραφείου δεν διαρρέει στην προβολή', () => {
+  /**
+   * 🔴 **ΔΙΟΡΘΩΘΗΚΕ, ΔΕΝ ΧΑΛΑΡΩΣΕ (ADR-841 §7 Α1, 2026-09-01).** Εδώ έγραφε *«καμία
+   * ταυτότητα **του γραφείου** δεν διαρρέει»* — και ήταν πράσινο για **λάθος λόγο**:
+   * το `publish()` δεν περνά ταυτότητα, οπότε η άγκυρα μετρούσε την **προεπιλογή**,
+   * όχι τη ζωντανή διαδρομή. Από σήμερα η ταυτότητα του γραφείου **δημοσιεύεται
+   * επίτηδες** *(δες `Υ3`)*, άρα η παλιά διατύπωση θα ήταν **δεύτερη αλήθεια** —
+   * άγκυρα που λέει το αντίθετο από τον κώδικα, πράσινη επειδή κοιτά αλλού.
+   *
+   * 🔑 Αυτό που μένει αληθινό και **αξίζει** άγκυρα είναι **δύο** πράγματα:
+   * 1. η ταυτότητα του **ΠΕΛΑΤΗ** δεν φεύγει **ποτέ** *(εκείνος δεν διάλεξε να φανεί)*·
+   * 2. αυτό το αρχείο είναι **leaf**: **δεν εφευρίσκει** ταυτότητα γραφείου — αν δεν
+   *    του τη δώσει ο καλών, δεν υπάρχει. Έτσι η ανάγνωση εταιρείας μένει **έξω** από
+   *    μια συνάρτηση που λέγεται «μετάφραση».
+   */
+  it('🔑 Μ6 — ο ΠΕΛΑΤΗΣ δεν διαρρέει ποτέ, και η μετάφραση ΔΕΝ ΕΦΕΥΡΙΣΚΕΙ γραφείο', () => {
     const confirmed = brokeredOwnerProperty({ confirmation: 'confirmed', decidedAt: AT });
     const flat = JSON.stringify(publish(confirmed));
 
-    expect(flat).not.toContain('comp_alfa');
+    // 1) Ο πελάτης — **απόλυτο**, καμία απόφαση δεν το ανατρέπει.
     expect(flat).not.toContain('cont_kostas');
+    // 2) Χωρίς ταυτότητα από τον καλούντα, το leaf δεν βγάζει καμία από το πουθενά —
+    //    παρότι το `authorCompanyId: 'comp_alfa'` κάθεται μέσα στο έγγραφο εισόδου.
+    expect(confirmed.authorCompanyId).toBe('comp_alfa');
+    expect(flat).not.toContain('comp_alfa');
   });
 });
 
@@ -303,16 +321,20 @@ describe('🔴 Μ — καμία αγγελία γραφείου στον κόσ
  * `agencyName` σβησμένο, **όλη η σουίτα έμενε πράσινη**. Δηλαδή το πεδίο μπορούσε να
  * λέει ψέματα για κάθε αγγελία γραφείου και κανείς δεν θα το μάθαινε.
  */
+/** Η ταυτότητα του γραφείου ως **ζεύγος** (ADR-841 §7 Α1.6) — ποτέ σκέτο όνομα. */
+const ALFA = { id: 'comp_alfa', name: 'ΑΛΦΑ ΜΕΣΙΤΙΚΗ' } as const;
+
 describe('🔴 Υ — ο επισκέπτης μαθαίνει ΠΟΙΟΣ δημοσίευσε, μέσα από τη ΜΕΤΑΦΡΑΣΗ', () => {
   it('🔑 Υ1 — αγγελία ΙΔΙΩΤΗ ⇒ `owner-declared`, καμία επωνυμία', () => {
     const listing = publish(validOwnerProperty())!;
     expect(listing.authorship).toBe('owner-declared');
     expect(listing.agencyName).toBeNull();
+    expect(listing.agencyId).toBeNull();
   });
 
   it('🔴 Υ2 — αγγελία ΓΡΑΦΕΙΟΥ ⇒ `agency`, ΜΕΣΑ ΑΠΟ ΤΗΝ ΕΝΤΟΛΗ', () => {
     const confirmed = brokeredOwnerProperty({ confirmation: 'confirmed', decidedAt: AT });
-    const projectable = projectableFromOwnerProperty(confirmed, AT, 'ΑΛΦΑ ΜΕΣΙΤΙΚΗ');
+    const projectable = projectableFromOwnerProperty(confirmed, AT, ALFA);
 
     // Ο παρονομαστής: η **ίδια** αγγελία ως ιδιώτη δίνει την άλλη τιμή. Χωρίς αυτό,
     // ένα καρφωμένο `'agency'` θα ήταν εξίσου πράσινο.
@@ -320,13 +342,13 @@ describe('🔴 Υ — ο επισκέπτης μαθαίνει ΠΟΙΟΣ δημ
       'owner-declared',
     );
     expect(projectable.authorship).toBe('agency');
-    expect(projectable.agencyName).toBe('ΑΛΦΑ ΜΕΣΙΤΙΚΗ');
+    expect(projectable.agency).toEqual(ALFA);
   });
 
   it('🔴 Υ3 — η επωνυμία ταξιδεύει ΩΣ ΤΗ ΔΗΜΟΣΙΑ ΑΓΓΕΛΙΑ, όχι μόνο ως το ενδιάμεσο', () => {
     const confirmed = brokeredOwnerProperty({ confirmation: 'confirmed', decidedAt: AT });
     const listing = buildPublicListing(
-      projectableFromOwnerProperty(confirmed, AT, 'ΑΛΦΑ ΜΕΣΙΤΙΚΗ'),
+      projectableFromOwnerProperty(confirmed, AT, ALFA),
       placeKnowledgeFromOwnerProperty(confirmed, AT),
       AT,
     );
@@ -334,6 +356,9 @@ describe('🔴 Υ — ο επισκέπτης μαθαίνει ΠΟΙΟΣ δημ
     expect(listing).not.toBeNull();
     expect(listing?.authorship).toBe('agency');
     expect(listing?.agencyName).toBe('ΑΛΦΑ ΜΕΣΙΤΙΚΗ');
+    // ADR-841 §7 (Α1.6): και η **ταυτότητα** ταξιδεύει — αλλιώς το αντίγραφο της
+    // επωνυμίας δεν μπορεί ποτέ να επαληθευτεί ούτε να επισκευαστεί.
+    expect(listing?.agencyId).toBe('comp_alfa');
   });
 
   it('🔑 Υ4 — γραφείο ΧΩΡΙΣ γνωστή επωνυμία μένει «γραφείο», δεν γίνεται «ιδιώτης»', () => {
@@ -341,9 +366,14 @@ describe('🔴 Υ — ο επισκέπτης μαθαίνει ΠΟΙΟΣ δημ
     // δεν διαβάστηκε είναι **ακόμη** αγγελία γραφείου. Η οθόνη έχει τρίτο κείμενο
     // ακριβώς γι' αυτό.
     const confirmed = brokeredOwnerProperty({ confirmation: 'confirmed', decidedAt: AT });
-    const projectable = projectableFromOwnerProperty(confirmed, AT, null);
+    const projectable = projectableFromOwnerProperty(confirmed, AT, {
+      id: 'comp_alfa',
+      name: null,
+    });
     expect(projectable.authorship).toBe('agency');
-    expect(projectable.agencyName).toBeNull();
+    expect(projectable.agency?.name).toBeNull();
+    // 🔑 Και η **ταυτότητα επιζεί**: είναι η μόνη ένδειξη ποιον να ξαναρωτήσουμε.
+    expect(projectable.agency?.id).toBe('comp_alfa');
   });
 });
 

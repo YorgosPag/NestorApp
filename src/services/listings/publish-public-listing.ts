@@ -36,11 +36,31 @@ import {
   type AddressLike,
 } from './public-listing-projection';
 import type { PlaceRef } from '@/types/geo/public-place';
+import {
+  createAgencyIdentityResolver,
+  type AgencyIdentityResolver,
+} from '@/services/company/company-public-name.reader';
 
 const logger = createModuleLogger('publish-public-listing');
 
 /** Τι έκανε ο γραφέας — ρητά, ώστε η επανασύνθεση να μπορεί να **μετρήσει**. */
 export type PublishOutcome = 'published' | 'withdrawn' | 'failed';
+
+/**
+ * **Το ωμό έγγραφο `properties/{id}` όσο το χρειάζεται ο γραφέας** — η προβολή, συν τα
+ * **τρία** πεδία που δεν ζουν σε αυτήν επειδή απαντούν σε ερωτήσεις **ιεραρχίας**.
+ *
+ * 🔑 Τα `buildingId`/`projectId` λύνουν τον **τόπο**· το `companyId` λύνει το
+ * **ποιος δημοσιεύει** (ADR-841 §7 Α1). Ζουν εδώ και όχι στο {@link ProjectableProperty}
+ * γιατί η προβολή είναι **καθαρή**: δέχεται λυμένες απαντήσεις, δεν κρατά κλειδιά για
+ * να τις βρει μόνη της.
+ */
+export type ListingSourceProperty = ProjectableProperty & {
+  readonly buildingId?: string | null;
+  readonly projectId?: string | null;
+  /** Ο **ιδιοκτήτης** του ακινήτου, γραμμένος από το `createEntity` (ADR-238). */
+  readonly companyId?: string | null;
+};
 
 /**
  * Μαζεύει ό,τι ξέρουμε για τον τόπο ενός ακινήτου, **ανεβαίνοντας την αλυσίδα της Α1**:
@@ -133,17 +153,54 @@ async function readBuildingDoc(
  * `'failed'` **ονομαστικά** ώστε ο καλών να το καταγράψει και η επανασύνθεση να το
  * διορθώσει — που είναι η διαφορά ανάμεσα σε «*σιωπηλά μπαγιάτικο*» και «*γνωστά
  * εκκρεμές*».
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 Η ΚΛΗΣΗ ΠΟΥ ΕΛΕΙΠΕ (ADR-841 §7 Α1, 2026-09-01)
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Μέχρι σήμερα **κάθε** αγγελία έργου έγραφε `agencyName: null` και η οθόνη έλεγε
+ * *«Από μεσιτικό γραφείο»* — χωρίς επωνυμία. **Δεν έλειπε μηχανή**: η είσοδος, η
+ * μεταφορά, ο αναγνώστης και η οθόνη υπήρχαν και οι τέσσερις· απλώς **κανείς δεν
+ * καλούσε τον αναγνώστη**. Ο γραφέας του **ιδιώτη** τον καλούσε ήδη σωστά
+ * (`owner-property-publication.service.ts`) — εδώ γίνεται το ίδιο, στο **συμμετρικό**
+ * σημείο.
+ *
+ * 🔑 **Ο επιλυτής είναι ΟΡΙΣΜΑ, για τον ΙΔΙΟ λόγο που το `projectedAt` είναι όρισμα**
+ * του {@link writeListingProjection}: ένα πέρασμα οφείλει να μιλά για **μία** στιγμή
+ * και **μία** εικόνα των εταιρειών. Ο βρόχος του έργου φτιάχνει **έναν** επιλυτή και
+ * τον περνά ⇒ **μία** ανάγνωση, όχι N. Ο μεμονωμένος καλών δεν χρειάζεται να ξέρει
+ * ότι υπάρχει: η προεπιλογή είναι επιλυτής **μιας χρήσης**.
+ *
+ * ⚠️ **`Promise.all` και όχι σειριακά**: ο τόπος και το γραφείο είναι **ανεξάρτητες**
+ * ερωτήσεις σε **διαφορετικά** έγγραφα. Σειριακά, η αγγελία θα πλήρωνε δύο πλήρεις
+ * γύρους δικτύου για δουλειά που γίνεται σε έναν.
+ *
+ * ⚠️ **Ο ιδιοκτήτης διαβάζεται από το ΕΓΓΡΑΦΟ, ποτέ από τον καλούντα.** Το
+ * `properties/{id}.companyId` το γράφει το `createEntity` από το **auth context**
+ * (ADR-238) — είναι η ίδια αυθεντία που κρίνει και τα δικαιώματα. Ένα `companyId` που
+ * θα ερχόταν από το σώμα ενός αιτήματος θα ήταν **ισχυρισμός του καλούντος**.
  */
 export async function republishListing(
   adminDb: AdminFirestore,
   propertyId: string,
-  property: ProjectableProperty & { buildingId?: string | null; projectId?: string | null }
+  property: ListingSourceProperty,
+  resolveAgency: AgencyIdentityResolver = createAgencyIdentityResolver(adminDb)
 ): Promise<PublishOutcome> {
   const now = nowISO();
 
   try {
-    const place = await collectPlaceKnowledge(adminDb, property, now);
-    return await writeListingProjection(adminDb, propertyId, property, place, now);
+    const [place, agency] = await Promise.all([
+      collectPlaceKnowledge(adminDb, property, now),
+      resolveAgency(property.companyId),
+    ]);
+
+    return await writeListingProjection(
+      adminDb,
+      propertyId,
+      { ...property, agency },
+      place,
+      now
+    );
   } catch (error) {
     return reportProjectionFailure(propertyId, error);
   }
@@ -240,11 +297,17 @@ export async function republishListingsForProject(
 
   const tally: Record<PublishOutcome, number> = { published: 0, withdrawn: 0, failed: 0 };
 
+  // 🔑 **ΕΝΑΣ επιλυτής για ΟΛΟ το πέρασμα** (ADR-841 §7 Α1): ένα έργο ανήκει σε
+  //    **ακριβώς μία** εταιρεία — δες την εξαίρεση μισθωτή δύο γραμμές πιο πάνω — άρα
+  //    N ακίνητα κάνουν **μία** ανάγνωση εταιρείας, όχι N ταυτόσημες.
+  const resolveAgency = createAgencyIdentityResolver(adminDb);
+
   for (const doc of snap.docs) {
     const outcome = await republishListing(
       adminDb,
       doc.id,
-      doc.data() as ProjectableProperty & { buildingId?: string | null; projectId?: string | null }
+      doc.data() as ListingSourceProperty,
+      resolveAgency
     );
     tally[outcome] += 1;
   }

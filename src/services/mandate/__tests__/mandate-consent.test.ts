@@ -282,15 +282,46 @@ describe('🔴 Χ — η απόφαση φτάνει στη ΔΗΜΟΣΙΑ ΠΡ�
     expect(await publicListingExists(db)).toBe(false);
   });
 
-  it('🔴 Χ4 — καμία ταυτότητα γραφείου ή πελάτη στη δημόσια προβολή', async () => {
+  it('🔴 Χ4 — καμία ταυτότητα ΠΕΛΑΤΗ ή ΧΡΗΣΤΗ στη δημόσια προβολή', async () => {
     const { link, db } = withLiveLink();
     await recordMandateDecision(db, link.token, 'confirmed');
 
     const snap = await db.collection(COLLECTIONS.PUBLIC_LISTINGS).doc(LISTING_ID).get();
     const flat = JSON.stringify(snap.data());
-    expect(flat).not.toContain('comp_alfa');
     expect(flat).not.toContain(CLIENT);
     expect(flat).not.toContain('user-1');
+  });
+
+  /**
+   * 🔴 **ΤΟ ΑΓΚΙΣΤΡΙ ΧΩΡΙΣΤΗΚΕ ΣΤΑ ΔΥΟ (ADR-841 §7 Α1, 2026-09-01) — ΚΑΙ ΕΓΙΝΕ ΠΙΟ
+   * ΑΥΣΤΗΡΟ, ΟΧΙ ΠΙΟ ΧΑΛΑΡΟ.**
+   *
+   * Το Χ4 έλεγε *«καμία ταυτότητα **γραφείου ή πελάτη**»* και **κοκκίνισε** τη στιγμή
+   * που μπήκε το `agencyId` — που είναι ακριβώς η δουλειά του. Η ερώτηση **δεν
+   * παρακάμφθηκε**: απαντήθηκε.
+   *
+   * 🔑 **Οι δύο ταυτότητες ΔΕΝ είναι το ίδιο πράγμα, και τις ξεχωρίζει ΠΟΙΟΣ ΕΓΡΑΨΕ
+   * ΠΟΙΟΝ** — η διάκριση είναι ήδη γραμμένη στο `types/agency-profile.ts`: *«ο
+   * **πελάτης** του γραφείου δεν διάλεξε ποτέ να φανεί· ο **οργανισμός δημοσίευσε τον
+   * εαυτό του**»*. Το γραφείο ανεβάζει αγγελίες **για να φαίνεται**· ο πελάτης όχι.
+   *
+   * ⚠️ Και δεν ανοίγει πόρτα: το `firestore.rules` δίνει ήδη
+   * `agency_profiles/{companyId}` σε **ανώνυμο** αναγνώστη — το `comp_*` είναι ήδη
+   * δημόσιο κλειδί εγγράφου. Εδώ προστίθεται **συνδεσιμότητα**, όχι ταυτότητα.
+   *
+   * ⇒ Το Χ4 κρατά την **απόλυτη** απαγόρευση *(πελάτης · χρήστης)*· το Χ5 απαιτεί το
+   * **αντίθετο** για το γραφείο, ώστε η αφαίρεση του `agencyId` να **κοκκινίζει** κι
+   * αυτή. Καμία από τις δύο πλευρές δεν μπορεί πια να αλλάξει σιωπηλά.
+   */
+  it('🔑 Χ5 — η ταυτότητα ΤΟΥ ΓΡΑΦΕΙΟΥ, αντίθετα, ΟΦΕΙΛΕΙ να ταξιδεύει', async () => {
+    const { link, db } = withLiveLink();
+    await recordMandateDecision(db, link.token, 'confirmed');
+
+    const snap = await db.collection(COLLECTIONS.PUBLIC_LISTINGS).doc(LISTING_ID).get();
+    const listing = snap.data() as { agencyId?: unknown; authorship?: unknown };
+
+    expect(listing.authorship).toBe('agency');
+    expect(listing.agencyId).toBe('comp_alfa');
   });
 });
 

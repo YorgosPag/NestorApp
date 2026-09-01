@@ -209,10 +209,21 @@ export const POST = withStandardRateLimit(
         // δημιουργίας (`operationalStatus: 'draft'`), οπότε το συνηθισμένο αποτέλεσμα
         // εδώ είναι `'withdrawn'` — δηλαδή «καμία προβολή», που είναι το **σωστό**.
         // Καλείται παρ' όλα αυτά ώστε να μην υπάρχει διαδρομή γραφής χωρίς απάντηση.
+        //
+        // ⚠️ **Το `companyId` προστίθεται ΡΗΤΑ** (ADR-841 §7 Α1): το `entitySpecificFields`
+        // το **αφαιρεί** επίτηδες *(κοινό πεδίο, το γράφει το `createEntity`)*, αλλά ο
+        // γραφέας της προβολής το χρειάζεται για να βρει την **επωνυμία του γραφείου**.
+        // Χωρίς αυτό, ένα ακίνητο που γεννιέται ήδη δημοσιεύσιμο θα έβγαινε **ανώνυμο**
+        // — και θα διορθωνόταν μόνο στην πρώτη επεξεργασία. Η πηγή είναι το **auth
+        // context**, η ίδια που έγραψε το πεδίο μία γραμμή πιο πάνω.
         await republishListing(
           adminDb,
           result.id,
-          { ...entitySpecificFields, id: result.id } as Parameters<typeof republishListing>[2],
+          {
+            ...entitySpecificFields,
+            id: result.id,
+            companyId: ctx.companyId,
+          } as Parameters<typeof republishListing>[2],
         );
 
         return apiSuccess<PropertyCreateResponse>(

@@ -58,6 +58,7 @@ import type { GeocodingAccuracy } from '@/lib/geocoding/geocoding-types';
 import type {
   ListingAuthorship,
   ListingPosition,
+  PublicAgencyIdentity,
   PublicListing,
   PublicListingStay,
   UnknownPositionReason,
@@ -142,10 +143,10 @@ export interface ProjectableProperty {
    */
   readonly legality?: readonly LegalityClaim[] | null;
   /**
-   * Η επωνυμία του γραφείου, όταν υπάρχει. Δες {@link PublicListing.agencyName} για
-   * το δηλωμένο κενό των αγγελιών **έργων**.
+   * **Η ταυτότητα του γραφείου — ΕΝΑ όρισμα για ΔΥΟ πεδία** (ADR-841 §7 Α1): έτσι η
+   * επωνυμία δεν μπορεί να ταξιδέψει με ξένη ταυτότητα. Δες {@link PublicAgencyIdentity}.
    */
-  readonly agencyName?: string | null;
+  readonly agency?: PublicAgencyIdentity | null;
 }
 
 /**
@@ -446,7 +447,8 @@ export function projectListingShape(
     // ── Α17 (ADR-838) — η ΒΑΘΜΙΔΑ φεύγει, το έγγραφο ποτέ. Δες projectLegality.
     legality: projectLegality(property, offerKinds, projectedAt),
     authorship: property.authorship ?? 'agency',
-    agencyName: property.agencyName ?? null,
+    agencyName: property.agency?.name ?? null,
+    agencyId: property.agency?.id ?? null,
     projectedAt,
   };
 }

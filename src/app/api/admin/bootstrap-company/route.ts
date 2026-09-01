@@ -32,6 +32,10 @@ import {
   adminDirectOperationRead,
   adminDirectOperationWrite,
 } from '@/lib/api/admin-operation-route';
+import {
+  republishListingsForCompany,
+  type CompanyRepublishReport,
+} from '@/services/listings/rebuild-public-listings.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 
@@ -195,9 +199,35 @@ export const PATCH = adminDirectOperationWrite(
         );
       }
 
+      // ── ADR-841 §7 (Α1) — Η ΜΕΤΟΝΟΜΑΣΙΑ ΚΑΤΕΧΕΙ ΤΗ ΣΥΝΕΠΕΙΑ ΤΗΣ ────────────────
+      //
+      // 🔴 **Αυτή είναι η ΜΟΝΗ ζωντανή διαδρομή που αλλάζει `companies/{id}.name`**
+      //    (μετρημένο 2026-09-01: το `api/companies` είναι μόνο `GET`). Η επωνυμία
+      //    είναι **αντιγραμμένη** σε κάθε δημόσια αγγελία του οργανισμού· μέχρι σήμερα
+      //    **κανείς** δεν ανανέωνε τα αντίγραφα, άρα η αγορά έδειχνε το **παλιό** όνομα
+      //    για πάντα.
+      //
+      // 🔑 **Εδώ και όχι σε Cloud Function trigger**: ένα trigger θα ήταν **δεύτερη
+      //    μηχανή** που γράφει στο `public_listings` (ADR-749). Το σημείο που **ξέρει
+      //    ότι το όνομα άλλαξε** είναι αυτό — και το `wasRepaired` το λέει ρητά.
+      //
+      // ⚠️ **Τυλιγμένο**: η μετονομασία **έγινε** και δεν ακυρώνεται από αποτυχία
+      //    παραγώγου· αλλά ο άνθρωπος **μαθαίνει** αν οι αγγελίες έμειναν πίσω, αντί
+      //    να το ανακαλύψει από την οθόνη.
+      let republished: CompanyRepublishReport | null = null;
+      try {
+        republished = await republishListingsForCompany(getAdminFirestore(), targetCompanyId);
+      } catch (error) {
+        logger.error('[BootstrapCompany] Η ΜΕΤΟΝΟΜΑΣΙΑ ΕΓΙΝΕ — οι αγγελίες ΕΜΕΙΝΑΝ ΜΠΑΓΙΑΤΙΚΕΣ', {
+          companyId: targetCompanyId,
+          error: getErrorMessage(error),
+        });
+      }
+
       logger.info('[BootstrapCompany] PATCH repair completed', {
         companyId: targetCompanyId,
         name: result.name,
+        republished,
       });
 
       return NextResponse.json({
@@ -205,6 +235,7 @@ export const PATCH = adminDirectOperationWrite(
         message: 'Company document repaired.',
         companyId: targetCompanyId,
         name: result.name,
+        republished,
       });
     } catch (error) {
       logger.error('[BootstrapCompany] PATCH failed', { error: getErrorMessage(error) });
