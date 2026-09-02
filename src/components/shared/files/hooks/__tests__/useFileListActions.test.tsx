@@ -1,25 +1,48 @@
+/**
+ * @fileoverview **ΠΟΙΟ ΚΑΝΑΛΙ ΜΙΛΑΕΙ ΟΤΑΝ Η ΔΙΑΓΡΑΦΗ ΑΠΟΤΥΧΕΙ** — διάλογος ή ειδοποίηση.
+ * @related hooks/notifications/useFilesNotifications · config/notification-keys.ts
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔑 ΓΙΑΤΙ Η ΠΡΟΣΔΟΚΙΑ ΕΙΝΑΙ ΣΤΟ **ΚΛΕΙΔΙ**, ΚΑΙ ΟΧΙ ΣΤΟ ΑΓΓΛΙΚΟ ΚΕΙΜΕΝΟ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * **Καμία** από τις δύο άγκυρες δεν ρωτά *«τι λέει η πρόταση;»* — ρωτούν *«**ποιο
+ * κανάλι** ειδοποιήθηκε;»*: μπλοκαρισμένος διάλογος για το legal hold, γενική
+ * ειδοποίηση για οτιδήποτε άλλο. Το αγγλικό κείμενο ήταν **πληρεξούσιο** αυτής της
+ * ερώτησης, ποτέ η ερώτηση.
+ *
+ * 🔴 **ΚΑΙ ΤΟ ΠΛΗΡΕΞΟΥΣΙΟ ΕΣΠΑΣΕ ΣΙΩΠΗΛΑ.** Το `useFileListActions` έπαψε να καλεί το
+ * `useNotifications().error` απευθείας και πέρασε στο **μητρώο**
+ * (`fileNotifications.list.deleteError()`), που στέλνει κλειδί **με πρόθεμα
+ * namespace** (`files:list.deleteError`). Ο πίνακας μεταφράσεων αυτού του αρχείου είχε
+ * τα κλειδιά **χωρίς** πρόθεμα, οπότε το `t` επέστρεφε το κλειδί αυτούσιο και η άγκυρα
+ * κοκκίνιζε — για αλλαγή που **δεν είχε καμία σχέση** με αυτό που φυλάει.
+ *
+ * ⇒ Το `t` επιστρέφει πλέον **το κλειδί**, και η προσδοκία δένεται στο ίδιο το
+ * {@link NOTIFICATION_KEYS} — όχι σε αντιγραμμένη συμβολοσειρά. Μετονομασία κλειδιού
+ * μετακινεί **και τα δύο** μαζί· λάθος **κανάλι** εξακολουθεί να κοκκινίζει.
+ *
+ * ⚠️ Το *«υπάρχει η μετάφραση;»* **δεν** φυλάγεται εδώ, αλλά στο `Δ1` του
+ * `hooks/notifications/__tests__/registry-exhaustiveness.test.ts` — μαζί με το μητρώο που
+ * κατέχει τα κλειδιά. Δύο άγκυρες για την ίδια ερώτηση θα ήταν δύο αλήθειες.
+ *
+ * 🔴 **Και ΟΧΙ το CHECK 3.8, όσο κι αν φαίνεται ο φυσικός φύλακας** — μετρημένο
+ * 2026-09-02: το ίδιο του το αρχείο γράφει *«SKIPS: Dynamic keys: `t(variable)`»*, και
+ * **κάθε** κλήση του μητρώου είναι ακριβώς αυτό (`t(NOTIFICATION_KEYS…)`, σταθερά και όχι
+ * κυριολεκτικό). Οι **80** συμβολοσειρές του μητρώου ήταν αφύλακτες μέχρι το `Δ1`.
+ */
+
 import '@testing-library/jest-dom';
 import { act, renderHook } from '@testing-library/react';
 import { useFileListActions } from '../useFileListActions';
+import { NOTIFICATION_KEYS } from '@/config/notification-keys';
 
 const successMock = jest.fn();
 const errorMock = jest.fn();
 
+/** Το `t` επιστρέφει **το κλειδί**: εδώ κρίνεται *ποια πρόταση ζητήθηκε*, όχι πώς ακούγεται. */
 jest.mock('@/i18n/hooks/useTranslation', () => ({
-  useTranslation: () => ({
-    t: (key: string) => {
-      const translations: Record<string, string> = {
-        'trash.cannotTrashWithHold': 'Cannot delete file with active hold',
-        'list.deleteError': 'Failed to move to Trash',
-        'list.deleteSuccess': 'File moved to Trash',
-        'list.unlinkSuccess': 'File unlinked successfully',
-        'list.unlinkError': 'Failed to unlink file',
-        'list.renameSuccess': 'File renamed successfully',
-        'list.renameError': 'Failed to rename file',
-      };
-      return translations[key] ?? key;
-    },
-  }),
+  useTranslation: () => ({ t: (key: string) => key }),
 }));
 
 jest.mock('@/providers/NotificationProvider', () => ({
@@ -55,7 +78,11 @@ describe('useFileListActions', () => {
 
     expect(onDelete).toHaveBeenCalledWith('file_001');
     expect(result.current.deleteBlockedOpen).toBe(true);
-    expect(result.current.deleteBlockedMessage).toBe('Cannot delete file with active hold');
+    // Το μήνυμα του legal hold ζητιέται από το ίδιο το hook (`t('trash.cannotTrashWithHold')`),
+    // ΟΧΙ από το μητρώο — γι' αυτό εδώ το κλειδί είναι **χωρίς** πρόθεμα. Αυτό που
+    // κρίνεται είναι ότι νίκησε **η ανθρώπινη πρόταση** και όχι το ωμό κείμενο του
+    // σφάλματος («Cannot trash file file_001: Active hold …»).
+    expect(result.current.deleteBlockedMessage).toBe('trash.cannotTrashWithHold');
     expect(errorMock).not.toHaveBeenCalled();
   });
 
@@ -78,6 +105,9 @@ describe('useFileListActions', () => {
     });
 
     expect(result.current.deleteBlockedOpen).toBe(false);
-    expect(errorMock).toHaveBeenCalledWith('Failed to move to Trash');
+    // 🔑 Δεμένο στο **μητρώο**, όχι σε αντιγραμμένη συμβολοσειρά: η ερώτηση είναι
+    // *«ήρθε η ΓΕΝΙΚΗ ειδοποίηση σφάλματος διαγραφής;»*, και το μητρώο είναι αυτός που
+    // ξέρει το όνομά της.
+    expect(errorMock).toHaveBeenCalledWith(NOTIFICATION_KEYS.files.list.deleteError);
   });
 });
