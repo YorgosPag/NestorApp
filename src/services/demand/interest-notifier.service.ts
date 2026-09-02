@@ -229,11 +229,11 @@ export async function announceOnePlace(
     // `common-shared` — ένα `search-results:` πρόθεμα εδώ **δεν θα έλυνε**, γιατί
     // εκείνο το namespace δεν είναι φορτωμένο στον drawer.
     titleKey: 'demandInterest.notificationTitle',
-    titleParams: { count: String(count), title: property.title },
+    titleParams: { count: String(count), title: propertyTitle },
     // 🔑 **Η ΖΩΝΗ, ποτέ το ωμό πλήθος** — αυτό, και μόνο αυτό, κάνει την επανάληψη
     // δομικά αδύνατη. Δες `lib/demand/demand-announcement.ts`.
-    eventId: announcementEventId(property.id, band),
-    entityId: property.id,
+    eventId: announcementEventId(propertyId, band),
+    entityId: propertyId,
     source: { service: SOURCE_SERVICES.CRM, feature: 'demand-interest', env: getCurrentEnvironment() },
   });
 
