@@ -33,7 +33,12 @@ import { useAuth } from '@/auth/hooks/useAuth';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { listingDetailHref } from '@/lib/listings/listing-routes';
 import { nowISO } from '@/lib/date-local';
-import { ownerListingVisibility } from '@/lib/owner-property/owner-property-projection';
+import {
+  ownerListingVisibility,
+  placeKnowledgeFromOwnerProperty,
+  projectableFromOwnerProperty,
+} from '@/lib/owner-property/owner-property-projection';
+import { projectListingShape } from '@/services/listings/public-listing-projection';
 import { ownerPropertyFormFrom } from '@/lib/owner-property/owner-property-form-values';
 import { MY_OFFERS_ROUTE } from '@/lib/owner-property/owner-property-routes';
 import { setOwnerListingLifecycle } from '@/services/owner-property/owner-property.service';
@@ -44,6 +49,7 @@ import { ownerMandateViews } from '@/lib/mandate/owner-mandate-view';
 
 import { PlaceInterestPanel } from '@/components/demand/PlaceInterestPanel';
 import { usePlaceInterest } from '@/hooks/demand/usePlaceInterest';
+import { OwnerListingCompletion } from './OwnerListingCompletion';
 import { OwnerMandatePanel } from './OwnerMandatePanel';
 import { OwnerPropertyCard } from './OwnerPropertyCard';
 import { OwnerPropertyFormContent } from './OwnerPropertyFormContent';
@@ -140,6 +146,17 @@ function OwnerPropertyView({
   // γνωρίσματος διαβάζεται ως υπό όρους από τον επόμενο αναγνώστη, ακόμη κι όταν δεν
   // είναι — και η πρώτη φορά που κάποιος τον τυλίξει σε `{onMap && …}` σπάει σιωπηλά.
   const interest = usePlaceInterest(property.id);
+  // 🏆 **ADR-842 Φ5 — Η ΙΔΙΑ ΠΡΟΒΟΛΗ ΠΟΥ ΒΛΕΠΕΙ Ο ΑΓΟΡΑΣΤΗΣ, ΩΣ ΚΑΘΡΕΦΤΗΣ ΓΙΑ ΤΟΝ ΚΑΤΟΧΟ.**
+  //    `projectListingShape` και **όχι** `buildPublicListing`: το σχήμα **χωρίς την
+  //    πύλη**, ώστε ο δείκτης να υπάρχει **και πριν** τη δημοσίευση — εκεί που το
+  //    κίνητρο έχει τη μεγαλύτερη αξία. Είναι ο **δεύτερος** καταναλωτής αυτής
+  //    ακριβώς της διάσπασης, ο πρώτος ήταν το δόλωμα του §12.6 (δες εκεί το «γιατί»).
+  // ⛔ **ΕΦΗΜΕΡΟ, στη μνήμη του φυλλομετρητή** — δεν γράφεται πουθενά (ίδιος κανόνας).
+  const projectedListing = projectListingShape(
+    projectableFromOwnerProperty(property, atISO),
+    placeKnowledgeFromOwnerProperty(property, atISO),
+    atISO,
+  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -166,6 +183,16 @@ function OwnerPropertyView({
         αγγελία”»*, δηλαδή απευθύνεται **εξ ορισμού** σε όποιον δεν έχει ανεβάσει.
       */}
       <PlaceInterestPanel interest={interest} />
+
+      {/*
+        🎯 **ΤΟ ΚΙΝΗΤΡΟ, ΑΜΕΣΩΣ ΜΕΤΑ ΤΗΝ ΕΠΙΘΥΜΙΑ (ADR-842 Φ5).** Η σειρά είναι
+        συμβόλαιο: το δόλωμα λέει *«N άνθρωποι ψάχνουν κάτι σαν το δικό σας»*, ο
+        δείκτης λέει *«να τι λείπει για να το βρουν»*. Ανάποδα, οι προτάσεις θα ήταν
+        αγγαρεία χωρίς λόγο· έτσι, είναι η **επόμενη κίνηση**.
+
+        🔑 **Και πριν το κουμπί επεξεργασίας**, γιατί είναι ο λόγος να το πατήσει.
+      */}
+      <OwnerListingCompletion listing={projectedListing} />
 
       {/*
         🔴 **Ο σύνδεσμος που κλείνει τον κύκλο της Α14.** Εμφανίζεται μόνο όταν η

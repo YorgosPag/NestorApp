@@ -37,7 +37,10 @@ import type { PropertyLevel } from '@/types/property';
 import type { PropertyFieldsFormData } from './property-fields-form-types';
 import { usePropertyCompletion } from '@/hooks/properties/usePropertyCompletion';
 import { PropertyCompletionBreakdown } from './PropertyCompletionBreakdown';
-import type { CompletionBucket } from '@/constants/property-completion';
+import {
+  completionBucketIndicatorClass,
+  completionBucketTextClass,
+} from '@/components/completion/completion-bucket-classes';
 
 // =============================================================================
 // PROPS
@@ -53,40 +56,11 @@ interface PropertyCompletionMeterProps {
 // =============================================================================
 // BUCKET → SEMANTIC COLOR RESOLVER
 // =============================================================================
-
-function resolveBucketTextClass(
-  bucket: CompletionBucket,
-  colors: ReturnType<typeof useSemanticColors>,
-): string {
-  switch (bucket) {
-    case 'green':
-      return colors.text.success;
-    case 'amber':
-      return colors.text.warning;
-    case 'red':
-    default:
-      return colors.text.error;
-  }
-}
-
-/**
- * Bucket → indicator background class. Semantic design-system CSS vars
- * (`--bg-success/warning/error`) passed via the new `indicatorClassName`
- * prop on `<Progress>` (shadcn/progress extension). We also append
- * `bg-transparent` to the track to hide the default `bg-primary` under
- * the bucket-colored fill — no child-selector specificity fight.
- */
-function resolveProgressIndicatorClass(bucket: CompletionBucket): string {
-  switch (bucket) {
-    case 'green':
-      return 'bg-[hsl(var(--status-success))]';
-    case 'amber':
-      return 'bg-[hsl(var(--status-warning))]';
-    case 'red':
-    default:
-      return 'bg-[hsl(var(--status-error))]';
-  }
-}
+//
+// 🔑 **ΜΕΤΑΚΟΜΙΣΑΝ ΣΕ ΜΙΑ ΑΡΧΗ (ADR-842 Φ5, κανόνας N.0.2).** Οι δύο επιλυτές ήταν
+// ιδιωτικοί εδώ· η Φ5 έφερε **δεύτερη** οθόνη που ρωτά το ίδιο ερώτημα, και η
+// αντιγραφή τους θα ήταν δίδυμος κλώνος μέσα στο ίδιο commit. Καμία αλλαγή
+// συμπεριφοράς — οι κλάσεις είναι ταυτόσημες.
 
 // =============================================================================
 // COMPONENT
@@ -159,8 +133,8 @@ export function PropertyCompletionMeter({
   }
 
   const { percentage, bucketColor, missingCritical } = assessment;
-  const textClass = resolveBucketTextClass(bucketColor, colors);
-  const indicatorClass = resolveProgressIndicatorClass(bucketColor);
+  const textClass = completionBucketTextClass(bucketColor, colors);
+  const indicatorClass = completionBucketIndicatorClass(bucketColor);
   const bucketLabelKey = `completion.bucket.${bucketColor}` as const;
 
   return (

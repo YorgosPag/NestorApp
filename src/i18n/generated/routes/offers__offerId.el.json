@@ -1,4 +1,38 @@
 {
+  "properties": {
+    "completion": {
+      "aria": "Δείκτης πληρότητας ακινήτου",
+      "breakdown": {
+        "allComplete": "Όλα τα πεδία έχουν συμπληρωθεί",
+        "heading": "Τι λείπει"
+      },
+      "bucket": {
+        "amber": "Σχεδόν πλήρες — {count} βελτιώσεις διαθέσιμες",
+        "green": "Εξαιρετική πληρότητα",
+        "red": "{count} κρίσιμα πεδία λείπουν"
+      },
+      "fields": {
+        "areaGross": "Μικτή επιφάνεια",
+        "areaNet": "Καθαρή επιφάνεια",
+        "bathrooms": "Μπάνια",
+        "bedrooms": "Υπνοδωμάτια",
+        "condition": "Κατάσταση διατήρησης",
+        "coolingType": "Ψύξη",
+        "energyClass": "Ενεργειακή κλάση",
+        "flooring": "Δάπεδα",
+        "floorplan": "Κάτοψη",
+        "glazing": "Υαλοπίνακες",
+        "heatingType": "Θέρμανση",
+        "interiorFeatures": "Εσωτερικά χαρακτηριστικά",
+        "orientations": "Προσανατολισμός",
+        "photos": "Φωτογραφίες",
+        "securityFeatures": "Χαρακτηριστικά ασφαλείας",
+        "type": "Τύπος ακινήτου",
+        "windowFrames": "Κουφώματα"
+      },
+      "title": "Πληρότητα καταχώρησης"
+    }
+  },
   "properties-enums": {
     "types": {
       "apartment": "Διαμέρισμα",
