@@ -90,7 +90,8 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     bathrooms: 1,
     wc: 1,
     totalRooms: 4,
-    levels: 1,
+    // ADR-842 Φ5 · §8 #7 — το μόνο πεδίο με **προέλευση** (`SourcedAttribute`).
+    levels: { provenance: 'declared', value: 1, at: '2026-09-02T00:00:00.000Z' },
     balconies: 2,
     netAreaSqm: 80,
     balconyAreaSqm: 10,

@@ -36,6 +36,7 @@
  */
 
 import { normalizePropertyType } from '@/constants/property-type-aliases';
+import { isPubliclyPresentable } from '@/lib/property/attribute-provenance';
 import type { PublicListing } from '@/types/public-listing';
 
 import {
@@ -88,7 +89,26 @@ const ATTRIBUTE_DECLARED: Record<ListingAttributeKey, AttributeDeclaredRule> = {
   bathrooms: 'value-present',
   wc: 'value-present',
   totalRooms: 'value-present',
-  levels: 'value-present',
+
+  /**
+   * 🔴 **ΔΕΥΤΕΡΗ ΙΔΙΟΤΗΤΑ ΜΕ ΔΙΚΗ ΤΗΣ ΚΡΙΣΗ — ΚΑΙ ΤΟ ΕΡΩΤΗΜΑ ΕΙΝΑΙ ΤΟΥ Α7.**
+   *
+   * Το `levels` είναι το μόνο πεδίο που κουβαλά **προέλευση** (ADR-842 Φ5 · §8 #7).
+   * Άρα το *«έχει τιμή;»* δεν αρκεί: ένα χαρακτηριστικό που **συμπέρανε μοντέλο** και
+   * **δεν το ενέκρινε άνθρωπος** έχει τιμή και **δεν επιτρέπεται να φτάσει στον
+   * αγοραστή** (Α7).
+   *
+   * 🔑 **Ο κανόνας ΔΕΝ ξαναγράφεται εδώ — ρωτιέται.** Το `isPubliclyPresentable` είναι
+   * η **μία** θέση όπου ζει το Α7 (*«και ΜΟΝΟ εδώ»*)· αυτή η γραμμή είναι
+   * **καταναλωτής** του, όχι δεύτερη υλοποίηση. Ένα `provenance !== 'inferred'` εδώ θα
+   * ήταν το δεύτερο αντίγραφο — και θα σταματούσε να ρωτά αύριο.
+   *
+   * ⚠️ **Ζώνη ΚΑΙ τιράντες (N.7.2 #4)**: ο γραφέας δεν παράγει σήμερα `inferred`. Αυτό
+   * είναι κατάσταση του **σημερινού** γραφέα, όχι εγγύηση του σχήματος — και η οθόνη
+   * του αγοραστή είναι το λάθος σημείο για να το ανακαλύψουμε.
+   */
+  levels: (listing) => listing.levels !== null && isPubliclyPresentable(listing.levels),
+
   balconies: 'value-present',
   netAreaSqm: 'value-present',
   balconyAreaSqm: 'value-present',

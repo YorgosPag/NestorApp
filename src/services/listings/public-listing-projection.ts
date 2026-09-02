@@ -344,7 +344,7 @@ export function projectListingShape(
     //    δημόσια έφευγαν **τέσσερα**· εδώ φεύγουν είκοσι τρία ακόμη, **χωρίς να
     //    ρωτηθεί κανένας άνθρωπος τίποτα**. Η κρίση «είναι ονομάσιμη αυτή η τιμή;»
     //    ζει στο `public-listing-attributes.ts` — δες εκεί γιατί δεν είναι `as`.
-    ...projectListingAttributes(property),
+    ...projectListingAttributes(property, projectedAt),
     title: (property.name ?? '').trim(),
     // §8.33 — δες τον κανόνα της απουσίας στο `ProjectableProperty.authorship`.
     // ── Α17 (ADR-838) — η ΒΑΘΜΙΔΑ φεύγει, το έγγραφο ποτέ. Δες projectLegality.

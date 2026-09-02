@@ -55,6 +55,7 @@ import {
   SECURITY_FEATURES,
   WATER_HEATING_TYPES,
 } from '@/constants/property-features-enterprise';
+import type { SourcedAttribute } from '@/lib/property/attribute-provenance';
 import type { ListingAttributeFields } from '@/types/public-listing';
 
 import type { ProjectableProperty } from './public-listing-projection-types';
@@ -121,6 +122,66 @@ function numberOrNull(value: unknown): number | null {
 }
 
 // ============================================================================
+// ΤΑ ΕΠΙΠΕΔΑ — ΔΥΟ ΠΗΓΕΣ, ΕΝΑ ΕΡΩΤΗΜΑ (ADR-842 Φ5 · §8 #7)
+// ============================================================================
+
+/**
+ * Ο δείκτης πηγής για επίπεδα που **μετρήθηκαν από το μοντέλο του κτηρίου**.
+ *
+ * ⚠️ **Κατηγορία πηγής, ΟΧΙ ταυτότητα σχεδίου — και είναι επίτηδες.** Το ADR-842 §8 #5
+ * το δηλώνει ρητά: *«η ταυτότητα του σχεδίου ανήκει στη Φ6, και θα ήταν επινόηση να
+ * οριστεί εδώ, πριν υπάρξει ο παραγωγός»*. Μια δομημένη ταυτότητα σήμερα θα ήταν
+ * **τρίτο λεξιλόγιο ταυτότητας σχεδίου**.
+ *
+ * 🔑 **Και δεν δημοσιεύει κανένα αναγνωριστικό**: ένα `bldg_…` θα ταξίδευε ιδιωτικό
+ * κλειδί στο δημόσιο έγγραφο για μηδενικό όφελος στον επισκέπτη.
+ */
+const LEVELS_MODEL_SOURCE_REF = 'property-model:levels';
+
+/**
+ * **ΠΟΣΑ ΕΠΙΠΕΔΑ, ΚΑΙ ΑΠΟ ΠΟΥ ΤΟ ΞΕΡΟΥΜΕ.**
+ *
+ * 🔴 **Το μοναδικό πεδίο των 27 με ΔΥΟ πηγές που μπορούν να διαφωνήσουν**, και ο λόγος
+ * που κουβαλά προέλευση (δες `PublicListing.levels`):
+ *
+ * | Πηγή | Τι είναι | Προέλευση |
+ * |---|---|---|
+ * | `layout.levels` | ο **αριθμός που πληκτρολόγησε** άνθρωπος | `declared` |
+ * | `levels[]` | οι **εγγραφές ορόφων** του μοντέλου του κτηρίου | `measured` |
+ *
+ * ⚠️ **Η ΣΕΙΡΑ ΕΙΝΑΙ ΑΠΟΦΑΣΗ, ΚΑΙ ΕΙΝΑΙ Η ΑΝΤΙΣΤΡΟΦΗ ΤΗΣ ΚΑΤΑΤΑΞΗΣ**: η **δήλωση**
+ * ρωτιέται πρώτη, παρότι το `measured` είναι ισχυρότερη βαθμίδα. Ο λόγος: η δήλωση
+ * είναι **ρητή απάντηση σε ερώτηση**, ενώ η δομή είναι **παρενέργεια** της σύνδεσης με
+ * ορόφους — που μπορεί να έχει εγγραφές για λόγους άσχετους με το πόσα επίπεδα
+ * *κατοικεί* ο άνθρωπος. Ο κανόνας του `preferStrongerAttribute` απαντά *«ποια νικά
+ * όταν ΚΡΑΤΑΜΕ και τις δύο»*· εδώ **παράγουμε** μία, και η ερώτηση είναι *«ποια
+ * ρωτάμε πρώτη»*. Δύο διαφορετικά ερωτήματα — γι' αυτό δεν καλείται εκείνη η
+ * συνάρτηση, που θα ήταν χρήση της για κάτι που δεν απαντά.
+ *
+ * ⛔ **Κενή δομή ⇒ `null`, ΠΟΤΕ `0`.** Ένα `levels: []` σημαίνει *«καμία εγγραφή
+ * ορόφου»* — άγνοια, όχι «μηδέν επίπεδα». Το `0` εδώ θα ήταν το ίδιο ψέμα με το `[]`
+ * των συνόλων γραμμένο από μετανάστευση (κρίκος 5).
+ */
+function projectLevels(
+  property: ProjectableProperty,
+  projectedAt: string
+): SourcedAttribute<number> | null {
+  const declared = numberOrNull(property.layout?.levels);
+  if (declared !== null) {
+    return { provenance: 'declared', value: declared, at: projectedAt };
+  }
+
+  if (!Array.isArray(property.levels) || property.levels.length === 0) return null;
+
+  return {
+    provenance: 'measured',
+    value: property.levels.length,
+    at: projectedAt,
+    sourceRef: LEVELS_MODEL_SOURCE_REF,
+  };
+}
+
+// ============================================================================
 // Η ΧΑΡΤΟΓΡΑΦΗΣΗ — μία οικογένεια ανά συνάρτηση (N.7.1)
 // ============================================================================
 
@@ -141,7 +202,8 @@ function projectEnergyAndCondition(
 
 /** Δωμάτια και εμβαδά. */
 function projectRoomsAndAreas(
-  property: ProjectableProperty
+  property: ProjectableProperty,
+  projectedAt: string
 ): Pick<
   ListingAttributeFields,
   | 'bathrooms'
@@ -160,7 +222,9 @@ function projectRoomsAndAreas(
     bathrooms: numberOrNull(property.layout?.bathrooms),
     wc: numberOrNull(property.layout?.wc),
     totalRooms: numberOrNull(property.layout?.totalRooms),
-    levels: numberOrNull(property.layout?.levels),
+    // 🔴 **ΔΕΝ είναι πια `numberOrNull(layout.levels)`** — δες `projectLevels` για τις
+    //    δύο πηγές και το §8 #7 που έκλεισε εδώ.
+    levels: projectLevels(property, projectedAt),
     balconies: numberOrNull(property.layout?.balconies),
     netAreaSqm: numberOrNull(property.areas?.net),
     balconyAreaSqm: numberOrNull(property.areas?.balcony),
@@ -217,11 +281,12 @@ function projectFeatureSets(
  * `projectListingShape` (σχήμα) έναντι της πύλης (πολιτική).
  */
 export function projectListingAttributes(
-  property: ProjectableProperty
+  property: ProjectableProperty,
+  projectedAt: string
 ): ListingAttributeFields {
   return {
     ...projectEnergyAndCondition(property),
-    ...projectRoomsAndAreas(property),
+    ...projectRoomsAndAreas(property, projectedAt),
     ...projectSystems(property),
     ...projectFeatureSets(property),
   };

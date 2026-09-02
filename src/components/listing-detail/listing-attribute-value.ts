@@ -167,7 +167,39 @@ type AttributeValueKind =
  * **Κάθε ιδιότητα, και πώς διαβάζεται η τιμή της.** Εξαντλητικό `Record` ⇒ νέα
  * ιδιότητα **δεν μεταγλωττίζεται** μέχρι να απαντηθεί *«πώς γίνεται κείμενο;»*.
  */
-const ATTRIBUTE_VALUE_KIND: Record<ListingAttributeKey, AttributeValueKind> = {
+/**
+ * 🔴 **ΤΑ ΚΛΕΙΔΙΑ ΠΟΥ Η ΤΙΜΗ ΤΟΥΣ ΕΙΝΑΙ ΒΑΘΜΩΤΗ** — δηλαδή όσα μπορούν να τυπωθούν
+ * αυτούσια χωρίς να ρωτηθεί κανείς πώς.
+ *
+ * Παράγεται από το **ίδιο** το {@link PublicListing}: κλειδί του οποίου η τιμή δεν
+ * είναι `string | number | null` **δεν ανήκει** εδώ, αυτόματα.
+ */
+type ScalarAttributeKey = {
+  readonly [K in ListingAttributeKey]: PublicListing[K] extends string | number | null
+    ? K
+    : never;
+}[ListingAttributeKey];
+
+/**
+ * 🔴 **Ο ΤΥΠΟΣ ΑΠΑΓΟΡΕΥΕΙ ΤΟ `[object Object]` — ΚΑΙ Ο ΛΟΓΟΣ ΕΙΝΑΙ ΜΕΤΡΗΜΕΝΟΣ.**
+ *
+ * Το `'verbatim'` κάνει `String(listing[key])`. Όσο **κάθε** ιδιότητα ήταν αριθμός ή
+ * συμβολοσειρά, αυτό ήταν ασφαλές. Η Φ5 έδωσε στο `levels` δοχείο **με προέλευση**
+ * (ADR-842 §8 #7) — και ένα `verbatim` πάνω σε αντικείμενο **μεταγλωττίζεται μια χαρά**
+ * και ζωγραφίζει `[object Object]` **στον ανώνυμο επισκέπτη**. Είναι η ίδια οικογένεια
+ * με το ωμό i18n κλειδί που το CHECK 3.51 κυνηγά, από άλλη πόρτα.
+ *
+ * ⇒ Ένα μη βαθμωτό κλειδί μπορεί να δηλωθεί **μόνο** `'custom'`, δηλαδή **μόνο** αν
+ * κάποιος απαντήσει ρητά *«πώς γίνεται κείμενο;»*. Η εγγύηση είναι του **μεταγλωττιστή**,
+ * όχι της προσοχής μας.
+ */
+type AttributeValueKindFor<K extends ListingAttributeKey> = K extends ScalarAttributeKey
+  ? AttributeValueKind
+  : Extract<AttributeValueKind, { readonly kind: 'custom' }>;
+
+const ATTRIBUTE_VALUE_KIND: {
+  readonly [K in ListingAttributeKey]: AttributeValueKindFor<K>;
+} = {
   type: { kind: 'custom', render: renderType },
   areaSqm: { kind: 'sqm' },
   floor: { kind: 'custom', render: renderFloor },
@@ -180,7 +212,7 @@ const ATTRIBUTE_VALUE_KIND: Record<ListingAttributeKey, AttributeValueKind> = {
   bathrooms: { kind: 'verbatim' },
   wc: { kind: 'verbatim' },
   totalRooms: { kind: 'verbatim' },
-  levels: { kind: 'verbatim' },
+  levels: { kind: 'custom', render: renderLevels },
   balconies: { kind: 'verbatim' },
   netAreaSqm: { kind: 'sqm' },
   balconyAreaSqm: { kind: 'sqm' },
@@ -217,6 +249,24 @@ function renderFloor(t: TFunction, listing: PublicListing): string {
 /** Πληθυντικός ICU — `0` είναι **γκαρσονιέρα**, υπαρκτή τιμή. */
 function renderBedrooms(t: TFunction, listing: PublicListing): string {
   return t('search-results:listing.bedrooms', { count: listing.bedrooms ?? 0 });
+}
+
+/**
+ * Τα **επίπεδα** — αριθμός που ζει μέσα σε δοχείο προέλευσης (ADR-842 Φ5 · §8 #7).
+ *
+ * ⚠️ **Η ΠΡΟΕΛΕΥΣΗ ΔΕΝ ΖΩΓΡΑΦΙΖΕΤΑΙ ΑΚΟΜΗ, ΚΑΙ ΕΙΝΑΙ ΔΗΛΩΜΕΝΟ.** Ένα σήμα
+ * *«μετρημένο από το σχέδιο»* δίπλα στην τιμή είναι πραγματικό πλεονέκτημα έναντι
+ * κάθε portal — και χρειάζεται **νέα κλειδιά i18n** σε διαδρομή με **σφραγισμένο
+ * ταβάνι** (`/listing/[id]`, 9.181 bytes), δηλαδή **πράξη ανθρώπου** με γραπτό `why`
+ * (ADR-744, CHECK 3.34). Ανήκει στη **Φ6**, όπου το `measured` παύει να είναι μία
+ * περίπτωση και γίνεται ο κανόνας.
+ *
+ * 🔑 Το `?? 0` **δεν** υπάρχει εδώ επίτηδες: καλούμαστε μόνο για κλειδιά που το
+ * `isAttributeDeclared` έκρινε δηλωμένα, και εκείνο ρωτά **και** το Α7. Μια σιωπηλή
+ * προεπιλογή θα έκρυβε ασυμφωνία που πρέπει να είναι **αδύνατη**.
+ */
+function renderLevels(_t: TFunction, listing: PublicListing): string {
+  return String(listing.levels?.value);
 }
 
 /**

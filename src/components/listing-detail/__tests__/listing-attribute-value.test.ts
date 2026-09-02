@@ -42,9 +42,14 @@ import {
   SECURITY_FEATURES,
   WATER_HEATING_TYPES,
 } from '@/constants/property-features-enterprise';
-import { LISTING_FEATURE_SET_KEYS } from '@/lib/listings/listing-disclosure';
+import {
+  LISTING_ATTRIBUTE_KEYS,
+  LISTING_FEATURE_SET_KEYS,
+} from '@/lib/listings/listing-disclosure';
+import type { PublicListing } from '@/types/public-listing';
 
 import {
+  attributeValue,
   FEATURE_SET_VOCABULARY,
   vocabularyLabel,
   type AttributeVocabulary,
@@ -160,5 +165,87 @@ describe('Τ3 — καμία δεύτερη πηγή ετικετών τιμής
     for (const [, , key] of EVERY_VALUE_KEY) {
       expect(key.startsWith('properties-enums:')).toBe(true);
     }
+  });
+});
+
+// ============================================================================
+// Τ4 — 🔴 ΚΑΜΙΑ ΙΔΙΟΤΗΤΑ ΔΕΝ ΖΩΓΡΑΦΙΖΕΙ `[object Object]` (ADR-842 Φ5)
+// ============================================================================
+
+/**
+ * 🔴 **Η ΟΙΚΟΓΕΝΕΙΑ ΤΟΥ ΩΜΟΥ ΚΛΕΙΔΙΟΥ, ΑΠΟ ΑΛΛΗ ΠΟΡΤΑ.**
+ *
+ * Το `'verbatim'` κάνει `String(listing[key])`. Όσο **κάθε** ιδιότητα ήταν αριθμός ή
+ * συμβολοσειρά αυτό ήταν ασφαλές· η Φ5 έδωσε στο `levels` δοχείο **με προέλευση**
+ * (§8 #7), και ένα `verbatim` πάνω σε αντικείμενο **μεταγλωττίζεται μια χαρά** και
+ * ζωγραφίζει `[object Object]` στον ανώνυμο επισκέπτη.
+ *
+ * 🔑 **Ο τύπος το απαγορεύει ήδη** (`AttributeValueKindFor`: μη βαθμωτό κλειδί δέχεται
+ * **μόνο** `'custom'`). Αυτή η άγκυρα είναι η **εκτελέσιμη** μισή του ζεύγους: ο
+ * μεταγλωττιστής δεν τρέχει στο CI ως πύλη για πράκτορα (N.17), και μια εγγύηση που
+ * κανείς δεν **εκτελεί** είναι σχόλιο.
+ */
+describe('Τ4 — 🔴 καμία τιμή ιδιότητας δεν γίνεται `[object Object]`', () => {
+  /** Αγγελία με **κάθε** ιδιότητα δηλωμένη — ώστε να ζωγραφιστούν όλες. */
+  const FULL: PublicListing = {
+    id: 'prop_τ4',
+    commercialStatus: 'for-sale',
+    commercial: { askingPrice: 1, finalPrice: null, rentPrice: null, nightlyRate: null },
+    stay: null,
+    coverImage: null,
+    gallery: [],
+    type: 'maisonette',
+    areaSqm: 95,
+    offerKinds: ['sell'],
+    position: { kind: 'unknown', reason: 'never-asked' },
+    place: null,
+    authorship: 'agency',
+    agencyName: null,
+    agencyId: null,
+    floor: 1,
+    bedrooms: 3,
+    energyClass: 'B',
+    condition: 'good',
+    renovationYear: 2015,
+    bathrooms: 2,
+    wc: 1,
+    totalRooms: 5,
+    levels: { provenance: 'measured', value: 2, at: '2026-09-02T00:00:00.000Z', sourceRef: 'property-model:levels' },
+    balconies: 2,
+    netAreaSqm: 85,
+    balconyAreaSqm: 10,
+    terraceAreaSqm: 5,
+    gardenAreaSqm: 0,
+    heatingType: 'autonomous',
+    heatingFuel: 'natural-gas',
+    coolingType: 'split-units',
+    waterHeating: 'electric',
+    windowFrames: 'aluminium',
+    glazing: 'double',
+    flooring: ['tiles'],
+    orientations: ['northeast'],
+    interiorFeatures: ['fireplace'],
+    securityFeatures: ['alarm'],
+    amenities: [],
+    title: 'Μεζονέτα',
+    legality: [],
+    projectedAt: '2026-09-02T00:00:00.000Z',
+  };
+
+  it.each([...LISTING_ATTRIBUTE_KEYS])('«%s» δεν παράγει ποτέ `[object Object]`', (key) => {
+    const { t } = recordingT();
+    expect(attributeValue(t, FULL, key)).not.toContain('object Object');
+  });
+
+  it('…και καμία δεν είναι κενή για δηλωμένη τιμή', () => {
+    const { t } = recordingT();
+    for (const key of LISTING_ATTRIBUTE_KEYS) {
+      expect([key, attributeValue(t, FULL, key).length > 0]).toEqual([key, true]);
+    }
+  });
+
+  it('🔴 τα επίπεδα ζωγραφίζουν την ΤΙΜΗ, όχι το δοχείο', () => {
+    const { t } = recordingT();
+    expect(attributeValue(t, FULL, 'levels')).toBe('2');
   });
 });
