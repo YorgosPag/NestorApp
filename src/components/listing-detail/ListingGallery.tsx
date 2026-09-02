@@ -23,6 +23,13 @@
  * βλέπων;»* — για φωτογραφία ακινήτου η απάντηση δεν είναι «τίποτα», άρα `alt=""` θα
  * έκρυβε γεγονός. Λέει **θέση + προέλευση**, που είναι ό,τι πραγματικά ξέρουμε *(Α2.5)*.
  *
+ * ⚠️ **ΚΑΙ ΤΟ «ΠΡΟΕΛΕΥΣΗ» ΕΙΝΑΙ ΔΥΟ ΠΡΟΤΑΣΕΙΣ, ΟΧΙ ΜΙΑ** *(Α15)*: το `alt` **και** η
+ * ορατή σημείωση από κάτω λένε **τίνος** υλικό είναι. Μέχρι την **Α14** έλεγαν και οι
+ * δύο *«του κατόχου»* ως **σταθερές** — αληθές όσο ο ιδιώτης ήταν ο μόνος παραγωγός
+ * συλλογής, **ψευδές σε 6 στις 7** μόλις το γραφείο απέκτησε. Πλέον διαλέγονται από την
+ * `authorship` του **ίδιου** εγγράφου που δίνει και τις εικόνες, άρα **δεν μπορούν** να
+ * διαφωνήσουν μεταξύ τους.
+ *
  * ⚠️ **Η ΑΠΟΥΣΙΑ ΟΝΟΜΑΖΕΤΑΙ, ΠΟΤΕ ΞΕΝΟ PLACEHOLDER** (§25.5.2): μια κάρτα με εικόνα-θέσης
  * διαβάζεται ως **αληθινή φωτογραφία που δεν δείχνει αυτό το ακίνητο** — χειρότερο από
  * την απουσία, γιατί λέει ψέματα αντί να σιωπά.
@@ -31,6 +38,7 @@
 import React from 'react';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { LISTING_MATERIAL_KEYS } from '@/lib/listings/listing-authorship';
 import { listingImageSrcSet, listingLeadImage } from '@/lib/listings/listing-images';
 import type { ListingImage, PublicListing } from '@/types/public-listing';
 
@@ -78,7 +86,18 @@ export function ListingGallery({ listing }: { readonly listing: PublicListing })
         </ul>
       )}
 
-      <p className="text-xs text-muted-foreground">{t('search-results:detail.media.ownerNote')}</p>
+      {/*
+        🔑 **Δυναμικό κλειδί, και είναι το ΣΩΣΤΟ εδώ** *(αντίθετα από την
+        `ListingAuthorshipLine`, όπου ο τριαδικός με κυριολεκτικά είναι ο κανόνας)*: η
+        ίδια ερώτηση απαντιέται **και** στη στιγμή της προβολής, για το `altKey` που
+        παγώνει μέσα στο έγγραφο. Δύο κυριολεκτικοί κλάδοι εδώ θα ήταν **δεύτερη
+        χαρτογράφηση** authorship→πρόταση, ελεύθερη να αποκλίνει από εκείνη του γραφέα.
+        Το πρόθεμα `search-results:detail.media` είναι **ήδη** δηλωμένο για αυτό το
+        αρχείο στο `.i18n-shell-slice.json` — καμία νέα άδεια (CHECK 3.34).
+      */}
+      <p className="text-xs text-muted-foreground">
+        {t(LISTING_MATERIAL_KEYS[listing.authorship].sourceNote)}
+      </p>
     </section>
   );
 }

@@ -19,9 +19,12 @@
 
 import {
   LISTING_AUTHORSHIP_KEYS,
+  LISTING_MATERIAL_KEYS,
   listingAuthorshipVoice,
   type ListingAuthorshipVoice,
 } from '../listing-authorship';
+import el from '@/i18n/locales/el/search-results.json';
+import en from '@/i18n/locales/en/search-results.json';
 import { LISTING_AUTHORSHIPS } from '@/types/public-listing';
 
 describe('Α — οι τρεις φωνές, από δύο πεδία', () => {
@@ -84,6 +87,89 @@ describe('Β — ο πίνακας κλειδιών είναι ΔΕΥΤΕΡΗ Φ
     // εμποδίζει να ξαναγυρίσει **μία** ομάδα πίσω, αφήνοντας δύο κανόνες σε ισχύ.
     for (const key of Object.values(LISTING_AUTHORSHIP_KEYS)) {
       expect(key.startsWith('card.')).toBe(false);
+    }
+  });
+});
+
+describe('Γ — ΤΟ ΥΛΙΚΟ ΕΧΕΙ ΠΡΟΕΛΕΥΣΗ, ΚΑΙ Η ΟΘΟΝΗ ΤΗ ΛΕΕΙ ΣΩΣΤΑ (Α15)', () => {
+  /**
+   * 🔴 **Η ΜΕΤΑΛΛΑΞΗ ΠΟΥ ΠΡΕΠΕΙ ΝΑ ΚΟΚΚΙΝΙΣΕΙ**: κάνε τη χαρτογράφηση **σταθερή** —
+   * δώσε στο `agency` τα κλειδιά του `owner-declared` *(δηλαδή γύρνα στην κατάσταση πριν
+   * την Α15, όπου υπήρχε **μία** σταθερά)* ⇒ το **Γ2** πέφτει, και στα **δύο** σκέλη.
+   *
+   * ⚠️ Το Γ1 **δεν** αρκεί: μια σταθερή χαρτογράφηση περνά κάθε έλεγχο «υπάρχει κλειδί;»
+   * — γι' αυτό ο φρουρός είναι η **διαφορά**, όχι η ύπαρξη.
+   */
+  it('🔴 Γ1 — ΚΑΘΕ κλάση γνώσης του σχήματος έχει ΚΑΙ ΤΑ ΔΥΟ κλειδιά (πλήρης παρονομαστής)', () => {
+    // Ο παρονομαστής έρχεται από το **σχήμα**: νέα τιμή στο `LISTING_AUTHORSHIPS`
+    // εμφανίζεται εδώ **αυτόματα**. (Ο μεταγλωττιστής το πιάνει ήδη μέσω του `Record`·
+    // αυτό εδώ το κρατά αληθές και για όποιον διαβάζει μόνο τις άγκυρες.)
+    for (const authorship of LISTING_AUTHORSHIPS) {
+      const keys = LISTING_MATERIAL_KEYS[authorship];
+      expect(keys.galleryAlt).toMatch(/^search-results:detail\.media\.galleryAlt\./);
+      expect(keys.sourceNote).toMatch(/^search-results:detail\.media\.sourceNote\./);
+    }
+    expect(Object.keys(LISTING_MATERIAL_KEYS)).toHaveLength(LISTING_AUTHORSHIPS.length);
+  });
+
+  it('🔴 Γ2 — ΔΥΟ ΚΛΑΣΕΙΣ ⇒ ΔΥΟ ΔΙΑΦΟΡΕΤΙΚΕΣ ΠΡΟΤΑΣΕΙΣ, και στα δύο κλειδιά', () => {
+    // Αυτό είναι **ολόκληρο** το Ο-18 σε μία γραμμή: πριν την Α15 η αγγελία γραφείου
+    // δανειζόταν την πρόταση του ιδιώτη και έλεγε *«υλικό του κατόχου»* — **ψευδές σε
+    // 6 στις 7** ζωντανές αγγελίες με συλλογή, σε ενεργή δημόσια οθόνη.
+    const owner = LISTING_MATERIAL_KEYS['owner-declared'];
+    const agency = LISTING_MATERIAL_KEYS.agency;
+
+    expect(agency.galleryAlt).not.toBe(owner.galleryAlt);
+    expect(agency.sourceNote).not.toBe(owner.sourceNote);
+  });
+
+  it('🔴 Γ3 — ΚΑΘΕ κλειδί ΛΥΝΕΤΑΙ σε el ΚΑΙ σε en, χωρίς `defaultValue` (N.11)', () => {
+    // Τα κλειδιά ταξιδεύουν ως **τιμές** — μπαίνουν στο δημοσιευμένο έγγραφο και
+    // καταλήγουν αυτούσια σε `t()`. Το CHECK 3.8 βλέπει `t('κυριολεκτικό')`, άρα
+    // **δεν βλέπει κανένα από αυτά**: ο μόνος φρουρός τους είναι εδώ.
+    const resolve = (bundle: unknown, key: string): unknown =>
+      key
+        .slice('search-results:'.length)
+        .split('.')
+        .reduce<unknown>((node, segment) => (node as Record<string, unknown>)?.[segment], bundle);
+
+    for (const authorship of LISTING_AUTHORSHIPS) {
+      for (const key of Object.values(LISTING_MATERIAL_KEYS[authorship])) {
+        const greek = resolve(el, key);
+        const english = resolve(en, key);
+
+        expect(typeof greek).toBe('string');
+        expect(typeof english).toBe('string');
+        expect(greek).not.toBe('');
+        expect(english).not.toBe('');
+        // 🔑 Και κάθε γλώσσα κουβαλά τη **δική της** πρόταση: αντιγραμμένο ελληνικό
+        //    μέσα στο `en` περνά κάθε έλεγχο «υπάρχει;» και φτάνει στην οθόνη.
+        expect(english).not.toBe(greek);
+      }
+    }
+  });
+
+  it('Γ4 — το ΦΥΛΛΟ του κλειδιού είναι η ΤΙΜΗ του σχήματος, ελεγμένο ΟΧΙ κατασκευασμένο', () => {
+    // ⛔ Ο κώδικας **δεν** συνθέτει το κλειδί με συνένωση: ένα πρόθεμα δεν είναι
+    //    συμβόλαιο. Η αντιστοιχία είναι ιδιότητα που θέλουμε **ελεγμένη** — αν κάποιος
+    //    μετονομάσει ένα φύλλο, το μαθαίνει εδώ αντί να το ανακαλύψει στην οθόνη.
+    const leaf = (key: string) => key.slice(key.lastIndexOf('.') + 1);
+
+    expect(leaf(LISTING_MATERIAL_KEYS['owner-declared'].galleryAlt)).toBe('ownerDeclared');
+    expect(leaf(LISTING_MATERIAL_KEYS['owner-declared'].sourceNote)).toBe('ownerDeclared');
+    expect(leaf(LISTING_MATERIAL_KEYS.agency.galleryAlt)).toBe('agency');
+    expect(leaf(LISTING_MATERIAL_KEYS.agency.sourceNote)).toBe('agency');
+  });
+
+  it('🔴 Γ5 — ΚΑΝΕΝΑ κλειδί δεν έμεινε στο ΠΑΛΙΟ, ΕΝΙΚΟ σπίτι', () => {
+    // Το `detail.media.ownerNote` **ονόμαζε** τον ιδιώτη κάτοχο της σημείωσης — δηλαδή
+    // το ίδιο το λεξιλόγιο ξαναγεννούσε το λάθος. Αν επιστρέψει, κάποιος ξανάγραψε
+    // σταθερή πρόταση για δύο κλάσεις.
+    for (const bundle of [el, en]) {
+      const media = (bundle as { detail: { media: Record<string, unknown> } }).detail.media;
+      expect(media.ownerNote).toBeUndefined();
+      expect(typeof media.galleryAlt).toBe('object');
+      expect(typeof media.sourceNote).toBe('object');
     }
   });
 });

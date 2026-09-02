@@ -32,8 +32,8 @@ jest.mock('../public-shelf.service', () => ({
 const { writeListingProjection } = require('../publish-public-listing') as
   typeof import('../publish-public-listing');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { LISTING_GALLERY_ALT_KEY } = require('@/lib/listings/listing-images') as
-  typeof import('@/lib/listings/listing-images');
+const { LISTING_MATERIAL_KEYS } = require('@/lib/listings/listing-authorship') as
+  typeof import('@/lib/listings/listing-authorship');
 
 const LISTING = 'ownp_77aa21bc';
 const AT = '2026-09-01T10:00:00.000Z';
@@ -117,7 +117,12 @@ describe('Κ2 — ΤΟ ΔΕΣΙΜΟ: το έγγραφο κουβαλά ό,τι 
         url: 'https://shelf/0-2560.webp',
         width: 2560,
         height: 1700,
-        altKey: LISTING_GALLERY_ALT_KEY,
+        // 🔑 **ΓΡΑΦΕΙΟΥ, και το fixture δεν το λέει πουθενά** (Α15): το `LISTED` δεν
+        //    έχει `authorship`, και ο **κανόνας της απουσίας** (§8.33) το κάνει
+        //    `'agency'`. Δηλαδή αυτή η γραμμή ελέγχει **δύο** πράγματα με ένα κλειδί:
+        //    ότι το `altKey` παράγεται από την προέλευση, και ότι η **σιωπή** του
+        //    εγγράφου εξακολουθεί να διαβάζεται ως γραφείο.
+        altKey: LISTING_MATERIAL_KEYS.agency.galleryAlt,
         sources: [
           { url: 'https://shelf/0-640.webp', width: 640 },
           { url: 'https://shelf/0-2560.webp', width: 2560 },

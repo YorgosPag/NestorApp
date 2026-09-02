@@ -26,7 +26,7 @@
     "src/i18n/generated/routes/terms.el.json": "481f837696b407553f56de16128778617a86f72cf7b27471d61cd5793cf7d288",
     "src/i18n/generated/routes/test-harness__listing-shapes.el.json": "9b6aaaa831492e24807a1c83e0b505dc865c03afbd5638abf8ea2b990422b037",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "43b44fed72572ae260fbc2efe2e2ce4f6b58ccdabee31c228db6f117a95d43b1",
+    "src/i18n/generated/shell-slice.el.json": "7d9f90b77a31a28ee20e81bae9233995c52617abcffe89b5cac276869fbc4edd",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "boundaries": {
@@ -65,7 +65,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "6d131a7e4d47e517cee643a93abd24e62d9a6a00e88fb43e5f63003a813bf885",
+  "inputsSha256": "3464ff33ca751ff69e594e9dcf4b686437942791f92246910d7714839aaebfa9",
   "languages": [
     "el"
   ],
@@ -167,7 +167,7 @@
     "src/components/listing-detail/ListingAttributeRow.tsx": "6a3778e8540d28550dcd99ff9abd4ee69a5ea1b9328e7c037a0cf3b1116fc90b",
     "src/components/listing-detail/ListingDetailContent.tsx": "fc20716f240ed219b413d015545b649c1d3e52e6b6710bca26c789feb193a119",
     "src/components/listing-detail/ListingFeatureSet.tsx": "2152f3396f98cccad1a426cea445ebb8c42cb94227e75d919a01281a7b43e97c",
-    "src/components/listing-detail/ListingGallery.tsx": "469644154687aa3a9e6b1ef95155dd5653065e2ddebd18a69aa4daa04c42b725",
+    "src/components/listing-detail/ListingGallery.tsx": "9fef6e7e7769721f29855ae25a31015c9410536cd4d825ced9b09658b5f7f283",
     "src/components/listing-detail/ListingLegality.tsx": "7f5c05f148501b31e4fd3757d9928a747d6321f52d4554f5bcc67e865c06cf82",
     "src/components/listing-detail/ListingOpenSubjects.tsx": "a3b7c8d88d803bef8649b5ef87716f03fb5b6ac18bf225bd1d76121dc18c71ca",
     "src/components/listing-detail/ListingPositionSection.tsx": "180fa77c3941aa93cf9a952035a2bf6d6c898aa5f27a69dd605a8969be82e07a",
@@ -314,7 +314,7 @@
     "src/lib/layout/bottom-sheet-stops.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/listings/listing-attribute-declared.ts": "84d0ba9fa6552b937fe8adc2e88b772da85da566686cecdae2f851e49495ba5a",
     "src/lib/listings/listing-attribute-groups.ts": "349e9f80fdf6dba48e0e7c6de19187263d4ecd3891429dbbd72726a786b327b5",
-    "src/lib/listings/listing-authorship.ts": "4f5276eaafe47399dee356678886af874cfc16098bb6cb7ee06c88a90a57ea6b",
+    "src/lib/listings/listing-authorship.ts": "149ff99581f31a9e265597806ba43354056a2504e6632b9ceeead06386bc7e64",
     "src/lib/listings/listing-completion-slice.ts": "f59620136fe8a7742bd0513bf057926f0d6fe6f8b337f492cb6a1c14ceca4989",
     "src/lib/listings/listing-disclosure.ts": "4ea275e2ceeb7049e96cbc8cac7662716e5a5fb5f2d2bd826952fb3e9855a527",
     "src/lib/listings/listing-images.ts": "ee3f77251d593a1a87d7c859a560196f300de1c807c67dc4090d5354e645c27c",
@@ -369,7 +369,7 @@
     "src/services/listings/legality-projection.ts": "a88bc62c2d2e65a3eed1ab5215e12e0fab6e0155255d8649037e1b26e05efcd4",
     "src/services/listings/public-listing-attributes.ts": "79ec9f80b660c026e2f07e14ee4d5c4dd366dc1ef51eab2a2ee4a2f214f0f7c0",
     "src/services/listings/public-listing-projection-types.ts": "38a4eea96f44f73010765e93a8521eb5fb4f7d1c4e171d4f246a1c4e18491bce",
-    "src/services/listings/public-listing-projection.ts": "e2a27bf5dea94c1a896017a39870270cfa4feb0ff5150eb5a641872159bb3a0a",
+    "src/services/listings/public-listing-projection.ts": "2b54bd74582e437f6f1323e9c275c0921d681a5922d0b77322b0628fd7f82055",
     "src/services/listings/public-shelf-sanitise.ts": "a760a93fbc47d907d0f056ece8b8a7fafe95aacf25b575baf65e889629c15dd8",
     "src/services/listings/public-shelf.service.ts": "047a492f7a9a1ec676612c5e1be3f710f49f437531d25abba747a41df8975f81",
     "src/services/listings/publish-public-listing.ts": "22f098164d2a4254e03a0000ac00d044c1c9a7ee6eee7064b8a5d1d1a21cee3a",
@@ -953,7 +953,10 @@
             "detail.back",
             "detail.loading",
             "detail.media.absent",
-            "detail.media.ownerNote",
+            "detail.media.galleryAlt.agency",
+            "detail.media.galleryAlt.ownerDeclared",
+            "detail.media.sourceNote.agency",
+            "detail.media.sourceNote.ownerDeclared",
             "detail.media.title",
             "detail.offers.heading",
             "detail.open.heading",
@@ -3984,7 +3987,7 @@
     "matchedKeys": 135,
     "routeBoundaries": 0,
     "shellFiles": 525,
-    "sliceBytes": 363282
+    "sliceBytes": 363642
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

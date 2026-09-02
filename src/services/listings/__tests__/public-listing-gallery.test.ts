@@ -23,7 +23,7 @@ import {
   type ProjectableProperty,
   type ProjectedShelfImage,
 } from '../public-listing-projection';
-import { LISTING_GALLERY_ALT_KEY } from '@/lib/listings/listing-images';
+import { LISTING_MATERIAL_KEYS } from '@/lib/listings/listing-authorship';
 import type { PublicListing } from '@/types/public-listing';
 
 const AT = '2026-09-01T10:00:00.000Z';
@@ -51,10 +51,14 @@ function shelfImage(name: string, widths: readonly number[]): ProjectedShelfImag
   };
 }
 
-function built(): PublicListing {
-  const listing = buildPublicListing(LISTED, NO_PLACE, AT);
+function buildOrThrow(property: ProjectableProperty): PublicListing {
+  const listing = buildPublicListing(property, NO_PLACE, AT);
   if (listing === null) throw new Error('το fixture όφειλε να δημοσιεύεται');
   return listing;
+}
+
+function built(): PublicListing {
+  return buildOrThrow(LISTED);
 }
 
 describe('Γ1 — Η ΚΑΘΑΡΗ ΠΡΟΒΟΛΗ ΔΕΝ ΜΑΝΤΕΥΕΙ URL', () => {
@@ -108,7 +112,7 @@ describe('Γ2 — ΤΟ ΔΕΣΙΜΟ: η αναφορά του ραφιού γί�
   });
 });
 
-describe('Γ3 — ΤΟ `altKey` ΜΠΑΙΝΕΙ ΕΔΩ, ΜΙΑ ΦΟΡΑ', () => {
+describe('Γ3 — ΤΟ `altKey` ΜΠΑΙΝΕΙ ΕΔΩ, ΜΙΑ ΦΟΡΑ, ΚΑΙ ΛΕΕΙ **ΤΙΝΟΣ** (Α15)', () => {
   it('κάθε εικόνα φέρει το ΙΔΙΟ κλειδί i18n — ποτέ ωμό κείμενο (N.11)', () => {
     const listing = withPublishedGallery(built(), [
       shelfImage('a', [640]),
@@ -116,7 +120,39 @@ describe('Γ3 — ΤΟ `altKey` ΜΠΑΙΝΕΙ ΕΔΩ, ΜΙΑ ΦΟΡΑ', () => {
     ]);
 
     for (const image of listing.gallery) {
-      expect(image.altKey).toBe(LISTING_GALLERY_ALT_KEY);
+      expect(image.altKey).toBe(LISTING_MATERIAL_KEYS[listing.authorship].galleryAlt);
     }
+  });
+
+  it('🔴 αγγελία ΓΡΑΦΕΙΟΥ ⇒ κλειδί ΓΡΑΦΕΙΟΥ · αγγελία ΙΔΙΩΤΗ ⇒ κλειδί ΙΔΙΩΤΗ', () => {
+    // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: κάνε το `altKey` σταθερά *(δηλαδή γύρνα στην κατάσταση πριν
+    //    την Α15)* ⇒ το ένα από τα δύο σκέλη πέφτει, όποια σταθερά κι αν διαλέξεις.
+    //    Αυτό είναι **ολόκληρο** το Ο-18: μέχρι την Α14 υπήρχε **ΕΝΑΣ** παραγωγός
+    //    συλλογής, άρα μία σταθερά ήταν σωστή· η Α14 έκανε **6 στις 7** ψευδείς.
+    const agency = withPublishedGallery(
+      buildOrThrow({ ...LISTED, authorship: 'agency' }),
+      [shelfImage('a', [640])],
+    );
+    const owner = withPublishedGallery(
+      buildOrThrow({ ...LISTED, authorship: 'owner-declared' }),
+      [shelfImage('a', [640])],
+    );
+
+    expect(agency.gallery[0].altKey).toBe(LISTING_MATERIAL_KEYS.agency.galleryAlt);
+    expect(owner.gallery[0].altKey).toBe(LISTING_MATERIAL_KEYS['owner-declared'].galleryAlt);
+    // Η ουσία δεν είναι «ποιο κλειδί», είναι ότι **ΔΕΝ είναι το ίδιο**.
+    expect(agency.gallery[0].altKey).not.toBe(owner.gallery[0].altKey);
+  });
+
+  it('🔑 και η ΙΔΙΑ αγγελία δίνει το ΙΔΙΟ κλειδί σε ΟΛΕΣ τις εικόνες της', () => {
+    // Το «τίνος υλικό» είναι ιδιότητα της **αγγελίας**, όχι της κάθε φωτογραφίας. Αν
+    // γίνει ποτέ ανά-εικόνα, η άδεια προθέματος στο `.i18n-shell-slice.json` παύει να
+    // είναι ασφαλής — και αυτή η γραμμή είναι που το ανακοινώνει.
+    const listing = withPublishedGallery(
+      buildOrThrow({ ...LISTED, authorship: 'agency' }),
+      [shelfImage('a', [640]), shelfImage('b', [640, 1280])],
+    );
+
+    expect(new Set(listing.gallery.map((image) => image.altKey)).size).toBe(1);
   });
 });

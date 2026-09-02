@@ -61,7 +61,7 @@ import type {
   PublicListingStay,
   UnknownPositionReason,
 } from '@/types/public-listing';
-import { LISTING_GALLERY_ALT_KEY } from '@/lib/listings/listing-images';
+import { LISTING_MATERIAL_KEYS } from '@/lib/listings/listing-authorship';
 import { projectListingAttributes } from './public-listing-attributes';
 import { outranksForLocation } from '@/lib/location/location-provenance';
 
@@ -431,7 +431,19 @@ export interface ProjectedShelfImage {
  *
  * 🔑 **Και το `altKey` μπαίνει ΕΔΩ, μία φορά**: είναι απόφαση **αποκάλυψης** *(τι λέμε
  * σε όποιον δεν βλέπει την εικόνα)*, όχι λεπτομέρεια απόδοσης. Δες
- * {@link LISTING_GALLERY_ALT_KEY} για το γιατί δεν είναι κενό και δεν περιγράφει.
+ * {@link LISTING_MATERIAL_KEYS} για το γιατί δεν είναι κενό και δεν περιγράφει.
+ *
+ * 🔴 **ΚΑΙ ΤΟ ΚΛΕΙΔΙ ΔΙΑΛΕΓΕΤΑΙ ΑΠΟ ΤΗΝ `authorship` ΤΗΣ ΙΔΙΑΣ ΑΓΓΕΛΙΑΣ** (Α15). Μέχρι
+ * την **Α14** ήταν **σταθερά** — και ήταν σωστό, γιατί υπήρχε **ΕΝΑΣ** παραγωγός
+ * συλλογής. Τη μέρα που το γραφείο απέκτησε συλλογή, η ίδια σταθερά έλεγε *«υλικό του
+ * κατόχου»* σε **6 στις 7** αγγελίες. ⚠️ **Καμία νέα παράμετρος**: η `authorship` ήταν
+ * **ήδη εδώ**, μέσα στο `listing` που αυτή η συνάρτηση δέχεται ολόκληρο.
+ *
+ * 🔑 **Ο ΛΟΓΟΣ ΠΟΥ Η ΕΠΙΛΟΓΗ ΓΙΝΕΤΑΙ ΤΗ ΣΤΙΓΜΗ ΤΗΣ ΠΡΟΒΟΛΗΣ**: το `galleryAlt` **παγώνει**
+ * μέσα στο δημοσιευμένο έγγραφο, ενώ η ορατή σημείωση από κάτω υπολογίζεται στην
+ * **απόδοση** από την `authorship` του **ίδιου** εγγράφου. Δύο χρόνοι, **μία** πηγή ⇒ οι
+ * δύο προτάσεις **δεν μπορούν** να διαφωνήσουν χωρίς το έγγραφο να είναι ασυνεπές με τον
+ * εαυτό του — πράγμα που η άγκυρα ρωτά ρητά.
  *
  * ⚠️ **Η σειρά ταξιδεύει αυτούσια** από τη συμφιλίωση, που την πήρε αυτούσια από την
  * επιλογή του κατόχου *(Α2.1)*. Καμία ταξινόμηση σε κανένα από τα τρία σημεία.
@@ -446,7 +458,7 @@ export function withPublishedGallery(
       url: image.url,
       width: image.width,
       height: image.height,
-      altKey: LISTING_GALLERY_ALT_KEY,
+      altKey: LISTING_MATERIAL_KEYS[listing.authorship].galleryAlt,
       sources: image.sources,
     })),
   };

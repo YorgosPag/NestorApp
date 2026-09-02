@@ -14,11 +14,8 @@
  * κάποιος γράψει `gallery[0] ?? coverImage`, αυτή η σουίτα κοκκινίζει.
  */
 
-import {
-  LISTING_GALLERY_ALT_KEY,
-  listingImageSrcSet,
-  listingLeadImage,
-} from '@/lib/listings/listing-images';
+import { LISTING_MATERIAL_KEYS } from '@/lib/listings/listing-authorship';
+import { listingImageSrcSet, listingLeadImage } from '@/lib/listings/listing-images';
 import type { ListingImage, PublicListing } from '@/types/public-listing';
 
 function image(url: string, widths: readonly number[] = [1280]): ListingImage {
@@ -27,7 +24,7 @@ function image(url: string, widths: readonly number[] = [1280]): ListingImage {
     url,
     width: largest,
     height: Math.round(largest * 0.75),
-    altKey: LISTING_GALLERY_ALT_KEY,
+    altKey: LISTING_MATERIAL_KEYS['owner-declared'].galleryAlt,
     sources: widths.map((width) => ({ url: `${url}?w=${width}`, width })),
   };
 }
@@ -76,10 +73,17 @@ describe('Ι2 — ΤΟ `srcset`: μόνο ό,τι ΥΠΑΡΧΕΙ, και μόν�
 });
 
 describe('Ι3 — ΤΟ `alt` ΔΕΝ ΕΙΝΑΙ ΚΕΝΟ, ΚΑΙ ΕΙΝΑΙ ΚΛΕΙΔΙ', () => {
-  it('το κλειδί έχει namespace και δεν είναι κενή συμβολοσειρά', () => {
+  it('🔑 ΚΑΘΕ κλειδί `alt` έχει namespace και δεν είναι κενή συμβολοσειρά', () => {
     // 🔴 `alt=""` θα δήλωνε **διακοσμητική** εικόνα — για φωτογραφία ακινήτου αυτό
     //    κρύβει γεγονός (WCAG 1.1.1, ADR-841 §7 Α2.5).
-    expect(LISTING_GALLERY_ALT_KEY).not.toBe('');
-    expect(LISTING_GALLERY_ALT_KEY).toContain(':');
+    //
+    // ⚠️ **Ο ΠΑΡΟΝΟΜΑΣΤΗΣ ΜΕΓΑΛΩΣΕ ΚΑΙ ΑΥΤΟ ΕΙΝΑΙ ΤΟ ΘΕΜΑ** (Α15): μέχρι την Α14 εδώ
+    //    υπήρχε **μία** σταθερά, γιατί υπήρχε **ένας** παραγωγός συλλογής. Η ερώτηση
+    //    *«τίνος υλικό;»* ζει πλέον στο `listing-authorship` — αυτό το αρχείο ρωτά
+    //    μόνο *«είναι κλειδί;»*, που είναι όσο του αναλογεί.
+    for (const keys of Object.values(LISTING_MATERIAL_KEYS)) {
+      expect(keys.galleryAlt).not.toBe('');
+      expect(keys.galleryAlt).toContain(':');
+    }
   });
 });
