@@ -34,14 +34,14 @@ import type { MissingPriceReason, PriceSource } from '@/lib/properties/price-res
  * καταχώρησε αριθμό» (κενό δεδομένων που ο κάτοχος μπορεί να κλείσει).
  */
 export const MISSING_PRICE_KEY: Readonly<Record<MissingPriceReason, string>> = {
-  'not-listed': 'search-results:card.priceMissing.notListed',
-  'sale-price-missing': 'search-results:card.priceMissing.salePriceMissing',
-  'rent-price-missing': 'search-results:card.priceMissing.rentPriceMissing',
+  'not-listed': 'search-results:listing.priceMissing.notListed',
+  'sale-price-missing': 'search-results:listing.priceMissing.salePriceMissing',
+  'rent-price-missing': 'search-results:listing.priceMissing.rentPriceMissing',
   // ⚠️ **Δεν είναι συνώνυμο του `not-listed`, είναι το αντίθετό του** (ADR-835 §4.4):
   // το κατάλυμα **είναι** στην αγορά — απλώς σε άξονα που το επτάτιμο λεξιλόγιο δεν
   // ονομάζει. Κοινό κείμενο με το «δεν διατίθεται» θα έλεγε ψέματα στον επισκέπτη και
   // θα έκρυβε από τον κάτοχο ένα κενό που **μπορεί** να κλείσει.
-  'nightly-rate-missing': 'search-results:card.priceMissing.nightlyRateMissing',
+  'nightly-rate-missing': 'search-results:listing.priceMissing.nightlyRateMissing',
 };
 
 /**

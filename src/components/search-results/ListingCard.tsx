@@ -37,6 +37,7 @@ import { listingDetailHref } from '@/lib/listings/listing-routes';
 import type { PublicListing } from '@/types/public-listing';
 import { formatCurrency } from '@/lib/intl-formatting';
 import { listingImageSrcSet, listingLeadImage } from '@/lib/listings/listing-images';
+import { ListingAuthorshipLine } from '@/components/listings/ListingAuthorshipLine';
 
 /**
  * Πόσο πλατιά αποδίδεται η εικόνα της κάρτας — **δήλωση διάταξης, όχι εικασία**.
@@ -167,19 +168,19 @@ export function ListingCard({
 
           <dl className="mt-1 flex flex-wrap gap-x-3 text-xs text-muted-foreground">
             {listing.areaSqm !== null && (
-              <div><dd>{t('search-results:card.areaSqm', { value: listing.areaSqm })}</dd></div>
+              <div><dd>{t('search-results:listing.areaSqm', { value: listing.areaSqm })}</dd></div>
             )}
             {listing.floor !== null && (
               <div>
                 <dd>
                   {listing.floor === 0
-                    ? t('search-results:card.groundFloor')
-                    : t('search-results:card.floor', { value: listing.floor })}
+                    ? t('search-results:listing.groundFloor')
+                    : t('search-results:listing.floor', { value: listing.floor })}
                 </dd>
               </div>
             )}
             {listing.bedrooms !== null && (
-              <div><dd>{t('search-results:card.bedrooms', { count: listing.bedrooms })}</dd></div>
+              <div><dd>{t('search-results:listing.bedrooms', { count: listing.bedrooms })}</dd></div>
             )}
           </dl>
 
@@ -190,7 +191,7 @@ export function ListingCard({
                 key={kind}
                 className="rounded bg-secondary px-1.5 py-0.5 text-xs text-secondary-foreground"
               >
-                {t(`search-results:card.offer.${kind}`)}
+                {t(`search-results:listing.offer.${kind}`)}
               </li>
             ))}
           </ul>
@@ -212,15 +213,19 @@ export function ListingCard({
 
             🔑 **Η οθόνη δεν άλλαξε γραμμή για να συμβεί αυτό**, και αυτό ήταν το
             εύρημα: δεν έλειπε μηχανή, έλειπε **μία κλήση** στον διακομιστή.
+
+            ✅ **Ο ΤΡΙΑΔΙΚΟΣ ΕΦΥΓΕ ΑΠΟ ΕΔΩ** (ADR-841 Α13.2, 2026-09-01) — **όχι για
+            τάξη**: η **σελίδα** της αγγελίας χρειάστηκε την ίδια πρόταση *(Ο-9, νομικό)*,
+            και αντιγραφή του κλάδου θα ήταν **δεύτερη αλήθεια στη ΛΟΓΙΚΗ**. Τα διπλά
+            κλειδιά τα πιάνει το CHECK 3.8· τον διπλό κλάδο **τίποτα**. Η απόφαση ζει
+            πλέον στο `lib/listings/listing-authorship.ts`, η ζωγραφική στη γραμμή από
+            κάτω — και **η τυπογραφία μένει εδώ**, γιατί εδώ είναι υποσημείωση.
           */}
           {showAuthorship ? (
-          <p className="mt-2 text-xs text-muted-foreground">
-            {listing.authorship === 'owner-declared'
-              ? t('search-results:card.authorship.ownerDeclared')
-              : listing.agencyName === null
-                ? t('search-results:card.authorship.agencyAnonymous')
-                : t('search-results:card.authorship.agency', { name: listing.agencyName })}
-          </p>
+            <ListingAuthorshipLine
+              listing={listing}
+              className="mt-2 text-xs text-muted-foreground"
+            />
           ) : null}
         </article>
       </Link>

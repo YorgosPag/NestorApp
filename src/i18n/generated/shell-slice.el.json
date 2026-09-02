@@ -3559,30 +3559,6 @@
     }
   },
   "search-results": {
-    "card": {
-      "areaSqm": "{value} τ.μ.",
-      "authorship": {
-        "agency": "Από γραφείο: {name}",
-        "agencyAnonymous": "Από μεσιτικό γραφείο",
-        "ownerDeclared": "Δήλωση ιδιοκτήτη"
-      },
-      "bedrooms": "{count, plural, one {# υπνοδωμάτιο} other {# υπνοδωμάτια}}",
-      "floor": "Όροφος {value}",
-      "groundFloor": "Ισόγειο",
-      "noImage": "Χωρίς φωτογραφία",
-      "offer": {
-        "exchange": "Αντιπαροχή",
-        "leaseOut": "Ενοικίαση",
-        "leaseShort": "Βραχυχρόνια μίσθωση",
-        "sell": "Πώληση"
-      },
-      "priceMissing": {
-        "nightlyRateMissing": "Χωρίς καταχωρημένη τιμή ανά διανυκτέρευση",
-        "notListed": "Δεν διατίθεται",
-        "rentPriceMissing": "Χωρίς καταχωρημένο ενοίκιο",
-        "salePriceMissing": "Χωρίς καταχωρημένη τιμή πώλησης"
-      }
-    },
     "detail": {
       "absent": {
         "body": "Ο σύνδεσμος δεν είναι λάθος — το ακίνητο έχει αποσυρθεί από τη δημόσια λίστα. Δεν σημαίνει ότι δεν υπάρχει· σημαίνει ότι δεν το δημοσιεύουμε αυτή τη στιγμή.",
@@ -3683,6 +3659,30 @@
     "list": {
       "empty": "Κανένα ακίνητο δεν ταιριάζει στα φίλτρα",
       "label": "Λίστα αποτελεσμάτων"
+    },
+    "listing": {
+      "areaSqm": "{value} τ.μ.",
+      "authorship": {
+        "agency": "Από γραφείο: {name}",
+        "agencyAnonymous": "Από μεσιτικό γραφείο",
+        "ownerDeclared": "Δήλωση ιδιοκτήτη"
+      },
+      "bedrooms": "{count, plural, one {# υπνοδωμάτιο} other {# υπνοδωμάτια}}",
+      "floor": "Όροφος {value}",
+      "groundFloor": "Ισόγειο",
+      "noImage": "Χωρίς φωτογραφία",
+      "offer": {
+        "exchange": "Αντιπαροχή",
+        "leaseOut": "Ενοικίαση",
+        "leaseShort": "Βραχυχρόνια μίσθωση",
+        "sell": "Πώληση"
+      },
+      "priceMissing": {
+        "nightlyRateMissing": "Χωρίς καταχωρημένη τιμή ανά διανυκτέρευση",
+        "notListed": "Δεν διατίθεται",
+        "rentPriceMissing": "Χωρίς καταχωρημένο ενοίκιο",
+        "salePriceMissing": "Χωρίς καταχωρημένη τιμή πώλησης"
+      }
     },
     "map": {
       "label": "Χάρτης αποτελεσμάτων",

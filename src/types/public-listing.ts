@@ -513,7 +513,7 @@ export type ListingAuthorship = (typeof LISTING_AUTHORSHIPS)[number];
  * ⚠️ **`{ id: null, name: null }` σημαίνει «δεν προέρχεται από γραφείο»**, όχι
  * «αποτυχία». Ένα `id` **με** `name: null` είναι νόμιμο και ονομάζει την ακριβή
  * κατάσταση *«γραφείο χωρίς επωνυμία»*, που η οθόνη ήδη ξέρει να πει
- * (`card.authorship.agencyAnonymous`).
+ * (`listing.authorship.agencyAnonymous`).
  */
 export interface PublicAgencyIdentity {
   /** Το `companyId` του γραφείου, ή `null`. **Ποτέ ψευδώνυμο** — δες `agencyId`. */

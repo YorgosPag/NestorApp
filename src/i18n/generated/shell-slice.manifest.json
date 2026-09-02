@@ -25,7 +25,7 @@
     "src/i18n/generated/routes/terms.el.json": "481f837696b407553f56de16128778617a86f72cf7b27471d61cd5793cf7d288",
     "src/i18n/generated/routes/test-harness__listing-shapes.el.json": "9b6aaaa831492e24807a1c83e0b505dc865c03afbd5638abf8ea2b990422b037",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "41ee75ff73dc285fb9ea52e1eb80e0b6e2dd8e39e6895fa73e2792a774913b82",
+    "src/i18n/generated/shell-slice.el.json": "bbfaad3c50f7c4c47a2ce042f3870153dd65caf116d32a2e7a62af14e5bb17e4",
     "src/i18n/generated/shell-slice.whole.json": "baab7e9d185a06b3ee1d8467d7096d2549e39c5ca21642817535a2539992a2df"
   },
   "boundaries": {
@@ -65,7 +65,7 @@
     "search-results",
     "short-stay"
   ],
-  "inputsSha256": "5d3cd5ccafff179f6ab154d09a3bcbd2f8d04f6a62011348d682d56a3527c939",
+  "inputsSha256": "ce4988b6492ae907ca8050582029a768703d3496c02b36b4632090de6cbc2f58",
   "languages": [
     "el"
   ],
@@ -159,13 +159,14 @@
     "src/components/geo/PlaceMap.tsx": "29b38e5a049adaf6f3325d34d6f418be6419db6eca706f655212bf850da7e1ea",
     "src/components/geo/PlaceSummary.tsx": "ef3e533db3d9f8176b536c853eb77cd2cab121381a9d708bda870bd40bd9419b",
     "src/components/geo/outline-draft.tsx": "40f39d0ad6f1b9ebf2ddb61b9a7487a1c2f0301604163f6437b785ce41d75b7d",
-    "src/components/listing-detail/ListingAttributeList.tsx": "137646a44400fa317f9907acefc803aa75b2402193c749b95e147f2a66edb186",
-    "src/components/listing-detail/ListingDetailContent.tsx": "a6d9de2e7b817fedffbb8e6d5e17e43c38ec0321088e7f1e6ae0a34a30a53f6c",
+    "src/components/listing-detail/ListingAttributeList.tsx": "40ff2bcf10e520a139f03d3cc6209cf29a2430a1070523be7cd676c2f472be3d",
+    "src/components/listing-detail/ListingDetailContent.tsx": "fc20716f240ed219b413d015545b649c1d3e52e6b6710bca26c789feb193a119",
     "src/components/listing-detail/ListingGallery.tsx": "469644154687aa3a9e6b1ef95155dd5653065e2ddebd18a69aa4daa04c42b725",
     "src/components/listing-detail/ListingLegality.tsx": "7f5c05f148501b31e4fd3757d9928a747d6321f52d4554f5bcc67e865c06cf82",
     "src/components/listing-detail/ListingOpenSubjects.tsx": "a3b7c8d88d803bef8649b5ef87716f03fb5b6ac18bf225bd1d76121dc18c71ca",
     "src/components/listing-detail/ListingPositionSection.tsx": "180fa77c3941aa93cf9a952035a2bf6d6c898aa5f27a69dd605a8969be82e07a",
     "src/components/listing-detail/ListingPriceBlock.tsx": "a4e7d8d65c8215961d9d4f44d7318c7dc784c356c0b155055232d47d9adce8a7",
+    "src/components/listings/ListingAuthorshipLine.tsx": "acd8914a26aabfa3233225d3c8f997d1a1b99a952db7ab6e192b8ebb6c31ee51",
     "src/components/mandate/AgencyDirectoryContent.tsx": "582c08a47ff28a815a5dbbf27334b63b90afbe0ac66e9b9753fe1907f6220d9a",
     "src/components/mandate/AgencyProfileContent.tsx": "18564a4aaf0e23e8e88c0032122ff75cc57ba4ca7fd45eddfc049c13c75baec3",
     "src/components/mandate/AgencyShowcaseContent.tsx": "038cf59662001318e0ca4eb098ed72d1985a01283a7f7d66d252ea5e2302391a",
@@ -196,14 +197,14 @@
     "src/components/owner-property/OwnerPropertyDetailContent.tsx": "990de3c05d83f9a3f01929fcf9e89f78e61fec421a3819bd8d740c575a089bcf",
     "src/components/owner-property/OwnerPropertyFormContent.tsx": "cea5b0be17f55a96ab53786a18ece4b189ce5bffaff482ed0f908484bb49e067",
     "src/components/owner-property/form/OwnerPropertyFields.tsx": "97353930fb160d7bb2553c5f1212959048a8bbcd51a232a833cfea45a722d544",
-    "src/components/owner-property/form/OwnerPropertyMediaField.tsx": "73caf2e84f07a87a3cab55a8fff32ea5c885f3f726c465e83b60f19cd27f35fb",
+    "src/components/owner-property/form/OwnerPropertyMediaField.tsx": "0c279b894f71cc45c37a9e5e344123a14e9afb70e0e3ed0c86ad05c67e071eca",
     "src/components/owner-property/form/OwnerPropertyMediaItem.tsx": "4d0af9fbc5211c22a02c91dd9cb70aa2018ec1ee0d0452450d29b363344cbc68",
     "src/components/owner-property/form/OwnerPropertyPlaceField.tsx": "add0b56270aa845cf74c28f6caa7c712b38af8ceee726c99e2b98cfd158b261a",
     "src/components/owner-property/form/RestoredDraftNotice.tsx": "038ffb591ff383874adb1ac6d782daddf1182e16925845ba73ee608aff2a1388",
     "src/components/owner-property/offer-form-labels.ts": "84450453f446381b56960c061358d49f5cdb22f91beec2b6851b52c36f2d69d0",
     "src/components/owner-property/owner-mandate-labels.ts": "adcfbdb334735a6e95e59baa8a884cb44a94b6b6121d3f6bace70d87f91785c2",
     "src/components/projects/ika/map-shared/map-styles.ts": "f8d164ffcb83a5eaa2f491f51117203407d7fac4d3a1b78d2d28e49afc99a1b7",
-    "src/components/search-results/ListingCard.tsx": "019d76940472269088ec4789b4acac450538ddf7c39755793c0861f01e0e212d",
+    "src/components/search-results/ListingCard.tsx": "49fa743d0b9aff3ac2ace6c1cc63e7fb82750afb2512fad7e97c032dc971e114",
     "src/components/search-results/ListingLedgerBar.tsx": "fe19b6ee40de7e137aa57dab65308b80f04872e4de13ddc20f41f4013db09e30",
     "src/components/search-results/ResultsMap.tsx": "9dc8657bcc511b716011cfa894927828e40fd4e1f6d82fc27927813affe7f4fb",
     "src/components/settings/brokerage/BrokerageCapabilityContent.tsx": "7e57255e158e46a57151edda2e6b81d8341b2cb6b020e3e72d5456cf002a12cd",
@@ -280,9 +281,10 @@
     "src/lib/geo/geo-local-frame.ts": "2f167dc263feae586e316ce5bb075f5fbd55797680cbdb4e9620170d6b51a878",
     "src/lib/geo/geo-ring.ts": "f6003ba3244ce1d46a77f7bc2fcfa47145e8529b8844a1771cce0965b152f3b6",
     "src/lib/geo/place-ref-schema.ts": "da18b3b1a788ecbf4ae980651719317961315838603e8c1407116a7bce9d891e",
+    "src/lib/listings/listing-authorship.ts": "4f5276eaafe47399dee356678886af874cfc16098bb6cb7ee06c88a90a57ea6b",
     "src/lib/listings/listing-disclosure.ts": "33771a788029b571bc7e704ce36654c9ce49ca6fc62da523f107ef00ac766ed4",
     "src/lib/listings/listing-images.ts": "ee3f77251d593a1a87d7c859a560196f300de1c807c67dc4090d5354e645c27c",
-    "src/lib/listings/listing-price-keys.ts": "0664c99b2aa659c05285880ad61ba5c422894e04e6782be56685ec5b3fd72cf8",
+    "src/lib/listings/listing-price-keys.ts": "4dc204e7e78f2b227750f43de016744a8b11ee0b62a18b1a326de5600e1c8c13",
     "src/lib/listings/listing-shape-keys.ts": "4434106cb898c44d3c147ffb8252babda539af9f1776f5244566cb73c7963126",
     "src/lib/listings/listings-geojson.ts": "ffbaed849f8ff0a3166454e16c29675c9a113dc9cd5973d53283a27c9565148d",
     "src/lib/mandate/mandate-actions.ts": "d0664f969eb9f0cb8c5d8ce0b15e0723a153c475303a1b88331ebdecbfd5ec55",
@@ -873,14 +875,6 @@
         },
         "search-results": {
           "keys": [
-            "card.areaSqm",
-            "card.bedrooms",
-            "card.floor",
-            "card.groundFloor",
-            "card.priceMissing.nightlyRateMissing",
-            "card.priceMissing.notListed",
-            "card.priceMissing.rentPriceMissing",
-            "card.priceMissing.salePriceMissing",
             "detail.attributes.heading",
             "detail.attributes.ledger",
             "detail.attributes.undeclared",
@@ -903,6 +897,17 @@
             "detail.price.role.nightly",
             "detail.price.role.rent",
             "detail.provenance.projectedAt",
+            "listing.areaSqm",
+            "listing.authorship.agency",
+            "listing.authorship.agencyAnonymous",
+            "listing.authorship.ownerDeclared",
+            "listing.bedrooms",
+            "listing.floor",
+            "listing.groundFloor",
+            "listing.priceMissing.nightlyRateMissing",
+            "listing.priceMissing.notListed",
+            "listing.priceMissing.rentPriceMissing",
+            "listing.priceMissing.salePriceMissing",
             "map.shape.none",
             "map.shape.outline",
             "map.shape.pin",
@@ -913,7 +918,6 @@
             "unmapped.reason.ownerDeclined"
           ],
           "prefixes": [
-            "card.offer",
             "detail.absent",
             "detail.attributes.label",
             "detail.error",
@@ -921,6 +925,7 @@
             "detail.open",
             "detail.position.meaning",
             "detail.position.provenance",
+            "listing.offer",
             "map.shape"
           ],
           "whole": false
@@ -2388,21 +2393,21 @@
         },
         "search-results": {
           "keys": [
-            "card.areaSqm",
-            "card.authorship.agency",
-            "card.authorship.agencyAnonymous",
-            "card.authorship.ownerDeclared",
-            "card.bedrooms",
-            "card.floor",
-            "card.groundFloor",
-            "card.priceMissing.nightlyRateMissing",
-            "card.priceMissing.notListed",
-            "card.priceMissing.rentPriceMissing",
-            "card.priceMissing.salePriceMissing"
+            "listing.areaSqm",
+            "listing.authorship.agency",
+            "listing.authorship.agencyAnonymous",
+            "listing.authorship.ownerDeclared",
+            "listing.bedrooms",
+            "listing.floor",
+            "listing.groundFloor",
+            "listing.priceMissing.nightlyRateMissing",
+            "listing.priceMissing.notListed",
+            "listing.priceMissing.rentPriceMissing",
+            "listing.priceMissing.salePriceMissing"
           ],
           "prefixes": [
-            "card.offer",
-            "detail.media"
+            "detail.media",
+            "listing.offer"
           ],
           "whole": false
         }
@@ -3350,7 +3355,7 @@
     "src/lib/listings/listing-routes.ts": "b923f8af7e5c011d93d1e0d9974851fee69183450fadb85bc7f93eb3ce736bae",
     "src/lib/listings/listing-showcase-order.ts": "0b419572fec4e0efd798b6ffdd15ac4385be8430ecc9785dd48e1ad550ea8556",
     "src/lib/listings/public-listing-from-document.ts": "63b67194ce12526e5933fa82ed2b9405f2f62e0924c4f788c2eff41f1fffe244",
-    "src/lib/listings/public-listing-schema.ts": "3f309c71b261ca33437d1cb036a68623b1d2727fdf19f54bafbbbe54caa3d992",
+    "src/lib/listings/public-listing-schema.ts": "3dba426ce606a97a8c1a4447f10a65ff900db63fc8bddf851fcee1220a6a6410",
     "src/lib/location/location-provenance.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/media/media-mime.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/occupancy/occupancy-conflict.ts": "fce79b54f1996729dc9363d98711e50108304d4af0b7ae5f4650d5f4a76d3149",
@@ -3575,7 +3580,7 @@
     "matchedKeys": 135,
     "routeBoundaries": 0,
     "shellFiles": 519,
-    "sliceBytes": 339428
+    "sliceBytes": 339431
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

@@ -222,8 +222,17 @@ export function OwnerPropertyMediaField({
               αριθμός εδώ **δεν μπορεί** να διαφωνήσει με το τι φεύγει στον κόσμο.
             */}
             <p aria-live="polite" className="text-xs text-muted-foreground">
+              {/*
+                🔴 **`published`, ΠΟΤΕ `count`** — και οι δύο λόγοι είναι μετρημένοι:
+                *(α)* το μήνυμα λέει `{published}`, οπότε ένα `count` άφηνε τη μεταβλητή
+                **άλυτη στην οθόνη** *(«Δημοσιεύονται (published) από (max)»* — το είδα
+                περπατώντας, με 1.012 tests πράσινα)*· *(β)* το `count` είναι
+                **δεσμευμένο** όνομα του i18next: ενεργοποιεί πληθυντικούς και θα
+                απαιτούσε `_one`/`_other`, δηλαδή δεύτερο μηχανισμό για μια πρόταση που
+                δεν κλίνει.
+              */}
               {t(`${K}.publishedCount`, {
-                count: published.length,
+                published: published.length,
                 max: PUBLISHED_MEDIA_LIMIT,
               })}
             </p>

@@ -58,7 +58,7 @@
     "moreList": "Larger list",
     "moreMap": "Larger map"
   },
-  "card": {
+  "listing": {
     "areaSqm": "{value} m²",
     "floor": "Floor {value}",
     "groundFloor": "Ground floor",

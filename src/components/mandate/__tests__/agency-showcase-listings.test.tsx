@@ -147,7 +147,7 @@ describe('Β. Η βιτρίνα δείχνει τα ακίνητά της (ADR-8
     expect(listingOf('prop_a', 'x').agencyName).toBe(PROFILE.displayName);
     // …και εμφανίζεται **μία** φορά — στην κεφαλίδα, όχι σε κάθε κάρτα.
     expect(screen.getAllByText(PROFILE.displayName)).toHaveLength(1);
-    expect(screen.queryByText('search-results:card.authorship.agency')).not.toBeInTheDocument();
+    expect(screen.queryByText('search-results:listing.authorship.agency')).not.toBeInTheDocument();
   });
 
   it('🔴 Β5 — ΡΩΤΑΕΙ ΜΕ ΤΗΝ ΤΑΥΤΟΤΗΤΑ, όχι με την επωνυμία', () => {

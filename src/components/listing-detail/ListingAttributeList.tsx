@@ -61,14 +61,14 @@ function useAttributeValue(listing: PublicListing, key: ListingAttributeKey): st
       return canonical === null ? '' : t(`properties-enums:${PROPERTY_TYPE_I18N_KEYS[canonical]}`);
     }
     case 'areaSqm':
-      return t('search-results:card.areaSqm', { value: listing.areaSqm });
+      return t('search-results:listing.areaSqm', { value: listing.areaSqm });
     case 'floor':
       // `0` είναι **ισόγειο**, όχι «μηδέν όροφος» — ίδια διάκριση με την κάρτα.
       return listing.floor === 0
-        ? t('search-results:card.groundFloor')
-        : t('search-results:card.floor', { value: listing.floor });
+        ? t('search-results:listing.groundFloor')
+        : t('search-results:listing.floor', { value: listing.floor });
     case 'bedrooms':
-      return t('search-results:card.bedrooms', { count: listing.bedrooms });
+      return t('search-results:listing.bedrooms', { count: listing.bedrooms });
   }
 }
 

@@ -58,7 +58,7 @@
     "moreList": "Μεγαλύτερη λίστα",
     "moreMap": "Μεγαλύτερος χάρτης"
   },
-  "card": {
+  "listing": {
     "areaSqm": "{value} τ.μ.",
     "floor": "Όροφος {value}",
     "groundFloor": "Ισόγειο",

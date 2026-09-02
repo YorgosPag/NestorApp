@@ -82,6 +82,15 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     floor: 1,
     bedrooms: 3,
     title: 'Διαμέρισμα στην Εγνατία',
+    // 🔴 **ΤΑ ΤΕΣΣΕΡΑ ΠΟΥ ΕΛΕΙΠΑΝ** (ADR-841 Α13, 2026-09-01). Ο τύπος τα δηλώνει
+    //    **υποχρεωτικά** — το fixture τα παρέλειπε, και κανείς δεν το είδε επειδή
+    //    ο πράκτορας δεν τρέχει `tsc` (N.17). Χωρίς αυτά, η **νέα** γραμμή προέλευσης
+    //    θα διάβαζε `authorship: undefined`, θα έπεφτε στον τελευταίο κλάδο και η
+    //    άγκυρα θα ήταν **πράσινη σε λάθος οθόνη** — το ακριβές σχήμα της Α2.10.
+    place: null,
+    authorship: 'agency',
+    agencyName: 'ΠΑΓΩΝΗΣ Ενεργειακή Κατασκευαστική Α.Ε.',
+    agencyId: 'comp_a0000001',
     // 🔑 **ΠΑΡΑΓΟΜΕΝΟ, όχι γραμμένο** (ADR-838): αν το fixture έγραφε τις γραμμές στο
     //    χέρι, θα ήταν **δεύτερη ελλιπής λίστα** δίπλα στον πίνακα — ακριβώς το
     //    σχήμα «δύο λίστες που επιβεβαιώνουν η μία την άλλη» που η Φ3 πλήρωσε (§18.7).
@@ -224,7 +233,7 @@ describe('Ο4 — κάθε ποσό λέει τι είναι', () => {
       listing: listing({ commercial: { askingPrice: null, finalPrice: null, rentPrice: null, nightlyRate: null } }),
     });
     expect(
-      screen.getByText('search-results:card.priceMissing.salePriceMissing')
+      screen.getByText('search-results:listing.priceMissing.salePriceMissing')
     ).toBeInTheDocument();
   });
 });
@@ -297,5 +306,78 @@ describe('Ο6 — ό,τι δεν δημοσιεύουμε, το λέμε', () =>
   it('ο τίτλος είναι κείμενο του κατόχου — ΟΧΙ κλειδί i18n', () => {
     renderWith({ state: 'found', listing: listing() });
     expect(screen.getByRole('heading', { level: 1, name: 'Διαμέρισμα στην Εγνατία' })).toBeInTheDocument();
+  });
+});
+
+// ============================================================================
+// Ο9 — Η ΥΠΟΓΡΑΦΗ ΣΤΗΝ ΟΘΟΝΗ ΤΗΣ ΑΠΟΦΑΣΗΣ (ADR-841 Α13 · κλείνει το Ο-9)
+// ============================================================================
+
+/**
+ * 🔴 **Νομική άγκυρα, όχι αισθητική.** Το **ΔΕΕ C-146/16** *(Α1.5)* ζητά την ταυτότητα
+ * του εμπόρου *«απλά και γρήγορα»*. Μέχρι σήμερα η **κάρτα** το έλεγε και **αυτή** η
+ * σελίδα όχι.
+ *
+ * ⚠️ **ΚΑΙ ΟΙ ΤΡΕΙΣ ΦΩΝΕΣ, ΟΧΙ ΔΕΙΓΜΑ**: ο παρονομαστής είναι το
+ * `ListingAuthorshipVoice`. Δοκιμή **μιας** κατάστασης θα άφηνε τις άλλες δύο να
+ * σβήσουν αθόρυβα — και η μία από αυτές *(«γραφείο χωρίς επωνυμία»)* είναι ακριβώς
+ * εκείνη που, αν σπάσει, τυπώνει κενό «Από γραφείο: ».
+ */
+describe('Ο9 — η σελίδα λέει ΠΟΙΟΣ δημοσίευσε', () => {
+  it('γραφείο ΜΕ επωνυμία ⇒ η επωνυμία ταξιδεύει ως παράμετρος', () => {
+    renderWith({ state: 'found', listing: listing() });
+    expect(
+      screen.getByText(/search-results:listing\.authorship\.agency::/)
+    ).toBeInTheDocument();
+    expect(screen.getByText(/ΠΑΓΩΝΗΣ Ενεργειακή Κατασκευαστική Α\.Ε\./)).toBeInTheDocument();
+  });
+
+  it('🔴 γραφείο ΧΩΡΙΣ επωνυμία ⇒ ΑΛΛΗ πρόταση, ΠΟΤΕ κενό «Από γραφείο: »', () => {
+    renderWith({ state: 'found', listing: listing({ agencyName: null }) });
+    expect(
+      screen.getByText('search-results:listing.authorship.agencyAnonymous')
+    ).toBeInTheDocument();
+    // Ο παρονομαστής: η **ονομαστική** εκδοχή ΔΕΝ ζωγραφίζεται εδώ.
+    expect(
+      screen.queryByText(/search-results:listing\.authorship\.agency::/)
+    ).not.toBeInTheDocument();
+  });
+
+  it('δήλωση ιδιοκτήτη ⇒ ούτε επωνυμία, ούτε «γραφείο»', () => {
+    renderWith({
+      state: 'found',
+      listing: listing({ authorship: 'owner-declared', agencyName: null, agencyId: null }),
+    });
+    expect(
+      screen.getByText('search-results:listing.authorship.ownerDeclared')
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('search-results:listing.authorship.agencyAnonymous')
+    ).not.toBeInTheDocument();
+  });
+
+  /**
+   * 🔴 **Η ΘΕΣΗ ΕΙΝΑΙ ΜΕΡΟΣ ΤΗΣ ΑΠΟΦΑΣΗΣ, ΑΡΑ ΜΕΡΟΣ ΤΗΣ ΑΓΚΥΡΑΣ** *(Α13.3)*.
+   *
+   * Χωρίς αυτόν τον έλεγχο, κάποιος θα μπορούσε να μετακινήσει τη γραμμή στο `aside`
+   * ή στο υποσέλιδο και **και τα τρία** παραπάνω θα έμεναν **πράσινα** — ενώ στο
+   * κινητό (μία στήλη) η υπογραφή θα είχε πέσει κάτω από γκαλερί και χάρτη, δηλαδή
+   * ακριβώς εκεί που το *«γρήγορα»* παύει να ισχύει.
+   *
+   * 🔑 Και ο δεύτερος έλεγχος είναι το **δικό μας** επιχείρημα *(Α13.4)*: η προέλευση
+   * **προηγείται των κενών**. «Δεν έχει δηλωθεί» χωρίς να ξέρεις ποιος δεν δήλωσε
+   * είναι κατηγορία χωρίς κατηγορούμενο.
+   */
+  it('🔴 ΘΕΣΗ — αμέσως μετά τον τίτλο, και ΠΡΙΝ από τα κενά', () => {
+    renderWith({ state: 'found', listing: listing() });
+
+    const heading = screen.getByRole('heading', { level: 1 });
+    const signature = screen.getByText(/search-results:listing\.authorship\.agency::/);
+    const gaps = screen.getByText('search-results:detail.open.heading');
+
+    expect(heading.compareDocumentPosition(signature) & Node.DOCUMENT_POSITION_FOLLOWING)
+      .toBeTruthy();
+    expect(signature.compareDocumentPosition(gaps) & Node.DOCUMENT_POSITION_FOLLOWING)
+      .toBeTruthy();
   });
 });

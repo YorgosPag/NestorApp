@@ -29,6 +29,7 @@ import { SHAPE_LABEL_KEY, SHAPE_MEANING_KEY, shapeMeaningKey } from '../listing-
 import { listingDetailHref, searchResultsHref, SEARCH_RESULTS_ROUTE } from '../listing-routes';
 import { LOCATION_PROVENANCES } from '@/lib/location/location-provenance';
 import { OFFER_KINDS } from '@/types/property-offers';
+import { LISTING_AUTHORSHIP_KEYS } from '../listing-authorship';
 import { PROPERTY_TYPES, PROPERTY_TYPE_I18N_KEYS } from '@/constants/property-types';
 import type { PublicListing } from '@/types/public-listing';
 
@@ -272,7 +273,12 @@ function allRequiredKeys(): readonly string[] {
     ...LISTING_ATTRIBUTE_KEYS.map((key) => `detail.attributes.label.${key}`),
     ...LISTING_OPEN_SUBJECTS.map((subject) => `detail.open.${subject}`),
     ...LOCATION_PROVENANCES.map((p) => `detail.position.provenance.${p}`),
-    ...OFFER_KINDS.map((kind) => `card.offer.${kind}`),
+    ...OFFER_KINDS.map((kind) => `listing.offer.${kind}`),
+    // ✅ **ADR-841 Α13 (Ο-9)** — η υπογραφή φτάνει πλέον και στην οθόνη 3. Ο **πλήρης
+    //    παρονομαστής** έρχεται από το `Record<ListingAuthorshipVoice, …>`: τέταρτη φωνή
+    //    σπάει τη μεταγλώττιση εκεί — άρα αυτή η λίστα **δεν μπορεί να αποκλίνει
+    //    σιωπηλά**, που είναι ο μόνος λόγος που ένας παρονομαστής αξίζει κάτι (Κ1 · Β1).
+    ...Object.values(LISTING_AUTHORSHIP_KEYS),
     'unmapped.reason.neverAsked',
     'unmapped.reason.ownerDeclined',
   ];
