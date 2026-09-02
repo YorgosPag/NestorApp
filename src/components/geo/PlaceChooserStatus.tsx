@@ -19,13 +19,14 @@
 import React from 'react';
 import { AlertCircle, CheckCircle2, Info } from 'lucide-react';
 
+import { Spinner } from '@/components/ui/spinner/Spinner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import type { BuildingLookup, PlaceIdentityState } from '@/hooks/geo/usePlaceIdentity';
 
-type Tone = 'neutral' | 'good' | 'warn';
+type Tone = 'neutral' | 'good' | 'warn' | 'busy';
 
-const ICON_OF: Record<Tone, typeof Info> = {
+const ICON_OF: Record<Exclude<Tone, 'busy'>, typeof Info> = {
   neutral: Info,
   good: CheckCircle2,
   warn: AlertCircle,
@@ -39,7 +40,7 @@ const ICON_OF: Record<Tone, typeof Info> = {
  * *«ξέρω ποιο είναι ποιο χωρίς να δω χρώμα;»*.
  */
 function StatusLine({ tone, children }: { tone: Tone; children: React.ReactNode }): React.ReactElement {
-  const Icon = ICON_OF[tone];
+  const Icon = tone === 'busy' ? null : ICON_OF[tone];
   return (
     <p
       className={cn(
@@ -47,8 +48,24 @@ function StatusLine({ tone, children }: { tone: Tone; children: React.ReactNode 
         tone === 'warn' ? 'text-destructive' : 'text-muted-foreground',
       )}
       role={tone === 'warn' ? 'alert' : 'status'}
+      // 🔑 **Η αναμονή ανακοινώνεται, δεν διακόπτει.** `polite` ώστε ο αναγνώστης οθόνης
+      //    να τη φτάσει στο επόμενο διάλειμμα — ένα `assertive` θα έκοβε τον χρήστη στη
+      //    μέση μιας πρότασης για να του πει «περίμενε».
+      aria-live={tone === 'busy' ? 'polite' : undefined}
+      aria-busy={tone === 'busy' ? true : undefined}
     >
-      <Icon className="mt-0.5 size-4 shrink-0" aria-hidden />
+      {/*
+        ⚠️ **Ο ΔΕΙΚΤΗΣ ΕΙΝΑΙ Ο ΚΑΝΟΝΙΚΟΣ `Spinner`** (`components/ui/spinner`), ποτέ ένα
+        τοπικό `Loader2 animate-spin`: το μέγεθος έρχεται από το `useIconSizes`, δηλαδή
+        από την ίδια κεντρική κλίμακα με κάθε άλλο εικονίδιο. Ένα χειρόγραφο `size-4`
+        εδώ θα ήταν το ίδιο σχήμα με τα «δύο λεξιλόγια» που το `listing-map-shape`
+        καταγγέλλει, σε μικρογραφία.
+      */}
+      {Icon === null ? (
+        <Spinner size="small" className="mt-0.5 shrink-0" aria-label="" />
+      ) : (
+        <Icon className="mt-0.5 size-4 shrink-0" aria-hidden />
+      )}
       <span>{children}</span>
     </p>
   );
@@ -61,7 +78,11 @@ export function LookupStatus({ lookup }: { lookup: BuildingLookup }): React.Reac
     case 'idle':
       return null;
     case 'searching':
-      return <StatusLine tone="neutral">{t('place.picker.searching')}</StatusLine>;
+      // 🔴 **Η ΑΝΑΦΟΡΑ ΤΟΥ GIORGIO (02/09)**: *«υπάρχει κάποια καθυστέρηση μέχρι να το
+      //    εντοπίσει»*. Υπήρχε ήδη **κείμενο**, αλλά στατικό — και στατικό κείμενο δεν
+      //    ξεχωρίζει από **αποτέλεσμα**: ο άνθρωπος δεν μπορούσε να πει αν το σύστημα
+      //    δουλεύει ή αν κόλλησε. Η κίνηση είναι η πληροφορία.
+      return <StatusLine tone="busy">{t('place.picker.searching')}</StatusLine>;
     case 'found':
       return (
         <StatusLine tone="good">

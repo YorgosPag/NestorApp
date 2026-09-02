@@ -17,8 +17,6 @@
 
 import { sleep } from '@/lib/async-utils';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
-import { normalizeGreekText } from '@/services/ai-pipeline/shared/greek-text-utils';
-import { transliterateGreeklish, containsGreek } from '@/services/ai-pipeline/shared/greek-nlp';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { countryNameToCode } from '@/utils/address/country-codes';
@@ -33,6 +31,13 @@ import {
   formatTopResult,
   type NominatimResult,
 } from './geocoding-engine-helpers';
+import {
+  composeStreet,
+  toOsmStyleQuery,
+  toFreeformQuery,
+  createAccentStrippedVariant,
+  createGreeklishVariant,
+} from './geocoding-query-variants';
 
 const logger = createModuleLogger('geocoding-api');
 
@@ -101,25 +106,6 @@ export function sanitizeQuery(body: GeocodingRequestBody): GeocodingRequestBody 
     county: sanitizeStr(body.county), municipality: sanitizeStr(body.municipality),
     region: sanitizeStr(body.region), country: sanitizeStr(body.country),
   };
-}
-
-/**
- * Join street name and house number. Nominatim's structured `street` slot wants
- * "<number> <name>", while free-form text follows the local written convention —
- * in Greek, "<name> <number>" («Τσιμισκή 43»). One composer so the two orders
- * cannot drift apart.
- *
- * Kept out of the caller's `street` field, which must stay the bare street name.
- */
-function composeStreet(
-  params: GeocodingRequestBody,
-  order: 'number-first' | 'number-last',
-): string | undefined {
-  if (!params.street) return undefined;
-  if (!params.number) return params.street;
-  return order === 'number-first'
-    ? `${params.number} ${params.street}`
-    : `${params.street} ${params.number}`;
 }
 
 // =============================================================================
@@ -256,55 +242,6 @@ function finishWith(
     top,
     declaredCountryCode,
   );
-}
-
-// =============================================================================
-// SEARCH VARIANTS (query builders)
-// =============================================================================
-
-/**
- * Tight first-pass query: street + number, locality, postal code — comma
- * separated. Measured (2026-07-26): space-joining these, as this builder used to
- * do, returns an empty set where the comma-separated form matches.
- */
-function toOsmStyleQuery(params: GeocodingRequestBody): string {
-  const locality = (params.neighborhood || params.city)?.replace(/-/g, ' ');
-  return [composeStreet(params, 'number-last'), locality, params.postalCode]
-    .filter(Boolean).join(', ');
-}
-
-/** Widest query: the full administrative chain, for when the tight one misses. */
-function toFreeformQuery(params: GeocodingRequestBody): string {
-  const locality = params.neighborhood || params.city;
-  return [
-    composeStreet(params, 'number-last'), locality, params.municipality,
-    params.county, params.postalCode, params.region,
-  ].filter(Boolean).join(', ');
-}
-
-function createAccentStrippedVariant(params: GeocodingRequestBody): GeocodingRequestBody {
-  const n = (v: string | undefined) => v ? normalizeGreekText(v) : undefined;
-  return {
-    street: n(params.street), number: params.number,
-    city: n(params.city), neighborhood: n(params.neighborhood),
-    postalCode: params.postalCode, county: n(params.county),
-    municipality: n(params.municipality), region: n(params.region), country: params.country,
-  };
-}
-
-function createGreeklishVariant(params: GeocodingRequestBody): GeocodingRequestBody | null {
-  const hasNonGreek =
-    (params.street && !containsGreek(params.street)) ||
-    (params.city && !containsGreek(params.city)) ||
-    (params.neighborhood && !containsGreek(params.neighborhood));
-  if (!hasNonGreek) return null;
-  const tr = (v: string | undefined) => v && !containsGreek(v) ? transliterateGreeklish(v) : v;
-  return {
-    street: tr(params.street), number: params.number,
-    city: tr(params.city), neighborhood: tr(params.neighborhood),
-    postalCode: params.postalCode, county: params.county, municipality: params.municipality,
-    region: tr(params.region), country: params.country,
-  };
 }
 
 // =============================================================================

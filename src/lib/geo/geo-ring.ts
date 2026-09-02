@@ -46,7 +46,7 @@ import type { GeoOutline, GeoPoint } from '@/types/geo/coordinates';
 // άξονας δρόμου (`geo-line.ts`) τη χρειάζεται με άλλο origin (αρχή, όχι κέντρο
 // βάρους) και η αντιγραφή θα έφτιαχνε δίδυμο (CHECK 3.28). Ο δακτύλιος περνά πάντα
 // {@link vertexCentroid} ως origin — αυτό ήταν η προηγούμενη (ιδιωτική) συμπεριφορά.
-import { toLocalMetres } from './geo-local-frame';
+import { fromLocalMetres, toLocalMetres } from './geo-local-frame';
 
 /**
  * Είναι το σημείο **μέσα** στον δακτύλιο;
@@ -150,6 +150,53 @@ export function geoOutlineBoundingCircle(
   const radiusKm = Math.max(farthestMetres / 1000, MIN_BOUNDING_RADIUS_KM);
   return { center, radiusKm };
 }
+
+/**
+ * **ΚΥΚΛΟΣ → ΔΑΚΤΥΛΙΟΣ** — το αντίστροφο του {@link geoOutlineBoundingCircle}, και ζει
+ * δίπλα του επίτηδες: είναι το **ζεύγος** της ίδιας ιδέας, όχι δεύτερο θέμα.
+ *
+ * 🔑 **Γιατί δακτύλιος και ΟΧΙ νέα στρώση χάρτη**: το MapLibre ζωγραφίζει κύκλο μόνο
+ * με ακτίνα σε **εικονοστοιχεία** (`circle-radius`) — δηλαδή σχήμα που **μεγαλώνει και
+ * μικραίνει με το ζουμ** και άρα **δεν είναι** τα 500 μέτρα που υποσχέθηκε. Ένας
+ * κύκλος σε **μέτρα** είναι, γεωγραφικά, πολύγωνο· και μόλις γίνει {@link GeoOutline},
+ * ο υπάρχων `outlineToGeoJson` τον ζωγραφίζει **χωρίς καμία νέα μετατροπή** και χωρίς
+ * δεύτερη αντιστροφή `lng`/`lat` — το ακριβώς ένα σημείο όπου το έργο επιτρέπει την
+ * αντιστροφή μένει ένα.
+ *
+ * 🔑 **Και γι’ αυτό δεν χρειάστηκε τριγωνομετρία**: το {@link fromLocalMetres} είναι
+ * ήδη ο SSoT της αντι-προβολής. Ο κύκλος χτίζεται σε **τοπικά μέτρα** — όπου είναι
+ * κυριολεκτικά `(r·cosθ, r·sinθ)` — και επιστρέφει γεωγραφικός. Η γραμμένη με το χέρι
+ * εκδοχή θα ξανάγραφε τη `metresPerDegree`/`cosLat` άλγεβρα που το `geo-local-frame`
+ * εξήγαγε **ακριβώς** για να μην ξαναγραφτεί (CHECK 3.28).
+ *
+ * ⚠️ **64 κορυφές, δηλωμένο και όχι ρυθμιζόμενο**: σε ζουμ κτιρίου η γωνιακή διαφορά
+ * είναι κάτω από ένα εικονοστοιχείο — ένα «λείο» 128 θα διπλασίαζε τα δεδομένα χωρίς
+ * ορατή διαφορά, και ένα 16 θα έδειχνε **οκτάγωνο**, δηλαδή σχήμα που ο άνθρωπος
+ * διαβάζει ως **σχεδιασμένο περίγραμμα** αντί για επιφύλαξη.
+ *
+ * @param center — το κέντρο
+ * @param radiusMetres — η ακτίνα· **μη θετική τιμή ⇒ `null`**, γιατί κύκλος χωρίς
+ *   ακτίνα δεν είναι μικρός κύκλος — **δεν είναι σχήμα**, και ένας δακτύλιος με 64
+ *   ταυτόσημες κορυφές θα περνούσε κάθε έλεγχο πλήθους και θα ζωγράφιζε το τίποτα.
+ */
+export function geoCircleOutline(center: GeoPoint, radiusMetres: number): GeoOutline | null {
+  if (!Number.isFinite(radiusMetres) || radiusMetres <= 0) return null;
+
+  const vertices: GeoPoint[] = [];
+  for (let index = 0; index < CIRCLE_SEGMENTS; index += 1) {
+    const angle = (index / CIRCLE_SEGMENTS) * 2 * Math.PI;
+    vertices.push(
+      fromLocalMetres(
+        { x: radiusMetres * Math.cos(angle), y: radiusMetres * Math.sin(angle) },
+        center,
+      ),
+    );
+  }
+  return vertices;
+}
+
+/** Δες το {@link geoCircleOutline}: κάτω από ένα εικονοστοιχείο σε ζουμ κτιρίου. */
+const CIRCLE_SEGMENTS = 64;
 
 /** 10 μέτρα — μικρότερο από κάθε οικόπεδο, μεγαλύτερο από κάθε σφάλμα στρογγυλοποίησης. */
 const MIN_BOUNDING_RADIUS_KM = 0.01;

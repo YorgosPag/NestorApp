@@ -29,6 +29,7 @@ import { safeParseBody } from '@/lib/validation/shared-schemas';
 import { createContactServerSide, updateContactField } from '@/services/ai-pipeline/shared/contact-lookup-crud';
 import { fuzzyGreekMatch } from '@/services/ai-pipeline/shared/greek-text-utils';
 import { getErrorMessage } from '@/lib/error-utils';
+import { splitStreetAndNumber } from '@/utils/address/address-parse';
 import {
   ResolveContactSchema,
   normalizeVat,
@@ -39,13 +40,6 @@ import {
   ensureSupplierPersona,
   setContactLogoIfEmpty,
 } from './resolve-helpers';
-
-function splitStreetNumber(raw: string): { street: string; number: string } {
-  const trimmed = raw.trim();
-  const match = /^(.+?)\s+(\d+[α-ωΑ-Ω]?)\s*$/.exec(trimmed);
-  if (match) return { street: match[1].trim(), number: match[2] };
-  return { street: trimmed, number: '' };
-}
 
 async function handlePost(request: NextRequest): Promise<NextResponse> {
   const handler = withAuth(
@@ -118,7 +112,12 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
         }
 
         if (vendorAddress || vendorCity) {
-          const { street: parsedStreet, number: parsedNumber } = splitStreetNumber(vendorAddress ?? '');
+          // 🔑 **Μία γραμματική αριθμού για όλο το έργο** (2026-09-02): αυτό ήταν αντίγραφο,
+          // χαρακτήρα προς χαρακτήρα, του regex της `parseGreekAddress` — και κανένα από τα
+          // δύο δεν ήξερε το «25ης Μαρτίου 12» ή το «8-10». Δες `utils/address/address-parse`.
+          const { street: parsedStreet, number: parsedNumber } = splitStreetAndNumber(
+            vendorAddress ?? '',
+          );
           const addressEntry = {
             street: parsedStreet,
             ...(parsedNumber ? { number: parsedNumber } : {}),

@@ -467,7 +467,19 @@
       "placeDeclinedNote": "The property will appear in the list marked as having no stated location.",
       "placeLinkLegend": "Which building or plot?",
       "placeLinkHelp": "Optional. If you point at it, your listing meets the people searching for THIS building — not just the area.",
-      "landAreaLabel": "Land area (m²)"
+      "landAreaLabel": "Land area (m²)",
+      "placeAccuracyLegend": "What was located",
+      "placeRefine": "A more specific address gives a more precise location. You can also point at the building on the map below.",
+      "placeAccuracyNote": {
+        "exact": "The building. The map marker points exactly there.",
+        "interpolated": "The street — not the building. The circle shows the range.",
+        "approximate": "The area — not the address. The circle shows the range.",
+        "center": "Only the settlement. The address was not found; the circle shows how large the uncertainty is."
+      },
+      "placeHouseNumber": {
+        "contradicted": "You entered \"{number}\", the map found \"{resolved}\". Check the number.",
+        "unconfirmed": "Number \"{number}\" was recorded, but the map data does not confirm it — the position shows the street."
+      }
     },
     "draftMemory": {
       "title": "We restored your draft",
@@ -691,15 +703,41 @@
       }
     },
     "directory": {
-      "title": "Estate agencies",
-      "lead": "Agencies that chose, themselves, to be found here. The order is alphabetical: no ranking, no rating, no paid placement.",
+      "title": "Professionals",
+      "lead": "Professionals who chose, themselves, to be found here. The order is alphabetical: no ranking, no rating, no paid placement.",
       "loading": "Loading directory…",
-      "empty": "No agency has published a showcase yet.",
-      "emptyHint": "When an agency declares it wants to be found, it will appear here.",
+      "empty": "Nobody has published a showcase yet.",
+      "emptyHint": "When a professional declares they want to be found, they will appear here.",
+      "emptyAfterFilter": "Nobody matches these criteria.",
+      "emptyAfterFilterHint": "Try another speciality or a wider radius — or clear the filters to see everyone.",
       "failed": "We could not load the directory. Please try again shortly.",
-      "count": "{count, plural, one {# agency} other {# agencies}}",
+      "count": "{count, plural, one {# professional} other {# professionals}}",
+      "countFiltered": "{shown} of {total}",
+      "clearFilters": "Clear filters",
+      "occupationFilterLabel": "Speciality",
+      "occupationAll": "All specialities",
+      "placeFilterLabel": "Area",
+      "placeAll": "All of Greece",
+      "radiusLabel": "Radius",
       "gemi": "GEMI {number}",
-      "open": "View this agency"
+      "open": "View this showcase"
+    },
+    "credibility": {
+      "occupationLabel": "Speciality",
+      "claim": {
+        "national": "{authority} · reg. no. {number}",
+        "chapter": "{chapter} ({authority}) · reg. no. {number}",
+        "declared": "Self-declared. We have not checked it.",
+        "verified": "Confirmed by the issuing authority."
+      },
+      "note": {
+        "registryExistsUndeclared": "A register is kept for this profession ({authority}). This showcase does not state a number.",
+        "registryAbsentByNature": "No authority keeps a register for this profession. Nothing is missing from this showcase.",
+        "registryUnexamined": "We have not examined whether a register is kept for this profession.",
+        "authorityMismatch": "The number stated belongs to a different authority than the one keeping the register for this showcase's profession ({expected}).",
+        "registryAbsentYetDeclared": "We know of no register for this showcase's profession. The number was stated by the professional.",
+        "classificationUnreadable": "We could not read the classification of this profession."
+      }
     },
     "profile": {
       "loading": "Loading…",
@@ -850,6 +888,32 @@
         "identity-incomplete": "The owner has not filled in their identity details (full name or VAT number), and no brokerage contract can be drawn up without them. The request STAYS open: contact them and press Accept again.",
         "mandate-invalid": "The proposed terms are not lawful for this type of mandate."
       }
+    }
+  },
+  "registries": {
+    "tee": {
+      "name": "Technical Chamber of Greece",
+      "abbreviation": "TCG"
+    },
+    "gemi": {
+      "name": "General Commercial Registry",
+      "abbreviation": "GEMI"
+    },
+    "oee": {
+      "name": "Economic Chamber of Greece",
+      "abbreviation": "ECG"
+    },
+    "barAssociation": {
+      "name": "Bar Association",
+      "abbreviation": "Bar"
+    },
+    "notaryAssociation": {
+      "name": "Notarial Association",
+      "abbreviation": "Not."
+    },
+    "regionalAuthority": {
+      "name": "Regional Unit Development Directorate",
+      "abbreviation": "Reg."
     }
   }
 }

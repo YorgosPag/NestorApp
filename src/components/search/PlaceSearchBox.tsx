@@ -29,6 +29,7 @@ import React, { useId, useState } from 'react';
 import { useRouter } from '@/lib/workspace/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { geocodeAddressDetailed } from '@/lib/geocoding/geocoding-service';
+import { addressLineToQuery } from '@/lib/geocoding/address-line-query';
 import {
   serializeListingFilters,
   EMPTY_LISTING_FILTERS,
@@ -61,10 +62,10 @@ export function PlaceSearchBox() {
     if (trimmed === '') return;
 
     setState('searching');
-    // ⚠️ Ελεύθερο κείμενο → `city`: είναι ένα από τα τρία πεδία που δέχεται το route,
-    // και η μηχανή δοκιμάζει **free-form πρώτα**, οπότε «Εγνατίας 147, Θεσσαλονίκη»
-    // λύνεται το ίδιο καλά με σκέτο «Θεσσαλονίκη».
-    const outcome = await geocodeAddressDetailed({ city: trimmed });
+    // ⚠️ **Ένας μεταφραστής για τα τρία σημεία** (2026-09-02): το «ελεύθερο κείμενο →
+    // `city`» ήταν γραμμένο εδώ, στο `usePlaceResolver` και στο
+    // `place-source-verification`. Δες `lib/geocoding/address-line-query`.
+    const outcome = await geocodeAddressDetailed(addressLineToQuery(trimmed));
 
     if (outcome.kind === 'found') {
       const params = serializeListingFilters({

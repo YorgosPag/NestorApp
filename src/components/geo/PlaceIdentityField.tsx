@@ -33,6 +33,7 @@ import { PlaceChooser } from '@/components/geo/PlaceChooser';
 import { PlaceSummary } from '@/components/geo/PlaceSummary';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import type { PlaceFocus } from '@/lib/geo/geocoding-focus';
 import type { PlaceTarget } from '@/lib/places/place-claim';
 import type { PlaceRef } from '@/types/geo/public-place';
 
@@ -47,12 +48,27 @@ export interface PlaceIdentityFieldProps {
    * θέση (Α1).
    */
   readonly target?: PlaceTarget;
+  /**
+   * **Η ΔΙΕΥΘΥΝΣΗ ΠΟΥ ΗΔΗ ΕΝΤΟΠΙΣΤΗΚΕ**, όταν η φόρμα τη ρώτησε πιο πάνω.
+   *
+   * 🔑 **Ταξιδεύει, δεν ερμηνεύεται.** Αυτό το component αποφασίζει *«ανοιχτός ή
+   * κλειστός επιλογέας;»* και τίποτε άλλο — η προβολή του χάρτη είναι δουλειά του
+   * {@link PlaceMap} και ο κανόνας της, του `lib/geo/geocoding-focus`. Ένα ενδιάμεσο
+   * που *«βελτιώνει»* την τιμή στο πέρασμα είναι δεύτερη αρχή για την ίδια ερώτηση.
+   *
+   * ⚠️ **Προαιρετικό**: από τους τρεις καταναλωτές, μόνο η φόρμα του κατόχου ρωτά
+   * διεύθυνση πριν από το κτίριο. Ο `BuildingPlaceLinkCard` ξεκινά **από** το κτίριο
+   * και ο `DemandAxisFields` ρωτά *«ποιο κτίριο ψάχνεις;»* — κανένας από τους δύο δεν
+   * έχει απάντηση γεωκωδικοποιητή να δώσει, και δεν πρέπει να επινοήσει.
+   */
+  readonly focus?: PlaceFocus | null;
 }
 
 export function PlaceIdentityField({
   chosen,
   onChosen,
   target = 'building',
+  focus = null,
 }: PlaceIdentityFieldProps): React.ReactElement {
   const { t } = useTranslation([NS]);
   const [editing, setEditing] = useState(chosen === null);
@@ -84,6 +100,7 @@ export function PlaceIdentityField({
   return (
     <PlaceChooser
       target={target}
+      focus={focus}
       onChosen={(ref) => {
         onChosen(ref);
         setEditing(false);

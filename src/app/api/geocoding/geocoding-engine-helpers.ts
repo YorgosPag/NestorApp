@@ -25,6 +25,7 @@ import type {
   FieldMatchMap,
   ConfidenceBreakdown,
 } from '@/lib/geocoding/geocoding-types';
+import type { GeoBoundingBox } from '@/types/geo/coordinates';
 
 const { GEOCODING } = GEOGRAPHIC_CONFIG;
 
@@ -58,6 +59,12 @@ export interface NominatimResult {
   importance?: number;
   osm_id?: number | string;
   osm_type?: string;
+  /**
+   * **Η ΕΠΙΣΗΜΗ ΒΑΘΜΙΔΑ ΤΟΥ NOMINATIM** — δες {@link determineAccuracy}.
+   * Επιστρέφεται στο προεπιλεγμένο `format=json`· προαιρετικό εδώ γιατί ο τύπος
+   * περιγράφει και απαντήσεις δοκιμών που δεν τη δηλώνουν.
+   */
+  place_rank?: number;
   boundingbox?: string[];
   address?: NominatimAddress;
 }
@@ -66,12 +73,118 @@ export interface NominatimResult {
 // RESULT EXTRACTION
 // =============================================================================
 
+/**
+ * Οι βαθμίδες του Nominatim — **επίσημη κλίμακα**, όχι δικό μας συμπέρασμα.
+ *
+ * `≥28` POI/κτίριο/αριθμός · `26–27` δρόμοι · `20–25` συνοικίες/οικισμοί ·
+ * `<20` πόλεις και διοικητικά. Τεκμηρίωση: *Nominatim ▸ Customize ▸ Ranking*.
+ */
+const RANK_ADDRESS = 28;
+const RANK_STREET = 26;
+const RANK_NEIGHBOURHOOD = 20;
+
+/**
+ * Πόσο ακριβές είναι αυτό το αποτέλεσμα.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΤΙ ΗΤΑΝ ΛΑΘΟΣ ΩΣ ΤΙΣ 2026-09-02 — μετρημένο σε ζωντανή αναζήτηση
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Η προηγούμενη εκδοχή ταίριαζε **ονόματα** (`type`), με το `class` μόνο ως εφεδρεία:
+ *
+ * ```
+ * if (type === 'street' || type === 'road')   return 'interpolated';
+ * if (type === 'suburb' || 'neighbourhood' || 'residential') return 'approximate';
+ * ```
+ *
+ * **Και το `'residential'` είναι ΤΡΙΠΛΑ ΑΜΦΙΣΗΜΟ στο OSM** — η σημασία του κρίνεται
+ * **αποκλειστικά** από το `class`, που η συνθήκη αγνοούσε:
+ *
+ * | Ετικέτα OSM | Τι είναι | Έδινε | Έπρεπε |
+ * |---|---|---|---|
+ * | `highway=residential` | **δρόμος** κατοικημένης περιοχής | `approximate` | `interpolated` |
+ * | `building=residential` | **κτίριο** κατοικιών | `approximate` | `exact` |
+ * | `landuse=residential` | ζώνη κατοικίας | `approximate` | `approximate` ✔ |
+ *
+ * ⇒ Ο **συνηθέστερος αστικός δρόμος της Ελλάδας** υποβαθμιζόταν κατά μία βαθμίδα, και
+ * ένα **κτίριο** κατά δύο. Και τα `'street'`/`'road'` που υποτίθεται ότι έπιαναν τους
+ * δρόμους είναι σχεδόν **νεκρά**: το `street` **δεν είναι τιμή OSM** καθόλου, και το
+ * `highway=road` σημαίνει «άγνωστης κατηγορίας» — σπάνιο. Δηλαδή ο κλάδος
+ * `interpolated` δεν έπιανε σχεδόν **τίποτα**, ενώ ήταν ο σωστός για κάθε δρόμο.
+ *
+ * 🔴 **Και δεν υπήρχε ΚΑΜΙΑ άγκυρα** σε ολόκληρο το repo (`grep` = 0) για τη συνάρτηση
+ * που κρίνει την ακρίβεια **κάθε** διεύθυνσης — και της οποίας η έξοδος οδηγεί, μέσω
+ * του `listingMapShape`, **το σχήμα στον δημόσιο χάρτη**. Ένατη εμφάνιση του «0 =
+ * κανείς δεν κοίταξε».
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * ✅ ΤΙ ΚΡΙΝΕΙ ΤΩΡΑ — αριθμός, όχι λεξιλόγιο
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * 🔑 **Το `place_rank` είναι το `location_type` της Google, μόνο καλύτερο**: κλίμακα
+ * αντί για τέσσερα ονόματα, ορισμένη από τον ίδιο τον πάροχο, **αδιάφορη σε νέες
+ * ετικέτες OSM**. Ένα καινούριο `class`/`type` που κανείς μας δεν έχει ακούσει παίρνει
+ * **σωστή** βαθμίδα χωρίς να αγγίξουμε γραμμή — ενώ κάθε λίστα ονομάτων παλιώνει.
+ *
+ * ⚠️ **Ο έλεγχος του αριθμού ΠΡΟΗΓΕΙΤΑΙ όλων**: αν ο πάροχος επέστρεψε
+ * `addr:housenumber`, τότε **ξέρουμε τη διεύθυνση** — ανεξάρτητα από βαθμίδα ή ετικέτα.
+ * Είναι απόδειξη, όχι ένδειξη.
+ *
+ * ⚠️ **Το ταίριασμα ονομάτων ΕΠΙΒΙΩΝΕΙ ως τελευταία εφεδρεία**, διορθωμένο ώστε να
+ * ρωτά το `class`: το `place_rank` λείπει σε μη τυπικές απαντήσεις, και μια σιωπηλή
+ * πτώση στο `'center'` θα μετέτρεπε κάθε τέτοια περίπτωση σε «μόνο πόλη» — υποβάθμιση
+ * που μοιάζει με δεδομένο.
+ */
 export function determineAccuracy(result: NominatimResult): GeocodingApiResponse['accuracy'] {
-  const type = result.type ?? result.class ?? '';
-  if (type === 'house' || type === 'building') return 'exact';
+  // 1. ΑΠΟΔΕΙΞΗ: ο πάροχος γύρισε αριθμό ⇒ ξέρουμε τη διεύθυνση.
+  if (result.address?.house_number) return 'exact';
+
+  // 2. Η ΕΠΙΣΗΜΗ ΚΛΙΜΑΚΑ.
+  const rank = result.place_rank;
+  if (typeof rank === 'number' && Number.isFinite(rank)) {
+    if (rank >= RANK_ADDRESS) return 'exact';
+    if (rank >= RANK_STREET) return 'interpolated';
+    if (rank >= RANK_NEIGHBOURHOOD) return 'approximate';
+    return 'center';
+  }
+
+  // 3. ΕΦΕΔΡΕΙΑ ΟΝΟΜΑΤΩΝ — τώρα ρωτά το `class`, που ήταν η ρίζα του σφάλματος.
+  const klass = result.class ?? '';
+  const type = result.type ?? '';
+  if (klass === 'building' || type === 'house' || type === 'building') return 'exact';
+  if (klass === 'highway') return 'interpolated';
   if (type === 'street' || type === 'road') return 'interpolated';
-  if (type === 'suburb' || type === 'neighbourhood' || type === 'residential') return 'approximate';
+  if (klass === 'landuse') return 'approximate';
+  if (type === 'suburb' || type === 'neighbourhood' || type === 'quarter') return 'approximate';
   return 'center';
+}
+
+/**
+ * **Η ΕΚΤΑΣΗ ΤΟΥ ΑΠΟΤΕΛΕΣΜΑΤΟΣ** — `boundingbox` του Nominatim → {@link GeoBoundingBox}.
+ *
+ * 🔴 **Αυτή η τιμή ΕΦΤΑΝΕ ΠΑΝΤΑ ΚΑΙ ΠΕΤΙΟΤΑΝ ΠΑΝΤΑ** (μετρημένο 2026-09-02): το
+ * `boundingbox` ήταν δηλωμένο στο {@link NominatimResult} — δηλαδή κάποιος το είχε
+ * **δει** — και καμία γραμμή δεν το διάβαζε. Είναι το `viewport` της Google με άλλο
+ * όνομα, και χωρίς αυτό κάθε επιφάνεια μαντεύει ζουμ από τον βαθμό ακρίβειας.
+ *
+ * ⚠️ **Η σειρά του Nominatim είναι `[νότος, βορράς, δύση, ανατολή]` — ΟΧΙ η σειρά που
+ * περιμένει κάθε βιβλιοθήκη χάρτη** (`[δ, ν, α, β]`). Η μετάφραση γίνεται **εδώ, μία
+ * φορά**, σε **ονομαστικά** πεδία: ένας πίνακας τεσσάρων αριθμών που ταξιδεύει με
+ * σιωπηρή σύμβαση σειράς είναι η κλασική διαδρομή προς αντεστραμμένους χάρτες.
+ *
+ * ⚠️ **Ανθεκτικός σε ό,τι δεν είναι αριθμός**: ο πάροχος δίνει **συμβολοσειρές**, και
+ * ένα `parseFloat` που γυρίζει `NaN` θα περνούσε σιωπηλά σε κάθε `fitBounds` και θα
+ * έριχνε τον χάρτη. `undefined` σημαίνει «δεν ξέρω την έκταση» — απάντηση που ο
+ * καταναλωτής **ξέρει** να χειριστεί.
+ */
+export function extractExtent(result: NominatimResult): GeoBoundingBox | undefined {
+  const box = result.boundingbox;
+  if (!box || box.length < 4) return undefined;
+
+  const [south, north, west, east] = box.map((value) => parseFloat(value));
+  if (![south, north, west, east].every(Number.isFinite)) return undefined;
+
+  return { south, north, west, east };
 }
 
 /**
@@ -215,6 +328,7 @@ function buildBaseResponse(
     accuracy: determineAccuracy(result),
     confidence,
     displayName: result.display_name,
+    extent: extractExtent(result),
     resolvedCity: resolvedFields.city,
     resolvedFields,
     partialMatch: computePartialMatch(fieldMatches),

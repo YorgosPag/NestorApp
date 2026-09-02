@@ -37,8 +37,14 @@
 import { useCallback, useState } from 'react';
 
 import { geocodeAddressDetailed } from '@/lib/geocoding/geocoding-service';
+import { addressLineToQuery } from '@/lib/geocoding/address-line-query';
+import {
+  houseNumberStanding,
+  type HouseNumberStanding,
+} from '@/lib/geocoding/house-number-standing';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { GeocodingAccuracy } from '@/lib/geocoding/geocoding-types';
+import type { GeoBoundingBox } from '@/types/geo/coordinates';
 
 const logger = createModuleLogger('usePlaceResolver');
 
@@ -55,6 +61,50 @@ export interface ResolvedPlace {
   readonly lat: number;
   readonly lng: number;
   readonly accuracy: GeocodingAccuracy;
+  /**
+   * **Η ΔΙΕΥΘΥΝΣΗ ΟΠΩΣ ΤΗΝ ΚΑΤΑΛΑΒΕ Ο ΓΕΩΚΩΔΙΚΟΠΟΙΗΤΗΣ** — όχι όπως τη *έγραψε* ο
+   * άνθρωπος.
+   *
+   * 🔴 **Οι δύο ΔΕΝ ταυτίζονται, και η διαφορά τους είναι ΟΛΟΚΛΗΡΗ Η ΕΠΑΛΗΘΕΥΣΗ.**
+   * Ο άνθρωπος γράφει *«Σαμοθράκης 16, 56334»*· ο πάροχος μπορεί να απαντήσει
+   * *«Σαμοθράκης, Εύοσμος, Θεσσαλονίκη»* — **χωρίς αριθμό**. Ίδιο κείμενο στην
+   * οθόνη ⇒ ο άνθρωπος δεν έχει **κανέναν** τρόπο να δει ότι το 16 χάθηκε.
+   *
+   * ⚠️ **ΤΟ ΠΕΤΑΓΑΜΕ** (μετρημένο 2026-09-02): το `displayName` έφτανε από τον
+   * διακομιστή σε **κάθε** κλήση και αυτός ο μεταφραστής κρατούσε μόνο lat/lng/βαθμό.
+   * Η οθόνη ανάγκαζε τον άνθρωπο να επαληθεύσει τη διεύθυνσή του διαβάζοντας
+   * **δεκαδικές συντεταγμένες** — δηλαδή δεν την επαλήθευε κανείς.
+   *
+   * ⛔ **Είναι ΕΠΙΒΕΒΑΙΩΣΗ, όχι δήλωση**: δεν αποθηκεύεται και δεν ταξιδεύει. Η
+   * δήλωση του ανθρώπου για το δικό του ακίνητο παραμένει **το κείμενο που έγραψε**.
+   */
+  readonly label: string;
+  /**
+   * **Η μετρημένη έκταση του αποτελέσματος** — δες `lib/geo/geocoding-focus`.
+   * `undefined` όταν ο πάροχος δεν τη δίνει· η απουσία είναι **δεδομένο**.
+   */
+  readonly extent?: GeoBoundingBox;
+  /**
+   * **ΠΟΥ ΣΤΕΚΕΤΑΙ Ο ΑΡΙΘΜΟΣ ΠΟΥ ΕΓΡΑΨΕ Ο ΑΝΘΡΩΠΟΣ** — δες {@link HouseNumberStanding}.
+   *
+   * 🔴 **Δεν προκύπτει από τον βαθμό ακρίβειας, και γι' αυτό είναι χωριστό πεδίο.** Ο
+   * βαθμός περιγράφει **την απάντηση** («δρόμος χωρίς αριθμό»)· αυτό περιγράφει **τι
+   * απέγινε η ερώτηση** («τον είπες, δεν επιβεβαιώθηκε»). Δύο διευθύνσεις με τον ίδιο
+   * `interpolated` — η μία με δηλωμένο αριθμό, η άλλη χωρίς — χρωστούν στον άνθρωπο
+   * **διαφορετική** πρόταση.
+   */
+  readonly houseNumber: HouseNumberStanding;
+  /**
+   * Ο αριθμός **όπως τον έγραψε ο άνθρωπος** — για να τον δει αυτούσιο στο μήνυμα.
+   * `undefined` όταν το κείμενο δεν είχε αναγνωρίσιμο αριθμό.
+   */
+  readonly declaredNumber?: string;
+  /**
+   * Ο αριθμός **που επέστρεψε ο πάροχος**, όταν διαφέρει από τον δηλωμένο. Χωρίς
+   * αυτόν, η κατάσταση `'contradicted'` θα έλεγε *«βρήκα άλλον»* **χωρίς να τον πει** —
+   * δηλαδή θα ζητούσε από τον άνθρωπο να διορθώσει κάτι που δεν βλέπει.
+   */
+  readonly resolvedNumber?: string;
 }
 
 export interface PlaceResolver {
@@ -82,15 +132,32 @@ export function usePlaceResolver(handlers: {
       if (trimmed === '') return;
 
       setState('resolving');
-      // ⚠️ Ελεύθερο κείμενο → `city`: η μηχανή δοκιμάζει **free-form πρώτα**, οπότε
-      // «Εγνατίας 147, Θεσσαλονίκη» λύνεται το ίδιο καλά με σκέτο «Θεσσαλονίκη».
-      const outcome = await geocodeAddressDetailed({ city: trimmed });
+      /**
+       * 🔴 **ΤΟ ΚΕΙΜΕΝΟ ΑΝΑΛΥΕΤΑΙ ΠΡΙΝ ΦΥΓΕΙ** (2026-09-02) — δες
+       * {@link addressLineToQuery}. Πριν, ολόκληρο το «Σαμοθράκης 16, 56334» πήγαινε
+       * στο **ένα** πεδίο `city`, οπότε ο διακομιστής **δεν μάθαινε ποτέ** ότι
+       * δηλώθηκε αριθμός — και η στάση του αριθμού ήταν δομικά ανέφικτη.
+       *
+       * ⚠️ **Η μηχανή δοκιμάζει free-form πρώτα, και το ερώτημα εκείνης της
+       * παραλλαγής μένει ΤΑΥΤΟΣΗΜΟ** μετά τη δόμηση — άγκυρα:
+       * `app/api/geocoding/__tests__/geocoding-query-identity.test.ts`.
+       */
+      const request = addressLineToQuery(trimmed);
+      const outcome = await geocodeAddressDetailed(request);
 
       if (outcome.kind === 'found') {
         onFound({
           lat: outcome.result.lat,
           lng: outcome.result.lng,
           accuracy: outcome.result.accuracy,
+          label: outcome.result.displayName,
+          extent: outcome.result.extent,
+          // ⚠️ `fieldMatches.number` είναι **προαιρετικό στον τύπο** (ο `FieldMatchMap`
+          //    παράγεται από τα προαιρετικά κλειδιά του `ResolvedAddressFields`) — γι'
+          //    αυτό το `houseNumberStanding` δέχεται `undefined` ως `'absent'`.
+          houseNumber: houseNumberStanding(outcome.result.reasoning.fieldMatches.number),
+          declaredNumber: request.number,
+          resolvedNumber: outcome.result.resolvedFields.number,
         });
         setState('idle');
         return;

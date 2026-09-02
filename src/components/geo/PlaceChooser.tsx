@@ -31,6 +31,7 @@ import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { usePlaceIdentity } from '@/hooks/geo/usePlaceIdentity';
 import type { PlaceClaim, PlaceTarget } from '@/lib/places/place-claim';
+import type { PlaceFocus } from '@/lib/geo/geocoding-focus';
 import type { GeoOutline, GeoPoint } from '@/types/geo/coordinates';
 import type { PlaceRef } from '@/types/geo/public-place';
 
@@ -46,7 +47,22 @@ export interface PlaceChooserProps {
   readonly target: PlaceTarget;
   /** Κλήθηκε όταν ο τόπος απέκτησε **ταυτότητα** — αυτό είναι το προϊόν. */
   readonly onChosen: (ref: PlaceRef) => void;
-  readonly center?: GeoPoint;
+  /**
+   * **Η ΑΠΑΝΤΗΣΗ ΤΟΥ ΓΕΩΚΩΔΙΚΟΠΟΙΗΤΗ**, όταν ο άνθρωπος έχει ήδη πει τη διεύθυνσή του.
+   *
+   * 🔴 **ΑΝΤΙΚΑΤΕΣΤΗΣΕ ΤΟ `center`, ΚΑΙ Η ΑΝΤΙΚΑΤΑΣΤΑΣΗ ΕΙΝΑΙ ΤΟ ΝΟΗΜΑ** (2026-09-02).
+   * Το `center?: GeoPoint` υπήρχε εδώ ως prop και **κανείς δεν το περνούσε ποτέ** —
+   * μετρημένο σε όλους τους καταναλωτές. Ο χάρτης έπεφτε πάντα στο
+   * `GEOGRAPHIC_CONFIG.DEFAULT_*` (Πλατεία Ομονοίας) ενώ ο άνθρωπος μόλις είχε
+   * εντοπίσει διεύθυνση **στη Θεσσαλονίκη**.
+   *
+   * 🔑 **Δεν ξαναδόθηκε ως `center`, δόθηκε ως `focus` — και ΔΕΝ είναι το ίδιο πράγμα
+   * με άλλο όνομα.** Ένα σκέτο σημείο απαντά μόνο *«πού»*· το {@link PlaceFocus}
+   * κουβαλά **βαθμό ακρίβειας και μετρημένη έκταση**, δηλαδή απαντά και *«πόσο
+   * σίγουρα»* — και αυτό είναι που κρίνει **ζουμ** και **σχήμα ένδειξης**. Δύο props
+   * («πού» + «πόσο») θα μπορούσαν να διαφωνήσουν· ένα δεν μπορεί.
+   */
+  readonly focus?: PlaceFocus | null;
 }
 
 const DEFAULT_CENTER: GeoPoint = {
@@ -57,8 +73,16 @@ const DEFAULT_CENTER: GeoPoint = {
 export function PlaceChooser({
   target,
   onChosen,
-  center = DEFAULT_CENTER,
+  focus = null,
 }: PlaceChooserProps): React.ReactElement {
+  /**
+   * ⚠️ **ΤΟ ΑΡΧΙΚΟ ΑΝΟΙΓΜΑ ΚΑΙ Η ΠΤΗΣΗ ΕΙΝΑΙ ΔΥΟ ΠΡΑΞΕΙΣ, ΚΑΙ ΧΡΕΙΑΖΟΝΤΑΙ ΚΑΙ ΟΙ ΔΥΟ.**
+   * Στη **συνήθη** ροή ο άνθρωπος εντοπίζει τη διεύθυνση **πριν** ανοίξει ο επιλογέας:
+   * τότε ο χάρτης οφείλει να **γεννηθεί** ήδη εκεί — μια πτήση από την Αθήνα θα ήταν
+   * θέαμα χωρίς πληροφορία. Το `focus` περνά **και** ως αρχική θέση (`center`) **και**
+   * στην κάμερα (`focus`), ώστε η δεύτερη να καλύπτει μόνο τις **επόμενες** απαντήσεις.
+   */
+  const center = focus?.point ?? DEFAULT_CENTER;
   const { t } = useTranslation(['search-results']);
   const { lookup, state, look, claim, reset } = usePlaceIdentity();
 
@@ -154,6 +178,12 @@ export function PlaceChooser({
 
       <PlaceMap
         center={center}
+        focus={focus}
+        // 🔑 **Δύο πηγές αναμονής, ένα prop** — και οι δύο είναι «περίμενε τον
+        //    διακομιστή»: το `searching` ρωτά *«τι υπάρχει εδώ;»*, το `working`
+        //    καταχωρεί. Ο χάρτης δεν έχει λόγο να τις ξεχωρίζει· η **γραμμή
+        //    κατάστασης** τις ξεχωρίζει με λέξεις, που είναι το σωστό όργανο.
+        busy={lookup.kind === 'searching' || state.kind === 'working'}
         onPick={handlePick}
         outline={shownOutline}
         trace={gesture === 'draw' ? draft.vertices : []}

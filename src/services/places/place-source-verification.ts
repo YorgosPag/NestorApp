@@ -34,6 +34,7 @@
 import 'server-only';
 
 import { geocode } from '@/app/api/geocoding/geocoding-engine';
+import { addressLineToQuery } from '@/lib/geocoding/address-line-query';
 import { vertexCentroid } from '@/lib/geo/geo-ring';
 import {
   findOsmBuildingAt,
@@ -149,9 +150,10 @@ export async function verifyPlaceClaim(
 
     case 'typed-address': {
       // 🔑 **Ο ΔΙΑΚΟΜΙΣΤΗΣ γεωκωδικοποιεί**, με τον **ίδιο** engine που εξυπηρετεί τη
-      // φόρμα — ίδιο ιδίωμα με το `usePlaceResolver`: ελεύθερο κείμενο → `city`,
-      // γιατί η μηχανή δοκιμάζει **free-form πρώτα**.
-      const hit = await geocode({ city: claim.query.trim() });
+      // φόρμα — και πλέον με τον **ίδιο μεταφραστή** κειμένου→ερωτήματος
+      // (`lib/geocoding/address-line-query`). Το «ελεύθερο κείμενο → `city`» ήταν
+      // γραμμένο **τρεις φορές**, με σχόλιο που το ονόμαζε «ίδιο ιδίωμα».
+      const hit = await geocode(addressLineToQuery(claim.query));
       if (hit === null) return { kind: 'rejected', reason: 'address-not-found' };
 
       return {
