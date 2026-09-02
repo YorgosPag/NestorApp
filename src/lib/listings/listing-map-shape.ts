@@ -40,6 +40,7 @@
  * αναπαράγαμε το ίδιο ελάττωμα που το αρχείο υπάρχει για να λύσει, μία βαθμίδα ψηλότερα.
  */
 
+import type { GeocodingAccuracy } from '@/lib/geocoding/geocoding-types';
 import type { GeoOutline } from '@/types/geo/coordinates';
 import type { ListingPosition } from '@/types/public-listing';
 
@@ -111,8 +112,25 @@ export function listingMapShape(
  * ⚠️ Ξεχωριστή συνάρτηση **επίτηδες**: είναι η **μόνη** διαδρομή όπου ένα σημείο
  * γεννιέται από **κείμενο** αντί από μέτρηση, και είναι εκεί που το `'center'` έμπαινε
  * μεταμφιεσμένο σε διεύθυνση.
+ *
+ * 🔴 **ΕΞΗΧΘΗ 2026-09-02 — ΚΑΙ Η ΑΦΟΡΜΗ ΗΤΑΝ ΔΕΥΤΕΡΟ ΛΕΞΙΛΟΓΙΟ ΠΟΥ ΓΕΝΝΗΘΗΚΕ ΚΑΙ
+ * ΠΕΘΑΝΕ ΜΕΣΑ ΣΤΟ ΙΔΙΟ COMMIT.** Η **φόρμα του κατόχου** χρειάστηκε την ίδια ακριβώς
+ * απάντηση για τον χάρτη του εντοπισμού, και — μη έχοντας ολόκληρη {@link
+ * ListingPosition} στα χέρια της, γιατί η αγγελία δεν υπάρχει ακόμη — ξανάγραψε τον
+ * πίνακα με **δικά της ονόματα** (`'point' | 'area'`). Δύο λεξιλόγια για το ίδιο
+ * ερώτημα είναι **κατά λέξη** το σχήμα ADR-749 που η επικεφαλίδα του
+ * `AddressPublicShapeBadge` καταγγέλλει: *«δύο ονόματα για το ίδιο πράγμα, που μια μέρα
+ * διαφωνούν»* — και το δεύτερο είχε **ήδη** διαφωνήσει, δίνοντας σκέτο κύκλο εκεί που
+ * ο πίνακας της **Α5** λέει ρητά **`pin-with-ring`**.
+ *
+ * 🔑 **Η δημοσιοποίηση δεν διευρύνει την ευθύνη — τη ΣΥΓΚΕΝΤΡΩΝΕΙ**: ο καλών που έχει
+ * μόνο βαθμό ακρίβειας παύει να έχει **δικαιολογία** να επινοήσει δικό του πίνακα.
  */
-function shapeOfAccuracy(accuracy: Extract<ListingPosition, { provenance: 'geocoded' }>['accuracy']): ListingMapShape {
+export function mapShapeOfGeocodingAccuracy(accuracy: GeocodingAccuracy): ListingMapShape {
+  return shapeOfAccuracy(accuracy);
+}
+
+function shapeOfAccuracy(accuracy: GeocodingAccuracy): ListingMapShape {
   switch (accuracy) {
     case 'exact':
       return 'pin';
