@@ -7,10 +7,40 @@
       "root": "src/constants/project-statuses.ts",
       "rootSymbol": "PROJECT_STATUSES",
       "typeName": "ProjectStatus",
-      "derivedTypes": ["StatusTransitionTarget"],
-      "values": ["planning", "in_progress", "completed", "on_hold", "cancelled", "deleted"],
+      "derivedTypes": [
+        "StatusTransitionTarget"
+      ],
+      "values": [
+        "planning",
+        "in_progress",
+        "completed",
+        "on_hold",
+        "cancelled",
+        "deleted"
+      ],
       "threshold": 4,
       "reason": "Lifecycle έργου (ADR-287 · ADR-812). Είχε ΔΕΚΑΤΡΙΑ σώματα με ΤΕΣΣΕΡΑ ασύμβατα σύνολα τιμών και δύο ομώνυμα PROJECT_STATUSES. Ο άξονας ΕΓΚΡΙΣΗΣ (review/approved) είναι ΕΞΩ και ανήκει στο παραδοτέο, όπως σε ISO 19650 (S3/S4/B1 στο information container), Revit (Issued στο revision) και Figma (Approved στο branch).",
+      "exemptions": []
+    },
+    {
+      "id": "registry-authority",
+      "root": "src/constants/professional-registries.ts",
+      "rootSymbol": "REGISTRY_AUTHORITIES",
+      "typeName": "RegistryAuthorityId",
+      "derivedTypes": [
+        "NationalRegistryId",
+        "ChapteredRegistryId"
+      ],
+      "values": [
+        "tee",
+        "gemi",
+        "oee",
+        "bar-association",
+        "notary-association",
+        "regional-authority"
+      ],
+      "threshold": 4,
+      "reason": "Οι αρχές που κρατούν μητρώο (ADR-841 Α9). Η απόδειξη ενός επαγγελματία είναι ΖΕΥΓΟΣ (αρχή, αριθμός) και ποτέ σκέτος αριθμός: ένα «1234» χωρίς «ΔΣΘ» δεν επαληθεύεται από κανέναν. Κάθε σώμα που απαριθμεί αυτές τις τιμές — πίνακας παρουσίασης, φίλτρο καταλόγου, χάρτης εικονιδίων — πρέπει να δείχνει στη ρίζα, ώστε μια έβδομη αρχή να σπάει το build αντί να εμφανιστεί στην οθόνη ως κενό. Το λεξιλόγιο είναι το ΕΙΔΟΣ της αρχής (έξι τιμές, νομικά ορισμένες)· ΔΕΝ είναι κατάλογος των 63 Δικηγορικών Συλλόγων ούτε των 74 Περιφερειακών Ενοτήτων, που μένουν ελεύθερο κείμενο επίτηδες — ημιτελές κλειστό σύνολο θα απέκλειε υπαρκτό δικηγόρο. 🔴 Η ΕΚΤΗ ΤΙΜΗ ΠΡΟΣΤΕΘΗΚΕ ΣΤΗ Φ6-Β και έκλεισε δηλωμένο ανοιχτό της Α9.4: οι υδραυλικοί (ISCO 7126) και οι ηλεκτρολόγοι (7411) έμεναν «unexamined» επειδή κανείς δεν είχε ερευνήσει αν η άδεια του ν.3982/2011 είναι μητρώο. Είναι: τηρείται ενιαίο μητρώο ασκούντων τεχνικά επαγγέλματα από τη Διεύθυνση Ανάπτυξης κάθε Περιφερειακής Ενότητας. Η άγνοια που δηλώνεται θεραπεύεται· η άγνοια που σιωπά όχι.",
       "exemptions": []
     }
   ]
