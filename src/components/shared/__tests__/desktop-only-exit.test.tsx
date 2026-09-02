@@ -17,8 +17,14 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 
+// ⚠️ **ΚΑΙ ΤΟ `i18n`, ΟΧΙ ΜΟΝΟ ΤΟ `t`.** Το `Υ` αποδίδει την **πραγματική** δημόσια
+// κεφαλίδα, που κουβαλά τον επιλογέα γλώσσας (`ShellUtilities → language-switcher`), και
+// εκείνος διαβάζει `i18n.language` σε `useEffect`. Διπλό μόνο με `t` έδινε
+// `TypeError: Cannot read properties of undefined (reading 'language')` — δηλαδή η άγκυρα
+// θα κοκκίνιζε για **λείπον διπλό**, όχι για λάθος συμπεριφορά.
+// 🔑 Ίδιο σχήμα με το `personal-custody-notice.test.tsx` — ένα διπλό `useTranslation`, όχι δύο.
 jest.mock('@/i18n/hooks/useTranslation', () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'el' } }),
 }));
 
 const mockUseAuth = jest.fn();
@@ -28,6 +34,24 @@ jest.mock('@/auth/hooks/useAuth', () => ({
 
 jest.mock('@/hooks/media/useViewportClass', () => ({
   useViewportClass: () => 'narrow',
+}));
+
+// 🔴 **ΜΟΝΟ ο δρομολογητής διπλασιάζεται — ΠΟΤΕ ολόκληρο το σύνορο πλοήγησης.**
+//
+// Το `Υ` αποδίδει την **αληθινή** `PublicSiteHeader`, της οποίας το κέλυφος καλεί
+// `useRouter()`· έξω από το Next runtime εκείνο πετά *«invariant expected app router to
+// be mounted»*. Το καθιερωμένο διπλό του repo (`shell-utilities-identity.test.tsx`)
+// αντικαθιστά **όλο** το module — και μαζί το `Link` με `<span>`.
+//
+// ⛔ **Εδώ αυτό θα έσβηνε την ίδια την ερώτηση**: και οι τρεις άγκυρες κρίνουν
+// `href` πάνω σε **`<a>`** *(«πού πάει η πόρτα;»)*. Με `<span>` θα γίνονταν πράσινες
+// χωρίς να κοιτάξουν τίποτα — φρουρός χωρίς απόδειξη ζωής (ADR-749 §5).
+//
+// ⇒ `requireActual` κρατά το πραγματικό `Link` / `usePathname`, και **μόνο** το
+// `useRouter` γίνεται κενό: είναι το μόνο κομμάτι που απαιτεί χρόνο εκτέλεσης Next.
+jest.mock('@/lib/workspace/navigation', () => ({
+  ...jest.requireActual('@/lib/workspace/navigation'),
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
 }));
 
 import { DesktopOnlyNotice } from '../DesktopOnlyGate';

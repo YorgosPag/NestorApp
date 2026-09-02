@@ -76,6 +76,65 @@ if (typeof global.Blob !== 'undefined' && typeof global.Blob.prototype.arrayBuff
   global.Blob.prototype.text = readWith('readAsText');
 }
 
+// ---------------------------------------------------------------------------
+// fetch / Request / Response — ο Node 20 τα ΕΧΕΙ, το jsdom ΔΕΝ τα εκθέτει.
+// ---------------------------------------------------------------------------
+// Ίδιο μοτίβο με TextEncoder / CompressionStream / Blob από πάνω: δανείζονται από τον
+// Node, **μόνο όταν λείπουν**. Μετρημένο σε καθαρό jsdom (2026-09-02): λείπουν
+// `fetch`, `Request`, `Response` — το `Headers` **υπάρχει**, γι' αυτό δεν το αγγίζουμε
+// (μάθημα του `Blob` από πάνω: αντικατάσταση υπάρχουσας κλάσης jsdom με του Node σπάει
+// brand-checks).
+//
+// 🔴 ΤΟ ΕΛΑΤΤΩΜΑ ΠΟΥ ΤΟ ΕΠΙΒΑΛΛΕΙ, ΜΕ ΓΡΑΜΜΗ: το **node** build του `@firebase/auth`
+// εκτελεί στο ΑΝΩΤΑΤΟ επίπεδο του module
+//     FetchProvider.initialize(fetch, Headers, Response)     // dist/node/totp-*.js:7335
+// — **γυμνά αναγνωριστικά, τη στιγμή της ΕΙΣΑΓΩΓΗΣ**. Άρα κάθε suite που εισάγει έστω
+// **μεταβατικά** το `AuthContext` πέθαινε με `ReferenceError: fetch is not defined`
+// **πριν** προλάβει να τρέξει οποιοδήποτε `jest.mock`. Αλυσίδα που το αποκάλυψε:
+// `PublicSiteHeader → ShellUtilities → language-switcher → useLanguagePreference →
+// AuthContext → firebase/auth`.
+//
+// ⚠️ ΓΙΑΤΙ ΟΧΙ `customExportConditions: ['browser']` — **ΔΟΚΙΜΑΣΤΗΚΕ, ΑΠΕΤΥΧΕ**: το
+// `browser-cjs` build **δεν** έχει την top-level κλήση (0 εμφανίσεις, μετρημένο), αλλά
+// ο resolver του jest δεν το διαλέγει· πέφτει στο `main: dist/node/index.js`. Ίδιο
+// σφάλμα, byte προς byte.
+//
+// ⚠️ ΓΙΑΤΙ ΟΧΙ custom `testEnvironment`: **20 αρχεία** δηλώνουν `@jest-environment jsdom`
+// σε docblock και **παρακάμπτουν** το `jest.config.js`. Το `setupFilesAfterEach` τρέχει
+// για **όλα** — αυτό είναι το μόνο σημείο χωρίς τρύπα.
+//
+// ⚠️ ΓΙΑΤΙ ΟΧΙ `jest.mock('firebase/auth')` καθολικά: **75 suites** το γράφουν ήδη
+// χειρόγραφα. Αυτό είναι το σύμπτωμα (N.18), όχι η θεραπεία — και ένα καθολικό mock θα
+// έκρυβε τα πραγματικά exports από τις 6 suites που δοκιμάζουν τον ίδιο τον auth.
+if (typeof global.fetch === 'undefined') {
+  // Το realm του Node — από εκεί δανειζόμαστε. Το `undici` **δεν** είναι εγκατεστημένο
+  // (μετρημένο: MODULE_NOT_FOUND), και δεν προσθέτουμε εξάρτηση για κάτι που ο Node
+  // έχει ήδη.
+  const nodeRealm = require('node:vm').runInThisContext('globalThis');
+
+  // 🔑 ΤΟ `fetch` ΥΠΑΡΧΕΙ ΑΛΛΑ **ΑΡΝΕΙΤΑΙ** — και αυτό είναι ΣΚΟΠΙΜΟ, όχι ημιτελές.
+  //
+  // Η συνήθης απάντηση της βιομηχανίας («βάλε `cross-fetch` / `whatwg-fetch`») δίνει στα
+  // unit tests **αληθινό δίκτυο**: αργά, ασταθή, και στο CI μπορούν να χτυπήσουν
+  // πραγματικό endpoint. Το MSW το πολεμά, αλλά απαιτεί πειθαρχία **ανά suite** — δηλαδή
+  // εξαρτάται από το να μην ξεχάσει κανείς. Εδώ η προεπιλογή είναι **άρνηση**: το `fetch`
+  // ικανοποιεί κάθε έλεγχο δυνατότητας (`typeof fetch !== 'undefined'`) και κάθε
+  // top-level capture, αλλά η **κλήση** του πετά με μήνυμα που λέει τι να κάνεις. Suite
+  // που όντως χρειάζεται δίκτυο ορίζει το δικό της (27 το κάνουν ήδη) και **υπερισχύει**.
+  global.fetch = function fetchRefusedInTests(input) {
+    const target = typeof input === 'string' ? input : String(input && input.url);
+    throw new Error(
+      `[jest.setup] Το unit test προσπάθησε να κάνει ΠΡΑΓΜΑΤΙΚΟ δικτυακό αίτημα: ${target}
+Τα unit tests δεν βγαίνουν στο δίκτυο. Όρισε τη δική σου απάντηση μέσα στη suite:
+  global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({}) });`,
+    );
+  };
+  // Οι κλάσεις είναι **αληθινές** (του Node) — ένα ψεύτικο `Response` θα ήταν ψέμα που
+  // περνά σιωπηλά. Μόνο η ΠΡΑΞΗ του δικτύου απαγορεύεται, όχι ο τύπος.
+  if (typeof global.Response === 'undefined') global.Response = nodeRealm.Response;
+  if (typeof global.Request === 'undefined') global.Request = nodeRealm.Request;
+}
+
 // Mock για Path2D (Canvas 2D API — not in jsdom)
 class Path2DMock {
   moveTo() {}
