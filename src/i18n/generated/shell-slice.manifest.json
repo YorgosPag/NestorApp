@@ -65,7 +65,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "3464ff33ca751ff69e594e9dcf4b686437942791f92246910d7714839aaebfa9",
+  "inputsSha256": "1aff186998501b5d07294723a54aa55c84e704265d6366a5cfeadaf1fb5c3325",
   "languages": [
     "el"
   ],
@@ -314,7 +314,6 @@
     "src/lib/layout/bottom-sheet-stops.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/listings/listing-attribute-declared.ts": "84d0ba9fa6552b937fe8adc2e88b772da85da566686cecdae2f851e49495ba5a",
     "src/lib/listings/listing-attribute-groups.ts": "349e9f80fdf6dba48e0e7c6de19187263d4ecd3891429dbbd72726a786b327b5",
-    "src/lib/listings/listing-authorship.ts": "149ff99581f31a9e265597806ba43354056a2504e6632b9ceeead06386bc7e64",
     "src/lib/listings/listing-completion-slice.ts": "f59620136fe8a7742bd0513bf057926f0d6fe6f8b337f492cb6a1c14ceca4989",
     "src/lib/listings/listing-disclosure.ts": "4ea275e2ceeb7049e96cbc8cac7662716e5a5fb5f2d2bd826952fb3e9855a527",
     "src/lib/listings/listing-images.ts": "ee3f77251d593a1a87d7c859a560196f300de1c807c67dc4090d5354e645c27c",
@@ -3752,13 +3751,14 @@
     "src/lib/legality/legality-offer-matrix.ts": "efd6ceb8a1a9a5847b97dad9da74f97019f27053fa9af604c49d556f36c2dff5",
     "src/lib/legality/legality-signal.ts": "14338e333b022ec6e3b0dd36791ecb5b97a4f4cc48e91a3ea2f1696c4952d6e2",
     "src/lib/legality/legality-tier.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
+    "src/lib/listings/listing-authorship.ts": "149ff99581f31a9e265597806ba43354056a2504e6632b9ceeead06386bc7e64",
     "src/lib/listings/listing-coverage.ts": "01e2eeed0cb00c7d501432df25edf4e07e7d3c24c9e3c6509aff1b2deeaa913c",
     "src/lib/listings/listing-filters.ts": "b0ced7fc27e45ce841f3859a0a174c83c2eb1b7ad1f11b2460f08cd87737972f",
     "src/lib/listings/listing-map-shape.ts": "e34eb0cf82fd8a1a57c1169c3c880b3a7fb1f00a54936d7ddd8694672c364220",
     "src/lib/listings/listing-routes.ts": "b923f8af7e5c011d93d1e0d9974851fee69183450fadb85bc7f93eb3ce736bae",
     "src/lib/listings/listing-showcase-order.ts": "0b419572fec4e0efd798b6ffdd15ac4385be8430ecc9785dd48e1ad550ea8556",
     "src/lib/listings/public-listing-from-document.ts": "63b67194ce12526e5933fa82ed2b9405f2f62e0924c4f788c2eff41f1fffe244",
-    "src/lib/listings/public-listing-schema.ts": "19a13cda3fbb169699779543952c8c405aa3a9005ad9683e2ead7f9a2ff06e11",
+    "src/lib/listings/public-listing-schema.ts": "4687f5ed587ac5d946ff9d2fd7a9b955ac8e8d521eeb4398134c9875d9f9d582",
     "src/lib/location/location-provenance.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/media/media-mime.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/occupancy/occupancy-conflict.ts": "fce79b54f1996729dc9363d98711e50108304d4af0b7ae5f4650d5f4a76d3149",
@@ -3986,7 +3986,7 @@
     "dynamicBoundaries": 18,
     "matchedKeys": 135,
     "routeBoundaries": 0,
-    "shellFiles": 525,
+    "shellFiles": 526,
     "sliceBytes": 363642
   },
   "unresolvableKeys": [
