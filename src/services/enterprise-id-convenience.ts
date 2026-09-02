@@ -8,6 +8,9 @@ import { enterpriseIdService } from './enterprise-id-singleton';
 
 // Core Business Entities
 export const generateCompanyId = () => enterpriseIdService.generateCompanyId();
+/** Idempotent σπορά: ίδιο seed ⇒ ίδιο companyId ⇒ επανεκτέλεση χωρίς διπλότυπα. ⚠️ Ποτέ για πραγματικό οργανισμό. */
+export const generateDeterministicCompanyId = (seed: string) =>
+  enterpriseIdService.generateDeterministicCompanyId(seed);
 export const generateProjectId = () => enterpriseIdService.generateProjectId();
 export const generateBuildingId = () => enterpriseIdService.generateBuildingId();
 export const generatePropertyId = () => enterpriseIdService.generatePropertyId();

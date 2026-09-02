@@ -126,6 +126,22 @@ export class EnterpriseIdService extends PublicRegistryIdGenerators {
 
   // Core Business Entities
   generateCompanyId(): string { return this.generateId(P.COMPANY).id; }
+  /**
+   * Σταθερή ταυτότητα εταιρείας από σταθερό `seed` — για οργανισμούς που
+   * **ξαναδημιουργούνται idempotent** αντί να γεννιούνται μία φορά (σπορά
+   * δοκιμαστικών δεδομένων· δες `config/demo-professionals.ts`).
+   *
+   * 🔴 **Ο ΛΟΓΟΣ ΕΙΝΑΙ Η ΕΠΑΝΕΚΤΕΛΕΣΗ, ΟΧΙ Η ΚΟΜΨΟΤΗΤΑ**: με τυχαίο id, κάθε
+   * τρέξιμο του seeder θα γεννούσε **νέα** εταιρεία και **νέα** βιτρίνα, και ο
+   * κατάλογος θα γέμιζε διπλότυπα που κανείς δεν μπορεί να ξεχωρίσει από τα
+   * αληθινά — ούτε να διαγράψει, γιατί **κανείς δεν κρατά τη λίστα**. Με σταθερό
+   * id, η δεύτερη εκτέλεση **ξαναγράφει το ίδιο έγγραφο** και η διαγραφή
+   * ξαναϋπολογίζει ακριβώς τα ίδια κλειδιά (N.7.2 #3).
+   *
+   * ⚠️ **ΠΟΤΕ για πραγματικό οργανισμό**: το seed θα ήταν τότε *«το όνομα ορίζει
+   * την ταυτότητα»*, και δύο εταιρείες με το ίδιο όνομα θα ήταν **μία**.
+   */
+  generateDeterministicCompanyId(seed: string): string { return this.generateDeterministicId(P.COMPANY, seed); }
   generateProjectId(): string { return this.generateId(P.PROJECT).id; }
   generateBuildingId(): string { return this.generateId(P.BUILDING).id; }
   generatePropertyId(): string { return this.generateId(P.PROPERTY).id; }

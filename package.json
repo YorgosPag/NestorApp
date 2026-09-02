@@ -399,7 +399,9 @@
     "test:shell-utilities": "jest scripts/__tests__/check-shell-utilities.test.js --verbose",
     "gate-index:generate": "node scripts/generate-gate-index.js",
     "gate-index:check": "node scripts/generate-gate-index.js --check",
-    "gate:explain": "node scripts/gate-explain.js"
+    "gate:explain": "node scripts/gate-explain.js",
+    "seed:demo-professionals": "tsx --env-file=.env.local scripts/seed-demo-professionals.ts",
+    "seed:demo-professionals:purge": "tsx --env-file=.env.local scripts/seed-demo-professionals.ts --purge"
   },
   "dependencies": {
     "@ai-sdk/openai": "3.0.48",
