@@ -1,0 +1,117 @@
+{
+  "geo-canvas": {
+    "accuracy": {
+      "controls": {
+        "hideIndicators": "👁️ Απόκρυψη Δεικτών",
+        "showIndicators": "👁️ Εμφάνιση Δεικτών"
+      },
+      "legend": "Υπόμνημα Ακρίβειας",
+      "levels": {
+        "excellent": "Άριστη (≤0.5m)",
+        "fair": "Μέτρια (≤2.0m)",
+        "good": "Καλή (≤1.0m)",
+        "poor": "Κακή (≤5.0m)",
+        "veryPoor": "Πολύ Κακή (>5.0m)"
+      },
+      "statistics": "Στατιστικά ακρίβειας",
+      "stats": {
+        "avgAccuracy": "Μέση Ακρίβεια",
+        "best": "Καλύτερη",
+        "format": "±{value}m",
+        "worst": "Χειρότερη"
+      },
+      "types": {
+        "circles": "○ Κύκλοι",
+        "zones": "◊ Ζώνες"
+      },
+      "visualization": "Οπτικοποίηση:"
+    },
+    "map": {
+      "basemap": {
+        "map": "Χάρτης",
+        "satellite": "Δορυφόρος"
+      },
+      "controls": {
+        "cancelPicking": "Ακύρωση Επιλογής",
+        "coordinatePicking": "Επιλογή Συντεταγμένων",
+        "currentStyle": "Τρέχον Στυλ",
+        "darkMode": "Σκούρο Θέμα",
+        "greece": "Ελλάδα",
+        "mapControls": "Χειριστήρια χάρτη",
+        "mapStyle": "Στυλ Χάρτη",
+        "openStreetMap": "OpenStreetMap",
+        "pickGeographicPoint": "Επιλογή Γεωγραφικού Σημείου",
+        "satellite": "Δορυφορικός",
+        "selectMapStyle": "Επιλογή στυλ χάρτη",
+        "terrain": "Τοπογραφικός",
+        "toner": "Ασπρόμαυρο",
+        "watercolor": "Ζωγραφική"
+      },
+      "coordinate": {
+        "altitude": "Υψόμετρο",
+        "clickPrompt": "Κλικ για προσθήκη {mode} σημείου",
+        "currentPosition": "Τρέχουσα Θέση",
+        "displayLabel": "Εμφάνιση Συντεταγμένων",
+        "dxf": "DXF",
+        "geographic": "γεωγραφικό",
+        "latitude": "Γεωγρ. Πλάτος",
+        "loading": "Φόρτωση...",
+        "longitude": "Γεωγρ. Μήκος"
+      },
+      "status": {
+        "controlPoints": "Σημεία Ελέγχου",
+        "drawingActive": "Σχεδίαση Ενεργή",
+        "indicators": "Δείκτες Κατάστασης",
+        "mapLoaded": "Χάρτης Φορτώθηκε",
+        "mapLoading": "Φόρτωση...",
+        "points": "Σημεία",
+        "polygons": "Πολύγωνα",
+        "statusBar": "Γραμμή Κατάστασης",
+        "transformationActive": "Μετασχηματισμός Ενεργός"
+      },
+      "styleSelector": {
+        "quickSwitcher": "Γρήγορη Αλλαγή Στυλ",
+        "style": "Στυλ:"
+      }
+    },
+    "notifications": {
+      "pointsConnected": "{count} σημεία συνδέθηκαν επιτυχώς",
+      "polygonClosed": "Πολύγωνο Κλείστηκε!"
+    }
+  },
+  "geo-canvas-drawing": {
+    "mapLayers": {
+      "deletePin": "Διαγραφή πινέζας",
+      "deletePolygon": "Διαγραφή πολυγώνου",
+      "pinPreviewTitle": "Πινέζα Προεπισκόπηση - Ακτίνα: {radius}m",
+      "pinRadiusTitle": "Πινέζα - Ακτίνα: {radius}m"
+    }
+  },
+  "short-stay": {
+    "checkIn": "Άφιξη",
+    "checkOut": "Αναχώρηση",
+    "clear": "Καθάρισε τις ημερομηνίες",
+    "guests": "Άτομα",
+    "guestsAny": "Δεν το έχω αποφασίσει",
+    "hint": "Δεν κρύβουμε ό,τι δεν ταιριάζει — το μετράμε και σου λέμε γιατί.",
+    "ledger": {
+      "disagree": "Οι δύο μετρήσεις δείχνουν διαφορετικό σύνολο — αυτό είναι σφάλμα, όχι κατάσταση.",
+      "idle": "Δώσε ημερομηνίες για να δεις τι είναι ελεύθερο.",
+      "imbalanced": "Η καταμέτρηση του χρόνου δεν κλείνει — αυτό είναι σφάλμα, όχι κατάσταση.",
+      "kind": {
+        "below-min-nights": "{count} με μεγαλύτερη ελάχιστη διαμονή",
+        "conditional": "{count} υπό αίρεση",
+        "free": "{count} ελεύθερα",
+        "not-a-stay": "{count} δεν είναι καταλύματα",
+        "occupied": "{count} κρατημένα",
+        "over-capacity": "{count} μικρότερα από όσους είστε",
+        "terms-unknown": "{count} χωρίς δηλωμένη χωρητικότητα",
+        "unknown": "{count} χωρίς δηλωμένο ημερολόγιο",
+        "unreadable": "{count} με ημερολόγιο που δεν διαβάστηκε"
+      },
+      "total": "{count, plural, one {# αγγελία} other {# αγγελίες}}"
+    },
+    "legend": "Πότε και πόσοι;",
+    "rangeInvalid": "Η αναχώρηση πρέπει να είναι μετά την άφιξη. Δεν διορθώνουμε την ημερομηνία μόνοι μας."
+  }
+}
