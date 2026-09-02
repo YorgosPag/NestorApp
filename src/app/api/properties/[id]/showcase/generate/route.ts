@@ -44,6 +44,7 @@ import {
   loadShowcasePropertyFloorFloorplans,
 } from './showcase-pdf-assets';
 import { loadBrandLogoAssets } from '@/services/property-showcase/brand-logo-assets';
+import { requestOriginOrThrow } from '@/lib/http/request-origin';
 
 const logger = createModuleLogger('PropertyShowcaseRoute');
 
@@ -76,14 +77,6 @@ function generateUrlSafeToken(length = 32): string {
   const array = new Uint8Array(length);
   crypto.getRandomValues(array);
   return Array.from(array, (byte) => chars[byte % chars.length]).join('');
-}
-
-function buildBaseUrl(req: NextRequest): string {
-  const envBase = process.env.NEXT_PUBLIC_APP_URL;
-  if (envBase && envBase.trim().length > 0) return envBase.replace(/\/$/, '');
-  const host = req.headers.get('x-forwarded-host') || req.headers.get('host');
-  const proto = req.headers.get('x-forwarded-proto') || 'https';
-  return `${proto}://${host}`;
 }
 
 async function generatePdfOrThrow(
@@ -176,7 +169,7 @@ async function handleGenerate(
     fileId: shareId,
     ext: 'pdf',
   }).path;
-  const baseUrl = buildBaseUrl(req);
+  const baseUrl = requestOriginOrThrow(req);
   const showcaseUrl = `${baseUrl}/showcase/${token}`;
 
   const pdfData = buildPdfData(

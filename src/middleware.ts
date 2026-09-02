@@ -20,6 +20,8 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
+import { redirectTo } from '@/lib/http/request-origin';
+
 // ============================================================================
 // BOT & SCANNER DETECTION
 // ============================================================================
@@ -160,7 +162,10 @@ export function middleware(request: NextRequest) {
   const decodedPath = decodeURIComponent(pathname);
   if (/\/\[[^/\]]+\]/.test(decodedPath)) {
     const parentPath = decodedPath.replace(/\/\[[^/\]]+\].*$/, '') || '/';
-    return NextResponse.redirect(new URL(parentPath, request.url), 307);
+    // 🔴 **ΣΧΕΤΙΚΟ `Location`** — δες `lib/http/request-origin.ts`: το
+    //    `request.url` πίσω από τον proxy του Netcup φέρει το `HOSTNAME` του
+    //    container (`0.0.0.0:3000`), όχι το `nestorconstruct.gr`.
+    return redirectTo(parentPath, 307);
   }
 
   // ── 1. Block vulnerability scanner paths (immediate 404) ──

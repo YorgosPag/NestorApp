@@ -29,6 +29,7 @@ import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErro
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { regeneratePdfForShare } from '../generate/helpers';
+import { requestOriginOrThrow } from '@/lib/http/request-origin';
 
 const logger = createModuleLogger('PropertyShowcaseRegenerateRoute');
 
@@ -48,14 +49,6 @@ interface ShowcaseRegenerateResponse {
   token: string;
   pdfUrl: string;
   regeneratedAt: string;
-}
-
-function buildBaseUrl(req: NextRequest): string {
-  const envBase = process.env.NEXT_PUBLIC_APP_URL;
-  if (envBase && envBase.trim().length > 0) return envBase.replace(/\/$/, '');
-  const host = req.headers.get('x-forwarded-host') || req.headers.get('host');
-  const proto = req.headers.get('x-forwarded-proto') || 'https';
-  return `${proto}://${host}`;
 }
 
 async function handleRegenerate(
@@ -80,7 +73,7 @@ async function handleRegenerate(
     shareId: body.shareId, propertyId, uid: ctx.uid, companyId: ctx.companyId,
   });
 
-  const baseUrl = buildBaseUrl(req);
+  const baseUrl = requestOriginOrThrow(req);
   const result = await regeneratePdfForShare({
     shareId: body.shareId,
     propertyId,

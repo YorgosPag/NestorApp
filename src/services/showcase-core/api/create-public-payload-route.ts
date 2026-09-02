@@ -31,6 +31,7 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { createModuleLogger, type Logger } from '@/lib/telemetry/Logger';
 import type { EnumLocale } from '@/services/property-enum-labels/property-enum-labels.service';
+import { requestOriginOrThrow } from '@/lib/http/request-origin';
 
 // =============================================================================
 // Public contracts
@@ -94,14 +95,6 @@ function jsonError(status: number, message: string): NextResponse {
   return NextResponse.json({ error: message }, { status });
 }
 
-function buildBaseUrl(req: NextRequest): string {
-  const envBase = process.env.NEXT_PUBLIC_APP_URL;
-  if (envBase && envBase.trim().length > 0) return envBase.replace(/\/$/, '');
-  const host = req.headers.get('x-forwarded-host') || req.headers.get('host');
-  const proto = req.headers.get('x-forwarded-proto') || 'https';
-  return `${proto}://${host}`;
-}
-
 function resolveLocale(request: NextRequest): EnumLocale {
   const localeParam = request.nextUrl.searchParams.get('locale');
   return localeParam === 'en' ? 'en' : 'el';
@@ -134,7 +127,7 @@ export function createPublicShowcasePayloadRoute<TPayload, TExtra = Record<strin
 
       const locale = resolveLocale(request);
       const pdfPath = share.pdfStoragePath ? config.pdfUrlPath(token) : null;
-      const pdfUrl = pdfPath ? `${buildBaseUrl(request)}${pdfPath}` : undefined;
+      const pdfUrl = pdfPath ? `${requestOriginOrThrow(request)}${pdfPath}` : undefined;
 
       let payload: TPayload;
       try {

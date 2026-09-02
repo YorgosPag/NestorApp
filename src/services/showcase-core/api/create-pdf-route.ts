@@ -46,6 +46,7 @@ import { generateShareId } from '@/services/enterprise-id.service';
 import { createModuleLogger, type Logger } from '@/lib/telemetry/Logger';
 import { nowISO } from '@/lib/date-local';
 import type { ShowcasePDFService } from '../pdf-service';
+import { requestOriginOrThrow } from '@/lib/http/request-origin';
 
 // =============================================================================
 // Public contracts
@@ -105,14 +106,6 @@ export interface ShowcasePdfRouteHandler {
 // =============================================================================
 // Internal helpers
 // =============================================================================
-
-function buildBaseUrl(req: NextRequest): string {
-  const envBase = process.env.NEXT_PUBLIC_APP_URL;
-  if (envBase && envBase.trim().length > 0) return envBase.replace(/\/$/, '');
-  const host = req.headers.get('x-forwarded-host') || req.headers.get('host');
-  const proto = req.headers.get('x-forwarded-proto') || 'https';
-  return `${proto}://${host}`;
-}
 
 async function uploadPdfToStorage(pdfBytes: Uint8Array, storagePath: string): Promise<void> {
   const bucket = getAdminBucket();
@@ -210,7 +203,7 @@ export function createShowcasePdfRoute<TData, TExtraBody extends Record<string, 
       entityType: config.entityType, entityId, uid: ctx.uid, companyId: ctx.companyId,
     });
 
-    const baseUrl = buildBaseUrl(req);
+    const baseUrl = requestOriginOrThrow(req);
     const pdfData = await config.loadPdfData({
       entityId, ctx, locale, body, adminDb, baseUrl, logger,
     });

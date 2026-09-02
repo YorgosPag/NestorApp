@@ -34,24 +34,25 @@
  * @module app/home/route
  */
 
-import { NextResponse, type NextRequest } from 'next/server';
+import { type NextResponse } from 'next/server';
 
 import { readPageIdentity } from '@/server/auth/page-identity';
 import { AUTH_ROUTES } from '@/lib/routes';
+import { redirectTo } from '@/lib/http/request-origin';
 import { workspaceHomeHref } from '@/lib/workspace/workspace-home';
 import { type WorkspaceOwner } from '@/lib/workspace/workspace-segment';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('home-redirect');
 
-export async function GET(request: NextRequest): Promise<NextResponse> {
+export async function GET(): Promise<NextResponse> {
   const identity = await readPageIdentity();
 
   // ⚠️ **Ο ανώνυμος ΔΕΝ είναι σφάλμα εδώ.** Το `/home` το πατά και ο επισκέπτης
   //    που έπεσε σε 404 χωρίς ποτέ να συνδεθεί — για εκείνον η σύνδεση **είναι**
   //    ο σωστός προορισμός. Το ίδιο κουμπί, δύο σωστές απαντήσεις.
   if (!identity.ok) {
-    return NextResponse.redirect(new URL(AUTH_ROUTES.login, request.url));
+    return redirectTo(AUTH_ROUTES.login);
   }
 
   const owner: WorkspaceOwner =
@@ -68,11 +69,18 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     logger.error('[HOME] Ο χώρος δεν έχει διεύθυνση — έξοδος προς τη σύνδεση', {
       uid: identity.ctx.uid,
     });
-    return NextResponse.redirect(new URL(AUTH_ROUTES.login, request.url));
+    return redirectTo(AUTH_ROUTES.login);
   }
 
   // ⚠️ **307, ποτέ 308** — ίδιος λόγος με το δίχτυ `(app)/[...unprefixed]`: ο
   //    προορισμός **εξαρτάται από το ποιος ρωτά**. Ένα 308 είναι cacheable ⇒ ο
   //    φυλλομετρητής θα κλείδωνε `/home → <ο χώρος του Α>` και θα το σέρβιρε στον Β.
-  return NextResponse.redirect(new URL(href, request.url), 307);
+  //
+  // 🔴 **ΣΧΕΤΙΚΟ `Location`, ΠΟΤΕ `new URL(href, request.url)`** — αυτή η γραμμή
+  //    ήταν η ρίζα του περιστατικού της 2026-09-02: το `request.url` του
+  //    standalone διακομιστή φέρει το `HOSTNAME` του container (`0.0.0.0:3000`),
+  //    άρα το απόλυτο `Location` έστελνε τον άνθρωπο σε `https://0.0.0.0:3000/o/…`
+  //    — και τον υποδεχόταν προειδοποίηση **phishing**. Το πλήρες σκεπτικό και το
+  //    γιατί το `HOSTNAME` **δεν** διορθώνεται: `lib/http/request-origin.ts`.
+  return redirectTo(href, 307);
 }
