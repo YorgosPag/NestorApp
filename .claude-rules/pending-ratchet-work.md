@@ -6,6 +6,53 @@
 > `helvetiker_regular.typeface.json` (MgOpen εκτός SPDX, μηδέν καταναλωτές) και το
 > `Roboto-Regular.ttf` (νεκρό μετά το ADR-803). **CHECK 3.69: baseline 1/8 → 0/6.**
 
+- 🔶 **02/09 — ΔΕΚΑΤΡΕΙΣ ΧΕΙΡΟΓΡΑΦΟΙ TYPE GUARDS ΓΙΑ ΤΟ ΙΔΙΟ ΕΡΩΤΗΜΑ** *(ADR-842 Φ3, εντοπίστηκε στο SSoT audit της προβολής χαρακτηριστικών)*
+
+  **Τι**: το repo απαντά *«ανήκει αυτή η τιμή στο λεξιλόγιο;»* με **χειρόγραφο type guard
+  ανά λεξιλόγιο**, όλοι με **ταυτόσημο σώμα** `(X as readonly string[]).includes(value)`:
+  `constants/commercial-statuses.ts:157` · `constants/operational-statuses.ts:99` ·
+  `constants/project-statuses.ts:80` · `constants/professional-registries.ts:204` ·
+  `lib/mandate/mandate-actions.ts:36,109` · `lib/oauth/oauth-config.ts:56` ·
+  `lib/ownership/landowner-acquisition.ts:58` · `utils/floor-naming.ts:45` ·
+  `lib/firestore-mappers.ts:50,54,172,176`. **Δεκατρείς** εμφανίσεις, καμία κοινή μηχανή.
+
+  **Γιατί το βρήκα**: η Φ3 χρειάστηκε **δεκατρείς ακόμη** για τα λεξιλόγια χαρακτηριστικών.
+  Γραμμένοι στο ίδιο ύφος θα ήταν **δίδυμοι κλώνοι μέσα στο ίδιο commit** (N.18). Αντ' αυτού
+  γράφτηκε **ένας γενικός** (`vocabularyValue` στο `services/listings/public-listing-attributes.ts`)
+  — άρα το νέο χρέος είναι **μηδέν**, αλλά το παλιό μένει.
+
+  **Γιατί ΔΕΝ έγινε τώρα**: 13 αρχεία × 4 τομείς (constants · lib · utils · firestore mappers),
+  με **43 σημεία κλήσης** που εξαρτώνται από τη στένωση τύπου (`value is XType`). Είναι N.0.2
+  «μεγάλο διπλότυπο (>1h, 4+ αρχεία)» ⇒ pending, όχι πέρασμα άλλου παραδοτέου.
+
+  **Fix**: SSoT `isMemberOf<T extends string>(vocabulary: readonly T[], value: unknown): value is T`
+  σε `utils/` (ή `constants/vocabulary-membership.ts`), οι 13 γίνονται λεπτά περιτυλίγματα που
+  **κρατούν το όνομά τους** (μηδέν αλλαγή στα σημεία κλήσης — ίδιο πρότυπο με το `X_OPTIONS` της
+  ADR-842 Φ1). Μετά: `npm run jscpd:baseline`.
+
+- 🔶 **02/09 — ΟΙ ΠΑΡΟΧΕΣ ΦΕΥΓΟΥΝ ΩΜΕΣ ΣΕ PDF · EMAIL · TELEGRAM** *(ADR-842 Φ3, μετρημένο στο ίδιο audit)*
+
+  **Τι**: το `services/property-showcase/snapshot-field-builders.ts:250-256` (`buildFeatures`)
+  μεταφράζει `interiorFeatures` και `securityFeatures` μέσω του
+  `services/property-enum-labels/property-enum-labels.service.ts`, αλλά για τα **`propertyAmenities`
+  δεν υπάρχει `translateAmenities`** — ο πίνακας φεύγει **αμετάφραστος**. Ο παραλήπτης της βιτρίνας
+  διαβάζει `parking-garage` · `doorman` αντί για «Κλειστό πάρκινγκ» · «Θυρωρός».
+
+  **Τι ΕΓΙΝΕ ήδη**: η Φ3 πρόσθεσε τα **κλειδιά** `features.amenities.*` (7 τιμές, el+en) στο
+  `properties-enums.json` — δηλαδή η **μισή** θεραπεία υπάρχει και είναι δωρεάν για τον επόμενο.
+  Άγκυρα που το φυλάει: `components/listing-detail/__tests__/listing-attribute-value.test.ts` (Τ1),
+  με παρονομαστή την αυθεντία της Φ1 και όχι το locale.
+
+  **Γιατί ΔΕΝ έγινε ολόκληρο**: το `ShowcaseFeaturesInfo` θα αποκτούσε `amenitiesLabels`, που αγγίζει
+  **πέντε** καταναλωτές (`snapshot-builder.ts` · `ShowcaseDetailSections.tsx` ·
+  `pdf/renderers/PropertyShowcaseSections.ts` · `email-templates/property-showcase-email-sections.ts` ·
+  `property-showcase/telegram-text-digest.ts`) σε **δύο** τομείς ⇒ N.8 «orchestrator/plan», όχι
+  πέρασμα της Φ3.
+
+  **Fix**: `translateAmenities` δίπλα στους 11 αδελφούς του (path `['features','amenities']`),
+  `amenitiesLabels` στο `ShowcaseFeaturesInfo`, και οι 5 καταναλωτές να διαβάζουν τις ετικέτες
+  αντί για τους κωδικούς.
+
 - 🔶 **01/09 — ΤΟ ΛΕΞΙΛΟΓΙΟ ΤΟΥ ΧΩΡΟΥ ΤΗΣ ΖΗΤΗΣΗΣ ΔΕΝ ΦΥΛΑΓΕΤΑΙ ΑΠΟ ΤΗΝ ΠΥΛΗ 3.73** *(ADR-777 §8.46, εντοπίστηκε υλοποιώντας το μέτωπο δρόμου)*
 
   **Τι**: το `.domain-vocabulary.json` (CHECK 3.73 / ADR-812) δηλώνει **ένα και μόνο**

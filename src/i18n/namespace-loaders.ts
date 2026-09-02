@@ -49,6 +49,7 @@ function getElLoader(namespace: Namespace): NamespaceLoader | null {
     case 'properties-enums': return () => import('./locales/el/properties-enums.json');
     case 'properties-viewer': return () => import('./locales/el/properties-viewer.json');
     case 'search-results': return () => import('./locales/el/search-results.json');
+    case 'listing-detail': return () => import('./locales/el/listing-detail.json');
     case 'short-stay': return () => import('./locales/el/short-stay.json');
     case 'property-market': return () => import('./locales/el/property-market.json');
     case 'crm': return () => import('./locales/el/crm.json');
@@ -164,6 +165,7 @@ function getEnLoader(namespace: Namespace): NamespaceLoader | null {
     case 'properties-enums': return () => import('./locales/en/properties-enums.json');
     case 'properties-viewer': return () => import('./locales/en/properties-viewer.json');
     case 'search-results': return () => import('./locales/en/search-results.json');
+    case 'listing-detail': return () => import('./locales/en/listing-detail.json');
     case 'short-stay': return () => import('./locales/en/short-stay.json');
     case 'property-market': return () => import('./locales/en/property-market.json');
     case 'crm': return () => import('./locales/en/crm.json');

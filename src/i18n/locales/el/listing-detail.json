@@ -1,0 +1,48 @@
+{
+  "attributes": {
+    "heading": "Στοιχεία ακινήτου",
+    "ledger": "{declared} από {total} στοιχεία δηλωμένα",
+    "undeclared": "Δεν έχει δηλωθεί",
+    "label": {
+      "type": "Είδος",
+      "areaSqm": "Εμβαδόν",
+      "floor": "Όροφος",
+      "bedrooms": "Υπνοδωμάτια",
+      "energyClass": "Ενεργειακή κλάση",
+      "condition": "Κατάσταση",
+      "renovationYear": "Έτος ανακαίνισης",
+      "bathrooms": "Μπάνια",
+      "wc": "Ξεχωριστό WC",
+      "totalRooms": "Συνολικά δωμάτια",
+      "levels": "Επίπεδα",
+      "balconies": "Μπαλκόνια",
+      "netAreaSqm": "Καθαρό εμβαδόν",
+      "balconyAreaSqm": "Εμβαδόν μπαλκονιών",
+      "terraceAreaSqm": "Εμβαδόν βεράντας",
+      "gardenAreaSqm": "Εμβαδόν κήπου",
+      "heatingType": "Θέρμανση",
+      "heatingFuel": "Καύσιμο θέρμανσης",
+      "coolingType": "Ψύξη",
+      "waterHeating": "Ζεστό νερό",
+      "windowFrames": "Κουφώματα",
+      "glazing": "Υαλοπίνακες",
+      "flooring": "Δάπεδα",
+      "orientations": "Προσανατολισμός",
+      "interiorFeatures": "Εσωτερικά χαρακτηριστικά",
+      "securityFeatures": "Ασφάλεια",
+      "amenities": "Παροχές"
+    },
+    "group": {
+      "essentials": "Βασικά στοιχεία",
+      "energyCondition": "Ενέργεια & κατάσταση",
+      "roomsAreas": "Δωμάτια & εμβαδά",
+      "systemsFinishes": "Συστήματα & υλικά",
+      "features": "Παροχές & χαρακτηριστικά"
+    },
+    "groupLedger": "{declared} από {total}",
+    "reveal": "{count, plural, one {# δεν έχει δηλωθεί} other {# δεν έχουν δηλωθεί}}",
+    "hide": "Απόκρυψη όσων δεν έχουν δηλωθεί",
+    "declaredNone": "Δηλώθηκε ότι δεν υπάρχουν",
+    "groupEmpty": "Κανένα στοιχείο αυτής της ομάδας δεν έχει δηλωθεί."
+  }
+}

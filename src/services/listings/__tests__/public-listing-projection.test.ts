@@ -167,14 +167,30 @@ describe('Κ4 — η προβολή δεν κουβαλά ΚΑΜΙΑ ταυτό�
       // και είναι ό,τι κάνει την επωνυμία **επαληθεύσιμη** αντί για ανεπιβεβαίωτη.
       'agencyId',
       'agencyName',
-      'areaSqm', 'authorship', 'bedrooms', 'commercial', 'commercialStatus', 'coverImage',
-      'floor',
+      // 🔴 **ΕΚΤΗ ΦΟΡΑ ΠΟΥ ΑΥΤΗ Η ΑΓΚΥΡΑ ΚΟΚΚΙΝΙΣΕ — ΚΑΙ Η ΜΕΓΑΛΥΤΕΡΗ (ADR-842 Φ3,
+      // 2026-09-02)**: **είκοσι τρία** κλειδιά μαζί. Πέρασαν από γραμμένη απόφαση
+      // (ADR-842 Α3, έγκριση Giorgio): τα δεδομένα **υπάρχουν ήδη** στο `Property` της
+      // εταιρείας και **κανένα δεν έφευγε** — το φράγμα ήταν η προβολή, όχι η φόρμα.
+      //
+      // ⛔ **ΚΑΙ ΤΟ ΠΙΟ ΣΗΜΑΝΤΙΚΟ ΕΙΝΑΙ ΤΙ ΔΕΝ ΜΠΗΚΕ**: από το `Property.energy` φεύγει
+      // **μόνο** η κλάση — όχι `certificateId`, όχι `certificateDate`, όχι `validUntil`.
+      // Ίδιος κανόνας με το `legality` (ADR-838): **βαθμίδα**, ποτέ έγγραφο ή ταυτότητα
+      // μητρώου. Ο έλεγχος διαρροής (Κ4, από πάνω) το επιβεβαιώνει ανεξάρτητα.
+      'amenities',
+      'areaSqm', 'authorship',
+      'balconies', 'balconyAreaSqm', 'bathrooms', 'bedrooms',
+      'commercial', 'commercialStatus', 'condition', 'coolingType', 'coverImage',
+      'energyClass',
+      'floor', 'flooring',
       // 🔴 **ΠΕΜΠΤΗ ΦΟΡΑ ΠΟΥ ΑΥΤΗ Η ΑΓΚΥΡΑ ΚΟΚΚΙΝΙΣΕ (ADR-841 Α2.6, 2026-09-01)** — η
       // **συλλογή του κατόχου**, δίπλα στο `coverImage` και ποτέ μέσα του: το πρώτο
       // απαντά *«τι ΕΙΝΑΙ το κτίριο;»* (παράγεται από το μοντέλο, κανόνας 31), το
       // δεύτερο *«τι ΔΕΙΧΝΕΙ ο κάτοχος;»* (ρητή επιλογή του, opt-in).
       'gallery',
+      'gardenAreaSqm', 'glazing',
+      'heatingFuel', 'heatingType',
       'id',
+      'interiorFeatures',
       // 🔴 **ΤΕΤΑΡΤΗ ΦΟΡΑ ΠΟΥ ΑΥΤΗ Η ΑΓΚΥΡΑ ΚΟΚΚΙΝΙΣΕ (ADR-838, 2026-08-31)** — και
       // πάλι έκανε τη δουλειά της. Το `legality` πέρασε από **γραμμένη** απόφαση:
       // δημοσιεύεται η **ΒΑΘΜΙΔΑ** και, όπου ο νόμος το **ΑΠΑΙΤΕΙ**, ο **αριθμός
@@ -184,7 +200,9 @@ describe('Κ4 — η προβολή δεν κουβαλά ΚΑΜΙΑ ταυτό�
       // σημείο (`legalitySignalFor`). Ο φρουρός ζει στην ομάδα `Ε4` του
       // `lib/legality/__tests__/legality-signal.test.ts`.
       'legality',
-      'offerKinds', 'place', 'position', 'projectedAt',
+      'levels', 'netAreaSqm',
+      'offerKinds', 'orientations', 'place', 'position', 'projectedAt',
+      'renovationYear', 'securityFeatures',
       // 🔴 **ΤΡΙΤΗ ΦΟΡΑ ΠΟΥ ΑΥΤΗ Η ΑΓΚΥΡΑ ΚΟΚΚΙΝΙΣΕ (ADR-835 Φ3, 2026-08-31)** — και
       // πάλι έκανε τη δουλειά της. Το `stay` πέρασε από **γραμμένη** απόφαση (§4.5):
       // τρία πεδία, **κανένα ημερολόγιο**, για τρεις δεσμευτικούς λόγους
@@ -192,7 +210,8 @@ describe('Κ4 — η προβολή δεν κουβαλά ΚΑΜΙΑ ταυτό�
       // κάθε κράτηση). Ο φρουρός ότι δεν θα γίνει ημερολόγιο ζει στην ομάδα `Η` του
       // `lib/stay/__tests__/stay-availability.test.ts`.
       'stay',
-      'title', 'type',
+      'terraceAreaSqm', 'title', 'totalRooms', 'type',
+      'waterHeating', 'wc', 'windowFrames',
     ]);
   });
 

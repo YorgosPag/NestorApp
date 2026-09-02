@@ -109,17 +109,6 @@
       "galleryAlt": "Photo {index} of {total} — provided by the owner",
       "ownerNote": "The photos are the owner’s own material, selected by them."
     },
-    "attributes": {
-      "heading": "Property details",
-      "ledger": "{declared} of {total} details declared",
-      "undeclared": "Not declared",
-      "label": {
-        "type": "Type",
-        "areaSqm": "Area",
-        "floor": "Floor",
-        "bedrooms": "Bedrooms"
-      }
-    },
     "offers": {
       "heading": "What is on offer"
     },

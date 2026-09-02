@@ -221,6 +221,21 @@
       "split-units": "Διαιρούμενες μονάδες",
       "fan-coil": "Ανεμιστήρας κλιματισμού",
       "none": "Καμία"
+    },
+    "fuel": {
+      "label": "Καύσιμο",
+      "natural-gas": "Φυσικό αέριο",
+      "oil": "Πετρέλαιο",
+      "electricity": "Ρεύμα",
+      "solar": "Ηλιακή",
+      "heat-pump": "Αντλία θερμότητας"
+    },
+    "waterHeating": {
+      "label": "Ζεστό νερό",
+      "electric": "Ηλεκτρικό",
+      "gas": "Αέριο",
+      "solar": "Ηλιακός",
+      "heat-pump": "Αντλία θερμότητας"
     }
   },
   "finishes": {
@@ -267,6 +282,16 @@
       "access-control": "Έλεγχος πρόσβασης",
       "intercom": "Θυροτηλέφωνο",
       "motion-sensors": "Αισθητήρες κίνησης"
+    },
+    "amenities": {
+      "label": "Παροχές",
+      "pool": "Πισίνα",
+      "elevator": "Ασανσέρ",
+      "gym": "Γυμναστήριο",
+      "doorman": "Θυρωρός",
+      "garden": "Κήπος",
+      "playground": "Παιδική χαρά",
+      "parking-garage": "Κλειστό πάρκινγκ"
     }
   },
   "operationalStatus": {

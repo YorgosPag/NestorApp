@@ -20,7 +20,7 @@
  * σωστό **και** αν έλειπε. *(«tie-break σκέλος = εμφάνιση, ΟΧΙ απόδειξη».)*
  */
 
-import type { PublicListing } from '@/types/public-listing';
+import { UNASKED_LISTING_ATTRIBUTES, type PublicListing } from '@/types/public-listing';
 import {
   compareShowcaseListings,
   orderShowcaseListings,
@@ -46,6 +46,10 @@ function listingOf(id: string, title: string, projectedAt = AT): PublicListing {
     place: null,
     floor: null,
     bedrooms: null,
+    // ✅ **ADR-842 Φ3** — τα 23 χαρακτηριστικά, ως **μία** ονομασμένη απουσία.
+    //    Οκτώ fixtures θα κρατούσαν ο καθένας τη δική του λίστα `null` — δηλαδή οκτώ
+    //    λίστες που συμφωνούν μέχρι την πρώτη προσθήκη πεδίου.
+    ...UNASKED_LISTING_ATTRIBUTES,
     legality: [],
     authorship: 'agency',
     agencyName: 'ΑΛΦΑ',

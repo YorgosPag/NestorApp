@@ -67,6 +67,21 @@ import type { OfferKind } from '@/types/property-offers';
 import type { CommercialStatus } from '@/constants/commercial-statuses';
 import type { PropertyType } from '@/types/property';
 import type { PlacePosition, PlaceRef } from '@/types/geo/public-place';
+import type {
+  AmenityCodeType,
+  ConditionType,
+  CoolingType,
+  EnergyClassType,
+  FlooringType,
+  FrameType,
+  FuelType,
+  GlazingType,
+  HeatingType,
+  InteriorFeatureCodeType,
+  OrientationType,
+  SecurityFeatureCodeType,
+  WaterHeatingType,
+} from '@/constants/property-features-enterprise';
 
 // ============================================================================
 // ΘΕΣΗ ΑΓΓΕΛΙΑΣ — το ίδιο λεξιλόγιο, με ΕΝΑ επιπλέον ερώτημα
@@ -352,6 +367,113 @@ export interface PublicListing {
   /** Υπνοδωμάτια. `null` = δεν καταχωρήθηκε· `0` = studio, υπαρκτή τιμή. */
   readonly bedrooms: number | null;
 
+  // ── ΤΑ ΧΑΡΑΚΤΗΡΙΣΤΙΚΑ (ADR-842 Φ3 · Α3) ───────────────────────────────────
+  /**
+   * 🔴 **ΤΟ ΦΡΑΓΜΑ ΠΟΥ ΕΣΠΑΣΕ ΕΔΩ — ΚΑΙ ΗΤΑΝ ΜΕΤΡΗΜΕΝΟ, ΟΧΙ ΥΠΟΘΕΣΗ.**
+   *
+   * Το ADR-842 §2 μέτρησε **τρία** σύνολα πεδίων του ίδιου έργου: η φόρμα του ιδιώτη
+   * ρωτά **8**, το `Property` της εταιρείας κουβαλά **~60**, και αυτή η προβολή έβγαζε
+   * δημόσια **τέσσερις** ιδιότητες. Δηλαδή η εταιρεία **κατείχε ήδη** τα πλούσια
+   * δεδομένα και **κανένα δεν έφευγε** — το φράγμα δεν ήταν η συλλογή, ήταν η
+   * **προβολή**.
+   *
+   * ⇒ Γι' αυτό η Φ3 προηγήθηκε της Φ4 (φόρμα): ξεκλειδώνει αξία από **υπάρχοντα**
+   * δεδομένα, με **μηδέν** νέα ερώτηση προς οποιονδήποτε άνθρωπο. Και γι' αυτό η
+   * `/offers/new` μένει **ακριβώς 8 πεδία** (§25.6 · ADR-842 §3): ο κανόνας μετρά
+   * **ερωτήματα της φόρμας**, όχι **πεδία του μοντέλου**.
+   *
+   * ⛔ **ΚΑΝΕΝΑ ΕΓΓΡΑΦΟ, ΚΑΜΙΑ ΤΑΥΤΟΤΗΤΑ, ΚΑΜΙΑ ΗΜΕΡΟΜΗΝΙΑ ΠΙΣΤΟΠΟΙΗΤΙΚΟΥ.** Το
+   * `Property.energy` κουβαλά `certificateId` · `certificateDate` · `validUntil`. Εδώ
+   * φεύγει **μόνο η κλάση**, με το ίδιο ακριβώς επιχείρημα που το {@link legality}
+   * στέλνει **βαθμίδα** και ποτέ έγγραφο (ADR-838): η κλάση είναι **ιδιότητα του
+   * ακινήτου**, το πιστοποιητικό είναι **ταυτότητα σε μητρώο**.
+   *
+   * ⚠️ **`null` = «κανείς δεν το δήλωσε», ΠΟΤΕ `0` και ΠΟΤΕ κενή συμβολοσειρά.** Ο
+   * κανόνας του αρχείου ισχύει ακέραιος και εδώ, και είναι πιο επικίνδυνος σε αυτό το
+   * μπλοκ παρά οπουδήποτε αλλού: `wc: 0` είναι **πραγματικό μηδέν** (διαμέρισμα χωρίς
+   * ξεχωριστό WC), `balconies: 0` είναι **πραγματικό μηδέν**, και ένας έλεγχος
+   * αληθοφάνειας θα τα έκρυβε **και τα δύο** ως «δεν δηλώθηκε».
+   */
+  readonly energyClass: EnergyClassType | null;
+  /** Φυσική κατάσταση. `null` = δεν δηλώθηκε. */
+  readonly condition: ConditionType | null;
+  /** Έτος τελευταίας ανακαίνισης. `null` = δεν δηλώθηκε. */
+  readonly renovationYear: number | null;
+
+  /** Μπάνια. `null` = δεν δηλώθηκε· `0` = **υπαρκτό μηδέν**. */
+  readonly bathrooms: number | null;
+  /** Ξεχωριστά WC. `null` = δεν δηλώθηκε· `0` = **υπαρκτό μηδέν**. */
+  readonly wc: number | null;
+  /** Συνολικά δωμάτια. `null` = δεν δηλώθηκε. */
+  readonly totalRooms: number | null;
+  /** Επίπεδα (μεζονέτα). `null` = δεν δηλώθηκε. */
+  readonly levels: number | null;
+  /** Πλήθος μπαλκονιών. `null` = δεν δηλώθηκε· `0` = **υπαρκτό μηδέν**. */
+  readonly balconies: number | null;
+
+  /**
+   * Καθαρό εμβαδόν σε m². `null` = δεν δηλώθηκε.
+   *
+   * ⚠️ **Ξεχωριστό πεδίο από το {@link areaSqm}, και ΟΧΙ αντικατάστασή του**: εκείνο
+   * είναι **μικτό**. Δύο αριθμοί που απαντούν σε δύο ερωτήσεις — και η αγορά τους
+   * συγχέει συστηματικά, γι' αυτό η οθόνη τους **ονομάζει**.
+   */
+  readonly netAreaSqm: number | null;
+  /** Εμβαδόν μπαλκονιών σε m². `null` = δεν δηλώθηκε. */
+  readonly balconyAreaSqm: number | null;
+  /** Εμβαδόν βεράντας σε m². `null` = δεν δηλώθηκε. */
+  readonly terraceAreaSqm: number | null;
+  /** Εμβαδόν κήπου σε m². `null` = δεν δηλώθηκε. */
+  readonly gardenAreaSqm: number | null;
+
+  /** Τύπος θέρμανσης. `null` = δεν δηλώθηκε. */
+  readonly heatingType: HeatingType | null;
+  /** Καύσιμο θέρμανσης. `null` = δεν δηλώθηκε. */
+  readonly heatingFuel: FuelType | null;
+  /** Τύπος ψύξης. `null` = δεν δηλώθηκε. */
+  readonly coolingType: CoolingType | null;
+  /** Παραγωγή ζεστού νερού. `null` = δεν δηλώθηκε. */
+  readonly waterHeating: WaterHeatingType | null;
+  /** Κουφώματα. `null` = δεν δηλώθηκε. */
+  readonly windowFrames: FrameType | null;
+  /** Υαλοπίνακες. `null` = δεν δηλώθηκε. */
+  readonly glazing: GlazingType | null;
+
+  // ── ΤΑ ΣΥΝΟΛΑ — και η ΤΡΙΤΗ κατάσταση που κανένα portal δεν έχει ───────────
+  /**
+   * 🏆 **`null` ΚΑΙ `[]` ΕΙΝΑΙ ΔΙΑΦΟΡΕΤΙΚΑ ΠΡΑΓΜΑΤΑ, ΚΑΙ ΕΔΩ ΕΙΝΑΙ ΟΛΟ ΤΟ ΝΟΗΜΑ.**
+   *
+   * | Τιμή | Τι σημαίνει | Τι λέει η οθόνη |
+   * |---|---|---|
+   * | `null` | **κανείς δεν ρώτησε** — δικό μας χρέος | «δεν έχει δηλωθεί» |
+   * | `[]` | ρωτήθηκε, και η απάντηση ήταν **καμία** | «καμία» — **γεγονός** |
+   * | `['fireplace']` | ρωτήθηκε, και υπάρχουν | οι ίδιες οι παροχές |
+   *
+   * 🔴 **Αυτή η τρίτη κατάσταση είναι ΔΟΜΙΚΑ ΑΝΕΚΦΡΑΣΤΗ σε Zillow · idealista ·
+   * Spitogatos**, όπου ένα σύνολο που λείπει και ένα σύνολο που δηλώθηκε άδειο
+   * καταλήγουν στην **ίδια** σιωπή. Είναι το ίδιο σχήμα με το `never-asked` vs
+   * `owner-declined` της θέσης (δες {@link UnknownPositionReason}) και με το
+   * *«0 = κανείς δεν κοίταξε»* των πυλών μας — εδώ, στην οθόνη του αγοραστή.
+   *
+   * ⛔ **ΓΙ' ΑΥΤΟ Ο ΡΟΛΟΣ ΤΟΥΣ ΕΙΝΑΙ `'feature-set'` ΚΑΙ ΟΧΙ `'attribute'`**: ο ρόλος
+   * της ιδιότητας ξέρει **δύο** καταστάσεις (δηλωμένο / όχι) και θα **έλιωνε** τις
+   * τρεις σε δύο, σιωπηλά. Δες `lib/listings/listing-disclosure.ts`.
+   *
+   * ⚠️ **ΜΗΝ το «απλοποιήσεις» σε `readonly X[]` με προεπιλογή `[]`.** Είναι η ίδια
+   * κίνηση που το ADR-835 §4.5 απέρριψε για το `stay` (*«αντικείμενο με μηδενικά θα
+   * κατηγορούσε τον κάτοχο για πεδίο που δεν του ζητήθηκε ποτέ»*), και ο κρίκος
+   * μετανάστευσης της Φ3 γράφει **`null`** ακριβώς για να μη γεννηθεί το ψέμα.
+   */
+  readonly flooring: readonly FlooringType[] | null;
+  /** Προσανατολισμοί. Δες τον κανόνα των τριών καταστάσεων στο {@link flooring}. */
+  readonly orientations: readonly OrientationType[] | null;
+  /** Εσωτερικά χαρακτηριστικά. Τρεις καταστάσεις — δες {@link flooring}. */
+  readonly interiorFeatures: readonly InteriorFeatureCodeType[] | null;
+  /** Χαρακτηριστικά ασφαλείας. Τρεις καταστάσεις — δες {@link flooring}. */
+  readonly securityFeatures: readonly SecurityFeatureCodeType[] | null;
+  /** Παροχές του ακινήτου. Τρεις καταστάσεις — δες {@link flooring}. */
+  readonly amenities: readonly AmenityCodeType[] | null;
+
   // ── ΝΟΜΙΜΟΤΗΤΑ (Α17 · ADR-838) ────────────────────────────────────────────
   /**
    * 🔴 **ΤΟ 4ο ΒΑΣΙΚΟ ΠΕΔΙΟ ΤΟΥ §25.6 — ΚΑΙ ΕΠΙ ΤΡΕΙΣ ΕΒΔΟΜΑΔΕΣ ΗΤΑΝ ΔΗΛΩΜΕΝΟ ΚΕΝΟ.**
@@ -524,6 +646,89 @@ export interface PublicAgencyIdentity {
 
 /** Η απουσία γραφείου, ως **τιμή με όνομα** — ώστε να μη γράφεται `{id:null,name:null}`. */
 export const NO_AGENCY_IDENTITY: PublicAgencyIdentity = { id: null, name: null };
+
+// ============================================================================
+// ΤΑ ΧΑΡΑΚΤΗΡΙΣΤΙΚΑ, ΩΣ ΟΝΟΜΑΣΜΕΝΟ ΚΟΜΜΑΤΙ ΤΟΥ ΣΧΗΜΑΤΟΣ (ADR-842 Φ3)
+// ============================================================================
+
+/**
+ * Τα είκοσι τρία πεδία που άνοιξε η Φ3.
+ *
+ * 🔑 **`Pick` και όχι χειρόγραφη διεπαφή** — αν το σχήμα αποκτήσει ή χάσει πεδίο, ο
+ * τύπος το μαθαίνει στην ίδια στιγμή. Μια χειρόγραφη λίστα εδώ θα ήταν *«χειρόγραφη
+ * λίστα πεδίων»*, η κλάση που το ADR-736 §5.3 ονομάζει και το ADR-833 μέτρησε στο
+ * **ένατο** περιστατικό της.
+ */
+export type ListingAttributeFields = Pick<
+  PublicListing,
+  | 'energyClass'
+  | 'condition'
+  | 'renovationYear'
+  | 'bathrooms'
+  | 'wc'
+  | 'totalRooms'
+  | 'levels'
+  | 'balconies'
+  | 'netAreaSqm'
+  | 'balconyAreaSqm'
+  | 'terraceAreaSqm'
+  | 'gardenAreaSqm'
+  | 'heatingType'
+  | 'heatingFuel'
+  | 'coolingType'
+  | 'waterHeating'
+  | 'windowFrames'
+  | 'glazing'
+  | 'flooring'
+  | 'orientations'
+  | 'interiorFeatures'
+  | 'securityFeatures'
+  | 'amenities'
+>;
+
+/**
+ * **Η αγγελία για την οποία κανείς δεν ρώτησε τίποτα** — και είναι η **σημερινή
+ * αλήθεια για κάθε αγγελία ιδιώτη** (ADR-842: τα πεδία έρχονται στη **Φ4**).
+ *
+ * 🔑 **Ίδιο ιδίωμα με το {@link NO_AGENCY_IDENTITY}**: μια ονομασμένη «απουσία» που
+ * είναι **τιμή**, ώστε κανένας καταναλωτής να μην ξαναγράφει είκοσι τρία `null`. Η
+ * εναλλακτική μετρήθηκε: **οκτώ** τόποι (μία σελίδα-εργαστήριο και επτά fixtures) θα
+ * κρατούσαν ο καθένας τη δική του χειρόγραφη λίστα — δηλαδή **οκτώ** λίστες που
+ * συμφωνούν μεταξύ τους μέχρι την πρώτη προσθήκη πεδίου.
+ *
+ * ⛔ **ΚΑΘΕ ΣΥΝΟΛΟ ΕΙΝΑΙ `null`, ΠΟΤΕ `[]`.** Το `[]` σημαίνει *«ο κάτοχος απάντησε:
+ * καμία»* — ισχυρισμός για λογαριασμό ανθρώπου που δεν ρωτήθηκε. Δες
+ * `ListingFeatureSetState`.
+ *
+ * ⚠️ **ΔΕΝ χρησιμοποιείται από τον γραφέα** (`projectListingAttributes`): εκεί ο
+ * μεταγλωττιστής **απαιτεί** και τα είκοσι τρία να παραχθούν από τις τέσσερις
+ * οικογένειες, και ένα `...UNASKED` από κάτω θα **έκρυβε** την οικογένεια που ξεχάστηκε.
+ */
+export const UNASKED_LISTING_ATTRIBUTES: ListingAttributeFields = {
+  energyClass: null,
+  condition: null,
+  renovationYear: null,
+  bathrooms: null,
+  wc: null,
+  totalRooms: null,
+  levels: null,
+  balconies: null,
+  netAreaSqm: null,
+  balconyAreaSqm: null,
+  terraceAreaSqm: null,
+  gardenAreaSqm: null,
+  heatingType: null,
+  heatingFuel: null,
+  coolingType: null,
+  waterHeating: null,
+  windowFrames: null,
+  glazing: null,
+  flooring: null,
+  orientations: null,
+  interiorFeatures: null,
+  securityFeatures: null,
+  amenities: null,
+};
 
 /**
  * ⚠️ *(§8.33: το λεξιλόγιο **μετακόμισε εδώ** από το `types/owner-property.ts`. Δεν

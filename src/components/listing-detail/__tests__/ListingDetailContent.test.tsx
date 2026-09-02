@@ -81,6 +81,32 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     position: { kind: 'unknown', reason: 'never-asked' },
     floor: 1,
     bedrooms: 3,
+    // ✅ **ADR-842 Φ3** — τα 23 χαρακτηριστικά, **όλα δηλωμένα**. Το fixture είναι
+    //    «πλήρης αγγελία» επίτηδες: η Ο3 μηδενίζει ρητά ό,τι θέλει να λείπει, ώστε
+    //    «καμία απουσία» να παραμείνει **ελέγξιμος** ισχυρισμός και όχι ευχή.
+    energyClass: 'B',
+    condition: 'good',
+    renovationYear: 2015,
+    bathrooms: 1,
+    wc: 1,
+    totalRooms: 4,
+    levels: 1,
+    balconies: 2,
+    netAreaSqm: 80,
+    balconyAreaSqm: 10,
+    terraceAreaSqm: 5,
+    gardenAreaSqm: 0,
+    heatingType: 'autonomous',
+    heatingFuel: 'natural-gas',
+    coolingType: 'split-units',
+    waterHeating: 'solar',
+    windowFrames: 'aluminum',
+    glazing: 'double',
+    flooring: ['tiles'],
+    orientations: ['north'],
+    interiorFeatures: ['fireplace'],
+    securityFeatures: ['alarm'],
+    amenities: ['elevator'],
     title: 'Διαμέρισμα στην Εγνατία',
     // 🔴 **ΤΑ ΤΕΣΣΕΡΑ ΠΟΥ ΕΛΕΙΠΑΝ** (ADR-841 Α13, 2026-09-01). Ο τύπος τα δηλώνει
     //    **υποχρεωτικά** — το fixture τα παρέλειπε, και κανείς δεν το είδε επειδή
@@ -180,28 +206,63 @@ describe('Ο2 — ο σύνδεσμος επιστροφής κρατά την �
 // ============================================================================
 
 describe('Ο3 — κανένα στοιχείο δεν σιωπά', () => {
-  it('και τα τέσσερα στοιχεία έχουν ετικέτα, ακόμη κι όταν λείπουν', () => {
+  /**
+   * 🔴 **ΓΡΑΜΜΕΝΟΣ ΣΤΟ ΧΕΡΙ, ΕΠΙΤΗΔΕΣ — ΔΕΥΤΕΡΗ ΦΩΝΗ** (ADR-587 §6.1). Αν ο αριθμός
+   * παραγόταν από τους ίδιους καταλόγους που διαβάζει η οθόνη, η άγκυρα θα
+   * επιβεβαίωνε τον εαυτό της. Έτσι, η μέρα που η οθόνη 3 μεγαλώνει είναι μέρα που
+   * **κάποιος το βλέπει** — όπως όταν πήγε από 4 σε 27 (ADR-842 Φ3).
+   */
+  const TOTAL_ELEMENTS = 27;
+
+  it('κάθε στοιχείο έχει ετικέτα, ακόμη κι όταν λείπει', () => {
     renderWith({ state: 'found', listing: listing({ areaSqm: null, floor: null, bedrooms: null }) });
-    for (const key of ['type', 'areaSqm', 'floor', 'bedrooms']) {
-      expect(screen.getByText(`search-results:detail.attributes.label.${key}`)).toBeInTheDocument();
+    for (const key of ['type', 'areaSqm', 'floor', 'bedrooms', 'energyClass', 'amenities']) {
+      expect(screen.getByText(`listing-detail:attributes.label.${key}`)).toBeInTheDocument();
     }
     // Τρία λείπουν ⇒ τρεις ονομασμένες απουσίες. Ποτέ σιωπή.
-    expect(screen.getAllByText('search-results:detail.attributes.undeclared')).toHaveLength(3);
+    expect(screen.getAllByText('listing-detail:attributes.undeclared')).toHaveLength(3);
+  });
+
+  it('🔴 τα κενά ΥΠΑΡΧΟΥΝ στο έγγραφο, απλώς δεν είναι ανοιχτά (2 επίπεδα, NN/g)', () => {
+    renderWith({ state: 'found', listing: listing({ areaSqm: null }) });
+    // Η ενέργεια αποκάλυψης **μετρά** — δεν λέει «Περισσότερα» (information scent).
+    expect(
+      screen.getByText('listing-detail:attributes.reveal::{"count":1}')
+    ).toBeInTheDocument();
+    // Και η ονομασμένη απουσία είναι ήδη στο DOM, πίσω από `hidden`.
+    expect(screen.getByText('listing-detail:attributes.undeclared')).toBeInTheDocument();
   });
 
   it('η λογιστική τυπώνεται με τους πραγματικούς αριθμούς', () => {
     renderWith({ state: 'found', listing: listing({ areaSqm: null, floor: null, bedrooms: null }) });
     expect(
-      screen.getByText('search-results:detail.attributes.ledger::{"declared":1,"total":4}')
+      screen.getByText(
+        `listing-detail:attributes.ledger::{"declared":${TOTAL_ELEMENTS - 3},"total":${TOTAL_ELEMENTS}}`
+      )
     ).toBeInTheDocument();
   });
 
   it('πλήρης αγγελία ⇒ καμία απουσία, και η λογιστική το λέει', () => {
     renderWith({ state: 'found', listing: listing() });
-    expect(screen.queryByText('search-results:detail.attributes.undeclared')).not.toBeInTheDocument();
+    expect(screen.queryByText('listing-detail:attributes.undeclared')).not.toBeInTheDocument();
     expect(
-      screen.getByText('search-results:detail.attributes.ledger::{"declared":4,"total":4}')
+      screen.getByText(
+        `listing-detail:attributes.ledger::{"declared":${TOTAL_ELEMENTS},"total":${TOTAL_ELEMENTS}}`
+      )
     ).toBeInTheDocument();
+  });
+
+  /**
+   * 🏆 **Η ΤΡΙΤΗ ΚΑΤΑΣΤΑΣΗ, ΣΤΗΝ ΟΘΟΝΗ** (ADR-842 Φ3): ένα σύνολο δηλωμένο **άδειο**
+   * λέει «δηλώθηκε ότι δεν υπάρχουν» — **γεγονός**, όχι κενό. Σε Zillow · idealista
+   * αυτό και το «δεν ρωτήθηκε» καταλήγουν στην ίδια σιωπή.
+   */
+  it('σύνολο δηλωμένο άδειο ζωγραφίζει ΑΛΛΟ κείμενο από το μη δηλωμένο', () => {
+    renderWith({ state: 'found', listing: listing({ amenities: [] }) });
+    expect(
+      screen.getByText('listing-detail:attributes.declaredNone')
+    ).toBeInTheDocument();
+    expect(screen.queryByText('listing-detail:attributes.undeclared')).not.toBeInTheDocument();
   });
 });
 

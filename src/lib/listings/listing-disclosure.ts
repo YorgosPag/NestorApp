@@ -48,7 +48,6 @@
  */
 
 import type { PublicListing } from '@/types/public-listing';
-import { normalizePropertyType } from '@/constants/property-type-aliases';
 
 // ============================================================================
 // 1. ΠΩΣ ΒΛΕΠΕΙ Ο ΚΟΣΜΟΣ ΚΑΘΕ ΠΕΔΙΟ — κλειστός πίνακας
@@ -78,6 +77,34 @@ export type DisclosureTreatment =
   | 'media'
   /** Μετρήσιμο χαρακτηριστικό — δείχνεται **και όταν λείπει** (§25.6). */
   | 'attribute'
+  /**
+   * **ΣΥΝΟΛΟ τιμών από κλειστό λεξιλόγιο** (ADR-842 Φ3) — παροχές, προσανατολισμοί,
+   * δάπεδα.
+   *
+   * ⛔ **ΔΕΝ είναι `'attribute'`, και η διάκριση ΕΙΝΑΙ ο μηχανισμός** — ίδιο ακριβώς
+   * σχήμα με τα `'stay-terms'` και `'legality'` που έφυγαν από εκεί πριν από αυτό.
+   * Ένα σύνολο έχει **τρεις** καταστάσεις, όχι δύο:
+   *
+   * | Τιμή | Τι σημαίνει |
+   * |---|---|
+   * | `null` | **κανείς δεν ρώτησε** — δικό μας χρέος |
+   * | `[]` | ρωτήθηκε, και η απάντηση ήταν **καμία** — **γεγονός του κατόχου** |
+   * | `[…]` | ρωτήθηκε, και υπάρχουν |
+   *
+   * Ο ρόλος `'attribute'` ξέρει **δύο** ({@link isAttributeDeclared} επιστρέφει
+   * `boolean`) και θα **έλιωνε** τις τρεις σε δύο — δηλαδή ένα ακίνητο που **δήλωσε**
+   * ότι δεν έχει καμία παροχή θα φαινόταν ίδιο με ένα που **δεν ρωτήθηκε ποτέ**.
+   *
+   * 🏆 **Αυτή είναι η τρίτη κατάσταση που Zillow · idealista · Spitogatos δεν έχουν**:
+   * εκεί και τα δύο καταλήγουν στην ίδια σιωπή. Είναι το ίδιο επιχείρημα με το
+   * `never-asked` vs `owner-declined` της θέσης (Α5 §3) — και ο λόγος που ο τύπος
+   * είναι `readonly X[] | null` και **ποτέ** `readonly X[]` με προεπιλογή `[]`.
+   *
+   * ⚠️ **Και ο ΤΡΟΠΟΣ εμφάνισης είναι πράγματι άλλος**: ετικέτες πολλαπλών τιμών, όχι
+   * γραμμή ετικέτα/τιμή. Δύο πεδία με τον ίδιο ρόλο εμφανίζονται με τον ίδιο
+   * μηχανισμό — αυτός ο κανόνας του πίνακα είναι που **απαιτεί** τον χωρισμό.
+   */
+  | 'feature-set'
   /** Οι διαθέσεις (Α20) — ο άξονας όπου δεν χάνεται τίποτα. */
   | 'offers'
   /** Η θέση: σχήμα στον χάρτη **και** η ακρίβειά του σε λέξεις (Α5). */
@@ -168,6 +195,42 @@ export const LISTING_DISCLOSURE = {
   areaSqm: 'attribute',
   floor: 'attribute',
   bedrooms: 'attribute',
+  // ── ADR-842 Φ3 — ΤΑ ΧΑΡΑΚΤΗΡΙΣΤΙΚΑ ΠΟΥ Η ΕΤΑΙΡΕΙΑ ΗΔΗ ΚΑΤΕΙΧΕ ───────────────
+  //
+  // 🔴 **Ο πίνακας κοκκίνισε ξανά, και είναι η ΠΕΜΠΤΗ φορά** που το
+  //    `satisfies Record<keyof PublicListing, …>` σταματά προσθήκη σχήματος πριν
+  //    προλάβει να τη δει άνθρωπος. Είκοσι τρία πεδία μπήκαν μαζί — και κανένα δεν
+  //    μπορούσε να μπει χωρίς να απαντηθεί εδώ *«με ποιον τρόπο γίνεται ορατό;»*.
+  //
+  // ⚠️ **Η ΣΕΙΡΑ ΕΙΝΑΙ ΟΘΟΝΗ**: από αυτήν παράγεται η σειρά μέσα σε κάθε ομάδα
+  //    ({@link ListingAttributeGroup}). Η **ομάδα** ζει σε δικό της πίνακα, γιατί
+  //    απαντά **άλλο** ερώτημα (*«πού κάθεται;»*, όχι *«πώς φαίνεται;»*) — και είναι
+  //    `Record` πάνω στα **παραγόμενα** κλειδιά αυτού εδώ, άρα οι δύο πίνακες **δεν
+  //    μπορούν** να αποκλίνουν: δεν είναι δύο λίστες, είναι μία και η προβολή της.
+  energyClass: 'attribute',
+  condition: 'attribute',
+  renovationYear: 'attribute',
+  bathrooms: 'attribute',
+  wc: 'attribute',
+  totalRooms: 'attribute',
+  levels: 'attribute',
+  balconies: 'attribute',
+  netAreaSqm: 'attribute',
+  balconyAreaSqm: 'attribute',
+  terraceAreaSqm: 'attribute',
+  gardenAreaSqm: 'attribute',
+  heatingType: 'attribute',
+  heatingFuel: 'attribute',
+  coolingType: 'attribute',
+  waterHeating: 'attribute',
+  windowFrames: 'attribute',
+  glazing: 'attribute',
+  // ── ΤΑ ΣΥΝΟΛΑ — τρεις καταστάσεις, δες τον ρόλο `'feature-set'` ─────────────
+  flooring: 'feature-set',
+  orientations: 'feature-set',
+  interiorFeatures: 'feature-set',
+  securityFeatures: 'feature-set',
+  amenities: 'feature-set',
   // ───────────────────────────────────────────────────────────────────────────
   offerKinds: 'offers',
   position: 'position',
@@ -195,21 +258,45 @@ export const LISTING_DISCLOSURE = {
 } as const satisfies Record<keyof PublicListing, DisclosureTreatment>;
 
 // ============================================================================
-// 2. ΟΙ ΙΔΙΟΤΗΤΕΣ — παραγόμενες από τον πίνακα, ποτέ ξαναγραμμένες
+// 2. ΤΑ ΠΑΡΑΓΟΜΕΝΑ ΚΛΕΙΔΙΑ — από τον πίνακα, ποτέ ξαναγραμμένα
 // ============================================================================
 
 /**
- * Τα πεδία με ρόλο `'attribute'` — **τύπος παραγόμενος από το ίδιο literal**.
+ * Τα κλειδιά του πίνακα που φέρουν έναν συγκεκριμένο ρόλο — **τύπος παραγόμενος από
+ * το ίδιο literal**.
+ *
+ * 🔑 **Γενικεύτηκε όταν μπήκε ο δεύτερος ρόλος-με-κατάλογο** (ADR-842 Φ3). Η
+ * προηγούμενη μορφή ήταν γραμμένη δύο φορές μέσα στον ίδιο τύπο για το `'attribute'`·
+ * ένα δεύτερο αντίγραφο για το `'feature-set'` θα ήταν **δίδυμος κλώνος στο ίδιο
+ * αρχείο** — ακριβώς αυτό που το `jscpd:diff` (N.18) υπάρχει για να πιάσει, και το
+ * κλασικό λάθος που ο ίδιος ο κανόνας περιγράφει: *«κεντρικοποιείς το Α, γράφεις Β ως
+ * δίδυμο»*.
+ */
+type KeysWithTreatment<T extends DisclosureTreatment> = {
+  [K in keyof typeof LISTING_DISCLOSURE]: (typeof LISTING_DISCLOSURE)[K] extends T ? K : never;
+}[keyof typeof LISTING_DISCLOSURE];
+
+/**
+ * Τα πεδία με ρόλο `'attribute'`.
  *
  * 🔑 Ένα νέο `'attribute'` πεδίο μπαίνει **αυτόματα** και στον τύπο και στον κατάλογο,
- * και ταυτόχρονα **σπάει** το εξαντλητικό `switch` του {@link isAttributeDeclared} —
- * δηλαδή δεν μπορεί να προστεθεί χωρίς να απαντηθεί «πότε θεωρείται δηλωμένο;».
+ * και ταυτόχρονα **σπάει** το εξαντλητικό `Record` του `ATTRIBUTE_DECLARED`
+ * (`./listing-attribute-declared`) — δηλαδή δεν μπορεί να προστεθεί χωρίς να απαντηθεί
+ * «πότε θεωρείται δηλωμένο;».
  */
-export type ListingAttributeKey = {
-  [K in keyof typeof LISTING_DISCLOSURE]: (typeof LISTING_DISCLOSURE)[K] extends 'attribute'
-    ? K
-    : never;
-}[keyof typeof LISTING_DISCLOSURE];
+export type ListingAttributeKey = KeysWithTreatment<'attribute'>;
+
+/**
+ * Τα πεδία με ρόλο `'feature-set'` (ADR-842 Φ3).
+ *
+ * ⚠️ **Η εγγύηση εδώ ΔΕΝ είναι ίδια με των ιδιοτήτων, και το λέω αντί να το υπονοήσω.**
+ * Η ανάγνωση ενός συνόλου είναι `listing[key]` — **ολική εξ ορισμού**, οπότε δεν
+ * υπάρχει `switch` να σπάσει και ένα ceremonial table εδώ θα ήταν τελετουργία, όχι
+ * φρουρός. Ένα νέο σύνολο σταματιέται σε **δύο άλλα** σημεία, και τα δύο `Record`
+ * πάνω σε αυτόν ακριβώς τον τύπο: το `LISTING_ATTRIBUTE_GROUP` (*«πού κάθεται;»*) και
+ * το `FEATURE_SET_VALUE_LABEL_NS` (*«με ποιο λεξιλόγιο ονομάζονται οι τιμές του;»*).
+ */
+export type ListingFeatureSetKey = KeysWithTreatment<'feature-set'>;
 
 /**
  * Ο κατάλογος των ιδιοτήτων, **στη σειρά του πίνακα**.
@@ -219,90 +306,51 @@ export type ListingAttributeKey = {
  * `LOCATION_PROVENANCES` (`lib/location/location-provenance`), που παράγεται από τον
  * πίνακα κατάταξης αντί να ξαναγραφεί δίπλα του.
  */
-export const LISTING_ATTRIBUTE_KEYS: readonly ListingAttributeKey[] = (
-  Object.keys(LISTING_DISCLOSURE) as (keyof typeof LISTING_DISCLOSURE)[]
-).filter(
-  (key): key is ListingAttributeKey => LISTING_DISCLOSURE[key] === 'attribute'
-);
+export const LISTING_ATTRIBUTE_KEYS: readonly ListingAttributeKey[] = keysWithTreatment(
+  'attribute'
+) as readonly ListingAttributeKey[];
+
+/** Ο κατάλογος των συνόλων, **στη σειρά του πίνακα**. */
+export const LISTING_FEATURE_SET_KEYS: readonly ListingFeatureSetKey[] = keysWithTreatment(
+  'feature-set'
+) as readonly ListingFeatureSetKey[];
 
 /**
- * Έχει **δηλωθεί** αυτή η ιδιότητα για τη συγκεκριμένη αγγελία;
- *
- * 🔴 **`0` είναι ΤΙΜΗ, όχι απουσία** — και οι δύο περιπτώσεις είναι πραγματικές:
- * `floor: 0` είναι **ισόγειο**, `bedrooms: 0` είναι **studio**. Ένας έλεγχος
- * αληθοφάνειας (`if (listing.floor)`) θα έκρυβε ακριβώς τα ισόγεια — και το
- * `types/public-listing.ts` το δηλώνει ρητά σε **δύο** πεδία, επειδή είναι το πρώτο
- * πράγμα που κάνει λάθος όποιος τα διαβάζει βιαστικά.
- *
- * 🔴 **Και «δηλωμένο» σημαίνει ΟΝΟΜΑΣΙΜΟ, όχι «μη κενό».** Ο τύπος `PropertyType`
- * περιλαμβάνει **παλαιές ελληνικές** τιμές του Firestore και **@deprecated**
- * παραλλαγές· ένα `type` που ο `normalizePropertyType` δεν αναγνωρίζει **δεν έχει
- * ετικέτα** να ζωγραφιστεί. Αν το μετρούσαμε ως δηλωμένο, η λογιστική θα έλεγε «4
- * από 4» ενώ η οθόνη θα έδειχνε **τρεις γραμμές** — δηλαδή θα ήταν το ίδιο ψέμα με
- * τη λίστα που λέει 11 και τον χάρτη που δείχνει 10 (κανόνας 27).
+ * ⚠️ **Μία υλοποίηση για δύο καταλόγους** — δες το {@link KeysWithTreatment} για τον
+ * λόγο. Ο ισχυρισμός τύπου στους δύο καταναλωτές είναι η **μετάφραση** του φίλτρου
+ * χρόνου εκτέλεσης στο μαπαρισμένο τύπο, που η TypeScript δεν συνάγει από `filter`.
  */
-export function isAttributeDeclared(
-  listing: PublicListing,
-  key: ListingAttributeKey
-): boolean {
-  switch (key) {
-    case 'type':
-      return normalizePropertyType(listing.type) !== null;
-    case 'areaSqm':
-      return listing.areaSqm !== null;
-    case 'floor':
-      return listing.floor !== null;
-    case 'bedrooms':
-      return listing.bedrooms !== null;
-    default:
-      return assertNeverAttribute(key);
-  }
+function keysWithTreatment(
+  treatment: DisclosureTreatment
+): readonly (keyof typeof LISTING_DISCLOSURE)[] {
+  return (Object.keys(LISTING_DISCLOSURE) as (keyof typeof LISTING_DISCLOSURE)[]).filter(
+    (key) => LISTING_DISCLOSURE[key] === treatment
+  );
 }
 
 // ============================================================================
-// 3. ΚΛΕΙΣΤΗ ΛΟΓΙΣΤΙΚΗ ΙΔΙΟΤΗΤΩΝ (κανόνας 27, στο επίπεδο ΠΕΔΙΟΥ)
+// 3. Η ΛΟΓΙΣΤΙΚΗ — ΜΕΤΑΚΟΜΙΣΕ, ΚΑΙ ΕΙΝΑΙ SPLIT ΟΧΙ TRIM
 // ============================================================================
 
 /**
- * **«3 από 4 στοιχεία δηλωμένα»** — *πάντα*, ακόμη και όταν είναι 4 από 4.
+ * 🔑 **Το «*πότε θεωρείται δηλωμένο;*» έφυγε σε δικό του αρχείο** (ADR-842 Φ3, N.7.1).
  *
- * 🔑 Είναι η {@link ListingLedger} της οθόνης 2, μια βαθμίδα πιο κάτω: εκείνη μετρά
- * **αγγελίες**, αυτή μετρά **πεδία μιας αγγελίας**. Ίδιος κανόνας, ίδιος λόγος —
- * ένας αναγνώστης που βλέπει τρεις γραμμές δεν ξέρει αν έλειπε μία ή δέκα.
+ * Ο λόγος δεν είναι το μέγεθος: είναι ότι πρόκειται για **άλλο ερώτημα**. Αυτό το
+ * αρχείο απαντά *«με ποιον τρόπο γίνεται ορατό κάθε πεδίο;»* — μια δήλωση. Εκείνο
+ * απαντά *«έχει τιμή αυτό το πεδίο σε αυτή την αγγελία;»* — μια **κρίση πάνω σε
+ * δεδομένα**, που μεγάλωσε από 4 σε 22 απαντήσεις (και άλλαξε από `switch` σε
+ * εξαντλητικό `Record` γι' αυτόν ακριβώς τον λόγο — δες την κεφαλίδα εκεί).
  *
- * ⚠️ **Τα δύο μέρη είναι ξεχωριστά πεδία, ΟΧΙ ένα με αφαίρεση** (ίδια σχεδίαση με το
- * {@link ListingLedger}): ένας καταναλωτής που υπολογίζει `total - declared` θα έχει
- * δίκιο μέχρι την πρώτη τρίτη κατηγορία, και μετά θα κλείνει **λάθος, σιωπηλά**.
+ * ⛔ **ΚΑΙ ΤΑ ΟΝΟΜΑΤΑ ΔΕΝ ΕΠΑΝΕΞΑΓΟΝΤΑΙ ΑΠΟ ΕΔΩ — ΕΠΙΤΗΔΕΣ.** Η επανεξαγωγή ήταν η
+ * πρώτη γραφή (πρότυπο `public-listing-projection-types.ts`, Α12.10) και θα έσωζε δύο
+ * γραμμές σε δύο καταναλωτές· θα γεννούσε όμως **κύκλο εισαγωγών** — εκείνο το αρχείο
+ * εισάγει τους καταλόγους από **αυτό**. Ο κύκλος θα δούλευε σήμερα (οι κατάλογοι
+ * διαβάζονται σε χρόνο κλήσης, όχι φόρτωσης) και θα έσπαγε την πρώτη φορά που κάποιος
+ * θα ήθελε τιμή του σε χρόνο φόρτωσης — δηλαδή θα ήταν **παγίδα με χρονοδιακόπτη**.
+ * Δύο εισαγωγές παραπάνω είναι φθηνότερες από έναν κύκλο.
+ *
+ * ⇒ Οι καταναλωτές εισάγουν από `./listing-attribute-declared`.
  */
-export interface ListingAttributeLedger {
-  readonly total: number;
-  readonly declared: number;
-  readonly undeclared: number;
-}
-
-/** Η λογιστική των ιδιοτήτων μιας αγγελίας. **Καθαρή συνάρτηση.** */
-export function listingAttributeLedger(listing: PublicListing): ListingAttributeLedger {
-  const declared = LISTING_ATTRIBUTE_KEYS.filter((key) =>
-    isAttributeDeclared(listing, key)
-  ).length;
-
-  return {
-    total: LISTING_ATTRIBUTE_KEYS.length,
-    declared,
-    undeclared: LISTING_ATTRIBUTE_KEYS.length - declared,
-  };
-}
-
-/**
- * Κλείνει το άθροισμα;
- *
- * 🔴 **Υπάρχει για να αποτύχει θορυβωδώς**, όπως το `ledgerBalances` του
- * `types/public-listing.ts`. Ίδιο εργαλείο, ίδιο επιχείρημα: μια λογιστική που δεν
- * μπορεί να πέσει έξω δεν είναι λογιστική, είναι διακόσμηση.
- */
-export function attributeLedgerBalances(ledger: ListingAttributeLedger): boolean {
-  return ledger.declared + ledger.undeclared === ledger.total;
-}
 
 // ============================================================================
 // 4. ΤΑ ΘΕΜΑΤΑ ΠΟΥ Η Α3 ΥΠΟΣΧΕΘΗΚΕ ΚΑΙ ΔΕΝ ΥΠΑΡΧΟΥΝ — δηλωμένα, όχι σιωπηλά
@@ -354,18 +402,3 @@ export const LISTING_OPEN_SUBJECTS: readonly ListingOpenSubject[] = [
   'floorplan',
   'dossier',
 ];
-
-// ============================================================================
-// ΕΞΑΝΤΛΗΤΙΚΟΤΗΤΑ — fail-closed, με ΟΝΟΜΑ
-// ============================================================================
-
-/**
- * ⚠️ **Δεν επιστρέφει σιωπηλά `false`.** Μια άγνωστη ιδιότητα που πέφτει σε «δεν
- * δηλώθηκε» θα εμφανιζόταν στην οθόνη ως **υπαρκτό κενό του κατόχου** — δηλαδή το
- * σφάλμα μας θα φορούσε τη στολή δικού του χρέους, και θα μετριόταν στη λογιστική
- * σαν να ήταν αληθινό. Ίδιο πρότυπο με το `listing-map-shape.ts`.
- */
-function assertNeverAttribute(key: never): never {
-  // Μήνυμα προγραμματιστή, όχι οθόνης (σύμβαση src/lib + N.11).
-  throw new Error(`isAttributeDeclared: unknown listing attribute — ${JSON.stringify(key)}`);
-}

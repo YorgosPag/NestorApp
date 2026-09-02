@@ -11,7 +11,7 @@ import {
   DEFAULT_SEARCH_RADIUS_KM,
 } from '../listing-filters';
 import { listingsToGeoJson } from '../listings-geojson';
-import type { PublicListing } from '@/types/public-listing';
+import { UNASKED_LISTING_ATTRIBUTES, type PublicListing } from '@/types/public-listing';
 
 const AT = '2026-08-10T10:00:00.000Z';
 
@@ -30,6 +30,14 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     floor: 1,
     bedrooms: 3,
     title: 'Δοκιμή',
+    // ✅ **ADR-842 Φ3** — τα 23 χαρακτηριστικά, ως **μία** ονομασμένη απουσία.
+    //    Οκτώ fixtures θα κρατούσαν ο καθένας τη δική του λίστα `null` — δηλαδή οκτώ
+    //    λίστες που συμφωνούν μέχρι την πρώτη προσθήκη πεδίου.
+    ...UNASKED_LISTING_ATTRIBUTES,
+    place: null,
+    authorship: 'agency',
+    agencyName: null,
+    agencyId: null,
     legality: [],
     projectedAt: AT,
     ...over,

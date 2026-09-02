@@ -40,7 +40,7 @@ import { registerRouteSlice } from '@/i18n/route-slice';
 import { ResultsMap } from '@/components/search-results/ResultsMap';
 import { ListingLedgerBar } from '@/components/search-results/ListingLedgerBar';
 import { computeListingLedger } from '@/services/realtime/hooks/usePublicListings';
-import type { PublicListing } from '@/types/public-listing';
+import { UNASKED_LISTING_ATTRIBUTES, type PublicListing } from '@/types/public-listing';
 
 registerRouteSlice(routeSlice);
 
@@ -61,6 +61,17 @@ function fixture(id: string, title: string, position: PublicListing['position'])
     // Α17 (ADR-838) — το εργαστήριο δείχνει **σχήματα θέσης**· η νομιμότητα έχει δικές
     // της άγκυρες. Κενός πίνακας = «κανείς δεν ρώτησε», που είναι και η αλήθεια εδώ.
     legality: [],
+    // 🔴 **ΤΑ ΤΕΣΣΕΡΑ ΠΟΥ ΕΛΕΙΠΑΝ ΑΠΟ ΤΗΝ ADR-841 (Α1)** — το fixture δεν είχε
+    //    ενημερωθεί όταν το σχήμα απέκτησε `place`/`authorship`/`agencyName`/`agencyId`,
+    //    και **κανείς δεν το είδε** επειδή ο πράκτορας δεν τρέχει `tsc` (N.17) και η
+    //    σελίδα δεν έχει άγκυρα. Ίδιο σχήμα με το fixture της οθόνης 3 (ADR-841 Α13).
+    place: null,
+    authorship: 'agency',
+    agencyName: null,
+    agencyId: null,
+    // ✅ **ADR-842 Φ3** — το εργαστήριο δείχνει **σχήματα θέσης**, όχι χαρακτηριστικά.
+    //    Μία ονομασμένη απουσία αντί για είκοσι τρία `null` γραμμένα εδώ.
+    ...UNASKED_LISTING_ATTRIBUTES,
     projectedAt: AT,
   };
 }

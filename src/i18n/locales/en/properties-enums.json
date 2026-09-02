@@ -221,6 +221,21 @@
       "split-units": "Split units",
       "fan-coil": "Fan coil",
       "none": "None"
+    },
+    "fuel": {
+      "label": "Fuel",
+      "natural-gas": "Natural gas",
+      "oil": "Oil",
+      "electricity": "Electricity",
+      "solar": "Solar",
+      "heat-pump": "Heat pump"
+    },
+    "waterHeating": {
+      "label": "Water heating",
+      "electric": "Electric",
+      "gas": "Gas",
+      "solar": "Solar",
+      "heat-pump": "Heat pump"
     }
   },
   "finishes": {
@@ -267,6 +282,16 @@
       "access-control": "Access control",
       "intercom": "Intercom",
       "motion-sensors": "Motion sensors"
+    },
+    "amenities": {
+      "label": "Amenities",
+      "pool": "Pool",
+      "elevator": "Elevator",
+      "gym": "Gym",
+      "doorman": "Doorman",
+      "garden": "Garden",
+      "playground": "Playground",
+      "parking-garage": "Garage"
     }
   },
   "operationalStatus": {

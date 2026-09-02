@@ -62,6 +62,7 @@ import type {
   UnknownPositionReason,
 } from '@/types/public-listing';
 import { LISTING_GALLERY_ALT_KEY } from '@/lib/listings/listing-images';
+import { projectListingAttributes } from './public-listing-attributes';
 import { outranksForLocation } from '@/lib/location/location-provenance';
 
 // ============================================================================
@@ -339,6 +340,11 @@ export function projectListingShape(
     place: place.ref,
     floor: numberOrNull(property.floor),
     bedrooms: numberOrNull(property.layout?.bedrooms),
+    // 🔴 **ADR-842 Φ3 — ΤΟ ΦΡΑΓΜΑ ΠΟΥ ΕΣΠΑΣΕ.** Η εταιρεία κατείχε ~60 πεδία και
+    //    δημόσια έφευγαν **τέσσερα**· εδώ φεύγουν είκοσι τρία ακόμη, **χωρίς να
+    //    ρωτηθεί κανένας άνθρωπος τίποτα**. Η κρίση «είναι ονομάσιμη αυτή η τιμή;»
+    //    ζει στο `public-listing-attributes.ts` — δες εκεί γιατί δεν είναι `as`.
+    ...projectListingAttributes(property),
     title: (property.name ?? '').trim(),
     // §8.33 — δες τον κανόνα της απουσίας στο `ProjectableProperty.authorship`.
     // ── Α17 (ADR-838) — η ΒΑΘΜΙΔΑ φεύγει, το έγγραφο ποτέ. Δες projectLegality.

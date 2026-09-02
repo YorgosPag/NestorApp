@@ -66,11 +66,61 @@ export interface ProjectableProperty {
     readonly minNights?: number | null;
     readonly maxGuests?: number | null;
   } | null;
-  readonly areas?: { readonly gross?: number | null } | null;
+  readonly areas?: {
+    readonly gross?: number | null;
+    /** ADR-842 Φ3 — δες τη σημείωση των λεξιλογικών πεδίων παρακάτω. */
+    readonly net?: number | null;
+    readonly balcony?: number | null;
+    readonly terrace?: number | null;
+    readonly garden?: number | null;
+  } | null;
   /** @deprecated επίπεδο πεδίο· διαβάζεται ως έσχατο εφεδρικό. */
   readonly area?: number | null;
   readonly floor?: number | null;
-  readonly layout?: { readonly bedrooms?: number | null } | null;
+  readonly layout?: {
+    readonly bedrooms?: number | null;
+    /** ADR-842 Φ3 — `0` είναι **υπαρκτή τιμή** σε καθένα από αυτά. */
+    readonly bathrooms?: number | null;
+    readonly wc?: number | null;
+    readonly totalRooms?: number | null;
+    readonly levels?: number | null;
+    readonly balconies?: number | null;
+  } | null;
+
+  // ── ΤΑ ΧΑΡΑΚΤΗΡΙΣΤΙΚΑ (ADR-842 Φ3) ─────────────────────────────────────────
+  /**
+   * 🔴 **`unknown` ΚΑΙ ΟΧΙ `ConditionType` — ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ, ΟΧΙ ΤΕΜΠΕΛΙΑ.**
+   *
+   * Αυτός ο τύπος είναι **δομικός** και ο βασικός του παραγωγός διαβάζει **ωμό έγγραφο
+   * Firestore** (`publish-public-listing.ts` · `rebuild-public-listings`). Ένα
+   * `readonly condition?: ConditionType` εδώ θα ήταν **υπόσχεση που η βάση δεν δίνει
+   * σε κανέναν**: ακριβώς η κλάση ψέματος που γέννησε το `public-listing-schema.ts`
+   * (*«ο τύπος έλεγε την αλήθεια για τον ΓΡΑΦΕΑ και ψέματα για τη ΒΑΣΗ»*), και θα
+   * μετέτρεπε μια πραγματική ασυμφωνία σε σιωπηλό `as`.
+   *
+   * ⇒ Η κρίση *«είναι αυτή η τιμή ονομάσιμη;»* γίνεται **μία φορά**, στο
+   * `public-listing-attributes.ts`, έναντι της αυθεντίας της Φ1. Ο τύπος εδώ λέει
+   * μόνο **τι σχήμα** έχει το έγγραφο, ποτέ τι **τιμές** κουβαλά.
+   */
+  readonly condition?: unknown;
+  readonly renovationYear?: number | null;
+  readonly energy?: { readonly class?: unknown } | null;
+  readonly systemsOverride?: {
+    readonly heatingType?: unknown;
+    readonly heatingFuel?: unknown;
+    readonly coolingType?: unknown;
+    readonly waterHeating?: unknown;
+  } | null;
+  readonly finishes?: {
+    readonly flooring?: unknown;
+    readonly windowFrames?: unknown;
+    readonly glazing?: unknown;
+  } | null;
+  readonly orientations?: unknown;
+  readonly interiorFeatures?: unknown;
+  readonly securityFeatures?: unknown;
+  /** ⚠️ Το όνομα του `Property`· στη δημόσια αγγελία γίνεται `amenities`. */
+  readonly propertyAmenities?: unknown;
   /**
    * 🔶 **Ο ΚΑΤΟΧΟΣ ΑΡΝΗΘΗΚΕ να δηλώσει θέση** (Α5 §3).
    *

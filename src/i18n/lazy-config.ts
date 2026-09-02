@@ -52,6 +52,7 @@ export const SUPPORTED_NAMESPACES = [
   'properties-enums',
   'properties-viewer',
   'search-results',   // ADR-777 A3 — δημοσια οθονη 2 (χαρτης + λιστα)
+  'listing-detail',   // ADR-842 F3 — dimosia othoni 3, MONO ta stoixeia tou akinitou
   'short-stay',       // ADR-835 F3 — o xronos stin anazitisi (vraxyxronia diamoni)
   'property-market',  // ADR-777 8.38 — ζητηση + προσφορα + εντολη (ο,τι συντασσει ο ανθρωπος)
   'crm',

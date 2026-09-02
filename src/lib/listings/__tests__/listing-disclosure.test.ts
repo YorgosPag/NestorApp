@@ -18,12 +18,16 @@ import path from 'path';
 import {
   LISTING_DISCLOSURE,
   LISTING_ATTRIBUTE_KEYS,
+  LISTING_FEATURE_SET_KEYS,
   LISTING_OPEN_SUBJECTS,
+  type ListingAttributeKey,
+} from '../listing-disclosure';
+import {
   isAttributeDeclared,
   listingAttributeLedger,
   attributeLedgerBalances,
-  type ListingAttributeKey,
-} from '../listing-disclosure';
+} from '../listing-attribute-declared';
+import { LISTING_ATTRIBUTE_GROUPS } from '../listing-attribute-groups';
 import { MISSING_PRICE_KEY, PRICE_ROLE_KEY } from '../listing-price-keys';
 import { SHAPE_LABEL_KEY, SHAPE_MEANING_KEY, shapeMeaningKey } from '../listing-shape-keys';
 import { listingDetailHref, searchResultsHref, SEARCH_RESULTS_ROUTE } from '../listing-routes';
@@ -65,6 +69,33 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     agencyId: null,
     floor: 1,
     bedrooms: 3,
+    // ✅ **ADR-842 Φ3** — και η Κ1 κοκκίνισε ξανά, **πέμπτη** φορά: ο παρονομαστής
+    //    οφείλει να είναι **πλήρης**, αλλιώς δεν είναι παρονομαστής (μάθημα 31/08).
+    //    Όλα δηλωμένα εδώ — η Κ5 μετρά «27 από 27» πάνω σε **αυτό**.
+    energyClass: 'B',
+    condition: 'good',
+    renovationYear: 2015,
+    bathrooms: 1,
+    wc: 1,
+    totalRooms: 4,
+    levels: 1,
+    balconies: 2,
+    netAreaSqm: 80,
+    balconyAreaSqm: 10,
+    terraceAreaSqm: 5,
+    // 🔴 `0` **δηλωμένο**: ακίνητο χωρίς κήπο που το **είπε**.
+    gardenAreaSqm: 0,
+    heatingType: 'autonomous',
+    heatingFuel: 'natural-gas',
+    coolingType: 'split-units',
+    waterHeating: 'solar',
+    windowFrames: 'aluminum',
+    glazing: 'double',
+    flooring: ['tiles'],
+    orientations: ['north'],
+    interiorFeatures: ['fireplace'],
+    securityFeatures: ['alarm'],
+    amenities: ['elevator'],
     title: 'Δοκιμή',
     // Α17 (ADR-838): κενός πίνακας = «κανείς δεν ρώτησε». Οι άγκυρες που κρίνουν
     // ΠΕΡΙΕΧΟΜΕΝΟ νομιμότητας ζουν στο `legality-signal.test.ts` — εδώ κρίνεται ΣΧΗΜΑ.
@@ -188,24 +219,49 @@ describe('Κ4 — τύπος που δεν έχει ετικέτα δεν μετ
 // ============================================================================
 
 describe('Κ5 — κλειστή λογιστική ιδιοτήτων', () => {
+  const TOTAL = LISTING_ATTRIBUTE_KEYS.length + LISTING_FEATURE_SET_KEYS.length;
+
+  /**
+   * Αγγελία **χωρίς τίποτα δηλωμένο πλην του είδους** — παραγόμενη από τους ίδιους
+   * καταλόγους, ποτέ χειρόγραφη: μια χειρόγραφη λίστα `null` θα ξεχνούσε το επόμενο
+   * πεδίο και η άγκυρα θα έμενε πράσινη για λάθος λόγο.
+   */
+  function bare(): PublicListing {
+    const blanks = Object.fromEntries([
+      ...LISTING_ATTRIBUTE_KEYS.filter((key) => key !== 'type').map((key) => [key, null]),
+      ...LISTING_FEATURE_SET_KEYS.map((key) => [key, null]),
+    ]) as Partial<PublicListing>;
+    return listing(blanks);
+  }
+
   it('πλήρης αγγελία: όλα δηλωμένα, το άθροισμα κλείνει', () => {
     const ledger = listingAttributeLedger(listing());
-    expect(ledger.declared).toBe(LISTING_ATTRIBUTE_KEYS.length);
+    expect(ledger.declared).toBe(TOTAL);
     expect(ledger.undeclared).toBe(0);
     expect(attributeLedgerBalances(ledger)).toBe(true);
   });
 
   it('άδεια αγγελία: μόνο το είδος, το άθροισμα κλείνει', () => {
-    const ledger = listingAttributeLedger(
-      listing({ areaSqm: null, floor: null, bedrooms: null })
-    );
+    const ledger = listingAttributeLedger(bare());
     expect(ledger.declared).toBe(1);
-    expect(ledger.undeclared).toBe(LISTING_ATTRIBUTE_KEYS.length - 1);
+    expect(ledger.undeclared).toBe(TOTAL - 1);
     expect(attributeLedgerBalances(ledger)).toBe(true);
   });
 
-  it('το `total` ΕΙΝΑΙ ο κατάλογος — όχι σταθερός αριθμός γραμμένος δίπλα', () => {
-    expect(listingAttributeLedger(listing()).total).toBe(LISTING_ATTRIBUTE_KEYS.length);
+  it('το `total` ΕΙΝΑΙ οι κατάλογοι — όχι σταθερός αριθμός γραμμένος δίπλα', () => {
+    expect(listingAttributeLedger(listing()).total).toBe(TOTAL);
+  });
+
+  /**
+   * 🏆 **Η ΤΡΙΤΗ ΚΑΤΑΣΤΑΣΗ ΜΕΤΡΑΕΙ ΩΣ ΔΗΛΩΜΕΝΗ** (ADR-842 Φ3): ο κάτοχος που είπε
+   * «καμία παροχή» **απάντησε**. Μια λογιστική που το χρέωνε ως κενό θα του ζητούσε
+   * να ξαναπεί κάτι που είπε — και θα ήταν αδιάκριτη από τη σιωπή των portals.
+   */
+  it('σύνολο δηλωμένο ΑΔΕΙΟ μετράει ως δηλωμένο — δεν είναι το ίδιο με το `null`', () => {
+    const declaredNone = listingAttributeLedger(listing({ amenities: [] }));
+    const neverAsked = listingAttributeLedger(listing({ amenities: null }));
+    expect(declaredNone.declared).toBe(TOTAL);
+    expect(neverAsked.declared).toBe(TOTAL - 1);
   });
 });
 
@@ -250,9 +306,6 @@ const STATIC_DETAIL_KEYS: readonly string[] = [
   'detail.error.body',
   'detail.price.heading',
   'detail.media.absent',
-  'detail.attributes.heading',
-  'detail.attributes.ledger',
-  'detail.attributes.undeclared',
   'detail.offers.heading',
   'detail.position.heading',
   'detail.position.precision',
@@ -270,7 +323,6 @@ function allRequiredKeys(): readonly string[] {
     ...Object.values(PRICE_ROLE_KEY),
     ...Object.values(SHAPE_LABEL_KEY),
     ...Object.values(SHAPE_MEANING_KEY),
-    ...LISTING_ATTRIBUTE_KEYS.map((key) => `detail.attributes.label.${key}`),
     ...LISTING_OPEN_SUBJECTS.map((subject) => `detail.open.${subject}`),
     ...LOCATION_PROVENANCES.map((p) => `detail.position.provenance.${p}`),
     ...OFFER_KINDS.map((kind) => `listing.offer.${kind}`),
@@ -311,6 +363,65 @@ describe.each(['el', 'en'] as const)('Κ7β — ετικέτα είδους ακ
     const value = lookup(bundle, PROPERTY_TYPE_I18N_KEYS[type]);
     expect(typeof value).toBe('string');
     expect((value as string).trim().length).toBeGreaterThan(0);
+  });
+});
+
+// ============================================================================
+// Κ7γ — 🔴 ΤΑ ΣΤΟΙΧΕΙΑ ΜΕΤΑΚΟΜΙΣΑΝ ΣΕ ΔΙΚΟ ΤΟΥΣ NAMESPACE (ADR-842 Φ3 · ADR-744)
+// ============================================================================
+
+/**
+ * 🔴 **ΓΙΑΤΙ ΕΦΥΓΑΝ ΑΠΟ ΤΟ `search-results` — ΜΕΤΡΗΜΕΝΟ, ΟΧΙ ΑΙΣΘΗΤΙΚΟ.**
+ *
+ * Το `search-results` είναι **εγγυημένο namespace του κελύφους**
+ * (`.i18n-shell-slice.json` → `guaranteedNamespaces`), δηλαδή ταξιδεύει **ΟΛΟΚΛΗΡΟ σε
+ * κάθε μία από τις 141 διαδρομές**. Η Φ3 πρόσθεσε 23 ετικέτες + 5 ομάδες + 5 στοιχεία
+ * χειρισμού και το πέταξε **πάνω από το ταβάνι του**: μετρημένο **13.095 → 14.670**,
+ * όριο **14.400**.
+ *
+ * ⛔ Το ίδιο το μητρώο απαγορεύει ρητά τη «λύση» της αύξησης: *«ΜΗΝ ανεβάσεις αριθμό
+ * για να γίνει πράσινο: μια εγγραφή που ξεπερνά το ταβάνι της λέει ότι κάτι μπήκε σε
+ * ΛΑΘΟΣ namespace, και η θεραπεία είναι **μετακόμιση**»*. Και είχε δίκιο: οι ετικέτες
+ * της **οθόνης 3** δεν έχουν καμία δουλειά στις άλλες 140 διαδρομές.
+ *
+ * ⇒ Ολόκληρο το υποδέντρο `detail.attributes.*` μετακόμισε στο **`listing-detail`** —
+ * per-route namespace με **έναν** καταναλωτή. Το `search-results` επέστρεψε στα
+ * **13.095**, δηλαδή η Φ3 άφησε το κέλυφος **ακριβώς όπως το βρήκε**.
+ *
+ * ⚠️ **Και μετακόμισαν ΟΛΑ, όχι μόνο τα νέα**: τέσσερις ετικέτες στο ένα namespace και
+ * είκοσι τρεις στο άλλο θα ανάγκαζαν τον `ListingAttributeRow` να αποφασίζει namespace
+ * **ανά κλειδί** — δηλαδή δεύτερος πίνακας, ελεύθερος να αποκλίνει.
+ */
+describe.each(['el', 'en'] as const)('Κ7γ — τα στοιχεία της οθόνης 3 [%s]', (language) => {
+  const bundle = readLocale(language, 'listing-detail');
+
+  const KEYS: readonly string[] = [
+    'attributes.heading',
+    'attributes.ledger',
+    'attributes.undeclared',
+    'attributes.groupLedger',
+    'attributes.reveal',
+    'attributes.hide',
+    'attributes.declaredNone',
+    'attributes.groupEmpty',
+    ...LISTING_ATTRIBUTE_KEYS.map((key) => `attributes.label.${key}`),
+    // ✅ Τα σύνολα ζητούν ετικέτα από το **ίδιο** πρόθεμα με τις ιδιότητες
+    //    (`ListingFeatureSet.tsx`), άρα ο παρονομαστής είναι η **ένωση**. Αν έμπαινε
+    //    μόνο ο ένας κατάλογος, η άγκυρα θα ήταν πράσινη με 5 ωμά κλειδιά.
+    ...LISTING_FEATURE_SET_KEYS.map((key) => `attributes.label.${key}`),
+    ...LISTING_ATTRIBUTE_GROUPS.map((group) => `attributes.group.${group}`),
+  ];
+
+  it.each(KEYS)('%s υπάρχει και είναι μη κενό κείμενο', (key) => {
+    const value = lookup(bundle, key);
+    expect(typeof value).toBe('string');
+    expect((value as string).trim().length).toBeGreaterThan(0);
+  });
+
+  it('🔴 ΤΙΠΟΤΑ ΔΕΝ ΕΜΕΙΝΕ ΠΙΣΩ: το `search-results` δεν έχει πια `detail.attributes`', () => {
+    // Ένα ξεχασμένο αντίγραφο εκεί θα ήταν **δεύτερη πηγή** για την ίδια ετικέτα, και
+    // θα ξανάσπαγε το ταβάνι του κελύφους σιωπηλά, στην πρώτη προσθήκη πεδίου.
+    expect(lookup(readLocale(language), 'detail.attributes')).toBeUndefined();
   });
 });
 

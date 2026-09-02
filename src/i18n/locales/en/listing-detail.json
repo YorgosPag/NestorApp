@@ -1,0 +1,48 @@
+{
+  "attributes": {
+    "heading": "Property details",
+    "ledger": "{declared} of {total} details declared",
+    "undeclared": "Not declared",
+    "label": {
+      "type": "Type",
+      "areaSqm": "Area",
+      "floor": "Floor",
+      "bedrooms": "Bedrooms",
+      "energyClass": "Energy class",
+      "condition": "Condition",
+      "renovationYear": "Renovation year",
+      "bathrooms": "Bathrooms",
+      "wc": "Separate WC",
+      "totalRooms": "Total rooms",
+      "levels": "Levels",
+      "balconies": "Balconies",
+      "netAreaSqm": "Net area",
+      "balconyAreaSqm": "Balcony area",
+      "terraceAreaSqm": "Terrace area",
+      "gardenAreaSqm": "Garden area",
+      "heatingType": "Heating",
+      "heatingFuel": "Heating fuel",
+      "coolingType": "Cooling",
+      "waterHeating": "Water heating",
+      "windowFrames": "Window frames",
+      "glazing": "Glazing",
+      "flooring": "Flooring",
+      "orientations": "Orientation",
+      "interiorFeatures": "Interior features",
+      "securityFeatures": "Security",
+      "amenities": "Amenities"
+    },
+    "group": {
+      "essentials": "Basics",
+      "energyCondition": "Energy & condition",
+      "roomsAreas": "Rooms & areas",
+      "systemsFinishes": "Systems & materials",
+      "features": "Features & amenities"
+    },
+    "groupLedger": "{declared} of {total}",
+    "reveal": "{count, plural, one {# not declared} other {# not declared}}",
+    "hide": "Hide the undeclared",
+    "declaredNone": "Declared as none",
+    "groupEmpty": "Nothing in this group has been declared."
+  }
+}

@@ -15,7 +15,7 @@
  */
 
 import { NO_DEMAND_FEATURES, type PropertyDemand } from '@/types/property-demand';
-import type { PublicListing } from '@/types/public-listing';
+import { UNASKED_LISTING_ATTRIBUTES, type PublicListing } from '@/types/public-listing';
 import type { ListingMatchFacts } from '../demand-match-vocabulary';
 
 /** Η σταθερή «σήμερα» όλων των σουιτών ζήτησης. */
@@ -67,6 +67,14 @@ export function listing(overrides: Partial<PublicListing> = {}): PublicListing {
     floor: 2,
     bedrooms: 3,
     title: 'Δοκιμή',
+    // ✅ **ADR-842 Φ3** — τα 23 χαρακτηριστικά, ως **μία** ονομασμένη απουσία.
+    //    Οκτώ fixtures θα κρατούσαν ο καθένας τη δική του λίστα `null` — δηλαδή οκτώ
+    //    λίστες που συμφωνούν μέχρι την πρώτη προσθήκη πεδίου.
+    ...UNASKED_LISTING_ATTRIBUTES,
+    place: null,
+    authorship: 'agency',
+    agencyName: null,
+    agencyId: null,
     legality: [],
     projectedAt: NOW_ISO,
     ...overrides,
