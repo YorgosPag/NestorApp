@@ -48,6 +48,7 @@ import { NO_AGENCY_IDENTITY, type PublicAgencyIdentity } from '@/types/public-li
 import {
   isOwnerPropertyOnTheMarket,
   listingAuthorshipOf,
+  mediaOf,
   type OwnerProperty,
 } from '@/types/owner-property';
 
@@ -167,8 +168,14 @@ export function projectableFromOwnerProperty(
      * ⚠️ **Καμία ένδειξη «απόσυρσης» δεν χρειάζεται**: όταν ο κάτοχος ξεδιαλέξει μια
      * φωτογραφία, το σύνολο **μικραίνει** και η συμφιλίωση της Α12.6 τη **σβήνει** από
      * τον κάδο. Η αφαίρεση δεν είναι συμβάν — είναι το ίδιο πέρασμα με άλλη τιμή.
+     *
+     * 🔴 **`mediaOf`, ΟΧΙ `property.media`** — και η διάκριση είναι διαδρομή παραγωγής,
+     * όχι ευπρέπεια: αυτή η συνάρτηση τρέφεται από `snap.data() as OwnerProperty`
+     * (`services/demand/place-interest.service.ts:129` και ~19 ακόμη ωμά cast). Ο τύπος
+     * υπόσχεται `media`, το **έγγραφο δεν χρωστά** — και ένα έγγραφο χωρίς το πεδίο
+     * έριχνε εδώ ολόκληρο τον εντοπισμό ακινήτου. Δες {@link mediaOf}.
      */
-    publishedMedia: publishedOwnerMediaSources(property.media),
+    publishedMedia: publishedOwnerMediaSources(mediaOf(property)),
 
     /**
      * 🔶 **ΤΑ ΧΑΡΑΚΤΗΡΙΣΤΙΚΑ ΤΗΣ Φ3 ΔΕΝ ΓΡΑΦΟΝΤΑΙ ΕΔΩ — ΔΗΛΩΜΕΝΟ ΚΕΝΟ, ΟΧΙ ΠΑΡΑΛΕΙΨΗ**

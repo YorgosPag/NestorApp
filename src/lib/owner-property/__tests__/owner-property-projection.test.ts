@@ -245,6 +245,36 @@ describe('🔴 Ι — το ιδιωτικό ΔΕΝ ταξιδεύει στη δ�
       { privateStoragePath: property.media[0].storagePath },
     ]);
   });
+
+  /**
+   * 🔴 **Ι5 — ΤΟ ΕΓΓΡΑΦΟ ΠΟΥ ΔΕΝ ΕΧΕΙ `media` ΔΕΝ ΡΙΧΝΕΙ ΤΗ ΔΙΑΔΡΟΜΗ.**
+   *
+   * ⚠️ **Δεν είναι υποθετικό σενάριο — είναι το σχήμα του ίδιου του αναγνώστη.** Κάθε
+   * διαδρομή που φτάνει εδώ ξεκινά από `snap.data() as OwnerProperty` (μετρημένο
+   * 2026-09-02: **~20** ωμά cast στο `src/`, κανένα δεν επικυρώνει). Ο τύπος δηλώνει το
+   * `media` **υποχρεωτικό**· η Firestore **δεν χρωστά** τίποτα σε τύπο, και το πεδίο
+   * γεννήθηκε στην **ADR-841 Φ3 (2026-09-01)** — δηλαδή κάθε έγγραφο γραμμένο πριν από
+   * εκείνη τη μέρα το **δεν** έχει.
+   *
+   * 🔑 **Γιατί το `as unknown as` ΕΙΝΑΙ το τεστ, όχι παράκαμψή του**: αναπαράγει
+   * **ακριβώς** το ψέμα που λέει ο `place-interest.service.ts:129`. Ένα fixture με
+   * `media: []` θα δοκίμαζε έναν κόσμο που ο μεταγλωττιστής **ήδη** εγγυάται, δηλαδή
+   * τίποτα. (Και τα `__tests__` είναι στο `exclude` του `tsconfig.json`: εδώ ο
+   * μεταγλωττιστής **δεν κοιτά καθόλου** — άρα η μόνη απόδειξη είναι **εκτέλεση**.)
+   *
+   * 🔴 **Η ΖΩΝΤΑΝΗ ΣΤΟΙΒΑ ΠΟΥ ΤΟ ΑΠΕΔΕΙΞΕ** (suite `place-interest-custody`, Θ2+Θ3):
+   * `lookupOwnedPlace → ownerPropertyFactsOf → projectableFromOwnerProperty →
+   * publishedOwnerMedia` ⇒ `TypeError: Cannot read properties of undefined (reading
+   * 'filter')`. Η αγκυροβόληση μπαίνει **εδώ** και όχι εκεί, γιατί **εδώ** ζει η γραμμή
+   * που διαβάζει το πεδίο· η άλλη suite ρωτά για τη **θεματοφυλακή**.
+   */
+  it('🔴 Ι5 — έγγραφο ΧΩΡΙΣ `media` (προ ADR-841 Φ3) δίνει κενό ράφι, δεν πετά', () => {
+    const { media: _absent, ...withoutMedia } = validOwnerProperty();
+    const legacyDocument = withoutMedia as unknown as ReturnType<typeof validOwnerProperty>;
+
+    expect(() => projectableFromOwnerProperty(legacyDocument, AT)).not.toThrow();
+    expect(projectableFromOwnerProperty(legacyDocument, AT).publishedMedia).toEqual([]);
+  });
 });
 
 
