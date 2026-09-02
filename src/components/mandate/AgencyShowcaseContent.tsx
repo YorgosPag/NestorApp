@@ -38,6 +38,12 @@ import React from 'react';
 
 import { Button } from '@/components/ui/button';
 import { HintedField } from '@/components/ui/hinted-field';
+import { PlaceIdentityField } from '@/components/geo/PlaceIdentityField';
+import {
+  EMPTY_CREDENTIAL_DRAFT,
+  ShowcaseCredentialField,
+  type ShowcaseCredentialDraft,
+} from '@/components/mandate/ShowcaseCredentialField';
 import {
   SHOWCASE_KEYS,
   SHOWCASE_NS,
@@ -50,7 +56,12 @@ import {
 } from '@/lib/auth/brokerage-authority';
 import { isCapabilityActive } from '@/types/organization-capability';
 import { useAgencyShowcase, type ShowcaseFailure } from '@/hooks/mandate/useAgencyShowcase';
+import type { ShowcaseWireDeclaration } from '@/lib/agency/showcase-wire';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { pickBilingualLabel, resolveEscoLang } from '@/components/shared/esco/esco-label';
+import type { EscoLanguage } from '@/types/contacts/esco-types';
+import type { PublicShowcase, ShowcaseCredential } from '@/types/agency-profile';
+import type { PlaceRef } from '@/types/geo/public-place';
 import { formatLongDate } from '@/lib/intl-formatting';
 // ⚠️ **Ο σύνδεσμος από το ΣΥΝΟΡΟ** (CHECK 3.61): το πρόθεμα χώρου το προσθέτει εκείνο.
 //    Ένα ωμό `next/link` εδώ θα έστελνε τον μεσίτη σε `/settings/brokerage` **χωρίς
@@ -65,6 +76,28 @@ import routeSlice from '@/i18n/generated/routes/o__workspace__settings__agency-p
 import { registerRouteSlice } from '@/i18n/route-slice';
 
 registerRouteSlice(routeSlice);
+
+/**
+ * **Δημοσιευμένο credential → πεδία φόρμας.**
+ *
+ * ⚠️ Το `standing` **δεν** αντιγράφεται: δεν είναι δήλωση του ανθρώπου, είναι
+ * **συμπέρασμα** από το `iscoCode`. Ένα πεδίο φόρμας γι' αυτό θα ήταν ακριβώς η
+ * σημαία που το σχήμα αρνείται να αποθηκεύσει.
+ */
+function draftOf(credential: ShowcaseCredential, lang: EscoLanguage): ShowcaseCredentialDraft {
+  const registration =
+    credential.attestation.state === 'unknown' ? null : credential.attestation.registration;
+  return {
+    // ⚠️ **Στη γλώσσα του ανθρώπου**, όχι πάντα ελληνικά: η ετικέτα ταξιδεύει
+    //    **δίγλωσση** ακριβώς για να μη χρειάζεται ο επιλογέας δεύτερη ανάγνωση.
+    profession: pickBilingualLabel(credential.occupation.label, lang),
+    escoUri: credential.occupation.escoUri,
+    iscoCode: credential.occupation.iscoCode,
+    registrationNumber: registration?.number ?? '',
+    registrationChapter:
+      registration !== null && registration.authorityKind === 'chapter' ? registration.chapter : '',
+  };
+}
 
 /**
  * **Γιατί δεν έγινε** — και **κάθε** `t()` εδώ είναι επιλύσιμο.
@@ -127,6 +160,20 @@ function FailureMessage({ failure }: { readonly failure: ShowcaseFailure }): Rea
       <>{t(SHOWCASE_KEYS.notAllowed)}</>
     );
   }
+  // ── Φ6-Β4: τρεις νέες αστοχίες, και **καμία** δεν λέει «απέτυχε» ────────────
+  //
+  // 🔴 Η ΔΙΑΚΡΙΣΗ ΕΙΝΑΙ Η ΘΕΡΑΠΕΙΑ (N.12): *«διάλεξε ξανά»* ≠ *«ξαναδοκίμασε»*.
+  //    Ένα κοινό «απέτυχε» θα έστελνε τον άνθρωπο να **αλλάξει σωστή επιλογή**
+  //    επειδή έπεσε η δική μας βάση.
+  if (failure.kind === 'occupation-unknown') {
+    return <>{t(SHOWCASE_KEYS.occupationUnknown)}</>;
+  }
+  if (failure.kind === 'place-not-found') {
+    return <>{t(SHOWCASE_KEYS.placeNotFound)}</>;
+  }
+  if (failure.kind === 'unavailable') {
+    return <>{t(SHOWCASE_KEYS.temporarilyUnavailable)}</>;
+  }
   // ⚠️ *«δεν είναι η διεύθυνσή σου»* και *«δεν μπόρεσα να ρωτήσω»* μοιράζονται σήμερα
   //    το γενικό μήνυμα, αλλά παραμένουν **χωριστές τιμές** στον τύπο: την ημέρα που
   //    αποκτήσουν δικό τους κείμενο, η αλλαγή γίνεται εδώ και μόνο εδώ.
@@ -134,13 +181,17 @@ function FailureMessage({ failure }: { readonly failure: ShowcaseFailure }): Rea
 }
 
 export function AgencyShowcaseContent(): React.ReactElement {
-  const { t } = useTranslation([SHOWCASE_NS]);
+  const { t, i18n } = useTranslation([SHOWCASE_NS]);
+  const { lang } = resolveEscoLang(undefined, i18n.language);
   const alias = useWorkspaceAlias() ?? '';
   const { state, busy, failure, publish, withdraw } = useAgencyShowcase();
 
   const published = state.phase === 'published' ? state.profile : null;
   const [displayName, setDisplayName] = React.useState('');
-  const [gemiNumber, setGemiNumber] = React.useState('');
+  const [credentials, setCredentials] = React.useState<readonly ShowcaseCredentialDraft[]>([
+    EMPTY_CREDENTIAL_DRAFT,
+  ]);
+  const [place, setPlace] = React.useState<PlaceRef | null>(null);
 
   // ⚠️ **Προσυμπλήρωση ΜΟΝΟ από την ίδια τη βιτρίνα** — ποτέ από το `companies/{id}`
   //    (§9.9 β). Το `publishedAt` είναι το σήμα «ήρθε νέα έκδοση», ώστε μια ανάκληση
@@ -149,7 +200,13 @@ export function AgencyShowcaseContent(): React.ReactElement {
   React.useEffect(() => {
     if (published === null) return;
     setDisplayName(published.displayName);
-    setGemiNumber(published.gemiNumber);
+    setCredentials(published.credentials.map((credential) => draftOf(credential, lang)));
+    // 🔴 **ΚΑΙ Ο ΤΟΠΟΣ — ΠΟΥ ΜΕΧΡΙ ΤΗ Φ6-Β4 ΗΤΑΝ ΔΟΜΙΚΑ ΝΕΚΡΟΣ.** Η φόρμα
+    //    έστελνε `place: published?.place ?? null`, δηλαδή **πάντα ό,τι ήδη
+    //    υπήρχε** — και επειδή τίποτα δεν το έγραφε ποτέ, ήταν **πάντα `null`**.
+    //    Τα κλειδιά `placeLabel`/`placeHint` υπήρχαν **χωρίς καταναλωτή**: μια
+    //    υπόσχεση στο locale που καμία οθόνη δεν τηρούσε.
+    setPlace(published.place);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- κλειδί ταυτότητας έκδοσης
   }, [publishedAt]);
 
@@ -181,31 +238,11 @@ export function AgencyShowcaseContent(): React.ReactElement {
           : t(SHOWCASE_KEYS.statusPublished)}
       </p>
 
-      <section className="flex flex-col gap-4">
-        <HintedField
-          id="showcase-alias"
-          label={t(SHOWCASE_KEYS.aliasLabel)}
-          hint={t(SHOWCASE_KEYS.aliasHint)}
-          value={alias}
-          readOnly
-        />
-        <HintedField
-          id="showcase-name"
-          label={t(SHOWCASE_KEYS.nameLabel)}
-          hint={t(SHOWCASE_KEYS.nameHint)}
-          placeholder={t(SHOWCASE_KEYS.namePlaceholder)}
-          value={displayName}
-          onChange={setDisplayName}
-        />
-        <HintedField
-          id="showcase-gemi"
-          label={t(SHOWCASE_KEYS.gemiLabel)}
-          hint={t(SHOWCASE_KEYS.gemiHint)}
-          placeholder={t(SHOWCASE_KEYS.gemiPlaceholder)}
-          value={gemiNumber}
-          onChange={setGemiNumber}
-        />
-      </section>
+      <IdentityFields alias={alias} displayName={displayName} onName={setDisplayName} />
+
+      <CredentialList credentials={credentials} onChange={setCredentials} />
+
+      <PlaceSection place={place} onChosen={setPlace} />
 
       {/* 🔑 Η απουσία καναλιού είναι **δηλωμένη**, όχι σιωπηλή: ο μεσίτης οφείλει να
           ξέρει ότι δεν λείπει πεδίο — ότι έτσι γεννιέται γραπτό αίτημα (§9.8). */}
@@ -219,38 +256,211 @@ export function AgencyShowcaseContent(): React.ReactElement {
         </p>
       )}
 
-      <footer className="flex flex-wrap items-center gap-3">
+      <ShowcaseActions
+        busy={busy}
+        published={published}
+        onPublish={() => publish(declarationOf(alias, displayName, credentials, place))}
+        onWithdraw={withdraw}
+      />
+    </section>
+  );
+}
+
+// =============================================================================
+// ΤΑ ΤΡΙΑ ΠΟΥ ΕΦΥΓΑΝ ΑΠΟ ΤΟΝ ΟΡΧΗΣΤΡΩΤΗ (N.7.1 — συνάρτηση ≤ 40 γραμμές)
+// =============================================================================
+
+/**
+ * **Ο πίνακας ειδικοτήτων.**
+ *
+ * 🔴 **ΠΙΝΑΚΑΣ ΚΑΙ ΟΧΙ ΕΝΑ ΠΕΔΙΟ, ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ.** Το μικτό γραφείο
+ * *(μεσίτης **και** διακοσμητής)* είναι εκφράσιμο στο σχήμα· μια φόρμα με ένα
+ * πεδίο θα το έκανε **αδύνατο να δηλωθεί** — δηλαδή θα άφηνε δηλωμένη
+ * δυνατότητα **χωρίς πόρτα**, που είναι χειρότερο από το να μην υπάρχει.
+ */
+function CredentialList({
+  credentials,
+  onChange,
+}: {
+  readonly credentials: readonly ShowcaseCredentialDraft[];
+  readonly onChange: (next: readonly ShowcaseCredentialDraft[]) => void;
+}): React.ReactElement {
+  const { t } = useTranslation([SHOWCASE_NS]);
+
+  return (
+    <section className="flex flex-col gap-3">
+      {credentials.map((draft, index) => (
+        <ShowcaseCredentialField
+          key={index}
+          index={index}
+          draft={draft}
+          onChange={(next) => onChange(credentials.map((entry, i) => (i === index ? next : entry)))}
+          // ⚠️ `null` στη **μόνη** ειδικότητα: βιτρίνα χωρίς καμία δεν υπάρχει,
+          //    και ο γραφέας θα την αρνιόταν ονομαστικά — καλύτερα να μην
+          //    προσφέρεται η πράξη που οδηγεί εκεί.
+          onRemove={
+            credentials.length > 1
+              ? () => onChange(credentials.filter((_, i) => i !== index))
+              : null
+          }
+        />
+      ))}
+      <div>
         <Button
           type="button"
-          disabled={busy !== null}
-          onClick={() => {
-            void publish({ alias, displayName, gemiNumber, place: published?.place ?? null });
-          }}
+          variant="outline"
+          size="sm"
+          onClick={() => onChange([...credentials, EMPTY_CREDENTIAL_DRAFT])}
         >
-          {busy === 'publishing'
-            ? t(SHOWCASE_KEYS.publishing)
-            : t(published === null ? SHOWCASE_KEYS.publish : SHOWCASE_KEYS.republish)}
+          {t(SHOWCASE_KEYS.addOccupation)}
         </Button>
-
-        {published !== null && (
-          <Button
-            type="button"
-            variant="outline"
-            disabled={busy !== null}
-            onClick={() => {
-              void withdraw();
-            }}
-          >
-            {busy === 'withdrawing' ? t(SHOWCASE_KEYS.withdrawing) : t(SHOWCASE_KEYS.withdraw)}
-          </Button>
-        )}
-
-        <span className="text-sm text-muted-foreground">
-          {published === null
-            ? t(SHOWCASE_KEYS.withdrawHint)
-            : t(SHOWCASE_KEYS.publishedAt, { date: formatLongDate(published.publishedAt) })}
-        </span>
-      </footer>
+      </div>
     </section>
+  );
+}
+
+/**
+ * **Ο τόπος — και το χειριστήριο είναι ΔΑΝΕΙΚΟ** *(N.18)*.
+ *
+ * Το `PlaceIdentityField` απαντά **ήδη** στο *«ποιο κτίριο;»* για δύο άλλους
+ * τομείς· τρίτο αντίγραφο εδώ θα ήταν κλώνος **σε χειριστήριο με χάρτη μέσα**.
+ *
+ * ⚠️ Ο **στόχος είναι `land`**: η βιτρίνα δηλώνει **πού δουλεύει ο
+ * επαγγελματίας**, όχι σε ποιο διαμέρισμα — και η **γη** είναι που κρατά τη
+ * θέση *(Α1)*, από την οποία ο διακομιστής παράγει το `position`.
+ */
+function PlaceSection({
+  place,
+  onChosen,
+}: {
+  readonly place: PlaceRef | null;
+  readonly onChosen: (ref: PlaceRef) => void;
+}): React.ReactElement {
+  const { t } = useTranslation([SHOWCASE_NS]);
+
+  return (
+    <section className="flex flex-col gap-2">
+      <h2 className="m-0 text-sm font-medium text-foreground">{t(SHOWCASE_KEYS.placeLabel)}</h2>
+      <p className="m-0 text-xs text-muted-foreground">{t(SHOWCASE_KEYS.placeHint)}</p>
+      <PlaceIdentityField chosen={place} onChosen={onChosen} target="land" />
+    </section>
+  );
+}
+
+/**
+ * **Τι φεύγει στο σύρμα** — και **μόνο ταξινομημένες** ειδικότητες.
+ *
+ * 🔴 Μια ειδικότητα χωρίς `escoUri` *(ελεύθερο κείμενο)* **δεν μπαίνει σε κανένα
+ * φίλτρο**, και η διαδρομή θα την απέρριπτε ούτως ή άλλως. Το φιλτράρισμα εδώ
+ * δεν είναι σιωπηλή απόρριψη: ο **επιλογέας το λέει ήδη στον άνθρωπο**, δίπλα
+ * στο πεδίο, **πριν** πατήσει *(`occupationUnclassified`)*.
+ *
+ * ⛔ **Κανένα `position`**: τη γεωμετρία την παράγει ο **διακομιστής** από τη γη.
+ * Δες `lib/agency/showcase-wire.ts`.
+ */
+function declarationOf(
+  alias: string,
+  displayName: string,
+  credentials: readonly ShowcaseCredentialDraft[],
+  place: PlaceRef | null,
+): ShowcaseWireDeclaration {
+  return {
+    alias,
+    displayName,
+    credentials: credentials
+      .filter((draft): draft is ShowcaseCredentialDraft & { escoUri: string } => draft.escoUri !== null)
+      .map((draft) => ({
+        escoUri: draft.escoUri,
+        registrationNumber: draft.registrationNumber,
+        registrationChapter: draft.registrationChapter,
+      })),
+    place,
+  };
+}
+
+/**
+ * **Ποιος είσαι** — η διεύθυνση *(αμετάβλητη)* και η επωνυμία.
+ *
+ * ⚠️ Το ψευδώνυμο είναι `readOnly` **επίτηδες**: το κρίνει ο διακομιστής απέναντι
+ * στο `companyId` **της απόδειξης** *(§9.13)*. Επεξεργάσιμο εδώ θα ήταν πεδίο που
+ * ο άνθρωπος αλλάζει και **η πόρτα απορρίπτει** — ερώτηση χωρίς έγκυρη απάντηση.
+ */
+function IdentityFields({
+  alias,
+  displayName,
+  onName,
+}: {
+  readonly alias: string;
+  readonly displayName: string;
+  readonly onName: (value: string) => void;
+}): React.ReactElement {
+  const { t } = useTranslation([SHOWCASE_NS]);
+
+  return (
+    <section className="flex flex-col gap-4">
+      <HintedField
+        id="showcase-alias"
+        label={t(SHOWCASE_KEYS.aliasLabel)}
+        hint={t(SHOWCASE_KEYS.aliasHint)}
+        value={alias}
+        readOnly
+      />
+      <HintedField
+        id="showcase-name"
+        label={t(SHOWCASE_KEYS.nameLabel)}
+        hint={t(SHOWCASE_KEYS.nameHint)}
+        placeholder={t(SHOWCASE_KEYS.namePlaceholder)}
+        value={displayName}
+        onChange={onName}
+      />
+    </section>
+  );
+}
+
+/**
+ * **Οι δύο πράξεις** — και η δεύτερη υπάρχει **μόνο όταν υπάρχει τι να αποσυρθεί**.
+ *
+ * 🔑 **Καμία σημαία «δημοσιευμένο»**: η κατάσταση **ΕΙΝΑΙ η ύπαρξη** του εγγράφου
+ * *(§9.10)*, και **απόσυρση = διαγραφή**. Ένας διακόπτης εδώ θα υπονοούσε πεδίο
+ * που μπορεί να διαφωνήσει με την ύπαρξη — ADR-749, σε μια οθόνη απόσταση.
+ */
+function ShowcaseActions({
+  busy,
+  published,
+  onPublish,
+  onWithdraw,
+}: {
+  readonly busy: 'publishing' | 'withdrawing' | null;
+  readonly published: PublicShowcase | null;
+  readonly onPublish: () => Promise<void>;
+  readonly onWithdraw: () => Promise<void>;
+}): React.ReactElement {
+  const { t } = useTranslation([SHOWCASE_NS]);
+
+  return (
+    <footer className="flex flex-wrap items-center gap-3">
+      <Button type="button" disabled={busy !== null} onClick={() => void onPublish()}>
+        {busy === 'publishing'
+          ? t(SHOWCASE_KEYS.publishing)
+          : t(published === null ? SHOWCASE_KEYS.publish : SHOWCASE_KEYS.republish)}
+      </Button>
+
+      {published !== null && (
+        <Button
+          type="button"
+          variant="outline"
+          disabled={busy !== null}
+          onClick={() => void onWithdraw()}
+        >
+          {busy === 'withdrawing' ? t(SHOWCASE_KEYS.withdrawing) : t(SHOWCASE_KEYS.withdraw)}
+        </Button>
+      )}
+
+      <span className="text-sm text-muted-foreground">
+        {published === null
+          ? t(SHOWCASE_KEYS.withdrawHint)
+          : t(SHOWCASE_KEYS.publishedAt, { date: formatLongDate(published.publishedAt) })}
+      </span>
+    </footer>
   );
 }

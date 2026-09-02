@@ -38,20 +38,21 @@ import { useAuth } from '@/auth/hooks/useAuth';
 //    μεταβολή του εγγράφου. Το έπιασε η πύλη, όχι η κρίση μου.
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { createModuleLogger } from '@/lib/telemetry';
-import type { AgencyProfile } from '@/types/agency-profile';
+import { readShowcase } from '@/lib/agency/showcase-read';
+import type { ShowcaseWireDeclaration } from '@/lib/agency/showcase-wire';
+import type { PublicShowcase } from '@/types/agency-profile';
 import {
   isCapabilityStatus,
   type CapabilityStatus,
 } from '@/types/organization-capability';
 import type { AgencyProfileRejection } from '@/services/mandate/agency-profile.service';
-import type { PlaceRef } from '@/types/geo/public-place';
 
 const logger = createModuleLogger('useAgencyShowcase');
 
 /** Πού βρίσκεται η βιτρίνα **τώρα** — τρεις τιμές, και η τρίτη δεν είναι η δεύτερη. */
 export type ShowcaseState =
   | { readonly phase: 'loading' }
-  | { readonly phase: 'published'; readonly profile: AgencyProfile }
+  | { readonly phase: 'published'; readonly profile: PublicShowcase }
   | { readonly phase: 'not-published' }
   /** 🔴 Η βάση δεν απάντησε. **Δεν** ισοπεδώνεται σε «μη δημοσιευμένο». */
   | { readonly phase: 'unavailable' };
@@ -88,20 +89,36 @@ export type ShowcaseFailure =
    * που ίσως ήδη εκκρεμεί.
    */
   | { readonly kind: 'not-allowed'; readonly status: CapabilityStatus | null }
+  /** Το `SHOWCASE_NO_ORGANIZATION`: **καμία βιτρίνα χωρίς χώρο** (Φ6-Β3). */
+  | { readonly kind: 'no-organization' }
+  /** Η ειδικότητα δεν βρέθηκε στην ταξινομία ⇒ *«διάλεξε ξανά»*. */
+  | { readonly kind: 'occupation-unknown' }
+  /** Ο δεσμός δεν δείχνει σε τόπο που υπάρχει ⇒ *«διάλεξέ τον ξανά»*. */
+  | { readonly kind: 'place-not-found' }
+  /**
+   * 🔴 **ΔΕΝ ΜΑΘΑΜΕ** *(ταξινομία ή τόπος)* ⇒ *«ξαναδοκίμασε, **μην αλλάξεις
+   * τίποτα**»*. Ισοπεδωμένο με τα δύο παραπάνω, η δική **μας** βλάβη θα έστελνε
+   * τον άνθρωπο να αλλάξει **σωστή** επιλογή — και θα του φαινόταν εύλογο.
+   */
+  | { readonly kind: 'unavailable' }
   | { readonly kind: 'failed' };
 
-export interface ShowcaseDeclaration {
-  readonly alias: string;
-  readonly displayName: string;
-  readonly gemiNumber: string;
-  readonly place: PlaceRef | null;
-}
+/**
+ * 🔑 **ΔΕΝ ΟΡΙΖΕΤΑΙ ΕΔΩ, ΚΑΙ ΕΙΝΑΙ ΔΙΟΡΘΩΣΗ** *(Φ6-Β4)*. Μέχρι σήμερα αυτό το
+ * αρχείο δήλωνε **δικό του** `ShowcaseDeclaration` με σκέτο `gemiNumber`, ενώ ο
+ * γραφέας δήλωνε **ομώνυμο** τύπο με άλλο σχήμα. Δύο απαντήσεις στο *«τι είναι
+ * δήλωση βιτρίνας»*, σε αρχεία που δεν εισάγουν το ένα το άλλο ⇒ η απόκλιση
+ * ήταν **αόρατη** και θα εκδηλωνόταν ως `MALFORMED_BODY` σε χρόνο εκτέλεσης.
+ *
+ * @see lib/agency/showcase-wire — η **μία** αυθεντία, που το zod της διαδρομής επαληθεύει.
+ */
+export type { ShowcaseWireDeclaration } from '@/lib/agency/showcase-wire';
 
 export interface AgencyShowcase {
   readonly state: ShowcaseState;
   readonly busy: 'publishing' | 'withdrawing' | null;
   readonly failure: ShowcaseFailure | null;
-  readonly publish: (declaration: ShowcaseDeclaration) => Promise<void>;
+  readonly publish: (declaration: ShowcaseWireDeclaration) => Promise<void>;
   readonly withdraw: () => Promise<void>;
 }
 
@@ -138,6 +155,19 @@ async function failureOf(response: Response): Promise<ShowcaseFailure | null> {
       return { kind: 'alias-not-owned' };
     case 'ALIAS_UNVERIFIED':
       return { kind: 'alias-unverified' };
+    case 'SHOWCASE_NO_ORGANIZATION':
+      return { kind: 'no-organization' };
+    case 'OCCUPATION_UNKNOWN':
+      return { kind: 'occupation-unknown' };
+    case 'PLACE_NOT_FOUND':
+      return { kind: 'place-not-found' };
+    // 🔑 **Δύο κωδικοί, ΜΙΑ θεραπεία** — και είναι σωστό να ενωθούν *εδώ*: ο
+    //    άνθρωπος δεν χρειάζεται να ξέρει αν έπεσε η ταξινομία ή ο χάρτης· η
+    //    πράξη του είναι η ίδια. Ό,τι δεν ενώνεται είναι *«διόρθωσε»* με
+    //    *«ξαναδοκίμασε»*.
+    case 'CLASSIFICATION_UNAVAILABLE':
+    case 'PLACE_UNVERIFIED':
+      return { kind: 'unavailable' };
     case 'BROKERAGE_NOT_ALLOWED': {
       // ⚠️ **Τοπική σταθερά, ΟΧΙ διπλή ανάγνωση του `body?.…`**: το `switch (body?.error)`
       //    στενεύει το **πεδίο**, ποτέ το `body`, οπότε δύο εμφανίσεις της ίδιας
@@ -169,13 +199,36 @@ export function useAgencyShowcase(): AgencyShowcase {
 
     setState({ phase: 'loading' });
 
-    return firestoreQueryService.subscribeDoc<AgencyProfile>(
+    return firestoreQueryService.subscribeDoc<Record<string, unknown>>(
       'AGENCY_PROFILES',
       companyId,
-      (profile) => {
+      (raw) => {
         // ⚠️ Το `null` σημαίνει **δεν υπάρχει έγγραφο** — δηλαδή «δεν δημοσιεύτηκε»,
         //    που είναι **κατάσταση**, όχι βλάβη. Η βλάβη έρχεται από τον `onError`.
-        setState(profile === null ? { phase: 'not-published' } : { phase: 'published', profile });
+        if (raw === null) {
+          setState({ phase: 'not-published' });
+          return;
+        }
+
+        // ───────────────────────────────────────────────────────────────────
+        // 🔴 Ο ΙΔΙΟΣ ΦΡΟΥΡΟΣ ΜΕ ΤΟΝ ΚΟΣΜΟ — ΚΑΙ ΜΕΧΡΙ ΤΗ Φ6-Β4 ΕΛΕΙΠΕ
+        //
+        // Αυτό το αρχείο γράφει στην κεφαλή του ότι *«η οθόνη διαβάζει ό,τι
+        // διαβάζει ΚΑΙ Ο ΠΕΛΑΤΗΣ… ένας ξεχωριστός δικός μας αναγνώστης θα ήταν
+        // δεύτερο βιβλίο: το γραφείο θα έβλεπε “δημοσιευμένο” ενώ ο κόσμος δεν
+        // θα το έβρισκε»*. Και **ακριβώς αυτό έκανε**: ένα `subscribeDoc<
+        // PublicShowcase>` είναι ισχυρισμός τύπου, όχι ανάγνωση — δεχόταν ό,τι
+        // γράφτηκε ποτέ, ενώ ο `usePublicAgencies` περνά από το `readShowcase`.
+        //
+        // ⇒ Έγγραφο **μη αναγνώσιμο** είναι *«δεν δημοσιεύτηκε»*, ταυτόσημα με
+        // ό,τι βλέπει ο κόσμος. Το `unavailable` μένει **μόνο** για τη βλάβη.
+        // ───────────────────────────────────────────────────────────────────
+        const read = readShowcase(raw, companyId);
+        setState(
+          read.outcome === 'showcase'
+            ? { phase: 'published', profile: read.showcase }
+            : { phase: 'not-published' },
+        );
       },
       (error) => {
         logger.error('[SHOWCASE] Η βιτρίνα δεν διαβάστηκε — άγνωστο, όχι κενό', {
@@ -187,7 +240,7 @@ export function useAgencyShowcase(): AgencyShowcase {
     );
   }, [companyId]);
 
-  const publish = useCallback(async (declaration: ShowcaseDeclaration) => {
+  const publish = useCallback(async (declaration: ShowcaseWireDeclaration) => {
     setBusy('publishing');
     setFailure(null);
     try {

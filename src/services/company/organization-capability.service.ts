@@ -32,7 +32,10 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { EntityAuditService } from '@/services/entity-audit.service';
-import { withdrawAgencyProfile } from '@/services/mandate/agency-profile.service';
+import {
+  lookupAgencyProfile,
+  withdrawAgencyProfile,
+} from '@/services/mandate/agency-profile.service';
 import { nowISO } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
 import {
@@ -317,10 +320,55 @@ export function revokeBrokerage(
       revocationReason: reason,
     }),
     // 🔴 **Π2** — δες {@link BeforeWrite} για το γιατί τρέχει **πριν** τη γραφή.
-    //    Ιδεμποτής: γραφείο που ποτέ δεν δημοσιεύτηκε επιστρέφει `withdrawn` το ίδιο.
-    async () => {
-      const outcome = await withdrawAgencyProfile(adminDb, companyId);
-      return outcome.kind === 'withdrawn' ? null : 'AGENCY_PROFILE_WITHDRAWAL_FAILED';
-    },
+    () => withdrawRegulatedShowcase(adminDb, companyId),
   );
+}
+
+/**
+ * **Το Π2, ΠΑΡΑΛΛΑΓΗΣ-ΣΥΝΕΙΔΗΤΟ** — σβήνει βιτρίνα **μόνο** αν είναι ρυθμιζόμενη.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΓΙΑΤΙ ΔΕΝ ΣΒΗΝΕΙ ΠΙΑ ΑΝΕΞΑΡΤΗΤΩΣ ΠΕΡΙΕΧΟΜΕΝΟΥ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Μέχρι τη Φ6-Β ο κατάλογος είχε **μόνο** μεσιτικά γραφεία, άρα *«ανάκληση
+ * μεσιτείας ⇒ διαγραφή βιτρίνας»* ήταν ταυτολογία. Με κατάλογο **επαγγελματιών**
+ * η ίδια γραμμή **εξαφανίζει τον υδραυλικό** που δουλεύει στο ίδιο γραφείο: μια
+ * ρυθμιστική απόφαση για τη **μεσιτεία** θα έσβηνε προβολή που **καμία αρχή δεν
+ * του απαγόρευσε** — η απουσία μητρώου γινόμενη **ποινή** (Α9.3).
+ *
+ * 🔶 **ΤΟ ΜΙΚΤΟ ΓΡΑΦΕΙΟ ΣΒΗΝΕΙ ΟΛΟΚΛΗΡΟ, ΚΑΙ ΕΙΝΑΙ ΔΗΛΩΜΕΝΟ ΚΟΣΤΟΣ.** Γραφείο με
+ * `[μεσίτης, διακοσμητής]` χάνει **και** τη διακόσμηση. Η εναλλακτική —
+ * *«αφαίρεσε μόνο το ρυθμιζόμενο credential»* — θα έκανε την πλατφόρμα
+ * **συντάκτη** της δήλωσης κάποιου άλλου: θα άφηνε στον κατάλογο βιτρίνα **που
+ * το γραφείο ποτέ δεν δήλωσε σε αυτή τη μορφή**, ενώ *«η παρουσία ΕΙΝΑΙ η
+ * συγκατάθεση»* (§9.10). Το γραφείο **ξαναδηλώνει** ό,τι του απομένει, και αυτή
+ * η δεύτερη πράξη είναι το νόημα.
+ *
+ * ⚠️ **Η ΒΛΑΒΗ ΑΝΑΓΝΩΣΗΣ ΜΑΤΑΙΩΝΕΙ ΤΗ ΜΕΤΑΒΑΣΗ** (N.12). *«Δεν μπόρεσα να
+ * διαβάσω τη βιτρίνα»* **δεν** είναι *«δεν έχει ρυθμιζόμενο credential»*: η
+ * σιωπηλή δεύτερη ανάγνωση θα άφηνε ανακληθέν μεσιτικό γραφείο να διαφημίζεται
+ * με ανύπαρκτη άδεια — ακριβώς η βλάβη που το Π2 υπάρχει να κλείσει. Ο
+ * υπερδιαχειριστής ξαναπατά· η κατάσταση **μένει ως είχε**.
+ *
+ * @returns `null` όταν δεν υπάρχει τίποτα να ματαιώσει τη μετάβαση.
+ */
+async function withdrawRegulatedShowcase(
+  adminDb: AdminFirestore,
+  companyId: string,
+): Promise<string | null> {
+  const lookup = await lookupAgencyProfile(adminDb, companyId);
+
+  // Ιδεμποτής: γραφείο που ποτέ δεν δημοσιεύτηκε δεν έχει τίποτα να χάσει.
+  if (lookup.outcome === 'not-published') return null;
+  if (lookup.outcome === 'unavailable') return 'AGENCY_PROFILE_UNREADABLE';
+
+  const regulated = lookup.showcase.credentials.some(
+    (credential) => credential.standing === 'regulated',
+  );
+  // 🔑 **Ο ΕΛΑΙΟΧΡΩΜΑΤΙΣΤΗΣ ΜΕΝΕΙ.** Καμία αρχή δεν του πήρε τίποτα.
+  if (!regulated) return null;
+
+  const outcome = await withdrawAgencyProfile(adminDb, companyId);
+  return outcome.kind === 'withdrawn' ? null : 'AGENCY_PROFILE_WITHDRAWAL_FAILED';
 }

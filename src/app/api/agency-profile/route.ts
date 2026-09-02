@@ -1,6 +1,7 @@
 /**
  * @fileoverview **Η ΔΕΥΤΕΡΗ ΠΡΑΞΗ — «ΘΕΛΩ ΝΑ ΜΕ ΒΡΙΣΚΟΥΝ»** (ADR-827 §9.10 · #12).
  * @related services/mandate/agency-profile.service.ts · lib/auth/brokerage-gate.ts
+ * @related app/api/agency-profile/showcase-request.ts — σχήμα σύρματος + οι τρεις επαληθεύσεις
  * @module app/api/agency-profile/route
  *
  * ────────────────────────────────────────────────────────────────────────────
@@ -37,107 +38,81 @@
  * ενώ η **βλάβη** απαντά **503** — *άγνωστο ≠ κενό* (N.12): ένα 422 σε βλάβη θα
  * έλεγε στο γραφείο ότι **η διεύθυνσή του δεν του ανήκει**.
  *
- * 🔒 `withAuth` *(απαιτεί οργανισμό)* + `gateBrokerage` *(απαιτεί **ενεργή** μεσιτική
- * ικανότητα)* + standard rate limit.
+ * 🔒 `withAuth` *(απαιτεί οργανισμό)* + `gateShowcase` *(απαιτεί **ενεργή** μεσιτική
+ * ικανότητα **μόνο όταν κάποια ειδικότητα είναι ρυθμιζόμενη**)* + standard rate limit.
+ * ⚠️ Το `DELETE` **δεν** έχει φρουρό ικανότητας — δες τον χειριστή του.
  */
 
 import 'server-only';
 
 import { NextResponse, type NextRequest } from 'next/server';
-import { z } from 'zod';
 
 import { readJsonBody } from '@/lib/api/json-body';
 import { withAuth } from '@/lib/auth/middleware';
 import type { AuthContext } from '@/lib/auth/types';
-import { gateBrokerage, type BrokerageDeniedResponse } from '@/lib/auth/brokerage-gate';
+import { gateShowcase } from '@/lib/auth/brokerage-gate';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { placeRefSchema } from '@/lib/geo/place-ref-schema';
+import { showcaseOwnerId } from '@/lib/auth/brokerage-authority';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
-import { resolveAlias } from '@/lib/workspace/alias-registry';
 import {
-  publishAgencyProfile,
+  publishShowcase,
   withdrawAgencyProfile,
-  type AgencyProfileRejection,
+  type ShowcaseCredentialDeclaration,
 } from '@/services/mandate/agency-profile.service';
-import type { AgencyProfile } from '@/types/agency-profile';
+import {
+  classifyDeclared,
+  locate,
+  publishSchema,
+  verifyAliasOwnership,
+  type AgencyProfileWriteResponse,
+} from './showcase-request';
 
 /**
- * **Ό,τι δηλώνει το γραφείο** — και **μόνο** αυτό.
- *
- * 🔴 **ΚΑΝΕΝΑ `min(1)` ΣΤΑ ΠΕΔΙΑ ΠΕΡΙΕΧΟΜΕΝΟΥ, ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ.** Το *«λείπει η
- * επωνυμία»* το απαντά ο **γραφέας** *(`AGENCY_PROFILE_REJECTIONS` — με **όνομα** ανά
- * πεδίο, που γίνεται κλειδί i18n)*. Ένα `min(1)` εδώ θα το απαντούσε **πρώτο**, ως
- * `MALFORMED_BODY`, και θα έκανε τους ονομαστικούς λόγους **ανεκτέλεστους**: κάλυψη σε
- * **νεκρό** κλάδο δεν είναι κάλυψη, και ο άνθρωπος θα έβλεπε *«κακό σώμα»* αντί για
- * *«γράψε την επωνυμία»*. **Ένας κριτής ανά ερώτημα** (ADR-749).
- *
- * ⚠️ Τα `max` **μένουν**: είναι **μορφή**, όχι κρίση περιεχομένου — φρουρός πόρου, που
- * είναι δουλειά του συνόρου.
+ * ⚠️ **Η ΣΕΙΡΑ ΑΛΛΑΞΕ ΣΤΗ Φ6-Β3, ΚΑΙ ΕΙΝΑΙ ΑΝΑΓΚΗ ΟΧΙ ΑΜΕΛΕΙΑ.** Ο φρουρός δεν
+ * μπορεί πια να τρέξει **πριν** το σώμα: το αν χρειάζεται μεσιτική ικανότητα το
+ * απαντά **η ειδικότητα που δηλώνεται**. Ο λόγος της παλιάς σειράς — *«δεν λέμε
+ * σε κάποιον που δεν επιτρέπεται καν αν το JSON του ήταν έγκυρο»* — **έπαψε να
+ * υπάρχει**: κάθε μέλος οργανισμού επιτρέπεται σε **κάτι**. Δες {@link gateShowcase}.
  */
-const publishSchema = z.object({
-  alias: z.string().max(128),
-  displayName: z.string().max(200),
-  gemiNumber: z.string().max(64),
-  // ⚠️ `.optional()` **και** `.nullable()`: η οθόνη που δεν δήλωσε τόπο δεν στέλνει
-  //    το πεδίο καθόλου, και το `null` είναι η **ρητή** «καμία περιοχή».
-  place: placeRefSchema.nullable().optional(),
-});
-
-type AgencyProfileWriteResponse =
-  | { readonly profile: AgencyProfile }
-  | { readonly withdrawn: true }
-  | { readonly error: 'INVALID_PROFILE'; readonly reason: AgencyProfileRejection }
-  /** Το ψευδώνυμο δεν λύνεται σε **αυτόν** τον οργανισμό — ή δεν λύνεται καθόλου. */
-  | { readonly error: 'ALIAS_NOT_OWNED' }
-  /** 🔴 **Δεν μάθαμε** — ποτέ ίδιο με το παραπάνω. */
-  | { readonly error: 'ALIAS_UNVERIFIED' }
-  | BrokerageDeniedResponse
-  | { readonly error: 'WRITE_FAILED' };
-
-/**
- * **Είναι αυτή η διεύθυνση δική σου;** — `null` όταν ναι, αλλιώς η έτοιμη απάντηση.
- *
- * ⚠️ Ο έλεγχος είναι **ισότητα με το `companyId` ΤΗΣ ΑΠΟΔΕΙΞΗΣ**, ποτέ με το σώμα:
- * το ίδιο ιδίωμα που κάνει αδύνατο να κριθεί ο ένας οργανισμός και να γραφτεί ο άλλος.
- */
-async function verifyAliasOwnership(
-  alias: string,
-  companyId: string,
-): Promise<NextResponse<AgencyProfileWriteResponse> | null> {
-  const resolution = await resolveAlias(alias);
-
-  if (resolution.outcome === 'unknown') {
-    return NextResponse.json({ error: 'ALIAS_UNVERIFIED' } as const, { status: 503 });
-  }
-
-  if (resolution.outcome === 'not-found' || resolution.companyId !== companyId) {
-    return NextResponse.json({ error: 'ALIAS_NOT_OWNED' } as const, { status: 422 });
-  }
-
-  return null;
-}
-
 async function publishHandler(
   request: NextRequest,
   ctx: AuthContext,
 ): Promise<NextResponse<AgencyProfileWriteResponse>> {
   const adminDb = getAdminFirestore();
 
-  // 🔴 Ο φρουρός ΠΡΩΤΟΣ — πριν διαβαστεί το σώμα. Δες {@link gateBrokerage}.
-  const authority = await gateBrokerage(adminDb, ctx.companyId);
-  if (authority instanceof NextResponse) return authority;
-
   const parsed = await readJsonBody(request, publishSchema);
   if ('rejected' in parsed) return parsed.rejected;
 
-  const denial = await verifyAliasOwnership(parsed.data.alias, authority.companyId);
+  const classified = await classifyDeclared(adminDb, parsed.data.credentials);
+  if ('rejected' in classified) return classified.rejected;
+
+  // 🔴 Ο φρουρός ρωτά **το επάγγελμα**, και παράγει την παραλλαγή της απόδειξης.
+  const authority = await gateShowcase(adminDb, ctx.companyId, classified.occupations);
+  if (authority instanceof NextResponse) return authority;
+
+  const denial = await verifyAliasOwnership(parsed.data.alias, showcaseOwnerId(authority));
   if (denial !== null) return denial;
 
-  const result = await publishAgencyProfile(adminDb, authority, {
+  // 🔑 Το `iscoCode` και οι ετικέτες έρχονται **από την ταξινομία**· από το σώμα
+  //    μόνο ο αριθμός και ο εκδότης — τα δύο που **μόνο ο άνθρωπος** ξέρει.
+  const credentials: ShowcaseCredentialDeclaration[] = classified.occupations.map(
+    (occupation, index) => ({
+      occupation,
+      registrationNumber: parsed.data.credentials[index]?.registrationNumber ?? '',
+      registrationChapter: parsed.data.credentials[index]?.registrationChapter ?? '',
+    }),
+  );
+
+  const place = parsed.data.place ?? null;
+  const located = await locate(adminDb, place);
+  if ('rejected' in located) return located.rejected;
+
+  const result = await publishShowcase(adminDb, authority, {
     alias: parsed.data.alias,
     displayName: parsed.data.displayName,
-    gemiNumber: parsed.data.gemiNumber,
-    place: parsed.data.place ?? null,
+    credentials,
+    place,
+    position: located.position,
   });
 
   // ⚠️ Κλειστό σύνολο, χωρίς `default`: πέμπτη κατάσταση του γραφέα **δεν
@@ -162,23 +137,35 @@ async function publishHandler(
 /**
  * **Η απόσυρση — διαγραφή, όχι σημαία** (§9.10).
  *
- * ⚠️ **Απαιτεί ΚΑΙ ΕΔΩ ενεργή ικανότητα, σε αντίθεση με το Π2.** Δεν είναι αντίφαση:
- * εκεί ο καλών είναι ο **διακομιστής** τη στιγμή που η ικανότητα χάθηκε *(και καμία
- * απόδειξη δεν μπορεί να κατασκευαστεί)*· εδώ ο καλών είναι **άνθρωπος** που ζητά
- * πράξη για τον οργανισμό του, και κάθε τέτοια πράξη περνά από τον **ίδιο** κριτή.
- * Γραφείο που **ανακλήθηκε** δεν χρειάζεται αυτή την πόρτα: το προφίλ του έχει ήδη
- * σβηστεί από το Π2.
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΕΧΑΣΕ ΤΟΝ ΦΡΟΥΡΟ ΙΚΑΝΟΤΗΤΑΣ ΣΤΗ Φ6-Β3 — ΚΑΙ ΕΙΝΑΙ ΔΙΟΡΘΩΣΗ ΒΛΑΒΗΣ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Μέχρι σήμερα το `DELETE` απαιτούσε **ενεργή μεσιτική ικανότητα**, με σχόλιο που
+ * δήλωνε ρητά την αμηχανία του: *«γραφείο που ανακλήθηκε δεν χρειάζεται αυτή την
+ * πόρτα — το προφίλ του έχει ήδη σβηστεί από το Π2»*. Δύο λόγοι που το
+ * κατέρριψαν:
+ *
+ * 1. 🔴 **Ο ελαιοχρωματιστής δεν είχε ΠΟΤΕ ικανότητα** ⇒ δεν μπορούσε να
+ *    αποσύρει τη βιτρίνα που μόλις δημοσίευσε. **Φρουρός που κάνει τη θεραπεία
+ *    αδύνατη** — ακριβώς το σχήμα που το `provisionWorkspace` ονομάζει
+ *    *(ADR-787 §5.1)* και που το ίδιο το `withdrawAgencyProfile` απορρίπτει για
+ *    τον εαυτό του.
+ * 2. Το Π2 σβήνει πλέον **μόνο ρυθμιζόμενη** βιτρίνα, άρα η υπόθεση *«έχει ήδη
+ *    σβηστεί»* **έπαψε να ισχύει** και για τον ανακληθέντα μεσίτη που κρατά
+ *    δεύτερη, μη ρυθμιζόμενη ειδικότητα.
+ *
+ * ⚠️ **Και δεν ανοίγει τίποτα**: το κλειδί διαγραφής είναι το `ctx.companyId`
+ * **από τα claims**, ποτέ από το σώμα ⇒ ξένη βιτρίνα παραμένει **μη
+ * εκφράσιμη**. Ο `withAuth` εγγυάται ότι ο καλών ανήκει σε αυτόν τον οργανισμό —
+ * και η απόσυρση της **δικής σου** προβολής δεν είναι ρυθμιζόμενη πράξη· είναι
+ * ανάκληση συγκατάθεσης.
  */
 async function withdrawHandler(
   _request: NextRequest,
   ctx: AuthContext,
 ): Promise<NextResponse<AgencyProfileWriteResponse>> {
-  const adminDb = getAdminFirestore();
-
-  const authority = await gateBrokerage(adminDb, ctx.companyId);
-  if (authority instanceof NextResponse) return authority;
-
-  const result = await withdrawAgencyProfile(adminDb, authority.companyId);
+  const result = await withdrawAgencyProfile(getAdminFirestore(), ctx.companyId);
 
   return result.kind === 'withdrawn'
     ? NextResponse.json({ withdrawn: true } as const)

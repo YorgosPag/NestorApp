@@ -25,8 +25,9 @@ import React from 'react';
 
 import { AgencyProfileContent } from '../AgencyProfileContent';
 import { PROFILE_KEYS } from '../agency-directory-labels';
-import type { AgencyProfile } from '@/types/agency-profile';
-import type { PublicListing } from '@/types/public-listing';
+import type { PublicShowcase } from '@/types/agency-profile';
+import { showcaseFixture } from '@/lib/agency/__fixtures__/showcase-fixture';
+import { UNASKED_LISTING_ATTRIBUTES, type PublicListing } from '@/types/public-listing';
 
 const ALFA = 'comp_alfa';
 
@@ -44,17 +45,20 @@ jest.mock('@/services/realtime/hooks/usePublicPlace', () => ({
   usePublicPlace: () => ({ state: 'idle' }),
 }));
 
-const PROFILE: AgencyProfile = {
+const PROFILE = showcaseFixture({
   companyId: ALFA,
   alias: 'alfa',
   displayName: 'ΑΛΦΑ ΚΑΤΑΣΚΕΥΑΣΤΙΚΗ Α.Ε.',
-  gemiNumber: '123456789000',
-  place: null,
   publishedAt: '2026-08-30T10:00:00.000Z',
-};
+});
 
 jest.mock('@/services/realtime/hooks/usePublicAgencies', () => ({
-  usePublicAgency: () => ({ state: 'found', profile: PROFILE_REF.current }),
+  // 🔴 **`showcase`, ΟΧΙ `profile`** — το πεδίο μετονομάστηκε μαζί με τον τύπο
+  //    (Φ6-Β2). Το mock είχε μείνει πίσω: **πλαστό σύμβολο που δεν αντιστοιχεί
+  //    σε τίποτα** ⇒ το `lookup.showcase` ήταν `undefined` και η οθόνη έσκαγε
+  //    στην πρώτη γραμμή της. Ακριβώς ο λόγος που ένα mock είναι υπόσχεση, και
+  //    το Jest **δεν κάνει type-check** για να την ελέγξει.
+  usePublicAgency: () => ({ state: 'found', showcase: PROFILE_REF.current }),
   agencyDoorFor: (companyId: string | null) =>
     companyId === null || companyId.trim() === ''
       ? { kind: 'absent' }
@@ -62,7 +66,7 @@ jest.mock('@/services/realtime/hooks/usePublicAgencies', () => ({
 }));
 
 /** Το `jest.mock` υψώνεται πάνω από τις σταθερές — η αναφορά γεμίζει μετά. */
-const PROFILE_REF: { current: AgencyProfile } = { current: PROFILE };
+const PROFILE_REF: { current: PublicShowcase } = { current: PROFILE };
 
 /** Ό,τι ζήτησε ο κώδικας από τον αδελφό — **το ερώτημα, όχι μόνο η απάντηση**. */
 const asked: { companyId: string | null } = { companyId: 'ΔΕΝ ΡΩΤΗΘΗΚΕ' as unknown as null };
@@ -99,6 +103,10 @@ function listingOf(id: string, title: string): PublicListing {
     place: null,
     floor: null,
     bedrooms: null,
+    // ✅ **ADR-842 Φ3** — τα 23 χαρακτηριστικά, ως **μία** ονομασμένη απουσία.
+    //    Οκτώ fixtures θα κρατούσαν ο καθένας τη δική του λίστα `null` — δηλαδή οκτώ
+    //    λίστες που συμφωνούν μέχρι την πρώτη προσθήκη πεδίου.
+    ...UNASKED_LISTING_ATTRIBUTES,
     legality: [],
     authorship: 'agency',
     agencyName: PROFILE.displayName,

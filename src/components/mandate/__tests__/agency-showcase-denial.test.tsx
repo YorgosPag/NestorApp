@@ -42,7 +42,11 @@ import { CAPABILITY_STATUSES, type CapabilityStatus } from '@/types/organization
 // Το κλειδί επιστρέφεται **αυτούσιο**: η δοκιμή ρωτά «ποιο μήνυμα διάλεξε η οθόνη;»,
 // όχι «πώς μεταφράστηκε» — η μετάφραση είναι δουλειά των locales και της CHECK 3.8.
 jest.mock('@/i18n/hooks/useTranslation', () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+  // ⚠️ **Το `i18n` ΔΕΝ είναι διακοσμητικό** *(Φ6-Β4)*: η οθόνη διαλέγει πλέον σε
+  //    **ποια γλώσσα** δείχνει τη δίγλωσση ετικέτα της ειδικότητας. Ένα mock που
+  //    επιστρέφει μόνο `t` είναι **υπόσχεση που δεν τηρείται** — και το Jest δεν
+  //    κάνει type-check για να τη διαψεύσει· την είδε μόνο η κατάρρευση.
+  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'el' } }),
 }));
 
 jest.mock('@/auth/hooks/useAuth', () => ({

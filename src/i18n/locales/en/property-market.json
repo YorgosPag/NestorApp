@@ -699,8 +699,27 @@
       "rejection": {
         "agency-profile-alias-missing": "Your workspace does not have an address yet.",
         "agency-profile-name-missing": "Write the business name people will see.",
-        "agency-profile-gemi-missing": "The GEMI number is required for the directory."
-      }
+        "agency-profile-occupation-missing": "Declare at least one occupation — without it the showcase says nothing.",
+        "agency-profile-registration-missing": "This occupation requires a registry number to appear in the directory.",
+        "agency-profile-chapter-missing": "Also state the chapter that issued the number — a bare number cannot be verified."
+      },
+      "occupationLabel": "Occupation",
+      "occupationHint": "Pick from the European ESCO classification — that is how people find you by the right criteria.",
+      "occupationPlaceholder": "e.g. plumber, lawyer, real estate agent",
+      "occupationUnclassified": "Pick an occupation from the list. Free text does not appear in the directory filters.",
+      "addOccupation": "Add occupation",
+      "removeOccupation": "Remove",
+      "registryLabel": "Registry number ({authority})",
+      "registryHint": "The number as issued by the authority. You declare it — we have not checked it.",
+      "registryPlaceholder": "e.g. 123456789000",
+      "chapterLabel": "Issuing chapter",
+      "chapterHint": "Which chapter issued the number. Without it, the number cannot be verified by anyone.",
+      "chapterPlaceholder": "e.g. Thessaloniki Bar",
+      "registryNone": "No authority keeps a registry for this occupation. Nothing is missing from your showcase.",
+      "registryUnexamined": "We have not examined whether a registry exists for this occupation.",
+      "occupationUnknown": "This occupation was not found in the classification. Please pick again from the list.",
+      "temporarilyUnavailable": "We could not complete this right now. Try again — do not change anything.",
+      "placeNotFound": "The place you declared was not found. Please pick it again on the map."
     },
     "directory": {
       "title": "Professionals",
@@ -720,7 +739,8 @@
       "placeAll": "All of Greece",
       "radiusLabel": "Radius",
       "gemi": "GEMI {number}",
-      "open": "View this showcase"
+      "open": "View this showcase",
+      "radiusOption": "{km} km"
     },
     "credibility": {
       "occupationLabel": "Speciality",

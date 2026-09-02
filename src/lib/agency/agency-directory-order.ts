@@ -12,7 +12,7 @@
  * ΑΚΙΝΗΤΩΝ — αν η πλατφόρμα κατατάσσει γραφεία, κατευθύνει ΔΟΥΛΕΙΑ»* (NAR
  * Settlement 17/08/2024, **$418M**).
  *
- * 🔑 **Ο πρώτος φρουρός είναι ΔΟΜΙΚΟΣ και δεν ζει εδώ**: το {@link AgencyProfile}
+ * 🔑 **Ο πρώτος φρουρός είναι ΔΟΜΙΚΟΣ και δεν ζει εδώ**: το {@link PublicShowcase}
  * **δεν έχει** πεδίο αμοιβής, βαθμολογίας, κατάταξης ή προβολής επί πληρωμή. Πεδίο
  * που δεν υπάρχει **δεν μπορεί** να ταξινομήσει κανείς. Αυτό το αρχείο είναι ο
  * **δεύτερος** φρουρός: ένα **ονομασμένο σημείο** που η άγκυρα μπορεί να
@@ -57,7 +57,7 @@
  * μία γραμμή κώδικα.
  */
 
-import type { AgencyProfile } from '@/types/agency-profile';
+import type { PublicShowcase } from '@/types/agency-profile';
 import { compareByNameThenId } from '@/lib/ordering/total-name-order';
 
 /**
@@ -68,8 +68,8 @@ import { compareByNameThenId } from '@/lib/ordering/total-name-order';
  * συνδρομή.
  */
 export function orderAgencies(
-  profiles: readonly AgencyProfile[],
-): readonly AgencyProfile[] {
+  profiles: readonly PublicShowcase[],
+): readonly PublicShowcase[] {
   return [...profiles].sort(compareAgencies);
 }
 
@@ -86,6 +86,6 @@ export function orderAgencies(
  * επειδή είναι το **ονομασμένο σημείο του antitrust**: εδώ φαίνεται, σε μία γραμμή,
  * ότι ο κατάλογος διαβάζει **επωνυμία και ταυτότητα, τίποτε άλλο**.
  */
-export function compareAgencies(a: AgencyProfile, b: AgencyProfile): number {
+export function compareAgencies(a: PublicShowcase, b: PublicShowcase): number {
   return compareByNameThenId(a.displayName, a.companyId, b.displayName, b.companyId);
 }

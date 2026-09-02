@@ -61,9 +61,10 @@ import { formatLongDate } from '@/lib/intl-formatting';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { ListingCard } from '@/components/search-results/ListingCard';
 import { usePublicAgency } from '@/services/realtime/hooks/usePublicAgencies';
+import { CredibilityStatement } from './CredibilityStatement';
 import { usePublicAgencyListings } from '@/services/realtime/hooks/usePublicListings';
 import { usePublicPlace } from '@/services/realtime/hooks/usePublicPlace';
-import type { AgencyProfile } from '@/types/agency-profile';
+import type { PublicShowcase } from '@/types/agency-profile';
 
 import { AGENCY_PUBLIC_NS, PROFILE_KEYS } from './agency-directory-labels';
 import { AGENCY_DIRECTORY_ROUTE } from './agency-directory-route';
@@ -155,7 +156,7 @@ function Notice({
 }
 
 /** Πού δραστηριοποιείται — **μία** επιπλέον ανάγνωση, μόνο για τη μία βιτρίνα. */
-function PlaceFact({ profile }: { readonly profile: AgencyProfile }): React.JSX.Element {
+function PlaceFact({ profile }: { readonly profile: PublicShowcase }): React.JSX.Element {
   const { t } = useTranslation([AGENCY_PUBLIC_NS]);
   // ⚠️ `idle` όταν `place === null` — **δεν είναι φόρτωση**, δεν υπάρχει ερώτηση.
   const place = usePublicPlace(profile.place);
@@ -287,7 +288,7 @@ export function AgencyProfileContent({
     );
   }
 
-  const { profile } = lookup;
+  const { showcase: profile } = lookup;
 
   return (
     <ShellSurface as="main" measure="prose" className="gap-6">
@@ -299,11 +300,16 @@ export function AgencyProfileContent({
       </header>
 
       <dl className="m-0 flex flex-col gap-4">
-        <Fact
-          label={t(PROFILE_KEYS.gemiLabel)}
-          value={profile.gemiNumber}
-          hint={t(PROFILE_KEYS.gemiHint)}
-        />
+        {/*
+          🔴 ADR-841 Φ6-Β — ΗΤΑΝ ΕΝΑ `Fact` ΜΕ ΤΟΝ ΓΕΜΗ, ΚΑΙ ΔΕΝ ΑΡΚΕΙ ΠΙΑ.
+          Η βιτρίνα δεν ανήκει μόνο σε μεσίτες: ο σκέτος αριθμός δεν λέει **ποιος
+          τον εξέδωσε** (Α9.1), και η **απουσία** του δεν λέει **γιατί** λείπει.
+          Ίδιο component με την κάρτα του καταλόγου — αν εδώ έλεγε κάτι άλλο, ο
+          ίδιος άνθρωπος θα διαβαζόταν διαφορετικά σε δύο οθόνες.
+        */}
+        {profile.credentials.map((credential) => (
+          <CredibilityStatement key={credential.occupation.escoUri} credential={credential} />
+        ))}
         <PlaceFact profile={profile} />
       </dl>
 

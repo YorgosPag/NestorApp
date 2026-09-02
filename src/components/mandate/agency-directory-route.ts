@@ -25,6 +25,8 @@
  * **οποιαδήποτε** πλευρά μπορεί να ρωτήσει.
  */
 
+import { typedHref } from '@/lib/workspace/route-worlds';
+
 /**
  * Η διαδρομή της βιτρίνας.
  *
@@ -35,6 +37,22 @@
  * δήλωση — δηλαδή ο έλεγχος θα ζούσε στο **τίποτα**.
  */
 export const AGENCY_DIRECTORY_ROUTE = '/pro' as const;
+
+/**
+ * **Ο κατάλογος με τα φίλτρα του** — για τον `router.replace` του συνόρου.
+ *
+ * ⚠️ Το κενό `?` **δεν** γράφεται: δύο ταυτόσημες σελίδες με και χωρίς αυτό
+ * είναι δύο διευθύνσεις για το ίδιο περιεχόμενο — ο ίδιος λόγος για τον οποίο
+ * το `serializeShowcaseFilters` δεν γράφει κενά φίλτρα *(Φ2)*.
+ *
+ * 🔑 **`typedHref` επειδή ο router του συνόρου δέχεται branded διεύθυνση**
+ * (CHECK 3.61): μια ωμή συμβολοσειρά **δεν μεταγλωττίζεται**, και αυτό είναι
+ * ακριβώς ο φρουρός — καμία διαδρομή δεν φεύγει χωρίς να περάσει από εδώ.
+ */
+export function agencyDirectoryHref(query?: string | null) {
+  if (query && query.length > 0) return typedHref(`${AGENCY_DIRECTORY_ROUTE}?${query}` as const);
+  return typedHref(AGENCY_DIRECTORY_ROUTE);
+}
 
 /**
  * `/pro/<ψευδώνυμο>` — **με κωδικοποίηση, και είναι απαίτηση όχι κόσμημα**: το

@@ -199,6 +199,13 @@
       "securityStatusDescription": "Your account is protected",
       "protected": "Protected",
       "policyText": "For more information about how we handle your data, please review our Privacy Policy."
+    },
+    "showcase": {
+      "title": "My public showcase",
+      "absentLead": "You do not have a public showcase yet. Visitors to the directory cannot find you.",
+      "absentCta": "I want to be found",
+      "presentLead": "You already have a workspace. Your showcase is configured inside it.",
+      "presentCta": "Take me to my workspace"
     }
   },
   "twoFactor": {

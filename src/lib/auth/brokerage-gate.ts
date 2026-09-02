@@ -36,7 +36,10 @@ import {
   isBrokerageDenial,
   requireBrokerageCapability,
   type BrokerageAuthority,
+  type ShowcaseAuthority,
 } from '@/lib/auth/brokerage-authority';
+import { occupationNeedsCapability } from '@/lib/professional/showcase-eligibility';
+import type { ClassifiedOccupation } from '@/types/agency-profile';
 import { readCompanyCapabilities } from '@/services/company/company-capabilities.reader';
 
 /**
@@ -92,4 +95,76 @@ export async function gateBrokerage(
   }
 
   return verdict;
+}
+
+// =============================================================================
+// Η ΒΙΤΡΙΝΑ — Ο ΦΡΟΥΡΟΣ ΠΟΥ ΡΩΤΑ **ΤΟ ΕΠΑΓΓΕΛΜΑ**, ΟΧΙ ΤΟΝ ΚΑΛΟΥΝΤΑ (ADR-841 Φ6-Β)
+// =============================================================================
+
+/**
+ * Η άρνηση της βιτρίνας — **η μεσιτική, ή η ανυπαρξία οργανισμού**.
+ *
+ * ⚠️ Δύο κωδικοί και όχι ένας: *«δεν επιτρέπεσαι στη μεσιτεία»* στέλνει τον
+ * άνθρωπο **στις ρυθμίσεις του οργανισμού**· *«δεν έχεις οργανισμό»* τον στέλνει
+ * να **φτιάξει** χώρο. Κοινός κωδικός θα έδειχνε τη λάθος θεραπεία στη μία από τις
+ * δύο περιπτώσεις.
+ */
+export type ShowcaseDeniedResponse =
+  | BrokerageDeniedResponse
+  | { readonly error: 'SHOWCASE_NO_ORGANIZATION'; readonly reason: string };
+
+/** Κλειδί i18n της άρνησης «καμία βιτρίνα χωρίς χώρο» — **δίπλα στον φρουρό του**. */
+export const SHOWCASE_NO_ORGANIZATION_KEY = 'auth:showcase.denyReason.noOrganization';
+
+/**
+ * **Επιτρέπεται σε αυτόν να δημοσιεύσει ΑΥΤΗ τη βιτρίνα;**
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 Ο ΦΡΟΥΡΟΣ ΕΞΑΡΤΑΤΑΙ ΑΠΟ ΤΟ **ΠΕΡΙΕΧΟΜΕΝΟ**, ΚΑΙ ΑΥΤΟ ΑΛΛΑΖΕΙ ΤΗ ΣΕΙΡΑ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Ο {@link gateBrokerage} καλείται **πριν** διαβαστεί το σώμα, επίτηδες. Εδώ
+ * **δεν γίνεται**: το αν χρειάζεται μεσιτική ικανότητα το απαντά **η ειδικότητα
+ * που δηλώνεται**, άρα το σώμα πρέπει να έχει ήδη διαβαστεί και ταξινομηθεί.
+ *
+ * ⚠️ **Και η προστασία που έχανε εκείνη η σειρά ΔΕΝ χάνεται** — έπαψε να
+ * υπάρχει. Ο λόγος της ήταν *«δεν λέμε σε κάποιον που δεν επιτρέπεται καν αν το
+ * JSON του ήταν έγκυρο»*. Εδώ **κάθε** μέλος οργανισμού επιτρέπεται σε **κάτι**
+ * *(τη μη ρυθμιζόμενη βιτρίνα — ADR-798 Α4)*, άρα δεν υπάρχει «κάποιος που δεν
+ * έπρεπε να φτάσει εκεί». Ο `withAuth` και το όριο ρυθμού μένουν μπροστά.
+ *
+ * 🔑 **Η ΠΑΡΑΛΛΑΓΗ ΔΕΝ ΕΙΝΑΙ ΕΠΙΛΟΓΗ ΤΟΥ ΚΑΛΟΥΝΤΟΣ** — παράγεται εδώ, από το
+ * `iscoCode` που έγραψε **η ταξινομία**, με την **ίδια** συνάρτηση που ρωτά ο
+ * αναγνώστης του συνόρου. Έτσι η *«υποβάθμιση»* *(δηλώνω `unregulated` για να
+ * γλιτώσω τον φρουρό)* δεν αποτρέπεται με έλεγχο — **δεν εκφράζεται**.
+ *
+ * @param occupations Οι ειδικότητες **όπως τις διάβασε ο διακομιστής**, ποτέ
+ *   όπως τις έστειλε ο πελάτης.
+ */
+export async function gateShowcase(
+  adminDb: AdminFirestore,
+  companyId: string | null,
+  occupations: readonly ClassifiedOccupation[],
+): Promise<ShowcaseAuthority | NextResponse<ShowcaseDeniedResponse>> {
+  // 🔴 **ΕΝΑ** ρυθμιζόμενο credential αρκεί για να κριθεί ολόκληρη η βιτρίνα. Το
+  //    μικτό γραφείο *(μεσίτης + διακοσμητής)* δεν γλιτώνει τον φρουρό επειδή η
+  //    δεύτερη ειδικότητά του είναι ελεύθερη.
+  const regulated = occupations.some((occupation) => occupationNeedsCapability(occupation.iscoCode));
+
+  if (regulated) {
+    const verdict = await gateBrokerage(adminDb, companyId);
+    return verdict instanceof NextResponse ? verdict : { kind: 'regulated', proof: verdict };
+  }
+
+  const tenant = typeof companyId === 'string' ? companyId.trim() : '';
+  if (tenant === '') {
+    // Δομικά απίθανο *(ο `withAuth` εγγυάται μισθωτή)*, και **γι' αυτό**
+    // δηλώνεται: σιωπηλή διέλευση εδώ θα έγραφε βιτρίνα **χωρίς ιδιοκτήτη**.
+    return NextResponse.json(
+      { error: 'SHOWCASE_NO_ORGANIZATION', reason: SHOWCASE_NO_ORGANIZATION_KEY } as const,
+      { status: 403 },
+    );
+  }
+
+  return { kind: 'unregulated', companyId: tenant };
 }

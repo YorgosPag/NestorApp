@@ -46,7 +46,8 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { agencyDoorFor } from '@/lib/agency/agency-door';
 import { orderAgencies } from '@/lib/agency/agency-directory-order';
-import type { AgencyProfile } from '@/types/agency-profile';
+import { readShowcase } from '@/lib/agency/showcase-read';
+import type { PublicShowcase } from '@/types/agency-profile';
 
 const logger = createModuleLogger('usePublicAgencies');
 
@@ -56,7 +57,7 @@ const logger = createModuleLogger('usePublicAgencies');
 
 export interface PublicAgenciesState {
   /** **Ήδη ταξινομημένες.** Δες παρακάτω γιατί η σειρά δεν ανήκει στην οθόνη. */
-  readonly agencies: readonly AgencyProfile[];
+  readonly agencies: readonly PublicShowcase[];
   readonly loading: boolean;
   readonly error: string | null;
 }
@@ -77,7 +78,7 @@ export interface PublicAgenciesState {
  * παρακάμπτεται**: η οθόνη δεν βλέπει ποτέ αταξινόμητο πίνακα.
  */
 export function usePublicAgencies(): PublicAgenciesState {
-  const [agencies, setAgencies] = useState<readonly AgencyProfile[]>([]);
+  const [agencies, setAgencies] = useState<readonly PublicShowcase[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -90,7 +91,19 @@ export function usePublicAgencies(): PublicAgenciesState {
     const unsubscribe = onSnapshot(
       collection(db, COLLECTIONS.AGENCY_PROFILES),
       (snapshot) => {
-        setAgencies(orderAgencies(snapshot.docs.map((d) => d.data() as AgencyProfile)));
+        // 🔒 ADR-841 Φ6-Β — ΤΟ `as` ΕΓΙΝΕ ΦΡΟΥΡΟΣ. Με credentials, ένα έγγραφο
+        //    ΧΩΡΙΣ καμία απόδειξη θα ζωγραφιζόταν ως κάρτα: ο κατάλογος που το
+        //    §9.9 β ονομάζει «επικίνδυνο αντί για χρήσιμο». Παραλείπεται ΚΑΙ
+        //    καταγράφεται — σιωπηλή παράλειψη θα ήταν «0 = κανείς δεν κοίταξε».
+        const readable: PublicShowcase[] = [];
+        for (const document of snapshot.docs) {
+          const read = readShowcase(document.data(), document.id);
+          if (read.outcome === 'showcase') readable.push(read.showcase);
+          else logger.warn('Βιτρίνα χωρίς αναγνώσιμη απόδειξη — παραλείφθηκε', {
+            data: { companyId: read.companyId },
+          });
+        }
+        setAgencies(orderAgencies(readable));
         setLoading(false);
       },
       (err: Error) => {
@@ -119,7 +132,7 @@ export function usePublicAgencies(): PublicAgenciesState {
  * τυπωμένη κάρτα **δικαιούται** να το μάθει, αντί για «κάτι πήγε στραβά» που θα τον
  * έβαζε να ξαναδοκιμάζει κάτι που **δεν πρόκειται** να αλλάξει.
  *
- * ⚠️ **Ξεχωριστός τύπος από το `AgencyProfileLookup`** των υπηρεσιών, και δεν είναι
+ * ⚠️ **Ξεχωριστός τύπος από το `PublicShowcaseLookup`** των υπηρεσιών, και δεν είναι
  * διπλότυπο: εκείνο απαντά **εφάπαξ, στον διακομιστή** (`lookupAgencyProfile`, Admin
  * SDK) και **δεν έχει `loading`**, γιατί εκεί δεν υπάρχει «ακόμη δεν ξέρω». Κοινός
  * τύπος θα ανάγκαζε τον έναν από τους δύο να κουβαλά κατάσταση που δεν του συμβαίνει
@@ -127,7 +140,7 @@ export function usePublicAgencies(): PublicAgenciesState {
  */
 export type PublicAgencyLookup =
   | { readonly state: 'loading' }
-  | { readonly state: 'found'; readonly profile: AgencyProfile }
+  | { readonly state: 'found'; readonly showcase: PublicShowcase }
   | { readonly state: 'absent' }
   | { readonly state: 'error'; readonly message: string };
 
@@ -162,11 +175,23 @@ export function usePublicAgency(companyId: string | null): PublicAgencyLookup {
     const unsubscribe = onSnapshot(
       doc(db, COLLECTIONS.AGENCY_PROFILES, door.companyId),
       (snapshot) => {
-        setLookup(
-          snapshot.exists()
-            ? { state: 'found', profile: snapshot.data() as AgencyProfile }
-            : { state: 'absent' },
-        );
+        if (!snapshot.exists()) {
+          setLookup({ state: 'absent' });
+          return;
+        }
+        const read = readShowcase(snapshot.data(), snapshot.id);
+        if (read.outcome === 'showcase') {
+          setLookup({ state: 'found', showcase: read.showcase });
+          return;
+        }
+        // ⚠️ **ΑΝΑΓΝΩΣΤΟ ⇒ `absent`, ΟΧΙ `error`** — και η διάκριση είναι για τον
+        //    ΑΝΘΡΩΠΟ, όχι για εμάς: το «error» τον βάζει να **ξαναδοκιμάσει** κάτι
+        //    που **δεν πρόκειται** να αλλάξει μόνο του. Προς τα έξω είναι απουσία·
+        //    προς τα μέσα καταγράφεται ως βλάβη, γιατί **είναι** βλάβη.
+        logger.error('Βιτρίνα χωρίς αναγνώσιμη απόδειξη', {
+          data: { companyId: read.companyId },
+        });
+        setLookup({ state: 'absent' });
       },
       (err: Error) => {
         logger.error('Δεν φορτώθηκε η βιτρίνα γραφείου', {

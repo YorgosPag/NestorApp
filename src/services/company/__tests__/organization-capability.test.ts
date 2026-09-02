@@ -37,7 +37,10 @@ import {
   type CapabilityStatus,
   type OrganizationCapabilities,
 } from '@/types/organization-capability';
-import type { AgencyProfile } from '@/types/agency-profile';
+import {
+  showcaseFixture,
+  storedShowcaseDoc,
+} from '@/lib/agency/__fixtures__/showcase-fixture';
 import {
   approveBrokerage,
   declareBrokerage,
@@ -48,14 +51,36 @@ const COMPANY = 'comp_grafeio_a';
 const SUPER_ADMIN = 'user_super';
 const REASON = 'Διαγραφή από το μητρώο μεσιτών';
 
-const PROFILE: AgencyProfile = {
+/**
+ * ⚠️ **ΤΟ ΑΠΟΘΗΚΕΥΜΕΝΟ σχήμα, όχι του καταναλωτή** *(δες `storedShowcaseDoc`)*: το
+ * Π2 **διαβάζει** πλέον τη βιτρίνα πριν αποφασίσει, άρα ένα δείγμα με πεδία που ο
+ * γραφέας δεν γράφει θα δοκίμαζε **κόσμο που δεν υπάρχει**.
+ */
+const PROFILE = storedShowcaseDoc({
   companyId: COMPANY,
   alias: 'mesitiko-pagoni',
   displayName: 'ΜΕΣΙΤΙΚΟ ΓΡΑΦΕΙΟ ΠΑΓΩΝΗ Ι.Κ.Ε.',
-  gemiNumber: '123456789000',
-  place: null,
   publishedAt: '2026-08-20T10:00:00.000Z',
-};
+});
+
+/** Η **μη ρυθμιζόμενη** βιτρίνα — ο υδραυλικός που δουλεύει στο ίδιο γραφείο. */
+const PLUMBER_PROFILE = storedShowcaseDoc({
+  companyId: COMPANY,
+  alias: 'mesitiko-pagoni',
+  displayName: 'ΠΑΓΩΝΗΣ Ι.Κ.Ε.',
+  publishedAt: '2026-08-20T10:00:00.000Z',
+  credentials: [
+    {
+      standing: 'self-declared',
+      occupation: {
+        escoUri: 'http://data.europa.eu/esco/occupation/plumber-fixture',
+        label: { el: 'υδραυλικός', en: 'plumber' },
+        iscoCode: '7126',
+      },
+      attestation: { state: 'unknown' },
+    },
+  ],
+});
 
 const DECLARATION: BrokerageDeclaration = {
   gemiNumber: '123456789000',
@@ -130,6 +155,33 @@ function withBrokenProfileDelete(fake: FakeFirestore): AdminFirestore {
             ...collection.doc(id),
             get: () => collection.doc(id).get(),
             delete: () => Promise.reject(new Error('UNAVAILABLE')),
+          }),
+        };
+      };
+    },
+  }) as unknown as AdminFirestore;
+}
+
+/**
+ * Βάση όπου **η ΑΝΑΓΝΩΣΗ της βιτρίνας αποτυγχάνει**, και μόνο αυτή.
+ *
+ * 🔴 Αδελφή του {@link withBrokenProfileDelete}, και **όχι** αντίγραφό της: το Π2
+ * κάνει πλέον **δύο** πράξεις στη συλλογή *(διαβάζει, μετά ίσως σβήνει)*, και οι
+ * δύο βλάβες έχουν **διαφορετικό νόημα**. Μία στοχευμένη βλάβη «σε ό,τι αγγίζει
+ * τη συλλογή» θα ήταν πράσινη για **λάθος λόγο**.
+ */
+function withBrokenProfileRead(fake: FakeFirestore): AdminFirestore {
+  return new Proxy(fake, {
+    get(target, property, receiver) {
+      if (property !== 'collection') return Reflect.get(target, property, receiver);
+      return (name: string) => {
+        const collection = target.collection(name);
+        if (name !== COLLECTIONS.AGENCY_PROFILES) return collection;
+        return {
+          doc: (id: string) => ({
+            ...collection.doc(id),
+            get: () => Promise.reject(new Error('UNAVAILABLE')),
+            delete: () => collection.doc(id).delete(),
           }),
         };
       };
@@ -237,6 +289,71 @@ describe('Ρ — «active που παύει ⇒ το προφίλ παύει ν�
 
     expect(result.kind).toBe('applied');
     expect(await statusOf(fake)).toBe('revoked');
+  });
+
+  it('🔴 Ρ6 — Ε8: Η ΑΝΑΚΛΗΣΗ ΜΕΣΙΤΕΙΑΣ ΔΕΝ ΕΞΑΦΑΝΙΖΕΙ ΤΟΝ ΥΔΡΑΥΛΙΚΟ', async () => {
+    // ────────────────────────────────────────────────────────────────────────
+    // 🔴 ADR-841 Φ6-Β3 — ΤΟ Π2 ΕΓΙΝΕ ΠΑΡΑΛΛΑΓΗΣ-ΣΥΝΕΙΔΗΤΟ
+    //
+    // Όσο ο κατάλογος είχε **μόνο** μεσιτικά γραφεία, το *«ανάκληση ⇒ διαγραφή»*
+    // ήταν ταυτολογία. Με κατάλογο **επαγγελματιών** η ίδια γραμμή σβήνει
+    // προβολή που **καμία αρχή δεν απαγόρευσε** — η απουσία μητρώου γινόμενη
+    // **ποινή** (Α9.3).
+    // ────────────────────────────────────────────────────────────────────────
+    const fake = new FakeFirestore();
+    fake.seed(COLLECTIONS.COMPANIES, COMPANY, {
+      name: 'ΠΑΓΩΝΗΣ Ι.Κ.Ε.',
+      capabilities: capabilities('active'),
+    });
+    fake.seed(COLLECTIONS.AGENCY_PROFILES, COMPANY, { ...PLUMBER_PROFILE });
+
+    const result = await revokeBrokerage(
+      fake as unknown as AdminFirestore,
+      COMPANY,
+      SUPER_ADMIN,
+      REASON,
+    );
+
+    // Η **μετάβαση** εφαρμόζεται κανονικά…
+    expect(result.kind).toBe('applied');
+    expect(await statusOf(fake)).toBe('revoked');
+    // …και η **βιτρίνα μένει**. Δεν του πήρε τίποτα καμία αρχή.
+    expect(await profileExists(fake)).toBe(true);
+  });
+
+  it('🔴 Ρ6α — Ο ΠΑΡΟΝΟΜΑΣΤΗΣ ΤΟΥ Ρ6: η ΡΥΘΜΙΖΟΜΕΝΗ βιτρίνα ΟΝΤΩΣ σβήνει', async () => {
+    // 🔑 Χωρίς αυτό, το Ρ6 θα ήταν πράσινο και σε κόσμο όπου το Π2 **δεν σβήνει
+    //    ποτέ τίποτα** — δηλαδή ο ανακληθείς μεσίτης θα συνέχιζε να διαφημίζεται
+    //    με ανύπαρκτη άδεια, ακριβώς η βλάβη που το Π2 υπάρχει να κλείσει.
+    const { fake, admin } = harness('active', true);
+
+    const result = await revokeBrokerage(admin, COMPANY, SUPER_ADMIN, REASON);
+
+    expect(result.kind).toBe('applied');
+    expect(await profileExists(fake)).toBe(false);
+  });
+
+  it('🔴 Ρ7 — ΑΓΝΩΣΤΟ ≠ ΚΕΝΟ: βλάβη ΑΝΑΓΝΩΣΗΣ της βιτρίνας ΜΑΤΑΙΩΝΕΙ τη μετάβαση', async () => {
+    // ⚠️ *«Δεν μπόρεσα να διαβάσω»* **δεν** είναι *«δεν έχει ρυθμιζόμενο
+    //    credential»*. Η σιωπηλή δεύτερη ανάγνωση θα άφηνε ανακληθέν μεσιτικό
+    //    γραφείο στον κατάλογο — **και** θα κατέγραφε τη μετάβαση ως επιτυχή.
+    const fake = new FakeFirestore();
+    fake.seed(COLLECTIONS.COMPANIES, COMPANY, {
+      name: 'ΠΑΓΩΝΗΣ Ι.Κ.Ε.',
+      capabilities: capabilities('active'),
+    });
+    fake.seed(COLLECTIONS.AGENCY_PROFILES, COMPANY, { ...PROFILE });
+
+    const result = await revokeBrokerage(
+      withBrokenProfileRead(fake),
+      COMPANY,
+      SUPER_ADMIN,
+      REASON,
+    );
+
+    expect(result.kind).toBe('failed');
+    // Η κατάσταση **μένει ως είχε** — ο υπερδιαχειριστής ξαναπατά.
+    expect(await statusOf(fake)).toBe('active');
   });
 });
 

@@ -12,19 +12,10 @@
  */
 
 import { orderAgencies, compareAgencies } from '../agency-directory-order';
-import type { AgencyProfile } from '@/types/agency-profile';
-
-function profile(overrides: Partial<AgencyProfile>): AgencyProfile {
-  return {
-    companyId: 'comp_00000000-0000-4000-8000-000000000000',
-    alias: 'a',
-    displayName: 'Α',
-    gemiNumber: '000000000000',
-    place: null,
-    publishedAt: '2026-01-01T00:00:00.000Z',
-    ...overrides,
-  };
-}
+import type { PublicShowcase } from '@/types/agency-profile';
+// 🔑 N.18 — ΕΝΑ δείγμα, τρεις σουίτες. Ήταν τρία αντίγραφα και έσπασαν όλα μαζί
+//    όταν το `gemiNumber` γενικεύτηκε σε `credentials[]` (ADR-841 Φ6-Β).
+import { showcaseFixture as profile } from '../__fixtures__/showcase-fixture';
 
 describe('Κ. Η σειρά είναι ΟΛΙΚΗ, όχι απλώς αλφαβητική', () => {
   it('Κ1 — ταξινομεί κατά επωνυμία με ελληνικό collation', () => {
@@ -119,10 +110,19 @@ describe('Α. Antitrust — καμία εμπορική είσοδος (ADR-827 
     // 🔴 Η ΔΟΜΙΚΗ ΑΠΟΔΕΙΞΗ: κάθε ΑΛΛΟ πεδίο γίνεται παγίδα. Αν κάποιος προσθέσει
     //    ποτέ κριτήριο («πρώτα τα πρόσφατα», «πρώτα όσα έχουν τόπο»), η ανάγνωση
     //    πυροδοτεί ΕΔΩ — πριν φτάσει σε κατάταξη επί πληρωμή.
-    const forbidden: (keyof AgencyProfile)[] = ['alias', 'gemiNumber', 'place', 'publishedAt'];
+    const forbidden: (keyof PublicShowcase)[] = [
+      'alias',
+      // 🔴 Φ6-Β: ΝΕΑ ΠΑΓΙΔΑ. Το `credentials` κουβαλά πλέον την ΕΙΔΙΚΟΤΗΤΑ και την
+      //    ΑΠΟΔΕΙΞΗ — δηλαδή ό,τι θα ήθελε κανείς για «πρώτα οι επαληθευμένοι».
+      //    Αν ο συγκριτής το αγγίξει ποτέ, πυροδοτεί ΕΔΩ.
+      'credentials',
+      'place',
+      'position',
+      'publishedAt',
+    ];
     const touched: string[] = [];
 
-    const trap = (companyId: string, displayName: string): AgencyProfile => {
+    const trap = (companyId: string, displayName: string): PublicShowcase => {
       const base = profile({ companyId, displayName });
       const guarded = { ...base };
       for (const field of forbidden) {

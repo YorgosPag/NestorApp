@@ -54,9 +54,35 @@ import routeSlice from '@/i18n/generated/routes/profile.el.json';
 import { registerRouteSlice } from '@/i18n/route-slice';
 
 import { ProfilePageContent } from '@/components/account/pages/ProfilePageContent';
+import { ShowcaseDoor } from '@/components/account/ShowcaseDoor';
 
 registerRouteSlice(routeSlice);
 
+/**
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🏆 ADR-841 Φ6-Β6 — Η ΠΟΡΤΑ ΤΗΣ ΒΙΤΡΙΝΑΣ ΜΠΑΙΝΕΙ **ΕΔΩ**, ΚΑΙ Η ΘΕΣΗ ΤΗΣ ΕΙΝΑΙ
+ *    Ο ΦΡΟΥΡΟΣ ΤΗΣ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Το αρχείο αυτό γεννήθηκε ως *«όριο διαδρομής»* — και αυτό ακριβώς το κάνει τη
+ * σωστή θέση για την πόρτα. Το {@link ProfilePageContent} το σερβίρουν **ΔΥΟ**
+ * διευθύνσεις· η δεύτερη *(`/o/<ψευδώνυμο>/account/profile`)* ανήκει σε άνθρωπο
+ * που είναι **ήδη μέσα σε χώρο**, και μια πρόταση *«θέλω να με βρίσκουν»* εκεί
+ * θα τον έστελνε να φτιάξει **δεύτερο**.
+ *
+ * ⇒ Η πόρτα ζει στο **όριο της μίας διαδρομής**, όχι μέσα στην κοινή οθόνη:
+ * κανένα runtime `if` δεν χρειάζεται, άρα **κανένα δεν μπορεί να ξεχαστεί**.
+ * Το `ProfilePageContent` μένει **ανέγγιχτο**.
+ *
+ * ⚠️ **Η σειρά είναι απόφαση**: η πόρτα μπαίνει **μετά** την οθόνη λογαριασμού.
+ * Ο άνθρωπος ήρθε εδώ για το προφίλ του· η βιτρίνα είναι **προσφορά**, όχι το
+ * ζητούμενο, και μια προσφορά πάνω από το ζητούμενο είναι διαφήμιση.
+ */
 export function PrivateProfileContent(): React.ReactElement {
-  return <ProfilePageContent />;
+  return (
+    <>
+      <ProfilePageContent />
+      <ShowcaseDoor />
+    </>
+  );
 }

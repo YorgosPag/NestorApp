@@ -37,9 +37,26 @@ export const SHOWCASE_KEYS = {
   nameLabel: `${K}.nameLabel`,
   nameHint: `${K}.nameHint`,
   namePlaceholder: `${K}.namePlaceholder`,
-  gemiLabel: `${K}.gemiLabel`,
-  gemiHint: `${K}.gemiHint`,
-  gemiPlaceholder: `${K}.gemiPlaceholder`,
+  // ── Η ΕΙΔΙΚΟΤΗΤΑ (Φ6-Β4) ─────────────────────────────────────────────────
+  occupationLabel: `${K}.occupationLabel`,
+  occupationHint: `${K}.occupationHint`,
+  occupationPlaceholder: `${K}.occupationPlaceholder`,
+  /** ⚠️ Ελεύθερο κείμενο **δεν** είναι ταξινομημένη ειδικότητα — το λέμε ρητά. */
+  occupationUnclassified: `${K}.occupationUnclassified`,
+  addOccupation: `${K}.addOccupation`,
+  removeOccupation: `${K}.removeOccupation`,
+  // ── ΤΟ ΜΗΤΡΩΟ, ΚΑΤΑ ΕΤΥΜΗΓΟΡΙΑ ───────────────────────────────────────────
+  /** Η **αρχή** δεν επιλέγεται — ονομάζεται. Το `{{authority}}` έρχεται από τον πίνακα. */
+  registryLabel: `${K}.registryLabel`,
+  registryHint: `${K}.registryHint`,
+  registryPlaceholder: `${K}.registryPlaceholder`,
+  chapterLabel: `${K}.chapterLabel`,
+  chapterHint: `${K}.chapterHint`,
+  chapterPlaceholder: `${K}.chapterPlaceholder`,
+  /** 🔑 *«Δεν τηρείται μητρώο. **Δεν σου λείπει τίποτα.**»* — Α9.3, όχι σιωπή. */
+  registryNone: `${K}.registryNone`,
+  /** 🔑 *«Δεν **έχουμε εξετάσει**…»* — υποκείμενο **εμείς**, ποτέ ο άνθρωπος. */
+  registryUnexamined: `${K}.registryUnexamined`,
   placeLabel: `${K}.placeLabel`,
   placeHint: `${K}.placeHint`,
   noChannel: `${K}.noChannel`,
@@ -53,6 +70,12 @@ export const SHOWCASE_KEYS = {
   statusPublished: `${K}.statusPublished`,
   statusNotPublished: `${K}.statusNotPublished`,
   notAllowed: `${K}.notAllowed`,
+  /** Το URI δεν βρέθηκε στην ταξινομία ⇒ *«διάλεξε ξανά»*. */
+  occupationUnknown: `${K}.occupationUnknown`,
+  /** 🔴 *«Δεν μπορέσαμε να ρωτήσουμε»* ⇒ **ξαναδοκίμασε**, ΠΟΤΕ «διόρθωσε». */
+  temporarilyUnavailable: `${K}.temporarilyUnavailable`,
+  /** Ο δεσμός δεν δείχνει σε τόπο που υπάρχει. */
+  placeNotFound: `${K}.placeNotFound`,
   failed: `${K}.failed`,
 } as const;
 
@@ -64,5 +87,7 @@ export const SHOWCASE_KEYS = {
 export const SHOWCASE_REJECTION_KEYS: Record<AgencyProfileRejection, string> = {
   'agency-profile-alias-missing': `${K}.rejection.agency-profile-alias-missing`,
   'agency-profile-name-missing': `${K}.rejection.agency-profile-name-missing`,
-  'agency-profile-gemi-missing': `${K}.rejection.agency-profile-gemi-missing`,
+  'agency-profile-occupation-missing': `${K}.rejection.agency-profile-occupation-missing`,
+  'agency-profile-registration-missing': `${K}.rejection.agency-profile-registration-missing`,
+  'agency-profile-chapter-missing': `${K}.rejection.agency-profile-chapter-missing`,
 };

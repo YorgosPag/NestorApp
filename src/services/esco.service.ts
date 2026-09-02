@@ -62,6 +62,7 @@ import { searchEscoByTokens, clearEscoSearchCache } from '@/lib/esco/token-searc
 
 // SSoT: Collection name from centralized config
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { escoDocIdOf } from '@/lib/esco/esco-uri';
 const ESCO_COLLECTION = COLLECTIONS.ESCO_CACHE;
 
 /** Μέγιστα αποτελέσματα ανά ερώτημα. */
@@ -141,10 +142,12 @@ export class EscoService {
     if (!uri) return null;
 
     try {
-      const match = uri.match(/\/([a-f0-9-]+)$/i);
-      if (!match) return null;
+      // 🔑 Η ανάλυση ζει στο `lib/esco/esco-uri` — ο **διακομιστής** κάνει την ίδια
+      //    (ADR-841 Φ6-Β). Δύο regex θα ήταν δύο απαντήσεις στο ίδιο ερώτημα.
+      const docId = escoDocIdOf(uri);
+      if (docId === null) return null;
 
-      const docSnap = await getDoc(doc(db, ESCO_COLLECTION, match[1]));
+      const docSnap = await getDoc(doc(db, ESCO_COLLECTION, docId));
       if (!docSnap.exists()) return null;
 
       return EscoService.mapOccupation(docSnap.data() as EscoOccupationDocument);

@@ -10,6 +10,7 @@
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+import { storedShowcaseDoc } from '@/lib/agency/__fixtures__/showcase-fixture';
 import { submitMandateRequest } from '@/services/mandate/mandate-request.service';
 import type { MandateRequestDeclaration } from '@/services/mandate/mandate-request-vocabulary';
 import { EXCLUSIVE_AGENCY, OPEN_LISTING } from '@/types/listing-agreement';
@@ -116,12 +117,20 @@ function world(overrides: {
   }
 
   if (overrides.agencyPublished !== false) {
-    fake.seed(COLLECTIONS.AGENCY_PROFILES, AGENCY, {
-      companyId: AGENCY,
-      displayName: 'Δοκιμαστικό Μεσιτικό Γραφείο',
-      gemiNumber: '123456789000',
-      publishedAt: '2026-08-01T00:00:00.000Z',
-    });
+    // 🔑 Το **αποθηκευμένο** σχήμα, από το κοινό δείγμα — ποτέ χειρόγραφο (N.18).
+    //    Η χειρόγραφη εκδοχή του δεν είχε `alias`, και ήταν πράσινη μόνο επειδή
+    //    ο αναγνώστης ήταν `as AgencyProfile`: δηλαδή δοκίμαζε γραφείο **που ο
+    //    γραφέας δεν μπορεί να γράψει**. Ο φρουρός του Φ6-Β το ονόμασε.
+    fake.seed(
+      COLLECTIONS.AGENCY_PROFILES,
+      AGENCY,
+      storedShowcaseDoc({
+        companyId: AGENCY,
+        alias: 'dokimastiko-grafeio',
+        displayName: 'Δοκιμαστικό Μεσιτικό Γραφείο',
+        publishedAt: '2026-08-01T00:00:00.000Z',
+      }),
+    );
   }
 
   (overrides.history ?? []).forEach((request, index) => {

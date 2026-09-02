@@ -15,11 +15,14 @@
  * `{...A, ...B}` βγήκαν *«unresolved dynamic t()»*.
  */
 
+import type { CredibilityNote } from '@/lib/professional/professional-credibility';
+
 /** Το namespace — **`property-market`**, το ίδιο με τη βιτρίνα και τις αγγελίες. */
 export const AGENCY_PUBLIC_NS = 'property-market';
 
 const D = 'property-market:mandate.directory';
 const P = 'property-market:mandate.profile';
+const C = 'property-market:mandate.credibility';
 
 /** Ο κατάλογος — `/pro`. */
 export const DIRECTORY_KEYS = {
@@ -28,11 +31,63 @@ export const DIRECTORY_KEYS = {
   loading: `${D}.loading`,
   empty: `${D}.empty`,
   emptyHint: `${D}.emptyHint`,
+  emptyAfterFilter: `${D}.emptyAfterFilter`,
+  emptyAfterFilterHint: `${D}.emptyAfterFilterHint`,
   failed: `${D}.failed`,
   count: `${D}.count`,
+  countFiltered: `${D}.countFiltered`,
+  clearFilters: `${D}.clearFilters`,
+  occupationFilterLabel: `${D}.occupationFilterLabel`,
+  occupationAll: `${D}.occupationAll`,
+  placeFilterLabel: `${D}.placeFilterLabel`,
+  placeAll: `${D}.placeAll`,
+  radiusLabel: `${D}.radiusLabel`,
+  /** ⚠️ **Η ΜΟΝΑΔΑ ΖΕΙ ΣΤΟ ΚΕΙΜΕΝΟ** («{km} χλμ»), όχι στον αριθμό: ένας αριθμός
+   *  με κρυμμένη μονάδα είναι το σχήμα που ονομάζει το ADR-716. */
+  radiusOption: `${D}.radiusOption`,
   gemi: `${D}.gemi`,
   open: `${D}.open`,
 } as const;
+
+// =============================================================================
+// Η ΑΞΙΟΠΙΣΤΙΑ — ΚΟΙΝΗ στην κάρτα και στη βιτρίνα (ADR-841 Φ6-Β)
+// =============================================================================
+
+/**
+ * ⚠️ **Μπαίνει ΕΔΩ και όχι στο `agency-showcase-labels.ts`** — και είναι ο ίδιος
+ * λόγος που τα δύο αρχεία είναι χωριστά: η αξιοπιστία είναι **δημόσια ανάγνωση**,
+ * και την καταναλώνουν **και οι δύο** δημόσιες οθόνες *(κάρτα καταλόγου + βιτρίνα)*.
+ * Η οθόνη **του γραφείου** δεν τη δείχνει ποτέ — εκείνη **ζητά** τον αριθμό.
+ */
+export const CREDIBILITY_KEYS = {
+  occupationLabel: `${C}.occupationLabel`,
+  claimNational: `${C}.claim.national`,
+  claimChapter: `${C}.claim.chapter`,
+  claimDeclared: `${C}.claim.declared`,
+  claimVerified: `${C}.claim.verified`,
+} as const;
+
+/**
+ * 🔑 **Πίνακας σταθερός στο ΙΔΙΟ module** — ο τεμαχιστής του CHECK 3.34 επιλύει
+ * `t(TABLE[x])` **μόνο** έτσι. Ένα ``t(`${C}.note.${note.kind}`)`` θα έβγαινε
+ * *«unresolved dynamic t()»* και το κλειδί θα ήταν **αόρατο** στο CHECK 3.8.
+ *
+ * 🔒 Και ο `Record<…>` είναι **ολικός**: ένα **έβδομο** σημείωμα **δεν
+ * μεταγλωττίζεται** μέχρι να αποκτήσει κείμενο — ίδιο ιδίωμα με το
+ * `REGISTRY_AUTHORITY_PRESENTATION`.
+ *
+ * ⚠️ **Ο τύπος πιάνει το κλειδί που λείπει· ΔΕΝ πιάνει δύο κλειδιά με το ΙΔΙΟ
+ * κείμενο.** Εκείνο το πιάνει μόνο η άγκυρα της οθόνης, που διαβάζει τα
+ * **επιλυμένα** κείμενα από το locale JSON.
+ */
+export const CREDIBILITY_NOTE_KEYS: Record<CredibilityNote['kind'], string> = {
+  'registry-exists-undeclared': `${C}.note.registryExistsUndeclared`,
+  'registry-absent-by-nature': `${C}.note.registryAbsentByNature`,
+  'registry-unexamined': `${C}.note.registryUnexamined`,
+  'authority-mismatch': `${C}.note.authorityMismatch`,
+  'registry-absent-yet-declared': `${C}.note.registryAbsentYetDeclared`,
+  'classification-unreadable': `${C}.note.classificationUnreadable`,
+};
 
 /** Η μία βιτρίνα — `/pro/<ψευδώνυμο>`. */
 export const PROFILE_KEYS = {

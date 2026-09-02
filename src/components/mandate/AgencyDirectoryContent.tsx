@@ -50,9 +50,24 @@ import { Link } from '@/lib/workspace/navigation';
 import { ShellSurface } from '@/core/containers/ShellSurface';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { usePublicAgencies } from '@/services/realtime/hooks/usePublicAgencies';
-import type { AgencyProfile } from '@/types/agency-profile';
+import type { PublicShowcase } from '@/types/agency-profile';
+import { CredibilityStatement } from './CredibilityStatement';
 
 import { AGENCY_PUBLIC_NS, DIRECTORY_KEYS } from './agency-directory-labels';
+import { AgencyDirectoryFilters } from './AgencyDirectoryFilters';
+import {
+  EMPTY_SHOWCASE_FILTERS,
+  applyShowcaseFilters,
+  hasActiveFilters,
+  occupationOptions,
+  parseShowcaseFilters,
+  serializeShowcaseFilters,
+  type ShowcaseFilters,
+} from '@/lib/agency/showcase-filter';
+// 🔴 **Ο ROUTER ΑΠΟ ΤΟ ΣΥΝΟΡΟ** (CHECK 3.61) — το `useSearchParams` δεν ζει εκεί
+//    και έρχεται ωμό, όπως και στην αδελφή δημόσια οθόνη `ListingDetailContent`.
+import { useSearchParams } from 'next/navigation';
+import { useRouter } from '@/lib/workspace/navigation';
 
 // 🔴 ADR-744 §18 — Η ΔΗΛΩΣΗ ΔΕΝ ΕΙΝΑΙ ΠΑΡΑΔΟΣΗ. Το route slice έχει δήλωση,
 // artifact και υπογραφή στο manifest — και **δεν φορτώνεται ποτέ** χωρίς αυτές τις
@@ -63,13 +78,13 @@ import { AGENCY_PUBLIC_NS, DIRECTORY_KEYS } from './agency-directory-labels';
 import routeSlice from '@/i18n/generated/routes/pro.el.json';
 import { registerRouteSlice } from '@/i18n/route-slice';
 // ADR-827 §9.15 — η δημόσια διεύθυνση ζει σε ουδέτερο module: τη ρωτά και ο διακομιστής.
-import { agencyProfileRoute } from './agency-directory-route';
+import { agencyDirectoryHref, agencyProfileRoute } from './agency-directory-route';
 
 registerRouteSlice(routeSlice);
 
 
 
-function AgencyCard({ profile }: { readonly profile: AgencyProfile }): React.JSX.Element {
+function AgencyCard({ profile }: { readonly profile: PublicShowcase }): React.JSX.Element {
   const { t } = useTranslation([AGENCY_PUBLIC_NS]);
 
   return (
@@ -77,14 +92,23 @@ function AgencyCard({ profile }: { readonly profile: AgencyProfile }): React.JSX
       <article className="flex flex-col gap-1">
         <h2 className="m-0 text-lg font-semibold text-foreground">{profile.displayName}</h2>
         {/*
-          ⚠️ Ο ΓΕΜΗ δεν είναι διακόσμηση: είναι **η απόδειξη ότι ο μεσίτης είναι
-          υπαρκτός και αδειοδοτημένος** (§9.9 β) — δηλαδή το μόνο που κάνει τον
-          κατάλογο χρήσιμο αντί για επικίνδυνο. Γι' αυτό είναι στην **κάρτα**, όχι
-          κρυμμένος μέσα στη σελίδα προφίλ.
+          ⚠️ Η ΑΠΟΔΕΙΞΗ δεν είναι διακόσμηση: είναι **αυτό που κάνει τον κατάλογο
+          χρήσιμο αντί για επικίνδυνο** (§9.9 β). Γι' αυτό είναι στην **κάρτα**,
+          όχι κρυμμένη μέσα στη σελίδα προφίλ.
+
+          🔴 ADR-841 Φ6-Β — ΗΤΑΝ ΜΙΑ ΓΡΑΜΜΗ «ΓΕΜΗ {number}», ΚΑΙ ΔΕΝ ΑΡΚΕΙ ΠΙΑ.
+          Με **πέντε** επαγγέλματα στον ίδιο πίνακα, ο σκέτος αριθμός δεν λέει
+          **ποιος τον εξέδωσε** *(Α9.1)*, και η απουσία του δεν λέει **γιατί
+          λείπει** — ο ελαιοχρωματιστής δεν έχει πού να γραφτεί, ο δικηγόρος που
+          σιωπά έχει. Δύο γραμμές, δύο ερωτήματα, ποτέ μία πρόταση.
+
+          ⚠️ **ΚΑΘΕ credential αποδίδεται**: το μικτό γραφείο *(μεσιτική άδεια ΚΑΙ
+          τεχνική ιδιότητα)* δείχνει **και τα δύο**. Ένα `credentials[0]` θα
+          έκρυβε τη μισή του ταυτότητα.
         */}
-        <p className="m-0 text-sm text-muted-foreground">
-          {t(DIRECTORY_KEYS.gemi, { number: profile.gemiNumber })}
-        </p>
+        {profile.credentials.map((credential) => (
+          <CredibilityStatement key={credential.occupation.escoUri} credential={credential} />
+        ))}
         <Link
           href={agencyProfileRoute(profile.alias)}
           className="mt-2 self-start text-sm font-medium text-foreground underline underline-offset-4"
@@ -97,8 +121,44 @@ function AgencyCard({ profile }: { readonly profile: AgencyProfile }): React.JSX
 }
 
 export function AgencyDirectoryContent(): React.JSX.Element {
-  const { t } = useTranslation([AGENCY_PUBLIC_NS]);
+  const { t, i18n } = useTranslation([AGENCY_PUBLIC_NS]);
   const { agencies, loading, error } = usePublicAgencies();
+
+  // 🔴 **`useSearchParams` ΕΔΩ, ΠΟΤΕ ΣΤΟ `page.tsx`** (ADR-744): τα Server και
+  //    Client δέντρα έχουν **ξεχωριστούς** γράφους module — μια ανάγνωση από
+  //    εκεί θα ζητούσε **άλλο** στιγμιότυπο, και το route slice δεν εγγράφεται.
+  //    Το όριο `<Suspense>` που απαιτεί η CHECK 3.55 ζει στο `page.tsx`.
+  const params = useSearchParams();
+  const router = useRouter();
+
+  const locale: 'el' | 'en' = i18n.language === 'el' ? 'el' : 'en';
+  const filters = React.useMemo(
+    () => parseShowcaseFilters(new URLSearchParams(params.toString())),
+    [params],
+  );
+
+  // 🔑 **Η ΔΙΕΥΘΥΝΣΗ ΕΙΝΑΙ Η ΚΑΤΑΣΤΑΣΗ.** Καμία δεύτερη πηγή: ένα `useState`
+  //    δίπλα στη διεύθυνση θα ήταν δύο απαντήσεις στο *«τι φιλτράρει τώρα;»*,
+  //    και η μία θα επιβίωνε του «πίσω» ενώ η άλλη όχι.
+  const apply = React.useCallback(
+    (next: ShowcaseFilters): void => {
+      // ⚠️ **`replace`, ΟΧΙ `push`**: η αλλαγή φίλτρου δεν είναι πλοήγηση. Με
+      //    `push`, το «πίσω» θα ξετύλιγε κάθε πάτημα του επισκέπτη αντί να τον
+      //    βγάλει από τον κατάλογο.
+      router.replace(agencyDirectoryHref(serializeShowcaseFilters(next).toString()), {
+        scroll: false,
+      });
+    },
+    [router],
+  );
+
+  // 🔴 **Φ3 — ΤΟ ΦΙΛΤΡΑΡΙΣΜΕΝΟ ΕΙΝΑΙ ΥΠΑΚΟΛΟΥΘΙΑ ΤΟΥ ΤΑΞΙΝΟΜΗΜΕΝΟΥ.** Ο
+  //    `usePublicAgencies` έχει **ήδη** ταξινομήσει· εδώ **μόνο** αφαιρούμε.
+  //    Καμία «συνάφεια», κανένα «best match» — η σειρά δεν αλλάζει ποτέ επειδή
+  //    κάποιος φιλτράρισε.
+  const visible = React.useMemo(() => applyShowcaseFilters(agencies, filters), [agencies, filters]);
+  const options = React.useMemo(() => occupationOptions(agencies, locale), [agencies, locale]);
+  const filtering = hasActiveFilters(filters);
 
   return (
     <ShellSurface as="main" measure="wide" className="gap-6">
@@ -111,6 +171,18 @@ export function AgencyDirectoryContent(): React.JSX.Element {
         */}
         <p className="m-0 text-muted-foreground">{t(DIRECTORY_KEYS.lead)}</p>
       </header>
+
+      {/* ⚠️ Τα χειριστήρια εμφανίζονται **μόνο όταν υπάρχει πληθυσμός**: επιλογές
+          πάνω σε άδειο κατάλογο θα υπόσχονταν κόσμο που δεν υπάρχει. */}
+      {!loading && error === null && agencies.length > 0 && (
+        <AgencyDirectoryFilters
+          filters={filters}
+          options={options}
+          locale={locale}
+          onChange={apply}
+          onClear={filtering ? () => apply(EMPTY_SHOWCASE_FILTERS) : null}
+        />
+      )}
 
       {loading ? (
         <p className="m-0 text-sm text-muted-foreground">{t(DIRECTORY_KEYS.loading)}</p>
@@ -127,13 +199,34 @@ export function AgencyDirectoryContent(): React.JSX.Element {
           <p className="m-0 text-sm text-foreground">{t(DIRECTORY_KEYS.empty)}</p>
           <p className="m-0 text-sm text-muted-foreground">{t(DIRECTORY_KEYS.emptyHint)}</p>
         </section>
+      ) : visible.length === 0 ? (
+        // 🔴 **«ΚΑΝΕΙΣ ΔΕΝ ΔΗΜΟΣΙΕΥΣΕ» ≠ «ΚΑΝΕΙΣ ΜΕ ΑΥΤΑ ΤΑ ΚΡΙΤΗΡΙΑ»** (N.12).
+        //    Ισοπεδωμένα, ο επισκέπτης που φιλτράρισε θα συμπέραινε ότι ο
+        //    κατάλογος είναι **άδειος** και θα έφευγε — ενώ φταίει η επιλογή του,
+        //    και η θεραπεία είναι **ένα πάτημα** μακριά.
+        <section className="flex flex-col gap-2 rounded-md border border-dashed border-border bg-muted/40 p-4">
+          <p className="m-0 text-sm text-foreground">{t(DIRECTORY_KEYS.emptyAfterFilter)}</p>
+          <p className="m-0 text-sm text-muted-foreground">
+            {t(DIRECTORY_KEYS.emptyAfterFilterHint)}
+          </p>
+        </section>
       ) : (
         <section className="flex flex-col gap-3">
           <p className="m-0 text-sm text-muted-foreground">
-            {t(DIRECTORY_KEYS.count, { count: agencies.length })}
+            {/* 🔑 **Φ4 — «7 από 34», ποτέ σκέτο «7».** Ο αριθμός που λείπει είναι
+                ο **παρονομαστής**: χωρίς αυτόν ο επισκέπτης δεν ξέρει ότι
+                αφαίρεσε κάτι, και το φίλτρο γίνεται αόρατος περιορισμός. */}
+            {filtering
+              ? t(DIRECTORY_KEYS.countFiltered, {
+                  // ⚠️ **`shown`, ΟΧΙ `count`** — τα ονόματα των παραμέτρων ζουν στο
+                  //    locale, και ένα λάθος όνομα ζωγραφίζει **ωμό `{shown}`**.
+                  shown: visible.length,
+                  total: agencies.length,
+                })
+              : t(DIRECTORY_KEYS.count, { count: agencies.length })}
           </p>
           <ul className="m-0 flex list-none flex-col gap-3 p-0">
-            {agencies.map((profile) => (
+            {visible.map((profile) => (
               <AgencyCard key={profile.companyId} profile={profile} />
             ))}
           </ul>
