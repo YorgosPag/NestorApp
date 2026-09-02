@@ -980,9 +980,10 @@
     },
     "property-features-enterprise": {
       "ssotFile": "src/constants/property-features-enterprise.ts",
-      "description": "Property feature enums (Orientation, ViewType, etc) must import from @/constants/property-features-enterprise",
+      "description": "Property feature enums (Orientation, ViewType, etc) must import from @/constants/property-features-enterprise. ADR-842 A4: an *_OPTIONS list must be a VIEW of the vocabulary ([...X]), never a hand-written array of string literals — the type X[] accepts a SUBSET, so a re-typed list silently drops values from every dropdown with zero compile error.",
       "forbiddenPatterns": [
-        "(ORIENTATION_LABELS|VIEW_TYPE_LABELS|ENERGY_CLASS_LABELS|ENERGY_CLASS_COLORS)\\s*(=|:)\\s*(\\{|Record)"
+        "(ORIENTATION_LABELS|VIEW_TYPE_LABELS|ENERGY_CLASS_LABELS|ENERGY_CLASS_COLORS)\\s*(=|:)\\s*(\\{|Record)",
+        "(ORIENTATION|CONDITION|ENERGY_CLASS|HEATING|COOLING|FLOORING|FRAME|GLAZING|INTERIOR_FEATURE|SECURITY_FEATURE)_OPTIONS[^=\\n]*=\\s*\\[\\s*['\"]"
       ],
       "allowlist": [
         "src/constants/property-features-enterprise.ts",

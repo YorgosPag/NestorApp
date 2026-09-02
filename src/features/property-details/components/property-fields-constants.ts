@@ -24,48 +24,55 @@ import type {
   InteriorFeatureCodeType,
   SecurityFeatureCodeType,
 } from '@/constants/property-features-enterprise';
+// ADR-842 Α4 — η αυθεντία του λεξιλογίου· οι λίστες παρακάτω είναι **όψη** του.
+import {
+  ORIENTATIONS,
+  ENERGY_CLASSES,
+  INTERIOR_FEATURES,
+  SECURITY_FEATURES,
+  CONDITIONS,
+  HEATING_TYPES,
+  COOLING_TYPES,
+  FLOORINGS,
+  FRAMES,
+  GLAZINGS,
+} from '@/constants/property-features-enterprise';
 
-export const ORIENTATION_OPTIONS: OrientationType[] = [
-  'north', 'northeast', 'east', 'southeast',
-  'south', 'southwest', 'west', 'northwest',
-];
+/**
+ * 🔴 **ΔΕΝ ΕΙΝΑΙ ΠΙΑ ΛΙΣΤΕΣ — ΕΙΝΑΙ ΟΨΗ ΤΟΥ ΛΕΞΙΛΟΓΙΟΥ** *(ADR-842 Α4, 2026-09-02)*.
+ *
+ * Μέχρι σήμερα οι δέκα λίστες παρακάτω απαριθμούσαν **με το χέρι** τις ίδιες τιμές που
+ * δηλώνει το `constants/property-features-enterprise.ts` — δεύτερος τόπος για το ίδιο
+ * λεξιλόγιο. Μετρήθηκε ότι συμφωνούσαν **10 στα 10**· αυτό ήταν τύχη, όχι δομή: ο τύπος
+ * `XType[]` δέχεται **υποσύνολο**, άρα νέα τιμή στο λεξιλόγιο **δεν** έφτανε ποτέ στο
+ * dropdown και **κανείς δεν το μάθαινε**. Δες το πλήρες σκεπτικό εκεί.
+ *
+ * ⚠️ **ΜΗΝ ξαναγράψεις τιμές εδώ.** Το αρχείο κρατά το **όνομα** που ξέρουν οι πέντε
+ * καταναλωτές του· η **αυθεντία** έφυγε. Νέα τιμή → στο λεξιλόγιο, και φτάνει εδώ μόνη της.
+ *
+ * 🔑 Το `[...X]` δεν είναι διακοσμητικό: η SSoT είναι `readonly` (`as const`) ενώ τα
+ * controls ζητούν μεταβλητό πίνακα — **ίδιο ιδίωμα με το `EDITABLE_PROPERTY_TYPES`**
+ * λίγες γραμμές πιο κάτω, που το κάνει ήδη για τους τύπους ακινήτου.
+ */
+export const ORIENTATION_OPTIONS: OrientationType[] = [...ORIENTATIONS];
 
-export const CONDITION_OPTIONS: ConditionType[] = [
-  'new', 'excellent', 'good', 'needs-renovation',
-];
+export const CONDITION_OPTIONS: ConditionType[] = [...CONDITIONS];
 
-export const ENERGY_CLASS_OPTIONS: EnergyClassType[] = [
-  'A+', 'A', 'B', 'C', 'D', 'E', 'F', 'G',
-];
+export const ENERGY_CLASS_OPTIONS: EnergyClassType[] = [...ENERGY_CLASSES];
 
-export const HEATING_OPTIONS: HeatingType[] = [
-  'central', 'autonomous', 'heat-pump', 'solar', 'none',
-];
+export const HEATING_OPTIONS: HeatingType[] = [...HEATING_TYPES];
 
-export const COOLING_OPTIONS: CoolingType[] = [
-  'central-air', 'split-units', 'fan-coil', 'none',
-];
+export const COOLING_OPTIONS: CoolingType[] = [...COOLING_TYPES];
 
-export const FLOORING_OPTIONS: FlooringType[] = [
-  'tiles', 'wood', 'laminate', 'marble', 'carpet',
-];
+export const FLOORING_OPTIONS: FlooringType[] = [...FLOORINGS];
 
-export const FRAME_OPTIONS: FrameType[] = [
-  'aluminum', 'pvc', 'wood',
-];
+export const FRAME_OPTIONS: FrameType[] = [...FRAMES];
 
-export const GLAZING_OPTIONS: GlazingType[] = [
-  'single', 'double', 'triple', 'energy',
-];
+export const GLAZING_OPTIONS: GlazingType[] = [...GLAZINGS];
 
-export const INTERIOR_FEATURE_OPTIONS: InteriorFeatureCodeType[] = [
-  'fireplace', 'jacuzzi', 'sauna', 'smart-home', 'solar-panels',
-  'underfloor-heating', 'air-conditioning',
-];
+export const INTERIOR_FEATURE_OPTIONS: InteriorFeatureCodeType[] = [...INTERIOR_FEATURES];
 
-export const SECURITY_FEATURE_OPTIONS: SecurityFeatureCodeType[] = [
-  'alarm', 'security-door', 'cctv', 'access-control', 'intercom', 'motion-sensors',
-];
+export const SECURITY_FEATURE_OPTIONS: SecurityFeatureCodeType[] = [...SECURITY_FEATURES];
 
 // ADR-145: PropertyType options derived from SSoT (@/constants/property-types).
 // Uses CREATABLE_PROPERTY_TYPES (excludes 'storage' — ADR-287 Batch 20).
