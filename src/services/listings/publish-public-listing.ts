@@ -45,6 +45,10 @@ import {
 } from '@/services/company/company-public-name.reader';
 import type { PublicShelfSource } from '@/services/upload/utils/storage-path-public-shelf';
 import { reconcilePublicShelf, type PublicShelfImage } from './public-shelf.service';
+import {
+  createAgencyMediaResolver,
+  type AgencyMediaResolver,
+} from './agency-media.reader';
 
 const logger = createModuleLogger('publish-public-listing');
 
@@ -176,9 +180,24 @@ async function readBuildingDoc(
  * τον περνά ⇒ **μία** ανάγνωση, όχι N. Ο μεμονωμένος καλών δεν χρειάζεται να ξέρει
  * ότι υπάρχει: η προεπιλογή είναι επιλυτής **μιας χρήσης**.
  *
- * ⚠️ **`Promise.all` και όχι σειριακά**: ο τόπος και το γραφείο είναι **ανεξάρτητες**
- * ερωτήσεις σε **διαφορετικά** έγγραφα. Σειριακά, η αγγελία θα πλήρωνε δύο πλήρεις
- * γύρους δικτύου για δουλειά που γίνεται σε έναν.
+ * ⚠️ **`Promise.all` και όχι σειριακά**: ο τόπος, το γραφείο και **οι φωτογραφίες** είναι
+ * **ανεξάρτητες** ερωτήσεις σε **διαφορετικά** έγγραφα. Σειριακά, η αγγελία θα πλήρωνε
+ * τρεις πλήρεις γύρους δικτύου για δουλειά που γίνεται σε έναν.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 Η ΔΕΥΤΕΡΗ ΚΛΗΣΗ ΠΟΥ ΕΛΕΙΠΕ (ADR-841 §7 Α14, 2026-09-02) — **η ίδια κλάση**
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Μέχρι σήμερα **κάθε** αγγελία έργου έφτανε στο {@link writeListingProjection} χωρίς
+ * `publishedMedia`, έπαιρνε το `?? []` της γρ. 280 και δημοσιευόταν **χωρίς καμία
+ * εικόνα** — ενώ ο ιδιώτης είχε αποκτήσει συλλογή από τη **Φ3**. Ίδιο σχήμα με την
+ * **Α1** ακριβώς από πάνω: **δεν έλειπε μηχανή** *(το πεδίο, το ράφι, ο καθαριστής και
+ * η οθόνη υπήρχαν και τα τέσσερα)* — έλειπε **η κλήση**.
+ *
+ * 🔑 **Ο επιλυτής είναι ΟΡΙΣΜΑ**, για τον ίδιο λόγο με τον `resolveAgency`: ο βρόχος
+ * κρατά τη δική του πολιτική κόστους, και ο γραφέας μένει μία μηχανή. ⛔ **Κανένα
+ * δεύτερο ράφι, κανένας δεύτερος γραφέας** — γεμίζει το **υπάρχον** `publishedMedia`,
+ * το ίδιο πεδίο που γεμίζει ο ιδιώτης από τη δική του πλευρά.
  *
  * ⚠️ **Ο ιδιοκτήτης διαβάζεται από το ΕΓΓΡΑΦΟ, ποτέ από τον καλούντα.** Το
  * `properties/{id}.companyId` το γράφει το `createEntity` από το **auth context**
@@ -189,20 +208,22 @@ export async function republishListing(
   adminDb: AdminFirestore,
   propertyId: string,
   property: ListingSourceProperty,
-  resolveAgency: AgencyIdentityResolver = createAgencyIdentityResolver(adminDb)
+  resolveAgency: AgencyIdentityResolver = createAgencyIdentityResolver(adminDb),
+  resolveMedia: AgencyMediaResolver = createAgencyMediaResolver(adminDb)
 ): Promise<PublishOutcome> {
   const now = nowISO();
 
   try {
-    const [place, agency] = await Promise.all([
+    const [place, agency, publishedMedia] = await Promise.all([
       collectPlaceKnowledge(adminDb, property, now),
       resolveAgency(property.companyId),
+      resolveMedia(propertyId, property.companyId),
     ]);
 
     return await writeListingProjection(
       adminDb,
       propertyId,
-      { ...property, agency },
+      { ...property, agency, publishedMedia },
       place,
       now
     );
