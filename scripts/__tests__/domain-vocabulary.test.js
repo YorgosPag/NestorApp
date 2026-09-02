@@ -21,6 +21,9 @@ const { STATES } = require('../lib/domain-vocabulary/scan');
 const REPO = path.resolve(__dirname, '..', '..');
 const CONFIG = path.join(REPO, '.domain-vocabulary.json');
 
+/** Τέλος γραμμής για τα fixtures που **γράφονται** εδώ (Μ12). Ο parser δέχεται και τα δύο. */
+const EOL = '\n';
+
 /** Τα αρχεία που συμμετέχουν, με τις ΠΡΑΓΜΑΤΙΚΕΣ διαδρομές τους. */
 const REAL_FILES = [
   'src/constants/project-statuses.ts',
@@ -28,6 +31,29 @@ const REAL_FILES = [
   'src/config/project-mutation-impact.ts',
   'src/services/ai-pipeline/modules/uc-011-admin-project-status/project-status-formatter.ts',
 ];
+
+/**
+ * Το λεξιλόγιο που ΔΟΚΙΜΑΖΕΙ το μίνι-repo — και **μόνο** αυτό.
+ *
+ * 🔴 **ΓΙΑΤΙ ΦΙΛΤΡΑΡΕΤΑΙ ΤΟ ΜΗΤΡΩΟ** *(2026-09-02, ADR-841 Α9.4)*. Μέχρι σήμερα το
+ * `miniRepo()` αντέγραφε **ολόκληρο** το `.domain-vocabulary.json` αλλά **μόνο τα
+ * τέσσερα αρχεία** του `project-status`. Με **ένα** λεξιλόγιο στο μητρώο αυτό ήταν
+ * αόρατο· με το **δεύτερο** (`registry-authority`) το μίνι-repo άρχισε να αναφέρει
+ * **8 μπλοκάρουσες παραβιάσεις** — `root-drift` και `orphan-declaration` για μια
+ * ρίζα που **υπάρχει στο δέντρο αλλά δεν αντιγράφηκε εδώ**. Δηλαδή τρία tests
+ * κοκκίνιζαν για **τον λόγο που ο έλεγχός τους λέει ότι αποκλείει**.
+ *
+ * ⚠️ **Οι ισχυρισμοί είναι ενικοί, επίτηδες**: `tally[ROOT] === 1` ·
+ * `tally[DECLARED_EXEMPT] === 1`. Ένα φιλτραρισμένο μητρώο τους κρατά **σταθερούς**
+ * όσα λεξιλόγια κι αν αποκτήσει το έργο· η εναλλακτική *(προσθήκη των νέων αρχείων
+ * στο `REAL_FILES`)* θα τους έκανε **κινούμενους αριθμούς** που κάθε μελλοντικό
+ * λεξιλόγιο θα χρειαζόταν να ξαναμετρήσει.
+ *
+ * ⛔ **ΜΗΝ το επεκτείνεις σε «όλα τα λεξιλόγια».** Το **πραγματικό** δέντρο —
+ * ολόκληρο το μητρώο, όλα τα αρχεία — το ελέγχει το **Μ0γ**, που καλεί
+ * `gate.measure()` **χωρίς** ρίζα. Εδώ δοκιμάζεται η **μηχανή**, εκεί το **δέντρο**.
+ */
+const MINI_REPO_VOCABULARY = 'project-status';
 
 let tmpRoot;
 
@@ -41,7 +67,19 @@ function miniRepo() {
     fs.mkdirSync(path.dirname(dest), { recursive: true });
     fs.copyFileSync(src, dest);
   }
-  fs.copyFileSync(CONFIG, path.join(root, '.domain-vocabulary.json'));
+  // Το ΠΡΑΓΜΑΤΙΚΟ μητρώο, περιορισμένο στο λεξιλόγιο που έχει αρχεία εδώ.
+  const cfg = JSON.parse(fs.readFileSync(CONFIG, 'utf8'));
+  const kept = cfg.vocabularies.filter(v => v.id === MINI_REPO_VOCABULARY);
+  if (kept.length !== 1) {
+    throw new Error(
+      `ΦΡΟΥΡΟΣ: το «${MINI_REPO_VOCABULARY}» δεν βρέθηκε ΜΙΑ φορά στο μητρώο (${kept.length}) — ` +
+        'μετονομάστηκε ή διαγράφηκε; Το μίνι-repo θα δοκίμαζε κενό μητρώο.',
+    );
+  }
+  fs.writeFileSync(
+    path.join(root, '.domain-vocabulary.json'),
+    JSON.stringify({ ...cfg, vocabularies: kept }, null, 2),
+  );
   return root;
 }
 
@@ -187,6 +225,61 @@ describe('CHECK 3.73 — το κλειστό σύνολο δηλώσεων', () 
   it('Μ11 — λεξιλόγιο χωρίς λόγο ⇒ ΑΡΝΗΣΗ κατά τη φόρτωση', () => {
     mutateConfig(tmpRoot, cfg => { cfg.vocabularies[0].reason = 'λίγα'; });
     expect(() => run(tmpRoot)).toThrow(/λόγος είναι υποχρεωτικός/);
+  });
+});
+
+describe('CHECK 3.73 — Μ12: το ΑΡΧΕΙΟ ΤΗΣ ΡΙΖΑΣ δεν είναι τυφλό σημείο', () => {
+  /**
+   * 🔴 **ΤΟ ΚΕΝΟ ΠΟΥ ΕΚΛΕΙΣΕ (2026-09-02, ADR-841 Α9.4).** Η πύλη έγραφε
+   * `if (rel === vocab.root) continue;` και παρέκαμπτε **ΟΛΟΚΛΗΡΟ** το αρχείο της
+   * ρίζας. Άρα μια δεύτερη απαρίθμηση γραμμένη **δίπλα** στη ρίζα — το πιο φυσικό
+   * μέρος να τη γράψει κανείς — ήταν **αόρατη**: «πράσινο επειδή κανείς δεν
+   * κοίταξε», δηλαδή ακριβώς η βλάβη που αυτή η πύλη υπάρχει για να κλείσει.
+   *
+   * Δεν φαινόταν επειδή το `project-statuses.ts` δεν έχει δεύτερο σώμα. Η άγκυρα
+   * **φτιάχνει** ένα και απαιτεί να το δει.
+   */
+  it('Μ12α — αδέσμευτη απαρίθμηση ΜΕΣΑ στο αρχείο της ρίζας ΜΠΛΟΚΑΡΕΙ', () => {
+    const rel = 'src/constants/project-statuses.ts';
+    const p = path.join(tmpRoot, rel);
+    fs.appendFileSync(
+      p,
+      [
+        '',
+        'export const STATUS_ICONS = {',
+        "  planning: 'a', in_progress: 'b', completed: 'c', on_hold: 'd', cancelled: 'e',",
+        '} as const;',
+        '',
+      ].join(EOL),
+    );
+    const found = blocking(run(tmpRoot));
+    expect(found).toHaveLength(1);
+    expect(found[0].name).toBe('STATUS_ICONS');
+    expect(found[0].state).toBe(STATES.UNTYPED_VOCABULARY);
+  });
+
+  it('Μ12β ΠΑΡΟΝΟΜΑΣΤΗΣ — η ΙΔΙΑ η ρίζα ΔΕΝ μετριέται δεύτερη φορά ως αδέσμευτη', () => {
+    // Η ρίζα δεν αναφέρει τον εαυτό της στον τύπο της· χωρίς ονομαστική εξαίρεση
+    // θα κοκκίνιζε ως untyped-vocabulary σε κάθε καθαρό δέντρο.
+    const r = run(tmpRoot);
+    expect(blocking(r)).toEqual([]);
+    expect(r.tally[STATES.ROOT]).toBe(1);
+  });
+
+  it('Μ12γ — δεμένη απαρίθμηση δίπλα στη ρίζα ΠΕΡΝΑ (καμία υπερ-ευαισθησία)', () => {
+    const rel = 'src/constants/project-statuses.ts';
+    fs.appendFileSync(
+      path.join(tmpRoot, rel),
+      [
+        '',
+        'export const STATUS_ICONS: Readonly<Record<ProjectStatus, string>> = {',
+        "  planning: 'a', in_progress: 'b', completed: 'c', on_hold: 'd', cancelled: 'e',",
+        "  deleted: 'f',",
+        '} as const;',
+        '',
+      ].join(EOL),
+    );
+    expect(blocking(run(tmpRoot))).toEqual([]);
   });
 });
 

@@ -140,9 +140,22 @@ function measure(opts = {}) {
     //
     // ⚠️ Πύλη που κοστίζει 18s δεν είναι αυστηρότερη — είναι ανενεργή, γιατί ο
     // επόμενος βάζει SKIP_ (μάθημα CHECK 3.52).
+    // 🔴 ΤΟ ΑΡΧΕΙΟ ΤΗΣ ΡΙΖΑΣ ΣΑΡΩΝΕΤΑΙ ΚΙ ΑΥΤΟ — ΔΙΟΡΘΩΘΗΚΕ 2026-09-02 (ADR-841 Α9.4).
+    //
+    // Μέχρι σήμερα η γραμμή ήταν `if (rel === vocab.root) continue;` και παρέκαμπτε
+    // ΟΛΟΚΛΗΡΟ το αρχείο, όχι μόνο τη ρίζα. Άρα κάθε ΔΕΥΤΕΡΗ απαρίθμηση γραμμένη
+    // ΔΙΠΛΑ στη ρίζα — το πιο φυσικό μέρος να τη γράψει κανείς — ήταν ΑΟΡΑΤΗ:
+    // «πράσινο επειδή κανείς δεν κοίταξε», το σχήμα που αυτή η πύλη υπάρχει για
+    // να κλείσει. Δεν φάνηκε ποτέ επειδή το μόνο λεξιλόγιο του μητρώου
+    // (`project-status`) έχει ρίζα που δεν περιέχει τίποτε άλλο· το αποκάλυψε το
+    // δεύτερο (`registry-authority`), όπου δύο ολικοί πίνακες ζουν στο ίδιο αρχείο.
+    //
+    // ⚠️ Παρακάμπτεται ΜΟΝΟ ο κόμβος της ρίζας, ονομαστικά — το `verifyRoot` την
+    // έχει ήδη κρίνει παραπάνω, και χωρίς αυτή την εξαίρεση θα μετριόταν δεύτερη
+    // φορά ως `untyped-vocabulary` (η ρίζα ΔΕΝ αναφέρει τον εαυτό της στον τύπο της).
     for (const abs of files) {
       const rel = toPosix(path.relative(root, abs));
-      if (rel === vocab.root) continue;
+      const skipSymbol = rel === vocab.root ? vocab.rootSymbol : null;
       let text;
       try {
         text = fs.readFileSync(abs, 'utf8');
@@ -163,6 +176,7 @@ function measure(opts = {}) {
         continue; // μη αναλύσιμο αρχείο: το φυλά το CHECK 3.70, όχι αυτό
       }
       for (const hit of hits) {
+        if (hit.name === skipSymbol) continue; // η ίδια η ρίζα — κρίθηκε από το verifyRoot
         const state = hit.state === STATES.UNTYPED_VOCABULARY && exemptions.has(rel)
           ? STATES.DECLARED_EXEMPT
           : hit.state;
