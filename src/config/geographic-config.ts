@@ -87,7 +87,28 @@ function getGeographicConfig(): GeographicConfig {
       NOMINATIM_DELAY_MS: parseInt(process.env.NEXT_PUBLIC_NOMINATIM_DELAY_MS || '1100', 10),
       BATCH_DELAY_MS: parseInt(process.env.NEXT_PUBLIC_GEOCODING_BATCH_DELAY_MS || '1200', 10),
       RESOLVER_TIMEOUT_MS: parseInt(process.env.NEXT_PUBLIC_GEOCODING_RESOLVER_TIMEOUT_MS || '5000', 10),
-      NOMINATIM_RESULT_LIMIT: process.env.NEXT_PUBLIC_NOMINATIM_RESULT_LIMIT || '1',
+      /**
+       * Πόσους υποψήφιους ζητάμε **ανά αίτημα** — όχι πόσα αιτήματα κάνουμε.
+       *
+       * 🔴 **ΗΤΑΝ `'1'` ΚΑΙ ΕΙΧΕ ΟΡΑΤΟ ΚΟΣΤΟΣ** (μετρημένο 2026-09-02): το ADR-332 §3.4
+       * σχεδίασε ρητά για πέντε — *«si usano i 5 candidati già richiesti con limit=5»* —
+       * και τρεις σκανδάλες του πάνελ προτάσεων στηρίζονται στις εναλλακτικές. Με `'1'`
+       * το `results.length` ήταν **πάντα ≤ 1** ⇒ `alternatives` **πάντα `[]`** ⇒ ο
+       * άνθρωπος έβλεπε «μήπως εννοούσες;» και από κάτω **μία** γραμμή: **την απάντηση
+       * που μόλις του δώσαμε**. Ορατή ανόητη οθόνη, στην καρτέλα «Γενικά» κτιρίου.
+       *
+       * 🔑 **ΤΟ `limit` ΔΕΝ ΑΓΓΙΖΕΙ ΤΟ ΟΡΙΟ ΡΥΘΜΟΥ.** Η πολιτική OSMF περιορίζει
+       * **αιτήματα** (1/δευτ., το τηρούμε με `NOMINATIM_DELAY_MS`) και **απαγορεύει
+       * autocomplete** — καμία ρήτρα για πλήθος αποτελεσμάτων ανά αίτημα. Το `limit=5`
+       * είναι **ένα** αίτημα με μεγαλύτερη απάντηση, επαληθευμένο με 22 ζωντανές κλήσεις·
+       * και η ροή μας είναι **μία** γεωκωδικοποίηση ανά αποθήκευση, από τον διακομιστή,
+       * ποτέ ανά πληκτρολόγηση.
+       *
+       * ⚠️ **Το `5` χωρίς το {@link distinctAddressChoices} είναι ΧΕΙΡΟΤΕΡΟ από το `1`**:
+       * μετρήθηκε ότι για διεύθυνση **με** τοπωνύμιο οι θέσεις 2-5 είναι **16/16** άλλα
+       * POI της ίδιας πόρτας. Οι δύο αλλαγές είναι **μία** απόφαση.
+       */
+      NOMINATIM_RESULT_LIMIT: process.env.NEXT_PUBLIC_NOMINATIM_RESULT_LIMIT || '5',
       ACCEPT_LANGUAGE: process.env.NEXT_PUBLIC_GEOCODING_ACCEPT_LANGUAGE || 'el,en',
       API_ENDPOINT: process.env.NEXT_PUBLIC_GEOCODING_API_ENDPOINT || API_ROUTES.GEOCODING,
       CONFIDENCE: {

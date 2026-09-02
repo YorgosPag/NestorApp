@@ -244,6 +244,8 @@
     },
     "suggestions": {
       "title": "Location Suggestions",
+      "advisoryTitle": "Check the address",
+      "advisorySingle": "The provider found a single address — the one already shown. Correct a field, or try again without one.",
       "triggerReason": {
         "noResultsAfterRetry": "No results found after retries",
         "lowConfidence": "Low confidence in location",

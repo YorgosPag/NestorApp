@@ -116,6 +116,53 @@ export function computeAllSuggestionTriggers(
 }
 
 /**
+ * **ΤΙ ΕΙΝΑΙ ΤΟ ΠΑΝΕΛ ΑΥΤΗ ΤΗ ΦΟΡΑ** — κατάλογος επιλογών ή συμβουλή;
+ *
+ * 🔴 **Η διάκριση έλειπε και το κόστος της ήταν ορατό** (μετρημένο 2026-09-02): το πάνελ
+ * άνοιγε πάντα ως κατάλογος, και επειδή το `NOMINATIM_RESULT_LIMIT` ήταν `'1'` ο
+ * κατάλογος είχε **ακριβώς μία γραμμή — την απάντηση που ο άνθρωπος ήδη έβλεπε**. Ένα
+ * «μήπως εννοούσες;» με μία επιλογή δεν είναι ερώτηση· είναι θόρυβος με κουμπί.
+ *
+ * 🔑 **Είναι η διάκριση `CONFIRM` ⇄ `FIX` της Google Address Validation, και το
+ * `suggestedAddress` (ενικός) + modal σύγκρισης του Adobe Commerce**: όταν υπάρχει
+ * *επιλογή*, δίνεις κατάλογο· όταν υπάρχει *μία* απάντηση με επιφύλαξη, δίνεις **τον
+ * λόγο και την επόμενη κίνηση** — ποτέ κατάλογο του ενός.
+ *
+ * ⚠️ **Το `advisory` ΔΕΝ είναι «κρυμμένο».** Είναι η μόνη διαδρομή που φέρνει στην
+ * οθόνη το «δεν βρέθηκε τίποτα» **μαζί με το κουμπί επανάληψης χωρίς πεδίο** — μηχανισμός
+ * που ως τις 02/09 ήταν **απρόσιτος**, γιατί το `showSuggestions` απαιτούσε
+ * `candidates.length > 0` ενώ η σκανδάλη `no-results-after-retry` συμβαίνει **μόνο** με
+ * `result === null`, δηλαδή με **μηδέν** υποψήφιους. Δύο συνθήκες που δεν μπορούσαν να
+ * αληθεύουν μαζί.
+ */
+export type SuggestionPresentation = 'hidden' | 'chooser' | 'advisory';
+
+export interface SuggestionPresentationInput {
+  trigger: SuggestionTrigger | null;
+  /**
+   * Πόσες **διακριτές** επιλογές έχει ο άνθρωπος. Ο διακομιστής έχει ήδη συμπτύξει τους
+   * υποψήφιους που είναι η ίδια πόρτα (`lib/geocoding/address-candidate-identity`), οπότε
+   * εδώ το «2» σημαίνει **δύο διαφορετικές διευθύνσεις**, όχι δύο σειρές.
+   */
+  choiceCount: number;
+  /** Ο άνθρωπος το έκλεισε — η απόφασή του νικά κάθε σκανδάλη. */
+  dismissed: boolean;
+}
+
+export function suggestionPresentation(
+  input: SuggestionPresentationInput,
+): SuggestionPresentation {
+  if (input.dismissed || input.trigger === null) return 'hidden';
+  return input.choiceCount >= MIN_CHOICES_FOR_CHOOSER ? 'chooser' : 'advisory';
+}
+
+/**
+ * Κάτω από δύο επιλογές δεν υπάρχει επιλογή. Δεν είναι ρυθμιζόμενο επίτηδες: ένα `1`
+ * εδώ επαναφέρει ακριβώς την οθόνη που αυτή η δουλειά αφαίρεσε.
+ */
+const MIN_CHOICES_FOR_CHOOSER = 2;
+
+/**
  * Given the set of omit-fields already attempted in the retry sequence,
  * returns the next field to omit, or `null` when every priority entry has
  * already been tried.

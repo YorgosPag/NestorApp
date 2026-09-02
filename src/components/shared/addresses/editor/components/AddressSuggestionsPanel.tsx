@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { AddressConfidenceMeter } from './AddressConfidenceMeter';
 import { FIELD_LABEL_I18N_KEY } from '../helpers/fieldLabels';
+import type { SuggestionPresentation } from '../helpers/computeSuggestionTriggers';
 import type { GeocodingApiResponse, ResolvedAddressFields, SuggestionRanking, SuggestionTrigger } from '../types';
 
 const TRIGGER_I18N_KEY: Record<SuggestionTrigger, string> = {
@@ -17,8 +18,24 @@ const TRIGGER_I18N_KEY: Record<SuggestionTrigger, string> = {
   'partial-match-flag': 'editor.suggestions.triggerReason.partialMatchFlag',
 };
 
+/**
+ * Το πάνελ έχει **δύο τρόπους**, και ο τρόπος αποφασίζεται έξω από εδώ
+ * (`suggestionPresentation`), όχι από το πλήθος γραμμών:
+ *
+ * - **`chooser`** — υπάρχουν ≥2 **διαφορετικές** διευθύνσεις ⇒ «μήπως εννοούσες;» με
+ *   κατάλογο. Μετρημένη περίπτωση: «Αθηνάς 5» χωρίς τοπωνύμιο ⇒ Άγιοι Ανάργυροι ·
+ *   Θεσσαλονίκη · Λάρισα · Καβάλα · Καστοριά.
+ * - **`advisory`** — μία ή καμία ⇒ **ο λόγος και η επόμενη κίνηση**, χωρίς κατάλογο.
+ *   Ένας κατάλογος του ενός ζητά από τον άνθρωπο να «διαλέξει» αυτό που ήδη βλέπει.
+ *
+ * ⚠️ **Στο `advisory` ΔΕΝ επαναλαμβάνεται η διεύθυνση.** Είναι ήδη στη φόρμα και στον
+ * χάρτη, δύο εκατοστά πιο πάνω· η τρίτη εμφάνισή της δεν προσθέτει πληροφορία — προσθέτει
+ * την **εντύπωση** ότι κάτι πρέπει να επιλεγεί.
+ */
 export interface AddressSuggestionsPanelProps {
   trigger: SuggestionTrigger | null;
+  /** Κατάλογος επιλογών ή συμβουλή. Αποφασισμένο από `suggestionPresentation`. */
+  presentation: Exclude<SuggestionPresentation, 'hidden'>;
   candidates: SuggestionRanking[];
   nextOmitField: keyof ResolvedAddressFields | null;
   retryExhausted: boolean;
@@ -35,6 +52,7 @@ function formatDistance(meters: number): string {
 
 export function AddressSuggestionsPanel({
   trigger,
+  presentation,
   candidates,
   nextOmitField,
   retryExhausted,
@@ -65,7 +83,11 @@ export function AddressSuggestionsPanel({
     <section className={cn('border rounded-md overflow-hidden', className)}>
       <header className="flex items-start justify-between px-3 py-2 bg-muted/40 border-b gap-2">
         <div className="min-w-0">
-          <p className="text-xs font-semibold text-foreground">{t('editor.suggestions.title')}</p>
+          <p className="text-xs font-semibold text-foreground">
+            {t(presentation === 'chooser'
+              ? 'editor.suggestions.title'
+              : 'editor.suggestions.advisoryTitle')}
+          </p>
           {trigger && (
             <p className="text-xs text-muted-foreground truncate">
               {t(TRIGGER_I18N_KEY[trigger])}
@@ -85,9 +107,11 @@ export function AddressSuggestionsPanel({
         )}
       </header>
 
-      {candidates.length === 0 ? (
-        <p className="text-xs text-muted-foreground px-3 py-3 text-center">
-          {t('editor.suggestions.empty')}
+      {presentation === 'advisory' ? (
+        <p className="text-xs text-muted-foreground px-3 py-3">
+          {t(candidates.length === 0
+            ? 'editor.suggestions.empty'
+            : 'editor.suggestions.advisorySingle')}
         </p>
       ) : (
         <ul role="listbox" aria-label={t('editor.suggestions.title')} className="divide-y">

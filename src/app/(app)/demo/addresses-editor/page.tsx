@@ -21,6 +21,7 @@ import { AddressFreshnessIndicator } from '@/components/shared/addresses/editor/
 import { AddressActivityLog } from '@/components/shared/addresses/editor/components/AddressActivityLog';
 import { AddressReconciliationPanel } from '@/components/shared/addresses/editor/components/AddressReconciliationPanel';
 import { AddressSuggestionsPanel } from '@/components/shared/addresses/editor/components/AddressSuggestionsPanel';
+import { suggestionPresentation } from '@/components/shared/addresses/editor/helpers/computeSuggestionTriggers';
 import { AddressDiffSummary } from '@/components/shared/addresses/editor/components/AddressDiffSummary';
 import { AddressDragConfirmDialog } from '@/components/shared/addresses/editor/components/AddressDragConfirmDialog';
 import { Button } from '@/components/ui/button';
@@ -215,15 +216,32 @@ function SuggestionsDemo() {
       {selected && (
         <p className="text-xs text-[hsl(var(--text-success))]">Selected: {selected}</p>
       )}
-      <AddressSuggestionsPanel
-        trigger="low-confidence"
-        candidates={MOCK_CANDIDATES}
-        nextOmitField="postalCode"
-        retryExhausted={false}
-        onSelect={(c) => setSelected(c.displayName)}
-        onRetry={(f) => alert(`retry without ${f}`)}
-        onDismiss={() => setSelected(null)}
-      />
+      {/* Και οι ΔΥΟ τρόποι, με τον ΠΡΑΓΜΑΤΙΚΟ κανόνα να τους διαλέγει (ADR-332 D22) —
+          ένα showcase που καρφώνει τη μία τιμή δείχνει οθόνη που δεν υπάρχει. */}
+      {[MOCK_CANDIDATES, MOCK_CANDIDATES.slice(0, 1)].map((candidates, i) => {
+        const presentation = suggestionPresentation({
+          trigger: 'low-confidence',
+          choiceCount: candidates.length,
+          dismissed: false,
+        });
+        return (
+          <section key={i} className="space-y-1">
+            <p className="text-xs text-muted-foreground">
+              {candidates.length} υποψήφιοι → {presentation}
+            </p>
+            <AddressSuggestionsPanel
+              trigger="low-confidence"
+              presentation={presentation === 'hidden' ? 'advisory' : presentation}
+              candidates={candidates}
+              nextOmitField="postalCode"
+              retryExhausted={false}
+              onSelect={(c) => setSelected(c.displayName)}
+              onRetry={(f) => setSelected(`retry without ${f}`)}
+              onDismiss={() => setSelected(null)}
+            />
+          </section>
+        );
+      })}
     </div>
   );
 }

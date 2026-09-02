@@ -264,3 +264,44 @@ describe('country integrity', () => {
     expect(result?.outOfDeclaredCountry).toBeUndefined();
   });
 });
+
+// =============================================================================
+// ΠΟΣΟΥΣ ΥΠΟΨΗΦΙΟΥΣ ΖΗΤΑΜΕ — ADR-332 D22 (2026-09-02)
+// =============================================================================
+
+/**
+ * 🔴 **ΑΥΤΗ Η ΤΙΜΗ ΔΕΝ ΕΙΧΕ ΚΑΜΙΑ ΑΓΚΥΡΑ ΩΣ ΤΙΣ 02/09** (`grep` σε όλα τα `*.test.*` = 0),
+ * και όσο ήταν **`'1'`** το `alternatives` ήταν **πάντα `[]`** ⇒ το πάνελ «μήπως εννοούσες;»
+ * έδειχνε **μία** γραμμή: την απάντηση που ο άνθρωπος ήδη έβλεπε.
+ *
+ * 🔑 **Γιατί αγκυρώνεται στο URL και όχι στη σταθερά**: μια άγκυρα που διαβάζει το
+ * `GEOGRAPHIC_CONFIG` θα επιβεβαίωνε ότι *«η σταθερά ισούται με τον εαυτό της»*. Η ερώτηση
+ * που έχει σημασία είναι **τι στέλνεται στον πάροχο** — και όλες οι 374 άγκυρες της
+ * περιοχής μοκάρουν το `fetch`, οπότε καμία δεν θα κοκκίνιζε σε επιστροφή στο `'1'`.
+ */
+describe('geocode() — το αίτημα ζητά περισσότερους από έναν υποψήφιους (D22)', () => {
+  it('ΚΑΘΕ παραλλαγή στέλνει limit=5 — δομημένη και ελεύθερου κειμένου', async () => {
+    const fetchMock = mockFetchAlways([]);
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    await geocode({ street: 'Τσιμισκή', number: '43', city: 'Θεσσαλονίκη', country: 'Ελλάδα' });
+
+    const urls = requestedUrls(fetchMock);
+    expect(urls.length).toBeGreaterThan(1);
+    for (const url of urls) {
+      expect(url).toContain('limit=5');
+    }
+  });
+
+  it('ένα ερώτημα = ένα αίτημα ανά παραλλαγή — το limit ΔΕΝ πολλαπλασιάζει τις κλήσεις', async () => {
+    // Η πολιτική OSMF περιορίζει ΡΥΘΜΟ (1/δευτ.), όχι πλήθος αποτελεσμάτων ανά αίτημα.
+    const fetchMock = mockFetchAlways([greekHit()]);
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    await geocode({ street: 'Τσιμισκή', number: '43', city: 'Θεσσαλονίκη', country: 'Ελλάδα' });
+
+    // Η πρώτη παραλλαγή πετυχαίνει ⇒ ακριβώς μία κλήση, με πέντε υποψήφιους ζητημένους.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(requestedUrls(fetchMock)[0]).toContain('limit=5');
+  });
+});

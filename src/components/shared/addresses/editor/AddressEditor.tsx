@@ -2,12 +2,11 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Redo2, RotateCcw, Undo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useAddressEditor } from './hooks/useAddressEditor';
 import { useAddressSuggestions } from './hooks/useAddressSuggestions';
+import { suggestionPresentation } from './helpers/computeSuggestionTriggers';
 import { useAddressReconciliation } from './hooks/useAddressReconciliation';
 import { useAddressUndo } from './hooks/useAddressUndo';
 import { useAddressTelemetry } from './hooks/useAddressTelemetry';
@@ -17,7 +16,8 @@ import {
   buildFieldActionsMap,
   resolveReconciliationAction,
 } from './helpers/coordinatorHelpers';
-import { AddressFieldBadge } from './components/AddressFieldBadge';
+import { FormFieldRow } from './components/AddressFormFieldRow';
+import { useEditorKeyboard } from './hooks/useEditorKeyboard';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { AddressConfidenceMeter } from './components/AddressConfidenceMeter';
 import { AddressActivityLog } from './components/AddressActivityLog';
@@ -27,7 +27,6 @@ import { AddressEditorContext } from './AddressEditorContext';
 import type { AddressEditorProps, AddressEditorHandle } from './AddressEditor.types';
 import type {
   AddressEditorState,
-  AddressFieldStatus,
   GeocodingApiResponse,
   ResolvedAddressFields,
 } from './types';
@@ -62,71 +61,6 @@ const PHASE_STATUS_CLASS: Record<AddressEditorState['phase'], string> = {
   'not-found': 'text-[hsl(var(--text-warning))]',
   error: 'text-destructive',
 };
-
-interface FormFieldRowProps {
-  field: keyof ResolvedAddressFields;
-  label: string;
-  placeholder?: string;
-  value: string;
-  onChange: (v: string) => void;
-  status: AddressFieldStatus;
-  disabled: boolean;
-}
-
-function FormFieldRow({
-  field,
-  label,
-  placeholder,
-  value,
-  onChange,
-  status,
-  disabled,
-}: FormFieldRowProps) {
-  return (
-    <div className="space-y-1">
-      <Label htmlFor={`addr-${field}`} className="text-xs font-medium">
-        {label}
-      </Label>
-      <div className="flex items-center gap-1.5">
-        <Input
-          id={`addr-${field}`}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          disabled={disabled}
-          className="h-8 text-sm"
-        />
-        <AddressFieldBadge status={status} />
-      </div>
-    </div>
-  );
-}
-
-function useEditorKeyboard(
-  canUndo: boolean,
-  canRedo: boolean,
-  onUndo: () => void,
-  onRedo: () => void,
-  onForceRegeocode: () => void,
-): void {
-  useEffect(() => {
-    function handleKey(e: KeyboardEvent) {
-      if (!e.ctrlKey && !e.metaKey) return;
-      if (e.key === 'z' && !e.shiftKey && canUndo) {
-        e.preventDefault();
-        onUndo();
-      } else if ((e.key === 'y' || (e.key === 'z' && e.shiftKey)) && canRedo) {
-        e.preventDefault();
-        onRedo();
-      } else if (e.key === 'r' && e.shiftKey) {
-        e.preventDefault();
-        onForceRegeocode();
-      }
-    }
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [canUndo, canRedo, onUndo, onRedo, onForceRegeocode]);
-}
 
 export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>(
   function AddressEditor({
@@ -327,8 +261,16 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
     editor.state.phase === 'typing' ||
     editor.state.phase === 'debouncing' ||
     editor.state.phase === 'loading';
-  const showSuggestions =
-    !dismissedSuggestions && suggestions.trigger !== null && suggestions.candidates.length > 0;
+  // Κατάλογος επιλογών, συμβουλή, ή τίποτα — μία απόφαση, ένα σημείο.
+  // ⚠️ Η προηγούμενη συνθήκη απαιτούσε `candidates.length > 0`, που έκανε τη σκανδάλη
+  // `no-results-after-retry` **δομικά αόρατη**: συμβαίνει μόνο με `result === null`,
+  // δηλαδή με μηδέν υποψήφιους. Μαζί της ήταν απρόσιτο και το κουμπί «δοκίμασε χωρίς …».
+  const presentation = suggestionPresentation({
+    trigger: suggestions.trigger,
+    choiceCount: suggestions.candidates.length,
+    dismissed: dismissedSuggestions,
+  });
+  const showSuggestions = presentation !== 'hidden';
   const showActivityLog = (activityLogOpts?.enabled ?? true) && mode === 'edit';
   const confidence = currentResult?.confidence;
   const neighborhoodFieldNode = formOptions?.hideGrid && formOptions.showNeighborhoodRegion
@@ -460,6 +402,7 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
           }}
           suggestions={{
             trigger: suggestions.trigger,
+            presentation: presentation === 'hidden' ? 'advisory' : presentation,
             candidates: suggestions.candidates,
             nextOmitField: suggestions.nextOmitField,
             retryExhausted: suggestions.retryExhausted,

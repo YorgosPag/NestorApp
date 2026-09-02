@@ -35,6 +35,7 @@ const reconciliation: AddressResolutionSlotProps['reconciliation'] = {
 
 const suggestions: AddressResolutionSlotProps['suggestions'] = {
   trigger: 'zeroResults',
+  presentation: 'advisory',
   candidates: [],
   nextOmitField: null,
   retryExhausted: false,

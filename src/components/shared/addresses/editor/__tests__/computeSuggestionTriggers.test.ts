@@ -15,6 +15,7 @@ import {
   computeAllSuggestionTriggers,
   computeSuggestionTrigger,
   nextOmitField,
+  suggestionPresentation,
 } from '../helpers/computeSuggestionTriggers';
 import type {
   GeocodingAlternative,
@@ -247,5 +248,46 @@ describe('SUGGESTION_DEFAULTS contract', () => {
   it('matches ADR §3.4 thresholds', () => {
     expect(SUGGESTION_DEFAULTS.lowConfidenceThreshold).toBe(0.7);
     expect(SUGGESTION_DEFAULTS.ambiguousConfidenceGap).toBe(0.15);
+  });
+});
+
+// =============================================================================
+// ΤΙ ΕΙΝΑΙ ΤΟ ΠΑΝΕΛ ΑΥΤΗ ΤΗ ΦΟΡΑ — κατάλογος ή συμβουλή (ADR-332 §3.4, 2026-09-02)
+// =============================================================================
+
+describe('suggestionPresentation — κατάλογος επιλογών, συμβουλή, ή τίποτα', () => {
+  it('ΧΩΡΙΣ σκανδάλη δεν εμφανίζεται τίποτα, όσους υποψήφιους κι αν έχουμε', () => {
+    expect(suggestionPresentation({ trigger: null, choiceCount: 5, dismissed: false }))
+      .toBe('hidden');
+  });
+
+  it('Ο ΑΝΘΡΩΠΟΣ ΤΟ ΕΚΛΕΙΣΕ: η απόφασή του νικά κάθε σκανδάλη', () => {
+    expect(suggestionPresentation({ trigger: 'low-confidence', choiceCount: 4, dismissed: true }))
+      .toBe('hidden');
+  });
+
+  it('🔴 ΜΙΑ ΕΠΙΛΟΓΗ ΔΕΝ ΕΙΝΑΙ ΕΠΙΛΟΓΗ — το εύρημα που γέννησε αυτή τη δουλειά', () => {
+    // Ακριβώς η οθόνη που έβλεπε ο χρήστης όσο το NOMINATIM_RESULT_LIMIT ήταν '1':
+    // «μήπως εννοούσες;» και από κάτω η απάντηση που μόλις του δώσαμε.
+    expect(suggestionPresentation({ trigger: 'low-confidence', choiceCount: 1, dismissed: false }))
+      .toBe('advisory');
+  });
+
+  it('🔴 ΜΗΔΕΝ ΥΠΟΨΗΦΙΟΙ ΦΤΑΝΟΥΝ ΠΛΕΟΝ ΣΤΗΝ ΟΘΟΝΗ — μαζί τους και το κουμπί επανάληψης', () => {
+    // Ήταν δομικά αδύνατο: η παλιά συνθήκη απαιτούσε `candidates.length > 0`, ενώ η
+    // σκανδάλη `no-results-after-retry` συμβαίνει ΜΟΝΟ με `result === null` ⇒ μηδέν υποψήφιοι.
+    expect(suggestionPresentation({ trigger: 'no-results-after-retry', choiceCount: 0, dismissed: false }))
+      .toBe('advisory');
+  });
+
+  it('ΔΥΟ ΔΙΑΦΟΡΕΤΙΚΕΣ ΔΙΕΥΘΥΝΣΕΙΣ ⇒ κατάλογος — εκεί η ερώτηση έχει νόημα', () => {
+    expect(suggestionPresentation({ trigger: 'multiple-candidates-similar', choiceCount: 2, dismissed: false }))
+      .toBe('chooser');
+  });
+
+  it('η μετρημένη «Αθηνάς 5» (5 πόλεις) είναι κατάλογος, ό,τι σκανδάλη κι αν άνοιξε το πάνελ', () => {
+    for (const trigger of ['low-confidence', 'partial-match-flag', 'multiple-candidates-similar'] as const) {
+      expect(suggestionPresentation({ trigger, choiceCount: 5, dismissed: false })).toBe('chooser');
+    }
   });
 });

@@ -214,21 +214,61 @@ function skippedAttempt(variant: GeocodingVariant): GeocodingAttempt {
  * matched — but it must never read as verified, so it is flagged and its
  * confidence is zeroed.
  */
+/**
+ * Η μία ερώτηση, ρωτημένη σε ένα σημείο: **βρίσκεται αυτός ο υποψήφιος στη χώρα που
+ * δήλωσε ο άνθρωπος;** Την κάνουν δύο καλούντες με **αντίθετη** αντίδραση, και γι' αυτό
+ * ζει χωριστά — δύο αντίγραφα της σύγκρισης είναι ακριβώς το σημείο όπου η μία πλευρά
+ * θα μάθαινε για ένα νέο `country_code` και η άλλη όχι.
+ */
+function withinDeclaredCountry(
+  result: NominatimResult,
+  declaredCountryCode: string | null,
+): boolean {
+  if (!declaredCountryCode) return true;
+  const resolved = result.address?.country_code?.toLowerCase();
+  return !resolved || resolved === declaredCountryCode;
+}
+
 function enforceCountryIntegrity(
   response: GeocodingApiResponse,
   result: NominatimResult,
   declaredCountryCode: string | null,
 ): GeocodingApiResponse {
-  if (!declaredCountryCode) return response;
-  const resolved = result.address?.country_code?.toLowerCase();
-  if (!resolved || resolved === declaredCountryCode) return response;
+  if (withinDeclaredCountry(result, declaredCountryCode)) return response;
   logger.warn('Geocoding result outside declared country', {
-    data: { declared: declaredCountryCode, resolved, variant: response.source.variantUsed },
+    data: {
+      declared: declaredCountryCode,
+      resolved: result.address?.country_code?.toLowerCase(),
+      variant: response.source.variantUsed,
+    },
   });
   return { ...response, outOfDeclaredCountry: true, confidence: 0 };
 }
 
-/** Single exit path for every variant — one place that formats and validates. */
+/**
+ * Single exit path for every variant — one place that formats and validates.
+ *
+ * 🔴 **Οι εναλλακτικές εκτός δηλωμένης χώρας ΦΕΥΓΟΥΝ, δεν σημαιοδοτούνται** — και η
+ * ασυμμετρία με τον κορυφαίο είναι σκόπιμη, γιατί οι δύο απαντούν σε **διαφορετική
+ * ερώτηση**:
+ *
+ * - Ο **κορυφαίος** μένει επισημασμένος με `confidence: 0`, επειδή είναι η **εξήγηση**
+ *   του τι ταίριαξε ο πάροχος. Χωρίς αυτόν ο άνθρωπος βλέπει «δεν βρέθηκε» και δεν μαθαίνει
+ *   ποτέ ότι η ορθογραφία του ταιριάζει σε δρόμο του Ουισκόνσιν (μετρημένο, ADR-332 D12).
+ * - Μια **εναλλακτική** δεν εξηγεί τίποτα — είναι **επιλογή σε κατάλογο**. «Μήπως
+ *   εννοούσες Town of Wheatland, Wisconsin;» για ελληνική διεύθυνση είναι ακριβώς ο
+ *   θόρυβος που αυτή η δουλειά αφαιρεί.
+ *
+ * ⚠️ **Το φίλτρο ήταν αόρατο ως τις 02/09 και έγινε αναγκαίο με το `limit=5`**: οι
+ * παραλλαγές 7 και 8 **σηκώνουν επίτηδες** τον περιορισμό χώρας για να σώσουν
+ * τυπογραφικά, οπότε μπορούν κάλλιστα να επιστρέψουν **πέντε** ξένα αποτελέσματα. Με
+ * `limit=1` δεν υπήρχε ποτέ δεύτερο· τώρα υπάρχει, και θα ταξίδευε με **πλήρη**
+ * εμπιστοσύνη και **χωρίς** σημαία, γιατί ο έλεγχος έβλεπε μόνο τη θέση 0.
+ *
+ * ⚠️ **Χωρίς άνω όριο εδώ**: η κοπή στις 4 γίνεται στο `formatTopResult` **μετά** τη
+ * σύμπτυξη ταυτόσημων επιλογών. Ένα `slice(1, 5)` εδώ θα άφηνε τέσσερα POI της ίδιας
+ * πόρτας να φάνε τη θέση μιας γνήσιας εναλλακτικής.
+ */
 function finishWith(
   results: NominatimResult[],
   params: GeocodingRequestBody,
@@ -237,8 +277,11 @@ function finishWith(
   declaredCountryCode: string | null,
 ): GeocodingApiResponse {
   const top = results[0];
+  const alternatives = results
+    .slice(1)
+    .filter((candidate) => withinDeclaredCountry(candidate, declaredCountryCode));
   return enforceCountryIntegrity(
-    formatTopResult(top, params, attempts, results.slice(1, 5), variant),
+    formatTopResult(top, params, attempts, alternatives, variant),
     top,
     declaredCountryCode,
   );

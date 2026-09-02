@@ -14,6 +14,7 @@
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { normalizeGreekText } from '@/services/ai-pipeline/shared/greek-text-utils';
 import { postalCodeAppearsIn, toCanonicalGreekPostalCode } from '@/utils/address/postal-code';
+import { distinctAddressChoices } from '@/lib/geocoding/address-candidate-identity';
 import type {
   GeocodingRequestBody,
   GeocodingApiResponse,
@@ -347,6 +348,30 @@ function buildBaseResponse(
   };
 }
 
+/**
+ * Πόσες εναλλακτικές ταξιδεύουν στην απάντηση.
+ *
+ * Φράγμα **ωφέλιμου φορτίου**, όχι σχεδίασης: ο τύπος `GeocodingApiResponse.alternatives`
+ * υπόσχεται «up to 4», και μια απάντηση που κουβαλά περισσότερα από όσα υπόσχεται είναι
+ * η αρχή της απόκλισης. Εφαρμόζεται **ΜΕΤΑ** τη σύμπτυξη, ποτέ πριν — αλλιώς τέσσερα POI
+ * της ίδιας πόρτας θα έτρωγαν τη θέση μιας γνήσιας εναλλακτικής.
+ */
+const MAX_ALTERNATIVES = 4;
+
+/**
+ * Το κορυφαίο αποτέλεσμα **μαζί με τις εναλλακτικές του** — όπου «εναλλακτική» σημαίνει
+ * *άλλη διεύθυνση*, όχι *άλλη σειρά*.
+ *
+ * 🔴 **Η σύμπτυξη γίνεται ΕΔΩ, όχι στην οθόνη.** Μετρημένο 2026-09-02: με `limit=5` ο
+ * Nominatim επιστρέφει για «Τσιμισκή 43, Θεσσαλονίκη» **τέσσερα POI της ίδιας πόρτας**
+ * (Προξενείο ΗΠΑ · Μασούτης · ODEON · το σπίτι, 0-57 m). Αν αυτά ταξίδευαν ως
+ * `alternatives`, **κάθε** καταναλωτής θα έπρεπε να τα ξαναφιλτράρει — και η σκανδάλη
+ * `multiple-candidates-similar` (`alternatives.length >= 2`) θα πυροδοτούσε πάνω σε
+ * **μηδέν** πραγματική αμφισημία. Το πεδίο πρέπει να σημαίνει αυτό που λέει το όνομά του
+ * στο σημείο που γεμίζει.
+ *
+ * @see lib/geocoding/address-candidate-identity — πότε δύο υποψήφιοι είναι η ίδια επιλογή
+ */
 export function formatTopResult(
   result: NominatimResult,
   params: GeocodingRequestBody,
@@ -354,12 +379,14 @@ export function formatTopResult(
   alternativeCandidates: NominatimResult[],
   variantUsed: GeocodingVariant,
 ): GeocodingApiResponse {
-  return {
-    ...buildBaseResponse(result, params, variantUsed, attempts),
-    alternatives: alternativeCandidates.map((alt) =>
-      formatAlternative(alt, params, variantUsed),
-    ),
-  };
+  const top = buildBaseResponse(result, params, variantUsed, attempts);
+  const formatted = alternativeCandidates.map((alt) =>
+    formatAlternative(alt, params, variantUsed),
+  );
+  // Ο κορυφαίος μπαίνει πρώτος στη σύγκριση ώστε μια εναλλακτική που είναι η ΙΔΙΑ πόρτα
+  // με εκείνον να πέφτει — αλλά βγαίνει αμέσως μετά, γιατί δεν είναι εναλλακτική του εαυτού του.
+  const distinct = distinctAddressChoices<GeocodingAlternative>([top, ...formatted]);
+  return { ...top, alternatives: distinct.slice(1, 1 + MAX_ALTERNATIVES) };
 }
 
 /** An alternative carries no attempts log — the log describes the search, not the candidate. */

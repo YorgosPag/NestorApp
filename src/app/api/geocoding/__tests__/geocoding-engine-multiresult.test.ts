@@ -41,6 +41,7 @@ interface NominatimMockResult {
     state?: string;
     postcode?: string;
     country?: string;
+    country_code?: string;
   };
 }
 
@@ -103,26 +104,52 @@ function fixtureSamothraki16Top(): NominatimMockResult {
   };
 }
 
-function fixtureSamothraki16Alt(postalCode: string, importance: number): NominatimMockResult {
+/**
+ * Μια εναλλακτική που είναι **όντως άλλη διεύθυνση** — ίδιο όνομα οδού, **άλλος δήμος**.
+ *
+ * 🔴 **ΤΟ ΠΑΛΙΟ FIXTURE ΗΤΑΝ ΤΡΟΦΗ ΠΟΥ Η ΠΑΡΑΓΩΓΗ ΔΕΝ ΠΑΡΑΓΕΙ**: γεννούσε τέσσερις
+ * «εναλλακτικές» με **ίδια οδό, ίδιο αριθμό και ΤΑΥΤΟΣΗΜΕΣ συντεταγμένες**
+ * (`40.6300/22.9500`), που διέφεραν **μόνο** στον ταχυδρομικό κώδικα. Αυτό δεν είναι
+ * τέσσερις επιλογές — είναι η **ίδια πόρτα** γραμμένη τέσσερις φορές, και ένας κατάλογος
+ * που τη ρωτούσε θα ζητούσε από τον άνθρωπο να ρίξει κορώνα-γράμματα.
+ *
+ * Η νέα μορφή είναι αντιγραφή **μετρημένης** απάντησης του Nominatim (02/09, «Αθηνάς 5»
+ * χωρίς τοπωνύμιο): ίδιο οδώνυμο σε **πέντε δήμους**, 212-349 km μεταξύ τους.
+ */
+function fixtureSamothrakiElsewhere(
+  city: string,
+  postalCode: string,
+  lat: string,
+  lon: string,
+  importance: number,
+): NominatimMockResult {
   return {
-    lat: '40.6300',
-    lon: '22.9500',
-    display_name: `Σαμοθράκης 16, Θεσσαλονίκη ${postalCode}, Ελλάδα`,
-    type: 'street',
-    class: 'highway',
+    lat,
+    lon,
+    display_name: `Σαμοθράκης 16, ${city} ${postalCode}, Ελλάδα`,
+    type: 'house',
+    class: 'place',
     importance,
     osm_id: 99999000 + Number(postalCode),
     osm_type: 'way',
     address: {
       road: 'Σαμοθράκης',
       house_number: '16',
-      city: 'Θεσσαλονίκη',
+      city,
       postcode: postalCode,
       country: 'Ελλάδα',
-      state: 'Κεντρική Μακεδονία',
+      country_code: 'gr',
     },
   };
 }
+
+/** Οι τέσσερις μετρημένα-διακριτοί δήμοι, στη σειρά που τους δίνει ο πάροχος. */
+const SAMOTHRAKI_ELSEWHERE: ReadonlyArray<readonly [string, string, string, string, number]> = [
+  ['Λάρισα', '41222', '39.6390', '22.4191', 0.35],
+  ['Καβάλα', '65403', '40.9396', '24.4069', 0.30],
+  ['Καστοριά', '52100', '40.5167', '21.2667', 0.28],
+  ['Ηγουμενίτσα', '46100', '39.5036', '20.2653', 0.25],
+];
 
 // =============================================================================
 // TESTS
@@ -132,10 +159,7 @@ describe('geocode() — ADR-332 Phase 0 multi-result behavior', () => {
   it('returns top result + up to 4 alternatives from the winning variant', async () => {
     global.fetch = mockFetchSequence([
       fixtureSamothraki16Top(),
-      fixtureSamothraki16Alt('54249', 0.35),
-      fixtureSamothraki16Alt('54100', 0.30),
-      fixtureSamothraki16Alt('54622', 0.28),
-      fixtureSamothraki16Alt('54006', 0.25),
+      ...SAMOTHRAKI_ELSEWHERE.map((args) => fixtureSamothrakiElsewhere(...args)),
     ]) as typeof fetch;
 
     const result = await geocode({
@@ -149,8 +173,8 @@ describe('geocode() — ADR-332 Phase 0 multi-result behavior', () => {
     expect(result!.lat).toBeCloseTo(40.6234);
     expect(result!.lng).toBeCloseTo(22.9456);
     expect(result!.alternatives).toHaveLength(4);
-    expect(result!.alternatives[0].displayName).toContain('54249');
-    expect(result!.alternatives[3].displayName).toContain('54006');
+    expect(result!.alternatives[0].displayName).toContain('Λάρισα');
+    expect(result!.alternatives[3].displayName).toContain('Ηγουμενίτσα');
   });
 
   it('populates resolvedFields from Nominatim address block', async () => {
@@ -302,7 +326,7 @@ describe('geocode() — ADR-332 Phase 0 multi-result behavior', () => {
   it('alternatives carry their own resolvedFields and reasoning (with empty attemptsLog)', async () => {
     global.fetch = mockFetchSequence([
       fixtureSamothraki16Top(),
-      fixtureSamothraki16Alt('54249', 0.35),
+      fixtureSamothrakiElsewhere('Λάρισα', '41222', '39.6390', '22.4191', 0.35),
     ]) as typeof fetch;
 
     const result = await geocode({
@@ -313,8 +337,120 @@ describe('geocode() — ADR-332 Phase 0 multi-result behavior', () => {
 
     expect(result!.alternatives).toHaveLength(1);
     const alt = result!.alternatives[0];
-    expect(alt.resolvedFields.postalCode).toBe('54249');
+    expect(alt.resolvedFields.postalCode).toBe('41222');
     expect(alt.reasoning.attemptsLog).toEqual([]);
-    expect(alt.partialMatch).toBe(true); // user postal 54635 ≠ alt 54249
+    expect(alt.partialMatch).toBe(true); // user postal 54635 ≠ alt 41222
+  });
+});
+
+// =============================================================================
+// ΤΙ ΕΙΝΑΙ «ΕΝΑΛΛΑΚΤΙΚΗ» — ADR-332 §3.4 (2026-09-02)
+// =============================================================================
+
+/**
+ * Οι τέσσερις σειρές που επέστρεψε **πραγματικά** ο Nominatim για
+ * `q="Τσιμισκή 43, Θεσσαλονίκη, 54623"` με `limit=5` (ζωντανή μέτρηση 02/09).
+ *
+ * Δεν είναι τέσσερις διευθύνσεις — είναι **μία πόρτα και τα μαγαζιά της**, μέσα σε 57 m.
+ * Οι συντεταγμένες και τα ονόματα είναι αντιγραμμένα από την απάντηση, όχι επινοημένα.
+ */
+const TSIMISKI_43_SAME_DOOR: ReadonlyArray<readonly [string, string, string]> = [
+  ['Γενικό Προξενείο των ΗΠΑ, 43, Ιωάννη Τσιμισκή, Λαδάδικα, Θεσσαλονίκη, 546 23, Ελλάδα', '40.6331916', '22.9427856'],
+  ['Μασούτης, 43, Ιωάννη Τσιμισκή, Λαδάδικα, 1η Κοινότητα Θεσσαλονίκης, 546 23, Ελλάδα', '40.6334732', '22.9433534'],
+  ['ODEON Πλατεία, 43, Ιωάννη Τσιμισκή, Λαδάδικα, 1η Κοινότητα Θεσσαλονίκης, 546 23, Ελλάδα', '40.6335573', '22.9430297'],
+  ['43, Ιωάννη Τσιμισκή, Λαδάδικα, 1η Κοινότητα Θεσσαλονίκης, 546 23, Ελλάδα', '40.6330851', '22.9426912'],
+];
+
+function tsimiskiRow(displayName: string, lat: string, lon: string): NominatimMockResult {
+  return {
+    lat,
+    lon,
+    display_name: displayName,
+    type: 'house',
+    class: 'place',
+    importance: 0.4,
+    osm_id: displayName.length,
+    osm_type: 'node',
+    address: {
+      road: 'Ιωάννη Τσιμισκή',
+      house_number: '43',
+      city: 'Θεσσαλονίκη',
+      postcode: '546 23',
+      country: 'Ελλάδα',
+      country_code: 'gr',
+    },
+  };
+}
+
+describe('geocode() — «εναλλακτική» σημαίνει άλλη ΔΙΕΥΘΥΝΣΗ, όχι άλλη σειρά', () => {
+  it('συμπτύσσει τα POI της ίδιας πόρτας σε καμία εναλλακτική (μετρημένο: Τσιμισκή 43)', async () => {
+    global.fetch = mockFetchSequence(
+      TSIMISKI_43_SAME_DOOR.map(([name, lat, lon]) => tsimiskiRow(name, lat, lon)),
+    ) as typeof fetch;
+
+    const result = await geocode({
+      street: 'Τσιμισκή',
+      number: '43',
+      city: 'Θεσσαλονίκη',
+      postalCode: '54623',
+      country: 'Ελλάδα',
+    });
+
+    // Ο κορυφαίος επιβιώνει — είναι η απάντηση. Οι άλλες τρεις σειρές ΕΙΝΑΙ ο κορυφαίος.
+    expect(result!.displayName).toContain('Γενικό Προξενείο');
+    expect(result!.alternatives).toHaveLength(0);
+  });
+
+  it('κρατά τις γνήσια διαφορετικές διευθύνσεις (μετρημένο: ίδιο οδώνυμο, άλλος δήμος)', async () => {
+    global.fetch = mockFetchSequence([
+      fixtureSamothraki16Top(),
+      ...SAMOTHRAKI_ELSEWHERE.map((args) => fixtureSamothrakiElsewhere(...args)),
+    ]) as typeof fetch;
+
+    const result = await geocode({ street: 'Σαμοθράκης', number: '16', country: 'Ελλάδα' });
+
+    expect(result!.alternatives.map((a) => a.resolvedFields.city)).toEqual([
+      'Λάρισα', 'Καβάλα', 'Καστοριά', 'Ηγουμενίτσα',
+    ]);
+  });
+
+  it('κόβει στις 4 ΜΕΤΑ τη σύμπτυξη — τα δίδυμα δεν τρώνε τη θέση των γνήσιων', async () => {
+    global.fetch = mockFetchSequence([
+      fixtureSamothraki16Top(),
+      // δύο δίδυμα του κορυφαίου (ίδια πόρτα) πριν από τις γνήσιες
+      { ...fixtureSamothraki16Top(), display_name: 'Καφενείο, Σαμοθράκης 16, Θεσσαλονίκη', lat: '40.62345' },
+      { ...fixtureSamothraki16Top(), display_name: 'Φαρμακείο, Σαμοθράκης 16, Θεσσαλονίκη', lat: '40.62350' },
+      ...SAMOTHRAKI_ELSEWHERE.map((args) => fixtureSamothrakiElsewhere(...args)),
+    ]) as typeof fetch;
+
+    const result = await geocode({ street: 'Σαμοθράκης', number: '16', country: 'Ελλάδα' });
+
+    // Αν η κοπή γινόταν ΠΡΙΝ τη σύμπτυξη, οι δύο πρώτες θέσεις θα χάνονταν σε δίδυμα.
+    expect(result!.alternatives).toHaveLength(4);
+    expect(result!.alternatives[0].resolvedFields.city).toBe('Λάρισα');
+    expect(result!.alternatives[3].resolvedFields.city).toBe('Ηγουμενίτσα');
+  });
+
+  it('πετά τις εναλλακτικές εκτός δηλωμένης χώρας, αλλά κρατά σημαιοδοτημένο τον κορυφαίο', async () => {
+    const wheatland: NominatimMockResult = {
+      lat: '42.6500', lon: '-88.4500',
+      display_name: 'Town of Wheatland, Wisconsin, United States',
+      type: 'administrative', class: 'boundary', importance: 0.55,
+      osm_id: 77, osm_type: 'relation',
+      address: { road: 'Ονειροπόλων', city: 'Wheatland', country: 'United States', country_code: 'us' },
+    };
+    global.fetch = mockFetchSequence([
+      { ...wheatland, display_name: 'Wheatland A, Wisconsin' },
+      { ...wheatland, display_name: 'Wheatland B, Wisconsin', lat: '43.1000' },
+      { ...wheatland, display_name: 'Wheatland C, Wisconsin', lat: '43.5000' },
+    ]) as typeof fetch;
+
+    const result = await geocode({ street: 'Ονειροπόλων', postalCode: '54624', country: 'Ελλάδα' });
+
+    // Ο κορυφαίος μένει ως ΕΞΗΓΗΣΗ (ADR-332 D12) — μηδενισμένος και σημαιοδοτημένος.
+    expect(result!.outOfDeclaredCountry).toBe(true);
+    expect(result!.confidence).toBe(0);
+    // Οι υπόλοιπες θα ήταν «μήπως εννοούσες Ουισκόνσιν;» — δεν είναι επιλογές.
+    expect(result!.alternatives).toHaveLength(0);
   });
 });
