@@ -222,7 +222,32 @@ const SelectItem = React.forwardRef<
         </SelectPrimitive.ItemIndicator>
       </span>
 
-      <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+      {/*
+        🔴 ΤΟ ΚΑΚΟ ΔΕΝ ΕΙΝΑΙ ΤΟ ΚΟΨΙΜΟ — ΕΙΝΑΙ Η ΣΙΩΠΗ ΤΟΥ (ADR-841 Α9.7)
+
+        Το `SelectContent` καρφώνει `w-[var(--radix-select-trigger-width)]` **επίτηδες**
+        (πλάτος ακριβώς όσο ο ενεργοποιητής) και έχει `overflow-hidden`. Ετικέτα
+        μακρύτερη από τον ενεργοποιητή **κοβόταν χωρίς αποσιωπητικά**: μετρημένο στο
+        `/pro`, ο άνθρωπος διάβαζε «διακοσμητής εσωτερικών χώ» ως **το όνομα** και δεν
+        είχε κανέναν τρόπο να ξέρει ότι λείπει κείμενο.
+
+        🔑 Η θεραπεία **δεν** αλλάζει την απόφαση του πλάτους (249 καταναλωτές
+        στηρίζονται στην ευθυγράμμιση) — κάνει το κόψιμο **ορατό**. Ο ενεργοποιητής
+        έλυνε ήδη το ίδιο πρόβλημα για τον εαυτό του με `[&>span]:line-clamp-1`·
+        το στοιχείο της λίστας ήταν το μισό που κανείς δεν είχε κοιτάξει.
+
+        ⚠️ **ΓΙΑΤΙ ΤΥΛΙΓΜΑ ΚΑΙ ΟΧΙ `className` ΣΤΟ `ItemText` — ΜΕΤΡΗΜΕΝΟ ΣΤΗΝ ΠΗΓΗ**:
+        το `SelectItemText` του Radix *(`@radix-ui/react-select@2.2.6`, dist/index.mjs:901)*
+        **αποδομεί** το `className` και το `style` και **ΔΕΝ** τα προωθεί στο
+        `Primitive.span` — περνά μόνο τα υπόλοιπα `itemTextProps`. Ένα `className`
+        εκεί θα ήταν **σιωπηλά άκυρο**: κώδικας που μοιάζει με θεραπεία και δεν
+        αγγίζει τίποτα. Γι' αυτό η άγκυρα ρωτά αν η κλάση **έφτασε στο DOM**, όχι αν
+        γράφτηκε στην πηγή.
+      */}
+      {/* eslint-disable-next-line custom/no-hardcoded-strings -- CSS classes, not i18n */}
+      <span className="min-w-0 flex-1 truncate">
+        <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+      </span>
     </SelectPrimitive.Item>
   );
 })

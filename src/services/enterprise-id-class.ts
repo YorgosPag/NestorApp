@@ -31,26 +31,12 @@ import {
   type IdGenerationConfig,
 } from './enterprise-id-prefixes';
 import { deterministicUuid } from './enterprise-id-deterministic';
-import {
-  aiUsageDocKey,
-  chatHistoryDocKey,
-  ownershipRevisionKey,
-  ownershipTableKey,
-  queryStrategyDocKey,
-  userPreferencesKey,
-  vendorLogoFileKey,
-} from './enterprise-id-composite-keys';
-import {
-  enterpriseIdType,
-  isValidEnterpriseId,
-  parseEnterpriseId,
-} from './enterprise-id-parse';
-import { PublicRegistryIdGenerators } from './enterprise-id-public-registry-generators';
+import { CompositeKeyIdGenerators } from './enterprise-id-composite-key-generators';
 
 // Alias for compact generator methods
 const P = ENTERPRISE_ID_PREFIXES;
 
-export class EnterpriseIdService extends PublicRegistryIdGenerators {
+export class EnterpriseIdService extends CompositeKeyIdGenerators {
   private readonly config: IdGenerationConfig;
   private readonly generatedIds = new Set<string>();
   private readonly cache = new Map<string, EnterpriseId>();
@@ -141,7 +127,31 @@ export class EnterpriseIdService extends PublicRegistryIdGenerators {
    * ⚠️ **ΠΟΤΕ για πραγματικό οργανισμό**: το seed θα ήταν τότε *«το όνομα ορίζει
    * την ταυτότητα»*, και δύο εταιρείες με το ίδιο όνομα θα ήταν **μία**.
    */
-  generateDeterministicCompanyId(seed: string): string { return this.generateDeterministicId(P.COMPANY, seed); }
+  generateDeterministicCompanyId(seed: string): string {
+    // 🔴 **ΓΙΑΤΙ ΔΕΝ ΚΑΛΕΙ ΣΚΕΤΟ ΤΟΝ `generateDeterministicId` — ΜΕΤΡΗΜΕΝΟ 2026-09-02**
+    //
+    // Ο {@link deterministicUuid} εκπέμπει nibble έκδοσης **`5`** *(name-based,
+    // σημασιολογικά σωστό)*. Αλλά ο **επικυρωτής του ίδιου έργου** δέχεται
+    // **μόνο v4**: `enterprise-id-parse.ts:24` ⇒ `isValidEnterpriseId('comp_<v5>')`
+    // επιστρέφει **`false`**.
+    //
+    // Η συνέπεια δεν ήταν θεωρητική: το `readsAsWorkspaceIdentity` *(που είναι
+    // `isValidEnterpriseId` + έλεγχος προθέματος)* απέρριπτε την ταυτότητα, ο
+    // `resolveAlias` έπεφτε στο `workspace_aliases`, δεν έβρισκε, και το
+    // `/pro/<ταυτότητα>` έδειχνε **«Δεν υπάρχει βιτρίνα σε αυτή τη διεύθυνση»**
+    // για βιτρίνα που **υπήρχε και φαινόταν στον κατάλογο**.
+    //
+    // ⚠️ **ΤΟ ΥΠΟΚΕΙΜΕΝΟ ΣΦΑΛΜΑ ΕΙΝΑΙ ΕΥΡΥΤΕΡΟ ΚΑΙ ΔΕΝ ΘΕΡΑΠΕΥΕΤΑΙ ΕΔΩ**: το ίδιο
+    // ισχύει για **κάθε** `generateDeterministic*Id` *(αρχείο, αναθεώρηση σχεδίου)*.
+    // Η καθολική θεραπεία *(v4 nibble στον `deterministicUuid`, ή διεύρυνση του
+    // `UUID_V4`)* αλλάζει **κοινό πυρήνα** και αξίζει δική της απόφαση — δες
+    // ADR-841 Α9.6. Μετρήθηκε ότι **κανένα** v5 id δεν έχει γραφτεί στη βάση.
+    //
+    // 🔑 Ξαναγράφεται **μόνο το nibble**, όχι δεύτερος κατακερματισμός: ίδιος
+    // σπόρος ⇒ ίδιο id, και μηδέν διπλότυπη μηχανή (N.18).
+    const uuid = deterministicUuid(seed);
+    return `${P.COMPANY}_${uuid.slice(0, 14)}4${uuid.slice(15)}`;
+  }
   generateProjectId(): string { return this.generateId(P.PROJECT).id; }
   generateBuildingId(): string { return this.generateId(P.BUILDING).id; }
   generatePropertyId(): string { return this.generateId(P.PROPERTY).id; }
@@ -419,37 +429,8 @@ export class EnterpriseIdService extends PublicRegistryIdGenerators {
   // DXF BIM Drawing Mode (ADR-363) + Opening Frame Presets (ADR-676) live in the
   // `BimEntityIdGenerators` base class (N.7.1 split) — same public surface.
 
-  // --- Deterministic Composite Key Generators ---
-  // Public surface only; the pure builders live in `./enterprise-id-composite-keys`
-  // (N.7.1 — this class owns stateful generation: retry loop, cache, stats).
-
-  generateAiUsageDocId(channel: string, userId: string, month: string): string {
-    return aiUsageDocKey(channel, userId, month);
-  }
-
-  generateQueryStrategyDocId(collection: string, failedFilters: string[]): string {
-    return queryStrategyDocKey(collection, failedFilters);
-  }
-
-  generateChatHistoryDocId(channel: string, senderId: string): string {
-    return chatHistoryDocKey(channel, senderId);
-  }
-
-  generateOwnershipTableId(projectId: string): string {
-    return ownershipTableKey(projectId);
-  }
-
-  generateUserPreferencesId(userId: string, companyId: string): string {
-    return userPreferencesKey(userId, companyId);
-  }
-
-  generateOwnershipRevisionId(version: number): string {
-    return ownershipRevisionKey(version);
-  }
-
-  generateVendorLogoFileId(quoteId: string): string {
-    return vendorLogoFileKey(quoteId);
-  }
+  // Τα σύνθετα κλειδιά (`generateAiUsageDocId` κ.λπ.) ζουν στην
+  // `CompositeKeyIdGenerators` (N.7.1 split) — ίδια δημόσια επιφάνεια.
 
   /**
    * Opaque, unprefixed UUID v4 for non-entity tokens (download tokens, nonces, etc).
@@ -462,23 +443,8 @@ export class EnterpriseIdService extends PublicRegistryIdGenerators {
 
   // --- Utility Methods ---
 
-  // Pure readers live in `./enterprise-id-parse` — no instance state involved.
-
-  parseId(enterpriseId: string): Partial<EnterpriseId> | null {
-    return parseEnterpriseId(enterpriseId);
-  }
-
-  validateId(id: string): boolean {
-    return isValidEnterpriseId(id);
-  }
-
-  getIdType(id: string): string | null {
-    return enterpriseIdType(id);
-  }
-
-  isLegacyId(id: string): boolean {
-    return !isValidEnterpriseId(id);
-  }
+  // Οι καθαροί αναγνώστες (`parseId` · `validateId` · `getIdType` · `isLegacyId`) ζουν
+  // στην `CompositeKeyIdGenerators` (N.7.1 split) — ίδια δημόσια επιφάνεια.
 
   getStats(): { totalGenerated: number; cacheSize: number; config: IdGenerationConfig } {
     return {

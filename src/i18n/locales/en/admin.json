@@ -838,7 +838,7 @@
     "userInfo": "User info",
     "name": "Name",
     "email": "Email",
-    "uid": "Uid",
+    "uid": "UID",
     "globalRole": "Global role",
     "mfaLabel": "MFA",
     "lastSignIn": "Last sign in",
@@ -873,7 +873,7 @@
       "email": "Email",
       "role": "Role",
       "status": "Status",
-      "mfa": "Mfa",
+      "mfa": "MFA",
       "projects": "Projects",
       "lastSignIn": "Last sign in",
       "actions": "Actions"
