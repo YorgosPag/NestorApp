@@ -242,7 +242,7 @@ describe('🔴 Ι — το ιδιωτικό ΔΕΝ ταξιδεύει στη δ�
     };
 
     expect(projectableFromOwnerProperty(chosen, AT).publishedMedia).toEqual([
-      { privateStoragePath: property.media[0].storagePath },
+      { privateStoragePath: property.media[0].storagePath, material: { kind: 'photo' } },
     ]);
   });
 

@@ -1,8 +1,9 @@
 'use client';
 
 /**
- * @fileoverview **«ΑΝΕΒΑΣΕ Ο,ΤΙ ΕΧΕΙΣ»** — φωτογραφίες και κατόψεις (Α14).
- * @related ADR-777 §7 (Α14 · Α19 κανόνας 31) · hooks/owner-property/useOwnerPropertyMedia
+ * @fileoverview **«ΑΝΕΒΑΣΕ Ο,ΤΙ ΕΧΕΙΣ»** — φωτογραφίες και σχέδια (Α14).
+ * @related ADR-777 §7 (Α14 · Α19 κανόνας 31) · ADR-842 §7.6.8 (πώς λέγεται το σχέδιο
+ *   ανά είδος) · hooks/owner-property/useOwnerPropertyMedia
  * @module components/owner-property/form/OwnerPropertyMediaField
  *
  * ────────────────────────────────────────────────────────────────────────────
@@ -47,12 +48,13 @@ import { useFormContext } from 'react-hook-form';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { FormFieldset } from '@/components/shared/forms/form-field-primitives';
+import { isLandProperty } from '@/constants/property-classification';
 import { useOwnerPropertyMedia } from '@/hooks/owner-property/useOwnerPropertyMedia';
 import { hasDraftIdentity } from '@/lib/forms/draft-identity';
 import { AUTH_ROUTES } from '@/lib/routes';
 import type { OwnerPropertyFormValues } from '@/lib/owner-property/owner-property-form-values';
+import { PUBLISHED_MEDIA_LIMIT } from '@/services/upload/utils/storage-path-public-shelf';
 import {
-  PUBLISHED_MEDIA_LIMIT,
   isLeadOwnerMedia,
   publishedOwnerMedia,
   withOwnerMediaFirst,
@@ -87,6 +89,39 @@ export function OwnerPropertyMediaField({
    * ίδιο πράγμα διαβάζονται ως δύο διαφορετικά προβλήματα.
    */
   const accountMissing = !hasDraftIdentity(authorUserId) || state.state === 'accountRequired';
+
+  /**
+   * 🔴 **ΕΝΑ ΟΙΚΟΠΕΔΟ ΔΕΝ ΕΧΕΙ ΚΑΤΟΨΗ** — και το ήξεραν όλοι εκτός από αυτή τη γραμμή.
+   *
+   * Μετρημένο στην οθόνη (2026-09-03, `/offers/ownp_330a5a4b-…`): με είδος **Οικόπεδο**
+   * το πεδίο ζητούσε *«φωτογραφίες, **κάτοψη**, PDF»*, ενώ **δύο κάρτες παρακάτω** ο
+   * δείκτης πληρότητας έλεγε σωστά *«λείπει: **Τοπογραφικό διάγραμμα**»*. Δηλαδή η
+   * απόφαση **υπήρχε** (`completionFieldLabelKey` · `LAND_LABELLED_FIELDS`, στο
+   * `constants/field-completion-weights.ts`) και το ανέβασμα ήταν το **μόνο** σημείο
+   * που δεν ρώτησε.
+   *
+   * 🔑 **Ο ΚΡΙΤΗΣ ΕΙΝΑΙ Ο ΙΔΙΟΣ ΜΕ ΤΟΝ ΑΔΕΛΦΟ**, και είναι το νόημα: το
+   * `OwnerBasicsFields` ρωτά **αυτό ακριβώς** το κατηγόρημα δύο πεδία πιο πάνω για να
+   * πει «Εμβαδόν **οικοπέδου**». Ένα χειρόγραφο `type === 'plot' || type === 'parcel'`
+   * εδώ θα ήταν η **τρίτη** αυθεντία για το «τι είναι γη» — και η τέταρτη τιμή γης θα
+   * προστίθετο στη μία (`property-types.ts`, το ίδιο το σχόλιο του κατηγορήματος).
+   *
+   * ⚠️ **Ταξικό, όχι λίστα τιμών**: καλύπτει το «Αγροτεμάχιο» χωρίς δεύτερη γραμμή, και
+   * μια τρίτη τιμή γης δωρεάν (`resolvedPropertyClassOf(…) === 'land'`).
+   *
+   * ✅ **ΚΑΛΥΠΤΕΙ ΚΑΙ ΤΗΝ ΩΜΗ ΠΑΛΑΙΑ ΤΙΜΗ** (`type: 'Οικόπεδο'`) — **από το §7.6.11**.
+   * Μέχρι τότε **δεν** την κάλυπτε, και η αιτία δεν ήταν εδώ: το κατηγόρημα ρωτούσε
+   * `isCanonicalPropertyType` **χωρίς** `normalizePropertyType`, ενώ ο δείκτης
+   * πληρότητας κανονικοποιούσε — **δύο κριτές, και ο ένας ήξερε λιγότερα**.
+   *
+   * 🔑 **ΚΑΙ Η ΘΕΡΑΠΕΙΑ ΔΕΝ ΜΠΗΚΕ ΕΔΩ, ΕΠΙΤΗΔΕΣ.** Ένας δυνατός κριτής **μόνο** στο
+   * ανέβασμα θα έκανε την **ίδια οθόνη** να αυτο-αντικρούεται — *«Εμβαδόν»* πάνω από το
+   * `OwnerBasicsFields`, *«τοπογραφικό»* κάτω από εδώ — που είναι **χειρότερο** από το
+   * να λένε και τα δύο το ίδιο λάθος. Μπήκε **στο κατηγόρημα**, για **έξι** καταναλωτές
+   * ταυτόχρονα, και ο αδύναμος κριτής **έπαψε να εξάγεται** ώστε να μη μπορεί να
+   * ξαναδιαλεχθεί: {@link isLandProperty} (`constants/property-classification`).
+   */
+  const isLand = isLandProperty(form.watch('type'));
 
   const media = form.watch('media') ?? [];
   // 🔑 **Ο ΙΔΙΟΣ κριτής με τον γραφέα** — δες το σκεπτικό του `owner-media-publication`.
@@ -129,6 +164,30 @@ export function OwnerPropertyMediaField({
   }
 
   /**
+   * **«ΤΙ ΕΙΝΑΙ ΑΥΤΟ;»** — η δεύτερη ανθρώπινη δήλωση (ADR-841 §7 Α17).
+   *
+   * 🔴 **ΔΕΥΤΕΡΟ ΕΡΩΤΗΜΑ, ΔΕΥΤΕΡΟΣ ΧΕΙΡΙΣΤΗΣ — ΠΟΤΕ ΣΥΝΔΥΑΣΜΕΝΟ ΜΕ ΤΗ ΔΗΜΟΣΙΕΥΣΗ.** Το
+   * *«φεύγει;»* και το *«τι είναι;»* είναι ορθογώνια: ο κάτοχος μπορεί να χαρακτηρίσει
+   * κάτοψη που **δεν** δημοσιεύει, και να δημοσιεύσει φωτογραφία που δεν χαρακτήρισε.
+   * Ένας χειριστής που τα έγραφε μαζί θα έπαιρνε **μία** απόφαση για **δύο** ερωτήσεις.
+   *
+   * ⚠️ **Ίδιο ιδίωμα `getValues` με τους γείτονές του**, και για τον ίδιο λόγο: δύο
+   * γρήγορα κλικ σε διαφορετικές γραμμές θα έγραφαν το ένα πάνω στο άλλο αν διάβαζαν το
+   * `media` του κλεισίματος.
+   */
+  function handleToggleFloorplan(storagePath: string, isFloorplan: boolean): void {
+    form.setValue(
+      'media',
+      (form.getValues('media') ?? []).map((item) =>
+        item.storagePath === storagePath
+          ? { ...item, kind: isFloorplan ? ('floorplan' as const) : ('photo' as const) }
+          : item,
+      ),
+      { shouldDirty: true },
+    );
+  }
+
+  /**
    * **«Να μπει πρώτη»** — μετακίνηση μέσα στον **ίδιο** πίνακα (ADR-841 §7 Α2.1).
    *
    * ⛔ **Κανένα πεδίο σειράς**: η σειρά που βλέπει ο κάτοχος **είναι** η σειρά που
@@ -153,7 +212,10 @@ export function OwnerPropertyMediaField({
   }
 
   return (
-    <FormFieldset legend={t(`${K}.label`)} help={t(`${K}.help`)}>
+    <FormFieldset
+      legend={t(isLand ? `${K}.landLabel` : `${K}.label`)}
+      help={t(isLand ? `${K}.landHelp` : `${K}.help`)}
+    >
       <div className="flex flex-col gap-2">
         <label
           htmlFor={inputId}
@@ -212,6 +274,7 @@ export function OwnerPropertyMediaField({
                   isLead={isLeadOwnerMedia(media, item.storagePath)}
                   canPublish={published.length < PUBLISHED_MEDIA_LIMIT}
                   onTogglePublished={handleTogglePublished}
+                  onToggleFloorplan={handleToggleFloorplan}
                   onMakeFirst={handleMakeFirst}
                   onRemove={handleRemove}
                 />

@@ -299,12 +299,13 @@ describe('Κ4 — έγγραφο χωρίς `link` δίνει `ref: null`, πο�
  * φυλάει μόνο άγκυρα που **περνά τιμή** από το σύνορο — δηλαδή αυτή εδώ.
  */
 describe('Κ5 — η επιλογή «δημοσίευσε αυτό το αρχείο» επιβιώνει του συνόρου', () => {
-  const fileAt = (name: string, published?: boolean) => ({
+  const fileAt = (name: string, published?: boolean, kind?: 'photo' | 'floorplan') => ({
     storagePath: `owner_properties/u1/ownp_1/${name}`,
     fileName: name,
     sizeBytes: 10,
     uploadedAt: AT,
     ...(published === undefined ? {} : { published }),
+    ...(kind === undefined ? {} : { kind }),
   });
 
   /**
@@ -351,7 +352,49 @@ describe('Κ5 — η επιλογή «δημοσίευσε αυτό το αρχ�
     const chosen = validOwnerProperty(parsed.draft);
 
     expect(projectableFromOwnerProperty(chosen, AT).publishedMedia).toEqual([
-      { privateStoragePath: 'owner_properties/u1/ownp_1/nai.jpg' },
+      {
+        privateStoragePath: 'owner_properties/u1/ownp_1/nai.jpg',
+        material: { kind: 'photo' },
+      },
+    ]);
+  });
+
+  /**
+   * 🔴 **Η ΔΕΥΤΕΡΗ ΔΗΛΩΣΗ ΠΕΡΝΑ ΤΟ ΙΔΙΟ ΣΥΝΟΡΟ — ΚΑΙ ΤΟ ΙΔΙΟ `zod` ΤΗΝ ΕΚΟΒΕ**
+   * (ADR-841 §7 Α17).
+   *
+   * Το `kind` είναι **προαιρετικό**, ακριβώς όπως το `published` από πάνω — άρα ο
+   * μεταγλωττιστής είναι **ξανά** δομικά ανίκανος να δει την κοπή. Χωρίς αυτή την
+   * άγκυρα, ο άνθρωπος θα τσέκαρε «Είναι κάτοψη», η οθόνη θα το έδειχνε τσεκαρισμένο,
+   * και η δήλωση **δεν θα έφτανε ποτέ στη Firestore**: η κάτοψη θα ξαναγινόταν
+   * *«Φωτογραφία N από M»* — **το Ο-20 με τη διόρθωσή του γραμμένη και ανενεργή**.
+   *
+   * ⛔ **ΜΕΤΑΛΛΑΞΗ**: βγάλε το `kind` από το zod σχήμα ⇒ **κόκκινο**.
+   */
+  it('🔴 και η ΔΗΛΩΣΗ «είναι κάτοψη» φτάνει ως ΠΗΓΗ ΤΟΥ ΡΑΦΙΟΥ, με τη στιγμή του ανθρώπου', () => {
+    const parsed = draftFrom([
+      fileAt('foto.jpg', true),
+      fileAt('katopsi.jpg', true, 'floorplan'),
+    ]);
+
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.draft.media[1].kind).toBe('floorplan');
+
+    const chosen = validOwnerProperty(parsed.draft);
+
+    // 🔑 **Και οι δύο φτάνουν στο ράφι** — ΕΝΑ πρόθεμα ανά αγγελία, ΕΝΑΣ διαχωρισμός
+    //    στο τέλος. Δύο συμφιλιώσεις θα έσβηναν η μία τα αντικείμενα της άλλης.
+    expect(projectableFromOwnerProperty(chosen, AT).publishedMedia).toEqual([
+      {
+        privateStoragePath: 'owner_properties/u1/ownp_1/foto.jpg',
+        material: { kind: 'photo' },
+      },
+      {
+        privateStoragePath: 'owner_properties/u1/ownp_1/katopsi.jpg',
+        // ⚠️ Το `at` είναι το `uploadedAt` **του ανθρώπου**, ποτέ ρολόι του γραφέα.
+        material: { kind: 'floorplan', at: AT },
+      },
     ]);
   });
 });

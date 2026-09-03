@@ -490,6 +490,8 @@
     "media": {
       "label": "Photos and floor plans",
       "help": "Upload whatever you have — photos, a floor plan, a PDF. Not mandatory.",
+      "landLabel": "Photos and survey plan",
+      "landHelp": "Upload whatever you have — photos, a survey plan, a PDF. Not mandatory.",
       "add": "Add file",
       "uploading": "Uploading {fileName} — {percent}%",
       "rejected": "{fileName} was not accepted: {reason}",
@@ -502,7 +504,8 @@
       "firstBadge": "1st in the listing",
       "publishedCount": "{published} of {max} are published. The first one is the card image.",
       "privateNote": "Your files are private. Only the ones you select are published in the listing, and only after their metadata (location, device, capture time) has been stripped.",
-      "signIn": "Sign in"
+      "signIn": "Sign in",
+      "isFloorplan": "This is a floor plan"
     },
     "invariant": {
       "heading": "The listing is not saved yet:",
@@ -517,6 +520,7 @@
       "title-missing": "Give the listing a title.",
       "bedrooms-negative": "Bedrooms cannot be negative.",
       "exchange-requires-land": "An exchange (antiparochi) applies only to land. Choose «Plot» or «Parcel» as the property type, or remove the exchange.",
+      "short-lease-requires-dwelling": "Short-term rental applies to dwellings — it is priced per night and counts guests. Pick a residential property type, or remove the short-term rental.",
       "mandate-client-missing": "The mandate does not name a client.",
       "mandate-expiry-invalid": "The expiry date cannot be read.",
       "mandate-expiry-past": "The expiry date is in the past.",
@@ -723,7 +727,7 @@
     },
     "directory": {
       "title": "Professionals",
-      "lead": "Professionals who chose, themselves, to be found here. The order is alphabetical: no ranking, no rating, no paid placement.",
+      "lead": "Professionals who chose, themselves, to be found here. The nearest come first — and those almost equally close, equally. If we do not know where you are, everyone is equal: no ranking, no rating, no paid placement.",
       "loading": "Loading directory…",
       "empty": "Nobody has published a showcase yet.",
       "emptyHint": "When a professional declares they want to be found, they will appear here.",

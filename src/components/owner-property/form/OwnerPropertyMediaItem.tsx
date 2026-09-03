@@ -43,6 +43,14 @@ interface OwnerPropertyMediaItemProps {
    */
   readonly canPublish: boolean;
   readonly onTogglePublished: (storagePath: string, published: boolean) => void;
+  /**
+   * **«Είναι κάτοψη;»** — η δεύτερη δήλωση του ανθρώπου (ADR-841 §7 Α17).
+   *
+   * ⚠️ **Ορθογώνιο προς το {@link onTogglePublished}**: ο κάτοχος μπορεί να χαρακτηρίσει
+   * κάτοψη που **δεν** δημοσιεύει. Η κατηγορία είναι ιδιότητα του **αρχείου**, όχι της
+   * απόφασης δημοσίευσης.
+   */
+  readonly onToggleFloorplan: (storagePath: string, isFloorplan: boolean) => void;
   readonly onMakeFirst: (storagePath: string) => void;
   readonly onRemove: (storagePath: string) => void;
 }
@@ -52,12 +60,15 @@ export function OwnerPropertyMediaItem({
   isLead,
   canPublish,
   onTogglePublished,
+  onToggleFloorplan,
   onMakeFirst,
   onRemove,
 }: OwnerPropertyMediaItemProps): React.ReactElement {
   const { t } = useTranslation([NS]);
   const published = item.published === true;
+  const isFloorplan = item.kind === 'floorplan';
   const checkboxId = React.useId();
+  const floorplanId = React.useId();
 
   return (
     <li className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border py-2 text-sm text-foreground last:border-b-0">
@@ -74,6 +85,33 @@ export function OwnerPropertyMediaItem({
         />
         <label htmlFor={checkboxId} className="text-xs text-muted-foreground">
           {t(`${K}.publish`)}
+        </label>
+      </span>
+
+      {/*
+        🔴 **«ΤΙ ΕΙΝΑΙ ΑΥΤΟ;» — Η ΕΡΩΤΗΣΗ ΠΟΥ ΚΑΝΕΙΣ ΔΕΝ ΕΚΑΝΕ ΣΤΟΝ ΙΔΙΩΤΗ** (Α17).
+        Ο επαγγελματίας την απαντά τη στιγμή του ανεβάσματος *(διαλέγει σημείο εισόδου, και
+        το `FileRecord.category` γράφεται μόνο του)*· ο ιδιώτης ανεβάζει σε **έναν** κάδο
+        με `fileType: 'any'`, δηλαδή *«φωτογραφίες, κατόψεις, ό,τι έχει»*. Χωρίς αυτό το
+        πλαίσιο, η κάτοψή του ανακοινωνόταν ως *«Φωτογραφία N από M»*.
+
+        ⚠️ **Πλαίσιο ελέγχου και ΟΧΙ λίστα επιλογής**, παρότι το λεξιλόγιο έχει δύο τιμές:
+        η ερώτηση είναι **δυαδική** και ο γείτονάς της *(«δημοσίευση»)* την ίδια στιγμή
+        είναι κι αυτός πλαίσιο. Μια λίστα εδώ θα εισήγαγε Radix Select σε γραμμή που δεν
+        έχει καμία άλλη — και θα ζητούσε από τον άνθρωπο **δύο** κλικ για ένα ναι/όχι.
+
+        ⚠️ **Χωρίς `disabled`**: η κατηγορία δεν αγγίζει το όριο δημοσίευσης.
+      */}
+      <span className="flex items-center gap-1.5">
+        <input
+          id={floorplanId}
+          type="checkbox"
+          checked={isFloorplan}
+          onChange={(event) => onToggleFloorplan(item.storagePath, event.target.checked)}
+          className="h-4 w-4 rounded border-border"
+        />
+        <label htmlFor={floorplanId} className="text-xs text-muted-foreground">
+          {t(`${K}.isFloorplan`)}
         </label>
       </span>
 

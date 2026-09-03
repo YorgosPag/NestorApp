@@ -45,8 +45,10 @@
 import { z } from 'zod';
 
 import { geoPointSchema, optionalNumberSchema } from '@/lib/forms/form-primitives';
+import { LISTING_MATERIAL_KINDS } from '@/lib/listings/listing-material';
 import { GEOCODING_ACCURACIES, type GeocodingAccuracy } from '@/lib/geocoding/geocoding-types';
-import { isLandPropertyType, PROPERTY_TYPES } from '@/constants/property-types';
+import { isLandProperty } from '@/constants/property-classification';
+import { PROPERTY_TYPES } from '@/constants/property-types';
 import { OFFER_KINDS, type OfferKind, type PropertyOffer } from '@/types/property-offers';
 import type {
   OwnerProperty,
@@ -159,6 +161,19 @@ export const ownerPropertyFormSchema = z.object({
        * έχει**, και η απουσία του οφείλει να διαβάζεται *«ιδιωτικό»*, ποτέ «άγνωστο».
        */
       published: z.boolean().optional(),
+      /**
+       * 🔴 **«ΤΙ ΕΙΝΑΙ ΑΥΤΟ;» (ADR-841 §7 Α17) — ΚΑΙ ΜΠΑΙΝΕΙ ΕΔΩ ΓΙΑ ΤΟΝ ΛΟΓΟ ΠΟΥ ΤΟ
+       * ΑΚΡΙΒΩΣ ΑΠΟ ΠΑΝΩ ΠΕΔΙΟ ΤΕΚΜΗΡΙΩΝΕΙ.** Το `zod` **κόβει σιωπηλά** ό,τι δεν
+       * δηλώνεται: χωρίς αυτή τη γραμμή ο άνθρωπος θα τσέκαρε «Είναι κάτοψη», η οθόνη
+       * θα το έδειχνε τσεκαρισμένο, και η δήλωση **δεν θα έφτανε ποτέ στη Firestore** —
+       * η κάτοψη θα ξαναγινόταν *«Φωτογραφία N από M»*, δηλαδή **ακριβώς το Ο-20**, με
+       * τη διόρθωσή του γραμμένη και ανενεργή.
+       *
+       * ⚠️ **Ούτε εδώ ο μεταγλωττιστής θα το έπιανε**, για τον ίδιο λόγο: το πεδίο είναι
+       * **προαιρετικό** στην οντότητα, άρα αντικείμενο **χωρίς** αυτό ικανοποιεί τον
+       * τύπο. Το φυλάει **μόνο** άγκυρα που περνά τιμή από το σύνορο.
+       */
+      kind: z.enum(LISTING_MATERIAL_KINDS).optional(),
     }),
   ),
 });
@@ -308,7 +323,7 @@ export function ownerPropertyDraftFrom(
   // να κρατά την τιμή που γράφτηκε πριν αλλάξει το είδος, και θα ταξίδευε στη βάση
   // ως «οικόπεδο στον 3ο όροφο» — σιωπηλό ψέμα που **καμία** οθόνη δεν θα έδειχνε.
   // Στη μετάφραση προς το προσχέδιο, ο διακομιστής παίρνει την ίδια εγγύηση δωρεάν.
-  const land = isLandPropertyType(values.type);
+  const land = isLandProperty(values.type);
 
   return {
     title: values.title.trim(),
