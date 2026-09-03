@@ -55,6 +55,7 @@ import { offerKindsFromLegacyStatus } from '@/lib/offers/derive-commercial-statu
 import type { PropertyType } from '@/types/property';
 import type { GeocodingAccuracy } from '@/lib/geocoding/geocoding-types';
 import type {
+  ListingImage,
   ListingImageSource,
   ListingPosition,
   PublicListing,
@@ -62,6 +63,7 @@ import type {
   UnknownPositionReason,
 } from '@/types/public-listing';
 import { LISTING_MATERIAL_KEYS } from '@/lib/listings/listing-authorship';
+import { isFloorplanMaterial, type ListingMaterial } from '@/lib/listings/listing-material';
 import { projectListingAttributes } from './public-listing-attributes';
 import { outranksForLocation } from '@/lib/location/location-provenance';
 
@@ -325,6 +327,10 @@ export function projectListingShape(
     //    συμφιλίωση. Τα δένει ο γραφέας, με το {@link withPublishedGallery}, **αφού**
     //    μάθει τι πραγματικά κάθεται στον κάδο (ADR-841 §7 Α2.2).
     gallery: [],
+    // 🔴 **ΙΔΙΑ ΣΗΜΑΣΙΑ ΜΕ ΤΟ `gallery: []` ΑΠΟ ΠΑΝΩ** — «το ράφι δεν ρωτήθηκε ακόμη»,
+    //    ποτέ «δεν έχει κάτοψη». Τις δένει ο γραφέας με το {@link withPublishedGallery},
+    //    στο **ίδιο** πέρασμα και από την **ίδια** αναφορά (ADR-841 §7 Α17.4).
+    floorplans: [],
     type: (property.type ?? 'apartment') as PropertyType,
     areaSqm: numberOrNull(property.areas?.gross) ?? numberOrNull(property.area),
     offerKinds,
@@ -418,6 +424,8 @@ export interface ProjectedShelfImage {
   readonly width: number;
   readonly height: number;
   readonly sources: readonly ListingImageSource[];
+  /** **Τι είναι αυτό** — δες `PublicShelfImage.material` (ADR-841 §7 Α17.4). */
+  readonly material: ListingMaterial;
 }
 
 /**
@@ -452,14 +460,31 @@ export function withPublishedGallery(
   listing: PublicListing,
   images: readonly ProjectedShelfImage[],
 ): PublicListing {
+  const keys = LISTING_MATERIAL_KEYS[listing.authorship];
+
+  const toImage = (image: ProjectedShelfImage, altKey: string): ListingImage => ({
+    url: image.url,
+    width: image.width,
+    height: image.height,
+    altKey,
+    sources: image.sources,
+  });
+
   return {
     ...listing,
-    gallery: images.map((image) => ({
-      url: image.url,
-      width: image.width,
-      height: image.height,
-      altKey: LISTING_MATERIAL_KEYS[listing.authorship].galleryAlt,
-      sources: image.sources,
-    })),
+    gallery: images
+      .filter((image) => !isFloorplanMaterial(image.material))
+      .map((image) => toImage(image, keys.galleryAlt)),
+    floorplans: images.flatMap((image) =>
+      isFloorplanMaterial(image.material)
+        ? [
+            {
+              provenance: 'declared' as const,
+              value: toImage(image, keys.floorplanAlt),
+              at: image.material.at,
+            },
+          ]
+        : [],
+    ),
   };
 }

@@ -48,6 +48,11 @@ function shelfImage(name: string, widths: readonly number[]): ProjectedShelfImag
       url: `https://storage.googleapis.com/bucket/listings/ownp_77aa21bc/${name}-${width}.webp`,
       width,
     })),
+    // 🔑 **Το ράφι κουβαλά το «τι είναι αυτό»** (ADR-841 §7 Α17.4). Εδώ **φωτογραφία**:
+    //    αυτή η σουίτα ρωτά για τη **συλλογή**. Ο διαχωρισμός κάτοψης/φωτογραφίας —
+    //    και το ότι η κάτοψη **δεν** μπαίνει εδώ — έχει δική του άγκυρα:
+    //    `lib/listings/__tests__/listing-floorplan-separation.test.ts`.
+    material: { kind: 'photo' },
   };
 }
 

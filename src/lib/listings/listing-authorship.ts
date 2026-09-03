@@ -144,6 +144,43 @@ export interface ListingMaterialKeys {
    * η Α15 διόρθωσε.
    */
   readonly sourceNote: string;
+  /**
+   * Το `alt` **κάθε κάτοψης** — το πεδίο `floorplans`, ποτέ η συλλογή (ADR-841 §7 Α17.2).
+   *
+   * 🔴 **ΤΡΙΤΟ ΠΕΔΙΟ ΕΔΩ, ΚΑΙ ΟΧΙ `kind` ΜΕΣΑ ΣΤΗΝ ΕΙΚΟΝΑ — ΕΙΝΑΙ Ο ΛΟΓΟΣ ΠΟΥ Η Α15
+   * ΕΠΙΒΙΩΝΕΙ.** Η κάτοψη χρειαζόταν **δικό της** `alt` *(«Φωτογραφία 3 από 8» είναι
+   * ψέμα για σχέδιο, και το `{index}`/`{total}` δεν έχει καν νόημα)*. Ο φυσικός δρόμος
+   * ήταν να γίνει το `altKey` ιδιότητα **της εικόνας** — που θα ακύρωνε ρητά τη
+   * δικαιολόγηση της άδειας προθέματος στο `.i18n-shell-slice.json`.
+   *
+   * 🔑 **Εδώ μένει ιδιότητα της ΑΓΓΕΛΙΑΣ, κατά προέλευση** — ίδιος παρονομαστής, ίδιο
+   * `Record`, **μηδέν** νέο ιδίωμα. Η κάτοψη του κατόχου και η κάτοψη του γραφείου
+   * λένε διαφορετικά πράγματα για τον ίδιο λόγο που το λένε και οι φωτογραφίες τους.
+   *
+   * ⚠️ **Καμία παράμετρος θέσης**: μια κάτοψη **δεν αριθμείται** στην οθόνη όπως οι
+   * φωτογραφίες. Το κλειδί λέει *τι είναι* και *τίνος είναι*, τίποτε άλλο.
+   */
+  readonly floorplanAlt: string;
+  /**
+   * Η **ορατή** σημείωση κάτω από τις κατόψεις.
+   *
+   * 🔴 **ΒΡΕΘΗΚΕ ΠΕΡΠΑΤΩΝΤΑΣ, ΟΧΙ ΑΠΟ ΑΓΚΥΡΑ** (2026-09-03, ADR-841 §7 Α17): η πρώτη
+   * υλοποίηση ξαναχρησιμοποιούσε το {@link sourceNote}, και η οθόνη τύπωσε *«Οι
+   * **φωτογραφίες** είναι υλικό του κατόχου»* **κάτω από μια κάτοψη** — και **δύο
+   * φορές**, δύο γραμμές απόσταση. Είναι **ακριβώς** η κλάση του Ο-18 *(πρόταση που
+   * μιλά για ένα είδος υλικού ενώ τα είδη έγιναν δύο)*, με τη διαφορά ότι αυτή τη
+   * φορά τη γέννησε η **ίδια η διόρθωσή** του.
+   *
+   * ⛔ **Και ΔΕΝ λύθηκε με διαγραφή της σημείωσης** από την ενότητα των κατόψεων: μια
+   * αγγελία **χωρίς** φωτογραφίες δείχνει *ονομασμένη απουσία* αντί για σημείωση
+   * προέλευσης ⇒ η κάτοψη θα έμενε **χωρίς καμία ορατή** δήλωση προέλευσης, δηλαδή θα
+   * ξανάνοιγε το Ο-18 από την πίσω πόρτα.
+   *
+   * ⚠️ **Δεν είναι δίδυμο του {@link sourceNote}**: εκείνο λέει *«οι φωτογραφίες»*,
+   * αυτό *«η κάτοψη»*. Ίδια ερώτηση, **άλλο υποκείμενο** — και το υποκείμενο είναι
+   * ακριβώς αυτό που ήταν λάθος.
+   */
+  readonly floorplanNote: string;
 }
 
 /** Δες {@link ListingMaterialKeys} για το γιατί ο παρονομαστής είναι η **κλάση γνώσης**. */
@@ -151,9 +188,13 @@ export const LISTING_MATERIAL_KEYS: Readonly<Record<ListingAuthorship, ListingMa
   'owner-declared': {
     galleryAlt: 'search-results:detail.media.galleryAlt.ownerDeclared',
     sourceNote: 'search-results:detail.media.sourceNote.ownerDeclared',
+    floorplanAlt: 'search-results:detail.media.floorplanAlt.ownerDeclared',
+    floorplanNote: 'search-results:detail.media.floorplanNote.ownerDeclared',
   },
   agency: {
     galleryAlt: 'search-results:detail.media.galleryAlt.agency',
     sourceNote: 'search-results:detail.media.sourceNote.agency',
+    floorplanAlt: 'search-results:detail.media.floorplanAlt.agency',
+    floorplanNote: 'search-results:detail.media.floorplanNote.agency',
   },
 } as const;
