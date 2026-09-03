@@ -46,7 +46,9 @@ const LISTED = {
   commercialStatus: 'for-sale',
   areas: { gross: 80 },
   commercial: { askingPrice: 150000 },
-  publishedMedia: [{ privateStoragePath: 'owner_properties/u1/a.jpg' }],
+  publishedMedia: [
+    { privateStoragePath: 'owner_properties/u1/a.jpg', material: { kind: 'photo' as const } },
+  ],
 } as const;
 
 /** Καταγράφει **τη σειρά** των πράξεων — αυτό ακριβώς μετρά η σουίτα. */
@@ -72,6 +74,10 @@ function shelfReport(count: number): PublicShelfReport {
       { key: `k${index}-640`, url: `https://shelf/${index}-640.webp`, width: 640, height: 425 },
       { key: `k${index}-2560`, url: `https://shelf/${index}-2560.webp`, width: 2560, height: 1700 },
     ],
+    // 🔑 **Το ράφι κουβαλά το «τι είναι αυτό»** (ADR-841 §7 Α17.4) — εδώ φωτογραφία, που
+    //    είναι ό,τι ρωτά αυτή η σουίτα. Ο **διαχωρισμός** κάτοψης/φωτογραφίας έχει δική
+    //    του άγκυρα (`lib/listings/__tests__/listing-floorplan-separation`).
+    material: { kind: 'photo' as const },
   });
   return {
     outcome: 'reconciled',

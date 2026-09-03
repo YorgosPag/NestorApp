@@ -164,6 +164,31 @@ describe('Κ2 — ⛔ Ο ΔΕΥΤΕΡΟΣ ΦΡΟΥΡΟΣ: τι ΔΕΝ γίνετ
     expect(shelfPaths()).toEqual([]);
   });
 
+  it('🔴 ΚΑΤΟΨΗ ως **JPEG** ΔΕΝ δημοσιεύεται — και ΜΟΝΟ η κατηγορία μπορεί να το πιάσει', async () => {
+    // 🔴 **ΤΟ ΚΕΝΟ ΠΟΥ ΕΙΧΕ ΑΥΤΗ Η ΣΟΥΙΤΑ, ΟΝΟΜΑΣΜΕΝΟ** (ADR-841 §7 Α17.1): η δοκιμή
+    //    ακριβώς από πάνω περνά `application/dxf`, δηλαδή **δύο** φρουροί μπορούν να την
+    //    πιάσουν *(κατηγορία **και** MIME)* και η άγκυρα **δεν ξεχωρίζει ποιος**. Αν
+    //    κάποιος έσβηνε τη γρ. 96, θα έμενε **πράσινη** — και το handoff του Ο-20
+    //    συμπέρανε ακριβώς γι' αυτό ότι ο φρουρός της κατηγορίας δεν υπάρχει.
+    //
+    // ⇒ Με **εικονικό** MIME ο δεύτερος φρουρός είναι **δομικά ανίκανος** να πιάσει,
+    //    οπότε ό,τι μένει είναι η κατηγορία. **Μετάλλαξη**: σβήσε τη γρ. 96 ⇒ κοκκινίζει.
+    //    ⚠️ Και αυτό είναι ο **ΚΑΝΟΝΑΣ** σε RESO/Rightmove, όχι ακραία περίπτωση: η
+    //    κάτοψη διανέμεται ως **αποδοθείσα εικόνα**, όχι ως DXF.
+    filesInCollection = [
+      fileDoc({
+        id: 'file_plan',
+        category: 'floorplans',
+        contentType: 'image/jpeg',
+        classification: 'public',
+      }),
+    ];
+
+    await republishListing(adminDb, LISTING, PROPERTY, resolveAgency);
+
+    expect(shelfPaths()).toEqual([]);
+  });
+
   it('🔴 ΣΥΜΒΟΛΑΙΟ σημασμένο `public` ΔΕΝ δημοσιεύεται', async () => {
     filesInCollection = [
       fileDoc({
@@ -240,7 +265,7 @@ describe('Κ3 — Η ΣΕΙΡΑ ΕΙΝΑΙ ΝΤΕΤΕΡΜΙΝΙΣΤΙΚΗ, κα�
 
   it('🔑 το όριο είναι ΤΟ ΙΔΙΟ με του ιδιώτη — 24, μία σταθερά', () => {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { PUBLISHED_MEDIA_LIMIT } = require('@/lib/owner-property/owner-media-publication') as
+    const { PUBLISHED_MEDIA_LIMIT } = require('@/services/upload/utils/storage-path-public-shelf') as
       typeof import('@/lib/owner-property/owner-media-publication');
 
     const many = Array.from({ length: PUBLISHED_MEDIA_LIMIT + 5 }, (_, index) =>

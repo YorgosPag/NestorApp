@@ -22,19 +22,16 @@
  */
 
 import type { OwnerPropertyMedia } from '@/types/owner-property';
-import type { PublicShelfSource } from '@/services/upload/utils/storage-path-public-shelf';
-
-/**
- * **Πόσες φωτογραφίες φεύγουν το πολύ** (ADR-841 §7 Α2.1).
- *
- * Μετρημένο, όχι στρογγυλό: η έρευνα της **Zillow** δίνει **22–27** ως ιδανικό εύρος,
- * με πτώση πάνω από **28** *(«οι σημαντικές θάβονται»)*· η **Rightmove** δουλεύει σε
- * **10–20**. Το **24** είναι μέσα στο πρώτο και πάνω από το δεύτερο.
- *
- * ⚠️ **Δεν είναι όριο ασφαλείας** — είναι όριο **προσοχής του επισκέπτη**. Το όριο
- * ασφαλείας είναι η ίδια η **επιλογή** (Α2.7): χωρίς αυτήν, δεν φεύγει **τίποτα**.
- */
-export const PUBLISHED_MEDIA_LIMIT = 24;
+import {
+  PUBLISHED_MEDIA_LIMIT,
+  type PublicShelfSource,
+} from '@/services/upload/utils/storage-path-public-shelf';
+import {
+  PHOTO_MATERIAL,
+  declaredFloorplanMaterial,
+  isFloorplanMaterial,
+  type ListingMaterial,
+} from '@/lib/listings/listing-material';
 
 /**
  * **Τα αρχεία που ο άνθρωπος διάλεξε, ΣΤΗ ΣΕΙΡΑ ΤΟΥ**, κομμένα στο όριο.
@@ -56,15 +53,54 @@ export function publishedOwnerMedia(
 }
 
 /**
+ * **ΤΙ ΕΙΝΑΙ ΑΥΤΟ ΤΟ ΑΡΧΕΙΟ;** — η **μία** ανάγνωση της δήλωσης του ανθρώπου (Α17).
+ *
+ * 🔴 **Η ΠΡΟΕΠΙΛΟΓΗ ΓΡΑΦΕΤΑΙ ΕΔΩ ΚΑΙ ΠΟΥΘΕΝΑ ΑΛΛΟΥ.** Το `kind` είναι **προαιρετικό**
+ * *(κάθε αρχείο που υπάρχει σήμερα ανέβηκε **πριν** υπάρξει η ερώτηση)*, και ένα
+ * `?? 'photo'` αντιγραμμένο σε δύο καλούντες θα ήταν **δύο** προεπιλογές ελεύθερες να
+ * αποκλίνουν — ακριβώς το σχήμα που αυτό το module υπάρχει για να αποτρέψει.
+ *
+ * 🔑 **Η κατεύθυνση της προεπιλογής είναι η ΣΗΜΕΡΙΝΗ ΣΥΜΠΕΡΙΦΟΡΑ, όχι προτίμηση**: τα
+ * υπάρχοντα αρχεία είναι **ήδη** στη συλλογή. Προεπιλογή `'floorplan'` θα τα **έβγαζε**
+ * σιωπηλά από αυτήν — αλλαγή σε δημοσιευμένη αγγελία που **κανείς άνθρωπος δεν ζήτησε**.
+ */
+export function ownerMediaMaterial(item: OwnerPropertyMedia): ListingMaterial {
+  return item.kind === 'floorplan'
+    ? declaredFloorplanMaterial(item.uploadedAt)
+    : PHOTO_MATERIAL;
+}
+
+/**
+ * **Τα δημοσιευμένα αρχεία που είναι ΦΩΤΟΓΡΑΦΙΕΣ** — δηλαδή η συλλογή.
+ *
+ * 🔑 Υπάρχει ξεχωριστά από το {@link publishedOwnerMedia} επειδή *«τι φεύγει;»* και
+ * *«τι μπαίνει στη ΣΥΛΛΟΓΗ;»* έπαψαν να είναι η ίδια ερώτηση τη στιγμή που η **Α17**
+ * έδωσε στην κάτοψη δικό της πεδίο.
+ */
+export function publishedOwnerPhotos(
+  media: readonly OwnerPropertyMedia[],
+): readonly OwnerPropertyMedia[] {
+  return publishedOwnerMedia(media).filter((item) => !isFloorplanMaterial(ownerMediaMaterial(item)));
+}
+
+/**
  * **Η επιλογή, στη γλώσσα του ραφιού** — μονοπάτια στον **ιδιωτικό** κάδο.
  *
  * ⚠️ Ποτέ bytes και ποτέ URL: ο γραφέας κατεβάζει το πρωτότυπο **ο ίδιος**, ώστε ο
  * καθαρισμός EXIF/GPS να μην μπορεί να παρακαμφθεί από τον καλούντα *(Α12.7)*.
+ *
+ * 🔴 **ΚΑΙ ΟΙ ΚΑΤΟΨΕΙΣ ΠΕΡΝΟΥΝ ΑΠΟ ΕΔΩ — ΕΝΑ ράφι, ΕΝΑΣ διαχωρισμός στο τέλος** *(Α17.4)*.
+ * Δύο κλήσεις του `reconcilePublicShelf` θα ήταν **καταστροφικές**, όχι απλώς περιττές: το
+ * πρόθεμα είναι **ένα ανά αγγελία**, άρα το `deleteExtra` της καθεμιάς θα έσβηνε τα
+ * αντικείμενα της **άλλης** σε κάθε πέρασμα.
  */
 export function publishedOwnerMediaSources(
   media: readonly OwnerPropertyMedia[],
 ): readonly PublicShelfSource[] {
-  return publishedOwnerMedia(media).map((item) => ({ privateStoragePath: item.storagePath }));
+  return publishedOwnerMedia(media).map((item) => ({
+    privateStoragePath: item.storagePath,
+    material: ownerMediaMaterial(item),
+  }));
 }
 
 /**
@@ -74,12 +110,18 @@ export function publishedOwnerMediaSources(
  * αρχείο στην κορυφή της λίστας **δεν** είναι η εικόνα της αγγελίας, και μια οθόνη που
  * θα το σήμαινε ως «1η» θα έλεγε ψέματα σε ακριβώς τον άνθρωπο που προσπαθεί να
  * διαλέξει.
+ *
+ * 🔴 **ΚΑΙ ΓΙ' ΑΥΤΟ ΑΚΡΙΒΩΣ ΡΩΤΑ ΜΟΝΟ ΤΙΣ ΦΩΤΟΓΡΑΦΙΕΣ, ΑΠΟ ΤΗΝ Α17.** Μια κάτοψη **δεν
+ * μπαίνει στη συλλογή καθόλου** — ζει σε δικό της πεδίο. Αν έμενε στον παρονομαστή, μια
+ * κάτοψη στην κορυφή του πίνακα θα σημαινόταν *«1η»* ενώ ο κόσμος θα έβλεπε **άλλη**
+ * εικόνα πρώτη: **ακριβώς το ίδιο ψέμα** που αυτή η συνάρτηση γράφτηκε για να αποτρέψει,
+ * με νέα αιτία. ⚠️ Η ουρά της Α17 που **δεν** φαινόταν στο δημόσιο έγγραφο.
  */
 export function isLeadOwnerMedia(
   media: readonly OwnerPropertyMedia[],
   storagePath: string,
 ): boolean {
-  return publishedOwnerMedia(media)[0]?.storagePath === storagePath;
+  return publishedOwnerPhotos(media)[0]?.storagePath === storagePath;
 }
 
 /**

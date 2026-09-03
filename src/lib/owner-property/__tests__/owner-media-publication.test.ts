@@ -18,8 +18,8 @@
  * η οθόνη θα δείχνει «πρώτη» άλλη φωτογραφία από αυτήν που διάλεξε ο άνθρωπος.
  */
 
+import { PUBLISHED_MEDIA_LIMIT } from '@/services/upload/utils/storage-path-public-shelf';
 import {
-  PUBLISHED_MEDIA_LIMIT,
   isLeadOwnerMedia,
   publishedOwnerMedia,
   publishedOwnerMediaSources,
@@ -58,7 +58,12 @@ describe('Ε1 — OPT-IN: ό,τι δεν επιλέχθηκε ΔΕΝ φεύγε�
     ]);
 
     expect(sources).toEqual([
-      { privateStoragePath: 'owner_properties/u1/ownp_1/public.jpg' },
+      {
+        privateStoragePath: 'owner_properties/u1/ownp_1/public.jpg',
+        // 🔑 **Η δήλωση ταξιδεύει μαζί με τα bytes** (ADR-841 §7 Α17.4). Αδήλωτο αρχείο
+        //    μένει φωτογραφία — δες την άγκυρα `listing-floorplan-separation`.
+        material: { kind: 'photo' },
+      },
     ]);
   });
 
@@ -119,10 +124,5 @@ describe('Ε3 — ΤΟ ΟΡΙΟ: η οθόνη και ο κόσμος ΔΕΝ μ�
 
     // Αν αυτά τα δύο αποκλίνουν, ο άνθρωπος βλέπει έναν αριθμό και ο κόσμος άλλον.
     expect(publishedOwnerMediaSources(list)).toHaveLength(publishedOwnerMedia(list).length);
-  });
-
-  it('το όριο είναι μέσα στο μετρημένο εύρος της έρευνας (22–27)', () => {
-    expect(PUBLISHED_MEDIA_LIMIT).toBeGreaterThanOrEqual(22);
-    expect(PUBLISHED_MEDIA_LIMIT).toBeLessThanOrEqual(27);
   });
 });

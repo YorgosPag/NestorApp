@@ -26,6 +26,7 @@ import sharp from 'sharp';
 import {
   PUBLIC_SHELF_CACHE_CONTROL,
   parsePublicShelfKey,
+  type PublicShelfSource,
 } from '@/services/upload/utils/storage-path-public-shelf';
 
 // ---------------------------------------------------------------------------
@@ -129,14 +130,14 @@ const { reconcilePublicShelf } = require('../public-shelf.service') as
 const LISTING = 'ownp_77aa21bc';
 
 /** Βάζει μια αληθινή φωτογραφία στον **ιδιωτικό** κάδο και επιστρέφει το μονοπάτι της. */
-async function givenPrivatePhoto(path: string, tint: number): Promise<{ privateStoragePath: string }> {
+async function givenPrivatePhoto(path: string, tint: number): Promise<PublicShelfSource> {
   const bytes = await sharp({
     create: { width: 60, height: 40, channels: 3, background: { r: tint, g: 40, b: 90 } },
   })
     .jpeg()
     .toBuffer();
   privateBucket.put(path, bytes);
-  return { privateStoragePath: path };
+  return { privateStoragePath: path, material: { kind: 'photo' } };
 }
 
 function shelfKeys(): string[] {
@@ -282,7 +283,7 @@ describe('Κ5 — ΑΝΘΕΚΤΙΚΟΤΗΤΑ: μια χαλασμένη πηγή
 
     const report = await reconcilePublicShelf(LISTING, [
       good,
-      { privateStoragePath: 'owner_properties/u1/broken.jpg' },
+      { privateStoragePath: 'owner_properties/u1/broken.jpg', material: { kind: 'photo' } },
     ]);
 
     expect(report.outcome).toBe('reconciled');
@@ -292,7 +293,7 @@ describe('Κ5 — ΑΝΘΕΚΤΙΚΟΤΗΤΑ: μια χαλασμένη πηγή
 
   it('πηγή που ΛΕΙΠΕΙ μετριέται, δεν πετά', async () => {
     const report = await reconcilePublicShelf(LISTING, [
-      { privateStoragePath: 'owner_properties/u1/does-not-exist.jpg' },
+      { privateStoragePath: 'owner_properties/u1/does-not-exist.jpg', material: { kind: 'photo' } },
     ]);
 
     expect(report.outcome).toBe('reconciled');
@@ -315,14 +316,14 @@ describe('Κ5 — ΑΝΘΕΚΤΙΚΟΤΗΤΑ: μια χαλασμένη πηγή
 // ---------------------------------------------------------------------------
 
 /** Ένα **μεγάλο** πρωτότυπο, ώστε τα τρία πλάτη να δώσουν **διαφορετικά** bytes. */
-async function givenLargePrivatePhoto(path: string): Promise<{ privateStoragePath: string }> {
+async function givenLargePrivatePhoto(path: string): Promise<PublicShelfSource> {
   const bytes = await sharp({
     create: { width: 1400, height: 1000, channels: 3, background: { r: 10, g: 120, b: 200 } },
   })
     .jpeg()
     .toBuffer();
   privateBucket.put(path, bytes);
-  return { privateStoragePath: path };
+  return { privateStoragePath: path, material: { kind: 'photo' } };
 }
 
 describe('Κ6 — ΤΑ ΠΑΡΑΓΩΓΑ: κάθε πλάτος έχει ΔΙΚΗ ΤΟΥ διεύθυνση, ένα manifest τα δένει', () => {

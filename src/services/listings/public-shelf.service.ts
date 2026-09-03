@@ -60,6 +60,7 @@ import { createHash } from 'node:crypto';
 import { GCS_PUBLIC_MEDIA_BUCKET } from '@/config/gcs-buckets';
 import { getAdminBucket, getAdminStorage } from '@/lib/firebaseAdmin';
 import { createModuleLogger } from '@/lib/telemetry';
+import type { ListingMaterial } from '@/lib/listings/listing-material';
 import {
   PUBLIC_SHELF_CACHE_CONTROL,
   buildPublicShelfKey,
@@ -102,6 +103,19 @@ export interface PublicShelfImage {
   readonly canonical: PublicShelfObject;
   /** Όλα τα διακριτά παράγωγα, **αύξον πλάτος**. Περιέχει το {@link canonical}. */
   readonly variants: readonly PublicShelfObject[];
+  /**
+   * **Τι ήταν αυτά τα bytes**, όπως το δήλωσε η πηγή — ταξιδεύει **αυτούσιο** (Α17.4).
+   *
+   * 🔴 **ΓΙΑΤΙ ΤΑΞΙΔΕΥΕΙ ΚΑΙ ΔΕΝ ΑΝΤΙΣΤΟΙΧΙΖΕΤΑΙ ΜΕ ΔΕΙΚΤΗ ΣΤΗΝ ΕΞΟΔΟ:** το
+   * {@link reconcilePublicShelf} **πετά** τις πηγές που δεν καθαρίστηκαν, άρα το
+   * `published[i]` **δεν** είναι το `sources[i]`. Ένας καλών που θα ζευγάρωνε με τη θέση
+   * θα γινόταν σιωπηλά λάθος την **πρώτη** φορά που μια εικόνα απορρίπτεται — και το
+   * λάθος θα ήταν «η κάτοψη ανακοινώθηκε ως φωτογραφία», δηλαδή **ακριβώς** το Ο-20.
+   *
+   * ⛔ **Το ράφι ΔΕΝ το διαβάζει ΠΟΤΕ για να αποφασίσει κάτι.** Καμία διακλάδωση αυτού
+   * του αρχείου δεν το κοιτά· η **μία** ερμηνεία ζει στο `withPublishedGallery`.
+   */
+  readonly material: ListingMaterial;
 }
 
 /** Τι έκανε η συμφιλίωση — ρητά, ώστε ο καλών να **μετρήσει**. */
@@ -131,6 +145,8 @@ interface PendingUpload {
 interface AddressedImage {
   readonly variants: readonly PublicShelfObject[];
   readonly uploads: readonly PendingUpload[];
+  /** Δες {@link PublicShelfImage.material} — κουβαλιέται, δεν ερμηνεύεται. */
+  readonly material: ListingMaterial;
 }
 
 // ---------------------------------------------------------------------------
@@ -274,11 +290,11 @@ async function addressOne(
     const sourceRef = sourceReference(source.privateStoragePath, String(meta.generation ?? ''));
 
     const hit = fullCacheHit(cachedVariants(existing, sourceRef));
-    if (hit !== null) return { variants: distinctByKey(hit), uploads: [] };
+    if (hit !== null) return { variants: distinctByKey(hit), uploads: [], material: source.material };
 
     const [raw] = await original.download();
     const uploads = groupUploads(listingId, sourceRef, [...(await sanitiseImageVariants(raw))]);
-    return { variants: distinctByKey(uploads.map(toObject)), uploads };
+    return { variants: distinctByKey(uploads.map(toObject)), uploads, material: source.material };
   } catch (error) {
     logger.warn('Πηγή δεν δημοσιεύεται — δεν διαβάστηκε ή δεν καθαρίστηκε', {
       listingId,
@@ -437,6 +453,7 @@ export async function reconcilePublicShelf(
       published: desired.map((image) => ({
         canonical: image.variants[image.variants.length - 1],
         variants: image.variants,
+        material: image.material,
       })),
       removed,
       rejected: addressed.length - desired.length,

@@ -36,7 +36,8 @@ import {
   FILE_STATUS,
 } from '@/config/domain-constants';
 import { FILE_TYPE_CONFIG } from '@/config/file-upload-config';
-import { PUBLISHED_MEDIA_LIMIT } from '@/lib/owner-property/owner-media-publication';
+import { PUBLISHED_MEDIA_LIMIT } from '@/services/upload/utils/storage-path-public-shelf';
+import { PHOTO_MATERIAL } from '@/lib/listings/listing-material';
 import type { FileRecord } from '@/types/file-record';
 import type { PublicShelfSource } from '@/services/upload/utils/storage-path-public-shelf';
 
@@ -154,6 +155,13 @@ export function compareAgencyMediaForPublication(
  * ⚠️ Ποτέ bytes και ποτέ URL — **μονοπάτι στον ιδιωτικό κάδο**, ίδιο συμβόλαιο με τον
  * ιδιώτη: ο γραφέας κατεβάζει το πρωτότυπο **ο ίδιος**, ώστε ο καθαρισμός EXIF/GPS να
  * μην μπορεί να παρακαμφθεί από τον καλούντα *(Α12.7)*.
+ *
+ * 🔑 **`PHOTO_MATERIAL` ΣΤΑΘΕΡΑ, ΚΑΙ ΕΙΝΑΙ ΑΠΟΔΕΙΞΗ — ΟΧΙ ΠΑΡΑΔΟΧΗ** (ADR-841 §7 Α17.4).
+ * Ο φρουρός #2 έχει **ήδη** εγγυηθεί, δέκα γραμμές πιο πάνω, ότι μόνο
+ * `category === 'photos'` φτάνει ως εδώ — δηλαδή το «είναι φωτογραφία;» **απαντήθηκε από
+ * ανθρώπινη πράξη** (το σημείο εισόδου του ανεβάσματος), δεν υποτίθεται. ⚠️ Γι' αυτό μια
+ * μελλοντική χαλάρωση της γρ. 96 **οφείλει** να αλλάξει και αυτή τη γραμμή: είναι οι δύο
+ * άκρες του **ίδιου** ισχυρισμού, και η άγκυρα του Ο-20 τις ρωτά μαζί.
  */
 export function publishedAgencyMediaSources(
   files: readonly AgencyMediaCandidate[],
@@ -163,5 +171,5 @@ export function publishedAgencyMediaSources(
     .slice()
     .sort(compareAgencyMediaForPublication)
     .slice(0, PUBLISHED_MEDIA_LIMIT)
-    .map((file) => ({ privateStoragePath: file.storagePath }));
+    .map((file) => ({ privateStoragePath: file.storagePath, material: PHOTO_MATERIAL }));
 }

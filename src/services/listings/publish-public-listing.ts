@@ -390,6 +390,10 @@ function toProjectedImage(image: PublicShelfImage): ProjectedShelfImage {
     width: image.canonical.width,
     height: image.canonical.height,
     sources: image.variants.map((variant) => ({ url: variant.url, width: variant.width })),
+    // 🔑 **Ταξιδεύει αυτούσιο, καμία κρίση εδώ** (ADR-841 §7 Α17.4): αυτή η γραμμή είναι
+    //    μετάφραση τύπων, όχι σημασιολογία. Ο **ένας** τόπος που ρωτά «κάτοψη ή
+    //    φωτογραφία;» είναι το `withPublishedGallery`.
+    material: image.material,
   };
 }
 

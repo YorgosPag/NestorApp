@@ -27,6 +27,7 @@
  * δηλωμένη ιδιότητα κάδου αντί για ιδιότητα κάθε `match` ξεχωριστά.
  */
 
+import { PUBLISHED_MEDIA_LIMIT } from '@/services/upload/utils/storage-path-public-shelf';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -201,5 +202,19 @@ describe('Κ6 — το δημόσιο URL μιλά στο Cloud Storage, ΟΧΙ 
     expect(url).not.toContain('firebasestorage.googleapis.com');
     expect(url).not.toContain('alt=media');
     expect(url).not.toContain('token');
+  });
+});
+
+describe('🔑 ΤΟ ΟΡΙΟ ΤΗΣ ΒΙΤΡΙΝΑΣ ΕΙΝΑΙ ΤΟΥ ΡΑΦΙΟΥ, ΟΧΙ ΜΙΑΣ ΟΙΚΟΓΕΝΕΙΑΣ (Ο-17)', () => {
+  it('το όριο είναι μέσα στο μετρημένο εύρος της έρευνας (22–27)', () => {
+    // ⚠️ **Η ΑΓΚΥΡΑ ΜΕΤΑΚΙΝΗΘΗΚΕ ΕΔΩ 2026-09-03, ΔΕΝ ΑΝΤΙΓΡΑΦΗΚΕ.** Ζούσε στη σουίτα
+    //    του **ιδιώτη**, όπου ήταν σωστή όσο εκείνος ήταν ο μόνος που δημοσίευε. Μετά
+    //    την Α14 δημοσιεύουν **δύο** οικογένειες ⇒ ο φρουρός ενός αριθμού που τον
+    //    ζητούν και οι δύο δεν μπορεί να ζει στο σπίτι της μίας.
+    //
+    // 🔑 Το εύρος είναι **μέτρηση, όχι γούστο**: Zillow **22–27** (πτώση πάνω από 28),
+    //    Rightmove **10–20**. Το 24 είναι μέσα στο πρώτο και πάνω από το δεύτερο.
+    expect(PUBLISHED_MEDIA_LIMIT).toBeGreaterThanOrEqual(22);
+    expect(PUBLISHED_MEDIA_LIMIT).toBeLessThanOrEqual(27);
   });
 });
