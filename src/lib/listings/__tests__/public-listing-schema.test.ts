@@ -20,6 +20,7 @@ import {
   type StoredListingDocument,
 } from '../public-listing-schema';
 import { readStoredListing, publicListingFromDocument } from '../public-listing-from-document';
+import { LISTING_MATERIAL_KEYS } from '../listing-authorship';
 import {
   projectListingShape,
   type PlaceKnowledge,
@@ -355,5 +356,64 @@ describe('Κ8 — 🏆 η τρίτη κατάσταση επιβιώνει τη�
   it('⚠️ έγγραφο που ΕΧΕΙ ήδη την απάντηση «καμία» δεν τη χάνει', () => {
     const answered = { ...PRODUCTION_V1, amenities: [] };
     expect(upgradeListingDocument(answered).amenities).toEqual([]);
+  });
+});
+
+// ============================================================================
+// ΚΡΙΚΟΣ 7 — ΤΟ ΠΑΓΩΜΕΝΟ `altKey` (ADR-841 Α15.6 · Ο-18)
+// ============================================================================
+
+describe('Κ9 — 🔴 ΤΟ ΠΑΓΩΜΕΝΟ `altKey` ΞΕΠΑΓΩΝΕΙ ΣΤΗΝ ΑΝΑΓΝΩΣΗ', () => {
+  /** Το κλειδί που κουβαλούσαν και τα **6** ζωντανά έγγραφα πριν την Α15. */
+  const FROZEN = 'search-results:detail.media.galleryAlt';
+
+  const withGallery = (authorship: string | undefined, altKey: unknown): StoredListingDocument => {
+    // ⚠️ Το `PRODUCTION_V1` **έχει** `authorship` — άρα η «απούσα» περίπτωση απαιτεί
+    //    **αφαίρεση**, όχι παράλειψη. Ένα `...(x ? {x} : {})` εδώ θα άφηνε το πεδίο
+    //    του προτύπου και η Κ9.3 θα δοκίμαζε **άλλο πράγμα** από αυτό που λέει.
+    const { authorship: _dropped, ...withoutAuthorship } = PRODUCTION_V1 as Record<string, unknown>;
+    const base = authorship === undefined ? withoutAuthorship : { ...withoutAuthorship, authorship };
+    return {
+      ...base,
+      gallery: [{ url: 'https://shelf/a.webp', width: 640, height: 480, altKey, sources: [] }],
+    };
+  };
+
+  const altKeyOf = (doc: StoredListingDocument): unknown =>
+    (upgradeListingDocument(doc).gallery as readonly Record<string, unknown>[])[0].altKey;
+
+  it('🔴 Κ9.1 — έγγραφο ΓΡΑΦΕΙΟΥ με το παλιό κλειδί ⇒ κλειδί ΓΡΑΦΕΙΟΥ', () => {
+    // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: σβήσε τον κρίκο 7 ⇒ το παλιό όνομα επιβιώνει, και η οθόνη
+    //    δείχνει **ωμό κλειδί** — χειρότερο από το ψέμα που η Α15 διόρθωσε.
+    expect(altKeyOf(withGallery('agency', FROZEN))).toBe(LISTING_MATERIAL_KEYS.agency.galleryAlt);
+  });
+
+  it('🔴 Κ9.2 — έγγραφο ΙΔΙΩΤΗ με το ΙΔΙΟ παλιό κλειδί ⇒ κλειδί ΙΔΙΩΤΗ', () => {
+    // Το ίδιο παγωμένο κλειδί, **δύο** προορισμοί: αν ο κρίκος γίνει σταθερός, το ένα
+    // από τα δύο σκέλη πέφτει — όποια σταθερά κι αν διαλεχτεί.
+    expect(altKeyOf(withGallery('owner-declared', FROZEN)))
+      .toBe(LISTING_MATERIAL_KEYS['owner-declared'].galleryAlt);
+  });
+
+  it('⛔ Κ9.3 — ΑΠΟΥΣΑ ή άγνωστη προέλευση ⇒ `agency` (ο κανόνας της απουσίας, §8.33)', () => {
+    // ⚠️ ΟΧΙ «άσ' το ως έχει»: αυτό θα άφηνε ωμό κλειδί σε **δημόσια** οθόνη —
+    //    σιωπηλή βλάβη αντί για δηλωμένη προεπιλογή.
+    expect(altKeyOf(withGallery(undefined, FROZEN))).toBe(LISTING_MATERIAL_KEYS.agency.galleryAlt);
+    expect(altKeyOf(withGallery('σκουπίδι', FROZEN))).toBe(LISTING_MATERIAL_KEYS.agency.galleryAlt);
+  });
+
+  it('🔑 Κ9.4 — ΙΔΙΟΔΥΝΑΜΟ: κλειδί που ΗΔΗ ανήκει στο λεξιλόγιο μένει άθικτο', () => {
+    // Και η ιδιοδυναμία ελέγχεται πάνω στο **σύνολο τιμών**, ποτέ σε πρόθεμα (Α15.2):
+    // εδώ ένα έγγραφο ΙΔΙΩΤΗ κρατά το κλειδί του ακόμη κι όταν ξαναπεράσει ο κρίκος.
+    const already = LISTING_MATERIAL_KEYS['owner-declared'].galleryAlt;
+    expect(altKeyOf(withGallery('owner-declared', already))).toBe(already);
+
+    const upgraded = upgradeListingDocument(withGallery('agency', FROZEN));
+    expect(altKeyOf(upgraded)).toBe(LISTING_MATERIAL_KEYS.agency.galleryAlt);
+  });
+
+  it('Κ9.5 — κενή ή απούσα συλλογή δεν πειράζεται (η μία ζωντανή αγγελία ιδιώτη)', () => {
+    // Μετρημένο 2026-09-03: η **μόνη** `owner-declared` αγγελία έχει `gallery: []`.
+    expect(upgradeListingDocument({ ...PRODUCTION_V1, gallery: [] }).gallery).toEqual([]);
   });
 });
