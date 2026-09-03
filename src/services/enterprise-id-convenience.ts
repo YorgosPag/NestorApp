@@ -145,6 +145,11 @@ export const generateBrokerageId = () => enterpriseIdService.generateBrokerageId
 // το facade δεν την εξήγαγε, οπότε η ΜΟΝΑΔΙΚΗ πηγή ταυτοτήτων (N.6) ήταν άφταστη
 // από τον γραφέα και θα γεννιόταν χειρόγραφο id.
 export const generateMandateRequestId = () => enterpriseIdService.generateMandateRequestId();
+// ADR-843 — Η ΠΡΑΞΗ ΤΗΣ ΠΡΩΤΗΣ ΕΠΑΦΗΣ. Εξάγεται **μαζί** με τη μέθοδο, όχι αργότερα:
+// το `mreq` έμεινε άφταστο από το facade και η ΜΟΝΑΔΙΚΗ πηγή ταυτοτήτων (N.6) ήταν
+// απρόσιτη για τον γραφέα — δηλαδή ο επόμενος θα έγραφε χειρόγραφο id. Δεύτερη φορά
+// το ίδιο λάθος δεν χρειάζεται να συμβεί για να το μάθουμε.
+export const generateFirstContactId = () => enterpriseIdService.generateFirstContactId();
 export const generateCommissionId = () => enterpriseIdService.generateCommissionId();
 
 // Payment Plan & Installments (ADR-234)
