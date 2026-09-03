@@ -26,7 +26,7 @@
 
 import { hasDuplicateLiveOfferKind } from '@/lib/offers/derive-commercial-status';
 import { liveOfferAmountGaps } from '@/lib/offers/offer-amount';
-import { isLandPropertyType } from '@/constants/property-types';
+import { isOfferKindEligible } from '@/constants/offer-kind-eligibility';
 import { isLiveOffer, isOpenOffer } from '@/types/property-offers';
 import type { OwnerPropertyDraft } from '@/types/owner-property';
 
@@ -81,7 +81,13 @@ export const OWNER_PROPERTY_INVARIANTS = [
    * (Giorgio 2026-08-20). Μέχρι σήμερα ο κανόνας ήταν **αδύνατο να παραβιαστεί
    * ΚΑΙ αδύνατο να τηρηθεί**, γιατί η λίστα των ειδών δεν είχε καθόλου γη: η
    * οθόνη πρόσφερε «δώσ' το με αντιπαροχή» πάνω σε **δώδεκα χτισμένες μονάδες**.
-   * Πλέον η γη υπάρχει ({@link isLandPropertyType}) και ο κανόνας έχει νόημα.
+   * Πλέον η γη υπάρχει (`isLandProperty`) και ο κανόνας έχει νόημα.
+   *
+   * 🔑 **Ο κανόνας μετακόμισε σε πίνακα** (2026-09-03): ζούσε **στο σώμα** του
+   * {@link ownerPropertyInvariantViolations} ως `!isLandPropertyType(draft.type)`.
+   * Πλέον είναι **γραμμή** στο `OFFER_KIND_CLASSES` — γιατί ο συμμετρικός του
+   * ({@link OwnerPropertyInvariant} `short-lease-requires-dwelling`) έλειπε, και
+   * ένας κανόνας κρυμμένος σε `if` δεν δείχνει σε κανέναν ότι λείπει ο διπλανός του.
    *
    * ⚠️ **Είναι invariant και όχι κρυφό φιλτράρισμα στη φόρμα.** Μια φόρμα που
    * απλώς **κρύβει** την επιλογή αφήνει τον διακομιστή να δεχτεί ό,τι του σταλεί —
@@ -90,6 +96,20 @@ export const OWNER_PROPERTY_INVARIANTS = [
    * αντί για «κάτι πήγε στραβά».
    */
   'exchange-requires-land',
+  /**
+   * **Βραχυχρόνια μίσθωση σε κάτι που δεν είναι κατοικία** (ADR-842 §7.6.10).
+   *
+   * 🔴 **Ο ΣΥΜΜΕΤΡΙΚΟΣ ΤΟΥ ΠΑΡΑΠΑΝΩ, ΚΑΙ ΕΛΕΙΠΕ.** Μετρημένο στην οθόνη
+   * (2026-09-03): είδος **Οικόπεδο**, τσεκ «Βραχυχρόνια μίσθωση», και από κάτω
+   * *«Τιμή ανά **διανυκτέρευση**»* · *«Ελάχιστες **διανυκτερεύσεις**»* ·
+   * *«Μέγιστος αριθμός **επισκεπτών**»*. Ένα οικόπεδο δεν έχει διανυκτερεύσεις.
+   *
+   * ⚠️ **Δικός του κωδικός, όχι κοινός με το `exchange-requires-land`**, παρότι ο
+   * κριτής είναι **ένας** ({@link isOfferKindEligible}): η κίνηση που ζητείται από
+   * τον άνθρωπο είναι **αντίθετη** — εκεί *«διάλεξε γη»*, εδώ *«διάλεξε κατοικία»*.
+   * Ένα κοινό «αυτή η διάθεση δεν ταιριάζει» θα τον άφηνε να μαντέψει προς τα πού.
+   */
+  'short-lease-requires-dwelling',
   /** Το **είδος** δεν δηλώθηκε — 3ο βασικό πεδίο του §25.6. */
   'type-missing',
   /** Το **εμβαδόν** λείπει ή δεν είναι θετικό — το άλλο μισό του 3ου βασικού. */
@@ -166,16 +186,31 @@ export function ownerPropertyInvariantViolations(
   if (gaps.minNightsInvalid.length > 0) found.push('short-lease-min-nights-invalid');
   if (gaps.maxGuestsInvalid.length > 0) found.push('short-lease-max-guests-invalid');
 
-  // Αντιπαροχή ⇒ γη. Κρίνονται **μόνο οι ΑΝΟΙΧΤΕΣ** (`isOpenOffer`), ποτέ οι
-  // «ζωντανές» (`isLiveOffer`).
+  // ── Ποιες διαθέσεις έχουν νόημα για ΑΥΤΟ το είδος (ADR-842 §7.6.10) ──────────
   //
-  // 🔴 Η διαφορά **δεν** είναι λεπτομέρεια, και την έπιασε η άγκυρα Κ17: το
-  // `LIVE_OFFER_LIFECYCLES` περιλαμβάνει το **`closed`**, γιατί απαντά *«μετράει για
-  // το τι είναι σήμερα το ακίνητο;»* — και ένα **πουλημένο** μετράει. Με εκείνο, μια
-  // **ολοκληρωμένη** αντιπαροχή θα κοκκίνιζε για πάντα και το ακίνητο θα γινόταν
-  // αδύνατο να ξαναποθηκευτεί, για πράξη που τελείωσε πριν χρόνια.
-  if (draft.offers.some((offer) => isOpenOffer(offer) && offer.kind === 'exchange')) {
-    if (!isLandPropertyType(draft.type)) found.push('exchange-requires-land');
+  // 🔑 **ΕΝΑΣ κριτής, ΔΥΟ μηνύματα.** Ο πίνακας `OFFER_KIND_CLASSES` απαντά «τι
+  // επιτρέπεται»· οι δύο κωδικοί λένε «γιατί όχι» με λόγια που ο άνθρωπος μπορεί να
+  // ακολουθήσει — και οι δύο κινήσεις είναι **αντίθετες** (*«διάλεξε γη»* έναντι
+  // *«διάλεξε κατοικία»*). Μέχρι σήμερα ο κανόνας της αντιπαροχής ήταν γραμμένος
+  // **στο σώμα** αυτής της συνάρτησης, και ο συμμετρικός του **δεν υπήρχε καθόλου**.
+  //
+  // 🔴 Κρίνονται **μόνο οι ΑΝΟΙΧΤΕΣ** (`isOpenOffer`), ποτέ οι «ζωντανές»
+  // (`isLiveOffer`) — η διαφορά **δεν** είναι λεπτομέρεια, και την έπιασε η άγκυρα
+  // Κ17: το `LIVE_OFFER_LIFECYCLES` περιλαμβάνει το **`closed`**, γιατί απαντά
+  // *«μετράει για το τι είναι σήμερα το ακίνητο;»* — και ένα **πουλημένο** μετράει.
+  // Με εκείνο, μια **ολοκληρωμένη** αντιπαροχή θα κοκκίνιζε για πάντα και το ακίνητο
+  // θα γινόταν αδύνατο να ξαναποθηκευτεί, για πράξη που τελείωσε πριν χρόνια.
+  //
+  // ⚠️ Ο πίνακας απαντά **`true` σε άγνωστο/κενό είδος** επίτηδες: το κενό το πιάνει
+  // ο δικός του κωδικός (`type-missing`) παρακάτω, που ξέρει να πει «διάλεξε είδος».
+  const openKinds = new Set(
+    draft.offers.filter(isOpenOffer).map((offer) => offer.kind),
+  );
+  if (openKinds.has('exchange') && !isOfferKindEligible('exchange', draft.type)) {
+    found.push('exchange-requires-land');
+  }
+  if (openKinds.has('leaseShort') && !isOfferKindEligible('leaseShort', draft.type)) {
+    found.push('short-lease-requires-dwelling');
   }
 
   if (typeof draft.type !== 'string' || draft.type.trim() === '') {

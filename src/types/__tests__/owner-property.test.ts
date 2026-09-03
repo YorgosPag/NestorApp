@@ -18,6 +18,7 @@ import {
   validDraft,
   validOwnerProperty,
 } from '@/lib/owner-property/__tests__/owner-property-fixtures';
+import type { PropertyOffer } from '@/types/property-offers';
 
 describe('ownerPropertyInvariantViolations — ΟΛΕΣ, ποτέ η πρώτη', () => {
   it('Κ1 — ένα πλήρες προσχέδιο δεν παραβιάζει τίποτα (ο παρονομαστής)', () => {
@@ -146,6 +147,20 @@ describe('ownerPropertyInvariantViolations — ΟΛΕΣ, ποτέ η πρώτη'
           ],
         }),
       ),
+      // ADR-842 §7.6.10 — ο συμμετρικός του `exchange-requires-land`. Η **γη** εδώ,
+      // το **εμπορικό** στο Κ23: μετρημένο ότι χρειάζονται **και τα δύο** — με μόνο
+      // τη γη, η μετάλλαξη `leaseShort: ['residential','commercial']` έμενε **πράσινη**.
+      ...ownerPropertyInvariantViolations(
+        validDraft({
+          type: 'plot',
+          areaSqm: 500,
+          floor: null,
+          bedrooms: null,
+          offers: [
+            { id: 'offr_stay', kind: 'leaseShort', lifecycle: 'active', nightlyRate: 65, minNights: 2, maxGuests: 4 },
+          ],
+        }),
+      ),
       ...ownerPropertyInvariantViolations(validDraft({ type: '' })),
       ...ownerPropertyInvariantViolations(validDraft({ areaSqm: null })),
       ...ownerPropertyInvariantViolations(validDraft({ title: '' })),
@@ -196,6 +211,122 @@ describe('ownerPropertyInvariantViolations — ΟΛΕΣ, ποτέ η πρώτη'
       offers: [offerOf('exchange', 40, 'closed', 'offr_old'), offerOf('sell', 200_000)],
     });
     expect(ownerPropertyInvariantViolations(draft)).not.toContain('exchange-requires-land');
+  });
+
+  // ==========================================================================
+  // ADR-842 §7.6.10 — Η ΒΡΑΧΥΧΡΟΝΙΑ ΜΙΣΘΩΣΗ ΑΦΟΡΑ ΚΑΤΟΙΚΙΕΣ
+  // ==========================================================================
+
+  /**
+   * 🔴 Ο **συμμετρικός** των Κ14–Κ17, και **έλειπε**. Μετρημένο στην οθόνη
+   * (2026-09-03): είδος **Οικόπεδο**, τσεκ «Βραχυχρόνια μίσθωση», και από κάτω
+   * *«Τιμή ανά διανυκτέρευση»* · *«Ελάχιστες διανυκτερεύσεις»* · *«Μέγιστος αριθμός
+   * επισκεπτών»*. Ο πίνακας `OFFER_KIND_CLASSES` απαντά **και τις δύο** ερωτήσεις.
+   */
+  const stayOffer = (
+    lifecycle: 'active' | 'closed' = 'active',
+    id = 'offr_stay',
+  ) => ({ id, kind: 'leaseShort', lifecycle, nightlyRate: 65, minNights: 2, maxGuests: 4 }) as const;
+
+  const landDraft = (offers: readonly PropertyOffer[]) =>
+    validDraft({ type: 'plot', areaSqm: 500, floor: null, bedrooms: null, offers: [...offers] });
+
+  it('🔴 Κ18 — βραχυχρόνια σε ΟΙΚΟΠΕΔΟ ⇒ `short-lease-requires-dwelling`', () => {
+    expect(ownerPropertyInvariantViolations(landDraft([stayOffer()]))).toContain(
+      'short-lease-requires-dwelling',
+    );
+  });
+
+  it('🔴 Κ18β — Η ΙΔΙΑ ΠΑΡΑΒΙΑΣΗ ΓΙΑ ΩΜΗ ΠΑΛΑΙΑ ΤΙΜΗ (ADR-842 §7.6.11)', () => {
+    // 🔑 **Το σκέλος που διαφοροποιεί, στον ΑΞΟΝΑ ΤΗΣ ΚΑΤΗΓΟΡΙΑΣ.** Το Κ18 περνά
+    // `'plot'` — κανονική τιμή, άρα ήταν πράσινο και με τον ασθενή κριτή. Εδώ περνά
+    // ό,τι κουβαλά παλιό έγγραφο: `'Οικόπεδο'`.
+    //
+    // 🔴 **Το ελάττωμα ήταν ΕΠΙΤΡΕΠΤΙΚΟ, όχι απλώς λάθος ετικέτα.** Το
+    // `isOfferKindEligible` λέει *«άγνωστο είδος ⇒ `true`»* — σκόπιμα, γιατί η φόρμα
+    // ξεκινά με `type: ''` και ο άνθρωπος δεν έχει απαντήσει ακόμη. Αλλά με τον
+    // ασθενή `propertyClassOf`, η ωμή τιμή `'Οικόπεδο'` **έμοιαζε με «δεν απάντησε»**
+    // ενώ ο άνθρωπος **είχε απαντήσει** ⇒ η βραχυχρόνια μίσθωση **περνούσε σε
+    // οικόπεδο**, με «τιμή ανά διανυκτέρευση» σε γυμνή γη.
+    const draft = validDraft({
+      type: 'Οικόπεδο' as never,
+      areaSqm: 500,
+      floor: null,
+      bedrooms: null,
+      offers: [stayOffer()],
+    });
+    expect(ownerPropertyInvariantViolations(draft)).toContain(
+      'short-lease-requires-dwelling',
+    );
+  });
+
+  it('🔴 Κ18γ — και η ΑΝΤΙΠΑΡΟΧΗ ΣΕ ΩΜΟ ΔΙΑΜΕΡΙΣΜΑ κατηγορείται (η άλλη φορά)', () => {
+    // Ο συμμετρικός έλεγχος, ώστε το Κ18β να μη μοιάζει «η κανονικοποίηση κάνει τα
+    // πάντα γη». Ωμή τιμή `'Διαμέρισμα'` ⇒ λύνεται σε `apartment` ⇒ **κατοικία** ⇒ η
+    // αντιπαροχή, που θέλει **γη**, παραβιάζεται. Με τον ασθενή κριτή αυτό ήταν
+    // `null` ⇒ **καμία** παραβίαση, δηλαδή αντιπαροχή σε διαμέρισμα περνούσε.
+    const draft = validDraft({
+      type: 'Διαμέρισμα' as never,
+      offers: [{ ...offerOf('exchange', 0), exchangePercentage: 40 } as never],
+    });
+    expect(ownerPropertyInvariantViolations(draft)).toContain('exchange-requires-land');
+  });
+
+  it('Κ19 — η ΙΔΙΑ βραχυχρόνια σε διαμέρισμα ⇒ καμία παραβίαση (ο παρονομαστής)', () => {
+    // Χωρίς αυτό, ένα invariant που κοκκινίζει **πάντα** θα ήταν εξίσου πράσινο στο
+    // Κ18 και εξίσου άχρηστο.
+    const draft = validDraft({ offers: [stayOffer()] });
+    expect(ownerPropertyInvariantViolations(draft)).toEqual([]);
+  });
+
+  it('🔴 Κ20 — ΠΩΛΗΣΗ και ΕΝΟΙΚΙΑΣΗ οικοπέδου ΔΕΝ αγγίζονται', () => {
+    // Το μισό της απόφασης που είναι εύκολο να χαθεί: η γη **πωλείται** και
+    // **εκμισθώνεται** κανονικά (ground lease, χωράφι, υπαίθρια στάθμευση). Ένας
+    // έλεγχος «γη ⇒ όχι μισθώσεις» θα έσβηνε πραγματική αγορά.
+    for (const kind of ['sell', 'leaseOut'] as const) {
+      expect(ownerPropertyInvariantViolations(landDraft([offerOf(kind, 150_000)]))).toEqual([]);
+    }
+  });
+
+  it('🔴 Κ21 — ΚΛΕΙΣΜΕΝΗ βραχυχρόνια σε οικόπεδο είναι ΙΣΤΟΡΙΚΟ, όχι παραβίαση', () => {
+    // Ίδιος λόγος με το Κ17: κρίνονται μόνο οι **ανοιχτές**. Χωρίς αυτό, ένα ακίνητο
+    // που κάποτε δηλώθηκε λάθος θα γινόταν αδύνατο να ξαναποθηκευτεί για πάντα.
+    const draft = landDraft([stayOffer('closed', 'offr_old'), offerOf('sell', 200_000)]);
+    expect(ownerPropertyInvariantViolations(draft)).not.toContain(
+      'short-lease-requires-dwelling',
+    );
+  });
+
+  /**
+   * 🔴 **ΤΟ ΣΚΕΛΟΣ ΠΟΥ ΒΡΗΚΕ Η ΜΕΤΑΛΛΑΞΗ, ΟΧΙ Η ΣΧΕΔΙΑΣΗ.** Η πρώτη γραφή αυτής της
+   * ομάδας δοκίμαζε **μόνο γη** — και η μετάλλαξη `leaseShort: ['residential',
+   * 'commercial']` έμενε **πράσινη**. Δηλαδή ο αποκλεισμός του εμπορικού ήταν
+   * **δηλωμένη απόφαση χωρίς φρουρό**: σκέλος που μοιάζει με απόδειξη και είναι
+   * εμφάνιση.
+   *
+   * 🔑 **Και ο λόγος ΔΕΝ είναι ο ίδιος με της γης** (δες `OFFER_KIND_CLASSES`): ένα
+   * γραφείο ή μια αίθουσα **όντως** νοικιάζονται βραχυχρόνια — αλλά **ανά ώρα ή ανά
+   * ημέρα**, και το «μέγιστος αριθμός επισκεπτών» εκεί σημαίνει **χωρητικότητα**, όχι
+   * πόσοι κοιμούνται. Λείπει η **μονάδα**, όχι η αγορά (ADR-842 §8 #10).
+   */
+  it('🔴 Κ23 — βραχυχρόνια σε ΓΡΑΦΕΙΟ ή ΚΑΤΑΣΤΗΜΑ ⇒ επίσης παραβίαση', () => {
+    for (const commercial of ['office', 'shop', 'hall', 'storage'] as const) {
+      const draft = validDraft({ type: commercial, offers: [stayOffer()] });
+      expect({ type: commercial, violations: ownerPropertyInvariantViolations(draft) }).toEqual({
+        type: commercial,
+        violations: ['short-lease-requires-dwelling'],
+      });
+    }
+  });
+
+  it('Κ22 — ΧΩΡΙΣ δηλωμένο είδος η βραχυχρόνια ΔΕΝ κατηγορείται (μιλά το `type-missing`)', () => {
+    // Ο άνθρωπος δεν έχει απαντήσει ακόμη· δύο μηνύματα για μία παράλειψη τον
+    // στέλνουν να ψάξει δύο πράγματα.
+    const violations = ownerPropertyInvariantViolations(
+      validDraft({ type: '', offers: [stayOffer()] }),
+    );
+    expect(violations).toContain('type-missing');
+    expect(violations).not.toContain('short-lease-requires-dwelling');
   });
 });
 

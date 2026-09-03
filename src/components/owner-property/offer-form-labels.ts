@@ -65,6 +65,9 @@ export const TEXT_KEYS: Record<DraftFormSlot | OfferBlocker | OfferViolation, st
   'short-lease-min-nights-invalid': 'property-market:offer.invariant.short-lease-min-nights-invalid',
   'short-lease-max-guests-invalid': 'property-market:offer.invariant.short-lease-max-guests-invalid',
   'exchange-requires-land': 'property-market:offer.invariant.exchange-requires-land',
+  // ⚠️ **Ο συμμετρικός του από πάνω** (ADR-842 §7.6.10): ίδιος κριτής
+  //    (`OFFER_KIND_CLASSES`), **αντίθετη** κίνηση για τον άνθρωπο.
+  'short-lease-requires-dwelling': 'property-market:offer.invariant.short-lease-requires-dwelling',
   'type-missing': 'property-market:offer.invariant.type-missing',
   'area-not-positive': 'property-market:offer.invariant.area-not-positive',
   'title-missing': 'property-market:offer.invariant.title-missing',
