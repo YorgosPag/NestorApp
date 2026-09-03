@@ -16,6 +16,7 @@ import type {
   AddressEditorDomain,
   AddressEditorFormOptions,
   AddressEditorMapOptions,
+  AddressEditorSuggestionOptions,
   AddressEditorActivityOptions,
   AddressEditorTelemetryOptions,
 } from './types';
@@ -31,6 +32,7 @@ export type {
   AddressEditorDomain,
   AddressEditorFormOptions,
   AddressEditorMapOptions,
+  AddressEditorSuggestionOptions,
   AddressEditorActivityOptions,
   AddressEditorTelemetryOptions,
   ResolvedAddressFields,
@@ -71,6 +73,8 @@ export interface AddressEditorProps {
   formOptions?: AddressEditorFormOptions;
   /** Map display options (reserved for Phase 6 map integration). */
   mapOptions?: AddressEditorMapOptions;
+  /** Πάνελ προτάσεων — αφετηρία εγγύτητας (ADR-332 D23). */
+  suggestions?: AddressEditorSuggestionOptions;
   /** Activity log configuration. */
   activityLog?: AddressEditorActivityOptions;
   /** Telemetry options (reserved for Phase 9). */

@@ -3,9 +3,9 @@
  *
  * Covers:
  *   - top + alternatives merged
- *   - default scoring (confidence-only when no mapCenter)
- *   - proximity-aware reorder when mapCenter provided
- *   - distance is null when no mapCenter
+ *   - default scoring (confidence-only when no proximityAnchor)
+ *   - proximity-aware reorder when proximityAnchor provided
+ *   - distance is null when no proximityAnchor
  *   - originalRank preserved
  *   - confidenceWeight + proximityCapM honored
  *
@@ -53,7 +53,7 @@ function makeAlt(overrides: Partial<GeocodingAlternative>): GeocodingAlternative
   return { ...rest, ...overrides };
 }
 
-describe('rankSuggestions — without mapCenter', () => {
+describe('rankSuggestions — without proximityAnchor', () => {
   it('returns top + alternatives in confidence-desc order', () => {
     const result = makeBase({
       confidence: 0.9,
@@ -78,7 +78,7 @@ describe('rankSuggestions — without mapCenter', () => {
     expect(second?.originalRank).toBe(2);
   });
 
-  it('distanceFromCenterM is null without mapCenter', () => {
+  it('distanceFromCenterM is null without proximityAnchor', () => {
     const result = makeBase({
       alternatives: [makeAlt({ confidence: 0.8 })],
     });
@@ -86,7 +86,7 @@ describe('rankSuggestions — without mapCenter', () => {
     expect(ranked.every((r) => r.distanceFromCenterM === null)).toBe(true);
   });
 
-  it('rankScore equals confidence without mapCenter', () => {
+  it('rankScore equals confidence without proximityAnchor', () => {
     const result = makeBase({
       confidence: 0.92,
       alternatives: [makeAlt({ confidence: 0.65 })],
@@ -113,7 +113,7 @@ describe('rankSuggestions — without mapCenter', () => {
   });
 });
 
-describe('rankSuggestions — with mapCenter', () => {
+describe('rankSuggestions — with proximityAnchor', () => {
   it('lower-confidence candidate can outrank top when much closer', () => {
     // Top hit far away (~200 km), alternative right next to map center.
     const top = makeBase({
@@ -125,7 +125,7 @@ describe('rankSuggestions — with mapCenter', () => {
       ],
     });
     const ranked = rankSuggestions(top, {
-      mapCenter: { lat: 40.6401, lng: 22.9444 },
+      proximityAnchor: { lat: 40.6401, lng: 22.9444 },
       proximityCapM: 5_000,
       confidenceWeight: 0.5,
     });
@@ -140,7 +140,7 @@ describe('rankSuggestions — with mapCenter', () => {
       alternatives: [makeAlt({ lat: 40.65, lng: 22.95, confidence: 0.7 })],
     });
     const ranked = rankSuggestions(result, {
-      mapCenter: { lat: 40.6401, lng: 22.9444 },
+      proximityAnchor: { lat: 40.6401, lng: 22.9444 },
     });
     expect(ranked.every((r) => typeof r.distanceFromCenterM === 'number')).toBe(true);
     expect(ranked.find((r) => r.candidate.confidence === 0.9)?.distanceFromCenterM).toBe(0);
@@ -154,7 +154,7 @@ describe('rankSuggestions — with mapCenter', () => {
       alternatives: [],
     });
     const ranked = rankSuggestions(result, {
-      mapCenter: { lat: 41.0, lng: 23.0 }, // way beyond 5 km cap
+      proximityAnchor: { lat: 41.0, lng: 23.0 }, // way beyond 5 km cap
       proximityCapM: 5_000,
       confidenceWeight: 0.7,
     });
@@ -168,7 +168,7 @@ describe('rankSuggestions — with mapCenter', () => {
       alternatives: [],
     });
     const ranked = rankSuggestions(result, {
-      mapCenter: { lat: result.lat, lng: result.lng },
+      proximityAnchor: { lat: result.lat, lng: result.lng },
       confidenceWeight: 0.7,
     });
     // 0.7 * 0.6 + 0.3 * 1 = 0.42 + 0.3 = 0.72
@@ -183,7 +183,7 @@ describe('rankSuggestions — with mapCenter', () => {
       alternatives: [makeAlt({ lat: 40.0001, lng: 22.0001, confidence: 0.6 })],
     });
     const ranked = rankSuggestions(result, {
-      mapCenter: { lat: 40.0001, lng: 22.0001 },
+      proximityAnchor: { lat: 40.0001, lng: 22.0001 },
       confidenceWeight: 1,
     });
     expect(ranked[0].candidate.confidence).toBe(0.9);
@@ -194,7 +194,7 @@ describe('rankSuggestions — with mapCenter', () => {
     const result = makeBase({ confidence: 0.5, alternatives: [] });
     // confidenceWeight = 5 → clamps to 1 → rankScore = confidence
     const ranked = rankSuggestions(result, {
-      mapCenter: { lat: result.lat, lng: result.lng },
+      proximityAnchor: { lat: result.lat, lng: result.lng },
       confidenceWeight: 5,
     });
     expect(ranked[0].rankScore).toBeCloseTo(0.5, 5);

@@ -10,7 +10,7 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AddressEditor } from '../AddressEditor';
 import { useAddressEditorContext } from '../AddressEditorContext';
@@ -25,6 +25,10 @@ jest.mock('@/i18n/hooks/useTranslation', () => ({
 
 jest.mock('@/lib/geocoding/geocoding-service', () => ({
   geocodeAddress: jest.fn().mockResolvedValue(null),
+  // 🔴 Ο editor καλεί **αυτό**, όχι το `geocodeAddress` (ADR-332 D11). Έλειπε από το
+  // mock, και οι υπάρχουσες άγκυρες δεν το είδαν επειδή καμία δεν προχωρά τον χρόνο
+  // πέρα από το debounce — δηλαδή καμία δεν έφτασε ποτέ στη γεωκωδικοποίηση.
+  geocodeAddressDetailed: jest.fn().mockResolvedValue({ kind: 'not-found' }),
 }));
 
 // Radix Dialog needs pointer-events
@@ -159,5 +163,76 @@ describe('AddressEditorContext', () => {
       'useAddressEditorContext must be used inside <AddressEditor>',
     );
     spy.mockRestore();
+  });
+});
+
+// =============================================================================
+// Η ΑΦΕΤΗΡΙΑ ΕΓΓΥΤΗΤΑΣ ΦΤΑΝΕΙ ΣΤΗΝ ΟΘΟΝΗ — ADR-332 D23
+// =============================================================================
+
+/**
+ * 🔴 **ΑΥΤΗ ΕΙΝΑΙ Η ΑΓΚΥΡΑ ΠΟΥ ΕΛΕΙΠΕ.** Ως τις 03/09 ο `AddressEditor` καλούσε το
+ * `useAddressSuggestions(currentResult)` **χωρίς options** ⇒ `proximityAnchor` πάντα
+ * `undefined` ⇒ `distanceFromCenterM` πάντα `null` ⇒ η γραμμή απόστασης **δεν
+ * εμφανίστηκε ποτέ** στην παραγωγή. Καμία από τις 12 άγκυρες του `rankSuggestions`
+ * δεν το έπιασε: όλες περνούσαν αφετηρία **οι ίδιες**.
+ *
+ * Ο έλεγχος **εκτελεί τον παραγωγικό καλόντα** — αν κάποιος σταματήσει να περνά την
+ * αφετηρία, εδώ κοκκινίζει.
+ */
+describe('AddressEditor — η αφετηρία εγγύτητας φτάνει ως το πάνελ (D23)', () => {
+  const THESSALONIKI = { lat: 40.6401, lng: 22.9444 };
+
+  /** Δύο διακριτές διευθύνσεις ⇒ `chooser` (D22), ώστε να ζωγραφιστεί ο κατάλογος. */
+  function twoChoices(): unknown {
+    const base = {
+      accuracy: 'exact' as const,
+      resolvedFields: { street: 'Αθηνάς', number: '5' },
+      partialMatch: false,
+      reasoning: {
+        fieldMatches: {},
+        attemptsLog: [],
+        confidenceBreakdown: { base: 0.4, streetMatch: 0, cityMatch: 0, postalMatch: 0, total: 0.6 },
+      },
+      source: { provider: 'nominatim' as const, variantUsed: 1 as const },
+    };
+    return {
+      kind: 'found',
+      result: {
+        ...base,
+        lat: 40.6440, lng: 22.9500, confidence: 0.6,
+        displayName: '5, Αθηνάς, Άνω Πόλη, Θεσσαλονίκη',
+        alternatives: [
+          { ...base, lat: 39.6390, lng: 22.4191, confidence: 0.55, displayName: '5, Αθηνάς, Λάρισα' },
+        ],
+      },
+    };
+  }
+
+  async function renderWithResult(props: Partial<React.ComponentProps<typeof AddressEditor>>) {
+    const service = jest.requireMock('@/lib/geocoding/geocoding-service');
+    service.geocodeAddressDetailed.mockResolvedValue(twoChoices());
+    const view = renderEditor(props);
+    // Ο editor γεωκωδικοποιεί μετά από debounce· χωρίς αυτό δεν φτάνει ποτέ αποτέλεσμα.
+    await waitFor(
+      () => expect(service.geocodeAddressDetailed).toHaveBeenCalled(),
+      { timeout: 5000 },
+    );
+    await waitFor(
+      () => expect(screen.getByRole('listbox')).toBeInTheDocument(),
+      { timeout: 5000 },
+    );
+    return view;
+  }
+
+  it('ΜΕ αφετηρία: ο κατάλογος δείχνει απόσταση', async () => {
+    await renderWithResult({ suggestions: { proximityAnchor: THESSALONIKI } });
+    expect(screen.getAllByText('editor.suggestions.distance').length).toBeGreaterThan(0);
+  });
+
+  it('ΧΩΡΙΣ αφετηρία: ο κατάλογος υπάρχει, αλλά καμία απόσταση — και είναι σωστό', async () => {
+    // Χωρίς σημείο αναφοράς κάθε «κοντά» θα ήταν μαντεψιά· η σιωπή είναι η τίμια απάντηση.
+    await renderWithResult({});
+    expect(screen.queryByText('editor.suggestions.distance')).toBeNull();
   });
 });

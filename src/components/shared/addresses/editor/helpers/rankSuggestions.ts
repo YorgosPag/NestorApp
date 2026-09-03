@@ -11,8 +11,12 @@
  *   - **proximity** (0..1) inverse of distance to the current map center,
  *     capped at `proximityCapM` (default 5 km)
  *
- * Without a `mapCenter` the score collapses to plain confidence and the order
+ * Without a `proximityAnchor` the score collapses to plain confidence and the order
  * is preserved (top first, then alternatives in their original Nominatim rank).
+
+ * ⚠️ Αυτή ήταν η **μόνη** συμπεριφορά που έτρεχε ποτέ στην παραγωγή ως τις 03/09: ο
+ * μοναδικός καλών δεν έδινε αφετηρία, οπότε το `distanceFromCenterM` ήταν **πάντα
+ * `null`** και η γραμμή απόστασης στο πάνελ δεν εμφανίστηκε ποτέ. Δες ADR-332 D23.
  *
  * @module components/shared/addresses/editor/helpers/rankSuggestions
  * @see ADR-332 §3.4 Suggestion trigger algorithm
@@ -25,14 +29,24 @@ import type {
   SuggestionRanking,
 } from '../types';
 
-export interface MapCenter {
+/**
+ * Το σημείο **από το οποίο μετριέται** η εγγύτητα.
+ *
+ * 🔴 **ΛΕΓΟΤΑΝ `MapCenter` ΚΑΙ ΤΟ ΟΝΟΜΑ ΗΤΑΝ ΛΑΘΟΣ** (ADR-332 D23): δεν είναι το κέντρο
+ * του χάρτη — είναι **πού δουλεύει ο άνθρωπος**. Η διαφορά μετρήθηκε: αν κάποιος
+ * συνέδεε εδώ το κέντρο προβολής, τότε ένας χρήστης που έσυρε τον χάρτη στην Αθήνα ενώ
+ * καταχωρεί διεύθυνση Θεσσαλονίκης θα έβλεπε **την Αθήνα πρώτη** — δηλαδή η βοήθεια θα
+ * ανέβαζε τη λάθος γραμμή εκεί ακριβώς που πατάει ο κόσμος. Το παλιό όνομα δεν ήταν
+ * ανακρίβεια· ήταν **οδηγία προς λάθος καλωδίωση**.
+ */
+export interface ProximityAnchor {
   lat: number;
   lng: number;
 }
 
 export interface RankSuggestionsOptions {
-  /** Current map center — drives the proximity component of the rank score. */
-  mapCenter?: MapCenter;
+  /** Πού δουλεύει ο άνθρωπος — οδηγεί τη συνιστώσα εγγύτητας του σκορ. */
+  proximityAnchor?: ProximityAnchor;
   /** Distance (m) at and above which the proximity bonus is 0. Default 5000. */
   proximityCapM?: number;
   /** Weight assigned to confidence (0..1). Proximity weight is `1 - confidenceWeight`. Default 0.7. */
@@ -63,7 +77,7 @@ function alternativeToFullResponse(alt: GeocodingAlternative): GeocodingApiRespo
 }
 
 interface ScoreOptions {
-  mapCenter?: MapCenter;
+  proximityAnchor?: ProximityAnchor;
   proximityCapM: number;
   confidenceWeight: number;
 }
@@ -72,10 +86,10 @@ function scoreCandidate(
   candidate: GeocodingApiResponse,
   opts: ScoreOptions,
 ): { rankScore: number; distanceFromCenterM: number | null } {
-  if (!opts.mapCenter) {
+  if (!opts.proximityAnchor) {
     return { rankScore: candidate.confidence, distanceFromCenterM: null };
   }
-  const distance = distanceMeters(opts.mapCenter, {
+  const distance = distanceMeters(opts.proximityAnchor, {
     lat: candidate.lat,
     lng: candidate.lng,
   });
@@ -102,7 +116,7 @@ export function rankSuggestions(
     1,
   );
   const scoreOpts: ScoreOptions = {
-    mapCenter: options.mapCenter,
+    proximityAnchor: options.proximityAnchor,
     proximityCapM,
     confidenceWeight,
   };

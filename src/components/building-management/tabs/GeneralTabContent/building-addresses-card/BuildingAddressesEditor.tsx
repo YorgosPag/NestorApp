@@ -17,6 +17,7 @@ import {
   hierarchyToResolvedAddress,
   storedAddressToResolved,
 } from '@/utils/address/administrative-hierarchy';
+import { addressListCenter } from '@/utils/address/address-list-center';
 import { Button } from '@/components/ui/button';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -29,6 +30,16 @@ import type { BuildingAddressEditorMode } from './building-addresses-card-types'
 interface BuildingAddressesEditorProps {
   mode: BuildingAddressEditorMode;
   initialValues?: ProjectAddress;
+  /**
+   * Οι διευθύνσεις του **έργου** στο οποίο ανήκει το κτίριο — η αφετηρία από την οποία
+   * κρίνεται ποιος υποψήφιος είναι «κοντά» (ADR-332 D23).
+   *
+   * 🔑 **Το έργο, όχι ο χάρτης**: το έργο εκφράζει **πρόθεση** (πού χτίζεις)· το κέντρο
+   * προβολής εκφράζει **τι κοιτάς αυτή τη στιγμή**, που είναι τυχαίο. Μετρημένο: για
+   * «Αθηνάς 5» χωρίς πόλη ο πάροχος δίνει πέντε αληθινές διευθύνσεις σε πέντε πόλεις —
+   * αν η αφετηρία ήταν ο χάρτης, ένα απλό σύρσιμο θα ανέβαζε τη λάθος πόλη **πρώτη**.
+   */
+  projectAddresses?: readonly ProjectAddress[];
   /** @deprecated Kept for BuildingAddressesCard backward compat; ignored internally. */
   externalValues?: Partial<ProjectAddress> | null;
   /** @deprecated Kept for BuildingAddressesCard backward compat; called after drag confirm. */
@@ -92,6 +103,7 @@ function toResolvedFromAddr(addr: Partial<PartialProjectAddress>): ResolvedAddre
 export function BuildingAddressesEditor({
   mode,
   initialValues,
+  projectAddresses,
   onExternalValuesChange,
   onChange,
   onCancel,
@@ -114,6 +126,16 @@ export function BuildingAddressesEditor({
   const [isPrimary, setIsPrimary] = useState(initialValues?.isPrimary ?? false);
 
   const editorRef = useRef<AddressEditorHandle>(null);
+
+  /**
+   * Πού να μετρηθεί το «κοντά»: **το έργο**, και αν εκείνο δεν έχει ακόμη θέση, η ήδη
+   * αποθηκευμένη θέση **αυτής** της εγγραφής. Αν λείπουν και τα δύο, `undefined` —
+   * η κατάταξη γίνεται μόνο με βεβαιότητα και **δεν** μαντεύεται σημείο.
+   */
+  const proximityAnchor = useMemo(
+    () => addressListCenter(projectAddresses) ?? addressListCenter(initialValues ? [initialValues] : []),
+    [projectAddresses, initialValues],
+  );
 
   const resolvedValue = useMemo(
     () => hierarchyToResolvedAddress(hierarchy),
@@ -205,6 +227,7 @@ export function BuildingAddressesEditor({
             onDragApplied={handleDragApplied}
             mode="edit"
             domain="building"
+            suggestions={{ proximityAnchor }}
             formOptions={{ hideGrid: true }}
             activityLog={{ collapsed: true }}
           >

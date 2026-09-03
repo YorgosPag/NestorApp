@@ -70,6 +70,7 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
     onUndoRedo,
     mode = 'edit',
     formOptions,
+    suggestions: suggestionOpts,
     activityLog: activityLogOpts,
     telemetry,
     className,
@@ -109,7 +110,12 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
 
   const currentResult = extractResult(editor.state);
   const resolvedFields: ResolvedAddressFields = currentResult?.resolvedFields ?? {};
-  const suggestions = useAddressSuggestions(currentResult);
+  // ⚠️ Ως τις 03/09 αυτή η κλήση δεν έδινε options, οπότε η κατάταξη κατά εγγύτητα ήταν
+  // δομικά νεκρή: `proximityAnchor` πάντα `undefined` ⇒ `distanceFromCenterM` πάντα `null`
+  // ⇒ η γραμμή απόστασης στο πάνελ δεν εμφανιζόταν ΠΟΤΕ. Δες ADR-332 D23.
+  const suggestions = useAddressSuggestions(currentResult, {
+    proximityAnchor: suggestionOpts?.proximityAnchor,
+  });
   const reconciliation = useAddressReconciliation(userInput, resolvedFields);
   const undoHook = useAddressUndo();
   const handleFieldChange = useCallback(

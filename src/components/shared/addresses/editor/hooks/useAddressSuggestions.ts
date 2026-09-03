@@ -31,7 +31,7 @@ import {
 } from '../helpers/computeSuggestionTriggers';
 import {
   rankSuggestions,
-  type MapCenter,
+  type ProximityAnchor,
 } from '../helpers/rankSuggestions';
 import type {
   GeocodingApiResponse,
@@ -45,8 +45,8 @@ export interface UseAddressSuggestionsOptions {
   lowConfidenceThreshold?: number;
   /** Top-vs-next confidence delta below which the `multiple-candidates-similar` trigger fires. Default 0.15. */
   ambiguousConfidenceGap?: number;
-  /** Current map center for proximity-aware ranking. */
-  mapCenter?: MapCenter;
+  /** Πού δουλεύει ο άνθρωπος — αφετηρία της κατάταξης κατά εγγύτητα. */
+  proximityAnchor?: ProximityAnchor;
   /** Distance cap (m) above which proximity bonus = 0. Default 5000. */
   proximityCapM?: number;
   /** Weight for the confidence component (0..1). Default 0.7. */
@@ -96,13 +96,13 @@ export function useAddressSuggestions(
     [result, retryExhausted, lowConfidenceThreshold, ambiguousConfidenceGap],
   );
 
-  const { mapCenter, proximityCapM, confidenceWeight } = options;
+  const { proximityAnchor, proximityCapM, confidenceWeight } = options;
   const candidates = useMemo<SuggestionRanking[]>(
     () =>
       result
-        ? rankSuggestions(result, { mapCenter, proximityCapM, confidenceWeight })
+        ? rankSuggestions(result, { proximityAnchor, proximityCapM, confidenceWeight })
         : [],
-    [result, mapCenter, proximityCapM, confidenceWeight],
+    [result, proximityAnchor, proximityCapM, confidenceWeight],
   );
 
   const recordOmitAttempt = useCallback(

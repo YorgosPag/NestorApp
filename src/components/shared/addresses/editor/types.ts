@@ -287,6 +287,25 @@ export interface AddressEditorMapOptions {
   initialZoom?: number;
 }
 
+/**
+ * Ρυθμίσεις του πάνελ προτάσεων (ADR-332 D23).
+ *
+ * ⚠️ **Δεν μπήκε στο {@link AddressEditorMapOptions}** επίτηδες: εκείνο περιγράφει πώς
+ * **ζωγραφίζεται** ένας χάρτης (ύψος, ζουμ) και δεν το διαβάζει κανείς. Η αφετηρία
+ * εγγύτητας δεν είναι ρύθμιση χάρτη — είναι **είσοδος κατάταξης**, και ζει με τις
+ * προτάσεις που κατατάσσει.
+ */
+export interface AddressEditorSuggestionOptions {
+  /**
+   * Πού δουλεύει ο άνθρωπος. Οι υποψήφιοι κοντά σε αυτό ανεβαίνουν.
+   *
+   * Απών ⇒ η κατάταξη γίνεται **μόνο** με βεβαιότητα και δεν εμφανίζεται απόσταση.
+   * Αυτό είναι σωστή συμπεριφορά, όχι υποβάθμιση: χωρίς αφετηρία, κάθε «κοντά» θα ήταν
+   * μαντεψιά.
+   */
+  proximityAnchor?: { lat: number; lng: number };
+}
+
 export interface AddressEditorActivityOptions {
   enabled?: boolean;
   verbosity?: ActivityVerbosity;

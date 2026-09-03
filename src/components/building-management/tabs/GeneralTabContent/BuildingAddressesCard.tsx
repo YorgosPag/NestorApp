@@ -83,6 +83,7 @@ export function BuildingAddressesCard(props: BuildingAddressesCardProps) {
         <BuildingAddressesEditor
           mode={editorMode}
           initialValues={currentEditAddress}
+          projectAddresses={projectAddresses}
           externalValues={editorDragAddress}
           onExternalValuesChange={setEditorDragAddress}
           onChange={setEditorAddress}
