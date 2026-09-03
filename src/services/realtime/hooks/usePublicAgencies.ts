@@ -38,16 +38,18 @@
  * στη μεσιτεία χωρίς εγγραφή, που ο Ν.4072/2012 κάνει παράνομη.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { collection, doc, onSnapshot } from 'firebase/firestore';
 
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { agencyDoorFor } from '@/lib/agency/agency-door';
-import { orderAgencies } from '@/lib/agency/agency-directory-order';
+import { orderAgencies, type DirectoryViewpoint } from '@/lib/agency/agency-directory-order';
 import { readShowcase } from '@/lib/agency/showcase-read';
+import type { GeoPoint } from '@/types/geo/coordinates';
 import type { PublicShowcase } from '@/types/agency-profile';
+import { generateSessionId } from '@/services/enterprise-id-convenience';
 
 const logger = createModuleLogger('usePublicAgencies');
 
@@ -60,6 +62,42 @@ export interface PublicAgenciesState {
   readonly agencies: readonly PublicShowcase[];
   readonly loading: boolean;
   readonly error: string | null;
+}
+
+/**
+ * **Ο ΣΠΟΡΟΣ ΤΗΣ ΙΣΟΠΑΛΙΑΣ** — σταθερός ανά **άνθρωπο**, όχι ανά φόρτωση (ΠΕ7, Κ13).
+ *
+ * 🔴 **ΣΥΝΕΔΡΙΑ ΚΑΙ ΟΧΙ `uid`, ΚΑΙ Ο ΛΟΓΟΣ ΕΙΝΑΙ ΜΕΤΡΗΜΕΝΟΣ**: ο κατάλογος ζει στο
+ * **ελαφρύ** κέλυφος (`app/(light)/pro`), που **δεν έχει `AuthProvider`** — ένα
+ * `useAuth()` εδώ δεν θα ήταν καλύτερος σπόρος, θα ήταν **εξαίρεση σε χρόνο
+ * εκτέλεσης**. Και ο πληθυσμός της σελίδας είναι, εξ ορισμού, **ανώνυμος
+ * επισκέπτης**: η ταυτότητα δεν λείπει κατά λάθος.
+ *
+ * ⚠️ **Το `sessionStorage` μπορεί να ΜΗΝ υπάρχει** *(ιδιωτικό παράθυρο, κλειδωμένα
+ * cookies, απόδοση στον διακομιστή)*. Τότε ο σπόρος είναι **σταθερή λέξη**: όλοι
+ * βλέπουν την ίδια σειρά μέσα στη ζώνη — **ουδέτερη ως προς εμάς**, απλώς λιγότερο
+ * δίκαιη ως προς την περιστροφή. ⛔ **ΜΗΝ βάλεις `Math.random()` ως εφεδρικό**: θα
+ * έκανε τη σελίδα μη ντετερμινιστική, δηλαδή αδοκίμαστη με άγκυρα και αδιάγνωστη σε
+ * αναφορά χρήστη *(«εμένα μου βγαίνει άλλη σειρά»)*.
+ */
+const SEED_KEY = 'nestor:directory-seed';
+const SEED_FALLBACK = 'directory';
+
+function directorySeed(): string {
+  try {
+    const stored = window.sessionStorage.getItem(SEED_KEY);
+    if (stored !== null && stored !== '') return stored;
+
+    // ⛔ **ΟΧΙ inline `crypto.randomUUID()`** (N.6 / RULE 2): η ΜΟΝΑΔΙΚΗ πηγή
+    //    ταυτοτήτων είναι το `enterprise-id.service`, και το `sess_*` υπάρχει ήδη
+    //    ακριβώς για ταυτότητα **συνεδρίας**. Το πρόθεμα δεν είναι διακοσμητικό:
+    //    κάνει τον σπόρο **αναγνωρίσιμο** σε όποιον ανοίξει το `sessionStorage`.
+    const minted = generateSessionId();
+    window.sessionStorage.setItem(SEED_KEY, minted);
+    return minted;
+  } catch {
+    return SEED_FALLBACK;
+  }
 }
 
 /**
@@ -77,8 +115,8 @@ export interface PublicAgenciesState {
  * ήταν υπόσχεση που κάποιος πρέπει να **θυμάται**. Εδώ είναι διαδρομή που **δεν
  * παρακάμπτεται**: η οθόνη δεν βλέπει ποτέ αταξινόμητο πίνακα.
  */
-export function usePublicAgencies(): PublicAgenciesState {
-  const [agencies, setAgencies] = useState<readonly PublicShowcase[]>([]);
+export function usePublicAgencies(from: GeoPoint | null): PublicAgenciesState {
+  const [readable, setReadable] = useState<readonly PublicShowcase[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -95,15 +133,15 @@ export function usePublicAgencies(): PublicAgenciesState {
         //    ΧΩΡΙΣ καμία απόδειξη θα ζωγραφιζόταν ως κάρτα: ο κατάλογος που το
         //    §9.9 β ονομάζει «επικίνδυνο αντί για χρήσιμο». Παραλείπεται ΚΑΙ
         //    καταγράφεται — σιωπηλή παράλειψη θα ήταν «0 = κανείς δεν κοίταξε».
-        const readable: PublicShowcase[] = [];
+        const published: PublicShowcase[] = [];
         for (const document of snapshot.docs) {
           const read = readShowcase(document.data(), document.id);
-          if (read.outcome === 'showcase') readable.push(read.showcase);
+          if (read.outcome === 'showcase') published.push(read.showcase);
           else logger.warn('Βιτρίνα χωρίς αναγνώσιμη απόδειξη — παραλείφθηκε', {
             data: { companyId: read.companyId },
           });
         }
-        setAgencies(orderAgencies(readable));
+        setReadable(published);
         setLoading(false);
       },
       (err: Error) => {
@@ -115,6 +153,19 @@ export function usePublicAgencies(): PublicAgenciesState {
 
     return () => unsubscribe();
   }, []);
+
+  // 🔴 **Η ΤΑΞΙΝΟΜΗΣΗ ΕΦΥΓΕ ΑΠΟ ΤΗ ΣΥΝΔΡΟΜΗ, ΟΧΙ ΑΠΟ ΤΟ HOOK** (ADR-843 ΠΕ7). Η σειρά
+  //    εξαρτάται πλέον από **πού κοιτάζει ο άνθρωπος**, που αλλάζει όταν αλλάζει το
+  //    φίλτρο εγγύτητας. Ταξινόμηση **μέσα** στο `onSnapshot` θα ανάγκαζε
+  //    **επανεγγραφή στη συνδρομή** σε κάθε αλλαγή φίλτρου — δηλαδή νέα ανάγνωση
+  //    ολόκληρης της συλλογής για κάτι που είναι **καθαρός υπολογισμός στη μνήμη**.
+  //
+  // ⚠️ **Ο καταναλωτής εξακολουθεί να ΜΗΝ βλέπει ποτέ αταξινόμητο πίνακα**: το
+  //    `readable` είναι **ιδιωτικό**, και το μόνο που φεύγει από εδώ είναι το
+  //    `agencies`. Η ουδετερότητα παραμένει διαδρομή που **δεν παρακάμπτεται**.
+  const seed = useMemo(directorySeed, []);
+  const viewpoint: DirectoryViewpoint = useMemo(() => ({ from, seed }), [from, seed]);
+  const agencies = useMemo(() => orderAgencies(readable, viewpoint), [readable, viewpoint]);
 
   return { agencies, loading, error };
 }

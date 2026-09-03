@@ -1,129 +1,216 @@
 /**
- * @fileoverview Άγκυρες της **ουδέτερης σειράς** του καταλόγου (ADR-827 §9.9 α).
+ * @fileoverview Άγκυρες της **ουδέτερης σειράς** του καταλόγου (ADR-843 ΠΕ7 · ADR-827 §9.9 α).
  * @related lib/agency/agency-directory-order.ts
  *
- * 🔴 **Τι φυλάει η ομάδα Κ**: ότι η σειρά είναι **ΟΛΙΚΗ**. Ένας συγκριτής χωρίς
- * tie-break περνά **κάθε** δοκιμή που τον καλεί μέσω `Array#sort`, επειδή η `sort`
- * είναι σταθερή από την ES2019 — δηλαδή η απουσία του τερματισμού θα ήταν
- * **αόρατη** και θα φαινόταν μόνο στην παραγωγή, ως σειρά που αλλάζει ανάμεσα σε
- * δύο φορτώσεις. Γι' αυτό η Κ3 καλεί τον **συγκριτή απευθείας**.
+ * 🔴 **Τι φυλάει η ομάδα Ε (εγγύτητα)**: ότι ο πιο κοντινός είναι πρώτος, **και** ότι
+ * η ζώνη ισοπαλίας **υπάρχει**. Οι δύο άγκυρες Ε3/Ε4 είναι **ζεύγος**, και μόνο μαζί
+ * καρφώνουν τη ζώνη: η μία απαιτεί ότι μέσα στη ζώνη η σειρά **μπορεί** να γυρίσει, η
+ * άλλη ότι **έξω** από αυτήν **ποτέ** δεν γυρίζει. Μία μόνη τους περνά και από
+ * υλοποίηση που ταξινομεί σκέτα κατά απόσταση *(η Ε4)* και από υλοποίηση που τα κάνει
+ * **όλα** ισότιμα *(η Ε3)*.
  *
- * 🔴 **Τι φυλάει η ομάδα Α**: ότι κανένα **εμπορικό** κριτήριο δεν μπήκε ποτέ.
+ * 🔴 **Τι φυλάει η ομάδα Κ**: ότι η σειρά είναι **ΟΛΙΚΗ**. Ένας συγκριτής χωρίς
+ * tie-break περνά **κάθε** δοκιμή που τον καλεί μέσω `Array#sort`, επειδή η `sort` είναι
+ * σταθερή από την ES2019 — δηλαδή η απουσία του τερματισμού θα ήταν **αόρατη** και θα
+ * φαινόταν μόνο στην παραγωγή. Γι' αυτό η Κ2 καλεί τον **συγκριτή απευθείας**.
+ *
+ * 🔴 **Τι φυλάει η ομάδα Α**: ότι κανένα **εμπορικό** κριτήριο δεν μπήκε ποτέ — και
+ * πλέον ούτε η **επωνυμία**: μετά το ΠΕ7 το όνομα **δεν αποφασίζει τίποτα**, και η
+ * παγίδα το φυλάει.
  */
 
-import { orderAgencies, compareAgencies } from '../agency-directory-order';
+import { orderAgencies, compareWithinBand } from '../agency-directory-order';
+import { PROXIMITY_TIE_MARGIN } from '@/lib/contact/first-contact-limits';
 import type { PublicShowcase } from '@/types/agency-profile';
-// 🔑 N.18 — ΕΝΑ δείγμα, τρεις σουίτες. Ήταν τρία αντίγραφα και έσπασαν όλα μαζί
-//    όταν το `gemiNumber` γενικεύτηκε σε `credentials[]` (ADR-841 Φ6-Β).
+import type { GeoPoint } from '@/types/geo/coordinates';
+// 🔑 N.18 — ΕΝΑ δείγμα, πολλές σουίτες.
 import { showcaseFixture as profile } from '../__fixtures__/showcase-fixture';
 
-describe('Κ. Η σειρά είναι ΟΛΙΚΗ, όχι απλώς αλφαβητική', () => {
-  it('Κ1 — ταξινομεί κατά επωνυμία με ελληνικό collation', () => {
-    const ordered = orderAgencies([
-      profile({ displayName: 'Ζωγράφου Ακίνητα', companyId: 'comp_c' }),
-      profile({ displayName: 'Αλεξίου Μεσιτικό', companyId: 'comp_a' }),
-      profile({ displayName: 'Μαυρίδης Real Estate', companyId: 'comp_b' }),
-    ]);
+const ORIGIN: GeoPoint = { lat: 0, lng: 0 };
 
-    // ⚠️ Ζ ΠΡΙΝ Μ — ελληνικό αλφάβητο, όχι λατινικό. Η πρώτη γραφή αυτής της
-    //    άγκυρας περίμενε λατινική σειρά και ΚΟΚΚΙΝΙΣΕ: ο collator είχε δίκιο.
-    expect(ordered.map((p) => p.displayName)).toEqual([
-      'Αλεξίου Μεσιτικό',
-      'Ζωγράφου Ακίνητα',
-      'Μαυρίδης Real Estate',
-    ]);
+/** Μοίρες γεωγραφικού πλάτους ανά μέτρο — αρκετά ακριβές για άγκυρα διάταξης. */
+const METRES_PER_DEGREE = 111_320;
+
+/** Μια βιτρίνα σε δεδομένη **απόσταση** από την αφετηρία. */
+function at(metres: number, companyId: string, displayName = 'Ίδιο'): PublicShowcase {
+  return profile({
+    companyId,
+    displayName,
+    position: { lat: metres / METRES_PER_DEGREE, lng: 0 },
+  });
+}
+
+/**
+ * ⚠️ **Σταθερή λίστα σπόρων, ΠΟΤΕ τυχαία** — μια άγκυρα που παράγει δικό της τυχαίο
+ * είναι άγκυρα που μπορεί να κοκκινίσει **χωρίς αλλαγή κώδικα**.
+ */
+const SEEDS = Array.from({ length: 24 }, (_, index) => `seed-${index}`);
+
+const idsOf = (profiles: readonly PublicShowcase[]): string[] =>
+  profiles.map((p) => p.companyId);
+
+describe('Ε. ΕΓΓΥΤΗΤΑ — ο πιο κοντινός πρώτος (ADR-843 ΠΕ7)', () => {
+  it('Ε1 — ο πιο κοντινός πρώτος, όταν οι αποστάσεις είναι σαφώς διαφορετικές', () => {
+    const ordered = orderAgencies(
+      [at(50_000, 'comp_far'), at(1_000, 'comp_near'), at(10_000, 'comp_mid')],
+      { from: ORIGIN, seed: 'any' },
+    );
+
+    expect(idsOf(ordered)).toEqual(['comp_near', 'comp_mid', 'comp_far']);
   });
 
-  it('Κ2 🔑 — τόνος και κεφαλαία ΔΕΝ αποφασίζουν: αποφασίζει ο τερματισμός', () => {
-    // 🔴 Η ΠΡΩΤΗ ΓΡΑΦΗ ΑΥΤΗΣ ΤΗΣ ΑΓΚΥΡΑΣ ΗΤΑΝ ΣΧΟΛΙΟ ΠΟΥ ΕΜΟΙΑΖΕ ΜΕ ΕΛΕΓΧΟ.
-    //    Σύγκρινε «ΆΛΦΑ» με «ΒΗΤΑ» — αλλά το `Α` προηγείται του `Β` σε ΚΑΘΕ
-    //    ευαισθησία, άρα η μετάλλαξη `base → variant` έβγαινε **ΠΡΑΣΙΝΗ**
-    //    (μετρημένο). Ο τόνος κρίνει ΜΟΝΟ όταν η ΒΑΣΗ των γραμμάτων ταυτίζεται.
-    //
-    // Εδώ οι επωνυμίες διαφέρουν **μόνο** σε τόνο/πεζά-κεφαλαία ⇒ με
-    // `sensitivity: 'base'` η σύγκριση ονόματος είναι **0** και αποφασίζει το
-    // `companyId`. Τα `companyId` επιλέγονται ώστε οι δύο ερμηνείες να δίνουν
-    // **αντίθετο** πρόσημο.
-    const accented = profile({ displayName: 'Άλφα', companyId: 'comp_aaa' });
-    const plain = profile({ displayName: 'Αλφα', companyId: 'comp_zzz' });
-    // base → 0 στο όνομα → aaa πριν zzz → αρνητικό.  variant → +1. 
-    expect(compareAgencies(accented, plain)).toBeLessThan(0);
+  it('Ε2 — όποιος ΔΕΝ δήλωσε τόπο πηγαίνει τελευταίος (δεν ανταμείβεται η σιωπή)', () => {
+    const ordered = orderAgencies(
+      [profile({ companyId: 'comp_silent', position: null }), at(90_000, 'comp_far')],
+      { from: ORIGIN, seed: 'any' },
+    );
 
-    const upper = profile({ displayName: 'ΒΑΣΗΣ', companyId: 'comp_zzz' });
-    const mixed = profile({ displayName: 'Βάσης', companyId: 'comp_aaa' });
-    // base → 0 στο όνομα → aaa πριν zzz → θετικό.  variant → −1.
-    expect(compareAgencies(upper, mixed)).toBeGreaterThan(0);
+    expect(idsOf(ordered)).toEqual(['comp_far', 'comp_silent']);
   });
 
-  it('Κ3 🔑 — ΙΔΙΑ επωνυμία: ο ΣΥΓΚΡΙΤΗΣ (όχι η sort) δίνει σταθερή σειρά', () => {
-    const first = profile({ displayName: 'Ακίνητα Α.Ε.', companyId: 'comp_aaa' });
-    const second = profile({ displayName: 'Ακίνητα Α.Ε.', companyId: 'comp_bbb' });
+  it('Ε3 🔑 — ΜΕΣΑ στη ζώνη η σειρά ΓΥΡΙΖΕΙ ανά άνθρωπο (η ζώνη υπάρχει)', () => {
+    // 2.000 μ. ⇒ οροφή 2.500 μ. Ο δεύτερος στα 2.400 είναι **ισότιμος**.
+    const inBand = 2_000 * (1 + PROXIMITY_TIE_MARGIN) - 100;
+    const flipped = SEEDS.some((seed) => {
+      const ordered = orderAgencies(
+        [at(2_000, 'comp_closer'), at(inBand, 'comp_tied')],
+        { from: ORIGIN, seed },
+      );
+      return ordered[0].companyId === 'comp_tied';
+    });
 
-    // 🔴 Η ΑΓΚΥΡΑ ΠΟΥ ΠΙΑΝΕΙ ΤΗΝ ΑΦΑΙΡΕΣΗ ΤΟΥ TIE-BREAK. Μέσω `sort` και τα δύο
-    //    θα ήταν `0` και η σταθερή `sort` θα κρατούσε τη σειρά εισόδου — πράσινο
-    //    σε συγκριτή που ΔΕΝ αποφασίζει τίποτα.
-    expect(compareAgencies(first, second)).toBeLessThan(0);
-    expect(compareAgencies(second, first)).toBeGreaterThan(0);
-    expect(compareAgencies(first, first)).toBe(0);
+    // 🔴 Η ΑΓΚΥΡΑ ΠΟΥ ΠΙΑΝΕΙ ΤΗΝ ΑΦΑΙΡΕΣΗ ΤΗΣ ΖΩΝΗΣ. Με σκέτη ταξινόμηση κατά
+    //    απόσταση, ο `comp_tied` **δεν βγαίνει ποτέ πρώτος** — για κανέναν σπόρο.
+    expect(flipped).toBe(true);
   });
 
-  it('Κ4 — ίδια έξοδος για ΚΑΘΕ σειρά εισόδου (ολική σχέση)', () => {
-    const a = profile({ displayName: 'Ίδιο Όνομα', companyId: 'comp_111' });
-    const b = profile({ displayName: 'Ίδιο Όνομα', companyId: 'comp_222' });
-    const c = profile({ displayName: 'Ίδιο Όνομα', companyId: 'comp_333' });
+  it('Ε4 🔑 — ΕΞΩ από τη ζώνη η σειρά ΔΕΝ γυρίζει ΠΟΤΕ (η ζώνη δεν είναι «όλοι»)', () => {
+    // 2.000 μ. ⇒ οροφή 2.500 μ. Ο δεύτερος στα 2.600 είναι **έξω**.
+    const outOfBand = 2_000 * (1 + PROXIMITY_TIE_MARGIN) + 100;
+    const everFlipped = SEEDS.some((seed) => {
+      const ordered = orderAgencies(
+        [at(2_000, 'comp_closer'), at(outOfBand, 'comp_farther')],
+        { from: ORIGIN, seed },
+      );
+      return ordered[0].companyId === 'comp_farther';
+    });
 
-    const expected = ['comp_111', 'comp_222', 'comp_333'];
-    for (const input of [
-      [a, b, c],
-      [c, b, a],
-      [b, c, a],
-      [c, a, b],
-    ]) {
-      expect(orderAgencies(input).map((p) => p.companyId)).toEqual(expected);
+    // 🔴 Η ΣΥΜΠΛΗΡΩΜΑΤΙΚΗ ΤΗΣ Ε3. Μια υλοποίηση που κάνει **τα πάντα** ισότιμα
+    //    περνά την Ε3 και **κοκκινίζει εδώ** — δηλαδή το ζεύγος καρφώνει το κατώφλι.
+    expect(everFlipped).toBe(false);
+  });
+
+  it('Ε5 🔑 — η ζώνη είναι ΣΧΕΤΙΚΗ: 20/24 χλμ. ισοπαλία, 2/2,6 χλμ. όχι', () => {
+    // 🔴 ΤΟ ΘΕΜΑ ΤΟΥ Θ-6: ένα **απόλυτο** κατώφλι (π.χ. 500 μ.) θα έκανε τα 20/24 χλμ.
+    //    **μη** ισόπαλα, ενώ το σχετικό τα κάνει ισόπαλα — και ταυτόχρονα κρατά τα
+    //    2/2,6 χλμ. **χωριστά**. Οι δύο απαντήσεις μαζί υπάρχουν **μόνο** στο σχετικό.
+    const farPairFlips = SEEDS.some((seed) => {
+      const ordered = orderAgencies(
+        [at(20_000, 'comp_a'), at(24_000, 'comp_b')],
+        { from: ORIGIN, seed },
+      );
+      return ordered[0].companyId === 'comp_b';
+    });
+
+    expect(farPairFlips).toBe(true);
+  });
+
+  it('Ε6 — χωρίς αφετηρία, ΟΛΟΙ ισότιμοι — και ΟΧΙ αλφαβητικά', () => {
+    // 🔴 Η ΑΓΚΥΡΑ ΠΟΥ ΠΙΑΝΕΙ ΤΗΝ ΕΠΙΣΤΡΟΦΗ ΣΤΟ ΑΛΦΑΒΗΤΙΚΑ «ΩΣ ΑΣΦΑΛΗ ΠΡΟΕΠΙΛΟΓΗ».
+    //    Θα ξαναγεννούσε τη μεροληψία «ΑΑΑ…» ακριβώς για τους επισκέπτες που δεν μας
+    //    είπαν πού είναι — δηλαδή για τους περισσότερους.
+    const alphabetical = ['comp_1', 'comp_2', 'comp_3', 'comp_4', 'comp_5'];
+    const population = alphabetical.map((id, index) =>
+      profile({ companyId: id, displayName: `Γραφείο ${index + 1}` }),
+    );
+
+    const everDiffers = SEEDS.some(
+      (seed) => idsOf(orderAgencies(population, { from: null, seed })).join() !== alphabetical.join(),
+    );
+
+    expect(everDiffers).toBe(true);
+  });
+});
+
+describe('Κ. Η σειρά είναι ΟΛΙΚΗ και ΣΤΑΘΕΡΗ ανά άνθρωπο', () => {
+  it('Κ1 — ίδια έξοδος για ΚΑΘΕ σειρά εισόδου, με τον ίδιο σπόρο', () => {
+    const a = at(2_000, 'comp_111');
+    const b = at(2_100, 'comp_222');
+    const c = at(2_200, 'comp_333');
+
+    const expected = idsOf(orderAgencies([a, b, c], { from: ORIGIN, seed: 'γιώργος' }));
+    for (const input of [[c, b, a], [b, c, a], [c, a, b], [a, c, b]]) {
+      expect(idsOf(orderAgencies(input, { from: ORIGIN, seed: 'γιώργος' }))).toEqual(expected);
     }
   });
 
-  it('Κ5 — «Γραφείο 2» πριν από «Γραφείο 10» (numeric collation)', () => {
-    const ordered = orderAgencies([
-      profile({ displayName: 'Γραφείο 10', companyId: 'comp_b' }),
-      profile({ displayName: 'Γραφείο 2', companyId: 'comp_a' }),
-    ]);
+  it('Κ2 🔑 — ΙΔΙΟΣ κλήρος: ο ΣΥΓΚΡΙΤΗΣ (όχι η sort) δίνει σταθερή σειρά', () => {
+    const first = profile({ companyId: 'comp_aaa', displayName: 'Ίδιο' });
+    const second = profile({ companyId: 'comp_bbb', displayName: 'Ίδιο' });
 
-    expect(ordered.map((p) => p.displayName)).toEqual(['Γραφείο 2', 'Γραφείο 10']);
+    // 🔴 Η ΑΓΚΥΡΑ ΠΟΥ ΠΙΑΝΕΙ ΤΗΝ ΑΦΑΙΡΕΣΗ ΤΟΥ ΤΕΡΜΑΤΙΣΜΟΥ. Μέσω `sort` δύο ίσα
+    //    στοιχεία θα κρατούσαν τη σειρά εισόδου — πράσινο σε συγκριτή που ΔΕΝ
+    //    αποφασίζει τίποτα.
+    expect(compareWithinBand('s', first, second)).not.toBe(0);
+    expect(Math.sign(compareWithinBand('s', first, second)))
+      .toBe(-Math.sign(compareWithinBand('s', second, first)));
+    expect(compareWithinBand('s', first, first)).toBe(0);
   });
 
-  it('Κ6 — ΔΕΝ μεταβάλλει την είσοδο (ανήκει στη συνδρομή)', () => {
-    const input = [
-      profile({ displayName: 'Ωμέγα', companyId: 'comp_z' }),
-      profile({ displayName: 'Άλφα', companyId: 'comp_a' }),
-    ];
-    const snapshot = input.map((p) => p.companyId);
+  it('Κ3 — ο ΙΔΙΟΣ άνθρωπος βλέπει ΠΑΝΤΑ την ίδια σειρά', () => {
+    const population = ['comp_a', 'comp_b', 'comp_c', 'comp_d'].map((id) => at(2_000, id));
+    const once = idsOf(orderAgencies(population, { from: ORIGIN, seed: 'ίδιος' }));
+    const again = idsOf(orderAgencies(population, { from: ORIGIN, seed: 'ίδιος' }));
 
-    orderAgencies(input);
+    expect(again).toEqual(once);
+  });
 
-    expect(input.map((p) => p.companyId)).toEqual(snapshot);
+  it('Κ5 🔑 — ΔΥΟ άνθρωποι βλέπουν ΔΙΑΦΟΡΕΤΙΚΗ σειρά (ο σπόρος ΜΕΤΡΑΕΙ)', () => {
+    // 🔴 ΓΕΝΝΗΘΗΚΕ ΑΠΟ ΜΕΤΑΛΛΑΞΗ ΠΟΥ ΒΓΗΚΕ ΠΡΑΣΙΝΗ (2026-09-03). Αφαιρώντας τον σπόρο
+    //    από τον κλήρο (`material = companyId`), **και οι δώδεκα** άγκυρες έμεναν
+    //    πράσινες — ενώ η συμπεριφορά ήταν **ακριβώς η μεροληψία που το ΠΕ7 έδιωξε**:
+    //    μια **σταθερή** σειρά ισοπαλίας που ευνοεί **συστηματικά** τα ίδια γραφεία,
+    //    απλώς με κριτήριο τον κατακερματισμό αντί για το αλφάβητο. Αόρατη, και
+    //    χειρότερη — γιατί κανείς δεν θα την υποψιαζόταν.
+    const population = ['comp_a', 'comp_b', 'comp_c', 'comp_d'].map((id) => at(2_000, id));
+    const distinct = new Set(
+      SEEDS.map((seed) => idsOf(orderAgencies(population, { from: ORIGIN, seed })).join()),
+    );
+
+    expect(distinct.size).toBeGreaterThan(1);
+  });
+
+  it('Κ4 — ΔΕΝ μεταβάλλει την είσοδο (ανήκει στη συνδρομή)', () => {
+    const input = [at(9_000, 'comp_z'), at(1_000, 'comp_a')];
+    const snapshot = idsOf(input);
+
+    orderAgencies(input, { from: ORIGIN, seed: 's' });
+
+    expect(idsOf(input)).toEqual(snapshot);
   });
 });
 
 describe('Α. Antitrust — καμία εμπορική είσοδος (ADR-827 §9.9 α, NAR $418M)', () => {
-  it('Α1 🔑 — ο συγκριτής διαβάζει ΜΟΝΟ `displayName` και `companyId`', () => {
+  it('Α1 🔑 — ο συγκριτής της ισοπαλίας διαβάζει ΜΟΝΟ `companyId`', () => {
     // 🔴 Η ΔΟΜΙΚΗ ΑΠΟΔΕΙΞΗ: κάθε ΑΛΛΟ πεδίο γίνεται παγίδα. Αν κάποιος προσθέσει
-    //    ποτέ κριτήριο («πρώτα τα πρόσφατα», «πρώτα όσα έχουν τόπο»), η ανάγνωση
+    //    ποτέ κριτήριο («πρώτα τα πρόσφατα», «πρώτα οι επαληθευμένοι»), η ανάγνωση
     //    πυροδοτεί ΕΔΩ — πριν φτάσει σε κατάταξη επί πληρωμή.
+    //
+    // ⚠️ ΤΟ `displayName` ΜΠΗΚΕ ΣΤΗ ΛΙΣΤΑ ΜΕ ΤΟ ΠΕ7. Πριν ήταν το **κριτήριο**·
+    //    τώρα δεν αποφασίζει τίποτα, και η μεροληψία «ΑΑΑ…» δεν μπορεί να επιστρέψει
+    //    κρυφά μέσα από την ισοπαλία.
     const forbidden: (keyof PublicShowcase)[] = [
       'alias',
-      // 🔴 Φ6-Β: ΝΕΑ ΠΑΓΙΔΑ. Το `credentials` κουβαλά πλέον την ΕΙΔΙΚΟΤΗΤΑ και την
-      //    ΑΠΟΔΕΙΞΗ — δηλαδή ό,τι θα ήθελε κανείς για «πρώτα οι επαληθευμένοι».
-      //    Αν ο συγκριτής το αγγίξει ποτέ, πυροδοτεί ΕΔΩ.
       'credentials',
+      'displayName',
       'place',
       'position',
       'publishedAt',
     ];
     const touched: string[] = [];
 
-    const trap = (companyId: string, displayName: string): PublicShowcase => {
-      const base = profile({ companyId, displayName });
+    const trap = (companyId: string): PublicShowcase => {
+      const base = profile({ companyId });
       const guarded = { ...base };
       for (const field of forbidden) {
         Object.defineProperty(guarded, field, {
@@ -136,8 +223,8 @@ describe('Α. Antitrust — καμία εμπορική είσοδος (ADR-827 
       return guarded;
     };
 
-    compareAgencies(trap('comp_a', 'Άλφα'), trap('comp_b', 'Βήτα'));
-    compareAgencies(trap('comp_a', 'Ίδιο'), trap('comp_b', 'Ίδιο'));
+    compareWithinBand('s', trap('comp_a'), trap('comp_b'));
+    compareWithinBand('s', trap('comp_a'), trap('comp_a'));
 
     expect(touched).toEqual([]);
   });

@@ -122,7 +122,6 @@ function AgencyCard({ profile }: { readonly profile: PublicShowcase }): React.JS
 
 export function AgencyDirectoryContent(): React.JSX.Element {
   const { t, i18n } = useTranslation([AGENCY_PUBLIC_NS]);
-  const { agencies, loading, error } = usePublicAgencies();
 
   // 🔴 **`useSearchParams` ΕΔΩ, ΠΟΤΕ ΣΤΟ `page.tsx`** (ADR-744): τα Server και
   //    Client δέντρα έχουν **ξεχωριστούς** γράφους module — μια ανάγνωση από
@@ -136,6 +135,19 @@ export function AgencyDirectoryContent(): React.JSX.Element {
     () => parseShowcaseFilters(new URLSearchParams(params.toString())),
     [params],
   );
+
+  // 🔴 **ΤΟ ΙΔΙΟ ΚΕΝΤΡΟ ΤΑΞΙΝΟΜΕΙ ΚΑΙ ΦΙΛΤΡΑΡΕΙ — ΚΑΙ ΔΕΝ ΕΙΝΑΙ ΔΕΥΤΕΡΟ ΚΡΙΤΗΡΙΟ**
+  //    (ADR-843 ΠΕ7 · Κ12). Ο άξονας είναι **ΕΝΑΣ**: η απόσταση από τον άνθρωπο. Το
+  //    φίλτρο απαντά *«ποιοι χωράνε στην ακτίνα;»*, η σειρά *«ποιος είναι πιο
+  //    κοντά;»* — δύο ερωτήσεις, **μία** είσοδος. Δύο **διαφορετικά** κέντρα εδώ θα
+  //    ήταν δύο αλήθειες για το «πού είσαι».
+  //
+  // ⚠️ **`null` = «δεν ξέρουμε πού είσαι» ⇒ όλοι ισότιμοι**, με τα λόγια της οθόνης.
+  //    ⛔ ΜΗΝ βάλεις προεπιλεγμένο κέντρο *(«Αθήνα, γιατί εκεί είναι οι περισσότεροι»)*:
+  //    θα ήταν **σιωπηλή γεωγραφική κατάταξη** που κανείς δεν ζήτησε και κανείς δεν
+  //    βλέπει — ακριβώς το σχήμα του «μοιάζει με αρχή» που ο Κ13 κυνηγά.
+  const near = filters.near?.center ?? null;
+  const { agencies, loading, error } = usePublicAgencies(near);
 
   // 🔑 **Η ΔΙΕΥΘΥΝΣΗ ΕΙΝΑΙ Η ΚΑΤΑΣΤΑΣΗ.** Καμία δεύτερη πηγή: ένα `useState`
   //    δίπλα στη διεύθυνση θα ήταν δύο απαντήσεις στο *«τι φιλτράρει τώρα;»*,
