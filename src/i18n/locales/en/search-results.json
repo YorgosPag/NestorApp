@@ -17,6 +17,13 @@
       "noLocation": "{total, plural, one {# listing} other {# listings}} — none with a declared location yet. That is why we do not ask you «where»: the filter would have nothing to work on.",
       "partial": "{total, plural, one {# listing} other {# listings}} · {mapped} with a declared location · {unmapped} without. Area search filters only the former — the rest always appear."
     },
+    "modes": {
+      "label": "What are you looking for",
+      "buy": "Buy",
+      "rent": "Rent",
+      "stay": "Stay",
+      "pros": "Professionals"
+    },
     "showcase": {
       "heading": "See what is already here"
     },
