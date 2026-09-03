@@ -45,9 +45,9 @@
  * @enterprise ADR-287 — Enum SSoT Centralization (Batch 21)
  */
 
+import { resolvedPropertyClassOf } from '@/constants/property-classification';
 import {
   isCanonicalPropertyType,
-  propertyClassOf,
   type PropertyTypeCanonical,
 } from '@/constants/property-types';
 import { toNonNegativeNumber } from '@/constants/plausibility-input';
@@ -394,12 +394,12 @@ export function assessAreaPlausibility(
   }
 
   // Step 10: garden σε τύπο που δεν είναι ground-level (apt/penthouse/loft)
-  // 🔑 **«Είναι κατοικία;» ρωτιέται ΜΙΑ φορά, από την αυθεντία** (`propertyClassOf`).
+  // 🔑 **«Είναι κατοικία;» ρωτιέται ΜΙΑ φορά, από την αυθεντία** (`resolvedPropertyClassOf`).
   // Ήταν χειρόγραφη λίστα τεσσάρων εμπορικών ειδών — δηλαδή «κατοικία» ορισμένο ως
   // *ό,τι περισσεύει*, ακριβώς το σχήμα που το `property-types.ts` κατήγγειλε όταν
   // μπήκε η γη: **το `plot` θα βαφτιζόταν σιωπηλά «κατοικία»** και ένα οικόπεδο με
   // δηλωμένο κήπο θα κρινόταν «κήπος σε μη ισόγειο».
-  if (!rule.gardenTypical && (garden ?? 0) > 0 && propertyClassOf(propertyType) === 'residential') {
+  if (!rule.gardenTypical && (garden ?? 0) > 0 && resolvedPropertyClassOf(propertyType) === 'residential') {
     return buildAssessment('unusual', 'gardenOnNonGround', propertyType, rule, gross, net, balcony, terrace, garden);
   }
 

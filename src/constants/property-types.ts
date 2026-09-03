@@ -144,26 +144,44 @@ export function propertyTypesOfClass(
   return PROPERTY_TYPES.filter((type) => PROPERTY_TYPE_CLASS[type] === klass);
 }
 
-/**
- * Η κατηγορία μιας **αβέβαιης** τιμής — `null` όταν δεν είναι κανονικό είδος.
- *
- * ⚠️ Δέχεται `unknown` επίτηδες: οι πραγματικοί καταναλωτές διαβάζουν από Firestore,
- * όπου ζουν ακόμη `DEPRECATED_PROPERTY_TYPES` και `LEGACY_GREEK_PROPERTY_TYPES`.
- * Για ελεύθερο κείμενο, πέρνα το πρώτα από το `normalizePropertyType`
- * (`constants/property-type-aliases`) — αυτό εδώ **δεν** μαντεύει.
- */
-export function propertyClassOf(type: unknown): PropertyClass | null {
+// ─────────────────────────────────────────────────────────────────────────────
+// 🔴 ΤΑ ΔΥΟ ΠΑΡΑΚΑΤΩ ΔΕΝ ΕΞΑΓΟΝΤΑΙ — ΚΑΙ Η ΑΦΑΙΡΕΣΗ ΤΟΥ `export` ΕΙΝΑΙ Η ΔΙΟΡΘΩΣΗ
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// **Ρωτούν «τι κατηγορία είναι;» ΧΩΡΙΣ να κανονικοποιούν** — άρα για ωμή παλαιά τιμή
+// (`type: 'Οικόπεδο'`, που το ίδιο το {@link PropertyType} επιτρέπει ρητά) απαντούσαν
+// *«άγνωστο»* και *«όχι γη»*. Η ίδια ερώτηση απαντιόταν σωστά αλλού, με χειρόγραφη
+// σύνθεση: **δύο κριτές, και ο ένας ήξερε λιγότερα** (ADR-842 §7.6.11).
+//
+// ⚠️ **Το παλιό σχόλιο ΕΛΕΓΕ τη σωστή κίνηση** — *«για ελεύθερο κείμενο, πέρνα το
+// πρώτα από το `normalizePropertyType`»* — και **έξι στους έξι** καταναλωτές δεν την
+// έκαναν. Είναι το σχήμα που αυτό το repo έχει ήδη ονομάσει: **οδηγία σε σχόλιο δεν
+// είναι πύλη**. Η πύλη είναι το να **μην υπάρχει** η αδύναμη πόρτα.
+//
+// 🔑 **Γιατί δεν κανονικοποιούν ΕΔΩ**: θα χρειαζόταν `import` του
+// `property-type-aliases`, που εισάγει **αυτό** το αρχείο ⇒ κύκλος. Και δεν είναι
+// θεωρητικός: το {@link CREATABLE_PROPERTY_TYPES} παρακάτω καλεί το κατηγόρημα **στο
+// module-eval**, οπότε ανάλογα με τη σειρά φόρτωσης το `PROPERTY_TYPE_ALIASES` θα ήταν
+// σε **TDZ** ⇒ `ReferenceError` σε χρόνο εκτέλεσης. Πλήρης ανάλυση και η θεραπεία:
+// **`constants/property-classification.ts`**.
+//
+// ✅ **Μένουν ιδιωτικά επειδή έχουν έναν έγκυρο ρόλο**: τρέχουν **αποκλειστικά** πάνω
+// σε τιμές του ίδιου του {@link PROPERTY_TYPES} (κανονικές εξ ορισμού), όπου η
+// κανονικοποίηση θα ήταν ταυτοτική. Δεν είναι «δεύτερη αυθεντία» — είναι δεικτοδότηση
+// πίνακα πάνω σε κλειστό σύνολο.
+//
+// ⛔ **ΜΗΝ ΞΑΝΑΒΑΛΕΙΣ `export`.** Αν το χρειάζεσαι από έξω, θέλεις τον δυνατό κριτή:
+// `import { isLandProperty, resolvedPropertyClassOf } from '@/constants/property-classification'`.
+// Το φυλάει άγκυρα (`property-type-classes.test.ts` Κ12) **και** ο κανόνας
+// `property-classification` στο `.ssot-registry.json`.
+
+/** @internal Η κατηγορία μιας **κανονικής** τιμής. Έξω από το αρχείο: `resolvedPropertyClassOf`. */
+function propertyClassOf(type: unknown): PropertyClass | null {
   return isCanonicalPropertyType(type) ? PROPERTY_TYPE_CLASS[type] : null;
 }
 
-/**
- * **Είναι γη;** — το κατηγόρημα που ξεκλειδώνει την αντιπαροχή.
- *
- * 🔑 Ζει **εδώ, δίπλα στον πίνακα**, και όχι στη φόρμα που το χρειάστηκε πρώτη: δύο
- * οθόνες με χειρόγραφο `type === 'plot' || type === 'parcel'` θα ήταν δύο αυθεντίες
- * για το «τι είναι γη», και η τρίτη τιμή γης θα προστίθετο **στη μία**.
- */
-export function isLandPropertyType(type: unknown): boolean {
+/** @internal «Είναι γη;» για **κανονική** τιμή. Έξω από το αρχείο: `isLandProperty`. */
+function isLandPropertyType(type: unknown): boolean {
   return propertyClassOf(type) === 'land';
 }
 

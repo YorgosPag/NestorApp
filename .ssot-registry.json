@@ -915,6 +915,18 @@
         "src/constants/property-types.ts"
       ]
     },
+    "property-classification": {
+      "addedDate": "2026-09-03",
+      "ssotFile": "src/constants/property-classification.ts",
+      "description": "Η ΤΑΞΙΝΟΜΗΣΗ — «τι είδους πράγμα είναι αυτό, ό,τι κι αν μου έγραψαν;»: ο ΕΝΑΣ κριτής, που συνθέτει την αναγνώριση (property-type-aliases) με το μοντέλο (property-types). Import from @/constants/property-classification — no inline re-declaration. 🔴 ΓΙΑΤΙ ΤΡΙΤΟ ΑΡΧΕΙΟ ΚΑΙ ΟΧΙ ΔΥΟ ΓΡΑΜΜΕΣ ΣΤΟ property-types (ADR-842 §7.6.11): το normalize ΔΕΝ μπορεί να μπει εκεί — το property-type-aliases εισάγει από το property-types, και το CREATABLE_PROPERTY_TYPES καλεί το κατηγόρημα ΣΤΟ MODULE-EVAL ⇒ TDZ ReferenceError εξαρτώμενο από τη σειρά φόρτωσης του bundler (δουλεύει σε dev, σκάει σε prod). ⚠️ Τα propertyClassOf/isLandPropertyType ΕΠΑΨΑΝ να εξάγονται από το property-types, επίτηδες: ο αδύναμος κριτής δεν είναι πια λάθος επιλογή — δεν είναι επιλογή. Άγκυρα που το εκτελεί: property-type-classes.test.ts Κ2γ.",
+      "forbiddenPatterns": [
+        "(function|const)\\s+(isLandProperty|resolvedPropertyClassOf)\\b"
+      ],
+      "allowlist": [
+        "src/constants/property-classification.ts"
+      ],
+      "tier": 3
+    },
     "property-type-aliases": {
       "addedDate": "2026-08-20",
       "ssotFile": "src/constants/property-type-aliases.ts",

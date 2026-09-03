@@ -33,7 +33,8 @@
  * @enterprise ADR-287 — Completion Meter (Batch 28)
  */
 
-import { propertyClassOf, type PropertyTypeCanonical } from '@/constants/property-types';
+import { resolvedPropertyClassOf } from '@/constants/property-classification';
+import type { PropertyTypeCanonical } from '@/constants/property-types';
 import { normalizePropertyType } from '@/constants/property-type-aliases';
 
 // =============================================================================
@@ -429,7 +430,7 @@ export function getFieldWeightsForType(
  * @returns κλειδί **χωρίς** πρόθεμα namespace, π.χ. `completion.fields.land.floorplan`
  */
 export function completionFieldLabelKey(fieldKey: FieldKey, propertyType: unknown): string {
-  return propertyClassOf(normalizePropertyType(propertyType)) === 'land'
+  return resolvedPropertyClassOf(propertyType) === 'land'
     && (LAND_LABELLED_FIELDS as readonly string[]).includes(fieldKey)
       ? `completion.fields.land.${fieldKey}`
       : `completion.fields.${fieldKey}`;

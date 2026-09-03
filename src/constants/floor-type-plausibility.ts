@@ -27,9 +27,9 @@
  * @enterprise ADR-287 — Enum SSoT Centralization (Batch 19)
  */
 
+import { isLandProperty } from '@/constants/property-classification';
 import {
   isCanonicalPropertyType,
-  isLandPropertyType,
   isStandaloneUnitType,
   type PropertyTypeCanonical,
 } from '@/constants/property-types';
@@ -151,7 +151,7 @@ export function assessFloorTypePlausibility(
   // 🔑 **`null` ⇒ `ok` · οτιδήποτε άλλο ⇒ `implausible`**, και η αυστηρότητα είναι
   // σκόπιμη: «οικόπεδο στον 3ο όροφο» δεν είναι ασυνήθιστο ακίνητο, είναι **λάθος
   // είδος** — ο άνθρωπος διάλεξε «Οικόπεδο» ενώ πουλά διαμέρισμα.
-  if (isLandPropertyType(propertyType)) {
+  if (isLandProperty(propertyType)) {
     const declaredFloor = toFiniteNumber(floor);
     return {
       verdict: declaredFloor === null ? 'ok' : 'implausible',

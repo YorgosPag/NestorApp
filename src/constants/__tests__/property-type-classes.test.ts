@@ -24,17 +24,20 @@ import enEnums from '@/i18n/locales/en/properties-enums.json';
 import {
   COMMERCIAL_PROPERTY_TYPES,
   CREATABLE_PROPERTY_TYPES,
-  isLandPropertyType,
   LAND_PROPERTY_TYPES,
   PROPERTY_CLASSES,
   PROPERTY_TYPE_CLASS,
   PROPERTY_TYPE_I18N_KEYS,
   PROPERTY_TYPES,
-  propertyClassOf,
   propertyTypesOfClass,
   RESIDENTIAL_PROPERTY_TYPES,
   type PropertyClass,
 } from '@/constants/property-types';
+import * as propertyTypesModule from '@/constants/property-types';
+import {
+  isLandProperty,
+  resolvedPropertyClassOf,
+} from '@/constants/property-classification';
 import {
   getPropertyTypeLabelEL,
   normalizePropertyType,
@@ -69,15 +72,60 @@ describe('ADR-777 §8.32 — Ο δεύτερος άξονας: η κατηγορ
 
   it('Κ2 — η γη είναι ακριβώς `plot` + `parcel`, και το κατηγόρημα συμφωνεί', () => {
     expect(LAND_PROPERTY_TYPES).toEqual(['plot', 'parcel']);
-    expect(isLandPropertyType('plot')).toBe(true);
-    expect(isLandPropertyType('parcel')).toBe(true);
-    expect(isLandPropertyType('apartment')).toBe(false);
-    expect(isLandPropertyType('storage')).toBe(false);
-    // Άγνωστη είσοδος ⇒ **όχι γη**, ποτέ σφάλμα: τα έγγραφα Firestore κουβαλούν
-    // ακόμη παλιές ελληνικές τιμές.
-    expect(isLandPropertyType('Αποθήκη')).toBe(false);
-    expect(isLandPropertyType(undefined)).toBe(false);
-    expect(propertyClassOf('κάτι τυχαίο')).toBeNull();
+    expect(isLandProperty('plot')).toBe(true);
+    expect(isLandProperty('parcel')).toBe(true);
+    expect(isLandProperty('apartment')).toBe(false);
+    expect(isLandProperty('storage')).toBe(false);
+    // Άγνωστη είσοδος ⇒ **όχι γη**, ποτέ σφάλμα.
+    expect(isLandProperty(undefined)).toBe(false);
+    expect(resolvedPropertyClassOf('κάτι τυχαίο')).toBeNull();
+
+    // ⚠️ **ΤΟ `'Αποθήκη'` ΔΕΝ ΕΙΝΑΙ ΤΟ ΣΚΕΛΟΣ ΠΟΥ ΔΙΑΦΟΡΟΠΟΙΕΙ** — μένει επειδή
+    // κρίνει **άλλο** πράγμα (ότι το εμπορικό δεν βαφτίζεται γη), αλλά ήταν
+    // **πράσινο και στις δύο εκδοχές** του κατηγορήματος: λύνεται σε `storage`,
+    // δηλαδή εμπορικό, οπότε «όχι γη» πριν **και** μετά την κανονικοποίηση.
+    // Ένα σκέλος που μένει πράσινο με το ελάττωμα ζωντανό **δεν είναι απόδειξη,
+    // είναι εμφάνιση** — γι' αυτό ακριβώς από κάτω μπαίνει το Κ2β.
+    expect(isLandProperty('Αποθήκη')).toBe(false);
+  });
+
+  it('🔴 Κ2β — ΤΟ ΣΚΕΛΟΣ ΠΟΥ ΔΙΑΦΟΡΟΠΟΙΕΙ: ωμή ΠΑΛΑΙΑ ΕΛΛΗΝΙΚΗ τιμή είναι γη', () => {
+    // Αυτή είναι η άγκυρα του ίδιου του ελαττώματος του §7.6.11. Με τον παλιό
+    // (ασθενή) κριτή **και τα τέσσερα** σκέλη ήταν `false` — δηλαδή η φόρμα έλεγε
+    // «Εμβαδόν» αντί «Εμβαδόν οικοπέδου», ο uploader ζητούσε «κάτοψη» αντί
+    // «τοπογραφικό», και το `ownerPropertyDraftFrom` **έγραφε** «οικόπεδο στον
+    // 3ο όροφο» — ενώ ο δείκτης πληρότητας, που κανονικοποιούσε, έλεγε «γη».
+    expect(isLandProperty('Οικόπεδο')).toBe(true);
+    expect(isLandProperty('Αγροτεμάχιο')).toBe(true);
+    // …και οι μορφές που ο ίδιος πίνακας αναγνώρισης υπόσχεται: πεζά, τονισμένα,
+    // με κενά γύρω. Αν κάποια λείψει από το `PROPERTY_TYPE_ALIASES`, εδώ κοκκινίζει.
+    expect(isLandProperty('οικοπεδο')).toBe(true);
+    expect(isLandProperty('  ΟΙΚΟΠΕΔΟ  ')).toBe(true);
+
+    // Και ο άξονας της κατηγορίας, όχι μόνο το «είναι γη;»: το παλαιό εμπορικό
+    // πρέπει να λύνεται σε `commercial`, αλλιώς το `isOfferKindEligible` θα άφηνε
+    // βραχυχρόνια μίσθωση σε αποθήκη (§7.6.10).
+    expect(resolvedPropertyClassOf('Αποθήκη')).toBe('commercial');
+    expect(resolvedPropertyClassOf('Διαμέρισμα')).toBe('residential');
+    expect(resolvedPropertyClassOf('Οικόπεδο')).toBe('land');
+  });
+
+  it('🔴 Κ2γ — Ο ΑΔΥΝΑΜΟΣ ΚΡΙΤΗΣ ΔΕΝ ΕΙΝΑΙ ΕΙΣΑΓΩΓΙΜΟΣ (η θεραπεία, δομικά)', () => {
+    // 🔑 **Η ουσία του §7.6.11 δεν είναι ότι προστέθηκε δυνατός κριτής — είναι ότι
+    // ο αδύναμος ΕΠΑΨΕ ΝΑ ΕΙΝΑΙ ΕΠΙΛΟΓΗ.** Ένα τρίτο module που απλώς *πρόσθετε*
+    // τον δυνατό θα άφηνε δύο εξαγόμενους κριτές για την ίδια ερώτηση, και ο
+    // επόμενος καταναλωτής θα διάλεγε σωστά **κατά τύχη** — δηλαδή το ίδιο
+    // ελάττωμα, ένα επίπεδο πιο πάνω.
+    //
+    // ⚠️ Αυτή η άγκυρα κοκκινίζει αν κάποιος ξαναβάλει το `export`. Δεν είναι
+    // στιλιστικός έλεγχος: το `export` **είναι** η επαναφορά του ελαττώματος.
+    expect('isLandPropertyType' in propertyTypesModule).toBe(false);
+    expect('propertyClassOf' in propertyTypesModule).toBe(false);
+
+    // …και ο πίνακας μένει εξαγόμενος επίτηδες: όποιος κρατά **ήδη** κανονική τιμή
+    // τον δεικτοδοτεί κατευθείαν, χωρίς να περάσει από κανονικοποίηση που θα ήταν
+    // ταυτοτική. Ο κανόνας είναι «μία ερώτηση, μία πόρτα», όχι «λιγότερα exports».
+    expect(PROPERTY_TYPE_CLASS.plot).toBe('land');
   });
 
   it('🔴 Κ3 — ΤΟ ΣΥΜΠΛΗΡΩΜΑ ΔΕΝ ΕΠΙΣΤΡΕΦΕΙ: καμία γη μέσα στην «κατοικία»', () => {

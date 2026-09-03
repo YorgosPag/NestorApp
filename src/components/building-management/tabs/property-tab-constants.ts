@@ -11,7 +11,8 @@
 
 import type { TFunction } from 'i18next';
 import type { PropertyType, CommercialStatus, OperationalStatus } from '@/types/property';
-import { isLandPropertyType, PROPERTY_TYPES, PROPERTY_TYPE_I18N_KEYS } from '@/constants/property-types';
+import { isLandProperty } from '@/constants/property-classification';
+import { PROPERTY_TYPES, PROPERTY_TYPE_I18N_KEYS } from '@/constants/property-types';
 
 // ============================================================================
 // TYPE LABELS & OPTIONS (i18n keys — resolve with t())
@@ -40,7 +41,7 @@ export const UNIT_TYPE_LABEL_KEYS: Record<string, string> = { ...PROPERTY_TYPE_I
  * Δύο διαφορετικές ερωτήσεις με διαφορετική απάντηση.
  */
 export const UNIT_TYPES_FOR_FILTER: PropertyType[] = PROPERTY_TYPES.filter(
-  (type) => !isLandPropertyType(type),
+  (type) => !isLandProperty(type),
 );
 
 // ============================================================================
