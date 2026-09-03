@@ -50,6 +50,7 @@ import { SEARCH_RESULTS_ROUTE } from '@/lib/listings/listing-routes';
 import { MY_DEMANDS_ROUTE } from '@/lib/demand/demand-routes';
 import { MY_OFFERS_ROUTE } from '@/lib/owner-property/owner-property-routes';
 import { CoverageStatement } from './CoverageStatement';
+import { LandingShowcase } from './LandingShowcase';
 import { PlaceSearchBox } from './PlaceSearchBox';
 
 export function SearchLandingContent() {
@@ -84,9 +85,29 @@ export function SearchLandingContent() {
         ⚠️ `content-center` και ΟΧΙ `justify-center`: με το μέτρο η επιφάνεια είναι
         `display: grid`, όπου το κάθετο κεντράρισμα το κάνει το `align-content`. Το
         `justify-content` εκεί ταξινομεί **στήλες** — δηλαδή θα ήταν σιωπηλά ανενεργό.
+        🔴 **ΤΟ ΜΕΤΡΟ ΗΤΑΝ `prose` ΚΑΙ ΕΓΙΝΕ `wide` (ADR-777 §8.49).** Το `prose` είναι
+        μέτρο **ανάγνωσης δοκιμίου** — σωστό για νομικό κείμενο, λάθος εδώ: με αυτό η
+        σελίδα κατείχε **~10,3%** της οθόνης *(424×445 px σε 1920×955)*, έναντι **72–95%**
+        στους τέσσερις μεγάλους που μετρήθηκαν την ίδια ώρα. Δεν ήταν «λίγο στενό»· ήταν
+        **σελίδα-στήλη** εκεί που η οθόνη απέκτησε βιτρίνα.
+
+        ⚠️ **ΤΟ ΜΕΤΡΟ ΔΕΝ ΕΓΙΝΕ ΠΕΡΙΤΤΟ — ΤΟ ΚΕΙΜΕΝΟ ΤΟ ΧΡΕΙΑΖΕΤΑΙ ΑΚΟΜΗ.** Ο τίτλος, η
+        πρόταση κάλυψης και τα κείμενα βοήθειας των πορτών παραμένουν **πρόζα**. Μόνο η
+        **βιτρίνα** σπάει έξω, και το ζητά με **όνομα** (`data-shell-span="full"`), ποτέ
+        με αρνητικό περιθώριο.
+
+        ⛔ **ΚΑΜΙΑ `max-w-*` ΕΔΩ**: το CHECK 3.63 **Κ5** τη μπλοκάρει ως **δεύτερο άξονα
+        πλάτους** — η αυθεντία είναι ο ρόλος, όχι μια κλάση.
+
+        🔴 **ΚΑΙ ΤΟ ΚΕΝΤΡΑΡΙΣΜΑ ΕΓΙΝΕ `safe`, ΑΚΡΙΒΩΣ ΕΠΕΙΔΗ ΜΠΗΚΕ Η ΒΙΤΡΙΝΑ.** Το σκέτο
+        `align-content: center` σε **υπερχείλιση** κεντράρει και προς τα **πάνω**: το
+        πρώτο περιεχόμενο βγαίνει έξω από το πάνω άκρο και γίνεται **απρόσιτο**, γιατί
+        καμία μπάρα κύλισης δεν φτάνει εκεί *(CSS Box Alignment §4.3 — ρητά «data loss»)*.
+        Με έξι κάρτες σε χαμηλό παράθυρο αυτό **συμβαίνει**, όχι «θα μπορούσε». Το `safe`
+        υποχωρεί σε `start` **μόνο** τότε — η κενή σελίδα μένει κεντραρισμένη.
       */
-      data-shell-measure="prose"
-      className="w-full flex-1 content-center gap-6"
+      data-shell-measure="wide"
+      className="w-full flex-1 [align-content:safe_center] gap-6"
     >
       <h1 className="text-3xl font-semibold text-foreground">
         {t('search-results:landing.title')}
@@ -97,6 +118,20 @@ export function SearchLandingContent() {
           <PlaceSearchBox />
         </section>
       )}
+
+      {/*
+        🔑 **Η ΑΠΟΔΕΙΞΗ ΠΡΙΝ ΤΗ ΛΟΓΙΣΤΙΚΗ, ΚΑΙ Η ΣΕΙΡΑ ΕΙΝΑΙ ΑΠΟΦΑΣΗ** (ADR-777 §8.49).
+        Η βιτρίνα δείχνει **δείγμα** (6)· η πρόταση κάλυψης λέει το **σύνολο** (8). Με
+        την αντίστροφη σειρά ο επισκέπτης διαβάζει «8» και μετρά «6» — και το κενό
+        διαβάζεται ως **σφάλμα φόρτωσης**. Έτσι όπως είναι, διαβάζεται ως ό,τι είναι:
+        «να μερικές· και συνολικά είναι τόσες».
+
+        ⚠️ **Η `CoverageStatement` ΔΕΝ αντικαταστάθηκε από τη βιτρίνα, και δεν πρέπει.**
+        Η βιτρίνα δεν μπορεί να απαντήσει το *«πόσες ΔΕΝ βλέπω;»* — έξι κάρτες χωρίς
+        αυτήν θα σήμαιναν σιωπηλά «αυτά έχουμε», δηλαδή τον ίδιο ανέλεγκτο ισχυρισμό που
+        το §8.10 ήρθε να απαγορεύσει, από την πίσω πόρτα.
+      */}
+      <LandingShowcase listings={listings} loading={loading} error={error} />
 
       <CoverageStatement coverage={coverage} loading={loading} error={error} />
 

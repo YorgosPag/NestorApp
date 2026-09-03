@@ -26,7 +26,7 @@
     "src/i18n/generated/routes/terms.el.json": "481f837696b407553f56de16128778617a86f72cf7b27471d61cd5793cf7d288",
     "src/i18n/generated/routes/test-harness__listing-shapes.el.json": "9b6aaaa831492e24807a1c83e0b505dc865c03afbd5638abf8ea2b990422b037",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "56ae09360fa189be70c9ae7a3d8cdc517d14dfa37b5c8a33d0e93781ebf743ad",
+    "src/i18n/generated/shell-slice.el.json": "dade5aaab3f3b8ec1cf3c7f38299533133784279f3c8ac434113828041c801c8",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "boundaries": {
@@ -65,7 +65,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "3ea30d4d30182ee6b974a5672301cdab00537c87ff231d66575e17d4831bd567",
+  "inputsSha256": "88a6c57605d85556fa453e5595a661ba8e41f17135fa37a7dc0d35e2142891a0",
   "languages": [
     "el"
   ],
@@ -174,7 +174,6 @@
     "src/components/listing-detail/ListingPositionSection.tsx": "180fa77c3941aa93cf9a952035a2bf6d6c898aa5f27a69dd605a8969be82e07a",
     "src/components/listing-detail/ListingPriceBlock.tsx": "a4e7d8d65c8215961d9d4f44d7318c7dc784c356c0b155055232d47d9adce8a7",
     "src/components/listing-detail/listing-attribute-value.ts": "aa20cacdb0b25db1aa272144f3f92b9328562351a568d815f6746d1ba86d4809",
-    "src/components/listings/ListingAuthorshipLine.tsx": "acd8914a26aabfa3233225d3c8f997d1a1b99a952db7ab6e192b8ebb6c31ee51",
     "src/components/mandate/AgencyDirectoryContent.tsx": "4a8d138858d5a2e1e3960a01e0e27431c6b28352d1dac596fe1d2ddc7a7e2d6f",
     "src/components/mandate/AgencyDirectoryFilters.tsx": "3e244d5b7cb3444096fca55c1fa0663e11b0c8782734186e6368a5f155a7c01b",
     "src/components/mandate/AgencyProfileContent.tsx": "b381f0f43b24e62e8ed812d29b7589ddcc534c2dcdbad77a91ec35c7e4cedeb6",
@@ -216,7 +215,6 @@
     "src/components/owner-property/offer-form-labels.ts": "fdd0699aa670c1d9221690f800d670d2cc0415a075dcaf48ab52962fa1d92c6d",
     "src/components/owner-property/owner-mandate-labels.ts": "adcfbdb334735a6e95e59baa8a884cb44a94b6b6121d3f6bace70d87f91785c2",
     "src/components/projects/ika/map-shared/map-styles.ts": "f8d164ffcb83a5eaa2f491f51117203407d7fac4d3a1b78d2d28e49afc99a1b7",
-    "src/components/search-results/ListingCard.tsx": "49fa743d0b9aff3ac2ace6c1cc63e7fb82750afb2512fad7e97c032dc971e114",
     "src/components/search-results/ListingLedgerBar.tsx": "fe19b6ee40de7e137aa57dab65308b80f04872e4de13ddc20f41f4013db09e30",
     "src/components/search-results/ResultsList.tsx": "9004b9cfde9510c0e36a966474ab1a7e05b8a1ffa3ffe8125da84b1cd2cec3c9",
     "src/components/search-results/ResultsMap.tsx": "9dc8657bcc511b716011cfa894927828e40fd4e1f6d82fc27927813affe7f4fb",
@@ -318,9 +316,7 @@
     "src/lib/listings/listing-attribute-groups.ts": "349e9f80fdf6dba48e0e7c6de19187263d4ecd3891429dbbd72726a786b327b5",
     "src/lib/listings/listing-completion-slice.ts": "f59620136fe8a7742bd0513bf057926f0d6fe6f8b337f492cb6a1c14ceca4989",
     "src/lib/listings/listing-disclosure.ts": "4ea275e2ceeb7049e96cbc8cac7662716e5a5fb5f2d2bd826952fb3e9855a527",
-    "src/lib/listings/listing-images.ts": "ee3f77251d593a1a87d7c859a560196f300de1c807c67dc4090d5354e645c27c",
     "src/lib/listings/listing-material.ts": "421561f57bc164eafb924d7ffb9746a79a54833e82af60670078a7e7d513c1d3",
-    "src/lib/listings/listing-price-keys.ts": "4dc204e7e78f2b227750f43de016744a8b11ee0b62a18b1a326de5600e1c8c13",
     "src/lib/listings/listing-shape-keys.ts": "4434106cb898c44d3c147ffb8252babda539af9f1776f5244566cb73c7963126",
     "src/lib/listings/listings-geojson.ts": "ffbaed849f8ff0a3166454e16c29675c9a113dc9cd5973d53283a27c9565148d",
     "src/lib/listings/stay-ledger.ts": "7f7560bdeb467a51cc8961fe3337ca6442aa130e55feeeb5dbd6cb3e6132359f",
@@ -3511,6 +3507,7 @@
     "src/components/layout/GlobalFileUploadToast.tsx": "7cae2db1e766efa8e05167f60c4f91bc9452b08876818300e8dd556a9ff1224d",
     "src/components/layout/MainContentBridge.tsx": "87f665a53cb0f2fe310d251c86e83f9d01954287893a5348d1bb05fb37548cd9",
     "src/components/layout/useRoutePrefetch.ts": "5cc279891bb43b1a78a7d8b44ad72a3f5d8060f2c64c094ad9f9ace3509cbdb4",
+    "src/components/listings/ListingAuthorshipLine.tsx": "acd8914a26aabfa3233225d3c8f997d1a1b99a952db7ab6e192b8ebb6c31ee51",
     "src/components/navigation/config/navigation-entities/entity-config.ts": "666ab670bc40fb30383e288c56ed288bcc5532ac8fbfdb2e0748f135718e2a9f",
     "src/components/navigation/config/navigation-entities/types.ts": "bbe5490a114cd615bf893141d249c2a0896202f151c0ad42fb8fd1f2fd1d3929",
     "src/components/navigation/core/NavigationContext.tsx": "43b1306da36d3c6ba72da69f1621b229c88bd5cc753f4e30b2d9750a2d1a937a",
@@ -3528,10 +3525,12 @@
     "src/components/property-viewer/Logo_Pagonis.tsx": "abe960984e1f408862eae2ad7eb305b93edb6ba4f7fdcf375ef29f992c3b98ce",
     "src/components/providers/I18nProvider.tsx": "bb82ce64bdb15f688d8d20467bde1357c6e5b71afb367cf015ade7f691d841f2",
     "src/components/public-site/PublicSiteHeader.tsx": "3c0ac0bb4cfc886ac000d8bef6b37f426aabbf3d2ab866c893e76fce36e5ae1e",
+    "src/components/search-results/ListingCard.tsx": "49fa743d0b9aff3ac2ace6c1cc63e7fb82750afb2512fad7e97c032dc971e114",
     "src/components/search/CoverageStatement.tsx": "3a99e80c975df088c325a5e156c3a2fa949cfcd115294297d502991a8b44eb3f",
     "src/components/search/GlobalSearchDialog.tsx": "f2f938184d386db2f647a6566216185b8544c55eda4219daa7a6215be9061761",
+    "src/components/search/LandingShowcase.tsx": "2ed3c065da69f881e84927475397bb216e93e97ce315c1758d873ef35ad901be",
     "src/components/search/PlaceSearchBox.tsx": "f79a076da68758e955c1572b19536c4a593627a1ce1aba6012af4415b4704baa",
-    "src/components/search/SearchLandingContent.tsx": "30c5391aaca5bb0ddea771efb54422bd7f4149b58ad4ca7560bae8c8721751e6",
+    "src/components/search/SearchLandingContent.tsx": "2ecae14883dae0368f4a6a391e97c1e8961dc180b87641859b9930254ab5f75f",
     "src/components/search/SearchResultItem.tsx": "9976b0ee9c507a0118d455720fa1e3c7e53ae1533bd82f26245e54be994329d4",
     "src/components/search/global-search-config.ts": "098d196bbb7b3b2c493d3a6dbe47e0b818ba6ef06267665da1c90d88a561efb2",
     "src/components/shared/ModuleBreadcrumb.tsx": "82cdfb50f56799805355388e56fd9395f9c0f67a643946e9650f775f250f2f92",
@@ -3777,9 +3776,11 @@
     "src/lib/legality/legality-signal.ts": "14338e333b022ec6e3b0dd36791ecb5b97a4f4cc48e91a3ea2f1696c4952d6e2",
     "src/lib/legality/legality-tier.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/listings/listing-authorship.ts": "a824afe822c364449ea11ca0a1f8a82b43542617a1bfe74ebb4373a676845ece",
-    "src/lib/listings/listing-coverage.ts": "01e2eeed0cb00c7d501432df25edf4e07e7d3c24c9e3c6509aff1b2deeaa913c",
+    "src/lib/listings/listing-coverage.ts": "8ae31dddc3a6e82a41a8105cbb9af5c98ef9932df25bdee0f504e434a13eb172",
     "src/lib/listings/listing-filters.ts": "9fae3035efa71679dc5e1da1f23d53dfb1c50115523b39f9f03e958f080f9163",
+    "src/lib/listings/listing-images.ts": "ee3f77251d593a1a87d7c859a560196f300de1c807c67dc4090d5354e645c27c",
     "src/lib/listings/listing-map-shape.ts": "e34eb0cf82fd8a1a57c1169c3c880b3a7fb1f00a54936d7ddd8694672c364220",
+    "src/lib/listings/listing-price-keys.ts": "4dc204e7e78f2b227750f43de016744a8b11ee0b62a18b1a326de5600e1c8c13",
     "src/lib/listings/listing-routes.ts": "b923f8af7e5c011d93d1e0d9974851fee69183450fadb85bc7f93eb3ce736bae",
     "src/lib/listings/listing-showcase-order.ts": "0b419572fec4e0efd798b6ffdd15ac4385be8430ecc9785dd48e1ad550ea8556",
     "src/lib/listings/public-listing-from-document.ts": "63b67194ce12526e5933fa82ed2b9405f2f62e0924c4f788c2eff41f1fffe244",
@@ -4011,8 +4012,8 @@
     "dynamicBoundaries": 18,
     "matchedKeys": 135,
     "routeBoundaries": 0,
-    "shellFiles": 528,
-    "sliceBytes": 366846
+    "shellFiles": 533,
+    "sliceBytes": 366930
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
@@ -7335,14 +7336,28 @@
         "landing.search.placeholder",
         "landing.search.searching",
         "landing.search.submit",
+        "landing.showcase.heading",
         "landing.title",
+        "listing.areaSqm",
+        "listing.authorship.agency",
+        "listing.authorship.agencyAnonymous",
+        "listing.authorship.ownerDeclared",
+        "listing.bedrooms",
+        "listing.floor",
+        "listing.groundFloor",
+        "listing.priceMissing.nightlyRateMissing",
+        "listing.priceMissing.notListed",
+        "listing.priceMissing.rentPriceMissing",
+        "listing.priceMissing.salePriceMissing",
         "site.brand",
         "site.home",
         "site.nav",
         "site.signIn"
       ],
       "prefixes": [
-        "landing.coverage"
+        "detail.media",
+        "landing.coverage",
+        "listing.offer"
       ],
       "whole": true
     }

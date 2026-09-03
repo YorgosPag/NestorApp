@@ -112,10 +112,30 @@ export function PlaceSearchBox() {
           disabled={busy}
           className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-foreground placeholder:text-muted-foreground"
         />
+        {/*
+          🔴 **ΗΤΑΝ `bg-card` — ΔΗΛΑΔΗ ΤΟ ΧΡΩΜΑ ΤΟΥ ΠΕΔΙΟΥ ΤΟΥ** (ADR-777 §8.49 Φ4).
+          Στο στιγμιότυπο της 2026-09-04 το κουμπί και το `<input>` δίπλα του
+          διαβάζονταν ως **ένα** στοιχείο: και τα δύο σκούρα, με το ίδιο `border-border`,
+          χωρίς κανένα σήμα «εδώ είναι η πράξη». Όσο η οθόνη ήταν κενή δεν φαινόταν· με
+          τη βιτρίνα από κάτω, το κουτί απέκτησε **ανταγωνισμό** και το αόρατο κουμπί
+          έγινε χαμένη αναζήτηση.
+
+          🔑 **ΚΑΙ Η ΑΠΑΝΤΗΣΗ ΥΠΗΡΧΕ ΗΔΗ ΣΤΗΝ ΙΔΙΑ ΣΕΛΙΔΑ, ΣΤΗΝ ΚΕΦΑΛΙΔΑ ΑΠΟ ΠΑΝΩ**:
+          το «Καταχώριση αγγελίας» (`PublicSiteHeader`) λύνει **το ίδιο ακριβώς**
+          πρόβλημα με **αντιστροφή σε σημασιολογικά tokens** — και η αιτιολογία του
+          ισχύει αυτούσια εδώ. ⛔ **ΜΗΝ βάλεις ωμό χρώμα** (σπάει 3.26/3.38/3.42) και
+          ⛔ **ΜΗΝ βάλεις `bg-primary`**: σε **σκοτεινό** θέμα λύνεται `217 33% 17%`,
+          **byte-ταυτόσημο με το `--card`** (ADR-682 §5.5 · ADR-770) — δηλαδή θα ήταν
+          η ίδια αορατότητα με άλλο όνομα.
+
+          🏆 Το ζεύγος `foreground`/`background` είναι το **μόνο** που εγγυάται τη
+          μέγιστη αντίθεση **του κάθε θέματος** χωρίς να τη μετρήσει κανείς: σκούρο
+          κουμπί σε φωτεινό θέμα, φωτεινό σε σκοτεινό, **από τον ορισμό των tokens**.
+        */}
         <button
           type="submit"
           disabled={busy || query.trim() === ''}
-          className="rounded-md border border-border bg-card px-4 py-2 font-medium text-foreground disabled:opacity-50"
+          className="rounded-md bg-foreground px-4 py-2 font-semibold text-background disabled:opacity-50"
         >
           {t('search-results:landing.search.submit')}
         </button>

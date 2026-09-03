@@ -5,7 +5,7 @@
     "description": "Στατική πύλη αντίθεσης UI — κάθε `text-*` που λύνεται σε token ΕΠΙΦΑΝΕΙΑΣ (λίστα ΠΑΡΑΓΟΜΕΝΗ από το tailwind.config.ts, ADR-770 §16) και που η στατική ανάλυση ΔΕΝ μπορεί να αποδείξει υγιή, ανά αρχείο και ανά κατάσταση.",
     "generatedBy": "node scripts/check-text-primary-ratchet.js --write-baseline",
     "totalInvisible": 451,
-    "totalFiles": 234,
+    "totalFiles": 235,
     "note": "ΤΟ ΠΛΗΘΟΣ ΔΕΝ ΕΙΝΑΙ ΔΕΙΚΤΗΣ ΥΓΕΙΑΣ. Ο σαρωτής αποδεικνύει βλάβη, όχι υγεία (το φόντο είναι ερώτημα προγόνων ⇒ browser). Η θεραπεία είναι ρόλοι on-* (Material 3), όχι μικρότερος αριθμός — ADR-759 §4.12.2. Άνοιξε ΑΥΤΟ το αρχείο πριν επικαλεστείς αριθμό."
   },
   "files": {
@@ -368,6 +368,9 @@
     },
     "src/components/sales/tabs/PropertySummaryContent.tsx": {
       "theme-surface": 6
+    },
+    "src/components/search/PlaceSearchBox.tsx": {
+      "element-light-bg": 1
     },
     "src/components/settings/company/OrgTreeView.tsx": {
       "theme-surface": 1
