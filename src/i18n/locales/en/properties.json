@@ -1075,7 +1075,12 @@
       "interiorFeatures": "Interior features",
       "securityFeatures": "Security features",
       "floorplan": "Floorplan",
-      "photos": "Photos"
+      "photos": "Photos",
+      "land": {
+        "areaGross": "Land area",
+        "floorplan": "Survey plan",
+        "photos": "Photos"
+      }
     }
   },
   "warningNoBuildingUnits": {

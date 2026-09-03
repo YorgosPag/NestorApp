@@ -24,6 +24,11 @@
         "glazing": "Υαλοπίνακες",
         "heatingType": "Θέρμανση",
         "interiorFeatures": "Εσωτερικά χαρακτηριστικά",
+        "land": {
+          "areaGross": "Εμβαδόν γης",
+          "floorplan": "Τοπογραφικό διάγραμμα",
+          "photos": "Φωτογραφίες"
+        },
         "orientations": "Προσανατολισμός",
         "photos": "Φωτογραφίες",
         "securityFeatures": "Χαρακτηριστικά ασφαλείας",

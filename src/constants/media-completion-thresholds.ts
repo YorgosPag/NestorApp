@@ -86,6 +86,20 @@ export const MEDIA_THRESHOLDS: Record<PropertyTypeCanonical, MediaThreshold> = {
   // ─── Auxiliary ─────────────────────────────────────────────────────────
   hall:          { photos: { min: 2, optimal: 4,  bonusCap: 8  }, floorplan: 1 },
   storage:       { photos: { min: 1, optimal: 2,  bonusCap: 4  }, floorplan: 1 },
+
+  // ─── Γη (ADR-777 §8.32 · κατώφλια ADR-842 Α6) ──────────────────────────
+  //
+  // 🔑 **Λιγότερες φωτογραφίες, όχι επειδή μετράει λιγότερο — επειδή ΥΠΑΡΧΟΥΝ
+  // λιγότερες.** Ένα διαμέρισμα έχει δωμάτια να δείξει· ένα οικόπεδο έχει τη θέα, την
+  // πρόσοψη και τα όρια. Οι αγγελίες γης σε Spitogatos / idealista / Zillow κινούνται
+  // τυπικά σε 3-6 λήψεις· κατώφλι 5 θα έβαφε **κάθε** αγγελία γης «ελλιπή».
+  //
+  // 🔴 **Το `floorplan` εδώ ΕΙΝΑΙ ΤΟ ΤΟΠΟΓΡΑΦΙΚΟ, και για τη γη είναι το ΚΥΡΙΟ
+  // έγγραφο** — το `Survey` του CRMLS Land form. Το σχήμα το απαιτεί ούτως ή άλλως ως
+  // σταθερά `1`· η γη είναι ο τύπος όπου αυτό το ένα μετράει περισσότερο από κάθε
+  // φωτογραφία (δες {@link LAND_MATRIX} στο `field-completion-weights`).
+  plot:          { photos: { min: 2, optimal: 4,  bonusCap: 8  }, floorplan: 1 },
+  parcel:        { photos: { min: 2, optimal: 4,  bonusCap: 8  }, floorplan: 1 },
 };
 
 // =============================================================================

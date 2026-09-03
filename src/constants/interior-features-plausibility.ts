@@ -25,7 +25,11 @@
  * @enterprise ADR-287 — Enum SSoT Centralization (Batch 24)
  */
 
-import type { PropertyTypeCanonical } from '@/constants/property-types';
+import {
+  isCanonicalPropertyType,
+  type PropertyTypeCanonical,
+} from '@/constants/property-types';
+import { toNonNegativeNumber } from '@/constants/plausibility-input';
 
 // =============================================================================
 // 1. SHARED CONSTANTS
@@ -48,21 +52,6 @@ const TINY_STUDIO_THRESHOLD_M2 = 35;
 const STUDIO_TYPES: ReadonlySet<PropertyTypeCanonical> = new Set<PropertyTypeCanonical>([
   'studio',
   'apartment_1br',
-]);
-
-const KNOWN_PROPERTY_TYPES: ReadonlySet<string> = new Set<PropertyTypeCanonical>([
-  'studio',
-  'apartment_1br',
-  'apartment',
-  'maisonette',
-  'penthouse',
-  'loft',
-  'detached_house',
-  'villa',
-  'shop',
-  'office',
-  'hall',
-  'storage',
 ]);
 
 // =============================================================================
@@ -134,7 +123,7 @@ export function assessInteriorFeaturesPlausibility(
   const heatingType = normalize(args.heatingType);
   const coolingType = normalize(args.coolingType);
   const areaGross = toNonNegativeNumber(args.areaGross);
-  const propertyType = isKnownPropertyType(propertyTypeRaw) ? propertyTypeRaw : null;
+  const propertyType = isCanonicalPropertyType(propertyTypeRaw) ? propertyTypeRaw : null;
 
   if (interiorFeatures.length === 0) {
     return {
@@ -238,28 +227,9 @@ function build(
   };
 }
 
-function isKnownPropertyType(value: unknown): value is PropertyTypeCanonical {
-  return typeof value === 'string' && KNOWN_PROPERTY_TYPES.has(value);
-}
-
 function normalize(value: unknown): string | null {
   if (typeof value !== 'string') return null;
   const trimmed = value.trim();
   return trimmed.length === 0 ? null : trimmed;
 }
 
-function toNonNegativeNumber(value: unknown): number | null {
-  if (value === null || value === undefined) return null;
-  if (typeof value === 'number') {
-    if (!Number.isFinite(value) || value < 0) return null;
-    return value;
-  }
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    if (trimmed.length === 0) return null;
-    const n = Number(trimmed);
-    if (!Number.isFinite(n) || n < 0) return null;
-    return n;
-  }
-  return null;
-}

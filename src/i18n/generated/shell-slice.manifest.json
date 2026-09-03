@@ -17,7 +17,7 @@
     "src/i18n/generated/routes/offers.el.json": "fbf3534aa31462d29cc48233fe00354d7130fb4846f6d1b16d6345f51c611f4b",
     "src/i18n/generated/routes/offers__mandate__new.el.json": "6c616f88730019427c1de6e6355405263c41dd292b6a1a2df69c2335e41637ad",
     "src/i18n/generated/routes/offers__new.el.json": "fef939f4b5f4f561b48ef9180d6ac19d3b31b0d2ee60e7843bf23ed43f02f2ee",
-    "src/i18n/generated/routes/offers__offerId.el.json": "87a8b5daccf0e0e16f7877fb9dfe88d9d6eadab522566285d8916c2455590039",
+    "src/i18n/generated/routes/offers__offerId.el.json": "e0f92fc470f332ec67a3a5f400ad702dc4229c208677d232878af4dd46181967",
     "src/i18n/generated/routes/privacy-policy.el.json": "181e3b315e8ac63a3e927fa8bf073863b2aa706fd66a06f38d936dce70b0cee0",
     "src/i18n/generated/routes/pro.el.json": "d9384c8bc01bef0d3a4afa5890b867e1a4690c1b1c30cac971ba17cf0976f9dc",
     "src/i18n/generated/routes/pro__alias.el.json": "d7e3c5bbca0adf0fbe3da1047d64fa6bde0aefd6c30ddf75c576ad2b175b09db",
@@ -65,7 +65,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "1aff186998501b5d07294723a54aa55c84e704265d6366a5cfeadaf1fb5c3325",
+  "inputsSha256": "9e7caf806efd66f51ad333ed89b5ad5f80c783f176ba66e6b165d94d14d29a21",
   "languages": [
     "el"
   ],
@@ -201,7 +201,7 @@
     "src/components/mandate/mandate-request-form-labels.ts": "5118852230e4fbee654596539c17b86626fea27a26a2bc7b00a32032e7f79c69",
     "src/components/mandate/offer-kind-labels.ts": "2462ab81199ebf51496c3936cd43391944141154b4b9db8f956fa8afa12a39cc",
     "src/components/owner-property/MyOwnerPropertiesContent.tsx": "5d6c9bd1aea0d87f47c292599456d2c09e758b404c90a8c5f2e24d166167116e",
-    "src/components/owner-property/OwnerListingCompletion.tsx": "24876910ed2286bf9ec074acb5531a6c1b75e55c18eff9577886fbaeae6815ea",
+    "src/components/owner-property/OwnerListingCompletion.tsx": "68f35f90e0a22585ca8064754c9c9f8665bbf60a76987b28b5b2c96c8f2b5a67",
     "src/components/owner-property/OwnerMandatePanel.tsx": "3ab662a71812f24311c61911b21599e0ee5f8645adf34e1745cf65778e548587",
     "src/components/owner-property/OwnerPropertyCard.tsx": "439343b851edbe6f362d0daa00cf772c1085372d4419639541add43e03a02916",
     "src/components/owner-property/OwnerPropertyCreationGate.tsx": "5df8038c8c881a149761999f161fdd19cbdde2dffb9ca447d8988bd8c2dd2c4a",
@@ -257,7 +257,7 @@
     "src/config/isco-registry-authority.ts": "b6f78a088def4d69dc36f5cc6bfc53b9391c23c862f903ce4e7450f0cbcc3eda",
     "src/constants/field-completion-weights.ts": "5a65b9a418971e75126ed3443b9bb51eb10a7294a99cb23dbbe87fd9bcfff014",
     "src/constants/media-completion-thresholds.ts": "ff02a4ea676d673f0dcf5d3c34dd60e5e05660de12f24ffbf9eba0caaafea7d3",
-    "src/constants/property-completion.ts": "b24fd033c61d17ff45eeeab0836e93ecef90694a26bfa418985a0714325f3bb2",
+    "src/constants/property-completion.ts": "2299e6b29f4a800b619c151b3db1677c73fb6f789730c5f0e0bf3e94261151c4",
     "src/constants/property-type-aliases.ts": "3ca747ea8f38a0bb71727944499288c84dc1b106a6b1a7f79acceff4032cb256",
     "src/core/states/PageLoadingState.tsx": "683c0e6b08a70039d9382ac5e1778d2071568a85259e02299b8b6eec54b6f399",
     "src/core/states/StaticPageLoading.tsx": "ee7014a3dbe1608ea6e6ff0600cf44e45db8b718acb43189a7f57c5524ba98a0",
@@ -3987,7 +3987,7 @@
     "matchedKeys": 135,
     "routeBoundaries": 0,
     "shellFiles": 526,
-    "sliceBytes": 363642
+    "sliceBytes": 363832
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

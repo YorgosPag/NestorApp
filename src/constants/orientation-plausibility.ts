@@ -26,6 +26,7 @@
  */
 
 import {
+  isCanonicalPropertyType,
   isStandaloneUnitType,
   type PropertyTypeCanonical,
 } from '@/constants/property-types';
@@ -142,6 +143,29 @@ export const ORIENTATION_RULES: Readonly<
     isStandalone: false,
     isCommercial: false,
   },
+
+  // ─── Γη (ADR-777 §8.32 · κανόνες ADR-842 Α6) ───────────────────────────────
+  //
+  // ⚠️ **`orientationExpected: false` — και ο λόγος ΔΕΝ είναι ότι ο προσανατολισμός
+  // δεν ενδιαφέρει τη γη.** Ενδιαφέρει, και πολύ *(ηλιασμός, θέα, πρόσοψη σε δρόμο)*.
+  // Είναι ότι το πεδίο `orientations` αυτού του μοντέλου περιγράφει **όψεις μονάδας**
+  // — και το να ζητηθεί ως *αναμενόμενο* από οικόπεδο θα σήμαινε ότι μια αγγελία γης
+  // δείχνει «ελλιπής» για κάτι που η φόρμα της δεν ρωτά.
+  //
+  // 🔑 **`isStandalone: true`**: η γη δεν κάθεται μέσα σε κτίριο. Είναι η ίδια απάντηση
+  // που δίνουν η βίλα και η μονοκατοικία, για τον ίδιο λόγο.
+  plot: {
+    orientationExpected: false,
+    typicalMax: null,
+    isStandalone: true,
+    isCommercial: false,
+  },
+  parcel: {
+    orientationExpected: false,
+    typicalMax: null,
+    isStandalone: true,
+    isCommercial: false,
+  },
 };
 
 // =============================================================================
@@ -191,7 +215,7 @@ export function assessOrientationPlausibility(
   const orientations = Array.isArray(args.orientations) ? args.orientations : [];
   const count = orientations.length;
 
-  if (!isKnownPropertyType(propertyType)) {
+  if (!isCanonicalPropertyType(propertyType)) {
     return { verdict: 'insufficientData', reason: null, propertyType: null, count };
   }
 
@@ -242,26 +266,6 @@ export function isActionableOrientationVerdict(
 // 3. INTERNAL HELPERS
 // =============================================================================
 
-const KNOWN_PROPERTY_TYPES: ReadonlySet<string> = new Set<PropertyTypeCanonical>([
-  'studio',
-  'apartment_1br',
-  'apartment',
-  'maisonette',
-  'penthouse',
-  'loft',
-  'detached_house',
-  'villa',
-  'shop',
-  'office',
-  'hall',
-  'storage',
-]);
-
-function isKnownPropertyType(
-  value: unknown,
-): value is PropertyTypeCanonical {
-  return typeof value === 'string' && KNOWN_PROPERTY_TYPES.has(value);
-}
 
 // Re-export helper for component use (verifies standalone discriminator)
 export { isStandaloneUnitType };

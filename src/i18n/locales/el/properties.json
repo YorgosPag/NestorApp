@@ -1075,7 +1075,12 @@
       "interiorFeatures": "Εσωτερικά χαρακτηριστικά",
       "securityFeatures": "Χαρακτηριστικά ασφαλείας",
       "floorplan": "Κάτοψη",
-      "photos": "Φωτογραφίες"
+      "photos": "Φωτογραφίες",
+      "land": {
+        "areaGross": "Εμβαδόν γης",
+        "floorplan": "Τοπογραφικό διάγραμμα",
+        "photos": "Φωτογραφίες"
+      }
     }
   },
   "warningNoBuildingUnits": {

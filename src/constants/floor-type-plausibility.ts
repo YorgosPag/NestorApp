@@ -28,9 +28,12 @@
  */
 
 import {
+  isCanonicalPropertyType,
+  isLandPropertyType,
   isStandaloneUnitType,
   type PropertyTypeCanonical,
 } from '@/constants/property-types';
+import { toFiniteNumber } from '@/constants/plausibility-input';
 
 // =============================================================================
 // 1. FLOOR BAND — classification από raw floor number
@@ -79,7 +82,7 @@ export type FloorTypeVerdict = 'ok' | 'unusual' | 'implausible';
  */
 export const FLOOR_TYPE_MATRIX: Readonly<
   Record<
-    Exclude<PropertyTypeCanonical, 'villa' | 'detached_house'>,
+    Exclude<PropertyTypeCanonical, 'villa' | 'detached_house' | 'plot' | 'parcel'>,
     Record<FloorBand, FloorTypeVerdict>
   >
 > = {
@@ -127,12 +130,34 @@ export function assessFloorTypePlausibility(
 ): FloorPlausibilityAssessment {
   const { propertyType, floor } = args;
 
-  if (!isKnownPropertyType(propertyType)) {
+  if (!isCanonicalPropertyType(propertyType)) {
     return {
       verdict: 'insufficientData',
       band: null,
       propertyType: null,
       isStandalone: false,
+    };
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 🔴 Η ΓΗ ΔΕΝ ΕΧΕΙ ΟΡΟΦΟ — και αυτό ΔΕΝ είναι το ίδιο με «ισόγειο»
+  // ──────────────────────────────────────────────────────────────────────────
+  //
+  // Η βίλα και η μονοκατοικία **έχουν** όροφο και τυχαίνει να είναι το ισόγειο· η γη
+  // **δεν έχει την έννοια**. Γι' αυτό η γη φεύγει και από τον τύπο του
+  // {@link FLOOR_TYPE_MATRIX} (`Exclude`): πίνακας ορόφων για οικόπεδο θα ήταν γραμμή
+  // που κανείς δεν μπορεί να συμπληρώσει σωστά.
+  //
+  // 🔑 **`null` ⇒ `ok` · οτιδήποτε άλλο ⇒ `implausible`**, και η αυστηρότητα είναι
+  // σκόπιμη: «οικόπεδο στον 3ο όροφο» δεν είναι ασυνήθιστο ακίνητο, είναι **λάθος
+  // είδος** — ο άνθρωπος διάλεξε «Οικόπεδο» ενώ πουλά διαμέρισμα.
+  if (isLandPropertyType(propertyType)) {
+    const declaredFloor = toFiniteNumber(floor);
+    return {
+      verdict: declaredFloor === null ? 'ok' : 'implausible',
+      band: declaredFloor === null ? null : classifyFloor(declaredFloor),
+      propertyType,
+      isStandalone: true,
     };
   }
 
@@ -183,40 +208,4 @@ export function isActionableFloorVerdict(
 // 4. INTERNAL HELPERS
 // =============================================================================
 
-const KNOWN_PROPERTY_TYPES: ReadonlySet<string> = new Set<PropertyTypeCanonical>([
-  'studio',
-  'apartment_1br',
-  'apartment',
-  'maisonette',
-  'penthouse',
-  'loft',
-  'detached_house',
-  'villa',
-  'shop',
-  'office',
-  'hall',
-  'storage',
-]);
 
-function isKnownPropertyType(
-  value: unknown,
-): value is PropertyTypeCanonical {
-  return typeof value === 'string' && KNOWN_PROPERTY_TYPES.has(value);
-}
-
-/**
- * Accepts `number | string | null | undefined`, επιστρέφει finite number ή `null`.
- * Διαφορά από `toPositiveNumber` (price-plausibility): δέχεται 0 και αρνητικά.
- */
-function toFiniteNumber(value: unknown): number | null {
-  if (typeof value === 'number') {
-    return Number.isFinite(value) ? value : null;
-  }
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    if (trimmed.length === 0) return null;
-    const n = Number(trimmed);
-    return Number.isFinite(n) ? n : null;
-  }
-  return null;
-}

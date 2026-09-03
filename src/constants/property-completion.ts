@@ -40,6 +40,7 @@
  */
 
 import type { PropertyTypeCanonical } from '@/constants/property-types';
+import { normalizePropertyType } from '@/constants/property-type-aliases';
 import { isPreCompletionOperationalStatus } from '@/constants/operational-statuses';
 import {
   FIELD_KEYS,
@@ -112,6 +113,16 @@ export interface CompletionAssessment {
   readonly exemptFields: readonly FieldKey[];
   /** UX bucket for color coding. */
   readonly bucketColor: CompletionBucket;
+  /**
+   * **Το είδος με το οποίο ΒΑΘΜΟΛΟΓΗΘΗΚΕ** — κανονικοποιημένο, ή `null` αν δεν
+   * αναγνωρίστηκε *(οπότε ίσχυσε ο συντηρητικός πίνακας του `apartment`)*.
+   *
+   * 🔑 **Ζει ΜΕΣΑ στο αποτέλεσμα, και όχι ως δεύτερο prop του καταναλωτή** (ADR-842
+   * §7.6.8): οι οθόνες χρειάζονται το είδος για να **ονομάσουν** τα πεδία
+   * *(«Τοπογραφικό» ⇄ «Κάτοψη»)*, και ένα ξεχωριστό prop θα επέτρεπε να ονομάζονται με
+   * **άλλο** είδος από αυτό με το οποίο κρίθηκαν — δύο αλήθειες για το ίδιο ακίνητο.
+   */
+  readonly propertyType: PropertyTypeCanonical | null;
 }
 
 export interface AssessPropertyCompletionArgs {
@@ -367,6 +378,12 @@ export function assessPropertyCompleteness(
     missingCritical,
     exemptFields,
     bucketColor: resolveBucket(percentage),
+    // 🔑 **Κανονικοποιημένο, ποτέ το ωμό `formData.type`**: το έγγραφο μπορεί να λέει
+    // `'Οικόπεδο'` ή `'Αποθήκη'` *(παλαιές ελληνικές τιμές Firestore)*, και ο
+    // καταναλωτής που θα ρωτούσε «είναι γη;» με ωμή τιμή θα έπαιρνε **όχι**. Είναι η
+    // ίδια αυθεντία που χρησιμοποιεί και το `getFieldWeightsForType` δύο γραμμές πιο
+    // πάνω — αλλιώς η βαθμολογία θα κρινόταν με ένα είδος και η **ετικέτα** με άλλο.
+    propertyType: normalizePropertyType(typeForLookup),
   };
 }
 

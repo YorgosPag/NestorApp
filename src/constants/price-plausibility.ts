@@ -38,6 +38,7 @@ import {
   type ListedCommercialStatus,
 } from '@/constants/commercial-statuses';
 import type { PropertyTypeCanonical } from '@/constants/property-types';
+import { toPositiveNumber } from '@/constants/plausibility-input';
 
 // =============================================================================
 // 1. PROPERTY TYPE CLASSIFICATION — 3 groups για range lookup
@@ -149,30 +150,7 @@ export interface PlausibilityAssessment {
   readonly priceClass: PropertyPriceClass | null;
   /** €/τ.μ. calculated (null αν δεν υπάρχει αρκετή πληροφορία). */
   readonly pricePerSqm: number | null;
-  /** Expected band που αξιολογήθηκε το input (null αν δεν έγινε check). */
-  readonly expected: PlausibilityRange | null;
-}
-
-export interface AssessPricePlausibilityArgs {
-  readonly commercialStatus: CommercialStatus | string | undefined | null;
-  readonly propertyType: PropertyTypeCanonical | string | undefined | null;
-  readonly askingPrice: number | string | undefined | null;
-  readonly grossArea: number | string | undefined | null;
-}
-
-function toPositiveNumber(value: unknown): number | null {
-  if (typeof value === 'number') {
-    return Number.isFinite(value) && value > 0 ? value : null;
-  }
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    if (trimmed.length === 0) return null;
-    const n = Number(trimmed);
-    return Number.isFinite(n) && n > 0 ? n : null;
-  }
-  return null;
-}
-
+  
 /**
  * Google-style plausibility assessment για asking price. Δεν μπλοκάρει save —
  * επιστρέφει verdict που ο UI layer μπορεί να εμφανίσει ως warning.

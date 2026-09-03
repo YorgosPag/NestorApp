@@ -32,7 +32,11 @@
  * @enterprise ADR-287 — Enum SSoT Centralization (Batch 20)
  */
 
-import type { PropertyTypeCanonical } from '@/constants/property-types';
+import {
+  isCanonicalPropertyType,
+  type PropertyTypeCanonical,
+} from '@/constants/property-types';
+import { toNonNegativeInt } from '@/constants/plausibility-input';
 
 // =============================================================================
 // 1. PER-TYPE RULES
@@ -171,6 +175,31 @@ export const LAYOUT_RULES: Readonly<Record<PropertyTypeCanonical, LayoutRule>> =
     requiresDedicatedBathroom: false,
     requiresDedicatedWC: false,
   },
+
+  // ─── Γη (ADR-777 §8.32 · κανόνες ADR-842 Α6) ───────────────────────────────
+  //
+  // 🔑 **`bedroomMax: 0` με `bedroomStrict: true` — και δεν είναι αντιγραφή της
+  // αποθήκης, είναι ισχυρότερος ισχυρισμός.** Η αποθήκη είναι *χώρος χωρίς
+  // υπνοδωμάτια*· η γη είναι *χώρος χωρίς **δωμάτια***. Ένα οικόπεδο που δηλώνει
+  // υπνοδωμάτιο ή μπάνιο δεν είναι «ασυνήθιστο» — είναι **λάθος είδος**: ο άνθρωπος
+  // διάλεξε «Οικόπεδο» ενώ πουλά μονοκατοικία, και αυτό ακριβώς πρέπει να του πει η
+  // οθόνη πριν δημοσιεύσει.
+  plot: {
+    bedroomMin: null,
+    bedroomMax: 0,
+    bedroomStrict: true,
+    requiresSanitary: false,
+    requiresDedicatedBathroom: false,
+    requiresDedicatedWC: false,
+  },
+  parcel: {
+    bedroomMin: null,
+    bedroomMax: 0,
+    bedroomStrict: true,
+    requiresSanitary: false,
+    requiresDedicatedBathroom: false,
+    requiresDedicatedWC: false,
+  },
 };
 
 // =============================================================================
@@ -228,7 +257,7 @@ export function assessLayoutPlausibility(
 ): LayoutAssessment {
   const { propertyType } = args;
 
-  if (!isKnownPropertyType(propertyType)) {
+  if (!isCanonicalPropertyType(propertyType)) {
     return emptyAssessment('insufficientData');
   }
 
@@ -355,42 +384,4 @@ function emptyAssessment(verdict: LayoutVerdict): LayoutAssessment {
   };
 }
 
-const KNOWN_PROPERTY_TYPES: ReadonlySet<string> = new Set<PropertyTypeCanonical>([
-  'studio',
-  'apartment_1br',
-  'apartment',
-  'maisonette',
-  'penthouse',
-  'loft',
-  'detached_house',
-  'villa',
-  'shop',
-  'office',
-  'hall',
-  'storage',
-]);
 
-function isKnownPropertyType(
-  value: unknown,
-): value is PropertyTypeCanonical {
-  return typeof value === 'string' && KNOWN_PROPERTY_TYPES.has(value);
-}
-
-/**
- * Accepts `number | string | null | undefined`, επιστρέφει non-negative integer
- * ή `null`. Αρνητικοί αριθμοί / non-integers / non-finite → `null`.
- */
-function toNonNegativeInt(value: unknown): number | null {
-  if (typeof value === 'number') {
-    if (!Number.isFinite(value) || value < 0) return null;
-    return Math.floor(value);
-  }
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    if (trimmed.length === 0) return null;
-    const n = Number(trimmed);
-    if (!Number.isFinite(n) || n < 0) return null;
-    return Math.floor(n);
-  }
-  return null;
-}

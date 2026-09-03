@@ -33,6 +33,7 @@ import type {
   CompletionAssessment,
   FieldKey,
 } from '@/constants/property-completion';
+import { completionFieldLabelKey } from '@/constants/field-completion-weights';
 
 // =============================================================================
 // HIGHLIGHT — temporary ring-pulse on jump target (Google Material Design cue)
@@ -254,7 +255,9 @@ export function PropertyCompletionBreakdown({
                     )}
                     aria-hidden="true"
                   />
-                  <span className="truncate">{t(`completion.fields.${fieldKey}`)}</span>
+                  <span className="truncate">
+                    {t(completionFieldLabelKey(fieldKey, assessment.propertyType))}
+                  </span>
                 </span>
                 <span
                   className={cn(

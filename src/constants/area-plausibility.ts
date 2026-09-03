@@ -45,7 +45,12 @@
  * @enterprise ADR-287 — Enum SSoT Centralization (Batch 21)
  */
 
-import type { PropertyTypeCanonical } from '@/constants/property-types';
+import {
+  isCanonicalPropertyType,
+  propertyClassOf,
+  type PropertyTypeCanonical,
+} from '@/constants/property-types';
+import { toNonNegativeNumber } from '@/constants/plausibility-input';
 
 // =============================================================================
 // 1. PER-TYPE RULES
@@ -194,6 +199,39 @@ export const AREA_RULES: Readonly<Record<PropertyTypeCanonical, AreaRule>> = {
     gardenTypical: false,
     ratioApplies: false,
   },
+
+  // ─── Γη (ADR-777 §8.32 · όρια ADR-842 Α6) ──────────────────────────────────
+  //
+  // 🔑 **Το εμβαδόν της γης ΔΕΝ είναι εμβαδόν κτίσματος** — και τα δύο πεδία λέγονται
+  // `areaSqm`, αλλά μετρούν άλλο πράγμα. Ένα «450 τ.μ.» είναι **βίλα** ή **μικρό
+  // οικόπεδο**· χωρίς δικές τους γραμμές, το οικόπεδο θα κρινόταν με τα όρια του
+  // διαμερίσματος και **κάθε** οικόπεδο άνω των 250 τ.μ. θα λεγόταν «ασυνήθιστο».
+  //
+  // ⚠️ `ratioApplies: false` — ο λόγος καθαρού/μεικτού είναι έννοια **κτίσματος**.
+  // `outdoor*: false` — μπαλκόνι σε χωράφι δεν υπάρχει· και `gardenTypical` δεν
+  // εξετάζεται καν για γη (δες το βήμα 10 του {@link assessAreaPlausibility}).
+  //
+  // 📐 Τα όρια: **οικόπεδο** εντός σχεδίου — κάτω από 50 τ.μ. δεν είναι άρτιο πουθενά
+  // στην Ελλάδα· πάνω από 1 εκτάριο (10.000 τ.μ.) είναι υπαρκτό αλλά ασυνήθιστο για
+  // *εντός σχεδίου*. **Αγροτεμάχιο** εκτός σχεδίου — η αρτιότητα ξεκινά τυπικά στα
+  // 4 στρέμματα, οπότε το σκληρό κάτω όριο μπαίνει στα 500 τ.μ. *(υπάρχουν μικρότερα,
+  // μη άρτια)* και το τυπικό άνω στα 200 στρέμματα.
+  plot: {
+    grossHardMin: 50,
+    grossTypicalMax: 10_000,
+    outdoorExpected: false,
+    outdoorRequired: false,
+    gardenTypical: false,
+    ratioApplies: false,
+  },
+  parcel: {
+    grossHardMin: 500,
+    grossTypicalMax: 200_000,
+    outdoorExpected: false,
+    outdoorRequired: false,
+    gardenTypical: false,
+    ratioApplies: false,
+  },
 };
 
 // =============================================================================
@@ -280,7 +318,7 @@ export function assessAreaPlausibility(
 ): AreaAssessment {
   const { propertyType } = args;
 
-  if (!isKnownPropertyType(propertyType)) {
+  if (!isCanonicalPropertyType(propertyType)) {
     return emptyAssessment('insufficientData');
   }
 
@@ -356,7 +394,12 @@ export function assessAreaPlausibility(
   }
 
   // Step 10: garden σε τύπο που δεν είναι ground-level (apt/penthouse/loft)
-  if (!rule.gardenTypical && (garden ?? 0) > 0 && propertyType !== 'shop' && propertyType !== 'office' && propertyType !== 'hall' && propertyType !== 'storage') {
+  // 🔑 **«Είναι κατοικία;» ρωτιέται ΜΙΑ φορά, από την αυθεντία** (`propertyClassOf`).
+  // Ήταν χειρόγραφη λίστα τεσσάρων εμπορικών ειδών — δηλαδή «κατοικία» ορισμένο ως
+  // *ό,τι περισσεύει*, ακριβώς το σχήμα που το `property-types.ts` κατήγγειλε όταν
+  // μπήκε η γη: **το `plot` θα βαφτιζόταν σιωπηλά «κατοικία»** και ένα οικόπεδο με
+  // δηλωμένο κήπο θα κρινόταν «κήπος σε μη ισόγειο».
+  if (!rule.gardenTypical && (garden ?? 0) > 0 && propertyClassOf(propertyType) === 'residential') {
     return buildAssessment('unusual', 'gardenOnNonGround', propertyType, rule, gross, net, balcony, terrace, garden);
   }
 
@@ -424,45 +467,4 @@ function buildAssessment(
   };
 }
 
-const KNOWN_PROPERTY_TYPES: ReadonlySet<string> = new Set<PropertyTypeCanonical>([
-  'studio',
-  'apartment_1br',
-  'apartment',
-  'maisonette',
-  'penthouse',
-  'loft',
-  'detached_house',
-  'villa',
-  'shop',
-  'office',
-  'hall',
-  'storage',
-]);
 
-function isKnownPropertyType(
-  value: unknown,
-): value is PropertyTypeCanonical {
-  return typeof value === 'string' && KNOWN_PROPERTY_TYPES.has(value);
-}
-
-/**
- * Accepts `number | string | null | undefined`, επιστρέφει non-negative finite
- * number ή `null`. Αρνητικοί / non-finite / empty string → `null`.
- * Δέχεται decimals (σε αντίθεση με το toNonNegativeInt του layout-plausibility)
- * επειδή εμβαδά εκφράζονται τυπικά σε decimal τ.μ. (π.χ. 85.5 τ.μ.).
- */
-function toNonNegativeNumber(value: unknown): number | null {
-  if (value === null || value === undefined) return null;
-  if (typeof value === 'number') {
-    if (!Number.isFinite(value) || value < 0) return null;
-    return value;
-  }
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    if (trimmed.length === 0) return null;
-    const n = Number(trimmed);
-    if (!Number.isFinite(n) || n < 0) return null;
-    return n;
-  }
-  return null;
-}

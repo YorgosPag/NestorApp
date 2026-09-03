@@ -48,7 +48,11 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 import { assessPropertyCompleteness } from '@/constants/property-completion';
-import type { FieldKey } from '@/constants/field-completion-weights';
+import {
+  completionFieldLabelKey,
+  type FieldKey,
+} from '@/constants/field-completion-weights';
+import type { PropertyTypeCanonical } from '@/constants/property-types';
 import { listingCompletionArgs } from '@/lib/listings/listing-completion-slice';
 import type { PublicListing } from '@/types/public-listing';
 
@@ -69,10 +73,27 @@ const K = `${NS}:completion`;
  */
 const SUGGESTIONS_AT_A_TIME = 3;
 
-/** Μία πρόταση: το όνομα του πεδίου, από το **υπάρχον** μητρώο ετικετών. */
-function Suggestion({ fieldKey }: { fieldKey: FieldKey }): React.ReactElement {
+/**
+ * Μία πρόταση: το όνομα του πεδίου, από το **υπάρχον** μητρώο ετικετών.
+ *
+ * ⚠️ **Το κλειδί το δίνει το {@link completionFieldLabelKey}, ποτέ το component**: για
+ * οικόπεδο το `floorplan` λέγεται **«Τοπογραφικό διάγραμμα»** και όχι «Κάτοψη» —
+ * μετρημένο στην οθόνη, ADR-842 §7.6.8. Η ίδια απόφαση διαβάζεται και από το
+ * `PropertyCompletionBreakdown`· ένα χειρόγραφο κλειδί εδώ θα ήταν η δεύτερη αυθεντία.
+ */
+function Suggestion({
+  fieldKey,
+  propertyType,
+}: {
+  fieldKey: FieldKey;
+  propertyType: PropertyTypeCanonical | null;
+}): React.ReactElement {
   const { t } = useTranslation([NS]);
-  return <li className="text-sm text-foreground">{t(`${K}.fields.${fieldKey}`)}</li>;
+  return (
+    <li className="text-sm text-foreground">
+      {t(`${NS}:${completionFieldLabelKey(fieldKey, propertyType)}`)}
+    </li>
+  );
 }
 
 /**
@@ -146,7 +167,11 @@ export function OwnerListingCompletion({
           <h3 className="text-sm font-medium text-foreground">{t(`${K}.breakdown.heading`)}</h3>
           <ul className="flex flex-col gap-1">
             {shown.map((fieldKey) => (
-              <Suggestion key={fieldKey} fieldKey={fieldKey} />
+              <Suggestion
+                key={fieldKey}
+                fieldKey={fieldKey}
+                propertyType={assessment.propertyType}
+              />
             ))}
           </ul>
         </>
