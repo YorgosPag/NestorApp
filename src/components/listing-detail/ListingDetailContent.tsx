@@ -71,6 +71,7 @@ import { ListingPositionSection } from './ListingPositionSection';
 import { ListingLegality } from './ListingLegality';
 import { ListingOpenSubjects } from './ListingOpenSubjects';
 import { ListingGallery } from './ListingGallery';
+import { ListingFloorplans } from './ListingFloorplans';
 import { ListingAuthorshipLine } from '@/components/listings/ListingAuthorshipLine';
 
 // ⚠️ Εμβέλεια MODULE, όχι render και όχι effect: τρέχει **πριν** αποδοθεί
@@ -242,6 +243,13 @@ function ListingDetailBody({
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="flex flex-col gap-4">
           <ListingGallery listing={listing} />
+          {/*
+            🔑 **ΔΙΠΛΑ, ΠΟΤΕ ΜΕΣΑ** *(ADR-841 §7 Α17.2)*: η δομή της οθόνης καθρεφτίζει τη
+            δομή του σχήματος, που έβαλε τις κατόψεις σε **δικό τους** πεδίο. Και αποδίδει
+            **τίποτα** όταν δεν υπάρχει καμία — η κάτοψη είναι προαιρετική, άρα η απουσία
+            της δεν ονομάζεται *(αντίθετα από τη συλλογή, που οφείλει να υπάρχει)*.
+          */}
+          <ListingFloorplans listing={listing} />
           <ListingPositionSection listing={listing} />
         </div>
 

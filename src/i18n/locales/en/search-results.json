@@ -113,6 +113,20 @@
       "sourceNote": {
         "ownerDeclared": "The photos are the owner’s own material, selected by them.",
         "agency": "The photos are the agency’s own material, selected by them."
+      },
+      "floorplanHeading": "{count, plural, one {Floor plan} other {Floor plans}}",
+      "floorplanAlt": {
+        "ownerDeclared": "Floor plan — provided by the owner",
+        "agency": "Floor plan — provided by the real-estate agency"
+      },
+      "floorplanProvenance": {
+        "declared": "Declared — uploaded by a person",
+        "measured": "Measured — computed from the drawing",
+        "inferred": "Estimated — inferred by a model"
+      },
+      "floorplanNote": {
+        "ownerDeclared": "The floor plan is the owner’s own material, selected by them.",
+        "agency": "The floor plan is the agency’s own material, selected by them."
       }
     },
     "offers": {

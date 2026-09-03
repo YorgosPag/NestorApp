@@ -75,6 +75,10 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     stay: null,
     coverImage: null,
     gallery: [],
+    // 🔑 **Απαιτείται από το σχήμα από την έκδοση 8** (ADR-841 §7 Α17): κάθε έγγραφο που
+    //    διαβάζεται περνά από τον **κρίκο 8**, άρα ο πίνακας υπάρχει πάντα. Κενός εδώ =
+    //    «καμία δηλωμένη κάτοψη», που είναι και η σιωπή αυτής της σουίτας.
+    floorplans: [],
     type: 'apartment',
     areaSqm: 95,
     offerKinds: ['sell'],
