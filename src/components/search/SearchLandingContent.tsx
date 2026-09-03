@@ -49,13 +49,44 @@ import { computeListingCoverage, coverageAnswersWhere } from '@/lib/listings/lis
 import { SEARCH_RESULTS_ROUTE } from '@/lib/listings/listing-routes';
 import { MY_DEMANDS_ROUTE } from '@/lib/demand/demand-routes';
 import { MY_OFFERS_ROUTE } from '@/lib/owner-property/owner-property-routes';
+import { usePublicAgencies } from '@/services/realtime/hooks/usePublicAgencies';
+import {
+  availableLandingModes,
+  countLandingModes,
+  defaultLandingMode,
+  type LandingMode,
+} from '@/lib/landing/landing-modes';
 import { CoverageStatement } from './CoverageStatement';
+import { LandingModeSwitch } from './LandingModeSwitch';
 import { LandingShowcase } from './LandingShowcase';
 import { PlaceSearchBox } from './PlaceSearchBox';
 
 export function SearchLandingContent() {
   const { t } = useTranslation(['search-results', 'property-market', 'search-results', 'search-results']);
   const { listings, loading, error } = usePublicListings();
+
+  // 🔑 **`null` = «χωρίς σημείο αναφοράς», και είναι σωστό εδώ**: η ρίζα δεν ξέρει πού
+  //    είναι ο επισκέπτης, και **δεν του το ζητά** πριν του δείξει τι υπάρχει. Ο
+  //    κατάλογος τότε επιστρέφει τα προφίλ **ισότιμα** — καμία κατάταξη, όπως το λέει
+  //    ήδη η ίδια η πρόταση του `/pro`.
+  const { agencies } = usePublicAgencies(null);
+
+  // ⚠️ **Η ΔΙΑΘΕΣΙΜΟΤΗΤΑ ΠΑΡΑΓΕΤΑΙ ΑΠΟ ΤΑ ΔΕΔΟΜΕΝΑ** (ADR-841 Α4 · ADR-777 §8.10):
+  //    ένα κουμπί εμφανίζεται **μόνο** όταν η λειτουργία του έχει τι να δείξει. Καμία
+  //    λίστα «ενεργών λειτουργιών» γραμμένη στο χέρι — δεν υπάρχει δεύτερη πηγή να
+  //    αποκλίνει. Μετρημένο 2026-09-04: `sell` 6 · `leaseOut` 4 · `leaseShort` **0**.
+  const modeCounts = React.useMemo(
+    () => countLandingModes(listings, agencies.length),
+    [listings, agencies.length],
+  );
+  const modes = React.useMemo(() => availableLandingModes(modeCounts), [modeCounts]);
+
+  // ⚠️ **Η επιλογή του ανθρώπου νικά, αλλά ΜΟΝΟ όσο παραμένει δυνατή.** Αν η λειτουργία
+  //    που διάλεξε πάψει να έχει δεδομένα όσο η σελίδα είναι ανοιχτή (ζωντανή
+  //    συνδρομή), η οθόνη επιστρέφει στην πρώτη διαθέσιμη αντί να μείνει σε κουμπί που
+  //    δεν υπάρχει πια στη σειρά.
+  const [chosen, setChosen] = React.useState<LandingMode | null>(null);
+  const mode = chosen !== null && modes.includes(chosen) ? chosen : defaultLandingMode(modes);
 
   // ⚠️ **Μία** ανάγνωση, **μία** λογιστική — η ίδια που τυπώνει η οθόνη 2. Οι δύο
   // οθόνες δεν μπορούν να δώσουν διαφορετικό αριθμό, γιατί δεν υπάρχουν δύο αριθμοί
@@ -113,9 +144,20 @@ export function SearchLandingContent() {
         {t('search-results:landing.title')}
       </h1>
 
-      {canAskWhere && (
-        <section aria-label={t('search-results:landing.search.label')}>
-          <PlaceSearchBox />
+      {canAskWhere && mode !== null && (
+        <section aria-label={t('search-results:landing.search.label')} className="flex flex-col gap-3">
+          {/*
+            🔑 **Ο ΔΙΑΚΟΠΤΗΣ ΠΑΝΩ ΑΠΟ ΤΟ ΠΕΔΙΟ** (ADR-841 §7 Α4) — η θέση είναι η
+            μετρημένη πρακτική και των εννέα πλατφορμών του §4: ο άνθρωπος διαλέγει
+            **τι** ψάχνει **πριν** αρχίσει να πληκτρολογεί, ποτέ μετά.
+
+            ⚠️ **Το πεδίο μένει ΕΝΑ**, όπως το δεσμεύει το ADR-777 Α3. Ο διακόπτης
+            αλλάζει τον **προορισμό** της υποβολής, όχι τον αριθμό των ερωτήσεων: ό,τι
+            άλλο χρειάζεται η κάθε λειτουργία *(ημερομηνίες · ειδικότητα)* ζει στην
+            οθόνη 2, όπου **υπάρχει ήδη χτισμένο**.
+          */}
+          <LandingModeSwitch modes={modes} value={mode} onChange={setChosen} />
+          <PlaceSearchBox mode={mode} />
         </section>
       )}
 

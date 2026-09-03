@@ -32,10 +32,12 @@ import { geocodeAddressDetailed } from '@/lib/geocoding/geocoding-service';
 import { addressLineToQuery } from '@/lib/geocoding/address-line-query';
 import {
   serializeListingFilters,
-  EMPTY_LISTING_FILTERS,
   DEFAULT_SEARCH_RADIUS_KM,
 } from '@/lib/listings/listing-filters';
 import { searchResultsHref } from '@/lib/listings/listing-routes';
+import { landingModeFilters, type LandingMode } from '@/lib/landing/landing-modes';
+import { serializeShowcaseFilters } from '@/lib/agency/showcase-filter';
+import { agencyDirectoryHref } from '@/components/mandate/agency-directory-route';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('PlaceSearchBox');
@@ -49,7 +51,45 @@ const logger = createModuleLogger('PlaceSearchBox');
  */
 type SubmitState = 'idle' | 'searching' | 'not-found' | 'error';
 
-export function PlaceSearchBox() {
+interface PlaceSearchBoxProps {
+  /**
+   * **Ποια λειτουργία ρωτά** (ADR-841 §7 Α4).
+   *
+   * 🔑 Το πεδίο μένει **ένα** — το δεσμεύει αριθμητικά το **ADR-777 Α3** *(«Οθόνη 1:
+   * ένα κουτί … Desktop: **ένα πεδίο**. Κινητό: **ίδιο**»)*. Αυτό που αλλάζει είναι ο
+   * **προορισμός**: δες {@link destinationFor}.
+   */
+  readonly mode: LandingMode;
+}
+
+/**
+ * **Πού πάει ο επισκέπτης** — η μία απόφαση που ο διακόπτης πραγματικά αλλάζει.
+ *
+ * 🔴 **Η διακλάδωση είναι ΤΥΠΟΥ, όχι συνθήκης**: το {@link landingModeFilters}
+ * επιστρέφει `null` **μόνο** για τους επαγγελματίες, γιατί η **Α5** το λέει ρητά —
+ * *«οι επαγγελματίες δεν είναι τύπος αγγελίας»*. Ένα `if (mode === 'pros')` εδώ θα
+ * ήταν **δεύτερη διατύπωση** του ίδιου κανόνα, ελεύθερη να αποκλίνει από το SSoT.
+ *
+ * ⚠️ **Η ειδικότητα ΔΕΝ ταξιδεύει** *(`occupation: null`)*, και είναι απόφαση: η ρίζα
+ * δεν τη ρωτά *(Α3 — ένα πεδίο)*, και το `/pro` χτίζει τις επιλογές του από τα **ίδια
+ * τα προφίλ**. Μια αυθαίρετη τιμή εδώ θα φιλτράριζε τον κατάλογο **χωρίς ο επισκέπτης
+ * να το έχει ζητήσει**.
+ */
+function destinationFor(mode: LandingMode, center: { lat: number; lng: number }) {
+  const filters = landingModeFilters(mode, center);
+
+  if (filters === null) {
+    const params = serializeShowcaseFilters({
+      occupation: null,
+      near: { center, radiusKm: DEFAULT_SEARCH_RADIUS_KM },
+    });
+    return agencyDirectoryHref(params.toString());
+  }
+
+  return searchResultsHref(serializeListingFilters(filters).toString());
+}
+
+export function PlaceSearchBox({ mode }: PlaceSearchBoxProps) {
   const { t } = useTranslation(['search-results']);
   const router = useRouter();
   const inputId = useId();
@@ -68,15 +108,10 @@ export function PlaceSearchBox() {
     const outcome = await geocodeAddressDetailed(addressLineToQuery(trimmed));
 
     if (outcome.kind === 'found') {
-      const params = serializeListingFilters({
-        ...EMPTY_LISTING_FILTERS,
-        near: {
-          center: { lat: outcome.result.lat, lng: outcome.result.lng },
-          radiusKm: DEFAULT_SEARCH_RADIUS_KM,
-        },
-      });
-      // Η οθόνη 2 διαβάζει **τη διεύθυνση**, ποτέ κατάσταση σε μνήμη.
-      router.push(searchResultsHref(params.toString()));
+      // Η οθόνη προορισμού διαβάζει **τη διεύθυνση**, ποτέ κατάσταση σε μνήμη.
+      router.push(
+        destinationFor(mode, { lat: outcome.result.lat, lng: outcome.result.lng }),
+      );
       return;
     }
 
