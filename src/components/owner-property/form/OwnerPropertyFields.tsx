@@ -35,7 +35,8 @@ import {
   PLACE_ANSWERS,
   type OwnerPropertyFormValues,
 } from '@/lib/owner-property/owner-property-form-values';
-import { isLandPropertyType, PROPERTY_TYPE_I18N_KEYS } from '@/constants/property-types';
+import { isLandProperty } from '@/constants/property-classification';
+import { PROPERTY_TYPE_I18N_KEYS } from '@/constants/property-types';
 import { OFFER_KINDS, type OfferKind } from '@/types/property-offers';
 
 const NS = 'property-market';
@@ -114,7 +115,7 @@ export function OwnerIdentityFields(): React.ReactElement {
 export function OwnerBasicsFields(): React.ReactElement {
   const { t } = useTranslation([NS]);
   const { control, watch } = useOfferForm();
-  const isLand = isLandPropertyType(watch('type'));
+  const isLand = isLandProperty(watch('type'));
 
   return (
     <FormFieldset legend={t(`${K}.form.basics`)}>

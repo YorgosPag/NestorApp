@@ -31,7 +31,8 @@ import {
 } from '@/lib/listings/listing-filters';
 import { NO_DEMAND_FEATURES } from '@/types/property-demand';
 import { demand, listing } from './demand-fixtures';
-import { isLandPropertyType, LAND_PROPERTY_TYPES } from '@/constants/property-types';
+import { LAND_PROPERTY_TYPES } from '@/constants/property-types';
+import { isLandProperty } from '@/constants/property-classification';
 
 /** Ο εργολάβος: «ζητώ **οικόπεδο** με **αντιπαροχή**». */
 const CONTRACTOR = demand({
@@ -69,7 +70,7 @@ describe('ADR-777 §8.32 — ο εργολάβος ψάχνει, ο ιδιοκτ
     const parcel = { ...OWNER_PLOT, id: 'prop_2', type: 'parcel' as const };
     expect(matchesListingFilters(parcel, filters)).toBe(false);
     // …και όμως **και τα δύο** είναι γη — ο άλλος άξονας απαντά «ναι».
-    expect(isLandPropertyType(parcel.type)).toBe(true);
+    expect(isLandProperty(parcel.type)).toBe(true);
   });
 
   it('Κ4 — η γη επιβιώνει της ΔΙΕΥΘΥΝΣΗΣ (round-trip σειριοποίησης)', () => {

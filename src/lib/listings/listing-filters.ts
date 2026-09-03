@@ -33,7 +33,7 @@ import type { OfferKind } from '@/types/property-offers';
 import { OFFER_KINDS } from '@/types/property-offers';
 import type { PublicListing } from '@/types/public-listing';
 import type { GeoPoint } from '@/types/geo/coordinates';
-import { isLandPropertyType } from '@/constants/property-types';
+import { isLandProperty } from '@/constants/property-classification';
 import { getEffectivePrice } from '@/lib/properties/price-resolver';
 import { distanceMeters } from '@/lib/geo/geo-distance';
 import { intervalShape } from '@/lib/date-local';
@@ -405,7 +405,7 @@ export function matchesListingFilters(listing: PublicListing, filters: ListingFi
   // κάποιος ζητά ρητά «≥2 υπνοδωμάτια», ένα διαμέρισμα που **δεν το λέει** δεν
   // απαντά στην ερώτηση. Η διαφορά δεν είναι η τιμή — είναι το **αν το είδος σηκώνει
   // την ερώτηση**.
-  if (filters.bedroomsMin !== null && !isLandPropertyType(listing.type)) {
+  if (filters.bedroomsMin !== null && !isLandProperty(listing.type)) {
     if (listing.bedrooms === null || listing.bedrooms < filters.bedroomsMin) return false;
   }
 
