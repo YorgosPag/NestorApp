@@ -45,6 +45,11 @@ import { ListingAuthorshipLine } from '@/components/listings/ListingAuthorshipLi
  * Η λίστα είναι μία στήλη ~22rem δίπλα στον χάρτη σε οθόνη, και πλήρους πλάτους σε
  * κινητό. Χωρίς `sizes` ο περιηγητής υποθέτει **100vw** και κατεβάζει το μεγαλύτερο
  * παράγωγο για μια εικόνα 350px — δηλαδή το `srcset` θα ήταν κόστος χωρίς όφελος.
+ *
+ * ⚠️ **ΕΙΝΑΙ Η ΠΡΟΕΠΙΛΟΓΗ, ΟΧΙ Ο ΝΟΜΟΣ** *(ADR-777 §8.49)*. Περιγράφει τη **στήλη** —
+ * τη διάταξη της οθόνης 2 και της βιτρίνας γραφείου. Μια οθόνη που αποδίδει την ίδια
+ * κάρτα σε **πλέγμα** τη διαψεύδει, και τότε το `srcset` γίνεται πάλι κόστος χωρίς
+ * όφελος: δες {@link ListingCardProps.imageSizes}.
  */
 const CARD_IMAGE_SIZES = '(min-width: 1024px) 22rem, 100vw';
 
@@ -93,6 +98,24 @@ interface ListingCardProps {
    * *(LCP 2,6s → 1,9s, Google Flights)* προϋποθέτει ότι είναι **μία**.
    */
   readonly priority?: boolean;
+  /**
+   * **Πόσο πλατιά αποδίδεται η εικόνα σε ΑΥΤΗ τη διάταξη** (ADR-777 §8.49).
+   *
+   * 🔴 **Ίδιο επιχείρημα με το `priority`, και όχι τυχαία: η κάρτα δεν βλέπει τη
+   * διάταξή της.** Το `priority` λέει *«η κάρτα δεν ξέρει τη θέση της — τη λέει η
+   * λίστα»*. Το ίδιο ισχύει για το πλάτος: η ίδια κάρτα ζει σε **στήλη ~22rem** *(οθόνη
+   * 2 · βιτρίνα γραφείου)* και σε **πλέγμα** *(η ρίζα)*, και μόνο η διάταξη ξέρει ποιο.
+   *
+   * ⚠️ **Λάθος `sizes` ΔΕΝ σπάει τίποτα ορατά — και γι' αυτό είναι επικίνδυνο.** Ο
+   * περιηγητής απλώς διαλέγει λάθος παράγωγο: **θολή** εικόνα αν το δηλωμένο πλάτος
+   * είναι μικρότερο του πραγματικού, **σπαταλημένα bytes** αν είναι μεγαλύτερο. Καμία
+   * πύλη δεν το ρωτά· η μόνη άμυνα είναι να το **δηλώνει** όποιος ξέρει.
+   *
+   * ⛔ **ΜΗΝ το περάσεις για να «μικρύνεις τις εικόνες».** Δεν είναι ρυθμιστικό
+   * ποιότητας — είναι **περιγραφή της αλήθειας της διάταξης**. Αν δεν ξέρεις το πλάτος,
+   * μην το περάσεις: η προεπιλογή είναι η στήλη.
+   */
+  readonly imageSizes?: string;
 }
 
 export function ListingCard({
@@ -102,6 +125,7 @@ export function ListingCard({
   filterQuery = '',
   showAuthorship = true,
   priority = false,
+  imageSizes = CARD_IMAGE_SIZES,
 }: ListingCardProps) {
   const { t } = useTranslation(['search-results']);
   const price = resolveDisplayPrice(listing);
@@ -142,7 +166,7 @@ export function ListingCard({
             <img
               src={image.url}
               srcSet={listingImageSrcSet(image)}
-              sizes={CARD_IMAGE_SIZES}
+              sizes={imageSizes}
               width={image.width}
               height={image.height}
               alt={t(image.altKey, { index: 1, total: listing.gallery.length })}
