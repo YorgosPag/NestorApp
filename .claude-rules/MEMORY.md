@@ -15,6 +15,7 @@
 - [No push without explicit order](feedback_no_push_without_order.md) — NON-NEGOTIABLE: NEVER git push without explicit order from Giorgio
 - [Giorgio fa commit + push](feedback_only_commit_no_push.md) — **AGGIORNATO 2026-05-16**: Giorgio fa SIA commit SIA push. Agent NEVER committa né pusha autonomamente. Vedi CLAUDE.md N.(-1).
 - [Never ask about commit/push](feedback_never_ask_commit_push.md) — NEVER ask "do you want a commit?" — Giorgio says so himself
+- 🆕 [Γράψε με `Write`/`Edit`, όχι heredoc](feedback_write_tool_not_heredoc.md) — **2026-09-04**. Το *«heredoc σπάει → γράφω με το εργαλείο αρχείου»* στέλνει το περιεχόμενο **δύο φορές**. Τεστ 2 δευτερολέπτων: **έχει ελληνικά ή backtick; → `Write`, με την πρώτη.** Μήνυμα commit → `Write` + `git commit -F`. ⛔ ΠΟΤΕ `sed -i` σε αρχείο με ελληνικά (Windows UTF-8).
 
 ## Pending Work
 - 🟢 [ADR-369 BIM Elevation — Q&A COMPLETE, Phase A NEXT](handoff-adr369.md) — **STATUS: ACTIVE** (2026-05-20). Q&A 10/10 ✅ done. ADR=READY_FOR_IMPLEMENTATION. **Next**: Phase A Schema + Factory functions (~20-25h). **PRE-REQ**: Giorgio MUST WIPE TEST DB first (Wipe & Reseed strategy). **READ HANDOFF FIRST** if ADR-369/BIM/elevation work mentioned.
