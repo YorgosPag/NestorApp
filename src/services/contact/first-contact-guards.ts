@@ -3,6 +3,7 @@ import 'server-only';
 /**
  * @fileoverview **ΟΙ ΦΡΟΥΡΟΙ ΤΗΣ ΠΡΩΤΗΣ ΕΠΑΦΗΣ** — κανένας νέος κριτής, ούτε ένας.
  * @related services/contact/first-contact.service.ts · lib/owner-property/listing-custody.ts
+ * @related services/contact/first-contact-target-locator.ts *(ADR-843 §10.17 — ποιον φτάνει)*
  * @related services/listings/listing-resolver.ts *(ADR-843 §10.16 — οι δύο οικογένειες)*
  * @module services/contact/first-contact-guards
  *
@@ -24,6 +25,13 @@ import 'server-only';
  * του §10.15: κάθε πράξη προς αγγελία **γραφείου** έπαιρνε *«η αγγελία δεν υπάρχει»*.
  * Η ερώτηση *«ποια αγγελία;»* ζει τώρα σε **ένα** σημείο: `listing-resolver.ts`.
  *
+ * ⛔ **ΟΥΤΕ ΤΟ «ΠΟΙΟΝ ΦΤΑΝΕΙ Η ΠΡΑΞΗ» — έφυγε κι αυτό** (§10.17). Ζούσε εδώ σε **δύο**
+ * σημεία *(μία γραμμή ενσωματωμένη για τον επαγγελματία · ο επιλυτής για την αγγελία)*
+ * και ήταν **απρόσιτο** από έξω, γιατί ήταν μπλεγμένο με εξουσιοδότηση και ζωντάνια.
+ * Όταν το backfill του `offerer` χρειάστηκε την **ίδια** απάντηση, δεν είχε τι να
+ * καλέσει. Τώρα ζει στο `first-contact-target-locator.ts` — και αν βρεθείς να γράφεις
+ * εδώ `{ kind: 'company', companyId: … }`, **αυτό ακριβώς** ξαναφτιάχνεις.
+ *
  * ⛔ **ΜΗΝ γράψεις εδώ σύγκριση ταυτότητας.** Αν βρεθείς να γράφεις
  * `authorUserId === …` ή `companyId === …`, η απάντηση υπάρχει ήδη: `mayAdminister`.
  *
@@ -34,21 +42,19 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { ListingMatchFacts } from '@/lib/demand/demand-match-vocabulary';
-import {
-  custodyOf,
-  mayAdminister,
-  type ListingActor,
-  type ListingCustody,
-} from '@/lib/owner-property/listing-custody';
+import { custodyOf, mayAdminister, type ListingActor } from '@/lib/owner-property/listing-custody';
 import { createModuleLogger } from '@/lib/telemetry';
 import { composeMatchReason } from '@/services/contact/first-contact-projection';
+import {
+  locateTarget,
+  type LocatedTarget,
+} from '@/services/contact/first-contact-target-locator';
 import {
   refuseFirstContact as refuse,
   FIRST_CONTACT_UNAVAILABLE as UNAVAILABLE,
   type FirstContactRefusal as Refusal,
   type FirstContactUnavailable as Unavailable,
 } from '@/services/contact/first-contact-vocabulary';
-import { resolveListing } from '@/services/listings/listing-resolver';
 import { lookupAgencyProfile } from '@/services/mandate/agency-profile.service';
 import type { FirstContactTarget, MatchReason } from '@/types/first-contact';
 import type { PropertyDemand } from '@/types/property-demand';
@@ -70,23 +76,6 @@ export type MatchReasonResolution =
   | Refusal
   | Unavailable;
 
-/** Ο στόχος στάθηκε — και, για αγγελία, τα γεγονότα που κρίνει το «γιατί». */
-export interface ResolvedTarget {
-  /** `null` για επαγγελματία: **δεν υπάρχει αγγελία να συγκριθεί** με τη ζήτηση. */
-  readonly facts: ListingMatchFacts | null;
-  /**
-   * 🏆 **ΠΟΙΟΝ ΦΤΑΝΕΙ Η ΠΡΑΞΗ** — και γι' αυτό ταξιδεύει έξω από εδώ (ADR-843 §10.16).
-   *
-   * Ο κριτής **ήδη** υπολόγιζε τη θεματοφυλακή για να απαντήσει *«μήπως είσαι εσύ;»*,
-   * και μετά **την πετούσε**. Έτσι η ερώτηση *«ποιες πράξεις είναι δικές μου;»*
-   * έμενε να απαντηθεί δεύτερη φορά, από **άλλο** αρχείο, με **άλλο** τρόπο — και
-   * εκείνη η δεύτερη απάντηση ήταν η μισή του §10.15.
-   *
-   * ⚠️ Δεν είναι «η εταιρεία του ζητούντος»: είναι ο **χώρος του στόχου**.
-   */
-  readonly custody: ListingCustody;
-}
-
 /**
  * **Υπάρχει ο στόχος, είναι ζωντανός, και ΔΕΝ είσαι εσύ;**
  *
@@ -94,70 +83,81 @@ export interface ResolvedTarget {
  * `mayAdminister(custodyOf(…))` του `listing-custody.ts` — ο **ίδιος** που κρίνει την
  * επεξεργασία και την ανάθεση. Εδώ ρωτιέται **ανάποδα**: αν επιτρέπεσαι να τη
  * διαχειριστείς, τότε **είναι δική σου** και δεν έχεις κανέναν να πλησιάσεις.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΤΡΕΙΣ ΕΡΩΤΗΣΕΙΣ ΜΕ ΣΕΙΡΑ — ΚΑΙ Η ΣΕΙΡΑ ΤΟΥΣ ΕΙΝΑΙ ΣΥΜΒΟΛΑΙΟ (ADR-843 §10.17)
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * 1. *«ποιον φτάνει;»* → {@link locateTarget} — **έφυγε από εδώ**, γιατί τη χρειάζεται
+ *    και το backfill του `offerer`, όπου δεν υπάρχει καν «καλών» να ρωτηθεί.
+ * 2. *«επιτρέπεσαι;»* → `mayAdminister`, εδώ.
+ * 3. *«είναι ζωντανός;»* → {@link targetIsNotLive}, εδώ — **δύο** διαφορετικές
+ *    ερωτήσεις ανά είδος στόχου, με **δύο** διαφορετικές αρνήσεις.
+ *
+ * ⚠️ **Η σειρά 2 → 3 ΔΕΝ αντιστρέφεται.** Ο ιδιοκτήτης μιας βιτρίνας που **απέσυρε**
+ * οφείλει να ακούσει *«είναι δικό σου»* και όχι *«δεν υπάρχει»* — και η αντίστροφη
+ * σειρά θα πλήρωνε επιπλέον μία ανάγνωση για να δώσει **χειρότερη** απάντηση.
  */
 export async function resolveTarget(
   adminDb: AdminFirestore,
   actor: ListingActor,
   target: FirstContactTarget,
   nowISO: string,
-): Promise<ResolvedTarget | Refusal | Unavailable> {
-  if (target.kind === 'professional') {
-    // 🔑 **Ο ΙΔΙΟΣ κριτής, σε χώρο εταιρείας.** Ένα ωμό `companyId === companyId` εδώ
-    //    θα ήταν **τέταρτο δόγμα εξουσιοδότησης** — και θα έπεφτε στην παγίδα του
-    //    κενού μισθωτή που το `hasTenant` κλείνει ονομαστικά.
-    //
-    // 🏆 **Και η θεματοφυλακή γράφεται ΜΙΑ φορά, εδώ**: η βιτρίνα **είναι** χώρος
-    //    εταιρείας. Δύο εκφράσεις του ίδιου πράγματος —μία για την άρνηση, μία για
-    //    τη δρομολόγηση— θα ήταν ελεύθερες να αποκλίνουν.
-    const custody: ListingCustody = { kind: 'company', companyId: target.agencyCompanyId };
+): Promise<LocatedTarget | Refusal | Unavailable> {
+  const located = await locateTarget(adminDb, target, nowISO);
+  if (located === null) return UNAVAILABLE;
+  if (located === 'absent') return refuse('target-absent');
 
-    if (mayAdminister(custody, actor)) return refuse('contact-own-target');
+  if (mayAdminister(located.custody, actor)) return refuse('contact-own-target');
 
-    const agency = await lookupAgencyProfile(adminDb, target.agencyCompanyId);
-    if (agency.outcome === 'unavailable') return UNAVAILABLE;
-    if (agency.outcome === 'not-published') return refuse('target-absent');
-    return { facts: null, custody };
-  }
-
-  return resolveListingTarget(adminDb, actor, target.listingId, nowISO);
+  const notLive = await targetIsNotLive(adminDb, target, located);
+  return notLive ?? located;
 }
 
 /**
- * **Η αγγελία, αν υπάρχει, είναι στην αγορά, και δεν είναι δική σου.**
+ * **Είναι ο στόχος ζωντανός;** — `null` όταν ναι, αλλιώς η **σωστή** άρνηση.
  *
- * 🔴 **ΚΑΙ ΟΙ ΔΥΟ ΟΙΚΟΓΕΝΕΙΕΣ, ΑΠΟ ΤΟΝ ΕΝΑ ΕΠΙΛΥΤΗ** (ADR-843 §10.16). Μέχρι τις
- * 2026-09-04 αυτή η συνάρτηση διάβαζε **η ίδια** το `owner_properties` — δηλαδή
- * απαντούσε *«δεν υπάρχει»* σε **6 από τις 8** ζωντανές αγγελίες, όσες ανήκουν στον
- * επαγγελματία. Το σχόλιο ακριβώς από κάτω έλεγε *«η δημοσίευση κρίνεται από τον ΕΝΑ
- * κριτή»* και ήταν **αληθές για τη μία οικογένεια**.
+ * 🔴 **ΔΥΟ ΕΡΩΤΗΣΕΙΣ, ΟΧΙ ΜΙΑ ΜΕ ΔΥΟ ΑΠΑΝΤΗΣΕΙΣ** — γι' αυτό η ζωντάνια **δεν**
+ * μετακόμισε στον εντοπιστή μαζί με τον παραλήπτη:
  *
- * 🔑 **Η θεραπεία δεν ήταν δεύτερο `if` — ήταν να πάψει αυτό το αρχείο να ξέρει τι
- * είναι «οικογένεια»**. Ο {@link resolveListing} απαντά με **έναν** τύπο, και ο
- * φρουρός βλέπει μόνο *«υπάρχει · ποιανού είναι · είναι στην αγορά»*.
+ * | Είδος | Η ερώτηση | Η άρνηση | Γιατί αυτή |
+ * |---|---|---|---|
+ * | επαγγελματίας | «δημοσιεύτηκε η **βιτρίνα**;» | `target-absent` | **συγκάλυψη**: αδημοσίευτο και ανύπαρκτο είναι αδιάκριτα (§9.6) |
+ * | αγγελία | «έχει **ζωντανή διάθεση**;» | `target-not-live` | ξεχωριστός κωδικός **επίτηδες**: «υπάρχει αλλά όχι τώρα» ≠ «δεν υπάρχει» |
  *
- * 🔴 **Η ΔΗΜΟΣΙΕΥΣΗ ΕΞΑΚΟΛΟΥΘΕΙ ΝΑ ΚΡΙΝΕΤΑΙ ΑΠΟ ΤΟΝ ΕΝΑ ΚΡΙΤΗ** — `buildPublicListing`,
- * που ο επιλυτής καλεί για **αμφότερες**. Ένα δικό μας `lifecycle !== 'listed'` εδώ θα
- * ήταν **δεύτερο κριτήριο δημοσίευσης** δίπλα στο `isPubliclyListed`, που το
- * `public-listing-projection.ts` δηλώνει ρητά ότι *«γράφεται **ΜΙΑ** φορά»* — και
- * προειδοποιεί ότι τα δύο θα διαφωνούσαν **ακριβώς στην αντιπαροχή**.
+ * 🔑 **Καμία από τις δύο δεν γράφεται εδώ**: το `lookupAgencyProfile` κρίνει τη μία,
+ * το `buildPublicListing` —μέσα στον επιλυτή— την άλλη. Αυτή η συνάρτηση **διαλέγει
+ * ποιον να ρωτήσει**, τίποτε άλλο.
  *
- * 🏆 **Και κερδίζουμε τα γεγονότα από την ίδια δουλειά**: η προβολή που κρίνει το
- * «είναι ζωντανή;» είναι **ακριβώς** αυτή που θα κρίνει το «γιατί ταιριάζει;».
+ * ⚠️ **Και η ανάγνωση του γραφείου γίνεται ΕΔΩ, μετά το `mayAdminister`** — ακριβώς
+ * όπου γινόταν πάντα. Ένα βήμα νωρίτερα θα ήταν μία ανάγνωση που πληρώνουμε για να
+ * πούμε στον ιδιοκτήτη λάθος πράγμα.
  */
-async function resolveListingTarget(
+async function targetIsNotLive(
   adminDb: AdminFirestore,
-  actor: ListingActor,
-  listingId: string,
-  nowISO: string,
-): Promise<ResolvedTarget | Refusal | Unavailable> {
-  const resolved = await resolveListing(adminDb, listingId, nowISO);
-  if (resolved === null) return UNAVAILABLE;
-  if (resolved === 'absent') return refuse('target-absent');
-
-  if (mayAdminister(resolved.custody, actor)) return refuse('contact-own-target');
-  if (resolved.facts === null) return refuse('target-not-live');
-
-  return { facts: resolved.facts, custody: resolved.custody };
+  target: FirstContactTarget,
+  located: LocatedTarget,
+): Promise<Refusal | Unavailable | null> {
+  switch (target.kind) {
+    case 'professional': {
+      const agency = await lookupAgencyProfile(adminDb, target.agencyCompanyId);
+      if (agency.outcome === 'unavailable') return UNAVAILABLE;
+      return agency.outcome === 'not-published' ? refuse('target-absent') : null;
+    }
+    case 'listing':
+      // 🔴 Η ΔΗΜΟΣΙΕΥΣΗ ΚΡΙΝΕΤΑΙ ΑΠΟ ΤΟΝ ΕΝΑ ΚΡΙΤΗ — `buildPublicListing`, μέσα στον
+      //    επιλυτή, για **αμφότερες** τις οικογένειες. Ένα δικό μας `lifecycle !== …`
+      //    εδώ θα ήταν **δεύτερο** κριτήριο δημοσίευσης, και το
+      //    `public-listing-projection.ts` προειδοποιεί ότι τα δύο θα διαφωνούσαν
+      //    **ακριβώς στην αντιπαροχή**.
+      return located.facts === null ? refuse('target-not-live') : null;
+    default: {
+      // Ένα τρίτο είδος στόχου κοκκινίζει ΕΔΩ: κάθε είδος οφείλει να δηλώσει τι
+      // σημαίνει «ζωντανός» γι' αυτό — αλλιώς θα περνούσε σιωπηλά ως ζωντανό.
+      const exhaustive: never = target;
+      return exhaustive;
+    }
+  }
 }
 
 // =============================================================================

@@ -68,7 +68,7 @@ import {
 } from '@/lib/demand/demand-match-axes';
 import { discloseDemand } from '@/lib/demand/demand-aggregate';
 import type { ListingMatchFacts } from '@/lib/demand/demand-match-vocabulary';
-import type { ListingActor } from '@/lib/owner-property/listing-custody';
+import type { ListingActor, ListingCustody } from '@/lib/owner-property/listing-custody';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { PropertyDemand } from '@/types/property-demand';
 import {
@@ -318,25 +318,71 @@ async function collectAddressedContacts(
   adminDb: AdminFirestore,
   actor: ListingActor,
 ): Promise<readonly FirstContact[] | null> {
+  // 🔑 **Οι χώροι του ανθρώπου, ως ΘΕΜΑΤΟΦΥΛΑΚΕΣ** — όχι ως δύο χειρόγραφα ερωτήματα.
+  //    Έτσι το «πού ζει ο παραλήπτης μέσα στο έγγραφο» απαντιέται **μία** φορά, στο
+  //    {@link offererEquality}, και δεν μπορεί να αποκλίνει ανάμεσα στα δύο σκέλη.
+  const custodies: ListingCustody[] = [{ kind: 'personal', userId: actor.uid }];
+
+  // ⚠️ **Ο ιδιωτικός χώρος ΔΕΝ διευρύνεται**: το εταιρικό σκέλος ρωτιέται μόνο από
+  //    όποιον έχει **πραγματική** εταιρεία — κενό `companyId` δεν είναι μισθωτής.
+  if (actor.companyId !== null && actor.companyId.length > 0) {
+    custodies.push({ kind: 'company', companyId: actor.companyId });
+  }
+
+  // ⚠️ **Ο χάρτης ΗΤΑΝ ΑΝΑΓΚΑΙΟΣ, ΤΩΡΑ ΕΙΝΑΙ ΦΡΟΥΡΟΣ.** Όσο η εμβέλεια ρωτιόταν με
+  //    δύο ασύνδετα ερωτήματα *(«η αγγελία είναι δική του» **και** «ο χώρος είναι
+  //    δικός του»)*, μια πράξη προς αγγελία γραφείου ταίριαζε **και στα δύο** και θα
+  //    φαινόταν ως **δύο άνθρωποι**. Με τον έναν παραλήπτη ανά πράξη —και το
+  //    `ListingCustody` διακριτή ένωση— αυτό είναι πλέον **αδύνατο**. Ο χάρτης μένει
+  //    γιατί το κόστος του είναι **μηδέν** και η ζημιά που απέτρεπε ήταν
+  //    **ανιχνεύσιμη μόνο από άνθρωπο** (N.7.2 #4).
   const byId = new Map<string, FirstContact>();
-  const contacts = adminDb.collection(COLLECTIONS.FIRST_CONTACTS);
+
+  for (const custody of custodies) {
+    const addressed = await contactsAddressedTo(adminDb, custody);
+    if (addressed === null) return null; // βλάβη σε ένα σκέλος = άγνωστο σύνολο (N.12)
+    for (const contact of addressed) byId.set(contact.id, contact);
+  }
+
+  return [...byId.values()];
+}
+
+/**
+ * **Ποιες πράξεις φτάνουν σε ΑΥΤΟΝ τον παραλήπτη;** — μία ισότητα, καμία παρενέργεια.
+ *
+ * 🔴 **ΕΙΝΑΙ ΔΗΜΟΣΙΑ ΕΠΙΤΗΔΕΣ, ΚΑΙ Ο ΛΟΓΟΣ ΕΙΝΑΙ ΜΕΤΡΗΜΕΝΟΣ** (ADR-843 §10.17): το
+ * backfill του `offerer` οφείλει να αποδείξει όχι *«έγραψα το πεδίο»* αλλά *«ο
+ * άνθρωπος **θα το δει**»* — και η μόνη τίμια απόδειξη είναι **η ίδια ερώτηση** που
+ * κάνει η οθόνη. Το {@link readOffererInbox} **δεν** μπορεί να το κάνει: σφραγίζει
+ * `seenAt`, δηλαδή ένα επαληθευτικό τρέξιμο θα κατέστρεφε το *«πότε το είδε»* —
+ * ακριβώς το δεδομένο που η ζωντανή επαλήθευση του Σταδίου ΣΤ υπάρχει για να ελέγξει.
+ *
+ * ⇒ Εδώ ζει το *«ρώτα»*· εκεί το *«ρώτα **και σημείωσε ότι το είδα**»*. Δύο πράξεις,
+ * και μόνο η δεύτερη ανήκει στην οθόνη.
+ *
+ * @returns `null` **μόνο** σε βλάβη — κενός πίνακας σημαίνει «κανείς» (N.12).
+ */
+export async function contactsAddressedTo(
+  adminDb: AdminFirestore,
+  custody: ListingCustody,
+): Promise<readonly FirstContact[] | null> {
+  const [fieldPath, value] = offererEquality(custody);
 
   try {
     // tenant-scope-exempt: ο άξονας απομόνωσης του `first_contacts` είναι ο ΖΗΤΩΝ
     // (`seekerUserId`)· τα εισερχόμενα του προσφέροντος διασχίζουν εξ ορισμού πολλούς
     // ζητούντες. Η εμβέλεια είναι ο ΔΙΚΟΣ ΤΟΥ χώρος, από την ΑΠΟΔΕΙΞΗ — ποτέ από το δίκτυο.
-    collect(byId, await contacts.where('offerer.userId', '==', actor.uid).get());
+    const snapshot = await adminDb
+      .collection(COLLECTIONS.FIRST_CONTACTS)
+      .where(fieldPath, '==', value)
+      .get();
 
-    if (actor.companyId !== null && actor.companyId.length > 0) {
-      // tenant-scope-exempt: ίδιος λόγος — ο χώρος του γραφείου, από την απόδειξη.
-      collect(byId, await contacts.where('offerer.companyId', '==', actor.companyId).get());
-    }
-
-    return [...byId.values()];
+    return snapshot.docs.map((doc: QueryDocumentSnapshot) =>
+      contactFromDocument(doc.data() as FirstContactDocument, doc.id),
+    );
   } catch (error) {
     logger.error('[FIRST-CONTACT] Η ανάγνωση των εισερχομένων απέτυχε — άγνωστο, όχι κενό', {
-      uid: actor.uid,
-      companyId: actor.companyId,
+      fieldPath,
       error: error instanceof Error ? error.message : String(error),
     });
     return null;
@@ -344,22 +390,20 @@ async function collectAddressedContacts(
 }
 
 /**
- * **Μαζεύει σε χάρτη κατά ταυτότητα** — ζώνη και τιράντες για τα διπλότυπα.
+ * **Πού ζει ο παραλήπτης μέσα στο έγγραφο** — το ζεύγος *(μονοπάτι, τιμή)*, αχώριστο.
  *
- * ⚠️ **Ήταν ΑΝΑΓΚΑΙΟΣ, τώρα είναι ΦΡΟΥΡΟΣ.** Όσο η εμβέλεια ρωτιόταν με δύο
- * ασύνδετα ερωτήματα *(«η αγγελία είναι δική του» **και** «ο χώρος είναι δικός
- * του»)*, μια πράξη προς αγγελία γραφείου ταίριαζε **και στα δύο** και θα φαινόταν
- * ως **δύο άνθρωποι**. Με τον έναν παραλήπτη ανά πράξη αυτό είναι πλέον αδύνατο —
- * ο χάρτης μένει γιατί το κόστος του είναι **μηδέν** και η ζημιά που απέτρεπε
- * **ανιχνεύσιμη μόνο από άνθρωπο**.
+ * 🔑 **Τα δύο ταξιδεύουν ΜΑΖΙ επίτηδες**, ίδιο ιδίωμα με το `ListingFamilyDeclaration`
+ * του §10.16: χωρισμένα σε δύο εκφράσεις θα μπορούσαν να αποκλίνουν, και ένα μονοπάτι
+ * που δεν ταιριάζει με την τιμή του παράγει σφάλμα **μη ανιχνεύσιμο** — κάθε ερώτημα
+ * θα γύριζε ήσυχα **κενό**, δηλαδή *«κανείς δεν σε πλησίασε»*.
+ *
+ * ⚠️ **Η διακριτή ένωση είναι ο λόγος που τα δύο σκέλη δεν επικαλύπτονται ΠΟΤΕ**: μια
+ * προσωπική θεματοφυλακή **δεν έχει** πεδίο `companyId` στο έγγραφο, και αντίστροφα.
  */
-function collect(
-  into: Map<string, FirstContact>,
-  snapshot: { readonly docs: readonly QueryDocumentSnapshot[] },
-): void {
-  for (const doc of snapshot.docs) {
-    into.set(doc.id, contactFromDocument(doc.data() as FirstContactDocument, doc.id));
-  }
+function offererEquality(custody: ListingCustody): readonly [string, string] {
+  return custody.kind === 'personal'
+    ? ['offerer.userId', custody.userId]
+    : ['offerer.companyId', custody.companyId];
 }
 
 /**
