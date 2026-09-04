@@ -29,11 +29,24 @@
  * ⚠️ **ΤΟ ΠΑΝΕΛ ΔΕΝ ΖΕΙ ΕΔΩ.** Αυτό το αρχείο αποδίδει **μόνο** τη σειρά των κουμπιών·
  * η φόρμα ζει στη σελίδα. Είναι ο ίδιος διαχωρισμός με το `priority` της κάρτας: το
  * *ποια* λειτουργία είναι ενεργή είναι γνώση **της σελίδας**, όχι του διακόπτη.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΚΑΙ ΟΥΤΕ Η ΡΙΖΑ ΤΩΝ `Tabs` ΖΕΙ ΕΔΩ ΠΙΑ (ADR-841 §7 Α4.3.12)
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Ο κανόνας πλήρους πλάτους του κελύφους είναι **άμεσο τέκνο**
+ * *(`shell-surface.css`: `[data-shell-measure] > [data-shell-span='full']`)*. Άρα το
+ * `tabpanel` — που είναι η **βιτρίνα** — οφείλει να είναι άμεσο τέκνο της επιφάνειας
+ * που δηλώνει το μέτρο. Αυτό απαιτεί τη ρίζα να κάθεται **πάνω στο ίδιο το main**
+ * *(`asChild`)*, δηλαδή **έξω** από αυτό το component. Εδώ μένει η `TabsList`.
+ *
+ * ⇒ Η κατάσταση *(`value` · `onValueChange`)* ανήκει πλέον στη **σελίδα**, όπως ήδη
+ * ανήκε το *«ποια λειτουργία είναι ενεργή»*.
  */
 
 import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { landingSwitchIsVisible, type LandingMode } from '@/lib/landing/landing-modes';
 
 /**
@@ -61,9 +74,44 @@ const MODE_LABEL_KEYS: Record<LandingMode, string> = {
 interface LandingModeSwitchProps {
   /** **Μόνο** όσες μπορούν να τηρήσουν την υπόσχεσή τους — δες `availableLandingModes`. */
   readonly modes: readonly LandingMode[];
+  /**
+   * **Η ενεργή λειτουργία — και εδώ χρησιμεύει σε ΕΝΑ μόνο πράγμα**: να κρίνει ποιο
+   * κουμπί επιτρέπεται να δηλώσει `aria-controls` *(δες {@link SUPPRESS_ARIA_CONTROLS})*.
+   *
+   * ⚠️ **Την επιλογή την κρατά η ρίζα**, όχι αυτή η τιμή: τα `TabsTrigger` διαβάζουν το
+   * `aria-selected` από το context του Radix. Η σελίδα δίνει **την ίδια** μεταβλητή και
+   * στα δύο· ότι δεν αποκλίνουν το φυλάει άγκυρα που ρωτά *«το tab με
+   * `aria-selected="true"` είναι ΑΚΡΙΒΩΣ αυτό με `aria-controls`;»* — γιατί μια
+   * απόκλιση εδώ θα κολλούσε τον δείκτη σε **λάθος** κουμπί, σιωπηλά.
+   */
   readonly value: LandingMode;
-  readonly onChange: (mode: LandingMode) => void;
 }
+
+/**
+ * 🔴 **ΤΟ `aria-controls` ΔΗΛΩΝΕΤΑΙ ΜΟΝΟ ΟΤΑΝ ΤΟ ΠΑΝΕΛ ΥΠΑΡΧΕΙ** *(ADR-841 §7 Α4.3.12)*.
+ *
+ * Το Radix γράφει `aria-controls` σε **κάθε** trigger, ενώ αποδίδει **μόνο** το πάνελ
+ * του επιλεγμένου ⇒ τα υπόλοιπα δείχνουν σε `id` **που δεν υπάρχει**. Μετρημένο ζωντανά
+ * *(Α4.3.10)*: **3 στα 3** `resolves: false`.
+ *
+ * 🔑 **Ο κανόνας ΔΕΝ γεννιέται εδώ** — είναι ο ίδιος που ήδη τηρούν, γραμμένος, το
+ * `searchable-combobox.tsx:364` *(«δείκτης σε ανύπαρκτο στοιχείο είναι σφάλμα ARIA,
+ * **χειρότερο από την απουσία του**»)* και το `TableFormatCellsTabs.tsx:98`. Εδώ απλώς
+ * **δεν τον αποφάσιζε ο κώδικάς μας**.
+ *
+ * 🏆 Και είναι **ακριβώς** η γραφή του **React Aria** *(`useTab`:
+ * `'aria-controls': isSelected ? tabPanelId : undefined`)*. Το πρότυπο απαιτεί το
+ * `aria-controls` να **αναφέρεται σε** πάνελ· ένα που δείχνει στο πουθενά **δεν
+ * αναφέρεται**, άρα η αφαίρεση τηρεί το APG **περισσότερο**, όχι λιγότερο. Στο
+ * `role="tab"` το `aria-controls` είναι **SHOULD** *(MDN)* — υποχρεωτικά είναι μόνο
+ * `aria-selected` και `id`, που τα δίνει το Radix.
+ *
+ * ⚠️ **ΓΙΑΤΙ ΔΟΥΛΕΥΕΙ ΤΟ ΡΗΤΟ `undefined`**: το Radix απλώνει τα `...triggerProps`
+ * **μετά** τα δικά του ⇒ το κλειδί υπάρχει με τιμή `undefined` και η React **παραλείπει**
+ * το χαρακτηριστικό. ⛔ **ΜΗΝ** το γράψεις ως `aria-controls={cond ? undefined : undefined}`:
+ * τότε το κλειδί υπάρχει **πάντα** και σβήνει και του επιλεγμένου.
+ */
+const SUPPRESS_ARIA_CONTROLS = { 'aria-controls': undefined } as const;
 
 /**
  * ⚠️ **ΣΙΩΠΑ ΜΕ ΜΙΑ ΜΟΝΟ ΛΕΙΤΟΥΡΓΙΑ.** Ένας διακόπτης με ένα κουμπί δεν είναι επιλογή —
@@ -74,20 +122,22 @@ interface LandingModeSwitchProps {
  * αν επιτρέπεται να φιλτράρει τη βιτρίνα. Δύο `length < 2` σε δύο αρχεία θα ήταν δύο
  * απαντήσεις στο *«έχει ο άνθρωπος χειριστήριο;»* — δες {@link landingSwitchIsVisible}.
  */
-export function LandingModeSwitch({ modes, value, onChange }: LandingModeSwitchProps) {
+export function LandingModeSwitch({ modes, value }: LandingModeSwitchProps) {
   const { t } = useTranslation(['search-results']);
 
   if (!landingSwitchIsVisible(modes)) return null;
 
   return (
-    <Tabs value={value} onValueChange={(next) => onChange(next as LandingMode)}>
-      <TabsList aria-label={t('search-results:landing.modes.label')}>
-        {modes.map((mode) => (
-          <TabsTrigger key={mode} value={mode}>
-            {t(MODE_LABEL_KEYS[mode])}
-          </TabsTrigger>
-        ))}
-      </TabsList>
-    </Tabs>
+    <TabsList aria-label={t('search-results:landing.modes.label')}>
+      {modes.map((mode) => (
+        <TabsTrigger
+          key={mode}
+          value={mode}
+          {...(mode === value ? {} : SUPPRESS_ARIA_CONTROLS)}
+        >
+          {t(MODE_LABEL_KEYS[mode])}
+        </TabsTrigger>
+      ))}
+    </TabsList>
   );
 }

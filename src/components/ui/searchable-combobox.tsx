@@ -16,7 +16,7 @@
  * @compliance CLAUDE.md — Radix Popover (ADR-001), zero `any`, no inline styles, semantic HTML
  */
 
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo, useId } from 'react';
 import { ChevronDown, X } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { Input } from '@/components/ui/input';
@@ -32,12 +32,26 @@ import {
 } from './searchable-combobox-types';
 // 🔑 «Ποια επιλογή εννοεί ο άνθρωπος;» — καθαρές συναρτήσεις, δοκιμάσιμες χωρίς DOM.
 import { filterOptions, resolveOptionByText } from './searchable-combobox-matching';
+// 🔑 «Ποια ΝΕΑ;» — άλλη ερώτηση, δική της κατάσταση, δικό της αρχείο.
+import { SearchableComboboxAddNew } from './searchable-combobox-add-new';
 
 export type { ComboboxOption, SearchableComboboxProps } from './searchable-combobox-types';
 
 // ============================================================================
 // HELPERS
 // ============================================================================
+
+/**
+ * Το `id` της **επισημασμένης** επιλογής — ο μόνος τρόπος να την **ακούσει** κανείς.
+ *
+ * 🔴 Η εστίαση DOM **δεν φεύγει ποτέ** από το `<input>` (APG «list autocomplete»), άρα
+ * χωρίς `aria-activedescendant` το `ArrowDown` μετακινούσε την επισήμανση **οπτικά** και
+ * ο αναγνώστης οθόνης **δεν ανακοίνωνε τίποτα**: το `Enter` επέλεγε κάτι που δεν είχε
+ * ακουστεί ποτέ. Ίδιο `index` με το `filtered` ⇒ δείκτης και στόχος **δεν αποκλίνουν**.
+ *
+ * @see ADR-841 §7 Α19.4β — W3C ARIA APG, Combobox Pattern
+ */
+const optionDomId = (listboxId: string, index: number): string => `${listboxId}-opt-${index}`;
 
 // ============================================================================
 // COMPONENT
@@ -60,13 +74,11 @@ export function SearchableCombobox({
   addNewButtonLabel = '+ Προσθήκη νέου',
 }: SearchableComboboxProps) {
   const dropdown = useDropdownTokens();
+  const listboxId = useId();
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
-  const [isAddingNew, setIsAddingNew] = useState(false);
-  const [newItemInput, setNewItemInput] = useState('');
-  const newInputRef = useRef<HTMLInputElement>(null);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
@@ -124,16 +136,62 @@ export function SearchableCombobox({
     };
   }, [inputValue, debounceMs]);
 
+  /**
+   * 🔴 **`debounceMs = 0` ΣΗΜΑΙΝΕΙ ΜΗΔΕΝ, ΟΧΙ «ΕΝΑ TICK»** — και είναι **ορθότητα**, όχι
+   * ταχύτητα *(ADR-841 §7 Α19.4α · N.7.2 #2 «race condition; ΟΧΙ»)*.
+   *
+   * Το `debouncedQuery` ενημερώνεται από `setTimeout`, άρα ακόμη και με `0` υπάρχει
+   * **παράθυρο** όπου το πεδίο δείχνει *«ελαιο»* και ο κατάλογος είναι ακόμη **και οι 23**.
+   * Μέσα σε εκείνο το παράθυρο, ένα `ArrowDown` + `Enter` επιλέγει από τη **ΛΑΘΟΣ ΛΙΣΤΑ**.
+   *
+   * ⚠️ **Μετρήθηκε ζωντανά 2026-09-04** στη ρίζα: πληκτρολόγηση *«ελαιο»* → `ArrowDown` →
+   * `Enter` προσγειώθηκε στο **«Όλες οι ειδικότητες»** *(θέση 0 της αφιλτράριστης λίστας)*
+   * αντί στον ελαιοχρωματιστή. Καμία πύλη δεν το ρώτησε — το βρήκε το **περπάτημα**.
+   *
+   * 🔑 Όταν ο καταναλωτής δηλώνει ότι **δεν χρειάζεται** debounce *(πληθυσμός στη μνήμη)*,
+   * το φιλτράρισμα γίνεται **σύγχρονο με το πάτημα** και το παράθυρο **παύει να υπάρχει**.
+   * Οι καταναλωτές με `debounceMs > 0` δεν επηρεάζονται καθόλου.
+   */
+  const effectiveQuery = debounceMs > 0 ? debouncedQuery : inputValue;
+
+  /**
+   * 🔴 **«ΕΨΑΞΕ Ο ΑΝΘΡΩΠΟΣ, Η ΑΠΛΩΣ ΒΛΕΠΕΙ ΤΗΝ ΕΠΙΛΟΓΗ ΤΟΥ;»** *(ADR-841 §7 Α19.4γ)*
+   *
+   * Το πεδίο δείχνει την **ετικέτα της τρέχουσας επιλογής** — αυτό είναι τιμή, **όχι
+   * ερώτημα**. Χρησιμοποιώντας το ως φίλτρο, το άνοιγμα του καταλόγου έδειχνε **ΜΟΝΟ ό,τι
+   * είχες ήδη διαλέξει**: για να αλλάξεις επιλογή, έπρεπε πρώτα να **σβήσεις**.
+   *
+   * ⚠️ **Ίσχυε και για τους επτά καταναλωτές** και δεν το είχε πιάσει καμία πύλη — φάνηκε
+   * στο περπάτημα της 2026-09-04, μόλις το φιλτράρισμα έγινε σύγχρονο *(με debounce
+   * απλώς **αργούσε** 150ms, δεν έλειπε)*. Κάθε design system δείχνει **ολόκληρη** τη
+   * λίστα στο άνοιγμα — Material, Fluent, cmdk· ήμασταν η εξαίρεση.
+   *
+   * 🔑 **Κριτήριο χωρίς κατάσταση**: αν το κείμενο είναι **ακριβώς** η ετικέτα του κατόχου,
+   * κανείς δεν έψαξε τίποτα. Μόλις πληκτρολογήσει έστω έναν χαρακτήρα διαφορετικά, το
+   * φίλτρο ζωντανεύει. Δεν χρειάζεται δεύτερη σημαία που να μπορεί να αποκλίνει.
+   */
+  const incumbentLabel = useMemo(
+    () => options.find((o) => o.value === value)?.label,
+    [options, value],
+  );
+  const query = effectiveQuery === incumbentLabel ? '' : effectiveQuery;
+
   // Filtered + limited options — το κριτήριο ζει στο `searchable-combobox-matching`.
   const filtered = useMemo(
-    () => filterOptions(options, debouncedQuery, maxDisplayed),
-    [options, debouncedQuery, maxDisplayed],
+    () => filterOptions(options, query, maxDisplayed),
+    [options, query, maxDisplayed],
   );
+
+  // ⚠️ **Ίδια συνθήκη με την απόδοση παρακάτω, γραμμένη ΜΙΑ φορά**: το `aria-controls`
+  //    δείχνει σε `id` που πρέπει να **υπάρχει**. Όταν δεν αποδίδεται `<ul>` (φόρτωση, ή
+  //    μηδέν αποτελέσματα χωρίς «προσθήκη»), ένας δείκτης σε ανύπαρκτο στοιχείο είναι
+  //    σφάλμα ARIA — χειρότερο από την απουσία του.
+  const listboxRendered = !isLoading && !(filtered.length === 0 && !onAddNew);
 
   // Reset highlight when filtered list changes
   useEffect(() => {
     setHighlightedIndex(-1);
-  }, [filtered.length, debouncedQuery]);
+  }, [filtered.length, query]);
 
   // Scroll highlighted item into view
   useEffect(() => {
@@ -145,24 +203,6 @@ export function SearchableCombobox({
       }
     }
   }, [highlightedIndex]);
-
-  // Focus new item input when add-new mode is activated
-  useEffect(() => {
-    if (isAddingNew && newInputRef.current) {
-      setTimeout(() => newInputRef.current?.focus(), 50);
-    }
-  }, [isAddingNew]);
-
-  // Handle submitting a new custom item
-  const handleAddNewSubmit = useCallback(() => {
-    const trimmed = newItemInput.trim();
-    if (!trimmed || !onAddNew) return;
-
-    onAddNew(trimmed);
-    setNewItemInput('');
-    setIsAddingNew(false);
-    setOpen(false);
-  }, [newItemInput, onAddNew]);
 
   // ========================================================================
   // EVENT HANDLERS
@@ -320,6 +360,11 @@ export function SearchableCombobox({
             aria-expanded={open}
             aria-haspopup="listbox"
             aria-autocomplete="list"
+            // 🔴 ΤΑ ΔΥΟ ΠΟΥ ΕΛΕΙΠΑΝ (ADR-841 §7 Α19.4β) — δες `optionDomId`.
+            aria-controls={open && listboxRendered ? listboxId : undefined}
+            aria-activedescendant={
+              open && highlightedIndex >= 0 ? optionDomId(listboxId, highlightedIndex) : undefined
+            }
             aria-invalid={!!error}
             autoComplete="off"
             className={dropdown.combobox.inputPaddingRight}
@@ -375,7 +420,7 @@ export function SearchableCombobox({
                 {emptyMessage}
               </p>
             ) : (
-              <ul ref={listRef} role="listbox" className={`${dropdown.combobox.listPadding} ${dropdown.content.maxHeightCombobox} overflow-y-auto`}>
+              <ul ref={listRef} id={listboxId} role="listbox" className={`${dropdown.combobox.listPadding} ${dropdown.content.maxHeightCombobox} overflow-y-auto`}>
                 {filtered.length === 0 && (
                   <li className={`px-3 py-2 ${dropdown.item.fontSize} text-muted-foreground text-center`}>
                     {emptyMessage}
@@ -384,6 +429,7 @@ export function SearchableCombobox({
                 {filtered.map((option, index) => (
                   <li
                     key={option.value}
+                    id={optionDomId(listboxId, index)}
                     role="option"
                     aria-selected={highlightedIndex === index}
                     aria-disabled={option.disabled || undefined}
@@ -420,61 +466,14 @@ export function SearchableCombobox({
               </ul>
             )}
 
-            {/* Add New section — shown when onAddNew prop is provided */}
+            {/* «Δεν υπάρχει — φτιάξε το»: ξεχωριστή ευθύνη, ξεχωριστό αρχείο (ADR-841 §7 Α19.4). */}
             {onAddNew && (
-              <div className={dropdown.combobox.addNewSection}>
-                {isAddingNew ? (
-                  <div className={`flex items-center ${dropdown.combobox.addNewRow}`}>
-                    <Input
-                      ref={newInputRef}
-                      type="text"
-                      value={newItemInput}
-                      onChange={e => setNewItemInput(e.target.value)}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleAddNewSubmit();
-                        }
-                        if (e.key === 'Escape') {
-                          setIsAddingNew(false);
-                          setNewItemInput('');
-                        }
-                      }}
-                      onMouseDown={e => e.stopPropagation()}
-                      placeholder={placeholder}
-                      className={dropdown.combobox.addNewInput}
-                    />
-                    <button
-                      type="button"
-                      onMouseDown={e => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleAddNewSubmit();
-                      }}
-                      disabled={!newItemInput.trim()}
-                      className={`${dropdown.combobox.addNewButton} rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50`}
-                    >
-                      OK
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onMouseDown={e => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setIsAddingNew(true);
-                    }}
-                    className={cn(
-                      `flex w-full items-center ${dropdown.item.gap} rounded-sm ${dropdown.item.combobox} ${dropdown.item.fontSize} cursor-pointer`,
-                      'hover:bg-accent hover:text-accent-foreground text-primary'
-                    )}
-                  >
-                    {addNewButtonLabel}
-                  </button>
-                )}
-              </div>
+              <SearchableComboboxAddNew
+                onAddNew={onAddNew}
+                onSubmitted={() => setOpen(false)}
+                placeholder={placeholder}
+                buttonLabel={addNewButtonLabel}
+              />
             )}
           </>
         )}

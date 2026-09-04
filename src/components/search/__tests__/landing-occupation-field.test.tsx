@@ -15,11 +15,37 @@
  *
  * Το ίδιο σχήμα με το Α17.6 / Α6.6: *«το λογικό μισό πράσινο, το ορατό μισό σπασμένο»*.
  *
- * ⚠️ **ΤΟ `@/components/ui/select` ΕΙΝΑΙ ΨΕΥΤΙΚΟ ΕΔΩ, ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ.** Το Radix Select
- * ανοίγει με `pointerdown` πάνω σε portal με `ResizeObserver` — σε jsdom το «διάλεξε την
- * τρίτη επιλογή» γίνεται **δοκιμή του Radix**, όχι της δικής μας καλωδίωσης, και σπάει με
- * κάθε αναβάθμιση. Εδώ ελέγχεται **τι ρωτάμε και πού στέλνουμε**. *(Το «ποτέ `value=""`»
- * το φυλάει η **CHECK 3.48**, με δικό της όργανο — δεν χρειάζεται δεύτερο εδώ.)*
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴🔴 ΤΟ ΧΕΙΡΙΣΤΗΡΙΟ ΔΕΝ ΕΙΝΑΙ ΠΙΑ ΨΕΥΤΙΚΟ *(2026-09-04, ADR-841 §7 Α19)*
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Μέχρι σήμερα αυτή η σουίτα **αντικαθιστούσε** το `@/components/ui/select` με native
+ * `<select data-testid="occupation-select">`, με επιχείρημα *«το Radix ανοίγει με
+ * `pointerdown` πάνω σε portal — σε jsdom θα δοκίμαζα το Radix, όχι εμάς»*. Το επιχείρημα
+ * ήταν **σωστό για το Radix**, αλλά η τιμή του φάνηκε όταν η **Α19** άλλαξε το χειριστήριο
+ * σε `SearchableCombobox`:
+ *
+ * 🔴 **Η σουίτα κοκκίνισε για λόγο ΜΗΧΑΝΙΚΟ, όχι σημασιολογικό**: όχι επειδή χάλασε η
+ * καλωδίωση, αλλά επειδή το `testid` **του ίδιου του ψεύτικου** εξαφανίστηκε.
+ *
+ * ⚠️ **Ακριβώς τι έκρυβε — και τι ΟΧΙ, μετρημένο**: η καλωδίωση `onValueChange` του
+ * `OccupationSelect` **δοκιμαζόταν** κανονικά *(το ψεύτικο αντικαθιστούσε μόνο το
+ * `ui/select`)*, και μια μετάλλαξη σε αυτήν κοκκινίζει και στις δύο γραφές. Αυτό που
+ * **χανόταν** ήταν η ίδια η **πράξη της επιλογής**: το «διάλεξε» ήταν `fireEvent.change`
+ * σε native `<select>`, δηλαδή παρέκαμπτε **άνοιγμα, φιλτράρισμα και επιλογή γραμμής**.
+ *
+ * 🔴 Και ένας έλεγχος ήταν **κενός**: το `queryByTestId('occupation-select')` στις τρεις
+ * λειτουργίες ακινήτων επιβεβαίωνε την απουσία στοιχείου **που δεν υπήρξε ποτέ στην
+ * παραγωγή** — θα ήταν πράσινο ακόμη κι αν το πεδίο ήταν **παρόν**. Τώρα ρωτά τον
+ * `role="combobox"`, δηλαδή το χειριστήριο που πραγματικά αποδίδεται.
+ *
+ * ✅ **Τώρα ο επιλογέας είναι ο ΠΡΑΓΜΑΤΙΚΟΣ**, και η επιλογή γίνεται όπως την κάνει ο
+ * άνθρωπος: εστίαση → κλικ στη γραμμή. Το `SearchableCombobox` είναι Radix **Popover**
+ * *(όχι Select)* και αποδίδει `role="option"` σε **κανονικό DOM**, οπότε η αρχική ένσταση
+ * **έπαψε να ισχύει** — δεν παρακάμπτεται, **εξέπνευσε**.
+ *
+ * *(Το «ποτέ `value=""`» το φυλάει η **CHECK 3.48** με δικό της όργανο· το φιλτράρισμα,
+ * η ελληνική ταύτιση και το `aria-activedescendant` ζουν στο `occupation-typeahead`.)*
  */
 
 import React from 'react';
@@ -53,32 +79,6 @@ jest.mock('@/lib/telemetry', () => ({
   createModuleLogger: () => ({ warn: jest.fn(), error: jest.fn(), info: jest.fn() }),
 }));
 
-/** Native `<select>` στη θέση του Radix — δες το docblock. */
-jest.mock('@/components/ui/select', () => ({
-  Select: ({
-    value,
-    onValueChange,
-    children,
-  }: {
-    value: string;
-    onValueChange: (v: string) => void;
-    children: React.ReactNode;
-  }) => (
-    <select
-      data-testid="occupation-select"
-      value={value}
-      onChange={(e) => onValueChange(e.target.value)}
-    >
-      {children}
-    </select>
-  ),
-  SelectContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  SelectTrigger: () => null,
-  SelectValue: () => null,
-  SelectItem: ({ value, children }: { value: string; children: React.ReactNode }) => (
-    <option value={value}>{children}</option>
-  ),
-}));
 
 // =============================================================================
 // Ο ΠΛΗΘΥΣΜΟΣ
@@ -127,7 +127,16 @@ function typePlace(text: string): void {
 }
 
 function chooseOccupation(escoUri: string): void {
-  fireEvent.change(screen.getByTestId('occupation-select'), { target: { value: escoUri } });
+  // 🔑 **Όπως το κάνει ο άνθρωπος**: εστίαση ανοίγει τον κατάλογο, κλικ διαλέγει γραμμή.
+  //    Ο επιλογέας είναι ο **ΠΡΑΓΜΑΤΙΚΟΣ** (ADR-841 §7 Α19) — η ετικέτα βρίσκεται από το
+  //    `escoUri` μέσω του **πληθυσμού**, ποτέ γραμμένη δεύτερη φορά εδώ.
+  const option = OPTIONS.find((candidate) => candidate.escoUri === escoUri);
+  if (!option) throw new Error(`Ο πληθυσμός δεν περιέχει ${escoUri}`);
+
+  fireEvent.focus(screen.getByRole('combobox'));
+  // ⚠️ `mouseDown` και όχι `click`: το `SearchableCombobox` διαλέγει στο **mousedown**,
+  //    ώστε να προλάβει το `blur` του πεδίου (δες `handleBlur`, καθυστέρηση 200ms).
+  fireEvent.mouseDown(screen.getByRole('option', { name: option.label.el }));
 }
 
 /** Ο τελευταίος προορισμός, ως ωμή συμβολοσειρά. */
@@ -181,7 +190,10 @@ describe('ADR-841 §7 Α4.5 — ο αριθμός των πεδίων ανήκε
         render(<PlaceSearchBox mode={mode} occupations={OPTIONS} locale="el" />);
 
         expect(screen.queryByText(OCCUPATION_LABEL_KEY)).not.toBeInTheDocument();
-        expect(screen.queryByTestId('occupation-select')).not.toBeInTheDocument();
+        // ⚠️ **Το χειριστήριο, όχι ένα `testid` δικής μας επινόησης**: η προηγούμενη γραφή
+        //    ζητούσε `queryByTestId('occupation-select')` — στοιχείο που υπήρχε **μόνο
+        //    μέσα στο ψεύτικο**, άρα «απουσίαζε» και όταν το πεδίο ήταν παρόν.
+        expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
         expect(screen.getByText(AREA_LABEL_KEY)).toBeInTheDocument();
       },
     );

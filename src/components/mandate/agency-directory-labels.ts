@@ -39,6 +39,11 @@ export const DIRECTORY_KEYS = {
   clearFilters: `${D}.clearFilters`,
   occupationFilterLabel: `${D}.occupationFilterLabel`,
   occupationAll: `${D}.occupationAll`,
+  /** Α19 — το πεδίο **πληκτρολογείται**· δες `OccupationSelect`. */
+  occupationSearchPlaceholder: `${D}.occupationSearchPlaceholder`,
+  /** ⚠️ **«Δεν ταιριάζει με ό,τι έγραψες»**, ΟΧΙ «δεν υπάρχει»: το δεύτερο το λέει το
+   *  `occupationScopeHint`, και είναι **άλλη αλήθεια** *(Α4.4-Γ)*. */
+  occupationSearchEmpty: `${D}.occupationSearchEmpty`,
   occupationScopeHint: `${D}.occupationScopeHint`,
   placeFilterLabel: `${D}.placeFilterLabel`,
   placeAll: `${D}.placeAll`,

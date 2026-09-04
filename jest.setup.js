@@ -149,6 +149,18 @@ class Path2DMock {
 }
 global.Path2D = Path2DMock;
 
+// Mock για scrollIntoView — **ίδια κατηγορία με τον ResizeObserver παρακάτω**: API που
+// υπάρχει σε κάθε browser και **λείπει από το jsdom**, όχι συμπεριφορά του προϊόντος.
+//
+// ⚠️ **Μπαίνει ΕΔΩ και όχι σε κάθε αρχείο test** (N.0.2): το ζητά **κάθε** σουίτα που
+// πλοηγείται με βέλη σε λίστα — το `SearchableCombobox` το καλεί για να **φέρει στο
+// οπτικό πεδίο** την επισημασμένη γραμμή. Γραμμένο ανά αρχείο, θα ήταν το ίδιο τρίγραμμο
+// αντιγραμμένο σε καθένα, και **κάθε νέο test θα κοκκίνιζε μια φορά πριν το μάθει**
+// (μετρήθηκε δύο φορές την ίδια μέρα, 2026-09-04 — ADR-841 §7 Α19).
+if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = jest.fn();
+}
+
 // Mock για ResizeObserver
 global.ResizeObserver = jest.fn().mockImplementation(() => ({
   observe: jest.fn(),

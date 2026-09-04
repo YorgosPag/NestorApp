@@ -84,7 +84,18 @@ import type { PublicShowcase } from '@/types/agency-profile';
  */
 const SHOWCASE_IMAGE_SIZES = '(min-width: 40rem) 20rem, 100vw';
 
-interface LandingShowcaseProps {
+/**
+ * ⚠️ **ΚΛΗΡΟΝΟΜΕΙ ΤΑ ΧΑΡΑΚΤΗΡΙΣΤΙΚΑ ΜΙΑΣ `section`, ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ** *(Α4.3.12)*.
+ *
+ * Όταν υπάρχει διακόπτης, η βιτρίνα **ΕΙΝΑΙ** το `tabpanel` του — όχι κάτι μέσα σε αυτό:
+ * η σελίδα την τυλίγει σε `TabsContent asChild`, και το Radix περνά εδώ `role` · `id` ·
+ * `aria-labelledby` · `data-state` · `tabIndex`.
+ *
+ * 🔑 **Ένα** στοιχείο, άρα **μία** δήλωση κατοχής του κενού. Ένα δοχείο γύρω από τη
+ * βιτρίνα θα χρειαζόταν **δεύτερο** `data-shell-span="full"` — και το εσωτερικό θα ήταν
+ * σιωπηλά **ανενεργό**, γιατί ο επιλογέας του κελύφους είναι `>`.
+ */
+interface LandingShowcaseProps extends React.ComponentPropsWithRef<'section'> {
   /**
    * **Η ενεργή λειτουργία — ή `null` όταν ΔΕΝ ΥΠΑΡΧΕΙ ΔΙΑΚΟΠΤΗΣ** στην οθόνη.
    *
@@ -116,6 +127,12 @@ export function LandingShowcase({
   agencies,
   loading,
   error,
+  // ⚠️ **Ρητά ξεχωριστό, ΟΧΙ μέσα στο `panelProps`**: όταν η βιτρίνα είναι `tabpanel`, το
+  //    Radix δίνει ετικέτα **το ίδιο το κουμπί** του διακόπτη — που είναι ό,τι ζητά το
+  //    APG, και σωστότερο από την `h2` («Δες τι υπάρχει ήδη» δεν λέει *ποιας*
+  //    λειτουργίας). Χωρίς διακόπτη δεν έρχεται τίποτα, και η `h2` παραμένει η ετικέτα.
+  'aria-labelledby': labelledBy,
+  ...panelProps
 }: LandingShowcaseProps) {
   const { t } = useTranslation(['search-results']);
   const headingId = useId();
@@ -135,7 +152,9 @@ export function LandingShowcase({
     // `data-shell-span="full"` — ο **δηλωμένος** τρόπος να σπάσει έξω από το μέτρο
     // ανάγνωσης (`shell-surface.css` §4). ⛔ ΠΟΤΕ `max-w-*` ή `-mx-*` εδώ: το CHECK
     // 3.63 Κ5 το μπλοκάρει ως **δεύτερο άξονα πλάτους**.
-    <section data-shell-span="full" aria-labelledby={headingId}>
+    // ⚠️ **Το `data-shell-span` γράφεται ΜΕΤΑ το άπλωμα, επίτηδες**: η αξίωση της
+    //    βιτρίνας στο πλήρες πλάτος δεν είναι διαπραγματεύσιμη από τον καλούντα.
+    <section {...panelProps} aria-labelledby={labelledBy ?? headingId} data-shell-span="full">
       <h2 id={headingId} className="mb-3 text-lg font-semibold text-foreground">
         {/*
           ⚠️ **Ο ΤΙΤΛΟΣ ΑΚΟΛΟΥΘΕΙ ΤΟ ΠΕΡΙΕΧΟΜΕΝΟ, ΓΙΑΤΙ ΑΛΛΙΩΣ ΛΕΕΙ ΨΕΜΑΤΑ.** Το «Δες

@@ -10,7 +10,8 @@ import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 import { LandingModeSwitch } from '../LandingModeSwitch';
-import { LANDING_MODES } from '@/lib/landing/landing-modes';
+import { Tabs } from '@/components/ui/tabs';
+import { LANDING_MODES, type LandingMode } from '@/lib/landing/landing-modes';
 
 import el from '@/i18n/locales/el/search-results.json';
 import en from '@/i18n/locales/en/search-results.json';
@@ -21,27 +22,62 @@ jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
+/**
+ * ⚠️ **Ο ΔΙΑΚΟΠΤΗΣ ΔΕΝ ΚΑΤΕΧΕΙ ΠΙΑ ΤΗ ΡΙΖΑ ΤΩΝ `Tabs`** *(Α4.3.12)* — ανέβηκε στο `main`
+ * της σελίδας, ώστε το πάνελ να είναι **άμεσο τέκνο** του μέτρου *(Α4.3.6)*. Άρα εδώ η
+ * ρίζα δίνεται από τη δοκιμή: είναι το **περιβάλλον** του component, όχι μέρος του.
+ *
+ * 🔑 Και γι' αυτό το *«σιωπά με ένα κουμπί»* **δεν** ελέγχεται πια με «κενό `container`»:
+ * ο `container` κρατά τη ρίζα. Η ερώτηση είναι *«υπάρχει `tablist`;»*, που είναι και η
+ * σωστή ερώτηση — το ελάττωμα θα ήταν **ορατό χειριστήριο**, όχι «κάποιο DOM».
+ */
+function renderSwitch(modes: readonly LandingMode[], value: LandingMode) {
+  return render(
+    <Tabs value={value}>
+      <LandingModeSwitch modes={modes} value={value} />
+    </Tabs>,
+  );
+}
+
 describe('Δ1 — ΤΙ ΑΠΟΔΙΔΕΤΑΙ', () => {
   it('🔴 αποδίδει ΜΟΝΟ τις λειτουργίες που του δόθηκαν', () => {
-    render(<LandingModeSwitch modes={['buy', 'rent', 'pros']} value="buy" onChange={jest.fn()} />);
+    renderSwitch(['buy', 'rent', 'pros'], 'buy');
 
     expect(screen.getAllByRole('tab')).toHaveLength(3);
     expect(screen.queryByText('search-results:landing.modes.stay')).not.toBeInTheDocument();
   });
 
   it('🔴 ΣΙΩΠΑ με μία μόνο λειτουργία — διακόπτης χωρίς επιλογή είναι ψέμα', () => {
-    // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: βγάλε το `modes.length < 2` ⇒ κοκκινίζει.
+    // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: βγάλε το `landingSwitchIsVisible` ⇒ κοκκινίζει.
     //    Ένα μοναδικό «κουμπί» καλεί τον επισκέπτη να το πατήσει και δεν κάνει τίποτα.
-    const { container } = render(
-      <LandingModeSwitch modes={['buy']} value="buy" onChange={jest.fn()} />,
-    );
-    expect(container).toBeEmptyDOMElement();
+    const { container } = renderSwitch(['buy'], 'buy');
+
+    expect(container.querySelector('[role="tablist"]')).toBeNull();
+    expect(screen.queryAllByRole('tab')).toHaveLength(0);
   });
 
   it('🔴 η ενεργή λειτουργία δηλώνεται στην ΥΠΟΒΟΗΘΟΥΜΕΝΗ τεχνολογία', () => {
-    render(<LandingModeSwitch modes={['buy', 'rent']} value="rent" onChange={jest.fn()} />);
+    renderSwitch(['buy', 'rent'], 'rent');
     expect(screen.getByText('search-results:landing.modes.rent').closest('[role="tab"]'))
       .toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('🔴 ΜΟΝΟ το ενεργό κουμπί δηλώνει `aria-controls` — τα άλλα δεν έχουν πού να δείξουν', () => {
+    // 🔴 **ΤΟ ΕΛΑΤΤΩΜΑ ΤΗΣ Α4.3.10 ΣΤΗ ΡΙΖΑ ΤΟΥ** *(Α4.3.12)*: το Radix γράφει
+    //    `aria-controls` σε **κάθε** trigger, ενώ αποδίδει **μόνο** το πάνελ του
+    //    επιλεγμένου. Ο κανόνας του έργου είναι ήδη γραμμένος αλλού — δείκτης σε
+    //    ανύπαρκτο στοιχείο είναι σφάλμα ARIA, **χειρότερο από την απουσία του**
+    //    *(`searchable-combobox.tsx:364` · `TableFormatCellsTabs.tsx:98`)*, και είναι
+    //    ακριβώς η γραφή του React Aria *(`useTab`)*.
+    // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: βγάλε το `SUPPRESS_ARIA_CONTROLS` ⇒ κοκκινίζει με 3 στα 3.
+    //    *(Ότι ο δείκτης ΛΥΝΕΤΑΙ το ρωτά το `landing-tabpanel.test.tsx` — εδώ δεν
+    //    υπάρχει πάνελ, και μια δοκιμή που το προσποιούνταν θα φύλαγε το ψεύτικο.)*
+    renderSwitch(['buy', 'rent', 'pros'], 'rent');
+
+    const declared = screen.getAllByRole('tab').filter((tab) => tab.hasAttribute('aria-controls'));
+
+    expect(declared).toHaveLength(1);
+    expect(declared[0]).toHaveAttribute('aria-selected', 'true');
   });
 });
 

@@ -135,6 +135,46 @@ describe('Β4 — ΤΟ ΠΛΕΓΜΑ ΚΑΙ Η ΥΠΟΣΧΕΣΗ ΤΟΥ `sizes`', 
     expect(Number(declaredSize)).toBeLessThanOrEqual(Number(declaredMin) + 6);
   });
 
+  it('🔴 ΦΟΡΑΕΙ την ταυτότητα του πάνελ που της δίνουν — και ΔΕΝ χάνει το πλάτος', () => {
+    // 🔴 **Η ΜΗΧΑΝΙΚΗ ΠΡΟΫΠΟΘΕΣΗ ΤΗΣ Α4.3.12**: με διακόπτη, η σελίδα τυλίγει τη
+    //    βιτρίνα σε `TabsContent asChild` ⇒ το Radix περνά εδώ `role` · `id` ·
+    //    `aria-labelledby`. Αν αυτά δεν φτάσουν στην ίδια την ενότητα, το
+    //    `aria-controls` του κουμπιού **ξανακρέμεται** — και το ελάττωμα επιστρέφει
+    //    χωρίς να το δει καμία δοκιμή αυτού του αρχείου.
+    // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: βγάλε το άπλωμα `{...panelProps}` ⇒ κοκκινίζει.
+    // ⚠️ **Και η ετικέτα**: όταν έρθει `aria-labelledby` από το πάνελ, νικά την `h2` —
+    //    το πάνελ ονομάζεται από **το κουμπί** του, όπως ζητά το APG.
+    const { container } = render(
+      <LandingShowcase
+        listings={many(3)}
+        {...READY}
+        role="tabpanel"
+        id="panel-buy"
+        aria-labelledby="tab-buy"
+      />,
+    );
+
+    const section = container.querySelector('section') as HTMLElement;
+    expect(section).toHaveAttribute('role', 'tabpanel');
+    expect(section).toHaveAttribute('id', 'panel-buy');
+    expect(section).toHaveAttribute('aria-labelledby', 'tab-buy');
+    expect(section).toHaveAttribute('data-shell-span', 'full');
+  });
+
+  it('🔴 ΧΩΡΙΣ πάνελ, την ετικέτα τη δίνει η δική της επικεφαλίδα', () => {
+    // ⚠️ Το `?? headingId` δεν είναι εφεδρεία «για καλό και για κακό»: χωρίς διακόπτη
+    //    **δεν υπάρχει** κουμπί να ονομάσει την ενότητα, και μια ανώνυμη `section` δεν
+    //    εκτίθεται καν ως ορόσημο.
+    const { container } = render(<LandingShowcase listings={many(3)} {...READY} />);
+
+    const section = container.querySelector('section') as HTMLElement;
+    const labelledBy = section.getAttribute('aria-labelledby');
+    expect(labelledBy).toBeTruthy();
+    expect(document.getElementById(labelledBy as string)).toBe(
+      screen.getByRole('heading', { level: 2 }),
+    );
+  });
+
   it('🔴 σπάει έξω από το μέτρο με ΟΝΟΜΑ, ποτέ με αρνητικό περιθώριο', () => {
     // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: σβήσε το `data-shell-span="full"` ⇒ κοκκινίζει.
     //    Χωρίς αυτό η βιτρίνα στριμώχνεται στο μέτρο ανάγνωσης — και ο επόμενος θα το
