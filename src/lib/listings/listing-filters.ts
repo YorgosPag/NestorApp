@@ -1,7 +1,23 @@
 /**
  * @fileoverview Τα φίλτρα της οθόνης 2 — **μία** κατάσταση, στη διεύθυνση.
- * @related ADR-777 §7 (Α3 · Α20) · SPEC-777-RESEARCH §25.8
+ * @related ADR-777 §7 (Α3 · Α20) · SPEC-777-RESEARCH §25.8 · lib/criteria/*
  * @module lib/listings/listing-filters
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΤΙ ΑΛΛΑΞΕ: ΟΙ ΑΞΟΝΕΣ ΔΕΝ ΖΟΥΝ ΠΙΑ ΕΔΩ — ΖΟΥΝ ΣΕ ΠΙΝΑΚΑ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Ως τις 2026-09-04 αυτό το αρχείο δήλωνε **επτά** άξονες ως επίπεδα πεδία. Το
+ * `PublicListing` δήλωνε **27** δημόσια στοιχεία. Δηλαδή ο κατάλογος έλεγε πράγματα
+ * που **κανείς δεν μπορούσε να ζητήσει** — και η ίδια η ζήτηση (`PropertyDemand`)
+ * ήξερε ήδη **περισσότερα** από την αναζήτηση *(όροφο, πολύγωνο, γειτνίαση)*, δηλαδή
+ * ένας άνθρωπος μπορούσε να **αποθηκεύσει** αίτημα που η οθόνη **δεν εκφράζει**.
+ *
+ * Οι άξονες ζουν πλέον στο `lib/criteria/`, σε **εξαντλητικό πίνακα πάνω στα ίδια
+ * κλειδιά** που παράγει το `LISTING_DISCLOSURE` ⇒ νέο δημόσιο στοιχείο **δεν
+ * μεταγλωττίζεται** μέχρι κάποιος να πει αν και πώς ρωτιέται. Εδώ μένουν **μόνο** οι
+ * τρεις άξονες που δεν είναι ομοιόμορφοι *(δες `AXES_OUTSIDE_THE_CRITERIA_MAP`)* και
+ * η σύνθεση.
  *
  * ────────────────────────────────────────────────────────────────────────────
  * 🔴 ΓΙΑΤΙ ΔΕΝ ΕΠΑΝΑΧΡΗΣΙΜΟΠΟΙΕΙΤΑΙ ΤΟ `FilterState` — και δεν είναι διπλότυπο
@@ -13,10 +29,10 @@
  *
  * Μια **νέα** οθόνη που ρωτούσε εκείνον τον άξονα θα γεννιόταν με το ελάττωμα που η
  * Α20 λύνει: θα έκρυβε ακριβώς τις αγγελίες για τις οποίες χτίστηκε ο νέος άξονας.
- * Άρα εδώ φιλτράρουμε σε **`offerKinds`** — «*ο άξονας όπου δεν χάνεται τίποτα*».
+ * Άρα εδώ φιλτράρουμε σε **`offerKind`** — «*ο άξονας όπου δεν χάνεται τίποτα*».
  *
- * Δεν είναι δεύτερη μηχανή φίλτρων: είναι η **ίδια ερώτηση σε σωστό λεξιλόγιο**. Η
- * παλιά ζει μέχρι να μεταναστεύσει ο καταναλωτής της (κανόνας 19).
+ * ⛔ **Ούτε το `components/core/AdvancedFilters`** — η απόρριψη, με το επιχείρημά της,
+ * γράφεται ολόκληρη στο `lib/criteria/criterion-vocabulary.ts`.
  *
  * ────────────────────────────────────────────────────────────────────────────
  * ΓΙΑΤΙ ΣΤΗ ΔΙΕΥΘΥΝΣΗ, ΚΑΙ ΟΧΙ ΣΕ `useState`
@@ -29,15 +45,29 @@
  * αποτελέσματα. Η διεύθυνση λύνει και τα τρία ταυτόχρονα.
  */
 
-import type { OfferKind } from '@/types/property-offers';
-import { OFFER_KINDS } from '@/types/property-offers';
 import type { PublicListing } from '@/types/public-listing';
 import type { GeoPoint } from '@/types/geo/coordinates';
-import { isLandProperty } from '@/constants/property-classification';
-import { getEffectivePrice } from '@/lib/properties/price-resolver';
 import { distanceMeters } from '@/lib/geo/geo-distance';
 import { intervalShape } from '@/lib/date-local';
 import type { StayQuery } from '@/lib/stay/stay-availability-vocabulary';
+
+import {
+  EMPTY_LISTING_CRITERIA,
+  type ListingCriteria,
+} from '@/lib/criteria/listing-criteria';
+import {
+  parseListingCriteria,
+  readFiniteNumber,
+  writeListingCriteria,
+} from '@/lib/criteria/listing-criteria-url';
+import {
+  computeCriteriaLedger,
+  listingSurvivesCriteria,
+  matchListingCriteria,
+  satisfiesRange,
+  type ListingCriteriaLedger,
+  type ListingCriteriaMatch,
+} from '@/lib/criteria/listing-criteria-judge';
 
 /**
  * **Ο γεωγραφικός άξονας** — η απάντηση της οθόνης 1 στο *«πού ψάχνεις;»* (Α3).
@@ -78,20 +108,20 @@ export interface ListingStayWindow {
   readonly checkOut: string;
 }
 
-/** Κλειστό σχήμα — κάθε φίλτρο της οθόνης 2, και κανένα άλλο. */
+/**
+ * **Κλειστό σχήμα — κάθε φίλτρο της οθόνης 2, και κανένα άλλο.**
+ *
+ * 🔑 **Ένας χάρτης και τρεις ειδικοί.** Ο χάρτης κρατά κάθε ομοιόμορφο άξονα *(εύρος
+ * · λεξιλόγιο · ναι-όχι)* με τον τύπο του παραγόμενο από τον πίνακα σχημάτων· οι τρεις
+ * ειδικοί μένουν επίπεδοι επειδή **δεν είναι τιμές**: γεωμετρία, ημι-ανοιχτό διάστημα
+ * ημερών, και χωρητικότητα που κρίνεται αλλού. Ο λόγος καθενός γράφεται στο
+ * `AXES_OUTSIDE_THE_CRITERIA_MAP` — **ονομασμένη εξαίρεση, ποτέ σιωπηλή**.
+ */
 export interface ListingFilters {
-  /** Κενό = «όλες οι διαθέσεις», **όχι** «καμία». */
-  readonly offerKinds: readonly OfferKind[];
-  readonly types: readonly string[];
-  readonly priceMin: number | null;
-  readonly priceMax: number | null;
-  readonly areaMin: number | null;
-  readonly areaMax: number | null;
-  readonly bedroomsMin: number | null;
+  /** Κάθε ομοιόμορφος άξονας. **Άξονας που λείπει = δεν ρωτήθηκε.** */
+  readonly criteria: ListingCriteria;
   /** `null` = «όπου να 'ναι». Δες {@link ListingGeoFilter}. */
   readonly near: ListingGeoFilter | null;
-
-  // ── Ο ΧΡΟΝΟΣ (ADR-835 Φ3) ─────────────────────────────────────────────────
   /** `null` = «οποτεδήποτε» — καμία χρονική ερώτηση. Δες {@link ListingStayWindow}. */
   readonly stayWindow: ListingStayWindow | null;
   /**
@@ -108,13 +138,7 @@ export interface ListingFilters {
 export const DEFAULT_SEARCH_RADIUS_KM = 10;
 
 export const EMPTY_LISTING_FILTERS: ListingFilters = {
-  offerKinds: [],
-  types: [],
-  priceMin: null,
-  priceMax: null,
-  areaMin: null,
-  areaMax: null,
-  bedroomsMin: null,
+  criteria: EMPTY_LISTING_CRITERIA,
   near: null,
   stayWindow: null,
   guests: null,
@@ -124,14 +148,14 @@ export const EMPTY_LISTING_FILTERS: ListingFilters = {
 // ΔΙΕΥΘΥΝΣΗ ⇄ ΚΑΤΑΣΤΑΣΗ
 // ============================================================================
 
+/**
+ * Οι παράμετροι των **τριών ειδικών** αξόνων.
+ *
+ * ⚠️ Των υπολοίπων ζουν στο `CRITERION_PARAM` και **δεν αντιγράφονται εδώ**. Το ότι
+ * κανένα από τα δύο σύνολα δεν συγκρούεται με το άλλο είναι **άγκυρα**, όχι σχόλιο:
+ * δες `RESERVED_SEARCH_PARAMS`.
+ */
 const PARAM = {
-  offer: 'offer',
-  type: 'type',
-  priceMin: 'pmin',
-  priceMax: 'pmax',
-  areaMin: 'amin',
-  areaMax: 'amax',
-  bedroomsMin: 'beds',
   lat: 'lat',
   lng: 'lng',
   radiusKm: 'r',
@@ -165,33 +189,18 @@ const PARAM = {
  * *(listings · demand · search · agency)*, και το `DemandPlaceResolver.tsx:20`
  * γράφει ήδη ότι χρησιμοποιεί *«το **ίδιο** σχήμα»*. Ώριμο για μετακόμιση σε
  * `lib/geo/`, με το πρότυπο *«η μηχανή μετακομίζει όταν αποκτά δεύτερο
- * καταναλωτή»* (ADR-841 Α6). **Δεν γίνεται εδώ**: θα άγγιζε έξι αρχεία εκτός του
- * εύρους της Φ6-Β, σε δέντρο που δουλεύει άλλος πράκτορας αυτή τη στιγμή.
+ * καταναλωτή»* (ADR-841 Α6).
  */
 export function readGeoFilter(params: URLSearchParams): ListingGeoFilter | null {
-  const lat = readNumber(params, PARAM.lat);
-  const lng = readNumber(params, PARAM.lng);
+  const lat = readFiniteNumber(params, PARAM.lat);
+  const lng = readFiniteNumber(params, PARAM.lng);
   if (lat === null || lng === null) return null;
   if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
 
-  const radiusKm = readNumber(params, PARAM.radiusKm) ?? DEFAULT_SEARCH_RADIUS_KM;
+  const radiusKm = readFiniteNumber(params, PARAM.radiusKm) ?? DEFAULT_SEARCH_RADIUS_KM;
   if (radiusKm <= 0) return null;
 
   return { center: { lat, lng }, radiusKm };
-}
-
-function readNumber(params: URLSearchParams, key: string): number | null {
-  const raw = params.get(key);
-  if (raw === null || raw.trim() === '') return null;
-  const value = Number(raw);
-  // ⚠️ `Number('')` είναι 0 και `Number('abc')` είναι NaN — και τα δύο θα γίνονταν
-  // σιωπηλά «φίλτρο 0», που φιλτράρει τα πάντα. Η άρνηση είναι ρητή.
-  return Number.isFinite(value) ? value : null;
-}
-
-function readOfferKinds(params: URLSearchParams): readonly OfferKind[] {
-  const known = new Set<string>(OFFER_KINDS);
-  return params.getAll(PARAM.offer).filter((k): k is OfferKind => known.has(k));
 }
 
 /**
@@ -224,8 +233,7 @@ function readDay(params: URLSearchParams, key: string): string | null {
  * που ο κόσμος γράφει ημερομηνίες με το χέρι. Ένα **κενό** (`in === out`) θα ήταν
  * αίτημα **μηδέν νυχτών**· ένα **ανάποδο** (`out < in`) δεν περιγράφει διάστημα. Και
  * τα δύο θα ταξίδευαν σε κάθε κοινοποιημένο σύνδεσμο, και ο κριτής θα τα έκρινε
- * **ασυνεπώς** (§17: *«η ίδια μηδενική διαμονή συγκρούεται ή όχι ανάλογα με το πού
- * πέφτει»*). Απορρίπτονται **εδώ**, στην πόρτα.
+ * **ασυνεπώς** (§17). Απορρίπτονται **εδώ**, στην πόρτα.
  */
 function readStayWindow(params: URLSearchParams): ListingStayWindow | null {
   const checkIn = readDay(params, PARAM.checkIn);
@@ -239,12 +247,12 @@ function readStayWindow(params: URLSearchParams): ListingStayWindow | null {
  * Διεύθυνση → πλήθος ατόμων, ή `null`.
  *
  * ⚠️ **Θετικός ακέραιος, ή τίποτα.** Το `0` δεν είναι «χαλαρό φίλτρο» — είναι αίτημα
- * για **κανέναν επισκέπτη**, και το `2,5` δεν είναι άνθρωποι. Ο `readNumber` δέχεται
- * και τα δύο (είναι πεπερασμένα), οπότε ο περιορισμός ανήκει **εδώ**: το ίδιο μάθημα
- * με το *«ακτίνα ≤ 0 ⇒ αγνοείται ολόκληρο το φίλτρο»*.
+ * για **κανέναν επισκέπτη**, και το `2,5` δεν είναι άνθρωποι. Ο `readFiniteNumber`
+ * δέχεται και τα δύο (είναι πεπερασμένα), οπότε ο περιορισμός ανήκει **εδώ**: το ίδιο
+ * μάθημα με το *«ακτίνα ≤ 0 ⇒ αγνοείται ολόκληρο το φίλτρο»*.
  */
 function readGuests(params: URLSearchParams): number | null {
-  const value = readNumber(params, PARAM.guests);
+  const value = readFiniteNumber(params, PARAM.guests);
   if (value === null || !Number.isInteger(value) || value < 1) return null;
   return value;
 }
@@ -252,13 +260,7 @@ function readGuests(params: URLSearchParams): number | null {
 /** Διεύθυνση → φίλτρα. **Άγνωστη τιμή αγνοείται**, ποτέ δεν σκάει η οθόνη. */
 export function parseListingFilters(params: URLSearchParams): ListingFilters {
   return {
-    offerKinds: readOfferKinds(params),
-    types: params.getAll(PARAM.type).filter((t) => t.trim() !== ''),
-    priceMin: readNumber(params, PARAM.priceMin),
-    priceMax: readNumber(params, PARAM.priceMax),
-    areaMin: readNumber(params, PARAM.areaMin),
-    areaMax: readNumber(params, PARAM.areaMax),
-    bedroomsMin: readNumber(params, PARAM.bedroomsMin),
+    criteria: parseListingCriteria(params),
     near: readGeoFilter(params),
     stayWindow: readStayWindow(params),
     guests: readGuests(params),
@@ -268,25 +270,19 @@ export function parseListingFilters(params: URLSearchParams): ListingFilters {
 /**
  * Φίλτρα → διεύθυνση.
  *
- * ⚠️ **Τα κενά φίλτρα ΔΕΝ γράφονται.** Αλλιώς κάθε σύνδεσμος θα κουβαλούσε επτά κενές
- * παραμέτρους, και δύο ταυτόσημες αναζητήσεις θα είχαν **διαφορετική** διεύθυνση —
- * που για μια μηχανή αναζήτησης σημαίνει δύο σελίδες με το ίδιο περιεχόμενο.
+ * ⚠️ **Τα κενά φίλτρα ΔΕΝ γράφονται.** Αλλιώς κάθε σύνδεσμος θα κουβαλούσε δεκάδες
+ * κενές παραμέτρους, και δύο ταυτόσημες αναζητήσεις θα είχαν **διαφορετική**
+ * διεύθυνση — που για μια μηχανή αναζήτησης σημαίνει δύο σελίδες με το ίδιο
+ * περιεχόμενο.
+ *
+ * 🔑 **Ο χάρτης γράφεται ΠΡΩΤΟΣ και οι τρεις ειδικοί μετά**, μέσα στο **ίδιο**
+ * αντικείμενο: μια συγχώνευση δύο `URLSearchParams` θα ήταν η θέση όπου κάποιος θα
+ * ξεχνούσε ότι τα κλειδιά λεξιλογίου **επαναλαμβάνονται** (`append` ⇄ `set`).
  */
 export function serializeListingFilters(filters: ListingFilters): URLSearchParams {
   const params = new URLSearchParams();
-  for (const kind of filters.offerKinds) params.append(PARAM.offer, kind);
-  for (const type of filters.types) params.append(PARAM.type, type);
-  const numbers: ReadonlyArray<readonly [string, number | null]> = [
-    [PARAM.priceMin, filters.priceMin],
-    [PARAM.priceMax, filters.priceMax],
-    [PARAM.areaMin, filters.areaMin],
-    [PARAM.areaMax, filters.areaMax],
-    [PARAM.bedroomsMin, filters.bedroomsMin],
-    [PARAM.guests, filters.guests],
-  ];
-  for (const [key, value] of numbers) {
-    if (value !== null) params.set(key, String(value));
-  }
+  writeListingCriteria(filters.criteria, params);
+
   // ⚠️ Τα τρία γεωγραφικά γράφονται **μαζί ή καθόλου**: μια διεύθυνση με `lat` χωρίς
   // `lng` δεν είναι μερικώς χρήσιμη, είναι μη αναγνώσιμη από το `readGeoFilter` — και
   // θα ταξίδευε σιωπηλά σε κάθε κοινοποιημένο σύνδεσμο.
@@ -295,13 +291,12 @@ export function serializeListingFilters(filters: ListingFilters): URLSearchParam
     params.set(PARAM.lng, String(filters.near.center.lng));
     params.set(PARAM.radiusKm, String(filters.near.radiusKm));
   }
-  // ⚠️ **Τα δύο άκρα γράφονται μαζί ή καθόλου**, ίδιος κανόνας με τα γεωγραφικά: ένα
-  // `in` χωρίς `out` δεν είναι μερικώς χρήσιμο — το `readStayWindow` το απορρίπτει,
-  // άρα θα ταξίδευε σιωπηλά ως σκουπίδι σε κάθε κοινοποιημένο σύνδεσμο.
+  // ⚠️ **Τα δύο άκρα γράφονται μαζί ή καθόλου**, ίδιος κανόνας με τα γεωγραφικά.
   if (filters.stayWindow !== null) {
     params.set(PARAM.checkIn, filters.stayWindow.checkIn);
     params.set(PARAM.checkOut, filters.stayWindow.checkOut);
   }
+  if (filters.guests !== null) params.set(PARAM.guests, String(filters.guests));
   return params;
 }
 
@@ -339,8 +334,13 @@ export function stayQueryOf(filters: ListingFilters): StayQuery | null {
  * ακριβώς πράγμα** για τιμή, εμβαδόν και όροφο. Μια δεύτερη γραφή εκεί θα ήταν τρεις
  * γραμμές — και η πιθανότερη παραλλαγή τους (`value ?? 0`) θα έκανε κάθε αγγελία
  * **χωρίς** εμβαδόν να μετράει ως **0 τ.μ.**, δηλαδή να ταιριάζει σε κάθε «έως Χ» και
- * σε κανένα «από Χ». Δύο κριτές για ένα ερώτημα, με τη διαφορά ορατή **μόνο** στα
- * ελλιπή δεδομένα — που είναι ακριβώς τα δεδομένα που έχουμε.
+ * σε κανένα «από Χ».
+ *
+ * 🔑 **Η σύγκριση ΔΕΝ ξαναγράφεται εδώ — ρωτιέται** (`satisfiesRange`). Αυτό που ζει
+ * σε αυτή τη συνάρτηση είναι **μόνο η πολιτική για το `null`**, και είναι η πολιτική
+ * της **ζήτησης**: εκεί δεν υπάρχει τρίτος κάδος, οπότε η άγνοια ισοπεδώνεται σε
+ * `false`. Η **αναζήτηση** απαντά την ίδια ερώτηση με **όνομα** (`'undeclared'`) —
+ * δύο πολιτικές, μία σύγκριση.
  */
 export function withinRange(
   value: number | null,
@@ -351,7 +351,7 @@ export function withinRange(
   // 🔑 Χωρίς αριθμό ΔΕΝ βαφτίζεται 0: μια αγγελία χωρίς εμβαδόν δεν «είναι 0 τ.μ.»,
   // απλώς δεν μπορεί να απαντήσει στο ερώτημα — και άρα δεν ταιριάζει σε εύρος.
   if (value === null) return false;
-  return (min === null || value >= min) && (max === null || value <= max);
+  return satisfiesRange(value, { min, max });
 }
 
 /**
@@ -361,63 +361,37 @@ export function withinRange(
  * 🔴 Ο ΧΡΟΝΟΣ ΚΑΙ ΤΑ ΑΤΟΜΑ **ΔΕΝ ΦΙΛΤΡΑΡΟΥΝ ΕΔΩ** — ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ, ΟΧΙ ΠΑΡΑΛΕΙΨΗ
  * ────────────────────────────────────────────────────────────────────────────
  *
- * Αυτή η συνάρτηση **εξαφανίζει** ό,τι δεν ταιριάζει. Είναι σωστό για τιμή, εμβαδόν
- * και είδος — και θα ήταν **καταστροφικό** για τον χρόνο, γιατί θα έκανε ακριβώς αυτό
- * που το ADR-835 §4.6 υπάρχει για να **μην** κάνουμε:
- *
- *   «*the search algorithm **completely hides** unavailable listings rather than
- *   suggesting nearby dates or showing partially available properties*»
- *
- * Ένα `return false` για «κρατημένο» θα εξαφάνιζε **και** τα καταλύματα χωρίς δηλωμένο
- * ημερολόγιο, **και** εκείνα που είναι ελεύθερα 5 από τις 7 νύχτες σου, **και** κάθε
- * ακίνητο που δεν είναι κατάλυμα — δηλαδή θα ισοπέδωνε σε σιωπή **και τους εννέα**
- * κάδους που το `lib/stay/stay-availability-vocabulary.ts` υπάρχει για να ονομάσει.
+ * Ένα `return false` για «κρατημένο» θα εξαφάνιζε **και** τα καταλύματα χωρίς
+ * δηλωμένο ημερολόγιο, **και** εκείνα που είναι ελεύθερα 5 από τις 7 νύχτες σου,
+ * **και** κάθε ακίνητο που δεν είναι κατάλυμα — δηλαδή θα ισοπέδωνε σε σιωπή **και
+ * τους εννέα** κάδους που το `lib/stay/stay-availability-vocabulary.ts` υπάρχει για
+ * να ονομάσει (ADR-835 §4.6: *«the search algorithm **completely hides** unavailable
+ * listings»* — αυτό που υπάρχουμε για να **μην** κάνουμε).
  *
  * ✅ **Ο χρόνος απαντιέται με ΟΝΟΜΑ και μετριέται στη ΛΟΓΙΣΤΙΚΗ**
- * (`lib/listings/stay-ledger.ts`), ποτέ με εξαφάνιση. Δύο διαφορετικές πράξεις:
- * *«ποια δείχνουμε»* (εδώ) και *«τι απαντά η καθεμιά στις ημερομηνίες σου»* (εκεί).
+ * (`lib/listings/stay-ledger.ts`), ποτέ με εξαφάνιση.
  *
- * ⚠️ Το **ίδιο** ισχύει για το `guests`, με τον ίδιο ακριβώς λόγο: ένα κατάλυμα που
- * **δεν δήλωσε** χωρητικότητα δεν είναι «δεν χωράει» — και η εξαφάνισή του θα
- * τιμωρούσε τον κάτοχο για πεδίο που κανείς δεν του ζήτησε (N.12).
+ * 🏆 **ΚΑΙ ΤΩΡΑ ΤΟ ΙΔΙΟ ΙΣΧΥΕΙ ΓΙΑ ΚΑΘΕ ΑΞΟΝΑ ΠΟΥ Η ΑΓΓΕΛΙΑ ΔΕΝ ΔΗΛΩΣΕ.** Ο
+ * κριτής κριτηρίων δίνει **τρεις** κάδους, όχι δύο: μια αγγελία που σιωπά για την
+ * ενεργειακή κλάση **μένει ορατή** και μετριέται χωριστά. Το επιχείρημα είναι
+ * **ταυτόσημο** με του χρόνου, και μέχρι σήμερα ίσχυε μόνο για τον χρόνο.
+ *
+ * 🔴 **Η ΓΗ ΔΕΝ ΚΡΙΝΕΤΑΙ ΣΕ ΥΠΝΟΔΩΜΑΤΙΑ** (ADR-777 §8.32) — ο κανόνας **έφυγε από
+ * εδώ** και ζει πλέον στο `LAND_CANNOT_ANSWER`, γενικευμένος στους **24** άξονες που
+ * ένα οικόπεδο δομικά δεν σηκώνει. Ήταν μία γραμμή για έναν άξονα· το ελάττωμα δεν
+ * ήταν η γραμμή, ήταν ότι ήταν **μία**.
  */
 export function matchesListingFilters(listing: PublicListing, filters: ListingFilters): boolean {
-  if (filters.offerKinds.length > 0) {
-    if (!listing.offerKinds.some((k) => filters.offerKinds.includes(k))) return false;
-  }
-  if (filters.types.length > 0 && !filters.types.includes(listing.type)) return false;
-
-  if (filters.priceMin !== null || filters.priceMax !== null) {
-    const resolved = getEffectivePrice(listing);
-    if (!withinRange(resolved?.amount ?? null, filters.priceMin, filters.priceMax)) return false;
-  }
-  if (!withinRange(listing.areaSqm, filters.areaMin, filters.areaMax)) return false;
-
-  // 🔴 **Η ΓΗ ΔΕΝ ΚΡΙΝΕΤΑΙ ΣΕ ΥΠΝΟΔΩΜΑΤΙΑ** (ADR-777 §8.32).
-  //
-  // Το βρήκε **η οθόνη**, όχι πύλη: η φόρμα ζήτησης έχει «Υπνοδωμάτια, τουλάχιστον»
-  // **δίπλα** στο «Οικόπεδο», και το βοηθητικό της κείμενο λέει *«το 0 σημαίνει
-  // “δέξου και γκαρσονιέρα”»* — δηλαδή ο άνθρωπος που γράφει `0` νομίζει ότι
-  // **χαλαρώνει** το φίλτρο. Ένα οικόπεδο όμως έχει `bedrooms: null` εκ κατασκευής,
-  // οπότε ο έλεγχος «`null` ⇒ έξω» **εξαφάνιζε ΚΑΘΕ οικόπεδο** — μετρημένο: `false`.
-  //
-  // ⚠️ Ο έλεγχος `null` **μένει** για τα υπόλοιπα είδη, και είναι σωστός εκεί: αν
-  // κάποιος ζητά ρητά «≥2 υπνοδωμάτια», ένα διαμέρισμα που **δεν το λέει** δεν
-  // απαντά στην ερώτηση. Η διαφορά δεν είναι η τιμή — είναι το **αν το είδος σηκώνει
-  // την ερώτηση**.
-  if (filters.bedroomsMin !== null && !isLandProperty(listing.type)) {
-    if (listing.bedrooms === null || listing.bedrooms < filters.bedroomsMin) return false;
-  }
+  if (!listingSurvivesCriteria(listing, filters.criteria)) return false;
 
   // 🔴 Ο ΓΕΩΓΡΑΦΙΚΟΣ ΑΞΟΝΑΣ — τελευταίος επίτηδες: είναι ο **μόνος** που κοστίζει
   // τριγωνομετρία, και τα φθηνά φίλτρα έχουν ήδη αποκλείσει ό,τι μπορούσαν.
   if (filters.near !== null) {
     // ⚠️ **Η αγγελία ΧΩΡΙΣ θέση ΔΕΝ αποκλείεται εδώ — και αυτό δεν είναι παράλειψη.**
-    // Είναι ο κανόνας Α5 §4.1 σε κώδικα: *«δεν φιλτράρονται όταν μετακινείς τον
-    // χάρτη· δεν μπορούμε να τις αποκλείσουμε από περιοχή που δεν ξέρουμε αν τους
-    // ανήκει»*. Ένα `return false` εδώ θα τις **εξαφάνιζε** — δηλαδή θα μετέτρεπε το
-    // «δεν ξέρουμε πού είναι» σε «δεν είναι εδώ», που είναι διαφορετικός ισχυρισμός
-    // και **ψευδής**. Μένουν, και τις μετρά η κλειστή λογιστική.
+    // Είναι ο κανόνας Α5 §4.1 σε κώδικα: *«δεν μπορούμε να τις αποκλείσουμε από
+    // περιοχή που δεν ξέρουμε αν τους ανήκει»*. Ένα `return false` εδώ θα τις
+    // **εξαφάνιζε** — δηλαδή θα μετέτρεπε το «δεν ξέρουμε πού είναι» σε «δεν είναι
+    // εδώ», που είναι διαφορετικός ισχυρισμός και **ψευδής**.
     if (listing.position.kind === 'known') {
       const metres = distanceMeters(filters.near.center, listing.position.point);
       if (metres > filters.near.radiusKm * 1000) return false;
@@ -439,4 +413,32 @@ export function applyListingFilters(
   filters: ListingFilters
 ): readonly PublicListing[] {
   return listings.filter((listing) => matchesListingFilters(listing, filters));
+}
+
+/**
+ * **Γιατί επέζησε — ή γιατί όχι** — για **μία** αγγελία.
+ *
+ * 🔑 Η οθόνη το χρειάζεται για να πει *«δεν έχει δηλωμένη ενεργειακή κλάση»* πάνω σε
+ * μια κάρτα, αντί να την κρύψει ή να τη δείξει σαν να ταιριάζει απόλυτα.
+ */
+export function listingCriteriaMatch(
+  listing: PublicListing,
+  filters: ListingFilters
+): ListingCriteriaMatch {
+  return matchListingCriteria(listing, filters.criteria);
+}
+
+/**
+ * **«7 ταιριάζουν · 3 δεν το δήλωσαν»** — η λογιστική των κριτηρίων για ένα σύνολο.
+ *
+ * ⚠️ **Μετριέται πάνω στο σύνολο ΠΡΙΝ τον γεωγραφικό άξονα**, όπως ακριβώς ο
+ * `computeStayLedger` μετρά το ίδιο `visible` και όχι ένα δικό του υποσύνολο: δύο
+ * διαμερίσεις του **ίδιου** συνόλου κλείνουν και ελέγχονται μεταξύ τους· δύο
+ * διαμερίσεις **διαφορετικών** συνόλων φωνάζουν σωστά για λάθος λόγο.
+ */
+export function computeListingCriteriaLedger(
+  listings: readonly PublicListing[],
+  filters: ListingFilters
+): ListingCriteriaLedger {
+  return computeCriteriaLedger(listings, filters.criteria);
 }

@@ -38,7 +38,10 @@ import {
 import type { ListingFeatureSetKey } from '@/lib/listings/listing-disclosure';
 import type { PublicListing } from '@/types/public-listing';
 
-import { FEATURE_SET_VOCABULARY, vocabularyLabel } from './listing-attribute-value';
+import {
+  FEATURE_SET_VOCABULARY,
+  vocabularyLabel,
+} from '@/lib/listings/listing-attribute-vocabulary';
 
 interface ListingFeatureSetProps {
   readonly listing: PublicListing;

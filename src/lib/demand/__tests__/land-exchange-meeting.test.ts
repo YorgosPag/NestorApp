@@ -29,8 +29,23 @@ import {
   parseListingFilters,
   serializeListingFilters,
 } from '@/lib/listings/listing-filters';
+import { valuesOf, withRange, type ListingCriteria } from '@/lib/criteria/listing-criteria';
+import { judgeCriterion } from '@/lib/criteria/listing-criteria-judge';
+import type { ListingFilters } from '@/lib/listings/listing-filters';
 import { NO_DEMAND_FEATURES } from '@/types/property-demand';
 import { demand, listing } from './demand-fixtures';
+
+/**
+ * «Υπνοδωμάτια, τουλάχιστον N» πάνω σε υπάρχοντα φίλτρα.
+ *
+ * ⚠️ **Μέσω του κατασκευαστή, ποτέ με ωμό `{ ...filters, bedroomsMin: N }`** — εκείνη
+ * η μορφή παρήγαγε **άγνωστη ιδιότητα** μετά τη μετακίνηση των αξόνων, δηλαδή άγκυρα
+ * που έλεγχε **τίποτα** και έμενε πράσινη.
+ */
+function withBedrooms(filters: ListingFilters, min: number): ListingFilters {
+  const criteria: ListingCriteria = withRange(filters.criteria, 'bedrooms', { min, max: null });
+  return { ...filters, criteria };
+}
 import { LAND_PROPERTY_TYPES } from '@/constants/property-types';
 import { isLandProperty } from '@/constants/property-classification';
 
@@ -79,8 +94,8 @@ describe('ADR-777 §8.32 — ο εργολάβος ψάχνει, ο ιδιοκτ
     // διάβαζε ως «δεν υπάρχουν οικόπεδα».
     const projected = listingFiltersFromDemand(CONTRACTOR);
     const roundTripped = parseListingFilters(serializeListingFilters(projected));
-    expect(roundTripped.types).toEqual(['plot']);
-    expect(roundTripped.offerKinds).toEqual(['exchange']);
+    expect(valuesOf(roundTripped.criteria, 'type')).toEqual(['plot']);
+    expect(valuesOf(roundTripped.criteria, 'offerKind')).toEqual(['exchange']);
     expect(matchesListingFilters(OWNER_PLOT, roundTripped)).toBe(true);
   });
 
@@ -91,21 +106,47 @@ describe('ADR-777 §8.32 — ο εργολάβος ψάχνει, ο ιδιοκτ
     // που γράφει 0 νομίζει ότι **χαλαρώνει**. Ένα οικόπεδο όμως έχει `bedrooms: null`
     // εκ κατασκευής, και ο έλεγχος «null ⇒ έξω» έδινε **μηδέν αποτελέσματα**
     // (μετρημένο `false` πριν τη διόρθωση).
-    const filters = { ...listingFiltersFromDemand(CONTRACTOR), bedroomsMin: 0 };
-    expect(matchesListingFilters(OWNER_PLOT, filters)).toBe(true);
+    //
+    // ⚠️ **Η ΠΡΟΗΓΟΥΜΕΝΗ ΜΟΡΦΗ ΑΥΤΗΣ ΤΗΣ ΑΓΚΥΡΑΣ ΠΕΡΝΟΥΣΕ ΚΕΝΗ** μετά τη μετακίνηση
+    //    των αξόνων στον χάρτη κριτηρίων: το `{ ...filters, bedroomsMin: 0 }` παρήγαγε
+    //    **άγνωστη** ιδιότητα και κενά κριτήρια, δηλαδή φίλτρο που δέχεται τα πάντα.
+    //    Πλέον γράφεται μέσω του κατασκευαστή, άρα **κρίνει** όντως.
+    const base = listingFiltersFromDemand(CONTRACTOR);
+    const wantsZero = withBedrooms(base, 0);
+    expect(matchesListingFilters(OWNER_PLOT, wantsZero)).toBe(true);
     // …ούτε με ρητή απαίτηση: η ερώτηση **δεν ισχύει** για γη, δεν «αποτυγχάνει».
-    expect(matchesListingFilters(OWNER_PLOT, { ...filters, bedroomsMin: 2 })).toBe(true);
+    expect(matchesListingFilters(OWNER_PLOT, withBedrooms(base, 2))).toBe(true);
+    // 🔑 Και τώρα λέγεται με **όνομα**: `not-applicable`, όχι «δεν το δήλωσε».
+    expect(judgeCriterion(OWNER_PLOT, withBedrooms(base, 2).criteria, 'bedrooms'))
+      .toBe('not-applicable');
   });
 
   it('Κ4γ — ο παρονομαστής: σε ΔΙΑΜΕΡΙΣΜΑ το ίδιο φίλτρο εξακολουθεί να κρίνει', () => {
     // Χωρίς αυτό, μια «διόρθωση» που απλώς σβήνει τον έλεγχο του `null` θα ήταν
     // εξίσου πράσινη στο Κ4β — και θα είχε χαλαρώσει το φίλτρο για **όλα** τα
     // ακίνητα, δηλαδή θα έστελνε γκαρσονιέρες σε όποιον ζητά τρία υπνοδωμάτια.
+    //
+    // 🔴 **ΤΟ ΚΡΙΤΗΡΙΟ ΤΟΥ ΠΑΡΟΝΟΜΑΣΤΗ ΑΛΛΑΞΕ (απόφαση Giorgio, 2026-09-04)**, και ο
+    //    **σκοπός** του μένει ακέραιος. Ως τώρα «κρίνει» σήμαινε «εξαφανίζει και το
+    //    διαμέρισμα που **δεν λέει** υπνοδωμάτια». Πλέον οι δύο περιπτώσεις
+    //    **ξεχωρίζουν με όνομα**: όποιο απαντά και δεν φτάνει ⇒ `excluded`· όποιο
+    //    σιωπά ⇒ `undeclared`, μένει ορατό και **μετριέται**. Η ουσία που φυλάει
+    //    αυτή η άγκυρα —«μη χαλαρώσεις το φίλτρο για ΟΛΑ»— ελέγχεται στη γραμμή
+    //    του `bedrooms: 1`, που εξακολουθεί να αποκλείεται.
     const flat = listing({ bedrooms: null });
-    const wantsTwo = { ...EMPTY_LISTING_FILTERS, bedroomsMin: 2 };
-    expect(matchesListingFilters(flat, wantsTwo)).toBe(false);
+    const wantsTwo = withBedrooms(EMPTY_LISTING_FILTERS, 2);
+
+    expect(judgeCriterion(flat, wantsTwo.criteria, 'bedrooms')).toBe('undeclared');
+    expect(matchesListingFilters(flat, wantsTwo)).toBe(true);
+
     expect(matchesListingFilters(listing({ bedrooms: 3 }), wantsTwo)).toBe(true);
+    expect(judgeCriterion(listing({ bedrooms: 3 }), wantsTwo.criteria, 'bedrooms'))
+      .toBe('satisfied');
+
+    // 🔑 Ο ΠΥΡΗΝΑΣ ΤΗΣ ΑΓΚΥΡΑΣ: γκαρσονιέρα που **δήλωσε** 1 υπνοδωμάτιο ΔΕΝ περνά.
     expect(matchesListingFilters(listing({ bedrooms: 1 }), wantsTwo)).toBe(false);
+    expect(judgeCriterion(listing({ bedrooms: 1 }), wantsTwo.criteria, 'bedrooms'))
+      .toBe('excluded');
   });
 
   it('Κ5 — ΚΑΘΕ είδος γης μπορεί να ζητηθεί και να βρεθεί (κανένα ξεχασμένο)', () => {

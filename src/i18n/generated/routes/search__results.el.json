@@ -87,6 +87,206 @@
       "pinRadiusTitle": "Πινέζα - Ακτίνα: {radius}m"
     }
   },
+  "listing-detail": {
+    "attributes": {
+      "group": {
+        "energyCondition": "Ενέργεια & κατάσταση",
+        "essentials": "Βασικά στοιχεία",
+        "features": "Παροχές & χαρακτηριστικά",
+        "roomsAreas": "Δωμάτια & εμβαδά",
+        "systemsFinishes": "Συστήματα & υλικά"
+      },
+      "label": {
+        "amenities": "Παροχές",
+        "areaSqm": "Εμβαδόν",
+        "balconies": "Μπαλκόνια",
+        "balconyAreaSqm": "Εμβαδόν μπαλκονιών",
+        "bathrooms": "Μπάνια",
+        "bedrooms": "Υπνοδωμάτια",
+        "condition": "Κατάσταση",
+        "coolingType": "Ψύξη",
+        "energyClass": "Ενεργειακή κλάση",
+        "floor": "Όροφος",
+        "flooring": "Δάπεδα",
+        "gardenAreaSqm": "Εμβαδόν κήπου",
+        "glazing": "Υαλοπίνακες",
+        "heatingFuel": "Καύσιμο θέρμανσης",
+        "heatingType": "Θέρμανση",
+        "interiorFeatures": "Εσωτερικά χαρακτηριστικά",
+        "levels": "Επίπεδα",
+        "netAreaSqm": "Καθαρό εμβαδόν",
+        "orientations": "Προσανατολισμός",
+        "renovationYear": "Έτος ανακαίνισης",
+        "securityFeatures": "Ασφάλεια",
+        "terraceAreaSqm": "Εμβαδόν βεράντας",
+        "totalRooms": "Συνολικά δωμάτια",
+        "type": "Είδος",
+        "waterHeating": "Ζεστό νερό",
+        "wc": "Ξεχωριστό WC",
+        "windowFrames": "Κουφώματα"
+      }
+    }
+  },
+  "properties-enums": {
+    "condition": {
+      "excellent": "Άριστη",
+      "good": "Καλή",
+      "needs-renovation": "Χρήζει ανακαίνισης",
+      "new": "Νέο",
+      "sectionTitle": "Κατάσταση διατήρησης"
+    },
+    "features": {
+      "amenities": {
+        "doorman": "Θυρωρός",
+        "elevator": "Ασανσέρ",
+        "garden": "Κήπος",
+        "gym": "Γυμναστήριο",
+        "label": "Παροχές",
+        "parking-garage": "Κλειστό πάρκινγκ",
+        "playground": "Παιδική χαρά",
+        "pool": "Πισίνα"
+      },
+      "interior": {
+        "air-conditioning": "Κλιματισμός",
+        "fireplace": "Τζάκι",
+        "jacuzzi": "Τζακούζι",
+        "label": "Εσωτερικά",
+        "sauna": "Σάουνα",
+        "smart-home": "Έξυπνο σπίτι",
+        "solar-panels": "Ηλιακά πάνελ",
+        "underfloor-heating": "Ενδοδαπέδια θέρμανση"
+      },
+      "security": {
+        "access-control": "Έλεγχος πρόσβασης",
+        "alarm": "Συναγερμός",
+        "cctv": "CCTV",
+        "intercom": "Θυροτηλέφωνο",
+        "label": "Ασφάλεια",
+        "motion-sensors": "Αισθητήρες κίνησης",
+        "security-door": "Πόρτα ασφαλείας"
+      }
+    },
+    "finishes": {
+      "flooring": {
+        "carpet": "Μοκέτα",
+        "label": "Δάπεδα",
+        "laminate": "Λαμινέιτ",
+        "marble": "Μάρμαρο",
+        "tiles": "Πλακάκι",
+        "wood": "Ξύλο"
+      },
+      "frames": {
+        "aluminum": "Αλουμινίου",
+        "label": "Κουφώματα",
+        "pvc": "PVC",
+        "wood": "Ξύλινα"
+      },
+      "glazing": {
+        "double": "Διπλοί",
+        "energy": "Ενεργειακοί",
+        "label": "Υαλοπίνακες",
+        "single": "Μονοί",
+        "triple": "Τριπλοί"
+      }
+    },
+    "systems": {
+      "cooling": {
+        "central-air": "Κεντρικός αέρας",
+        "fan-coil": "Ανεμιστήρας κλιματισμού",
+        "label": "Ψύξη",
+        "none": "Καμία",
+        "split-units": "Διαιρούμενες μονάδες"
+      },
+      "fuel": {
+        "electricity": "Ρεύμα",
+        "heat-pump": "Αντλία θερμότητας",
+        "label": "Καύσιμο",
+        "natural-gas": "Φυσικό αέριο",
+        "oil": "Πετρέλαιο",
+        "solar": "Ηλιακή"
+      },
+      "heating": {
+        "autonomous": "Αυτόνομη",
+        "central": "Κεντρική",
+        "heat-pump": "Αντλία θερμότητας",
+        "label": "Θέρμανση",
+        "none": "Καμία",
+        "solar": "Ηλιακή"
+      },
+      "waterHeating": {
+        "electric": "Ηλεκτρικό",
+        "gas": "Αέριο",
+        "heat-pump": "Αντλία θερμότητας",
+        "label": "Ζεστό νερό",
+        "solar": "Ηλιακός"
+      }
+    },
+    "types": {
+      "apartment": "Διαμέρισμα",
+      "apartment_1br": "Γκαρσονιέρα",
+      "detached_house": "Μονοκατοικία",
+      "hall": "Αίθουσα",
+      "loft": "Σοφίτα",
+      "maisonette": "Μεζονέτα",
+      "office": "Γραφείο",
+      "parcel": "Αγροτεμάχιο",
+      "penthouse": "Ρετιρέ",
+      "plot": "Οικόπεδο",
+      "shop": "Κατάστημα",
+      "storage": "Αποθήκη",
+      "studio": "Στούντιο",
+      "villa": "Βίλα"
+    },
+    "units": {
+      "orientation": {
+        "east": "Ανατολικό",
+        "north": "Βόρειο",
+        "northeast": "Βορειοανατολικό",
+        "northwest": "Βορειοδυτικό",
+        "south": "Νότιο",
+        "southeast": "Νοτιοανατολικό",
+        "southwest": "Νοτιοδυτικό",
+        "west": "Δυτικό"
+      }
+    }
+  },
+  "search-filters": {
+    "criteriaLedger": {
+      "imbalanced": "Η καταμέτρηση των κριτηρίων δεν κλείνει — αυτό είναι σφάλμα, όχι κατάσταση.",
+      "summary": "{matching} ταιριάζουν · {undeclared} χωρίς δηλωμένα στοιχεία · {excluded} δεν ταιριάζουν",
+      "undeclaredHint": "Όσες δεν έχουν δηλώσει τα στοιχεία που ζήτησες μένουν ορατές — δεν ξέρουμε αν ταιριάζουν, και δεν στο κρύβουμε."
+    },
+    "filters": {
+      "apply": "{count, plural, =0 {Κανένα αποτέλεσμα} one {Δείξε # αποτέλεσμα} other {Δείξε # αποτελέσματα}}",
+      "authorship": {
+        "agency": "Επαγγελματίες",
+        "owner-declared": "Ιδιώτες"
+      },
+      "axis": {
+        "authorship": "Ποιος τη δηλώνει",
+        "hasPhotos": "Μόνο με φωτογραφίες",
+        "offerKind": "Διάθεση",
+        "price": "Τιμή"
+      },
+      "clearAll": "Καθαρισμός όλων",
+      "empty": "Κανένα φίλτρο ενεργό",
+      "group": {
+        "listing": "Η αγγελία"
+      },
+      "heading": "Φίλτρα",
+      "more": "Περισσότερα φίλτρα",
+      "moreActive": "{count, plural, one {Περισσότερα φίλτρα · # ενεργό} other {Περισσότερα φίλτρα · # ενεργά}}",
+      "option": {
+        "undeclared": "{count} χωρίς δήλωση"
+      },
+      "range": {
+        "max": "Έως",
+        "maxLabel": "{axis} — έως",
+        "min": "Από",
+        "minLabel": "{axis} — από"
+      }
+    }
+  },
   "short-stay": {
     "checkIn": "Άφιξη",
     "checkOut": "Αναχώρηση",

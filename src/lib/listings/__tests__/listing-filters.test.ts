@@ -6,14 +6,31 @@ import {
   parseListingFilters,
   serializeListingFilters,
   applyListingFilters,
+  listingCriteriaMatch,
   stayQueryOf,
   EMPTY_LISTING_FILTERS,
   DEFAULT_SEARCH_RADIUS_KM,
+  type ListingFilters,
 } from '../listing-filters';
+import {
+  EMPTY_LISTING_CRITERIA,
+  flagOf,
+  rangeOf,
+  valuesOf,
+  withFlag,
+  withRange,
+  withValues,
+  type ListingCriteria,
+} from '@/lib/criteria/listing-criteria';
 import { listingsToGeoJson } from '../listings-geojson';
 import { UNASKED_LISTING_ATTRIBUTES, type PublicListing } from '@/types/public-listing';
 
 const AT = '2026-08-10T10:00:00.000Z';
+
+/** Φίλτρα **μόνο** με κριτήρια — οι τρεις ειδικοί άξονες μένουν ουδέτεροι. */
+function onlyCriteria(criteria: ListingCriteria): ListingFilters {
+  return { ...EMPTY_LISTING_FILTERS, criteria };
+}
 
 function listing(over: Partial<PublicListing> = {}): PublicListing {
   return {
@@ -46,26 +63,33 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
 
 describe('Φ1 — τα φίλτρα ζουν στη διεύθυνση και επιβιώνουν', () => {
   it('γράψιμο → ανάγνωση επιστρέφει την ΙΔΙΑ κατάσταση', () => {
-    const filters = {
-      offerKinds: ['sell', 'exchange'] as const,
-      types: ['apartment'],
-      priceMin: 100000, priceMax: 300000,
-      areaMin: 50, areaMax: null,
-      bedroomsMin: 2,
-      // ⚠️ Ρητό `null`, ποτέ παραλειπόμενο: ο γεωγραφικός άξονας (ADR-777 Α3, οθόνη 1)
-      // είναι **υποχρεωτικό** πεδίο του κλειστού σχήματος. Ένα `undefined` εδώ θα
-      // περνούσε τον έλεγχο `!== null` και θα έσκαγε στη σειριοποίηση — που είναι
-      // ακριβώς ό,τι έκανε την πρώτη φορά, και γι' αυτό γράφεται.
-      near: null,
-      // 🔴 **ΔΕΥΤΕΡΗ ΕΜΦΑΝΙΣΗ ΤΟΥ ΙΔΙΟΥ, 2026-08-31 (ADR-835 Φ3).** Ο χρονικός
-      // άξονας μπήκε στο κλειστό σχήμα και αυτή η δοκιμή **κοκκίνισε αμέσως** με
-      // `Cannot read properties of undefined (reading 'checkIn')` — δηλαδή έκανε
-      // ακριβώς τη δουλειά που περιγράφει η παραπάνω παράγραφος. Τα ρητά `null`
-      // **μένουν**: είναι ο λόγος που το επόμενο πεδίο θα πιαστεί κι αυτό.
-      stayWindow: null,
-      guests: null,
-    };
+    // 🔴 **ΤΡΙΤΗ ΕΜΦΑΝΙΣΗ ΤΟΥ ΙΔΙΟΥ, 2026-09-04.** Οι επτά επίπεδοι άξονες έγιναν
+    // **χάρτης κριτηρίων** (`lib/criteria/`), και αυτή η δοκιμή κοκκίνισε αμέσως —
+    // δηλαδή έκανε ξανά τη δουλειά της. Οι δύο προηγούμενες φορές είναι γραμμένες
+    // στο ιστορικό του αρχείου: ρητό `near: null` (Α3), ρητό `stayWindow: null` (Φ3).
+    //
+    // ⚠️ **Οι τρεις ειδικοί άξονες μένουν ΡΗΤΑ `null`** — δες `EMPTY_LISTING_FILTERS`.
+    let criteria = withValues(EMPTY_LISTING_CRITERIA, 'offerKind', ['sell', 'exchange']);
+    criteria = withValues(criteria, 'type', ['apartment']);
+    criteria = withRange(criteria, 'price', { min: 100000, max: 300000 });
+    criteria = withRange(criteria, 'areaSqm', { min: 50, max: null });
+    criteria = withRange(criteria, 'bedrooms', { min: 2, max: null });
+    criteria = withRange(criteria, 'floor', { min: 1, max: 4 });
+    criteria = withValues(criteria, 'energyClass', ['A', 'B']);
+    criteria = withValues(criteria, 'amenities', ['elevator']);
+    criteria = withFlag(criteria, 'hasPhotos', true);
+
+    const filters = { ...EMPTY_LISTING_FILTERS, criteria };
     expect(parseListingFilters(serializeListingFilters(filters))).toEqual(filters);
+  });
+
+  it('🔴 ΤΟ `false` ΤΗΣ ΣΗΜΑΙΑΣ ΕΠΙΒΙΩΝΕΙ — «μόνο ΧΩΡΙΣ φωτογραφίες» ≠ «δεν με νοιάζει»', () => {
+    // Ένα `params.has()` ή ένα `Boolean(params.get())` θα ισοπέδωνε τις τρεις
+    // καταστάσεις σε δύο, και η μία από αυτές θα γινόταν **ανέκφραστη**.
+    const off = { ...EMPTY_LISTING_FILTERS, criteria: withFlag(EMPTY_LISTING_CRITERIA, 'hasPhotos', false) };
+    const parsed = parseListingFilters(serializeListingFilters(off));
+    expect(flagOf(parsed.criteria, 'hasPhotos')).toBe(false);
+    expect(flagOf(EMPTY_LISTING_FILTERS.criteria, 'hasPhotos')).toBeUndefined();
   });
 
   it('τα κενά φίλτρα ΔΕΝ γράφονται — δύο ίδιες αναζητήσεις έχουν ΜΙΑ διεύθυνση', () => {
@@ -74,13 +98,34 @@ describe('Φ1 — τα φίλτρα ζουν στη διεύθυνση και ε
 
   it('άγνωστη διάθεση στη διεύθυνση αγνοείται — η οθόνη δεν σκάει από ξένο σύνδεσμο', () => {
     const parsed = parseListingFilters(new URLSearchParams('offer=sell&offer=telepathy'));
-    expect(parsed.offerKinds).toEqual(['sell']);
+    expect(valuesOf(parsed.criteria, 'offerKind')).toEqual(['sell']);
+  });
+
+  it('🔴 …και ο ΙΔΙΟΣ φρουρός ισχύει πλέον για ΚΑΘΕ λεξιλόγιο, όχι μόνο για τη διάθεση', () => {
+    // Ως τις 2026-09-04 μόνο το `offer` επικυρωνόταν σε κλειστό σύνολο· το `type`
+    // δεχόταν **οτιδήποτε**. Τώρα και οι δεκαέξι άξονες λεξιλογίου έχουν φρουρό.
+    const parsed = parseListingFilters(new URLSearchParams('energy=A&energy=Ω&type=σπίτι'));
+    expect(valuesOf(parsed.criteria, 'energyClass')).toEqual(['A']);
+    expect(valuesOf(parsed.criteria, 'type')).toBeUndefined();
   });
 
   it('🔴 σκουπίδι σε αριθμό γίνεται null, ΟΧΙ 0 — το 0 θα φιλτράριζε τα πάντα', () => {
     const parsed = parseListingFilters(new URLSearchParams('pmin=abc&amin='));
-    expect(parsed.priceMin).toBeNull();
-    expect(parsed.areaMin).toBeNull();
+    expect(rangeOf(parsed.criteria, 'price')).toBeUndefined();
+    expect(rangeOf(parsed.criteria, 'areaSqm')).toBeUndefined();
+  });
+
+  it('🔴 ΤΟ ΠΑΛΙΟ `beds` ΕΞΑΚΟΛΟΥΘΕΙ ΝΑ ΔΙΑΒΑΖΕΤΑΙ — κοινοποιημένος σύνδεσμος δεν πεθαίνει σιωπηλά', () => {
+    // Ο άξονας έγινε εύρος, άρα το κανονικό όνομα είναι `bedsmin`. Κάθε σύνδεσμος
+    // που μοιράστηκε ως τώρα λέει `beds` — και ένας σύνδεσμος που **παύει σιωπηλά
+    // να φιλτράρει** είναι χειρότερος από έναν που σπάει.
+    expect(rangeOf(parseListingFilters(new URLSearchParams('beds=3')).criteria, 'bedrooms'))
+      .toEqual({ min: 3, max: null });
+    // ⚠️ Μονής κατεύθυνσης: γράφεται **μόνο** το κανονικό όνομα.
+    const written = serializeListingFilters(
+      parseListingFilters(new URLSearchParams('beds=3')),
+    ).toString();
+    expect(written).toBe('bedsmin=3');
   });
 });
 
@@ -161,10 +206,18 @@ describe('Γ2 — η εφαρμογή του φίλτρου', () => {
 });
 
 describe('Φ2 — φιλτράρεται ο ΣΩΣΤΟΣ άξονας (Α20)', () => {
-  it('🔑 ακίνητο μόνο προς ΑΝΤΙΠΑΡΟΧΗ βρίσκεται από το offerKinds', () => {
+  it('🔑 ακίνητο μόνο προς ΑΝΤΙΠΑΡΟΧΗ βρίσκεται από τον άξονα διάθεσης', () => {
+    // ⚠️ **ΑΥΤΗ Η ΔΟΚΙΜΗ ΠΕΡΝΟΥΣΕ ΚΕΝΗ μετά τη μετακίνηση των αξόνων**, και το
+    // γράφω γιατί είναι το ακριβές σχήμα «πράσινο = κανείς δεν κοίταξε»: το
+    // `{ ...EMPTY_LISTING_FILTERS, offerKinds: [...] }` παρήγαγε αντικείμενο με
+    // **άγνωστη** ιδιότητα και **κενά** κριτήρια, δηλαδή φίλτρο που δέχεται τα
+    // πάντα — και το `toHaveLength(1)` ήταν αληθές για **λάθος λόγο**.
     const exchange = listing({ commercialStatus: 'unavailable', offerKinds: ['exchange'] });
-    const found = applyListingFilters([exchange], { ...EMPTY_LISTING_FILTERS, offerKinds: ['exchange'] });
-    expect(found).toHaveLength(1);
+    const other = listing({ id: 'sale-only', offerKinds: ['sell'] });
+    const wantsExchange = onlyCriteria(
+      withValues(EMPTY_LISTING_CRITERIA, 'offerKind', ['exchange']),
+    );
+    expect(applyListingFilters([exchange, other], wantsExchange).map((l) => l.id)).toEqual(['l1']);
   });
 
   it('κενό φίλτρο διαθέσεων σημαίνει «όλες», όχι «καμία»', () => {
@@ -177,14 +230,35 @@ describe('Φ2 — φιλτράρεται ο ΣΩΣΤΟΣ άξονας (Α20)', (
       commercial: { askingPrice: null, finalPrice: null, rentPrice: 500, nightlyRate: null },
       offerKinds: ['leaseOut'],
     });
-    expect(applyListingFilters([rental], { ...EMPTY_LISTING_FILTERS, priceMax: 600 })).toHaveLength(1);
-    expect(applyListingFilters([rental], { ...EMPTY_LISTING_FILTERS, priceMin: 600 })).toHaveLength(0);
+    const upTo600 = onlyCriteria(withRange(EMPTY_LISTING_CRITERIA, 'price', { min: null, max: 600 }));
+    const from600 = onlyCriteria(withRange(EMPTY_LISTING_CRITERIA, 'price', { min: 600, max: null }));
+    expect(applyListingFilters([rental], upTo600)).toHaveLength(1);
+    expect(applyListingFilters([rental], from600)).toHaveLength(0);
   });
 
-  it('🔴 χωρίς εμβαδόν ΔΕΝ βαφτίζεται 0 τ.μ. — δεν ταιριάζει σε εύρος, δεν ψεύδεται', () => {
+  it('🔴 ΧΩΡΙΣ ΕΜΒΑΔΟΝ ΔΕΝ ΒΑΦΤΙΖΕΤΑΙ 0 τ.μ. — ΚΑΙ ΠΛΕΟΝ ΔΕΝ ΕΞΑΦΑΝΙΖΕΤΑΙ ΚΙΟΛΑΣ', () => {
+    // 🔴 **ΑΛΛΑΞΕ Η ΠΟΛΙΤΙΚΗ, ΟΧΙ Ο ΚΑΝΟΝΑΣ (απόφαση Giorgio, 2026-09-04).**
+    //
+    // Ο κανόνας μένει ακέραιος: αγγελία χωρίς εμβαδόν **δεν** λογίζεται 0 τ.μ. Αυτό
+    // που άλλαξε είναι τι κάνουμε με τη σιωπή της: ως τώρα την **εξαφανίζαμε**
+    // (`false`), δηλαδή μετατρέπαμε το «δεν ξέρουμε» σε «δεν είναι» — ο ίδιος
+    // ισχυρισμός που ο κανόνας Α5 απαγορεύει για τη θέση, και το ADR-835 §4.6 για
+    // τον χρόνο. Πλέον **μένει ορατή** και **μετριέται χωριστά**.
     const noArea = listing({ areaSqm: null });
-    expect(applyListingFilters([noArea], { ...EMPTY_LISTING_FILTERS, areaMin: 0 })).toHaveLength(0);
-    expect(applyListingFilters([noArea], EMPTY_LISTING_FILTERS)).toHaveLength(1);
+    const wantsArea = onlyCriteria(
+      withRange(EMPTY_LISTING_CRITERIA, 'areaSqm', { min: 50, max: null }),
+    );
+    expect(applyListingFilters([noArea], wantsArea)).toHaveLength(1);
+    expect(listingCriteriaMatch(noArea, wantsArea)).toEqual({
+      verdict: 'undeclared',
+      excludedBy: [],
+      undeclaredOn: ['areaSqm'],
+    });
+
+    // ⚠️ Ο ΠΑΡΟΝΟΜΑΣΤΗΣ: όποια **απαντά** και δεν χωρά, **αποκλείεται** κανονικά.
+    const small = listing({ id: 'small', areaSqm: 30 });
+    expect(applyListingFilters([small], wantsArea)).toHaveLength(0);
+    expect(listingCriteriaMatch(small, wantsArea).excludedBy).toEqual(['areaSqm']);
   });
 });
 

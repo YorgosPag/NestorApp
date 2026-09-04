@@ -14,7 +14,12 @@ import {
   demandResultsHref,
   listingFiltersFromDemand,
 } from '../demand-listing-filters';
-import { parseListingFilters, serializeListingFilters } from '@/lib/listings/listing-filters';
+import {
+  parseListingFilters,
+  serializeListingFilters,
+  withinRange,
+} from '@/lib/listings/listing-filters';
+import { rangeOf, valuesOf } from '@/lib/criteria/listing-criteria';
 import { NO_DEMAND_FEATURES, type PropertyDemand } from '@/types/property-demand';
 
 function demand(overrides: Partial<PropertyDemand> = {}): PropertyDemand {
@@ -64,7 +69,7 @@ const SQUARE = [
 describe('🔴 Τ — καμία μετάφραση στον άξονα συναλλαγής', () => {
   it('το `seeks` περνά ΑΥΤΟΥΣΙΟ στα `offerKinds` — schema.org/Demand', () => {
     const filters = listingFiltersFromDemand(demand({ seeks: ['leaseOut', 'exchange'] }));
-    expect(filters.offerKinds).toEqual(['leaseOut', 'exchange']);
+    expect(valuesOf(filters.criteria, 'offerKind')).toEqual(['leaseOut', 'exchange']);
   });
 });
 
@@ -179,7 +184,6 @@ describe('🔴 Α — η λίστα απωλειών: ούτε ψεύτικη π
       },
     ],
     ['place-identity', { place: { kind: 'place', landId: 'land_1', buildingId: null } }],
-    ['floor-range', { features: { ...NO_DEMAND_FEATURES, floorMin: 3 } }],
     ['proximity', { proximity: [{ kind: 'school', maxMetres: 400 }] }],
   ];
 
@@ -194,15 +198,28 @@ describe('🔴 Α — η λίστα απωλειών: ούτε ψεύτικη π
     expect([...DEMAND_AXES_LOST_IN_FILTERS].sort()).toEqual([...covered].sort());
   });
 
-  it('🔴 ο ΟΡΟΦΟΣ είναι απώλεια — το `ListingFilters` δεν έχει τέτοιον άξονα', () => {
+  it('✅ ο ΟΡΟΦΟΣ ΔΕΝ είναι πια απώλεια — ταξιδεύει ως κριτήριο (2026-09-04)', () => {
+    // 🏆 **ΑΥΤΗ Η ΑΓΚΥΡΑ ΧΤΥΠΗΣΕ ΑΚΡΙΒΩΣ ΟΠΩΣ ΣΧΕΔΙΑΣΤΗΚΕ.** Η προηγούμενη μορφή
+    // της έγραφε: *«Αν κάποτε προστεθεί όροφος στα φίλτρα, αυτό το test πέφτει και
+    // αναγκάζει να αφαιρεθεί το `floor-range` από τις απώλειες — αντί να μείνει
+    // ψεύτικο.»* Προστέθηκε· έπεσε· η γραμμή αφαιρέθηκε.
     const filters = listingFiltersFromDemand(
       demand({ features: { ...NO_DEMAND_FEATURES, floorMin: 3, floorMax: 5 } }),
     );
-    // Αν κάποτε προστεθεί όροφος στα φίλτρα, αυτό το test πέφτει και αναγκάζει να
-    // αφαιρεθεί το `floor-range` από τις απώλειες — αντί να μείνει ψεύτικο.
-    expect(Object.keys(filters)).not.toContain('floorMin');
+    expect(rangeOf(filters.criteria, 'floor')).toEqual({ min: 3, max: 5 });
+
+    // ⚠️ Και η **αντίστροφη** φορά: η λίστα απωλειών δεν επιτρέπεται να το λέει πια.
+    expect([...DEMAND_AXES_LOST_IN_FILTERS]).not.toContain('floor-range');
     expect(axesLostProjectingDemand(demand({ features: { ...NO_DEMAND_FEATURES, floorMax: 5 } })))
-      .toContain('floor-range');
+      .toEqual([]);
+  });
+
+  it('🔴 ΤΟ ΣΥΜΒΟΛΑΙΟ «ΥΠΕΡΣΥΝΟΛΟ» ΕΠΙΒΙΩΝΕΙ ΤΗΣ ΣΤΕΝΩΣΗΣ', () => {
+    // Η προσθήκη του ορόφου **στενεύει** την προβολή, άρα μοιάζει να σπάει το
+    // συμβόλαιο. Δεν το σπάει: η μηχανή αποκλείει αγγελία **χωρίς** δηλωμένο όροφο
+    // (`withinRange(null, …) === false`), ενώ τα φίλτρα την **κρατούν** ως «δεν το
+    // δήλωσε». Τα φίλτρα παραμένουν χαλαρότερα — που είναι ό,τι απαιτεί το συμβόλαιο.
+    expect(withinRange(null, 3, null)).toBe(false);
   });
 });
 
@@ -222,7 +239,7 @@ describe('Δ — ο σύνδεσμος «δες τι υπάρχει σήμερα
     expect(href.startsWith('/search/results?')).toBe(true);
     expect(href).toContain('offer=sell');
     expect(href).toContain('pmax=250000');
-    expect(href).toContain('beds=3');
+    expect(href).toContain('bedsmin=3');
     expect(href).toContain('r=4');
   });
 

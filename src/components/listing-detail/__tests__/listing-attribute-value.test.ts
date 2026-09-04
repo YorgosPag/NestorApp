@@ -49,11 +49,11 @@ import {
 import type { PublicListing } from '@/types/public-listing';
 
 import {
-  attributeValue,
   FEATURE_SET_VOCABULARY,
   vocabularyLabel,
   type AttributeVocabulary,
-} from '../listing-attribute-value';
+} from '@/lib/listings/listing-attribute-vocabulary';
+import { attributeValue } from '../listing-attribute-value';
 
 /**
  * **Κάθε λεξιλόγιο, και ο κατάλογος τιμών του** — χειρόγραφο επίτηδες, ως **δεύτερη

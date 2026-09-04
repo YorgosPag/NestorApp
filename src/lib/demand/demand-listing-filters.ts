@@ -33,9 +33,13 @@
  * κοίταξε» που κυνηγούν οι πύλες, μεταφερμένο στην οθόνη.
  *
  * Πρακτικά αυτό σημαίνει: το **πολύγωνο** της Ζ4 προβάλλεται σε **περικλείοντα
- * κύκλο** (μεγαλύτερος, ποτέ μικρότερος)· ο **χρόνος**, η **ταυτότητα ακινήτου**, ο
- * **όροφος** και η **γειτονιά** απλώς **δεν ταξιδεύουν**.
+ * κύκλο** (μεγαλύτερος, ποτέ μικρότερος)· ο **χρόνος**, η **ταυτότητα ακινήτου** και
+ * η **γειτονιά** απλώς **δεν ταξιδεύουν**.
  * Η μηχανή τα ξαναβάζει **μετά** ({@link matchDemandAgainstListing}).
+ *
+ * ✅ **Ο ΟΡΟΦΟΣ ΤΑΞΙΔΕΥΕΙ ΠΛΕΟΝ** (2026-09-04): ήταν ο **μόνος** άξονας που χανόταν
+ * επειδή η αναζήτηση **δεν είχε λέξη** γι' αυτόν — όχι επειδή δεν χωρούσε. Με το
+ * `lib/criteria/` η λέξη υπάρχει, και η γραμμή του έφυγε από τη λίστα απωλειών.
  *
  * 🔑 **Και η λίστα των απωλειών είναι Η ΙΔΙΑ λίστα με τη δουλειά της μηχανής.** Ένας
  * άξονας που χάνεται εδώ είναι **ακριβώς** ένας άξονας που η μηχανή οφείλει να
@@ -48,6 +52,11 @@
 import type { ListingFilters } from '@/lib/listings/listing-filters';
 import { EMPTY_LISTING_FILTERS } from '@/lib/listings/listing-filters';
 import { serializeListingFilters } from '@/lib/listings/listing-filters';
+import {
+  EMPTY_LISTING_CRITERIA,
+  withRange,
+  withValues,
+} from '@/lib/criteria/listing-criteria';
 import { searchResultsHref } from '@/lib/listings/listing-routes';
 import { geoOutlineBoundingCircle } from '@/lib/geo/geo-ring';
 import { distanceMeters } from '@/lib/geo/geo-distance';
@@ -84,13 +93,39 @@ export const DEMAND_AXES_LOST_IN_FILTERS = [
    * με το `area-outline` — γι' αυτό μοιράζεται τη λέξη «κύκλος», όχι το ίδιο πεδίο.
    */
   'frontage-axis',
-  /** **Ζ5** — ο όροφος. Το `ListingFilters` δεν έχει άξονα ορόφου (μετρημένο). */
-  'floor-range',
   /** **Ζ6** — «σχολείο ≤ 500 μ.». Απαιτεί άντληση σημείων ενδιαφέροντος. */
   'proximity',
 ] as const;
 
+/**
+ * ✅ **ΤΟ `'floor-range'` ΕΦΥΓΕ ΑΠΟ ΤΗ ΛΙΣΤΑ (2026-09-04) — ΚΑΙ ΕΤΣΙ ΜΕΤΡΙΕΤΑΙ Η
+ * ΠΡΟΟΔΟΣ.**
+ *
+ * Η γραμμή του έγραφε: *«ο όροφος. Το `ListingFilters` δεν έχει άξονα ορόφου
+ * (μετρημένο)»*. Ήταν η **πιο συγκεκριμένη διατύπωση** του ελαττώματος που γέννησε το
+ * `lib/criteria/`: η **ζήτηση** ήξερε `floorMin`/`floorMax`, η **αναζήτηση** δεν είχε
+ * λέξη γι' αυτά — δύο λεξιλόγια για την ίδια ερώτηση, ήδη αποκλίνοντα (ADR-749).
+ *
+ * 🔑 **Αυτή η λίστα ΕΙΝΑΙ ο μετρητής της ενοποίησης.** Κάθε άξονας που η αναζήτηση
+ * αποκτά **σβήνει μια γραμμή από εδώ**, και όταν αδειάσει, τα δύο λεξιλόγια θα λένε
+ * το ίδιο πράγμα. Δεν είναι γνώμη — είναι διαφορά που ο μεταγλωττιστής και οι άγκυρες
+ * βλέπουν. **Μείναν πέντε.**
+ *
+ * ⚠️ **Η προσθήκη του ορόφου ΔΕΝ σπάει το συμβόλαιο «υπερσύνολο»**, και το γράφω
+ * επειδή μοιάζει να το σπάει *(η προβολή μόλις **στένεψε**)*. Ο έλεγχος είναι
+ * μετρημένος: η μηχανή αποκλείει αγγελία **χωρίς** δηλωμένο όροφο *(`withinRange`
+ * με `null` ⇒ `false` ⇒ `floor-outside`)*, ενώ τα φίλτρα την **κρατούν** και τη
+ * μετρούν ως *«δεν το δήλωσε»*. Άρα τα φίλτρα παραμένουν **χαλαρότερα** από τη
+ * μηχανή σε κάθε άξονα — που είναι ακριβώς αυτό που το συμβόλαιο απαιτεί.
+ *
+ * 🔶 **Δηλωμένο, μη λυμένο**: η **ίδια** η ασυμμετρία είναι πλέον το επόμενο εύρημα.
+ * Η αναζήτηση ονομάζει την άγνοια *(τρίτος κάδος)*· η μηχανή ταιριάσματος ακόμη την
+ * ισοπεδώνει σε `no-match` για τιμή, εμβαδόν, υπνοδωμάτια και όροφο. Δύο πολιτικές
+ * για την ίδια σιωπή — και η σωστή είναι η **μία, με δύο όψεις**, όπως ακριβώς λέει
+ * και το ανοιχτό ζήτημα των `demand.blocker.*` σε γ' πληθυντικό.
+ */
 export type DemandAxisLostInFilters = (typeof DEMAND_AXES_LOST_IN_FILTERS)[number];
+
 
 /**
  * Ποιοι άξονες χάνονται **για αυτή τη συγκεκριμένη ζήτηση**.
@@ -114,9 +149,8 @@ export function axesLostProjectingDemand(
   if (demand.place.kind === 'area') lost.push('area-outline');
   if (demand.place.kind === 'frontage') lost.push('frontage-axis');
   if (demand.place.kind === 'place') lost.push('place-identity');
-  if (demand.features.floorMin !== null || demand.features.floorMax !== null) {
-    lost.push('floor-range');
-  }
+  // ✅ Ο **όροφος** δεν χάνεται πια — ταξιδεύει ως κριτήριο. Δες τη σημείωση πάνω από
+  //    το `DemandAxisLostInFilters`: αυτή η διαγραφή **είναι** η πρόοδος.
   if (demand.proximity.length > 0) lost.push('proximity');
 
   return lost;
@@ -188,20 +222,33 @@ function projectPlace(place: DemandPlace): ProjectedGeo {
  * Αν η ζήτηση είχε δικό της λεξιλόγιο, **εδώ** θα ζούσε ένας πίνακας μετάφρασης, και
  * εκεί θα γεννιόταν η επόμενη απόκλιση.
  *
- * ⚠️ **Ο όροφος ΔΕΝ γράφεται** — το `ListingFilters` δεν τον έχει. Δηλώνεται ως
- * `floor-range` στις απώλειες, ώστε να μην είναι σιωπηλή παράλειψη που κάποιος θα
- * ανακαλύψει βλέποντας ισόγεια σε αναζήτηση για 3ο όροφο.
+ * ✅ **Ο ΟΡΟΦΟΣ ΓΡΑΦΕΤΑΙ ΠΛΕΟΝ.** Ήταν η μοναδική απώλεια που δεν είχε αιτία στη
+ * **φύση** του άξονα — μόνο στην απουσία λέξης. Δες τη σημείωση πάνω από το
+ * `DemandAxisLostInFilters` για το γιατί αυτό **δεν** σπάει το συμβόλαιο υπερσυνόλου.
+ *
+ * ⚠️ **Οι κατασκευαστές, ποτέ ωμό αντικείμενο.** Το `withRange`/`withValues` είναι
+ * που επιβάλλουν το *«κενό κριτήριο δεν αποθηκεύεται»* — μια ζήτηση χωρίς οροφή
+ * τιμής **δεν** πρέπει να αποκτήσει `price: {min:null,max:null}`, αλλιώς δύο
+ * ταυτόσημες ζητήσεις θα παρήγαγαν διαφορετικό χάρτη και κάθε σύγκριση θα έλεγε
+ * «άλλαξε» χωρίς να έχει αλλάξει τίποτα.
+ *
+ * ⚠️ **Τα υπνοδωμάτια μένουν μονόπλευρα**, κι ας δέχεται ο άξονας εύρος: η **ζήτηση**
+ * έχει μόνο `bedroomsMin`. Ένα `max` από το πουθενά θα ήταν **στένωση χωρίς αίτημα** —
+ * ακριβώς αυτό που το συμβόλαιο απαγορεύει.
  */
 export function listingFiltersFromDemand(demand: PropertyDemand): ListingFilters {
+  const f = demand.features;
+
+  let criteria = withValues(EMPTY_LISTING_CRITERIA, 'offerKind', demand.seeks);
+  criteria = withValues(criteria, 'type', f.types);
+  criteria = withRange(criteria, 'price', { min: f.priceMin, max: f.priceMax });
+  criteria = withRange(criteria, 'areaSqm', { min: f.areaMin, max: f.areaMax });
+  criteria = withRange(criteria, 'bedrooms', { min: f.bedroomsMin, max: null });
+  criteria = withRange(criteria, 'floor', { min: f.floorMin, max: f.floorMax });
+
   return {
     ...EMPTY_LISTING_FILTERS,
-    offerKinds: demand.seeks,
-    types: demand.features.types,
-    priceMin: demand.features.priceMin,
-    priceMax: demand.features.priceMax,
-    areaMin: demand.features.areaMin,
-    areaMax: demand.features.areaMax,
-    bedroomsMin: demand.features.bedroomsMin,
+    criteria,
     near: projectPlace(demand.place),
   };
 }

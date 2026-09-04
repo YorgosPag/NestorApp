@@ -31,15 +31,11 @@
  */
 
 import React, { useId } from 'react';
-import { useRouter } from '@/lib/workspace/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import {
-  serializeListingFilters,
-  type ListingFilters,
-} from '@/lib/listings/listing-filters';
-import { searchResultsHref } from '@/lib/listings/listing-routes';
+import type { ListingFilters } from '@/lib/listings/listing-filters';
 import { intervalShape } from '@/lib/date-local';
 import { cn } from '@/lib/utils';
+import { useFilterCommit } from './filters/use-filter-commit';
 
 interface StayFilterFieldsProps {
   readonly filters: ListingFilters;
@@ -51,7 +47,7 @@ const GUEST_CHOICES = [1, 2, 3, 4, 5, 6, 7, 8] as const;
 
 export function StayFilterFields({ filters, className }: StayFilterFieldsProps) {
   const { t } = useTranslation(['short-stay']);
-  const router = useRouter();
+  const { commit } = useFilterCommit(filters);
   const checkInId = useId();
   const checkOutId = useId();
   const guestsId = useId();
@@ -60,14 +56,13 @@ export function StayFilterFields({ filters, className }: StayFilterFieldsProps) 
   const checkOut = filters.stayWindow?.checkOut ?? '';
 
   /**
-   * 🔑 **Η ΜΙΑ ΕΞΟΔΟΣ ΠΡΟΣ ΤΗ ΔΙΕΥΘΥΝΣΗ.** Κάθε έλεγχος περνά από εδώ, ώστε η
-   * κανονικοποίηση (`serializeListingFilters`) να γίνεται **μία** φορά. Δύο σημεία
-   * που έγραφαν διεύθυνση θα παρήγαγαν δύο διαφορετικούς συνδέσμους για την ίδια
-   * ερώτηση — που για μηχανή αναζήτησης σημαίνει δύο σελίδες με το ίδιο περιεχόμενο.
+   * ✅ **Η ΜΙΑ ΕΞΟΔΟΣ ΠΡΟΣ ΤΗ ΔΙΕΥΘΥΝΣΗ ΕΦΥΓΕ ΣΕ ΚΟΙΝΟ ΤΟΠΟ** *(2026-09-04, Στάδιο 3)*.
+   *
+   * Ζούσε εδώ ως τοπική `commit()`, με τον λόγο της γραμμένο: *«δύο σημεία που έγραφαν
+   * διεύθυνση θα παρήγαγαν δύο διαφορετικούς συνδέσμους για την ίδια ερώτηση»*. Το
+   * πάνελ κριτηρίων πρόσθεσε **τρία ακόμη** τέτοια σημεία — οπότε το επιχείρημα
+   * απαιτούσε **μετακόμιση**, όχι αντιγραφή: {@link useFilterCommit}.
    */
-  function commit(next: ListingFilters): void {
-    router.push(searchResultsHref(serializeListingFilters(next).toString()));
-  }
 
   /**
    * ⚠️ **Το ημιτελές παράθυρο ΔΕΝ γράφεται, και δεν είναι σφάλμα.** Όσο ο επισκέπτης

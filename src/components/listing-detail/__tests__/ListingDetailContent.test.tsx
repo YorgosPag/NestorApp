@@ -190,10 +190,13 @@ describe('Ο1 — κάθε κατάσταση λέει το δικό της', ()
 
 describe('Ο2 — ο σύνδεσμος επιστροφής κρατά την αναζήτηση', () => {
   it('κρατά τα αναγνωρίσιμα φίλτρα', () => {
+    // ⚠️ Ο σύνδεσμος εισόδου λέει `beds=2` — **παλιό όνομα**, που εξακολουθεί να
+    //    διαβάζεται. Ο σύνδεσμος επιστροφής γράφει το **κανονικό** (`bedsmin`): η
+    //    διεύθυνση ΚΑΝΟΝΙΚΟΠΟΙΕΙΤΑΙ, δεν αντιγράφεται — δες το επόμενο test.
     renderWith({ state: 'found', listing: listing() }, 'offer=sell&beds=2');
     const back = screen.getAllByText('search-results:detail.back')[0];
     expect(back.getAttribute('href')).toContain('offer=sell');
-    expect(back.getAttribute('href')).toContain('beds=2');
+    expect(back.getAttribute('href')).toContain('bedsmin=2');
   });
 
   it('🔴 πετά τα σκουπίδια — η διεύθυνση ΚΑΝΟΝΙΚΟΠΟΙΕΙΤΑΙ, δεν αντιγράφεται', () => {

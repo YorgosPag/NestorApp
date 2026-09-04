@@ -42,6 +42,8 @@
 
 import type { PropertyDemand } from '@/types/property-demand';
 import type { ListingFilters } from '@/lib/listings/listing-filters';
+import { rangeOf, valuesOf } from '@/lib/criteria/listing-criteria';
+import { NO_RANGE, type CriterionRange } from '@/lib/criteria/criterion-vocabulary';
 import { distanceMeters } from '@/lib/geo/geo-distance';
 import { listingFiltersFromDemand } from './demand-listing-filters';
 
@@ -117,12 +119,40 @@ export function demandsAreSimilar(a: PropertyDemand, b: PropertyDemand): boolean
   const fb = listingFiltersFromDemand(b);
 
   return (
-    labelsIntersect(fa.offerKinds, fb.offerKinds) &&
-    labelsIntersect(fa.types, fb.types) &&
-    rangesIntersect(fa.priceMin, fa.priceMax, fb.priceMin, fb.priceMax) &&
-    rangesIntersect(fa.areaMin, fa.areaMax, fb.areaMin, fb.areaMax) &&
+    labelsIntersect(labels(fa, 'offerKind'), labels(fb, 'offerKind')) &&
+    labelsIntersect(labels(fa, 'type'), labels(fb, 'type')) &&
+    rangesOverlap(span(fa, 'price'), span(fb, 'price')) &&
+    rangesOverlap(span(fa, 'areaSqm'), span(fb, 'areaSqm')) &&
     areasIntersect(fa.near, fb.near)
   );
+}
+
+/**
+ * 🔴 **ΟΙ ΑΞΟΝΕΣ ΤΗΣ ΟΜΟΙΟΤΗΤΑΣ ΕΙΝΑΙ ΠΕΝΤΕ, ΚΑΙ ΔΕΝ ΜΕΓΑΛΩΣΑΝ ΜΕ ΤΟΝ ΟΡΟΦΟ.**
+ *
+ * Η προβολή ζήτησης → φίλτρα απέκτησε *(2026-09-04)* άξονα **ορόφου**. Η προφανής
+ * κίνηση —«πρόσθεσέ τον κι εδώ, τώρα που ταξιδεύει»— **απορρίπτεται**: αυτή η
+ * συνάρτηση απαντά *«ποιος **θα μπορούσε** να ανταγωνιστεί;»*, και η δηλωμένη της
+ * πολιτική είναι **γενναιοδωρία** *(«μετράμε περισσότερους, ποτέ λιγότερους»)*.
+ * Κάθε νέος άξονας εδώ **στενεύει** τον ανταγωνισμό — δηλαδή λέει στον άνθρωπο ότι
+ * τον ψάχνουν λιγότεροι απ' όσους πραγματικά τον ψάχνουν.
+ *
+ * ⚠️ Άρα ο κατάλογος εδώ **δεν ακολουθεί** τη λίστα απωλειών: είναι δική του
+ * απόφαση προϊόντος, και το γράφω ώστε η επόμενη προσθήκη άξονα να μη «διορθώσει»
+ * σιωπηλά αυτή τη σιωπή.
+ */
+function labels(filters: ListingFilters, key: 'offerKind' | 'type'): readonly string[] {
+  return valuesOf(filters.criteria, key) ?? [];
+}
+
+/** Το εύρος ενός άξονα, ή το ουδέτερο όταν δεν ρωτήθηκε. */
+function span(filters: ListingFilters, key: 'price' | 'areaSqm'): CriterionRange {
+  return rangeOf(filters.criteria, key) ?? NO_RANGE;
+}
+
+/** Τα δύο εύρη, με τη σημασιολογία κενού που ήδη ίσχυε. */
+function rangesOverlap(a: CriterionRange, b: CriterionRange): boolean {
+  return rangesIntersect(a.min, a.max, b.min, b.max);
 }
 
 /**

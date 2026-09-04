@@ -19,22 +19,32 @@
  * απαντά για το **σύνολο**, όχι για ό,τι τυχαίνει να χωρά σε ένα πλαίσιο.
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { usePublicListings, useListingLedger } from '@/services/realtime/hooks/usePublicListings';
 import {
   applyListingFilters,
+  computeListingCriteriaLedger,
+  listingCriteriaMatch,
   parseListingFilters,
   serializeListingFilters,
   stayQueryOf,
 } from '@/lib/listings/listing-filters';
+import {
+  askedCriterionKeys,
+  EMPTY_LISTING_CRITERIA,
+} from '@/lib/criteria/listing-criteria';
+import { criterionLabel } from '@/lib/criteria/listing-criterion-labels';
+import type { PublicListing } from '@/types/public-listing';
 import { computeStayLedger } from '@/lib/listings/stay-ledger';
 import { stayAvailabilityFor, saleExposureOf } from '@/lib/stay/stay-availability';
 import type { StayAvailabilityAnswer } from '@/lib/stay/stay-availability-vocabulary';
 import { listingMapShape, isMappedShape } from '@/lib/listings/listing-map-shape';
 import { useViewportClass } from '@/hooks/media/useViewportClass';
+import { CriteriaLedgerBar } from './CriteriaLedgerBar';
 import { ListingLedgerBar } from './ListingLedgerBar';
+import { PrimaryFilterBar } from './filters/PrimaryFilterBar';
 import { StayFilterFields } from './StayFilterFields';
 import { StayLedgerBar } from './StayLedgerBar';
 import { ResultsList } from './ResultsList';
@@ -42,7 +52,7 @@ import { ResultsMap } from './ResultsMap';
 import { ResultsSheet } from './ResultsSheet';
 
 export function SearchResultsContent() {
-  const { t } = useTranslation(['search-results']);
+  const { t } = useTranslation(['search-results', 'search-filters', 'listing-detail']);
   const searchParams = useSearchParams();
 
   /**
@@ -63,6 +73,64 @@ export function SearchResultsContent() {
   );
 
   const visible = useMemo(() => applyListingFilters(listings, filters), [listings, filters]);
+
+  /**
+   * 🔴 **ΤΟ ΤΡΙΤΟ ΣΥΝΟΛΟ — ΚΑΙ ΧΩΡΙΣ ΑΥΤΟ Η ΛΟΓΙΣΤΙΚΗ ΚΡΙΤΗΡΙΩΝ ΕΙΝΑΙ ΨΕΥΔΗΣ**
+   * (ADR-777 §8.51).
+   *
+   * Ο κατάλογος **αφού** απαντηθούν οι άξονες που ζουν **έξω** από τον χάρτη κριτηρίων
+   * *(γεωγραφία · παράθυρο · άτομα)* και **πριν** κριθούν τα ίδια τα κριτήρια.
+   *
+   * ⚠️ **Η προφανής γραφή ήταν να μετρηθεί το `visible`, και θα ήταν ΔΟΜΙΚΑ ΤΥΦΛΗ**:
+   * το `visible` έχει **ήδη πετάξει** τις αποκλεισμένες, άρα το `excluded` θα ήταν
+   * **πάντα 0** — μια γραμμή που θα έγραφε *«8 ταιριάζουν · 0 δεν ταιριάζουν»* σε
+   * **κάθε** αναζήτηση, για πάντα. Το ίδιο σχήμα με το *«`0` σημαίνει κανείς δεν
+   * κοίταξε»* που το repo έχει πληρώσει τέσσερις φορές.
+   *
+   * ⚠️ **Ούτε ο ωμός `listings` όμως**: τότε το σύνολο θα περιλάμβανε ακίνητα εκτός της
+   * περιοχής που διάλεξε ο άνθρωπος, και η γραμμή θα του χρέωνε ως *«δεν ταιριάζουν»*
+   * σπίτια που **δεν ζήτησε ποτέ**.
+   *
+   * 🔑 **Ο ΙΔΙΟΣ φιλτραριστής, άλλη ερώτηση** — `applyListingFilters` με **κενά**
+   * κριτήρια. Ένας δεύτερος γεωγραφικός έλεγχος εδώ θα ήταν δεύτερη αλήθεια για το
+   * *«είναι μέσα στην ακτίνα;»*, δηλαδή ακριβώς ό,τι αποφεύγει το `listingMapShape`.
+   */
+  const withinScope = useMemo(
+    () => applyListingFilters(listings, { ...filters, criteria: EMPTY_LISTING_CRITERIA }),
+    [listings, filters]
+  );
+
+  /**
+   * **«7 ταιριάζουν · 3 χωρίς δηλωμένα στοιχεία · 4 δεν ταιριάζουν».**
+   *
+   * 🔑 Το άθροισμα κλείνει στο `withinScope`, και υπάρχει **δεύτερος** έλεγχος που η
+   * οθόνη μπορεί να κάνει μόνη της: `visible.length === matching + undeclared`. Είναι
+   * η ίδια σχέση με το `ledgersAgree` της διαμονής — δύο διαμερίσεις που **οφείλουν**
+   * να συμφωνούν, και φωνάζουν αν όχι.
+   */
+  const criteriaLedger = useMemo(
+    () => computeListingCriteriaLedger(withinScope, filters),
+    [withinScope, filters]
+  );
+
+  const criteriaAsked = useMemo(
+    () => askedCriterionKeys(filters.criteria).length > 0,
+    [filters]
+  );
+
+  /**
+   * **Ποιους άξονες σιωπά μια συγκεκριμένη αγγελία** — η ερώτηση που κατεβαίνει στη λίστα.
+   *
+   * ⚠️ **`useCallback` με εξάρτηση τα `filters`, ΟΧΙ πίνακας**: η κρίση μιας αγγελίας
+   * κοστίζει όσο οι **ρωτημένοι** άξονες *(συνήθως 2-3)*, και τρέχει **μόνο** για τις
+   * κάρτες που πράγματι ζωγραφίζονται. Ένας προϋπολογισμένος χάρτης θα έκρινε και τις
+   * 2.000 για να διαβαστούν οι 20.
+   */
+  const undeclaredLabelsFor = useCallback(
+    (listing: PublicListing) =>
+      listingCriteriaMatch(listing, filters).undeclaredOn.map((key) => criterionLabel(t, key)),
+    [filters, t]
+  );
 
   /**
    * Τα φίλτρα **ξανα-σειριοποιημένα**, όχι η ωμή διεύθυνση.
@@ -173,6 +241,30 @@ export function SearchResultsContent() {
           asked={stayQuery !== null}
           className="mt-1"
         />
+        {/*
+          🔴 **Η ΤΡΙΤΗ ΔΙΑΜΕΡΙΣΗ** (ADR-777 §8.51): *«πού;»* · *«πότε;»* · **«ταιριάζει;»**.
+          Τυπώνεται μόνο όταν κάποιος ρώτησε κάτι — δες την κεφαλίδα του συστατικού για
+          το γιατί αυτό ΔΕΝ αναιρεί τον κανόνα 27.
+        */}
+        <CriteriaLedgerBar ledger={criteriaLedger} asked={criteriaAsked} className="mt-1" />
+
+        {/*
+          ⚠️ **Τα ΦΙΛΤΡΑ κάτω από τις ΛΟΓΙΣΤΙΚΕΣ, όχι από πάνω.** Ο άνθρωπος διαβάζει
+          πρώτα *τι υπάρχει* και μετά *τι μπορεί να ζητήσει* — και όταν πατήσει κάτι, η
+          απάντηση είναι **ήδη μπροστά στα μάτια του**, όχι κάτω από τα χειριστήρια.
+
+          🔑 **Παίρνει το `withinScope`, ΟΧΙ τον ωμό κατάλογο**: τα πλήθη ανά επιλογή
+          οφείλουν να σέβονται την **περιοχή** και τις **ημερομηνίες** που έχει ήδη
+          διαλέξει. Ο ίδιος ο άξονας αφαιρείται μέσα στο `criterionOptionTallies`.
+        */}
+        <PrimaryFilterBar
+          filters={filters}
+          listings={withinScope}
+          visibleCount={visible.length}
+          viewport={viewport}
+          className="mt-2"
+        />
+
         <StayFilterFields filters={filters} className="mt-2" />
         {loading && <p className="mt-1 text-sm text-muted-foreground">{t('search-results:page.loading')}</p>}
         {error && <p role="alert" className="mt-1 text-sm text-destructive">{t('search-results:page.error')}</p>}
@@ -205,6 +297,7 @@ export function SearchResultsContent() {
             highlightedId={highlightedId}
             onHover={setHighlightedId}
             filterQuery={filterQuery}
+            undeclaredLabelsFor={undeclaredLabelsFor}
           />
         </ResultsSheet>
 

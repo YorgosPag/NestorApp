@@ -294,7 +294,13 @@ export type ListingAttributeKey = KeysWithTreatment<'attribute'>;
  * υπάρχει `switch` να σπάσει και ένα ceremonial table εδώ θα ήταν τελετουργία, όχι
  * φρουρός. Ένα νέο σύνολο σταματιέται σε **δύο άλλα** σημεία, και τα δύο `Record`
  * πάνω σε αυτόν ακριβώς τον τύπο: το `LISTING_ATTRIBUTE_GROUP` (*«πού κάθεται;»*) και
- * το `FEATURE_SET_VALUE_LABEL_NS` (*«με ποιο λεξιλόγιο ονομάζονται οι τιμές του;»*).
+ * το `FEATURE_SET_VOCABULARY` (*«με ποιο λεξιλόγιο ονομάζονται οι τιμές του;»*,
+ * `lib/listings/listing-attribute-vocabulary`).
+ *
+ * ⚠️ **Ως τις 2026-09-04 αυτή η γραμμή έλεγε `FEATURE_SET_VALUE_LABEL_NS` — όνομα που
+ * ΔΕΝ ΥΠΗΡΞΕ ΠΟΤΕ στον κώδικα.** Ένας φρουρός που αναφέρεται με όνομα που δεν
+ * υπάρχει είναι φρουρός που κανείς δεν μπορεί να βρει, δηλαδή τεκμηρίωση που
+ * **διαβάζεται ως εγγύηση χωρίς να είναι**.
  */
 export type ListingFeatureSetKey = KeysWithTreatment<'feature-set'>;
 

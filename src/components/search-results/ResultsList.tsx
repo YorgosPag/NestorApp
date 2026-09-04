@@ -25,9 +25,28 @@ interface ResultsListProps {
    * ώστε η επιστροφή από την οθόνη 3 να βρίσκει **την ίδια** αναζήτηση (Α3).
    */
   readonly filterQuery: string;
+  /**
+   * **Ποια στοιχεία σιωπά αυτή η αγγελία, ΩΣ ΚΕΙΜΕΝΟ** — ερώτηση, όχι πίνακας (§8.51).
+   *
+   * 🔑 **Συνάρτηση και όχι χάρτης `id → άξονες`**: ένας χάρτης θα ήταν **δεύτερο
+   * αντίγραφο** της κρίσης, χτισμένο πάνω σε ολόκληρο τον κατάλογο για να διαβαστεί
+   * από όσες κάρτες τυχαίνει να ζωγραφιστούν. Η κρίση μιας αγγελίας κοστίζει όσο οι
+   * **ρωτημένοι** άξονες — τρέχει όπου καταναλώνεται.
+   *
+   * ⚠️ **Η λίστα δεν ξέρει τι είναι «σιωπή» και δεν πρέπει.** Παραδίδει την ερώτηση
+   * από τον γονιό στην κάρτα· ο **κριτής** ζει στο `lib/criteria`, όπου και ανήκει.
+   */
+  readonly undeclaredLabelsFor: (listing: PublicListing) => readonly string[];
 }
 
-export function ResultsList({ mapped, unmapped, highlightedId, onHover, filterQuery }: ResultsListProps) {
+export function ResultsList({
+  mapped,
+  unmapped,
+  highlightedId,
+  onHover,
+  filterQuery,
+  undeclaredLabelsFor,
+}: ResultsListProps) {
   const { t } = useTranslation(['search-results']);
   const isEmpty = mapped.length === 0 && unmapped.length === 0;
 
@@ -61,6 +80,7 @@ export function ResultsList({ mapped, unmapped, highlightedId, onHover, filterQu
                 onHover={onHover}
                 filterQuery={filterQuery}
                 priority={index === 0}
+                undeclaredLabels={undeclaredLabelsFor(listing)}
               />
             ))}
           </ul>

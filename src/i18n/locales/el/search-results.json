@@ -92,7 +92,8 @@
       "agency": "Από γραφείο: {name}",
       "agencyAnonymous": "Από μεσιτικό γραφείο",
       "ownerDeclared": "Δήλωση ιδιοκτήτη"
-    }
+    },
+    "undeclaredOn": "Δεν έχει δηλωθεί: {fields}"
   },
   "detail": {
     "back": "Πίσω στα αποτελέσματα",

@@ -92,7 +92,8 @@
       "agency": "From agency: {name}",
       "agencyAnonymous": "From a real-estate agency",
       "ownerDeclared": "Owner-declared"
-    }
+    },
+    "undeclaredOn": "Not declared: {fields}"
   },
   "detail": {
     "back": "Back to results",

@@ -3570,6 +3570,8 @@
       "directory": {
         "occupationAll": "Όλες οι ειδικότητες",
         "occupationFilterLabel": "Ειδικότητα",
+        "occupationSearchEmpty": "Καμία ειδικότητα δεν ταιριάζει με αυτό που έγραψες",
+        "occupationSearchPlaceholder": "Πληκτρολόγησε ή διάλεξε",
         "open": "Δείτε τη βιτρίνα"
       }
     },
@@ -3752,7 +3754,8 @@
         "notListed": "Δεν διατίθεται",
         "rentPriceMissing": "Χωρίς καταχωρημένο ενοίκιο",
         "salePriceMissing": "Χωρίς καταχωρημένη τιμή πώλησης"
-      }
+      },
+      "undeclaredOn": "Δεν έχει δηλωθεί: {fields}"
     },
     "map": {
       "label": "Χάρτης αποτελεσμάτων",

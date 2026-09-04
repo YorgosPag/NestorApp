@@ -53,6 +53,7 @@ import {
   applyListingFilters,
   type ListingFilters,
 } from '@/lib/listings/listing-filters';
+import { EMPTY_LISTING_CRITERIA, withValues } from '@/lib/criteria/listing-criteria';
 import {
   LANDING_SHOWCASE_LIMIT,
   landingShowcaseListings,
@@ -231,7 +232,11 @@ export function landingModeFilters(
     // ⚠️ **Ένα** είδος, όχι πολλά: ο επισκέπτης πάτησε **ένα** κουμπί. Ένα δεύτερο
     //    `OfferKind` εδώ θα του έδινε αποτελέσματα που **δεν ζήτησε** — και θα
     //    ακύρωνε τον λόγο ύπαρξης του διακόπτη.
-    offerKinds: [LANDING_MODE_OFFER[mode]],
+    //
+    // 🔑 **Γράφεται μέσω του κατασκευαστή, ποτέ με ωμό αντικείμενο**: ο `withValues`
+    //    είναι που επιβάλλει τον κανόνα *«κενό σύνολο ⇒ ο άξονας φεύγει»*, ώστε δύο
+    //    ταυτόσημες αναζητήσεις να έχουν **ταυτόσημο** χάρτη κριτηρίων.
+    criteria: withValues(EMPTY_LISTING_CRITERIA, 'offerKind', [LANDING_MODE_OFFER[mode]]),
     // 🔴 **ΤΟ ΚΕΝΤΡΟ ΕΙΝΑΙ ΠΡΟΑΙΡΕΤΙΚΟ, ΚΑΙ ΑΥΤΟ ΕΙΝΑΙ Η ΑΠΟΦΑΣΗ Α4.3.**
     //
     // Η **υποβολή** έχει κέντρο *(ο επισκέπτης πληκτρολόγησε τόπο)*· η **βιτρίνα**

@@ -1,0 +1,39 @@
+{
+  "criteriaLedger": {
+    "summary": "{matching} match · {undeclared} with undeclared details · {excluded} do not match",
+    "undeclaredHint": "Listings that have not declared what you asked for stay visible — we do not know whether they match, and we do not hide that.",
+    "imbalanced": "The criteria count does not add up — this is an error, not a state."
+  },
+  "filters": {
+    "heading": "Filters",
+    "more": "More filters",
+    "moreActive": "{count, plural, one {More filters · # active} other {More filters · # active}}",
+    "close": "Close filters",
+    "clearAll": "Clear all",
+    "clearAxis": "Clear",
+    "apply": "{count, plural, =0 {No results} one {Show # result} other {Show # results}}",
+    "empty": "No filters active",
+    "range": {
+      "min": "From",
+      "max": "To",
+      "minLabel": "{axis} — from",
+      "maxLabel": "{axis} — to"
+    },
+    "option": {
+      "undeclared": "{count} undeclared"
+    },
+    "axis": {
+      "price": "Price",
+      "offerKind": "Offer",
+      "authorship": "Listed by",
+      "hasPhotos": "With photos only"
+    },
+    "authorship": {
+      "agency": "Agencies",
+      "owner-declared": "Private owners"
+    },
+    "group": {
+      "listing": "The listing"
+    }
+  }
+}

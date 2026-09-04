@@ -35,7 +35,7 @@ import { resolveDisplayPrice } from '@/lib/properties/price-resolver';
 import { MISSING_PRICE_KEY } from '@/lib/listings/listing-price-keys';
 import { listingDetailHref } from '@/lib/listings/listing-routes';
 import type { PublicListing } from '@/types/public-listing';
-import { formatCurrency } from '@/lib/intl-formatting';
+import { formatCurrency, formatList } from '@/lib/intl-formatting';
 import { listingImageSrcSet, listingLeadImage } from '@/lib/listings/listing-images';
 import { ListingAuthorshipLine } from '@/components/listings/ListingAuthorshipLine';
 
@@ -116,6 +116,48 @@ interface ListingCardProps {
    * μην το περάσεις: η προεπιλογή είναι η στήλη.
    */
   readonly imageSizes?: string;
+  /**
+   * **Οι άξονες που ο επισκέπτης ΖΗΤΗΣΕ και αυτή η αγγελία ΔΕΝ ΕΧΕΙ ΔΗΛΩΣΕΙ**
+   * (ADR-777 §8.51).
+   *
+   * 🔴 **ΕΙΝΑΙ Ο ΛΟΓΟΣ ΠΟΥ Η ΚΑΡΤΑ ΕΙΝΑΙ ΕΔΩ, ΚΑΙ ΧΩΡΙΣ ΑΥΤΟΝ Η ΠΑΡΟΥΣΙΑ ΤΗΣ ΕΙΝΑΙ
+   * ΑΝΕΞΗΓΗΤΗ.** Μετρημένο ζωντανά: το `?pmax=1` επιστρέφει **μία** αγγελία — αυτήν
+   * **χωρίς δηλωμένο ενοίκιο** — και με τον παλιό κώδικα θα επέστρεφε **μηδέν**. Η
+   * τρίτη κατάσταση του κριτή (`undeclared`) την **κρατά ορατή**· αυτή η γραμμή είναι
+   * το σημείο όπου ο άνθρωπος μαθαίνει **γιατί** τη βλέπει.
+   *
+   * ⚠️ **Η γραμμή λογιστικής ΔΕΝ αρκεί, και το αντίστροφο.** Εκείνη λέει *«3 χωρίς
+   * δηλωμένα στοιχεία»* και ο άνθρωπος δεν ξέρει **ποιες τρεις**· αυτή λέει *«αυτή, και
+   * της λείπει η ενεργειακή κλάση»* και ο άνθρωπος δεν ξέρει αν είναι **3 ή 30**.
+   *
+   * 🔑 **Προαιρετικό, όπως τα άλλα συμφραζόμενα της οθόνης 2**: η βιτρίνα
+   * `/pro/<ψευδώνυμο>` **δεν έχει φίλτρα**, άρα δεν υπάρχει σιωπή να ονομαστεί — ένα
+   * υποχρεωτικό `[]` εκεί θα ήταν ψεύτικη τιμή, ακριβώς ό,τι απέφυγαν τα τρία πεδία
+   * από πάνω.
+   *
+   * ────────────────────────────────────────────────────────────────────────
+   * 🔴 ΕΤΟΙΜΕΣ ΕΤΙΚΕΤΕΣ, ΟΧΙ `CriterionKey[]` — ΚΑΙ ΤΟ ΚΟΣΤΟΣ ΗΤΑΝ ΜΕΤΡΗΜΕΝΟ
+   * ────────────────────────────────────────────────────────────────────────
+   *
+   * Η πρώτη γραφή έπαιρνε `readonly CriterionKey[]` και καλούσε μόνη της τη
+   * `criterionLabel`. **Μετρήθηκε ζωντανά ότι έριξε ΔΥΟ ΟΛΟΚΛΗΡΑ namespaces μέσα
+   * στο ΚΕΛΥΦΟΣ**: η κάρτα ζει και στη **βιτρίνα της ρίζας**, άρα βρίσκεται στη
+   * στατική κλειστότητα του κελύφους — και ο γεννήτορας του ADR-744 αποδίδει τα
+   * κλειδιά **ανά αρχείο**, οπότε ένα `import` από το `listing-criterion-labels`
+   * κουβάλησε **όλα** τα κλειδιά εκείνου του αρχείου. Αποτέλεσμα: κέλυφος **18 → 21**
+   * namespaces, δηλαδή `listing-detail` + `properties-enums` σε **~150 διαδρομές**.
+   *
+   * ⚠️ **Και η πύλη ΔΕΝ το είχε πιάσει**: το μητρώο μετανάστευσης (CHECK 3.34) κρίνει
+   * τα **10 δηλωμένα** namespaces με προϋπολογισμό· ένα **νέο** namespace στο κέλυφος
+   * δεν έχει γραμμή, άρα δεν έχει ταβάνι. Φάνηκε μόνο επειδή **οκτώ άσχετες
+   * διαδρομές** έχασαν ταυτόχρονα το `properties-enums:types.*` — αφαιρέθηκε ως
+   * «το δίνει ήδη το κέλυφος».
+   *
+   * 🔑 Η θεραπεία είναι **αρχιτεκτονική, όχι ρύθμιση**: η κάρτα είναι συστατικό
+   * **παρουσίασης** — δεν χρειάζεται να ξέρει τι είναι άξονας κριτηρίου. Παίρνει
+   * κείμενο. Το λεξιλόγιο μένει στην οθόνη 2, όπου και ανήκει.
+   */
+  readonly undeclaredLabels?: readonly string[];
 }
 
 export function ListingCard({
@@ -126,6 +168,7 @@ export function ListingCard({
   showAuthorship = true,
   priority = false,
   imageSizes = CARD_IMAGE_SIZES,
+  undeclaredLabels = [],
 }: ListingCardProps) {
   const { t } = useTranslation(['search-results']);
   const price = resolveDisplayPrice(listing);
@@ -245,6 +288,28 @@ export function ListingCard({
             πλέον στο `lib/listings/listing-authorship.ts`, η ζωγραφική στη γραμμή από
             κάτω — και **η τυπογραφία μένει εδώ**, γιατί εδώ είναι υποσημείωση.
           */}
+          {/*
+            🔴 **Η ΟΝΟΜΑΣΜΕΝΗ ΣΙΩΠΗ** — δες {@link ListingCardProps.undeclaredLabels}.
+
+            ⚠️ **ΜΙΑ πρόταση με ένωση, ΟΧΙ λίστα σημάτων.** Τρία `badge` δίπλα-δίπλα
+            διαβάζονται ως **ιδιότητες του ακινήτου** *(«τζάκι», «πισίνα»)* — δηλαδή θα
+            έλεγαν το αντίθετο από αυτό που εννοούν. Η ένωση γίνεται με τον
+            `formatList`, που ξέρει το «και» κάθε γλώσσας: ένα `join(', ')` θα έγραφε
+            «ενεργειακή κλάση, θέρμανση» χωρίς σύνδεσμο, λάθος σε **κάθε** γλώσσα (N.11).
+
+            🔑 **Οι ετικέτες είναι οι ΙΔΙΕΣ με το φίλτρο και με τη σελίδα του ακινήτου**
+            (`criterionLabel`) — ο άνθρωπος διαβάζει εδώ **ακριβώς** τη λέξη που μόλις
+            πάτησε στο πάνελ. Δύο μητρώα θα σήμαιναν ότι πατά «Ενεργειακή κλάση» και
+            διαβάζει «Ενεργ. κατηγορία».
+          */}
+          {undeclaredLabels.length > 0 && (
+            <p className="mt-2 text-xs italic text-muted-foreground">
+              {t('search-results:listing.undeclaredOn', {
+                fields: formatList(undeclaredLabels),
+              })}
+            </p>
+          )}
+
           {showAuthorship ? (
             <ListingAuthorshipLine
               listing={listing}

@@ -13,6 +13,13 @@
  * διαβάζει **ήδη** και δεύτερος καταναλωτής, ο **server** resolver
  * (`services/property-enum-labels`) που τροφοδοτεί PDF · email · Telegram.
  *
+ * ✅ **ΤΟ ΣΤΑΔΙΟ 3 ΤΟ ΕΠΙΒΕΒΑΙΩΣΕ, ΚΑΙ Η ΜΕΤΑΚΟΜΙΣΗ ΗΤΑΝ Η ΑΠΑΝΤΗΣΗ** *(2026-09-04)*: το
+ * πάνελ φίλτρων της οθόνης 2 χρειάστηκε **τις ίδιες** ετικέτες τιμών. Η `vocabularyLabel`
+ * και το `FEATURE_SET_VOCABULARY` **έφυγαν από εδώ** και ζουν πλέον στο
+ * `lib/listings/listing-attribute-vocabulary` — όπου καμία από τις δύο οθόνες δεν είναι
+ * ιδιοκτήτης. Εδώ μένει **μόνο** το *«πώς διαβάζεται η τιμή ΑΥΤΗΣ της ιδιότητας»*, που
+ * είναι όντως ερώτημα της σελίδας ακινήτου.
+ *
  * ⇒ Ένα δεύτερο σύνολο ετικετών κάτω από το `search-results` θα ήταν **τρίτη** εκδοχή
  * της ίδιας αλήθειας (ADR-749 · N.0.2). Εδώ ζει **μόνο η αντιστοίχιση** «ποιο πεδίο
  * διαβάζεται με ποιο λεξιλόγιο» — μηδέν κείμενο.
@@ -49,93 +56,13 @@ import type { TFunction } from 'i18next';
 
 import { PROPERTY_TYPE_I18N_KEYS } from '@/constants/property-types';
 import { normalizePropertyType } from '@/constants/property-type-aliases';
-import type {
-  ListingAttributeKey,
-  ListingFeatureSetKey,
-} from '@/lib/listings/listing-disclosure';
+import type { ListingAttributeKey } from '@/lib/listings/listing-disclosure';
+import {
+  ATTRIBUTE_VOCABULARY,
+  vocabularyLabel,
+  type AttributeVocabulary,
+} from '@/lib/listings/listing-attribute-vocabulary';
 import type { PublicListing } from '@/types/public-listing';
-
-// ============================================================================
-// 1. ΤΑ ΛΕΞΙΛΟΓΙΑ — ένα όνομα ανά κατάλογο ετικετών
-// ============================================================================
-
-/**
- * Ποιος κατάλογος του `properties-enums` ονομάζει τις τιμές αυτού του πεδίου.
- *
- * ⚠️ **Ονόματα λεξιλογίου, ΟΧΙ ονόματα πεδίων**: το `heatingType` και το
- * `systemsOverride.heatingType` της φόρμας μοιράζονται τον **ίδιο** κατάλογο, και το
- * `flooring` τον μοιράζεται ως **σύνολο**. Αν το κλειδί ήταν το όνομα του πεδίου, δύο
- * πεδία με το ίδιο λεξιλόγιο θα το δήλωναν δύο φορές.
- */
-export type AttributeVocabulary =
-  | 'condition'
-  | 'heating'
-  | 'fuel'
-  | 'cooling'
-  | 'waterHeating'
-  | 'frames'
-  | 'glazing'
-  | 'flooring'
-  | 'orientation'
-  | 'interiorFeature'
-  | 'securityFeature'
-  | 'amenity';
-
-/**
- * Μία τιμή λεξιλογίου → η ετικέτα της.
- *
- * 🔴 **Κάθε πρόθεμα είναι ΚΥΡΙΟΛΕΚΤΙΚΟ** — δες την κεφαλίδα για το γιατί, και το
- * `switch` είναι εξαντλητικό πάνω στο {@link AttributeVocabulary}, άρα νέο λεξιλόγιο
- * **δεν μεταγλωττίζεται** μέχρι να πει από πού διαβάζονται οι ετικέτες του.
- */
-export function vocabularyLabel(
-  t: TFunction,
-  vocabulary: AttributeVocabulary,
-  value: string
-): string {
-  switch (vocabulary) {
-    case 'condition':
-      return t(`properties-enums:condition.${value}`);
-    case 'heating':
-      return t(`properties-enums:systems.heating.${value}`);
-    case 'fuel':
-      return t(`properties-enums:systems.fuel.${value}`);
-    case 'cooling':
-      return t(`properties-enums:systems.cooling.${value}`);
-    case 'waterHeating':
-      return t(`properties-enums:systems.waterHeating.${value}`);
-    case 'frames':
-      return t(`properties-enums:finishes.frames.${value}`);
-    case 'glazing':
-      return t(`properties-enums:finishes.glazing.${value}`);
-    case 'flooring':
-      return t(`properties-enums:finishes.flooring.${value}`);
-    case 'orientation':
-      return t(`properties-enums:units.orientation.${value}`);
-    case 'interiorFeature':
-      return t(`properties-enums:features.interior.${value}`);
-    case 'securityFeature':
-      return t(`properties-enums:features.security.${value}`);
-    case 'amenity':
-      return t(`properties-enums:features.amenities.${value}`);
-  }
-}
-
-/**
- * **Κάθε σύνολο, και το λεξιλόγιο των τιμών του.**
- *
- * 🔑 `Record<ListingFeatureSetKey, …>` ⇒ νέο σύνολο **δεν μεταγλωττίζεται** μέχρι να
- * πει με ποιες ετικέτες ονομάζονται οι τιμές του. Είναι ο **ένας** από τους δύο
- * φρουρούς των συνόλων (ο άλλος είναι το `LISTING_ATTRIBUTE_GROUP`) — τα σύνολα δεν
- * έχουν πίνακα «πότε είναι δηλωμένο», γιατί η ανάγνωσή τους είναι ολική εξ ορισμού.
- */
-export const FEATURE_SET_VOCABULARY: Record<ListingFeatureSetKey, AttributeVocabulary> = {
-  flooring: 'flooring',
-  orientations: 'orientation',
-  interiorFeatures: 'interiorFeature',
-  securityFeatures: 'securityFeature',
-  amenities: 'amenity',
-};
 
 // ============================================================================
 // 2. ΠΩΣ ΔΙΑΒΑΖΕΤΑΙ Η ΤΙΜΗ ΚΑΘΕ ΙΔΙΟΤΗΤΑΣ
@@ -206,7 +133,7 @@ const ATTRIBUTE_VALUE_KIND: {
   bedrooms: { kind: 'custom', render: renderBedrooms },
 
   energyClass: { kind: 'verbatim' },
-  condition: { kind: 'enum', vocabulary: 'condition' },
+  condition: { kind: 'enum', vocabulary: ATTRIBUTE_VOCABULARY.condition },
   renovationYear: { kind: 'verbatim' },
 
   bathrooms: { kind: 'verbatim' },
@@ -219,12 +146,12 @@ const ATTRIBUTE_VALUE_KIND: {
   terraceAreaSqm: { kind: 'sqm' },
   gardenAreaSqm: { kind: 'sqm' },
 
-  heatingType: { kind: 'enum', vocabulary: 'heating' },
-  heatingFuel: { kind: 'enum', vocabulary: 'fuel' },
-  coolingType: { kind: 'enum', vocabulary: 'cooling' },
-  waterHeating: { kind: 'enum', vocabulary: 'waterHeating' },
-  windowFrames: { kind: 'enum', vocabulary: 'frames' },
-  glazing: { kind: 'enum', vocabulary: 'glazing' },
+  heatingType: { kind: 'enum', vocabulary: ATTRIBUTE_VOCABULARY.heatingType },
+  heatingFuel: { kind: 'enum', vocabulary: ATTRIBUTE_VOCABULARY.heatingFuel },
+  coolingType: { kind: 'enum', vocabulary: ATTRIBUTE_VOCABULARY.coolingType },
+  waterHeating: { kind: 'enum', vocabulary: ATTRIBUTE_VOCABULARY.waterHeating },
+  windowFrames: { kind: 'enum', vocabulary: ATTRIBUTE_VOCABULARY.windowFrames },
+  glazing: { kind: 'enum', vocabulary: ATTRIBUTE_VOCABULARY.glazing },
 };
 
 type AttributeRenderer = (t: TFunction, listing: PublicListing) => string;

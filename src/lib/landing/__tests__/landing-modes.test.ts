@@ -12,6 +12,7 @@
  * παίρνει μηδέν, φεύγει για πάντα»*.
  */
 
+import { valuesOf } from '@/lib/criteria/listing-criteria';
 import {
   LANDING_MODES,
   LANDING_MODE_OFFER,
@@ -127,7 +128,7 @@ describe('Μ3 — Ο ΠΡΟΟΡΙΣΜΟΣ', () => {
     for (const mode of LANDING_MODES) {
       const filters = landingModeFilters(mode, ATHENS);
       if (!isListingMode(mode)) continue;
-      expect(filters?.offerKinds).toEqual([LANDING_MODE_OFFER[mode]]);
+      expect(valuesOf(filters!.criteria, 'offerKind')).toEqual([LANDING_MODE_OFFER[mode]]);
       expect(filters?.near?.center).toEqual(ATHENS);
     }
   });
