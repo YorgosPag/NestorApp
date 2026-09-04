@@ -46,6 +46,9 @@ import {
   listingFactsFrom,
 } from '@/lib/demand/demand-answer';
 import { matchDemand } from '@/lib/demand/demand-matching';
+// 🔑 **Ο ΥΠΑΡΧΩΝ helper, ποτέ χειρόγραφο `/listing/${id}`** — κουβαλά ήδη το
+//    `encodeURIComponent` και είναι το **ένα** σημείο που ξέρει τη διαδρομή.
+import { listingDetailHref } from '@/lib/listings/listing-routes';
 import { readLiveDemands } from '@/services/demand/live-demands.reader';
 import { readLivePublicListings } from '@/services/listings/live-public-listings.reader';
 import type { PublicListing } from '@/types/public-listing';
@@ -137,6 +140,28 @@ async function announceOneMatch(announcement: MatchAnnouncement): Promise<MatchO
     // 🔑 Ζεύγος ταυτότητας, ΠΟΤΕ ζώνη — δες `demandListingMatchEventId` για το γιατί.
     eventId: demandListingMatchEventId(demandId, listing.id),
     entityId: listing.id,
+    // 🔴 **Η ΔΙΕΥΘΥΝΣΗ ΑΝΗΚΕΙ ΣΤΟΝ ΠΑΡΑΓΩΓΟ, ΟΧΙ ΣΤΟΝ ΑΝΑΓΝΩΣΤΗ** (ADR-841 §7 Α18).
+    //
+    // Ο `NotificationDrawer` αποδίδει το κουμπί «Προβολή» **μόνο αν** υπάρχει
+    // `actions[0].url` (`:377`, `:433`) — και ο μηχανισμός **δούλευε ήδη**
+    // (`overdue-alert` · `po-notification` · `email-inbound`). Έλειπε **η τροφοδοσία**:
+    // αυτή η κλήση έγραφε `actions` **μηδέν φορές**, άρα το `actionUrl` ήταν **πάντα**
+    // `undefined` και ο άνθρωπος έβλεπε μόνο το «Προβλήθηκε», που **δεν πλοηγεί**.
+    //
+    // ⛔ **ΜΗΝ λυθεί με ευρετική τίτλου στον drawer**: θα ήταν η **τρίτη** δίπλα στις
+    //    δύο υπάρχουσες (`source.feature === 'ai-inbox'` · `title.includes('message')` —
+    //    **αγγλικές**, καμία ελληνική ειδοποίηση ακινήτου δεν τις πιάνει), και θα έσπαγε
+    //    με κάθε αλλαγή κειμένου.
+    //
+    // 🔑 **ΔΗΜΟΣΙΑ αγγελία, και είναι απόφαση**: ο παραλήπτης είναι ο **ζητών** — δεν
+    //    κατέχει τίποτα εδώ. Το `/offers/<id>` θα ήταν **ψεύτικη πόρτα**: ο κανόνας
+    //    Firestore του `(me)` δίνει `read` **μόνο** στον `authorUserId`.
+    //
+    // ⚠️ Το `label` **δεν φτάνει ποτέ σε οθόνη** — μετρημένο: ο drawer αποδίδει το δικό
+    //    του `t('notifications.actions.view_email')` («Προβολή» / «View»). Το πεδίο είναι
+    //    `min(1)` στο σχήμα, οπότε δίνεται **σταθερό αγγλικό αναγνωριστικό**, ποτέ
+    //    ελληνικό κείμενο που θα υποσχόταν μετάφραση που δεν υπάρχει (N.11).
+    actions: [{ id: 'view', label: 'view', url: listingDetailHref(listing.id) }],
     source: {
       service: SOURCE_SERVICES.CRM,
       feature: 'demand-listing-match',

@@ -44,6 +44,7 @@ import {
   type ListingMatchReport,
 } from '@/services/demand/listing-match-notifier.service';
 import { demandListingMatchEventId } from '@/lib/demand/demand-announcement';
+import { listingDetailHref } from '@/lib/listings/listing-routes';
 
 function demand(id: string, overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return { id, authorUserId: `usr_${id}`, ...overrides };
@@ -98,6 +99,20 @@ describe('Ι — το κλειδί idempotency είναι το ζεύγος (ζ�
       recipientId: 'usr_d1',
       tenantId: 'usr_d1',
     });
+
+    // 🔴 **ADR-841 §7 Α18 — Η ΕΙΔΟΠΟΙΗΣΗ ΞΕΡΕΙ ΠΟΥ ΟΔΗΓΕΙ.**
+    //
+    // Ερώτημα Giorgio: *«γιατί όταν πατάω δεξιά στις καρτέλες της καμπάνας δεν
+    // οδηγούμαι στο κατάλληλο σημείο;»*. Μετρημένο: ο `NotificationDrawer` αποδίδει
+    // το «Προβολή» **μόνο αν** υπάρχει `actions[0].url` — και αυτή η κλήση έγραφε
+    // `actions` **μηδέν φορές**. Ο μηχανισμός δούλευε· έλειπε **η τροφοδοσία**.
+    //
+    // 🔑 **ΔΗΜΟΣΙΑ αγγελία, όχι `/offers/<id>`**: ο παραλήπτης είναι ο **ζητών** και
+    //    δεν κατέχει τίποτα εδώ — ο κανόνας Firestore του `(me)` δίνει `read` μόνο
+    //    στον `authorUserId`, άρα η ιδιωτική διεύθυνση θα ήταν **ψεύτικη πόρτα**.
+    expect(dispatchNotification.mock.calls[0][0].actions).toEqual([
+      { id: 'view', label: 'view', url: listingDetailHref('l1') },
+    ]);
 
     // ── Πέρασμα 2: το ίδιο ζεύγος ξαναφαίνεται — ο orchestrator το ξέρει ήδη ──
     dispatchNotification.mockResolvedValueOnce({

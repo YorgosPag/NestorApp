@@ -59,6 +59,9 @@ import {
 } from '@/lib/mandate/mandate-client-name';
 import { createModuleLogger } from '@/lib/telemetry';
 import { dispatchNotification } from '@/server/notifications/notification-orchestrator';
+// 🔑 **Ο ΥΠΑΡΧΩΝ helper, ποτέ χειρόγραφο `/offers/${id}`** — κουβαλά ήδη το
+//    `encodeURIComponent` και είναι το **ένα** σημείο που ξέρει τη διαδρομή.
+import { offerDetailHref } from '@/lib/owner-property/owner-property-routes';
 import type { Contact } from '@/types/contacts/contracts';
 import { getContactDisplayName } from '@/types/contacts/helpers';
 import type { MandateConfirmation } from '@/types/mandate';
@@ -176,6 +179,37 @@ export async function announceMandateDecision(
       eventId: `mandate-decision:${event.ownerPropertyId}:${event.previous}>${event.next}:${event.decidedAt}`,
       entityId: event.ownerPropertyId,
       entityType: NOTIFICATION_ENTITY_TYPES.PROPERTY,
+      // 🔴 **Η ΔΙΕΥΘΥΝΣΗ ΑΝΗΚΕΙ ΣΤΟΝ ΠΑΡΑΓΩΓΟ** (ADR-841 §7 Α18) — ο μηχανισμός του
+      //    `NotificationDrawer` υπήρχε ολόκληρος· έλειπε **η τροφοδοσία**.
+      //
+      // ═══════════════════════════════════════════════════════════════════════════
+      // 🔴 ΑΥΤΗ Η ΓΡΑΜΜΗ ΕΓΡΑΨΕ ΠΡΩΤΑ «ΔΗΛΩΜΕΝΟ ΑΝΟΙΧΤΟ», ΚΑΙ ΗΤΑΝ ΛΑΘΟΣ (Α18.4)
+      // ═══════════════════════════════════════════════════════════════════════════
+      //
+      // Η πρώτη γραφή αρνήθηκε να δώσει διεύθυνση, με επιχείρημα που **διαβάστηκε από
+      // την κεφαλίδα αντί να μετρηθεί**: *«ο παραλήπτης είναι ο υπάλληλος του
+      // γραφείου (§8.23), και το `(me)` δίνει `read` μόνο στον `authorUserId`
+      // ⇒ ψεύτικη πόρτα»*.
+      //
+      // **Η μέτρηση το ανέτρεψε, και οι δύο πλευρές είναι μονόγραμμες:**
+      //
+      //   `mandate-consent.service.ts:348`  →  `recipientUserId: property.authorUserId`
+      //   `firestore.rules:1237`            →  `allow read: … resource.data.authorUserId == request.auth.uid`
+      //
+      // ⇒ Ο παραλήπτης **ΕΙΝΑΙ** ο `authorUserId` του ίδιου εγγράφου που θα ανοίξει.
+      // Η πόρτα **δεν** είναι ψεύτικη· ανοίγει **εξ ορισμού του κανόνα**.
+      //
+      // 🔑 **Η κεφαλίδα δεν έλεγε ψέματα — απαντούσε ΑΛΛΟ ΕΡΩΤΗΜΑ.** Το «το γραφείο
+      //    μαθαίνει» περιγράφει **ποιος ενδιαφέρεται**· το `authorUserId` λέει **ποιος
+      //    κατέχει**. Εδώ ταυτίζονται, γιατί την καταχώρηση την έκανε ο **ίδιος** ο
+      //    υπάλληλος (γι' αυτό υπάρχει και `authorCompanyId`). Δύο σωστές προτάσεις,
+      //    και το συμπέρασμα προέκυψε από τη **λάθος**.
+      //
+      // ⚠️ **ΤΟ ΜΑΘΗΜΑ**: «ποιος επιτρέπεται;» απαντιέται **μόνο** από τον κανόνα και
+      //    το σημείο ανάθεσης του παραλήπτη — **ποτέ** από docblock, όσο ακριβής κι αν
+      //    είναι. Είναι το ίδιο σχήμα με το Α4.5.2: επιχείρημα σωστό **ως προς κάτι
+      //    άλλο**, που κρατήθηκε ως δόγμα.
+      actions: [{ id: 'view', label: 'view', url: offerDetailHref(event.ownerPropertyId) }],
       source: {
         service: SOURCE_SERVICES.PROPERTIES,
         feature: 'mandate-decision',

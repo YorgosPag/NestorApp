@@ -49,6 +49,9 @@ import { nowISO, todayLocalDate } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
 import { NOTIFICATION_EVENT_TYPES, SOURCE_SERVICES, getCurrentEnvironment } from '@/config/notification-events';
 import { dispatchNotification } from '@/server/notifications/notification-orchestrator';
+// 🔑 **Ο ΥΠΑΡΧΩΝ helper, ποτέ χειρόγραφο `/offers/${id}`** — κουβαλά ήδη το
+//    `encodeURIComponent` και είναι το **ένα** σημείο που ξέρει τη διαδρομή.
+import { offerDetailHref } from '@/lib/owner-property/owner-property-routes';
 import {
   announcementEventId,
   type AnnouncementBand,
@@ -234,6 +237,19 @@ export async function announceOnePlace(
     // δομικά αδύνατη. Δες `lib/demand/demand-announcement.ts`.
     eventId: announcementEventId(propertyId, band),
     entityId: propertyId,
+    // 🔴 **Η ΔΙΕΥΘΥΝΣΗ ΑΝΗΚΕΙ ΣΤΟΝ ΠΑΡΑΓΩΓΟ** (ADR-841 §7 Α18) — δες το ίδιο σχόλιο στο
+    //    `listing-match-notifier`. Ο μηχανισμός υπήρχε ολόκληρος· έλειπε η τροφοδοσία.
+    //
+    // 🔑 **ΚΑΙ Ο ΠΡΟΟΡΙΣΜΟΣ ΕΙΝΑΙ ΑΛΛΟΣ ΑΠΟ ΤΟΥ ΑΔΕΛΦΟΥ, ΕΠΙΤΗΔΕΣ.** Εκεί ο παραλήπτης
+    //    είναι ο **ζητών** και πάει στη **δημόσια** αγγελία· εδώ είναι ο **ιδιοκτήτης**
+    //    (`recipientId: property.authorUserId`, γρ. 152) και το `propertyId` είναι η
+    //    **δική του** καταχώρηση (`ownp_*`). Μια κοινή διεύθυνση για τα δύο θα ήταν
+    //    λάθος **και στις δύο** κατευθύνσεις: ο ζητών θα χτυπούσε σε άρνηση Firestore,
+    //    ο ιδιοκτήτης θα έβλεπε τον εαυτό του σαν επισκέπτης.
+    //
+    // ⚠️ Το `label` δεν φτάνει σε οθόνη — ο drawer αποδίδει δικό του μεταφρασμένο
+    //    κείμενο. Σταθερό αναγνωριστικό, ποτέ ελληνικό (N.11).
+    actions: [{ id: 'view', label: 'view', url: offerDetailHref(propertyId) }],
     source: { service: SOURCE_SERVICES.CRM, feature: 'demand-interest', env: getCurrentEnvironment() },
   });
 

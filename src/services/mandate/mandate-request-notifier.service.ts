@@ -52,6 +52,9 @@ import {
 } from '@/config/notification-events';
 import { createModuleLogger } from '@/lib/telemetry';
 import { dispatchNotification } from '@/server/notifications/notification-orchestrator';
+// 🔑 **Ο ΥΠΑΡΧΩΝ helper, ποτέ χειρόγραφο `/offers/${id}`** — κουβαλά ήδη το
+//    `encodeURIComponent` και είναι το **ένα** σημείο που ξέρει τη διαδρομή.
+import { offerDetailHref } from '@/lib/owner-property/owner-property-routes';
 import type { MandateRequestDecision } from '@/types/mandate-request';
 import { publicListingFromDocument } from '@/lib/listings/public-listing-from-document';
 
@@ -127,6 +130,19 @@ export async function announceMandateRequestAnswer(
       eventId: `mandate-request:${answer.requestId}:pending>${answer.decision}`,
       entityId: answer.ownerPropertyId,
       entityType: NOTIFICATION_ENTITY_TYPES.PROPERTY,
+      // 🔴 **Η ΔΙΕΥΘΥΝΣΗ ΑΝΗΚΕΙ ΣΤΟΝ ΠΑΡΑΓΩΓΟ** (ADR-841 §7 Α18) — ο μηχανισμός του
+      //    drawer υπήρχε ολόκληρος· έλειπε **η τροφοδοσία**.
+      //
+      // 🔑 **ΚΑΙ ΕΔΩ Ο ΠΡΟΟΡΙΣΜΟΣ ΕΠΙΤΡΕΠΕΤΑΙ, ΣΕ ΑΝΤΙΘΕΣΗ ΜΕ ΤΟΝ ΑΝΤΙΘΕΤΟ ΑΓΩΓΟ.**
+      //    Παραλήπτης εδώ είναι ο **`requestedByUserId`** — ο **ίδιος ο ιδιώτης**, που
+      //    είναι ο `authorUserId` της καταχώρησης. Ο κανόνας Firestore του `(me)` του
+      //    δίνει `read`, άρα το `/offers/<id>` ανοίγει. Στον
+      //    `mandate-decision-notifier` **δεν** ανοίγει, και γι' αυτό εκείνος **δεν**
+      //    πήρε διεύθυνση — δες το δηλωμένο ανοιχτό εκεί.
+      //
+      // ⚠️ Το `label` δεν φτάνει σε οθόνη — ο drawer αποδίδει δικό του μεταφρασμένο
+      //    κείμενο (`notifications.actions.view_email` → «Προβολή» / «View»).
+      actions: [{ id: 'view', label: 'view', url: offerDetailHref(answer.ownerPropertyId) }],
       source: {
         service: SOURCE_SERVICES.PROPERTIES,
         feature: 'mandate-request-answer',
