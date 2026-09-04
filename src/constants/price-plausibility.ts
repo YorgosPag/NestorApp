@@ -150,7 +150,17 @@ export interface PlausibilityAssessment {
   readonly priceClass: PropertyPriceClass | null;
   /** €/τ.μ. calculated (null αν δεν υπάρχει αρκετή πληροφορία). */
   readonly pricePerSqm: number | null;
-  
+  /** Expected band που αξιολογήθηκε το input (null αν δεν έγινε check). */
+  readonly expected: PlausibilityRange | null;
+}
+
+export interface AssessPricePlausibilityArgs {
+  readonly commercialStatus: CommercialStatus | string | undefined | null;
+  readonly propertyType: PropertyTypeCanonical | string | undefined | null;
+  readonly askingPrice: number | string | undefined | null;
+  readonly grossArea: number | string | undefined | null;
+}
+
 /**
  * Google-style plausibility assessment για asking price. Δεν μπλοκάρει save —
  * επιστρέφει verdict που ο UI layer μπορεί να εμφανίσει ως warning.
