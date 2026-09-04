@@ -21,6 +21,7 @@ import {
   isListingMode,
   landingModeFilters,
   landingPanelListings,
+  landingModeSeeksPeople,
   landingProShowcase,
   landingSwitchIsVisible,
 } from '@/lib/landing/landing-modes';
@@ -269,5 +270,40 @@ describe('Μ6 — 🔴 Η ΒΙΤΡΙΝΑ ΤΩΝ ΕΠΑΓΓΕΛΜΑΤΙΩΝ (Α4.
     const given = [profile('γ'), profile('α'), profile('β')];
 
     expect(landingProShowcase(given).map((p) => p.companyId)).toEqual(['γ', 'α', 'β']);
+  });
+});
+
+describe('Μ7 — 🔴 Η ΠΟΡΤΑ «ΔΕΣ ΤΑ ΟΛΑ» ΞΕΡΕΙ ΠΟΥ ΣΤΕΚΕΣΑΙ (Α4.4-Β)', () => {
+  // 🔴 **ΤΟ ΕΡΩΤΗΜΑ ΤΟΥ GIORGIO**: *«θέλω υδραυλικό — τι κάνω;»*. Μετρήθηκε ότι δεν
+  //    υπήρχε **καμία** διαδρομή προς τον κατάλογο χωρίς να πληκτρολογήσεις τόπο:
+  //    το «Αναζήτηση» είναι απενεργοποιημένο με κενό πεδίο, και οι κάρτες οδηγούν σε
+  //    **ένα** προφίλ. Δηλαδή «επαγγελματίες οπουδήποτε» ήταν **αδύνατο**.
+
+  it('🔴 στους ΕΠΑΓΓΕΛΜΑΤΙΕΣ η πόρτα ψάχνει ΠΡΟΣΩΠΟ, όχι ακίνητο', () => {
+    // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: κάνε το να επιστρέφει πάντα `false` ⇒ κοκκινίζει, και ο
+    //    επισκέπτης που μόλις είπε «ψάχνω πρόσωπο» ξαναστέλνεται σε **αγγελίες**.
+    expect(landingModeSeeksPeople('pros')).toBe(true);
+  });
+
+  it('🔴 στις λειτουργίες ΑΓΓΕΛΙΩΝ μένει η ιστορική πόρτα', () => {
+    for (const mode of LANDING_MODES) {
+      if (!isListingMode(mode)) continue;
+      expect(landingModeSeeksPeople(mode)).toBe(false);
+    }
+  });
+
+  it('🔴 ΧΩΡΙΣ ΔΙΑΚΟΠΤΗ κανείς δεν δήλωσε τι ψάχνει — η πόρτα δεν αλλάζει', () => {
+    // ⚠️ Ίδιος κανόνας με το `landingPanelListings(null, …)`: χωρίς χειριστήριο, καμία
+    //    σιωπηλή απόφαση εκ μέρους του ανθρώπου.
+    expect(landingModeSeeksPeople(null)).toBe(false);
+  });
+
+  it('🔴 είναι Η ΙΔΙΑ διατύπωση με τον τύπο — ποτέ δεύτερη λίστα ονομάτων', () => {
+    // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: γράψ' το ως `mode === 'pros'` και πρόσθεσε λειτουργία στο
+    //    `LANDING_MODES` χωρίς `OfferKind` ⇒ οι δύο απαντήσεις αποκλίνουν. Εδώ δεν
+    //    μπορούν: και οι δύο ρωτούν το ίδιο `landingModeFilters`.
+    for (const mode of LANDING_MODES) {
+      expect(landingModeSeeksPeople(mode)).toBe(!isListingMode(mode));
+    }
   });
 });

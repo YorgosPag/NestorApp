@@ -1,9 +1,29 @@
 'use client';
 
 /**
- * **Το ΕΝΑ κουτί της οθόνης 1** — *«πού ψάχνεις;»* (ADR-777 Α3).
+ * **Το κουτί της οθόνης 1** — *«πού ψάχνεις;»*, και για τους επαγγελματίες **«τι;» πρώτα**.
  *
- * @related SPEC-777-RESEARCH §25.8 (μικρο-δέσμευση) · lib/listings/listing-filters
+ * @related ADR-777 Α3 *(η αρχική δέσμευση)* · ADR-841 §7 Α4.5 *(η ανατροπή)* ·
+ *          SPEC-777-RESEARCH §25.8 (μικρο-δέσμευση) · lib/listings/listing-filters
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΤΟ «ΕΝΑ ΠΕΔΙΟ» ΕΙΝΑΙ ΙΔΙΟΤΗΤΑ ΤΟΥ **ΠΑΝΕΛ**, ΟΧΙ ΤΗΣ ΟΘΟΝΗΣ (Α4.5)
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Το **ADR-777 Α3** έγραψε *«Οθόνη 1 — **ένα** κουτί … Desktop: **ένα πεδίο**»*, και ήταν
+ * σωστό **για τον κόσμο στον οποίο γράφτηκε**: η οθόνη είχε τότε **μία** λειτουργία και
+ * **κανέναν** διακόπτη, άρα ήταν ολόκληρη **μία** ερώτηση. Η **Α4** έφερε τέσσερις
+ * λειτουργίες και η **Α4.3** τους έδωσε **πάνελ** ⇒ το πλήθος των ερωτήσεων έγινε
+ * ιδιότητα **της ενεργής λειτουργίας**.
+ *
+ * | Λειτουργία | Πεδία | Γιατί |
+ * |---|---|---|
+ * | Αγορά · Ενοικίαση · Διαμονή | **1** *(τόπος)* | Η ADR-777 Α3 **παραμένει αληθής** εδώ |
+ * | **Επαγγελματίες** | **2** *(**ειδικότητα** → τόπος)* | Ο κατάλογος έχει **δύο** άξονες, και ο **πρώτος** δεν είναι ο τόπος |
+ *
+ * 🏆 **Μετρημένο σε ζωντανό DOM, 2026-09-04** *(ADR-841 §7 Α4.5.3)*: το **xe.gr** έχει τον
+ * **ίδιο** διακόπτη στην **ίδια** θέση, και δίνει **1 · 2 · 1 · 2 · 1** πεδία ανά tab. Το
+ * ερώτημα *«πόσα πεδία;»* **δεν** απαντιέται μία φορά για όλη τη σελίδα — ούτε εκεί.
  *
  * ────────────────────────────────────────────────────────────────────────────
  * 🔴 ΓΙΑΤΙ ΔΕΝ ΕΙΝΑΙ ΤΟ `GlobalSearchDialog` — ΚΑΙ ΔΕΝ ΕΙΝΑΙ ΔΙΠΛΟΤΥΠΟ
@@ -35,9 +55,18 @@ import {
   DEFAULT_SEARCH_RADIUS_KM,
 } from '@/lib/listings/listing-filters';
 import { searchResultsHref } from '@/lib/listings/listing-routes';
-import { landingModeFilters, type LandingMode } from '@/lib/landing/landing-modes';
-import { serializeShowcaseFilters } from '@/lib/agency/showcase-filter';
+import {
+  landingModeFilters,
+  landingModeSeeksPeople,
+  type LandingMode,
+} from '@/lib/landing/landing-modes';
+import {
+  serializeShowcaseFilters,
+  type OccupationOption,
+} from '@/lib/agency/showcase-filter';
 import { agencyDirectoryHref } from '@/components/mandate/agency-directory-route';
+import { OccupationSelect } from '@/components/mandate/OccupationSelect';
+import type { GeoPoint } from '@/types/geo/coordinates';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('PlaceSearchBox');
@@ -55,33 +84,56 @@ interface PlaceSearchBoxProps {
   /**
    * **Ποια λειτουργία ρωτά** (ADR-841 §7 Α4).
    *
-   * 🔑 Το πεδίο μένει **ένα** — το δεσμεύει αριθμητικά το **ADR-777 Α3** *(«Οθόνη 1:
-   * ένα κουτί … Desktop: **ένα πεδίο**. Κινητό: **ίδιο**»)*. Αυτό που αλλάζει είναι ο
-   * **προορισμός**: δες {@link destinationFor}.
+   * 🔴 **ΑΥΤΗ ΚΡΙΝΕΙ ΚΑΙ ΤΟΝ ΑΡΙΘΜΟ ΤΩΝ ΠΕΔΙΩΝ, ΟΧΙ ΜΟΝΟ ΤΟΝ ΠΡΟΟΡΙΣΜΟ (Α4.5).** Η
+   * παλιά διατύπωση *(«το πεδίο μένει ένα — ADR-777 Α3»)* **αναιρέθηκε ρητά**: το
+   * «ένα πεδίο» παραμένει αληθές για **Αγορά · Ενοικίαση · Διαμονή** και **παύει** να
+   * ισχύει για τους **Επαγγελματίες**, που έχουν **δύο** άξονες.
    */
   readonly mode: LandingMode;
+  /**
+   * Οι ειδικότητες που **υπάρχουν** — από το `occupationOptions(agencies, locale)` της
+   * σελίδας.
+   *
+   * ⚠️ **Δίνονται ΠΑΝΤΑ, χρησιμοποιούνται ΜΟΝΟ όταν η λειτουργία ψάχνει πρόσωπο.** Η
+   * κρίση *«ψάχνει πρόσωπο;»* δεν ξαναγράφεται εδώ — τη ρωτά το SSoT της **Α5**
+   * *({@link landingModeSeeksPeople})*.
+   */
+  readonly occupations: readonly OccupationOption[];
+  /** Η γλώσσα των ετικετών — από το `showcaseLocale`, ποτέ γραμμένη στο χέρι. */
+  readonly locale: 'el' | 'en';
 }
 
 /**
- * **Πού πάει ο επισκέπτης** — η μία απόφαση που ο διακόπτης πραγματικά αλλάζει.
+ * **Πού πάει ο επισκέπτης** — και **με τι** φτάνει εκεί.
  *
  * 🔴 **Η διακλάδωση είναι ΤΥΠΟΥ, όχι συνθήκης**: το {@link landingModeFilters}
  * επιστρέφει `null` **μόνο** για τους επαγγελματίες, γιατί η **Α5** το λέει ρητά —
  * *«οι επαγγελματίες δεν είναι τύπος αγγελίας»*. Ένα `if (mode === 'pros')` εδώ θα
  * ήταν **δεύτερη διατύπωση** του ίδιου κανόνα, ελεύθερη να αποκλίνει από το SSoT.
  *
- * ⚠️ **Η ειδικότητα ΔΕΝ ταξιδεύει** *(`occupation: null`)*, και είναι απόφαση: η ρίζα
- * δεν τη ρωτά *(Α3 — ένα πεδίο)*, και το `/pro` χτίζει τις επιλογές του από τα **ίδια
- * τα προφίλ**. Μια αυθαίρετη τιμή εδώ θα φιλτράριζε τον κατάλογο **χωρίς ο επισκέπτης
- * να το έχει ζητήσει**.
+ * ⚠️ **ΔΥΟ ΚΛΑΔΟΙ ΜΕ `return`, ΠΟΤΕ ternary**: ένα ternary ανάμεσα σε δύο διευθύνσεις
+ * **φαρδαίνει τον τύπο σε `string`** *(`listing-routes.ts:71`)* και τυφλώνει τον φρουρό
+ * του συνόρου *(CHECK 3.61)*. Κάθε κλάδος καλεί **τον δικό του** helper.
+ *
+ * ✅ **Η ΕΙΔΙΚΟΤΗΤΑ ΠΛΕΟΝ ΤΑΞΙΔΕΥΕΙ (Α4.5)** — η προηγούμενη γραφή έστελνε
+ * `occupation: null` **επίτηδες**, γιατί η ρίζα δεν τη ρωτούσε. Τώρα τη ρωτά, και το
+ * `serializeShowcaseFilters` την υποστήριζε **ήδη**: **καμία νέα μηχανή**.
+ *
+ * 🔴 **ΚΑΙ ΤΟ ΚΕΝΤΡΟ ΕΙΝΑΙ ΠΛΕΟΝ `null`-άβλε (Α4.5.δ)**: *«υδραυλικός **οπουδήποτε**»*
+ * είναι νόμιμη ερώτηση μόλις υπάρξει δεύτερος άξονας. Το `landingModeFilters` δέχεται
+ * ήδη `null` κέντρο· το `serializeShowcaseFilters` **δεν γράφει** κενά φίλτρα *(Φ2)*.
  */
-function destinationFor(mode: LandingMode, center: { lat: number; lng: number }) {
+function destinationFor(
+  mode: LandingMode,
+  center: GeoPoint | null,
+  occupation: string | null,
+) {
   const filters = landingModeFilters(mode, center);
 
   if (filters === null) {
     const params = serializeShowcaseFilters({
-      occupation: null,
-      near: { center, radiusKm: DEFAULT_SEARCH_RADIUS_KM },
+      occupation,
+      near: center === null ? null : { center, radiusKm: DEFAULT_SEARCH_RADIUS_KM },
     });
     return agencyDirectoryHref(params.toString());
   }
@@ -89,28 +141,70 @@ function destinationFor(mode: LandingMode, center: { lat: number; lng: number })
   return searchResultsHref(serializeListingFilters(filters).toString());
 }
 
-export function PlaceSearchBox({ mode }: PlaceSearchBoxProps) {
+export function PlaceSearchBox({ mode, occupations, locale }: PlaceSearchBoxProps) {
   const { t } = useTranslation(['search-results']);
   const router = useRouter();
   const inputId = useId();
   const [query, setQuery] = useState('');
   const [state, setState] = useState<SubmitState>('idle');
+  const [chosenOccupation, setChosenOccupation] = useState<string | null>(null);
+
+  // 🔴 **Η ΜΙΑ ΔΙΑΤΥΠΩΣΗ ΤΟΥ ΚΑΝΟΝΑ ΤΗΣ Α5** — ⛔ ποτέ `mode === 'pros'` εδώ: θα ήταν η
+  //    **πέμπτη** εκδοχή του ίδιου κανόνα, ελεύθερη να αποκλίνει από τις άλλες τέσσερις.
+  const asksOccupation = landingModeSeeksPeople(mode);
+
+  // ⚠️ **Η ΕΠΙΛΟΓΗ ΤΟΥ ΑΝΘΡΩΠΟΥ ΝΙΚΑ, ΑΛΛΑ ΜΟΝΟ ΟΣΟ ΠΑΡΑΜΕΝΕΙ ΔΥΝΑΤΗ** — ίδιος κανόνας
+  //    με το `chosen` του `SearchLandingContent` για τη λειτουργία, και για τον ίδιο
+  //    λόγο: ο `usePublicAgencies` είναι **ζωντανή συνδρομή**, και μια ειδικότητα μπορεί
+  //    να πάψει να υπάρχει όσο η σελίδα είναι ανοιχτή *(ο τελευταίος που τη δήλωνε
+  //    αποσύρθηκε)*. Χωρίς αυτό, το `<Select>` θα κρατούσε τιμή **εκτός επιλογών** ⇒ ο
+  //    πυροδότης θα ζωγράφιζε **κενό**, και η υποβολή θα έστελνε σε φίλτρο που δίνει μηδέν.
+  const occupation =
+    chosenOccupation !== null &&
+    occupations.some((option) => option.escoUri === chosenOccupation)
+      ? chosenOccupation
+      : null;
+
+  const trimmedQuery = query.trim();
+
+  // 🔴 **ΥΠΟΒΑΛΛΕΙΣ ΟΤΑΝ ΕΧΕΙΣ ΔΗΛΩΣΕΙ ΕΣΤΩ ΕΝΑΝ ΑΞΟΝΑ (ADR-841 §7 Α4.5.δ).**
+  //
+  // Ήταν `query.trim() === ''`, και ήταν **σωστό** όσο ο τόπος ήταν η **μόνη** ερώτηση:
+  // υποβολή χωρίς κανένα κριτήριο δεν είναι αναζήτηση. Με δύο άξονες παύει να είναι, και
+  // το ελάττωμα έχει όνομα: *«υδραυλικός **οπουδήποτε**»* — ο άνθρωπος που ξέρει **τι**
+  // θέλει και δεν τον νοιάζει το **πού**.
+  //
+  // ⚠️ **Και το «τίποτα-τίποτα» μένει νεκρό επίτηδες**: η πόρτα «Δες όλους τους
+  //    επαγγελματίες» απαντά ήδη ακριβώς αυτό *(Α4.4.2)*. Δεύτερος δρόμος προς τον ίδιο
+  //    προορισμό θα ήταν δύο κουμπιά που κάνουν το ίδιο, δίπλα-δίπλα.
+  const canSubmit = trimmedQuery !== '' || occupation !== null;
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const trimmed = query.trim();
-    if (trimmed === '') return;
+    if (!canSubmit) return;
+
+    // 🔑 **ΧΩΡΙΣ ΤΟΠΟ ΔΕΝ ΚΑΛΕΙΤΑΙ Ο ΓΕΩΚΩΔΙΚΟΠΟΙΗΤΗΣ** — και δεν είναι βελτιστοποίηση:
+    //    μια κλήση με κενό κείμενο θα επέστρεφε `not-found`, και ο επισκέπτης θα διάβαζε
+    //    *«δεν εντοπίσαμε αυτή την περιοχή»* για περιοχή **που δεν ζήτησε ποτέ**.
+    if (trimmedQuery === '') {
+      router.push(destinationFor(mode, null, occupation));
+      return;
+    }
 
     setState('searching');
     // ⚠️ **Ένας μεταφραστής για τα τρία σημεία** (2026-09-02): το «ελεύθερο κείμενο →
     // `city`» ήταν γραμμένο εδώ, στο `usePlaceResolver` και στο
     // `place-source-verification`. Δες `lib/geocoding/address-line-query`.
-    const outcome = await geocodeAddressDetailed(addressLineToQuery(trimmed));
+    const outcome = await geocodeAddressDetailed(addressLineToQuery(trimmedQuery));
 
     if (outcome.kind === 'found') {
       // Η οθόνη προορισμού διαβάζει **τη διεύθυνση**, ποτέ κατάσταση σε μνήμη.
       router.push(
-        destinationFor(mode, { lat: outcome.result.lat, lng: outcome.result.lng }),
+        destinationFor(
+          mode,
+          { lat: outcome.result.lat, lng: outcome.result.lng },
+          occupation,
+        ),
       );
       return;
     }
@@ -128,25 +222,50 @@ export function PlaceSearchBox({ mode }: PlaceSearchBoxProps) {
 
   return (
     <form onSubmit={handleSubmit} className="w-full">
-      <label htmlFor={inputId} className="block text-sm font-medium text-foreground">
-        {t('search-results:landing.search.label')}
-      </label>
+      {/*
+        🔴 **Η ΕΙΔΙΚΟΤΗΤΑ ΠΡΩΤΗ, Ο ΤΟΠΟΣ ΔΕΥΤΕΡΟΣ — ΜΕΤΡΗΜΕΝΟ, ΟΧΙ ΠΡΟΤΙΜΗΣΗ**
+        *(ADR-841 §7 Α4.5.3)*. Πέντε πλατφόρμες διαβάστηκαν σε ζωντανό DOM την ίδια ώρα
+        *(xe.gr «Επαγγελματίες» · vrisko.gr · Houzz · Thumbtack · Angi)*: **5 στις 5**
+        ρωτούν **δύο** πεδία, και **5 στις 5** βάζουν την υπηρεσία **πρώτη**. Καμία δεν
+        ρωτά μόνο τόπο· καμία δεν βάζει τον τόπο πρώτο.
 
-      <div className="mt-2 flex gap-2">
-        <input
-          id={inputId}
-          type="search"
-          value={query}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            // Το μήνυμα αστοχίας αφορά το **προηγούμενο** κείμενο· μόλις ο επισκέπτης
-            // αρχίσει να γράφει, παύει να είναι αλήθεια.
-            if (state !== 'idle') setState('idle');
-          }}
-          placeholder={t('search-results:landing.search.placeholder')}
-          disabled={busy}
-          className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-foreground placeholder:text-muted-foreground"
-        />
+        ⚠️ **`items-end` και `flex-wrap`**: τα δύο πεδία έχουν **ετικέτα από πάνω**, άρα
+        διαφορετικό ύψος από το κουμπί — το `items-end` τα ευθυγραμμίζει στη **γραμμή
+        βάσης της πράξης**. Σε στενή οθόνη σπάνε σε στήλη μόνα τους, χωρίς breakpoint.
+      */}
+      <div className="flex flex-wrap items-end gap-2">
+        {/*
+          ⚠️ **ΑΠΟΔΙΔΕΤΑΙ ΜΟΝΟ ΟΤΑΝ Η ΛΕΙΤΟΥΡΓΙΑ ΨΑΧΝΕΙ ΠΡΟΣΩΠΟ.** Οι τρεις λειτουργίες
+          ακινήτων κρατούν **ένα** πεδίο — το ADR-777 Α3 παραμένει αληθές γι' αυτές.
+        */}
+        {asksOccupation && (
+          <OccupationSelect
+            value={occupation}
+            options={occupations}
+            locale={locale}
+            onChange={setChosenOccupation}
+          />
+        )}
+
+        <label htmlFor={inputId} className="flex min-w-56 flex-1 flex-col gap-1 text-sm">
+          <span className="font-medium text-foreground">
+            {t('search-results:landing.search.label')}
+          </span>
+          <input
+            id={inputId}
+            type="search"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              // Το μήνυμα αστοχίας αφορά το **προηγούμενο** κείμενο· μόλις ο επισκέπτης
+              // αρχίσει να γράφει, παύει να είναι αλήθεια.
+              if (state !== 'idle') setState('idle');
+            }}
+            placeholder={t('search-results:landing.search.placeholder')}
+            disabled={busy}
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground placeholder:text-muted-foreground"
+          />
+        </label>
         {/*
           🔴 **ΗΤΑΝ `bg-card` — ΔΗΛΑΔΗ ΤΟ ΧΡΩΜΑ ΤΟΥ ΠΕΔΙΟΥ ΤΟΥ** (ADR-777 §8.49 Φ4).
           Στο στιγμιότυπο της 2026-09-04 το κουμπί και το `<input>` δίπλα του
@@ -169,7 +288,7 @@ export function PlaceSearchBox({ mode }: PlaceSearchBoxProps) {
         */}
         <button
           type="submit"
-          disabled={busy || query.trim() === ''}
+          disabled={busy || !canSubmit}
           className="rounded-md bg-foreground px-4 py-2 font-semibold text-background disabled:opacity-50"
         >
           {t('search-results:landing.search.submit')}

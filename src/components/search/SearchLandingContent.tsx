@@ -46,24 +46,27 @@ import { Link } from '@/lib/workspace/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { usePublicListings } from '@/services/realtime/hooks/usePublicListings';
 import { computeListingCoverage, coverageAnswersWhere } from '@/lib/listings/listing-coverage';
-import { SEARCH_RESULTS_ROUTE } from '@/lib/listings/listing-routes';
+import { searchResultsHref } from '@/lib/listings/listing-routes';
 import { MY_DEMANDS_ROUTE } from '@/lib/demand/demand-routes';
 import { MY_OFFERS_ROUTE } from '@/lib/owner-property/owner-property-routes';
 import { usePublicAgencies } from '@/services/realtime/hooks/usePublicAgencies';
+import { occupationOptions, showcaseLocale } from '@/lib/agency/showcase-filter';
 import {
   availableLandingModes,
   countLandingModes,
   defaultLandingMode,
+  landingModeSeeksPeople,
   landingSwitchIsVisible,
   type LandingMode,
 } from '@/lib/landing/landing-modes';
+import { agencyDirectoryHref } from '@/components/mandate/agency-directory-route';
 import { CoverageStatement } from './CoverageStatement';
 import { LandingModeSwitch } from './LandingModeSwitch';
 import { LandingShowcase } from './LandingShowcase';
 import { PlaceSearchBox } from './PlaceSearchBox';
 
 export function SearchLandingContent() {
-  const { t } = useTranslation(['search-results', 'property-market', 'search-results', 'search-results']);
+  const { t, i18n } = useTranslation(['search-results', 'property-market', 'search-results', 'search-results']);
   const { listings, loading, error } = usePublicListings();
 
   // 🔑 **`null` = «χωρίς σημείο αναφοράς», και είναι σωστό εδώ**: η ρίζα δεν ξέρει πού
@@ -74,6 +77,28 @@ export function SearchLandingContent() {
   //    κρίνει αν το κουμπί «Επαγγελματίες» μπορεί να εμφανιστεί)*. Η βιτρίνα τα
   //    **ξαναχρησιμοποιεί** — καμία δεύτερη ανάγνωση, καμία δεύτερη συνδρομή.
   const { agencies } = usePublicAgencies(null);
+
+  // 🔴 **ΤΟ ΔΕΥΤΕΡΟ ΠΕΔΙΟ ΕΙΝΑΙ ΔΩΡΕΑΝ, ΚΑΙ ΓΙ' ΑΥΤΟ Η ΑΝΑΤΡΟΠΗ ΤΗΣ Α4.1.4 ΕΙΝΑΙ ΦΘΗΝΗ**
+  //    *(ADR-841 §7 Α4.5.2)*.
+  //
+  // Η **Α4.1.4** απέρριψε το πεδίο ειδικότητας γράφοντας ότι *«η ρίζα θα φόρτωνε 22
+  // προφίλ **μόνο για να γεμίσει ένα dropdown**»*. Αυτό ήταν **κόστος**, όχι αρχή — και
+  // το κόστος **πληρωνόταν ήδη τη στιγμή που γράφτηκε**: ο `countLandingModes` μία
+  // γραμμή πιο κάτω μετρά τα ίδια προφίλ για να κρίνει αν το κουμπί «Επαγγελματίες»
+  // επιτρέπεται να εμφανιστεί, και η **Α4.3** τα ξόδεψε ξανά για τη βιτρίνα.
+  //
+  // ⇒ Το `occupationOptions` είναι **καθαρή συνάρτηση πάνω σε πίνακα που ήδη κρατάμε**:
+  //    μηδέν επιπλέον ανάγνωση, μηδέν επιπλέον συνδρομή, **μηδέν νέο κλειδί i18n**.
+  //
+  // ⚠️ **Υπολογίζεται και για τις λειτουργίες ακινήτων, και είναι σωστό**: ένα `useMemo`
+  //    υπό συνθήκη δεν υπάρχει, και η εναλλακτική *(«υπολόγισέ το μέσα στη φόρμα»)* θα
+  //    έβαζε κλήση του SSoT σε component που δεν κατέχει τα δεδομένα. Το κόστος είναι
+  //    ένας `Map` πάνω σε ~22 εγγραφές, μία φορά ανά αλλαγή του καταλόγου.
+  const locale = showcaseLocale(i18n.language);
+  const occupations = React.useMemo(
+    () => occupationOptions(agencies, locale),
+    [agencies, locale],
+  );
 
   // ⚠️ **Η ΔΙΑΘΕΣΙΜΟΤΗΤΑ ΠΑΡΑΓΕΤΑΙ ΑΠΟ ΤΑ ΔΕΔΟΜΕΝΑ** (ADR-841 Α4 · ADR-777 §8.10):
   //    ένα κουμπί εμφανίζεται **μόνο** όταν η λειτουργία του έχει τι να δείξει. Καμία
@@ -112,6 +137,24 @@ export function SearchLandingContent() {
   //    μένει **ένα** κουμπί — και τότε η βιτρίνα οφείλει να δείξει **ό,τι υπάρχει**,
   //    όχι μόνο τη μία λειτουργία που έτυχε να επιβιώσει.
   const panelMode = canAskWhere && landingSwitchIsVisible(modes) ? mode : null;
+
+  // 🔴 **Η ΠΟΡΤΑ «ΔΕΣ ΤΑ ΟΛΑ» ΑΚΟΛΟΥΘΕΙ ΚΙ ΑΥΤΗ ΤΟΝ ΔΙΑΚΟΠΤΗ (Α4.3 · Α4.4-Β).**
+  //
+  // Το ερώτημα του Giorgio: *«θέλω υδραυλικό — τι κάνω;»*. Μετρήθηκε ότι **δεν
+  // υπήρχε καμία διαδρομή**: το κουμπί «Αναζήτηση» είναι **απενεργοποιημένο** όσο
+  // το πεδίο τόπου είναι κενό, και οι κάρτες της βιτρίνας οδηγούν σε **ένα** προφίλ
+  // — όχι στον κατάλογο. Δηλαδή *«επαγγελματίες οπουδήποτε»* ήταν **αδύνατο**.
+  //
+  // ⚠️ **ΔΕΝ προστέθηκε τέταρτο κουμπί.** Η πόρτα υπήρχε ήδη *(«Δες όλες τις
+  //    αγγελίες»)* και απαντούσε **πάντα** για ακίνητα, ακόμη κι όταν ο επισκέπτης
+  //    μόλις είχε πει ότι ψάχνει **πρόσωπο** — η ίδια ασυνέπεια που έκλεισε η Α4.3,
+  //    μία γραμμή πιο κάτω. Μία πόρτα που **ξέρει πού στέκεσαι**, όχι δύο δίπλα-δίπλα.
+  //
+  // 🔴 **Η ΔΙΑΚΛΑΔΩΣΗ ΕΙΝΑΙ ΤΥΠΟΥ, ΚΑΙ ΤΗΝ ΚΑΤΕΧΕΙ ΤΟ SSoT** — όχι αυτή η σελίδα:
+  //    το {@link landingModeSeeksPeople} είναι η **μία** διατύπωση του κανόνα της Α5,
+  //    με δική της άγκυρα και μετάλλαξη. Ένα `panelMode === 'pros'` εδώ θα ήταν η
+  //    **τέταρτη** εκδοχή του ίδιου κανόνα, ελεύθερη να αποκλίνει.
+  const browseAllSeeksPeople = landingModeSeeksPeople(panelMode);
 
   return (
     // `flex-1`, ΟΧΙ `min-h-screen`: το ύψος το κατέχει πλέον το `(light)/layout.tsx`,
@@ -160,20 +203,46 @@ export function SearchLandingContent() {
         {t('search-results:landing.title')}
       </h1>
 
+      {/*
+        ⚠️ **ΤΟ `aria-label` ΕΦΥΓΕ ΑΠΟ ΤΟ `<section>` ΠΑΡΑΚΑΤΩ (Α4.5)**, και δεν είναι
+        παράλειψη: έλεγε «Περιοχή αναζήτησης» — αλήθεια όσο υπήρχε **ένα** πεδίο, **ψέμα**
+        από τη στιγμή που το tab «Επαγγελματίες» απέκτησε πεδίο **ειδικότητας**. Και ήταν
+        πλέον και **θόρυβος**: κάθε χειριστήριο μέσα κουβαλά τώρα **ορατή** δική του
+        ετικέτα, οπότε ο αναγνώστης οθόνης θα άκουγε το ίδιο κείμενο δύο φορές. Ένα
+        `<section>` χωρίς όνομα **δεν** εκτίθεται ως ορόσημο — που είναι το σωστό εδώ: η
+        ομάδα ζει ήδη μέσα στο `main`, κάτω από τον τίτλο `h1`.
+        ⚠️ Τα ονόματα των δύο στοιχείων γράφονται **χωρίς γωνιώδη άγκιστρα, επίτηδες**: ο
+        σαρωτής της N.11 δουλεύει **ανά γραμμή** και διαβάζει ελληνικά ανάμεσα σε `>` και
+        `<` ως κείμενο JSX — μπλόκαρε αυτό ακριβώς το σχόλιο, μετρημένα.
+
+        🔴 **ΚΑΙ ΤΟ ΣΧΟΛΙΟ ΖΕΙ ΕΞΩ ΑΠΟ ΤΟ `&&`, ΟΧΙ ΜΕΣΑ ΤΟΥ.** Ένα σχόλιο JSX ως **πρώτο
+        παιδί** μέσα στις παρενθέσεις του `panelMode !== null && ( … )` είναι **δεύτερη**
+        έκφραση δίπλα στο `<section>` ⇒ *«Expected slash, got className»* — **Build Error**,
+        λευκή σελίδα.
+
+        ⚠️ **ΚΑΙ ΜΗΝ ΓΡΑΨΕΙΣ ΤΗΝ ΑΚΟΛΟΥΘΙΑ ΚΛΕΙΣΙΜΑΤΟΣ ΣΧΟΛΙΟΥ ΜΕΣΑ ΣΕ ΣΧΟΛΙΟ.** Η
+        πρώτη διόρθωση αυτού εδώ **έδειχνε** τη σύνταξη κυριολεκτικά, άρα **τερμάτισε το
+        ίδιο της το μπλοκ** στη μέση: ο parser συνέχισε ως κείμενο JSX και κατήγγειλε το
+        **τελευταίο `}` του αρχείου**, 125 γραμμές πιο κάτω. Τρίτη φορά το ίδιο σχήμα σε
+        αυτό το ADR *(Α4.2: «το Build Error ΔΕΝ ήταν η μνήμη»)*: **η αναφερόμενη γραμμή δεν
+        είναι η αιτία**.
+      */}
       {panelMode !== null && (
-        <section aria-label={t('search-results:landing.search.label')} className="flex flex-col gap-3">
+        <section className="flex flex-col gap-3">
           {/*
             🔑 **Ο ΔΙΑΚΟΠΤΗΣ ΠΑΝΩ ΑΠΟ ΤΟ ΠΕΔΙΟ** (ADR-841 §7 Α4) — η θέση είναι η
             μετρημένη πρακτική και των εννέα πλατφορμών του §4: ο άνθρωπος διαλέγει
             **τι** ψάχνει **πριν** αρχίσει να πληκτρολογεί, ποτέ μετά.
 
-            ⚠️ **Το πεδίο μένει ΕΝΑ**, όπως το δεσμεύει το ADR-777 Α3. Ο διακόπτης
-            αλλάζει τον **προορισμό** της υποβολής, όχι τον αριθμό των ερωτήσεων: ό,τι
-            άλλο χρειάζεται η κάθε λειτουργία *(ημερομηνίες · ειδικότητα)* ζει στην
-            οθόνη 2, όπου **υπάρχει ήδη χτισμένο**.
+            🔴 **ΚΑΙ Ο ΔΙΑΚΟΠΤΗΣ ΑΛΛΑΖΕΙ ΠΛΕΟΝ ΚΑΙ ΤΟΝ ΑΡΙΘΜΟ ΤΩΝ ΠΕΔΙΩΝ** *(Α4.5)*.
+            Το σχόλιο εδώ έγραφε *«το πεδίο μένει ΕΝΑ, όπως το δεσμεύει το ADR-777 Α3»* —
+            **αναιρέθηκε ρητά**: ισχύει για «Αγορά · Ενοικίαση · Διαμονή», και **όχι** για
+            τους «Επαγγελματίες», που ρωτούν **ειδικότητα → περιοχή**. Οι ημερομηνίες της
+            «Διαμονής» μένουν στην οθόνη 2 *(`StayFilterFields`)*, γιατί εκείνη η φόρμα
+            είναι **ασύμβατη** με μία γραμμή — η ειδικότητα δεν είναι.
           */}
           <LandingModeSwitch modes={modes} value={panelMode} onChange={setChosen} />
-          <PlaceSearchBox mode={panelMode} />
+          <PlaceSearchBox mode={panelMode} occupations={occupations} locale={locale} />
         </section>
       )}
 
@@ -205,12 +274,28 @@ export function SearchLandingContent() {
         με ρητή εξήγηση γιατί καμία δεν είναι στον χάρτη.
       */}
       <nav className="flex flex-col gap-3">
-        <Link
-          href={SEARCH_RESULTS_ROUTE}
-          className="inline-block w-fit rounded-md border border-border bg-card px-4 py-2 font-medium text-foreground"
-        >
-          {t('search-results:landing.browseAll')}
-        </Link>
+        {/*
+          ⚠️ **ΔΥΟ ΚΛΑΔΟΙ, ΟΧΙ ternary ΜΕΣΑ ΣΤΟ `href`.** Το `listing-routes.ts:71` το
+          γράφει ρητά: ένα ternary ανάμεσα σε δύο διευθύνσεις **φαρδαίνει τον τύπο σε
+          `string`**, και τότε ο φρουρός του συνόρου (CHECK 3.61) παύει να βλέπει τι
+          περνά. Κάθε κλάδος καλεί **τον δικό του** helper, που επιστρέφει branded
+          διεύθυνση.
+        */}
+        {browseAllSeeksPeople ? (
+          <Link
+            href={agencyDirectoryHref()}
+            className="inline-block w-fit rounded-md border border-border bg-card px-4 py-2 font-medium text-foreground"
+          >
+            {t('search-results:landing.browseAllPros')}
+          </Link>
+        ) : (
+          <Link
+            href={searchResultsHref()}
+            className="inline-block w-fit rounded-md border border-border bg-card px-4 py-2 font-medium text-foreground"
+          >
+            {t('search-results:landing.browseAll')}
+          </Link>
+        )}
 
         {/*
           🔑 **Η διέξοδος του §25.8 προς τη ΖΗΤΗΣΗ.** Το κείμενο βοήθειας δεν είναι
