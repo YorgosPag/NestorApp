@@ -20,12 +20,27 @@ import {
   defaultLandingMode,
   isListingMode,
   landingModeFilters,
+  landingPanelListings,
+  landingProShowcase,
+  landingSwitchIsVisible,
 } from '@/lib/landing/landing-modes';
+import { LANDING_SHOWCASE_LIMIT } from '@/lib/listings/listing-coverage';
 import type { OfferKind } from '@/types/property-offers';
 import type { PublicListing } from '@/types/public-listing';
+import type { PublicShowcase } from '@/types/agency-profile';
 
 function listing(...offerKinds: OfferKind[]): PublicListing {
   return { id: `l-${offerKinds.join('-')}`, offerKinds } as unknown as PublicListing;
+}
+
+/**
+ * **Αγγελία με ΕΛΕΓΧΟΜΕΝΗ θέση στη σειρά** — η βιτρίνα ταξινομεί κατά τίτλο→id.
+ *
+ * ⚠️ Χρειάζεται **μόνο** όπου η άγκυρα μιλά για τη σχέση **σειράς και κοψίματος**.
+ * Αλλού ο τίτλος θα ήταν θόρυβος που κρύβει ποιο σκέλος ελέγχεται.
+ */
+function titled(title: string, ...offerKinds: OfferKind[]): PublicListing {
+  return { id: `l-${title}`, title, offerKinds } as unknown as PublicListing;
 }
 
 const ATHENS = { lat: 37.98098, lng: 23.7333 };
@@ -128,5 +143,131 @@ describe('Μ3 — Ο ΠΡΟΟΡΙΣΜΟΣ', () => {
     // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: πρόσθεσε `'exchange'` στο `LANDING_MODES` ⇒ κοκκινίζει.
     expect(Object.values(LANDING_MODE_OFFER)).not.toContain('exchange');
     expect(LANDING_MODES).toHaveLength(4);
+  });
+});
+
+describe('Μ4 — 🔴 ΤΟ ΠΑΝΕΛ: Η ΒΙΤΡΙΝΑ ΑΚΟΛΟΥΘΕΙ ΤΟΝ ΔΙΑΚΟΠΤΗ (Α4.3)', () => {
+  // 🔴 **ΤΟ ΕΛΑΤΤΩΜΑ ΠΟΥ ΦΥΛΑΕΙ ΑΥΤΗ Η ΟΜΑΔΑ, ΜΕ ΤΑ ΛΟΓΙΑ ΤΟΥ GIORGIO**:
+  //    *«είναι σωστό όταν πατάω **αγορά** να εμφανίζονται και εικόνες **ενοικίασης**;»*
+  //
+  // ⚠️ Βρέθηκε από **μάτι σε στιγμιότυπο**, με **20/20 άγκυρες πράσινες** — γιατί καμία
+  //    δεν ρωτούσε *«τι δείχνει η οθόνη ΚΑΤΩ από το κουμπί που μόλις πάτησα;»*.
+
+  const SELL_ONLY = listing('sell');
+  const RENT_ONLY = listing('leaseOut');
+  const BOTH = listing('sell', 'leaseOut');
+
+  it('🔴 η «Αγορά» ΔΕΝ δείχνει ενοικιάσεις — και το αντίστροφο', () => {
+    // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: κάνε το `landingPanelListings` να επιστρέφει
+    //    `landingShowcaseListings(listings)` αδιακρίτως ⇒ κοκκινίζει και στα δύο σκέλη.
+    const stock = [SELL_ONLY, RENT_ONLY, BOTH];
+
+    expect(landingPanelListings('buy', stock)).toEqual(
+      expect.arrayContaining([SELL_ONLY, BOTH]),
+    );
+    expect(landingPanelListings('buy', stock)).not.toContain(RENT_ONLY);
+
+    expect(landingPanelListings('rent', stock)).toEqual(
+      expect.arrayContaining([RENT_ONLY, BOTH]),
+    );
+    expect(landingPanelListings('rent', stock)).not.toContain(SELL_ONLY);
+  });
+
+  it('🔴 η αγγελία με ΔΥΟ διαθέσεις εμφανίζεται ΚΑΙ ΣΤΙΣ ΔΥΟ λειτουργίες', () => {
+    // 🔑 Το πλεονέκτημα της Α4 — «πουλάω, και μέχρι να πουληθεί το νοικιάζω». Ένα
+    //    φίλτρο γραμμένο ως `offerKinds[0] === …` θα την εξαφάνιζε από τη μία.
+    expect(landingPanelListings('buy', [BOTH])).toHaveLength(1);
+    expect(landingPanelListings('rent', [BOTH])).toHaveLength(1);
+  });
+
+  it('🔴 ΤΟ ΦΙΛΤΡΟ ΤΡΕΧΕΙ ΠΡΙΝ ΤΟ ΚΟΨΙΜΟ — αλλιώς το έλλειμμα είναι ΑΟΡΑΤΟ', () => {
+    // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: αντίστρεψε τη σειρά σε «κόψε στα 6, μετά φιλτράρισε» ⇒
+    //    εδώ επιστρέφει **0** αντί για 4, και στην οθόνη θα φαινόταν φυσιολογικό:
+    //    κάρτες υπάρχουν, απλώς οι περισσότερες λείπουν. Ίδιο σχήμα με το «slice πριν
+    //    το sort» που το `landingShowcaseListings` ήδη απαγορεύει γραμμένο.
+    //
+    // 🔴 **ΟΙ ΤΙΤΛΟΙ ΕΙΝΑΙ ΤΟ ΜΙΣΟ ΤΗΣ ΑΓΚΥΡΑΣ, ΟΧΙ ΔΙΑΚΟΣΜΗΣΗ.** Η βιτρίνα ταξινομεί
+    //    κατά **τίτλο→id** (`compareShowcaseListings`). Χωρίς ρητούς τίτλους, τα
+    //    `id` των ψεύτικων αντικειμένων έβαζαν **τυχαία** τις ενοικιάσεις πρώτες,
+    //    οπότε ακόμη και το «κόψε πρώτα» επέστρεφε 4 — και **η μετάλλαξη επιβίωνε**.
+    //    *(Μετρημένο: η πρώτη γραφή αυτής της άγκυρας ήταν πράσινη και στις δύο
+    //    εκδοχές — δηλαδή δεν φύλαγε τίποτα.)* Εδώ οι πωλήσεις καταλαμβάνουν
+    //    **ολόκληρο** το ταβάνι, ώστε ένα πρόωρο κόψιμο να μην αφήνει καμία ενοικίαση.
+    const stock = [
+      ...Array.from({ length: LANDING_SHOWCASE_LIMIT }, (_, i) =>
+        titled(`Α${i}`, 'sell'),
+      ),
+      ...Array.from({ length: 4 }, (_, i) => titled(`Ω${i}`, 'leaseOut')),
+    ];
+
+    expect(stock).toHaveLength(LANDING_SHOWCASE_LIMIT + 4);
+    expect(landingPanelListings('rent', stock)).toHaveLength(4);
+  });
+
+  it('🔴 το ταβάνι της βιτρίνας ΕΞΑΚΟΛΟΥΘΕΙ να ισχύει μέσα στη λειτουργία', () => {
+    const many = Array.from({ length: LANDING_SHOWCASE_LIMIT + 5 }, () => listing('sell'));
+
+    expect(landingPanelListings('buy', many)).toHaveLength(LANDING_SHOWCASE_LIMIT);
+  });
+
+  it('🔴 οι ΕΠΑΓΓΕΛΜΑΤΙΕΣ δεν αποδεικνύονται με αγγελίες — η διακλάδωση είναι ΤΥΠΟΥ', () => {
+    // Α5. Το `null` είναι που επιτρέπει στη βιτρίνα να αποδώσει **κάρτες προσώπων**
+    // χωρίς να ξαναγράψει κανείς τον κανόνα ως `if (mode === 'pros')`.
+    // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: δώσε στο `pros` ένα `OfferKind` ⇒ κοκκινίζει.
+    expect(landingPanelListings('pros', [SELL_ONLY, RENT_ONLY])).toBeNull();
+  });
+
+  it('🔴 ΧΩΡΙΣ ΔΙΑΚΟΠΤΗ ΔΕΝ ΦΙΛΤΡΑΡΟΥΜΕ — φίλτρο χωρίς χειριστήριο είναι ΑΠΩΛΕΙΑ', () => {
+    // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: κάνε το `mode === null` να πέφτει στο `landingModeFilters` ⇒
+    //    κοκκινίζει, γιατί η αντιπαροχή θα εξαφανιζόταν **σιωπηλά**.
+    //
+    // ⚠️ Είναι **χειρότερο** από το ελάττωμα που έκλεισε η Α4.3: εκεί ο επισκέπτης
+    //    έβλεπε **παραπάνω** απ' όσα ζήτησε *(θόρυβος)*· εδώ θα έβλεπε **λιγότερα απ'
+    //    όσα υπάρχουν** *(απώλεια)*, χωρίς τίποτα στην οθόνη να το εξηγεί.
+    const stock = [SELL_ONLY, listing('exchange')];
+
+    expect(landingPanelListings(null, stock)).toHaveLength(2);
+    expect(landingPanelListings('buy', stock)).toHaveLength(1);
+  });
+});
+
+describe('Μ5 — 🔴 ΤΟ ΧΕΙΡΙΣΤΗΡΙΟ ΕΧΕΙ ΜΙΑ ΠΗΓΗ (Α4.3)', () => {
+  it('🔴 ένα κουμπί ΔΕΝ είναι διακόπτης — είναι ετικέτα που μοιάζει με επιλογή', () => {
+    // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: κάνε το `>= 2` σε `>= 1` ⇒ κοκκινίζει. Τότε η βιτρίνα θα
+    //    φιλτράριζε ενώ ο επισκέπτης δεν βλέπει **κανένα** κουμπί να το αναιρέσει.
+    expect(landingSwitchIsVisible([])).toBe(false);
+    expect(landingSwitchIsVisible(['buy'])).toBe(false);
+    expect(landingSwitchIsVisible(['buy', 'rent'])).toBe(true);
+  });
+
+  it('🔴 το κριτήριο ζει ΕΞΩ από το component, γιατί το ρωτούν ΔΥΟ', () => {
+    // Ο διακόπτης το ρωτά για να σιωπήσει· η σελίδα για να ξέρει αν επιτρέπεται να
+    // φιλτράρει. Δύο `length < 2` σε δύο αρχεία θα ήταν δύο απαντήσεις (N.0.2).
+    const counts = countLandingModes([listing('sell')], 0);
+
+    expect(availableLandingModes(counts)).toEqual(['buy']);
+    expect(landingSwitchIsVisible(availableLandingModes(counts))).toBe(false);
+  });
+});
+
+describe('Μ6 — 🔴 Η ΒΙΤΡΙΝΑ ΤΩΝ ΕΠΑΓΓΕΛΜΑΤΙΩΝ (Α4.3)', () => {
+  function profile(id: string): PublicShowcase {
+    return { companyId: id } as unknown as PublicShowcase;
+  }
+
+  it('🔴 ΙΔΙΟ ταβάνι με τις αγγελίες — «δείγμα» δεν έχει δύο μεγέθη', () => {
+    // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: βάλε δεύτερη σταθερά (π.χ. 4) ⇒ κοκκινίζει. Θα σήμαινε ότι
+    //    το πόσα δείχνει η βιτρίνα αλλάζει ανάλογα με το κουμπί, χωρίς κανείς να το μάθει.
+    const many = Array.from({ length: LANDING_SHOWCASE_LIMIT + 3 }, (_, i) => profile(`c${i}`));
+
+    expect(landingProShowcase(many)).toHaveLength(LANDING_SHOWCASE_LIMIT);
+  });
+
+  it('🔴 ΔΕΝ ξανα-ταξινομεί — η σειρά έρχεται από τον `usePublicAgencies`', () => {
+    // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: βάλε `sort()` εδώ ⇒ κοκκινίζει. Θα ήταν **δεύτερη** σειρά
+    //    για το ίδιο σύνολο, ελεύθερη να αποκλίνει από τον κατάλογο `/pro`.
+    const given = [profile('γ'), profile('α'), profile('β')];
+
+    expect(landingProShowcase(given).map((p) => p.companyId)).toEqual(['γ', 'α', 'β']);
   });
 });

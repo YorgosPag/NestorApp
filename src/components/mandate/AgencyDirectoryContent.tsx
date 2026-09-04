@@ -46,12 +46,10 @@
 
 import React from 'react';
 
-import { Link } from '@/lib/workspace/navigation';
 import { ShellSurface } from '@/core/containers/ShellSurface';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { usePublicAgencies } from '@/services/realtime/hooks/usePublicAgencies';
-import type { PublicShowcase } from '@/types/agency-profile';
-import { CredibilityStatement } from './CredibilityStatement';
+import { AgencyCard } from './AgencyCard';
 
 import { AGENCY_PUBLIC_NS, DIRECTORY_KEYS } from './agency-directory-labels';
 import { AgencyDirectoryFilters } from './AgencyDirectoryFilters';
@@ -78,47 +76,11 @@ import { useRouter } from '@/lib/workspace/navigation';
 import routeSlice from '@/i18n/generated/routes/pro.el.json';
 import { registerRouteSlice } from '@/i18n/route-slice';
 // ADR-827 §9.15 — η δημόσια διεύθυνση ζει σε ουδέτερο module: τη ρωτά και ο διακομιστής.
-import { agencyDirectoryHref, agencyProfileRoute } from './agency-directory-route';
+import { agencyDirectoryHref } from './agency-directory-route';
 
 registerRouteSlice(routeSlice);
 
 
-
-function AgencyCard({ profile }: { readonly profile: PublicShowcase }): React.JSX.Element {
-  const { t } = useTranslation([AGENCY_PUBLIC_NS]);
-
-  return (
-    <li className="rounded-lg border border-border bg-card p-4">
-      <article className="flex flex-col gap-1">
-        <h2 className="m-0 text-lg font-semibold text-foreground">{profile.displayName}</h2>
-        {/*
-          ⚠️ Η ΑΠΟΔΕΙΞΗ δεν είναι διακόσμηση: είναι **αυτό που κάνει τον κατάλογο
-          χρήσιμο αντί για επικίνδυνο** (§9.9 β). Γι' αυτό είναι στην **κάρτα**,
-          όχι κρυμμένη μέσα στη σελίδα προφίλ.
-
-          🔴 ADR-841 Φ6-Β — ΗΤΑΝ ΜΙΑ ΓΡΑΜΜΗ «ΓΕΜΗ {number}», ΚΑΙ ΔΕΝ ΑΡΚΕΙ ΠΙΑ.
-          Με **πέντε** επαγγέλματα στον ίδιο πίνακα, ο σκέτος αριθμός δεν λέει
-          **ποιος τον εξέδωσε** *(Α9.1)*, και η απουσία του δεν λέει **γιατί
-          λείπει** — ο ελαιοχρωματιστής δεν έχει πού να γραφτεί, ο δικηγόρος που
-          σιωπά έχει. Δύο γραμμές, δύο ερωτήματα, ποτέ μία πρόταση.
-
-          ⚠️ **ΚΑΘΕ credential αποδίδεται**: το μικτό γραφείο *(μεσιτική άδεια ΚΑΙ
-          τεχνική ιδιότητα)* δείχνει **και τα δύο**. Ένα `credentials[0]` θα
-          έκρυβε τη μισή του ταυτότητα.
-        */}
-        {profile.credentials.map((credential) => (
-          <CredibilityStatement key={credential.occupation.escoUri} credential={credential} />
-        ))}
-        <Link
-          href={agencyProfileRoute(profile.alias)}
-          className="mt-2 self-start text-sm font-medium text-foreground underline underline-offset-4"
-        >
-          {t(DIRECTORY_KEYS.open)}
-        </Link>
-      </article>
-    </li>
-  );
-}
 
 export function AgencyDirectoryContent(): React.JSX.Element {
   const { t, i18n } = useTranslation([AGENCY_PUBLIC_NS]);

@@ -34,7 +34,7 @@
 import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import type { LandingMode } from '@/lib/landing/landing-modes';
+import { landingSwitchIsVisible, type LandingMode } from '@/lib/landing/landing-modes';
 
 /**
  * **Κλειδί i18n ανά λειτουργία** — `Record` πάνω στο union, ποτέ συνάρτηση με `switch`.
@@ -69,11 +69,15 @@ interface LandingModeSwitchProps {
  * ⚠️ **ΣΙΩΠΑ ΜΕ ΜΙΑ ΜΟΝΟ ΛΕΙΤΟΥΡΓΙΑ.** Ένας διακόπτης με ένα κουμπί δεν είναι επιλογή —
  * είναι **ετικέτα που μοιάζει με επιλογή**, και ο επισκέπτης θα πατούσε περιμένοντας
  * αλλαγή. Η οθόνη τότε δείχνει απλώς τη φόρμα, όπως πριν την Α4.
+ *
+ * 🔴 **ΤΟ ΚΡΙΤΗΡΙΟ ΔΕΝ ΖΕΙ ΠΙΑ ΕΔΩ** *(Α4.3)*: το ρωτά και η **σελίδα**, για να ξέρει
+ * αν επιτρέπεται να φιλτράρει τη βιτρίνα. Δύο `length < 2` σε δύο αρχεία θα ήταν δύο
+ * απαντήσεις στο *«έχει ο άνθρωπος χειριστήριο;»* — δες {@link landingSwitchIsVisible}.
  */
 export function LandingModeSwitch({ modes, value, onChange }: LandingModeSwitchProps) {
   const { t } = useTranslation(['search-results']);
 
-  if (modes.length < 2) return null;
+  if (!landingSwitchIsVisible(modes)) return null;
 
   return (
     <Tabs value={value} onValueChange={(next) => onChange(next as LandingMode)}>

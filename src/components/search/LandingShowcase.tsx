@@ -66,8 +66,14 @@
 import React, { useId } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { ListingCard } from '@/components/search-results/ListingCard';
-import { landingShowcaseListings } from '@/lib/listings/listing-coverage';
+import { AgencyCard } from '@/components/mandate/AgencyCard';
+import {
+  landingPanelListings,
+  landingProShowcase,
+  type LandingMode,
+} from '@/lib/landing/landing-modes';
 import type { PublicListing } from '@/types/public-listing';
+import type { PublicShowcase } from '@/types/agency-profile';
 
 /**
  * Το πλάτος της κάρτας **σε αυτή τη διάταξη** — δες το docblock παραπάνω.
@@ -79,7 +85,21 @@ import type { PublicListing } from '@/types/public-listing';
 const SHOWCASE_IMAGE_SIZES = '(min-width: 40rem) 20rem, 100vw';
 
 interface LandingShowcaseProps {
+  /**
+   * **Η ενεργή λειτουργία — ή `null` όταν ΔΕΝ ΥΠΑΡΧΕΙ ΔΙΑΚΟΠΤΗΣ** στην οθόνη.
+   *
+   * ⛔ **Το `null` ΔΕΝ είναι «όλες οι λειτουργίες»** — είναι *«κανείς δεν ρώτησε»*.
+   * Δες το {@link landingPanelListings}: εκεί ζει ο λόγος για τον οποίο τότε **δεν**
+   * φιλτράρουμε, και είναι ο ίδιος κανόνας που κρατά τον διακόπτη κρυφό.
+   */
+  readonly mode: LandingMode | null;
   readonly listings: readonly PublicListing[];
+  /**
+   * ⚠️ **Ήδη ταξινομημένοι** από τον `usePublicAgencies` — η βιτρίνα **μόνο** κόβει
+   * *({@link landingProShowcase})*. Μια `sort()` εδώ θα ήταν δεύτερη σειρά για το ίδιο
+   * σύνολο, ελεύθερη να αποκλίνει από τον κατάλογο `/pro`.
+   */
+  readonly agencies: readonly PublicShowcase[];
   readonly loading: boolean;
   readonly error: string | null;
 }
@@ -90,12 +110,26 @@ interface LandingShowcaseProps {
  * υπόσχεση που δεν τηρείται ποτέ. Το *«τι συμβαίνει»* το λέει η `CoverageStatement`, με
  * αριθμούς — **μία** φωνή για την κατάσταση, ποτέ δύο.
  */
-export function LandingShowcase({ listings, loading, error }: LandingShowcaseProps) {
+export function LandingShowcase({
+  mode,
+  listings,
+  agencies,
+  loading,
+  error,
+}: LandingShowcaseProps) {
   const { t } = useTranslation(['search-results']);
   const headingId = useId();
-  const shown = landingShowcaseListings(listings);
 
-  if (loading || error !== null || shown.length === 0) return null;
+  // 🔴 **Η ΔΙΑΚΛΑΔΩΣΗ ΕΙΝΑΙ ΤΥΠΟΥ, ΟΧΙ ΣΥΝΘΗΚΗΣ** — ίδιο σχήμα με το `PlaceSearchBox`.
+  //    Το `null` **δεν** το αποφασίζει αυτό το αρχείο ρωτώντας `mode === 'pros'`: το
+  //    λέει το SSoT, επειδή **οι επαγγελματίες δεν είναι αγγελία** (Α5). Ένα
+  //    `if (mode === 'pros')` εδώ θα ήταν **δεύτερος** τόπος που ξέρει ποια
+  //    λειτουργία αποδεικνύεται με τι — ελεύθερος να αποκλίνει.
+  const shownListings = landingPanelListings(mode, listings);
+  const shownAgencies = shownListings === null ? landingProShowcase(agencies) : null;
+  const count = shownListings?.length ?? shownAgencies?.length ?? 0;
+
+  if (loading || error !== null || count === 0) return null;
 
   return (
     // `data-shell-span="full"` — ο **δηλωμένος** τρόπος να σπάσει έξω από το μέτρο
@@ -103,20 +137,42 @@ export function LandingShowcase({ listings, loading, error }: LandingShowcasePro
     // 3.63 Κ5 το μπλοκάρει ως **δεύτερο άξονα πλάτους**.
     <section data-shell-span="full" aria-labelledby={headingId}>
       <h2 id={headingId} className="mb-3 text-lg font-semibold text-foreground">
-        {t('search-results:landing.showcase.heading')}
+        {/*
+          ⚠️ **Ο ΤΙΤΛΟΣ ΑΚΟΛΟΥΘΕΙ ΤΟ ΠΕΡΙΕΧΟΜΕΝΟ, ΓΙΑΤΙ ΑΛΛΙΩΣ ΛΕΕΙ ΨΕΜΑΤΑ.** Το «Δες
+          τι υπάρχει ήδη» πάνω από κάρτες **επαγγελματιών** θα διαβαζόταν ως «να τα
+          ακίνητα» — δηλαδή η ίδια σύγχυση, μετακινημένη μία γραμμή πιο πάνω.
+        */}
+        {t(
+          shownAgencies !== null
+            ? 'search-results:landing.showcase.prosHeading'
+            : 'search-results:landing.showcase.heading',
+        )}
       </h2>
 
+      {/*
+        ⚠️ **ΕΝΑ ΠΛΕΓΜΑ, ΔΥΟ ΕΙΔΗ ΑΠΟΔΕΙΞΗΣ — ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ.** Ένα δεύτερο
+        `<section>` + `<ul>` για τους επαγγελματίες θα ήταν **δίδυμος κλώνος** της
+        ίδιας διάταξης *(N.18: ακριβώς το σχήμα που το `jscpd` πιάνει ανεξάρτητα
+        ονόματος)*. Η **διάταξη** της βιτρίνας είναι μία· αλλάζει μόνο **η κάρτα**.
+      */}
       <ul className="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(18rem,1fr))] gap-4 p-0">
-        {/* Μόνο η πρώτη κάρτα είναι LCP (ADR-841 §7 Α2.4): πολλές «υψηλής
-            προτεραιότητας» εικόνες **ακυρώνουν η μία την άλλη**. */}
-        {shown.map((listing, index) => (
-          <ListingCard
-            key={listing.id}
-            listing={listing}
-            priority={index === 0}
-            imageSizes={SHOWCASE_IMAGE_SIZES}
-          />
-        ))}
+        {shownListings !== null
+          ? /* Μόνο η πρώτη κάρτα είναι LCP (ADR-841 §7 Α2.4): πολλές «υψηλής
+               προτεραιότητας» εικόνες **ακυρώνουν η μία την άλλη**. */
+            shownListings.map((listing, index) => (
+              <ListingCard
+                key={listing.id}
+                listing={listing}
+                priority={index === 0}
+                imageSizes={SHOWCASE_IMAGE_SIZES}
+              />
+            ))
+          : /* ⚠️ `headingLevel={3}`: η βιτρίνα έχει **ήδη** δική της `<h2>` από πάνω.
+               Η προεπιλογή `2` της κάρτας είναι σωστή στον `/pro`, που έχει `<h1>`
+               και καμία `<h2>` — γι' αυτό το επίπεδο **ρωτιέται**, δεν καρφώνεται. */
+            (shownAgencies ?? []).map((profile) => (
+              <AgencyCard key={profile.companyId} profile={profile} headingLevel={3} />
+            ))}
       </ul>
     </section>
   );

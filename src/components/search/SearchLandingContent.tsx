@@ -54,6 +54,7 @@ import {
   availableLandingModes,
   countLandingModes,
   defaultLandingMode,
+  landingSwitchIsVisible,
   type LandingMode,
 } from '@/lib/landing/landing-modes';
 import { CoverageStatement } from './CoverageStatement';
@@ -69,6 +70,9 @@ export function SearchLandingContent() {
   //    είναι ο επισκέπτης, και **δεν του το ζητά** πριν του δείξει τι υπάρχει. Ο
   //    κατάλογος τότε επιστρέφει τα προφίλ **ισότιμα** — καμία κατάταξη, όπως το λέει
   //    ήδη η ίδια η πρόταση του `/pro`.
+  // ⚠️ Τα προφίλ **ήταν ήδη εδώ** πριν την Α4.3 *(τα μετρά ο `countLandingModes` για να
+  //    κρίνει αν το κουμπί «Επαγγελματίες» μπορεί να εμφανιστεί)*. Η βιτρίνα τα
+  //    **ξαναχρησιμοποιεί** — καμία δεύτερη ανάγνωση, καμία δεύτερη συνδρομή.
   const { agencies } = usePublicAgencies(null);
 
   // ⚠️ **Η ΔΙΑΘΕΣΙΜΟΤΗΤΑ ΠΑΡΑΓΕΤΑΙ ΑΠΟ ΤΑ ΔΕΔΟΜΕΝΑ** (ADR-841 Α4 · ADR-777 §8.10):
@@ -96,6 +100,18 @@ export function SearchLandingContent() {
   // Όσο δεν έχουμε μετρήσει, δεν υποσχόμαστε: το κουτί δεν εμφανίζεται σε φόρτωση ή
   // σφάλμα, γιατί σε καμία από τις δύο δεν ξέρουμε αν μπορεί να τηρηθεί η υπόσχεση.
   const canAskWhere = !loading && error === null && coverageAnswersWhere(coverage);
+
+  // 🔴 **Η ΜΙΑ ΠΗΓΗ ΤΟΥ «ΥΠΑΡΧΕΙ ΧΕΙΡΙΣΤΗΡΙΟ;» (ADR-841 §7 Α4.3).**
+  //
+  // Ο διακόπτης **και** η βιτρίνα κρέμονται από την **ίδια** απάντηση, γιατί το
+  // φιλτράρισμα χωρίς ορατό χειριστήριο είναι **σιωπηλός περιορισμός**: ο επισκέπτης
+  // βλέπει λιγότερα, δεν μαθαίνει ποτέ γιατί, και **δεν έχει τρόπο να το αναιρέσει**.
+  //
+  // ⚠️ **ΔΥΟ σκέλη, και τα δύο απαραίτητα**: το `canAskWhere` κρύβει τον διακόπτη όταν
+  //    η κάλυψη δεν σηκώνει την ερώτηση *(§8.10)*· το `landingSwitchIsVisible` όταν
+  //    μένει **ένα** κουμπί — και τότε η βιτρίνα οφείλει να δείξει **ό,τι υπάρχει**,
+  //    όχι μόνο τη μία λειτουργία που έτυχε να επιβιώσει.
+  const panelMode = canAskWhere && landingSwitchIsVisible(modes) ? mode : null;
 
   return (
     // `flex-1`, ΟΧΙ `min-h-screen`: το ύψος το κατέχει πλέον το `(light)/layout.tsx`,
@@ -144,7 +160,7 @@ export function SearchLandingContent() {
         {t('search-results:landing.title')}
       </h1>
 
-      {canAskWhere && mode !== null && (
+      {panelMode !== null && (
         <section aria-label={t('search-results:landing.search.label')} className="flex flex-col gap-3">
           {/*
             🔑 **Ο ΔΙΑΚΟΠΤΗΣ ΠΑΝΩ ΑΠΟ ΤΟ ΠΕΔΙΟ** (ADR-841 §7 Α4) — η θέση είναι η
@@ -156,8 +172,8 @@ export function SearchLandingContent() {
             άλλο χρειάζεται η κάθε λειτουργία *(ημερομηνίες · ειδικότητα)* ζει στην
             οθόνη 2, όπου **υπάρχει ήδη χτισμένο**.
           */}
-          <LandingModeSwitch modes={modes} value={mode} onChange={setChosen} />
-          <PlaceSearchBox mode={mode} />
+          <LandingModeSwitch modes={modes} value={panelMode} onChange={setChosen} />
+          <PlaceSearchBox mode={panelMode} />
         </section>
       )}
 
@@ -173,7 +189,13 @@ export function SearchLandingContent() {
         αυτήν θα σήμαιναν σιωπηλά «αυτά έχουμε», δηλαδή τον ίδιο ανέλεγκτο ισχυρισμό που
         το §8.10 ήρθε να απαγορεύσει, από την πίσω πόρτα.
       */}
-      <LandingShowcase listings={listings} loading={loading} error={error} />
+      <LandingShowcase
+        mode={panelMode}
+        listings={listings}
+        agencies={agencies}
+        loading={loading}
+        error={error}
+      />
 
       <CoverageStatement coverage={coverage} loading={loading} error={error} />
 

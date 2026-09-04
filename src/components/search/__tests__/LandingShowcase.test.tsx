@@ -20,6 +20,7 @@ import '@testing-library/jest-dom';
 import { LandingShowcase } from '../LandingShowcase';
 import { LANDING_SHOWCASE_LIMIT } from '@/lib/listings/listing-coverage';
 import type { PublicListing } from '@/types/public-listing';
+import type { PublicShowcase } from '@/types/agency-profile';
 
 jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -66,21 +67,32 @@ function many(count: number): readonly PublicListing[] {
   );
 }
 
-const READY = { loading: false, error: null } as const;
+/**
+ * ⚠️ **ΟΙ ΤΡΕΙΣ ΣΤΑΘΕΡΕΣ ΤΗΣ ΑΠΟΔΟΣΗΣ.** Το `mode` έγινε **υποχρεωτικό** με την Α4.3:
+ * η βιτρίνα είναι πλέον **το πάνελ του διακόπτη**, όχι μια λίστα δίπλα του.
+ *
+ * 🔑 `mode="buy"` και **όχι** `null`: τα δείγματα εδώ είναι όλα `offerKinds: ['sell']`,
+ * άρα το πλήθος **δεν αλλάζει** — αλλά η άγκυρα περνά από τη **ζωντανή** διαδρομή
+ * φιλτραρίσματος αντί να την παρακάμπτει. Ένα `null` θα έλεγχε τον **παλιό** κώδικα.
+ */
+const READY = { loading: false, error: null, mode: 'buy', agencies: [] } as const;
+
+/** Μόνο η κατάσταση φόρτωσης — η λειτουργία δηλώνεται ρητά σε κάθε δοκιμή της Β6. */
+const READY_STATE = { loading: false, error: null } as const;
 
 describe('Β3 — ΣΙΩΠΑ ΟΤΑΝ ΔΕΝ ΜΠΟΡΕΙ ΝΑ ΑΠΟΔΕΙΞΕΙ', () => {
   it('🔴 σε ΦΟΡΤΩΣΗ δεν αποδίδει τίποτα — ποτέ σκελετός', () => {
     // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: βγάλε το `loading` από τη συνθήκη εξόδου ⇒ κοκκινίζει.
     //    Ένας σκελετός είναι **υπόσχεση για περιεχόμενο** — και το §8.10 απαγορεύει
     //    ακριβώς τις υποσχέσεις που η βάση μπορεί να μην τηρήσει.
-    const { container } = render(<LandingShowcase listings={many(6)} loading error={null} />);
+    const { container } = render(<LandingShowcase listings={many(6)} agencies={[]} mode="buy" loading error={null} />);
     expect(container).toBeEmptyDOMElement();
   });
 
   it('🔴 σε ΣΦΑΛΜΑ δεν αποδίδει τίποτα', () => {
     // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: βγάλε το `error !== null` ⇒ κοκκινίζει.
     const { container } = render(
-      <LandingShowcase listings={many(6)} loading={false} error="boom" />,
+      <LandingShowcase listings={many(6)} agencies={[]} mode="buy" loading={false} error="boom" />,
     );
     expect(container).toBeEmptyDOMElement();
   });
@@ -155,5 +167,86 @@ describe('Β5 — ΜΟΝΟ ΜΙΑ ΕΙΚΟΝΑ ΕΙΝΑΙ LCP', () => {
     expect(container.querySelectorAll('section > ul > li')).toHaveLength(
       LANDING_SHOWCASE_LIMIT,
     );
+  });
+});
+
+describe('Β6 — 🔴 ΤΟ ΠΑΝΕΛ ΤΟΥ ΔΙΑΚΟΠΤΗ, ΣΤΗΝ ΟΘΟΝΗ (Α4.3)', () => {
+  // 🔴 **ΓΙΑΤΙ ΕΔΩ ΚΑΙ ΟΧΙ ΜΟΝΟ ΣΤΟ `landing-modes.test.ts`.** Εκεί ρωτάμε *«ποιες
+  //    αγγελίες;»* — καθαρή συνάρτηση. Εδώ ρωτάμε *«τι ΦΤΑΝΕΙ ΣΤΗΝ ΟΘΟΝΗ;»*, και το
+  //    ελάττωμα της Α4.3 ήταν **ακριβώς** στο ορατό μισό: το βρήκε **μάτι σε
+  //    στιγμιότυπο**, με 20/20 άγκυρες πράσινες. Το §8.49 το έχει ήδη μετρήσει
+  //    **τέσσερις φορές σε τέσσερις συνεδρίες**.
+
+  function profile(companyId: string, displayName: string): PublicShowcase {
+    return {
+      companyId,
+      displayName,
+      alias: companyId,
+      credentials: [],
+    } as unknown as PublicShowcase;
+  }
+
+  const PROS = [profile('c1', 'Υδραυλικά Ρήγας'), profile('c2', 'Μελέτες Άλφα')];
+
+  it('🔴 στους ΕΠΑΓΓΕΛΜΑΤΙΕΣ δεν φτάνει ΚΑΜΙΑ αγγελία — ούτε μία εικόνα ακινήτου', () => {
+    // 🔴 **ΤΟ ΕΛΑΤΤΩΜΑ ΤΟΥ §1.3, ΑΥΤΟΛΕΞΕΙ**: η οθόνη έλεγε *«ψάχνεις επαγγελματία»*
+    //    και από κάτω έδειχνε **διαμερίσματα** — σε ανθρώπους που ψάχνουν **πρόσωπο
+    //    εμπιστοσύνης** (Α5).
+    // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: κάνε το `landingPanelListings` να επιστρέφει αγγελίες και για
+    //    το `pros` ⇒ κοκκινίζει και στα τρία σκέλη.
+    render(<LandingShowcase mode="pros" listings={many(6)} agencies={PROS} {...READY_STATE} />);
+
+    expect(screen.queryAllByRole('img')).toHaveLength(0);
+    expect(screen.queryByText('Τ01')).not.toBeInTheDocument();
+    expect(screen.getByText('Υδραυλικά Ρήγας')).toBeInTheDocument();
+  });
+
+  it('🔴 ο ΤΙΤΛΟΣ ακολουθεί το περιεχόμενο — αλλιώς λέει ψέματα μία γραμμή πιο πάνω', () => {
+    // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: κάρφωσε το `landing.showcase.heading` ⇒ κοκκινίζει. Το «Δες
+    //    τι υπάρχει ήδη» πάνω από πρόσωπα διαβάζεται ως «να τα ακίνητα».
+    const { rerender } = render(
+      <LandingShowcase mode="buy" listings={many(3)} agencies={PROS} {...READY_STATE} />,
+    );
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(
+      'search-results:landing.showcase.heading',
+    );
+
+    rerender(
+      <LandingShowcase mode="pros" listings={many(3)} agencies={PROS} {...READY_STATE} />,
+    );
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(
+      'search-results:landing.showcase.prosHeading',
+    );
+  });
+
+  it('🔴 οι κάρτες προσώπων μπαίνουν ΜΕΣΑ στο ίδιο πλέγμα — όχι σε δεύτερη ενότητα', () => {
+    // 🔑 **ΕΝΑ πλέγμα, δύο είδη κάρτας** (N.18): μια δεύτερη `<section><ul>` για τους
+    //    επαγγελματίες θα ήταν **δίδυμος κλώνος** της ίδιας διάταξης — ακριβώς το σχήμα
+    //    που το `jscpd` πιάνει ανεξάρτητα ονόματος.
+    const { container } = render(
+      <LandingShowcase mode="pros" listings={[]} agencies={PROS} {...READY_STATE} />,
+    );
+
+    expect(container.querySelectorAll('section')).toHaveLength(1);
+    expect(container.querySelectorAll('section > ul > li')).toHaveLength(PROS.length);
+    expect(container.querySelector('section')).toHaveAttribute('data-shell-span', 'full');
+  });
+
+  it('🔴 ΧΩΡΙΣ ΕΠΑΓΓΕΛΜΑΤΙΕΣ σιωπά — ποτέ επικεφαλίδα πάνω από τίποτα', () => {
+    // Ίδιος κανόνας με το Β3: ισχυρισμός χωρίς απόδειξη είναι το χειρότερο που μπορεί
+    // να κάνει αυτή η οθόνη (§8.10).
+    const { container } = render(
+      <LandingShowcase mode="pros" listings={many(6)} agencies={[]} {...READY_STATE} />,
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it('🔴 ΧΩΡΙΣ ΔΙΑΚΟΠΤΗ (`mode={null}`) δείχνει ΟΛΕΣ — φίλτρο χωρίς χειριστήριο = απώλεια', () => {
+    // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: κάνε το `null` να φιλτράρει ⇒ κοκκινίζει. Ο επισκέπτης θα
+    //    έβλεπε λιγότερα απ' όσα υπάρχουν, **χωρίς κανένα κουμπί να το αναιρέσει**.
+    const { container } = render(
+      <LandingShowcase mode={null} listings={many(3)} agencies={PROS} {...READY_STATE} />,
+    );
+    expect(container.querySelectorAll('section > ul > li')).toHaveLength(3);
   });
 });
