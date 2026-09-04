@@ -17,6 +17,7 @@
  * ρολόι, **κανένα `server-only`**. Ο γραφέας μένει κλειστός.
  */
 
+import { FIRST_CONTACT_INVARIANTS } from '@/types/first-contact';
 import type {
   FirstContactForOfferer,
   FirstContactForSeeker,
@@ -90,6 +91,29 @@ export type FirstContactRejection = (typeof FIRST_CONTACT_REJECTIONS)[number];
 export function isFirstContactRejection(value: unknown): value is FirstContactRejection {
   return typeof value === 'string'
     && (FIRST_CONTACT_REJECTIONS as readonly string[]).includes(value);
+}
+
+/**
+ * **Είναι αυτό αμετάβλητο που ξέρουμε;** — ο **δεύτερος** φρουρός του ίδιου συνόρου.
+ *
+ * 🔴 **ΓΕΝΝΗΘΗΚΕ ΑΠΟ ΕΥΡΗΜΑ ΤΟΥ ΣΤΑΔΙΟΥ Γ, ΚΑΙ ΕΙΝΑΙ ΤΟ ΙΔΙΟ ΣΧΗΜΑ ΑΠΟ ΤΗΝ ΑΛΛΗ ΑΚΡΗ.**
+ * Η πόρτα απαντά **δύο** διακριτά 422 — `CONTACT_REFUSED` *(λόγος)* και
+ * `INVALID_CONTACT` *(αμετάβλητα)* — ενώ ο πελατικός μεταφορέας αναγνώριζε **μόνο τον
+ * πρώτο**. Το δεύτερο έπεφτε στο `catch` και γινόταν *«κάτι πήγε στραβά»*.
+ *
+ * ⚠️ **Η συνέπεια ήταν ακριβώς αυτό που το `first-contact-body.ts` πλήρωσε για να
+ * αποφύγει**: εκείνο **αρνήθηκε** το `min(1)` στο zod ώστε το *«γράψε πώς σε λένε»* να
+ * ταξιδεύει ονομαστικά ως `contact-no-name` αντί για «κακό σώμα» — και ο μεταφορέας
+ * πετούσε τη δουλειά του. **Κάλυψη σε νεκρό κλάδο δεν είναι κάλυψη**: τα πέντε κλειδιά
+ * i18n των αμετάβλητων θα υπήρχαν και **δεν θα εμφανίζονταν ποτέ**.
+ *
+ * 🔑 **Γιατί εδώ και όχι στο `types/first-contact.ts`**: εκεί ζει η **λίστα**· εδώ ζει
+ * ο **φρουρός του σύρματος**, δίπλα στον αδελφό του {@link isFirstContactRejection},
+ * γιατί απαντά την ίδια ερώτηση — *«ήρθε αυτό από σχήμα που αναγνωρίζουμε;»*.
+ */
+export function isFirstContactInvariant(value: unknown): value is FirstContactInvariant {
+  return typeof value === 'string'
+    && (FIRST_CONTACT_INVARIANTS as readonly string[]).includes(value);
 }
 
 /**

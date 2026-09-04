@@ -73,6 +73,7 @@ import { ListingOpenSubjects } from './ListingOpenSubjects';
 import { ListingGallery } from './ListingGallery';
 import { ListingFloorplans } from './ListingFloorplans';
 import { ListingAuthorshipLine } from '@/components/listings/ListingAuthorshipLine';
+import { FirstContactAction } from '@/components/contact/FirstContactAction';
 
 // ⚠️ Εμβέλεια MODULE, όχι render και όχι effect: τρέχει **πριν** αποδοθεί
 // οτιδήποτε, στον server και στον client, χωρίς κύκλο ζωής React να το καθυστερεί.
@@ -255,6 +256,8 @@ function ListingDetailBody({
 
         <aside className="flex flex-col gap-4">
           <ListingPriceBlock listing={listing} />
+          {/* ADR-843 ΠΕ1 — το κουμπί που γράφει (ADR-827 §9.8), αμέσως μετά την τιμή. */}
+          <FirstContactAction target={{ kind: 'listing', listingId: listing.id }} />
           <ListingOffers listing={listing} />
           <ListingAttributeList listing={listing} />
           {/* A17 (ADR-838) — i nomimotita einai pleon DEDOMENO, oxi dilomeno keno. */}

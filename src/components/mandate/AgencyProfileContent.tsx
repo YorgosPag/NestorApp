@@ -65,6 +65,7 @@ import { CredibilityStatement } from './CredibilityStatement';
 import { usePublicAgencyListings } from '@/services/realtime/hooks/usePublicListings';
 import { usePublicPlace } from '@/services/realtime/hooks/usePublicPlace';
 import type { PublicShowcase } from '@/types/agency-profile';
+import { FirstContactAction } from '@/components/contact/FirstContactAction';
 
 import { AGENCY_PUBLIC_NS, PROFILE_KEYS } from './agency-directory-labels';
 import { AGENCY_DIRECTORY_ROUTE } from './agency-directory-route';
@@ -334,6 +335,11 @@ export function AgencyProfileContent({
         <p id="agency-request-hint" className="m-0 text-sm text-muted-foreground">
           {t(PROFILE_KEYS.requestHint)}
         </p>
+        {/* ADR-843 ΠΕ1 — η δεύτερη πράξη της βιτρίνας, κάτω από την εντολή. */}
+        <FirstContactAction
+          target={{ kind: 'professional', agencyCompanyId: profile.companyId }}
+          variant="professional"
+        />
       </section>
 
       {/*
