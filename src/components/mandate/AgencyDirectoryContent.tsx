@@ -60,6 +60,7 @@ import {
   occupationOptions,
   parseShowcaseFilters,
   serializeShowcaseFilters,
+  showcaseLocale,
   type ShowcaseFilters,
 } from '@/lib/agency/showcase-filter';
 // 🔴 **Ο ROUTER ΑΠΟ ΤΟ ΣΥΝΟΡΟ** (CHECK 3.61) — το `useSearchParams` δεν ζει εκεί
@@ -92,7 +93,11 @@ export function AgencyDirectoryContent(): React.JSX.Element {
   const params = useSearchParams();
   const router = useRouter();
 
-  const locale: 'el' | 'en' = i18n.language === 'el' ? 'el' : 'en';
+  // ⚠️ **ΗΤΑΝ ΓΡΑΜΜΕΝΟ ΕΔΩ ΣΤΟ ΧΕΡΙ** (`i18n.language === 'el' ? 'el' : 'en'`). Η **ρίζα**
+  //    το χρειάστηκε ως δεύτερος αναγνώστης *(Α4.5)*, και δύο αντίγραφα ενός `?:` δεν
+  //    κοστίζουν σήμερα — κοστίζουν όταν προστεθεί τρίτη γλώσσα και οι δύο οθόνες
+  //    ταξινομήσουν αλλιώς, **χωρίς κανένα σφάλμα** (N.0.2).
+  const locale = showcaseLocale(i18n.language);
   const filters = React.useMemo(
     () => parseShowcaseFilters(new URLSearchParams(params.toString())),
     [params],

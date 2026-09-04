@@ -47,11 +47,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { AGENCY_PUBLIC_NS, DIRECTORY_KEYS } from './agency-directory-labels';
-import {
-  ALL_OCCUPATIONS,
-  type OccupationOption,
-  type ShowcaseFilters,
-} from '@/lib/agency/showcase-filter';
+import { OccupationSelect } from './OccupationSelect';
+import type { OccupationOption, ShowcaseFilters } from '@/lib/agency/showcase-filter';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 /**
@@ -84,41 +81,49 @@ export function AgencyDirectoryFilters({
 
   return (
     <section className="flex flex-wrap items-end gap-3">
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-foreground">
-          {t(DIRECTORY_KEYS.occupationFilterLabel)}
-        </span>
-        <Select
-          // 🔴 **Sentinel `'all'`, ΠΟΤΕ `''`** (CHECK 3.48): το Radix δεσμεύει την
-          //    κενή συμβολοσειρά — ένα `<SelectItem value="">` πετά σε χρόνο
-          //    εκτέλεσης και **ρίχνει ΟΛΟΚΛΗΡΗ την επιφάνεια**.
-          value={filters.occupation ?? ALL_OCCUPATIONS}
-          onValueChange={(value) =>
-            onChange({
-              ...filters,
-              // ⚠️ Η μετάφραση του sentinel γίνεται **εδώ ή στο `parse`**, ποτέ και
-              //    στα δύο: δύο σημεία μετάφρασης είναι δύο ευκαιρίες να ξεχαστεί.
-              occupation: value === ALL_OCCUPATIONS ? null : value,
-            })
-          }
-        >
-          <SelectTrigger className="min-w-56">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {/* 🔑 **Φ2 — η προεπιλογή είναι ΟΛΑ, και είναι γραμμένη πρώτη.** */}
-            <SelectItem value={ALL_OCCUPATIONS}>{t(DIRECTORY_KEYS.occupationAll)}</SelectItem>
-            {options.map((option) => (
-              // ⚠️ Οι επιλογές **παράγονται από τον πληθυσμό**: καμία δεν οδηγεί σε
-              //    κενό αποτέλεσμα, εξ ορισμού. Houzz/Thumbtack προσφέρουν trades
-              //    με μηδέν επαγγελματίες στην περιοχή σου.
-              <SelectItem key={option.escoUri} value={option.escoUri}>
-                {option.label[locale]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </label>
+      {/*
+        🔴 **ΤΟ ΧΕΙΡΙΣΤΗΡΙΟ ΕΦΥΓΕ ΑΠΟ ΕΔΩ (ADR-841 §7 Α4.5)** — και δεν είναι
+        αναδιοργάνωση: η **ρίζα** το ζήτησε ως **δεύτερος** αναγνώστης, όταν το tab
+        «Επαγγελματίες» απέκτησε πεδίο ειδικότητας. Η **Α4.1.4** είχε προβλέψει σωστά
+        ότι ένα δεύτερο `<Select>` θα ήταν **διπλότυπο** αυτού εδώ· ο Giorgio ανέτρεψε
+        την απόρριψη του πεδίου, **όχι** την πρόβλεψη του κινδύνου.
+        ⇒ **EXTRACT, ποτέ αντιγραφή** *(N.0.2)*. Δες {@link OccupationSelect}.
+      */}
+      <OccupationSelect
+        value={filters.occupation}
+        options={options}
+        locale={locale}
+        onChange={(occupation) => onChange({ ...filters, occupation })}
+      />
+
+      {/*
+        🔴 **«ΑΓΝΩΣΤΟ ≠ ΚΕΝΟ» — Η ΑΠΟΥΣΙΑ ΔΗΛΩΝΕΤΑΙ** (ADR-841 §7 Α4.4-Γ).
+        ────────────────────────────────────────────────────────────────────────
+        Ερώτημα Giorgio *(2026-09-04)*: *«όταν αναζητά ελαιοχρωματιστές ή
+        **υδραυλικούς**, τι πρέπει να κάνει;»*. Μετρήθηκε στην οθόνη:
+        «ελαιοχρωματιστής οικοδομών» **υπάρχει**· «υδραυλικός» **δεν υπάρχει ούτε
+        ως λέξη** — κανείς δεν έχει γραφτεί. Ο επισκέπτης δεν το μάθαινε ποτέ:
+        **έψαχνε επιλογή που δεν υπήρχε** και συμπέραινε μόνος του ό,τι ήθελε.
+
+        🔑 **Η ΜΗΧΑΝΗ ΔΕΝ ΑΛΛΑΖΕΙ, ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ.** Οι επιλογές μένουν
+        παραγόμενες από τον **πληθυσμό** *(δες το σχόλιο παρακάτω)*: μια λίστα με
+        τα **2.942** επαγγέλματα του ESCO θα πρόσφερε **2.900+ επιλογές που δίνουν
+        μηδέν** — ακριβώς το ελάττωμα του Houzz, και το §8.10 ανάποδα.
+
+        ⇒ Το κενό δεν ήταν στη λίστα· ήταν ότι **κανείς δεν έλεγε τι περιέχει**. Ο
+        τίτλος «Όλες οι ειδικότητες» υπόσχεται **πληρότητα που δεν υπάρχει**.
+
+        ⛔ **ΚΑΙ ΔΕΝ ΠΡΟΣΦΕΡΕΤΑΙ ΤΟ «ΖΗΤΩ» ΩΣ ΔΙΕΞΟΔΟΣ**, όσο κι αν ταιριάζει το
+        σχήμα: το `PropertyDemand` περιγράφει **ακίνητο** *(είδος · τιμή · τ.μ. ·
+        υπνοδωμάτια)* — **δεν υπάρχει** ζήτηση επαγγελματία. Σύνδεσμος εκεί θα ήταν
+        **ψεύτικη πόρτα**: ο άνθρωπος θα συμπλήρωνε φόρμα για διαμέρισμα νομίζοντας
+        ότι ζητά υδραυλικό. Η πρόταση σταματά στην **αλήθεια**.
+
+        ⚠️ **ICU με ΜΟΝΑ άγκιστρα** (CHECK 3.9) — `{count, plural, …}`, ποτέ `{{ }}`.
+      */}
+      <p className="m-0 basis-full text-sm text-muted-foreground">
+        {t(DIRECTORY_KEYS.occupationScopeHint, { count: options.length })}
+      </p>
 
       <RadiusControl filters={filters} onChange={onChange} />
 

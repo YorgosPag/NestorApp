@@ -18,6 +18,7 @@ import {
   occupationOptions,
   parseShowcaseFilters,
   serializeShowcaseFilters,
+  showcaseLocale,
 } from '../showcase-filter';
 import type { PublicShowcase, ShowcaseCredential } from '@/types/agency-profile';
 
@@ -268,6 +269,39 @@ describe('ADR-841 Φ6-Β — ΚΑΝΟΝΑΣ Φ: φίλτρο ≠ κατάταξ�
 
     it('άδειος κατάλογος ⇒ καμία επιλογή, όχι εξαίρεση', () => {
       expect(occupationOptions([], 'el')).toEqual([]);
+    });
+  });
+
+  // ===========================================================================
+  // Α4.5 — Η ΓΛΩΣΣΑ ΤΗΣ ΕΤΙΚΕΤΑΣ, ΜΙΑ ΓΡΑΦΗ
+  // ===========================================================================
+
+  describe('Α4.5 — `showcaseLocale`: μία στένωση, δύο αναγνώστες', () => {
+    /**
+     * 🔴 Η στένωση ζούσε γραμμένη στο χέρι μέσα στο `AgencyDirectoryContent`, και η
+     * **ρίζα** τη χρειάστηκε ως **δεύτερος** αναγνώστης *(ADR-841 §7 Α4.5)*. Δύο
+     * αντίγραφα ενός `?:` δεν κοστίζουν σήμερα — κοστίζουν όταν προστεθεί τρίτη
+     * γλώσσα και οι δύο οθόνες ταξινομήσουν αλλιώς, **χωρίς κανένα σφάλμα**.
+     */
+    it('ελληνικά ⇒ `el`', () => {
+      expect(showcaseLocale('el')).toBe('el');
+    });
+
+    it('ΟΤΙΔΗΠΟΤΕ άλλο ⇒ `en` — και δεν πετά ποτέ', () => {
+      // ⚠️ Το `pseudo` **συμβαίνει**: κλικ σε dropdown του `/pro` το ενεργοποίησε
+      //    ζωντανά (ADR-841 Α4.3, παγίδα 9). Το `el-GR` είναι η άλλη ρεαλιστική τιμή.
+      expect(showcaseLocale('en')).toBe('en');
+      expect(showcaseLocale('el-GR')).toBe('en');
+      expect(showcaseLocale('pseudo')).toBe('en');
+      expect(showcaseLocale('')).toBe('en');
+    });
+
+    it('η έξοδός της ΕΙΝΑΙ το κλειδί που διαβάζει η δίγλωσση ετικέτα', () => {
+      // 🔑 Δεν ελέγχει τιμή — ελέγχει ότι οι δύο πλευρές **ταιριάζουν**: ό,τι
+      //    επιστρέφει η στένωση πρέπει να είναι δείκτης του `EscoBilingualText`.
+      const [first] = occupationOptions(ORDERED, showcaseLocale('el'));
+      expect(first.label[showcaseLocale('el')]).toBe('Δικηγόρος');
+      expect(first.label[showcaseLocale('en-US')]).toBe('Lawyer');
     });
   });
 });

@@ -39,6 +39,7 @@ export const DIRECTORY_KEYS = {
   clearFilters: `${D}.clearFilters`,
   occupationFilterLabel: `${D}.occupationFilterLabel`,
   occupationAll: `${D}.occupationAll`,
+  occupationScopeHint: `${D}.occupationScopeHint`,
   placeFilterLabel: `${D}.placeFilterLabel`,
   placeAll: `${D}.placeAll`,
   radiusLabel: `${D}.radiusLabel`,

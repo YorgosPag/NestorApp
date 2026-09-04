@@ -739,6 +739,7 @@
       "clearFilters": "Clear filters",
       "occupationFilterLabel": "Speciality",
       "occupationAll": "All specialities",
+      "occupationScopeHint": "This list shows the {count, plural, one {# specialty professionals have declared} other {# specialties professionals have declared}} so far — not every occupation. If what you are looking for is missing, nobody has registered for it yet.",
       "placeFilterLabel": "Area",
       "placeAll": "All of Greece",
       "radiusLabel": "Radius",
