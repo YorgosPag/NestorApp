@@ -49,7 +49,7 @@ import type { Firestore as AdminFirestore, Transaction } from 'firebase-admin/fi
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { canOpenAnotherContact } from '@/lib/contact/first-contact-capacity';
-import type { ListingActor } from '@/lib/owner-property/listing-custody';
+import type { ListingActor, ListingCustody } from '@/lib/owner-property/listing-custody';
 import { createModuleLogger } from '@/lib/telemetry';
 import {
   resolveMatchReason,
@@ -119,7 +119,7 @@ export async function openFirstContact(
   );
   if (reason.kind !== 'reason') return reason;
 
-  return writeContact(adminDb, actor, declaration, reason.matchReason, nowISO);
+  return writeContact(adminDb, actor, declaration, target.custody, reason.matchReason, nowISO);
 }
 
 /**
@@ -162,6 +162,7 @@ async function writeContact(
   adminDb: AdminFirestore,
   actor: ListingActor,
   declaration: FirstContactDeclaration,
+  offerer: ListingCustody,
   matchReason: MatchReason | null,
   nowISO: string,
 ): Promise<FirstContactWriteResult> {
@@ -169,6 +170,10 @@ async function writeContact(
     id: generateFirstContactId(),
     seekerUserId: actor.uid,
     target: declaration.target,
+    // 🏆 **Ο παραλήπτης γράφεται ΤΩΡΑ, από τον κριτή που τον υπολόγισε ήδη** (§10.16).
+    //    Καμία νέα ανάγνωση, καμία δεύτερη κρίση θεματοφυλακής — δες
+    //    `FirstContact.offerer` για το γιατί δεν ζει ως ερώτημα σε χρόνο ανάγνωσης.
+    offerer,
     demandId: declaration.demandId,
     disclosure: declaration.disclosure,
     matchReason,

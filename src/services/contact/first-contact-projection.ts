@@ -265,10 +265,7 @@ export async function readOffererInbox(
   actor: ListingActor,
   nowISO: string,
 ): Promise<OffererInboxLoad> {
-  const listingIds = await ownListingIds(adminDb, actor);
-  if (listingIds === null) return { kind: 'unavailable' };
-
-  const collected = await collectTargetedContacts(adminDb, listingIds, actor.companyId);
+  const collected = await collectAddressedContacts(adminDb, actor);
   if (collected === null) return { kind: 'unavailable' };
 
   const stamped = await stampSeen(adminDb, collected, nowISO);
@@ -283,98 +280,78 @@ export async function readOffererInbox(
 }
 
 /**
- * **Ποιες αγγελίες είναι δικές του** — η εμβέλεια των εισερχομένων.
+ * **Όλα τα εισερχόμενα του προσφέροντος** — *«ποιες πράξεις απευθύνονται σε εμένα;»*.
  *
- * 🔑 **Η ερώτηση ρωτιέται στη ΒΑΣΗ, όχι σε σύγκριση** (CHECK 3.56): τα δύο πεδία που
- * ορίζουν τον χώρο γίνονται **φίλτρα ερωτήματος**, ποτέ `===` πάνω σε φορτωμένο
- * έγγραφο. Ο κριτής `mayAdminister` απαντά *«επιτρέπεσαι σε αυτό;»* για **ένα**
- * έγγραφο· εδώ η ερώτηση είναι *«ποια είναι δικά μου;»* — άλλο σχήμα, ίδια δύο πεδία.
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🏆 Η ΕΡΩΤΗΣΗ ΑΛΛΑΞΕ, ΚΑΙ ΓΙ' ΑΥΤΟ ΧΩΡΕΣΕ (ADR-843 §10.16)
+ * ────────────────────────────────────────────────────────────────────────────
  *
- * ⚠️ **Ο ιδιωτικός χώρος ΔΕΝ διευρύνεται**: ο συνδεδεμένος με εταιρεία παίρνει **και**
- * τις προσωπικές του (`authorUserId`) **και** τις εταιρικές — γιατί και τις δύο τις
- * διαχειρίζεται. Ένας **χωρίς** εταιρεία δεν ρωτά ποτέ το εταιρικό ερώτημα.
+ * Μέχρι τις 2026-09-04 ρωτούσαμε **δύο** ερωτήσεις σε σειρά: *«ποιες αγγελίες είναι
+ * δικές μου;»* και μετά *«ποιες πράξεις δείχνουν σε αυτές;»* — με `in` ερωτήματα των
+ * **30** πάνω σε ταυτότητες. Είχε **δύο** ελαττώματα, και το δεύτερο ήταν αθεράπευτο:
  *
- * @returns `null` **μόνο** σε βλάβη — κενός πίνακας σημαίνει «καμία αγγελία» (N.12).
+ * 1. 🔴 Η πρώτη ερώτηση σάρωνε **μόνο** το `owner_properties` ⇒ το εισερχόμενο του
+ *    **γραφείου δεν έβρισκε ποτέ** τις δικές του αγγελίες (§10.15).
+ * 2. 🔴 Και δεν αρκούσε να προστεθεί το `properties`: για το γραφείο, *«τα ακίνητά
+ *    μου»* είναι **κάθε μονάδα κάθε κτιρίου κάθε έργου**. Εκατοντάδες έγγραφα, μετά
+ *    δεκάδες ερωτήματα των 30 — **ανά άνοιγμα οθόνης**.
+ *
+ * 🔑 **Η θεραπεία δεν είναι καλύτερο ερώτημα — είναι ΑΛΛΗ ερώτηση.** Η πράξη κουβαλά
+ * πλέον τον **παραλήπτη** της ({@link FirstContact.offerer}), γραμμένο από τον κριτή
+ * τη στιγμή που τον υπολόγισε. Άρα εδώ ρωτιούνται **δύο ισότητες**, χωρίς σάρωση
+ * αγγελιών, χωρίς chunking, και —το σημαντικότερο— **χωρίς αυτό το αρχείο να ξέρει
+ * ότι υπάρχουν οικογένειες αγγελιών**. Μια τρίτη αύριο δεν το αφορά καθόλου.
+ *
+ * ⚠️ **Ο ιδιωτικός χώρος ΔΕΝ διευρύνεται**: το προσωπικό σκέλος απαντά **μόνο** στον
+ * ίδιο, και το εταιρικό ρωτιέται **μόνο** από όποιον έχει πραγματική εταιρεία —
+ * κενό `companyId` δεν είναι μισθωτής, είναι **απουσία** μισθωτή (`hasTenant`).
+ *
+ * 🔑 **Τα δύο σκέλη είναι ΞΕΝΑ μεταξύ τους**: μια πράξη έχει **έναν** παραλήπτη, και
+ * η {@link ListingCustody} είναι διακριτή ένωση — άρα δεν υπάρχει έγγραφο που να
+ * ταιριάζει και στα δύο. *(Πριν, μια πράξη προς αγγελία γραφείου ταίριαζε **και στα
+ * δύο** ερωτήματα, και χρειαζόταν χάρτης-φρουρός για να μην εμφανιστεί δύο φορές.)*
+ * Ο χάρτης **μένει** ως ζώνη-και-τιράντες (N.7.2 #4), όχι ως αναγκαιότητα.
+ *
+ * @returns `null` **μόνο** σε βλάβη — κενός πίνακας σημαίνει «κανείς» (N.12).
  */
-async function ownListingIds(
+async function collectAddressedContacts(
   adminDb: AdminFirestore,
   actor: ListingActor,
-): Promise<readonly string[] | null> {
-  const listings = adminDb.collection(COLLECTIONS.OWNER_PROPERTIES);
-  const ids = new Set<string>();
-
-  try {
-    const mine = await listings.where('authorUserId', '==', actor.uid).get();
-    for (const doc of mine.docs) ids.add(doc.id);
-
-    if (actor.companyId !== null && actor.companyId.length > 0) {
-      // tenant-scope-exempt: ο άξονας του `owner_properties` είναι ο ΣΥΓΓΡΑΦΕΑΣ, αλλά
-      // ο ΧΩΡΟΣ είναι το `authorCompanyId` (ADR-841 θεματοφυλακή)· η εταιρική αγγελία
-      // ανήκει στο γραφείο, όχι στον υπάλληλο που την πληκτρολόγησε. Η τιμή έρχεται
-      // από την ΑΠΟΔΕΙΞΗ, ποτέ από το δίκτυο.
-      const ours = await listings.where('authorCompanyId', '==', actor.companyId).get();
-      for (const doc of ours.docs) ids.add(doc.id);
-    }
-
-    return [...ids];
-  } catch (error) {
-    logger.error('[FIRST-CONTACT] Η ανάγνωση των δικών του αγγελιών απέτυχε', {
-      uid: actor.uid,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return null;
-  }
-}
-
-/**
- * **Όλα τα εισερχόμενα, από τα δύο είδη στόχου, χωρίς διπλότυπα.**
- *
- * ⚠️ **Τα `in` κόβονται σε δεκάδες των {@link TARGET_IN_CHUNK}**: είναι το σκληρό
- * όριο της Firestore, όχι επιλογή. Ένα ερώτημα με 40 ταυτότητες **πετά** — και θα
- * πετούσε την ημέρα που κάποιος ανεβάσει την 31η αγγελία, όχι σήμερα.
- */
-async function collectTargetedContacts(
-  adminDb: AdminFirestore,
-  listingIds: readonly string[],
-  agencyCompanyId: string | null,
 ): Promise<readonly FirstContact[] | null> {
   const byId = new Map<string, FirstContact>();
   const contacts = adminDb.collection(COLLECTIONS.FIRST_CONTACTS);
 
   try {
-    for (const chunk of chunked(listingIds, TARGET_IN_CHUNK)) {
-      // tenant-scope-exempt: ο άξονας απομόνωσης είναι ο ΖΗΤΩΝ (`seekerUserId`)· τα
-      // εισερχόμενα του προσφέροντος διασχίζουν εξ ορισμού πολλούς ζητούντες, και η
-      // εμβέλεια είναι οι ΔΙΚΕΣ ΤΟΥ αγγελίες — κριμένες από τη θεματοφυλακή πριν από εδώ.
-      collect(byId, await contacts.where('target.listingId', 'in', chunk).get());
-    }
+    // tenant-scope-exempt: ο άξονας απομόνωσης του `first_contacts` είναι ο ΖΗΤΩΝ
+    // (`seekerUserId`)· τα εισερχόμενα του προσφέροντος διασχίζουν εξ ορισμού πολλούς
+    // ζητούντες. Η εμβέλεια είναι ο ΔΙΚΟΣ ΤΟΥ χώρος, από την ΑΠΟΔΕΙΞΗ — ποτέ από το δίκτυο.
+    collect(byId, await contacts.where('offerer.userId', '==', actor.uid).get());
 
-    if (agencyCompanyId !== null) {
-      // tenant-scope-exempt: ίδιος λόγος — η εμβέλεια είναι ο ΧΩΡΟΣ του προσφέροντος
-      // (`agencyCompanyId` από την απόδειξη), ποτέ παράμετρος από το δίκτυο.
-      collect(byId, await contacts.where('target.agencyCompanyId', '==', agencyCompanyId).get());
+    if (actor.companyId !== null && actor.companyId.length > 0) {
+      // tenant-scope-exempt: ίδιος λόγος — ο χώρος του γραφείου, από την απόδειξη.
+      collect(byId, await contacts.where('offerer.companyId', '==', actor.companyId).get());
     }
 
     return [...byId.values()];
   } catch (error) {
     logger.error('[FIRST-CONTACT] Η ανάγνωση των εισερχομένων απέτυχε — άγνωστο, όχι κενό', {
-      listings: listingIds.length,
-      agencyCompanyId,
+      uid: actor.uid,
+      companyId: actor.companyId,
       error: error instanceof Error ? error.message : String(error),
     });
     return null;
   }
 }
 
-/** Το σκληρό όριο της Firestore για `in` — **δικό της**, όχι πολιτική μας. */
-const TARGET_IN_CHUNK = 30;
-
 /**
- * **Μαζεύει σε χάρτη κατά ταυτότητα** — ο χάρτης **είναι** ο φρουρός των διπλοτύπων.
+ * **Μαζεύει σε χάρτη κατά ταυτότητα** — ζώνη και τιράντες για τα διπλότυπα.
  *
- * ⚠️ Μια πράξη προς **αγγελία γραφείου** ταιριάζει και στα δύο ερωτήματα *(η αγγελία
- * είναι δική του **και** ο χώρος είναι δικός του)*. Με πίνακα θα εμφανιζόταν **δύο
- * φορές** στα εισερχόμενα, και ο προσφέρων θα νόμιζε ότι τον πλησίασαν δύο άνθρωποι.
+ * ⚠️ **Ήταν ΑΝΑΓΚΑΙΟΣ, τώρα είναι ΦΡΟΥΡΟΣ.** Όσο η εμβέλεια ρωτιόταν με δύο
+ * ασύνδετα ερωτήματα *(«η αγγελία είναι δική του» **και** «ο χώρος είναι δικός
+ * του»)*, μια πράξη προς αγγελία γραφείου ταίριαζε **και στα δύο** και θα φαινόταν
+ * ως **δύο άνθρωποι**. Με τον έναν παραλήπτη ανά πράξη αυτό είναι πλέον αδύνατο —
+ * ο χάρτης μένει γιατί το κόστος του είναι **μηδέν** και η ζημιά που απέτρεπε
+ * **ανιχνεύσιμη μόνο από άνθρωπο**.
  */
 function collect(
   into: Map<string, FirstContact>,
@@ -466,11 +443,3 @@ function byNewestFirst(contacts: readonly FirstContact[]): readonly FirstContact
   return [...contacts].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
 }
 
-/** Κόβει σε ομάδες — χωρίς εξάρτηση, γιατί η μόνη χρήση είναι το όριο `in`. */
-function chunked<T>(values: readonly T[], size: number): readonly (readonly T[])[] {
-  const out: T[][] = [];
-  for (let index = 0; index < values.length; index += size) {
-    out.push(values.slice(index, index + size));
-  }
-  return out;
-}

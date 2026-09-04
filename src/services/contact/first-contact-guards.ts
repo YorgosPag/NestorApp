@@ -3,6 +3,7 @@ import 'server-only';
 /**
  * @fileoverview **ΟΙ ΦΡΟΥΡΟΙ ΤΗΣ ΠΡΩΤΗΣ ΕΠΑΦΗΣ** — κανένας νέος κριτής, ούτε ένας.
  * @related services/contact/first-contact.service.ts · lib/owner-property/listing-custody.ts
+ * @related services/listings/listing-resolver.ts *(ADR-843 §10.16 — οι δύο οικογένειες)*
  * @module services/contact/first-contact-guards
  *
  * ────────────────────────────────────────────────────────────────────────────
@@ -18,6 +19,11 @@ import 'server-only';
  * (**CHECK 3.56**), και η δημοσίευση στο `buildPublicListing`. Το αρχείο είναι, κατά
  * κυριολεξία, *«ποιον ρωτάμε»* — και γι' αυτό διαβάζεται μόνο του.
  *
+ * ⛔ **ΚΑΙ ΜΗΝ ΓΡΑΨΕΙΣ ΕΔΩ ΟΝΟΜΑ ΣΥΛΛΟΓΗΣ ΑΓΓΕΛΙΩΝ.** Μέχρι τις 2026-09-04 αυτό το
+ * αρχείο άνοιγε **το ίδιο** το `owner_properties` — και έτσι έγινε ο **μισός** μηχανισμός
+ * του §10.15: κάθε πράξη προς αγγελία **γραφείου** έπαιρνε *«η αγγελία δεν υπάρχει»*.
+ * Η ερώτηση *«ποια αγγελία;»* ζει τώρα σε **ένα** σημείο: `listing-resolver.ts`.
+ *
  * ⛔ **ΜΗΝ γράψεις εδώ σύγκριση ταυτότητας.** Αν βρεθείς να γράφεις
  * `authorUserId === …` ή `companyId === …`, η απάντηση υπάρχει ήδη: `mayAdminister`.
  *
@@ -32,11 +38,8 @@ import {
   custodyOf,
   mayAdminister,
   type ListingActor,
+  type ListingCustody,
 } from '@/lib/owner-property/listing-custody';
-import {
-  placeKnowledgeFromOwnerProperty,
-  projectableFromOwnerProperty,
-} from '@/lib/owner-property/owner-property-projection';
 import { createModuleLogger } from '@/lib/telemetry';
 import { composeMatchReason } from '@/services/contact/first-contact-projection';
 import {
@@ -45,10 +48,9 @@ import {
   type FirstContactRefusal as Refusal,
   type FirstContactUnavailable as Unavailable,
 } from '@/services/contact/first-contact-vocabulary';
-import { buildPublicListing } from '@/services/listings/public-listing-projection';
+import { resolveListing } from '@/services/listings/listing-resolver';
 import { lookupAgencyProfile } from '@/services/mandate/agency-profile.service';
 import type { FirstContactTarget, MatchReason } from '@/types/first-contact';
-import type { OwnerProperty } from '@/types/owner-property';
 import type { PropertyDemand } from '@/types/property-demand';
 
 const logger = createModuleLogger('first-contact-guards');
@@ -72,6 +74,17 @@ export type MatchReasonResolution =
 export interface ResolvedTarget {
   /** `null` για επαγγελματία: **δεν υπάρχει αγγελία να συγκριθεί** με τη ζήτηση. */
   readonly facts: ListingMatchFacts | null;
+  /**
+   * 🏆 **ΠΟΙΟΝ ΦΤΑΝΕΙ Η ΠΡΑΞΗ** — και γι' αυτό ταξιδεύει έξω από εδώ (ADR-843 §10.16).
+   *
+   * Ο κριτής **ήδη** υπολόγιζε τη θεματοφυλακή για να απαντήσει *«μήπως είσαι εσύ;»*,
+   * και μετά **την πετούσε**. Έτσι η ερώτηση *«ποιες πράξεις είναι δικές μου;»*
+   * έμενε να απαντηθεί δεύτερη φορά, από **άλλο** αρχείο, με **άλλο** τρόπο — και
+   * εκείνη η δεύτερη απάντηση ήταν η μισή του §10.15.
+   *
+   * ⚠️ Δεν είναι «η εταιρεία του ζητούντος»: είναι ο **χώρος του στόχου**.
+   */
+  readonly custody: ListingCustody;
 }
 
 /**
@@ -92,13 +105,18 @@ export async function resolveTarget(
     // 🔑 **Ο ΙΔΙΟΣ κριτής, σε χώρο εταιρείας.** Ένα ωμό `companyId === companyId` εδώ
     //    θα ήταν **τέταρτο δόγμα εξουσιοδότησης** — και θα έπεφτε στην παγίδα του
     //    κενού μισθωτή που το `hasTenant` κλείνει ονομαστικά.
-    if (mayAdminister({ kind: 'company', companyId: target.agencyCompanyId }, actor)) {
-      return refuse('contact-own-target');
-    }
+    //
+    // 🏆 **Και η θεματοφυλακή γράφεται ΜΙΑ φορά, εδώ**: η βιτρίνα **είναι** χώρος
+    //    εταιρείας. Δύο εκφράσεις του ίδιου πράγματος —μία για την άρνηση, μία για
+    //    τη δρομολόγηση— θα ήταν ελεύθερες να αποκλίνουν.
+    const custody: ListingCustody = { kind: 'company', companyId: target.agencyCompanyId };
+
+    if (mayAdminister(custody, actor)) return refuse('contact-own-target');
+
     const agency = await lookupAgencyProfile(adminDb, target.agencyCompanyId);
     if (agency.outcome === 'unavailable') return UNAVAILABLE;
     if (agency.outcome === 'not-published') return refuse('target-absent');
-    return { facts: null };
+    return { facts: null, custody };
   }
 
   return resolveListingTarget(adminDb, actor, target.listingId, nowISO);
@@ -107,10 +125,19 @@ export async function resolveTarget(
 /**
  * **Η αγγελία, αν υπάρχει, είναι στην αγορά, και δεν είναι δική σου.**
  *
- * 🔴 **Η ΔΗΜΟΣΙΕΥΣΗ ΚΡΙΝΕΤΑΙ ΑΠΟ ΤΟΝ ΕΝΑ ΚΡΙΤΗ** — `buildPublicListing`, που
- * επιστρέφει `null` για ό,τι δεν έχει **καμία ζωντανή διάθεση στην αγορά**
- * (απόσυρση · ληγμένη ή εκκρεμής εντολή). Ένα δικό μας `lifecycle !== 'listed'` εδώ
- * θα ήταν **δεύτερο κριτήριο δημοσίευσης** δίπλα στο `isPubliclyListed`, που το
+ * 🔴 **ΚΑΙ ΟΙ ΔΥΟ ΟΙΚΟΓΕΝΕΙΕΣ, ΑΠΟ ΤΟΝ ΕΝΑ ΕΠΙΛΥΤΗ** (ADR-843 §10.16). Μέχρι τις
+ * 2026-09-04 αυτή η συνάρτηση διάβαζε **η ίδια** το `owner_properties` — δηλαδή
+ * απαντούσε *«δεν υπάρχει»* σε **6 από τις 8** ζωντανές αγγελίες, όσες ανήκουν στον
+ * επαγγελματία. Το σχόλιο ακριβώς από κάτω έλεγε *«η δημοσίευση κρίνεται από τον ΕΝΑ
+ * κριτή»* και ήταν **αληθές για τη μία οικογένεια**.
+ *
+ * 🔑 **Η θεραπεία δεν ήταν δεύτερο `if` — ήταν να πάψει αυτό το αρχείο να ξέρει τι
+ * είναι «οικογένεια»**. Ο {@link resolveListing} απαντά με **έναν** τύπο, και ο
+ * φρουρός βλέπει μόνο *«υπάρχει · ποιανού είναι · είναι στην αγορά»*.
+ *
+ * 🔴 **Η ΔΗΜΟΣΙΕΥΣΗ ΕΞΑΚΟΛΟΥΘΕΙ ΝΑ ΚΡΙΝΕΤΑΙ ΑΠΟ ΤΟΝ ΕΝΑ ΚΡΙΤΗ** — `buildPublicListing`,
+ * που ο επιλυτής καλεί για **αμφότερες**. Ένα δικό μας `lifecycle !== 'listed'` εδώ θα
+ * ήταν **δεύτερο κριτήριο δημοσίευσης** δίπλα στο `isPubliclyListed`, που το
  * `public-listing-projection.ts` δηλώνει ρητά ότι *«γράφεται **ΜΙΑ** φορά»* — και
  * προειδοποιεί ότι τα δύο θα διαφωνούσαν **ακριβώς στην αντιπαροχή**.
  *
@@ -123,47 +150,14 @@ async function resolveListingTarget(
   listingId: string,
   nowISO: string,
 ): Promise<ResolvedTarget | Refusal | Unavailable> {
-  const property = await readOwnerProperty(adminDb, listingId);
-  if (property === null) return UNAVAILABLE;
-  if (property === 'absent') return refuse('target-absent');
+  const resolved = await resolveListing(adminDb, listingId, nowISO);
+  if (resolved === null) return UNAVAILABLE;
+  if (resolved === 'absent') return refuse('target-absent');
 
-  if (mayAdminister(custodyOf(property), actor)) return refuse('contact-own-target');
+  if (mayAdminister(resolved.custody, actor)) return refuse('contact-own-target');
+  if (resolved.facts === null) return refuse('target-not-live');
 
-  const place = placeKnowledgeFromOwnerProperty(property, nowISO);
-  const listing = buildPublicListing(
-    projectableFromOwnerProperty(property, nowISO),
-    place,
-    nowISO,
-  );
-  if (listing === null) return refuse('target-not-live');
-
-  // 🔶 **Τα δύο δηλωμένα κενά ταξιδεύουν ΑΝΟΙΧΤΑ** (`availability` · `proximityMetres`):
-  //    δεν αντλούνται σήμερα, και **δεν** γεμίζονται με εικασία. Ο συνθέτης του λόγου
-  //    δεν τα διαβάζει — δες την κεφαλίδα του `first-contact-projection.ts`.
-  return { facts: { listing, place: place.ref, availability: null, proximityMetres: {} } };
-}
-
-/**
- * **Το ακίνητο, ή γιατί δεν το έχουμε.**
- *
- * ⚠️ Τρεις απαντήσεις, ποτέ δύο: `null` = **βλάβη** *(δεν μάθαμε)*, `'absent'` = **δεν
- * υπάρχει**, αλλιώς το έγγραφο. Ένα `null` που σκέπαζε και τα δύο θα έλεγε στον
- * άνθρωπο «δεν υπάρχει» κάθε φορά που πέφτει η Firestore (N.12).
- */
-async function readOwnerProperty(
-  adminDb: AdminFirestore,
-  listingId: string,
-): Promise<OwnerProperty | 'absent' | null> {
-  try {
-    const snapshot = await adminDb.collection(COLLECTIONS.OWNER_PROPERTIES).doc(listingId).get();
-    return snapshot.exists ? (snapshot.data() as OwnerProperty) : 'absent';
-  } catch (error) {
-    logger.error('[FIRST-CONTACT] Η ανάγνωση της αγγελίας απέτυχε — άγνωστο, όχι κενό', {
-      listingId,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return null;
-  }
+  return { facts: resolved.facts, custody: resolved.custody };
 }
 
 // =============================================================================

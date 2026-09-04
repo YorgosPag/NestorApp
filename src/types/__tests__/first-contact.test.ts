@@ -31,6 +31,8 @@ function makeContact(overrides: Partial<FirstContact> = {}): FirstContact {
     id: 'fcon_test_0001',
     seekerUserId: 'user-eleni',
     target: { kind: 'listing', listingId: 'ownp_0001' },
+    // Ο παραλήπτης: αγγελία **ιδιώτη** ⇒ προσωπικός χώρος (ADR-843 §10.16).
+    offerer: { kind: 'personal', userId: 'user-nikos' },
     demandId: 'dmnd_0001',
     disclosure: DISCLOSURE,
     matchReason: { unmetAxes: ['price-above'], declaredAxes: 5 },

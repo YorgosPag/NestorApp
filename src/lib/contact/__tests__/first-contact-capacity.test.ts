@@ -26,6 +26,11 @@ function contact(index: number, kind: Kind, lifecycle: FirstContactLifecycle): F
     target: kind === 'listing'
       ? { kind: 'listing', listingId: `ownp_${index}` }
       : { kind: 'professional', agencyCompanyId: `company-${index}` },
+    // ⚠️ Ο παραλήπτης ακολουθεί το είδος του στόχου: η βιτρίνα **είναι** χώρος
+    //    εταιρείας, η αγγελία ιδιώτη προσωπικός (ADR-843 §10.16).
+    offerer: kind === 'listing'
+      ? { kind: 'personal', userId: `owner-${index}` }
+      : { kind: 'company', companyId: `company-${index}` },
     demandId: null,
     disclosure: {
       displayName: 'Ελένη Π.',

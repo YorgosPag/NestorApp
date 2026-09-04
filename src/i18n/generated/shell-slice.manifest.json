@@ -65,7 +65,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "56e80bb507d61f816361a2fa2e167eb0359eeea1a793a27afbc9defd8651c049",
+  "inputsSha256": "0d38279c35624a17f923d3a4c46521f4388985a471aae75586ee45b846c9ba95",
   "languages": [
     "el"
   ],
@@ -370,7 +370,7 @@
     "src/services/mandate/mandate-catalog.client.ts": "69f79edb85185acb80424ad0338bf17d12619a5dceeaec6b874ee1c699059378",
     "src/services/mandate/mandate-catalog.service.ts": "56869cb4424ea7f9f02d7251030c1d1130dd8f8f2754f360cbde608bb10d883b",
     "src/services/mandate/mandate-consent.service.ts": "0ed7706c3ca04af92c4ea28d88282351a7a81d66ec2a1f01e557d93f0a180eee",
-    "src/services/mandate/mandate-decision-notifier.service.ts": "4691e7b76f3322775459a83cbed7cb040d7843ca9fd2d2ed46d8175aa616b4a1",
+    "src/services/mandate/mandate-decision-notifier.service.ts": "cf516d31aedb9a6732fc5ea2521d73bfc64720c259b5ab20dda4b53d128d00a6",
     "src/services/mandate/mandate-decision-vocabulary.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/services/mandate/mandate-email-texts.ts": "36447d4bec3d582dc9279738c63d91671934b5c62dcc1392c0cdb744a15c17f9",
     "src/services/mandate/mandate-inbox.client.ts": "e39d58edb9e06fae3b785de2f7e46bba249e17cfdde528c78740d5829c459e62",
@@ -430,7 +430,7 @@
     "src/subapps/geo-canvas/types/index.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/types/brokerage.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/types/communications.ts": "ab607dae93f4f9fa45c1f8321402d47ba279eaf2bf7f8c780c71193627dbf73d",
-    "src/types/first-contact.ts": "c0453e9570e0f3e921bf33a98dc1a23285e65330b5e52bc0fe363f3ec18bffae",
+    "src/types/first-contact.ts": "4b13090991ed18e3ec7aa61c900107042849a0bec3b735746e5df7373a7b13be",
     "src/types/listing-agreement.ts": "19d3ad6022a212e491a6a2b85fbd8dc336f60c92ec7199cc178800940e246453",
     "src/types/mandate-request.ts": "c4a0e430c9d307da01fabee077f8f8fa4d3b6a7e922d75f4104a954da0d52b9a",
     "src/types/mandate.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
