@@ -49,6 +49,13 @@
   },
   "$dynamicKeyPolicy": "Every entry below answers ONE unresolvable `t(...)` call site in a shell module. The generator REFUSES to emit a slice while any such call is unclassified — that refusal is the guarantee. Each `reason` states a fact measured on 2026-07-31, not an assumption; re-verify it when you touch the file.",
   "dynamicKeyPolicy": {
+    "src/components/contact/FirstContactOutcomeNotice.tsx": {
+      "prefixes": [
+        "property-market:contact.first"
+      ],
+      "reason": "ADR-843 §10 — ΕΠΑΛΗΘΕΥΣΙΜΟΣ ΙΣΧΥΡΙΣΜΟΣ, μετρημένος 2026-09-04, όχι πρόζα. Οι δυναμικές κλήσεις είναι ΤΡΕΙΣ και ΟΛΕΣ δεικτοδοτούν πίνακα του first-contact-labels.ts: t(REJECTION_KEYS[reason]) · t(INVARIANT_KEYS[violation]) · t(remedy.labelKey) όπου remedy = REJECTION_REMEDY[reason]. Και οι τρεις πίνακες είναι Record<K, …> πάνω σε ΚΛΕΙΣΤΗ ένωση (FirstContactRejection, FirstContactInvariant) ⇒ νέος κωδικός χωρίς κλειδί ΔΕΝ ΜΕΤΑΓΛΩΤΤΙΖΕΤΑΙ — η λίστα δεν μπορεί να αποκλίνει σιωπηλά, που είναι ακριβώς ο λόγος που το πρόθεμα είναι ασφαλές. Μετρημένο: και οι 45 τιμές των τριών πινάκων ζουν κάτω από ΑΥΤΟ το πρόθεμα, καμία εκτός. Το συνοδεύει άγκυρα πληρότητας (FIRST_CONTACT_LABEL_SOURCES + components/contact/__tests__/first-contact-labels.test.ts). ⚠️ ΤΟ ΑΔΥΝΑΤΟ ΣΗΜΕΙΟ, ΓΡΑΜΜΕΝΟ: το RejectionRemedy.labelKey είναι σκέτο `string`, ΟΧΙ template type — άρα ένα ΜΕΛΛΟΝΤΙΚΟ remedy μπορεί να δείξει σε άλλο πρόθεμα ΧΩΡΙΣ να σπάσει η μεταγλώττιση. Σήμερα υπάρχει ΕΝΑ remedy (capacity-full-action) και είναι εντός. Ξαναεπαλήθευσέ το αν προσθέσεις remedy.",
+      "$note": "Τα αδέρφια contact.mine.* και contact.inbox.* του ΙΔΙΟΥ αρχείου κλειδιών ΔΕΝ χρειάζονται πρόθεμα εδώ: καταναλώνονται κυριολεκτικά από τα MyContactsContent/ContactInboxContent, που ζουν στο (me) — έξω από αυτή τη διαδρομή."
+    },
     "src/components/search/CoverageStatement.tsx": {
       "prefixes": [
         "search-results:landing.coverage"

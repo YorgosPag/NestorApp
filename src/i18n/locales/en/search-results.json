@@ -25,7 +25,8 @@
       "pros": "Professionals"
     },
     "showcase": {
-      "heading": "See what is already here"
+      "heading": "See what is already here",
+      "prosHeading": "See who is already here"
     },
     "browseAll": "Browse all listings"
   },

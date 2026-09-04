@@ -78,32 +78,6 @@
         "withdrawHint": "Η απόσυρση σβήνει τη βιτρίνα. Οι αγγελίες σας δεν επηρεάζονται.",
         "withdrawing": "Απόσυρση…"
       }
-    },
-    "registries": {
-      "barAssociation": {
-        "abbreviation": "Δ.Σ.",
-        "name": "Δικηγορικός Σύλλογος"
-      },
-      "gemi": {
-        "abbreviation": "ΓΕΜΗ",
-        "name": "Γενικό Εμπορικό Μητρώο"
-      },
-      "notaryAssociation": {
-        "abbreviation": "Σ.Σ.",
-        "name": "Συμβολαιογραφικός Σύλλογος"
-      },
-      "oee": {
-        "abbreviation": "ΟΕΕ",
-        "name": "Οικονομικό Επιμελητήριο Ελλάδας"
-      },
-      "regionalAuthority": {
-        "abbreviation": "Π.Ε.",
-        "name": "Διεύθυνση Ανάπτυξης Περιφερειακής Ενότητας"
-      },
-      "tee": {
-        "abbreviation": "ΤΕΕ",
-        "name": "Τεχνικό Επιμελητήριο Ελλάδας"
-      }
     }
   }
 }

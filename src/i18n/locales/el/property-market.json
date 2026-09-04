@@ -946,7 +946,15 @@
       "contact-no-channel": "Αφήστε email ή τηλέφωνο — αλλιώς δεν έχει πώς να σας απαντήσει.",
       "contact-withdrawal-timeless": "Κάτι δεν πήγε καλά με την πράξη. Δοκιμάστε ξανά.",
       "contact-foreign-id": "Κάτι δεν πήγε καλά με την πράξη. Δοκιμάστε ξανά.",
-      "contact-reason-without-demand": "Κάτι δεν πήγε καλά με την πράξη. Δοκιμάστε ξανά."
+      "contact-reason-without-demand": "Κάτι δεν πήγε καλά με την πράξη. Δοκιμάστε ξανά.",
+      "contact-name-unset": "Γράψτε πώς θέλετε να σας λένε — αυτό το όνομα θα δει.",
+      "contact-channel-unset": "Αφήστε email ή τηλέφωνο. Ένα από τα δύο αρκεί.",
+      "contact-email-malformed": "Το email χρειάζεται μορφή onoma@parodeigma.gr",
+      "contact-phone-malformed": "Το τηλέφωνο χρειάζεται 10 ψηφία (π.χ. 6912345678) ή διεθνή μορφή (+30…).",
+      "errorSummaryTitle": "Δεν στάλθηκε — διορθώστε τα εξής",
+      "optionalSuffix": "(προαιρετικό)",
+      "requiredSuffix": "(απαιτείται)",
+      "closeAfterDone": "Κλείσιμο"
     },
     "mine": {
       "title": "Οι επαφές μου",

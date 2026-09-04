@@ -946,7 +946,15 @@
       "contact-no-channel": "Leave an email or a phone — otherwise they have no way to reply.",
       "contact-withdrawal-timeless": "Something went wrong with the record. Please try again.",
       "contact-foreign-id": "Something went wrong with the record. Please try again.",
-      "contact-reason-without-demand": "Something went wrong with the record. Please try again."
+      "contact-reason-without-demand": "Something went wrong with the record. Please try again.",
+      "contact-name-unset": "Write what they should call you — this is the name they will see.",
+      "contact-channel-unset": "Leave an email or a phone. Either one is enough.",
+      "contact-email-malformed": "The email needs the form name@example.com",
+      "contact-phone-malformed": "The phone needs 10 digits (e.g. 6912345678) or international form (+30…).",
+      "errorSummaryTitle": "Not sent — please fix the following",
+      "optionalSuffix": "(optional)",
+      "requiredSuffix": "(required)",
+      "closeAfterDone": "Close"
     },
     "mine": {
       "title": "My contacts",
