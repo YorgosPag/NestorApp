@@ -65,7 +65,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "e3466c757ceafa9caadacf47fe12511f0b4804780cd650fb6f0eb877c622803e",
+  "inputsSha256": "b9009f87dd7f5a94b20a4337635d767a8872d15bec085a1f8b12d7f893df1132",
   "languages": [
     "el"
   ],
@@ -129,8 +129,8 @@
     "src/components/account/pages/ProfilePageContent.tsx": "5b8e385e5a86b5b72b6294370c42be36a907f3a63432c7e436af1126b5dd3dd6",
     "src/components/account/tax-identity-labels.ts": "6ef45577a4701ebce1c90bb24aeb4fb8fd75649b2b71c026855b0f17f90c8623",
     "src/components/completion/completion-bucket-classes.ts": "d046fc132098ac220f1084138d0b1f5ef9b1ce6f3f53070974a0b838ca3749e1",
-    "src/components/contact/FirstContactAction.tsx": "1b02b25229688989d46ff948de69e2d79fade59712bb9406764bc40176e34413",
-    "src/components/contact/first-contact-labels.ts": "91d708c0359b420cd2817f3a0ec152f3dc13f14c9cc369d4f7e81bbdad3ec7ce",
+    "src/components/contact/FirstContactAction.tsx": "78c9f06be3c3c5c1d85dbb3a47f69e46a96bcbe011c7e01f68cea70834eb09ba",
+    "src/components/contact/first-contact-labels.ts": "7b91eb7b6038ab0d043674440c6e085706690dbe6a7df3ba0eca9d497fb4caba",
     "src/components/dashboard/DashboardHome.tsx": "2ebe4bd60f9048488e0343135ea19803ecb053a69141b3908a8ba150531e6e17",
     "src/components/dashboard/DashboardWelcome.tsx": "664e054ae71015831d86ea4cf203f32bef47fccffdf4f7db1908158df9dd31bc",
     "src/components/dashboard/NavigationCard.tsx": "2f031deb932f093ae0ad57d5c814eb785092691e69f297cb5c4d562727b3983b",
@@ -286,6 +286,7 @@
     "src/i18n/route-slice.ts": "cef4139f7e7dae3606e6d8a153f72f3351646f4cb13c613e4e6560f991702459",
     "src/lib/agency/showcase-wire.ts": "f36b90668936e15e90de9a50dd94d3fdfacdccf4c92d4ed52aa7824f6a03d5b5",
     "src/lib/auth/brokerage-authority.ts": "147a6776dcc3e020043fb913dd34d48af38c33afaa7b66243b779e4eea412c5c",
+    "src/lib/contact/first-contact-capacity.ts": "dcf99f9e023a46bce73412d2b21bd080adaafd3d048ac8591bebfb143567ae27",
     "src/lib/contact/first-contact-form-values.ts": "333ab8076b837f8935b58e0e4cd7601577963a91b4cd639ea19dbf1394ad4d16",
     "src/lib/contacts/primary-email.ts": "be062827144f613c7f73525068f4ec1de9bd81ff36b425dc69bc6b538c3a970c",
     "src/lib/criteria/criterion-option-counts.ts": "df08b34cd0375fa66e1519fc81c51f0fe380f70ea2720f3a4a6f3fcbaa7d93b8",
@@ -362,7 +363,9 @@
     "src/server/notifications/notification-orchestrator.ts": "3a50166f2b19dfbd4f43d6c266c2cacdf63b2edcb40cd43956c2b11822cffce0",
     "src/services/account/tax-identity.service.ts": "96596f0ee90dc75534ab6cab64bc756a4d46028c5a4c8b4530e94e765ccb71c6",
     "src/services/company/company-public-name.reader.ts": "edb8c2bc3045831f4ba77fffbaf686508497d5738f7f8d9f550c6374a0039f63",
+    "src/services/contact/first-contact-projection.ts": "bcd9b1e69f7e6f441d7f49b27d4a38b796907572260185b80fb1034a108f5083",
     "src/services/contact/first-contact-vocabulary.ts": "a7e79f0dd98f1388b049dd186c7ffff3bbb0c4518676b40efc117b9d85f48d86",
+    "src/services/contact/first-contact.client.ts": "b2c4981434d59981cd0d6f8d58bbecfa2220d8b73c14c575c8abd4c5d2f68ffe",
     "src/services/contacts-query.service.ts": "e205fb92132590d84bbd946dfbd3c3d628cd46a6efd31cf52b35a3b372e99a0a",
     "src/services/demand/property-demand.service.ts": "1cdc6982f7aa1ad93f90d86dcf4258b5e427830a04198968eea4b243bdc55d67",
     "src/services/esco-skill.service.ts": "60240828f5dd730470fda03be1874048792e14fe8fbc35392bd77e4b7fb265c5",

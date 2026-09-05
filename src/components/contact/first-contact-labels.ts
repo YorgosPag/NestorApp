@@ -125,6 +125,33 @@ export const ACT_KEYS = {
   cta: 'property-market:contact.first.cta',
   ctaPro: 'property-market:contact.first.ctaPro',
   ctaHint: 'property-market:contact.first.ctaHint',
+  /**
+   * **ΤΙ ΜΠΑΙΝΕΙ ΣΤΗ ΘΕΣΗ ΤΟΥ ΚΟΥΜΠΙΟΥ** όταν η ήσυχη ερώτηση απαντήσει «όχι» (§10.18).
+   *
+   * 🔑 **ΔΕΝ ΤΑΞΙΔΕΥΟΥΝ ΣΤΟ ΠΡΩΤΟ ΒΑΨΙΜΟ, ΚΑΙ ΕΙΝΑΙ ΔΟΜΙΚΟ**: τα ζωγραφίζει **μόνο** ο
+   * {@link FirstContactStandIn}, που φορτώνεται **τεμπέλικα** — για τον **ίδιο**
+   * μετρημένο λόγο με τον διάλογο *(CHECK 3.34, ADR-744)*. Δεν μπορούν να φανούν πριν
+   * μάθουμε **ποιος** κοιτάζει, και το μαθαίνουμε μόνο μετά από αίτημα δικτύου· άρα
+   * μηδέν επιβάρυνση στη στατική κλειστότητα των **δύο δημόσιων** διαδρομών.
+   *
+   * ⚠️ **Ο ιδιοκτήτης ακούει ΤΙ ΕΙΝΑΙ, όχι τι ΔΕΝ ΜΠΟΡΕΙ.** Το `contact-own-target`
+   * (*«είναι δικό σας»*) είναι σωστό **μετά** από υποβολή· **πριν**, ο άνθρωπος δεν
+   * προσπάθησε τίποτα — ήρθε να δει τη σελίδα του. Άρνηση σε κάτι που δεν ζήτησε είναι
+   * απάντηση σε λάθος ερώτηση.
+   */
+  ownListingTitle: 'property-market:contact.first.ownListingTitle',
+  ownListingLead: 'property-market:contact.first.ownListingLead',
+  ownListingAction: 'property-market:contact.first.ownListingAction',
+  ownProTitle: 'property-market:contact.first.ownProTitle',
+  ownProLead: 'property-market:contact.first.ownProLead',
+  /**
+   * ⚠️ **Χωριστά από τα `alreadyOpen*`, και ΔΕΝ είναι διπλότυπο**: εκείνα μιλούν
+   * **μετά** την υποβολή (*«δεν στάλθηκε τίποτα δεύτερη φορά»*) — πρόταση που είναι
+   * **αναληθής** πριν πατήσει κανείς. Ίδιο γεγονός, **άλλη στιγμή**, άλλος χρόνος
+   * ρήματος.
+   */
+  alreadySentTitle: 'property-market:contact.first.alreadySentTitle',
+  alreadySentLead: 'property-market:contact.first.alreadySentLead',
   dialogTitle: 'property-market:contact.first.dialogTitle',
   dialogLead: 'property-market:contact.first.dialogLead',
   nameLabel: 'property-market:contact.first.nameLabel',
@@ -212,10 +239,15 @@ export const INBOX_KEYS = {
 /**
  * **Ο άξονας που δεν ταιριάζει, με το ΔΙΚΟ του όνομα** — και ζει ήδη στο δέντρο.
  *
- * 🔑 **ΚΑΝΕΝΑ ΝΕΟ ΚΛΕΙΔΙ**: και οι **20** `DemandBlocker` έχουν ετικέτα στο
+ * 🔑 **ΚΑΝΕΝΑ ΝΕΟ ΚΛΕΙΔΙ**: **κάθε** `DemandBlocker` έχει ετικέτα στο
  * `property-market:demand.blocker.*` από την εποχή του ταιριάσματος. Ένας δεύτερος
  * πίνακας εδώ θα ήταν **δεύτερο λεξιλόγιο για την ίδια έννοια** — και θα απέκλινε την
  * πρώτη φορά που κάποιος διόρθωνε τη μία διατύπωση.
+ *
+ * ⚠️ **Ο ΑΡΙΘΜΟΣ ΑΦΑΙΡΕΘΗΚΕ ΕΠΙΤΗΔΕΣ** (ADR-777 §8.52): έγραφε «20» και πάλιωσε την
+ * ώρα που το λεξιλόγιο απέκτησε τα τέσσερα εμπόδια απουσίας. Ένα πλήθος που το φυλάει
+ * ήδη άγκυρα πληρότητας δεν χρειάζεται να επαναλαμβάνεται σε πρόζα — ίδιο μάθημα με
+ * τους αριθμούς baseline του N.12, που πάλιωσαν τρεις φορές μέσα στο ίδιο αρχείο.
  *
  * ⚠️ Δυναμικό κλειδί **με δηλωμένη ρίζα**: η CHECK 3.8 το δέχεται επειδή το πρόθεμα
  * είναι κυριολεκτικό και το σύνολο των καταλήξεων είναι **κλειστό** (`DEMAND_BLOCKERS`).

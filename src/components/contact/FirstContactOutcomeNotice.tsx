@@ -32,7 +32,7 @@ import {
 } from './first-contact-labels';
 import { OPEN_CONTACT_CAPACITY } from '@/lib/contact/first-contact-limits';
 
-type Translator = ReturnType<typeof useTranslation>['t'];
+export type Translator = ReturnType<typeof useTranslation>['t'];
 
 export interface FirstContactOutcomeNoticeProps {
   readonly result: OpenContactResult;
@@ -121,14 +121,28 @@ function OpenedBody({
   );
 }
 
-/** `refused` — λόγος **και** διέξοδος, αν {@link REJECTION_REMEDY} έχει μία. */
-function RefusedBody({
+/**
+ * `refused` — λόγος **και** διέξοδος, αν {@link REJECTION_REMEDY} έχει μία.
+ *
+ * 🔑 **ΕΞΑΓΕΤΑΙ, ΕΠΕΙΔΗ ΤΟ ΙΔΙΟ ΕΡΩΤΗΜΑ ΡΩΤΙΕΤΑΙ ΣΕ ΔΥΟ ΣΤΙΓΜΕΣ** *(ADR-843 §10.18)*:
+ * εδώ **μετά** την υποβολή, και στο {@link FirstContactStandIn} **πριν** πατήσει
+ * κανείς. Είναι η **ίδια** μετάφραση *«κωδικός άρνησης → πρόταση + διέξοδος»*, και
+ * δεύτερο αντίγραφό της θα απέκλινε την πρώτη φορά που κάποιος διόρθωνε τη μία
+ * διατύπωση — ή θα ξεχνούσε τον **έκτο** κωδικό στο ένα από τα δύο σημεία.
+ *
+ * ⚠️ **Ο ΞΕΝΙΣΤΗΣ ΔΙΝΕΙ ΤΟ ΔΟΧΕΙΟ, ΚΑΙ ΕΙΝΑΙ ΟΥΣΙΑΣΤΙΚΟ**: εδώ τυλίγεται σε
+ * `role="alert"` γιατί **μόλις έγινε πράξη**· εκεί **όχι**, γιατί τίποτα δεν συνέβη —
+ * ο άνθρωπος απλώς άνοιξε μια σελίδα. Ένα `alert` σε φόρτωση σελίδας είναι ανακοίνωση
+ * χωρίς γεγονός.
+ */
+export function RefusedBody({
   reason,
-  capacity,
+  capacity = OPEN_CONTACT_CAPACITY,
   t,
 }: {
   readonly reason: FirstContactRejection;
-  readonly capacity: number;
+  /** Δες {@link FirstContactOutcomeNoticeProps.capacity} — **μία** σταθερά, ποτέ δεύτερος μετρητής. */
+  readonly capacity?: number;
   readonly t: Translator;
 }): React.JSX.Element {
   const remedy = REJECTION_REMEDY[reason];
