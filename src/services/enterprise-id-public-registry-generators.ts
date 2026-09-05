@@ -137,4 +137,14 @@ export abstract class PublicRegistryIdGenerators extends BimEntityIdGenerators {
    * που το ΠΕ5 εξαφάνισε: πράξη που **δείχνει** κλειστή και **συμπεριφέρεται** ανοιχτή.
    */
   generateFirstContactId(): string { return this.generateId(P.FIRST_CONTACT).id; }
+
+  /**
+   * **Η πρόσκληση** (ADR-844) — η δήλωση που περιμένει απόδειξη καναλιού.
+   *
+   * ⚠️ **Δεν είναι πράξη**, και γι' αυτό δεν είναι `fcon`: η πράξη μετριέται από
+   * τη χωρητικότητα με άξονα το `seekerUserId`, που εδώ **δεν υπάρχει ακόμη**.
+   */
+  generateFirstContactInvitationId(): string {
+    return this.generateId(P.FIRST_CONTACT_INVITATION).id;
+  }
 }

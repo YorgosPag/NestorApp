@@ -164,6 +164,22 @@ export const COLLECTIONS = {
    */
   FIRST_CONTACTS: process.env.NEXT_PUBLIC_FIRST_CONTACTS_COLLECTION || 'first_contacts',
 
+  /**
+   * **Η ΠΡΟΣΚΛΗΣΗ — Ο,ΤΙ ΔΕΝ ΕΙΝΑΙ ΑΚΟΜΗ ΠΡΑΞΗ** (ADR-844).
+   *
+   * 🔴 **ΞΕΧΩΡΙΣΤΗ ΣΥΛΛΟΓΗ ΚΑΙ ΟΧΙ ΤΡΙΤΗ ΚΑΤΑΣΤΑΣΗ ΣΤΟ `first_contacts`.** Η
+   * πράξη έχει άξονα το `seekerUserId`, που τη στιγμή της υποβολής **δεν
+   * υπάρχει** — ο άνθρωπος δεν έχει ακόμη λογαριασμό. Μια «εκκρεμής» πράξη θα
+   * ήταν έγγραφο με **κενό** τον άξονα της χωρητικότητας (ΠΕ5/Κ5/Κ9), δηλαδή
+   * ακριβώς η «άπειρη χωρητικότητα» που το ADR-843 §10.18 Η απέρριψε.
+   *
+   * ⇒ Εδώ παρκάρει η **δήλωση**· η πράξη γεννιέται στο `first_contacts` **μόνο**
+   * μετά την επαλήθευση, από τον **ίδιο** γραφέα (`openFirstContact`).
+   * 1.000 προσκλήσεις ⇒ **το πολύ 10** ανοιχτές πράξεις.
+   */
+  FIRST_CONTACT_INVITATIONS:
+    process.env.NEXT_PUBLIC_FIRST_CONTACT_INVITATIONS_COLLECTION || 'first_contact_invitations',
+
   FLOORS: process.env.NEXT_PUBLIC_FLOORS_COLLECTION || 'floors',
   /**
    * ADR-759 Φ2 — institutional/legal plot data as declared by a surveyor on a date

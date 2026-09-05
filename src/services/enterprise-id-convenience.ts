@@ -150,6 +150,11 @@ export const generateMandateRequestId = () => enterpriseIdService.generateMandat
 // απρόσιτη για τον γραφέα — δηλαδή ο επόμενος θα έγραφε χειρόγραφο id. Δεύτερη φορά
 // το ίδιο λάθος δεν χρειάζεται να συμβεί για να το μάθουμε.
 export const generateFirstContactId = () => enterpriseIdService.generateFirstContactId();
+// ADR-844 — Η ΠΡΟΣΚΛΗΣΗ. Εξάγεται **μαζί** με τη μέθοδο, για τον λόγο ακριβώς από
+// πάνω: μια ταυτότητα άφταστη από το facade είναι μια ταυτότητα που ο επόμενος θα
+// γράψει με το χέρι (N.6).
+export const generateFirstContactInvitationId = () =>
+  enterpriseIdService.generateFirstContactInvitationId();
 export const generateCommissionId = () => enterpriseIdService.generateCommissionId();
 
 // Payment Plan & Installments (ADR-234)
