@@ -44,11 +44,11 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { sendReplyViaMailgun } from '@/services/ai-pipeline/shared/mailgun-sender';
-import {
-  issueFirstContactInvitation,
-  normaliseChannelEmail,
-} from '@/services/contact/first-contact-invitation.service';
+import { normaliseChannelEmail } from '@/lib/contact/channel-email';
+import { listingDetailHref } from '@/lib/listings/listing-routes';
+import { issueFirstContactInvitation } from '@/services/contact/first-contact-invitation.service';
 import { buildFirstContactVerificationEmail } from '@/services/email-templates/first-contact-verification';
+import type { FirstContactTarget } from '@/types/first-contact';
 import { guestContactBodySchema } from './guest-contact-body';
 
 const logger = createModuleLogger('first-contacts-guest-route');
@@ -80,21 +80,43 @@ function maskEmail(email: string): string {
   return `${local.slice(0, 1)}***${local.slice(-1)}${domain}`;
 }
 
-function confirmUrl(token: string): string {
-  // ⚠️ Ίδια ανάγνωση με το `buildReviewUrl` του ADR-660 — **δύο** ονόματα επειδή τα
-  //    περιβάλλοντα διαφέρουν ιστορικά, και το κενό είναι **υπαρκτή** περίπτωση.
+/**
+ * Η ρίζα των δημόσιων διευθύνσεων.
+ *
+ * ⚠️ Ίδια ανάγνωση με το `buildReviewUrl` του ADR-660 — **δύο** ονόματα επειδή τα
+ * περιβάλλοντα διαφέρουν ιστορικά, και το κενό είναι **υπαρκτή** περίπτωση.
+ */
+function publicBase(): string {
   const base = (process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXT_PUBLIC_BASE_URL ?? '').trim();
-  return `${base.replace(/\/+$/, '')}/contact/${token}`;
+  return base.replace(/\/+$/, '');
+}
+
+function confirmUrl(token: string): string {
+  return `${publicBase()}/contact/${token}`;
 }
 
 /** Τι πλησίασε, σε ανθρώπινη γλώσσα — **χωρίς καμία ανάγνωση**. */
 function targetLabel(kind: 'listing' | 'professional'): string {
   // ⚠️ **ΔΗΛΩΜΕΝΟ ΟΡΙΟ**: ο πραγματικός τίτλος της αγγελίας θα ήταν σαφέστερος, αλλά
   //    απαιτεί ανάγνωση δημόσιας αγγελίας — που **οφείλει** να περάσει από το σύνορο
-  //    του ADR-839 (CHECK 3.74). Δεν πληρώνεται ανάγνωση για ετικέτα. Αν ο άνθρωπος
-  //    πλησίασε **δύο** αγγελίες, παίρνει δύο όμοια email με **διαφορετικά** κλειδιά:
-  //    και τα δύο δουλεύουν, απλώς δεν ξεχωρίζουν με το μάτι.
+  //    του ADR-839 (CHECK 3.74). Δεν πληρώνεται ανάγνωση για ετικέτα.
+  // ✅ **Η ΣΥΓΧΥΣΗ ΠΟΥ ΑΥΤΟ ΑΦΗΝΕ, ΤΗ ΛΥΝΕΙ ΤΟ {@link targetHref}** (2026-09-05): δύο
+  //    αγγελίες έδιναν δύο **όμοια** email· τώρα η ετικέτα είναι **σύνδεσμος** προς τη
+  //    σελίδα που είδε ο άνθρωπος, και ξεχωρίζουν με το μάτι.
   return kind === 'listing' ? 'την αγγελία που είδατε' : 'τον επαγγελματία που είδατε';
+}
+
+/**
+ * **Πού στεκόταν ο άνθρωπος** — ή `null` όταν δεν υπάρχει δημόσια διεύθυνση.
+ *
+ * 🔑 **Μηδέν αναγνώσεις**: το `listingId` ζει ήδη μέσα στη δήλωση που μόλις παρέλαβε η
+ * πόρτα. ⛔ Ο `professional` κρατά `agencyCompanyId` — **όχι** δημόσια διεύθυνση: η
+ * βιτρίνα ζει σε `alias`, που θα απαιτούσε ανάγνωση. Δηλωμένο κενό, ποτέ μαντεψιά.
+ */
+function targetHref(target: FirstContactTarget): string | null {
+  return target.kind === 'listing'
+    ? `${publicBase()}${listingDetailHref(target.listingId)}`
+    : null;
 }
 
 async function guestHandler(request: NextRequest): Promise<NextResponse<GuestContactResponse>> {
@@ -116,6 +138,7 @@ async function guestHandler(request: NextRequest): Promise<NextResponse<GuestCon
   const { subject, html, text } = buildFirstContactVerificationEmail({
     seekerName: declaration.disclosure.displayName.trim() || 'Καλησπέρα σας',
     targetLabel: targetLabel(declaration.target.kind),
+    targetHref: targetHref(declaration.target),
     confirmUrl: confirmUrl(issued.token),
     code: issued.code,
     lifetimeDays: LIFETIME_DAYS,

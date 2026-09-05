@@ -467,6 +467,7 @@ export class FakeCollection extends FakeQuery {
 export class FakeBatch {
   private readonly pending: { ref: FakeDocRef; doc: Doc }[] = [];
   private readonly pendingUpdates: { ref: FakeDocRef; patch: Doc }[] = [];
+  private readonly pendingDeletes: FakeDocRef[] = [];
 
   constructor(private readonly db: FakeFirestore) {}
 
@@ -488,6 +489,24 @@ export class FakeBatch {
     this.pendingUpdates.push({ ref, patch });
   }
 
+  /**
+   * **Διαγραφή μέσα σε δέσμη** (ADR-844 Β6 — ο σαρωτής λήξης των προσκλήσεων).
+   *
+   * 🔑 **ΚΑΜΙΑ ΠΡΟΫΠΟΘΕΣΗ, ΚΑΙ ΕΙΝΑΙ ΤΟ ΣΥΜΒΟΛΑΙΟ — ΟΧΙ ΧΑΛΑΡΩΣΗ.** Σε αντίθεση με το
+   * `create` *(αποτυγχάνει αν υπάρχει)* και το `update` *(αποτυγχάνει αν δεν υπάρχει)*,
+   * το πραγματικό `batch.delete()` σε **ανύπαρκτο** έγγραφο είναι **αθόρυβα επιτυχές**.
+   * Ένας πλαστός που πετούσε εδώ θα έκανε τον σαρωτή να φαίνεται μη-ιδεμποτος ενώ
+   * **είναι**, και θα κοκκίνιζε άγκυρα για συμπεριφορά που η παραγωγή δέχεται.
+   *
+   * ⚠️ **Προσθετικό, μηδέν ακτίνα σε υπάρχοντα καταναλωτή** — ο ίδιος κανόνας που
+   * ανάγκασε την αναίρεση του `.ref` στις 2026-09-05: σε **κοινό** εργαλείο, «πιο
+   * σωστό» δεν αρκεί· μετράει και **ποιον ξυπνά**. Καμία υπάρχουσα σουίτα δεν καλεί
+   * `batch.delete`, άρα καμία δεν αλλάζει διαδρομή.
+   */
+  delete(ref: FakeDocRef): void {
+    this.pendingDeletes.push(ref);
+  }
+
   async commit(): Promise<void> {
     // ⚠️ **Ατομικότητα**: όλα ή τίποτα. Ο γραφέας βασίζεται σε αυτό ώστε να μη
     // γεννηθεί ποτέ κτίριο χωρίς τη γη του — και ένας πλαστός που έγραφε ένα-ένα θα
@@ -502,6 +521,9 @@ export class FakeBatch {
     }
     for (const { ref, doc } of this.pending) await ref.create(doc);
     for (const { ref, patch } of this.pendingUpdates) await ref.update(patch);
+    // ⚠️ **Οι διαγραφές ΤΕΛΕΥΤΑΙΕΣ και ΧΩΡΙΣ προέλεγχο** — δες {@link FakeBatch.delete}:
+    //    η διαγραφή ανύπαρκτου εγγράφου είναι αθόρυβα επιτυχής στο πραγματικό Firestore.
+    for (const ref of this.pendingDeletes) await ref.delete();
     this.db.countWrite();
   }
 }

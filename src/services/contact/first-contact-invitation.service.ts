@@ -55,6 +55,7 @@ import type {
 } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { normaliseChannelEmail } from '@/lib/contact/channel-email';
 import { nowISO as clockNowISO } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
 import {
@@ -144,11 +145,6 @@ export interface IssuedInvitation {
   /** Για τη **δεύτερη πόρτα**. Ωμός **μόνο εδώ και στο email** — ποτέ στη βάση. */
   readonly code: string;
   readonly expiresAtISO: string;
-}
-
-/** Πεζά, χωρίς κενά — το κλειδί ιδεμποτησίας και ο παραλήπτης. */
-export function normaliseChannelEmail(raw: string): string {
-  return raw.trim().toLowerCase();
 }
 
 /**
