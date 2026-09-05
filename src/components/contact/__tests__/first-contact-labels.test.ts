@@ -32,8 +32,14 @@ import {
   REJECTION_REMEDY,
   demandBlockerKey,
 } from '@/components/contact/first-contact-labels';
+import {
+  GUEST_KEYS,
+  INVITATION_REFUSAL_KEYS,
+  LINK_KEYS,
+} from '@/components/contact/first-contact-guest-labels';
 import { FIRST_CONTACT_REJECTIONS } from '@/services/contact/first-contact-vocabulary';
 import { FIRST_CONTACT_INVARIANTS } from '@/types/first-contact';
+import { FIRST_CONTACT_INVITATION_REFUSALS } from '@/types/first-contact-invitation';
 import { FIRST_CONTACT_FORM_BLOCKERS } from '@/lib/contact/first-contact-form-values';
 import { DEMAND_BLOCKERS } from '@/lib/demand/demand-match-vocabulary';
 
@@ -58,6 +64,14 @@ const TABLES: readonly (readonly [string, Readonly<Record<string, string>>])[] =
   ['ACT_KEYS', ACT_KEYS],
   ['MINE_KEYS', MINE_KEYS],
   ['INBOX_KEYS', INBOX_KEYS],
+  // 🔴 **ADR-844 — Η ΦΙΛΟΞΕΝΟΥΜΕΝΗ ΕΠΑΦΗ, ΚΑΙ ΕΔΩ ΤΟ ΩΜΟ ΚΛΕΙΔΙ ΕΙΝΑΙ ΧΕΙΡΟΤΕΡΟ.**
+  //    Ο άνθρωπος αυτών των τριών πινάκων στέκεται σε **δημόσια σελίδα από email**,
+  //    **χωρίς λογαριασμό**, χωρίς πλοήγηση πίσω, και χωρίς κανέναν να ρωτήσει. Ένα
+  //    `property-market:contact.link.doneTitle` στην οθόνη του δεν είναι ατέλεια —
+  //    είναι **έγγραφο που δεν διαβάζεται**, τη στιγμή που μόλις έστειλε τα στοιχεία του.
+  ['INVITATION_REFUSAL_KEYS', INVITATION_REFUSAL_KEYS],
+  ['GUEST_KEYS', GUEST_KEYS],
+  ['LINK_KEYS', LINK_KEYS],
 ];
 
 const LANGUAGES = [['el', el], ['en', en]] as const;
@@ -102,6 +116,11 @@ describe('🔴 Ρ — κάθε κείμενο της πρώτης επαφής �
     expect(FIRST_CONTACT_FORM_BLOCKERS.filter((code) => !(code in FORM_BLOCKER_KEYS))).toEqual([]);
     // 🔑 Και η **διέξοδος** είναι πλήρης: `null` είναι απάντηση, απουσία γραμμής όχι.
     expect(FIRST_CONTACT_REJECTIONS.filter((code) => !(code in REJECTION_REMEDY))).toEqual([]);
+    // 🔴 ADR-844 — και οι **επτά** λόγοι άρνησης του συνδέσμου. Ο όγδοος θα ήταν σιωπή
+    //    σε άνθρωπο που μόλις πάτησε τον μοναδικό σύνδεσμο που του δώσαμε.
+    expect(
+      FIRST_CONTACT_INVITATION_REFUSALS.filter((code) => !(code in INVITATION_REFUSAL_KEYS)),
+    ).toEqual([]);
   });
 
   it('🔑 Ρ4 — η άγκυρα ΠΙΑΝΕΙ πραγματικά: ανύπαρκτο κλειδί λείπει', () => {

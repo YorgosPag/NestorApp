@@ -26,7 +26,7 @@ import {
   type FirstContactFormBlocker,
 } from '@/lib/contact/first-contact-form-values';
 
-export const FIRST_CONTACT_NS = 'property-market';
+export { FIRST_CONTACT_NS } from './first-contact-namespace';
 
 /**
  * **Οι πέντε αρνήσεις του διακομιστή** — *«ο κόσμος δεν το επιτρέπει»*.
@@ -51,7 +51,7 @@ export const REJECTION_KEYS: Record<FirstContactRejection, string> = {
 };
 
 /**
- * **Τα τέσσερα εμπόδια της ΦΟΡΜΑΣ** — *«αυτό που βλέπω δεν μπορεί να σταλεί»*.
+ * **Τα εμπόδια της ΦΟΡΜΑΣ** — *«αυτό που βλέπω δεν μπορεί να σταλεί»*.
  *
  * 🔑 **ΤΡΙΤΟΣ πίνακας, και είναι ΑΛΛΗ ΣΤΙΓΜΗ**: τα {@link REJECTION_KEYS} τα μαθαίνει ο
  * άνθρωπος **μετά** την υποβολή· αυτά τα βλέπει **πληκτρολογώντας**, δίπλα στο πεδίο.
@@ -64,7 +64,7 @@ export const REJECTION_KEYS: Record<FirstContactRejection, string> = {
  */
 export const FORM_BLOCKER_KEYS: Record<FirstContactFormBlocker, string> = {
   'contact-name-unset': 'property-market:contact.first.contact-name-unset',
-  'contact-channel-unset': 'property-market:contact.first.contact-channel-unset',
+  'contact-email-unset': 'property-market:contact.first.contact-email-unset',
   'contact-email-malformed': 'property-market:contact.first.contact-email-malformed',
   'contact-phone-malformed': 'property-market:contact.first.contact-phone-malformed',
 };
@@ -157,7 +157,26 @@ export const ACT_KEYS = {
   nameLabel: 'property-market:contact.first.nameLabel',
   emailLabel: 'property-market:contact.first.emailLabel',
   phoneLabel: 'property-market:contact.first.phoneLabel',
+  /** Η υπόδειξη του **email** — «εδώ πάει ο σύνδεσμος, αυτό θα δει ο άλλος» (ADR-844). */
+  emailHint: 'property-market:contact.first.emailHint',
+  /**
+   * Η υπόδειξη του **τηλεφώνου**. ⚠️ Το κλειδί κράτησε το παλιό του όνομα επίτηδες:
+   * το κείμενο άλλαξε *(«άφησε έναν τρόπο»* ⇒ *«προαιρετικό»)*, αλλά η **θέση** του —
+   * τελευταίο πεδίο — και ο ρόλος του δεν άλλαξαν. Μετονομασία θα κόστιζε αλλαγή σε
+   * δύο locales, τον τύπο i18n και την οθόνη, για **μηδέν** κέρδος αναγνωσιμότητας.
+   */
   channelHint: 'property-market:contact.first.channelHint',
+  /**
+   * 🔴 **Η ΓΡΑΜΜΗ ΤΟΥ EDPB, ΚΑΙ ΔΕΝ ΕΙΝΑΙ ΨΙΛΑ ΓΡΑΜΜΑΤΑ** (ADR-844, απόφαση #1).
+   *
+   * Οι *Recommendations 2/2025* απαιτούν υποχρεωτικό λογαριασμό **μόνο** όταν είναι
+   * αντικειμενικά απαραίτητος, και ρητή ενημέρωση για το **γιατί**. Η αγγλόφωνη
+   * πρακτική λέγεται *«stealth account creation»*· στην ΕΕ δεν στέκει.
+   *
+   * ⚠️ **Μπαίνει ΠΡΙΝ το κουμπί, όχι μετά την υποβολή**: μια ενημέρωση που φτάνει
+   * αφού έγινε η πράξη δεν είναι ενημέρωση, είναι ανακοίνωση.
+   */
+  accountNotice: 'property-market:contact.first.accountNotice',
   submit: 'property-market:contact.first.submit',
   submitting: 'property-market:contact.first.submitting',
   cancel: 'property-market:contact.first.cancel',
@@ -246,11 +265,14 @@ export const INBOX_KEYS = {
  *
  * ⚠️ **Ο ΑΡΙΘΜΟΣ ΑΦΑΙΡΕΘΗΚΕ ΕΠΙΤΗΔΕΣ** (ADR-777 §8.52): έγραφε «20» και πάλιωσε την
  * ώρα που το λεξιλόγιο απέκτησε τα τέσσερα εμπόδια απουσίας. Ένα πλήθος που το φυλάει
- * ήδη άγκυρα πληρότητας δεν χρειάζεται να επαναλαμβάνεται σε πρόζα — ίδιο μάθημα με
- * τους αριθμούς baseline του N.12, που πάλιωσαν τρεις φορές μέσα στο ίδιο αρχείο.
+ * ήδη άγκυρα πληρότητας δεν χρειάζεται να επαναλαμβάνεται σε πρόζα.
  *
  * ⚠️ Δυναμικό κλειδί **με δηλωμένη ρίζα**: η CHECK 3.8 το δέχεται επειδή το πρόθεμα
  * είναι κυριολεκτικό και το σύνολο των καταλήξεων είναι **κλειστό** (`DEMAND_BLOCKERS`).
+ *
+ * 🔑 **ΜΕΤΑΚΟΜΙΣΕ ΕΔΩ ΑΠΟ ΤΟ `first-contact-labels.ts`** *(ADR-844)*: η ρίζα που δηλώνει
+ * σέρνει **ολόκληρο** το δέντρο αξόνων ζήτησης σε κάθε αρχείο που την εισάγει, και ο
+ * **μοναδικός** της καταναλωτής είναι το `ContactInboxRow` — δηλαδή αυτό εδώ το κατάστιχο.
  */
 export function demandBlockerKey(blocker: string): string {
   return `property-market:demand.blocker.${blocker}`;
