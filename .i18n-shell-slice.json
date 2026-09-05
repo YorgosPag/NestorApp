@@ -95,6 +95,13 @@
   },
   "$dynamicKeyPolicy": "Every entry below answers ONE unresolvable `t(...)` call site in a shell module. The generator REFUSES to emit a slice while any such call is unclassified — that refusal is the guarantee. Each `reason` states a fact measured on 2026-07-31, not an assumption; re-verify it when you touch the file.",
   "dynamicKeyPolicy": {
+    "src/components/notifications/notification-display-title.ts": {
+      "prefixes": [
+        "common:notifications.unknownSender",
+        "common:notifications.email.newFrom"
+      ],
+      "reason": "ADR-841 §7 Α18.10 — ΜΕΤΡΗΜΕΝΟ 2026-09-05: τρεις κλήσεις, τρεις ΔΙΑΦΟΡΕΤΙΚΕΣ απαντήσεις, όχι ένα πρόθεμα-σκούπα. (1) `t(titleKey, params)` — το `titleKey` έρχεται από το έγγραφο ειδοποίησης, άρα είναι ΑΝΟΙΧΤΟ· όμως το αποτέλεσμα περνά ΑΜΕΣΩΣ από `isUnresolvedTranslation(rendered, titleKey)` και σε αστοχία επιστρέφεται το αποθηκευμένο `title`, ΠΟΤΕ το κλειδί ⇒ δομικά ανίκανη να βάψει ωμό κλειδί, ίδιο σκεπτικό με το `NotificationProvider.tsx` εδώ δίπλα. (2) `t(EMAIL_FROM_KEY, …)` — κυριολεκτική σταθερά `notifications.email.newFrom`, φρουρημένη από τον ΙΔΙΟ έλεγχο. (3) `t(UNKNOWN_SENDER_KEY)` — κυριολεκτική σταθερά `notifications.unknownSender` και η ΜΟΝΗ ΑΦΡΟΥΡΗΤΗ: το αποτέλεσμά της μπαίνει ως παράμετρος `sender` ΜΕΣΑ στον τίτλο, οπότε αν δεν φορτώσει βάφεται ωμό μέσα σε κανονική πρόταση. Γι' αυτό δηλώνονται τα ΔΥΟ ΚΥΡΙΟΛΕΚΤΙΚΑ κλειδιά και μόνο αυτά — όχι `common:notifications`, που θα έσερνε ολόκληρο το δέντρο ειδοποιήσεων για δύο συμβολοσειρές. Και τα δύο ζουν στο `locales/<γλώσσα>/common.json` (επαληθευμένο και στις δύο γλώσσες), namespace που ταξιδεύει ΟΛΟΚΛΗΡΟ (`guaranteedNamespaces`) ⇒ σημερινό κόστος ΜΗΔΕΝ. ⚠️ Ξαναεπαλήθευσέ το αν φύγει το `common` από τα guaranteed ή αν προστεθεί ΑΦΡΟΥΡΗΤΗ κλήση σε αυτό το αρχείο."
+    },
     "src/components/contact/FirstContactOutcomeNotice.tsx": {
       "prefixes": [
         "property-market:contact.first"

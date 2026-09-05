@@ -16,6 +16,7 @@ import { useNotificationCenter } from '@/stores/notificationCenter';
 import { useTranslation } from '@/i18n';
 import type { Notification, Severity, UserPreferences } from '@/types/notification';
 import { NotificationClient } from '@/api/notificationClient';
+import { notificationDisplayTitle } from '@/components/notifications/notification-display-title';
 import { markNotificationsAsRead, dismissNotification } from '@/services/notificationService';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -348,30 +349,12 @@ export function NotificationDrawer() {
                 const colorClass = colorMap[n.severity];
                 const isUnread = n.delivery.state !== 'seen' && n.delivery.state !== 'acted';
 
-                // i18n: resolve display title with robust sender extraction
-                const resolveDisplayTitle = (): string => {
-                  if (n.titleKey) {
-                    const params: Record<string, string> = { ...n.titleParams };
-                    // Fallback chain for missing sender: titleParams → raw title regex → source email → default
-                    if (!params.sender) {
-                      const fromMatch = n.title?.match(/from (.+)$/i);
-                      if (fromMatch) {
-                        params.sender = fromMatch[1];
-                      } else {
-                        params.sender = t('notifications.unknownSender');
-                      }
-                    }
-                    return t(n.titleKey, { ...params, defaultValue: n.title ?? '' });
-                  }
-                  if (n.title) {
-                    const emailFromMatch = n.title.match(/^New (?:Email|message) from (.+)$/i);
-                    if (emailFromMatch) {
-                      return t('notifications.email.newFrom', { sender: emailFromMatch[1], defaultValue: n.title });
-                    }
-                  }
-                  return n.title ?? '';
-                };
-                const displayTitle = resolveDisplayTitle();
+                // 🔴 **Η ΑΠΟΦΑΣΗ ΕΦΥΓΕ ΑΠΟ ΤΟ RENDER** (ADR-841 §7 Α18.10). Ζούσε εδώ ως
+                //    κλειστή συνάρτηση μέσα σε `.map()`, και ήταν **σιωπηλά λάθος**: το
+                //    `defaultValue` έκανε το i18next να **μην γυρίσει ποτέ το κλειδί**, οπότε το
+                //    δίχτυ διασταυρούμενων namespaces του `useTranslation` (ADR-716 Φ5) δεν έτρεχε
+                //    **ποτέ** — και ο άνθρωπος έβλεπε το **παγωμένο** κείμενο της παραγωγής.
+                const displayTitle = notificationDisplayTitle(t, n);
 
                 // Derive navigation URL: actions → source.feature → title-based detection
                 const actionUrl = n.actions?.[0]?.url
