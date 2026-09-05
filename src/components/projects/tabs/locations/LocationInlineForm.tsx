@@ -48,6 +48,18 @@ interface LocationInlineFormProps {
   t: (key: string) => string;
   tProjects: (key: string) => string;
   availableTypes?: readonly ProjectAddressType[];
+  /**
+   * Πού μετριέται το «κοντά» για την κατάταξη των προτάσεων (ADR-332 D23/D25).
+   *
+   * ⚠️ **Δεν υπολογίζεται εδώ, επίτηδες.** Αυτή η φόρμα ξέρει *μία* διεύθυνση — αυτή που
+   * γράφεται τώρα. Η αφετηρία είναι ιδιότητα του **έργου**, και μόνο ο γονιός
+   * (`ProjectLocationsTab`) κρατά ολόκληρη τη λίστα. Αν την υπολόγιζε η φόρμα, θα
+   * απαντούσε ερώτηση που δεν βλέπει.
+   *
+   * Απών ⇒ η κατάταξη γίνεται μόνο με βεβαιότητα, χωρίς γραμμή απόστασης — σωστή
+   * συμπεριφορά, όχι υποβάθμιση.
+   */
+  proximityAnchor?: { lat: number; lng: number };
 }
 
 // =============================================================================
@@ -82,6 +94,7 @@ export const LocationInlineForm = forwardRef<AddressEditorHandle, LocationInline
     t,
     tProjects,
     availableTypes,
+    proximityAnchor,
   }, ref) {
     const iconSizes = useIconSizes();
     const typography = useTypography();
@@ -170,6 +183,7 @@ export const LocationInlineForm = forwardRef<AddressEditorHandle, LocationInline
             onUndoRedo={onUndoRedo}
             mode="edit"
             domain="project"
+            suggestions={{ proximityAnchor }}
             formOptions={{ hideGrid: true, showNeighborhoodRegion: true }}
             activityLog={{ collapsed: true }}
           >

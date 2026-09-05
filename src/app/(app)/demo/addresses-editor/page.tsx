@@ -92,6 +92,13 @@ const DEMO_INITIAL_ADDRESS: ResolvedAddressFields = {
   postalCode: '54621',
 };
 
+/**
+ * Το κέντρο της Θεσσαλονίκης — **στέκεται στη θέση της οντότητας** που η demo δεν έχει.
+ * Επιλέχθηκε ώστε το `DEMO_INITIAL_ADDRESS` να είναι κοντά και οι εναλλακτικές άλλων
+ * πόλεων μακριά, δηλαδή η κατάταξη να **φαίνεται** ότι δουλεύει.
+ */
+const DEMO_PROXIMITY_ANCHOR = { lat: 40.6401, lng: 22.9444 } as const;
+
 function AddressEditorDemo() {
   const [address, setAddress] = useState<ResolvedAddressFields>(DEMO_INITIAL_ADDRESS);
   const [viewMode, setViewMode] = useState(false);
@@ -125,6 +132,15 @@ function AddressEditorDemo() {
         value={address}
         onChange={setAddress}
         mode={viewMode ? 'view' : 'edit'}
+        /*
+          ⚠️ **ΠΛΑΣΜΑΤΙΚΗ αφετηρία, και γι' αυτό δηλώνεται εδώ και όχι σιωπηλά.**
+          Στην παραγωγή η αφετηρία βγαίνει ΠΑΝΤΑ από τις άλλες διευθύνσεις της ίδιας
+          οντότητας (ADR-332 D23/D25)· μια σελίδα demo δεν έχει οντότητα, άρα δανείζεται
+          σταθερό σημείο. Υπάρχει για έναν λόγο: **να είναι ορατή η γραμμή απόστασης**.
+          Ως τις 03/09 δεν εμφανίστηκε ΠΟΤΕ πουθενά, και η demo ήταν το μόνο μέρος όπου
+          κάποιος θα το είχε δει — αν την είχε τροφοδοτήσει κανείς.
+        */
+        suggestions={{ proximityAnchor: DEMO_PROXIMITY_ANCHOR }}
         activityLog={{ enabled: true, verbosity: 'detailed' }}
         className="border rounded-lg p-4"
       />

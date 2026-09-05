@@ -19,6 +19,7 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useFullscreen } from '@/hooks/useFullscreen';
 import { storedAddressToResolved } from '@/utils/address/administrative-hierarchy';
+import { addressListCenter } from '@/utils/address/address-list-center';
 import { FullscreenOverlay, FullscreenToggleButton } from '@/core/containers/FullscreenOverlay';
 import { cn } from '@/lib/utils';
 import { LocationInlineForm } from './locations/LocationInlineForm';
@@ -85,6 +86,34 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
     () => loc.localAddresses
       .map((address, originalIndex) => ({ address, originalIndex }))
       .filter(({ address }) => !((address.street ?? '') === '' && (address.city ?? '') === '')),
+    [loc.localAddresses],
+  );
+
+  /**
+   * 🔑 **Η ΑΦΕΤΗΡΙΑ ΕΓΓΥΤΗΤΑΣ ΤΩΝ ΠΡΟΤΑΣΕΩΝ** — ADR-332 **D25** *(ο κανόνας είναι του D23)*.
+   *
+   * «Από πού μετράμε το κοντά;» ⇒ **από τις άλλες διευθύνσεις του ίδιου έργου**. Για
+   * «Αθηνάς 5» χωρίς τοπωνύμιο ο πάροχος δίνει **πέντε αληθινές** διευθύνσεις σε πέντε
+   * πόλεις (212-349 km)· χωρίς αφετηρία η σειρά τους βγαίνει μόνο από τη βεβαιότητα.
+   *
+   * ⛔ **ΠΟΤΕ το κέντρο προβολής του χάρτη** (D23): το έργο εκφράζει *πρόθεση*, ο χάρτης
+   * *τι κοιτάς τώρα*. Ένα σύρσιμο θα ανέβαζε τη λάθος πόλη **πρώτη**.
+   *
+   * ⛔ **ΚΑΙ ΠΟΤΕ το `pendingDragCoords`** της φόρμας προσθήκης: εκείνο είναι
+   * *τοποθέτηση πινέζας για να πιαστεί* — κεντροειδές, ή μετατόπιση 150 m, ή το
+   * **προεπιλεγμένο κέντρο Αθήνας** όταν δεν υπάρχει καμία θέση. Το τελευταίο είναι
+   * ακριβώς η αστοχία που απέρριψε το D23, από άλλη πόρτα.
+   *
+   * ⚠️ **Η μία λίστα αρκεί για ΚΑΙ ΤΙΣ ΔΥΟ φόρμες**: στην προσθήκη δίνει το σημείο του
+   * έργου· στην επεξεργασία, αν η εγγραφή που διορθώνεται είναι η κύρια, δίνει τη **δική
+   * της αποθηκευμένη θέση** — που είναι κατά λέξη η δηλωμένη υποχώρηση του D23.
+   *
+   * ⚠️ Οι «φαντάσματα» (`street==='' && city===''`) περνούν αθώα: το
+   * `handleClearPrimaryAddress` τα φτιάχνει με `createProjectAddress` **χωρίς
+   * συντεταγμένες**, και το `addressListCenter` απορρίπτει δομικά ό,τι δεν έχει θέση.
+   */
+  const proximityAnchor = useMemo(
+    () => addressListCenter(loc.localAddresses),
     [loc.localAddresses],
   );
 
@@ -244,6 +273,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
             t={t}
             tProjects={tProjects}
             availableTypes={availableTypesForAdd}
+            proximityAnchor={proximityAnchor}
           />
         )}
 
@@ -269,6 +299,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
             t={t}
             availableTypes={availableTypesForEdit}
             tProjects={tProjects}
+            proximityAnchor={proximityAnchor}
           />
         )}
 

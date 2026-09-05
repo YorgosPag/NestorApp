@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -17,6 +17,7 @@ import type { AddressWithHierarchyValue } from '@/components/shared/addresses/Ad
 import { AddressEditor } from '@/components/shared/addresses/editor';
 import { fromHierarchyValue, EMPTY_HIERARCHY } from '@/components/projects/tabs/locations/location-converters';
 import { resolveCityFromHierarchy } from '@/utils/address/administrative-hierarchy';
+import { addressListCenter } from '@/utils/address/address-list-center';
 
 interface FrontageAddressCreateDialogProps {
   open: boolean;
@@ -40,6 +41,22 @@ export function FrontageAddressCreateDialog({
 
   // ADR-772: ο κανόνας «οικισμός, αλλιώς Δήμος» ζει σε ΕΝΑ σημείο (ήταν σε επτά).
   const canSave = Boolean(resolveCityFromHierarchy(hierarchy).trim());
+
+  /**
+   * 🔑 **Η ΑΦΕΤΗΡΙΑ ΕΓΓΥΤΗΤΑΣ** — ADR-332 **D25** *(κανόνας του D23)*.
+   *
+   * Μια **πρόσοψη** δεν είναι άλλη διεύθυνση: είναι **η ίδια πλευρά του ίδιου οικοπέδου**
+   * με τις υπόλοιπες διευθύνσεις του έργου. Άρα εδώ η αφετηρία δεν είναι απλώς
+   * διαθέσιμη — είναι **ο ισχυρότερος** από τους έξι καταναλωτές: ό,τι πληκτρολογείται
+   * εδώ οφείλει να απέχει **δεκάδες μέτρα**, όχι διακόσια χιλιόμετρα.
+   *
+   * Καμία υποχώρηση σε «τη θέση αυτής της εγγραφής»: η εγγραφή **γεννιέται τώρα** και
+   * δεν έχει θέση. `undefined` όταν το έργο δεν έχει καμία — δεδομένο, όχι σφάλμα.
+   */
+  const proximityAnchor = useMemo(
+    () => addressListCenter(project.addresses),
+    [project.addresses],
+  );
 
   const handleClose = () => {
     setHierarchy({});
@@ -104,6 +121,7 @@ export function FrontageAddressCreateDialog({
         <div className="py-2">
           {/* AddressEditor: activity log, field badges, reconciliation, undo */}
           <AddressEditor
+            suggestions={{ proximityAnchor }}
             value={{
               street: hierarchy.street,
               number: hierarchy.number,
