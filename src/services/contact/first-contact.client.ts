@@ -24,18 +24,25 @@
 import { apiClient, apiErrorBodyOf } from '@/lib/api/enterprise-api-client';
 import { createModuleLogger } from '@/lib/telemetry';
 import {
-  isFirstContactInvariant,
   isFirstContactRejection,
   type FirstContactDeclaration,
   type FirstContactInboxEntry,
   type FirstContactRejection,
 } from '@/services/contact/first-contact-vocabulary';
+// 🔑 ADR-844 — οι δύο αναγνώστες αποτυχίας ζουν σε δικό τους SSoT: τους ρωτούν ΔΥΟ
+//    ενότητες αυτού του αρχείου (η οθόνη με ταυτότητα και ο φιλοξενούμενος), και ο
+//    ίδιος ο `guestFailureOf` από κάτω είναι εξαγόμενος με τον ίδιο ακριβώς λόγο.
+import { commonFailureOf } from '@/services/contact/first-contact-failure-readers';
 import type { SeekerContactView } from '@/services/contact/first-contact-projection';
 import type {
   FirstContactForSeeker,
   FirstContactInvariant,
   FirstContactTarget,
 } from '@/types/first-contact';
+import {
+  isFirstContactInvitationRefusal,
+  type FirstContactInvitationRefusal,
+} from '@/types/first-contact-invitation';
 
 const logger = createModuleLogger('first-contact.client');
 
@@ -95,56 +102,8 @@ export async function openFirstContactFromScreen(
     }>(CONTACTS_URL, declaration);
     return { kind: 'opened', contact: body.contact, created: body.created };
   } catch (cause) {
-    const reason = refusalOf(cause);
-    if (reason !== null) return { kind: 'refused', reason };
-
-    // ⚠️ **Ο δεύτερος διακριτής, και η σειρά δεν έχει σημασία** — τα δύο σχήματα είναι
-    //    **ασύνδετα**: `error` είναι ή `CONTACT_REFUSED` ή `INVALID_CONTACT`, ποτέ και τα
-    //    δύο. Ελέγχονται διαδοχικά για να μείνει κάθε φρουρός **μία** ερώτηση.
-    const violations = invariantViolationsOf(cause);
-    if (violations !== null) return { kind: 'invalid', violations };
-
-    logger.error('Η πρώτη επαφή δεν καταγράφηκε', {
-      error: cause instanceof Error ? cause.message : String(cause),
-    });
-    return { kind: 'failed' };
+    return commonFailureOf(cause, 'Η πρώτη επαφή δεν καταγράφηκε');
   }
-}
-
-/**
- * Ο λόγος άρνησης όπως τον έστειλε ο διακομιστής, ή `null` όταν η αποτυχία ήταν
- * **δικτύου** — δύο πράγματα που η οθόνη πρέπει να πει διαφορετικά.
- *
- * ⚠️ **Ο διακριτής ελέγχεται ΠΡΩΤΟΣ και δεν παρακάμπτεται.** Ένα `reason` χωρίς αυτόν
- * θα σήμαινε ότι διαβάζουμε πεδίο από σχήμα που δεν αναγνωρίσαμε — και ένας άγνωστος
- * κωδικός θα κατέληγε **ωμό κλειδί στην οθόνη**.
- */
-function refusalOf(cause: unknown): FirstContactRejection | null {
-  const body = apiErrorBodyOf(cause);
-  if (body === null || body.error !== 'CONTACT_REFUSED') return null;
-
-  return isFirstContactRejection(body.reason) ? body.reason : null;
-}
-
-/**
- * **Ποια αμετάβλητα έσπασαν** — ή `null` όταν η αποτυχία δεν ήταν αυτού του σχήματος.
- *
- * 🔴 **ΤΟ ΦΙΛΤΡΟ ΔΕΝ ΕΙΝΑΙ ΕΥΠΡΕΠΕΙΑ, ΕΙΝΑΙ Ο ΙΔΙΟΣ ΦΡΟΥΡΟΣ ΜΕ ΤΟΥ `refusalOf`**: ένας
- * **άγνωστος** κωδικός αμετάβλητου θα κατέληγε **ωμό κλειδί στην οθόνη** — ακριβώς το
- * περιστατικό ADR-834 §6.5.ε, που ο αδελφός του αποτρέπει ήδη.
- *
- * ⚠️ **ΚΑΙ ΤΟ ΚΕΝΟ ΑΠΟΤΕΛΕΣΜΑ ΕΠΙΣΤΡΕΦΕΙ `null`, ΟΧΙ `[]`** (N.12): πίνακας που
- * **άδειασε επειδή δεν αναγνωρίσαμε κανέναν** θα έλεγε στην οθόνη *«άκυρο, χωρίς
- * λόγο»* — δηλαδή θα παρουσίαζε την **άγνοιά μας** ως πλήρη απάντηση. Ένα `null` το
- * στέλνει στο `failed`, που είναι **αληθές**: δεν μάθαμε τι έφταιξε.
- */
-function invariantViolationsOf(cause: unknown): readonly FirstContactInvariant[] | null {
-  const body = apiErrorBodyOf(cause);
-  if (body === null || body.error !== 'INVALID_CONTACT') return null;
-  if (!Array.isArray(body.violations)) return null;
-
-  const known = body.violations.filter(isFirstContactInvariant);
-  return known.length > 0 ? known : null;
 }
 
 // =============================================================================
@@ -337,4 +296,152 @@ export async function askContactAdmission(
     });
     return { kind: 'unknown' };
   }
+}
+
+// =============================================================================
+// 5. Ο ΦΙΛΟΞΕΝΟΥΜΕΝΟΣ — δήλωση, μετά απόδειξη, μετά πράξη (ADR-844)
+// =============================================================================
+
+const GUEST_URL = `${CONTACTS_URL}/guest`;
+
+/**
+ * 🔴 **ΟΙ ΔΥΟ ΔΗΜΟΣΙΕΣ ΠΟΡΤΕΣ ΤΑΞΙΔΕΥΟΥΝ `skipAuth`, ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ ΟΧΙ ΑΒΛΕΨΙΑ.**
+ *
+ * Ο καλών **μπορεί** να μην έχει ταυτότητα — αυτό ακριβώς είναι το νόημα του ADR-844.
+ * Χωρίς αυτή τη σημαία, το `buildHeaders` θα ζητούσε `getIdToken()` από ανύπαρκτο
+ * χρήστη και θα πετούσε **401 πριν καν φύγει το αίτημα**: δηλαδή ο μεταφορέας θα
+ * αναπαρήγαγε, ένα στρώμα ψηλότερα, **το ίδιο ακριβώς ελάττωμα** που η νέα διαδρομή
+ * υπάρχει για να θεραπεύσει.
+ *
+ * ⚠️ Ισχύει **και** για τον συνδεδεμένο που περνά από εδώ *(ανεπαλήθευτο κανάλι,
+ * απόφαση #3)*: οι διαδρομές **δεν κοιτούν** ταυτότητα, οπότε ένα `Authorization`
+ * header θα ήταν byte που κανείς δεν διαβάζει.
+ */
+const PUBLIC_CALL = { skipAuth: true } as const;
+
+/**
+ * **Τι απέγινε η ΔΗΛΩΣΗ** — που **δεν** είναι ακόμη πράξη.
+ *
+ * 🔑 Το `sent` κουβαλά `invitationId` *(το κρατά η ανοιχτή καρτέλα για την πόρτα Β)* και
+ * `maskedEmail` *(ώστε ο άνθρωπος που πληκτρολόγησε λάθος να το δει **αμέσως**)*.
+ *
+ * ⛔ **Το `not-sent` ΔΕΝ είναι `failed`.** *«Η πρόσκληση γράφτηκε αλλά το email δεν
+ * έφυγε»* στέλνει τον άνθρωπο σε **άλλη** ενέργεια από *«δεν μάθαμε τι έγινε»*: στην
+ * πρώτη περίπτωση δεν έχει νόημα να κοιτά εισερχόμενα.
+ */
+export type GuestInviteResult =
+  | { readonly kind: 'sent'; readonly invitationId: string; readonly maskedEmail: string }
+  /** Έφτασε δήλωση χωρίς email. Η φόρμα το προλαβαίνει· η πόρτα το ξαναλέει ονομαστικά. */
+  | { readonly kind: 'email-required' }
+  | { readonly kind: 'not-sent' }
+  | { readonly kind: 'failed' };
+
+/**
+ * **Πλησίασε χωρίς λογαριασμό** — γράφει πρόσκληση, στέλνει σύνδεσμο + κωδικό.
+ *
+ * ⚠️ **202, όχι 201**: τίποτα δεν έγινε ακόμη. Η οθόνη **οφείλει** να το πει — ένα
+ * «στάλθηκε» εδώ θα ήταν υπόσχεση για μήνυμα που **δεν έφυγε**.
+ */
+export async function submitGuestContact(
+  declaration: FirstContactDeclaration,
+): Promise<GuestInviteResult> {
+  try {
+    const body = await apiClient.post<{ invitationId: string; maskedEmail: string }>(
+      GUEST_URL,
+      declaration,
+      PUBLIC_CALL,
+    );
+    return { kind: 'sent', invitationId: body.invitationId, maskedEmail: body.maskedEmail };
+  } catch (cause) {
+    const error = apiErrorBodyOf(cause)?.error;
+    if (error === 'EMAIL_REQUIRED') return { kind: 'email-required' };
+    if (error === 'INVITE_NOT_SENT') return { kind: 'not-sent' };
+
+    logger.error('Η πρόσκληση δεν ζητήθηκε', {
+      error: cause instanceof Error ? cause.message : String(cause),
+    });
+    return { kind: 'failed' };
+  }
+}
+
+/**
+ * **Τι απέγινε η ΑΠΟΔΕΙΞΗ** — και μόνο εδώ γεννιέται πράξη.
+ *
+ * 🔴 **ΕΠΤΑ ΣΚΕΛΗ, ΕΠΕΙΔΗ ΕΙΝΑΙ ΕΠΤΑ ΔΙΑΦΟΡΕΤΙΚΑ ΕΠΟΜΕΝΑ ΒΗΜΑΤΑ.** Ένα κοινό
+ * `{kind:'failed'}` ήταν **όλο** το αρχικό ελάττωμα του ADR-844: ο ανώνυμος έπαιρνε
+ * *«κάτι πήγε στραβά»* για **401**, δηλαδή για κάτι που δεν είχε καμία σχέση με αυτόν.
+ *
+ * ⚠️ Το `opened` κουβαλά `customToken` — **άνεση, όχι προϋπόθεση**: η πράξη έχει ήδη
+ * γραφτεί στον διακομιστή. Αποτυχία σύνδεσης **δεν** ακυρώνει το μήνυμα.
+ */
+export type GuestConfirmResult =
+  | {
+      readonly kind: 'opened';
+      readonly contact: FirstContactForSeeker;
+      readonly created: boolean;
+      readonly customToken: string;
+    }
+  | { readonly kind: 'link-refused'; readonly reason: FirstContactInvitationRefusal }
+  | { readonly kind: 'refused'; readonly reason: FirstContactRejection }
+  | { readonly kind: 'invalid'; readonly violations: readonly FirstContactInvariant[] }
+  /**
+   * ⚠️ **ΧΩΡΙΣ ΛΟΓΟ, ΚΑΙ Ο ΔΙΑΚΟΜΙΣΤΗΣ ΔΕΝ ΤΟΝ ΣΤΕΛΝΕΙ ΚΑΝ.** Οι λόγοι εκεί
+   * *(απενεργοποιημένος λογαριασμός, μυστικό που λείπει)* μιλούν για **εμάς** — και σε
+   * **δημόσια** διαδρομή θα επιβεβαίωναν σε τρίτον ότι η διεύθυνση **υπάρχει**.
+   */
+  | { readonly kind: 'identity-refused' }
+  /** Έγκυρη απόδειξη, αποτυχία γραφής. Η πρόσκληση **σφραγίστηκε** — χρειάζεται νέα. */
+  | { readonly kind: 'unavailable' }
+  | { readonly kind: 'failed' };
+
+/**
+ * **Πόρτα Β — ο εξαψήφιος κωδικός**, από την ανοιχτή καρτέλα.
+ *
+ * ⛔ **Η πόρτα Α (σύνδεσμος) ΔΕΝ περνά από εδώ**: εκείνη είναι **σελίδα**
+ * (`app/(auth)/contact/[token]`) που εξαργυρώνει στον **διακομιστή**, πριν καν βαφτεί
+ * τίποτα. Μια δεύτερη πελατική κλήση εκεί θα σήμαινε ότι η πράξη εξαρτάται από
+ * JavaScript που μπορεί να μη φορτώσει.
+ */
+export async function confirmGuestContact(
+  invitationId: string,
+  code: string,
+): Promise<GuestConfirmResult> {
+  try {
+    const body = await apiClient.post<{
+      contact: FirstContactForSeeker;
+      created: boolean;
+      customToken: string;
+    }>(`${GUEST_URL}/confirm`, { invitationId, code }, PUBLIC_CALL);
+
+    return {
+      kind: 'opened',
+      contact: body.contact,
+      created: body.created,
+      customToken: body.customToken,
+    };
+  } catch (cause) {
+    return guestFailureOf(cause);
+  }
+}
+
+/**
+ * **Η μετάφραση αποτυχίας → ονομαστική έκβαση**, εξαγόμενη επειδή τη ρωτούν **δύο**.
+ *
+ * 🔑 Ο δεύτερος καλών είναι η **σελίδα** του συνδέσμου, όταν κάποτε χρειαστεί να
+ * μεταφράσει την ίδια απάντηση στον φυλλομετρητή. Ένα δεύτερο αντίγραφο θα ξεχνούσε το
+ * **έβδομο** σκέλος την ημέρα που προστεθεί.
+ *
+ * 🔴 **Κάθε φρουρός φιλτράρει τον κωδικό**, όπως και οι τρεις από πάνω: άγνωστος
+ * κωδικός θα κατέληγε **ωμό κλειδί στην οθόνη** (ADR-834 §6.5.ε).
+ */
+export function guestFailureOf(cause: unknown): GuestConfirmResult {
+  const body = apiErrorBodyOf(cause);
+
+  if (body?.error === 'LINK_REFUSED' && isFirstContactInvitationRefusal(body.reason)) {
+    return { kind: 'link-refused', reason: body.reason };
+  }
+  if (body?.error === 'IDENTITY_REFUSED') return { kind: 'identity-refused' };
+  if (body?.error === 'WRITE_FAILED') return { kind: 'unavailable' };
+
+  return commonFailureOf(cause, 'Η απόδειξη δεν κατέληξε σε πράξη');
 }
