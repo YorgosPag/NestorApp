@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { formatGeoDistance } from '@/lib/geo/format-geo-distance';
 import { AddressConfidenceMeter } from './AddressConfidenceMeter';
 import { FIELD_LABEL_I18N_KEY } from '../helpers/fieldLabels';
 import type { SuggestionPresentation } from '../helpers/computeSuggestionTriggers';
@@ -45,10 +46,6 @@ export interface AddressSuggestionsPanelProps {
   className?: string;
 }
 
-function formatDistance(meters: number): string {
-  if (meters < 1000) return `${Math.round(meters)}`;
-  return `${(meters / 1000).toFixed(1)}κμ`;
-}
 
 export function AddressSuggestionsPanel({
   trigger,
@@ -61,7 +58,7 @@ export function AddressSuggestionsPanel({
   onDismiss,
   className,
 }: AddressSuggestionsPanelProps) {
-  const { t } = useTranslation('addresses');
+  const { t, currentLanguage } = useTranslation('addresses');
   const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   function handleItemKeyDown(e: React.KeyboardEvent, index: number) {
@@ -115,7 +112,9 @@ export function AddressSuggestionsPanel({
         </p>
       ) : (
         <ul role="listbox" aria-label={t('editor.suggestions.title')} className="divide-y">
-          {candidates.map((ranking, idx) => (
+          {candidates.map((ranking, idx) => {
+            const distance = formatGeoDistance(ranking.distanceFromCenterM, currentLanguage);
+            return (
             <li key={ranking.candidate.displayName + idx} role="option" aria-selected={false}>
               <button
                 ref={(el) => { itemRefs.current[idx] = el; }}
@@ -134,21 +133,24 @@ export function AddressSuggestionsPanel({
                     {ranking.candidate.displayName}
                   </span>
                   <span className="flex items-center gap-2 mt-0.5">
-                    <AddressConfidenceMeter
-                      confidence={ranking.candidate.confidence}
-                      className="w-16"
-                    />
-                    <span className="text-muted-foreground">
-                      {t('editor.suggestions.confidence', {
-                        percent: Math.round(ranking.candidate.confidence * 100),
-                      })}
-                    </span>
-                    {ranking.distanceFromCenterM !== null && (
-                      <span className="text-muted-foreground">
-                        {t('editor.suggestions.distance', {
-                          distance: formatDistance(ranking.distanceFromCenterM),
-                        })}
-                      </span>
+                    {/*
+                      🔴 **ΗΤΑΝ ΔΥΟ ΦΟΡΕΣ ΤΟ ΙΔΙΟ, ΚΑΙ ΕΠΙΚΑΛΥΠΤΟΝΤΑΝ** (ADR-332 D25 §μονάδα).
+                      Ο μετρητής γράφει ήδη «Βεβαιότητα ▮▮▯ 65%»· δίπλα του τυπωνόταν και
+                      `editor.suggestions.confidence` = «Βεβαιότητα: 65%». Και επειδή το
+                      `w-16` (64 px) ήταν **στενότερο από την ίδια την μπάρα** (`w-24`,
+                      96 px), τα δύο κείμενα έπεφταν το ένα πάνω στο άλλο: η οθόνη έγραφε
+                      «Βεβαιότητα Β65αιότητα: 65%». Ο μετρητής είναι ο ΕΝΑΣ ιδιοκτήτης της
+                      παρουσίασης της βεβαιότητας — το δεύτερο κείμενο έφυγε, μαζί με το
+                      πλάτος που το έσπρωχνε.
+                    */}
+                    <AddressConfidenceMeter confidence={ranking.candidate.confidence} />
+                    {/*
+                      Χωρίς αφετηρία εγγύτητας (D23/D25) το `distanceFromCenterM` είναι
+                      `null` και η γραμμή **δεν ζωγραφίζεται**: κάθε «κοντά» θα ήταν
+                      μαντεψιά, και η σιωπή είναι η τίμια απάντηση.
+                    */}
+                    {distance !== null && (
+                      <span className="text-muted-foreground whitespace-nowrap">{distance}</span>
                     )}
                   </span>
                 </span>
@@ -160,7 +162,8 @@ export function AddressSuggestionsPanel({
                 )}
               </button>
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
 

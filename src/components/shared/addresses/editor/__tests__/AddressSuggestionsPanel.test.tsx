@@ -12,6 +12,7 @@
 
 import React from 'react';
 import { render, screen } from '@testing-library/react';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 import {
   AddressSuggestionsPanel,
@@ -20,7 +21,7 @@ import {
 import type { GeocodingApiResponse, SuggestionRanking } from '../types';
 
 jest.mock('@/i18n/hooks/useTranslation', () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({ t: (key: string) => key, currentLanguage: 'el' }),
 }));
 
 function candidate(displayName: string, confidence: number): GeocodingApiResponse {
@@ -122,5 +123,55 @@ describe('AddressSuggestionsPanel — κατάλογος ΜΟΝΟ όταν υπ�
     });
 
     expect(screen.getByText('editor.suggestions.triggerReason.partialMatchFlag')).toBeInTheDocument();
+  });
+});
+
+// =============================================================================
+// Η ΒΕΒΑΙΟΤΗΤΑ ΓΡΑΦΕΤΑΙ ΜΙΑ ΦΟΡΑ — ADR-332 D25 §μονάδα
+// =============================================================================
+
+/**
+ * 🔴 **ΟΡΑΤΟ ΕΛΑΤΤΩΜΑ, ΠΙΑΣΜΕΝΟ ΜΕ ΠΕΡΠΑΤΗΜΑ** (05/09, με 476 άγκυρες πράσινες).
+ *
+ * Ο `AddressConfidenceMeter` γράφει ήδη «Βεβαιότητα ▮▮▯ 65%». Δίπλα του το πάνελ τύπωνε
+ * **και** το `editor.suggestions.confidence` = «Βεβαιότητα: 65%» — και επειδή ο μετρητής
+ * στριμωχνόταν σε `w-16` (64 px) ενώ η μπάρα του είναι `w-24` (96 px), τα δύο κείμενα
+ * **έπεφταν το ένα πάνω στο άλλο**: η οθόνη έγραφε «Βεβαιότητα Β65αιότητα: 65%».
+ *
+ * 🔑 Η αρχή, όχι το δείγμα: **ένας ιδιοκτήτης ανά πληροφορία**. Ο μετρητής κατέχει την
+ * παρουσίαση της βεβαιότητας· το πάνελ δεν την ξαναλέει.
+ */
+describe('AddressSuggestionsPanel — ένας ιδιοκτήτης της βεβαιότητας (D25)', () => {
+  /**
+   * ⚠️ Δύο υποψήφιοι, αλλιώς ο κατάλογος **δεν ζωγραφίζεται καθόλου** (D22: `chooser`
+   * απαιτεί επιλογή) και οι έλεγχοι θα ήταν πράσινοι χωρίς να δουν τίποτα.
+   * Ο `TooltipProvider` είναι απαίτηση του μετρητή, όπως στην εφαρμογή το `ConditionalAppShell`.
+   */
+  function renderWithChoices() {
+    return render(
+      <TooltipProvider>
+        <AddressSuggestionsPanel
+          trigger="low-confidence"
+          presentation="chooser"
+          candidates={[ranking('Αθηνάς, Μελίσσια'), ranking('Αθηνάς, Βούλα')]}
+          nextOmitField={null}
+          retryExhausted={false}
+          onSelect={jest.fn()}
+        />
+      </TooltipProvider>,
+    );
+  }
+
+  it('το πάνελ ΔΕΝ τυπώνει δεύτερη ετικέτα βεβαιότητας δίπλα στον μετρητή', () => {
+    renderWithChoices();
+
+    // Με ταυτοτικό `t`, το διπλότυπο θα εμφανιζόταν ως το ίδιο του το κλειδί.
+    expect(screen.queryByText('editor.suggestions.confidence')).toBeNull();
+  });
+
+  it('ο μετρητής βεβαιότητας εξακολουθεί να υπάρχει — δεν σβήστηκε η πληροφορία', () => {
+    renderWithChoices();
+
+    expect(screen.getAllByRole('meter')).toHaveLength(2);
   });
 });

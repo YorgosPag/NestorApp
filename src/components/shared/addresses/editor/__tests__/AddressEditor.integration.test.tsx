@@ -20,6 +20,10 @@ import { useAddressEditorContext } from '../AddressEditorContext';
 jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: () => ({
     t: (key: string) => key,
+    // 🔴 Η γλώσσα δηλώνεται **ρητά**: η απόσταση δεν περνά πια από `t` αλλά από `Intl`
+    // (ADR-332 D25 §μονάδα), και χωρίς σταθερή γλώσσα ο έλεγχος θα κρινόταν από τη
+    // ρύθμιση του μηχανήματος που τον τρέχει.
+    currentLanguage: 'el',
   }),
 }));
 
@@ -225,14 +229,33 @@ describe('AddressEditor — η αφετηρία εγγύτητας φτάνει 
     return view;
   }
 
-  it('ΜΕ αφετηρία: ο κατάλογος δείχνει απόσταση', async () => {
-    await renderWithResult({ suggestions: { proximityAnchor: THESSALONIKI } });
-    expect(screen.getAllByText('editor.suggestions.distance').length).toBeGreaterThan(0);
+  /**
+   * 🔴 **ΑΥΤΟΣ Ο ΕΛΕΓΧΟΣ ΞΑΝΑΓΡΑΦΤΗΚΕ, ΚΑΙ Ο ΛΟΓΟΣ ΑΞΙΖΕΙ ΟΣΟ Ο ΕΛΕΓΧΟΣ** (D25 §μονάδα).
+   *
+   * Ως τις 05/09 απαιτούσε `getAllByText('editor.suggestions.distance')` — δηλαδή, με
+   * ταυτοτικό `t`, βεβαίωνε ότι **κλήθηκε το κλειδί**. Ήταν πράσινος όσο η οθόνη έγραφε
+   * **«296.0κμμ»**: μονάδα που δεν υπάρχει, από δύο μισές αποφάσεις που δεν ήξεραν η μία
+   * την άλλη. Το ελάττωμα βρέθηκε με **περπάτημα**, με 476 άγκυρες πράσινες.
+   *
+   * Τώρα ελέγχεται το **αναγνώσιμο αποτέλεσμα**: αριθμός + πραγματική μονάδα CLDR.
+   */
+  /** Αριθμός + ελληνική μονάδα απόστασης, όπως τα γράφει το CLDR: «640 μ.» · «115 χλμ.» */
+  const READABLE_DISTANCE = /\d[\d.,]*\s?(χλμ|μ)\./;
+
+  it('ΜΕ αφετηρία: ο κατάλογος δείχνει ΑΝΑΓΝΩΣΙΜΗ απόσταση, με σωστή μονάδα', async () => {
+    const { container } = await renderWithResult({
+      suggestions: { proximityAnchor: THESSALONIKI },
+    });
+
+    const listbox = screen.getByRole('listbox');
+    expect(listbox.textContent).toMatch(READABLE_DISTANCE);
+    // Η ακριβής παλιά αστοχία, καρφωμένη: διπλή μονάδα από κλειδί + τοπικό format.
+    expect(container.textContent).not.toMatch(/κμμ|κμ/);
   });
 
   it('ΧΩΡΙΣ αφετηρία: ο κατάλογος υπάρχει, αλλά καμία απόσταση — και είναι σωστό', async () => {
     // Χωρίς σημείο αναφοράς κάθε «κοντά» θα ήταν μαντεψιά· η σιωπή είναι η τίμια απάντηση.
     await renderWithResult({});
-    expect(screen.queryByText('editor.suggestions.distance')).toBeNull();
+    expect(screen.getByRole('listbox').textContent).not.toMatch(READABLE_DISTANCE);
   });
 });
