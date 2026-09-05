@@ -118,7 +118,8 @@
     "locatingUser": "Locating...",
     "locationDenied": "Location access denied",
     "locationError": "Could not determine location",
-    "myLocation": "My location"
+    "myLocation": "My location",
+    "fitCandidates": "Show all possible locations"
   },
   "mapStatus": {
     "idle": "Add address fields for map",

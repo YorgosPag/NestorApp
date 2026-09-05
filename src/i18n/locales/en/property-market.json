@@ -938,7 +938,8 @@
       "nameLabel": "What they should call you",
       "emailLabel": "Email",
       "phoneLabel": "Phone",
-      "channelHint": "Leave at least one way to reply. You choose which.",
+      "emailHint": "The confirmation link goes here, and this is what the other side sees.",
+      "channelHint": "Optional. If you leave it, they can call you instead of writing.",
       "submit": "Send my details",
       "submitting": "Writing…",
       "cancel": "Cancel",
@@ -962,13 +963,46 @@
       "contact-foreign-id": "Something went wrong with the record. Please try again.",
       "contact-reason-without-demand": "Something went wrong with the record. Please try again.",
       "contact-name-unset": "Write what they should call you — this is the name they will see.",
-      "contact-channel-unset": "Leave an email or a phone. Either one is enough.",
+      "contact-email-unset": "Enter your email — that is where the confirmation link is sent.",
       "contact-email-malformed": "The email needs the form name@example.com",
       "contact-phone-malformed": "The phone needs 10 digits (e.g. 6912345678) or international form (+30…).",
       "errorSummaryTitle": "Not sent — please fix the following",
       "optionalSuffix": "(optional)",
       "requiredSuffix": "(required)",
-      "closeAfterDone": "Close"
+      "closeAfterDone": "Close",
+      "accountNotice": "When you send, we email you a confirmation link. The moment you follow it your message goes out and your account is created — so you can see your contacts and withdraw them whenever you want."
+    },
+    "guest": {
+      "title": "Check your email",
+      "lead": "We sent a link to {email}. Follow it — or type the six-digit code printed below it.",
+      "why": "Until then nothing has been sent and nobody has heard about you.",
+      "codeLabel": "Six-digit code",
+      "codeHint": "Six digits, in the same email.",
+      "submit": "Confirm",
+      "submitting": "Checking…",
+      "notSent": "We could not send the email. Try again shortly — nothing was lost.",
+      "identityRefused": "We cannot complete the contact with this address. Please get in touch with us.",
+      "writeFailed": "The code was right, but the message was not written. Press ‘Reach out’ again — we will send you a new link.",
+      "failed": "We could not check the code. Try again shortly."
+    },
+    "invitation": {
+      "link-invalid": "This link is not valid. Check that you copied all of it from the email.",
+      "invitation-unknown": "We could not find this invitation. Ask for a new link from the listing page.",
+      "expired": "The link has expired. Press ‘Reach out’ again to get a new one.",
+      "already-used": "Already done. Your message went out with this link — nothing else is needed.",
+      "superseded": "You asked for a newer link. Look for our most recent email — this one was replaced.",
+      "code-wrong": "That code is not right. Check the six digits in the email.",
+      "code-exhausted": "Too many tries and the code locked. Press ‘Reach out’ again for a new link."
+    },
+    "link": {
+      "doneTitle": "Your message is on its way",
+      "doneLead": "Your details are now on their list. We also created your account, so you can see your contacts and withdraw them whenever you want.",
+      "alreadyTitle": "You had already done this",
+      "alreadyLead": "The contact was already open. Nothing was sent twice and you did not take a second slot.",
+      "refusedTitle": "This link did not work",
+      "signingIn": "Signing you in…",
+      "signInFailed": "Your message went out. We could not sign you in automatically though — sign in with your email to see your contacts.",
+      "signIn": "Sign in"
     },
     "mine": {
       "title": "My contacts",
