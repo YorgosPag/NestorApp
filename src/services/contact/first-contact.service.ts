@@ -23,12 +23,18 @@ import 'server-only';
  * 🔑 Η ΣΕΙΡΑ ΤΩΝ ΦΡΟΥΡΩΝ ΕΙΝΑΙ ΣΥΜΒΟΛΑΙΟ, ΟΧΙ ΥΦΟΣ
  * ────────────────────────────────────────────────────────────────────────────
  *
- * | # | Ερώτηση | Γιατί εκεί |
- * |---|---|---|
- * | 1 | *«το έχεις ήδη κάνει;»* | **Ιδεμποτησία πρώτη** (Stripe): το δεύτερο πάτημα δεν επιτρέπεται **ούτε** να ξοδέψει δεύτερη θέση **ούτε** να ακούσει «γέμισε» για κάτι που **πέτυχε** |
- * | 2 | *«χωράει άλλη μία;»* | Η **μία** ανάγνωση έχει ήδη γίνει για το (1). Και όταν είσαι γεμάτος **καμία** πράξη δεν περνά ⇒ το «γέμισε» είναι η αληθινή **και** ενεργήσιμη απάντηση |
- * | 3 | *«υπάρχει ο στόχος, και δεν είσαι εσύ;»* | Πληρώνει ανάγνωση — δεν την πληρώνουμε για κάποιον που δεν μπορεί να πράξει |
- * | 4 | *«η ζήτηση που επικαλείσαι είναι δική σου;»* | Ο **λόγος** γράφεται μόνο αφού ο **στόχος** σταθεί |
+ * | # | Ερώτηση | Πού ζει | Γιατί εκεί |
+ * |---|---|---|---|
+ * | 1 | *«το έχεις ήδη κάνει;»* | `first-contact-admission` | **Ιδεμποτησία πρώτη** (Stripe): το δεύτερο πάτημα δεν επιτρέπεται **ούτε** να ξοδέψει δεύτερη θέση **ούτε** να ακούσει «γέμισε» για κάτι που **πέτυχε** |
+ * | 2 | *«χωράει άλλη μία;»* | `first-contact-admission` | Η **μία** ανάγνωση έχει ήδη γίνει για το (1). Και όταν είσαι γεμάτος **καμία** πράξη δεν περνά ⇒ το «γέμισε» είναι η αληθινή **και** ενεργήσιμη απάντηση |
+ * | 3 | *«υπάρχει ο στόχος, και δεν είσαι εσύ;»* | `first-contact-admission` | Πληρώνει ανάγνωση — δεν την πληρώνουμε για κάποιον που δεν μπορεί να πράξει |
+ * | 4 | *«η ζήτηση που επικαλείσαι είναι δική σου;»* | **εδώ** | Ο **λόγος** γράφεται μόνο αφού ο **στόχος** σταθεί — και κρίνει ό,τι **δηλώθηκε**, όχι το αν γίνεσαι δεκτός |
+ *
+ * 🔴 **ΟΙ ΤΡΕΙΣ ΠΡΩΤΟΙ ΕΦΥΓΑΝ ΣΤΟ §10.18, ΚΑΙ Η ΣΕΙΡΑ ΤΟΥΣ ΤΑΞΙΔΕΨΕ ΜΑΖΙ ΤΟΥΣ.** Είναι
+ * **μία** ερώτηση — *«γίνεσαι δεκτός;»* — και τη ρωτά πλέον **και η οθόνη**, πριν βάψει
+ * το κουμπί. ⛔ **ΜΗΝ τους ξαναγράψεις εδώ**: αν βρεθείς να καλείς `loadSeekerContacts`
+ * ή `resolveTarget` σε αυτό το αρχείο, φτιάχνεις **δεύτερη αυθεντία** για το
+ * «επιτρέπεσαι» — και η οθόνη θα λέει άλλα από τον γραφέα την ημέρα που θα αποκλίνουν.
  *
  * ────────────────────────────────────────────────────────────────────────────
  * ⛔ ΚΑΜΙΑ `EntityAuditService.recordChange()` — ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ, ΟΧΙ ΠΑΡΑΛΕΙΨΗ
@@ -51,14 +57,9 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { canOpenAnotherContact } from '@/lib/contact/first-contact-capacity';
 import type { ListingActor, ListingCustody } from '@/lib/owner-property/listing-custody';
 import { createModuleLogger } from '@/lib/telemetry';
-import {
-  resolveMatchReason,
-  resolveTarget,
-} from '@/services/contact/first-contact-guards';
-import {
-  contactFromDocument,
-  loadSeekerContacts,
-} from '@/services/contact/first-contact-projection';
+import { admitFirstContact } from '@/services/contact/first-contact-admission';
+import { resolveMatchReason } from '@/services/contact/first-contact-guards';
+import { contactFromDocument } from '@/services/contact/first-contact-projection';
 import {
   refuseFirstContact as refuse,
   FIRST_CONTACT_UNAVAILABLE as UNAVAILABLE,
@@ -69,10 +70,10 @@ import {
 import { generateFirstContactId } from '@/services/enterprise-id-convenience';
 import {
   firstContactInvariantViolations,
+  sameFirstContactTarget,
   shownToSeeker,
   type FirstContact,
   type FirstContactDocument,
-  type FirstContactTarget,
   type MatchReason,
 } from '@/types/first-contact';
 
@@ -98,44 +99,21 @@ export async function openFirstContact(
   declaration: FirstContactDeclaration,
   nowISO: string,
 ): Promise<FirstContactWriteResult> {
-  const existing = await loadSeekerContacts(adminDb, actor.uid);
-  if (existing === null) return UNAVAILABLE;
-
-  // 🔑 **ΙΔΕΜΠΟΤΗΣΙΑ ΠΡΩΤΗ.** Δεύτερο πάτημα στο ίδιο κουμπί **δεν είναι νέα πράξη**:
-  //    δεν ξοδεύει δεύτερη θέση, δεν στέλνει δεύτερο εισερχόμενο, και **δεν** ακούει
-  //    «γέμισε» για κάτι που ήδη πέτυχε.
-  const already = existing.find(
-    (contact) => contact.lifecycle === 'open' && sameTarget(contact.target, declaration.target),
-  );
-  if (already !== undefined) return { kind: 'unchanged', contact: shownToSeeker(already) };
-
-  if (!canOpenAnotherContact(existing)) return refuse('capacity-full');
-
-  const target = await resolveTarget(adminDb, actor, declaration.target, nowISO);
-  if ('kind' in target) return target;
+  // 🔑 **ΟΙ ΤΡΕΙΣ ΠΡΩΤΟΙ ΦΡΟΥΡΟΙ ΗΤΑΝ ΜΙΑ ΕΡΩΤΗΣΗ, ΚΑΙ ΕΦΥΓΑΝ** (§10.18): *«γίνεσαι
+  //    δεκτός;»*. Έφυγαν επειδή τη ρωτά πλέον **και η οθόνη, πριν βάψει το κουμπί** —
+  //    και ό,τι μένει ενσωματωμένο μέσα σε πράξη **γραφής** είναι απρόσιτο σε κάθε
+  //    άλλον. Ίδιο σχήμα με το §10.17, μία ερώτηση πιο πάνω.
+  const admission = await admitFirstContact(adminDb, actor, declaration.target, nowISO);
+  if (admission.kind !== 'admitted') return admission;
 
   const reason = await resolveMatchReason(
-    adminDb, actor, declaration.demandId, target.facts, nowISO,
+    adminDb, actor, declaration.demandId, admission.located.facts, nowISO,
   );
   if (reason.kind !== 'reason') return reason;
 
-  return writeContact(adminDb, actor, declaration, target.custody, reason.matchReason, nowISO);
-}
-
-/**
- * **Ίδιος στόχος;** — η μία διατύπωση, ώστε να μη γραφτεί δεύτερη.
- *
- * ⚠️ Δύο πράξεις **διαφορετικού είδους** δεν είναι ποτέ η ίδια, ακόμη κι αν οι
- * ταυτότητες συμπέσουν: το `ownp_*` και το `companyId` ζουν σε **άλλους** χώρους
- * ταυτοτήτων, και μια σύγκριση που τους ανακάτευε θα «έβλεπε» διπλότυπο εκεί που
- * υπάρχουν δύο πραγματικές πράξεις.
- */
-function sameTarget(left: FirstContactTarget, right: FirstContactTarget): boolean {
-  if (left.kind === 'listing' && right.kind === 'listing') {
-    return left.listingId === right.listingId;
-  }
-  return left.kind === 'professional' && right.kind === 'professional'
-    && left.agencyCompanyId === right.agencyCompanyId;
+  return writeContact(
+    adminDb, actor, declaration, admission.located.custody, reason.matchReason, nowISO,
+  );
 }
 
 // =============================================================================
@@ -227,7 +205,7 @@ async function commitIfStillRoom(
   );
 
   const already = existing.find(
-    (open) => open.lifecycle === 'open' && sameTarget(open.target, contact.target),
+    (open) => open.lifecycle === 'open' && sameFirstContactTarget(open.target, contact.target),
   );
   if (already !== undefined) return { kind: 'unchanged', contact: shownToSeeker(already) };
 

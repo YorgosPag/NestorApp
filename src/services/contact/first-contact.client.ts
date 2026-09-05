@@ -31,7 +31,11 @@ import {
   type FirstContactRejection,
 } from '@/services/contact/first-contact-vocabulary';
 import type { SeekerContactView } from '@/services/contact/first-contact-projection';
-import type { FirstContactForSeeker, FirstContactInvariant } from '@/types/first-contact';
+import type {
+  FirstContactForSeeker,
+  FirstContactInvariant,
+  FirstContactTarget,
+} from '@/types/first-contact';
 
 const logger = createModuleLogger('first-contact.client');
 
@@ -235,5 +239,102 @@ export async function fetchFirstContactInbox(): Promise<ContactInboxLoad> {
       error: cause instanceof Error ? cause.message : String(cause),
     });
     return { kind: 'failed' };
+  }
+}
+
+// =============================================================================
+// 4. Η ΗΣΥΧΗ ΕΡΩΤΗΣΗ — «αν πατούσα τώρα, θα με δεχόσουν;» (§10.18)
+// =============================================================================
+
+/**
+ * **Τι απάντησε ο κριτής, πριν πατήσει κανείς.**
+ *
+ * 🔴 **Το `unknown` ΔΕΝ είναι άρνηση, και η οθόνη το διαβάζει ως «δείξε το κουμπί»**
+ * (N.12: *άγνωστο ≠ κενό*). Είναι ο **μόνος** ασφαλής προεπιλεγμένος κλάδος: ένα
+ * fail-closed θα **έκρυβε την πράξη** από αθώο άνθρωπο επειδή έπεσε μια ανάγνωση,
+ * δηλαδή θα μετέτρεπε **βλάβη μας** σε σιωπηλή απαγόρευση.
+ */
+export type ContactAdmissionAnswer =
+  | { readonly kind: 'open' }
+  | { readonly kind: 'already' }
+  | {
+      readonly kind: 'refused';
+      readonly reason: FirstContactRejection;
+      readonly manageHref: string | null;
+    }
+  | { readonly kind: 'unknown' };
+
+/**
+ * **Ο στόχος, ως παράμετροι διαδρομής** — εξαντλητικά, με φρουρό στον μεταγλωττιστή.
+ *
+ * 🔑 **Είναι ο καθρέφτης του `firstContactTargetSchema`, όχι δεύτερος ορισμός**: εκείνο
+ * **διαβάζει**, αυτό **γράφει**, και το `switch` πάνω σε κλειστή ένωση κοκκινίζει στη
+ * μεταγλώττιση αν προστεθεί τρίτο είδος στόχου — αντί να στείλει σιωπηλά διεύθυνση
+ * που ο διακομιστής θα απορρίψει ως `ADMISSION_MALFORMED`.
+ */
+function targetQuery(target: FirstContactTarget): string {
+  switch (target.kind) {
+    case 'listing':
+      return new URLSearchParams({ kind: 'listing', listingId: target.listingId }).toString();
+    case 'professional':
+      return new URLSearchParams({
+        kind: 'professional',
+        agencyCompanyId: target.agencyCompanyId,
+      }).toString();
+    default: {
+      const exhaustive: never = target;
+      return exhaustive;
+    }
+  }
+}
+
+/**
+ * **Ρώτα ήσυχα, πριν βάψεις το κουμπί.**
+ *
+ * ⚠️ **ΚΑΛΕΙΤΑΙ ΜΟΝΟ ΓΙΑ ΣΥΝΔΕΔΕΜΕΝΟ ΘΕΑΤΗ**, και η απόφαση ζει στην οθόνη
+ * ({@link FirstContactAction}) — όχι εδώ. Ο ανώνυμος **δεν μπορεί** να είναι ο
+ * ιδιοκτήτης, δεν έχει ανοιχτές πράξεις και δεν έχει χωρητικότητα να γεμίσει· ένα
+ * αίτημα γι΄ αυτόν θα ήταν **βέβαιο 401** σε **κάθε** προβολή δημόσιας αγγελίας.
+ *
+ * 🔑 **Ο κωδικός φιλτράρεται με τον ΙΔΙΟ φρουρό που φυλά την πράξη**
+ * ({@link isFirstContactRejection}): άγνωστος κωδικός θα κατέληγε **ωμό κλειδί στην
+ * οθόνη** — το περιστατικό ADR-834 §6.5.ε, που ο αδελφός του αποτρέπει ήδη δύο φορές
+ * σε αυτό το αρχείο.
+ *
+ * ⛔ **ΚΑΜΙΑ ΚΡΙΣΗ ΕΔΩ**, όπως και στις τρεις πράξεις από πάνω: αυτό μεταφέρει την
+ * ετυμηγορία **του διακομιστή**. Αν βρεθείς να γράφεις σύγκριση ταυτότητας ή
+ * `custody`, φτιάχνεις τη **δεύτερη αυθεντία** που το `first-contact-admission.ts`
+ * υπάρχει για να μην υπάρξει (CHECK 3.56).
+ */
+export async function askContactAdmission(
+  target: FirstContactTarget,
+): Promise<ContactAdmissionAnswer> {
+  try {
+    const body = await apiClient.get<{
+      verdict?: unknown;
+      reason?: unknown;
+      manageHref?: unknown;
+    }>(`${CONTACTS_URL}/admission?${targetQuery(target)}`);
+
+    if (body.verdict === 'open') return { kind: 'open' };
+    if (body.verdict === 'already') return { kind: 'already' };
+    if (body.verdict === 'refused' && isFirstContactRejection(body.reason)) {
+      return {
+        kind: 'refused',
+        reason: body.reason,
+        manageHref: typeof body.manageHref === 'string' ? body.manageHref : null,
+      };
+    }
+
+    // Σχήμα που δεν αναγνωρίσαμε ⇒ **δεν μάθαμε**. Ποτέ «δεν επιτρέπεσαι».
+    return { kind: 'unknown' };
+  } catch (cause) {
+    // ⚠️ **`debug`, όχι `error`**: το `401` είναι **αναμενόμενο** όποτε η συνεδρία
+    //    λήξει όσο η σελίδα είναι ανοιχτή, και η οθόνη έχει σωστή συμπεριφορά γι΄ αυτό.
+    //    Ένα `error` ανά προβολή θα έπνιγε το ημερολόγιο σε θόρυβο χωρίς αναγνώστη.
+    logger.debug('Η ήσυχη ερώτηση δεν απαντήθηκε — η οθόνη δείχνει το κουμπί', {
+      error: cause instanceof Error ? cause.message : String(cause),
+    });
+    return { kind: 'unknown' };
   }
 }
