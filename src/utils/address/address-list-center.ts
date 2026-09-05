@@ -44,12 +44,28 @@ export interface AddressWithOptionalPosition {
  * έλεγχο `typeof === 'number'`. Ένα `NaN` κέντρο μολύνει **κάθε** απόσταση που μετριέται
  * από αυτό, και οι συγκρίσεις με `NaN` είναι όλες ψευδείς ⇒ η κατάταξη θα κατέρρεε
  * σιωπηλά στη σειρά του παρόχου, χωρίς κανένα σφάλμα πουθενά.
+ *
+ * Εξάγεται ώστε **κάθε** καταναλωτής σημείου να ρωτά τον ίδιο κριτή.
  */
-function usablePosition(address: AddressWithOptionalPosition): CoordinatePoint | undefined {
-  const point = address.coordinates;
+export function usablePoint(
+  point: { readonly lat: number; readonly lng: number } | null | undefined,
+): CoordinatePoint | undefined {
   if (!point) return undefined;
   if (!Number.isFinite(point.lat) || !Number.isFinite(point.lng)) return undefined;
   return { lat: point.lat, lng: point.lng };
+}
+
+/**
+ * Η ίδια ερώτηση, για μια **διεύθυνση** αντί για σκέτο ζεύγος.
+ *
+ * ⚠️ **Αναθέτει, δεν ξαναγράφει** *(ADR-332 D25 §πινέζα)*: όταν προστέθηκε δεύτερος
+ * καταναλωτής του «είναι αυτό χρησιμοποιήσιμο σημείο;» *(η πινέζα που έσυρε ο άνθρωπος)*,
+ * η εύκολη κίνηση ήταν ένας δεύτερος έλεγχος `Number.isFinite`. Δύο έλεγχοι για την ίδια
+ * ερώτηση αποκλίνουν — και η απόκλιση **δεν φαίνεται**, γιατί και οι δύο επιστρέφουν
+ * κάτι εύλογο.
+ */
+function usablePosition(address: AddressWithOptionalPosition): CoordinatePoint | undefined {
+  return usablePoint(address.coordinates);
 }
 
 /**

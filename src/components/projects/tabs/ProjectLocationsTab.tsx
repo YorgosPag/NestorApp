@@ -19,7 +19,7 @@ import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useFullscreen } from '@/hooks/useFullscreen';
 import { storedAddressToResolved } from '@/utils/address/administrative-hierarchy';
-import { addressListCenter } from '@/utils/address/address-list-center';
+import { resolveProximityAnchor } from '@/utils/address/proximity-anchor';
 import { FullscreenOverlay, FullscreenToggleButton } from '@/core/containers/FullscreenOverlay';
 import { cn } from '@/lib/utils';
 import { LocationInlineForm } from './locations/LocationInlineForm';
@@ -112,10 +112,42 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
    * `handleClearPrimaryAddress` τα φτιάχνει με `createProjectAddress` **χωρίς
    * συντεταγμένες**, και το `addressListCenter` απορρίπτει δομικά ό,τι δεν έχει θέση.
    */
-  const proximityAnchor = useMemo(
-    () => addressListCenter(loc.localAddresses),
+  const entityAnchor = useMemo(
+    () => resolveProximityAnchor({ addresses: loc.localAddresses }),
     [loc.localAddresses],
   );
+
+  /**
+   * 🔑 **Η ΦΟΡΜΑ ΠΡΟΣΘΗΚΗΣ ΑΚΟΥΕΙ ΠΡΩΤΑ ΤΟΝ ΑΝΘΡΩΠΟ** — ADR-332 D25 §πινέζα, **απόφαση
+   * Giorgio 05/09**. Αν ο άνθρωπος έσυρε την πινέζα πριν πληκτρολογήσει, είπε **«εδώ»**·
+   * καμία συναγωγή από τη λίστα δεν είναι ισχυρότερη από αυτό. Έργο στη Θεσσαλονίκη με
+   * νέα διεύθυνση στην Καλαμαριά κατατάσσει σωστά **μόνο** έτσι.
+   *
+   * ⚠️ Το `humanPlacedPoint` είναι **ήδη διακριμένο** από το hook: `null` όσο η πινέζα
+   * κάθεται στη μαντεμένη θέση. Ο τύπος του πεδίου δεν δέχεται σημαία «το έσυρε;» —
+   * επίτηδες, ώστε να μη γίνεται να ξεχαστεί *(βλ. `utils/address/proximity-anchor`)*.
+   */
+  const addFormAnchor = useMemo(
+    () => resolveProximityAnchor({
+      humanPlacedPoint: loc.humanPlacedPoint,
+      addresses: loc.localAddresses,
+    }),
+    [loc.humanPlacedPoint, loc.localAddresses],
+  );
+
+  /*
+    ⛔ **Η ΦΟΡΜΑ ΕΠΕΞΕΡΓΑΣΙΑΣ ΔΕΝ ΠΑΙΡΝΕΙ ΤΗΝ ΠΙΝΕΖΑ, ΚΑΙ ΕΙΝΑΙ ΔΟΜΙΚΟ, ΟΧΙ ΤΥΧΑΙΟ.**
+    Η εκκρεμής πινέζα ανήκει **αποκλειστικά** στη ροή προσθήκης: στην επεξεργασία, το
+    σύρσιμο μιας υπαρκτής πινέζας πηγαίνει στο `editEditorRef.setPendingDrag` και περνά
+    από διάλογο επιβεβαίωσης — ο πίνακας δεν κρατά ποτέ εκείνο το σημείο.
+
+    Θα ήταν εύκολο να δοθεί **μία** αφετηρία και στις δύο φόρμες, βασισμένο στο ότι το
+    `humanPlacedPoint` «τυχαίνει» να είναι `null` στην επεξεργασία *(η πινέζα καθαρίζεται
+    στο `handleCancelAdd`, και οι δύο φόρμες δεν συνυπάρχουν)*. Αυτό όμως είναι
+    **συμπερασμός από μηχανή καταστάσεων**, όχι εγγύηση: αρκεί μια μελλοντική διαδρομή
+    που δεν καθαρίζει, για να μεταφερθεί σιωπηλά η πινέζα της προσθήκης σε άλλη εγγραφή.
+    Δύο ονόματα κοστίζουν δύο γραμμές και κάνουν τη διαρροή **αδύνατη**.
+  */
 
   // Unique address types already in use. `other` is excluded from this set so
   // that it can be picked multiple times.
@@ -273,7 +305,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
             t={t}
             tProjects={tProjects}
             availableTypes={availableTypesForAdd}
-            proximityAnchor={proximityAnchor}
+            proximityAnchor={addFormAnchor}
           />
         )}
 
@@ -299,7 +331,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
             t={t}
             availableTypes={availableTypesForEdit}
             tProjects={tProjects}
-            proximityAnchor={proximityAnchor}
+            proximityAnchor={entityAnchor}
           />
         )}
 

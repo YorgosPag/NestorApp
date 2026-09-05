@@ -267,6 +267,21 @@ export function useProjectLocations(project: Project) {
     setAddIsPrimary(false);
   }, []);
 
+  /**
+   * 🔑 **ΤΟ ΣΗΜΕΙΟ ΠΟΥ ΤΟΠΟΘΕΤΗΣΕ Ο ΑΝΘΡΩΠΟΣ** — μία απάντηση, δύο καταναλωτές.
+   *
+   * Η διάκριση *«μαντεμένη πινέζα ή ανθρώπινη πράξη;»* ζούσε ήδη εδώ, ενσωματωμένη στην
+   * αποθήκευση *(«αλλιώς η διεύθυνση κολλάει στην προεπιλεγμένη θέση»)*. Όταν το ADR-332
+   * **D25** χρειάστηκε την **ίδια** διάκριση για την αφετηρία εγγύτητας, η εύκολη κίνηση
+   * ήταν να εκτεθεί το ωμό `pendingHasDragged` και να ξαναγίνει η σύνθεση απ' έξω. Δύο
+   * συνθέσεις της ίδιας ερώτησης **αποκλίνουν σιωπηλά**: η μία θα θυμόταν τον έλεγχο
+   * κενού και η άλλη όχι, και κανένα από τα δύο αποτελέσματα δεν θα φαινόταν λάθος.
+   *
+   * ⚠️ **`null` όσο η πινέζα κάθεται στη μαντεμένη θέση** — κεντροειδές, μετατόπιση
+   * 150 m, ή προεπιλεγμένο κέντρο Αθήνας. Καμία από αυτές δεν είναι δήλωση ανθρώπου.
+   */
+  const humanPlacedPoint = pendingHasDragged ? pendingDragCoords : null;
+
   const handleSaveNewAddress = async () => {
     const addressFields = fromHierarchyValue({ ...EMPTY_HIERARCHY, ...addHierarchy } as AddressWithHierarchyValue);
     if (!addressFields.city) {
@@ -286,7 +301,8 @@ export function useProjectLocations(project: Project) {
         // sat at the default reference position (Athens / centroid), let the
         // map geocode the typed street/city instead — otherwise the saved
         // address gets stuck at the default location.
-        ...(pendingDragCoords && pendingHasDragged ? { coordinates: pendingDragCoords } : {}),
+        // 🔑 Η ίδια τιμή τρέφει και την αφετηρία εγγύτητας (D25) — μία απάντηση.
+        ...(humanPlacedPoint ? { coordinates: humanPlacedPoint } : {}),
         ...(addBlockSide !== SELECT_CLEAR_VALUE ? { blockSide: addBlockSide as BlockSideDirection } : {}),
         ...(addLabel ? { label: addLabel } : {}),
       });
@@ -421,6 +437,7 @@ export function useProjectLocations(project: Project) {
     isAddFormOpen,
     handleOpenAddForm,
     pendingDragCoords,
+    humanPlacedPoint,
     handlePendingDragUpdate,
     addHierarchy,
     setAddHierarchy,
