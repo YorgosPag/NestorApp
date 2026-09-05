@@ -8,6 +8,11 @@ import { SharedAddressActionCard } from '@/components/shared/addresses/SharedAdd
 import { AddressPublicShapeBadge } from '@/components/shared/addresses/AddressPublicShapeBadge';
 import { ADDRESS_TYPE_KEYS, isUniqueAddressType } from './locations/address-constants';
 import { AddressMap } from '@/components/shared/addresses/AddressMap';
+import { AddressMapCandidateLayer } from '@/components/shared/addresses/AddressMapCandidateLayer';
+import {
+  useSuggestionMapBond,
+  useSuggestionOptions,
+} from '@/components/shared/addresses/useSuggestionMapBond';
 import { Button } from '@/components/ui/button';
 import { MapPin, Plus } from 'lucide-react';
 import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -209,6 +214,21 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
     }
     return undefined;
   }, [loc.isAddFormOpen, loc.editingIndex, loc.localAddresses, visibleAddresses]);
+  /**
+   * 🔴 **Ο ΔΕΣΜΟΣ ΚΑΤΑΛΟΓΟΥ ⇄ ΧΑΡΤΗ** — ADR-332 **D26**. Ως τις 05/09 ο κατάλογος
+   * «Πιθανές Τοποθεσίες» έδειχνε πέντε αληθινές διευθύνσεις σε **292-318 χλμ** και **καμία
+   * τους δεν υπήρχε στον χάρτη δεξιά**: ο άνθρωπος διάλεγε στα τυφλά.
+   *
+   * ⚠️ **Ένας δεσμός για ΔΥΟ φόρμες, και δεν είναι παράλειψη.** Οι δύο φόρμες δεν
+   * συνυπάρχουν ποτέ, αλλά αυτό είναι **συμπερασμός από μηχανή καταστάσεων** — ακριβώς ο
+   * τύπος υπόθεσης που το D25 απέρριψε για την αφετηρία. Εδώ δεν χρειάζεται: η αναφορά
+   * κουβαλά **τη δική της** πράξη επιλογής και **τη δική της** αφετηρία
+   * (`SuggestionMapReport`), οπότε δεν υπάρχει τίποτα να δρομολογηθεί λάθος.
+   */
+  const candidateBond = useSuggestionMapBond();
+  const addSuggestions = useSuggestionOptions(candidateBond, addFormAnchor);
+  const editSuggestions = useSuggestionOptions(candidateBond, entityAnchor);
+
   const mapAddresses = useMemo<ProjectAddress[]>(() => {
     const real = visibleAddresses.map(({ address }) => address);
     if (!loc.isAddFormOpen || !loc.pendingDragCoords) return real;
@@ -305,7 +325,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
             t={t}
             tProjects={tProjects}
             availableTypes={availableTypesForAdd}
-            proximityAnchor={addFormAnchor}
+            suggestions={addSuggestions}
           />
         )}
 
@@ -331,7 +351,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
             t={t}
             availableTypes={availableTypesForEdit}
             tProjects={tProjects}
-            proximityAnchor={entityAnchor}
+            suggestions={editSuggestions}
           />
         )}
 
@@ -424,6 +444,21 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
           dragResetKey={undoRedoCount}
           heightPreset="viewerFullscreen"
           className="rounded-lg border shadow-sm !h-full"
+          /*
+            ADR-332 D26 — οι υποψήφιοι ζωγραφίζονται **στον ίδιο χάρτη** χωρίς να γίνουν
+            διευθύνσεις: δεν γεωκωδικοποιούνται, δεν σύρονται, δεν μετακινούν την κάμερα.
+            Το τελευταίο είναι **απόφαση**, όχι παράλειψη: το αυτόματο fit-bounds θα
+            πετούσε τον άνθρωπο σε μισή Ελλάδα κάθε φορά που εμφανίζεται ο κατάλογος.
+          */
+          overlay={candidateBond.candidates.length > 0 ? (
+            <AddressMapCandidateLayer
+              candidates={candidateBond.candidates}
+              highlightedRank={candidateBond.highlightedRank}
+              onHighlight={candidateBond.setHighlightedRank}
+              onSelect={candidateBond.select}
+              anchor={candidateBond.anchor}
+            />
+          ) : undefined}
         />
       </aside>
 

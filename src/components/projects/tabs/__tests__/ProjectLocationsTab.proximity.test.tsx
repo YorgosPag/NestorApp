@@ -32,9 +32,15 @@ jest.mock('@/i18n/hooks/useTranslation', () => ({
 }));
 
 /** Το τέρμα της αλυσίδας, ως καταγραφέας — τα παιδιά δεν αποδίδονται επίτηδες. */
-const receivedSuggestions: unknown[] = [];
+/**
+ * ⚠️ Ο τύπος έγινε **ρητός** (ADR-332 D26): η ομάδα ρυθμίσεων απέκτησε και τον δεσμό
+ * καταλόγου⇄χάρτη, οπότε ένα `toEqual({ proximityAnchor })` πάνω σε **ολόκληρο** το
+ * αντικείμενο θα κοκκίνιζε για κάθε μελλοντικό πεδίο. Ο ισχυρισμός αυτού του αρχείου
+ * ήταν πάντα *«φτάνει η αφετηρία»* — τώρα το λέει και ο κώδικάς του.
+ */
+const receivedSuggestions: Array<{ proximityAnchor?: unknown } | undefined> = [];
 jest.mock('@/components/shared/addresses/editor', () => ({
-  AddressEditor: (props: { suggestions?: unknown }) => {
+  AddressEditor: (props: { suggestions?: { proximityAnchor?: unknown } }) => {
     receivedSuggestions.push(props.suggestions);
     return null;
   },
@@ -44,6 +50,16 @@ jest.mock('@/components/shared/addresses/editor', () => ({
 /** Ο χάρτης απαιτεί Leaflet και δεν συμμετέχει στην ερώτηση. */
 jest.mock('@/components/shared/addresses/AddressMap', () => ({
   AddressMap: () => null,
+}));
+
+/**
+ * Το ίδιο ισχύει και για το στρώμα υποψηφίων (ADR-332 D26): εισάγει `maplibre-gl`, που
+ * απαιτεί `URL.createObjectURL` — ανύπαρκτο στο jsdom. **Δεν συμμετέχει στην ερώτηση
+ * αυτού του αρχείου** *(«φτάνει η αφετηρία;»)*· τη δική του ερώτηση τη φυλάνε οι
+ * `address-map-candidates.test.ts` και `useSuggestionMapBond.test.tsx`.
+ */
+jest.mock('@/components/shared/addresses/AddressMapCandidateLayer', () => ({
+  AddressMapCandidateLayer: () => null,
 }));
 
 jest.mock('../locations/useProjectLocations');
@@ -165,7 +181,7 @@ describe('ProjectLocationsTab — η αφετηρία φτάνει και στι
       const captured = renderTab([address({ coordinates: SITE_POINT })], form);
 
       expect(captured).toHaveLength(1);
-      expect(captured[0]).toEqual({ proximityAnchor: SITE_POINT });
+      expect(captured[0]?.proximityAnchor).toEqual(SITE_POINT);
     },
   );
 
@@ -175,7 +191,7 @@ describe('ProjectLocationsTab — η αφετηρία φτάνει και στι
     // («πού να πιαστεί το χέρι;»), και ως αφετηρία θα ανέβαζε την Αθήνα πρώτη.
     const captured = renderTab([address({ coordinates: undefined })], 'add');
 
-    expect(captured[0]).toEqual({ proximityAnchor: undefined });
+    expect(captured[0]?.proximityAnchor).toBeUndefined();
   });
 
   it('το «φάντασμα» της καθαρισμένης κύριας δεν κλέβει την αφετηρία', () => {
@@ -190,7 +206,7 @@ describe('ProjectLocationsTab — η αφετηρία φτάνει και στι
       'edit',
     );
 
-    expect(captured[0]).toEqual({ proximityAnchor: SITE_POINT });
+    expect(captured[0]?.proximityAnchor).toEqual(SITE_POINT);
   });
 });
 
@@ -212,20 +228,20 @@ describe('ProjectLocationsTab — η πινέζα του ανθρώπου νικ
   it('φόρμα προσθήκης: η ΣΥΡΜΕΝΗ πινέζα γίνεται αφετηρία, όχι η θέση του έργου', () => {
     const captured = renderTab([address({ coordinates: SITE_POINT })], 'add', DRAGGED_POINT);
 
-    expect(captured[0]).toEqual({ proximityAnchor: DRAGGED_POINT });
+    expect(captured[0]?.proximityAnchor).toEqual(DRAGGED_POINT);
   });
 
   it('🔴 πινέζα ΜΑΝΤΕΜΕΝΗ (ο άνθρωπος δεν την άγγιξε) ⇒ μιλά το έργο, ΠΟΤΕ η πινέζα', () => {
     // Το hook δίνει `humanPlacedPoint: null` όσο η πινέζα κάθεται στη μαντεμένη θέση.
     const captured = renderTab([address({ coordinates: SITE_POINT })], 'add', null);
 
-    expect(captured[0]).toEqual({ proximityAnchor: SITE_POINT });
+    expect(captured[0]?.proximityAnchor).toEqual(SITE_POINT);
   });
 
   it('συρμένη πινέζα σε έργο ΧΩΡΙΣ καμία αποθηκευμένη θέση ⇒ αρκεί μόνη της', () => {
     const captured = renderTab([address({ coordinates: undefined })], 'add', DRAGGED_POINT);
 
-    expect(captured[0]).toEqual({ proximityAnchor: DRAGGED_POINT });
+    expect(captured[0]?.proximityAnchor).toEqual(DRAGGED_POINT);
   });
 
   it('🔴 φόρμα ΕΠΕΞΕΡΓΑΣΙΑΣ: αγνοεί την εκκρεμή πινέζα ακόμη κι αν υπάρχει', () => {
@@ -234,6 +250,6 @@ describe('ProjectLocationsTab — η πινέζα του ανθρώπου νικ
     // πινέζα μιας νέας διεύθυνσης διαρρέει σε εγγραφή που διορθώνεται.
     const captured = renderTab([address({ coordinates: SITE_POINT })], 'edit', DRAGGED_POINT);
 
-    expect(captured[0]).toEqual({ proximityAnchor: SITE_POINT });
+    expect(captured[0]?.proximityAnchor).toEqual(SITE_POINT);
   });
 });

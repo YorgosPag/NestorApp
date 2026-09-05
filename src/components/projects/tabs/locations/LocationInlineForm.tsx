@@ -12,7 +12,11 @@ import { Button } from '@/components/ui/button';
 import { AddressWithHierarchy } from '@/components/shared/addresses/AddressWithHierarchy';
 import type { AddressWithHierarchyValue } from '@/components/shared/addresses/AddressWithHierarchy';
 import { AddressEditor } from '@/components/shared/addresses/editor';
-import type { AddressEditorHandle, ResolvedAddressFields } from '@/components/shared/addresses/editor';
+import type {
+  AddressEditorHandle,
+  AddressEditorSuggestionOptions,
+  ResolvedAddressFields,
+} from '@/components/shared/addresses/editor';
 import { hierarchyToResolvedAddress } from '@/utils/address/administrative-hierarchy';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
@@ -49,17 +53,24 @@ interface LocationInlineFormProps {
   tProjects: (key: string) => string;
   availableTypes?: readonly ProjectAddressType[];
   /**
-   * Πού μετριέται το «κοντά» για την κατάταξη των προτάσεων (ADR-332 D23/D25).
+   * Οι ρυθμίσεις του πάνελ προτάσεων — **αφετηρία εγγύτητας** (ADR-332 D23/D25) **και**
+   * ο δεσμός καταλόγου⇄χάρτη (ADR-332 **D26**).
    *
-   * ⚠️ **Δεν υπολογίζεται εδώ, επίτηδες.** Αυτή η φόρμα ξέρει *μία* διεύθυνση — αυτή που
-   * γράφεται τώρα. Η αφετηρία είναι ιδιότητα του **έργου**, και μόνο ο γονιός
-   * (`ProjectLocationsTab`) κρατά ολόκληρη τη λίστα. Αν την υπολόγιζε η φόρμα, θα
-   * απαντούσε ερώτηση που δεν βλέπει.
+   * ⚠️ **Τίποτα από αυτά δεν υπολογίζεται εδώ, επίτηδες.** Αυτή η φόρμα ξέρει *μία*
+   * διεύθυνση — αυτή που γράφεται τώρα. Η αφετηρία είναι ιδιότητα του **έργου** και ο
+   * χάρτης ανήκει στον γονιό· μόνο ο `ProjectLocationsTab` βλέπει και τα δύο. Αν τα
+   * υπολόγιζε η φόρμα, θα απαντούσε ερώτηση που δεν βλέπει.
    *
-   * Απών ⇒ η κατάταξη γίνεται μόνο με βεβαιότητα, χωρίς γραμμή απόστασης — σωστή
+   * 🔑 **Περνιέται ολόκληρη η ομάδα, όχι ένα-ένα τα πεδία της.** Ήταν `proximityAnchor`
+   * σκέτο· κάθε νέο πεδίο του `AddressEditorSuggestionOptions` θα απαιτούσε **δεύτερη**
+   * χειρόγραφη δήλωση εδώ, και η παράλειψη θα ήταν prop που ο καλών **δεν μπορεί να
+   * περάσει**, σιωπηλά. Είναι κατά λέξη το εύρημα που κατέγραψε ο `InteractiveMap`
+   * *(«ήταν χειρόγραφο αντίγραφο 40 γραμμών… και είχε ήδη αποκλίνει»)*.
+   *
+   * Απούσα αφετηρία ⇒ κατάταξη μόνο με βεβαιότητα, χωρίς γραμμή απόστασης — σωστή
    * συμπεριφορά, όχι υποβάθμιση.
    */
-  proximityAnchor?: { lat: number; lng: number };
+  suggestions?: AddressEditorSuggestionOptions;
 }
 
 // =============================================================================
@@ -94,7 +105,7 @@ export const LocationInlineForm = forwardRef<AddressEditorHandle, LocationInline
     t,
     tProjects,
     availableTypes,
-    proximityAnchor,
+    suggestions,
   }, ref) {
     const iconSizes = useIconSizes();
     const typography = useTypography();
@@ -183,7 +194,7 @@ export const LocationInlineForm = forwardRef<AddressEditorHandle, LocationInline
             onUndoRedo={onUndoRedo}
             mode="edit"
             domain="project"
-            suggestions={{ proximityAnchor }}
+            suggestions={suggestions}
             formOptions={{ hideGrid: true, showNeighborhoodRegion: true }}
             activityLog={{ collapsed: true }}
           >

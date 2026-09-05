@@ -62,6 +62,21 @@ export interface HintedFieldProps {
    */
   readonly type?: 'text' | 'email' | 'tel';
   readonly autoComplete?: string;
+  /**
+   * **Ποιο πληκτρολόγιο ανοίγει στο κινητό** — εμφάνιση, ποτέ επικύρωση.
+   *
+   * 🔴 **ΠΡΟΣΤΕΘΗΚΕ ΑΝΤΙ ΓΙΑ `type="number"`** (ADR-844 Β5, κανόνας N.0.2): το πεδίο
+   * του εξαψήφιου κωδικού χρειάζεται αριθμητικό πληκτρολόγιο, και ο **προφανής** δρόμος
+   * —`type="number"`— είναι λάθος για τρεις μετρήσιμους λόγους: κόβει τα **κενά** που
+   * τυπώνει το email (`472 913`), εμφανίζει **βελάκια αύξησης** σε κάτι που δεν είναι
+   * ποσότητα, και ενεργοποιεί **εγγενή** επικύρωση φυλλομετρητή — δηλαδή αγγλικά πάνω
+   * σε ελληνική οθόνη, ακριβώς ό,τι απαγορεύει το σχόλιο του `type` από πάνω.
+   *
+   * ⚠️ **`'numeric'`, ΟΧΙ `'tel'`, για κωδικό**: το `tel` ανοίγει πληκτρολόγιο
+   * **τηλεφώνου** με `*`, `#` και `+` — σύμβολα που **δεν** υπάρχουν σε κωδικό, και που
+   * ο άνθρωπος θα δει να του προσφέρονται χωρίς λόγο.
+   */
+  readonly inputMode?: 'text' | 'numeric' | 'tel' | 'email';
   /** Για επικύρωση **μετά** το πεδίο, ποτέ ενώ πληκτρολογεί (Baymard). */
   readonly onBlur?: () => void;
   /** Μικρό επίθεμα δίπλα στην ετικέτα — *«(προαιρετικό)»* / *«(απαιτείται)»*. */
@@ -80,6 +95,7 @@ export function HintedField({
   error,
   type = 'text',
   autoComplete,
+  inputMode,
   onBlur,
   labelSuffix,
 }: HintedFieldProps): React.ReactElement {
@@ -113,6 +129,7 @@ export function HintedField({
         readOnly={readOnly}
         disabled={disabled}
         autoComplete={autoComplete}
+        inputMode={inputMode}
         aria-describedby={describedBy === '' ? undefined : describedBy}
         aria-invalid={error !== undefined}
         placeholder={placeholder}
