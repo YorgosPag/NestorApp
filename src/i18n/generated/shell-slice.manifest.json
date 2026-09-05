@@ -3,7 +3,7 @@
   "artifacts": {
     "src/i18n/generated/routes/data-deletion.el.json": "50365f50ff77003a6cb3602a0863d0dc674b3f215b30e55bfd88d21aa793807b",
     "src/i18n/generated/routes/demands.el.json": "8d920afce4681d2fb27b97286b773db492257d880fc5f00c201dcc610898560c",
-    "src/i18n/generated/routes/demands__demandId.el.json": "27d520eabce9a02c5100994b3529145a2d86d6316c84a0ce778254344c7aa84f",
+    "src/i18n/generated/routes/demands__demandId.el.json": "fd2d1b5b0ed4628ec4d75992eef44d0c0b33af93e956614f26b56fa718bb32ed",
     "src/i18n/generated/routes/demands__new.el.json": "a00a37bb34cebdd1e27ee54c89fbbffd9f8b0f9df761d8c601d04d5ee1e32042",
     "src/i18n/generated/routes/listing__id.el.json": "8c6fb176332e7133cdfa4a2fbc201d65b412683a0c532e4ad67b4b7eba2113bb",
     "src/i18n/generated/routes/login.el.json": "6ba750825f9e8597ac3c9718ed99005e265a55752e1d64217ba48b29fad7f281",
@@ -65,7 +65,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "5a5fca8d9097f6633f6f73af5f2cee7bacab98f3248bf89f3506d4030b6dc9c9",
+  "inputsSha256": "e3466c757ceafa9caadacf47fe12511f0b4804780cd650fb6f0eb877c622803e",
   "languages": [
     "el"
   ],
@@ -287,18 +287,18 @@
     "src/lib/agency/showcase-wire.ts": "f36b90668936e15e90de9a50dd94d3fdfacdccf4c92d4ed52aa7824f6a03d5b5",
     "src/lib/auth/brokerage-authority.ts": "147a6776dcc3e020043fb913dd34d48af38c33afaa7b66243b779e4eea412c5c",
     "src/lib/contact/first-contact-form-values.ts": "333ab8076b837f8935b58e0e4cd7601577963a91b4cd639ea19dbf1394ad4d16",
-    "src/lib/contacts/primary-email.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
+    "src/lib/contacts/primary-email.ts": "be062827144f613c7f73525068f4ec1de9bd81ff36b425dc69bc6b538c3a970c",
     "src/lib/criteria/criterion-option-counts.ts": "df08b34cd0375fa66e1519fc81c51f0fe380f70ea2720f3a4a6f3fcbaa7d93b8",
     "src/lib/criteria/listing-criterion-labels.ts": "aaeca76e2f8dacd6f3e05fbe3902999e79ea80e0724423019d51308781ddf06e",
     "src/lib/demand/demand-aggregate.ts": "78e1df376b7bf05793d4ce7abf2e098af8c5c331921cca126c09fd0137eb8e90",
-    "src/lib/demand/demand-answer.ts": "b86a52989f0d55650a299ffbac0ec6c15682ac680ec0b5abeb1ae42c7770d3c1",
+    "src/lib/demand/demand-answer.ts": "a1dbf044b4a62a3ecc051e7a90614ed78e7737a7bb8025855faf74dbc79bbff8",
     "src/lib/demand/demand-concessions.ts": "be06172343d39b813eb35b7da485d6d0c3d0c9c4641ee45da75c509ad38cc44c",
     "src/lib/demand/demand-form-validation.ts": "f2c33f045529b49af04d71ac125a1c238536b976692b5f18fe16034a342ffe2f",
     "src/lib/demand/demand-form-values.ts": "ecdad7067f06da0c75b6281acf05bc3da58209a05720d2ab60c81c8669760949",
     "src/lib/demand/demand-interest.ts": "7e624ab94ff18c3f19557c8f408025361c7a2d512e51e166dad95c41bc5a0e62",
     "src/lib/demand/demand-life-presets.ts": "d8ad11a7d479e93d036eaf1bc6d8342d41a8d9c607ff287ef45e912e7ea5e65c",
     "src/lib/demand/demand-listing-filters.ts": "f7a0146d5132fe567a875ee3ac31c5dbc0531051cd5163fbeb07c3874cf15b29",
-    "src/lib/demand/demand-match-axes.ts": "ce577c2bff4e683f72cb2158127491f2ca4e01cdedb6b06f7147b16e73e57be8",
+    "src/lib/demand/demand-match-axes.ts": "ece319c42790829c3c46962b6d96944f32830af833fea5d486a7ede9be2fe4dc",
     "src/lib/demand/demand-match-vocabulary.ts": "0a9152d4816dcbecfedb288e40b84bf8c5171dbc7e0804b4ce569164f568301c",
     "src/lib/demand/demand-matching.ts": "b76cb10ec5a33005b1b02a1cc34711742acdc927cbfbc0d202b8fbb1c4660ace",
     "src/lib/environment/environment-audit.ts": "5d0881da20ddac48bb810d62c69675086910384c624de7df358d2b145500262b",
@@ -348,6 +348,7 @@
     "src/lib/owner-property/owner-property-projection.ts": "732c216bc8dfd992151c4f44fd9b563e52fac495dcc993a3047563655c0aa1a1",
     "src/lib/places/place-claim-validation.ts": "a157fcedd9f80412f18309f840076e298026c2e857bbbdddd48fb647b262fe0b",
     "src/lib/places/place-claim.ts": "73eb20571bf6ef6cc5e04a3b4ad3647c2b73a5f5a6b64652713e96eebfea4f77",
+    "src/lib/primary-entry.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/property/property-completion-stance.ts": "e03d3e31e18bb9a51aa428bea0ff2bdc23dd6477be22e5460b10105f258cd343",
     "src/lib/stay/stay-availability.ts": "ae4e3d59e0b03634a4d1af8c1c34f8186a4c902ae09018fa5a26e947162678db",
     "src/lib/stay/stay-conflict.ts": "90b9a4d4a18d0591c7415c42ef3bd0476bc7e06dd796617f705ca05e28849da8",
@@ -4198,7 +4199,7 @@
     "matchedKeys": 162,
     "routeBoundaries": 0,
     "shellFiles": 562,
-    "sliceBytes": 372780
+    "sliceBytes": 373107
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
@@ -4596,6 +4597,10 @@
   ],
   "wants": {
     "admin": {
+      "from": [
+        "src/components/admin/layout/AdminSidebar.tsx",
+        "src/components/header/CompanySwitcher.tsx"
+      ],
       "keys": [
         "companySwitcher.noCompanies",
         "companySwitcher.selectCompany",
@@ -4608,6 +4613,11 @@
       "whole": true
     },
     "auth": {
+      "from": [
+        "src/auth/components/AuthScreenChrome.tsx",
+        "src/auth/components/ProtectedRoute.tsx",
+        "src/components/private-space/PrivateSpaceShell.tsx"
+      ],
       "keys": [
         "brand.name",
         "loading.checkingAccess",
@@ -4617,6 +4627,43 @@
       "whole": false
     },
     "common": {
+      "from": [
+        "src/app/(app)/o/[workspace]/account/layout.tsx",
+        "src/components/NotificationBell.enterprise.tsx",
+        "src/components/NotificationDrawer.enterprise.tsx",
+        "src/components/admin/ai-inbox/AIInboxUnauthorized.tsx",
+        "src/components/app-header.tsx",
+        "src/components/header/help-button.tsx",
+        "src/components/header/language-switcher.tsx",
+        "src/components/header/theme-toggle.tsx",
+        "src/components/header/user-menu.tsx",
+        "src/components/header/voice-assistant-button.tsx",
+        "src/components/search/GlobalSearchDialog.tsx",
+        "src/components/search/SearchResultItem.tsx",
+        "src/components/ui/ProductTour/product-tour-overlay.tsx",
+        "src/components/ui/ShareButton.tsx",
+        "src/components/ui/ShareModal.tsx",
+        "src/components/ui/channel-sharing/ChannelLinkForm.tsx",
+        "src/components/ui/channel-sharing/ChannelShareForm.tsx",
+        "src/components/ui/channel-sharing/ContactChannelPicker.tsx",
+        "src/components/ui/dialog.tsx",
+        "src/components/ui/email-sharing/ContactEmailPicker.tsx",
+        "src/components/ui/email-sharing/EmailShareForm.tsx",
+        "src/components/ui/search/SearchInput.tsx",
+        "src/components/ui/sharing/panels/UserAuthPermissionPanel.tsx",
+        "src/components/ui/sharing/panels/user-auth/PhotoPickerStep.tsx",
+        "src/components/ui/sheet.tsx",
+        "src/components/ui/sidebar.tsx",
+        "src/components/ui/social-sharing/CopyActionsSection.tsx",
+        "src/components/ui/social-sharing/PhotoPickerGrid.tsx",
+        "src/components/ui/social-sharing/SharePlatformGrid.tsx",
+        "src/components/voice-ai/VoiceAIPanel.tsx",
+        "src/core/modals/PhotoPreviewModal.tsx",
+        "src/core/modals/photo-preview-helpers.ts",
+        "src/design-system/primitives/Card/CardActionsToolbar.tsx",
+        "src/hooks/notifications/useFilesNotifications.ts",
+        "src/providers/NotificationProvider.tsx"
+      ],
       "keys": [
         "a11y.addFavorite",
         "a11y.cardActions",
@@ -4888,6 +4935,43 @@
       "whole": true
     },
     "common-account": {
+      "from": [
+        "src/app/(app)/o/[workspace]/account/layout.tsx",
+        "src/components/NotificationBell.enterprise.tsx",
+        "src/components/NotificationDrawer.enterprise.tsx",
+        "src/components/admin/ai-inbox/AIInboxUnauthorized.tsx",
+        "src/components/app-header.tsx",
+        "src/components/header/MySpacesSection.tsx",
+        "src/components/header/help-button.tsx",
+        "src/components/header/language-switcher.tsx",
+        "src/components/header/theme-toggle.tsx",
+        "src/components/header/user-menu.tsx",
+        "src/components/header/voice-assistant-button.tsx",
+        "src/components/search/GlobalSearchDialog.tsx",
+        "src/components/search/SearchResultItem.tsx",
+        "src/components/ui/ProductTour/product-tour-overlay.tsx",
+        "src/components/ui/ShareButton.tsx",
+        "src/components/ui/ShareModal.tsx",
+        "src/components/ui/channel-sharing/ChannelLinkForm.tsx",
+        "src/components/ui/channel-sharing/ChannelShareForm.tsx",
+        "src/components/ui/channel-sharing/ContactChannelPicker.tsx",
+        "src/components/ui/dialog.tsx",
+        "src/components/ui/email-sharing/ContactEmailPicker.tsx",
+        "src/components/ui/email-sharing/EmailShareForm.tsx",
+        "src/components/ui/search/SearchInput.tsx",
+        "src/components/ui/sharing/panels/UserAuthPermissionPanel.tsx",
+        "src/components/ui/sharing/panels/user-auth/PhotoPickerStep.tsx",
+        "src/components/ui/sheet.tsx",
+        "src/components/ui/sidebar.tsx",
+        "src/components/ui/social-sharing/CopyActionsSection.tsx",
+        "src/components/ui/social-sharing/PhotoPickerGrid.tsx",
+        "src/components/ui/social-sharing/SharePlatformGrid.tsx",
+        "src/components/voice-ai/VoiceAIPanel.tsx",
+        "src/core/modals/PhotoPreviewModal.tsx",
+        "src/core/modals/photo-preview-helpers.ts",
+        "src/design-system/primitives/Card/CardActionsToolbar.tsx",
+        "src/providers/NotificationProvider.tsx"
+      ],
       "keys": [
         "a11y.addFavorite",
         "a11y.cardActions",
@@ -5162,6 +5246,42 @@
       "whole": false
     },
     "common-actions": {
+      "from": [
+        "src/app/(app)/o/[workspace]/account/layout.tsx",
+        "src/components/NotificationBell.enterprise.tsx",
+        "src/components/NotificationDrawer.enterprise.tsx",
+        "src/components/admin/ai-inbox/AIInboxUnauthorized.tsx",
+        "src/components/app-header.tsx",
+        "src/components/header/help-button.tsx",
+        "src/components/header/language-switcher.tsx",
+        "src/components/header/theme-toggle.tsx",
+        "src/components/header/user-menu.tsx",
+        "src/components/header/voice-assistant-button.tsx",
+        "src/components/search/GlobalSearchDialog.tsx",
+        "src/components/search/SearchResultItem.tsx",
+        "src/components/ui/ProductTour/product-tour-overlay.tsx",
+        "src/components/ui/ShareButton.tsx",
+        "src/components/ui/ShareModal.tsx",
+        "src/components/ui/channel-sharing/ChannelLinkForm.tsx",
+        "src/components/ui/channel-sharing/ChannelShareForm.tsx",
+        "src/components/ui/channel-sharing/ContactChannelPicker.tsx",
+        "src/components/ui/dialog.tsx",
+        "src/components/ui/email-sharing/ContactEmailPicker.tsx",
+        "src/components/ui/email-sharing/EmailShareForm.tsx",
+        "src/components/ui/search/SearchInput.tsx",
+        "src/components/ui/sharing/panels/UserAuthPermissionPanel.tsx",
+        "src/components/ui/sharing/panels/user-auth/PhotoPickerStep.tsx",
+        "src/components/ui/sheet.tsx",
+        "src/components/ui/sidebar.tsx",
+        "src/components/ui/social-sharing/CopyActionsSection.tsx",
+        "src/components/ui/social-sharing/PhotoPickerGrid.tsx",
+        "src/components/ui/social-sharing/SharePlatformGrid.tsx",
+        "src/components/voice-ai/VoiceAIPanel.tsx",
+        "src/core/modals/PhotoPreviewModal.tsx",
+        "src/core/modals/photo-preview-helpers.ts",
+        "src/design-system/primitives/Card/CardActionsToolbar.tsx",
+        "src/providers/NotificationProvider.tsx"
+      ],
       "keys": [
         "a11y.addFavorite",
         "a11y.cardActions",
@@ -5433,6 +5553,42 @@
       "whole": true
     },
     "common-empty-states": {
+      "from": [
+        "src/app/(app)/o/[workspace]/account/layout.tsx",
+        "src/components/NotificationBell.enterprise.tsx",
+        "src/components/NotificationDrawer.enterprise.tsx",
+        "src/components/admin/ai-inbox/AIInboxUnauthorized.tsx",
+        "src/components/app-header.tsx",
+        "src/components/header/help-button.tsx",
+        "src/components/header/language-switcher.tsx",
+        "src/components/header/theme-toggle.tsx",
+        "src/components/header/user-menu.tsx",
+        "src/components/header/voice-assistant-button.tsx",
+        "src/components/search/GlobalSearchDialog.tsx",
+        "src/components/search/SearchResultItem.tsx",
+        "src/components/ui/ProductTour/product-tour-overlay.tsx",
+        "src/components/ui/ShareButton.tsx",
+        "src/components/ui/ShareModal.tsx",
+        "src/components/ui/channel-sharing/ChannelLinkForm.tsx",
+        "src/components/ui/channel-sharing/ChannelShareForm.tsx",
+        "src/components/ui/channel-sharing/ContactChannelPicker.tsx",
+        "src/components/ui/dialog.tsx",
+        "src/components/ui/email-sharing/ContactEmailPicker.tsx",
+        "src/components/ui/email-sharing/EmailShareForm.tsx",
+        "src/components/ui/search/SearchInput.tsx",
+        "src/components/ui/sharing/panels/UserAuthPermissionPanel.tsx",
+        "src/components/ui/sharing/panels/user-auth/PhotoPickerStep.tsx",
+        "src/components/ui/sheet.tsx",
+        "src/components/ui/sidebar.tsx",
+        "src/components/ui/social-sharing/CopyActionsSection.tsx",
+        "src/components/ui/social-sharing/PhotoPickerGrid.tsx",
+        "src/components/ui/social-sharing/SharePlatformGrid.tsx",
+        "src/components/voice-ai/VoiceAIPanel.tsx",
+        "src/core/modals/PhotoPreviewModal.tsx",
+        "src/core/modals/photo-preview-helpers.ts",
+        "src/design-system/primitives/Card/CardActionsToolbar.tsx",
+        "src/providers/NotificationProvider.tsx"
+      ],
       "keys": [
         "a11y.addFavorite",
         "a11y.cardActions",
@@ -5704,6 +5860,42 @@
       "whole": true
     },
     "common-navigation": {
+      "from": [
+        "src/app/(app)/o/[workspace]/account/layout.tsx",
+        "src/components/NotificationBell.enterprise.tsx",
+        "src/components/NotificationDrawer.enterprise.tsx",
+        "src/components/admin/ai-inbox/AIInboxUnauthorized.tsx",
+        "src/components/app-header.tsx",
+        "src/components/header/help-button.tsx",
+        "src/components/header/language-switcher.tsx",
+        "src/components/header/theme-toggle.tsx",
+        "src/components/header/user-menu.tsx",
+        "src/components/header/voice-assistant-button.tsx",
+        "src/components/search/GlobalSearchDialog.tsx",
+        "src/components/search/SearchResultItem.tsx",
+        "src/components/ui/ProductTour/product-tour-overlay.tsx",
+        "src/components/ui/ShareButton.tsx",
+        "src/components/ui/ShareModal.tsx",
+        "src/components/ui/channel-sharing/ChannelLinkForm.tsx",
+        "src/components/ui/channel-sharing/ChannelShareForm.tsx",
+        "src/components/ui/channel-sharing/ContactChannelPicker.tsx",
+        "src/components/ui/dialog.tsx",
+        "src/components/ui/email-sharing/ContactEmailPicker.tsx",
+        "src/components/ui/email-sharing/EmailShareForm.tsx",
+        "src/components/ui/search/SearchInput.tsx",
+        "src/components/ui/sharing/panels/UserAuthPermissionPanel.tsx",
+        "src/components/ui/sharing/panels/user-auth/PhotoPickerStep.tsx",
+        "src/components/ui/sheet.tsx",
+        "src/components/ui/sidebar.tsx",
+        "src/components/ui/social-sharing/CopyActionsSection.tsx",
+        "src/components/ui/social-sharing/PhotoPickerGrid.tsx",
+        "src/components/ui/social-sharing/SharePlatformGrid.tsx",
+        "src/components/voice-ai/VoiceAIPanel.tsx",
+        "src/core/modals/PhotoPreviewModal.tsx",
+        "src/core/modals/photo-preview-helpers.ts",
+        "src/design-system/primitives/Card/CardActionsToolbar.tsx",
+        "src/providers/NotificationProvider.tsx"
+      ],
       "keys": [
         "a11y.addFavorite",
         "a11y.cardActions",
@@ -5975,6 +6167,42 @@
       "whole": true
     },
     "common-photos": {
+      "from": [
+        "src/app/(app)/o/[workspace]/account/layout.tsx",
+        "src/components/NotificationBell.enterprise.tsx",
+        "src/components/NotificationDrawer.enterprise.tsx",
+        "src/components/admin/ai-inbox/AIInboxUnauthorized.tsx",
+        "src/components/app-header.tsx",
+        "src/components/header/help-button.tsx",
+        "src/components/header/language-switcher.tsx",
+        "src/components/header/theme-toggle.tsx",
+        "src/components/header/user-menu.tsx",
+        "src/components/header/voice-assistant-button.tsx",
+        "src/components/search/GlobalSearchDialog.tsx",
+        "src/components/search/SearchResultItem.tsx",
+        "src/components/ui/ProductTour/product-tour-overlay.tsx",
+        "src/components/ui/ShareButton.tsx",
+        "src/components/ui/ShareModal.tsx",
+        "src/components/ui/channel-sharing/ChannelLinkForm.tsx",
+        "src/components/ui/channel-sharing/ChannelShareForm.tsx",
+        "src/components/ui/channel-sharing/ContactChannelPicker.tsx",
+        "src/components/ui/dialog.tsx",
+        "src/components/ui/email-sharing/ContactEmailPicker.tsx",
+        "src/components/ui/email-sharing/EmailShareForm.tsx",
+        "src/components/ui/search/SearchInput.tsx",
+        "src/components/ui/sharing/panels/UserAuthPermissionPanel.tsx",
+        "src/components/ui/sharing/panels/user-auth/PhotoPickerStep.tsx",
+        "src/components/ui/sheet.tsx",
+        "src/components/ui/sidebar.tsx",
+        "src/components/ui/social-sharing/CopyActionsSection.tsx",
+        "src/components/ui/social-sharing/PhotoPickerGrid.tsx",
+        "src/components/ui/social-sharing/SharePlatformGrid.tsx",
+        "src/components/voice-ai/VoiceAIPanel.tsx",
+        "src/core/modals/PhotoPreviewModal.tsx",
+        "src/core/modals/photo-preview-helpers.ts",
+        "src/design-system/primitives/Card/CardActionsToolbar.tsx",
+        "src/providers/NotificationProvider.tsx"
+      ],
       "keys": [
         "a11y.addFavorite",
         "a11y.cardActions",
@@ -6246,6 +6474,42 @@
       "whole": false
     },
     "common-sales": {
+      "from": [
+        "src/app/(app)/o/[workspace]/account/layout.tsx",
+        "src/components/NotificationBell.enterprise.tsx",
+        "src/components/NotificationDrawer.enterprise.tsx",
+        "src/components/admin/ai-inbox/AIInboxUnauthorized.tsx",
+        "src/components/app-header.tsx",
+        "src/components/header/help-button.tsx",
+        "src/components/header/language-switcher.tsx",
+        "src/components/header/theme-toggle.tsx",
+        "src/components/header/user-menu.tsx",
+        "src/components/header/voice-assistant-button.tsx",
+        "src/components/search/GlobalSearchDialog.tsx",
+        "src/components/search/SearchResultItem.tsx",
+        "src/components/ui/ProductTour/product-tour-overlay.tsx",
+        "src/components/ui/ShareButton.tsx",
+        "src/components/ui/ShareModal.tsx",
+        "src/components/ui/channel-sharing/ChannelLinkForm.tsx",
+        "src/components/ui/channel-sharing/ChannelShareForm.tsx",
+        "src/components/ui/channel-sharing/ContactChannelPicker.tsx",
+        "src/components/ui/dialog.tsx",
+        "src/components/ui/email-sharing/ContactEmailPicker.tsx",
+        "src/components/ui/email-sharing/EmailShareForm.tsx",
+        "src/components/ui/search/SearchInput.tsx",
+        "src/components/ui/sharing/panels/UserAuthPermissionPanel.tsx",
+        "src/components/ui/sharing/panels/user-auth/PhotoPickerStep.tsx",
+        "src/components/ui/sheet.tsx",
+        "src/components/ui/sidebar.tsx",
+        "src/components/ui/social-sharing/CopyActionsSection.tsx",
+        "src/components/ui/social-sharing/PhotoPickerGrid.tsx",
+        "src/components/ui/social-sharing/SharePlatformGrid.tsx",
+        "src/components/voice-ai/VoiceAIPanel.tsx",
+        "src/core/modals/PhotoPreviewModal.tsx",
+        "src/core/modals/photo-preview-helpers.ts",
+        "src/design-system/primitives/Card/CardActionsToolbar.tsx",
+        "src/providers/NotificationProvider.tsx"
+      ],
       "keys": [
         "a11y.addFavorite",
         "a11y.cardActions",
@@ -6517,6 +6781,44 @@
       "whole": false
     },
     "common-shared": {
+      "from": [
+        "src/app/(app)/o/[workspace]/account/layout.tsx",
+        "src/components/NotificationBell.enterprise.tsx",
+        "src/components/NotificationDrawer.enterprise.tsx",
+        "src/components/admin/ai-inbox/AIInboxUnauthorized.tsx",
+        "src/components/app-header.tsx",
+        "src/components/header/help-button.tsx",
+        "src/components/header/language-switcher.tsx",
+        "src/components/header/theme-toggle.tsx",
+        "src/components/header/user-menu.tsx",
+        "src/components/header/voice-assistant-button.tsx",
+        "src/components/search/GlobalSearchDialog.tsx",
+        "src/components/search/SearchResultItem.tsx",
+        "src/components/sharing/fields/PersonalMessageField.tsx",
+        "src/components/ui/ProductTour/product-tour-overlay.tsx",
+        "src/components/ui/ShareButton.tsx",
+        "src/components/ui/ShareModal.tsx",
+        "src/components/ui/channel-sharing/ChannelLinkForm.tsx",
+        "src/components/ui/channel-sharing/ChannelShareForm.tsx",
+        "src/components/ui/channel-sharing/ContactChannelPicker.tsx",
+        "src/components/ui/dialog.tsx",
+        "src/components/ui/email-sharing/ContactEmailPicker.tsx",
+        "src/components/ui/email-sharing/EmailShareForm.tsx",
+        "src/components/ui/search/SearchInput.tsx",
+        "src/components/ui/sharing/ShareStatusBanner.tsx",
+        "src/components/ui/sharing/panels/UserAuthPermissionPanel.tsx",
+        "src/components/ui/sharing/panels/user-auth/PhotoPickerStep.tsx",
+        "src/components/ui/sheet.tsx",
+        "src/components/ui/sidebar.tsx",
+        "src/components/ui/social-sharing/CopyActionsSection.tsx",
+        "src/components/ui/social-sharing/PhotoPickerGrid.tsx",
+        "src/components/ui/social-sharing/SharePlatformGrid.tsx",
+        "src/components/voice-ai/VoiceAIPanel.tsx",
+        "src/core/modals/PhotoPreviewModal.tsx",
+        "src/core/modals/photo-preview-helpers.ts",
+        "src/design-system/primitives/Card/CardActionsToolbar.tsx",
+        "src/providers/NotificationProvider.tsx"
+      ],
       "keys": [
         "a11y.addFavorite",
         "a11y.cardActions",
@@ -6799,6 +7101,42 @@
       "whole": false
     },
     "common-status": {
+      "from": [
+        "src/app/(app)/o/[workspace]/account/layout.tsx",
+        "src/components/NotificationBell.enterprise.tsx",
+        "src/components/NotificationDrawer.enterprise.tsx",
+        "src/components/admin/ai-inbox/AIInboxUnauthorized.tsx",
+        "src/components/app-header.tsx",
+        "src/components/header/help-button.tsx",
+        "src/components/header/language-switcher.tsx",
+        "src/components/header/theme-toggle.tsx",
+        "src/components/header/user-menu.tsx",
+        "src/components/header/voice-assistant-button.tsx",
+        "src/components/search/GlobalSearchDialog.tsx",
+        "src/components/search/SearchResultItem.tsx",
+        "src/components/ui/ProductTour/product-tour-overlay.tsx",
+        "src/components/ui/ShareButton.tsx",
+        "src/components/ui/ShareModal.tsx",
+        "src/components/ui/channel-sharing/ChannelLinkForm.tsx",
+        "src/components/ui/channel-sharing/ChannelShareForm.tsx",
+        "src/components/ui/channel-sharing/ContactChannelPicker.tsx",
+        "src/components/ui/dialog.tsx",
+        "src/components/ui/email-sharing/ContactEmailPicker.tsx",
+        "src/components/ui/email-sharing/EmailShareForm.tsx",
+        "src/components/ui/search/SearchInput.tsx",
+        "src/components/ui/sharing/panels/UserAuthPermissionPanel.tsx",
+        "src/components/ui/sharing/panels/user-auth/PhotoPickerStep.tsx",
+        "src/components/ui/sheet.tsx",
+        "src/components/ui/sidebar.tsx",
+        "src/components/ui/social-sharing/CopyActionsSection.tsx",
+        "src/components/ui/social-sharing/PhotoPickerGrid.tsx",
+        "src/components/ui/social-sharing/SharePlatformGrid.tsx",
+        "src/components/voice-ai/VoiceAIPanel.tsx",
+        "src/core/modals/PhotoPreviewModal.tsx",
+        "src/core/modals/photo-preview-helpers.ts",
+        "src/design-system/primitives/Card/CardActionsToolbar.tsx",
+        "src/providers/NotificationProvider.tsx"
+      ],
       "keys": [
         "a11y.addFavorite",
         "a11y.cardActions",
@@ -7070,6 +7408,42 @@
       "whole": true
     },
     "common-validation": {
+      "from": [
+        "src/app/(app)/o/[workspace]/account/layout.tsx",
+        "src/components/NotificationBell.enterprise.tsx",
+        "src/components/NotificationDrawer.enterprise.tsx",
+        "src/components/admin/ai-inbox/AIInboxUnauthorized.tsx",
+        "src/components/app-header.tsx",
+        "src/components/header/help-button.tsx",
+        "src/components/header/language-switcher.tsx",
+        "src/components/header/theme-toggle.tsx",
+        "src/components/header/user-menu.tsx",
+        "src/components/header/voice-assistant-button.tsx",
+        "src/components/search/GlobalSearchDialog.tsx",
+        "src/components/search/SearchResultItem.tsx",
+        "src/components/ui/ProductTour/product-tour-overlay.tsx",
+        "src/components/ui/ShareButton.tsx",
+        "src/components/ui/ShareModal.tsx",
+        "src/components/ui/channel-sharing/ChannelLinkForm.tsx",
+        "src/components/ui/channel-sharing/ChannelShareForm.tsx",
+        "src/components/ui/channel-sharing/ContactChannelPicker.tsx",
+        "src/components/ui/dialog.tsx",
+        "src/components/ui/email-sharing/ContactEmailPicker.tsx",
+        "src/components/ui/email-sharing/EmailShareForm.tsx",
+        "src/components/ui/search/SearchInput.tsx",
+        "src/components/ui/sharing/panels/UserAuthPermissionPanel.tsx",
+        "src/components/ui/sharing/panels/user-auth/PhotoPickerStep.tsx",
+        "src/components/ui/sheet.tsx",
+        "src/components/ui/sidebar.tsx",
+        "src/components/ui/social-sharing/CopyActionsSection.tsx",
+        "src/components/ui/social-sharing/PhotoPickerGrid.tsx",
+        "src/components/ui/social-sharing/SharePlatformGrid.tsx",
+        "src/components/voice-ai/VoiceAIPanel.tsx",
+        "src/core/modals/PhotoPreviewModal.tsx",
+        "src/core/modals/photo-preview-helpers.ts",
+        "src/design-system/primitives/Card/CardActionsToolbar.tsx",
+        "src/providers/NotificationProvider.tsx"
+      ],
       "keys": [
         "a11y.addFavorite",
         "a11y.cardActions",
@@ -7341,6 +7715,9 @@
       "whole": true
     },
     "files": {
+      "from": [
+        "src/hooks/notifications/useFilesNotifications.ts"
+      ],
       "keys": [
         "archived.unarchiveError",
         "archived.unarchiveSuccess",
@@ -7371,11 +7748,24 @@
       "whole": false
     },
     "landing": {
+      "from": [],
       "keys": [],
       "prefixes": [],
       "whole": true
     },
     "navigation": {
+      "from": [
+        "src/components/app-sidebar.tsx",
+        "src/components/header/DeclaredOccupationBadge.tsx",
+        "src/components/header/JobSwitch.tsx",
+        "src/components/job/HiddenItemsBadge.tsx",
+        "src/components/job/JobSuggestion.tsx",
+        "src/components/shared/ModuleBreadcrumb.tsx",
+        "src/components/sidebar/sidebar-hidden-row.tsx",
+        "src/components/sidebar/sidebar-logo.tsx",
+        "src/components/sidebar/sidebar-menu-item.tsx",
+        "src/components/sidebar/sidebar-reveal-banner.tsx"
+      ],
       "keys": [
         "account.nav.notifications",
         "account.nav.preferences",
@@ -7487,6 +7877,9 @@
       "whole": true
     },
     "parking": {
+      "from": [
+        "src/components/search/SearchResultItem.tsx"
+      ],
       "keys": [],
       "prefixes": [
         "status"
@@ -7494,6 +7887,9 @@
       "whole": false
     },
     "projects": {
+      "from": [
+        "src/components/projects/procurement/BackToProjectLink.tsx"
+      ],
       "keys": [
         "tabs.subtabs.procurement.backToProject"
       ],
@@ -7501,6 +7897,13 @@
       "whole": false
     },
     "property-market": {
+      "from": [
+        "src/components/mandate/AgencyCard.tsx",
+        "src/components/mandate/CredibilityStatement.tsx",
+        "src/components/mandate/OccupationSelect.tsx",
+        "src/components/public-site/PublicSiteHeader.tsx",
+        "src/components/search/SearchLandingContent.tsx"
+      ],
       "keys": [
         "demand.door.hint",
         "demand.door.label",
@@ -7539,6 +7942,16 @@
       "whole": false
     },
     "search-results": {
+      "from": [
+        "src/components/listings/ListingAuthorshipLine.tsx",
+        "src/components/public-site/PublicSiteHeader.tsx",
+        "src/components/search-results/ListingCard.tsx",
+        "src/components/search/CoverageStatement.tsx",
+        "src/components/search/LandingModeSwitch.tsx",
+        "src/components/search/LandingShowcase.tsx",
+        "src/components/search/PlaceSearchBox.tsx",
+        "src/components/search/SearchLandingContent.tsx"
+      ],
       "keys": [
         "landing.browseAll",
         "landing.browseAllPros",
