@@ -147,7 +147,15 @@ export function stanceOfListing(listing: PublicListing): InterestStance {
 const UNDECLARED_AXES: Readonly<Record<InterestStance, readonly DemandBlocker[]>> = {
   offered: [],
   partial: ['offer-kind'],
-  dormant: ['offer-kind', 'price-above', 'price-below'],
+  // 🔴 ADR-777 §8.52 — ΗΤΑΝ ΑΝΤΙΣΤΑΘΜΙΣΗ ΤΟΥ ΨΕΥΔΟΥΣ, ΚΑΙ ΕΠΑΨΕ ΝΑ ΧΡΕΙΑΖΕΤΑΙ.
+  //    Έγραφε `price-above`/`price-below` επειδή η μηχανή έβγαζε **αυτά** για αγγελία
+  //    **χωρίς τιμή** — δηλαδή αυτό το αρχείο **συγχωρούσε από κάτω** έναν ισχυρισμό
+  //    που δεν έπρεπε να είχε γίνει από πάνω. Τώρα η ίδια αγγελία βγάζει
+  //    `price-undeclared`, που λέει την αλήθεια, και η συγχώρεση γίνεται **ονομαστική**.
+  //    ⚠️ Τα δύο παλιά ΑΦΑΙΡΕΘΗΚΑΝ και δεν είναι παράλειψη: μια `dormant` αγγελία
+  //    (`getEffectivePrice() == null`) **δεν μπορεί πια** να παραγάγει `price-above` —
+  //    θα ήταν νεκρές εγγραφές που κρύβουν την επόμενη παλινδρόμηση στο ίδιο σημείο.
+  dormant: ['offer-kind', 'price-undeclared'],
 };
 
 /** `true` αν **κάθε** εμπόδιο οφείλεται σε άξονα που ο ιδιοκτήτης δεν έχει δηλώσει. */

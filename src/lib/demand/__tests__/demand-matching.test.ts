@@ -24,6 +24,7 @@ import {
   isCategoricalBlocker,
   isMeasurableBlocker,
   isUncertainBlocker,
+  ABSENCE_BLOCKERS,
   matchDemand,
   matchDemandAgainstListing,
   demandResultsBalance,
@@ -38,6 +39,7 @@ import { matchesListingFilters } from '@/lib/listings/listing-filters';
 import { EARTH_RADIUS_METERS } from '@/lib/geo/geo-distance';
 import { NO_DEMAND_FEATURES, type FrontageSide, type PropertyDemand } from '@/types/property-demand';
 import type { PublicListing } from '@/types/public-listing';
+import { IGNORANCE_BLOCKERS } from '../demand-answer';
 
 // =============================================================================
 // ΒΟΗΘΗΤΙΚΑ
@@ -213,6 +215,35 @@ describe('🔴 Ζ — κάθε εμπόδιο πυροδοτεί σε πραγμ
     ['area-below', demand({ features: { ...NO_DEMAND_FEATURES, areaMin: 200 } }), facts()],
     ['area-above', demand({ features: { ...NO_DEMAND_FEATURES, areaMax: 50 } }), facts()],
     ['bedrooms-below', demand({ features: { ...NO_DEMAND_FEATURES, bedroomsMin: 5 } }), facts()],
+    // 🔴 ADR-777 §8.52 — ΤΑ ΤΕΣΣΕΡΑ ΕΜΠΟΔΙΑ ΑΠΟΥΣΙΑΣ. Η ΑΓΚΥΡΑ ΤΟΥ ΚΛΕΙΣΤΟΥ ΣΥΝΟΛΟΥ
+    //    ΤΑ ΖΗΤΗΣΕ ΜΟΝΗ ΤΗΣ, και είχε δίκιο: εμπόδιο χωρίς σενάριο είναι κωδικός που
+    //    **κανείς δεν έχει δει να παράγεται** — δηλαδή φρουρός που δεν ξέρουμε αν ζει.
+    //    ⚠️ Το ΟΡΙΟ μπαίνει ΚΑΙ στη ζήτηση ΚΑΙ η αγγελία σιωπά: χωρίς το πρώτο δεν
+    //    γεννιέται εμπόδιο (§8.52.4), χωρίς το δεύτερο γεννιέται το μετρήσιμο αδελφό του.
+    [
+      'price-undeclared',
+      demand({ features: { ...NO_DEMAND_FEATURES, priceMax: 100_000 } }),
+      facts({
+        listing: listing({
+          commercial: { askingPrice: null, finalPrice: null, rentPrice: null, nightlyRate: null },
+        }),
+      }),
+    ],
+    [
+      'area-undeclared',
+      demand({ features: { ...NO_DEMAND_FEATURES, areaMin: 200 } }),
+      facts({ listing: listing({ areaSqm: null }) }),
+    ],
+    [
+      'bedrooms-undeclared',
+      demand({ features: { ...NO_DEMAND_FEATURES, bedroomsMin: 5 } }),
+      facts({ listing: listing({ bedrooms: null }) }),
+    ],
+    [
+      'floor-undeclared',
+      demand({ features: { ...NO_DEMAND_FEATURES, floorMin: 5, floorMax: 9 } }),
+      facts({ listing: listing({ floor: null }) }),
+    ],
     [
       'floor-outside',
       demand({ features: { ...NO_DEMAND_FEATURES, floorMin: 5, floorMax: 9 } }),
@@ -356,7 +387,13 @@ describe('🔴 Μ — «με +20.000 € υπάρχουν 6» ΥΠΟΛΟΓΙΖΕ
     });
     const result = matchDemandAgainstListing(d, f, TODAY);
 
-    expect(result.blockers).toContain('price-above');
+    // 🔴 ADR-777 §8.52 — ΕΔΩ ΗΤΑΝ ΓΡΑΜΜΕΝΟ ΤΟ ΨΕΜΑ, ΜΕΣΑ ΣΕ ΑΓΚΥΡΑ.
+    //    Η προηγούμενη εκδοχή απαιτούσε `price-above`, δηλαδή «είναι πιο ακριβή απ' όσο
+    //    θέλεις» για ποσό που ΚΑΝΕΙΣ δεν ξέρει — άρα η άγκυρα ΚΛΕΙΔΩΝΕ την παραβίαση
+    //    της Α5 αντί να την πιάνει. Μια δοκιμή που επικυρώνει το ελάττωμα το κάνει
+    //    **μονιμότερο** από την απουσία δοκιμής.
+    expect(result.blockers).toContain('price-undeclared');
+    expect(result.blockers).not.toContain('price-above');
     // ⚠️ Χωρίς τιμή ΔΕΝ υπάρχει απόσταση — ένα `0` εδώ θα διαβαζόταν ως «ταιριάζει
     // ακριβώς στην οροφή», που είναι υπαρκτή και ΔΙΑΦΟΡΕΤΙΚΗ απάντηση.
     expect(result.gaps.priceOverBy).toBeNull();
@@ -637,4 +674,126 @@ describe('🔴 Ο — ποιες προελεύσεις επιτρέπεται �
       expect(result.blockers).not.toContain('wrong-side');
     });
   }
+});
+
+// ─── ADR-777 §8.52 — Η ΣΙΩΠΗ ΠΑΥΕΙ ΝΑ ΕΙΝΑΙ ΙΣΧΥΡΙΣΜΟΣ ─────────────────────────
+//
+// 🔴 ΔΥΟ ΕΛΑΤΤΩΜΑΤΑ, ΜΙΑ ΘΕΡΑΠΕΙΑ. Το `numericOutcome` ήταν **δεύτερος αναγνώστης**
+// (8 ωμά `=== null`) δίπλα στον ΕΝΑΝ του `lib/criteria/`. Συνέπεια (α): η σιωπή
+// γινόταν ισχυρισμός («πιο ακριβή απ' όσο θέλεις» για άγνωστη τιμή). Συνέπεια (β):
+// η **γη κρινόταν σε υπνοδωμάτια**, ενώ η αναζήτηση την εξαιρεί ρητά για 24 άξονες.
+//
+// ⚠️ Η ομάδα Γ δεν δοκιμάζει «νέο κώδικα»: δοκιμάζει ότι **δεν γράφτηκε** δεύτερη
+// φορά ο κανόνας της γης. Περνά επειδή ο ΕΝΑΣ αναγνώστης απαντά ήδη `not-applicable`.
+
+describe('ADR-777 §8.52 — η ζήτηση ρωτά τον ΕΝΑΝ αναγνώστη', () => {
+  const NOTHING = { askingPrice: null, finalPrice: null, rentPrice: null, nightlyRate: null };
+
+  // ── Α. Η ΣΙΩΠΗ ΟΝΟΜΑΖΕΤΑΙ ─────────────────────────────────────────────────
+
+  it('Α1 — χωρίς δηλωμένη τιμή: `price-undeclared`, ΠΟΤΕ `price-above`/`price-below`', () => {
+    const d = demand({ features: { ...NO_DEMAND_FEATURES, priceMin: 50_000, priceMax: 180_000 } });
+    const result = matchDemandAgainstListing(d, facts({ listing: listing({ commercial: NOTHING }) }), TODAY);
+    expect(result.blockers).toContain('price-undeclared');
+    expect(result.blockers).not.toContain('price-above');
+    expect(result.blockers).not.toContain('price-below');
+    // Καμία απόσταση: δεν υπάρχει «πόσο λείπει» σε μια απουσία.
+    expect(result.gaps.priceOverBy).toBeNull();
+    expect(result.gaps.priceUnderBy).toBeNull();
+  });
+
+  it('Α2 — χωρίς δηλωμένο εμβαδόν: `area-undeclared`, ΠΟΤΕ `area-below`', () => {
+    const d = demand({ features: { ...NO_DEMAND_FEATURES, areaMin: 200 } });
+    const result = matchDemandAgainstListing(d, facts({ listing: listing({ areaSqm: null }) }), TODAY);
+    expect(result.blockers).toContain('area-undeclared');
+    expect(result.blockers).not.toContain('area-below');
+    expect(result.gaps.areaShortBy).toBeNull();
+  });
+
+  it('Α3 — χωρίς δηλωμένα υπνοδωμάτια: `bedrooms-undeclared`, ΠΟΤΕ `bedrooms-below`', () => {
+    const d = demand({ features: { ...NO_DEMAND_FEATURES, bedroomsMin: 5 } });
+    const result = matchDemandAgainstListing(d, facts({ listing: listing({ bedrooms: null }) }), TODAY);
+    expect(result.blockers).toContain('bedrooms-undeclared');
+    expect(result.blockers).not.toContain('bedrooms-below');
+    expect(result.gaps.bedroomsShortBy).toBeNull();
+  });
+
+  it('Α4 — χωρίς δηλωμένο όροφο: `floor-undeclared`, ΠΟΤΕ `floor-outside`', () => {
+    const d = demand({ features: { ...NO_DEMAND_FEATURES, floorMin: 1, floorMax: 3 } });
+    const result = matchDemandAgainstListing(d, facts({ listing: listing({ floor: null }) }), TODAY);
+    expect(result.blockers).toContain('floor-undeclared');
+    expect(result.blockers).not.toContain('floor-outside');
+  });
+
+  // ── Β. Η ΣΙΩΠΗ ΔΕΝ ΜΙΛΑΕΙ ΟΤΑΝ ΚΑΝΕΙΣ ΔΕΝ ΡΩΤΗΣΕ ─────────────────────────
+
+  it('Β1 — αγγελία χωρίς ΚΑΝΕΝΑ αριθμητικό στοιχείο ταιριάζει, αν η ζήτηση δεν ρωτά τίποτα', () => {
+    // 🔑 Ο κρίσιμος διαχωρισμός: το εμπόδιο απουσίας γεννιέται μόνο όταν ο άνθρωπος
+    //    **έθεσε όριο**. Αλλιώς κάθε ελλιπής αγγελία θα αποκλειόταν από κάθε ζήτηση —
+    //    δηλαδή θα τιμωρούσαμε τη σιωπή χωρίς να τη ρωτήσει κανείς.
+    const bare = listing({ commercial: NOTHING, areaSqm: null, bedrooms: null, floor: null });
+    const result = matchDemandAgainstListing(demand(), facts({ listing: bare }), TODAY);
+    expect(result.blockers).toEqual([]);
+    expect(result.verdict).toBe('match');
+  });
+
+  // ── Γ. Η ΓΗ ΔΕΝ ΚΡΙΝΕΤΑΙ ΣΕ ΥΠΝΟΔΩΜΑΤΙΑ (ΕΥΡΗΜΑ 4) ───────────────────────
+
+  it('Γ1 — οικόπεδο ΔΕΝ αποκλείεται σε υπνοδωμάτια/όροφο: δεν σηκώνει την ερώτηση', () => {
+    // 🔴 Πριν το §8.52 αυτό έβγαζε `bedrooms-below` ΚΑΙ `floor-outside`: η ζήτηση
+    //    ζητούσε από κάτοχο γης να δηλώσει υπνοδωμάτια. Η αναζήτηση το ήξερε ήδη
+    //    (`LAND_CANNOT_ANSWER`, 24 άξονες) — η ίδια αγγελία, δύο απαντήσεις.
+    const d = demand({
+      features: { ...NO_DEMAND_FEATURES, bedroomsMin: 3, floorMin: 1, floorMax: 5 },
+    });
+    const plot = listing({ type: 'plot', bedrooms: null, floor: null, areaSqm: 500 });
+    const result = matchDemandAgainstListing(d, facts({ listing: plot }), TODAY);
+
+    expect(result.blockers).not.toContain('bedrooms-below');
+    expect(result.blockers).not.toContain('bedrooms-undeclared');
+    expect(result.blockers).not.toContain('floor-outside');
+    expect(result.blockers).not.toContain('floor-undeclared');
+    expect(result.verdict).toBe('match');
+  });
+
+  it('Γ2 — το ΙΔΙΟ κενό σε ΚΤΙΣΜΑ παράγει εμπόδιο: η εξαίρεση είναι της ΓΗΣ, όχι του `null`', () => {
+    // ⚠️ Η άγκυρα που κάνει το Γ1 να σημαίνει κάτι. Χωρίς αυτήν, ένα «πάντα σιωπή»
+    //    θα περνούσε το Γ1 και θα έσβηνε ΟΛΑ τα εμπόδια απουσίας.
+    const d = demand({ features: { ...NO_DEMAND_FEATURES, bedroomsMin: 3 } });
+    const flat = listing({ type: 'apartment', bedrooms: null });
+    const result = matchDemandAgainstListing(d, facts({ listing: flat }), TODAY);
+    expect(result.blockers).toContain('bedrooms-undeclared');
+  });
+
+  it('Γ3 — το οικόπεδο ΑΠΑΝΤΑ κανονικά σε εμβαδόν: η εξαίρεση είναι ανά ΑΞΟΝΑ', () => {
+    const d = demand({ features: { ...NO_DEMAND_FEATURES, areaMin: 1_000 } });
+    const plot = listing({ type: 'plot', areaSqm: 500, bedrooms: null, floor: null });
+    const result = matchDemandAgainstListing(d, facts({ listing: plot }), TODAY);
+    expect(result.blockers).toContain('area-below');
+    expect(result.gaps.areaShortBy).toBe(500);
+  });
+
+  // ── Δ. Η ΚΑΤΑΤΑΞΗ ΕΙΝΑΙ ΡΗΤΗ, ΣΕ ΚΑΘΕ ΜΙΑ ΑΠΟ ΤΙΣ ΤΡΕΙΣ ΘΕΣΕΙΣ ──────────
+
+  it('Δ1 — τα τέσσερα είναι ΚΑΤΗΓΟΡΙΚΑ και ΜΗ μετρήσιμα, ποτέ σιωπηλά «μετρήσιμα»', () => {
+    for (const blocker of ABSENCE_BLOCKERS) {
+      expect(isCategoricalBlocker(blocker)).toBe(true);
+      expect(isMeasurableBlocker(blocker)).toBe(false);
+      expect(isUncertainBlocker(blocker)).toBe(false);
+    }
+  });
+
+  it('Δ2 — και τα τέσσερα λογίζονται ΑΓΝΟΙΑ στο επίπεδο της ΑΠΑΝΤΗΣΗΣ', () => {
+    // 🔑 Δεν είναι αντίφαση με το Δ1: κατηγορικό **ανά αγγελία** (χωρίς τιμή δεν
+    //    κρίνεται προϋπολογισμός), άγνοια **ανά απάντηση** (ο λόγος που δεν βρέθηκε
+    //    τίποτα δεν είναι ότι «δεν υπάρχει», αλλά ότι «δεν το δήλωσαν»).
+    for (const blocker of ABSENCE_BLOCKERS) {
+      expect((IGNORANCE_BLOCKERS as readonly string[]).includes(blocker)).toBe(true);
+    }
+  });
+
+  // ⚠️ ΔΕΝ γράφεται εδώ άγκυρα «κάθε εμπόδιο έχει ετικέτα»: υπάρχει ΗΔΗ, και είναι
+  //    καλύτερη — `first-contact-labels.test.ts` Σ1, πάνω στο `DEMAND_BLOCKERS`, **και
+  //    στις δύο γλώσσες**, με παρονομαστή (Σ2). Δεύτερη θα ήταν το ίδιο ελάττωμα που
+  //    αυτό το §8.52 διορθώνει: δύο αναγνώστες της ίδιας ερώτησης.
 });

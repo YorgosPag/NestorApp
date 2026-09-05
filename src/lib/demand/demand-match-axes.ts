@@ -15,15 +15,23 @@
  * αγγιχτεί κανένα κριτήριο.
  *
  * 🔑 **Τα κοινά πρωτόγονα έρχονται από τους υπάρχοντες SSoT, ποτέ ξαναγραμμένα:**
- * `withinRange` (`listing-filters.ts`) · `getEffectivePrice` (`price-resolver.ts`) ·
+ * `readNumericAnswer` (`lib/criteria/`) · `withinRange` (`listing-filters.ts`) ·
  * `distanceMeters` (`lib/geo/geo-distance.ts`) · `isPointInGeoOutline` (`geo-ring.ts`).
  * Έτσι ο χάρτης, η λίστα και η μηχανή **δεν μπορούν** να διαφωνήσουν για το ίδιο ερώτημα.
+ *
+ * ⚠️ **Ο `getEffectivePrice` ΕΦΥΓΕ από αυτό το αρχείο, και είναι διόρθωση** (ADR-777
+ * §8.52): τον ρωτά πλέον ο **ΕΝΑΣ** αναγνώστης, μέσα από τον `readNumericAnswer`. Δύο
+ * κλήσεις του ίδιου επιλυτή από δύο σημεία δεν είναι «κοινός SSoT» — είναι δύο
+ * αναγνώστες που συμφωνούν **σήμερα**.
  *
  * **Layering**: leaf — καθαρές συναρτήσεις, καμία εξάρτηση από React/Firestore.
  */
 
-import { getEffectivePrice } from '@/lib/properties/price-resolver';
 import { withinRange } from '@/lib/listings/listing-filters';
+// 🔑 ADR-777 §8.52 — Ο **ΕΝΑΣ** αναγνώστης. Η ζήτηση ΔΕΝ ρωτά πια μόνη της «τι απαντά
+// η αγγελία;» — ούτε για την τιμή (`getEffectivePrice` ζει ΜΕΣΑ του), ούτε για τη γη.
+import { readNumericAnswer } from '@/lib/criteria/listing-criterion-reading';
+import type { RangeCriterionKey } from '@/lib/criteria/listing-criterion-asking';
 import { isPointInGeoOutline } from '@/lib/geo/geo-ring';
 import { distanceMeters } from '@/lib/geo/geo-distance';
 import { metresOutsideFrontage, sideOfPolyline } from '@/lib/geo/geo-line';
@@ -58,56 +66,169 @@ export function categoryBlockers(demand: PropertyDemand, listing: PublicListing)
   return found;
 }
 
-/** Τιμή · εμβαδόν · υπνοδωμάτια · όροφος — με το **πόσο** μαζί. */
+/**
+ * Οι αποστάσεις **όσο χτίζονται** — ο ίδιος τύπος με το {@link DemandGaps}, χωρίς το
+ * `readonly`.
+ *
+ * 🔑 **Ονομάζεται μία φορά, επίτηδες**: γραμμένος στη σειρά σε τέσσερις υπογραφές θα
+ * ήταν structural clone που το CHECK 3.28 μετρά (N.18) — και, χειρότερα, ένα νέο πεδίο
+ * κενού θα απαιτούσε τέσσερις πανομοιότυπες επεξεργασίες που **καμία πύλη δεν συνδέει**.
+ *
+ * ⚠️ **Ζει μόνο εδώ, μέσα στο αρχείο**: η μεταβλητότητα είναι λεπτομέρεια της
+ * **κατασκευής**, όχι του συμβολαίου. Εξαγόμενος, θα καλούσε καταναλωτές να γράψουν
+ * πάνω σε ένα σύνολο που η μηχανή παραδίδει **κλειστό**.
+ */
+type MutableGaps = { -readonly [K in keyof DemandGaps]: DemandGaps[K] };
+
+/**
+ * Τιμή · εμβαδόν · υπνοδωμάτια · όροφος — με το **πόσο** μαζί.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ADR-777 §8.52 — ΕΔΩ ΖΟΥΣΕ ΕΝΑΣ **ΔΕΥΤΕΡΟΣ ΑΝΑΓΝΩΣΤΗΣ**, ΚΑΙ ΕΛΕΓΕ ΨΕΜΑΤΑ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Μέχρι σήμερα αυτή η συνάρτηση ρωτούσε **η ίδια** «τι απαντά η αγγελία;», με ωμά
+ * `listing.x === null`. Δύο συνέπειες, **και οι δύο μετρημένες**:
+ *
+ *   **(α) Η σιωπή γινόταν ΙΣΧΥΡΙΣΜΟΣ.** Αγγελία χωρίς δηλωμένη τιμή έβγαινε
+ *   `price-above` — *«είναι πιο ακριβή απ' όσο θέλεις»* για ποσό που **κανείς δεν
+ *   ξέρει**. Το ίδιο σε εμβαδόν, υπνοδωμάτια, όροφο. Παραβίαση της **Α5** στην πιο
+ *   καθαρή της μορφή, και ο κώδικας **το παραδεχόταν σε σχόλιο**.
+ *
+ *   **(β) Η ΓΗ ΚΡΙΝΟΤΑΝ ΣΕ ΥΠΝΟΔΩΜΑΤΙΑ.** Το §8.50 εξαίρεσε ρητά **24 άξονες** για τα
+ *   οικόπεδα (`LAND_CANNOT_ANSWER`) — αλλά **μόνο στην αναζήτηση**. Μετρημένο: καμία
+ *   αναφορά σε `isLandProperty`/`criterionAppliesTo` σε ολόκληρο το `lib/demand/`.
+ *   Δηλαδή **η ίδια αγγελία, δύο απαντήσεις**, στην ίδια εφαρμογή. Ένα οικόπεδο έχει
+ *   `bedrooms: null` **εκ κατασκευής**, άρα λογιζόταν «λιγότερα υπνοδωμάτια».
+ *
+ * 🔑 **Η ΘΕΡΑΠΕΙΑ ΕΙΝΑΙ ΜΙΑ, ΚΑΙ ΛΥΝΕΙ ΚΑΙ ΤΑ ΔΥΟ: ΠΑΨΕ ΝΑ ΕΙΣΑΙ ΑΝΑΓΝΩΣΤΗΣ.**
+ * Ο **ΕΝΑΣ** αναγνώστης ({@link readNumericAnswer}) απαντά ήδη σε **τέσσερις**
+ * καταστάσεις, και κάθε μία έχει **διαφορετική** σωστή συνέπεια εδώ:
+ *
+ * | Απάντηση | Τι σημαίνει | Τι κάνει ο άξονας |
+ * |---|---|---|
+ * | `declared` | η αγγελία απάντησε | συγκρίνει, με «πόσο» |
+ * | `never-asked` | **δεν δηλώθηκε** | εμπόδιο **απουσίας**, χωρίς «πόσο» |
+ * | `not-applicable` | **δεν σηκώνει την ερώτηση** *(γη)* | **ΚΑΝΕΝΑ εμπόδιο** |
+ * | `declared-none` | δεν προκύπτει σε αριθμό | — |
+ *
+ * ⚠️ Η **τρίτη γραμμή είναι δωρεάν**: έρχεται μαζί με τη δεύτερη, χωρίς δικό της
+ * κώδικα. Δύο πολιτικές έγιναν μία **επειδή έμεινε ένας κριτής** — όχι επειδή
+ * γράφτηκε δεύτερη φορά ο ίδιος κανόνας.
+ *
+ * ⛔ **ΜΗΝ ξαναγράψεις `listing.x === null` εδώ.** Θα ήταν τρίτος αναγνώστης, και θα
+ * ξαναχάσει σιωπηλά τη γη — το ακριβές σχήμα του ADR-749.
+ */
 export function numericOutcome(
   demand: PropertyDemand,
   listing: PublicListing,
 ): { blockers: DemandBlocker[]; gaps: DemandGaps } {
   const f = demand.features;
   const blockers: DemandBlocker[] = [];
-  const gaps: { -readonly [K in keyof DemandGaps]: DemandGaps[K] } = { ...NO_GAPS };
+  const gaps: MutableGaps = { ...NO_GAPS };
 
-  const price = getEffectivePrice(listing)?.amount ?? null;
-  if (!withinRange(price, f.priceMin, f.priceMax)) {
-    if (price !== null && f.priceMax !== null && price > f.priceMax) {
-      blockers.push('price-above');
-      gaps.priceOverBy = price - f.priceMax;
-    }
-    if (price !== null && f.priceMin !== null && price < f.priceMin) {
-      blockers.push('price-below');
-      gaps.priceUnderBy = f.priceMin - price;
-    }
-    // ⚠️ Αγγελία ΧΩΡΙΣ τιμή: το `withinRange` λέει «όχι» και **δεν υπάρχει πόσο**.
-    // Λογίζεται ως `price-above` χωρίς κενό θα ήταν ψέμα· εδώ μένει άρνηση χωρίς
-    // μετρήσιμο εμπόδιο, δηλαδή ⇒ `no-match` (βλ. τη λογιστική στο §6).
-    if (price === null) blockers.push('price-above');
-  }
-
-  if (!withinRange(listing.areaSqm, f.areaMin, f.areaMax)) {
-    const area = listing.areaSqm;
-    if (area !== null && f.areaMin !== null && area < f.areaMin) {
-      blockers.push('area-below');
-      gaps.areaShortBy = f.areaMin - area;
-    }
-    if (area !== null && f.areaMax !== null && area > f.areaMax) {
-      blockers.push('area-above');
-      gaps.areaOverBy = area - f.areaMax;
-    }
-    if (area === null) blockers.push('area-below');
-  }
-
-  if (f.bedroomsMin !== null) {
-    if (listing.bedrooms === null) {
-      blockers.push('bedrooms-below');
-    } else if (listing.bedrooms < f.bedroomsMin) {
-      blockers.push('bedrooms-below');
-      gaps.bedroomsShortBy = f.bedroomsMin - listing.bedrooms;
-    }
-  }
-
-  if (!withinRange(listing.floor, f.floorMin, f.floorMax)) blockers.push('floor-outside');
+  priceAxis(listing, f, blockers, gaps);
+  areaAxis(listing, f, blockers, gaps);
+  bedroomsAxis(listing, f, blockers, gaps);
+  floorAxis(listing, f, blockers);
 
   return { blockers, gaps };
+}
+
+/**
+ * Ο κοινός σκελετός των τεσσάρων αξόνων: **ρώτα τον ΕΝΑΝ αναγνώστη, μετά κρίνε**.
+ *
+ * 🔑 Επιστρέφει `number | null` **αφού** έχει ήδη γράψει το εμπόδιο απουσίας — ώστε ο
+ * καλών να ασχολείται μόνο με την αριθμητική. Το `null` εδώ σημαίνει **«μη συνεχίσεις»**
+ * και **ποτέ** «η τιμή είναι άγνωστη»: η διάκριση απουσίας ⇄ μη-εφαρμοσιμότητας έχει
+ * **ήδη** αποφασιστεί, στη μία θέση που την ξέρει.
+ */
+function answerOrBlock(
+  listing: PublicListing,
+  key: RangeCriterionKey,
+  absent: DemandBlocker,
+  asked: boolean,
+  blockers: DemandBlocker[],
+): number | null {
+  if (!asked) return null;
+  const answer = readNumericAnswer(listing, key);
+  if (answer.state === 'declared') return answer.value;
+  // ⚠️ `not-applicable` ⇒ ΣΙΩΠΗ, όχι εμπόδιο. Ένα οικόπεδο δεν «απέτυχε» στον όροφο:
+  //    δεν του τέθηκε ποτέ το ερώτημα (§8.50, `LAND_CANNOT_ANSWER`).
+  if (answer.state === 'never-asked' || answer.state === 'declared-none') blockers.push(absent);
+  return null;
+}
+
+function priceAxis(
+  listing: PublicListing,
+  f: PropertyDemand['features'],
+  blockers: DemandBlocker[],
+  gaps: MutableGaps,
+): void {
+  const price = answerOrBlock(
+    listing, 'price', 'price-undeclared',
+    f.priceMin !== null || f.priceMax !== null, blockers,
+  );
+  if (price === null) return;
+  if (f.priceMax !== null && price > f.priceMax) {
+    blockers.push('price-above');
+    gaps.priceOverBy = price - f.priceMax;
+  }
+  if (f.priceMin !== null && price < f.priceMin) {
+    blockers.push('price-below');
+    gaps.priceUnderBy = f.priceMin - price;
+  }
+}
+
+function areaAxis(
+  listing: PublicListing,
+  f: PropertyDemand['features'],
+  blockers: DemandBlocker[],
+  gaps: MutableGaps,
+): void {
+  const area = answerOrBlock(
+    listing, 'areaSqm', 'area-undeclared',
+    f.areaMin !== null || f.areaMax !== null, blockers,
+  );
+  if (area === null) return;
+  if (f.areaMin !== null && area < f.areaMin) {
+    blockers.push('area-below');
+    gaps.areaShortBy = f.areaMin - area;
+  }
+  if (f.areaMax !== null && area > f.areaMax) {
+    blockers.push('area-above');
+    gaps.areaOverBy = area - f.areaMax;
+  }
+}
+
+function bedroomsAxis(
+  listing: PublicListing,
+  f: PropertyDemand['features'],
+  blockers: DemandBlocker[],
+  gaps: MutableGaps,
+): void {
+  const bedrooms = answerOrBlock(
+    listing, 'bedrooms', 'bedrooms-undeclared', f.bedroomsMin !== null, blockers,
+  );
+  if (bedrooms === null || f.bedroomsMin === null) return;
+  if (bedrooms < f.bedroomsMin) {
+    blockers.push('bedrooms-below');
+    gaps.bedroomsShortBy = f.bedroomsMin - bedrooms;
+  }
+}
+
+/** ⚠️ Ο **μόνος** άξονας χωρίς «πόσο»: ένας όροφος εκτός εύρους δεν έχει έλλειμμα. */
+function floorAxis(
+  listing: PublicListing,
+  f: PropertyDemand['features'],
+  blockers: DemandBlocker[],
+): void {
+  const floor = answerOrBlock(
+    listing, 'floor', 'floor-undeclared',
+    f.floorMin !== null || f.floorMax !== null, blockers,
+  );
+  if (floor === null) return;
+  if (!withinRange(floor, f.floorMin, f.floorMax)) blockers.push('floor-outside');
 }
 
 /** Χωρικός άξονας — και η **μόνη** θέση που η θέση της αγγελίας κρίνεται. */

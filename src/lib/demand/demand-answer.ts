@@ -57,6 +57,7 @@ import {
   type DemandConcessionReport,
 } from './demand-concessions';
 import { matchDemand, type DemandResults } from './demand-matching';
+import { ABSENCE_BLOCKERS } from './demand-match-vocabulary';
 import type { DemandBlocker, ListingMatchFacts } from './demand-match-vocabulary';
 import { axesLostProjectingDemand, type DemandAxisLostInFilters } from './demand-listing-filters';
 
@@ -264,6 +265,14 @@ export const IGNORANCE_BLOCKERS = [
   'position-unknown',
   'availability-unknown',
   'proximity-unknown',
+  // 🔴 ADR-777 §8.52 — ΟΙ ΤΕΣΣΕΡΙΣ ΑΠΟΥΣΙΕΣ, ΚΑΙ Η ΔΙΑΚΡΙΣΗ ΔΕΝ ΕΙΝΑΙ ΑΝΤΙΦΑΣΗ.
+  //    Είναι **κατηγορικά** ανά αγγελία (χωρίς δηλωμένη τιμή δεν κρίνεται προϋπολογισμός,
+  //    άρα `no-match`) και **άγνοια** ανά απάντηση: ο λόγος που ο άνθρωπος δεν βρήκε
+  //    τίποτα δεν είναι ότι «δεν υπάρχει τέτοιο ακίνητο» — είναι ότι **δεν το δήλωσαν**.
+  //    Ακριβώς η ζημιά που το σχόλιο από πάνω ονομάζει: «η οθόνη θα λέει «δεν υπάρχει»
+  //    για κάτι που κανείς δεν ρώτησε». Ίδιο σχήμα με τα τέσσερα από πάνω, που είναι
+  //    επίσης όλα στο `CATEGORICAL_BLOCKERS`.
+  ...ABSENCE_BLOCKERS,
 ] as const satisfies readonly DemandBlocker[];
 
 /**
