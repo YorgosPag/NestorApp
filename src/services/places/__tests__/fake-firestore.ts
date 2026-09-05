@@ -466,11 +466,26 @@ export class FakeCollection extends FakeQuery {
 
 export class FakeBatch {
   private readonly pending: { ref: FakeDocRef; doc: Doc }[] = [];
+  private readonly pendingUpdates: { ref: FakeDocRef; patch: Doc }[] = [];
 
   constructor(private readonly db: FakeFirestore) {}
 
   create(ref: FakeDocRef, doc: Doc): void {
     this.pending.push({ ref, doc });
+  }
+
+  /**
+   * **Ενημέρωση μέσα σε δέσμη** (ADR-844).
+   *
+   * ⚠️ **Η ΠΡΟΫΠΟΘΕΣΗ ΕΙΝΑΙ Η ΑΝΤΙΣΤΡΟΦΗ ΤΟΥ `create`, ΚΑΙ ΜΟΝΤΕΛΟΠΟΙΕΙΤΑΙ**: το
+   * πραγματικό `batch.update()` **αποτυγχάνει** αν το έγγραφο **δεν** υπάρχει,
+   * ενώ το `create()` αποτυγχάνει αν **υπάρχει**. Ένας πλαστός που δεχόταν
+   * σιωπηλά update σε ανύπαρκτο έγγραφο θα άφηνε τον γραφέα να «πετύχει» εδώ και
+   * να σκάσει στην παραγωγή — ακριβώς η κλάση σφάλματος που αυτό το αρχείο
+   * υπάρχει για να πιάνει.
+   */
+  update(ref: FakeDocRef, patch: Doc): void {
+    this.pendingUpdates.push({ ref, patch });
   }
 
   async commit(): Promise<void> {
@@ -481,7 +496,12 @@ export class FakeBatch {
       const snapshot = await ref.get();
       if (snapshot.data() !== undefined) throw new Error(`ALREADY_EXISTS: ${ref.id}`);
     }
+    for (const { ref } of this.pendingUpdates) {
+      const snapshot = await ref.get();
+      if (snapshot.data() === undefined) throw new Error(`NOT_FOUND: ${ref.id}`);
+    }
     for (const { ref, doc } of this.pending) await ref.create(doc);
+    for (const { ref, patch } of this.pendingUpdates) await ref.update(patch);
     this.db.countWrite();
   }
 }

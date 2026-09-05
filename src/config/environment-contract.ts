@@ -167,4 +167,15 @@ export const ENVIRONMENT_CONTRACT: readonly EnvironmentRequirement[] = [
       'Η προσφορά δεν κατατίθεται ποτέ και το γραφείο νομίζει ότι δεν απάντησε.',
     consumer: 'src/services/vendor-portal/vendor-portal-token-service.ts',
   },
+  {
+    name: 'FIRST_CONTACT_INVITE_SECRET',
+    severity: 'feature',
+    feature: 'Φιλοξενούμενη επαφή σε δημόσια αγγελία (ADR-844)',
+    consequence:
+      'Ο επισκέπτης χωρίς λογαριασμό συμπληρώνει τη φόρμα επαφής, λαμβάνει το email ' +
+      'και ο σύνδεσμος απαντά «άκυρος». Το μήνυμά του ΔΕΝ φτάνει ποτέ στον ιδιοκτήτη, ' +
+      'και επειδή η πράξη γεννιέται μόνο στην επαλήθευση, ο ιδιοκτήτης δεν μαθαίνει ' +
+      'ποτέ ότι κάποιος τον πλησίασε. Δηλαδή σιωπηλή απώλεια κάθε επαφής από τον δρόμο.',
+    consumer: 'src/services/contact/first-contact-invitation.service.ts',
+  },
 ] as const;

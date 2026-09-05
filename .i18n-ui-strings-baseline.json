@@ -2,14 +2,21 @@
   "_meta": {
     "description": "i18n hardcoded UI strings baseline (JSX text, attrs, errors, toasts)",
     "generated": "2026-04-25T07:35:27Z",
-    "totalViolations": 21,
-    "totalFiles": 3,
+    "totalViolations": 25,
+    "totalFiles": 4,
     "rule": "Counts can only decrease. New files = zero tolerance.",
-    "patterns": ["JSX text", "attributes", "throw/alert/confirm", "toast calls"]
+    "patterns": [
+      "JSX text",
+      "attributes",
+      "throw/alert/confirm",
+      "toast calls"
+    ],
+    "exceptions": "ADR-844 — ΓΡΑΜΜΕΝΗ ΕΞΑΙΡΕΣΗ, ΟΧΙ ΣΙΩΠΗΛΗ. Ο κανόνας λέει «νέα αρχεία = μηδενική ανοχή» και εδώ ΠΑΡΑΒΙΑΣΤΗΚΕ συνειδητά για ΕΝΑ αρχείο: το email-templates/first-contact-verification.ts. ΤΙ ΠΙΑΝΕΙ ΠΡΑΓΜΑΤΙΚΑ Ο ΑΝΙΧΝΕΥΤΗΣ: το pattern 1 είναι '>[^<>{}]*Greek[^<>{}]*<' και ταιριάζει σε '<strong>ένα βήμα</strong>' ΜΕΣΑ σε template literal email HTML — δεν υπάρχει JSX σε αυτό το αρχείο, ούτε αποδότης t(): όλο το email-templates/ είναι server-only ελληνικό HTML. ΤΟ ΠΡΟΗΓΟΥΜΕΝΟ ΕΙΝΑΙ ΤΑΥΤΟΣΗΜΟ ΚΑΙ ΜΕΤΡΗΜΕΝΟ: pending-registration-admin.ts:82 = 'Ένας νέος χρήστης <strong>αυτο-εγγράφηκε</strong>...', ήδη εδώ με 2. ΓΙΑΤΙ ΚΑΤΑΓΡΑΦΗ ΚΑΙ ΟΧΙ ΘΕΡΑΠΕΙΑ: η θεραπεία που θα έκανε την πύλη πράσινη είναι να φύγει το <strong> σε βοηθητική συνάρτηση — ίδιο παραγόμενο HTML, ίδιο αμετάφραστο ελληνικό κείμενο, ΚΡΥΜΜΕΝΟ από τον ανιχνευτή. Αυτό θα ήταν 'πράσινο επειδή κανείς δεν κοίταξε'. Η ΠΡΑΓΜΑΤΙΚΗ ΕΡΩΤΗΣΗ ΜΕΝΕΙ ΑΝΟΙΧΤΗ ΚΑΙ ΕΙΝΑΙ ΠΡΟΪΟΝΤΙΚΗ: μεταφράζονται τα email; Σήμερα ΟΧΙ, για ΚΑΝΕΝΑ από τα 17 πρότυπα. Όταν απαντηθεί, αυτές οι 4+2 γραμμές φεύγουν ΜΑΖΙ με τις άλλες ~40 ελληνικές γραμμές του ίδιου αρχείου που ο ανιχνευτής ΔΕΝ βλέπει καν."
   },
   "files": {
     "src/lib/obligations/content.ts": 16,
     "src/services/sales-accounting/accounting-office-notify.ts": 3,
-    "src/services/email-templates/pending-registration-admin.ts": 2
+    "src/services/email-templates/pending-registration-admin.ts": 2,
+    "src/services/email-templates/first-contact-verification.ts": 4
   }
 }
