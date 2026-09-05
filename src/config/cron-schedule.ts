@@ -50,6 +50,7 @@ import { runDemandListingMatchAnnounce } from '@/lib/cron/jobs/demand-listing-ma
 import { runOutboundEmailFlush } from '@/lib/cron/jobs/outbound-email-flush.job';
 import { runEmailIngestion } from '@/lib/cron/jobs/email-ingestion.job';
 import { runFilePurge } from '@/lib/cron/jobs/file-purge.job';
+import { runFirstContactInvitationExpiry } from '@/lib/cron/jobs/first-contact-invitation-expiry.job';
 import { runMandateExpiry } from '@/lib/cron/jobs/mandate-expiry.job';
 import { runOAuthCleanup } from '@/lib/cron/jobs/oauth-cleanup.job';
 import { runOnboardingReminder } from '@/lib/cron/jobs/onboarding-reminder.job';
@@ -225,6 +226,32 @@ export const CRON_SCHEDULE: readonly CronJobDefinition[] = [
     maxRuntimeMinutes: 10,
     leaseMinutes: 15,
     run: runMandateExpiry,
+  },
+  {
+    slug: 'first-contact-invitation-expiry',
+    path: '/api/cron/first-contact-invitation-expiry',
+    description: 'Διαγραφή προσκλήσεων πρώτης επαφής που πέρασαν τις 7 ημέρες τους (ADR-844)',
+    enabled: true,
+    // 🔑 **Ημερήσια, και ο ρυθμός προκύπτει από τη ΖΩΗ ΤΟΥ ΕΓΓΡΑΦΟΥ — όχι από συνήθεια.**
+    //
+    // Η πρόσκληση ζει **7 ημέρες**. Μια ωριαία σάρωση θα ρωτούσε 168 φορές την ίδια
+    // ερώτηση μέσα σε έναν κύκλο ζωής· μια εβδομαδιαία θα άφηνε τα στοιχεία ανθρώπου να
+    // λιμνάζουν έως **δεκατέσσερις** ημέρες, δηλαδή θα διπλασίαζε σιωπηλά τη δηλωμένη
+    // διάρκεια. Η ημέρα είναι η μονάδα που κρατά την καθυστέρηση **φραγμένη σε μία**.
+    //
+    // ⚠️ **Η καθυστέρηση ΔΕΝ είναι κίνδυνος, και γι' αυτό δεν κυνηγιέται.** Η ληγμένη
+    // πρόσκληση απορρίπτεται **δομικά** από το `claimInvitation` τη στιγμή που πέρασε
+    // η ώρα της — με ή χωρίς αυτό το πέρασμα. Εδώ κερδίζεται **ελαχιστοποίηση δεδομένων**,
+    // όχι ασφάλεια, και ένα κέρδος καθαριότητας δεν αξίζει 24 περάσματα τη μέρα.
+    //
+    // 03:45 και όχι 03:30: εκεί τρέχει η λήξη των εντολών, και δύο σαρώσεις στο ίδιο
+    // λεπτό μοιράζονται τους **4 πυρήνες** του μηχανήματος χωρίς λόγο.
+    schedule: '45 3 * * *',
+    timezone: CRON_TIMEZONE,
+    checkinMarginMinutes: 20,
+    maxRuntimeMinutes: 10,
+    leaseMinutes: 15,
+    run: runFirstContactInvitationExpiry,
   },
   {
     slug: 'demand-interest-announce',
