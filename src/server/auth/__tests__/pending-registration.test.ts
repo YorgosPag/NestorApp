@@ -41,6 +41,8 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { ensurePendingRegistration } from '../pending-registration';
+import { CITIZEN_STATUS } from '../citizen-identity';
+import { USER_STATUSES } from '@/auth/types/auth.types';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { REPO_ROOT, listRepoSourceFiles, readRepoCode } from '@/test-utils/read-source';
 
@@ -152,6 +154,66 @@ describe('ensurePendingRegistration', () => {
     expect(result).toEqual({ status: 'assigned', notified: false });
     expect(setCalls).toHaveLength(0);
     expect(sendReplyViaMailgunMock).not.toHaveBeenCalled();
+  });
+
+  /**
+   * 🔴 **Π1 — Ο ΠΟΛΙΤΗΣ ΔΕΝ ΥΠΟΒΑΘΜΙΖΕΤΑΙ** (ADR-844).
+   *
+   * Χωρίς αυτό το σκέλος, **κάθε** σύνδεση **κάθε** πολίτη θα έγραφε
+   * `globalRole: null, status: 'pending'` πάνω σε **έγκυρο** claim
+   * `external_user` ⇒ **ενεργή** απόκλιση claim↔εγγράφου *(που το §5.13 μετρά
+   * σήμερα 0/4, δηλαδή λανθάνουσα)* — και θα τον έβαζε σε λίστα «εκκρεμείς
+   * εγκρίσεις» ενός διαχειριστή που **δεν ζήτησε τίποτα να κρίνει**.
+   *
+   * ⚠️ Το `setCalls` **πρέπει** να είναι κενό: το «no-op» δεν είναι «γράφει τα
+   * ίδια», είναι «**δεν γράφει**».
+   */
+  it('Π1 — είναι αυστηρό no-op για πολίτη (ποτέ downgrade, ποτέ ειδοποίηση)', async () => {
+    const { db, setCalls } = makeFirestore({
+      // ⚠️ Ο πολίτης έχει **έγκυρο ρόλο** και **κανένα** companyId — δηλαδή περνά
+      //    τον φρουρό του `assigned` και θα έπεφτε ίσια στη γραφή.
+      userDoc: { companyId: null, globalRole: 'external_user', status: CITIZEN_STATUS },
+      tenantUsers: [{ uid: 'admin1', globalRole: 'company_admin', status: 'active', email: 'admin@example.com' }],
+    });
+    getAdminFirestoreMock.mockReturnValue(db);
+
+    const result = await ensurePendingRegistration(INPUT);
+
+    expect(result).toEqual({ status: 'citizen', notified: false });
+    expect(setCalls).toHaveLength(0);
+    expect(sendReplyViaMailgunMock).not.toHaveBeenCalled();
+  });
+
+  /**
+   * 🔑 **Π2 — Ο ΦΡΟΥΡΟΣ ΚΡΙΝΕΙ ΤΟ `status`, ΟΧΙ ΤΟΝ ΡΟΛΟ.**
+   *
+   * Η αφελής υλοποίηση θα ήταν *«έχει globalRole ⇒ μην τον πειράξεις»*. Θα ήταν
+   * **λάθος**: υπάρχουν έγγραφα με ρόλο και **χωρίς** μισθωτή που όντως
+   * περιμένουν έγκριση *(απόκλιση από τις δύο μη-ατομικές διπλές εγγραφές που
+   * ονομάζει το §5.13)*. Μόνο το ρητό `citizen` λέει «δεν περιμένει κανέναν».
+   */
+  it('Π2 — έγγραφο με ρόλο αλλά ΧΩΡΙΣ την κατάσταση πολίτη μένει pending', async () => {
+    const { db, setCalls } = makeFirestore({
+      userDoc: { companyId: null, globalRole: 'external_user', status: 'pending' },
+      tenantUsers: [{ uid: 'admin1', globalRole: 'company_admin', status: 'active', email: 'admin@example.com' }],
+    });
+    getAdminFirestoreMock.mockReturnValue(db);
+
+    const result = await ensurePendingRegistration(INPUT);
+
+    expect(result.status).toBe('pending');
+    expect(setCalls).toHaveLength(1);
+  });
+
+  /**
+   * ⛔ **Π3 — Η ΤΙΜΗ ΕΙΝΑΙ ΔΑΝΕΙΣΜΕΝΗ, ΟΧΙ ΕΠΙΝΟΗΜΕΝΗ.**
+   *
+   * Το περιστατικό του ADR-822 §4.4: μια «θεραπεία» παραλίγο να γράψει
+   * `status: 'disabled'` — **τιμή εκτός λεξιλογίου**. Εδώ η άγκυρα εκτελεί την
+   * ίδια ερώτηση: ανήκει το `CITIZEN_STATUS` στο **ένα** λεξιλόγιο;
+   */
+  it('Π3 — το CITIZEN_STATUS ανήκει στο λεξιλόγιο USER_STATUSES', () => {
+    expect(USER_STATUSES).toContain(CITIZEN_STATUS);
   });
 
   it('does NOT re-notify when the user was already notified (notify-once)', async () => {

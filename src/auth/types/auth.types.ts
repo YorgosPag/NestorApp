@@ -189,8 +189,37 @@ export interface UserTypeContextType {
  * `USER_STATUSES.find((value) => value === raw)`.
  *
  * @see ADR-660 — γιατί υπάρχει το `pending`
+ * @see ADR-844 — γιατί υπάρχει το `citizen`
  */
-export const USER_STATUSES = ['active', 'inactive', 'suspended', 'pending'] as const;
+export const USER_STATUSES = [
+  'active',
+  'inactive',
+  'suspended',
+  'pending',
+  /**
+   * **Ο ΠΟΛΙΤΗΣ** — ταυτότητα **χωρίς οργανισμό**, γεννημένη από δημόσια πράξη
+   * (ADR-844: ο άνθρωπος πλησίασε αγγελία και επαλήθευσε το email του).
+   *
+   * 🔴 **ΓΙΑΤΙ ΔΕΝ ΕΙΝΑΙ ΚΑΜΙΑ ΑΠΟ ΤΙΣ ΤΕΣΣΕΡΙΣ ΠΡΟΗΓΟΥΜΕΝΕΣ:**
+   * - `pending` σημαίνει *«ζήτησε είσοδο σε χώρο εργασίας και **περιμένει
+   *   άνθρωπο**»*. Ο πολίτης **δεν ζήτησε** χώρο εργασίας και **δεν περιμένει
+   *   κανέναν** — θα καθόταν για πάντα σε μια λίστα εγκρίσεων που δεν αδειάζει.
+   * - `active` σημαίνει *«ενεργό μέλος»*, που προϋποθέτει μισθωτή. Ο πολίτης
+   *   **δεν έχει** `companyId`, εξ ορισμού (δες `CitizenClaimPayload`).
+   *
+   * ⚠️ **Η ΤΙΜΗ ΔΙΑΒΑΖΕΤΑΙ ΟΝΟΜΑΣΤΙΚΑ** από τον `ensurePendingRegistration`
+   * (`server/auth/pending-registration.ts`) για να κάνει **αυστηρό no-op**.
+   * Χωρίς εκείνο το σκέλος, κάθε σύνδεση πολίτη θα του έγραφε `globalRole: null`
+   * πάνω σε **έγκυρο** claim ⇒ ενεργή απόκλιση claim↔εγγράφου.
+   *
+   * ⛔ **ΜΗΝ τη γράψεις κάπου ως ωμό string**: η σταθερά ζει **μία φορά**, στο
+   * `CITIZEN_STATUS` του `server/auth/citizen-identity.ts`, που παράγεται από
+   * **αυτόν** τον πίνακα. Το περιστατικό του ADR-822 §4.4 *(`status:'disabled'`,
+   * τιμή που **δεν υπήρχε** στο λεξιλόγιο)* είναι ο λόγος που ο πίνακας είναι η
+   * αυθεντία και ο τύπος **παράγεται**.
+   */
+  'citizen',
+] as const;
 
 /** Η κατάσταση ενός εγγράφου χρήστη. Παράγεται από {@link USER_STATUSES}. */
 export type UserStatus = (typeof USER_STATUSES)[number];

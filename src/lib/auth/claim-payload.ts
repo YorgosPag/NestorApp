@@ -102,6 +102,78 @@ export interface ClaimPayload {
 }
 
 /**
+ * **Το claim του ΠΟΛΙΤΗ** — ταυτότητα **χωρίς οργανισμό** (ADR-844).
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΓΙΑΤΙ ΞΕΧΩΡΙΣΤΟΣ ΤΥΠΟΣ ΚΑΙ ΟΧΙ `companyId: string | null`
+ * ─────────────────────────────────────────────────────────────────────────────
+ *
+ * **Η ΑΠΟΥΣΙΑ ΤΟΥ ΚΛΕΙΔΙΟΥ ΕΙΝΑΙ Η ΣΗΜΑΣΙΑ, ΟΧΙ ΠΑΡΑΛΕΙΨΗ.** Ο
+ * {@link extractCustomClaims} (`lib/auth/auth-context.ts`) επιστρέφει `null`
+ * ακριβώς όταν λείπει το `companyId` — και **αυτό** είναι που γεννά τον
+ * **προσωπικό** κλάδο του ADR-817. Ένα `companyId: null` **μέσα** στο claim θα
+ * ήταν κλειδί που υπάρχει με τιμή που δεν στέκει· ένα `companyId: ''` το
+ * απορρίπτει fail-closed το ADR-657 §3.5 *(«κενή συμβολοσειρά = **απουσία**, όχι
+ * μισθωτής»)*. Το κλειδί απλώς **δεν γράφεται**.
+ *
+ * ⛔ **ΜΗΝ το ενοποιήσεις με το {@link ClaimPayload} βάζοντας προαιρετικό
+ * `companyId`**: τότε ο μεταγλωττιστής θα επέτρεπε στον διαχειριστικό γραφέα
+ * (`claims-handler`) να παραλείψει τον μισθωτή **σιωπηλά** — δηλαδή να παράγει
+ * πολίτη εκεί που ζητήθηκε μέλος εταιρείας. Δύο σχήματα επειδή υπάρχουν
+ * **πραγματικά δύο**, και ο μεταγλωττιστής τα κρατά χωριστά.
+ *
+ * 🔑 Ο ρόλος είναι **σταθερά** `external_user`: ο πολίτης δεν διαπραγματεύεται
+ * ρόλο. Ο τύπος το λέει, ώστε να μην μπορεί κανείς να περάσει `company_admin`
+ * από αυτή τη διαδρομή — **μη εκφράσιμο**, όχι αποθαρρυμένο.
+ */
+export interface CitizenClaimPayload {
+  readonly globalRole: 'external_user';
+  readonly mfaEnrolled: boolean;
+  readonly permissions: PermissionId[];
+}
+
+/**
+ * Ό,τι μπορεί να γραφτεί ως custom claim — **και τα δύο** σχήματα.
+ *
+ * Υπάρχει ώστε η **μέτρηση** ({@link claimPayloadBytes} · {@link checkClaimFits})
+ * να είναι **μία** για όλα όσα γράφονται. Το όριο της Firebase δεν ρωτά ποιος
+ * είσαι.
+ */
+export type AnyClaimPayload = ClaimPayload | CitizenClaimPayload;
+
+/**
+ * Συνθέτει το claim του **πολίτη** — ανθρώπου χωρίς οργανισμό (ADR-844).
+ *
+ * @param previousClaims Τα claims που **ήδη** έχει· η πηγή του `mfaEnrolled`.
+ * @returns Payload για τον {@link setClaimsWithMirror}, **χωρίς** `companyId`.
+ *
+ * ⚠️ **`permissions` ΠΑΝΤΑ κενό, και είναι απόφαση.** Τα permissions είναι
+ * **εμβέλειας εταιρείας** κατά δήλωση του ίδιου του PDP (`lib/auth/permissions.ts`:
+ * *«η παραχώρηση ζει δίπλα στο `companyId` και δεν κουβαλά δική της εμβέλεια»*).
+ * Μια παραχώρηση σε κάποιον χωρίς εταιρεία **δεν έχει πού να ισχύσει** — θα ήταν
+ * δικαίωμα χωρίς χώρο, δηλαδή θόρυβος που μοιάζει με εξουσία.
+ *
+ * ⛔ Και γι' αυτό **δεν** δέχεται `explicitPermissions`: η υπογραφή κάνει την
+ * κατάχρηση **αδύνατη να γραφτεί**, αντί να την απαγορεύει με σχόλιο.
+ *
+ * @example
+ * composeCitizenClaimPayload();
+ * // → { globalRole: 'external_user', mfaEnrolled: false, permissions: [] }
+ */
+export function composeCitizenClaimPayload(
+  previousClaims?: Record<string, unknown> | undefined,
+): CitizenClaimPayload {
+  return {
+    globalRole: 'external_user',
+    // ⚠️ Ίδιο `=== true` με τον εταιρικό συνθέτη, για τον ίδιο λόγο: η εγγραφή
+    //    MFA είναι πράξη **του ίδιου του ανθρώπου** — τη διατηρούμε, δεν την
+    //    κρίνουμε, και η απουσία της σημαίνει «δεν έχει», ποτέ «άγνωστο».
+    mfaEnrolled: previousClaims?.mfaEnrolled === true,
+    permissions: [],
+  };
+}
+
+/**
  * Συνθέτει το claim: **ταυτότητα + extras**, ποτέ αντίγραφο του καταλόγου.
  *
  * @param input Ταυτότητα, ρητά extras, και τα προηγούμενα claims.
@@ -146,7 +218,7 @@ export function composeClaimPayload(input: ClaimPayloadInput): ClaimPayload {
  * είναι λατινικά **σήμερα** — αλλά ένα όριο που είναι σωστό μόνο όσο κανείς δεν
  * γράφει ελληνικά δεν είναι όριο.
  */
-export function claimPayloadBytes(payload: ClaimPayload): number {
+export function claimPayloadBytes(payload: AnyClaimPayload): number {
   // Η σφραγίδα που θα προσθέσει ο `setClaimsWithMirror` (ADR-360) — 13ψήφιο
   // epoch ms. Χρησιμοποιείται σταθερή τιμή **ίδιου μήκους** ώστε η μέτρηση να
   // είναι ντετερμινιστική και να μη διαφέρει μεταξύ δύο κλήσεων.
@@ -173,7 +245,7 @@ export interface ClaimFitVerdict {
  * const fit = checkClaimFits(payload);
  * if (!fit.fits) throw new Error(`υπερβαίνει κατά ${fit.overBy} bytes`);
  */
-export function checkClaimFits(payload: ClaimPayload): ClaimFitVerdict {
+export function checkClaimFits(payload: AnyClaimPayload): ClaimFitVerdict {
   const bytes = claimPayloadBytes(payload);
   return {
     fits: bytes <= FIREBASE_CLAIM_LIMIT_BYTES,

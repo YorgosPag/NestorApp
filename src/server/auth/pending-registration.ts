@@ -55,6 +55,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { getCompanyId } from '@/config/tenant';
 import { sendReplyViaMailgun } from '@/services/ai-pipeline/shared/mailgun-sender';
 import { buildPendingRegistrationAdminEmail } from '@/services/email-templates/pending-registration-admin';
+import { CITIZEN_STATUS } from '@/server/auth/citizen-identity';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 
@@ -66,7 +67,19 @@ const ADMIN_ROLES: readonly string[] = ['super_admin', 'company_admin'];
 // TYPES
 // =============================================================================
 
-export type PendingRegistrationStatus = 'pending' | 'assigned';
+/**
+ * ⚠️ **ΤΡΕΙΣ ΚΑΤΑΣΤΑΣΕΙΣ, ΚΑΙ Η ΤΡΙΤΗ ΔΕΝ ΕΙΝΑΙ ΠΑΡΑΛΛΑΓΗ ΤΩΝ ΑΛΛΩΝ ΔΥΟ.**
+ *
+ * - `pending` — ζήτησε είσοδο σε **χώρο εργασίας** και **περιμένει άνθρωπο**.
+ * - `assigned` — έχει ήδη μισθωτή· εδώ δεν γίνεται τίποτα.
+ * - `citizen` — **δεν ζήτησε ποτέ χώρο εργασίας** (ADR-844). Ήρθε από δημόσια
+ *   αγγελία, έχει ταυτότητα **χωρίς οργανισμό**, και **δεν περιμένει κανέναν**.
+ *
+ * 🔴 Το `citizen` **δεν** μπορούσε να μπει στο `assigned`: εκείνο σημαίνει *«έχει
+ * tenant»*, που για τον πολίτη είναι **ψευδές**. Μια κοινή τιμή θα έκανε τους
+ * δύο ισχυρισμούς έναν — το σχήμα του ADR-749.
+ */
+export type PendingRegistrationStatus = 'pending' | 'assigned' | 'citizen';
 
 export interface PendingRegistrationInput {
   uid: string;
@@ -76,7 +89,10 @@ export interface PendingRegistrationInput {
 }
 
 export interface PendingRegistrationResult {
-  /** `assigned` = ο χρήστης έχει ήδη tenant (no-op)· `pending` = εκκρεμεί έγκριση. */
+  /**
+   * `assigned` = έχει ήδη tenant (no-op) · `citizen` = ταυτότητα χωρίς οργανισμό,
+   * δεν περιμένει έγκριση (no-op, ADR-844) · `pending` = εκκρεμεί έγκριση.
+   */
   status: PendingRegistrationStatus;
   /** True μόνο όταν στάλθηκε (τώρα) ειδοποίηση προς διαχειριστές. */
   notified: boolean;
@@ -115,6 +131,26 @@ export async function ensurePendingRegistration(
       return { kind: 'assigned', firstNotification: false, displayName: null, authProvider: null };
     }
 
+    // 🔴 **Ο ΠΟΛΙΤΗΣ — ΑΥΣΤΗΡΟ NO-OP, ΓΙΑ ΤΟΝ ΙΔΙΟ ΛΟΓΟ ΜΕ ΤΟ `assigned`** (ADR-844).
+    //
+    // Ο άνθρωπος που ήρθε από δημόσια αγγελία έχει **ταυτότητα χωρίς οργανισμό**:
+    // claim `globalRole: external_user`, **κανένα** `companyId`. Δηλαδή περνά τον
+    // πρώτο φρουρό (δεν έχει μισθωτή) και θα έπεφτε **ίσια** στη γραφή παρακάτω —
+    // που θα του έγραφε `globalRole: null, status: 'pending'`.
+    //
+    // ⚠️ **ΤΟ CLAIM ΔΕΝ ΘΑ ΑΓΓΙΖΟΤΑΝ, ΚΑΙ ΓΙ' ΑΥΤΟ ΑΚΡΙΒΩΣ ΕΙΝΑΙ ΣΟΒΑΡΟ**: θα
+    // έμενε `external_user` στο token και `null` στο έγγραφο — **ενεργή** απόκλιση
+    // claim↔εγγράφου, το ίδιο σχήμα που το §5.13 χαρακτηρίζει «ρητά ανεκτό» αλλά
+    // **μετρά 0/4 σήμερα**, δηλαδή λανθάνον. Θα το κάναμε ενεργό, σε **κάθε**
+    // σύνδεση **κάθε** πολίτη — και μαζί θα τον έβαζε στη λίστα «εκκρεμείς
+    // εγκρίσεις» ενός διαχειριστή που **δεν ζήτησε ποτέ** τίποτα να εγκρίνει.
+    //
+    // ⛔ Ο έλεγχος κρίνει το **έγγραφο**, ποτέ το claim — ίδια αρχή με τον
+    //    φρουρό του `assigned` από πάνω: το έγγραφο είναι αυτό που θα γραφόταν.
+    if (data?.status === CITIZEN_STATUS) {
+      return { kind: 'citizen', firstNotification: false, displayName: null, authProvider: null };
+    }
+
     const alreadyNotified = Boolean(data?.pendingNotifiedAt);
     const displayName = input.displayName ?? (data?.displayName as string | null) ?? null;
     const authProvider = input.authProvider ?? (data?.authProvider as string | null) ?? 'unknown';
@@ -145,8 +181,13 @@ export async function ensurePendingRegistration(
     return { kind: 'pending', firstNotification: !alreadyNotified, displayName, authProvider };
   });
 
-  if (outcome.kind === 'assigned') {
-    return { status: 'assigned', notified: false };
+  // ⚠️ **`!== 'pending'`, ΚΑΙ ΟΧΙ ΑΠΑΡΙΘΜΗΣΗ ΤΩΝ ΑΛΛΩΝ ΔΥΟ.** Η ειδοποίηση
+  //    διαχειριστή έχει νόημα **μόνο** για κάποιον που όντως περιμένει έγκριση.
+  //    Γραμμένο ως λίστα (`'assigned' || 'citizen'`), μια **τέταρτη** κατάσταση
+  //    αύριο θα έπεφτε σιωπηλά στη διαδρομή της ειδοποίησης — δηλαδή θα
+  //    ενοχλούσε άνθρωπο για κάτι που δεν του ζητήθηκε να κρίνει.
+  if (outcome.kind !== 'pending') {
+    return { status: outcome.kind, notified: false };
   }
   if (!outcome.firstNotification) {
     return { status: 'pending', notified: false };
