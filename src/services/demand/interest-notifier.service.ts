@@ -49,9 +49,12 @@ import { nowISO, todayLocalDate } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
 import { NOTIFICATION_EVENT_TYPES, SOURCE_SERVICES, getCurrentEnvironment } from '@/config/notification-events';
 import { dispatchNotification } from '@/server/notifications/notification-orchestrator';
-// 🔑 **Ο ΥΠΑΡΧΩΝ helper, ποτέ χειρόγραφο `/offers/${id}`** — κουβαλά ήδη το
-//    `encodeURIComponent` και είναι το **ένα** σημείο που ξέρει τη διαδρομή.
-import { offerDetailHref } from '@/lib/owner-property/owner-property-routes';
+// 🔑 **Ο ΥΠΑΡΧΩΝ helper, ποτέ χειρόγραφη διαδρομή** — κουβαλά ήδη το
+//    `encodeURIComponent` και είναι το **ένα** σημείο που ξέρει **ΠΟΙΑ ΚΑΤΟΧΗ ΑΝΟΙΓΕΙ
+//    ΠΟΙΑ ΠΟΡΤΑ** (ADR-841 §7 Α18.9). Μέχρι το Α18.9 εδώ καλούνταν κατευθείαν το
+//    `offerDetailHref` — η οθόνη **του ιδιώτη** — και **για τις δύο** οικογένειες.
+import { placeDetailHref } from '@/lib/places/place-detail-route';
+import type { PlaceSource } from './place-interest.service';
 import {
   announcementEventId,
   type AnnouncementBand,
@@ -156,6 +159,10 @@ async function tallyAnnouncements(
         // Ο ιδιώτης **δεν έχει εταιρεία** — το επίπεδο απομόνωσής του είναι ο
         // εαυτός του (`tenant-config.ts`, `mode: 'userId'`).
         tenantId: property.authorUserId,
+        // 🔑 **Η κατοχή δηλώνεται εδώ, γιατί ΕΔΩ διαβάστηκε η συλλογή**
+        //    (`owner_properties`). Δεν συνάγεται από το πρόθεμα `ownp_*` — αυτό θα
+        //    ήταν παρατήρηση για κάτι που αυτός ο βρόχος ήδη **ξέρει**.
+        source: 'owner-property',
         facts: ownerPropertyFactsOf(property, nowIso),
       },
       demands,
@@ -185,6 +192,11 @@ export interface PlaceAnnouncement {
   readonly propertyTitle: string;
   readonly recipientId: string;
   readonly tenantId: string;
+  /**
+   * **Η κατοχή** — και είναι αυτή που διαλέγει την πόρτα, όχι το πρόθεμα της
+   * ταυτότητας (ADR-841 §7 Α18.9). Δηλώνεται από τον σαρωτή που διάβασε τη συλλογή.
+   */
+  readonly source: PlaceSource;
   readonly band: AnnouncementBand;
   readonly count: number;
 }
@@ -211,7 +223,19 @@ const EMAIL_SUBJECT = (count: number): string =>
 export async function announceOnePlace(
   announcement: PlaceAnnouncement,
 ): Promise<AnnounceOutcome> {
-  const { propertyId, propertyTitle, recipientId, tenantId, band, count } = announcement;
+  // ⚠️ **Μετονομάζεται σε `placeSource`, επίτηδες**: λίγες γραμμές πιο κάτω το
+  //    `dispatchNotification` παίρνει **δικό του** `source` (υπηρεσία · λειτουργία ·
+  //    περιβάλλον). Δύο ολότελα διαφορετικά πράγματα με το ίδιο όνομα, στην ίδια κλήση,
+  //    είναι ακριβώς το σχήμα που κάνει το επόμενο diff να διαβαστεί λάθος.
+  const {
+    propertyId,
+    propertyTitle,
+    recipientId,
+    tenantId,
+    source: placeSource,
+    band,
+    count,
+  } = announcement;
 
   const result = await dispatchNotification({
     eventType: NOTIFICATION_EVENT_TYPES.PROPERTIES_DEMAND_INTEREST,
@@ -241,15 +265,20 @@ export async function announceOnePlace(
     //    `listing-match-notifier`. Ο μηχανισμός υπήρχε ολόκληρος· έλειπε η τροφοδοσία.
     //
     // 🔑 **ΚΑΙ Ο ΠΡΟΟΡΙΣΜΟΣ ΕΙΝΑΙ ΑΛΛΟΣ ΑΠΟ ΤΟΥ ΑΔΕΛΦΟΥ, ΕΠΙΤΗΔΕΣ.** Εκεί ο παραλήπτης
-    //    είναι ο **ζητών** και πάει στη **δημόσια** αγγελία· εδώ είναι ο **ιδιοκτήτης**
-    //    (`recipientId: property.authorUserId`, γρ. 152) και το `propertyId` είναι η
-    //    **δική του** καταχώρηση (`ownp_*`). Μια κοινή διεύθυνση για τα δύο θα ήταν
+    //    είναι ο **ζητών** και πάει στη **δημόσια** αγγελία· εδώ είναι ο **κάτοχος**, και
+    //    πάει στην οθόνη όπου μπορεί να **πράξει**. Μια κοινή διεύθυνση για τα δύο θα ήταν
     //    λάθος **και στις δύο** κατευθύνσεις: ο ζητών θα χτυπούσε σε άρνηση Firestore,
-    //    ο ιδιοκτήτης θα έβλεπε τον εαυτό του σαν επισκέπτης.
+    //    ο κάτοχος θα έβλεπε τον εαυτό του σαν επισκέπτης.
+    //
+    // 🔴 **ΚΑΙ Ο ΚΑΤΟΧΟΣ ΕΙΝΑΙ ΔΥΟ, ΟΧΙ ΕΝΑΣ — ΤΟ ΠΛΗΡΩΣΑΜΕ ΓΙΑ ΝΑ ΤΟ ΜΑΘΟΥΜΕ.**
+    //    Αυτή η γραμμή έγραφε `offerDetailHref(propertyId)` **για όλους**, ενώ ο πυρήνας
+    //    σαρώνει **δύο** συλλογές: **6 στα 12** έγγραφα ήταν `prop_*` (αγγελίες γραφείου)
+    //    και το `/offers/<id>` τους απαντούσε *«δεν υπάρχει — ή δεν είναι δικό σου»*.
+    //    Μετρημένο ζωντανά, ADR-841 §7 Α18.8 → Α18.9.
     //
     // ⚠️ Το `label` δεν φτάνει σε οθόνη — ο drawer αποδίδει δικό του μεταφρασμένο
     //    κείμενο. Σταθερό αναγνωριστικό, ποτέ ελληνικό (N.11).
-    actions: [{ id: 'view', label: 'view', url: offerDetailHref(propertyId) }],
+    actions: [{ id: 'view', label: 'view', url: placeDetailHref(placeSource, propertyId) }],
     source: { service: SOURCE_SERVICES.CRM, feature: 'demand-interest', env: getCurrentEnvironment() },
   });
 

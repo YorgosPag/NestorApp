@@ -34,6 +34,7 @@ import {
   type AnnounceOutcome,
 } from '@/services/demand/interest-notifier.service';
 import type { ListingMatchFacts } from '@/lib/demand/demand-match-vocabulary';
+import type { PlaceSource } from '@/services/demand/place-interest.service';
 import type { PropertyDemand } from '@/types/property-demand';
 
 /** Οι τέσσερις καταλήξεις που μοιράζονται **και οι δύο** σαρωτές. */
@@ -70,6 +71,19 @@ export interface AnnouncementCandidate {
   readonly propertyTitle: string;
   readonly recipientId: string;
   readonly tenantId: string;
+  /**
+   * **Η κατοχή — δηλωμένη από τον σαρωτή που διάβασε τη συλλογή** (ADR-841 §7 Α18.9).
+   *
+   * 🔴 **ΔΕΝ είναι διακοσμητικό πεδίο: αποφασίζει ΠΟΥ ΟΔΗΓΕΙ ΤΟ ΚΟΥΜΠΙ.** Μέχρι το
+   * Α18.9 και οι δύο σαρωτές έστελναν στην οθόνη **του ιδιώτη**, οπότε **οι μισές**
+   * ειδοποιήσεις είχαν πόρτα που απαντούσε *«δεν είναι δικό σου»* — μετρημένο
+   * κλειστά σε 12 έγγραφα.
+   *
+   * 🔑 **Ζει ΕΔΩ και όχι στον αποστολέα**, γιατί εδώ ζει ό,τι *«διαφέρει ανά
+   * μονοπάτι κατοχής»* — και ο σαρωτής **δεν συνάγει** την κατοχή: μόλις ρώτησε τη
+   * συλλογή. Δες {@link module:lib/places/place-detail-route} για τις δύο πόρτες.
+   */
+  readonly source: PlaceSource;
   /** Τα γεγονότα, **ήδη χτισμένα** από το μονοπάτι που ξέρει πώς. */
   readonly facts: ListingMatchFacts;
 }
@@ -114,6 +128,7 @@ export async function announceIfNewsworthy(
       propertyTitle: candidate.propertyTitle,
       recipientId: candidate.recipientId,
       tenantId: candidate.tenantId,
+      source: candidate.source,
       band,
       count: interest.disclosure.count ?? 0,
     }),

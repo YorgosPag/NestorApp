@@ -45,8 +45,23 @@ const ANNOUNCEMENT = {
   propertyTitle: 'Διαμέρισμα στη Θεσσαλονίκη',
   recipientId: 'user_owner',
   tenantId: 'user_owner',
+  // ADR-841 §7 Α18.9 — η κατοχή διαλέγει την πόρτα.
+  source: 'owner-property',
   band: 'few',
   count: 3,
+} as const;
+
+/**
+ * Η **ίδια** ανακοίνωση, από την **άλλη** κατοχή — αγγελία γραφείου.
+ *
+ * ⚠️ Ο παραλήπτης είναι πάλι ένας άνθρωπος· ο **μισθωτής** όμως είναι η εταιρεία,
+ * ακριβώς όπως τα 6 έγγραφα που μετρήθηκαν ζωντανά στην Α18.8.
+ */
+const COMPANY_ANNOUNCEMENT = {
+  ...ANNOUNCEMENT,
+  propertyId: 'prop_a0000003-7777-4aaa-8aaa-000000000003',
+  tenantId: 'comp_9c7c1a50',
+  source: 'company-property',
 } as const;
 
 type Announcement = Parameters<typeof announceOnePlace>[0];
@@ -83,5 +98,42 @@ describe('Ε — η ειδοποίηση ζήτησης ΕΚΤΕΛΕΙΤΑΙ, δ
       eventId: announcementEventId(ANNOUNCEMENT.propertyId, ANNOUNCEMENT.band),
       entityId: ANNOUNCEMENT.propertyId,
     });
+  });
+});
+
+/**
+ * ============================================================================
+ * Ζ — **Η ΠΟΡΤΑ ΠΟΥ ΓΡΑΦΕΤΑΙ ΕΙΝΑΙ Η ΠΟΡΤΑ ΤΗΣ ΚΑΤΟΧΗΣ** (ADR-841 §7 Α18.9)
+ * ============================================================================
+ *
+ * 🔴 **ΚΑΙ ΕΙΝΑΙ Η ΑΓΚΥΡΑ ΣΥΜΠΕΡΙΦΟΡΑΣ ΠΟΥ ΕΛΕΙΠΕ.** Η
+ * `place-detail-route.test.ts` αποδεικνύει ότι η **συνάρτηση** ξέρει τις δύο
+ * πόρτες· εδώ αποδεικνύεται ότι η **ειδοποίηση τη ρωτά** — δηλαδή ότι το `source`
+ * ταξιδεύει από τον σαρωτή μέχρι το `actions[0].url` **χωρίς να χαθεί στη μέση**.
+ *
+ * ⚠️ Χωρίς το **Ζ2**, ένα μελλοντικό «καθάρισμα» που ξανακαρφώνει
+ * `offerDetailHref` θα περνούσε **και τα δύο** άλλα φρουρά: το `Κ2` της
+ * `notification-destination-custody` *(«η διεύθυνση χτίζεται από helper»)* και τα
+ * `Π*` *(«η συνάρτηση ξέρει τις πόρτες»)*. Η ψεύτικη πόρτα ζούσε **ακριβώς** σε
+ * αυτό το κενό.
+ */
+describe('Ζ — ο προορισμός ακολουθεί την ΚΑΤΟΧΗ, όχι το πρόθεμα', () => {
+  it('Ζ1 — κατοχή ιδιώτη ⇒ η δική του καταχώρηση', async () => {
+    await announceOnePlace(ANNOUNCEMENT as Announcement);
+
+    expect(mockDispatchNotification.mock.calls[0][0]).toMatchObject({
+      actions: [{ id: 'view', label: 'view', url: '/offers/ownp_42' }],
+    });
+  });
+
+  it('Ζ2 🔴 — κατοχή γραφείου ⇒ η καρτέλα του γραφείου, ΠΟΤΕ το `/offers`', async () => {
+    await announceOnePlace(COMPANY_ANNOUNCEMENT as Announcement);
+
+    const url = mockDispatchNotification.mock.calls[0][0].actions[0].url;
+
+    expect(url).toBe(`/properties/${COMPANY_ANNOUNCEMENT.propertyId}`);
+    // Η ακριβής ψεύτικη πόρτα της Α18.8, γραμμένη ως **άρνηση**: εκεί κατέληγαν
+    // **6 στα 12** έγγραφα, και η οθόνη απαντούσε «δεν είναι δικό σου».
+    expect(url).not.toMatch(/^\/offers\//);
   });
 });
