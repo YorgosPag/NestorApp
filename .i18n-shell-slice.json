@@ -47,6 +47,52 @@
       "reason": "~1.6 KB — ADR-777 Α3, η ΔΗΜΟΣΙΑ οθόνη 2 (/search/results). ΜΕΤΡΗΜΕΝΟ ΖΩΝΤΑΝΑ 2026-08-10: χωρίς αυτή την εγγραφή το SSR βάφει `page.title` ωμό, με `bundles: [search-results=absent]` — δηλαδή ακριβώς η κλάση ελαττώματος της CHECK 3.51, σε σελίδα που είναι Η ΠΡΩΤΗ ΕΠΑΦΗ ανώνυμου επισκέπτη. Ο λόγος που ΔΕΝ λύνεται με πύλη φόρτωσης είναι γραμμένος αλλού και δεσμεύει: ADR-777 Α19 κανόνας 30 — «κάτι ΑΛΗΘΙΝΟ ζωγραφίζεται στο πρώτο καρέ· κενό με spinner ΔΕΝ είναι πρώτος καρές», και ένα ωμό κλειδί είναι ΧΕΙΡΟΤΕΡΟ από spinner: δεν είναι κενό, είναι ψέμα. Είναι επίσης route boundary εξ ορισμού (σελίδα, όχι layout), άρα δομικά εκτός shell closure. Απελευθερώνεται με per-route slices (§8, Φ4) — αυτή η διαδρομή είναι από τις ΚΑΘΑΡΟΤΕΡΕΣ υποψήφιες, γιατί το namespace έχει ΕΝΑΝ καταναλωτή."
     }
   },
+  "$shellNamespaces": [
+    "ADR-744 §23 — ΤΟ ΑΛΛΟ ΜΙΣΟ ΤΟΥ ΚΕΛΥΦΟΥΣ: οσα ταξιδευουν ΚΟΜΜΕΝΑ ΣΤΟ ΚΛΕΙΔΙ.",
+    "Το `guaranteedNamespaces` απο πανω φυλαει τα 10 που ταξιδευουν ΟΛΟΚΛΗΡΑ. Αυτα εδω ειναι τα 8 που φερνει η ΚΛΕΙΣΤΟΤΗΤΑ — και μεχρι τις 2026-09-04 ΔΕΝ ΤΑ ΦΥΛΑΓΕ ΚΑΝΕΙΣ: ενα `import { criterionLabel }` στο ListingCard τα εκανε 8 -> 10 με τον φρουρο `wholeNs.length <= 10` ΠΡΑΣΙΝΟ, γιατι μετρουσε το αλλο μισο.",
+    "ΤΑ ΔΥΟ ΚΑΤΑΣΤΙΧΑ ΕΙΝΑΙ ΔΙΑΜΕΡΙΣΗ: καθε namespace του κελυφους δηλωνεται σε ΑΚΡΙΒΩΣ ΕΝΑ. Το `shell-census.js` το επιβαλλει και προς τις δυο κατευθυνσεις.",
+    "`dragger` = το αρχειο του κελυφους που το ΣΕΡΝΕΙ, και η πυλη ΕΠΑΛΗΘΕΥΕΙ απο το manifest (`wants[ns].from`) οτι εξακολουθει να το ζητα. Οταν ο αιτιος αλλαξει, η πυλη ζηταει να ονομαστει ο νεος — αιτιολογια που δεν διαψευδεται δεν ειναι αιτιολογια.",
+    "ΠΟΤΕ bytes εδω: το key-sliced μερος μεγαλωνει ακριβως οταν καποιος ΘΕΡΑΠΕΥΕΙ ωμο κλειδι (αντι-προτυπο CHECK 3.44/3.53)."
+  ],
+  "shellNamespaces": {
+    "auth": {
+      "dragger": "src/auth/components/ProtectedRoute.tsx",
+      "reason": "Το ProtectedRoute τυλιγει ΚΑΘΕ προστατευμενη σελιδα, αρα ζει στο κελυφος εξ ορισμου, και τα μηνυματα του (ελεγχος συνεδριας, αρνηση προσβασης) βαφονται ΠΡΙΝ προλαβει να τρεξει οποιαδηποτε πυλη φορτωσης. Per-route slice δεν λυνει τιποτα: η ιδια οθονη εμφανιζεται σε ολες τις διαδρομες."
+    },
+    "common-account": {
+      "dragger": "src/components/app-header.tsx",
+      "reason": "Η ομαδα `common-*` ταξιδευει μαζι: η κεφαλιδα ζηταει τα αδελφια ως πληρη λιστα στο ιδιο useTranslation, και το περιεχομενο βαφεται μεσα σε ηδη προσαρτημενη επιφανεια οπου το ADR-279 §9 απαγορευει πυλη φορτωσης. Μετρημενα 35 αρχεια του κελυφους το ζητουν."
+    },
+    "common-photos": {
+      "dragger": "src/components/app-header.tsx",
+      "reason": "Ιδιο σκεπτικο με το common-account — ενα απο τα αδελφια `common-*` που η κεφαλιδα ζηταει ως ενιαια λιστα. Μετρημενα 34 αρχεια του κελυφους το ζητουν· δεν απομονωνεται σε διαδρομη."
+    },
+    "common-shared": {
+      "dragger": "src/components/app-header.tsx",
+      "reason": "Το πιο διαδεδομενο αδελφι της ομαδας `common-*` — μετρημενα 36 αρχεια του κελυφους. Οι ετικετες του εμφανιζονται σε καθε φορμα καθε σελιδας, αρα δεν υπαρχει διαδρομη να το χρεωθει."
+    },
+    "files": {
+      "dragger": "src/hooks/notifications/useFilesNotifications.ts",
+      "reason": "ΕΝΑΣ καταναλωτης, και ειναι ο λογος που δεν φευγει: το hook ειδοποιησεων τρεχει στην κεφαλιδα, δηλαδη σε καθε σελιδα, και συνθετει κειμενο ειδοποιησης χωρις να ξερει σε ποια διαδρομη βρισκεται ο ανθρωπος."
+    },
+    "parking": {
+      "dragger": "src/components/search/SearchResultItem.tsx",
+      "reason": "Το αποτελεσμα αναζητησης ζει στη βιτρινα της ριζας — δηλαδη σε shell root — και δειχνει χαρακτηριστικο σταθμευσης μεσα στην καρτα. Θα φυγει οταν η βιτρινα αποκτησει δικο της route slice."
+    },
+    "projects": {
+      "dragger": "src/components/projects/procurement/BackToProjectLink.tsx",
+      "reason": "ΕΝΑΣ καταναλωτης, ενας συνδεσμος επιστροφης — και μπαινει στην κλειστοτητα μεσω αλυσιδας εισαγωγων του κελυφους, οχι επειδη το θελει καποια σελιδα. Υποψηφιο για αφαιρεση μολις σπασει η αλυσιδα."
+    },
+    "property-market": {
+      "dragger": "src/components/public-site/PublicSiteHeader.tsx",
+      "reason": "Η δημοσια κεφαλιδα ειναι κελυφος για ολοκληρη την ανωνυμη πλευρα (βιτρινα, προφιλ γραφειου, εντολη), και το λεξιλογιο της αγορας βαφεται μεσα της. Μετρημενα 5 αρχεια του κελυφους το ζητουν."
+    }
+  },
+  "shellNamespacesSeal": {
+    "count": 8,
+    "at": "2026-09-05",
+    "why": "Σφραγιση της πρωτης μετρησης: 18 namespaces στο κελυφος = 10 ολοκληρα (guaranteedNamespaces) + 8 key-sliced. Ο αριθμος 8 ΔΕΝ επιλεχθηκε — μετρηθηκε απο το shell-slice.el.json μειον το shell-slice.whole.json την ημερα που γραφτηκε η απογραφη. Στοχος το μηδεν, μαζι με τα per-route slices."
+  },
   "$dynamicKeyPolicy": "Every entry below answers ONE unresolvable `t(...)` call site in a shell module. The generator REFUSES to emit a slice while any such call is unclassified — that refusal is the guarantee. Each `reason` states a fact measured on 2026-07-31, not an assumption; re-verify it when you touch the file.",
   "dynamicKeyPolicy": {
     "src/components/contact/FirstContactOutcomeNotice.tsx": {

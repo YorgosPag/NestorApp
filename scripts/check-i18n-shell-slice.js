@@ -73,6 +73,11 @@ const { buildSlices, stableStringify, sha256, fingerprintShellFile } = require('
 const { loadNamespaceBundles } = require('./lib/i18n-namespace-extract');
 const { loadKeyConstants } = require('./lib/i18n-shell-slice/key-extract');
 const { auditLedger, describeFailures, auditRouteLedger, describeRouteFailures } = require('./lib/i18n-shell-slice/ledger');
+const {
+  auditShellCensus,
+  describeCensusFailures,
+  describeCensusGrowth,
+} = require('./lib/i18n-shell-slice/shell-census');
 const RS = require('./lib/i18n-shell-slice/route-slices');
 const { ROUTES_DIR, routeIdFor } = RS;
 const { parseModule } = require('./lib/module-graph/parse-module');
@@ -179,6 +184,48 @@ function checkLedgerBudget(config, manifest) {
   const audit = auditLedger(config.guaranteedNamespaces, resources, whole);
   if (audit.failures.length === 0) return null;
   return `migration ledger over budget — ${describeFailures(audit.failures)}`;
+}
+
+/**
+ * B3. ADR-744 §23 — **Η ΑΠΟΓΡΑΦΗ: «ποιος μπήκε στο κέλυφος, και ποιος το αποφάσισε;»**
+ *
+ * 🔴 ΤΟ ΚΕΝΟ ΠΟΥ ΚΛΕΙΝΕΙ, ΜΕΤΡΗΜΕΝΟ (2026-09-04). Το `checkLedgerBudget` από πάνω
+ * κρίνει **μόνο** όσα ταξιδεύουν ΟΛΟΚΛΗΡΑ (10). Τα **8** που ταξιδεύουν κομμένα στο
+ * κλειδί δεν τα ρωτούσε **κανείς**: ένα `import` τα έκανε 8 → 10 και κάθε πύλη έμεινε
+ * πράσινη. Πιάστηκε από **παρενέργεια** — δηλαδή από τύχη.
+ *
+ * ⚠️ **ΔΥΟ ΚΑΝΟΝΕΣ, ΔΥΟ ΦΩΝΕΣ, ΠΟΤΕ ΕΝΑΣ ΜΕ «Ή»** (μάθημα CHECK 3.41, και ο ίδιος λόγος
+ * που το `runLayerOne` δεν αλυσιδώνει `||`): επιστρέφει **πίνακα**, ώστε μια απογραφή
+ * που δεν κλείνει ΚΑΙ ένα κέλυφος που μεγάλωσε να αναφερθούν **και τα δύο** σε ένα
+ * πέρασμα. Το ένα εύρημα ανά κύκλο είναι ο κύκλος που δεν τελειώνει ποτέ.
+ *
+ * ⛔ **ΚΑΜΙΑ ΜΕΤΡΗΣΗ BYTES** — δομικά, όχι κατά σύμβαση: το `shell-census.js` δεν
+ * περιέχει καμία. Νέο κλειδί σε υπάρχον namespace είναι **θεραπεία** ωμού κλειδιού και
+ * περνά ελεύθερα· νέο **namespace** είναι νέα οικογένεια κειμένου σε ~150 διαδρομές.
+ */
+function checkShellCensus(config, manifest) {
+  const [language] = manifest.languages;
+  const file = path.join(PROJECT_ROOT, toPosix(path.join(config.outputDir, `shell-slice.${language}.json`)));
+  if (!fs.existsSync(file)) return [];   // το checkArtifactIntegrity το λέει καλύτερα
+  let resources;
+  try {
+    resources = JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch {
+    return [];                            // ίδιο: το λέει το checkLedgerBudget
+  }
+  const audit = auditShellCensus(
+    config.shellNamespaces,
+    config.guaranteedNamespaces,
+    Object.keys(resources),
+    manifest.wants || {},
+    config.shellNamespacesSeal,
+  );
+  const found = [];
+  if (audit.failures.length > 0) {
+    found.push(`η απογραφή του κελύφους δεν κλείνει — ${describeCensusFailures(audit.failures)}`);
+  }
+  if (audit.grew) found.push(describeCensusGrowth(audit));
+  return found;
 }
 
 /**
@@ -363,6 +410,7 @@ function runLayerOne(config, stagedFiles) {
     checkArtifactIntegrity(manifest),
     checkLedgerBudget(config, manifest),
     checkRouteLedger(config, manifest),
+    ...checkShellCensus(config, manifest),
     checkLocaleDrift(config, manifest),
     checkRouteLocaleDrift(config, manifest),
     checkStagedShellFiles(config, manifest, stagedFiles),
@@ -488,6 +536,7 @@ module.exports = {
   checkArtifactIntegrity,
   checkLedgerBudget,
   checkRouteLedger,
+  checkShellCensus,
   checkLocaleDrift,
   checkRouteLocaleDrift,
   checkStagedShellFiles,

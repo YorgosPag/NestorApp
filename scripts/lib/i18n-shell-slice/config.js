@@ -27,6 +27,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const { parseDeclaration, parseRouteDeclaration } = require('./ledger');
+const { parseShellDeclaration, parseSeal } = require('./shell-census');
 
 const CONFIG_FILE = '.i18n-shell-slice.json';
 
@@ -76,6 +77,25 @@ const DEFAULTS = Object.freeze({
    * and it is meant to reach zero when per-route slices land.
    */
   guaranteedNamespaces: {},
+
+  /**
+   * ADR-744 §23 — **ΤΟ ΑΛΛΟ ΜΙΣΟ ΤΟΥ ΚΕΛΥΦΟΥΣ.** Τα namespaces που ταξιδεύουν
+   * **ΚΟΜΜΕΝΑ ΣΤΟ ΚΛΕΙΔΙ**, δηλαδή όσα φέρνει η **κλειστότητα** και όχι μια δήλωση.
+   *
+   * 🔴 Μέχρι τις 2026-09-04 ΔΕΝ ΤΑ ΦΥΛΑΓΕ ΚΑΝΕΙΣ: ο μόνος φρουρός μετρούσε τα
+   * `wholeNs` (≤10), δηλαδή το **άλλο μισό**. Ένα `import` έριξε δύο ολόκληρα
+   * namespaces στο κέλυφος με την πύλη πράσινη. Βλ. `shell-census.js`.
+   *
+   * ⚠️ Σχήμα `{ dragger, reason }` — **ποτέ bytes**: το key-sliced μέρος μεγαλώνει
+   * ακριβώς όταν κάποιος **θεραπεύει** ωμό κλειδί.
+   */
+  shellNamespaces: {},
+
+  /**
+   * ADR-744 §23 — η **σφράγιση του πλήθους** (Κ2). Μέτρηση με ημερομηνία και λόγο,
+   * ποτέ προτίμηση· **μόνο συρρικνώνεται**.
+   */
+  shellNamespacesSeal: { count: 0, at: '1970-01-01', why: 'αδήλωτο — ο generator δεν έχει τρέξει ποτέ με απογραφή' },
 
   // el ONLY, deliberately. `getInitialLanguage()` in src/i18n/config.ts returns
   // DEFAULT_LANGUAGE unconditionally (to avoid an SSR/CSR mismatch) and
@@ -165,6 +185,13 @@ function loadConfig(projectRoot) {
   for (const [page, value] of Object.entries(config.routeSlices)) {
     parseRouteDeclaration(page, value);
   }
+  // 🔴 ADR-744 §23 — ΚΑΙ ΤΟ ΤΡΙΤΟ ΚΑΤΑΣΤΙΧΟ, ΓΙΑ ΤΟΝ ΙΔΙΟ ΛΟΓΟ: η άρνηση ζει στη
+  // ΦΟΡΤΩΣΗ, ώστε generator · CHECK 3.34 · tests να δουν την ΙΔΙΑ. Μια δήλωση χωρίς
+  // `dragger` δεν διαψεύδεται ποτέ — είναι το «~1,6 KB» με άλλο ρούχο.
+  for (const [namespace, value] of Object.entries(config.shellNamespaces)) {
+    parseShellDeclaration(namespace, value);
+  }
+  parseSeal(config.shellNamespacesSeal);
   return config;
 }
 

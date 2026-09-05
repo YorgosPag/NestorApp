@@ -36,6 +36,14 @@ const path = require('node:path');
 const LIB = path.resolve(__dirname, '..', 'lib', 'i18n-shell-slice');
 const { computeShellClosure } = require(path.join(LIB, 'shell-closure'));
 const { auditLedger, describeFailures, LEDGER_LIMIT_BYTES } = require(path.join(LIB, 'ledger'));
+const {
+  CENSUS,
+  auditShellCensus,
+  announceCensusSlack,
+  describeCensusFailures,
+  parseShellDeclaration,
+  parseSeal,
+} = require(path.join(LIB, 'shell-census'));
 const CONFIG = require(path.join(LIB, 'config')).loadConfig(path.resolve(__dirname, '..', '..'));
 const {
   splitKey,
@@ -587,6 +595,9 @@ describe('Group 12 — the committed slice is sane', () => {
       path.join(REPO, 'src', 'i18n', 'generated', 'shell-slice.whole.json'), 'utf8'));
     const wholeNs = Array.isArray(whole) ? whole : Object.keys(whole);
 
+    // 🔴 ADR-744 §23 — ΑΥΤΟΣ Ο ΦΡΟΥΡΟΣ ΦΥΛΑΕΙ ΤΟ ΜΙΣΟ, ΚΑΙ ΤΟ ΞΕΡΕΙ ΠΛΕΟΝ.
+    // Μετρά ΜΟΝΟ όσα ταξιδεύουν ΟΛΟΚΛΗΡΑ (10). Τα 8 που ταξιδεύουν κομμένα στο κλειδί
+    // τα φυλάει από σήμερα η ΑΠΟΓΡΑΦΗ (Group 17) — μέχρι τις 2026-09-04 κανείς.
     // Ο ΚΥΡΙΟΣ φρουρός: 11η εγγραφή = ένα ακόμη ΟΛΟΚΛΗΡΟ namespace στον σύγχρονο δρόμο.
     // Το ADR το λέει «should reach zero» — άρα κάθε νόμιμη κίνηση είναι ΠΡΟΣ ΤΑ ΚΑΤΩ.
     expect(wholeNs.length).toBeLessThanOrEqual(10);
@@ -1134,5 +1145,194 @@ describe('Group 16 — «νεκρή εγγραφή» σημαίνει νεκρή
     for (const file of files) {
       expect(fs.existsSync(path.join(REPO, file))).toBe(true);
     }
+  });
+});
+
+// ─── Group 17: ADR-744 §23 — Η ΑΠΟΓΡΑΦΗ ΤΟΥ ΚΕΛΥΦΟΥΣ ────────────────────────────
+//
+// 🔴 ΤΟ ΠΕΡΙΣΤΑΤΙΚΟ ΠΟΥ ΤΗ ΓΕΝΝΗΣΕ (2026-09-04): ένα `import { criterionLabel }` μέσα
+// στο `ListingCard` έριξε ΤΡΙΑ ολόκληρα namespaces στο κέλυφος (~150 διαδρομές) και
+// **καμία πύλη δεν το είδε** — ο μόνος φρουρός μετρούσε τα `wholeNs` (Group 12),
+// δηλαδή το ΑΛΛΟ μισό. Πιάστηκε από παρενέργεια, δηλαδή από τύχη.
+//
+// ⚠️ ΒΑΘΜΟΝΟΜΗΜΕΝΟ ΣΕ ΠΡΑΓΜΑΤΙΚΟ ΚΩΔΙΚΑ, ΟΧΙ ΜΟΝΟ ΣΕ FIXTURE: το περιστατικό
+// ξαναφτιάχτηκε στο δέντρο (2026-09-05) — ο generator ΑΡΝΗΘΗΚΕ να γράψει και το
+// CHECK 3.34 βγήκε ΚΟΚΚΙΝΟ με 2 ευρήματα, ονομάζοντας το αρχείο-αίτιο· με την
+// εισαγωγή βγαλμένη, ΠΡΑΣΙΝΟ. Πύλη που δεν την είδες να δαγκώνει δεν είναι πύλη.
+
+describe('Group 17 — η απογραφή του κελύφους: ποιος μπήκε, και ποιος το αποφάσισε;', () => {
+  const REPO = path.resolve(__dirname, '..', '..');
+  const generated = path.join(REPO, 'src', 'i18n', 'generated');
+  const readJson = file => JSON.parse(fs.readFileSync(path.join(generated, file), 'utf8'));
+
+  /** Ένα ελάχιστο `wants` — μόνο τα δύο πεδία που ρωτά η απογραφή. */
+  const wants = (spec) => Object.fromEntries(
+    Object.entries(spec).map(([ns, v]) => [ns, { whole: Boolean(v.whole), from: v.from || [] }]),
+  );
+  const decl = (dragger) => ({ dragger, reason: 'λόγος αρκετά μακρύς ώστε να περάσει τον έλεγχο ουσίας' });
+  const SEAL = { count: 2, at: '2026-09-05', why: 'σφράγιση δοκιμής με λόγο αρκετά μακρύ για τον έλεγχο' };
+
+  // ─── Το πραγματικό δέντρο ────────────────────────────────────────────────────
+
+  it('Α1 — η απογραφή του ΠΡΑΓΜΑΤΙΚΟΥ δέντρου κλείνει, και το πλήθος ισούται με τη σφράγιση', () => {
+    const slice = readJson('shell-slice.el.json');
+    const manifest = readJson('shell-slice.manifest.json');
+    const audit = auditShellCensus(
+      CONFIG.shellNamespaces, CONFIG.guaranteedNamespaces,
+      Object.keys(slice), manifest.wants, CONFIG.shellNamespacesSeal,
+    );
+    expect(describeCensusFailures(audit.failures)).toBe('');
+    expect(audit.grew).toBe(false);
+    // ⚠️ ΙΣΟΤΗΤΑ, ΟΧΙ «<=»: κάθε μονάδα τζόγου είναι ένα ΟΛΟΚΛΗΡΟ namespace που μπορεί
+    // να μπει χωρίς να κοκκινίσει τίποτα (μάθημα ADR-598, 8× τζόγος επί 40 ημέρες).
+    expect(audit.slicedCount).toBe(CONFIG.shellNamespacesSeal.count);
+    expect(announceCensusSlack(audit)).toEqual([]);
+  });
+
+  it('Α2 — τα δύο κατάστιχα είναι ΔΙΑΜΕΡΙΣΗ του πραγματικού κελύφους, χωρίς τομή', () => {
+    const whole = new Set(Object.keys(CONFIG.guaranteedNamespaces));
+    const sliced = new Set(Object.keys(CONFIG.shellNamespaces));
+    expect([...sliced].filter(ns => whole.has(ns))).toEqual([]);
+    const slice = readJson('shell-slice.el.json');
+    expect(new Set([...whole, ...sliced])).toEqual(new Set(Object.keys(slice)));
+  });
+
+  it('Α3 — κάθε δηλωμένος dragger ΕΞΑΚΟΛΟΥΘΕΙ να ζητά το namespace του', () => {
+    const manifest = readJson('shell-slice.manifest.json');
+    for (const [ns, declaration] of Object.entries(CONFIG.shellNamespaces)) {
+      expect(manifest.wants[ns]).toBeDefined();
+      // 🔑 Αυτό είναι το βήμα πάνω από τα --stats-reasons του webpack: η αιτιολογία
+      // δεν είναι πρόζα, είναι ισχυρισμός που ΔΙΑΨΕΥΔΕΤΑΙ από το ίδιο το manifest.
+      expect(manifest.wants[ns].from).toContain(declaration.dragger);
+    }
+  });
+
+  // ─── Κ1: η κλειστή απογραφή, και οι αστοχίες της ────────────────────────────
+
+  it('Κ1α — namespace που ΜΠΗΚΕ χωρίς δήλωση καταγγέλλεται ΚΑΙ ονομάζει τον αίτιο', () => {
+    const audit = auditShellCensus(
+      { alpha: decl('src/shell/A.tsx') }, {},
+      ['alpha', 'listing-detail'],
+      wants({
+        alpha: { from: ['src/shell/A.tsx'] },
+        'listing-detail': { from: ['src/components/search-results/ListingCard.tsx'] },
+      }),
+      { ...SEAL, count: 2 },
+    );
+    const bad = audit.failures.filter(f => f.verdict === CENSUS.UNDECLARED);
+    expect(bad.map(f => f.namespace)).toEqual(['listing-detail']);
+    // Το μήνυμα οφείλει να δείχνει το ΑΡΧΕΙΟ — αλλιώς ο άνθρωπος ψάχνει σε 562 modules.
+    expect(describeCensusFailures(bad)).toContain('ListingCard.tsx');
+  });
+
+  it('Κ1β — δήλωση που ΕΠΑΨΕ να αντιστοιχεί σε πραγματικότητα είναι αστοχία, όχι σιωπή', () => {
+    const audit = auditShellCensus(
+      { alpha: decl('src/shell/A.tsx'), ghost: decl('src/shell/G.tsx') }, {},
+      ['alpha'], wants({ alpha: { from: ['src/shell/A.tsx'] } }), SEAL,
+    );
+    expect(audit.failures.map(f => f.verdict)).toEqual([CENSUS.ABSENT]);
+    expect(describeCensusFailures(audit.failures)).toContain('ΚΑΤΕΒΑΣΕ τη σφράγιση');
+  });
+
+  it('Κ1γ — λάθος κατάστιχο: οι δύο κατευθύνσεις ΞΕΧΩΡΙΖΟΥΝ, γιατί η θεραπεία είναι αντίθετη', () => {
+    const shipsWhole = auditShellCensus(
+      { alpha: decl('src/shell/A.tsx') }, {},
+      ['alpha'], wants({ alpha: { whole: true, from: ['src/shell/A.tsx'] } }), { ...SEAL, count: 0 },
+    );
+    expect(shipsWhole.failures.map(f => f.verdict)).toEqual([CENSUS.SHOULD_BE_WHOLE]);
+
+    const shipsSliced = auditShellCensus(
+      {}, { beta: { budget: 10, reason: 'ολόκληρο κατά δήλωση' } },
+      ['beta'], wants({ beta: { whole: false, from: ['src/shell/B.tsx'] } }), SEAL,
+    );
+    expect(shipsSliced.failures.map(f => f.verdict)).toEqual([CENSUS.SHOULD_BE_SLICED]);
+  });
+
+  it('Κ1δ — ο δηλωμένος αίτιος που ΕΠΑΨΕ να ζητά το namespace καταγγέλλεται ονομαστικά', () => {
+    const audit = auditShellCensus(
+      { alpha: decl('src/shell/OLD.tsx') }, {},
+      ['alpha'], wants({ alpha: { from: ['src/shell/NEW.tsx'] } }), { ...SEAL, count: 1 },
+    );
+    expect(audit.failures.map(f => f.verdict)).toEqual([CENSUS.STALE_DRAGGER]);
+    const message = describeCensusFailures(audit.failures);
+    expect(message).toContain('src/shell/OLD.tsx');
+    expect(message).toContain('src/shell/NEW.tsx');
+  });
+
+  // ─── Κ2: το πλήθος, και ΜΟΝΟ το πλήθος ──────────────────────────────────────
+
+  it('Κ2α — το πλήθος που μεγάλωσε κοκκινίζει, ΑΝΕΞΑΡΤΗΤΑ από το αν όλα είναι δηλωμένα', () => {
+    const audit = auditShellCensus(
+      {
+        alpha: decl('src/shell/A.tsx'),
+        beta: decl('src/shell/B.tsx'),
+        gamma: decl('src/shell/C.tsx'),
+      }, {},
+      ['alpha', 'beta', 'gamma'],
+      wants({
+        alpha: { from: ['src/shell/A.tsx'] },
+        beta: { from: ['src/shell/B.tsx'] },
+        gamma: { from: ['src/shell/C.tsx'] },
+      }),
+      { ...SEAL, count: 2 },
+    );
+    // 🔑 Η ΟΥΣΙΑ ΤΩΝ ΔΥΟ ΑΝΕΞΑΡΤΗΤΩΝ ΚΑΝΟΝΩΝ: η απογραφή ΚΛΕΙΝΕΙ (όλα δηλωμένα, όλοι
+    // οι αίτιοι ισχύουν) και όμως το κέλυφος μεγάλωσε. Ένας κανόνας με «ή» θα ήταν
+    // πράσινος πάνω στο ελάττωμα.
+    expect(audit.failures).toHaveLength(0);
+    expect(audit.grew).toBe(true);
+  });
+
+  it('Κ2β — το πλήθος που ΜΙΚΡΥΝΕ δεν κοκκινίζει, αλλά ΑΝΑΚΟΙΝΩΝΕΤΑΙ ο τζόγος', () => {
+    const audit = auditShellCensus(
+      { alpha: decl('src/shell/A.tsx') }, {},
+      ['alpha'], wants({ alpha: { from: ['src/shell/A.tsx'] } }), { ...SEAL, count: 3 },
+    );
+    expect(audit.grew).toBe(false);
+    expect(audit.failures).toHaveLength(0);
+    expect(announceCensusSlack(audit).join(' ')).toContain('2 δωρεάν');
+  });
+
+  // ─── ΤΟ ΑΝΤΙ-ΠΡΟΤΥΠΟ ΠΟΥ ΑΥΤΗ Η ΠΥΛΗ ΑΡΝΕΙΤΑΙ ──────────────────────────────
+
+  it('Θ — η ΘΕΡΑΠΕΙΑ ωμού κλειδιού περνά ΕΛΕΥΘΕΡΑ: ίδια namespaces, περισσότερα κλειδιά', () => {
+    const declarations = { alpha: decl('src/shell/A.tsx') };
+    const w = wants({ alpha: { from: ['src/shell/A.tsx'] } });
+    const seal = { ...SEAL, count: 1 };
+    // Η θεραπεία: το ίδιο namespace απέκτησε 500 κλειδιά επειδή κάποιος έβγαλε ωμά
+    // ελληνικά από JSX. Το σύνολο ΤΩΝ NAMESPACES δεν άλλαξε — άρα τίποτα δεν αλλάζει.
+    // ⚠️ Η απογραφή ΔΕΝ ΒΛΕΠΕΙ ΚΑΝ τα κλειδιά: η υπογραφή της δέχεται ΟΝΟΜΑΤΑ
+    // namespace, ποτέ δέντρο τιμών. Γι' αυτό ο κανόνας δεν μπορεί να παραβιαστεί.
+    const audit = auditShellCensus(declarations, {}, ['alpha'], w, seal);
+    expect(audit.failures).toHaveLength(0);
+    expect(audit.grew).toBe(false);
+    expect(audit.slicedCount).toBe(1);
+  });
+
+  it('Δ — Η ΑΠΑΓΟΡΕΥΣΗ ΤΩΝ BYTES ΕΙΝΑΙ ΔΟΜΙΚΗ: το module δεν ΜΠΟΡΕΙ να μετρήσει μέγεθος', () => {
+    const source = fs.readFileSync(path.join(LIB, 'shell-census.js'), 'utf8');
+    const code = source.split('\n').filter(line => !/^\s*[*/]/.test(line)).join('\n');
+    // ⚠️ ΑΥΤΟ ΕΙΝΑΙ Η ΠΥΛΗ ΤΗΣ ΠΥΛΗΣ. Ένα σχόλιο «μη μετρήσεις bytes» είναι σύσταση·
+    // ένα module χωρίς ΚΑΝΕΝΑ εργαλείο μέτρησης δεν έχει από πού να παραβεί τον κανόνα.
+    // Ratchet σε bytes θα μπλόκαρε τη ΘΕΡΑΠΕΙΑ ωμών κλειδιών (CHECK 3.44/3.53).
+    expect(code).not.toMatch(/Buffer\s*\./);
+    expect(code).not.toMatch(/byteLength/);
+    expect(code).not.toMatch(/JSON\s*\.\s*stringify/);
+  });
+
+  // ─── Το σχήμα: πρόζα δεν είναι αιτιολογία ───────────────────────────────────
+
+  it('Σ1 — μια δήλωση χωρίς ελεγχόμενο σχήμα απορρίπτεται ΘΟΡΥΒΩΔΩΣ', () => {
+    expect(() => parseShellDeclaration('x', 'γιατί έτσι')).toThrow(/συμβολοσειρά/);
+    expect(() => parseShellDeclaration('x', { reason: 'λόγος αρκετά μακρύς για τον έλεγχο ουσίας' })).toThrow(/dragger/);
+    expect(() => parseShellDeclaration('x', { dragger: 'a.tsx', reason: 'κοντό' })).toThrow(/reason/);
+    expect(parseShellDeclaration('x', { dragger: 'a.tsx', reason: 'λόγος αρκετά μακρύς για τον έλεγχο' }).namespace).toBe('x');
+  });
+
+  it('Σ2 — η σφράγιση απαιτεί ΜΕΤΡΗΣΗ με ημερομηνία και λόγο', () => {
+    expect(() => parseSeal({ count: 8, at: 'πέρσι', why: 'λόγος αρκετά μακρύς για τον έλεγχο' })).toThrow(/ΥΥΥΥ-ΜΜ-ΗΗ/);
+    expect(() => parseSeal({ count: -1, at: '2026-09-05', why: 'λόγος αρκετά μακρύς για τον έλεγχο' })).toThrow(/ακέραιος/);
+    expect(() => parseSeal({ count: 8, at: '2026-09-05', why: 'κοντό' })).toThrow(/why/);
+    expect(parseSeal(SEAL).count).toBe(2);
   });
 });

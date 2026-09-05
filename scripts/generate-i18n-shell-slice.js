@@ -46,6 +46,7 @@ const {
   deadPolicyEntries,
   renderArtifacts,
   manifestPath,
+  serializeWants,
 } = require('./lib/i18n-shell-slice/plan');
 const RS = require('./lib/i18n-shell-slice/route-slices');
 const { wholeNamespacesOf } = RS;
@@ -61,6 +62,15 @@ const {
   ROUTE_BUDGET,
   ROUTE_SHAPE,
 } = require('./lib/i18n-shell-slice/ledger');
+// 🔴 ADR-744 §23 — ΤΟ ΤΡΙΤΟ ΚΑΤΑΣΤΙΧΟ: η ΑΠΟΓΡΑΦΗ του κελύφους. Ζει σε δικό του
+// module επειδή δεν μετρά bytes — και ΔΕΝ ΠΡΕΠΕΙ ποτέ να μετρήσει (η θεραπεία ωμού
+// κλειδιού προσθέτει κλειδιά, άρα bytes· ratchet σε bytes μπλοκάρει τη θεραπεία).
+const {
+  auditShellCensus,
+  announceCensusSlack,
+  describeCensusFailures,
+  describeCensusGrowth,
+} = require('./lib/i18n-shell-slice/shell-census');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const GREEN = '\x1b[0;32m';
@@ -255,11 +265,25 @@ function main() {
     config.routeSlices, observeRouteArtifacts(config, routes, refusedPages), shellBytes,
   );
 
+  // 🔴 ADR-744 §23 — Η ΑΠΟΓΡΑΦΗ, ΚΑΙ ΕΙΝΑΙ ΤΟ ΙΣΧΥΡΟΤΕΡΟ ΣΗΜΕΙΟ ΠΟΥ ΜΠΟΡΕΙ ΝΑ ΜΠΕΙ.
+  // Εδώ ο generator **αρνείται να γράψει**: ένα namespace που μπήκε στο κέλυφος χωρίς
+  // δήλωση δεν προσγειώνεται καν ως artifact, άρα κανείς δεν μπορεί να «ξαναπαράγει»
+  // για να το προσπεράσει. Η αυθεντία είναι το σχέδιο που ΜΟΛΙΣ χτίστηκε — ποτέ ο
+  // δίσκος, που μπορεί να είναι παλιός (ίδιο σκεπτικό με το `shellBytes`).
+  const census = auditShellCensus(
+    config.shellNamespaces,
+    config.guaranteedNamespaces,
+    Object.keys(rendered.slices.resources[config.languages[0]] || {}),
+    serializeWants(plan.wants, { withProvenance: true }),
+    config.shellNamespacesSeal,
+  );
+
   if (routes.length > 0) reportRoutes(routes, config.languages[0], routeLedger, shellRefused);
 
   // ⚠️ Ο ΤΖΟΓΟΣ ΑΝΑΚΟΙΝΩΝΕΤΑΙ ΚΑΙ ΣΤΑ ΔΥΟ ΚΑΤΑΣΤΙΧΑ, ΚΑΙ ΔΕΝ ΜΠΛΟΚΑΡΕΙ (ADR-598).
   for (const line of announceLedgerSlack(ledger.entries)) console.log(`${DIM}${line}${NC}`);
   for (const line of announceRouteSlack(routeLedger.entries)) console.log(`${DIM}${line}${NC}`);
+  for (const line of announceCensusSlack(census)) console.log(`${DIM}${line}${NC}`);
 
   // ─── Η συγκομιδή των ετυμηγοριών — ΟΛΕΣ, με τη σειρά που τις διαβάζει άνθρωπος ──
   if (shellRefused) {
@@ -283,6 +307,30 @@ function main() {
       console.error(`${DIM}   Κ2/Κ3: το ταβάνι ΔΕΝ δηλώνεται — υπολογίζεται από τη σφράγιση. Δεν υπάρχει${NC}`);
       console.error(`${DIM}          αριθμός να ανεβάσεις: ή βάζεις ΟΡΙΟ, ή ΣΦΡΑΓΙΖΕΙΣ ΞΑΝΑ με γραμμένο «why».${NC}`);
       console.error(`${DIM}          Οι μετρήσεις: npm run generate:i18n-shell-slice -- --measure${NC}`);
+    });
+  }
+
+  // 🔴 ADR-744 §23 — ΔΥΟ ΚΑΝΟΝΕΣ, ΔΥΟ ΕΤΥΜΗΓΟΡΙΕΣ. Χωριστά και όχι με «ή»: μια
+  // απογραφή που δεν κλείνει ΚΑΙ ένα κέλυφος που μεγάλωσε είναι δύο διαφορετικά
+  // ελαττώματα με δύο διαφορετικές θεραπείες, και το ένα εύρημα ανά κύκλο είναι ο
+  // κύκλος που δεν τελειώνει ποτέ.
+  if (census.failures.length > 0) {
+    failures.push(() => {
+      console.error(`
+${RED}❌ Η απογραφή του κελύφους δεν κλείνει:${NC}`);
+      console.error(`${RED}   ${describeCensusFailures(census.failures)}${NC}`);
+      console.error(`${DIM}   Τα δύο κατάστιχα είναι ΔΙΑΜΕΡΙΣΗ: ολόκληρα ⇒ guaranteedNamespaces (με bytes),${NC}`);
+      console.error(`${DIM}   κομμένα στο κλειδί ⇒ shellNamespaces (με dragger + reason, ΠΟΤΕ bytes).${NC}`);
+    });
+  }
+  if (census.grew) {
+    failures.push(() => {
+      console.error(`
+${RED}❌ Το κέλυφος μεγάλωσε σε ΠΛΗΘΟΣ namespaces:${NC}`);
+      console.error(`${RED}   ${describeCensusGrowth(census)}${NC}`);
+      console.error(`${DIM}   ⚠️ ΜΗΝ ανεβάσεις τη σφράγιση για να γίνει πράσινο. Ένα namespace στο κέλυφος${NC}`);
+      console.error(`${DIM}      είναι νέα οικογένεια κειμένου σε ~150 διαδρομές — η θεραπεία είναι${NC}`);
+      console.error(`${DIM}      συνήθως να ΚΟΠΕΙ η εισαγωγή, όχι να δηλωθεί το namespace.${NC}`);
     });
   }
 
