@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef } from 'react';
-import { MapPin, RotateCcw, X } from 'lucide-react';
+import { RotateCcw, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -43,6 +43,18 @@ export interface AddressSuggestionsPanelProps {
   onSelect: (candidate: GeocodingApiResponse) => void;
   onRetry?: (field: keyof ResolvedAddressFields) => void;
   onDismiss?: () => void;
+  /**
+   * Ο δεσμός **λίστα → χάρτης** (ADR-332 **D26**): ποια γραμμή δείχνει τώρα ο άνθρωπος,
+   * ή `null` όταν καμία. Μία μορφή, δύο καταστάσεις — precedent `ListingCard.tsx:181-184`.
+   *
+   * 🏆 **Πυροδοτείται και από το ΠΛΗΚΤΡΟΛΟΓΙΟ.** Ο κατάλογος έχει ήδη πλοήγηση με βελάκια
+   * (`handleItemKeyDown`)· δένοντας την προεπισκόπηση στην **ενεργή επιλογή** αντί στο
+   * ποντίκι, ο χάρτης ακολουθεί και όποιον δεν χρησιμοποιεί ποντίκι. Ο Zillow είναι
+   * ποντικοκεντρικός: με πληκτρολόγιο δεν παίρνεις προεπισκόπηση.
+   */
+  onHighlight?: (rank: number | null) => void;
+  /** Ο δεσμός **χάρτης → λίστα**: τονισμένη επειδή ο άνθρωπος δείχνει την πινέζα της. */
+  highlightedRank?: number | null;
   className?: string;
 }
 
@@ -56,6 +68,8 @@ export function AddressSuggestionsPanel({
   onSelect,
   onRetry,
   onDismiss,
+  onHighlight,
+  highlightedRank = null,
   className,
 }: AddressSuggestionsPanelProps) {
   const { t, currentLanguage } = useTranslation('addresses');
@@ -115,18 +129,53 @@ export function AddressSuggestionsPanel({
           {candidates.map((ranking, idx) => {
             const distance = formatGeoDistance(ranking.distanceFromCenterM, currentLanguage);
             return (
-            <li key={ranking.candidate.displayName + idx} role="option" aria-selected={false}>
+            <li
+              key={ranking.candidate.displayName + idx}
+              role="option"
+              aria-selected={highlightedRank === ranking.originalRank}
+            >
               <button
                 ref={(el) => { itemRefs.current[idx] = el; }}
                 type="button"
                 className={cn(
                   'w-full flex items-center gap-3 px-3 py-2.5 text-left text-xs',
                   'hover:bg-muted/60 focus:bg-muted/80 focus:outline-none transition-colors',
+                  // Η έμφαση που έρχεται **από τον χάρτη**. Ίδιο ζεύγος κλάσεων με το
+                  // precedent της αναζήτησης ακινήτων (`ListingCard`), ώστε οι δύο δεσμοί
+                  // λίστας⇄χάρτη της εφαρμογής να μοιάζουν μεταξύ τους.
+                  highlightedRank === ranking.originalRank && 'bg-accent',
                 )}
                 onClick={() => onSelect(ranking.candidate)}
                 onKeyDown={(e) => handleItemKeyDown(e, idx)}
+                onMouseEnter={() => onHighlight?.(ranking.originalRank)}
+                onMouseLeave={() => onHighlight?.(null)}
+                onFocus={() => onHighlight?.(ranking.originalRank)}
+                onBlur={() => onHighlight?.(null)}
               >
-                <MapPin className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                {/*
+                  🔴 **ΗΤΑΝ ΤΟ ΙΔΙΟ ΕΙΚΟΝΙΔΙΟ ΣΕ ΚΑΘΕ ΓΡΑΜΜΗ, ΔΗΛΑΔΗ ΜΗΔΕΝ ΠΛΗΡΟΦΟΡΙΑ.**
+                  Στη θέση του κάθεται ο **αριθμός** της γραμμής, ταυτόσημος με τον αριθμό
+                  πάνω στην πινέζα του χάρτη (`AddressMapCandidateLayer`). Έτσι η
+                  αντιστοίχιση γραμμής⇄πινέζας διαβάζεται **χωρίς καμία χειρονομία** —
+                  ο Zillow απαιτεί hover για να τη μάθεις.
+
+                  Το σχήμα *(κύκλος, διάστικτο περίγραμμα)* είναι το ίδιο με της πινέζας
+                  και **διαφορετικό** από τη συμπαγή σταγόνα των αποθηκευμένων
+                  διευθύνσεων: «πρόταση» και «δεδομένο» ξεχωρίζουν σε κανάλι που δεν
+                  εξαρτάται από όραση χρώματος (**CHECK 3.41**).
+                */}
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    'flex h-5 w-5 shrink-0 items-center justify-center rounded-full',
+                    'text-[10px] font-semibold tabular-nums transition-colors',
+                    highlightedRank === ranking.originalRank
+                      ? 'border-2 border-solid border-foreground bg-foreground text-background'
+                      : 'border-2 border-dashed border-foreground/70 bg-background text-foreground',
+                  )}
+                >
+                  {idx + 1}
+                </span>
 
                 <span className="flex-1 min-w-0">
                   <span className="block truncate font-medium text-foreground">

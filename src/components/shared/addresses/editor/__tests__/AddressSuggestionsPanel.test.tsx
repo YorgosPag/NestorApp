@@ -11,7 +11,7 @@
  */
 
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
 import {
@@ -35,10 +35,10 @@ function candidate(displayName: string, confidence: number): GeocodingApiRespons
   } as GeocodingApiResponse;
 }
 
-function ranking(displayName: string, confidence = 0.6): SuggestionRanking {
+function ranking(displayName: string, confidence = 0.6, originalRank = 0): SuggestionRanking {
   return {
     candidate: candidate(displayName, confidence),
-    originalRank: 0,
+    originalRank,
     distanceFromCenterM: null,
     rankScore: confidence,
   };
@@ -173,5 +173,83 @@ describe('AddressSuggestionsPanel — ένας ιδιοκτήτης της βε�
     renderWithChoices();
 
     expect(screen.getAllByRole('meter')).toHaveLength(2);
+  });
+});
+
+// =============================================================================
+// Ο ΔΕΣΜΟΣ ΚΑΤΑΛΟΓΟΥ ⇄ ΧΑΡΤΗ — ADR-332 D26
+// =============================================================================
+
+/**
+ * 🔴 **Ο κατάλογος έδειχνε πέντε αληθινές διευθύνσεις σε 292-318 χλμ και ΚΑΜΙΑ τους δεν
+ * υπήρχε στον χάρτη δεξιά** (ζωντανή μέτρηση 05/09). Αυτές οι άγκυρες φυλάνε τις δύο
+ * άκρες του δεσμού που το έλυσε — και ιδίως την άκρη που **κανείς δεν δοκιμάζει**:
+ * το πληκτρολόγιο.
+ */
+describe('AddressSuggestionsPanel — ο δεσμός προς τον χάρτη (D26)', () => {
+  const THREE = [
+    ranking('Αθηνάς, Περιστέρι', 0.65, 7),
+    ranking('Αθηνάς, Κορυδαλλός', 0.65, 3),
+    ranking('Αθηνάς, Βριλήσσια', 0.65, 5),
+  ];
+
+  it('το ποντίκι πάνω σε γραμμή ανακοινώνει την ΤΑΥΤΟΤΗΤΑ της, όχι τη θέση της', () => {
+    const onHighlight = jest.fn();
+    renderPanel({ candidates: THREE, onHighlight });
+
+    fireEvent.mouseEnter(screen.getByText('Αθηνάς, Βριλήσσια').closest('button')!);
+
+    // Τρίτη στην οθόνη, ταυτότητα 5. Μια υλοποίηση με δείκτη θέσης θα έστελνε 2.
+    expect(onHighlight).toHaveBeenCalledWith(5);
+  });
+
+  it('φεύγοντας το ποντίκι ανακοινώνει `null` — ένα ρήμα, δύο καταστάσεις', () => {
+    const onHighlight = jest.fn();
+    renderPanel({ candidates: THREE, onHighlight });
+
+    fireEvent.mouseLeave(screen.getByText('Αθηνάς, Περιστέρι').closest('button')!);
+
+    expect(onHighlight).toHaveBeenCalledWith(null);
+  });
+
+  it('🏆 Η ΕΣΤΙΑΣΗ κάνει το ίδιο με το ποντίκι — εδώ ξεπερνάμε τον Zillow', () => {
+    // Ο κατάλογος έχει ήδη πλοήγηση με βελάκια. Αν η προεπισκόπηση δενόταν μόνο στο
+    // ποντίκι, όποιος πλοηγείται με πληκτρολόγιο θα διάλεγε **στα τυφλά** — δηλαδή
+    // ακριβώς το πρόβλημα που λύνει αυτή η δουλειά, μόνο για άλλους ανθρώπους.
+    const onHighlight = jest.fn();
+    renderPanel({ candidates: THREE, onHighlight });
+
+    fireEvent.focus(screen.getByText('Αθηνάς, Κορυδαλλός').closest('button')!);
+    expect(onHighlight).toHaveBeenCalledWith(3);
+
+    fireEvent.blur(screen.getByText('Αθηνάς, Κορυδαλλός').closest('button')!);
+    expect(onHighlight).toHaveBeenLastCalledWith(null);
+  });
+
+  it('χωρίς παραλήπτη το hover δεν σκάει — ο δεσμός είναι προαιρετικός', () => {
+    renderPanel({ candidates: THREE });
+    expect(() =>
+      fireEvent.mouseEnter(screen.getByText('Αθηνάς, Περιστέρι').closest('button')!),
+    ).not.toThrow();
+  });
+
+  it('🔴 η ΤΟΝΙΣΜΕΝΗ από τον χάρτη γραμμή το ανακοινώνει και σε βοηθητική τεχνολογία', () => {
+    renderPanel({ candidates: THREE, highlightedRank: 5 });
+
+    const options = screen.getAllByRole('option');
+    expect(options.map((o) => o.getAttribute('aria-selected'))).toEqual(['false', 'false', 'true']);
+  });
+
+  it('καμία έμφαση ⇒ καμία γραμμή δεν δηλώνεται επιλεγμένη', () => {
+    renderPanel({ candidates: THREE, highlightedRank: null });
+
+    expect(screen.queryByRole('option', { selected: true })).toBeNull();
+  });
+
+  it('🔑 κάθε γραμμή φέρει τον ΑΡΙΘΜΟ ΤΗΣ — η ίδια αντιστοίχιση με την πινέζα, χωρίς hover', () => {
+    renderPanel({ candidates: THREE });
+
+    const options = screen.getAllByRole('option');
+    expect(options.map((o) => o.textContent?.trim().charAt(0))).toEqual(['1', '2', '3']);
   });
 });

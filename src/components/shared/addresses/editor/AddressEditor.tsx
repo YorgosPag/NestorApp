@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useAddressEditor } from './hooks/useAddressEditor';
 import { useAddressSuggestions } from './hooks/useAddressSuggestions';
+import { useSuggestionMapReport } from './hooks/useSuggestionMapReport';
 import { suggestionPresentation } from './helpers/computeSuggestionTriggers';
 import { useAddressReconciliation } from './hooks/useAddressReconciliation';
 import { useAddressUndo } from './hooks/useAddressUndo';
@@ -95,9 +96,6 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
       setUserInput(value);
     }
   }, [value]);
-  useImperativeHandle(ref, () => ({
-    setPendingDrag: (addr: ResolvedAddressFields) => setPendingDrag(addr),
-  }), []);
   const telemetryHook = useAddressTelemetry({
     contextEntityType: (telemetry?.contextEntityType ?? 'contact') as CorrectionContextEntityType,
     contextEntityId: telemetry?.contextEntityId ?? '',
@@ -223,6 +221,10 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
     [undoHook, onChange, editor, suggestions.candidates, telemetryHook, resolvedFields],
   );
 
+  useImperativeHandle(ref, () => ({
+    setPendingDrag: (addr: ResolvedAddressFields) => setPendingDrag(addr),
+  }), []);
+
   const handleSuggestionRetry = useCallback(
     (field: keyof ResolvedAddressFields) => {
       suggestions.recordOmitAttempt(field);
@@ -277,6 +279,20 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
     dismissed: dismissedSuggestions,
   });
   const showSuggestions = presentation !== 'hidden';
+
+  /**
+   * Ο κατάλογος φεύγει και προς τα **έξω** — ADR-332 **D26**: ο χάρτης του γονιού
+   * ζωγραφίζει τις ίδιες γραμμές ως πινέζες. Τι ακριβώς φεύγει και πότε σβήνει, στο
+   * `useSuggestionMapReport`.
+   */
+  useSuggestionMapReport({
+    candidates: suggestions.candidates,
+    presentation,
+    proximityAnchor: suggestionOpts?.proximityAnchor,
+    onReport: suggestionOpts?.onCandidatesChange,
+    onSelect: handleSuggestionSelect,
+  });
+
   const showActivityLog = (activityLogOpts?.enabled ?? true) && mode === 'edit';
   const confidence = currentResult?.confidence;
   const neighborhoodFieldNode = formOptions?.hideGrid && formOptions.showNeighborhoodRegion
@@ -415,6 +431,8 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
             onSelect: handleSuggestionSelect,
             onRetry: suggestions.nextOmitField ? handleSuggestionRetry : undefined,
             onDismiss: () => setDismissedSuggestions(true),
+            highlightedRank: suggestionOpts?.highlightedCandidateRank ?? null,
+            onHighlight: suggestionOpts?.onCandidateHighlight,
           }}
         />
 

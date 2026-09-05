@@ -20,3 +20,9 @@ export { AddressDragConfirmDialog } from './components/AddressDragConfirmDialog'
 export type { AddressDragConfirmDialogProps } from './components/AddressDragConfirmDialog';
 export { computeFreshness } from './helpers/computeFreshness';
 export type { AddressSourceType, AddressFreshness, AddressFreshnessLevel, ResolvedAddressFields } from './types';
+/**
+ * ADR-332 **D26** — ο δεσμός καταλόγου⇄χάρτη ταξιδεύει μέσα σε αυτή την ομάδα, οπότε
+ * κάθε καλών που στήνει τον δεσμό χρειάζεται τον **τύπο** της (`LocationInlineForm`).
+ * Το `SuggestionRanking` βγαίνει μαζί: είναι ό,τι παραδίδει το `onCandidatesChange`.
+ */
+export type { AddressEditorSuggestionOptions, SuggestionRanking, SuggestionMapReport } from './types';
