@@ -21,6 +21,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { linkEntity } from '@/lib/firestore/entity-linking.service';
 import { getErrorMessage } from '@/lib/error-utils';
+import { primaryOrFirst } from '@/lib/primary-entry';
 import { withVersionCheck, ConflictError } from '@/lib/firestore/version-check';
 import { POLICY_ERROR_CODES } from '@/lib/policy';
 import {
@@ -70,7 +71,10 @@ async function resolveBuildingAddresses(
   );
   logger.info('[Buildings] Θέσεις διευθύνσεων', { ...tally });
 
-  const primary = addresses.find((a) => (a as { isPrimary?: boolean }).isPrimary === true) ?? addresses[0];
+  // 🏆 ADR-332 **D24** — «κύριο ή πρώτο» λέγεται ΜΙΑ φορά. Ο μετασχηματισμός τύπου
+  //    (`as { isPrimary?: boolean }`) έφυγε **μαζί** με το διπλότυπο: ήταν δείκτης ότι
+  //    ο τοπικός τύπος δεν χωρούσε την ερώτηση — και ο κοινός τη χωράει.
+  const primary = primaryOrFirst(addresses);
   const lat = primary?.coordinates?.lat;
   const lng = primary?.coordinates?.lng;
   const primaryPoint =

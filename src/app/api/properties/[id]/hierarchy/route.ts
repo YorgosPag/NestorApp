@@ -14,6 +14,7 @@ import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErro
 import { createModuleLogger } from '@/lib/telemetry';
 import { requirePropertyInTenantScope } from '@/lib/auth/tenant-isolation';
 import { extractNestedIdFromUrl } from '@/lib/api/route-helpers';
+import { primaryOrFirst } from '@/lib/primary-entry';
 
 const logger = createModuleLogger('PropertyHierarchyRoute');
 
@@ -124,7 +125,10 @@ export const GET = withStandardRateLimit(
                     municipality?: string;
                     regionalUnit?: string;
                   }> | undefined;
-                  const primaryAddr = addresses?.find(a => a.isPrimary) ?? addresses?.[0];
+                  // 🏆 ADR-332 **D24** — «κύριο ή πρώτο» λέγεται ΜΙΑ φορά, στο
+                  //    `lib/primary-entry.ts`. Το `?.` σε κάθε βήμα ήταν το τίμημα του
+                  //    ότι η ερώτηση δεν είχε σπίτι — ο κοινός δέχεται `undefined`.
+                  const primaryAddr = primaryOrFirst(addresses);
 
                   result.project = {
                     id: projectDoc.id,

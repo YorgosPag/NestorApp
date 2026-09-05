@@ -9,6 +9,8 @@
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { primaryEmailOf, type EmailLike } from '@/lib/contacts/primary-email';
+import { primaryOrFirst } from '@/lib/primary-entry';
 
 // ============================================================================
 // TYPES
@@ -48,29 +50,40 @@ export const ROLE_LABELS: Record<string, string> = {
 // ============================================================================
 
 /**
- * Extract primary email from contact document.
- * Checks: contact.email → contact.emails[].isPrimary → contact.emails[0].
+ * **Πού στέλνουμε σε αυτή την επαφή** — `contact.email` (παλαιό σχήμα), αλλιώς η λίστα.
+ *
+ * 🔴 **ΔΙΟΡΘΩΘΗΚΕ ΣΦΑΛΜΑ 05/09 (ADR-332 D24), ΔΕΝ ΕΓΙΝΕ ΜΟΝΟ ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ**: η
+ * προηγούμενη γραφή τελείωνε σε `emails[0]?.email ?? null` — **χωρίς έλεγχο κενού**.
+ * Μια επαφή με `{ email: '' }` *(συνηθισμένη· μισοσυμπληρωμένη φόρμα)* επέστρεφε `''`,
+ * που **δεν είναι `null`** ⇒ περνούσε κάθε έλεγχο «υπάρχει;» και έφτανε στον πάροχο.
+ * Και αυτή είναι διαδρομή **ειδοποιήσεων**: το σφάλμα φαινόταν μόνο ως ειδοποίηση που
+ * δεν έφτασε ποτέ. Η παγίδα ήταν **ήδη ονομασμένη** στο `primaryEmailOf` (ADR-777
+ * §8.33) — απλώς κανείς δεν είχε συνδέσει τα δύο σημεία.
+ *
+ * ⚠️ **Το `contact.email` προηγείται και ΜΕΝΕΙ**: είναι το παλαιό, μονό πεδίο. Η σειρά
+ * δεν αντιστρέφεται — μια επαφή που έχει **και** τα δύο έχει το μονό ως αυθεντία.
  */
 export function extractPrimaryEmail(contactData: Record<string, unknown>): string | null {
   const directEmail = contactData.email as string | undefined;
   if (directEmail) return directEmail;
 
-  const emails = contactData.emails as Array<{ email?: string; isPrimary?: boolean }> | undefined;
-  if (!emails || emails.length === 0) return null;
-
-  const primary = emails.find(e => e.isPrimary && e.email);
-  if (primary?.email) return primary.email;
-
-  return emails[0]?.email ?? null;
+  return primaryEmailOf(contactData.emails as EmailLike[] | undefined);
 }
 
-/** Extract primary phone from phones[] array */
+/**
+ * **Σε ποιο νούμερο καλούμε αυτή την επαφή** — ίδιο σχήμα με το email, ίδια διόρθωση.
+ *
+ * 🔴 **Είχε ΤΟ ΙΔΙΟ σφάλμα κενού** (`phones[0]?.number` χωρίς έλεγχο) και διορθώθηκε
+ * μαζί: **φιλτράρισμα πρώτα, επιλογή μετά**. Δεν υπάρχει `primaryPhoneOf` αδελφός του
+ * `primaryEmailOf` — και **δεν φτιάχτηκε εδώ επίτηδες**: θα ήταν αυθεντία γεννημένη σε
+ * αρχείο ειδοποιήσεων, με **έναν** καλόντα. Η σύνθεση είναι ρητή και τοπική.
+ */
 export function extractPrimaryPhone(contactData: Record<string, unknown>): string | null {
   const phones = contactData.phones as Array<{ number?: string; isPrimary?: boolean }> | undefined;
-  if (!phones || phones.length === 0) return null;
+  if (!Array.isArray(phones)) return null;
 
-  const primary = phones.find(p => p.isPrimary && p.number);
-  return primary?.number ?? phones[0]?.number ?? null;
+  const usable = phones.filter((entry) => typeof entry.number === 'string' && entry.number.trim() !== '');
+  return primaryOrFirst(usable)?.number?.trim() ?? null;
 }
 
 /** Extract formatted primary address from addresses[] array */
@@ -84,7 +97,9 @@ export function extractPrimaryAddress(contactData: Record<string, unknown>): str
   }> | undefined;
   if (!addresses || addresses.length === 0) return null;
 
-  const addr = addresses.find(a => a.isPrimary) ?? addresses[0];
+  const addr = primaryOrFirst(addresses);
+  if (addr === undefined) return null;
+
   const parts = [
     [addr.street, addr.number].filter(Boolean).join(' '),
     addr.postalCode,

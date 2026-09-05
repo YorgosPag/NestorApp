@@ -20,6 +20,8 @@
  * **Layering**: leaf — καθαρή συνάρτηση.
  */
 
+import { primaryOrFirst } from '@/lib/primary-entry';
+
 /** Το ελάχιστο σχήμα που χρειάζεται η απόφαση — **όχι** ολόκληρη η `EmailInfo`. */
 export interface EmailLike {
   readonly email?: unknown;
@@ -42,11 +44,18 @@ export interface EmailLike {
 export function primaryEmailOf(emails: readonly EmailLike[] | undefined): string | null {
   if (!Array.isArray(emails)) return null;
 
+  // 🔑 **ΦΙΛΤΡΑΡΙΣΜΑ ΠΡΩΤΑ, ΕΠΙΛΟΓΗ ΜΕΤΑ** — και η σειρά είναι ολόκληρη η ουσία: το
+  //    «πρώτο» πρέπει να είναι το πρώτο **χρήσιμο**, αλλιώς μια μισοσυμπληρωμένη φόρμα
+  //    κερδίζει επειδή καταχωρήθηκε νωρίτερα.
   const usable = emails.filter(
     (entry): entry is EmailLike & { email: string } =>
       typeof entry.email === 'string' && entry.email.trim() !== '',
   );
 
-  const preferred = usable.find((entry) => entry.isPrimary === true) ?? usable[0];
+  // 🏆 **Η επιλογή «κύριο ή πρώτο» ΔΕΝ γράφεται εδώ** (ADR-332 **D24**): είναι η ΜΙΑ
+  //    διατύπωση του `lib/primary-entry.ts`, την οποία μοιράζονται διευθύνσεις,
+  //    τηλέφωνα, δάνεια και επίπεδα. Ό,τι μένει εδώ είναι το **ειδικό για email**
+  //    σκέλος — τι σημαίνει «χρήσιμο».
+  const preferred = primaryOrFirst(usable);
   return preferred === undefined ? null : preferred.email.trim();
 }
