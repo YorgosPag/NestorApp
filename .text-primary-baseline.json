@@ -5,14 +5,21 @@
     "description": "Στατική πύλη αντίθεσης UI — κάθε `text-*` που λύνεται σε token ΕΠΙΦΑΝΕΙΑΣ (λίστα ΠΑΡΑΓΟΜΕΝΗ από το tailwind.config.ts, ADR-770 §16) και που η στατική ανάλυση ΔΕΝ μπορεί να αποδείξει υγιή, ανά αρχείο και ανά κατάσταση.",
     "generatedBy": "node scripts/check-text-primary-ratchet.js --write-baseline",
     "totalInvisible": 451,
-    "totalFiles": 235,
-    "note": "ΤΟ ΠΛΗΘΟΣ ΔΕΝ ΕΙΝΑΙ ΔΕΙΚΤΗΣ ΥΓΕΙΑΣ. Ο σαρωτής αποδεικνύει βλάβη, όχι υγεία (το φόντο είναι ερώτημα προγόνων ⇒ browser). Η θεραπεία είναι ρόλοι on-* (Material 3), όχι μικρότερος αριθμός — ADR-759 §4.12.2. Άνοιξε ΑΥΤΟ το αρχείο πριν επικαλεστείς αριθμό."
+    "totalFiles": 236,
+    "note": "ΤΟ ΠΛΗΘΟΣ ΔΕΝ ΕΙΝΑΙ ΔΕΙΚΤΗΣ ΥΓΕΙΑΣ. Ο σαρωτής αποδεικνύει βλάβη, όχι υγεία (το φόντο είναι ερώτημα προγόνων ⇒ browser). Η θεραπεία είναι ρόλοι on-* (Material 3), όχι μικρότερος αριθμός — ADR-759 §4.12.2. Άνοιξε ΑΥΤΟ το αρχείο πριν επικαλεστείς αριθμό.",
+    "examinedByEye": "ADR-332 D26, 2026-09-05 — ΤΡΙΤΗ εγγραφή `element-light-bg`, εξετασμένη ΟΠΤΙΚΑ όπως οι δύο προηγούμενες (δες την επικεφαλίδα του check-text-primary-ratchet.js). AddressMapCandidateLayer.tsx:186 — η ΤΟΝΙΣΜΕΝΗ πινέζα: `border-background bg-foreground text-background`. ΓΙΑΤΙ ΕΙΝΑΙ ΣΩΣΤΗ ΚΑΙ ΟΧΙ ΑΝΟΧΗ: ο σαρωτής κοκκινίζει επειδή το φόντο είναι ερώτημα ΠΡΟΓΟΝΩΝ και δεν μπορεί να το αποδείξει — εδώ όμως το φόντο ΔΕΝ ερωτάται: το ΙΔΙΟ στοιχείο, στην ΙΔΙΑ κλάση, ορίζει `bg-foreground`. Το ζεύγος `bg-foreground`/`text-background` είναι εξ ορισμού ΑΝΤΙΘΕΤΟ και στα ΔΥΟ θέματα (αντεστραμμένη πινέζα — μέγιστη αντίθεση), σε αντίθεση με το `--primary`, που στο σκοτεινό θέμα λύνεται ΤΑΥΤΟΣΗΜΟ με το `--card` (1,00:1) και είναι ο λόγος ύπαρξης αυτής της πύλης. ⚠️ Ξαναεπαλήθευσέ το αν κάποιος χωρίσει το `bg-` από το `text-` σε διαφορετικά στοιχεία: τότε το φόντο ΞΑΝΑΓΙΝΕΤΑΙ ερώτημα προγόνων και η εγγραφή παύει να ισχύει."
   },
   "files": {
     "src/app/(app)/onboarding/organization/page.tsx": {
       "theme-surface": 1
     },
     "src/app/(app)/pending-approval/page.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/ContactFormSections/contactRenderersTyped.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/NotificationDrawer.enterprise.tsx": {
       "theme-surface": 1
     },
     "src/components/account/SessionsList.tsx": {
@@ -54,16 +61,16 @@
     "src/components/banking/IBANInput.tsx": {
       "theme-surface": 1
     },
-    "src/components/building-management/dialogs/NameComboboxField.tsx": {
+    "src/components/building-management/StorageForm/StorageFormHeader.tsx": {
       "theme-surface": 1
     },
-    "src/components/building-management/StorageForm/StorageFormHeader.tsx": {
+    "src/components/building-management/StorageTab.tsx": {
       "theme-surface": 1
     },
     "src/components/building-management/StorageTab/index.tsx": {
       "theme-surface": 3
     },
-    "src/components/building-management/StorageTab.tsx": {
+    "src/components/building-management/dialogs/NameComboboxField.tsx": {
       "theme-surface": 1
     },
     "src/components/building-management/tabs/AnalyticsTabContent/AnalyticsFinancial.tsx": {
@@ -96,23 +103,23 @@
     "src/components/building-management/tabs/MeasurementsTabContent/BOQSummaryCards.tsx": {
       "theme-surface": 2
     },
-    "src/components/building-management/tabs/parking-tab-config.ts": {
-      "theme-surface": 2
-    },
     "src/components/building-management/tabs/ParkingTabContent.tsx": {
       "theme-surface": 1
     },
     "src/components/building-management/tabs/PropertiesTabContent.tsx": {
       "theme-surface": 1
     },
-    "src/components/building-management/tabs/property-tab-constants.ts": {
-      "theme-surface": 2
+    "src/components/building-management/tabs/TimelineTabContent/OverallProgressCard.tsx": {
+      "theme-surface": 3
     },
     "src/components/building-management/tabs/TimelineTabContent/dashboard/ScheduleVarianceTable.tsx": {
       "theme-surface": 6
     },
-    "src/components/building-management/tabs/TimelineTabContent/OverallProgressCard.tsx": {
-      "theme-surface": 3
+    "src/components/building-management/tabs/parking-tab-config.ts": {
+      "theme-surface": 2
+    },
+    "src/components/building-management/tabs/property-tab-constants.ts": {
+      "theme-surface": 2
     },
     "src/components/communications/utils/formatters.ts": {
       "theme-surface": 3
@@ -131,9 +138,6 @@
     },
     "src/components/compositions/UserCard/UserCard.tsx": {
       "theme-surface": 2
-    },
-    "src/components/ContactFormSections/contactRenderersTyped.tsx": {
-      "theme-surface": 1
     },
     "src/components/contacts/dialogs/CommunicationImpactDialog.tsx": {
       "theme-surface": 1
@@ -162,9 +166,6 @@
     "src/components/contacts/tabs/procurement/ContactRfqInvitesSection.tsx": {
       "theme-surface": 1
     },
-    "src/components/crm/inbox/attachment-parts.tsx": {
-      "file-light-bg": 2
-    },
     "src/components/crm/inbox/ReactionBubbles.tsx": {
       "theme-surface": 1
     },
@@ -176,6 +177,9 @@
     },
     "src/components/crm/inbox/__tests__/ThreadView.test.tsx": {
       "theme-surface": 1
+    },
+    "src/components/crm/inbox/attachment-parts.tsx": {
+      "file-light-bg": 2
     },
     "src/components/crm/pages/CrmHubPageContent.tsx": {
       "theme-surface": 1
@@ -203,9 +207,6 @@
     },
     "src/components/navigation/config/navigation-entities/action-config.ts": {
       "theme-surface": 4
-    },
-    "src/components/NotificationDrawer.enterprise.tsx": {
-      "theme-surface": 1
     },
     "src/components/obligations/live-preview/parts/DocumentContent.tsx": {
       "theme-surface": 1
@@ -237,10 +238,10 @@
     "src/components/obligations/table-of-contents/utils/badges.ts": {
       "theme-surface": 1
     },
-    "src/components/procurement/hub/cards/PurchaseOrdersCard.tsx": {
+    "src/components/procurement/SupplierComparisonTable.tsx": {
       "theme-surface": 1
     },
-    "src/components/procurement/SupplierComparisonTable.tsx": {
+    "src/components/procurement/hub/cards/PurchaseOrdersCard.tsx": {
       "theme-surface": 1
     },
     "src/components/procurement/vendors/VendorDetail.tsx": {
@@ -249,17 +250,17 @@
     "src/components/projects/AllowedBuildingDataTab.tsx": {
       "theme-surface": 7
     },
-    "src/components/projects/ika/components/WorkerCard.tsx": {
-      "theme-surface": 1
-    },
     "src/components/projects/PermitsTab.tsx": {
-      "theme-surface": 1
-    },
-    "src/components/projects/procurement/ProjectProcurementTabs.tsx": {
       "theme-surface": 1
     },
     "src/components/projects/ProjectTimelineTab.tsx": {
       "theme-surface": 2
+    },
+    "src/components/projects/ika/components/WorkerCard.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/projects/procurement/ProjectProcurementTabs.tsx": {
+      "theme-surface": 1
     },
     "src/components/projects/tabs/brokerage/BrokerageAgreementCard.tsx": {
       "theme-surface": 1
@@ -306,16 +307,19 @@
     "src/components/sales/legal/ContractTimeline.tsx": {
       "theme-surface": 2
     },
-    "src/components/sales/legal/professionals-card-dialogs.tsx": {
+    "src/components/sales/legal/ProfessionalsCard.tsx": {
       "theme-surface": 1
     },
-    "src/components/sales/legal/ProfessionalsCard.tsx": {
+    "src/components/sales/legal/professionals-card-dialogs.tsx": {
       "theme-surface": 1
     },
     "src/components/sales/pages/SalesHubPageContent.tsx": {
       "theme-surface": 1
     },
-    "src/components/sales/payments/financial-intelligence/counterproposal-negotiation.tsx": {
+    "src/components/sales/payments/InstallmentSchedule.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/sales/payments/LoanStatusTimeline.tsx": {
       "theme-surface": 1
     },
     "src/components/sales/payments/financial-intelligence/CounterproposalScenarioRow.tsx": {
@@ -324,13 +328,10 @@
     "src/components/sales/payments/financial-intelligence/CounterproposalTab.tsx": {
       "theme-surface": 1
     },
-    "src/components/sales/payments/financial-intelligence/DrawScheduleTab.tsx": {
-      "theme-surface": 1
-    },
     "src/components/sales/payments/financial-intelligence/DSCRStressTab.tsx": {
       "theme-surface": 1
     },
-    "src/components/sales/payments/financial-intelligence/equity-waterfall-results.tsx": {
+    "src/components/sales/payments/financial-intelligence/DrawScheduleTab.tsx": {
       "theme-surface": 1
     },
     "src/components/sales/payments/financial-intelligence/ForwardCurveChart.tsx": {
@@ -339,17 +340,20 @@
     "src/components/sales/payments/financial-intelligence/HedgingComparisonTable.tsx": {
       "theme-surface": 1
     },
-    "src/components/sales/payments/financial-intelligence/monte-carlo-panels.tsx": {
-      "theme-surface": 2
-    },
     "src/components/sales/payments/financial-intelligence/MonteCarloTab.tsx": {
       "theme-surface": 1
     },
     "src/components/sales/payments/financial-intelligence/SensitivityTab.tsx": {
       "theme-surface": 1
     },
-    "src/components/sales/payments/InstallmentSchedule.tsx": {
+    "src/components/sales/payments/financial-intelligence/counterproposal-negotiation.tsx": {
       "theme-surface": 1
+    },
+    "src/components/sales/payments/financial-intelligence/equity-waterfall-results.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/sales/payments/financial-intelligence/monte-carlo-panels.tsx": {
+      "theme-surface": 2
     },
     "src/components/sales/payments/interest-cost-helpers.tsx": {
       "theme-surface": 2
@@ -359,9 +363,6 @@
     },
     "src/components/sales/payments/interest-cost-tabs.tsx": {
       "theme-surface": 2
-    },
-    "src/components/sales/payments/LoanStatusTimeline.tsx": {
-      "theme-surface": 1
     },
     "src/components/sales/shared/SalesGridCard.tsx": {
       "theme-surface": 2
@@ -375,11 +376,23 @@
     "src/components/settings/company/OrgTreeView.tsx": {
       "theme-surface": 1
     },
+    "src/components/shared/AutoSaveStatusIndicator.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/shared/EscoSkillPicker.tsx": {
+      "theme-surface": 2
+    },
+    "src/components/shared/__tests__/desktop-only-exit.test.tsx": {
+      "file-light-bg": 1
+    },
     "src/components/shared/addresses/AddressCard.tsx": {
       "theme-surface": 1
     },
     "src/components/shared/addresses/AddressMap.tsx": {
       "theme-surface": 1
+    },
+    "src/components/shared/addresses/AddressMapCandidateLayer.tsx": {
+      "element-light-bg": 1
     },
     "src/components/shared/addresses/editor/AddressEditor.tsx": {
       "theme-surface": 2
@@ -390,17 +403,11 @@
     "src/components/shared/audit/audit-timeline-entry.tsx": {
       "theme-surface": 1
     },
-    "src/components/shared/AutoSaveStatusIndicator.tsx": {
-      "theme-surface": 1
-    },
     "src/components/shared/customer-info/components/CustomerInfoCompact.tsx": {
       "theme-surface": 1
     },
     "src/components/shared/customer-info/components/UnifiedCustomerCard.tsx": {
       "theme-surface": 1
-    },
-    "src/components/shared/EscoSkillPicker.tsx": {
-      "theme-surface": 2
     },
     "src/components/shared/files/AuditLogPanel.tsx": {
       "theme-surface": 11
@@ -414,13 +421,19 @@
     "src/components/shared/files/FilesList.tsx": {
       "theme-surface": 2
     },
+    "src/components/shared/files/InboxView.tsx": {
+      "theme-surface": 2
+    },
+    "src/components/shared/files/UploadEntryPointSelector.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/shared/files/VersionHistory.tsx": {
+      "theme-surface": 1
+    },
     "src/components/shared/files/hierarchical-entry-cards.tsx": {
       "theme-surface": 1
     },
     "src/components/shared/files/inbox-view-helpers.ts": {
-      "theme-surface": 2
-    },
-    "src/components/shared/files/InboxView.tsx": {
       "theme-surface": 2
     },
     "src/components/shared/files/media/MediaCard.tsx": {
@@ -428,12 +441,6 @@
     },
     "src/components/shared/files/media/VideoPlayer.tsx": {
       "element-light-bg": 1
-    },
-    "src/components/shared/files/UploadEntryPointSelector.tsx": {
-      "theme-surface": 1
-    },
-    "src/components/shared/files/VersionHistory.tsx": {
-      "theme-surface": 1
     },
     "src/components/shared/pages/SharedContactPageContent.tsx": {
       "theme-surface": 5
@@ -443,9 +450,6 @@
     },
     "src/components/shared/space-info/DescriptionNotesCard.tsx": {
       "theme-surface": 1
-    },
-    "src/components/shared/__tests__/desktop-only-exit.test.tsx": {
-      "file-light-bg": 1
     },
     "src/components/sidebar/sidebar-menu-item.tsx": {
       "theme-surface": 8
@@ -460,6 +464,9 @@
       "theme-surface": 1
     },
     "src/components/storage/pages/StorageDetailPageContent.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/ui/ProductTour/product-tour-overlay.tsx": {
       "theme-surface": 1
     },
     "src/components/ui/button.tsx": {
@@ -486,19 +493,16 @@
     "src/components/ui/effects/social-effects.ts": {
       "theme-surface": 1
     },
-    "src/components/ui/email-sharing/components/RecipientsList.tsx": {
-      "theme-surface": 3
-    },
     "src/components/ui/email-sharing/ContactEmailPicker.tsx": {
       "theme-surface": 1
+    },
+    "src/components/ui/email-sharing/components/RecipientsList.tsx": {
+      "theme-surface": 3
     },
     "src/components/ui/enterprise-contact-dropdown.tsx": {
       "theme-surface": 2
     },
     "src/components/ui/floating/FloatingPanel.tsx": {
-      "theme-surface": 1
-    },
-    "src/components/ui/ProductTour/product-tour-overlay.tsx": {
       "theme-surface": 1
     },
     "src/components/ui/property-status/PropertyStatusSelector.tsx": {
@@ -573,11 +577,11 @@
     "src/features/floorplan-import/components/StepPropertySelector.tsx": {
       "theme-surface": 1
     },
-    "src/features/property-details/components/property-fields-constants.ts": {
-      "theme-surface": 11
-    },
     "src/features/property-details/components/PropertyFieldsEditForm.tsx": {
       "theme-surface": 1
+    },
+    "src/features/property-details/components/property-fields-constants.ts": {
+      "theme-surface": 11
     },
     "src/features/property-hover/constants.ts": {
       "theme-surface": 2

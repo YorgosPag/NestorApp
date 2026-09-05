@@ -95,6 +95,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
   readOnlyAddressIds,
   dragResetKey,
   activeEditingAddressId,
+  overlay,
   className = ''
 }) => {
   // ===========================================================================
@@ -408,6 +409,8 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
                   </Marker>
                 );
               })}
+              {/* ADR-332 D26 — ό,τι ζωγραφίζεται στον ίδιο χάρτη χωρίς να είναι διεύθυνση. */}
+              {overlay}
             </InteractiveMap>
           )}
         </div>
