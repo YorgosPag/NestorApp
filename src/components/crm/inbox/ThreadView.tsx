@@ -33,6 +33,7 @@ import { AttachmentRenderer } from './AttachmentRenderer';
 import type { MessageReactionsMap, MessageAttachment } from '@/types/conversations';
 import '@/lib/design-system';
 
+import { revealInScroll } from '@/lib/a11y/reveal-in-scroll';
 // 🏢 ENTERPRISE: Extracted helpers + handler hook
 import {
   getRelativeTime, getSenderIcon, getMessageStatusIcon,
@@ -97,7 +98,7 @@ export function ThreadView({
 
   useEffect(() => {
     if (messagesEndRef.current && messages.length > 0) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      revealInScroll(messagesEndRef.current, { urgency: 'requested', block: 'start' });
     }
   }, [messages.length]);
 

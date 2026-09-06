@@ -1,5 +1,7 @@
 "use client";
 
+import { revealInScroll } from '@/lib/a11y/reveal-in-scroll';
+
 export function getPreviewId(id: string): string {
   return `preview-${id}`;
 }
@@ -11,6 +13,6 @@ export function scrollToPreviewId(id: string): void {
   const element = window.document.getElementById(elementId);
   
   if (element) {
-    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    revealInScroll(element, { urgency: 'requested', block: 'start' });
   }
 }

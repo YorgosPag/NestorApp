@@ -27,6 +27,7 @@ import type { StairDoc } from '@/subapps/dxf-viewer/bim/types/stair-types';
 import { isBuildingStorey } from '@/utils/floor-naming';
 import type { FloorRecord, FloorsApiResponse, FloorMutationResponse } from './useFloorsTabState.types';
 
+import { revealInScroll } from '@/lib/a11y/reveal-in-scroll';
 // Types live in `useFloorsTabState.types.ts` (file-size split). Re-export
 // FloorRecord για back-compat — εξωτερικοί consumers το εισάγουν από εδώ.
 export type { FloorRecord } from './useFloorsTabState.types';
@@ -443,9 +444,10 @@ export function useFloorsTabState(buildingId: string, projectId?: string, focusF
 
     // Scroll on the next frame, after the row has rendered.
     const raf = requestAnimationFrame(() => {
-      floorRowRefs.current
-        .get(focusFloorId)
-        ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      revealInScroll(floorRowRefs.current.get(focusFloorId), {
+        urgency: 'requested',
+        block: 'center',
+      });
     });
     // Fade the highlight after a short pulse.
     const timer = setTimeout(() => setHighlightedFloorId(null), 2600);

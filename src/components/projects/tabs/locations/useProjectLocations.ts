@@ -25,6 +25,7 @@ import { useProjectNotifications } from '@/hooks/notifications/useProjectNotific
 import { toHierarchyValue, fromHierarchyValue, EMPTY_HIERARCHY } from './location-converters';
 import { ADDRESS_TYPE_KEYS, isUniqueAddressType } from './address-constants';
 
+import { revealInScroll } from '@/lib/a11y/reveal-in-scroll';
 type AddressOp = 'added' | 'updated' | 'deleted' | 'cleared' | 'primaryUpdated';
 
 // =============================================================================
@@ -147,7 +148,7 @@ export function useProjectLocations(project: Project) {
   const handleMarkerClick = useCallback((address: ProjectAddress) => {
     const cardElement = document.getElementById(`address-card-${address.id}`);
     if (cardElement) {
-      cardElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      revealInScroll(cardElement, { urgency: 'requested', block: 'center' });
       cardElement.classList.add('ring-2', 'ring-primary');
       setTimeout(() => {
         cardElement.classList.remove('ring-2', 'ring-primary');

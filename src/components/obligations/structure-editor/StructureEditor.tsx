@@ -10,6 +10,7 @@ import type { StructureEditorProps } from './types';
 import type { ObligationSection } from '@/types/obligations';
 import '@/lib/design-system';
 
+import { revealInScroll } from '@/lib/a11y/reveal-in-scroll';
 export default function StructureEditor({
   sections,
   onSectionsChange,
@@ -43,10 +44,7 @@ export default function StructureEditor({
         setTimeout(() => {
           const sectionElement = document.getElementById(`section-${newSectionId}`);
           if (sectionElement) {
-            sectionElement.scrollIntoView({
-              behavior: 'smooth',
-              block: 'center'
-            });
+            revealInScroll(sectionElement, { urgency: 'requested', block: 'center' });
           }
         }, 100);
       }
@@ -62,10 +60,7 @@ export default function StructureEditor({
       setTimeout(() => {
         const activeElement = document.getElementById(`section-${activeItemId}`);
         if (activeElement) {
-          activeElement.scrollIntoView({
-            behavior: 'smooth',
-            block: 'center'
-          });
+          revealInScroll(activeElement, { urgency: 'requested', block: 'center' });
         }
       }, 150);
     }

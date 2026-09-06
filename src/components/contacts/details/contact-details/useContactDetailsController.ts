@@ -28,6 +28,7 @@ import {
   SUBCOLLECTION_TABS,
 } from './contact-details-helpers';
 import { usePersonaToggle } from './usePersonaToggle';
+import { revealInScroll } from '@/lib/a11y/reveal-in-scroll';
 const logger = createModuleLogger('ContactDetails');
 
 const VALIDATION_FIELD_TAB: Record<string, string> = {
@@ -224,7 +225,7 @@ export function useContactDetailsController({
       }
 
       element.focus();
-      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      revealInScroll(element, { urgency: 'requested', block: 'center' });
     };
 
     window.requestAnimationFrame(() => attempt(MAX_FRAMES));

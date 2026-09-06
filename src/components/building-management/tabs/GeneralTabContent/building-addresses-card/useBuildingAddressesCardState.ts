@@ -7,6 +7,7 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getProjectAddresses } from '../../../building-services';
 import { updateBuildingWithPolicy } from '@/services/building/building-mutation-gateway';
+import { revealInScroll } from '@/lib/a11y/reveal-in-scroll';
 import type {
   BuildingAddressEditorMode,
   BuildingAddressesCardProps,
@@ -254,7 +255,7 @@ export function useBuildingAddressesCardState({
       return;
     }
 
-    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    revealInScroll(element, { urgency: 'requested', block: 'center' });
     element.classList.add('ring-2', 'ring-primary');
     window.setTimeout(() => {
       element.classList.remove('ring-2', 'ring-primary');
