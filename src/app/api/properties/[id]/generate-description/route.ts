@@ -29,7 +29,7 @@ import {
   generatePropertyDescription,
   PropertyDescriptionGenerationError,
 } from '@/services/ai/property-description-generator.service';
-import type { Property } from '@/types/property';
+import { mapPropertyDoc } from '@/lib/firestore-mappers';
 
 const logger = createModuleLogger('GeneratePropertyDescriptionRoute');
 
@@ -103,7 +103,10 @@ export async function POST(
           throw new ApiError(403, 'Access denied');
         }
 
-        const property = { id: propertyDoc.id, ...data } as Property;
+        // 🔴 **ΤΟ ΣΥΝΟΡΟ ΤΟΥ `properties`** (ADR-842 §7.6.12) — ήταν ωμός ισχυρισμός
+        //    που παρέκαμπτε τον {@link mapPropertyDoc}· η περιγραφή που παράγει το
+        //    μοντέλο **διαβάζει το είδος**, οπότε μια παλαιά τιμή έγραφε παλαιό κείμενο.
+        const property = mapPropertyDoc(propertyDoc.id, data as Record<string, unknown>);
 
         try {
           const result = await generatePropertyDescription(property, {

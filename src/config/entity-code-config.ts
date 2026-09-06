@@ -32,8 +32,10 @@ export const PROPERTY_TYPE_TO_CODE: Partial<Record<PropertyType, string>> = {
   studio: 'ST',
   apartment_1br: 'GK',
   apartment: 'DI',
-  apartment_2br: 'DI',
-  apartment_3br: 'DI',
+  // ⚠️ Τα `apartment_2br`/`apartment_3br` **αφαιρέθηκαν** με τη φάση contract του
+  //    ADR-842 §8 #11: έφευγαν από την ένωση `PropertyType`. Καμία αλλαγή κωδικού —
+  //    και τα δύο κατέρρεαν ήδη στο `'apartment'` μέσω `PROPERTY_TYPE_ALIASES`, που
+  //    δίνει το **ίδιο** `'DI'`.
   maisonette: 'ME',
   penthouse: 'RE',
   loft: 'LO',

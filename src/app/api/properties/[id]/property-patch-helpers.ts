@@ -12,6 +12,7 @@
 import { z } from 'zod';
 import { ApiError } from '@/lib/api/ApiErrorHandler';
 import { deriveMultiLevelFields } from '@/services/multi-level.service';
+import { PUBLISHED_MEDIA_LIMIT } from '@/services/upload/utils/storage-path-public-shelf';
 
 // ============================================================================
 // SCHEMA + TYPES (re-exported so route.ts can import from here)
@@ -31,6 +32,23 @@ export const PropertyPatchSchema = z.object({
   projectId: z.string().max(128).nullable().optional(),
   companyId: z.string().max(128).nullable().optional(),
   isMultiLevel: z.boolean().optional(),
+  /**
+   * **Η πράξη σειράς του γραφείου** — ταυτότητες `FileRecord.id` στη δηλωμένη σειρά
+   * (ADR-841 §7 Α14.7).
+   *
+   * 🔴 **ΓΡΑΜΜΕΝΟ ΡΗΤΑ ΕΠΕΙΔΗ ΤΟ ΣΧΗΜΑ ΕΙΝΑΙ `.passthrough()`** *(Α14.7.5)*. Χωρίς αυτή
+   * τη γραμμή το πεδίο θα περνούσε **χωρίς κανέναν έλεγχο** τύπου, μήκους ή
+   * περιεχομένου — ο μόνος φρουρός από κάτω είναι η λίστα **άρνησης** πέντε ονομάτων
+   * του `FORBIDDEN_FIELDS`, που δεν λέει τίποτα για σχήμα.
+   *
+   * ⚠️ **Το άνω όριο είναι το ΥΠΑΡΧΟΝ `PUBLISHED_MEDIA_LIMIT`, όχι νέος αριθμός**
+   * *(Α14.4: το όριο είναι **ένα**)*: δήλωση μεγαλύτερη από όσα μπορούν να φύγουν δεν
+   * έχει τι να τακτοποιήσει.
+   */
+  publishedMediaOrder: z
+    .array(z.string().min(1).max(128))
+    .max(PUBLISHED_MEDIA_LIMIT)
+    .optional(),
   _v: z.number().int().optional(),
 }).passthrough();
 
@@ -69,6 +87,8 @@ export interface PropertyPatchPayload extends Record<string, unknown> {
   areas?: Record<string, number>;
   layout?: Record<string, number>;
   orientations?: string[];
+  /** ADR-841 §7 Α14.7 — η δηλωμένη σειρά των δημόσιων φωτογραφιών της αγγελίας. */
+  publishedMediaOrder?: string[];
 }
 
 // ============================================================================

@@ -10,7 +10,7 @@ import { deriveMultiLevelFields } from '@/services/multi-level.service';
 import { republishListing } from '@/services/listings/publish-public-listing';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import type { PropertyType } from '@/types/property';
+import { normalizePropertyType } from '@/constants/property-type-aliases';
 import { getErrorMessage } from '@/lib/error-utils';
 import {
   PropertyCreationPolicyError,
@@ -185,7 +185,15 @@ export const POST = withStandardRateLimit(
           codeOptions: {
             currentValue: body.code?.trim(),
             floorLevel: typeof body.floor === 'number' ? body.floor : 0,
-            unitType: (body.type || 'apartment') as PropertyType,
+            // 🔴 **ΤΟ `|| 'apartment'` ΗΤΑΝ ΣΙΩΠΗΛΟ ΨΕΜΑ** (ADR-842 §7.6.12 / §8 #11):
+            //    σώμα αιτήματος + προεπιλογή που **βάφτιζε διαμέρισμα** ό,τι δεν
+            //    αναγνώριζε — και ο κωδικός οντότητας (ADR-233) κληρονομούσε το ψέμα
+            //    **μόνιμα**, γιατί ο κωδικός γράφεται μία φορά και μένει.
+            //
+            // ⚠️ `undefined` = *«δεν ξέρω το είδος»*, και η γεννήτρια κωδικών ξέρει να
+            //    το χειριστεί. Η **επικύρωση** του `type` γίνεται όπου ανήκει, στην
+            //    πύλη γραφής (`property-mutation-gateway` → `normalize` + throw).
+            unitType: normalizePropertyType(body.type) ?? undefined,
           },
           apiPath: '/api/properties/create (POST)',
           auditFieldResolvers: {

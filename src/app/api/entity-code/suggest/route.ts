@@ -26,7 +26,7 @@ import {
   parseEntityCode,
 } from '@/services/entity-code.service';
 import { extractBuildingLetter } from '@/config/entity-code-config';
-import type { PropertyType } from '@/types/property';
+import { normalizePropertyType } from '@/constants/property-type-aliases';
 import type { ParkingLocationZone } from '@/types/parking';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -57,7 +57,10 @@ export const GET = withStandardRateLimit(
       const entityType = searchParams.get('entityType') as 'property' | 'parking' | 'storage';
       const buildingId = searchParams.get('buildingId');
       const floorLevelStr = searchParams.get('floorLevel');
-      const propertyType = searchParams.get('propertyType') as PropertyType | null;
+      // 🔴 **ΚΑΝΟΝΙΚΟΠΟΙΗΣΗ, ΟΧΙ ΙΣΧΥΡΙΣΜΟΣ** (ADR-842 §7.6.12 / §8 #11): παράμετρος
+      //    **URL** — ό,τι πληκτρολογήσει οποιοσδήποτε. Ένα `as` εδώ ήταν κυριολεκτικά
+      //    «πίστεψε τον πελάτη», και έστελνε αυθαίρετο κείμενο στη γεννήτρια κωδικών.
+      const propertyType = normalizePropertyType(searchParams.get('propertyType'));
       const locationZone = searchParams.get('locationZone') as ParkingLocationZone | null;
 
       // Validation
