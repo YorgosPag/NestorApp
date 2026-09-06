@@ -19,10 +19,43 @@
  * πήγαινε να δει. Το κλικ είναι **σκόπιμο**, άρα το κάλυμμα είναι **ζητούμενο**.
  *
  * 🔑 **Η ΙΔΙΑ ΑΛΗΘΕΙΑ ΜΕ ΤΗΝ ΚΑΡΤΑ ΤΗΣ ΛΙΣΤΑΣ, ΟΧΙ ΑΝΤΙΓΡΑΦΟ ΤΗΣ.** Τιμή από τον
- * `price-resolver`, εικόνα από το `listingLeadImage`, σύνδεσμος από το `listingDetailHref`
- * — οι **ίδιες τρεις αρχές** που ρωτά το `ListingCard`. Δεν είναι μικρογραφία της κάρτας:
- * είναι **λιγότερα πεδία**, γιατί εδώ ο άνθρωπος ρωτά *«ποιο είναι αυτό;»*, όχι
- * *«ταιριάζει;»*.
+ * `price-resolver`, εικόνες από το `listingGalleryImages`, σύνδεσμος από το
+ * `listingDetailHref` — οι **ίδιες τρεις αρχές** που ρωτά το `ListingCard`. Δεν είναι
+ * μικρογραφία της κάρτας: είναι **λιγότερα πεδία**, γιατί εδώ ο άνθρωπος ρωτά
+ * *«ποιο είναι αυτό;»*, όχι *«ταιριάζει;»*.
+ *
+ * ════════════════════════════════════════════════════════════════════════════
+ * ⚠️ «ΛΙΓΟΤΕΡΑ **ΠΕΔΙΑ**» — ΠΟΤΕ «ΛΙΓΟΤΕΡΗ ΑΝΑΓΝΩΣΙΜΟΤΗΤΑ ΤΟΥ ΙΔΙΟΥ ΠΕΔΙΟΥ»
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * Ο κανόνας από πάνω **παρεξηγήθηκε μία φορά** (ADR-777 §8.58): διαβάστηκε ως *«κράτα
+ * το popup φτωχό»* και κράτησε τη φωτογραφία **μία**, ενώ η κάρτα δίπλα του είχε ήδη
+ * περιήγηση. Το αποτέλεσμα ήταν **η ίδια αγγελία, δύο φορές στην ίδια οθόνη, με
+ * διαφορετικές δυνατότητες** — μετρημένο στο στιγμιότυπο του Giorgio, 06/09.
+ *
+ * 🔑 Η διάκριση που **σώζει** τον κανόνα και επιτρέπει τη γκαλερί:
+ *
+ * | Τι απαγορεύει ο κανόνας | Τι είναι η γκαλερί |
+ * |---|---|
+ * | Νέα **πεδία** — τ.μ., όροφος, υπνοδωμάτια, ετικέτες, γραμμή προέλευσης | **Κανένα** νέο πεδίο. Το **ίδιο** πεδίο, με πλοήγηση |
+ * | Απαντά *«ταιριάζει;»* — σύγκριση χαρακτηριστικών | Απαντά *«ποιο είναι αυτό;»* — **η ερώτηση που αυτό το αρχείο δηλώνει δική του** |
+ *
+ * ⇒ Η φωτογραφία είναι το **όργανο** του *«ποιο είναι αυτό;»*. Δύο βελάκια δεν
+ * προσθέτουν καμία διάσταση σύγκρισης — προσθέτουν **αναγνωσιμότητα** σε πεδίο που το
+ * popup είχε **ήδη αποφασίσει** να δείξει. Μία lead φωτογραφία που τυχαίνει να είναι
+ * ημιτελής τοίχος δεν απαντά *τίποτα*.
+ *
+ * 🏆 **ΚΑΙ ΤΟ ΖΗΤΗΣΑΝ ΟΙ ΙΔΙΟΙ ΟΙ ΧΡΗΣΤΕΣ ΤΟΥ ZILLOW**: η ομάδα UX του Zillow
+ * δημοσίευσε ότι πολλοί ζητούσαν *«να κυλούν τις φωτογραφίες σε μια κάρτα ακινήτου
+ * **μέσα στην προβολή χάρτη**»*, και πρωτοτυποποίησαν ειδικά τον κίνδυνο **δύο
+ * οριζόντιων κυλίσεων σε παρόμοιο χώρο**. Redfin και Airbnb το ίδιο.
+ *
+ * ⚠️ **Ο ΔΙΚΟΣ ΜΑΣ ΑΝΤΑΓΩΝΙΣΤΗΣ ΚΥΛΙΣΗΣ ΕΙΝΑΙ ΧΕΙΡΟΤΕΡΟΣ ΑΠΟ ΤΟΥ ZILLOW**: εκεί
+ * ανταγωνίζονται *κάρτα ↔ γκαλερί*· εδώ *γκαλερί ↔ **ο χάρτης που σέρνεται***. Η
+ * MapLibre δένει τους χειριστές μετακίνησης στο `getCanvasContainer()`, ενώ το popup
+ * ζει στο `getContainer()` — **αδέλφια, όχι πρόγονος/απόγονος** — άρα το σύρσιμο μέσα
+ * στη φούσκα δεν φτάνει ποτέ στον χάρτη. Το `overscroll-x-contain` της γκαλερί κλείνει
+ * και τη δεύτερη διαδρομή (αλυσιδωτή κύλιση).
  */
 
 import React from 'react';
@@ -34,8 +67,23 @@ import { formatCurrency } from '@/lib/intl-formatting';
 import { resolveDisplayPrice } from '@/lib/properties/price-resolver';
 import { MISSING_PRICE_KEY } from '@/lib/listings/listing-price-keys';
 import { listingDetailHref } from '@/lib/listings/listing-routes';
-import { listingLeadImage } from '@/lib/listings/listing-images';
+import { listingGalleryImages } from '@/lib/listings/listing-images';
+import { ListingCardGallery } from './ListingCardGallery';
 import type { PublicListing } from '@/types/public-listing';
+
+/**
+ * Το πλάτος της φούσκας σε **μία** δήλωση, γιατί το ρωτούν **δύο** διαφορετικοί.
+ *
+ * 🔴 Το `w-44` (176px) το χρειάζεται το `<article>` για διάταξη, και το `sizes` το
+ * χρειάζεται ο **περιηγητής** για να διαλέξει πηγή από το `srcSet`. Γραμμένα χωριστά,
+ * τα δύο **αποκλίνουν σιωπηλά**: η οθόνη μένει σωστή και ο επιλογέας εικόνας κατεβάζει
+ * λάθος μέγεθος — σφάλμα που **καμία** οπτική επιθεώρηση δεν πιάνει.
+ *
+ * ⚠️ **Σταθερό, χωρίς `vw`**: σε αντίθεση με την κάρτα της λίστας, η φούσκα **δεν
+ * αλλάζει πλάτος** με την οθόνη — το `maxWidth` του `Popup` την κρατά καρφωμένη.
+ */
+const POPUP_IMAGE_WIDTH_PX = 176;
+const POPUP_IMAGE_SIZES = `${POPUP_IMAGE_WIDTH_PX}px`;
 
 interface ListingMapPopupProps {
   readonly listing: PublicListing;
@@ -51,7 +99,8 @@ export function ListingMapPopup({ listing, filterQuery, onClose }: ListingMapPop
   if (listing.position.kind !== 'known') return null;
 
   const price = resolveDisplayPrice(listing);
-  const image = listingLeadImage(listing);
+  const images = listingGalleryImages(listing);
+  const href = listingDetailHref(listing.id, filterQuery);
   const { point } = listing.position;
 
   return (
@@ -77,53 +126,87 @@ export function ListingMapPopup({ listing, filterQuery, onClose }: ListingMapPop
       className="listing-map-popup"
       maxWidth="15rem"
     >
-      <Link
-        href={listingDetailHref(listing.id, filterQuery)}
-        className="block rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        <article className="w-44">
-          {image !== null && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={image.url}
-              width={image.width}
-              height={image.height}
-              alt={t(image.altKey, { index: 1, total: listing.gallery.length })}
-              /*
-                `loading="lazy"` **και** `decoding="async"`: το popup γεννιέται από κλικ,
-                δηλαδή **μετά** το LCP της οθόνης. Μια εικόνα υψηλής προτεραιότητας εδώ
-                θα ανταγωνιζόταν την πρώτη κάρτα της λίστας — που είναι το πραγματικό LCP
-                (ADR-841 §7 Α2.4: «πολλές εικόνες υψηλής προτεραιότητας ακυρώνουν η μία
-                την άλλη»).
-              */
-              loading="lazy"
-              decoding="async"
-              className="mb-1.5 aspect-[4/3] w-full rounded object-cover"
-            />
+      {/*
+        🔴 **Η ΦΟΥΣΚΑ ΔΕΝ ΕΙΝΑΙ ΠΙΑ ΜΕΣΑ ΣΕ `<a>` — ΚΑΙ ΕΙΝΑΙ ΑΠΑΙΤΗΣΗ, ΟΧΙ ΓΟΥΣΤΟ.**
+
+        Τα βελάκια της γκαλερί είναι **πραγματικά `<button>`**. Ένα `<button>` μέσα σε
+        `<a>` είναι **άκυρη HTML** *(το `<a>` απαγορεύει διαδραστικό περιεχόμενο)*, και
+        η πρακτική συνέπεια δεν είναι θεωρητική: ο περιηγητής **αναδομεί** το δέντρο, και
+        το κλικ στο βελάκι ανοίγει την αγγελία αντί να αλλάξει φωτογραφία.
+
+        ✅ Η λύση είναι **ήδη γραμμένη και δοκιμασμένη** στο `ListingCard` (§8.57): ο
+        σύνδεσμος ζει στον **τίτλο** και απλώνει `::after { inset: 0 }` πάνω σε όλη τη
+        φούσκα. Μία στάση στο `Tab`, μία εκφώνηση, ολόκληρη η επιφάνεια κλικαρίσιμη —
+        και τα κουμπιά **έξω** από τον σύνδεσμο, όπου τους ανήκει.
+
+        ⚠️ **`relative` στο `<article>`, ΥΠΟΧΡΕΩΤΙΚΟ**: το `inset-0` απλώνεται στον
+        πλησιέστερο **τοποθετημένο** πρόγονο. Χωρίς αυτό ο σύνδεσμος θα κάλυπτε ό,τι
+        βρει πιο πάνω — εδώ, ολόκληρο τον χάρτη.
+
+        🔑 **`group/card`**: δίνει στα βελάκια την τέταρτη διαδρομή αποκάλυψης *(hover
+        οπουδήποτε στη φούσκα, όχι μόνο πάνω στη φωτογραφία)*. Σε επιφάνεια 176px αυτό
+        δεν είναι πολυτέλεια — είναι ο λόγος που ο Giorgio *«τα έψαχνε αρκετή ώρα»* στην
+        κάρτα, όπου ο χώρος ήταν **διπλάσιος**.
+      */}
+      <article className="group/card relative w-44">
+        {/*
+          ⚠️ **`priority` ΔΕΝ δίνεται — και η προεπιλογή `false` ΕΙΝΑΙ η απόφαση.** Το
+          popup γεννιέται από **κλικ**, δηλαδή **μετά** το LCP της οθόνης· η γκαλερί
+          τότε ζητά **κάθε** φωτογραφία με `loading="lazy"`. Μια εικόνα υψηλής
+          προτεραιότητας εδώ θα ανταγωνιζόταν την πρώτη κάρτα της λίστας, που είναι το
+          πραγματικό LCP (ADR-841 §7 Α2.4: *«πολλές εικόνες υψηλής προτεραιότητας
+          ακυρώνουν η μία την άλλη»*).
+
+          ⚠️ **Και η ΣΕΙΡΑ των εικόνων είναι του `listingGalleryImages`, όχι δική μας**:
+          είναι το SSoT *«όλες οι εικόνες με τη σειρά που τις βλέπει ο άνθρωπος»*, και
+          η πρώτη του είναι **ακριβώς** το `listingLeadImage` που έδειχνε αυτό το αρχείο
+          πριν. Δηλαδή η φούσκα **δεν αλλάζει πρώτη εικόνα** — αποκτά τις υπόλοιπες.
+        */}
+        <ListingCardGallery
+          images={images}
+          sizes={POPUP_IMAGE_SIZES}
+          className="mb-1.5"
+          /*
+            Ο **πλεοναστικός** σύνδεσμος της φωτογραφίας: `tabIndex={-1}` + `aria-hidden`
+            ⇒ δεύτερη διαδρομή για το ποντίκι, **μηδέν** κόστος για το πληκτρολόγιο. Δες
+            το ίδιο σχόλιο στο `ListingCard` για το γιατί ο κύλινδρος πρέπει να κάθεται
+            πάνω από το overlay και άρα να ξαναποκτήσει δικό του σύνδεσμο.
+          */
+          renderSlideLink={(picture) => (
+            <Link href={href} tabIndex={-1} aria-hidden="true" className="block">
+              {picture}
+            </Link>
           )}
+        />
 
-          {/*
-            ⚠️ **`popover-foreground`, ΟΧΙ `foreground`** — και δεν είναι αισθητική.
-            Η φούσκα είναι **αιωρούμενη επιφάνεια**: το `--popover` τη βάφει (στο
-            `foreign-boundary.css`, γιατί η MapLibre καρφώνει `#fff`), οπότε το κείμενο
-            οφείλει να δηλώνει το **ζευγάρι** εκείνης της επιφάνειας. Οι δύο τιμές είναι
-            σήμερα ταυτόσημες και στα δύο θέματα — γι' αυτό η αλλαγή είναι **αόρατη
-            σήμερα και σωστή αύριο**: αν μετακινηθεί το `--popover`, το ζεύγος κινείται
-            μαζί του αντί να μείνει πίσω σιωπηλά (ADR-770 · CHECK 3.39).
-          */}
-          <h3 className="truncate text-sm font-medium text-popover-foreground">{listing.title}</h3>
+        {/*
+          ⚠️ **`popover-foreground`, ΟΧΙ `foreground`** — και δεν είναι αισθητική.
+          Η φούσκα είναι **αιωρούμενη επιφάνεια**: το `--popover` τη βάφει (στο
+          `foreign-boundary.css`, γιατί η MapLibre καρφώνει `#fff`), οπότε το κείμενο
+          οφείλει να δηλώνει το **ζευγάρι** εκείνης της επιφάνειας. Οι δύο τιμές είναι
+          σήμερα ταυτόσημες και στα δύο θέματα — γι' αυτό η αλλαγή είναι **αόρατη
+          σήμερα και σωστή αύριο**: αν μετακινηθεί το `--popover`, το ζεύγος κινείται
+          μαζί του αντί να μείνει πίσω σιωπηλά (ADR-770 · CHECK 3.39).
+        */}
+        <h3 className="truncate text-sm font-medium text-popover-foreground">
+          <Link
+            href={href}
+            className="after:absolute after:inset-0 after:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {listing.title}
+          </Link>
+        </h3>
 
-          <p className="mt-0.5 text-sm font-semibold text-popover-foreground">
-            {price.kind === 'priced'
-              ? formatCurrency(price.headline.amount)
-              : t(MISSING_PRICE_KEY[price.reason])}
-          </p>
+        <p className="mt-0.5 text-sm font-semibold text-popover-foreground">
+          {price.kind === 'priced'
+            ? formatCurrency(price.headline.amount)
+            : t(MISSING_PRICE_KEY[price.reason])}
+        </p>
 
-          <p className="mt-1 text-xs text-muted-foreground">
-            {t('search-focus:popup.open')}
-          </p>
-        </article>
-      </Link>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {t('search-focus:popup.open')}
+        </p>
+      </article>
     </Popup>
   );
 }

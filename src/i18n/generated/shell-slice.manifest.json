@@ -67,7 +67,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "2b4391de326833c35f5d98c40d735b2f16b521b1015758374681d825de2b51c3",
+  "inputsSha256": "a4779487e8e011fdcb9c45d230edda245f29750268000a916539a37a56cdcffb",
   "languages": [
     "el"
   ],
@@ -228,7 +228,7 @@
     "src/components/search-results/CriteriaLedgerBar.tsx": "f829859dad6a08df38fcea86128bda22c158af65b61f7d738f8b8b665e4c7cbd",
     "src/components/search-results/ListingEdgeIndicator.tsx": "ff24ad371332bae13f022bfe5a79092e386b025147146b9a55007c5d8cf17b96",
     "src/components/search-results/ListingLedgerBar.tsx": "fe19b6ee40de7e137aa57dab65308b80f04872e4de13ddc20f41f4013db09e30",
-    "src/components/search-results/ListingMapPopup.tsx": "37d165ef8d16bc69541b5fda9cbb1cc3efc9317cef975fab22a16def7c2f92cc",
+    "src/components/search-results/ListingMapPopup.tsx": "971c3dd0f78466e3b64da13043935d0a521137e88334298a767c9a22f748147e",
     "src/components/search-results/ResultsList.tsx": "f463fbaea163e7b7c604f19803cda2ac899b7c245dbb6fd03674a7645705fae1",
     "src/components/search-results/ResultsMap.tsx": "40e46d0f294b62e597d2309bab6e9dc59f7e5452042f44cdb06cfd758aac2367",
     "src/components/search-results/ResultsSheet.tsx": "4a98dea07a1dcf9a522a0d4841d27a63d5ad6d2c1335df9c72ad39385b56dc7d",
@@ -894,6 +894,16 @@
     "listing__id": {
       "page": "src/app/(light)/listing/[id]/page.tsx",
       "wants": {
+        "common-photos": {
+          "keys": [
+            "photoPreview.navigation.nextAria",
+            "photoPreview.navigation.previousAria",
+            "photoPreview.navigation.slide",
+            "photos.galleryLabel"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
         "geo-canvas": {
           "keys": [
             "accuracy.controls.hideIndicators",
@@ -3691,6 +3701,16 @@
     "test-harness__listing-shapes": {
       "page": "src/app/(app)/test-harness/listing-shapes/page.tsx",
       "wants": {
+        "common-photos": {
+          "keys": [
+            "photoPreview.navigation.nextAria",
+            "photoPreview.navigation.previousAria",
+            "photoPreview.navigation.slide",
+            "photos.galleryLabel"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
         "geo-canvas": {
           "keys": [
             "accuracy.controls.hideIndicators",
@@ -3867,7 +3887,7 @@
     "src/components/layout/GlobalFileUploadToast.tsx": "7cae2db1e766efa8e05167f60c4f91bc9452b08876818300e8dd556a9ff1224d",
     "src/components/layout/MainContentBridge.tsx": "87f665a53cb0f2fe310d251c86e83f9d01954287893a5348d1bb05fb37548cd9",
     "src/components/layout/useRoutePrefetch.ts": "5cc279891bb43b1a78a7d8b44ad72a3f5d8060f2c64c094ad9f9ace3509cbdb4",
-    "src/components/listings/ListingAuthorshipLine.tsx": "acd8914a26aabfa3233225d3c8f997d1a1b99a952db7ab6e192b8ebb6c31ee51",
+    "src/components/listings/ListingAuthorshipLine.tsx": "4cc48f7465d6fef354d79e1375e935b8959759a7deb8b366d594564a120fa606",
     "src/components/mandate/AgencyCard.tsx": "72734448506cc03adfb985188d179a613523316231f545454ad7d6b5bd371e18",
     "src/components/mandate/CredibilityStatement.tsx": "ca2d50846efcdf2dc9694956a8b593d643221e2fcf6552cb9cd1800d075a9ed3",
     "src/components/mandate/OccupationSelect.tsx": "a888896ea322baf14183ecfa7ee3963839e0626de43737c4d51a8f13dab8a199",

@@ -29,20 +29,76 @@
  * σε μια κάρτα περίληψης και **δήλωση** στη σελίδα της απόφασης· ένα `variant="card"`
  * εδώ θα ξανάφερνε μέσα στο κοινό αρχείο ακριβώς το λεξιλόγιο που η **Α13.1** έβγαλε από
  * τα κλειδιά.
+ *
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🏆 ΚΑΙ ΑΠΟ ΤΟ ADR-777 §8.58 (Φ7) Η ΓΡΑΜΜΗ ΕΙΝΑΙ **ΠΟΡΤΑ**, ΟΧΙ ΚΕΙΜΕΝΟ
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * Η βιτρίνα (`/pro/<…>`) υπήρχε **ολόκληρη** — σελίδα, ανάγνωση, φίλτρο, σειρά, και
+ * **η ίδια `ListingCard`** για τις αγγελίες της. Αυτό που έλειπε δεν ήταν οθόνη:
+ * ήταν **ο κρίκος**. Μετρημένο πριν την αλλαγή: `grep -c 'Link\|href'` σε αυτό το
+ * αρχείο = **0**. Ο επισκέπτης που έβλεπε **δύο** αγγελίες του ίδιου γραφείου δεν
+ * είχε **καμία** διαδρομή προς το «τι άλλο έχει».
+ *
+ * 🔑 Και το `agencyId` μπήκε στο `PublicListing` **ακριβώς γι' αυτό** — ο ίδιος ο
+ * τύπος το ονομάζει: *«Τροφοδοτεί δύο πράγματα που η συμβολοσειρά της επωνυμίας δεν
+ * μπορεί: τη **βιτρίνα** (Φ7) και την **επαλήθευση του αντιγράφου**… Εδώ προστίθεται
+ * **συνδεσιμότητα**, όχι ταυτότητα.»*
+ *
+ * 🏆 **ΤΟ ΚΑΝΟΥΝ ΟΛΟΙ, ΚΑΙ ΤΟ ΕΧΟΥΝ ΜΕΤΡΗΣΕΙ**: Zoopla, Rightmove, Idealista, Zillow
+ * — καμία σοβαρή πύλη δεν τυπώνει επωνυμία γραφείου ως **αδρανές κείμενο**. Η Zoopla
+ * ανακοίνωσε **+49%** leads από τις ανασχεδιασμένες σελίδες γραφείου *(Απρίλιος 2026·
+ * ⚠️ το μέγεθος δείγματος **δεν** δημοσιεύτηκε)*.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 Ο ΣΥΝΔΕΣΜΟΣ ΜΠΑΙΝΕΙ **ΠΑΝΤΑ** ΟΤΑΝ ΥΠΑΡΧΕΙ ΤΑΥΤΟΤΗΤΑ — ΠΟΤΕ «ΑΝ ΔΗΜΟΣΙΕΥΕΤΑΙ»
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Ο φυσικός πειρασμός είναι μια σημειακή ανάγνωση *(«μη συνδέεις σε πόρτα που δεν
+ * ανοίγει»)*. **Είναι ακριβώς η παραβίαση που απαγορεύει το `lib/agency/agency-door.ts`**:
+ * αν η κάρτα συνδέει **επιλεκτικά**, τότε η **παρουσία του συνδέσμου** απαντά *«έχει
+ * αυτό το γραφείο δημοσιευμένη βιτρίνα;»* — δηλαδή η κάρτα γίνεται το **μαντείο** που ο
+ * κανόνας `null ≡ '' ≡ «δεν δημοσίευσε»` υπάρχει για να κλείσει *(Ε-5 §4 #1)*.
+ *
+ * ✅ Άρα: **πάντα σύνδεσμος**. Η σελίδα προορισμού είναι **ήδη γραμμένη** να απαντά
+ * ειλικρινά και **αδιάκριτα** στις τρεις εκβάσεις. Και το κέρδος είναι διπλό — **μηδέν**
+ * επιπλέον αναγνώσεις Firestore, **μηδέν** fan-out ανά κάρτα.
+ *
+ * ⚠️ **Ο κριτής είναι ο {@link agencyDoorFor}, ΟΧΙ δικός μας έλεγχος `!== null`.** Είναι
+ * το SSoT του *«ρωτάμε καθόλου;»* και ήδη απαντά **ταυτόσημα** για `null` και για `''`.
+ * Ένα `if (listing.agencyId)` εδώ θα ήταν **τρίτη ανάγνωση της ίδιας κρίσης** — και θα
+ * απέκλινε τη μέρα που η πρώτη αλλάξει.
+ *
+ * ⛔ **Η ΘΩΡΑΚΙΣΗ ΑΠΟ ΤΟ LINK-OVERLAY ΑΝΗΚΕΙ ΣΤΟΝ ΚΑΛΟΥΝΤΑ** — δες
+ * {@link ListingAuthorshipLineProps.className}. Ο **ένας** από τους δύο καταναλωτές
+ * έχει `::after { inset: 0 }` πάνω σε όλη την κάρτα· ο άλλος όχι. Ένα `z-10` γραμμένο
+ * **εδώ** θα ήταν το κοινό αρχείο να παίρνει θέση για τη διάταξη μιας μόνο οθόνης.
  */
 
 import React from 'react';
 
+import { Link } from '@/lib/workspace/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { listingAuthorshipVoice } from '@/lib/listings/listing-authorship';
+import { agencyDoorFor } from '@/lib/agency/agency-door';
+import { agencyProfileRoute } from '@/components/mandate/agency-directory-route';
 import type { PublicListing } from '@/types/public-listing';
 
 interface ListingAuthorshipLineProps {
-  /** Μόνο τα **δύο** πεδία που απαντούν την ερώτηση — δες `listingAuthorshipVoice`. */
-  readonly listing: Pick<PublicListing, 'authorship' | 'agencyName'>;
+  /**
+   * Μόνο τα **τρία** πεδία που απαντούν τις δύο ερωτήσεις: *«τι λέει η γραμμή;»*
+   * (`authorship` + `agencyName` → `listingAuthorshipVoice`) και *«πού οδηγεί;»*
+   * (`agencyId` → {@link agencyDoorFor}).
+   */
+  readonly listing: Pick<PublicListing, 'authorship' | 'agencyName' | 'agencyId'>;
   /**
    * Η τυπογραφία της **οθόνης που καλεί**. Υποχρεωτικό: μια σιωπηρή προεπιλογή θα
    * σήμαινε ότι το κοινό αρχείο έχει άποψη για το πού μπαίνει η γραμμή, και **δεν έχει**.
+   *
+   * ⚠️ **ΚΑΙ Η ΣΤΡΩΣΗ ΤΑΞΙΔΕΥΕΙ ΑΠΟ ΕΔΩ.** Όποιος καλών απλώνει link-overlay πάνω στη
+   * γραμμή οφείλει να δηλώσει `relative z-10` — αλλιώς το αόρατο `::after` του τίτλου
+   * **τρώει το κλικ** και ο σύνδεσμος γίνεται διακοσμητικός. Πληρωμένη παγίδα, ADR-777
+   * §8.57.3.
    */
   readonly className: string;
 }
@@ -51,13 +107,50 @@ export function ListingAuthorshipLine({ listing, className }: ListingAuthorshipL
   const { t } = useTranslation(['search-results']);
   const voice = listingAuthorshipVoice(listing);
 
+  const sentence =
+    voice === 'owner-declared'
+      ? t('search-results:listing.authorship.ownerDeclared')
+      : voice === 'agency-anonymous'
+        ? t('search-results:listing.authorship.agencyAnonymous')
+        : t('search-results:listing.authorship.agency', { name: listing.agencyName });
+
+  const door = agencyDoorFor(listing.agencyId);
+
+  /*
+    ⚠️ **ΚΑΙ ΤΟ `voice` ΚΡΙΝΕΤΑΙ, ΟΧΙ ΜΟΝΟ Η ΠΟΡΤΑ.** Μια αγγελία μπορεί να έχει
+    ταυτότητα γραφείου και **ανώνυμη** φωνή *(εταιρεία που δεν δήλωσε επωνυμία, ή
+    ανάγνωση που απέτυχε)*. Ένας σύνδεσμος πάνω σε *«Από γραφείο»* **χωρίς όνομα** θα
+    ζητούσε από τον άνθρωπο να πατήσει κάτι που δεν του λέει πού πάει — ο σύνδεσμος
+    δανείζεται το accessible name του από την **πρόταση**, και εκεί η πρόταση δεν
+    ονομάζει κανέναν. Η γραμμή μένει τότε κείμενο, όπως ακριβώς την περιγράφει η
+    τρίτη φωνή του `listing-authorship.ts`: *«η οθόνη δεν αναπληρώνει — το λέει»*.
+  */
+  if (voice !== 'agency-named' || door.kind === 'absent') {
+    return <p className={className}>{sentence}</p>;
+  }
+
   return (
     <p className={className}>
-      {voice === 'owner-declared'
-        ? t('search-results:listing.authorship.ownerDeclared')
-        : voice === 'agency-anonymous'
-          ? t('search-results:listing.authorship.agencyAnonymous')
-          : t('search-results:listing.authorship.agency', { name: listing.agencyName })}
+      {/*
+        🔑 **Ο ΣΥΝΔΕΣΜΟΣ ΤΥΛΙΓΕΙ ΟΛΗ ΤΗΝ ΠΡΟΤΑΣΗ, ΟΧΙ ΜΟΝΟ ΤΗΝ ΕΠΩΝΥΜΙΑ.**
+
+        Το κλειδί είναι **μία** πρόταση με παρεμβολή (*«Από γραφείο: {name}»*). Για να
+        γίνει σύνδεσμος **μόνο** το όνομα θα χρειαζόταν σπάσιμο του κλειδιού σε πρόθεμα
+        + τιμή — δηλαδή **γραμματική καρφωμένη στα ελληνικά**, που καταρρέει σε κάθε
+        γλώσσα όπου η επωνυμία δεν έρχεται τελευταία. Ο στόχος κλικ γίνεται ταυτόχρονα
+        **μεγαλύτερος** (WCAG 2.5.8) και το accessible name **περιγραφικό**.
+
+        ⚠️ `<a>` ΜΕΣΑ στο `<p>`, ποτέ το `<p>` να γίνει `<a>`: το `className` του
+        καλούντος είναι τυπογραφία **παραγράφου** (`mt-2`, `text-xs`) — σε inline
+        στοιχείο το περιθώριο δεν κάνει τίποτα, και η ίδια δήλωση θα έβαφε δύο
+        διαφορετικά πράγματα.
+      */}
+      <Link
+        href={agencyProfileRoute(door.companyId)}
+        className="underline decoration-dotted underline-offset-4 hover:text-foreground hover:decoration-solid focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:rounded-sm"
+      >
+        {sentence}
+      </Link>
     </p>
   );
 }
