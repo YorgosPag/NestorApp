@@ -92,9 +92,21 @@ export const NOTIFICATION_KEYS = {
   // ==========================================================================
   procurement: {
     quote: {
-      submittedViaPortal: 'quotes:quotes.notifications.quoteSubmittedViaPortal',
-      vendorDeclined: 'quotes:quotes.notifications.vendorDeclined',
-      vendorEdited: 'quotes:quotes.notifications.vendorEdited',
+      // 🔴 **ΜΕΤΑΚΟΜΙΣΑΝ ΣΤΟ `common-shared`** (ADR-841 §7 Α18.14): ο
+      //    `NotificationDrawer` ζει στο κέλυφος και αποδίδει με `COMMON_NAMESPACES`.
+      submittedViaPortal: 'common-shared:quoteNotifications.quoteSubmittedViaPortal',
+      vendorDeclined: 'common-shared:quoteNotifications.vendorDeclined',
+      vendorEdited: 'common-shared:quoteNotifications.vendorEdited',
+      // 🔶 **ΕΜΕΙΝΑΝ ΣΤΟ `quotes`, ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ**: μετρήθηκε 2026-09-05 ότι έχουν
+      //    **μηδέν καταναλωτές** — δεν φτάνουν ποτέ σε `titleKey`. Μια μετακόμιση «για
+      //    συνέπεια» θα έβαζε στο κέλυφος κλειδιά που **κανείς δεν ζητά**, δηλαδή θα
+      //    πλήρωνε το βάρος χωρίς να λύνει τίποτα.
+      //
+      // ⚠️ **ΚΑΙ ΟΛΟΚΛΗΡΗ Η ΕΓΓΡΑΦΗ ΕΙΝΑΙ ΑΔΡΑΝΗΣ**: `grep` για
+      //    `NOTIFICATION_KEYS.procurement` δίνει **μηδέν** — οι τρεις παραγωγοί γράφουν
+      //    τη συμβολοσειρά **κυριολεκτικά** και παρακάμπτουν αυτό το μητρώο. Γι' αυτό
+      //    ακριβώς έσπασε ο κανόνας του προθέματος: **μητρώο που κανείς δεν ρωτά δεν
+      //    φυλάει τίποτα.** Δες το ανοιχτό **Ο-23**.
       inviteSent: 'quotes:quotes.notifications.inviteSent',
       inviteFailed: 'quotes:quotes.notifications.inviteFailed',
     },

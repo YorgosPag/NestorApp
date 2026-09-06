@@ -76,7 +76,7 @@ export async function processScanAsync(
       {
         entityId: quoteId,
         entityType: NOTIFICATION_ENTITY_TYPES.QUOTE,
-        titleKey: 'quotes:quotes.notifications.quoteScanCompleted',
+        titleKey: 'common-shared:quoteNotifications.quoteScanCompleted',
         titleParams: { vendorName },
       },
     );

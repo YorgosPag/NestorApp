@@ -34,7 +34,6 @@ import {
   validateVendorPortalTokenSignature,
 } from '@/services/vendor-portal/vendor-portal-token-service';
 import {
-  getVendorInviteByToken,
   markInviteOpened,
   markInviteSubmitted,
 } from '@/subapps/procurement/services/vendor-invite-service';
@@ -46,6 +45,7 @@ import {
 import { dispatchProcurementNotification } from '@/server/notifications/notification-orchestrator';
 import { NOTIFICATION_EVENT_TYPES, NOTIFICATION_ENTITY_TYPES } from '@/config/notification-events';
 import type { Quote } from '@/subapps/procurement/types/quote';
+import { openVendorInvite } from './open-invite';
 import { jsonError, readFiles, readSubmission } from './parsing';
 import { uploadVendorFiles } from './upload';
 
@@ -72,17 +72,13 @@ const baseGET = async (
   context?: { params: Promise<{ token: string }> },
 ): Promise<NextResponse> => {
   try {
-    if (!context) return jsonError('missing_context', 500);
-    const { token: rawToken } = await context.params;
-    const token = decodeURIComponent(rawToken);
-
-    const sig = validateVendorPortalTokenSignature(token);
-    if (!sig.valid) return jsonError(sig.reason, 400);
-
-    const invite = await getVendorInviteByToken(token);
-    if (!invite) return jsonError('invite_not_found', 404);
-    if (invite.status === 'declined') return jsonError('token_revoked', 410, { status: 'declined' });
-    if (invite.status === 'expired') return jsonError('token_expired', 410);
+    // 🔑 **Η ΑΛΥΣΙΔΑ ΑΝΟΙΓΜΑΤΟΣ ΖΕΙ ΣΕ ΕΝΑ ΣΗΜΕΙΟ** — δες `open-invite.ts` για το
+    //    γιατί η επικύρωση περνιέται (η ανάγνωση **δεν** καίει nonce).
+    const opened = await openVendorInvite(context, validateVendorPortalTokenSignature, {
+      status: 'declined',
+    });
+    if (!opened.ok) return opened.response;
+    const { token, invite } = opened;
 
     const rfq = await getRfq(invite.companyId, invite.rfqId);
     if (!rfq) return jsonError('rfq_not_found', 404);
@@ -159,17 +155,14 @@ const basePOST = async (
   context?: { params: Promise<{ token: string }> },
 ): Promise<NextResponse> => {
   try {
-    if (!context) return jsonError('missing_context', 500);
-    const { token: rawToken } = await context.params;
-    const token = decodeURIComponent(rawToken);
-
-    const validation = await validateVendorPortalToken(token, { markUsed: false });
-    if (!validation.valid) return jsonError(validation.reason, 400);
-
-    const invite = await getVendorInviteByToken(token);
-    if (!invite) return jsonError('invite_not_found', 404);
-    if (invite.status === 'declined') return jsonError('token_revoked', 410);
-    if (invite.status === 'expired') return jsonError('token_expired', 410);
+    // 🔑 **ΙΔΙΑ ΑΛΥΣΙΔΑ, ΑΥΣΤΗΡΟΤΕΡΗ ΕΠΙΚΥΡΩΣΗ**: η υποβολή περνά από πλήρη έλεγχο
+    //    (nonce κ.λπ.), σε αντίθεση με την ανάγνωση. `markUsed: false` — το token
+    //    σφραγίζεται μετά την επιτυχή εγγραφή, όχι πριν.
+    const opened = await openVendorInvite(context, (value) =>
+      validateVendorPortalToken(value, { markUsed: false }),
+    );
+    if (!opened.ok) return opened.response;
+    const { token, invite } = opened;
 
     const isFirstSubmission = invite.status !== 'submitted';
     if (!isFirstSubmission) {
@@ -236,8 +229,8 @@ const basePOST = async (
           ? NOTIFICATION_EVENT_TYPES.PROCUREMENT_QUOTE_RECEIVED
           : NOTIFICATION_EVENT_TYPES.PROCUREMENT_QUOTE_EDITED;
         const titleKey = isFirstSubmission
-          ? 'quotes:quotes.notifications.quoteSubmittedViaPortal'
-          : 'quotes:quotes.notifications.vendorEdited';
+          ? 'common-shared:quoteNotifications.quoteSubmittedViaPortal'
+          : 'common-shared:quoteNotifications.vendorEdited';
         const titleParams: Record<string, string> = isFirstSubmission
           ? { rfqTitle: rfq.title }
           : { vendorName: invite.recipientName ?? invite.vendorContactId, rfqTitle: rfq.title };

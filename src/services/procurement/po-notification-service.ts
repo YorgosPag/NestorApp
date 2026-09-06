@@ -73,7 +73,19 @@ export async function notifyPOApproved(
           url: `/procurement/${po.id}`,
         },
       ],
-      titleKey: 'procurement.notifications.poApproved',
+      // 🔴 **ΔΥΟ ΕΛΑΤΤΩΜΑΤΑ ΣΕ ΜΙΑ ΓΡΑΜΜΗ, ΚΑΙ ΤΑ ΒΡΗΚΕ ΠΥΛΗ** (ADR-841 §7 Α18.14,
+      //    2026-09-05). Έγραφε `'procurement.notifications.poApproved'`:
+      //
+      //    1. **Λάθος διαδρομή** — το κλειδί ζούσε στο `notifications.poApproved`
+      //       **μέσα** στο `procurement.json`· το όνομα του namespace είχε αντιγραφεί
+      //       και ως τμήμα της διαδρομής ⇒ **δεν υπήρχε πουθενά**.
+      //    2. **Λάθος σπίτι** — ακόμη κι αν η διαδρομή ήταν σωστή, ο
+      //       `NotificationDrawer` ζει στο **κέλυφος** και αποδίδει με
+      //       `COMMON_NAMESPACES`· το `procurement` **δεν φορτώνεται ποτέ** εκεί.
+      //
+      //    ⇒ Η κάρτα έπεφτε στο **αποθηκευμένο** κείμενο: παγωμένη και μονόγλωσση.
+      //    Ίδια κλάση με τα τέσσερα `quotes:` της ίδιας ημέρας — και **προϋπήρχε**.
+      titleKey: 'common-shared:poNotifications.poApproved',
       titleParams: { poNumber: po.poNumber },
     });
   } catch (err) {
