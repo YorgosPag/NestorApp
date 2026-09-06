@@ -72,7 +72,12 @@ const {
 const { DEFAULTS, loadConfig, policyFor, parsePolicyEntry, assertKnownFields } = require(path.join(LIB, 'config'));
 const { patternToRegExp, serializeWants, hydrateWants } = require(path.join(LIB, 'plan'));
 const { bootstrap } = require(path.join(LIB, 'cli'));
-const { normalize, checkArtifactIntegrity, parseArgs } = require(path.resolve(__dirname, '..', 'check-i18n-shell-slice.js'));
+const {
+  normalize,
+  checkArtifactIntegrity,
+  checkNewlyResolvableSpecs,
+  parseArgs,
+} = require(path.resolve(__dirname, '..', 'check-i18n-shell-slice.js'));
 const MG = require(path.resolve(__dirname, '..', 'lib', 'module-graph'));
 const { stripComments, extractTCalls } = require(path.resolve(__dirname, '..', 'lib', 'i18n-namespace-extract'));
 
@@ -1334,5 +1339,37 @@ describe('Group 17 — η απογραφή του κελύφους: ποιος �
     expect(() => parseSeal({ count: -1, at: '2026-09-05', why: 'λόγος αρκετά μακρύς για τον έλεγχο' })).toThrow(/ακέραιος/);
     expect(() => parseSeal({ count: 8, at: '2026-09-05', why: 'κοντό' })).toThrow(/why/);
     expect(parseSeal(SEAL).count).toBe(2);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Group Δ — ΤΟ ΚΡΙΤΗΡΙΟ «ΝΕΟ ΑΡΧΕΙΟ ΜΕΓΑΛΩΣΕ ΤΗΝ ΚΛΕΙΣΤΟΤΗΤΑ» (Layer 1, D)
+//
+// 🔴 ΓΕΝΝΗΘΗΚΕ ΧΩΡΙΣ ΑΓΚΥΡΑ, ΚΑΙ ΤΟ ΠΛΗΡΩΣΕ ΑΜΕΣΩΣ. Το κριτήριο D ήταν το μόνο του
+// Layer 1 χωρίς test, και κοκκίνιζε σε **κάθε** commit που άγγιζε μετάφραση: το
+// `probe()` δέχεται άμεσο hit χωρίς κατάληξη, άρα τα 216 locale JSON του manifest
+// «ικανοποιούσαν» τους ομώνυμους specifiers του `namespace-loaders.ts`.
+//
+// ⚠️ ΤΟ Δ2 ΕΙΝΑΙ ΤΟ ΜΙΣΟ ΠΟΥ ΜΕΤΡΑΕΙ. Χωρίς αυτό, η θεραπεία θα μπορούσε να είναι
+// «γύρνα πάντα null» — μια πύλη πράσινη και ανενεργή, το σχήμα που κυνηγά όλο το ADR.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('Group Δ — νέα αρχεία που λύνουν άλυτους specifiers', () => {
+  const loaderSpec = 'src/i18n/namespace-loaders.ts → ./locales/el/common-shared.json';
+
+  it('Δ1 — ένα locale JSON ΔΕΝ μεγαλώνει την κλειστότητα: ο walk δεν ακολουθεί .json', () => {
+    const manifest = { unresolvedSpecs: [loaderSpec] };
+    expect(checkNewlyResolvableSpecs(manifest, ['src/i18n/locales/el/common-shared.json'])).toBeNull();
+  });
+
+  it('Δ2 — ένα MODULE που λύνει άλυτο specifier ΕΞΑΚΟΛΟΥΘΕΙ να κοκκινίζει', () => {
+    const manifest = { unresolvedSpecs: ['src/i18n/namespace-loaders.ts → ./freshly-added-helper'] };
+    const message = checkNewlyResolvableSpecs(manifest, ['src/i18n/freshly-added-helper.ts']);
+    expect(message).toMatch(/freshly-added-helper/);
+  });
+
+  it('Δ3 — η ρίζα είναι γραμμένη στον resolver: το .json δεν είναι υποψήφια κατάληξη', () => {
+    // Αν κάποιος προσθέσει το '.json' εδώ, το Δ1 γίνεται ψέμα — και θα το δει.
+    expect(MG.CANDIDATE_EXTENSIONS).not.toContain('.json');
   });
 });

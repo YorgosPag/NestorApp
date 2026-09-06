@@ -261,6 +261,63 @@ if [[ -z "${SKIP_CHART_PALETTE:-}" ]] && [[ -f "scripts/validate-chart-palette.j
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 0.10: SYNC — CHECK 3.34 i18n shell-slice freshness, LAYER 1 (ADR-744 §23.9)
+#
+# ΤΟ ΚΑΛΩΔΙΟ ΠΟΥ ΕΛΕΙΠΕ. Ο έλεγχος ήταν γραμμένος για ΑΥΤΗ τη θέση από την πρώτη
+# μέρα — το ίδιο του το `--help` λέει «[staged files…] Layer 1 (pre-commit, no
+# module graph)» — και δεν συνδέθηκε ποτέ. Μέχρι σήμερα η απογραφή του §23
+# επιβαλλόταν μόνο (α) από την άρνηση του generator, που ενεργοποιείται ΜΟΝΟ όταν
+# κάποιος αναπαράγει, και (β) από το CI, που εδώ δεν σταματά τίποτα: ο deploy
+# είναι Netcup, ξεχωριστό σύστημα. Άρα ένα `import` που μπαίνει χωρίς αναπαραγωγή
+# περνούσε ΑΟΡΑΤΟ — το περιστατικό της 2026-09-04: ένα `import` έφερε 3 namespaces
+# σε ~150 διαδρομές.
+#
+# ΚΟΣΤΟΣ, ΜΕΤΡΗΜΕΝΟ (2026-09-05, 8 εκτελέσεις): 0,66–1,29 s, διάμεσος ~0,8 s —
+# ΕΠΙΠΕΔΟ, δεν εξαρτάται από το πλήθος των σταδιοποιημένων (0 αρχεία: 692–855 ms ·
+# 1 shell module: 730–927 ms). Ο ίδιος αριθμός ήταν ήδη καταγεγραμμένος στο
+# `i18n-shell-slice.yml` («measured 0,7s»). Το πρότυπο της αγοράς για pre-commit
+# είναι «<2s και ντετερμινιστικό» — περνά με διπλάσιο περιθώριο.
+#
+# ΤΙ ΜΕΝΕΙ ΕΞΩ, ΕΠΙΤΗΔΕΣ:
+#   · ΠΛΗΡΗΣ ΓΡΑΦΟΣ (13.877 modules, ~19s) → Layer 2 στο CI. Ίδια συναλλαγή με
+#     CHECK 3.29 / 3.30, ίδιος λόγος: N.17. Η τρύπα που μένει (αλυσίδα re-export
+#     γραμμένη ΕΚΤΟΣ shell module) είναι δηλωμένη στο yml — μια πύλη που υπονοεί
+#     κάλυψη που δεν έχει είναι χειρότερη από μη-πύλη.
+#   · ΑΥΤΟ-ΘΕΡΑΠΕΙΑ (αναπαραγωγή + επανα-σταδιοποίηση — το `stage_fixed` του
+#     lefthook, η κομψή λύση της αγοράς) → ΑΠΟΚΛΕΙΣΤΗΚΕ ΜΕ ΜΕΤΡΗΣΗ:
+#     `generate --dry-run` = 48.569 ms / 109.189 ms. Εννιαπλάσιο του ορίου.
+#
+# ⚠️ Η ΣΚΑΝΔΑΛΗ ΔΕΝ ΕΙΝΑΙ `src/i18n/**` — ΘΑ ΗΤΑΝ ΛΑΘΟΣ. Το περιστατικό της 04/09
+# ξεκίνησε από `src/components/search-results/ListingCard.tsx`: ΚΑΘΕ module του
+# `src/` μπορεί να μπει στην κλειστότητα του κελύφους. Μαζί τα locales (locale
+# drift), τα ίδια τα artifacts (χειρόγραφο πείραγμα) και το config (ρίζα/σφράγιση).
+#
+# ⚠️ ΔΙΑΓΡΑΦΕΣ (`D`) ΠΕΡΝΟΥΝ ΕΠΙΤΗΔΕΣ, ΚΑΙ ΓΙΑΤΙ: το καθολικό `$STAGED_FILES` είναι
+# `--diff-filter=ACM`. Ο checker όμως έχει γραμμένο κλάδο «είναι shell module στο
+# manifest αλλά δεν υπάρχει πια» που με ACM ΔΕΝ ΜΠΟΡΕΙ ΝΑ ΠΥΡΟΔΟΤΗΣΕΙ ΠΟΤΕ —
+# δηλαδή ήταν νεκρός κώδικας φύλακα. Η δική μας κλήση με ACMD τον ζωντανεύει.
+#
+# ⚠️ ΟΧΙ στη Phase 1: ίδιος λόγος με 0.5/0.6 — δεν μπαίνει στο worker pool.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+if [[ -z "${SKIP_I18N_SHELL_SLICE:-}" ]] && [[ -f "scripts/check-i18n-shell-slice.js" ]]; then
+    SHELL_SLICE_STAGED=$(git diff --cached --name-only --diff-filter=ACMD)
+    SHELL_SLICE_TRIGGERS=$(echo "$SHELL_SLICE_STAGED" \
+        | grep -E '^(src/.*\.(ts|tsx)|src/i18n/locales/(el|en)/.*\.json|src/i18n/generated/.*|\.i18n-shell-slice\.json)$' || true)
+    if [[ -n "$SHELL_SLICE_TRIGGERS" ]]; then
+        node scripts/check-i18n-shell-slice.js $SHELL_SLICE_TRIGGERS
+        if [[ $? -ne 0 ]]; then
+            echo ""
+            echo -e "${RED}  🚫 COMMIT BLOCKED — CHECK 3.34 i18n shell slice (ADR-744)${NC}"
+            echo -e "${YELLOW}  Θεραπεία: npm run generate:i18n-shell-slice  (και σταδιοποίησε τα artifacts)${NC}"
+            echo -e "${YELLOW}  ⚠️  ΜΗΝ ανεβάσεις τη σφράγιση για να γίνει πράσινο — η θεραπεία είναι σχεδόν πάντα να ΚΟΠΕΙ η εισαγωγή.${NC}"
+            echo -e "${YELLOW}  Emergency skip (justify to Giorgio): SKIP_I18N_SHELL_SLICE=1 git commit ...${NC}"
+            exit 1
+        fi
+    fi
+fi
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # PHASE 1: Node.js worker_threads orchestrator
 # — one node process, all checks run in parallel threads (JS) or processes (.sh)
 # ═══════════════════════════════════════════════════════════════════════════════

@@ -307,7 +307,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 ### Pre-commit checks (summary):
 
 <!-- BEGIN GENERATED GATE INDEX — ΜΗΝ ΤΟ ΓΡΑΨΕΙΣ ΣΤΟ ΧΕΡΙ. Πηγή: docs/gates/3.NN.md · αναπαραγωγή: npm run gate-index:generate
-     fingerprint: sha256:f1db43cbe12a3f4cac6717292d1d8365a5013c3b2927de243135d73bc927ec34 -->
+     fingerprint: sha256:261ca1ff450c14d866e49a2410dd9698815cb6173837a6a59502c859e0c567b5 -->
 | CHECK | Goal | Mode | Baseline |
 |-------|------|------|----------|
 | **3.8** | **Missing i18n keys** (ADR-777) — `t('key')` **και** `t('ns:key')` χωρίς αντιστοιχία στα locales · 📘 `docs/gates/3.8.md` | RATCHET | `.i18n-missing-keys-baseline.json` |
@@ -382,7 +382,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 φορές (N.12 · N.18 · CHECK 3.38). Στη γραμμή μένει ο **δείκτης**, και ο γεννήτορας
 επαληθεύει ότι **λύνεται**. Άνοιξε το JSON.
 
-📊 Πύλες που **τρέχουν**: **69** (εκτελεστής 61 + hook 18) ·
+📊 Πύλες που **τρέχουν**: **69** (εκτελεστής 61 + hook 19) ·
 γραμμές εδώ: **56** · αδήλωτες: **11** (εκστρατεία που τελειώνει στο μηδέν).
 *Αυτοί οι αριθμοί είναι **παραγόμενοι** — η προηγούμενη χειρόγραφη εκδοχή τους είχε ήδη*
 *αποκλίνει (έγραφε «48 γραμμές» και «61 πύλες»).*

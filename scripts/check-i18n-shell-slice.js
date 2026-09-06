@@ -81,7 +81,12 @@ const {
 const RS = require('./lib/i18n-shell-slice/route-slices');
 const { ROUTES_DIR, routeIdFor } = RS;
 const { parseModule } = require('./lib/module-graph/parse-module');
-const { readTsPathAliases, resolveSpecifier, toPosix } = require('./lib/module-graph/resolve-specifier');
+const {
+  CANDIDATE_EXTENSIONS,
+  readTsPathAliases,
+  resolveSpecifier,
+  toPosix,
+} = require('./lib/module-graph/resolve-specifier');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const REGENERATE = 'npm run generate:i18n-shell-slice';
@@ -377,10 +382,32 @@ function checkStagedShellFiles(config, manifest, stagedFiles) {
   return null;
 }
 
-/** D. a new file that makes a previously-unresolved specifier resolve. */
+/**
+ * D. a new file that makes a previously-unresolved specifier resolve.
+ *
+ * 🔴 **ΜΟΝΟ ΑΡΧΕΙΑ ΠΟΥ ΜΠΟΡΟΥΝ ΝΑ ΜΠΟΥΝ ΣΤΗΝ ΚΛΕΙΣΤΟΤΗΤΑ, ΚΑΙ ΓΙΑΤΙ.** Η πρώτη γραφή
+ * έχτιζε το `fileSet` από **ΟΛΑ** τα σταδιοποιημένα, και το `probe()` δέχεται άμεσο
+ * hit χωρίς κατάληξη ⇒ κάθε `src/i18n/locales/<γλ>/<ns>.json` «ικανοποιούσε» τον
+ * ομώνυμο specifier του `namespace-loaders.ts`. **Μετρημένο**: από τα **222**
+ * `unresolvedSpecs` του manifest, τα **216** είναι ακριβώς αυτά τα locale JSON.
+ * Δηλαδή η πύλη κοκκίνιζε σε **κάθε commit που αγγίζει μετάφραση** — και το
+ * `--regenerate` **δεν** το θεράπευε, γιατί ο walk τα ξαναγράφει άλυτα κάθε φορά.
+ *
+ * 🔑 **Η ρίζα δεν είναι η λίστα, είναι η ΕΡΩΤΗΣΗ.** Το κριτήριο ρωτά *«μεγάλωσε η
+ * κλειστότητα;»*, και η κλειστότητα ακολουθεί **modules** — το
+ * `CANDIDATE_EXTENSIONS` του resolver **δεν έχει `.json`**. Άρα ένα αρχείο δεδομένων
+ * είναι **δομικά ανίκανο** να τη μεγαλώσει, όσο νέο κι αν είναι: το ψευδώς θετικό δεν
+ * ήταν οριακή περίπτωση αλλά **η μόνη περίπτωση** που πυροδοτούσε.
+ *
+ * ⚠️ **ΜΗΝ το «διορθώσεις» βγάζοντας τα locales από τη σκανδάλη του hook** — εκεί
+ * μπαίνουν επίτηδες, για **άλλο** κριτήριο (locale drift, Α/Β). Το στενό σημείο είναι
+ * εδώ, και μόνο εδώ.
+ */
 function checkNewlyResolvableSpecs(manifest, stagedFiles) {
   if (manifest.unresolvedSpecs.length === 0 || stagedFiles.length === 0) return null;
-  const added = new Set(stagedFiles.map(f => toPosix(path.join(PROJECT_ROOT, f))));
+  const modules = stagedFiles.filter(f => CANDIDATE_EXTENSIONS.some(ext => f.endsWith(ext)));
+  if (modules.length === 0) return null;
+  const added = new Set(modules.map(f => toPosix(path.join(PROJECT_ROOT, f))));
   const aliases = readTsPathAliases(PROJECT_ROOT);
   for (const entry of manifest.unresolvedSpecs) {
     const [fromRel, spec] = entry.split(' → ');
