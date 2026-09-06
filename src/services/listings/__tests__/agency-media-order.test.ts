@@ -31,6 +31,7 @@ import { join, sep } from 'path';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { PUBLISHED_MEDIA_LIMIT } from '@/services/upload/utils/storage-path-public-shelf';
 import { promoteToFront, withDeclaredFirst } from '@/lib/ordering/declared-order';
+import { declaredFileIds } from '@/lib/listings/declared-file-ids';
 import { withOwnerMediaFirst } from '@/lib/owner-property/owner-media-publication';
 import type { OwnerPropertyMedia } from '@/types/owner-property';
 import type { PublicShelfReport } from '../public-shelf.service';
@@ -49,7 +50,6 @@ const { republishListing } = require('../publish-public-listing') as
 const {
   publishedAgencyMediaSources,
   orderedPublishableAgencyMedia,
-  declaredMediaOrder,
   compareAgencyMediaForPublication,
 } = require('../agency-media-publication') as typeof import('../agency-media-publication');
 
@@ -234,7 +234,7 @@ describe('Κ3 — Η ΣΕΙΡΑ ΜΕΝΕΙ ΟΛΙΚΗ ΚΑΙ ΝΤΕΤΕΡΜΙΝ�
   const FILES = [FILE_A, FILE_B, FILE_C];
 
   it('🔴 ΑΓΝΩΣΤΗ ταυτότητα αγνοείται — καμία τρύπα, ουρά ανέπαφη', () => {
-    expect(ids(publishedAgencyMediaSources(FILES, ['file_ghost', 'file_b']))).toEqual([
+    expect(ids(publishedAgencyMediaSources(FILES, { order: ['file_ghost', 'file_b'], floorplans: [] }))).toEqual([
       'file_b',
       'file_a',
       'file_c',
@@ -242,7 +242,7 @@ describe('Κ3 — Η ΣΕΙΡΑ ΜΕΝΕΙ ΟΛΙΚΗ ΚΑΙ ΝΤΕΤΕΡΜΙΝ�
   });
 
   it('🔴 ΔΙΠΛΟΤΥΠΗ ταυτότητα μετρά ΜΙΑ φορά', () => {
-    expect(ids(publishedAgencyMediaSources(FILES, ['file_c', 'file_c', 'file_a']))).toEqual([
+    expect(ids(publishedAgencyMediaSources(FILES, { order: ['file_c', 'file_c', 'file_a'], floorplans: [] }))).toEqual([
       'file_c',
       'file_a',
       'file_b',
@@ -250,15 +250,15 @@ describe('Κ3 — Η ΣΕΙΡΑ ΜΕΝΕΙ ΟΛΙΚΗ ΚΑΙ ΝΤΕΤΕΡΜΙΝ�
   });
 
   it('🔴 δύο κλήσεις με την ΙΔΙΑ είσοδο δίνουν ΤΟ ΙΔΙΟ αποτέλεσμα', () => {
-    const once = ids(publishedAgencyMediaSources(FILES, ['file_b']));
-    const twice = ids(publishedAgencyMediaSources(FILES, ['file_b']));
+    const once = ids(publishedAgencyMediaSources(FILES, { order: ['file_b'], floorplans: [] }));
+    const twice = ids(publishedAgencyMediaSources(FILES, { order: ['file_b'], floorplans: [] }));
     expect(once).toEqual(twice);
   });
 
   it('🔴 η ΕΙΣΟΔΟΣ δεν μεταβάλλεται — ο καλών δεν χάνει τη σειρά του', () => {
     const input = [FILE_C, FILE_A, FILE_B];
     const before = input.map((f) => f.id);
-    publishedAgencyMediaSources(input, ['file_b']);
+    publishedAgencyMediaSources(input, { order: ['file_b'], floorplans: [] });
     expect(input.map((f) => f.id)).toEqual(before);
   });
 
@@ -267,8 +267,8 @@ describe('Κ3 — Η ΣΕΙΡΑ ΜΕΝΕΙ ΟΛΙΚΗ ΚΑΙ ΝΤΕΤΕΡΜΙΝ�
     const x = fileDoc({ id: 'file_x', createdAt: same });
     const y = fileDoc({ id: 'file_y', createdAt: same });
 
-    expect(ids(publishedAgencyMediaSources([y, x], []))).toEqual(['file_x', 'file_y']);
-    expect(ids(publishedAgencyMediaSources([y, x], ['file_y']))).toEqual(['file_y', 'file_x']);
+    expect(ids(publishedAgencyMediaSources([y, x], { order: [], floorplans: [] }))).toEqual(['file_x', 'file_y']);
+    expect(ids(publishedAgencyMediaSources([y, x], { order: ['file_y'], floorplans: [] }))).toEqual(['file_y', 'file_x']);
   });
 });
 
@@ -287,18 +287,18 @@ describe('Κ4 — ΤΟ ΟΡΙΟ', () => {
   const LAST = MANY[MANY.length - 1].id;
 
   it('🔴 δηλωμένο αρχείο ΕΚΤΟΣ ορίου χρονικά ΦΕΥΓΕΙ, και είναι ΠΡΩΤΟ', () => {
-    const out = ids(publishedAgencyMediaSources(MANY, [LAST]));
+    const out = ids(publishedAgencyMediaSources(MANY, { order: [LAST], floorplans: [] }));
     expect(out[0]).toBe(LAST);
     expect(out).toHaveLength(PUBLISHED_MEDIA_LIMIT);
   });
 
   it('🔴 ΧΩΡΙΣ δήλωση, το ίδιο αρχείο ΔΕΝ φεύγει καθόλου — άρα το κόψιμο είναι ΜΕΤΑ', () => {
-    expect(ids(publishedAgencyMediaSources(MANY, []))).not.toContain(LAST);
+    expect(ids(publishedAgencyMediaSources(MANY, { order: [], floorplans: [] }))).not.toContain(LAST);
   });
 
   it('🔴 ΚΑΝΕΝΑ δεύτερο όριο: δήλωση μεγαλύτερη του ορίου δεν μεγαλώνει το ράφι', () => {
     const all = MANY.map((f) => f.id);
-    expect(ids(publishedAgencyMediaSources(MANY, all))).toHaveLength(PUBLISHED_MEDIA_LIMIT);
+    expect(ids(publishedAgencyMediaSources(MANY, { order: all, floorplans: [] }))).toHaveLength(PUBLISHED_MEDIA_LIMIT);
   });
 });
 
@@ -317,8 +317,8 @@ describe('Κ5 — Η ΟΘΟΝΗ ΔΕΙΧΝΕΙ ΑΚΡΙΒΩΣ Ο,ΤΙ ΦΕΥΓΕ
     ];
     const declared = ['file_b', 'file_plan'];
 
-    const screen = orderedPublishableAgencyMedia(mixed, declared).map((f) => f.id);
-    const shelf = ids(publishedAgencyMediaSources(mixed, declared));
+    const screen = orderedPublishableAgencyMedia(mixed, { order: declared, floorplans: [] }).map((f) => f.id);
+    const shelf = ids(publishedAgencyMediaSources(mixed, { order: declared, floorplans: [] }));
 
     expect(screen).toEqual(shelf);
     expect(screen).toEqual(['file_b', 'file_a', 'file_c']);
@@ -329,7 +329,7 @@ describe('Κ5 — Η ΟΘΟΝΗ ΔΕΙΧΝΕΙ ΑΚΡΙΒΩΣ Ο,ΤΙ ΦΕΥΓΕ
 // Κ6 — Η ΑΝΑΓΝΩΣΗ ΤΟΥ ΩΜΟΥ ΠΕΔΙΟΥ (`.passthrough()`, Α14.7.5)
 // ============================================================================
 
-describe('Κ6 — `declaredMediaOrder` ΔΕΝ ΕΜΠΙΣΤΕΥΕΤΑΙ ΤΟΝ ΔΙΣΚΟ', () => {
+describe('Κ6 — `declaredFileIds` ΔΕΝ ΕΜΠΙΣΤΕΥΕΤΑΙ ΤΟΝ ΔΙΣΚΟ', () => {
   it.each([
     ['undefined', undefined],
     ['null', null],
@@ -337,11 +337,11 @@ describe('Κ6 — `declaredMediaOrder` ΔΕΝ ΕΜΠΙΣΤΕΥΕΤΑΙ ΤΟΝ Δ
     ['συμβολοσειρά', 'file_a'],
     ['αντικείμενο', { 0: 'file_a' }],
   ])('🔴 %s ⇒ καμία δήλωση', (_label, value) => {
-    expect(declaredMediaOrder(value)).toEqual([]);
+    expect(declaredFileIds(value)).toEqual([]);
   });
 
   it('🔴 κρατά ΜΟΝΟ μη-κενές συμβολοσειρές, στη σειρά τους', () => {
-    expect(declaredMediaOrder(['file_a', 7, '', '   ', null, 'file_b'])).toEqual([
+    expect(declaredFileIds(['file_a', 7, '', '   ', null, 'file_b'])).toEqual([
       'file_a',
       'file_b',
     ]);
@@ -472,13 +472,16 @@ describe('Κ8 — ΚΛΕΙΣΤΟΤΗΤΑ ΤΩΝ ΚΑΛΟΥΝΤΩΝ', () => {
       join(REPO_ROOT, 'src', 'services', 'listings', 'agency-media.reader.ts'),
       'utf8',
     );
-    expect(reader).toContain('declaredOrder: AgencyMediaOrderDeclaration');
+    expect(reader).toContain('declaration: AgencyMediaDeclaration');
 
     const writer = readFileSync(
       join(REPO_ROOT, 'src', 'services', 'listings', 'publish-public-listing.ts'),
       'utf8',
     );
-    expect(writer).toContain('declaredMediaOrder(property.publishedMediaOrder)');
+    // 🔑 **ΜΙΑ κλήση για ΚΑΙ ΤΑ ΔΥΟ πεδία** (Α17.7.6): ο γραφέας δεν μπορεί να διαβάσει
+    //    το ένα και να **ξεχάσει** το άλλο — το σχήμα που άφησε το `publishedMedia` άδειο
+    //    επί μήνες (Α14.5).
+    expect(writer).toContain('agencyMediaDeclaration(property)');
   });
 });
 
@@ -523,7 +526,7 @@ describe('Κ9 — Η ΟΥΡΑ ΕΧΕΙ ΑΚΟΜΗ ΤΟΝ ΔΙΚΟ ΤΗΣ ΚΑΝ�
   });
 
   it('🔴 ΚΑΙ Η ΔΗΛΩΣΗ ΝΙΚΑ ΚΑΙ ΤΑ ΔΥΟ ΚΛΕΙΔΙΑ', () => {
-    expect(ids(publishedAgencyMediaSources([OLD_OMEGA, NEW_ALPHA], ['file_aaa']))).toEqual([
+    expect(ids(publishedAgencyMediaSources([OLD_OMEGA, NEW_ALPHA], { order: ['file_aaa'], floorplans: [] }))).toEqual([
       'file_aaa',
       'file_zzz',
     ]);

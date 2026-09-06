@@ -48,7 +48,7 @@ import {
   createAgencyMediaResolver,
   type AgencyMediaResolver,
 } from './agency-media.reader';
-import { declaredMediaOrder } from './agency-media-publication';
+import { agencyMediaDeclaration } from './agency-media-publication';
 
 const logger = createModuleLogger('publish-public-listing');
 
@@ -79,11 +79,23 @@ export type ListingSourceProperty = ProjectableProperty & {
    * επόμενο πέρασμα, χωρίς να το μάθει κανείς.
    *
    * ⚠️ **Ωμό `unknown`, επίτηδες**: το πεδίο έρχεται από έγγραφο του δίσκου και το
-   * διαβάζει **αποκλειστικά** το `declaredMediaOrder`. Ένας τύπος `string[]` εδώ θα
+   * διαβάζει **αποκλειστικά** το `agencyMediaDeclaration`. Ένας τύπος `string[]` εδώ θα
    * ήταν **υπόσχεση που κανείς δεν επιβάλλει** — ακριβώς το σχήμα με το οποίο ένα
    * προαιρετικό πεδίο γίνεται σιωπηλά «μόνιμα σωστό» στα μάτια του μεταγλωττιστή.
    */
   readonly publishedMediaOrder?: unknown;
+  /**
+   * **Οι κατόψεις που το γραφείο ΟΝΟΜΑΣΕ για αυτή την αγγελία** — ταυτότητες
+   * `FileRecord.id` (ADR-841 §7 Α17.7).
+   *
+   * 🔴 **ΕΙΝΑΙ ΣΚΕΛΟΣ ΣΥΜΜΕΤΟΧΗΣ, ΣΕ ΑΝΤΙΘΕΣΗ ΜΕ ΤΟ `publishedMediaOrder` ΑΠΟ ΠΑΝΩ** —
+   * και γι' αυτό **προστίθεται** στους φρουρούς, ποτέ δεν τους αντικαθιστά: κάτοψη χωρίς
+   * `classification: 'public'` δεν φεύγει **ούτε όταν δηλωθεί** *(Α17.7.4)*.
+   *
+   * ⚠️ **Ωμό `unknown`, ίδια πειθαρχία**: η ανάγνωση είναι **αποκλειστικά** το
+   * `agencyMediaDeclaration`.
+   */
+  readonly publishedFloorplans?: unknown;
 };
 
 /**
@@ -237,7 +249,7 @@ export async function republishListing(
       //    της συνάρτησης ⇒ η πράξη του ανθρώπου φτάνει στον επιλυτή **χωρίς καμία
       //    επιπλέον ανάγνωση** και χωρίς να μπορεί να δει **άλλη** έκδοση του εγγράφου
       //    από αυτήν που δημοσιεύεται στο ίδιο πέρασμα.
-      resolveMedia(propertyId, property.companyId, declaredMediaOrder(property.publishedMediaOrder)),
+      resolveMedia(propertyId, property.companyId, agencyMediaDeclaration(property)),
     ]);
 
     return await writeListingProjection(

@@ -28,7 +28,7 @@
  * *«can be shared externally (e.g. marketing photos)»*.
  */
 
-import { compareInstantsAsc } from '@/lib/date-local';
+import { compareInstantsAsc, normalizeToISO } from '@/lib/date-local';
 import {
   FILE_CATEGORIES,
   FILE_CLASSIFICATIONS,
@@ -37,7 +37,16 @@ import {
 } from '@/config/domain-constants';
 import { FILE_TYPE_CONFIG } from '@/config/file-upload-config';
 import { PUBLISHED_MEDIA_LIMIT } from '@/services/upload/utils/storage-path-public-shelf';
-import { PHOTO_MATERIAL } from '@/lib/listings/listing-material';
+import {
+  PHOTO_MATERIAL,
+  declaredFloorplanMaterial,
+  type ListingMaterial,
+} from '@/lib/listings/listing-material';
+import {
+  declaredFileIds,
+  NO_DECLARED_FILE_IDS,
+  type DeclaredFileIds,
+} from '@/lib/listings/declared-file-ids';
 import { orderByDeclaration } from '@/lib/ordering/declared-order';
 import type { FileRecord } from '@/types/file-record';
 import type { PublicShelfSource } from '@/services/upload/utils/storage-path-public-shelf';
@@ -87,15 +96,25 @@ export function isPubliclyClassified(file: AgencyMediaCandidate): boolean {
 }
 
 /**
- * **Είναι αυτό φωτογραφία του ακινήτου, έτοιμη και ζωντανή;** — ο φρουρός #2.
+ * **Μπορούν αυτά τα bytes να ΦΥΓΟΥΝ ως εικόνα αυτού του ακινήτου;** — ο φρουρός #2,
+ * **χωρίς** το σκέλος της κατηγορίας.
+ *
+ * 🔴 **ΕΞΗΧΘΗ ΣΤΗΝ Α17.7, ΚΑΙ Η ΓΡΑΜΜΗ ΤΗΣ ΤΟΜΗΣ ΕΙΝΑΙ Η ΑΠΟΦΑΣΗ.** Εδώ ζει ό,τι ισχύει
+ * **ανεξάρτητα** από το τι είδους υλικό είναι: κηδεμονία *(είναι ακινήτου;)*, ετοιμότητα,
+ * ζωή, και **αποκωδικοποιήσιμη εικόνα**. Το *«τι είδους υλικό είναι;»* απαντιέται
+ * **χωριστά** από κάθε οικογένεια — γιατί οι δύο οικογένειες το απαντούν **ανόμοια**, και
+ * η ανομοιότητα είναι δικαιολογημένη *(Α17.7.4)*.
  *
  * ⚠️ Το `lifecycleState` και το `isDeleted` είναι **δύο** πεδία για μία κατάσταση *(η
  * ζωντανή βάση έχει και τα δύο σε κάθε έγγραφο)*. Ελέγχονται **αμφότερα**: το ένα να
  * λείπει σε παλιό έγγραφο δεν επιτρέπεται να σημαίνει «δημοσίευσέ το».
+ *
+ * 🔑 **Ο έλεγχος MIME μένει εδώ και είναι ο λόγος που τα DXF δεν είναι θέμα**: μετρημένο
+ * ζωντανά *(Α17.7.1)*, και οι κατόψεις της βάσης είναι `application/dxf` ⇒ **δεν μπαίνουν
+ * σε `<img>`**, όσο κι αν κάποιος τις δηλώσει. Η δήλωση της Α17.7 **δεν** τις ξεκλειδώνει.
  */
-export function isPublishableShape(file: AgencyMediaCandidate): boolean {
+export function isDeliverableAgencyImage(file: AgencyMediaCandidate): boolean {
   if (file.entityType !== 'property') return false;
-  if (file.category !== FILE_CATEGORIES.PHOTOS) return false;
   if (file.status !== FILE_STATUS.READY) return false;
   if (file.isDeleted === true) return false;
   if (
@@ -109,10 +128,59 @@ export function isPublishableShape(file: AgencyMediaCandidate): boolean {
 }
 
 /**
- * **Και οι δύο φρουροί.** Η σύζευξη γράφεται **μία** φορά, εδώ.
+ * **ΤΙ ΦΕΥΓΕΙ ΑΥΤΟ ΤΟ ΑΡΧΕΙΟ — ΚΑΙ ΩΣ ΤΙ;** ΜΙΑ ερώτηση, μία απάντηση (Α17.7.4).
+ *
+ * 🔴 **ΓΡΑΦΤΗΚΕ ΩΣ ΕΝΑ ΕΡΩΤΗΜΑ ΕΠΙΤΗΔΕΣ, ΚΑΙ ΤΟ ΠΡΟΕΙΔΟΠΟΙΟΥΣΕ Η Α17.4**:
+ * *«μια μελλοντική χαλάρωση της λευκής λίστας **οφείλει** να αλλάξει και τη γραμμή του
+ * υλικού: είναι οι **δύο άκρες του ίδιου ισχυρισμού**»*. Δύο ξεχωριστές συναρτήσεις —
+ * *«φεύγει;»* και *«τι είναι;»* — θα μπορούσαν να διαφωνήσουν σιωπηλά: αρχείο θα έφευγε
+ * ως **φωτογραφία** ενώ ο άνθρωπος το δήλωσε **κάτοψη**, ή αντίστροφα. Με **μία**
+ * συνάρτηση, η διαφωνία είναι **δομικά αδύνατη**: `null` σημαίνει «δεν φεύγει», και ό,τι
+ * δεν είναι `null` **είναι** το υλικό του.
+ *
+ * ```
+ * ΦΩΤΟΓΡΑΦΙΑ  →  public + σχήμα + category === 'photos'                    ⇒ photo
+ * ΚΑΤΟΨΗ      →  public + σχήμα + category === 'floorplans'
+ *                            + ΟΝΟΜΑΣΤΙΚΗ ΔΗΛΩΣΗ + αναγνώσιμη στιγμή        ⇒ floorplan
+ * ```
+ *
+ * 🔴 **Η ΛΕΥΚΗ ΛΙΣΤΑ ΔΕΝ ΧΑΛΑΡΩΣΕ — ΑΠΕΚΤΗΣΕ ΔΕΥΤΕΡΟ ΣΚΕΛΟΣ ΜΕ ΑΥΣΤΗΡΟΤΕΡΗ
+ * ΑΠΑΙΤΗΣΗ.** Το Ο-21 προειδοποιούσε ρητά: *«ΜΗΝ λυθεί χαλαρώνοντας τη λευκή λίστα — θα
+ * δημοσίευε **κάθε** αρχείο `floorplans` που κάποιος σήμανε `public`»*. Δεν συμβαίνει:
+ * η κάτοψη θέλει `classification: 'public'` **ΚΑΙ** ρητή αναφορά της ταυτότητάς της.
+ * ⇒ Η άγκυρα **Κ4** του `listing-floorplan-separation` μένει **αληθής**, και απέκτησε
+ * αδελφό: *«ούτε τότε, παρά μόνο αν κάποιος την **ονόμασε**»*.
+ *
+ * ⚠️ **ΑΝΑΓΝΩΣΙΜΗ ΣΤΙΓΜΗ ΕΙΝΑΙ ΦΡΟΥΡΟΣ, ΟΧΙ ΛΕΠΤΟΜΕΡΕΙΑ.** Το `ListingMaterial` της
+ * κάτοψης έχει **υποχρεωτικό** `at`, επειδή το δημόσιο έγγραφο τη γράφει ως
+ * `SourcedAttribute` — και κάθε τέτοιο **οφείλει** να πει *πότε το έμαθε η πηγή*. Κάτοψη
+ * με μη αναγνώσιμο `createdAt` **δεν δημοσιεύεται**· ⛔ **ποτέ ρολόι του γραφέα**, που θα
+ * απαντούσε *«πότε το πρόβαλα»* σε πεδίο που ρωτά *«πότε το είπε ο άνθρωπος»*.
+ *
+ * ⚠️ **`declaredFloorplans` είναι ΣΥΝΟΛΟ, όχι πίνακας**: ρωτιέται μία φορά ανά αρχείο σε
+ * βρόχο πάνω σε **όλα** τα αρχεία του ακινήτου· ένα `includes` θα ήταν `O(n·m)` για
+ * απάντηση που είναι `O(1)`.
+ *
+ * 🔴 **ΚΑΙ ΓΙ' ΑΥΤΟ ΕΦΥΓΑΝ ΤΑ `isPublishableShape` / `isPublishableAgencyPhoto`**
+ * *(2026-09-06)*. Μετά την Α17.7 δεν τα καλούσε **κανείς** — ούτε παραγωγός, ούτε άγκυρα
+ * *(μετρημένο με `grep` σε όλο το `src/`)* — και θα έμεναν ως **δεύτερη διατύπωση** του
+ * κριτηρίου που ζει τώρα εδώ: ακριβώς το σχήμα που το **ADR-749** ονομάζει «δύο μηχανές
+ * για την ίδια ερώτηση». *«Νεκρό **και** διπλότυπο» δεν είναι δύο προβλήματα — είναι το
+ * ίδιο πρόβλημα σε δύο ηλικίες.*
  */
-export function isPublishableAgencyPhoto(file: AgencyMediaCandidate): boolean {
-  return isPubliclyClassified(file) && isPublishableShape(file);
+export function agencyMediaMaterial(
+  file: AgencyMediaCandidate,
+  declaredFloorplans: ReadonlySet<string>,
+): ListingMaterial | null {
+  if (!isPubliclyClassified(file)) return null;
+  if (!isDeliverableAgencyImage(file)) return null;
+
+  if (file.category === FILE_CATEGORIES.PHOTOS) return PHOTO_MATERIAL;
+  if (file.category !== FILE_CATEGORIES.FLOORPLANS) return null;
+  if (!declaredFloorplans.has(file.id)) return null;
+
+  const at = normalizeToISO(file.createdAt);
+  return at === null ? null : declaredFloorplanMaterial(at);
 }
 
 /**
@@ -155,47 +223,51 @@ export function compareAgencyMediaForPublication(
 }
 
 /**
- * **Η ΠΡΑΞΗ ΣΕΙΡΑΣ ΤΟΥ ΓΡΑΦΕΙΟΥ, ΟΠΩΣ ΤΗ ΔΙΑΒΑΖΕΙ Ο ΓΡΑΦΕΑΣ** (ADR-841 §7 Α14.7).
+ * **Η ΠΡΑΞΗ ΤΟΥ ΑΝΘΡΩΠΟΥ ΤΟΥ ΓΡΑΦΕΙΟΥ** — δύο δηλώσεις, ένα δοχείο (ADR-841 §7 Α14.7 · Α17.7).
  *
- * Πίνακας **ταυτοτήτων `FileRecord.id`** στη σειρά που τις θέλει ο άνθρωπος του γραφείου,
- * φυλαγμένος στο **έγγραφο του ακινήτου** — `properties/{id}.publishedMediaOrder`.
+ * | Πεδίο | Ρωτά | Ζει στο |
+ * |---|---|---|
+ * | `order` | *«με ποια σειρά;»* — **ποτέ** «ποια;» | `properties/{id}.publishedMediaOrder` |
+ * | `floorplans` | *«ποιες κατόψεις είναι υλικό **ΑΥΤΗΣ** της αγγελίας;» | `properties/{id}.publishedFloorplans` |
  *
- * 🔴 **ΔΕΝ ΕΙΝΑΙ ΛΙΣΤΑ ΣΥΜΜΕΤΟΧΗΣ, ΚΑΙ ΑΥΤΟ ΕΙΝΑΙ ΟΛΟ ΤΟ ΣΧΕΔΙΟ.** Το *«ποια φεύγουν;»*
- * το απαντούν **αποκλειστικά** οι δύο φρουροί της Α14.2. Ταυτότητα εδώ που δεν τους
- * περνά **δεν δημοσιεύεται** — απλώς αγνοείται. Γι' αυτό δεν γεννιέται ποτέ η ερώτηση
- * *«ποια από τις δύο πηγές κερδίζει;»*: δεν απαντούν την ίδια ερώτηση.
+ * 🔴 **ΟΙ ΔΥΟ ΔΕΝ ΕΙΝΑΙ ΤΟ ΙΔΙΟ ΕΙΔΟΣ ΔΗΛΩΣΗΣ, ΚΑΙ Η ΔΙΑΦΟΡΑ ΕΙΝΑΙ Η ΑΣΦΑΛΕΙΑ.**
+ * Η `order` **δεν μπορεί να δημοσιεύσει τίποτα** — μόνο να τακτοποιήσει ό,τι ήδη φεύγει *(Α14.7.2)*.
+ * Η `floorplans` **ΕΙΝΑΙ** σκέλος συμμετοχής — αλλά **προστίθεται** στους φρουρούς,
+ * ποτέ δεν τους αντικαθιστά *(Α17.7.4)*: κάτοψη χωρίς `classification: \'public\'` δεν φεύγει
+ * **ούτε όταν δηλωθεί**. ⚠️ Για να μην συγχυθούν ποτέ, μένουν **δύο ονομασμένα πεδία**
+ * και **όχι** δύο ομόηχοι πίνακες σε σειρά ορισμάτων, όπου μια αντιμετάθεση θα ήταν **σιωπηλή**.
  */
-export type AgencyMediaOrderDeclaration = readonly string[];
+export interface AgencyMediaDeclaration {
+  /** Η σειρά — πρόθεμα, ποτέ συμμετοχή. */
+  readonly order: DeclaredFileIds;
+  /** Οι κατόψεις — ένας φρουρός ΕΠΙΠΛΕΟΝ, ποτέ αντί για. */
+  readonly floorplans: DeclaredFileIds;
+}
 
-/** Καμία δήλωση σειράς — μοιράζεται, γιατί είναι αμετάβλητη και κενή. */
-export const NO_MEDIA_ORDER: AgencyMediaOrderDeclaration = [];
+/** Καμία δήλωση — μοιράζεται, γιατί είναι αμετάβλητη και κενή. */
+export const NO_AGENCY_DECLARATION: AgencyMediaDeclaration = {
+  order: NO_DECLARED_FILE_IDS,
+  floorplans: NO_DECLARED_FILE_IDS,
+};
 
 /**
- * **ΤΙ ΔΗΛΩΣΕ Ο ΑΝΘΡΩΠΟΣ;** — η **μία** ανάγνωση του πεδίου από ωμό έγγραφο.
+ * **ΤΙ ΔΗΛΩΣΕ Ο ΑΝΘΡΩΠΟΣ;** — η **μία** ανάγνωση του ωμού εγγράφου.
  *
- * 🔴 **ΥΠΑΡΧΕΙ ΕΠΕΙΔΗ Η ΠΟΡΤΑ ΕΙΝΑΙ `.passthrough()`** (ADR-841 §7 Α14.7.5). Το
- * `PropertyPatchSchema` επικυρώνει ονομαστικά 13 πεδία και αφήνει τα υπόλοιπα να
- * περάσουν· η νέα ρητή γραμμή του σχήματος φυλά **τα αιτήματα από σήμερα**, όχι το
- * ιστορικό ενός εγγράφου που μπορεί να έχει περάσει από άλλη διαδρομή. Ο γραφέας
- * **δεν επιτρέπεται να εμπιστευτεί** το σχήμα του δίσκου.
+ * 🔑 **ΕΝΑ ΣΗΜΕΙΟ ΓΙΑ ΚΑΙ ΤΑ ΔΥΟ ΠΕΔΙΑ**: ο γραφέας κάνει **μία** κλήση, άρα
+ * δεν υπάρχει περίπτωση να διαβάσει το ένα και να **ξεχάσει** το άλλο — το σχήμα που έκανε
+ * το `publishedMedia` να μείνει άδειο επί μήνες *(Α14.5)*.
  *
- * ⚠️ **Δεν πετά ποτέ, και δεν «διορθώνει»**: ό,τι δεν είναι πίνακας ⇒ *καμία δήλωση*.
- * Μια εξαίρεση εδώ θα ακύρωνε τη **δημοσίευση ολόκληρης** της αγγελίας επειδή κάποιος
- * έγραψε σκουπίδι σε ένα προαιρετικό πεδίο σειράς.
- *
- * ⚠️ **ΚΑΝΕΝΑ ΚΟΨΙΜΟ ΣΤΟ ΟΡΙΟ ΕΔΩ, ΕΠΙΤΗΔΕΣ.** Θα ήταν εύλογο *(δεν δημοσιεύονται πάνω
- * από `PUBLISHED_MEDIA_LIMIT`)* και θα ήταν **λάθος**: η δήλωση περιέχει και ταυτότητες
- * που **δεν** ταιριάζουν πια σε δημοσιεύσιμο αρχείο, άρα ένα κόψιμο στη θέση 24 μπορεί
- * να πετάξει ταυτότητα που **ταιριάζει**. Το όριο επιβάλλεται εκεί που είναι αληθές —
- * στο **αποτέλεσμα** — και το μήκος της εισόδου το φράζει η **πόρτα**.
+ * ⚠️ **Δέχεται ωμό αντικείμενο, και κάθε πεδίο περνά από το {@link declaredFileIds}**:
+ * ο δίσκος δεν είναι έμπιστος όσο η πόρτα του PATCH είναι `.passthrough()` *(Α14.7.5)*.
  */
-export function declaredMediaOrder(value: unknown): AgencyMediaOrderDeclaration {
-  if (!Array.isArray(value)) return NO_MEDIA_ORDER;
-
-  const ids = value.filter(
-    (entry): entry is string => typeof entry === 'string' && entry.trim() !== '',
-  );
-  return ids.length === 0 ? NO_MEDIA_ORDER : ids;
+export function agencyMediaDeclaration(source: {
+  readonly publishedMediaOrder?: unknown;
+  readonly publishedFloorplans?: unknown;
+}): AgencyMediaDeclaration {
+  return {
+    order: declaredFileIds(source.publishedMediaOrder),
+    floorplans: declaredFileIds(source.publishedFloorplans),
+  };
 }
 
 /**
@@ -236,16 +308,21 @@ export function declaredMediaOrder(value: unknown): AgencyMediaOrderDeclaration 
  */
 export function publishedAgencyMediaSources(
   files: readonly AgencyMediaCandidate[],
-  declaredOrder: AgencyMediaOrderDeclaration = NO_MEDIA_ORDER,
+  declaration: AgencyMediaDeclaration = NO_AGENCY_DECLARATION,
 ): readonly PublicShelfSource[] {
-  return orderedPublishableAgencyMedia(files, declaredOrder).map((file) => ({
-    privateStoragePath: file.storagePath,
-    material: PHOTO_MATERIAL,
-  }));
+  const declaredFloorplans = new Set(declaration.floorplans);
+
+  return orderedPublishableAgencyMedia(files, declaration).flatMap((file) => {
+    const material = agencyMediaMaterial(file, declaredFloorplans);
+    // ⚠️ Το `null` είναι **αδύνατο** εδώ — το ίδιο ερώτημα έκανε το φιλτράρισμα μια
+    //    γραμμή πιο πάνω. Ο κλάδος υπάρχει για να **μη χρειαστεί `!`**: ένας ισχυρισμός
+    //    εδώ θα ήταν ακριβώς ο τρόπος με τον οποίο οι δύο άκρες αρχίζουν να αποκλίνουν.
+    return material === null ? [] : [{ privateStoragePath: file.storagePath, material }];
+  });
 }
 
 /**
- * **ΤΙ ΦΕΥΓΕΙ, ΜΕ ΠΟΙΑ ΣΕΙΡΑ — ΤΑ ΙΔΙΑ ΤΑ ΑΡΧΕΙΑ** (ADR-841 §7 Α14.7).
+ * **ΤΙ ΦΕΥΓΕΙ, ΜΕ ΠΟΙΑ ΣΕΙΡΑ — ΤΑ ΙΔΙΑ ΤΑ ΑΡΧΕΙΑ** (ADR-841 §7 Α14.7 · Α17.7).
  *
  * 🔴 **ΕΞΗΧΘΗ ΓΙΑ ΝΑ ΜΗΝ ΥΠΑΡΞΕΙ ΔΕΥΤΕΡΗ ΑΠΑΝΤΗΣΗ, ΚΑΙ ΤΟ ΣΧΗΜΑ ΕΙΝΑΙ ΓΡΑΜΜΕΝΟ ΑΠΟ
  * ΤΗΝ ΑΛΛΗ ΠΛΕΥΡΑ**: το `owner-media-publication` βάζει *«τι φεύγει;»* και *«τι βλέπει ο
@@ -258,19 +335,31 @@ export function publishedAgencyMediaSources(
  * χωρίς δεύτερο πέρασμα αντιστοίχισης: ο κανόνας χρειάζεται μόνο το
  * {@link AgencyMediaCandidate}, ο καλών παίρνει πίσω **ό,τι έδωσε**.
  *
+ * 🔴 **ΦΩΤΟΓΡΑΦΙΕΣ ΚΑΙ ΚΑΤΟΨΕΙΣ ΣΕ ΕΝΑ ΡΕΥΜΑ, ΜΕ ΕΝΑ ΟΡΙΟ — ΚΑΙ Ο ΙΔΙΩΤΗΣ ΤΟ ΕΙΧΕ
+ * ΗΔΗ ΑΠΑΝΤΗΣΕΙ** (Α17.7.5). Το `publishedOwnerMedia` κόβει στο `PUBLISHED_MEDIA_LIMIT`
+ * **πριν** χωρίσει φωτογραφίες από κατόψεις: ένα, **συνολικό** όριο. ⛔ Δεύτερο όριο για
+ * κατόψεις θα ήταν ακριβώς ο δεύτερος αριθμός που απαγορεύει η **Α14.4**.
+ *
+ * ⚠️ **Και γι\' αυτό η πράξη σειράς οφείλει να ΠΡΟΗΓΕΙΤΑΙ**: με ένα συνολικό όριο, μια
+ * κάτοψη μπορεί να **κοπεί** από φωτογραφίες που προηγούνται χρονικά. Η **Α14.7** έδωσε
+ * τη λαβή — το `publishedMediaOrder` δέχεται **οποιαδήποτε** ταυτότητα, άρα και κάτοψης.
+ *
  * ⚠️ **Το `PUBLISHED_MEDIA_LIMIT` κόβει ΕΔΩ, ΜΕΤΑ τη σειρά** — άρα η οθόνη δείχνει και
  * το κόψιμο: ένα αρχείο εκτός ορίου **δεν εμφανίζεται**, γιατί δεν φεύγει.
  */
 export function orderedPublishableAgencyMedia<T extends AgencyMediaCandidate>(
   files: readonly T[],
-  declaredOrder: AgencyMediaOrderDeclaration = NO_MEDIA_ORDER,
+  declaration: AgencyMediaDeclaration = NO_AGENCY_DECLARATION,
 ): readonly T[] {
-  const publishable = files.filter(isPublishableAgencyPhoto);
+  const declaredFloorplans = new Set(declaration.floorplans);
+  const publishable = files.filter(
+    (file) => agencyMediaMaterial(file, declaredFloorplans) !== null,
+  );
 
   return orderByDeclaration(
     publishable,
     (file) => file.id,
-    declaredOrder,
+    declaration.order,
     compareAgencyMediaForPublication,
   ).slice(0, PUBLISHED_MEDIA_LIMIT);
 }

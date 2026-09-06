@@ -20,7 +20,7 @@
  * 🔴 ΤΟ ΕΡΩΤΗΜΑ ΣΤΕΝΕΥΕΙ ΣΕ **ΚΗΔΕΜΟΝΙΑ**· Η **ΑΠΟΦΑΣΗ** ΖΕΙ ΣΤΟΝ ΚΑΘΑΡΟ ΚΑΝΟΝΑ
  * ────────────────────────────────────────────────────────────────────────────
  *
- * Το ερώτημα φιλτράρει σε *«ποιανού είναι»* *(μισθωτής + οντότητα + κατηγορία)*· το
+ * Το ερώτημα φιλτράρει σε *«ποιανού είναι»* *(μισθωτής + οντότητα + **οι δύο κάδοι**)*· το
  * *«δημοσιεύεται;»* το απαντά **αποκλειστικά** το {@link publishedAgencyMediaSources},
  * στη μνήμη. **Δεν** είναι βελτιστοποίηση — είναι το SSoT: κριτήριο μοιρασμένο ανάμεσα
  * σε ένα ευρετήριο Firestore και μια συνάρτηση θα ήταν **δύο** απαντήσεις, και η μισή
@@ -40,16 +40,42 @@ import { createModuleLogger } from '@/lib/telemetry';
 import {
   publishedAgencyMediaSources,
   type AgencyMediaCandidate,
-  type AgencyMediaOrderDeclaration,
+  type AgencyMediaDeclaration,
 } from './agency-media-publication';
 import type { PublicShelfSource } from '@/services/upload/utils/storage-path-public-shelf';
 
 const logger = createModuleLogger('agency-media-reader');
 
 /**
+ * **ΟΙ ΔΥΟ ΚΑΔΟΙ ΠΟΥ ΜΠΟΡΟΥΝ ΝΑ ΔΩΣΟΥΝ ΔΗΜΟΣΙΟ ΥΛΙΚΟ** (ADR-841 §7 Α17.7).
+ *
+ * 🔴 **ΕΔΩ ΗΤΑΝ Η ΠΡΑΓΜΑΤΙΚΗ ΑΙΤΙΑ ΤΟΥ Ο-21 — ΟΧΙ ΣΤΟΝ ΚΑΝΟΝΑ.** Μέχρι τις 2026-09-06 το
+ * ερώτημα έγραφε `.where('category', '==', PHOTOS)`, δηλαδή **καμία κάτοψη δεν έφτανε
+ * ποτέ** στον φρουρό που το Ο-21 κατηγορούσε. Το Ο-21 έδειχνε τη λευκή λίστα του
+ * `agency-media-publication`· εκείνη έκοβε **δεύτερη**. ⚠️ Πέμπτο σκέλος της ψευδούς
+ * προκείμενης *(Α17.7.1)*: **ένας φρουρός που δεν εκτελείται ποτέ δεν είναι η αιτία.**
+ *
+ * 🔑 **`in` και όχι αφαίρεση του φίλτρου**: χωρίς κατηγορία, το ερώτημα θα κατέβαζε
+ * **κάθε** αρχείο του ακινήτου *(συμβόλαια, τιμολόγια, άδειες)* για να τα πετάξει στη
+ * μνήμη — περισσότερα reads και **περιττή έκθεση** δεδομένων που δεν αφορούν κανέναν εδώ.
+ *
+ * 🔑 **Κανένα νέο ευρετήριο**: το `in` πάνω σε πεδίο **ισότητας** εξυπηρετείται από το ίδιο
+ * σύνθετο ευρετήριο `[companyId, entityType, entityId, category, isDeleted]`.
+ *
+ * ⛔ **ΜΗΝ προσθέσεις τρίτο κάδο εδώ «για ευελιξία».** Το *«τι φεύγει;»* το απαντά
+ * **αποκλειστικά** το `agencyMediaMaterial`· αυτή η λίστα είναι **στένωση κόστους**, όχι
+ * δεύτερο κριτήριο. Κάθε τιμή που μπαίνει εδώ και **δεν** έχει σκέλος εκεί είναι έγγραφα
+ * που κατεβαίνουν για να πεταχτούν.
+ */
+const PUBLISHABLE_CATEGORIES: readonly string[] = [
+  FILE_CATEGORIES.PHOTOS,
+  FILE_CATEGORIES.FLOORPLANS,
+];
+
+/**
  * Η επιλογή δημοσίευσης **ενός ακινήτου** του γραφείου.
  *
- * ⚠️ **Η δήλωση σειράς ΤΑΞΙΔΕΥΕΙ, δεν διαβάζεται εδώ** (ADR-841 §7 Α14.7.2). Ζει στο
+ * ⚠️ **Η δήλωση του ανθρώπου ΤΑΞΙΔΕΥΕΙ, δεν διαβάζεται εδώ** (ADR-841 §7 Α14.7.2). Ζει στο
  * **έγγραφο του ακινήτου**, το οποίο ο καλών έχει **ήδη στα χέρια του** — μια δεύτερη
  * ανάγνωση εδώ θα πλήρωνε ένα read ανά αγγελία για δεδομένο που ταξιδεύει δωρεάν, και θα
  * μπορούσε να διαβάσει **άλλη** έκδοση του ίδιου εγγράφου μέσα στο ίδιο πέρασμα.
@@ -57,7 +83,7 @@ const logger = createModuleLogger('agency-media-reader');
 export type AgencyMediaResolver = (
   propertyId: string,
   companyId: string | null | undefined,
-  declaredOrder: AgencyMediaOrderDeclaration,
+  declaration: AgencyMediaDeclaration,
 ) => Promise<readonly PublicShelfSource[]>;
 
 /** Κανένα δημόσιο αρχείο — μοιράζεται, γιατί είναι αμετάβλητο και κενό. */
@@ -80,7 +106,7 @@ export async function readPublishedAgencyMedia(
   adminDb: AdminFirestore,
   propertyId: string,
   companyId: string | null | undefined,
-  declaredOrder: AgencyMediaOrderDeclaration,
+  declaration: AgencyMediaDeclaration,
 ): Promise<readonly PublicShelfSource[]> {
   const owner = typeof companyId === 'string' && companyId.trim() !== '' ? companyId : null;
   if (owner === null || propertyId.trim() === '') return NO_AGENCY_MEDIA;
@@ -91,12 +117,12 @@ export async function readPublishedAgencyMedia(
       .where('companyId', '==', owner)
       .where('entityType', '==', 'property')
       .where('entityId', '==', propertyId)
-      .where('category', '==', FILE_CATEGORIES.PHOTOS)
+      .where('category', 'in', PUBLISHABLE_CATEGORIES)
       .get();
 
     return publishedAgencyMediaSources(
       snapshot.docs.map((doc) => ({ ...(doc.data() as AgencyMediaCandidate), id: doc.id })),
-      declaredOrder,
+      declaration,
     );
   } catch (error) {
     logger.warn('Οι φωτογραφίες του γραφείου δεν διαβάστηκαν — η αγγελία δημοσιεύεται χωρίς αυτές', {
@@ -112,6 +138,6 @@ export async function readPublishedAgencyMedia(
  * **Ο επιλυτής ενός περάσματος.** Δες το σχόλιο του module για το γιατί δεν έχει μνήμη.
  */
 export function createAgencyMediaResolver(adminDb: AdminFirestore): AgencyMediaResolver {
-  return (propertyId, companyId, declaredOrder) =>
-    readPublishedAgencyMedia(adminDb, propertyId, companyId, declaredOrder);
+  return (propertyId, companyId, declaration) =>
+    readPublishedAgencyMedia(adminDb, propertyId, companyId, declaration);
 }
