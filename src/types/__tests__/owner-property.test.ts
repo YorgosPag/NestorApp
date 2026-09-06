@@ -20,6 +20,17 @@ import {
 } from '@/lib/owner-property/__tests__/owner-property-fixtures';
 import type { PropertyOffer } from '@/types/property-offers';
 
+// ⚠️ **ΤΟ ΠΡΟΣΧΕΔΙΟ ΛΕΕΙ «ΔΕΝ ΞΕΡΩ» ΜΕ `null`, Η ΦΟΡΜΑ ΜΕ `''`** (ADR-842 §7.6.12 /
+// §8 #11) — δύο κανάλια που ήταν **πάντα** δύο, αλλά ως τις 2026-09-06 δανείζονταν το
+// ίδιο λεξιλόγιο:
+//
+//   `''`   → ΦΟΡΜΑ     «ο άνθρωπος δεν απάντησε **ακόμη**» (controlled input)
+//   `null` → ΠΡΟΣΧΕΔΙΟ «δεν υπάρχει λυμένο είδος»
+//
+// 🔑 Τη **γέφυρα** τη φυλάει άγκυρα στο `lib/owner-property/__tests__/owner-property-form-values.test.ts`
+// (Μ2β3): `''` της φόρμας ⇒ `null` του προσχεδίου ⇒ `type-missing`. Εδώ κρίνεται μόνο
+// το **προσχέδιο**, οπότε τα σχήματα μιλούν τη δική του γλώσσα.
+
 describe('ownerPropertyInvariantViolations — ΟΛΕΣ, ποτέ η πρώτη', () => {
   it('Κ1 — ένα πλήρες προσχέδιο δεν παραβιάζει τίποτα (ο παρονομαστής)', () => {
     expect(ownerPropertyInvariantViolations(validDraft())).toEqual([]);
@@ -68,7 +79,7 @@ describe('ownerPropertyInvariantViolations — ΟΛΕΣ, ποτέ η πρώτη'
   });
 
   it('Κ8 — τα τρία βασικά πεδία του §25.6 κρίνονται ονομαστικά', () => {
-    expect(ownerPropertyInvariantViolations(validDraft({ type: '' }))).toContain(
+    expect(ownerPropertyInvariantViolations(validDraft({ type: null }))).toContain(
       'type-missing',
     );
     expect(ownerPropertyInvariantViolations(validDraft({ areaSqm: null }))).toContain(
@@ -98,7 +109,7 @@ describe('ownerPropertyInvariantViolations — ΟΛΕΣ, ποτέ η πρώτη'
 
   it('🔴 Κ11 — επιστρέφονται ΟΛΕΣ μαζί, ποτέ η πρώτη (Α14 §17.2)', () => {
     const found = ownerPropertyInvariantViolations(
-      validDraft({ offers: [], type: '', areaSqm: null, title: '' }),
+      validDraft({ offers: [], type: null, areaSqm: null, title: '' }),
     );
     expect(found).toEqual(
       expect.arrayContaining([
@@ -161,7 +172,7 @@ describe('ownerPropertyInvariantViolations — ΟΛΕΣ, ποτέ η πρώτη'
           ],
         }),
       ),
-      ...ownerPropertyInvariantViolations(validDraft({ type: '' })),
+      ...ownerPropertyInvariantViolations(validDraft({ type: null })),
       ...ownerPropertyInvariantViolations(validDraft({ areaSqm: null })),
       ...ownerPropertyInvariantViolations(validDraft({ title: '' })),
       ...ownerPropertyInvariantViolations(validDraft({ bedrooms: -3 })),
@@ -323,7 +334,7 @@ describe('ownerPropertyInvariantViolations — ΟΛΕΣ, ποτέ η πρώτη'
     // Ο άνθρωπος δεν έχει απαντήσει ακόμη· δύο μηνύματα για μία παράλειψη τον
     // στέλνουν να ψάξει δύο πράγματα.
     const violations = ownerPropertyInvariantViolations(
-      validDraft({ type: '', offers: [stayOffer()] }),
+      validDraft({ type: null, offers: [stayOffer()] }),
     );
     expect(violations).toContain('type-missing');
     expect(violations).not.toContain('short-lease-requires-dwelling');

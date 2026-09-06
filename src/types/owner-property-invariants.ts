@@ -213,7 +213,12 @@ export function ownerPropertyInvariantViolations(
     found.push('short-lease-requires-dwelling');
   }
 
-  if (typeof draft.type !== 'string' || draft.type.trim() === '') {
+  // 🔴 **ΕΝΑΣ ΕΛΕΓΧΟΣ ΑΝΤΙ ΓΙΑ ΔΥΟ, ΚΑΙ ΤΟ ΚΕΡΔΙΣΕ Ο ΜΕΤΑΓΛΩΤΤΙΣΤΗΣ** (ADR-842 §7.6.12).
+  // Έγραφε `typeof draft.type !== 'string' || draft.type.trim() === ''` — δύο ερωτήσεις
+  // επειδή ο τύπος ήταν **η ευρεία ένωση** και το πεδίο μπορούσε να κρατά ό,τι να 'ναι.
+  // Τώρα το προσχέδιο δηλώνει `PropertyTypeCanonical | null`: το «άγνωστο» έχει **ένα**
+  // όνομα, και οι δύο αμυντικοί κλάδοι έγιναν **αδύνατοι** αντί για περιττοί.
+  if (draft.type === null) {
     found.push('type-missing');
   }
   if (!isPositive(draft.areaSqm)) found.push('area-not-positive');
