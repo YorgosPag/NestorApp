@@ -68,7 +68,7 @@ import {
 import { generateFirstContactInvitationId } from '@/services/enterprise-id.service';
 import type { FirstContactDeclaration } from '@/services/contact/first-contact-vocabulary';
 import {
-  FIRST_CONTACT_TARGET_KINDS,
+  readFirstContactTarget,
   sameFirstContactTarget,
   type FirstContactTarget,
 } from '@/types/first-contact';
@@ -255,17 +255,28 @@ async function supersedePreviousInvitations(
  * ⚠️ Ο έλεγχος σχήματος μένει, γιατί εδώ τα δεδομένα έρχονται **από τη βάση**:
  * αστοχεί προς το **ασφαλές** *(δύο προσκλήσεις που δεν αναγνωρίστηκαν ως ίδιες
  * απλώς συνυπάρχουν)*, ποτέ προς την ακύρωση ξένης πρόσκλησης.
+ *
+ * 🔑 **ΤΟΝ ΕΛΕΓΧΟ ΤΟΝ ΚΑΝΕΙ ΠΛΕΟΝ ΤΟ {@link readFirstContactTarget}, ΚΑΙ ΔΕΝ ΕΙΝΑΙ
+ * ΜΕΤΑΚΟΜΙΣΗ ΓΙΑ ΤΗΝ ΟΜΟΡΦΙΑ**: ο **ίδιος** έλεγχος χρειάστηκε από την
+ * {@link storedTarget}, που δίνει τον στόχο στην **άρνηση** ως διέξοδο. Όσο ζούσε
+ * ιδιωτικός εδώ, ο δεύτερος καλών θα τον ξανάγραφε — και η δική του εκδοχή θα
+ * έπρεπε να ελέγχει **περισσότερα** *(το φορτίο, όχι μόνο το `kind`)*, δηλαδή δύο
+ * αυστηρότητες για την ίδια ερώτηση.
  */
 function sameInvitationTarget(stored: unknown, current: FirstContactDeclaration): boolean {
-  const target = (stored as FirstContactDeclaration | undefined)?.target;
-  if (target === null || typeof target !== 'object') return false;
-  if (!isFirstContactTargetKind((target as { kind?: unknown }).kind)) return false;
-  return sameFirstContactTarget(target as FirstContactTarget, current.target);
+  const target = storedTarget(stored);
+  return target !== null && sameFirstContactTarget(target, current.target);
 }
 
-function isFirstContactTargetKind(value: unknown): boolean {
-  return typeof value === 'string'
-    && (FIRST_CONTACT_TARGET_KINDS as readonly string[]).includes(value);
+/**
+ * **Ο στόχος μιας αποθηκευμένης δήλωσης** — ή `null` όταν το έγγραφο δεν τον έχει.
+ *
+ * 🔑 Το **μόνο** που προσθέτει πάνω από το {@link readFirstContactTarget} είναι η
+ * **διαδρομή** *(`declaration.target`)*, δηλαδή γνώση του **σχήματος του εγγράφου** —
+ * που ανήκει εδώ, στην υπηρεσία που το γράφει.
+ */
+function storedTarget(stored: unknown): FirstContactTarget | null {
+  return readFirstContactTarget((stored as FirstContactDeclaration | undefined)?.target);
 }
 
 // =============================================================================
@@ -274,7 +285,30 @@ function isFirstContactTargetKind(value: unknown): boolean {
 
 export type InvitationClaim =
   | { readonly kind: 'claimed'; readonly invitation: FirstContactInvitation }
-  | { readonly kind: 'refused'; readonly reason: FirstContactInvitationRefusal };
+  | {
+      readonly kind: 'refused';
+      readonly reason: FirstContactInvitationRefusal;
+      /**
+       * 🔴 **Η ΑΡΝΗΣΗ ΚΟΥΒΑΛΑ ΤΟΝ ΣΤΟΧΟ, ΚΑΙ ΕΙΝΑΙ ΤΟ ΜΟΝΟ ΠΟΥ ΤΗΝ ΚΑΝΕΙ ΑΠΑΝΤΗΣΙΜΗ.**
+       *
+       * Χωρίς αυτό το πεδίο, ο άνθρωπος με ληγμένο σύνδεσμο προσγειώνεται σε σελίδα
+       * που του λέει *«πατήστε ξανά «Πλησιάστε»»* — **χωρίς κουμπί «Πλησιάστε»,
+       * χωρίς δρόμο πίσω στην αγγελία, και χωρίς να θυμάται ποια ήταν**. Η οθόνη
+       * έδινε οδηγία που δεν μπορούσε να εκτελεστεί: ίδια κλάση με το αρχικό
+       * ελάττωμα του ADR-844 *(«κάτι πήγε στραβά» σε άνθρωπο που δεν έφταιγε)*,
+       * και το πρότυπο *dead-end recovery* του NN/g το ονομάζει ρητά — **κάθε οθόνη
+       * σφάλματος οφείλει να προσφέρει την επόμενη κίνηση, όχι να την περιγράφει**.
+       *
+       * 🔑 **ΚΟΣΤΟΣ: ΜΗΔΕΝ ΑΝΑΓΝΩΣΕΙΣ.** Ο στόχος ζει **μέσα** στην πρόσκληση, που
+       * αυτή η συναλλαγή **μόλις διάβασε** τη στιγμή που αρνείται. Δεν έλειπε
+       * δεδομένο — έλειπε **πεδίο στην έκβαση**.
+       *
+       * ⚠️ **Το `null` είναι ΑΠΑΝΤΗΣΗ, όχι παράλειψη**: για `link-invalid` και
+       * `invitation-unknown` **δεν υπάρχει έγγραφο** να ρωτηθεί. Η οθόνη δίνει τότε
+       * τη **γενική** διέξοδο — ποτέ κουμπί που δεν οδηγεί πουθενά.
+       */
+      readonly target: FirstContactTarget | null;
+    };
 
 /**
  * **Πόρτα Α — ο σύνδεσμος.** Η υπογραφή ελέγχεται **πριν** από κάθε ανάγνωση.
@@ -292,17 +326,17 @@ export async function claimInvitationByLink(
     secret = requireTokenSecret(SECRET_ENV);
   } catch {
     logger.error('Λείπει το μυστικό των προσκλήσεων — κάθε σύνδεσμος φαίνεται άκυρος');
-    return { kind: 'refused', reason: 'link-invalid' };
+    return refuse('link-invalid');
   }
 
   const verdict = decodeSignedToken(secret, tokenString, 3);
   if (!verdict.ok || verdict.fields.length !== 3) {
-    return { kind: 'refused', reason: 'link-invalid' };
+    return refuse('link-invalid');
   }
 
   const [invitationId, nonce, expiresAtMs] = verdict.fields as [string, string, string];
   if (!Number.isFinite(Number(expiresAtMs))) {
-    return { kind: 'refused', reason: 'link-invalid' };
+    return refuse('link-invalid');
   }
 
   return claimInvitation(adminDb, invitationId, nowISOValue, (stored) =>
@@ -327,7 +361,7 @@ export async function claimInvitationByCode(
     secret = requireTokenSecret(SECRET_ENV);
   } catch {
     logger.error('Λείπει το μυστικό των προσκλήσεων — κάθε κωδικός φαίνεται λάθος');
-    return { kind: 'refused', reason: 'code-wrong' };
+    return refuse('code-wrong');
   }
 
   const expected = hashVerificationCode(code.trim(), secret);
@@ -368,11 +402,15 @@ async function claimInvitation(
       if (!snap.exists) return refuse('invitation-unknown');
 
       const stored = readInvitation(snap.data());
+      // 🔑 **Διαβάζεται ΜΙΑ φορά, πριν από κάθε άρνηση**: και οι δύο επόμενοι έλεγχοι
+      //    τον χρειάζονται, και το έγγραφο είναι **ήδη** στα χέρια μας.
+      const target = storedTarget(stored.declaration);
+
       const unusable = stateRefusal(stored, nowISOValue);
-      if (unusable !== null) return refuse(unusable);
+      if (unusable !== null) return refuse(unusable, target);
 
       const blocked = guard(stored, tx, ref);
-      if (blocked !== null) return refuse(blocked);
+      if (blocked !== null) return refuse(blocked, target);
 
       tx.update(ref, { state: 'redeemed', redeemedAt: nowISOValue });
       return { kind: 'claimed', invitation: { ...stored, state: 'redeemed', redeemedAt: nowISOValue } };
@@ -386,8 +424,17 @@ async function claimInvitation(
   }
 }
 
-function refuse(reason: FirstContactInvitationRefusal): InvitationClaim {
-  return { kind: 'refused', reason };
+/**
+ * ⚠️ **Ο στόχος είναι ΡΗΤΗ ΠΑΡΑΜΕΤΡΟΣ ΜΕ ΠΡΟΕΠΙΛΟΓΗ `null`, ΟΧΙ ΠΡΟΑΙΡΕΤΙΚΟ ΠΕΔΙΟ.**
+ * Οι τρεις καλούντες που δεν τον έχουν *(λείπον μυστικό, πλαστή υπογραφή, έγγραφο που
+ * δεν βρέθηκε)* **πραγματικά** δεν τον ξέρουν — η προεπιλογή λέει ακριβώς αυτό. Ένα
+ * `?:` θα άφηνε τον επόμενο να τον **ξεχάσει** εκεί όπου τον έχει.
+ */
+function refuse(
+  reason: FirstContactInvitationRefusal,
+  target: FirstContactTarget | null = null,
+): InvitationClaim {
+  return { kind: 'refused', reason, target };
 }
 
 /** Το ωμό έγγραφο → τύπος, με την κατάσταση **fail-closed** (δες τον τύπο). */

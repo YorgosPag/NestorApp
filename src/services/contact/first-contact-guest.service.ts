@@ -54,7 +54,11 @@ import {
 } from '@/services/contact/first-contact-invitation.service';
 import { openFirstContact } from '@/services/contact/first-contact.service';
 import type { FirstContactRejection } from '@/services/contact/first-contact-vocabulary';
-import type { FirstContactForSeeker, FirstContactInvariant } from '@/types/first-contact';
+import type {
+  FirstContactForSeeker,
+  FirstContactInvariant,
+  FirstContactTarget,
+} from '@/types/first-contact';
 import type {
   FirstContactInvitation,
   FirstContactInvitationRefusal,
@@ -75,6 +79,26 @@ const logger = createModuleLogger('first-contact-guest.service');
  * - `invalid` — *«λείπει το όνομά σου»* ⇒ **εσύ** το διορθώνεις
  * - `identity` — *«ο λογαριασμός είναι κλειστός»* ⇒ επικοινώνησε μαζί μας
  * - `unavailable` — *«δεν μάθαμε»* ⇒ **ποτέ** ίδιο με άρνηση (N.12)
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΚΑΘΕ ΜΗ-ΕΠΙΤΥΧΗΣ ΕΚΒΑΣΗ ΚΟΥΒΑΛΑ ΤΟΝ **ΣΤΟΧΟ** — ΚΑΙ ΕΙΝΑΙ ΔΟΜΙΚΟ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Ο **ΕΝΑΣ** καταναλωτής αυτών των πέντε είναι η σελίδα `/contact/[token]`, όπου ο
+ * άνθρωπος φτάνει **από email**: χωρίς λογαριασμό, χωρίς προηγούμενη πλοήγηση, χωρίς
+ * «πίσω» που να οδηγεί κάπου. Ό,τι δεν του δώσει αυτή η έκβαση, **δεν θα το βρει
+ * πουθενά**.
+ *
+ * ⇒ Ο στόχος δεν είναι διακόσμηση: είναι η **μόνη** διαφορά ανάμεσα σε *«ο σύνδεσμος
+ * έληξε — πατήστε ξανά «Πλησιάστε»»* με κουμπί, και **λευκή σελίδα με οδηγία που δεν
+ * εκτελείται**.
+ *
+ * ⚠️ **Ο τύπος δεν είναι ο ίδιος παντού, και αυτό λέει την αλήθεια**: το
+ * `link-refused` γεννιέται **πριν** βρεθεί έγγραφο *(άκυρη υπογραφή, άγνωστη
+ * πρόσκληση)* ⇒ `| null`. Τα άλλα τέσσερα γεννιούνται **μετά** από επιτυχημένη
+ * εξαργύρωση ⇒ ο στόχος είναι **γνωστός και τυπωμένος**, και ένα `| null` εκεί θα
+ * ήταν αναληθές — θα επέτρεπε στην οθόνη να δώσει γενική διέξοδο ενώ ξέρει την
+ * ακριβή.
  */
 export type GuestContactOutcome =
   | {
@@ -84,11 +108,27 @@ export type GuestContactOutcome =
       /** Το εφήμερο κλειδί για `signInWithCustomToken`. **Άνεση, όχι προϋπόθεση.** */
       readonly customToken: string;
     }
-  | { readonly kind: 'link-refused'; readonly reason: FirstContactInvitationRefusal }
-  | { readonly kind: 'contact-refused'; readonly reason: FirstContactRejection }
-  | { readonly kind: 'invalid'; readonly violations: readonly FirstContactInvariant[] }
-  | { readonly kind: 'identity-refused'; readonly reason: CitizenIdentityRefusal }
-  | { readonly kind: 'unavailable' };
+  | {
+      readonly kind: 'link-refused';
+      readonly reason: FirstContactInvitationRefusal;
+      readonly target: FirstContactTarget | null;
+    }
+  | {
+      readonly kind: 'contact-refused';
+      readonly reason: FirstContactRejection;
+      readonly target: FirstContactTarget;
+    }
+  | {
+      readonly kind: 'invalid';
+      readonly violations: readonly FirstContactInvariant[];
+      readonly target: FirstContactTarget;
+    }
+  | {
+      readonly kind: 'identity-refused';
+      readonly reason: CitizenIdentityRefusal;
+      readonly target: FirstContactTarget;
+    }
+  | { readonly kind: 'unavailable'; readonly target: FirstContactTarget };
 
 // =============================================================================
 // 2. ΟΙ ΔΥΟ ΕΙΣΟΔΟΙ
@@ -123,7 +163,10 @@ async function finish(
   at: string,
 ): Promise<GuestContactOutcome> {
   if (claim.kind === 'refused') {
-    return { kind: 'link-refused', reason: claim.reason };
+    // 🔑 **Ο στόχος περνά ΑΥΤΟΥΣΙΟΣ, μαζί με το `null` του.** Η υπηρεσία δεν
+    //    «συμπληρώνει» ό,τι η απόδειξη δεν ήξερε — η άγνοια ταξιδεύει ονομαστικά,
+    //    και η οθόνη ξέρει ότι πρέπει να δώσει τη **γενική** διέξοδο.
+    return { kind: 'link-refused', reason: claim.reason, target: claim.target };
   }
 
   const identity = await ensureCitizenIdentity({
@@ -132,7 +175,11 @@ async function finish(
     displayName: claim.invitation.declaration.disclosure.displayName,
   });
   if (identity.kind === 'refused') {
-    return { kind: 'identity-refused', reason: identity.reason };
+    return {
+      kind: 'identity-refused',
+      reason: identity.reason,
+      target: claim.invitation.declaration.target,
+    };
   }
 
   return writeAct(adminDb, claim.invitation, identity.uid, identity.customToken, at);
@@ -181,6 +228,11 @@ async function writeAct(
     at,
   );
 
+  // 🔑 **Από τη ΔΗΛΩΣΗ, όχι από το αποτέλεσμα** — και σε **κάθε** κλάδο ο ίδιος: το
+  //    `openFirstContact` δεν επιστρέφει στόχο όταν αρνείται, ενώ εμείς τον έχουμε
+  //    **τυπωμένο** από την πρόσκληση που μόλις εξαργυρώθηκε. Μηδέν αναγνώσεις.
+  const target = invitation.declaration.target;
+
   switch (result.kind) {
     case 'created':
     case 'unchanged':
@@ -191,9 +243,9 @@ async function writeAct(
         customToken,
       };
     case 'rejected':
-      return { kind: 'contact-refused', reason: result.reason };
+      return { kind: 'contact-refused', reason: result.reason, target };
     case 'invalid':
-      return { kind: 'invalid', violations: result.violations };
+      return { kind: 'invalid', violations: result.violations, target };
     case 'unavailable':
     case 'failed':
       // 🔴 **Η ΠΡΟΣΚΛΗΣΗ ΕΧΕΙ ΗΔΗ ΣΦΡΑΓΙΣΤΕΙ ΩΣ ΧΡΗΣΙΜΟΠΟΙΗΜΕΝΗ, ΚΑΙ ΤΟ ΞΕΡΟΥΜΕ.**
@@ -209,6 +261,6 @@ async function writeAct(
         invitationId: invitation.id,
         kind: result.kind,
       });
-      return { kind: 'unavailable' };
+      return { kind: 'unavailable', target };
   }
 }

@@ -136,6 +136,42 @@ export function sameFirstContactTarget(
     && left.agencyCompanyId === right.agencyCompanyId;
 }
 
+/**
+ * **Ο στόχος όπως ήρθε από τη ΒΑΣΗ** — ή `null` όταν δεν στέκει.
+ *
+ * 🔑 **ΓΕΝΝΗΘΗΚΕ ΩΣ ΙΔΙΩΤΙΚΗ ΤΟΥ `first-contact-invitation.service`, ΚΑΙ ΜΕΤΑΚΟΜΙΣΕ
+ * ΟΤΑΝ ΤΗ ΡΩΤΗΣΕ ΔΕΥΤΕΡΟΣ.** Εκεί απαντούσε **μόνο** *«είναι ο ίδιος στόχος;»*·
+ * τώρα η **άρνηση** πρέπει να κουβαλήσει τον στόχο ως **διέξοδο** — δηλαδή η ίδια
+ * ανάγνωση, με δύο σκοπούς. Δεύτερη διατύπωση θα ήταν το σχήμα του ADR-749.
+ *
+ * 🔴 **ΕΛΕΓΧΕΙ ΚΑΙ ΤΟ ΦΟΡΤΙΟ, ΟΧΙ ΜΟΝΟ ΤΟ `kind` — ΚΑΙ ΕΙΝΑΙ Η ΔΙΑΦΟΡΑ ΑΝΑΜΕΣΑ ΣΕ
+ * ΑΣΦΑΛΕΣ ΚΑΙ ΣΕ ΣΠΑΣΜΕΝΟ ΣΥΝΔΕΣΜΟ.** Ο παλιός έλεγχος κοίταζε **μόνο** το `kind`,
+ * και του αρκούσε: μια σύγκριση με `listingId === undefined` απλώς απαντούσε *«όχι»*.
+ * Ο **νέος** καταναλωτής όμως **χτίζει διεύθυνση** — έγγραφο χωρίς `listingId` θα
+ * έδινε κουμπί προς `/listing/undefined`, δηλαδή **ακριβώς** το αδιέξοδο που η
+ * διέξοδος υπάρχει για να λύσει.
+ *
+ * ⚠️ Αστοχεί προς το **ασφαλές**: `null` σημαίνει *«δεν ξέρω πού στεκόταν»*, και η
+ * οθόνη δίνει τότε τη **γενική** διέξοδο. Ποτέ κουμπί που δεν οδηγεί πουθενά.
+ */
+export function readFirstContactTarget(value: unknown): FirstContactTarget | null {
+  if (value === null || typeof value !== 'object') return null;
+
+  const candidate = value as { kind?: unknown; listingId?: unknown; agencyCompanyId?: unknown };
+  if (candidate.kind === 'listing' && isNonEmptyString(candidate.listingId)) {
+    return { kind: 'listing', listingId: candidate.listingId };
+  }
+  if (candidate.kind === 'professional' && isNonEmptyString(candidate.agencyCompanyId)) {
+    return { kind: 'professional', agencyCompanyId: candidate.agencyCompanyId };
+  }
+  return null;
+}
+
+/** ⚠️ Το κενό string **δεν** είναι ταυτότητα: θα έχτιζε `/listing/` — σελίδα άλλου. */
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim() !== '';
+}
+
 
 // =============================================================================
 // 2. Ο ΚΥΚΛΟΣ ΖΩΗΣ — ΔΥΟ καταστάσεις, και η δεύτερη είναι ΜΙΑ πράξη για δύο σκοπούς

@@ -46,6 +46,15 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 const AT = '2026-09-05T10:00:00.000Z';
 const DB = {} as AdminFirestore;
 
+/**
+ * Ο στόχος της δήλωσης — **μία** φορά, γιατί τον περιμένουν πλέον **πέντε** εκβάσεις.
+ *
+ * 🔑 Από την ημέρα που η άρνηση απέκτησε **διέξοδο** (ADR-844), το *«ποια αγγελία
+ * ήταν;»* δεν είναι λεπτομέρεια της επιτυχίας — είναι το **μόνο** που κρατά τη σελίδα
+ * του συνδέσμου από το να γίνει λευκό χαρτί.
+ */
+const TARGET = { kind: 'listing', listingId: 'ownp_α' } as const;
+
 /** Η πρόσκληση όπως βγαίνει από την εξαργύρωση — **επαληθευμένο** κανάλι πεζά. */
 function claimed(typedEmail: string | null = 'MARIA@Example.com ') {
   return {
@@ -54,7 +63,7 @@ function claimed(typedEmail: string | null = 'MARIA@Example.com ') {
       id: 'fcin_1',
       channelEmail: 'maria@example.com',
       declaration: {
-        target: { kind: 'listing' as const, listingId: 'ownp_α' },
+        target: TARGET,
         demandId: null,
         disclosure: {
           displayName: 'Μαρία Δ.',
@@ -110,12 +119,17 @@ describe('Σ — η σειρά και η μετάφραση', () => {
     expect(actor).toEqual({ uid: 'uid_maria', companyId: null });
   });
 
-  it('Σ3 — άρνηση συνδέσμου: ΚΑΜΙΑ ταυτότητα, ΚΑΜΙΑ πράξη', async () => {
-    claimByLinkMock.mockResolvedValue({ kind: 'refused', reason: 'expired' });
+  it('Σ3 — άρνηση συνδέσμου: ΚΑΜΙΑ ταυτότητα, ΚΑΜΙΑ πράξη — αλλά ΜΕ ΔΙΕΞΟΔΟ', async () => {
+    // 🔴 **Ο στόχος περνά ΑΥΤΟΥΣΙΟΣ** (ADR-844 — το αδιέξοδο της άρνησης): η υπηρεσία
+    //    δεν «συμπληρώνει» ό,τι η απόδειξη δεν ήξερε, ούτε πετά ό,τι ήξερε. Χωρίς αυτή
+    //    τη γραμμή η σελίδα του συνδέσμου δεν έχει **τίποτα** να δείξει ως επόμενη κίνηση.
+    claimByLinkMock.mockResolvedValue({
+      kind: 'refused', reason: 'expired', target: TARGET,
+    });
 
     const outcome = await redeemGuestContactByLink(DB, 'token', AT);
 
-    expect(outcome).toEqual({ kind: 'link-refused', reason: 'expired' });
+    expect(outcome).toEqual({ kind: 'link-refused', reason: 'expired', target: TARGET });
     // 🔑 Ο ΠΑΡΟΝΟΜΑΣΤΗΣ της σειράς: τίποτα δεν τρέχει μετά από άκυρη απόδειξη.
     expect(ensureCitizenIdentityMock).not.toHaveBeenCalled();
     expect(openFirstContactMock).not.toHaveBeenCalled();
@@ -127,7 +141,9 @@ describe('Σ — η σειρά και η μετάφραση', () => {
 
     const outcome = await redeemGuestContactByLink(DB, 'token', AT);
 
-    expect(outcome).toEqual({ kind: 'identity-refused', reason: 'account-disabled' });
+    expect(outcome).toEqual({
+      kind: 'identity-refused', reason: 'account-disabled', target: TARGET,
+    });
     expect(openFirstContactMock).not.toHaveBeenCalled();
   });
 
@@ -145,7 +161,7 @@ describe('Σ — η σειρά και η μετάφραση', () => {
     openFirstContactMock.mockResolvedValue({ kind: 'rejected', reason: 'capacity-full' });
 
     expect(await redeemGuestContactByLink(DB, 'token', AT)).toEqual({
-      kind: 'contact-refused', reason: 'capacity-full',
+      kind: 'contact-refused', reason: 'capacity-full', target: TARGET,
     });
   });
 
@@ -153,7 +169,8 @@ describe('Σ — η σειρά και η μετάφραση', () => {
     claimByLinkMock.mockResolvedValue(claimed());
     openFirstContactMock.mockResolvedValue({ kind: 'unavailable' });
 
-    expect(await redeemGuestContactByLink(DB, 'token', AT)).toEqual({ kind: 'unavailable' });
+    expect(await redeemGuestContactByLink(DB, 'token', AT))
+      .toEqual({ kind: 'unavailable', target: TARGET });
   });
 
   it('Σ8 — «ήδη υπάρχει» είναι ΕΠΙΤΥΧΙΑ, και το κλειδί δίνεται κανονικά', async () => {

@@ -55,6 +55,15 @@ function declaration(listingId = 'ownp_kalamaria'): FirstContactDeclaration {
   };
 }
 
+/**
+ * Ο στόχος της προεπιλεγμένης δήλωσης — **η διέξοδος** που κουβαλά κάθε άρνηση.
+ *
+ * 🔑 Ονομάζεται εδώ επειδή τον περιμένουν πλέον **οκτώ** προσδοκίες: από την ημέρα
+ * που η άρνηση απέκτησε διέξοδο (ADR-844 §11), το *«ποια αγγελία ήταν;»* δεν είναι
+ * λεπτομέρεια της επιτυχίας.
+ */
+const TARGET = { kind: 'listing', listingId: 'ownp_kalamaria' } as const;
+
 function freshDb(): AdminFirestore {
   return new FakeFirestore() as unknown as AdminFirestore;
 }
@@ -94,7 +103,7 @@ describe('Ε — η πόρτα του συνδέσμου', () => {
 
     // 🔑 **Επιτυχία στο παρελθόν, όχι αποτυχία τώρα.** Ο άνθρωπος που διπλοπάτησε
     //    δεν πρέπει να νομίσει ότι κάτι χάλασε.
-    expect(second).toEqual({ kind: 'refused', reason: 'already-used' });
+    expect(second).toEqual({ kind: 'refused', reason: 'already-used', target: TARGET });
   });
 
   it('Ε3 — ο σύνδεσμος λήγει, και η λήξη λέγεται με το όνομά της', async () => {
@@ -109,7 +118,7 @@ describe('Ε — η πόρτα του συνδέσμου', () => {
     const db2 = freshDb();
     const late = await issueFirstContactInvitation(db2, declaration(), EMAIL, NOW);
     expect(await claimInvitationByLink(db2, late.token, TOO_LATE)).toEqual({
-      kind: 'refused', reason: 'expired',
+      kind: 'refused', reason: 'expired', target: TARGET,
     });
   });
 
@@ -120,8 +129,10 @@ describe('Ε — η πόρτα του συνδέσμου', () => {
     const forged = Buffer.from('fcin_ψεύτικο:nonce:9999999999999:κακή')
       .toString('base64url');
 
+    // ⚠️ `target: null` **και είναι ο πυρήνας της άγκυρας**: πλαστός σύνδεσμος
+    //    απορρίπτεται **πριν** από κάθε ανάγνωση, άρα δεν υπάρχει τι να ρωτηθεί.
     expect(await claimInvitationByLink(db, forged, NOW)).toEqual({
-      kind: 'refused', reason: 'link-invalid',
+      kind: 'refused', reason: 'link-invalid', target: null,
     });
   });
 
@@ -170,7 +181,7 @@ describe('Κ — η πόρτα του κωδικού', () => {
     const wrong = issued.code === '000000' ? '111111' : '000000';
 
     expect(await claimInvitationByCode(db, issued.invitationId, wrong, NOW)).toEqual({
-      kind: 'refused', reason: 'code-wrong',
+      kind: 'refused', reason: 'code-wrong', target: TARGET,
     });
     expect((await storedDoc(db, issued.invitationId)).attempts).toBe(1);
 
@@ -190,13 +201,13 @@ describe('Κ — η πόρτα του κωδικού', () => {
     }
     // Η **πέμπτη** είναι που κλειδώνει.
     expect(await claimInvitationByCode(db, issued.invitationId, wrong, NOW)).toEqual({
-      kind: 'refused', reason: 'code-exhausted',
+      kind: 'refused', reason: 'code-exhausted', target: TARGET,
     });
 
     // 🔑 Ο φρουρός είναι ανά **πρόσκληση**, όχι ανά IP: αλλαγή διεύθυνσης δεν τον
     //    παρακάμπτει, και ούτε ο σωστός κωδικός.
     expect(await claimInvitationByCode(db, issued.invitationId, issued.code, NOW)).toEqual({
-      kind: 'refused', reason: 'code-exhausted',
+      kind: 'refused', reason: 'code-exhausted', target: TARGET,
     });
   });
 
@@ -207,13 +218,13 @@ describe('Κ — η πόρτα του κωδικού', () => {
     // Η πόρτα του κωδικού δεν περνά από υπογραφή, άρα δεν έχει ημερομηνία να
     // διαβάσει — η λήξη κρίνεται από το έγγραφο.
     expect(await claimInvitationByCode(db, issued.invitationId, issued.code, TOO_LATE)).toEqual({
-      kind: 'refused', reason: 'expired',
+      kind: 'refused', reason: 'expired', target: TARGET,
     });
   });
 
   it('Κ6 — άγνωστη πρόσκληση δεν αποκαλύπτει τίποτα', async () => {
     expect(await claimInvitationByCode(freshDb(), 'fcin_ανύπαρκτο', '123456', NOW)).toEqual({
-      kind: 'refused', reason: 'invitation-unknown',
+      kind: 'refused', reason: 'invitation-unknown', target: null,
     });
   });
 });
@@ -230,7 +241,7 @@ describe('Α — δύο ζωντανοί σύνδεσμοι δεν υπάρχο�
 
     // Ο παλιός λέει **γιατί** έπαψε — όχι «άκυρος».
     expect(await claimInvitationByLink(db, first.token, NOW)).toEqual({
-      kind: 'refused', reason: 'superseded',
+      kind: 'refused', reason: 'superseded', target: TARGET,
     });
     expect((await claimInvitationByLink(db, second.token, NOW)).kind).toBe('claimed');
   });
@@ -281,5 +292,122 @@ describe('Χ — λεπτομέρειες που φαίνονται ασήμαν
     }
     // Και ότι δεν επιστρέφει την ίδια τιμή συνέχεια (νεκρή γεννήτρια).
     expect(drawn.size).toBeGreaterThan(2000);
+  });
+});
+
+// =============================================================================
+// Δ — Η ΑΡΝΗΣΗ ΚΟΥΒΑΛΑ ΤΗ ΔΙΕΞΟΔΟ (ADR-844 — το αδιέξοδο της άρνησης)
+// =============================================================================
+
+/**
+ * 🔴 **ΤΙ ΦΥΛΑΕΙ ΑΥΤΗ Η ΟΜΑΔΑ, ΚΑΙ ΓΙΑΤΙ ΚΑΜΙΑ ΠΥΛΗ ΔΕΝ ΤΟ ΒΛΕΠΕΙ**
+ *
+ * Η άρνηση επέστρεφε **μόνο** λόγο. Η σελίδα `/contact/[token]` έλεγε τότε στον
+ * άνθρωπο *«πατήστε ξανά «Πλησιάστε»»* — **χωρίς κουμπί, χωρίς δρόμο πίσω, χωρίς να
+ * θυμάται ποια αγγελία ήταν**. Ο τύπος μεταγλωττιζόταν μια χαρά· το i18n ήταν πλήρες·
+ * το μέγεθος εντάξει. **Το ελάττωμα ήταν ότι έλειπε πεδίο**, και μόνο εκτέλεση το βλέπει.
+ *
+ * ⚠️ **Κόστος θεραπείας: ΜΗΔΕΝ αναγνώσεις** — ο στόχος ζει μέσα στην πρόσκληση που η
+ * συναλλαγή **μόλις διάβασε**. Η Δ5 το αποδεικνύει μετρώντας τις κλήσεις της βάσης.
+ */
+describe('Δ — καμία άρνηση χωρίς δρόμο πίσω', () => {
+  it('🔑 Δ0 — Ο ΠΑΡΟΝΟΜΑΣΤΗΣ: η ΕΠΙΤΥΧΙΑ κουβαλά τον στόχο μέσα στη δήλωση', async () => {
+    const db = freshDb();
+    const issued = await issueFirstContactInvitation(db, declaration(), EMAIL, NOW);
+
+    const claim = await claimInvitationByLink(db, issued.token, NOW);
+
+    expect(claim.kind).toBe('claimed');
+    if (claim.kind === 'claimed') {
+      expect(claim.invitation.declaration.target).toEqual(TARGET);
+    }
+  });
+
+  it('🔴 Δ1 — ΛΗΞΗ: ο άνθρωπος που άργησε οκτώ μέρες παίρνει πίσω την αγγελία του', async () => {
+    const db = freshDb();
+    const issued = await issueFirstContactInvitation(db, declaration(), EMAIL, NOW);
+
+    const claim = await claimInvitationByLink(db, issued.token, TOO_LATE);
+
+    expect(claim).toEqual({ kind: 'refused', reason: 'expired', target: TARGET });
+  });
+
+  it('🔴 Δ2 — ΔΕΥΤΕΡΟ ΠΑΤΗΜΑ και ΑΝΤΙΚΑΤΑΣΤΑΣΗ: ίδια διέξοδος', async () => {
+    const db = freshDb();
+    const issued = await issueFirstContactInvitation(db, declaration(), EMAIL, NOW);
+    await claimInvitationByLink(db, issued.token, NOW);
+
+    expect((await claimInvitationByLink(db, issued.token, NOW))).toEqual({
+      kind: 'refused', reason: 'already-used', target: TARGET,
+    });
+
+    const other = freshDb();
+    const first = await issueFirstContactInvitation(other, declaration(), EMAIL, NOW);
+    await issueFirstContactInvitation(other, declaration(), EMAIL, NOW);
+
+    expect((await claimInvitationByLink(other, first.token, NOW))).toEqual({
+      kind: 'refused', reason: 'superseded', target: TARGET,
+    });
+  });
+
+  it('🔴 Δ3 — ΚΛΕΙΔΩΜΕΝΟΣ ΚΩΔΙΚΟΣ: και η πόρτα Β δίνει διέξοδο', async () => {
+    const db = freshDb();
+    const issued = await issueFirstContactInvitation(db, declaration(), EMAIL, NOW);
+
+    for (let i = 0; i < 5; i += 1) {
+      await claimInvitationByCode(db, issued.invitationId, '000000', NOW);
+    }
+
+    const claim = await claimInvitationByCode(db, issued.invitationId, issued.code, NOW);
+    expect(claim).toEqual({ kind: 'refused', reason: 'code-exhausted', target: TARGET });
+  });
+
+  it('🔑 Δ4 — ΧΩΡΙΣ ΕΓΓΡΑΦΟ δεν υπάρχει στόχος, και το λέμε με `null` — ποτέ μαντεψιά', async () => {
+    const db = freshDb();
+
+    // Άγνωστη πρόσκληση: το έγγραφο **δεν υπάρχει**, άρα δεν υπάρχει τι να ρωτηθεί.
+    expect(await claimInvitationByCode(db, 'fcin_fantasma', '123456', NOW)).toEqual({
+      kind: 'refused', reason: 'invitation-unknown', target: null,
+    });
+
+    // Πλαστός σύνδεσμος: απορρίπτεται **πριν** από κάθε ανάγνωση.
+    expect(await claimInvitationByLink(db, 'σκουπίδια', NOW)).toEqual({
+      kind: 'refused', reason: 'link-invalid', target: null,
+    });
+  });
+
+  it('🔴 Δ5 — ΜΗΔΕΝ ΕΠΙΠΛΕΟΝ ΑΝΑΓΝΩΣΕΙΣ: η διέξοδος δεν πληρώνεται με ερώτημα', async () => {
+    const db = freshDb();
+    const issued = await issueFirstContactInvitation(db, declaration(), EMAIL, NOW);
+
+    // ⚠️ Ο πλαστός μετρά κάθε `collection()`. Η άρνηση διαβάζει **το έγγραφο που ήδη
+    //    κρατά** — αν κάποιος «λύσει» τη διέξοδο με δεύτερη ανάγνωση (π.χ. τον τίτλο
+    //    της αγγελίας), αυτός ο αριθμός θα ανέβει και η άγκυρα θα το πει.
+    const spy = jest.spyOn(db, 'collection');
+    const claim = await claimInvitationByLink(db, issued.token, TOO_LATE);
+    // ⚠️ **ΜΕΤΡΑ ΠΡΙΝ ΤΟ `mockRestore()`** — εκείνο **μηδενίζει** το ιστορικό κλήσεων
+    //    μαζί με την επαναφορά, και η άγκυρα θα έβλεπε **0** ό,τι κι αν έτρεξε:
+    //    πράσινη για λάθος λόγο, ακριβώς το είδος που δεν πιάνει τίποτα.
+    const reads = spy.mock.calls.length;
+    spy.mockRestore();
+
+    expect(claim.kind).toBe('refused');
+    expect(reads).toBe(1);
+  });
+
+  it('🔴 Δ6 — ΧΑΛΑΣΜΕΝΟ ΕΓΓΡΑΦΟ: `null`, ΠΟΤΕ σύνδεσμος προς `/listing/undefined`', async () => {
+    const db = freshDb();
+    const issued = await issueFirstContactInvitation(db, declaration(), EMAIL, NOW);
+
+    // 🔴 Ο παλιός έλεγχος κοίταζε **μόνο** το `kind` — και του αρκούσε, γιατί ο μόνος
+    //    καταναλωτής ήταν μια σύγκριση. Ο νέος **χτίζει διεύθυνση**: έγγραφο χωρίς
+    //    `listingId` θα έδινε κουμπί προς `/listing/undefined`, δηλαδή **ακριβώς** το
+    //    αδιέξοδο που η διέξοδος υπάρχει για να λύσει.
+    await db.collection(COLLECTIONS.FIRST_CONTACT_INVITATIONS).doc(issued.invitationId).update({
+      declaration: { ...declaration(), target: { kind: 'listing' } },
+    });
+
+    const claim = await claimInvitationByLink(db, issued.token, TOO_LATE);
+    expect(claim).toEqual({ kind: 'refused', reason: 'expired', target: null });
   });
 });

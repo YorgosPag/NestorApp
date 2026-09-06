@@ -1,6 +1,6 @@
 /**
  * @fileoverview **ΠΩΣ ΔΙΑΒΑΖΕΤΑΙ ΜΙΑ ΑΠΟΤΥΧΙΑ** — δύο αναγνώστες, ένας φρουρός.
- * @related ADR-843 · ADR-844 · first-contact.client.ts · first-contact-guest.client.ts
+ * @related ADR-843 · ADR-844 · first-contact.client.ts (ο ΜΟΝΟΣ καταναλωτής)
  * @module services/contact/first-contact-failure-readers
  *
  * ────────────────────────────────────────────────────────────────────────────
