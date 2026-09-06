@@ -157,3 +157,77 @@ describe('edgeIndicatorFor — είσοδοι που δεν είναι απάν�
     expect(edgeIndicatorFor({ x: 5000, y: 150 }, FRAME, -1)).toBeNull();
   });
 });
+
+/**
+ * ─────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΤΟ ΚΕΛΥΦΟΣ ΤΟΥ ΧΑΡΤΗ — μετρημένο ελάττωμα, 2026-09-05
+ * ─────────────────────────────────────────────────────────────────────────────
+ *
+ * Ζωντανή μέτρηση στην οθόνη «Διευθύνσεις Έργου»: ο δείκτης του υποψήφιου «Άγιοι
+ * Ανάργυροι» — **σχεδόν ακριβώς νότια** του εργοταξίου Θεσσαλονίκης — κάθισε πάνω στο
+ * κουμπί «Δες όλες τις πιθανές τοποθεσίες», με επικάλυψη **15×23 px**. Και τα δύο
+ * είναι **κάτω κεντρικά**, άρα η σύγκρουση δεν ήταν ατυχία: ήταν **βεβαιότητα** για
+ * κάθε υποψήφιο σε φορά κοντά στις 180°.
+ */
+describe('edgeIndicatorFor — τα περιθώρια τοποθέτησης κρατούν το κέλυφος καθαρό', () => {
+  /** Δέσμευση κάτω ζώνης: `bottom-3` (12) + ύψος κουμπιού (30) + διάκενο (6) + μισό τονισμένο σήμα (18). */
+  const RESERVED_BOTTOM = 66;
+  const PLACEMENT = { top: INSET, right: INSET, bottom: RESERVED_BOTTOM, left: INSET };
+
+  it('🔴 ΚΑΝΕΝΑΣ δείκτης δεν μπαίνει στη δεσμευμένη ζώνη, για 360 κατευθύνσεις', () => {
+    for (let deg = 0; deg < 360; deg += 1) {
+      const radians = (deg * Math.PI) / 180;
+      const result = edgeIndicatorFor(
+        { x: 200 + Math.cos(radians) * 9000, y: 150 + Math.sin(radians) * 9000 },
+        FRAME,
+        INSET,
+        PLACEMENT,
+      );
+      expect(result).not.toBeNull();
+      if (!result) continue;
+      expect(result.y).toBeLessThanOrEqual(
+        FRAME.height - RESERVED_BOTTOM + FLOAT_TOLERANCE_PX,
+      );
+      assertInsideFrame(result);
+    }
+  });
+
+  it('ο υποψήφιος ΑΚΡΙΒΩΣ νότια κάθεται στο όριο της δεσμευμένης ζώνης — όχι στην ακμή', () => {
+    const result = edgeIndicatorFor({ x: 200, y: 9000 }, FRAME, INSET, PLACEMENT);
+    expect(result?.x).toBeCloseTo(200, 9);
+    expect(result?.y).toBeCloseTo(FRAME.height - RESERVED_BOTTOM, 9);
+    expect(result?.angleDeg).toBeCloseTo(180, 9);
+  });
+
+  it('η δέσμευση είναι ΑΝΑ ΠΛΕΥΡΑ — η πάνω ακμή δεν πληρώνει για την κάτω', () => {
+    const result = edgeIndicatorFor({ x: 200, y: -9000 }, FRAME, INSET, PLACEMENT);
+    expect(result?.y).toBeCloseTo(INSET, 9);
+    expect(result?.angleDeg).toBeCloseTo(0, 9);
+  });
+
+  /**
+   * 🔑 **Η ΑΓΚΥΡΑ ΠΟΥ ΔΙΚΑΙΟΛΟΓΕΙ ΤΗ ΔΕΥΤΕΡΗ ΠΑΡΑΜΕΤΡΟ.** Αν η δέσμευση του κελύφους
+   * έκρινε **και** την ορατότητα, τότε μια πινέζα 50 px πάνω από την κάτω ακμή — που ο
+   * άνθρωπος **βλέπει** — θα έπαιρνε δείκτη: δύο σημεία για μία διεύθυνση.
+   */
+  it('🔴 πινέζα ΟΡΑΤΗ αλλά μέσα στη δεσμευμένη ζώνη ⇒ ΚΑΝΕΝΑΣ δείκτης (όχι διπλή αναπαράσταση)', () => {
+    // y = 250: μέσα στο ορατό ορθογώνιο (|dy| = 100 ≤ 130) αλλά κάτω από το 300-66 = 234.
+    expect(edgeIndicatorFor({ x: 200, y: 250 }, FRAME, INSET, PLACEMENT)).toBeNull();
+  });
+
+  it('περιθώριο τοποθέτησης ΜΙΚΡΟΤΕΡΟ από το ορατό δεν μπορεί να παρασταθεί — ισχύει το ορατό', () => {
+    const shrunk = { top: 0, right: 0, bottom: 5, left: 0 };
+    const result = edgeIndicatorFor({ x: 200, y: 9000 }, FRAME, INSET, shrunk);
+    expect(result?.y).toBeCloseTo(FRAME.height - INSET, 9);
+  });
+
+  it('πλευρά δεσμευμένη ΟΛΟΚΛΗΡΗ ⇒ null — δεν έμεινε άκρη να δείξει κάτι', () => {
+    const swallowed = { top: INSET, right: INSET, bottom: 150, left: INSET };
+    expect(edgeIndicatorFor({ x: 200, y: 9000 }, FRAME, INSET, swallowed)).toBeNull();
+  });
+
+  it('περιθώριο τοποθέτησης που δεν είναι αριθμός ⇒ null, ΟΧΙ δείκτης στη γωνία', () => {
+    const broken = { top: INSET, right: INSET, bottom: NaN, left: INSET };
+    expect(edgeIndicatorFor({ x: 200, y: 9000 }, FRAME, INSET, broken)).toBeNull();
+  });
+});
