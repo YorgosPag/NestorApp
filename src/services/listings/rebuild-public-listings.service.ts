@@ -51,6 +51,8 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { nowISO } from '@/lib/date-local';
+import { createModuleLogger } from '@/lib/telemetry';
+import { readStoredOwnerProperty } from '@/lib/owner-property/owner-property-from-document';
 import { createAgencyIdentityResolver } from '@/services/company/company-public-name.reader';
 import { projectableFromOwnerProperty } from '@/lib/owner-property/owner-property-projection';
 import { isPubliclyListed } from '@/services/listings/public-listing-projection';
@@ -61,6 +63,39 @@ import {
 } from '@/services/listings/publish-public-listing';
 import { republishOwnerProperty } from '@/services/owner-property/owner-property-publication.service';
 import type { OwnerProperty } from '@/types/owner-property';
+
+const logger = createModuleLogger('listings/rebuild-public-listings');
+
+/**
+ * **Το ακίνητο του ιδιώτη όπως το κρατά η βάση** — μέσα από {@link readStoredOwnerProperty},
+ * και με την **ολίσθηση λεξιλογίου καταγεγραμμένη**.
+ *
+ * 🔑 **Εδώ και όχι στο σύνορο, επίτηδες.** Το σύνορο είναι **καθαρή συνάρτηση** και
+ * τρέχει και σε πελάτη — ίδιο συμβόλαιο με το `needsRebuild` του ADR-839: *«ο
+ * καταναλωτής που τη βλέπει οφείλει να το καταγράψει»*. Και **αυτός** είναι ο σωστός
+ * καταναλωτής: είναι η **μόνη** διαδρομή που περνά από **κάθε** έγγραφο της συλλογής,
+ * άρα η μόνη που μπορεί να απαντήσει *«πόσα μένουν παλαιά;»* — τον αριθμό που κάνει
+ * την αφαίρεση του παλαιού λεξιλογίου απόφαση **με μέτρηση** και όχι με τόλμη
+ * (ADR-842 §7.6.12).
+ *
+ * ⚠️ **Επίπεδο `warn`, όχι `error`**: το έγγραφο **διαβάστηκε** και η αγγελία
+ * επανασυντίθεται κανονικά. Η ολίσθηση είναι εκκρεμότητα δεδομένων, όχι βλάβη
+ * εκτέλεσης — και ένα `error` εδώ θα εκπαίδευε τον αναγνώστη να το αγνοεί.
+ */
+function ownerPropertyOf(id: string, data: unknown): OwnerProperty | null {
+  const read = readStoredOwnerProperty(data, id);
+  if (read === null) return null;
+
+  if (read.vocabularyDrift !== null) {
+    logger.warn('owner_properties: παλαιά τιμή είδους στη βάση', {
+      ownerPropertyId: id,
+      storedType: read.vocabularyDrift,
+      resolvedType: read.property.type,
+    });
+  }
+
+  return read.property;
+}
 
 /**
  * Ό,τι διαβάζει η επανασύνθεση από ένα έγγραφο `properties`.
@@ -180,7 +215,10 @@ export async function rebuildAllPublicListings(
     //    αγγελία ιδιώτη ως «ορφανή προς διαγραφή» — δηλαδή θα έλεγε στον άνθρωπο
     //    ότι το `POST` πρόκειται να κάνει ακριβώς τη ζημιά που έκανε.
     liveIds.add(doc.id);
-    const owner = doc.data() as OwnerProperty;
+    // 🔴 **ΤΟ ΣΥΝΟΡΟ** (ADR-842 §7.6.12) — και η ταυτότητα δένεται **εδώ**, οπότε το
+    //    χειροκίνητο `{ ...owner, id: doc.id }` της επανασύνθεσης παρακάτω έφυγε.
+    const owner = ownerPropertyOf(doc.id, doc.data());
+    if (owner === null) continue;
 
     if (dryRun) {
       tally[
@@ -189,7 +227,7 @@ export async function rebuildAllPublicListings(
       continue;
     }
 
-    tally[(await republishOwnerProperty(adminDb, { ...owner, id: doc.id })).publish] += 1;
+    tally[(await republishOwnerProperty(adminDb, owner)).publish] += 1;
   }
 
   const orphansRemoved = await removeOrphanListings(adminDb, liveIds, dryRun);
@@ -294,7 +332,8 @@ export async function republishListingsForCompany(
     .get();
 
   for (const doc of ownerProperties.docs) {
-    const owner = { ...(doc.data() as OwnerProperty), id: doc.id };
+    const owner = ownerPropertyOf(doc.id, doc.data());
+    if (owner === null) continue;
     tally[(await republishOwnerProperty(adminDb, owner)).publish] += 1;
   }
 

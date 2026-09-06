@@ -68,7 +68,7 @@ import {
   collectPlaceKnowledge,
   type ListingSourceProperty,
 } from '@/services/listings/publish-public-listing';
-import type { OwnerProperty } from '@/types/owner-property';
+import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
 
 const logger = createModuleLogger('listing-resolver');
 
@@ -217,7 +217,12 @@ async function readOwnerListing(
   raw: Record<string, unknown>,
   nowISO: string,
 ): Promise<ResolvedListing | null> {
-  const property = { ...(raw as OwnerProperty), id: listingId };
+  // 🔴 **ΤΟ ΣΥΝΟΡΟ** (ADR-842 §7.6.12) — `null` **μόνο** όταν τα δεδομένα δεν είναι καν
+  //    αντικείμενο, δηλαδή ακριβώς η περίπτωση όπου το παλιό `as` παρήγαγε «ακίνητο»
+  //    από κάτι που δεν ήταν.
+  const property = ownerPropertyFromDocument(raw, listingId);
+  if (property === null) return null;
+
   const place = placeKnowledgeFromOwnerProperty(property, nowISO);
 
   return {

@@ -87,3 +87,20 @@ export function searchResultsHref(query?: string | null) {
   if (query && query.length > 0) return typedHref(`${SEARCH_RESULTS_ROUTE}?${query}`);
   return typedHref(SEARCH_RESULTS_ROUTE);
 }
+
+/**
+ * **Η γενική διέξοδος** — η οθόνη 1, τυποποιημένη για `<Link>` και `router`.
+ *
+ * 🔑 **ΓΡΑΦΤΗΚΕ ΟΤΑΝ Ο ΔΕΥΤΕΡΟΣ ΤΗ ΧΡΕΙΑΣΤΗΚΕ, ΟΧΙ ΠΡΙΝ**: το `typedHref(
+ * SEARCH_LANDING_ROUTE)` ζούσε ωμό στο `DesktopOnlyGate`, ενώ οι **δύο αδελφές**
+ * οθόνες αυτού του αρχείου εξήγαν ήδη κατασκευαστή. Ο δεύτερος καταναλωτής είναι η
+ * **διέξοδος της άρνησης** του ADR-844 — ο άνθρωπος που έφτασε από email σε στόχο
+ * **χωρίς** δημόσια διεύθυνση, και χρειάζεται *κάπου* να πάει.
+ *
+ * ⚠️ **Χωρίς παράμετρο φίλτρων, και είναι σκόπιμο**: όποιος προσγειώνεται εδώ **δεν
+ * έχει** αναζήτηση να διατηρήσει — ή την έχασε, ή δεν την έκανε ποτέ. Ένα ερώτημα
+ * θα υποσχόταν συνέχεια που δεν υπάρχει.
+ */
+export function searchLandingHref() {
+  return typedHref(SEARCH_LANDING_ROUTE);
+}

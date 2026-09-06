@@ -35,6 +35,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { mandatesOf } from '@/types/owner-property-mandate';
 import { createModuleLogger } from '@/lib/telemetry';
 import { republishOwnerProperty } from '@/services/owner-property/owner-property-publication.service';
+import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
 import type { OwnerProperty } from '@/types/owner-property';
 import type { PublishOutcome } from '@/services/listings/publish-public-listing';
 
@@ -84,7 +85,10 @@ export async function applyAgencyRevocation(
   let swept = 0;
 
   for (const doc of snapshot.docs) {
-    const property = { ...(doc.data() as OwnerProperty), id: doc.id };
+    // 🔴 **ΤΟ ΣΥΝΟΡΟ** (ADR-842 §7.6.12) — η ταυτότητα του εγγράφου νικά, και ένα
+    //    έγγραφο που δεν είναι καν αντικείμενο **δεν** μετριέται ως σαρωμένη αγγελία.
+    const property = ownerPropertyFromDocument(doc.data(), doc.id);
+    if (property === null) continue;
 
     // ⚠️ Ο ιδιώτης **δεν αγγίζεται ποτέ**: χωρίς εντολή δεν υπάρχει ρυθμιζόμενη
     //    πράξη (ADR-824 §7). Κενός πίνακας ⇒ προσπερνάμε.

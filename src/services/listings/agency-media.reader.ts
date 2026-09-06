@@ -40,15 +40,24 @@ import { createModuleLogger } from '@/lib/telemetry';
 import {
   publishedAgencyMediaSources,
   type AgencyMediaCandidate,
+  type AgencyMediaOrderDeclaration,
 } from './agency-media-publication';
 import type { PublicShelfSource } from '@/services/upload/utils/storage-path-public-shelf';
 
 const logger = createModuleLogger('agency-media-reader');
 
-/** Η επιλογή δημοσίευσης **ενός ακινήτου** του γραφείου. */
+/**
+ * Η επιλογή δημοσίευσης **ενός ακινήτου** του γραφείου.
+ *
+ * ⚠️ **Η δήλωση σειράς ΤΑΞΙΔΕΥΕΙ, δεν διαβάζεται εδώ** (ADR-841 §7 Α14.7.2). Ζει στο
+ * **έγγραφο του ακινήτου**, το οποίο ο καλών έχει **ήδη στα χέρια του** — μια δεύτερη
+ * ανάγνωση εδώ θα πλήρωνε ένα read ανά αγγελία για δεδομένο που ταξιδεύει δωρεάν, και θα
+ * μπορούσε να διαβάσει **άλλη** έκδοση του ίδιου εγγράφου μέσα στο ίδιο πέρασμα.
+ */
 export type AgencyMediaResolver = (
   propertyId: string,
   companyId: string | null | undefined,
+  declaredOrder: AgencyMediaOrderDeclaration,
 ) => Promise<readonly PublicShelfSource[]>;
 
 /** Κανένα δημόσιο αρχείο — μοιράζεται, γιατί είναι αμετάβλητο και κενό. */
@@ -71,6 +80,7 @@ export async function readPublishedAgencyMedia(
   adminDb: AdminFirestore,
   propertyId: string,
   companyId: string | null | undefined,
+  declaredOrder: AgencyMediaOrderDeclaration,
 ): Promise<readonly PublicShelfSource[]> {
   const owner = typeof companyId === 'string' && companyId.trim() !== '' ? companyId : null;
   if (owner === null || propertyId.trim() === '') return NO_AGENCY_MEDIA;
@@ -86,6 +96,7 @@ export async function readPublishedAgencyMedia(
 
     return publishedAgencyMediaSources(
       snapshot.docs.map((doc) => ({ ...(doc.data() as AgencyMediaCandidate), id: doc.id })),
+      declaredOrder,
     );
   } catch (error) {
     logger.warn('Οι φωτογραφίες του γραφείου δεν διαβάστηκαν — η αγγελία δημοσιεύεται χωρίς αυτές', {
@@ -101,5 +112,6 @@ export async function readPublishedAgencyMedia(
  * **Ο επιλυτής ενός περάσματος.** Δες το σχόλιο του module για το γιατί δεν έχει μνήμη.
  */
 export function createAgencyMediaResolver(adminDb: AdminFirestore): AgencyMediaResolver {
-  return (propertyId, companyId) => readPublishedAgencyMedia(adminDb, propertyId, companyId);
+  return (propertyId, companyId, declaredOrder) =>
+    readPublishedAgencyMedia(adminDb, propertyId, companyId, declaredOrder);
 }
