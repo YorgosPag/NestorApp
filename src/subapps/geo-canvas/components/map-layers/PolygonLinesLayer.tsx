@@ -15,7 +15,7 @@
  */
 
 import React, { memo, useMemo } from 'react';
-import { Source, Layer } from 'react-map-gl/maplibre';
+import { Source, Layer } from '@/lib/maps/maplibre';
 import type { FloorPlanControlPoint } from '../../floor-plan-system/types/control-points';
 import { GEO_COLORS } from '../../config/color-config';
 

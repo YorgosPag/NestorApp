@@ -15,7 +15,7 @@
  */
 
 import React, { memo, useMemo } from 'react';
-import { Source, Layer, Marker } from 'react-map-gl/maplibre';
+import { Source, Layer, Marker } from '@/lib/maps/maplibre';
 import type { UniversalPolygon } from '@geo-alert/core';
 import { interactiveMapStyles } from '../InteractiveMap.styles';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -27,6 +27,38 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: GeoJSON Feature Collection type
 type GeoJSONFeatureCollection = GeoJSON.FeatureCollection;
 type GeoJSONFeature = GeoJSON.Feature;
+
+/**
+ * **Το κουμπί που σβήνει ένα πολύγωνο** — μία γραφή, δύο θέσεις.
+ *
+ * 🔴 **ΕΞΗΧΘΗ ΕΠΕΙΔΗ ΤΟ CHECK 3.28 ΤΟ ΜΕΤΡΗΣΕ ΔΙΔΥΜΟ** *(23 γραμμές / 108 tokens, μέσα
+ * στο **ίδιο** αρχείο)*: η πινέζα ακτίνας και η πρώτη κορυφή του πολυγώνου το έγραφαν
+ * αυτούσιο. Δύο αντίγραφα σημαίνει ότι μια διόρθωση φτάνει **στο ένα**.
+ *
+ * ⚠️ **Το `stopPropagation` είναι ουσιώδες, όχι τελετουργία**: χωρίς αυτό το κλικ ταξιδεύει
+ * στον `Marker` από κάτω και ο χάρτης το διαβάζει ως **επιλογή** του πολυγώνου που μόλις
+ * ζητήθηκε να σβηστεί.
+ *
+ * 🔑 **Ο τίτλος δίνεται από τον καλούντα**: η μία θέση λέει «σβήσε την πινέζα», η άλλη
+ * «σβήσε το πολύγωνο» — **διαφορετική** υπόσχεση στον άνθρωπο, ίδια πράξη στον κώδικα.
+ */
+function PolygonDeleteBadge({
+  onDelete,
+  title,
+}: {
+  readonly onDelete: () => void;
+  readonly title: string;
+}): React.ReactElement {
+  return (
+    <button
+      onClick={(e) => { e.stopPropagation(); onDelete(); }}
+      style={interactiveMapStyles.markers.deleteBadge()}
+      title={title}
+    >
+      ×
+    </button>
+  );
+}
 
 export interface PolygonSystemLayersProps {
   /** Polygons από centralized system */
@@ -230,31 +262,10 @@ export const PolygonSystemLayers: React.FC<PolygonSystemLayersProps> = memo(({
                     <div style={interactiveMapStyles.markers.dynamicCenterDot()} />
                   </div>
                   {onDeletePolygon && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onDeletePolygon(polygon.id); }}
-                      style={{
-                        position: 'absolute',
-                        top: -8,
-                        right: -8,
-                        width: 18,
-                        height: 18,
-                        borderRadius: '50%',
-                        background: '#ef4444',
-                        color: '#fff',
-                        border: 'none',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: 11,
-                        fontWeight: 700,
-                        lineHeight: 1,
-                        zIndex: 10
-                      }}
+                    <PolygonDeleteBadge
+                      onDelete={() => onDeletePolygon(polygon.id)}
                       title={t('mapLayers.deletePin')}
-                    >
-                      ×
-                    </button>
+                    />
                   )}
                 </div>
               </Marker>
@@ -331,31 +342,10 @@ export const PolygonSystemLayers: React.FC<PolygonSystemLayersProps> = memo(({
                       title={point.label || `Point ${index + 1}`}
                     />
                     {index === 0 && onDeletePolygon && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); onDeletePolygon(polygon.id); }}
-                        style={{
-                          position: 'absolute',
-                          top: -8,
-                          right: -8,
-                          width: 18,
-                          height: 18,
-                          borderRadius: '50%',
-                          background: '#ef4444',
-                          color: '#fff',
-                          border: 'none',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: 11,
-                          fontWeight: 700,
-                          lineHeight: 1,
-                          zIndex: 10
-                        }}
+                      <PolygonDeleteBadge
+                        onDelete={() => onDeletePolygon(polygon.id)}
                         title={t('mapLayers.deletePolygon')}
-                      >
-                        ×
-                      </button>
+                      />
                     )}
                   </div>
                 </Marker>

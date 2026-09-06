@@ -25,7 +25,7 @@
  */
 
 import React, { useMemo, useCallback, useEffect, useRef } from 'react';
-import { Source, Layer } from 'react-map-gl/maplibre';
+import { Source, Layer } from '@/lib/maps/maplibre';
 import { InteractiveMap } from '@/subapps/geo-canvas/components/InteractiveMap';
 import { PolygonSystemProvider } from '@/subapps/geo-canvas/systems/polygon-system';
 import type { MapInstance } from '@/subapps/geo-canvas/hooks/map/useMapInteractions';

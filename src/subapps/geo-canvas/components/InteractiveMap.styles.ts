@@ -27,6 +27,7 @@ interface MarkerStylesType {
   readonly dynamicPin: (strokeColor: string, fillColor: string) => CSSProperties;
   readonly dynamicCenterDot: () => CSSProperties;
   readonly drawingPoint: (index: number) => CSSProperties;
+  readonly deleteBadge: () => CSSProperties;
 }
 
 interface LabelStylesType {
@@ -187,6 +188,36 @@ const markerStyles: MarkerStylesType = {
     borderRadius: '50%',
     backgroundColor: 'hsl(var(--background))',
     border: '1px solid hsl(var(--foreground))'
+  }),
+
+  /**
+   * **Το σήμα διαγραφής πάνω σε πινέζα** — ένα στυλ, δύο θέσεις.
+   *
+   * 🔴 Ήταν γραμμένο **δύο φορές αυτούσιο** μέσα στο `PolygonSystemLayers` *(CHECK 3.28,
+   * 23 γραμμές / 108 tokens)*: μία στην πινέζα ακτίνας και μία στην πρώτη κορυφή του
+   * πολυγώνου. Δύο αντίγραφα σημαίνει ότι μια αλλαγή μεγέθους θα έφτανε **στο ένα**.
+   *
+   * ⚠️ **Το χρώμα φεύγει από το `#ef4444` και γίνεται token** *(`--destructive`)*: το
+   * ωμό δεκαεξαδικό αγνοεί το θέμα — και ο ίδιος κώδικας ζωγραφίζει **και** στο σκοτεινό.
+   */
+  deleteBadge: (): CSSProperties => ({
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    width: 18,
+    height: 18,
+    borderRadius: '50%',
+    background: 'hsl(var(--destructive))',
+    color: 'hsl(var(--destructive-foreground))',
+    border: 'none',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: 11,
+    fontWeight: 700,
+    lineHeight: 1,
+    zIndex: 10
   }),
 
   /**

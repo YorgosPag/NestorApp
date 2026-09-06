@@ -16,8 +16,8 @@
  */
 
 import React, { memo } from 'react';
-import { Map } from 'react-map-gl/maplibre';
-import type { MapLayerMouseEvent } from 'react-map-gl/maplibre';
+import { Map } from '@/lib/maps/maplibre';
+import type { MapLayerMouseEvent } from '@/lib/maps/maplibre';
 import type { StyleSpecification } from 'maplibre-gl';
 import type { FloorPlanControlPoint } from '../floor-plan-system/types/control-points';
 import type { UniversalPolygon } from '@geo-alert/core/polygon-system/types';

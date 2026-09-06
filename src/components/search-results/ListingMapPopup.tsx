@@ -26,7 +26,7 @@
  */
 
 import React from 'react';
-import { Popup } from 'react-map-gl/maplibre';
+import { Popup } from '@/lib/maps/maplibre';
 
 import { Link } from '@/lib/workspace/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';

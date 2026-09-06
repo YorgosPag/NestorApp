@@ -15,7 +15,7 @@
  */
 
 import React, { memo, useMemo } from 'react';
-import { Source, Layer, Marker } from 'react-map-gl/maplibre';
+import { Source, Layer, Marker } from '@/lib/maps/maplibre';
 import type { GeoCoordinate } from '../../types';
 import { interactiveMapStyles } from '../InteractiveMap.styles';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
