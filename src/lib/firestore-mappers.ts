@@ -16,7 +16,6 @@ import type {
 } from '@/types/parking';
 import type {
   Property,
-  PropertyType,
   LegacySalesStatus,
   LinkedSpace,
   PropertyLevel,
@@ -27,12 +26,43 @@ import type {
 import type { SpaceCommercialStatus, SpaceCommercialData } from '@/types/sales-shared';
 import type { OperationalStatus } from '@/constants/operational-statuses';
 import type { CommercialStatus } from '@/constants/commercial-statuses';
-import {
-  PROPERTY_TYPES,
-  DEPRECATED_PROPERTY_TYPES,
-  LEGACY_GREEK_PROPERTY_TYPES,
-} from '@/constants/property-types';
+import { normalizePropertyType } from '@/constants/property-type-aliases';
 import { normalizeToDate } from '@/lib/date-local';
+
+/**
+ * **Τα πεδία παρακολουθήματος πώλησης** (ADR-199) — χιλιοστά, εμπορική κατάσταση, όροι.
+ *
+ * 🔴 **ΗΤΑΝ ΓΡΑΜΜΕΝΑ ΔΥΟ ΦΟΡΕΣ, ΑΥΤΟΛΕΞΕΙ** — στον `mapStorageDoc` και στον
+ * `mapParkingDoc`. Το `jscpd` (N.18 / CHECK 3.28) τα ανέφερε ως κλώνο **13 γραμμών**
+ * ενόσω το αρχείο αγγιζόταν για το ADR-842 §7.6.12. Ο κλώνος **προϋπήρχε**· η επιλογή
+ * ήταν *«παράκαμψη με `SKIP_JSCPD_DIFF=1`»* ή *«εξαγωγή»* — και μια παράκαμψη διδάσκει
+ * τον επόμενο να παρακάμπτει (N.0.2, κανόνας προσκόπου).
+ *
+ * 🔑 **Αποθήκη και θέση στάθμευσης είναι ΚΑΙ ΟΙ ΔΥΟ «χώρος-παρακολούθημα»** — η ίδια
+ * πρόταση του τομέα, όχι τυχαία ομοιότητα κειμένου. Γι' αυτό η εξαγωγή είναι σωστή και
+ * όχι απλώς βολική: την ημέρα που το ADR-199 αποκτήσει τέταρτο πεδίο, θα το γράψει
+ * **κανείς μία φορά** αντί να το ξεχάσει στη μία από τις δύο.
+ *
+ * ⚠️ **Το `undefined` και το `null` ΔΕΝ συγχέονται** στα χιλιοστά: `null` = *«δηλώθηκε
+ * ρητά ότι δεν έχει»*, απουσία = *«κανείς δεν ρώτησε»*. Η τριάδα διατηρείται αυτούσια
+ * από την αρχική γραφή.
+ */
+function spaceAppurtenanceFields(data: Record<string, unknown>): {
+  readonly millesimalShares: number | null | undefined;
+  readonly commercialStatus: SpaceCommercialStatus | undefined;
+  readonly commercial: SpaceCommercialData | undefined;
+} {
+  return {
+    millesimalShares:
+      typeof data.millesimalShares === 'number'
+        ? data.millesimalShares
+        : data.millesimalShares === null
+          ? null
+          : undefined,
+    commercialStatus: data.commercialStatus as SpaceCommercialStatus | undefined,
+    commercial: data.commercial as SpaceCommercialData | undefined,
+  };
+}
 
 // =============================================================================
 // STORAGE MAPPER
@@ -84,10 +114,7 @@ export function mapStorageDoc(docId: string, data: Record<string, unknown>): Sto
     owner: data.owner as string | undefined,
     notes: data.notes as string | undefined,
     lastUpdated: normalizeToDate(data.lastUpdated) || undefined,
-    // ADR-199: Sales appurtenance fields
-    millesimalShares: typeof data.millesimalShares === 'number' ? data.millesimalShares : (data.millesimalShares === null ? null : undefined),
-    commercialStatus: data.commercialStatus as SpaceCommercialStatus | undefined,
-    commercial: data.commercial as SpaceCommercialData | undefined,
+    ...spaceAppurtenanceFields(data),
   };
 }
 
@@ -145,10 +172,7 @@ export function mapParkingDoc(docId: string, data: Record<string, unknown>): Par
     createdBy: data.createdBy as string | undefined,
     createdAt: normalizeToDate(data.createdAt) || undefined,
     updatedAt: normalizeToDate(data.updatedAt) || undefined,
-    // ADR-199: Sales appurtenance fields
-    millesimalShares: typeof data.millesimalShares === 'number' ? data.millesimalShares : (data.millesimalShares === null ? null : undefined),
-    commercialStatus: data.commercialStatus as SpaceCommercialStatus | undefined,
-    commercial: data.commercial as SpaceCommercialData | undefined,
+    ...spaceAppurtenanceFields(data),
   };
 }
 
@@ -162,18 +186,8 @@ const VALID_PROPERTY_STATUSES: readonly string[] = [
   'off-market', 'unavailable', 'deleted',
 ];
 
-const ALL_VALID_PROPERTY_TYPES: readonly string[] = [
-  ...PROPERTY_TYPES,
-  ...DEPRECATED_PROPERTY_TYPES,
-  ...LEGACY_GREEK_PROPERTY_TYPES,
-];
-
 function isValidPropertyStatus(value: string): value is LegacySalesStatus {
   return VALID_PROPERTY_STATUSES.includes(value);
-}
-
-function isValidPropertyType(value: string): value is PropertyType {
-  return ALL_VALID_PROPERTY_TYPES.includes(value);
 }
 
 /**
@@ -188,7 +202,16 @@ export function mapPropertyDoc(docId: string, data: Record<string, unknown>): Pr
   return {
     id: docId,
     name: (data.name as string) || `Unit ${docId.substring(0, 6)}`,
-    type: typeof data.type === 'string' && isValidPropertyType(data.type) ? data.type : 'apartment',
+    // 🔴 **ΚΑΝΟΝΙΚΟΠΟΙΕΙ, ΔΕΝ ΕΠΙΚΥΡΩΝΕΙ** (ADR-842 §7.6.12 / §8 #11). Ρωτούσε *«είναι
+    //    **γνωστή** τιμή;»* πάνω σε λίστα που περιλάμβανε τις παρωχημένες και τις
+    //    παλαιές ελληνικές — άρα τις **περνούσε αυτούσιες** στον τομέα — και ό,τι δεν
+    //    αναγνώριζε το **βάφτιζε `'apartment'`**. Δύο ελαττώματα σε μία γραμμή. Πλέον
+    //    ρωτά *«ποια είναι η **κανονική** μορφή;»*, και το «δεν ξέρω» λέγεται `null`.
+    //
+    // ⚠️ Ο `ALL_VALID_PROPERTY_TYPES` + ο `isValidPropertyType` **διαγράφηκαν**: ήταν ο
+    //    ασθενής κριτής του §7.6.11 σε τρίτο αντίγραφο, και υπήρχαν **μόνο** γι' αυτή τη
+    //    γραμμή.
+    type: normalizePropertyType(data.type),
     building: (data.building as string) || '',
     buildingId: (data.buildingId as string) || '',
     floor: typeof data.floor === 'number' ? data.floor : 0,

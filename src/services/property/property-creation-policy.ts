@@ -23,6 +23,7 @@ import 'server-only';
 
 import type { Firestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { normalizePropertyType } from '@/constants/property-type-aliases';
 import type { PropertyType } from '@/types/property';
 import {
   STANDALONE_UNIT_TYPES as CANONICAL_STANDALONE_UNIT_TYPES,
@@ -163,7 +164,11 @@ export async function assertUpstreamChainExists(
   db: Firestore,
   propertyData: Record<string, unknown>,
 ): Promise<void> {
-  const type = propertyData.type as PropertyType;
+  // 🔴 **ΚΑΝΟΝΙΚΟΠΟΙΗΣΗ, ΟΧΙ ΙΣΧΥΡΙΣΜΟΣ** (ADR-842 §7.6.12 / §8 #11): το `propertyData`
+  //    είναι `Record<string, unknown>` — ωμό ωφέλιμο φορτίο. Ο `isStandaloneType`
+  //    αποφασίζει **αν χρειάζεται κτίριο και όροφος**· με ωμή τιμή, ένα `'Μονοκατοικία'`
+  //    απαντούσε «όχι μονήρες» και η αλυσίδα απαιτούσε κτίριο από **μονοκατοικία**.
+  const type = normalizePropertyType(propertyData.type);
   const standalone = isStandaloneType(type);
   const projectId = propertyData.projectId as string;
 

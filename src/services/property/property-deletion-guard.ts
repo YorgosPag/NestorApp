@@ -16,6 +16,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { boqService } from '@/services/measurements';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { BOQItem } from '@/types/boq';
+import { mapPropertyDoc } from '@/lib/firestore-mappers';
 import type { Property } from '@/types/property';
 
 const logger = createModuleLogger('property-deletion-guard');
@@ -98,11 +99,19 @@ export async function loadPropertyContext(
   const ref = doc(db, COLLECTIONS.PROPERTIES, propertyId);
   const snap = await getDoc(ref);
   if (!snap.exists()) return null;
-  const data = snap.data() as Property & { companyId?: string };
-  if (!data.buildingId) return null;
+  // 🔴 **ΤΟ ΣΥΝΟΡΟ ΤΟΥ `properties`** (ADR-842 §7.6.12) — ήταν
+  //    `snap.data() as Property & { companyId?: string }`, ωμός ισχυρισμός που
+  //    παρέκαμπτε τον {@link mapPropertyDoc}.
+  //
+  // ⚠️ **Το `companyId` διαβάζεται ΧΩΡΙΣΤΑ, και είναι σωστό**: δεν είναι πεδίο του
+  //    `Property` — είναι το **πεδίο μισθωτή** του εγγράφου (ADR-214), και ο mapper
+  //    δεν το επιστρέφει επίτηδες. Η παλιά τομή τύπων το έκρυβε αυτό.
+  const data = snap.data() as Record<string, unknown>;
+  const property = mapPropertyDoc(snap.id, data);
+  if (!property.buildingId) return null;
   return {
-    companyId: data.companyId ?? '',
-    buildingId: data.buildingId,
-    property: { ...data, id: snap.id },
+    companyId: typeof data.companyId === 'string' ? data.companyId : '',
+    buildingId: property.buildingId,
+    property,
   };
 }

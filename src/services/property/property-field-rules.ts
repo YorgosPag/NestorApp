@@ -13,8 +13,7 @@
  * @since 2026-04-04
  */
 
-import type { PropertyType } from '@/types/property';
-import { RESIDENTIAL_PROPERTY_TYPES } from '@/constants/property-types';
+import { resolvedPropertyClassOf } from '@/constants/property-classification';
 
 // =============================================================================
 // TYPES
@@ -32,15 +31,6 @@ export interface FieldWarning {
 // =============================================================================
 // CONSTANTS — derived from SSoT (@/constants/property-types, ADR-145)
 // =============================================================================
-
-/**
- * Residential property types — basement placement is unusual for these.
- * Shop, office, hall, storage (commercial/auxiliary) are commonly found in basements.
- * Derived from SSoT `RESIDENTIAL_PROPERTY_TYPES` (includes deprecated underscore values).
- */
-const RESIDENTIAL_TYPES: ReadonlySet<PropertyType> = new Set(
-  RESIDENTIAL_PROPERTY_TYPES,
-);
 
 // =============================================================================
 // RULES
@@ -73,7 +63,12 @@ export function evaluateFloorTypeCompatibility(
 ): FieldWarning | null {
   if (!propertyType) return null;
   if (!isBasementFloor(floor)) return null;
-  if (!RESIDENTIAL_TYPES.has(propertyType as PropertyType)) return null;
+  // 🔴 **Ο ΕΝΑΣ ΚΡΙΤΗΣ, ΟΧΙ ΤΕΤΑΡΤΟ ΤΟΠΙΚΟ ΣΥΝΟΛΟ** (ADR-842 §7.6.11 / §7.6.12). Εδώ
+  //    ζούσε `RESIDENTIAL_TYPES.has(propertyType as PropertyType)` — ένα **τέταρτο**
+  //    αντίγραφο του «τι είναι κατοικία», με ισχυρισμό πάνω σε `string | undefined`.
+  //    Το `resolvedPropertyClassOf` κανονικοποιεί **και** ταξινομεί, οπότε μια
+  //    `'Μονοκατοικία'` κρίνεται πλέον σωστά αντί να προσπερνιέται σιωπηλά.
+  if (resolvedPropertyClassOf(propertyType) !== 'residential') return null;
 
   return {
     titleKey: 'fieldWarnings.basementResidential.title',

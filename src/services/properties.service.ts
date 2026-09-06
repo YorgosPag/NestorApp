@@ -7,6 +7,7 @@ import {
 import type { DocumentData } from 'firebase/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { normalizeToISO, nowISO } from '@/lib/date-local';
+import { normalizePropertyType } from '@/constants/property-type-aliases';
 import type { Property } from '@/types/property-viewer';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
@@ -35,6 +36,23 @@ function toProperty(raw: DocumentData): Property {
     const iso = normalizeToISO(raw[key]);
     property[key] = iso ?? raw[key];
   }
+
+  // 🔴 **ΤΟ ΕΙΔΟΣ ΚΑΝΟΝΙΚΟΠΟΙΕΙΤΑΙ, ΑΠΟ ΤΗΝ ΜΙΑ ΑΥΘΕΝΤΙΑ** (ADR-842 §7.6.12 / §8 #11).
+  //
+  // ⚠️ **ΓΙΑΤΙ ΟΧΙ ΟΛΟΚΛΗΡΟΣ Ο {@link mapPropertyDoc} ΕΔΩ, ΚΑΙ ΕΙΝΑΙ ΜΕΤΡΗΜΕΝΟ**: ο
+  //    mapper είναι **λίστα επιτρεπόμενων πεδίων** — χτίζει ρητό αντικείμενο και
+  //    **ρίχνει** ό,τι δεν απαριθμεί (π.χ. το `companyId`). Αυτή εδώ είναι **διαπερατή**
+  //    μετάφραση ημερομηνιών που κρατά τα πάντα, και τροφοδοτεί το `getProperties()` —
+  //    δηλαδή **κάθε** οθόνη του μισθωτή. Η σύγκλιση των δύο σε ένα σύνορο είναι
+  //    πραγματική εκκρεμότητα, αλλά είναι **δική της** εργασία με δικό της παρονομαστή·
+  //    μια σιωπηλή αντικατάσταση εδώ θα έσβηνε πεδία που κανείς δεν μέτρησε.
+  //    Καταγράφηκε στο `.claude-rules/pending-ratchet-work.md`.
+  //
+  // 🔑 **Δεν είναι δεύτερος κριτής**: είναι η **ίδια** συνάρτηση
+  //    ({@link normalizePropertyType}) καλεσμένη από άλλη πόρτα — ακριβώς ό,τι κάνει
+  //    και ο mapper στη δική του γραμμή.
+  property.type = normalizePropertyType(property.type);
+
   return property as unknown as Property;
 }
 
