@@ -48,22 +48,16 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Marker, useMap } from 'react-map-gl/maplibre';
 import { LngLatBounds } from 'maplibre-gl';
-import { Maximize2, Navigation } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Maximize2 } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatGeoDistance } from '@/lib/geo/format-geo-distance';
+import type { ScreenPoint, ScreenSize } from '@/lib/geo/offscreen-edge-indicator';
 import {
-  edgeIndicatorFor,
-  type ScreenPoint,
-  type ScreenSize,
-} from '@/lib/geo/offscreen-edge-indicator';
+  CandidateBadge,
+  edgeIndicatorForCandidate,
+  EdgeIndicatorArrow,
+} from '@/components/shared/addresses/address-map-edge-indicator';
 import type { AddressMapCandidate } from '@/components/shared/addresses/address-map-candidates';
-
-/**
- * Περιθώριο από την ακμή, σε pixel — **ο μισός δείκτης**. Ο δείκτης είναι ~32 px· με 24
- * μένει ολόκληρος μέσα στο κάδρο, μαζί με το δαχτυλίδι εστίασης.
- */
-const EDGE_INSET_PX = 24;
 
 /**
  * Ζουμ πάνω από το οποίο το «δες τα όλα» δεν ανεβαίνει: **ένας** υποψήφιος δίνει
@@ -158,38 +152,6 @@ function useCandidateScreenGeometry(
   }, [mapRef, candidates]);
 
   return geometry;
-}
-
-// =============================================================================
-// ΤΟ ΣΗΜΑ — ένα σχήμα, δύο καταστάσεις
-// =============================================================================
-
-interface CandidateBadgeProps {
-  readonly position: number;
-  readonly highlighted: boolean;
-}
-
-/**
- * Ο αριθμημένος κύκλος. **Διάστικτος** όσο είναι πρόταση· **συμπαγής και μεγαλύτερος**
- * όταν είναι η τονισμένη.
- *
- * ⚠️ Τα ζεύγη χρωμάτων είναι `background`/`foreground` — δηλωμένα ζεύγη του θέματος, άρα
- * αναγνώσιμα και στα δύο θέματα χωρίς νέα υπόσχεση αντίθεσης (**CHECK 3.38 / 3.39**).
- */
-function CandidateBadge({ position, highlighted }: CandidateBadgeProps) {
-  return (
-    <span
-      className={cn(
-        'flex items-center justify-center rounded-full font-semibold tabular-nums',
-        'transition-transform duration-150 shadow-md',
-        highlighted
-          ? 'h-8 w-8 text-sm border-2 border-solid border-background bg-foreground text-background scale-110'
-          : 'h-6 w-6 text-xs border-2 border-dashed border-foreground/70 bg-background text-foreground',
-      )}
-    >
-      {position}
-    </span>
-  );
 }
 
 // =============================================================================
@@ -293,12 +255,6 @@ function edgeStyle(x: number, y: number): React.CSSProperties {
   return { left: x, top: y, transform: 'translate(-50%, -50%)' };
 }
 
-function arrowStyle(angleDeg: number): React.CSSProperties {
-  // Το εικονίδιο `Navigation` δείχνει **πάνω** στη φυσική του θέση — ίδια σύμβαση με το
-  // `angleDeg` (0° = πάνω, δεξιόστροφα), οπότε η περιστροφή είναι άμεση.
-  return { transform: `rotate(${angleDeg}deg)` };
-}
-
 function CandidateEdgeIndicators({
   placed,
   handlers,
@@ -321,15 +277,9 @@ function CandidateEdgeIndicators({
             {...candidateButtonProps(candidate, handlers)}
             className="pointer-events-auto flex items-center bg-transparent border-0 p-0 cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <Navigation
-              aria-hidden="true"
-              className={cn(
-                'h-3.5 w-3.5 shrink-0 drop-shadow',
-                handlers.highlightedRank === candidate.rank
-                  ? 'text-foreground'
-                  : 'text-foreground/70',
-              )}
-              style={arrowStyle(angleDeg)}
+            <EdgeIndicatorArrow
+              angleDeg={angleDeg}
+              highlighted={handlers.highlightedRank === candidate.rank}
             />
             <CandidateBadge
               position={candidate.position}
@@ -384,7 +334,14 @@ export function AddressMapCandidateLayer({
     for (const candidate of candidates) {
       const point = geometry.points.get(candidate.rank);
       if (!point) continue;
-      const indicator = edgeIndicatorFor(point, geometry.size, EDGE_INSET_PX);
+      /*
+        Δύο περιθώρια, δύο ερωτήματα — *«φαίνεται η πινέζα;»* και *«πού επιτρέπεται να
+        καθίσει ο δείκτης;»*. Η σύγχυσή τους ήταν το μετρημένο ελάττωμα της 05/09
+        *(δείκτης πάνω στο «δες τα όλα», 15×23 px)*, και **δεν περνούν από εδώ**: τα
+        κρατά το ίδιο το `edgeIndicatorForCandidate`, ώστε να μην υπάρχει παράμετρος να
+        ξεχαστεί — και ώστε η άγκυρα να δοκιμάζει **αυτή ακριβώς** τη διαδρομή.
+      */
+      const indicator = edgeIndicatorForCandidate(point, geometry.size);
       if (indicator) result.push({ candidate, ...indicator });
     }
     return result;
@@ -413,6 +370,13 @@ export function AddressMapCandidateLayer({
         «Δες τα όλα» — η **ρητή** πόρτα προς τη συνολική εικόνα (απόφαση Giorgio 05/09).
         Κάτω δεξιά θα έπεφτε πάνω στο «Βρες τη θέση μου» του `AddressMap`· πάνω δεξιά πάνω
         στο χειριστήριο του `InteractiveMap`. Μένει **κάτω κεντρικά**.
+
+        🔴 **ΚΑΙ ΑΚΡΙΒΩΣ ΓΙ' ΑΥΤΟ Η ΚΑΤΩ ΠΛΕΥΡΑ ΕΙΝΑΙ ΔΕΣΜΕΥΜΕΝΗ.** Ο δείκτης ενός
+        υποψήφιου **ακριβώς νότια** έπεφτε εδώ πάνω — μετρημένη επικάλυψη **15×23 px**
+        στους «Αγίους Αναργύρους», 05/09. Το `bottom-3` και το ύψος αυτού του κουμπιού
+        είναι δηλωμένα στο `FIT_BUTTON_BOX`, και το `EDGE_PLACEMENT_INSETS.bottom`
+        **υπολογίζεται από εκεί**: αν αλλάξει η θέση του κουμπιού χωρίς τη σταθερά, την
+        ασυμφωνία τη δείχνει άγκυρα, όχι η οθόνη.
       */}
       <button
         type="button"
