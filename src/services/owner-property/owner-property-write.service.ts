@@ -53,6 +53,7 @@ import {
 } from '@/lib/owner-property/listing-custody';
 import { nowISO } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
+import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
 import { republishOwnerProperty } from '@/services/owner-property/owner-property-publication.service';
 import { PLACE_REF_TREATMENT, verifyPlaceRef } from '@/services/places/public-place-read.service';
 import {
@@ -245,8 +246,10 @@ async function loadAdministrable(
     .doc(ownerPropertyId)
     .get();
 
-  const property = snapshot.data() as OwnerProperty | undefined;
-  if (property === undefined || !mayAdminister(custodyOf(property), actor)) return null;
+  // 🔴 **ΤΟ ΣΥΝΟΡΟ** (ADR-842 §7.6.12) — ίδια έκβαση, κανονικοποιημένο είδος, και η
+  //    ταυτότητα δεμένη εδώ αντί να λείπει.
+  const property = ownerPropertyFromDocument(snapshot.data(), ownerPropertyId);
+  if (property === null || !mayAdminister(custodyOf(property), actor)) return null;
   return property;
 }
 
@@ -385,8 +388,8 @@ export async function setOwnerPropertyMandate(
   try {
     outcome = await adminDb.runTransaction(async (tx) => {
       const snapshot = await tx.get(ref);
-      const existing = snapshot.data() as OwnerProperty | undefined;
-      if (existing === undefined) return { kind: 'absent' } as const;
+      const existing = ownerPropertyFromDocument(snapshot.data(), ownerPropertyId);
+      if (existing === null) return { kind: 'absent' } as const;
 
       // 🔑 **Ο ΚΡΙΤΗΣ ΔΕΝ ΖΕΙ ΕΔΩ** (ADR-827 §9.21): ζει στο `mandateWriteVerdict`,
       //    γιατί η **συναλλαγή της αποδοχής** του Σ3 δεν μπορεί να καλέσει αυτή τη

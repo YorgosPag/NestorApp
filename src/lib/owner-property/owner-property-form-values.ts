@@ -48,6 +48,7 @@ import { geoPointSchema, optionalNumberSchema } from '@/lib/forms/form-primitive
 import { LISTING_MATERIAL_KINDS } from '@/lib/listings/listing-material';
 import { GEOCODING_ACCURACIES, type GeocodingAccuracy } from '@/lib/geocoding/geocoding-types';
 import { isLandProperty } from '@/constants/property-classification';
+import { normalizePropertyType } from '@/constants/property-type-aliases';
 import { PROPERTY_TYPES } from '@/constants/property-types';
 import { OFFER_KINDS, type OfferKind, type PropertyOffer } from '@/types/property-offers';
 import type {
@@ -327,7 +328,13 @@ export function ownerPropertyDraftFrom(
 
   return {
     title: values.title.trim(),
-    type: values.type as OwnerPropertyDraft['type'],
+    // 🔴 **ΚΑΝΟΝΙΚΟΠΟΙΗΣΗ, ΟΧΙ ΙΣΧΥΡΙΣΜΟΣ** (ADR-842 §7.6.12). Ήταν `as` πάνω σε
+    // `z.string()` — δηλαδή «πίστεψέ με» πάνω σε **ό,τι κι αν** έστειλε η φόρμα. Οι
+    // επιλογές του καταλόγου είναι ήδη κανονικές, άρα η πράξη είναι **ταυτοτική**·
+    // αυτό που αλλάζει είναι ότι πλέον **αποδεικνύεται** αντί να δηλώνεται. Άλυτη
+    // τιμή δίνει `null`, και ο `z.enum(PROPERTY_TYPES)` του προσχεδίου την απορρίπτει
+    // ονομαστικά — ποτέ σιωπηλό `'apartment'`.
+    type: normalizePropertyType(values.type),
     areaSqm: values.areaSqm,
     floor: land ? null : values.floor,
     bedrooms: land ? null : values.bedrooms,
@@ -370,7 +377,12 @@ export function ownerPropertyFormFrom(
 
   return {
     title: property.title,
-    type: property.type,
+    // 🔑 **ΔΥΟ ΔΙΑΦΟΡΕΤΙΚΑ «ΔΕΝ ΞΕΡΩ», ΚΑΙ Η ΓΕΦΥΡΑ ΤΟΥΣ ΖΕΙ ΕΔΩ** (ADR-842 §7.6.12):
+    // το `null` του εγγράφου σημαίνει *«η αποθηκευμένη τιμή δεν λύθηκε ή δεν υπάρχει»*·
+    // το `''` της φόρμας σημαίνει *«ο άνθρωπος δεν έχει απαντήσει ακόμη»*. Η οθόνη
+    // ξεκινά **κενή** και ο δικός της κωδικός (`type-missing`) ζητά επιλογή — που είναι
+    // ακριβώς η σωστή πράξη για ένα έγγραφο με αγνώριστο είδος.
+    type: property.type ?? '',
     areaSqm: property.areaSqm,
     floor: property.floor,
     bedrooms: property.bedrooms,

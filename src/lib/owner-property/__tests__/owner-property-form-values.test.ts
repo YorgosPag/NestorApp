@@ -14,6 +14,7 @@ import {
   type OwnerPropertyFormValues,
 } from '../owner-property-form-values';
 import { validateOwnerPropertyForm } from '../owner-property-form-validation';
+import { ownerPropertyInvariantViolations } from '@/types/owner-property-invariants';
 import { offerOf, validOwnerProperty } from './owner-property-fixtures';
 
 /** Ένα φορτίο φόρμας που περνά — η βάση κάθε δοκιμής. */
@@ -133,15 +134,29 @@ describe('ownerPropertyDraftFrom — επίπεδη φόρμα → διακρι�
   it('🔴 Μ2β2 — ΩΜΗ ΠΑΛΑΙΑ ΤΙΜΗ ⇒ ο ΙΔΙΟΣ μηδενισμός (ADR-842 §7.6.11)', () => {
     // 🔑 **Το σκέλος που διαφοροποιεί.** Το Μ2β από πάνω περνά `'plot'` — κανονική
     // τιμή, άρα ήταν **πράσινο και με τον ασθενή κριτή**. Εδώ περνά ό,τι κουβαλά ένα
-    // **παλιό έγγραφο Firestore** (`'Οικόπεδο'`), που το ίδιο το `PropertyType`
-    // επιτρέπει ρητά *«για συμβατότητα με παλιά έγγραφα»* — και μέχρι το §7.6.11 το
+    // **παλιό έγγραφο Firestore** (`'Οικόπεδο'`) — και μέχρι το §7.6.11 το
     // `isLandPropertyType` απαντούσε **«όχι γη»**, οπότε ο μηδενισμός **δεν έτρεχε**
     // και γραφόταν κυριολεκτικά «οικόπεδο στον 3ο όροφο».
     //
-    // ⚠️ Η διαδρομή είναι **πραγματική, όχι κατασκευασμένη**: το `ownerPropertyFormFrom`
-    // γράφει `type: property.type` **αυτούσιο** και το πεδίο της φόρμας είναι
-    // `z.string()` — δηλαδή μια παλιά αγγελία που ανοίγει για επεξεργασία φτάνει εδώ
-    // με ακριβώς αυτή την τιμή.
+    // ⚠️ **ΠΡΟΣΕΞΕ ΟΤΙ ΕΔΩ ΔΕΝ ΧΡΕΙΑΖΕΤΑΙ ΚΑΝΕΝΑ CAST — ΚΑΙ ΑΥΤΟ ΕΙΝΑΙ ΤΟ ΕΥΡΗΜΑ**
+    // *(διορθώθηκε 2026-09-06)*: το πεδίο της φόρμας είναι **`z.string()`**, οπότε το
+    // `'Οικόπεδο'` περνά **χωρίς να διαμαρτυρηθεί ο μεταγλωττιστής**. Και δεν θα
+    // μπορούσε να διαμαρτυρηθεί αλλού: το `'Οικόπεδο'` **ΔΕΝ είναι** στο
+    // `LEGACY_GREEK_PROPERTY_TYPES` — εκείνο έχει **7** τιμές και **καμία γη**, γιατί τα
+    // `plot`/`parcel` μπήκαν 2026-08-20, πολύ αργότερα.
+    //
+    // ⇒ Η τιμή έφτανε εδώ **μόνο σε χρόνο εκτέλεσης**, από κανάλια που ο τύπος **δεν
+    // έβλεπε**: ωμές αναγνώσεις (`snap.data() as OwnerProperty` — **19** σημεία σε **14**
+    // αρχεία, μετρημένα 2026-09-06) και το `ownerPropertyFormFrom`, που έγραφε
+    // `type: property.type` **αυτούσιο**.
+    //
+    // ✅ **ΚΑΙ ΤΑ ΔΥΟ ΚΑΝΑΛΙΑ ΕΚΛΕΙΣΑΝ ΜΕ ΤΟ §8 #11** *(2026-09-06)*: οι ωμές αναγνώσεις
+    // περνούν πλέον από το `lib/owner-property/owner-property-from-document.ts`, και
+    // αυτή εδώ η γραμμή **κανονικοποιεί** αντί να ισχυρίζεται.
+    //
+    // ⚠️ **Η ΑΓΚΥΡΑ ΜΕΝΕΙ, ΚΑΙ ΓΙΝΕΤΑΙ ΠΙΟ ΧΡΗΣΙΜΗ**: το πεδίο της φόρμας είναι **ακόμη**
+    // `z.string()`, δηλαδή ο μεταγλωττιστής εξακολουθεί να μη βλέπει τι πληκτρολογήθηκε.
+    // Αυτό το σκέλος είναι που αποδεικνύει ότι **δεν πειράζει πια**.
     const { source } = identitySource();
     const draft = ownerPropertyDraftFrom(
       parse(formValues({ type: 'Οικόπεδο', floor: 3, bedrooms: 2, areaSqm: 480 })),
@@ -151,6 +166,32 @@ describe('ownerPropertyDraftFrom — επίπεδη φόρμα → διακρι�
     expect(draft.floor).toBeNull();
     expect(draft.bedrooms).toBeNull();
     expect(draft.areaSqm).toBe(480);
+  });
+
+  it('🔴 Μ2β3 — Η ΓΕΦΥΡΑ ΤΩΝ ΔΥΟ «ΔΕΝ ΞΕΡΩ»: το κενό της ΦΟΡΜΑΣ γίνεται `null` του ΠΡΟΣΧΕΔΙΟΥ', () => {
+    // 🔴 **ΔΥΟ ΚΑΝΑΛΙΑ, ΜΙΑ ΓΕΦΥΡΑ, ΚΑΙ ΖΕΙ ΕΔΩ** (ADR-842 §7.6.12 / §8 #11):
+    //
+    //   κενό   → ΦΟΡΜΑ     «ο άνθρωπος δεν απάντησε **ακόμη**» (controlled input)
+    //   `null` → ΠΡΟΣΧΕΔΙΟ «δεν υπάρχει λυμένο είδος»
+    //
+    // ⚠️ **Αυτός ο μεταφραστής είναι ο ΜΟΝΟΣ που τα ενώνει.** Αν κάποια μέρα ξεχάσει την
+    //    κανονικοποίηση, το κενό θα ταξίδευε ως «είδος» και το `type-missing` θα
+    //    εξαφανιζόταν **σιωπηλά** — δηλαδή η φόρμα θα δεχόταν αγγελία **χωρίς είδος**.
+    const { source } = identitySource();
+    const draft = ownerPropertyDraftFrom(parse(formValues({ type: '' })), source);
+
+    expect(draft.type).toBeNull();
+    expect(ownerPropertyInvariantViolations(draft)).toContain('type-missing');
+  });
+
+  it('🔑 Μ2β4 — ο ΠΑΡΟΝΟΜΑΣΤΗΣ: κανονική τιμή περνά, και ΔΕΝ κατηγορείται', () => {
+    // Χωρίς αυτό, το Μ2β3 θα ήταν πράσινο ακόμη κι αν ο μεταφραστής επέστρεφε **πάντα**
+    // `null` — «πράσινο επειδή κανείς δεν κοίταξε».
+    const { source } = identitySource();
+    const draft = ownerPropertyDraftFrom(parse(formValues({ type: 'maisonette' })), source);
+
+    expect(draft.type).toBe('maisonette');
+    expect(ownerPropertyInvariantViolations(draft)).not.toContain('type-missing');
   });
 
   it('Μ2γ — σε ΧΤΙΣΜΕΝΗ μονάδα τα ίδια πεδία περνούν άθικτα', () => {

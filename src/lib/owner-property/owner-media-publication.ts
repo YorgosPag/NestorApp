@@ -32,6 +32,7 @@ import {
   isFloorplanMaterial,
   type ListingMaterial,
 } from '@/lib/listings/listing-material';
+import { promoteToFront } from '@/lib/ordering/declared-order';
 
 /**
  * **Τα αρχεία που ο άνθρωπος διάλεξε, ΣΤΗ ΣΕΙΡΑ ΤΟΥ**, κομμένα στο όριο.
@@ -131,14 +132,18 @@ export function isLeadOwnerMedia(
  * βλέπει ο κάτοχος **είναι** η σειρά που φεύγει· δεν υπάρχει δεύτερη λίστα να μείνει
  * πίσω.
  *
- * ⚠️ Άγνωστο μονοπάτι ⇒ **ο ίδιος πίνακας, αμετάβλητος**. Μια «διόρθωση» εδώ
- * (π.χ. σιωπηλή προσθήκη) θα έγραφε στη φόρμα κατάσταση που κανείς δεν ζήτησε.
+ * 🔴 **ΑΓΝΩΣΤΟ ΜΟΝΟΠΑΤΙ ⇒ Ο ΙΔΙΟΣ ΠΙΝΑΚΑΣ, ΑΜΕΤΑΒΛΗΤΟΣ** — και η πολιτική γράφεται
+ * **εδώ**, όχι μέσα στη μηχανή (ADR-841 §7 Α14.7.4). Μια «διόρθωση» με σιωπηλή προσθήκη
+ * θα έγραφε στη φόρμα κατάσταση που κανείς δεν ζήτησε: αυτός ο πίνακας **είναι** η
+ * συμμετοχή *(Α2.1)*, άρα προσθήκη εδώ σημαίνει **δημοσίευση**.
+ *
+ * ⚠️ **Η αντίθετη πλευρά επιλέγει το αντίθετο, με δικαίωμα**: η δήλωση σειράς του
+ * γραφείου *(`withDeclaredFirst`)* βάζει το άγνωστο κλειδί **μπροστά**, γιατί εκεί η
+ * δήλωση **δεν** είναι συμμετοχή. Ίδια μηχανή, ρητά διαφορετικός λόγος.
  */
 export function withOwnerMediaFirst(
   media: readonly OwnerPropertyMedia[],
   storagePath: string,
 ): readonly OwnerPropertyMedia[] {
-  const target = media.find((item) => item.storagePath === storagePath);
-  if (target === undefined) return media;
-  return [target, ...media.filter((item) => item.storagePath !== storagePath)];
+  return promoteToFront(media, (item) => item.storagePath, storagePath) ?? media;
 }
