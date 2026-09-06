@@ -28,7 +28,7 @@
     "src/i18n/generated/routes/terms.el.json": "481f837696b407553f56de16128778617a86f72cf7b27471d61cd5793cf7d288",
     "src/i18n/generated/routes/test-harness__listing-shapes.el.json": "0a342a84a1d24b4b7068e33a0e303cd6c22e437cc38be31b5a63e33c4089cd6b",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "1c139052569b79d1fafc1aca186b442b95fa1bdbdf34910e9b031483825b5125",
+    "src/i18n/generated/shell-slice.el.json": "a693f7a235e9d48ad93ae64bbcba607207bc579db495ab8ee0816264510b59f5",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "boundaries": {
@@ -67,7 +67,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "9b4f1c7e2f02c6a421bbb636b1b006a8c1a4ef32a1505bfeacf720d5afe14bba",
+  "inputsSha256": "8020d1ff74f1c2acfc111a7ef351061d79ef0dd963ab5ce71a2853ad76b7baf6",
   "languages": [
     "el"
   ],
@@ -2787,6 +2787,16 @@
     "pro__alias": {
       "page": "src/app/(light)/pro/[alias]/page.tsx",
       "wants": {
+        "common-photos": {
+          "keys": [
+            "photoPreview.navigation.nextAria",
+            "photoPreview.navigation.previousAria",
+            "photoPreview.navigation.slide",
+            "photos.galleryLabel"
+          ],
+          "prefixes": [],
+          "whole": false
+        },
         "property-market": {
           "keys": [
             "contact.first.cta",
@@ -3403,7 +3413,11 @@
         },
         "common-photos": {
           "keys": [
-            "buttons.close"
+            "buttons.close",
+            "photoPreview.navigation.nextAria",
+            "photoPreview.navigation.previousAria",
+            "photoPreview.navigation.slide",
+            "photos.galleryLabel"
           ],
           "prefixes": [],
           "whole": false
@@ -3877,7 +3891,8 @@
     "src/components/property-viewer/Logo_Pagonis.tsx": "abe960984e1f408862eae2ad7eb305b93edb6ba4f7fdcf375ef29f992c3b98ce",
     "src/components/providers/I18nProvider.tsx": "bb82ce64bdb15f688d8d20467bde1357c6e5b71afb367cf015ade7f691d841f2",
     "src/components/public-site/PublicSiteHeader.tsx": "3c0ac0bb4cfc886ac000d8bef6b37f426aabbf3d2ab866c893e76fce36e5ae1e",
-    "src/components/search-results/ListingCard.tsx": "0a12e86932bfcd09b8e6cdc26f9dbec121c36ce7dadfeba4818e80db10c9f2ef",
+    "src/components/search-results/ListingCard.tsx": "c1455c7a0afcbdd1ad5bfd94674eee0ac825208aee41387f69bc32810892403a",
+    "src/components/search-results/ListingCardGallery.tsx": "5d20b37177992106a6e20a08cd2fd4457455ece3f0d5bec3862ed5c090d9fbeb",
     "src/components/search/CoverageStatement.tsx": "3a99e80c975df088c325a5e156c3a2fa949cfcd115294297d502991a8b44eb3f",
     "src/components/search/GlobalSearchDialog.tsx": "f2f938184d386db2f647a6566216185b8544c55eda4219daa7a6215be9061761",
     "src/components/search/LandingModeSwitch.tsx": "abc34515cab9d750a6610b1a947369d0aeba2edf79fc1867098dacef2b5ddbf9",
@@ -4392,10 +4407,10 @@
   ],
   "stats": {
     "dynamicBoundaries": 18,
-    "matchedKeys": 162,
+    "matchedKeys": 166,
     "routeBoundaries": 0,
-    "shellFiles": 569,
-    "sliceBytes": 385498
+    "shellFiles": 570,
+    "sliceBytes": 385798
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
@@ -6367,6 +6382,7 @@
         "src/components/header/theme-toggle.tsx",
         "src/components/header/user-menu.tsx",
         "src/components/header/voice-assistant-button.tsx",
+        "src/components/search-results/ListingCardGallery.tsx",
         "src/components/search/GlobalSearchDialog.tsx",
         "src/components/search/SearchResultItem.tsx",
         "src/components/ui/ProductTour/product-tour-overlay.tsx",
@@ -6562,7 +6578,10 @@
         "photoPreview.contactType.service",
         "photoPreview.contactType.unknown",
         "photoPreview.navigation.next",
+        "photoPreview.navigation.nextAria",
         "photoPreview.navigation.previous",
+        "photoPreview.navigation.previousAria",
+        "photoPreview.navigation.slide",
         "photoPreview.screenReader.gallery",
         "photoPreview.screenReader.photoFrom",
         "photoPreview.screenReader.single",
@@ -6576,6 +6595,7 @@
         "photoPreview.zoom.in",
         "photoPreview.zoom.label",
         "photoPreview.zoom.out",
+        "photos.galleryLabel",
         "placeholders.search",
         "productTour.dontShowAgain",
         "productTour.finish",
@@ -8125,6 +8145,7 @@
         "src/components/listings/ListingAuthorshipLine.tsx",
         "src/components/public-site/PublicSiteHeader.tsx",
         "src/components/search-results/ListingCard.tsx",
+        "src/components/search-results/ListingCardGallery.tsx",
         "src/components/search/CoverageStatement.tsx",
         "src/components/search/LandingModeSwitch.tsx",
         "src/components/search/LandingShowcase.tsx",

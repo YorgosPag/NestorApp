@@ -36,7 +36,8 @@ import { MISSING_PRICE_KEY } from '@/lib/listings/listing-price-keys';
 import { listingDetailHref } from '@/lib/listings/listing-routes';
 import type { PublicListing } from '@/types/public-listing';
 import { formatCurrency, formatList } from '@/lib/intl-formatting';
-import { listingImageSrcSet, listingLeadImage } from '@/lib/listings/listing-images';
+import { listingGalleryImages } from '@/lib/listings/listing-images';
+import { ListingCardGallery } from '@/components/search-results/ListingCardGallery';
 import type { ListingFocusStrength } from '@/lib/listings/listing-focus';
 import { LISTING_CARD_ID_ATTRIBUTE } from '@/hooks/listings/useListingRevealTracking';
 import { ListingAuthorshipLine } from '@/components/listings/ListingAuthorshipLine';
@@ -188,7 +189,8 @@ export function ListingCard({
 }: ListingCardProps) {
   const { t } = useTranslation(['search-results']);
   const price = resolveDisplayPrice(listing);
-  const image = listingLeadImage(listing);
+  const images = listingGalleryImages(listing);
+  const href = listingDetailHref(listing.id, filterQuery);
 
   return (
     /*
@@ -200,32 +202,48 @@ export function ListingCard({
       (`LISTING_CARD_ID_ATTRIBUTE`).
     */
     <li {...{ [LISTING_CARD_ID_ATTRIBUTE]: listing.id }}>
-      <Link
-        href={listingDetailHref(listing.id, filterQuery)}
+      {/*
+        🔴 **Η ΚΑΡΤΑ ΕΠΑΨΕ ΝΑ ΕΙΝΑΙ ΕΝΑΣ ΤΕΡΑΣΤΙΟΣ ΣΥΝΔΕΣΜΟΣ** (§8.57).
+
+        Μέχρι σήμερα **ολόκληρη** η κάρτα ήταν τυλιγμένη σε `<Link>`: εικόνα, τίτλος,
+        τιμή, χαρακτηριστικά, υπογραφή. Δούλευε — μέχρι τη στιγμή που η φωτογραφία
+        απέκτησε **βελάκια**, δηλαδή κουμπιά. Ένα `<button>` μέσα σε `<a>` είναι
+        **άκυρο HTML**: η σειρά του `Tab` σπάει και ο αναγνώστης οθόνης εκφωνεί
+        «*σύνδεσμος: προηγούμενη φωτογραφία Μεζονέτα 95 τ.μ. 200.000 €…*».
+
+        ⚠️ Και το τύλιγμα ήταν **ήδη** ελάττωμα πριν από τα βελάκια: ο Adrian Roselli
+        το μέτρησε — με τα πάντα μέσα στον σύνδεσμο, η βοηθητική τεχνολογία διαβάζει
+        **ολόκληρη τη συμβολοσειρά της κάρτας** σε κάθε στάση του `Tab` (~25 δευτ.).
+
+        🔑 **Η λύση είναι CSS, όχι HTML**: ο σύνδεσμος ζει στον **τίτλο** και απλώνεται
+        πάνω σε όλη την κάρτα με `::after { inset: 0 }`. Μία στάση στο `Tab`, μία
+        ανακοίνωση («ο τίτλος»), και τα βελάκια είναι **πραγματικά κουμπιά** από πάνω
+        του. Το κλικ οπουδήποτε αλλού στην κάρτα ανοίγει την αγγελία, όπως πριν.
+      */}
+      <article
         onMouseEnter={() => onHover?.(listing.id)}
         onMouseLeave={() => onHover?.(null)}
-        onFocus={() => onHover?.(listing.id)}
-        onBlur={() => onHover?.(null)}
-        className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        /*
+          🔴 **ΔΥΟ ΒΑΘΜΙΔΕΣ ΕΝΤΑΣΗΣ, ΚΑΙ ΚΑΜΙΑ ΔΕΝ ΕΙΝΑΙ ΜΟΝΟ ΧΡΩΜΑ** (CHECK 3.41 /
+          WCAG 1.4.1). Το `peeked` αλλάζει **μόνο** το περίγραμμα· το `selected`
+          προσθέτει **δεύτερο κανάλι** — γέμισμα **και** δακτύλιο. Αν η διαφορά ήταν
+          δύο αποχρώσεις του ίδιου χρώματος, θα ήταν αδιάκριτη για όποιον δεν τις
+          ξεχωρίζει, και θα εξαφανιζόταν σε ασπρόμαυρη εκτύπωση — το ίδιο σκεπτικό
+          που κάνει τα πέντε σχήματα του χάρτη να διαφέρουν σε **μέγεθος**.
+        */
+        className={[
+          'relative rounded-lg border bg-card p-3 transition-colors',
+          // Ο δακτύλιος εστίασης ήταν στο `<Link>` που τύλιγε τα πάντα· τώρα ο
+          // σύνδεσμος είναι μικρός (ο τίτλος) και **αόρατος** ως περίγραμμα, οπότε
+          // τον δακτύλιο τον φοράει η κάρτα όταν κάποιο παιδί της έχει εστίαση.
+          'has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-ring has-[a:focus-visible]:ring-offset-1 has-[a:focus-visible]:ring-offset-background',
+          focusStrength === 'selected'
+            ? 'border-ring bg-accent ring-2 ring-ring ring-offset-1 ring-offset-background'
+            : focusStrength === 'peeked'
+              ? 'border-ring bg-accent/40'
+              : 'border-border',
+        ].join(' ')}
       >
-        <article
-          /*
-            🔴 **ΔΥΟ ΒΑΘΜΙΔΕΣ ΕΝΤΑΣΗΣ, ΚΑΙ ΚΑΜΙΑ ΔΕΝ ΕΙΝΑΙ ΜΟΝΟ ΧΡΩΜΑ** (CHECK 3.41 /
-            WCAG 1.4.1). Το `peeked` αλλάζει **μόνο** το περίγραμμα· το `selected`
-            προσθέτει **δεύτερο κανάλι** — γέμισμα **και** δακτύλιο. Αν η διαφορά ήταν
-            δύο αποχρώσεις του ίδιου χρώματος, θα ήταν αδιάκριτη για όποιον δεν τις
-            ξεχωρίζει, και θα εξαφανιζόταν σε ασπρόμαυρη εκτύπωση — το ίδιο σκεπτικό
-            που κάνει τα πέντε σχήματα του χάρτη να διαφέρουν σε **μέγεθος**.
-          */
-          className={[
-            'rounded-lg border bg-card p-3 transition-colors',
-            focusStrength === 'selected'
-              ? 'border-ring bg-accent ring-2 ring-ring ring-offset-1 ring-offset-background'
-              : focusStrength === 'peeked'
-                ? 'border-ring bg-accent/40'
-                : 'border-border',
-          ].join(' ')}
-        >
           {/*
             🔴 **Η ΚΑΡΤΑ ΑΠΕΚΤΗΣΕ ΕΙΚΟΝΑ** (ADR-841 §7 Α2) — μέχρι σήμερα η οθόνη
             αποτελεσμάτων ήταν **λίστα κειμένου**, με μηδέν `<img>`.
@@ -240,23 +258,45 @@ export function ListingCard({
             Το `object-cover` κόβει τη διαφορά — όπως ακριβώς κάνει η Zillow στα
             thumbnails των αποτελεσμάτων (~4:3).
           */}
-          {image !== null && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={image.url}
-              srcSet={listingImageSrcSet(image)}
-              sizes={imageSizes}
-              width={image.width}
-              height={image.height}
-              alt={t(image.altKey, { index: 1, total: listing.gallery.length })}
-              loading={priority ? 'eager' : 'lazy'}
-              fetchPriority={priority ? 'high' : 'auto'}
-              decoding="async"
-              className="mb-2 aspect-[4/3] w-full rounded-md border border-border object-cover"
-            />
-          )}
+          <ListingCardGallery
+            images={images}
+            sizes={imageSizes}
+            priority={priority}
+            className="mb-2"
+            /*
+              🔑 **Ο ΣΥΝΔΕΣΜΟΣ ΤΗΣ ΦΩΤΟΓΡΑΦΙΑΣ ΕΙΝΑΙ ΠΛΕΟΝΑΣΜΑΤΙΚΟΣ, ΚΑΙ ΤΟ ΔΗΛΩΝΕΙ.**
+              Ο κύλινδρος κάθεται **πάνω** από το αόρατο `::after` του τίτλου — αλλιώς
+              το δάχτυλο θα ακουμπούσε τον σύνδεσμο και **δεν θα γινόταν ποτέ swipe**.
+              Άρα η φωτογραφία χρειάζεται δικό της σύνδεσμο για να παραμείνει κλικαρίσιμη.
 
-          <h3 className="truncate text-sm font-medium text-foreground">{listing.title}</h3>
+              ⚠️ `tabIndex={-1}` + `aria-hidden`: **δεύτερη διαδρομή για το ποντίκι, μηδέν
+              κόστος για το πληκτρολόγιο**. Χωρίς αυτά θα προσθέταμε 9 επιπλέον στάσεις
+              `Tab` και 9 διπλές εκφωνήσεις του ίδιου προορισμού σε μία οθόνη. Είναι το
+              καθιερωμένο «redundant link» — ο τίτλος παραμένει ο **ένας** ονομαστικός.
+            */
+            renderSlideLink={(picture) => (
+              <Link href={href} tabIndex={-1} aria-hidden="true" className="block">
+                {picture}
+              </Link>
+            )}
+          />
+
+          <h3 className="truncate text-sm font-medium text-foreground">
+            <Link
+              href={href}
+              onFocus={() => onHover?.(listing.id)}
+              onBlur={() => onHover?.(null)}
+              /*
+                ⚠️ **Το `::after` ΕΙΝΑΙ η επιφάνεια κλικ της κάρτας.** Το `inset-0`
+                απλώνεται στον πλησιέστερο τοποθετημένο πρόγονο — γι' αυτό το `<article>`
+                είναι `relative`. Χωρίς εκείνο το `relative`, ο σύνδεσμος θα κάλυπτε
+                **ολόκληρη τη σελίδα**.
+              */
+              className="after:absolute after:inset-0 after:rounded-lg focus-visible:outline-none"
+            >
+              {listing.title}
+            </Link>
+          </h3>
 
           <p className="mt-1 text-base font-semibold text-foreground">
             {price.kind === 'priced'
@@ -352,8 +392,7 @@ export function ListingCard({
               className="mt-2 text-xs text-muted-foreground"
             />
           ) : null}
-        </article>
-      </Link>
+      </article>
     </li>
   );
 }

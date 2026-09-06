@@ -39,7 +39,7 @@ import React from 'react';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { LISTING_MATERIAL_KEYS } from '@/lib/listings/listing-authorship';
-import { listingImageSrcSet, listingLeadImage } from '@/lib/listings/listing-images';
+import { listingGalleryImages, listingImageSrcSet } from '@/lib/listings/listing-images';
 import type { ListingImage, PublicListing } from '@/types/public-listing';
 
 /** Τα `sizes` της **κορυφαίας** εικόνας — μία στήλη σε κινητό, ~2/3 της διάταξης σε οθόνη. */
@@ -50,22 +50,34 @@ const THUMB_SIZES = '(min-width: 1024px) 20vw, 45vw';
 
 export function ListingGallery({ listing }: { readonly listing: PublicListing }) {
   const { t } = useTranslation(['search-results']);
-  const lead = listingLeadImage(listing);
 
-  if (lead === null) {
+  /*
+    🔑 **Ο ΥΠΟΛΟΓΙΣΜΟΣ ΕΦΥΓΕ ΑΠΟ ΕΔΩ** (§8.57). Εδώ έγραφε
+    `listing.gallery.filter((i) => i.url !== lead.url)` **μέσα στο σώμα του component**
+    — δηλαδή η απάντηση στο *«ποιες είναι οι υπόλοιπες και με ποια σειρά;»* ζούσε
+    **μόνο σε αυτή την οθόνη**, ενώ η αδελφή της (*«ποια είναι η πρώτη;»*) είχε ήδη
+    σπίτι στο `listing-images`. Όταν η **κάρτα** της λίστας απέκτησε περιήγηση
+    φωτογραφιών, ρώτησε το ίδιο πράγμα — και δύο απαντήσεις για ένα ερώτημα είναι
+    ελεύθερες να αποκλίνουν (N.0.2). Το σκεπτικό *«ποτέ `slice(1)` πάνω στη
+    `gallery`»* **δεν χάθηκε**: μετακόμισε στο `listingGalleryImages`, που το τηρεί
+    για **κάθε** καταναλωτή αντί για έναν.
+
+    ⚠️ **Και ο μετρητής ήταν ήδη λάθος για μια εποχή που έρχεται**: το `total` μετρούσε
+    `listing.gallery.length`, αγνοώντας το `coverImage`. Σήμερα είναι `null` παντού και
+    δεν φαίνεται· μόλις η Φ4 παραγάγει εξώφυλλο, η οθόνη θα ζωγράφιζε **N+1** εικόνες
+    λέγοντας «από N». Τώρα ο αριθμός βγαίνει από **τον ίδιο** πίνακα που ζωγραφίζεται.
+  */
+  const images = listingGalleryImages(listing);
+  const [lead, ...rest] = images;
+  const total = images.length;
+
+  if (lead === undefined) {
     return (
       <p className="rounded-lg border border-dashed border-border bg-muted/40 p-4 text-sm text-muted-foreground">
         {t('search-results:detail.media.absent')}
       </p>
     );
   }
-
-  // 🔑 **Οι υπόλοιπες είναι «η συλλογή ΧΩΡΙΣ την κορυφαία»**, και ο κριτής της
-  //    κορυφαίας είναι ο ίδιος με της κάρτας. Ένα `slice(1)` εδώ θα ήταν λάθος όταν
-  //    κάποτε υπάρξει `coverImage`: τότε η κορυφαία **δεν** είναι η `gallery[0]`, και
-  //    η πρώτη φωτογραφία του κατόχου θα εξαφανιζόταν σιωπηλά.
-  const rest = listing.gallery.filter((image) => image.url !== lead.url);
-  const total = listing.gallery.length;
 
   return (
     <section aria-label={t('search-results:detail.media.title')} className="flex flex-col gap-2">

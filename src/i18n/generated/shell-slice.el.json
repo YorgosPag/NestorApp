@@ -2533,7 +2533,10 @@
       },
       "navigation": {
         "next": "Επόμενη φωτογραφία",
-        "previous": "Προηγούμενη φωτογραφία"
+        "nextAria": "Επόμενη φωτογραφία ({current}/{total})",
+        "previous": "Προηγούμενη φωτογραφία",
+        "previousAria": "Προηγούμενη φωτογραφία ({current}/{total})",
+        "slide": "{current} από {total}"
       },
       "screenReader": {
         "gallery": "Προβολή φωτογραφίας {current} από {total}. {contactInfo}Χρησιμοποιήστε τα βέλη για πλοήγηση.",
@@ -2556,6 +2559,9 @@
         "label": "Μεγέθυνση:",
         "out": "Μικρότερο"
       }
+    },
+    "photos": {
+      "galleryLabel": "Γκαλερί φωτογραφιών"
     }
   },
   "common-shared": {

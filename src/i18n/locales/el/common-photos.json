@@ -35,7 +35,8 @@
       "previous": "Προηγούμενη φωτογραφία",
       "previousAria": "Προηγούμενη φωτογραφία ({current}/{total})",
       "next": "Επόμενη φωτογραφία",
-      "nextAria": "Επόμενη φωτογραφία ({current}/{total})"
+      "nextAria": "Επόμενη φωτογραφία ({current}/{total})",
+      "slide": "{current} από {total}"
     },
     "zoom": {
       "out": "Μικρότερο",

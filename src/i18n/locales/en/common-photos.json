@@ -35,7 +35,8 @@
       "previous": "Previous photo",
       "previousAria": "Previous photo ({current}/{total})",
       "next": "Next photo",
-      "nextAria": "Next photo ({current}/{total})"
+      "nextAria": "Next photo ({current}/{total})",
+      "slide": "{current} of {total}"
     },
     "zoom": {
       "out": "Zoom out",
