@@ -9356,3 +9356,60 @@ locales)*.
 
 🔶 **ΤΙ ΜΕΝΕΙ ΓΙΑ ΤΟΝ ΑΝΘΡΩΠΟ**: ένα κλικ σε πινέζα στο `/search/results`. Είναι δύο
 δευτερόλεπτα για τον Giorgio και ήταν τέσσερις αποτυχίες για το εργαλείο.
+
+---
+
+#### 8.58.6 🔴 BOY SCOUT — **ΤΟ ΣΥΝΟΡΟ ΤΟΥ §8.56 ΕΙΧΕ ΣΚΟΤΩΣΕΙ ΕΝΑ SUITE, ΚΑΙ ΚΑΝΕΙΣ ΔΕΝ ΤΟ ΗΞΕΡΕ**
+
+Βρέθηκε **παρεμπιπτόντως**, τρέχοντας τους γείτονες των αλλαγών αυτής της συνεδρίας.
+Δεν είναι δικό της εύρημα προς διόρθωση — είναι **παλινδρόμηση της προηγούμενης**:
+
+```
+FAIL src/components/mandate/__tests__/agency-showcase-denial.test.tsx
+  ● Test suite failed to run
+    TypeError: window.URL.createObjectURL is not a function
+    at Object.<anonymous> (src/lib/maps/maplibre.ts:91)
+```
+
+**Η αλυσίδα, μετρημένη**: `agency-showcase-denial.test` → `AgencyShowcaseContent` →
+`PlaceIdentityField` → `PlaceChooser` → `PlaceMap` → **`lib/maps/maplibre`**.
+
+🔴 **Η αιτία είναι το ίδιο το σύνορο του §8.56**, και το `git show` το δείχνει σε μία γραμμή:
+
+```diff
+- } from 'react-map-gl/maplibre';
+- import 'maplibre-gl/dist/maplibre-gl.css';
++ } from '@/lib/maps/maplibre';
+```
+
+Πριν, το `PlaceMap` εισήγαγε **μόνο React**. Το σύνορο προσθέτει
+`export { LngLatBounds, Marker } from 'maplibre-gl'` — δηλαδή σέρνει την **προστακτική**
+βιβλιοθήκη σε **κάθε** αρχείο που το αγγίζει, και εκείνη καλεί `URL.createObjectURL` σε
+**χρόνο φόρτωσης module** *(worker από Blob)*. Το jsdom δεν το υλοποιεί **ποτέ**.
+
+⚠️ **Η ΑΠΟΦΑΣΗ ΤΟΥ §8.56 ΠΑΡΑΜΕΝΕΙ ΣΩΣΤΗ** *(«η επιφάνεια βγαίνει ΜΑΖΙ με το στυλ της»)*.
+Το σφάλμα δεν ήταν το σύνορο — ήταν ότι **η ζημιά σε γείτονα δεν φάνηκε πουθενά**: το
+`agency-showcase-denial.test.tsx` **δεν άλλαξε από τις 2026-09-02** και **σταμάτησε να
+τρέχει** σιωπηλά. Είναι **ακριβώς** η κλάση που το ADR-587 καταγράφει στην ενότητα 6.1 *(«11 tests κόκκινα στο main
+επί ~6 commits, επειδή κανένα gate δεν τα έτρεχε»)*.
+
+🔑 **Και το ύπουλο δεν ήταν το κόκκινο — ήταν το ΠΡΑΣΙΝΟ ΤΩΝ ΤΡΙΩΝ ΓΕΙΤΟΝΩΝ.** Μετρήθηκε
+ότι `PlaceIdentityField.render` · `OwnerPropertyPlaceField.render` ·
+`DemandFrontageField.gesture` περνούν **όλα** — επειδή **τυχαίνει** να mock-άρουν το
+σύνορο. Δηλαδή τρία «πράσινα» που σήμαιναν *«δεν κοίταξα»*, **πέμπτη** εμφάνιση του
+σχήματος που το `CLAUDE.md` καταγράφει σε N.11 · N.12 · N.18.
+
+✅ **Η ΔΙΟΡΘΩΣΗ ΖΕΙ ΣΤΟ `jest.setup.js`, ΟΧΙ ΣΕ MOCK ΤΟΥ ΤΕΣΤ** — και η επιλογή έπεται
+από το προηγούμενο: ένα τέταρτο mock θα ήταν **τέταρτη τυχαία επιβίωση**, όχι λύση.
+Ακολουθεί το **υπάρχον** μοτίβο του αρχείου *(TextEncoder · CompressionStream · Blob ·
+fetch: «δανείζονται μόνο όταν λείπουν»)* και δεν αντικαθιστά ποτέ υπάρχουσα υλοποίηση
+jsdom *(μάθημα του `Blob`: η αντικατάσταση σπάει brand-checks — 19 τεστ κόκκινα)*.
+
+**Μέτρηση μετά**: `agency-showcase-denial` **PASS** · ευρεία σάρωση
+*(`mandate` · `geo` · `search-results` · `listings` · `owner-property/form` ·
+`demand/form`)* = **36 suites / 347 tests, όλα πράσινα**. Καμία παλινδρόμηση από το
+polyfill — είναι **προσθετικό μόνο**.
+
+🔶 **ΜΕΝΕΙ ΑΝΟΙΧΤΟ, ΚΑΙ ΕΙΝΑΙ ΤΟ ΠΡΑΓΜΑΤΙΚΟ ΜΑΘΗΜΑ**: το κόκκινο suite έζησε στο `main`
+χωρίς να το δει κανείς. Το polyfill θεραπεύει **το σύμπτωμα**· η ερώτηση *«ποιο gate
+τρέχει τα jsdom suites σε κάθε commit;»* παραμένει αναπάντητη.

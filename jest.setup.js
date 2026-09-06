@@ -229,3 +229,40 @@ afterEach(() => {
   jest.clearAllMocks();
   localStorage.clear();
 });
+// ---------------------------------------------------------------------------
+// URL.createObjectURL / revokeObjectURL — το jsdom ΔΕΝ τα υλοποιεί, ΠΟΤΕ.
+// ---------------------------------------------------------------------------
+// 🔴 ΔΕΝ ΕΙΝΑΙ ΠΡΟΛΗΨΗ — ΕΙΝΑΙ ΜΕΤΡΗΜΕΝΟ ΚΟΚΚΙΝΟ SUITE ΣΤΟ `main` (2026-09-06).
+//
+// Η `maplibre-gl` τα καλεί σε **χρόνο φόρτωσης module** (φτιάχνει worker από Blob), οπότε
+// η αποτυχία δεν είναι «ένα τεστ έπεσε» αλλά **«το suite δεν έτρεξε καθόλου»**:
+//   TypeError: window.URL.createObjectURL is not a function
+//
+// ⚠️ **ΚΑΙ Η ΑΙΤΙΑ ΕΙΝΑΙ ΤΟ ΙΔΙΟ ΤΟ ΣΥΝΟΡΟ ΤΟΥ ADR-777 §8.56.** Πριν, το `PlaceMap.tsx`
+// εισήγαγε `react-map-gl/maplibre` — καθαρό React, καμία μηχανή. Το σύνορο
+// (`lib/maps/maplibre.ts`) προσθέτει `export { LngLatBounds, Marker } from 'maplibre-gl'`,
+// δηλαδή σέρνει την **προστακτική** βιβλιοθήκη σε **κάθε** αρχείο που το αγγίζει. Σωστή
+// απόφαση για τον περιηγητή (η επιφάνεια βγαίνει ΜΑΖΙ με το στυλ της)· στο jsdom όμως
+// έγινε **αόρατη ζημιά σε γείτονα**: το `agency-showcase-denial.test.tsx` δεν άλλαξε από
+// τις 2026-09-02 και **σταμάτησε να τρέχει** χωρίς κανείς να το γράψει πουθενά.
+//
+// 🔑 Γι' αυτό το polyfill ζει **εδώ, μία φορά**, και όχι σε mock του κάθε test: οι τρεις
+// γείτονες που **επιβίωσαν** (`PlaceIdentityField.render` · `OwnerPropertyPlaceField.render`
+// · `DemandFrontageField.gesture`) επιβίωσαν επειδή **τυχαίνει** να mock-άρουν το σύνορο.
+// Ένα ακόμη mock θα ήταν τέταρτη τυχαία επιβίωση — όχι λύση.
+//
+// ⚠️ **Επιστρέφει ΨΕΥΤΙΚΟ URL, και δεν προσποιείται τίποτα άλλο**: κανένα τεστ δεν
+// **διαβάζει** από αυτό το URL — μόνο η MapLibre το ζητά για να γεννήσει worker που στο
+// jsdom δεν τρέχει ούτως ή άλλως. Ένα «ρεαλιστικό» blob store εδώ θα ήταν μηχανή που
+// κανείς δεν χρησιμοποιεί.
+//
+// ⚠️ **Μόνο όταν λείπει** — ίδιο μοτίβο με TextEncoder / CompressionStream / Blob / fetch
+// από πάνω. Αν κάποια μέρα το jsdom τα αποκτήσει, δεν τα αντικαθιστούμε (μάθημα του
+// `Blob`: αντικατάσταση υπάρχουσας υλοποίησης jsdom σπάει brand-checks).
+if (typeof URL.createObjectURL !== 'function') {
+  let objectUrlCounter = 0;
+  URL.createObjectURL = () => `blob:jsdom/${++objectUrlCounter}`;
+}
+if (typeof URL.revokeObjectURL !== 'function') {
+  URL.revokeObjectURL = () => {};
+}
