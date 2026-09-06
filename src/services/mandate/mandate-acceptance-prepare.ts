@@ -34,6 +34,7 @@ import {
   type OwnerIdentity,
 } from '@/services/mandate/mandate-owner-identity';
 import type { MandateRequest } from '@/types/mandate-request';
+import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
 import type { OwnerProperty } from '@/types/owner-property';
 import {
   mandatesOf,
@@ -120,8 +121,9 @@ async function readListing(
       .doc(ownerPropertyId)
       .get();
 
-    const property = snapshot.data() as OwnerProperty | undefined;
-    if (property === undefined) return { kind: 'refused', reason: 'listing-withdrawn' };
+    // 🔴 **ΤΟ ΣΥΝΟΡΟ** (ADR-842 §7.6.12) — ίδια έκβαση, κανονικοποιημένο είδος.
+    const property = ownerPropertyFromDocument(snapshot.data(), ownerPropertyId);
+    if (property === null) return { kind: 'refused', reason: 'listing-withdrawn' };
     if (property.lifecycle !== 'listed') {
       return { kind: 'refused', reason: 'listing-withdrawn' };
     }

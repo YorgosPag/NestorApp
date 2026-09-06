@@ -74,7 +74,6 @@ import type {
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import {
-  mandatesOf,
   mandateWriteVerdict,
   nextMandateExpiry,
 } from '@/types/owner-property-mandate';
@@ -83,6 +82,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { republishOwnerProperty } from '@/services/owner-property/owner-property-publication.service';
 import type { MandateRequest } from '@/types/mandate-request';
+import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
 import type { OwnerProperty } from '@/types/owner-property';
 import type { BrokeredListingMandate } from '@/types/owner-property-mandate';
 
@@ -164,7 +164,15 @@ async function commit(
         transaction.get(propertyRef),
       ]);
 
-      const stale = casViolation(requestSnap.data(), propertySnap.data(), input.agencyCompanyId);
+      // 🔴 **ΤΟ ΣΥΝΟΡΟ ΠΡΙΝ ΤΟΝ ΚΡΙΤΗ** (ADR-842 §7.6.12). Η **απουσία εγγράφου** δεν
+      //    είναι παραβίαση CAS — είναι αποτυχία **ανάγνωσης**, και ανήκει εδώ. Η
+      //    έκβαση μένει **ταυτόσημη** (`listing-withdrawn`)· άλλαξε μόνο ποιος τη λέει.
+      const freshProperty = ownerPropertyFromDocument(propertySnap.data(), propertyRef.id);
+      if (freshProperty === null) {
+        return { kind: 'refused', reason: 'listing-withdrawn' };
+      }
+
+      const stale = casViolation(requestSnap.data(), freshProperty, input.agencyCompanyId);
       if (stale !== null) return stale;
 
       // 🔴 **ΟΙ ΚΑΤΑΛΗΨΕΙΣ ΔΙΑΒΑΖΟΝΤΑΙ ΑΠΟ ΤΟ ΦΡΕΣΚΟ ΕΓΓΡΑΦΟ ΤΗΣ ΣΥΝΑΛΛΑΓΗΣ.**
@@ -177,7 +185,7 @@ async function commit(
       //    ΔΕΔΟΜΕΝΩΝ**. Εντολή που γράφτηκε από τρίτο γραφείο στο ενδιάμεσο
       //    **εξαφανιζόταν** από τον πίνακα, γιατί η γραφή έστελνε ολόκληρο τον
       //    **παλιό** πίνακα συν τη νέα. Μια άγκυρα το μέτρησε (Α2).
-      const occupations = mandatesOf(propertySnap.data() as OwnerProperty);
+      const occupations = freshProperty.mandates;
 
       // 🔑 **Ο ΙΔΙΟΣ ΚΡΙΤΗΣ, ΞΑΝΑ, ΜΕ ΤΑ ΦΡΕΣΚΑ** — όχι δεύτερος. Η φάση 1 απαντά
       //    *«αξίζει να προσπαθήσουμε;»*· **αυτή** είναι η μόνη που δεσμεύει, γιατί
@@ -241,7 +249,7 @@ async function commit(
  */
 function casViolation(
   request: unknown,
-  property: unknown,
+  property: OwnerProperty,
   agencyCompanyId: string,
 ): Refusal | null {
   const fresh = request as MandateRequest | undefined;
@@ -253,8 +261,7 @@ function casViolation(
     return { kind: 'refused', reason: 'request-not-pending' };
   }
 
-  const listing = property as OwnerProperty | undefined;
-  if (listing === undefined || listing.lifecycle !== 'listed') {
+  if (property.lifecycle !== 'listed') {
     return { kind: 'refused', reason: 'listing-withdrawn' };
   }
   // 🔴 **Ο ΕΛΕΓΧΟΣ ΤΗΣ ΣΥΓΚΡΟΥΣΗΣ ΕΓΙΝΕ ΣΤΟ `mandateWriteVerdict`** (ADR-832), με τους

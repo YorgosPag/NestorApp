@@ -95,6 +95,7 @@ import {
 import { mandateConflicts } from '@/lib/mandate/mandate-conflict';
 import { bindingMandates, occupancyOf } from '@/types/owner-property-mandate';
 import { mandatesOf } from '@/types/owner-property-mandate';
+import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
 import type { OwnerProperty } from '@/types/owner-property';
 
 const logger = createModuleLogger('mandate-request.service');
@@ -223,7 +224,9 @@ async function loadOwnListing(
   }
 
   if (!snapshot.exists) return { kind: 'rejected', reason: 'listing-absent' };
-  const property = snapshot.data() as OwnerProperty;
+  // 🔴 **ΤΟ ΣΥΝΟΡΟ** (ADR-842 §7.6.12) — ίδια έκβαση, κανονικοποιημένο είδος.
+  const property = ownerPropertyFromDocument(snapshot.data(), ownerPropertyId);
+  if (property === null) return { kind: 'rejected', reason: 'listing-absent' };
 
   if (!mayAdminister(custodyOf(property), actor)) {
     return { kind: 'rejected', reason: 'listing-absent' };

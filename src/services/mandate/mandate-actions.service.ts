@@ -69,6 +69,7 @@ import {
   type NotifyOutcome,
 } from '@/services/mandate/mandate-invitation.service';
 import { setOwnerPropertyMandate } from '@/services/owner-property/owner-property-write.service';
+import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
 import type { OwnerProperty } from '@/types/owner-property';
 import {
   mandatesOf,
@@ -124,8 +125,9 @@ async function prepare(
   // του ίδιου ερωτήματος, που μπορούσε να αποκλίνει από την πρώτη χωρίς να το δει
   // κανείς. Ο έλεγχος «είναι όντως εντολή;» μένει ΞΕΧΩΡΙΣΤΟΣ από κάτω, γιατί είναι
   // **άλλη** ερώτηση: η θεματοφυλακή λέει ποιος διαχειρίζεται, το `mandate.kind` τι.
-  const stored = snapshot.data() as OwnerProperty | undefined;
-  if (stored === undefined) return { ok: false, reason: 'absent' };
+  // 🔴 **ΤΟ ΣΥΝΟΡΟ** (ADR-842 §7.6.12) — ίδια έκβαση (`absent`), κανονικοποιημένο είδος.
+  const stored = ownerPropertyFromDocument(snapshot.data(), ownerPropertyId);
+  if (stored === null) return { ok: false, reason: 'absent' };
   const custody = custodyOf(stored);
   if (custody.kind !== 'company' || custody.companyId !== companyId) {
     return { ok: false, reason: 'absent' };

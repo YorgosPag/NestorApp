@@ -52,6 +52,7 @@ import {
 } from '@/lib/tokens/signed-token';
 import { announceMandateDecision } from '@/services/mandate/mandate-decision-notifier.service';
 import { setOwnerPropertyMandate } from '@/services/owner-property/owner-property-write.service';
+import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
 import type { OwnerProperty } from '@/types/owner-property';
 import type { BrokeredListingMandate } from '@/types/owner-property-mandate';
 import { mandatesOf } from '@/types/owner-property-mandate';
@@ -243,8 +244,8 @@ export async function readMandateConsentRequest(
     .doc(ownerPropertyId)
     .get();
 
-  const property = snapshot.data() as OwnerProperty | undefined;
-  if (property === undefined) return { ok: false, reason: 'listing-absent' };
+  const property = ownerPropertyFromDocument(snapshot.data(), ownerPropertyId);
+  if (property === null) return { ok: false, reason: 'listing-absent' };
   if (mandatesOf(property).length === 0) return { ok: false, reason: 'not-brokered' };
 
   // 🔑 **ΤΟ NONCE ΕΙΝΑΙ Η ΤΑΥΤΟΤΗΤΑ ΤΗΣ ΠΡΟΣΚΛΗΣΗΣ** — και με τον πληθυντικό γίνεται
@@ -308,8 +309,11 @@ export async function recordMandateDecision(
     .doc(lookup.request.ownerPropertyId)
     .get();
 
-  const property = snapshot.data() as OwnerProperty | undefined;
-  if (property === undefined) return { ok: false, reason: 'listing-absent' };
+  const property = ownerPropertyFromDocument(
+    snapshot.data(),
+    lookup.request.ownerPropertyId,
+  );
+  if (property === null) return { ok: false, reason: 'listing-absent' };
 
   // 🔑 **Η ΠΡΟΣΚΛΗΣΗ ΔΙΑΛΕΓΕΙ ΤΗΝ ΕΝΤΟΛΗ** — δες `readConsentTarget`. Ο σύνδεσμος
   //    που πάτησε ο ιδιοκτήτης αφορά **μία** πρόσκληση· χωρίς αυτό το φίλτρο θα
@@ -398,8 +402,8 @@ export async function markMandateViewed(
       .doc(ownerPropertyId)
       .get();
 
-    const property = snapshot.data() as OwnerProperty | undefined;
-    if (property === undefined) return;
+    const property = ownerPropertyFromDocument(snapshot.data(), ownerPropertyId);
+    if (property === null) return;
 
     const mandate = mandatesOf(property).find((m) => m.consentNonce === consentNonce);
     if (mandate === undefined) return;

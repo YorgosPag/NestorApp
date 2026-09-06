@@ -46,7 +46,8 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { nowISO } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
 import { republishOwnerProperty } from '@/services/owner-property/owner-property-publication.service';
-import { isOwnerPropertyOnTheMarket, type OwnerProperty } from '@/types/owner-property';
+import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
+import { isOwnerPropertyOnTheMarket } from '@/types/owner-property';
 import { nextMandateExpiry } from '@/types/owner-property-mandate';
 import { mandatesOf } from '@/types/owner-property-mandate';
 
@@ -111,7 +112,10 @@ export async function retireExpiredMandates(
   let failed = 0;
 
   for (const doc of docs) {
-    const property = doc.data() as OwnerProperty;
+    // 🔴 **ΤΟ ΣΥΝΟΡΟ** (ADR-842 §7.6.12) — η ταυτότητα του εγγράφου νικά, και έγγραφο
+    //    που δεν είναι καν αντικείμενο **δεν** μετριέται ως σαρωμένη αγγελία.
+    const property = ownerPropertyFromDocument(doc.data(), doc.id);
+    if (property === null) continue;
 
     // 🔴 **Ο ΚΡΙΤΗΣ ΕΙΝΑΙ Ο ΙΔΙΟΣ ΠΟΥ ΚΡΙΝΕΙ Η ΠΡΟΒΟΛΗ.** Δεν ξαναρωτιέται εδώ «έληξε;»
     // με δεύτερη σύγκριση ημερομηνιών — θα ήταν δεύτερος κριτής για το ίδιο ερώτημα,
