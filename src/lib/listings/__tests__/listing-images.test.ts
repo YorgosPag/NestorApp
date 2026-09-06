@@ -15,7 +15,11 @@
  */
 
 import { LISTING_MATERIAL_KEYS } from '@/lib/listings/listing-authorship';
-import { listingImageSrcSet, listingLeadImage } from '@/lib/listings/listing-images';
+import {
+  listingGalleryImages,
+  listingImageSrcSet,
+  listingLeadImage,
+} from '@/lib/listings/listing-images';
 import type { ListingImage, PublicListing } from '@/types/public-listing';
 
 function image(url: string, widths: readonly number[] = [1280]): ListingImage {
@@ -84,6 +88,50 @@ describe('Ι3 — ΤΟ `alt` ΔΕΝ ΕΙΝΑΙ ΚΕΝΟ, ΚΑΙ ΕΙΝΑΙ ΚΛ�
     for (const keys of Object.values(LISTING_MATERIAL_KEYS)) {
       expect(keys.galleryAlt).not.toBe('');
       expect(keys.galleryAlt).toContain(':');
+    }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Ι4 — Η ΣΕΙΡΑ ΠΟΥ ΤΙΣ ΒΛΕΠΕΙ Ο ΑΝΘΡΩΠΟΣ (ADR-777 §8.57)
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe('Ι4 — ΟΛΕΣ οι εικόνες, με σειρά', () => {
+  it('χωρίς τίποτα ⇒ κενός πίνακας, ποτέ `[null]`', () => {
+    // Ο καταναλωτής ρωτά `images.length` για να αποφασίσει αν υπάρχει γκαλερί.
+    expect(listingGalleryImages(listing({}))).toEqual([]);
+  });
+
+  it('χωρίς παραγόμενο καρέ ⇒ ΑΚΡΙΒΩΣ η συλλογή, με τη σειρά της', () => {
+    const gallery = [image('a'), image('b'), image('c')];
+    expect(listingGalleryImages(listing({ gallery })).map((i) => i.url)).toEqual(['a', 'b', 'c']);
+  });
+
+  it('🔴 ΜΕ παραγόμενο καρέ ⇒ ΠΡΩΤΟ εκείνο, και ΚΑΜΙΑ φωτογραφία δεν χάνεται', () => {
+    // 🔑 **Η ΑΓΚΥΡΑ ΤΗΣ ΕΠΟΜΕΝΗΣ ΕΠΟΧΗΣ.** Σήμερα το `coverImage` είναι `null` σε
+    //    **όλες** τις αγγελίες (μετρημένο στη Firestore, 9/9), άρα ένα αφελές
+    //    `[cover, ...gallery.slice(1)]` θα περνούσε **πράσινο**. Μόλις η Φ4 παραγάγει
+    //    εξώφυλλο (κανόνας 31), εκείνο θα έκοβε **σιωπηλά μια αληθινή φωτογραφία**.
+    const cover = image('cover');
+    const gallery = [image('a'), image('b')];
+    const result = listingGalleryImages(listing({ coverImage: cover, gallery }));
+    expect(result.map((i) => i.url)).toEqual(['cover', 'a', 'b']);
+  });
+
+  it('🔴 το παραγόμενο καρέ ΠΟΥ ΕΙΝΑΙ ΚΑΙ ΣΤΗ ΣΥΛΛΟΓΗ δεν εμφανίζεται ΔΥΟ φορές', () => {
+    // Ο μετρητής «N από M» θα έλεγε ψέματα, και το `key={url}` θα συγκρουόταν.
+    const shared = image('a');
+    const result = listingGalleryImages(listing({ coverImage: shared, gallery: [shared, image('b')] }));
+    expect(result.map((i) => i.url)).toEqual(['a', 'b']);
+  });
+
+  it('🔑 η ΠΡΩΤΗ είναι ΠΑΝΤΑ αυτή που λέει ο ΕΝΑΣ κριτής — δύο απαντήσεις δεν αποκλίνουν', () => {
+    for (const over of [
+      { gallery: [image('a'), image('b')] },
+      { coverImage: image('cover'), gallery: [image('a')] },
+    ]) {
+      const scenario = listing(over);
+      expect(listingGalleryImages(scenario)[0]).toBe(listingLeadImage(scenario));
     }
   });
 });
