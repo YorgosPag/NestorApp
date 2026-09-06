@@ -17,21 +17,17 @@
  * @enterprise ADR-287 — Enum SSoT Centralization (Batch 25)
  */
 
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertTriangle } from 'lucide-react';
-import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { cn } from '@/lib/utils';
+import {
+  PlausibilityAlert,
+  plausibilityTypeLabel,
+} from '@/components/properties/shared/PlausibilityAlert';
 import {
   assessFinishesPlausibility,
   isActionableFinishesVerdict,
   type AssessFinishesPlausibilityArgs,
   type FinishesReason,
 } from '@/constants/finishes-plausibility';
-import {
-  PROPERTY_TYPE_I18N_KEYS,
-  type PropertyTypeCanonical,
-} from '@/constants/property-types';
 
 interface FinishesPlausibilityWarningProps
   extends AssessFinishesPlausibilityArgs {
@@ -74,7 +70,6 @@ export function FinishesPlausibilityWarning({
   className,
 }: FinishesPlausibilityWarningProps) {
   const { t } = useTranslation(['properties']);
-  const iconSizes = useIconSizes();
 
   const assessment = assessFinishesPlausibility({
     propertyType,
@@ -93,12 +88,9 @@ export function FinishesPlausibilityWarning({
   const conditionLabel = assessment.condition
     ? t(conditionLabelKey(assessment.condition))
     : '';
-  const typeKey =
-    assessment.propertyType !== null &&
-    assessment.propertyType in PROPERTY_TYPE_I18N_KEYS
-      ? PROPERTY_TYPE_I18N_KEYS[assessment.propertyType as PropertyTypeCanonical]
-      : '';
-  const typeLabel = typeKey ? t(typeKey) : '';
+  // 🔑 Η ετικέτα του είδους ζει **σε ένα σημείο** — δες `PlausibilityAlert.tsx` για το
+  //    γιατί (ADR-842 §7.6.12 · N.18: ο δίδυμος γεννήθηκε μέσα στην ίδια δέσμευση).
+  const typeLabel = plausibilityTypeLabel(t, assessment.propertyType);
 
   const reasonTemplate = reasonKey(assessment.reason);
   const reasonText = reasonTemplate
@@ -110,15 +102,11 @@ export function FinishesPlausibilityWarning({
     : '';
 
   return (
-    <Alert
-      className={cn(
-        'border-[hsl(var(--text-warning))] bg-[hsl(var(--bg-warning))]/40 text-[hsl(var(--text-warning))]',
-        className,
-      )}
-    >
-      <AlertTriangle className={iconSizes.sm} />
-      <AlertTitle>{t(titleKey)}</AlertTitle>
-      <AlertDescription>{reasonText}</AlertDescription>
-    </Alert>
+    <PlausibilityAlert
+      titleKey={titleKey}
+      reasonText={reasonText}
+      t={t}
+      className={className}
+    />
   );
 }

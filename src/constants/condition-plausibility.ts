@@ -36,6 +36,7 @@
  */
 
 import type { PropertyTypeCanonical } from '@/constants/property-types';
+import { normalizePropertyType } from '@/constants/property-type-aliases';
 import { isPreCompletionOperationalStatus } from '@/constants/operational-statuses';
 
 // =============================================================================
@@ -87,7 +88,16 @@ export type ConditionReason =
 export interface ConditionAssessment {
   readonly verdict: ConditionVerdict;
   readonly reason: ConditionReason;
-  readonly propertyType: PropertyTypeCanonical | string | null;
+  /**
+   * **Το είδος, στην κανονική του μορφή** — ή `null` όταν δεν αναγνωρίστηκε.
+   *
+   * 🔴 **ΗΤΑΝ `PropertyTypeCanonical | string | null`** — ένωση που **δεν λέει τίποτα**
+   * (το `PropertyTypeCanonical` είναι ήδη `string`), και ακριβώς γι' αυτό η οθόνη που
+   * τη διάβαζε αναγκαζόταν σε `as PropertyTypeCanonical` για να δεικτοδοτήσει τον
+   * πίνακα ετικετών. Πλέον η αξιολόγηση **κανονικοποιεί** την είσοδο (ADR-842 §7.6.12 /
+   * §8 #11) και ο καταναλωτής παίρνει τιμή που **μπορεί** να χρησιμοποιήσει.
+   */
+  readonly propertyType: PropertyTypeCanonical | null;
   readonly condition: string | null;
   readonly operationalStatus: string | null;
   readonly heatingType: string | null;
@@ -123,14 +133,19 @@ export interface AssessConditionPlausibilityArgs {
 export function assessConditionPlausibility(
   args: AssessConditionPlausibilityArgs,
 ): ConditionAssessment {
-  const propertyType = normalize(args.propertyType);
+  // 🔴 **Ο ΔΥΝΑΤΟΣ ΚΡΙΤΗΣ, ΟΧΙ ΣΚΕΤΟ trim** (ADR-842 §7.6.12): ο τοπικός `normalize`
+  //    απαντά *«είναι μη κενή συμβολοσειρά;»* — για το **είδος** η ερώτηση είναι *«ποιο
+  //    είδος είναι, ό,τι κι αν μου έγραψαν;»*. Με το παλιό, ένα `'Στούντιο'` περνούσε
+  //    αυτούσιο και ο έλεγχος «είναι κατοικία;» απαντούσε **όχι** — δηλαδή η οθόνη δεν
+  //    προειδοποιούσε ποτέ για ένα διαμέρισμα με παλαιά τιμή.
+  const propertyType = normalizePropertyType(args.propertyType);
   const condition = normalize(args.condition);
   const operationalStatus = normalize(args.operationalStatus);
   const heatingType = normalize(args.heatingType);
   const energyClass = normalize(args.energyClass);
 
   const isResidential =
-    propertyType !== null && RESIDENTIAL_TYPES.has(propertyType as PropertyTypeCanonical);
+    propertyType !== null && RESIDENTIAL_TYPES.has(propertyType);
   const hasValidCondition = condition !== null && KNOWN_CONDITIONS.has(condition);
   // Pre-completion (draft / under-construction) → suppress "missing" warnings
   // (Google progressive disclosure). Declarative cross-field checks remain ON.
@@ -266,7 +281,7 @@ export function isActionableConditionVerdict(
 function buildAssessment(
   verdict: ConditionVerdict,
   reason: ConditionReason,
-  propertyType: string | null,
+  propertyType: PropertyTypeCanonical | null,
   condition: string | null,
   operationalStatus: string | null,
   heatingType: string | null,

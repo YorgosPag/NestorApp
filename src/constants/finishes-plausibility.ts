@@ -42,6 +42,7 @@
  */
 
 import type { PropertyTypeCanonical } from '@/constants/property-types';
+import { normalizePropertyType } from '@/constants/property-type-aliases';
 import { isPreCompletionOperationalStatus } from '@/constants/operational-statuses';
 
 // =============================================================================
@@ -94,7 +95,11 @@ export type FinishesReason =
 export interface FinishesAssessment {
   readonly verdict: FinishesVerdict;
   readonly reason: FinishesReason;
-  readonly propertyType: PropertyTypeCanonical | string | null;
+  /**
+   * **Το είδος, στην κανονική του μορφή** — ή `null` όταν δεν αναγνωρίστηκε.
+   * Δες την ίδια σημείωση στο {@link ConditionAssessment.propertyType} (ADR-842 §7.6.12).
+   */
+  readonly propertyType: PropertyTypeCanonical | null;
   readonly flooring: readonly string[];
   readonly windowFrames: string | null;
   readonly glazing: string | null;
@@ -135,7 +140,9 @@ export interface AssessFinishesPlausibilityArgs {
 export function assessFinishesPlausibility(
   args: AssessFinishesPlausibilityArgs,
 ): FinishesAssessment {
-  const propertyType = normalize(args.propertyType);
+  // 🔴 **Ο ΔΥΝΑΤΟΣ ΚΡΙΤΗΣ, ΟΧΙ ΣΚΕΤΟ trim** — δες την ίδια αλλαγή στο
+  //    `condition-plausibility.ts` (ADR-842 §7.6.12).
+  const propertyType = normalizePropertyType(args.propertyType);
   const flooring = Array.isArray(args.flooring) ? args.flooring.filter(Boolean) : [];
   const windowFrames = normalize(args.windowFrames);
   const glazing = normalize(args.glazing);
@@ -152,7 +159,7 @@ export function assessFinishesPlausibility(
   const isPreCompletion = isPreCompletionOperationalStatus(operationalStatus);
 
   const isResidential =
-    propertyType !== null && RESIDENTIAL_TYPES.has(propertyType as PropertyTypeCanonical);
+    propertyType !== null && RESIDENTIAL_TYPES.has(propertyType);
 
   const allEmpty =
     flooring.length === 0 &&
@@ -309,7 +316,7 @@ export function isActionableFinishesVerdict(
 function buildAssessment(
   verdict: FinishesVerdict,
   reason: FinishesReason,
-  propertyType: string | null,
+  propertyType: PropertyTypeCanonical | null,
   flooring: readonly string[],
   windowFrames: string | null,
   glazing: string | null,
