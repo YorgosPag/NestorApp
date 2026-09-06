@@ -1,13 +1,6 @@
 'use client';
 
-import {
-  where,
-  orderBy,
-} from 'firebase/firestore';
-import type { DocumentData } from 'firebase/firestore';
-import { COLLECTIONS } from '@/config/firestore-collections';
-import { normalizeToISO, nowISO } from '@/lib/date-local';
-import { normalizePropertyType } from '@/constants/property-type-aliases';
+import { nowISO } from '@/lib/date-local';
 import type { Property } from '@/types/property-viewer';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
 import { RealtimeService } from '@/services/realtime';
@@ -16,45 +9,31 @@ import { apiClient, ApiClientError } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
-import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 
 const logger = createModuleLogger('PropertiesService');
 
 // ============================================================================
-// POST-QUERY NORMALIZATION (replaces DocumentSnapshot-based transformers)
+// 🔴 ΑΥΤΟ ΤΟ ΑΡΧΕΙΟ ΔΕΝ ΔΙΑΒΑΖΕΙ ΤΗ ΒΑΣΗ — ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ (ADR-842 §7.6.13)
 // ============================================================================
-
-/**
- * Convert raw Firestore document data (plain object with `id`) to Property type.
- * Handles Timestamp → ISO string conversion for all fields.
- * Replaces the old `transformUnit(doc: DocumentSnapshot)` function.
- */
-function toProperty(raw: DocumentData): Property {
-  const property: Record<string, unknown> = { id: raw.id };
-  for (const key in raw) {
-    if (key === 'id') continue;
-    const iso = normalizeToISO(raw[key]);
-    property[key] = iso ?? raw[key];
-  }
-
-  // 🔴 **ΤΟ ΕΙΔΟΣ ΚΑΝΟΝΙΚΟΠΟΙΕΙΤΑΙ, ΑΠΟ ΤΗΝ ΜΙΑ ΑΥΘΕΝΤΙΑ** (ADR-842 §7.6.12 / §8 #11).
-  //
-  // ⚠️ **ΓΙΑΤΙ ΟΧΙ ΟΛΟΚΛΗΡΟΣ Ο {@link mapPropertyDoc} ΕΔΩ, ΚΑΙ ΕΙΝΑΙ ΜΕΤΡΗΜΕΝΟ**: ο
-  //    mapper είναι **λίστα επιτρεπόμενων πεδίων** — χτίζει ρητό αντικείμενο και
-  //    **ρίχνει** ό,τι δεν απαριθμεί (π.χ. το `companyId`). Αυτή εδώ είναι **διαπερατή**
-  //    μετάφραση ημερομηνιών που κρατά τα πάντα, και τροφοδοτεί το `getProperties()` —
-  //    δηλαδή **κάθε** οθόνη του μισθωτή. Η σύγκλιση των δύο σε ένα σύνορο είναι
-  //    πραγματική εκκρεμότητα, αλλά είναι **δική της** εργασία με δικό της παρονομαστή·
-  //    μια σιωπηλή αντικατάσταση εδώ θα έσβηνε πεδία που κανείς δεν μέτρησε.
-  //    Καταγράφηκε στο `.claude-rules/pending-ratchet-work.md`.
-  //
-  // 🔑 **Δεν είναι δεύτερος κριτής**: είναι η **ίδια** συνάρτηση
-  //    ({@link normalizePropertyType}) καλεσμένη από άλλη πόρτα — ακριβώς ό,τι κάνει
-  //    και ο mapper στη δική του γραμμή.
-  property.type = normalizePropertyType(property.type);
-
-  return property as unknown as Property;
-}
+//
+// Μέχρι τις 2026-09-06 εδώ ζούσε ο `toProperty` — **δεύτερος αναγνώστης** της
+// συλλογής `properties`, με ασύμβατη φιλοσοφία από τον {@link mapPropertyDoc}:
+// διαπερατός αντί για λίστα επιτρεπόμενων πεδίων, και τερμάτιζε σε
+// `as unknown as Property`, δηλαδή **διπλό** ισχυρισμό — ούτε καν ο μεταγλωττιστής
+// δεν είχε λόγο.
+//
+// 🔑 **Δεν συγκλίναμε τους δύο· ο ένας ήταν ΝΕΚΡΟΣ.** Μετρημένο με `knip
+// --include exports,types`: ο μόνος καλών του `getProperties()` ήταν το
+// `useContactsState`, πρόγονος του ζωντανού `useContactsPageState` που έμεινε πίσω
+// στην εξαγωγή του ADR-233 και κρατιόταν «ζωντανός» από **ένα** `import type`.
+//
+// ⚠️ **ΜΗΝ ΞΑΝΑΠΡΟΣΘΕΣΕΙΣ ΑΝΑΓΝΩΣΗ ΕΔΩ.** Αν χρειάζεσαι έγγραφα `properties`:
+//   • από τον διακομιστή → Admin SDK + {@link mapPropertyDoc} (δες
+//     `app/api/properties/route.ts`)
+//   • από τον πελάτη ανά κτίριο → `components/properties/shared/usePropertiesByBuilding`
+//   • συγκεντρωτικά ανά ιδιοκτήτη → `app/api/contacts/owner-property-stats`
+// Η συλλογή έχει **ΕΝΑ** σύνορο ανάγνωσης· μια δεύτερη πόρτα εδώ θα ήταν η ίδια
+// απόκλιση από την αρχή. Το φυλάει άγκυρα (`properties-service-no-read.test.ts`).
 
 // addUnit() DELETED — was dead code (0 consumers).
 // Client-side setDoc blocked by Firestore rules (allow create: if false).
@@ -106,18 +85,6 @@ export async function createProperty(
   }
 }
 
-// Get all properties for the active tenant.
-// Tenant filter comes from `buildTenantConstraints` (companyId, ADR-214) — do NOT
-// re-add `tenantOverride: 'skip'`. It was there because `companyId ==` + `orderBy(name)`
-// needs a composite index that did not exist; the index now ships in
-// firestore.indexes.json (properties: companyId + name, 2026-08-05).
-export async function getProperties(): Promise<Property[]> {
-  const result = await firestoreQueryService.getAll<DocumentData>('PROPERTIES', {
-    constraints: [orderBy('name', 'asc')],
-  });
-  return result.documents.map(toProperty);
-}
-
 // Update a property via Admin SDK API (server-side validation + audit trail)
 export async function updateProperty(propertyId: string, updates: Partial<Property>): Promise<{ success: boolean }> {
   await apiClient.patch(API_ROUTES.PROPERTIES.BY_ID(propertyId), updates);
@@ -141,31 +108,14 @@ export async function updateProperty(propertyId: string, updates: Partial<Proper
   return { success: true };
 }
 
-// NEW: Update multiple properties' owner
-export async function updateMultiplePropertiesOwner(propertyIds: string[], contactId: string): Promise<{ success: boolean }> {
-  const saleDate = nowISO();
-
-  await Promise.all(
-    propertyIds.map(async (propertyId) => {
-      await apiClient.patch(API_ROUTES.PROPERTIES.BY_ID(propertyId), {
-        soldTo: contactId,
-        status: 'sold',
-        saleDate,
-      });
-
-      RealtimeService.dispatch('UNIT_UPDATED', {
-        propertyId,
-        updates: {
-          soldTo: contactId,
-          status: 'sold',
-        },
-        timestamp: Date.now(),
-      });
-    }),
-  );
-  return { success: true };
-}
-
+// updateMultiplePropertiesOwner() DELETED 2026-09-06 (ADR-842 §7.6.13) — νεκρό,
+// μετρημένο με `knip --include exports,types` μαζί με τον νεκρό αναγνώστη.
+//
+// ⚠️ **Δεν αντικαταστάθηκε από κάτι, και είναι μετρημένο**: το
+// `property-mutation-gateway` **δεν έχει** μαζική μεταβίβαση κυριότητας — έχει
+// `updatePropertyWithPolicy` (μία μονάδα) και `revertPropertySaleWithPolicy` (η
+// αντίστροφη πράξη). Αν χρειαστεί ποτέ μαζική, ανήκει **εκεί**, με πολιτική: αυτή
+// εδώ έγραφε `soldTo`/`status: 'sold'` παρακάμπτοντας κάθε έλεγχο.
 
 // 🔒 SECURITY: Delete property via Admin SDK API (client-side Firestore deletes are blocked)
 export async function deleteProperty(propertyId: string): Promise<{ success: boolean }> {

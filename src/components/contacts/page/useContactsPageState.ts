@@ -11,13 +11,18 @@ import type { ContactFilterState } from '@/components/core/AdvancedFilters';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useAuth } from '@/auth/hooks/useAuth';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
+import type { ListGridViewMode } from '@/core/headers';
 import { buildContactDashboardStats } from './contactDashboardStats';
 import { filterContactsForPage } from './contactsPageFilters';
 import { useContactsTrashState } from './useContactsTrashState';
+import { useContactBulkActions } from './useContactBulkActions';
 import { createStaleCache } from '@/lib/stale-cache';
 import { useSelectedEntityUrlState } from '@/hooks/useSelectedEntityUrlState';
 import { replaceUrlSearchParams } from '@/lib/url-query-state';
 import { useSelectedContactAvatarRefresh } from './useSelectedContactAvatarRefresh';
+import { useTabVisibilityRefresh } from '@/hooks/useTabVisibilityRefresh';
+import { useAISyncBridge } from '@/hooks/useAISyncBridge';
+import { useOwnerPropertyStats } from './useOwnerPropertyStats';
 
 const logger = createModuleLogger('ContactsPageContent');
 // SSoT stale-while-revalidate cache (ADR-300) — single-key (one list per session)
@@ -99,17 +104,21 @@ export function useContactsPageState() {
     setSelectedId(contact?.id ?? null);
   }, [setSelectedId]);
 
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  // Ο τύπος έρχεται από τον SSoT των headers — το inline `'list' | 'grid'` ήταν
+  // αντίγραφο του ίδιου union (`core/headers/list-page-header-props.ts` γρ. 12-14).
+  const [viewMode, setViewMode] = useState<ListGridViewMode>('list');
   const [showDashboard, setShowDashboard] = useState(false);
   const [creationMode, setCreationMode] = useState<null | 'selecting' | ContactType>(null);
-  const [showDeleteContactDialog, setShowDeleteContactDialog] = useState(false);
-  const [showArchiveContactDialog, setShowArchiveContactDialog] = useState(false);
-  const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   const [_showCompactToolbar, _setShowCompactToolbar] = useState(false);
   const [activeCardFilter, setActiveCardFilter] = useState<string | null>(null);
   const [filters, setFilters] = useState<ContactFilterState>(INITIAL_FILTERS);
   const [subscriptionRetry, setSubscriptionRetry] = useState(0);
+
+  // Τι κατέχει κάθε επαφή — μία κλήση για όλους (ADR-842 §7.6.13 Δ). Δέχεται την
+  // **ίδια** σκανδάλη με τη συνδρομή επαφών, ώστε μία ανανέωση να πιάνει και τα δύο.
+  const ownerStats = useOwnerPropertyStats(subscriptionRetry);
+
   // ---------------------------------------------------------------------------
   // Data: Firestore real-time subscription
   // ---------------------------------------------------------------------------
@@ -309,6 +318,25 @@ export function useContactsPageState() {
   }, []);
 
   useSelectedContactAvatarRefresh(selectedContact);
+
+  // ---------------------------------------------------------------------------
+  // 🔴 Ο ΠΟΜΠΟΣ ΕΚΠΕΜΠΕ ΣΕ ΑΔΕΙΑ ΣΥΧΝΟΤΗΤΑ (ADR-842 §7.6.13 Α)
+  // ---------------------------------------------------------------------------
+  // Ο διακομιστής γράφει `config/ui_sync_signal` σε **έξι** σημεία της ροής AI
+  // (`contact-handler` · `contact-field-update-handler` · `esco-write-handler` ·
+  // `admin-update-contact-module` · `contact-lookup-crud`). Ο **μόνος** ακροατής
+  // ήταν το `useContactsState` — πρόγονος **αυτού** του hook, που έμεινε πίσω στην
+  // εξαγωγή του ADR-233 και μετρήθηκε νεκρός με knip.
+  //
+  // ⚠️ Δηλαδή δεν ήταν «νεκρός κώδικας προς διαγραφή»: ήταν **ζωντανό ελάττωμα**.
+  //    Ο Giorgio έστελνε εντολή στο Telegram, ο agent ενημέρωνε την επαφή, και η
+  //    οθόνη έμενε στα παλιά — **χωρίς κανένα σύμπτωμα σφάλματος**. Το tab-visibility
+  //    refresh, που υπάρχει ακριβώς ως δικλείδα του ίδιου σεναρίου, είχε χαθεί μαζί.
+  //
+  // 🔑 `refreshContacts` είναι το ίδιο πράγμα με το παλιό `forceDataRefresh`:
+  //    ανεβάζει το `subscriptionRetry` ⇒ ξαναστήνεται η συνδρομή Firestore.
+  useTabVisibilityRefresh(refreshContacts);
+  useAISyncBridge('contacts', refreshContacts);
   // ---------------------------------------------------------------------------
   // Handlers: Creation / Deletion / Archive
   // ---------------------------------------------------------------------------
@@ -327,51 +355,20 @@ export function useContactsPageState() {
   const handleSelectContactType = useCallback((type: ContactType) => setCreationMode(type), []);
   const handleBackToTypeSelection = useCallback(() => setCreationMode('selecting'), []);
 
-  /**
-   * Ποιες επαφές αφορά η μαζική ενέργεια: οι ρητά δοσμένες, αλλιώς η επιλεγμένη,
-   * αλλιώς καμία. Ήταν αντιγραμμένη σε διαγραφή και αρχειοθέτηση.
-   */
-  const resolveBulkTargetIds = useCallback((ids?: string[]): string[] => {
-    if (ids && ids.length > 0) return ids;
-    return selectedContact?.id ? [selectedContact.id] : [];
-  }, [selectedContact?.id]);
 
-  const handleDeleteContacts = useCallback((ids?: string[]) => {
-    setSelectedContactIds(resolveBulkTargetIds(ids));
-    setShowDeleteContactDialog(true);
-  }, [resolveBulkTargetIds]);
-
-  /**
-   * Η κοινή ουρά κάθε μαζικής ενέργειας: κλείσε τον διάλογο, ξεκόλλα την επιλογή
-   * αν η επιλεγμένη επαφή ήταν μέσα στις επηρεαζόμενες, καθάρισε τα ids, ανανέωσε.
-   *
-   * Ήταν αντιγραμμένη σε διαγραφή και αρχειοθέτηση· μια διόρθωση στη μία (π.χ. να
-   * μη μένει η επιλογή σε αρχειοθετημένη επαφή) δεν έφτανε ποτέ στην άλλη.
-   */
-  const finishBulkContactAction = useCallback(
-    (closeDialog: (open: boolean) => void) => {
-      closeDialog(false);
-      if (selectedContact && selectedContactIds.includes(selectedContact.id!)) {
-        setSelectedContact(null);
-      }
-      setSelectedContactIds([]);
-      refreshContacts();
-    },
-    [selectedContact, selectedContactIds, refreshContacts],
-  );
-
-  const handleContactsDeleted = useCallback(async () => {
-    finishBulkContactAction(setShowDeleteContactDialog);
-  }, [finishBulkContactAction]);
-
-  const handleArchiveContacts = useCallback((ids?: string[]) => {
-    setSelectedContactIds(resolveBulkTargetIds(ids));
-    setShowArchiveContactDialog(true);
-  }, [resolveBulkTargetIds]);
-
-  const handleContactsArchived = useCallback(async () => {
-    finishBulkContactAction(setShowArchiveContactDialog);
-  }, [finishBulkContactAction]);
+  // ==== ΜΑΖΙΚΕΣ ΕΝΕΡΓΕΙΕΣ: Delegated to useContactBulkActions (ADR-842 §7.6.13 Δ) ====
+  const {
+    selectedContactIds,
+    setSelectedContactIds,
+    showDeleteContactDialog,
+    setShowDeleteContactDialog,
+    showArchiveContactDialog,
+    setShowArchiveContactDialog,
+    handleDeleteContacts,
+    handleContactsDeleted,
+    handleArchiveContacts,
+    handleContactsArchived,
+  } = useContactBulkActions({ selectedContact, setSelectedContact, refreshContacts });
 
   // ==== TRASH: Delegated to useContactsTrashState ====
   const trash = useContactsTrashState({
@@ -395,10 +392,11 @@ export function useContactsPageState() {
       selectedContactId,
       showTrash: trash.showTrash,
       t,
+      ownerStats,
     }),
     // Intentional: only the fields the filter actually reads, not the whole `filters` object.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [contacts, selectedContactId, activeCardFilter, filters.searchTerm, filters.contactType, filters.isFavorite, trash.showTrash, t],
+    [contacts, selectedContactId, activeCardFilter, filters.searchTerm, filters.contactType, filters.isFavorite, filters.propertiesCount, filters.totalArea, filters.hasProperties, trash.showTrash, t, ownerStats],
   );
 
   // Dashboard stats (extracted to contactDashboardStats.ts — SRP)
