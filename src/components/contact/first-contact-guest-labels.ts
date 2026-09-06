@@ -87,6 +87,22 @@ export const GUEST_KEYS = {
   codeHint: 'property-market:contact.guest.codeHint',
   submit: 'property-market:contact.guest.submit',
   submitting: 'property-market:contact.guest.submitting',
+  /**
+   * 🔴 **ΤΑ ΤΕΣΣΕΡΑ ΚΕΙΜΕΝΑ ΤΟΥ «ΞΑΝΑΣΤΕΙΛΤΕ»** — και το πρώτο είναι το σημαντικό.
+   *
+   * Το `resendHint` *(«Δεν έλαβα τίποτα;»)* απευθύνεται σε άνθρωπο που **δεν έχει
+   * κανένα μήνυμα σφάλματος**: το email του χάθηκε στα ανεπιθύμητα, και η οθόνη τού
+   * ζητά κωδικό που **δεν πρόκειται να δει ποτέ**. Χωρίς αυτή τη γραμμή, η μόνη του
+   * διέξοδος ήταν το «Άκυρο».
+   *
+   * ⚠️ **Το `resendWait` παίρνει `{seconds}` — ΜΟΝΑ άγκιστρα** (CHECK 3.9). Και δεν
+   * λέει «περιμένετε»: λέει **πόσο**, γιατί ανενεργό κουμπί χωρίς αριθμό διαβάζεται
+   * ως χαλασμένο.
+   */
+  resendHint: 'property-market:contact.guest.resendHint',
+  resend: 'property-market:contact.guest.resend',
+  resending: 'property-market:contact.guest.resending',
+  resendWait: 'property-market:contact.guest.resendWait',
   /** Η πρόσκληση **γράφτηκε**, το email **δεν έφυγε** — και το λέμε (N.12). */
   notSent: 'property-market:contact.guest.notSent',
   identityRefused: 'property-market:contact.guest.identityRefused',
@@ -116,6 +132,18 @@ export const LINK_KEYS = {
   signingIn: 'property-market:contact.link.signingIn',
   signInFailed: 'property-market:contact.link.signInFailed',
   signIn: 'property-market:contact.link.signIn',
+  /**
+   * 🔴 **ΤΑ ΔΥΟ ΚΕΙΜΕΝΑ ΤΗΣ ΔΙΕΞΟΔΟΥ** — χωρίς αυτά, **κάθε** άρνηση αυτής της
+   * σελίδας ήταν λευκή σελίδα με οδηγία που ο άνθρωπος **δεν μπορούσε να εκτελέσει**.
+   *
+   * ⚠️ **Δύο, όχι ένα «Επιστροφή»**: η ετικέτα λέει **πού** πάει. Το
+   * `backToListing` υπόσχεται τη σελίδα που ο άνθρωπος **είδε**· το `backToSearch`
+   * παραδέχεται ότι **δεν την ξέρουμε** και προσφέρει αναζήτηση. Ένα κοινό
+   * «Επιστροφή» θα ήταν η ίδια λέξη για δύο **διαφορετικές** υποσχέσεις — και η μία
+   * από τις δύο θα ήταν ψέμα.
+   */
+  backToListing: 'property-market:contact.link.backToListing',
+  backToSearch: 'property-market:contact.link.backToSearch',
 } as const;
 
 /** Ο κωδικός σε σειρά — για την άγκυρα πληρότητας, ώστε **λείπον κλειδί να κοκκινίζει**. */

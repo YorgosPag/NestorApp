@@ -21,8 +21,30 @@
  */
 
 import type { FirstContactRejection } from '@/services/contact/first-contact-vocabulary';
-import type { FirstContactInvariant } from '@/types/first-contact';
+import type { FirstContactInvariant, FirstContactTarget } from '@/types/first-contact';
 import type { FirstContactInvitationRefusal } from '@/types/first-contact-invitation';
+
+/**
+ * **Η ΔΙΕΞΟΔΟΣ, ΩΣ ΠΕΔΙΟ ΚΑΘΕ ΑΠΟΤΥΧΙΑΣ** — και είναι ο **φρουρός της κλάσης**.
+ *
+ * 🔴 **ΓΙΑΤΙ ΤΟ ΚΟΥΒΑΛΑΕΙ ΚΑΘΕ ΣΚΕΛΟΣ ΚΑΙ ΟΧΙ ΜΟΝΟ ΟΣΑ «ΤΟ ΧΡΕΙΑΖΟΝΤΑΙ».** Το
+ * αδιέξοδο που θεραπεύεται εδώ **δεν** ήταν ελάττωμα ενός σκέλους — ήταν ελάττωμα
+ * **σχήματος**: η έκβαση δεν είχε *πού* να το βάλει, άρα **καμία** οθόνη δεν
+ * μπορούσε να το δείξει. Ένα `target` σε μερικά μόνο σκέλη θα ξανάφτιαχνε ακριβώς
+ * αυτό: **έβδομη** έκβαση, γραμμένη βιαστικά, χωρίς πεδίο και χωρίς διέξοδο.
+ *
+ * ⇒ Ως **κοινό** πεδίο, η ερώτηση *«πού στέλνω τον άνθρωπο τώρα;»* γίνεται
+ * υποχρεωτική στη **μεταγλώττιση**, όχι στην επιθεώρηση.
+ *
+ * ⚠️ **ΚΑΙ ΔΕΝ ΠΑΡΑΒΙΑΖΕΙ ΤΟΝ ΚΑΝΟΝΑ ΤΟΥ ΑΡΧΕΙΟΥ** *(«ό,τι περνά σε client component
+ * γράφεται μέσα στο HTML»)*: ο στόχος **δεν είναι** προσωπικό δεδομένο — είναι η
+ * σελίδα που ο άνθρωπος **μόλις κοίταζε**, δημόσια και ήδη γνωστή σε αυτόν. Το
+ * `contact` μένει ρητά απόν.
+ */
+export interface GuestContactExit {
+  /** `null` = *«δεν ξέρουμε πού στεκόταν»* ⇒ **γενική** διέξοδος, ποτέ νεκρό κουμπί. */
+  readonly target: FirstContactTarget | null;
+}
 
 /**
  * **Ό,τι ΑΚΡΙΒΩΣ ζωγραφίζεται** — και τίποτα άλλο δεν φεύγει από τον διακομιστή.
@@ -48,9 +70,14 @@ export type GuestContactLinkView =
        */
       readonly customToken: string;
     }
-  | { readonly kind: 'link-refused'; readonly reason: FirstContactInvitationRefusal }
-  | { readonly kind: 'contact-refused'; readonly reason: FirstContactRejection }
-  | { readonly kind: 'invalid'; readonly violations: readonly FirstContactInvariant[] }
-  /** ⚠️ **Χωρίς λόγο, επίτηδες** — οι λόγοι μιλούν για εμάς (απαρίθμηση λογαριασμών). */
-  | { readonly kind: 'identity-refused' }
-  | { readonly kind: 'unavailable' };
+  | (GuestContactExit & (
+      | { readonly kind: 'link-refused'; readonly reason: FirstContactInvitationRefusal }
+      | { readonly kind: 'contact-refused'; readonly reason: FirstContactRejection }
+      | { readonly kind: 'invalid'; readonly violations: readonly FirstContactInvariant[] }
+      /** ⚠️ **Χωρίς λόγο, επίτηδες** — οι λόγοι μιλούν για εμάς (απαρίθμηση λογαριασμών). */
+      | { readonly kind: 'identity-refused' }
+      | { readonly kind: 'unavailable' }
+    ));
+
+/** Ό,τι **δεν** είναι επιτυχία — δηλαδή ό,τι **οφείλει** να έχει διέξοδο. */
+export type GuestContactSetback = Exclude<GuestContactLinkView, { kind: 'done' }>;
