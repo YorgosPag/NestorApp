@@ -75,6 +75,7 @@ import {
   mayAdminister,
   type ListingActor,
 } from '@/lib/owner-property/listing-custody';
+import { acceptsMandate } from '@/lib/professional/showcase-acts';
 import { generateMandateRequestId } from '@/services/enterprise-id-convenience';
 import { lookupAgencyProfile } from '@/services/mandate/agency-profile.service';
 import { readOwnerIdentity } from '@/services/mandate/mandate-owner-identity';
@@ -139,6 +140,19 @@ export async function submitMandateRequest(
   if (agency.outcome === 'unavailable') return { kind: 'unavailable' };
   if (agency.outcome === 'not-published') {
     return { kind: 'rejected', reason: 'agency-absent' };
+  }
+
+  // 🔴 **Ο ΜΟΝΟΣ ΠΡΑΓΜΑΤΙΚΟΣ ΦΡΟΥΡΟΣ ΤΗΣ ΜΕΣΙΤΕΙΑΣ** (ADR-841 §7 Α5). Η βιτρίνα και η
+  //    σελίδα της φόρμας ρωτούν τον **ίδιο** κριτή, αλλά εκείνες μόνο **κρύβουν** —
+  //    και *«ΤΟ ΜΕΝΟΥ ΔΕΝ ΕΙΝΑΙ ΦΡΟΥΡΟΣ»* (`brokerage-authority.ts:24`). Χωρίς αυτή
+  //    τη γραμμή, ένα χειρόγραφο POST γράφει αίτημα **εντολής μεσιτείας** σε γραφείο
+  //    φυσικού αερίου — μετρημένο στην οθόνη, 2026-09-06.
+  //
+  // ⚠️ **ΔΕΝ είναι το `gateBrokerage`**, και δεν μπορεί να είναι: εκείνος ρωτά *«έχει
+  //    ο **ΚΑΛΩΝ** μεσιτική ικανότητα;»* — εδώ ο καλών είναι **ιδιώτης**. Ο έλεγχος
+  //    αφορά τον **ΣΤΟΧΟ**, και γι' αυτό ζει στον γραφέα και όχι στη διαδρομή.
+  if (!acceptsMandate(agency.showcase.credentials)) {
+    return { kind: 'rejected', reason: 'agency-not-brokerage' };
   }
 
   // 🔴 **Η ΣΥΓΚΡΟΥΣΗ ΚΡΙΝΕΤΑΙ ΕΔΩ** (ADR-832) — με τον **ίδιο** κριτή που θα τρέξει

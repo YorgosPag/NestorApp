@@ -59,6 +59,9 @@
       "shadedCircle": "Περιοχή / συνοικία",
       "shadedCity": "Μόνο πόλη — όχι διεύθυνση",
       "none": "Χωρίς δηλωμένη θέση"
+    },
+    "priceMarker": {
+      "aria": "Προβολή αγγελίας: {title}, {price}"
     }
   },
   "list": {

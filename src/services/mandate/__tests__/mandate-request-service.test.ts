@@ -10,7 +10,7 @@
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
-import { storedShowcaseDoc } from '@/lib/agency/__fixtures__/showcase-fixture';
+import { storedShowcaseDoc, TRADE_CREDENTIAL } from '@/lib/agency/__fixtures__/showcase-fixture';
 import { submitMandateRequest } from '@/services/mandate/mandate-request.service';
 import type { MandateRequestDeclaration } from '@/services/mandate/mandate-request-vocabulary';
 import { EXCLUSIVE_AGENCY, OPEN_LISTING } from '@/types/listing-agreement';
@@ -73,6 +73,12 @@ function world(overrides: {
   readonly listing?: Record<string, unknown> | null;
   readonly agencyPublished?: boolean;
   /**
+   * 🔴 **ΤΙ ΕΙΔΟΥΣ ΕΠΑΓΓΕΛΜΑΤΙΑΣ ΕΙΝΑΙ ΤΟ ΓΡΑΦΕΙΟ** (ADR-841 §7 Α5) — προεπιλογή
+   * **μεσίτης**, γιατί αλλιώς κάθε άγκυρα αυτού του αρχείου θα πρασίνιζε στον νέο
+   * φρουρό αντί για εκείνον που δοκιμάζει. Ίδιο σκεπτικό με το `owner`.
+   */
+  readonly agencyCredentials?: readonly { readonly occupation: unknown; readonly attestation: unknown }[];
+  /**
    * ⚠️ **`MandateRequestDocument`, ΟΧΙ `MandateRequest`** — η σπορά γράφει **ωμό
    * έγγραφο**, όπου το `status` είναι ανοιχτή συμβολοσειρά. Μόνο έτσι εκφράζεται το
    * **κληροδότημα** (`'declined'`), που είναι ακριβώς η κατάσταση που ο μεταφραστής
@@ -124,12 +130,17 @@ function world(overrides: {
     fake.seed(
       COLLECTIONS.AGENCY_PROFILES,
       AGENCY,
-      storedShowcaseDoc({
-        companyId: AGENCY,
-        alias: 'dokimastiko-grafeio',
-        displayName: 'Δοκιμαστικό Μεσιτικό Γραφείο',
-        publishedAt: '2026-08-01T00:00:00.000Z',
-      }),
+      {
+        ...storedShowcaseDoc({
+          companyId: AGENCY,
+          alias: 'dokimastiko-grafeio',
+          displayName: 'Δοκιμαστικό Μεσιτικό Γραφείο',
+          publishedAt: '2026-08-01T00:00:00.000Z',
+        }),
+        ...(overrides.agencyCredentials === undefined
+          ? {}
+          : { credentials: overrides.agencyCredentials }),
+      },
     );
   }
 
@@ -294,6 +305,28 @@ describe('Φ — οι φρουροί του Σ1', () => {
       kind: 'rejected',
       reason: 'agency-absent',
     });
+  });
+
+  it('Φ5.1 — 🔴 ΤΟ ΕΥΡΗΜΑ ΤΗΣ ΟΘΟΝΗΣ: γραφείο ΦΥΣΙΚΟΥ ΑΕΡΙΟΥ δεν αναλαμβάνει ακίνητο', async () => {
+    // 🔴 Μέχρι τις 2026-09-06 αυτό **γραφόταν κανονικά**: κανένας από τους τέσσερις
+    //    κρίκους της διαδρομής δεν ρωτούσε αν το γραφείο ασκεί μεσιτεία. Η βιτρίνα
+    //    πρόσφερε «ζητήστε του να αναλάβει το ακίνητό σας» σε τεχνίτη ISCO 7126.
+    const fake = world({
+      agencyCredentials: [
+        { occupation: TRADE_CREDENTIAL.occupation, attestation: TRADE_CREDENTIAL.attestation },
+      ],
+    });
+
+    expect(await submit(fake)).toEqual({ kind: 'rejected', reason: 'agency-not-brokerage' });
+
+    // ⚠️ **Η ΑΡΝΗΣΗ ΔΕΝ ΑΡΚΕΙ — Η ΜΗ-ΓΡΑΦΗ ΕΙΝΑΙ ΤΟ ΖΗΤΟΥΜΕΝΟ.** Ένας φρουρός που
+    //    λέει «όχι» και γράφει είναι χειρότερος από κανέναν: το γραφείο θα έβλεπε
+    //    στα εισερχόμενά του αίτημα που η πλατφόρμα δηλώνει ότι απέρριψε.
+    expect(fake.all(COLLECTIONS.MANDATE_REQUESTS)).toHaveLength(0);
+  });
+
+  it('Φ5.2 — ΔΗΜΟΣΙΕΥΜΕΝΟ ΚΑΙ ΜΕΣΙΤΙΚΟ περνά — ο παρονομαστής του Φ5.1', async () => {
+    expect((await submit(world())).kind).toBe('created');
   });
 
   it('Φ6 — 🔴 Η ΣΕΙΡΑ: η κατοχή κρίνεται ΠΡΙΝ το γραφείο', async () => {

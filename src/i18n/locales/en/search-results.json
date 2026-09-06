@@ -59,6 +59,9 @@
       "shadedCircle": "Area / neighbourhood",
       "shadedCity": "City only — not an address",
       "none": "No declared location"
+    },
+    "priceMarker": {
+      "aria": "Show listing: {title}, {price}"
     }
   },
   "list": {

@@ -40,6 +40,8 @@
 import { redirect } from 'next/navigation';
 
 import { MandateRequestFormContent } from '@/components/mandate/MandateRequestFormContent';
+import { MandateUnavailableNotice } from '@/components/mandate/MandateUnavailableNotice';
+import { acceptsMandate } from '@/lib/professional/showcase-acts';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { resolveAlias } from '@/lib/workspace/alias-registry';
 import { AGENCY_DIRECTORY_ROUTE, agencyProfileRoute } from '@/components/mandate/agency-directory-route';
@@ -70,6 +72,19 @@ export default async function MandateRequestPage({ searchParams }: MandateReques
   const profile = await lookupAgencyProfile(getAdminFirestore(), resolution.companyId);
   if (profile.outcome === 'unavailable') throw new Error('AGENCY_PROFILE_UNAVAILABLE');
   if (profile.outcome === 'not-published') redirect(AGENCY_DIRECTORY_ROUTE);
+
+  // 🔴 **ΤΟ ΓΡΑΦΕΙΟ ΥΠΑΡΧΕΙ — Η ΠΡΑΞΗ ΟΧΙ** (ADR-841 §7 Α5). Ο **ίδιος** κριτής που
+  //    κρύβει το κουμπί στη βιτρίνα κλείνει και τη φόρμα, ώστε μπαγιάτικος ή
+  //    χειρόγραφος σύνδεσμος να μη γεμίζει ο άνθρωπος αίτημα που θα απορριφθεί
+  //    (N.7.2 #4). ⚠️ Ο **φρουρός** παραμένει ο γραφέας: αυτό εδώ κλείνει οθόνη,
+  //    δεν φυλά γραφή.
+  //
+  // ⚠️ **ΚΑΙ ΔΕΝ ΕΙΝΑΙ `redirect`**, σε αντίθεση με τις δύο από πάνω: εκεί δεν υπάρχει
+  //    τίποτα να δείξεις· εδώ ο άνθρωπος μόλις ερχόταν από αυτή τη βιτρίνα και
+  //    δικαιούται να μάθει **γιατί** — δες `MandateUnavailableNotice`.
+  if (!acceptsMandate(profile.showcase.credentials)) {
+    return <MandateUnavailableNotice agencyHref={agencyProfileRoute(agency)} />;
+  }
 
   return (
     <MandateRequestFormContent

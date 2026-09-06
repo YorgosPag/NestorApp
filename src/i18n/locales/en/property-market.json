@@ -802,12 +802,14 @@
       "requestCta": "Ask them to take on your property",
       "requestHint": "A written request with a date and terms will be drawn up. Nothing of yours is sent until the agency accepts.",
       "noChannel": "This agency publishes no phone number and no email — by design. A brokerage contract is concluded in writing, and a phone call leaves no record that protects you.",
+      "noChannelPro": "This agency publishes no phone number and no email — by design. Whatever is agreed here is written down with a date, whereas a phone call leaves no record that protects you.",
       "backToDirectory": "All agencies",
       "listingsTitle": "What it has on the market right now",
       "listingsCount": "{count, plural, one {# listing} other {# listings}}",
       "listingsLoading": "Loading listings…",
       "listingsEmpty": "This agency has no published listings right now.",
       "listingsEmptyHint": "That does not mean it is not working — it means it has published nothing here. You can still ask it to take on your own property.",
+      "listingsEmptyHintPro": "That does not mean it is not working — it means it has published nothing here. You can approach it directly.",
       "listingsFailed": "We could not load its listings. The agency is there — please try again shortly."
     },
     "request": {
@@ -850,6 +852,7 @@
       "listing-not-live": "The listing is withdrawn, so the agency has nothing to see. Restore it first.",
       "listing-already-brokered": "This listing is already assigned to an agency.",
       "agency-absent": "This agency was not found. It may no longer be published.",
+      "agency-not-brokerage": "This agency does not practise brokerage, so it cannot take on a property. See its storefront for what you can ask it for — or approach a real-estate agency.",
       "request-already-pending": "You have already sent this agency a request for this property, with different terms. Withdraw it first — we do not change a document the agent may already be reading.",
       "request-declined-final": "This agency has given a final refusal for this listing. You can approach another agency.",
       "unverified": "We could not ask right now. This does not mean anything is wrong — please try again shortly, without changing anything.",

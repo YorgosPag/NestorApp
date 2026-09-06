@@ -31,8 +31,11 @@ import { PolygonSystemProvider } from '@/subapps/geo-canvas/systems/polygon-syst
 import type { MapInstance } from '@/subapps/geo-canvas/hooks/map/useMapInteractions';
 import { readRootCssVar } from '@/subapps/dxf-viewer/config/color-config';
 import { listingsToGeoJson } from '@/lib/listings/listings-geojson';
+import { listingBounds } from '@/lib/listings/listing-map-bounds';
+import { listingPriceMarkers } from '@/lib/listings/listing-price-markers';
 import { NO_LISTING_FOCUS, type ListingFocus } from '@/lib/listings/listing-focus';
 import { ListingMapPopup } from './ListingMapPopup';
+import { ListingPriceMarkers } from './ListingPriceMarkers';
 import type { PublicListing } from '@/types/public-listing';
 
 /**
@@ -100,33 +103,6 @@ const RADIUS = { pin: 7, ring: 7, neighbourhood: 34, city: 90 } as const;
 const SOURCE_ID = 'public-listings';
 
 /**
- * Το ορθογώνιο που περικλείει **ό,τι ζωγραφίζεται** — ή `null` αν δεν ζωγραφίζεται τίποτα.
- *
- * 🔴 **Χωρίς αυτό ο χάρτης δείχνει την προεπιλογή του, δηλαδή ΑΛΛΟ ΜΕΡΟΣ.** Βρέθηκε
- * ζωντανά (στιγμιότυπο 2026-08-10): έξι σωστά σχήματα στη Θεσσαλονίκη, με τον χάρτη
- * καρφωμένο στην κεντρική Ελλάδα ⇒ **οθόνη που φαίνεται άδεια ενώ έχει αποτελέσματα**.
- * Είναι η ίδια οικογένεια σφάλματος με τη σιωπηλή εξαφάνιση της Α5: το να μην τα δείχνεις
- * και το να μην πας εκεί που είναι, καταλήγουν στην ίδια εντύπωση.
- */
-function boundsOf(data: ReturnType<typeof listingsToGeoJson>): [[number, number], [number, number]] | null {
-  let west = Infinity, south = Infinity, east = -Infinity, north = -Infinity;
-
-  for (const feature of data.features) {
-    const coords: Array<[number, number]> = feature.geometry.type === 'Point'
-      ? [feature.geometry.coordinates as [number, number]]
-      : (feature.geometry.coordinates[0] as Array<[number, number]>);
-    for (const [lng, lat] of coords) {
-      if (lng < west) west = lng;
-      if (lng > east) east = lng;
-      if (lat < south) south = lat;
-      if (lat > north) north = lat;
-    }
-  }
-
-  return Number.isFinite(west) ? [[west, south], [east, north]] : null;
-}
-
-/**
  * Η όψη του MapLibre που **χρειάζεται πραγματικά** αυτό το αρχείο.
  *
  * ⚠️ Το `MapInstance` του Geo-Canvas δεν εκθέτει τη διεπαφή συμβάντων ανά επίπεδο, και
@@ -170,7 +146,21 @@ export function ResultsMap({
   onClear,
 }: ResultsMapProps) {
   const data = useMemo(() => listingsToGeoJson(listings), [listings]);
-  const bounds = useMemo(() => boundsOf(data), [data]);
+  const bounds = useMemo(() => listingBounds(data), [data]);
+
+  /**
+   * 🏆 **ΟΙ ΤΙΜΕΣ ΠΑΝΩ ΣΤΟΝ ΧΑΡΤΗ — ΤΙΜΕΣ *ΚΑΙ* ΚΟΥΚΙΔΕΣ, ΠΟΤΕ ΤΙΜΕΣ *ΑΝΤΙ ΓΙΑ*** (Ε2).
+   *
+   * Τα επτά επίπεδα από κάτω μένουν **ανέπαφα**: κάθε αγγελία με θέση εξακολουθεί να
+   * έχει το σχήμα της, όσες κι αν είναι. Η πινακίδα είναι **προσθήκη σε υποσύνολο** —
+   * ποιο, το κρίνει ο `listingPriceMarkers` και **μόνο** αυτός (τρεις κανόνες: ξέρουμε
+   * ΠΟΥ, ξέρουμε ΠΟΣΟ, και μέσα στο φραγμένο πλήθος).
+   *
+   * 🔑 **Τρέφεται από το `data`, όχι από τα `listings`.** Η θέση της πινακίδας πρέπει να
+   * είναι **η ίδια συντεταγμένη** με το σχήμα, όχι μια δεύτερη μετατροπή σε `[lng, lat]`
+   * που «πρέπει» να συμφωνεί — δες την κεφαλίδα του `listings-geojson.ts`.
+   */
+  const priceMarkers = useMemo(() => listingPriceMarkers(listings, data), [listings, data]);
 
   // `hsl(var(--chart-1))` δεν το καταλαβαίνει το MapLibre — θέλει συγκεκριμένο χρώμα.
   const mark = `hsl(${readRootCssVar('--chart-1', '210 80% 50%')})`;
@@ -463,6 +453,21 @@ export function ResultsMap({
                    'circle-stroke-width': 4, 'circle-stroke-color': mark, 'circle-stroke-opacity': 1 }}
         />
       </Source>
+
+      {/*
+        Οι πινακίδες τιμής — **μετά** την πηγή, ώστε να κάθονται πάνω από τα σχήματα,
+        και **πριν** τη φούσκα, που πρέπει να μένει πάνω από όλα.
+
+        ⚠️ Το `RADIUS.pin` δίνεται ως prop: η ακτίνα της πινέζας έχει **μία** αυθεντία,
+        και το κενό της πινακίδας παράγεται από αυτήν αντί να το μαντέψει δεύτερος.
+      */}
+      <ListingPriceMarkers
+        markers={priceMarkers}
+        focus={focus}
+        pinRadiusPx={RADIUS.pin}
+        onPeek={onPeek}
+        onSelect={onSelect}
+      />
 
       {/*
         🏆 **Η ΑΠΑΝΤΗΣΗ ΕΚΕΙ ΠΟΥ ΚΟΙΤΑΖΕΙ** — πρότυπο Zillow/Redfin/Airbnb.

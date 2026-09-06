@@ -26,7 +26,7 @@ import React from 'react';
 import { AgencyProfileContent } from '../AgencyProfileContent';
 import { PROFILE_KEYS } from '../agency-directory-labels';
 import type { PublicShowcase } from '@/types/agency-profile';
-import { showcaseFixture } from '@/lib/agency/__fixtures__/showcase-fixture';
+import { showcaseFixture, TRADE_CREDENTIAL } from '@/lib/agency/__fixtures__/showcase-fixture';
 import { UNASKED_LISTING_ATTRIBUTES, type PublicListing } from '@/types/public-listing';
 
 const ALFA = 'comp_alfa';
@@ -114,12 +114,24 @@ function listingOf(id: string, title: string): PublicListing {
   };
 }
 
-function paint(state: Partial<typeof listingsState>): void {
+function paint(state: Partial<typeof listingsState>, profile: PublicShowcase = PROFILE): void {
   listingsState = { listings: [], loading: false, error: null, ...state };
   LISTINGS_REF.current = listingsState;
-  PROFILE_REF.current = PROFILE;
+  PROFILE_REF.current = profile;
   render(<AgencyProfileContent companyId={ALFA} alias="alfa" />);
 }
+
+/**
+ * 🔴 **Η ΒΙΤΡΙΝΑ ΤΟΥ ΕΥΡΗΜΑΤΟΣ** — γραφείο **εγκαταστάσεων φυσικού αερίου**, το ίδιο
+ * που στις 2026-09-06 καλούσε τον επισκέπτη να του αναθέσει **μεσιτεία**.
+ */
+const TRADE_PROFILE = showcaseFixture({
+  companyId: ALFA,
+  alias: 'alfa',
+  displayName: 'ΘΕΡΜΟΔΟΜΗ — ΕΓΚΑΤΑΣΤΑΣΕΙΣ ΦΥΣΙΚΟΥ ΑΕΡΙΟΥ',
+  publishedAt: '2026-08-30T10:00:00.000Z',
+  credentials: [TRADE_CREDENTIAL],
+});
 
 beforeEach(() => {
   asked.companyId = 'ΔΕΝ ΡΩΤΗΘΗΚΕ' as unknown as null;
@@ -173,5 +185,47 @@ describe('Β. Η βιτρίνα δείχνει τα ακίνητά της (ADR-8
     //    ταυτότητα του εγγράφου που μόλις επαληθεύτηκε. Η βιτρίνα ρωτά το δεύτερο.
     paint({ listings: [] });
     expect(asked.companyId).toBe(PROFILE.companyId);
+  });
+});
+
+/**
+ * 🔴 **ADR-841 §7 Α5 — Η ΒΙΤΡΙΝΑ ΡΩΤΑΕΙ ΠΟΙΕΣ ΠΡΑΞΕΙΣ ΔΕΧΕΤΑΙ.**
+ *
+ * ⚠️ Το Ε1 είναι η **μοναδική** άγκυρα που θα είχε πιάσει το ελάττωμα: όλα τα Β1-Β6
+ * ήταν πράσινα ενώ η οθόνη ζητούσε από τεχνίτη να ασκήσει μεσιτεία — κανένα τους δεν
+ * ρωτούσε *ποιο κουμπί* δείχνει η σελίδα.
+ */
+describe('Ε. Οι πράξεις της βιτρίνας (ADR-841 §7 Α5)', () => {
+  it('🔴 Ε1 — ΤΟ ΕΥΡΗΜΑ: γραφείο φυσικού αερίου ΔΕΝ καλεί σε εντολή μεσιτείας', () => {
+    paint({ listings: [] }, TRADE_PROFILE);
+
+    expect(screen.queryByText(PROFILE_KEYS.requestCta)).not.toBeInTheDocument();
+    expect(screen.queryByText(PROFILE_KEYS.requestHint)).not.toBeInTheDocument();
+  });
+
+  it('🔴 Ε2 — ούτε επικαλείται τη ΜΕΣΙΤΙΚΗ ΣΥΜΒΑΣΗ για να εξηγήσει την απουσία τηλεφώνου', () => {
+    // ⚠️ Το «γιατί δεν έχει τηλέφωνο» **παραμένει** — αλλάζει ο ΛΟΓΟΣ. Χωρίς αυτή τη
+    //    δεύτερη προσδοκία, ένα «κρύψε τα όλα» θα περνούσε ως διόρθωση.
+    paint({ listings: [] }, TRADE_PROFILE);
+
+    expect(screen.queryByText(PROFILE_KEYS.noChannel)).not.toBeInTheDocument();
+    expect(screen.getByText(PROFILE_KEYS.noChannelPro)).toBeInTheDocument();
+  });
+
+  it('🔴 Ε3 — και η κενή λίστα δεν του ζητά να «αναλάβει το δικό σας ακίνητο»', () => {
+    paint({ listings: [] }, TRADE_PROFILE);
+
+    expect(screen.queryByText(PROFILE_KEYS.listingsEmptyHint)).not.toBeInTheDocument();
+    expect(screen.getByText(PROFILE_KEYS.listingsEmptyHintPro)).toBeInTheDocument();
+  });
+
+  it('Ε4 — Ο ΠΑΡΟΝΟΜΑΣΤΗΣ: το μεσιτικό γραφείο τα κρατά ΟΛΑ αμετάβλητα', () => {
+    // 🔑 Χωρίς αυτό, ένα «κρύψε το κουμπί πάντα» θα άφηνε τα Ε1-Ε3 πράσινα.
+    paint({ listings: [] });
+
+    expect(screen.getByText(PROFILE_KEYS.requestCta)).toBeInTheDocument();
+    expect(screen.getByText(PROFILE_KEYS.noChannel)).toBeInTheDocument();
+    expect(screen.getByText(PROFILE_KEYS.listingsEmptyHint)).toBeInTheDocument();
+    expect(screen.queryByText(PROFILE_KEYS.noChannelPro)).not.toBeInTheDocument();
   });
 });

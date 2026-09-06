@@ -66,6 +66,7 @@ import { usePublicAgencyListings } from '@/services/realtime/hooks/usePublicList
 import { usePublicPlace } from '@/services/realtime/hooks/usePublicPlace';
 import type { PublicShowcase } from '@/types/agency-profile';
 import { FirstContactAction } from '@/components/contact/FirstContactAction';
+import { acceptsMandate } from '@/lib/professional/showcase-acts';
 
 import { AGENCY_PUBLIC_NS, PROFILE_KEYS } from './agency-directory-labels';
 import { AGENCY_DIRECTORY_ROUTE } from './agency-directory-route';
@@ -208,7 +209,18 @@ function PlaceFact({ profile }: { readonly profile: PublicShowcase }): React.JSX
  * Αν ο Giorgio τη θέλει ψηλότερα, είναι **μετακίνηση ενός μπλοκ** — αλλά τότε το §9.8
  * ενημερώνεται μαζί.
  */
-function AgencyListings({ companyId }: { readonly companyId: string }): React.JSX.Element {
+function AgencyListings({
+  companyId,
+  canHoldMandate,
+}: {
+  readonly companyId: string;
+  /**
+   * ⚠️ **Περνιέται, δεν ξαναρωτιέται** (ADR-841 §7 Α5): ο κριτής έχει ήδη τρέξει στη
+   * σελίδα και τα credentials δεν ταξιδεύουν ως εδώ. Δεύτερη κλήση θα ήταν δεύτερη
+   * ευκαιρία να **διαφωνήσει** με το κουμπί που ο ίδιος επισκέπτης βλέπει από πάνω.
+   */
+  readonly canHoldMandate: boolean;
+}): React.JSX.Element {
   const { t } = useTranslation([AGENCY_PUBLIC_NS]);
   const { listings, loading, error } = usePublicAgencyListings(companyId);
 
@@ -232,7 +244,9 @@ function AgencyListings({ companyId }: { readonly companyId: string }): React.JS
       ) : listings.length === 0 ? (
         <>
           <p className="m-0 text-sm text-muted-foreground">{t(PROFILE_KEYS.listingsEmpty)}</p>
-          <p className="m-0 text-sm text-muted-foreground">{t(PROFILE_KEYS.listingsEmptyHint)}</p>
+          <p className="m-0 text-sm text-muted-foreground">
+            {t(canHoldMandate ? PROFILE_KEYS.listingsEmptyHint : PROFILE_KEYS.listingsEmptyHintPro)}
+          </p>
         </>
       ) : (
         // ⚠️ Οι αγγελίες φτάνουν **ήδη ταξινομημένες** από το hook
@@ -290,6 +304,12 @@ export function AgencyProfileContent({
   }
 
   const { showcase: profile } = lookup;
+  // 🔑 **ΜΙΑ ΕΡΩΤΗΣΗ, ΜΙΑ ΦΟΡΑ** (ADR-841 §7 Α5). Τρεις αποφάσεις της οθόνης κρέμονται
+  //    από αυτήν — κουμπί · «γιατί δεν έχει τηλέφωνο» · κενή λίστα — και οφείλουν να
+  //    λένε **την ίδια ιστορία**. Τρεις ξεχωριστές κλήσεις θα ήταν τρεις ευκαιρίες να
+  //    αποκλίνουν, και η οθόνη θα έδειχνε «δεν ασκεί μεσιτεία» δίπλα σε κουμπί
+  //    μεσιτείας.
+  const canHoldMandate = acceptsMandate(profile.credentials);
 
   return (
     <ShellSurface as="main" measure="prose" className="gap-6">
@@ -329,12 +349,27 @@ export function AgencyProfileContent({
           `companyId → ψευδώνυμο` θα ήταν **σάρωση**, δηλαδή απαρίθμηση γραφείων
           (`alias-registry.ts`, ADR-787 Ε-5 §4 #1).
         */}
-        <Button asChild aria-describedby="agency-request-hint">
-          <Link href={mandateRequestHref(alias)}>{t(PROFILE_KEYS.requestCta)}</Link>
-        </Button>
-        <p id="agency-request-hint" className="m-0 text-sm text-muted-foreground">
-          {t(PROFILE_KEYS.requestHint)}
-        </p>
+        {/*
+          🔴 **ΤΟ ΚΟΥΜΠΙ ΡΩΤΑΕΙ ΠΡΩΤΑ, ΚΑΙ ΜΕΧΡΙ ΤΙΣ 2026-09-06 ΔΕΝ ΡΩΤΟΥΣΕ ΠΟΤΕ**
+          (ADR-841 §7 Α5). Αποδιδόταν **χωρίς καμία συνθήκη** ⇒ ένα γραφείο
+          εγκαταστάσεων **φυσικού αερίου** καλούσε τον επισκέπτη να του αναθέσει
+          **μεσιτεία** — δραστηριότητα που ο Ν.4072/2012 επιτρέπει μόνο σε
+          εγγεγραμμένους μεσίτες. Μετρήθηκε στην οθόνη, δεν προβλέφθηκε.
+
+          ⚠️ **ΚΑΙ Η ΑΠΟΚΡΥΨΗ ΔΕΝ ΕΙΝΑΙ Ο ΦΡΟΥΡΟΣ** — είναι ευγένεια προς τον άνθρωπο,
+          ώστε να μη ζητήσει ό,τι θα απορριφθεί (N.7.2 #4). Ο φρουρός ζει στον γραφέα
+          (`mandate-request.service.ts`), όπου ο ίδιος κριτής απαντά ξανά.
+        */}
+        {canHoldMandate ? (
+          <>
+            <Button asChild aria-describedby="agency-request-hint">
+              <Link href={mandateRequestHref(alias)}>{t(PROFILE_KEYS.requestCta)}</Link>
+            </Button>
+            <p id="agency-request-hint" className="m-0 text-sm text-muted-foreground">
+              {t(PROFILE_KEYS.requestHint)}
+            </p>
+          </>
+        ) : null}
         {/* ADR-843 ΠΕ1 — η δεύτερη πράξη της βιτρίνας, κάτω από την εντολή. */}
         <FirstContactAction
           target={{ kind: 'professional', agencyCompanyId: profile.companyId }}
@@ -349,7 +384,7 @@ export function AgencyProfileContent({
         το άρθρο 200 §1 αφήνει χωρίς ίχνος.
       */}
       <p className="m-0 rounded-md border border-border bg-card p-3 text-sm text-muted-foreground">
-        {t(PROFILE_KEYS.noChannel)}
+        {t(canHoldMandate ? PROFILE_KEYS.noChannel : PROFILE_KEYS.noChannelPro)}
       </p>
 
       {/*
@@ -359,7 +394,7 @@ export function AgencyProfileContent({
         μέσω του `profile.companyId`, που είναι η **ταυτότητα του ίδιου εγγράφου** που
         μόλις διαβάστηκε — όχι το prop, που μπορεί να είναι `null`.
       */}
-      <AgencyListings companyId={profile.companyId} />
+      <AgencyListings companyId={profile.companyId} canHoldMandate={canHoldMandate} />
 
       <nav>
         <Link

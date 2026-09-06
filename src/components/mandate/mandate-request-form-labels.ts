@@ -108,6 +108,13 @@ export const REJECTION_KEYS: Record<MandateRequestRejection, string> = {
   'listing-not-live': 'property-market:mandate.request.listing-not-live',
   'listing-already-brokered': 'property-market:mandate.request.listing-already-brokered',
   'agency-absent': 'property-market:mandate.request.agency-absent',
+  /**
+   * 🔴 **ΑΔΕΛΦΟΣ ΤΟΥ ΑΠΟ ΠΑΝΩ, ΚΑΙ ΤΟ ΑΝΤΙΘΕΤΟ ΤΟΥ** (ADR-841 §7 Α5): το γραφείο
+   * **φαίνεται** — απλώς δεν ασκεί μεσιτεία. Γι' αυτό το κείμενο **δεν** στέλνει
+   * στον κατάλογο *(θα τον έβγαζε από γραφείο που μόλις επισκεπτόταν)* αλλά λέει
+   * τι **μπορεί** να του ζητήσει.
+   */
+  'agency-not-brokerage': 'property-market:mandate.request.agency-not-brokerage',
   'request-already-pending': 'property-market:mandate.request.request-already-pending',
   'request-declined-final': 'property-market:mandate.request.request-declined-final',
   /**
@@ -136,7 +143,7 @@ export const REJECTION_KEYS: Record<MandateRequestRejection, string> = {
  * 🔴 ΓΙΑΤΙ ΠΛΗΡΗΣ `Record` ΜΕ `null`, ΚΑΙ ΟΧΙ `Partial`
  * ────────────────────────────────────────────────────────────────────────────
  *
- * Ένα `Partial<…>` θα σήμαινε *«όποιος έχει, έχει»* — δηλαδή ο **ένατος** κωδικός θα
+ * Ένα `Partial<…>` θα σήμαινε *«όποιος έχει, έχει»* — δηλαδή ο **δέκατος** κωδικός θα
  * γεννιόταν **σιωπηλά χωρίς διέξοδο**, και κανείς δεν θα το παρατηρούσε ποτέ. Ο
  * πλήρης πίνακας κάνει την ερώτηση **υποχρεωτική**: *«μπορεί ο άνθρωπος να κάνει κάτι
  * γι' αυτό, εδώ και τώρα;»*. Το `null` είναι **απάντηση**, όχι παράλειψη.
@@ -161,6 +168,13 @@ export const REJECTION_REMEDY: Record<MandateRequestRejection, RejectionRemedy |
   'listing-not-live': null,
   'listing-already-brokered': null,
   'agency-absent': null,
+  /**
+   * ⚠️ **`null` ΜΕ ΛΟΓΟ**: δεν υπάρχει πεδίο να διορθώσει — **δεν έκανε λάθος**. Ο
+   * μόνος άλλος δρόμος είναι **άλλο γραφείο**, και ένας σύνδεσμος στον κατάλογο θα
+   * τον έσπρωχνε μακριά από τη βιτρίνα που δέχεται **άλλη** πράξη, την οποία
+   * βλέπει ήδη.
+   */
+  'agency-not-brokerage': null,
   'request-already-pending': null,
   'request-declined-final': null,
   'listing-conflicting-mandate': null,

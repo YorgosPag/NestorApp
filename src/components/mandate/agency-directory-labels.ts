@@ -111,6 +111,12 @@ export const PROFILE_KEYS = {
   requestCta: `${P}.requestCta`,
   requestHint: `${P}.requestHint`,
   noChannel: `${P}.noChannel`,
+  // ⚠️ **ΔΥΟ ΚΕΙΜΕΝΑ ΓΙΑ ΤΗΝ ΙΔΙΑ ΑΠΟΥΣΙΑ, ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ** (ADR-841 §7 Α5): το
+  //    «γιατί δεν έχει τηλέφωνο» ισχύει για **κάθε** επαγγελματία, αλλά ο **λόγος**
+  //    δεν είναι ο ίδιος. Ο μεσιτικός επικαλείται τη **μεσιτική σύμβαση** — πρόταση
+  //    που σε γραφείο φυσικού αερίου είναι απλώς **ψευδής**. Ένα κοινό κείμενο θα
+  //    ήταν λάθος στη μία από τις δύο περιπτώσεις, ό,τι κι αν διαλέγαμε.
+  noChannelPro: `${P}.noChannelPro`,
   backToDirectory: `${P}.backToDirectory`,
   // ── ADR-841 §7 (Α6) — ΤΙ ΠΟΥΛΑ, ΟΧΙ ΜΟΝΟ ΠΟΙΟΣ ΕΙΝΑΙ ──────────────────────
   //
@@ -123,5 +129,7 @@ export const PROFILE_KEYS = {
   listingsLoading: `${P}.listingsLoading`,
   listingsEmpty: `${P}.listingsEmpty`,
   listingsEmptyHint: `${P}.listingsEmptyHint`,
+  /** Ίδιος λόγος με το `noChannelPro`: το «ζήτησέ του να αναλάβει» δεν ισχύει εδώ. */
+  listingsEmptyHintPro: `${P}.listingsEmptyHintPro`,
   listingsFailed: `${P}.listingsFailed`,
 } as const;
