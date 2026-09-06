@@ -66,7 +66,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "979577897a50f321db95c5ff83e21649fad93f0b27a5669845c2dd52da65217a",
+  "inputsSha256": "8550f72efed7224615b02760561a4231fd5b5d3466ac294d855c0c18f78c60f4",
   "languages": [
     "el"
   ],
@@ -284,7 +284,7 @@
     "src/hooks/geo/usePlaceIdentity.ts": "e1106f132bc40d83f20c81c2de74c07710a77d6c17c14cac5da680e3ee260329",
     "src/hooks/geo/usePlaceOutline.ts": "792a38bba8f6b68d1731ad07ca0aeb94e2fd15ee4b91596369924552c8c76cf6",
     "src/hooks/geo/usePlaceResolver.ts": "5602ed9dbedee0acbefbcd361c8c9a5c98a92896a484109a0d916a4f2db03df8",
-    "src/hooks/listings/useListingFocus.ts": "1fff952b287880e1ffd25f0e67679572585c1b23516943b09c5749f8f8055f3d",
+    "src/hooks/listings/useListingFocus.ts": "3af313aabc898ab2115ac073030b62d14cd5b67299ee454b7a57ea45c5e46224",
     "src/hooks/mandate/useAgencyShowcase.ts": "db5cf7de0506704da91b680c1713be32143d60ce05fd3c06cf94472924c8c449",
     "src/hooks/mandate/useMandateCatalog.ts": "a57448c1c42a23613c470f0a94ba7d16931f2de5fa315e08fd0b7b56fe9b14ea",
     "src/hooks/mandate/useMandateInbox.ts": "336d880546f769fd998339c41a395e33050c5f4da9a610501d265669b7b8e4c2",
