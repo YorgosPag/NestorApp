@@ -166,3 +166,122 @@ describe('filterContactsForPage', () => {
     expect(result.map(c => c.id)).toEqual(['c1']);
   });
 });
+
+// =============================================================================
+// ADR-842 §7.6.13 Δ — ΤΑ ΤΡΙΑ ΦΙΛΤΡΑ ΙΔΙΟΚΤΗΣΙΑΣ
+// =============================================================================
+//
+// 🔴 **Η ΣΥΝΔΕΣΗ ΠΟΥ ΕΛΕΙΠΕ.** Το panel πρόσφερε «Αριθμός ακινήτων» · «Συνολικό
+//    εμβαδόν» · «Μόνο με ιδιοκτησίες»· αυτή η συνάρτηση **δεν διάβαζε καν** τα τρία
+//    πεδία. Δεν ήταν λάθος κανόνας — ήταν **απουσία κανόνα**, και γι' αυτό δεν την
+//    έπιασε ούτε πύλη ούτε δοκιμή: το προηγούμενο αρχείο δοκιμών περνούσε
+//    `NO_FILTERS` σε κάθε περίπτωση, δηλαδή δεν ρώτησε ποτέ.
+
+describe('ADR-842 §7.6.13 Δ — φίλτρα «τι κατέχει η επαφή»', () => {
+  const OWNER_STATS = {
+    c1: { propertiesCount: 4, totalArea: 250 },
+    c2: { propertiesCount: 1, totalArea: 60 },
+  };
+
+  const both = [ALICE, COMPANY];
+
+  it('χωρίς πίνακα ιδιοκτησιών τα τρία φίλτρα ΔΕΝ εφαρμόζονται («δεν ξέρω» ≠ «μηδέν»)', () => {
+    const result = filterContactsForPage({
+      contacts: both,
+      filters: { ...NO_FILTERS, hasProperties: true, propertiesCount: '6+' },
+      activeCardFilter: null,
+      selectedContactId: null,
+      showTrash: false,
+      t,
+      // ownerStats σκόπιμα απών — η λίστα μένει πλήρης αντί να αδειάσει
+    });
+
+    expect(result.map(c => c.id)).toEqual(['c1', 'c2']);
+  });
+
+  it('«μόνο με ιδιοκτησίες»: πετάει όποιον δεν κατέχει τίποτα', () => {
+    const result = filterContactsForPage({
+      contacts: both,
+      filters: { ...NO_FILTERS, hasProperties: true },
+      activeCardFilter: null,
+      selectedContactId: null,
+      showTrash: false,
+      t,
+      ownerStats: { c1: OWNER_STATS.c1 },
+    });
+
+    expect(result.map(c => c.id)).toEqual(['c1']);
+  });
+
+  it('κάδος πλήθους «3-5»: κρατά μόνο όποιον πέφτει μέσα', () => {
+    const result = filterContactsForPage({
+      contacts: both,
+      filters: { ...NO_FILTERS, propertiesCount: '3-5' },
+      activeCardFilter: null,
+      selectedContactId: null,
+      showTrash: false,
+      t,
+      ownerStats: OWNER_STATS,
+    });
+
+    expect(result.map(c => c.id)).toEqual(['c1']);
+  });
+
+  it('κάδος εμβαδού «0-100»: κρατά μόνο τη μικρή', () => {
+    const result = filterContactsForPage({
+      contacts: both,
+      filters: { ...NO_FILTERS, totalArea: '0-100' },
+      activeCardFilter: null,
+      selectedContactId: null,
+      showTrash: false,
+      t,
+      ownerStats: OWNER_STATS,
+    });
+
+    expect(result.map(c => c.id)).toEqual(['c2']);
+  });
+
+  it('οι δύο κάδοι συνδυάζονται (ΚΑΙ, όχι Ή)', () => {
+    const result = filterContactsForPage({
+      contacts: both,
+      filters: { ...NO_FILTERS, propertiesCount: '3-5', totalArea: '0-100' },
+      activeCardFilter: null,
+      selectedContactId: null,
+      showTrash: false,
+      t,
+      ownerStats: OWNER_STATS,
+    });
+
+    expect(result).toEqual([]);
+  });
+
+  it('η ΑΝΟΙΧΤΗ επαφή δεν κρύβεται ποτέ από φίλτρο ιδιοκτησίας', () => {
+    // Η ίδια ρήτρα που ισχύει για κάθε άλλο φίλτρο (ADR-332 D21) — αλλιώς το πάνελ
+    // θα έδειχνε κάποιον που δεν υπάρχει στη λίστα δίπλα του.
+    const result = filterContactsForPage({
+      contacts: both,
+      filters: { ...NO_FILTERS, propertiesCount: '6+' },
+      activeCardFilter: null,
+      selectedContactId: 'c2',
+      showTrash: false,
+      t,
+      ownerStats: OWNER_STATS,
+    });
+
+    expect(result.map(c => c.id)).toEqual(['c2']);
+  });
+
+  it('επαφή άγνωστη στον πίνακα μετράει ως μηδέν (όχι σφάλμα)', () => {
+    const result = filterContactsForPage({
+      contacts: both,
+      filters: { ...NO_FILTERS, hasProperties: true },
+      activeCardFilter: null,
+      selectedContactId: null,
+      showTrash: false,
+      t,
+      ownerStats: {},
+    });
+
+    expect(result).toEqual([]);
+  });
+});

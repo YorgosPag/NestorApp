@@ -15,6 +15,12 @@ import { getContactDisplayName } from '@/types/contacts';
 import { CONTACT_TYPES } from '@/constants/contacts';
 import { normalizeToDate } from '@/lib/date-local';
 import type { ContactFilterState } from '@/components/core/AdvancedFilters';
+import {
+  EMPTY_OWNER_STATS,
+  matchesPropertiesCount,
+  matchesTotalArea,
+  type OwnerPropertyStatsByContact,
+} from '@/lib/contacts/owner-property-stats';
 
 /** Μεταφραστής τίτλων καρτών του dashboard — ό,τι επιστρέφει το `useTranslation`. */
 type TranslateFn = (key: string) => string;
@@ -36,6 +42,21 @@ export interface ContactFilterInputs {
   selectedContactId: string | null;
   showTrash: boolean;
   t: TranslateFn;
+  /**
+   * Τι κατέχει κάθε επαφή — **συναθροισμένο στον διακομιστή**
+   * (`/api/contacts/owner-property-stats`).
+   *
+   * 🔴 **Γιατί όρισμα και όχι ανάγνωση εδώ μέσα** (ADR-842 §7.6.13): αυτή η
+   * συνάρτηση δηλώνει στο @fileoverview της ότι είναι **καθαρή** — «δέχεται τα
+   * πάντα ως όρισμα, δεν διαβάζει state και δεν έχει παρενέργειες». Μια κλήση
+   * δικτύου εδώ θα ακύρωνε ακριβώς τον λόγο που εξήχθη.
+   *
+   * ⚠️ **Παραλείπεται ⇒ τα τρία φίλτρα ιδιοκτησίας δεν εφαρμόζονται.** Είναι η
+   * τίμια συμπεριφορά όσο τα δεδομένα φορτώνουν: «δεν ξέρω ακόμη» δεν είναι
+   * «κατέχει μηδέν» — το δεύτερο θα άδειαζε τη λίστα για ένα κλάσμα του
+   * δευτερολέπτου σε κάθε φόρτωση.
+   */
+  ownerStats?: OwnerPropertyStatsByContact;
 }
 
 /**
@@ -85,6 +106,7 @@ export function filterContactsForPage({
   selectedContactId,
   showTrash,
   t,
+  ownerStats,
 }: ContactFilterInputs): Contact[] {
   // 🗑️ Trash mode: show ONLY deleted contacts
   if (showTrash) {
@@ -112,6 +134,18 @@ export function filterContactsForPage({
     }
 
     if (filters.isFavorite && !contact.isFavorite) return false;
+
+    // ── Τι κατέχει η επαφή (ADR-842 §7.6.13) ────────────────────────────────
+    // Τα τρία αυτά φίλτρα ήταν **ορατά και ανενεργά**: το panel τα πρόσφερε, ο
+    // φίλτρος τα αγνοούσε. Εφαρμόζονται μόνο όταν ο πίνακας έχει φτάσει — δες
+    // τη σημείωση στο `ownerStats`.
+    if (ownerStats) {
+      const stats = (contact.id && ownerStats[contact.id]) || EMPTY_OWNER_STATS;
+
+      if (filters.hasProperties && stats.propertiesCount === 0) return false;
+      if (!matchesPropertiesCount(filters.propertiesCount, stats.propertiesCount)) return false;
+      if (!matchesTotalArea(filters.totalArea, stats.totalArea)) return false;
+    }
 
     return true;
   });

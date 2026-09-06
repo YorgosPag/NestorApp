@@ -747,6 +747,12 @@ export const API_ROUTES = {
   CONTACTS: {
     BY_ID: (id: string) => `/api/contacts/${id}` as const,
     PROPERTIES: (contactId: string) => `/api/contacts/${contactId}/properties` as const,
+    /**
+     * Τι κατέχει **κάθε** επαφή του μισθωτή — δύο αριθμοί ανά ιδιοκτήτη, χωρίς
+     * παράμετρο (ADR-842 §7.6.13). Αδελφή της {@link PROPERTIES}, σε άλλη κλίμακα:
+     * εκείνη απαντά «τι κατέχει **αυτή**», αυτή «ποιοι κατέχουν **πόσα**».
+     */
+    OWNER_PROPERTY_STATS: '/api/contacts/owner-property-stats',
     SEARCH_INDIVIDUALS: '/api/contacts/search-individuals',
     SEARCH_FOR_SHARE: '/api/contacts/search-for-share',
     IDENTITY_IMPACT_PREVIEW: (id: string) => `/api/contacts/${id}/identity-impact-preview` as const,

@@ -1,5 +1,47 @@
 import type { ContactFilterState, FilterPanelConfig } from '../types';
 import { AFO, COMMON_FILTER_LABELS, FL, FT, PROPERTY_BUILDING_TYPE_LABELS, PROPERTY_FILTER_LABELS, RL, SP, UNIFIED_STATUS_FILTER_LABELS } from './shared';
+import {
+  PROPERTIES_COUNT_BUCKETS,
+  TOTAL_AREA_BUCKETS,
+  type PropertiesCountBucket,
+  type TotalAreaBucket,
+} from '@/lib/contacts/owner-property-stats';
+
+/**
+ * 🔴 **ΟΙ ΤΙΜΕΣ ΕΡΧΟΝΤΑΙ ΑΠΟ ΤΟΝ ΚΡΙΤΗ, ΟΙ ΕΤΙΚΕΤΕΣ ΜΕΝΟΥΝ ΕΔΩ** (ADR-842 §7.6.13 Δ).
+ *
+ * Μέχρι σήμερα οι τιμές `'1-2'`/`'3-5'`/`'6+'` ήταν γραμμένες **εδώ** και ο κριτής που
+ * τις ερμήνευε ζούσε **αλλού** — όσο ζούσε. Δύο ανεξάρτητες λίστες για ένα λεξιλόγιο:
+ * μια αλλαγή ορίου («ας γίνει 1-3») θα άλλαζε την **ετικέτα** χωρίς να αλλάξει τον
+ * **κανόνα**, και το σφάλμα θα ήταν αθόρυβο — το dropdown θα έλεγε ένα, το φίλτρο θα
+ * έκανε άλλο.
+ *
+ * 🔑 Ο τύπος `Record<Bucket, string>` κάνει τον **μεταγλωττιστή** φύλακα: νέος κάδος
+ * στο SSoT ⇒ **υποχρεωτική** ετικέτα εδώ. Δεν είναι σύμβαση, είναι σφάλμα build.
+ */
+const PROPERTIES_COUNT_LABELS: Record<PropertiesCountBucket, string> = {
+  all: COMMON_FILTER_LABELS.ALL_UNITS,
+  '1-2': RL.units_1_2,
+  '3-5': RL.units_3_5,
+  '6+': RL.units_6_plus,
+};
+
+const TOTAL_AREA_LABELS: Record<TotalAreaBucket, string> = {
+  all: COMMON_FILTER_LABELS.ALL_AREAS,
+  '0-100': RL.area_up_to_100,
+  '101-300': RL.area_101_300,
+  '301+': RL.area_301_plus,
+};
+
+const propertiesCountOptions = PROPERTIES_COUNT_BUCKETS.map((value) => ({
+  value,
+  label: PROPERTIES_COUNT_LABELS[value],
+}));
+
+const totalAreaOptions = TOTAL_AREA_BUCKETS.map((value) => ({
+  value,
+  label: TOTAL_AREA_LABELS[value],
+}));
 
 export const contactFiltersConfig: FilterPanelConfig = {
   title: FT.contacts,
@@ -57,12 +99,7 @@ export const contactFiltersConfig: FilterPanelConfig = {
           label: FL.properties_count,
           placeholder: RL.units_all,
           width: 1,
-          options: [
-            { value: "all", label: COMMON_FILTER_LABELS.ALL_UNITS },
-            { value: "1-2", label: RL.units_1_2 },
-            { value: "3-5", label: RL.units_3_5 },
-            { value: "6+", label: RL.units_6_plus },
-          ],
+          options: propertiesCountOptions,
         },
         {
           id: "totalArea",
@@ -70,12 +107,7 @@ export const contactFiltersConfig: FilterPanelConfig = {
           label: FL.total_area,
           placeholder: RL.areas_all,
           width: 1,
-          options: [
-            { value: "all", label: COMMON_FILTER_LABELS.ALL_AREAS },
-            { value: "0-100", label: RL.area_up_to_100 },
-            { value: "101-300", label: RL.area_101_300 },
-            { value: "301+", label: RL.area_301_plus },
-          ],
+          options: totalAreaOptions,
         },
         {
           id: "hasProperties",
