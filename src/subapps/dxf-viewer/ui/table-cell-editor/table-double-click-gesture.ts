@@ -50,7 +50,10 @@ import { resolveSelectedTable, resolveTableById } from './table-entity-lookup';
 // 🔴 ADR-833 Φάση 4 — η **τρίτη** χειρονομία του ίδιου διπλού κλικ: μετονομασία καρτέλας.
 import { computeTableEntityGeometryLive } from '../../bim/table/table-entity-geometry';
 import { tableWorksheetStripAtWorld } from './table-worksheet-tab-probe';
-import { openWorksheetRename } from './table-worksheet-rename-open';
+// 🔴 ADR-833 §5.4.11 #3 — **η θύρα κατά ΤΑΥΤΟΤΗΤΑ**, η ίδια που χρησιμοποιεί το μενού. Δες
+// παρακάτω: το slot κάτω από το pixel είναι απάντηση που **λήγει μέσα στη χειρονομία**.
+import { openWorksheetRenameById } from './table-worksheet-rename-open';
+import { resolveWorksheetFields } from '../../bim/table/table-worksheet-resolve';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
 import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
 
@@ -125,10 +128,38 @@ export function applyTableDoubleClick(params: TableDoubleClickParams): void {
     // σημασία στο διπλό κλικ: το πρώτο του πάτημα έφτιαξε ήδη φύλλο, οπότε ένα δεύτερο θα
     // έφτιαχνε **δύο** και ο χρήστης δεν ζήτησε κανένα από τα δύο συνειδητά.
     if (strip.kind === 'tab') {
-      openWorksheetRename({
+      // ── 🔴 ADR-833 §5.4.11 #3 — Ο ΣΤΟΧΟΣ ΕΙΝΑΙ ΤΟ **ΕΝΕΡΓΟ ΦΥΛΛΟ**, ΟΧΙ ΤΟ SLOT ─────────
+      //
+      // Το `strip.tab` απαντά «ποια καρτέλα κάθεται **τώρα** σε αυτό το pixel» — και αυτή η
+      // απάντηση **λήγει μέσα στην ίδια χειρονομία**: το πρώτο κλικ του διπλού ενεργοποιεί
+      // το φύλλο, το παράθυρο υπερχείλισης είναι **κεντραρισμένο στην ενεργή** καρτέλα, άρα
+      // η λωρίδα **κυλά** και το ίδιο pixel αποκτά **άλλον ένοικο**.
+      //
+      // 🔴 **Μετρημένο**: με 40 φύλλα, διπλό κλικ στην ακριανή ορατή καρτέλα (`ws_23`) άνοιγε
+      // τη μετονομασία του **`ws_35`** — δώδεκα φύλλα παραδίπλα. Σιωπηλή αστοχία που καταλήγει
+      // σε **λάθος δεδομένα**, όχι σε αδράνεια: ο χρήστης μετονομάζει φύλλο που δεν είδε ποτέ.
+      //
+      // 🔑 **Η σωστή ταυτότητα υπάρχει ήδη και δεν χρειάζεται καμία μνήμη**: η καρτέλα που
+      // πάτησε το πρώτο κλικ **ΕΙΝΑΙ**, εξ ορισμού, η ενεργή. Είναι και η σημασιολογία της
+      // χειρονομίας παντού (Excel, Sheets, Numbers): το διπλό κλικ σε καρτέλα **πρώτα την
+      // ενεργοποιεί** και μετά μετονομάζει — δεν υπάρχει «μετονομασία μη ενεργής».
+      //
+      // Άρα το hit-test κρατά την ερώτηση που ξέρει να απαντά (**«είμαι πάνω σε καρτέλα;»**)
+      // και το «**ποια**» το απαντά το `activeWorksheetId`, δηλαδή το SSoT του «ποιο φύλλο
+      // βλέπεις». Καμία δεύτερη απάντηση, κανένα store, καμία χρονομέτρηση — ίδια πειθαρχία
+      // με το `runAfterClose` του §5.4.11: *μη ξαναρωτάς ερώτηση που η απάντησή της έληξε·
+      // κουβάλα την από τη στιγμή που ίσχυε.*
+      //
+      // ⚠️ Και μπαίνει από την **ΙΔΙΑ ΘΥΡΑ** με το μενού (`openWorksheetRenameById`), που ήδη
+      // κρατά **ταυτότητα** και ξαναβρίσκει τη θέση — με σκεπτικό γραμμένο εκεί: *«η λωρίδα
+      // κυλά, το φύλλο όχι»*. Οι δύο διαδρομές έπαψαν να είναι δύο πόρτες.
+      //
+      // Η δεύτερη ανάγνωση γεωμετρίας μέσα στη θύρα είναι **cache hit** (`computeTableEntity
+      // GeometryLive` κλειδώνει σε έκδοση διάταξης), οπότε ο κανόνας «μία ανάγνωση ανά συμβάν»
+      // δεν παραβιάζεται — αλλάζει μόνο ποιος τη ζητά.
+      openWorksheetRenameById({
         entity,
-        tab: strip.tab,
-        mmToWorld: geometry.mmToWorld,
+        worksheetId: resolveWorksheetFields(entity).activeWorksheetId,
         container,
         transform,
       });

@@ -9,6 +9,8 @@
 import { computeTableFormulaBarFrame } from '../table-formula-bar-frame';
 import { TABLE_INDICATOR_OUTER_PX } from '../../../bim/table/table-indicator-geometry';
 import { tableInsertControlOuterPx } from '../../../bim/table/table-insert-control';
+// 🔴 ADR-833 §5.4.11 #3 — ο **τρίτος** ένοικος του χώρου πάνω από το πλέγμα.
+import { tableWorksheetStripOuterPx } from '../../../bim/table/table-worksheet-tabs-geometry';
 
 describe('computeTableFormulaBarFrame', () => {
   it('η γραμμή απλώνεται όσο ο πίνακας ΣΥΝ τη ζώνη αριθμών', () => {
@@ -55,6 +57,27 @@ describe('computeTableFormulaBarFrame', () => {
     const frame = computeTableFormulaBarFrame({ tableWidthMm: 100, tableHeightMm: 40, pxPerMm: 4, spaceAbovePx: 999 });
     const barBottomPx = frame.offsetYPx + frame.heightPx;
     expect(barBottomPx).toBeLessThanOrEqual(-tableInsertControlOuterPx('table-mode').top);
+  });
+
+  it('🔴 ADR-833 §5.4.11 #3 ΤΟ ΙΔΙΟ, ΓΙΑ ΤΟΝ ΤΡΙΤΟ ΕΝΟΙΚΟ: η γραμμή δεν σκεπάζει τη ΛΩΡΙΔΑ', () => {
+    // ⚠️ **Τρίτη φορά το ίδιο σχήμα, και γι' αυτό γράφεται ΤΗΝ ΙΔΙΑ ΜΕΡΑ με τον ένοικο.**
+    // Στο §27.13 ο ένοικος ήταν η ζώνη, στο §40 το ⊕· και τις δύο φορές ο έλεγχος από πάνω
+    // έμενε **πράσινος** ενώ η γραμμή σκέπαζε τον καινούριο, επειδή ρωτούσε για τον παλιό.
+    // Η λωρίδα καρτελών μετακόμισε εδώ σήμερα (κρεμόταν από την κάτω ακμή και έφευγε κάτω
+    // από το χέρι) — αν αυτή η γραμμή έλειπε, το περιστατικό θα επαναλαμβανόταν αυτούσιο.
+    const frame = computeTableFormulaBarFrame({ tableWidthMm: 100, tableHeightMm: 40, pxPerMm: 4, spaceAbovePx: 999 });
+    const barBottomPx = frame.offsetYPx + frame.heightPx;
+    expect(barBottomPx).toBeLessThanOrEqual(-tableWorksheetStripOuterPx());
+  });
+
+  it('🔴 ADR-833 §5.4.11 #3 το «χρειάζεται χώρο» μετρά ΚΑΙ τη λωρίδα — αλλιώς την καταπίνει', () => {
+    // Ο χώρος αρκεί για γραμμή + ζώνη + ⊕, αλλά **όχι** για τη λωρίδα από πάνω τους. Χωρίς
+    // αυτόν τον έλεγχο, ο τρίτος ένοικος θα υπήρχε στη στοίβα χωρίς κανείς να τον μετρά.
+    const tight = tableInsertControlOuterPx('table-mode').top + 4 + 22;
+    const frame = computeTableFormulaBarFrame({
+      tableWidthMm: 100, tableHeightMm: 40, pxPerMm: 4, spaceAbovePx: tight,
+    });
+    expect(frame.flipped).toBe(true);
   });
 
   it('🔴 §40 το «χρειάζεται χώρο από πάνω» μετρά ΚΑΙ το ⊕ — αλλιώς δεν αναποδογυρίζει ποτέ', () => {
