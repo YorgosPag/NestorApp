@@ -23,8 +23,12 @@
 import {
   TABLE_WORKSHEET_TAB_LABEL_PADDING_PX,
   tableWorksheetStripAtFrame,
+  tableWorksheetStripOuterPx,
   tableWorksheetTabStrip,
 } from '../table-worksheet-tabs-geometry';
+// 🔴 ADR-833 §5.4.11 #3 — ο **από κάτω ένοικος** της πάνω ακμής, από τότε που η λωρίδα
+// μετακόμισε εκεί. Ρωτιέται από την πηγή του για τον ίδιο λόγο που ρωτιέται και το κενό.
+import { tableInsertControlOuterPx } from '../table-insert-control';
 // 🔴 Η πηγή του κενού και του LOD — οι δύο σταθερές που η λωρίδα **καταναλώνει** αντί να τις
 // ξαναγράψει. Τα tests τις ρωτούν από εκεί, ώστε μια αλλαγή τους να μη «διορθωθεί» εδώ σιωπηλά.
 import { TABLE_INDICATOR_GRIP_CLEARANCE_PX } from '../table-indicator-geometry';
@@ -108,15 +112,24 @@ describe('ADR-833 Φ3 — μεγέθη και το κενό της κάτω ακ
   });
 
   it('🔴 το κενό είναι Ο ΠΕΜΠΤΟΣ ΚΑΤΑΝΑΛΩΤΗΣ του `TABLE_INDICATOR_GRIP_CLEARANCE_PX`', () => {
+    // ⚠️ **Ο ισχυρισμός δεν άλλαξε — άλλαξε ο ΓΕΙΤΟΝΑΣ** (ADR-833 §5.4.11 #3): εδώ μετριόταν
+    // το κενό ως προς το `heightMm`, όσο η λωρίδα κρεμόταν από την κάτω ακμή. Τώρα μετριέται
+    // ως προς τον από κάτω ένοικο της **πάνω** ακμής — ίδια ερώτηση, ίδιος αριθμός, καμία
+    // δεύτερη άποψη για το «πόσο κενό αφήνει η λωρίδα».
     const [tab] = tabsOf(2);
-    expect((tab.rectMm.y - HEIGHT_MM) * PX_PER_MM).toBeCloseTo(TABLE_INDICATOR_GRIP_CLEARANCE_PX);
+    const gapToNeighbourPx =
+      -(tab.rectMm.y + tab.rectMm.h) * PX_PER_MM - tableInsertControlOuterPx('table-mode').top;
+    expect(gapToNeighbourPx).toBeCloseTo(TABLE_INDICATOR_GRIP_CLEARANCE_PX);
   });
 
   it('τα μεγέθη είναι σε px ΟΘΟΝΗΣ: διπλό zoom ⇒ μισά mm, ίδια px', () => {
-    const [tab] = tabsOf(2, FIRST_TABLE_WORKSHEET_ID, WIDTH_MM, HEIGHT_MM, PX_PER_MM * 2);
-    expect(tab.rectMm.w * (PX_PER_MM * 2)).toBeCloseTo(tabWidthPx());
-    expect((tab.rectMm.y - HEIGHT_MM) * (PX_PER_MM * 2)).toBeCloseTo(TABLE_INDICATOR_GRIP_CLEARANCE_PX);
-    expect(tab.rectMm.h * (PX_PER_MM * 2)).toBeCloseTo(TABLE_INDICATOR.columnBandPx);
+    const zoomed = PX_PER_MM * 2;
+    const [tab] = tabsOf(2, FIRST_TABLE_WORKSHEET_ID, WIDTH_MM, HEIGHT_MM, zoomed);
+    expect(tab.rectMm.w * zoomed).toBeCloseTo(tabWidthPx());
+    // Η **θέση** είναι εξίσου σε px οθόνης: η δηλωμένη επιφάνεια δεν εξαρτάται από το zoom,
+    // άρα σε διπλό zoom δίνει τα μισά mm — η ίδια ιδιότητα που ελέγχεται για πλάτος και ύψος.
+    expect(-tab.rectMm.y * zoomed).toBeCloseTo(tableWorksheetStripOuterPx());
+    expect(tab.rectMm.h * zoomed).toBeCloseTo(TABLE_INDICATOR.columnBandPx);
   });
 
   it('το περιθώριο ετικέτας ζει στο ΙΔΙΟ σπίτι με το πλάτος που το παρήγαγε', () => {
@@ -129,15 +142,28 @@ describe('ADR-833 Φ3 — μεγέθη και το κενό της κάτω ακ
   });
 });
 
-describe('ADR-833 Φ3 — η λωρίδα ζει ΚΑΤΩ από το πλέγμα, σε θετικό v', () => {
+describe('ADR-833 Φ4 — η λωρίδα ζει ΠΑΝΩ από το πλέγμα, σε αρνητικό v', () => {
   const strip = tableWorksheetTabStrip(sheets(3), FIRST_TABLE_WORKSHEET_ID, WIDTH_MM, HEIGHT_MM, PX_PER_MM);
   const slots = strip.tabs;
 
-  it('κάθε καρτέλα αρχίζει μετά το `heightMm` συν το κενό', () => {
+  it('🔑 κάθε καρτέλα κάθεται στη ΔΗΛΩΜΕΝΗ επιφάνεια — ΑΝΕΞΑΡΤΗΤΑ από το `heightMm`', () => {
+    // ⚠️ **Η προδιαγραφή άλλαξε επίτηδες** (ADR-833 §5.4.11 #3). Εδώ έγραφε «κάθε καρτέλα
+    // αρχίζει μετά το `heightMm` συν το κενό» — και **αυτό ακριβώς ήταν το ελάττωμα**: το
+    // πρώτο κλικ ενός διπλού κλικ άλλαζε φύλλο, το `heightMm` άλλαζε, και η λωρίδα έφευγε
+    // κάτω από το χέρι. Ο νέος ισχυρισμός είναι το **αντίθετο** του παλιού, και σκόπιμα.
     expect(slots).toHaveLength(3);
     for (const slot of slots) {
-      expect(slot.rectMm.y).toBeCloseTo(HEIGHT_MM + TABLE_INDICATOR_GRIP_CLEARANCE_PX / PX_PER_MM);
+      expect(slot.rectMm.y).toBeCloseTo(-tableWorksheetStripOuterPx() / PX_PER_MM);
     }
+  });
+
+  it('🔑 …και το αποδεικνύει ΑΛΛΟ `heightMm`: η θέση μένει ΤΑΥΤΟΣΗΜΗ', () => {
+    // Ο φύλακας του ελαττώματος ως αριθμός: χωρίς αυτόν, ο παραπάνω ισχυρισμός θα μπορούσε να
+    // περνά με μια υλοποίηση που τυχαίνει να συμφωνεί σε **αυτό** το ύψος.
+    const taller = tableWorksheetTabStrip(
+      sheets(3), FIRST_TABLE_WORKSHEET_ID, WIDTH_MM, HEIGHT_MM * 3, PX_PER_MM,
+    );
+    expect(taller.tabs.map((s) => s.rectMm.y)).toEqual(slots.map((s) => s.rectMm.y));
   });
 
   it('οι καρτέλες είναι συνεχόμενες από την αριστερή ακμή του πλέγματος', () => {
@@ -382,8 +408,21 @@ describe('🔴 ADR-833 Φ3 — ΤΟ ΧΑΡΤΙ ΔΕΝ ΜΕΓΑΛΩΣΕ', () => {
   });
 });
 
-describe('ADR-833 Φ3 — η λαβή συμπλήρωσης και η καρτέλα δεν τέμνονται ΠΟΤΕ', () => {
-  it('🔴 επιλογή που αγγίζει την τελευταία γραμμή: η λαβή μένει ΠΑΝΩ από τη λωρίδα', () => {
+describe('ADR-833 Φ3+Φ4 — η λαβή συμπλήρωσης και η καρτέλα δεν τέμνονται ΠΟΤΕ', () => {
+  /**
+   * ⚠️ **Ο ισχυρισμός ΑΝΤΙΣΤΡΑΦΗΚΕ, η ερώτηση όχι** (ADR-833 §5.4.11 #3).
+   *
+   * Όσο η λωρίδα κρεμόταν από την κάτω ακμή, οι δύο ήταν **γείτονες** και τους χώριζαν
+   * `9 − 7 = 2 px`: γι' αυτό το test μετρούσε την ανισότητα αριθμητικά, και γι' αυτό
+   * αξίζει να **μείνει**. Τώρα η λωρίδα κάθεται στην **πάνω** ακμή και η λαβή στην κάτω-δεξιά
+   * κορυφή — δηλαδή σε **αντίθετες πλευρές του πίνακα**, και το περιθώριο δεν είναι πια
+   * 2 px αλλά *ολόκληρος ο πίνακας + η ζώνη γραμμάτων + ο δίσκος του ⊕*.
+   *
+   * 🔑 Δεν διαγράφεται (N.7.2 #4): η μέρα που κάποιος ξαναφέρει τη λωρίδα κοντά στην κάτω
+   * ακμή είναι ακριβώς η μέρα που αυτό το test οφείλει να κοκκινίσει **πριν** ο χρήστης
+   * πατήσει καρτέλα ενώ σημάδευε λαβή.
+   */
+  it('🔴 επιλογή που αγγίζει την τελευταία γραμμή: η ΛΩΡΙΔΑ μένει πάνω από τη λαβή', () => {
     const entity = buildTableEntity({ x: 0, y: 0 }, {}, 'tbl_tabs', 'lyr_test');
     const layout = computeTableEntityGeometryLive(entity).layout;
     const handle = tableFillHandleRectMm(
@@ -403,9 +442,11 @@ describe('ADR-833 Φ3 — η λαβή συμπλήρωσης και η καρτ�
     const [tab] = tableWorksheetTabStrip(
       twoSheets.worksheets, twoSheets.activeWorksheetId, layout.widthMm, layout.heightMm, PX_PER_MM,
     ).tabs;
-    const stripTopMm = tab.rectMm.y;
+    const stripBottomMm = tab.rectMm.y + tab.rectMm.h;
     const handleOutwardMm = TABLE_FILL_HANDLE_OUTWARD_APERTURE_PX / PX_PER_MM;
-    // Η **εξωτερική εμβέλεια** της λαβής (ορθογώνιο + οπή προς τα έξω) μένει πάνω από τη λωρίδα.
-    expect(handle!.y + handle!.h + handleOutwardMm).toBeLessThanOrEqual(stripTopMm);
+    // Η **εσωτερική** ακμή της λωρίδας μένει πάνω από την **εξωτερική εμβέλεια** της λαβής
+    // (ορθογώνιο + οπή προς τα έξω) — η ίδια ερώτηση «ποιο pixel ανήκει σε ποιον», με τη
+    // λωρίδα πλέον στην αντίπερα ακμή.
+    expect(stripBottomMm).toBeLessThanOrEqual(handle!.y - handleOutwardMm);
   });
 });
