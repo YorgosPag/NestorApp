@@ -33,10 +33,11 @@ import React from 'react';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useEntityFiles } from '@/components/shared/files/hooks/useEntityFiles';
-import { FileThumbnail } from '@/components/shared/files/FileThumbnail';
 import { Button } from '@/components/ui/button';
-import { ENTITY_TYPES, FILE_CATEGORIES } from '@/config/domain-constants';
+import { ENTITY_TYPES } from '@/config/domain-constants';
+import { declaredFileIds } from '@/lib/listings/declared-file-ids';
 import { useListingMediaOrder } from '@/hooks/listings/useListingMediaOrder';
+import { ListingMaterialPanel, ListingMaterialRow } from './ListingMaterialPanel';
 
 const NS = 'property-market';
 const K = `${NS}:listing.mediaOrder`;
@@ -45,12 +46,21 @@ export interface ListingMediaOrderPanelProps {
   readonly propertyId: string;
   readonly companyId: string;
   /**
-   * Η **αποθηκευμένη** δήλωση, ωμή από το έγγραφο του ακινήτου.
+   * Η **αποθηκευμένη** δήλωση σειράς, ωμή από το έγγραφο του ακινήτου.
    *
    * ⚠️ **`unknown` και όχι `string[]`**: το `Property` του viewer είναι ωμό spread
-   * εγγράφου Firestore· η **μία** ανάγνωση είναι το `declaredMediaOrder`, μέσα στο hook.
+   * εγγράφου Firestore· η **μία** ανάγνωση είναι το `declaredFileIds`, μέσα στο hook.
    */
   readonly storedOrder: unknown;
+  /**
+   * Οι **δηλωμένες κατόψεις** — ωμές, από το ίδιο έγγραφο (ADR-841 §7 Α17.7).
+   *
+   * 🔑 **Η οθόνη της σειράς ΔΕΝ τις αποφασίζει, αλλά ΟΦΕΙΛΕΙ να τις ξέρει**: μετά την
+   * Α17.7 μια δηλωμένη κάτοψη **φεύγει** και **μετρά στο ίδιο, συνολικό όριο**. Μια οθόνη
+   * που τις αγνοούσε θα έδειχνε άλλη σειρά και άλλο πλήθος από τον κόσμο — ακριβώς το
+   * κενό «οθόνη ⇄ ράφι» που αυτή η οικογένεια αρχείων υπάρχει για να κλείσει.
+   */
+  readonly storedFloorplans: unknown;
 }
 
 /**
@@ -60,11 +70,17 @@ export interface ListingMediaOrderPanelProps {
  * πάνω *(κάποιος σημαίνει μια φωτογραφία «δημόσια»)*. Με εφάπαξ ανάγνωση, η οθόνη θα
  * έλεγε *«καμία φωτογραφία»* ακριβώς αφού ο άνθρωπος πρόσθεσε μία — δηλαδή θα φαινόταν
  * χαλασμένη τη στιγμή που δούλεψε.
+ *
+ * ⚠️ **ΧΩΡΙΣ φίλτρο κατηγορίας**: μετά την Α17.7 στο ράφι φεύγουν **δύο** κάδοι, και ο
+ * κανόνας τους κόβει στο **ίδιο** όριο. Ένα `category: 'photos'` εδώ θα έκρυβε τις
+ * δηλωμένες κατόψεις από τη σειρά — δηλαδή θα ξανάνοιγε το κενό «οθόνη ⇄ ράφι» από την
+ * πίσω πόρτα.
  */
 export function ListingMediaOrderPanel({
   propertyId,
   companyId,
   storedOrder,
+  storedFloorplans,
 }: ListingMediaOrderPanelProps) {
   const { t } = useTranslation([NS]);
 
@@ -72,83 +88,61 @@ export function ListingMediaOrderPanel({
     entityType: ENTITY_TYPES.PROPERTY,
     entityId: propertyId,
     companyId,
-    category: FILE_CATEGORIES.PHOTOS,
     realtime: true,
   });
+
+  const floorplans = React.useMemo(
+    () => declaredFileIds(storedFloorplans),
+    [storedFloorplans],
+  );
 
   const { items, saving, failed, makeFirst } = useListingMediaOrder(
     propertyId,
     files,
     storedOrder,
+    floorplans,
   );
 
   return (
-    <section aria-labelledby="listing-media-order-title" className="mt-6 rounded-lg border border-border p-4">
-      <header className="mb-3">
-        <h3 id="listing-media-order-title" className="text-sm font-semibold text-foreground">
-          {t(`${K}.title`)}
-        </h3>
-        <p className="mt-1 text-xs text-muted-foreground">{t(`${K}.help`)}</p>
-      </header>
-
-      {/*
-        ⚠️ **Το άδειο δεν είναι σφάλμα — είναι απάντηση, και λέει ΤΙ ΝΑ ΚΑΝΕΙ ο άνθρωπος.**
-        Ο λόγος που δεν φεύγει καμία φωτογραφία είναι σχεδόν πάντα ο φρουρός #1 της Α14.2
-        *(κανείς δεν τη σήμανε δημόσια)*, και αυτό δεν το μαντεύει κανείς κοιτάζοντας μια
-        κενή λίστα.
-      */}
-      {items.length === 0 ? (
-        <p className="text-xs text-muted-foreground">{t(`${K}.empty`)}</p>
-      ) : (
-        <ol className="flex flex-col gap-2">
-          {items.map((file, index) => (
-            <li key={file.id} className="flex items-center gap-3 rounded-md border border-border p-2">
-              <FileThumbnail
-                contentType={file.contentType}
-                thumbnailUrl={file.thumbnailUrl}
-                downloadUrl={file.downloadUrl}
-                displayName={file.displayName}
-                size="sm"
-              />
-
-              <span className="min-w-0 flex-1 truncate text-xs text-foreground">
-                {file.displayName}
+    <ListingMaterialPanel
+      titleId="listing-media-order-title"
+      title={t(`${K}.title`)}
+      help={t(`${K}.help`)}
+      empty={t(`${K}.empty`)}
+      failure={failed ? t(`${K}.saveFailed`) : null}
+      isEmpty={items.length === 0}
+    >
+      <ol className="flex flex-col gap-2">
+        {items.map((file, index) => (
+          <ListingMaterialRow
+            key={file.id}
+            contentType={file.contentType}
+            thumbnailUrl={file.thumbnailUrl}
+            downloadUrl={file.downloadUrl}
+            displayName={file.displayName}
+          >
+            {/*
+              🔑 **Το σήμα «1η» και το κουμπί είναι ΑΜΟΙΒΑΙΑ ΑΠΟΚΛΕΙΟΜΕΝΑ**, ίδιο με του
+              ιδιώτη: *«κάνε πρώτο κάτι που είναι ήδη πρώτο»* δεν σημαίνει τίποτα.
+            */}
+            {index === 0 ? (
+              <span className="rounded bg-secondary px-1.5 py-0.5 text-xs text-secondary-foreground">
+                {t(`${K}.firstBadge`)}
               </span>
-
-              {/*
-                🔑 **Το σήμα «1η» και το κουμπί είναι ΑΜΟΙΒΑΙΑ ΑΠΟΚΛΕΙΟΜΕΝΑ**, ίδιο με του
-                ιδιώτη: *«κάνε πρώτο κάτι που είναι ήδη πρώτο»* δεν σημαίνει τίποτα.
-              */}
-              {index === 0 ? (
-                <span className="rounded bg-secondary px-1.5 py-0.5 text-xs text-secondary-foreground">
-                  {t(`${K}.firstBadge`)}
-                </span>
-              ) : (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={saving}
-                  onClick={() => void makeFirst(file.id)}
-                >
-                  {t(`${K}.makeFirst`)}
-                </Button>
-              )}
-            </li>
-          ))}
-        </ol>
-      )}
-
-      {/*
-        ⚠️ **Η αποτυχία λέγεται, δεν σιωπά** — η οθόνη έχει ήδη γυρίσει πίσω στη σειρά που
-        πράγματι ισχύει, οπότε χωρίς αυτή τη γραμμή ο άνθρωπος θα έβλεπε το κλικ του να
-        «μην κάνει τίποτα» και θα το ξαναπατούσε.
-      */}
-      {failed && (
-        <p role="alert" className="mt-3 text-xs text-destructive">
-          {t(`${K}.saveFailed`)}
-        </p>
-      )}
-    </section>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={saving}
+                onClick={() => void makeFirst(file.id)}
+              >
+                {t(`${K}.makeFirst`)}
+              </Button>
+            )}
+          </ListingMaterialRow>
+        ))}
+      </ol>
+    </ListingMaterialPanel>
   );
 }
