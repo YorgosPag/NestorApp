@@ -15,8 +15,13 @@
 
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
-import { PageHeader, buildHeaderCustomActions, LIST_GRID_VIEW_MODES } from '@/core/headers';
-import type { ListGridHeaderProps, ListGridViewMode } from '@/core/headers';
+import {
+  PageHeader,
+  buildHeaderCustomActions,
+  LIST_GRID_VIEW_MODES,
+  isListGridViewMode,
+} from '@/core/headers';
+import type { ListGridHeaderProps } from '@/core/headers';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { NavigationBreadcrumb } from '@/components/navigation/components/NavigationBreadcrumb';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -74,7 +79,7 @@ export function PropertiesHeader({
         showDashboard,
         onDashboardToggle: () => setShowDashboard(!showDashboard),
         viewMode,
-        onViewModeChange: (mode) => setViewMode(mode as ListGridViewMode),
+        onViewModeChange: (mode) => { if (isListGridViewMode(mode)) setViewMode(mode); },
         viewModes: LIST_GRID_VIEW_MODES,
         customActions: customActions.length > 0 ? customActions : undefined
       }}

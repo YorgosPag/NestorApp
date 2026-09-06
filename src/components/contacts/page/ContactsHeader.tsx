@@ -10,9 +10,8 @@ import '@/lib/design-system';
 import React from 'react';
 import { Users, Filter, Trash2 } from 'lucide-react';
 import { CommonBadge } from '@/core/badges';
-import { PageHeader } from '@/core/headers';
-import type { ViewMode as CoreViewMode } from '@/core/headers';
-import type { ViewMode } from '@/hooks/useContactsState';
+import { PageHeader, LIST_GRID_VIEW_MODES, isListGridViewMode } from '@/core/headers';
+import type { ListGridViewMode } from '@/core/headers';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -22,8 +21,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 
 interface ContactsHeaderProps {
-  viewMode: ViewMode;
-  setViewMode: (mode: ViewMode) => void;
+  viewMode: ListGridViewMode;
+  setViewMode: (mode: ListGridViewMode) => void;
   showDashboard: boolean;
   setShowDashboard: (show: boolean) => void;
   // Mobile-only filter toggle
@@ -71,9 +70,9 @@ export function ContactsHeader({
       actions={{
         showDashboard,
         onDashboardToggle: () => setShowDashboard(!showDashboard),
-        viewMode: viewMode as CoreViewMode,
-        onViewModeChange: (mode) => setViewMode(mode as ViewMode),
-        viewModes: ['list', 'grid'] as CoreViewMode[],
+        viewMode,
+        onViewModeChange: (mode) => { if (isListGridViewMode(mode)) setViewMode(mode); },
+        viewModes: LIST_GRID_VIEW_MODES,
         customActions: [
           // 🗑️ Trash toggle button
           ...(onToggleTrash ? [

@@ -12,8 +12,13 @@
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import { ShoppingBag } from 'lucide-react';
-import { PageHeader, buildHeaderCustomActions, LIST_GRID_VIEW_MODES } from '@/core/headers';
-import type { ListGridHeaderProps, ListGridViewMode } from '@/core/headers';
+import {
+  PageHeader,
+  buildHeaderCustomActions,
+  LIST_GRID_VIEW_MODES,
+  isListGridViewMode,
+} from '@/core/headers';
+import type { ListGridHeaderProps } from '@/core/headers';
 import { NavigationBreadcrumb } from '@/components/navigation/components/NavigationBreadcrumb';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
@@ -72,7 +77,7 @@ export function SalesAvailableHeader({
         showDashboard,
         onDashboardToggle: () => setShowDashboard(!showDashboard),
         viewMode,
-        onViewModeChange: (mode) => setViewMode(mode as ListGridViewMode),
+        onViewModeChange: (mode) => { if (isListGridViewMode(mode)) setViewMode(mode); },
         viewModes: LIST_GRID_VIEW_MODES,
         addButton: onAddToMarket
           ? { label: t('sales.available.addToMarket'), onClick: onAddToMarket }

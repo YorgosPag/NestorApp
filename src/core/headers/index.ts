@@ -34,7 +34,11 @@ export type {
   ListGridHeaderProps,
   ListGridViewMode
 } from './list-page-header-props';
-export { LIST_GRID_VIEW_MODES, LIST_PAGE_VIEW_MODES } from './list-page-header-props';
+export {
+  LIST_GRID_VIEW_MODES,
+  LIST_PAGE_VIEW_MODES,
+  isListGridViewMode,
+} from './list-page-header-props';
 
 // Πλήρες header σελίδας-λίστας — SSoT για Parkings/Storages
 export { ListPageHeader } from './ListPageHeader';

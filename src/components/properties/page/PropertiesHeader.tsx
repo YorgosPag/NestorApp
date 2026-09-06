@@ -10,7 +10,12 @@
 
 import React from 'react';
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
-import { PageHeader, buildHeaderCustomActions, LIST_GRID_VIEW_MODES } from '@/core/headers';
+import {
+  PageHeader,
+  buildHeaderCustomActions,
+  LIST_GRID_VIEW_MODES,
+  isListGridViewMode,
+} from '@/core/headers';
 import type { ListGridViewMode, ListPageHeaderProps } from '@/core/headers';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 // 🏢 ENTERPRISE: Breadcrumb from centralized navigation
@@ -61,7 +66,7 @@ export function PropertiesHeader({
         showDashboard,
         onDashboardToggle: () => setShowDashboard(!showDashboard),
         viewMode,
-        onViewModeChange: (mode) => setViewMode(mode as ListGridViewMode),
+        onViewModeChange: (mode) => { if (isListGridViewMode(mode)) setViewMode(mode); },
         viewModes: LIST_GRID_VIEW_MODES,
         customActions: buildHeaderCustomActions({
           showFilters,
