@@ -60,7 +60,7 @@ import {
 import { searchResultsHref } from '@/lib/listings/listing-routes';
 import { geoOutlineBoundingCircle } from '@/lib/geo/geo-ring';
 import { distanceMeters } from '@/lib/geo/geo-distance';
-import type { GeoPoint } from '@/types/geo/coordinates';
+import type { GeoCircle, GeoPoint } from '@/types/geo/coordinates';
 import type { DemandPlace, PropertyDemand } from '@/types/property-demand';
 
 // =============================================================================
@@ -160,8 +160,16 @@ export function axesLostProjectingDemand(
 // 2. Ο ΧΩΡΙΚΟΣ ΑΞΟΝΑΣ — το μόνο σημείο που χρειάζεται γεωμετρία
 // =============================================================================
 
-/** Ο τύπος του `near` μέσα στο {@link ListingFilters}, χωρίς να ξαναγραφτεί. */
-type ProjectedGeo = ListingFilters['near'];
+/**
+ * Ο κύκλος που προβάλλει μια {@link DemandPlace}· `null` = «οπουδήποτε».
+ *
+ * 🔑 **ΗΤΑΝ `ListingFilters['near']` — και αυτό ήταν το ελάττωμα** *(ADR-777 §8.53)*:
+ * ο τομέας της **ζήτησης** τρυπούσε μέσα στον τύπο των **φίλτρων αγγελιών** για να
+ * δανειστεί μια καθαρά **γεωμετρική** έννοια, επειδή κανείς δεν της είχε δώσει όνομα.
+ * Τώρα και οι δύο πλευρές μιλούν το ίδιο {@link GeoCircle} του Shared Kernel, και η
+ * εξάρτηση δείχνει προς **τη γεωμετρία**, όχι προς τις αγγελίες.
+ */
+type ProjectedGeo = GeoCircle | null;
 
 /** Απόσταση σε μέτρα, μέσω του **μοναδικού** SSoT απόστασης του έργου. */
 function metresBetween(a: GeoPoint, b: GeoPoint): number {

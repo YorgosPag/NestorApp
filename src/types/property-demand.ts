@@ -110,7 +110,7 @@
 
 import { isMandateAttributable, type MandateLike } from '@/types/mandate';
 import type { OfferKind } from '@/types/property-offers';
-import type { GeoOutline, GeoPoint, GeoPolyline } from '@/types/geo/coordinates';
+import type { GeoCircle, GeoOutline, GeoPolyline } from '@/types/geo/coordinates';
 
 // =============================================================================
 // 1. ΧΩΡΟΣ — ο πρώτος άξονας (Ζ1 · Ζ2 · Ζ3 · Ζ4 · Ζ5)
@@ -134,10 +134,16 @@ export type DemandPlace =
   /** Καθαρή Ζ8 — τα χαρακτηριστικά μετράνε, η θέση όχι. */
   | { readonly kind: 'anywhere' }
   /**
-   * **Ζ1/Ζ2** — σημείο και ακτίνα. Το **ίδιο** σχήμα με το `ListingGeoFilter` της
-   * οθόνης 2, ώστε η προβολή προς τα φίλτρα να είναι **ταυτότητα** και όχι μετάφραση.
+   * **Ζ1/Ζ2** — σημείο και ακτίνα.
+   *
+   * 🔑 **Η «ταυτότητα» είναι πλέον ΤΥΠΟΣ, όχι σχόλιο** *(ADR-777 §8.53)*. Αυτή η
+   * γραμμή έγραφε *«το **ίδιο** σχήμα με το `ListingGeoFilter`»* και το ξανάγραφε με
+   * το χέρι — δηλαδή η υπόσχεση ζούσε σε **πρόζα** που τίποτα δεν επαλήθευε, και θα
+   * έσπαγε σιωπηλά την πρώτη φορά που η μία πλευρά αποκτούσε τρίτο πεδίο. Τώρα είναι
+   * **το ίδιο** {@link GeoCircle}, άρα η προβολή προς τα φίλτρα είναι ταυτότητα
+   * **επειδή δεν μπορεί να μην είναι**.
    */
-  | { readonly kind: 'near'; readonly center: GeoPoint; readonly radiusKm: number }
+  | ({ readonly kind: 'near' } & GeoCircle)
   /**
    * **Ζ4** — «*Μεγάλου Αλεξάνδρου, αλλά **μόνο αυτό το κομμάτι** της*». Το περίγραμμα
    * το σχεδιάζει ο άνθρωπος με το **υπάρχον** σύστημα πολυγώνων του Geo-Canvas.

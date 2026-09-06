@@ -46,7 +46,7 @@
  */
 
 import type { PublicListing } from '@/types/public-listing';
-import type { GeoPoint } from '@/types/geo/coordinates';
+import type { GeoCircle, GeoPoint } from '@/types/geo/coordinates';
 import { distanceMeters } from '@/lib/geo/geo-distance';
 import { intervalShape } from '@/lib/date-local';
 import type { StayQuery } from '@/lib/stay/stay-availability-vocabulary';
@@ -72,6 +72,28 @@ import {
 /**
  * **Ο γεωγραφικός άξονας** — η απάντηση της οθόνης 1 στο *«πού ψάχνεις;»* (Α3).
  *
+ * @deprecated **ΜΕΤΑΚΟΜΙΣΕ — χρησιμοποίησε το {@link GeoCircle}** από το
+ * `@/types/geo/coordinates` *(ADR-777 §8.53, 2026-09-06)*. Ο «κύκλος αναζήτησης» είναι
+ * **γεωγραφικό λεξιλόγιο**, όχι λεπτομέρεια του φίλτρου: τον μιλούσαν **πέντε** σημεία
+ * σε **τρεις** τομείς, και **δύο** από αυτά τρυπούσαν μέσα σε *αυτόν* τον τύπο
+ * (`ListingFilters['near']`) για να τον δανειστούν — δηλαδή ο τομέας της **ζήτησης**
+ * εξαρτιόταν από τον τομέα των **αγγελιών** για καθαρή γεωμετρία.
+ *
+ * 🔑 **Γιατί μένει ως ψευδώνυμο αντί να σβηστεί — ΕΙΝΑΙ η πρακτική των μεγάλων, όχι
+ * έκπτωση**: *«type aliasing and forwarding functions are invaluable for allowing
+ * existing users to continue to function while introducing new systems and migrating
+ * users to them **non-atomically**»* — SWE at Google, κεφ. 22 *«Large-Scale Changes»*.
+ * Ο τελευταίος καταναλωτής (`lib/agency/showcase-filter.ts`) ανήκει σε **άλλη ροή
+ * εργασίας** και μεταναστεύει με δικό της ρυθμό.
+ *
+ * 🏆 **ΚΑΙ ΕΔΩ ΞΕΠΕΡΝΑΜΕ ΤΗΝ ΠΡΑΚΤΙΚΗ ΤΟΥΣ.** Το βιομηχανικό ψευδώνυμο **σαπίζει**: ο
+ * κανόνας `no-deprecated` **δεν πιάνει** αξιόπιστα ψευδώνυμα re-export *(γνωστό κενό,
+ * `palantir/tslint#3751`)*, και η διαγραφή περιμένει να τη θυμηθεί άνθρωπος. Εδώ **δεν
+ * περιμένει κανέναν**: άγκυρα μετρά τους καταναλωτές, **μπλοκάρει κάθε νέο**, και
+ * **απαιτεί τη διαγραφή αυτού του ψευδωνύμου** τη στιγμή που φεύγει ο τελευταίος —
+ * `src/lib/geo/__tests__/geo-circle-vocabulary.test.ts`. Ψευδώνυμο που δεν ξέρει πότε
+ * πεθαίνει είναι το επόμενο κάτοπτρο.
+ *
  * 🔑 **Σημείο + ακτίνα, ΠΟΤΕ όνομα τόπου.** Το {@link PublicListing} **δεν κουβαλά
  * καμία λέξη τόπου** (μετρημένο: κουβαλά `position` και `title`, τίποτα άλλο), οπότε
  * ένα φίλτρο «πόλη = Θεσσαλονίκη» θα έπρεπε είτε να ψάξει στον **τίτλο** — που είναι
@@ -83,11 +105,7 @@ import {
  * συγκρίνει **γεωμετρία με γεωμετρία** — το μόνο πράγμα που και οι δύο πλευρές
  * ξέρουν με βεβαιότητα.
  */
-export interface ListingGeoFilter {
-  readonly center: GeoPoint;
-  /** Ακτίνα σε **χιλιόμετρα**. Πάντα > 0 — το 0 δεν είναι «παντού», είναι «πουθενά». */
-  readonly radiusKm: number;
-}
+export type ListingGeoFilter = GeoCircle;
 
 /**
  * **Ο ΧΡΟΝΙΚΟΣ ΑΞΟΝΑΣ** — η απάντηση στο *«πότε;»* (ADR-835 §4.6).
@@ -120,8 +138,8 @@ export interface ListingStayWindow {
 export interface ListingFilters {
   /** Κάθε ομοιόμορφος άξονας. **Άξονας που λείπει = δεν ρωτήθηκε.** */
   readonly criteria: ListingCriteria;
-  /** `null` = «όπου να 'ναι». Δες {@link ListingGeoFilter}. */
-  readonly near: ListingGeoFilter | null;
+  /** `null` = «όπου να 'ναι». Δες {@link GeoCircle}. */
+  readonly near: GeoCircle | null;
   /** `null` = «οποτεδήποτε» — καμία χρονική ερώτηση. Δες {@link ListingStayWindow}. */
   readonly stayWindow: ListingStayWindow | null;
   /**
@@ -184,14 +202,16 @@ const PARAM = {
  * ⛔ **ΜΗΝ αντιγράψεις αυτή τη λογική** — ούτε «απλοποιημένη». Οι τρεις έλεγχοι
  * *(μισό ζεύγος · εκτός ορίων · ακτίνα ≤ 0)* είναι ο λόγος ύπαρξής της.
  *
- * 🔶 **Δηλωμένο, μη λυμένο**: το `ListingGeoFilter` και το
- * {@link DEFAULT_SEARCH_RADIUS_KM} έχουν πλέον καταναλωτές σε **τέσσερα** δέντρα
- * *(listings · demand · search · agency)*, και το `DemandPlaceResolver.tsx:20`
- * γράφει ήδη ότι χρησιμοποιεί *«το **ίδιο** σχήμα»*. Ώριμο για μετακόμιση σε
- * `lib/geo/`, με το πρότυπο *«η μηχανή μετακομίζει όταν αποκτά δεύτερο
- * καταναλωτή»* (ADR-841 Α6).
+ * ✅ **ΛΥΘΗΚΕ (2026-09-06, ADR-777 §8.53)**: ο τύπος μετακόμισε — αλλά **όχι** στο
+ * `lib/geo/` όπως προέβλεπε αυτή η σημείωση. Εκεί ζει η **συμπεριφορά**· το
+ * **λεξιλόγιο** ζει στο `@/types/geo/coordinates`, δίπλα στα {@link GeoPoint},
+ * `GeoOutline`, `GeoPolyline`, `GeoBoundingBox` — αρχείο με **μηδέν imports**, άρα
+ * Shared Kernel *(Evans, DDD)* **δομικά** και όχι κατά σύμβαση. Το όνομα είναι
+ * {@link GeoCircle}. Το {@link DEFAULT_SEARCH_RADIUS_KM} **μένει εδώ** επίτηδες: είναι
+ * **πολιτική της οθόνης** *(«τι εννοεί ο επισκέπτης όταν δεν πει ακτίνα»)*, όχι
+ * γεωμετρία — και η γεωμετρία δεν έχει προεπιλογές.
  */
-export function readGeoFilter(params: URLSearchParams): ListingGeoFilter | null {
+export function readGeoFilter(params: URLSearchParams): GeoCircle | null {
   const lat = readFiniteNumber(params, PARAM.lat);
   const lng = readFiniteNumber(params, PARAM.lng);
   if (lat === null || lng === null) return null;

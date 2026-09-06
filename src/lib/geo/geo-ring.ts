@@ -41,7 +41,7 @@
  * **Layering**: leaf module — καμία εξάρτηση πέρα από τύπους.
  */
 
-import type { GeoOutline, GeoPoint } from '@/types/geo/coordinates';
+import type { GeoCircle, GeoOutline, GeoPoint } from '@/types/geo/coordinates';
 // ⚠️ Η ισαπέχουσα προβολή σε τοπικά μέτρα ζει πλέον στο `geo-local-frame.ts` — ο
 // άξονας δρόμου (`geo-line.ts`) τη χρειάζεται με άλλο origin (αρχή, όχι κέντρο
 // βάρους) και η αντιγραφή θα έφτιαχνε δίδυμο (CHECK 3.28). Ο δακτύλιος περνά πάντα
@@ -133,7 +133,7 @@ export function vertexCentroid(outline: GeoOutline): GeoPoint {
 export function geoOutlineBoundingCircle(
   outline: GeoOutline,
   distanceMetres: (a: GeoPoint, b: GeoPoint) => number,
-): { readonly center: GeoPoint; readonly radiusKm: number } | null {
+): GeoCircle | null {
   if (outline.length === 0) return null;
 
   const center = vertexCentroid(outline);
