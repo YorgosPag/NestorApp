@@ -26,18 +26,43 @@ VIOLATIONS=""
 RATCHET_UPDATES=""
 HAS_BLOCK=0
 
+# Blank out block comments, KEEPING line numbering (newlines survive).
+#
+# 🔴 ΓΙΑΤΙ ΥΠΑΡΧΕΙ, ΚΑΙ ΕΙΝΑΙ ΜΕΤΡΗΜΕΝΟ (2026-09-06): το φίλτρο σχολίων από κάτω δουλεύει
+#    ΑΝΑ ΓΡΑΜΜΗ — πιάνει `//`, `*`, `#` και `{/*` στην ΑΡΧΗ. Ένα πολυγραμμικό JSX σχόλιο
+#    που ΔΕΝ βάζει `*` σε κάθε γραμμή (το ιδίωμα αυτού του repo) περνά ολόκληρο από μέσα.
+#
+#    Το μετρημένο ψευδώς θετικό: `ListingCard.tsx:210`, μέσα σε {/* … */}, η πρόταση
+#    «`<button>` μέσα σε `<a>` είναι άκυρο HTML» — τα markdown code spans δίνουν
+#    `>` … ελληνικά … `<` και το Pattern 1 ταιριάζει. Δηλαδή η πύλη ΤΙΜΩΡΟΥΣΕ ΤΗΝ
+#    ΤΕΚΜΗΡΙΩΣΗ, και το CLAUDE.md N.11 εξαιρεί ΡΗΤΑ τα σχόλια («EXCEPTIONS: … code
+#    comments …»). Ένα ψευδώς θετικό σε σωστό κώδικα είναι ο δρόμος προς το SKIP_.
+#
+# ⚠️ ΜΗΝ το κάνεις με `grep -v` ανά γραμμή: η κατάσταση «είμαι μέσα σε σχόλιο» ΔΕΝ
+#    διαβάζεται από μία γραμμή. Γι' αυτό διαβάζεται ολόκληρο το αρχείο (`-0777`).
+strip_block_comments() {
+    perl -0777 -pe 's{/\*.*?\*/}{ $& =~ s/[^
+]//gr }gse' "$1" 2>/dev/null
+}
+
 # Count hardcoded UI violations in a file (4 patterns, de-duplicated by line)
 count_ui_violations() {
     local file="$1"
+    local src
+    src="$(strip_block_comments "$file")"
     {
         # Pattern 1: JSX text with Greek
-        grep -nP ">[^<>{}]*\p{Greek}[^<>{}]*<" "$file" 2>/dev/null
+        printf '%s
+' "$src" | grep -nP ">[^<>{}]*\p{Greek}[^<>{}]*<" 2>/dev/null
         # Pattern 2: Attributes with Greek
-        grep -nP "(placeholder|title|aria-label|alt|label)=\"[^\"]*\p{Greek}[^\"]*\"" "$file" 2>/dev/null
+        printf '%s
+' "$src" | grep -nP "(placeholder|title|aria-label|alt|label)=\"[^\"]*\p{Greek}[^\"]*\"" 2>/dev/null
         # Pattern 3: throw/alert/confirm/prompt with Greek
-        grep -nP "(throw new Error|alert|confirm|prompt)\(\s*[\"'\`][^\"'\`]*\p{Greek}" "$file" 2>/dev/null
+        printf '%s
+' "$src" | grep -nP "(throw new Error|alert|confirm|prompt)\(\s*[\"'\`][^\"'\`]*\p{Greek}" 2>/dev/null
         # Pattern 4: toast calls with Greek
-        grep -nP "toast\.[a-z]+\(\s*[\"'\`][^\"'\`]*\p{Greek}" "$file" 2>/dev/null
+        printf '%s
+' "$src" | grep -nP "toast\.[a-z]+\(\s*[\"'\`][^\"'\`]*\p{Greek}" 2>/dev/null
     } | grep -vE "^\s*[0-9]+:\s*(//|\*|#)" | grep -vP "^\d+:\s*\{/\*" | awk -F: '{print $1}' | sort -u | wc -l | tr -d ' '
 }
 
