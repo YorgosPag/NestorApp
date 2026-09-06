@@ -225,23 +225,52 @@ export interface LevelData {
 // =============================================================================
 // 📅 Updated 2026-01-24: Changed to canonical English codes (ADR-233)
 // 📅 Updated 2026-04-05: Centralized to SSoT at @/constants/property-types (ADR-145)
-// 🏢 ENTERPRISE: Data layer uses English codes, i18n handles translations
-// Legacy Greek values ('Στούντιο', 'Διαμέρισμα 2Δ', etc.) may still exist in Firestore
-// UI should use i18n mapping: t(`types.${unit.type}`, { defaultValue: unit.type })
-//
-// The canonical 14-type list και Family A/B discriminator ζουν στο SSoT module.
-// Αυτό το type union προσθέτει απλώς τα legacy Greek Firestore values (backward compat).
+// 📅 Updated 2026-09-06: **CONTRACT** — η ένωση έγινε ίση με τις κανονικές (ADR-842 §8 #11)
 
-import type {
-  PropertyTypeCanonical,
-  LegacyGreekPropertyType,
-  DeprecatedPropertyType,
-} from '@/constants/property-types';
+import type { PropertyTypeCanonical } from '@/constants/property-types';
 
-export type PropertyType =
-  | PropertyTypeCanonical
-  | DeprecatedPropertyType
-  | LegacyGreekPropertyType;
+/**
+ * **Το είδος ακινήτου — ΜΟΝΟ οι κανονικές τιμές.**
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΗΤΑΝ Η ΕΥΡΕΙΑ ΕΝΩΣΗ, ΚΑΙ Η ΕΥΡΥΤΗΤΑ ΗΤΑΝ ΤΟ ΕΛΑΤΤΩΜΑ (ADR-842 §7.6.12 / §8 #11)
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Ως τις 2026-09-06 έγραφε `PropertyTypeCanonical | DeprecatedPropertyType |
+ * LegacyGreekPropertyType` — **εννέα** παλαιές τιμές τυπικά παραδεκτές. Συνέπεια: κάθε
+ * καταναλωτής όφειλε να **θυμηθεί** τον σωστό κριτή, και **τίποτε δεν έλεγχε ότι το
+ * έκανε**. Το μετρημένο τίμημα ήταν **επτά** σημεία που χρειάζονταν κανονική τιμή, δεν
+ * την είχαν, και το δήλωναν με `as PropertyTypeCanonical` — δηλαδή έλεγαν ψέματα στον
+ * μεταγλωττιστή για να προχωρήσουν.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔑 ΓΙΑΤΙ ΤΩΡΑ — Η ΜΕΤΑΝΑΣΤΕΥΣΗ ΕΙΧΕ ΗΔΗ ΤΕΛΕΙΩΣΕΙ ΚΑΙ ΚΑΝΕΙΣ ΔΕΝ ΤΟ ΕΙΧΕ ΜΕΤΡΗΣΕΙ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Το πρότυπο λέγεται **expand/contract**, και η **στενή** φάση απαιτεί απόδειξη ότι
+ * καμία παλαιά τιμή δεν ζει. Μετρήθηκε στη **ζωντανή βάση** (2026-09-06):
+ *
+ * ```
+ * owner_properties   6/6   κανονικά      public_listings   9/9   κανονικά
+ * properties         8/8   κανονικά      property_demands  κενό λεξιλόγιο
+ * ```
+ *
+ * ⇒ **23/23. Μηδέν παλαιά τιμή, μηδέν έγγραφο χωρίς είδος.** Και οι **δύο** πύλες γραφής
+ * ήταν ήδη κλειστές (`owner-property-draft-schema.ts` = `z.enum(PROPERTY_TYPES)` ·
+ * `property-mutation-gateway.ts` = `normalizePropertyType` + **throw**), άρα το παλαιό
+ * λεξιλόγιο ήταν **ιστορικό και δεν μεγάλωνε**. Ο μόνος λόγος που η ένωση έμενε φαρδιά
+ * ήταν ότι **κανείς δεν είχε ανοίξει τη βάση να ρωτήσει**.
+ *
+ * ⚠️ **ΤΟ ΠΑΛΑΙΟ ΛΕΞΙΛΟΓΙΟ ΔΕΝ ΔΙΑΓΡΑΦΗΚΕ — ΑΛΛΑΞΕ ΡΟΛΟ.** Οι τιμές ζουν στο
+ * `PROPERTY_TYPE_ALIASES`, που απαντά **άλλη** ερώτηση: *«τι μου έγραψαν;»* (ADR-777
+ * §8.32). Ένα έγγραφο με `'Διαμέρισμα 2Δ'` εξακολουθεί να **διαβάζεται σωστά** — απλώς
+ * μεταφράζεται στο **σύνορο ανάγνωσης** αντί να ταξιδεύει ωμό μέσα στον τομέα.
+ *
+ * @see lib/owner-property/owner-property-from-document.ts — το σύνορο του ιδιώτη
+ * @see lib/listings/public-listing-from-document.ts — το σύνορο της αγγελίας
+ * @see lib/firestore-mappers.ts `mapPropertyDoc` — το σύνορο της μονάδας
+ */
+export type PropertyType = PropertyTypeCanonical;
 
 // =============================================================================
 // 🏢 COVERAGE INTERFACE (Documentation Completeness)
@@ -381,7 +410,19 @@ export interface Property extends PropertySpecificationFields {
   // === EXISTING FIELDS ===
   id: string;
   name: string;
-  type: PropertyType;
+  /**
+   * **Το είδος, στην κανονική του μορφή** — ή `null` όταν δεν ξέρουμε ποιο είναι.
+   *
+   * 🔴 **`null` ΚΑΙ ΠΟΤΕ `'apartment'`** (ADR-842 §7.6.12 / §8 #11): ο `mapPropertyDoc`
+   * έγραφε `isValidPropertyType(data.type) ? data.type : 'apartment'` — δηλαδή περνούσε
+   * τις παλαιές τιμές **αυτούσιες** και **βάφτιζε διαμέρισμα** ό,τι δεν αναγνώριζε.
+   * Πλέον **κανονικοποιεί**, και το «δεν ξέρω» έχει όνομα.
+   *
+   * ⚠️ Οι καταναλωτές που κρατούν **ήδη** κανονική τιμή (π.χ. {@link PropertyModel},
+   * που το συμβόλαιό του λέει *«normalized with defaults, never undefined»*) την
+   * ξαναδηλώνουν **μη-null** — νόμιμο στένεμα, όχι εξαίρεση.
+   */
+  type: PropertyType | null;
   building: string;
   floor: number;
 
@@ -584,7 +625,8 @@ export interface PropertyDoc extends PropertySpecificationFields {
   // Legacy fields - all optional
   id?: string;
   name?: string;
-  type?: PropertyType;
+  /** Δες {@link Property.type} — `null` = **δεν ξέρουμε**, ποτέ σιωπηλή προεπιλογή. */
+  type?: PropertyType | null;
 
   // New extended fields - all optional during migration
   code?: string;

@@ -97,6 +97,17 @@ export interface Property {
     levels?: PropertyLevel[];
     /** Per-level data keyed by floorId — multi-level units only (ADR-236 Phase 2) */
     levelData?: Record<string, LevelData>;
+    /**
+     * **Η πράξη σειράς του γραφείου** για τη δημόσια αγγελία — ταυτότητες `FileRecord.id`
+     * στη δηλωμένη σειρά (ADR-841 §7 Α14.7).
+     *
+     * ⚠️ **`unknown`, ίδια πειθαρχία με τον γραφέα**: το αντικείμενο έρχεται ως **ωμό
+     * spread** του εγγράφου Firestore (`SharedPropertiesProvider`, `result.documents`
+     * `as Property[]`) — δηλαδή **κανείς δεν επικυρώνει τον τύπο** στη διαδρομή. Ένα
+     * `string[]` εδώ θα ήταν υπόσχεση που δεν την επιβάλλει κανένας· η **μία** ανάγνωση
+     * είναι το `declaredMediaOrder`.
+     */
+    publishedMediaOrder?: unknown;
     parentPropertyId?: string;
     features?: string[];
     attachments?: {

@@ -227,6 +227,57 @@ export function normalizePropertyType(
 }
 
 /**
+ * **Τι είδος είναι, ΚΑΙ τι χρειάστηκε για να το μάθουμε** — η μία πράξη του συνόρου.
+ *
+ * 🔴 **ΓΕΝΝΗΘΗΚΕ ΩΣ ΔΙΔΥΜΟ, ΚΑΙ ΤΟ ΕΠΙΑΣΕ Ο ΚΑΝΟΝΑΣ ΠΡΙΝ ΠΡΟΛΑΒΕΙ ΝΑ ΑΠΟΚΛΙΝΕΙ**
+ * (ADR-842 §7.6.12 · N.18 / CHECK 3.28): τα **δύο** σύνορα ανάγνωσης
+ * (`lib/owner-property/owner-property-from-document.ts` ·
+ * `lib/listings/public-listing-from-document.ts`) χρειάζονται **την ίδια** απάντηση, και
+ * η πρώτη γραφή τους την είχε **δύο φορές** — ίδιο σώμα, δύο αρχεία, ελεύθερα να
+ * αποκλίνουν την πρώτη φορά που κάποιος θα άγγιζε το ένα.
+ *
+ * 🔑 **ΜΙΑ κλήση αντί για δύο, επίτηδες.** Το «ποια είναι η κανονική τιμή;» και το
+ * «διέφερε από αυτό που ήταν γραμμένο;» είναι **η ίδια σύγκριση** ιδωμένη από δύο
+ * πλευρές· χωρισμένα σε δύο εξαγωγές, ο καταναλωτής θα μπορούσε να καλέσει τη μία και
+ * να ξεχάσει την άλλη — δηλαδή ακριβώς το σχήμα που το §7.6.11 μόλις έκλεισε.
+ *
+ * ⚠️ **Η σύγκριση γίνεται με το ΑΠΟΤΕΛΕΣΜΑ, ποτέ με λίστα «γνωστών παλαιών τιμών»**:
+ * μια δεύτερη λίστα θα πάλιωνε την πρώτη φορά που κάποιος πειράξει το
+ * {@link PROPERTY_TYPE_ALIASES}, και θα ήταν οδηγία σε σχόλιο αντί για πύλη.
+ *
+ * @example
+ * readPropertyType('apartment')   // → { type: 'apartment', drift: null }
+ * readPropertyType('Οικόπεδο')    // → { type: 'plot',      drift: 'Οικόπεδο' }
+ * readPropertyType('parking')     // → { type: null,        drift: 'parking' }
+ * readPropertyType(undefined)     // → { type: null,        drift: null }  (απουσία)
+ */
+export function readPropertyType(raw: unknown): PropertyTypeRead {
+  const type = normalizePropertyType(raw);
+  return { type, drift: driftOf(raw, type) };
+}
+
+/**
+ * Το αποτέλεσμα του {@link readPropertyType}.
+ *
+ * 🔑 **Το ζεύγος ξεχωρίζει ΤΡΕΙΣ καταστάσεις με ΔΥΟ πεδία**, χωρίς τρίτο:
+ * `type` γεμάτο ⇒ *ξέρουμε* (και το `drift` λέει αν χρειάστηκε μετάφραση)·
+ * `type: null` **με** `drift` ⇒ *ήρθε τιμή που δεν αναγνωρίζεται*·
+ * `type: null` **χωρίς** `drift` ⇒ *δεν ήρθε τιμή καθόλου*.
+ */
+export interface PropertyTypeRead {
+  readonly type: PropertyTypeCanonical | null;
+  /** Η **ωμή** αποθηκευμένη τιμή, όταν δεν ήταν ήδη η κανονική. `null` = καθαρό/απόν. */
+  readonly drift: string | null;
+}
+
+/** Η σύγκριση, ιδιωτική: η δημόσια πόρτα είναι το {@link readPropertyType}. */
+function driftOf(stored: unknown, canonical: PropertyTypeCanonical | null): string | null {
+  if (stored === undefined || stored === null) return null;
+  if (stored === canonical) return null;
+  return typeof stored === 'string' ? stored : String(stored);
+}
+
+/**
  * Check whether two property type inputs match semantically after normalization.
  *
  * Handles the common AI-pipeline use case: user searches for "διαμέρισμα" and
