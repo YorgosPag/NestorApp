@@ -12,6 +12,7 @@
     "src/i18n/generated/routes/o__workspace__dashboard.el.json": "263a3349d6e3f1e2badbab37f08d81836a102b89054c44e5ffac29cfacafffd0",
     "src/i18n/generated/routes/o__workspace__listings__mandates.el.json": "f2b0212cf0909081143453962ba0bfec2a47dc8753dc81a009ee34c12579b137",
     "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "f727ff8f3fa190d5f9c785e785404aee2104a7ec2a032a6e9f00ba177f66ff4e",
+    "src/i18n/generated/routes/o__workspace__listings__mandates__ownerPropertyId.el.json": "53b8a69df480afaffc315b57eec3b28be9037d68e77d1b96d7ee1b71b403c575",
     "src/i18n/generated/routes/o__workspace__listings__mandates__requests.el.json": "3b685808152db56cfc0ce4d50912bcd6166e986921ebb92e601cbef9936c0a0b",
     "src/i18n/generated/routes/o__workspace__settings__agency-profile.el.json": "835c9967562d6425cab9e0dd07f7186e8cd67130e73b7c9c8ed6749f97ff781e",
     "src/i18n/generated/routes/o__workspace__settings__brokerage.el.json": "6f86c3b2066bbd272fac89cddb49471e3bb123f002bd7d1709b6d9d4ab4efe69",
@@ -66,7 +67,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "226f491b98c8708f3a4cec2a1fc71ad18fd743e968d765e2d85216e5b14538ac",
+  "inputsSha256": "5fdc0e1eb85e19e367df9758dff0dcbb4ae9a035b1f41a4939fb7509abd084ea",
   "languages": [
     "el"
   ],
@@ -93,6 +94,7 @@
   "routeFiles": {
     "src/app/(app)/data-deletion/page.tsx": "b5869d2e0a20b13b9b7b31f179595ce7dca7d2d0f4d78d1397e8aaffaedb6455",
     "src/app/(app)/o/[workspace]/dashboard/page.tsx": "caae0e68c4651ed51e33c634ff45d20da06a9dc9d56901809538950f152e6980",
+    "src/app/(app)/o/[workspace]/listings/mandates/[ownerPropertyId]/page.tsx": "464823b34f5a9c40f8e0827b118c9e4a923b143b15c9d8a58f70df45dc682179",
     "src/app/(app)/o/[workspace]/listings/mandates/new/page.tsx": "e678daf0d06fdd1bd4fe7ec0136db195ad9d89e300ee88f7841bd79a3da92a02",
     "src/app/(app)/o/[workspace]/listings/mandates/page.tsx": "b3c814fdfb96af29642fe4b0bbe0340b5c57f905fac8c46e230f2f2850a26220",
     "src/app/(app)/o/[workspace]/listings/mandates/requests/page.tsx": "42f5db0700cfc7f328a3c5d1c86c79bf66eaaea284e731f89d620ce2dea6df3f",
@@ -193,6 +195,7 @@
     "src/components/mandate/MandateCatalogContent.tsx": "bd551b73a57e19fdc826c2050dbb089dbb8505f9cb50ab75705e34db883cecb1",
     "src/components/mandate/MandateConsentContent.tsx": "bf0f2ec82176e32030f54a520fd38da8ce24c0442c3e3d0e35cb85ec243bc9aa",
     "src/components/mandate/MandateConsentRefusal.tsx": "258b5946d453bc1ca234c18ea4f26130c99de13f7a7e649f2dd593f12eaa4441",
+    "src/components/mandate/MandateDetailContent.tsx": "eeb8e5c5c1b867621b81ad5ef00287b527b1d1f4eeb90d93044ccd56151a8de0",
     "src/components/mandate/MandateInboxContent.tsx": "cfc03a8b0a6898b0c7ce725740841b4c9010237997900a835e41707307cbf87e",
     "src/components/mandate/MandateRequestFormContent.tsx": "70480f9b6d4614df32ce145c970ab37c1c3fa03b0f0c91f4d402687285140b35",
     "src/components/mandate/MandateRequestOutcomeNotice.tsx": "899455eda7ad732bf45907b7643dbb74c2b58eb8485d286d078b3f2cd1b872ad",
@@ -287,6 +290,7 @@
     "src/hooks/listings/useListingFocus.ts": "3af313aabc898ab2115ac073030b62d14cd5b67299ee454b7a57ea45c5e46224",
     "src/hooks/mandate/useAgencyShowcase.ts": "db5cf7de0506704da91b680c1713be32143d60ce05fd3c06cf94472924c8c449",
     "src/hooks/mandate/useMandateCatalog.ts": "a57448c1c42a23613c470f0a94ba7d16931f2de5fa315e08fd0b7b56fe9b14ea",
+    "src/hooks/mandate/useMandateDetail.ts": "901506df5d1448085320ddbd498b5ff5d571f77c5dc69b41ccbb1f33a70f8e16",
     "src/hooks/mandate/useMandateInbox.ts": "336d880546f769fd998339c41a395e33050c5f4da9a610501d265669b7b8e4c2",
     "src/hooks/mandate/useMandateRowActions.ts": "f828f7db5990fafbaa8c37289cbb36372ec88580ee51c1708e67a16fa26702c4",
     "src/hooks/media/useSheetBackDismiss.ts": "c7046dd08105ad48417f1abeac803cc94fdc3f86b14e71eb870507203aab463f",
@@ -1796,6 +1800,73 @@
             "place.mode",
             "place.modeHint",
             "place.rejection"
+          ],
+          "whole": false
+        }
+      }
+    },
+    "o__workspace__listings__mandates__ownerPropertyId": {
+      "page": "src/app/(app)/o/[workspace]/listings/mandates/[ownerPropertyId]/page.tsx",
+      "wants": {
+        "property-market": {
+          "keys": [
+            "offer.mandates.action.resend",
+            "offer.mandates.action.revoke",
+            "offer.mandates.action.working",
+            "offer.mandates.actionDone.resend",
+            "offer.mandates.actionDone.revoke",
+            "offer.mandates.clientLabel",
+            "offer.mandates.clientUnknown",
+            "offer.mandates.clientUnnamed",
+            "offer.mandates.detail.back",
+            "offer.mandates.expiredLabel",
+            "offer.mandates.expiresIn",
+            "offer.mandates.loading",
+            "offer.mandates.neverNotifiedHint.failed",
+            "offer.mandates.neverNotifiedHint.no-address",
+            "offer.mandates.notifiedNever",
+            "offer.mandates.offTheMarket",
+            "offer.mandates.onTheMarket",
+            "offer.mandates.presence.restore",
+            "offer.mandates.presence.withdraw",
+            "offer.mandates.presenceDone.restore",
+            "offer.mandates.presenceDone.withdraw",
+            "offer.mandates.proof.agency-attestation",
+            "offer.mandates.proof.owner-consent",
+            "offer.mandates.reject.absent",
+            "offer.mandates.reject.already-revoked",
+            "offer.mandates.reject.declined",
+            "offer.mandates.reject.expired",
+            "offer.mandates.reject.network",
+            "offer.mandates.reject.no-address",
+            "offer.mandates.reject.not-brokered",
+            "offer.mandates.reject.not-pending",
+            "offer.mandates.reject.write-failed",
+            "offer.mandates.retry",
+            "offer.mandates.standing.awaiting-decision",
+            "offer.mandates.standing.awaiting-view",
+            "offer.mandates.standing.declined",
+            "offer.mandates.standing.expired",
+            "offer.mandates.standing.expired-unanswered",
+            "offer.mandates.standing.expiring-soon",
+            "offer.mandates.standing.link-revoked",
+            "offer.mandates.standing.live",
+            "offer.mandates.standing.never-notified",
+            "offer.mandates.standing.unannounced-live",
+            "offer.mandates.standingHint.awaiting-decision",
+            "offer.mandates.standingHint.awaiting-view",
+            "offer.mandates.standingHint.declined",
+            "offer.mandates.standingHint.expired",
+            "offer.mandates.standingHint.expired-unanswered",
+            "offer.mandates.standingHint.expiring-soon",
+            "offer.mandates.standingHint.link-revoked",
+            "offer.mandates.standingHint.live",
+            "offer.mandates.standingHint.never-notified",
+            "offer.mandates.standingHint.unannounced-live",
+            "offer.mandates.viewedNever"
+          ],
+          "prefixes": [
+            "offer.mandates.detail"
           ],
           "whole": false
         }
@@ -4323,7 +4394,7 @@
     "matchedKeys": 162,
     "routeBoundaries": 0,
     "shellFiles": 569,
-    "sliceBytes": 378722
+    "sliceBytes": 385498
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
