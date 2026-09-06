@@ -976,6 +976,67 @@ query.where('commercial.ownerContactIds', 'array-contains', contactId);`,
   // ζωής είναι υποχρεωτική εδώ περισσότερο από αλλού: το ελάττωμα που έκλεισε ήταν ΤΡΙΑ
   // ταυτόσημα `preventBlur` one-liners κάτω από το όριο των 50 tokens του jscpd — δηλαδή
   // αόρατα σε κάθε ΑΛΛΟ εργαλείο. Αν αυτό το pattern ήταν νεκρό, κανείς δεν θα το μάθαινε.
+  // ADR-842 §7.6.12 / §8 #11 — ΤΟ ΣΥΝΟΡΟ ΤΟΥ ΙΔΙΩΤΗ. Ο φρουρός ρωτά «γράφτηκε ΔΕΥΤΕΡΗ
+  // μετάφραση εγγράφου → OwnerProperty;». Η απόδειξη εκτελείται στη ΜΗΧΑΝΗ ΤΗΣ ΠΥΛΗΣ
+  // (JS RegExp): pattern με 0 ευρήματα είναι *καθαρό* ή *νεκρό*, και μόνο ένα παράδειγμα
+  // που όντως πιάνεται τα ξεχωρίζει (N.12, αδρανείς φρουροί — 606 από 671).
+  // ADR-842 §7.6.11 — Ο ΕΝΑΣ ΚΡΙΤΗΣ. 🔴 Το module μπήκε στο μητρώο με το `62a40cb3` **χωρίς
+  // απόδειξη**, δηλαδή παραβίασε τον κανόνα που το ίδιο του το ADR επιβάλλει· το χρέος
+  // πληρώθηκε 2026-09-06 (§7.6.12) αντί να ανέβει το ταβάνι. Ο φρουρός ρωτά «γράφτηκε
+  // ΔΕΥΤΕΡΟΣ κριτής για το “είναι γη;”» — ακριβώς η βλάβη που γέννησε το §7.6.11.
+  'property-classification': {
+    shouldMatch: `// Ο σαρωτής πρέπει να πιάσει ΔΕΥΤΕΡΟ κριτή, με ή χωρίς export:
+export function isLandProperty(type) { return type === 'plot'; }
+function resolvedPropertyClassOf(type) { return PROPERTY_TYPE_CLASS[type] ?? null; }
+const isLandProperty = (t) => t === 'plot' || t === 'parcel';
+const resolvedPropertyClassOf = (t) => propertyClassOf(normalizePropertyType(t));`,
+    shouldSkip: `// Κανονική χρήση — ΕΝΑΣ κριτής, δηλωμένος στο SSoT, εισαγόμενος παντού αλλού:
+import { isLandProperty, resolvedPropertyClassOf } from '@/constants/property-classification';
+const land = isLandProperty(values.type);
+if (resolvedPropertyClassOf(propertyType) === 'residential') return warning;
+const klass = resolvedPropertyClassOf(listing.type);
+
+// Και ΔΕΝ πιάνει γειτονικά ονόματα ούτε ιδιότητες αντικειμένου:
+export function isLandPropertyType(type) { return LAND_PROPERTY_TYPES.includes(type); }
+const rules = { isLandProperty: true, resolvedPropertyClassOf: 'land' };`,
+  },
+  // ADR-777 §8.32 — Η ΑΝΑΓΝΩΡΙΣΗ («τι μου έγραψαν;»). Ο φρουρός ρωτά «δηλώθηκε ΔΕΥΤΕΡΟΣ
+  // πίνακας ψευδωνύμων ή ελληνικών ετικετών;» — το ακριβές σχήμα που είχε ήδη αποκλίνει
+  // μία φορά (`loft: 'Loft'` ενώ το locale έλεγε «Σοφίτα»).
+  'property-type-aliases': {
+    shouldMatch: `// Ο σαρωτής πρέπει να πιάσει ΔΕΥΤΕΡΗ δήλωση των πινάκων:
+export const PROPERTY_TYPE_ALIASES = { studio: 'studio', 'διαμέρισμα': 'apartment' };
+const PROPERTY_TYPE_LABELS_EL = { studio: 'Στούντιο', shop: 'Κατάστημα' };
+export const PROPERTY_TYPE_ALIASES: Record<string, PropertyTypeCanonical> = {};
+const PROPERTY_TYPE_LABELS_EL: Record<PropertyTypeCanonical, string> = {};`,
+    shouldSkip: `// Κανονική χρήση — ΕΝΑΣ πίνακας, δηλωμένος στο SSoT, και ανάγνωση παντού αλλού:
+import { PROPERTY_TYPE_ALIASES, getPropertyTypeLabelEL } from '@/constants/property-type-aliases';
+import { normalizePropertyType, readPropertyType } from '@/constants/property-type-aliases';
+const canonical = PROPERTY_TYPE_ALIASES[raw.trim().toLowerCase()] ?? null;
+const label = PROPERTY_TYPE_LABELS_EL[canonical];
+const { type, drift } = readPropertyType(stored.type);
+if (Object.keys(PROPERTY_TYPE_ALIASES).length === 0) throw new Error('κενός πίνακας');`,
+  },
+  'owner-property-from-document': {
+    shouldMatch: `// Ο σαρωτής πρέπει να πιάσει ΔΕΥΤΕΡΗ υλοποίηση της μετάφρασης:
+export function ownerPropertyFromDocument(raw, id) { return { ...raw, id }; }
+export function readStoredOwnerProperty(raw, id) { return { property: raw, vocabularyDrift: null }; }
+// ...και τη μισοκρυμμένη, χωρίς \`export\`, μέσα σε υπηρεσία:
+function ownerPropertyFromDocument(snap) { return snap.data(); }
+function readStoredOwnerProperty(snap) { return snap.data(); }`,
+    shouldSkip: `// Κανονική χρήση — ΕΝΑΣ ορισμός, δηλωμένος στο σύνορο, και εισαγωγή παντού αλλού:
+import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
+import { readStoredOwnerProperty } from '@/lib/owner-property/owner-property-from-document';
+const property = ownerPropertyFromDocument(snapshot.data(), ownerPropertyId);
+const read = readStoredOwnerProperty(doc.data(), doc.id);
+if (read?.vocabularyDrift !== null) logger.warn('παλαιά τιμή είδους', { id: doc.id });
+
+// Και ΔΕΝ πιάνει γειτονικά ονόματα — η προβολή και ο γραφέας είναι ΑΛΛΕΣ ερωτήσεις:
+export function projectableFromOwnerProperty(property, at) { return { ...property }; }
+export function placeKnowledgeFromOwnerProperty(property, at) { return { candidates: [] }; }
+export function ownerPropertyFormFrom(property) { return { type: property.type ?? '' }; }
+const wrapped = useOwnerPropertyFromDocumentCache();`,
+  },
   'non-activating-surface': {
     shouldMatch: `// Ο σκανάρισμα πρέπει να πιάσει ΤΕΤΑΡΤΟ αντίγραφο του φρουρού:
   const preventBlur = (e: React.MouseEvent): void => e.preventDefault();

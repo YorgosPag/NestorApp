@@ -927,6 +927,18 @@
       ],
       "tier": 3
     },
+    "owner-property-from-document": {
+      "addedDate": "2026-09-06",
+      "ssotFile": "src/lib/owner-property/owner-property-from-document.ts",
+      "description": "ΤΟ ΕΝΑ ΣΥΝΟΡΟ ΤΟΥ ΙΔΙΩΤΗ — έγγραφο Firestore → OwnerProperty. Import from @/lib/owner-property/owner-property-from-document — ποτέ δεύτερη μετάφραση. 🔴 ΓΙΑΤΙ (ADR-842 §7.6.12 / §8 #11): η ίδια πράξη γινόταν σε 19 σημεία μέσα σε 14 αρχεία, όλα με ωμό snap.data() as OwnerProperty — άρα το 'Οικόπεδο'/'Αγροτεμάχιο' έφτανε στον τομέα από κανάλι που ο ΜΕΤΑΓΛΩΤΤΙΣΤΗΣ ΔΕΝ ΕΒΛΕΠΕ (η γη μπήκε 2026-08-20, πολύ μετά το πάγωμα του LEGACY_GREEK_PROPERTY_TYPES, που έχει 7 τιμές και ΚΑΜΙΑ γη). 🔑 Καθαρή συνάρτηση και ΟΧΙ FirestoreDataConverter, ίδιος λόγος με το ADR-839: οι καταναλωτές μοιράζονται σε Admin SDK και πελάτη — δύο βιβλιοθήκες, δύο τύποι converter, άρα ένας converter θα κάλυπτε τη μια πλευρά και θα άφηνε την άλλη με το as, δηλαδή δεύτερο κριτή ελεύθερο να αποκλίνει (ADR-749). ⚠️ Ο ισχυρισμός ΔΕΝ εξαφανίστηκε — μαζεύτηκε στο ΕΝΑ σημείο που έχει άγκυρες, τεκμηρίωση και πύλη: CHECK 3.74, δεύτερη γραμμή του πίνακα BOUNDARIES. ⛔ ΠΟΤΕ ?? 'apartment': άλυτο είδος δίνει null, και η πύλη δημοσίευσης (isPubliclyListed) αρνείται να το δημοσιεύσει — το έγγραφο ΖΕΙ και ο κάτοχος το διορθώνει (δρόμος Γ′, απόφαση Giorgio 2026-09-06). Άγκυρες που το ΕΚΤΕΛΟΥΝ: src/lib/owner-property/__tests__/owner-property-from-document.test.ts (14 άγκυρες, 7 μεταλλάξεις κόκκινες).",
+      "forbiddenPatterns": [
+        "(export\\s+)?function\\s+(readStoredOwnerProperty|ownerPropertyFromDocument)\\b"
+      ],
+      "allowlist": [
+        "src/lib/owner-property/owner-property-from-document.ts"
+      ],
+      "tier": 3
+    },
     "property-type-aliases": {
       "addedDate": "2026-08-20",
       "ssotFile": "src/constants/property-type-aliases.ts",
