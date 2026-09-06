@@ -35,8 +35,7 @@ import {
   Source,
   type MapLayerMouseEvent,
   type MapRef,
-} from 'react-map-gl/maplibre';
-import 'maplibre-gl/dist/maplibre-gl.css';
+} from '@/lib/maps/maplibre';
 import { MapPin } from 'lucide-react';
 
 import { OSM_MAP_STYLE } from '@/components/projects/ika/map-shared';

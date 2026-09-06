@@ -12,3 +12,6 @@ export type { PageErrorStateProps } from './PageErrorState';
 
 export { StaticPageLoading } from './StaticPageLoading';
 export type { StaticPageLoadingProps } from './StaticPageLoading';
+
+export { CardLoadingState } from './CardLoadingState';
+export type { CardLoadingStateProps } from './CardLoadingState';

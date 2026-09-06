@@ -20,8 +20,7 @@
  */
 
 import React from 'react';
-import { Map as MapGL, Marker, Popup, Source, Layer } from 'react-map-gl/maplibre';
-import 'maplibre-gl/dist/maplibre-gl.css';
+import { Map as MapGL, Marker, Popup, Source, Layer } from '@/lib/maps/maplibre';
 import {
   MapPin,
   Radio,
@@ -29,7 +28,7 @@ import {
   AlertTriangle,
   Clock,
 } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
+import { CardLoadingState } from '@/core/states';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -96,13 +95,7 @@ export function LiveWorkerMap({
   } = useLiveWorkerMap(projectId, events, latestEvent, workers, t);
 
   if (geofenceLoading) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <Spinner size="large" />
-        </CardContent>
-      </Card>
-    );
+    return <CardLoadingState />;
   }
 
   return (

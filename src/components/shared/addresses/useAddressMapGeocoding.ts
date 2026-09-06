@@ -15,7 +15,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { flushSync } from 'react-dom';
-import { LngLatBounds } from 'maplibre-gl';
+import { LngLatBounds } from '@/lib/maps/maplibre';
 
 import type { ProjectAddress, PartialProjectAddress } from '@/types/project/addresses';
 import {

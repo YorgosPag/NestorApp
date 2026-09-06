@@ -20,8 +20,7 @@
  */
 
 import React from 'react';
-import { Map, Marker, Source, Layer } from 'react-map-gl/maplibre';
-import 'maplibre-gl/dist/maplibre-gl.css';
+import { Map, Marker, Source, Layer } from '@/lib/maps/maplibre';
 import {
   MapPin,
   Save,
@@ -30,6 +29,7 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
+import { CardLoadingState } from '@/core/states';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -91,13 +91,7 @@ export function GeofenceConfigMap({ projectId }: GeofenceConfigMapProps) {
   } = useGeofenceConfig(projectId, t);
 
   if (isLoading) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <Spinner size="large" />
-        </CardContent>
-      </Card>
-    );
+    return <CardLoadingState />;
   }
 
   return (

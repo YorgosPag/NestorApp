@@ -46,8 +46,8 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Marker, useMap } from 'react-map-gl/maplibre';
-import { LngLatBounds } from 'maplibre-gl';
+import { Marker, useMap } from '@/lib/maps/maplibre';
+import { LngLatBounds } from '@/lib/maps/maplibre';
 import { Maximize2 } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatGeoDistance } from '@/lib/geo/format-geo-distance';

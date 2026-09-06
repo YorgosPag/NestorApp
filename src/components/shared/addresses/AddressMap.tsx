@@ -31,13 +31,19 @@
 
 import React, { useState, useCallback, useRef, useEffect, memo } from 'react';
 import { useMapPinImage } from '@/components/shared/addresses/useMapPinImage';
-import { Marker } from 'react-map-gl/maplibre';
+/*
+  🔴 ΕΔΩ ΕΙΧΕ ΗΔΗ ΠΛΗΡΩΘΕΙ Η ΙΔΙΑ ΒΛΑΒΗ, ΜΙΑ ΦΟΡΑ: η γραμμή που έφυγε από εδώ έγραφε
+  «*MapLibre CSS required for Marker positioning — was missing, causing invisible pins*».
+  Δηλαδή κάποιος **είχε ήδη μετρήσει** ότι χωρίς το φύλλο στυλ οι πινέζες γίνονται
+  αόρατες, και το διόρθωσε **τοπικά** — σε ένα από τα τέσσερα αρχεία που το εισήγαγαν
+  χειρόγραφα. Ο κοινός χάρτης έμεινε ακάλυπτος και η **ίδια** αιτία ξαναχτύπησε στο
+  `/search/results`, δύο μήνες μετά, με άλλο πρόσωπο (ADR-777 §8.56).
+  Πλέον το φύλλο στυλ έρχεται **μαζί** με τα σύμβολα, από το σύνορο.
+*/
+import { Marker, MapLibreMarker } from '@/lib/maps/maplibre';
 import { AlertTriangle, MapPin, Locate } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { useNotifications } from '@/providers/NotificationProvider';
-import { Marker as MapLibreMarker } from 'maplibre-gl';
-// 🔧 FIX: MapLibre CSS required for Marker positioning — was missing, causing invisible pins
-import 'maplibre-gl/dist/maplibre-gl.css';
 
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { InteractiveMap } from '@/subapps/geo-canvas/components/InteractiveMap';
