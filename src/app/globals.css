@@ -1687,38 +1687,37 @@ body {
    ============================================================= */
 
 /* =============================================================
-   FIX TEXT WRAPPING ISSUE - NO MORE "ARROWS" FROM BROKEN WORDS
+   ⛔ ΑΦΑΙΡΕΘΗΚΕ — «FIX TEXT WRAPPING ISSUE / NO MORE ARROWS FROM BROKEN WORDS»
+
+   Ο κανόνας ήταν `[class*="card"] h1,h2,h3 { white-space: nowrap !important }`.
+   Το `[class*="card"]` είναι επιλογέας **υποσυμβολοσειράς**: πιάνει τα ΔΙΚΑ ΜΑΣ
+   design tokens του Tailwind — `bg-card`, `text-card-foreground`, `border-card` —
+   δηλαδή **κάθε κάρτα της εφαρμογής** (165 αρχεία με `bg-card`), όχι τις παλιές
+   «relationship cards» που ήθελε να προστατέψει.
+
+   🔴 ΜΕΤΡΗΜΕΝΟ ΣΤΗΝ ΟΘΟΝΗ (2026-09-06): οι τίτλοι των καρτών επαγγελματία
+   στη βιτρίνα της ρίζας («Ηλεκτρομηχανολογικές Μελέτες Βολτ») έβγαιναν **έξω από το
+   πλαίσιο**: `nowrap` **και** `overflow: visible !important` — άρα ούτε αναδίπλωση
+   ούτε κοπή: το κείμενο απλώς δραπέτευε πάνω από τη διπλανή κάρτα.
+   Επαληθεύτηκε σε ζωντανό DOM: `bg-card` ⇒ `white-space: nowrap`.
+
+   Οι υπόλοιποι επιλογείς του μπλοκ (`[class*="CardTitle"]`, `[class*="card-title"]`,
+   `.card .card-title`, `.card-header`, `.card .header`, `*[class*="CardHeader"]`,
+   `*[role="heading"]`) **δεν αντιστοιχούσαν σε τίποτα** — τα `CardTitle`/`CardHeader`
+   είναι ονόματα *component* στο `src/components/ui/card.tsx`, όχι κλάσεις CSS.
+   Άρα το μπλοκ δεν έκανε τίποτα από όσα υποσχόταν, και **μόνο** έβλαπτε.
+
+   ⚠️ ΜΗΝ το επαναφέρεις. Αν κάποιος τίτλος πρέπει να μείνει σε μία γραμμή, το λέει
+   **η κάρτα του** με `truncate` στο δικό της className — τοπικά και με `text-overflow`,
+   όχι καθολικά με `!important`.
    ============================================================= */
 
-/* Prevent text wrapping in relationship headers */
-/* [REMOVED] :contains() is jQuery/Sizzle selector, not valid CSS */
-[class*="card"] h1,
-[class*="card"] h2,
-[class*="card"] h3,
-[class*="CardTitle"],
-[class*="card-title"] {
+/* Τα στοιχεία λίστας του Radix μένουν σε μία γραμμή — αφορά **dropdown**,
+   όχι κάρτες. Ζούσε στο ίδιο μπλοκ με τον κανόνα των καρτών κατά λάθος. */
+[data-radix-collection-item] * {
   white-space: nowrap !important;
   word-break: keep-all !important;
   hyphens: none !important;
-  overflow: visible !important;
-  text-overflow: clip !important;
-}
-
-/* Specific fix for relationship card titles */
-.card .card-title,
-[data-radix-collection-item] *,
-*[role="heading"] {
-  white-space: nowrap !important;
-  word-break: keep-all !important;
-  hyphens: none !important;
-}
-
-/* Ensure container has enough space */
-.card-header,
-.card .header,
-*[class*="CardHeader"] {
-  min-width: max-content !important;
-  overflow: visible !important;
 }
 
 /* =============================================================
