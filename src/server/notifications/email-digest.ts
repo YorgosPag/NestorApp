@@ -248,6 +248,36 @@ export function planCoversEveryMessage(
   return messages.every((message) => unique.has(message.id));
 }
 
+/**
+ * **Λέει αυτό το σώμα κάτι που δεν λέει ήδη το θέμα;** (ADR-777 §8.54)
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 Η ΕΡΩΤΗΣΗ ΗΤΑΝ ΛΑΘΟΣ, ΟΧΙ Η ΑΠΑΝΤΗΣΗ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Εδώ ρωτιόταν *«υπάρχει σώμα;»* (`content.trim().length > 0`) — και η απάντηση
+ * ήταν **πάντα ναι**, επειδή ο orchestrator έγραφε `content: body ?? title`.
+ * Ζωντανή μέτρηση 2026-09-05: σύνοψη **5** ειδοποιήσεων, **10** γραμμές.
+ *
+ * 🔑 **Δεύτερη άμυνα, όχι αντίγραφο της πρώτης** (N.7.2 #4). Η ρίζα διορθώθηκε στον
+ * orchestrator, αλλά τα ήδη γραμμένα `pending` έγγραφα της ουράς κουβαλούν το
+ * αντίγραφο **για πάντα** — καμία migration δεν τα αγγίζει, και θα ξαναφτάσουν στα
+ * εισερχόμενα του ίδιου ανθρώπου. Και ανεξάρτητα από ιστορικό: ένα σώμα ταυτόσημο
+ * με το θέμα **δεν προσθέτει πληροφορία**, όποιος κι αν το έγραψε.
+ *
+ * ⚠️ **Η σύγκριση γίνεται μετά από `trim()` και στα δύο.** Ένα «  Θέμα  » είναι το
+ * θέμα με κενά, όχι νέα πληροφορία — και ο ίδιος `trim()` απαντά ήδη το «υπάρχει;».
+ *
+ * ⚠️ **ΕΝΑΣ κριτής, δύο καταναλωτές.** Η συνθήκη ήταν γραμμένη **δύο φορές**
+ * ({@link digestText} · {@link digestHtml})· δύο αντίγραφα σημαίνουν ότι η επόμενη
+ * διόρθωση θα έφτανε στο ένα, και η σύνοψη θα έλεγε **διαφορετικά πράγματα σε
+ * κείμενο και σε HTML** — δηλαδή θα εξαρτιόταν από το πρόγραμμα του παραλήπτη.
+ */
+function bodyAddsAnything(message: PendingEmail): boolean {
+  const body = message.content.trim();
+  return body.length > 0 && body !== message.subject.trim();
+}
+
 /** Το σώμα της σύνοψης σε **απλό κείμενο** — ο αναγνώστης χωρίς HTML. */
 function digestText(members: readonly PendingEmail[], language: HumanLanguage): string {
   const texts = emailTextsFor(language);
@@ -255,7 +285,7 @@ function digestText(members: readonly PendingEmail[], language: HumanLanguage): 
 
   members.forEach((member, index) => {
     lines.push(`${index + 1}. ${member.subject}`);
-    if (member.content.trim().length > 0) lines.push(`   ${member.content}`);
+    if (bodyAddsAnything(member)) lines.push(`   ${member.content}`);
     lines.push('');
   });
 
@@ -279,10 +309,9 @@ function digestHtml(members: readonly PendingEmail[], language: HumanLanguage): 
   const texts = emailTextsFor(language);
   const items = members
     .map((member) => {
-      const body =
-        member.content.trim().length > 0
-          ? `<p style="margin:4px 0 0;color:#555">${escapeHtml(member.content)}</p>`
-          : '';
+      const body = bodyAddsAnything(member)
+        ? `<p style="margin:4px 0 0;color:#555">${escapeHtml(member.content)}</p>`
+        : '';
       return `<li style="margin-bottom:12px"><strong>${escapeHtml(member.subject)}</strong>${body}</li>`;
     })
     .join('\n');

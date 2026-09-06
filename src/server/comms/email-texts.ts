@@ -51,6 +51,15 @@ export interface EmailWording {
    * ανεπιθύμητα, και ο παραλήπτης δεν έχει τίποτα να διαβάσει στη λίστα του.
    */
   readonly fallbackSubject: string;
+  /**
+   * **Το αποτύπωμα του αποστολέα στο θέμα** — «ΝΕΣΤΩΡ», «Nestor».
+   *
+   * ⚠️ **Είναι το ΟΝΟΜΑ, όχι το επίθεμα.** Το πώς κολλάει στο θέμα (παύλα; κενά;
+   * παρένθεση;) το αποφασίζει το {@link brandedSubject}, σε **ένα** σημείο. Αν το
+   * επίθεμα ζούσε εδώ ολόκληρο («— ΝΕΣΤΩΡ»), μια αλλαγή στίξης θα ήταν αλλαγή σε
+   * **κάθε** γλώσσα — δηλαδή η ίδια απόφαση, γραμμένη όσες φορές και οι στήλες.
+   */
+  readonly brand: string;
   readonly digest: {
     /** ⚠️ **Πάντα πληθυντικός** — η σύνοψη είναι εξ ορισμού ≥2 (`MIN_DIGEST_SIZE`). */
     readonly subject: (count: number) => string;
@@ -73,6 +82,7 @@ export interface EmailWording {
 const EMAIL_TEXTS: Readonly<Record<HumanLanguage, EmailWording>> = {
   el: {
     fallbackSubject: 'Ειδοποίηση',
+    brand: 'ΝΕΣΤΩΡ',
     digest: {
       subject: (count) => `${count} νέες ειδοποιήσεις`,
       intro: (count) => `Έχετε ${count} νέες ειδοποιήσεις:`,
@@ -81,6 +91,7 @@ const EMAIL_TEXTS: Readonly<Record<HumanLanguage, EmailWording>> = {
   },
   en: {
     fallbackSubject: 'Notification',
+    brand: 'Nestor',
     digest: {
       subject: (count) => `${count} new notifications`,
       intro: (count) => `You have ${count} new notifications:`,
@@ -101,6 +112,47 @@ export function emailTextsFor(language: unknown): EmailWording {
 }
 
 /**
+ * **ΤΟ ΘΕΜΑ, ΣΦΡΑΓΙΣΜΕΝΟ ΑΠΟ ΤΟΝ ΑΠΟΣΤΟΛΕΑ** (ADR-777 §8.54).
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΤΟ ΠΕΡΙΣΤΑΤΙΚΟ: ΤΕΣΣΕΡΙΣ ΠΑΡΑΓΩΓΟΙ, ΤΕΣΣΕΡΙΣ ΑΠΟΦΑΣΕΙΣ, ΤΡΕΙΣ ΙΔΙΕΣ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Το «— ΝΕΣΤΩΡ» ήταν γραμμένο με το χέρι σε **6 σημεία, 3 αρχεία**
+ * (`interest-notifier` · `listing-match-notifier` · `mandate-request-notifier`) και
+ * **έλειπε** από το τέταρτο (`mandate-decision-notifier`, **6** προτάσεις). Μετρημένο
+ * στα εισερχόμενα του ανθρώπου, 2026-09-05: τρεις γραμμές το είχαν, μία όχι.
+ *
+ * 🔴 **Και ήταν σε λάθος στρώση, όχι μόνο σε πολλά αντίγραφα.** Μέσα σε **σύνοψη**
+ * το επίθεμα επαναλαμβανόταν **σε κάθε γραμμή**, κάτω από ένα θέμα που ήδη έλεγε
+ * ποιος στέλνει. Ο παραγωγός ενός γεγονότος **δεν ξέρει** αν το κείμενό του θα γίνει
+ * θέμα email ή γραμμή λίστας — άρα δεν μπορεί να απαντήσει «χρειάζεται υπογραφή;».
+ * Ο αποστολέας ξέρει, γιατί **αυτός** φτιάχνει τον φάκελο.
+ *
+ * 🏆 **Ίδια πρακτική με Zillow / Airbnb / GitHub**: το αποτύπωμα της μάρκας ανήκει
+ * στο **επίπεδο παράδοσης** (όνομα αποστολέα + θέμα), ποτέ στον παραγωγό του
+ * συμβάντος. Το κερδισμένο εδώ είναι ότι το επίθεμα ακολουθεί πλέον **τη γλώσσα του
+ * παραλήπτη**: κανένας από τους 4 παραγωγούς δεν το έκανε αυτό — έγραφαν ελληνικά
+ * σε κάθε παραλήπτη.
+ *
+ * ⚠️ **ΕΙΝΑΙ ΑΜΕΤΑΒΛΗΤΗ ΠΡΑΞΗ (N.7.2 #3), ΚΑΙ ΧΡΕΙΑΖΕΤΑΙ ΝΑ ΕΙΝΑΙ.** Την ίδια ουρά
+ * μοιράζονται μηνύματα που **δεν** είναι ειδοποιήσεις — οι επώνυμες κοινοποιήσεις
+ * ακινήτων φέρνουν **δικό τους** θέμα από το `email-templates`. Χωρίς τον έλεγχο, ένα
+ * θέμα που ήδη υπογράφει θα υπέγραφε **δύο φορές**. Και τα ήδη γραμμένα `pending`
+ * έγγραφα της ουράς κουβαλούν το παλιό, χειρόγραφο επίθεμα **για πάντα**.
+ */
+export function brandedSubject(language: unknown, subject: string): string {
+  const { brand } = emailTextsFor(language);
+  const trimmed = subject.trim();
+  // ⚠️ Ο έλεγχος γίνεται στο **όνομα**, όχι στο πλήρες επίθεμα: το χειρόγραφο
+  // παρελθόν έγραφε «— ΝΕΣΤΩΡ» με παύλα em, αλλά ένα μελλοντικό (ή ξένο) θέμα
+  // μπορεί να υπογράφει αλλιώς. Η ερώτηση είναι «υπογράφει ήδη;», όχι «υπογράφει
+  // ΜΕ ΤΟΝ ΔΙΚΟ ΜΑΣ ΤΡΟΠΟ;».
+  if (trimmed.endsWith(brand)) return trimmed;
+  return `${trimmed} — ${brand}`;
+}
+
+/**
  * **Έχει κάθε γλώσσα τα λόγια της;**
  *
  * Υπάρχει **για να αποτύχει θορυβωδώς** σε άγκυρα. Ο τύπος `Record` το εγγυάται σε
@@ -115,6 +167,8 @@ export function everyLanguageHasWording(): boolean {
     return (
       typeof wording?.fallbackSubject === 'string' &&
       wording.fallbackSubject.length > 0 &&
+      typeof wording.brand === 'string' &&
+      wording.brand.length > 0 &&
       typeof wording.digest?.footer === 'string' &&
       wording.digest.footer.length > 0 &&
       typeof wording.digest.subject(2) === 'string' &&

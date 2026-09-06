@@ -14,6 +14,9 @@
  * (Ίδιο μάθημα με τον αδρανή φρουρό του `withQuietHours` — ADR-749 §5.)
  */
 
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import {
   DEFAULT_LANGUAGE,
   HUMAN_LANGUAGES,
@@ -22,7 +25,7 @@ import {
   isHumanLanguage,
   resolveHumanLanguage,
 } from '@/i18n/languages';
-import { emailTextsFor, everyLanguageHasWording } from '@/server/comms/email-texts';
+import { brandedSubject, emailTextsFor, everyLanguageHasWording } from '@/server/comms/email-texts';
 
 describe('ADR-777 §8.29 — το λεξιλόγιο των γλωσσών', () => {
   it('Λ1 🔑 — το `pseudo` ΕΙΝΑΙ γλώσσα i18next αλλά ΔΕΝ είναι γλώσσα ανθρώπου', () => {
@@ -121,5 +124,70 @@ describe('ADR-777 §8.29 — τα λόγια, ανά γλώσσα', () => {
     for (const language of HUMAN_LANGUAGES) {
       expect(emailTextsFor(language).fallbackSubject.trim().length).toBeGreaterThan(0);
     }
+  });
+});
+
+// =============================================================================
+// Β — Η ΥΠΟΓΡΑΦΗ ΤΗΣ ΜΑΡΚΑΣ ΑΝΗΚΕΙ ΣΤΟΝ ΑΠΟΣΤΟΛΕΑ (ADR-777 §8.54)
+// =============================================================================
+//
+// 🔴 **ΤΟ ΠΕΡΙΣΤΑΤΙΚΟ**: το «— ΝΕΣΤΩΡ» ήταν γραμμένο με το χέρι σε **6 σημεία, 3
+// αρχεία**, και **έλειπε** από το τέταρτο (`mandate-decision-notifier`). Μετρημένο
+// στα εισερχόμενα του ανθρώπου 2026-09-05: τρεις γραμμές το είχαν, μία όχι — και
+// μέσα στη σύνοψη επαναλαμβανόταν **πέντε φορές**, κάτω από θέμα που ήδη υπέγραφε.
+
+describe('Β — το θέμα σφραγίζεται μία φορά, από τον αποστολέα', () => {
+  it('Β1 🔑 — το θέμα αποκτά την υπογραφή', () => {
+    expect(brandedSubject('el', 'Νέα αγγελία')).toBe('Νέα αγγελία — ΝΕΣΤΩΡ');
+  });
+
+  it('Β2 🔴 ΑΜΕΤΑΒΛΗΤΗ ΠΡΑΞΗ — θέμα που υπογράφει ήδη ΔΕΝ υπογράφει δεύτερη φορά', () => {
+    // Τα ήδη γραμμένα `pending` έγγραφα της ουράς κουβαλούν το παλιό, χειρόγραφο
+    // επίθεμα **για πάντα**· και οι επώνυμες κοινοποιήσεις φέρνουν δικό τους θέμα.
+    const once = brandedSubject('el', 'Νέα αγγελία — ΝΕΣΤΩΡ');
+    expect(once).toBe('Νέα αγγελία — ΝΕΣΤΩΡ');
+    expect(brandedSubject('el', once)).toBe(once);
+  });
+
+  it('Β3 🔴 ΜΕΤΑΛΛΑΞΗ ΓΛΩΣΣΑΣ — η υπογραφή ακολουθεί τον ΠΑΡΑΛΗΠΤΗ', () => {
+    // Κανένας από τους 4 παραγωγούς δεν το έκανε αυτό: έγραφαν «ΝΕΣΤΩΡ» σε κάθε
+    // παραλήπτη, ανεξαρτήτως γλώσσας.
+    expect(brandedSubject('en', 'A new listing')).toBe('A new listing — Nestor');
+    expect(brandedSubject('en', 'A new listing')).not.toContain('ΝΕΣΤΩΡ');
+  });
+
+  it('Β4 — κάθε γλώσσα έχει όνομα μάρκας, και ο φρουρός το απαιτεί', () => {
+    for (const language of HUMAN_LANGUAGES) {
+      expect(emailTextsFor(language).brand.trim().length).toBeGreaterThan(0);
+    }
+    expect(everyLanguageHasWording()).toBe(true);
+  });
+
+  it('Β5 🔴 Η ΡΙΖΑ — ΚΑΝΕΝΑΣ παραγωγός ειδοποιήσεων δεν γράφει πια τη μάρκα', () => {
+    // ⚠️ Στατική άγκυρα σε **και τους τέσσερις** ιδιοκτήτες. Η προηγούμενη κατάσταση
+    //    δεν ήταν «λάθος σε ένα αρχείο» — ήταν **τέσσερις ανεξάρτητες αποφάσεις** για
+    //    το ίδιο ερώτημα, εκ των οποίων μία έλεγε «όχι» χωρίς να το ξέρει κανείς.
+    const producers = [
+      'src/services/demand/interest-notifier.service.ts',
+      'src/services/demand/listing-match-notifier.service.ts',
+      'src/services/mandate/mandate-decision-notifier.service.ts',
+      'src/services/mandate/mandate-request-notifier.service.ts',
+    ];
+    for (const producer of producers) {
+      const source = readFileSync(join(process.cwd(), producer), 'utf8');
+      expect(source).not.toContain('ΝΕΣΤΩΡ');
+    }
+  });
+
+  it('Β6 🔴 — ο αποστολέας σφραγίζει ΚΑΙ ΤΙΣ ΔΥΟ διαδρομές (μοναχικό + σύνοψη)', () => {
+    // Ένα από τα δύο σημεία ξεχασμένο θα σήμαινε ότι η υπογραφή εξαφανίζεται
+    // ακριβώς όταν ο άνθρωπος λαμβάνει **πολλά** — δηλαδή εκεί που μετράει.
+    const sender = readFileSync(
+      join(process.cwd(), 'src/lib/cron/jobs/outbound-email-flush.job.ts'),
+      'utf8',
+    );
+    // Δύο **κλήσεις**: `deliverOne` (μοναχικό) και `deliverDigest` (σύνοψη). Η
+    // εισαγωγή δεν μετράει — γράφεται χωρίς παρένθεση.
+    expect(sender.split('brandedSubject(').length - 1).toBe(2);
   });
 });
