@@ -38,6 +38,7 @@ import routeSlice from '@/i18n/generated/routes/test-harness__listing-shapes.el.
 import { registerRouteSlice } from '@/i18n/route-slice';
 
 import { ResultsMap } from '@/components/search-results/ResultsMap';
+import { useListingFocus } from '@/hooks/listings/useListingFocus';
 import { ListingLedgerBar } from '@/components/search-results/ListingLedgerBar';
 import { computeListingLedger } from '@/services/realtime/hooks/usePublicListings';
 import { UNASKED_LISTING_ATTRIBUTES, type PublicListing } from '@/types/public-listing';
@@ -101,7 +102,7 @@ const FIXTURES: readonly PublicListing[] = [
 ];
 
 export default function ListingShapesHarness() {
-  const [highlightedId, setHighlightedId] = React.useState<string | null>(null);
+  const { focus, peek, select, clear } = useListingFocus();
   const ledger = computeListingLedger(FIXTURES);
 
   return (
@@ -112,7 +113,7 @@ export default function ListingShapesHarness() {
         </h1>
         <ListingLedgerBar ledger={ledger} className="mt-1" />
         <p className="mt-1 text-xs text-muted-foreground">
-          Επιλεγμένο: {highlightedId ?? '—'} · και τα έξι ορατά σχήματα έχουν το ΙΔΙΟ χρώμα:
+          Επιλεγμένο: {focus.selected ?? '—'} · Από πάνω: {focus.peeked ?? '—'} · και τα έξι ορατά σχήματα έχουν το ΙΔΙΟ χρώμα:
           η ακρίβεια είναι σχήμα, όχι απόχρωση (CHECK 3.41 / WCAG 1.4.1).
         </p>
       </header>
@@ -125,7 +126,13 @@ export default function ListingShapesHarness() {
             </li>
           ))}
         </ul>
-        <ResultsMap listings={FIXTURES} highlightedId={highlightedId} onSelect={setHighlightedId} />
+        <ResultsMap
+          listings={FIXTURES}
+          focus={focus}
+          onPeek={peek}
+          onSelect={select}
+          onClear={clear}
+        />
       </div>
     </main>
   );

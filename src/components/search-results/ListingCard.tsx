@@ -37,6 +37,8 @@ import { listingDetailHref } from '@/lib/listings/listing-routes';
 import type { PublicListing } from '@/types/public-listing';
 import { formatCurrency, formatList } from '@/lib/intl-formatting';
 import { listingImageSrcSet, listingLeadImage } from '@/lib/listings/listing-images';
+import type { ListingFocusStrength } from '@/lib/listings/listing-focus';
+import { LISTING_CARD_ID_ATTRIBUTE } from '@/hooks/listings/useListingRevealTracking';
 import { ListingAuthorshipLine } from '@/components/listings/ListingAuthorshipLine';
 
 /**
@@ -66,8 +68,22 @@ const CARD_IMAGE_SIZES = '(min-width: 1024px) 22rem, 100vw';
  */
 interface ListingCardProps {
   readonly listing: PublicListing;
-  /** Επισημασμένη από τον χάρτη; Χωρίς χάρτη, **ποτέ**. */
-  readonly isHighlighted?: boolean;
+  /**
+   * **ΠΟΣΟ ΕΝΤΟΝΑ την αφορά η εστίαση του χάρτη** — τρεις καταστάσεις, ποτέ δύο.
+   *
+   * 🔴 **ΗΤΑΝ `isHighlighted: boolean`, ΚΑΙ ΤΟ ΨΕΥΔΟΣ ΗΤΑΝ ΔΟΜΙΚΟ** (2026-09-06).
+   * Ένα `boolean` δεν μπορεί να ξεχωρίσει *«ο δείκτης περνά από πάνω»* (ακούσιο,
+   * εφήμερο) από *«αυτό διάλεξα»* (σκόπιμο, επίμονο) — άρα η κάρτα **δεν μπορούσε** να
+   * τα βάψει διαφορετικά, και η επιλογή έσβηνε μόλις το ποντίκι ακουμπούσε αλλού.
+   *
+   * 🏆 Το **Revit** το λύνει έτσι εδώ και δεκαετίες: το *pre-highlight* έχει **δικό του
+   * χρώμα**, ξεχωριστό από τη *selection*, και ο μηχανικός βλέπει με μια ματιά τι
+   * **κοιτάζει** και τι **κρατά**. Δες `lib/listings/listing-focus.ts`.
+   *
+   * ⚠️ Προαιρετικό, όπως τα άλλα συμφραζόμενα της οθόνης 2: η βιτρίνα
+   * `/pro/<ψευδώνυμο>` **δεν έχει χάρτη**, άρα δεν υπάρχει εστίαση να αναφερθεί.
+   */
+  readonly focusStrength?: ListingFocusStrength;
   /** Ο δεσμός λίστα → χάρτης. Χωρίς χάρτη, **δεν υπάρχει τι να ειδοποιηθεί**. */
   readonly onHover?: (id: string | null) => void;
   /** Τα ενεργά φίλτρα ως ερώτημα — ταξιδεύουν μαζί με τον επισκέπτη στην οθόνη 3. */
@@ -162,7 +178,7 @@ interface ListingCardProps {
 
 export function ListingCard({
   listing,
-  isHighlighted = false,
+  focusStrength = 'none',
   onHover,
   filterQuery = '',
   showAuthorship = true,
@@ -175,7 +191,15 @@ export function ListingCard({
   const image = listingLeadImage(listing);
 
   return (
-    <li>
+    /*
+      🔑 **Η ΚΑΡΤΑ ΔΗΛΩΝΕΙ ΠΟΙΑ ΕΙΝΑΙ, ΚΑΙ ΓΙ' ΑΥΤΟ Ο ΧΑΡΤΗΣ ΜΠΟΡΕΙ ΝΑ ΤΗ ΒΡΕΙ.**
+      Η εναλλακτική ήταν ένας πίνακας από `ref` στη λίστα — δηλαδή **δεύτερο μητρώο**
+      καρτών δίπλα στον πίνακα δεδομένων, που ξεσυγχρονίζεται σε κάθε φιλτράρισμα. Το
+      γνώρισμα ζει **πάνω στο ίδιο το στοιχείο** που ζωγραφίστηκε: δεν υπάρχει δεύτερη
+      αλήθεια να αποκλίνει. Το όνομα είναι μία φορά γραμμένο, στον καταναλωτή του
+      (`LISTING_CARD_ID_ATTRIBUTE`).
+    */
+    <li {...{ [LISTING_CARD_ID_ATTRIBUTE]: listing.id }}>
       <Link
         href={listingDetailHref(listing.id, filterQuery)}
         onMouseEnter={() => onHover?.(listing.id)}
@@ -185,9 +209,21 @@ export function ListingCard({
         className="block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <article
+          /*
+            🔴 **ΔΥΟ ΒΑΘΜΙΔΕΣ ΕΝΤΑΣΗΣ, ΚΑΙ ΚΑΜΙΑ ΔΕΝ ΕΙΝΑΙ ΜΟΝΟ ΧΡΩΜΑ** (CHECK 3.41 /
+            WCAG 1.4.1). Το `peeked` αλλάζει **μόνο** το περίγραμμα· το `selected`
+            προσθέτει **δεύτερο κανάλι** — γέμισμα **και** δακτύλιο. Αν η διαφορά ήταν
+            δύο αποχρώσεις του ίδιου χρώματος, θα ήταν αδιάκριτη για όποιον δεν τις
+            ξεχωρίζει, και θα εξαφανιζόταν σε ασπρόμαυρη εκτύπωση — το ίδιο σκεπτικό
+            που κάνει τα πέντε σχήματα του χάρτη να διαφέρουν σε **μέγεθος**.
+          */
           className={[
             'rounded-lg border bg-card p-3 transition-colors',
-            isHighlighted ? 'border-ring bg-accent' : 'border-border',
+            focusStrength === 'selected'
+              ? 'border-ring bg-accent ring-2 ring-ring ring-offset-1 ring-offset-background'
+              : focusStrength === 'peeked'
+                ? 'border-ring bg-accent/40'
+                : 'border-border',
           ].join(' ')}
         >
           {/*

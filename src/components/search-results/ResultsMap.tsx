@@ -24,13 +24,15 @@
  * σχόλιο δηλώνει ως «*the SINGLE place*» που αγγίζει `getComputedStyle` για tokens.
  */
 
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useEffect, useRef } from 'react';
 import { Source, Layer } from 'react-map-gl/maplibre';
 import { InteractiveMap } from '@/subapps/geo-canvas/components/InteractiveMap';
 import { PolygonSystemProvider } from '@/subapps/geo-canvas/systems/polygon-system';
 import type { MapInstance } from '@/subapps/geo-canvas/hooks/map/useMapInteractions';
 import { readRootCssVar } from '@/subapps/dxf-viewer/config/color-config';
 import { listingsToGeoJson } from '@/lib/listings/listings-geojson';
+import { NO_LISTING_FOCUS, type ListingFocus } from '@/lib/listings/listing-focus';
+import { ListingMapPopup } from './ListingMapPopup';
 import type { PublicListing } from '@/types/public-listing';
 
 /**
@@ -48,7 +50,30 @@ const CLICKABLE_LAYER_IDS = [
 
 interface ResultsMapProps {
   readonly listings: readonly PublicListing[];
-  readonly highlightedId: string | null;
+  /**
+   * **Η ΕΣΤΙΑΣΗ ΟΛΟΚΛΗΡΗ** — δύο ερωτήσεις, δύο κανάλια βαψίματος.
+   *
+   * ⚠️ Προαιρετική: η **οθόνη 3** δείχνει τον ίδιο χάρτη για **μία** αγγελία, όπου δεν
+   * υπάρχει τίποτα να επισημανθεί σε σχέση με τίποτα άλλο.
+   */
+  readonly focus?: ListingFocus;
+  /**
+   * **Ο ΔΕΙΚΤΗΣ ΠΕΡΑΣΕ ΑΠΟ ΠΑΝΩ** — εφήμερο, ακούσιο, δεκάδες φορές το λεπτό.
+   *
+   * ⛔ **Ο καταναλωτής ΔΕΝ επιτρέπεται να κυλήσει τίποτα από αυτό.** Είναι το ελάττωμα
+   * που η **Figma** μέτρησε και απέσυρε στο Layers panel — δες
+   * `hooks/listings/useListingRevealTracking.ts`.
+   */
+  readonly onPeek?: (id: string | null) => void;
+  /**
+   * Τα ενεργά φίλτρα ως ερώτημα — **ταξιδεύουν και από το popup**.
+   *
+   * 🔑 Χωρίς αυτό, ο σύνδεσμος του popup θα ήταν η **μία** διαδρομή προς την οθόνη 3
+   * που **χάνει** την αναζήτηση, ενώ η κάρτα δίπλα του την κρατά. Δύο σύνδεσμοι προς
+   * το ίδιο ακίνητο με διαφορετική συμπεριφορά επιστροφής είναι ακριβώς η απώλεια που
+   * η Α3 μέτρησε στο **75%**.
+   */
+  readonly filterQuery?: string;
   /**
    * Κλικ σε σχήμα → επιλογή στη λίστα. **Προαιρετικό, και η απουσία έχει νόημα.**
    *
@@ -59,6 +84,14 @@ interface ResultsMapProps {
    * πάνω σε πόλη. Ο ζωγράφος είναι **ένας**· αλλάζει το ερώτημα, όχι ο χάρτης.
    */
   readonly onSelect?: (id: string) => void;
+  /**
+   * **ΚΛΙΚ ΣΕ ΚΕΝΟ ΣΗΜΕΙΟ ΤΟΥ ΧΑΡΤΗ** — η ρητή έξοδος από την επιλογή.
+   *
+   * 🔑 Είναι η **τρίτη** διαδρομή ακύρωσης, δίπλα στο `×` του popup και στο `Escape`.
+   * Μια επίμονη κατάσταση χωρίς ορατό τρόπο εξόδου είναι παγίδα: ο άνθρωπος που πάτησε
+   * κατά λάθος πινέζα δεν πρέπει να χρειάζεται να μαντέψει πώς ξεφεύγει.
+   */
+  readonly onClear?: () => void;
 }
 
 /** Ακτίνες σε pixel. **Κατηγορικά διακριτές**, όχι διαβαθμίσεις που μοιάζουν. */
@@ -93,7 +126,49 @@ function boundsOf(data: ReturnType<typeof listingsToGeoJson>): [[number, number]
   return Number.isFinite(west) ? [[west, south], [east, north]] : null;
 }
 
-export function ResultsMap({ listings, highlightedId, onSelect }: ResultsMapProps) {
+/**
+ * Η όψη του MapLibre που **χρειάζεται πραγματικά** αυτό το αρχείο.
+ *
+ * ⚠️ Το `MapInstance` του Geo-Canvas δεν εκθέτει τη διεπαφή συμβάντων ανά επίπεδο, και
+ * η μετάβαση γινόταν ήδη με `as unknown`. Γράφεται **μία** φορά, ονομασμένη, αντί να
+ * επαναληφθεί σε κάθε χειριστή — έτσι μια αλλαγή της βιβλιοθήκης σπάει σε **ένα**
+ * σημείο αντί για πέντε.
+ */
+interface MapPointerEvent {
+  readonly features?: Array<{ properties?: Record<string, unknown> }>;
+  readonly point: { x: number; y: number };
+}
+
+interface MapEventTarget {
+  on: (
+    ev: string,
+    layerOrHandler: string | ((e: MapPointerEvent) => void),
+    cb?: (e: MapPointerEvent) => void
+  ) => void;
+  getCanvas: () => HTMLCanvasElement;
+  getContainer: () => HTMLElement;
+  resize: () => void;
+  fitBounds: (b: [[number, number], [number, number]], o?: Record<string, unknown>) => void;
+  queryRenderedFeatures: (
+    point: { x: number; y: number },
+    options?: { layers?: readonly string[] }
+  ) => Array<{ properties?: Record<string, unknown> }>;
+}
+
+/** Η ταυτότητα της αγγελίας κάτω από τον δείκτη, ή `null` αν δεν είναι αγγελία. */
+function listingIdOf(event: MapPointerEvent): string | null {
+  const id = event.features?.[0]?.properties?.id;
+  return typeof id === 'string' ? id : null;
+}
+
+export function ResultsMap({
+  listings,
+  focus = NO_LISTING_FOCUS,
+  filterQuery = '',
+  onPeek,
+  onSelect,
+  onClear,
+}: ResultsMapProps) {
   const data = useMemo(() => listingsToGeoJson(listings), [listings]);
   const bounds = useMemo(() => boundsOf(data), [data]);
 
@@ -101,38 +176,199 @@ export function ResultsMap({ listings, highlightedId, onSelect }: ResultsMapProp
   const mark = `hsl(${readRootCssVar('--chart-1', '210 80% 50%')})`;
   const surface = `hsl(${readRootCssVar('--card', '0 0% 100%')})`;
 
+  const selectedListing = useMemo(
+    () => (focus.selected === null ? null : (listings.find((l) => l.id === focus.selected) ?? null)),
+    [listings, focus.selected]
+  );
+
   /**
-   * Το κλικ δένεται στα **επίπεδα**, όχι σε δείκτες DOM — γιατί δεν υπάρχουν δείκτες
-   * DOM (βλ. `listings-geojson.ts`). Ο δεσμός χάρτη → λίστα είναι **η μισή** απαίτηση
-   * της Α3· η άλλη μισή (λίστα → χάρτης) ζει στο `highlightedId`.
+   * 🔴 **ΟΙ ΧΕΙΡΙΣΤΕΣ ΔΙΑΒΑΖΟΝΤΑΙ ΤΗ ΣΤΙΓΜΗ ΤΟΥ ΣΥΜΒΑΝΤΟΣ, ΠΟΤΕ ΩΣ ΣΤΙΓΜΙΟΤΥΠΟ.**
+   *
+   * Είναι ο **κεντρικός κανόνας 2 του ADR-040**, εδώ για **δύο** ανεξάρτητους λόγους:
+   *
+   * 1. **Ορθότητα.** Οι ακροατές δένονται **μία φορά**, στο `load` του MapLibre. Ένας
+   *    χειριστής που έκλεισε μέσα του το `onSelect` της πρώτης απόδοσης θα καλούσε για
+   *    πάντα **εκείνη** τη συνάρτηση — δηλαδή θα έγραφε σε παλιά κατάσταση.
+   * 2. **Απόδοση — και η προειδοποίηση είναι γραμμένη στην ίδια την πηγή.** Ο
+   *    `InteractiveMapContainer:332` λέει ρητά *«new function every render caused Map
+   *    re-init»*. Με τα props στις εξαρτήσεις, **κάθε κίνηση του ποντικιού** θα άλλαζε
+   *    την ταυτότητα του `handleMapReady` — δηλαδή θα απειλούσε επαναρχικοποίηση του
+   *    χάρτη στα 60fps. Το `useCallback([])` το κάνει **δομικά αδύνατο**.
    */
-  const handleMapReady = useCallback((map: MapInstance) => {
-    const target = map as unknown as {
-      on: (ev: string, layer: string, cb: (e: { features?: Array<{ properties?: Record<string, unknown> }> }) => void) => void;
-      getCanvas: () => HTMLCanvasElement;
-      fitBounds: (b: [[number, number], [number, number]], o?: Record<string, unknown>) => void;
-    };
+  const handlersRef = useRef({ onPeek, onSelect, onClear });
+  useEffect(() => {
+    handlersRef.current = { onPeek, onSelect, onClear };
+  }, [onPeek, onSelect, onClear]);
+
+  /**
+   * 🔴 **ΚΑΙ ΤΑ `bounds` ΔΙΑΒΑΖΟΝΤΑΙ ΑΠΟ ΑΝΑΦΟΡΑ — ΜΕΤΡΗΜΕΝΟ ΛΑΘΟΣ, ΟΧΙ ΠΡΟΛΗΨΗ.**
+   *
+   * Η πρώτη γραφή της διόρθωσης έβαλε τα `bounds` στις εξαρτήσεις του `handleMapReady`
+   * *«μόνο για το αρχικό κάδρο»* — και **ζωντανά ο χάρτης πέθανε**: μαύρισε, το popup
+   * εξαφανίστηκε ενώ η κάρτα έμενε επιλεγμένη *(δηλαδή η κατάσταση React ζούσε και ο
+   * χάρτης όχι)*. Ο λόγος είναι γραμμένος στην πηγή, στο `InteractiveMapContainer:332`:
+   * *«new function every render caused Map re-init»* — το `onMapReady` περνά μέσα σε
+   * `useMemo`, άρα **νέα ταυτότητα = νέος χάρτης**.
+   *
+   * ⇒ Ο κατάλογος φτάνει από το δίκτυο ⇒ `bounds` αλλάζουν ⇒ ο χάρτης **ξαναστήνεται
+   * ακριβώς τη στιγμή που αποκτά κάτι να δείξει**. Η προειδοποίηση δεν ήταν θεωρητική.
+   */
+  const boundsRef = useRef(bounds);
+  useEffect(() => { boundsRef.current = bounds; }, [bounds]);
+
+  /**
+   * 🔴 **ΤΟ ΚΑΔΡΑΡΙΣΜΑ ΕΙΝΑΙ ΕΦΕ ΤΩΝ ΔΕΔΟΜΕΝΩΝ, ΟΧΙ ΒΗΜΑ ΤΗΣ ΑΡΧΙΚΟΠΟΙΗΣΗΣ.**
+   *
+   * ⚠️ **Μετρημένο ζωντανά 2026-09-06 — ο χάρτης έδειχνε ΟΛΗ ΤΗΝ ΕΛΛΑΔΑ σε χαμηλό ζουμ
+   * ενώ τα έξι σχήματα ήταν σε δύο πόλεις.** Το `fitBounds` ζούσε **μέσα** στο
+   * `onMapReady`, δηλαδή έτρεχε **μία φορά, στο `load` του MapLibre** — και εκείνη τη
+   * στιγμή το `usePublicListings` **δεν έχει απαντήσει ακόμη**: `listings = []` ⇒
+   * `bounds = null` ⇒ **καμία κλήση, ποτέ**.
+   *
+   * 🔑 **Η αγγελία φτάνει ΜΕΤΑ τον χάρτη — πάντα.** Ο χάρτης είναι τοπικός κώδικας, ο
+   * κατάλογος είναι δίκτυο. Οποιαδήποτε γραφή που καδράρει «όταν είναι έτοιμος ο
+   * χάρτης» ρωτά τον **λάθος** από τους δύο.
+   *
+   * ✅ Και κλείνει **δεύτερο, προϋπάρχον** ελάττωμα: με το καδράρισμα δεμένο στο `load`,
+   * μια αλλαγή φίλτρων **άφηνε τον χάρτη στην παλιά περιοχή** — ο άνθρωπος έβλεπε
+   * «3 στον χάρτη» και **κανένα σχήμα** στο κάδρο του.
+   */
+  const mapRef = useRef<MapEventTarget | null>(null);
+
+  /**
+   * Ο παρατηρητής μεγέθους του χάρτη — δες τον λόγο μέσα στο `handleMapReady`.
+   *
+   * ⚠️ **Η αποσύνδεση είναι υποχρεωτική.** Ένας `ResizeObserver` κρατά ζωντανό το
+   * στοιχείο που παρατηρεί **και** το κλείσιμο πάνω στο `target`: χωρίς αυτό, κάθε
+   * πλοήγηση μακριά από την οθόνη 2 αφήνει πίσω της έναν ολόκληρο χάρτη MapLibre.
+   */
+  const mapObserverRef = useRef<ResizeObserver | null>(null);
+  useEffect(() => () => {
+    mapObserverRef.current?.disconnect();
+    mapObserverRef.current = null;
+  }, []);
+
+  useEffect(() => {
+    const target = mapRef.current;
+    if (!target || !bounds) return;
 
     // ⚠️ `padding` **υποχρεωτικό**: χωρίς αυτό μια πινέζα στην άκρη κάθεται πάνω στο
     // σύνορο και μοιάζει κομμένη· και `maxZoom`, γιατί ΕΝΑ αποτέλεσμα δίνει ορθογώνιο
     // μηδενικού εμβαδού — ο χάρτης θα ζουμάριζε σε επίπεδο δρόμου, ισχυρισμός
     // ακρίβειας που το ίδιο το σχήμα μπορεί να μην κάνει.
-    if (bounds) target.fitBounds(bounds, { padding: 64, maxZoom: 15, duration: 0 });
+    target.fitBounds(bounds, { padding: 64, maxZoom: 15, duration: 0 });
+  }, [bounds]);
+
+  const handleMapReady = useCallback((map: MapInstance) => {
+    const target = map as unknown as MapEventTarget;
+    /*
+      🔑 **Η αναφορά μπαίνει ΠΡΩΤΗ, και η σειρά έχει σημασία.** Ο κατάλογος μπορεί να
+      έχει ήδη φτάσει όσο ο χάρτης φόρτωνε· τότε το effect από πάνω έχει **ήδη τρέξει
+      με `mapRef.current === null`** και δεν πρόκειται να ξανατρέξει (τα `bounds` δεν
+      άλλαξαν). Γι' αυτό το καδράρισμα επαναλαμβάνεται **και εδώ**: δύο διαδρομές προς
+      την ίδια, **ταυτοδύναμη** πράξη — belt-and-suspenders (N.7.2 #4), όχι διπλή αλήθεια.
+    */
+    mapRef.current = target;
+    const readyBounds = boundsRef.current;
+    if (readyBounds) target.fitBounds(readyBounds, { padding: 64, maxZoom: 15, duration: 0 });
+
+    /*
+      ────────────────────────────────────────────────────────────────────────
+      🔴 Ο ΧΑΡΤΗΣ ΗΤΑΝ **ΜΑΥΡΟΣ** ΩΣΠΟΥ Ο ΑΝΘΡΩΠΟΣ ΤΟΝ ΑΚΟΥΜΠΟΥΣΕ *(2026-09-06)*
+      ────────────────────────────────────────────────────────────────────────
+
+      **Μετρημένο ζωντανά, και η μέτρηση ανέτρεψε δύο υποθέσεις:**
+
+      | Υποψία | Μέτρηση |
+      |---|---|
+      | «δεν φορτώνουν τα tiles» | **ΨΕΥΔΗΣ** — **45 αιτήματα, όλα `200`**, `tile.openstreetmap.org/9/...` |
+      | «λάθος μέγεθος καμβά» | **ΨΕΥΔΗΣ** — `1587×633` = `1984×792 × dpr 0,8`, **σωστό** |
+      | «χαμένο WebGL context» | **ΨΕΥΔΗΣ** — `gl.isContextLost() === false` |
+
+      ⇒ Το καρέ ήταν **σωστά υπολογισμένο και ποτέ ζωγραφισμένο**. Ένα `scroll` πάνω
+      στον χάρτη τον έκανε να εμφανιστεί **ολόκληρο, με τις πινέζες, ακαριαία**.
+
+      🔑 **Η αιτία είναι ο βρόχος απόδοσης, όχι τα δεδομένα.** Το MapLibre σταματά να
+      ζωγραφίζει όταν κρίνει ότι τίποτα δεν εκκρεμεί· εδώ το δοχείο αποκτά το τελικό
+      του ύψος από **CSS του κελύφους** (`data-shell-viewport`, ADR-797 Φάση Γ) που
+      εφαρμόζεται **μετά** το `load` — μια αλλαγή που ο χάρτης δεν έχει λόγο να
+      παρατηρήσει, γιατί το `getBoundingClientRect` του **ήδη** συμφωνεί.
+
+      ✅ Το `resize()` είναι ο **επίσημος** τρόπος να ξαναρχίσει ο βρόχος: επανεξετάζει
+      το μέγεθος **και** ζητά νέο καρέ. Είναι **ταυτοδύναμο** — αν τίποτα δεν άλλαξε,
+      κοστίζει ένα καρέ.
+
+      ⚠️ **ΤΟ `ResizeObserver` ΕΙΝΑΙ ΤΟ ΟΥΣΙΩΔΕΣ ΜΙΣΟ, ΟΧΙ ΤΟ ΔΕΥΤΕΡΟ.** Ένα σκέτο
+      `requestAnimationFrame` θα διόρθωνε **αυτή** τη στιγμή και θα ξανάσπαγε στην
+      επόμενη: αλλαγή μεγέθους παραθύρου, μετάβαση του φύλλου πυθμένα ανάμεσα στις
+      τρεις στάσεις, εμφάνιση μπάρας κύλισης στη λίστα. Ο παρατηρητής απαντά σε **κάθε**
+      αλλαγή του δοχείου — και το πρώτο του κάλεσμα είναι, εξ ορισμού, **αμέσως**.
+
+      🔶 **Δηλωμένο όριο**: ο `AddressMap` και το `GeoCanvasContent` εισάγουν τον **ίδιο**
+      `InteractiveMap`, που **δεν έχει καμία** διαχείριση `resize` (grep = 0 σε ολόκληρο
+      το `geo-canvas`). Η θεραπεία ανήκει **εκεί**, μία φορά, για τους τρεις — αλλά ο
+      χάρτης του Geo-Canvas είναι ξένο υποσύστημα με δικό του ADR, και μια αλλαγή εκεί
+      είναι δική της απόφαση. Καταγράφεται ονομαστικά αντί να σιωπήσει.
+    */
+    // ⚠️ **Αποσύνδεσε τον προηγούμενο ΠΡΙΝ φτιάξεις νέο.** Το `load` του MapLibre μπορεί
+    // να συμβεί ξανά (π.χ. αλλαγή υποβάθρου «Χάρτης» ⇄ «Δορυφόρος»), και δύο ζωντανοί
+    // παρατηρητές πάνω στο ίδιο δοχείο διπλασιάζουν τα `resize()` ανά καρέ.
+    mapObserverRef.current?.disconnect();
+    const observer = new ResizeObserver(() => target.resize());
+    observer.observe(target.getContainer());
+    mapObserverRef.current = observer;
 
     // ⚠️ Χωρίς καταναλωτή επιλογής **δεν δένεται τίποτα** — ούτε κλικ, ούτε δείκτης.
     // Βλ. {@link ResultsMapProps.onSelect}: δείκτης «χεράκι» χωρίς αποτέλεσμα είναι
     // υπόσχεση που δεν τηρείται.
-    if (!onSelect) return;
+    if (!handlersRef.current.onSelect) return;
 
     for (const layerId of CLICKABLE_LAYER_IDS) {
       target.on('click', layerId, (event) => {
-        const id = event.features?.[0]?.properties?.id;
-        if (typeof id === 'string') onSelect(id);
+        const id = listingIdOf(event);
+        if (id !== null) handlersRef.current.onSelect?.(id);
       });
-      target.on('mouseenter', layerId, () => { target.getCanvas().style.cursor = 'pointer'; });
-      target.on('mouseleave', layerId, () => { target.getCanvas().style.cursor = ''; });
+
+      /*
+        🔴 **`mousemove` ΚΑΙ ΟΧΙ ΜΟΝΟ `mouseenter` — Η ΔΙΑΦΟΡΑ ΕΙΝΑΙ ΟΡΑΤΗ.**
+        Το `mouseenter` ενός επιπέδου πυροδοτείται όταν ο δείκτης μπαίνει **στο επίπεδο**,
+        όχι σε κάθε σχήμα του. Δύο γειτονικές πινέζες ζουν στο **ίδιο** `listing-pin`:
+        περνώντας από τη μία στην άλλη **δεν** υπάρχει νέο `mouseenter`, άρα η επισήμανση
+        θα κόλλαγε στην πρώτη. Το `mousemove` ρωτά **ποιο σχήμα** είναι από κάτω, κάθε
+        φορά — και ο έλεγχος ταυτότητας στον καταναλωτή (`useListingFocus.peek`) κόβει
+        την επανάληψη, ώστε να μην υπάρχει απόδοση χωρίς αλλαγή.
+      */
+      target.on('mousemove', layerId, (event) => {
+        target.getCanvas().style.cursor = 'pointer';
+        handlersRef.current.onPeek?.(listingIdOf(event));
+      });
+
+      target.on('mouseleave', layerId, () => {
+        target.getCanvas().style.cursor = '';
+        handlersRef.current.onPeek?.(null);
+      });
     }
-  }, [onSelect, bounds]);
+
+    /*
+      **ΚΛΙΚ ΣΤΟ ΚΕΝΟ = ΑΚΥΡΩΣΗ.**
+
+      ⚠️ **Ο έλεγχος είναι υποχρεωτικός**: το καθολικό `click` πυροδοτείται **και** όταν
+      το κλικ έπεσε πάνω σε σχήμα — δηλαδή χωρίς αυτόν, κάθε επιλογή θα ακυρωνόταν από
+      το ίδιο της το κλικ, μέσα στον ίδιο κύκλο συμβάντων. Ρωτάμε τα **ίδια** επίπεδα
+      που δέχονται κλικ: μία λίστα, δύο χρήσεις, καμία ευκαιρία να αποκλίνουν.
+    */
+    target.on('click', (event: MapPointerEvent) => {
+      const hit = target.queryRenderedFeatures(event.point, { layers: CLICKABLE_LAYER_IDS });
+      if (hit.length === 0) handlersRef.current.onClear?.();
+    });
+    /*
+      🔴 **ΚΕΝΟΣ ΠΙΝΑΚΑΣ ΕΞΑΡΤΗΣΕΩΝ — ΚΑΙ ΕΙΝΑΙ ΤΟ ΣΥΜΒΟΛΑΙΟ, ΟΧΙ ΒΕΛΤΙΣΤΟΠΟΙΗΣΗ.**
+      Αυτή η συνάρτηση περνά ως `onMapReady` μέσα σε `useMemo` του
+      `InteractiveMapContainer`: **κάθε** αλλαγή ταυτότητας ξαναστήνει τον χάρτη
+      (*«new function every render caused Map re-init»*, γρ. 332). Ό,τι χρειάζεται
+      διαβάζεται από αναφορά **τη στιγμή του συμβάντος** — κανόνας 2 του ADR-040.
+    */
+  }, []);
 
   return (
     /*
@@ -204,18 +440,62 @@ export function ResultsMap({ listings, highlightedId, onSelect }: ResultsMapProp
                    'circle-stroke-width': 2, 'circle-stroke-color': surface }}
         />
         {/*
-          Η ΕΠΙΣΗΜΑΝΣΗ από τη λίστα — δακτύλιος ΓΥΡΩ από το σχήμα, ποτέ αλλαγή του
-          σχήματος: η επισήμανση είναι «ποιο κοιτάς», η ακρίβεια είναι «τι ξέρουμε».
-          Δύο ερωτήματα, δύο κανάλια — αλλιώς το hover θα έλεγε ψέματα για τη γνώση μας.
+          ────────────────────────────────────────────────────────────────────
+          🔴 ΔΥΟ ΕΠΙΠΕΔΑ ΕΠΙΣΗΜΑΝΣΗΣ, ΓΙΑΤΙ ΥΠΑΡΧΟΥΝ ΔΥΟ ΕΡΩΤΗΣΕΙΣ
+          ────────────────────────────────────────────────────────────────────
+
+          Ήταν **ένα** (`listing-highlight`), τροφοδοτημένο από μία μεταβλητή που
+          σήμαινε ταυτόχρονα «κοιτάζω» και «διάλεξα» — άρα ο χάρτης **δεν μπορούσε** να
+          δείξει και τα δύο, και η επιλογή έσβηνε με το πρώτο πέρασμα του ποντικιού.
+
+          🏆 Το **Revit** το λύνει έτσι εδώ και δεκαετίες: το *pre-highlight* και η
+          *selection* έχουν **δικό τους** χρώμα, και ο μηχανικός βλέπει με μια ματιά τι
+          **κοιτάζει** και τι **κρατά**. Το ίδιο κάνει το Airbnb όταν κρατά την επιλογή
+          σου ορατή ενώ σαρώνεις αλλού τον χάρτη.
+
+          ⚠️ **ΚΑΙ ΤΑ ΔΥΟ ΕΙΝΑΙ ΔΑΚΤΥΛΙΟΙ ΓΥΡΩ, ΠΟΤΕ ΑΛΛΑΓΗ ΤΟΥ ΣΧΗΜΑΤΟΣ.** Η
+          επισήμανση απαντά «ποιο κοιτάς», η ακρίβεια «τι ξέρουμε» — δύο ερωτήματα, δύο
+          κανάλια· αλλιώς το hover θα έλεγε ψέματα για τη γνώση μας (Α5).
+
+          ⚠️ **Ξεχωρίζουν σε ΓΕΩΜΕΤΡΙΑ, όχι σε απόχρωση** (CHECK 3.41 / WCAG 1.4.1): ο
+          εφήμερος δακτύλιος είναι **λεπτός και μικρότερος**, ο επίμονος **παχύς,
+          μεγαλύτερος και με γέμισμα**. Η διαφορά επιβιώνει σε ασπρόμαυρη εκτύπωση.
+
+          🔴 **ΤΟ ΣΗΜΕΙΟ ΑΝΑΦΟΡΑΣ «ΚΑΝΕΝΑ» ΗΤΑΝ ΚΥΡΙΟΛΕΚΤΙΚΑ ΕΝΑ NUL BYTE** — βρέθηκε
+          εδώ, 2026-09-06. Το `?? ' '` που **φαινόταν** κενό διάστημα ήταν `U+0000`, και
+          η συνέπεια δεν ήταν οπτική αλλά **εργαλειακή**: το git κατέτασσε ολόκληρο το
+          αρχείο ως **δυαδικό** (`Binary file … matches`), δηλαδή **καμία σύγκριση,
+          καμία συγχώνευση, καμία αναθεώρηση γραμμής**. Πλέον είναι το **κενό
+          αλφαριθμητικό**, που καμία ταυτότητα δεν μπορεί να πάρει (ADR-017: τα
+          enterprise IDs έχουν πρόθεμα, ποτέ δεν είναι κενά).
         */}
         <Layer
-          id="listing-highlight"
+          id="listing-peek"
           type="circle"
-          filter={['==', ['get', 'id'], highlightedId ?? ' ']}
-          paint={{ 'circle-radius': RADIUS.pin + 8, 'circle-color': mark, 'circle-opacity': 0,
-                   'circle-stroke-width': 2, 'circle-stroke-color': mark, 'circle-stroke-opacity': 0.9 }}
+          filter={['==', ['get', 'id'], focus.peeked ?? '']}
+          paint={{ 'circle-radius': RADIUS.pin + 6, 'circle-color': mark, 'circle-opacity': 0,
+                   'circle-stroke-width': 2, 'circle-stroke-color': mark, 'circle-stroke-opacity': 0.55 }}
+        />
+        <Layer
+          id="listing-selected"
+          type="circle"
+          filter={['==', ['get', 'id'], focus.selected ?? '']}
+          paint={{ 'circle-radius': RADIUS.pin + 11, 'circle-color': mark, 'circle-opacity': 0.12,
+                   'circle-stroke-width': 4, 'circle-stroke-color': mark, 'circle-stroke-opacity': 1 }}
         />
       </Source>
+
+      {/*
+        🏆 **Η ΑΠΑΝΤΗΣΗ ΕΚΕΙ ΠΟΥ ΚΟΙΤΑΖΕΙ** — πρότυπο Zillow/Redfin/Airbnb.
+
+        ⚠️ **Δεμένο στο `selected`, ΠΟΤΕ στο `peeked`.** Ένα popup που ανοίγει με το
+        πέρασμα του δείκτη αναβοσβήνει σε κάθε διαδρομή του ποντικιού και **σκεπάζει τις
+        γειτονικές πινέζες** — κρύβει ακριβώς αυτό που ο άνθρωπος πήγαινε να δει. Δες
+        την κεφαλίδα του `ListingMapPopup`.
+      */}
+      {selectedListing !== null && onClear && (
+        <ListingMapPopup listing={selectedListing} filterQuery={filterQuery} onClose={onClear} />
+      )}
     </InteractiveMap>
     </PolygonSystemProvider>
   );

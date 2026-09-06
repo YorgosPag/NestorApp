@@ -103,7 +103,7 @@ export function ListingPositionSection({ listing }: ListingPositionSectionProps)
             Μετρημένο ζωντανά στην οθόνη 2 (10/08).
           */}
           <div className="h-72 w-full border-t border-border sm:h-96">
-            <ResultsMap listings={[listing]} highlightedId={null} />
+            <ResultsMap listings={[listing]} />
           </div>
         </>
       )}

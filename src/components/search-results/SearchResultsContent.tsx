@@ -19,7 +19,7 @@
  * απαντά για το **σύνολο**, όχι για ό,τι τυχαίνει να χωρά σε ένα πλαίσιο.
  */
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { usePublicListings, useListingLedger } from '@/services/realtime/hooks/usePublicListings';
@@ -42,6 +42,7 @@ import { stayAvailabilityFor, saleExposureOf } from '@/lib/stay/stay-availabilit
 import type { StayAvailabilityAnswer } from '@/lib/stay/stay-availability-vocabulary';
 import { listingMapShape, isMappedShape } from '@/lib/listings/listing-map-shape';
 import { useViewportClass } from '@/hooks/media/useViewportClass';
+import { useListingFocus } from '@/hooks/listings/useListingFocus';
 import { CriteriaLedgerBar } from './CriteriaLedgerBar';
 import { ListingLedgerBar } from './ListingLedgerBar';
 import { PrimaryFilterBar } from './filters/PrimaryFilterBar';
@@ -65,7 +66,25 @@ export function SearchResultsContent() {
    */
   const viewport = useViewportClass();
   const { listings, loading, error } = usePublicListings();
-  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+
+  /**
+   * 🔴 **ΔΥΟ ΕΡΩΤΗΣΕΙΣ, ΟΧΙ ΜΙΑ** *(2026-09-06)*.
+   *
+   * Εδώ ζούσε `const [highlightedId, setHighlightedId] = useState<string | null>(null)`
+   * — **μία** μεταβλητή που την έγραφαν **δύο** ασύμβατες αιτίες: το ακούσιο πέρασμα
+   * του δείκτη (`hover`) και η σκόπιμη επιλογή (`click`). Η συνέπεια ήταν ορατή: το
+   * ακίνητο που μόλις **διάλεγε** ο άνθρωπος **έσβηνε** μόλις το ποντίκι ακουμπούσε
+   * οποιοδήποτε άλλο σχήμα.
+   *
+   * Είναι ακριβώς το σχήμα που φυλάει η **CHECK 3.41**: *«δύο ερωτήματα, δύο
+   * μηχανισμοί — ποτέ ένας με ή»*. Το λεξιλόγιο ζει στο `lib/listings/listing-focus.ts`,
+   * οι μεταβάσεις στο `hooks/listings/useListingFocus.ts`.
+   *
+   * 🔑 **Και οι δύο καταναλωτές διαβάζουν το ΙΔΙΟ αντικείμενο** — ο χάρτης το βάφει σε
+   * δύο επίπεδα, η λίστα σε δύο βαθμίδες κάρτας. Καμία διαδρομή όπου το ένα πλαίσιο
+   * ξέρει κάτι που το άλλο αγνοεί.
+   */
+  const { focus, peek, select, clear } = useListingFocus();
 
   const filters = useMemo(
     () => parseListingFilters(new URLSearchParams(searchParams?.toString() ?? '')),
@@ -294,8 +313,8 @@ export function SearchResultsContent() {
           <ResultsList
             mapped={mapped}
             unmapped={unmapped}
-            highlightedId={highlightedId}
-            onHover={setHighlightedId}
+            focus={focus}
+            onHover={peek}
             filterQuery={filterQuery}
             undeclaredLabelsFor={undeclaredLabelsFor}
           />
@@ -312,7 +331,19 @@ export function SearchResultsContent() {
           aria-label={t('search-results:map.label')}
           className="absolute inset-0 isolate md:static"
         >
-          <ResultsMap listings={mapped} highlightedId={highlightedId} onSelect={setHighlightedId} />
+          {/*
+            **Ο ΑΜΦΙΔΡΟΜΟΣ ΔΕΣΜΟΣ, ΟΛΟΚΛΗΡΟΣ** (Α3) — τέσσερα σύρματα, όχι δύο:
+            hover στη λίστα → `peek` · hover στον χάρτη → `peek` · κλικ στον χάρτη →
+            `select` · κλικ στο κενό ή `Escape` → `clear`.
+          */}
+          <ResultsMap
+            listings={mapped}
+            focus={focus}
+            filterQuery={filterQuery}
+            onPeek={peek}
+            onSelect={select}
+            onClear={clear}
+          />
         </section>
       </div>
     </main>
