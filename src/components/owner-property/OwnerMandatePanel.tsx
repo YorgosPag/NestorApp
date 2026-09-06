@@ -64,7 +64,7 @@ function AgencyName({ companyId }: { companyId: string | null }): React.JSX.Elem
 
   if (companyId === null) return <>{t(OWNER_MANDATE_KEYS.agencyUnknown)}</>;
   if (lookup.state !== 'found') return <>{t(OWNER_MANDATE_KEYS.agencyUnnamed)}</>;
-  return <>{lookup.profile.displayName}</>;
+  return <>{lookup.showcase.displayName}</>;
 }
 
 /** Η αμοιβή, ολόκληρη — **ποσό ΚΑΙ ΦΠΑ**: μισός όρος δεν είναι όρος (ADR-827 Α4/Α5). */

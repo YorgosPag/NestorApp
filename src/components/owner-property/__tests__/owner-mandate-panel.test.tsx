@@ -28,6 +28,8 @@ import {
 } from '@/components/owner-property/owner-mandate-labels';
 import { OwnerMandatePanel } from '@/components/owner-property/OwnerMandatePanel';
 import type { BrokeredListingMandate } from '@/types/owner-property-mandate';
+import type { PublicAgencyLookup } from '@/services/realtime/hooks/usePublicAgencies';
+import { showcaseFixture } from '@/lib/agency/__fixtures__/showcase-fixture';
 
 import el from '@/i18n/locales/el/property-market.json';
 import en from '@/i18n/locales/en/property-market.json';
@@ -36,7 +38,16 @@ jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-let agencyLookup: { state: string; profile?: { displayName: string } } = { state: 'absent' };
+/**
+ * 🔴 **Ο ΤΥΠΟΣ ΤΟΥ ΠΛΑΣΤΟΥ ΕΙΝΑΙ Ο ΑΛΗΘΙΝΟΣ ΤΥΠΟΣ** — και ήταν μετρημένη ζημιά.
+ *
+ * Η προηγούμενη εκδοχή δήλωνε **δικό της** σχήμα (`{ state: string; profile?: … }`),
+ * ασύνδετο από το συμβόλαιο του hook. Όταν το πεδίο μετονομάστηκε `profile` →
+ * `showcase` *(Φ6-Β)*, το test έμεινε **πράσινο** και η οθόνη έσπασε **στην
+ * εκτέλεση** — `Cannot read properties of undefined (reading 'displayName')`.
+ * Με {@link PublicAgencyLookup}, η ίδια μετονομασία **δεν μεταγλωττίζεται**.
+ */
+let agencyLookup: PublicAgencyLookup = { state: 'absent' };
 jest.mock('@/services/realtime/hooks/usePublicAgencies', () => ({
   usePublicAgency: () => agencyLookup,
 }));
@@ -143,7 +154,7 @@ describe('Ο — η οθόνη', () => {
   });
 
   it('Ο-4 με δημοσιευμένη βιτρίνα ⇒ Η ΕΠΩΝΥΜΙΑ, ποτέ η ταυτότητα του οργανισμού', () => {
-    agencyLookup = { state: 'found', profile: { displayName: 'Μεσιτικό Παγώνης' } };
+    agencyLookup = { state: 'found', showcase: showcaseFixture({ displayName: 'Μεσιτικό Παγώνης' }) };
     const withAgency = { ...LIVE_LEGACY, agencyCompanyId: 'comp_9c7c1a50' } as BrokeredListingMandate;
 
     render(<OwnerMandatePanel views={ownerMandateViews({ mandate: withAgency }, NOW)} />);

@@ -74,7 +74,7 @@ export default async function MandateRequestPage({ searchParams }: MandateReques
   return (
     <MandateRequestFormContent
       agencyCompanyId={resolution.companyId}
-      agencyDisplayName={profile.profile.displayName}
+      agencyDisplayName={profile.showcase.displayName}
       agencyHref={agencyProfileRoute(agency)}
     />
   );
