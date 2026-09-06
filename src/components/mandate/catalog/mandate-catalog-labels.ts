@@ -36,6 +36,12 @@ import {
   CLIENT_NAME_KNOWN,
   type MandateClientName,
 } from '@/lib/mandate/mandate-client-name';
+import {
+  MANDATE_FOUND,
+  MANDATE_MISSING,
+  MANDATE_NOT_A_MANDATE,
+  type MandateDetailResponse,
+} from '@/lib/mandate/mandate-detail-outcome';
 import type { MandateNotifyOutcome, MandateProofVia } from '@/types/owner-property-mandate';
 import type { PresenceAction } from '@/lib/owner-property/listing-presence';
 
@@ -80,9 +86,55 @@ export const CATALOG_KEYS = {
   notifiedNever: `${K}.notifiedNever`,
   viewedNever: `${K}.viewedNever`,
   groupCount: `${K}.groupCount`,
+  /** ADR-841 §7 Α18.12 — ο διάδρομος από τη γραμμή προς τη **δική της** διεύθυνση. */
+  openOne: `${K}.openOne`,
   working: `${K}.action.working`,
   networkFailure: `${K}.reject.network`,
 } as const;
+
+/**
+ * **Η ΟΘΟΝΗ ΤΗΣ ΜΙΑΣ ΕΝΤΟΛΗΣ** (ADR-841 §7 Α18.12) — ο προορισμός της ειδοποίησης.
+ *
+ * 🔑 **Ίδιο namespace με τον κατάλογο, και είναι σημασία**: είναι η **ίδια** εντολή με
+ * την ίδια κατάσταση και τις ίδιες πράξεις — απλώς μόνη της. Δεύτερο namespace θα
+ * σήμαινε ότι η ίδια λέξη μπορεί να μεταφραστεί δύο φορές διαφορετικά.
+ */
+export const DETAIL_KEYS = {
+  /** Ο δρόμος πίσω. ⚠️ Ο άνθρωπος έρχεται εδώ από **ειδοποίηση**, όχι από τη λίστα —
+   *  δηλαδή **δεν έχει ιστορικό** να γυρίσει πίσω. Ο σύνδεσμος είναι υποχρεωτικός. */
+  back: `${K}.detail.back`,
+} as const;
+
+/**
+ * **ΟΤΑΝ Η ΕΝΤΟΛΗ ΔΕΝ ΕΙΝΑΙ ΕΚΕΙ** — τρεις εκβάσεις, τρεις **διαφορετικές δουλειές**.
+ *
+ * 🔴 **Δεμένο στη ρίζα του λεξιλογίου** (ιδίωμα CHECK 3.73): ο τύπος είναι
+ * `Record<MandateDetailResponse['kind'] | 'failed', …>` μείον το `found` — άρα μια
+ * τέταρτη έκβαση **δεν μεταγλωττίζεται** μέχρι κάποιος να αποφασίσει τι λέει στον
+ * άνθρωπο. Ένα δυναμικό ``t(`…detail.${load.kind}`)`` θα «δούλευε» και θα ζωγράφιζε
+ * ωμό κλειδί σε παραγωγή — **αόρατο στη CHECK 3.8**, δες την κεφαλίδα.
+ *
+ * ⚠️ **Δύο προτάσεις η καθεμία, και είναι απόφαση**: ο *τίτλος* λέει **τι συνέβη**, η
+ * *υπόδειξη* λέει **τι να κάνει**. Ένα σκέτο «Δεν βρέθηκε» αφήνει τον μεσίτη να
+ * μαντέψει αν φταίει ο σύνδεσμος, η εντολή, ή το δίκτυο.
+ */
+export const DETAIL_ABSENCE_KEYS: Record<
+  Exclude<MandateDetailResponse['kind'], typeof MANDATE_FOUND> | 'failed',
+  { readonly title: string; readonly hint: string }
+> = {
+  [MANDATE_MISSING]: {
+    title: `${K}.detail.missing.title`,
+    hint: `${K}.detail.missing.hint`,
+  },
+  [MANDATE_NOT_A_MANDATE]: {
+    title: `${K}.detail.notMandate.title`,
+    hint: `${K}.detail.notMandate.hint`,
+  },
+  failed: {
+    title: `${K}.detail.failed.title`,
+    hint: `${K}.detail.failed.hint`,
+  },
+};
 
 /** Ο τίτλος κάθε **ομάδας** — εξαντλητικά. */
 export const GROUP_LABEL_KEYS: Record<MandateStandingGroup, string> = {

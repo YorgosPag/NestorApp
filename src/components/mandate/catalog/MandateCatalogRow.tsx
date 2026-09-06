@@ -58,6 +58,18 @@ export interface MandateCatalogRowProps {
   readonly onAct: (ownerPropertyId: string, action: MandateAction) => void;
   /** ADR-777 §8.39 — «κατέβασέ το» / «ανέβασέ το», στον χώρο του γραφείου. */
   readonly onSetPresence: (ownerPropertyId: string, action: PresenceAction) => void;
+  /**
+   * Σε ποιο **επίπεδο επικεφαλίδας** κάθεται ο τίτλος της αγγελίας (ADR-841 §7 Α18.12).
+   *
+   * 🔴 **ΔΕΝ είναι στυλ — είναι δομή εγγράφου.** Μέσα στον κατάλογο η γραμμή είναι
+   * **μία από πολλές** κάτω από το `h2` της ομάδας της, άρα `h3`. Στην οθόνη **της
+   * μίας** εντολής ο ίδιος τίτλος **ΕΙΝΑΙ** η ταυτότητα της σελίδας, άρα `h1` — και
+   * ένας δεύτερος τίτλος από πάνω θα τον έλεγε **δύο φορές**, ενώ ένα `h3` χωρίς `h1`
+   * σπάει τη σειρά επικεφαλίδων που διαβάζει ο αναγνώστης οθόνης.
+   *
+   * ⚠️ **Προεπιλογή `h3`**: ο κατάλογος δεν αλλάζει ούτε κατά χαρακτήρα.
+   */
+  readonly titleAs?: 'h1' | 'h2' | 'h3';
 }
 
 /**
@@ -164,15 +176,20 @@ export function MandateCatalogRow({
   feedback,
   onAct,
   onSetPresence,
+  titleAs,
 }: MandateCatalogRowProps): React.ReactElement {
   const { t } = useTranslation([CATALOG_NS]);
   const actions = allowedActionsFor(row.standing);
   const presence = presenceActionFor(row.onTheMarket);
+  // ⚠️ **Το μέγεθος μένει το ίδιο σε κάθε επίπεδο** (`text-base`): αλλάζει η **σημασία**
+  //    για τον αναγνώστη οθόνης, όχι η εμφάνιση — η γραμμή είναι η ίδια κάρτα και στις
+  //    δύο οθόνες, και μια ξαφνικά τεράστια επικεφαλίδα θα έλεγε ότι είναι άλλο πράγμα.
+  const Title = titleAs ?? 'h3';
 
   return (
     <article className="flex flex-col gap-3 rounded-md border border-border bg-card p-4">
       <header className="flex flex-col gap-1">
-        <h3 className="m-0 text-base font-semibold text-foreground">{row.listingTitle}</h3>
+        <Title className="m-0 text-base font-semibold text-foreground">{row.listingTitle}</Title>
         <p className="m-0 text-sm font-medium text-foreground">
           {t(STANDING_LABEL_KEYS[row.standing])}
         </p>

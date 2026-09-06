@@ -46,6 +46,7 @@ import {
   type MandateStandingGroup,
 } from '@/lib/mandate/mandate-standing';
 import {
+  mandateDetailHref,
   MANDATE_INBOX_ROUTE,
   NEW_BROKERED_LISTING_ROUTE,
 } from '@/lib/mandate/mandate-routes';
@@ -117,7 +118,7 @@ function GroupSection({
       </h2>
       <ul className="m-0 flex list-none flex-col gap-3 p-0">
         {rows.map((row) => (
-          <li key={row.ownerPropertyId}>
+          <li key={row.ownerPropertyId} className="flex flex-col gap-1">
             <MandateCatalogRow
               row={row}
               busy={busyId === row.ownerPropertyId}
@@ -125,6 +126,31 @@ function GroupSection({
               onAct={onAct}
               onSetPresence={onSetPresence}
             />
+            {/*
+              🔴 **Η ΓΡΑΜΜΗ ΑΠΟΚΤΑ ΔΙΑΔΡΟΜΟ ΠΡΟΣ ΤΗ ΔΙΚΗ ΤΗΣ ΔΙΕΥΘΥΝΣΗ** (ADR-841 §7
+              Α18.12). Μέχρι τις 2026-09-05 η εντολή **δεν είχε διεύθυνση**: η γραμμή
+              κλείδωνε σε `key={row.ownerPropertyId}` και **καμία** `href` δεν οδηγούσε
+              πουθενά — μια **λίστα**, όχι μια διεύθυνση.
+
+              🔑 **Και μπαίνει την ΙΔΙΑ στιγμή που γεννιέται η σελίδα**, όχι σε δεύτερο
+              βήμα που κάποιος θα θυμηθεί: το §8.33 πλήρωσε ήδη αυτό το μάθημα δύο φορές
+              *(`/new` και `/requests` έμειναν **πόρτες χωρίς διάδρομο** και τις έβρισκες
+              μόνο πληκτρολογώντας τη διεύθυνση)*.
+
+              ⚠️ **ΞΕΧΩΡΙΣΤΟΣ ΣΥΝΔΕΣΜΟΣ ΚΑΙ ΟΧΙ ΤΥΛΙΓΜΑ ΤΗΣ ΚΑΡΤΑΣ**: η κάρτα περιέχει
+              **κουμπιά** (ξαναστείλτε · ανακαλέστε · αποσύρετε). Ένα `<a>` γύρω από
+              διαδραστικά στοιχεία είναι **άκυρο HTML** *(«no interactive content
+              inside `a`»)* και, χειρότερα, κάθε κλικ σε κουμπί θα ξεκινούσε **και**
+              πλοήγηση — δηλαδή ο μεσίτης θα έφευγε από τη σελίδα ενώ ανακαλεί.
+            */}
+            <nav className="pl-4">
+              <Link
+                href={mandateDetailHref(row.ownerPropertyId)}
+                className="text-sm underline text-muted-foreground"
+              >
+                {t(CATALOG_KEYS.openOne)}
+              </Link>
+            </nav>
           </li>
         ))}
       </ul>
