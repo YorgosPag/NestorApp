@@ -105,9 +105,14 @@ export interface Property {
      * spread** του εγγράφου Firestore (`SharedPropertiesProvider`, `result.documents`
      * `as Property[]`) — δηλαδή **κανείς δεν επικυρώνει τον τύπο** στη διαδρομή. Ένα
      * `string[]` εδώ θα ήταν υπόσχεση που δεν την επιβάλλει κανένας· η **μία** ανάγνωση
-     * είναι το `declaredMediaOrder`.
+     * είναι το `agencyMediaDeclaration`.
      */
     publishedMediaOrder?: unknown;
+    /**
+     * **Οι κατόψεις που το γραφείο ΟΝΟΜΑΣΕ για τη δημόσια αγγελία** (ADR-841 §7 Α17.7).
+     * ⚠️ `unknown` για τον ίδιο λόγο με το πεδίο από πάνω — ωμό spread εγγράφου.
+     */
+    publishedFloorplans?: unknown;
     parentPropertyId?: string;
     features?: string[];
     attachments?: {

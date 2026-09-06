@@ -1111,6 +1111,14 @@
       "firstBadge": "1st in the listing",
       "empty": "No photo is published to the listing right now. Mark a photo as \"Public\" in the list above.",
       "saveFailed": "The order was not saved. Please try again."
+    },
+    "floorplans": {
+      "title": "Floor plans in the public listing",
+      "help": "Choose which floor plans the public sees. Marking a file \"Public\" in the list above is not enough — a floor plan is published only if you pick it here too.",
+      "declare": "In the listing",
+      "blocked": "Selected, but not published — check that it is \"Public\" and that it is an image",
+      "empty": "This property has no floor plan yet. Upload one from the list above.",
+      "saveFailed": "The selection was not saved. Please try again."
     }
   }
 }
