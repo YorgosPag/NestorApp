@@ -21,6 +21,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
+import { ListingMediaOrderPanel } from '@/components/listings/ListingMediaOrderPanel';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { useCompanyId } from '@/hooks/useCompanyId';
 import { ENTITY_TYPES } from '@/config/domain-constants';
@@ -124,19 +125,39 @@ export function PhotosTab({
   }
 
   return (
-    <EntityFilesManager
-      companyId={companyId}
-      currentUserId={currentUserId}
-      entityType={ENTITY_TYPES.PROPERTY}
-      entityId={String(selectedProperty.id)}
-      entityLabel={selectedProperty.name || t('unitFallbackLabel', { id: selectedProperty.id })}
-      domain="sales"
-      category="photos"
-      purpose="photo"
-      entryPointCategoryFilter="photos"
-      displayStyle="media-gallery"
-      acceptedTypes={DEFAULT_PHOTO_ACCEPT}
-      companyName={companyDisplayName}
-    />
+    <>
+      <EntityFilesManager
+        companyId={companyId}
+        currentUserId={currentUserId}
+        entityType={ENTITY_TYPES.PROPERTY}
+        entityId={String(selectedProperty.id)}
+        entityLabel={selectedProperty.name || t('unitFallbackLabel', { id: selectedProperty.id })}
+        domain="sales"
+        category="photos"
+        purpose="photo"
+        entryPointCategoryFilter="photos"
+        displayStyle="media-gallery"
+        acceptedTypes={DEFAULT_PHOTO_ACCEPT}
+        companyName={companyDisplayName}
+      />
+
+      {/*
+        🔴 **Η ΠΡΑΞΗ ΣΕΙΡΑΣ ΤΟΥ ΓΡΑΦΕΙΟΥ** (ADR-841 §7 Α14.7 — κλείνει το Ο-16).
+
+        Μπαίνει **εδώ** και όχι μέσα στον `EntityFilesManager` επειδή εκείνος είναι
+        **γενικός** *(επαφές · έργα · κτίρια · όροφοι)*, ενώ *«ποια φωτογραφία είναι πρώτη
+        **στην αγγελία**;»* έχει νόημα μόνο για ακίνητο. Είναι **αδελφός**, όχι
+        τροποποίηση κεντρικού εξαρτήματος.
+
+        🔑 Και μπαίνει **από κάτω**, όχι από πάνω: η ερώτηση της σειράς προϋποθέτει την
+        απάντηση της εξουσιοδότησης *(«ποιες είναι δημόσιες;»)*, που δίνεται στη λίστα
+        αρχείων ακριβώς από πάνω. Η οθόνη διαβάζεται με τη σειρά που ρωτιέται.
+      */}
+      <ListingMediaOrderPanel
+        propertyId={String(selectedProperty.id)}
+        companyId={companyId}
+        storedOrder={selectedProperty.publishedMediaOrder}
+      />
+    </>
   );
 }

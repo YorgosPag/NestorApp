@@ -359,7 +359,12 @@ describe('Σ — η σύνοψη φεύγει ως ΕΝΑ email', () => {
 
     const result = await runOutboundEmailFlush();
 
-    expect((sendEmail.mock.calls[0][0] as { subject: string }).subject).toBe('Το πραγματικό θέμα');
+    // 🔑 §8.54 — το πραγματικό θέμα φεύγει **αυτούσιο**, με **μία** υπογραφή που
+    //    προσθέτει ο αποστολέας. Πριν, το «— ΝΕΣΤΩΡ» ερχόταν χειρόγραφο από 3 στους
+    //    4 παραγωγούς — και έλειπε από τον τέταρτο.
+    expect((sendEmail.mock.calls[0][0] as { subject: string }).subject).toBe(
+      'Το πραγματικό θέμα — ΝΕΣΤΩΡ',
+    );
     expect(result.metrics).toMatchObject({ sent: 1, emailsSent: 1, digested: 0 });
   });
 
@@ -379,7 +384,25 @@ describe('Σ — η σύνοψη φεύγει ως ΕΝΑ email', () => {
 
     expect(result.metrics).toMatchObject({ sent: 3, emailsSent: 2, digested: 2 });
     const subjects = sendEmail.mock.calls.map((call) => (call[0] as { subject: string }).subject);
-    expect(subjects).toContain('Παραβίαση λογαριασμού');
+    expect(subjects).toContain('Παραβίαση λογαριασμού — ΝΕΣΤΩΡ');
+  });
+
+  it('Σ5β 🔴 §8.54 — ΜΗΝΥΜΑ ΧΩΡΙΣ ΣΩΜΑ φεύγει μοναχικό με ΤΟ ΘΕΜΑ ΤΟΥ ως σώμα', async () => {
+    // 🔴 Η ρίζα της διπλογραφής: ο orchestrator έγραφε το θέμα **και** στο σώμα, και
+    //    η σύνοψη τα τύπωνε **και τα δύο** — 5 ειδοποιήσεις, 10 γραμμές (μετρημένο
+    //    στα εισερχόμενα, 2026-09-05). Πλέον η ουρά κρατά **κενό**, και η εφεδρεία
+    //    μπαίνει **εδώ**, όπου ρωτιέται: ένα μοναχικό email με άδειο σώμα διαβάζεται
+    //    ως σπασμένο και κερδίζει φίλτρα ανεπιθύμητων.
+    firestoreReturning([queuedDoc('m1', notification({ subject: 'Θέμα δίχως σώμα', content: '' }))]);
+
+    await runOutboundEmailFlush();
+
+    // ⚠️ Το πεδίο λέγεται `content` **σε αυτό το σύνορο**: ο κρίκος του παρόχου
+    //    μεταφράζει το `text` της αλυσίδας. Ίδιο ιδίωμα με το Σ3.
+    const job = sendEmail.mock.calls[0][0] as { subject: string; content: string };
+    expect(job.subject).toBe('Θέμα δίχως σώμα — ΝΕΣΤΩΡ');
+    // ⚠️ Το σώμα παίρνει το **ασφράγιστο** θέμα: η υπογραφή ανήκει στον φάκελο.
+    expect(job.content).toBe('Θέμα δίχως σώμα');
   });
 
   it('Σ6 — ό,τι ΔΕΝ είναι ειδοποίηση κρατά το δικό του πρότυπο', async () => {

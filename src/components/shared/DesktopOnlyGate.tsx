@@ -40,12 +40,12 @@
 
 import React from 'react';
 import { Link } from '@/lib/workspace/navigation';
-import { declaredHref, typedHref } from '@/lib/workspace/route-worlds';
+import { declaredHref } from '@/lib/workspace/route-worlds';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useViewportClass } from '@/hooks/media/useViewportClass';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { hasDraftIdentity } from '@/lib/forms/draft-identity';
-import { SEARCH_LANDING_ROUTE } from '@/lib/listings/listing-routes';
+import { searchLandingHref } from '@/lib/listings/listing-routes';
 
 const NS = 'property-market';
 
@@ -109,7 +109,7 @@ export function DesktopOnlyNotice({
   const identified = hasDraftIdentity(user?.uid ?? null);
   const exitHref = identified
     ? declaredHref('privateHref χτίζεται από τον χώρο του συνδεδεμένου.', privateHref)
-    : typedHref(SEARCH_LANDING_ROUTE);
+    : searchLandingHref();
   const whatKey = identified ? 'what' : 'whatAnonymous';
   const backKey = identified ? 'back' : 'backAnonymous';
 

@@ -30,7 +30,7 @@
 import React from 'react';
 import { Link } from '@/lib/workspace/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { PROPERTY_TYPE_I18N_KEYS, isCanonicalPropertyType } from '@/constants/property-types';
+import { PROPERTY_TYPE_I18N_KEYS } from '@/constants/property-types';
 import { nowISO } from '@/lib/date-local';
 import { ownerListingVisibility } from '@/lib/owner-property/owner-property-projection';
 import { offerDetailHref } from '@/lib/owner-property/owner-property-routes';
@@ -62,9 +62,21 @@ export function OwnerPropertyCard({
       </header>
 
       <p className="text-sm text-foreground">
-        {isCanonicalPropertyType(property.type)
-          ? t(`properties-enums:${PROPERTY_TYPE_I18N_KEYS[property.type]}`)
-          : property.type}
+        {/*
+          🔴 **ΤΟ ΣΚΕΛΟΣ ΤΟΥ «ΔΕΝ ΞΕΡΩ», ΚΑΙ ΕΙΝΑΙ Η ΟΘΟΝΗ ΠΟΥ ΤΟ ΔΕΙΧΝΕΙ** (ADR-842
+          §7.6.12 / §8 #11). Έγραφε `isCanonicalPropertyType(...) ? t(...) : property.type`
+          — δηλαδή για μη κανονική τιμή **τύπωνε την ωμή αποθηκευμένη συμβολοσειρά** στην
+          οθόνη του ανθρώπου (`'Διαμέρισμα 2Δ'`, `'Οικόπεδο'`). Πλέον ο τύπος **δεν
+          επιτρέπει** τέτοια τιμή: το σύνορο την κανονικοποίησε ή έδωσε `null`.
+
+          🔑 **Και το `null` ΕΜΦΑΝΙΖΕΤΑΙ, δεν κρύβεται.** Είναι η οθόνη του **κατόχου** —
+          ο μόνος που μπορεί να διορθώσει το είδος. Η δημόσια προβολή κάνει το αντίθετο
+          και **δεν δημοσιεύεται** (`isPubliclyListed`): δύο ακροατήρια, δύο σωστές
+          απαντήσεις στην ίδια κατάσταση.
+        */}
+        {property.type === null
+          ? t(`${K}.card.typeUnknown`)
+          : t(`properties-enums:${PROPERTY_TYPE_I18N_KEYS[property.type]}`)}
         {property.areaSqm !== null && ` · ${t(`${K}.card.area`, { area: property.areaSqm })}`}
         {property.floor !== null && ` · ${t(`${K}.card.floor`, { floor: property.floor })}`}
         {property.bedrooms !== null &&

@@ -53,7 +53,7 @@ import { Timestamp } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { createModuleLogger } from '@/lib/telemetry';
-import { emailTextsFor } from '@/server/comms/email-texts';
+import { brandedSubject, emailTextsFor } from '@/server/comms/email-texts';
 import {
   sendThroughChain,
   type ChainOutcome,
@@ -350,7 +350,9 @@ async function deliverDigest(
 
   const outcome = await sendThroughChain(chain, {
     to: entry.to,
-    subject: entry.subject,
+    // 🔑 §8.54 — **μία** υπογραφή για ολόκληρη τη σύνοψη. Πριν, το «— ΝΕΣΤΩΡ»
+    // ερχόταν από τους παραγωγούς και επαναλαμβανόταν σε **κάθε γραμμή** του σώματος.
+    subject: brandedSubject(entry.language, entry.subject),
     text: entry.content,
     html: entry.html,
   });
@@ -465,11 +467,21 @@ async function deliverOne(
 
   await doc.ref.update({ attempts, lastAttemptAt: Timestamp.now() });
 
+  const language = queueMetadata(data).language;
+  // 🌐 §8.29: **τρίτο** αντίγραφο της ίδιας ελληνικής εφεδρείας, τώρα από το SSoT.
+  const subject = asString(data.subject) ?? emailTextsFor(language).fallbackSubject;
+  const body = asString(data.content) ?? '';
+
   const outcome = await sendThroughChain(chain, {
     to,
-    // 🌐 §8.29: **τρίτο** αντίγραφο της ίδιας ελληνικής εφεδρείας, τώρα από το SSoT.
-    subject: asString(data.subject) ?? emailTextsFor(queueMetadata(data).language).fallbackSubject,
-    text: asString(data.content) ?? '',
+    // 🔑 §8.54 — η υπογραφή της μάρκας μπαίνει **εδώ**, όχι στους 4 παραγωγούς.
+    subject: brandedSubject(language, subject),
+    // 🔑 §8.54 — **Η ΕΦΕΔΡΕΙΑ ΖΕΙ ΕΔΩ, ΟΧΙ ΣΤΑ ΔΕΔΟΜΕΝΑ.** Ο orchestrator έγραφε
+    // `content: body ?? title` και **σφράγιζε** το αντίγραφο στην ουρά, όπου το
+    // διάβαζε **και** η σύνοψη — που δεν το ήθελε (10 γραμμές για 5 ειδοποιήσεις).
+    // Ένα μοναχικό email με κενό σώμα όμως διαβάζεται ως σπασμένο και κερδίζει
+    // φίλτρα ανεπιθύμητων· γι' αυτό η εφεδρεία μπαίνει **τη στιγμή που ρωτιέται**.
+    text: body.trim().length > 0 ? body : subject,
     from: asString(data.from) ?? undefined,
   });
 
