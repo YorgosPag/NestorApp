@@ -29,14 +29,13 @@ import { nowISO } from '@/lib/date-local';
 import { PUBLIC_LISTING_SCHEMA_VERSION } from '@/lib/listings/public-listing-schema';
 import {
   buildPublicListing,
-  addressToPositionCandidate,
   withPublishedGallery,
   type ProjectableProperty,
   type PlaceKnowledge,
   type ListingPositionCandidate,
-  type AddressLike,
   type ProjectedShelfImage,
 } from './public-listing-projection';
+import { addressToPositionCandidate, type AddressLike } from './public-listing-position';
 import type { PlaceRef } from '@/types/geo/public-place';
 import type { PublicListing } from '@/types/public-listing';
 import {
@@ -49,6 +48,7 @@ import {
   createAgencyMediaResolver,
   type AgencyMediaResolver,
 } from './agency-media.reader';
+import { declaredMediaOrder } from './agency-media-publication';
 
 const logger = createModuleLogger('publish-public-listing');
 
@@ -57,7 +57,7 @@ export type PublishOutcome = 'published' | 'withdrawn' | 'failed';
 
 /**
  * **Το ωμό έγγραφο `properties/{id}` όσο το χρειάζεται ο γραφέας** — η προβολή, συν τα
- * **τρία** πεδία που δεν ζουν σε αυτήν επειδή απαντούν σε ερωτήσεις **ιεραρχίας**.
+ * πεδία που δεν ζουν σε αυτήν επειδή απαντούν σε ερωτήσεις **ιεραρχίας** ή **πρόθεσης**.
  *
  * 🔑 Τα `buildingId`/`projectId` λύνουν τον **τόπο**· το `companyId` λύνει το
  * **ποιος δημοσιεύει** (ADR-841 §7 Α1). Ζουν εδώ και όχι στο {@link ProjectableProperty}
@@ -69,6 +69,21 @@ export type ListingSourceProperty = ProjectableProperty & {
   readonly projectId?: string | null;
   /** Ο **ιδιοκτήτης** του ακινήτου, γραμμένος από το `createEntity` (ADR-238). */
   readonly companyId?: string | null;
+  /**
+   * **Η πράξη σειράς του γραφείου** — ταυτότητες `FileRecord.id`, στη δηλωμένη σειρά
+   * (ADR-841 §7 Α14.7).
+   *
+   * 🔴 **ΖΕΙ ΕΔΩ ΚΑΙ ΟΧΙ ΣΤΗΝ ΠΡΟΒΟΛΗ, ΚΑΙ ΕΙΝΑΙ Ο ΛΟΓΟΣ ΠΟΥ ΕΠΙΒΙΩΝΕΙ**: το
+   * `public_listings` **ξαναγράφεται ολόκληρο** σε κάθε επανασύνθεση (`set`, γρ. ~300
+   * παρακάτω). Ανθρώπινη είσοδος μέσα σε προβολή είναι είσοδος που **σβήνεται** στο
+   * επόμενο πέρασμα, χωρίς να το μάθει κανείς.
+   *
+   * ⚠️ **Ωμό `unknown`, επίτηδες**: το πεδίο έρχεται από έγγραφο του δίσκου και το
+   * διαβάζει **αποκλειστικά** το `declaredMediaOrder`. Ένας τύπος `string[]` εδώ θα
+   * ήταν **υπόσχεση που κανείς δεν επιβάλλει** — ακριβώς το σχήμα με το οποίο ένα
+   * προαιρετικό πεδίο γίνεται σιωπηλά «μόνιμα σωστό» στα μάτια του μεταγλωττιστή.
+   */
+  readonly publishedMediaOrder?: unknown;
 };
 
 /**
@@ -217,7 +232,12 @@ export async function republishListing(
     const [place, agency, publishedMedia] = await Promise.all([
       collectPlaceKnowledge(adminDb, property, now),
       resolveAgency(property.companyId),
-      resolveMedia(propertyId, property.companyId),
+      // 🔑 **Η δήλωση σειράς διαβάζεται ΕΔΩ, από το έγγραφο που ήδη κρατάμε** (Α14.7.2):
+      //    το `properties/{id}` είναι **1:1** με την αγγελία και είναι **η είσοδος** αυτής
+      //    της συνάρτησης ⇒ η πράξη του ανθρώπου φτάνει στον επιλυτή **χωρίς καμία
+      //    επιπλέον ανάγνωση** και χωρίς να μπορεί να δει **άλλη** έκδοση του εγγράφου
+      //    από αυτήν που δημοσιεύεται στο ίδιο πέρασμα.
+      resolveMedia(propertyId, property.companyId, declaredMediaOrder(property.publishedMediaOrder)),
     ]);
 
     return await writeListingProjection(

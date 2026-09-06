@@ -34,7 +34,7 @@ import {
   type GeocodeHit,
 } from '../address-position';
 import { ADDRESS_GEOCODING_FIELDS } from '@/components/shared/addresses/address-map-config';
-import { addressToPositionCandidate } from '@/services/listings/public-listing-projection';
+import { addressToPositionCandidate } from '@/services/listings/public-listing-position';
 import { listingMapShape } from '@/lib/listings/listing-map-shape';
 
 const NOW = 1_756_000_000_000;

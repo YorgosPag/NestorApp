@@ -52,20 +52,19 @@ import {
 import { projectLegality } from './legality-projection';
 import { OFFER_KINDS, type OfferKind } from '@/types/property-offers';
 import { offerKindsFromLegacyStatus } from '@/lib/offers/derive-commercial-status';
-import type { PropertyType } from '@/types/property';
-import type { GeocodingAccuracy } from '@/lib/geocoding/geocoding-types';
+import { normalizePropertyType } from '@/constants/property-type-aliases';
 import type {
   ListingImage,
   ListingImageSource,
-  ListingPosition,
   PublicListing,
   PublicListingStay,
-  UnknownPositionReason,
 } from '@/types/public-listing';
 import { LISTING_MATERIAL_KEYS } from '@/lib/listings/listing-authorship';
 import { isFloorplanMaterial, type ListingMaterial } from '@/lib/listings/listing-material';
 import { projectListingAttributes } from './public-listing-attributes';
-import { outranksForLocation } from '@/lib/location/location-provenance';
+// 🔑 **Η ΘΕΣΗ ΕΧΕΙ ΔΙΚΟ ΤΗΣ ΣΠΙΤΙ** — δες την κεφαλίδα του `public-listing-position.ts`
+//    για το γιατί δεν ήταν απλώς «κόψιμο για να περάσει το όριο των 500 γραμμών».
+import { resolveListingPosition } from './public-listing-position';
 
 // ============================================================================
 // ΕΙΣΟΔΟΙ — το συμβόλαιο ζει στο -types.ts (N.7.1), η μηχανή εδώ
@@ -103,6 +102,26 @@ const PUBLIC_OFFER_KINDS: ReadonlySet<string> = new Set<OfferKind>(OFFER_KINDS);
  * δεύτερο σκέλος θα έδινε **άδεια οθόνη με όλες τις πύλες πράσινες**.
  */
 export function isPubliclyListed(property: ProjectableProperty): boolean {
+  // 🔴 **ΧΩΡΙΣ ΛΥΜΕΝΟ ΕΙΔΟΣ ΔΕΝ ΔΗΜΟΣΙΕΥΕΤΑΙ** (ADR-842 §7.6.12 / §8 #11 — απόφαση
+  //    Giorgio 06/09, δρόμος **Γ′**). Ως τις 2026-09-06 η προβολή έγραφε
+  //    `(property.type ?? 'apartment') as PropertyType`, δηλαδή **βάφτιζε διαμέρισμα**
+  //    ό,τι δεν είχε είδος και το έστελνε στον **κόσμο** — ελάττωμα ήδη καταγγελμένο
+  //    γραπτώς στο `owner-property-draft-schema.ts`. Το είδος δεν είναι ετικέτα: οδηγεί
+  //    ταξινόμηση γης, επιλεξιμότητα διάθεσης, κατώφλια μέσων και φίλτρα αναζήτησης.
+  //
+  // 🔑 **Η ΑΠΟΣΥΡΣΗ ΥΠΑΡΧΕΙ ΗΔΗ, ΔΕΝ ΦΤΙΑΧΝΕΤΑΙ ΜΗΧΑΝΙΣΜΟΣ**: ο γραφέας κάνει
+  //    `buildPublicListing() === null ⇒ ref.delete()` **μαζί** με απόσυρση του ραφιού
+  //    φωτογραφιών (`writeListingProjection`, ADR-841 Α12.6). Ένα `false` εδώ αρκεί.
+  //
+  // ⚠️ **ΚΑΙ ΤΟ ΑΚΙΝΗΤΟ ΔΕΝ ΕΞΑΦΑΝΙΖΕΤΑΙ**: η οθόνη του **κατόχου** το δείχνει με
+  //    «άγνωστο είδος — χρειάζεται διόρθωση» (`OwnerPropertyCard`), και το
+  //    {@link projectListingShape} —**χωρίς** την πύλη— συνεχίζει να δίνει σχήμα στο
+  //    δόλωμα του §12.6. Δύο ακροατήρια, δύο σωστές απαντήσεις.
+  //
+  // 🟢 **Λανθάνον, όχι ενεργό** (μετρημένο 06/09): **9/9** αγγελίες και **6/6** προσφορές
+  //    έχουν ήδη κανονικό είδος. Η γραμμή δεν διορθώνει υπαρκτή βλάβη — αποτρέπει την πρώτη.
+  if (normalizePropertyType(property.type) === null) return false;
+
   const status = property.commercialStatus ?? property.status ?? null;
   if (typeof status === 'string' && (LISTED_COMMERCIAL_STATUSES as readonly string[]).includes(status)) {
     return true;
@@ -136,40 +155,6 @@ export function isPubliclyListed(property: ProjectableProperty): boolean {
   }
 
   return (property.offerKinds ?? []).some((kind) => PUBLIC_OFFER_KINDS.has(kind));
-}
-
-// ============================================================================
-// ΘΕΣΗ — ο κανόνας του §14.3, εφαρμοσμένος
-// ============================================================================
-
-/**
- * Ποια από τις υποψήφιες θέσεις ισχύει.
- *
- * 🔴 **Χρησιμοποιεί `outranksForLocation`, ΠΟΤΕ το σκαλοπάτι της σκάλας** — και αυτό
- * είναι το εύρημα #1 του Β1, γραμμένο εδώ ως κώδικας: το σκαλοπάτι **5** σημαίνει
- * «έγγραφο ναι, **θέση όχι**» ενώ το **4** δίνει σχήμα. Όποιος διαβάσει τον αριθμό ως
- * αξιοπιστία, αφήνει **ανύπαρκτο** στοιχείο θέσης να σβήσει **υπαρκτό**.
- *
- * ⚠️ **Ισοβαθμία ⇒ κρατάει ο πρώτος.** Το `outranksForLocation` επιστρέφει `false` σε
- * ισοβαθμία **επίτηδες**: δύο πηγές ίδιας βαθμίδας που διαφωνούν είναι σύγκρουση προς
- * επίλυση από άνθρωπο, όχι «το τελευταίο νικά».
- */
-export function resolveListingPosition(
-  place: PlaceKnowledge,
-  disclosure: ProjectableProperty['locationDisclosure']
-): ListingPosition {
-  let winner: ListingPositionCandidate | null = null;
-
-  for (const candidate of place.candidates) {
-    if (outranksForLocation(candidate.provenance, winner?.provenance ?? null)) {
-      winner = candidate;
-    }
-  }
-
-  if (winner) return winner;
-
-  const reason: UnknownPositionReason = disclosure === 'declined' ? 'owner-declined' : 'never-asked';
-  return { kind: 'unknown', reason };
 }
 
 // ============================================================================
@@ -331,7 +316,16 @@ export function projectListingShape(
     //    ποτέ «δεν έχει κάτοψη». Τις δένει ο γραφέας με το {@link withPublishedGallery},
     //    στο **ίδιο** πέρασμα και από την **ίδια** αναφορά (ADR-841 §7 Α17.4).
     floorplans: [],
-    type: (property.type ?? 'apartment') as PropertyType,
+    // 🔴 **ΤΟ ΟΓΔΟΟ `as`, ΚΑΙ ΤΟ ΠΙΟ ΑΚΡΙΒΟ** (ADR-842 §7.6.12 / §8 #11): έγραφε
+    //    `(property.type ?? 'apartment') as PropertyType` — **βάφτιζε διαμέρισμα ένα
+    //    οικόπεδο** στη δημόσια αγγελία, και ο ισχυρισμός έκανε τον μεταγλωττιστή
+    //    συνένοχο. Η {@link ProjectableProperty.type} είναι σκόπιμα `string | null`
+    //    (τρέφεται και από `properties` και από `owner_properties`), άρα η μετάφραση
+    //    **ανήκει εδώ**, στη μία προβολή.
+    //
+    // ⚠️ Το `null` που μένει είναι **εφήμερο**: η {@link isPubliclyListed} το κόβει πριν
+    //    γραφτεί οτιδήποτε: επιβιώνει μόνο στο δόλωμα του §12.6, που μιλά στον κάτοχο.
+    type: normalizePropertyType(property.type),
     areaSqm: numberOrNull(property.areas?.gross) ?? numberOrNull(property.area),
     offerKinds,
     position: resolveListingPosition(place, property.locationDisclosure),
@@ -360,51 +354,6 @@ export function projectListingShape(
     agencyId: property.agency?.id ?? null,
     projectedAt,
   };
-}
-
-// ============================================================================
-// ΔΙΕΥΘΥΝΣΗ → ΥΠΟΨΗΦΙΑ ΘΕΣΗ
-// ============================================================================
-
-/** Δομική όψη μιας καταχωρημένης διεύθυνσης — όσο χρειάζεται η θέση, τίποτα άλλο. */
-export interface AddressLike {
-  readonly coordinates?: { readonly lat?: number | null; readonly lng?: number | null } | null;
-  readonly geocodingMetadata?: { readonly accuracy?: GeocodingAccuracy | null } | null;
-  readonly isPrimary?: boolean | null;
-  readonly verifiedAt?: number | null;
-}
-
-/**
- * Διεύθυνση → υποψήφια θέση, ή `null` αν δεν κουβαλά συντεταγμένες.
- *
- * 🔑 **Η προέλευση συνάγεται από ΤΑ ΙΔΙΑ ΤΑ ΔΕΔΟΜΕΝΑ, όχι από παραδοχή:**
- *
- *   - υπάρχει `geocodingMetadata` ⇒ **μηχανή** το συμπέρανε από κείμενο ⇒ `geocoded`,
- *     και **κουβαλά την ακρίβειά της** — που είναι ολόκληρη η Α5.
- *   - υπάρχουν συντεταγμένες **χωρίς** μεταδεδομένα geocoder ⇒ κάποιος τις **έβαλε**
- *     ⇒ `manual`.
- *
- * ⚠️ **Η δεύτερη περίπτωση δεν βαφτίζεται `geocoded` με `accuracy: 'center'`** — θα
- * ήταν εύκολο και θα ήταν **ψέμα** προς την ασφαλή κατεύθυνση: θα ζωγράφιζε σκιασμένη
- * πόλη εκεί που άνθρωπος έδειξε ακριβές σημείο, δηλαδή θα **έκρυβε** γνώση που έχουμε.
- * Η Α5 απαιτεί να λέμε **ό,τι ξέρουμε**, όχι το ασφαλέστερο.
- */
-export function addressToPositionCandidate(
-  address: AddressLike,
-  locatedAt: string
-): ListingPositionCandidate | null {
-  const lat = address.coordinates?.lat;
-  const lng = address.coordinates?.lng;
-  if (typeof lat !== 'number' || typeof lng !== 'number') return null;
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-
-  const accuracy = address.geocodingMetadata?.accuracy ?? null;
-  const point = { lat, lng } as const;
-
-  if (accuracy) {
-    return { kind: 'known', provenance: 'geocoded', point, locatedAt, accuracy };
-  }
-  return { kind: 'known', provenance: 'manual', point, locatedAt };
 }
 
 // ---------------------------------------------------------------------------

@@ -66,7 +66,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "10efc3ab17d554fef3df5faa611cfc39d6c6d05c847e5e26a7c390265ef895f2",
+  "inputsSha256": "cefea87e856f75fa258cfec8de4de7870c31f07a425503a1212cc0756812def9",
   "languages": [
     "el"
   ],
@@ -365,7 +365,7 @@
     "src/lib/owner-property/owner-property-form-validation.ts": "8b89295ec92ccb7f1df65ec50a48b3fbe65eb0224cc72bb4b0bb79d998638bdb",
     "src/lib/owner-property/owner-property-form-values.ts": "2815b27a704454e7d4d57a92493535ab9859deed709f9d74b80f1d8e3b8584f7",
     "src/lib/owner-property/owner-property-from-document.ts": "3a843402a86febb95d39d4472f551c3e6d476a6f0aed2166620d64a037793361",
-    "src/lib/owner-property/owner-property-projection.ts": "732c216bc8dfd992151c4f44fd9b563e52fac495dcc993a3047563655c0aa1a1",
+    "src/lib/owner-property/owner-property-projection.ts": "5eea665514450d0f0474549617816cc7ddfa1cebb0a7d0bd2d4493dc49dc118f",
     "src/lib/places/place-claim-validation.ts": "a157fcedd9f80412f18309f840076e298026c2e857bbbdddd48fb647b262fe0b",
     "src/lib/places/place-claim.ts": "73eb20571bf6ef6cc5e04a3b4ad3647c2b73a5f5a6b64652713e96eebfea4f77",
     "src/lib/primary-entry.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -402,11 +402,12 @@
     "src/services/listings/legality-projection.ts": "a88bc62c2d2e65a3eed1ab5215e12e0fab6e0155255d8649037e1b26e05efcd4",
     "src/services/listings/listing-resolver.ts": "03ad90790d811f14ddb6d50e437bf825eb4f642786e7f99b40e5b143f7dd1014",
     "src/services/listings/public-listing-attributes.ts": "79ec9f80b660c026e2f07e14ee4d5c4dd366dc1ef51eab2a2ee4a2f214f0f7c0",
+    "src/services/listings/public-listing-position.ts": "5c0bf072f03972c3cb4d3ed6bbdd54b5aa43335f2741a9d8e19a7b8f4996bc9e",
     "src/services/listings/public-listing-projection-types.ts": "38a4eea96f44f73010765e93a8521eb5fb4f7d1c4e171d4f246a1c4e18491bce",
-    "src/services/listings/public-listing-projection.ts": "e6f4bab70decd8cdd16fc6a99f2266998283cf0ea623acf7141b62b9fe9db6c9",
+    "src/services/listings/public-listing-projection.ts": "f67f0ded23826ffafac60f7093768baeef46235bd6a141cfe1b7e69c1df98d2c",
     "src/services/listings/public-shelf-sanitise.ts": "a760a93fbc47d907d0f056ece8b8a7fafe95aacf25b575baf65e889629c15dd8",
     "src/services/listings/public-shelf.service.ts": "e346e69026a15424d1de7da1936d38464913ba6ca3182bed3f7a6542ca11b8b0",
-    "src/services/listings/publish-public-listing.ts": "947111f7593e2eedb693d3a0f6ae5ded9935ba78d6cf6039850e77db59aba632",
+    "src/services/listings/publish-public-listing.ts": "231197d9bac88a7ed19b8f17f9e41f20f1a521b7f63cd3275f4db8fe2f3fcd69",
     "src/services/mandate/agency-profile.service.ts": "c599907f66ce501b504cbfbca8b252ba82ccff846b11e07653a8fc44741ce3f4",
     "src/services/mandate/mandate-actions.service.ts": "c017fe22d216a7572e7f7e290226ca66ba3922dfaeb13e0b010d6517b5ca7793",
     "src/services/mandate/mandate-catalog.client.ts": "41c5bd36535fedb33fc332ab51abd83507c22afd982f4aa50fd4b7867d2d96b4",

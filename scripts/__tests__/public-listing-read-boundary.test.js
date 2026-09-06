@@ -18,6 +18,7 @@ const {
   measureK1,
   measureK2,
   collectSourceFiles,
+  BOUNDARIES,
   CUSTODIAN,
   CUSTODIAN_MODULE,
 } = require('../check-public-listing-read-boundary');
@@ -122,5 +123,91 @@ describe('Κ — το συμβόλαιο: πού ΔΕΝ κοκκινίζει, κ
       )
     );
     expect(run().k1[0].line).toBe(6);
+  });
+});
+
+
+// ---------------------------------------------------------------------------
+// Ν — Η ΔΕΥΤΕΡΗ ΓΡΑΜΜΗ ΤΟΥ ΠΙΝΑΚΑ (ADR-842 §7.6.12 / §8 #11)
+// ---------------------------------------------------------------------------
+//
+// 🔴 **ΓΡΑΜΜΗ ΠΙΝΑΚΑ ΧΩΡΙΣ ΑΓΚΥΡΑ ΕΙΝΑΙ ΔΗΛΩΣΗ, ΟΧΙ ΠΥΛΗ.** Η γενίκευση σε πίνακα
+// κρύβει ένα καινούριο είδος αστοχίας: η μηχανή να δουλεύει τέλεια για την **πρώτη**
+// γραμμή και η δεύτερη να είναι διακοσμητική — πράσινο επειδή δεν εκτελείται. Οι
+// άγκυρες παρακάτω ΕΚΤΕΛΟΥΝ τη μηχανή με τη δεύτερη γραμμή.
+
+describe('Ν — ο πίνακας των συνόρων', () => {
+  const OWNER = BOUNDARIES.find((b) => b.typeName === 'OwnerProperty');
+
+  it('Ν0 — ο πίνακας δηλώνει και τα δύο σύνορα, χωρίς διπλότυπα', () => {
+    expect(BOUNDARIES.length).toBeGreaterThanOrEqual(2);
+    expect(OWNER).toBeDefined();
+
+    const names = BOUNDARIES.map((b) => b.typeName);
+    expect(new Set(names).size).toBe(names.length);
+
+    const homes = BOUNDARIES.map((b) => b.custodian);
+    expect(new Set(homes).size).toBe(homes.length);
+  });
+
+  it('🔴 Ν1 — «as OwnerProperty» σε ΝΕΟ αρχείο ⇒ ΚΟΚΚΙΝΟ', () => {
+    write(OWNER.custodian, 'export function ownerPropertyFromDocument(raw, id) { return null; }');
+    write('src/services/mandate/x.ts', 'const p = snap.data() as OwnerProperty;');
+
+    const files = collectSourceFiles(path.join(root, 'src'), root);
+    const k1 = measureK1(files, root, OWNER);
+
+    expect(k1).toHaveLength(1);
+    expect(k1[0].file).toBe('src/services/mandate/x.ts');
+  });
+
+  it('🔴 Ν2 (ΤΟ ΣΗΜΑΝΤΙΚΟ) — σύνορο ΧΩΡΙΣ καταναλωτές ⇒ το Κ2 το πιάνει', () => {
+    // Χωρίς αυτό, μια γραμμή θα ήταν «πράσινη επειδή κανείς δεν διαβάζει» — και με
+    // δύο γραμμές η σιωπή της μιας θα κρυβόταν πίσω από την υγεία της άλλης.
+    write(OWNER.custodian, 'export function ownerPropertyFromDocument(raw, id) { return null; }');
+
+    const files = collectSourceFiles(path.join(root, 'src'), root);
+    expect(measureK2(files, root, OWNER)).toHaveLength(0);
+
+    write(
+      'src/services/mandate/reader.ts',
+      `import { ownerPropertyFromDocument } from '@/lib/owner-property/${OWNER.module}';\n` +
+        'export const x = ownerPropertyFromDocument;'
+    );
+    const after = collectSourceFiles(path.join(root, 'src'), root);
+    expect(measureK2(after, root, OWNER)).toEqual(['src/services/mandate/reader.ts']);
+  });
+
+  it('Ν3 — τα δύο σύνορα ΔΕΝ μπερδεύονται: ο ισχυρισμός του ενός δεν κοκκινίζει τον άλλο', () => {
+    write(OWNER.custodian, 'export function ownerPropertyFromDocument(raw, id) { return null; }');
+    write('src/services/mandate/x.ts', 'const p = snap.data() as OwnerProperty;');
+
+    const files = collectSourceFiles(path.join(root, 'src'), root);
+
+    expect(measureK1(files, root, OWNER)).toHaveLength(1);
+    expect(measureK1(files, root, BOUNDARIES[0])).toHaveLength(0);
+  });
+
+  it('Ν4 — το ίδιο το σύνορο του ιδιώτη ΕΠΙΤΡΕΠΕΤΑΙ να ισχυρίζεται', () => {
+    write(
+      OWNER.custodian,
+      'export function ownerPropertyFromDocument(raw, id) { return raw as OwnerProperty; }'
+    );
+
+    const files = collectSourceFiles(path.join(root, 'src'), root);
+    expect(measureK1(files, root, OWNER)).toHaveLength(0);
+  });
+
+  it('🔴 Ν5 — ΚΑΘΕ γραμμή του πίνακα δείχνει σε σύνορο που ΥΠΑΡΧΕΙ στον δίσκο', () => {
+    // Ο πραγματικός δίσκος, όχι το μίνι-repo: μια γραμμή που δείχνει σε ανύπαρκτο
+    // αρχείο θα έκανε την πύλη να κοκκινίζει για λάθος λόγο — ή, χειρότερα, κάποιος
+    // θα την έσβηνε αντί να τη διορθώσει.
+    const repo = path.resolve(__dirname, '..', '..');
+    for (const boundary of BOUNDARIES) {
+      expect(fs.existsSync(path.join(repo, boundary.custodian))).toBe(true);
+      expect(boundary.custodian).toContain(boundary.module);
+      expect(boundary.remedy).not.toHaveLength(0);
+      expect(boundary.adr).toMatch(/^ADR-\d+/);
+    }
   });
 });

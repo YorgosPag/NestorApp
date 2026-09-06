@@ -22,6 +22,7 @@ import {
 import { readStoredListing, publicListingFromDocument } from '../public-listing-from-document';
 import { LISTING_MATERIAL_KEYS } from '../listing-authorship';
 import {
+  isPubliclyListed,
   projectListingShape,
   type PlaceKnowledge,
   type ProjectableProperty,
@@ -415,5 +416,67 @@ describe('Κ9 — 🔴 ΤΟ ΠΑΓΩΜΕΝΟ `altKey` ΞΕΠΑΓΩΝΕΙ ΣΤΗ�
   it('Κ9.5 — κενή ή απούσα συλλογή δεν πειράζεται (η μία ζωντανή αγγελία ιδιώτη)', () => {
     // Μετρημένο 2026-09-03: η **μόνη** `owner-declared` αγγελία έχει `gallery: []`.
     expect(upgradeListingDocument({ ...PRODUCTION_V1, gallery: [] }).gallery).toEqual([]);
+  });
+});
+
+
+// ============================================================================
+// Κ10 — ΤΟ ΛΕΞΙΛΟΓΙΟ ΣΤΟ ΣΥΝΟΡΟ (ADR-842 §7.6.12 / §8 #11)
+// ============================================================================
+
+describe('Κ10 — 🔴 Η ΚΑΝΟΝΙΚΟΠΟΙΗΣΗ ΤΟΥ ΕΙΔΟΥΣ ΓΙΝΕΤΑΙ ΕΔΩ, ΑΝΕΥ ΟΡΩΝ', () => {
+  /**
+   * ⚠️ **Το «άνευ όρων» είναι ΟΛΟΚΛΗΡΟ το σκέλος.** Η δουλειά λεξιλογίου **δεν** μπήκε
+   * ως κρίκος μετανάστευσης, γιατί το {@link upgradeListingDocument} επιστρέφει
+   * **αυτούσιο** κάθε έγγραφο που φέρει ήδη τη σημερινή σφραγίδα — άρα ένα έγγραφο
+   * **τρέχουσας έκδοσης** με ωμή τιμή δεν θα περνούσε ποτέ από τον κρίκο.
+   */
+  const CURRENT = { ...PRODUCTION_V1, schemaVersion: PUBLIC_LISTING_SCHEMA_VERSION };
+
+  it('Κ10.1 — παλαιά ελληνική τιμή μεταφράζεται, ΚΑΙ η ολίσθηση καταγράφεται', () => {
+    const read = readStoredListing({ ...PRODUCTION_V1, type: 'Κατάστημα' }, LISTING_ID)!;
+    expect(read.listing.type).toBe('shop');
+    expect(read.vocabularyDrift).toBe('Κατάστημα');
+  });
+
+  it('Κ10.2 — 🔴 ΚΑΙ ΣΕ ΕΓΓΡΑΦΟ ΤΡΕΧΟΥΣΑΣ ΕΚΔΟΣΗΣ (εδώ θα σιωπούσε ένας κρίκος)', () => {
+    const read = readStoredListing({ ...CURRENT, type: 'Οικόπεδο' }, LISTING_ID)!;
+    expect(read.needsRebuild).toBe(false); // η αλυσίδα δεν έτρεξε…
+    expect(read.listing.type).toBe('plot'); // …και όμως η τιμή λύθηκε
+    expect(read.vocabularyDrift).toBe('Οικόπεδο');
+  });
+
+  it('Κ10.3 — αγνώριστη τιμή ⇒ `null`, ΠΟΤΕ σιωπηλό «apartment»', () => {
+    const read = readStoredListing({ ...PRODUCTION_V1, type: 'parking' }, LISTING_ID)!;
+    expect(read.listing.type).toBeNull();
+    expect(read.listing.type).not.toBe('apartment');
+    expect(read.vocabularyDrift).toBe('parking');
+  });
+
+  it('Κ10.4 — απόν είδος ⇒ `null` ΧΩΡΙΣ ολίσθηση (απουσία ≠ ολίσθηση)', () => {
+    const { type: _dropped, ...withoutType } = PRODUCTION_V1;
+    const read = readStoredListing(withoutType, LISTING_ID)!;
+    expect(read.listing.type).toBeNull();
+    expect(read.vocabularyDrift).toBeNull();
+  });
+
+  it('Κ10.5 — κανονική τιμή μένει αυτούσια και ΧΩΡΙΣ ολίσθηση (ιδιοδυναμία)', () => {
+    const read = readStoredListing(PRODUCTION_V1, LISTING_ID)!;
+    expect(read.listing.type).toBe('plot');
+    expect(read.vocabularyDrift).toBeNull();
+  });
+
+  it('Κ10.6 — 🔑 Η ΠΥΛΗ ΔΗΜΟΣΙΕΥΣΗΣ ΑΡΝΕΙΤΑΙ ΑΚΙΝΗΤΟ ΧΩΡΙΣ ΛΥΜΕΝΟ ΕΙΔΟΣ', () => {
+    // Ο δρόμος **Γ′**: το έγγραφο ΖΕΙ και ο κάτοχος το βλέπει· ο **κόσμος** όχι.
+    // Η απόσυρση υπάρχει ήδη: `buildPublicListing() === null ⇒ ref.delete()`.
+    const base: ProjectableProperty = {
+      id: LISTING_ID,
+      commercialStatus: 'for-sale',
+      offerKinds: ['sell'],
+    };
+    expect(isPubliclyListed({ ...base, type: 'plot' })).toBe(true);
+    expect(isPubliclyListed({ ...base, type: 'Οικόπεδο' })).toBe(true);
+    expect(isPubliclyListed({ ...base, type: 'parking' })).toBe(false);
+    expect(isPubliclyListed({ ...base, type: null })).toBe(false);
   });
 });

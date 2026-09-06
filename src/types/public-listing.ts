@@ -66,7 +66,7 @@ import type { LegalitySignal } from '@/lib/legality/legality-signal';
 import type { SourcedAttribute } from '@/lib/property/attribute-provenance';
 import type { OfferKind } from '@/types/property-offers';
 import type { CommercialStatus } from '@/constants/commercial-statuses';
-import type { PropertyType } from '@/types/property';
+import type { PropertyTypeCanonical } from '@/constants/property-types';
 import type { PlacePosition, PlaceRef } from '@/types/geo/public-place';
 import type {
   AmenityCodeType,
@@ -370,7 +370,22 @@ export interface PublicListing {
   readonly floorplans: readonly ListingFloorplan[];
 
   // ── 3. ΕΙΔΟΣ + ΕΜΒΑΔΟΝ ────────────────────────────────────────────────────
-  readonly type: PropertyType;
+  /**
+   * **Το είδος, στην κανονική του μορφή** — ή `null` όταν δεν ξέρουμε ποιο είναι.
+   *
+   * 🔴 **ΗΤΑΝ Η ΕΥΡΕΙΑ ΕΝΩΣΗ, ΚΑΙ Ο ΓΡΑΦΕΑΣ ΤΗΝ ΕΤΡΕΦΕ ΜΕ ΨΕΜΑ** (ADR-842 §7.6.12 /
+   * §8 #11): η προβολή έγραφε `(property.type ?? 'apartment') as PropertyType`, δηλαδή
+   * **βάφτιζε διαμέρισμα** κάθε ακίνητο που δεν είχε είδος — και το ελάττωμα ήταν ήδη
+   * καταγγελμένο γραπτώς στο `owner-property-draft-schema.ts`. Πλέον η τιμή
+   * κανονικοποιείται στη **μία** προβολή και το «δεν ξέρω» έχει **όνομα**.
+   *
+   * ⚠️ **Και δεν φτάνει ποτέ σε δημόσια αγγελία**: η πύλη `isPubliclyListed` αρνείται
+   * να δημοσιεύσει ακίνητο χωρίς λυμένο είδος, και ο γραφέας **αποσύρει** την υπάρχουσα
+   * προβολή (`ref.delete()` + απόσυρση του ραφιού, ADR-841 Α12.6). Το `null` επιβιώνει
+   * μόνο στο **εφήμερο** σχήμα του `projectListingShape` — το δόλωμα του §12.6, που
+   * μιλά στον **κάτοχο** και όχι στον κόσμο.
+   */
+  readonly type: PropertyTypeCanonical | null;
   /** Μικτό εμβαδόν σε m². `null` = δεν καταχωρήθηκε — **ποτέ** `0` ως «άγνωστο». */
   readonly areaSqm: number | null;
 

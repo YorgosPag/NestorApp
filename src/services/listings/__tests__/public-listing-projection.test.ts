@@ -11,17 +11,24 @@ import { join } from 'node:path';
 
 import {
   isPubliclyListed,
-  resolveListingPosition,
   buildPublicListing,
   projectListingShape,
-  addressToPositionCandidate,
   type ProjectableProperty,
   type PlaceKnowledge,
 } from '../public-listing-projection';
+import { addressToPositionCandidate, resolveListingPosition } from '../public-listing-position';
 import { offerKindsFromLegacyStatus } from '@/lib/offers/derive-commercial-status';
 
 const AT = '2026-08-10T10:00:00.000Z';
 const NO_PLACE: PlaceKnowledge = { candidates: [], ref: null };
+
+// ⚠️ **ΚΑΘΕ ΣΧΗΜΑ ΕΔΩ ΔΗΛΩΝΕΙ `type`, ΚΑΙ ΕΙΝΑΙ ΑΠΑΙΤΗΣΗ ΤΗΣ ΑΓΚΥΡΑΣ** (ADR-842 §7.6.12
+// / §8 #11): η πύλη `isPubliclyListed` αρνείται πλέον ακίνητο **χωρίς λυμένο είδος**
+// (δρόμος Γ′). Ένα σχήμα χωρίς `type` θα εξακολουθούσε να περνά τις άγκυρες του τύπου
+// *«ΔΕΝ δημοσιεύεται»* — αλλά **για λάθος λόγο**, δηλαδή «πράσινο επειδή κανείς δεν
+// κοίταξε». Ο ίδιος ο κανόνας κρίνεται στο **Κ10.6** του
+// `lib/listings/__tests__/public-listing-schema.test.ts`, δίπλα στο σύνορο που τον
+// τροφοδοτεί.
 
 /** Πραγματικό έγγραφο: `prop_2d612992…` «Μεζονέτα 95 τ.μ.» (χωρίς offerKinds — προ Α20). */
 const REAL_MAISONETTE: ProjectableProperty = {
@@ -45,25 +52,25 @@ describe('Κ1 — το κριτήριο δημοσίευσης είναι Η Ε�
 
   it('🔴 ΜΟΝΟ ΑΝΤΙΠΑΡΟΧΗ: commercialStatus «unavailable» αλλά offerKinds ⇒ ΔΗΜΟΣΙΕΥΕΤΑΙ', () => {
     const exchangeOnly: ProjectableProperty = {
-      id: 'p1', commercialStatus: 'unavailable', offerKinds: ['exchange'],
+      id: 'p1', type: 'plot', commercialStatus: 'unavailable', offerKinds: ['exchange'],
     };
     expect(isPubliclyListed(exchangeOnly)).toBe(true);
   });
 
   it('🔑 γιατί χρειάζονται ΚΑΙ ΤΑ ΔΥΟ: το καθένα μόνο του κρύβει άλλη κατηγορία', () => {
     // Μόνο το παλιό σκέλος ⇒ χάνει την αντιπαροχή.
-    const exchangeOnly: ProjectableProperty = { id: 'p1', commercialStatus: 'unavailable', offerKinds: ['exchange'] };
+    const exchangeOnly: ProjectableProperty = { id: 'p1', type: 'plot', commercialStatus: 'unavailable', offerKinds: ['exchange'] };
     // Μόνο το νέο σκέλος ⇒ χάνει ΚΑΘΕ έγγραφο γραμμένο πριν την Α20 (δηλαδή και τα 8).
     expect(isPubliclyListed(exchangeOnly)).toBe(true);
     expect(isPubliclyListed(REAL_MAISONETTE)).toBe(true);
   });
 
   it('πωλημένο χωρίς διαθέσεις ⇒ ΔΕΝ δημοσιεύεται', () => {
-    expect(isPubliclyListed({ id: 'p', commercialStatus: 'sold' })).toBe(false);
+    expect(isPubliclyListed({ id: 'p', type: 'apartment', commercialStatus: 'sold' })).toBe(false);
   });
 
   it('άγνωστη διάθεση δεν δημοσιεύει τίποτα — το σύνολο είναι κλειστό', () => {
-    expect(isPubliclyListed({ id: 'p', commercialStatus: 'unavailable', offerKinds: ['barter'] })).toBe(false);
+    expect(isPubliclyListed({ id: 'p', type: 'apartment', commercialStatus: 'unavailable', offerKinds: ['barter'] })).toBe(false);
   });
 });
 
@@ -380,13 +387,13 @@ describe('Κ5 — τιμή: ωμοί αριθμοί, καμία δεύτερη �
     expect(listing.floor).toBe(0);
     expect(listing.bedrooms).toBe(0);
     expect(buildPublicListing(REAL_MAISONETTE, NO_PLACE, AT)!.bedrooms).toBe(3);
-    expect(buildPublicListing({ id: 'x', commercialStatus: 'for-sale' }, NO_PLACE, AT)!.bedrooms).toBeNull();
+    expect(buildPublicListing({ id: 'x', type: 'apartment', commercialStatus: 'for-sale' }, NO_PLACE, AT)!.bedrooms).toBeNull();
   });
 });
 
 describe('Κ6 — το null ΕΙΝΑΙ εντολή διαγραφής', () => {
   it('μη δημοσιευμένο ⇒ null, ώστε η απόσυρση να ΣΥΜΒΑΙΝΕΙ αντί να αφήνει ορφανό έγγραφο', () => {
-    expect(buildPublicListing({ id: 'p', commercialStatus: 'sold' }, NO_PLACE, AT)).toBeNull();
+    expect(buildPublicListing({ id: 'p', type: 'apartment', commercialStatus: 'sold' }, NO_PLACE, AT)).toBeNull();
   });
 });
 
@@ -436,7 +443,7 @@ describe('Κ6 — η προβολή μιλά και τα ΔΥΟ λεξιλόγι
     ['for-rent', ['leaseOut']],
     ['for-sale-and-rent', ['leaseOut', 'sell']],
   ] as const)('%s χωρίς offerKinds → [%s]', (commercialStatus, expected) => {
-    const listing = buildPublicListing({ id: 'p', commercialStatus }, NO_PLACE, AT)!;
+    const listing = buildPublicListing({ id: 'p', type: 'apartment', commercialStatus }, NO_PLACE, AT)!;
     expect(listing.offerKinds).toEqual(expected);
   });
 
@@ -444,7 +451,7 @@ describe('Κ6 — η προβολή μιλά και τα ΔΥΟ λεξιλόγι
     // Έγγραφο μετά την Α20: πώληση ενεργή ΚΑΙ αντιπαροχή. Το παλιό λεξιλόγιο θα
     // έλεγε μόνο `['sell']` — και θα έσβηνε σιωπηλά την αντιπαροχή.
     const listing = buildPublicListing(
-      { id: 'p', commercialStatus: 'for-sale', offerKinds: ['exchange', 'sell'] },
+      { id: 'p', type: 'apartment', commercialStatus: 'for-sale', offerKinds: ['exchange', 'sell'] },
       NO_PLACE,
       AT
     )!;
@@ -453,7 +460,7 @@ describe('Κ6 — η προβολή μιλά και τα ΔΥΟ λεξιλόγι
 
   it('offerKinds με ΜΟΝΟ άγνωστη λέξη ⇒ πέφτει στην εφεδρεία, δεν μένει κενό', () => {
     const listing = buildPublicListing(
-      { id: 'p', commercialStatus: 'for-rent', offerKinds: ['barter'] },
+      { id: 'p', type: 'apartment', commercialStatus: 'for-rent', offerKinds: ['barter'] },
       NO_PLACE,
       AT
     )!;
@@ -462,7 +469,7 @@ describe('Κ6 — η προβολή μιλά και τα ΔΥΟ λεξιλόγι
 
   it('η ωμή άγνωστη λέξη ΔΕΝ διαρρέει ποτέ στο δημόσιο έγγραφο', () => {
     const listing = buildPublicListing(
-      { id: 'p', commercialStatus: 'unavailable', offerKinds: ['barter', 'exchange'] },
+      { id: 'p', type: 'apartment', commercialStatus: 'unavailable', offerKinds: ['barter', 'exchange'] },
       NO_PLACE,
       AT
     )!;
@@ -470,7 +477,7 @@ describe('Κ6 — η προβολή μιλά και τα ΔΥΟ λεξιλόγι
   });
 
   it('εφεδρικό πεδίο `status` όταν λείπει το `commercialStatus` — ίδια αλυσίδα με τη γρ. 203', () => {
-    const listing = buildPublicListing({ id: 'p', status: 'for-rent' }, NO_PLACE, AT)!;
+    const listing = buildPublicListing({ id: 'p', type: 'apartment', status: 'for-rent' }, NO_PLACE, AT)!;
     expect(listing.offerKinds).toEqual(['leaseOut']);
   });
 });
@@ -488,7 +495,7 @@ describe('Κ7 — καμία κατάσταση δεν αποκτά δημοσί
   it.each(['sold', 'rented', 'reserved', 'unavailable'] as const)(
     '⛔ %s χωρίς offerKinds ⇒ ΚΑΜΙΑ προβολή (η μετάφραση δεν δημοσιεύει)',
     (commercialStatus) => {
-      const property: ProjectableProperty = { id: 'p', commercialStatus };
+      const property: ProjectableProperty = { id: 'p', type: 'apartment', commercialStatus };
       expect(isPubliclyListed(property)).toBe(false);
       expect(buildPublicListing(property, NO_PLACE, AT)).toBeNull();
     }
@@ -522,6 +529,7 @@ describe('Κ8 — δηλωμένο offerKinds + τελική κατάσταση 
     (commercialStatus) => {
       const property: ProjectableProperty = {
         id: 'p',
+        type: 'apartment',
         commercialStatus,
         offerKinds: ['sell', 'leaseOut'],
       };
@@ -535,6 +543,7 @@ describe('Κ8 — δηλωμένο offerKinds + τελική κατάσταση 
     // αγνοούνταν ολότελα — «πράσινο επειδή κανείς δεν κοίταξε».
     const live: ProjectableProperty = {
       id: 'p',
+      type: 'apartment',
       commercialStatus: 'unavailable',
       offerKinds: ['exchange'],
     };
@@ -560,7 +569,7 @@ describe('🔴 Κ1 — η πύλη ζει στο `buildPublicListing`· ο ΓΡ�
   const HIDDEN: ProjectableProperty = {
     id: 'prop_hidden',
     name: 'Κλειστό κατάστημα',
-    type: 'commercial',
+    type: 'shop',
     commercialStatus: 'unavailable',
     offerKinds: [],
   };

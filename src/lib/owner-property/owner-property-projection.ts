@@ -36,11 +36,11 @@ import {
 } from '@/lib/offers/derive-commercial-status';
 import { deriveStayTerms } from '@/lib/offers/derive-stay-terms';
 import {
-  addressToPositionCandidate,
   isPubliclyListed,
   type PlaceKnowledge,
   type ProjectableProperty,
 } from '@/services/listings/public-listing-projection';
+import { addressToPositionCandidate } from '@/services/listings/public-listing-position';
 import type { PublishOutcome } from '@/services/listings/publish-public-listing';
 import { mandatesOf } from '@/types/owner-property-mandate';
 import { publishedOwnerMediaSources } from '@/lib/owner-property/owner-media-publication';

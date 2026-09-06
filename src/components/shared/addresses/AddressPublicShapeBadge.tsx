@@ -46,7 +46,7 @@ import { MapPin, MapPinOff } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { listingMapShape, type ListingMapShape } from '@/lib/listings/listing-map-shape';
-import { addressToPositionCandidate } from '@/services/listings/public-listing-projection';
+import { addressToPositionCandidate } from '@/services/listings/public-listing-position';
 import type { AddressGeocodingMetadata } from '@/lib/geocoding/address-position';
 
 export interface AddressPublicShapeBadgeProps {

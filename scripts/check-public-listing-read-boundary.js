@@ -37,6 +37,24 @@
  * από χθες» — **ένας** αρκεί για λευκή οθόνη σε δημόσια σελίδα. Το zero-tol
  * είναι εφικτό επειδή **μετρήθηκε**: το ίδιο ρεύμα δουλειάς μηδένισε και τα τρία.
  *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔑 ΜΙΑ ΜΗΧΑΝΗ, ΠΙΝΑΚΑΣ ΣΥΝΟΡΩΝ (ADR-842 §7.6.12, 2026-09-06)
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Το §8 #11 γέννησε **δεύτερο** σύνορο ανάγνωσης — `owner_properties`, με **19** ωμά
+ * `as OwnerProperty` σε **14** αρχεία. Η προφανής κίνηση ήταν δεύτερο script· ⛔
+ * **απορρίφθηκε**: θα ήταν **δεύτερος κριτής για την ίδια ερώτηση**, ελεύθερος να
+ * αποκλίνει στη διάλεκτο, στις εξαιρέσεις ή στο σχήμα της αναφοράς — κατά γράμμα το
+ * σχήμα που τιμωρεί το ADR-749.
+ *
+ * ⇒ Ο έλεγχος έγινε **πίνακας** ({@link BOUNDARIES}): μία γραμμή ανά συλλογή, ίδια Κ1
+ * και Κ2 για όλες. Το CHECK **κρατά τον αριθμό του** — αυτό που μεγάλωσε είναι η
+ * εμβέλεια, όχι η ταυτότητα.
+ *
+ * ⚠️ **Το Κ2 γίνεται ΑΚΟΜΑ πιο σημαντικό με δύο γραμμές**: ένα σύνορο χωρίς
+ * καταναλωτές δίνει **πράσινο Κ1 επειδή κανείς δεν διαβάζει**, και με δύο σύνορα η
+ * σιωπή του ενός θα κρυβόταν πίσω από την υγεία του άλλου.
+ *
  * Escape: `SKIP_LISTING_READ_BOUNDARY=1` (δικαιολόγησέ το στον Giorgio).
  */
 
@@ -54,11 +72,39 @@ const GREEN = '\x1b[0;32m';
 const DIM = '\x1b[2m';
 const NC = '\x1b[0m';
 
-/** Το **ΕΝΑ** σπίτι του ισχυρισμού — δες ADR-839 §6. */
-const CUSTODIAN = 'src/lib/listings/public-listing-from-document.ts';
+/**
+ * **Τα σύνορα ανάγνωσης — μία γραμμή ανά συλλογή.**
+ *
+ * 🔑 Κάθε γραμμή απαντά το ίδιο ζεύγος: *«ποιος είναι ο **ένας** ισχυρισμός;»* (Κ1) και
+ * *«τον **ζητά** κανείς;»* (Κ2). Νέα συλλογή με σύνορο ⇒ **μία γραμμή εδώ**, τίποτα
+ * άλλο.
+ */
+const BOUNDARIES = [
+  {
+    adr: 'ADR-839',
+    typeName: 'PublicListing',
+    custodian: 'src/lib/listings/public-listing-from-document.ts',
+    module: 'public-listing-from-document',
+    remedy: '«readStoredListing(raw, id)» ή «publicListingFromDocument(raw, id)»',
+  },
+  {
+    adr: 'ADR-842 §7.6.12',
+    typeName: 'OwnerProperty',
+    custodian: 'src/lib/owner-property/owner-property-from-document.ts',
+    module: 'owner-property-from-document',
+    remedy: '«readStoredOwnerProperty(raw, id)» ή «ownerPropertyFromDocument(raw, id)»',
+  },
+];
 
-/** Η μονάδα που κάθε αναγνώστης οφείλει να ζητά. */
-const CUSTODIAN_MODULE = 'public-listing-from-document';
+/** Ο ισχυρισμός που ψάχνει η Κ1 για μια γραμμή του πίνακα. */
+const assertionOf = (typeName) => new RegExp(`\\bas\\s+${typeName}\\b`);
+
+/**
+ * 🔶 Συμβατότητα με τις άγκυρες της πύλης — η **πρώτη** γραμμή είναι το ADR-839.
+ * Οι άγκυρες εκτελούν τη μηχανή σε μίνι-repo· δεν χρειάζεται να ξέρουν τον πίνακα.
+ */
+const CUSTODIAN = BOUNDARIES[0].custodian;
+const CUSTODIAN_MODULE = BOUNDARIES[0].module;
 
 /**
  * 🔶 **Δηλωμένες εξαιρέσεις — με λόγο, ποτέ σιωπηλά.**
@@ -101,13 +147,12 @@ function stripComments(source) {
 // Κ1 — ο ισχυρισμός ζει σε ΕΝΑ σπίτι
 // ---------------------------------------------------------------------------
 
-const ASSERTION = /\bas\s+PublicListing\b/;
-
-function measureK1(files, root = PROJECT_ROOT) {
+function measureK1(files, root = PROJECT_ROOT, boundary = BOUNDARIES[0]) {
+  const ASSERTION = assertionOf(boundary.typeName);
   const offenders = [];
 
   for (const rel of files) {
-    if (rel === CUSTODIAN || isExempt(rel)) continue;
+    if (rel === boundary.custodian || isExempt(rel)) continue;
 
     // 🔑 **Δύο αναγνώσεις, επίτηδες**: η κρίση γίνεται στο κείμενο *χωρίς* σχόλια
     //    (ώστε ένα `as PublicListing` μέσα σε τεκμηρίωση να μη μετρά), αλλά ο
@@ -127,7 +172,7 @@ function measureK1(files, root = PROJECT_ROOT) {
 // Κ2 — ο παρονομαστής: το σύνορο έχει καταναλωτές
 // ---------------------------------------------------------------------------
 
-const IMPORTS_CUSTODIAN = new RegExp(`from\\s+['"][^'"]*${CUSTODIAN_MODULE}['"]`);
+
 
 /**
  * Ποιοι **παραγωγικοί** καταναλωτές ζητούν τη μετάφραση.
@@ -135,12 +180,13 @@ const IMPORTS_CUSTODIAN = new RegExp(`from\\s+['"][^'"]*${CUSTODIAN_MODULE}['"]`
  * Επιστρέφει τη λίστα (όχι απλώς πλήθος) ώστε η αναφορά να λέει **ποιοι** — μια
  * πύλη που λέει μόνο «0» αφήνει τον άνθρωπο να ψάχνει τι έσπασε.
  */
-function measureK2(files, root = PROJECT_ROOT) {
+function measureK2(files, root = PROJECT_ROOT, boundary = BOUNDARIES[0]) {
+  const importsCustodian = new RegExp(`from\\s+['"][^'"]*${boundary.module}['"]`);
   return files.filter(
     (rel) =>
-      rel !== CUSTODIAN &&
+      rel !== boundary.custodian &&
       !isExempt(rel) &&
-      IMPORTS_CUSTODIAN.test(stripComments(fs.readFileSync(path.join(root, rel), 'utf8')))
+      importsCustodian.test(stripComments(fs.readFileSync(path.join(root, rel), 'utf8')))
   );
 }
 
@@ -152,46 +198,67 @@ function main() {
     return 0;
   }
 
-  if (!fs.existsSync(path.join(PROJECT_ROOT, CUSTODIAN))) {
-    console.error(`${RED}❌ CHECK 3.74 — λείπει το ίδιο το σύνορο: ${CUSTODIAN}${NC}`);
-    return 1;
-  }
-
   const files = collectSourceFiles(SRC);
-  const k1 = measureK1(files);
-  const consumers = measureK2(files);
+  let failed = false;
 
-  // 🔑 Τυπώνεται **ακόμα και στο μηδέν** — πύλη που σιωπά όταν περνά δεν
-  //    ξεχωρίζει από πύλη που δεν έτρεξε (μάθημα CHECK 3.48).
+  for (const boundary of BOUNDARIES) {
+    if (!fs.existsSync(path.join(PROJECT_ROOT, boundary.custodian))) {
+      console.error(
+        `${RED}❌ CHECK 3.74 — λείπει το ίδιο το σύνορο: ${boundary.custodian}${NC}`
+      );
+      failed = true;
+      continue;
+    }
+
+    const k1 = measureK1(files, PROJECT_ROOT, boundary);
+    const consumers = measureK2(files, PROJECT_ROOT, boundary);
+
+    // 🔑 Τυπώνεται **ακόμα και στο μηδέν** — πύλη που σιωπά όταν περνά δεν
+    //    ξεχωρίζει από πύλη που δεν έτρεξε (μάθημα CHECK 3.48).
+    console.log(
+      `${DIM}  CHECK 3.74 — ${boundary.typeName} (${boundary.adr}): ` +
+        `${k1.length} ισχυρισμοί εκτός σπιτιού · ${consumers.length} καταναλωτές${NC}`
+    );
+
+    for (const { file, line } of k1) {
+      console.error(
+        `${RED}  ⛔ Κ1 ${file}:${line} — «as ${boundary.typeName}» έξω από ${boundary.custodian}${NC}`
+      );
+    }
+
+    if (consumers.length === 0) {
+      console.error(
+        `${RED}  ⛔ Κ2 (${boundary.typeName}) — το σύνορο ΔΕΝ ΕΧΕΙ ΚΑΝΕΝΑΝ καταναλωτή.${NC}\n` +
+          `${RED}     Το Κ1 είναι πράσινο επειδή κανείς δεν διαβάζει — όχι επειδή διαβάζει σωστά.${NC}`
+      );
+    }
+
+    if (k1.length > 0 || consumers.length === 0) {
+      console.error(
+        `\n${RED}❌ CHECK 3.74 (${boundary.adr}) — το «${boundary.typeName}» διαβάζεται χωρίς φύλακα.${NC}\n` +
+          `   Θεραπεία: ${boundary.remedy}.\n` +
+          `   ΜΗΝ προσθέσεις «?? []» ή «?? 'apartment'» στην οθόνη — αυτό θεραπεύει το δείγμα, όχι την κλάση.\n`
+      );
+      failed = true;
+    }
+  }
+
+  if (failed) return 1;
+
   console.log(
-    `${DIM}  CHECK 3.74 — σύνορο ανάγνωσης: ${k1.length} ισχυρισμοί εκτός σπιτιού · ` +
-      `${consumers.length} καταναλωτές του συνόρου · ${files.length} αρχεία${NC}`
+    `${GREEN}✅ CHECK 3.74 — και τα ${BOUNDARIES.length} σύνορα ανάγνωσης έχουν φύλακα ` +
+      `(${files.length} αρχεία).${NC}`
   );
-
-  for (const { file, line } of k1) {
-    console.error(`${RED}  ⛔ Κ1 ${file}:${line} — «as PublicListing» έξω από ${CUSTODIAN}${NC}`);
-  }
-
-  if (consumers.length === 0) {
-    console.error(
-      `${RED}  ⛔ Κ2 — το σύνορο ΔΕΝ ΕΧΕΙ ΚΑΝΕΝΑΝ καταναλωτή.${NC}\n` +
-        `${RED}     Το Κ1 είναι πράσινο επειδή κανείς δεν διαβάζει — όχι επειδή διαβάζει σωστά.${NC}`
-    );
-  }
-
-  if (k1.length > 0 || consumers.length === 0) {
-    console.error(
-      `\n${RED}❌ CHECK 3.74 (ADR-839) — η δημόσια προβολή διαβάζεται χωρίς φύλακα.${NC}\n` +
-        `   Θεραπεία: «readStoredListing(raw, id)» ή «publicListingFromDocument(raw, id)».\n` +
-        `   ΜΗΝ προσθέσεις «?? []» στην οθόνη — αυτό θεραπεύει το δείγμα, όχι την κλάση.\n`
-    );
-    return 1;
-  }
-
-  console.log(`${GREEN}✅ CHECK 3.74 (ADR-839) — κάθε ανάγνωση αγγελίας περνά από το σύνορο.${NC}`);
   return 0;
 }
 
 if (require.main === module) process.exit(main());
 
-module.exports = { measureK1, measureK2, collectSourceFiles, CUSTODIAN, CUSTODIAN_MODULE };
+module.exports = {
+  measureK1,
+  measureK2,
+  collectSourceFiles,
+  BOUNDARIES,
+  CUSTODIAN,
+  CUSTODIAN_MODULE,
+};
