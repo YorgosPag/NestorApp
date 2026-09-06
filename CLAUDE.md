@@ -307,7 +307,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 ### Pre-commit checks (summary):
 
 <!-- BEGIN GENERATED GATE INDEX — ΜΗΝ ΤΟ ΓΡΑΨΕΙΣ ΣΤΟ ΧΕΡΙ. Πηγή: docs/gates/3.NN.md · αναπαραγωγή: npm run gate-index:generate
-     fingerprint: sha256:261ca1ff450c14d866e49a2410dd9698815cb6173837a6a59502c859e0c567b5 -->
+     fingerprint: sha256:00f9dec05ad21f9bb151cfa2f408401d561a70165d32c08b4f3c4576314d79a3 -->
 | CHECK | Goal | Mode | Baseline |
 |-------|------|------|----------|
 | **3.8** | **Missing i18n keys** (ADR-777) — `t('key')` **και** `t('ns:key')` χωρίς αντιστοιχία στα locales · 📘 `docs/gates/3.8.md` | RATCHET | `.i18n-missing-keys-baseline.json` |
@@ -368,7 +368,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 | **3.71** | **Πύλη των διπλών κλειδιών locale** (ADR-810) — «δηλώνεται κλειδί **ΔΥΟ ΦΟΡΕΣ στο ίδιο αντικείμενο** ενός locale JSON;» · `npm run test:locale-dup-keys` · `SKIP_LOCALE_DUPLICATE_KEYS=1` · 📘 `docs/gates/3.71.md` | ⛔ ZERO TOL | — |
 | **3.72** | **Πύλη των καθολικών δυνατοτήτων** (ADR-809) — «προσφέρει **αυτή η οθόνη** στον άνθρωπο τη **γλώσσα**, το **θέμα** και τον **λογαριασμό** του, και αν όχι το είπε κάποιος **με λόγο**;» · `npm run test:shell-utilities` · `SKIP_SHELL_UTILITIES=1` · 📘 `docs/gates/3.72.md` | ⛔ ZERO TOL | — |
 | **3.73** | **Πύλη λεξιλογίου τομέα** (ADR-812) — «είναι κάθε δήλωση που **απαριθμεί** το λεξιλόγιο **ΔΕΜΕΝΗ στη ρίζα του**;» · `npm run test:domain-vocabulary` · `SKIP_DOMAIN_VOCABULARY=1` · 📘 `docs/gates/3.73.md` | ⛔ ZERO TOL | — |
-| **3.74** | **Πύλη του συνόρου ανάγνωσης αγγελίας** (ADR-839) — «διαβάζει κάποιος δημόσια αγγελία **χωρίς να περάσει από το σύνορο**;» · `npm run test:listing-read-boundary` · `SKIP_LISTING_READ_BOUNDARY=1` · 📘 `docs/gates/3.74.md` | ⛔ ZERO TOL | — |
+| **3.74** | **Πύλη των συνόρων ανάγνωσης** (ADR-839 · ADR-842) — «διαβάζει κάποιος αποθηκευμένο έγγραφο **χωρίς να περάσει από το σύνορό του**;» · `npm run test:listing-read-boundary` · `SKIP_LISTING_READ_BOUNDARY=1` · 📘 `docs/gates/3.74.md` | ⛔ ZERO TOL | — |
 
 **📘 Πλήρες ιστορικό ανά πύλη** (περιστατικά, μετρήσεις, «⚠️ ΜΗΝ», απορριφθείσες εναλλακτικές):
 `docs/gates/<αριθμός>.md` — ή `npm run gate:explain 3.63`.
