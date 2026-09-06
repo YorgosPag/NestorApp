@@ -102,9 +102,18 @@ export function ListingMapPopup({ listing, filterQuery, onClose }: ListingMapPop
             />
           )}
 
-          <h3 className="truncate text-sm font-medium text-foreground">{listing.title}</h3>
+          {/*
+            ⚠️ **`popover-foreground`, ΟΧΙ `foreground`** — και δεν είναι αισθητική.
+            Η φούσκα είναι **αιωρούμενη επιφάνεια**: το `--popover` τη βάφει (στο
+            `foreign-boundary.css`, γιατί η MapLibre καρφώνει `#fff`), οπότε το κείμενο
+            οφείλει να δηλώνει το **ζευγάρι** εκείνης της επιφάνειας. Οι δύο τιμές είναι
+            σήμερα ταυτόσημες και στα δύο θέματα — γι' αυτό η αλλαγή είναι **αόρατη
+            σήμερα και σωστή αύριο**: αν μετακινηθεί το `--popover`, το ζεύγος κινείται
+            μαζί του αντί να μείνει πίσω σιωπηλά (ADR-770 · CHECK 3.39).
+          */}
+          <h3 className="truncate text-sm font-medium text-popover-foreground">{listing.title}</h3>
 
-          <p className="mt-0.5 text-sm font-semibold text-foreground">
+          <p className="mt-0.5 text-sm font-semibold text-popover-foreground">
             {price.kind === 'priced'
               ? formatCurrency(price.headline.amount)
               : t(MISSING_PRICE_KEY[price.reason])}
