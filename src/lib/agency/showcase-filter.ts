@@ -89,7 +89,8 @@
  */
 
 import { distanceMeters } from '@/lib/geo/geo-distance';
-import { readGeoFilter, type ListingGeoFilter } from '@/lib/listings/listing-filters';
+import { readGeoFilter } from '@/lib/listings/listing-filters';
+import type { GeoCircle } from '@/types/geo/coordinates';
 import type { PublicShowcase } from '@/types/agency-profile';
 import type { EscoBilingualText } from '@/types/contacts/esco-types';
 
@@ -121,8 +122,8 @@ export const ALL_OCCUPATIONS = 'all' as const;
 export interface ShowcaseFilters {
   /** ESCO URI, ή `null` = **ΟΛΕΣ**. Το sentinel `'all'` δεν φτάνει ποτέ εδώ. */
   readonly occupation: string | null;
-  /** `null` = **όπου να 'ναι**. Ίδιο σχήμα με το `ListingFilters.near`. */
-  readonly near: ListingGeoFilter | null;
+  /** `null` = **όπου να 'ναι**. Ο ΙΔΙΟΣ {@link GeoCircle} με το `ListingFilters.near`. */
+  readonly near: GeoCircle | null;
 }
 
 /** Η **προεπιλογή είναι «όλα»** — Φ2, ρητά και σε ένα σημείο. */
