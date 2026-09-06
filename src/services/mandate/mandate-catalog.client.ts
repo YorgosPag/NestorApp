@@ -22,6 +22,13 @@ import {
 } from '@/lib/mandate/mandate-actions';
 import type { MandateActionOutcome } from '@/services/mandate/mandate-actions.service';
 import type { MandateCatalog } from '@/services/mandate/mandate-catalog.service';
+// 🔑 **Ο τύπος και ο κριτής από το ΕΝΑ λεξιλόγιο** — ποτέ `import` από `route.ts`
+//    *(θα έσερνε τον διακομιστή στο bundle του πελάτη)* και ποτέ σκέτο `'missing'`.
+import {
+  isMandateMissingBody,
+  MANDATE_MISSING,
+  type MandateDetailResponse,
+} from '@/lib/mandate/mandate-detail-outcome';
 
 const logger = createModuleLogger('mandate-catalog.client');
 
@@ -31,6 +38,55 @@ const CATALOG_URL = '/api/owner-properties/brokered';
 export type CatalogLoad =
   | { readonly kind: 'ready'; readonly catalog: MandateCatalog }
   | { readonly kind: 'failed'; readonly message: string };
+
+/**
+ * Τι έγινε με την ανάγνωση **μιας** εντολής (ADR-841 §7 Α18.12).
+ *
+ * 🔑 **Οι τρεις εκβάσεις του διακομιστή ΣΥΝ μία δική μας** (`failed` = το δίκτυο).
+ * Η οθόνη έχει λέξεις και για τις τέσσερις, και **καμία δεν φοράει τη στολή άλλης** —
+ * *«δεν υπάρχει»* ≠ *«υπάρχει χωρίς εντολή»* ≠ *«δεν σε ακούσαμε»*.
+ */
+export type DetailLoad =
+  | MandateDetailResponse
+  | { readonly kind: 'failed'; readonly message: string };
+
+/**
+ * **Φέρε ΜΙΑ εντολή** (ADR-841 §7 Α18.12) — ο προορισμός της ειδοποίησης.
+ *
+ * 🔑 **Ίδια βάση διεύθυνσης** ({@link CATALOG_URL}), γιατί είναι **η ίδια πόρτα με άλλο
+ * ρήμα**: ο γονέας απαριθμεί, το παιδί δείχνει μία. Δεύτερη σταθερά εδώ θα ήταν δεύτερος
+ * τόπος που πρέπει να συμφωνεί με τη δρομολόγηση.
+ *
+ * ⚠️ **Το `404` ΔΕΝ είναι αποτυχία δικτύου, και γι' αυτό διαβάζεται ξεχωριστά.** Ο
+ * `apiClient` πετά σε κάθε μη-2xx· χωρίς αυτή τη μετάφραση, ο άνθρωπος που άνοιξε παλιό
+ * σύνδεσμο θα διάβαζε *«ελέγξτε τη σύνδεσή σας»* για εντολή που **απλώς δεν υπάρχει**.
+ * Είναι **ακριβώς** το ελάττωμα που πλήρωσε ο γείτονας {@link rejectionOf} (ADR-834 §6.5.ε).
+ *
+ * 🔴 **Η ΑΝΥΠΑΡΞΙΑ ΤΑΞΙΔΕΥΕΙ ΩΣ ΑΠΑΝΤΗΣΗ, ΟΧΙ ΩΣ ΣΦΑΛΜΑ**: επιστρέφει
+ * `{ kind: 'missing' }` — την **ίδια** τιμή που θα έστελνε ο διακομιστής σε σώμα 200 —
+ * ώστε η οθόνη να έχει **έναν** τρόπο να ρωτήσει *«τι βρήκες;»*.
+ */
+export async function fetchMandateDetail(ownerPropertyId: string): Promise<DetailLoad> {
+  try {
+    return await apiClient.get<MandateDetailResponse>(
+      `${CATALOG_URL}/${encodeURIComponent(ownerPropertyId)}`,
+    );
+  } catch (cause) {
+    // ⚠️ **Ο κριτής είναι ο ΕΝΑΣ** ({@link apiErrorBodyOf} — ρωτά `isApiClientError`),
+    //    ποτέ δομικό cast πάνω στο throwable: εκείνο πιάνει **οποιοδήποτε** σφάλμα με
+    //    πεδίο `data` και ήταν η ρίζα του ADR-834 §6.5.ε.
+    // 🔴 **Η ΑΝΥΠΑΡΞΙΑ ΑΝΑΓΝΩΡΙΖΕΤΑΙ ΑΠΟ ΤΟ ΣΩΜΑ, ΟΧΙ ΑΠΟ ΤΟΝ ΚΩΔΙΚΑ.** Το
+    //    `apiErrorBodyOf` επιστρέφει **σώμα**, όχι status *(μετρημένο:
+    //    `api-client-types.ts:249`)* — και το σώμα είναι ήδη η **τελική** απάντηση
+    //    (`{ kind: 'missing' }`), την ίδια που θα έστελνε ένα 200. Άρα δεν χρειάζεται
+    //    δεύτερος δείκτης, και η οθόνη έχει **έναν** τρόπο να ρωτήσει «τι βρήκες;».
+    if (isMandateMissingBody(apiErrorBodyOf(cause))) return { kind: MANDATE_MISSING };
+
+    const message = cause instanceof Error ? cause.message : String(cause);
+    logger.error('Η εντολή δεν φορτώθηκε', { data: { ownerPropertyId }, error: message });
+    return { kind: 'failed', message };
+  }
+}
 
 /** **Φέρε τον κατάλογο.** Η εμβέλεια είναι το γραφείο του συνδεδεμένου, πάντα. */
 export async function fetchMandateCatalog(): Promise<CatalogLoad> {

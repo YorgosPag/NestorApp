@@ -50,14 +50,15 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { createModuleLogger } from '@/lib/telemetry';
+import { MANDATE_STANDINGS, type MandateStanding } from '@/lib/mandate/mandate-standing';
+// 🔑 **Ο κατασκευαστής της γραμμής ΕΞΗΧΘΗ** (ADR-841 §7 Α18.12.ζ E1): τον ζητά πλέον
+//    και η οθόνη **της μίας** εντολής. Δύο απαντήσεις στο *«τι δείχνει η γραμμή;»* θα
+//    απέκλιναν σιωπηλά — ο κατάλογος και η καρτέλα θα έλεγαν άλλη κατάσταση για την
+//    **ίδια** εντολή.
 import {
-  daysUntilExpiry,
-  groupOfStanding,
-  MANDATE_STANDINGS,
-  mandateStandingOf,
-  type MandateStanding,
-  type MandateStandingGroup,
-} from '@/lib/mandate/mandate-standing';
+  toMandateCatalogRow,
+  type MandateCatalogRow,
+} from '@/lib/mandate/mandate-catalog-row';
 import {
   clientNameFrom,
   CLIENT_NAME_IS_MISSING,
@@ -66,12 +67,14 @@ import {
 } from '@/lib/mandate/mandate-client-name';
 import type { Contact } from '@/types/contacts/contracts';
 import { getContactDisplayName } from '@/types/contacts/helpers';
-import { isOwnerPropertyOnTheMarket, type OwnerProperty } from '@/types/owner-property';
-import type {
-  BrokeredListingMandate,
-  MandateNotifyOutcome,
-} from '@/types/owner-property-mandate';
-import { mandatesOf, notifyOutcomeOf } from '@/types/owner-property-mandate';
+import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
+import type { OwnerProperty } from '@/types/owner-property';
+import { mandatesOf } from '@/types/owner-property-mandate';
+
+// 🔑 **Επανεξαγωγή, ΟΧΙ δεύτερη δήλωση** (ADR-841 §7 Α18.12.ζ E3): οι τρεις υπάρχοντες
+//    καταναλωτές του τύπου *(η οθόνη, η γραμμή, η άγκυρα)* συνεχίζουν να τον ζητούν από
+//    εδώ — καμία αλλαγή σε αυτούς, και **ένας** ορισμός.
+export type { MandateCatalogRow };
 
 const logger = createModuleLogger('mandate-catalog.service');
 
@@ -84,42 +87,6 @@ const logger = createModuleLogger('mandate-catalog.service');
  * απόκριση — και **αναφέρεται** στο σώμα ({@link MandateCatalog.truncated}).
  */
 export const MANDATE_CATALOG_CAP = 500;
-
-/** Μία γραμμή του καταλόγου — ό,τι χρειάζεται η οθόνη, τίποτα παραπάνω. */
-export interface MandateCatalogRow {
-  readonly ownerPropertyId: string;
-  readonly listingTitle: string;
-  /**
-   * Το όνομα του πελάτη — ή **ποια από τις δύο άγνοιες** ισχύει (ADR-834 §6.5.δ).
-   *
-   * 🔴 **Ήταν `string | null`, και το `null` κουβαλούσε ΔΥΟ κόσμους**: «η επαφή
-   * διαγράφηκε» και «η επαφή υπάρχει χωρίς όνομα». Η οθόνη τύπωνε *«Η επαφή δεν
-   * βρέθηκε»* και για τα δύο — δηλαδή έστελνε τον μεσίτη να ψάξει διαγραμμένη επαφή
-   * που **δεν** διαγράφηκε. Δες {@link MandateClientName} για τις δύο θεραπείες.
-   */
-  readonly clientName: MandateClientName;
-  readonly clientContactId: string;
-  readonly standing: MandateStanding;
-  readonly group: MandateStandingGroup;
-  /** `null` όταν έχει ήδη λήξει ή η λήξη δεν διαβάζεται — η κατάσταση το λέει. */
-  readonly daysLeft: number | null;
-  readonly expiresAt: string;
-  readonly notifiedAt: string | null;
-  /**
-   * 🔴 **ΓΙΑΤΙ ΔΕΝ ΕΦΤΑΣΕ ΤΟ ΜΗΝΥΜΑ** — `null` = καμία καταγεγραμμένη απόπειρα.
-   *
-   * Ταξιδεύει **δίπλα** στο {@link notifiedAt} και ποτέ αντί για αυτό: εκείνο απαντά
-   * *«πότε»*, αυτό *«πώς πήγε»*. Χωρίς αυτό, η γραμμή «Δεν στάλθηκε ποτέ» έπρεπε να
-   * **μαντέψει** την αιτία από ένα bit (ADR-834 §6.5.δ).
-   */
-  readonly notifyOutcome: MandateNotifyOutcome | null;
-  readonly viewedAt: string | null;
-  readonly decidedAt: string | null;
-  /** `owner-consent` ⇄ `agency-attestation` — **η προέλευση, ποτέ κρυμμένη**. */
-  readonly proofVia: BrokeredListingMandate['proof']['via'];
-  /** Είναι **αυτή τη στιγμή** ορατή στον κόσμο; Παράγωγο, όχι δεύτερος κριτής. */
-  readonly onTheMarket: boolean;
-}
 
 /** Ό,τι επιστρέφει ο κατάλογος, **μαζί με τη λογιστική του**. */
 export interface MandateCatalog {
@@ -165,8 +132,16 @@ const URGENCY_RANK = new Map<MandateStanding, number>(
  * απουσία και τύπωνε *«Η επαφή δεν βρέθηκε»* για επαφή που **βρέθηκε**. Πλέον ο
  * χάρτης κρατά **ονομασμένη κατάσταση** για κάθε ταυτότητα που ζητήθηκε — η άγνοια
  * **ταξιδεύει**, δεν εξαφανίζεται.
+ *
+ * 🔑 **ΕΞΑΓΕΤΑΙ ΑΠΟ 2026-09-05** (ADR-841 §7 Α18.12): το ίδιο ερώτημα — *«πώς λέγεται ο
+ * πελάτης αυτής της εντολής, και αν όχι, ΠΟΙΑ άγνοια;»* — το κάνει και η ανάγνωση **της
+ * μίας** ({@link ../mandate/mandate-detail.service}). Δεύτερη υλοποίηση θα ξαναγεννούσε
+ * ακριβώς το ελάττωμα του §6.5.δ: το `continue` που ισοπέδωνε δύο κόσμους σε έναν.
+ *
+ * ⚠️ **Η ομαδική ανάγνωση ΔΕΝ είναι υπερβολή για έναν**: το `getAll` με μία αναφορά
+ * είναι ένα ταξίδι — ίδιο κόστος με `.doc().get()`, και **ένας** κριτής.
  */
-async function readClientNames(
+export async function readClientNames(
   adminDb: AdminFirestore,
   contactIds: readonly string[],
 ): Promise<Map<string, MandateClientName>> {
@@ -264,57 +239,15 @@ async function readOfficeMandates(
 
   const properties = snapshot.docs
     .slice(0, MANDATE_CATALOG_CAP)
-    .map((doc) => ({ ...(doc.data() as OwnerProperty), id: doc.id }))
+    // 🔴 **ΤΟ ΣΥΝΟΡΟ** (ADR-842 §7.6.12) — η ταυτότητα του εγγράφου νικά.
+    .map((doc) => ownerPropertyFromDocument(doc.data(), doc.id))
+    .filter((property): property is OwnerProperty => property !== null)
     // ⚠️ Το φίλτρο είναι **απαραίτητο, όχι αμυντικό**: το `authorCompanyId` υπάρχει και
     // σε αγγελίες που δεν είναι εντολές (θα ήταν `null` για ιδιώτη, αλλά ένα μελλοντικό
     // εταιρικό `self` θα περνούσε). Ο κατάλογος μιλά **μόνο** για εντολές.
     .filter((property) => mandatesOf(property).length > 0);
 
   return { properties, truncated };
-}
-
-/** **Μία γραμμή** — η σύνθεση, χωρίς καμία απόφαση δικής της. */
-function toCatalogRow(
-  property: OwnerProperty,
-  clientNames: ReadonlyMap<string, MandateClientName>,
-  nowISOValue: string,
-): MandateCatalogRow {
-  // ⚠️ **Η ΠΡΩΤΗ εντολή του καταλόγου, και ο κατάλογος είναι ΤΟΥ ΓΡΑΦΕΙΟΥ** — το
-  //    ερώτημα φιλτράρει ήδη σε `authorCompanyId`, οπότε εδώ φτάνουν αγγελίες που
-  //    το γραφείο κατέγραψε. Το `as` έφυγε: ο τύπος είναι πλέον σωστός εξ αρχής.
-  const mandate = mandatesOf(property)[0];
-  if (mandate === undefined) return null;
-  const standing = mandateStandingOf(mandate, nowISOValue);
-
-  return {
-    ownerPropertyId: property.id,
-    listingTitle: property.title,
-    // ⚠️ **Το `??` ΔΕΝ είναι σιωπηλή προεπιλογή**: ο χάρτης γεμίζει από `getAll`, που
-    //    επιστρέφει στιγμιότυπο για **κάθε** ταυτότητα που ζητήθηκε — άρα η μόνη
-    //    διαδρομή που φτάνει εδώ χωρίς εγγραφή είναι ταυτότητα που **δεν ζητήθηκε
-    //    καθόλου**, και για εκείνη «δεν βρέθηκε επαφή» είναι **η ίδια** απάντηση.
-    clientName: clientNames.get(mandate.clientContactId) ?? CLIENT_NAME_IS_MISSING,
-    clientContactId: mandate.clientContactId,
-    standing,
-    group: groupOfStanding(standing),
-    daysLeft: daysUntilExpiry(mandate, nowISOValue),
-    expiresAt: mandate.expiresAt,
-    notifiedAt: mandate.notifiedAt,
-    // 🔑 **Μέσω του SSoT αναγνώστη, ΠΟΤΕ σκέτο `mandate.notifyOutcome`**: το πεδίο
-    //    λείπει από κάθε εντολή γραμμένη πριν από το §6.5.δ, και ένα `undefined` σε
-    //    `Record` ευρετηρίαση θα τύπωνε **κενό** — η άγνοια θα ξαναγινόταν αόρατη.
-    notifyOutcome: notifyOutcomeOf(mandate),
-    viewedAt: mandate.viewedAt,
-    decidedAt: mandate.decidedAt,
-    proofVia: mandate.proof.via,
-    // 🔴 **Ο ΕΝΑΣ ΚΡΙΤΗΣ, ΠΟΤΕ ΔΕΥΤΕΡΟΣ.** Η πρώτη γραφή αυτού του πεδίου ήταν
-    // `lifecycle === 'listed' && confirmation === 'confirmed' && !έληξε` — δηλαδή
-    // **ξαναγραμμένος στο χέρι** ο κανόνας που ζει ήδη ολόκληρος στο
-    // {@link isOwnerPropertyOnTheMarket}. Θα «δούλευε» σήμερα και θα απέκλινε στην
-    // πρώτη αλλαγή του κύκλου ζωής, λέγοντας στο γραφείο «είναι στον χάρτη» για
-    // αγγελία που δεν είναι (ADR-749, κατά γράμμα).
-    onTheMarket: isOwnerPropertyOnTheMarket(property, nowISOValue),
-  };
 }
 
 /**
@@ -352,11 +285,20 @@ export async function readMandateCatalog(
   ]);
 
   const tally = emptyTally();
-  const rows = properties.map((property) => {
-    const row = toCatalogRow(property, clientNames, nowISOValue);
-    tally[row.standing] += 1;
-    return row;
-  });
+  // ⚠️ **Το `null` ΔΕΝ αγνοείται σιωπηλά — είναι ΑΔΥΝΑΤΟ εδώ, και λέγεται.** Το
+  //    `readOfficeMandates` φιλτράρει ήδη `mandatesOf(property).length > 0`, άρα κάθε
+  //    ακίνητο που φτάνει εδώ **έχει** εντολή. Ο τύπος όμως το επιτρέπει *(ο δεύτερος
+  //    καλών — η οθόνη της μίας εντολής — δέχεται και ακίνητα χωρίς εντολή)*, οπότε το
+  //    φιλτράρισμα είναι **η γέφυρα ανάμεσα στα δύο συμβόλαια**, όχι άμυνα.
+  //
+  // 🔴 Ως τις 2026-09-05 η υπογραφή έλεγε `: MandateCatalogRow` και το σώμα έκανε
+  //    `return null` — **σφάλμα τύπου με `strict: true`** που ζούσε στο `main`. Δες
+  //    {@link toMandateCatalogRow}.
+  const rows = properties
+    .map((property) => toMandateCatalogRow(property, clientNames, nowISOValue))
+    .filter((row): row is MandateCatalogRow => row !== null);
+
+  for (const row of rows) tally[row.standing] += 1;
 
   rows.sort(byUrgencyThenExpiry);
 
