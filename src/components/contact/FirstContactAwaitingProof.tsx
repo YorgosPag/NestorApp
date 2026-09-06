@@ -40,44 +40,39 @@ import { Button } from '@/components/ui/button';
 import { DialogFooter } from '@/components/ui/dialog';
 import { HintedField } from '@/components/ui/hinted-field';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { adoptCitizenSession } from '@/auth/citizen-session';
-import {
-  confirmGuestContact,
-  type GuestConfirmResult,
-  type OpenContactResult,
-} from '@/services/contact/first-contact.client';
-import type { FirstContactInvitationRefusal } from '@/types/first-contact-invitation';
+import type { OpenContactResult } from '@/services/contact/first-contact.client';
 
 import { ACT_KEYS, FIRST_CONTACT_NS } from './first-contact-labels';
 import { GUEST_KEYS, INVITATION_REFUSAL_KEYS } from './first-contact-guest-labels';
-
-/**
- * 🔑 **ΜΟΝΟ ο λάθος κωδικός αφήνει τον άνθρωπο να ξαναδοκιμάσει, και είναι κλειστό
- * σύνολο ΟΧΙ κατά τύχη.** Οι υπόλοιπες έξι αρνήσεις είναι **γεγονότα του κόσμου**
- * *(έληξε, εξαργυρώθηκε, αντικαταστάθηκε, κλείδωσε)*: ένα πεδίο κωδικού από κάτω τους θα
- * ήταν πρόσκληση να δοκιμάσει κάτι που **δεν μπορεί** να πετύχει.
- *
- * ⚠️ Το `code-exhausted` είναι **ρητά έξω**: εκεί οι δοκιμές τελείωσαν — άλλη μία θα
- * ήταν ψέμα.
- */
-const RETRYABLE_REFUSALS: readonly FirstContactInvitationRefusal[] = ['code-wrong'];
-
-/** Ό,τι μπορεί να πάει στραβά **χωρίς** να έχει γεννηθεί πράξη. */
-type ProofSetback =
-  | { readonly kind: 'link'; readonly reason: FirstContactInvitationRefusal }
-  | { readonly kind: 'identity' }
-  | { readonly kind: 'unavailable' }
-  | { readonly kind: 'failed' };
-
-type ProofPhase =
-  | { readonly kind: 'asking'; readonly setback: ProofSetback | null }
-  | { readonly kind: 'checking' };
+// 🔑 **Η ΛΟΓΙΚΗ ΖΕΙ ΔΙΠΛΑ, ΟΧΙ ΕΔΩ** *(ADR-844 §11.8)*: αυτό το αρχείο απαντά **μόνο**
+//    στο *«τι βλέπει ο άνθρωπος;»*.
+import {
+  actionOf,
+  useCodeProof,
+  useResendCooldown,
+  type ProofSetback,
+} from './first-contact-proof-state';
 
 export interface FirstContactAwaitingProofProps {
   readonly invitationId: string;
   /** Η απόδειξη πέρασε **και** γεννήθηκε πράξη — ο γονιός αναλαμβάνει την ανακοίνωση. */
   readonly onProven: (result: OpenContactResult) => void;
   readonly onCancel: () => void;
+  /**
+   * 🔴 **ΤΟ ΚΟΥΜΠΙ ΠΟΥ ΕΛΕΙΠΕ — ΚΑΙ Η ΠΡΑΞΗ ΤΟΥ ΑΝΗΚΕΙ ΣΤΟΝ ΓΟΝΙΟ, ΟΧΙ ΕΔΩ.**
+   *
+   * Αυτή η οθόνη ξέρει **μόνο** ένα `invitationId`. Η νέα πρόσκληση χρειάζεται
+   * ολόκληρη τη **δήλωση** *(όνομα, email, τηλέφωνο, στόχο, ζήτηση)*, που ζει στον
+   * διάλογο. Αν την ξανάχτιζε εδώ, θα ήταν **δεύτερη κατασκευή** του ίδιου σώματος —
+   * ακριβώς αυτό που ο διάλογος αποφεύγει ρητά *(«δύο χωριστές κατασκευές θα
+   * απέκλιναν στην πρώτη προσθήκη πεδίου — σιωπηλά, γιατί το zod αφαιρεί ό,τι δεν
+   * δηλώθηκε»)*.
+   *
+   * ⇒ Εδώ ζει η **στιγμή** *(πότε επιτρέπεται)*· εκεί η **πράξη** *(τι στέλνεται)*.
+   */
+  readonly onResend: () => void;
+  /** Ο γονιός στέλνει — το κουμπί λέει «Στέλνεται…» και δεν ξαναπατιέται. */
+  readonly resending: boolean;
 }
 
 /**
@@ -90,40 +85,30 @@ export function FirstContactAwaitingProof({
   invitationId,
   onProven,
   onCancel,
+  onResend,
+  resending,
 }: FirstContactAwaitingProofProps): React.JSX.Element {
   const { t } = useTranslation([FIRST_CONTACT_NS]);
   const fieldId = React.useId();
 
   const [code, setCode] = React.useState('');
-  const [phase, setPhase] = React.useState<ProofPhase>({ kind: 'asking', setback: null });
+  // 🔑 **ΔΥΟ ΑΓΚΙΣΤΡΑ, ΔΥΟ ΕΡΩΤΗΜΑΤΑ**: *«τι απέγινε η απόδειξη;»* και *«πότε
+  //    επιτρέπεται νέος σύνδεσμος;»*. Ό,τι μένει εδώ είναι **παρουσίαση**.
+  const proof = useCodeProof(invitationId, onProven);
+  const cooldown = useResendCooldown();
 
-  const setback = phase.kind === 'asking' ? phase.setback : null;
-  const closed = setback !== null && !isRetryable(setback);
-
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
-    event.preventDefault();
-    if (code.trim() === '') return;
-
-    setPhase({ kind: 'checking' });
-    const outcome = await confirmGuestContact(invitationId, code);
-    const act = await settle(outcome);
-
-    if (act !== null) {
-      onProven(act);
-      return;
-    }
-    setPhase({ kind: 'asking', setback: setbackOf(outcome) });
-  }
+  const action = actionOf(proof.setback);
+  const busy = proof.checking || resending;
 
   return (
     // ⚠️ `noValidate`: ο κριτής είναι δικός μας, στη γλώσσα του ανθρώπου — ίδιο ιδίωμα
     //    με τη φόρμα δήλωσης, ίδιος λόγος (ο φυλλομετρητής μιλά αγγλικά).
-    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
+    <form onSubmit={(event) => void proof.submit(event, code)} noValidate className="flex flex-col gap-4">
       <p className="m-0 text-sm text-muted-foreground">{t(GUEST_KEYS.why)}</p>
 
-      {setback !== null && <SetbackNotice setback={setback} />}
+      {proof.setback !== null && <SetbackNotice setback={proof.setback} />}
 
-      {!closed && (
+      {action === 'retry-code' && (
         <HintedField
           id={`${fieldId}-code`}
           label={t(GUEST_KEYS.codeLabel)}
@@ -136,18 +121,30 @@ export function FirstContactAwaitingProof({
           inputMode="numeric"
           autoComplete="one-time-code"
           value={code}
-          disabled={phase.kind === 'checking'}
+          disabled={busy}
           onChange={setCode}
         />
       )}
 
+      {action !== 'none' && (
+        <ResendRow
+          primary={action === 'reissue'}
+          secondsLeft={cooldown.secondsLeft}
+          sending={resending}
+          onResend={() => {
+            cooldown.restart();
+            onResend();
+          }}
+        />
+      )}
+
       <DialogFooter>
-        <Button type="button" variant="ghost" onClick={onCancel} disabled={phase.kind === 'checking'}>
-          {t(closed ? ACT_KEYS.closeAfterDone : ACT_KEYS.cancel)}
+        <Button type="button" variant="ghost" onClick={onCancel} disabled={busy}>
+          {t(action === 'none' ? ACT_KEYS.closeAfterDone : ACT_KEYS.cancel)}
         </Button>
-        {!closed && (
-          <Button type="submit" disabled={phase.kind === 'checking' || code.trim() === ''}>
-            {t(phase.kind === 'checking' ? GUEST_KEYS.submitting : GUEST_KEYS.submit)}
+        {action === 'retry-code' && (
+          <Button type="submit" disabled={busy || code.trim() === ''}>
+            {t(proof.checking ? GUEST_KEYS.submitting : GUEST_KEYS.submit)}
           </Button>
         )}
       </DialogFooter>
@@ -156,55 +153,61 @@ export function FirstContactAwaitingProof({
 }
 
 /**
- * **Η πράξη, αν γεννήθηκε** — αλλιώς `null` και ο ξενιστής μένει.
+ * **«Δεν έλαβα τίποτα»** — η διέξοδος που **ΔΕΝ** περίμενε άρνηση για να εμφανιστεί.
  *
- * 🔴 **Η ΣΥΝΔΕΣΗ ΓΙΝΕΤΑΙ ΕΔΩ, ΚΑΙ ΑΝΑΜΕΝΕΤΑΙ.** Ο επόμενος πειρασμός είναι
- * fire-and-forget *(«η πράξη έγινε, τι μας νοιάζει;»)*: θα άφηνε τον άνθρωπο να δει
- * *«Δείτε τις επαφές σας»* και να πατήσει **πριν** στηθεί το cookie — δηλαδή θα τον
- * έστελνε σε **401** αμέσως μετά από επιτυχία.
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΤΟ ΧΕΙΡΟΤΕΡΟ ΑΔΙΕΞΟΔΟ ΑΥΤΗΣ ΤΗΣ ΟΘΟΝΗΣ ΔΕΝ ΕΙΧΕ ΚΑΝ ΜΗΝΥΜΑ ΣΦΑΛΜΑΤΟΣ
+ * ────────────────────────────────────────────────────────────────────────────
  *
- * ⚠️ **Και η αποτυχία της ΔΕΝ αλλάζει τίποτα**: το `adoptCitizenSession` δεν πετά ποτέ,
- * και η πράξη είναι ήδη γραμμένη. Ο άνθρωπος βλέπει «Στάλθηκε» — που είναι **αληθές**.
+ * Ο άνθρωπος του οποίου το email **δεν φτάνει ποτέ** *(τυπογραφικό στη διεύθυνση,
+ * ανεπιθύμητα, καθυστέρηση παρόχου)* δεν παίρνει **καμία** έκβαση: κάθεται μπροστά σε
+ * πεδίο κωδικού που δεν μπορεί να συμπληρώσει, με μοναδικό κουμπί το «Άκυρο». Η οθόνη
+ * δεν του είπε **τίποτα λάθος** — απλώς δεν του έδωσε **τίποτα να κάνει**. Ίδια κλάση
+ * με τη σελίδα της άρνησης, χωρίς καν κείμενο να την προδώσει.
+ *
+ * 🏆 Γι' αυτό το «Resend» των Slack/Stripe/Airbnb είναι **μόνιμο** στην οθόνη του
+ * εξαψήφιου κωδικού, όχι αποτέλεσμα σφάλματος.
+ *
+ * ⚠️ **ΕΝΑ κουμπί, δύο βάρη** *(`primary`)*: όσο η πρόσκληση **ζει** είναι δευτερεύον
+ * — η κύρια πράξη είναι ο κωδικός· όταν εκείνη **πεθάνει** γίνεται η **μόνη** πράξη
+ * και το δείχνει. Δύο σημεία απόδοσης θα ήταν δύο σημεία να ξεχαστεί το ένα.
  */
-async function settle(outcome: GuestConfirmResult): Promise<OpenContactResult | null> {
-  switch (outcome.kind) {
-    case 'opened':
-      await adoptCitizenSession(outcome.customToken);
-      return { kind: 'opened', contact: outcome.contact, created: outcome.created };
-    case 'refused':
-      return { kind: 'refused', reason: outcome.reason };
-    case 'invalid':
-      return { kind: 'invalid', violations: outcome.violations };
-    case 'failed':
-      return { kind: 'failed' };
-    case 'link-refused':
-    case 'identity-refused':
-    case 'unavailable':
-      return null;
-  }
-}
+function ResendRow({
+  primary,
+  secondsLeft,
+  sending,
+  onResend,
+}: {
+  readonly primary: boolean;
+  readonly secondsLeft: number;
+  readonly sending: boolean;
+  readonly onResend: () => void;
+}): React.JSX.Element {
+  const { t } = useTranslation([FIRST_CONTACT_NS]);
+  const waiting = secondsLeft > 0;
 
-/** Το συμπλήρωμα του {@link settle} — **εξαντλητικά**, χωρίς `default`. */
-function setbackOf(outcome: GuestConfirmResult): ProofSetback {
-  switch (outcome.kind) {
-    case 'link-refused':
-      return { kind: 'link', reason: outcome.reason };
-    case 'identity-refused':
-      return { kind: 'identity' };
-    case 'unavailable':
-      return { kind: 'unavailable' };
-    // 🔑 Οι υπόλοιπες **ανέβηκαν** στον γονιό· αν φτάσουν εδώ, κάποιος χάλασε το
-    //    {@link settle} — και το «δεν μάθαμε» είναι η μόνη τίμια απάντηση (N.12).
-    case 'opened':
-    case 'refused':
-    case 'invalid':
-    case 'failed':
-      return { kind: 'failed' };
-  }
-}
-
-function isRetryable(setback: ProofSetback): boolean {
-  return setback.kind === 'link' && RETRYABLE_REFUSALS.includes(setback.reason);
+  return (
+    <p className="m-0 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+      {t(GUEST_KEYS.resendHint)}
+      <Button
+        type="button"
+        variant={primary ? 'default' : 'ghost'}
+        size="sm"
+        disabled={sending || waiting}
+        onClick={onResend}
+      >
+        {/*
+          ⚠️ **Η αναμονή λέει ΠΟΣΟ, όχι σκέτο «περιμένετε».** Ανενεργό κουμπί χωρίς
+             αριθμό διαβάζεται ως **χαλασμένο**: ο άνθρωπος το πατά ξανά και ξανά και
+             συμπεραίνει ότι η οθόνη τον αγνοεί. Ο μετρητής μετατρέπει την άρνηση σε
+             **υπόσχεση** — πρότυπο κάθε οθόνης κωδικού.
+        */}
+        {sending && t(GUEST_KEYS.resending)}
+        {!sending && waiting && t(GUEST_KEYS.resendWait, { seconds: secondsLeft })}
+        {!sending && !waiting && t(GUEST_KEYS.resend)}
+      </Button>
+    </p>
+  );
 }
 
 /**

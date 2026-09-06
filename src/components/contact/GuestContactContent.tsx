@@ -49,8 +49,10 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { Link } from '@/lib/workspace/navigation';
 import { AUTH_ROUTES } from '@/lib/routes/authRoutes';
+import { firstContactTargetHref } from '@/lib/contact/first-contact-target-href';
+import { searchLandingHref } from '@/lib/listings/listing-routes';
 
-import type { GuestContactLinkView } from './guest-contact-view';
+import type { GuestContactLinkView, GuestContactSetback } from './guest-contact-view';
 import { ACT_KEYS, FIRST_CONTACT_NS, MY_CONTACTS_ROUTE } from './first-contact-labels';
 import { GUEST_KEYS, INVITATION_REFUSAL_KEYS, LINK_KEYS } from './first-contact-guest-labels';
 import { InvalidBody, RefusedBody } from './FirstContactOutcomeNotice';
@@ -106,6 +108,14 @@ export function GuestContactContent({
         <>
           <h1 className="m-0 text-xl font-semibold">{t(LINK_KEYS.refusedTitle)}</h1>
           <SetbackBody view={view} />
+          {/*
+            🔴 **Η ΔΙΕΞΟΔΟΣ ΕΙΝΑΙ ΑΔΕΛΦΟΣ ΤΟΥ ΛΟΓΟΥ, ΟΧΙ ΠΑΙΔΙ ΤΟΥ** — και είναι το
+            μόνο που κάνει τον φρουρό να δουλεύει. Μέσα στο {@link SetbackBody} θα
+            έπρεπε να γραφτεί **πέντε** φορές, μία ανά σκέλος του `switch`, και ο
+            **έκτος** συγγραφέας θα την ξεχνούσε — ακριβώς όπως ξεχάστηκε την πρώτη
+            φορά. Εδώ έξω, **καμία** άρνηση δεν μπορεί να βγει χωρίς αυτήν.
+          */}
+          <SetbackExit target={view.target} />
         </>
       )}
     </section>
@@ -192,7 +202,7 @@ function SignInStatus({ phase }: { readonly phase: SignInPhase }): React.JSX.Ele
 function SetbackBody({
   view,
 }: {
-  readonly view: Exclude<GuestContactLinkView, { kind: 'done' }>;
+  readonly view: GuestContactSetback;
 }): React.JSX.Element {
   const { t } = useTranslation([FIRST_CONTACT_NS]);
 
@@ -208,4 +218,62 @@ function SetbackBody({
     case 'unavailable':
       return <p className="m-0">{t(GUEST_KEYS.writeFailed)}</p>;
   }
+}
+
+/**
+ * **Η ΕΠΟΜΕΝΗ ΚΙΝΗΣΗ** — και είναι η θεραπεία ολόκληρου του αδιεξόδου.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΤΙ ΕΛΕΓΕ Η ΟΘΟΝΗ ΠΡΙΝ, ΚΑΙ ΓΙΑΤΙ ΗΤΑΝ ΑΔΥΝΑΤΟ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * *«Ο σύνδεσμος έληξε. **Πατήστε ξανά «Πλησιάστε»** για να πάρετε νέο.»* — ειπωμένο
+ * σε άνθρωπο που στέκεται στο `/contact/<token>`, όπου **δεν υπάρχει** κουμπί
+ * «Πλησιάστε», **δεν υπάρχει** δρόμος πίσω, και ο ίδιος **δεν θυμάται ποια αγγελία
+ * ήταν** *(πέρασαν οκτώ μέρες, και ήρθε από email)*.
+ *
+ * 🏆 **Καμία πύλη ακινήτων δεν το κάνει αυτό**: Zillow · Idealista · Airbnb δίνουν
+ * **πάντα** «επιστροφή στο ακίνητο» ή «ζήτα νέο σύνδεσμο». Το πρότυπο *dead-end
+ * recovery* του NN/g το λέει κατηγορηματικά: **κάθε οθόνη σφάλματος οφείλει να
+ * προσφέρει την επόμενη κίνηση, όχι να την περιγράφει**.
+ *
+ * ⚠️ **ΓΙΑΤΙ ΔΕΝ ΞΕΧΩΡΙΖΕΙ ΑΝΑ ΛΟΓΟ ΑΡΝΗΣΗΣ** — και είναι απόφαση, όχι τεμπελιά. Ο
+ * λόγος αλλάζει το **κείμενο** *(το λέει το {@link SetbackBody})*· τη **διαδρομή**
+ * δεν την αλλάζει: και οι επτά καταλήγουν στο *«γύρνα εκεί που ήσουν και ξαναζήτα»*,
+ * γιατί η σελίδα **δεν έχει** τη φόρμα για να ξαναστείλει μόνη της. Ένας πίνακας
+ * διεξόδων ανά λόγο θα ήταν επτά γραμμές με **την ίδια** τιμή.
+ *
+ * ⛔ **Ο `professional` ΠΕΦΤΕΙ ΣΤΗ ΓΕΝΙΚΗ, ΚΑΙ ΔΕΝ ΕΙΝΑΙ ΑΒΛΕΨΙΑ** *(ADR-844 §7.1)*:
+ * κρατά `agencyCompanyId`, η βιτρίνα ζει σε `alias`. Ένα μαντεμένο
+ * `/pro/${agencyCompanyId}` θα ήταν **404** — αδιέξοδο με κουμπί, δηλαδή χειρότερο
+ * από αδιέξοδο χωρίς.
+ */
+function SetbackExit({
+  target,
+}: {
+  readonly target: GuestContactSetback['target'];
+}): React.JSX.Element {
+  const { t } = useTranslation([FIRST_CONTACT_NS]);
+  const href = target === null ? null : firstContactTargetHref(target);
+
+  // ⚠️ **Δύο ξεχωριστά `<Link>`, ΟΧΙ ένα με τερνάριο στο `href`.** Το
+  //    `listing-routes.ts` το έχει μετρήσει: το `typedHref` μέσα σε τερνάριο
+  //    **φαρδαίνει και τα δύο άκρα** σε σκέτο `string`, και το σύνορο πλοήγησης
+  //    (CHECK 3.61) χάνει τον τύπο που υπάρχει για να το φυλάει.
+  if (href === null) {
+    return (
+      <Link
+        href={searchLandingHref()}
+        className="font-medium text-foreground underline underline-offset-4"
+      >
+        {t(LINK_KEYS.backToSearch)}
+      </Link>
+    );
+  }
+
+  return (
+    <Link href={href} className="font-medium text-foreground underline underline-offset-4">
+      {t(LINK_KEYS.backToListing)}
+    </Link>
+  );
 }

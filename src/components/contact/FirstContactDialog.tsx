@@ -99,13 +99,43 @@ type ActState =
    * **έχει γραφτεί πρόσκληση** και **δεν έχει γεννηθεί πράξη**. Ο ιδιοκτήτης δεν έμαθε
    * τίποτα, και δεν θα μάθει αν ο άνθρωπος φύγει τώρα.
    */
-  | { readonly kind: 'awaiting'; readonly invitationId: string; readonly maskedEmail: string }
+  | {
+      readonly kind: 'awaiting';
+      readonly invitationId: string;
+      readonly maskedEmail: string;
+      /**
+       * ⚠️ **ΜΕΣΑ ΣΤΗΝ «ΑΝΑΜΟΝΗ», ΟΧΙ ΩΣ ΕΠΙΣΤΡΟΦΗ ΣΤΟ `sending`.** Το `sending`
+       * ζωγραφίζει τη **φόρμα** — μια επαναποστολή θα πετούσε τον άνθρωπο πίσω σε
+       * οθόνη που **έχει ήδη αφήσει**, για να τον ξαναφέρει εδώ ένα δευτερόλεπτο
+       * μετά. Η οθόνη μένει· αλλάζει **μόνο** το κουμπί.
+       */
+      readonly resending: boolean;
+    }
   | { readonly kind: 'done'; readonly result: OpenContactResult }
   /** Η πρόσκληση **δεν ζητήθηκε**. Άλλο πράγμα από «η πράξη απορρίφθηκε». */
   | { readonly kind: 'invite-refused'; readonly reason: InviteSetback };
 
 /** Τα τρία μη-επιτυχή σκέλη του {@link GuestInviteResult}, χωρίς το `sent`. */
 type InviteSetback = Exclude<GuestInviteResult['kind'], 'sent'>;
+
+/**
+ * **Έκβαση πρόσκλησης → κατάσταση οθόνης** — γραμμένη **μία** φορά.
+ *
+ * 🔑 **ΕΞΑΓΕΤΑΙ ΕΠΕΙΔΗ ΤΗΝ ΚΑΛΟΥΝ ΔΥΟ**: η **πρώτη** υποβολή και η **επαναποστολή**.
+ * Όσο ζούσε ενσωματωμένη στο `handleSubmit`, το δεύτερο σημείο θα την **αντέγραφε** —
+ * και η αντιγραφή θα ξεχνούσε το `resending: false`, αφήνοντας το κουμπί κλειδωμένο
+ * σε «Στέλνεται…» **για πάντα** μετά από κάθε επιτυχημένη επαναποστολή.
+ */
+function stateOfInvite(invite: GuestInviteResult): ActState {
+  return invite.kind === 'sent'
+    ? {
+        kind: 'awaiting',
+        invitationId: invite.invitationId,
+        maskedEmail: invite.maskedEmail,
+        resending: false,
+      }
+    : { kind: 'invite-refused', reason: invite.kind };
+}
 
 /**
  * ⚠️ **Προσυμπλήρωση από τον συνδεδεμένο, όχι εφεύρεση**: το `FirebaseAuthUser` έχει
@@ -233,12 +263,27 @@ export function FirstContactDialog({
       return;
     }
 
-    const invite = await submitGuestContact(declaration);
-    setState(
-      invite.kind === 'sent'
-        ? { kind: 'awaiting', invitationId: invite.invitationId, maskedEmail: invite.maskedEmail }
-        : { kind: 'invite-refused', reason: invite.kind },
-    );
+    setState(stateOfInvite(await submitGuestContact(declaration)));
+  }
+
+  /**
+   * **Ο άνθρωπος ζητά ΝΕΟ σύνδεσμο** — και είναι η **ίδια** υποβολή, όχι δεύτερη.
+   *
+   * 🔑 **ΞΑΝΑΣΤΕΛΝΕΙ ΤΗΝ ΙΔΙΑ ΔΗΛΩΣΗ, ΚΑΙ Η ΠΑΛΙΑ ΠΡΟΣΚΛΗΣΗ ΣΒΗΝΕΙ ΜΟΝΗ ΤΗΣ.** Ο
+   * `supersedePreviousInvitations` του διακομιστή σημειώνει την προηγούμενη ως
+   * `superseded` **μέσα** στην ίδια έκδοση — δηλαδή **μηδέν** νέα μηχανική εδώ, και
+   * **ποτέ** δύο ζωντανοί σύνδεσμοι. Ο δρόμος υπήρχε ήδη· έλειπε το **κουμπί**.
+   *
+   * ⚠️ **ΔΕΝ περνά από τον φρουρό `isChannelProven`, και σωστά**: αν το κανάλι ήταν
+   * αποδεδειγμένο, ο άνθρωπος **δεν θα ήταν** ποτέ σε αυτή την οθόνη. Ένας δεύτερος
+   * έλεγχος εδώ θα ήταν κώδικας που δεν εκτελείται — δηλαδή κώδικας που κανείς δεν
+   * μαθαίνει ότι χάλασε.
+   */
+  async function handleResend(): Promise<void> {
+    if (state.kind !== 'awaiting') return;
+
+    setState({ ...state, resending: true });
+    setState(stateOfInvite(await submitGuestContact(declarationOf(target, demandId, values))));
   }
 
   function close(): void {
@@ -272,8 +317,19 @@ export function FirstContactDialog({
       case 'awaiting':
         return (
           <FirstContactAwaitingProof
+            /**
+             * 🔴 **ΤΟ `key` ΔΕΝ ΕΙΝΑΙ ΤΥΠΙΚΟΤΗΤΑ — ΕΙΝΑΙ Η ΣΩΣΤΟΤΗΤΑ.** Νέα πρόσκληση
+             * σημαίνει ότι ο κωδικός που ίσως έχει **ήδη πληκτρολογήσει** ο άνθρωπος
+             * **έπαψε να ισχύει**, και ότι η προηγούμενη άρνηση *(«έληξε»)* μιλά για
+             * έγγραφο που **δεν υπάρχει πια**. Η αλλαγή ταυτότητας **ξαναγεννά** την
+             * οθόνη: άδειο πεδίο, καμία άρνηση, νέα αναμονή. Χωρίς αυτό, η οθόνη θα
+             * κρατούσε κατάσταση **ξένης** πρόσκλησης — σιωπηλά.
+             */
+            key={state.invitationId}
             invitationId={state.invitationId}
+            resending={state.resending}
             onProven={(result) => setState({ kind: 'done', result })}
+            onResend={() => void handleResend()}
             onCancel={close}
           />
         );

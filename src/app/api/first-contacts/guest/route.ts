@@ -45,7 +45,7 @@ import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { sendReplyViaMailgun } from '@/services/ai-pipeline/shared/mailgun-sender';
 import { normaliseChannelEmail } from '@/lib/contact/channel-email';
-import { listingDetailHref } from '@/lib/listings/listing-routes';
+import { firstContactTargetHref } from '@/lib/contact/first-contact-target-href';
 import { issueFirstContactInvitation } from '@/services/contact/first-contact-invitation.service';
 import { buildFirstContactVerificationEmail } from '@/services/email-templates/first-contact-verification';
 import type { FirstContactTarget } from '@/types/first-contact';
@@ -107,16 +107,22 @@ function targetLabel(kind: 'listing' | 'professional'): string {
 }
 
 /**
- * **Πού στεκόταν ο άνθρωπος** — ή `null` όταν δεν υπάρχει δημόσια διεύθυνση.
+ * **Πού στεκόταν ο άνθρωπος**, σε **απόλυτη** μορφή — ή `null` όταν δεν υπάρχει.
  *
- * 🔑 **Μηδέν αναγνώσεις**: το `listingId` ζει ήδη μέσα στη δήλωση που μόλις παρέλαβε η
- * πόρτα. ⛔ Ο `professional` κρατά `agencyCompanyId` — **όχι** δημόσια διεύθυνση: η
- * βιτρίνα ζει σε `alias`, που θα απαιτούσε ανάγνωση. Δηλωμένο κενό, ποτέ μαντεψιά.
+ * 🔑 **ΤΗΝ ΕΡΩΤΗΣΗ ΤΗΝ ΑΠΑΝΤΑ ΠΛΕΟΝ ΤΟ {@link firstContactTargetHref}, ΚΑΙ ΔΕΝ ΕΙΝΑΙ
+ * ΚΑΛΛΩΠΙΣΜΟΣ.** Η **σελίδα της άρνησης** (`GuestContactContent`) ρώτησε το ίδιο
+ * πράγμα — και δύο διατυπώσεις του *«ποια είναι η δημόσια διεύθυνση αυτού του
+ * στόχου»* είναι ελεύθερες να **αποκλίνουν**: αρκεί η μία να μάθει κάποτε τη
+ * βιτρίνα του επαγγελματία και η άλλη όχι, και ο **ίδιος** άνθρωπος παίρνει κουμπί
+ * στο email και **λευκή σελίδα** στην οθόνη.
+ *
+ * ⚠️ **Ό,τι μένει εδώ είναι η ΡΙΖΑ, και σωστά**: ο παραλήπτης του email είναι **εκτός
+ * ιστότοπου** — γι' αυτόν η σχετική διεύθυνση δεν σημαίνει τίποτα. Η οθόνη, που είναι
+ * **μέσα**, δεν τη θέλει. Γνώση **περιβάλλοντος**, όχι γνώση **στόχου**.
  */
 function targetHref(target: FirstContactTarget): string | null {
-  return target.kind === 'listing'
-    ? `${publicBase()}${listingDetailHref(target.listingId)}`
-    : null;
+  const href = firstContactTargetHref(target);
+  return href === null ? null : `${publicBase()}${href}`;
 }
 
 async function guestHandler(request: NextRequest): Promise<NextResponse<GuestContactResponse>> {

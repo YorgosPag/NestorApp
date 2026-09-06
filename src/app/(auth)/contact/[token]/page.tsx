@@ -72,21 +72,30 @@ export const metadata: Metadata = {
  * ⚠️ **Ο λόγος του `identity-refused` ΠΕΦΤΕΙ ΕΔΩ, όπως και στο δίκτυο**: μιλά για
  * **εμάς** *(απενεργοποιημένος λογαριασμός, μυστικό που λείπει)*, και σε δημόσια
  * σελίδα θα επιβεβαίωνε σε τρίτον ότι η διεύθυνση **υπάρχει**.
+ *
+ * 🔴 **Ο ΣΤΟΧΟΣ ΠΕΡΝΑΕΙ, ΚΑΙ ΕΙΝΑΙ ΤΟ ΑΝΤΙΘΕΤΟ ΤΟΥ ΛΟΓΟΥ ΤΑΥΤΟΤΗΤΑΣ.** Εκείνος
+ * πέφτει επειδή μιλά για **εμάς**· αυτός περνά επειδή μιλά για **τον άνθρωπο** — και
+ * είναι η **μόνη** πληροφορία που τον βγάζει από τη σελίδα. Χωρίς αυτόν, ο άνθρωπος
+ * που άργησε οκτώ μέρες διαβάζει *«πατήστε ξανά «Πλησιάστε»»* και στέκεται σε λευκή
+ * σελίδα **χωρίς κουμπί, χωρίς δρόμο πίσω, χωρίς να θυμάται ποια αγγελία ήταν**.
+ *
+ * ⚠️ **Δεν είναι αποκάλυψη**: ο στόχος είναι δημόσια σελίδα που ο ίδιος **μόλις
+ * κοίταζε** — του τη θυμίζουμε, δεν του τη μαθαίνουμε.
  */
 function viewOf(outcome: GuestContactOutcome): GuestContactLinkView {
   switch (outcome.kind) {
     case 'contacted':
       return { kind: 'done', created: outcome.created, customToken: outcome.customToken };
     case 'link-refused':
-      return { kind: 'link-refused', reason: outcome.reason };
+      return { kind: 'link-refused', reason: outcome.reason, target: outcome.target };
     case 'contact-refused':
-      return { kind: 'contact-refused', reason: outcome.reason };
+      return { kind: 'contact-refused', reason: outcome.reason, target: outcome.target };
     case 'invalid':
-      return { kind: 'invalid', violations: outcome.violations };
+      return { kind: 'invalid', violations: outcome.violations, target: outcome.target };
     case 'identity-refused':
-      return { kind: 'identity-refused' };
+      return { kind: 'identity-refused', target: outcome.target };
     case 'unavailable':
-      return { kind: 'unavailable' };
+      return { kind: 'unavailable', target: outcome.target };
   }
 }
 
