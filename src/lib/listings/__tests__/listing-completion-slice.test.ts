@@ -24,6 +24,7 @@ import { FIELD_KEYS } from '@/constants/field-completion-weights';
 import { UNASKED_LISTING_ATTRIBUTES, type PublicListing } from '@/types/public-listing';
 
 import { listingCompletionArgs } from '../listing-completion-slice';
+import { publicListingFromDocument } from '@/lib/listings/public-listing-from-document';
 
 const AT = '2026-09-02T00:00:00.000Z';
 
@@ -182,11 +183,18 @@ describe('πιστή μετάφραση — «δεν ρωτήθηκε» γίνε
   it('🔴 το είδος περνά από την αυθεντία — μη ονομάσιμο ⇒ ΛΕΙΠΕΙ, όπως στη λογιστική', () => {
     expect(listingCompletionArgs(listing({ type: 'apartment' })).formData.type).toBe('apartment');
 
+    // 🔴 **Η ΑΥΘΕΝΤΙΑ ΜΕΤΑΚΟΜΙΣΕ ΣΤΟ ΣΥΝΟΡΟ** (ADR-842 §7.6.12 / §8 #11): οι δύο
+    //    παρακάτω ξεκινούν πλέον από **έγγραφο Firestore**, όχι από `PublicListing`
+    //    φτιαγμένο με `as` — κατάσταση που ο τύπος δεν επιτρέπει πια. Η εγγύηση είναι
+    //    ίδια, η διαδρομή είναι η παραγωγική.
+    const fromDocument = (type: unknown): PublicListing =>
+      publicListingFromDocument({ ...listing(), type }, 'ownp_δοκιμή')!;
+
     // Παλαιά ελληνική τιμή: **ονομάσιμη** μέσω της αυθεντίας ⇒ κανονικοποιείται.
-    expect(listingCompletionArgs(listing({ type: 'Αποθήκη' })).formData.type).toBe('storage');
+    expect(listingCompletionArgs(fromDocument('Αποθήκη')).formData.type).toBe('storage');
 
     // Ανώνυμη τιμή ⇒ κενό, και η μηχανή τη μετρά ως **έλλειψη**.
-    const unnamable = listing({ type: 'κάτι τυχαίο' as PublicListing['type'] });
+    const unnamable = fromDocument('κάτι τυχαίο');
     expect(listingCompletionArgs(unnamable).formData.type).toBe('');
     const entry = assessPropertyCompleteness(listingCompletionArgs(unnamable)).breakdown.find(
       (b) => b.fieldKey === 'type',

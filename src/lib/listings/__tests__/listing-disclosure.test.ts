@@ -28,6 +28,7 @@ import {
   attributeLedgerBalances,
 } from '../listing-attribute-declared';
 import { LISTING_ATTRIBUTE_GROUPS } from '../listing-attribute-groups';
+import { publicListingFromDocument } from '@/lib/listings/public-listing-from-document';
 import { MISSING_PRICE_KEY, PRICE_ROLE_KEY } from '../listing-price-keys';
 import { SHAPE_LABEL_KEY, SHAPE_MEANING_KEY, shapeMeaningKey } from '../listing-shape-keys';
 import { listingDetailHref, searchResultsHref, SEARCH_RESULTS_ROUTE } from '../listing-routes';
@@ -204,14 +205,28 @@ describe('Κ4 — τύπος που δεν έχει ετικέτα δεν μετ
     expect(isAttributeDeclared(listing({ type: 'apartment' }), 'type')).toBe(true);
   });
 
-  it('παλαιά ελληνική τιμή Firestore ⇒ δηλωμένη (ο resolver την αναγνωρίζει)', () => {
-    expect(isAttributeDeclared(listing({ type: 'Στούντιο' }), 'type')).toBe(true);
+  /**
+   * 🔴 **ΟΙ ΔΥΟ ΠΑΡΑΚΑΤΩ ΠΕΡΝΟΥΝ ΑΠΟ ΤΟ ΣΥΝΟΡΟ, ΚΑΙ ΕΙΝΑΙ ΕΝΙΣΧΥΣΗ** (ADR-842 §7.6.12 /
+   * §8 #11). Έγραφαν `listing({ type: 'Στούντιο' })` και
+   * `listing({ type: '…' as PublicListing['type'] })` — δηλαδή **κατασκεύαζαν με `as`
+   * μια κατάσταση που ο τύπος δεν επιτρέπει πια**. Η εγγύηση δεν άλλαξε· άλλαξε **ποιος
+   * τη δίνει**: η μετάφραση συμβαίνει στην ανάγνωση, μία φορά.
+   *
+   * 🔑 Και το κέρδος είναι πραγματικό: κρίνεται πλέον η **παραγωγική διαδρομή**
+   * (έγγραφο Firestore → σύνορο → κριτής) αντί για ένα αντικείμενο φτιαγμένο στο χέρι
+   * που **δεν μπορεί να υπάρξει**.
+   */
+  const fromDocument = (type: unknown): PublicListing =>
+    publicListingFromDocument({ ...listing(), type }, 'ownp_δοκιμή')!;
+
+  it('παλαιά ελληνική τιμή Firestore ⇒ δηλωμένη (το σύνορο την αναγνωρίζει)', () => {
+    expect(fromDocument('Στούντιο').type).toBe('studio');
+    expect(isAttributeDeclared(fromDocument('Στούντιο'), 'type')).toBe(true);
   });
 
   it('άγνωστη τιμή ⇒ ΜΗ δηλωμένη — αλλιώς η λογιστική θα έλεγε 4/4 με 3 γραμμές', () => {
-    expect(
-      isAttributeDeclared(listing({ type: 'κάτι που δεν υπάρχει' as PublicListing['type'] }), 'type')
-    ).toBe(false);
+    expect(fromDocument('κάτι που δεν υπάρχει').type).toBeNull();
+    expect(isAttributeDeclared(fromDocument('κάτι που δεν υπάρχει'), 'type')).toBe(false);
   });
 });
 

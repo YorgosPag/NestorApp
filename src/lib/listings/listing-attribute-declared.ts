@@ -35,7 +35,6 @@
  * (`'value-present'`) και όχι κλείσιμο πάνω στο όνομα.
  */
 
-import { normalizePropertyType } from '@/constants/property-type-aliases';
 import { isPubliclyPresentable } from '@/lib/property/attribute-provenance';
 import type { PublicListing } from '@/types/public-listing';
 
@@ -76,7 +75,9 @@ const ATTRIBUTE_DECLARED: Record<ListingAttributeKey, AttributeDeclaredRule> = {
    * **τρεις** γραμμές — το ίδιο ψέμα με τη λίστα που λέει 11 και τον χάρτη που
    * δείχνει 10 (κανόνας 27).
    */
-  type: (listing) => normalizePropertyType(listing.type) !== null,
+  // 🔑 Η κανονικοποίηση έγινε στο **σύνορο** (ADR-842 §7.6.12) — εδώ μένει η ερώτηση:
+  //    *«ξέρουμε το είδος;»*. Ήταν `normalizePropertyType(listing.type) !== null`.
+  type: (listing) => listing.type !== null,
 
   areaSqm: 'value-present',
   floor: 'value-present',

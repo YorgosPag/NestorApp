@@ -55,7 +55,6 @@
 import type { TFunction } from 'i18next';
 
 import { PROPERTY_TYPE_I18N_KEYS } from '@/constants/property-types';
-import { normalizePropertyType } from '@/constants/property-type-aliases';
 import type { ListingAttributeKey } from '@/lib/listings/listing-disclosure';
 import {
   ATTRIBUTE_VOCABULARY,
@@ -158,8 +157,11 @@ type AttributeRenderer = (t: TFunction, listing: PublicListing) => string;
 
 /** Το είδος — **ονομάσιμο** ή τίποτα (δες `isAttributeDeclared`). */
 function renderType(t: TFunction, listing: PublicListing): string {
-  const canonical = normalizePropertyType(listing.type);
-  return canonical === null ? '' : t(`properties-enums:${PROPERTY_TYPE_I18N_KEYS[canonical]}`);
+  // 🔑 Η κανονικοποίηση έγινε στο **σύνορο** (ADR-842 §7.6.12): εδώ μένει μόνο η
+  //    ερώτηση της οθόνης — *«ξέρουμε το είδος;»*.
+  return listing.type === null
+    ? ''
+    : t(`properties-enums:${PROPERTY_TYPE_I18N_KEYS[listing.type]}`);
 }
 
 /**

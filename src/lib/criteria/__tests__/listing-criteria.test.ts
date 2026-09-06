@@ -45,6 +45,7 @@ import {
   matchListingCriteria,
 } from '../listing-criteria-judge';
 import { criterionAppliesTo, readValuesAnswer } from '../listing-criterion-reading';
+import { publicListingFromDocument } from '@/lib/listings/public-listing-from-document';
 
 const AT = '2026-08-10T10:00:00.000Z';
 
@@ -316,10 +317,15 @@ describe('Σ — `set-all` στενεύει, `set-any` χαλαρώνει', () =
 
 describe('Τ — 🔴 το παλαιό ελληνικό είδος ΑΠΑΝΤΑ στο κανονικό φίλτρο', () => {
   it('«Οικόπεδο» της βάσης ταιριάζει στο φίλτρο `plot`', () => {
-    // Το `PublicListing.type` δηλώνει ρητά ότι κουβαλά παλαιές τιμές «για συμβατότητα
-    // με παλιά έγγραφα Firestore». Χωρίς κανονικοποίηση, μια τέτοια αγγελία **δεν θα
-    // απαντούσε ποτέ** στο φίλτρο — σιωπηλά.
-    const legacy = listing({ type: 'Οικόπεδο' as PublicListing['type'] });
+    // 🔴 **Η ΕΓΓΥΗΣΗ ΕΙΝΑΙ Η ΙΔΙΑ· Η ΔΙΑΔΡΟΜΗ ΕΓΙΝΕ Η ΠΡΑΓΜΑΤΙΚΗ** (ADR-842 §7.6.12 /
+    //    §8 #11). Έγραφε `listing({ type: 'Οικόπεδο' as PublicListing['type'] })` —
+    //    **κατασκεύαζε με `as`** αγγελία που ο τύπος δεν επιτρέπει πλέον. Η μετάφραση
+    //    ζει στο σύνορο ανάγνωσης, οπότε εδώ ξεκινάμε από **έγγραφο Firestore**.
+    //
+    // ⚠️ Χωρίς αυτή τη διαδρομή, μια αγγελία `'Οικόπεδο'` **δεν θα απαντούσε ποτέ** στο
+    //    φίλτρο `plot` — σιωπηλά. Αυτό ακριβώς κρίνεται εδώ, από άκρη σε άκρη.
+    const legacy = publicListingFromDocument({ ...listing(), type: 'Οικόπεδο' }, 'ownp_δοκιμή')!;
+    expect(legacy.type).toBe('plot');
     expect(readValuesAnswer(legacy, 'type')).toEqual({ state: 'declared', value: ['plot'] });
   });
 });

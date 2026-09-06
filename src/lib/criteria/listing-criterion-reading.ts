@@ -16,7 +16,7 @@
  * | «σε ποια από τις τρεις καταστάσεις είναι το σύνολο;» | `featureSetState` — ίδιο αρχείο |
  * | «είναι γη;» | `isLandProperty` — ο **ΕΝΑΣ** κριτής *(ADR-842 §7.6.11)* |
  * | «ποια είναι η τιμή;» | `getEffectivePrice` *(23 καταναλωτές)* |
- * | «ποιο κανονικό είδος είναι;» | `normalizePropertyType` |
+ * | «ποιο κανονικό είδος είναι;» | **το σύνορο ανάγνωσης** *(ADR-842 §7.6.12)* — δεν ρωτιέται πια εδώ |
  *
  * 🔴 **Ο λόγος είναι μετρημένος, όχι αισθητικός.** Ένα `listing.levels !== null` εδώ
  * θα ήταν **δεύτερος** κριτής δίπλα στον `ATTRIBUTE_DECLARED.levels`, που ελέγχει
@@ -41,7 +41,6 @@ import {
 } from '@/lib/listings/listing-attribute-declared';
 import { getEffectivePrice } from '@/lib/properties/price-resolver';
 import { isLandProperty } from '@/constants/property-classification';
-import { normalizePropertyType } from '@/constants/property-type-aliases';
 
 import {
   DECLARED_NONE,
@@ -199,18 +198,22 @@ function featureSet(key: ListingFeatureSetKey): ValuesReader {
  */
 const VALUES_READERS: Record<ValueSetCriterionKey, ValuesReader> = {
   /**
-   * 🔑 **ΚΑΝΟΝΙΚΟΠΟΙΕΙΤΑΙ ΠΡΙΝ ΣΥΓΚΡΙΘΕΙ** — και αυτό είναι διόρθωση, όχι
-   * διακόσμηση. Το `PublicListing.type` δηλώνει ρητά ότι κουβαλά και **παλαιές
-   * ελληνικές** τιμές *(«για συμβατότητα με παλιά έγγραφα Firestore»)*, ενώ το
-   * φίλτρο ρωτά με **κανονικά** ονόματα. Χωρίς κανονικοποίηση, μια αγγελία
-   * `'Οικόπεδο'` **δεν θα απαντούσε ποτέ** στο φίλτρο `plot` — σιωπηλά.
+   * 🔴 **Η ΚΑΝΟΝΙΚΟΠΟΙΗΣΗ ΜΕΤΑΚΟΜΙΣΕ ΣΤΟ ΣΥΝΟΡΟ** (ADR-842 §7.6.12 / §8 #11). Εδώ
+   * έγραφε `normalizePropertyType(l.type) ?? l.type`, με αιτιολογία *«το
+   * `PublicListing.type` δηλώνει ρητά ότι κουβαλά και παλαιές ελληνικές τιμές»* — που
+   * **έπαψε να ισχύει** 2026-09-06: με τη φάση contract ο τύπος είναι
+   * `PropertyTypeCanonical | null` και μεταφράζεται **μία φορά**, στην ανάγνωση.
    *
-   * ⚠️ **Μη αναγνωρίσιμη τιμή ταξιδεύει ΑΥΤΟΥΣΙΑ, ποτέ ως `never-asked`.** Ο κάτοχος
-   * **δήλωσε** κάτι· η αδυναμία μας να το διαβάσουμε δεν είναι σιωπή του. Ταιριάζει
-   * μόνο σε φίλτρο που ζητά ακριβώς αυτό — δηλαδή σε κανένα, όσο τα φίλτρα
-   * περιορίζονται στο κλειστό λεξιλόγιο.
+   * 🔑 **Η βλάβη που το γέννησε μένει κλεισμένη**: μια αγγελία γραμμένη `'Οικόπεδο'`
+   * εξακολουθεί να απαντά στο φίλτρο `plot` — απλώς έχει ήδη γίνει `plot` πριν φτάσει
+   * εδώ, αντί να ελπίζει ότι **αυτός** ο αναγνώστης θα το θυμηθεί.
+   *
+   * ⚠️ **Η μη αναγνωρίσιμη τιμή δεν «ταξιδεύει αυτούσια» πια — δεν ΦΤΑΝΕΙ**: το σύνορο
+   * τη μετατρέπει σε `null` (με καταγραφή), και η πύλη δημοσίευσης αρνείται να τη
+   * δημοσιεύσει. Το `null` το πιάνει το `isAttributeDeclared` του {@link singleValue}
+   * και δίνει `never-asked` — που είναι πλέον **αληθές**: δεν ξέρουμε τι δήλωσε.
    */
-  type: singleValue('type', (l) => normalizePropertyType(l.type) ?? l.type),
+  type: singleValue('type', (l) => l.type),
   energyClass: singleValue('energyClass', (l) => l.energyClass),
   condition: singleValue('condition', (l) => l.condition),
   heatingType: singleValue('heatingType', (l) => l.heatingType),
