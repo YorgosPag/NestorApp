@@ -294,7 +294,21 @@ export async function dispatchNotification(request: DispatchRequest): Promise<Di
     settings,
     isMandatory: mapping.isMandatory,
     subject: title,
-    content: body ?? title,
+    // 🔴 **ΤΟ ΚΕΝΟ ΜΕΝΕΙ ΚΕΝΟ** (ADR-777 §8.54). Ήταν `body ?? title`, και η μία
+    // λέξη `??` έφτανε: **γέμιζε ένα κενό με αντίγραφο**, δηλαδή αποθήκευε στην
+    // ουρά την **εφεδρεία** αντί για την αλήθεια «αυτό το μήνυμα δεν έχει σώμα».
+    //
+    // Ζωντανή μέτρηση 2026-09-05: σύνοψη **5** ειδοποιήσεων έφτασε με **10**
+    // γραμμές — κάθε τίτλος δύο φορές. Ο σχεδιαστής ρωτούσε *«υπάρχει σώμα;»*,
+    // σωστή ερώτηση που έπαιρνε πάντα «ναι», επειδή **εδώ** είχε ήδη γραφτεί ψέμα.
+    // Και οι **4** παραγωγοί ειδοποιήσεων (`listing-match` · `interest` ·
+    // `mandate-decision` · `mandate-request`) δίνουν **μηδέν** `body` — μετρημένο.
+    //
+    // 🔑 **Η εφεδρεία δεν χάθηκε· μετακόμισε εκεί που ΡΩΤΙΕΤΑΙ.** Το «τι σώμα
+    // στέλνω σε μοναχικό email;» το απαντά ο αποστολέας (`outbound-email-flush`,
+    // {@link deliverOne}) τη στιγμή της αποστολής. Ένα πεδίο δεδομένων δεν
+    // επιτρέπεται να κουβαλά την απάντηση **άλλου** καταναλωτή.
+    content: body ?? '',
     dedupeKey,
     entityId,
     entityType: entityType as EnqueueMessageParams['entityType'],

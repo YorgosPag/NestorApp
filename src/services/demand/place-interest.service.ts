@@ -49,6 +49,7 @@ import {
   placeKnowledgeFromOwnerProperty,
   projectableFromOwnerProperty,
 } from '@/lib/owner-property/owner-property-projection';
+import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
 import type { OwnerProperty } from '@/types/owner-property';
 import type { ListingMatchFacts } from '@/lib/demand/demand-match-vocabulary';
 
@@ -126,7 +127,11 @@ async function readOwnerProperty(
   actor: { readonly uid: string; readonly companyId: string | null },
 ): Promise<ListingMatchFacts | null> {
   const snap = await db.collection(COLLECTIONS.OWNER_PROPERTIES).doc(propertyId).get();
-  const property = snap.data() as OwnerProperty | undefined;
+  // 🔴 **ΤΟ ΣΥΝΟΡΟ** (ADR-842 §7.6.12) — και εδώ η ταυτότητα δένεται **μία** φορά, όχι
+  //    ξανά στην επιστροφή: το `{ ...property, id: propertyId }` που έγραφε αυτή η
+  //    συνάρτηση ήταν το ίδιο χειροκίνητο μπάλωμα σε **έξι** από τους δεκαεννιά
+  //    καταναλωτές, και οι υπόλοιποι δεκατρείς **δεν** το θυμούνταν.
+  const property = ownerPropertyFromDocument(snap.data(), propertyId);
   // 🔴 ΗΤΑΝ `property.authorUserId !== uid` — ΤΡΙΤΗ ΕΜΦΑΝΙΣΗ ΤΟΥ §8.39 (ADR-777 §8.42).
   //
   // Η ερώτηση εδώ είναι «**επιτρέπεται σε αυτόν τον άνθρωπο**;», δηλαδή ΑΚΡΙΒΩΣ αυτή
@@ -140,10 +145,10 @@ async function readOwnerProperty(
   // κρίνει `userId === uid`, δηλαδή **ταυτόσημα** με πριν. Προστίθεται μόνο ο
   // εταιρικός κλάδος, και εκείνος απαιτεί `hasTenant` και στις δύο πλευρές — άρα
   // είναι **αυστηρότερος** από μια ωμή `===` που θα ταίριαζε δύο κενές τιμές.
-  if (property === undefined) return null;
+  if (property === null) return null;
   if (!mayAdminister(custodyOf(property), actor)) return null;
 
-  return ownerPropertyFactsOf({ ...property, id: propertyId }, nowISO());
+  return ownerPropertyFactsOf(property, nowISO());
 }
 
 /**

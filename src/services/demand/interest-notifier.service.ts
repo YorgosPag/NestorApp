@@ -47,6 +47,7 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { nowISO, todayLocalDate } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
+import { pluralize } from '@/server/comms/email-plural';
 import { NOTIFICATION_EVENT_TYPES, SOURCE_SERVICES, getCurrentEnvironment } from '@/config/notification-events';
 import { dispatchNotification } from '@/server/notifications/notification-orchestrator';
 // 🔑 **Ο ΥΠΑΡΧΩΝ helper, ποτέ χειρόγραφη διαδρομή** — κουβαλά ήδη το
@@ -66,6 +67,7 @@ import {
 } from '@/services/demand/announcement-pass';
 import { readLiveDemands } from '@/services/demand/live-demands.reader';
 import { ownerPropertyFactsOf } from './place-interest.service';
+import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
 import type { OwnerProperty } from '@/types/owner-property';
 import type { PropertyDemand } from '@/types/property-demand';
 
@@ -108,10 +110,13 @@ export async function announceInterestToOwners(
     .limit(MAX_ANNOUNCE_PROPERTIES)
     .get();
 
-  const properties = snapshot.docs.map((doc) => ({
-    ...(doc.data() as OwnerProperty),
-    id: doc.id,
-  }));
+  // 🔴 **ΤΟ ΣΥΝΟΡΟ, ΟΧΙ ΩΜΟ `as`** (ADR-842 §7.6.12): η ταυτότητα του **εγγράφου**
+  //    νικά, το είδος φτάνει **κανονικοποιημένο**, και τα `media`/`mandates` έχουν ήδη
+  //    περάσει από τα φύλλα τους. Έγγραφο που δεν είναι καν αντικείμενο **πέφτει έξω**
+  //    αντί να ταξιδέψει ως ψεύτικο ακίνητο μέσα στη μηχανή ταιριάσματος.
+  const properties = snapshot.docs
+    .map((doc) => ownerPropertyFromDocument(doc.data(), doc.id))
+    .filter((property): property is OwnerProperty => property !== null);
 
   const report = await tallyAnnouncements(properties, demands);
 
@@ -210,7 +215,24 @@ export interface PlaceAnnouncement {
  * σε κλήση 12 ορισμάτων.
  */
 const EMAIL_SUBJECT = (count: number): string =>
-  `${count} άτομα ψάχνουν ακίνητο σαν το δικό σας — ΝΕΣΤΩΡ`;
+  // 🔴 **ΗΤΑΝ `${count} άτομα ψάχνουν`** — και η οθόνη έλεγε το σωστό για το ίδιο
+  //    γεγονός (`demandInterest.notificationTitle`, ICU). Ζωντανή μέτρηση στα
+  //    εισερχόμενα του ανθρώπου 2026-09-05: **«1 άτομα ψάχνουν»**. Και δεν είναι
+  //    ακραία περίπτωση: το `ANNOUNCEMENT_BANDS` ξεκινά από **1**, άρα ήταν η
+  //    **πρώτη** ειδοποίηση κάθε ιδιοκτήτη.
+  //
+  // 🔑 **Ίδιες λέξεις και ίδιο `#` με το locale key της οθόνης**, ώστε οι δύο
+  //    διατυπώσεις να συγκρίνονται με το μάτι — και από άγκυρα. Ο κριτής
+  //    «ένας ή πολλοί;» είναι **ένας**: το CLDR.
+  //
+  // ⚠️ **Το `'el'` είναι δηλωμένο όριο, όχι παράλειψη.** Ολόκληρο το θέμα είναι
+  //    ελληνικό — ο αποδότης i18n διακομιστή παραμένει ανοιχτό κενό (ADR-777 §8.22
+  //    #2), **κοινό** και με τους τρεις άλλους παραγωγούς. Όταν κλείσει, αλλάζει
+  //    **αυτό το όρισμα**, όχι η δομή.
+  pluralize('el', count, {
+    one: '# άνθρωπος ψάχνει ακίνητο σαν το δικό σας',
+    other: '# άνθρωποι ψάχνουν ακίνητο σαν το δικό σας',
+  });
 
 /**
  * Μία ειδοποίηση.
