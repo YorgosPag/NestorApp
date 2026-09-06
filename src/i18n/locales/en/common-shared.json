@@ -761,7 +761,11 @@
   },
   "mandateDecision": {
     "confirmedTitle": "{client} approved the mandate for “{title}”",
-    "declinedTitle": "{client} declined the mandate for “{title}”"
+    "declinedTitle": "{client} declined the mandate for “{title}”",
+    "confirmedTitleUnnamed": "The mandate for \"{title}\" was approved — the client has no name on their record",
+    "declinedTitleUnnamed": "The mandate for \"{title}\" was declined — the client has no name on their record",
+    "confirmedTitleMissing": "The mandate for \"{title}\" was approved — the client contact was not found",
+    "declinedTitleMissing": "The mandate for \"{title}\" was declined — the client contact was not found"
   },
   "deepLink": {
     "title": "This link does not lead to a record",
@@ -774,5 +778,14 @@
     "acceptedTitle": "{agency} took on the listing \"{title}\"",
     "revisableTitle": "{agency} asks you to resubmit your request for \"{title}\"",
     "finalTitle": "{agency} did not take on the listing \"{title}\""
+  },
+  "quoteNotifications": {
+    "quoteScanCompleted": "Quote scan completed: {vendorName}",
+    "vendorDeclined": "Vendor {vendorName} declined RFQ {rfqTitle}",
+    "quoteSubmittedViaPortal": "New vendor quote submitted for RFQ {rfqTitle}",
+    "vendorEdited": "Vendor {vendorName} updated their quote"
+  },
+  "poNotifications": {
+    "poApproved": "PO {poNumber} has been approved"
   }
 }

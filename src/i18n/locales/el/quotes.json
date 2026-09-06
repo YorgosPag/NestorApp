@@ -174,12 +174,8 @@
       "description": "Επιλέξτε έργο και ειδικότητα. Γραμμές και στοιχεία συμπληρώνονται μετά τη δημιουργία."
     },
     "notifications": {
-      "quoteSubmittedViaPortal": "Νέα προσφορά υποβλήθηκε από προμηθευτή για το RFQ {rfqTitle}",
-      "vendorDeclined": "Ο προμηθευτής {vendorName} αρνήθηκε τη συμμετοχή στο RFQ {rfqTitle}",
-      "vendorEdited": "Ο προμηθευτής {vendorName} ενημέρωσε την προσφορά του",
       "inviteSent": "Η πρόσκληση στάλθηκε στον προμηθευτή {vendorName}",
       "inviteFailed": "Η αποστολή πρόσκλησης απέτυχε για τον προμηθευτή {vendorName}: {reason}",
-      "quoteScanCompleted": "Σάρωση προσφοράς ολοκληρώθηκε: {vendorName}",
       "vendorCreated": "Νέος προμηθευτής καταχωρήθηκε: {vendorName}"
     },
     "signatory": {
@@ -816,8 +812,12 @@
         "sending": "Αποστολή...",
         "retry": "Δοκίμασε ξανά"
       },
-      "subject": { "label": "Θέμα" },
-      "body": { "label": "Μήνυμα" },
+      "subject": {
+        "label": "Θέμα"
+      },
+      "body": {
+        "label": "Μήνυμα"
+      },
       "status": {
         "sent": "Εστάλη",
         "sending": "Σε αποστολή",
@@ -858,8 +858,12 @@
       },
       "sendButton": "Στείλε σε {count} προμηθευτές",
       "cancel": "Ακύρωση",
-      "subject": { "label": "Θέμα" },
-      "body": { "label": "Μήνυμα" },
+      "subject": {
+        "label": "Θέμα"
+      },
+      "body": {
+        "label": "Μήνυμα"
+      },
       "ccSelf": "Στείλε cc σε εμένα",
       "errors": {
         "invalidEmail": "Μη έγκυρο email"

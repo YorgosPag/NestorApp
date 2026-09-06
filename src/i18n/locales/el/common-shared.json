@@ -761,7 +761,11 @@
   },
   "mandateDecision": {
     "confirmedTitle": "Ο/Η {client} ενέκρινε την εντολή για «{title}»",
-    "declinedTitle": "Ο/Η {client} αρνήθηκε την εντολή για «{title}»"
+    "declinedTitle": "Ο/Η {client} αρνήθηκε την εντολή για «{title}»",
+    "confirmedTitleUnnamed": "Εγκρίθηκε η εντολή για «{title}» — ο πελάτης δεν έχει όνομα στην καρτέλα του",
+    "declinedTitleUnnamed": "Απορρίφθηκε η εντολή για «{title}» — ο πελάτης δεν έχει όνομα στην καρτέλα του",
+    "confirmedTitleMissing": "Εγκρίθηκε η εντολή για «{title}» — η επαφή του πελάτη δεν βρέθηκε",
+    "declinedTitleMissing": "Απορρίφθηκε η εντολή για «{title}» — η επαφή του πελάτη δεν βρέθηκε"
   },
   "deepLink": {
     "title": "Ο σύνδεσμος δεν οδηγεί σε εγγραφή",
@@ -774,5 +778,14 @@
     "acceptedTitle": "Το «{agency}» ανέλαβε την αγγελία «{title}»",
     "revisableTitle": "Το «{agency}» σας ζητά να ξαναστείλετε το αίτημα για «{title}»",
     "finalTitle": "Το «{agency}» δεν ανέλαβε την αγγελία «{title}»"
+  },
+  "quoteNotifications": {
+    "quoteScanCompleted": "Σάρωση προσφοράς ολοκληρώθηκε: {vendorName}",
+    "vendorDeclined": "Ο προμηθευτής {vendorName} αρνήθηκε τη συμμετοχή στο RFQ {rfqTitle}",
+    "quoteSubmittedViaPortal": "Νέα προσφορά υποβλήθηκε από προμηθευτή για το RFQ {rfqTitle}",
+    "vendorEdited": "Ο προμηθευτής {vendorName} ενημέρωσε την προσφορά του"
+  },
+  "poNotifications": {
+    "poApproved": "Το PO {poNumber} εγκρίθηκε"
   }
 }

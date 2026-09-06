@@ -222,7 +222,6 @@
   },
   "notifications": {
     "approvalNeeded": "PO {poNumber} requires approval",
-    "poApproved": "PO {poNumber} has been approved",
     "poOverdue": "PO {poNumber} is overdue (needed by {dateNeeded})"
   },
   "kpi": {
@@ -277,8 +276,13 @@
   "page": {
     "pageLabel": "Procurement Page",
     "loadingMessage": "Loading purchase orders...",
-    "dashboard": { "label": "Procurement Dashboard" },
-    "filters": { "desktop": "Filters", "mobile": "Filters" }
+    "dashboard": {
+      "label": "Procurement Dashboard"
+    },
+    "filters": {
+      "desktop": "Filters",
+      "mobile": "Filters"
+    }
   },
   "nav": {
     "purchaseOrders": "Purchase Orders",

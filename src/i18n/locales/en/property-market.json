@@ -410,7 +410,23 @@
         "withdraw": "The listing is off the map. The mandate is unchanged.",
         "restore": "The listing is back on the map."
       },
-      "inbox": "Incoming requests"
+      "inbox": "Incoming requests",
+      "openOne": "Open mandate",
+      "detail": {
+        "back": "← All mandates",
+        "missing": {
+          "title": "This mandate was not found",
+          "hint": "The link may be outdated, or the listing was deleted. Check your agency mandate catalogue."
+        },
+        "notMandate": {
+          "title": "This listing has no mandate",
+          "hint": "It exists and belongs to your agency, but carries no mandate — it was either revoked or never created."
+        },
+        "failed": {
+          "title": "The mandate did not load",
+          "hint": "We got no answer. Check your connection and try again."
+        }
+      }
     },
     "desktopOnly": {
       "title": "Listing a property is done on a computer",
@@ -568,6 +584,7 @@
     },
     "card": {
       "noPlace": "No stated location",
+      "typeUnknown": "Unknown type — needs correction",
       "area": "{area} sqm",
       "floor": "Floor {floor}",
       "bedrooms": "{count, plural, one {# bedroom} other {# bedrooms}}"
@@ -980,19 +997,23 @@
       "codeHint": "Six digits, in the same email.",
       "submit": "Confirm",
       "submitting": "Checking…",
+      "resendHint": "Did not get the email?",
+      "resend": "Send it again",
+      "resending": "Sending…",
+      "resendWait": "Send again in {seconds}s",
       "notSent": "We could not send the email. Try again shortly — nothing was lost.",
       "identityRefused": "We cannot complete the contact with this address. Please get in touch with us.",
-      "writeFailed": "The code was right, but the message was not written. Press ‘Reach out’ again — we will send you a new link.",
+      "writeFailed": "The code was right, but the message was not written. Ask for a new link and try again.",
       "failed": "We could not check the code. Try again shortly."
     },
     "invitation": {
       "link-invalid": "This link is not valid. Check that you copied all of it from the email.",
-      "invitation-unknown": "We could not find this invitation. Ask for a new link from the listing page.",
-      "expired": "The link has expired. Press ‘Reach out’ again to get a new one.",
+      "invitation-unknown": "We could not find this invitation. Ask for a new link.",
+      "expired": "The link has expired. Ask for a new one — your details were not lost.",
       "already-used": "Already done. Your message went out with this link — nothing else is needed.",
       "superseded": "You asked for a newer link. Look for our most recent email — this one was replaced.",
       "code-wrong": "That code is not right. Check the six digits in the email.",
-      "code-exhausted": "Too many tries and the code locked. Press ‘Reach out’ again for a new link."
+      "code-exhausted": "Too many tries and the code locked. Ask for a new link to carry on."
     },
     "link": {
       "doneTitle": "Your message is on its way",
@@ -1002,7 +1023,9 @@
       "refusedTitle": "This link did not work",
       "signingIn": "Signing you in…",
       "signInFailed": "Your message went out. We could not sign you in automatically though — sign in with your email to see your contacts.",
-      "signIn": "Sign in"
+      "signIn": "Sign in",
+      "backToListing": "Back to the listing",
+      "backToSearch": "Search properties"
     },
     "mine": {
       "title": "My contacts",
@@ -1078,6 +1101,16 @@
     "regionalAuthority": {
       "name": "Regional Unit Development Directorate",
       "abbreviation": "Reg."
+    }
+  },
+  "listing": {
+    "mediaOrder": {
+      "title": "Photo order in the public listing",
+      "help": "This is exactly the order the public sees. The first one becomes the listing image.",
+      "makeFirst": "Make it first",
+      "firstBadge": "1st in the listing",
+      "empty": "No photo is published to the listing right now. Mark a photo as \"Public\" in the list above.",
+      "saveFailed": "The order was not saved. Please try again."
     }
   }
 }

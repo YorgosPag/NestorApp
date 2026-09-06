@@ -174,12 +174,8 @@
       "description": "Select project and trade. Lines and details can be added after creation."
     },
     "notifications": {
-      "quoteSubmittedViaPortal": "New vendor quote submitted for RFQ {rfqTitle}",
-      "vendorDeclined": "Vendor {vendorName} declined RFQ {rfqTitle}",
-      "vendorEdited": "Vendor {vendorName} updated their quote",
       "inviteSent": "Invitation sent to vendor {vendorName}",
       "inviteFailed": "Invitation delivery failed for vendor {vendorName}: {reason}",
-      "quoteScanCompleted": "Quote scan completed: {vendorName}",
       "vendorCreated": "New vendor added: {vendorName}"
     },
     "signatory": {
@@ -816,8 +812,12 @@
         "sending": "Sending...",
         "retry": "Retry"
       },
-      "subject": { "label": "Subject" },
-      "body": { "label": "Message" },
+      "subject": {
+        "label": "Subject"
+      },
+      "body": {
+        "label": "Message"
+      },
       "status": {
         "sent": "Sent",
         "sending": "Sending",
@@ -858,8 +858,12 @@
       },
       "sendButton": "Send to {count} vendors",
       "cancel": "Cancel",
-      "subject": { "label": "Subject" },
-      "body": { "label": "Message" },
+      "subject": {
+        "label": "Subject"
+      },
+      "body": {
+        "label": "Message"
+      },
       "ccSelf": "Send cc to myself",
       "errors": {
         "invalidEmail": "Invalid email"
