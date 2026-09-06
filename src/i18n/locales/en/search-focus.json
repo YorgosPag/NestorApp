@@ -1,0 +1,9 @@
+{
+  "popup": {
+    "open": "View property"
+  },
+  "edge": {
+    "above": "Higher up the list",
+    "below": "Further down the list"
+  }
+}

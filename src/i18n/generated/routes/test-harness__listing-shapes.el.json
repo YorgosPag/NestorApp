@@ -86,5 +86,10 @@
       "pinPreviewTitle": "Πινέζα Προεπισκόπηση - Ακτίνα: {radius}m",
       "pinRadiusTitle": "Πινέζα - Ακτίνα: {radius}m"
     }
+  },
+  "search-focus": {
+    "popup": {
+      "open": "Δες το ακίνητο"
+    }
   }
 }

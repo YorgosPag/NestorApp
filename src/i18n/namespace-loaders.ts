@@ -50,6 +50,7 @@ function getElLoader(namespace: Namespace): NamespaceLoader | null {
     case 'properties-viewer': return () => import('./locales/el/properties-viewer.json');
     case 'search-results': return () => import('./locales/el/search-results.json');
     case 'search-filters': return () => import('./locales/el/search-filters.json');
+    case 'search-focus': return () => import('./locales/el/search-focus.json');
     case 'listing-detail': return () => import('./locales/el/listing-detail.json');
     case 'short-stay': return () => import('./locales/el/short-stay.json');
     case 'property-market': return () => import('./locales/el/property-market.json');
@@ -167,6 +168,7 @@ function getEnLoader(namespace: Namespace): NamespaceLoader | null {
     case 'properties-viewer': return () => import('./locales/en/properties-viewer.json');
     case 'search-results': return () => import('./locales/en/search-results.json');
     case 'search-filters': return () => import('./locales/en/search-filters.json');
+    case 'search-focus': return () => import('./locales/en/search-focus.json');
     case 'listing-detail': return () => import('./locales/en/listing-detail.json');
     case 'short-stay': return () => import('./locales/en/short-stay.json');
     case 'property-market': return () => import('./locales/en/property-market.json');
