@@ -19,23 +19,21 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
 import { ListingMediaOrderPanel } from '@/components/listings/ListingMediaOrderPanel';
 import { useAuth } from '@/auth/contexts/AuthContext';
+import { useCompanyDisplayName } from '@/hooks/useCompanyDisplayName';
 import { useCompanyId } from '@/hooks/useCompanyId';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { getCompanyById } from '@/services/companies.service';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 import { DEFAULT_PHOTO_ACCEPT } from '@/config/file-upload-config';
 import type { Property } from '@/types/property-viewer';
-import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
-const logger = createModuleLogger('PhotosTab');
 
 // =============================================================================
 // PROPS
@@ -75,32 +73,9 @@ export function PhotosTab({
   const currentUserId = user?.uid;
 
   // 🏢 ENTERPRISE: Fetch company name for Technical View display (ADR-031)
-  const [companyDisplayName, setCompanyDisplayName] = useState<string | undefined>(undefined);
+  // Ena hook, mia apantisi — des ti simeiwsi sto `FloorPlanTab`.
+  const companyDisplayName = useCompanyDisplayName(companyId);
 
-  useEffect(() => {
-    const fetchCompanyName = async () => {
-      if (!companyId) {
-        setCompanyDisplayName(undefined);
-        return;
-      }
-
-      try {
-        const company = await getCompanyById(companyId);
-        if (company && company.type === 'company') {
-          // 🏢 ENTERPRISE: Use companyName or tradeName as fallback
-          const displayName = company.companyName || company.tradeName || companyId;
-          setCompanyDisplayName(displayName);
-        } else {
-          setCompanyDisplayName(companyId); // Fallback to ID if company not found
-        }
-      } catch (error) {
-        logger.error('[PhotosTab] Failed to fetch company name:', { error: error });
-        setCompanyDisplayName(companyId); // Fallback to ID on error
-      }
-    };
-
-    fetchCompanyName();
-  }, [companyId]);
 
   // If no unit selected, show placeholder
   if (!selectedProperty) {
@@ -157,6 +132,7 @@ export function PhotosTab({
         propertyId={String(selectedProperty.id)}
         companyId={companyId}
         storedOrder={selectedProperty.publishedMediaOrder}
+        storedFloorplans={selectedProperty.publishedFloorplans}
       />
     </>
   );

@@ -12,11 +12,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager';
+import { ListingFloorplansPanel } from '@/components/listings/ListingFloorplansPanel';
 import { LevelTabStrip } from '@/features/property-details/components/PropertyFieldsReadOnly';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { useCompanyId } from '@/hooks/useCompanyId';
+import { useCompanyDisplayName } from '@/hooks/useCompanyDisplayName';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { getCompanyById } from '@/services/companies.service';
 import { ENTITY_TYPES, FLOORPLAN_PURPOSES } from '@/config/domain-constants';
 import { FLOORPLAN_ACCEPT } from '@/config/file-upload-config';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
@@ -24,9 +25,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 import type { Property } from '@/types/property-viewer';
-import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
-const logger = createModuleLogger('FloorPlanTab');
 
 const PropertyIcon = NAVIGATION_ENTITIES.property.icon;
 const propertyColor = NAVIGATION_ENTITIES.property.color;
@@ -46,7 +45,12 @@ export function FloorPlanTab({ selectedProperty }: FloorPlanTabProps) {
   const companyId = unitCompanyId || fallbackCompanyId;
   const currentUserId = user?.uid;
 
-  const [companyDisplayName, setCompanyDisplayName] = useState<string | undefined>(undefined);
+  // 🧹 Το «φέρε την εταιρεία, προτίμησε companyName → tradeName → id» ζει στο ΕΝΑ hook
+  // (`hooks/useCompanyDisplayName`). Ήταν αντιγραμμένο εδώ **και** στο `PhotosTab` — το
+  // CHECK 3.28 τα μέτρησε δίδυμα (8 γραμμές / 52 tokens) τη στιγμή που στάλθηκαν μαζί.
+  // ⚠️ Και το αντίγραφο ήταν **χειρότερο**: χωρίς φρουρό ακύρωσης, δηλαδή γρήγορη
+  //    εναλλαγή ακινήτου μπορούσε να γράψει το όνομα του **προηγούμενου**.
+  const companyDisplayName = useCompanyDisplayName(companyId);
 
   // Multi-level: active level selection
   const levels = selectedProperty?.levels ?? [];
@@ -63,23 +67,6 @@ export function FloorPlanTab({ selectedProperty }: FloorPlanTabProps) {
     }
   }, [selectedProperty?.id, isMultiLevel, levels.length]);
 
-  useEffect(() => {
-    const fetchCompanyName = async () => {
-      if (!companyId) { setCompanyDisplayName(undefined); return; }
-      try {
-        const company = await getCompanyById(companyId);
-        if (company && company.type === 'company') {
-          setCompanyDisplayName(company.companyName || company.tradeName || companyId);
-        } else {
-          setCompanyDisplayName(companyId);
-        }
-      } catch (error) {
-        logger.error('[FloorPlanTab] Failed to fetch company name:', { error });
-        setCompanyDisplayName(companyId);
-      }
-    };
-    fetchCompanyName();
-  }, [companyId]);
 
   if (!selectedProperty) {
     return (
@@ -127,6 +114,22 @@ export function FloorPlanTab({ selectedProperty }: FloorPlanTabProps) {
         acceptedTypes={FLOORPLAN_ACCEPT}
         companyName={companyDisplayName}
         levelFloorId={activeLevelId ?? undefined}
+      />
+
+      {/*
+        🔴 **Η ΠΡΑΞΗ ΤΗΣ ΚΑΤΟΨΗΣ** (ADR-841 §7 Α17.7 — κλείνει το Ο-21).
+
+        Μπαίνει **εδώ** επειδή εδώ ζουν οι κατόψεις του ακινήτου, και **από κάτω** επειδή
+        η ερώτηση *«ποια φεύγει στην αγγελία;»* προϋποθέτει την απάντηση *«ποιες
+        υπάρχουν;»* που δίνει ο διαχειριστής από πάνω.
+
+        ⛔ **Δεν αγγίζει τον `EntityFilesManager`**: εκείνος είναι γενικός *(έργα · κτίρια ·
+        όροφοι)* και δεν του ανήκει λεξιλόγιο αγγελίας. Είναι **αδελφός**, όχι τροποποίηση.
+      */}
+      <ListingFloorplansPanel
+        propertyId={String(selectedProperty.id)}
+        companyId={companyId}
+        storedFloorplans={selectedProperty.publishedFloorplans}
       />
     </div>
   );

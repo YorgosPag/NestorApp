@@ -79,3 +79,50 @@ describe('Π3 — ΤΟ ΟΡΙΟ ΕΙΝΑΙ ΤΟ ΥΠΑΡΧΟΝ, ΟΧΙ ΔΕΥΤ�
     expect(PropertyPatchSchema.safeParse({ publishedMediaOrder: overLimit }).success).toBe(false);
   });
 });
+
+// ============================================================================
+// Π4 — Η ΔΕΥΤΕΡΗ ΔΗΛΩΣΗ: ΟΙ ΚΑΤΟΨΕΙΣ (ADR-841 §7 Α17.7)
+// ============================================================================
+
+/**
+ * 🔴 **ΙΔΙΟ ΣΧΗΜΑ, ΜΕΓΑΛΥΤΕΡΟ ΒΑΡΟΣ.** Το `publishedMediaOrder` **δεν μπορεί** να
+ * δημοσιεύσει τίποτα· το `publishedFloorplans` **μπορεί** — είναι σκέλος συμμετοχής.
+ * Άρα η γραμμή του σχήματος δεν είναι τελετουργία: χωρίς αυτήν, το `.passthrough()` θα
+ * δεχόταν **οτιδήποτε** σε πεδίο που **βγάζει bytes στον κόσμο**.
+ */
+describe('Π4 — Η ΠΟΡΤΑ ΤΩΝ ΚΑΤΟΨΕΩΝ', () => {
+  it('🔴 πίνακας ταυτοτήτων περνά', () => {
+    expect(PropertyPatchSchema.safeParse({ publishedFloorplans: [ID] }).success).toBe(true);
+  });
+
+  it('🔴 ΚΕΝΟΣ πίνακας περνά — «καμία κάτοψη» είναι έγκυρη πράξη (ανάκληση)', () => {
+    expect(PropertyPatchSchema.safeParse({ publishedFloorplans: [] }).success).toBe(true);
+  });
+
+  it.each([
+    ['συμβολοσειρά', ID],
+    ['αριθμός', 7],
+    ['αντικείμενο', { 0: ID }],
+    ['πίνακας με κενή συμβολοσειρά', [ID, '']],
+    ['πίνακας με null', [ID, null]],
+  ])('🔴 %s ⇒ ΑΠΟΡΡΙΨΗ', (_label, value) => {
+    expect(PropertyPatchSchema.safeParse({ publishedFloorplans: value }).success).toBe(false);
+  });
+
+  it('🔴 ΤΟ ΙΔΙΟ όριο με τη σειρά — ΕΝΑ ράφι, ΕΝΑ όριο (Α17.7.5)', () => {
+    const atLimit = Array.from({ length: PUBLISHED_MEDIA_LIMIT }, (_, i) => `plan_${i}`);
+    expect(PropertyPatchSchema.safeParse({ publishedFloorplans: atLimit }).success).toBe(true);
+    expect(
+      PropertyPatchSchema.safeParse({ publishedFloorplans: [...atLimit, 'plan_extra'] }).success,
+    ).toBe(false);
+  });
+
+  it('🔴 ΚΑΙ ΟΙ ΔΥΟ ΔΗΛΩΣΕΙΣ ΜΑΖΙ περνούν — δεν αποκλείει η μία την άλλη', () => {
+    expect(
+      PropertyPatchSchema.safeParse({
+        publishedMediaOrder: [ID],
+        publishedFloorplans: [ID],
+      }).success,
+    ).toBe(true);
+  });
+});

@@ -49,6 +49,20 @@ export const PropertyPatchSchema = z.object({
     .array(z.string().min(1).max(128))
     .max(PUBLISHED_MEDIA_LIMIT)
     .optional(),
+  /**
+   * **Οι δηλωμένες κατόψεις της αγγελίας** — ταυτότητες `FileRecord.id` (ADR-841 §7 Α17.7).
+   *
+   * 🔴 **ΙΔΙΟ ΣΧΗΜΑ, ΔΙΑΦΟΡΕΤΙΚΟ ΒΑΡΟΣ**: το `publishedMediaOrder` **δεν μπορεί να
+   * δημοσιεύσει τίποτα**· αυτό **μπορεί**. Γι' αυτό η γραμμή είναι εξίσου ρητή — και ο
+   * φρουρός `classification: 'public'` παραμένει **ανέγγιχτος** στον κανόνα *(Α17.7.4)*.
+   *
+   * ⚠️ **Ίδιο άνω όριο, το ΥΠΑΡΧΟΝ**: το ράφι είναι **ένα** και το όριό του **συνολικό**
+   * *(Α17.7.5)* — δήλωση μεγαλύτερη από όσα χωρούν δεν έχει τι να δημοσιεύσει.
+   */
+  publishedFloorplans: z
+    .array(z.string().min(1).max(128))
+    .max(PUBLISHED_MEDIA_LIMIT)
+    .optional(),
   _v: z.number().int().optional(),
 }).passthrough();
 
@@ -89,6 +103,8 @@ export interface PropertyPatchPayload extends Record<string, unknown> {
   orientations?: string[];
   /** ADR-841 §7 Α14.7 — η δηλωμένη σειρά των δημόσιων φωτογραφιών της αγγελίας. */
   publishedMediaOrder?: string[];
+  /** ADR-841 §7 Α17.7 — οι δηλωμένες κατόψεις της αγγελίας. */
+  publishedFloorplans?: string[];
 }
 
 // ============================================================================
