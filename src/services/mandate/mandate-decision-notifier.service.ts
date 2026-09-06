@@ -55,15 +55,21 @@ import {
 } from '@/config/notification-events';
 import {
   clientNameFrom,
+  CLIENT_NAME_IS_MISSING,
   CLIENT_NAME_KNOWN,
+  CLIENT_NAME_MISSING,
+  CLIENT_NAME_UNNAMED,
+  withEmailAsName,
+  type MandateClientName,
 } from '@/lib/mandate/mandate-client-name';
 import { createModuleLogger } from '@/lib/telemetry';
 import { dispatchNotification } from '@/server/notifications/notification-orchestrator';
-// 🔑 **Ο ΥΠΑΡΧΩΝ helper, ποτέ χειρόγραφο `/offers/${id}`** — κουβαλά ήδη το
-//    `encodeURIComponent` και είναι το **ένα** σημείο που ξέρει τη διαδρομή.
-import { offerDetailHref } from '@/lib/owner-property/owner-property-routes';
+// 🔑 **Ο ΥΠΑΡΧΩΝ helper, ποτέ χειρόγραφο `/listings/mandates/${id}`** — κουβαλά ήδη το
+//    `encodeURIComponent` και είναι το **ένα** σημείο που ξέρει τη διαδρομή (Κ2 της
+//    `notification-destination-custody`).
+import { mandateDetailHref } from '@/lib/mandate/mandate-routes';
 import type { Contact } from '@/types/contacts/contracts';
-import { getContactDisplayName } from '@/types/contacts/helpers';
+import { getContactDisplayName, getPrimaryEmail } from '@/types/contacts/helpers';
 import type { MandateConfirmation } from '@/types/mandate';
 
 const logger = createModuleLogger('mandate-decision-notifier.service');
@@ -83,22 +89,47 @@ export interface MandateDecisionEvent {
 }
 
 /**
- * Το όνομα του πελάτη για το μήνυμα.
+ * **Πώς λέγεται ο πελάτης** — ή **ΠΟΙΑ** από τις δύο άγνοιες ισχύει (ADR-841 §7 Α18.13).
  *
- * ⚠️ Εφεδρεία **το αναγνωριστικό της επαφής**, ποτέ κενό: ένα «Ο/Η  ενέκρινε» είναι
- * χειρότερο από ένα άσχημο αναγνωριστικό — ο μεσίτης πρέπει να μπορεί να βρει ποιον
- * αφορά, ακόμη κι όταν η επαφή σβήστηκε.
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΕΔΩ ΕΓΡΑΦΕ Η ΕΙΔΟΠΟΙΗΣΗ ΕΝΑ **UUID** ΣΕ ΑΝΘΡΩΠΟ — ΜΕΤΡΗΜΕΝΟ ΖΩΝΤΑΝΑ 05/09
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * > *«Ο/Η **cont_da84f8c4-2344-4f0f-b161-d1f795d25d2f** ενέκρινε την εντολή για
+ * > «TEST-3…»»*
+ *
+ * Η γραμμή έλεγε `named.kind === KNOWN ? named.name : clientContactId` — δηλαδή ρωτούσε
+ * τον **σωστό** κριτή και μετά **πετούσε την απάντησή του**, ισοπεδώνοντας τους **τρεις**
+ * κόσμους σε δύο. Η κεφαλίδα της μάλιστα το **δικαιολογούσε** *(«εφεδρεία το
+ * αναγνωριστικό, ποτέ κενό»)* — σωστό ως προς το ότι το **κενό** είναι χειρότερο, και
+ * **λάθος** ως προς το ότι αυτές ήταν οι μόνες δύο επιλογές.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * ✅ Η ΤΡΙΤΗ ΕΠΙΛΟΓΗ ΥΠΗΡΧΕ, ΚΑΙ ΤΗΝ ΕΧΕΙ Η ΑΓΟΡΑ ΑΠΟ ΤΟ RFC 5322
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * **Η διεύθυνση ηλεκτρονικού ταχυδρομείου ΕΙΝΑΙ όνομα.** Το RFC 5322 δέχεται ρητά
+ * `mailbox` **χωρίς** `display-name`, και κάθε πελάτης — Gmail, Outlook, Apple Mail —
+ * αποδίδει τότε **τη διεύθυνση**. ⇒ {@link withEmailAsName}, που **προάγει** το
+ * `unnamed` σε `known` αντί να γεννήσει τέταρτο όνομα.
+ *
+ * ⚠️ **ΚΑΙ ΤΟ ΑΠΟΤΕΛΕΣΜΑ ΔΕΝ ΕΙΝΑΙ ΠΙΑ ΣΥΜΒΟΛΟΣΕΙΡΑ**: ο καλών χρειάζεται να **ξέρει**
+ * ποια περίπτωση ισχύει, γιατί οι τρεις παίρνουν **διαφορετική πρόταση** — όχι το ίδιο
+ * κείμενο με άλλο υποκείμενο. Ένα `string` εδώ θα ξανάκρυβε ακριβώς αυτό.
  */
 async function clientNameOf(
   adminDb: AdminFirestore,
   clientContactId: string,
-): Promise<string> {
+): Promise<MandateClientName> {
   const snapshot = await adminDb
     .collection(COLLECTIONS.CONTACTS)
     .doc(clientContactId)
     .get();
 
-  if (!snapshot.exists) return clientContactId;
+  // 🔑 **Σπασμένος δεσμός, και λέγεται.** Ο μεσίτης πρέπει να καταλάβει ότι η δουλειά
+  //    του είναι *«ξαναδέσε τον πελάτη»* — άλλη από το *«συμπλήρωσε την καρτέλα»*.
+  if (!snapshot.exists) return CLIENT_NAME_IS_MISSING;
+
   const contact = { ...(snapshot.data() as object), id: snapshot.id } as Contact;
 
   // ⚠️ Ίδια άμυνα με τον κατάλογο: το `as Contact` πέφτει σε **ωμό έγγραφο**, όπου ο
@@ -107,17 +138,86 @@ async function clientNameOf(
   // ποτέ ότι ο πελάτης απάντησε.
   //
   // 🔑 **Ο κριτής είναι ΕΝΑΣ** (ADR-834 §6.5.δ, N.0.2): το *«μετράει αυτό ως όνομα;»* το
-  //    απαντά το {@link clientNameFrom}, ο ίδιος που χρησιμοποιεί ο κατάλογος. Ήταν
-  //    γραμμένο **δύο φορές** (`typeof … && .trim() !== ''`) — ίδια ουσία, άλλο σημείο,
-  //    και η μία γραφή θα άλλαζε χωρίς την άλλη.
+  //    απαντά το {@link clientNameFrom}, ο ίδιος που χρησιμοποιεί ο κατάλογος.
   //
-  // ⚠️ **Η ΑΠΑΝΤΗΣΗ μένει διαφορετική, και είναι σωστό**: ο κατάλογος επιστρέφει
-  //    **ονομασμένη άγνοια** (η οθόνη έχει λέξεις γι' αυτήν)· εδώ χρειάζεται
-  //    **συμβολοσειρά πάντα**, γιατί μπαίνει σε σώμα email. Κοινός **κριτής**, όχι
-  //    κοινή έξοδος.
-  const named = clientNameFrom(getContactDisplayName(contact));
-  return named.kind === CLIENT_NAME_KNOWN ? named.name : clientContactId;
+  // 🔑 **Και το email μπαίνει από τον ΕΝΑ αναγνώστη** ({@link getPrimaryEmail}) — ποτέ
+  //    χειρόγραφο `emails[0].email`: εκείνος ξέρει τι σημαίνει «πρωτεύον».
+  return withEmailAsName(
+    clientNameFrom(getContactDisplayName(contact)),
+    getPrimaryEmail(contact),
+  );
 }
+
+/**
+ * **Η ΑΠΟΦΑΣΗ ΤΟΥ ΠΕΛΑΤΗ × ΤΟ ΠΩΣ ΤΟΝ ΛΕΜΕ** — έξι προτάσεις, καμία συναρμολογημένη.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΓΙΑΤΙ ΞΕΧΩΡΙΣΤΟ ΚΛΕΙΔΙ ΚΑΙ ΟΧΙ `{client}` ΜΕ ΑΛΛΗ ΤΙΜΗ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Θα ήταν μία γραμμή να μπει στο `{client}` ένα «Πελάτης χωρίς όνομα». Θα σήμαινε ότι
+ * η **άγνοια** μπαίνει στη θέση **υποκειμένου**, δηλαδή προτάσεις όπως *«Ο/Η Πελάτης
+ * χωρίς όνομα ενέκρινε…»* — και σε **κάθε άλλη γλώσσα** θα έσπαγαν αλλιώς *(γένος,
+ * πτώση, άρθρο)*. **Η άγνοια δεν είναι όνομα· είναι άλλη πρόταση.**
+ *
+ * 🔑 **`Record` δεμένο στη ρίζα του λεξιλογίου** *(ιδίωμα CHECK 3.73)*: μια τέταρτη
+ * κατάσταση ονόματος **δεν μεταγλωττίζεται** μέχρι κάποιος να αποφασίσει τι λέει στον
+ * άνθρωπο. Ένα δυναμικό ``t(`mandateDecision.${kind}Title`)`` θα «δούλευε» και θα
+ * ζωγράφιζε **ωμό κλειδί** — **αόρατο στη CHECK 3.8**, που διαβάζει κυριολεκτικά
+ * ορίσματα.
+ *
+ * ⚠️ **Χωρίς πρόθεμα namespace**: ο `NotificationDrawer` αποδίδει με
+ * `COMMON_NAMESPACES`, άρα τα κλειδιά ζουν στο `common-shared`.
+ */
+const DECISION_TITLE_KEYS: Record<
+  'confirmed' | 'declined',
+  Record<MandateClientName['kind'], string>
+> = {
+  confirmed: {
+    [CLIENT_NAME_KNOWN]: 'mandateDecision.confirmedTitle',
+    [CLIENT_NAME_UNNAMED]: 'mandateDecision.confirmedTitleUnnamed',
+    [CLIENT_NAME_MISSING]: 'mandateDecision.confirmedTitleMissing',
+  },
+  declined: {
+    [CLIENT_NAME_KNOWN]: 'mandateDecision.declinedTitle',
+    [CLIENT_NAME_UNNAMED]: 'mandateDecision.declinedTitleUnnamed',
+    [CLIENT_NAME_MISSING]: 'mandateDecision.declinedTitleMissing',
+  },
+};
+
+/**
+ * **ΤΟ ΘΕΜΑ ΤΟΥ EMAIL** — ελληνικά, στον διακομιστή, και είναι **δηλωμένο κενό**.
+ *
+ * ⚠️ Το `titleKey` είναι **η αλήθεια**· αυτό είναι το θέμα. Το έγγραφο ειδοποίησης ζει
+ * για πάντα και ο άνθρωπος μπορεί να αλλάξει γλώσσα, οπότε η **οθόνη** αποδίδει το
+ * κλειδί. Το email όμως συντίθεται **εδώ**, όπου **δεν υπάρχει** αποδότης i18n.
+ * 🔶 Ο αποδότης i18n διακομιστή είναι υπαρκτό, **ονομασμένο** κενό (ADR-777 §8.22
+ * ανοιχτό #2) — **κοινό** με τους δύο άλλους αγωγούς, όχι δικό μας.
+ *
+ * 🔑 **Ίδιες έξι προτάσεις με τον πίνακα από πάνω**, ώστε το email και η οθόνη να μην
+ * μπορούν να πουν **διαφορετικό πράγμα** για την ίδια απόφαση.
+ */
+const DECISION_EMAIL_SUBJECTS: Record<
+  'confirmed' | 'declined',
+  Record<MandateClientName['kind'], (client: string, listing: string) => string>
+> = {
+  confirmed: {
+    [CLIENT_NAME_KNOWN]: (client, listing) =>
+      `Ο/Η ${client} ενέκρινε την εντολή για «${listing}»`,
+    [CLIENT_NAME_UNNAMED]: (_client, listing) =>
+      `Εγκρίθηκε η εντολή για «${listing}» — ο πελάτης δεν έχει όνομα στην καρτέλα του`,
+    [CLIENT_NAME_MISSING]: (_client, listing) =>
+      `Εγκρίθηκε η εντολή για «${listing}» — η επαφή του πελάτη δεν βρέθηκε`,
+  },
+  declined: {
+    [CLIENT_NAME_KNOWN]: (client, listing) =>
+      `Ο/Η ${client} αρνήθηκε την εντολή για «${listing}»`,
+    [CLIENT_NAME_UNNAMED]: (_client, listing) =>
+      `Απορρίφθηκε η εντολή για «${listing}» — ο πελάτης δεν έχει όνομα στην καρτέλα του`,
+    [CLIENT_NAME_MISSING]: (_client, listing) =>
+      `Απορρίφθηκε η εντολή για «${listing}» — η επαφή του πελάτη δεν βρέθηκε`,
+  },
+};
 
 /**
  * **Ο ιδιοκτήτης απάντησε** — και το γραφείο το μαθαίνει, αν άλλαξε κάτι.
@@ -147,7 +247,11 @@ export async function announceMandateDecision(
 
   try {
     const client = await clientNameOf(adminDb, event.clientContactId);
-    const confirmed = event.next === 'confirmed';
+    // ⚠️ **Στενεύει σε κλειστό σύνολο, ΟΧΙ σε boolean**: το `event.next` μπορεί να είναι
+    //    και `pending`, αλλά ο φρουρός από πάνω το έχει ήδη αποκλείσει. Ένα `confirmed:
+    //    boolean` θα έκρυβε αυτή την εξάρτηση· έτσι ο τύπος τη **δηλώνει**.
+    const decision: 'confirmed' | 'declined' =
+      event.next === 'confirmed' ? 'confirmed' : 'declined';
 
     const result = await dispatchNotification({
       eventType: NOTIFICATION_EVENT_TYPES.PROPERTIES_MANDATE_DECIDED,
@@ -156,15 +260,19 @@ export async function announceMandateDecision(
       // ⚠️ **Το `title` είναι το ΘΕΜΑ ΤΟΥ EMAIL· το `titleKey` είναι η αλήθεια.** Το
       // email συντίθεται στον διακομιστή, όπου **δεν υπάρχει** αποδότης i18n — ίδιο
       // ιδίωμα και ίδιο δηλωμένο κενό με το §8.23 (ADR-777 §8.22 ανοιχτό #2).
-      title: confirmed
-        ? `Ο/Η ${client} ενέκρινε την εντολή για «${event.listingTitle}»`
-        : `Ο/Η ${client} αρνήθηκε την εντολή για «${event.listingTitle}»`,
-      // ⚠️ **Χωρίς πρόθεμα namespace**: ο `NotificationDrawer` αποδίδει με
-      // `COMMON_NAMESPACES`, άρα το κλειδί ζει στο `common-shared`.
-      titleKey: confirmed
-        ? 'mandateDecision.confirmedTitle'
-        : 'mandateDecision.declinedTitle',
-      titleParams: { client, title: event.listingTitle },
+      title: DECISION_EMAIL_SUBJECTS[decision][client.kind](
+        client.kind === CLIENT_NAME_KNOWN ? client.name : '',
+        event.listingTitle,
+      ),
+      titleKey: DECISION_TITLE_KEYS[decision][client.kind],
+      // 🔴 **ΤΟ `client` ΤΑΞΙΔΕΥΕΙ ΜΟΝΟ ΟΤΑΝ ΥΠΑΡΧΕΙ.** Στις δύο άγνοιες η πρόταση
+      //    **δεν έχει υποκείμενο** — και ένα κενό `{client}` θα ζωγράφιζε «Ο/Η
+      //    ενέκρινε», ακριβώς το *«χειρότερο από άσχημο αναγνωριστικό»* που η παλιά
+      //    κεφαλίδα φοβόταν σωστά.
+      titleParams:
+        client.kind === CLIENT_NAME_KNOWN
+          ? { client: client.name, title: event.listingTitle }
+          : { title: event.listingTitle },
       // 🔴 **Η ΤΑΥΤΟΤΗΤΑ ΤΟΥ ΓΕΓΟΝΟΤΟΣ ΕΙΝΑΙ Η ΜΕΤΑΒΑΣΗ, ΟΧΙ Η ΩΡΑ — και το βρήκε
       // ΑΓΚΥΡΑ, όχι σκέψη.** Η πρώτη γραφή ήταν `…:${decidedAt}` και **κοκκίνιζε δύο
       // στις τέσσερις εκτελέσεις**: δύο αποφάσεις μέσα στο **ίδιο χιλιοστό** παίρνουν
@@ -183,33 +291,38 @@ export async function announceMandateDecision(
       //    `NotificationDrawer` υπήρχε ολόκληρος· έλειπε **η τροφοδοσία**.
       //
       // ═══════════════════════════════════════════════════════════════════════════
-      // 🔴 ΑΥΤΗ Η ΓΡΑΜΜΗ ΕΓΡΑΨΕ ΠΡΩΤΑ «ΔΗΛΩΜΕΝΟ ΑΝΟΙΧΤΟ», ΚΑΙ ΗΤΑΝ ΛΑΘΟΣ (Α18.4)
+      // 🔴 ΑΥΤΗ Η ΓΡΑΜΜΗ ΑΛΛΑΞΕ **ΔΥΟ ΦΟΡΕΣ**, ΚΑΙ ΚΑΘΕ ΦΟΡΑ ΤΗΝ ΑΛΛΑΞΕ ΜΕΤΡΗΣΗ
       // ═══════════════════════════════════════════════════════════════════════════
       //
-      // Η πρώτη γραφή αρνήθηκε να δώσει διεύθυνση, με επιχείρημα που **διαβάστηκε από
-      // την κεφαλίδα αντί να μετρηθεί**: *«ο παραλήπτης είναι ο υπάλληλος του
-      // γραφείου (§8.23), και το `(me)` δίνει `read` μόνο στον `authorUserId`
-      // ⇒ ψεύτικη πόρτα»*.
+      // **(1) Ήταν ΚΕΝΗ**, με επιχείρημα διαβασμένο από κεφαλίδα αντί να μετρηθεί:
+      //     *«ο παραλήπτης είναι ο υπάλληλος του γραφείου (§8.23), και το `(me)` δίνει
+      //     `read` μόνο στον `authorUserId` ⇒ ψεύτικη πόρτα»*. **Η μέτρηση το
+      //     ανέτρεψε**, και οι δύο πλευρές είναι μονόγραμμες:
       //
-      // **Η μέτρηση το ανέτρεψε, και οι δύο πλευρές είναι μονόγραμμες:**
+      //       `mandate-consent.service.ts:348`  →  `recipientUserId: property.authorUserId`
+      //       `firestore.rules:1237`            →  `allow read: … resource.data.authorUserId == request.auth.uid`
       //
-      //   `mandate-consent.service.ts:348`  →  `recipientUserId: property.authorUserId`
-      //   `firestore.rules:1237`            →  `allow read: … resource.data.authorUserId == request.auth.uid`
+      //     ⇒ Ο παραλήπτης **ΕΙΝΑΙ** ο `authorUserId`. Η πόρτα άνοιγε **εξ ορισμού του
+      //     κανόνα**. 🔑 Η κεφαλίδα δεν έλεγε ψέματα — απαντούσε **ΑΛΛΟ ΕΡΩΤΗΜΑ**:
+      //     το «το γραφείο μαθαίνει» λέει **ποιος ενδιαφέρεται**, το `authorUserId`
+      //     λέει **ποιος κατέχει**.
       //
-      // ⇒ Ο παραλήπτης **ΕΙΝΑΙ** ο `authorUserId` του ίδιου εγγράφου που θα ανοίξει.
-      // Η πόρτα **δεν** είναι ψεύτικη· ανοίγει **εξ ορισμού του κανόνα**.
+      // **(2) Ήταν `offerDetailHref` — και ΑΝΟΙΓΕ, αλλά σε ΛΑΘΟΣ ΚΟΣΜΟ** (Α18.12).
+      //     Το `(me)/offers/<id>` είναι ο **ιδιωτικός χώρος του ιδιώτη**: ο υπάλληλος
+      //     έβλεπε την καταχώρηση *«ως συντάκτης»*, όχι μέσα στο **κέλυφος του
+      //     γραφείου** — χωρίς την κατάσταση της εντολής, χωρίς τα κουμπιά της.
       //
-      // 🔑 **Η κεφαλίδα δεν έλεγε ψέματα — απαντούσε ΑΛΛΟ ΕΡΩΤΗΜΑ.** Το «το γραφείο
-      //    μαθαίνει» περιγράφει **ποιος ενδιαφέρεται**· το `authorUserId` λέει **ποιος
-      //    κατέχει**. Εδώ ταυτίζονται, γιατί την καταχώρηση την έκανε ο **ίδιος** ο
-      //    υπάλληλος (γι' αυτό υπάρχει και `authorCompanyId`). Δύο σωστές προτάσεις,
-      //    και το συμπέρασμα προέκυψε από τη **λάθος**.
+      // 🔑 **ΚΑΙ Ο ΚΑΤΑΛΟΓΟΣ ΔΕΝ ΗΤΑΝ Η ΑΠΑΝΤΗΣΗ** *(δύο μετρήσεις, ADR-841 Α18.12.β)*:
+      //    · κόβεται στις **500** γραμμές ⇒ η **ανακοινωμένη** εντολή μπορεί να λείπει,
+      //      **σιωπηλά** — η κλάση ελαττώματος της Α18.9, χωρίς καν άρνηση·
+      //    · ταξινομείται με **επείγον**, και μια μόλις εγκεκριμένη εντολή γίνεται
+      //      `live`, **δέκατη και τελευταία** από τις δέκα καταστάσεις ⇒ ο άνθρωπος θα
+      //      προσγειωνόταν στο **κάτω μέρος** μιας οθόνης τριάζ.
       //
-      // ⚠️ **ΤΟ ΜΑΘΗΜΑ**: «ποιος επιτρέπεται;» απαντιέται **μόνο** από τον κανόνα και
-      //    το σημείο ανάθεσης του παραλήπτη — **ποτέ** από docblock, όσο ακριβής κι αν
-      //    είναι. Είναι το ίδιο σχήμα με το Α4.5.2: επιχείρημα σωστό **ως προς κάτι
-      //    άλλο**, που κρατήθηκε ως δόγμα.
-      actions: [{ id: 'view', label: 'view', url: offerDetailHref(event.ownerPropertyId) }],
+      // ⚠️ **ΤΟ ΜΑΘΗΜΑ, ΚΑΙ ΤΩΝ ΔΥΟ ΦΟΡΩΝ**: *«ανοίγει;»* και *«είναι ο σωστός
+      //    προορισμός;»* είναι **δύο** ερωτήσεις. Η πρώτη απαντιέται από τον κανόνα· η
+      //    δεύτερη **μόνο** ρωτώντας τι θέλει να **κάνει** ο άνθρωπος μετά.
+      actions: [{ id: 'view', label: 'view', url: mandateDetailHref(event.ownerPropertyId) }],
       source: {
         service: SOURCE_SERVICES.PROPERTIES,
         feature: 'mandate-decision',

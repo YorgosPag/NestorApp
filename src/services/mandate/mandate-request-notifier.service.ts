@@ -97,11 +97,11 @@ const TITLE_KEYS: Record<MandateRequestDecision, string> = {
  * ανοιχτό #2) — **κοινό** με τους δύο άλλους αγωγούς, όχι δικό μας.
  */
 const EMAIL_SUBJECTS: Record<MandateRequestDecision, (agency: string, title: string) => string> = {
-  accepted: (agency, title) => `Το «${agency}» ανέλαβε την αγγελία «${title}» — ΝΕΣΤΩΡ`,
+  accepted: (agency, title) => `Το «${agency}» ανέλαβε την αγγελία «${title}»`,
   'declined-revisable': (agency, title) =>
-    `Το «${agency}» σας ζητά να ξαναστείλετε το αίτημα για «${title}» — ΝΕΣΤΩΡ`,
+    `Το «${agency}» σας ζητά να ξαναστείλετε το αίτημα για «${title}»`,
   'declined-final': (agency, title) =>
-    `Το «${agency}» δεν ανέλαβε την αγγελία «${title}» — ΝΕΣΤΩΡ`,
+    `Το «${agency}» δεν ανέλαβε την αγγελία «${title}»`,
 };
 
 /**

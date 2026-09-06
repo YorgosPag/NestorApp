@@ -109,8 +109,8 @@ export function listingMatchReportBalances(report: ListingMatchReport): boolean 
  */
 const EMAIL_SUBJECT = (listingTitle: string): string =>
   listingTitle.length > 0
-    ? `Νέα αγγελία ταιριάζει στη ζήτησή σας: «${listingTitle}» — ΝΕΣΤΩΡ`
-    : 'Νέα αγγελία ταιριάζει στη ζήτησή σας — ΝΕΣΤΩΡ';
+    ? `Νέα αγγελία ταιριάζει στη ζήτησή σας: «${listingTitle}»`
+    : 'Νέα αγγελία ταιριάζει στη ζήτησή σας';
 
 /** Ό,τι χρειάζεται **μία** ανακοίνωση ζεύγους (ζήτηση, αγγελία). */
 interface MatchAnnouncement {
