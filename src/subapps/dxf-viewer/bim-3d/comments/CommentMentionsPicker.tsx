@@ -30,6 +30,7 @@ import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { CompanyUser } from '@/components/admin/role-management/types';
 
+import { revealInScroll } from '@/lib/a11y/reveal-in-scroll';
 interface CommentMentionsPickerProps {
   /** Filtered candidates, owned by the parent via `useMentionCandidates`. */
   readonly candidates: readonly CompanyUser[];
@@ -64,7 +65,7 @@ export function CommentMentionsPicker({
     if (option instanceof HTMLElement) {
       // Optional-call: jsdom does not implement scrollIntoView (repo convention,
       // same as the stair override sections).
-      option.scrollIntoView?.({ block: 'nearest' });
+      revealInScroll(option, { urgency: 'incidental', block: 'nearest' });
     }
   }, [activeIndex]);
 

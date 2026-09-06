@@ -35,6 +35,8 @@ import { filterOptions, resolveOptionByText } from './searchable-combobox-matchi
 // 🔑 «Ποια ΝΕΑ;» — άλλη ερώτηση, δική της κατάσταση, δικό της αρχείο.
 import { SearchableComboboxAddNew } from './searchable-combobox-add-new';
 
+import { applyRovingArrowKey } from '@/lib/a11y/roving-highlight';
+import { useRevealHighlightedOption } from '@/lib/a11y/use-reveal-highlighted-option';
 export type { ComboboxOption, SearchableComboboxProps } from './searchable-combobox-types';
 
 // ============================================================================
@@ -193,16 +195,7 @@ export function SearchableCombobox({
     setHighlightedIndex(-1);
   }, [filtered.length, query]);
 
-  // Scroll highlighted item into view
-  useEffect(() => {
-    if (highlightedIndex >= 0 && listRef.current) {
-      const items = listRef.current.querySelectorAll('[role="option"]');
-      const item = items[highlightedIndex];
-      if (item) {
-        item.scrollIntoView({ block: 'nearest' });
-      }
-    }
-  }, [highlightedIndex]);
+  useRevealHighlightedOption(listRef, highlightedIndex);
 
   // ========================================================================
   // EVENT HANDLERS
@@ -280,19 +273,9 @@ export function SearchableCombobox({
 
       if (filtered.length === 0) return;
 
+      if (applyRovingArrowKey(e, filtered.length, setHighlightedIndex)) return;
+
       switch (e.key) {
-        case 'ArrowDown':
-          e.preventDefault();
-          setHighlightedIndex((prev) =>
-            prev < filtered.length - 1 ? prev + 1 : 0,
-          );
-          break;
-        case 'ArrowUp':
-          e.preventDefault();
-          setHighlightedIndex((prev) =>
-            prev > 0 ? prev - 1 : filtered.length - 1,
-          );
-          break;
         case 'Enter':
           e.preventDefault();
           if (highlightedIndex >= 0 && highlightedIndex < filtered.length) {

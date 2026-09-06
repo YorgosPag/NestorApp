@@ -21,6 +21,8 @@ import type { ServicePreset } from '@/subapps/accounting/types';
 
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
+import { revealInScroll } from '@/lib/a11y/reveal-in-scroll';
+import { applyRovingArrowKey } from '@/lib/a11y/roving-highlight';
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -72,7 +74,7 @@ export function ServicePresetCombobox({
   useEffect(() => {
     if (highlightedIndex >= 0 && listRef.current) {
       const item = listRef.current.children[highlightedIndex] as HTMLElement | undefined;
-      item?.scrollIntoView({ block: 'nearest' });
+      revealInScroll(item, { urgency: 'incidental', block: 'nearest' });
     }
   }, [highlightedIndex]);
 
@@ -107,19 +109,9 @@ export function ServicePresetCombobox({
         return;
       }
 
+      if (applyRovingArrowKey(e, filtered.length, setHighlightedIndex)) return;
+
       switch (e.key) {
-        case 'ArrowDown':
-          e.preventDefault();
-          setHighlightedIndex((prev) =>
-            prev < filtered.length - 1 ? prev + 1 : 0,
-          );
-          break;
-        case 'ArrowUp':
-          e.preventDefault();
-          setHighlightedIndex((prev) =>
-            prev > 0 ? prev - 1 : filtered.length - 1,
-          );
-          break;
         case 'Enter':
           e.preventDefault();
           if (highlightedIndex >= 0 && highlightedIndex < filtered.length) {

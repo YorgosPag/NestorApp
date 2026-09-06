@@ -31,6 +31,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import '@/lib/design-system';
 
+import { revealInScroll } from '@/lib/a11y/reveal-in-scroll';
+import { nextRovingIndex } from '@/lib/a11y/roving-highlight';
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -169,23 +171,15 @@ export const EnterpriseContactDropdown: React.FC<EnterpriseContactDropdownProps>
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (searchResults.length === 0) return;
 
-    if (e.key === 'ArrowDown') {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault();
+      const direction = e.key === 'ArrowDown' ? 'next' : 'previous';
       setHighlightedIndex(prev => {
-        const newIndex = prev < searchResults.length - 1 ? prev + 1 : 0;
+        const newIndex = nextRovingIndex(prev, searchResults.length, direction);
+        // ⚠️ `setTimeout(…, 0)`: το στοιχείο-στόχος αποδίδεται **μετά** τον χειριστή.
         setTimeout(() => {
           const element = resultsRef.current?.querySelector(`[data-contact-index="${newIndex}"]`);
-          element?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-        }, 0);
-        return newIndex;
-      });
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setHighlightedIndex(prev => {
-        const newIndex = prev > 0 ? prev - 1 : searchResults.length - 1;
-        setTimeout(() => {
-          const element = resultsRef.current?.querySelector(`[data-contact-index="${newIndex}"]`);
-          element?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+          revealInScroll(element, { urgency: 'incidental', block: 'nearest' });
         }, 0);
         return newIndex;
       });

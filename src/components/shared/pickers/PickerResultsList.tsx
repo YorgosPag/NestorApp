@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { PenLine } from 'lucide-react';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
+import { useRevealHighlightedOption } from '@/lib/a11y/use-reveal-highlighted-option';
 // ============================================================================
 // SSoT: generic autocomplete results listbox (ADR-601)
 // ----------------------------------------------------------------------------
@@ -60,16 +61,7 @@ export function PickerResultsList<TResult>({
     showFreeText, inputValue, commitResult, commitFreeText, listRef,
   } = picker;
 
-  // Scroll highlighted item into view
-  useEffect(() => {
-    if (highlightedIndex >= 0 && listRef.current) {
-      const items = listRef.current.querySelectorAll('[role="option"]');
-      const item = items[highlightedIndex];
-      if (item) {
-        item.scrollIntoView({ block: 'nearest' });
-      }
-    }
-  }, [highlightedIndex, listRef]);
+  useRevealHighlightedOption(listRef, highlightedIndex);
 
   const freeTextIndex = results.length;
 

@@ -13,6 +13,8 @@ import {
 } from '@/config/construction-templates';
 import type { ConstructionPhase } from '@/types/building/construction';
 
+import { revealInScroll } from '@/lib/a11y/reveal-in-scroll';
+import { nextRovingIndex } from '@/lib/a11y/roving-highlight';
 // ─── Types ──────────────────────────────────────────────────────────────
 
 export interface ComboboxOption {
@@ -118,23 +120,18 @@ export function usePhaseNameCombobox({
     const totalItems = filteredOptions.length + (searchQuery.trim() ? 1 : 0);
     if (totalItems === 0) return;
 
-    if (e.key === 'ArrowDown') {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault();
+      const direction = e.key === 'ArrowDown' ? 'next' : 'previous';
       setHighlightedIndex((prev) => {
-        const next = prev < totalItems - 1 ? prev + 1 : 0;
+        const next = nextRovingIndex(prev, totalItems, direction);
+        // ⚠️ `setTimeout(…, 0)`: το στοιχείο-στόχος **δεν υπάρχει ακόμη** τη στιγμή
+        //    του χειριστή — η απόδοση με το νέο `data-option-index` γίνεται μετά.
         setTimeout(() => {
-          resultsRef.current?.querySelector(`[data-option-index="${next}"]`)
-            ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-        }, 0);
-        return next;
-      });
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setHighlightedIndex((prev) => {
-        const next = prev > 0 ? prev - 1 : totalItems - 1;
-        setTimeout(() => {
-          resultsRef.current?.querySelector(`[data-option-index="${next}"]`)
-            ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+          revealInScroll(
+            resultsRef.current?.querySelector(`[data-option-index="${next}"]`),
+            { urgency: 'incidental', block: 'nearest' }
+          );
         }, 0);
         return next;
       });

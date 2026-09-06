@@ -66,7 +66,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "8550f72efed7224615b02760561a4231fd5b5d3466ac294d855c0c18f78c60f4",
+  "inputsSha256": "226f491b98c8708f3a4cec2a1fc71ad18fd743e968d765e2d85216e5b14538ac",
   "languages": [
     "el"
   ],
@@ -252,7 +252,7 @@
     "src/components/shared/forms/FormIssues.tsx": "62135e64a814a9555343f00145599a2bf0a99de139ac1ae321f84af5fba35561",
     "src/components/shared/forms/form-field-primitives.tsx": "8530034fee5769914f2f25c7016f8c4e428f0cf71835e8f6a25be05d2d2035a7",
     "src/components/shared/pickers/LinkedSinglePickerView.tsx": "3965fb17b375fa350a223f29e0995f00b2ad21f8595161ec3252921a970e24fd",
-    "src/components/shared/pickers/PickerResultsList.tsx": "d4c0862a5b65029b714a9362d80cfb0efda1734cdd9cf9257f1a89d4ecaa0376",
+    "src/components/shared/pickers/PickerResultsList.tsx": "06dfd960f027aa97a4ad5c0d182ae44e8a546dfdcd5b2ece7110bb20ca9f5d28",
     "src/components/shared/pickers/PickerSearchInput.tsx": "593cd7706e673bdb85943018e68a7169324f46596909fb076bb8306b5b87cd03",
     "src/components/shared/pickers/contact-picker-i18n.ts": "92e8a320ba7f7789b6add0104b80c7087dc898cfa48ed96fd2da7e875e8ff2c1",
     "src/components/shared/pickers/picker-popover-shell.tsx": "afd97bc89864049c6b6c2a3d103283dfaf0ce4db320f0dacc042456374535be1",
@@ -3865,7 +3865,7 @@
     "src/components/ui/searchable-combobox-add-new.tsx": "b23a4f8c9a746c52e038df224de7e223584be61b2c0945f3c95c443e4151b45c",
     "src/components/ui/searchable-combobox-matching.ts": "05dfa3788e1fd44ff7c821a9226fbc34deff6a95e110dafacaa5cf3a5a5819d1",
     "src/components/ui/searchable-combobox-types.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
-    "src/components/ui/searchable-combobox.tsx": "2a56dd885ad91c73c220a330ceb946b6ab3e07fb873e8bc0cd8e40cea0757fc1",
+    "src/components/ui/searchable-combobox.tsx": "bfa9f82e7559cd862b4695165a3826d66c16d65f49765254f2bd8eda4cc3f715",
     "src/components/ui/select.tsx": "0753f9f74590ed50530f95b1bd354639ad87452f849c89aea84993d38183072f",
     "src/components/ui/separator.tsx": "c23dc73460d4e1ed17e0fb42e464886c3934693b77617001a8470121f23dbb6a",
     "src/components/ui/sharing/ShareStatusBanner.tsx": "e829058926ca3e77e3308989b66a7e60d0e6093c03abc94eaa8705e182d9b79f",
@@ -4012,8 +4012,10 @@
     "src/lib/a11y/keyboard-scope.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/a11y/reduced-motion.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/a11y/reveal-in-scroll.ts": "25112419076a5f8dd770a14b850c3fde4c1ee1f2d183e76fc52aec0334a5babb",
+    "src/lib/a11y/roving-highlight.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/a11y/use-dialog-focus-restore.ts": "8fd6edd13dfa0351fa57df3a923d8a5bbcf9c8887d24ad13f6a7654922c08b47",
     "src/lib/a11y/use-modal-keyboard-scope.ts": "1aefe4a7211496c61e829d96a460117b612590ed3e64f4ede0d236117ae87c83",
+    "src/lib/a11y/use-reveal-highlighted-option.ts": "efdc1ebf014318f0affd720d75cfe2bd1d78ac84f1be41c67badacf797bd8318",
     "src/lib/agency/agency-directory-order.ts": "c875603d5e88ef2d88cdd7af1a725b4e9f07ad63237dca72ae6db352763395af",
     "src/lib/agency/agency-door.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/agency/showcase-filter.ts": "e9c6ff43dfd63fdfe265acc148d711322db671e424f41b9d866ca14fc6d635ed",
@@ -4320,7 +4322,7 @@
     "dynamicBoundaries": 18,
     "matchedKeys": 162,
     "routeBoundaries": 0,
-    "shellFiles": 567,
+    "shellFiles": 569,
     "sliceBytes": 378722
   },
   "unresolvableKeys": [
