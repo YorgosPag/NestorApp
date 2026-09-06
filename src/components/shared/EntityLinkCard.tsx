@@ -39,6 +39,7 @@ import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 import '@/lib/design-system';
 
+import { revealInScroll } from '@/lib/a11y/reveal-in-scroll';
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -176,7 +177,7 @@ export function EntityLinkCard({
   // message AND the exact field they must fix, without hunting.
   useEffect(() => {
     if (hasError && cardRef.current) {
-      cardRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      revealInScroll(cardRef.current, { urgency: 'requested', block: 'center' });
     }
   }, [hasError]);
 

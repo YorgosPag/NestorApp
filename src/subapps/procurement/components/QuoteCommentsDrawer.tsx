@@ -15,6 +15,7 @@ import { useAuth } from '@/auth/hooks/useAuth';
 import { quoteCommentService, formatCommentDate, type QuoteComment } from '@/services/quote-comment.service';
 import { nowISO } from '@/lib/date-local';
 
+import { revealInScroll } from '@/lib/a11y/reveal-in-scroll';
 // ============================================================================
 // PROPS
 // ============================================================================
@@ -180,7 +181,7 @@ export function QuoteCommentsDrawer({
 
   useEffect(() => {
     if (comments.length > 0) {
-      listEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      revealInScroll(listEndRef.current, { urgency: 'requested', block: 'start' });
     }
   }, [comments.length]);
 

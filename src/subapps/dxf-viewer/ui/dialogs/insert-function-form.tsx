@@ -32,6 +32,7 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { TABLE_CELL_SESSION_MARKER } from '../table-cell-editor/table-cell-session-focus';
+import { revealInScroll } from '@/lib/a11y/reveal-in-scroll';
 import type {
   FormulaCatalogEntry,
   FormulaCategoryFilter,
@@ -108,7 +109,7 @@ export function InsertFunctionForm(props: InsertFunctionFormProps): React.ReactE
     const list = listRef.current;
     if (!list) return;
     const row = list.querySelector<HTMLElement>(`[data-fn="${CSS.escape(selected)}"]`);
-    row?.scrollIntoView({ block: 'nearest' });
+    revealInScroll(row, { urgency: 'incidental', block: 'nearest' });
   }, [selected]);
 
   const moveSelection = useCallback(

@@ -11,6 +11,7 @@ import { DEFAULT_LAYER_COLOR } from '../../config/color-config';
 import type { FloatingPanelType } from '../../types/panel-types';
 import { getSceneLayerById } from '../../utils/scene-layer-utils';
 
+import { revealInScroll } from '@/lib/a11y/reveal-in-scroll';
 /**
  * @deprecated Use FloatingPanelType instead
  */
@@ -82,13 +83,13 @@ export function useFloatingPanelHandle({
       requestAnimationFrame(() => {
         const first = ids[0];
         const el = document.querySelector(`[data-entity-id="${first}"]`) as HTMLElement | null;
-        el?.scrollIntoView({ block: 'nearest' });
+        revealInScroll(el, { urgency: 'incidental', block: 'nearest' });
       });
     },
 
     scrollFirstSelectedIntoView: () => {
       const el = document.querySelector('[data-entity-selected="true"]') as HTMLElement | null;
-      el?.scrollIntoView({ block: 'nearest' });
+      revealInScroll(el, { urgency: 'incidental', block: 'nearest' });
     }
   }), [expandedKeys, setActivePanel, setExpandedKeys]);
 }

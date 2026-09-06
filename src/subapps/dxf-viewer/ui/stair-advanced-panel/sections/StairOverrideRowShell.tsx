@@ -15,6 +15,7 @@
 import React, { useEffect, useRef } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
+import { revealInScroll } from '@/lib/a11y/reveal-in-scroll';
 export interface StairOverrideRowShellProps {
   readonly index: number;
   /** True when this index is a persisted override (vs a transient click-into row). */
@@ -40,7 +41,7 @@ export function StairOverrideRowShell({
   const rowRef = useRef<HTMLTableRowElement>(null);
   // Bring the clicked-into row into view (a 2D/3D click may target a row scrolled away).
   useEffect(() => {
-    if (isActive) rowRef.current?.scrollIntoView?.({ block: 'nearest' });
+    if (isActive) revealInScroll(rowRef.current, { urgency: 'incidental', block: 'nearest' });
   }, [isActive]);
 
   // Display is 1-based (humans count from 1); the key stays 0-based (geometry/tag/resolver SSoT).

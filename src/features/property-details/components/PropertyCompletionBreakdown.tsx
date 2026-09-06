@@ -35,6 +35,7 @@ import type {
 } from '@/constants/property-completion';
 import { completionFieldLabelKey } from '@/constants/field-completion-weights';
 
+import { revealInScroll } from '@/lib/a11y/reveal-in-scroll';
 // =============================================================================
 // HIGHLIGHT — temporary ring-pulse on jump target (Google Material Design cue)
 // =============================================================================
@@ -194,7 +195,7 @@ export function PropertyCompletionBreakdown({
       const element = document.getElementById(anchorId);
       if (!(element instanceof HTMLElement)) return;
 
-      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      revealInScroll(element, { urgency: 'requested', block: 'center' });
       element.classList.add(...highlightClasses);
       element.focus({ preventScroll: true });
 

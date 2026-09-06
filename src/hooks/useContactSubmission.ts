@@ -18,6 +18,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { useGuardedContactMutation } from '@/hooks/useGuardedContactMutation';
 import { useContactNotifications } from '@/hooks/notifications/useContactNotifications';
 
+import { revealInScroll } from '@/lib/a11y/reveal-in-scroll';
 const logger = createModuleLogger('useContactSubmission');
 
 export interface UseContactSubmissionProps {
@@ -89,7 +90,7 @@ export function useContactSubmission({
       if (!(element instanceof HTMLElement)) return;
 
       element.focus();
-      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      revealInScroll(element, { urgency: 'requested', block: 'center' });
     }, 0);
   }, []);
 

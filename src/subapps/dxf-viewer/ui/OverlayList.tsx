@@ -20,6 +20,7 @@ import { OverlayListCard } from '@/domain/cards';
 import { useOverlayStore } from '../overlays/overlay-store';
 import { DeleteConfirmDialog } from '@/components/ui/ConfirmDialog';
 
+import { revealInScroll } from '@/lib/a11y/reveal-in-scroll';
 interface OverlayListProps {
   overlays: Overlay[];
   selectedOverlayId: string | null;
@@ -48,11 +49,7 @@ export const OverlayList: React.FC<OverlayListProps> = ({
   // Auto-scroll to selected overlay card when selection changes
   React.useEffect(() => {
     if (selectedOverlayId && selectedCardRef.current) {
-      selectedCardRef.current.scrollIntoView({
-        behavior: 'smooth',
-        block: 'nearest',
-        inline: 'nearest'
-      });
+      revealInScroll(selectedCardRef.current, { urgency: 'requested', block: 'nearest', inline: 'nearest' });
     }
   }, [selectedOverlayId]);
 

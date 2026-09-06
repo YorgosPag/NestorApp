@@ -9,6 +9,7 @@ import { PropertyListSkeleton } from "./list/PropertyListSkeleton";
 import { PropertyListEmptyState } from "./list/PropertyListEmptyState";
 import '@/lib/design-system';
 
+import { revealInScroll } from '@/lib/a11y/reveal-in-scroll';
 interface PropertyListProps {
   properties: Property[];
   selectedPropertyIds: string[];
@@ -34,7 +35,7 @@ export function PropertyList({
   useEffect(() => {
     if (!hoveredPropertyId || !scrollContainerRef.current) return;
     const el = scrollContainerRef.current.querySelector(`[data-property-id="${hoveredPropertyId}"]`);
-    el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    revealInScroll(el, { urgency: 'requested', block: 'nearest' });
   }, [hoveredPropertyId]);
 
   if (isLoading) {

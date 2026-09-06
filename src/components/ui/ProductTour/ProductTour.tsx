@@ -30,6 +30,7 @@ import type { TourStep, ProductTourProps } from './ProductTour.types';
 import { TOUR_STYLES } from './product-tour-constants';
 import { SpotlightOverlay, TourTooltip } from './product-tour-overlay';
 
+import { revealInScroll } from '@/lib/a11y/reveal-in-scroll';
 // =============================================================================
 // UTILITY FUNCTIONS
 // =============================================================================
@@ -100,7 +101,7 @@ const TourRenderer: FC = () => {
       }
 
       if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+        revealInScroll(element, { urgency: 'requested', block: 'center', inline: 'center' });
       }
     };
 
