@@ -16,6 +16,7 @@ import { where } from 'firebase/firestore';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { createModuleLogger } from '@/lib/telemetry';
+import { mapPropertyDoc } from '@/lib/firestore-mappers';
 import type { Property } from '@/types/property';
 
 const logger = createModuleLogger('usePropertiesByBuilding');
@@ -52,7 +53,11 @@ export function usePropertiesByBuilding(
     const unsubscribe = firestoreQueryService.subscribe<Record<string, unknown> & { id: string }>(
       'PROPERTIES',
       (result) => {
-        const items = result.documents.map((doc) => doc as unknown as Property);
+        // 🔴 **ΤΟ ΣΥΝΟΡΟ ΤΟΥ `properties`** (ADR-842 §7.6.12) — ήταν
+        //    `doc as unknown as Property`, δηλαδή **διπλός** ισχυρισμός: ούτε καν ο
+        //    μεταγλωττιστής δεν είχε λόγο. Ο {@link mapPropertyDoc} απαντά πλέον για
+        //    κάθε πεδίο, και το είδος φτάνει **κανονικοποιημένο**.
+        const items = result.documents.map((doc) => mapPropertyDoc(doc.id, doc));
         setRaw(items);
         setLoading(false);
       },

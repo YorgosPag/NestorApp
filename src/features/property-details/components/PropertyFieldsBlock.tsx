@@ -3,6 +3,7 @@
 'use client';
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { normalizePropertyType } from '@/constants/property-type-aliases';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -223,7 +224,8 @@ export function PropertyFieldsBlock({
     onWarningDismiss: isCreatingNewUnit ? handleWarningDismiss : undefined,
   });
 
-  const isStandalone = isStandaloneUnitType(formData.type as PropertyType | '');
+  // 🔑 Ο {@link isStandaloneUnitType} δέχεται **`unknown`** (ADR-842 §7.6.12).
+  const isStandalone = isStandaloneUnitType(formData.type);
   const isHierarchyComplete = isStandalone ? !!formData.type : !!(formData.type && formData.buildingId && formData.floorId);
   const isHierarchyLocked = !!isCreatingNewUnit && !isHierarchyComplete;
   // ADR-236 Phase 5 (Batch 22): SSoT derive from formData in BOTH modes.
@@ -389,7 +391,7 @@ export function PropertyFieldsBlock({
       {isCreatingNewUnit && (
         <NewUnitHierarchySection
           selection={{
-            type: formData.type as PropertyType | '',
+            type: formData.type,
             projectId: formData.projectId,
             buildingId: formData.buildingId,
             floorId: formData.floorId,
@@ -431,7 +433,7 @@ export function PropertyFieldsBlock({
         handleSave={handleSave}
         codeBuildingId={hasAllCodeInputs && (isCreatingNewUnit || !formData.code) ? codeBuildingId : ''}
         codeFloorLevel={codeFloorLevel}
-        codePropertyType={(localType as PropertyType) || undefined}
+        codePropertyType={normalizePropertyType(localType) ?? undefined}
         onCodeChange={handleCodeChange}
         onCodeAutoApply={handleCodeAutoApply}
         onSuggestionChange={setLatestSuggestion}

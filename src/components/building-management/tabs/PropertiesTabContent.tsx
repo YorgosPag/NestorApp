@@ -3,6 +3,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { normalizePropertyType } from '@/constants/property-type-aliases';
 import { useRouter } from '@/lib/workspace/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
@@ -347,7 +348,14 @@ export function PropertiesTabContent({ building, onActiveUnitsCountChange }: Pro
               />
             </label>
 
-            <Select value={filterType} onValueChange={(val) => setFilterType(val as PropertyType | 'all')}>
+            {/* 🔴 Κανονικοποίηση αντί για ισχυρισμό (ADR-842 §7.6.12): το `'all'`
+                είναι **δικό μας** σύμβολο, όχι είδος — γι' αυτό ελέγχεται χωριστά. */}
+            <Select
+              value={filterType}
+              onValueChange={(val) =>
+                setFilterType(val === 'all' ? 'all' : (normalizePropertyType(val) ?? 'all'))
+              }
+            >
               <SelectTrigger>
                 <SelectValue placeholder={t('allTypes', { ns: 'filters' })} />
               </SelectTrigger>

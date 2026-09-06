@@ -6,7 +6,6 @@
  */
 
 import type { Property } from '@/types/property-viewer';
-import type { PropertyType } from '@/types/property';
 import { isStandaloneUnitType } from '@/hooks/properties/usePropertyCreateValidation';
 import type { PropertyFieldsFormData } from './property-fields-form-types';
 
@@ -21,7 +20,9 @@ export function buildCreationPayload(params: {
   defaultName: string;
 }): Record<string, unknown> {
   const { formData, updates, suggestedCode, defaultName } = params;
-  const standalone = isStandaloneUnitType(formData.type as PropertyType | '');
+  // 🔑 Ο {@link isStandaloneUnitType} δέχεται **`unknown`** — ο ισχυρισμός ήταν
+  //    θόρυβος, όχι ασφάλεια (ADR-842 §7.6.12).
+  const standalone = isStandaloneUnitType(formData.type);
 
   return {
     ...updates,

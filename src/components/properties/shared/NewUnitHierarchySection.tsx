@@ -20,6 +20,7 @@
  */
 
 import React, { useCallback, useState, useEffect } from 'react';
+import { normalizePropertyType } from '@/constants/property-type-aliases';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ClearableSelect } from '@/components/ui/clearable-select';
 import { FormField, FormGrid, FormInput } from '@/components/ui/form/FormComponents';
@@ -37,7 +38,6 @@ import { FloorInlineCreateForm } from '@/components/building-management/tabs/Flo
 import { LinkBuildingToProjectDialog } from '@/components/building-management/dialogs/LinkBuildingToProjectDialog';
 import { PropertyHierarchyEmptyStates } from './PropertyHierarchyEmptyStates';
 import { useNewUnitHierarchy, type NewUnitHierarchySelection } from './useNewUnitHierarchy';
-import type { PropertyType } from '@/types/property';
 import { formatBuildingLabel } from '@/lib/entity-formatters';
 
 // =============================================================================
@@ -93,7 +93,10 @@ export function NewUnitHierarchySection({
 
   // ── Handlers ──
   const handleTypeChange = useCallback((value: string) => {
-    const newType = value as PropertyType | '';
+    // 🔴 **ΚΑΝΟΝΙΚΟΠΟΙΗΣΗ, ΟΧΙ ΙΣΧΥΡΙΣΜΟΣ** (ADR-842 §7.6.12): το `value` έρχεται από
+    //    το Radix Select ως σκέτο `string`. Το `''` (καθάρισμα επιλογής) μένει `''` —
+    //    είναι το «δεν απάντησε ακόμη» της φόρμας, διαφορετικό από το «δεν λύθηκε».
+    const newType = normalizePropertyType(value) ?? '';
     if (isStandaloneUnitType(newType)) {
       // Family B: clear building/floor
       onChange({ type: newType, buildingId: '', floorId: '', floor: 0 });

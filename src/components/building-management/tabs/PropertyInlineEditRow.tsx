@@ -12,6 +12,7 @@
 'use client';
 
 import { Check, X } from 'lucide-react';
+import { normalizePropertyType } from '@/constants/property-type-aliases';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { TableCell } from '@/components/ui/table';
@@ -23,7 +24,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
-import type { PropertyType } from '@/types/property';
 import type { TFunction } from 'i18next';
 import {
   UNIT_TYPES_FOR_FILTER,
@@ -54,7 +54,12 @@ export function PropertyInlineEditRow({ edit, tUnits }: PropertyInlineEditRowPro
       <TableCell>
         <Select
           value={edit.editType || 'apartment'}
-          onValueChange={(v) => edit.setEditType(v as PropertyType)}
+          // 🔴 Κανονικοποίηση αντί για ισχυρισμό (ADR-842 §7.6.12) — το Radix Select
+          //    δίνει `string`. Μη αναγνωρίσιμη τιμή **δεν** αλλάζει το είδος.
+          onValueChange={(v) => {
+            const canonical = normalizePropertyType(v);
+            if (canonical !== null) edit.setEditType(canonical);
+          }}
           disabled={edit.saving}
         >
           <SelectTrigger className="h-8">
