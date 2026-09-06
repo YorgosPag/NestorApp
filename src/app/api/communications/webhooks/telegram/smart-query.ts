@@ -8,6 +8,7 @@
  * @created 2026-01-13
  */
 
+import { mapPropertyDoc } from '@/lib/firestore-mappers';
 import type { Property } from '@/types/property';
 import { extractSearchCriteria as extractCriteriaFromText } from '@/services/property-search.service';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -114,8 +115,10 @@ export async function executeSmartSearch(
     const querySnapshot = await getDocs(q);
 
     querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      results.push({ id: doc.id, ...data } as Property);
+    // 🔴 **ΤΟ ΣΥΝΟΡΟ ΤΟΥ `properties`** (ADR-842 §7.6.12) — ήταν
+    //    `{ id, ...data } as Property`, δηλαδή ωμός ισχυρισμός που παρέκαμπτε τον
+    //    {@link mapPropertyDoc} και άφηνε το `type` **ανεπίβεβαιο**.
+      results.push(mapPropertyDoc(doc.id, doc.data() as Record<string, unknown>));
     });
     logger.info('Search results found', { count: results.length });
 

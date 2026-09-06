@@ -31,6 +31,7 @@
  */
 
 import type { PropertyTypeCanonical } from '@/constants/property-types';
+import { normalizePropertyType } from '@/constants/property-type-aliases';
 
 // =============================================================================
 // 1. THRESHOLD SHAPE
@@ -108,16 +109,23 @@ export const MEDIA_THRESHOLDS: Record<PropertyTypeCanonical, MediaThreshold> = {
 
 /**
  * Returns the media threshold configuration for a given property type.
- * Unknown/legacy types fall back to `apartment` defaults (conservative
- * mid-market baseline).
+ *
+ * 🔴 **ΚΑΝΟΝΙΚΟΠΟΙΕΙ ΠΡΙΝ ΔΕΙΚΤΟΔΟΤΗΣΕΙ** (ADR-842 §7.6.12 / §8 #11). Ρωτούσε
+ * `type in MEDIA_THRESHOLDS` και μετά δήλωνε `as PropertyTypeCanonical` — δηλαδή
+ * **ελεγχόταν σε χρόνο εκτέλεσης και ισχυριζόταν στη μεταγλώττιση**, δύο απαντήσεις
+ * για την ίδια ερώτηση. Χειρότερα: ένα `'Στούντιο'` **δεν** ήταν κλειδί του πίνακα,
+ * οπότε έπεφτε στην προεπιλογή του διαμερίσματος — δηλαδή ένα στούντιο κρινόταν με
+ * κατώφλια **άλλου είδους**, σιωπηλά.
+ *
+ * ⚠️ **Η προεπιλογή `apartment` ΜΕΝΕΙ, και δεν είναι το ίδιο πράγμα με το
+ * `?? 'apartment'` που το §8 #11 καταργεί**: εκεί μια **αποθηκευμένη ταυτότητα**
+ * βαφτιζόταν διαμέρισμα· εδώ επιλέγεται **κατώφλι** για είδος που δεν ξέρουμε, και ο
+ * πίνακας οφείλει να δώσει **κάποιον** αριθμό. Δηλωμένη συντηρητική βάση, όχι ψέμα
+ * ταυτότητας.
  */
-export function getMediaThresholdForType(
-  type: PropertyTypeCanonical | string | null | undefined,
-): MediaThreshold {
-  if (typeof type === 'string' && type in MEDIA_THRESHOLDS) {
-    return MEDIA_THRESHOLDS[type as PropertyTypeCanonical];
-  }
-  return MEDIA_THRESHOLDS.apartment;
+export function getMediaThresholdForType(type: unknown): MediaThreshold {
+  const canonical = normalizePropertyType(type);
+  return canonical === null ? MEDIA_THRESHOLDS.apartment : MEDIA_THRESHOLDS[canonical];
 }
 
 /**
@@ -132,10 +140,7 @@ export function getMediaThresholdForType(
  * Diminishing returns oltre `bonusCap` — τυπωμένο με identical score `1.0`
  * ώστε να αποτρέπει photo-spam inflation.
  */
-export function computePhotoScore(
-  count: number,
-  type: PropertyTypeCanonical | string | null | undefined,
-): number {
+export function computePhotoScore(count: number, type: unknown): number {
   if (count <= 0 || !Number.isFinite(count)) return 0;
   const { min, optimal } = getMediaThresholdForType(type).photos;
   if (count >= optimal) return 1;

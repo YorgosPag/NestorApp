@@ -42,6 +42,7 @@
 
 import type { PropertyDemand } from '@/types/property-demand';
 import type { ListingFilters } from '@/lib/listings/listing-filters';
+import type { GeoCircle } from '@/types/geo/coordinates';
 import { rangeOf, valuesOf } from '@/lib/criteria/listing-criteria';
 import { NO_RANGE, type CriterionRange } from '@/lib/criteria/criterion-vocabulary';
 import { distanceMeters } from '@/lib/geo/geo-distance';
@@ -92,7 +93,7 @@ function rangesIntersect(
  * ⚠️ `null` (δηλαδή `anywhere`, ή `place` που δεν προβάλλεται) τέμνεται με **τα
  * πάντα** — είναι κυριολεκτικά «οπουδήποτε».
  */
-function areasIntersect(a: ListingFilters['near'], b: ListingFilters['near']): boolean {
+function areasIntersect(a: GeoCircle | null, b: GeoCircle | null): boolean {
   if (a === null || b === null) return true;
 
   const metres = distanceMeters(a.center, b.center);

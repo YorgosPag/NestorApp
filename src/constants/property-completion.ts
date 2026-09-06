@@ -287,8 +287,11 @@ export function assessPropertyCompleteness(
   const isPreCompletion = isPreCompletionOperationalStatus(operationalStatus);
   const isDraft = operationalStatus === 'draft';
 
-  const typeForLookup =
-    isStringComplete(formData.type) ? (formData.type as PropertyTypeCanonical) : undefined;
+  // 🔴 **ΚΑΝΟΝΙΚΟΠΟΙΗΣΗ, ΟΧΙ ΙΣΧΥΡΙΣΜΟΣ** (ADR-842 §7.6.12 / §8 #11). Ρωτούσε *«είναι
+  //    μη κενή συμβολοσειρά;»* και μετά **δήλωνε** ότι είναι κανονικό είδος — δύο
+  //    πράγματα που δεν συνδέονται. Πλέον ρωτά *«ποιο είδος είναι;»*, οπότε και μια
+  //    παλαιά τιμή βρίσκει τα **σωστά** βάρη αντί να πέσει στην προεπιλογή.
+  const typeForLookup = normalizePropertyType(formData.type) ?? undefined;
   const weightEntries = getFieldWeightsForType(typeForLookup);
   const entryByKey = new Map<FieldKey, FieldWeightEntry>(
     weightEntries.map((entry) => [entry.key, entry]),
@@ -378,12 +381,15 @@ export function assessPropertyCompleteness(
     missingCritical,
     exemptFields,
     bucketColor: resolveBucket(percentage),
-    // 🔑 **Κανονικοποιημένο, ποτέ το ωμό `formData.type`**: το έγγραφο μπορεί να λέει
-    // `'Οικόπεδο'` ή `'Αποθήκη'` *(παλαιές ελληνικές τιμές Firestore)*, και ο
-    // καταναλωτής που θα ρωτούσε «είναι γη;» με ωμή τιμή θα έπαιρνε **όχι**. Είναι η
-    // ίδια αυθεντία που χρησιμοποιεί και το `getFieldWeightsForType` δύο γραμμές πιο
-    // πάνω — αλλιώς η βαθμολογία θα κρινόταν με ένα είδος και η **ετικέτα** με άλλο.
-    propertyType: normalizePropertyType(typeForLookup),
+    // 🔑 **Η ΙΔΙΑ κανονική τιμή με το `getFieldWeightsForType`, ΜΙΑ φορά λυμένη**: το
+    // έγγραφο μπορεί να λέει `'Οικόπεδο'` ή `'Αποθήκη'` *(παλαιές ελληνικές τιμές)*,
+    // και ο καταναλωτής που θα ρωτούσε «είναι γη;» με ωμή τιμή θα έπαιρνε **όχι**.
+    //
+    // ⚠️ **Ήταν δεύτερη κλήση `normalizePropertyType(typeForLookup)`** πάνω σε τιμή
+    // **ήδη** κανονική — ιδιοδύναμη, άρα αβλαβής, αλλά έλεγε ότι η μία λύση δεν
+    // εμπιστεύεται την άλλη. Πλέον η βαθμολογία και η **ετικέτα** διαβάζουν κυριολεκτικά
+    // την ίδια μεταβλητή, οπότε το να αποκλίνουν είναι **αδύνατο**, όχι απλώς απίθανο.
+    propertyType: typeForLookup ?? null,
   };
 }
 

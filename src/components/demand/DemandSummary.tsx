@@ -25,7 +25,8 @@ import React from 'react';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrency } from '@/lib/intl-formatting';
-import { PROPERTY_TYPE_I18N_KEYS, type PropertyTypeCanonical } from '@/constants/property-types';
+import { PROPERTY_TYPE_I18N_KEYS } from '@/constants/property-types';
+import { normalizePropertyType } from '@/constants/property-type-aliases';
 import type { DemandPlace, DemandTiming, PropertyDemand } from '@/types/property-demand';
 
 /** Ο χωρικός άξονας ως φράση. */
@@ -123,11 +124,21 @@ function useTypesPhrase(): (types: readonly string[]) => string {
       if (types.length === 0) return t('property-market:demand.summary.anyType');
       return types
         .map((type) => {
-          const key = PROPERTY_TYPE_I18N_KEYS[type as PropertyTypeCanonical];
-          // Άγνωστο είδος (παλιά εγγραφή Firestore) εμφανίζεται **ως έχει** αντί να
-          // εξαφανιστεί: μια ζήτηση που φιλτράρει σε κάτι που δεν δείχνουμε είναι
-          // χειρότερη από μια ετικέτα χωρίς μετάφραση.
-          return key === undefined ? type : t(`properties-enums:${key}`);
+          // 🔴 **ΚΑΝΟΝΙΚΟΠΟΙΗΣΗ, ΟΧΙ ΙΣΧΥΡΙΣΜΟΣ** (ADR-842 §7.6.12 / §8 #11). Έγραφε
+          //    `PROPERTY_TYPE_I18N_KEYS[type as PropertyTypeCanonical]` πάνω σε ωμό
+          //    `string` της ζήτησης — δηλαδή **δεικτοδοτούσε πίνακα με ανεπίβεβαιο
+          //    κλειδί** και βασιζόταν στο `undefined` για να το καταλάβει.
+          //
+          // 🔑 **Και κερδίζει σημασία, δεν χάνει**: μια παλαιά ελληνική τιμή
+          //    (`'Στούντιο'`) εμφανιζόταν **αμετάφραστη**· τώρα λύνεται σε `studio` και
+          //    ο άνθρωπος βλέπει τη σωστή ετικέτα στη γλώσσα του.
+          const canonical = normalizePropertyType(type);
+          // Πραγματικά άγνωστο είδος εμφανίζεται **ως έχει** αντί να εξαφανιστεί: μια
+          // ζήτηση που φιλτράρει σε κάτι που δεν δείχνουμε είναι χειρότερη από μια
+          // ετικέτα χωρίς μετάφραση.
+          return canonical === null
+            ? type
+            : t(`properties-enums:${PROPERTY_TYPE_I18N_KEYS[canonical]}`);
         })
         .join(' · ');
     },
