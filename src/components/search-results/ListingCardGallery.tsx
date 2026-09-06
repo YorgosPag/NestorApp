@@ -144,7 +144,25 @@ export function ListingCardGallery({
   const goTo = useCallback((next: number) => {
     const scroller = scrollerRef.current;
     if (scroller === null) return;
-    const clamped = Math.max(0, Math.min(next, scroller.children.length - 1));
+    /*
+      🔁 **ΛΟΥΠΑ, ΟΧΙ ΨΑΛΙΔΙΣΜΑ — ΚΑΙ Η ΑΠΟΦΑΣΗ ΕΙΝΑΙ ΤΕΧΝΙΚΗ, ΟΧΙ ΓΟΥΣΤΟ.**
+      Η εναλλακτική *(κρύψιμο του βέλους στο άκρο, όπως Airbnb/Zillow)* έχει ελάττωμα
+      που κανείς τους δεν λύνει: το κουμπί **εξαφανίζεται ενώ το πληκτρολόγιο βρίσκεται
+      πάνω του** — ο άνθρωπος πατά `Enter` στην τελευταία φωτογραφία και η εστίαση πέφτει
+      στο `body`, δηλαδή **χάνει τη θέση του μέσα σε λίστα 9 καρτών**. Με λούπα τα δύο
+      βελάκια είναι **πάντα εκεί**: καμία αναπήδηση, καμία χαμένη εστίαση, καμία νεκρή
+      περιοχή που «δεν κάνει τίποτα».
+
+      🔑 Η γνωστή ένσταση κατά της λούπας *(«ο άνθρωπος δεν μαθαίνει ποτέ ότι τελείωσαν»)*
+      **απαντιέται εδώ**: η βιβλιογραφία τη δέχεται ρητά *«εφόσον δείχνεις καθαρά την
+      τρέχουσα θέση»*, και οι **τελείες** το κάνουν ακριβώς αυτό, μονίμως ορατές.
+
+      ⚠️ Το `+ total` πριν το δεύτερο `%` είναι υποχρεωτικό: στη JavaScript το `-1 % 2`
+      είναι **-1**, όχι 1 — χωρίς αυτό το «προηγούμενη» από την πρώτη θα έστελνε σε
+      αρνητική θέση, δηλαδή πουθενά.
+    */
+    const slides = scroller.children.length;
+    const wrapped = ((next % slides) + slides) % slides;
     /*
       🔴 **ΚΑΝΕΝΑ `behavior` ΕΔΩ — ΚΑΙ ΕΙΝΑΙ ΔΙΟΡΘΩΣΗ, ΟΧΙ ΠΑΡΑΛΕΙΨΗ.**
       Γράφτηκε πρώτα ως `scrollTo({ left, behavior: 'smooth' })` και **μετρήθηκε ζωντανά
@@ -164,7 +182,7 @@ export function ListingCardGallery({
       αντιδρά σε αλλαγή της ρύθμισης **χωρίς επανα-απόδοση**, ενώ μια τιμή διαβασμένη σε
       JS παγώνει μέχρι το επόμενο render.
     */
-    const target = clamped * scroller.clientWidth;
+    const target = wrapped * scroller.clientWidth;
     const startedAt = scroller.scrollLeft;
     scroller.scrollTo({ left: target });
 
@@ -251,7 +269,26 @@ export function ListingCardGallery({
   });
 
   return (
-    <div className={`group/gallery relative ${className}`}>
+    /*
+      🔴 **`z-10` — ΧΩΡΙΣ ΑΥΤΟ ΤΑ ΒΕΛΑΚΙΑ ΗΤΑΝ ΠΡΑΚΤΙΚΑ ΑΟΡΑΤΑ.** Αναφέρθηκε από τον
+      Giorgio: *«πρέπει να κάνω hover ΑΚΡΙΒΩΣ πάνω από τα βελάκια… τα έψαχνα αρκετή ώρα»*.
+
+      Η αιτία ήταν το **link-overlay** της κάρτας: το `::after { inset: 0 }` του τίτλου
+      απλώνεται πάνω σε **ΟΛΗ** την κάρτα, και ο τίτλος είναι **αδελφός** αυτού του
+      δοχείου — όχι απόγονός του. Άρα ο δείκτης πάνω στη φωτογραφία ακουμπούσε **το
+      overlay του τίτλου**, το `.group/gallery` δεν έπαιρνε ποτέ `:hover`, και τα μόνα
+      σημεία που δούλευαν ήταν τα ίδια τα κουμπιά *(`z-20`, πάνω από το overlay)*.
+
+      🔑 Το `z-10` βάζει τον κύλινδρο **πάνω** από το overlay ⇒ hover σε **οποιοδήποτε**
+      σημείο της φωτογραφίας. Το κλικ πάνω της εξακολουθεί να ανοίγει την αγγελία, γιατί
+      κάθε slide έχει **δικό του** σύνδεσμο (`renderSlideLink`).
+
+      ⚠️ Και εξηγεί το δεύτερο σύμπτωμα που αναφέρθηκε — *«όταν κάνω hover πάνω στο
+      ανενεργό βελάκι δεν εμφανίζεται τίποτα»*: το `disabled:pointer-events-none` άφηνε
+      τον δείκτη να **περάσει μέσα** του και να προσγειωθεί πάλι στο overlay του τίτλου.
+      Με τη λούπα κανένα βελάκι δεν είναι πια ανενεργό, οπότε η περίπτωση εκλείπει.
+    */
+    <div className={`group/gallery relative z-10 ${className}`}>
       <ul
         ref={scrollerRef}
         aria-roledescription="carousel"
@@ -283,25 +320,26 @@ export function ListingCardGallery({
 
       {total > 1 && (
         <>
+          {/*
+            ⚠️ Ο αριθμός στο `aria-label` είναι ο **ΠΡΟΟΡΙΣΜΟΣ**, όχι η τρέχουσα θέση:
+            «Προηγούμενη φωτογραφία (2/2)» σημαίνει *«θα σε πάει στη 2η από 2»*. Με τη
+            λούπα **τυλίγεται κι αυτός** — αλλιώς το κουμπί θα εκφωνούσε «(0/2)» στην
+            πρώτη φωτογραφία, αριθμό που δεν υπάρχει *(μετρήθηκε στην οθόνη)*.
+          */}
           <GalleryArrow
             side="left"
-            /*
-              ⚠️ Ο αριθμός στο `aria-label` είναι ο **ΠΡΟΟΡΙΣΜΟΣ**, όχι η τρέχουσα θέση:
-              «Προηγούμενη φωτογραφία (1/2)» σημαίνει *«θα σε πάει στην 1η από 2»*. Το
-              `Math.max(1, …)` υπάρχει επειδή μετρήθηκε στην οθόνη ότι στην πρώτη
-              φωτογραφία το κουμπί εκφωνούσε «**(0/2)**» — αριθμός που δεν υπάρχει.
-            */
             label={t('common-photos:photoPreview.navigation.previousAria', {
-              current: Math.max(1, index),
+              current: index === 0 ? total : index,
               total,
             })}
-            disabled={index === 0}
             onActivate={() => goTo(index - 1)}
           />
           <GalleryArrow
             side="right"
-            label={t('common-photos:photoPreview.navigation.nextAria', { current: index + 2, total })}
-            disabled={index === total - 1}
+            label={t('common-photos:photoPreview.navigation.nextAria', {
+              current: index === total - 1 ? 1 : index + 2,
+              total,
+            })}
             onActivate={() => goTo(index + 1)}
           />
 
@@ -368,12 +406,10 @@ export function ListingCardGallery({
 function GalleryArrow({
   side,
   label,
-  disabled,
   onActivate,
 }: {
   readonly side: 'left' | 'right';
   readonly label: string;
-  readonly disabled: boolean;
   readonly onActivate: () => void;
 }) {
   const Icon = side === 'left' ? ChevronLeft : ChevronRight;
@@ -381,7 +417,6 @@ function GalleryArrow({
     <button
       type="button"
       aria-label={label}
-      disabled={disabled}
       onClick={(event) => {
         // ⚠️ Ο σύνδεσμος της κάρτας είναι ΠΡΟΓΟΝΟΣ: χωρίς αυτό, το κλικ ανεβαίνει και
         //    ανοίγει την αγγελία μαζί με την αλλαγή φωτογραφίας.
@@ -394,8 +429,20 @@ function GalleryArrow({
         //    κάθεται πάνω σε ΦΩΤΟΓΡΑΦΙΑ, όχι πάνω σε επιφάνεια του θέματος.
         'absolute top-1/2 z-20 -translate-y-1/2 rounded-full bg-black/55 p-1 text-white',
         'shadow-sm backdrop-blur-sm transition-opacity hover:bg-black/70',
-        'disabled:pointer-events-none disabled:opacity-0',
+        /*
+          🔑 **ΤΕΣΣΕΡΙΣ ΔΙΑΔΡΟΜΕΣ ΑΠΟΚΑΛΥΨΗΣ, ΚΑΙ ΚΑΜΙΑ ΔΕΝ ΕΙΝΑΙ ΠΕΡΙΤΤΗ:**
+          `hover` στη **φωτογραφία** *(η κύρια — αυτή που έλειπε)* · `hover` οπουδήποτε
+          στην **κάρτα** *(το πρότυπο Zillow/Airbnb: το βλέμμα πάει στην κάρτα, όχι στο
+          βελάκι)* · `focus-within` **και των δύο** *(αλλιώς τα βελάκια θα ήταν
+          απρόσιτα με πληκτρολόγιο — φαίνονταν μόνο με ποντίκι)* · και μόνιμη ορατότητα
+          όπου **δεν υπάρχει δείκτης** να τα αποκαλύψει.
+
+          ⚠️ Το `group-hover/card` απαιτεί από την κάρτα να δηλώσει `group/card`. Αν δεν
+          το κάνει, ο κανόνας απλώς **δεν ταιριάζει** — η γκαλερί εξακολουθεί να δουλεύει
+          με το δικό της `group/gallery`. Καμία σιωπηλή εξάρτηση.
+        */
         'opacity-0 group-hover/gallery:opacity-100 group-focus-within/gallery:opacity-100',
+        'group-hover/card:opacity-100 group-focus-within/card:opacity-100',
         'focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white',
         '[@media(hover:none)]:opacity-100',
         side === 'left' ? 'left-1.5' : 'right-1.5',

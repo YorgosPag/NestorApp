@@ -159,23 +159,39 @@ describe('Κ — τα βελάκια κυλούν ΑΥΤΟΝ τον κύλινδ
 // Α — ΤΑ ΑΚΡΑ: το κουμπί που δεν έχει πού να πάει
 // ═══════════════════════════════════════════════════════════════════════════
 
-describe('Α — τα άκρα', () => {
-  it('Α1: στην ΠΡΩΤΗ φωτογραφία το «Προηγούμενη» είναι ανενεργό', () => {
+describe('Α — τα άκρα ΤΥΛΙΓΟΥΝ, δεν κλείνουν', () => {
+  it('🔴 Α1: ΚΑΝΕΝΑ βελάκι δεν είναι ΠΟΤΕ ανενεργό — ούτε στην πρώτη, ούτε στην τελευταία', () => {
+    // 🔴 **ΤΟ ΓΕΓΟΝΟΣ ΠΟΥ ΤΟ ΓΕΝΝΗΣΕ** (αναφορά Giorgio, 2026-09-06): με `disabled` το
+    //    ανενεργό βελάκι είχε `pointer-events: none`, άρα ο δείκτης **περνούσε μέσα του**
+    //    και προσγειωνόταν στο link-overlay του τίτλου ⇒ *«όταν κάνω hover πάνω στο δεξί
+    //    δεν εμφανίζεται»*. Η λούπα εξαλείφει την **κατάσταση**, όχι το σύμπτωμα.
+    //
+    // ⚠️ Και ο βαθύτερος λόγος είναι η **εστίαση**: ένα κουμπί που εξαφανίζεται ή
+    //    απενεργοποιείται ενώ το πληκτρολόγιο κάθεται πάνω του πετά την εστίαση στο
+    //    `body` — ο άνθρωπος χάνει τη θέση του μέσα σε λίστα 9 καρτών.
     render(<ListingCardGallery images={images(3)} sizes={SIZES} />);
-    expect(screen.getByRole('button', { name: /previous/i })).toBeDisabled();
-    expect(screen.getByRole('button', { name: /next/i })).toBeEnabled();
+    for (const button of screen.getAllByRole('button')) {
+      expect(button).toBeEnabled();
+    }
   });
 
-  it('🔴 Α2: το «Προηγούμενη» ΔΕΝ εκφωνεί ΠΟΤΕ «0» — μετρήθηκε στην οθόνη', () => {
-    // Πρώτη γραφή: `current: index` ⇒ στην πρώτη φωτογραφία το κουμπί έλεγε «(0/3)»,
-    // αριθμό που δεν υπάρχει. Ο αριθμός είναι ο ΠΡΟΟΡΙΣΜΟΣ, ποτέ αρνητικός δείκτης.
+  it('🔴 Α2: «Προηγούμενη» από την ΠΡΩΤΗ τυλίγει στην ΤΕΛΕΥΤΑΙΑ', () => {
+    render(<ListingCardGallery images={images(3)} sizes={SIZES} />);
+    const { calls } = instrument(400);
+    fireEvent.click(screen.getByRole('button', { name: /previous/i }));
+    // δείκτης 0 → −1 → τυλίγει στο 2 ⇒ 2 × 400. Το `-1 % 3` στη JavaScript είναι −1:
+    // χωρίς το `+ total` πριν το δεύτερο `%`, εδώ θα ζητούσαμε αρνητική θέση.
+    expect(calls).toEqual([{ left: 800 }]);
+  });
+
+  it('🔴 Α3: το «Προηγούμενη» ΔΕΝ εκφωνεί ΠΟΤΕ «0» — εκφωνεί τον ΤΥΛΙΓΜΕΝΟ προορισμό', () => {
     render(<ListingCardGallery images={images(3)} sizes={SIZES} />);
     const label = screen.getByRole('button', { name: /previous/i }).getAttribute('aria-label');
-    expect(label).toContain('"current":1');
+    expect(label).toContain('"current":3');
     expect(label).not.toContain('"current":0');
   });
 
-  it('Α3: το «Επόμενη» δηλώνει τον ΠΡΟΟΡΙΣΜΟ και το σύνολο', () => {
+  it('Α4: το «Επόμενη» από την πρώτη δηλώνει τη ΔΕΥΤΕΡΗ, με το σύνολο', () => {
     render(<ListingCardGallery images={images(3)} sizes={SIZES} />);
     const label = screen.getByRole('button', { name: /next/i }).getAttribute('aria-label');
     expect(label).toContain('"current":2');

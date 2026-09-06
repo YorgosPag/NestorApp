@@ -232,7 +232,10 @@ export function ListingCard({
           που κάνει τα πέντε σχήματα του χάρτη να διαφέρουν σε **μέγεθος**.
         */
         className={[
-          'relative rounded-lg border bg-card p-3 transition-colors',
+          // 🔑 `group/card`: τα βελάκια της γκαλερί αποκαλύπτονται με hover **οπουδήποτε
+          //    στην κάρτα**, όχι μόνο πάνω στη φωτογραφία — το πρότυπο Zillow/Airbnb,
+          //    όπου το βλέμμα πάει στην κάρτα ως σύνολο. Δες `ListingCardGallery`.
+          'group/card relative rounded-lg border bg-card p-3 transition-colors',
           // Ο δακτύλιος εστίασης ήταν στο `<Link>` που τύλιγε τα πάντα· τώρα ο
           // σύνδεσμος είναι μικρός (ο τίτλος) και **αόρατος** ως περίγραμμα, οπότε
           // τον δακτύλιο τον φοράει η κάρτα όταν κάποιο παιδί της έχει εστίαση.

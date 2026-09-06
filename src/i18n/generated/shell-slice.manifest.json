@@ -67,7 +67,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "8020d1ff74f1c2acfc111a7ef351061d79ef0dd963ab5ce71a2853ad76b7baf6",
+  "inputsSha256": "2b4391de326833c35f5d98c40d735b2f16b521b1015758374681d825de2b51c3",
   "languages": [
     "el"
   ],
@@ -3892,7 +3892,7 @@
     "src/components/providers/I18nProvider.tsx": "bb82ce64bdb15f688d8d20467bde1357c6e5b71afb367cf015ade7f691d841f2",
     "src/components/public-site/PublicSiteHeader.tsx": "3c0ac0bb4cfc886ac000d8bef6b37f426aabbf3d2ab866c893e76fce36e5ae1e",
     "src/components/search-results/ListingCard.tsx": "c1455c7a0afcbdd1ad5bfd94674eee0ac825208aee41387f69bc32810892403a",
-    "src/components/search-results/ListingCardGallery.tsx": "5d20b37177992106a6e20a08cd2fd4457455ece3f0d5bec3862ed5c090d9fbeb",
+    "src/components/search-results/ListingCardGallery.tsx": "ef86c6ab52ffa3bc6484d096d7f6f832c15253423a1ad44ecd6564f635c2df44",
     "src/components/search/CoverageStatement.tsx": "3a99e80c975df088c325a5e156c3a2fa949cfcd115294297d502991a8b44eb3f",
     "src/components/search/GlobalSearchDialog.tsx": "f2f938184d386db2f647a6566216185b8544c55eda4219daa7a6215be9061761",
     "src/components/search/LandingModeSwitch.tsx": "abc34515cab9d750a6610b1a947369d0aeba2edf79fc1867098dacef2b5ddbf9",
