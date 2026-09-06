@@ -10,7 +10,7 @@
  */
 
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { ALL_PROPERTY_TYPES_WITH_DEPRECATED } from '@/constants/property-types';
+import { PROPERTY_TYPES } from '@/constants/property-types';
 import { COMMERCIAL_STATUSES } from '@/constants/commercial-statuses';
 import { OPERATIONAL_STATUSES } from '@/constants/operational-statuses';
 import { ENERGY_CLASSES } from '@/constants/energy-classes';
@@ -100,8 +100,34 @@ const BUILDING_STATUSES = ACTIVE_BUILDING_STATUSES;
 // ADR-287 — EnergyClass SSoT lives στο `@/constants/energy-classes`.
 // Το local const αφαιρέθηκε · γίνεται re-use απευθείας το imported array.
 
-// ADR-145 SSoT — 12 canonical + 2 deprecated (apartment_2br/3br for legacy data)
-const UNIT_TYPES = ALL_PROPERTY_TYPES_WITH_DEPRECATED;
+/**
+ * Τα είδη που **προσφέρονται ως φίλτρο** — μόνο τα κανονικά (ADR-842 §7.6.13 Ε).
+ *
+ * 🔴 **ΗΤΑΝ `ALL_PROPERTY_TYPES_WITH_DEPRECATED`, ΚΑΙ ΠΡΟΣΦΕΡΕ ΔΥΟ ΕΠΙΛΟΓΕΣ ΠΟΥ
+ * ΕΠΙΣΤΡΕΦΑΝ ΠΑΝΤΑ ΜΗΔΕΝ.** Τα `apartment_2br`/`apartment_3br` μετρήθηκαν
+ * **0 στα 23** ζωντανά έγγραφα (§7.6.12) — και δεν πρόκειται να εμφανιστούν: και τα
+ * **δύο** σύνορα γραφής επιβάλλουν κανονικές τιμές
+ * (`owner-property-draft-schema` με `z.enum` · `property-mutation-gateway` με
+ * `normalizePropertyType` + throw).
+ *
+ * 🔑 **Η αρχή, από τη βιβλιογραφία faceted search**: *ποτέ μην προσφέρεις έλεγχο που
+ * δεν μπορεί να αλλάξει το αποτέλεσμα*. Μια επιλογή που γυρίζει πάντα άδειο δεν είναι
+ * «συμβατότητα» — είναι αδιέξοδο που ο χρήστης χρεώνεται ως δικό του λάθος.
+ *
+ * ⚠️ **ΚΑΙ ΘΑ ΕΛΕΓΕ ΨΕΜΑΤΑ ΑΚΟΜΗ ΚΑΙ ΑΝ ΕΒΡΙΣΚΕ**: το `PROPERTY_TYPE_ALIASES`
+ * καταρρέει το `apartment_2br` σε `apartment` (*family collapse*), οπότε ο χρήστης θα
+ * φιλτράριζε «Διαμέρισμα 2Δ» και θα έβλεπε γραμμές με ετικέτα «Διαμέρισμα».
+ *
+ * ⛔ **ΜΗΝ προσθέσεις «επέκταση παραλλαγών» στο query engine για να τα ξαναπιάσεις.**
+ * Θα ήταν μηχανισμός για σύνολο **μετρημένα κενό** — φρουρός χωρίς απόδειξη ζωής,
+ * ακριβώς το είδος που το `CLAUDE.md` μετρά ως **606/671** αδρανείς. Αν κάποτε
+ * μετρηθεί παρωχημένη τιμή στη βάση, η σωστή θέση είναι **δηλωμένη ικανότητα πεδίου**
+ * στο `report-query-executor`, όχι επιλογή στο dropdown.
+ *
+ * ✅ Το `DEPRECATED_PROPERTY_TYPES` **μένει** ως δεδομένα για τον μεταφραστή — όπως
+ * ακριβώς το `LEGACY_GREEK_PROPERTY_TYPES`. Άλλαξε ο **ρόλος**, όχι η σημασία.
+ */
+const UNIT_TYPES = PROPERTY_TYPES;
 
 // ADR-287 — CommercialStatus SSoT lives στο `@/constants/commercial-statuses`.
 // Το local const αφαιρέθηκε · γίνεται re-use απευθείας το imported array.

@@ -41,7 +41,10 @@
  * @enterprise ADR-287 — Enum SSoT Centralization (Batch 27, extends Batch 25)
  */
 
-import type { PropertyTypeCanonical } from '@/constants/property-types';
+// 🔑 Η ΜΙΑ αυθεντία για το «τι είναι κατοικία» (ADR-842 §7.6.13) — δες τη σημείωση
+//    στο `condition-plausibility.ts` για το γιατί η «intentional duplication» δεν
+//    στεκόταν σε κανένα από τα τρία αρχεία.
+import { PROPERTY_TYPE_CLASS, type PropertyTypeCanonical } from '@/constants/property-types';
 import { normalizePropertyType } from '@/constants/property-type-aliases';
 import { isPreCompletionOperationalStatus } from '@/constants/operational-statuses';
 
@@ -56,22 +59,6 @@ const GLAZING_SINGLE = 'single';
 const GLAZING_TRIPLE = 'triple';
 const FLOORING_CARPET = 'carpet';
 const INTERIOR_UNDERFLOOR = 'underfloor-heating';
-
-/**
- * Residential type-set που υπόκειται σε missing-finishes warnings.
- * Mirror του set στο `systems-plausibility.ts` — intentional duplication
- * ανάμεσα σε leaf modules για zero cross-module coupling.
- */
-const RESIDENTIAL_TYPES: ReadonlySet<PropertyTypeCanonical> = new Set<PropertyTypeCanonical>([
-  'studio',
-  'apartment_1br',
-  'apartment',
-  'maisonette',
-  'penthouse',
-  'loft',
-  'detached_house',
-  'villa',
-]);
 
 // =============================================================================
 // 2. ASSESSMENT — public API
@@ -159,7 +146,7 @@ export function assessFinishesPlausibility(
   const isPreCompletion = isPreCompletionOperationalStatus(operationalStatus);
 
   const isResidential =
-    propertyType !== null && RESIDENTIAL_TYPES.has(propertyType);
+    propertyType !== null && PROPERTY_TYPE_CLASS[propertyType] === 'residential';
 
   const allEmpty =
     flooring.length === 0 &&

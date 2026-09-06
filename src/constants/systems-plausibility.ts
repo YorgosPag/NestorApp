@@ -34,8 +34,12 @@
  * @enterprise ADR-287 — Enum SSoT Centralization (Batch 27, extends Batch 25)
  */
 
+// 🔑 Η ΜΙΑ αυθεντία για το «τι είναι κατοικία» (ADR-842 §7.6.13) — δες τη σημείωση
+//    στο `condition-plausibility.ts`.
 import {
   isCanonicalPropertyType,
+  propertyTypesOfClass,
+  PROPERTY_TYPE_CLASS,
   type PropertyTypeCanonical,
 } from '@/constants/property-types';
 import { toNonNegativeNumber } from '@/constants/plausibility-input';
@@ -54,16 +58,18 @@ const CONDITION_NEW = 'new';
  * Type-set που υπόκειται σε ΚΕνΑΚ heating requirement.
  * Standalone + apartment family + commercial residential-like.
  * Storage / hall = exempt (auxiliary / open-plan).
+ *
+ * 🔑 **ΠΑΡΑΓΕΤΑΙ: «όλες οι κατοικίες, ΣΥΝ το γραφείο»** (ADR-842 §7.6.13). Ήταν
+ * χειρόγραφη λίστα εννέα τιμών, δηλαδή το σύνολο των κατοικιών **αντιγραμμένο** και
+ * μια τιμή παραπάνω· ένα νέο είδος κατοικίας θα έπρεπε να θυμηθεί κανείς να το
+ * προσθέσει **και εδώ**, αλλιώς το ΚΕνΑΚ θα σιωπούσε γι' αυτό.
+ *
+ * ⚠️ Το `'office'` μένει **ρητό**, όχι παραγόμενο: δεν είναι «όλα τα εμπορικά» — τα
+ * `shop`/`hall`/`storage` εξαιρούνται επίτηδες. Η ένωση είναι *κατοικίες + μία
+ * δηλωμένη εξαίρεση*, και έτσι διαβάζεται.
  */
 const HEATING_REQUIRED_TYPES: ReadonlySet<PropertyTypeCanonical> = new Set<PropertyTypeCanonical>([
-  'studio',
-  'apartment_1br',
-  'apartment',
-  'maisonette',
-  'penthouse',
-  'loft',
-  'detached_house',
-  'villa',
+  ...propertyTypesOfClass('residential'),
   'office',
 ]);
 
@@ -76,17 +82,6 @@ const COOLING_OVERSIZED_THRESHOLD_M2 = 40;
  * Όριο σε τ.μ. πάνω από το οποίο residential χωρίς ψύξη είναι ασυνήθιστο.
  */
 const COOLING_NONE_LARGE_THRESHOLD_M2 = 120;
-
-const RESIDENTIAL_TYPES: ReadonlySet<PropertyTypeCanonical> = new Set<PropertyTypeCanonical>([
-  'studio',
-  'apartment_1br',
-  'apartment',
-  'maisonette',
-  'penthouse',
-  'loft',
-  'detached_house',
-  'villa',
-]);
 
 // =============================================================================
 // 2. ASSESSMENT — public API
@@ -174,6 +169,12 @@ export function assessSystemsPlausibility(
     };
   }
 
+  // Μετά τον φρουρό κανονικότητας το είδος είναι `PropertyTypeCanonical`, άρα η
+  // δεικτοδότηση του πίνακα είναι ασφαλής — και είναι ακριβώς ο τρόπος που υποδεικνύει
+  // το `property-classification.ts` όταν κρατάς **ήδη** κανονική τιμή (η
+  // κανονικοποίηση εκεί θα ήταν θόρυβος, όχι ασφάλεια).
+  const isResidential = PROPERTY_TYPE_CLASS[propertyType] === 'residential';
+
   // Step 2: condition=new + heating=none → ΚΕνΑΚ violation (most specific)
   if (
     heatingType === HEATING_NONE &&
@@ -212,7 +213,7 @@ export function assessSystemsPlausibility(
   // Suppressed σε pre-completion — heating ενδέχεται να μην έχει εγκατασταθεί.
   if (
     heatingType === null &&
-    RESIDENTIAL_TYPES.has(propertyType) &&
+    isResidential &&
     !isPreCompletion
   ) {
     return buildAssessment(
@@ -231,7 +232,7 @@ export function assessSystemsPlausibility(
   // Suppressed σε pre-completion — cooling ενδέχεται να μην έχει εγκατασταθεί.
   if (
     coolingType === null &&
-    RESIDENTIAL_TYPES.has(propertyType) &&
+    isResidential &&
     !isPreCompletion
   ) {
     return buildAssessment(
@@ -252,7 +253,7 @@ export function assessSystemsPlausibility(
     areaGross !== null &&
     areaGross > 0 &&
     areaGross < COOLING_OVERSIZED_THRESHOLD_M2 &&
-    RESIDENTIAL_TYPES.has(propertyType)
+    isResidential
   ) {
     return buildAssessment(
       'unusual',
@@ -271,7 +272,7 @@ export function assessSystemsPlausibility(
     coolingType === COOLING_NONE &&
     areaGross !== null &&
     areaGross > COOLING_NONE_LARGE_THRESHOLD_M2 &&
-    RESIDENTIAL_TYPES.has(propertyType)
+    isResidential
   ) {
     return buildAssessment(
       'unusual',

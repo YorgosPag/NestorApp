@@ -35,7 +35,13 @@
  * @enterprise ADR-287 — Enum SSoT Centralization (Batch 27, extends Batch 25)
  */
 
-import type { PropertyTypeCanonical } from '@/constants/property-types';
+// 🔑 **Η ΜΙΑ ΑΥΘΕΝΤΙΑ ΓΙΑ ΤΟ «ΤΙ ΕΙΝΑΙ ΚΑΤΟΙΚΙΑ»** (ADR-842 §7.6.13). Εδώ ζούσε
+//    χειρόγραφο `RESIDENTIAL_TYPES` με τις ίδιες 8 τιμές, σε **τρία** αντίγραφα. Το
+//    σχόλιό τους επικαλούνταν *«intentional duplication για zero cross-module
+//    coupling»* — δεν στέκει: το `property-types` είναι leaf και **ήδη** εισάγεται
+//    εδώ για τον τύπο. Δεν υπήρχε coupling να αποφευχθεί, μόνο τρεις λίστες να
+//    αποκλίνουν.
+import { PROPERTY_TYPE_CLASS, type PropertyTypeCanonical } from '@/constants/property-types';
 import { normalizePropertyType } from '@/constants/property-type-aliases';
 import { isPreCompletionOperationalStatus } from '@/constants/operational-statuses';
 
@@ -48,23 +54,6 @@ const KNOWN_OPERATIONAL_STATUSES = new Set(['ready', 'under-construction']);
 const KNOWN_HEATING_NONE = 'none';
 const HIGH_ENERGY_CLASSES = new Set(['A+', 'A', 'B']);
 const LOW_ENERGY_CLASSES = new Set(['E', 'F', 'G']);
-
-/**
- * Residential type-set για missing-condition / missing-energyClass gating.
- * Mirror του set σε `systems-plausibility.ts` + `finishes-plausibility.ts` —
- * intentional duplication ανάμεσα σε leaf modules για zero cross-module
- * coupling.
- */
-const RESIDENTIAL_TYPES: ReadonlySet<PropertyTypeCanonical> = new Set<PropertyTypeCanonical>([
-  'studio',
-  'apartment_1br',
-  'apartment',
-  'maisonette',
-  'penthouse',
-  'loft',
-  'detached_house',
-  'villa',
-]);
 
 // =============================================================================
 // 2. ASSESSMENT — public API
@@ -145,7 +134,7 @@ export function assessConditionPlausibility(
   const energyClass = normalize(args.energyClass);
 
   const isResidential =
-    propertyType !== null && RESIDENTIAL_TYPES.has(propertyType);
+    propertyType !== null && PROPERTY_TYPE_CLASS[propertyType] === 'residential';
   const hasValidCondition = condition !== null && KNOWN_CONDITIONS.has(condition);
   // Pre-completion (draft / under-construction) → suppress "missing" warnings
   // (Google progressive disclosure). Declarative cross-field checks remain ON.

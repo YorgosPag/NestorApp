@@ -396,12 +396,19 @@ export const RESIDENTIAL_PROPERTY_TYPES: readonly (
 // 8. UNION WITH DEPRECATED (για report-builder, AI search, legacy dropdowns)
 // =============================================================================
 
-/**
- * All canonical + deprecated underscore types (14 total).
- * Χρησιμοποιείται από report-builder και AI search ώστε να ταιριάζουν
- * και τα παλιά Firestore records (apartment_2br/3br).
- */
-export const ALL_PROPERTY_TYPES_WITH_DEPRECATED = [
-  ...PROPERTY_TYPES,
-  ...DEPRECATED_PROPERTY_TYPES,
-] as const;
+// ALL_PROPERTY_TYPES_WITH_DEPRECATED DELETED 2026-09-06 (ADR-842 §7.6.13 Ε).
+//
+// Είχε **έναν** καταναλωτή, το `report-builder/domain-definitions.ts`, όπου γέμιζε ένα
+// dropdown φίλτρου με τα `apartment_2br`/`apartment_3br` — τιμές **μετρημένα 0 στα 23**
+// ζωντανά έγγραφα, που κανένα σύνορο γραφής δεν μπορεί πια να γεννήσει. Δηλαδή δύο
+// επιλογές που επέστρεφαν **πάντα μηδέν**.
+//
+// ⚠️ Το σχόλιό της έλεγε *«χρησιμοποιείται από report-builder **και AI search**»* —
+//    το AI search **δεν την εισήγαγε ποτέ**. Ένας ισχυρισμός παραπάνω από τη μέτρηση,
+//    στο ίδιο σχήμα με τα υπόλοιπα ευρήματα του §7.6.13.
+//
+// 🔑 Αν χρειαστείς την ένωση, γράψ' την στο σημείο χρήσης:
+//    `[...PROPERTY_TYPES, ...DEPRECATED_PROPERTY_TYPES]`. Ο **λόγος** που δεν ζει εδώ
+//    ως όνομα είναι ότι το όνομα προσκαλούσε τη λάθος χρήση: «όλα τα είδη» ακούγεται
+//    σαν προεπιλογή, ενώ είναι **ιστορικό λεξιλόγιο ανάγνωσης** — ποτέ επιλογή που
+//    προσφέρεται σε άνθρωπο.
