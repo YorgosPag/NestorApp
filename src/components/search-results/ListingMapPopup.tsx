@@ -68,6 +68,7 @@ import { resolveDisplayPrice } from '@/lib/properties/price-resolver';
 import { MISSING_PRICE_KEY } from '@/lib/listings/listing-price-keys';
 import { listingDetailHref } from '@/lib/listings/listing-routes';
 import { listingGalleryImages } from '@/lib/listings/listing-images';
+import { photoPositionFor } from '@/lib/listings/listing-photo-position';
 import { ListingCardGallery } from './ListingCardGallery';
 import type { PublicListing } from '@/types/public-listing';
 
@@ -166,6 +167,27 @@ export function ListingMapPopup({ listing, filterQuery, onClose }: ListingMapPop
           images={images}
           sizes={POPUP_IMAGE_SIZES}
           className="mb-1.5"
+          /*
+            🏆 **ΚΛΗΡΟΝΟΜΙΑ ΑΡΧΙΚΗΣ ΘΕΣΗΣ — ΟΧΙ ΣΥΓΧΡΟΝΙΣΜΟΣ** (ADR-777 §8.58.7).
+
+            Ο άνθρωπος διαβάζει τη λίστα *(«ταιριάζει;»)*, βρίσκει κάτι στην 4η
+            φωτογραφία, και ρωτά τον χάρτη *(«πού είναι;»)*. Μέχρι σήμερα η φούσκα
+            άνοιγε πάντα στην **πρώτη** — δηλαδή του έλεγε *«ξέχνα τι κοίταζες»*.
+
+            🔑 **Η ανάγνωση γίνεται ΕΔΩ, στη γέννηση της φούσκας, και είναι η ΣΤΙΓΜΗ ΤΟΥ
+            ΣΥΜΒΑΝΤΟΣ** — αυτό το component υπάρχει **μόνο** όσο υπάρχει επιλογή, άρα η
+            απόδοσή του **είναι** το κλικ στην πινέζα. Κανόνας 2 του ADR-040 κατά
+            γράμμα: τιμή από **αναφορά τη στιγμή που χρειάζεται**, ποτέ συνδρομή.
+
+            ⛔ **ΜΗΝ το κάνεις `useSyncExternalStore`.** Θα ήταν ο αμφίδρομος
+            συγχρονισμός που το §8.58.7 απέρριψε — και θα ακύρωνε τα βελάκια **αυτής**
+            της γκαλερί, που είναι ολόκληρο το §8.58.2.
+
+            ⚠️ Το `images.length` περνά ως παρονομαστής: ο κατάλογος είναι **ζωντανός**
+            και μια αγγελία μπορεί να χάσει φωτογραφίες ενώ η κάρτα της είναι στην
+            οθόνη. Ο **ένας** κριτής των ορίων ζει μέσα στο `photoPositionFor`.
+          */
+          initialIndex={photoPositionFor(listing.id, images.length)}
           /*
             Ο **πλεοναστικός** σύνδεσμος της φωτογραφίας: `tabIndex={-1}` + `aria-hidden`
             ⇒ δεύτερη διαδρομή για το ποντίκι, **μηδέν** κόστος για το πληκτρολόγιο. Δες

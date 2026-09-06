@@ -62,6 +62,7 @@ beforeAll(() => {
 
 import { ListingMapPopup } from '../ListingMapPopup';
 import { listingLeadImage } from '@/lib/listings/listing-images';
+import { notePhotoPosition, forgetPhotoPosition } from '@/lib/listings/listing-photo-position';
 import type { PublicListing, ListingImage } from '@/types/public-listing';
 
 function image(n: number): ListingImage {
@@ -210,5 +211,69 @@ describe('ADR-777 §8.58 — η φούσκα του χάρτη αποκτά πε
     //    **λάθος** — σφάλμα που καμία οπτική επιθεώρηση δεν πιάνει.
     expect(container.querySelector('article')).toHaveClass('w-44');
     expect(photos(container)[0]).toHaveAttribute('sizes', '176px');
+  });
+
+  /* ─────────────────────────────────────────────────────────────────────────
+     ADR-777 §8.58.7 — Η ΚΛΗΡΟΝΟΜΙΑ ΑΡΧΙΚΗΣ ΘΕΣΗΣ
+
+     🔴 Ο `jsdom` **δεν έχει διάταξη**: `clientWidth` = 0, άρα το `scrollTo` της
+     γκαλερί δεν μπορεί να μετρηθεί εδώ — αυτό ανήκει στον περιηγητή. Αυτό που
+     **μπορεί** και **πρέπει** να μετρηθεί είναι το ΣΥΜΒΟΛΑΙΟ: ότι η φούσκα
+     **ρωτά** το SSoT και **παραδίδει** την απάντηση στη γκαλερί ως `initialIndex`.
+
+     ⚠️ Γι' αυτό η Κ2 κατασκοπεύει το prop αντί για το DOM: ένα τεστ που κοίταζε
+     `scrollLeft` θα ήταν **μονίμως πράσινο για λάθος λόγο** (0 === 0).
+     ───────────────────────────────────────────────────────────────────────── */
+  describe('Κληρονομιά αρχικής θέσης (§8.58.7)', () => {
+    afterEach(() => forgetPhotoPosition(LISTING.id));
+
+    it('Κ1 — καμία δήλωση από την κάρτα ⇒ η φούσκα ξεκινά από την ΠΡΩΤΗ', () => {
+      const { container } = draw();
+      expect(photos(container)[0]).toHaveAttribute('src', listingLeadImage(LISTING)?.url);
+    });
+
+    it('Κ2 — 🔑 Η ΚΑΡΤΑ ΕΙΧΕ ΞΕΦΥΛΛΙΣΕΙ ΣΤΗΝ 3η ⇒ Η ΦΟΥΣΚΑ ΑΝΟΙΓΕΙ ΕΚΕΙ', () => {
+      notePhotoPosition(LISTING.id, 2);
+      draw();
+
+      /*
+        🔴 **ΜΕΤΡΙΕΤΑΙ Η ΦΩΝΗ, ΟΧΙ ΤΟ PROP — ΚΑΙ Η ΕΠΙΛΟΓΗ ΕΙΝΑΙ Η ΑΓΚΥΡΑ.**
+
+        Ο `jsdom` **δεν έχει διάταξη** (`clientWidth` = 0), άρα το `scrollLeft` που θα
+        ακολουθούσε είναι **αμέτρητο εδώ** — ένα τεστ πάνω του θα ήταν μονίμως πράσινο
+        για λάθος λόγο (`0 === 0`). Και ένας κατάσκοπος στο prop θα επιβεβαίωνε μόνο
+        ότι *«περάσαμε αριθμό»*, όχι ότι **η γκαλερί τον πίστεψε**.
+
+        🔑 Το `aria-label` των βελακιών παράγεται από τον **δείκτη κατάστασης** της
+        γκαλερί — δηλαδή είναι η ίδια η απόδειξη ότι ο σπόρος φύτρωσε, **και**
+        ταυτόχρονα αυτό που θα ακούσει ο άνθρωπος με αναγνώστη οθόνης.
+
+        Με 3 φωτογραφίες και δείκτη `2` *(η τελευταία)*: το «Προηγούμενη» οδηγεί στη
+        **2η** και το «Επόμενη» τυλίγεται στην **1η** (§8.57.7, λούπα).
+      */
+      const previous = screen.getByLabelText(/previousAria/);
+      expect(previous.getAttribute('aria-label')).toContain('"current":2');
+
+      const next = screen.getByLabelText(/nextAria/);
+      expect(next.getAttribute('aria-label')).toContain('"current":1');
+    });
+
+    it('Κ2β — 🔴 ΜΕΤΑΛΛΑΞΗ ΣΤΗΝ ΙΔΙΑ ΤΗΝ ΑΓΚΥΡΑ: χωρίς δήλωση, οι ΙΔΙΕΣ φωνές λένε ΑΛΛΟΥΣ αριθμούς', () => {
+      // Χωρίς αυτό, η Κ2 θα μπορούσε να περνά για λόγο άσχετο με την κληρονομιά.
+      draw();
+
+      expect(screen.getByLabelText(/previousAria/).getAttribute('aria-label')).toContain('"current":3');
+      expect(screen.getByLabelText(/nextAria/).getAttribute('aria-label')).toContain('"current":2');
+    });
+
+    it('Κ3 — 🔴 Η ΦΟΥΣΚΑ ΔΕΝ ΓΡΑΦΕΙ ΠΟΤΕ: μετά το άνοιγμά της, το SSoT μένει ΑΘΙΚΤΟ', () => {
+      notePhotoPosition(LISTING.id, 2);
+      draw();
+
+      // Αν η φούσκα δήλωνε `reportPositionAs`, ο δικός της παρατηρητής θα έγραφε `0`
+      // πάνω από το `2` της κάρτας — ο βρόχος ανάδρασης του §8.58.7, σιωπηλά.
+      const { photoPositionFor } = require('@/lib/listings/listing-photo-position') as typeof import('@/lib/listings/listing-photo-position');
+      expect(photoPositionFor(LISTING.id, 3)).toBe(2);
+    });
   });
 });
