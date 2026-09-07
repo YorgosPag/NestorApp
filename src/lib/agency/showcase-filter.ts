@@ -31,10 +31,16 @@
  * πλησιέστερος ελαιοχρωματιστής είναι πρώτος. Η **ειδικότητα** παραμένει ερώτηση που
  * **μόνο** ο χρήστης μπορεί να απαντήσει, και το φίλτρο **μόνο** αυτήν απαντά.
  *
- * 🔑 **ΚΑΙ ΤΟ ΚΕΝΤΡΟ ΕΙΝΑΙ ΠΛΕΟΝ ΚΟΙΝΟ**: το `filters.near.center` τροφοδοτεί **και**
- * το φίλτρο **και** τη σειρά. Δεν είναι δεύτερο κριτήριο — είναι **μία** είσοδος που
- * απαντά σε **δύο** ερωτήσεις *(«ποιοι χωράνε;»* · *«ποιος είναι πιο κοντά;»)*. Δύο
- * **διαφορετικά** κέντρα θα ήταν δύο αλήθειες για το «πού είσαι».
+ * 🔑 **ΚΑΙ ΤΟ ΚΕΝΤΡΟ ΕΙΝΑΙ ΠΛΕΟΝ ΚΟΙΝΟ**: το κέντρο του {@link ShowcaseFilters.where}
+ * *(σκέλος `circle`, μέσω {@link whereCenter})* τροφοδοτεί **και** το φίλτρο **και** τη
+ * σειρά. Δεν είναι δεύτερο κριτήριο — είναι **μία** είσοδος που απαντά σε **δύο**
+ * ερωτήσεις *(«ποιοι χωράνε;»* · *«ποιος είναι πιο κοντά;»)*. Δύο **διαφορετικά**
+ * κέντρα θα ήταν δύο αλήθειες για το «πού είσαι».
+ *
+ * ⚠️ **Το πεδίο λεγόταν `near` μέχρι το ADR-846** — έγινε `where`, **κλειστή ένωση**,
+ * ώστε η διοικητική περιοχή να είναι **δεύτερη πηγή του ΙΔΙΟΥ** άξονα αντί για δεύτερο
+ * πεδίο δίπλα του. Το σκέλος `adminId` **δεν παράγει κέντρο** *(δεν έχουμε γεωμετρία
+ * ορίων)* ⇒ εκεί η σειρά είναι **ισότιμη**.
  *
  * Όσο ο πληθυσμός ήταν **μόνο** μεσιτικά γραφεία, αυτό ήταν ανεκτό κόστος. Με
  * ελαιοχρωματιστές, δικηγόρους, μηχανικούς **και** μεσίτες στον **ίδιο** πίνακα,
@@ -88,9 +94,10 @@
  * @see lib/listings/listing-filters.ts — η μηχανή «σημείο + ακτίνα», δεύτερος καταναλωτής
  */
 
+import { coverageMatches, type LineageResolver } from '@/lib/agency/coverage-match';
 import { distanceMeters } from '@/lib/geo/geo-distance';
 import { readGeoFilter } from '@/lib/listings/listing-filters';
-import type { GeoCircle } from '@/types/geo/coordinates';
+import type { GeoCircle, GeoPoint } from '@/types/geo/coordinates';
 import type { PublicShowcase } from '@/types/agency-profile';
 import type { EscoBilingualText } from '@/types/contacts/esco-types';
 
@@ -122,18 +129,82 @@ export const ALL_OCCUPATIONS = 'all' as const;
 export interface ShowcaseFilters {
   /** ESCO URI, ή `null` = **ΟΛΕΣ**. Το sentinel `'all'` δεν φτάνει ποτέ εδώ. */
   readonly occupation: string | null;
-  /** `null` = **όπου να 'ναι**. Ο ΙΔΙΟΣ {@link GeoCircle} με το `ListingFilters.near`. */
-  readonly near: GeoCircle | null;
+  /** `null` = **όπου να 'ναι**. Δες {@link ShowcaseWhere} για το γιατί είναι **ένα** πεδίο. */
+  readonly where: ShowcaseWhere | null;
+}
+
+/**
+ * **ΠΟΥ ΨΑΧΝΕΙ Ο ΕΠΙΣΚΕΠΤΗΣ — ΜΙΑ ΕΡΩΤΗΣΗ, ΔΥΟ ΠΗΓΕΣ** *(ADR-846)*.
+ *
+ * ═════════════════════════════════════════════════════════════════════════════
+ * 🔴 ΓΙΑΤΙ ΚΛΕΙΣΤΗ ΕΝΩΣΗ ΚΑΙ ΟΧΙ ΔΕΥΤΕΡΟ ΠΕΔΙΟ ΔΙΠΛΑ ΣΤΟ `near`
+ *
+ * Η προφανής γραφή ήταν `place: string | null` **δίπλα** στο `near: GeoCircle | null`.
+ * Είναι ακριβώς το σχήμα που **δύο** αρχεία αυτού του έργου απαγορεύουν ονομαστικά:
+ *
+ *   • εδώ, λίγες γραμμές πιο πάνω: *«Δύο **διαφορετικά** κέντρα θα ήταν δύο αλήθειες
+ *     για το "πού είσαι"»*
+ *   • `types/geo/coordinates.ts`: *«Δύο ξεχωριστά πεδία θα ήταν ΔΕΥΤΕΡΟ γεωγραφικό
+ *     φίλτρο — δηλαδή δύο απαντήσεις στο ίδιο ερώτημα, που μια μέρα διαφωνούν»*
+ *
+ * 🏆 **Με ένα πεδίο, η μία πηγή ΑΝΤΙΚΑΘΙΣΤΑ την άλλη αντί να την ανταγωνίζεται** — το
+ * ίδιο ιδίωμα με το `GeoArea`, όπου το σύρσιμο του χάρτη αντικαθιστά τον κύκλο του
+ * geocoder. Και ο μεταγλωττιστής **αναγκάζει** κάθε καταναλωτή να απαντήσει και για τα
+ * δύο σκέλη.
+ *
+ * ✅ **Και το σχήμα παραμένει ΔΥΟ αξόνων** *(Ε3β)*: η άγκυρα μετρά **πλήθος** κλειδιών,
+ * και το πλήθος **δεν άλλαξε** — άλλαξε ένα **όνομα**. Ένας τρίτος άξονας θα ήταν άλλη
+ * συζήτηση, και η άγκυρα θα εξακολουθούσε να τη σταματά.
+ *
+ * 🔑 **ΤΟ ΣΚΕΛΟΣ `circle` ΕΙΝΑΙ Η ΥΠΟΔΟΧΗ ΤΟΥ ADR-842**: η οθόνη `/pro` δεν έχει ακόμη
+ * δικό της πεδίο αναζήτησης τόπου, και η δηλωμένη θεραπεία ήταν *«να δεχτεί προορισμό ο
+ * `PlaceSearchBox`»*. Όταν έρθει, γράφει **εδώ** — όχι σε δεύτερο πεδίο δίπλα.
+ */
+export type ShowcaseWhere =
+  /**
+   * **Διοικητική οντότητα** — ό,τι διάλεξε ο επισκέπτης από το κλειστό λεξιλόγιο του
+   * Καλλικράτη *(ADR-772)*, σε οποιοδήποτε από τα 8 επίπεδα.
+   *
+   * ⚠️ **Κανένα σημείο εδώ, και είναι ΔΟΜΙΚΟ**: δεν έχουμε γεωμετρία διοικητικών ορίων,
+   * άρα δεν υπάρχει κέντρο να παραχθεί. Συνέπεια: όταν ο άξονας είναι διοικητικός, η
+   * σειρά του καταλόγου είναι **ισότιμη** *(`orderAgencies` με `from === null`)* —
+   * επιβεβλημένο, όχι επιλογή, και **antitrust-ασφαλές**.
+   */
+  | { readonly adminId: string }
+  /** **Σημείο + ακτίνα** — ο ΙΔΙΟΣ {@link GeoCircle} με το `ListingFilters.near`. */
+  | { readonly circle: GeoCircle };
+
+/** **Ποιο σκέλος;** — διάκριση με **παρουσία πεδίου**, ίδιο ιδίωμα με το `isBoundingBox`. */
+export function isAdministrativeWhere(
+  where: ShowcaseWhere,
+): where is { readonly adminId: string } {
+  return 'adminId' in where;
+}
+
+/**
+ * **Το κέντρο της ταξινόμησης** — ή `null` όταν δεν υπάρχει.
+ *
+ * 🔑 Γράφεται **εδώ, μία φορά**, γιατί ο καταναλωτής της *(`AgencyDirectoryContent`)*
+ * τροφοδοτεί μαζί της το `usePublicAgencies`: ένα `where.circle?.center` σκορπισμένο
+ * στην οθόνη θα ήταν το σημείο όπου κάποιος θα «διόρθωνε» το διοικητικό σκέλος να
+ * παράγει κέντρο — δηλαδή θα έδινε στη **δήλωση** διαδρομή προς τη **σειρά**.
+ */
+export function whereCenter(where: ShowcaseFilters['where']): GeoPoint | null {
+  if (where === null || isAdministrativeWhere(where)) return null;
+  return where.circle.center;
 }
 
 /** Η **προεπιλογή είναι «όλα»** — Φ2, ρητά και σε ένα σημείο. */
 export const EMPTY_SHOWCASE_FILTERS: ShowcaseFilters = {
   occupation: null,
-  near: null,
+  where: null,
 };
 
 /** Το όνομα της παραμέτρου της ειδικότητας στη διεύθυνση. */
 const OCCUPATION_PARAM = 'occupation';
+
+/** Το όνομα της παραμέτρου της **διοικητικής** περιοχής. */
+const AREA_PARAM = 'area';
 
 // =============================================================================
 // ΔΙΕΥΘΥΝΣΗ ⇄ ΚΑΤΑΣΤΑΣΗ
@@ -151,29 +222,52 @@ export function parseShowcaseFilters(params: URLSearchParams): ShowcaseFilters {
   return {
     // ⚠️ Το sentinel μεταφράζεται ΕΔΩ, μία φορά, στο σύνορο.
     occupation: raw === '' || raw === ALL_OCCUPATIONS ? null : raw,
-    // 🔑 ΜΗΔΕΝ ΔΙΠΛΟΤΥΠΟ: η ίδια συνάρτηση που διαβάζει το γεωγραφικό φίλτρο των
-    //    αγγελιών. Δεύτερη υλοποίηση θα ξεχνούσε τον έλεγχο `|lat| > 90`.
-    near: readGeoFilter(params),
+    where: readWhere(params),
   };
+}
+
+/**
+ * **Ένα πεδίο, δύο πηγές — και η προτεραιότητα δηλώνεται.**
+ *
+ * ⚠️ **Η διοικητική περιοχή νικά**, αν κάποιος φτιάξει διεύθυνση με **και τα δύο**.
+ * Δεν είναι κρίση αξίας: είναι ο κανόνας *«μία αλήθεια»* εφαρμοσμένος σε **ντετερμινιστικό**
+ * σημείο. Χωρίς ρητή σειρά, η ίδια διεύθυνση θα έδινε διαφορετικό αποτέλεσμα ανάλογα με
+ * το ποιος έλεγχος γράφτηκε πρώτος — και κανείς δεν θα το έβλεπε.
+ */
+function readWhere(params: URLSearchParams): ShowcaseWhere | null {
+  const adminId = params.get(AREA_PARAM)?.trim() ?? '';
+  if (adminId !== '') return { adminId };
+
+  // 🔑 ΜΗΔΕΝ ΔΙΠΛΟΤΥΠΟ: η ίδια συνάρτηση που διαβάζει το γεωγραφικό φίλτρο των
+  //    αγγελιών. Δεύτερη υλοποίηση θα ξεχνούσε τον έλεγχο `|lat| > 90`.
+  const circle = readGeoFilter(params);
+  return circle === null ? null : { circle };
 }
 
 /** Κατάσταση → διεύθυνση. **Τα κενά φίλτρα ΔΕΝ γράφονται** *(μία διεύθυνση ανά ερώτημα)*. */
 export function serializeShowcaseFilters(filters: ShowcaseFilters): URLSearchParams {
   const params = new URLSearchParams();
   if (filters.occupation !== null) params.set(OCCUPATION_PARAM, filters.occupation);
-  // ⚠️ Τα τρία γεωγραφικά **μαζί ή καθόλου** — ίδιος κανόνας με το
-  //    `serializeListingFilters`: μισό ζεύγος δεν είναι μερικώς χρήσιμο.
-  if (filters.near !== null) {
-    params.set('lat', String(filters.near.center.lat));
-    params.set('lng', String(filters.near.center.lng));
-    params.set('r', String(filters.near.radiusKm));
+
+  // ⚠️ **Ποτέ και τα δύο σκέλη μαζί** — η κλειστή ένωση το εγγυάται στον τύπο, και η
+  //    διεύθυνση το καθρεφτίζει: μία ερώτηση, μία γραφή.
+  if (filters.where !== null) {
+    if (isAdministrativeWhere(filters.where)) {
+      params.set(AREA_PARAM, filters.where.adminId);
+    } else {
+      // ⚠️ Τα τρία γεωγραφικά **μαζί ή καθόλου** — ίδιος κανόνας με το
+      //    `serializeListingFilters`: μισό ζεύγος δεν είναι μερικώς χρήσιμο.
+      params.set('lat', String(filters.where.circle.center.lat));
+      params.set('lng', String(filters.where.circle.center.lng));
+      params.set('r', String(filters.where.circle.radiusKm));
+    }
   }
   return params;
 }
 
 /** Υπάρχει έστω ένας ενεργός άξονας; — για το «Καθαρισμός» *(Φ4)*. */
 export function hasActiveFilters(filters: ShowcaseFilters): boolean {
-  return filters.occupation !== null || filters.near !== null;
+  return filters.occupation !== null || filters.where !== null;
 }
 
 // =============================================================================
@@ -193,12 +287,17 @@ export function hasActiveFilters(filters: ShowcaseFilters): boolean {
 export function applyShowcaseFilters(
   ordered: readonly PublicShowcase[],
   filters: ShowcaseFilters,
+  lineageOf: LineageResolver,
 ): readonly PublicShowcase[] {
   if (!hasActiveFilters(filters)) return ordered;
-  return ordered.filter((showcase) => matchesFilters(showcase, filters));
+  return ordered.filter((showcase) => matchesFilters(showcase, filters, lineageOf));
 }
 
-function matchesFilters(showcase: PublicShowcase, filters: ShowcaseFilters): boolean {
+function matchesFilters(
+  showcase: PublicShowcase,
+  filters: ShowcaseFilters,
+  lineageOf: LineageResolver,
+): boolean {
   if (filters.occupation !== null) {
     // 🔑 **ΚΑΘΕ credential μετρά**: το μικτό γραφείο βρίσκεται ΚΑΙ ως μεσίτης ΚΑΙ
     //    ως τεχνικό. Ένα `credentials[0]` θα έκρυβε τη μισή του ταυτότητα.
@@ -208,14 +307,27 @@ function matchesFilters(showcase: PublicShowcase, filters: ShowcaseFilters): boo
     if (!offers) return false;
   }
 
-  if (filters.near !== null) {
-    // ⚠️ **Χωρίς δηλωμένο τόπο, ΔΕΝ ταιριάζει** — και δεν είναι ποινή: ο άξονας
-    //    ρωτά «πού είσαι;» και η βιτρίνα δεν το λέει. Η εναλλακτική («να
-    //    εμφανίζεται παντού») θα έδινε σε όποιον ΔΕΝ δηλώνει τόπο **καθολική
-    //    ορατότητα** — δηλαδή θα αντάμειβε τη σιωπή.
-    if (showcase.position === null) return false;
-    const metres = distanceMeters(filters.near.center, showcase.position);
-    if (metres > filters.near.radiusKm * 1000) return false;
+  if (filters.where !== null) {
+    // 🔴 **ΔΥΟ ΣΚΕΛΗ, ΔΥΟ ΔΕΔΟΜΕΝΑ — ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ, ΟΧΙ ΑΒΛΕΨΙΑ** (ADR-846).
+    //    Το διοικητικό σκέλος κρίνει τη **δήλωση** (`coverage`, «πού δουλεύω»)· το
+    //    κυκλικό κρίνει την **έδρα** (`position`, «πού κάθομαι»). Είναι διαφορετικές
+    //    ερωτήσεις, άρα διαφορετικά πεδία — και συνέπεια: ο επαγγελματίας που δήλωσε
+    //    εμβέλεια αλλά **όχι** έδρα βρίσκεται στο πρώτο και **όχι** στο δεύτερο.
+    //    Δηλώνεται εδώ ρητά ώστε να μη διαβαστεί ποτέ ως σφάλμα.
+    if (isAdministrativeWhere(filters.where)) {
+      // ⚠️ «Δεν ξέρω» (κενή γενεαλογία, ιεραρχία που δεν φόρτωσε) φτάνει εδώ ως
+      //    `disjoint` — γι' αυτό ο **καλών** οφείλει να μην εφαρμόσει καθόλου τον
+      //    άξονα σε αυτή την κατάσταση, και να το **πει** στην οθόνη.
+      if (!coverageMatches(showcase.coverage, filters.where.adminId, lineageOf)) return false;
+    } else {
+      // ⚠️ **Χωρίς δηλωμένη έδρα, ΔΕΝ ταιριάζει** — και δεν είναι ποινή: ο άξονας
+      //    ρωτά «πού είσαι;» και η βιτρίνα δεν το λέει. Η εναλλακτική («να
+      //    εμφανίζεται παντού») θα έδινε σε όποιον ΔΕΝ δηλώνει τόπο **καθολική
+      //    ορατότητα** — δηλαδή θα αντάμειβε τη σιωπή.
+      if (showcase.position === null) return false;
+      const metres = distanceMeters(filters.where.circle.center, showcase.position);
+      if (metres > filters.where.circle.radiusKm * 1000) return false;
+    }
   }
 
   return true;

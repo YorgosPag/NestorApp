@@ -148,8 +148,17 @@ describe('🏆 Κ2 — ΑΠΟ ΑΚΡΗ ΣΕ ΑΚΡΗ: η δήλωση γίνετ
     expect(outcome.mark.image.sources.map((s) => s.width)).toEqual([
       ...SHOWCASE_SHELF.encoding.widths,
     ]);
-    // Το κανονικό είναι το ΤΕΛΕΥΤΑΙΟ — 256px, όχι 2560px.
-    expect(outcome.mark.image.width).toBe(256);
+    // 🔴 **ΠΑΡΑΓΟΜΕΝΟ, ΟΧΙ ΓΡΑΜΜΕΝΟ ΜΕ ΤΟ ΧΕΡΙ — ΚΑΙ ΤΟ ΜΑΘΗΜΑ ΕΙΝΑΙ ΜΕΤΡΗΜΕΝΟ:**
+    //    εδώ ήταν καρφωμένο `256`. Όταν η **Α21.9** πρόσθεσε τη βαθμίδα **512** για τη
+    //    ζώνη, αυτή η γραμμή έγινε κόκκινη — και **έμεινε κόκκινη ασχολίαστη**, επειδή
+    //    η εντολή επαλήθευσης εκείνης της συνεδρίας δεν περιλάμβανε το
+    //    `src/services/mandate`. Το ίδιο σχήμα με τη «σιωπή» που κυνηγά όλο το ADR:
+    //    πράσινο **επειδή κανείς δεν κοίταξε**.
+    // 🔑 Το κανονικό είναι **το τελευταίο του ραφιού** — και η κλίμακα του σήματος,
+    //    ποτέ της γκαλερί: το επόμενο `expect` κρατά **αυτό** το νόημα δεμένο.
+    const widths = SHOWCASE_SHELF.encoding.widths;
+    expect(outcome.mark.image.width).toBe(widths[widths.length - 1]);
+    expect(outcome.mark.image.width).toBeLessThan(LISTING_SHELF.encoding.widths.at(-1)!);
     expect(outcome.mark.image.url).toBe(
       outcome.mark.image.sources[outcome.mark.image.sources.length - 1].url,
     );
@@ -161,11 +170,47 @@ describe('🏆 Κ2 — ΑΠΟ ΑΚΡΗ ΣΕ ΑΚΡΗ: η δήλωση γίνετ
 
     // 🔴 Αν η συνταγή ήταν κοινή, τα παράγωγα του ενός είδους θα περνούσαν για έγκυρα
     //    του άλλου — και επειδή η γρήγορη διαδρομή δεν κατεβάζει bytes, ΑΟΡΑΤΑ.
+    // 🔑 **Η ΣΥΝΤΑΓΗ ΡΩΤΙΕΤΑΙ ΑΠΟ ΤΗ ΓΡΑΜΜΗ** (Α21.10), όπως στην παραγωγή: το
+    //    πλαισίωμα εξαρτάται από το **υλικό**, άρα το λογότυπο γράφει **άλλη** συνταγή
+    //    από το πορτρέτο της **ίδιας** ρίζας. Ένα σταθερό `FRAMING_AS_GIVEN` εδώ θα
+    //    έλεγχε συνταγή που **κανείς δεν γράφει**.
+    const logoRecipe = shelfRecipe(SHOWCASE_SHELF.encoding, SHOWCASE_SHELF.framingOf({ kind: 'logo' }));
+
     for (const saved of shelf.objects.values()) {
-      expect(saved.custom?.shelfRecipe).toBe(shelfRecipe(SHOWCASE_SHELF.encoding));
-      expect(saved.custom?.shelfRecipe).not.toBe(shelfRecipe(LISTING_SHELF.encoding));
+      expect(saved.custom?.shelfRecipe).toBe(logoRecipe);
+      expect(saved.custom?.shelfRecipe).not.toBe(
+        shelfRecipe(LISTING_SHELF.encoding, LISTING_SHELF.framingOf({ kind: 'photo' })),
+      );
       expect(saved.contentType).toBe('image/webp');
     }
+  });
+
+  it('🔴 Α21.10 — ΛΟΓΟΤΥΠΟ και ΠΟΡΤΡΕΤΟ γράφουν ΔΙΑΦΟΡΕΤΙΚΗ συνταγή στην ΙΔΙΑ ρίζα', async () => {
+    // Αλλιώς ένα άτριφτο πορτρέτο θα περνούσε για τριμμένο λογότυπο και **δεν θα
+    // ξαναπαραγόταν ποτέ** — η γρήγορη διαδρομή δεν αποκωδικοποιεί τίποτα.
+    const path = await putPrivateImage(COMPANY);
+
+    await publishShowcaseMark(COMPANY, { kind: 'logo', privateStoragePath: path });
+    const asLogo = [...shelf.objects.values()].map((o) => o.custom?.shelfRecipe);
+
+    // 🔑 **ΓΙΑΤΙ ΜΗΔΕΝΙΖΕΤΑΙ ΤΟ ΡΑΦΙ — ΙΔΙΟΤΗΤΑ ΠΟΥ ΒΡΗΚΕ ΑΥΤΗ Η ΑΓΚΥΡΑ.** Το δείγμα
+    //    είναι ομοιόχρωμο, άρα ο κριτής του περιγράμματος το κρίνει `body` και **δεν
+    //    τρίβεται** — οπότε λογότυπο και πορτρέτο δίνουν **ταυτόσημα bytes** ⇒ ταυτόσημο
+    //    sha256 ⇒ **ίδια κλειδιά**. Ο γραφέας γράφει μεταδεδομένα **μόνο μαζί με νέα
+    //    bytes** *(δηλωμένο συμβόλαιο του `uploadMissing`)*, άρα η παλιά συνταγή **μένει**.
+    // ✅ **Και είναι ασφαλές προς τη σωστή κατεύθυνση**: παλιά συνταγή ⇒ αστοχία της
+    //    γρήγορης διαδρομής ⇒ **ξανακωδικοποίηση**. Ποτέ το αντίστροφο, δηλαδή ποτέ
+    //    επαναχρήση bytes που παρήχθησαν με **άλλη** συνταγή. Χρεώνει μια περιττή
+    //    κωδικοποίηση, δεν δημοσιεύει ποτέ λάθος bytes.
+    // ⇒ Εδώ ρωτάμε *«τι γράφει μια ΚΑΘΑΡΗ δημοσίευση;»*, που είναι το ερώτημα της Α21.10.
+    shelf.reset();
+
+    await publishShowcaseMark(COMPANY, { kind: 'portrait', privateStoragePath: path });
+    const asPortrait = [...shelf.objects.values()].map((o) => o.custom?.shelfRecipe);
+
+    expect(new Set(asLogo).size).toBe(1);
+    expect(new Set(asPortrait).size).toBe(1);
+    expect(asPortrait[0]).not.toBe(asLogo[0]);
   });
 
   it('🔴 το `altKey` βγαίνει από το ΕΙΔΟΣ — λογότυπο ≠ πρόσωπο', async () => {
