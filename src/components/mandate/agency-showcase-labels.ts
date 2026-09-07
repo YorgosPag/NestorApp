@@ -35,6 +35,13 @@ export const SHOWCASE_KEYS = {
   lead: `${K}.lead`,
   aliasLabel: `${K}.aliasLabel`,
   aliasHint: `${K}.aliasHint`,
+  // ── Η ΠΟΡΤΑ ΠΡΟΣ ΤΗ ΔΗΜΟΣΙΑ ΟΨΗ (ADR-841 §7 Α21.11) ──────────────────────
+  /** 🔑 *«Δες τη **δημόσια** όψη»* — το μοτίβο της Zillow, αυτολεξεί. */
+  publicView: `${K}.publicView`,
+  /** ⚠️ **Πράξη**, όχι πλοήγηση: `<button>`, ποτέ `<a>`. */
+  copyLink: `${K}.copyLink`,
+  linkCopied: `${K}.linkCopied`,
+  publicViewHint: `${K}.publicViewHint`,
   nameLabel: `${K}.nameLabel`,
   nameHint: `${K}.nameHint`,
   namePlaceholder: `${K}.namePlaceholder`,
@@ -60,6 +67,26 @@ export const SHOWCASE_KEYS = {
   registryUnexamined: `${K}.registryUnexamined`,
   placeLabel: `${K}.placeLabel`,
   placeHint: `${K}.placeHint`,
+  /**
+   * **Η ΔΗΛΩΜΕΝΗ ΕΜΒΕΛΕΙΑ** *(ADR-846)* — «πού δουλεύω», ποτέ «πού κάθομαι».
+   *
+   * ⚠️ **Το `placeLabel` έλεγε «Πού δραστηριοποιείστε» ενώ αποθήκευε την ΕΔΡΑ** — και το
+   * `mandate.profile.placeLabel` έλεγε κατευθείαν «Περιοχή δραστηριότητας». Δηλαδή δύο
+   * οθόνες υπόσχονταν εμβέλεια που το πεδίο **δεν** εξέφραζε. Διορθώθηκαν μαζί με αυτή
+   * τη δουλειά: η έδρα λέγεται πλέον **έδρα**, και η εμβέλεια απέκτησε δικά της κλειδιά.
+   */
+  coverageLabel: `${K}.coverageLabel`,
+  coverageHint: `${K}.coverageHint`,
+  coverageNationwide: `${K}.coverageNationwide`,
+  coverageNationwideHint: `${K}.coverageNationwideHint`,
+  coverageAddPlaceholder: `${K}.coverageAddPlaceholder`,
+  coverageSearchEmpty: `${K}.coverageSearchEmpty`,
+  coverageEmpty: `${K}.coverageEmpty`,
+  coverageRemove: `${K}.coverageRemove`,
+  coverageAbsorbed: `${K}.coverageAbsorbed`,
+  coverageLoading: `${K}.coverageLoading`,
+  /** Δηλωμένη περιοχή που δεν υπάρχει στην ιεραρχία ⇒ *«διάλεξέ την ξανά»*. */
+  coverageAreaUnknown: `${K}.coverageAreaUnknown`,
   noChannel: `${K}.noChannel`,
   publish: `${K}.publish`,
   publishing: `${K}.publishing`,

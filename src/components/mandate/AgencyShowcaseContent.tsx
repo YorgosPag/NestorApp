@@ -37,7 +37,8 @@
 import React from 'react';
 
 import { Button } from '@/components/ui/button';
-import { HintedField } from '@/components/ui/hinted-field';
+import { ShowcaseIdentityFields } from '@/components/mandate/ShowcaseIdentityFields';
+import { ShowcasePublicDoor } from '@/components/mandate/ShowcasePublicDoor';
 import { PlaceIdentityField } from '@/components/geo/PlaceIdentityField';
 import {
   EMPTY_CREDENTIAL_DRAFT,
@@ -63,6 +64,8 @@ import { pickBilingualLabel, resolveEscoLang } from '@/components/shared/esco/es
 import type { EscoLanguage } from '@/types/contacts/esco-types';
 import type { PublicShowcase, ShowcaseCredential } from '@/types/agency-profile';
 import type { PlaceRef } from '@/types/geo/public-place';
+import type { DeclaredCoverage } from '@/types/agency-coverage';
+import { CoverageAreaPicker } from './CoverageAreaPicker';
 import { formatLongDate } from '@/lib/intl-formatting';
 // ⚠️ **Ο σύνδεσμος από το ΣΥΝΟΡΟ** (CHECK 3.61): το πρόθεμα χώρου το προσθέτει εκείνο.
 //    Ένα ωμό `next/link` εδώ θα έστελνε τον μεσίτη σε `/settings/brokerage` **χωρίς
@@ -169,6 +172,9 @@ function FailureMessage({ failure }: { readonly failure: ShowcaseFailure }): Rea
   if (failure.kind === 'occupation-unknown') {
     return <>{t(SHOWCASE_KEYS.occupationUnknown)}</>;
   }
+  if (failure.kind === 'coverage-area-unknown') {
+    return <>{t(SHOWCASE_KEYS.coverageAreaUnknown)}</>;
+  }
   if (failure.kind === 'place-not-found') {
     return <>{t(SHOWCASE_KEYS.placeNotFound)}</>;
   }
@@ -193,6 +199,9 @@ export function AgencyShowcaseContent(): React.ReactElement {
     EMPTY_CREDENTIAL_DRAFT,
   ]);
   const [place, setPlace] = React.useState<PlaceRef | null>(null);
+  // 🔑 **Δεύτερο, ΑΝΕΞΑΡΤΗΤΟ δεδομένο** (ADR-846): «πού δουλεύω» δεν προκύπτει από
+  //    «πού κάθομαι». Ο ελαιοχρωματιστής χωρίς έδρα δηλώνει κάλλιστα τρεις δήμους.
+  const [coverage, setCoverage] = React.useState<DeclaredCoverage | null>(null);
 
   // ⚠️ **Προσυμπλήρωση ΜΟΝΟ από την ίδια τη βιτρίνα** — ποτέ από το `companies/{id}`
   //    (§9.9 β). Το `publishedAt` είναι το σήμα «ήρθε νέα έκδοση», ώστε μια ανάκληση
@@ -208,6 +217,7 @@ export function AgencyShowcaseContent(): React.ReactElement {
     //    Τα κλειδιά `placeLabel`/`placeHint` υπήρχαν **χωρίς καταναλωτή**: μια
     //    υπόσχεση στο locale που καμία οθόνη δεν τηρούσε.
     setPlace(published.place);
+    setCoverage(published.coverage);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- κλειδί ταυτότητας έκδοσης
   }, [publishedAt]);
 
@@ -239,11 +249,19 @@ export function AgencyShowcaseContent(): React.ReactElement {
           : t(SHOWCASE_KEYS.statusPublished)}
       </p>
 
-      <IdentityFields alias={alias} displayName={displayName} onName={setDisplayName} />
+      {/* 🏆 Α21.11 — η πόρτα προς τη δημόσια όψη, **στην κορυφή**, όπως η Zillow. */}
+      <ShowcasePublicDoor alias={alias} published={published !== null} />
+
+      <ShowcaseIdentityFields alias={alias} displayName={displayName} onName={setDisplayName} />
 
       <CredentialList credentials={credentials} onChange={setCredentials} />
 
       <PlaceSection place={place} onChosen={setPlace} />
+
+      {/* ⚠️ **Ξεχωριστή ενότητα από την έδρα, επίτηδες.** Δίπλα-δίπλα θα διαβάζονταν ως
+          «το ίδιο με άλλη ακρίβεια» — και είναι **διαφορετική ερώτηση**: η έδρα
+          επαληθεύεται από τη γη, η εμβέλεια είναι πρόθεση που δηλώνει μόνος του. */}
+      <CoverageAreaPicker value={coverage} onChange={setCoverage} />
 
       {/*
         🏆 ADR-841 §7 Α21, Φάση 2 — ΤΟ ΣΗΜΑ, ΚΑΙ ΕΙΝΑΙ ΤΟ ΜΟΝΟ ΠΕΔΙΟ ΠΟΥ ΔΕΝ ΠΕΡΙΜΕΝΕΙ
@@ -277,7 +295,7 @@ export function AgencyShowcaseContent(): React.ReactElement {
       <ShowcaseActions
         busy={busy}
         published={published}
-        onPublish={() => publish(declarationOf(alias, displayName, credentials, place))}
+        onPublish={() => publish(declarationOf(alias, displayName, credentials, place, coverage))}
         onWithdraw={withdraw}
       />
     </section>
@@ -381,6 +399,7 @@ function declarationOf(
   displayName: string,
   credentials: readonly ShowcaseCredentialDraft[],
   place: PlaceRef | null,
+  coverage: DeclaredCoverage | null,
 ): ShowcaseWireDeclaration {
   return {
     alias,
@@ -393,46 +412,8 @@ function declarationOf(
         registrationChapter: draft.registrationChapter,
       })),
     place,
+    coverage,
   };
-}
-
-/**
- * **Ποιος είσαι** — η διεύθυνση *(αμετάβλητη)* και η επωνυμία.
- *
- * ⚠️ Το ψευδώνυμο είναι `readOnly` **επίτηδες**: το κρίνει ο διακομιστής απέναντι
- * στο `companyId` **της απόδειξης** *(§9.13)*. Επεξεργάσιμο εδώ θα ήταν πεδίο που
- * ο άνθρωπος αλλάζει και **η πόρτα απορρίπτει** — ερώτηση χωρίς έγκυρη απάντηση.
- */
-function IdentityFields({
-  alias,
-  displayName,
-  onName,
-}: {
-  readonly alias: string;
-  readonly displayName: string;
-  readonly onName: (value: string) => void;
-}): React.ReactElement {
-  const { t } = useTranslation([SHOWCASE_NS]);
-
-  return (
-    <section className="flex flex-col gap-4">
-      <HintedField
-        id="showcase-alias"
-        label={t(SHOWCASE_KEYS.aliasLabel)}
-        hint={t(SHOWCASE_KEYS.aliasHint)}
-        value={alias}
-        readOnly
-      />
-      <HintedField
-        id="showcase-name"
-        label={t(SHOWCASE_KEYS.nameLabel)}
-        hint={t(SHOWCASE_KEYS.nameHint)}
-        placeholder={t(SHOWCASE_KEYS.namePlaceholder)}
-        value={displayName}
-        onChange={onName}
-      />
-    </section>
-  );
 }
 
 /**

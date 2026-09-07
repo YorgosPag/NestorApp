@@ -95,6 +95,8 @@ export type ShowcaseFailure =
   | { readonly kind: 'occupation-unknown' }
   /** Ο δεσμός δεν δείχνει σε τόπο που υπάρχει ⇒ *«διάλεξέ τον ξανά»*. */
   | { readonly kind: 'place-not-found' }
+  /** Δηλωμένη περιοχή εκτός ιεραρχίας ⇒ *«διάλεξέ την ξανά»* (ADR-846). */
+  | { readonly kind: 'coverage-area-unknown' }
   /**
    * 🔴 **ΔΕΝ ΜΑΘΑΜΕ** *(ταξινομία ή τόπος)* ⇒ *«ξαναδοκίμασε, **μην αλλάξεις
    * τίποτα**»*. Ισοπεδωμένο με τα δύο παραπάνω, η δική **μας** βλάβη θα έστελνε
@@ -161,12 +163,17 @@ async function failureOf(response: Response): Promise<ShowcaseFailure | null> {
       return { kind: 'occupation-unknown' };
     case 'PLACE_NOT_FOUND':
       return { kind: 'place-not-found' };
+    case 'COVERAGE_AREA_UNKNOWN':
+      return { kind: 'coverage-area-unknown' };
     // 🔑 **Δύο κωδικοί, ΜΙΑ θεραπεία** — και είναι σωστό να ενωθούν *εδώ*: ο
     //    άνθρωπος δεν χρειάζεται να ξέρει αν έπεσε η ταξινομία ή ο χάρτης· η
     //    πράξη του είναι η ίδια. Ό,τι δεν ενώνεται είναι *«διόρθωσε»* με
     //    *«ξαναδοκίμασε»*.
     case 'CLASSIFICATION_UNAVAILABLE':
     case 'PLACE_UNVERIFIED':
+    // ⚠️ **Τρίτος κωδικός, ίδια θεραπεία** (ADR-846): «δεν διαβάστηκε η ιεραρχία»
+    //    είναι δική **μας** βλάβη — ο άνθρωπος δεν έχει τίποτα να διορθώσει.
+    case 'COVERAGE_UNVERIFIED':
       return { kind: 'unavailable' };
     case 'BROKERAGE_NOT_ALLOWED': {
       // ⚠️ **Τοπική σταθερά, ΟΧΙ διπλή ανάγνωση του `body?.…`**: το `switch (body?.error)`
