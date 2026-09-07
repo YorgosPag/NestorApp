@@ -20,6 +20,7 @@ import type { CommercialStatus } from '@/constants/commercial-statuses';
 import type { LegalityClaim } from '@/lib/legality/legality-claim';
 import type { PlaceRef } from '@/types/geo/public-place';
 import type {
+  ListedAt,
   ListingAuthorship,
   ListingPosition,
   PublicAgencyIdentity,
@@ -203,6 +204,20 @@ export interface ProjectableProperty {
    * επωνυμία δεν μπορεί να ταξιδέψει με ξένη ταυτότητα. Δες {@link PublicAgencyIdentity}.
    */
   readonly agency?: PublicAgencyIdentity | null;
+  /**
+   * **Πότε μπήκε στην αγορά** — δες {@link ListedAt}.
+   *
+   * ⚠️ **Η ΑΠΟΥΣΙΑ ΕΙΝΑΙ ΤΙΜΗ, και είναι η ΤΡΙΤΗ κατάσταση.** Στην προβολή το πεδίο
+   * είναι πάντα παρόν· εδώ, στο **έγγραφο πηγής**, το `undefined` σημαίνει *«δεν πέρασε
+   * ΠΟΤΕ από τη σφραγίδα»*. Είναι ακριβώς η διάκριση που επιτρέπει στο
+   * `stampListedAt` να ξεχωρίσει **«πρώτη δημοσίευση»** από **«ήδη δημοσιευμένο πριν
+   * υπάρξει το πεδίο»** — και χωρίς αυτήν, τα ήδη δημοσιευμένα θα έπαιρναν τη
+   * **σημερινή** ημερομηνία.
+   *
+   * 🔑 **Ο γραφέας το ΔΙΑΒΑΖΕΙ από εδώ και το αντιγράφει.** Δεν το υπολογίζει ποτέ:
+   * ο ιδιοκτήτης του γεγονότος είναι το ακίνητο, όχι η προβολή.
+   */
+  readonly listedAt?: ListedAt | null;
 }
 
 /**

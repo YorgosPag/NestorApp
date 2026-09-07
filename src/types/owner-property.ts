@@ -82,7 +82,7 @@ import {
   nextMandateExpiry,
   type BrokeredListingMandate,
 } from '@/types/owner-property-mandate';
-import type { ListingAuthorship } from '@/types/public-listing';
+import type { ListedAt, ListingAuthorship } from '@/types/public-listing';
 import type { ListingMaterialKind } from '@/lib/listings/listing-material';
 import type { PublishOutcome } from '@/services/listings/publish-public-listing';
 
@@ -441,6 +441,22 @@ export interface OwnerProperty {
    * *(Ίδιο σκεπτικό με το `globalRole: string` του `CapabilitySubject`, ADR-801.)*
    */
   readonly publication?: OwnerPropertyPublication;
+
+  /**
+   * **Πότε μπήκε στην αγορά** — write-once (ADR-777 §8.61). Δες {@link ListedAt}.
+   *
+   * ⚠️ **ΠΡΟΑΙΡΕΤΙΚΟ, ΚΑΙ Η ΑΠΟΥΣΙΑ ΕΙΝΑΙ ΤΙΜΗ** — ίδιο ακριβώς σκεπτικό με το
+   * {@link OwnerProperty.publication} από πάνω: η απουσία σημαίνει *«δεν πέρασε ΠΟΤΕ
+   * από τη σφραγίδα»*, και είναι η **τρίτη** κατάσταση που επιτρέπει στο
+   * `resolveListedAt` να ξεχωρίσει «πρώτη δημοσίευση» από «ήδη δημοσιευμένο πριν
+   * υπάρξει το πεδίο».
+   *
+   * 🔴 **ΔΙΑΦΕΡΕΙ ΑΠΟ ΤΟ `createdAt` ΑΠΟ ΚΑΤΩ, ΚΑΙ ΔΕΝ ΕΙΝΑΙ ΛΕΠΤΟΜΕΡΕΙΑ**: εκείνο
+   * λέει *«πότε φτιάχτηκε η εγγραφή»*. Μια καταχώρηση μπορεί να ζήσει μήνες ως
+   * προσχέδιο πριν δημοσιευτεί — και το `updatedAt` αλλάζει σε **κάθε** αποθήκευση.
+   * Ταξινόμηση σε οποιοδήποτε από τα δύο θα ήταν **ψέμα που μοιάζει με πληροφορία**.
+   */
+  readonly listedAt?: ListedAt;
 
   readonly createdAt: string;
   readonly updatedAt: string;

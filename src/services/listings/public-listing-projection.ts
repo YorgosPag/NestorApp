@@ -352,6 +352,16 @@ export function projectListingShape(
     authorship: property.authorship ?? 'agency',
     agencyName: property.agency?.name ?? null,
     agencyId: property.agency?.id ?? null,
+    // 🔴 **ΑΝΤΙΓΡΑΦΗ, ΠΟΤΕ ΥΠΟΛΟΓΙΣΜΟΣ** (ADR-777 §8.61). Ο ιδιοκτήτης του γεγονότος
+    //    είναι το **ακίνητο**· η προβολή το διαβάζει. Γι' αυτό μια ανακατασκευή δεν
+    //    μπορεί να το μηδενίσει — δεν είναι πειθαρχία, είναι **δομή**.
+    //
+    // ⚠️ **Το `?? ` ΔΕΝ είναι προεπιλογή ευκολίας**: εδώ φτάνει ακίνητο **χωρίς**
+    //    σφραγίδα μόνο όταν το `stampListedAt` δεν ευδοκίμησε (ο γραφέας δεν πετά ποτέ
+    //    — δες `writeListingProjection`). Η τιμή λέει **ακριβώς αυτό**, και δεν
+    //    συγχέεται με το `'predates-record'`: ένα σπασμένο CAS οφείλει να είναι
+    //    **μετρήσιμο**, όχι κρυμμένο μέσα στο κανονικό ιστορικό.
+    listedAt: property.listedAt ?? { kind: 'unknown', reason: 'not-recorded' },
     projectedAt,
   };
 }
