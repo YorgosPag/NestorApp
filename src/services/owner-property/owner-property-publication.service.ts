@@ -32,6 +32,8 @@ import {
   writeListingProjection,
   type PublishOutcome,
 } from '@/services/listings/publish-public-listing';
+import { isPubliclyListed } from '@/services/listings/public-listing-projection';
+import { resolveListedAt } from '@/services/listings/listed-at-stamp';
 import type { OwnerProperty } from '@/types/owner-property';
 
 const logger = createModuleLogger('owner-property-publication');
@@ -75,11 +77,25 @@ async function republishOwnerListing(
   // 🔑 **Η ταυτότητα ταξιδεύει ΜΑΖΙ με το όνομα** ώστε η επανασύνθεση να είναι
   //    **επισκευή** (ξαναρωτά την πηγή) και όχι δεύτερη μαντεψιά.
   const agency = await readPublicAgencyIdentity(adminDb, property.authorCompanyId);
+  const projectable = projectableFromOwnerProperty(property, at, agency);
+
+  // 🔴 **Η ΣΦΡΑΓΙΔΑ ΕΙΣΟΔΟΥ ΣΤΗΝ ΑΓΟΡΑ** (ADR-777 §8.61) — **ίδια** πολιτική με τον
+  //    επαγγελματία, **άλλη** διεύθυνση. Η απόφαση ζει μία φορά στο `listed-at-stamp`·
+  //    εδώ δίνεται μόνο η συλλογή. Δύο αντίγραφα της πολιτικής θα ήταν ακριβώς η
+  //    απόκλιση που η κεφαλίδα αυτού του αρχείου υπάρχει για να αποτρέψει.
+  //
+  // ⚠️ **Κρίνεται το ΠΡΟΒΑΛΛΟΜΕΝΟ σχήμα, όχι το ωμό έγγραφο**: ο ίδιος κριτής που θα
+  //    αποφασίσει και τη δημοσίευση δύο γραμμές πιο κάτω. Ένα δεύτερο κριτήριο εδώ θα
+  //    σφράγιζε ακίνητο που δεν δημοσιεύεται — δες `owner-property-projection.ts`, που
+  //    ρωτά **ήδη** έτσι το ίδιο ερώτημα.
+  const listedAt = isPubliclyListed(projectable)
+    ? await resolveListedAt(adminDb, COLLECTIONS.OWNER_PROPERTIES, property.id, property.listedAt, at)
+    : null;
 
   return writeListingProjection(
     adminDb,
     property.id,
-    projectableFromOwnerProperty(property, at, agency),
+    { ...projectable, listedAt },
     placeKnowledgeFromOwnerProperty(property, at),
     at,
   );
