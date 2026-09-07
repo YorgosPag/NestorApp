@@ -41,6 +41,7 @@
  */
 
 import { useCallback, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 
 import { useRouter } from '@/lib/workspace/navigation';
 import type { CriterionRange } from '@/lib/criteria/criterion-vocabulary';
@@ -61,6 +62,11 @@ import {
   serializeListingFilters,
   type ListingFilters,
 } from '@/lib/listings/listing-filters';
+import {
+  parseListingOrder,
+  writeListingOrder,
+  type ListingOrder,
+} from '@/lib/listings/listing-results-order';
 import { searchResultsHref } from '@/lib/listings/listing-routes';
 
 /** Ό,τι μπορεί να ζητήσει ένα χειριστήριο από τη διεύθυνση. */
@@ -82,22 +88,58 @@ export interface FilterCommit {
    * μένουν **εκτός** του χάρτη κριτηρίων (`AXES_OUTSIDE_THE_CRITERIA_MAP`).
    */
   readonly clearAllCriteria: () => void;
+  /**
+   * **Άλλαξε τη ΣΕΙΡΑ**, αφήνοντας κάθε φίλτρο ανέγγιχτο.
+   *
+   * ⚠️ **Η σειρά ΔΕΝ είναι φίλτρο** και γι' αυτό δεν ζει μέσα στο {@link ListingFilters}:
+   * κάθε πεδίο εκεί απαντά *«τι ρώτησε ο επισκέπτης για τα ακίνητα;»*, ενώ αυτό απαντά
+   * *«πώς θέλει να τα δει;»*. Ζει όμως στην **ίδια** διεύθυνση, γιατί η Α3 το απαιτεί:
+   * ο κοινοποιημένος σύνδεσμος οφείλει να δείχνει ό,τι άφησε ο αποστολέας.
+   */
+  readonly setOrder: (order: ListingOrder) => void;
 }
 
 export function useFilterCommit(filters: ListingFilters): FilterCommit {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  /**
+   * 🔴 **Η ΣΕΙΡΑ ΔΙΑΒΑΖΕΤΑΙ ΑΠΟ ΤΗ ΔΙΕΥΘΥΝΣΗ, ΟΧΙ ΑΠΟ ΟΡΙΣΜΑ — ΚΑΙ ΕΙΝΑΙ ΔΟΜΙΚΟ.**
+   *
+   * Η εναλλακτική ήταν να περάσει ως δεύτερο όρισμα του `useFilterCommit`. Θα δούλευε,
+   * και θα ήταν **εύθραυστη**: κάθε καλών (`PrimaryFilterBar`, `StayFilterFields`, και
+   * όποιος προστεθεί αύριο) θα έπρεπε να **θυμηθεί** να το περάσει, και όποιος το
+   * ξεχνούσε θα **έσβηνε σιωπηλά** τη σειρά του ανθρώπου με το πρώτο φίλτρο που θα
+   * άλλαζε. Διαβασμένη εδώ, από την ίδια τη διεύθυνση που πρόκειται να ξαναγραφτεί, η
+   * διατήρηση είναι **αδύνατο** να ξεχαστεί.
+   */
+  const currentOrder = useMemo(
+    () => parseListingOrder(new URLSearchParams(searchParams?.toString() ?? '')),
+    [searchParams]
+  );
 
   /**
    * 🔑 **Η ΜΙΑ ΕΞΟΔΟΣ.** Κάθε έλεγχος περνά από εδώ, ώστε η κανονικοποίηση
    * (`serializeListingFilters`) να γίνεται **μία** φορά: δύο ταυτόσημες αναζητήσεις
    * οφείλουν να παράγουν **χαρακτήρα προς χαρακτήρα** την ίδια διεύθυνση, αλλιώς μια
    * μηχανή αναζήτησης βλέπει δύο σελίδες με ταυτόσημο περιεχόμενο.
+   *
+   * ⚠️ **Τα φίλτρα και η σειρά γράφονται ΜΑΖΙ, στο ίδιο αντικείμενο παραμέτρων** — για
+   * τον ίδιο λόγο που το `serializeListingFilters` γράφει τον χάρτη και τους τρεις
+   * ειδικούς μαζί: μια συγχώνευση δύο `URLSearchParams` είναι η θέση όπου χάνεται το ένα.
    */
-  const commit = useCallback(
-    (next: ListingFilters): void => {
-      router.push(searchResultsHref(serializeListingFilters(next).toString()));
+  const write = useCallback(
+    (next: ListingFilters, order: ListingOrder): void => {
+      const params = serializeListingFilters(next);
+      writeListingOrder(order, params);
+      router.push(searchResultsHref(params.toString()));
     },
     [router]
+  );
+
+  const commit = useCallback(
+    (next: ListingFilters): void => write(next, currentOrder),
+    [write, currentOrder]
   );
 
   return useMemo(() => {
@@ -112,6 +154,9 @@ export function useFilterCommit(filters: ListingFilters): FilterCommit {
       setFlag: (key, value) => commitCriteria(withFlag(filters.criteria, key, value)),
       clearAxis: (key) => commitCriteria(without(filters.criteria, key)),
       clearAllCriteria: () => commitCriteria(EMPTY_LISTING_CRITERIA),
+      // ⚠️ Περνά τα **τρέχοντα** φίλτρα αυτούσια: αλλαγή σειράς δεν είναι αλλαγή
+      //    ερώτησης, και δεν επιτρέπεται να ξε-ρωτήσει τίποτα.
+      setOrder: (order) => write(filters, order),
     };
-  }, [commit, filters]);
+  }, [commit, write, filters]);
 }

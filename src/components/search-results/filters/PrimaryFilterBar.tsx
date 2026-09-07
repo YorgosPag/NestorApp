@@ -45,16 +45,20 @@ import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/s
 import type { ViewportClass } from '@/hooks/media/useViewportClass';
 import { askedCriterionKeys } from '@/lib/criteria/listing-criteria';
 import type { ListingFilters } from '@/lib/listings/listing-filters';
+import type { ListingOrder } from '@/lib/listings/listing-results-order';
 import type { PublicListing } from '@/types/public-listing';
 import { cn } from '@/lib/utils';
 
 import { PRIMARY_CRITERION_KEYS } from './criteria-filter-groups';
 import { CriteriaFilterPanel } from './CriteriaFilterPanel';
 import { CriterionField } from './CriterionField';
+import { ResultsOrderSelect } from './ResultsOrderSelect';
 import { useFilterCommit } from './use-filter-commit';
 
 interface PrimaryFilterBarProps {
   readonly filters: ListingFilters;
+  /** Η **δηλωμένη σειρά** των αποτελεσμάτων (ADR-777 §8.61) — έρχεται από τη διεύθυνση. */
+  readonly order: ListingOrder;
   /** Ο κατάλογος **εντός εμβέλειας** (`withinScope`) — δες {@link CriterionField}. */
   readonly listings: readonly PublicListing[];
   /** Πόσα βλέπει **αυτή τη στιγμή** ο άνθρωπος — ο αριθμός μέσα στο «Δείξε N». */
@@ -65,6 +69,7 @@ interface PrimaryFilterBarProps {
 
 export function PrimaryFilterBar({
   filters,
+  order,
   listings,
   visibleCount,
   viewport,
@@ -139,6 +144,46 @@ export function PrimaryFilterBar({
           />
         </div>
       ))}
+
+      {/*
+        🔴 **Η ΣΕΙΡΑ ΕΙΝΑΙ ΧΕΙΡΙΣΤΗΡΙΟ ΠΡΩΤΟΥ ΕΠΙΠΕΔΟΥ, ΟΧΙ ΕΠΙΛΟΓΗ ΜΕΣΑ ΣΤΟ ΣΥΡΤΑΡΙ**
+        (ADR-777 §8.61). Μέχρι σήμερα η κατάταξη ήταν **κρυφή παράμετρος** — κατά
+        `documentId`, δηλαδή κατά τάξη συντάκτη. Μια θεραπεία κρυμμένη πίσω από ένα
+        «Περισσότερα» θα άφηνε τον άνθρωπο να **μη μάθει ποτέ** ότι η σειρά είναι δική
+        του απόφαση, και η υποχρέωση διαφάνειας (Καν. ΕΕ 2019/1150 · Οδηγία ΕΕ
+        2019/2161) μιλά για ό,τι **βλέπει** ο καταναλωτής.
+
+        ⚠️ **Ζει ΕΞΩ από τα κριτήρια, και το δείχνει ο «Καθαρισμός»**: εκείνος σβήνει
+        **ερωτήσεις** για τα ακίνητα· η σειρά δεν είναι ερώτηση, είναι τρόπος θέασης, και
+        δεν καθαρίζεται μαζί τους.
+      */}
+      <div className="w-52 shrink-0">
+        <ResultsOrderSelect order={order} onChange={commit.setOrder} />
+        {/*
+          🔴 **Η ΣΙΩΠΗ ΤΗΣ ΒΥΘΙΣΗΣ ΘΑ ΗΤΑΝ ΤΟ ΙΔΙΟ ΑΜΑΡΤΗΜΑ, ΣΕ ΝΕΑ ΘΕΣΗ.** Στη διάταξη
+          «νεότερες», οι αγγελίες χωρίς καταγεγραμμένη ημερομηνία πέφτουν στο τέλος. Αν
+          έπεφταν **σιωπηλά**, θα είχαμε ξαναφτιάξει αδήλωτη κατάταξη — ακριβώς αυτό που
+          αυτή η δουλειά διορθώνει.
+
+          🔑 **Ο κανόνας δηλώνεται ΜΙΑ φορά, εδώ, αντί για μία γραμμή σε ΚΑΘΕ κάρτα** —
+          και είναι η **σωστότερη** μορφή, όχι απλώς η φθηνότερη: η υποχρέωση (Καν. ΕΕ
+          2019/1150 · Οδηγία ΕΕ 2019/2161) αφορά τα **κριτήρια κατάταξης**, δηλαδή τον
+          κανόνα — όχι το κάθε αντικείμενο.
+
+          ⚠️ **Και το μέτρησε η πύλη**: η `ListingCard` ζει **μέσα στο κέλυφος**, οπότε
+          μια γραμμή εκεί ζητούσε νέο namespace σε ~150 διαδρομές (`generate:i18n-shell-slice`
+          — *«η θεραπεία είναι να ΚΟΠΕΙ η εισαγωγή, όχι να δηλωθεί το namespace»*).
+
+          ⚠️ **Εμφανίζεται μόνο όταν ΥΠΑΡΧΕΙ τέτοια αγγελία** — ίδιο ιδίωμα με τον
+          «Καθαρισμό» παρακάτω: μονίμως ορατή σημείωση που δεν αφορά τίποτα διδάσκει τον
+          επισκέπτη να την αγνοεί.
+        */}
+        {order === 'newest' && listings.some((l) => l.listedAt.kind === 'unknown') && (
+          <p className="mt-1 text-xs text-muted-foreground">
+            {t('search-filters:filters.sort.unknownLast')}
+          </p>
+        )}
+      </div>
 
       {/*
         🔴 **Η ΕΞΟΔΟΣ, ΣΤΟ ΠΡΩΤΟ ΕΠΙΠΕΔΟ — ΚΑΙ ΤΟ ΕΛΑΤΤΩΜΑ ΗΤΑΝ ΜΕΤΡΗΜΕΝΟ.**

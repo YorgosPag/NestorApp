@@ -34,6 +34,13 @@
     },
     "group": {
       "listing": "The listing"
+    },
+    "sort": {
+      "label": "Sort",
+      "newest": "Newest first",
+      "priceAsc": "Price: low to high",
+      "priceDesc": "Price: high to low",
+      "unknownLast": "Listings with no recorded date appear last."
     }
   }
 }
