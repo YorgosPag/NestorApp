@@ -58,6 +58,8 @@ import type { GeoPoint } from '@/types/geo/coordinates';
 import type { PlaceRef } from '@/types/geo/public-place';
 import type { EscoBilingualText } from '@/types/contacts/esco-types';
 import type { ProfessionalAttestation } from '@/types/professional-identity';
+import type { ListingImage } from '@/types/public-listing';
+import type { ShowcaseMarkKind } from '@/lib/agency/showcase-mark-kind';
 
 // =============================================================================
 // ΤΟ ΣΧΗΜΑ
@@ -242,8 +244,51 @@ export interface PublicShowcase {
    * μεγαλύτερη ακτίνα εμφανίζεται σε περισσότερες αναζητήσεις.
    */
   readonly position: GeoPoint | null;
+  /**
+   * 🏆 **ΤΟ ΔΗΛΩΜΕΝΟ ΣΗΜΑ** — λογότυπο ή πορτρέτο, ή `null` (ADR-841 §7 Α21, Στάδιο 2).
+   *
+   * ⚠️ **`null` δεν σημαίνει «ανώνυμος»**, και αυτό είναι ολόκληρη η Α21: όποιος δεν
+   * δήλωσε παίρνει το **παραγόμενο** `lettermark` *(`lib/agency/showcase-mark`)*. Η
+   * έρευνα μέτρησε ότι η **γενική γκρι σιλουέτα** είναι χειρότερη ακόμη και από άσχημη
+   * εικόνα — άρα η εφεδρεία **δεν αποτυγχάνει ποτέ**, και το πεδίο μπορεί με ησυχία να
+   * λείπει.
+   *
+   * ⛔ **ΚΑΜΙΑ ΑΥΤΟΜΑΤΗ ΑΝΤΙΓΡΑΦΗ** από `companies/{id}.logoURL` ή `users/{uid}` —
+   * σκοπός Α σε δεδομένο συλλεγμένο για σκοπό Β *(δες #3 παρακάτω)*. Το
+   * `company-branding-resolver` **τα διαβάζει**, αλλά για **εσωτερικό branding PDF**·
+   * η δημοσίευση θέλει **ρητή** πράξη.
+   *
+   * ⛔ **ΚΑΜΙΑ ΣΦΡΑΓΙΔΑ «ΕΠΑΛΗΘΕΥΜΕΝΟ ΛΟΓΟΤΥΠΟ»** — Α9.2 · **DSA άρθ. 6(3)**: η
+   * απαλλαγή του άρθ. 6 χάνεται όταν η **παρουσίαση** παραπλανά ως προς την
+   * **προέλευση**. Το σήμα είναι **αυτο-δηλωμένος ισχυρισμός**, και μια σφραγίδα θα
+   * απαιτούσε και διαδρομή **αναγγελίας** *(άρθ. 16)*.
+   */
+  readonly mark: DeclaredShowcaseMark | null;
   /** ISO — πότε δημοσιεύτηκε η βιτρίνα. */
   readonly publishedAt: string;
+}
+
+/**
+ * **Το σήμα όπως το βλέπει ο κόσμος** — είδος + η εικόνα με όλα τα παράγωγά της.
+ *
+ * 🔑 **Το δοχείο είναι το ΥΠΑΡΧΟΝ {@link ListingImage}**, όχι νέο σχήμα: είναι
+ * `{url, width, height, altKey, sources}` — δηλαδή **manifest**, ακριβώς όπως το θέλει
+ * το content-addressed ράφι *(κάθε πλάτος έχει **δική του** διεύθυνση, η σύνδεσή τους
+ * ζει **μία** φορά, εδώ)*. Δεύτερος τύπος με ταυτόσημα πεδία θα ήταν **δίδυμο** *(N.18 /
+ * CHECK 3.28)* και θα γεννούσε δεύτερο `srcset` builder δίπλα στον υπάρχοντα.
+ *
+ * ⚠️ **Το όνομα `ListingImage` πλέον λέει ψέματα** — εξυπηρετεί **δύο** τομείς, ακριβώς
+ * το σχήμα που το **Ο-17** τιμώρησε στο `PUBLISHED_MEDIA_LIMIT`. Η μετονομασία σε
+ * ουδέτερο `PublishedImage` είναι **14 αρχεία / 29 αναφορές**, δηλαδή κατά **N.0.2**
+ * *(«4+ αρχεία ⇒ pending»)* δουλειά με **δικό της** commit — δηλωμένη στο
+ * `.claude-rules/pending-ratchet-work.md`, ποτέ σιωπηλή.
+ *
+ * 🔴 **ΤΟ `kind` ΤΟ ΔΗΛΩΝΕΙ Ο ΑΝΘΡΩΠΟΣ** — δες το σκεπτικό του
+ * {@link module:lib/agency/showcase-mark-kind} για τις δύο μαντεψιές που απορρίφθηκαν.
+ */
+export interface DeclaredShowcaseMark {
+  readonly kind: ShowcaseMarkKind;
+  readonly image: ListingImage;
 }
 
 /**

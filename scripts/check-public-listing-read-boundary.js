@@ -94,6 +94,26 @@ const BOUNDARIES = [
     module: 'owner-property-from-document',
     remedy: '«readStoredOwnerProperty(raw, id)» ή «ownerPropertyFromDocument(raw, id)»',
   },
+  {
+    // 🔴 ADR-841 Α21.1 — Η ΤΡΙΤΗ ΓΡΑΜΜΗ, ΚΑΙ ΤΟ ΣΥΝΟΡΟ ΥΠΗΡΧΕ ΗΔΗ ΑΦΥΛΑΚΤΟ.
+    //
+    // Το `showcase-read.ts` είναι **υποδειγματικός** θεματοφύλακας από τη Φ6-Β:
+    // `readShowcase` + `toStoredShowcase` στο ΙΔΙΟ αρχείο («οι δύο κατευθύνσεις
+    // είναι μία σύμβαση»), με **γραμμένη μετανάστευση** παλιού εγγράφου (σκέτο
+    // `gemiNumber` → credential). Δηλαδή η δουλειά είχε γίνει — αλλά **τίποτα δεν
+    // εμπόδιζε τον επόμενο** να γράψει ωμό `snap.data() as PublicShowcase`, που
+    // το ίδιο το header εκείνου του αρχείου λέει ότι υπήρχε σε **τρία** σημεία.
+    //
+    // 🔑 Και το διακύβευμα είναι **ταυτόσημο** με τη βλάβη της 31/08 που γέννησε
+    // αυτή την πύλη: το `agency_profiles` το διαβάζει **ανώνυμος** επισκέπτης
+    // (`firestore.rules:1079` → `allow read: if true`), οπότε ένα πεδίο που λείπει
+    // από παλιό αποθηκευμένο έγγραφο βγαίνει **λευκή σελίδα σε δημόσια οθόνη**.
+    adr: 'ADR-827 §9 · ADR-841 Α21.1',
+    typeName: 'PublicShowcase',
+    custodian: 'src/lib/agency/showcase-read.ts',
+    module: 'showcase-read',
+    remedy: '«readShowcase(raw, companyId)»',
+  },
 ];
 
 /** Ο ισχυρισμός που ψάχνει η Κ1 για μια γραμμή του πίνακα. */

@@ -97,6 +97,11 @@ export function showcaseFixture(overrides: Partial<PublicShowcase> = {}): Public
     credentials: [BROKER_CREDENTIAL],
     place: null,
     position: null,
+    // ⚠️ **Η προεπιλογή είναι «κανένα δηλωμένο σήμα», και είναι ο ΣΩΣΤΟΣ παρονομαστής**
+    //    (ADR-841 §7 Α21): οι περισσότεροι επαγγελματίες δεν θα δηλώσουν ποτέ σήμα, και
+    //    η οθόνη τους δίνει το **παραγόμενο** `lettermark`. Μια εικονική εικόνα εδώ θα
+    //    έκανε **κάθε** δοκιμή να μετρά τη σπάνια περίπτωση.
+    mark: null,
     publishedAt: '2026-01-01T00:00:00.000Z',
     ...overrides,
   };

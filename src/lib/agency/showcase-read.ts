@@ -45,10 +45,13 @@
 import { occupationNeedsCapability } from '@/lib/professional/showcase-eligibility';
 import type {
   ClassifiedOccupation,
+  DeclaredShowcaseMark,
   PublicShowcase,
   ShowcaseCredential,
   ShowcaseRead,
 } from '@/types/agency-profile';
+import type { ListingImage, ListingImageSource } from '@/types/public-listing';
+import { isShowcaseMarkKind } from '@/lib/agency/showcase-mark-kind';
 import type { ProfessionalAttestation } from '@/types/professional-identity';
 import { isRegistryAuthority, isChapteredRegistry } from '@/constants/professional-registries';
 
@@ -210,9 +213,69 @@ export function readShowcase(raw: unknown, companyId: string): ShowcaseRead {
       credentials,
       place: readPlace(source.place),
       position: readPosition(source.position),
+      mark: readMark(source.mark),
       publishedAt,
     } satisfies PublicShowcase,
   };
+}
+
+/**
+ * **Το δηλωμένο σήμα** — `null` όταν λείπει, όταν είναι σκουπίδι, **ή** όταν το έγγραφο
+ * γράφτηκε πριν την Α21 (ADR-841 §7 Α21, Στάδιο 2).
+ *
+ * 🔴 **ΜΙΑ ΕΛΛΕΙΨΗ ΕΔΩ ΔΕΝ ΕΙΝΑΙ «ΛΕΥΚΗ ΣΕΛΙΔΑ ΣΕ ΔΗΜΟΣΙΑ ΟΘΟΝΗ», ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ.**
+ * Το `agency_profiles` το διαβάζει **ανώνυμος** *(`firestore.rules:1079`)*, οπότε
+ * **κάθε** πεδίο που λείπει από παλιό έγγραφο είναι υποψήφια βλάβη — αυτό ακριβώς
+ * γέννησε την πύλη **CHECK 3.74**. Εδώ το `null` είναι **έγκυρη, ονομασμένη κατάσταση**:
+ * ο επισκέπτης παίρνει το παραγόμενο `lettermark`, που **δεν αποτυγχάνει ποτέ**. Άρα η
+ * μετανάστευση των παλιών εγγράφων δεν χρειάζεται **καμία** εγγραφή.
+ *
+ * ⚠️ **Ανεκτικός αναγνώστης, αυστηρός γραφέας** — ίδιο ιδίωμα με τον σαρωτή του ραφιού:
+ * σήμα με άγνωστο `kind` ή χωρίς `url` **δεν μαντεύεται**, γίνεται `null`. Ένα σήμα που
+ * το μισό διαβάστηκε θα ζωγραφιζόταν **σπασμένο** σε δημόσια κάρτα.
+ */
+function readMark(raw: unknown): DeclaredShowcaseMark | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const source = raw as Record<string, unknown>;
+
+  if (!isShowcaseMarkKind(source.kind)) return null;
+
+  const image = readPublishedImage(source.image);
+  if (image === null) return null;
+
+  return { kind: source.kind, image };
+}
+
+/**
+ * **Μια δημοσιευμένη εικόνα με τα παράγωγά της** — ή `null`.
+ *
+ * ⚠️ **Το `sources` δεν επιτρέπεται να είναι κενό**: το `ListingImage` δηλώνει ρητά ότι
+ * το τελευταίο στοιχείο **είναι** το `url`. Ένα κενό `sources` θα έδινε `srcset` χωρίς
+ * υποψήφιες — δηλαδή αντικείμενο που φαίνεται έγκυρο και **δεν ζωγραφίζεται**.
+ */
+function readPublishedImage(raw: unknown): ListingImage | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const source = raw as Record<string, unknown>;
+
+  const url = text(source.url);
+  const altKey = text(source.altKey);
+  const width = Number(source.width);
+  const height = Number(source.height);
+  if (url === null || altKey === null) return null;
+  if (!Number.isFinite(width) || !Number.isFinite(height)) return null;
+
+  const sources: ListingImageSource[] = [];
+  for (const entry of Array.isArray(source.sources) ? source.sources : []) {
+    if (typeof entry !== 'object' || entry === null) continue;
+    const row = entry as Record<string, unknown>;
+    const rowUrl = text(row.url);
+    const rowWidth = Number(row.width);
+    if (rowUrl === null || !Number.isFinite(rowWidth)) continue;
+    sources.push({ url: rowUrl, width: rowWidth });
+  }
+  if (sources.length === 0) return null;
+
+  return { url, width, height, altKey, sources };
 }
 
 /** Τα credentials — από τον πίνακα, **ή** από τη μετανάστευση του παλιού ΓΕΜΗ. */
