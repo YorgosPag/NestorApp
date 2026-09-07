@@ -35,11 +35,18 @@ import {
   PUBLIC_SHELF_CACHE_CONTROL,
   PUBLIC_SHELF_MAX_CACHE_SECONDS,
   buildPublicShelfKey,
-  isPublicShelfListingId,
   parsePublicShelfKey,
   publicShelfPrefix,
   publicShelfUrl,
 } from '@/services/upload/utils/storage-path-public-shelf';
+import {
+  LISTING_SHELF,
+  PUBLIC_SHELF_KINDS,
+  SHOWCASE_SHELF,
+  isPublicShelfListingId,
+  isPublicShelfShowcaseId,
+  shelfRecipe,
+} from '@/services/upload/utils/public-shelf-kinds';
 
 const STORAGE_RULES = readFileSync(join(process.cwd(), 'storage.rules'), 'utf8');
 
@@ -78,7 +85,7 @@ describe('Κ1 — ο ΙΔΙΩΤΙΚΟΣ κάδος δεν αποκτά ΠΟΤΕ 
 describe('Κ2 — το δημόσιο κλειδί δεν κουβαλά ΠΟΤΕ ταυτότητα μισθωτή', () => {
   it('απορρίπτει ταυτότητα εταιρείας ως ταυτότητα αγγελίας', () => {
     expect(isPublicShelfListingId('comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757')).toBe(false);
-    expect(() => publicShelfPrefix('comp_abc')).toThrow();
+    expect(() => publicShelfPrefix(LISTING_SHELF, 'comp_abc')).toThrow();
   });
 
   it('δέχεται τις ΖΩΝΤΑΝΕΣ οικογένειες αναγνωριστικών (μετρημένες στη Φ1)', () => {
@@ -87,7 +94,11 @@ describe('Κ2 — το δημόσιο κλειδί δεν κουβαλά ΠΟΤ�
   });
 
   it('κανένα παραγόμενο κλειδί δεν περιέχει `comp_`', () => {
-    const key = buildPublicShelfKey({ listingId: 'ownp_77aa21bc', contentHash: HASH, ext: 'webp' });
+    const key = buildPublicShelfKey(LISTING_SHELF, {
+      subjectId: 'ownp_77aa21bc',
+      contentHash: HASH,
+      ext: 'webp',
+    });
     expect(key).not.toContain('comp_');
     expect(key).toBe(`listings/ownp_77aa21bc/${HASH}.webp`);
   });
@@ -104,35 +115,184 @@ describe('Κ3 — η διαδρομή δεν δραπετεύει από το π
   it('το πρόθεμα τελειώνει σε «/» ώστε να μην πιάνει γειτονικές αγγελίες', () => {
     // Χωρίς την κάθετη, ένα getFiles({prefix:'listings/ownp_1'}) θα έπιανε
     // ΚΑΙ το 'listings/ownp_12/...' — δηλαδή διαγραφή σε ξένο ράφι.
-    expect(publicShelfPrefix('ownp_1')).toBe('listings/ownp_1/');
-    expect('listings/ownp_12/x'.startsWith(publicShelfPrefix('ownp_1'))).toBe(false);
+    expect(publicShelfPrefix(LISTING_SHELF, 'ownp_1')).toBe('listings/ownp_1/');
+    expect(
+      'listings/ownp_12/x'.startsWith(publicShelfPrefix(LISTING_SHELF, 'ownp_1')),
+    ).toBe(false);
+  });
+
+  it('🔑 καμία ρίζα του πίνακα δεν κουβαλά κάθετη — αλλιώς το πρόθεμα σπάει', () => {
+    // Φρουρός εναντίον του «η επόμενη γραμμή ξέχασε τη μορφή»: η κάθετη μπαίνει ΜΙΑ
+    // φορά, από το `publicShelfPrefix`. Μια ρίζα γραμμένη ως `'showcases/'` θα έδινε
+    // πρόθεμα με διπλή κάθετη — δηλαδή getFiles που δεν πιάνει ΤΙΠΟΤΑ, και ράφι που
+    // δεν αδειάζει ποτέ.
+    for (const kind of PUBLIC_SHELF_KINDS) {
+      expect(kind.root).not.toContain('/');
+    }
   });
 });
 
 describe('Κ4 — ο γραφέας είναι ΑΥΣΤΗΡΟΣ, ο αναγνώστης ΑΝΕΚΤΙΚΟΣ', () => {
   it('ο γραφέας πετά αντί να «καθαρίσει» σιωπηλά', () => {
     expect(() =>
-      buildPublicShelfKey({ listingId: 'ownp_1', contentHash: 'κοντό', ext: 'webp' }),
+      buildPublicShelfKey(LISTING_SHELF, {
+        subjectId: 'ownp_1',
+        contentHash: 'κοντό',
+        ext: 'webp',
+      }),
     ).toThrow();
     expect(() =>
-      buildPublicShelfKey({ listingId: 'ownp_1', contentHash: HASH.toUpperCase(), ext: 'webp' }),
+      buildPublicShelfKey(LISTING_SHELF, {
+        subjectId: 'ownp_1',
+        contentHash: HASH.toUpperCase(),
+        ext: 'webp',
+      }),
     ).toThrow();
   });
 
   it('ο αναγνώστης επιστρέφει null για ό,τι δεν είναι δικό μας — δεν μαντεύει', () => {
-    expect(parsePublicShelfKey('listings/ownp_1/not-a-hash.webp')).toBeNull();
-    expect(parsePublicShelfKey('other-root/ownp_1/' + HASH + '.webp')).toBeNull();
-    expect(parsePublicShelfKey('listings/ownp_1/' + HASH + '.svg')).toBeNull();
-    expect(parsePublicShelfKey('listings/ownp_1/deep/' + HASH + '.webp')).toBeNull();
+    expect(parsePublicShelfKey(LISTING_SHELF, 'listings/ownp_1/not-a-hash.webp')).toBeNull();
+    expect(parsePublicShelfKey(LISTING_SHELF, 'other-root/ownp_1/' + HASH + '.webp')).toBeNull();
+    expect(parsePublicShelfKey(LISTING_SHELF, 'listings/ownp_1/' + HASH + '.svg')).toBeNull();
+    expect(parsePublicShelfKey(LISTING_SHELF, 'listings/ownp_1/deep/' + HASH + '.webp')).toBeNull();
   });
 
-  it('ό,τι γράφει ο γραφέας το διαβάζει ο αναγνώστης — κλειστός κύκλος', () => {
-    const key = buildPublicShelfKey({ listingId: 'prop_9', contentHash: HASH, ext: 'webp' });
-    expect(parsePublicShelfKey(key)).toEqual({
-      listingId: 'prop_9',
-      contentHash: HASH,
-      ext: 'webp',
-    });
+  it('ό,τι γράφει ο γραφέας το διαβάζει ο αναγνώστης — κλειστός κύκλος, σε ΚΑΘΕ είδος', () => {
+    // 🔑 Ο κύκλος δοκιμάζεται σε ΟΛΟΝ τον πίνακα, όχι μόνο στην πρώτη γραμμή: ένα είδος
+    //    που γράφει κλειδί το οποίο ο ΔΙΚΟΣ ΤΟΥ αναγνώστης δεν δέχεται θα ήταν ράφι που
+    //    ΔΕΝ ΜΠΟΡΕΙ να αδειάσει — το `deleteExtra` αγγίζει μόνο ό,τι αναγνωρίζει.
+    const subjectOf: Record<string, string> = {
+      listings: 'prop_9',
+      showcases: 'comp_9c7c1a50',
+    };
+
+    for (const kind of PUBLIC_SHELF_KINDS) {
+      const subjectId = subjectOf[kind.root];
+      expect(subjectId).toBeDefined();
+
+      const key = buildPublicShelfKey(kind, { subjectId, contentHash: HASH, ext: 'webp' });
+
+      expect(key).toBe(`${kind.root}/${subjectId}/${HASH}.webp`);
+      expect(parsePublicShelfKey(kind, key)).toEqual({ subjectId, contentHash: HASH, ext: 'webp' });
+    }
+  });
+});
+
+describe('🔴 Κ2β — ΟΙ ΔΥΟ ΡΙΖΕΣ ΔΕΝ ΜΠΟΡΟΥΝ ΝΑ ΤΑΪΣΟΥΝ Η ΜΙΑ ΤΗΝ ΤΑΥΤΟΤΗΤΑ ΤΗΣ ΑΛΛΗΣ', () => {
+  // ────────────────────────────────────────────────────────────────────────────
+  // Το Στάδιο 2 (Α21) έδωσε στο ράφι δεύτερο είδος με **αντίστροφο** φρουρό:
+  //
+  //   listings/  ΑΠΑΓΟΡΕΥΕΙ `comp_` — πρόθεμα μισθωτή σε δημόσιο URL αγγελίας
+  //                                   αποκαλύπτει ΠΟΙΟΣ ΚΑΤΕΧΕΙ αυτό το σπίτι
+  //   showcases/ ΑΠΑΙΤΕΙ   `comp_` — εκεί η ταυτότητα ΕΙΝΑΙ το περιεχόμενο
+  //                                   (`firestore.rules:1079` → `allow read: if true`)
+  //
+  // ⚠️ Το Κ2 από πάνω φυλάει τη ΜΙΑ πλευρά και **δεν ρωτά ποτέ για τη βιτρίνα**. Χωρίς
+  //    αυτό εδώ, λάθος στη δεύτερη γραμμή του πίνακα θα ήταν αόρατο: το Κ2 θα έμενε
+  //    πράσινο — «πράσινο επειδή κανείς δεν κοίταξε», στην πιο ακριβή του μορφή.
+  // ────────────────────────────────────────────────────────────────────────────
+
+  it('η ρίζα της βιτρίνας ΑΠΑΙΤΕΙ ταυτότητα εταιρείας', () => {
+    expect(isPublicShelfShowcaseId('comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757')).toBe(true);
+    expect(publicShelfPrefix(SHOWCASE_SHELF, 'comp_abc')).toBe('showcases/comp_abc/');
+  });
+
+  it('🔴 η ρίζα της βιτρίνας ΑΠΟΡΡΙΠΤΕΙ τις ζωντανές ταυτότητες αγγελίας', () => {
+    expect(isPublicShelfShowcaseId('ownp_77aa21bc')).toBe(false);
+    expect(isPublicShelfShowcaseId('prop_0f3c9a11')).toBe(false);
+    expect(() => publicShelfPrefix(SHOWCASE_SHELF, 'ownp_77aa21bc')).toThrow();
+  });
+
+  it('ο αντίστροφος φρουρός κρατά ΚΑΙ τους κοινούς όρους ασφαλείας', () => {
+    // Το `comp_` δεν είναι πάσο: η διαδρομή δεν δραπετεύει ούτε εδώ.
+    for (const candidate of ['..', '.', 'comp_a/b', '']) {
+      expect(isPublicShelfShowcaseId(candidate)).toBe(false);
+    }
+  });
+
+  it('🏆 ΚΑΘΕ ταυτότητα γίνεται δεκτή από ΤΟ ΠΟΛΥ ΜΙΑ ρίζα — ποτέ και από τις δύο', () => {
+    // Η δομική εγγύηση, δοκιμασμένη ως ΙΔΙΟΤΗΤΑ των φρουρών — όχι ως δύο χωριστά
+    // παραδείγματα που αύριο μπορεί να αποκλίνουν.
+    for (const candidate of ['comp_abc', 'ownp_1', 'prop_9', 'comp_', 'x', '..']) {
+      expect(PUBLIC_SHELF_KINDS.filter((kind) => kind.acceptsSubject(candidate)).length)
+        .toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('ο αναγνώστης της μιας ρίζας ΔΕΝ διαβάζει κλειδί της άλλης', () => {
+    const showcaseKey = `showcases/comp_abc/${HASH}.webp`;
+    const listingKey = `listings/ownp_1/${HASH}.webp`;
+
+    expect(parsePublicShelfKey(LISTING_SHELF, showcaseKey)).toBeNull();
+    expect(parsePublicShelfKey(SHOWCASE_SHELF, listingKey)).toBeNull();
+  });
+
+  it('οι ρίζες είναι διακριτές — αλλιώς το πρόθεμα θα έσβηνε ΞΕΝΑ bytes', () => {
+    expect(new Set(PUBLIC_SHELF_KINDS.map((kind) => kind.root)).size).toBe(
+      PUBLIC_SHELF_KINDS.length,
+    );
+  });
+});
+
+describe('🔑 Κ2γ — ΚΑΘΕ ΕΙΔΟΣ ΕΧΕΙ ΔΙΚΗ ΤΟΥ ΣΥΝΤΑΓΗ, ΚΑΙ ΕΙΝΑΙ ΠΑΡΑΓΟΜΕΝΗ', () => {
+  // Η συνταγή ταξιδεύει ως μεταδεδομένο και απαντά «βγήκε από τη ΣΗΜΕΡΙΝΗ ρύθμιση;»
+  // ΧΩΡΙΣ να αποκωδικοποιηθεί τίποτα. Δύο είδη με ΙΔΙΑ συνταγή θα σήμαινε ότι τα
+  // παράγωγα του ενός περνούν για έγκυρα του άλλου — και επειδή η γρήγορη διαδρομή δεν
+  // κατεβάζει bytes, το λάθος θα ήταν ΑΟΡΑΤΟ: σήμα 256px να περνά για γκαλερί 2560px.
+
+  it('οι συνταγές των ειδών είναι διακριτές', () => {
+    expect(new Set(PUBLIC_SHELF_KINDS.map((kind) => shelfRecipe(kind.encoding))).size).toBe(
+      PUBLIC_SHELF_KINDS.length,
+    );
+  });
+
+  it('η συνταγή αλλάζει όταν αλλάξει ΟΠΟΙΟΔΗΠΟΤΕ σκέλος της κωδικοποίησης', () => {
+    const base = LISTING_SHELF.encoding;
+
+    expect(shelfRecipe({ ...base, widths: [640] })).not.toBe(shelfRecipe(base));
+    expect(shelfRecipe({ ...base, quality: 83 })).not.toBe(shelfRecipe(base));
+    expect(shelfRecipe({ ...base, quality: 'lossless' })).not.toBe(shelfRecipe(base));
+    // 🔴 Το `preset` ΑΛΛΑΖΕΙ τα bytes. Αν έλειπε από την υπογραφή, μια αλλαγή του θα
+    //    άφηνε τα παλιά παράγωγα δημοσιευμένα ως «σωστά» — σιωπηλά.
+    expect(shelfRecipe({ ...base, preset: 'icon' })).not.toBe(shelfRecipe(base));
+  });
+});
+
+describe('🏆 Κ2δ — Η ΚΛΙΜΑΚΑ ΤΟΥ ΣΗΜΑΤΟΣ ΕΞΥΠΗΡΕΤΕΙ ΤΙΣ ΟΘΟΝΕΣ ΠΟΥ ΥΠΑΡΧΟΥΝ', () => {
+  // Το `ShowcaseMarkView` ζωγραφίζει 44px (κάρτα, `h-11`) και 64px (προφίλ, `h-16`).
+  // Η κλίμακα [64,128,256] ΔΕΝ είναι στρογγυλεμένη — είναι μετρημένη από αυτά τα δύο.
+  const DRAWN_SIZES = [44, 64];
+  const DEVICE_PIXEL_RATIOS = [1, 2, 3];
+
+  it('🔴 κανένα ζεύγος (μέγεθος × πυκνότητα) δεν ΥΠΟ-εξυπηρετείται', () => {
+    const largest = Math.max(...SHOWCASE_SHELF.encoding.widths);
+
+    for (const size of DRAWN_SIZES) {
+      for (const dpr of DEVICE_PIXEL_RATIOS) {
+        // Υπάρχει παράγωγο ΤΟΥΛΑΧΙΣΤΟΝ όσο χρειάζεται; Αλλιώς ο περιηγητής μεγεθύνει,
+        // δηλαδή θολό σήμα σε οθόνη υψηλής πυκνότητας.
+        expect(largest).toBeGreaterThanOrEqual(size * dpr);
+        expect(SHOWCASE_SHELF.encoding.widths.some((w) => w >= size * dpr)).toBe(true);
+      }
+    }
+  });
+
+  it('🔑 και δεν ΥΠΕΡ-εξυπηρετεί: το σήμα είναι ασύγκριτα μικρότερο από τη γκαλερί', () => {
+    // Το εύρημα που γέννησε ολόκληρο το Στάδιο 2: παράγωγο 2560px για εικόνα 44px.
+    const markMax = Math.max(...SHOWCASE_SHELF.encoding.widths);
+    const listingMax = Math.max(...LISTING_SHELF.encoding.widths);
+
+    expect(markMax).toBe(256);
+    expect(listingMax / markMax).toBeGreaterThanOrEqual(10);
+  });
+
+  it('τα πλάτη κάθε είδους είναι ΑΥΞΟΝΤΑ — η προβολή διαβάζει το τελευταίο ως κανονικό', () => {
+    for (const kind of PUBLIC_SHELF_KINDS) {
+      const widths = kind.encoding.widths;
+      expect(widths.length).toBeGreaterThan(0);
+      expect([...widths].sort((a, b) => a - b)).toEqual([...widths]);
+      expect(new Set(widths).size).toBe(widths.length);
+    }
   });
 });
 

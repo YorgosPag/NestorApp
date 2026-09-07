@@ -21,11 +21,12 @@
  */
 
 import type { PublicShelfReport } from '../public-shelf.service';
+import { LISTING_SHELF } from '@/services/upload/utils/public-shelf-kinds';
 
-const reconcilePublicShelf = jest.fn<Promise<PublicShelfReport>, [string, readonly unknown[]]>();
+const reconcilePublicShelf = jest.fn<Promise<PublicShelfReport<unknown>>, [unknown, string, readonly unknown[]]>();
 
 jest.mock('../public-shelf.service', () => ({
-  reconcilePublicShelf: (...args: [string, readonly unknown[]]) => reconcilePublicShelf(...args),
+  reconcilePublicShelf: (...args: [unknown, string, readonly unknown[]]) => reconcilePublicShelf(...args),
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -93,7 +94,7 @@ beforeEach(() => {
   ref.set.mockClear();
   ref.delete.mockClear();
   reconcilePublicShelf.mockReset();
-  reconcilePublicShelf.mockImplementation(async (_id, sources) => {
+  reconcilePublicShelf.mockImplementation(async (_kind, _id, sources) => {
     trace.push(`reconcile(${sources.length})`);
     return shelfReport(sources.length);
   });
@@ -109,7 +110,7 @@ describe('Κ1 — Η ΣΕΙΡΑ: το ράφι ρωτιέται ΠΡΙΝ τη γ
   it('η επιλογή του κατόχου φτάνει ΑΥΤΟΥΣΙΑ στη συμφιλίωση', async () => {
     await writeListingProjection(adminDb, LISTING, LISTED, NO_PLACE, AT);
 
-    expect(reconcilePublicShelf).toHaveBeenCalledWith(LISTING, LISTED.publishedMedia);
+    expect(reconcilePublicShelf).toHaveBeenCalledWith(LISTING_SHELF, LISTING, LISTED.publishedMedia);
   });
 });
 

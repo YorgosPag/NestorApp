@@ -31,10 +31,10 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import type { PublicShelfReport } from '../public-shelf.service';
 import type { AgencyMediaCandidate } from '../agency-media-publication';
 
-const reconcilePublicShelf = jest.fn<Promise<PublicShelfReport>, [string, readonly unknown[]]>();
+const reconcilePublicShelf = jest.fn<Promise<PublicShelfReport<unknown>>, [unknown, string, readonly unknown[]]>();
 
 jest.mock('../public-shelf.service', () => ({
-  reconcilePublicShelf: (...args: [string, readonly unknown[]]) => reconcilePublicShelf(...args),
+  reconcilePublicShelf: (...args: [unknown, string, readonly unknown[]]) => reconcilePublicShelf(...args),
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -108,7 +108,7 @@ const resolveAgency = async () => ({ id: COMPANY, name: 'ΠΑΓΩΝΗΣ Α.Ε.' 
 /** Τα μονοπάτια που ζητήθηκαν από το ράφι, στη σειρά που ζητήθηκαν. */
 function shelfPaths(): string[] {
   const call = reconcilePublicShelf.mock.calls[0];
-  return ((call?.[1] ?? []) as { privateStoragePath: string }[]).map((s) => s.privateStoragePath);
+  return ((call?.[2] ?? []) as { privateStoragePath: string }[]).map((s) => s.privateStoragePath);
 }
 
 beforeEach(() => {
