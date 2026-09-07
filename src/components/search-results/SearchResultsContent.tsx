@@ -45,6 +45,11 @@ import { useViewportClass } from '@/hooks/media/useViewportClass';
 import { useListingFocus } from '@/hooks/listings/useListingFocus';
 import { CriteriaLedgerBar } from './CriteriaLedgerBar';
 import { ListingLedgerBar } from './ListingLedgerBar';
+import {
+  orderResultsListings,
+  parseListingOrder,
+} from '@/lib/listings/listing-results-order';
+
 import { PrimaryFilterBar } from './filters/PrimaryFilterBar';
 import { StayFilterFields } from './StayFilterFields';
 import { StayLedgerBar } from './StayLedgerBar';
@@ -172,6 +177,57 @@ export function SearchResultsContent() {
     return { mapped: withShape, unmapped: without };
   }, [visible]);
 
+  /**
+   * 🔴 **Η ΣΕΙΡΑ — ΔΗΛΩΜΕΝΗ, ΕΠΙΛΕΞΙΜΗ, ΚΑΙ ΜΟΝΟ ΓΙΑ ΤΗ ΛΙΣΤΑ** (ADR-777 §8.61).
+   *
+   * Ως σήμερα δεν υπήρχε καμία: το ερώτημα δεν έχει `orderBy`, οπότε το Firestore
+   * επέστρεφε κατά `documentId` — δηλαδή, επειδή τα IDs είναι `ownp_…`/`prop_…`, **κατά
+   * τάξη συντάκτη**. Το «γιατί» και οι μετρήσεις ζουν στο `listing-results-order.ts`.
+   */
+  const order = useMemo(
+    () => parseListingOrder(new URLSearchParams(searchParams?.toString() ?? '')),
+    [searchParams]
+  );
+
+  /**
+   * 🔴 **ΞΕΧΩΡΙΣΤΗ ΤΑΥΤΟΤΗΤΑ ΠΙΝΑΚΑ ΓΙΑ ΤΗ ΛΙΣΤΑ — ΚΑΙ ΕΙΝΑΙ ΤΟ ΟΛΟ ΘΕΜΑ.**
+   *
+   * Ο `ResultsMap` εξακολουθεί να παίρνει το **αρχικό** `mapped`. Νέα ταυτότητα πίνακα
+   * εκεί σημαίνει **επανα-αρχικοποίηση του MapLibre** — το `InteractiveMapContainer` το
+   * γράφει ήδη ρητά (*«new function every render caused Map re-init»*), και το τίμημα
+   * είναι **μαύρη οθόνη** σε κάθε αλλαγή σειράς. Η σειρά είναι ερώτηση **της λίστας**·
+   * ο χάρτης δεν έχει σειρά, έχει θέσεις.
+   *
+   * ⚠️ **Και τα δύο σύνολα ταξινομούνται**: το `unmapped` είναι κι αυτό λίστα που
+   * διαβάζει άνθρωπος. Αν έμενε αταξινόμητο, η ίδια οθόνη θα είχε **δύο** σειρές — μία
+   * δηλωμένη και μία τυχαία — και η δεύτερη θα ήταν πάλι κατά τάξη συντάκτη.
+   */
+  const orderedMapped = useMemo(() => orderResultsListings(mapped, order), [mapped, order]);
+  const orderedUnmapped = useMemo(() => orderResultsListings(unmapped, order), [unmapped, order]);
+
+  /**
+   * 🔴 **ΕΝΑ ΑΝΤΙΚΕΙΜΕΝΟ, ΔΥΟ ΚΑΤΑΝΑΛΩΤΕΣ — ΚΑΙ ΕΙΝΑΙ ΟΛΟ ΤΟ ΝΟΗΜΑ ΤΟΥ §8.62.**
+   *
+   * Ό,τι μπαίνει εδώ **πηγαίνει στη λίστα** και **μετριέται από τον μετρητή**. Δεν
+   * υπάρχει διαδρομή όπου η μία πλευρά αλλάζει και η άλλη δεν το μαθαίνει: για να
+   * κοπεί η λίστα, το κόψιμο πρέπει να συμβεί **μέσα σε αυτό το `useMemo`** — και τότε
+   * το `renderedCount` πέφτει μαζί του **στην ίδια αναπνοή**.
+   *
+   * ⚠️ **Γι' αυτό είναι αντικείμενο και όχι δύο ξεχωριστές μεταβλητές.** Με δύο
+   * μεταβλητές, ένα μελλοντικό `orderedMapped.slice(0, 40)` γραμμένο κατευθείαν στο
+   * JSX θα παρέκαμπτε τον μετρητή **χωρίς να πειράξει τίποτα εδώ** — δηλαδή θα ήταν
+   * ακριβώς η σιωπηλή απόκλιση που αυτό το βήμα υπάρχει για να κλείσει.
+   *
+   * 🔑 Ο χάρτης **δεν** διαβάζει από εδώ: εξακολουθεί να παίρνει το αρχικό `mapped`,
+   * για τον λόγο που γράφεται από πάνω (ταυτότητα πίνακα → re-init MapLibre) **και**
+   * επειδή το §8.60 έχει ήδη αποφασίσει γραπτά ότι η λίστα δεν διατάζει τον χάρτη.
+   */
+  const listView = useMemo(
+    () => ({ mapped: orderedMapped, unmapped: orderedUnmapped }),
+    [orderedMapped, orderedUnmapped]
+  );
+  const renderedCount = listView.mapped.length + listView.unmapped.length;
+
   const ledger = useListingLedger(visible);
 
   /**
@@ -247,7 +303,7 @@ export function SearchResultsContent() {
       <header className="border-b border-border px-4 py-3">
         <h1 className="text-lg font-semibold text-foreground">{t('search-results:page.title')}</h1>
         {/* Η λογιστική τυπώνεται ΠΑΝΤΑ — ακόμη και στο μηδέν, ακόμη και στη φόρτωση. */}
-        <ListingLedgerBar ledger={ledger} className="mt-1" />
+        <ListingLedgerBar ledger={ledger} rendered={renderedCount} className="mt-1" />
         {/*
           🔴 **ΔΥΟ ΓΡΑΜΜΕΣ, ΔΥΟ ΔΙΑΜΕΡΙΣΕΙΣ ΤΟΥ ΙΔΙΟΥ ΣΥΝΟΛΟΥ** (ADR-835 §4.6).
           «Πού;» και «πότε;» δεν είναι κάδοι της ίδιας μέτρησης: ένα ακίνητο είναι
@@ -278,6 +334,7 @@ export function SearchResultsContent() {
         */}
         <PrimaryFilterBar
           filters={filters}
+          order={order}
           listings={withinScope}
           visibleCount={visible.length}
           viewport={viewport}
@@ -311,8 +368,8 @@ export function SearchResultsContent() {
       <div className="relative min-h-0 flex-1 overflow-hidden md:grid md:grid-cols-[minmax(20rem,26rem)_1fr]">
         <ResultsSheet viewport={viewport}>
           <ResultsList
-            mapped={mapped}
-            unmapped={unmapped}
+            mapped={listView.mapped}
+            unmapped={listView.unmapped}
             focus={focus}
             onHover={peek}
             filterQuery={filterQuery}

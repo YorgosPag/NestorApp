@@ -41,6 +41,7 @@ import { ListingCardGallery } from '@/components/search-results/ListingCardGalle
 import type { ListingFocusStrength } from '@/lib/listings/listing-focus';
 import { LISTING_CARD_ID_ATTRIBUTE } from '@/hooks/listings/useListingRevealTracking';
 import { ListingAuthorshipLine } from '@/components/listings/ListingAuthorshipLine';
+import styles from './ListingCard.module.css';
 
 /**
  * Πόσο πλατιά αποδίδεται η εικόνα της κάρτας — **δήλωση διάταξης, όχι εικασία**.
@@ -201,7 +202,15 @@ export function ListingCard({
       αλήθεια να αποκλίνει. Το όνομα είναι μία φορά γραμμένο, στον καταναλωτή του
       (`LISTING_CARD_ID_ATTRIBUTE`).
     */
-    <li {...{ [LISTING_CARD_ID_ATTRIBUTE]: listing.id }}>
+    /*
+      🔑 **Η ΠΑΡΑΛΕΙΨΗ ΒΑΦΗΣ ΖΕΙ ΣΤΟ ΙΔΙΟ ΣΤΟΙΧΕΙΟ ΜΕ ΤΗΝ ΤΑΥΤΟΤΗΤΑ** — και αυτό είναι
+      απόφαση, όχι σύμπτωση: το `<li>` που κουβαλά το `data-listing-id` είναι **ακριβώς**
+      αυτό που ο χάρτης ψάχνει με `querySelector`. Βάζοντας το `content-visibility` εδώ,
+      το στοιχείο που **πρέπει να βρίσκεται** είναι το ίδιο που **κρατά το κουτί του**.
+      Ένα εσωτερικό `<div>` θα χώριζε τα δύο, και η πρώτη αναδιοργάνωση θα τα ξεσυνέδεε.
+      Το «γιατί» και οι μετρήσεις ζουν στο `ListingCard.module.css`.
+    */
+    <li className={styles.card} {...{ [LISTING_CARD_ID_ATTRIBUTE]: listing.id }}>
       {/*
         🔴 **Η ΚΑΡΤΑ ΕΠΑΨΕ ΝΑ ΕΙΝΑΙ ΕΝΑΣ ΤΕΡΑΣΤΙΟΣ ΣΥΝΔΕΣΜΟΣ** (§8.57).
 

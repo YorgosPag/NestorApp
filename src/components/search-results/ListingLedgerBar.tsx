@@ -18,17 +18,33 @@
 
 import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { ledgerBalances, type ListingLedger } from '@/types/public-listing';
+import { ledgerBalances, ledgerCoversRendered, type ListingLedger } from '@/types/public-listing';
 import { cn } from '@/lib/utils';
 
 interface ListingLedgerBarProps {
   readonly ledger: ListingLedger;
+  /**
+   * **ΠΟΣΕΣ ΚΑΡΤΕΣ ΠΑΡΑΔΟΘΗΚΑΝ ΣΤΗ ΛΙΣΤΑ** — ο αριθμός που κάνει τον μετρητή
+   * **ανίκανο να ψευδιστεί** (ADR-777 §8.62).
+   *
+   * ⚠️ **Υποχρεωτικό, ποτέ προαιρετικό με προεπιλογή `ledger.total`.** Μια προεπιλογή
+   * ίση με τη λογιστική θα έκανε τον έλεγχο **ταυτολογία** — θα περνούσε πάντα, και θα
+   * ήταν ακριβώς το είδος «πράσινου επειδή κανείς δεν κοίταξε» που το ίδιο το έργο
+   * καταγράφει τέσσερις φορές (N.11 · N.12 · N.18 · CHECK 3.18). Ο καταναλωτής
+   * **οφείλει** να το μετρήσει από τα σύνολα που όντως έδωσε στη λίστα.
+   */
+  readonly rendered: number;
   readonly className?: string;
 }
 
-export function ListingLedgerBar({ ledger, className }: ListingLedgerBarProps) {
+export function ListingLedgerBar({ ledger, rendered, className }: ListingLedgerBarProps) {
   const { t } = useTranslation(['search-results']);
+  // 🔑 **ΔΥΟ ΑΝΕΞΑΡΤΗΤΕΣ ΕΡΩΤΗΣΕΙΣ, ΠΟΤΕ ΜΙΑ ΜΕ «Ή» ΣΤΗΝ ΠΗΓΗ.** Το `balanced` ρωτά
+  //    «κλείνει μέσα της;»· το `covers` ρωτά «είναι του ΙΔΙΟΥ συνόλου;». Συμπτύσσοντάς
+  //    τες σε έναν υπολογισμό θα χανόταν ποια από τις δύο έσπασε — το ίδιο σχήμα που
+  //    οι πύλες μας κρατούν χωριστό (Κ1 δομικός · Κ2 ταβάνι, ποτέ ένας με «ή»).
   const balanced = ledgerBalances(ledger);
+  const covers = ledgerCoversRendered(ledger, rendered);
 
   return (
     <output
@@ -52,8 +68,14 @@ export function ListingLedgerBar({ ledger, className }: ListingLedgerBarProps) {
         🔴 Ο φρουρός δεν είναι διακοσμητικός: αν κάποτε προστεθεί τρίτη κατάσταση
         θέσης που δεν μετριέται σε κανέναν από τους δύο κάδους, ο χρήστης το μαθαίνει
         ΕΔΩ — αντί να δει χάρτη με λιγότερα από τη λίστα και να μην ξέρει γιατί.
+
+        🔴 **ΚΑΙ Η ΔΕΥΤΕΡΗ ΑΙΤΙΑ, ΑΠΟ ΤΟ §8.62**: ο αριθμός μιλά για **άλλο σύνολο**
+        από τις κάρτες που ζωγραφίστηκαν. Ο συναγερμός είναι **ο ίδιος επίτηδες** —
+        με τον Δρόμο Α τίποτα δεν κρύβεται σκόπιμα, άρα και οι δύο αιτίες είναι
+        **σφάλμα, όχι κατάσταση**, ακριβώς όπως λέει το κείμενο του κλειδιού. Δες
+        {@link ledgerCoversRendered} για το γιατί δεν είναι δεύτερο μήνυμα.
       */}
-      {!balanced && (
+      {!(balanced && covers) && (
         <strong role="alert" className="text-destructive">
           {t('search-results:ledger.imbalanced')}
         </strong>
