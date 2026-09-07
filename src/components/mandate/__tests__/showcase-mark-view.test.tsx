@@ -218,7 +218,7 @@ describe('🔴 Φάση 2 — Η ΕΙΚΟΝΑ ΜΙΛΑ, ΤΟ ΠΛΑΚΙΔΙΟ Σ
     // σήμα 44 εικονοστοιχείων.
     for (const [size, expected] of [
       ['card', '44px'],
-      ['page', '64px'],
+      ['page', '96px'],
     ] as const) {
       const { unmount } = render(
         <ShowcaseMarkView mark={{ declared: declaredMark('logo') }} size={size} />,
@@ -269,43 +269,92 @@ describe('🔴 Φάση 2 — Η ΕΙΚΟΝΑ ΜΙΛΑ, ΤΟ ΠΛΑΚΙΔΙΟ Σ
   });
 });
 
-describe('🔴 Φάση 2 — ΤΑ ΔΥΟ ΝΟΥΜΕΡΑ ΠΟΥ Ο ΜΕΤΑΓΛΩΤΤΙΣΤΗΣ ΔΕΝ ΜΠΟΡΕΙ ΝΑ ΔΕΣΕΙ', () => {
+describe('Α21.9 — 🔴 ΤΟ ΚΟΥΤΙ ΦΤΑΝΕΙ ΩΣ ΤΗΝ ΟΘΟΝΗ, ΟΧΙ ΜΟΝΟ ΩΣ ΤΗ ΣΥΝΑΡΤΗΣΗ', () => {
   /**
-   * 🔴 **ΓΙΑΤΙ ΧΡΕΙΑΖΕΤΑΙ ΑΓΚΥΡΑ ΚΑΙ ΟΧΙ ΤΥΠΟΣ.** Το `MARK_SIZES` είναι **κλάσεις
-   * Tailwind** (`h-11` · `h-16`), το `MARK_SIZES_ATTR` είναι **αριθμοί σε px**. Κανένας
-   * τύπος δεν συνδέει τα δύο: αν κάποιος αλλάξει το `h-11` σε `h-12` «για αισθητική»,
-   * το `sizes="44px"` γίνεται **ψέμα** — και ο περιηγητής, που το **πιστεύει**, θα
-   * διαλέξει μικρότερο παράγωγο από όσο χρειάζεται.
+   * 🔴 **ΓΙΑΤΙ ΕΔΩ ΚΑΙ ΟΧΙ ΜΟΝΟ ΣΤΟ `showcase-mark-box.test`.** Εκείνο κρίνει την
+   * **απόφαση**· αυτό κρίνει ότι η απόφαση **φοριέται**. Οι δύο μπορούν να αποκλίνουν:
+   * μια οθόνη που ξεχνά να περάσει `width`/`height`, ή που κρατά δική της κλάση ύψους,
+   * θα άφηνε το SSoT πράσινο και τον επισκέπτη με το παλιό κουτί.
    *
-   * ⚠️ Η άγκυρα διαβάζει το **ωμό αρχείο**: τα δύο σύνολα είναι ιδιωτικά στο module, και
-   * μια εξαγωγή τους μόνο και μόνο για να τα δει το test θα διεύρυνε τη δημόσια
-   * επιφάνεια για χάρη της δοκιμής.
+   * ⚠️ **Οι πίνακες μεγεθών ΕΦΥΓΑΝ από το `ShowcaseMarkView`** — μαζί τους μετακόμισε
+   * και η άγκυρα «κλάση ↔ `sizes`», που τώρα ζει στο `showcase-mark-box.test` (Κ5).
    */
-  const RAW = fs.readFileSync(
-    path.join(process.cwd(), 'src/components/mandate/ShowcaseMarkView.tsx'),
-    'utf8',
-  );
+  function wordmark(): DeclaredShowcaseMark {
+    const mark = declaredMark('logo');
+    return { ...mark, image: { ...mark.image, width: 256, height: 64 } };
+  }
 
-  /** `card: 'h-11 w-11 …'` → `['card', 11]` — η **κλάση** που ζωγραφίζεται. */
-  const drawnEdges = new Map(
-    [...RAW.matchAll(/^ {2}(\w+): 'h-(\d+) w-\d+/gm)].map((m) => [m[1], Number(m[2]) * 4]),
-  );
+  it('🔴 wordmark 4:1 στη ΣΕΛΙΔΑ ⇒ ζώνη: ελεύθερο πλάτος και `sizes` 240px', () => {
+    // 🔴 **ΤΟ ΠΕΡΙΣΤΑΤΙΚΟ, ΑΥΤΟΛΕΞΕΙ**: αυτή ακριβώς η εικόνα έδινε μελάνι 64×16.
+    // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: πάψε να περνάς `width`/`height` στο `markBox` *(δηλαδή
+    //    ξαναγράψε το ως τετράγωνο)* ⇒ κοκκινίζει.
+    render(<ShowcaseMarkView mark={{ declared: wordmark() }} size="page" />);
 
-  /** `card: '44px',` → `['card', 44]` — ο **αριθμός** που υπόσχεται το `sizes`. */
-  const declaredEdges = new Map(
-    [...RAW.matchAll(/^ {2}(\w+): '(\d+)px',/gm)].map((m) => [m[1], Number(m[2])]),
-  );
-
-  it('🔴 το `sizes` κάθε μεγέθους ΣΥΜΦΩΝΕΙ με την κλάση ύψους του', () => {
-    // Tailwind: 1 μονάδα = 0.25rem = 4px στη ρίζα των 16px ⇒ `h-11` = 44px · `h-16` = 64px.
-    expect(drawnEdges.size).toBeGreaterThan(0);
-
-    for (const [size, edge] of drawnEdges) {
-      expect(declaredEdges.get(size)).toBe(edge);
-    }
+    const img = screen.getByRole('img');
+    expect(img).toHaveClass('w-auto');
+    expect(img).toHaveClass('max-w-[15rem]');
+    expect(img).toHaveAttribute('sizes', '240px');
   });
 
-  it('🔑 ΚΑΘΕ μέγεθος έχει `sizes` — τρίτο μέγεθος δεν περνά αδήλωτο', () => {
-    expect([...drawnEdges.keys()].sort()).toEqual([...declaredEdges.keys()].sort());
+  it('🔴 ΠΟΡΤΡΕΤΟ 4:1 στη σελίδα ⇒ ΤΕΤΡΑΓΩΝΟ: το είδος νικά την αναλογία', () => {
+    const mark = declaredMark('portrait');
+    const wide = { ...mark, image: { ...mark.image, width: 256, height: 64 } };
+
+    render(<ShowcaseMarkView mark={{ declared: wide }} size="page" />);
+
+    const img = screen.getByRole('img');
+    expect(img).toHaveClass('h-24');
+    expect(img).toHaveClass('w-24');
+    expect(img).toHaveAttribute('sizes', '96px');
+  });
+
+  it('🔴 στην ΚΑΡΤΑ ο ίδιος wordmark μένει τετράγωνος — ο ρυθμός της σειράς', () => {
+    render(<ShowcaseMarkView mark={{ declared: wordmark() }} size="card" />);
+
+    const img = screen.getByRole('img');
+    expect(img).toHaveClass('h-11');
+    expect(img).toHaveClass('w-11');
+  });
+
+  it('🔑 οι ΠΡΑΓΜΑΤΙΚΕΣ διαστάσεις φτάνουν στα χαρακτηριστικά — όχι σταθερό 96', () => {
+    // ⚠️ Το `width`/`height` του `<img>` δεσμεύει χώρο πριν φορτώσει η εικόνα. Λάθος
+    //    αναλογία εκεί = **τίναγμα διάταξης** (CLS) τη στιγμή που έρχονται τα bytes.
+    render(<ShowcaseMarkView mark={{ declared: wordmark() }} size="page" />);
+
+    const img = screen.getByRole('img');
+    expect(img).toHaveAttribute('width', '256');
+    expect(img).toHaveAttribute('height', '64');
+  });
+});
+
+describe('Α21.10 — 🏆 Ο ΑΕΡΑΣ ΤΗΣ ΦΑΣΗΣ Β ΦΤΑΝΕΙ ΩΣ ΤΗΝ ΟΘΟΝΗ', () => {
+  /**
+   * 🔴 **ΓΙΑΤΙ ΕΔΩ ΚΑΙ ΟΧΙ ΜΟΝΟ ΣΤΟ `showcase-mark-box.test`** — ίδιο σκεπτικό με την
+   * Α21.9: εκείνο κρίνει ότι η **απόφαση** παίρνεται, αυτό ότι **φοριέται**. Το
+   * `clearSpace` είναι νέο πεδίο, και ένα πεδίο που κανείς δεν διαβάζει είναι σιωπηλά
+   * ανενεργό: το SSoT θα έμενε πράσινο και το τριμμένο λογότυπο θα έχανε τις γωνίες του
+   * στην καμπύλη του `rounded-lg`, χωρίς κανένα σφάλμα πουθενά.
+   */
+  it('🔴 το ΛΟΓΟΤΥΠΟ φοράει την εσοχή — αλλιώς το τριμμένο μελάνι κόβεται στην καμπύλη', () => {
+    // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: βγάλε το `box.clearSpace` από το `cn(...)` ⇒ κοκκινίζει.
+    render(<ShowcaseMarkView mark={{ declared: declaredMark('logo') }} size="page" />);
+
+    expect(screen.getByRole('img').className).toMatch(/\bp-\d/);
+  });
+
+  it('🔴 το ΠΟΡΤΡΕΤΟ ΔΕΝ τη φοράει — δαχτυλίδι `bg-card` γύρω από πρόσωπο', () => {
+    render(<ShowcaseMarkView mark={{ declared: declaredMark('portrait') }} size="page" />);
+
+    expect(screen.getByRole('img').className).not.toMatch(/\bp-\d/);
+  });
+
+  it('🔴 και ΚΑΙ ΣΤΑ ΔΥΟ μεγέθη του λογοτύπου, γιατί η ακτίνα είναι η ίδια', () => {
+    for (const size of ['card', 'page'] as const) {
+      const { unmount } = render(
+        <ShowcaseMarkView mark={{ declared: declaredMark('logo') }} size={size} />,
+      );
+      expect(screen.getByRole('img').className).toMatch(/\bp-\d/);
+      unmount();
+    }
   });
 });

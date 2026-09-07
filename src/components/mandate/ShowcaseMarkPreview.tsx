@@ -32,12 +32,24 @@ import React from 'react';
 
 import { cn } from '@/lib/utils';
 import { frameOf } from '@/components/mandate/showcase-mark-frame';
+import { markBox } from '@/components/mandate/showcase-mark-box';
 import type { ShowcaseMarkKind } from '@/lib/agency/showcase-mark-kind';
 
 interface ShowcaseMarkPreviewProps {
   /** Τοπικό `blob:` της επιλογής, ή το δημόσιο URL του δημοσιευμένου σήματος. */
   readonly src: string;
   readonly kind: ShowcaseMarkKind;
+  /**
+   * Οι **πραγματικές** διαστάσεις της εικόνας.
+   *
+   * 🔴 **ΑΠΑΙΤΗΤΙΚΕΣ, ΟΧΙ ΠΡΟΑΙΡΕΤΙΚΕΣ** *(Α21.9)*. Από τη στιγμή που το κουτί του
+   * κόσμου ακολουθεί την **αναλογία**, μια προεπισκόπηση που δεν την ξέρει θα έδειχνε
+   * **τετράγωνο** ενώ ο επισκέπτης βλέπει **ζώνη** — δηλαδή ακριβώς η απόκλιση που το
+   * `showcase-mark-frame` ήρθε να απαγορεύσει, ξαναγεννημένη από άλλη πόρτα. Με
+   * προαιρετικό πεδίο η απόκλιση θα ήταν **παράλειψη**· έτσι δεν είναι εκφράσιμη.
+   */
+  readonly width: number;
+  readonly height: number;
   /** Τι δείχνει η εικόνα, για όποιον δεν τη βλέπει — **έτοιμο κείμενο**, ποτέ κλειδί. */
   readonly alt: string;
 }
@@ -57,22 +69,33 @@ interface ShowcaseMarkPreviewProps {
 export function ShowcaseMarkPreview({
   src,
   kind,
+  width,
+  height,
   alt,
 }: ShowcaseMarkPreviewProps): React.JSX.Element {
   const frame = frameOf(kind);
+  // 🔑 **`page` και όχι `card`**: η προεπισκόπηση δείχνει το **μεγάλο** περιβάλλον, γιατί
+  //    εκεί κρίνεται αν η εικόνα δουλεύει *(σε 44px δεν φαίνεται αν κόπηκε το πηγούνι)* —
+  //    και είναι το ίδιο κουτί με τη σελίδα προφίλ, ώστε να μην υπάρχει τρίτη αλήθεια.
+  const box = markBox('page', { kind, width, height });
 
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={src}
       alt={alt}
-      width={96}
-      height={96}
+      width={width}
+      height={height}
       decoding="async"
       className={cn(
-        'h-24 w-24 shrink-0 border border-border bg-card',
+        'shrink-0 border border-border bg-card',
         frame.shape,
         frame.fit,
+        box.className,
+        // 🔑 **Ίδιος αέρας με τη σελίδα** (Α21.10): η προεπισκόπηση υπάρχει για να δείχνει
+        //    ό,τι θα δει ο επισκέπτης. Παράλειψη εδώ θα ήταν η **ίδια** απόκλιση που το
+        //    `showcase-mark-frame` ήρθε να απαγορεύσει, από άλλη πόρτα.
+        box.clearSpace,
       )}
     />
   );

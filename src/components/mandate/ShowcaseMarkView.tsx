@@ -49,6 +49,10 @@ import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { SHOWCASE_NS } from '@/components/mandate/agency-showcase-labels';
 import { frameOf } from '@/components/mandate/showcase-mark-frame';
+import {
+  markBox,
+  type ShowcaseMarkSize,
+} from '@/components/mandate/showcase-mark-box';
 import { listingImageSrcSet } from '@/lib/listings/listing-images';
 import type { ShowcaseLettermark } from '@/lib/agency/showcase-mark';
 import type { DeclaredShowcaseMark } from '@/types/agency-profile';
@@ -98,43 +102,17 @@ const MARK_SURFACES = [
 ] as const;
 
 /**
- * Πόσο χώρο πιάνει — **δύο** μεγέθη, όσα και τα περιβάλλοντα που υπάρχουν.
+ * 🔴 **ΤΟ ΚΟΥΤΙ ΕΦΥΓΕ ΑΠΟ ΕΔΩ — ΔΕΝ ΕΙΝΑΙ ΠΙΑ ΣΥΝΑΡΤΗΣΗ ΜΟΝΟ ΤΟΥ ΜΕΓΕΘΟΥΣ** (Α21.9).
  *
- * ⚠️ Και τα δύο κρατούν `font-bold` με μέγεθος **≥18,66px**: δες το κατώφλι παραπάνω.
- * Ένα τρίτο, μικρότερο μέγεθος **δεν προστίθεται** χωρίς να ξαναγίνει η κουβέντα της
- * αντίθεσης — κάτω από εκείνο το όριο το δανεισμένο 3:1 **παύει να ισχύει**.
+ * Εδώ ζούσαν **δύο** πίνακες, `MARK_SIZES` και `MARK_SIZES_ATTR`, που έπρεπε να
+ * συμφωνούν και **δεν** τους επαλήθευε μεταγλωττιστής *(το ίδιο τους το σχόλιο το
+ * παραδεχόταν)*. Και οι δύο έδιναν **τετράγωνο** σε κάθε σήμα — δηλαδή σε λογότυπο 4:1
+ * μελάνι **64×16**.
+ *
+ * Πλέον η απάντηση είναι **μία** και παράγεται από την **αναλογία της ίδιας της
+ * εικόνας**: {@link module:components/mandate/showcase-mark-box}. Διαστάσεις και `sizes`
+ * επιστρέφονται **μαζί**, γιατί είναι η ίδια απόφαση.
  */
-const MARK_SIZES = {
-  /** Η κάρτα του καταλόγου και της βιτρίνας. */
-  card: 'h-11 w-11 text-xl',
-  /** Η επικεφαλίδα της σελίδας `/pro/<alias>`. */
-  page: 'h-16 w-16 text-3xl',
-} as const;
-
-export type ShowcaseMarkSize = keyof typeof MARK_SIZES;
-
-/**
- * **Πόσα ΛΟΓΙΚΑ εικονοστοιχεία πιάνει κάθε μέγεθος**, ως τιμή `sizes` του `<img>`.
- *
- * ────────────────────────────────────────────────────────────────────────────
- * 🔴 ΧΩΡΙΣ ΑΥΤΟ, ΟΛΟΚΛΗΡΗ Η ΚΛΙΜΑΚΑ ΤΗΣ ΦΑΣΗΣ 1 ΕΙΝΑΙ ΝΕΚΡΗ
- * ────────────────────────────────────────────────────────────────────────────
- *
- * Με `w` descriptors και **χωρίς** `sizes`, ο περιηγητής υποθέτει `100vw` — δηλαδή
- * κατεβάζει **πάντα το μεγαλύτερο** παράγωγο. Το ράφι θα παρήγαγε ευλαβικά 64/128/256
- * και ο επισκέπτης θα έπαιρνε **πάντα** το 256 για σήμα **44 εικονοστοιχείων**.
- *
- * ⚠️ **Σταθερή τιμή σε px, ΠΟΤΕ viewport-based**: το στοιχείο έχει **σταθερό** μέγεθος
- * (`h-11` · `h-16`) σε κάθε πλάτος οθόνης. Ένα `sizes="(max-width: …) …vw"` θα ήταν
- * ψέμα που ο περιηγητής **πιστεύει**.
- *
- * 🔑 **Καθρέφτης του {@link MARK_SIZES}** — και η αντιστοιχία δεν επαληθεύεται από
- * μεταγλωττιστή *(εκείνα είναι κλάσεις Tailwind, αυτά αριθμοί)*. Άγκυρα το φυλάει.
- */
-const MARK_SIZES_ATTR: Readonly<Record<ShowcaseMarkSize, string>> = {
-  card: '44px',
-  page: '64px',
-} as const;
 
 /**
  * **Τι σήμα δείχνουμε** — δηλωμένο ή παραγόμενο, ποτέ και τα δύο.
@@ -196,13 +174,21 @@ function DeclaredMarkImage({
 }): React.JSX.Element {
   const { t } = useTranslation([SHOWCASE_NS]);
   const frame = frameOf(mark.kind);
+  // 🔑 **Η ΑΝΑΛΟΓΙΑ ΕΡΧΕΤΑΙ ΑΠΟ ΤΑ ΙΔΙΑ ΤΑ BYTES** (Α21.9): το `width`/`height` το
+  //    γράφει ο καθαριστής από το `sharp` με `fit: 'inside'`, άρα είναι οι **πραγματικές**
+  //    διαστάσεις του παραγώγου — όχι υπόσχεση, μέτρηση. Καμία ερώτηση στον άνθρωπο.
+  const box = markBox(size, {
+    kind: mark.kind,
+    width: mark.image.width,
+    height: mark.image.height,
+  });
 
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={mark.image.url}
       srcSet={listingImageSrcSet(mark.image)}
-      sizes={MARK_SIZES_ATTR[size]}
+      sizes={box.sizesAttr}
       width={mark.image.width}
       height={mark.image.height}
       alt={t(mark.image.altKey)}
@@ -218,7 +204,11 @@ function DeclaredMarkImage({
         'shrink-0 bg-card',
         frame.shape,
         frame.fit,
-        MARK_SIZES[size],
+        box.className,
+        // 🔑 **Ο αέρας γύρω από ΤΡΙΜΜΕΝΟ μελάνι** (Α21.10): ο καθαριστής κόβει πλέον το
+        //    λογότυπο στα όριά του, και μελάνι που ακουμπά την άκρη ενός `rounded-lg`
+        //    **χάνει τις γωνίες του** στην ίδια την καμπύλη. Κενό για πορτρέτο.
+        box.clearSpace,
       )}
     />
   );
@@ -242,6 +232,10 @@ function Lettermark({
   readonly mark: ShowcaseLettermark;
   readonly size: ShowcaseMarkSize;
 }): React.JSX.Element {
+  // ⚠️ **Το πλακίδιο δεν έχει αναλογία** — είναι παραγόμενο, άρα **πάντα** τετράγωνο.
+  //    Ο τύπος το λέει: το σκέλος `lettermark` δεν δέχεται καν διαστάσεις.
+  const box = markBox(size, { kind: 'lettermark' });
+
   return (
     <span
       aria-hidden="true"
@@ -249,7 +243,8 @@ function Lettermark({
         'flex shrink-0 select-none items-center justify-center rounded-lg font-bold leading-none tracking-tight',
         'text-[hsl(var(--card))]',
         MARK_SURFACES[mark.slot - 1],
-        MARK_SIZES[size],
+        box.className,
+        box.text,
       )}
     >
       {mark.initials}

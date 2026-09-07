@@ -291,6 +291,8 @@ function MarkChooser({
         <ShowcaseMarkPreview
           src={published.image.url}
           kind={published.kind}
+          width={published.image.width}
+          height={published.image.height}
           alt={t(SHOWCASE_MARK_ALT_KEYS[published.kind])}
         />
       )}
