@@ -225,7 +225,13 @@ describe('Κ4 — η στένωση τύπου εκτελείται', () => {
         type: 'Feature',
         id: 'bad',
         geometry: { type: 'Polygon', coordinates: [[[22.9, 40.6], [22.91, 40.6], [22.91, 40.61], [22.9, 40.6]]] },
-        properties: { id: 'bad', shape: 'pin', title: 'Παραμορφωμένο' },
+        properties: {
+          id: 'bad',
+          shape: 'pin',
+          title: 'Παραμορφωμένο',
+          uncertaintyM: 0,
+          mercatorScale: 1.316,
+        },
       }],
     };
 

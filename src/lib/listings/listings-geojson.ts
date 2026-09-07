@@ -30,8 +30,17 @@
  * καναλιού» θα μπορούσε να ψευτίσει· εδώ δεν υπάρχει δεύτερο πεδίο να ψευτίσει.
  */
 
+import { mercatorScaleAt } from '@/lib/maps/metric-size';
 import type { PublicListing } from '@/types/public-listing';
-import { listingMapShape, isMappedShape, type ListingMapShape } from './listing-map-shape';
+import {
+  listingMapShape,
+  isMappedShape,
+  LISTING_UNCERTAINTY_KM,
+  type ListingMapShape,
+} from './listing-map-shape';
+
+/** Χιλιόμετρα → μέτρα. Γραμμένο μία φορά ώστε το `1000` να μη γίνει μαγικός αριθμός. */
+const METRES_PER_KM = 1000;
 
 /** Ό,τι χρειάζεται ο ζωγράφος από κάθε αγγελία — και τίποτα άλλο. */
 export interface ListingFeatureProperties {
@@ -39,7 +48,46 @@ export interface ListingFeatureProperties {
   /** Το σχήμα, **παραγμένο**. Ο ζωγράφος το διαβάζει· δεν το επιλέγει. */
   readonly shape: ListingMapShape;
   readonly title: string;
+  /**
+   * **Πόσο δεν ξέρουμε, σε ΜΕΤΡΑ** — το ίδιο νούμερο που κρίνει το «μέσα/ίσως/έξω».
+   *
+   * 🔴 **Γεννήθηκε επειδή ο ζωγράφος μιλούσε άλλη γλώσσα από τον κριτή** (ADR-777
+   * §8.64): οι ακτίνες του χάρτη ήταν **pixel σταθερά** (`34` · `90`) ενώ η ίδια
+   * αβεβαιότητα κρινόταν σε μέτρα, άρα ο ίδιος ισχυρισμός κάλυπτε δεκάδες χιλιόμετρα
+   * στο ζουμ 10 και λίγα μέτρα στο ζουμ 18.
+   *
+   * 🔑 **Ταξιδεύει με το feature, δεν είναι σταθερά του επιπέδου** — γιατί έτσι κάθε
+   * αγγελία ζωγραφίζεται με **τη δική της** αβεβαιότητα ταυτόχρονα, και ο ζωγράφος
+   * διαβάζει **το ίδιο πεδίο** που κρίνει ο κριτής. Ένας δεύτερος πίνακας ακτίνων
+   * μέσα στο επίπεδο θα ήταν δεύτερο λεξιλόγιο, δηλαδή το σχήμα ADR-749.
+   */
+  readonly uncertaintyM: number;
+  /**
+   * **Ο συντελεστής παραμόρφωσης Mercator στο πλάτος αυτής της αγγελίας.**
+   *
+   * 🏆 Είναι η μισή γραμμή που **ξεπερνά** την επίσημη πρακτική: η MapLibre καταγράφει
+   * ότι η διόρθωση «δεν είναι δυνατή από πλευράς style», επειδή σκέφτεται κατάσταση
+   * της **οθόνης** (`global-state`, μία τιμή για όλους). Ως ιδιότητα του **σημείου**
+   * είναι τετριμμένη — και σωστή για **κάθε** σχήμα ταυτόχρονα.
+   */
+  readonly mercatorScale: number;
 }
+
+/**
+ * **Τα ονόματα των πεδίων, ως ΕΝΑ λεξιλόγιο** — ο ζωγράφος τα ζητά από εδώ.
+ *
+ * 🔴 Χωρίς αυτό, το `['get', 'uncertaintyM']` του επιπέδου θα ήταν **αλφαριθμητικό σε
+ * δεύτερο αρχείο**: μια μετονομασία εδώ θα άφηνε τον χάρτη να ζητά πεδίο που δεν
+ * υπάρχει, και το MapLibre **δεν σκάει σε άγνωστο `get`** — αφήνει το επίπεδο σιωπηλά
+ * αζωγράφιστο. Το `satisfies` παρακάτω κάνει τη μετονομασία **σφάλμα μεταγλώττισης**.
+ */
+export const LISTING_FEATURE_KEY = {
+  id: 'id',
+  shape: 'shape',
+  title: 'title',
+  uncertaintyM: 'uncertaintyM',
+  mercatorScale: 'mercatorScale',
+} as const satisfies { readonly [K in keyof ListingFeatureProperties]: K };
 
 export type ListingFeature = GeoJSON.Feature<GeoJSON.Point | GeoJSON.Polygon, ListingFeatureProperties>;
 
@@ -60,11 +108,26 @@ export function listingsToGeoJson(
     if (!isMappedShape(shape)) continue;
     if (listing.position.kind !== 'known') continue;
 
+    // 🔑 **Το `?? 0` ΔΕΝ κρύβει κατάσταση.** Ο μόνος παραγωγός του `null` είναι το
+    //    σχήμα `'none'`, που το `isMappedShape` από πάνω έχει ήδη αποκλείσει — άρα ο
+    //    κλάδος είναι δομικά ανέφικτος και υπάρχει μόνο για τον τύπο. Το ίδιο σκεπτικό
+    //    με το `throw` του `listingSearchArea`, με αντίστροφο πρόσημο: εκεί ο κλάδος
+    //    ήταν **σιωπηλή σημασιολογία** (αγγελία που δεν φιλτράρεται ποτέ) και έπρεπε
+    //    να φωνάξει· εδώ είναι **μηδενική ακτίνα**, που είναι η αλήθεια για κάθε
+    //    σχήμα χωρίς αβεβαιότητα (`outline`, `pin`).
+    const uncertaintyM = (LISTING_UNCERTAINTY_KM[shape] ?? 0) * METRES_PER_KM;
+
     features.push({
       type: 'Feature',
       id: listing.id,
       geometry: geometryOf(listing, shape),
-      properties: { id: listing.id, shape, title: listing.title },
+      properties: {
+        id: listing.id,
+        shape,
+        title: listing.title,
+        uncertaintyM,
+        mercatorScale: mercatorScaleAt(listing.position.point.lat),
+      },
     });
   }
 
