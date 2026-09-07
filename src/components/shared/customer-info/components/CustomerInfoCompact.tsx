@@ -14,6 +14,7 @@
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React from 'react';
 import { Phone, Mail, Eye, User } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -26,6 +27,13 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useCustomerInfo } from '../hooks/useCustomerInfo';
 import { CustomerActionButtons } from './CustomerActionButtons';
 import type { CustomerInfoCompactProps, CustomerActionType } from '../types/CustomerInfoTypes';
+import { getInitials } from '@/types/contacts/helpers';
+import {
+  ContactCell,
+  EmptyTableRow,
+  TABLE_ROW_GRID,
+  type EmptyRowTone,
+} from './CustomerInfoTableCells';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
@@ -117,12 +125,9 @@ export function CustomerInfoCompact({
   // ========================================================================
 
   const renderAvatar = () => {
-    const initials = displayInfo?.displayName
-      ?.split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2) || '??';
+    // ADR-841 Α21.1 — τα αρχικά τα ξέρει ΕΝΑΣ. Εδώ ζούσε η ίδια έκφραση **λέξη
+    // προς λέξη** με το `UnifiedCustomerCard`, δίπλα σε δηλωμένο SSoT (ADR-209 Φ8).
+    const initials = getInitials(displayInfo?.displayName ?? '') || '??';
 
     return (
       <Avatar className={`${styles.avatar} shrink-0`}>
@@ -136,6 +141,36 @@ export function CustomerInfoCompact({
       </Avatar>
     );
   };
+
+  /**
+   * **ΟΙ ΔΥΟ ΠΡΟΣΑΡΜΟΓΕΙΣ** — δίνουν στα καθαρά κελιά ({@link EmptyTableRow},
+   * {@link ContactCell}) τα μεγέθη που ξέρει **μόνο** αυτή η κάρτα.
+   *
+   * 🔑 Τα κελιά έφυγαν σε δικό τους αρχείο (N.7.1), αλλά το `styles` εξαρτάται από
+   * το `size` prop — άρα το **δέσιμο** ανήκει εδώ, όχι εκεί. Οι καλούντες παρακάτω
+   * μένουν **αμετάβλητοι**: η εξαγωγή δεν είναι δικαιολογία για να ξαναγραφτούν.
+   */
+  const renderEmptyTableRow = (tone: EmptyRowTone, message: string) => (
+    <EmptyTableRow
+      tone={tone}
+      message={message}
+      avatarClass={styles.avatar}
+      textClass={styles.text}
+      iconClass={iconSizes.xs}
+      className={className}
+      containerStyle={containerStyle}
+    />
+  );
+
+  const renderContactCell = (Icon: LucideIcon, value: string | undefined) => (
+    <ContactCell
+      icon={Icon}
+      value={value}
+      textClass={styles.text}
+      iconClass={iconSizes.sm}
+      mutedClass={colors.text.muted}
+    />
+  );
 
   const renderContactDetails = () => {
     if (!displayInfo || nameOnly) {
@@ -215,7 +250,7 @@ export function CustomerInfoCompact({
     if (variant === 'table') {
       return (
         <div
-          className={`grid grid-cols-[2fr_1fr_1.8fr_auto_auto] gap-3 items-center py-3 px-1 ${className}`}
+          className={cn(TABLE_ROW_GRID, className)}
           style={containerStyle}
         >
           {/* Column 1: Avatar + Name */}
@@ -262,24 +297,14 @@ export function CustomerInfoCompact({
 
   if (hasError) {
     if (variant === 'table') {
-      return (
-        <div
-          className={`grid grid-cols-[2fr_1.2fr_1.5fr_auto_auto] gap-3 items-center py-3 px-1 ${className} text-destructive`}
-          style={containerStyle}
-        >
-          <div className="flex items-center gap-3">
-            <div className={`${styles.avatar} bg-destructive/10 rounded-full shrink-0 flex items-center justify-center`}>
-              <User className={iconSizes.xs} />
-            </div>
-            <span className={`${styles.text} font-medium truncate`}>{t('customerActions.states.loadingError')}</span>
-          </div>
-          <span className={`${styles.subtext} text-destructive/70 truncate`}>—</span>
-          <span className={`${styles.subtext} text-destructive/70 truncate`}>—</span>
-          <div className="flex justify-end pr-3">
-            <span>—</span>
-          </div>
-          <span>—</span>
-        </div>
+      return renderEmptyTableRow(
+        {
+          row: 'text-destructive',
+          bubble: 'bg-destructive/10',
+          label: 'font-medium',
+          dash: cn(styles.subtext, 'text-destructive/70 truncate'),
+        },
+        t('customerActions.states.loadingError'),
       );
     }
 
@@ -309,24 +334,16 @@ export function CustomerInfoCompact({
 
   if (!displayInfo) {
     if (variant === 'table') {
-      return (
-        <div
-          className={cn("grid grid-cols-[2fr_1.2fr_1.5fr_auto_auto] gap-3 items-center py-3 px-1", className, colors.text.muted)}
-          style={containerStyle}
-        >
-          <div className="flex items-center gap-3">
-            <div className={`${styles.avatar} bg-muted rounded-full shrink-0 flex items-center justify-center`}>
-              <User className={iconSizes.xs} />
-            </div>
-            <span className={`${styles.text} truncate`}>{t('customerActions.states.noCustomer')}</span>
-          </div>
-          <span>—</span>
-          <span>—</span>
-          <div className="flex justify-end pr-3">
-            <span>—</span>
-          </div>
-          <span>—</span>
-        </div>
+      return renderEmptyTableRow(
+        {
+          row: colors.text.muted,
+          bubble: 'bg-muted',
+          // ⚠️ Χωρίς έμφαση, σε αντίθεση με το σφάλμα: «δεν υπάρχει πελάτης» είναι
+          //    **κατάσταση**, όχι **βλάβη** — και η οθόνη δεν τα ισοπεδώνει.
+          label: '',
+          dash: '',
+        },
+        t('customerActions.states.noCustomer'),
       );
     }
 
@@ -354,7 +371,7 @@ export function CustomerInfoCompact({
   if (variant === 'table') {
     return (
       <div
-        className={`grid grid-cols-[2fr_1fr_1.8fr_auto_auto] gap-3 items-center py-3 px-1 ${className}`}
+        className={cn(TABLE_ROW_GRID, className)}
         style={containerStyle}
         role="article"
         aria-label={t('customerActions.aria.customerDetails', { name: displayInfo.displayName })}
@@ -368,32 +385,10 @@ export function CustomerInfoCompact({
         </div>
 
         {/* Column 2: Phone (1.2fr - medium width) */}
-        <div className="flex items-center gap-2 min-w-0">
-          {displayInfo?.primaryPhone ? (
-            <>
-              <Phone className={cn(iconSizes.sm, colors.text.muted, "shrink-0")} />
-              <span className={`${styles.text} text-foreground truncate`}>
-                {displayInfo.primaryPhone}
-              </span>
-            </>
-          ) : (
-            <span className={cn(styles.text, colors.text.muted)}>—</span>
-          )}
-        </div>
+        {renderContactCell(Phone, displayInfo?.primaryPhone)}
 
         {/* Column 3: Email (1.5fr - medium-wide for emails) */}
-        <div className="flex items-center gap-2 min-w-0">
-          {displayInfo?.primaryEmail ? (
-            <>
-              <Mail className={cn(iconSizes.sm, colors.text.muted, "shrink-0")} />
-              <span className={`${styles.text} text-foreground truncate`}>
-                {displayInfo.primaryEmail}
-              </span>
-            </>
-          ) : (
-            <span className={cn(styles.text, colors.text.muted)}>—</span>
-          )}
-        </div>
+        {renderContactCell(Mail, displayInfo?.primaryEmail)}
 
         {/* Column 4: Units Count (auto - narrow for numbers) */}
         <div className="flex items-center justify-end gap-1 pr-3">

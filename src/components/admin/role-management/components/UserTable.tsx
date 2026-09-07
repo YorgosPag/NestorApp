@@ -27,6 +27,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import type { CompanyUser, UserListFilters } from '../types';
 import { ROLE_BADGE_VARIANT, STATUS_BADGE_VARIANT } from '../types';
 import { formatRelativeTime } from '@/lib/intl-formatting';
+import { getInitials } from '@/types/contacts/helpers';
 
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 
@@ -72,15 +73,20 @@ function getAvatarColor(uid: string): string {
   return AVATAR_COLORS[hash % AVATAR_COLORS.length];
 }
 
-function getInitials(displayName: string | null, email: string): string {
-  if (displayName) {
-    const parts = displayName.split(' ').filter(Boolean);
-    if (parts.length >= 2) {
-      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-    }
-    return displayName.slice(0, 2).toUpperCase();
-  }
-  return email.slice(0, 2).toUpperCase();
+/**
+ * **Ο χρήστης μπορεί να ΜΗΝ ΕΧΕΙ όνομα** — τότε μιλά το email.
+ *
+ * 🔑 **Δεύτερη ερώτηση, όχι δεύτερη υλοποίηση** (ADR-841 Α21.1): τα *αρχικά ενός
+ * ονόματος* τα ξέρει **ένας** — το `getInitials`. Το *«τι δείχνω όταν όνομα δεν
+ * υπάρχει»* είναι ερώτημα **αυτής** της οθόνης, και ζει εδώ.
+ *
+ * ⚠️ Εδώ ζούσε **αντίγραφο** του `getInitials` που έδινε **άλλη απάντηση** από τον
+ * δηλωμένο SSoT *(«Παπαδόπουλος» → `ΠΑ` εδώ, `Π` εκεί)*. Η ενοποίηση κράτησε **τη
+ * συμπεριφορά αυτού του αρχείου**, γιατί ήταν η μόνη που είχε σκεφτεί τη
+ * μονολεκτική περίπτωση.
+ */
+function initialsForUser(displayName: string | null, email: string): string {
+  return getInitials(displayName ?? '') || email.slice(0, 2).toUpperCase();
 }
 
 // =============================================================================
@@ -182,7 +188,7 @@ export function UserTable({
             const isSelf = companyUser.uid === currentUserId;
             // ADR-660: χρήστης χωρίς tenant = αυτο-εγγραφή που εκκρεμεί έγκριση.
             const needsApproval = companyUser.companyId === null;
-            const initials = getInitials(companyUser.displayName, companyUser.email);
+            const initials = initialsForUser(companyUser.displayName, companyUser.email);
             const avatarColor = getAvatarColor(companyUser.uid);
 
             return (

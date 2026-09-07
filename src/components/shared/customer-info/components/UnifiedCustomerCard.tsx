@@ -27,6 +27,7 @@ import { useTranslation } from 'react-i18next';
 import { useCustomerInfo } from '../hooks/useCustomerInfo';
 import { CustomerActionButtons } from './CustomerActionButtons';
 import type { UnifiedCustomerCardProps } from '../types/CustomerInfoTypes';
+import { getInitials } from '@/types/contacts/helpers';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
@@ -122,6 +123,38 @@ export function UnifiedCustomerCard({
     }
   };
 
+  /**
+   * **Η ΕΝΕΡΓΟΠΟΙΗΣΗ ΤΗΣ ΚΑΡΤΑΣ — ΓΡΑΜΜΕΝΗ ΜΙΑ ΦΟΡΑ** *(ADR-841 Α21.1 · N.0.2)*.
+   *
+   * 🔴 **Ήταν ΔΥΟ αντίγραφα, και δεν ήταν θέμα αισθητικής**: `onClick` + `role` +
+   * `tabIndex` **και ολόκληρος ο `onKeyDown`** επαναλαμβάνονταν **αυτούσια** στην
+   * `inline` και στην `card` παραλλαγή. Δηλαδή η **προσβασιμότητα με πληκτρολόγιο**
+   * ζούσε σε **δύο** θέσεις: μια διόρθωση στη μία άφηνε την άλλη σπασμένη, **σιωπηλά**.
+   * Το βρήκε το **CHECK 3.28** (jscpd, token-based) — 11 γραμμές / 65 tokens.
+   *
+   * ⚠️ **Το `onClick` περνιέται ΠΑΝΤΑ**, ακόμη κι όταν το prop λείπει — γιατί έτσι
+   * έκαναν **και τα δύο** αντίγραφα, και η συμπεριφορά οφείλει να μείνει **ταυτόσημη**.
+   * Ο φρουρός δεν χάνεται: ζει μέσα στο {@link handleCardClick} *(`if (onClick &&
+   * !isLoading)`)*.
+   *
+   * 🔑 Τα **άλλα τρία** μπαίνουν μόνο όταν η κάρτα είναι όντως πατήσιμη — ένα
+   * `tabIndex={0}` σε κάρτα που δεν κάνει τίποτα βάζει στη σειρά πλοήγησης του
+   * πληκτρολογίου έναν σταθμό **χωρίς προορισμό**.
+   */
+  const activation: React.HTMLAttributes<HTMLElement> = onClick
+    ? {
+        onClick: handleCardClick,
+        role: 'button',
+        tabIndex: 0,
+        onKeyDown: (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            handleCardClick();
+          }
+        },
+      }
+    : { onClick: handleCardClick };
+
   const handleInfoUpdate = (updatedInfo: typeof extendedInfo) => {
     if (onUpdate && updatedInfo) {
       onUpdate(updatedInfo);
@@ -135,12 +168,9 @@ export function UnifiedCustomerCard({
   const renderAvatar = () => {
     if (isMinimalVariant) return null;
 
-    const initials = displayInfo?.displayName
-      ?.split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2) || '??';
+    // ADR-841 Α21.1 — τα αρχικά τα ξέρει ΕΝΑΣ. Εδώ ζούσε η ίδια έκφραση **λέξη
+    // προς λέξη** με το `UnifiedCustomerCard`, δίπλα σε δηλωμένο SSoT (ADR-209 Φ8).
+    const initials = getInitials(displayInfo?.displayName ?? '') || '??';
 
     return (
       <Avatar className={styles.avatar}>
@@ -309,15 +339,7 @@ export function UnifiedCustomerCard({
           ${selected ? 'bg-accent' : ''}
           ${className}
         `}
-        onClick={handleCardClick}
-        role={onClick ? 'button' : undefined}
-        tabIndex={onClick ? 0 : undefined}
-        onKeyDown={onClick ? (e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            handleCardClick();
-          }
-        } : undefined}
+        {...activation}
       >
         {renderAvatar()}
         {renderContactInfo()}
@@ -338,15 +360,7 @@ export function UnifiedCustomerCard({
         ${selected ? 'ring-2 ring-primary ring-offset-2' : ''}
         ${className}
       `}
-      onClick={handleCardClick}
-      role={onClick ? 'button' : undefined}
-      tabIndex={onClick ? 0 : undefined}
-      onKeyDown={onClick ? (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          handleCardClick();
-        }
-      } : undefined}
+      {...activation}
     >
       {!isMinimalVariant && (
         <CardHeader className="pb-2">
