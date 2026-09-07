@@ -213,6 +213,7 @@ export function readShowcase(raw: unknown, companyId: string): ShowcaseRead {
       credentials,
       place: readPlace(source.place),
       position: readPosition(source.position),
+      coverage: readCoverage(source.coverage),
       mark: readMark(source.mark),
       publishedAt,
     } satisfies PublicShowcase,
@@ -325,6 +326,30 @@ function readPosition(raw: unknown): PublicShowcase['position'] {
   return typeof lat === 'number' && Number.isFinite(lat) && typeof lng === 'number' && Number.isFinite(lng)
     ? { lat, lng }
     : null;
+}
+
+/**
+ * **Η δηλωμένη εμβέλεια, ή `null`** *(ADR-846)*.
+ *
+ * ⚠️ **Καμία επαλήθευση ταυτοτήτων εδώ, επίτηδες.** Ο αναγνώστης δεν έχει την ιεραρχία
+ * *(4,1 MB — θα τη φόρτωνε **κάθε** ανώνυμος επισκέπτης πριν δει την πρώτη κάρτα)*, και
+ * δεν τη χρειάζεται: ταυτότητα που δεν υπάρχει **δεν ταιριάζει με κανένα ερώτημα** —
+ * αποτυγχάνει **αθόρυβα και ακίνδυνα**, ποτέ ως ψευδώς θετικό. Ο κριτής της εγκυρότητας
+ * είναι ο **γραφέας** *(`resolveCoverage`)*, ένας ανά ερώτημα *(ADR-749)*.
+ *
+ * 🔒 **Κενή λίστα ⇒ `null`**: ο δίσκος **δεν επιτρέπεται** να γεννήσει δεύτερη
+ * αναπαράσταση της απουσίας, ακόμη κι αν κάποτε γράφτηκε από παλαιότερο δρόμο.
+ */
+function readCoverage(raw: unknown): PublicShowcase['coverage'] {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const source = raw as Record<string, unknown>;
+
+  if (source.nationwide === true) return { nationwide: true };
+
+  const { adminIds } = source;
+  if (!Array.isArray(adminIds)) return null;
+  const ids = adminIds.filter((id): id is string => typeof id === 'string' && id !== '');
+  return ids.length === 0 ? null : { adminIds: ids };
 }
 
 // =============================================================================

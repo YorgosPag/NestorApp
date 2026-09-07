@@ -57,18 +57,19 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { nowISO } from '@/lib/date-local';
 import { showcaseOwnerId, type ShowcaseAuthority } from '@/lib/auth/brokerage-authority';
+import type { DeclaredCoverage } from '@/types/agency-coverage';
 import type {
-  ClassifiedOccupation,
   PublicShowcase,
   PublicShowcaseLookup,
   ShowcaseCredential,
 } from '@/types/agency-profile';
-import { asCredential, readShowcase, toStoredShowcase } from '@/lib/agency/showcase-read';
+import { readShowcase, toStoredShowcase } from '@/lib/agency/showcase-read';
 import { publishShowcaseMark } from '@/services/mandate/showcase-mark-publication';
-import { resolveRegistryAuthority } from '@/config/isco-registry-authority';
-import { isChapteredRegistry } from '@/constants/professional-registries';
-import { occupationNeedsCapability } from '@/lib/professional/showcase-eligibility';
-import type { ProfessionalRegistration } from '@/types/professional-identity';
+// 🔑 Ο κριτής του διαπιστευτηρίου ζει **έξω** — καθαρή κρίση, μηδέν I/O (N.7.1).
+import {
+  credentialFor,
+  type ShowcaseCredentialDeclaration,
+} from '@/services/mandate/agency-profile-credential';
 import type { GeoPoint } from '@/types/geo/coordinates';
 import type { PlaceRef } from '@/types/geo/public-place';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -79,37 +80,6 @@ const logger = createModuleLogger('agency-profile.service');
 // ΤΙ ΔΗΛΩΝΕΙ ΤΟ ΓΡΑΦΕΙΟ
 // =============================================================================
 
-/**
- * **Ό,τι γράφει ο άνθρωπος**, και τίποτα παραπάνω.
- *
- * ⛔ **ΚΑΜΙΑ αυτόματη αντιγραφή από το `companies/{id}`** (§9.9 β). Το GDPR εξαιρεί τα
- * **νομικά** πρόσωπα *(αιτ. σκ. 14)*, αλλά μεσίτης με **ατομική επιχείρηση** είναι
- * **φυσικό** πρόσωπο και η έδρα του μπορεί να είναι η **κατοικία** του. Άρα κάθε πεδίο
- * που δημοσιεύεται πρέπει να έχει **γραφτεί ρητά για δημοσίευση**, όχι να έχει
- * κληρονομηθεί από εγγραφή που έγινε για άλλον λόγο.
- */
-export interface ShowcaseCredentialDeclaration {
-  /**
-   * 🔴 **Η ΜΟΝΗ ΤΑΞΙΝΟΜΙΚΗ ΕΙΣΟΔΟΣ ΑΠΟ ΤΟ ΣΥΡΜΑ.** Ούτε ετικέτα, ούτε `iscoCode`.
-   *
-   * Ετικέτα από το σύρμα θα επέτρεπε «Δικηγόρος» πάνω σε URI υδραυλικού: το
-   * φίλτρο θα δούλευε σωστά *(πάνω στο URI)* και η **κάρτα θα έλεγε ψέματα**.
-   * Ο διακομιστής διαβάζει την ταξινομία **μία φορά ανά γραφή** και γράφει και
-   * τις δύο ετικέτες — δες `services/esco/occupation-classification.reader.ts`.
-   */
-  readonly occupation: ClassifiedOccupation;
-  /**
-   * Ο αριθμός μητρώου **όπως τον πληκτρολόγησε ο άνθρωπος**. Κενό = *«δεν
-   * δηλώνω»*, που είναι **νόμιμο** για κάθε επάγγελμα εκτός των ρυθμιζόμενων
-   * *(Α9.2: η σιωπή δεν είναι άρνηση)*.
-   */
-  readonly registrationNumber: string;
-  /**
-   * **Ποιος εκδότης** — υποχρεωτικό μόνο όταν η αρχή του επαγγέλματος έχει
-   * πολλούς *(«ΔΣΘ», «ΔΣ Πατρών»)*. Α9.1: «1234» χωρίς «ΔΣΘ» δεν επαληθεύεται.
-   */
-  readonly registrationChapter: string;
-}
 
 /**
  * **Ό,τι δηλώνει ο επαγγελματίας**, και τίποτα παραπάνω.
@@ -138,6 +108,15 @@ export interface ShowcaseDeclaration {
    * Ατλαντικό που κάθε χάρτης ζωγραφίζει **με απόλυτη σιγουριά**.
    */
   readonly position: GeoPoint | null;
+  /**
+   * **Πού δουλεύει** — ήδη **επαληθευμένη και κανονικοποιημένη** από το σύνορο
+   * *(`showcase-request.ts::resolveCoverage`)*, ADR-846.
+   *
+   * ⚠️ **Ο γραφέας ΔΕΝ την ξανακανονικοποιεί**, και είναι απόφαση: θα χρειαζόταν
+   * δεύτερη φόρτωση των 4,1 MB **μέσα σε συναλλαγή** — ακριβώς η παρενέργεια που το
+   * σχόλιο της συναλλαγής παρακάτω απαγορεύει. Ένας κριτής ανά ερώτημα *(ADR-749)*.
+   */
+  readonly coverage: DeclaredCoverage | null;
   /**
    * ⛔ **ΚΑΝΕΝΑ `mark` ΕΔΩ — ΤΟ ΣΗΜΑ ΕΙΝΑΙ ΔΙΚΗ ΤΟΥ ΠΡΑΞΗ** (ADR-841 §7 Α21, Φάση 2).
    *
@@ -168,15 +147,17 @@ export interface ShowcaseDeclaration {
 // 🔑 **Το λεξιλόγιο των ετυμηγοριών ζει σε ΚΑΘΑΡΟ leaf** — το μοιράζονται **δύο** γραφείς
 //    (βιτρίνα + σήμα) και το διαβάζουν **πελατικά** αρχεία. Δες το «γιατί» εκεί.
 // ⚠️ Το `export … from` παρακάτω **ΕΠΑΝΕΞΑΓΕΙ** — δεν δεσμεύει τα ονόματα εδώ (CHECK 3.70).
-import type {
-  AgencyProfileRejection, AgencyProfileWriteResult,
-} from '@/services/mandate/agency-profile-verdict';
+import type { AgencyProfileWriteResult } from '@/services/mandate/agency-profile-verdict';
 
 export type {
   AgencyProfileRejection,
   AgencyProfileWriteResult,
 } from '@/services/mandate/agency-profile-verdict';
 export { AGENCY_PROFILE_REJECTIONS } from '@/services/mandate/agency-profile-verdict';
+// ⚠️ **ΕΠΑΝΕΞΑΓΩΓΗ, όχι δεύτερος ορισμός** (CHECK 3.70): η δήλωση μετακόμισε μαζί με τον
+//    κριτή της, αλλά οι δύο καταναλωτές (`api/agency-profile/route`, οι άγκυρες) τη
+//    ζητούν **από εδώ** — και το σύνορο *«τι δηλώνει το γραφείο»* παραμένει αυτό το αρχείο.
+export type { ShowcaseCredentialDeclaration } from '@/services/mandate/agency-profile-credential';
 
 // =============================================================================
 // Η ΔΗΜΟΣΙΕΥΣΗ
@@ -269,6 +250,11 @@ export async function publishShowcase(
         credentials,
         place: declaration.place,
         position: declaration.position,
+        // ⚠️ `?? null` και ΟΧΙ σκέτο πέρασμα: το Firestore **απορρίπτει `undefined`**, και
+        //    η απόρριψη έρχεται ως αποτυχία **ολόκληρης** της δημοσίευσης. Ο τύπος το
+        //    απαιτεί ήδη· αυτό εδώ φυλά τον **παλιό καλούντα** που δεν το ξέρει ακόμη —
+        //    μία αναπαράσταση της απουσίας, επιβαλλόμενη στο σημείο της γραφής.
+        coverage: declaration.coverage ?? null,
         mark: keptMark,
         publishedAt: nowISO(),
       };
@@ -289,117 +275,6 @@ export async function publishShowcase(
   }
 }
 
-/**
- * **Ένα credential από μια δήλωση** — ή η **ονομασμένη** άρνηση.
- *
- * ────────────────────────────────────────────────────────────────────────────
- * 🔴 Η ΑΡΧΗ ΤΟΥ ΜΗΤΡΩΟΥ ΔΕΝ ΕΡΧΕΤΑΙ ΑΠΟ ΤΟ ΣΥΡΜΑ — ΤΗΝ ΛΕΕΙ ΤΟ ΕΠΑΓΓΕΛΜΑ
- * ────────────────────────────────────────────────────────────────────────────
- *
- * Ο άνθρωπος δηλώνει **αριθμό** *(και εκδότη, αν χρειάζεται)*· **ποια αρχή**
- * τον εξέδωσε το απαντά ο `resolveRegistryAuthority` από το `iscoCode`. Αν
- * ερχόταν από τον πελάτη, ένας διακοσμητής θα μπορούσε να δηλώσει αριθμό
- * **ΓΕΜΗ** — δηλαδή ισχυρισμό μεσιτείας χωρίς τον φρουρό της, με σωστό φίλτρο
- * και ψεύτικη κάρτα.
- *
- * ⚠️ **ΚΑΙ ΓΙ' ΑΥΤΟ ΤΟ `authority-mismatch` ΤΗΣ ΟΘΟΝΗΣ ΔΕΝ ΕΙΝΑΙ ΝΕΚΡΟ.** Δεν
- * παράγεται από **αυτόν** τον δρόμο — παράγεται από **μετατόπιση του πίνακα**:
- * η Φ6-Β1 μόλις μετακίνησε τα ISCO `7126`/`7411` από `no-registry` σε
- * `regional-authority`. Ένα έγγραφο επιβιώνει της ετυμηγορίας του, και το
- * σημείωμα είναι ο μόνος τρόπος να το πει ο κατάλογος **χωρίς να κατηγορήσει**
- * τον επαγγελματία.
- */
-function credentialFor(
-  declared: ShowcaseCredentialDeclaration,
-):
-  | { readonly credential: ShowcaseCredential }
-  | { readonly reason: AgencyProfileRejection } {
-  const { occupation } = declared;
-  const number = declared.registrationNumber.trim();
-  const verdict = resolveRegistryAuthority(occupation.iscoCode);
-
-  // ── Το επάγγελμα ΔΕΝ έχει (γνωστή) αρχή ⇒ ο αριθμός δεν έχει εκδότη ──────────
-  //    ⚠️ Ο αριθμός **απορρίπτεται σιωπηλά** και είναι σωστό: η φόρμα δεν δείχνει
-  //    καν πεδίο σε αυτή την ετυμηγορία (`no-registry` · `unexamined`), άρα δεν
-  //    υπάρχει άνθρωπος να ειδοποιηθεί. Μια άρνηση εδώ θα ήταν άρνηση για κάτι
-  //    που κανείς δεν ζήτησε.
-  if (verdict.kind !== 'authority') {
-    return { credential: selfDeclared(occupation) };
-  }
-
-  if (number === '') {
-    // 🔒 Ρυθμιζόμενο ⇒ **δεν μπαίνει** χωρίς αριθμό: το «δεν μπαίνεις χωρίς
-    //    αυτόν» του παλιού `gemiNumber: string`, τώρα με όνομα.
-    if (occupationNeedsCapability(occupation.iscoCode)) {
-      return { reason: 'agency-profile-registration-missing' };
-    }
-    // 🔑 **Η ΣΙΩΠΗ ΕΙΝΑΙ ΝΟΜΙΜΗ** (Α9.2): ο δικηγόρος που δεν δηλώνει αριθμό
-    //    μπαίνει στον κατάλογο· η οθόνη το λέει με **σημείωμα**, όχι με άρνηση.
-    return { credential: selfDeclared(occupation) };
-  }
-
-  // ── Αρχή με **πολλούς** εκδότες ⇒ ο εκδότης είναι υποχρεωτικός ──────────────
-  if (isChapteredRegistry(verdict.authority)) {
-    const chapter = declared.registrationChapter.trim();
-    // 🔒 Η Α9.1: «1234» χωρίς «ΔΣΘ» δεν επαληθεύεται από κανέναν — και οι
-    //    Δικηγορικοί Σύλλογοι είναι **63**.
-    if (chapter === '') return { reason: 'agency-profile-chapter-missing' };
-    return {
-      credential: declaredCredential(occupation, {
-        authorityKind: 'chapter',
-        authority: verdict.authority,
-        chapter,
-        number,
-      }),
-    };
-  }
-
-  return {
-    credential: declaredCredential(occupation, {
-      authorityKind: 'national',
-      authority: verdict.authority,
-      number,
-    }),
-  };
-}
-
-/**
- * Ειδικότητα **με** δηλωμένο ζεύγος *(αρχή, αριθμός)*.
- *
- * ⚠️ Περνά κι αυτή από τον {@link asCredential}: το `declared` ικανοποιεί **και**
- * τις δύο παραλλαγές, άρα η επιστροφή `null` είναι μη προσιτή — αλλά ο τύπος τη
- * δηλώνει, και μια σιωπηλή `!` θα ήταν ισχυρισμός αντί για απόδειξη.
- */
-function declaredCredential(
-  occupation: ClassifiedOccupation,
-  registration: ProfessionalRegistration,
-): ShowcaseCredential {
-  const credential = asCredential(occupation, { state: 'declared', registration });
-  /* istanbul ignore next — μη προσιτό: το `declared` ικανοποιεί κάθε παραλλαγή. */
-  if (credential === null) {
-    throw new Error('ADR-841 A9 invariant: a declared (occupation, registration) pair did not form a credential.');
-  }
-  return credential;
-}
-
-/**
- * Ειδικότητα **χωρίς** δηλωμένο αριθμό.
- *
- * ⚠️ Περνά από τον {@link asCredential} και **δεν** κατασκευάζει το αντικείμενο
- * μόνη της: αν το επάγγελμα είναι ρυθμιζόμενο, εκείνος επιστρέφει `null` και
- * αυτή η συνάρτηση **πετά** — δηλαδή η μόνη διαδρομή που θα έγραφε ρυθμιζόμενη
- * βιτρίνα χωρίς απόδειξη κλείνει με **θόρυβο**, ποτέ σιωπηλά.
- */
-function selfDeclared(occupation: ClassifiedOccupation): ShowcaseCredential {
-  const credential = asCredential(occupation, { state: 'unknown' });
-  /* istanbul ignore next — οι καλούντες έχουν ήδη αποκλείσει το ρυθμιζόμενο. */
-  if (credential === null) {
-    throw new Error(
-      'ADR-841 Α9: ρυθμιζόμενη ειδικότητα έφτασε στο `selfDeclared` — ο φρουρός παρακάμφθηκε.',
-    );
-  }
-  return credential;
-}
 
 /**
  * **Η απόσυρση — ΔΙΑΓΡΑΦΗ, όχι σημαία** (§9.10).

@@ -67,7 +67,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "127055204edb10ec518f8220c08e38cd9e583e1083915bd4274981c515319362",
+  "inputsSha256": "34a42131e07adbaed5513014b22bc96c3aab79aab482430d19be585aa1067c69",
   "languages": [
     "el"
   ],
@@ -469,7 +469,8 @@
     "src/services/listings/public-shelf.service.ts": "d15169cf63441b56787a1f065da5c96473ef5812e4541c47e6b2225679ddf6df",
     "src/services/listings/publish-public-listing-shelf.ts": "4757d2be8dd039f1d044cbb34dd069a3cffcf3b9829115f1d085935f9a062b51",
     "src/services/listings/publish-public-listing.ts": "994418e6ede0e5f923da28402cee7ff55c94745e677a100f04aed2fe19c5ccf2",
-    "src/services/mandate/agency-profile.service.ts": "046f75611c3688d5be76d65f7a973cd5991f8d44473792c7f55dcb0d8c32bf61",
+    "src/services/mandate/agency-profile-credential.ts": "513e596408cd006ab31efa97517b707a374053df05f64790896eec0405856504",
+    "src/services/mandate/agency-profile.service.ts": "2509c3edb518d432dcea98acca4c57ed4dc0d5396711ddc9b2714f894dd08217",
     "src/services/mandate/mandate-actions.service.ts": "c017fe22d216a7572e7f7e290226ca66ba3922dfaeb13e0b010d6517b5ca7793",
     "src/services/mandate/mandate-catalog.client.ts": "41c5bd36535fedb33fc332ab51abd83507c22afd982f4aa50fd4b7867d2d96b4",
     "src/services/mandate/mandate-catalog.service.ts": "2975d9316db3f60192c4de3bc4b9dfeaade64abb5022788db24085cf00680ec3",

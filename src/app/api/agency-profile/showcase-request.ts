@@ -30,15 +30,18 @@ import { z } from 'zod';
 import type { ShowcaseDeniedResponse } from '@/lib/auth/brokerage-gate';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import type { ShowcaseWireDeclaration } from '@/lib/agency/showcase-wire';
+import { normalizeCoverageIds } from '@/lib/agency/coverage-match';
 import { placeRefSchema } from '@/lib/geo/place-ref-schema';
 import { resolveAlias } from '@/lib/workspace/alias-registry';
 import { readOccupationClassification } from '@/services/esco/occupation-classification.reader';
+import { readAdministrativeLineage } from '@/services/places/administrative-hierarchy.reader';
 import { readLandPosition } from '@/services/places/place-position.reader';
 import {
   PLACE_REF_TREATMENT,
   verifyPlaceRef,
 } from '@/services/places/public-place-read.service';
 import type { AgencyProfileRejection } from '@/services/mandate/agency-profile-verdict';
+import { isNationwide, type DeclaredCoverage } from '@/types/agency-coverage';
 import type { ClassifiedOccupation, PublicShowcase } from '@/types/agency-profile';
 import type { GeoPoint } from '@/types/geo/coordinates';
 import type { PlaceRef } from '@/types/geo/public-place';
@@ -91,6 +94,25 @@ export const publishSchema: z.ZodType<ShowcaseWireDeclaration> = z.object({
   //    διακομιστής από τη γη (δες {@link locate}). Δες `lib/agency/showcase-wire`.
   place: placeRefSchema.nullable().optional(),
   /**
+   * **Η ΔΗΛΩΜΕΝΗ ΕΜΒΕΛΕΙΑ** *(ADR-846)* — κλειστή ένωση δύο σκελών.
+   *
+   * ⚠️ Το `max(64)` στις ταυτότητες είναι **φρουρός πόρου**, όχι κρίση: κάθε στοιχείο
+   * κοστίζει μια διάσχιση γενεαλογίας. Και **δεν χρειάζεται πλαφόν σχεδίασης** — η
+   * κανονικοποίηση *(απορρόφηση απογόνων)* κρατά τη λίστα μικρή **μόνη της**, γι' αυτό
+   * το όριο μπορεί να είναι τόσο χαλαρό.
+   *
+   * 🔑 **Κανένα `min(1)`**, ίδιο δόγμα με τα υπόλοιπα πεδία: το *«κενή λίστα»* το
+   * απαντά ο **γραφέας**, μετατρέποντάς το σε `coverage: null` — μία αναπαράσταση
+   * για την απουσία, όχι δύο.
+   */
+  coverage: z
+    .union([
+      z.object({ nationwide: z.literal(true) }),
+      z.object({ adminIds: z.array(z.string().max(64)).max(200) }),
+    ])
+    .nullable()
+    .optional(),
+  /**
    * ⛔ **ΚΑΝΕΝΑ `mark` ΕΔΩ — ΕΦΥΓΕ ΣΤΗ ΔΙΚΗ ΤΟΥ ΔΙΑΔΡΟΜΗ** (ADR-841 §7 Α21, Φάση 2).
    *
    * Υπήρξε, και η αφαίρεσή του είναι **διόρθωση βλάβης**: η οθόνη διαβάζει πίσω το ίδιο
@@ -120,6 +142,10 @@ export type AgencyProfileWriteResponse =
   | { readonly error: 'PLACE_NOT_FOUND' }
   /** 🔴 **Δεν μάθαμε** αν ο τόπος υπάρχει ⇒ **ξαναδοκίμασε** (503), ποτέ 422. */
   | { readonly error: 'PLACE_UNVERIFIED' }
+  /** Δηλωμένη περιοχή που **δεν υπάρχει** στην ιεραρχία ⇒ **διάλεξέ την ξανά** (422). */
+  | { readonly error: 'COVERAGE_AREA_UNKNOWN'; readonly adminId: string }
+  /** 🔴 **Δεν διαβάστηκε η ιεραρχία** ⇒ **ξαναδοκίμασε** (503), ποτέ 422. */
+  | { readonly error: 'COVERAGE_UNVERIFIED' }
   | ShowcaseDeniedResponse
   | { readonly error: 'WRITE_FAILED' };
 
@@ -228,4 +254,50 @@ export async function locate(
   }
 
   return { position: await readLandPosition(adminDb, place.landId) };
+}
+
+/**
+ * **Επαληθεύει τη δηλωμένη εμβέλεια ΚΑΙ την κανονικοποιεί** — δύο πράξεις, μία γνώση.
+ *
+ * 🔴 **Η ΕΓΚΥΡΟΤΗΤΑ ΔΕΝ ΕΡΧΕΤΑΙ ΑΠΟ ΤΟ ΣΩΜΑ** *(ADR-846)*. Ταυτότητα που δεν υπάρχει
+ * δεν σκάει πουθενά: ο κριτής θα απαντούσε `disjoint` παντού, και ο επαγγελματίας θα
+ * έβλεπε *«δήλωσα περιοχή»* ενώ **κανείς δεν μπορεί να τον βρει από αυτήν**. Ίδια κλάση
+ * σιωπηλής βλάβης με τον δεσμό σε ανύπαρκτο τόπο, ίδιες **τρεις** θεραπείες.
+ *
+ * ⚠️ **Η κενή λίστα γίνεται `null`, ΕΔΩ, μία φορά**: *«δήλωσα και μετά τα έσβησα όλα»*
+ * και *«δεν δήλωσα ποτέ»* είναι **η ίδια** κατάσταση για κάθε αναγνώστη, και δύο
+ * αναπαραστάσεις της θα ήταν έλεγχος που κάποιος θα ξεχνούσε.
+ */
+export async function resolveCoverage(
+  coverage: DeclaredCoverage | null | undefined,
+): Promise<
+  | { readonly coverage: DeclaredCoverage | null }
+  | { readonly rejected: NextResponse<AgencyProfileWriteResponse> }
+> {
+  if (coverage === null || coverage === undefined) return { coverage: null };
+  // 🔑 «Όλη η Ελλάδα» δεν έχει τίποτα να επαληθευτεί — δεν είναι ταυτότητα, είναι όριο.
+  if (isNationwide(coverage)) return { coverage };
+  if (coverage.adminIds.length === 0) return { coverage: null };
+
+  const lineageOf = await readAdministrativeLineage();
+  if (lineageOf === null) {
+    return {
+      rejected: NextResponse.json({ error: 'COVERAGE_UNVERIFIED' } as const, { status: 503 }),
+    };
+  }
+
+  // ⚠️ **Ονομάζεται η ΠΡΩΤΗ άγνωστη**, δεν απορρίπτονται σιωπηλά: ο άνθρωπος πρέπει να
+  //    μάθει **ποια** επιλογή του χάθηκε, όχι ότι «κάτι» δεν πέρασε.
+  for (const adminId of coverage.adminIds) {
+    if (lineageOf(adminId).length === 0) {
+      return {
+        rejected: NextResponse.json(
+          { error: 'COVERAGE_AREA_UNKNOWN', adminId } as const,
+          { status: 422 },
+        ),
+      };
+    }
+  }
+
+  return { coverage: { adminIds: normalizeCoverageIds(coverage.adminIds, lineageOf) } };
 }

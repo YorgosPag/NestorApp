@@ -63,6 +63,7 @@ import {
   classifyDeclared,
   locate,
   publishSchema,
+  resolveCoverage,
   verifyAliasOwnership,
   type AgencyProfileWriteResponse,
 } from './showcase-request';
@@ -107,6 +108,13 @@ async function publishHandler(
   const located = await locate(adminDb, place);
   if ('rejected' in located) return located.rejected;
 
+  // 🔑 **ΔΥΟ ΑΝΕΞΑΡΤΗΤΕΣ ΕΡΩΤΗΣΕΙΣ** (ADR-846): ο τόπος απαντά *«πού κάθεσαι;»* και
+  //    επαληθεύεται από τη **γη**· η εμβέλεια απαντά *«πού δουλεύεις;»* και επαληθεύεται
+  //    από την **ιεραρχία**. Καμία δεν συνεπάγεται την άλλη — ο ελαιοχρωματιστής χωρίς
+  //    έδρα μπορεί κάλλιστα να δηλώσει τρεις δήμους.
+  const covered = await resolveCoverage(parsed.data.coverage);
+  if ('rejected' in covered) return covered.rejected;
+
   // ⛔ **ΚΑΝΕΝΑ ΣΗΜΑ ΕΔΩ** (ADR-841 §7 Α21, Φάση 2): έγινε **δική του πράξη**
   //    (`POST`/`DELETE /api/agency-profile/mark`), και ο γραφέας **διατηρεί** ό,τι βρει
   //    μέσα σε συναλλαγή. Όσο ζούσε σε αυτό το σώμα, κάθε δεύτερη δημοσίευση από οθόνη
@@ -117,6 +125,7 @@ async function publishHandler(
     credentials,
     place,
     position: located.position,
+    coverage: covered.coverage,
   });
 
   // ⚠️ Κλειστό σύνολο, χωρίς `default`: πέμπτη κατάσταση του γραφέα **δεν
