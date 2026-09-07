@@ -9,7 +9,7 @@
  *
  *   επιθυμητό σύνολο  ⇒ το πρόθεμα γίνεται **ακριβώς** αυτό  (ίδια είσοδος ⇒ ίδιο ράφι)
  *   κενό σύνολο       ⇒ το πρόθεμα **αδειάζει**              (η απόσυρση ΣΥΜΒΑΙΝΕΙ)
- *   ταυτότητα         = το ίδιο το `listingId`               (καμία νέα γεννήτρια)
+ *   ταυτότητα         = το ίδιο το `subjectId`               (καμία νέα γεννήτρια)
  *
  * 🔑 **ΣΥΜΦΙΛΙΩΣΗ ΚΑΙ ΠΟΤΕ «ΕΦΑΡΜΟΓΗ ΣΥΜΒΑΝΤΟΣ».** Το `writeListingProjection` κάνει
  * ολικό `set()` επειδή μια μερική ενημέρωση θα άφηνε το δημόσιο έγγραφο **μείγμα δύο
@@ -60,7 +60,6 @@ import { createHash } from 'node:crypto';
 import { GCS_PUBLIC_MEDIA_BUCKET } from '@/config/gcs-buckets';
 import { getAdminBucket, getAdminStorage } from '@/lib/firebaseAdmin';
 import { createModuleLogger } from '@/lib/telemetry';
-import type { ListingMaterial } from '@/lib/listings/listing-material';
 import {
   PUBLIC_SHELF_CACHE_CONTROL,
   buildPublicShelfKey,
@@ -69,12 +68,9 @@ import {
   publicShelfUrl,
   type PublicShelfSource,
 } from '@/services/upload/utils/storage-path-public-shelf';
+import { shelfRecipe, type PublicShelfKind } from '@/services/upload/utils/public-shelf-kinds';
 
-import {
-  PUBLIC_SHELF_RECIPE,
-  PUBLIC_SHELF_VARIANT_WIDTHS,
-  sanitiseImageVariants,
-} from './public-shelf-sanitise';
+import { sanitiseImageVariants } from './public-shelf-sanitise';
 
 const logger = createModuleLogger('public-shelf');
 
@@ -98,7 +94,7 @@ export interface PublicShelfObject {
  * μαντέψει ποια bytes ανήκουν στην ίδια φωτογραφία — δηλαδή θα γεννιόταν **δεύτερος**
  * κριτής ταυτότητας δίπλα στο content-addressing.
  */
-export interface PublicShelfImage {
+export interface PublicShelfImage<M> {
   /** Το **μεγαλύτερο** διαθέσιμο παράγωγο — ο στόχος του `src`. */
   readonly canonical: PublicShelfObject;
   /** Όλα τα διακριτά παράγωγα, **αύξον πλάτος**. Περιέχει το {@link canonical}. */
@@ -113,16 +109,21 @@ export interface PublicShelfImage {
    * λάθος θα ήταν «η κάτοψη ανακοινώθηκε ως φωτογραφία», δηλαδή **ακριβώς** το Ο-20.
    *
    * ⛔ **Το ράφι ΔΕΝ το διαβάζει ΠΟΤΕ για να αποφασίσει κάτι.** Καμία διακλάδωση αυτού
-   * του αρχείου δεν το κοιτά· η **μία** ερμηνεία ζει στο `withPublishedGallery`.
+   * του αρχείου δεν το κοιτά· η **μία** ερμηνεία ζει στον καταναλωτή του κάθε είδους
+   * *(`withPublishedGallery` για τις αγγελίες)*.
+   *
+   * 🔑 **Και γι' αυτό έγινε παράμετρος τύπου στο Στάδιο 2**: ένα πεδίο που κουβαλιέται
+   * **αδιαφανώς** δεν έχει λόγο να ξέρει αν είναι κάτοψη ή λογότυπο. Ο τύπος τηρεί
+   * επιτέλους αυτό που το σχόλιο υποσχόταν ήδη.
    */
-  readonly material: ListingMaterial;
+  readonly material: M;
 }
 
 /** Τι έκανε η συμφιλίωση — ρητά, ώστε ο καλών να **μετρήσει**. */
-export interface PublicShelfReport {
+export interface PublicShelfReport<M> {
   readonly outcome: 'reconciled' | 'failed';
   /** Οι εικόνες που **είναι** στο ράφι μετά τη συμφιλίωση, στη σειρά της επιλογής. */
-  readonly published: readonly PublicShelfImage[];
+  readonly published: readonly PublicShelfImage<M>[];
   /** Πόσα αντικείμενα **έφυγαν** επειδή έπαψαν να ανήκουν στο επιθυμητό σύνολο. */
   readonly removed: number;
   /** Πόσες πηγές **δεν** μπόρεσαν να καθαριστούν (κατεστραμμένο ή μη-εικόνα). */
@@ -142,11 +143,11 @@ interface PendingUpload {
 }
 
 /** Ό,τι έμαθε η συμφιλίωση για **μία** πηγή. */
-interface AddressedImage {
+interface AddressedImage<M> {
   readonly variants: readonly PublicShelfObject[];
   readonly uploads: readonly PendingUpload[];
   /** Δες {@link PublicShelfImage.material} — κουβαλιέται, δεν ερμηνεύεται. */
-  readonly material: ListingMaterial;
+  readonly material: M;
 }
 
 // ---------------------------------------------------------------------------
@@ -193,10 +194,16 @@ function sourceReference(privateStoragePath: string, generation: string): string
  * **Τα παράγωγα αυτής της πηγής που ΥΠΑΡΧΟΥΝ ΗΔΗ**, ανά ζητούμενο πλάτος.
  *
  * ⚠️ Απαιτεί ταύτιση **και** στη συνταγή: αλλαγή ποιότητας ή γκάμας πλατών **οφείλει**
- * να ακυρώσει τα παλιά παράγωγα, και η {@link PUBLIC_SHELF_RECIPE} είναι παραγόμενη
- * ακριβώς για να μην μπορεί να ξεχαστεί.
+ * να ακυρώσει τα παλιά παράγωγα, και το {@link shelfRecipe} είναι παραγόμενο ακριβώς για
+ * να μην μπορεί να ξεχαστεί.
+ *
+ * 🔴 **Η συνταγή έρχεται από ΤΟ ΕΙΔΟΣ, και αυτό είναι το πιο λεπτό σημείο του Σταδίου 2.**
+ * Μια σταθερή συνταγή θα έκανε τα παράγωγα του **ενός** είδους να μοιάζουν έγκυρα για το
+ * **άλλο** — και επειδή η γρήγορη διαδρομή δεν αποκωδικοποιεί τίποτα, το λάθος θα ήταν
+ * **αόρατο**: σήμα 256px θα περνούσε για γκαλερί 2560px χωρίς κανείς να το μετρήσει.
  */
 function cachedVariants(
+  kind: PublicShelfKind,
   existing: readonly File[],
   sourceRef: string,
 ): ReadonlyMap<number, PublicShelfObject> {
@@ -205,7 +212,7 @@ function cachedVariants(
   for (const file of existing) {
     const custom = file.metadata.metadata;
     if (custom?.[META_SOURCE_REF] !== sourceRef) continue;
-    if (custom[META_RECIPE] !== PUBLIC_SHELF_RECIPE) continue;
+    if (custom[META_RECIPE] !== shelfRecipe(kind.encoding)) continue;
 
     const object: PublicShelfObject = {
       key: file.name,
@@ -233,19 +240,20 @@ function cachedVariants(
  * νικητή θα έλεγε ψέματα στην επόμενη συμφιλίωση.
  */
 function groupUploads(
-  listingId: string,
+  kind: PublicShelfKind,
+  subjectId: string,
   sourceRef: string,
   assets: readonly { bytes: Buffer; contentType: string; width: number; height: number }[],
 ): readonly PendingUpload[] {
   const byKey = new Map<string, PendingUpload>();
 
   assets.forEach((asset, index) => {
-    const key = buildPublicShelfKey({
-      listingId,
+    const key = buildPublicShelfKey(kind, {
+      subjectId,
       contentHash: contentAddress(asset.bytes),
       ext: 'webp',
     });
-    const requested = PUBLIC_SHELF_VARIANT_WIDTHS[index];
+    const requested = kind.encoding.widths[index];
     const already = byKey.get(key);
 
     byKey.set(key, {
@@ -279,25 +287,27 @@ function groupUploads(
  * επαναχρησιμοποίηση θα ήταν δεύτερη διαδρομή με δικά της σφάλματα για να γλιτώσει
  * **μία** κωδικοποίηση από τρεις.
  */
-async function addressOne(
-  listingId: string,
-  source: PublicShelfSource,
+async function addressOne<M>(
+  kind: PublicShelfKind,
+  subjectId: string,
+  source: PublicShelfSource<M>,
   existing: readonly File[],
-): Promise<AddressedImage | null> {
+): Promise<AddressedImage<M> | null> {
   try {
     const original = getAdminBucket().file(source.privateStoragePath);
     const [meta] = await original.getMetadata();
     const sourceRef = sourceReference(source.privateStoragePath, String(meta.generation ?? ''));
 
-    const hit = fullCacheHit(cachedVariants(existing, sourceRef));
+    const hit = fullCacheHit(kind, cachedVariants(kind, existing, sourceRef));
     if (hit !== null) return { variants: distinctByKey(hit), uploads: [], material: source.material };
 
     const [raw] = await original.download();
-    const uploads = groupUploads(listingId, sourceRef, [...(await sanitiseImageVariants(raw))]);
+    const sanitised = [...(await sanitiseImageVariants(raw, kind.encoding))];
+    const uploads = groupUploads(kind, subjectId, sourceRef, sanitised);
     return { variants: distinctByKey(uploads.map(toObject)), uploads, material: source.material };
   } catch (error) {
     logger.warn('Πηγή δεν δημοσιεύεται — δεν διαβάστηκε ή δεν καθαρίστηκε', {
-      listingId,
+      subjectId,
       privateStoragePath: source.privateStoragePath,
       error: error instanceof Error ? error.message : String(error),
     });
@@ -313,11 +323,12 @@ async function addressOne(
  * βήμα (κατέβασμα + αποκωδικοποίηση) θα πληρωνόταν ούτως ή άλλως.
  */
 function fullCacheHit(
+  kind: PublicShelfKind,
   cached: ReadonlyMap<number, PublicShelfObject>,
 ): readonly PublicShelfObject[] | null {
   const found: PublicShelfObject[] = [];
 
-  for (const width of PUBLIC_SHELF_VARIANT_WIDTHS) {
+  for (const width of kind.encoding.widths) {
     const object = cached.get(width);
     if (object === undefined) return null;
     found.push(object);
@@ -364,6 +375,7 @@ function distinctByKey(objects: readonly PublicShelfObject[]): readonly PublicSh
  * ανάμεσα στις δύο κλήσεις θα άφηνε **μόνιμη** αποτυχία επαναχρησιμοποίησης.
  */
 async function uploadMissing(
+  kind: PublicShelfKind,
   bucket: Bucket,
   uploads: readonly PendingUpload[],
   existing: ReadonlySet<string>,
@@ -378,7 +390,7 @@ async function uploadMissing(
           cacheControl: PUBLIC_SHELF_CACHE_CONTROL,
           metadata: {
             [META_SOURCE_REF]: upload.sourceRef,
-            [META_RECIPE]: PUBLIC_SHELF_RECIPE,
+            [META_RECIPE]: shelfRecipe(kind.encoding),
             [META_REQUESTED_WIDTHS]: upload.requestedWidths.join(','),
             [META_PIXEL_WIDTH]: String(upload.width),
             [META_PIXEL_HEIGHT]: String(upload.height),
@@ -398,12 +410,13 @@ async function uploadMissing(
  * σαρωτής της 27/08 *(«θα έσβηνε την αγορά»)*.
  */
 async function deleteExtra(
+  kind: PublicShelfKind,
   bucket: Bucket,
   existingFiles: readonly File[],
   desired: ReadonlySet<string>,
 ): Promise<number> {
   const doomed = existingFiles.filter(
-    (file) => parsePublicShelfKey(file.name) !== null && !desired.has(file.name),
+    (file) => parsePublicShelfKey(kind, file.name) !== null && !desired.has(file.name),
   );
 
   await Promise.all(doomed.map((file) => file.delete({ ignoreNotFound: true })));
@@ -415,7 +428,7 @@ async function deleteExtra(
 // ---------------------------------------------------------------------------
 
 /**
- * **Κάνε το ράφι αυτής της αγγελίας ΑΚΡΙΒΩΣ ίσο με το επιθυμητό σύνολο.**
+ * **Κάνε το ράφι αυτού του υποκειμένου ΑΚΡΙΒΩΣ ίσο με το επιθυμητό σύνολο.**
  *
  * Κενό σύνολο ⇒ το πρόθεμα αδειάζει. Ίδιο σύνολο δύο φορές ⇒ ταυτόσημο αποτέλεσμα,
  * χωρίς δεύτερη εγγραφή — και, από τη Φ3, **χωρίς δεύτερη αποκωδικοποίηση** *(Α2.3)*.
@@ -427,26 +440,39 @@ async function deleteExtra(
  * 🔑 **Η σειρά του `published` είναι η σειρά των `sources`** — δηλαδή η σειρά που
  * **δήλωσε** ο κάτοχος *(Α2.1)*. Καμία ταξινόμηση εδώ: θα ήταν σιωπηλή απόφαση για το
  * ποια φωτογραφία είναι «πρώτη», που είναι ακριβώς η πράξη που ανήκει στον άνθρωπο.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🏆 ΤΟ ΕΙΔΟΣ ΕΙΝΑΙ **ΠΡΩΤΟ ΟΡΙΣΜΑ**, ΚΑΙ ΑΥΤΟ ΕΙΝΑΙ ΤΟ ΣΤΑΔΙΟ 2
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Ως την Α21 η συνάρτηση **υπέθετε** το είδος: ρίζα `listings/`, φρουρός που απαγορεύει
+ * `comp_`, πλάτη γκαλερί. Τώρα το **ρωτά** — και ό,τι ακολουθεί *(πρόθεμα, φρουρός,
+ * κωδικοποίηση, συνταγή, σάρωση, διαγραφή)* βγαίνει **από τον ίδιο** περιγραφέα.
+ *
+ * 🔴 **Ένα λάθος είδος δεν μπορεί να γράψει σε ξένη ρίζα**: το `publicShelfPrefix`
+ * **πετά** αν η ταυτότητα δεν περνά τον φρουρό **αυτού** του είδους, και οι δύο φρουροί
+ * είναι **αντίθετοι**. Δεν είναι σύμβαση — είναι αδύνατο.
  */
-export async function reconcilePublicShelf(
-  listingId: string,
-  sources: readonly PublicShelfSource[],
-): Promise<PublicShelfReport> {
+export async function reconcilePublicShelf<M>(
+  kind: PublicShelfKind,
+  subjectId: string,
+  sources: readonly PublicShelfSource<M>[],
+): Promise<PublicShelfReport<M>> {
   try {
-    const prefix = publicShelfPrefix(listingId);
+    const prefix = publicShelfPrefix(kind, subjectId);
     const bucket = shelfBucket();
 
     const [existingFiles] = await bucket.getFiles({ prefix });
     const addressed = await Promise.all(
-      sources.map((source) => addressOne(listingId, source, existingFiles)),
+      sources.map((source) => addressOne(kind, subjectId, source, existingFiles)),
     );
-    const desired = addressed.filter((image): image is AddressedImage => image !== null);
+    const desired = addressed.filter((image): image is AddressedImage<M> => image !== null);
 
     const desiredKeys = new Set(desired.flatMap((image) => image.variants.map((v) => v.key)));
     const existingKeys = new Set(existingFiles.map((file) => file.name));
 
-    await uploadMissing(bucket, desired.flatMap((image) => image.uploads), existingKeys);
-    const removed = await deleteExtra(bucket, existingFiles, desiredKeys);
+    await uploadMissing(kind, bucket, desired.flatMap((image) => image.uploads), existingKeys);
+    const removed = await deleteExtra(kind, bucket, existingFiles, desiredKeys);
 
     return {
       outcome: 'reconciled',
@@ -460,7 +486,8 @@ export async function reconcilePublicShelf(
     };
   } catch (error) {
     logger.error('Το δημόσιο ράφι ΔΕΝ συμφιλιώθηκε — μένει ΜΠΑΓΙΑΤΙΚΟ ως την επανασύνθεση', {
-      listingId,
+      root: kind.root,
+      subjectId,
       error: error instanceof Error ? error.message : String(error),
     });
     return { outcome: 'failed', published: [], removed: 0, rejected: 0 };

@@ -7,7 +7,7 @@
  * 🔑 ΤΟ ΚΛΕΙΔΙ ΕΙΝΑΙ ΤΟ **ΠΕΡΙΕΧΟΜΕΝΟ**, ΚΑΙ ΑΥΤΟ ΔΙΝΕΙ ΤΕΣΣΕΡΑ ΔΩΡΕΑΝ
  * ────────────────────────────────────────────────────────────────────────────
  *
- *   listings/{listingId}/{sha256 των ΚΑΘΑΡΙΣΜΕΝΩΝ bytes}.{ext}
+ *   {ρίζα του είδους}/{subjectId}/{sha256 των ΚΑΘΑΡΙΣΜΕΝΩΝ bytes}.{ext}
  *
  * 1. **Καμία ακύρωση cache για ΑΛΛΑΓΗ** — άλλα bytes ⇒ άλλο κλειδί ⇒ άλλο URL, οπότε
  *    το `immutable` δεν λέει ποτέ ψέματα. ⚠️ Για **ΔΙΑΓΡΑΦΗ** δεν αρκεί: η ύπαρξη δεν
@@ -22,15 +22,34 @@
  *    βήμα που μπορεί να ξεχαστεί· εδώ δεν υπάρχει τι να ξεχαστεί.
  *
  * ────────────────────────────────────────────────────────────────────────────
- * ⚠️ ΓΙΑΤΙ ΤΟ `{listingId}` ΜΠΑΙΝΕΙ ΠΡΙΝ ΤΟ HASH — και όχι κοινή ρίζα
+ * ⚠️ ΓΙΑΤΙ ΤΟ `{subjectId}` ΜΠΑΙΝΕΙ ΠΡΙΝ ΤΟ HASH — και όχι κοινή ρίζα
  * ────────────────────────────────────────────────────────────────────────────
  *
  * Καθαρά content-addressed ράφι σε **κοινή** ρίζα θα γεννούσε **μέτρηση αναφορών**:
  * δύο αγγελίες με την ίδια φωτογραφία, η μία αποσύρεται, και η διαγραφή σπάει την
- * άλλη. Το πρόθεμα κάνει τη διαγραφή **τοπική και ασφαλή** — το `{listingId}` είναι το
+ * άλλη. Το πρόθεμα κάνει τη διαγραφή **τοπική και ασφαλή** — το `{subjectId}` είναι το
  * όριο, όπως το `{userId}` είναι το όριο στο `owner_properties/`. Τίμημα: λίγα διπλά
  * bytes σε σπάνια περίπτωση. **Μετρήσιμο και μικρό· η μέτρηση αναφορών είναι κλάση
  * σφαλμάτων.**
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🏆 ΔΥΟ ΕΙΔΗ ΠΡΑΓΜΑΤΩΝ, **ΕΝΑ** ΡΑΦΙ — ΚΑΙ ΟΙ ΦΡΟΥΡΟΙ ΤΟΥΣ ΕΙΝΑΙ ΑΝΤΙΘΕΤΟΙ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Το **Στάδιο 2** της Α21 έδωσε στο ράφι **δεύτερο** είδος: το σήμα του επαγγελματία.
+ * Η προφανής κίνηση ήταν δεύτερο ράφι· ⛔ **απορρίφθηκε** — θα ήταν **δεύτερος γραφέας
+ * για την ίδια ερώτηση**, ελεύθερος να αποκλίνει στη συμφιλίωση, στη διαγραφή ή στον
+ * καθαρισμό. Κατά γράμμα το σχήμα που τιμωρεί το **ADR-749**.
+ *
+ * ⇒ Το ράφι έγινε **πίνακας ειδών** ({@link PublicShelfKind}) — **ακριβώς** η κίνηση που
+ * έκανε το **CHECK 3.74** την ίδια εβδομάδα *(`BOUNDARIES`: «νέα συλλογή ⇒ **μία γραμμή**
+ * και τίποτα άλλο»)*. Το ράφι **κρατά την ταυτότητά του**· αυτό που μεγάλωσε είναι η
+ * εμβέλεια.
+ *
+ * 🔑 **ΑΥΤΟ ΤΟ ΑΡΧΕΙΟ ΔΕΝ ΞΕΡΕΙ ΠΟΣΑ ΕΙΔΗ ΥΠΑΡΧΟΥΝ, ΚΑΙ ΕΙΝΑΙ ΤΟ ΝΟΗΜΑ ΤΟΥ.** Δέχεται
+ * περιγραφέα και εκτελεί την **ίδια** αριθμητική για καθέναν — οπότε νέο είδος **δεν
+ * αγγίζει καμία γραμμή εδώ**. Ο πίνακας, οι δύο **αντίθετοι** φρουροί ταυτότητας και το
+ * «γιατί» τους ζουν στο {@link module:services/upload/utils/public-shelf-kinds}.
  *
  * ⛔ **ΚΑΘΑΡΟ MODULE — καμία I/O, κανένα `crypto`.** Το hashing ζει στον γραφέα
  * ({@link module:services/listings/public-shelf.service}) επειδή αυτό το αρχείο ανήκει
@@ -38,8 +57,8 @@
  * 'crypto'` εδώ θα τα έσπαγε. Εδώ ζει μόνο **αριθμητική συμβολοσειρών**.
  */
 
-import { isValidPathSegment } from './storage-path-validation';
 import type { ListingMaterial } from '@/lib/listings/listing-material';
+import type { PublicShelfKind } from './public-shelf-kinds';
 
 // ---------------------------------------------------------------------------
 // Σταθερές
@@ -73,9 +92,6 @@ import type { ListingMaterial } from '@/lib/listings/listing-material';
  * εισάγουν *(αμφότερες για το {@link PublicShelfSource})*.
  */
 export const PUBLISHED_MEDIA_LIMIT = 24;
-
-/** Η ρίζα του ραφιού μέσα στον δημόσιο κάδο — γραμμένη **μία** φορά. */
-export const PUBLIC_SHELF_ROOT = 'listings';
 
 /**
  * 🔴 **ΤΟ `max-age` ΕΙΝΑΙ Ο ΠΡΟΫΠΟΛΟΓΙΣΜΟΣ ΤΗΣ ΑΠΟΣΥΡΣΗΣ — ΟΧΙ ΡΥΘΜΙΣΗ ΕΠΙΔΟΣΗΣ.**
@@ -140,16 +156,6 @@ export type PublicShelfExtension = (typeof PUBLIC_SHELF_EXTENSIONS)[number];
 /** Το αποτύπωμα που παράγει ο γραφέας: sha256, πεζό δεκαεξαδικό, 64 χαρακτήρες. */
 const CONTENT_HASH_PATTERN = /^[0-9a-f]{64}$/;
 
-/**
- * Πρόθεμα ταυτότητας μισθωτή — **απαγορευμένο** σε δημόσιο κλειδί.
- *
- * 🔴 Η Φ1 μέτρησε ότι τα ζωντανά αναγνωριστικά αγγελιών είναι `prop_*` / `ownp_*` και
- * **κανένα** `comp_*`. Ο φρουρός εδώ κάνει τη μέτρηση **εκτελούμενη**: αν κάποτε
- * περάσει `companyId` ως ταυτότητα αγγελίας, η δημοσίευση **σταματά** αντί να
- * τυπώσει την ταυτότητα του μισθωτή σε δημόσιο URL.
- */
-const TENANT_IDENTITY_PREFIX = 'comp_';
-
 // ---------------------------------------------------------------------------
 // Τύποι
 // ---------------------------------------------------------------------------
@@ -165,7 +171,7 @@ const TENANT_IDENTITY_PREFIX = 'comp_';
  * (`public-listing-projection.ts`, ρητά καθαρή) να μπορεί να το δηλώσει ως είσοδο
  * χωρίς να αποκτήσει εξάρτηση από `sharp` / Admin SDK.
  */
-export interface PublicShelfSource {
+export interface PublicShelfSource<M = ListingMaterial> {
   readonly privateStoragePath: string;
   /**
    * **Τι ΕΙΝΑΙ αυτά τα bytes** — φωτογραφία ή κάτοψη (ADR-841 §7 Α17.4).
@@ -178,13 +184,37 @@ export interface PublicShelfSource {
    * και το γραφείο— **δεν μεταγλωττίζονται** αν δεν απαντήσουν *«τι είναι αυτό;»*.
    * Ένα προαιρετικό πεδίο θα ξαναγεννούσε ακριβώς τη σιωπή που το Ο-20 ονόμασε:
    * *«δεν το ταξινόμησε κανείς»* διαβασμένο ως *«φωτογραφία»*.
+   *
+   * ────────────────────────────────────────────────────────────────────────
+   * 🔑 ΓΙΑΤΙ ΕΓΙΝΕ **ΓΕΝΙΚΟ** ΣΤΟ ΣΤΑΔΙΟ 2 — ΤΗΡΗΣΗ, ΟΧΙ ΝΕΑ ΙΔΕΑ
+   * ────────────────────────────────────────────────────────────────────────
+   *
+   * Το ίδιο το ράφι δηλώνει *«το **ΚΟΥΒΑΛΑ**, δεν το ΕΡΜΗΝΕΥΕΙ ΠΟΤΕ»*. Ένα πεδίο που
+   * κουβαλιέται αδιαφανώς **δεν έχει λόγο** να ξέρει τον τύπο του — και μόλις εμφανίστηκε
+   * δεύτερο είδος πράγματος, το καρφωμένο `ListingMaterial` άρχισε να λέει ψέματα.
+   *
+   * ⛔ **ΜΗΝ προσθέσεις `'logo'`/`'portrait'` στο {@link ListingMaterial}**: θα μόλυνε τις
+   * αγγελίες με έννοιες βιτρίνας και θα ανάγκαζε το `withPublishedGallery` να χειριστεί
+   * **αδύνατες** περιπτώσεις — κάτοψη-λογότυπο, φωτογραφία-πορτρέτο.
+   *
+   * ⚠️ **Γενικό στο ΔΟΧΕΙΟ, ποτέ στο «είδος»**: το `ListingMaterial` είναι **διακριτή
+   * ένωση** *(`{kind:'photo'} | {kind:'floorplan', at}`)*, και ένα `PublicShelfSource<K>`
+   * πάνω σε σκέτο `kind` θα **έτρωγε το `at`** της κάτοψης — δηλαδή τη στιγμή που ο
+   * `SourcedAttribute` είναι υποχρεωμένος να δηλώσει.
    */
-  readonly material: ListingMaterial;
+  readonly material: M;
 }
 
 /** Τα τρία μέρη ενός κλειδιού ραφιού. */
 export interface PublicShelfKeyParts {
-  readonly listingId: string;
+  /**
+   * **Το υποκείμενο** — η αγγελία ή ο οργανισμός στον οποίο ανήκουν αυτά τα bytes.
+   *
+   * ⚠️ Ονομαζόταν `listingId` ως το Στάδιο 2. Με **δύο** είδη το όνομα έλεγε ψέματα στο
+   * μισό ράφι — και η ταυτότητα της βιτρίνας είναι `companyId`, δηλαδή ακριβώς αυτό που
+   * ο παλιός φρουρός **απαγόρευε**.
+   */
+  readonly subjectId: string;
   /** sha256 των **καθαρισμένων** bytes, πεζό δεκαεξαδικό. */
   readonly contentHash: string;
   readonly ext: PublicShelfExtension;
@@ -193,22 +223,6 @@ export interface PublicShelfKeyParts {
 // ---------------------------------------------------------------------------
 // Επικύρωση
 // ---------------------------------------------------------------------------
-
-/**
- * Είναι αυτό αποδεκτή ταυτότητα αγγελίας για **δημόσιο** κλειδί;
- *
- * ⚠️ **Δεν αρκεί το {@link isValidPathSegment}**, και είναι μετρημένο: το μοτίβο του
- * `/^[\p{L}\p{N}_.\-]+$/u` επιτρέπει τελείες, άρα δέχεται **`..`** — αθώο για τα
- * παραγόμενα enterprise ids όπου χρησιμοποιείται σήμερα, **όχι** αθώο εδώ όπου το
- * τμήμα γίνεται πρόθεμα διαγραφής. Ο επιπλέον όρος **δεν** είναι δεύτερος sanitizer:
- * είναι περιορισμός **αυτού** του συνόρου πάνω στον υπάρχοντα.
- */
-export function isPublicShelfListingId(value: string): boolean {
-  if (!isValidPathSegment(value)) return false;
-  if (value === '.' || value === '..') return false;
-  return !value.startsWith(TENANT_IDENTITY_PREFIX);
-}
-
 /** Είναι αυτό αποτύπωμα που θα μπορούσε να έχει παραχθεί από τον γραφέα; */
 export function isPublicShelfContentHash(value: string): boolean {
   return CONTENT_HASH_PATTERN.test(value);
@@ -224,20 +238,24 @@ export function isPublicShelfExtension(value: string): value is PublicShelfExten
 // ---------------------------------------------------------------------------
 
 /**
- * **Το πρόθεμα μιας αγγελίας** — η μονάδα συμφιλίωσης **και** διαγραφής.
+ * **Το πρόθεμα ενός υποκειμένου** — η μονάδα συμφιλίωσης **και** διαγραφής.
  *
  * Τελειώνει σε `/` ώστε ένα `getFiles({ prefix })` να μην μπορεί ποτέ να πιάσει
- * γειτονική αγγελία με κοινό πρόθεμα ονόματος (`ownp_1` ⇄ `ownp_12`).
+ * γειτονικό υποκείμενο με κοινό πρόθεμα ονόματος (`ownp_1` ⇄ `ownp_12`).
  *
- * @throws Αν η ταυτότητα δεν είναι αποδεκτή — δες {@link isPublicShelfListingId}.
+ * 🔑 **Ο φρουρός έρχεται από τον περιγραφέα**, ποτέ από αυτή τη συνάρτηση: έτσι η ίδια
+ * αριθμητική εξυπηρετεί δύο είδη **χωρίς** να ξέρει ότι υπάρχουν δύο.
+ *
+ * @throws Αν η ταυτότητα δεν είναι αποδεκτή **για αυτό το είδος** — δες
+ *   {@link PublicShelfKind.acceptsSubject}.
  */
-export function publicShelfPrefix(listingId: string): string {
-  if (!isPublicShelfListingId(listingId)) {
+export function publicShelfPrefix(kind: PublicShelfKind, subjectId: string): string {
+  if (!kind.acceptsSubject(subjectId)) {
     throw new Error(
-      `Invalid public shelf listing id: ${JSON.stringify(listingId)}`,
+      `Invalid public shelf subject for root ${JSON.stringify(kind.root)}: ${JSON.stringify(subjectId)}`,
     );
   }
-  return `${PUBLIC_SHELF_ROOT}/${listingId}/`;
+  return `${kind.root}/${subjectId}/`;
 }
 
 /**
@@ -246,8 +264,8 @@ export function publicShelfPrefix(listingId: string): string {
  * @throws Αν οποιοδήποτε μέρος είναι μη αποδεκτό. **Πετά αντί να «καθαρίσει»**: ένα
  *   σιωπηλά διορθωμένο δημόσιο κλειδί είναι αρχείο σε θέση που κανείς δεν ζήτησε.
  */
-export function buildPublicShelfKey(parts: PublicShelfKeyParts): string {
-  const { listingId, contentHash, ext } = parts;
+export function buildPublicShelfKey(kind: PublicShelfKind, parts: PublicShelfKeyParts): string {
+  const { subjectId, contentHash, ext } = parts;
 
   if (!isPublicShelfContentHash(contentHash)) {
     throw new Error(`Invalid public shelf content hash: ${JSON.stringify(contentHash)}`);
@@ -256,7 +274,7 @@ export function buildPublicShelfKey(parts: PublicShelfKeyParts): string {
     throw new Error(`Invalid public shelf extension: ${JSON.stringify(ext)}`);
   }
 
-  return `${publicShelfPrefix(listingId)}${contentHash}.${ext}`;
+  return `${publicShelfPrefix(kind, subjectId)}${contentHash}.${ext}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -269,14 +287,23 @@ export function buildPublicShelfKey(parts: PublicShelfKeyParts): string {
  * 🔑 Ο **ανεκτικός αναγνώστης** απέναντι στον **αυστηρό γραφέα**: ο σαρωτής του κάδου
  * συναντά ό,τι υπάρχει εκεί, και ό,τι δεν αναγνωρίζεται **δεν αγγίζεται** — δεν
  * μαντεύεται και δεν σβήνεται.
+ *
+ * 🔴 **ΡΩΤΑ ΓΙΑ ΕΝΑ ΣΥΓΚΕΚΡΙΜΕΝΟ ΕΙΔΟΣ, ΚΑΙ ΑΥΤΟ ΕΙΝΑΙ Η ΑΣΦΑΛΕΙΑ.** Ένας αναγνώστης που
+ * θα δοκίμαζε **όλες** τις γραμμές του πίνακα θα ήταν βολικός και **επικίνδυνος**: ο
+ * μόνος καταναλωτής του είναι ο σβήστης (`deleteExtra`), και ένα κλειδί βιτρίνας που
+ * αναγνωρίζεται μέσα στο πέρασμα μιας **αγγελίας** είναι ακριβώς η διαρροή αρμοδιότητας
+ * που ο πίνακας γράφτηκε για να αποκλείσει.
  */
-export function parsePublicShelfKey(key: string): PublicShelfKeyParts | null {
+export function parsePublicShelfKey(
+  kind: PublicShelfKind,
+  key: string,
+): PublicShelfKeyParts | null {
   const segments = key.split('/');
   if (segments.length !== 3) return null;
 
-  const [root, listingId, fileName] = segments;
-  if (root !== PUBLIC_SHELF_ROOT) return null;
-  if (!isPublicShelfListingId(listingId)) return null;
+  const [root, subjectId, fileName] = segments;
+  if (root !== kind.root) return null;
+  if (!kind.acceptsSubject(subjectId)) return null;
 
   const dot = fileName.lastIndexOf('.');
   if (dot <= 0) return null;
@@ -286,12 +313,12 @@ export function parsePublicShelfKey(key: string): PublicShelfKeyParts | null {
   if (!isPublicShelfContentHash(contentHash)) return null;
   if (!isPublicShelfExtension(ext)) return null;
 
-  return { listingId, contentHash, ext };
+  return { subjectId, contentHash, ext };
 }
 
-/** Είναι αυτό κλειδί που θα μπορούσε να έχει γράψει ο γραφέας του ραφιού; */
-export function isPublicShelfKey(key: string): boolean {
-  return parsePublicShelfKey(key) !== null;
+/** Είναι αυτό κλειδί που θα μπορούσε να έχει γράψει ο γραφέας για **αυτό** το είδος; */
+export function isPublicShelfKey(kind: PublicShelfKind, key: string): boolean {
+  return parsePublicShelfKey(kind, key) !== null;
 }
 
 // ---------------------------------------------------------------------------

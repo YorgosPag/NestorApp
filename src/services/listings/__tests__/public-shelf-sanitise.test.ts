@@ -30,8 +30,16 @@ import sharp from 'sharp';
 import {
   ShelfSanitiseError,
   sanitiseImageVariants,
-  PUBLIC_SHELF_MAX_EDGE_PX,
 } from '../public-shelf-sanitise';
+import {
+  LISTING_SHELF,
+  PUBLIC_SHELF_KINDS,
+  SHOWCASE_SHELF,
+  type ShelfEncoding,
+} from '@/services/upload/utils/public-shelf-kinds';
+
+/** Το κανονικό (μεγαλύτερο) πλάτος της γκαλερί — ό,τι ήταν το `PUBLIC_SHELF_MAX_EDGE_PX`. */
+const LISTING_MAX_EDGE_PX = Math.max(...LISTING_SHELF.encoding.widths);
 
 /** Ακρόπολη — αναγνωρίσιμες συντεταγμένες, ώστε η αποτυχία να είναι ευανάγνωστη. */
 const LAT_DMS = '37/1 58/1 3000/100';
@@ -83,8 +91,11 @@ describe('Κ0 — ΤΟ ΔΕΙΓΜΑ ΟΝΤΩΣ ΚΟΥΒΑΛΑΕΙ ΑΥΤΟ ΠΟ�
  * στην παραγωγή** — δηλαδή οι άγκυρες του EXIF θα φύλαγαν κώδικα που δεν τρέχει.
  * Ο μονός καθαριστής **διαγράφηκε**· εδώ ρωτιέται ο πραγματικός.
  */
-async function sanitiseCanonical(input: Buffer) {
-  const variants = await sanitiseImageVariants(input);
+async function sanitiseCanonical(
+  input: Buffer,
+  encoding: ShelfEncoding = LISTING_SHELF.encoding,
+) {
+  const variants = await sanitiseImageVariants(input, encoding);
   return variants[variants.length - 1];
 }
 
@@ -141,7 +152,7 @@ describe('Κ2 — ο καθαρισμός δεν ΚΑΤΑΣΤΡΕΦΕΙ αυτό
     const wide = await sanitiseCanonical(
       await sharp({
         create: {
-          width: PUBLIC_SHELF_MAX_EDGE_PX + 800,
+          width: LISTING_MAX_EDGE_PX + 800,
           height: 400,
           channels: 3,
           background: { r: 1, g: 2, b: 3 },
@@ -151,7 +162,7 @@ describe('Κ2 — ο καθαρισμός δεν ΚΑΤΑΣΤΡΕΦΕΙ αυτό
         .toBuffer(),
     );
 
-    expect(wide.width).toBe(PUBLIC_SHELF_MAX_EDGE_PX);
+    expect(wide.width).toBe(LISTING_MAX_EDGE_PX);
     expect(wide.height).toBeLessThan(400);
   });
 
@@ -176,8 +187,8 @@ describe('Κ2 — ο καθαρισμός δεν ΚΑΤΑΣΤΡΕΦΕΙ αυτό
 
 describe('Κ3 — ό,τι δεν είναι εικόνα ΔΕΝ αποκτά διεύθυνση', () => {
   it('απορρίπτει κενά bytes με ονομασμένη αιτία', async () => {
-    await expect(sanitiseImageVariants(Buffer.alloc(0))).rejects.toBeInstanceOf(ShelfSanitiseError);
-    await expect(sanitiseImageVariants(Buffer.alloc(0))).rejects.toMatchObject({
+    await expect(sanitiseImageVariants(Buffer.alloc(0), LISTING_SHELF.encoding)).rejects.toBeInstanceOf(ShelfSanitiseError);
+    await expect(sanitiseImageVariants(Buffer.alloc(0), LISTING_SHELF.encoding)).rejects.toMatchObject({
       failure: 'empty',
     });
   });
@@ -186,24 +197,72 @@ describe('Κ3 — ό,τι δεν είναι εικόνα ΔΕΝ αποκτά δ�
     // 🔴 Χωρίς διεύθυνση δεν υπάρχει δημοσίευση (Α12.7): ένα PE header δεν μπορεί να
     // φτάσει ποτέ στο ράφι, γιατί δεν βγαίνει κλειδί για κάτι που δεν καθαρίστηκε.
     const fake = Buffer.concat([Buffer.from('MZ'), Buffer.alloc(2048, 0x41)]);
-    await expect(sanitiseImageVariants(fake)).rejects.toMatchObject({ failure: 'undecodable' });
+    await expect(sanitiseImageVariants(fake, LISTING_SHELF.encoding)).rejects.toMatchObject({ failure: 'undecodable' });
   });
 });
 
 describe('Κ4 — Η ΕΓΓΥΗΣΗ ΙΣΧΥΕΙ ΓΙΑ ΚΑΘΕ ΠΑΡΑΓΩΓΟ, ΟΧΙ ΜΟΝΟ ΓΙΑ ΤΟ ΚΑΝΟΝΙΚΟ', () => {
-  it('🔴 ΚΑΝΕΝΑ από τα τρία πλάτη δεν κουβαλά EXIF ή υπογραφή συσκευής', async () => {
-    // Χωρίς αυτό, ένα μικρότερο παράγωγο θα μπορούσε να γεννηθεί από **άλλη** διαδρομή
-    // που ξέχασε τον καθαρισμό — και θα δημοσιευόταν με GPS, ακυρώνοντας το
-    // `locationDisclosure: 'declined'` της Α5 (ADR-841 §7 Α12.7).
-    const variants = await sanitiseImageVariants(await photoWithGps(3000, 2000));
+  // ──────────────────────────────────────────────────────────────────────────
+  // 🔴 ΠΑΡΑΜΕΤΡΟΠΟΙΗΜΕΝΟ ΣΤΟΝ ΠΙΝΑΚΑ ΕΙΔΩΝ, ΚΑΙ ΕΙΝΑΙ Η ΨΥΧΗ ΤΟΥ ΣΤΑΔΙΟΥ 2.
+  //
+  // Ως την Α21 αυτή η άγκυρα έλεγε «κανένα από τα **τρία** πλάτη» — καρφωμένη στη
+  // **μοναδική** κωδικοποίηση που υπήρχε. Τη στιγμή που η κλίμακα έγινε παράμετρος, μια
+  // καρφωμένη άγκυρα θα συνέχιζε να **περνά** ελέγχοντας μόνο τη γκαλερί: η κλίμακα του
+  // **σήματος** θα δημοσιευόταν **αφύλακτη**.
+  //
+  // ⚠️ Και το διακύβευμα εκεί είναι ΜΕΓΑΛΥΤΕΡΟ, όχι μικρότερο: το `portrait` είναι
+  //    **φυσικό πρόσωπο** — η selfie του υδραυλικού κουβαλά **GPS του σπιτιού του**.
+  // ──────────────────────────────────────────────────────────────────────────
+  it.each(PUBLIC_SHELF_KINDS.map((kind) => [kind.root, kind.encoding] as const))(
+    '🔴 στο είδος «%s» ΚΑΝΕΝΑ πλάτος δεν κουβαλά EXIF ή υπογραφή συσκευής',
+    async (_root, encoding) => {
+      // Χωρίς αυτό, ένα μικρότερο παράγωγο θα μπορούσε να γεννηθεί από **άλλη** διαδρομή
+      // που ξέχασε τον καθαρισμό — και θα δημοσιευόταν με GPS, ακυρώνοντας το
+      // `locationDisclosure: 'declined'` της Α5 (ADR-841 §7 Α12.7).
+      const variants = await sanitiseImageVariants(await photoWithGps(3000, 2000), encoding);
 
-    expect(variants).toHaveLength(3);
-    for (const variant of variants) {
-      expect((await sharp(variant.bytes).metadata()).exif).toBeUndefined();
-      expect(variant.bytes.includes(Buffer.from('NestorTestCamera'))).toBe(false);
-      expect(variant.contentType).toBe('image/webp');
-    }
-    expect(variants.map((variant) => variant.width)).toEqual([640, 1280, PUBLIC_SHELF_MAX_EDGE_PX]);
+      expect(variants).toHaveLength(encoding.widths.length);
+      for (const variant of variants) {
+        expect((await sharp(variant.bytes).metadata()).exif).toBeUndefined();
+        expect(variant.bytes.includes(Buffer.from('NestorTestCamera'))).toBe(false);
+        expect(variant.contentType).toBe('image/webp');
+      }
+      expect(variants.map((variant) => variant.width)).toEqual([...encoding.widths]);
+    },
+  );
+
+  it('η γκαλερί εξακολουθεί να δίνει ΑΚΡΙΒΩΣ τα τρία μετρημένα πλάτη', async () => {
+    // Το παραμετροποιημένο από πάνω ρωτά «συμφωνεί με τη ρύθμισή του;» — αληθές ακόμη
+    // κι αν η ρύθμιση γίνει λάθος. Αυτό εδώ κρατά τις **τιμές** της Α2.2 δεμένες.
+    const variants = await sanitiseImageVariants(
+      await photoWithGps(3000, 2000),
+      LISTING_SHELF.encoding,
+    );
+    expect(variants.map((variant) => variant.width)).toEqual([640, 1280, LISTING_MAX_EDGE_PX]);
+  });
+
+  it('🏆 το ΣΗΜΑ βγαίνει lossless — και τα bytes το αποδεικνύουν, όχι η ρύθμιση', async () => {
+    // Το `lossless` δεν είναι γούστο: λογότυπο = επίπεδες περιοχές + αιχμηρές ακμές,
+    // δηλαδή ΜΟΝΟ οι μεταβάσεις που θολώνει η lossy συμπίεση. Η απόδειξη είναι το ίδιο
+    // το αρχείο: το WebP δηλώνει lossless με το chunk `VP8L`, το lossy με `VP8 `.
+    const [mark] = await sanitiseImageVariants(await photoWithGps(400, 400), SHOWCASE_SHELF.encoding);
+    const [photo] = await sanitiseImageVariants(await photoWithGps(400, 400), LISTING_SHELF.encoding);
+
+    expect(mark.bytes.includes(Buffer.from('VP8L'))).toBe(true);
+    expect(photo.bytes.includes(Buffer.from('VP8L'))).toBe(false);
+  });
+
+  it('🔑 και η ΔΙΑΦΑΝΕΙΑ επιβιώνει — αλλιώς κάθε λογότυπο θα έπαιρνε μαύρο φόντο', async () => {
+    // Ψημένη πλάκα φόντου θα ήταν απόφαση για ΕΝΑ θέμα και λάθος στο άλλο (ADR-777
+    // §8.57.3 α). Το WebP κρατά το κανάλι alpha, και αυτό το μετρά — δεν το υποθέτει.
+    const transparent = await sharp({
+      create: { width: 300, height: 300, channels: 4, background: { r: 200, g: 30, b: 30, alpha: 0 } },
+    })
+      .png()
+      .toBuffer();
+
+    const [mark] = await sanitiseImageVariants(transparent, SHOWCASE_SHELF.encoding);
+    expect((await sharp(mark.bytes).metadata()).hasAlpha).toBe(true);
   });
 
   it('🔑 ο προσανατολισμός EXIF εφαρμόζεται ΜΙΑ φορά και τον κληρονομούν ΟΛΑ', async () => {
@@ -214,7 +273,7 @@ describe('Κ4 — Η ΕΓΓΥΗΣΗ ΙΣΧΥΕΙ ΓΙΑ ΚΑΘΕ ΠΑΡΑΓΩΓ�
       .toBuffer();
     const tagged = await sharp(upright).withMetadata({ orientation: 6 }).jpeg().toBuffer();
 
-    const variants = await sanitiseImageVariants(tagged);
+    const variants = await sanitiseImageVariants(tagged, LISTING_SHELF.encoding);
 
     // Orientation 6 ⇒ 2000×1000 γίνεται 1000×2000: **κάθε** παράγωγο είναι όρθιο.
     for (const variant of variants) {

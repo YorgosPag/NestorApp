@@ -28,91 +28,15 @@ import {
   parsePublicShelfKey,
   type PublicShelfSource,
 } from '@/services/upload/utils/storage-path-public-shelf';
+import { LISTING_SHELF } from '@/services/upload/utils/public-shelf-kinds';
 
-// ---------------------------------------------------------------------------
-// Ψεύτικος κάδος — κρατά bytes σε Map, όπως ο αληθινός κρατά objects
-// ---------------------------------------------------------------------------
+// 🔑 **Ο ψεύτικος κάδος είναι ΚΟΙΝΟΣ** (N.18 / CHECK 3.28): η ίδια κλάση ζούσε αυτούσια
+//    και στο `showcase-mark-publication.test.ts`, με ΔΙΑΦΟΡΕΤΙΚΟ σύνολο μετρητών — δύο
+//    απαντήσεις στο «τι θυμάται ο κάδος;». Εδώ είναι η **ένωση**.
+import { FakeShelfBucket } from '@/services/upload/__fixtures__/fake-shelf-bucket';
 
-interface SavedObject {
-  readonly bytes: Buffer;
-  readonly contentType?: string;
-  readonly cacheControl?: string;
-  /**
-   * 🔴 **Ο ψεύτικος κάδος απέκτησε μεταδεδομένα, γιατί ο αληθινός ΤΑ ΧΡΗΣΙΜΟΠΟΙΕΙ**
-   * (ADR-841 §7 Α2.3): η επαναχρησιμοποίηση παραγώγων ρωτά *«ίδια πηγή; ίδια
-   * συνταγή;»* πάνω στα custom metadata. Ένας κάδος χωρίς αυτά θα έκανε τη σουίτα
-   * να μετρά **άλλη** διαδρομή από αυτήν που τρέχει στην παραγωγή.
-   */
-  readonly custom?: Record<string, string>;
-  /** Η **γενιά** — αλλάζει σε κάθε επανεγγραφή, όπως στο GCS. */
-  readonly generation: number;
-}
-
-let generationCounter = 0;
-
-class FakeBucket {
-  readonly objects = new Map<string, SavedObject>();
-  saveCalls = 0;
-  deleteCalls = 0;
-  downloadCalls = 0;
-
-  /** Γράφει ωμά, όπως ένα `gsutil cp` — χωρίς να περάσει από τον γραφέα μας. */
-  put(name: string, bytes: Buffer): void {
-    generationCounter += 1;
-    this.objects.set(name, { bytes, generation: generationCounter });
-  }
-
-  file(name: string) {
-    const bucket = this;
-    return {
-      name,
-      get metadata() {
-        const found = bucket.objects.get(name);
-        return { generation: String(found?.generation ?? ''), metadata: found?.custom };
-      },
-      getMetadata: async () => {
-        const found = bucket.objects.get(name);
-        if (!found) throw new Error(`no such object: ${name}`);
-        return [{ generation: String(found.generation) }];
-      },
-      save: async (
-        bytes: Buffer,
-        options?: {
-          contentType?: string;
-          metadata?: { cacheControl?: string; metadata?: Record<string, string> };
-        },
-      ) => {
-        this.saveCalls += 1;
-        generationCounter += 1;
-        this.objects.set(name, {
-          bytes,
-          contentType: options?.contentType,
-          cacheControl: options?.metadata?.cacheControl,
-          custom: options?.metadata?.metadata,
-          generation: generationCounter,
-        });
-      },
-      delete: async () => {
-        this.deleteCalls += 1;
-        this.objects.delete(name);
-      },
-      download: async (): Promise<[Buffer]> => {
-        this.downloadCalls += 1;
-        const found = this.objects.get(name);
-        if (!found) throw new Error(`no such object: ${name}`);
-        return [found.bytes];
-      },
-    };
-  }
-
-  async getFiles({ prefix }: { prefix: string }) {
-    const names = [...this.objects.keys()].filter((name) => name.startsWith(prefix));
-    return [names.map((name) => this.file(name))];
-  }
-}
-
-const shelf = new FakeBucket();
-const privateBucket = new FakeBucket();
+const shelf = new FakeShelfBucket();
+const privateBucket = new FakeShelfBucket();
 
 jest.mock('@/lib/firebaseAdmin', () => ({
   getAdminStorage: () => ({ bucket: () => shelf }),
@@ -141,15 +65,12 @@ async function givenPrivatePhoto(path: string, tint: number): Promise<PublicShel
 }
 
 function shelfKeys(): string[] {
-  return [...shelf.objects.keys()].sort();
+  return shelf.keys();
 }
 
 beforeEach(() => {
-  shelf.objects.clear();
-  privateBucket.objects.clear();
-  shelf.saveCalls = 0;
-  shelf.deleteCalls = 0;
-  privateBucket.downloadCalls = 0;
+  shelf.reset();
+  privateBucket.reset();
 });
 
 // ---------------------------------------------------------------------------
@@ -158,14 +79,14 @@ describe('Κ1 — δημοσίευση: το ράφι αποκτά ΑΚΡΙΒΩ�
   it('ανεβάζει καθαρισμένα bytes με αμετάβλητο κλειδί και σωστές επικεφαλίδες', async () => {
     const source = await givenPrivatePhoto('owner_properties/u1/ownp_77aa21bc/a.jpg', 200);
 
-    const report = await reconcilePublicShelf(LISTING, [source]);
+    const report = await reconcilePublicShelf(LISTING_SHELF, LISTING, [source]);
 
     expect(report.outcome).toBe('reconciled');
     expect(report.published).toHaveLength(1);
     expect(shelfKeys()).toHaveLength(1);
 
     const [key] = shelfKeys();
-    expect(parsePublicShelfKey(key)).toMatchObject({ listingId: LISTING, ext: 'webp' });
+    expect(parsePublicShelfKey(LISTING_SHELF, key)).toMatchObject({ subjectId: LISTING, ext: 'webp' });
 
     const saved = shelf.objects.get(key);
     expect(saved?.contentType).toBe('image/webp');
@@ -174,7 +95,7 @@ describe('Κ1 — δημοσίευση: το ράφι αποκτά ΑΚΡΙΒΩ�
 
   it('το URL δείχνει στο δημόσιο ράφι, όχι στο Firebase', async () => {
     const source = await givenPrivatePhoto('owner_properties/u1/ownp_77aa21bc/a.jpg', 200);
-    const report = await reconcilePublicShelf(LISTING, [source]);
+    const report = await reconcilePublicShelf(LISTING_SHELF, LISTING, [source]);
 
     expect(report.published[0]?.canonical.url).toContain('https://storage.googleapis.com/');
     expect(report.published[0]?.canonical.url).not.toContain('firebasestorage');
@@ -182,7 +103,7 @@ describe('Κ1 — δημοσίευση: το ράφι αποκτά ΑΚΡΙΒΩ�
 
   it('🔑 δημοσιεύει ΚΑΘΑΡΙΣΜΕΝΑ bytes — όχι το πρωτότυπο', async () => {
     const source = await givenPrivatePhoto('owner_properties/u1/ownp_77aa21bc/a.jpg', 200);
-    await reconcilePublicShelf(LISTING, [source]);
+    await reconcilePublicShelf(LISTING_SHELF, LISTING, [source]);
 
     const original = privateBucket.objects.get(source.privateStoragePath)!.bytes;
     const published = shelf.objects.get(shelfKeys()[0])!.bytes;
@@ -196,11 +117,11 @@ describe('Κ2 — ΙΔΕΜΠΟΤΕΝΤΙΚΟΤΗΤΑ: ίδια bytes ⇒ καμ�
   it('η δεύτερη κλήση δεν ξαναγράφει και δεν σβήνει τίποτα', async () => {
     const source = await givenPrivatePhoto('owner_properties/u1/ownp_77aa21bc/a.jpg', 200);
 
-    await reconcilePublicShelf(LISTING, [source]);
+    await reconcilePublicShelf(LISTING_SHELF, LISTING, [source]);
     const afterFirst = shelfKeys();
     const savesAfterFirst = shelf.saveCalls;
 
-    await reconcilePublicShelf(LISTING, [source]);
+    await reconcilePublicShelf(LISTING_SHELF, LISTING, [source]);
 
     expect(shelfKeys()).toEqual(afterFirst);
     expect(shelf.saveCalls).toBe(savesAfterFirst); // μηδέν επιπλέον εγγραφή
@@ -209,12 +130,12 @@ describe('Κ2 — ΙΔΕΜΠΟΤΕΝΤΙΚΟΤΗΤΑ: ίδια bytes ⇒ καμ�
 
   it('άλλα bytes ⇒ ΑΛΛΟ κλειδί, και το παλιό φεύγει', async () => {
     const first = await givenPrivatePhoto('owner_properties/u1/ownp_77aa21bc/a.jpg', 200);
-    await reconcilePublicShelf(LISTING, [first]);
+    await reconcilePublicShelf(LISTING_SHELF, LISTING, [first]);
     const oldKey = shelfKeys()[0];
 
     // ο κάτοχος αντικαθιστά τη φωτογραφία στο ΙΔΙΟ μονοπάτι
     await givenPrivatePhoto('owner_properties/u1/ownp_77aa21bc/a.jpg', 15);
-    await reconcilePublicShelf(LISTING, [first]);
+    await reconcilePublicShelf(LISTING_SHELF, LISTING, [first]);
 
     expect(shelfKeys()).toHaveLength(1);
     expect(shelfKeys()[0]).not.toBe(oldKey);
@@ -226,10 +147,10 @@ describe('Κ3 — ΑΠΟΣΥΡΣΗ: κενό σύνολο ⇒ το πρόθεμ�
   it('σβήνει ό,τι δημοσιεύτηκε όταν η αγγελία αποσύρεται', async () => {
     const a = await givenPrivatePhoto('owner_properties/u1/ownp_77aa21bc/a.jpg', 200);
     const b = await givenPrivatePhoto('owner_properties/u1/ownp_77aa21bc/b.jpg', 30);
-    await reconcilePublicShelf(LISTING, [a, b]);
+    await reconcilePublicShelf(LISTING_SHELF, LISTING, [a, b]);
     expect(shelfKeys()).toHaveLength(2);
 
-    const report = await reconcilePublicShelf(LISTING, []);
+    const report = await reconcilePublicShelf(LISTING_SHELF, LISTING, []);
 
     expect(report.outcome).toBe('reconciled');
     expect(report.removed).toBe(2);
@@ -238,13 +159,13 @@ describe('Κ3 — ΑΠΟΣΥΡΣΗ: κενό σύνολο ⇒ το πρόθεμ�
 
   it('η ΕΠΑΝΑΦΟΡΑ ξαναγεμίζει — το ράφι δεν κατέχει κατάσταση', async () => {
     const a = await givenPrivatePhoto('owner_properties/u1/ownp_77aa21bc/a.jpg', 200);
-    await reconcilePublicShelf(LISTING, [a]);
+    await reconcilePublicShelf(LISTING_SHELF, LISTING, [a]);
     const original = shelfKeys();
 
-    await reconcilePublicShelf(LISTING, []); // απόσυρση
+    await reconcilePublicShelf(LISTING_SHELF, LISTING, []); // απόσυρση
     expect(shelfKeys()).toEqual([]);
 
-    await reconcilePublicShelf(LISTING, [a]); // επαναφορά
+    await reconcilePublicShelf(LISTING_SHELF, LISTING, [a]); // επαναφορά
     expect(shelfKeys()).toEqual(original); // ΤΟ ΙΔΙΟ κλειδί — content-addressed
   });
 });
@@ -255,22 +176,22 @@ describe('Κ4 — Η ΑΠΟΜΟΝΩΣΗ: η μία αγγελία δεν αγγ�
     const one = await givenPrivatePhoto('owner_properties/u1/one.jpg', 200);
     const twelve = await givenPrivatePhoto('owner_properties/u1/twelve.jpg', 60);
 
-    await reconcilePublicShelf('ownp_1', [one]);
-    await reconcilePublicShelf('ownp_12', [twelve]);
+    await reconcilePublicShelf(LISTING_SHELF, 'ownp_1', [one]);
+    await reconcilePublicShelf(LISTING_SHELF, 'ownp_12', [twelve]);
     expect(shelfKeys()).toHaveLength(2);
 
-    await reconcilePublicShelf('ownp_1', []);
+    await reconcilePublicShelf(LISTING_SHELF, 'ownp_1', []);
 
     const survivors = shelfKeys();
     expect(survivors).toHaveLength(1);
-    expect(parsePublicShelfKey(survivors[0])?.listingId).toBe('ownp_12');
+    expect(parsePublicShelfKey(LISTING_SHELF, survivors[0])?.subjectId).toBe('ownp_12');
   });
 
   it('ΔΕΝ αγγίζει αντικείμενα που δεν αναγνωρίζει', async () => {
     // Ο ανεκτικός αναγνώστης: ό,τι δεν είναι δικής μας μορφής ΜΕΝΕΙ.
     shelf.put(`listings/${LISTING}/ksenο-arxeio.txt`, Buffer.from('x'));
 
-    await reconcilePublicShelf(LISTING, []);
+    await reconcilePublicShelf(LISTING_SHELF, LISTING, []);
 
     expect(shelf.objects.has(`listings/${LISTING}/ksenο-arxeio.txt`)).toBe(true);
   });
@@ -281,7 +202,7 @@ describe('Κ5 — ΑΝΘΕΚΤΙΚΟΤΗΤΑ: μια χαλασμένη πηγή
     const good = await givenPrivatePhoto('owner_properties/u1/good.jpg', 200);
     privateBucket.put('owner_properties/u1/broken.jpg', Buffer.from('MZ not an image'));
 
-    const report = await reconcilePublicShelf(LISTING, [
+    const report = await reconcilePublicShelf(LISTING_SHELF, LISTING, [
       good,
       { privateStoragePath: 'owner_properties/u1/broken.jpg', material: { kind: 'photo' } },
     ]);
@@ -292,7 +213,7 @@ describe('Κ5 — ΑΝΘΕΚΤΙΚΟΤΗΤΑ: μια χαλασμένη πηγή
   });
 
   it('πηγή που ΛΕΙΠΕΙ μετριέται, δεν πετά', async () => {
-    const report = await reconcilePublicShelf(LISTING, [
+    const report = await reconcilePublicShelf(LISTING_SHELF, LISTING, [
       { privateStoragePath: 'owner_properties/u1/does-not-exist.jpg', material: { kind: 'photo' } },
     ]);
 
@@ -304,7 +225,7 @@ describe('Κ5 — ΑΝΘΕΚΤΙΚΟΤΗΤΑ: μια χαλασμένη πηγή
   it('ταυτότητα μισθωτή ως listingId ⇒ ΑΠΟΤΥΓΧΑΝΕΙ, δεν δημοσιεύει', async () => {
     const source = await givenPrivatePhoto('owner_properties/u1/a.jpg', 200);
 
-    const report = await reconcilePublicShelf('comp_secret', [source]);
+    const report = await reconcilePublicShelf(LISTING_SHELF, 'comp_secret', [source]);
 
     expect(report.outcome).toBe('failed');
     expect(shelfKeys()).toEqual([]);
@@ -330,7 +251,7 @@ describe('Κ6 — ΤΑ ΠΑΡΑΓΩΓΑ: κάθε πλάτος έχει ΔΙΚΗ
   it('ένα μεγάλο πρωτότυπο δίνει ΤΡΙΑ διακριτά αντικείμενα, σε αύξον πλάτος', async () => {
     const source = await givenLargePrivatePhoto('owner_properties/u1/big.jpg');
 
-    const report = await reconcilePublicShelf(LISTING, [source]);
+    const report = await reconcilePublicShelf(LISTING_SHELF, LISTING, [source]);
 
     const [image] = report.published;
     expect(image.variants).toHaveLength(3);
@@ -347,7 +268,7 @@ describe('Κ6 — ΤΑ ΠΑΡΑΓΩΓΑ: κάθε πλάτος έχει ΔΙΚΗ
     // διεύθυνση περιεχομένου το κάνει δομικά (ADR-841 §7 Α2.2).
     const source = await givenPrivatePhoto('owner_properties/u1/small.jpg', 200);
 
-    const report = await reconcilePublicShelf(LISTING, [source]);
+    const report = await reconcilePublicShelf(LISTING_SHELF, LISTING, [source]);
 
     expect(report.published[0].variants).toHaveLength(1);
     expect(shelfKeys()).toHaveLength(1);
@@ -355,10 +276,10 @@ describe('Κ6 — ΤΑ ΠΑΡΑΓΩΓΑ: κάθε πλάτος έχει ΔΙΚΗ
 
   it('η ΑΠΟΣΥΡΣΗ παίρνει ΟΛΑ τα παράγωγα, όχι μόνο το κανονικό', async () => {
     const source = await givenLargePrivatePhoto('owner_properties/u1/big.jpg');
-    await reconcilePublicShelf(LISTING, [source]);
+    await reconcilePublicShelf(LISTING_SHELF, LISTING, [source]);
     expect(shelfKeys()).toHaveLength(3);
 
-    const report = await reconcilePublicShelf(LISTING, []);
+    const report = await reconcilePublicShelf(LISTING_SHELF, LISTING, []);
 
     expect(report.removed).toBe(3);
     expect(shelfKeys()).toEqual([]);
@@ -368,12 +289,12 @@ describe('Κ6 — ΤΑ ΠΑΡΑΓΩΓΑ: κάθε πλάτος έχει ΔΙΚΗ
 describe('Κ7 — ΕΠΑΝΑΧΡΗΣΙΜΟΠΟΙΗΣΗ: η δεύτερη αποθήκευση δεν ξανακατεβάζει τίποτα', () => {
   it('ίδια πηγή + ίδια συνταγή ⇒ ΜΗΔΕΝ κατεβάσματα, μηδέν εγγραφές', async () => {
     const source = await givenLargePrivatePhoto('owner_properties/u1/big.jpg');
-    await reconcilePublicShelf(LISTING, [source]);
+    await reconcilePublicShelf(LISTING_SHELF, LISTING, [source]);
 
     privateBucket.downloadCalls = 0;
     shelf.saveCalls = 0;
 
-    const report = await reconcilePublicShelf(LISTING, [source]);
+    const report = await reconcilePublicShelf(LISTING_SHELF, LISTING, [source]);
 
     // 🔴 **Αυτό είναι όλο το νόημα της Α2.3**: η συμφιλίωση τρέχει σε κάθε αποθήκευση
     //    του κατόχου, και χωρίς αυτό θα κατέβαζε + ξανακωδικοποιούσε κάθε φωτογραφία.
@@ -385,7 +306,7 @@ describe('Κ7 — ΕΠΑΝΑΧΡΗΣΙΜΟΠΟΙΗΣΗ: η δεύτερη απο
 
   it('🔴 ΑΝΤΙΚΑΤΑΣΤΑΘΗΚΕ το πρωτότυπο ⇒ ΝΕΑ γενιά ⇒ ξανακατεβαίνει και τα παλιά φεύγουν', async () => {
     const source = await givenLargePrivatePhoto('owner_properties/u1/big.jpg');
-    await reconcilePublicShelf(LISTING, [source]);
+    await reconcilePublicShelf(LISTING_SHELF, LISTING, [source]);
     const before = shelfKeys();
 
     // ο κάτοχος ανεβάζει ΑΛΛΗ φωτογραφία στο ΙΔΙΟ μονοπάτι
@@ -397,7 +318,7 @@ describe('Κ7 — ΕΠΑΝΑΧΡΗΣΙΜΟΠΟΙΗΣΗ: η δεύτερη απο
     privateBucket.put(source.privateStoragePath, replaced);
     privateBucket.downloadCalls = 0;
 
-    await reconcilePublicShelf(LISTING, [source]);
+    await reconcilePublicShelf(LISTING_SHELF, LISTING, [source]);
 
     expect(privateBucket.downloadCalls).toBe(1);
     expect(shelfKeys()).toHaveLength(3);
@@ -408,7 +329,7 @@ describe('Κ7 — ΕΠΑΝΑΧΡΗΣΙΜΟΠΟΙΗΣΗ: η δεύτερη απο
     // 🔴 Ο `legacyObjectReader` δίνει `objects.get`, που επιστρέφει **και τα
     //    μεταδεδομένα**: ωμό μονοπάτι εκεί μέσα = διαρροή του `userId` σε ανώνυμο.
     const source = await givenLargePrivatePhoto('owner_properties/u-secret-42/big.jpg');
-    await reconcilePublicShelf(LISTING, [source]);
+    await reconcilePublicShelf(LISTING_SHELF, LISTING, [source]);
 
     const serialised = JSON.stringify([...shelf.objects.values()].map((o) => o.custom));
     expect(serialised).not.toContain('u-secret-42');
