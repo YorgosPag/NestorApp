@@ -71,6 +71,7 @@ import {
   History,
   DatabaseBackup,
   Network,
+  Store,
 } from "lucide-react";
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -128,6 +129,12 @@ const NAVIGATION_LABELS = {
 
   // 🏢 ENTERPRISE: Company Settings (ADR-326)
   company_settings: 'admin.companySettings',
+
+  // 🏆 ADR-841 §7 Α21.11 — η βιτρίνα του επαγγελματία. ⚠️ `sidebar.*` και ΟΧΙ `admin.*`,
+  //    και δεν είναι θέμα φακέλου: το `admin.*` ονομάζει ό,τι διαχειρίζεται **κάποιος
+  //    άλλος** για λογαριασμό του οργανισμού. Η βιτρίνα είναι **δική του** — δες τον
+  //    φρουρό δικαιωμάτων παρακάτω, που για τον ίδιο λόγο λείπει.
+  agency_showcase: 'sidebar.agencyShowcase',
 
   // Construction Portfolio (ADR-266 Phase D.5)
   construction_portfolio: 'pages.construction_portfolio',
@@ -731,6 +738,32 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
                   priority: 'low'
                 }
               },
+              // ════════════════════════════════════════════════════════════════
+              // 🏆 ADR-841 §7 Α21.11 — Η ΒΙΤΡΙΝΑ, ΚΑΙ Η ΑΠΟΥΣΙΑ ΤΟΥ `permissions`
+              // ════════════════════════════════════════════════════════════════
+              //
+              // 🔴 **ΤΟ ΚΕΝΟ `permissions` ΕΙΝΑΙ Η ΑΠΟΦΑΣΗ, ΟΧΙ ΠΑΡΑΛΕΙΨΗ.** Οι γείτονές
+              //    του (`/settings/company`, `/admin/*`) ζητούν `admin_access` σωστά:
+              //    ρυθμίζουν τον **οργανισμό**. Η βιτρίνα είναι το **πρόσωπο του ίδιου
+              //    του επαγγελματία** προς τον κόσμο.
+              //
+              // 🔑 **Ο Κώστας ο υδραυλικός δουλεύει μόνος και ΔΕΝ είναι «διαχειριστής»
+              //    πουθενά.** Ένα `admin_access` εδώ θα σήμαινε ότι δεν βλέπει ποτέ το
+              //    κουμπί και δεν βρίσκει ποτέ τη βιτρίνα του — δηλαδή **ποινή για τον
+              //    μη-οργανωμένο**, ακριβώς αυτό που το **Α9.3** απαγόρευσε ρητά για το
+              //    μητρώο. Η ίδια οικογένεια λάθους με τη «σχολή Α» της Α21.9.2.
+              //
+              // ⚠️ **ΚΑΙ ΤΟ ΜΟΤΙΒΟ ΕΙΝΑΙ ΕΠΑΛΗΘΕΥΜΕΝΟ ΕΞΩ** (έρευνα 2026-09-08): στη
+              //    **Zillow** το προφίλ του μεσίτη ζει στο **«My Zillow»** — το προσωπικό
+              //    μενού — και **ποτέ** πίσω από ρυθμίσεις οργανισμού.
+              {
+                icon: Store,
+                href: '/settings/agency-profile',
+                smartConfig: {
+                  priority: 'medium',
+                  analyticsKey: 'nav_agency_showcase'
+                }
+              },
               {
                 icon: Network,
                 href: '/settings/company',
@@ -841,6 +874,7 @@ function getLabelKeyForPath(path: string): string {
     'settings': 'settings',
     'settings/shortcuts': 'shortcuts',
     'settings/company': 'company_settings',
+    'settings/agency-profile': 'agency_showcase',
 
     // Admin paths
     'admin/ai-inbox': 'ai_inbox',

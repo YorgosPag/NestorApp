@@ -288,7 +288,8 @@
     "availableParking": "Διαθέσιμες Θέσεις Στάθμευσης",
     "soldProperties": "Πωληθέντα",
     "financialIntelligence": "Χρηματοοικονομική Ανάλυση",
-    "hierarchyLabel": "Ιεραρχία"
+    "hierarchyLabel": "Ιεραρχία",
+    "agencyShowcase": "Η βιτρίνα μου"
   },
   "reports": {
     "overview": "Διοικητική Σύνοψη",

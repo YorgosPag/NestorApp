@@ -288,7 +288,8 @@
     "availableParking": "Available Parking",
     "soldProperties": "Sold Properties",
     "financialIntelligence": "Financial Intelligence",
-    "hierarchyLabel": "Hierarchy"
+    "hierarchyLabel": "Hierarchy",
+    "agencyShowcase": "My showcase"
   },
   "reports": {
     "overview": "Executive Summary",
