@@ -766,6 +766,7 @@
         "needsShowcase": "Publish your storefront first. Then you can add a mark.",
         "tooSmall": "The image is {shortest} pixels on its short side. At least {required} are needed.",
         "blurryPage": "{shortest} pixels: sharp on the directory card, blurry on your page on a high-density screen.",
+        "blurryDense": "{shortest} pixels: sharp on the card and on your page. From {ideal} upwards it stays sharp on the densest screens too.",
         "blurryEverywhere": "{shortest} pixels: it will look blurry. An image of {ideal} or more looks sharp everywhere.",
         "unreadable": "We could not read that file as an image. Try JPG, PNG or WebP.",
         "uploadFailed": "The image did not upload. Try the same file again.",

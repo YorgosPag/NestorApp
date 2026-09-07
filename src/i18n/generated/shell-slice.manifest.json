@@ -14,7 +14,7 @@
     "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "f727ff8f3fa190d5f9c785e785404aee2104a7ec2a032a6e9f00ba177f66ff4e",
     "src/i18n/generated/routes/o__workspace__listings__mandates__ownerPropertyId.el.json": "53b8a69df480afaffc315b57eec3b28be9037d68e77d1b96d7ee1b71b403c575",
     "src/i18n/generated/routes/o__workspace__listings__mandates__requests.el.json": "3b685808152db56cfc0ce4d50912bcd6166e986921ebb92e601cbef9936c0a0b",
-    "src/i18n/generated/routes/o__workspace__settings__agency-profile.el.json": "3d26c4df7afd88ee1fe1877e14beaca6347101e76ef7cfa0783216c595eed3b8",
+    "src/i18n/generated/routes/o__workspace__settings__agency-profile.el.json": "754811f376f1851277bab530bbd90a6b81ede9fa62facef39655bb1e8504312a",
     "src/i18n/generated/routes/o__workspace__settings__brokerage.el.json": "6f86c3b2066bbd272fac89cddb49471e3bb123f002bd7d1709b6d9d4ab4efe69",
     "src/i18n/generated/routes/offers.el.json": "d33193ccad2e87854ef1f4cd993b27c6d0818d32a425994f7b6dba2258ab95fc",
     "src/i18n/generated/routes/offers__mandate__new.el.json": "34f040b9e35404412ab9dfe647fb615b02f8a061336a7abc8b74ab4ac6e8ea50",
@@ -67,7 +67,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "36fc11d3ef4ea51f04b5a17ddd3d05fee0b1182e0f2c7f1b83cd025a5d012a61",
+  "inputsSha256": "6128369ac29fd55614c9c0a0362e7711e844d9bc6ea3d6cd40bd6e1bb058c176",
   "languages": [
     "el"
   ],
@@ -201,7 +201,7 @@
     "src/components/mandate/MandateRequestOutcomeNotice.tsx": "899455eda7ad732bf45907b7643dbb74c2b58eb8485d286d078b3f2cd1b872ad",
     "src/components/mandate/MandateUnavailableNotice.tsx": "e371e65810939937257c57eeffd1f271901ec338356571f3148fc6137e595fbf",
     "src/components/mandate/ShowcaseCredentialField.tsx": "3d875a36891619a42b1edfd9c15a46421d9d7233d094bb24a41b805642d1228e",
-    "src/components/mandate/ShowcaseMarkField.tsx": "6f53a559d4e73a6d93d19ca3dba71d96c531ab3a525b31e91421207778b4da5c",
+    "src/components/mandate/ShowcaseMarkField.tsx": "2def3791b15294a1ae7a439c106bf6ad2c503e70098bf6a583d0dc2cd8d299d8",
     "src/components/mandate/ShowcaseMarkPreview.tsx": "a1832d7dbbbcd6dcc62af26e1f76416aeca141c9482a46a1f3bb296c7197feb1",
     "src/components/mandate/catalog/MandateCatalogRow.tsx": "2a53f0deebe217433b17498e1cc1e325cf0b9985365aebd16f961ddd8ec16fc9",
     "src/components/mandate/catalog/mandate-catalog-labels.ts": "0c0767e8a4cbde6b0173d69bcb6edb9bc0f131f84e950c85ec5606536982d09d",
@@ -2032,6 +2032,7 @@
             "mandate.showcase.chapterPlaceholder",
             "mandate.showcase.failed",
             "mandate.showcase.lead",
+            "mandate.showcase.mark.blurryDense",
             "mandate.showcase.mark.blurryEverywhere",
             "mandate.showcase.mark.blurryPage",
             "mandate.showcase.mark.choose",
@@ -4537,7 +4538,7 @@
     "matchedKeys": 167,
     "routeBoundaries": 0,
     "shellFiles": 581,
-    "sliceBytes": 390925
+    "sliceBytes": 391167
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

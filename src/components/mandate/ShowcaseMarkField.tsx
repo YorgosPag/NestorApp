@@ -59,6 +59,7 @@ import {
 } from '@/components/mandate/agency-showcase-labels';
 import { ShowcaseMarkPreview } from '@/components/mandate/ShowcaseMarkPreview';
 import { useShowcaseMark, type ShowcaseMarkState } from '@/hooks/mandate/useShowcaseMark';
+import type { ShowcaseMarkReach } from '@/lib/agency/showcase-mark-input';
 import { maskCrops } from '@/components/mandate/showcase-mark-frame';
 import { MARK_IDEAL_EDGE } from '@/lib/agency/showcase-mark-input';
 import {
@@ -410,12 +411,7 @@ function MarkStatus({
   if (state.state === 'warned') {
     return (
       <p aria-live="polite" className="m-0 text-sm text-muted-foreground">
-        {state.reach.coversCard
-          ? t(SHOWCASE_MARK_KEYS.blurryPage, { shortest: state.reach.shortest })
-          : t(SHOWCASE_MARK_KEYS.blurryEverywhere, {
-              shortest: state.reach.shortest,
-              ideal: MARK_IDEAL_EDGE,
-            })}
+        <BlurryReach reach={state.reach} />
       </p>
     );
   }
@@ -425,6 +421,31 @@ function MarkStatus({
       <MarkFailure state={state} tooSmall={tooSmall} />
     </p>
   );
+}
+
+/**
+ * **ΠΟΥ ΑΚΡΙΒΩΣ ΘΑ ΦΑΝΕΙ ΘΟΛΗ** — τρεις ζώνες, γιατί οι επιφάνειες είναι δύο.
+ *
+ * 🔴 **Η ΠΡΩΤΗ ΓΡΑΦΗ ΕΙΧΕ ΔΥΟ ΚΛΑΔΟΥΣ ΚΑΙ ΕΛΕΓΕ ΨΕΜΑΤΑ**, μετρημένο: με
+ * `coversCard ? blurryPage : blurryEverywhere`, κάθε εικόνα **128-255px** άκουγε *«θολό
+ * στη σελίδα»* ενώ η σελίδα **καλύπτεται**. Ίδιο σχήμα με το Ο-18: ισχυρισμός
+ * αληθοφανής, λανθασμένος, σε πρόταση που κανείς δεν διασταυρώνει.
+ *
+ * 🔑 **Ο έλεγχος διαβάζει τα ΔΥΟ κατηγορήματα, ποτέ το ένα**: το `reach` απαντά χωριστά
+ * *«καλύπτεται η κάρτα;»* και *«καλύπτεται η σελίδα;»* ακριβώς για να μη χρειάζεται
+ * κανείς να μαντέψει το δεύτερο από το πρώτο.
+ */
+function BlurryReach({ reach }: { readonly reach: ShowcaseMarkReach }): React.JSX.Element {
+  const { t } = useTranslation([SHOWCASE_NS]);
+
+  if (!reach.coversCard) {
+    return <>{t(SHOWCASE_MARK_KEYS.blurryEverywhere, { shortest: reach.shortest, ideal: MARK_IDEAL_EDGE })}</>;
+  }
+  if (!reach.coversPage) {
+    return <>{t(SHOWCASE_MARK_KEYS.blurryPage, { shortest: reach.shortest })}</>;
+  }
+  // ⚠️ **Καλύπτονται και οι δύο** — η προειδοποίηση αφορά μόνο **πολύ** πυκνές οθόνες.
+  return <>{t(SHOWCASE_MARK_KEYS.blurryDense, { shortest: reach.shortest, ideal: MARK_IDEAL_EDGE })}</>;
 }
 
 /**
