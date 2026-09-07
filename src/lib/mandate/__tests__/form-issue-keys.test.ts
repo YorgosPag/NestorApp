@@ -52,7 +52,7 @@ import { DEMAND_FORM_BLOCKERS } from '@/lib/demand/demand-form-values';
 import { DEMAND_INVARIANTS } from '@/types/property-demand';
 // ⚠️ Το κλειστό σύνολο εισάγεται από τη **ΜΙΑ** πηγή του (SSoT): μια αντιγραφή της
 //    λίστας εδώ θα έμενε πράσινη ενώ ο κώδικας θα είχε αποκτήσει τέταρτο λόγο.
-import { AGENCY_PROFILE_REJECTIONS } from '@/services/mandate/agency-profile.service';
+import { AGENCY_PROFILE_REJECTIONS } from '@/services/mandate/agency-profile-verdict';
 
 /**
  * 🔴 **ΤΑ ΚΛΕΙΔΙΑ ΕΡΧΟΝΤΑΙ ΑΠΟ ΤΟΝ ΙΔΙΟ ΤΟΝ ΠΙΝΑΚΑ (2026-08-29)** — όχι από

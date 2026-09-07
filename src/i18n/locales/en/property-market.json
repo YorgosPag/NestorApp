@@ -726,7 +726,11 @@
         "agency-profile-name-missing": "Write the business name people will see.",
         "agency-profile-occupation-missing": "Declare at least one occupation — without it the showcase says nothing.",
         "agency-profile-registration-missing": "This occupation requires a registry number to appear in the directory.",
-        "agency-profile-chapter-missing": "Also state the chapter that issued the number — a bare number cannot be verified."
+        "agency-profile-chapter-missing": "Also state the chapter that issued the number — a bare number cannot be verified.",
+        "agency-profile-mark-not-owned": "The file you selected does not belong to your workspace. Upload it again from this page.",
+        "agency-profile-mark-unknown-kind": "State whether the mark is a logo or a portrait photograph.",
+        "agency-profile-mark-without-showcase": "Publish your storefront first. The mark is added afterwards.",
+        "agency-profile-mark-unpublishable": "The image was not published. Try again — if it persists, choose another file."
       },
       "occupationLabel": "Occupation",
       "occupationHint": "Pick from the European ESCO classification — that is how people find you by the right criteria.",
@@ -744,7 +748,29 @@
       "registryUnexamined": "We have not examined whether a registry exists for this occupation.",
       "occupationUnknown": "This occupation was not found in the classification. Please pick again from the list.",
       "temporarilyUnavailable": "We could not complete this right now. Try again — do not change anything.",
-      "placeNotFound": "The place you declared was not found. Please pick it again on the map."
+      "placeNotFound": "The place you declared was not found. Please pick it again on the map.",
+      "mark": {
+        "label": "Your mark",
+        "hint": "One image, your choice. Without it your initials appear on a coloured tile — and that is not a gap.",
+        "kindLegend": "What does the image show?",
+        "kindLogo": "Logo",
+        "kindLogoHint": "Shown in full, in a square frame.",
+        "kindPortrait": "Photo of a person",
+        "kindPortraitHint": "Shown in a circle — the corners of the image will not appear.",
+        "choose": "Choose an image",
+        "replace": "Change image",
+        "remove": "Remove",
+        "uploading": "Uploading the image…",
+        "publishing": "Publishing…",
+        "removing": "Removing…",
+        "needsShowcase": "Publish your storefront first. Then you can add a mark.",
+        "tooSmall": "The image is {shortest} pixels on its short side. At least {required} are needed.",
+        "blurryPage": "{shortest} pixels: sharp on the directory card, blurry on your page on a high-density screen.",
+        "blurryEverywhere": "{shortest} pixels: it will look blurry. An image of {ideal} or more looks sharp everywhere.",
+        "unreadable": "We could not read that file as an image. Try JPG, PNG or WebP.",
+        "uploadFailed": "The image did not upload. Try the same file again.",
+        "cropNote": "The corners will not show: the circle reveals about 79% of the image. Keep the face centred."
+      }
     },
     "directory": {
       "title": "Professionals",
@@ -786,6 +812,10 @@
         "registryAbsentYetDeclared": "We know of no register for this showcase's profession. The number was stated by the professional.",
         "classificationUnreadable": "We could not read the classification of this profession."
       }
+    },
+    "mark": {
+      "logoAlt": "Logo of the firm",
+      "portraitAlt": "Photograph of the professional"
     },
     "profile": {
       "loading": "Loading…",
