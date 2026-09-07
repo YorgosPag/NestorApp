@@ -67,6 +67,8 @@ import { usePublicPlace } from '@/services/realtime/hooks/usePublicPlace';
 import type { PublicShowcase } from '@/types/agency-profile';
 import { FirstContactAction } from '@/components/contact/FirstContactAction';
 import { acceptsMandate } from '@/lib/professional/showcase-acts';
+import { lettermarkOf } from '@/lib/agency/showcase-mark';
+import { ShowcaseMarkView } from './ShowcaseMarkView';
 
 import { AGENCY_PUBLIC_NS, PROFILE_KEYS } from './agency-directory-labels';
 import { AGENCY_DIRECTORY_ROUTE } from './agency-directory-route';
@@ -313,11 +315,21 @@ export function AgencyProfileContent({
 
   return (
     <ShellSurface as="main" measure="prose" className="gap-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="m-0 text-2xl font-semibold text-foreground">{profile.displayName}</h1>
-        <p className="m-0 text-sm text-muted-foreground">
-          {t(PROFILE_KEYS.publishedAt, { date: formatLongDate(profile.publishedAt) })}
-        </p>
+      {/*
+        🔴 ADR-841 Α21 — ΤΟ **ΙΔΙΟ** ΣΗΜΑ ΜΕ ΤΗΝ ΚΑΡΤΑ, ΣΕ ΑΛΛΟ ΜΕΓΕΘΟΣ.
+        Ίδια συνάρτηση (`lettermarkOf`), ίδιο component — άρα ο ίδιος επαγγελματίας
+        έχει **το ίδιο χρώμα** στη ρίζα, στο `/pro` και εδώ. Αν η σελίδα έφτιαχνε
+        δικό της σήμα, ο άνθρωπος που πάτησε την κάρτα θα προσγειωνόταν σε **άλλη
+        ταυτότητα** — και η αναγνωρισιμότητα είναι όλη η δουλειά του σήματος.
+      */}
+      <header className="flex items-center gap-4">
+        <ShowcaseMarkView mark={lettermarkOf(profile.companyId, profile.displayName)} size="page" />
+        <div className="flex min-w-0 flex-col gap-1">
+          <h1 className="m-0 text-2xl font-semibold text-foreground">{profile.displayName}</h1>
+          <p className="m-0 text-sm text-muted-foreground">
+            {t(PROFILE_KEYS.publishedAt, { date: formatLongDate(profile.publishedAt) })}
+          </p>
+        </div>
       </header>
 
       <dl className="m-0 flex flex-col gap-4">

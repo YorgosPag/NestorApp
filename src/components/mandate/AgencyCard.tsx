@@ -52,6 +52,8 @@ import type { PublicShowcase } from '@/types/agency-profile';
 import { CredibilityStatement } from './CredibilityStatement';
 import { AGENCY_PUBLIC_NS, DIRECTORY_KEYS } from './agency-directory-labels';
 import { agencyProfileRoute } from './agency-directory-route';
+import { lettermarkOf } from '@/lib/agency/showcase-mark';
+import { ShowcaseMarkView } from './ShowcaseMarkView';
 
 interface AgencyCardProps {
   readonly profile: PublicShowcase;
@@ -77,34 +79,49 @@ export function AgencyCard({ profile, headingLevel = 2 }: AgencyCardProps): Reac
 
   return (
     <li className="rounded-lg border border-border bg-card p-4">
-      <article className="flex flex-col gap-1">
-        <Heading className="m-0 text-lg font-semibold text-foreground">
-          {profile.displayName}
-        </Heading>
-        {/*
-          ⚠️ Η ΑΠΟΔΕΙΞΗ δεν είναι διακόσμηση: είναι **αυτό που κάνει τον κατάλογο
-          χρήσιμο αντί για επικίνδυνο** (§9.9 β). Γι' αυτό είναι στην **κάρτα**,
-          όχι κρυμμένη μέσα στη σελίδα προφίλ.
+      {/*
+        🔴 ADR-841 Α21 — Η ΚΑΡΤΑ ΕΓΙΝΕ ΓΡΑΜΜΗ, ΚΑΙ ΤΟ ΠΕΡΙΕΧΟΜΕΝΟ ΣΤΗΛΗ.
+        Το `flex-col gap-1` μετακόμισε **αυτούσιο** στο εσωτερικό `<div>`· η
+        `<article>` κρατά πλέον σήμα + περιεχόμενο δίπλα-δίπλα.
 
-          🔴 ADR-841 Φ6-Β — ΗΤΑΝ ΜΙΑ ΓΡΑΜΜΗ «ΓΕΜΗ {number}», ΚΑΙ ΔΕΝ ΑΡΚΕΙ ΠΙΑ.
-          Με **πέντε** επαγγέλματα στον ίδιο πίνακα, ο σκέτος αριθμός δεν λέει
-          **ποιος τον εξέδωσε** *(Α9.1)*, και η απουσία του δεν λέει **γιατί
-          λείπει** — ο ελαιοχρωματιστής δεν έχει πού να γραφτεί, ο δικηγόρος που
-          σιωπά έχει. Δύο γραμμές, δύο ερωτήματα, ποτέ μία πρόταση.
+        ⚠️ **Το `min-w-0` δεν είναι διακόσμηση**: στοιχείο flex έχει
+        `min-width:auto`, δηλαδή **αρνείται να συρρικνωθεί κάτω από το περιεχόμενό
+        του**. Χωρίς αυτό, μια μεγάλη επωνυμία **σπρώχνει το σήμα έξω** από το
+        πλαίσιο — και το `globals.css` επιβάλλει ήδη `white-space: nowrap` σε κάθε
+        επικεφαλίδα κάρτας (ADR-777 §8.59, `bc3451be`), οπότε δεν υπάρχει αναδίπλωση
+        να τη σώσει.
+      */}
+      <article className="flex items-start gap-3">
+        <ShowcaseMarkView mark={lettermarkOf(profile.companyId, profile.displayName)} size="card" />
+        <div className="flex min-w-0 flex-col gap-1">
+          <Heading className="m-0 text-lg font-semibold text-foreground">
+            {profile.displayName}
+          </Heading>
+          {/*
+            ⚠️ Η ΑΠΟΔΕΙΞΗ δεν είναι διακόσμηση: είναι **αυτό που κάνει τον κατάλογο
+            χρήσιμο αντί για επικίνδυνο** (§9.9 β). Γι' αυτό είναι στην **κάρτα**,
+            όχι κρυμμένη μέσα στη σελίδα προφίλ.
 
-          ⚠️ **ΚΑΘΕ credential αποδίδεται**: το μικτό γραφείο *(μεσιτική άδεια ΚΑΙ
-          τεχνική ιδιότητα)* δείχνει **και τα δύο**. Ένα `credentials[0]` θα
-          έκρυβε τη μισή του ταυτότητα.
-        */}
-        {profile.credentials.map((credential) => (
-          <CredibilityStatement key={credential.occupation.escoUri} credential={credential} />
-        ))}
-        <Link
-          href={agencyProfileRoute(profile.alias)}
-          className="mt-2 self-start text-sm font-medium text-foreground underline underline-offset-4"
-        >
-          {t(DIRECTORY_KEYS.open)}
-        </Link>
+            🔴 ADR-841 Φ6-Β — ΗΤΑΝ ΜΙΑ ΓΡΑΜΜΗ «ΓΕΜΗ {number}», ΚΑΙ ΔΕΝ ΑΡΚΕΙ ΠΙΑ.
+            Με **πέντε** επαγγέλματα στον ίδιο πίνακα, ο σκέτος αριθμός δεν λέει
+            **ποιος τον εξέδωσε** *(Α9.1)*, και η απουσία του δεν λέει **γιατί
+            λείπει** — ο ελαιοχρωματιστής δεν έχει πού να γραφτεί, ο δικηγόρος που
+            σιωπά έχει. Δύο γραμμές, δύο ερωτήματα, ποτέ μία πρόταση.
+
+            ⚠️ **ΚΑΘΕ credential αποδίδεται**: το μικτό γραφείο *(μεσιτική άδεια ΚΑΙ
+            τεχνική ιδιότητα)* δείχνει **και τα δύο**. Ένα `credentials[0]` θα
+            έκρυβε τη μισή του ταυτότητα.
+          */}
+          {profile.credentials.map((credential) => (
+            <CredibilityStatement key={credential.occupation.escoUri} credential={credential} />
+          ))}
+          <Link
+            href={agencyProfileRoute(profile.alias)}
+            className="mt-2 self-start text-sm font-medium text-foreground underline underline-offset-4"
+          >
+            {t(DIRECTORY_KEYS.open)}
+          </Link>
+        </div>
       </article>
     </li>
   );

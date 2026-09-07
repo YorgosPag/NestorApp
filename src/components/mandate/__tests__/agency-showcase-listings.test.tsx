@@ -91,6 +91,7 @@ function listingOf(id: string, title: string): PublicListing {
     id,
     title,
     projectedAt: '2026-09-01T09:28:43.769Z',
+    listedAt: { kind: 'unknown', reason: 'predates-record' },
     commercialStatus: 'for-sale',
     commercial: { askingPrice: 200000, finalPrice: null, rentPrice: null, nightlyRate: null },
     stay: null,
