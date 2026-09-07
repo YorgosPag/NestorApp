@@ -145,19 +145,37 @@ describe('Β — το `withinScope`: γεωγραφία απαντημένη, κ
  * `results-layout-authority.test.ts`: ένα αρχείο που **τεκμηριώνει** τη βλάβη μέσα σε
  * σχόλιο θα γινόταν το ίδιο η βλάβη.
  */
-const SCREEN = fs
-  .readFileSync(path.join(__dirname, '..', 'SearchResultsContent.tsx'), 'utf8')
-  .replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '');
+const stripNarration = (source: string): string =>
+  source.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '');
+
+const SCREEN = stripNarration(
+  fs.readFileSync(path.join(__dirname, '..', 'SearchResultsContent.tsx'), 'utf8')
+);
+
+/**
+ * 🔴 **Η ΑΡΙΘΜΗΤΙΚΗ ΜΕΤΑΚΟΜΙΣΕ, ΚΑΙ Η ΑΓΚΥΡΑ ΤΗΝ ΑΚΟΛΟΥΘΕΙ** *(ADR-777 §8.65)*: το
+ * `useResultsLedgers` κρατά πλέον τις τέσσερις λογιστικές, η οθόνη κρατά τη διάταξη.
+ *
+ * ⚠️ **Ρωτιούνται και τα ΔΥΟ αρχεία, όχι μόνο το νέο.** Μια άγκυρα που κοιτάζει μόνο το
+ * hook θα έμενε πράσινη τη μέρα που κάποιος ξαναγράψει τη λογιστική **μέσα στην οθόνη** —
+ * δηλαδή θα φύλαγε **το αρχείο**, όχι **τον κανόνα**.
+ */
+const LEDGERS = stripNarration(
+  fs.readFileSync(
+    path.join(__dirname, '..', '..', '..', 'hooks', 'listings', 'useResultsLedgers.ts'),
+    'utf8'
+  )
+);
 
 describe('Γ — η καλωδίωση της οθόνης', () => {
   it('🔴 η λογιστική κριτηρίων μετρά το `withinScope`, ΠΟΤΕ το `visible`', () => {
-    expect(SCREEN).toMatch(/computeListingCriteriaLedger\(\s*withinScope\s*,/);
-    expect(SCREEN).not.toMatch(/computeListingCriteriaLedger\(\s*visible\s*,/);
+    expect(LEDGERS).toMatch(/computeListingCriteriaLedger\(\s*withinScope\s*,/);
+    expect(`${LEDGERS}${SCREEN}`).not.toMatch(/computeListingCriteriaLedger\(\s*visible\s*,/);
   });
 
   it('το `withinScope` παράγεται από τον ΙΔΙΟ φιλτραριστή με κενά κριτήρια', () => {
     // Δεύτερος γεωγραφικός έλεγχος εδώ θα ήταν δεύτερη αλήθεια για «είμαι στην ακτίνα;».
-    expect(SCREEN).toMatch(
+    expect(LEDGERS).toMatch(
       /withinScope[\s\S]{0,200}applyListingFilters\(listings,\s*\{\s*\.\.\.filters,\s*criteria:\s*EMPTY_LISTING_CRITERIA\s*\}\)/
     );
   });

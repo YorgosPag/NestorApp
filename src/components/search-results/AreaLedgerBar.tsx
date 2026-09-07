@@ -33,6 +33,7 @@
 import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
+import type { ListingReadCoverage } from '@/lib/listings/listing-geo-query';
 import {
   areaLedgerBalances,
   areaLedgerMatchesVisible,
@@ -54,10 +55,30 @@ interface AreaLedgerBarProps {
    * όντως έδωσε στην οθόνη.
    */
   readonly visibleCount: number;
+  /**
+   * **ΤΙ ΚΟΙΤΑΞΕ Η ΑΝΑΓΝΩΣΗ** — και γι' αυτό, τι επιτρέπεται να ισχυριστεί η γραμμή.
+   *
+   * 🔴 **Χωρίς αυτό, το §8.65 θα ΑΚΥΡΩΝΕ σιωπηλά το §8.63.** Από τη στιγμή που το
+   * ερώτημα κουβαλά την περιοχή, ο κατάλογος περιέχει μόνο ό,τι ζει στο ορθογώνιο
+   * ανάγνωσης — άρα το `outside` μετρά **τον δακτύλιο των 10 χλμ**, όχι τον κόσμο.
+   * Ένας τέτοιος αριθμός είναι **μικρός, εύλογος και ψεύτικος**: δεν σπάει καμία
+   * ισορροπία, δεν κοκκινίζει καμία άγκυρα, και λέει ψέματα σε κάθε αναζήτηση.
+   *
+   * ⇒ Όταν η ανάγνωση **κόπηκε**, η γραμμή λέει *«8 εδώ · 3 ίσως»* και **ομολογεί**
+   * ότι δεν κοίταξε παραπέρα. Δεν αφαιρείται πληροφορία: αντικαθίσταται ψευδής με
+   * αληθινή — το ίδιο ιδίωμα με το `indeterminate` του `public-place-lookup`.
+   */
+  readonly coverage: ListingReadCoverage;
   readonly className?: string;
 }
 
-export function AreaLedgerBar({ ledger, asked, visibleCount, className }: AreaLedgerBarProps) {
+export function AreaLedgerBar({
+  ledger,
+  asked,
+  visibleCount,
+  coverage,
+  className,
+}: AreaLedgerBarProps) {
   const { t } = useTranslation(['search-results']);
 
   // 🔑 **ΔΥΟ ΑΝΕΞΑΡΤΗΤΕΣ ΕΡΩΤΗΣΕΙΣ, ΠΟΤΕ ΜΙΑ ΜΕ «Ή» ΣΤΗΝ ΠΗΓΗ** — ίδιο ιδίωμα με το
@@ -76,13 +97,40 @@ export function AreaLedgerBar({ ledger, asked, visibleCount, className }: AreaLe
         className
       )}
     >
+      {/*
+        🔑 **ΔΥΟ ΔΙΑΤΥΠΩΣΕΙΣ, ΓΙΑΤΙ ΞΕΡΟΥΜΕ ΔΥΟ ΔΙΑΦΟΡΕΤΙΚΑ ΠΡΑΓΜΑΤΑ** — ποτέ μία με
+        `outside: 0`. Όταν η ανάγνωση κόπηκε, το «εκτός περιοχής» δεν είναι μηδέν:
+        είναι **άγνωστο**, και οι δύο λέξεις δεν επιτρέπεται να μοιράζονται σύμβολο.
+      */}
       <span>
-        {t('search-results:area.summary', {
-          inside: ledger.inside,
-          maybe: ledger.maybe,
-          outside: ledger.outside,
-        })}
+        {coverage.kind === 'complete'
+          ? t('search-results:area.summary', {
+              inside: ledger.inside,
+              maybe: ledger.maybe,
+              outside: ledger.outside,
+            })
+          : t('search-results:area.summaryCapped', {
+              inside: ledger.inside,
+              maybe: ledger.maybe,
+            })}
       </span>
+
+      {/*
+        ⚠️ **Ο συνολικός αριθμός λέγεται ΜΟΝΟ όταν είναι ακριβής.** Για δηλωμένο
+        **κύκλο** η καταμέτρηση τρέχει στο περιγεγραμμένο ορθογώνιο (έως 21,5%
+        μεγαλύτερο), οπότε το `total` έρχεται `null` και η οθόνη λέει σκέτο
+        *«υπάρχουν κι άλλες»* — αληθές, χωρίς ψεύτικη ακρίβεια τριών ψηφίων.
+      */}
+      {coverage.kind === 'capped' && (
+        <span>
+          {coverage.total === null
+            ? t('search-results:area.moreUnknown', { shown: coverage.shown })
+            : t('search-results:area.moreCounted', {
+                shown: coverage.shown,
+                total: coverage.total,
+              })}
+        </span>
+      )}
 
       {/*
         ⚠️ **Η εξήγηση εμφανίζεται ΜΟΝΟ όταν υπάρχει «ίσως».** Μια μόνιμη υποσημείωση

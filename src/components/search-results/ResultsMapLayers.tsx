@@ -27,27 +27,62 @@
 import React from 'react';
 import { Layer } from '@/lib/maps/maplibre';
 import type { ListingFocus } from '@/lib/listings/listing-focus';
+import { LISTING_FEATURE_KEY } from '@/lib/listings/listings-geojson';
+import { metricCircleRadius } from '@/lib/maps/metric-size';
 
 /**
- * Ακτίνες σε **pixel**. **Κατηγορικά διακριτές**, όχι διαβαθμίσεις που μοιάζουν.
+ * Ακτίνες σε **pixel** — και πλέον **ΜΟΝΟ για ΣΗΜΑΔΙΑ, ποτέ για ισχυρισμούς έκτασης**.
  *
- * 🔴 **ΓΝΩΣΤΗ ΑΠΟΚΛΙΣΗ, ΚΑΤΑΓΡΑΜΜΕΝΗ ΑΝΤΙ ΝΑ ΚΡΥΒΕΤΑΙ** *(ADR-777 §8.63)*: αυτοί οι
- * αριθμοί είναι **οθόνης**, ενώ ο `LISTING_UNCERTAINTY_KM` — που κρίνει πλέον ποια
- * αγγελία είναι «μέσα», «ίσως» ή «έξω» — είναι σε **μέτρα του κόσμου**. Συνέπεια: ο
- * κύκλος «συνοικία» των 34px καλύπτει δεκάδες χιλιόμετρα στο ζουμ 10 και λίγα μέτρα
- * στο ζουμ 18, δηλαδή **ο ίδιος ισχυρισμός αλλάζει μέγεθος με το ζουμ**.
+ * ✅ **ΕΚΛΕΙΣΕ Η ΑΠΟΚΛΙΣΗ ΠΟΥ ΗΤΑΝ ΓΡΑΜΜΕΝΗ ΕΔΩ** *(ADR-777 §8.64)*. Μέχρι σήμερα ο
+ * πίνακας είχε και `neighbourhood: 34` και `city: 90` — αριθμούς **οθόνης** για κάτι
+ * που ο `LISTING_UNCERTAINTY_KM` κρίνει σε **μέτρα του κόσμου**. Έφυγαν: η
+ * αβεβαιότητα ζωγραφίζεται τώρα από το `metricCircleRadius`, που διαβάζει το **ίδιο**
+ * νούμερο με τον κριτή.
  *
- * ⚠️ **Το ελάττωμα ΠΡΟΫΠΗΡΧΕ** — δεν το γέννησε το φιλτράρισμα· το φιλτράρισμα το
- * **έκανε ορατό**, δίνοντας για πρώτη φορά στην αβεβαιότητα μέγεθος ανεξάρτητο του
- * ζουμ. Η σωστή διόρθωση είναι **ο ζωγράφος να πλησιάσει τον κριτή**, ποτέ το
- * αντίστροφο. Καταγράφεται στο `.claude-rules/pending-ratchet-work.md`.
+ * 🔑 **Ό,τι έμεινε είναι σωστό σε pixel, και ο λόγος είναι εννοιολογικός.** Η πινέζα
+ * και ο δακτύλιος δεν απαντούν *«πόση έκταση καλύπτει ο ισχυρισμός;»* — απαντούν
+ * *«πού να κάνω κλικ;»*. Ένα σημάδι που συρρικνώνεται με το ζουμ γίνεται άκλικο,
+ * δηλαδή **προσβασιμότητα, όχι γεωγραφία**. Είναι ακριβώς η διάκριση που κάνει το
+ * Google Maps: η μπλε **κουκκίδα** έχει σταθερό μέγεθος οθόνης, ο μπλε **κύκλος
+ * ακρίβειας** έχει σταθερό μέγεθος στον κόσμο.
  *
  * 🔑 **Εξάγεται επειδή έχει ΔΕΥΤΕΡΟ καταναλωτή**: οι πινακίδες τιμών στοιχίζονται
  * πάνω από την πινέζα και χρειάζονται **την ίδια** ακτίνα (`pinRadiusPx`). Δύο
  * αντίγραφα του «7» θα ήταν δύο απαντήσεις στο *«πόσο μεγάλη είναι η πινέζα;»*, και
  * η μέρα που θα διαφωνούσαν θα εμφανιζόταν ως πινακίδα που ακουμπά το σχήμα της.
  */
-export const RADIUS = { pin: 7, ring: 7, neighbourhood: 34, city: 90 } as const;
+export const RADIUS = { pin: 7, ring: 7 } as const;
+
+/**
+ * Τα δύο όρια του ψαλιδιού για τους κύκλους αβεβαιότητας, σε pixel.
+ *
+ * ⚠️ **Το κάτω όριο δεν είναι στρογγυλοποίηση — είναι ο λόγος που η αγγελία δεν
+ * εξαφανίζεται.** Οι σκιασμένες αγγελίες **δεν έχουν πινέζα** να πέσει πίσω τους: σε
+ * ζουμ χώρας μια αβεβαιότητα 1,5 χλμ γίνεται **1,6 px** και ο επισκέπτης βλέπει κενό
+ * χάρτη ενώ η λίστα μετρά αποτελέσματα. Το `12` το κρατά ορατό **και** κατηγορικά
+ * μεγαλύτερο από τη συμπαγή πινέζα των `7` — η διάκριση της Α5 επιβιώνει στο ψαλίδι.
+ *
+ * ⚠️ **Το άνω όριο είναι φραγμός ΑΠΟΔΟΣΗΣ.** Στο ζουμ 18 μια αβεβαιότητα 10 χλμ είναι
+ * ~42 500 px· ο κύκλος του MapLibre ζωγραφίζεται σε τετράπλευρο του shader και σε
+ * τέτοιες ακτίνες αποκόπτεται. Στα `3000` px ο κύκλος καλύπτει ήδη κάθε ρεαλιστικό
+ * κάδρο *(η μισή διαγώνιος μιας οθόνης 4K είναι ~2 200 px)*, οπότε το ψαλίδι **δεν
+ * αλλάζει την εικόνα** — απλώς την κρατά αποδοτέα.
+ */
+export const UNCERTAINTY_PX_LIMITS = { min: 12, max: 3000 } as const;
+
+/**
+ * **Η ΜΙΑ ακτίνα αβεβαιότητας** — σε μέτρα του κόσμου, με διόρθωση Mercator ανά αγγελία.
+ *
+ * 🔑 **Γράφεται μία φορά και δίνεται σε δύο επίπεδα.** Η πόλη και η συνοικία δεν
+ * διαφέρουν πια σε **τύπο** — διαφέρουν μόνο στο `uncertaintyM` που κουβαλά το κάθε
+ * feature. Δύο κλήσεις με διαφορετικά ορίσματα θα ήταν δύο ευκαιρίες να αποκλίνουν.
+ */
+const UNCERTAINTY_RADIUS = metricCircleRadius({
+  metersProperty: LISTING_FEATURE_KEY.uncertaintyM,
+  scaleProperty: LISTING_FEATURE_KEY.mercatorScale,
+  minPx: UNCERTAINTY_PX_LIMITS.min,
+  maxPx: UNCERTAINTY_PX_LIMITS.max,
+});
 
 interface ResultsMapLayersProps {
   /**
@@ -95,7 +130,7 @@ export function ResultsMapLayers({ sourceId, mark, surface, focus }: ResultsMapL
         id="listing-city"
         type="circle"
         filter={['==', ['get', 'shape'], 'shaded-city']}
-        paint={{ 'circle-radius': RADIUS.city, 'circle-color': mark, 'circle-opacity': 0.12,
+        paint={{ 'circle-radius': UNCERTAINTY_RADIUS, 'circle-color': mark, 'circle-opacity': 0.12,
                  'circle-stroke-width': 1, 'circle-stroke-color': mark, 'circle-stroke-opacity': 0.35 }}
       />
       {/* ΣΥΝΟΙΚΙΑ — μικρότερος σκιασμένος κύκλος (πρότυπο Airbnb). */}
@@ -104,7 +139,7 @@ export function ResultsMapLayers({ sourceId, mark, surface, focus }: ResultsMapL
         id="listing-neighbourhood"
         type="circle"
         filter={['==', ['get', 'shape'], 'shaded-circle']}
-        paint={{ 'circle-radius': RADIUS.neighbourhood, 'circle-color': mark, 'circle-opacity': 0.18,
+        paint={{ 'circle-radius': UNCERTAINTY_RADIUS, 'circle-color': mark, 'circle-opacity': 0.18,
                  'circle-stroke-width': 1, 'circle-stroke-color': mark, 'circle-stroke-opacity': 0.5 }}
       />
       {/* ΜΕΤΡΗΜΕΝΟ ΠΕΡΙΓΡΑΜΜΑ — πραγματικό σχήμα, γεμάτο + περίγραμμα. */}

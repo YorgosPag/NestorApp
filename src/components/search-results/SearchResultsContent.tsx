@@ -22,30 +22,21 @@
 import React, { useCallback, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { usePublicListings, useListingLedger } from '@/services/realtime/hooks/usePublicListings';
+import { usePublicListings } from '@/services/realtime/hooks/usePublicListings';
 import {
   applyListingFilters,
-  computeListingCriteriaLedger,
   listingCriteriaMatch,
   parseListingFilters,
   serializeListingFilters,
-  stayQueryOf,
 } from '@/lib/listings/listing-filters';
-import {
-  askedCriterionKeys,
-  EMPTY_LISTING_CRITERIA,
-} from '@/lib/criteria/listing-criteria';
 import { criterionLabel } from '@/lib/criteria/listing-criterion-labels';
 import type { PublicListing } from '@/types/public-listing';
-import { computeStayLedger } from '@/lib/listings/stay-ledger';
-import { stayAvailabilityFor, saleExposureOf } from '@/lib/stay/stay-availability';
-import type { StayAvailabilityAnswer } from '@/lib/stay/stay-availability-vocabulary';
 import { listingMapShape, isMappedShape } from '@/lib/listings/listing-map-shape';
 import { useViewportClass } from '@/hooks/media/useViewportClass';
 import { useListingFocus } from '@/hooks/listings/useListingFocus';
 import { useMapAreaSearch } from '@/hooks/listings/useMapAreaSearch';
+import { useResultsLedgers } from '@/hooks/listings/useResultsLedgers';
 import { useFilterCommit } from './filters/use-filter-commit';
-import { computeAreaLedger } from '@/lib/listings/listing-search-area';
 import { isBoundingBox } from '@/lib/geo/geo-area';
 import { CriteriaLedgerBar } from './CriteriaLedgerBar';
 import { ListingLedgerBar } from './ListingLedgerBar';
@@ -76,7 +67,25 @@ export function SearchResultsContent() {
    * Ο λόγος γράφεται ολόκληρος στο `ResultsSheet`.
    */
   const viewport = useViewportClass();
-  const { listings, loading, error } = usePublicListings();
+
+  /**
+   * 🔴 **ΤΑ ΦΙΛΤΡΑ ΔΙΑΒΑΖΟΝΤΑΙ ΠΡΙΝ ΤΗΝ ΑΝΑΓΝΩΣΗ, ΚΑΙ ΑΠΟ §8.65 ΕΙΝΑΙ ΥΠΟΧΡΕΩΤΙΚΟ.**
+   * Μέχρι τότε η σειρά ήταν αδιάφορη: το ερώτημα ήταν *«φέρε τα πάντα»* και τα φίλτρα
+   * έτρεχαν μετά, στη μνήμη. Τώρα η **περιοχή είναι μέρος του ερωτήματος** — άρα
+   * πρέπει να είναι γνωστή τη στιγμή που ρωτάμε.
+   */
+  const filters = useMemo(
+    () => parseListingFilters(new URLSearchParams(searchParams?.toString() ?? '')),
+    [searchParams]
+  );
+
+  /**
+   * ⚠️ **Το `near` ταξιδεύει ΣΤΟ ΕΡΩΤΗΜΑ, όχι μόνο στο φίλτρο μνήμης** (§8.65). Το ίδιο
+   * `near` εξακολουθεί να κρίνεται και στη μνήμη από τον `listingAreaVerdict`, και οι
+   * δύο **δεν** είναι διπλότυπο: το ερώτημα είναι **φθηνό ορθογώνιο** *(διευρυμένο,
+   * ώστε να μη χαθεί η «τρίτη κατηγορία»)*, ο κριτής είναι **ακριβής**.
+   */
+  const { listings, loading, error, coverage } = usePublicListings(filters.near);
 
   /**
    * 🔴 **ΔΥΟ ΕΡΩΤΗΣΕΙΣ, ΟΧΙ ΜΙΑ** *(2026-09-06)*.
@@ -97,72 +106,26 @@ export function SearchResultsContent() {
    */
   const { focus, peek, select, clear } = useListingFocus();
 
-  const filters = useMemo(
-    () => parseListingFilters(new URLSearchParams(searchParams?.toString() ?? '')),
-    [searchParams]
-  );
-
   const visible = useMemo(() => applyListingFilters(listings, filters), [listings, filters]);
 
   /**
-   * 🔴 **ΤΟ ΤΡΙΤΟ ΣΥΝΟΛΟ — ΚΑΙ ΧΩΡΙΣ ΑΥΤΟ Η ΛΟΓΙΣΤΙΚΗ ΚΡΙΤΗΡΙΩΝ ΕΙΝΑΙ ΨΕΥΔΗΣ**
-   * (ADR-777 §8.51).
+   * **ΟΙ ΤΕΣΣΕΡΙΣ ΛΟΓΙΣΤΙΚΕΣ** — *«πού;»* · *«πότε;»* · *«ταιριάζει;»* · *«είναι στην
+   * περιοχή που κοιτάω;»*, μαζί με τα ενδιάμεσα σύνολα που τις στηρίζουν.
    *
-   * Ο κατάλογος **αφού** απαντηθούν οι άξονες που ζουν **έξω** από τον χάρτη κριτηρίων
-   * *(γεωγραφία · παράθυρο · άτομα)* και **πριν** κριθούν τα ίδια τα κριτήρια.
-   *
-   * ⚠️ **Η προφανής γραφή ήταν να μετρηθεί το `visible`, και θα ήταν ΔΟΜΙΚΑ ΤΥΦΛΗ**:
-   * το `visible` έχει **ήδη πετάξει** τις αποκλεισμένες, άρα το `excluded` θα ήταν
-   * **πάντα 0** — μια γραμμή που θα έγραφε *«8 ταιριάζουν · 0 δεν ταιριάζουν»* σε
-   * **κάθε** αναζήτηση, για πάντα. Το ίδιο σχήμα με το *«`0` σημαίνει κανείς δεν
-   * κοίταξε»* που το repo έχει πληρώσει τέσσερις φορές.
-   *
-   * ⚠️ **Ούτε ο ωμός `listings` όμως**: τότε το σύνολο θα περιλάμβανε ακίνητα εκτός της
-   * περιοχής που διάλεξε ο άνθρωπος, και η γραμμή θα του χρέωνε ως *«δεν ταιριάζουν»*
-   * σπίτια που **δεν ζήτησε ποτέ**.
-   *
-   * 🔑 **Ο ΙΔΙΟΣ φιλτραριστής, άλλη ερώτηση** — `applyListingFilters` με **κενά**
-   * κριτήρια. Ένας δεύτερος γεωγραφικός έλεγχος εδώ θα ήταν δεύτερη αλήθεια για το
-   * *«είναι μέσα στην ακτίνα;»*, δηλαδή ακριβώς ό,τι αποφεύγει το `listingMapShape`.
+   * 🔑 Ολόκληρη η αριθμητική ζει στο `useResultsLedgers`· εδώ μένει **μόνο** η σύνδεση.
+   * Το **ποια** σύνολα μετρώνται — και γιατί **ούτε** το `visible` **ούτε** ο ωμός
+   * `listings` — είναι απόφαση γραμμένη ολόκληρη εκεί. Γραμμένη εδώ, θα πρόσθετε
+   * δεύτερη ευθύνη σε ένα συστατικό που κρατά **τη διάταξη**.
    */
-  const withinScope = useMemo(
-    () => applyListingFilters(listings, { ...filters, criteria: EMPTY_LISTING_CRITERIA }),
-    [listings, filters]
-  );
-
-  /**
-   * **«7 ταιριάζουν · 3 χωρίς δηλωμένα στοιχεία · 4 δεν ταιριάζουν».**
-   *
-   * 🔑 Το άθροισμα κλείνει στο `withinScope`, και υπάρχει **δεύτερος** έλεγχος που η
-   * οθόνη μπορεί να κάνει μόνη της: `visible.length === matching + undeclared`. Είναι
-   * η ίδια σχέση με το `ledgersAgree` της διαμονής — δύο διαμερίσεις που **οφείλουν**
-   * να συμφωνούν, και φωνάζουν αν όχι.
-   */
-  /**
-   * 🔴 **ΤΟ ΣΥΝΟΛΟ ΠΟΥ Η ΠΕΡΙΟΧΗ ΚΡΙΝΕΙ — ΚΑΙ ΔΕΝ ΕΙΝΑΙ ΚΑΝΕΝΑ ΑΠΟ ΤΑ ΔΥΟ ΥΠΑΡΧΟΝΤΑ**
-   * *(ADR-777 §8.63)*.
-   *
-   * Ο κατάλογος αφού απαντηθεί **κάθε άλλος** άξονας και **πριν** τη γεωγραφία.
-   *
-   * ⚠️ **Ούτε το `visible`**: εκείνο έχει **ήδη** πετάξει τις εκτός περιοχής, άρα το
-   * `outside` θα ήταν **πάντα 0** — μια γραμμή που θα έγραφε *«0 εκτός περιοχής»* σε
-   * κάθε αναζήτηση, για πάντα.
-   * ⚠️ **Ούτε ο ωμός `listings`**: τότε θα χρεώναμε ως *«εκτός περιοχής»* σπίτια που
-   * έφυγαν για την **τιμή** τους, και ο αριθμός θα κατηγορούσε τον χάρτη για δουλειά
-   * που έκανε το φίλτρο.
-   *
-   * 🔑 **Ο ΙΔΙΟΣ φιλτραριστής, άλλη ερώτηση** — `near: null`. Ακριβώς το ιδίωμα του
-   * `withinScope` από πάνω, στον συμπληρωματικό άξονα.
-   */
-  const anywhere = useMemo(
-    () => applyListingFilters(listings, { ...filters, near: null }),
-    [listings, filters]
-  );
-
-  const areaLedger = useMemo(
-    () => computeAreaLedger(anywhere, filters.near),
-    [anywhere, filters.near]
-  );
+  const {
+    withinScope,
+    ledger,
+    stayLedger,
+    stayQuery,
+    criteriaLedger,
+    criteriaAsked,
+    areaLedger,
+  } = useResultsLedgers(listings, filters, visible);
 
   /**
    * **Ο ΧΑΡΤΗΣ ΩΣ ΕΡΩΤΗΜΑ** — ο διακόπτης, το εκκρεμές κάδρο και η εφαρμογή τους.
@@ -174,16 +137,6 @@ export function SearchResultsContent() {
   const { commit } = useFilterCommit(filters);
   const { followMap, setFollowMap, pendingArea, onAreaChange, applyPendingArea } =
     useMapAreaSearch(filters, commit);
-
-  const criteriaLedger = useMemo(
-    () => computeListingCriteriaLedger(withinScope, filters),
-    [withinScope, filters]
-  );
-
-  const criteriaAsked = useMemo(
-    () => askedCriterionKeys(filters.criteria).length > 0,
-    [filters]
-  );
 
   /**
    * **Ποιους άξονες σιωπά μια συγκεκριμένη αγγελία** — η ερώτηση που κατεβαίνει στη λίστα.
@@ -271,39 +224,6 @@ export function SearchResultsContent() {
   );
   const renderedCount = listView.mapped.length + listView.unmapped.length;
 
-  const ledger = useListingLedger(visible);
-
-  /**
-   * 🔴 **Ο ΧΡΟΝΟΣ — ΚΑΙ ΤΟ ΣΥΝΟΡΟ ΤΟΥ §3.2, ΣΕ ΜΙΑ ΜΕΤΑΒΛΗΤΗ.**
-   *
-   * Ο κριτής κατάληψης χρειάζεται τις **κρατήσεις**, που είναι **ιδιωτικές**: ο
-   * ανώνυμος επισκέπτης δεν επιτρέπεται να τις διαβάσει, και το ADR-835 §4.5
-   * απαγορεύει ρητά να ταξιδέψει ημερολόγιο μέσα στο `PublicListing`. Άρα η
-   * διαθεσιμότητα απαντιέται **στον διακομιστή**, και φτάνει εδώ ως **απάντηση**.
-   *
-   * ⚠️ **Ο διακομιστής είναι Φ5** — η συλλογή κρατήσεων δεν υπάρχει ακόμη. Ως τότε
-   * το ημερολόγιο κάθε αγγελίας είναι **`undeclared`**, και η μηχανή απαντά
-   * ειλικρινά `unknown`: *«κανείς δεν δήλωσε ημερολόγιο»*. Αυτό **δεν** είναι
-   * προσωρινό ψέμα — είναι η **αλήθεια** για τα σημερινά δεδομένα, και η γραμμή
-   * λογιστικής τη λέει με **αριθμό** αντί να δείξει άδεια λίστα.
-   *
-   * 🔑 Οι όροι διαμονής (`maxGuests`/`minNights`) και το `not-a-stay` απαντιούνται
-   * **ήδη σωστά** από σήμερα: ζουν στο `PublicListing.stay`, όχι στο ημερολόγιο.
-   */
-  const stayQuery = useMemo(() => stayQueryOf(filters), [filters]);
-
-  const stayLedger = useMemo(() => {
-    // 🔴 **ΜΕΤΡΑ ΠΑΝΤΑ ΤΟ ΙΔΙΟ `visible`, ΑΚΟΜΗ ΚΑΙ ΧΩΡΙΣ ΕΡΩΤΗΣΗ.** Ένα κενό σύνολο
-    //    εδώ θα έδινε `total: 0` ενώ η πρώτη διαμέριση μετρά **N** — και το
-    //    `ledgersAgree` θα φώναζε **σωστά**, για λάθος λόγο. Χωρίς ερώτηση κάθε
-    //    αγγελία είναι `unknown` (*«δεν ρωτήσαμε»*), και το άθροισμα κλείνει.
-    const answerFor = (listing: (typeof visible)[number]): StayAvailabilityAnswer | undefined =>
-      stayQuery === null
-        ? undefined
-        : stayAvailabilityFor(listing, stayQuery, { kind: 'undeclared' }, saleExposureOf(listing));
-    return computeStayLedger(visible, answerFor);
-  }, [visible, stayQuery]);
-
   return (
     // 🔴 `flex-1 min-h-0`, ΟΧΙ `h-screen`: η οθόνη ζει τώρα **κάτω από κεφαλίδα**, και
     // ένα σταθερό ύψος παραθύρου θα έσπρωχνε το κάτω μέρος του χάρτη εκτός οθόνης. Το
@@ -380,6 +300,7 @@ export function SearchResultsContent() {
           ledger={areaLedger}
           asked={filters.near !== null}
           visibleCount={visible.length}
+          coverage={coverage}
           className="mt-1"
         />
 

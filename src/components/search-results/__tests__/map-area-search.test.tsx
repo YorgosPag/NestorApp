@@ -18,6 +18,7 @@ import { render, screen, act } from '@testing-library/react';
 import { renderHook } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
+import type { ListingReadCoverage } from '@/lib/listings/listing-geo-query';
 import { computeAreaLedger } from '@/lib/listings/listing-search-area';
 import { EMPTY_LISTING_FILTERS, type ListingFilters } from '@/lib/listings/listing-filters';
 import { useMapAreaSearch } from '@/hooks/listings/useMapAreaSearch';
@@ -35,13 +36,21 @@ jest.mock('@/i18n/hooks/useTranslation', () => ({
   }),
 }));
 
+/** Η ανάγνωση κοίταξε παντού — η προεπιλογή κάθε γραμμής που δεν δοκιμάζει το ψαλίδι. */
+const COMPLETE: ListingReadCoverage = { kind: 'complete' };
+
 const FRAME: GeoBoundingBox = { south: 37.974, west: 23.7155, north: 37.994, east: 23.7395 };
 const OTHER_FRAME: GeoBoundingBox = { south: 38.1, west: 23.8, north: 38.2, east: 23.9 };
 
 describe('Α — η γραμμή σιωπά όταν κανείς δεν ρώτησε περιοχή', () => {
   it('χωρίς ερώτηση δεν αποδίδεται τίποτα — ποτέ «0 εκτός περιοχής» για πάντα', () => {
     const { container } = render(
-      <AreaLedgerBar ledger={computeAreaLedger([], null)} asked={false} visibleCount={0} />
+      <AreaLedgerBar
+        ledger={computeAreaLedger([], null)}
+        asked={false}
+        visibleCount={0}
+        coverage={COMPLETE}
+      />
     );
     expect(container).toBeEmptyDOMElement();
   });
@@ -52,6 +61,7 @@ describe('Α — η γραμμή σιωπά όταν κανείς δεν ρώτ�
         ledger={{ total: 0, inside: 0, maybe: 0, outside: 0 }}
         asked
         visibleCount={0}
+      coverage={COMPLETE}
       />
     );
     expect(screen.getByText(/area\.summary/)).toHaveTextContent('"inside":0');
@@ -67,6 +77,7 @@ describe('Β — ο συναγερμός ΜΠΟΡΕΙ να χτυπήσει', ()
         ledger={{ total: 4, inside: 1, maybe: 2, outside: 1 }}
         asked
         visibleCount={3}
+      coverage={COMPLETE}
       />
     );
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -78,6 +89,7 @@ describe('Β — ο συναγερμός ΜΠΟΡΕΙ να χτυπήσει', ()
         ledger={{ total: 4, inside: 1, maybe: 2, outside: 1 }}
         asked
         visibleCount={99}
+      coverage={COMPLETE}
       />
     );
     expect(screen.getByRole('alert')).toHaveTextContent('area.imbalanced');
@@ -89,6 +101,7 @@ describe('Β — ο συναγερμός ΜΠΟΡΕΙ να χτυπήσει', ()
         ledger={{ total: 10, inside: 1, maybe: 2, outside: 1 }}
         asked
         visibleCount={3}
+      coverage={COMPLETE}
       />
     );
     expect(screen.getByRole('alert')).toBeInTheDocument();
@@ -100,6 +113,7 @@ describe('Β — ο συναγερμός ΜΠΟΡΕΙ να χτυπήσει', ()
         ledger={{ total: 2, inside: 2, maybe: 0, outside: 0 }}
         asked
         visibleCount={2}
+      coverage={COMPLETE}
       />
     );
     expect(screen.queryByText(/area\.maybeHint/)).not.toBeInTheDocument();
@@ -109,9 +123,100 @@ describe('Β — ο συναγερμός ΜΠΟΡΕΙ να χτυπήσει', ()
         ledger={{ total: 2, inside: 1, maybe: 1, outside: 0 }}
         asked
         visibleCount={2}
+      coverage={COMPLETE}
       />
     );
     expect(screen.getByText(/area\.maybeHint/)).toBeInTheDocument();
+  });
+});
+
+// ============================================================================
+// Β2 — Η ΟΜΟΛΟΓΙΑ ΤΗΣ ΑΝΑΓΝΩΣΗΣ (ADR-777 §8.65)  🔴 Η ΚΡΙΣΙΜΗ ΟΜΑΔΑ
+// ============================================================================
+
+describe('Β2 — όταν η ανάγνωση κόπηκε, η γραμμή ΔΕΝ λέει «εκτός περιοχής»', () => {
+  const CAPPED_COUNTED: ListingReadCoverage = { kind: 'capped', shown: 500, total: 4312 };
+  const CAPPED_UNKNOWN: ListingReadCoverage = { kind: 'capped', shown: 500, total: null };
+
+  it('🔴 ΣΙΩΠΑ ΓΙΑ ΤΟ «ΕΚΤΟΣ» — γιατί δεν κοίταξε έξω από την περιοχή', () => {
+    // Με φραγμένη ανάγνωση, ο κάδος `outside` μετρά τον ΔΑΚΤΥΛΙΟ των 10 χλμ, όχι τον
+    // κόσμο: αριθμός μικρός, εύλογος και ψεύτικος. Το §8.63 υπάρχει για να μη γίνεται
+    // αυτό — άρα το §8.65 δεν επιτρέπεται να το γεννήσει από την πίσω πόρτα.
+    render(
+      <AreaLedgerBar
+        ledger={{ total: 9, inside: 5, maybe: 3, outside: 1 }}
+        asked
+        visibleCount={8}
+        coverage={CAPPED_COUNTED}
+      />
+    );
+    expect(screen.queryByText(/area\.summary#/)).not.toBeInTheDocument();
+    expect(screen.getByText(/area\.summaryCapped/)).toHaveTextContent('"inside":5');
+    expect(screen.getByText(/area\.summaryCapped/)).toHaveTextContent('"maybe":3');
+  });
+
+  it('με πλήρη ανάγνωση λέει ΚΑΙ ΤΑ ΤΡΙΑ, όπως πριν', () => {
+    render(
+      <AreaLedgerBar
+        ledger={{ total: 9, inside: 5, maybe: 3, outside: 1 }}
+        asked
+        visibleCount={8}
+        coverage={COMPLETE}
+      />
+    );
+    expect(screen.getByText(/area\.summary#/)).toHaveTextContent('"outside":1');
+    expect(screen.queryByText(/area\.summaryCapped/)).not.toBeInTheDocument();
+  });
+
+  it('ο ΑΚΡΙΒΗΣ συνολικός αριθμός λέγεται όταν υπάρχει', () => {
+    render(
+      <AreaLedgerBar
+        ledger={{ total: 9, inside: 5, maybe: 3, outside: 1 }}
+        asked
+        visibleCount={8}
+        coverage={CAPPED_COUNTED}
+      />
+    );
+    const more = screen.getByText(/area\.moreCounted/);
+    expect(more).toHaveTextContent('"total":4312');
+    expect(more).toHaveTextContent('"shown":500');
+  });
+
+  it('🔴 ΧΩΡΙΣ ΑΚΡΙΒΗ ΑΡΙΘΜΟ ΛΕΕΙ ΑΛΛΗ ΠΡΟΤΑΣΗ — ποτέ ψεύτικη ακρίβεια', () => {
+    render(
+      <AreaLedgerBar
+        ledger={{ total: 9, inside: 5, maybe: 3, outside: 1 }}
+        asked
+        visibleCount={8}
+        coverage={CAPPED_UNKNOWN}
+      />
+    );
+    expect(screen.getByText(/area\.moreUnknown/)).toHaveTextContent('"shown":500');
+    expect(screen.queryByText(/area\.moreCounted/)).not.toBeInTheDocument();
+  });
+
+  it('με πλήρη ανάγνωση δεν υπάρχει ΚΑΜΙΑ ομολογία να διαβαστεί', () => {
+    render(
+      <AreaLedgerBar
+        ledger={{ total: 9, inside: 5, maybe: 3, outside: 1 }}
+        asked
+        visibleCount={8}
+        coverage={COMPLETE}
+      />
+    );
+    expect(screen.queryByText(/area\.more/)).not.toBeInTheDocument();
+  });
+
+  it('η ομολογία ΔΕΝ εμφανίζεται όταν κανείς δεν ρώτησε περιοχή', () => {
+    const { container } = render(
+      <AreaLedgerBar
+        ledger={{ total: 9, inside: 5, maybe: 3, outside: 1 }}
+        asked={false}
+        visibleCount={8}
+        coverage={CAPPED_COUNTED}
+      />
+    );
+    expect(container).toBeEmptyDOMElement();
   });
 });
 

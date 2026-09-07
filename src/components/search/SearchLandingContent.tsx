@@ -68,7 +68,11 @@ import { PlaceSearchBox } from './PlaceSearchBox';
 
 export function SearchLandingContent() {
   const { t, i18n } = useTranslation(['search-results', 'property-market', 'search-results', 'search-results']);
-  const { listings, loading, error } = usePublicListings();
+  // 🔑 **`null` = «χωρίς περιοχή», και είναι σωστό εδώ** (§8.65): η ρίζα δείχνει
+  //    **βιτρίνα**, όχι αναζήτηση — δεν έχει χάρτη, άρα δεν έχει κάδρο να ρωτήσει. Το
+  //    όριο ανάγνωσης όμως ισχύει **και εδώ**: το μετρημένο ελάττωμα δεν ήταν η απουσία
+  //    περιοχής, ήταν η απουσία **οποιουδήποτε** ορίου.
+  const { listings, loading, error } = usePublicListings(null);
 
   // 🔑 **`null` = «χωρίς σημείο αναφοράς», και είναι σωστό εδώ**: η ρίζα δεν ξέρει πού
   //    είναι ο επισκέπτης, και **δεν του το ζητά** πριν του δείξει τι υπάρχει. Ο
