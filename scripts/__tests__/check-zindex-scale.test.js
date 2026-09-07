@@ -676,7 +676,17 @@ describe('Σ — το σύνορο των τρίτων', () => {
   });
 
   it('Σ5 — δηλωμένος περιορισμός χωρίς isolation:isolate ⇒ ⛔ foreign-unverified', async () => {
-    const edits = { [BOUNDARY]: (s) => s.replace('.fc {\n  isolation: isolate;\n}', '.fc {\n  overflow: hidden;\n}') };
+    // ⚠️ **Ανθεκτικό στα τέλη γραμμής, ΕΠΙΤΗΔΕΣ.** Το `foreign-boundary.css` είναι
+    //    **CRLF** (μετρημένο 2026-09-07: 236 `\r\n`, μηδέν γυμνά `\n`), οπότε ένα
+    //    πολύγραμμο μοτίβο με `\n` **δεν ταιριάζει ποτέ** — και η μετάλλαξη γινόταν
+    //    σιωπηλό no-op, δηλαδή η άγκυρα Σ5 ήταν **νεκρή**. Την έπιασε ο φρουρός του
+    //    `miniRepo` *(«μια μετάλλαξη που δεν άλλαξε τίποτα είναι ο ορισμός του νεκρού
+    //    test»)*, που έκανε ακριβώς τη δουλειά του. Ένα μοτίβο ξαναγραμμένο σε CRLF
+    //    θα έσπαγε **αντίστροφα** τη μέρα που κάποιος κανονικοποιήσει το αρχείο.
+    const edits = {
+      [BOUNDARY]: (s) =>
+        s.replace(/\.fc \{\s*isolation:\s*isolate;\s*\}/, '.fc {\n  overflow: hidden;\n}'),
+    };
     const m = await run(edits, ['--report']);
     // Δύο πακέτα (@fullcalendar/core + timegrid) μοιράζονται τη ρίζα `.fc`.
     expect(fdelta(m.foreign.census)).toEqual({

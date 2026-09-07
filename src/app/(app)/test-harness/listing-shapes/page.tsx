@@ -74,6 +74,7 @@ function fixture(id: string, title: string, position: PublicListing['position'])
     //    Μία ονομασμένη απουσία αντί για είκοσι τρία `null` γραμμένα εδώ.
     ...UNASKED_LISTING_ATTRIBUTES,
     projectedAt: AT,
+    listedAt: { kind: 'unknown', reason: 'predates-record' },
   };
 }
 
@@ -111,7 +112,13 @@ export default function ListingShapesHarness() {
         <h1 className="text-lg font-semibold text-foreground">
           Πάγκος δοκιμών — τα έξι σχήματα της Α5
         </h1>
-        <ListingLedgerBar ledger={ledger} className="mt-1" />
+        {/*
+          ⚠️ `rendered` = όσα ζωγραφίζει **αυτή** η σελίδα παρακάτω, δηλαδή ολόκληρο το
+          `FIXTURES` — ο πάγκος δεν κόβει τίποτα. Δεν είναι διακοσμητικό: αν αύριο ο
+          πάγκος δείξει υποσύνολο, ο συναγερμός του §8.62 χτυπά **και εδώ**, που είναι
+          ακριβώς ο λόγος που το prop είναι υποχρεωτικό αντί να προεπιλέγει τη λογιστική.
+        */}
+        <ListingLedgerBar ledger={ledger} rendered={FIXTURES.length} className="mt-1" />
         <p className="mt-1 text-xs text-muted-foreground">
           Επιλεγμένο: {focus.selected ?? '—'} · Από πάνω: {focus.peeked ?? '—'} · και τα έξι ορατά σχήματα έχουν το ΙΔΙΟ χρώμα:
           η ακρίβεια είναι σχήμα, όχι απόχρωση (CHECK 3.41 / WCAG 1.4.1).

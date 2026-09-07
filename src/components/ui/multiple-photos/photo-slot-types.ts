@@ -1,4 +1,9 @@
-import type { FileUploadProgress, FileUploadResult } from '@/hooks/useEnterpriseFileUpload';
+// 🔑 **ΑΠΟ ΤΗΝ ΠΗΓΗ, ΟΧΙ ΑΠΟ ΤΟΝ ΜΕΣΑΖΟΝΤΑ.** Οι δύο τύποι γεννιούνται στο
+//    `useFileUploadState`· το `useEnterpriseFileUpload` απλώς τους re-export-άρει
+//    («για backward compatibility»). Η εισαγωγή από εκεί σέρνει τον ΟΡΧΗΣΤΡΩΤΗ —
+//    toasts, FileNamingService, PhotoUploadService — μέσα σε κάθε κλειστότητα που
+//    ζητά μόνο ένα σχήμα.
+import type { FileUploadProgress, FileUploadResult } from '@/hooks/useFileUploadState';
 import type { UploadPurpose } from '@/config/file-upload-config';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 

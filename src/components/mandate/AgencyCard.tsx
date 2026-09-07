@@ -92,7 +92,22 @@ export function AgencyCard({ profile, headingLevel = 2 }: AgencyCardProps): Reac
         να τη σώσει.
       */}
       <article className="flex items-start gap-3">
-        <ShowcaseMarkView mark={lettermarkOf(profile.companyId, profile.displayName)} size="card" />
+        {/*
+          🏆 ADR-841 §7 Α21, Φάση 2 — Η ΕΙΚΟΝΑ ΑΝ ΤΗ ΔΗΛΩΣΕ, ΤΑ ΑΡΧΙΚΑ ΑΝ ΟΧΙ.
+
+          🔑 **Η ΕΦΕΔΡΕΙΑ ΔΕΝ ΑΠΟΤΥΓΧΑΝΕΙ ΠΟΤΕ**: το `lettermark` είναι **συνάρτηση της
+          ταυτότητας** — δεν κατεβάζει τίποτα, δεν περιμένει τίποτα, και δεν μπορεί να
+          λείπει. Γι' αυτό οι περισσότεροι επαγγελματίες, που δεν θα δηλώσουν ποτέ σήμα,
+          **δεν μένουν ανώνυμοι**.
+        */}
+        <ShowcaseMarkView
+          mark={
+            profile.mark !== null
+              ? { declared: profile.mark }
+              : { lettermark: lettermarkOf(profile.companyId, profile.displayName) }
+          }
+          size="card"
+        />
         <div className="flex min-w-0 flex-col gap-1">
           <Heading className="m-0 text-lg font-semibold text-foreground">
             {profile.displayName}

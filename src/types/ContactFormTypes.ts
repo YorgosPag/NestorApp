@@ -1,7 +1,13 @@
 import type { ReactNode } from 'react';
 import type { ContactType, PhoneInfo, EmailInfo, WebsiteInfo, SocialMediaInfo, CompanyContact } from '@/types/contacts';
 import type { PersonaType } from '@/types/contacts/personas';
-import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
+// 🔑 **ΑΠΟ ΤΟ ΚΑΝΟΝΙΚΟ SSoT (ADR-596), ΟΧΙ ΑΠΟ ΤΟ COMPONENT ΠΟΥ ΤΟ RE-EXPORT-ΑΡΕΙ.**
+//    Το `MultiplePhotosUpload` εκθέτει τον ίδιο τύπο «for API stability», αλλά είναι
+//    **οθόνη**: ένα αρχείο ΤΥΠΩΝ που δείχνει εκεί σέρνει ολόκληρο δέντρο UI μέσα σε κάθε
+//    στατική κλειστότητα που το αγγίζει. Μετρημένο (ADR-841 §7 Α21, Φάση 2): ο γεννήτορας
+//    του route slice **ΑΡΝΗΘΗΚΕ** διαδρομή που δεν έχει καμία σχέση με επαφές, επειδή αυτή
+//    η γραμμή έφερνε 22 κλειδιά χωρίς namespace από `EnterprisePhotoUpload`.
+import type { PhotoSlot } from '@/components/ui/multiple-photos/photo-slot-types';
 import type { ContactAddressType } from '@/types/contacts/address-types';
 
 export interface AddNewContactDialogProps {

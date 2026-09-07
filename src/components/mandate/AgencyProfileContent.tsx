@@ -323,7 +323,22 @@ export function AgencyProfileContent({
         ταυτότητα** — και η αναγνωρισιμότητα είναι όλη η δουλειά του σήματος.
       */}
       <header className="flex items-center gap-4">
-        <ShowcaseMarkView mark={lettermarkOf(profile.companyId, profile.displayName)} size="page" />
+        {/*
+          🏆 ADR-841 §7 Α21, Φάση 2 — Η ΕΙΚΟΝΑ ΑΝ ΤΗ ΔΗΛΩΣΕ, ΤΑ ΑΡΧΙΚΑ ΑΝ ΟΧΙ.
+
+          🔑 **Η ΕΦΕΔΡΕΙΑ ΔΕΝ ΑΠΟΤΥΓΧΑΝΕΙ ΠΟΤΕ**: το `lettermark` είναι **συνάρτηση της
+          ταυτότητας** — δεν κατεβάζει τίποτα, δεν περιμένει τίποτα, και δεν μπορεί να
+          λείπει. Γι' αυτό οι περισσότεροι επαγγελματίες, που δεν θα δηλώσουν ποτέ σήμα,
+          **δεν μένουν ανώνυμοι**.
+        */}
+        <ShowcaseMarkView
+          mark={
+            profile.mark !== null
+              ? { declared: profile.mark }
+              : { lettermark: lettermarkOf(profile.companyId, profile.displayName) }
+          }
+          size="page"
+        />
         <div className="flex min-w-0 flex-col gap-1">
           <h1 className="m-0 text-2xl font-semibold text-foreground">{profile.displayName}</h1>
           <p className="m-0 text-sm text-muted-foreground">
