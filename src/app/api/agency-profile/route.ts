@@ -107,6 +107,10 @@ async function publishHandler(
   const located = await locate(adminDb, place);
   if ('rejected' in located) return located.rejected;
 
+  // ⛔ **ΚΑΝΕΝΑ ΣΗΜΑ ΕΔΩ** (ADR-841 §7 Α21, Φάση 2): έγινε **δική του πράξη**
+  //    (`POST`/`DELETE /api/agency-profile/mark`), και ο γραφέας **διατηρεί** ό,τι βρει
+  //    μέσα σε συναλλαγή. Όσο ζούσε σε αυτό το σώμα, κάθε δεύτερη δημοσίευση από οθόνη
+  //    που δεν μπορούσε να το ξαναστείλει **έσβηνε το λογότυπο**.
   const result = await publishShowcase(adminDb, authority, {
     alias: parsed.data.alias,
     displayName: parsed.data.displayName,

@@ -38,7 +38,7 @@ import {
   PLACE_REF_TREATMENT,
   verifyPlaceRef,
 } from '@/services/places/public-place-read.service';
-import type { AgencyProfileRejection } from '@/services/mandate/agency-profile.service';
+import type { AgencyProfileRejection } from '@/services/mandate/agency-profile-verdict';
 import type { ClassifiedOccupation, PublicShowcase } from '@/types/agency-profile';
 import type { GeoPoint } from '@/types/geo/coordinates';
 import type { PlaceRef } from '@/types/geo/public-place';
@@ -90,6 +90,18 @@ export const publishSchema: z.ZodType<ShowcaseWireDeclaration> = z.object({
   //    🔴 **ΚΑΝΕΝΑ `position` ΕΔΩ, ΕΠΙΤΗΔΕΣ**: τη γεωμετρία την παράγει ο
   //    διακομιστής από τη γη (δες {@link locate}). Δες `lib/agency/showcase-wire`.
   place: placeRefSchema.nullable().optional(),
+  /**
+   * ⛔ **ΚΑΝΕΝΑ `mark` ΕΔΩ — ΕΦΥΓΕ ΣΤΗ ΔΙΚΗ ΤΟΥ ΔΙΑΔΡΟΜΗ** (ADR-841 §7 Α21, Φάση 2).
+   *
+   * Υπήρξε, και η αφαίρεσή του είναι **διόρθωση βλάβης**: η οθόνη διαβάζει πίσω το ίδιο
+   * έγγραφο με τον κόσμο, όπου το σήμα ζει ως **δημόσιο URL** — το `privateStoragePath`
+   * που ζητούσε αυτό το πεδίο **δεν επιστρέφει ποτέ**. Άρα κάθε δεύτερη δημοσίευση
+   * έστελνε «κανένα σήμα» και **έσβηνε το λογότυπο**, χωρίς ο πελάτης να έχει τρόπο να
+   * το αποφύγει.
+   *
+   * ⇒ `POST`/`DELETE /api/agency-profile/mark` — δες
+   * {@link module:app/api/agency-profile/mark-request}.
+   */
 });
 
 export type AgencyProfileWriteResponse =
