@@ -46,8 +46,14 @@
  */
 
 import type { PublicListing } from '@/types/public-listing';
-import type { GeoCircle, GeoPoint } from '@/types/geo/coordinates';
-import { distanceMeters } from '@/lib/geo/geo-distance';
+import type { GeoArea, GeoCircle, GeoPoint } from '@/types/geo/coordinates';
+import {
+  listingAreaVerdict,
+  readSearchAreaBox,
+  writeSearchAreaBox,
+  SEARCH_AREA_PARAM,
+} from '@/lib/listings/listing-search-area';
+import { isBoundingBox } from '@/lib/geo/geo-area';
 import { intervalShape } from '@/lib/date-local';
 import type { StayQuery } from '@/lib/stay/stay-availability-vocabulary';
 
@@ -101,10 +107,10 @@ export interface ListingFilters {
   /** Κάθε ομοιόμορφος άξονας. **Άξονας που λείπει = δεν ρωτήθηκε.** */
   readonly criteria: ListingCriteria;
   /**
-   * `null` = «όπου να 'ναι» — καμία χωρική ερώτηση. Ο τύπος είναι {@link GeoCircle},
-   * του Shared Kernel *(ADR-777 §8.53)*.
+   * `null` = «όπου να 'ναι» — καμία χωρική ερώτηση. Ο τύπος είναι {@link GeoArea},
+   * του Shared Kernel: **κύκλος ή ορθογώνιο** *(ADR-777 §8.53 · §8.63)*.
    *
-   * 🔑 **Σημείο + ακτίνα, ΠΟΤΕ όνομα τόπου.** Το {@link PublicListing} **δεν κουβαλά
+   * 🔑 **Γεωμετρία, ΠΟΤΕ όνομα τόπου.** Το {@link PublicListing} **δεν κουβαλά
    * καμία λέξη τόπου** (μετρημένο: κουβαλά `position` και `title`, τίποτα άλλο), οπότε
    * ένα φίλτρο «πόλη = Θεσσαλονίκη» θα έπρεπε είτε να ψάξει στον **τίτλο** — που είναι
    * κείμενο του κατόχου, όχι διεύθυνση — είτε να γεννήσει νέο πεδίο, που είναι
@@ -114,8 +120,15 @@ export interface ListingFilters {
    * (`/api/geocoding`, ανώνυμα προσβάσιμος) **πριν** φτάσει εδώ. Έτσι το φίλτρο
    * συγκρίνει **γεωμετρία με γεωμετρία** — το μόνο πράγμα που και οι δύο πλευρές
    * ξέρουν με βεβαιότητα.
+   *
+   * 🔴 **ΔΥΟ ΣΧΗΜΑΤΑ, ΕΝΑ ΠΕΔΙΟ** *(ADR-777 §8.63)*. Ήταν `GeoCircle | null` — και
+   * τότε το οπτικό πεδίο του χάρτη, που είναι **ορθογώνιο**, δεν είχε πού να μπει.
+   * Η προφανής κίνηση («βάλε δεύτερο πεδίο δίπλα») **απορρίπτεται**: θα ήταν δύο
+   * απαντήσεις στο *«πού ψάχνω;»*, και η μέρα που θα διαφωνούσαν θα εμφανιζόταν ως
+   * λίστα και χάρτης να δείχνουν άλλα πράγματα. Με **ένα** πεδίο κλειστής ένωσης,
+   * το σύρσιμο του χάρτη **αντικαθιστά** την περιοχή αντί να την ανταγωνίζεται.
    */
-  readonly near: GeoCircle | null;
+  readonly near: GeoArea | null;
   /** `null` = «οποτεδήποτε» — καμία χρονική ερώτηση. Δες {@link ListingStayWindow}. */
   readonly stayWindow: ListingStayWindow | null;
   /**
@@ -257,7 +270,12 @@ function readGuests(params: URLSearchParams): number | null {
 export function parseListingFilters(params: URLSearchParams): ListingFilters {
   return {
     criteria: parseListingCriteria(params),
-    near: readGeoFilter(params),
+    // 🔑 **Το ορθογώνιο ΠΡΟΗΓΕΙΤΑΙ του κύκλου, και η σειρά είναι σημασία, όχι τύχη.**
+    // Ο κύκλος γεννιέται από **κείμενο** που έγραψε ο επισκέπτης· το ορθογώνιο από
+    // **κίνηση** που έκανε ο ίδιος πάνω στον χάρτη — δηλαδή είναι η **νεότερη** και
+    // πιο ρητή δήλωση για το πού κοιτάει. Ο σειριοποιητής γράφει πάντα **ένα** από
+    // τα δύο, οπότε αυτή η προτεραιότητα κρίνει μόνο χειρόγραφες διευθύνσεις.
+    near: readSearchAreaBox(params) ?? readGeoFilter(params),
     stayWindow: readStayWindow(params),
     guests: readGuests(params),
   };
@@ -282,10 +300,17 @@ export function serializeListingFilters(filters: ListingFilters): URLSearchParam
   // ⚠️ Τα τρία γεωγραφικά γράφονται **μαζί ή καθόλου**: μια διεύθυνση με `lat` χωρίς
   // `lng` δεν είναι μερικώς χρήσιμη, είναι μη αναγνώσιμη από το `readGeoFilter` — και
   // θα ταξίδευε σιωπηλά σε κάθε κοινοποιημένο σύνδεσμο.
+  // ⚠️ **Ένα σχήμα ή το άλλο, ΠΟΤΕ και τα δύο.** Δύο γεωγραφικές δηλώσεις στην ίδια
+  // διεύθυνση θα ήταν δύο απαντήσεις στο «πού ψάχνω;» — και ο αναγνώστης θα έπρεπε να
+  // διαλέξει, δηλαδή κάποιος θα διάλεγε **αλλιώς**.
   if (filters.near !== null) {
-    params.set(PARAM.lat, String(filters.near.center.lat));
-    params.set(PARAM.lng, String(filters.near.center.lng));
-    params.set(PARAM.radiusKm, String(filters.near.radiusKm));
+    if (isBoundingBox(filters.near)) {
+      params.set(SEARCH_AREA_PARAM, writeSearchAreaBox(filters.near));
+    } else {
+      params.set(PARAM.lat, String(filters.near.center.lat));
+      params.set(PARAM.lng, String(filters.near.center.lng));
+      params.set(PARAM.radiusKm, String(filters.near.radiusKm));
+    }
   }
   // ⚠️ **Τα δύο άκρα γράφονται μαζί ή καθόλου**, ίδιος κανόνας με τα γεωγραφικά.
   if (filters.stayWindow !== null) {
@@ -382,18 +407,16 @@ export function matchesListingFilters(listing: PublicListing, filters: ListingFi
 
   // 🔴 Ο ΓΕΩΓΡΑΦΙΚΟΣ ΑΞΟΝΑΣ — τελευταίος επίτηδες: είναι ο **μόνος** που κοστίζει
   // τριγωνομετρία, και τα φθηνά φίλτρα έχουν ήδη αποκλείσει ό,τι μπορούσαν.
-  if (filters.near !== null) {
-    // ⚠️ **Η αγγελία ΧΩΡΙΣ θέση ΔΕΝ αποκλείεται εδώ — και αυτό δεν είναι παράλειψη.**
-    // Είναι ο κανόνας Α5 §4.1 σε κώδικα: *«δεν μπορούμε να τις αποκλείσουμε από
-    // περιοχή που δεν ξέρουμε αν τους ανήκει»*. Ένα `return false` εδώ θα τις
-    // **εξαφάνιζε** — δηλαδή θα μετέτρεπε το «δεν ξέρουμε πού είναι» σε «δεν είναι
-    // εδώ», που είναι διαφορετικός ισχυρισμός και **ψευδής**.
-    if (listing.position.kind === 'known') {
-      const metres = distanceMeters(filters.near.center, listing.position.point);
-      if (metres > filters.near.radiusKm * 1000) return false;
-    }
-  }
-  return true;
+  // 🔴 **Ο ΚΡΙΤΗΣ ΕΙΝΑΙ ΕΝΑΣ ΚΑΙ ΑΠΑΝΤΑ ΤΡΙΑ** *(ADR-777 §8.63)*. Εδώ ζούσε σημειακή
+  // απόσταση πάνω σε κάθε θέση `kind: 'known'` — δηλαδή μια αγγελία γεωκωδικοποιημένη
+  // σε **κέντρο πόλης** κρινόταν *σαν να ξέραμε τη διεύθυνσή της*, την ίδια στιγμή που
+  // ο χάρτης τη ζωγράφιζε `shaded-city`, λέγοντας **ρητά ότι δεν την ξέρουμε**.
+  //
+  // ⚠️ **ΜΟΝΟ το `'outside'` αποκλείει.** Το `'maybe'` επιβιώνει, και αυτό είναι ο
+  // κανόνας Α5 §4.1 ακέραιος: *«δεν μπορούμε να την αποκλείσουμε από περιοχή που δεν
+  // ξέρουμε αν της ανήκει»*. Η διαφορά με πριν είναι ότι τώρα το «δεν ξέρουμε» έχει
+  // **όνομα** και μπορεί να **ανακοινωθεί**, αντί να περνά σιωπηλά ως «ταιριάζει».
+  return listingAreaVerdict(listing, filters.near) !== 'outside';
 }
 
 /**

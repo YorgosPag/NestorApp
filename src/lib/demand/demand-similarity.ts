@@ -42,10 +42,10 @@
 
 import type { PropertyDemand } from '@/types/property-demand';
 import type { ListingFilters } from '@/lib/listings/listing-filters';
-import type { GeoCircle } from '@/types/geo/coordinates';
+import type { GeoArea } from '@/types/geo/coordinates';
 import { rangeOf, valuesOf } from '@/lib/criteria/listing-criteria';
 import { NO_RANGE, type CriterionRange } from '@/lib/criteria/criterion-vocabulary';
-import { distanceMeters } from '@/lib/geo/geo-distance';
+import { areasOverlap } from '@/lib/geo/geo-area';
 import { listingFiltersFromDemand } from './demand-listing-filters';
 
 // =============================================================================
@@ -86,18 +86,22 @@ function rangesIntersect(
 /**
  * Τέμνονται οι δύο περιοχές αναζήτησης;
  *
- * 🔑 **Δύο κύκλοι τέμνονται όταν η απόσταση των κέντρων είναι ≤ άθροισμα ακτίνων.**
- * Δεν είναι «είναι το ίδιο σημείο»: δύο άνθρωποι που ψάχνουν σε γειτονικές γειτονιές
- * με ακτίνα 10 χλμ. ο καθένας **βλέπουν τα ίδια ακίνητα** στη μέση.
+ * 🔑 **Δεν είναι «είναι το ίδιο σημείο»**: δύο άνθρωποι που ψάχνουν σε γειτονικές
+ * γειτονιές με ακτίνα 10 χλμ. ο καθένας **βλέπουν τα ίδια ακίνητα** στη μέση.
+ *
+ * ✅ **Η ΓΕΩΜΕΤΡΙΑ ΕΦΥΓΕ ΑΠΟ ΕΔΩ** *(ADR-777 §8.63)*. Ζούσε γραμμένη στο χέρι
+ * *(«απόσταση κέντρων ≤ άθροισμα ακτίνων»)* — σωστή, αλλά **δεύτερη**: το ίδιο
+ * ερώτημα το απαντούσε ήδη ο γεωγραφικός φιλτραριστής των αγγελιών, με δικό του
+ * κώδικα. Τώρα και οι δύο ρωτούν το {@link areasOverlap}, δηλαδή **μία** μηχανή —
+ * και ως δώρο η ζήτηση απαντά πλέον σωστά και για **ορθογώνιες** περιοχές, που
+ * χειρόγραφα δεν μπορούσε να εκφράσει.
  *
  * ⚠️ `null` (δηλαδή `anywhere`, ή `place` που δεν προβάλλεται) τέμνεται με **τα
  * πάντα** — είναι κυριολεκτικά «οπουδήποτε».
  */
-function areasIntersect(a: GeoCircle | null, b: GeoCircle | null): boolean {
+function areasIntersect(a: GeoArea | null, b: GeoArea | null): boolean {
   if (a === null || b === null) return true;
-
-  const metres = distanceMeters(a.center, b.center);
-  return metres <= (a.radiusKm + b.radiusKm) * 1000;
+  return areasOverlap(a, b);
 }
 
 // =============================================================================
