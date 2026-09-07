@@ -54,6 +54,9 @@ import { AGENCY_PUBLIC_NS, DIRECTORY_KEYS } from './agency-directory-labels';
 import { agencyProfileRoute } from './agency-directory-route';
 import { lettermarkOf } from '@/lib/agency/showcase-mark';
 import { ShowcaseMarkView } from './ShowcaseMarkView';
+import { lineageIdsOf, useAdministrativeHierarchy } from '@/hooks/useAdministrativeHierarchy';
+import { coverageRelation } from '@/lib/agency/coverage-match';
+import { isNationwide } from '@/types/agency-coverage';
 
 interface AgencyCardProps {
   readonly profile: PublicShowcase;
@@ -71,9 +74,25 @@ interface AgencyCardProps {
    * διαλέγαμε — γι' αυτό ρωτιέται, αντί να μαντεύεται.
    */
   readonly headingLevel?: 2 | 3;
+  /**
+   * **Η περιοχή που ρώτησε ο επισκέπτης**, όταν ρώτησε *(ADR-846)*.
+   *
+   * 🔑 **Προαιρετικό, γιατί η ΣΧΕΣΗ δεν υπάρχει χωρίς ερώτημα.** Η κάρτα εμφανίζεται και
+   * σε οθόνη χωρίς φίλτρο *(η βιτρίνα της ρίζας)*, όπου το *«καλύπτει όλη την περιοχή»*
+   * δεν έχει **σε τι** να αναφέρεται. Χωρίς αυτό το prop, η κάρτα δείχνει μόνο **τι
+   * δήλωσε** — που ισχύει πάντα.
+   *
+   * ⛔ **ΔΕΝ επηρεάζει ποτέ τη σειρά** — μόνο μια γραμμή κειμένου. Δες τον φρουρό στο
+   * `agency-directory-order.ts`.
+   */
+  readonly queryAreaId?: string | null;
 }
 
-export function AgencyCard({ profile, headingLevel = 2 }: AgencyCardProps): React.JSX.Element {
+export function AgencyCard({
+  profile,
+  headingLevel = 2,
+  queryAreaId = null,
+}: AgencyCardProps): React.JSX.Element {
   const { t } = useTranslation([AGENCY_PUBLIC_NS]);
   const Heading = (headingLevel === 3 ? 'h3' : 'h2') as 'h2' | 'h3';
 
@@ -130,6 +149,21 @@ export function AgencyCard({ profile, headingLevel = 2 }: AgencyCardProps): Reac
           {profile.credentials.map((credential) => (
             <CredibilityStatement key={credential.occupation.escoUri} credential={credential} />
           ))}
+          {/*
+            🏆 **Η ΔΗΛΩΣΗ ΕΙΝΑΙ ΟΡΑΤΗ — ΚΑΙ ΕΔΩ ΞΕΠΕΡΝΑΜΕ ΤΟΥΣ ΜΕΓΑΛΟΥΣ** (ADR-846).
+
+            Zillow · Thumbtack · Google: κανένας **δεν δείχνει την έκταση** που δήλωσε
+            ο επαγγελματίας δίπλα στο αποτέλεσμα. Ο επισκέπτης μαθαίνει ότι «καλύπτει
+            την περιοχή» χωρίς να μάθει ποτέ ότι ο ίδιος δήλωσε **ολόκληρη τη χώρα**.
+
+            ⚠️ **Η ορατότητα ΑΝΤΙΚΑΘΙΣΤΑ τον ανιχνευτή spam**: όταν η υπερδήλωση
+            **φαίνεται**, ο άνθρωπος την κρίνει μόνος του — και δεν χρειάζεται
+            αλγόριθμος που μαντεύει ποιος «το παρακάνει».
+
+            ⛔ **Καμία ετικέτα σχέσης εδώ** *(«καλύπτει όλη την περιοχή»)*: αυτή έχει
+            νόημα **μόνο** όταν υπάρχει ερώτημα, και η κάρτα εμφανίζεται και χωρίς.
+          */}
+          <CoverageLine coverage={profile.coverage} queryAreaId={queryAreaId} />
           <Link
             href={agencyProfileRoute(profile.alias)}
             className="mt-2 self-start text-sm font-medium text-foreground underline underline-offset-4"
@@ -139,5 +173,65 @@ export function AgencyCard({ profile, headingLevel = 2 }: AgencyCardProps): Reac
         </div>
       </article>
     </li>
+  );
+}
+
+/**
+ * **Η δηλωμένη εμβέλεια, με λέξεις** *(ADR-846)*.
+ *
+ * ⚠️ **Τα ονόματα λύνονται ΤΩΡΑ, από την ιεραρχία** — δεν αποθηκεύονται δίπλα στα ids.
+ * Ένα `coverageNames: string[]` στο έγγραφο θα ήταν δεύτερη αυθεντία που **παλιώνει**
+ * στην πρώτη μετονομασία δήμου, και θα έμοιαζε επικίνδυνα με το σχήμα «ταυτότητα +
+ * όνομα ανά επίπεδο» που κυνηγά το CHECK 3.44.
+ *
+ * 🔑 **Όσο η ιεραρχία δεν έχει φορτώσει, η γραμμή ΛΕΙΠΕΙ** αντί να δείξει ωμά ids: ένα
+ * `municipality:0706` στην κάρτα δεν λέει τίποτα σε κανέναν.
+ */
+function CoverageLine({
+  coverage,
+  queryAreaId,
+}: {
+  readonly coverage: PublicShowcase['coverage'];
+  readonly queryAreaId: string | null;
+}): React.ReactElement | null {
+  const { t } = useTranslation([AGENCY_PUBLIC_NS]);
+  const { findById } = useAdministrativeHierarchy();
+
+  if (coverage === null) return null;
+
+  // 🏆 **Η ΤΡΙΤΗ ΑΠΑΝΤΗΣΗ, ΟΡΑΤΗ** — *«ναι, ολόκληρη»* ≠ *«ίσως, εν μέρει»*. Οι
+  //    πλατφόρμες ακινήτων υποβαθμίζουν αυτό το ερώτημα σε δυαδικό *(εμφανίζεται ή
+  //    όχι)*· εδώ ο επισκέπτης βλέπει **ποια από τις δύο** ισχύει, και κρίνει μόνος του.
+  //
+  // ⛔ **ΦΙΛΤΡΟ ΚΑΙ ΠΕΡΙΓΡΑΦΗ, ΠΟΤΕ ΣΕΙΡΑ**: το `within` ΔΕΝ ανεβάζει κανέναν πάνω από
+  //    το `intersects` — θα ήταν κατάταξη παραγόμενη από δήλωση του ίδιου.
+  if (queryAreaId !== null && queryAreaId !== '') {
+    const relation = coverageRelation(coverage, queryAreaId, lineageIdsOf);
+    if (relation !== 'disjoint') {
+      return (
+        <p className="m-0 text-sm text-muted-foreground">
+          {t(relation === 'within' ? DIRECTORY_KEYS.coverageWithin : DIRECTORY_KEYS.coverageIntersects)}
+        </p>
+      );
+    }
+  }
+
+  if (isNationwide(coverage)) {
+    return (
+      <p className="m-0 text-sm text-muted-foreground">
+        {t(DIRECTORY_KEYS.coverageDeclaredNationwide)}
+      </p>
+    );
+  }
+
+  const names = coverage.adminIds
+    .map((adminId) => findById(adminId)?.name)
+    .filter((name): name is string => name !== undefined);
+  if (names.length === 0) return null;
+
+  return (
+    <p className="m-0 text-sm text-muted-foreground">
+      {t(DIRECTORY_KEYS.coverageDeclared, { areas: names.join(' · ') })}
+    </p>
   );
 }

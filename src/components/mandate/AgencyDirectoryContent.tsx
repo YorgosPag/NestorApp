@@ -57,12 +57,18 @@ import {
   EMPTY_SHOWCASE_FILTERS,
   applyShowcaseFilters,
   hasActiveFilters,
+  isAdministrativeWhere,
   occupationOptions,
   parseShowcaseFilters,
   serializeShowcaseFilters,
   showcaseLocale,
+  whereCenter,
   type ShowcaseFilters,
 } from '@/lib/agency/showcase-filter';
+import {
+  lineageIdsOf,
+  useAdministrativeHierarchy,
+} from '@/hooks/useAdministrativeHierarchy';
 // 🔴 **Ο ROUTER ΑΠΟ ΤΟ ΣΥΝΟΡΟ** (CHECK 3.61) — το `useSearchParams` δεν ζει εκεί
 //    και έρχεται ωμό, όπως και στην αδελφή δημόσια οθόνη `ListingDetailContent`.
 import { useSearchParams } from 'next/navigation';
@@ -113,8 +119,19 @@ export function AgencyDirectoryContent(): React.JSX.Element {
   //    ⛔ ΜΗΝ βάλεις προεπιλεγμένο κέντρο *(«Αθήνα, γιατί εκεί είναι οι περισσότεροι»)*:
   //    θα ήταν **σιωπηλή γεωγραφική κατάταξη** που κανείς δεν ζήτησε και κανείς δεν
   //    βλέπει — ακριβώς το σχήμα του «μοιάζει με αρχή» που ο Κ13 κυνηγά.
-  const near = filters.near?.center ?? null;
+  //
+  // 🔴 **ΚΑΙ Ο ΔΙΟΙΚΗΤΙΚΟΣ ΑΞΟΝΑΣ ΔΕΝ ΠΑΡΑΓΕΙ ΚΕΝΤΡΟ — ΔΟΜΙΚΑ** (ADR-846). Δεν έχουμε
+  //    γεωμετρία διοικητικών ορίων, άρα το *«πού είναι το κέντρο του Δήμου Θέρμης;»*
+  //    **δεν έχει απάντηση** εδώ. Συνέπεια: όταν ο επισκέπτης ρωτά με περιοχή, η σειρά
+  //    είναι **ισότιμη**. Αυτό δεν είναι έλλειψη — είναι ο ασφαλέστερος συνδυασμός που
+  //    υπάρχει: **φίλτρο χωρίς καμία κατάταξη**.
+  const near = whereCenter(filters.where);
   const { agencies, loading, error } = usePublicAgencies(near);
+
+  // 🔑 **Η ΙΕΡΑΡΧΙΑ ΜΠΑΙΝΕΙ ΜΕ ΕΝΕΣΗ** (ADR-846): το `showcase-filter` είναι **καθαρό
+  //    φύλλο** και δεν επιτρέπεται να εισάγει hook. Το `lineageIdsOf` διαβάζει το ίδιο
+  //    module cache που γεμίζει ο `useAdministrativeHierarchy` παρακάτω.
+  const { isLoading: hierarchyLoading } = useAdministrativeHierarchy();
 
   // 🔑 **Η ΔΙΕΥΘΥΝΣΗ ΕΙΝΑΙ Η ΚΑΤΑΣΤΑΣΗ.** Καμία δεύτερη πηγή: ένα `useState`
   //    δίπλα στη διεύθυνση θα ήταν δύο απαντήσεις στο *«τι φιλτράρει τώρα;»*,
@@ -135,7 +152,20 @@ export function AgencyDirectoryContent(): React.JSX.Element {
   //    `usePublicAgencies` έχει **ήδη** ταξινομήσει· εδώ **μόνο** αφαιρούμε.
   //    Καμία «συνάφεια», κανένα «best match» — η σειρά δεν αλλάζει ποτέ επειδή
   //    κάποιος φιλτράρισε.
-  const visible = React.useMemo(() => applyShowcaseFilters(agencies, filters), [agencies, filters]);
+  //
+  // ⚠️ **ΟΣΟ Η ΙΕΡΑΡΧΙΑ ΔΕΝ ΕΧΕΙ ΦΟΡΤΩΣΕΙ, Ο ΔΙΟΙΚΗΤΙΚΟΣ ΑΞΟΝΑΣ ΔΕΝ ΕΦΑΡΜΟΖΕΤΑΙ.**
+  //    Η εναλλακτική είναι χειρότερη από αργή: με κενή γενεαλογία **κάθε** βιτρίνα
+  //    απαντά `disjoint`, δηλαδή η οθόνη θα έλεγε *«κανείς δεν ταιριάζει»* — ψέμα, για
+  //    τα πρώτα ms κάθε επίσκεψης. «Άγνωστο ≠ κενό» (N.12): δείχνουμε **όλους** και το
+  //    **λέμε** (`areaLoading`), αντί να δείξουμε **κανέναν** σιωπηλά.
+  const areaPending = hierarchyLoading && filters.where !== null && isAdministrativeWhere(filters.where);
+  const visible = React.useMemo(
+    () =>
+      areaPending
+        ? agencies
+        : applyShowcaseFilters(agencies, filters, lineageIdsOf),
+    [agencies, filters, areaPending],
+  );
   const options = React.useMemo(() => occupationOptions(agencies, locale), [agencies, locale]);
   const filtering = hasActiveFilters(filters);
 
@@ -161,6 +191,18 @@ export function AgencyDirectoryContent(): React.JSX.Element {
           onChange={apply}
           onClear={filtering ? () => apply(EMPTY_SHOWCASE_FILTERS) : null}
         />
+      )}
+
+      {/*
+        🔴 **ΤΟ «ΔΕΝ ΞΕΡΩ» ΛΕΓΕΤΑΙ** (ADR-846). Όσο η ιεραρχία των 4,1 MB δεν έχει
+        φορτώσει, ο διοικητικός άξονας **δεν εφαρμόζεται** — και ο επισκέπτης βλέπει
+        **όλους**, ενώ έχει ζητήσει περιοχή. Σιωπή εδώ θα ήταν χειρότερη από αργή
+        οθόνη: ο άνθρωπος θα συμπέραινε ότι *«όλοι αυτοί δουλεύουν εκεί»*.
+      */}
+      {areaPending && (
+        <p role="status" className="m-0 text-sm text-muted-foreground">
+          {t(DIRECTORY_KEYS.areaLoading)}
+        </p>
       )}
 
       {loading ? (
@@ -206,7 +248,15 @@ export function AgencyDirectoryContent(): React.JSX.Element {
           </p>
           <ul className="m-0 flex list-none flex-col gap-3 p-0">
             {visible.map((profile) => (
-              <AgencyCard key={profile.companyId} profile={profile} />
+              <AgencyCard
+                key={profile.companyId}
+                profile={profile}
+                queryAreaId={
+                  filters.where !== null && isAdministrativeWhere(filters.where)
+                    ? filters.where.adminId
+                    : null
+                }
+              />
             ))}
           </ul>
         </section>

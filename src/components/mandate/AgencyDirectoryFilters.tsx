@@ -47,8 +47,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { AGENCY_PUBLIC_NS, DIRECTORY_KEYS } from './agency-directory-labels';
+import { AreaCombobox } from './AreaCombobox';
 import { OccupationSelect } from './OccupationSelect';
-import type { OccupationOption, ShowcaseFilters } from '@/lib/agency/showcase-filter';
+import {
+  isAdministrativeWhere,
+  type OccupationOption,
+  type ShowcaseFilters,
+} from '@/lib/agency/showcase-filter';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 /**
@@ -125,7 +130,7 @@ export function AgencyDirectoryFilters({
         {t(DIRECTORY_KEYS.occupationScopeHint, { count: options.length })}
       </p>
 
-      <RadiusControl filters={filters} onChange={onChange} />
+      <WhereControl filters={filters} onChange={onChange} />
 
       {/* 🔑 **Φ4 — η αφαίρεση είναι ΜΙΑ ενέργεια.** Φίλτρο που δεν ξεκλειδώνει με
           ένα πάτημα είναι φίλτρο που ο άνθρωπος **δεν** θα δοκιμάσει. */}
@@ -139,26 +144,34 @@ export function AgencyDirectoryFilters({
 }
 
 /**
- * **Η ακτίνα — και ΜΟΝΟ όταν υπάρχει σημείο.**
+ * **ΠΟΥ ΨΑΧΝΕΙ Ο ΕΠΙΣΚΕΠΤΗΣ** — ένας άξονας, δύο πηγές *(ADR-846)*.
  *
- * 🔑 **Ο άξονας του τόπου είναι «σημείο + ακτίνα», ΠΟΤΕ όνομα τόπου** — το
- * γράφει ήδη το `listing-filters.ts:38`: *«ένα φίλτρο “πόλη = Θεσσαλονίκη” θα
- * έπρεπε είτε να ψάξει στον **τίτλο**, είτε να γεννήσει νέο πεδίο»*. Το σημείο
- * έρχεται από τη **διεύθυνση** (`lat`·`lng`), λυμένο από τον υπάρχοντα
- * γεωκωδικοποιητή, και συγκρίνεται **γεωμετρία με γεωμετρία**.
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔄 ΤΙ ΑΝΤΙΚΑΤΕΣΤΗΣΕ, ΚΑΙ ΓΙΑΤΙ Η ΠΑΛΙΑ ΓΡΑΦΗ ΗΤΑΝ ΣΩΣΤΗ ΓΙΑ ΤΟΝ ΚΑΙΡΟ ΤΗΣ
+ * ════════════════════════════════════════════════════════════════════════════
  *
- * ⚠️ Χωρίς σημείο, μια ακτίνα δεν σημαίνει τίποτα: το χειριστήριο **λείπει**
- * και η οθόνη λέει ρητά *«όλη η Ελλάδα»* — σιωπή θα άφηνε τον επισκέπτη να
- * νομίζει ότι φιλτράρει ενώ δεν φιλτράρει.
+ * Εδώ έγραφε: *«Ο άξονας του τόπου είναι «σημείο + ακτίνα», **ΠΟΤΕ όνομα τόπου**»*, με
+ * παραπομπή στο `listing-filters.ts:38`: *«ένα φίλτρο “πόλη = Θεσσαλονίκη” θα έπρεπε
+ * είτε να ψάξει στον **τίτλο**, είτε να **γεννήσει νέο πεδίο**»*.
  *
- * 🔶 **ΔΗΛΩΜΕΝΟ ΑΝΟΙΧΤΟ**: η οθόνη `/pro` δεν έχει ακόμη **δικό της** πεδίο
- * αναζήτησης τόπου. Ο άξονας δουλεύει ολόκληρος από τη διεύθυνση *(parse ·
- * apply · άγκυρες)*· λείπει **μόνο** ο τρόπος να τεθεί το σημείο **εδώ**. Η
- * θεραπεία είναι να δεχτεί προορισμό ο `PlaceSearchBox` — αρχείο που
- * επεξεργάζεται **άλλος πράκτορας** (ADR-842), και ένα δεύτερο κουτί
- * αναζήτησης θα ήταν ο κλώνος που το N.18 ονομάζει.
+ * 🔑 **Το νέο πεδίο γεννήθηκε.** Το `PublicShowcase.coverage` *(ADR-846)* είναι ακριβώς
+ * αυτό που εκείνη η πρόταση προέβλεπε ως προϋπόθεση — άρα η απαγόρευση **δεν
+ * παραβιάζεται· η προϋπόθεσή της εκπληρώθηκε**. Και το όνομα τόπου δεν ψάχνεται σε
+ * κείμενο: είναι **ταυτότητα** κλειστού λεξιλογίου *(ΕΛΣΤΑΤ/Καλλικράτης, ADR-772)*,
+ * που συγκρίνεται με **σχέση προγόνου**, όχι με `includes`.
+ *
+ * ✅ **ΚΑΙ ΤΟ ΔΗΛΩΜΕΝΟ ΑΝΟΙΧΤΟ ΕΚΛΕΙΣΕ**: η οθόνη `/pro` **δεν είχε τρόπο να θέσει
+ * τόπο** — ο άξονας δούλευε μόνο από τη διεύθυνση. Τώρα έχει.
+ *
+ * ⚠️ **ΚΑΙ ΔΕΝ ΑΚΥΡΩΝΕΙ ΤΟΝ `PlaceSearchBox`** *(ADR-842, άλλος πράκτορας)*: εκείνος
+ * απαντά την **ίδια** ερώτηση από **άλλη** πηγή *(ελεύθερος γεωκωδικοποιητής → σημείο)*
+ * και γράφει στο **ίδιο** πεδίο, ως σκέλος `circle`. Δύο **πεδία** θα ήταν «δύο
+ * αλήθειες για το πού είσαι»· δύο **πηγές ενός** πεδίου είναι το ιδίωμα του `GeoArea`.
+ *
+ * ⛔ **Η ακτίνα δείχνεται ΜΟΝΟ στο σκέλος `circle`** — σε διοικητική περιοχή δεν
+ * σημαίνει τίποτα: δεν υπάρχει κέντρο να μετρηθεί απόσταση από αυτό.
  */
-function RadiusControl({
+function WhereControl({
   filters,
   onChange,
 }: {
@@ -166,41 +179,53 @@ function RadiusControl({
   readonly onChange: (filters: ShowcaseFilters) => void;
 }): React.ReactElement {
   const { t } = useTranslation([AGENCY_PUBLIC_NS]);
-
-  // 🔑 **Ο ΑΞΟΝΑΣ ΟΝΟΜΑΖΕΤΑΙ ΚΑΙ ΣΤΙΣ ΔΥΟ ΚΑΤΑΣΤΑΣΕΙΣ.** Χωρίς όνομα, το «όλη η
-  //    Ελλάδα» θα ήταν ελεύθερη πρόταση που ο επισκέπτης δεν συνδέει με φίλτρο —
-  //    και δεν θα καταλάβαινε ότι **υπάρχει** άξονας τόπου να τεθεί.
-  if (filters.near === null) {
-    return (
-      <div className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-foreground">{t(DIRECTORY_KEYS.placeFilterLabel)}</span>
-        <p className="m-0 text-sm text-muted-foreground">{t(DIRECTORY_KEYS.placeAll)}</p>
-      </div>
-    );
-  }
-
-  const near = filters.near;
+  const where = filters.where;
+  const areaId = where !== null && isAdministrativeWhere(where) ? where.adminId : '';
 
   return (
-    <label className="flex flex-col gap-1 text-sm">
-      <span className="font-medium text-foreground">{t(DIRECTORY_KEYS.radiusLabel)}</span>
-      <Select
-        value={String(near.radiusKm)}
-        onValueChange={(value) =>
-          onChange({ ...filters, near: { ...near, radiusKm: Number(value) } })
-        }
-      >
-        <SelectTrigger className="min-w-40">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {RADIUS_CHOICES_KM.map((km) => (
-            <SelectItem key={km} value={String(km)}>
-              {t(DIRECTORY_KEYS.radiusOption, { km })}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </label>
+    <div className="flex flex-wrap items-end gap-4">
+      <label className="flex flex-col gap-1 text-sm">
+        <span className="font-medium text-foreground">{t(DIRECTORY_KEYS.placeFilterLabel)}</span>
+        <AreaCombobox
+          value={areaId}
+          onValueChange={(adminId) =>
+            onChange({ ...filters, where: adminId === '' ? null : { adminId } })
+          }
+          placeholder={t(DIRECTORY_KEYS.areaSearchPlaceholder)}
+          emptyMessage={t(DIRECTORY_KEYS.areaSearchEmpty)}
+        />
+        {/* 🔑 **Ο ΑΞΟΝΑΣ ΟΝΟΜΑΖΕΤΑΙ ΚΑΙ ΣΤΙΣ ΔΥΟ ΚΑΤΑΣΤΑΣΕΙΣ.** Σιωπή θα άφηνε τον
+            επισκέπτη να νομίζει ότι φιλτράρει ενώ δεν φιλτράρει. */}
+        <span className="text-xs text-muted-foreground">
+          {areaId === '' ? t(DIRECTORY_KEYS.placeAll) : t(DIRECTORY_KEYS.areaHint)}
+        </span>
+      </label>
+
+      {where !== null && !isAdministrativeWhere(where) && (
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium text-foreground">{t(DIRECTORY_KEYS.radiusLabel)}</span>
+          <Select
+            value={String(where.circle.radiusKm)}
+            onValueChange={(value) =>
+              onChange({
+                ...filters,
+                where: { circle: { ...where.circle, radiusKm: Number(value) } },
+              })
+            }
+          >
+            <SelectTrigger className="min-w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {RADIUS_CHOICES_KM.map((km) => (
+                <SelectItem key={km} value={String(km)}>
+                  {t(DIRECTORY_KEYS.radiusOption, { km })}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </label>
+      )}
+    </div>
   );
 }

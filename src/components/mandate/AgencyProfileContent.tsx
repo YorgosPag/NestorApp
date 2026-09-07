@@ -71,6 +71,8 @@ import { lettermarkOf } from '@/lib/agency/showcase-mark';
 import { ShowcaseMarkView } from './ShowcaseMarkView';
 
 import { AGENCY_PUBLIC_NS, PROFILE_KEYS } from './agency-directory-labels';
+import { useAdministrativeHierarchy } from '@/hooks/useAdministrativeHierarchy';
+import { isNationwide } from '@/types/agency-coverage';
 import { AGENCY_DIRECTORY_ROUTE } from './agency-directory-route';
 
 /**
@@ -159,7 +161,7 @@ function Notice({
   );
 }
 
-/** Πού δραστηριοποιείται — **μία** επιπλέον ανάγνωση, μόνο για τη μία βιτρίνα. */
+/** Πού **εδρεύει** — **μία** επιπλέον ανάγνωση, μόνο για τη μία βιτρίνα. */
 function PlaceFact({ profile }: { readonly profile: PublicShowcase }): React.JSX.Element {
   const { t } = useTranslation([AGENCY_PUBLIC_NS]);
   // ⚠️ `idle` όταν `place === null` — **δεν είναι φόρτωση**, δεν υπάρχει ερώτηση.
@@ -176,6 +178,38 @@ function PlaceFact({ profile }: { readonly profile: PublicShowcase }): React.JSX
       : t(PROFILE_KEYS.placeUnknown);
 
   return <Fact label={t(PROFILE_KEYS.placeLabel)} value={value} />;
+}
+
+/**
+ * **ΠΟΥ ΔΟΥΛΕΥΕΙ** — η δηλωμένη εμβέλεια, δίπλα στην έδρα και **ξεχωριστά από αυτήν**
+ * *(ADR-846)*.
+ *
+ * 🔴 **Μέχρι σήμερα η σελίδα έλεγε «Περιοχή δραστηριότητας» δείχνοντας την ΕΔΡΑ.** Δεν
+ * ήταν ανακρίβεια διατύπωσης: ήταν **υπόσχεση που το δεδομένο δεν μπορούσε να τηρήσει**,
+ * και ο επισκέπτης έβγαζε συμπέρασμα για την εμβέλεια από μια διεύθυνση.
+ *
+ * ⚠️ **Τα ονόματα λύνονται ΤΩΡΑ** από την ιεραρχία — ποτέ αποθηκευμένα δίπλα στα ids
+ * *(δες `types/agency-coverage.ts`)*. Όσο δεν έχει φορτώσει, η γραμμή λέει «δεν
+ * δηλώθηκε» **μόνο** αν όντως δεν δηλώθηκε· αλλιώς περιμένει σιωπηλά τα ονόματα.
+ */
+function CoverageFact({
+  coverage,
+}: {
+  readonly coverage: PublicShowcase['coverage'];
+}): React.JSX.Element {
+  const { t } = useTranslation([AGENCY_PUBLIC_NS]);
+  const { findById } = useAdministrativeHierarchy();
+
+  const value = ((): string => {
+    if (coverage === null) return t(PROFILE_KEYS.coverageUnknown);
+    if (isNationwide(coverage)) return t(PROFILE_KEYS.coverageNationwide);
+    const names = coverage.adminIds
+      .map((adminId) => findById(adminId)?.name)
+      .filter((name): name is string => name !== undefined);
+    return names.length === 0 ? t(PROFILE_KEYS.coverageUnknown) : names.join(' · ');
+  })();
+
+  return <Fact label={t(PROFILE_KEYS.coverageLabel)} value={value} />;
 }
 
 /**
@@ -359,6 +393,7 @@ export function AgencyProfileContent({
           <CredibilityStatement key={credential.occupation.escoUri} credential={credential} />
         ))}
         <PlaceFact profile={profile} />
+        <CoverageFact coverage={profile.coverage} />
       </dl>
 
       <section className="flex flex-col gap-2">
