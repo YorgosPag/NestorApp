@@ -46,6 +46,7 @@ import { useListingFocus } from '@/hooks/listings/useListingFocus';
 import { useMapAreaSearch } from '@/hooks/listings/useMapAreaSearch';
 import { useFilterCommit } from './filters/use-filter-commit';
 import { computeAreaLedger } from '@/lib/listings/listing-search-area';
+import { isBoundingBox } from '@/lib/geo/geo-area';
 import { CriteriaLedgerBar } from './CriteriaLedgerBar';
 import { ListingLedgerBar } from './ListingLedgerBar';
 import { AreaLedgerBar } from './AreaLedgerBar';
@@ -461,12 +462,17 @@ export function SearchResultsContent() {
             onClear={clear}
             onAreaChange={onAreaChange}
             /*
-              🔴 **ΤΟ ΚΛΕΙΔΩΜΑ ΣΠΑΕΙ ΤΗΝ ΑΝΑΔΡΑΣΗ** — δες `ResultsMapProps.areaLocked`.
-              Όσο ο άνθρωπος έχει δηλώσει περιοχή, ο χάρτης **δεν** ξανακαδράρει στα
-              αποτελέσματα: αλλιώς κάθε σύρσιμο θα έκοβε τη λίστα, τα νέα όρια θα
-              τραβούσαν τον χάρτη πιο σφιχτά, και το κάδρο θα έκοβε ξανά.
+              🔴 **Η ΠΕΡΙΟΧΗ ΚΑΝΕΙ ΔΥΟ ΔΟΥΛΕΙΕΣ** — δες `ResultsMapProps.searchArea`:
+              (α) σπάει την ανάδραση *(ο χάρτης δεν ξανακαδράρει στα αποτελέσματα, άρα
+              δεν πηδά κάτω από τα δάχτυλα του ανθρώπου)*· (β) **καδράρει εκεί**, ώστε
+              ένας κοινοποιημένος σύνδεσμος να **δείχνει** την περιοχή που φιλτράρει.
+
+              ⚠️ **Μόνο ορθογώνιο**: το `near` μπορεί να είναι και **κύκλος** *(από
+              κείμενο που έγραψε ο επισκέπτης)*, και εκείνον τον καδράρει ήδη ο
+              υπάρχων μηχανισμός των δεδομένων. Το `null` εδώ σημαίνει ρητά *«καμία
+              ορθογώνια περιοχή»*, όχι «καμία ερώτηση».
             */
-            areaLocked={filters.near !== null}
+            searchArea={filters.near !== null && isBoundingBox(filters.near) ? filters.near : null}
           />
 
           {/*

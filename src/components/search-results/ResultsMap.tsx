@@ -39,7 +39,14 @@ import { ListingPriceMarkers } from './ListingPriceMarkers';
 import { ResultsMapLayers, RADIUS } from './ResultsMapLayers';
 import type { PublicListing } from '@/types/public-listing';
 import type { GeoBoundingBox } from '@/types/geo/coordinates';
-import { readMapArea, type MapAreaSource } from './results-map-area';
+import { readMapArea, sameMapArea } from './results-map-area';
+import {
+  fitMapToArea,
+  listingIdOf,
+  type MapEventTarget,
+  type MapMoveEvent,
+  type MapPointerEvent,
+} from './results-map-contract';
 
 /**
  * Τα επίπεδα που δέχονται κλικ. **Κάθε ορατό σχήμα**, όχι μόνο η πινέζα — αλλιώς οι
@@ -112,7 +119,25 @@ interface ResultsMapProps {
    */
   readonly onAreaChange?: (area: GeoBoundingBox) => void;
   /**
-   * **ΜΗΝ ΚΑΔΡΑΡΕΙΣ ΜΟΝΟΣ ΣΟΥ — Ο ΑΝΘΡΩΠΟΣ ΤΟΠΟΘΕΤΗΣΕ ΤΟΝ ΧΑΡΤΗ** *(ADR-777 §8.63)*.
+   * **Η ΠΕΡΙΟΧΗ ΠΟΥ ΡΩΤΗΘΗΚΕ** — `null` = κανείς δεν ρώτησε *(ADR-777 §8.63)*.
+   *
+   * 🔴 **ΗΤΑΝ `areaLocked: boolean`, ΚΑΙ Η ΖΩΝΤΑΝΗ ΕΠΑΛΗΘΕΥΣΗ ΤΟ ΚΑΤΕΔΕΙΞΕ ΩΣ ΜΙΣΟ**
+   * *(2026-09-07)*. Η σημαία απαντούσε *«μην καδράρεις»* — και ο χάρτης έμενε **όπου
+   * έτυχε**. Μετρημένο στην οθόνη: ένας σύνδεσμος `?box=37.8,23.5,38.1,23.9` έκοβε
+   * σωστά τη λίστα σε **1 εδώ · 3 ίσως · 5 εκτός**, ενώ ο χάρτης δίπλα έδειχνε
+   * **ολόκληρη την Πελοπόννησο**. Δηλαδή ο άνθρωπος έβλεπε λίστα κομμένη σε περιοχή
+   * που **δεν του δείχναμε πουθενά** — ακριβώς η ασυμφωνία λίστας/χάρτη που ο
+   * κανόνας 27 απαγορεύει, στην πιο σημαντική διαδρομή της Α3 *(ο κοινοποιημένος
+   * σύνδεσμος)*.
+   *
+   * 🔑 **Η περιοχή απαντά ΚΑΙ ΤΑ ΔΥΟ ερωτήματα** — *«μην καδράρεις στα δεδομένα»*
+   * **και** *«κάδραρε ΕΔΩ»*. Μια σημαία μπορούσε να απαντήσει μόνο το πρώτο.
+   *
+   * ⚠️ Εφαρμόζεται **ΜΙΑ φορά ανά περιοχή**, ποτέ σε κάθε απόδοση: αλλιώς κάθε
+   * σύρσιμο θα γεννούσε `fitBounds` με `padding`, δηλαδή ένα ορατό **τίναγμα** πάνω
+   * στην κίνηση του ίδιου του ανθρώπου.
+   *
+   * 🔴 **ΚΑΙ ΤΟ ΚΛΕΙΔΩΜΑ ΠΑΡΑΜΕΝΕΙ — ΧΩΡΙΣ ΑΥΤΟ ΥΠΑΡΧΕΙ ΑΝΑΔΡΑΣΗ, ΚΑΙ ΕΙΝΑΙ ΟΡΑΤΗ**:
    *
    * 🔴 **ΧΩΡΙΣ ΑΥΤΟ ΥΠΑΡΧΕΙ ΑΝΑΔΡΑΣΗ, ΚΑΙ ΕΙΝΑΙ ΟΡΑΤΗ**: ο άνθρωπος σέρνει ⇒ το κάδρο
    * γίνεται φίλτρο ⇒ μένουν λιγότερες αγγελίες ⇒ αλλάζουν τα `bounds` του καταλόγου ⇒
@@ -124,64 +149,13 @@ interface ResultsMapProps {
    * 🔑 **Η λύση δεν είναι χρονική (debounce), είναι ΣΗΜΑΣΙΟΛΟΓΙΚΗ**: όταν υπάρχει
    * **δηλωμένη** περιοχή, το αυτόματο καδράρισμα δεν έχει τίποτα να προσφέρει — ο
    * άνθρωπος έχει ήδη πει πού κοιτάει. Ένα χρονόμετρο θα έκανε την ανάδραση **πιο
-   * αργή**, όχι ανύπαρκτη *(μάθημα του Βήματος 2: early cutoff αντί για ρολόι)*.
+   * αργή**, όχι ανύπαρκτη *(μάθημα Βήματος 2: early cutoff αντί για ρολόι)*.
    */
-  readonly areaLocked?: boolean;
+  readonly searchArea?: GeoBoundingBox | null;
 }
 
 
 const SOURCE_ID = 'public-listings';
-
-/**
- * Η όψη του MapLibre που **χρειάζεται πραγματικά** αυτό το αρχείο.
- *
- * ⚠️ Το `MapInstance` του Geo-Canvas δεν εκθέτει τη διεπαφή συμβάντων ανά επίπεδο, και
- * η μετάβαση γινόταν ήδη με `as unknown`. Γράφεται **μία** φορά, ονομασμένη, αντί να
- * επαναληφθεί σε κάθε χειριστή — έτσι μια αλλαγή της βιβλιοθήκης σπάει σε **ένα**
- * σημείο αντί για πέντε.
- */
-interface MapPointerEvent {
-  readonly features?: Array<{ properties?: Record<string, unknown> }>;
-  readonly point: { x: number; y: number };
-}
-
-/**
- * Το συμβάν κίνησης του χάρτη — **και το ένα πεδίο που μας ενδιαφέρει**.
- *
- * 🔑 **Το `originalEvent` απαντά «ποιος το ζήτησε;»** και είναι το καθιερωμένο ιδίωμα
- * του MapLibre: υπάρχει όταν την κίνηση την προκάλεσε **άνθρωπος** (σύρσιμο, ρόδα,
- * κουμπί ζουμ) και **λείπει** όταν την προκάλεσε ο κώδικάς μας (`fitBounds`).
- *
- * 🔴 **Χωρίς αυτόν τον έλεγχο, το ΑΡΧΙΚΟ καδράρισμα θα γραφόταν στη διεύθυνση σαν να
- * το ζήτησε ο επισκέπτης** — δηλαδή κάθε άνθρωπος που απλώς **άνοιξε** τη σελίδα θα
- * αποκτούσε αμέσως φίλτρο περιοχής που δεν διάλεξε ποτέ, και ο κοινοποιημένος
- * σύνδεσμος θα κουβαλούσε ένα ερώτημα που κανείς δεν έθεσε.
- */
-interface MapMoveEvent {
-  readonly originalEvent?: unknown;
-}
-
-interface MapEventTarget extends MapAreaSource {
-  on: (
-    ev: string,
-    layerOrHandler: string | ((e: MapPointerEvent) => void) | ((e: MapMoveEvent) => void),
-    cb?: (e: MapPointerEvent) => void
-  ) => void;
-  getCanvas: () => HTMLCanvasElement;
-  getContainer: () => HTMLElement;
-  resize: () => void;
-  fitBounds: (b: [[number, number], [number, number]], o?: Record<string, unknown>) => void;
-  queryRenderedFeatures: (
-    point: { x: number; y: number },
-    options?: { layers?: readonly string[] }
-  ) => Array<{ properties?: Record<string, unknown> }>;
-}
-
-/** Η ταυτότητα της αγγελίας κάτω από τον δείκτη, ή `null` αν δεν είναι αγγελία. */
-function listingIdOf(event: MapPointerEvent): string | null {
-  const id = event.features?.[0]?.properties?.id;
-  return typeof id === 'string' ? id : null;
-}
 
 export function ResultsMap({
   listings,
@@ -191,7 +165,7 @@ export function ResultsMap({
   onSelect,
   onClear,
   onAreaChange,
-  areaLocked = false,
+  searchArea = null,
 }: ResultsMapProps) {
   const data = useMemo(() => listingsToGeoJson(listings), [listings]);
   const bounds = useMemo(() => listingBounds(data), [data]);
@@ -259,8 +233,8 @@ export function ResultsMap({
    * το `handleMapReady` έχει **κενό** πίνακα εξαρτήσεων ως συμβόλαιο, και κάθε νέα
    * ταυτότητα εκεί σημαίνει **επανα-αρχικοποίηση MapLibre**, δηλαδή **μαύρη οθόνη**.
    */
-  const areaLockedRef = useRef(areaLocked);
-  useEffect(() => { areaLockedRef.current = areaLocked; }, [areaLocked]);
+  const searchAreaRef = useRef(searchArea);
+  useEffect(() => { searchAreaRef.current = searchArea; }, [searchArea]);
 
   /**
    * 🔴 **ΤΟ ΚΑΔΡΑΡΙΣΜΑ ΕΙΝΑΙ ΕΦΕ ΤΩΝ ΔΕΔΟΜΕΝΩΝ, ΟΧΙ ΒΗΜΑ ΤΗΣ ΑΡΧΙΚΟΠΟΙΗΣΗΣ.**
@@ -290,8 +264,8 @@ export function ResultsMap({
 
   useEffect(() => {
     const target = mapRef.current;
-    // ⚠️ Ο έλεγχος του κλειδώματος είναι **πρώτος**: δες {@link ResultsMapProps.areaLocked}.
-    if (!target || !bounds || areaLockedRef.current) return;
+    // ⚠️ Ο έλεγχος του κλειδώματος είναι **πρώτος**: δες {@link ResultsMapProps.searchArea}.
+    if (!target || !bounds || searchAreaRef.current !== null) return;
 
     // ⚠️ `padding` **υποχρεωτικό**: χωρίς αυτό μια πινέζα στην άκρη κάθεται πάνω στο
     // σύνορο και μοιάζει κομμένη· και `maxZoom`, γιατί ΕΝΑ αποτέλεσμα δίνει ορθογώνιο
@@ -299,6 +273,28 @@ export function ResultsMap({
     // ακρίβειας που το ίδιο το σχήμα μπορεί να μην κάνει.
     target.fitBounds(bounds, { padding: 64, maxZoom: 15, duration: 0 });
   }, [bounds]);
+
+  /**
+   * 🔴 **ΚΑΔΡΑΡΙΣΜΑ ΣΤΗΝ ΠΕΡΙΟΧΗ ΠΟΥ ΡΩΤΗΘΗΚΕ — ΜΙΑ ΦΟΡΑ ΑΝΑ ΠΕΡΙΟΧΗ.**
+   *
+   * ⚠️ **Ο έλεγχος ταυτότητας ΔΕΝ είναι βελτιστοποίηση.** Χωρίς αυτόν, κάθε σύρσιμο
+   * θα κατέληγε σε `fitBounds` **πάνω στην κίνηση του ίδιου του ανθρώπου** — και
+   * επειδή το `fitBounds` προσθέτει `padding: 64`, το κάδρο που θα προέκυπτε θα ήταν
+   * **ελαφρώς μεγαλύτερο** από αυτό που ζήτησε: ορατό **τίναγμα** σε κάθε κίνηση.
+   *
+   * 🔑 **Η δική μας κίνηση ΔΕΝ αναφέρεται πίσω** — το `moveend` που γεννά αυτό το
+   * `fitBounds` δεν έχει `originalEvent`, άρα ο ακροατής τον αγνοεί. Ο κύκλος
+   * κλείνει **δομικά**, όχι με χρονόμετρο.
+   */
+  const framedAreaRef = useRef<GeoBoundingBox | null>(null);
+  useEffect(() => {
+    const target = mapRef.current;
+    if (!target || !searchArea) return;
+    if (sameMapArea(framedAreaRef.current, searchArea)) return;
+
+    framedAreaRef.current = searchArea;
+    fitMapToArea(target, searchArea);
+  }, [searchArea]);
 
   const handleMapReady = useCallback((map: MapInstance) => {
     const target = map as unknown as MapEventTarget;
@@ -311,7 +307,17 @@ export function ResultsMap({
     */
     mapRef.current = target;
     const readyBounds = boundsRef.current;
-    if (readyBounds && !areaLockedRef.current) {
+    /*
+      🔑 **ΔΥΟ ΔΙΑΔΡΟΜΕΣ ΠΡΟΣ ΤΗΝ ΙΔΙΑ, ΤΑΥΤΟΔΥΝΑΜΗ ΠΡΑΞΗ** — belt-and-suspenders
+      (N.7.2 #4), όχι διπλή αλήθεια: τα effects από πάνω μπορεί να έχουν **ήδη** τρέξει
+      με `mapRef.current === null` (ο χάρτης φόρτωνε ακόμη) και να μην ξανατρέξουν.
+      Η **δηλωμένη περιοχή προηγείται** των δεδομένων: ο άνθρωπος είπε πού κοιτάει.
+    */
+    const readyArea = searchAreaRef.current;
+    if (readyArea) {
+      framedAreaRef.current = readyArea;
+      fitMapToArea(target, readyArea);
+    } else if (readyBounds) {
       target.fitBounds(readyBounds, { padding: 64, maxZoom: 15, duration: 0 });
     }
 
@@ -441,7 +447,7 @@ export function ResultsMap({
       onMapReady={handleMapReady}
     >
       <Source id={SOURCE_ID} type="geojson" data={data}>
-        <ResultsMapLayers mark={mark} surface={surface} focus={focus} />
+        <ResultsMapLayers sourceId={SOURCE_ID} mark={mark} surface={surface} focus={focus} />
       </Source>
 
       {/*

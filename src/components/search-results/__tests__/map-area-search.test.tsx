@@ -23,6 +23,9 @@ import { EMPTY_LISTING_FILTERS, type ListingFilters } from '@/lib/listings/listi
 import { useMapAreaSearch } from '@/hooks/listings/useMapAreaSearch';
 import type { GeoBoundingBox } from '@/types/geo/coordinates';
 
+import { readMapArea, sameMapArea } from '../results-map-area';
+import { fitMapToArea, listingIdOf, type MapEventTarget } from '../results-map-contract';
+
 import { AreaLedgerBar } from '../AreaLedgerBar';
 
 jest.mock('@/i18n/hooks/useTranslation', () => ({
@@ -189,5 +192,56 @@ describe('Γ 🔴 — ο διακόπτης αποφασίζει ΑΝ η ανα�
     act(() => view.result.current.onAreaChange(FRAME));
 
     expect(commit).toHaveBeenCalledWith(expect.objectContaining({ near: FRAME }));
+  });
+});
+
+describe('Δ — το σύνορο προς το MapLibre: μετατροπές που ΣΠΑΝΕ ΣΙΩΠΗΛΑ', () => {
+  const boundsOf = (b: GeoBoundingBox) => ({
+    getSouth: () => b.south,
+    getWest: () => b.west,
+    getNorth: () => b.north,
+    getEast: () => b.east,
+  });
+
+  it('readMapArea διαβάζει το κάδρο με τα ΣΩΣΤΑ ονόματα', () => {
+    expect(readMapArea({ getBounds: () => boundsOf(FRAME) })).toEqual(FRAME);
+  });
+
+  it('🔴 NaN ⇒ null — ένα ορθογώνιο με NaN αδειάζει τη λίστα ΣΙΩΠΗΛΑ', () => {
+    const broken = { ...FRAME, north: Number.NaN };
+    expect(readMapArea({ getBounds: () => boundsOf(broken) })).toBeNull();
+  });
+
+  it('χάρτης χωρίς κάδρο ⇒ null, ποτέ εξαίρεση μέσα σε ακροατή', () => {
+    expect(readMapArea({ getBounds: () => undefined } as never)).toBeNull();
+  });
+
+  it('sameMapArea συγκρίνει ΠΕΔΙΑ, ποτέ ταυτότητα αντικειμένου', () => {
+    expect(sameMapArea(FRAME, { ...FRAME })).toBe(true);
+    expect(sameMapArea(FRAME, { ...FRAME, north: FRAME.north + 0.001 })).toBe(false);
+    expect(sameMapArea(null, null)).toBe(true);
+    expect(sameMapArea(FRAME, null)).toBe(false);
+  });
+
+  it('🔴 fitMapToArea στέλνει [[δύση, νότος], [ανατολή, βορράς]] — η ΣΕΙΡΑ είναι σιωπηλά αντιστρέψιμη', () => {
+    const calls: unknown[][] = [];
+    const target = { fitBounds: (...args: unknown[]) => calls.push(args) } as unknown as MapEventTarget;
+
+    fitMapToArea(target, FRAME);
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0][0]).toEqual([
+      [FRAME.west, FRAME.south],
+      [FRAME.east, FRAME.north],
+    ]);
+    // ⚠️ Το `maxZoom` δεν είναι αισθητικό: ΕΝΑ αποτέλεσμα δίνει ορθογώνιο μηδενικού
+    //    εμβαδού, και χωρίς φραγμό ο χάρτης ισχυρίζεται ακρίβεια δρόμου (Α5).
+    expect(calls[0][1]).toMatchObject({ padding: 64, maxZoom: 15 });
+  });
+
+  it('listingIdOf επιστρέφει null όταν το σχήμα δεν είναι αγγελία', () => {
+    expect(listingIdOf({ features: [{ properties: { id: 'prop_7' } }], point: { x: 0, y: 0 } })).toBe('prop_7');
+    expect(listingIdOf({ features: [], point: { x: 0, y: 0 } })).toBeNull();
+    expect(listingIdOf({ point: { x: 0, y: 0 } })).toBeNull();
   });
 });

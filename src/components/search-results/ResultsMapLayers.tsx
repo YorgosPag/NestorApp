@@ -50,6 +50,28 @@ import type { ListingFocus } from '@/lib/listings/listing-focus';
 export const RADIUS = { pin: 7, ring: 7, neighbourhood: 34, city: 90 } as const;
 
 interface ResultsMapLayersProps {
+  /**
+   * 🔴 **ΤΟ `source` ΔΙΝΕΤΑΙ ΡΗΤΑ, ΚΑΙ ΤΟ ΕΜΑΘΑ ΖΩΝΤΑΝΑ** *(2026-09-07)*.
+   *
+   * Όσο τα `<Layer>` ήταν **άμεσα** παιδιά του `<Source>`, η `react-map-gl` τους
+   * περνούσε μόνη της την ταυτότητα της πηγής. Μόλις μπήκαν σε **δικό τους**
+   * συστατικό, το άμεσο παιδί του `<Source>` έγινε αυτό εδώ — και τα οκτώ επίπεδα
+   * έχασαν την πηγή τους:
+   *
+   * ```
+   * Console Error ×8 — layers.listing-city: missing required property "source"
+   * ```
+   *
+   * ⚠️ **ΚΑΙ Ο ΧΑΡΤΗΣ ΔΕΝ ΕΣΚΑΣΕ — ΣΙΩΠΗΣΕ.** Τα υπόβαθρα ζωγραφίζονταν, οι
+   * **πινακίδες τιμών** ζωγραφίζονταν *(είναι HTML markers, όχι επίπεδα)*, και μόνο
+   * τα **σχήματα των αγγελιών** έλειπαν. Δηλαδή η οθόνη έμοιαζε σωστή ενώ η Α5 —
+   * *«ένα σχήμα ανά σκαλί ακρίβειας»* — **δεν ζωγραφιζόταν καθόλου**. Καμία σουίτα
+   * δεν το έπιασε: κανένα test δεν αποδίδει MapLibre.
+   *
+   * 🔑 **Ρητό είναι ΚΑΛΥΤΕΡΟ από σιωπηρό, όχι απλώς διόρθωση**: η παλιά συμπεριφορά
+   * εξαρτιόταν από **δομή του δέντρου** — μια ανακατανομή JSX την έσπαγε αθόρυβα.
+   */
+  readonly sourceId: string;
   /** Το χρώμα σήμανσης, **ήδη λυμένο σε συγκεκριμένο χρώμα** — το MapLibre δεν δέχεται `hsl(var(--x))`. */
   readonly mark: string;
   /** Το χρώμα της επιφάνειας, για τα κενά κέντρα των δακτυλίων. */
@@ -64,11 +86,12 @@ interface ResultsMapLayersProps {
  * ⚠️ **Αποδίδεται ΜΕΣΑ σε `<Source>`** — τα `<Layer>` του MapLibre χρειάζονται τη
  * γεωμετρία του γονιού τους. Έξω από αυτό δεν σπάει· απλώς **δεν ζωγραφίζει τίποτα**.
  */
-export function ResultsMapLayers({ mark, surface, focus }: ResultsMapLayersProps) {
+export function ResultsMapLayers({ sourceId, mark, surface, focus }: ResultsMapLayersProps) {
   return (
     <>
       {/* ΜΟΝΟ ΠΟΛΗ — σκιασμένη περιοχή. ΠΟΤΕ πινέζα (Α5). */}
       <Layer
+        source={sourceId}
         id="listing-city"
         type="circle"
         filter={['==', ['get', 'shape'], 'shaded-city']}
@@ -77,6 +100,7 @@ export function ResultsMapLayers({ mark, surface, focus }: ResultsMapLayersProps
       />
       {/* ΣΥΝΟΙΚΙΑ — μικρότερος σκιασμένος κύκλος (πρότυπο Airbnb). */}
       <Layer
+        source={sourceId}
         id="listing-neighbourhood"
         type="circle"
         filter={['==', ['get', 'shape'], 'shaded-circle']}
@@ -85,12 +109,14 @@ export function ResultsMapLayers({ mark, surface, focus }: ResultsMapLayersProps
       />
       {/* ΜΕΤΡΗΜΕΝΟ ΠΕΡΙΓΡΑΜΜΑ — πραγματικό σχήμα, γεμάτο + περίγραμμα. */}
       <Layer
+        source={sourceId}
         id="listing-outline-fill"
         type="fill"
         filter={['==', ['get', 'shape'], 'outline']}
         paint={{ 'fill-color': mark, 'fill-opacity': 0.3 }}
       />
       <Layer
+        source={sourceId}
         id="listing-outline-line"
         type="line"
         filter={['==', ['get', 'shape'], 'outline']}
@@ -98,6 +124,7 @@ export function ResultsMapLayers({ mark, surface, focus }: ResultsMapLayersProps
       />
       {/* ΔΡΟΜΟΣ ΧΩΡΙΣ ΑΡΙΘΜΟ — πινέζα με ΔΑΚΤΥΛΙΟ: κενό κέντρο, παχύ περίγραμμα. */}
       <Layer
+        source={sourceId}
         id="listing-pin-ring"
         type="circle"
         filter={['==', ['get', 'shape'], 'pin-with-ring']}
@@ -106,6 +133,7 @@ export function ResultsMapLayers({ mark, surface, focus }: ResultsMapLayersProps
       />
       {/* ΑΚΡΙΒΗΣ ΔΙΕΥΘΥΝΣΗ — συμπαγής πινέζα. */}
       <Layer
+        source={sourceId}
         id="listing-pin"
         type="circle"
         filter={['==', ['get', 'shape'], 'pin']}
@@ -143,6 +171,7 @@ export function ResultsMapLayers({ mark, surface, focus }: ResultsMapLayersProps
         enterprise IDs έχουν πρόθεμα, ποτέ δεν είναι κενά).
       */}
       <Layer
+        source={sourceId}
         id="listing-peek"
         type="circle"
         filter={['==', ['get', 'id'], focus.peeked ?? '']}
@@ -150,6 +179,7 @@ export function ResultsMapLayers({ mark, surface, focus }: ResultsMapLayersProps
                  'circle-stroke-width': 2, 'circle-stroke-color': mark, 'circle-stroke-opacity': 0.55 }}
       />
       <Layer
+        source={sourceId}
         id="listing-selected"
         type="circle"
         filter={['==', ['get', 'id'], focus.selected ?? '']}
