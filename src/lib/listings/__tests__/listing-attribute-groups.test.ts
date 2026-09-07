@@ -55,6 +55,7 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     title: 'Δοκιμή',
     legality: [],
     projectedAt: AT,
+    listedAt: { kind: 'unknown', reason: 'predates-record' },
     ...over,
   };
 }

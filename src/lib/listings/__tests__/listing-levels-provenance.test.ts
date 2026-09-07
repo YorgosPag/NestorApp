@@ -192,6 +192,7 @@ function listingWith(levels: PublicListing['levels']): PublicListing {
     title: 'Μεζονέτα',
     legality: [],
     projectedAt: AT,
+    listedAt: { kind: 'unknown', reason: 'predates-record' },
   };
 }
 

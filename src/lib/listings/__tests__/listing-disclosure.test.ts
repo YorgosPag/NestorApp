@@ -103,6 +103,7 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     // ΠΕΡΙΕΧΟΜΕΝΟ νομιμότητας ζουν στο `legality-signal.test.ts` — εδώ κρίνεται ΣΧΗΜΑ.
     legality: [],
     projectedAt: AT,
+    listedAt: { kind: 'unknown', reason: 'predates-record' },
     ...over,
   };
 }
