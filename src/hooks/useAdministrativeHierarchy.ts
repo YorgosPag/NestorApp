@@ -13,6 +13,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import type { ComboboxOption } from '@/components/ui/searchable-combobox';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('useAdministrativeHierarchy');
 
 // ============================================================================
 // TYPES
@@ -131,27 +134,56 @@ async function loadHierarchy(): Promise<void> {
   }
 
   loadingPromise = (async () => {
-    const rawData: RawData = await fetch('/data/administrative-hierarchy.json').then(r => r.json());
-    const entityMap = new Map<string, AdminEntity>();
-    const levelMap = new Map<number, AdminEntity[]>();
-
-    for (const raw of rawData.data) {
-      const entity = mapRawToEntity(raw);
-      entityMap.set(entity.id, entity);
-
-      const levelList = levelMap.get(entity.level);
-      if (levelList) {
-        levelList.push(entity);
-      } else {
-        levelMap.set(entity.level, [entity]);
+    // 🔴 **ΑΝ ΑΥΤΟ ΠΕΤΑΞΕΙ, ΠΕΦΤΕΙ ΟΛΟΚΛΗΡΗ Η ΟΘΟΝΗ** — και μέχρι το ADR-846 πετούσε.
+    //    Το `await fetch(…).then(r => r.json())` ακολουθούμενο από `for (… of rawData.data)`
+    //    δίνει `TypeError: rawData.data is not iterable` σε **κάθε** απόκριση που δεν είναι
+    //    το αναμενόμενο σχήμα: σελίδα σφάλματος του διακομιστή, HTML του SPA fallback,
+    //    διακοπή δικτύου στα μισά των **4,1 MB**. Ένα δημόσιο, ανώνυμο component
+    //    *(`/pro`)* **δεν επιτρέπεται** να εξαφανίζεται επειδή ένα βοηθητικό αρχείο
+    //    άργησε — και η ίδια η ύπαρξη του `isLoading` υπόσχεται ότι δεν θα το κάνει.
+    //
+    // ⚠️ **Το κενό cache ΕΙΝΑΙ η σωστή κατάσταση αποτυχίας** (N.12): κάθε αναγνώστης
+    //    *(`findById` · `lineageIdsOf` · `levelOptions`)* απαντά ήδη «δεν ξέρω» με κενό —
+    //    και οι καταναλωτές του ADR-846 μεταφράζουν το «δεν ξέρω» σε *«δεν φιλτράρω, και
+    //    το λέω»*, ποτέ σε *«κανείς δεν ταιριάζει»*.
+    try {
+      const response = await fetch('/data/administrative-hierarchy.json');
+      const rawData = (await response.json()) as Partial<RawData>;
+      if (!Array.isArray(rawData.data)) {
+        throw new TypeError('Η διοικητική ιεραρχία δεν έχει το αναμενόμενο σχήμα');
       }
-    }
 
-    cachedEntities = entityMap;
-    cachedByLevel = levelMap;
+      const entityMap = new Map<string, AdminEntity>();
+      const levelMap = new Map<number, AdminEntity[]>();
+
+      for (const raw of rawData.data) {
+        const entity = mapRawToEntity(raw);
+        entityMap.set(entity.id, entity);
+
+        const levelList = levelMap.get(entity.level);
+        if (levelList) {
+          levelList.push(entity);
+        } else {
+          levelMap.set(entity.level, [entity]);
+        }
+      }
+
+      cachedEntities = entityMap;
+      cachedByLevel = levelMap;
+    } catch (error) {
+      // ⚠️ **Δεν γράφεται τίποτα στο cache** — ώστε μια επόμενη προσπάθεια να ξαναρωτήσει
+      //    αντί να κληρονομήσει μισοφορτωμένη ιεραρχία.
+      logger.warn('Δεν φορτώθηκε η διοικητική ιεραρχία — οι περιοχές μένουν άγνωστες', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   })();
 
   await loadingPromise;
+  // 🔑 **Καθαρίζεται ΠΑΝΤΑ**, ώστε μια αποτυχία να μη «κλειδώσει» τη φόρτωση για όλη τη
+  //    ζωή της σελίδας: χωρίς αυτό, κάθε επόμενος καλών θα περίμενε την **ίδια**
+  //    αποτυχημένη υπόσχεση και δεν θα ξαναδοκίμαζε ποτέ.
+  loadingPromise = null;
 }
 
 // ============================================================================
@@ -165,6 +197,45 @@ function normalizeSearch(text: string): string {
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[.\-_/\\()]/g, '')
     .toLowerCase();
+}
+
+// ============================================================================
+// ΓΕΝΕΑΛΟΓΙΑ — εκτός hook, επίτηδες (ADR-846)
+// ============================================================================
+
+/**
+ * **Η γραμμή μιας οντότητας προς τη ρίζα, ΜΕ ΤΟΝ ΕΑΥΤΟ ΤΗΣ ΠΡΩΤΟ** — π.χ.
+ * `['community:…', 'municipalUnit:…', 'municipality:…', …, 'major_geographic_unit:2']`.
+ *
+ * 🔑 **Γιατί ζει ΕΞΩ από το hook** *(ADR-846)*: ο καταναλωτής της είναι το
+ * `lib/agency/coverage-match.ts` — **καθαρό φύλλο** που καλείται μέσα από `useMemo` και
+ * **δεν επιτρέπεται** να εισάγει React. Ένα δεύτερο πέρασμα πάνω στα ίδια δεδομένα μέσα
+ * στο `lib/` θα ήταν κλώνος του `resolvePath` *(N.18)*· ένα `resolvePath` μέσα σε
+ * `useCallback` δεν μπορεί να ταξιδέψει εκεί. Άρα: **ίδιο module cache, μία γραφή,
+ * χωρίς hook**.
+ *
+ * ⚠️ **Κενός πίνακας = «δεν ξέρω»** — είτε η ιεραρχία δεν έχει φορτώσει *(τεμπέλικη
+ * φόρτωση 4,1 MB)*, είτε το id δεν υπάρχει. Ο καλών **οφείλει** να το ξεχωρίσει από
+ * «καμία σχέση»: δες τη σύμβαση του `LineageResolver`.
+ *
+ * ⚠️ **Δεν διπλασιάζει το `resolvePath`** — εκείνο απαντά *«ποια οντότητα σε κάθε
+ * βαθμίδα;»* *(δοχείο 8 θέσεων, για **διεύθυνση**)*· αυτό απαντά *«ποιοι με περιέχουν;»*
+ * *(αλυσίδα, για **σχέση**)*. Ίδια διαδρομή, **διαφορετική ερώτηση** — και η δεύτερη
+ * δεν εκφράζεται από την πρώτη χωρίς να ξέρει ο καλών ποια κλειδιά είναι `null`.
+ */
+export function lineageIdsOf(entityId: string): readonly string[] {
+  if (!cachedEntities) return [];
+
+  const lineage: string[] = [];
+  let current: AdminEntity | undefined = cachedEntities.get(entityId);
+  // 🔒 Φρουρός κύκλου: δεδομένα ΕΛΣΤΑΤ, αλλά ένας κύκλος parentId θα κρέμαγε την οθόνη
+  //    αθόρυβα. Το βάθος είναι 8 — το 16 είναι διπλάσιο κάθε νόμιμης αλυσίδας.
+  let guard = 16;
+  while (current && guard-- > 0) {
+    lineage.push(current.id);
+    current = current.parentId ? cachedEntities.get(current.parentId) : undefined;
+  }
+  return lineage;
 }
 
 // ============================================================================
