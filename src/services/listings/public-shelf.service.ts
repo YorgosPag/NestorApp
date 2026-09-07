@@ -55,22 +55,48 @@
  */
 
 import type { Bucket, File } from '@google-cloud/storage';
-import { createHash } from 'node:crypto';
 
 import { GCS_PUBLIC_MEDIA_BUCKET } from '@/config/gcs-buckets';
 import { getAdminBucket, getAdminStorage } from '@/lib/firebaseAdmin';
 import { createModuleLogger } from '@/lib/telemetry';
 import {
   PUBLIC_SHELF_CACHE_CONTROL,
-  buildPublicShelfKey,
   parsePublicShelfKey,
   publicShelfPrefix,
-  publicShelfUrl,
   type PublicShelfSource,
 } from '@/services/upload/utils/storage-path-public-shelf';
-import { shelfRecipe, type PublicShelfKind } from '@/services/upload/utils/public-shelf-kinds';
+import {
+  isRasterShelfKind,
+  shelfRecipe,
+  type AnyPublicShelfKind,
+  type PublicShelfKind,
+  type RasterShelfKind,
+} from '@/services/upload/utils/public-shelf-kinds';
 
+import {
+  META_PIXEL_HEIGHT,
+  META_PIXEL_WIDTH,
+  META_RECIPE,
+  META_REQUESTED_WIDTHS,
+  META_SOURCE_REF,
+  cachedVariants,
+  distinctByKey,
+  fullCacheHit,
+  groupUploads,
+  sourceReference,
+  toObject,
+  type PendingUpload,
+  type PublicShelfObject,
+} from './public-shelf-plan';
 import { sanitiseImageVariants } from './public-shelf-sanitise';
+
+/**
+ * ⚠️ **Επανεξαγωγή, ΟΧΙ δεύτερη δήλωση** — ο τύπος μετακόμισε στο `public-shelf-plan`
+ * *(N.7.1, ADR-845 Φ4.0)*, αλλά η **δημόσια επιφάνεια** του ραφιού είναι εδώ: το
+ * {@link PublicShelfImage} τον αναφέρει, και κανείς καταναλωτής δεν χρειάζεται να μάθει
+ * ότι το σχέδιο χώρισε από τον γραφέα.
+ */
+export type { PublicShelfObject } from './public-shelf-plan';
 
 const logger = createModuleLogger('public-shelf');
 
@@ -78,13 +104,6 @@ const logger = createModuleLogger('public-shelf');
 // Τύποι
 // ---------------------------------------------------------------------------
 
-/** Ένα δημοσιευμένο αντικείμενο, όπως το βλέπει ο κόσμος. */
-export interface PublicShelfObject {
-  readonly key: string;
-  readonly url: string;
-  readonly width: number;
-  readonly height: number;
-}
 
 /**
  * **Μια εικόνα και όλα τα παράγωγά της** — η μονάδα που καταλαβαίνει η οθόνη.
@@ -130,17 +149,6 @@ export interface PublicShelfReport<M> {
   readonly rejected: number;
 }
 
-/** Ένα παράγωγο έτοιμο να **ανέβει** — υπάρχει μόνο όταν δεν βρέθηκε ήδη στο ράφι. */
-interface PendingUpload {
-  readonly key: string;
-  readonly bytes: Buffer;
-  readonly contentType: string;
-  readonly sourceRef: string;
-  readonly width: number;
-  readonly height: number;
-  /** Τα **ζητούμενα** πλάτη που εξυπηρετεί αυτό το ένα αντικείμενο (δες `groupUploads`). */
-  readonly requestedWidths: readonly number[];
-}
 
 /** Ό,τι έμαθε η συμφιλίωση για **μία** πηγή. */
 interface AddressedImage<M> {
@@ -154,11 +162,6 @@ interface AddressedImage<M> {
 // Μεταδεδομένα του ραφιού — τα ονόματα γράφονται **μία** φορά
 // ---------------------------------------------------------------------------
 
-const META_SOURCE_REF = 'shelfSourceRef';
-const META_RECIPE = 'shelfRecipe';
-const META_REQUESTED_WIDTHS = 'shelfRequestedWidths';
-const META_PIXEL_WIDTH = 'shelfPixelWidth';
-const META_PIXEL_HEIGHT = 'shelfPixelHeight';
 
 // ---------------------------------------------------------------------------
 // Πρόσβαση στον κάδο
@@ -169,106 +172,9 @@ function shelfBucket(): Bucket {
   return getAdminStorage().bucket(GCS_PUBLIC_MEDIA_BUCKET);
 }
 
-/** sha256 των bytes, πεζό δεκαεξαδικό — **το κλειδί γεννιέται εδώ**. */
-function contentAddress(bytes: Buffer): string {
-  return createHash('sha256').update(bytes).digest('hex');
-}
-
-/**
- * **Ποιο πρωτότυπο, σε ποια έκδοση** — χασαρισμένο, γιατί το αποτέλεσμα γίνεται
- * **δημόσιο μεταδεδομένο** (δες το σκεπτικό του module).
- *
- * 🔑 Η **γενιά** του GCS αλλάζει σε κάθε επανεγγραφή του ιδιωτικού αρχείου, άρα ένα
- * αντικατεστημένο πρωτότυπο παίρνει **νέα** αναφορά και τα παλιά παράγωγα παύουν να
- * ταιριάζουν — αυτο-ακύρωση, χωρίς κανέναν να τη θυμηθεί.
- */
-function sourceReference(privateStoragePath: string, generation: string): string {
-  return createHash('sha256').update(`${privateStoragePath}#${generation}`).digest('hex');
-}
 
 // ---------------------------------------------------------------------------
 // Η μνήμη του ραφιού — τι υπάρχει ήδη, και από ποιο πρωτότυπο
-// ---------------------------------------------------------------------------
-
-/**
- * **Τα παράγωγα αυτής της πηγής που ΥΠΑΡΧΟΥΝ ΗΔΗ**, ανά ζητούμενο πλάτος.
- *
- * ⚠️ Απαιτεί ταύτιση **και** στη συνταγή: αλλαγή ποιότητας ή γκάμας πλατών **οφείλει**
- * να ακυρώσει τα παλιά παράγωγα, και το {@link shelfRecipe} είναι παραγόμενο ακριβώς για
- * να μην μπορεί να ξεχαστεί.
- *
- * 🔴 **Η συνταγή έρχεται από ΤΟ ΕΙΔΟΣ, και αυτό είναι το πιο λεπτό σημείο του Σταδίου 2.**
- * Μια σταθερή συνταγή θα έκανε τα παράγωγα του **ενός** είδους να μοιάζουν έγκυρα για το
- * **άλλο** — και επειδή η γρήγορη διαδρομή δεν αποκωδικοποιεί τίποτα, το λάθος θα ήταν
- * **αόρατο**: σήμα 256px θα περνούσε για γκαλερί 2560px χωρίς κανείς να το μετρήσει.
- */
-function cachedVariants(
-  kind: PublicShelfKind,
-  existing: readonly File[],
-  sourceRef: string,
-): ReadonlyMap<number, PublicShelfObject> {
-  const byWidth = new Map<number, PublicShelfObject>();
-
-  for (const file of existing) {
-    const custom = file.metadata.metadata;
-    if (custom?.[META_SOURCE_REF] !== sourceRef) continue;
-    if (custom[META_RECIPE] !== shelfRecipe(kind.encoding)) continue;
-
-    const object: PublicShelfObject = {
-      key: file.name,
-      url: publicShelfUrl(GCS_PUBLIC_MEDIA_BUCKET, file.name),
-      width: Number(custom[META_PIXEL_WIDTH]),
-      height: Number(custom[META_PIXEL_HEIGHT]),
-    };
-    if (!Number.isFinite(object.width) || !Number.isFinite(object.height)) continue;
-
-    for (const requested of String(custom[META_REQUESTED_WIDTHS] ?? '').split(',')) {
-      const width = Number(requested);
-      if (Number.isFinite(width)) byWidth.set(width, object);
-    }
-  }
-
-  return byWidth;
-}
-
-/**
- * **Παράγωγα → αντικείμενα προς ανέβασμα**, με τα ταυτόσημα **συγχωνευμένα**.
- *
- * 🔑 Μια φωτογραφία 800px δίνει για τα 1280 **και** τα 2560 τα **ίδια bytes** ⇒ ίδιο
- * sha256 ⇒ **ένα** αντικείμενο. Η συγχώνευση δεν είναι βελτιστοποίηση: χωρίς αυτήν, δύο
- * παράλληλες εγγραφές θα διεκδικούσαν το **ίδιο** κλειδί, και το `requestedWidths` του
- * νικητή θα έλεγε ψέματα στην επόμενη συμφιλίωση.
- */
-function groupUploads(
-  kind: PublicShelfKind,
-  subjectId: string,
-  sourceRef: string,
-  assets: readonly { bytes: Buffer; contentType: string; width: number; height: number }[],
-): readonly PendingUpload[] {
-  const byKey = new Map<string, PendingUpload>();
-
-  assets.forEach((asset, index) => {
-    const key = buildPublicShelfKey(kind, {
-      subjectId,
-      contentHash: contentAddress(asset.bytes),
-      ext: 'webp',
-    });
-    const requested = kind.encoding.widths[index];
-    const already = byKey.get(key);
-
-    byKey.set(key, {
-      key,
-      bytes: asset.bytes,
-      contentType: asset.contentType,
-      sourceRef,
-      width: asset.width,
-      height: asset.height,
-      requestedWidths: [...(already?.requestedWidths ?? []), requested],
-    });
-  });
-
-  return [...byKey.values()];
-}
 
 // ---------------------------------------------------------------------------
 // Παραγωγή του επιθυμητού συνόλου
@@ -288,7 +194,7 @@ function groupUploads(
  * **μία** κωδικοποίηση από τρεις.
  */
 async function addressOne<M>(
-  kind: PublicShelfKind,
+  kind: RasterShelfKind<M>,
   subjectId: string,
   source: PublicShelfSource<M>,
   existing: readonly File[],
@@ -298,12 +204,23 @@ async function addressOne<M>(
     const [meta] = await original.getMetadata();
     const sourceRef = sourceReference(source.privateStoragePath, String(meta.generation ?? ''));
 
-    const hit = fullCacheHit(kind, cachedVariants(kind, existing, sourceRef));
+    // 🔑 **ΕΔΩ ΓΕΝΝΙΕΤΑΙ Η ΣΥΝΤΑΓΗ, ΜΙΑ ΦΟΡΑ ΑΝΑ ΠΗΓΗ** *(Α21.10)*: είναι το **μόνο**
+    //    σημείο του γραφέα που κρατά ταυτόχρονα το **είδος** *(άρα την κωδικοποίηση)*
+    //    και το **υλικό** *(άρα το πλαισίωμα)*. Ό,τι είναι πιο κάτω τη δέχεται έτοιμη —
+    //    ούτε η μνήμη ούτε ο γραφέας επιτρέπεται να τη ξαναϋπολογίσουν.
+    // ⚠️ Η μηχανή **ρωτά τη γραμμή**· δεν ερμηνεύει το υλικό. Δες `PublicShelfKind.framingOf`.
+    // ⚠️ **Ρωτιέται ΜΙΑ φορά** και ταΐζει και τα δύο: μια δεύτερη κλήση θα ήταν δύο τιμές
+    //    που πρέπει να συμφωνούν — δηλαδή συνταγή που περιγράφει **άλλα** bytes από όσα
+    //    παρήχθησαν, αν κάποτε το `framingOf` πάψει να είναι καθαρή συνάρτηση.
+    const framing = kind.framingOf(source.material);
+    const recipe = shelfRecipe(kind.encoding, framing);
+
+    const hit = fullCacheHit(kind, cachedVariants(existing, sourceRef, recipe));
     if (hit !== null) return { variants: distinctByKey(hit), uploads: [], material: source.material };
 
     const [raw] = await original.download();
-    const sanitised = [...(await sanitiseImageVariants(raw, kind.encoding))];
-    const uploads = groupUploads(kind, subjectId, sourceRef, sanitised);
+    const sanitised = [...(await sanitiseImageVariants(raw, kind.encoding, framing))];
+    const uploads = groupUploads(kind, subjectId, sourceRef, recipe, sanitised);
     return { variants: distinctByKey(uploads.map(toObject)), uploads, material: source.material };
   } catch (error) {
     logger.warn('Πηγή δεν δημοσιεύεται — δεν διαβάστηκε ή δεν καθαρίστηκε', {
@@ -313,51 +230,6 @@ async function addressOne<M>(
     });
     return null;
   }
-}
-
-/**
- * **Καλύπτονται ΟΛΑ τα ζητούμενα πλάτη;** — `null` αν λείπει έστω ένα.
- *
- * ⚠️ **Όλα ή τίποτα, επίτηδες**: μερική επαναχρησιμοποίηση θα ήταν δεύτερη διαδρομή με
- * δικά της σφάλματα, για να γλιτώσει **μία** κωδικοποίηση από τρεις — ενώ το ακριβό
- * βήμα (κατέβασμα + αποκωδικοποίηση) θα πληρωνόταν ούτως ή άλλως.
- */
-function fullCacheHit(
-  kind: PublicShelfKind,
-  cached: ReadonlyMap<number, PublicShelfObject>,
-): readonly PublicShelfObject[] | null {
-  const found: PublicShelfObject[] = [];
-
-  for (const width of kind.encoding.widths) {
-    const object = cached.get(width);
-    if (object === undefined) return null;
-    found.push(object);
-  }
-
-  return found;
-}
-
-/** Ένα αντικείμενο προς ανέβασμα, όπως θα το δει ο κόσμος. */
-function toObject(upload: PendingUpload): PublicShelfObject {
-  return {
-    key: upload.key,
-    url: publicShelfUrl(GCS_PUBLIC_MEDIA_BUCKET, upload.key),
-    width: upload.width,
-    height: upload.height,
-  };
-}
-
-/**
- * **Τα διακριτά παράγωγα, αύξον πλάτος.**
- *
- * ⚠️ Η ταυτότητα είναι το **κλειδί**, ποτέ το πλάτος: δύο ζητούμενα πλάτη που έδωσαν τα
- * ίδια bytes είναι **ένα** αντικείμενο, και μια δεύτερη γραμμή `srcset` για το ίδιο URL
- * θα ζητούσε από τον περιηγητή να διαλέξει ανάμεσα σε δύο ταυτόσημα.
- */
-function distinctByKey(objects: readonly PublicShelfObject[]): readonly PublicShelfObject[] {
-  return [...new Map(objects.map((object) => [object.key, object])).values()].sort(
-    (a, b) => a.width - b.width,
-  );
 }
 
 // ---------------------------------------------------------------------------
@@ -373,9 +245,15 @@ function distinctByKey(objects: readonly PublicShelfObject[]): readonly PublicSh
  * ⚠️ Τα μεταδεδομένα **γράφονται μαζί με τα bytes**, ποτέ σε δεύτερη κλήση: ένα
  * αντικείμενο χωρίς `sourceRef` είναι αόρατο στη γρήγορη διαδρομή, και μια αποτυχία
  * ανάμεσα στις δύο κλήσεις θα άφηνε **μόνιμη** αποτυχία επαναχρησιμοποίησης.
+ *
+ * 🔴 **ΔΕΝ ΞΕΡΕΙ ΠΙΑ ΤΟ ΕΙΔΟΣ, ΚΑΙ ΕΙΝΑΙ ΔΙΟΡΘΩΣΗ ΟΧΙ ΑΠΛΟΠΟΙΗΣΗ** *(Α21.10)*. Ο
+ * πίνακας `uploads` είναι **ισοπεδωμένος από ΠΟΛΛΕΣ πηγές** — και από την Α21.10 δύο
+ * πηγές της **ίδιας** ρίζας μπορούν να έχουν **διαφορετική** συνταγή *(λογότυπο
+ * τριμμένο, πορτρέτο άτριφτο)*. Ένας υπολογισμός εδώ θα έγραφε τη **μία** πάνω σε bytes
+ * της **άλλης**, και επειδή η γρήγορη διαδρομή δεν αποκωδικοποιεί τίποτα, το ψέμα θα
+ * ήταν **μόνιμο**: το άτριφτο πορτρέτο δεν θα ξαναπαραγόταν ποτέ.
  */
 async function uploadMissing(
-  kind: PublicShelfKind,
   bucket: Bucket,
   uploads: readonly PendingUpload[],
   existing: ReadonlySet<string>,
@@ -390,7 +268,7 @@ async function uploadMissing(
           cacheControl: PUBLIC_SHELF_CACHE_CONTROL,
           metadata: {
             [META_SOURCE_REF]: upload.sourceRef,
-            [META_RECIPE]: shelfRecipe(kind.encoding),
+            [META_RECIPE]: upload.recipe,
             [META_REQUESTED_WIDTHS]: upload.requestedWidths.join(','),
             [META_PIXEL_WIDTH]: String(upload.width),
             [META_PIXEL_HEIGHT]: String(upload.height),
@@ -410,7 +288,7 @@ async function uploadMissing(
  * σαρωτής της 27/08 *(«θα έσβηνε την αγορά»)*.
  */
 async function deleteExtra(
-  kind: PublicShelfKind,
+  kind: AnyPublicShelfKind,
   bucket: Bucket,
   existingFiles: readonly File[],
   desired: ReadonlySet<string>,
@@ -454,10 +332,28 @@ async function deleteExtra(
  * είναι **αντίθετοι**. Δεν είναι σύμβαση — είναι αδύνατο.
  */
 export async function reconcilePublicShelf<M>(
-  kind: PublicShelfKind,
+  kind: PublicShelfKind<M>,
   subjectId: string,
   sources: readonly PublicShelfSource<M>[],
 ): Promise<PublicShelfReport<M>> {
+  // 🔴 **Η ΜΙΑ ΣΤΕΝΩΣΗ, ΣΤΟ ΣΥΝΟΡΟ** *(ADR-845 §3, Φ4.0 · άγκυρα Α-1δ)*. Ό,τι είναι από
+  //    εδώ και κάτω είναι **σχήματος raster από άκρη σε άκρη**: η μνήμη του ραφιού έχει
+  //    κλειδί το **πλάτος**, τα μεταδεδομένα κουβαλούν `requestedWidths`, και η γρήγορη
+  //    διαδρομή ρωτά *«υπάρχουν ΟΛΑ τα πλάτη;»*. Δεν είναι τρεις αναφορές σε πεδίο —
+  //    είναι η **πληθυντικότητα** της εικόνας, που ένα μοντέλο **δεν έχει**.
+  // ⚠️ **Ονομαστική αποτυχία, ποτέ `throw`** — ίδιο συμβόλαιο με κάθε άλλη αποτυχία εδώ:
+  //    το ράφι μένει μπαγιάτικο, η αποθήκευση του κατόχου **δεν** ακυρώνεται.
+  // 🔑 Στη Φ4.2 αυτή η γραμμή είναι που θα **κοκκινίσει πρώτη** όταν εμφανιστεί είδος
+  //    μοντέλου — και είναι το ζητούμενο: ο ψήστης μπαίνει **μαζί** με τη γραμμή του.
+  if (!isRasterShelfKind(kind)) {
+    logger.error('Το δημόσιο ράφι ΔΕΝ δημοσιεύει μη-εικόνες — δεν υπάρχει ακόμη ψήστης', {
+      root: kind.root,
+      subjectId,
+      encoding: kind.encoding.kind,
+    });
+    return { outcome: 'failed', published: [], removed: 0, rejected: sources.length };
+  }
+
   try {
     const prefix = publicShelfPrefix(kind, subjectId);
     const bucket = shelfBucket();
@@ -471,7 +367,7 @@ export async function reconcilePublicShelf<M>(
     const desiredKeys = new Set(desired.flatMap((image) => image.variants.map((v) => v.key)));
     const existingKeys = new Set(existingFiles.map((file) => file.name));
 
-    await uploadMissing(kind, bucket, desired.flatMap((image) => image.uploads), existingKeys);
+    await uploadMissing(bucket, desired.flatMap((image) => image.uploads), existingKeys);
     const removed = await deleteExtra(kind, bucket, existingFiles, desiredKeys);
 
     return {

@@ -38,14 +38,20 @@ import {
   parsePublicShelfKey,
   publicShelfPrefix,
   publicShelfUrl,
+  shelfExtension,
+  PUBLIC_SHELF_EXTENSIONS,
 } from '@/services/upload/utils/storage-path-public-shelf';
 import {
+  FRAMING_AS_GIVEN,
+  FRAMING_INK_TIGHT,
   LISTING_SHELF,
   PUBLIC_SHELF_KINDS,
   SHOWCASE_SHELF,
   isPublicShelfListingId,
   isPublicShelfShowcaseId,
+  isRasterShelfKind,
   shelfRecipe,
+  type ModelShelfEncoding,
 } from '@/services/upload/utils/public-shelf-kinds';
 
 const STORAGE_RULES = readFileSync(join(process.cwd(), 'storage.rules'), 'utf8');
@@ -241,20 +247,89 @@ describe('🔑 Κ2γ — ΚΑΘΕ ΕΙΔΟΣ ΕΧΕΙ ΔΙΚΗ ΤΟΥ ΣΥΝΤΑ
   // κατεβάζει bytes, το λάθος θα ήταν ΑΟΡΑΤΟ: σήμα 256px να περνά για γκαλερί 2560px.
 
   it('οι συνταγές των ειδών είναι διακριτές', () => {
-    expect(new Set(PUBLIC_SHELF_KINDS.map((kind) => shelfRecipe(kind.encoding))).size).toBe(
-      PUBLIC_SHELF_KINDS.length,
-    );
+    const recipes = PUBLIC_SHELF_KINDS.map((kind) => shelfRecipe(kind.encoding, FRAMING_AS_GIVEN));
+
+    expect(new Set(recipes).size).toBe(PUBLIC_SHELF_KINDS.length);
   });
 
   it('η συνταγή αλλάζει όταν αλλάξει ΟΠΟΙΟΔΗΠΟΤΕ σκέλος της κωδικοποίησης', () => {
     const base = LISTING_SHELF.encoding;
+    const recipe = (encoding: typeof base) => shelfRecipe(encoding, FRAMING_AS_GIVEN);
 
-    expect(shelfRecipe({ ...base, widths: [640] })).not.toBe(shelfRecipe(base));
-    expect(shelfRecipe({ ...base, quality: 83 })).not.toBe(shelfRecipe(base));
-    expect(shelfRecipe({ ...base, quality: 'lossless' })).not.toBe(shelfRecipe(base));
+    expect(recipe({ ...base, widths: [640] })).not.toBe(recipe(base));
+    expect(recipe({ ...base, quality: 83 })).not.toBe(recipe(base));
+    expect(recipe({ ...base, quality: 'lossless' })).not.toBe(recipe(base));
     // 🔴 Το `preset` ΑΛΛΑΖΕΙ τα bytes. Αν έλειπε από την υπογραφή, μια αλλαγή του θα
     //    άφηνε τα παλιά παράγωγα δημοσιευμένα ως «σωστά» — σιωπηλά.
-    expect(shelfRecipe({ ...base, preset: 'icon' })).not.toBe(shelfRecipe(base));
+    expect(recipe({ ...base, preset: 'icon' })).not.toBe(recipe(base));
+  });
+
+  it('🔴 και όταν αλλάξει το ΠΛΑΙΣΙΩΜΑ — τα τριμμένα bytes ΔΕΝ είναι τα ίδια bytes', () => {
+    // Α21.10: το τρίμμα αλλάζει τις διαστάσεις του παραγώγου. Αν έλειπε από την
+    // υπογραφή, ένα ΑΤΡΙΦΤΟ λογότυπο δημοσιευμένο πριν τη Φάση Β θα περνούσε για
+    // τριμμένο και ΔΕΝ θα ξαναπαραγόταν ποτέ — η γρήγορη διαδρομή δεν αποκωδικοποιεί.
+    const { encoding } = SHOWCASE_SHELF;
+
+    expect(shelfRecipe(encoding, FRAMING_INK_TIGHT)).not.toBe(
+      shelfRecipe(encoding, FRAMING_AS_GIVEN),
+    );
+  });
+
+  it('🔴 και όταν αλλάξει το ΚΑΤΩΦΛΙ του τριμμένου — άλλο κατώφλι, άλλα όρια, άλλα bytes', () => {
+    const { encoding } = SHOWCASE_SHELF;
+
+    expect(shelfRecipe(encoding, { mode: 'ink-tight', threshold: 40 })).not.toBe(
+      shelfRecipe(encoding, FRAMING_INK_TIGHT),
+    );
+  });
+});
+
+describe('🏆 Κ2γ′ — ΤΟ `as-given` ΣΙΩΠΑ ΚΑΤΑ ΓΡΑΜΜΑ, ΑΛΛΙΩΣ ΑΚΥΡΩΝΕΤΑΙ ΟΛΟ ΤΟ ΡΑΦΙ', () => {
+  // 🔴 Η ΠΙΟ ΑΚΡΙΒΗ ΑΓΚΥΡΑ ΤΗΣ Α21.10, ΚΑΙ ΓΙ' ΑΥΤΟ ΕΙΝΑΙ ΚΑΤΑ ΓΡΑΜΜΑ:
+    // αυτές οι συμβολοσειρές ζουν **αυτή τη στιγμή** στα μεταδεδομένα κάθε δημοσιευμένου
+    // αντικειμένου της παραγωγής. Αν το πλαισίωμα άρχιζε να γράφει σύμβολο και για την
+    // προεπιλογή, ΚΑΘΕ φωτογραφία ΚΑΘΕ αγγελίας θα ξανακατέβαινε, θα
+    // ξανα-αποκωδικοποιούνταν και θα ξανα-ανέβαινε — χιλιάδες πράξεις για μηδέν διαφορά
+    // στα bytes. Ένα `not.toContain('trim')` θα άφηνε αλλαγή μορφής να περάσει· μόνο η
+    // κατά γράμμα σύγκριση κλειδώνει τη σιωπή.
+
+  it('η συνταγή της ΑΓΓΕΛΙΑΣ μένει ακριβώς όπως γράφτηκε πριν τη Φάση Β', () => {
+    expect(shelfRecipe(LISTING_SHELF.encoding, FRAMING_AS_GIVEN)).toBe(
+      'webp:q82:photo:w640-1280-2560',
+    );
+  });
+
+  it('η συνταγή του ΑΤΡΙΦΤΟΥ σήματος (πορτρέτο) μένει επίσης αμετάβλητη', () => {
+    expect(shelfRecipe(SHOWCASE_SHELF.encoding, FRAMING_AS_GIVEN)).toBe(
+      'webp:lossless:icon:w64-128-256-512',
+    );
+  });
+
+  it('🔑 και ΜΟΝΟ το λογότυπο αποκτά σύμβολο — άρα μόνο αυτό ξαναπαράγεται', () => {
+    expect(shelfRecipe(SHOWCASE_SHELF.encoding, FRAMING_INK_TIGHT)).toBe(
+      'webp:lossless:icon:w64-128-256-512:trim25',
+    );
+  });
+});
+
+describe('🏆 Κ2γ″ — Η ΓΡΑΜΜΗ ΑΠΑΝΤΑ «ΠΩΣ ΠΛΑΙΣΙΩΝΕΤΑΙ ΑΥΤΟ ΤΟ ΥΛΙΚΟ;», ΟΧΙ Η ΜΗΧΑΝΗ', () => {
+  it('🔴 το ΛΟΓΟΤΥΠΟ τρίβεται', () => {
+    expect(SHOWCASE_SHELF.framingOf({ kind: 'logo' })).toEqual(FRAMING_INK_TIGHT);
+  });
+
+  it('🔴 το ΠΟΡΤΡΕΤΟ ΔΕΝ αγγίζεται — το περιθώριό του ΕΙΝΑΙ το κάδρο', () => {
+    // Το `preset: 'icon'` είναι ΚΟΙΝΟ και στα δύο (δες Κ2δ). Γι' αυτό δεν μπορούσε ποτέ
+    // να είναι αυτό το κριτήριο: θα κούρευε τη selfie του υδραυλικού.
+    expect(SHOWCASE_SHELF.framingOf({ kind: 'portrait' })).toEqual(FRAMING_AS_GIVEN);
+  });
+
+  it('🔴 καμία ΦΩΤΟΓΡΑΦΙΑ ΑΚΙΝΗΤΟΥ δεν τρίβεται ποτέ, για κανένα υλικό', () => {
+    // Ομοιόμορφος ουρανός στην κορυφή έχει ΑΚΡΙΒΩΣ το σχήμα που ο κριτής του
+    // περιγράμματος θα έλεγε «χαρτί» — και το σαλόνι θα δημοσιευόταν κουρεμένο.
+    expect(LISTING_SHELF.framingOf({ kind: 'photo' })).toEqual(FRAMING_AS_GIVEN);
+    expect(LISTING_SHELF.framingOf({ kind: 'floorplan', at: '2026-09-07T00:00:00.000Z' })).toEqual(
+      FRAMING_AS_GIVEN,
+    );
   });
 });
 
@@ -279,11 +354,19 @@ describe('🏆 Κ2δ — Η ΚΛΙΜΑΚΑ ΤΟΥ ΣΗΜΑΤΟΣ ΕΞΥΠΗΡΕ�
 
   it('🔑 και δεν ΥΠΕΡ-εξυπηρετεί: το σήμα είναι ασύγκριτα μικρότερο από τη γκαλερί', () => {
     // Το εύρημα που γέννησε ολόκληρο το Στάδιο 2: παράγωγο 2560px για εικόνα 44px.
+    //
+    // ⚠️ **ΤΟ ΤΑΒΑΝΙ ΑΝΕΒΗΚΕ 256 → 512** *(Α21.9)*, και ο λόγος είναι μετρημένος: ένα
+    //    wordmark δεν είναι πια «εικόνα 44px» — απλώνεται ως **240 λογικά px**, δηλαδή
+    //    **480** σε διπλή πυκνότητα. Η αναλογία προς τη γκαλερί έπεσε από ×10 σε **×5**,
+    //    και η δήλωση της σουίτας ακολουθεί: το σήμα μένει **πολλαπλάσια** μικρότερο,
+    //    αλλά όχι πια «ασύγκριτα».
+    // 🔴 **Το όριο παραμένει ΟΡΙΟ**: χωρίς αυτή τη γραμμή, μια «ας βάλουμε και 1024»
+    //    θα περνούσε αθόρυβα — και το Στάδιο 2 γεννήθηκε ακριβώς από τέτοια σιωπή.
     const markMax = Math.max(...SHOWCASE_SHELF.encoding.widths);
     const listingMax = Math.max(...LISTING_SHELF.encoding.widths);
 
-    expect(markMax).toBe(256);
-    expect(listingMax / markMax).toBeGreaterThanOrEqual(10);
+    expect(markMax).toBe(512);
+    expect(listingMax / markMax).toBeGreaterThanOrEqual(5);
   });
 
   it('τα πλάτη κάθε είδους είναι ΑΥΞΟΝΤΑ — η προβολή διαβάζει το τελευταίο ως κανονικό', () => {
@@ -376,5 +459,112 @@ describe('🔑 ΤΟ ΟΡΙΟ ΤΗΣ ΒΙΤΡΙΝΑΣ ΕΙΝΑΙ ΤΟΥ ΡΑΦΙ�
     //    Rightmove **10–20**. Το 24 είναι μέσα στο πρώτο και πάνω από το δεύτερο.
     expect(PUBLISHED_MEDIA_LIMIT).toBeGreaterThanOrEqual(22);
     expect(PUBLISHED_MEDIA_LIMIT).toBeLessThanOrEqual(27);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ADR-845 Φ4.0 — ΤΟ ΡΑΦΙ ΜΑΘΑΙΝΕΙ ΟΤΙ ΥΠΑΡΧΟΥΝ ΜΗ-ΕΙΚΟΝΕΣ
+// ---------------------------------------------------------------------------
+
+/**
+ * 🔑 **Νόμιμη τιμή, ΚΑΝΕΝΑ cast** — και είναι ο λόγος που η ένωση έχει **δύο** μέλη.
+ *
+ * Μια ένωση **ενός** μέλους θα έκανε τον τύπο εξίσου αυστηρό, αλλά καμία από τις
+ * τέσσερις άγκυρες παρακάτω δεν θα μπορούσε να **εκτελεστεί**: δεν θα υπήρχε δεύτερη
+ * τιμή να δοθεί χωρίς `as`. Και επειδή ο **N.17** απαγορεύει στον πράκτορα να τρέξει
+ * `tsc`, μια εγγύηση **μόνο** σε χρόνο μεταγλώττισης θα ήταν ανεπαλήθευτη — δηλαδή
+ * ακριβώς το *«0 = κανείς δεν κοίταξε»* των N.11/N.12.
+ */
+const MODEL_ENCODING: ModelShelfEncoding = { kind: 'model' };
+
+describe('🏆 Α-1 (ADR-845 §8) — Η ΣΥΝΤΑΓΗ ΔΕΝ ΓΡΑΦΕΙ `webp:` ΓΙΑ ΜΗ-ΕΙΚΟΝΑ', () => {
+  // Η συνταγή δεν είναι σχόλιο: γίνεται ΜΕΤΑΔΕΔΟΜΕΝΟ που ταξιδεύει με τα bytes και
+  // μέρος της απόφασης «υπάρχει ήδη;». Και το κλειδί είναι content-addressed — άρα μια
+  // συνταγή που λέει ψέματα γίνεται ΜΟΝΙΜΗ ΔΙΕΥΘΥΝΣΗ που λέει ψέματα.
+
+  it('πετά αντί να μαντέψει — και το μήνυμα ονομάζει το είδος', () => {
+    expect(() => shelfRecipe(MODEL_ENCODING, FRAMING_AS_GIVEN)).toThrow(/model/);
+  });
+
+  it('🔴 και ΔΕΝ γράφει `webp:` — η μετάλλαξη που πιάνει την επιστροφή στο άνευ όρων', () => {
+    let written: string | null = null;
+    try {
+      written = shelfRecipe(MODEL_ENCODING, FRAMING_AS_GIVEN);
+    } catch {
+      written = null;
+    }
+
+    expect(written).toBeNull();
+  });
+
+  it('οι εικόνες μένουν ΑΝΕΠΑΦΕΣ — ο αυστηρότερος τύπος δεν άλλαξε καμία συνταγή', () => {
+    expect(shelfRecipe(LISTING_SHELF.encoding, FRAMING_AS_GIVEN)).toMatch(/^webp:/);
+    expect(shelfRecipe(SHOWCASE_SHELF.encoding, FRAMING_INK_TIGHT)).toMatch(/^webp:/);
+  });
+});
+
+describe('🏆 Α-1β — Η ΜΟΡΦΗ ΔΗΛΩΝΕΤΑΙ ΜΑΖΙ ΜΕ ΤΟΝ ΨΗΣΤΗ, ΠΟΤΕ ΠΡΙΝ', () => {
+  // Το `storage-path-public-shelf` γράφει ότι το `glb` λείπει ΕΠΙΤΗΔΕΣ, «μαζί με τον
+  // ψήστη που το παράγει», γιατί μορφή χωρίς καθαριστή είναι υπόσχεση χωρίς μηχανισμό
+  // — και θα άνοιγε διαδρομή να δημοσιευτεί μοντέλο ΩΜΟ. Ήταν σχόλιο· τώρα εκτελείται.
+
+  it('η μη-εικόνα δεν έχει μορφή — `null`, όχι προεπιλογή', () => {
+    expect(shelfExtension(MODEL_ENCODING)).toBeNull();
+  });
+
+  it('🔴 το `glb` ΔΕΝ σερβίρεται ακόμη από κανένα ράφι', () => {
+    expect(PUBLIC_SHELF_EXTENSIONS).not.toContain('glb');
+  });
+
+  it('η εικόνα δίνει `webp` — αμετάβλητο', () => {
+    expect(shelfExtension(LISTING_SHELF.encoding)).toBe('webp');
+    expect(shelfExtension(SHOWCASE_SHELF.encoding)).toBe('webp');
+  });
+});
+
+describe('🏆 Α-1γ — Ο ΔΕΣΜΟΣ ΛΕΞΙΛΟΓΙΟΥ ⇄ ΕΙΔΩΝ', () => {
+  // Η άγκυρα που κάνει ΔΟΜΙΚΑ ΑΔΥΝΑΤΟ ένα είδος με μορφή που το ράφι δεν σερβίρει —
+  // και αντίστροφα. Οι μεγάλοι το γράφουν σε τεκμηρίωση· εδώ κοκκινίζει.
+
+  it('κάθε γραμμή του πίνακα παράγει μορφή που το ράφι ΟΝΤΩΣ σερβίρει', () => {
+    for (const kind of PUBLIC_SHELF_KINDS) {
+      const ext = shelfExtension(kind.encoding);
+
+      expect(ext).not.toBeNull();
+      expect(PUBLIC_SHELF_EXTENSIONS as readonly string[]).toContain(ext);
+    }
+  });
+
+  it('και κάθε σερβιριζόμενη μορφή έχει είδος που την παράγει — κανένα ορφανό', () => {
+    const produced = new Set(PUBLIC_SHELF_KINDS.map((kind) => shelfExtension(kind.encoding)));
+
+    for (const ext of PUBLIC_SHELF_EXTENSIONS) {
+      expect(produced).toContain(ext);
+    }
+  });
+});
+
+describe('🏆 Α-1δ — ΤΟ ΣΥΝΟΡΟ ΤΟΥ ΓΡΑΦΕΑ ΞΕΡΕΙ ΤΙ ΕΙΔΟΥΣ BYTES ΚΡΑΤΑ', () => {
+  // Ό,τι είναι πίσω από τον φρουρό είναι σχήματος raster από άκρη σε άκρη: η μνήμη
+  // κλειδώνεται στο ΠΛΑΤΟΣ και η γρήγορη διαδρομή ρωτά «υπάρχουν ΟΛΑ τα πλάτη;».
+  // Ένα μοντέλο δεν έχει αυτή την πληθυντικότητα — τα επίπεδα λεπτομέρειας ζουν ΜΕΣΑ
+  // στο αρχείο, γι' αυτό και το ADR-841 §6 λέει «το δημοσιευμένο GLB», στον ενικό.
+
+  it('και τα δύο σημερινά είδη περνούν τον φρουρό', () => {
+    for (const kind of PUBLIC_SHELF_KINDS) {
+      expect(isRasterShelfKind(kind)).toBe(true);
+    }
+  });
+
+  it('🔴 ένα είδος μη-εικόνας ΔΕΝ τον περνά — αλλιώς φτάνει σε μηχανή που μετρά πλάτη', () => {
+    expect(isRasterShelfKind({ ...LISTING_SHELF, encoding: MODEL_ENCODING })).toBe(false);
+  });
+
+  it('ο φρουρός ρωτά την ΚΩΔΙΚΟΠΟΙΗΣΗ, ποτέ τη ρίζα', () => {
+    // Ίδια ρίζα με το LISTING_SHELF, άλλο είδος bytes ⇒ πρέπει να απορριφθεί.
+    // Ένα κριτήριο τύπου `kind.root === 'listings'` θα το άφηνε να περάσει.
+    expect(
+      isRasterShelfKind({ ...LISTING_SHELF, encoding: MODEL_ENCODING }).valueOf(),
+    ).toBe(false);
   });
 });

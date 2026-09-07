@@ -58,7 +58,7 @@
  */
 
 import type { ListingMaterial } from '@/lib/listings/listing-material';
-import type { PublicShelfKind } from './public-shelf-kinds';
+import type { AnyPublicShelfKind, RasterShelfEncoding, ShelfEncoding } from './public-shelf-kinds';
 
 // ---------------------------------------------------------------------------
 // Σταθερές
@@ -233,6 +233,41 @@ export function isPublicShelfExtension(value: string): value is PublicShelfExten
   return (PUBLIC_SHELF_EXTENSIONS as readonly string[]).includes(value);
 }
 
+/**
+ * 🏆 **ΠΟΙΑ ΜΟΡΦΗ ΠΑΡΑΓΕΙ ΑΥΤΗ Η ΚΩΔΙΚΟΠΟΙΗΣΗ** — `null` αν **κανείς δεν την ψήνει ακόμη**
+ * *(ADR-845 §3, Φ4.0)*.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 Η ΕΡΩΤΗΣΗ ΗΤΑΝ ΚΑΘΟΛΙΚΗ ΚΑΙ ΓΙΝΕΤΑΙ **ΑΝΑ ΕΙΔΟΣ**
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Ως τη Φ4.0 η μόνη ερώτηση ήταν *«ανήκει αυτό στο σύνολο των μορφών μας;»* — και όσο
+ * το σύνολο είχε **ένα** μέλος, «έγκυρη μορφή» και «η μορφή αυτού του είδους» ήταν
+ * κατά λάθος **η ίδια πρόταση**. Με δεύτερο είδος bytes παύουν να είναι: ένα κλειδί
+ * `.webp` κάτω από ρίζα που δημοσιεύει μοντέλα θα περνούσε τον καθολικό έλεγχο **μια
+ * χαρά**, και θα ήταν αρχείο σε θέση που κανείς δεν ζήτησε.
+ *
+ * 🔑 **`null` ΚΑΙ ΟΧΙ `throw`, ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ ΣΥΜΒΟΛΑΙΟΥ.** Τη ρωτούν **δύο** με
+ * αντίθετα συμβόλαια: ο **αυστηρός γραφέας** ({@link buildPublicShelfKey}, πετά αντί να
+ * καθαρίσει) και ο **ανεκτικός αναγνώστης** ({@link parsePublicShelfKey}, *δεν πετά ποτέ*
+ * — ο σαρωτής του κάδου συναντά ό,τι υπάρχει εκεί). Μια συνάρτηση που πετά θα ανάγκαζε
+ * τον αναγνώστη σε `try/catch`, δηλαδή θα του άλλαζε το συμβόλαιο για χάρη του γραφέα.
+ * Το `null` αφήνει **τον καθένα** να αποφασίσει τι σημαίνει «δεν ξέρω».
+ *
+ * ⚠️ **ΤΟ `'glb'` ΕΞΑΚΟΛΟΥΘΕΙ ΝΑ ΛΕΙΠΕΙ, ΚΑΙ ΤΩΡΑ ΤΟ ΦΥΛΑΕΙ ΑΓΚΥΡΑ.** Το `'model'`
+ * επιστρέφει `null` — δηλαδή *«η μορφή θα δηλωθεί μαζί με τον ψήστη»*, που ως εδώ ήταν
+ * **σχόλιο** στο {@link PUBLIC_SHELF_EXTENSIONS} και τώρα είναι **εκτελούμενο**.
+ * 🔑 **Οι υπερφορτώσεις ΔΕΝ είναι καλλωπισμός** *(N.2: ποτέ `as`)*: ο γραφέας, αφού
+ * στενέψει στο σύνορό του, κρατά **raster** κωδικοποίηση — και τότε η απάντηση **δεν
+ * μπορεί** να είναι `null`. Χωρίς την υπερφόρτωση, κάθε κλήση του θα κουβαλούσε χειρισμό
+ * ενός `null` που είναι **αποδεδειγμένα αδύνατο** εκεί, δηλαδή νεκρό κλάδο σε ζεστό δρόμο.
+ */
+export function shelfExtension(encoding: RasterShelfEncoding): PublicShelfExtension;
+export function shelfExtension(encoding: ShelfEncoding): PublicShelfExtension | null;
+export function shelfExtension(encoding: ShelfEncoding): PublicShelfExtension | null {
+  return encoding.kind === 'raster' ? 'webp' : null;
+}
+
 // ---------------------------------------------------------------------------
 // Κατασκευή
 // ---------------------------------------------------------------------------
@@ -249,7 +284,7 @@ export function isPublicShelfExtension(value: string): value is PublicShelfExten
  * @throws Αν η ταυτότητα δεν είναι αποδεκτή **για αυτό το είδος** — δες
  *   {@link PublicShelfKind.acceptsSubject}.
  */
-export function publicShelfPrefix(kind: PublicShelfKind, subjectId: string): string {
+export function publicShelfPrefix(kind: AnyPublicShelfKind, subjectId: string): string {
   if (!kind.acceptsSubject(subjectId)) {
     throw new Error(
       `Invalid public shelf subject for root ${JSON.stringify(kind.root)}: ${JSON.stringify(subjectId)}`,
@@ -264,14 +299,20 @@ export function publicShelfPrefix(kind: PublicShelfKind, subjectId: string): str
  * @throws Αν οποιοδήποτε μέρος είναι μη αποδεκτό. **Πετά αντί να «καθαρίσει»**: ένα
  *   σιωπηλά διορθωμένο δημόσιο κλειδί είναι αρχείο σε θέση που κανείς δεν ζήτησε.
  */
-export function buildPublicShelfKey(kind: PublicShelfKind, parts: PublicShelfKeyParts): string {
+export function buildPublicShelfKey(kind: AnyPublicShelfKind, parts: PublicShelfKeyParts): string {
   const { subjectId, contentHash, ext } = parts;
 
   if (!isPublicShelfContentHash(contentHash)) {
     throw new Error(`Invalid public shelf content hash: ${JSON.stringify(contentHash)}`);
   }
-  if (!isPublicShelfExtension(ext)) {
-    throw new Error(`Invalid public shelf extension: ${JSON.stringify(ext)}`);
+  // 🔴 **Ο ΕΛΕΓΧΟΣ ΕΙΝΑΙ ΑΝΑ ΕΙΔΟΣ, ΟΧΙ ΚΑΘΟΛΙΚΟΣ** *(ADR-845 §3)*. Το «είναι μορφή που
+  //    παράγουμε;» δεν αρκεί: ρωτά αν κάποιος **κάπου** την ψήνει. Η ερώτηση που κρατά τα
+  //    bytes στη θέση τους είναι *«την ψήνει ΑΥΤΟ το είδος;»* — ίδιο ιδίωμα με το
+  //    `acceptsSubject`, που ρωτά **τη γραμμή** και όχι έναν καθολικό κατάλογο ταυτοτήτων.
+  if (ext !== shelfExtension(kind.encoding)) {
+    throw new Error(
+      `Invalid public shelf extension for root ${JSON.stringify(kind.root)}: ${JSON.stringify(ext)}`,
+    );
   }
 
   return `${publicShelfPrefix(kind, subjectId)}${contentHash}.${ext}`;
@@ -295,7 +336,7 @@ export function buildPublicShelfKey(kind: PublicShelfKind, parts: PublicShelfKey
  * που ο πίνακας γράφτηκε για να αποκλείσει.
  */
 export function parsePublicShelfKey(
-  kind: PublicShelfKind,
+  kind: AnyPublicShelfKind,
   key: string,
 ): PublicShelfKeyParts | null {
   const segments = key.split('/');
@@ -311,13 +352,18 @@ export function parsePublicShelfKey(
   const contentHash = fileName.slice(0, dot);
   const ext = fileName.slice(dot + 1);
   if (!isPublicShelfContentHash(contentHash)) return null;
+  // Πρώτα *«είναι μορφή που παράγουμε;»* — δίνει τον **τύπο**.
   if (!isPublicShelfExtension(ext)) return null;
+  // ⚠️ Έπειτα *«την παράγει ΑΥΤΟ το είδος;»* — ίδια ερώτηση με τον γραφέα, **αντίθετη**
+  //    απάντηση στο «δεν ξέρω»: εδώ ό,τι δεν αναγνωρίζεται **δεν αγγίζεται** — δεν
+  //    μαντεύεται και δεν σβήνεται.
+  if (ext !== shelfExtension(kind.encoding)) return null;
 
   return { subjectId, contentHash, ext };
 }
 
 /** Είναι αυτό κλειδί που θα μπορούσε να έχει γράψει ο γραφέας για **αυτό** το είδος; */
-export function isPublicShelfKey(kind: PublicShelfKind, key: string): boolean {
+export function isPublicShelfKey(kind: AnyPublicShelfKind, key: string): boolean {
   return parsePublicShelfKey(kind, key) !== null;
 }
 
