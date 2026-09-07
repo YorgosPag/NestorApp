@@ -64,6 +64,7 @@ import type {
   ShowcaseCredential,
 } from '@/types/agency-profile';
 import { asCredential, readShowcase, toStoredShowcase } from '@/lib/agency/showcase-read';
+import { publishShowcaseMark } from '@/services/mandate/showcase-mark-publication';
 import { resolveRegistryAuthority } from '@/config/isco-registry-authority';
 import { isChapteredRegistry } from '@/constants/professional-registries';
 import { occupationNeedsCapability } from '@/lib/professional/showcase-eligibility';
@@ -137,36 +138,45 @@ export interface ShowcaseDeclaration {
    * Ατλαντικό που κάθε χάρτης ζωγραφίζει **με απόλυτη σιγουριά**.
    */
   readonly position: GeoPoint | null;
+  /**
+   * ⛔ **ΚΑΝΕΝΑ `mark` ΕΔΩ — ΤΟ ΣΗΜΑ ΕΙΝΑΙ ΔΙΚΗ ΤΟΥ ΠΡΑΞΗ** (ADR-841 §7 Α21, Φάση 2).
+   *
+   * ────────────────────────────────────────────────────────────────────────
+   * 🔴 ΥΠΗΡΞΕ ΕΔΩ, ΚΑΙ Η ΑΦΑΙΡΕΣΗ ΤΟΥ ΕΙΝΑΙ ΔΙΟΡΘΩΣΗ ΒΛΑΒΗΣ
+   * ────────────────────────────────────────────────────────────────────────
+   *
+   * Η Φάση 1 το έβαλε στη δήλωση, με το σκεπτικό *«η δήλωση είναι ολόκληρη η βιτρίνα,
+   * άρα απόν = καθάρισέ το»*. Σωστό για κάθε **άλλο** πεδίο, και **αδύνατο** γι' αυτό:
+   * η οθόνη διαβάζει πίσω το **ίδιο έγγραφο με τον κόσμο**, όπου το σήμα ζει ως
+   * **δημόσιο URL** — το `privateStoragePath` που ζητά το σύρμα **δεν επιστρέφει ποτέ**.
+   *
+   * ⇒ Η οθόνη δεν *«ξεχνούσε»* να το ξαναστείλει· **δεν είχε από πού να το πάρει**.
+   * Κάθε αλλαγή επωνυμίας θα έσβηνε το λογότυπο, και **καμία** διόρθωση στον πελάτη δεν
+   * θα το έλυνε.
+   *
+   * 🔑 **Η θεραπεία δεν ήταν να μάθει η δήλωση να σιωπά** *(`undefined` = «μην αγγίζεις»)*:
+   * αυτό θα έκανε **δύο** πεδία με **δύο** σημασιολογίες απουσίας στο ίδιο σχήμα, και η
+   * διαφορά θα ήταν αόρατη σε κάθε πελάτη με σφάλμα. Το σήμα έφυγε **ολόκληρο** σε δικές
+   * του πράξεις — `declareShowcaseMark` / `retractShowcaseMark`, στο
+   * {@link module:services/mandate/showcase-mark-custody} — και είναι το καθολικό
+   * πρότυπο *(GitHub · Slack · LinkedIn)*: **το avatar δεν έχει «Αποθήκευση»**.
+   *
+   * ⚠️ Ο γραφέας **διατηρεί** ό,τι βρει, μέσα σε **συναλλαγή** — δες {@link publishShowcase}.
+   */
 }
 
-/** Το αποτέλεσμα της δημοσίευσης — **ποτέ `boolean`**: μια άρνηση οφείλει να εξηγείται. */
-export type AgencyProfileWriteResult =
-  | { readonly kind: 'published'; readonly profile: PublicShowcase }
-  | { readonly kind: 'withdrawn' }
-  | { readonly kind: 'rejected'; readonly reason: AgencyProfileRejection }
-  | { readonly kind: 'failed' };
+// 🔑 **Το λεξιλόγιο των ετυμηγοριών ζει σε ΚΑΘΑΡΟ leaf** — το μοιράζονται **δύο** γραφείς
+//    (βιτρίνα + σήμα) και το διαβάζουν **πελατικά** αρχεία. Δες το «γιατί» εκεί.
+// ⚠️ Το `export … from` παρακάτω **ΕΠΑΝΕΞΑΓΕΙ** — δεν δεσμεύει τα ονόματα εδώ (CHECK 3.70).
+import type {
+  AgencyProfileRejection, AgencyProfileWriteResult,
+} from '@/services/mandate/agency-profile-verdict';
 
-/**
- * Κλειδιά i18n του «γιατί όχι» — ίδιο συμβόλαιο με το `BrokerageDenial.reason`.
- *
- * ⚠️ **Το `agency-profile-gemi-missing` ΕΓΙΝΕ `…-registration-missing`** στη Φ6-Β3,
- * και δεν είναι μετονομασία στιλ: με **έξι** αρχές μητρώου, ένα κείμενο που
- * ονομάζει το **ΓΕΜΗ** θα έλεγε ψέματα στον επόμενο ρυθμιζόμενο κλάδο — και θα
- * το έλεγε **σιωπηλά**, γιατί κανένας τύπος δεν συνδέει το κλειδί με την αρχή.
- * Η αρχή ταξιδεύει στο **σημείωμα** της οθόνης, όχι στο όνομα της άρνησης.
- */
-export const AGENCY_PROFILE_REJECTIONS = [
-  'agency-profile-alias-missing',
-  'agency-profile-name-missing',
-  /** Καμία ειδικότητα — βιτρίνα χωρίς περιεχόμενο δεν είναι βιτρίνα. */
-  'agency-profile-occupation-missing',
-  /** Ρυθμιζόμενο επάγγελμα **χωρίς** αριθμό μητρώου: ο κατάλογος θα γινόταν επικίνδυνος (§9.9 β). */
-  'agency-profile-registration-missing',
-  /** Αρχή με **πολλούς** εκδότες, χωρίς εκδότη — «1234» χωρίς «ΔΣΘ» (Α9.1). */
-  'agency-profile-chapter-missing',
-] as const;
-
-export type AgencyProfileRejection = (typeof AGENCY_PROFILE_REJECTIONS)[number];
+export type {
+  AgencyProfileRejection,
+  AgencyProfileWriteResult,
+} from '@/services/mandate/agency-profile-verdict';
+export { AGENCY_PROFILE_REJECTIONS } from '@/services/mandate/agency-profile-verdict';
 
 // =============================================================================
 // Η ΔΗΜΟΣΙΕΥΣΗ
@@ -187,6 +197,20 @@ export type AgencyProfileRejection = (typeof AGENCY_PROFILE_REJECTIONS)[number];
  * βιτρίνα**. Με `merge`, ένα credential που ο άνθρωπος **αφαίρεσε** θα επιβίωνε —
  * δηλαδή δικηγόρος που έγινε διακοσμητής θα συνέχιζε να δείχνει αριθμό ΔΣΘ που
  * **δεν ζήτησε** να δείχνει.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΚΑΙ ΓΙ' ΑΥΤΟ ΑΚΡΙΒΩΣ ΤΟ **ΣΗΜΑ** ΧΡΕΙΑΖΕΤΑΙ ΣΥΝΑΛΛΑΓΗ (Α21, Φάση 2)
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Το `mark` είναι το **μόνο** πεδίο που **δεν** το δηλώνει αυτή η κλήση: το γράφει
+ * άλλη πράξη *(`declareShowcaseMark`)*, σε άλλο χρόνο, γιατί η οθόνη **δεν μπορεί** να
+ * το ξαναστείλει — διαβάζει πίσω δημόσιο URL, ποτέ ιδιωτικό μονοπάτι. Άρα το `set`
+ * **οφείλει να το κουβαλήσει**, αλλιώς κάθε αλλαγή επωνυμίας θα έσβηνε το λογότυπο.
+ *
+ * ⚠️ **Συναλλαγή και όχι «διάβασε μετά γράψε»**: το παράθυρο ανάμεσα στις δύο είναι
+ * ακριβώς όσο ένα ανέβασμα εικόνας, και ο άνθρωπος που ανεβάζει σήμα ενώ πατά
+ * «Δημοσίευση» δεν πρέπει να έχει νικητή που χάνει. Άγκυρα:
+ * `showcase-mark-survival.test.ts`.
  */
 export async function publishShowcase(
   adminDb: AdminFirestore,
@@ -213,25 +237,49 @@ export async function publishShowcase(
   // 🔴 ΑΠΟ ΤΗΝ ΑΠΟΔΕΙΞΗ, ποτέ από όρισμα: αδύνατο να κριθεί ο ένας οργανισμός και
   //    να γραφτεί ο άλλος (ADR-824 §6) — και στις **δύο** παραλλαγές.
   const companyId = showcaseOwnerId(authority);
-
-  const showcase: PublicShowcase = {
-    companyId,
-    alias: declaration.alias.trim(),
-    displayName: declaration.displayName.trim(),
-    credentials,
-    place: declaration.place,
-    position: declaration.position,
-    publishedAt: nowISO(),
-  };
+  const ref = adminDb.collection(COLLECTIONS.AGENCY_PROFILES).doc(companyId);
 
   try {
-    // 🔑 **Ο δίσκος ΔΕΝ παίρνει το `standing`** — δες `toStoredShowcase`. Μια
-    //    αποθηκευμένη σημαία μπορεί να διαφωνήσει με το περιεχόμενο (ADR-749).
-    await adminDb
-      .collection(COLLECTIONS.AGENCY_PROFILES)
-      .doc(companyId)
-      .set(toStoredShowcase(showcase));
-    return { kind: 'published', profile: showcase };
+    // ───────────────────────────────────────────────────────────────────────
+    // 🔴 ΣΥΝΑΛΛΑΓΗ, ΚΑΙ Ο ΛΟΓΟΣ ΕΙΝΑΙ ΤΟ ΣΗΜΑ — ΟΧΙ Η ΒΙΤΡΙΝΑ
+    // ───────────────────────────────────────────────────────────────────────
+    //
+    // Το `set` **χωρίς `merge`** μένει *(η δήλωση είναι ολόκληρη η βιτρίνα)*, αλλά το
+    // `mark` **δεν ανήκει στη δήλωση**: το γράφει άλλη πράξη, σε άλλο χρόνο. Μια απλή
+    // «διάβασε μετά γράψε» θα έχανε το σήμα που δηλώθηκε **ανάμεσα** στις δύο —
+    // παράθυρο μικρό, αλλά ακριβώς όσο ένα ανέβασμα εικόνας.
+    //
+    // 🔑 **Καμία παρενέργεια μέσα στη συναλλαγή**: μόνο ανάγνωση και γραφή εγγράφου. Ο
+    //    κάδος **δεν αγγίζεται καθόλου** εδώ, γιατί τα bytes του σήματος είναι ήδη στο
+    //    ράφι και **δεν άλλαξαν** — άρα το `DeclaredShowcaseMark` που ξαναγράφεται είναι
+    //    ακόμη αληθές. Ένα `reconcilePublicShelf` μέσα σε σώμα που **ξαναεκτελείται σε
+    //    σύγκρουση** θα κατέβαζε και θα ξανάγραφε bytes πολλές φορές.
+    const profile = await adminDb.runTransaction(async (transaction) => {
+      const snapshot = await transaction.get(ref);
+
+      // ⚠️ Ο **αναγνώστης**, ποτέ `as`: έγγραφο που δεν περνά τον φρουρό δίνει `null`
+      //    σήμα — ίδιο συμβόλαιο με ό,τι βλέπει ο κόσμος (Φ6-Β4).
+      const existing = snapshot.exists ? readShowcase(snapshot.data(), companyId) : null;
+      const keptMark = existing?.outcome === 'showcase' ? existing.showcase.mark : null;
+
+      const showcase: PublicShowcase = {
+        companyId,
+        alias: declaration.alias.trim(),
+        displayName: declaration.displayName.trim(),
+        credentials,
+        place: declaration.place,
+        position: declaration.position,
+        mark: keptMark,
+        publishedAt: nowISO(),
+      };
+
+      // 🔑 **Ο δίσκος ΔΕΝ παίρνει το `standing`** — δες `toStoredShowcase`. Μια
+      //    αποθηκευμένη σημαία μπορεί να διαφωνήσει με το περιεχόμενο (ADR-749).
+      transaction.set(ref, toStoredShowcase(showcase));
+      return showcase;
+    });
+
+    return { kind: 'published', profile };
   } catch (error) {
     logger.error('[AGENCY-PROFILE] Η δημοσίευση απέτυχε', {
       companyId,
@@ -367,12 +415,33 @@ function selfDeclared(occupation: ClassifiedOccupation): ShowcaseCredential {
  *
  * ⚠️ Ιδεμποτής: διαγραφή ανύπαρκτου εγγράφου **δεν** είναι σφάλμα — και δεν πρέπει να
  * είναι, γιατί το Π2 τρέχει και για γραφεία που ποτέ δεν δημοσιεύτηκαν.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΕΣΒΗΝΕ ΜΟΝΟ ΤΟ ΕΓΓΡΑΦΟ — ΚΑΙ ΤΟ ΠΟΡΤΡΕΤΟ ΕΜΕΝΕ ΔΗΜΟΣΙΟ (Α21, Φάση 2)
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Το ράφι `showcases/{companyId}/` **δεν άδειαζε ποτέ**. Δηλαδή ο επαγγελματίας που
+ * **ανακαλούσε τη συγκατάθεσή του** άφηνε πίσω τη **φωτογραφία του προσώπου του**,
+ * δημόσια προσβάσιμη, για πάντα — ενώ το ίδιο αυτό αρχείο γράφει, δύο οθόνες πιο πάνω,
+ * ότι *«η παρουσία **ΕΙΝΑΙ** η συγκατάθεση, και **απόσυρση = διαγραφή**»*.
+ *
+ * ⚠️ **Δύο σκανδάλες, καμία ορατή από την οθόνη**: το γραφείο που αποσύρεται μόνο του,
+ * **και** το Π2 που καλεί την ίδια συνάρτηση σε ανάκληση ικανότητας.
+ *
+ * 🔑 **ΠΡΩΤΑ ΤΑ BYTES, ΜΕΤΑ ΤΟ ΕΓΓΡΑΦΟ.** Αν το ράφι αποτύχει, το έγγραφο **μένει** και
+ * ο άνθρωπος ξαναπατά «Απόσυρση» — ορατή κατάσταση, με θεραπεία. Η αντίστροφη σειρά θα
+ * άφηνε **ορφανά bytes** που καμία οθόνη δεν δείχνει και κανείς δεν ξέρει να σβήσει.
+ *
+ * ⚠️ Το `publishShowcaseMark(cid, null)` **υπήρχε ήδη** και έκανε ακριβώς αυτό: το
+ * κενό σύνολο αδειάζει το πρόθεμα. Δεν γράφτηκε καμία διαδρομή διαγραφής — είναι η
+ * **ίδια** πράξη με άλλη τιμή.
  */
 export async function withdrawAgencyProfile(
   adminDb: AdminFirestore,
   companyId: string,
 ): Promise<AgencyProfileWriteResult> {
   try {
+    await publishShowcaseMark(companyId, null);
     await adminDb.collection(COLLECTIONS.AGENCY_PROFILES).doc(companyId).delete();
     return { kind: 'withdrawn' };
   } catch (error) {
