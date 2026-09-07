@@ -35,6 +35,7 @@ import '@testing-library/jest-dom';
 import { SearchLandingContent } from '../SearchLandingContent';
 import type { PublicListing } from '@/types/public-listing';
 import type { PublicShowcase } from '@/types/agency-profile';
+import { showcaseProfile } from './showcase-profile-fixture';
 
 // =============================================================================
 // ΤΑ ΨΕΥΤΙΚΑ — μόνο οι ΠΗΓΕΣ
@@ -116,9 +117,13 @@ function listing(id: string, offerKinds: readonly OfferKind[], mapped: boolean):
   } as unknown as PublicListing;
 }
 
-function profile(companyId: string, displayName: string): PublicShowcase {
-  return { companyId, displayName, alias: companyId, credentials: [] } as unknown as PublicShowcase;
-}
+/**
+ * 🔴 **ΤΟ ΨΕΥΤΙΚΟ ΕΙΝΑΙ ΚΟΙΝΟ, ΚΑΙ Ο ΛΟΓΟΣ ΜΕΤΡΗΘΗΚΕ** *(ADR-777 §8.67.6)*: η ίδια
+ * συνάρτηση ζούσε χειρόγραφη **δύο φορές**, και όταν το σχήμα απέκτησε σήμα
+ * *(ADR-841 Α21.8)* διορθώθηκε **το ένα** αντίγραφο — το άλλο έμεινε κόκκινο σιωπηλά.
+ * Ολόκληρη η αλυσίδα ζει στο `showcase-profile-fixture.ts`.
+ */
+const profile = showcaseProfile;
 
 /** Τρεις λειτουργίες, όπως η παραγωγή σήμερα: `sell` · `leaseOut` · επαγγελματίες. */
 const THREE_MODES: readonly PublicListing[] = [
@@ -149,6 +154,19 @@ function renderScreen(
 /** Το `id` που δηλώνει ένα κουμπί — ή `null` όταν **δεν** δηλώνει, που είναι έγκυρο. */
 function controls(tab: HTMLElement): string | null {
   return tab.getAttribute('aria-controls');
+}
+
+/**
+ * Η **μία** κλάση που κρίνει την κάθετη στοίχιση του μέτρου — δηλαδή τη θέση του τίτλου.
+ *
+ * ⚠️ **ΔΗΛΩΤΙΚΗ ΑΓΚΥΡΑ, ΚΑΙ ΤΟ ΛΕΕΙ**: το jsdom **δεν κάνει διάταξη** — κάθε
+ * `getBoundingClientRect` επιστρέφει μηδενικά. Άρα εδώ **δεν** μετριούνται pixel· εδώ
+ * κλειδώνεται η **δήλωση** που τα παράγει. Τα 47px του περιστατικού μετρήθηκαν σε
+ * φυλλομετρητή, και εκεί μόνο μπορούν να ξαναμετρηθούν.
+ */
+function alignment(container: HTMLElement): string {
+  const measure = container.querySelector('[data-shell-measure]') as HTMLElement;
+  return Array.from(measure.classList).find((c) => c.startsWith('[align-content:')) ?? '';
 }
 
 // =============================================================================
@@ -293,5 +311,56 @@ describe('Π4 — 🔴 ΧΩΡΙΣ ΔΙΑΚΟΠΤΗ ΔΕΝ ΥΠΑΡΧΕΙ ΠΑΝ�
     const showcase = container.querySelector('[data-shell-span="full"]');
     expect(showcase).not.toBeNull();
     expect(showcase?.parentElement).toBe(measure);
+  });
+});
+
+describe('Π5 — 🔴 Ο ΤΙΤΛΟΣ ΔΕΝ ΧΟΡΟΠΗΔΑ ΜΕ ΤΗΝ ΚΑΡΤΕΛΑ', () => {
+  // ────────────────────────────────────────────────────────────────────────────
+  // 🔴 ΤΟ ΠΕΡΙΣΤΑΤΙΚΟ (ADR-777 §8.67, μετρημένο 2026-09-07)
+  // ────────────────────────────────────────────────────────────────────────────
+  //
+  // Ο τίτλος «Πού ψάχνεις;» στα **192px** στην «Ενοικίαση» και στα **239px** στους
+  // «Επαγγελματίες» — **47px άλμα** σε κάθε πάτημα καρτέλας. Καμία πύλη δεν το είδε,
+  // και οι 33 δοκιμές αυτού του αρχείου ήταν **πράσινες**: κανείς δεν ρωτούσε *«πού
+  // στέκεται η κορυφή;»*.
+  //
+  // Η αιτία δεν ήταν σφάλμα: με `align-content: center` η θέση του τίτλου είναι
+  // **συνάρτηση του ύψους όσων ακολουθούν**, και η βιτρίνα των επαγγελματιών είναι
+  // ~90px κοντύτερη *(κάρτες χωρίς φωτογραφία)*. Το γεωμετρικό κέντρο έμενε
+  // **ταυτόσημο** και στις δύο — η οθόνη δούλευε ακριβώς όπως γράφτηκε.
+
+  it('🔴 ΜΕ διακόπτη η κορυφή είναι ΚΑΡΦΩΜΕΝΗ, όχι κεντραρισμένη', () => {
+    // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: γύρνα το `className` του `main` στο σκέτο
+    //    `[align-content:safe_center]` ⇒ κοκκινίζει.
+    const container = renderScreen(THREE_MODES, PROS);
+
+    expect(alignment(container)).toBe('[align-content:start]');
+  });
+
+  it('🔴 και ΔΕΝ αλλάζει όταν ο άνθρωπος αλλάζει λειτουργία', () => {
+    // 🔑 **ΤΟ ΣΚΕΛΟΣ ΠΟΥ ΕΙΝΑΙ ΟΝΤΩΣ ΤΟ ΠΑΡΑΠΟΝΟ.** Το πρώτο σκέλος κλειδώνει *ποια*
+    //    στοίχιση· αυτό κλειδώνει ότι **δεν εξαρτάται από την καρτέλα**.
+    // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: κάνε τη συνθήκη `panelMode === 'pros' ? … : …` — δηλαδή την
+    //    ίδια μετακίνηση γραμμένη ανάποδα ⇒ κοκκινίζει **μόνο** αυτή η γραμμή.
+    const container = renderScreen(THREE_MODES, PROS);
+    const before = alignment(container);
+
+    const pros = screen.getAllByRole('tab').at(-1) as HTMLElement;
+    fireEvent.mouseDown(pros, { button: 0 });
+
+    // Η καρτέλα όντως άλλαξε — αλλιώς το «ίδιο» παρακάτω δεν σημαίνει τίποτα.
+    expect(pros).toHaveAttribute('aria-selected', 'true');
+    expect(alignment(container)).toBe(before);
+  });
+
+  it('🔴 ΧΩΡΙΣ διακόπτη η κενή σελίδα ΜΕΝΕΙ κεντραρισμένη', () => {
+    // ⚠️ **Η ΠΡΟΘΕΣΗ ΠΟΥ ΔΕΝ ΑΝΑΙΡΕΘΗΚΕ.** Το κεντράρισμα δεν ήταν λάθος — ήταν λάθος
+    //    **εκεί όπου υπάρχει διακόπτης**. Μια πρόταση κολλημένη στην κορυφή με κενή
+    //    οθόνη από κάτω δεν είναι διάταξη, είναι παράλειψη.
+    // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: κάνε τη στοίχιση σταθερά `start` ⇒ κοκκινίζει.
+    const container = renderScreen(ONE_MODE, []);
+
+    expect(screen.queryAllByRole('tab')).toHaveLength(0);
+    expect(alignment(container)).toBe('[align-content:safe_center]');
   });
 });

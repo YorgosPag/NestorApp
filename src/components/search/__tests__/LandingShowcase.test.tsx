@@ -20,7 +20,7 @@ import '@testing-library/jest-dom';
 import { LandingShowcase } from '../LandingShowcase';
 import { LANDING_SHOWCASE_LIMIT } from '@/lib/listings/listing-coverage';
 import type { PublicListing } from '@/types/public-listing';
-import type { PublicShowcase } from '@/types/agency-profile';
+import { showcaseProfile } from './showcase-profile-fixture';
 
 jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -217,16 +217,10 @@ describe('Β6 — 🔴 ΤΟ ΠΑΝΕΛ ΤΟΥ ΔΙΑΚΟΠΤΗ, ΣΤΗΝ ΟΘΟ�
   //    στιγμιότυπο**, με 20/20 άγκυρες πράσινες. Το §8.49 το έχει ήδη μετρήσει
   //    **τέσσερις φορές σε τέσσερις συνεδρίες**.
 
-  function profile(companyId: string, displayName: string): PublicShowcase {
-    return {
-      companyId,
-      displayName,
-      alias: companyId,
-      credentials: [],
-    } as unknown as PublicShowcase;
-  }
-
-  const PROS = [profile('c1', 'Υδραυλικά Ρήγας'), profile('c2', 'Μελέτες Άλφα')];
+  const PROS = [
+    showcaseProfile('c1', 'Υδραυλικά Ρήγας'),
+    showcaseProfile('c2', 'Μελέτες Άλφα'),
+  ];
 
   it('🔴 στους ΕΠΑΓΓΕΛΜΑΤΙΕΣ δεν φτάνει ΚΑΜΙΑ αγγελία — ούτε μία εικόνα ακινήτου', () => {
     // 🔴 **ΤΟ ΕΛΑΤΤΩΜΑ ΤΟΥ §1.3, ΑΥΤΟΛΕΞΕΙ**: η οθόνη έλεγε *«ψάχνεις επαγγελματία»*

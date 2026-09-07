@@ -42,6 +42,7 @@
  */
 
 import React from 'react';
+import { cn } from '@/lib/utils';
 import { Link } from '@/lib/workspace/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { usePublicListings } from '@/services/realtime/hooks/usePublicListings';
@@ -228,9 +229,29 @@ export function SearchLandingContent() {
           καμία μπάρα κύλισης δεν φτάνει εκεί *(CSS Box Alignment §4.3 — ρητά «data loss»)*.
           Με έξι κάρτες σε χαμηλό παράθυρο αυτό **συμβαίνει**, όχι «θα μπορούσε». Το `safe`
           υποχωρεί σε `start` **μόνο** τότε — η κενή σελίδα μένει κεντραρισμένη.
+
+          🔴 **ΚΑΙ ΤΟ ΚΕΝΤΡΑΡΙΣΜΑ ΕΠΑΨΕ ΝΑ ΙΣΧΥΕΙ ΟΤΑΝ ΥΠΑΡΧΕΙ ΔΙΑΚΟΠΤΗΣ (ADR-777 §8.67).**
+          Με `align-content: center` η θέση του τίτλου είναι **συνάρτηση του ύψους όσων
+          ακολουθούν** — και όσα ακολουθούν **αλλάζουν ύψος με την καρτέλα**: η βιτρίνα
+          ακινήτων έχει **φωτογραφία**, των επαγγελματιών **μόνο κείμενο**. Μετρημένο
+          ζωντανά (07/09): ο τίτλος `Πού ψάχνεις;` στα **192px** στην «Ενοικίαση» και στα
+          **239px** στους «Επαγγελματίες» — **47px άλμα** σε κάθε πάτημα καρτέλας, ενώ το
+          γεωμετρικό κέντρο έμενε **ταυτόσημο** (~585px). Δηλαδή η οθόνη δούλευε ακριβώς
+          όπως γράφτηκε· απλώς αυτό που γράφτηκε κάνει τον **σταθερό** τίτλο να χοροπηδά.
+
+          ⚠️ **Η ΣΥΝΘΗΚΗ ΕΙΝΑΙ `panelMode === null`, ΟΧΙ Η ΤΙΜΗ ΤΗΣ ΚΑΡΤΕΛΑΣ — ΕΠΙΤΗΔΕΣ.**
+          Το πάτημα καρτέλας αλλάζει την **τιμή** του `panelMode`, ποτέ το «null ή όχι»:
+          άρα η κλάση **δεν μπορεί** να αλλάξει ανάμεσα σε «Αγορά · Ενοικίαση ·
+          Επαγγελματίες». Ένα `panelMode === 'pros' ? …` εδώ θα ήταν η ίδια μετακίνηση
+          γραμμένη ανάποδα. Και η **κενή** σελίδα *(χωρίς διακόπτη, χωρίς βιτρίνα)* κρατά
+          το `safe center` που της δίνει νόημα — μία πρόταση κολλημένη στην κορυφή με
+          κενή οθόνη από κάτω δεν είναι διάταξη, είναι παράλειψη.
         */
         data-shell-measure="wide"
-        className="w-full flex-1 [align-content:safe_center] gap-6"
+        className={cn(
+          'w-full flex-1 gap-6',
+          panelMode === null ? '[align-content:safe_center]' : '[align-content:start]',
+        )}
       >
         <h1 className="text-3xl font-semibold text-foreground">
           {t('search-results:landing.title')}
