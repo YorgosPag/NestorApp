@@ -67,7 +67,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "6697818a37a6ac799d8c9215d01501a17270d7bf16f7f2b0ef359d731d2c1cb0",
+  "inputsSha256": "67f103ba342b85d40dff58ca0736a44f34e93313307b8c17b056303b1b8aa651",
   "languages": [
     "el"
   ],
@@ -235,8 +235,9 @@
     "src/components/search-results/ListingPriceMarkers.tsx": "fff51cb77cebe92ed76e6418e50335aacb5577f6ebc3713c3ff6211cfac0f5be",
     "src/components/search-results/MapAreaControl.tsx": "74e3601f1490e3611ba009298341aea66fde03e9f91256cdb425069165ec4e2d",
     "src/components/search-results/ResultsList.tsx": "f463fbaea163e7b7c604f19803cda2ac899b7c245dbb6fd03674a7645705fae1",
-    "src/components/search-results/ResultsMap.tsx": "cf50b3eff43398d79db6d35fe98032b2c2078153a945d75f76aee689cd50f865",
-    "src/components/search-results/ResultsMapLayers.tsx": "04521b5456ffc2f62547ce38ba734c35aaa8f06c72d665e96c8856a54e2ef9d0",
+    "src/components/search-results/ResultsMap.tsx": "db59f41bc738f3e5d374d866d79b8aec0e52397eab45e6507d32da62158efa55",
+    "src/components/search-results/ResultsMapLayers.tsx": "2fe0c31ffa77d98e164ee170bc7aa9cfe6e839eb9e206b1f8dc1ba7a37fa4b09",
+    "src/components/search-results/ResultsMapSources.tsx": "e0d5e988f4242c8b7e2e01750a2bef56fa1c126d4f73033cc272265ce6e746b6",
     "src/components/search-results/ResultsSheet.tsx": "4a98dea07a1dcf9a522a0d4841d27a63d5ad6d2c1335df9c72ad39385b56dc7d",
     "src/components/search-results/SearchResultsContent.tsx": "cd734e402e19727276e5b03b2905255f0a1ef01287070eb6cf1bcf423645a486",
     "src/components/search-results/StayFilterFields.tsx": "50b75a24eb75bed9a8dbf2b5b5adc4114760e85b6f98f569bee0930e64e41dac",
@@ -394,6 +395,7 @@
     "src/lib/mandate/mandate-standing.ts": "b30500bc4466542a91ca478aada505b0b8a097b0386d532747de99cbc758cdfc",
     "src/lib/mandate/mandate-term-window.ts": "b0862fc1c7339be12ae58f95e05f5fb2901b13a5be45f6128627ebde587622af",
     "src/lib/mandate/owner-mandate-view.ts": "458a8b53a6c4840cd26733f035816067928c0d072e09fa030d25c888745d05d4",
+    "src/lib/maps/listing-clusters.ts": "cfc65b9eedadb5598f0c8596b8d3112fe9a035f38316e3356c0b6349c5f72767",
     "src/lib/maps/maplibre.ts": "eb9024e3e6f1a573b86b20235ca5b1c916bdcbacb4434617d0c8b9ae7c216b15",
     "src/lib/maps/metric-size.ts": "f5087eb2c1d67c1d57cff81b19d752bdf9b3f23b816c688edd5cfa99831a8f28",
     "src/lib/middleware/rate-limit-config.ts": "12e5417c7ba80652780a9682e67bd1a039fe05e32b9f1630d13e8e640f80f527",
@@ -4024,7 +4026,7 @@
     "src/components/search/LandingModeSwitch.tsx": "abc34515cab9d750a6610b1a947369d0aeba2edf79fc1867098dacef2b5ddbf9",
     "src/components/search/LandingShowcase.tsx": "810c23ca39453a16a6ef3dd80e68e5d265cf0864bb2a2afbd77305eeea82bb34",
     "src/components/search/PlaceSearchBox.tsx": "7c37edbdb937c2785882ec52db6a8a0e9790d31de4f74318da40651efe7ac428",
-    "src/components/search/SearchLandingContent.tsx": "8de02c9f5ea0e8d5021e705031bd5e730117e48844fd651975a4b77f79913f55",
+    "src/components/search/SearchLandingContent.tsx": "2695f338850495077c585d2032fdaeb19d911c4d593c8c4ec4a8a95ef2f862e4",
     "src/components/search/SearchResultItem.tsx": "9976b0ee9c507a0118d455720fa1e3c7e53ae1533bd82f26245e54be994329d4",
     "src/components/search/global-search-config.ts": "098d196bbb7b3b2c493d3a6dbe47e0b818ba6ef06267665da1c90d88a561efb2",
     "src/components/shared/ModuleBreadcrumb.tsx": "82cdfb50f56799805355388e56fd9395f9c0f67a643946e9650f775f250f2f92",

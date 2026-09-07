@@ -29,6 +29,7 @@ import { Layer } from '@/lib/maps/maplibre';
 import type { ListingFocus } from '@/lib/listings/listing-focus';
 import { LISTING_FEATURE_KEY } from '@/lib/listings/listings-geojson';
 import { metricCircleRadius } from '@/lib/maps/metric-size';
+import { NOT_A_CLUSTER } from '@/lib/maps/listing-clusters';
 
 /**
  * Ακτίνες σε **pixel** — και πλέον **ΜΟΝΟ για ΣΗΜΑΔΙΑ, ποτέ για ισχυρισμούς έκτασης**.
@@ -129,7 +130,7 @@ export function ResultsMapLayers({ sourceId, mark, surface, focus }: ResultsMapL
         source={sourceId}
         id="listing-city"
         type="circle"
-        filter={['==', ['get', 'shape'], 'shaded-city']}
+        filter={['all', NOT_A_CLUSTER, ['==', ['get', 'shape'], 'shaded-city']]}
         paint={{ 'circle-radius': UNCERTAINTY_RADIUS, 'circle-color': mark, 'circle-opacity': 0.12,
                  'circle-stroke-width': 1, 'circle-stroke-color': mark, 'circle-stroke-opacity': 0.35 }}
       />
@@ -138,31 +139,22 @@ export function ResultsMapLayers({ sourceId, mark, surface, focus }: ResultsMapL
         source={sourceId}
         id="listing-neighbourhood"
         type="circle"
-        filter={['==', ['get', 'shape'], 'shaded-circle']}
+        filter={['all', NOT_A_CLUSTER, ['==', ['get', 'shape'], 'shaded-circle']]}
         paint={{ 'circle-radius': UNCERTAINTY_RADIUS, 'circle-color': mark, 'circle-opacity': 0.18,
                  'circle-stroke-width': 1, 'circle-stroke-color': mark, 'circle-stroke-opacity': 0.5 }}
       />
-      {/* ΜΕΤΡΗΜΕΝΟ ΠΕΡΙΓΡΑΜΜΑ — πραγματικό σχήμα, γεμάτο + περίγραμμα. */}
-      <Layer
-        source={sourceId}
-        id="listing-outline-fill"
-        type="fill"
-        filter={['==', ['get', 'shape'], 'outline']}
-        paint={{ 'fill-color': mark, 'fill-opacity': 0.3 }}
-      />
-      <Layer
-        source={sourceId}
-        id="listing-outline-line"
-        type="line"
-        filter={['==', ['get', 'shape'], 'outline']}
-        paint={{ 'line-color': mark, 'line-width': 2 }}
-      />
+      {/*
+        ⚠️ **ΤΑ ΠΕΡΙΓΡΑΜΜΑΤΑ ΔΕΝ ΖΟΥΝ ΠΙΑ ΕΔΩ** *(ADR-777 §8.66)* — μετακόμισαν στο
+        `ResultsMapSources`, μαζί με τη **δική τους πηγή**. Ο λόγος δεν είναι τάξη
+        αλλά περιορισμός: το supercluster δέχεται **μόνο σημεία**, οπότε ένα πολύγωνο
+        σε πηγή με `cluster: true` **εξαφανίζεται σιωπηλά**.
+      */}
       {/* ΔΡΟΜΟΣ ΧΩΡΙΣ ΑΡΙΘΜΟ — πινέζα με ΔΑΚΤΥΛΙΟ: κενό κέντρο, παχύ περίγραμμα. */}
       <Layer
         source={sourceId}
         id="listing-pin-ring"
         type="circle"
-        filter={['==', ['get', 'shape'], 'pin-with-ring']}
+        filter={['all', NOT_A_CLUSTER, ['==', ['get', 'shape'], 'pin-with-ring']]}
         paint={{ 'circle-radius': RADIUS.ring, 'circle-color': surface, 'circle-opacity': 1,
                  'circle-stroke-width': 3, 'circle-stroke-color': mark }}
       />
@@ -171,7 +163,7 @@ export function ResultsMapLayers({ sourceId, mark, surface, focus }: ResultsMapL
         source={sourceId}
         id="listing-pin"
         type="circle"
-        filter={['==', ['get', 'shape'], 'pin']}
+        filter={['all', NOT_A_CLUSTER, ['==', ['get', 'shape'], 'pin']]}
         paint={{ 'circle-radius': RADIUS.pin, 'circle-color': mark, 'circle-opacity': 1,
                  'circle-stroke-width': 2, 'circle-stroke-color': surface }}
       />

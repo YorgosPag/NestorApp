@@ -25,18 +25,18 @@
  */
 
 import React, { useMemo, useCallback, useEffect, useRef } from 'react';
-import { Source } from '@/lib/maps/maplibre';
 import { InteractiveMap } from '@/subapps/geo-canvas/components/InteractiveMap';
 import { PolygonSystemProvider } from '@/subapps/geo-canvas/systems/polygon-system';
 import type { MapInstance } from '@/subapps/geo-canvas/hooks/map/useMapInteractions';
 import { readRootCssVar } from '@/subapps/dxf-viewer/config/color-config';
-import { listingsToGeoJson } from '@/lib/listings/listings-geojson';
+import { listingsToGeoJson, splitListingGeometry } from '@/lib/listings/listings-geojson';
 import { listingBounds } from '@/lib/listings/listing-map-bounds';
 import { listingPriceMarkers } from '@/lib/listings/listing-price-markers';
 import { NO_LISTING_FOCUS, type ListingFocus } from '@/lib/listings/listing-focus';
 import { ListingMapPopup } from './ListingMapPopup';
 import { ListingPriceMarkers } from './ListingPriceMarkers';
-import { ResultsMapLayers, RADIUS } from './ResultsMapLayers';
+import { RADIUS } from './ResultsMapLayers';
+import { ResultsMapSources } from './ResultsMapSources';
 import type { PublicListing } from '@/types/public-listing';
 import type { GeoBoundingBox } from '@/types/geo/coordinates';
 import { readMapArea, sameMapArea } from './results-map-area';
@@ -155,7 +155,6 @@ interface ResultsMapProps {
 }
 
 
-const SOURCE_ID = 'public-listings';
 
 export function ResultsMap({
   listings,
@@ -167,7 +166,22 @@ export function ResultsMap({
   onAreaChange,
   searchArea = null,
 }: ResultsMapProps) {
+  /**
+   * 🔴 **ΧΩΡΙΣΜΕΝΗ ΣΕ ΔΥΟ, ΚΑΙ ΔΕΝ ΕΙΝΑΙ ΤΑΞΗ — ΕΙΝΑΙ ΠΕΡΙΟΡΙΣΜΟΣ** *(ADR-777 §8.66)*.
+   * Το supercluster δέχεται **μόνο** `Point`/`MultiPoint`: μια πηγή με `cluster: true`
+   * **αγνοεί** κάθε πολύγωνό της, χωρίς σφάλμα και χωρίς προειδοποίηση. Ενωμένες, τα
+   * μετρημένα περιγράμματα θα **εξαφανίζονταν** από τον χάρτη.
+   */
   const data = useMemo(() => listingsToGeoJson(listings), [listings]);
+  const geometry = useMemo(() => splitListingGeometry(data), [data]);
+  /**
+   * 🔴 **ΤΟ ΚΑΔΡΟ ΡΩΤΑΕΙ ΤΟ ΠΛΗΡΕΣ ΣΥΝΟΛΟ, ΟΧΙ ΤΑ ΣΗΜΕΙΑ** *(ADR-777 §8.66)*. Η κοπή
+   * σε δύο πηγές είναι περιορισμός **της βιβλιοθήκης** — δεν είναι νέα αλήθεια για το
+   * *«πού είναι τα αποτελέσματα»*. Καδραρισμένο μόνο στα σημεία, ένα σύνολο από
+   * **μετρημένα περιγράμματα** *(η κορυφαία βαθμίδα της Α5)* θα άφηνε τον χάρτη στην
+   * προεπιλογή του: **οθόνη που φαίνεται άδεια ενώ έχει αποτελέσματα** — ακριβώς το
+   * ζωντανό εύρημα που γέννησε το `listingBounds`.
+   */
   const bounds = useMemo(() => listingBounds(data), [data]);
 
   /**
@@ -446,9 +460,7 @@ export function ResultsMap({
       className="h-full w-full"
       onMapReady={handleMapReady}
     >
-      <Source id={SOURCE_ID} type="geojson" data={data}>
-        <ResultsMapLayers sourceId={SOURCE_ID} mark={mark} surface={surface} focus={focus} />
-      </Source>
+      <ResultsMapSources geometry={geometry} mark={mark} surface={surface} focus={focus} />
 
       {/*
         Οι πινακίδες τιμής — **μετά** την πηγή, ώστε να κάθονται πάνω από τα σχήματα,
