@@ -3369,6 +3369,7 @@
     },
     "sidebar": {
       "accounting": "Λογιστικό",
+      "agencyShowcase": "Η βιτρίνα μου",
       "availableParking": "Διαθέσιμες Θέσεις Στάθμευσης",
       "availableProperties": "Διαθέσιμα Ακίνητα",
       "availableStorage": "Διαθέσιμες Αποθήκες",
@@ -3574,6 +3575,10 @@
         }
       },
       "directory": {
+        "coverageDeclared": "Δηλώνει: {areas}",
+        "coverageDeclaredNationwide": "Δηλώνει: όλη η Ελλάδα",
+        "coverageIntersects": "Καλύπτει μέρος της περιοχής",
+        "coverageWithin": "Καλύπτει όλη την περιοχή",
         "occupationAll": "Όλες οι ειδικότητες",
         "occupationFilterLabel": "Ειδικότητα",
         "occupationSearchEmpty": "Καμία ειδικότητα δεν ταιριάζει με αυτό που έγραψες",

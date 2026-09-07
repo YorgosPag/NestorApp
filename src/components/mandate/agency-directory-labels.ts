@@ -51,6 +51,26 @@ export const DIRECTORY_KEYS = {
   /** ⚠️ **Η ΜΟΝΑΔΑ ΖΕΙ ΣΤΟ ΚΕΙΜΕΝΟ** («{km} χλμ»), όχι στον αριθμό: ένας αριθμός
    *  με κρυμμένη μονάδα είναι το σχήμα που ονομάζει το ADR-716. */
   radiusOption: `${D}.radiusOption`,
+  // ── Η ΠΕΡΙΟΧΗ ΩΣ ΦΙΛΤΡΟ (ADR-846) ────────────────────────────────────────
+  /** ⚠️ **Δήμος/περιφέρεια/κοινότητα** — το πεδίο πληκτρολογείται, δεν επιλέγεται. */
+  areaSearchPlaceholder: `${D}.areaSearchPlaceholder`,
+  /** ⚠️ **«Δεν ταιριάζει με ό,τι έγραψες»**, ΟΧΙ «δεν υπάρχει» — ίδια διάκριση με το
+   *  `occupationSearchEmpty` παραπάνω. */
+  areaSearchEmpty: `${D}.areaSearchEmpty`,
+  /** 🔑 Η ιεραρχία φορτώνει **τεμπέλικα** (4,1 MB): η αναμονή λέγεται, δεν σιωπά. */
+  areaLoading: `${D}.areaLoading`,
+  /** 🔑 *«…**δεν αλλάζει τη σειρά τους**»* — το φίλτρο δεν είναι κατάταξη. */
+  areaHint: `${D}.areaHint`,
+  // ── Η ΚΑΛΥΨΗ ΟΠΩΣ ΤΗ ΒΛΕΠΕΙ Η ΚΑΡΤΑ (ADR-846) ────────────────────────────
+  /** 🔑 **ΤΡΕΙΣ ΔΙΑΦΟΡΕΤΙΚΕΣ ΑΛΗΘΕΙΕΣ, ΤΡΙΑ ΚΛΕΙΔΙΑ.** «Ολόκληρη» και «μέρος»
+   *  απαντούν στο **ερώτημα του φίλτρου**· το `coverageDeclared*` απαντά *«τι
+   *  δήλωσε»* χωρίς να έχει ρωτηθεί περιοχή. Ένα κοινό κλειδί θα έλεγε στον
+   *  επισκέπτη ότι απαντήθηκε ερώτηση που **δεν έκανε**. */
+  coverageWithin: `${D}.coverageWithin`,
+  coverageIntersects: `${D}.coverageIntersects`,
+  coverageDeclaredNationwide: `${D}.coverageDeclaredNationwide`,
+  /** Το `{areas}` έρχεται **ονοματισμένο** από την ιεραρχία — ποτέ ωμά ids. */
+  coverageDeclared: `${D}.coverageDeclared`,
   gemi: `${D}.gemi`,
   open: `${D}.open`,
 } as const;
@@ -105,8 +125,18 @@ export const PROFILE_KEYS = {
   failedLead: `${P}.failedLead`,
   gemiLabel: `${P}.gemiLabel`,
   gemiHint: `${P}.gemiHint`,
+  /** ⚠️ **«Έδρα», όχι «Περιοχή δραστηριότητας»** — δες `coverageLabel` (ADR-846). */
   placeLabel: `${P}.placeLabel`,
   placeUnknown: `${P}.placeUnknown`,
+  /**
+   * **Η ΔΗΛΩΜΕΝΗ ΕΜΒΕΛΕΙΑ** *(ADR-846)*.
+   *
+   * 🔴 Το `placeLabel` έλεγε «Περιοχή δραστηριότητας» **δείχνοντας την έδρα** — υπόσχεση
+   * που το δεδομένο δεν μπορούσε να τηρήσει. Πλέον οι δύο ερωτήσεις έχουν δύο γραμμές.
+   */
+  coverageLabel: `${P}.coverageLabel`,
+  coverageUnknown: `${P}.coverageUnknown`,
+  coverageNationwide: `${P}.coverageNationwide`,
   publishedAt: `${P}.publishedAt`,
   requestCta: `${P}.requestCta`,
   requestHint: `${P}.requestHint`,
