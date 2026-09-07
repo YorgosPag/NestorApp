@@ -49,6 +49,7 @@ import {
   SHOWCASE_NS,
   SHOWCASE_REJECTION_KEYS,
 } from '@/components/mandate/agency-showcase-labels';
+import { ShowcaseMarkField } from '@/components/mandate/ShowcaseMarkField';
 import {
   BROKERAGE_DENY_NS,
   BROKERAGE_DENY_REASON_KEYS,
@@ -243,6 +244,23 @@ export function AgencyShowcaseContent(): React.ReactElement {
       <CredentialList credentials={credentials} onChange={setCredentials} />
 
       <PlaceSection place={place} onChosen={setPlace} />
+
+      {/*
+        🏆 ADR-841 §7 Α21, Φάση 2 — ΤΟ ΣΗΜΑ, ΚΑΙ ΕΙΝΑΙ ΤΟ ΜΟΝΟ ΠΕΔΙΟ ΠΟΥ ΔΕΝ ΠΕΡΙΜΕΝΕΙ
+        ΤΟ «ΔΗΜΟΣΙΕΥΣΗ».
+
+        🔑 **Δεν στέλνει τίποτα στο `declarationOf`**, και είναι όλη η απόφαση: το σήμα
+        έχει **δική του** διαδρομή (`POST/DELETE /api/agency-profile/mark`) και αλλάζει
+        **αμέσως** — το καθολικό πρότυπο *(GitHub · Slack · LinkedIn)* όπου το avatar δεν
+        έχει «Αποθήκευση». Όσο ζούσε μέσα στη δήλωση, κάθε αλλαγή επωνυμίας **έσβηνε το
+        λογότυπο**: η οθόνη διαβάζει πίσω **δημόσιο URL**, ποτέ το ιδιωτικό μονοπάτι που
+        ζητά το σύρμα, άρα δεν είχε **από πού** να το ξαναστείλει.
+
+        ⚠️ **Η αυθεντία είναι η ΒΙΤΡΙΝΑ**, όχι το πεδίο: το `published.mark` έρχεται από
+        το ίδιο στιγμιότυπο Firestore με τα υπόλοιπα. Μια τοπική κατάσταση σήματος εδώ θα
+        ήταν δεύτερη αλήθεια — και θα απέκλινε ακριβώς την ώρα που ο άνθρωπος κοιτά.
+      */}
+      <ShowcaseMarkField published={published?.mark ?? null} enabled={published !== null} />
 
       {/* 🔑 Η απουσία καναλιού είναι **δηλωμένη**, όχι σιωπηλή: ο μεσίτης οφείλει να
           ξέρει ότι δεν λείπει πεδίο — ότι έτσι γεννιέται γραπτό αίτημα (§9.8). */}

@@ -45,7 +45,7 @@ import {
   isCapabilityStatus,
   type CapabilityStatus,
 } from '@/types/organization-capability';
-import type { AgencyProfileRejection } from '@/services/mandate/agency-profile.service';
+import type { AgencyProfileRejection } from '@/services/mandate/agency-profile-verdict';
 
 const logger = createModuleLogger('useAgencyShowcase');
 

@@ -46,7 +46,12 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { SHOWCASE_NS } from '@/components/mandate/agency-showcase-labels';
+import { frameOf } from '@/lib/agency/showcase-mark-frame';
+import { listingImageSrcSet } from '@/lib/listings/listing-images';
 import type { ShowcaseLettermark } from '@/lib/agency/showcase-mark';
+import type { DeclaredShowcaseMark } from '@/types/agency-profile';
 
 /**
  * 🔴 **ΣΤΑΤΙΚΗ ΟΚΤΑΔΑ, ΚΑΙ ΕΙΝΑΙ ΑΝΑΓΚΗ — ΟΧΙ ΠΡΟΤΙΜΗΣΗ.**
@@ -108,29 +113,135 @@ const MARK_SIZES = {
 
 export type ShowcaseMarkSize = keyof typeof MARK_SIZES;
 
+/**
+ * **Πόσα ΛΟΓΙΚΑ εικονοστοιχεία πιάνει κάθε μέγεθος**, ως τιμή `sizes` του `<img>`.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΧΩΡΙΣ ΑΥΤΟ, ΟΛΟΚΛΗΡΗ Η ΚΛΙΜΑΚΑ ΤΗΣ ΦΑΣΗΣ 1 ΕΙΝΑΙ ΝΕΚΡΗ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Με `w` descriptors και **χωρίς** `sizes`, ο περιηγητής υποθέτει `100vw` — δηλαδή
+ * κατεβάζει **πάντα το μεγαλύτερο** παράγωγο. Το ράφι θα παρήγαγε ευλαβικά 64/128/256
+ * και ο επισκέπτης θα έπαιρνε **πάντα** το 256 για σήμα **44 εικονοστοιχείων**.
+ *
+ * ⚠️ **Σταθερή τιμή σε px, ΠΟΤΕ viewport-based**: το στοιχείο έχει **σταθερό** μέγεθος
+ * (`h-11` · `h-16`) σε κάθε πλάτος οθόνης. Ένα `sizes="(max-width: …) …vw"` θα ήταν
+ * ψέμα που ο περιηγητής **πιστεύει**.
+ *
+ * 🔑 **Καθρέφτης του {@link MARK_SIZES}** — και η αντιστοιχία δεν επαληθεύεται από
+ * μεταγλωττιστή *(εκείνα είναι κλάσεις Tailwind, αυτά αριθμοί)*. Άγκυρα το φυλάει.
+ */
+const MARK_SIZES_ATTR: Readonly<Record<ShowcaseMarkSize, string>> = {
+  card: '44px',
+  page: '64px',
+} as const;
+
+/**
+ * **Τι σήμα δείχνουμε** — δηλωμένο ή παραγόμενο, ποτέ και τα δύο.
+ *
+ * 🔴 **ΔΙΑΚΕΚΡΙΜΕΝΗ ΕΝΩΣΗ ΚΑΙ ΟΧΙ `declared?: … ; lettermark: …`.** Με δύο προαιρετικά
+ * πεδία, το *«και τα δύο»* και το *«κανένα»* θα ήταν **εκφράσιμα** — δηλαδή κάποιος θα
+ * έπρεπε να αποφασίσει σε χρόνο εκτέλεσης ποιο κερδίζει, και δύο καταναλωτές θα
+ * μπορούσαν να απαντήσουν αλλιώς. **Ένα σήμα ανά επαγγελματία**: η κάρτα έχει **μία**
+ * θέση για *«ποιος είσαι;»*, και ο τύπος το λέει.
+ */
+export type ShowcaseMarkSubject =
+  | { readonly declared: DeclaredShowcaseMark }
+  | { readonly lettermark: ShowcaseLettermark };
+
 interface ShowcaseMarkViewProps {
-  readonly mark: ShowcaseLettermark;
+  readonly mark: ShowcaseMarkSubject;
   readonly size: ShowcaseMarkSize;
 }
 
 /**
  * **Το σήμα.**
  *
+ * ⇒ Δηλωμένη εικόνα ⇒ {@link DeclaredMarkImage}· αλλιώς το **παραγόμενο** πλακίδιο, που
+ * **δεν αποτυγχάνει ποτέ**.
+ */
+export function ShowcaseMarkView({ mark, size }: ShowcaseMarkViewProps): React.JSX.Element {
+  if ('declared' in mark) return <DeclaredMarkImage mark={mark.declared} size={size} />;
+  return <Lettermark mark={mark.lettermark} size={size} />;
+}
+
+/**
+ * **Η ΔΗΛΩΜΕΝΗ εικόνα** (ADR-841 §7 Α21, Φάση 2) — ο **τέταρτος** καταναλωτής του ενός
+ * `srcset` builder.
+ *
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔴 ΕΔΩ ΤΟ `aria-hidden` ΑΝΤΙΣΤΡΕΦΕΤΑΙ — ΚΑΙ ΕΙΝΑΙ Η ΙΔΙΑ ΑΡΧΗ, ΟΧΙ ΕΞΑΙΡΕΣΗ
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * Το πλακίδιο κρύβεται γιατί **δεν λέει τίποτα** που να μην το λέει ο τίτλος δίπλα του:
+ * «Π, Α» πριν από το «Παπαδόπουλος» είναι θόρυβος. Η **εικόνα** λέει κάτι που ο τίτλος
+ * **δεν** λέει — *«λογότυπο γραφείου»* ή *«φωτογραφία προσώπου»*, που είναι διαφορετική
+ * πληροφορία και όχι διαφορετική διατύπωση.
+ *
+ * ⇒ **Δύο διαφορετικές απαντήσεις στην ίδια οθόνη, και είναι σωστό.** Το ίδιο το αρχείο
+ * το είχε προβλέψει από το Στάδιο 1: *«το δηλωμένο σήμα θα χρειαστεί `altKey`»*.
+ *
+ * ⚠️ **Το `altKey` ΤΑΞΙΔΕΥΕΙ ΩΣ ΤΙΜΗ** μέσα στην εικόνα — η οθόνη το περνά σε `t()`,
+ * **δεν το επιλέγει**. Ένα `t(kind === 'logo' ? … : …)` εδώ θα ήταν **δεύτερος** κριτής
+ * για το «τι είναι αυτά τα bytes», ελεύθερος να διαφωνήσει με τον γραφέα που τα έγραψε.
+ *
+ * ⛔ **Ποτέ `next/image`**: οι δημόσιες εικόνες πάνε με σκέτο `<img srcSet>`.
+ */
+function DeclaredMarkImage({
+  mark,
+  size,
+}: {
+  readonly mark: DeclaredShowcaseMark;
+  readonly size: ShowcaseMarkSize;
+}): React.JSX.Element {
+  const { t } = useTranslation([SHOWCASE_NS]);
+  const frame = frameOf(mark.kind);
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={mark.image.url}
+      srcSet={listingImageSrcSet(mark.image)}
+      sizes={MARK_SIZES_ATTR[size]}
+      width={mark.image.width}
+      height={mark.image.height}
+      alt={t(mark.image.altKey)}
+      // ⚠️ **`lazy`, και είναι σωστό ακόμη και στην πρώτη κάρτα**: το σήμα δεν είναι
+      //    ποτέ το στοιχείο LCP — είναι 44 εικονοστοιχεία δίπλα σε επικεφαλίδα. Ένα
+      //    `eager` εδώ θα ανταγωνιζόταν το πραγματικό LCP για εύρος ζώνης (Α2.4).
+      loading="lazy"
+      decoding="async"
+      className={cn(
+        // 🔑 **`bg-card` κάτω από την εικόνα**: το ράφι διατηρεί τη διαφάνεια επίτηδες,
+        //    οπότε διαφανές λογότυπο με σκούρα γράμματα χρειάζεται επιφάνεια για να
+        //    φανεί — και στα **δύο** θέματα, χωρίς ψημένη πλάκα στα bytes.
+        'shrink-0 bg-card',
+        frame.shape,
+        frame.fit,
+        MARK_SIZES[size],
+      )}
+    />
+  );
+}
+
+/**
+ * **Το παραγόμενο πλακίδιο** — η εφεδρεία που **δεν αποτυγχάνει ποτέ**.
+ *
  * 🔑 **`aria-hidden`, και είναι απόφαση — όχι παράλειψη**: η επωνυμία βρίσκεται
  * **δίπλα**, στην ίδια `<article>`. Ένα σήμα που εκφωνεί «Π, Α» πριν από το
- * «Παπαδόπουλος» είναι **θόρυβος** για τον αναγνώστη οθόνης, όχι πληροφορία. Ο
- * επισκέπτης με βοηθητική τεχνολογία **δεν χάνει τίποτα** — γιατί το σήμα δεν
- * **λέει** τίποτα που να μην το λέει ήδη ο τίτλος.
- *
- * ⇒ Και γι' αυτό αυτό το στάδιο **δεν χρειάζεται ούτε ένα κλειδί i18n** (N.11).
- * Το **δηλωμένο** σήμα των Σταδίων 2-3 θα χρειαστεί `altKey` — εκείνο δείχνει κάτι
- * που ο τίτλος **δεν** λέει.
+ * «Παπαδόπουλος» είναι **θόρυβος** για τον αναγνώστη οθόνης, όχι πληροφορία.
  *
  * ⚠️ **Κενά αρχικά είναι νόμιμα** *(επωνυμία χωρίς κανένα γράμμα)*: μένει το χρωματιστό
  * πλακίδιο. Είναι **λιγότερο** πληροφοριακό, αλλά **δεν είναι ανώνυμο** — και η
  * ανωνυμία ήταν η μετρημένη ποινή, όχι η έλλειψη γραμμάτων.
  */
-export function ShowcaseMarkView({ mark, size }: ShowcaseMarkViewProps): React.JSX.Element {
+function Lettermark({
+  mark,
+  size,
+}: {
+  readonly mark: ShowcaseLettermark;
+  readonly size: ShowcaseMarkSize;
+}): React.JSX.Element {
   return (
     <span
       aria-hidden="true"
