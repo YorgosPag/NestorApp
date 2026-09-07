@@ -32,10 +32,12 @@ import {
   sanitiseImageVariants,
 } from '../public-shelf-sanitise';
 import {
+  FRAMING_AS_GIVEN,
+  FRAMING_INK_TIGHT,
   LISTING_SHELF,
   PUBLIC_SHELF_KINDS,
   SHOWCASE_SHELF,
-  type ShelfEncoding,
+  type RasterShelfEncoding,
 } from '@/services/upload/utils/public-shelf-kinds';
 
 /** Το κανονικό (μεγαλύτερο) πλάτος της γκαλερί — ό,τι ήταν το `PUBLIC_SHELF_MAX_EDGE_PX`. */
@@ -93,9 +95,9 @@ describe('Κ0 — ΤΟ ΔΕΙΓΜΑ ΟΝΤΩΣ ΚΟΥΒΑΛΑΕΙ ΑΥΤΟ ΠΟ�
  */
 async function sanitiseCanonical(
   input: Buffer,
-  encoding: ShelfEncoding = LISTING_SHELF.encoding,
+  encoding: RasterShelfEncoding = LISTING_SHELF.encoding,
 ) {
-  const variants = await sanitiseImageVariants(input, encoding);
+  const variants = await sanitiseImageVariants(input, encoding, FRAMING_AS_GIVEN);
   return variants[variants.length - 1];
 }
 
@@ -187,8 +189,8 @@ describe('Κ2 — ο καθαρισμός δεν ΚΑΤΑΣΤΡΕΦΕΙ αυτό
 
 describe('Κ3 — ό,τι δεν είναι εικόνα ΔΕΝ αποκτά διεύθυνση', () => {
   it('απορρίπτει κενά bytes με ονομασμένη αιτία', async () => {
-    await expect(sanitiseImageVariants(Buffer.alloc(0), LISTING_SHELF.encoding)).rejects.toBeInstanceOf(ShelfSanitiseError);
-    await expect(sanitiseImageVariants(Buffer.alloc(0), LISTING_SHELF.encoding)).rejects.toMatchObject({
+    await expect(sanitiseImageVariants(Buffer.alloc(0), LISTING_SHELF.encoding, FRAMING_AS_GIVEN)).rejects.toBeInstanceOf(ShelfSanitiseError);
+    await expect(sanitiseImageVariants(Buffer.alloc(0), LISTING_SHELF.encoding, FRAMING_AS_GIVEN)).rejects.toMatchObject({
       failure: 'empty',
     });
   });
@@ -197,7 +199,7 @@ describe('Κ3 — ό,τι δεν είναι εικόνα ΔΕΝ αποκτά δ�
     // 🔴 Χωρίς διεύθυνση δεν υπάρχει δημοσίευση (Α12.7): ένα PE header δεν μπορεί να
     // φτάσει ποτέ στο ράφι, γιατί δεν βγαίνει κλειδί για κάτι που δεν καθαρίστηκε.
     const fake = Buffer.concat([Buffer.from('MZ'), Buffer.alloc(2048, 0x41)]);
-    await expect(sanitiseImageVariants(fake, LISTING_SHELF.encoding)).rejects.toMatchObject({ failure: 'undecodable' });
+    await expect(sanitiseImageVariants(fake, LISTING_SHELF.encoding, FRAMING_AS_GIVEN)).rejects.toMatchObject({ failure: 'undecodable' });
   });
 });
 
@@ -219,7 +221,7 @@ describe('Κ4 — Η ΕΓΓΥΗΣΗ ΙΣΧΥΕΙ ΓΙΑ ΚΑΘΕ ΠΑΡΑΓΩΓ�
       // Χωρίς αυτό, ένα μικρότερο παράγωγο θα μπορούσε να γεννηθεί από **άλλη** διαδρομή
       // που ξέχασε τον καθαρισμό — και θα δημοσιευόταν με GPS, ακυρώνοντας το
       // `locationDisclosure: 'declined'` της Α5 (ADR-841 §7 Α12.7).
-      const variants = await sanitiseImageVariants(await photoWithGps(3000, 2000), encoding);
+      const variants = await sanitiseImageVariants(await photoWithGps(3000, 2000), encoding, FRAMING_AS_GIVEN);
 
       expect(variants).toHaveLength(encoding.widths.length);
       for (const variant of variants) {
@@ -237,6 +239,7 @@ describe('Κ4 — Η ΕΓΓΥΗΣΗ ΙΣΧΥΕΙ ΓΙΑ ΚΑΘΕ ΠΑΡΑΓΩΓ�
     const variants = await sanitiseImageVariants(
       await photoWithGps(3000, 2000),
       LISTING_SHELF.encoding,
+      FRAMING_AS_GIVEN,
     );
     expect(variants.map((variant) => variant.width)).toEqual([640, 1280, LISTING_MAX_EDGE_PX]);
   });
@@ -245,8 +248,8 @@ describe('Κ4 — Η ΕΓΓΥΗΣΗ ΙΣΧΥΕΙ ΓΙΑ ΚΑΘΕ ΠΑΡΑΓΩΓ�
     // Το `lossless` δεν είναι γούστο: λογότυπο = επίπεδες περιοχές + αιχμηρές ακμές,
     // δηλαδή ΜΟΝΟ οι μεταβάσεις που θολώνει η lossy συμπίεση. Η απόδειξη είναι το ίδιο
     // το αρχείο: το WebP δηλώνει lossless με το chunk `VP8L`, το lossy με `VP8 `.
-    const [mark] = await sanitiseImageVariants(await photoWithGps(400, 400), SHOWCASE_SHELF.encoding);
-    const [photo] = await sanitiseImageVariants(await photoWithGps(400, 400), LISTING_SHELF.encoding);
+    const [mark] = await sanitiseImageVariants(await photoWithGps(400, 400), SHOWCASE_SHELF.encoding, FRAMING_AS_GIVEN);
+    const [photo] = await sanitiseImageVariants(await photoWithGps(400, 400), LISTING_SHELF.encoding, FRAMING_AS_GIVEN);
 
     expect(mark.bytes.includes(Buffer.from('VP8L'))).toBe(true);
     expect(photo.bytes.includes(Buffer.from('VP8L'))).toBe(false);
@@ -261,7 +264,7 @@ describe('Κ4 — Η ΕΓΓΥΗΣΗ ΙΣΧΥΕΙ ΓΙΑ ΚΑΘΕ ΠΑΡΑΓΩΓ�
       .png()
       .toBuffer();
 
-    const [mark] = await sanitiseImageVariants(transparent, SHOWCASE_SHELF.encoding);
+    const [mark] = await sanitiseImageVariants(transparent, SHOWCASE_SHELF.encoding, FRAMING_AS_GIVEN);
     expect((await sharp(mark.bytes).metadata()).hasAlpha).toBe(true);
   });
 
@@ -273,11 +276,198 @@ describe('Κ4 — Η ΕΓΓΥΗΣΗ ΙΣΧΥΕΙ ΓΙΑ ΚΑΘΕ ΠΑΡΑΓΩΓ�
       .toBuffer();
     const tagged = await sharp(upright).withMetadata({ orientation: 6 }).jpeg().toBuffer();
 
-    const variants = await sanitiseImageVariants(tagged, LISTING_SHELF.encoding);
+    const variants = await sanitiseImageVariants(tagged, LISTING_SHELF.encoding, FRAMING_AS_GIVEN);
 
     // Orientation 6 ⇒ 2000×1000 γίνεται 1000×2000: **κάθε** παράγωγο είναι όρθιο.
     for (const variant of variants) {
       expect(variant.height).toBeGreaterThan(variant.width);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Κ5 — ΤΟ ΠΛΑΙΣΙΩΜΑ (ADR-841 §7 Α21.10)
+// ---------------------------------------------------------------------------
+
+/**
+ * **Το ίδιο μελάνι, σε καμβά ίδιας αναλογίας, με ΔΙΑΦΟΡΕΤΙΚΟ περιθώριο.**
+ *
+ * 🔑 Η αναλογία κρατιέται **σταθερή επίτηδες**: αν άλλαζε, το κουτί της Α21.9 θα άλλαζε
+ * μαζί της και η άγκυρα θα μπορούσε να περάσει για λάθος λόγο. Έτσι η **μόνη** μεταβλητή
+ * είναι το περιθώριο — δηλαδή ακριβώς αυτό που η Φάση Β υπάρχει για να εξαλείψει.
+ */
+async function markWithMargin(marginFraction: number, background = { r: 0, g: 0, b: 0, alpha: 0 }) {
+  const CANVAS_W = 800;
+  const CANVAS_H = 200;
+  const inkW = Math.round(CANVAS_W * (1 - 2 * marginFraction));
+  const inkH = Math.round(CANVAS_H * (1 - 2 * marginFraction));
+
+  const ink = await sharp({
+    create: { width: inkW, height: inkH, channels: 4, background: { r: 20, g: 60, b: 190, alpha: 1 } },
+  })
+    .png()
+    .toBuffer();
+
+  return sharp({ create: { width: CANVAS_W, height: CANVAS_H, channels: 4, background } })
+    .composite([
+      {
+        input: ink,
+        left: Math.round((CANVAS_W - inkW) / 2),
+        top: Math.round((CANVAS_H - inkH) / 2),
+      },
+    ])
+    .png()
+    .toBuffer();
+}
+
+const canonicalOf = async (input: Buffer, framing: Parameters<typeof sanitiseImageVariants>[2]) => {
+  const variants = await sanitiseImageVariants(input, SHOWCASE_SHELF.encoding, framing);
+  return variants[variants.length - 1];
+};
+
+describe('🏆 Κ5 — ΔΥΟ ΣΗΜΑΤΑ ΜΕ ΑΛΛΟ ΠΕΡΙΘΩΡΙΟ ΚΑΤΑΛΗΓΟΥΝ ΤΑΥΤΟΣΗΜΑ', () => {
+  it('🔴 ΤΟ ΔΕΙΓΜΑ ΟΝΤΩΣ ΚΟΥΒΑΛΑΕΙ ΤΟ ΠΡΟΒΛΗΜΑ — χωρίς πλαισίωμα ΔΙΑΦΕΡΟΥΝ', async () => {
+    // Ο παρονομαστής: αν αυτό γινόταν ποτέ πράσινο, η επόμενη άγκυρα θα ήταν κενή.
+    const tight = await canonicalOf(await markWithMargin(0.02), FRAMING_AS_GIVEN);
+    const padded = await canonicalOf(await markWithMargin(0.3), FRAMING_AS_GIVEN);
+
+    expect(tight.width).toBe(padded.width); // ίδιος καμβάς ⇒ ίδιες διαστάσεις παραγώγου
+    // …και όμως το μελάνι μέσα τους διαφέρει κατά ~2× — αυτό ακριβώς είναι το πρόβλημα
+    // που καμία μέτρηση διαστάσεων δεν βλέπει, και που το `object-contain` σέβεται.
+    expect(tight.bytes.equals(padded.bytes)).toBe(false);
+  });
+
+  it('🏆 ΜΕ πλαισίωμα, ΚΑΙ ΤΑ ΔΥΟ γεμίζουν ΠΛΗΡΩΣ — άρα ίδιο οπτικό βάρος', async () => {
+    const tight = await canonicalOf(await markWithMargin(0.02), FRAMING_INK_TIGHT);
+    const padded = await canonicalOf(await markWithMargin(0.3), FRAMING_INK_TIGHT);
+
+    // Ίδια αναλογία ⇒ **ίδιο κουτί** (Α21.9). Και επειδή κανένα από τα δύο δεν έχει πια
+    // περιθώριο, το `object-contain` τα ζωγραφίζει **ταυτόσημα** — που είναι όλο το
+    // ζητούμενο της Φάσης Β.
+    expect(padded.width / padded.height).toBeCloseTo(tight.width / tight.height, 2);
+
+    // 🔑 **Η ΑΠΟΔΕΙΞΗ ΤΟΥ «ΓΕΜΙΖΟΥΝ ΠΛΗΡΩΣ», ΜΕΤΡΗΜΕΝΗ**: ένα δεύτερο τρίμμα πάνω στην
+    //    έξοδο δεν βρίσκει **τίποτα** να αφαιρέσει. Μια σύγκριση διαστάσεων μεταξύ τους
+    //    δεν θα το έλεγε αυτό — θα μπορούσαν να είναι και τα δύο εξίσου γεμάτα κενό.
+    for (const asset of [tight, padded]) {
+      const again = await sharp(asset.bytes)
+        .trim({ threshold: 25 })
+        .toBuffer({ resolveWithObject: true });
+
+      expect({ w: again.info.width, h: again.info.height }).toEqual({
+        w: asset.width,
+        h: asset.height,
+      });
+    }
+  });
+
+  it('⚠️ …αλλά ΟΧΙ ίδιες διαστάσεις, και είναι ΣΩΣΤΟ — ανάλυση ≠ βάρος', async () => {
+    // 🔴 Η Φάση Β **αποκαλύπτει** διαφορά που πριν ήταν κρυμμένη: το σήμα με το μεγάλο
+    //    περιθώριο είχε πάντα λιγότερο **πραγματικό** μελάνι (320×80 έναντι 768×192).
+    //    Ο καθαριστής **δεν μεγεθύνει** (`withoutEnlargement`) — η εφεύρεση
+    //    εικονοστοιχείων θα ήταν ψέμα. Άρα δημοσιεύεται σε **χαμηλότερη ανάλυση**, ενώ
+    //    ζωγραφίζεται στο **ίδιο** μέγεθος.
+    // ⚠️ Και αυτό είναι ακριβώς το **δηλωμένο κενό #1 της Α21.10**: ο κριτής εισόδου
+    //    μετρά το **αρχείο**, ενώ το ράφι δημοσιεύει το **μελάνι**.
+    const tight = await canonicalOf(await markWithMargin(0.02), FRAMING_INK_TIGHT);
+    const padded = await canonicalOf(await markWithMargin(0.3), FRAMING_INK_TIGHT);
+
+    expect(padded.width).toBeLessThan(tight.width);
+  });
+
+  it('🔑 και το ΛΕΥΚΟ φόντο δίνει το ΙΔΙΟ αποτέλεσμα με το διάφανο', async () => {
+    // Αλλιώς η κανονικοποίηση θα εξαρτιόταν από τη μορφή που έτυχε να εξάγει ο άνθρωπος.
+    const onWhite = await markWithMargin(0.3, { r: 255, g: 255, b: 255, alpha: 1 });
+    const onAlpha = await markWithMargin(0.3);
+
+    const white = await canonicalOf(onWhite, FRAMING_INK_TIGHT);
+    const alpha = await canonicalOf(onAlpha, FRAMING_INK_TIGHT);
+
+    expect({ w: white.width, h: white.height }).toEqual({ w: alpha.width, h: alpha.height });
+  });
+
+  it('🔑 η ΑΝΑΛΟΓΙΑ που γράφεται γίνεται του ΜΕΛΑΝΙΟΥ, όχι του καμβά', async () => {
+    // Το εύρημα που ξεπερνά το αρχικό αίτημα: το `marksBand()` της Α21.9 ρωτά αυτόν
+    // ακριβώς τον αριθμό. Wordmark σε ΤΕΤΡΑΓΩΝΟ αρχείο έπαιρνε τετράγωνο κουτί με 16px
+    // μελάνι — τώρα παίρνει ζώνη, χωρίς να αλλάξει τίποτα στην οθόνη.
+    const CANVAS = 400;
+    const ink = await sharp({
+      create: { width: 360, height: 90, channels: 4, background: { r: 20, g: 60, b: 190, alpha: 1 } },
+    })
+      .png()
+      .toBuffer();
+    const squareCanvas = await sharp({
+      create: { width: CANVAS, height: CANVAS, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } },
+    })
+      .composite([{ input: ink, left: 20, top: 155 }])
+      .png()
+      .toBuffer();
+
+    const asGiven = await canonicalOf(squareCanvas, FRAMING_AS_GIVEN);
+    const inkTight = await canonicalOf(squareCanvas, FRAMING_INK_TIGHT);
+
+    expect(asGiven.width / asGiven.height).toBeCloseTo(1, 2); // ο καμβάς λέει «τετράγωνο»
+    expect(inkTight.width / inkTight.height).toBeCloseTo(4, 1); // το μελάνι λέει «4:1»
+  });
+});
+
+describe('🔴 Κ6 — ΤΟ ΠΛΑΙΣΙΩΜΑ ΔΕΝ ΚΑΤΑΣΤΡΕΦΕΙ ΠΟΤΕ, ΚΑΙ ΔΕΝ ΠΕΤΑ ΠΟΤΕ', () => {
+  it('🔴 app-icon με ΧΡΩΜΑΤΙΣΤΟ σώμα μένει ΑΘΙΚΤΟ', async () => {
+    // Η μετρημένη καταστροφή που γέννησε τον κριτή: σκέτο `trim` έδινε 400×200 → 120×120,
+    // δηλαδή έτρωγε το πλακίδιο και άφηνε μόνο το σύμβολο, αλλάζοντας και την αναλογία.
+    const appIcon = await sharp({
+      create: { width: 400, height: 200, channels: 4, background: { r: 29, g: 78, b: 216, alpha: 1 } },
+    })
+      .composite([
+        {
+          input: await sharp({
+            create: { width: 80, height: 80, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 1 } },
+          })
+            .png()
+            .toBuffer(),
+          left: 160,
+          top: 60,
+        },
+      ])
+      .png()
+      .toBuffer();
+
+    const framed = await canonicalOf(appIcon, FRAMING_INK_TIGHT);
+    const asGiven = await canonicalOf(appIcon, FRAMING_AS_GIVEN);
+
+    expect({ w: framed.width, h: framed.height }).toEqual({ w: asGiven.width, h: asGiven.height });
+    expect(framed.width / framed.height).toBeCloseTo(2, 1); // η αναλογία ΔΕΝ άλλαξε
+  });
+
+  it('ΟΜΟΙΟΧΡΩΜΗ εικόνα δεν εξαφανίζεται — το τρίμμα είναι no-op, όχι σφάλμα', async () => {
+    const blank = await sharp({
+      create: { width: 300, height: 150, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 1 } },
+    })
+      .png()
+      .toBuffer();
+
+    const framed = await canonicalOf(blank, FRAMING_INK_TIGHT);
+    expect(framed.width / framed.height).toBeCloseTo(2, 1);
+  });
+
+  it('🔴 εικόνα κάτω από 3×3 ΔΕΝ μπλοκάρει τη δημοσίευση', async () => {
+    // Το libvips πετά «Image to trim must be at least 3x3 pixels». Χωρίς φρουρό, η
+    // εξαίρεση θα ταξίδευε ως `undecodable` και ΟΛΟΚΛΗΡΗ η βιτρίνα δεν θα δημοσιευόταν
+    // εξαιτίας ενός σήματος 2×2.
+    const tiny = await sharp({
+      create: { width: 2, height: 2, channels: 4, background: { r: 10, g: 20, b: 30, alpha: 1 } },
+    })
+      .png()
+      .toBuffer();
+
+    await expect(canonicalOf(tiny, FRAMING_INK_TIGHT)).resolves.toMatchObject({ width: 2 });
+  });
+
+  it('🔑 ΙΔΕΜΠΟΤΕΝΤΙΚΟ — δεύτερο πέρασμα δεν αφαιρεί τίποτα άλλο', async () => {
+    // Χωρίς αυτό, μια επαναδημοσίευση θα μίκραινε το σήμα κάθε φορά.
+    const once = await canonicalOf(await markWithMargin(0.3), FRAMING_INK_TIGHT);
+    const twice = await canonicalOf(once.bytes, FRAMING_INK_TIGHT);
+
+    expect({ w: twice.width, h: twice.height }).toEqual({ w: once.width, h: once.height });
   });
 });

@@ -27,7 +27,13 @@ import sharp from 'sharp';
 
 import { createModuleLogger } from '@/lib/telemetry';
 import type { PublicShelfExtension } from '@/services/upload/utils/storage-path-public-shelf';
-import type { ShelfEncoding } from '@/services/upload/utils/public-shelf-kinds';
+import type { RasterShelfEncoding, ShelfFraming } from '@/services/upload/utils/public-shelf-kinds';
+import {
+  borderIsPackaging,
+  classifyBorder,
+  type BorderPixel,
+  type BorderVerdict,
+} from '@/services/listings/public-shelf-border';
 
 const logger = createModuleLogger('public-shelf-sanitise');
 
@@ -47,6 +53,16 @@ export const PUBLIC_SHELF_IMAGE_CONTENT_TYPE = 'image/webp';
  * γραφέα δεν αποκωδικοποιεί καν)*. Ασυμμετρία που κάνει το `6` προφανές.
  */
 const PUBLIC_SHELF_ENCODER_EFFORT = 6;
+
+/**
+ * **Κάτω από αυτή την ακμή το `sharp` αρνείται να τρίψει** — μετρημένο όριο, όχι υπόθεση.
+ *
+ * Το libvips πετά *«Image to trim must be at least 3x3 pixels»*. Χωρίς φρουρό η εξαίρεση
+ * θα ταξίδευε ως `undecodable` και μια εικόνα **2×2** θα εμπόδιζε τη δημοσίευση ολόκληρης
+ * της βιτρίνας — αντί απλώς να μείνει άτριφτη, που είναι η **σωστή** συμπεριφορά για
+ * κάτι τόσο μικρό ώστε να μην έχει περιθώριο να χάσει.
+ */
+const MIN_TRIMMABLE_EDGE_PX = 3;
 
 // ---------------------------------------------------------------------------
 // Τύποι
@@ -85,7 +101,7 @@ export class ShelfSanitiseError extends Error {
  * υπήρχε **ένα** είδος πράγματος. Με το σήμα του επαγγελματία η ίδια σταθερά θα σήμαινε
  * ότι ο επισκέπτης κατεβάζει παράγωγο **2560px** για εικόνα που ζωγραφίζεται **44px**,
  * κωδικοποιημένη με ποιότητα ρυθμισμένη για **φωτογραφία**. Δύο απαντήσεις σε ερώτηση
- * που έχει **μία** ανά είδος ⇒ η ερώτηση ανήκει στον {@link ShelfEncoding}.
+ * που έχει **μία** ανά είδος ⇒ η ερώτηση ανήκει στον {@link RasterShelfEncoding}.
  *
  * 🔑 **ΜΙΑ αποκωδικοποίηση, Ν κωδικοποιήσεις.** Το `clone()` του `sharp` μοιράζεται την
  * **ίδια** αποκωδικοποιημένη εικόνα σε πολλούς αγωγούς εξόδου — τρεις χωριστές
@@ -100,17 +116,136 @@ export class ShelfSanitiseError extends Error {
  * ίδια bytes ⇒ ίδιο sha256 ⇒ ίδιο κλειδί. Ένα `distinct()` εδώ θα ήταν δεύτερος κριτής
  * ταυτότητας δίπλα στο content-addressing, ελεύθερος να διαφωνήσει μαζί του.
  *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΓΙΑΤΙ Ο ΤΥΠΟΣ ΕΙΝΑΙ {@link RasterShelfEncoding} ΚΑΙ ΟΧΙ `ShelfEncoding` (ADR-845 Φ4.0)
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Από τη Φ4.0 η κωδικοποίηση είναι **διακριτή ένωση**, και αυτή η υπογραφή δέχεται
+ * **μόνο** το σκέλος των εικόνων. Δεν είναι τυπικότητα: κάνει το *«μοντέλο που φτάνει
+ * στο `sharp`»* **αδύνατο σε χρόνο μεταγλώττισης**, αντί για έλεγχο που κάποιος θα
+ * μπορούσε κάποτε να παραλείψει.
+ *
+ * ⛔ **Ο ΚΑΘΑΡΙΣΤΗΣ ΜΟΝΤΕΛΟΥ ΘΑ ΕΙΝΑΙ ΑΔΕΛΦΟ MODULE, ΠΟΤΕ ΚΛΑΔΟΣ ΕΔΩ.** Το `sharp` είναι
+ * **εγγενές** και μόνο-διακομιστή· ένας ψήστης `glb` που θα ζούσε στο ίδιο αρχείο θα το
+ * έσερνε μαζί του σε κάθε διαδρομή που τον φορτώνει, για μηδέν λόγο. Δύο υλικά με
+ * **καμία** κοινή πράξη δεν μοιράζονται module επειδή απαντούν στην ίδια ερώτηση.
+ *
  * @throws {ShelfSanitiseError} όταν τα bytes δεν είναι αποκωδικοποιήσιμη εικόνα.
  */
 export async function sanitiseImageVariants(
   input: Buffer,
-  encoding: ShelfEncoding,
+  encoding: RasterShelfEncoding,
+  framing: ShelfFraming,
 ): Promise<readonly SanitisedShelfAsset[]> {
-  return decodableOrThrow(input, (decoded) =>
-    Promise.all(
-      encoding.widths.map((width) => encodeOne(decoded.clone(), width, encoding)),
-    ),
-  );
+  return decodableOrThrow(input, async (decoded) => {
+    const framed = await frameContent(decoded, framing);
+
+    return Promise.all(
+      encoding.widths.map((width) => encodeOne(framed.clone(), width, encoding)),
+    );
+  });
+}
+
+/**
+ * 🏆 **ΤΟ ΤΡΙΜΜΑ — ΜΙΑ ΑΠΟΦΑΣΗ, ΠΡΙΝ ΤΟΝ ΚΛΩΝΟ** (ADR-841 §7 Α21.10).
+ *
+ * ⚠️ **Μπαίνει ακριβώς εκεί που μπαίνει το `.rotate()`, και για τον ίδιο λόγο**: είναι
+ * απόφαση για το **πρωτότυπο**, όχι για το παράγωγο. Αν ζούσε μέσα στο
+ * {@link encodeOne}, τα τέσσερα πλάτη θα έκαναν τέσσερις **ανεξάρτητες** κρίσεις πάνω
+ * στο ίδιο ερώτημα — και μια μελλοντική αλλαγή στη σειρά των πράξεων θα μπορούσε να τις
+ * κάνει να **διαφωνήσουν**, δίνοντας παράγωγα με διαφορετική αναλογία μεταξύ τους.
+ *
+ * 🔴 **ΔΕΝ ΠΡΟΣΘΕΤΕΙ ΠΟΤΕ ΕΙΚΟΝΟΣΤΟΙΧΕΙΑ.** Το αρχικό σχέδιο της Φάσης Β ζητούσε
+ * `trim` **και** `.extend()` για να επανέλθει σταθερό clear space μέσα στα bytes.
+ * ⛔ **Απορρίφθηκε, με δύο λόγους**:
+ *
+ * 1. **Το `.extend()` απαιτεί να ΕΠΙΝΟΗΣΟΥΜΕ χρώμα.** Για διάφανο και για λευκό η
+ *    απάντηση είναι προφανής — αλλά ένα σύστημα που δημοσιεύει στον κόσμο δεν πρέπει να
+ *    έχει καν τη **δυνατότητα** να επινοήσει, γιατί η επόμενη περίπτωση θα είναι εκείνη
+ *    που δεν προβλέψαμε.
+ * 2. **Τα bytes είναι content-addressed και ΑΜΕΤΑΒΛΗΤΑ.** Ψημένο 6% σημαίνει ότι μια
+ *    μελλοντική αλλαγή σε 8% **διχοτομεί τον κόσμο** σε παλιά και νέα σήματα, χωρίς
+ *    τρόπο να διορθωθούν τα παλιά — δηλαδή ακριβώς το κενό που η **Α21.9.7** δήλωσε για
+ *    το παράγωγο 512, ξαναγεννημένο εθελοντικά.
+ *
+ * 🔑 **Ο αέρας δεν χάθηκε — μετακόμισε εκεί που έχει ήδη ιδιοκτήτη**: στο
+ * `showcase-mark-box`, που είναι το **ένα** αρχείο που απαντά *«πόσο χώρο πιάνει το
+ * σήμα;»*. Έτσι το τρίμμα κάνει την **κανονικοποίηση** *(η ουσία)* και η παρουσίαση
+ * δίνει το **clear space** *(το κοσμητικό)* — και το δεύτερο μπορεί να αλλάξει αύριο
+ * χωρίς να ξαναγραφτεί ούτε ένα byte.
+ *
+ * ✅ **ΚΑΙ ΚΕΡΔΙΖΕΙ ΚΑΤΙ ΠΟΥ ΤΟ `.extend()` ΘΑ ΕΧΑΝΕ**: το `width`/`height` που γράφεται
+ * στο έγγραφο γίνεται η **αληθινή αναλογία του μελανιού** αντί για την αναλογία του
+ * **καμβά**. Το `marksBand()` της Α21.9 σταματά να ρωτά για το αρχείο και ρωτά για το
+ * σήμα — ένα wordmark 4:1 αποθηκευμένο σε τετράγωνο καμβά παύει να παίρνει τετράγωνο
+ * κουτί με 16 εικονοστοιχεία μελανιού.
+ */
+async function frameContent(
+  pipeline: sharp.Sharp,
+  framing: ShelfFraming,
+): Promise<sharp.Sharp> {
+  if (framing.mode === 'as-given') return pipeline;
+
+  const verdict = await borderVerdict(pipeline);
+  if (!borderIsPackaging(verdict)) {
+    // ⚠️ **Καταγράφεται η ΚΡΙΣΗ, όχι σκέτο «δεν τρίφτηκε»**: `'body'` σημαίνει *«βρήκα
+    //    πλαίσιο και είναι το σήμα»* ενώ `'disagree'` σημαίνει *«δεν υπάρχει πλαίσιο»*.
+    //    Ένας άνθρωπος που ρωτά «γιατί δεν κανονικοποιήθηκε το λογότυπό μου;» χρειάζεται
+    //    να ξέρει **ποιο** από τα δύο συνέβη.
+    logger.debug('Το περίγραμμα δεν είναι συσκευασία — το σήμα μένει άτριφτο', { verdict });
+    return pipeline;
+  }
+
+  return pipeline.trim({ threshold: framing.threshold });
+}
+
+/**
+ * **Τι είναι το περίγραμμα** — δύο γραμμές εικονοστοιχείων, τέσσερις γωνίες.
+ *
+ * 🔑 **Δύο αποκωδικοποιήσεις, όχι τέσσερις ΚΑΙ όχι ολόκληρη η εικόνα.** Τέσσερα
+ * ξεχωριστά `extract` 1×1 θα ήταν τέσσερα περάσματα· ένα `raw().toBuffer()` ολόκληρης
+ * της εικόνας θα ήταν **100MB** για ανέβασμα 5000×5000 — από **χρήστη**, δηλαδή μέγεθος
+ * που δεν το ελέγχουμε. Οι δύο ακραίες **γραμμές** κοστίζουν `πλάτος × 4` bytes.
+ *
+ * ⚠️ **`autoOrient` και όχι `width`/`height`**: ο αγωγός έχει ήδη περάσει από
+ * `.rotate()`, ενώ το `metadata()` επιστρέφει τις διαστάσεις **πριν** τον
+ * προσανατολισμό. Σε φωτογραφία γυρισμένη κατά 90° το `extract` θα ζητούσε περιοχή
+ * **εκτός** εικόνας. Το `sharp` δίνει τον μετασχηματισμένο αριθμό το ίδιο — καμία
+ * επανυλοποίηση της λογικής του EXIF εδώ.
+ */
+async function borderVerdict(pipeline: sharp.Sharp): Promise<BorderVerdict> {
+  const { autoOrient } = await pipeline.metadata();
+  const { width, height } = autoOrient;
+
+  if (width < MIN_TRIMMABLE_EDGE_PX || height < MIN_TRIMMABLE_EDGE_PX) return 'disagree';
+
+  const [top, bottom] = await Promise.all([
+    edgeRow(pipeline, width, 0),
+    edgeRow(pipeline, width, height - 1),
+  ]);
+
+  return classifyBorder([
+    pixelAt(top, 0),
+    pixelAt(top, width - 1),
+    pixelAt(bottom, 0),
+    pixelAt(bottom, width - 1),
+  ]);
+}
+
+/** Μία οριζόντια γραμμή εικονοστοιχείων, **πάντα** με κανάλι alpha. */
+async function edgeRow(pipeline: sharp.Sharp, width: number, top: number): Promise<Buffer> {
+  return pipeline
+    .clone()
+    .ensureAlpha()
+    .extract({ left: 0, top, width, height: 1 })
+    .raw()
+    .toBuffer();
+}
+
+/** Το `index`-οστό εικονοστοιχείο μιας ωμής γραμμής RGBA. */
+function pixelAt(row: Buffer, index: number): BorderPixel {
+  const at = index * 4;
+  return [row[at], row[at + 1], row[at + 2], row[at + 3]];
 }
 
 /**
@@ -156,7 +291,7 @@ async function decodableOrThrow<T>(
 async function encodeOne(
   pipeline: sharp.Sharp,
   maxEdgePx: number,
-  encoding: ShelfEncoding,
+  encoding: RasterShelfEncoding,
 ): Promise<SanitisedShelfAsset> {
   const { data, info } = await pipeline
     .resize({
@@ -202,7 +337,7 @@ async function encodeOne(
  * RGB των **πλήρως διάφανων** pixel δεν διατηρούνται, άρα δεν υπάρχει πού να επιβιώσει
  * δεδομένο μέσα σε αόρατη περιοχή.
  */
-function webpOptions(encoding: ShelfEncoding): sharp.WebpOptions {
+function webpOptions(encoding: RasterShelfEncoding): sharp.WebpOptions {
   const base = { preset: encoding.preset, effort: PUBLIC_SHELF_ENCODER_EFFORT } as const;
 
   return encoding.quality === 'lossless'
