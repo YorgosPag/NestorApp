@@ -165,3 +165,53 @@ function geometryOf(
   const { point } = listing.position;
   return { type: 'Point', coordinates: [point.lng, point.lat] };
 }
+
+// ============================================================================
+// Ο ΔΙΑΧΩΡΙΣΜΟΣ ΓΕΩΜΕΤΡΙΑΣ — επειδή η ομαδοποίηση ΔΕΝ βλέπει πολύγωνα (ADR-777 §8.66)
+// ============================================================================
+
+/** Οι δύο συλλογές που χρειάζεται ο χάρτης: ό,τι ομαδοποιείται, και ό,τι δεν μπορεί. */
+export interface SplitListingGeometry {
+  /** Σημεία — **ομαδοποιήσιμα**. Πινέζες, δακτύλιοι, σκιασμένοι κύκλοι. */
+  readonly points: GeoJSON.FeatureCollection<GeoJSON.Point, ListingFeatureProperties>;
+  /** Πολύγωνα — **μετρημένα περιγράμματα**, ποτέ ομαδοποιημένα. */
+  readonly polygons: GeoJSON.FeatureCollection<GeoJSON.Polygon, ListingFeatureProperties>;
+}
+
+/**
+ * **Χώρισε τη μία παραγωγή σε δύο πηγές** — και ο λόγος είναι περιορισμός βιβλιοθήκης.
+ *
+ * 🔴 **ΤΟ SUPERCLUSTER ΔΕΧΕΤΑΙ ΜΟΝΟ `Point`/`MultiPoint`. Τα πολύγωνα τα ΑΓΝΟΕΙ.** Και
+ * το «αγνοεί» εδώ σημαίνει **εξαφανίζονται**: μια πηγή με `cluster: true` δεν
+ * ζωγραφίζει καθόλου τα μη-σημειακά features της, **χωρίς σφάλμα, χωρίς προειδοποίηση**.
+ * Δηλαδή ένα σκέτο `cluster: true` πάνω στην υπάρχουσα πηγή θα έσβηνε **κάθε μετρημένο
+ * περίγραμμα ακινήτου** από τον χάρτη — και τα περιγράμματα είναι ό,τι **ακριβέστερο**
+ * έχουμε, το αντίθετο ακριβώς από ό,τι θα δεχόμασταν να χάσουμε.
+ *
+ * ⚠️ **Τρίτη εμφάνιση της οικογένειας «η οθόνη μοιάζει σωστή»** *(§8.63 `source` που
+ * έλειπε · §8.64.3 `['zoom']` σε λάθος θέση)*: ο χάρτης θα ζωγράφιζε πινέζες,
+ * συσσωματώματα και σκιάσεις — **όλα σωστά** — και θα έλειπε σιωπηλά μία κατηγορία.
+ *
+ * 🔑 **Ο διαχωρισμός γίνεται ΕΔΩ, όχι στο συστατικό**: είναι ερώτηση για τη **γεωμετρία
+ * των δεδομένων**, και η απάντησή της είναι η ίδια για κάθε καταναλωτή. Ένα `.filter()`
+ * μέσα στο JSX θα ήταν δεύτερη δήλωση του *«τι είναι ομαδοποιήσιμο»*.
+ */
+export function splitListingGeometry(
+  collection: GeoJSON.FeatureCollection<GeoJSON.Point | GeoJSON.Polygon, ListingFeatureProperties>
+): SplitListingGeometry {
+  const points: Array<GeoJSON.Feature<GeoJSON.Point, ListingFeatureProperties>> = [];
+  const polygons: Array<GeoJSON.Feature<GeoJSON.Polygon, ListingFeatureProperties>> = [];
+
+  for (const feature of collection.features) {
+    if (feature.geometry.type === 'Point') {
+      points.push(feature as GeoJSON.Feature<GeoJSON.Point, ListingFeatureProperties>);
+    } else {
+      polygons.push(feature as GeoJSON.Feature<GeoJSON.Polygon, ListingFeatureProperties>);
+    }
+  }
+
+  return {
+    points: { type: 'FeatureCollection', features: points },
+    polygons: { type: 'FeatureCollection', features: polygons },
+  };
+}

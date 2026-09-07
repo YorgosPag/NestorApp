@@ -36,91 +36,11 @@ import {
 // Ο ΔΙΕΡΜΗΝΕΑΣ — η προδιαγραφή MapLibre, στους τελεστές που χρησιμοποιούμε
 // ============================================================================
 
-interface EvalContext {
-  readonly zoom: number;
-  readonly props: Readonly<Record<string, number>>;
-}
-
-function evaluateExpression(expression: unknown, ctx: EvalContext): number {
-  if (typeof expression === 'number') return expression;
-  if (!Array.isArray(expression)) {
-    throw new Error(`μη αριθμητικό φύλλο: ${JSON.stringify(expression)}`);
-  }
-
-  const [operator, ...args] = expression as [string, ...unknown[]];
-
-  switch (operator) {
-    case 'zoom':
-      return ctx.zoom;
-
-    case 'get': {
-      const key = args[0];
-      if (typeof key !== 'string' || !(key in ctx.props)) {
-        // 🔴 Αυτό το `throw` είναι η άγκυρα για τη μετάλλαξη «λάθος όνομα πεδίου».
-        //    Το ΙΔΙΟ το MapLibre θα σιωπούσε: άγνωστο `get` δίνει `null`, το επίπεδο
-        //    μένει αζωγράφιστο, και κανένα σφάλμα δεν φτάνει σε άνθρωπο.
-        throw new Error(`το feature δεν έχει πεδίο "${String(key)}"`);
-      }
-      return ctx.props[key];
-    }
-
-    case '*':
-      return args.reduce<number>((acc, arg) => acc * evaluateExpression(arg, ctx), 1);
-
-    case 'min':
-      return Math.min(...args.map((arg) => evaluateExpression(arg, ctx)));
-
-    case 'max':
-      return Math.max(...args.map((arg) => evaluateExpression(arg, ctx)));
-
-    case 'interpolate':
-      return evaluateInterpolate(args, ctx);
-
-    default:
-      throw new Error(`ο διερμηνέας δεν γνωρίζει τον τελεστή "${operator}"`);
-  }
-}
-
-/** `['interpolate', ['exponential', base], input, ...ζεύγη]` — κατά την προδιαγραφή. */
-function evaluateInterpolate(args: readonly unknown[], ctx: EvalContext): number {
-  const [interpolation, input, ...flatStops] = args;
-  if (!Array.isArray(interpolation) || interpolation[0] !== 'exponential') {
-    throw new Error('η άγκυρα καλύπτει μόνο εκθετική παρεμβολή');
-  }
-  const base = interpolation[1] as number;
-  const x = evaluateExpression(input, ctx);
-
-  const inputs: number[] = [];
-  const outputs: unknown[] = [];
-  for (let i = 0; i < flatStops.length; i += 2) {
-    inputs.push(flatStops[i] as number);
-    outputs.push(flatStops[i + 1]);
-  }
-
-  if (x <= inputs[0]) return evaluateExpression(outputs[0], ctx);
-  const last = inputs.length - 1;
-  if (x >= inputs[last]) return evaluateExpression(outputs[last], ctx);
-
-  let k = 0;
-  while (k < last && inputs[k + 1] <= x) k += 1;
-
-  const lower = evaluateExpression(outputs[k], ctx);
-  const upper = evaluateExpression(outputs[k + 1], ctx);
-  const span = inputs[k + 1] - inputs[k];
-  const t = (base ** (x - inputs[k]) - 1) / (base ** span - 1);
-  return lower + t * (upper - lower);
-}
-
-/** Ψάχνει `['zoom']` **κάτω** από το πρώτο επίπεδο — η απαγόρευση της προδιαγραφής. */
-function findNestedZoom(expression: unknown, depth: number): boolean {
-  if (!Array.isArray(expression)) return false;
-  if (expression[0] === 'zoom' && depth > 1) return true;
-  return expression.some((child) => findNestedZoom(child, depth + 1));
-}
-
-// ============================================================================
-// ΣΤΑΘΕΡΕΣ ΤΟΥ ΣΕΝΑΡΙΟΥ
-// ============================================================================
+import {
+  evaluateExpression,
+  findNestedZoom,
+  type EvalContext,
+} from './style-expression-evaluator';
 
 const METERS = 'uncertaintyM';
 const SCALE = 'mercatorScale';

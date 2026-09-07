@@ -19,7 +19,7 @@ import type { GeocodingAccuracy } from '@/types/geo/public-place';
 import type { PublicListing } from '@/types/public-listing';
 
 import { LISTING_UNCERTAINTY_KM } from '../listing-map-shape';
-import { listingsToGeoJson, LISTING_FEATURE_KEY } from '../listings-geojson';
+import { listingsToGeoJson, splitListingGeometry, LISTING_FEATURE_KEY } from '../listings-geojson';
 
 /** Το ίδιο σημείο σε όλα τα δείγματα, ώστε η διαφορά να είναι **μόνο** η ακρίβεια. */
 const POINT = { lat: 37.9838, lng: 23.7275 } as const;
@@ -34,6 +34,30 @@ function geocoded(accuracy: GeocodingAccuracy, overrides: Partial<PublicListing>
       accuracy,
     },
     ...overrides,
+  });
+}
+
+/**
+ * Αγγελία με **μετρημένο περίγραμμα** — η μόνη που παράγει `Polygon`.
+ *
+ * 🔑 Υπάρχει επειδή το §8.66 έκανε τη γεωμετρία **κριτήριο δρομολόγησης**: ως τότε
+ * κανένα δείγμα αυτού του αρχείου δεν χρειαζόταν πολύγωνο, και γι' αυτό η παγίδα του
+ * supercluster δεν μπορούσε να πιαστεί εδώ.
+ */
+function outlined(id: string) {
+  return listing({
+    id,
+    position: {
+      kind: 'known',
+      provenance: 'survey',
+      point: POINT,
+      locatedAt: '2026-08-11T00:00:00.000Z',
+      outline: [
+        { lat: 37.9835, lng: 23.7270 },
+        { lat: 37.9835, lng: 23.7280 },
+        { lat: 37.9842, lng: 23.7280 },
+      ],
+    },
   });
 }
 
@@ -156,5 +180,51 @@ describe('Κ4 — η γεωμετρία, που ζούσε αφρούρητη', 
     const [feature] = listingsToGeoJson([geocoded('exact', { id: 'prop_42' })]).features;
     expect(feature.id).toBe('prop_42');
     expect(feature.properties.id).toBe('prop_42');
+  });
+});
+
+// ============================================================================
+// Κ5 — Ο ΔΙΑΧΩΡΙΣΜΟΣ ΓΕΩΜΕΤΡΙΑΣ  🔴 η παγίδα που εξαφανίζει περιγράμματα (§8.66)
+// ============================================================================
+
+describe('Κ5 — τα πολύγωνα ΔΕΝ πάνε στην πηγή που ομαδοποιείται', () => {
+  it('κάθε feature καταλήγει σε ΑΚΡΙΒΩΣ μία από τις δύο συλλογές', () => {
+    const collection = listingsToGeoJson([
+      geocoded('exact', { id: 'own_pin' }),
+      outlined('own_outline'),
+      geocoded('center', { id: 'own_city' }),
+    ]);
+    const split = splitListingGeometry(collection);
+
+    expect(split.points.features.length + split.polygons.features.length).toBe(
+      collection.features.length
+    );
+    const ids = [...split.points.features, ...split.polygons.features].map((f) => f.properties.id);
+    expect(new Set(ids).size).toBe(collection.features.length);
+  });
+
+  it('🔴 η ομαδοποιήσιμη πηγή περιέχει ΜΟΝΟ σημεία', () => {
+    // Το supercluster δέχεται μόνο Point/MultiPoint: ένα πολύγωνο εδώ θα
+    // ΕΞΑΦΑΝΙΖΟΤΑΝ από τον χάρτη, χωρίς σφάλμα και χωρίς προειδοποίηση.
+    const split = splitListingGeometry(
+      listingsToGeoJson([outlined('own_a'), geocoded('exact'), geocoded('approximate')])
+    );
+    for (const feature of split.points.features) {
+      expect(feature.geometry.type).toBe('Point');
+    }
+    expect(split.points.features.length).toBeGreaterThan(0);
+  });
+
+  it('τα μετρημένα περιγράμματα ΕΠΙΒΙΩΝΟΥΝ — στη δική τους πηγή', () => {
+    const split = splitListingGeometry(listingsToGeoJson([outlined('own_only')]));
+    expect(split.polygons.features).toHaveLength(1);
+    expect(split.polygons.features[0].geometry.type).toBe('Polygon');
+    expect(split.points.features).toHaveLength(0);
+  });
+
+  it('κενή είσοδος δίνει δύο κενές — ποτέ undefined', () => {
+    const split = splitListingGeometry(listingsToGeoJson([]));
+    expect(split.points).toEqual({ type: 'FeatureCollection', features: [] });
+    expect(split.polygons).toEqual({ type: 'FeatureCollection', features: [] });
   });
 });
