@@ -85,6 +85,7 @@
 
 import { PROXIMITY_TIE_MARGIN } from '@/lib/contact/first-contact-limits';
 import { distanceMeters } from '@/lib/geo/geo-distance';
+import { fnv1a32 } from '@/lib/hash/fnv1a';
 import type { GeoPoint } from '@/types/geo/coordinates';
 import type { PublicShowcase } from '@/types/agency-profile';
 
@@ -222,13 +223,15 @@ export function compareWithinBand(seed: string, a: PublicShowcase, b: PublicShow
  * χρειάζεται να είναι**: το ζητούμενο δεν είναι να μη μαντεύεται, αλλά να **μην
  * ευνοεί συστηματικά** κανένα γραφείο. Ο ίδιος άνθρωπος βλέπει **πάντα** την ίδια
  * σειρά· δύο άνθρωποι βλέπουν **διαφορετική**.
+ *
+ * 🔑 **Ο ΒΡΟΧΟΣ ΜΕΤΑΚΟΜΙΣΕ, Η ΑΠΟΦΑΣΗ ΕΜΕΙΝΕ** *(ADR-841 Α21.1)*: το FNV ζούσε εδώ
+ * ιδιωτικό με **έναν** καταναλωτή· το σήμα ταυτότητας του Α21 έδωσε **δεύτερον**, οπότε
+ * η μηχανή πήγε στο {@link module:lib/hash/fnv1a} και εδώ έμεινε ό,τι είναι **δικό
+ * αυτού του αρχείου**: *τι* χασάρεται — `σπόρος + ταυτότητα` — και **γιατί**.
+ *
+ * ⚠️ **Το σήμα ταυτότητας ΔΕΝ χασάρει σπόρο**: εκείνο θέλει **ίδιο** αποτέλεσμα για
+ * κάθε επισκέπτη· αυτό εδώ θέλει **διαφορετικό**. Ίδια μηχανή, αντίθετη απαίτηση.
  */
 function lotOf(seed: string, companyId: string): number {
-  const material = `${seed}:${companyId}`;
-  let hash = 0x811c9dc5;
-  for (let index = 0; index < material.length; index += 1) {
-    hash ^= material.charCodeAt(index);
-    hash = Math.imul(hash, 0x01000193) >>> 0;
-  }
-  return hash;
+  return fnv1a32(`${seed}:${companyId}`);
 }
