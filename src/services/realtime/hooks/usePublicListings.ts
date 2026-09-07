@@ -2,7 +2,7 @@
 
 /**
  * @fileoverview Η **μία** ανάγνωση της οθόνης 2 — και η κλειστή λογιστική μαζί της.
- * @related ADR-777 §7 (Α3 · Α5 κανόνας 27 · Α20) · types/public-listing.ts
+ * @related ADR-777 §7 (Α3 · Α5 κανόνας 27 · Α20) · §8.65 · types/public-listing.ts
  * @module services/realtime/hooks/usePublicListings
  *
  * ────────────────────────────────────────────────────────────────────────────
@@ -15,130 +15,90 @@
  * δύο ερωτήματα + συγχώνευση + αποδιπλασιασμός, **για πάντα**.
  *
  * Εδώ το κριτήριο δημοσίευσης εφαρμόστηκε **μία φορά, στον διακομιστή**: ό,τι υπάρχει
- * στη συλλογή είναι εξ ορισμού δημόσιο. Το ερώτημα γίνεται «φέρε τα όλα».
+ * στη συλλογή είναι εξ ορισμού δημόσιο.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 §8.65 — ΤΟ ΕΡΩΤΗΜΑ ΕΦΥΓΕ ΑΠΟ ΤΟΝ ΦΥΛΛΟΜΕΤΡΗΤΗ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Μέχρι τις 2026-09-07 εδώ στεκόταν `collection(db, PUBLIC_LISTINGS)` — **καμία**
+ * `where`, **καμία** `limit`, και `onSnapshot`: ολόκληρη η αγορά, ζωντανά, σε κάθε
+ * επισκέπτη. Ήταν γραμμένο ως **συνειδητή** απόφαση για εννέα αγγελίες, και ήταν σωστή
+ * τότε. Τώρα το ερώτημα κουβαλά **περιοχή** *(εύρη σε δύο πεδία — ένα ερώτημα, δες
+ * `lib/listings/listing-geo-query.ts` για τη μετρημένη σύγκριση με το geohash)* και
+ * **πάντα** όριο.
  *
  * 🔑 **Η λογιστική υπολογίζεται ΕΔΩ, όχι στον καταναλωτή** — γιατί αν την υπολόγιζε ο
  * καταναλωτής, θα υπήρχε μία λογιστική **ανά καταναλωτή**, και ο κανόνας 27 απαιτεί το
  * άθροισμα να κλείνει **πάντα**, όχι «όπου κάποιος θυμήθηκε».
  */
 
-import { useState, useEffect, useMemo } from 'react';
-import { collection, doc, onSnapshot, query, where } from 'firebase/firestore';
-import type { DocumentData, Query, Unsubscribe } from 'firebase/firestore';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { collection, doc, getDocs, onSnapshot, query, where } from 'firebase/firestore';
+import type { Unsubscribe } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { PublicListing, ListingLedger } from '@/types/public-listing';
+import type { GeoArea } from '@/types/geo/coordinates';
 import { listingMapShape, isMappedShape } from '@/lib/listings/listing-map-shape';
-import { readStoredListing } from '@/lib/listings/public-listing-from-document';
+import {
+  capListingReads,
+  listingAreaKey,
+  type ListingReadCoverage,
+} from '@/lib/listings/listing-geo-query';
 import { orderShowcaseListings } from '@/lib/listings/listing-showcase-order';
 import { agencyDoorFor } from '@/lib/agency/agency-door';
 
+import { countPublicListings, publicListingsQuery } from './public-listings-query';
+import {
+  readListingSnapshots,
+  readSingleListing,
+  subscribeToPublicListings,
+  type PublicListingLookup,
+} from './public-listings-source';
+
+export type { PublicListingLookup } from './public-listings-source';
+
 const logger = createModuleLogger('usePublicListings');
 
-// ============================================================================
-// ΤΟ ΣΥΝΟΡΟ (ADR-839)
-// ============================================================================
-//
-// 🔴 **Καμία από τις δύο συναρτήσεις δεν ξέρει το σχήμα** — το ρωτούν. Πριν το
-//    ADR-839 και οι δύο διαδρομές έγραφαν `data() as PublicListing`, δηλαδή
-//    **δήλωναν** ό,τι δεν είχαν ελέγξει· η αγγελία `ownp_330a5a4b…` έπεσε στην
-//    παραγωγή ακριβώς εκεί. Εδώ μένει μόνο το «τι κάνω με την απάντηση».
-
-/** Ό,τι χρειάζεται η ανάγνωση από ένα στιγμιότυπο — ώστε οι δύο διαδρομές να μοιράζονται τύπο. */
-interface ListingSnapshotLike {
-  readonly id: string;
-  data(): unknown;
-}
-
 /**
- * **Πόσα έγγραφα ζητούν επανασύνθεση** — καταγράφεται, δεν διορθώνεται εδώ.
+ * **Πόση ακινησία σημαίνει «ο άνθρωπος κοιτάζει».**
  *
- * ⚠️ **ΓΙΑΤΙ ΔΕΝ ΓΡΑΦΕΙ ΠΙΣΩ ο αναγνώστης (lazy migration), όσο κι αν το προτείνει
- * το πρότυπο του document store**: ο πελάτης **δεν έχει** δικαίωμα εγγραφής στο
- * `public_listings` — γράφει **μόνο** ο διακομιστής (`read: if true`, καμία
- * `write`). Ένα write-back-on-read θα απαιτούσε διαδρομή που επιτρέπει σε
- * **ανώνυμο** επισκέπτη να πυροδοτεί εγγραφές, δηλαδή θα αντάλλασσε μια λευκή
- * οθόνη με ένα διάνυσμα DoS. Η επανασύνθεση ανήκει στο batch (`rebuildAllPublicListings`),
- * και ο επισκέπτης βλέπει ήδη σωστά γιατί η μετάφραση έγινε **στη μνήμη**.
+ * 🔑 Το υβριδικό ζωντανό: όσο ο χάρτης ταξιδεύει, κάθε κάδρο διαβάζεται **εφάπαξ** —
+ * γρήγορα και χωρίς ακροατή. Μόλις σταματήσει τόσο, ανοίγει **μία** ζωντανή γραμμή για
+ * εκείνο το κάδρο, και μια αγγελία που δημοσιεύεται τώρα εμφανίζεται μόνη της.
+ *
+ * ⚠️ **Ούτε Zillow, ούτε Idealista, ούτε Redfin το κάνουν** — δίνουν εφάπαξ ανάγνωση.
+ * Γίνεται εδώ επειδή το ερώτημα είναι **ένα**: με geohash θα ήταν 4-9 ακροατές που
+ * ανοιγοκλείνουν σε κάθε σύρσιμο, δηλαδή κόστος χωρίς αντίκρισμα.
  */
-function reportStaleListings(staleCount: number, total: number): void {
-  if (staleCount === 0) return;
-  logger.warn('Δημόσιες προβολές σε παλαιότερη έκδοση σχήματος — εκκρεμεί επανασύνθεση', {
-    data: { stale: staleCount, total },
-  });
-}
-
-/** Λίστα στιγμιότυπων → αγγελίες. Ό,τι δεν είναι καν αντικείμενο **πέφτει**, δεν σκάει. */
-function readListingSnapshots(docs: readonly ListingSnapshotLike[]): readonly PublicListing[] {
-  const reads = docs.map((snapshot) => readStoredListing(snapshot.data(), snapshot.id));
-
-  reportStaleListings(reads.filter((read) => read?.needsRebuild).length, docs.length);
-
-  return reads.flatMap((read) => (read === null ? [] : [read.listing]));
-}
-
-/** Ένα στιγμιότυπο → η έκβαση της αναζήτησης. Άμορφο έγγραφο = **δεν υπάρχει αγγελία**. */
-function readSingleListing(raw: unknown, id: string): PublicListingLookup {
-  const read = readStoredListing(raw, id);
-  if (read === null) return { state: 'absent' };
-
-  reportStaleListings(read.needsRebuild ? 1 : 0, 1);
-  return { state: 'found', listing: read.listing };
-}
-
-
-/**
- * **Ο ΕΝΑΣ ΚΥΚΛΟΣ ΖΩΗΣ ΜΙΑΣ ΔΗΜΟΣΙΑΣ ΣΥΝΔΡΟΜΗΣ** — και τον περνούν **και οι τρεις**.
- *
- * 🔴 **Εξήχθη επειδή το CHECK 3.28 τον κατήγγειλε ως κλώνο** *(2026-09-01, ADR-841 §7
- * Α6: 18 γραμμές / 59 tokens, `usePublicListings` ⇄ `usePublicAgencyListings`)* — και
- * είχε δίκιο: *«συνδρομή → σύνορο σχήματος → κατάσταση → σφάλμα»* είναι **ένα** πράγμα,
- * και δύο αντίγραφά του θα απέκλιναν στην πρώτη αλλαγή *(π.χ. ο ένας να μάθει
- * `needsRebuild` και ο άλλος όχι)*.
- *
- * ⛔ **ΔΕΝ χρησιμοποιείται το `createRealtimeCollectionHook`** (ADR-798 §22), και ο
- * λόγος είναι δομικός: εκείνο περνά **υποχρεωτικά** από τον `firestoreQueryService`
- * με φρουρό μισθωτή. Το `public_listings` είναι **δημοσιευμένη προβολή** που διαβάζει
- * **ανώνυμος** επισκέπτης — δεν υπάρχει μισθωτής να φρουρηθεί, και ο φρουρός θα
- * απέρριπτε κάθε ανάγνωση. Δύο διαφορετικές ερωτήσεις, δύο σπίτια *(ADR-749)*.
- *
- * 🔑 **Ο καλών κρατά τα setters του**: η μία διαδρομή παραδίδει ωμή λίστα, η άλλη
- * **ταξινομημένη** — η διαφορά ζει στο `deliver`, όχι σε δεύτερη μηχανή συνδρομής.
- */
-function subscribeToPublicListings(
-  listingsQuery: Query<DocumentData>,
-  deliver: (listings: readonly PublicListing[]) => void,
-  fail: (message: string) => void,
-  failure: { readonly message: string; readonly data?: Record<string, unknown> },
-): Unsubscribe {
-  return onSnapshot(
-    listingsQuery,
-    (snapshot) => deliver(readListingSnapshots(snapshot.docs)),
-    (err: Error) => {
-      logger.error(failure.message, {
-        ...(failure.data === undefined ? {} : { data: failure.data }),
-        error: err.message,
-      });
-      fail(err.message);
-    },
-  );
-}
+const LIVE_AFTER_STILLNESS_MS = 1_200;
 
 export interface PublicListingsState {
   readonly listings: readonly PublicListing[];
   readonly loading: boolean;
   readonly error: string | null;
+  /**
+   * **Κοίταξα παντού, ή κόπηκα;** — η ομολογία που οφείλει η οθόνη (§8.65).
+   *
+   * ⚠️ Οι δύο αδελφοί *(μία αγγελία · βιτρίνα γραφείου)* είναι **πάντα** `'complete'`:
+   * ρωτούν κατά ταυτότητα, όχι κατά περιοχή. Το πεδίο υπάρχει και σε αυτούς ώστε ο
+   * καταναλωτής να μη χρειάζεται **δύο** σχήματα κατάστασης για την ίδια ερώτηση.
+   */
+  readonly coverage: ListingReadCoverage;
 }
 
+/** Η προεπιλογή: ρώτησα κατά ταυτότητα, δεν υπάρχει τίποτα να ομολογήσω. */
+const COMPLETE: ListingReadCoverage = { kind: 'complete' };
+
 /**
- * **Η ΜΙΑ ΚΑΤΑΣΤΑΣΗ ΜΙΑΣ ΔΗΜΟΣΙΑΣ ΣΥΝΔΡΟΜΗΣ** — τρία πεδία, τέσσερις μεταβάσεις.
+ * **Η ΜΙΑ ΚΑΤΑΣΤΑΣΗ ΜΙΑΣ ΔΗΜΟΣΙΑΣ ΣΥΝΔΡΟΜΗΣ** — τέσσερα πεδία, τέσσερις μεταβάσεις.
  *
  * 🔴 **Δεύτερη εξαγωγή που ζήτησε το CHECK 3.28 στο ίδιο commit** *(ADR-841 §7 Α6)*, και
  * η δεύτερη φορά που είχε δίκιο: μετά τη συνδρομή, ο κλώνος που έμενε ήταν η **ίδια η
- * κατάσταση** *(τρία `useState` + οι ίδιες τέσσερις μεταβάσεις)*. Ένα `loading` που
- * ξεχνά να κλείσει σε **έναν** από τους δύο αδελφούς είναι μόνιμος «Φόρτωση…» — και το
- * είδαμε ζωντανά σε αυτή τη συνεδρία, από άλλη αιτία.
+ * κατάσταση**. Ένα `loading` που ξεχνά να κλείσει σε **έναν** από τους δύο αδελφούς
+ * είναι μόνιμος «Φόρτωση…».
  *
  * 🔑 **Οι μεταβάσεις είναι ονομασμένες, όχι σκόρπιοι setters**: `begin` *(ρωτάω)* ·
  * `deliver` *(ήρθαν)* · `fail` *(δεν μπόρεσα)* · `idle` *(**δεν** ρωτάω — και δεν είναι
@@ -146,19 +106,19 @@ export interface PublicListingsState {
  * ρώτησε»* και *«ρώτησα, δεν έχει»* καταλήγουν στην **ίδια** κενή λίστα αλλά είναι
  * διαφορετικές αλήθειες για τον καλούντα.
  *
- * ⚠️ **Ο καλών ταξινομεί ΠΡΙΝ το `deliver`** — η σειρά είναι απόφαση της οθόνης του,
- * όχι της συνδρομής.
+ * ⚠️ **Ο καλών ταξινομεί ΠΡΙΝ το `deliver`** — η σειρά είναι απόφαση της οθόνης του.
  */
 function usePublicListingsSubscriptionState(): {
   readonly state: PublicListingsState;
   readonly begin: () => void;
-  readonly deliver: (listings: readonly PublicListing[]) => void;
+  readonly deliver: (listings: readonly PublicListing[], coverage?: ListingReadCoverage) => void;
   readonly fail: (message: string) => void;
   readonly idle: () => void;
 } {
   const [listings, setListings] = useState<readonly PublicListing[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [coverage, setCoverage] = useState<ListingReadCoverage>(COMPLETE);
 
   const transitions = useMemo(
     () => ({
@@ -166,8 +126,9 @@ function usePublicListingsSubscriptionState(): {
         setLoading(true);
         setError(null);
       },
-      deliver: (fresh: readonly PublicListing[]) => {
+      deliver: (fresh: readonly PublicListing[], nextCoverage: ListingReadCoverage = COMPLETE) => {
         setListings(fresh);
+        setCoverage(nextCoverage);
         setLoading(false);
       },
       fail: (message: string) => {
@@ -176,37 +137,105 @@ function usePublicListingsSubscriptionState(): {
       },
       idle: () => {
         setListings([]);
+        setCoverage(COMPLETE);
         setLoading(false);
         setError(null);
       },
     }),
-    [],
+    []
   );
 
-  return { state: { listings, loading, error }, ...transitions };
+  return { state: { listings, loading, error, coverage }, ...transitions };
 }
 
-export function usePublicListings(): PublicListingsState {
-  const { state, deliver, fail } = usePublicListingsSubscriptionState();
+/**
+ * Οι δημόσιες αγγελίες **της δηλωμένης περιοχής** — η ανάγνωση της **οθόνης 2**.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔑 ΤΟ ΥΒΡΙΔΙΚΟ ΖΩΝΤΑΝΟ, ΚΑΙ ΓΙΑΤΙ ΜΕ ΑΥΤΗ ΤΗ ΣΕΙΡΑ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * 1. **Εφάπαξ, αμέσως** — ο επισκέπτης βλέπει το νέο κάδρο χωρίς να περιμένει ακροατή.
+ * 2. **Ζωντανά, μετά τη σιγή** — μόνο για το κάδρο στο οποίο όντως στάθηκε.
+ *
+ * ⚠️ **Η αντίστροφη σειρά θα ήταν χειρότερη και από τις δύο**: ένας ακροατής που
+ * ανοίγει και κλείνει σε κάθε σύρσιμο πληρώνει **πλήρη ανάγνωση** για κάδρα που ο
+ * άνθρωπος προσπέρασε, και δεν προλαβαίνει ποτέ να παραδώσει ζωντανή ενημέρωση.
+ *
+ * ⚠️ **Το `near` διαβάζεται από ref, με κλειδί το {@link listingAreaKey}** — και είναι
+ * το ίδιο ιδίωμα με τα `boundsRef`/`searchAreaRef` του `ResultsMap`: τα φίλτρα
+ * ξαναγεννιούνται σε κάθε απόδοση, οπότε εξάρτηση στην **αναφορά** θα ακύρωνε τη
+ * συνδρομή σε κάθε απόδοση *(νέο αντικείμενο ⇒ βρόχος)*.
+ *
+ * @param near Η δηλωμένη περιοχή, ή `null` για ολόκληρη την αγορά. **Και στις δύο
+ *   περιπτώσεις ισχύει το {@link LISTING_READ_CAP}**: το ελάττωμα δεν ήταν η απουσία
+ *   περιοχής — ήταν η απουσία **οποιουδήποτε** ορίου.
+ */
+export function usePublicListings(near: GeoArea | null): PublicListingsState {
+  const { state, begin, deliver, fail } = usePublicListingsSubscriptionState();
+
+  const areaKey = listingAreaKey(near);
+  const nearRef = useRef(near);
+  nearRef.current = near;
+
+  /**
+   * 🔴 **Ο ΣΥΝΟΛΙΚΟΣ ΑΡΙΘΜΟΣ ΖΕΙ ΣΕ REF, ΚΑΙ ΤΟ ΕΜΑΘΑ ΓΡΑΦΟΝΤΑΣ ΤΟ ΛΑΘΟΣ.** Η πρώτη
+   * γραφή διάβαζε το `state.coverage` **μέσα** στην επανάκληση του `onSnapshot` — δηλαδή
+   * ένα **στιγμιότυπο** της κατάστασης παγωμένο τη στιγμή που στήθηκε ο ακροατής. Ο
+   * ακροατής ζει **λεπτά**· η κατάσταση αλλάζει στο μεταξύ. Είναι κατά λέξη ο κανόνας
+   * του ADR-040: *«οι χειριστές συμβάντων παίρνουν getter, ποτέ στιγμιότυπο»* — και η
+   * συνέπεια εδώ θα ήταν μετρητής που **γυρίζει πίσω** στην πρώτη ζωντανή ενημέρωση.
+   */
+  const knownTotalRef = useRef<number | null>(null);
 
   useEffect(() => {
-    // tenant-scope-exempt: `public_listings` είναι δηλωμένη `published-projection` στο
-    // `services/firestore/tenant-config.ts` — κλειστό σχήμα ΧΩΡΙΣ ταυτότητα πελάτη,
-    // γραμμένο μόνο από τον διακομιστή. Η αφιλτράριστη λίστα ΕΙΝΑΙ το ερώτημα που ο
-    // κανόνας `read: if true` επιτρέπει ρητά (άγκυρα: `public-listings.rules.test.ts`).
-    //
-    // 🔴 **ΔΙΟΡΘΩΣΗ 2026-09-01 (ADR-841 §7 Α1)**: εδώ έγραφε *«δεν υπάρχει `companyId`
-    //    να φιλτραριστεί»* — **έπαψε να ισχύει** τη στιγμή που μπήκε το `agencyId`.
-    //    Υπάρχει πλέον ταυτότητα **γραφείου** στο σχήμα, και τη ρωτά η
-    //    {@link usePublicAgencyListings}. Δεν υπάρχει ταυτότητα **πελάτη** — αυτό
-    //    μένει αληθές και είναι ο λόγος της εξαίρεσης. ⚠️ Η **οθόνη 2** εξακολουθεί να
-    //    ζητά τα πάντα επίτηδες: είναι όλη η αγορά, όχι μία βιτρίνα.
-    const q = collection(db, COLLECTIONS.PUBLIC_LISTINGS);
+    const area = nearRef.current;
+    let cancelled = false;
+    let live: Unsubscribe | null = null;
 
-    return subscribeToPublicListings(q, deliver, fail, {
-      message: 'Δεν φορτώθηκαν οι δημόσιες αγγελίες',
-    });
-  }, [deliver, fail]);
+    begin();
+    knownTotalRef.current = null;
+
+    // (1) ΕΦΑΠΑΞ — και η καταμέτρηση μαζί, ώστε η ομολογία να έρθει με τα δεδομένα.
+    void Promise.all([getDocs(publicListingsQuery(area)), countPublicListings(area)])
+      .then(([snapshot, total]) => {
+        if (cancelled) return;
+        knownTotalRef.current = total;
+        const capped = capListingReads(readListingSnapshots(snapshot.docs), total);
+        deliver(capped.items, capped.coverage);
+      })
+      .catch((err: Error) => {
+        if (cancelled) return;
+        logger.error('Δεν φορτώθηκαν οι δημόσιες αγγελίες', { error: err.message });
+        fail(err.message);
+      });
+
+    // (2) ΖΩΝΤΑΝΑ — μόνο αφού ο χάρτης ησυχάσει.
+    const timer = setTimeout(() => {
+      if (cancelled) return;
+      live = subscribeToPublicListings(
+        publicListingsQuery(area),
+        (fresh) => {
+          // ⚠️ Η **ομολογία** δεν ξαναϋπολογίζεται από νέα καταμέτρηση: το ζωντανό
+          //    παραδίδει το **ίδιο** ερώτημα, άρα το «κόπηκε;» απαντιέται από το ίδιο
+          //    «ένα παραπάνω». Δεύτερη καταμέτρηση ανά στιγμιότυπο θα ήταν ερώτημα ανά
+          //    αλλαγή εγγράφου — κόστος χωρίς νέα γνώση.
+          const capped = capListingReads(fresh, knownTotalRef.current);
+          deliver(capped.items, capped.coverage);
+        },
+        fail,
+        { message: 'Δεν φορτώθηκαν οι δημόσιες αγγελίες' }
+      );
+    }, LIVE_AFTER_STILLNESS_MS);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      live?.();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `near` διαβάζεται από ref
+    // επίτηδες (δες την κεφαλίδα): το κλειδί ΕΙΝΑΙ η ταυτότητα της περιοχής.
+  }, [areaKey, begin, deliver, fail]);
 
   return state;
 }
@@ -216,25 +245,6 @@ export function usePublicListings(): PublicListingsState {
 // ============================================================================
 
 /**
- * **Τι ξέρουμε για τη μία αγγελία** — τέσσερις **ρητές** καταστάσεις.
- *
- * 🔴 **Το `absent` ΔΕΝ είναι σφάλμα, και η διάκριση δεν είναι λεπτολογία.** Η
- * συλλογή είναι **προβολή**: μια αγγελία φεύγει από εκεί όταν το ακίνητο **πάψει να
- * είναι δημοσιεύσιμο** (`publish-public-listing`). Δηλαδή «δεν υπάρχει» σημαίνει
- * *«δεν δημοσιεύεται πια»* — πληροφορία που ο επισκέπτης **δικαιούται**, ιδίως όταν
- * έφτασε εδώ από κοινοποιημένο σύνδεσμο. Ένα κοινό «κάτι πήγε στραβά» θα τον έστελνε
- * να ξαναδοκιμάσει κάτι που **δεν πρόκειται** να αλλάξει.
- *
- * ⚠️ Ίδια σχεδίαση με το `SubmitState` του `PlaceSearchBox` και το `DisplayPrice`:
- * **ποτέ** `boolean` + `null` για δύο διαφορετικές αποτυχίες.
- */
-export type PublicListingLookup =
-  | { readonly state: 'loading' }
-  | { readonly state: 'found'; readonly listing: PublicListing }
-  | { readonly state: 'absent' }
-  | { readonly state: 'error'; readonly message: string };
-
-/**
  * Η **μία** αγγελία, ζωντανά — η ανάγνωση της **οθόνης 3**.
  *
  * ────────────────────────────────────────────────────────────────────────────
@@ -242,15 +252,13 @@ export type PublicListingLookup =
  * ────────────────────────────────────────────────────────────────────────────
  *
  * Το να διαβάσει η οθόνη 3 **ολόκληρη** τη συλλογή και να κρατήσει ένα έγγραφο θα
- * ήταν σωστό σήμερα (**6** αγγελίες) και **δομικά λάθος** αύριο: η **Α0** δεσμεύει
- * *«μοντέλο για την τελική κλίμακα, οθόνη σταδιακά»*, και σε 60.000 αγγελίες το
- * άνοιγμα **μιας** σελίδας ακινήτου θα κατέβαζε **όλες** τις άλλες.
+ * ήταν σωστό σήμερα και **δομικά λάθος** αύριο: η **Α0** δεσμεύει *«μοντέλο για την
+ * τελική κλίμακα, οθόνη σταδιακά»*, και σε 60.000 αγγελίες το άνοιγμα **μιας** σελίδας
+ * ακινήτου θα κατέβαζε **όλες** τις άλλες.
  *
  * ⚠️ **Δεν είναι δεύτερη ανάγνωση**: ίδια συλλογή, ίδια σταθερά, ίδιο σχήμα, ίδιο
  * αρχείο. Είναι η **ίδια** πηγή ρωτημένη πιο στενά — η διάκριση που ο κανόνας 19
- * ονομάζει «*μετακινούμε καταναλωτές, όχι αρχεία*». Μια **δεύτερη** ανάγνωση θα ήταν
- * άλλη πηγή ή άλλο κριτήριο δημοσίευσης· εδώ δεν υπάρχει κριτήριο, γιατί το εφάρμοσε
- * ήδη ο διακομιστής **μία φορά** (βλ. κεφαλίδα αρχείου).
+ * ονομάζει «*μετακινούμε καταναλωτές, όχι αρχεία*».
  *
  * 🔴 **Ζωντανά, όχι εφάπαξ**: ο ίδιος γραφέας που σβήνει την αγγελία όταν πάψει να
  * είναι δημοσιεύσιμη θα την **εξαφανίσει από την ανοιχτή σελίδα** — αντί ο επισκέπτης
@@ -302,24 +310,14 @@ export function usePublicListing(id: string): PublicListingLookup {
 /**
  * Οι αγγελίες **ενός** γραφείου, ζωντανά — η ανάγνωση της **βιτρίνας** `/pro/<ψευδώνυμο>`.
  *
- * ────────────────────────────────────────────────────────────────────────────
- * 🔑 ΓΙΑΤΙ ΤΡΙΤΟΣ ΑΔΕΛΦΟΣ ΚΑΙ ΟΧΙ ΦΙΛΤΡΟ ΠΑΝΩ ΣΤΟ {@link usePublicListings}
- * ────────────────────────────────────────────────────────────────────────────
- *
  * **Ίδιο επιχείρημα, ίδιος αριθμός** με τον λόγο που το {@link usePublicListing} είναι
  * αδελφός: σε **60.000** αγγελίες, το άνοιγμα της βιτρίνας **ενός** γραφείου θα
- * κατέβαζε **όλη την αγορά** στον φυλλομετρητή για να κρατήσει έξι έγγραφα. Η **Α0**
- * δεσμεύει *«μοντέλο για την τελική κλίμακα, οθόνη σταδιακά»*.
- *
- * ⚠️ **Δεν είναι δεύτερη ανάγνωση**: ίδια συλλογή, ίδια σταθερά, ίδιο σύνορο σχήματος
- * ({@link readListingSnapshots}), ίδιο αρχείο. Είναι η **ίδια** πηγή ρωτημένη πιο
- * στενά — «*μετακινούμε καταναλωτές, όχι αρχεία*».
+ * κατέβαζε **όλη την αγορά** στον φυλλομετρητή για να κρατήσει έξι έγγραφα.
  *
  * 🔴 **ΚΑΙ ΓΙΝΕΤΑΙ ΜΟΝΟ ΕΠΕΙΔΗ ΥΠΑΡΧΕΙ ΤΑΥΤΟΤΗΤΑ.** Πριν το `agencyId` (ADR-841 §7 Α1)
  * το φίλτρο θα ήταν πάνω στην **επωνυμία-κείμενο** — δηλαδή δύο γραφεία με ίδιο όνομα
  * θα εμφάνιζαν το ένα τις αγγελίες του άλλου, και μια μετονομασία θα **άδειαζε** τη
- * βιτρίνα χωρίς να αλλάξει τίποτα στην πραγματικότητα. Γι' αυτό η Α6 δήλωνε ότι
- * *«είναι δύο δουλειές, όχι μία»*.
+ * βιτρίνα χωρίς να αλλάξει τίποτα στην πραγματικότητα.
  *
  * ⚠️ **Καμία `orderBy`, και είναι απόφαση**: ένα `orderBy` θα απαιτούσε **σύνθετο
  * ευρετήριο** *(CHECK 3.15)* και —το βαρύτερο— θα έκρυβε τη σειρά μέσα στο ερώτημα.
@@ -329,10 +327,6 @@ export function usePublicListing(id: string): PublicListingLookup {
  * ⚠️ **Ήδη ταξινομημένες** ({@link orderShowcaseListings}) — δες εκεί γιατί **όχι**
  * `projectedAt`, που είναι το προφανές και ψεύτικο κλειδί.
  *
- * ⚠️ **Επιστρέφει το ΙΔΙΟ {@link PublicListingsState}** με τον μεγάλο αδελφό — δεύτερο
- * σχήμα κατάστασης για την ίδια ερώτηση θα ήταν δεύτερο λεξιλόγιο *(«φορτώνει;»,
- * «απέτυχε;»)* που θα απέκλινε στην πρώτη αλλαγή.
- *
  * @param companyId Το `companyId` του γραφείου, ή `null` όταν το ψευδώνυμο δεν λύθηκε.
  */
 export function usePublicAgencyListings(companyId: string | null): PublicListingsState {
@@ -341,8 +335,8 @@ export function usePublicAgencyListings(companyId: string | null): PublicListing
   useEffect(() => {
     // 🔑 **Η ΙΔΙΑ ΠΟΡΤΑ ΜΕ ΤΗ ΒΙΤΡΙΝΑ** ({@link agencyDoorFor}, ADR-827 §9.4) — και δεν
     //    είναι κομψότητα: οι δύο αναγνώσεις ζουν στην **ίδια σελίδα**. Μια δεύτερη
-    //    κρίση εδώ θα μπορούσε να **διαφωνήσει** με εκείνη *(η μία ρωτά, η άλλη όχι)*,
-    //    και η οθόνη θα έδειχνε βιτρίνα χωρίς αγγελίες — ή αγγελίες χωρίς βιτρίνα.
+    //    κρίση εδώ θα μπορούσε να **διαφωνήσει** με εκείνη, και η οθόνη θα έδειχνε
+    //    βιτρίνα χωρίς αγγελίες — ή αγγελίες χωρίς βιτρίνα.
     //
     // ⚠️ **Κενή ταυτότητα ⇒ ΤΕΛΟΣ, όχι ερώτημα.** Ένα `where('agencyId','==', null)`
     //    θα επέστρεφε **κάθε αγγελία ιδιώτη** της αγοράς μέσα στη βιτρίνα ενός
@@ -376,7 +370,7 @@ export function usePublicAgencyListings(companyId: string | null): PublicListing
       {
         message: 'Δεν φορτώθηκαν οι αγγελίες του γραφείου',
         data: { companyId: door.companyId },
-      },
+      }
     );
   }, [companyId, begin, deliver, fail, idle]);
 
