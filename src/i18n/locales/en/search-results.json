@@ -49,6 +49,13 @@
       "ownerDeclined": "The owner has not declared a location"
     }
   },
+  "area": {
+    "followMap": "Search as I move the map",
+    "searchHere": "Search this area",
+    "summary": "{inside} here · {maybe} maybe · {outside} outside the area",
+    "maybeHint": "“Maybe” = we know their area, not their address.",
+    "imbalanced": "The area count does not add up — this is an error, not a state."
+  },
   "map": {
     "label": "Results map",
     "legendTitle": "What each shape means",

@@ -25,7 +25,7 @@
  */
 
 import React, { useMemo, useCallback, useEffect, useRef } from 'react';
-import { Source, Layer } from '@/lib/maps/maplibre';
+import { Source } from '@/lib/maps/maplibre';
 import { InteractiveMap } from '@/subapps/geo-canvas/components/InteractiveMap';
 import { PolygonSystemProvider } from '@/subapps/geo-canvas/systems/polygon-system';
 import type { MapInstance } from '@/subapps/geo-canvas/hooks/map/useMapInteractions';
@@ -36,7 +36,10 @@ import { listingPriceMarkers } from '@/lib/listings/listing-price-markers';
 import { NO_LISTING_FOCUS, type ListingFocus } from '@/lib/listings/listing-focus';
 import { ListingMapPopup } from './ListingMapPopup';
 import { ListingPriceMarkers } from './ListingPriceMarkers';
+import { ResultsMapLayers, RADIUS } from './ResultsMapLayers';
 import type { PublicListing } from '@/types/public-listing';
+import type { GeoBoundingBox } from '@/types/geo/coordinates';
+import { readMapArea, type MapAreaSource } from './results-map-area';
 
 /**
  * Τα επίπεδα που δέχονται κλικ. **Κάθε ορατό σχήμα**, όχι μόνο η πινέζα — αλλιώς οι
@@ -95,10 +98,37 @@ interface ResultsMapProps {
    * κατά λάθος πινέζα δεν πρέπει να χρειάζεται να μαντέψει πώς ξεφεύγει.
    */
   readonly onClear?: () => void;
+  /**
+   * **Ο ΧΑΡΤΗΣ ΑΝΑΦΕΡΕΙ ΠΟΥ ΚΟΙΤΑΕΙ** — μετά από κάθε σύρσιμο/ζουμ *(ADR-777 §8.63)*.
+   *
+   * 🔑 **Αναφέρει ΠΑΝΤΑ· ΔΕΝ αποφασίζει ποτέ.** Το αν το κάδρο θα γίνει φίλτρο είναι
+   * **πολιτική** — τη διακόπτει ο άνθρωπος με τον διακόπτη *«Αναζήτηση καθώς
+   * μετακινώ»* — και ζει στον γονιό. Ένας χάρτης που έκρινε ο ίδιος πότε αξίζει να
+   * μιλήσει θα ήταν **δεύτερος** τόπος απόφασης, και ο διακόπτης θα σταματούσε να
+   * είναι η μοναδική αλήθεια για το τι ζήτησε ο επισκέπτης.
+   *
+   * ⚠️ Προαιρετικό: η **οθόνη 3** δείχνει τον ίδιο χάρτη για **μία** αγγελία, όπου
+   * δεν υπάρχει λίστα να φιλτραριστεί.
+   */
+  readonly onAreaChange?: (area: GeoBoundingBox) => void;
+  /**
+   * **ΜΗΝ ΚΑΔΡΑΡΕΙΣ ΜΟΝΟΣ ΣΟΥ — Ο ΑΝΘΡΩΠΟΣ ΤΟΠΟΘΕΤΗΣΕ ΤΟΝ ΧΑΡΤΗ** *(ADR-777 §8.63)*.
+   *
+   * 🔴 **ΧΩΡΙΣ ΑΥΤΟ ΥΠΑΡΧΕΙ ΑΝΑΔΡΑΣΗ, ΚΑΙ ΕΙΝΑΙ ΟΡΑΤΗ**: ο άνθρωπος σέρνει ⇒ το κάδρο
+   * γίνεται φίλτρο ⇒ μένουν λιγότερες αγγελίες ⇒ αλλάζουν τα `bounds` του καταλόγου ⇒
+   * το `fitBounds` **ξανακαδράρει πιο σφιχτά** ⇒ ο χάρτης **πηδά κάτω από τα δάχτυλά
+   * του**, και το νέο κάδρο κόβει κι άλλες. Το φαινόμενο είναι ακριβώς αυτό που τα
+   * καταγεγραμμένα παράπονα για την Airbnb περιγράφουν ως *«καταλύματα εμφανίζονται
+   * και εξαφανίζονται στην παραμικρή κίνηση»*.
+   *
+   * 🔑 **Η λύση δεν είναι χρονική (debounce), είναι ΣΗΜΑΣΙΟΛΟΓΙΚΗ**: όταν υπάρχει
+   * **δηλωμένη** περιοχή, το αυτόματο καδράρισμα δεν έχει τίποτα να προσφέρει — ο
+   * άνθρωπος έχει ήδη πει πού κοιτάει. Ένα χρονόμετρο θα έκανε την ανάδραση **πιο
+   * αργή**, όχι ανύπαρκτη *(μάθημα του Βήματος 2: early cutoff αντί για ρολόι)*.
+   */
+  readonly areaLocked?: boolean;
 }
 
-/** Ακτίνες σε pixel. **Κατηγορικά διακριτές**, όχι διαβαθμίσεις που μοιάζουν. */
-const RADIUS = { pin: 7, ring: 7, neighbourhood: 34, city: 90 } as const;
 
 const SOURCE_ID = 'public-listings';
 
@@ -115,10 +145,26 @@ interface MapPointerEvent {
   readonly point: { x: number; y: number };
 }
 
-interface MapEventTarget {
+/**
+ * Το συμβάν κίνησης του χάρτη — **και το ένα πεδίο που μας ενδιαφέρει**.
+ *
+ * 🔑 **Το `originalEvent` απαντά «ποιος το ζήτησε;»** και είναι το καθιερωμένο ιδίωμα
+ * του MapLibre: υπάρχει όταν την κίνηση την προκάλεσε **άνθρωπος** (σύρσιμο, ρόδα,
+ * κουμπί ζουμ) και **λείπει** όταν την προκάλεσε ο κώδικάς μας (`fitBounds`).
+ *
+ * 🔴 **Χωρίς αυτόν τον έλεγχο, το ΑΡΧΙΚΟ καδράρισμα θα γραφόταν στη διεύθυνση σαν να
+ * το ζήτησε ο επισκέπτης** — δηλαδή κάθε άνθρωπος που απλώς **άνοιξε** τη σελίδα θα
+ * αποκτούσε αμέσως φίλτρο περιοχής που δεν διάλεξε ποτέ, και ο κοινοποιημένος
+ * σύνδεσμος θα κουβαλούσε ένα ερώτημα που κανείς δεν έθεσε.
+ */
+interface MapMoveEvent {
+  readonly originalEvent?: unknown;
+}
+
+interface MapEventTarget extends MapAreaSource {
   on: (
     ev: string,
-    layerOrHandler: string | ((e: MapPointerEvent) => void),
+    layerOrHandler: string | ((e: MapPointerEvent) => void) | ((e: MapMoveEvent) => void),
     cb?: (e: MapPointerEvent) => void
   ) => void;
   getCanvas: () => HTMLCanvasElement;
@@ -144,6 +190,8 @@ export function ResultsMap({
   onPeek,
   onSelect,
   onClear,
+  onAreaChange,
+  areaLocked = false,
 }: ResultsMapProps) {
   const data = useMemo(() => listingsToGeoJson(listings), [listings]);
   const bounds = useMemo(() => listingBounds(data), [data]);
@@ -185,10 +233,10 @@ export function ResultsMap({
    *    την ταυτότητα του `handleMapReady` — δηλαδή θα απειλούσε επαναρχικοποίηση του
    *    χάρτη στα 60fps. Το `useCallback([])` το κάνει **δομικά αδύνατο**.
    */
-  const handlersRef = useRef({ onPeek, onSelect, onClear });
+  const handlersRef = useRef({ onPeek, onSelect, onClear, onAreaChange });
   useEffect(() => {
-    handlersRef.current = { onPeek, onSelect, onClear };
-  }, [onPeek, onSelect, onClear]);
+    handlersRef.current = { onPeek, onSelect, onClear, onAreaChange };
+  }, [onPeek, onSelect, onClear, onAreaChange]);
 
   /**
    * 🔴 **ΚΑΙ ΤΑ `bounds` ΔΙΑΒΑΖΟΝΤΑΙ ΑΠΟ ΑΝΑΦΟΡΑ — ΜΕΤΡΗΜΕΝΟ ΛΑΘΟΣ, ΟΧΙ ΠΡΟΛΗΨΗ.**
@@ -205,6 +253,14 @@ export function ResultsMap({
    */
   const boundsRef = useRef(bounds);
   useEffect(() => { boundsRef.current = bounds; }, [bounds]);
+
+  /**
+   * ⚠️ **ΑΝΑΦΟΡΑ, ΟΧΙ ΕΞΑΡΤΗΣΗ** — για τον λόγο που γράφεται από πάνω για τα `bounds`:
+   * το `handleMapReady` έχει **κενό** πίνακα εξαρτήσεων ως συμβόλαιο, και κάθε νέα
+   * ταυτότητα εκεί σημαίνει **επανα-αρχικοποίηση MapLibre**, δηλαδή **μαύρη οθόνη**.
+   */
+  const areaLockedRef = useRef(areaLocked);
+  useEffect(() => { areaLockedRef.current = areaLocked; }, [areaLocked]);
 
   /**
    * 🔴 **ΤΟ ΚΑΔΡΑΡΙΣΜΑ ΕΙΝΑΙ ΕΦΕ ΤΩΝ ΔΕΔΟΜΕΝΩΝ, ΟΧΙ ΒΗΜΑ ΤΗΣ ΑΡΧΙΚΟΠΟΙΗΣΗΣ.**
@@ -234,7 +290,8 @@ export function ResultsMap({
 
   useEffect(() => {
     const target = mapRef.current;
-    if (!target || !bounds) return;
+    // ⚠️ Ο έλεγχος του κλειδώματος είναι **πρώτος**: δες {@link ResultsMapProps.areaLocked}.
+    if (!target || !bounds || areaLockedRef.current) return;
 
     // ⚠️ `padding` **υποχρεωτικό**: χωρίς αυτό μια πινέζα στην άκρη κάθεται πάνω στο
     // σύνορο και μοιάζει κομμένη· και `maxZoom`, γιατί ΕΝΑ αποτέλεσμα δίνει ορθογώνιο
@@ -254,7 +311,9 @@ export function ResultsMap({
     */
     mapRef.current = target;
     const readyBounds = boundsRef.current;
-    if (readyBounds) target.fitBounds(readyBounds, { padding: 64, maxZoom: 15, duration: 0 });
+    if (readyBounds && !areaLockedRef.current) {
+      target.fitBounds(readyBounds, { padding: 64, maxZoom: 15, duration: 0 });
+    }
 
     /*
       🔴 **Ο ΧΑΡΤΗΣ ΗΤΑΝ ΜΑΥΡΟΣ ΩΣΠΟΥ Ο ΑΝΘΡΩΠΟΣ ΤΟΝ ΑΚΟΥΜΠΟΥΣΕ** *(ADR-777 §8.56)*.
@@ -286,6 +345,25 @@ export function ResultsMap({
       ⚠️ **Ταυτοδύναμο και φθηνό**: αν όλα είναι εντάξει, κοστίζει **ένα** καρέ.
     */
     requestAnimationFrame(() => requestAnimationFrame(() => target.resize()));
+
+    /*
+      🔴 **Ο ΧΑΡΤΗΣ ΑΡΧΙΖΕΙ ΝΑ ΜΙΛΑΕΙ** *(ADR-777 §8.63)*. Δενόταν **τίποτα** ως σήμερα:
+      μετρημένο με grep, δεν υπήρχε ούτε ένας `moveend` σε όλο το έργο.
+
+      ⚠️ **ΠΡΙΝ από την πρόωρη έξοδο του `onSelect` παρακάτω, ΕΠΙΤΗΔΕΣ.** Το «πού
+      κοιτάω» και το «τι διάλεξα» είναι **δύο** ερωτήσεις: μια οθόνη που φιλτράρει από
+      τον χάρτη χωρίς να επιτρέπει επιλογή είναι απολύτως νοητή, και με τη σύνδεση
+      παρακάτω θα έμενε σιωπηλή **χωρίς κανένα μήνυμα**.
+
+      ⚠️ **Ο ακροατής δένεται ΜΙΑ φορά και διαβάζει από αναφορά** — κανόνας 2 του
+      ADR-040. Μια εξάρτηση εδώ θα άλλαζε την ταυτότητα του `handleMapReady`, δηλαδή
+      **μαύρη οθόνη** (η προειδοποίηση είναι μετρημένη, όχι θεωρητική).
+    */
+    target.on('moveend', (event: MapMoveEvent) => {
+      if (!event.originalEvent) return;
+      const area = readMapArea(target);
+      if (area !== null) handlersRef.current.onAreaChange?.(area);
+    });
 
     // ⚠️ Χωρίς καταναλωτή επιλογής **δεν δένεται τίποτα** — ούτε κλικ, ούτε δείκτης.
     // Βλ. {@link ResultsMapProps.onSelect}: δείκτης «χεράκι» χωρίς αποτέλεσμα είναι
@@ -363,95 +441,7 @@ export function ResultsMap({
       onMapReady={handleMapReady}
     >
       <Source id={SOURCE_ID} type="geojson" data={data}>
-        {/* ΜΟΝΟ ΠΟΛΗ — σκιασμένη περιοχή. ΠΟΤΕ πινέζα (Α5). */}
-        <Layer
-          id="listing-city"
-          type="circle"
-          filter={['==', ['get', 'shape'], 'shaded-city']}
-          paint={{ 'circle-radius': RADIUS.city, 'circle-color': mark, 'circle-opacity': 0.12,
-                   'circle-stroke-width': 1, 'circle-stroke-color': mark, 'circle-stroke-opacity': 0.35 }}
-        />
-        {/* ΣΥΝΟΙΚΙΑ — μικρότερος σκιασμένος κύκλος (πρότυπο Airbnb). */}
-        <Layer
-          id="listing-neighbourhood"
-          type="circle"
-          filter={['==', ['get', 'shape'], 'shaded-circle']}
-          paint={{ 'circle-radius': RADIUS.neighbourhood, 'circle-color': mark, 'circle-opacity': 0.18,
-                   'circle-stroke-width': 1, 'circle-stroke-color': mark, 'circle-stroke-opacity': 0.5 }}
-        />
-        {/* ΜΕΤΡΗΜΕΝΟ ΠΕΡΙΓΡΑΜΜΑ — πραγματικό σχήμα, γεμάτο + περίγραμμα. */}
-        <Layer
-          id="listing-outline-fill"
-          type="fill"
-          filter={['==', ['get', 'shape'], 'outline']}
-          paint={{ 'fill-color': mark, 'fill-opacity': 0.3 }}
-        />
-        <Layer
-          id="listing-outline-line"
-          type="line"
-          filter={['==', ['get', 'shape'], 'outline']}
-          paint={{ 'line-color': mark, 'line-width': 2 }}
-        />
-        {/* ΔΡΟΜΟΣ ΧΩΡΙΣ ΑΡΙΘΜΟ — πινέζα με ΔΑΚΤΥΛΙΟ: κενό κέντρο, παχύ περίγραμμα. */}
-        <Layer
-          id="listing-pin-ring"
-          type="circle"
-          filter={['==', ['get', 'shape'], 'pin-with-ring']}
-          paint={{ 'circle-radius': RADIUS.ring, 'circle-color': surface, 'circle-opacity': 1,
-                   'circle-stroke-width': 3, 'circle-stroke-color': mark }}
-        />
-        {/* ΑΚΡΙΒΗΣ ΔΙΕΥΘΥΝΣΗ — συμπαγής πινέζα. */}
-        <Layer
-          id="listing-pin"
-          type="circle"
-          filter={['==', ['get', 'shape'], 'pin']}
-          paint={{ 'circle-radius': RADIUS.pin, 'circle-color': mark, 'circle-opacity': 1,
-                   'circle-stroke-width': 2, 'circle-stroke-color': surface }}
-        />
-        {/*
-          ────────────────────────────────────────────────────────────────────
-          🔴 ΔΥΟ ΕΠΙΠΕΔΑ ΕΠΙΣΗΜΑΝΣΗΣ, ΓΙΑΤΙ ΥΠΑΡΧΟΥΝ ΔΥΟ ΕΡΩΤΗΣΕΙΣ
-          ────────────────────────────────────────────────────────────────────
-
-          Ήταν **ένα** (`listing-highlight`), τροφοδοτημένο από μία μεταβλητή που
-          σήμαινε ταυτόχρονα «κοιτάζω» και «διάλεξα» — άρα ο χάρτης **δεν μπορούσε** να
-          δείξει και τα δύο, και η επιλογή έσβηνε με το πρώτο πέρασμα του ποντικιού.
-
-          🏆 Το **Revit** το λύνει έτσι εδώ και δεκαετίες: το *pre-highlight* και η
-          *selection* έχουν **δικό τους** χρώμα, και ο μηχανικός βλέπει με μια ματιά τι
-          **κοιτάζει** και τι **κρατά**. Το ίδιο κάνει το Airbnb όταν κρατά την επιλογή
-          σου ορατή ενώ σαρώνεις αλλού τον χάρτη.
-
-          ⚠️ **ΚΑΙ ΤΑ ΔΥΟ ΕΙΝΑΙ ΔΑΚΤΥΛΙΟΙ ΓΥΡΩ, ΠΟΤΕ ΑΛΛΑΓΗ ΤΟΥ ΣΧΗΜΑΤΟΣ.** Η
-          επισήμανση απαντά «ποιο κοιτάς», η ακρίβεια «τι ξέρουμε» — δύο ερωτήματα, δύο
-          κανάλια· αλλιώς το hover θα έλεγε ψέματα για τη γνώση μας (Α5).
-
-          ⚠️ **Ξεχωρίζουν σε ΓΕΩΜΕΤΡΙΑ, όχι σε απόχρωση** (CHECK 3.41 / WCAG 1.4.1): ο
-          εφήμερος δακτύλιος είναι **λεπτός και μικρότερος**, ο επίμονος **παχύς,
-          μεγαλύτερος και με γέμισμα**. Η διαφορά επιβιώνει σε ασπρόμαυρη εκτύπωση.
-
-          🔴 **ΤΟ ΣΗΜΕΙΟ ΑΝΑΦΟΡΑΣ «ΚΑΝΕΝΑ» ΗΤΑΝ ΚΥΡΙΟΛΕΚΤΙΚΑ ΕΝΑ NUL BYTE** — βρέθηκε
-          εδώ, 2026-09-06. Το `?? ' '` που **φαινόταν** κενό διάστημα ήταν `U+0000`, και
-          η συνέπεια δεν ήταν οπτική αλλά **εργαλειακή**: το git κατέτασσε ολόκληρο το
-          αρχείο ως **δυαδικό** (`Binary file … matches`), δηλαδή **καμία σύγκριση,
-          καμία συγχώνευση, καμία αναθεώρηση γραμμής**. Πλέον είναι το **κενό
-          αλφαριθμητικό**, που καμία ταυτότητα δεν μπορεί να πάρει (ADR-017: τα
-          enterprise IDs έχουν πρόθεμα, ποτέ δεν είναι κενά).
-        */}
-        <Layer
-          id="listing-peek"
-          type="circle"
-          filter={['==', ['get', 'id'], focus.peeked ?? '']}
-          paint={{ 'circle-radius': RADIUS.pin + 6, 'circle-color': mark, 'circle-opacity': 0,
-                   'circle-stroke-width': 2, 'circle-stroke-color': mark, 'circle-stroke-opacity': 0.55 }}
-        />
-        <Layer
-          id="listing-selected"
-          type="circle"
-          filter={['==', ['get', 'id'], focus.selected ?? '']}
-          paint={{ 'circle-radius': RADIUS.pin + 11, 'circle-color': mark, 'circle-opacity': 0.12,
-                   'circle-stroke-width': 4, 'circle-stroke-color': mark, 'circle-stroke-opacity': 1 }}
-        />
+        <ResultsMapLayers mark={mark} surface={surface} focus={focus} />
       </Source>
 
       {/*

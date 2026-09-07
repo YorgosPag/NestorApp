@@ -43,8 +43,13 @@ import type { StayAvailabilityAnswer } from '@/lib/stay/stay-availability-vocabu
 import { listingMapShape, isMappedShape } from '@/lib/listings/listing-map-shape';
 import { useViewportClass } from '@/hooks/media/useViewportClass';
 import { useListingFocus } from '@/hooks/listings/useListingFocus';
+import { useMapAreaSearch } from '@/hooks/listings/useMapAreaSearch';
+import { useFilterCommit } from './filters/use-filter-commit';
+import { computeAreaLedger } from '@/lib/listings/listing-search-area';
 import { CriteriaLedgerBar } from './CriteriaLedgerBar';
 import { ListingLedgerBar } from './ListingLedgerBar';
+import { AreaLedgerBar } from './AreaLedgerBar';
+import { MapAreaControl } from './MapAreaControl';
 import {
   orderResultsListings,
   parseListingOrder,
@@ -132,6 +137,43 @@ export function SearchResultsContent() {
    * η ίδια σχέση με το `ledgersAgree` της διαμονής — δύο διαμερίσεις που **οφείλουν**
    * να συμφωνούν, και φωνάζουν αν όχι.
    */
+  /**
+   * 🔴 **ΤΟ ΣΥΝΟΛΟ ΠΟΥ Η ΠΕΡΙΟΧΗ ΚΡΙΝΕΙ — ΚΑΙ ΔΕΝ ΕΙΝΑΙ ΚΑΝΕΝΑ ΑΠΟ ΤΑ ΔΥΟ ΥΠΑΡΧΟΝΤΑ**
+   * *(ADR-777 §8.63)*.
+   *
+   * Ο κατάλογος αφού απαντηθεί **κάθε άλλος** άξονας και **πριν** τη γεωγραφία.
+   *
+   * ⚠️ **Ούτε το `visible`**: εκείνο έχει **ήδη** πετάξει τις εκτός περιοχής, άρα το
+   * `outside` θα ήταν **πάντα 0** — μια γραμμή που θα έγραφε *«0 εκτός περιοχής»* σε
+   * κάθε αναζήτηση, για πάντα.
+   * ⚠️ **Ούτε ο ωμός `listings`**: τότε θα χρεώναμε ως *«εκτός περιοχής»* σπίτια που
+   * έφυγαν για την **τιμή** τους, και ο αριθμός θα κατηγορούσε τον χάρτη για δουλειά
+   * που έκανε το φίλτρο.
+   *
+   * 🔑 **Ο ΙΔΙΟΣ φιλτραριστής, άλλη ερώτηση** — `near: null`. Ακριβώς το ιδίωμα του
+   * `withinScope` από πάνω, στον συμπληρωματικό άξονα.
+   */
+  const anywhere = useMemo(
+    () => applyListingFilters(listings, { ...filters, near: null }),
+    [listings, filters]
+  );
+
+  const areaLedger = useMemo(
+    () => computeAreaLedger(anywhere, filters.near),
+    [anywhere, filters.near]
+  );
+
+  /**
+   * **Ο ΧΑΡΤΗΣ ΩΣ ΕΡΩΤΗΜΑ** — ο διακόπτης, το εκκρεμές κάδρο και η εφαρμογή τους.
+   *
+   * 🔑 Ολόκληρη η πολιτική ζει στο `useMapAreaSearch`· εδώ μένει **μόνο** η σύνδεση.
+   * Γραμμένη μέσα σε αυτό το αρχείο, θα πρόσθετε τρίτη ευθύνη σε ένα συστατικό που
+   * ήδη κρατά τη διάταξη και τις τέσσερις λογιστικές.
+   */
+  const { commit } = useFilterCommit(filters);
+  const { followMap, setFollowMap, pendingArea, onAreaChange, applyPendingArea } =
+    useMapAreaSearch(filters, commit);
+
   const criteriaLedger = useMemo(
     () => computeListingCriteriaLedger(withinScope, filters),
     [withinScope, filters]
@@ -324,6 +366,23 @@ export function SearchResultsContent() {
         <CriteriaLedgerBar ledger={criteriaLedger} asked={criteriaAsked} className="mt-1" />
 
         {/*
+          🔴 **Η ΤΕΤΑΡΤΗ ΔΙΑΜΕΡΙΣΗ** (ADR-777 §8.63): *«πού;»* · *«πότε;»* ·
+          *«ταιριάζει;»* · **«είναι στην περιοχή που κοιτάω;»**.
+
+          🔑 Είναι η **μόνη** από τις τέσσερις που περιγράφει κάτι το οποίο η οθόνη
+          **πράγματι έκοψε** — και γι' αυτό η ύπαρξή της δεν είναι διακοσμητική: χωρίς
+          αυτήν, το φιλτράρισμα από τον χάρτη θα ήταν μια σιωπηλή εξαφάνιση, δηλαδή
+          ακριβώς το ελάττωμα που τα καταγεγραμμένα παράπονα για την Airbnb
+          περιγράφουν και που κανένας από τους μεγάλους δεν ανακοινώνει.
+        */}
+        <AreaLedgerBar
+          ledger={areaLedger}
+          asked={filters.near !== null}
+          visibleCount={visible.length}
+          className="mt-1"
+        />
+
+        {/*
           ⚠️ **Τα ΦΙΛΤΡΑ κάτω από τις ΛΟΓΙΣΤΙΚΕΣ, όχι από πάνω.** Ο άνθρωπος διαβάζει
           πρώτα *τι υπάρχει* και μετά *τι μπορεί να ζητήσει* — και όταν πατήσει κάτι, η
           απάντηση είναι **ήδη μπροστά στα μάτια του**, όχι κάτω από τα χειριστήρια.
@@ -400,6 +459,28 @@ export function SearchResultsContent() {
             onPeek={peek}
             onSelect={select}
             onClear={clear}
+            onAreaChange={onAreaChange}
+            /*
+              🔴 **ΤΟ ΚΛΕΙΔΩΜΑ ΣΠΑΕΙ ΤΗΝ ΑΝΑΔΡΑΣΗ** — δες `ResultsMapProps.areaLocked`.
+              Όσο ο άνθρωπος έχει δηλώσει περιοχή, ο χάρτης **δεν** ξανακαδράρει στα
+              αποτελέσματα: αλλιώς κάθε σύρσιμο θα έκοβε τη λίστα, τα νέα όρια θα
+              τραβούσαν τον χάρτη πιο σφιχτά, και το κάδρο θα έκοβε ξανά.
+            */
+            areaLocked={filters.near !== null}
+          />
+
+          {/*
+            ⚠️ **ΑΔΕΛΦΟΣ ΤΟΥ ΧΑΡΤΗ, ΠΟΤΕ ΠΑΙΔΙ ΤΟΥ.** Ο `ResultsMap` αποδίδει τον
+            `InteractiveMap` του Geo-Canvas, που διαχειρίζεται **ο ίδιος** το δέντρο
+            του· ένα χειριστήριο χωμένο μέσα του θα ζούσε στο έλεος ξένου κώδικα. Εδώ
+            κάθεται πάνω από τον χάρτη μέσα στο **ίδιο** `isolate`, άρα η στρώση του
+            είναι τοπική και δεν ανταγωνίζεται καμία καθολική κλίμακα (CHECK 3.50).
+          */}
+          <MapAreaControl
+            followMap={followMap}
+            onFollowMapChange={setFollowMap}
+            hasPendingArea={pendingArea !== null}
+            onSearchHere={applyPendingArea}
           />
         </section>
       </div>
