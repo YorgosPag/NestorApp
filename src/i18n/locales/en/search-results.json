@@ -54,7 +54,10 @@
     "searchHere": "Search this area",
     "summary": "{inside} here · {maybe} maybe · {outside} outside the area",
     "maybeHint": "“Maybe” = we know their area, not their address.",
-    "imbalanced": "The area count does not add up — this is an error, not a state."
+    "imbalanced": "The area count does not add up — this is an error, not a state.",
+    "summaryCapped": "{inside} here · {maybe} maybe",
+    "moreCounted": "{total} listings here — showing {shown}. Zoom in for all.",
+    "moreUnknown": "More than {shown} here — zoom in for all."
   },
   "map": {
     "label": "Results map",
