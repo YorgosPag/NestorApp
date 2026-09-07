@@ -23,6 +23,7 @@
     "src/subapps/dxf-viewer/bim/table/__tests__/table-cell-link-spans.test.ts": "edc059820ad27e34",
     "src/subapps/dxf-viewer/bim/table/__tests__/table-cell-shrink.test.ts": "4677658c935dc968",
     "src/subapps/dxf-viewer/bim/table/__tests__/table-cell-styled-spans.test.ts": "1c2a26a4807de08f",
+    "src/subapps/dxf-viewer/bim/table/__tests__/table-formula-cross-sheet.test.ts": "039f233f6f47526b",
     "src/subapps/dxf-viewer/bim/table/__tests__/table-layout-cache-font-tier.test.ts": "7b3996ba9292657c",
     "src/subapps/dxf-viewer/bim/table/__tests__/table-link-export.test.ts": "90601fc9aa347718",
     "src/subapps/dxf-viewer/bim/table/__tests__/table-to-xlsx.test.ts": "b03862c90349c56a",
@@ -50,7 +51,7 @@
     "src/subapps/dxf-viewer/rendering/ghost/__tests__/apply-entity-preview-text.test.ts": "be9bfa610fe35b61",
     "src/subapps/dxf-viewer/rendering/hitTesting/__tests__/bounds-calculator-coverage.test.ts": "ab97461787bd62a8",
     "src/subapps/dxf-viewer/rendering/hitTesting/__tests__/hit-test-text-box-parity.test.ts": "367584984f3dab88",
-    "src/subapps/dxf-viewer/services/__tests__/hit-test-entity-model-coverage.test.ts": "4999c24aad9b9488",
+    "src/subapps/dxf-viewer/services/__tests__/hit-test-entity-model-coverage.test.ts": "9ab5829a2cf01e46",
     "src/subapps/dxf-viewer/snapping/engines/__tests__/TextSnapEngine.test.ts": "013e14980622d075",
     "src/subapps/dxf-viewer/snapping/orchestrator/__tests__/SnapOrchestrator.behavioral-anchors.test.ts": "6cb3b39baa2faa47",
     "src/subapps/dxf-viewer/snapping/orchestrator/__tests__/SnapOrchestrator.broad-phase-equivalence.test.ts": "2b13008ddd978943",
@@ -240,6 +241,13 @@
         "family",
         "italic"
       ]
+    },
+    {
+      "file": "src/subapps/dxf-viewer/bim/table/__tests__/table-formula-cross-sheet.test.ts",
+      "glyph": 0,
+      "css": 0,
+      "nominal": 4,
+      "dropped": []
     },
     {
       "file": "src/subapps/dxf-viewer/bim/table/__tests__/table-layout-cache-font-tier.test.ts",
@@ -441,7 +449,7 @@
       "file": "src/subapps/dxf-viewer/services/__tests__/hit-test-entity-model-coverage.test.ts",
       "glyph": 0,
       "css": 0,
-      "nominal": 3,
+      "nominal": 19,
       "dropped": []
     },
     {

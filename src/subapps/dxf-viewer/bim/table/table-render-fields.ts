@@ -7,6 +7,14 @@
  * pipeline αντιγράφει **ΑΚΡΙΒΩΣ** αυτή τη λίστα:
  *   - `hooks/canvas/dxf-scene-entity-handlers.ts` — scene `TableEntity` → flat `DxfTable`.
  *   - `canvas-v2/dxf-canvas/dxf-renderer-entity-model.ts` — `DxfTable` → render `EntityModel`.
+ *   - `services/hit-test-model-dxf.ts` — `DxfTable` → hit-test `EntityModel` (spatial index).
+ *
+ * 🔴 **Η ΤΡΙΤΗ ΕΛΕΙΠΕ ΑΠΟ ΑΥΤΗ ΤΗ ΛΙΣΤΑ ΜΕΧΡΙ ΤΙΣ 2026-09-07** — και ήταν η μόνη που δεν
+ * ακολούθησε τη Φάση 2: ζητούσε ακόμη `model`/`binding` (πεδία που **έφυγαν** από την
+ * οντότητα). Κάθε πίνακας έμπαινε στο χωρικό ευρετήριο ως **σημείο** αντί για κουτί, με
+ * `logger.error` σε κάθε καρέ. Το ίδιο το αρχείο αυτό διακήρυττε ότι οι προβολές είναι δύο:
+ * **μια λίστα καταναλωτών που δεν είναι πλήρης είναι χειρότερη από καμία**, γιατί σταματά την
+ * αναζήτηση. Ο φρουρός της τρίτης ζει στο `services/__tests__/hit-test-model-table.test.ts`.
  *
  * ...και ο **ίδιος ο τύπος** `DxfTable` (`canvas-v2/dxf-canvas/dxf-types.ts`) **παράγεται** από
  * εδώ με `Pick`, αντί να απαριθμεί τα ίδια πεδία τρίτη φορά.

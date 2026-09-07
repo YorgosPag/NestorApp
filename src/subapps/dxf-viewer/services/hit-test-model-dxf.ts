@@ -14,8 +14,11 @@
  */
 
 import type { EntityModel } from '../rendering/types/Types';
-import type { DxfDimension } from '../canvas-v2/dxf-canvas/dxf-types';
+import type { DxfDimension, DxfText } from '../canvas-v2/dxf-canvas/dxf-types';
 import type { HitTestModelHandler } from './hit-test-model-types';
+import { pickTableRenderFields } from '../bim/table/table-render-fields';
+import { pickTextRenderFields } from '../bim/text/text-render-fields';
+import type { TableEntity } from '../types/table-entity';
 
 /**
  * Flat-params converter: `{ ...base, type, <fields> }`. Πεδία με τιμή `undefined`
@@ -71,9 +74,18 @@ export const HIT_TEST_MODEL_DXF_HANDLERS = {
   // (`textStyle` justification / `widthFactor` X-scale / `width` MTEXT frame), ώστε το
   // `resolveTextBox` του hit-test να παράγει ΤΟ ΙΔΙΟ κουτί που ζωγραφίζει το hover frame.
   // Χωρίς αυτά η ζώνη κλικ ξέφευγε από το φωτισμένο ορθογώνιο.
-  text: flatFields('text', [
-    'position', 'text', 'height', 'rotation', 'textStyle', 'widthFactor', 'width',
-  ]),
+  //
+  // 🔴 2026-09-07 — **ΚΑΙ ΕΔΩ ΗΤΑΝ ΧΕΙΡΟΓΡΑΦΗ ΛΙΣΤΑ, ΜΕ ΤΟ ΙΔΙΟ ΑΠΟΤΕΛΕΣΜΑ** (βρέθηκε ψάχνοντας
+  // την κλάση του πίνακα): έλειπαν `textNode` + `lineSpacing`. Το `textNode` είναι το **canonical**
+  // AST — το ύψος ζει στο **run** (ADR-737 §18) και τα flat πεδία είναι μπαγιάτικα — οπότε το
+  // ευρετήριο έπαιρνε το ΜΙΚΡΟ κουτί: μετρημένο **30×25 → 3×2,5** (10×) για run ύψους 25 πάνω σε
+  // flat `height: 2.5`. Η ζώνη κλικ ενός πολυ-run MTEXT ήταν κλάσμα του ορατού κειμένου.
+  // Ζητά πλέον το SSoT (`TEXT_RENDER_FIELDS`), όπως ο πίνακας — καμία τοπική λίστα.
+  text: (entity, base): EntityModel => ({
+    ...base,
+    type: 'text',
+    ...pickTextRenderFields(entity as unknown as Partial<DxfText>),
+  }) as unknown as EntityModel,
   'angle-measurement': flatFields('angle-measurement', ['vertex', 'point1', 'point2', 'angle']),
   dimension: dimensionHandler,
   // ADR-359 Phase 11 — τα xline/ray είναι WRAPPED· χωρίς unwrap δεν φτάνουν basePoint/
@@ -98,11 +110,23 @@ export const HIT_TEST_MODEL_DXF_HANDLERS = {
   'opening-info-tag': flatFields('opening-info-tag', [
     'position', 'angleRad', 'widthMm', 'topText', 'bottomLeftText', 'bottomRightText',
   ]),
-  // ADR-739 Φ.Γ — γενικός πίνακας. Το `model` (στήλες/γραμμές/αραιά κελιά/συγχωνεύσεις)
-  // ΚΑΙ το `styleId` πρέπει να επιβιώσουν της μετατροπής: η διάταξη — άρα και το bbox και
-  // το hit-test — παράγεται από αυτά. Χωρίς το seam ο πίνακας βγαίνει σιωπηλά εκτός
-  // spatial index (μηδέν hover/κλικ), ο ίδιος Φ10 μηχανισμός με την εικόνα.
-  table: flatFields('table', ['position', 'angleRad', 'styleId', 'model', 'binding', 'breaking']),
+  // ADR-739 Φ.Γ — γενικός πίνακας. Η διάταξη — άρα και το bbox και το hit-test — παράγεται από
+  // τα **κελιά του ενεργού φύλλου**, οπότε τα φύλλα οφείλουν να επιβιώσουν της μετατροπής.
+  //
+  // 🔴 ADR-833 — **Η ΤΡΙΤΗ ΠΡΟΒΟΛΗ, ΠΟΥ ΕΜΕΙΝΕ ΠΙΣΩ.** Η γραμμή αυτή ήταν χειρόγραφη λίστα
+  // που ζητούσε ακόμη `model`/`binding` — πεδία που η Φάση 2 **έβγαλε** από την οντότητα —
+  // και δεν ζητούσε καθόλου `worksheets`. Αποτέλεσμα, μετρημένο σε πραγματικό σχέδιο: κάθε
+  // καρέ έφτανε στον `BoundsCalculator` πίνακας **χωρίς κανένα σχήμα** ⇒ `resolveWorksheets`
+  // επέστρεφε το **κενό** εφεδρικό φύλλο (+ `logger.error` σε κάθε frame) ⇒ διάταξη 0×0 ⇒ το
+  // κουτί στο χωρικό ευρετήριο ήταν **εκφυλισμένο σημείο στην άγκυρα**, όχι ο πίνακας.
+  //
+  // Γι' αυτό εδώ **δεν απαριθμούμε πεδία**: ρωτάμε το ίδιο SSoT που ρωτούν οι άλλες δύο
+  // προβολές (`pickTableRenderFields`), που λύνει επιπλέον και την **παλιά μορφή** στο σύνορο.
+  table: (entity, base): EntityModel => ({
+    ...base,
+    type: 'table',
+    ...pickTableRenderFields(entity as unknown as Partial<TableEntity>),
+  }) as unknown as EntityModel,
   // ADR-654 — standalone raster image (entourage / furniture-plan sprite). Ο τύπος που
   // έλειπε από ΟΛΟ αυτό το seam και γέννησε τη Φ10.
   image: flatFields('image', ['position', 'width', 'height', 'url', 'rotation']),

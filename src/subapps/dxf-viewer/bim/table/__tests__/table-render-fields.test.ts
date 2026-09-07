@@ -17,7 +17,19 @@
  * Αν κάποιος προσθέσει πεδίο στο {@link TABLE_RENDER_FIELDS} χωρίς να το μεταφέρουν ΟΛΕΣ οι
  * προβολές, **αυτό το αρχείο κοκκινίζει**.
  *
+ * ⚠️ **Η ΠΡΟΒΟΛΗ 3/3 ΕΛΕΓΧΕΤΑΙ ΑΛΛΟΥ, ΚΑΙ ΟΧΙ ΑΠΟ ΑΜΕΛΕΙΑ**: η τρίτη είναι το hit-test seam
+ * (`DxfTable → EntityModel` του spatial index), και η ερώτησή της δεν είναι «μεταφέρθηκαν τα
+ * πεδία;» αλλά **«βγαίνει το ίδιο κουτί;»** — χρειάζεται `BoundsCalculator` και firebase mock,
+ * που δεν έχουν θέση σε αυτό το καθαρό αρχείο. Ζει στο
+ * `services/__tests__/hit-test-model-table.test.ts`.
+ *
+ * 🔴 Μέχρι τις 2026-09-07 αυτό το αρχείο μετρούσε **δύο** προβολές — και η τρίτη είχε μείνει
+ * στην προ-Φάσης-2 μορφή (ζητούσε `model`, όχι `worksheets`) για μια ολόκληρη φάση, ρίχνοντας
+ * κάθε πίνακα εκτός σωστού spatial index. **Μια απαρίθμηση που δεν είναι πλήρης δεν είναι
+ * συμβόλαιο.**
+ *
  * @see bim/table/table-render-fields.ts
+ * @see services/__tests__/hit-test-model-table.test.ts — η προβολή 3/3 (hit-test seam)
  * @see bim/image/__tests__/image-render-fields.test.ts — ο αδελφός contract test (ADR-736 §5.3)
  */
 
@@ -98,13 +110,13 @@ describe('🔴 ΚΑΜΙΑ προβολή δεν ρίχνει πεδίο του �
   const base = { id: FULL_TABLE.id, layerId: 'L', visible: true };
   const dxf = TO_DXF_HANDLERS.table!(FULL_TABLE, base as never) as unknown as Record<string, unknown>;
 
-  it('προβολή 1/2 — scene TableEntity → DxfTable', () => {
+  it('προβολή 1/3 — scene TableEntity → DxfTable', () => {
     expect(dxf).not.toBeNull();
     const dropped = TABLE_RENDER_FIELDS.filter((f) => dxf[f] === undefined);
     expect(dropped).toEqual([]);
   });
 
-  it('προβολή 2/2 — DxfTable → render EntityModel', () => {
+  it('προβολή 2/3 — DxfTable → render EntityModel', () => {
     const model = buildEntityModelFromDxf(
       dxf as unknown as DxfEntityUnion, false,
       { colorHex: '#fff', lineWidthPx: 1, alpha: 1 },
