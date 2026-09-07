@@ -48,7 +48,7 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { SHOWCASE_NS } from '@/components/mandate/agency-showcase-labels';
-import { frameOf } from '@/lib/agency/showcase-mark-frame';
+import { frameOf } from '@/components/mandate/showcase-mark-frame';
 import { listingImageSrcSet } from '@/lib/listings/listing-images';
 import type { ShowcaseLettermark } from '@/lib/agency/showcase-mark';
 import type { DeclaredShowcaseMark } from '@/types/agency-profile';

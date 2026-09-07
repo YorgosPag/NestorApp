@@ -2,7 +2,7 @@
 
 /**
  * @fileoverview **Η ΠΡΟΕΠΙΣΚΟΠΗΣΗ ΣΤΟ ΤΕΛΙΚΟ ΣΧΗΜΑ** (ADR-841 §7 Α21, Φάση 2).
- * @related lib/agency/showcase-mark-frame · components/mandate/ShowcaseMarkView
+ * @related components/mandate/showcase-mark-frame · components/mandate/ShowcaseMarkView
  * @module components/mandate/ShowcaseMarkPreview
  *
  * ════════════════════════════════════════════════════════════════════════════
@@ -31,7 +31,7 @@
 import React from 'react';
 
 import { cn } from '@/lib/utils';
-import { frameOf } from '@/lib/agency/showcase-mark-frame';
+import { frameOf } from '@/components/mandate/showcase-mark-frame';
 import type { ShowcaseMarkKind } from '@/lib/agency/showcase-mark-kind';
 
 interface ShowcaseMarkPreviewProps {

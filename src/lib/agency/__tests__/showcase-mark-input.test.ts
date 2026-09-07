@@ -1,6 +1,6 @@
 /**
  * @fileoverview **ΟΙ ΑΓΚΥΡΕΣ ΤΟΥ ΚΡΙΤΗ ΕΙΣΟΔΟΥ ΚΑΙ ΤΟΥ ΠΛΑΙΣΙΟΥ** (ADR-841 §7 Α21, Φάση 2).
- * @related lib/agency/showcase-mark-input · lib/agency/showcase-mark-frame
+ * @related lib/agency/showcase-mark-input · components/mandate/showcase-mark-frame
  * @module lib/agency/__tests__/showcase-mark-input
  *
  * ────────────────────────────────────────────────────────────────────────────
@@ -31,7 +31,7 @@ import {
   SHOWCASE_MARK_FRAME,
   frameOf,
   maskCrops,
-} from '../showcase-mark-frame';
+} from '@/components/mandate/showcase-mark-frame';
 
 const square = (edge: number) => ({ width: edge, height: edge });
 
@@ -210,5 +210,53 @@ describe('🔴 Ε — ΟΙ ΔΥΟ ΕΠΙΦΑΝΕΙΕΣ ΠΟΥ Ο ΜΕΤΑΓΛΩ�
 
     expect(at88.outcome === 'warned' && at88.reach.coversCard).toBe(true);
     expect(at87.outcome === 'warned' && at87.reach.coversCard).toBe(false);
+  });
+});
+
+describe('🔴 Τ — Ο TAILWIND ΠΡΕΠΕΙ ΝΑ ΒΛΕΠΕΙ ΤΙΣ ΚΛΑΣΕΙΣ ΤΟΥ ΠΛΑΙΣΙΟΥ', () => {
+  /**
+   * 🔴 **ΤΟ ΒΡΗΚΕ ΖΩΝΤΑΝΟΣ ΕΛΕΓΧΟΣ ΤΗΣ ΔΙΑΜΟΡΦΩΣΗΣ, ΟΧΙ ΤΟ TEST.** Η πρώτη γραφή έβαλε
+   * το `SHOWCASE_MARK_FRAME` στο `src/lib/agency/` — φάκελο που το `content` του
+   * `tailwind.config.ts` **δεν απαριθμεί**. Δούλευε **από τύχη**: και οι τέσσερις κλάσεις
+   * παράγονταν επειδή τις χρησιμοποιούσαν εκατοντάδες *άλλα* αρχεία.
+   *
+   * ⚠️ **Η αποτυχία θα ήταν σιωπηλή ΚΑΙ ΜΕΛΛΟΝΤΙΚΗ**: τρίτο είδος με σπανιότερη κλάση
+   * *(`rounded-3xl`)* θα έδινε σήμα **χωρίς σχήμα**, χωρίς κανένα σφάλμα πουθενά.
+   *
+   * 🔑 **Η άγκυρα ρωτά τη ΔΙΑΜΟΡΦΩΣΗ, όχι μια σταθερά**: αν το `content` αλλάξει —
+   * προστεθεί ή αφαιρεθεί φάκελος — αυτό το test το μαθαίνει. Ένα καρφωμένο
+   * `expect(path).toContain('components')` θα επαλήθευε **τον εαυτό του**.
+   */
+  const CONFIG = fs.readFileSync(path.join(process.cwd(), 'tailwind.config.ts'), 'utf8');
+
+  /** Τα πρώτα τμήματα των globs του `content` — `'./src/components/**...'` → `components`. */
+  const scannedRoots = new Set(
+    [...CONFIG.matchAll(/'\.\/src\/([\w-]+)/g)].map((m) => m[1]),
+  );
+
+  it('🔴 το αρχείο του πλαισίου ζει σε φάκελο που ο σαρωτής ΑΠΑΡΙΘΜΕΙ', () => {
+    // Το `require.resolve` θα έδινε το μεταγλωττισμένο μονοπάτι· εδώ θέλουμε το **πηγαίο**.
+    const frameRoot = 'src/components/mandate/showcase-mark-frame.ts'.split('/')[1];
+
+    expect(scannedRoots.size).toBeGreaterThan(0);
+    expect([...scannedRoots]).toContain(frameRoot);
+  });
+
+  it('🔴 ΚΑΘΕ κλάση του πίνακα εμφανίζεται ΚΑΙ σε σαρωμένο αρχείο', () => {
+    // ⚠️ Το ίδιο το αρχείο του πλαισίου **είναι** σαρωμένο μετά τη μετακίνηση, οπότε η
+    //    συνθήκη ικανοποιείται από μόνη της. Η αξία της άγκυρας είναι ότι **κοκκινίζει**
+    //    αν κάποιος το ξαναμετακινήσει σε `lib/`, `types/` ή `constants/`.
+    const frameSource = fs.readFileSync(
+      path.join(process.cwd(), 'src/components/mandate/showcase-mark-frame.ts'),
+      'utf8',
+    );
+
+    for (const kind of SHOWCASE_MARK_KINDS) {
+      for (const cls of [SHOWCASE_MARK_FRAME[kind].shape, SHOWCASE_MARK_FRAME[kind].fit]) {
+        // 🔑 Η κλάση οφείλει να είναι **κυριολεκτική** στο αρχείο — ποτέ χτισμένη με
+        //    παρεμβολή, που ο σαρωτής **δεν εκτελεί ποτέ**.
+        expect(frameSource).toContain(`'${cls}'`);
+      }
+    }
   });
 });

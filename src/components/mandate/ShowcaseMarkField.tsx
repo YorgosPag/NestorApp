@@ -2,7 +2,7 @@
 
 /**
  * @fileoverview 🏆 **«ΠΟΙΟΣ ΕΙΣΑΙ;» — ΤΟ ΠΕΔΙΟ ΤΟΥ ΣΗΜΑΤΟΣ** (ADR-841 §7 Α21, Φάση 2).
- * @related hooks/mandate/useShowcaseMark · lib/agency/showcase-mark-frame ·
+ * @related hooks/mandate/useShowcaseMark · components/mandate/showcase-mark-frame ·
  *   components/mandate/AgencyShowcaseContent
  * @module components/mandate/ShowcaseMarkField
  *
@@ -59,7 +59,7 @@ import {
 } from '@/components/mandate/agency-showcase-labels';
 import { ShowcaseMarkPreview } from '@/components/mandate/ShowcaseMarkPreview';
 import { useShowcaseMark, type ShowcaseMarkState } from '@/hooks/mandate/useShowcaseMark';
-import { maskCrops } from '@/lib/agency/showcase-mark-frame';
+import { maskCrops } from '@/components/mandate/showcase-mark-frame';
 import { MARK_IDEAL_EDGE } from '@/lib/agency/showcase-mark-input';
 import {
   SHOWCASE_MARK_ALT_KEYS,

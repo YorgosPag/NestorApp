@@ -19,7 +19,7 @@ import { render, screen } from '@testing-library/react';
 import { ShowcaseMarkView } from '../ShowcaseMarkView';
 import { lettermarkOf, SHOWCASE_MARK_SLOTS } from '@/lib/agency/showcase-mark';
 import { SHOWCASE_MARK_ALT_KEYS } from '@/lib/agency/showcase-mark-kind';
-import { SHOWCASE_MARK_FRAME } from '@/lib/agency/showcase-mark-frame';
+import { SHOWCASE_MARK_FRAME } from '@/components/mandate/showcase-mark-frame';
 import type { DeclaredShowcaseMark } from '@/types/agency-profile';
 
 /**
