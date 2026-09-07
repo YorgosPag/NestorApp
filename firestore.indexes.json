@@ -15,6 +15,20 @@
       ]
     },
     {
+      "collectionGroup": "public_listings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "position.point.lat",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "position.point.lng",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "storage_orphan_candidates",
       "queryScope": "COLLECTION",
       "fields": [
