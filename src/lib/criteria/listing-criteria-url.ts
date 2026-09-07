@@ -121,7 +121,7 @@ export const CRITERION_PARAM: Record<CriterionKey, string> = {
  * (`in`/`out`) και χωρητικότητα (`guests`). Μια σύγκρουση μαζί τους θα ήταν αόρατη —
  * η μία πλευρά θα διάβαζε σκουπίδια της άλλης, **σιωπηλά**, σε κοινοποιημένο σύνδεσμο.
  */
-export const RESERVED_SEARCH_PARAMS = ['lat', 'lng', 'r', 'in', 'out', 'guests'] as const;
+export const RESERVED_SEARCH_PARAMS = ['lat', 'lng', 'r', 'box', 'in', 'out', 'guests'] as const;
 
 /** Τα δύο άκρα ενός αριθμητικού άξονα στη διεύθυνση. */
 export function rangeParams(key: RangeCriterionKey): { readonly min: string; readonly max: string } {
