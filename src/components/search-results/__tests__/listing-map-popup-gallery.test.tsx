@@ -124,6 +124,7 @@ const LISTING: PublicListing = {
   title: 'ΔΟΚΙΜΗ Α — Ενοικίαση ΜΕ ενοίκιο',
   legality: [],
   projectedAt: '2026-09-06T00:00:00.000Z',
+  listedAt: { kind: 'unknown', reason: 'predates-record' },
 };
 
 function draw(listing: PublicListing = LISTING) {

@@ -230,6 +230,7 @@ describe('Τ4 — 🔴 καμία τιμή ιδιότητας δεν γίνετ�
     title: 'Μεζονέτα',
     legality: [],
     projectedAt: '2026-09-02T00:00:00.000Z',
+    listedAt: { kind: 'unknown', reason: 'predates-record' },
   };
 
   it.each([...LISTING_ATTRIBUTE_KEYS])('«%s» δεν παράγει ποτέ `[object Object]`', (key) => {

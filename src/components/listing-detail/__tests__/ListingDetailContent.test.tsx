@@ -127,6 +127,7 @@ function listing(over: Partial<PublicListing> = {}): PublicListing {
     //    σχήμα «δύο λίστες που επιβεβαιώνουν η μία την άλλη» που η Φ3 πλήρωσε (§18.7).
     legality: legalitySignalsFor([], ['sell'], [{ propertyId: 'prop_a0000001', spaceId: null }], AT, LEGALITY_CLAIM_KINDS),
     projectedAt: AT,
+    listedAt: { kind: 'unknown', reason: 'predates-record' },
     ...over,
   };
 }
