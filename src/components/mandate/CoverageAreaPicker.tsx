@@ -40,16 +40,23 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { normalizeCoverageIds } from '@/lib/agency/coverage-match';
 import { lineageIdsOf, useAdministrativeHierarchy } from '@/hooks/useAdministrativeHierarchy';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { isNationwide, type DeclaredCoverage } from '@/types/agency-coverage';
+import { isNationwide, isRadiusCoverage, type DeclaredCoverage } from '@/types/agency-coverage';
+import type { GeoPoint } from '@/types/geo/coordinates';
 
 import { AreaCombobox } from './AreaCombobox';
+import { CoverageRadiusPicker } from './CoverageRadiusPicker';
 import { SHOWCASE_KEYS, SHOWCASE_NS } from './agency-showcase-labels';
 
 interface CoverageAreaPickerProps {
   readonly value: DeclaredCoverage | null;
   readonly onChange: (coverage: DeclaredCoverage | null) => void;
+  /** Η δημοσιευμένη έδρα, για τη συντόμευση του κέντρου — δες `CoverageRadiusPicker`. */
+  readonly home?: GeoPoint | null;
   readonly disabled?: boolean;
 }
+
+/** Οι δύο τρόποι να πει κανείς «πού δουλεύω», όταν δεν λέει «όλη η Ελλάδα». */
+type CoverageMode = 'areas' | 'radius';
 
 /** Τι απορροφήθηκε μόλις τώρα — για να το **πει** η οθόνη, όχι να συμβεί σιωπηλά. */
 /**
@@ -75,14 +82,39 @@ interface Absorption {
 export function CoverageAreaPicker({
   value,
   onChange,
+  home = null,
   disabled = false,
 }: CoverageAreaPickerProps): React.ReactElement {
   const { t } = useTranslation([SHOWCASE_NS]);
   const { isLoading, findById } = useAdministrativeHierarchy();
   const [absorption, setAbsorption] = React.useState<Absorption | null>(null);
+  /**
+   * ⚠️ **Η προτίμηση είναι τοπική· η ΔΗΛΩΣΗ αποφασίζει όταν υπάρχει.**
+   *
+   * 🔴 Ένα σκέτο `useState(αρχική τιμή από το value)` θα ήταν **ακριβώς** το σφάλμα που
+   * πληρώθηκε στον `AreaCombobox` *(§8.1)*: η δημοσιευμένη βιτρίνα φτάνει **μετά** το
+   * πρώτο render, οπότε ο επαγγελματίας που είχε δηλώσει ακτίνα θα έβλεπε ανοιχτό το
+   * **λάθος** χειριστήριο και θα νόμιζε ότι η δήλωσή του χάθηκε.
+   */
+  const [preferred, setPreferred] = React.useState<CoverageMode>('areas');
 
   const nationwide = value !== null && isNationwide(value);
-  const adminIds = value !== null && !isNationwide(value) ? value.adminIds : [];
+  const radius = value !== null && !isNationwide(value) && isRadiusCoverage(value) ? value : null;
+  const mode: CoverageMode = radius !== null ? 'radius' : preferred;
+  const adminIds =
+    value !== null && !isNationwide(value) && !isRadiusCoverage(value) ? value.adminIds : [];
+
+  /**
+   * ⚠️ **Η αλλαγή τρόπου ΣΒΗΝΕΙ την προηγούμενη δήλωση** — ίδιος κανόνας με το
+   * ξεκλείδωμα του «όλη η Ελλάδα» λίγο πιο κάτω: μια κρυμμένη δήλωση που θα
+   * «επέστρεφε» αν ο άνθρωπος άλλαζε ξανά γνώμη είναι κατάσταση που **δεν βλέπει και
+   * δεν ζήτησε**. Ξαναδηλώνει ρητά.
+   */
+  const switchMode = (next: CoverageMode): void => {
+    setAbsorption(null);
+    setPreferred(next);
+    onChange(null);
+  };
 
   const nameOf = React.useCallback(
     (adminId: string): string => findById(adminId)?.name ?? adminId,
@@ -151,6 +183,41 @@ export function CoverageAreaPicker({
           {t(SHOWCASE_KEYS.coverageNationwideHint)}
         </p>
       ) : (
+        <>
+          {/* 🔑 **Ραδιοπλήκτρα, ΟΧΙ δεύτερο checkbox**: οι δύο τρόποι είναι αμοιβαία
+              αποκλειόμενοι στον **τύπο** (κλειστή ένωση), και δύο checkbox θα
+              επέτρεπαν στην οθόνη να εκφράσει κατάσταση που τα δεδομένα δεν έχουν. */}
+          <div role="radiogroup" className="flex flex-col gap-1">
+            {(['areas', 'radius'] as const).map((option) => (
+              <label key={option} className="flex items-center gap-2 text-sm text-foreground">
+                <input
+                  type="radio"
+                  name="coverage-mode"
+                  checked={mode === option}
+                  disabled={disabled}
+                  onChange={() => switchMode(option)}
+                />
+                {t(
+                  option === 'areas'
+                    ? SHOWCASE_KEYS.coverageModeAreas
+                    : SHOWCASE_KEYS.coverageModeRadius,
+                )}
+              </label>
+            ))}
+          </div>
+        </>
+      )}
+
+      {!nationwide && mode === 'radius' && (
+        <CoverageRadiusPicker
+          value={radius}
+          home={home}
+          onChange={onChange}
+          disabled={disabled}
+        />
+      )}
+
+      {!nationwide && mode === 'areas' && (
         <>
           {adminIds.length > 0 && (
             <ul className="m-0 flex list-none flex-wrap gap-2 p-0">

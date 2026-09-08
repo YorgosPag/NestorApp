@@ -20,7 +20,8 @@ import {
   serializeShowcaseFilters,
   showcaseLocale,
 } from '../showcase-filter';
-import type { LineageResolver } from '../coverage-match';
+import type { CoverageResolvers, LineageResolver } from '../coverage-match';
+import { NO_FOOTPRINTS } from '@/types/geo/admin-footprint';
 import type { DeclaredCoverage } from '@/types/agency-coverage';
 import type { PublicShowcase, ShowcaseCredential } from '@/types/agency-profile';
 
@@ -72,6 +73,14 @@ function showcase(
  * άξονα. Κενή γενεαλογία = *«δεν ξέρω»*, και ο άξονας απλώς δεν εφαρμόζεται.
  */
 const NO_HIERARCHY: LineageResolver = () => [];
+
+/**
+ * **Καμία γεωγραφική γνώση** — ούτε ιεραρχία, ούτε αποτυπώματα *(Φάση 2)*.
+ *
+ * 🔑 Το `applyShowcaseFilters` δέχεται πλέον **αντικείμενο**: δύο παράλληλες παράμετροι
+ * θα ήταν το σχήμα όπου ο τρίτος καλών περνά τη μία και ξεχνά την άλλη.
+ */
+const NO_GEO: CoverageResolvers = { lineageOf: NO_HIERARCHY, footprintOf: NO_FOOTPRINTS };
 
 /** ⚠️ **Ήδη ταξινομημένος** — όπως τον παραδίδει το `usePublicAgencies`. */
 const ORDERED: readonly PublicShowcase[] = [
@@ -126,7 +135,7 @@ describe('ADR-841 Φ6-Β — ΚΑΝΟΝΑΣ Φ: φίλτρο ≠ κατάταξ�
     });
 
     it('χωρίς φίλτρα, ΚΑΝΕΙΣ δεν φεύγει — ούτε ο άτοπος, ούτε ο αμήτρωτος', () => {
-      expect(applyShowcaseFilters(ORDERED, EMPTY_SHOWCASE_FILTERS, NO_HIERARCHY)).toEqual(ORDERED);
+      expect(applyShowcaseFilters(ORDERED, EMPTY_SHOWCASE_FILTERS, NO_GEO)).toEqual(ORDERED);
     });
 
     it('το sentinel «all» ΔΕΝ διαρρέει στην κατάσταση — μεταφράζεται στο σύνορο', () => {
@@ -153,7 +162,7 @@ describe('ADR-841 Φ6-Β — ΚΑΝΟΝΑΣ Φ: φίλτρο ≠ κατάταξ�
       const filtered = applyShowcaseFilters(
         ORDERED,
         { occupation: PAINTER_URI, where: null },
-        NO_HIERARCHY,
+        NO_GEO,
       );
 
       const positionsInInput = filtered.map((s) => ORDERED.indexOf(s));
@@ -174,8 +183,8 @@ describe('ADR-841 Φ6-Β — ΚΑΝΟΝΑΣ Φ: φίλτρο ≠ κατάταξ�
   describe('ο άξονας της ειδικότητας', () => {
     it('το ΜΙΚΤΟ γραφείο βρίσκεται ΚΑΙ ως μεσίτης ΚΑΙ ως τεχνικό', () => {
       // 🔑 Ένα `credentials[0]` θα έκρυβε τη μισή του ταυτότητα.
-      const asBroker = applyShowcaseFilters(ORDERED, { occupation: BROKER_URI, where: null }, NO_HIERARCHY);
-      const asPainter = applyShowcaseFilters(ORDERED, { occupation: PAINTER_URI, where: null }, NO_HIERARCHY);
+      const asBroker = applyShowcaseFilters(ORDERED, { occupation: BROKER_URI, where: null }, NO_GEO);
+      const asPainter = applyShowcaseFilters(ORDERED, { occupation: PAINTER_URI, where: null }, NO_GEO);
 
       expect(asBroker.map((s) => s.companyId)).toContain('c3');
       expect(asPainter.map((s) => s.companyId)).toContain('c3');
@@ -189,7 +198,7 @@ describe('ADR-841 Φ6-Β — ΚΑΝΟΝΑΣ Φ: φίλτρο ≠ κατάταξ�
   describe('ο άξονας της περιοχής', () => {
     it('30 χλμ γύρω από τη Θεσσαλονίκη αφήνει έξω την Αθήνα', () => {
       const near = { center: THESSALONIKI, radiusKm: 30 };
-      const ids = applyShowcaseFilters(ORDERED, { occupation: null, where: { circle: near } }, NO_HIERARCHY).map(
+      const ids = applyShowcaseFilters(ORDERED, { occupation: null, where: { circle: near } }, NO_GEO).map(
         (s) => s.companyId,
       );
 
@@ -204,7 +213,7 @@ describe('ADR-841 Φ6-Β — ΚΑΝΟΝΑΣ Φ: φίλτρο ≠ κατάταξ�
      */
     it('βιτρίνα χωρίς δηλωμένο τόπο ΔΕΝ εμφανίζεται σε αναζήτηση περιοχής', () => {
       const near = { center: THESSALONIKI, radiusKm: 30 };
-      const ids = applyShowcaseFilters(ORDERED, { occupation: null, where: { circle: near } }, NO_HIERARCHY).map(
+      const ids = applyShowcaseFilters(ORDERED, { occupation: null, where: { circle: near } }, NO_GEO).map(
         (s) => s.companyId,
       );
       expect(ids).not.toContain('c5');
@@ -212,7 +221,7 @@ describe('ADR-841 Φ6-Β — ΚΑΝΟΝΑΣ Φ: φίλτρο ≠ κατάταξ�
 
     it('χωρίς φίλτρο περιοχής, η ίδια βιτρίνα ΕΜΦΑΝΙΖΕΤΑΙ κανονικά', () => {
       // 🔑 Ο παρονομαστής: η απουσία τόπου δεν είναι αποκλεισμός από τον κατάλογο.
-      expect(applyShowcaseFilters(ORDERED, EMPTY_SHOWCASE_FILTERS, NO_HIERARCHY).map((s) => s.companyId))
+      expect(applyShowcaseFilters(ORDERED, EMPTY_SHOWCASE_FILTERS, NO_GEO).map((s) => s.companyId))
         .toContain('c5');
     });
   });
@@ -249,7 +258,7 @@ describe('ADR-841 Φ6-Β — ΚΑΝΟΝΑΣ Φ: φίλτρο ≠ κατάταξ�
         const matches = applyShowcaseFilters(
           ORDERED,
           { occupation: option.escoUri, where: null },
-          NO_HIERARCHY,
+          NO_GEO,
         );
         expect(matches.length).toBeGreaterThan(0);
       }
@@ -335,6 +344,8 @@ describe('ADR-846 — η δηλωμένη εμβέλεια ως τρίτη πη�
     [CENTRAL_MACEDONIA]: [CENTRAL_MACEDONIA],
   };
   const lineageOf: LineageResolver = (id) => LINEAGE[id] ?? [];
+  /** Ιεραρχία **ναι**, αποτυπώματα **όχι** — ακριβώς η σημερινή κατάσταση της παραγωγής. */
+  const GEO: CoverageResolvers = { lineageOf, footprintOf: NO_FOOTPRINTS };
 
   function covering(companyId: string, coverage: DeclaredCoverage | null): PublicShowcase {
     return { ...showcase(companyId, companyId, [PAINTER]), coverage };
@@ -348,7 +359,7 @@ describe('ADR-846 — η δηλωμένη εμβέλεια ως τρίτη πη�
   ];
 
   const found = (adminId: string): readonly string[] =>
-    applyShowcaseFilters(POPULATION, { occupation: null, where: { adminId } }, lineageOf).map(
+    applyShowcaseFilters(POPULATION, { occupation: null, where: { adminId } }, GEO).map(
       (s) => s.companyId,
     );
 
@@ -387,20 +398,55 @@ describe('ADR-846 — η δηλωμένη εμβέλεια ως τρίτη πη�
     const ids = applyShowcaseFilters(
       homeless,
       { occupation: null, where: { adminId: KASSANDRA } },
-      lineageOf,
+      GEO,
     ).map((s) => s.companyId);
     expect(ids).toEqual(['c-chalkidiki', 'c-nationwide']);
   });
 
-  it('ο κύκλος κοιτά την ΕΔΡΑ, όχι τη δήλωση — δύο ερωτήσεις, δύο δεδομένα', () => {
-    // Όλοι έχουν έδρα Θεσσαλονίκη (προεπιλογή του fixture) ⇒ ο κύκλος τους κρατά
-    // όλους, ανεξάρτητα από το τι δήλωσαν ως εμβέλεια.
+  // ===========================================================================
+  // 🔴 ΦΑΣΗ 2 — Ο ΚΥΚΛΟΣ ΣΤΑΜΑΤΑ ΝΑ ΚΟΙΤΑ ΤΗΝ ΕΔΡΑ ΟΤΑΝ ΥΠΑΡΧΕΙ ΔΗΛΩΣΗ
+  //
+  // ⚠️ **Αυτός ο έλεγχος έλεγε το ΑΝΤΙΘΕΤΟ μέχρι σήμερα**, και το έλεγε σωστά για τη
+  //    Φάση 1: *«ο κύκλος κοιτά την ΕΔΡΑ, όχι τη δήλωση»*. Ήταν η μισή εφαρμογή του
+  //    ADR-846 — ο επισκέπτης που ρωτά «20 χλμ γύρω μου» *(η **προεπιλεγμένη**
+  //    ερώτηση)* εξακολουθούσε να βρίσκει με βάση το πού **κάθεται** ο επαγγελματίας.
+  //    Δηλαδή το ελάττωμα που το ADR ονόμασε επιβίωνε **ακέραιο** στον έναν από τους
+  //    δύο άξονες.
+  // ===========================================================================
+
+  it('🔴 δηλωμένη εμβέλεια ΝΙΚΑ την έδρα: ο Αθηναίος που δηλώνει Χαλκιδική ΔΕΝ κόβεται', () => {
+    // Έδρα στην Αθήνα, δήλωση «Χαλκιδική», ερώτημα «30 χλμ γύρω από τη Θεσσαλονίκη».
+    // Χωρίς αποτυπώματα η σχέση είναι `unknown` ⇒ **δεν κόβουμε** — και η κάρτα το λέει.
+    const athenian = { ...covering('c-athens', { adminIds: [CHALKIDIKI] }), position: ATHENS };
     const ids = applyShowcaseFilters(
-      POPULATION,
+      [athenian],
       { occupation: null, where: { circle: { center: THESSALONIKI, radiusKm: 30 } } },
-      lineageOf,
+      GEO,
     ).map((s) => s.companyId);
-    expect(ids).toHaveLength(POPULATION.length);
+    expect(ids).toEqual(['c-athens']);
+  });
+
+  it('«όλη η Ελλάδα» ταιριάζει σε ΚΥΚΛΙΚΟ ερώτημα ανεξάρτητα από την έδρα', () => {
+    const athenian = { ...covering('c-nation-athens', { nationwide: true }), position: ATHENS };
+    const ids = applyShowcaseFilters(
+      [athenian],
+      { occupation: null, where: { circle: { center: THESSALONIKI, radiusKm: 30 } } },
+      GEO,
+    ).map((s) => s.companyId);
+    expect(ids).toEqual(['c-nation-athens']);
+  });
+
+  it('ΠΑΡΟΝΟΜΑΣΤΗΣ — χωρίς δήλωση, ο κύκλος εξακολουθεί να κρίνει την ΕΔΡΑ', () => {
+    // 🔑 Η Φάση 2 **δεν εξαφανίζει** κανέναν υπάρχοντα: όποιος δεν δήλωσε εμβέλεια
+    //    κρίνεται όπως πριν. Χωρίς αυτόν τον έλεγχο, ένα «δείχνε τους πάντα» θα
+    //    περνούσε τους δύο από πάνω θριαμβευτικά.
+    const silentAthenian = { ...covering('c-silent-athens', null), position: ATHENS };
+    const ids = applyShowcaseFilters(
+      [silentAthenian],
+      { occupation: null, where: { circle: { center: THESSALONIKI, radiusKm: 30 } } },
+      GEO,
+    ).map((s) => s.companyId);
+    expect(ids).toEqual([]);
   });
 });
 

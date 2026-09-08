@@ -67,7 +67,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "1d13156d2cf8867b3371e39434fe8b32406c40a46611c7a949c88ef78091057c",
+  "inputsSha256": "44cf4deed2e530afef645e353d7fae8ac9ab3feb1c74b06349bf19aef1225cb8",
   "languages": [
     "el"
   ],
@@ -1145,6 +1145,8 @@
             "detail.media.floorplanProvenance.measured",
             "detail.media.galleryAlt.agency",
             "detail.media.galleryAlt.ownerDeclared",
+            "detail.media.modelAlt.agency",
+            "detail.media.modelAlt.ownerDeclared",
             "detail.media.sourceNote.agency",
             "detail.media.sourceNote.ownerDeclared",
             "detail.media.title",
@@ -4351,7 +4353,7 @@
     "src/lib/legality/legality-signal.ts": "14338e333b022ec6e3b0dd36791ecb5b97a4f4cc48e91a3ea2f1696c4952d6e2",
     "src/lib/legality/legality-tier.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/listings/listing-attribute-declared.ts": "79260f77f4f9323dc6a0659da1b9d00d69a96be0f02aac62076039bbfb2c2533",
-    "src/lib/listings/listing-authorship.ts": "a824afe822c364449ea11ca0a1f8a82b43542617a1bfe74ebb4373a676845ece",
+    "src/lib/listings/listing-authorship.ts": "6390182d7007057b907d79db2f63177a996866dcc584bbe13f048638ab1c1616",
     "src/lib/listings/listing-coverage.ts": "8ae31dddc3a6e82a41a8105cbb9af5c98ef9932df25bdee0f504e434a13eb172",
     "src/lib/listings/listing-disclosure.ts": "36c57a9d093bcb83c050260213c165363316e7f55d0458ff05b92c90ea6f2fb1",
     "src/lib/listings/listing-filters.ts": "fcaa541f2706654e8c00ec0aa907b1c93591080d55b39f68e1b440dad8df776e",

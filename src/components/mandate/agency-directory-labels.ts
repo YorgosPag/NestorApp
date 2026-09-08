@@ -68,9 +68,20 @@ export const DIRECTORY_KEYS = {
    *  επισκέπτη ότι απαντήθηκε ερώτηση που **δεν έκανε**. */
   coverageWithin: `${D}.coverageWithin`,
   coverageIntersects: `${D}.coverageIntersects`,
+  /**
+   * **Η ΤΕΤΑΡΤΗ ΑΠΑΝΤΗΣΗ** *(ADR-846 Φάση 2)* — «δεν ξέρω», και λέγεται.
+   *
+   * Εμφανίζεται στα **μεικτά** ζεύγη *(δήλωση ακτίνας εναντίον διοικητικού
+   * ερωτήματος, και αντίστροφα)* όσο λείπουν τα παράγωγα αποτυπώματα. ⛔ **ΠΟΤΕ**
+   * μη το αντικαταστήσεις με το `coverageIntersects` «για να μη φαίνεται κενό»:
+   * θα ήταν ισχυρισμός μερικής κάλυψης που **κανείς δεν έκανε**.
+   */
+  coverageUnknown: `${D}.coverageUnknown`,
   coverageDeclaredNationwide: `${D}.coverageDeclaredNationwide`,
   /** Το `{areas}` έρχεται **ονοματισμένο** από την ιεραρχία — ποτέ ωμά ids. */
   coverageDeclared: `${D}.coverageDeclared`,
+  /** **Η ακτίνα με λέξεις** — δες `types/agency-coverage.ts`, σκέλος 2 του σκεπτικού. */
+  coverageDeclaredRadius: `${D}.coverageDeclaredRadius`,
   gemi: `${D}.gemi`,
   open: `${D}.open`,
 } as const;
@@ -137,6 +148,15 @@ export const PROFILE_KEYS = {
   coverageLabel: `${P}.coverageLabel`,
   coverageUnknown: `${P}.coverageUnknown`,
   coverageNationwide: `${P}.coverageNationwide`,
+  /**
+   * **Η ακτίνα, με λέξεις, ΣΤΗ ΒΙΤΡΙΝΑ** *(ADR-846 Φ2)*.
+   *
+   * ⚠️ **Χωριστό από το `DIRECTORY_KEYS.coverageDeclaredRadius`**, όπως χωριστά είναι
+   * ήδη τα `coverageNationwide` των δύο οθονών: ο **κατάλογος** γράφει «Δηλώνει: …»
+   * *(πρόταση μέσα σε κάρτα)*, η **βιτρίνα** γράφει την τιμή ενός `Fact` με δικό του
+   * label. Ένα κοινό κλειδί θα ανάγκαζε τη μία από τις δύο να διαβάζεται στραβά.
+   */
+  coverageRadius: `${P}.coverageRadius`,
   publishedAt: `${P}.publishedAt`,
   requestCta: `${P}.requestCta`,
   requestHint: `${P}.requestHint`,

@@ -52,6 +52,7 @@ import type {
 } from '@/types/agency-profile';
 import type { ListingImage, ListingImageSource } from '@/types/public-listing';
 import { isShowcaseMarkKind } from '@/lib/agency/showcase-mark-kind';
+import { asCoverageRadiusKm, type RadiusCoverage } from '@/types/agency-coverage';
 import type { ProfessionalAttestation } from '@/types/professional-identity';
 import { isRegistryAuthority, isChapteredRegistry } from '@/constants/professional-registries';
 
@@ -346,10 +347,53 @@ function readCoverage(raw: unknown): PublicShowcase['coverage'] {
 
   if (source.nationwide === true) return { nationwide: true };
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 🔴 ΤΟ ΣΚΕΛΟΣ ΤΗΣ ΑΚΤΙΝΑΣ — ΚΑΙ Η ΑΠΟΥΣΙΑ ΤΟΥ ΗΤΑΝ ΑΚΡΙΒΩΣ Η ΒΛΑΒΗ ΠΟΥ
+  //    ΠΕΡΙΓΡΑΦΕΙ Η ΕΠΙΚΕΦΑΛΙΔΑ ΤΟΥ `toStoredShowcase`, ΛΙΓΕΣ ΓΡΑΜΜΕΣ ΠΙΟ ΚΑΤΩ
+  //
+  // *«μια αλλαγή στον έναν και όχι στον άλλο θα έγραφε σχήμα που ο αναγνώστης
+  //   απορρίπτει — δηλαδή **βιτρίνα που εξαφανίζεται τη στιγμή που δημοσιεύεται**,
+  //   με πράσινο τον γραφέα»*.
+  //
+  // ⚠️ **Μετρημένο ζωντανά (2026-09-08)**: ο γραφέας δέχτηκε τον κύκλο, το Firestore
+  //    τον αποθήκευσε, και η βιτρίνα εμφάνισε **«Περιοχή δραστηριότητας: Δεν
+  //    δηλώθηκε»** — η δήλωση του ανθρώπου έσβησε στο **τελευταίο** βήμα, χωρίς
+  //    κανένα σφάλμα πουθενά. Καμία πύλη δεν το είδε· το είδε η οθόνη.
+  // ═══════════════════════════════════════════════════════════════════════════
+  const circle = readCoverageCircle(source.circle);
+  if (circle !== null) return { circle };
+
   const { adminIds } = source;
   if (!Array.isArray(adminIds)) return null;
   const ids = adminIds.filter((id): id is string => typeof id === 'string' && id !== '');
   return ids.length === 0 ? null : { adminIds: ids };
+}
+
+/**
+ * **Ο κύκλος από τον δίσκο** — και **ΕΔΩ** επαληθεύεται το βήμα, σε αντίθεση με τα
+ * `adminIds`.
+ *
+ * 🔑 **Η ασυμμετρία είναι απόφαση, όχι αβλεψία.** Τα `adminIds` δεν ελέγχονται εδώ γιατί
+ * ο έλεγχός τους απαιτεί την ιεραρχία των 4 MB *(βλ. επικεφαλίδα)* και η αποτυχία τους
+ * είναι **ακίνδυνη**: ανύπαρκτη ταυτότητα δεν ταιριάζει με κανένα ερώτημα. Η ακτίνα
+ * είναι το **αντίθετο**: ο έλεγχος κοστίζει **τέσσερις συγκρίσεις**, και η αποτυχία του
+ * είναι **επικίνδυνη** — ένα χειρόγραφο `radiusKm: 500` στη βάση θα ανάσταινε ακριβώς
+ * την απαγόρευση #6 *(«dial χωρίς ταβάνι»)*, παρακάμπτοντας και τον τύπο και τον γραφέα.
+ *
+ * ⚠️ **Ο τύπος δεν επιβιώνει ενός `JSON.parse`** — γι' αυτό το κλειστό σύνολο
+ * επιβάλλεται **και εδώ**, από την ίδια συνάρτηση που το επιβάλλει στον γραφέα.
+ */
+function readCoverageCircle(raw: unknown): RadiusCoverage['circle'] | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const source = raw as Record<string, unknown>;
+
+  const center = readPosition(source.center);
+  if (center === null) return null;
+
+  const radiusKm = typeof source.radiusKm === 'number' ? asCoverageRadiusKm(source.radiusKm) : null;
+  if (radiusKm === null) return null;
+
+  return { center, radiusKm };
 }
 
 // =============================================================================

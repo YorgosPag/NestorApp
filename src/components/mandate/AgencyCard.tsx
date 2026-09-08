@@ -55,8 +55,9 @@ import { agencyProfileRoute } from './agency-directory-route';
 import { lettermarkOf } from '@/lib/agency/showcase-mark';
 import { ShowcaseMarkView } from './ShowcaseMarkView';
 import { lineageIdsOf, useAdministrativeHierarchy } from '@/hooks/useAdministrativeHierarchy';
-import { coverageRelation } from '@/lib/agency/coverage-match';
-import { isNationwide } from '@/types/agency-coverage';
+import { coverageRelation, type CoverageRelation } from '@/lib/agency/coverage-match';
+import { isNationwide, isRadiusCoverage, type ShowcaseWhere } from '@/types/agency-coverage';
+import { NO_FOOTPRINTS } from '@/types/geo/admin-footprint';
 
 interface AgencyCardProps {
   readonly profile: PublicShowcase;
@@ -84,14 +85,20 @@ interface AgencyCardProps {
    *
    * ⛔ **ΔΕΝ επηρεάζει ποτέ τη σειρά** — μόνο μια γραμμή κειμένου. Δες τον φρουρό στο
    * `agency-directory-order.ts`.
+   *
+   * ⚠️ **ΗΤΑΝ `queryAreaId: string` μέχρι τη Φάση 2.** Έγινε ολόκληρο το ερώτημα, γιατί
+   * η σχέση υπάρχει πλέον **και για κυκλικό ερώτημα**: ένα σκέτο id θα σήμαινε ότι ο
+   * επισκέπτης που ρωτά «20 χλμ γύρω μου» **δεν μαθαίνει ποτέ** αν τον καλύπτουν
+   * ολόκληρο ή εν μέρει — δηλαδή η τρίτη απάντηση θα υπήρχε στον κριτή και θα ήταν
+   * **αόρατη** στη μισή οθόνη.
    */
-  readonly queryAreaId?: string | null;
+  readonly where?: ShowcaseWhere | null;
 }
 
 export function AgencyCard({
   profile,
   headingLevel = 2,
-  queryAreaId = null,
+  where = null,
 }: AgencyCardProps): React.JSX.Element {
   const { t } = useTranslation([AGENCY_PUBLIC_NS]);
   const Heading = (headingLevel === 3 ? 'h3' : 'h2') as 'h2' | 'h3';
@@ -163,7 +170,7 @@ export function AgencyCard({
             ⛔ **Καμία ετικέτα σχέσης εδώ** *(«καλύπτει όλη την περιοχή»)*: αυτή έχει
             νόημα **μόνο** όταν υπάρχει ερώτημα, και η κάρτα εμφανίζεται και χωρίς.
           */}
-          <CoverageLine coverage={profile.coverage} queryAreaId={queryAreaId} />
+          <CoverageLine coverage={profile.coverage} where={where} />
           <Link
             href={agencyProfileRoute(profile.alias)}
             className="mt-2 self-start text-sm font-medium text-foreground underline underline-offset-4"
@@ -175,6 +182,24 @@ export function AgencyCard({
     </li>
   );
 }
+
+/**
+ * **Σχέση → κλειδί, ΕΞΑΝΤΛΗΤΙΚΑ.**
+ *
+ * 🔑 `Record<CoverageRelation, …>` σημαίνει ότι μια **πέμπτη** τιμή δεν θα
+ * μεταγλωττιστεί μέχρι κάποιος να πει **τι γράφει η οθόνη** γι' αυτήν. Το προηγούμενο
+ * `relation === 'within' ? … : …` ήταν **δυαδικό**: το `'unknown'` της Φάσης 2 θα
+ * εμφανιζόταν σιωπηλά ως *«καλύπτει μέρος»* — δηλαδή ισχυρισμός που κανείς δεν έκανε.
+ *
+ * ⚠️ Το `'disjoint'` δηλώνεται αλλά **δεν αποδίδεται ποτέ** — ο καλών επιστρέφει `null`
+ * πριν φτάσει εδώ. Δηλώνεται ώστε ο πίνακας να μένει **ολικός**.
+ */
+const COVERAGE_RELATION_KEYS: Record<CoverageRelation, string> = {
+  within: DIRECTORY_KEYS.coverageWithin,
+  intersects: DIRECTORY_KEYS.coverageIntersects,
+  unknown: DIRECTORY_KEYS.coverageUnknown,
+  disjoint: DIRECTORY_KEYS.coverageWithin,
+};
 
 /**
  * **Η δηλωμένη εμβέλεια, με λέξεις** *(ADR-846)*.
@@ -189,10 +214,10 @@ export function AgencyCard({
  */
 function CoverageLine({
   coverage,
-  queryAreaId,
+  where,
 }: {
   readonly coverage: PublicShowcase['coverage'];
-  readonly queryAreaId: string | null;
+  readonly where: ShowcaseWhere | null;
 }): React.ReactElement | null {
   const { t } = useTranslation([AGENCY_PUBLIC_NS]);
   const { findById } = useAdministrativeHierarchy();
@@ -205,12 +230,20 @@ function CoverageLine({
   //
   // ⛔ **ΦΙΛΤΡΟ ΚΑΙ ΠΕΡΙΓΡΑΦΗ, ΠΟΤΕ ΣΕΙΡΑ**: το `within` ΔΕΝ ανεβάζει κανέναν πάνω από
   //    το `intersects` — θα ήταν κατάταξη παραγόμενη από δήλωση του ίδιου.
-  if (queryAreaId !== null && queryAreaId !== '') {
-    const relation = coverageRelation(coverage, queryAreaId, lineageIdsOf);
+  if (where !== null) {
+    // ⚠️ **`NO_FOOTPRINTS` είναι ΔΗΛΩΣΗ ΑΓΝΟΙΑΣ, όχι παράλειψη** *(Φάση 2)*: το παράγωγο
+    //    αρχείο αποτυπωμάτων δεν έχει παραχθεί ακόμη *(η πηγή CC-BY δεν απαντούσε)*,
+    //    οπότε τα δύο **μεικτά** κελιά απαντούν `unknown` — και η οθόνη το **λέει**.
+    //    Όταν το αρχείο υπάρξει, ένα `grep NO_FOOTPRINTS` βρίσκει κάθε σημείο που
+    //    χρειάζεται σύνδεση. Καμία σιωπηλή λάθος ετικέτα στο μεταξύ.
+    const relation = coverageRelation(coverage, where, {
+      lineageOf: lineageIdsOf,
+      footprintOf: NO_FOOTPRINTS,
+    });
     if (relation !== 'disjoint') {
       return (
         <p className="m-0 text-sm text-muted-foreground">
-          {t(relation === 'within' ? DIRECTORY_KEYS.coverageWithin : DIRECTORY_KEYS.coverageIntersects)}
+          {t(COVERAGE_RELATION_KEYS[relation])}
         </p>
       );
     }
@@ -220,6 +253,17 @@ function CoverageLine({
     return (
       <p className="m-0 text-sm text-muted-foreground">
         {t(DIRECTORY_KEYS.coverageDeclaredNationwide)}
+      </p>
+    );
+  }
+
+  // 🏆 **Η ΑΚΤΙΝΑ ΓΡΑΦΕΤΑΙ ΜΕ ΛΕΞΕΙΣ — ΚΑΙ ΕΙΝΑΙ ΤΟ ΜΙΣΟ ΤΟΥ ΕΠΙΧΕΙΡΗΜΑΤΟΣ** που
+  //    επέτρεψε το σκέλος (δες `types/agency-coverage.ts`). Η ένσταση της #6 δεν ήταν
+  //    «μεγάλο νούμερο» — ήταν *«οπτικά αόρατο»*. Αόρατο παύει να είναι μόνο εδώ.
+  if (isRadiusCoverage(coverage)) {
+    return (
+      <p className="m-0 text-sm text-muted-foreground">
+        {t(DIRECTORY_KEYS.coverageDeclaredRadius, { km: coverage.circle.radiusKm })}
       </p>
     );
   }

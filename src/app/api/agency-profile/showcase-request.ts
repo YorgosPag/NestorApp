@@ -41,7 +41,12 @@ import {
   verifyPlaceRef,
 } from '@/services/places/public-place-read.service';
 import type { AgencyProfileRejection } from '@/services/mandate/agency-profile-verdict';
-import { isNationwide, type DeclaredCoverage } from '@/types/agency-coverage';
+import {
+  asCoverageRadiusKm,
+  isNationwide,
+  isRadiusCoverage,
+  type DeclaredCoverage,
+} from '@/types/agency-coverage';
 import type { ClassifiedOccupation, PublicShowcase } from '@/types/agency-profile';
 import type { GeoPoint } from '@/types/geo/coordinates';
 import type { PlaceRef } from '@/types/geo/public-place';
@@ -109,6 +114,22 @@ export const publishSchema: z.ZodType<ShowcaseWireDeclaration> = z.object({
     .union([
       z.object({ nationwide: z.literal(true) }),
       z.object({ adminIds: z.array(z.string().max(64)).max(200) }),
+      /**
+       * **Το σκέλος της ακτίνας** *(ADR-846 Φάση 2)* — **μορφή** εδώ, **κρίση** στον
+       * {@link resolveCoverage}.
+       *
+       * ⚠️ **Κανένα `enum` στο `radiusKm` εδώ, επίτηδες.** Ένα `z.union([z.literal(10),…])`
+       * θα απαντούσε *«κακό σώμα»* — δηλαδή ο άνθρωπος θα έβλεπε `MALFORMED_BODY` αντί
+       * για ονομαστικό λόγο, ακριβώς η αστοχία που το σχόλιο των `min(1)` παραπάνω
+       * περιγράφει. Ο κλειστός κατάλογος επιβάλλεται **ονομαστικά** παρακάτω, από τον
+       * ίδιο κριτή που ονομάζει και την άγνωστη διοικητική περιοχή.
+       */
+      z.object({
+        circle: z.object({
+          center: z.object({ lat: z.number(), lng: z.number() }),
+          radiusKm: z.number(),
+        }),
+      }),
     ])
     .nullable()
     .optional(),
@@ -146,6 +167,14 @@ export type AgencyProfileWriteResponse =
   | { readonly error: 'COVERAGE_AREA_UNKNOWN'; readonly adminId: string }
   /** 🔴 **Δεν διαβάστηκε η ιεραρχία** ⇒ **ξαναδοκίμασε** (503), ποτέ 422. */
   | { readonly error: 'COVERAGE_UNVERIFIED' }
+  /**
+   * Δηλωμένη **ακτίνα** εκτός του κλειστού καταλόγου, ή κέντρο εκτός γης ⇒ **διόρθωσε** (422).
+   *
+   * ⚠️ **Η οθόνη ΔΕΝ μπορεί να το παράγει** *(κλειστά βήματα + σημείο από τον χάρτη)* —
+   * υπάρχει ως **δεύτερη ζώνη** για ό,τι δεν ήρθε από την οθόνη μας. Ένας τύπος δεν
+   * επιβιώνει ενός `JSON.parse` *(δες `asCoverageRadiusKm`)*.
+   */
+  | { readonly error: 'COVERAGE_RADIUS_INVALID' }
   | ShowcaseDeniedResponse
   | { readonly error: 'WRITE_FAILED' };
 
@@ -277,6 +306,35 @@ export async function resolveCoverage(
   if (coverage === null || coverage === undefined) return { coverage: null };
   // 🔑 «Όλη η Ελλάδα» δεν έχει τίποτα να επαληθευτεί — δεν είναι ταυτότητα, είναι όριο.
   if (isNationwide(coverage)) return { coverage };
+
+  // ── Η ΑΚΤΙΝΑ: κλειστός κατάλογος + κέντρο πάνω στη γη ──────────────────────
+  //
+  // 🔴 **Ο κλειστός κατάλογος είναι ΟΛΟ το επιχείρημα που επέτρεψε αυτό το σκέλος**
+  //    *(δες `types/agency-coverage.ts`)*. Αν ο διακομιστής δεχόταν αυθαίρετο αριθμό,
+  //    η απαγόρευση #6 θα είχε ανασταθεί από την πίσω πόρτα — με τον τύπο να λέει
+  //    «τέσσερα βήματα» και τη βάση να κρατά «500».
+  if (isRadiusCoverage(coverage)) {
+    const { center, radiusKm } = coverage.circle;
+    const step = asCoverageRadiusKm(radiusKm);
+    const onEarth =
+      Number.isFinite(center.lat) &&
+      Number.isFinite(center.lng) &&
+      Math.abs(center.lat) <= 90 &&
+      Math.abs(center.lng) <= 180;
+
+    if (step === null || !onEarth) {
+      return {
+        rejected: NextResponse.json(
+          { error: 'COVERAGE_RADIUS_INVALID' } as const,
+          { status: 422 },
+        ),
+      };
+    }
+    // ⚠️ **Ξαναχτίζεται από τα επαληθευμένα μέρη**, δεν περνά αυτούσιο: ό,τι δεν
+    //    ελέγχθηκε δεν αποθηκεύεται *(και το `step` κουβαλά τον στενό τύπο)*.
+    return { coverage: { circle: { center: { lat: center.lat, lng: center.lng }, radiusKm: step } } };
+  }
+
   if (coverage.adminIds.length === 0) return { coverage: null };
 
   const lineageOf = await readAdministrativeLineage();

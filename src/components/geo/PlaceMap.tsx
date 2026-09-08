@@ -161,6 +161,20 @@ export interface PlaceMapProps {
   readonly busy?: boolean;
   readonly disabled?: boolean;
   readonly heightClass?: string;
+  /**
+   * **Πόσο κοντά ανοίγει** — αδελφό του {@link PlaceMapProps.center}, που λέει *«πού»*.
+   *
+   * 🔑 **Προαιρετικό, με την υπάρχουσα τιμή ως προεπιλογή**: οι τέσσερις καταναλωτές
+   * που ρωτούν *«ποιο κτίριο;»* δεν αγγίζονται. Το ζήτησε ο πέμπτος
+   * *(`CoverageRadiusPicker`, ADR-846 Φ2)*, όπου το αντικείμενο δεν είναι κτίριο αλλά
+   * **κύκλος 10-50 χλμ**: στο `BUILDING_ZOOM` ένας τέτοιος κύκλος είναι **ολόκληρος
+   * εκτός οθόνης**, δηλαδή σχήμα που ζωγραφίζεται και δεν το βλέπει κανείς.
+   *
+   * ⛔ **ΔΕΝ είναι το `focus`.** Εκείνο απαντά *«πού πήγε η κάμερα επειδή κάποιος
+   * ρώτησε»* και κουβαλά **βαθμό βεβαιότητας γεωκωδικοποιητή** — έννοια που η δήλωση
+   * εμβέλειας δεν έχει και **δεν επιτρέπεται να δανειστεί**.
+   */
+  readonly initialZoom?: number;
 }
 
 /**
@@ -269,6 +283,7 @@ export function PlaceMap({
   busy = false,
   disabled = false,
   heightClass = 'h-80',
+  initialZoom = BUILDING_ZOOM,
 }: PlaceMapProps): React.ReactElement {
   const interactive = onPick !== undefined && !disabled;
   const mapRef = useRef<MapRef | null>(null);
@@ -296,7 +311,7 @@ export function PlaceMap({
     <figure className={cn('relative overflow-hidden rounded-lg border border-border', heightClass)}>
       <Map
         ref={mapRef}
-        initialViewState={{ latitude: center.lat, longitude: center.lng, zoom: BUILDING_ZOOM }}
+        initialViewState={{ latitude: center.lat, longitude: center.lng, zoom: initialZoom }}
         style={{ width: '100%', height: '100%' }}
         mapStyle={OSM_MAP_STYLE}
         onLoad={() => setReady(true)}
