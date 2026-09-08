@@ -45,7 +45,11 @@ import React from 'react';
 
 import { OutlineDraftControls, useOutlineDraft } from '@/components/geo/outline-draft';
 import { PlaceMap } from '@/components/geo/PlaceMap';
-import { COVERAGE_MAP_HEIGHT_PX, coverageCameraFrame } from '@/lib/agency/coverage-camera';
+import {
+  COVERAGE_MAP_HEIGHT_CLASS,
+  COVERAGE_MAP_HEIGHT_PX,
+  coverageCameraFrame,
+} from '@/lib/agency/coverage-camera';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { coverageOutlineDefect } from '@/lib/agency/coverage-outline';
@@ -175,7 +179,7 @@ export function CoverageOutlinePicker({
         onPick={disabled ? undefined : draft.addVertex}
         trace={draft.vertices}
         outline={draft.outline}
-        heightClass="h-64"
+        heightClass={COVERAGE_MAP_HEIGHT_CLASS}
         initialZoom={EMPTY_MAP_ZOOM}
         fit={fit}
         disabled={disabled}

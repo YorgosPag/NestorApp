@@ -41,7 +41,11 @@ import React from 'react';
 
 import { Button } from '@/components/ui/button';
 import { PlaceMap } from '@/components/geo/PlaceMap';
-import { COVERAGE_MAP_HEIGHT_PX, coverageCameraFrame } from '@/lib/agency/coverage-camera';
+import {
+  COVERAGE_MAP_HEIGHT_CLASS,
+  COVERAGE_MAP_HEIGHT_PX,
+  coverageCameraFrame,
+} from '@/lib/agency/coverage-camera';
 import {
   Select,
   SelectContent,
@@ -163,7 +167,7 @@ export function CoverageRadiusPicker({
         onPick={disabled ? undefined : (point) => emit(point, radiusKm)}
         pin={centre}
         outline={centre === null ? null : geoCircleOutline(centre, radiusKm * 1000)}
-        heightClass="h-64"
+        heightClass={COVERAGE_MAP_HEIGHT_CLASS}
         initialZoom={mapZoomForRadiusKm(radiusKm, COVERAGE_MAP_HEIGHT_PX)}
         /* 🔑 **Το `initialZoom` ανοίγει, το `fit` ΑΚΟΛΟΥΘΕΙ** (ADR-846 Φ4). Χωρίς το
            δεύτερο, ο επαγγελματίας που αλλάζει βήμα με τον χάρτη ήδη ανοιχτό βλέπει τον

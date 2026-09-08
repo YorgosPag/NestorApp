@@ -31,7 +31,7 @@
 import React from 'react';
 
 import { PlaceMap } from '@/components/geo/PlaceMap';
-import { COVERAGE_MAP_HEIGHT_PX } from '@/lib/agency/coverage-camera';
+import { COVERAGE_MAP_HEIGHT_CLASS, COVERAGE_MAP_HEIGHT_PX } from '@/lib/agency/coverage-camera';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { ringsFootprint } from '@/lib/geo/geo-footprint';
 import { mapZoomForRadiusKm } from '@/lib/geo/geo-map-zoom';
@@ -63,7 +63,7 @@ export function CoverageOutlineMap({ outline }: CoverageOutlineMapProps): React.
 
   return (
     <figure className="m-0 flex flex-col gap-1">
-      <PlaceMap center={centre} outline={outline} heightClass="h-64" initialZoom={zoom} />
+      <PlaceMap center={centre} outline={outline} heightClass={COVERAGE_MAP_HEIGHT_CLASS} initialZoom={zoom} />
       <figcaption className="text-xs text-muted-foreground">
         {t(`${DRAW_NS}:place.attribution`)}
       </figcaption>
