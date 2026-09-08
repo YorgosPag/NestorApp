@@ -4,7 +4,7 @@
  * Pure, side-effect-free factory functions that produce the canonical
  * (persona × operation) coverage matrix for each `RulesPattern`. The
  * registry in `coverage-manifest.ts` composes these into per-collection
- * `CollectionCoverage` entries, occasionally applying `overrideCells` to
+ * `CollectionCoverage` entries, occasionally applying `overrideDefinition` to
  * express a collection's delta from the canonical shape.
  *
  * Extracted from `coverage-manifest.ts` in ADR-298 Phase B.1 (2026-04-11)
@@ -24,6 +24,14 @@
 import type { Operation, Outcome, Reason } from './operations';
 import type { Persona } from './personas';
 import type { CoverageCell } from './coverage-manifest';
+import { defineMatrix, overrideDefinition, type CoverageDefinition } from './coverage-completeness';
+import {
+  anonymousUnmeasured,
+  crossTenantAdminUnmeasured,
+  crossTenantUserUnmeasured,
+  externalUserOpenDecision,
+  sameTenantUserPerCollection,
+} from './coverage-exemptions';
 
 // ---------------------------------------------------------------------------
 // Cell constructors and delta helpers
@@ -45,28 +53,16 @@ export function cell(
     : { persona, operation, outcome, reason };
 }
 
-/**
- * Return a new matrix with specific (persona × operation) cells replaced.
- *
- * Used by collections whose rule body differs from a canonical shape by a
- * small number of cells (e.g. `messages` denies super_admin create because
- * the rule has no `isSuperAdminOnly()` leg on create). Keeping the canonical
- * shape as a base and declaring the delta explicitly makes the difference
- * auditable from the manifest alone — reviewers do not have to diff rule
- * bodies to understand which cells diverge.
- *
- * If an override key is not present in the base matrix, it is **appended**
- * rather than replaced — this is how `attendanceEventMatrix()` adds the
- * `same_tenant_user × create` cell that canonical tenant_direct omits.
- */
-export function overrideCells(
-  base: readonly CoverageCell[],
-  overrides: readonly CoverageCell[],
-): readonly CoverageCell[] {
-  const key = (c: CoverageCell): string => `${c.persona}:${c.operation}`;
-  const overrideKeys = new Set(overrides.map(key));
-  return [...base.filter((c) => !overrideKeys.has(key(c))), ...overrides];
-}
+// ⛔ ΕΔΩ ΖΟΥΣΕ Η `overrideCells` — ΑΝΤΙΚΑΤΑΣΤΑΘΗΚΕ, ΜΗΝ ΤΗΝ ΞΑΝΑΦΕΡΕΙΣ.
+//
+// Δούλευε σε **πίνακα κελιών**, οπότε μια υπέρβαση μπορούσε να αφήσει τη μήτρα
+// **μερική** χωρίς να το πει κανείς. Η διάδοχός της `overrideDefinition()`
+// (`coverage-completeness.ts`) δουλεύει σε **ορισμό** — κρατά μαζί τα κελιά ΚΑΙ
+// τις εξαιρέσεις, και όταν μια συλλογή δηλώνει ένα κελί, **αφαιρεί μόνη της** την
+// αντίστοιχη εξαίρεση. Αυτή η αυτόματη αφαίρεση είναι ο λόγος που το ratchet της
+// CHECK 3.16 · Validation G **μπορεί να πέσει** χωρίς να το θυμηθεί άνθρωπος.
+//
+// ⇒ ADR-298 §8 Α21.16.
 
 // ---------------------------------------------------------------------------
 // Canonical pattern matrices
@@ -76,8 +72,14 @@ export function overrideCells(
  * Canonical matrix for a `tenant_direct` pattern — companyId lives on the
  * document and is compared against the persona's companyId claim.
  *
- * **25 κελιά από τα 35.** Τα 10 που λείπουν ΔΕΝ λείπουν από αμέλεια — λείπουν
- * επειδή η πρόθεσή τους είναι **ανοιχτό ερώτημα**· δες το μπλοκ παρακάτω.
+ * **35/35 — 25 εκτελέσιμα κελιά + 10 δηλωμένες εξαιρέσεις.** Τα 10 δεν λείπουν:
+ * **ομολογούνται**, με λόγο, ιδιοκτήτη και ημερομηνία επανεξέτασης
+ * *(`coverage-exemptions.ts`)*. Μέχρι το ADR-298 Α21.16 **έλειπαν σιωπηλά**, και
+ * αυτή η γραμμή έγραφε «25 κελιά από τα 35» σαν να ήταν φυσιολογικό.
+ *
+ * ⚠️ **ΜΗΝ ξαναγράψεις εδώ αριθμό κελιών.** Τον επιβάλλει η `defineMatrix()`
+ * (πετάει αν δεν κάνουν 35) και τον αναφέρει η CHECK 3.16 · Validation G. Αριθμός
+ * σε σχόλιο **παλιώνει** — αυτό ακριβώς έκανε η προηγούμενη εκδοχή του, δύο φορές.
  *
  * 🔴 **ΔΙΟΡΘΩΣΗ 2026-09-08 (ADR-298 §8) — ΑΥΤΟ ΤΟ ΣΧΟΛΙΟ ΕΛΕΓΕ ΨΕΜΑΤΑ.**
  * Μέχρι σήμερα έγραφε *«external_user denied entirely (limited role scope)»*.
@@ -97,11 +99,16 @@ export function overrideCells(
  * ανάγνωσή του είναι **σκόπιμη και φέρουσα**. Κελί με λάθος πρόθεση είναι
  * χειρότερο από κελί που λείπει: **μοιάζει** επικυρωμένο.
  *
- * ### Τα 10 κελιά που λείπουν, και ΓΙΑΤΙ
- * | πρόσωπο | πράξεις | μετρημένη πραγματικότητα | γιατί δεν μπαίνει |
+ * ### Τα 10 κελιά που ΟΜΟΛΟΓΟΥΝΤΑΙ, και ΓΙΑΤΙ
+ * | πρόσωπο | πράξεις | μετρημένη πραγματικότητα | γιατί είναι εξαίρεση |
  * |---|---|---|---|
  * | `external_user` | και οι 5 | read/list/create **allow** | ανοιχτή απόφαση προϊόντος |
  * | `same_tenant_user` | create/update/delete | create **allow**, υπόλοιπα deny | αποκλίνει ανά συλλογή (δες `crmDirectMatrix`) |
+ *
+ * Και οι δύο κλείνουν **χωρίς να αγγιχτεί αυτό το αρχείο**: η πρώτη με απόφαση
+ * (μία γραμμή στο `coverage-exemptions.ts` ⇒ πέφτει σε **40** builders μαζί), η
+ * δεύτερη με `overrideDefinition()` στη συλλογή που ξέρει — και η εξαίρεση
+ * **φεύγει μόνη της**.
  *
  * ### Τι ΜΠΗΚΕ σήμερα — και γιατί δεν χρειάστηκε καμία απόφαση
  * Τα 8 κελιά `cross_tenant_user` × 5 και `anonymous` × create/update/delete.
@@ -109,8 +116,8 @@ export function overrideCells(
  * ρητά τα αδελφά τους κελιά (`cross_tenant_admin`, `anonymous` read/list) — και
  * και τα 8 **μετρήθηκαν πράσινα** και στις **20** συλλογές πριν γραφτούν (**586 tests**).
  */
-export function tenantDirectMatrix(): readonly CoverageCell[] {
-  return [
+export function tenantDirectMatrix(): CoverageDefinition {
+  return defineMatrix('tenantDirectMatrix', [
     // super_admin: allow all
     cell('super_admin', 'read', 'allow'),
     cell('super_admin', 'list', 'allow'),
@@ -143,7 +150,11 @@ export function tenantDirectMatrix(): readonly CoverageCell[] {
     cell('anonymous', 'create', 'deny', 'missing_claim'),
     cell('anonymous', 'update', 'deny', 'missing_claim'),
     cell('anonymous', 'delete', 'deny', 'missing_claim'),
-  ];
+  ], [
+    ...sameTenantUserPerCollection(['create', 'update', 'delete']),
+    ...crossTenantAdminUnmeasured(['create', 'delete']),
+    ...externalUserOpenDecision(['read', 'list', 'create', 'update', 'delete']),
+  ]);
 }
 
 /**
@@ -157,8 +168,8 @@ export function tenantDirectMatrix(): readonly CoverageCell[] {
  * L2385 enforces this — the read gate short-circuits on `isSuperAdminOnly`
  * and otherwise requires `isCompanyAdminOfCompany(resource.data.companyId)`.
  */
-export function immutableMatrix(): readonly CoverageCell[] {
-  return [
+export function immutableMatrix(): CoverageDefinition {
+  return defineMatrix('immutableMatrix', [
     // Reads: super_admin + same_tenant_admin allow, line users + cross_tenant deny
     cell('super_admin', 'read', 'allow'),
     cell('super_admin', 'list', 'allow'),
@@ -178,7 +189,13 @@ export function immutableMatrix(): readonly CoverageCell[] {
     cell('cross_tenant_admin', 'create', 'deny', 'cross_tenant'),
     cell('cross_tenant_admin', 'update', 'deny', 'immutable'),
     cell('anonymous', 'create', 'deny', 'missing_claim'),
-  ];
+  ], [
+    ...sameTenantUserPerCollection(['list', 'create', 'update', 'delete']),
+    ...crossTenantAdminUnmeasured(['delete']),
+    ...crossTenantUserUnmeasured(['read', 'list', 'create', 'update', 'delete']),
+    ...anonymousUnmeasured(['list', 'update', 'delete']),
+    ...externalUserOpenDecision(['read', 'list', 'create', 'update', 'delete']),
+  ]);
 }
 
 /**
@@ -225,7 +242,7 @@ function serverOnlyWriteCells(personas: readonly Persona[]): readonly CoverageCe
  * όλοι (§14.4 κανόνες 1-2). Ο διαχειριστής που πρέπει να γράψει, γράφει από τον
  * διακομιστή — όπου η **πηγή μπορεί να επαληθευτεί**.
  */
-export function publicWorldMatrix(): readonly CoverageCell[] {
+export function publicWorldMatrix(): CoverageDefinition {
   /**
    * **ΚΑΘΕ** persona διαβάζει. Γραμμένο ως λίστα και όχι ως δεκατρείς γραμμές
    * `cell(...)` για δύο λόγους, ο δεύτερος μετρημένος:
@@ -248,7 +265,7 @@ export function publicWorldMatrix(): readonly CoverageCell[] {
   /** Η αφιλτράριστη λίστα δοκιμάζεται σε δείγμα personas — ίδια πολιτική, μία απόφαση. */
   const LISTERS: readonly Persona[] = ['super_admin', 'same_tenant_admin', 'cross_tenant_admin', 'anonymous'];
 
-  return [
+  return defineMatrix('publicWorldMatrix', [
     ...READERS.map((persona) => cell(persona, 'read', 'allow')),
     ...LISTERS.map((persona) => cell(persona, 'list', 'allow')),
     ...serverOnlyWriteCells(['super_admin', 'same_tenant_admin', 'anonymous']),
@@ -258,7 +275,12 @@ export function publicWorldMatrix(): readonly CoverageCell[] {
       // να καλύπτονται και οι δύο κατευθύνσεις μισθωτή.
       (c) => c.operation !== 'delete',
     ),
-  ];
+  ], [
+    ...sameTenantUserPerCollection(['list', 'delete']),
+    ...crossTenantAdminUnmeasured(['delete']),
+    ...crossTenantUserUnmeasured(['list', 'create', 'update', 'delete']),
+    ...externalUserOpenDecision(['list', 'create', 'update', 'delete']),
+  ]);
 }
 
 /**
@@ -273,8 +295,8 @@ export function publicWorldMatrix(): readonly CoverageCell[] {
  * persona lacks privileges, it's that the rule deliberately forbids the
  * entire client surface.
  */
-export function adminWriteOnlyMatrix(): readonly CoverageCell[] {
-  return [
+export function adminWriteOnlyMatrix(): CoverageDefinition {
+  return defineMatrix('adminWriteOnlyMatrix', [
     // Reads follow tenant isolation
     cell('super_admin', 'read', 'allow'),
     cell('super_admin', 'list', 'allow'),
@@ -301,7 +323,12 @@ export function adminWriteOnlyMatrix(): readonly CoverageCell[] {
     cell('cross_tenant_admin', 'update', 'deny', 'cross_tenant'),
     cell('cross_tenant_admin', 'delete', 'deny', 'cross_tenant'),
     cell('anonymous', 'create', 'deny', 'missing_claim'),
-  ];
+  ], [
+    ...sameTenantUserPerCollection(['create', 'update', 'delete']),
+    ...crossTenantUserUnmeasured(['read', 'list', 'create', 'update', 'delete']),
+    ...anonymousUnmeasured(['update', 'delete']),
+    ...externalUserOpenDecision(['read', 'list', 'create', 'update', 'delete']),
+  ]);
 }
 
 /**
@@ -321,8 +348,8 @@ export function adminWriteOnlyMatrix(): readonly CoverageCell[] {
  * marked `deny/server_only` because the rule intentionally excludes super
  * admin — the Admin SDK bypass is the sanctioned path.
  */
-export function tenantStateMachineMatrix(): readonly CoverageCell[] {
-  return [
+export function tenantStateMachineMatrix(): CoverageDefinition {
+  return defineMatrix('tenantStateMachineMatrix', [
     // Reads
     cell('super_admin', 'read', 'allow'),
     cell('super_admin', 'list', 'allow'),
@@ -347,7 +374,13 @@ export function tenantStateMachineMatrix(): readonly CoverageCell[] {
     // match and admin role, so client delete is allowed for them.
     cell('super_admin', 'delete', 'deny', 'server_only'),
     cell('same_tenant_admin', 'delete', 'allow'),
-  ];
+  ], [
+    ...sameTenantUserPerCollection(['create', 'update', 'delete']),
+    ...crossTenantAdminUnmeasured(['delete']),
+    ...crossTenantUserUnmeasured(['read', 'list', 'create', 'update', 'delete']),
+    ...anonymousUnmeasured(['list', 'create', 'update', 'delete']),
+    ...externalUserOpenDecision(['read', 'list', 'create', 'update', 'delete']),
+  ]);
 }
 
 /**
@@ -377,13 +410,13 @@ export function tenantStateMachineMatrix(): readonly CoverageCell[] {
  * `uid == createdBy` update/delete leg is exercised for same_tenant_user.
  *
  * Collections: `accounting_invoices`, `accounting_journal_entries`.
- * `accounting_audit_log` uses `overrideCells(roleDualMatrix(), [...])` to
+ * `accounting_audit_log` uses `overrideDefinition(roleDualMatrix(), [...])` to
  * swap update/delete to `immutable` deny (Q7 ΚΦΔ compliance).
  *
  * See ADR-298 §4 Phase B.2 (2026-04-13).
  */
-export function roleDualMatrix(): readonly CoverageCell[] {
-  return [
+export function roleDualMatrix(): CoverageDefinition {
+  return defineMatrix('roleDualMatrix', [
     // Read: isSuperAdminOnly() || isInternalUserOfCompany(companyId)
     cell('super_admin', 'read', 'allow'),
     cell('super_admin', 'list', 'allow'),
@@ -416,7 +449,10 @@ export function roleDualMatrix(): readonly CoverageCell[] {
     cell('same_tenant_user', 'delete', 'allow'),
     cell('cross_tenant_admin', 'delete', 'deny', 'cross_tenant'),
     cell('anonymous', 'delete', 'deny', 'missing_claim'),
-  ];
+  ], [
+    ...crossTenantUserUnmeasured(['read', 'list', 'create', 'update', 'delete']),
+    ...externalUserOpenDecision(['read', 'list', 'create', 'update', 'delete']),
+  ]);
 }
 
 /**
@@ -444,8 +480,8 @@ export function roleDualMatrix(): readonly CoverageCell[] {
  * Η ακτίνα: `grep -n "crmDirectMatrix()" coverage-manifest.ts`.
  * See ADR-298 §4 Phase B.3 (2026-04-13).
  */
-export function crmDirectMatrix(): readonly CoverageCell[] {
-  return overrideCells(tenantDirectMatrix(), [
+export function crmDirectMatrix(): CoverageDefinition {
+  return overrideDefinition(tenantDirectMatrix(), [
     // No isSuperAdminOnly() short-circuit on create — super_admin companyId
     // claim ('company-root') does not match test tenant ('company-a').
     cell('super_admin', 'create', 'deny', 'cross_tenant'),
@@ -454,7 +490,7 @@ export function crmDirectMatrix(): readonly CoverageCell[] {
     cell('same_tenant_user', 'create', 'allow'),
     cell('same_tenant_user', 'update', 'allow'),
     cell('same_tenant_user', 'delete', 'allow'),
-  ]);
+  ], 'crmDirectMatrix');
 }
 
 /**
@@ -479,8 +515,8 @@ export function crmDirectMatrix(): readonly CoverageCell[] {
  * Expressed as a delta over `tenantDirectMatrix()` so the divergences are
  * auditable from the manifest alone.
  */
-export function attendanceEventMatrix(): readonly CoverageCell[] {
-  return overrideCells(tenantDirectMatrix(), [
+export function attendanceEventMatrix(): CoverageDefinition {
+  return overrideDefinition(tenantDirectMatrix(), [
     // Create: same_tenant_user allowed (no role gate — any authenticated user
     // in the same tenant whose payload references a same-tenant project).
     cell('same_tenant_user', 'create', 'allow'),
@@ -495,7 +531,7 @@ export function attendanceEventMatrix(): readonly CoverageCell[] {
     // Delete: all deny with `immutable` reason.
     cell('super_admin', 'delete', 'deny', 'immutable'),
     cell('same_tenant_admin', 'delete', 'deny', 'immutable'),
-  ]);
+  ], 'attendanceEventMatrix');
 }
 
 // Phase C.1 accounting matrix functions live in coverage-matrices-accounting.ts

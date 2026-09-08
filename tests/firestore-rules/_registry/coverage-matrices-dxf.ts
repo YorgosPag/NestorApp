@@ -22,7 +22,13 @@
  */
 
 import type { CoverageCell } from './coverage-manifest';
-import { cell, overrideCells } from './coverage-matrices';
+import { cell } from './coverage-matrices';
+import { defineMatrix, overrideDefinition, type CoverageDefinition } from './coverage-completeness';
+import {
+  crossTenantUserUnmeasured,
+  externalUserOpenDecision,
+  sameTenantUserPerCollection,
+} from './coverage-exemptions';
 
 // ---------------------------------------------------------------------------
 // ADR-298 Phase C.2 — DXF / CAD / Floorplan collections
@@ -45,8 +51,8 @@ import { cell, overrideCells } from './coverage-matrices';
  *
  * See ADR-298 §4 Phase C.2+C.3 (2026-04-14).
  */
-export function fileTenantFullMatrix(): readonly CoverageCell[] {
-  return [
+export function fileTenantFullMatrix(): CoverageDefinition {
+  return defineMatrix('fileTenantFullMatrix', [
     // Read: isSuperAdminOnly || belongsToCompany
     cell('super_admin', 'read', 'allow'),
     cell('super_admin', 'list', 'allow'),
@@ -76,7 +82,10 @@ export function fileTenantFullMatrix(): readonly CoverageCell[] {
     cell('same_tenant_user', 'delete', 'allow'),
     cell('cross_tenant_admin', 'delete', 'deny', 'cross_tenant'),
     cell('anonymous', 'delete', 'deny', 'missing_claim'),
-  ];
+  ], [
+    ...crossTenantUserUnmeasured(['read', 'list', 'create', 'update', 'delete']),
+    ...externalUserOpenDecision(['read', 'list', 'create', 'update', 'delete']),
+  ]);
 }
 
 /**
@@ -94,8 +103,8 @@ export function fileTenantFullMatrix(): readonly CoverageCell[] {
  *
  * See ADR-298 §4 Phase C.2 (2026-04-14).
  */
-export function cadFilesMatrix(): readonly CoverageCell[] {
-  return [
+export function cadFilesMatrix(): CoverageDefinition {
+  return defineMatrix('cadFilesMatrix', [
     // Read: tenant-scoped (super || belongsToCompany || legacy createdBy)
     cell('super_admin', 'read', 'allow'),
     cell('super_admin', 'list', 'allow'),
@@ -125,7 +134,10 @@ export function cadFilesMatrix(): readonly CoverageCell[] {
     cell('same_tenant_user', 'delete', 'allow'),
     cell('cross_tenant_admin', 'delete', 'deny', 'cross_tenant'),
     cell('anonymous', 'delete', 'deny', 'missing_claim'),
-  ];
+  ], [
+    ...crossTenantUserUnmeasured(['read', 'list', 'create', 'update', 'delete']),
+    ...externalUserOpenDecision(['read', 'list', 'create', 'update', 'delete']),
+  ]);
 }
 
 // ---------------------------------------------------------------------------
@@ -147,8 +159,8 @@ export function cadFilesMatrix(): readonly CoverageCell[] {
  *
  * See ADR-298 §4 Phase C.3 (2026-04-14).
  */
-export function fileAuditLogMatrix(): readonly CoverageCell[] {
-  return [
+export function fileAuditLogMatrix(): CoverageDefinition {
+  return defineMatrix('fileAuditLogMatrix', [
     // Read: belongsToCompany only — no isSuperAdminOnly bypass on read!
     cell('super_admin', 'read', 'deny', 'cross_tenant'),  // company-root != company-a
     cell('super_admin', 'list', 'deny', 'cross_tenant'),
@@ -175,7 +187,11 @@ export function fileAuditLogMatrix(): readonly CoverageCell[] {
     cell('same_tenant_admin', 'delete', 'deny', 'immutable'),
     cell('cross_tenant_admin', 'delete', 'deny', 'immutable'),
     cell('anonymous', 'delete', 'deny', 'immutable'),
-  ];
+  ], [
+    ...sameTenantUserPerCollection(['update', 'delete']),
+    ...crossTenantUserUnmeasured(['read', 'list', 'create', 'update', 'delete']),
+    ...externalUserOpenDecision(['read', 'list', 'create', 'update', 'delete']),
+  ]);
 }
 
 /**
@@ -192,8 +208,8 @@ export function fileAuditLogMatrix(): readonly CoverageCell[] {
  *
  * See ADR-298 §4 Phase C.3 (2026-04-14).
  */
-export function fileSharesMatrix(): readonly CoverageCell[] {
-  return [
+export function fileSharesMatrix(): CoverageDefinition {
+  return defineMatrix('fileSharesMatrix', [
     // Read: if true — public access for share token validation
     cell('super_admin', 'read', 'allow'),
     cell('super_admin', 'list', 'allow'),
@@ -223,7 +239,10 @@ export function fileSharesMatrix(): readonly CoverageCell[] {
     cell('same_tenant_user', 'delete', 'allow'),            // uid == createdBy
     cell('cross_tenant_admin', 'delete', 'deny', 'cross_tenant'),
     cell('anonymous', 'delete', 'deny', 'missing_claim'),
-  ];
+  ], [
+    ...crossTenantUserUnmeasured(['read', 'list', 'create', 'update', 'delete']),
+    ...externalUserOpenDecision(['read', 'list', 'create', 'update', 'delete']),
+  ]);
 }
 
 /**
@@ -237,8 +256,8 @@ export function fileSharesMatrix(): readonly CoverageCell[] {
  *
  * See ADR-298 §4 Phase C.3 (2026-04-14).
  */
-export function photoSharesMatrix(): readonly CoverageCell[] {
-  return [
+export function photoSharesMatrix(): CoverageDefinition {
+  return defineMatrix('photoSharesMatrix', [
     // Read: isSuperAdminOnly || belongsToCompany
     cell('super_admin', 'read', 'allow'),
     cell('super_admin', 'list', 'allow'),
@@ -267,7 +286,11 @@ export function photoSharesMatrix(): readonly CoverageCell[] {
     cell('same_tenant_user', 'delete', 'deny', 'insufficient_role'),
     cell('cross_tenant_admin', 'delete', 'deny', 'insufficient_role'),
     cell('anonymous', 'delete', 'deny', 'missing_claim'),
-  ];
+  ], [
+    ...sameTenantUserPerCollection(['update']),
+    ...crossTenantUserUnmeasured(['read', 'list', 'create', 'update', 'delete']),
+    ...externalUserOpenDecision(['read', 'list', 'create', 'update', 'delete']),
+  ]);
 }
 
 /**
@@ -288,8 +311,8 @@ export function photoSharesMatrix(): readonly CoverageCell[] {
  *
  * See ADR-298 §4 Phase C.3 (2026-04-14).
  */
-export function fileCommentsMatrix(): readonly CoverageCell[] {
-  return [
+export function fileCommentsMatrix(): CoverageDefinition {
+  return defineMatrix('fileCommentsMatrix', [
     // Read: belongsToCompany only — no isSuperAdminOnly bypass
     cell('super_admin', 'read', 'deny', 'cross_tenant'),
     cell('super_admin', 'list', 'deny', 'cross_tenant'),
@@ -321,7 +344,10 @@ export function fileCommentsMatrix(): readonly CoverageCell[] {
     cell('same_tenant_user', 'delete', 'allow'),  // authorId == same_tenant_user.uid
     cell('cross_tenant_admin', 'delete', 'deny', 'cross_tenant'),
     cell('anonymous', 'delete', 'deny', 'missing_claim'),
-  ];
+  ], [
+    ...crossTenantUserUnmeasured(['read', 'list', 'create', 'update', 'delete']),
+    ...externalUserOpenDecision(['read', 'list', 'create', 'update', 'delete']),
+  ]);
 }
 
 /**
@@ -334,8 +360,8 @@ export function fileCommentsMatrix(): readonly CoverageCell[] {
  *
  * See ADR-298 §4 Phase C.3 (2026-04-14).
  */
-export function fileApprovalsMatrix(): readonly CoverageCell[] {
-  return [
+export function fileApprovalsMatrix(): CoverageDefinition {
+  return defineMatrix('fileApprovalsMatrix', [
     // Read: isSuperAdminOnly || (companyId && belongsToCompany)
     cell('super_admin', 'read', 'allow'),
     cell('super_admin', 'list', 'allow'),
@@ -364,7 +390,11 @@ export function fileApprovalsMatrix(): readonly CoverageCell[] {
     cell('same_tenant_admin', 'delete', 'deny', 'immutable'),
     cell('cross_tenant_admin', 'delete', 'deny', 'immutable'),
     cell('anonymous', 'delete', 'deny', 'immutable'),
-  ];
+  ], [
+    ...sameTenantUserPerCollection(['delete']),
+    ...crossTenantUserUnmeasured(['read', 'list', 'create', 'update', 'delete']),
+    ...externalUserOpenDecision(['read', 'list', 'create', 'update', 'delete']),
+  ]);
 }
 
 
@@ -390,8 +420,8 @@ export function fileApprovalsMatrix(): readonly CoverageCell[] {
  * `floorplan_stairs`, and — via `legacyFloorplanMatrix()` — the 5 legacy
  * containers. `bimAuthoringMatrix()` derives from it with a 2-cell delta.
  */
-export function bimPresentationMatrix(): readonly CoverageCell[] {
-  return [
+export function bimPresentationMatrix(): CoverageDefinition {
+  return defineMatrix('bimPresentationMatrix', [
     // super_admin — isSuperAdminOnly() short-circuits every op.
     cell('super_admin', 'read', 'allow'),
     cell('super_admin', 'list', 'allow'),
@@ -435,7 +465,7 @@ export function bimPresentationMatrix(): readonly CoverageCell[] {
     cell('anonymous', 'create', 'deny', 'missing_claim'),
     cell('anonymous', 'update', 'deny', 'missing_claim'),
     cell('anonymous', 'delete', 'deny', 'missing_claim'),
-  ];
+  ]);
 }
 
 /**
@@ -452,11 +482,11 @@ export function bimPresentationMatrix(): readonly CoverageCell[] {
  * declaring them as a delta over the presentation base keeps that one-line
  * difference auditable from this file alone (no 35-cell clone).
  */
-export function bimAuthoringMatrix(): readonly CoverageCell[] {
-  return overrideCells(bimPresentationMatrix(), [
+export function bimAuthoringMatrix(): CoverageDefinition {
+  return overrideDefinition(bimPresentationMatrix(), [
     cell('external_user', 'read', 'deny', 'insufficient_role'),
     cell('external_user', 'list', 'deny', 'insufficient_role'),
-  ]);
+  ], 'bimAuthoringMatrix');
 }
 
 /**
@@ -480,7 +510,11 @@ export function bimAuthoringMatrix(): readonly CoverageCell[] {
  * by `isBimWriter(resource.data.companyId)` — same internal-user floor as the
  * presentation write gate.
  */
-export function legacyFloorplanMatrix(): readonly CoverageCell[] {
+export function legacyFloorplanMatrix(): CoverageDefinition {
+  // Σκόπιμα **ο ίδιος** ορισμός, όχι αντίγραφό του: το πρότυπο είναι ήδη πλήρες
+  // (35/35) και η πληρότητά του έχει ήδη επικυρωθεί από τη `defineMatrix()` του
+  // `bimPresentationMatrix`. Δεύτερο τύλιγμα εδώ δεν θα πρόσθετε έλεγχο — θα
+  // πρόσθετε δεύτερο σημείο που μπορεί να αποκλίνει.
   return bimPresentationMatrix();
 }
 
@@ -504,8 +538,8 @@ export function legacyFloorplanMatrix(): readonly CoverageCell[] {
  * Used by: `text_templates` (Phase 7.E), `company_fonts` (future Phase 6.F).
  * See ADR-344 §8 Phase 7.E (2026-05-11).
  */
-export function textTemplateMatrix(): readonly CoverageCell[] {
-  return [
+export function textTemplateMatrix(): CoverageDefinition {
+  return defineMatrix('textTemplateMatrix', [
     // Read: isSuperAdminOnly || belongsToCompany — all tenant members
     cell('super_admin', 'read', 'allow'),
     cell('super_admin', 'list', 'allow'),
@@ -535,7 +569,10 @@ export function textTemplateMatrix(): readonly CoverageCell[] {
     cell('same_tenant_user', 'delete', 'deny', 'insufficient_role'),
     cell('cross_tenant_admin', 'delete', 'deny', 'cross_tenant'),
     cell('anonymous', 'delete', 'deny', 'missing_claim'),
-  ];
+  ], [
+    ...crossTenantUserUnmeasured(['read', 'list', 'create', 'update', 'delete']),
+    ...externalUserOpenDecision(['read', 'list', 'create', 'update', 'delete']),
+  ]);
 }
 
 /**
@@ -578,8 +615,8 @@ export function textTemplateMatrix(): readonly CoverageCell[] {
  * suite's hardening block: listing someone else's bucket, or the tenant's
  * user-scope blocks without the `createdBy` constraint, is denied.
  */
-export function blockLibraryMatrix(): readonly CoverageCell[] {
-  return [
+export function blockLibraryMatrix(): CoverageDefinition {
+  return defineMatrix('blockLibraryMatrix', [
     // Read — super admin + the owner only. A company admin is DENIED: this is
     // the private-import guarantee, and the only cell that states it.
     cell('super_admin', 'read', 'allow'),
@@ -615,7 +652,10 @@ export function blockLibraryMatrix(): readonly CoverageCell[] {
     cell('same_tenant_user', 'delete', 'allow'),
     cell('cross_tenant_admin', 'delete', 'deny', 'cross_tenant'),
     cell('anonymous', 'delete', 'deny', 'missing_claim'),
-  ];
+  ], [
+    ...crossTenantUserUnmeasured(['update', 'delete']),
+    ...externalUserOpenDecision(['read', 'list', 'create', 'update', 'delete']),
+  ]);
 }
 
 // ---------------------------------------------------------------------------

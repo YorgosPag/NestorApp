@@ -15,12 +15,32 @@ export type Operation = 'read' | 'list' | 'create' | 'update' | 'delete';
 export type Outcome = 'allow' | 'deny';
 
 /**
- * Deterministic failure reason tag.
+ * Deterministic failure reason tag — **ΤΕΚΜΗΡΙΩΣΗ, ΟΧΙ ΕΠΙΚΥΡΩΣΗ.**
  *
- * Used to verify *why* a deny happened — a rule regression that still denies
- * but for the wrong reason (e.g. "immutable" instead of "cross_tenant") is a
- * silent contract break. Reason tags give the harness a lightweight way to
- * assert on intent, not just outcome.
+ * Δηλώνει **ποιο σκέλος** του κανόνα αναμένεται να κόψει. Χρήσιμο για τον
+ * άνθρωπο που διαβάζει τη μήτρα: μια παλινδρόμηση που **εξακολουθεί να αρνείται
+ * αλλά για λάθος λόγο** (π.χ. `immutable` αντί για `cross_tenant`) είναι σιωπηλό
+ * σπάσιμο συμβολαίου, και το tag είναι το μόνο σημείο όπου η πρόθεση γράφεται.
+ *
+ * ⛔ **Η ΠΡΟΗΓΟΥΜΕΝΗ ΠΡΟΤΑΣΗ ΕΔΩ ΕΛΕΓΕ ΨΕΜΑΤΑ ΚΑΙ ΑΦΑΙΡΕΘΗΚΕ** *(ADR-298 §8
+ * Α21.15/Α21.16)*. Έγραφε *«Reason tags give the harness a lightweight way to
+ * assert on intent, not just outcome»*. **Η `assertCell()` δεν διάβασε ΠΟΤΕ το
+ * `cell.reason`** — και τα tags είναι **1.654** σε χρόνο εκτέλεσης, δηλαδή
+ * **κάθε** κελί άρνησης φέρει ένα, **κανένα** δεν ελέγχεται.
+ *
+ * 📊 **ΚΑΙ Η ΕΠΙΒΟΛΗ ΜΕΤΡΗΘΗΚΕ ΠΡΙΝ ΑΠΟΡΡΙΦΘΕΙ**: ο κωδικός σφάλματος είναι
+ * `permission-denied` για **όλους**· το μήνυμα ξεχωρίζει μόνο τον `anonymous`
+ * (`false @ L21` vs `evaluation error at L2390:24`), ενώ `cross_tenant` /
+ * `insufficient_role` / `not_owner` δίνουν **ταυτόσημο byte-προς-byte** μήνυμα.
+ * ⇒ Επιβλητό είναι **μόνο** το `missing_claim` (**417 από 1.654 = 25%**). Μια
+ * μηχανή επιβολής θα έβαφε πράσινο **το εύκολο 25%** και θα έμενε τυφλή στο
+ * **75%** που την κίνησε — δηλαδή θα ξανάχτιζε το ίδιο «μοιάζει επικυρωμένο»,
+ * με νέο όνομα.
+ *
+ * ⇒ **Το tag είναι ισχυρισμός για το ΠΟΙΟ ΣΚΕΛΟΣ έκοψε, όχι παρατηρήσιμο
+ * γεγονός.** Η μόνη εκτελέσιμη διαδρομή προς επικύρωση που έχει ονομαστεί είναι
+ * το δέσιμό του στη **γραμμή** που αρνήθηκε, μέσω του υπάρχοντος location-map
+ * (`--map`) — **δεν έχει χτιστεί**, και είναι απόφαση, όχι εκκρεμότητα.
  */
 export type Reason =
   | 'missing_claim'         // unauthenticated or no companyId claim

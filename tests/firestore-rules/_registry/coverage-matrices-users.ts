@@ -23,6 +23,13 @@
 import type { CoverageCell } from './coverage-manifest';
 import type { Persona } from './personas';
 import { cell } from './coverage-matrices';
+import { defineMatrix, type CoverageDefinition } from './coverage-completeness';
+import {
+  anonymousUnmeasured,
+  crossTenantUserUnmeasured,
+  externalUserOpenDecision,
+  sameTenantUserPerCollection,
+} from './coverage-exemptions';
 
 // ---------------------------------------------------------------------------
 // ADR-298 Phase C.6 — ownership-based user / company collections
@@ -47,8 +54,8 @@ import { cell } from './coverage-matrices';
  *
  * See ADR-298 §4 Phase C.6 (2026-04-14).
  */
-export function companiesMatrix(): readonly CoverageCell[] {
-  return [
+export function companiesMatrix(): CoverageDefinition {
+  return defineMatrix('companiesMatrix', [
     // Read (single get): isSuperAdminOnly() || getUserCompanyId() == companyId
     // Seed docId = SAME_TENANT_COMPANY_ID ('company-a') — same_tenant personas pass
     cell('super_admin', 'read', 'allow'),
@@ -73,7 +80,12 @@ export function companiesMatrix(): readonly CoverageCell[] {
     cell('cross_tenant_admin', 'update', 'deny', 'cross_tenant'),
     cell('cross_tenant_admin', 'delete', 'deny', 'cross_tenant'),
     cell('anonymous', 'create', 'deny', 'missing_claim'),
-  ];
+  ], [
+    ...sameTenantUserPerCollection(['create', 'update', 'delete']),
+    ...crossTenantUserUnmeasured(['read', 'list', 'create', 'update', 'delete']),
+    ...anonymousUnmeasured(['update', 'delete']),
+    ...externalUserOpenDecision(['read', 'list', 'create', 'update', 'delete']),
+  ]);
 }
 
 /**
@@ -100,8 +112,8 @@ export function companiesMatrix(): readonly CoverageCell[] {
  *
  * See ADR-298 §4 Phase C.6 (2026-04-14).
  */
-export function usersMatrix(): readonly CoverageCell[] {
-  return [
+export function usersMatrix(): CoverageDefinition {
+  return defineMatrix('usersMatrix', [
     // Read: uid==userId || (companyId && belongsToCompany) || isSuperAdminOnly
     cell('super_admin', 'read', 'allow'),
     cell('super_admin', 'list', 'allow'),
@@ -133,7 +145,10 @@ export function usersMatrix(): readonly CoverageCell[] {
     cell('same_tenant_user', 'delete', 'deny', 'server_only'),
     cell('cross_tenant_admin', 'delete', 'deny', 'cross_tenant'),
     cell('anonymous', 'delete', 'deny', 'missing_claim'),
-  ];
+  ], [
+    ...crossTenantUserUnmeasured(['read', 'list', 'create', 'update', 'delete']),
+    ...externalUserOpenDecision(['read', 'list', 'create', 'update', 'delete']),
+  ]);
 }
 
 /**
@@ -157,8 +172,8 @@ export function usersMatrix(): readonly CoverageCell[] {
  *
  * See ADR-298 §4 Phase C.6 (2026-04-14).
  */
-export function ownerOnlyMatrix(): readonly CoverageCell[] {
-  return [
+export function ownerOnlyMatrix(): CoverageDefinition {
+  return defineMatrix('ownerOnlyMatrix', [
     // Read (single get): isOwner(userId) — seed docId = same_tenant_user.uid
     cell('same_tenant_user', 'read', 'allow'),    // uid == docId ✓
     cell('super_admin', 'read', 'deny', 'insufficient_role'),
@@ -189,7 +204,10 @@ export function ownerOnlyMatrix(): readonly CoverageCell[] {
     cell('same_tenant_admin', 'delete', 'deny', 'insufficient_role'),
     cell('cross_tenant_admin', 'delete', 'deny', 'insufficient_role'),
     cell('anonymous', 'delete', 'deny', 'missing_claim'),
-  ];
+  ], [
+    ...crossTenantUserUnmeasured(['read', 'list', 'create', 'update', 'delete']),
+    ...externalUserOpenDecision(['read', 'list', 'create', 'update', 'delete']),
+  ]);
 }
 
 // ---------------------------------------------------------------------------
@@ -225,7 +243,7 @@ export function ownerOnlyMatrix(): readonly CoverageCell[] {
  *
  * @since 2026-08-11 (ADR-777 Α9)
  */
-export function authorOwnedMatrix(): readonly CoverageCell[] {
+export function authorOwnedMatrix(): CoverageDefinition {
   /** Πιστοποιημένοι που **δεν** είναι ο κάτοχος — μαζί ο `super_admin`. */
   const NON_OWNERS: readonly Persona[] = [
     'super_admin',
@@ -235,7 +253,7 @@ export function authorOwnedMatrix(): readonly CoverageCell[] {
     'external_user',
   ];
 
-  return [
+  return defineMatrix('authorOwnedMatrix', [
     // ── READ: μόνο ο κάτοχος. Ο super_admin ΔΕΝ εξαιρείται, και είναι σκόπιμο:
     //    το §12.7(α) απαγορεύει «καμία διαδρομή που να το κάνει εργαλείο πίεσης».
     cell('same_tenant_user', 'read', 'allow'),
@@ -263,5 +281,5 @@ export function authorOwnedMatrix(): readonly CoverageCell[] {
     cell('same_tenant_user', 'delete', 'deny', 'server_only'),
     ...NON_OWNERS.map((p) => cell(p, 'delete', 'deny', 'server_only')),
     cell('anonymous', 'delete', 'deny', 'missing_claim'),
-  ];
+  ]);
 }

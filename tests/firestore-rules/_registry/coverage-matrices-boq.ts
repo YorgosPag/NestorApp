@@ -19,6 +19,14 @@
 
 import type { CoverageCell } from './coverage-manifest';
 import { cell } from './coverage-matrices';
+import { defineMatrix, type CoverageDefinition } from './coverage-completeness';
+import {
+  anonymousUnmeasured,
+  crossTenantAdminUnmeasured,
+  crossTenantUserUnmeasured,
+  externalUserOpenDecision,
+  sameTenantUserPerCollection,
+} from './coverage-exemptions';
 
 // ---------------------------------------------------------------------------
 // ADR-298 Phase C.4 — BoQ / Commissions / Ownership collections
@@ -40,8 +48,8 @@ import { cell } from './coverage-matrices';
  *
  * See ADR-298 §4 Phase C.4 (2026-04-14).
  */
-export function boqCategoriesMatrix(): readonly CoverageCell[] {
-  return [
+export function boqCategoriesMatrix(): CoverageDefinition {
+  return defineMatrix('boqCategoriesMatrix', [
     // Read: isSuperAdminOnly || (companyId && belongsToCompany) || !companyId
     cell('super_admin', 'read', 'allow'),
     cell('super_admin', 'list', 'allow'),
@@ -63,7 +71,13 @@ export function boqCategoriesMatrix(): readonly CoverageCell[] {
     cell('same_tenant_user', 'create', 'deny', 'server_only'),
     cell('cross_tenant_admin', 'create', 'deny', 'cross_tenant'),
     cell('anonymous', 'create', 'deny', 'missing_claim'),
-  ];
+  ], [
+    ...sameTenantUserPerCollection(['update', 'delete']),
+    ...crossTenantAdminUnmeasured(['update', 'delete']),
+    ...crossTenantUserUnmeasured(['read', 'list', 'create', 'update', 'delete']),
+    ...anonymousUnmeasured(['update', 'delete']),
+    ...externalUserOpenDecision(['read', 'list', 'create', 'update', 'delete']),
+  ]);
 }
 
 /**
@@ -86,8 +100,8 @@ export function boqCategoriesMatrix(): readonly CoverageCell[] {
  *
  * See ADR-298 §4 Phase C.4 (2026-04-14).
  */
-export function brokerageMatrix(): readonly CoverageCell[] {
-  return [
+export function brokerageMatrix(): CoverageDefinition {
+  return defineMatrix('brokerageMatrix', [
     // Read: isSuperAdminOnly || (companyId && belongsToCompany)
     cell('super_admin', 'read', 'allow'),
     cell('super_admin', 'list', 'allow'),
@@ -117,7 +131,10 @@ export function brokerageMatrix(): readonly CoverageCell[] {
     cell('same_tenant_user', 'delete', 'allow'),    // createdBy==uid (seed doc)
     cell('cross_tenant_admin', 'delete', 'deny', 'cross_tenant'),
     cell('anonymous', 'delete', 'deny', 'missing_claim'),
-  ];
+  ], [
+    ...crossTenantUserUnmeasured(['read', 'list', 'create', 'update', 'delete']),
+    ...externalUserOpenDecision(['read', 'list', 'create', 'update', 'delete']),
+  ]);
 }
 
 /**
@@ -138,8 +155,8 @@ export function brokerageMatrix(): readonly CoverageCell[] {
  *
  * See ADR-298 §4 Phase C.4 (2026-04-14).
  */
-export function commissionRecordsMatrix(): readonly CoverageCell[] {
-  return [
+export function commissionRecordsMatrix(): CoverageDefinition {
+  return defineMatrix('commissionRecordsMatrix', [
     // Read: isSuperAdminOnly || (companyId && belongsToCompany)
     cell('super_admin', 'read', 'allow'),
     cell('super_admin', 'list', 'allow'),
@@ -169,7 +186,10 @@ export function commissionRecordsMatrix(): readonly CoverageCell[] {
     cell('same_tenant_user', 'delete', 'deny', 'insufficient_role'),
     cell('cross_tenant_admin', 'delete', 'deny', 'cross_tenant'),
     cell('anonymous', 'delete', 'deny', 'missing_claim'),
-  ];
+  ], [
+    ...crossTenantUserUnmeasured(['read', 'list', 'create', 'update', 'delete']),
+    ...externalUserOpenDecision(['read', 'list', 'create', 'update', 'delete']),
+  ]);
 }
 
 /**
@@ -187,8 +207,8 @@ export function commissionRecordsMatrix(): readonly CoverageCell[] {
  *
  * See ADR-298 §4 Phase C.4 (2026-04-14).
  */
-export function ownershipTablesMatrix(): readonly CoverageCell[] {
-  return [
+export function ownershipTablesMatrix(): CoverageDefinition {
+  return defineMatrix('ownershipTablesMatrix', [
     // Read: isSuperAdminOnly || (companyId && belongsToCompany)
     cell('super_admin', 'read', 'allow'),
     cell('super_admin', 'list', 'allow'),
@@ -218,5 +238,8 @@ export function ownershipTablesMatrix(): readonly CoverageCell[] {
     cell('same_tenant_user', 'delete', 'deny', 'insufficient_role'),
     cell('cross_tenant_admin', 'delete', 'deny', 'cross_tenant'),
     cell('anonymous', 'delete', 'deny', 'missing_claim'),
-  ];
+  ], [
+    ...crossTenantUserUnmeasured(['read', 'list', 'create', 'update', 'delete']),
+    ...externalUserOpenDecision(['read', 'list', 'create', 'update', 'delete']),
+  ]);
 }

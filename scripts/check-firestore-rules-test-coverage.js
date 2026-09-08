@@ -31,6 +31,12 @@
  *      so the matrix is iterated rather than hand-copied (drift prevention).
  *   7. Validation E — for every `tenant_direct` coverage entry, the first
  *      OR leg of the corresponding rule's allow-read must be `isSuperAdminOnly()`.
+ *   8b. Validation G — ΚΑΜΙΑ ΜΗΤΡΑ ΔΕΝ ΕΙΝΑΙ ΜΕΡΙΚΗ ΣΙΩΠΗΛΑ (ADR-298 Α21.16):
+ *       κάθε εγγραφή δηλώνει και τα 35 κελιά (7 πρόσωπα × 5 πράξεις) — είτε ως
+ *       κελί που ΕΚΤΕΛΕΙΤΑΙ, είτε ως εξαίρεση με λόγο/ιδιοκτήτη/ημερομηνία
+ *       επανεξέτασης — με ratchet στο ΕΙΔΟΣ του χρέους. Ο μόνος έλεγχος εδώ που
+ *       ΦΟΡΤΩΝΕΙ το μητρώο αντί να το διαβάζει με AST, γιατί η μήτρα δεν είναι
+ *       literal: είναι κλήση συνάρτησης. Μηχανή: `lib/firestore-rules/`.
  *   8. Validation F — no two top-level blocks may share a match PATH. Firestore
  *      unions the `allow` of every matching block, so a second block silently
  *      cancels the stricter one. Added 2026-09-08 (ADR-841 §7 Α21.14.8) after
@@ -74,6 +80,10 @@ const {
   validateSuperAdminShortCircuit,
 } = require('./_shared/firestore-rules-parser');
 const { renderRulesLocationMap } = require('./_shared/rules-location-map');
+const {
+  validateCompleteness,
+  generateBaseline,
+} = require('./lib/firestore-rules/completeness');
 
 // ---------------------------------------------------------------------------
 // Paths
@@ -107,6 +117,15 @@ const MODE_ALL = flags.has('--all');
 const VERBOSE = flags.has('--verbose');
 /** 🏆 Ο **παραγόμενος** δείκτης προς τους κανόνες — δες ADR-841 §7 Α21.14. */
 const MODE_MAP = flags.has('--map');
+/**
+ * Σπορά της baseline της Validation G **από το ίδιο εκτελέσιμο με τον έλεγχο**.
+ *
+ * ⚠️ ΟΧΙ ξεχωριστό script — είναι το ρητό μάθημα του ADR-749: τέσσερις
+ * υλοποιήσεις σε πέντε διαλέκτους έδιναν **τρεις αριθμούς** για το ίδιο δέντρο,
+ * και το ratchet συνέκρινε `τρέχον(μηχανή Α)` με `baseline(μηχανή Β)`. Πρότυπο:
+ * PHPStan / ESLint / detekt — `--generate-baseline` **μέσα** στον έλεγχο.
+ */
+const MODE_GENERATE_BASELINE = flags.has('--generate-baseline');
 
 // ---------------------------------------------------------------------------
 // Colors
@@ -889,6 +908,48 @@ function printLocationMap(blocks, manifest) {
 // Main
 // ---------------------------------------------------------------------------
 
+/**
+ * Validation G — τρέχει τη μηχανή πληρότητας και τη μεταφράζει σε `Violation`.
+ *
+ * 🔴 **Το `catch` ΔΕΝ είναι αμυντικός θόρυβος — είναι το κύριο κανάλι.** Όταν
+ * ένας builder είναι μερικός, η `defineMatrix()` πετάει στο ίδιο το `require`
+ * του μητρώου, με μήνυμα που **ονομάζει** τον builder και **απαριθμεί** τα κελιά
+ * που λείπουν. Το μεταφέρουμε αυτούσιο: μια πύλη που το κατάπινε και έλεγε
+ * «σφάλμα φόρτωσης» θα έκρυβε ακριβώς την πληροφορία που υπάρχει για να δώσει.
+ *
+ * @returns {{ violations: Violation[], warnings: string[], notes: string[] }}
+ */
+function runCompleteness() {
+  try {
+    const { violations, warnings, notes } = validateCompleteness();
+    return {
+      violations: violations.map((message) => ({
+        kind: 'incomplete-coverage-matrix',
+        message,
+        location: 'tests/firestore-rules/_registry/',
+        hint:
+          '      → Ο κατασκευαστής: tests/firestore-rules/_registry/coverage-completeness.ts\n' +
+          '      → Οι λόγοι:        tests/firestore-rules/_registry/coverage-exemptions.ts\n' +
+          '      → Νέα baseline:    node scripts/check-firestore-rules-test-coverage.js --generate-baseline',
+      })),
+      warnings,
+      notes,
+    };
+  } catch (err) {
+    return {
+      violations: [
+        {
+          kind: 'coverage-manifest-failed-to-load',
+          message: err instanceof Error ? err.message : String(err),
+          location: 'tests/firestore-rules/_registry/coverage-manifest.ts',
+        },
+      ],
+      warnings: [],
+      notes: [],
+    };
+  }
+}
+
 function main() {
   if (!fs.existsSync(RULES_FILE)) {
     log(`${C.red}✖ firestore.rules not found at ${RULES_FILE}${C.reset}`);
@@ -936,7 +997,17 @@ function main() {
     process.exit(0);
   }
 
+  if (MODE_GENERATE_BASELINE) {
+    const seeded = generateBaseline();
+    log(
+      `${C.green}✔ Validation G baseline: ${seeded.totals.collections} συλλογές, ` +
+        `${seeded.totals.cells} κελιά, ${seeded.totals.exemptions} εξαιρέσεις${C.reset}`,
+    );
+    process.exit(0);
+  }
+
   const bimViolations = validateBimTierConformance(blocks, tiers, rulesLines);
+  const completeness = runCompleteness();
 
   /** @type {Violation[]} */
   const violations = [
@@ -946,7 +1017,11 @@ function main() {
     ...validateRuleShape(manifest, blocks),
     ...validateNoDuplicateMatchPaths(blocks),
     ...bimViolations,
+    ...completeness.violations,
   ];
+
+  for (const w of completeness.warnings) log(`  ${C.yellow}${w}${C.reset}`);
+  for (const n of completeness.notes) log(`  ${C.dim}ℹ ${n}${C.reset}`);
 
   if (VERBOSE && MODE_ALL) {
     printBimTierReport(blocks, tiers, bimViolations);
