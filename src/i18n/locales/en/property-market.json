@@ -802,7 +802,13 @@
       "coverageOutlineMissing": "You have not drawn a shape yet. Until you do, no area is declared.",
       "coverageOutlineExtent": "Spans ~{spread} km (limit {max}) · {vertices} of {maxVertices} vertices",
       "coverageOutlineTooManyVertices": "The shape has more than {maxVertices} vertices. Remove some — a drawn service area does not need that much detail.",
-      "coverageOutlineTooWide": "The shape spans more than {max} km. Draw a smaller area, or declare a municipality or region from the list — it also reads better."
+      "coverageOutlineTooWide": "The shape spans more than {max} km. Draw a smaller area, or declare a municipality or region from the list — it also reads better.",
+      "coverageAgreementTitle": "Your declaration and your properties",
+      "coverageAgreementOutside": "{count, plural, one {1 of your {total} properties falls outside this declaration.} other {# of your {total} properties fall outside this declaration.}}",
+      "coverageAgreementConsequence": "Anyone searching for a professional there will no longer find you. The listings themselves stay visible — nothing is hidden.",
+      "coverageAgreementUnknown": "{count, plural, one {For 1 of your properties we do not know precisely enough where it is, so we did not judge it.} other {For # of your properties we do not know precisely enough where they are, so we did not judge them.}}",
+      "coverageAgreementExtendRadius": "Extend to {km} km",
+      "coverageAgreementNoAutoFix": "Add their areas to the declaration above so you appear there."
     },
     "directory": {
       "title": "Professionals",

@@ -44,5 +44,25 @@
     "hide": "Hide the undeclared",
     "declaredNone": "Declared as none",
     "groupEmpty": "Nothing in this group has been declared."
+  },
+  "model": {
+    "heading": "{count, plural, one {3D model} other {3D models}}",
+    "reveal": "View in 3D",
+    "loading": "Loading the model…",
+    "failed": "The model did not load. Try again or refresh the page.",
+    "retry": "Try again",
+    "alt": {
+      "ownerDeclared": "3D model — provided by the owner",
+      "agency": "3D model — provided by the real-estate agency"
+    },
+    "note": {
+      "ownerDeclared": "The model is the owner’s own material, selected by them.",
+      "agency": "The model is the agency’s own material, selected by them."
+    },
+    "provenance": {
+      "declared": "Declared — uploaded by a person",
+      "measured": "Measured — produced from the drawing",
+      "inferred": "Estimated — inferred by a model"
+    }
   }
 }
