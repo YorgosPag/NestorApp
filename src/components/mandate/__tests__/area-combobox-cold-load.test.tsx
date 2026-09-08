@@ -42,6 +42,29 @@ import { render, screen, fireEvent, act } from '@testing-library/react';
 
 import { AreaCombobox } from '../AreaCombobox';
 
+/**
+ * 🔑 **Η μετάφραση λύνεται από το ΠΡΑΓΜΑΤΙΚΟ αρχείο locale** *(ADR-846 Φ4)*, όχι από
+ * σταθερές γραμμένες εδώ. Οι ετικέτες των βαθμίδων ήταν μέχρι πρότινος **ωμά ελληνικά
+ * μέσα σε κώδικα** (N.11)· τώρα είναι κλειδιά. Ένα mock που επέστρεφε το κλειδί θα
+ * άφηνε το Κ3 να περνά με **λείπον** κλειδί — δηλαδή θα επικύρωνε οθόνη που δείχνει
+ * `addresses:hierarchy.levels.municipality` στον άνθρωπο.
+ */
+jest.mock('@/i18n/hooks/useTranslation', () => ({
+  useTranslation: () => ({
+    i18n: { language: 'el' },
+    t: (key: string): string => {
+      const bundle: Record<string, unknown> = jest.requireActual(
+        '@/i18n/locales/el/addresses.json',
+      );
+      let node: unknown = bundle;
+      for (const segment of key.replace(/^addresses:/, '').split('.')) {
+        node = (node as Record<string, unknown> | undefined)?.[segment];
+      }
+      return typeof node === 'string' ? node : key;
+    },
+  }),
+}));
+
 // Ο hook καταγράφει την αποτυχία δικτύου· ο καταγραφέας δεν είναι το αντικείμενο εδώ.
 jest.mock('@/lib/telemetry', () => ({
   createModuleLogger: () => ({
