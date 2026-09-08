@@ -37,7 +37,7 @@ import React from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { normalizeCoverageIds } from '@/lib/agency/coverage-match';
+import { absorbArea, type Absorption } from '@/lib/agency/coverage-absorption';
 import { lineageIdsOf, useAdministrativeHierarchy } from '@/hooks/useAdministrativeHierarchy';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
@@ -80,25 +80,6 @@ const MODE_KEYS: Record<CoverageMode, string> = {
 };
 
 /** Τι απορροφήθηκε μόλις τώρα — για να το **πει** η οθόνη, όχι να συμβεί σιωπηλά. */
-/**
- * 🔴 **ΤΟ `count` ΔΕΝ ΕΙΝΑΙ ΔΙΑΚΟΣΜΗΤΙΚΟ** *(ζωντανό περπάτημα 2026-09-08)*: με δηλωμένα
- * «ΔΗΜΟΣ ΘΕΡΜΗΣ» **και** «Π.Ε. ΧΑΛΚΙΔΙΚΗΣ», η προσθήκη της «ΠΕΡΙΦΕΡΕΙΑΣ ΚΕΝΤΡΙΚΗΣ
- * ΜΑΚΕΔΟΝΙΑΣ» κατάπιε **δύο** — και το μήνυμα ονόμαζε **ένα** *(`swallowed[0]`)*.
- * Δηλαδή ακριβώς η σιωπή που το σχόλιο του `add` ορκίζεται ότι αποφεύγει, μία γραμμή
- * πιο κάτω.
- *
- * ⚠️ **Γιατί ΠΛΗΘΟΣ και όχι ΛΙΣΤΑ ΟΝΟΜΑΤΩΝ**: μια λίστα απαιτεί συνένωση με στίξη
- * *(εισαγωγικά, «και»)* — δηλαδή **γλώσσα μέσα στον κώδικα**, που ο N.11 απαγορεύει και
- * που σπάει σε κάθε νέα γλώσσα. Το πλήθος μπαίνει σε **ένα** κλειδί ICU με `plural` και
- * είναι το ίδιο ιδίωμα που χρησιμοποιούν οι μεγάλοι *(«3 layers were merged»)*.
- * Ο άνθρωπος βλέπει ούτως ή άλλως **ποια** chips έφυγαν· αυτό που δεν έβλεπε ήταν
- * **πόσα**.
- */
-interface Absorption {
-  readonly narrow: string;
-  readonly wide: string;
-  readonly count: number;
-}
 
 export function CoverageAreaPicker({
   value,
@@ -148,32 +129,17 @@ export function CoverageAreaPicker({
     [findById],
   );
 
+  /**
+   * 🔑 **Η κρίση «ποιος κατάπιε ποιον» ζει στο `lib/agency/coverage-absorption`** — εδώ
+   * μένει μόνο *«τι κάνω με την απάντηση»*. Ήταν 26 γραμμές μέσα σε χειριστή συμβάντος,
+   * δηλαδή κρίση τομέα δοκιμάσιμη **μόνο μέσω render**.
+   */
   const add = (adminId: string): void => {
     if (adminId === '' || adminIds.includes(adminId)) return;
 
-    const next = normalizeCoverageIds([...adminIds, adminId], lineageIdsOf);
-    // 🔑 **Η απορρόφηση ανακοινώνεται.** Αν ο νέος έφυγε, τον κατάπιε πρόγονος· αν
-    //    έφυγαν άλλοι, τους κατάπιε ο νέος. Και στις δύο περιπτώσεις ο άνθρωπος
-    //    πάτησε κάτι και **κάτι άλλο** συνέβη — σιωπή εδώ διαβάζεται ως σφάλμα.
-    if (!next.includes(adminId)) {
-      const swallower = adminIds.find((id) => lineageIdsOf(adminId).includes(id));
-      // Ο νέος καταπίνεται από **έναν** πρόγονο — το πλήθος είναι εξ ορισμού 1.
-      setAbsorption({ narrow: nameOf(adminId), wide: nameOf(swallower ?? adminId), count: 1 });
-    } else {
-      const swallowed = adminIds.filter((id) => !next.includes(id));
-      setAbsorption(
-        swallowed.length === 0
-          ? null
-          : {
-              narrow: nameOf(swallowed[0]),
-              wide: nameOf(adminId),
-              // 🔑 **Πόσα έφυγαν, όχι πόσα χωρούσαν σε μία πρόταση.**
-              count: swallowed.length,
-            },
-      );
-    }
-
-    onChange(next.length === 0 ? null : { adminIds: next });
+    const outcome = absorbArea(adminIds, adminId, lineageIdsOf, nameOf);
+    setAbsorption(outcome.absorption);
+    onChange(outcome.adminIds.length === 0 ? null : { adminIds: outcome.adminIds });
   };
 
   const remove = (adminId: string): void => {
