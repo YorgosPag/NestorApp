@@ -41,6 +41,7 @@ import React from 'react';
 
 import { Button } from '@/components/ui/button';
 import { PlaceMap } from '@/components/geo/PlaceMap';
+import { COVERAGE_MAP_HEIGHT_PX, coverageCameraFrame } from '@/lib/agency/coverage-camera';
 import {
   Select,
   SelectContent,
@@ -70,19 +71,6 @@ import { SHOWCASE_KEYS, SHOWCASE_NS } from './agency-showcase-labels';
  * απόφαση που το ADR-846 φροντίζει να μην κατευθύνει.
  */
 const DEFAULT_STEP: CoverageRadiusKm = 20;
-
-/**
- * **Το ύψος του χάρτη σε εικονοστοιχεία** — δεμένο με το `h-64` παρακάτω, **ονομαστικά**.
- *
- * 🔴 Εδώ ζούσε πίνακας `ZOOM_FOR_STEP` τεσσάρων τιμών. Η Φάση 3 έφερε δύο ακόμη
- * καταναλωτές *(χαραγμένο πολύγωνο, δημόσια βιτρίνα)* όπου **δεν υπάρχουν τέσσερα
- * μεγέθη**, οπότε ο πίνακας έγινε **η φόρμουλα από την οποία είχε προκύψει**
- * *(`lib/geo/geo-map-zoom.ts`)* αντί να αποκτήσει τρίτο αντίγραφο.
- *
- * ⚠️ **Αν αλλάξει το `h-64`, αλλάζει ΕΔΩ** — και ο μεταγλωττιστής το ζητά, γιατί το
- * ύψος είναι **όρισμα** της φόρμουλας, όχι σιωπηλή παραδοχή της.
- */
-const MAP_HEIGHT_PX = 256;
 
 /** Πού ανοίγει ο χάρτης όταν δεν υπάρχει ούτε κέντρο ούτε έδρα. */
 const FALLBACK_CENTRE: GeoPoint = {
@@ -176,7 +164,12 @@ export function CoverageRadiusPicker({
         pin={centre}
         outline={centre === null ? null : geoCircleOutline(centre, radiusKm * 1000)}
         heightClass="h-64"
-        initialZoom={mapZoomForRadiusKm(radiusKm, MAP_HEIGHT_PX)}
+        initialZoom={mapZoomForRadiusKm(radiusKm, COVERAGE_MAP_HEIGHT_PX)}
+        /* 🔑 **Το `initialZoom` ανοίγει, το `fit` ΑΚΟΛΟΥΘΕΙ** (ADR-846 Φ4). Χωρίς το
+           δεύτερο, ο επαγγελματίας που αλλάζει βήμα με τον χάρτη ήδη ανοιχτό βλέπει τον
+           κύκλο να μεγαλώνει **έξω από το κάδρο** — δεν σκάει τίποτα, και διαβάζεται ως
+           «χάθηκε η δήλωσή μου». */
+        fit={coverageCameraFrame(centre === null ? null : { circle: { center: centre, radiusKm } })}
         disabled={disabled}
       />
 

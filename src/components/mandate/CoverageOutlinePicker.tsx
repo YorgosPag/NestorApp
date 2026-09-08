@@ -45,6 +45,7 @@ import React from 'react';
 
 import { OutlineDraftControls, useOutlineDraft } from '@/components/geo/outline-draft';
 import { PlaceMap } from '@/components/geo/PlaceMap';
+import { COVERAGE_MAP_HEIGHT_PX, coverageCameraFrame } from '@/lib/agency/coverage-camera';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { coverageOutlineDefect } from '@/lib/agency/coverage-outline';
@@ -53,7 +54,7 @@ import { mapZoomForRadiusKm } from '@/lib/geo/geo-map-zoom';
 import { vertexCentroid } from '@/lib/geo/geo-ring';
 import { COVERAGE_MAX_OUTER_KM, COVERAGE_MAX_VERTICES } from '@/types/agency-coverage';
 import type { OutlineCoverage } from '@/types/agency-coverage';
-import type { GeoPoint } from '@/types/geo/coordinates';
+import type { GeoOutline, GeoPoint } from '@/types/geo/coordinates';
 
 import {
   COVERAGE_OUTLINE_DEFECT_KEYS,
@@ -62,9 +63,6 @@ import {
   SHOWCASE_NS,
 } from './agency-showcase-labels';
 
-/** Δεμένο με το `h-64` παρακάτω — δες `lib/geo/geo-map-zoom.ts`. */
-const MAP_HEIGHT_PX = 256;
-
 /**
  * **Πού ανοίγει ο άδειος χάρτης** — στο **μισό** του επιτρεπτού ανοίγματος.
  *
@@ -72,7 +70,7 @@ const MAP_HEIGHT_PX = 256;
  * κλικ είναι χιλιόμετρα)*. Στα ~25 χλμ ακτίνας ο άνθρωπος βλέπει **περίπου όσο του
  * επιτρέπεται να δηλώσει**, οπότε το ταβάνι γίνεται αντιληπτό **πριν** το συναντήσει.
  */
-const EMPTY_MAP_ZOOM = mapZoomForRadiusKm(COVERAGE_MAX_OUTER_KM / 2, MAP_HEIGHT_PX);
+const EMPTY_MAP_ZOOM = mapZoomForRadiusKm(COVERAGE_MAX_OUTER_KM / 2, COVERAGE_MAP_HEIGHT_PX);
 
 /** Πού ανοίγει ο χάρτης όταν δεν υπάρχει ούτε σχήμα ούτε έδρα. */
 const FALLBACK_CENTRE: GeoPoint = {
@@ -146,6 +144,28 @@ export function CoverageOutlinePicker({
 
   const centre = draft.vertices.length > 0 ? vertexCentroid(draft.vertices) : (home ?? FALLBACK_CENTRE);
 
+  /**
+   * 🔴 **Η ΚΑΜΕΡΑ ΧΩΡΑΕΙ ΤΟ ΣΧΗΜΑ ΠΟΥ ΗΡΘΕ — ΟΧΙ ΑΥΤΟ ΠΟΥ ΧΑΡΑΖΕΤΑΙ** (ADR-846 Φ4).
+   *
+   * Ο επαγγελματίας που **επιστρέφει** σε δημοσιευμένο πολύγωνο μακριά από την
+   * προεπιλογή έβλεπε τον χάρτη στην αρχική θέση, με το σχήμα του **πουθενά**.
+   *
+   * ⛔ **Και όμως το `fit` ΔΕΝ δείχνει στο `draft`**, όσο κι αν μοιάζει προφανές: το
+   * σχήμα αλλάζει σε **κάθε κορυφή**, οπότε η κάμερα θα πετούσε σε κάθε κλικ —
+   * ο άνθρωπος θα χάραζε πάνω σε χάρτη που **του φεύγει από κάτω**. Η ακτίνα *(Φ2)*
+   * θέλει το αντίθετο: εκεί **κάθε** αλλαγή βήματος αξίζει πτήση. Ίδια μηχανή, **άλλη
+   * σκανδάλη** — και γι' αυτό το καρέ το χτίζει η κάθε επιφάνεια, όχι το `PlaceMap`.
+   *
+   * 🔑 **Μανταλάκι στην πρώτη άφιξη**: η δήλωση φτάνει **μετά** την προσάρτηση (ασύγχρονη
+   * φόρτωση), άρα ένα `useRef(value)` θα κρατούσε για πάντα το `null` του πρώτου render.
+   */
+  const arrived = React.useRef<GeoOutline | null>(null);
+  if (arrived.current === null && value !== null) arrived.current = value.outline;
+  const fit = React.useMemo(
+    () => coverageCameraFrame(arrived.current === null ? null : { outline: arrived.current }),
+    [arrived.current],
+  );
+
   return (
     <fieldset className="m-0 flex flex-col gap-2 border-0 p-0">
       <p className="m-0 text-sm text-muted-foreground">{t(SHOWCASE_KEYS.coverageOutlineHint)}</p>
@@ -157,6 +177,7 @@ export function CoverageOutlinePicker({
         outline={draft.outline}
         heightClass="h-64"
         initialZoom={EMPTY_MAP_ZOOM}
+        fit={fit}
         disabled={disabled}
       />
 

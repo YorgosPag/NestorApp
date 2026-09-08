@@ -40,7 +40,9 @@ import { MapPin } from 'lucide-react';
 
 import { OSM_MAP_STYLE } from '@/components/projects/ika/map-shared';
 import { Spinner } from '@/components/ui/spinner/Spinner';
+import { useCameraFrame } from '@/components/geo/use-camera-frame';
 import { useFocusCamera } from '@/components/geo/use-focus-camera';
+import type { CameraFrame } from '@/types/geo/camera-frame';
 import { outlineToGeoJson, pointsToGeoJson } from '@/lib/geo/geo-geojson';
 import { geoCircleOutline } from '@/lib/geo/geo-ring';
 import {
@@ -175,6 +177,26 @@ export interface PlaceMapProps {
    * εμβέλειας δεν έχει και **δεν επιτρέπεται να δανειστεί**.
    */
   readonly initialZoom?: number;
+  /**
+   * **ΧΩΡΕΣΕ ΑΥΤΟ** — καρέ που η κάμερα ακολουθεί **κάθε φορά που αλλάζει**.
+   *
+   * 🔑 **Ο τρίτος και τελευταίος τρόπος να πεις «πού»**, και οι τρεις είναι διακριτοί:
+   *
+   * | prop | απαντά | πότε διαβάζεται |
+   * |---|---|---|
+   * | `center` + `initialZoom` | *«πού ανοίγει»* | **μία φορά**, στην προσάρτηση |
+   * | `focus` | *«πού πήγε επειδή κάποιος **ρώτησε**»* | κάθε αλλαγή — **ΜΕ** βεβαιότητα, που **ζωγραφίζεται** |
+   * | `fit` | *«πού πήγε επειδή κάποιος **δήλωσε**»* | κάθε αλλαγή — **ΧΩΡΙΣ** καμία βεβαιότητα |
+   *
+   * ⛔ **ΔΕΝ είναι το `focus` με άλλο όνομα.** Το `PlaceFocus` κουβαλά βαθμό βεβαιότητας
+   * γεωκωδικοποιητή και το `PlaceMap` τον **ζωγραφίζει ως φωτοστέφανο**. Μια δήλωση
+   * ανθρώπου *(ADR-846)* δεν έχει περιθώριο σφάλματος — ο δανεισμός θα το **επινοούσε
+   * στην οθόνη**. Και τα δύο περνούν από την **ίδια** μηχανή κίνησης
+   * ({@link useCameraFrame}), άρα δεν υπάρχει δεύτερη πτήση να αποκλίνει.
+   *
+   * ⚠️ **`null` σημαίνει «μην κουνηθείς»**, ποτέ «γύρνα στην αρχή».
+   */
+  readonly fit?: CameraFrame | null;
 }
 
 /**
@@ -280,6 +302,7 @@ export function PlaceMap({
   trace = [],
   pin = null,
   focus = null,
+  fit = null,
   busy = false,
   disabled = false,
   heightClass = 'h-80',
@@ -296,6 +319,7 @@ export function PlaceMap({
    */
   const [ready, setReady] = useState(false);
   useFocusCamera(mapRef, ready, focus);
+  useCameraFrame(mapRef, ready, fit);
 
   const halo = useMemo(() => halosOf(focus), [focus]);
 

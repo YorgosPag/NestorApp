@@ -31,6 +31,7 @@
 import React from 'react';
 
 import { PlaceMap } from '@/components/geo/PlaceMap';
+import { COVERAGE_MAP_HEIGHT_PX } from '@/lib/agency/coverage-camera';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { ringsFootprint } from '@/lib/geo/geo-footprint';
 import { mapZoomForRadiusKm } from '@/lib/geo/geo-map-zoom';
@@ -38,7 +39,7 @@ import { vertexCentroid } from '@/lib/geo/geo-ring';
 import type { GeoOutline } from '@/types/geo/coordinates';
 
 /** Δεμένο με το `h-64` παρακάτω — δες `lib/geo/geo-map-zoom.ts`. */
-const MAP_HEIGHT_PX = 256;
+
 
 /** Το namespace της χάραξης — **εγγυημένο κέλυφος**, άρα το route slice δεν μεγαλώνει. */
 const DRAW_NS = 'search-results';
@@ -58,7 +59,7 @@ export function CoverageOutlineMap({ outline }: CoverageOutlineMapProps): React.
    */
   const footprint = ringsFootprint([outline]);
   const centre = footprint?.center ?? vertexCentroid(outline);
-  const zoom = mapZoomForRadiusKm(footprint?.outerKm ?? 0, MAP_HEIGHT_PX);
+  const zoom = mapZoomForRadiusKm(footprint?.outerKm ?? 0, COVERAGE_MAP_HEIGHT_PX);
 
   return (
     <figure className="m-0 flex flex-col gap-1">
