@@ -203,6 +203,15 @@
       ],
       "reason": "ADR-842 §7.6.8 — το κλειδί το παράγει η SSoT `completionFieldLabelKey(fieldKey, propertyType)`, γιατί για ΓΗ το `floorplan` λέγεται «Τοπογραφικό διάγραμμα» και όχι «Κάτοψη» (μετρημένο στην οθόνη). ΕΠΑΛΗΘΕΥΣΙΜΟ ΚΛΕΙΣΤΟ ΣΥΝΟΛΟ: η συνάρτηση επιστρέφει ΜΟΝΟ `completion.fields.<FIELD_KEY>` ή `completion.fields.land.<FIELD_KEY>` — και τα δύο κάτω από αυτό το πρόθεμα, με τα `FIELD_KEYS` κλειστά (17 τιμές). Το κλείσιμο το ΕΚΤΕΛΕΙ η ομάδα Λ του `constants/__tests__/property-type-coverage.test.ts`: κάθε είδος × κάθε πεδίο λύνεται σε κείμενο σε el ΚΑΙ en, αλλιώς κοκκινίζει."
     },
+    "src/components/mandate/AgencyCard.tsx": {
+      "prefixes": [
+        "property-market:mandate.directory.coverageWithin",
+        "property-market:mandate.directory.coverageIntersects",
+        "property-market:mandate.directory.coverageUnknown"
+      ],
+      "reason": "ADR-846 Φ2 (2026-09-08) — η ΜΟΝΗ δυναμική κλήση είναι `t(COVERAGE_RELATION_KEYS[relation])` (γρ. 246). ΕΠΑΛΗΘΕΥΣΙΜΟΣ ΙΣΧΥΡΙΣΜΟΣ, όχι πρόζα: ο πίνακας (γρ. 197) είναι σταθερός στο ΙΔΙΟ module και τυπωμένος `Record<CoverageRelation, string>` — ΟΧΙ Partial — με ΤΕΣΣΕΡΙΣ τιμές που δείχνουν σε ΤΡΙΑ κυριολεκτικά κλειδιά του `DIRECTORY_KEYS` (`coverageWithin` · `coverageIntersects` · `coverageUnknown`· το `disjoint` δείχνει στο ίδιο κλειδί με το `within` και ΔΕΝ αποδίδεται ποτέ — ο καλών επιστρέφει `null` πριν φτάσει εκεί, και δηλώνεται μόνο για να μένει ο πίνακας ΟΛΙΚΟΣ). Επειδή ο τύπος είναι πλήρες Record πάνω σε union, νέα σχέση κάλυψης ΣΠΑΕΙ ΤΗ ΜΕΤΑΓΛΩΤΤΙΣΗ αν δεν πάρει γραμμή — άρα η λίστα δεν μπορεί να αποκλίνει σιωπηλά, ίδιο επιχείρημα με τα `CoverageStatement.tsx` και `SearchResultItem.tsx` παραπάνω. 🔴 ΚΑΙ Ο ΠΙΝΑΚΑΣ ΑΝΤΙΚΑΤΕΣΤΗΣΕ ΔΥΑΔΙΚΟ ΤΕΛΕΣΤΗ, ΓΙ' ΑΥΤΟ ΥΠΑΡΧΕΙ: το προηγούμενο `relation === 'within' ? … : …` θα εμφάνιζε το `'unknown'` της Φάσης 2 ΣΙΩΠΗΛΑ ως «καλύπτει μέρος» — ισχυρισμό που κανείς δεν έκανε, τη στιγμή που το αρχείο αποτυπωμάτων ΔΕΝ έχει παραχθεί ακόμη. ⚠️ ΤΑ ΠΡΟΘΕΜΑΤΑ ΕΙΝΑΙ ΑΚΡΙΒΗ ΚΛΕΙΔΙΑ, ΟΧΙ ΥΠΟΔΕΝΤΡΟ: ένα σκέτο `mandate.directory` θα έσερνε ΟΛΟΝ τον κατάλογο (30+ κλειδιά) στο slice κάθε διαδρομής που ζωγραφίζει την κάρτα.",
+      "$note": "Το `coverageDeclaredNationwide`/`coverageDeclared`/`coverageDeclaredRadius` ΔΕΝ χρειάζονται δήλωση εδώ — είναι κυριολεκτικά `t(DIRECTORY_KEYS.x)` και ο τεμαχιστής τα επιλύει μόνος του."
+    },
     "src/components/listing-detail/ListingFloorplans.tsx": {
       "prefixes": [
         "search-results:detail.media"
