@@ -11,8 +11,10 @@
  * @see src/data/administrative-hierarchy.json
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import type { ComboboxOption } from '@/components/ui/searchable-combobox';
+import { createLazyJsonSnapshot } from '@/lib/data/lazy-json-snapshot';
+import { useLazySnapshot } from '@/hooks/useLazySnapshot';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('useAdministrativeHierarchy');
@@ -145,8 +147,6 @@ const EMPTY_SNAPSHOT: HierarchySnapshot = {
   byLevel: new Map<number, readonly AdminEntity[]>(),
 };
 
-let cachedSnapshot: HierarchySnapshot | null = null;
-let loadingPromise: Promise<void> | null = null;
 
 function mapRawToEntity(raw: RawEntity): AdminEntity {
   const entity: AdminEntity = {
@@ -163,64 +163,53 @@ function mapRawToEntity(raw: RawEntity): AdminEntity {
   return entity;
 }
 
-async function loadHierarchy(): Promise<void> {
-  if (cachedSnapshot) return;
-  if (loadingPromise) {
-    await loadingPromise;
-    return;
-  }
-
-  loadingPromise = (async () => {
-    // 🔴 **ΑΝ ΑΥΤΟ ΠΕΤΑΞΕΙ, ΠΕΦΤΕΙ ΟΛΟΚΛΗΡΗ Η ΟΘΟΝΗ** — και μέχρι το ADR-846 πετούσε.
-    //    Το `await fetch(…).then(r => r.json())` ακολουθούμενο από `for (… of rawData.data)`
-    //    δίνει `TypeError: rawData.data is not iterable` σε **κάθε** απόκριση που δεν είναι
-    //    το αναμενόμενο σχήμα: σελίδα σφάλματος του διακομιστή, HTML του SPA fallback,
-    //    διακοπή δικτύου στα μισά των **4,1 MB**. Ένα δημόσιο, ανώνυμο component
-    //    *(`/pro`)* **δεν επιτρέπεται** να εξαφανίζεται επειδή ένα βοηθητικό αρχείο
-    //    άργησε — και η ίδια η ύπαρξη του `isLoading` υπόσχεται ότι δεν θα το κάνει.
-    //
-    // ⚠️ **Το κενό cache ΕΙΝΑΙ η σωστή κατάσταση αποτυχίας** (N.12): κάθε αναγνώστης
-    //    *(`findById` · `lineageIdsOf` · `levelOptions`)* απαντά ήδη «δεν ξέρω» με κενό —
-    //    και οι καταναλωτές του ADR-846 μεταφράζουν το «δεν ξέρω» σε *«δεν φιλτράρω, και
-    //    το λέω»*, ποτέ σε *«κανείς δεν ταιριάζει»*.
-    try {
-      const response = await fetch('/data/administrative-hierarchy.json');
-      const rawData = (await response.json()) as Partial<RawData>;
-      if (!Array.isArray(rawData.data)) {
-        throw new TypeError('Η διοικητική ιεραρχία δεν έχει το αναμενόμενο σχήμα');
-      }
-
-      const entityMap = new Map<string, AdminEntity>();
-      const levelMap = new Map<number, AdminEntity[]>();
-
-      for (const raw of rawData.data) {
-        const entity = mapRawToEntity(raw);
-        entityMap.set(entity.id, entity);
-
-        const levelList = levelMap.get(entity.level);
-        if (levelList) {
-          levelList.push(entity);
-        } else {
-          levelMap.set(entity.level, [entity]);
-        }
-      }
-
-      cachedSnapshot = { entities: entityMap, byLevel: levelMap };
-    } catch (error) {
-      // ⚠️ **Δεν γράφεται τίποτα στο cache** — ώστε μια επόμενη προσπάθεια να ξαναρωτήσει
-      //    αντί να κληρονομήσει μισοφορτωμένη ιεραρχία.
-      logger.warn('Δεν φορτώθηκε η διοικητική ιεραρχία — οι περιοχές μένουν άγνωστες', {
-        error: error instanceof Error ? error.message : String(error),
-      });
+/**
+ * **Ο τεμπέλης αναγνώστης της ιεραρχίας** — ο μηχανισμός ζει πλέον στο
+ * `lib/data/lazy-json-snapshot.ts` *(ADR-846 Φ2.5)*.
+ *
+ * 🔴 **Ήταν γραμμένος ΕΔΩ, ιδιωτικός** — module cache + single-flight + `try/catch` που
+ * αφήνει το cache άδειο + καθάρισμα της υπόσχεσης. Τέσσερις αποφάσεις, **όλες**
+ * πληρωμένες με περιστατικό. Όταν τα **αποτυπώματα** (`lib/geo/admin-footprints.ts`)
+ * χρειάστηκαν ακριβώς το ίδιο σχήμα, η επιλογή ήταν «δεύτερο αντίγραφο» ή «μία μηχανή».
+ * Το αντίγραφο θα ήταν το sibling clone του **N.18**, με τις τέσσερις αποφάσεις να
+ * αποκλίνουν σιωπηλά. Δες την κεφαλίδα του `lazy-json-snapshot.ts`.
+ *
+ * ⚠️ **Ο έλεγχος `Array.isArray` ΜΕΝΕΙ ΚΡΙΣΙΜΟΣ**: χωρίς αυτόν, μια σελίδα σφάλματος
+ * του διακομιστή ή το HTML fallback του SPA δίνει `TypeError: … is not iterable` **μέσα
+ * σε render**, και το δημόσιο `/pro` **εξαφανίζεται**. Πετώντας εδώ, η αποτυχία
+ * γίνεται κανονική «δεν ξέρω».
+ */
+const HIERARCHY_SOURCE = createLazyJsonSnapshot<HierarchySnapshot>({
+  url: '/data/administrative-hierarchy.json',
+  build: (payload) => {
+    const rawData = payload as Partial<RawData>;
+    if (!Array.isArray(rawData.data)) {
+      throw new TypeError('Η διοικητική ιεραρχία δεν έχει το αναμενόμενο σχήμα');
     }
-  })();
 
-  await loadingPromise;
-  // 🔑 **Καθαρίζεται ΠΑΝΤΑ**, ώστε μια αποτυχία να μη «κλειδώσει» τη φόρτωση για όλη τη
-  //    ζωή της σελίδας: χωρίς αυτό, κάθε επόμενος καλών θα περίμενε την **ίδια**
-  //    αποτυχημένη υπόσχεση και δεν θα ξαναδοκίμαζε ποτέ.
-  loadingPromise = null;
-}
+    const entityMap = new Map<string, AdminEntity>();
+    const levelMap = new Map<number, AdminEntity[]>();
+
+    for (const raw of rawData.data) {
+      const entity = mapRawToEntity(raw);
+      entityMap.set(entity.id, entity);
+
+      const levelList = levelMap.get(entity.level);
+      if (levelList) {
+        levelList.push(entity);
+      } else {
+        levelMap.set(entity.level, [entity]);
+      }
+    }
+
+    return { entities: entityMap, byLevel: levelMap };
+  },
+  onFailure: (error) => {
+    logger.warn('Δεν φορτώθηκε η διοικητική ιεραρχία — οι περιοχές μένουν άγνωστες', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  },
+});
 
 // ============================================================================
 // SEARCH HELPERS
@@ -260,7 +249,7 @@ function normalizeSearch(text: string): string {
  * δεν εκφράζεται από την πρώτη χωρίς να ξέρει ο καλών ποια κλειδιά είναι `null`.
  */
 export function lineageIdsOf(entityId: string): readonly string[] {
-  const entities = cachedSnapshot?.entities;
+  const entities = HIERARCHY_SOURCE.peek()?.entities;
   if (!entities) return [];
 
   const lineage: string[] = [];
@@ -434,21 +423,10 @@ interface UseAdministrativeHierarchyReturn {
  * το σφάλμα που άφηνε τον επιλογέα περιοχής **άδειο** σε πρώτο φόρτωμα (ADR-846).
  */
 export function useAdministrativeHierarchy(): UseAdministrativeHierarchyReturn {
-  const [snapshot, setSnapshot] = useState<HierarchySnapshot | null>(cachedSnapshot);
-
-  useEffect(() => {
-    if (snapshot) return;
-    let alive = true;
-    // ⚠️ Αποτυχία ⇒ `EMPTY_SNAPSHOT`: η οθόνη σταματά να λέει «φορτώνω» και οι αναγνώστες
-    //    απαντούν «δεν ξέρω» με κενό. Το `cachedSnapshot` μένει `null`, ώστε η επόμενη
-    //    προσάρτηση να **ξαναρωτήσει**.
-    void loadHierarchy().then(() => {
-      if (alive) setSnapshot(cachedSnapshot ?? EMPTY_SNAPSHOT);
-    });
-    return () => {
-      alive = false;
-    };
-  }, [snapshot]);
+  // ⚠️ Αποτυχία ⇒ `EMPTY_SNAPSHOT`: η οθόνη σταματά να λέει «φορτώνω» και οι αναγνώστες
+  //    απαντούν «δεν ξέρω» με κενό — ενώ το cache μένει άδειο, ώστε η επόμενη
+  //    προσάρτηση να **ξαναρωτήσει**. Ο μηχανισμός ζει στο `hooks/useLazySnapshot.ts`.
+  const snapshot = useLazySnapshot(HIERARCHY_SOURCE, EMPTY_SNAPSHOT);
 
   const findById = useCallback(
     (id: string): AdminEntity | undefined => snapshot?.entities.get(id),
