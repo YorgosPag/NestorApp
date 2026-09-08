@@ -17,8 +17,8 @@
  *           served by `PrintHost`, ADR-453).
  *
  * Mounted as a React.Suspense leaf in `DxfViewerDialogs`. ADR-040: zero HIGH-FREQUENCY
- * canvas subscriptions (transform/hover/cursor). The low-frequency Firestore feeds it reads
- * (`useFloorsByBuilding`, `useFirestoreBuildings`) are rarely-changing lists, not 60fps stores.
+ * canvas subscriptions (transform/hover/cursor). The low-frequency Firestore feeds behind
+ * `useExportDeps` are rarely-changing lists, not 60fps stores.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-505-unified-export-system.md
  */
@@ -28,20 +28,12 @@ import * as React from 'react';
 import { EventBus } from '../systems/events/EventBus';
 import { useEventGatedDialog } from './dialog-hosts/useEventGatedDialog';
 import { useLevels } from '../systems/levels';
-// ADR-668 — storey elevations for the 3Δ export, from the SAME canonical Firestore source the
-// floor tabs and the live «Όλοι οι όροφοι» 3Δ view use (`useFloors3DAggregator` reads exactly
-// this hook). NOT `Bim3DEntitiesStore.floors`, whose `elevation` arrives undefined → every
-// storey would stack at Y=0.
-import { useFloorsByBuilding } from '@/components/properties/shared/useFloorsByBuilding';
-// ADR-668 — building records (baseElevation + membership) from the SAME canonical Firestore SSoT
-// the live 3Δ store feeds on: `useFirestoreBuildings` (ONE shared BUILDINGS listener, ADR-227/300)
-// → `useBuildingFloors3DSync` → `Bim3DEntitiesStore.buildings`. Low-frequency list, not a canvas
-// store — the ADR-040 concern is high-freq subscriptions, not a rarely-changing buildings feed.
-import { useFirestoreBuildings } from '@/hooks/useFirestoreBuildings';
-import { nowISO } from '@/lib/date-local';
+// 🔴 ADR-845 Βήμα Γ — τα ζωντανά υλικά της συναρμολόγησης (ενεργό κτήριο · όροφοι · κτήρια ·
+// σκηνές) ζουν σε **ένα** σημείο, γιατί τα ζητούν **δύο** προορισμοί. Το «γιατί» κάθε πηγής
+// (ADR-668, ADR-227/300, fail-open στα κτήρια) είναι γραμμένο εκεί, αυτούσιο.
+import { useExportDeps } from './dialog-hosts/useExportDeps';
 import { runExport } from '../export/export-service';
-import type { ExportDeps, ExportLevelScene, ExportRequest } from '../export/types';
-import type { BuildingRef } from '../bim/utils/bim-floor-utils';
+import type { ExportLevelScene, ExportRequest } from '../export/types';
 import { ExportDialog } from '../ui/components/export/ExportDialog';
 // 🔴 ADR-767 Δ4 — ο φραγμός των **μπαγιάτικων δεμένων πινάκων** (`DXEVAL`). Η κρίση είναι
 // καθαρή και ελεγμένη· εδώ αποκτά το σημείο όπου σταματά τον χρήστη.
@@ -79,35 +71,11 @@ interface ExportBodyProps {
 }
 
 function ExportBody({ projectId, buildingId, onClose }: ExportBodyProps): React.JSX.Element {
-  const { levels, currentLevelId, getLevelScene } = useLevels();
-
-  const projectName = React.useMemo(() => {
-    const level = levels.find((l) => l.id === currentLevelId);
-    return level?.name ?? level?.sceneFileName ?? 'drawing';
-  }, [levels, currentLevelId]);
-
-  // ADR-668 — derived from the ACTIVE LEVEL (not the `buildingId` prop, which scopes the IFC
-  // flow): this mirrors `useFloors3DAggregator` exactly, so the exported stack matches what the
-  // live 3Δ view shows. Falls back to the prop when the level carries no building.
-  const activeBuildingId = React.useMemo(
-    () => levels.find((l) => l.id === currentLevelId)?.buildingId ?? buildingId ?? null,
-    [levels, currentLevelId, buildingId],
-  );
-  // Fetched while the dialog is open (it only mounts on open), so the storey elevations are
-  // ready before submit. DXF/TEK ignore them; the 3Δ exporter fails closed without them.
-  const { floors: buildingFloors } = useFloorsByBuilding(activeBuildingId, true);
-
-  // ADR-668 — building refs for the 3Δ exporter. Mirrors `useBuildingFloors3DSync`'s map exactly
-  // (id + baseElevation + name), from the same `useFirestoreBuildings` SSoT. Without them
-  // `resolveEntityBuilding` fails → every body resolves to buildingId='' → the mesh3d building gate
-  // marks it `HIDDEN_` AND its `baseElevation` Y-offset collapses to 0. Left UNFILTERED by project:
-  // the exporter only ever does `.find(b => b.id === …)`, so extra buildings are harmless while a
-  // stale/missing projectId prop could starve it (fail-open beats fail-closed here).
-  const { buildings: firestoreBuildings } = useFirestoreBuildings();
-  const buildings = React.useMemo<BuildingRef[]>(
-    () => firestoreBuildings.map((b) => ({ id: b.id, baseElevation: b.baseElevation, name: b.name })),
-    [firestoreBuildings],
-  );
+  const { currentLevelId } = useLevels();
+  // 🔴 ADR-845 Βήμα Γ — τα ζωντανά υλικά (ενεργό κτήριο · όροφοι · κτήρια · σκηνές) ζουν πλέον
+  //    στο `useExportDeps`, γιατί τα ζητά **και** ο host της δημοσίευσης μοντέλου. Καμία
+  //    αλλαγή κανόνα: ίδιο fallback ενεργού κτηρίου, ίδιες πηγές, ίδια στιγμή συλλογής.
+  const { collect } = useExportDeps(buildingId);
 
   /**
    * 🔴 ADR-767 Δ4 — ο φραγμός **εν αναμονή**: η ετυμηγορία + το «τι κάνω μόλις απαντήσεις».
@@ -176,14 +144,10 @@ function ExportBody({ projectId, buildingId, onClose }: ExportBodyProps): React.
   const handleSubmit = React.useCallback(
     async (request: ExportRequest) => {
       // 🔴 ADR-767 Δ4 — οι σκηνές συναρμολογούνται **πριν** τη διακλάδωση, γιατί ο φραγμός
-      // τις χρειάζεται για **κάθε** μορφή (δες `passesBoundTableGate`). Η λίστα ξαναχρησιμο-
-      // ποιείται αυτούσια από το `deps` παρακάτω — καμία δεύτερη συλλογή.
-      const levelScenes: ExportLevelScene[] = [];
-      for (const level of levels) {
-        const scene = getLevelScene(level.id);
-        if (scene) levelScenes.push({ level, scene });
-      }
-      if (!(await passesBoundTableGate(request, levelScenes))) return;
+      // τις χρειάζεται για **κάθε** μορφή (δες `passesBoundTableGate`). Το ίδιο `deps`
+      // ξαναχρησιμοποιείται αυτούσιο παρακάτω — **καμία δεύτερη συλλογή**.
+      const deps = collect();
+      if (!(await passesBoundTableGate(request, deps.levelScenes))) return;
 
       // IFC / PDF → delegate to the canonical engines (SSoT, no duplication).
       if (request.format === 'ifc') {
@@ -200,23 +164,9 @@ function ExportBody({ projectId, buildingId, onClose }: ExportBodyProps): React.
       }
 
       // DXF / TEK / OBJ / glTF → unified pipeline (content scope + multi-floor live here).
-      const deps: ExportDeps = {
-        levelScenes,
-        activeLevelId: currentLevelId,
-        projectName,
-        dateStr: nowISO().slice(0, 10),
-        // ADR-668 — 3Δ-only: real storey elevations, so «όλοι οι όροφοι» stacks a building
-        // instead of flattening every floor onto Z=0.
-        floors: buildingFloors,
-        // ADR-668 — 3Δ-only: building records so `resolveEntityBuilding` binds every body to its
-        // building (correct baseElevation + never spuriously HIDDEN_).
-        buildings,
-        activeBuildingId,
-      };
       await runExport(request, deps);
     },
-    [levels, getLevelScene, currentLevelId, projectName, projectId, buildingId,
-     buildingFloors, buildings, activeBuildingId, passesBoundTableGate],
+    [collect, projectId, buildingId, passesBoundTableGate],
   );
 
   const handleOpenChange = React.useCallback(

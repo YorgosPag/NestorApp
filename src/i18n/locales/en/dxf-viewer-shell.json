@@ -5673,7 +5673,8 @@
           "number": "Format Cells: Number",
           "alignment": "Format Cells: Alignment"
         }
-      }
+      },
+      "publishModel": "Publish 3D"
     },
     "tooltips": {
       "bimSchedule": "Open BIM Schedule — export structural elements",
@@ -5684,7 +5685,8 @@
       "autoStudyOrganism": "Studies the whole floor by itself: iterates loads → sizing → reinforcement → footings → check, until nothing is red (or up to 10 rounds). One Ctrl+Z undoes the whole study",
       "autoReinforceOrganism": "Auto-reinforce the selected structural members (or the whole floor) with the minimum valid reinforcement per the active code",
       "computeTakedownLoads": "Auto footing loads: column tributary area × storeys × area loads (G/Q) → service design load (never overwrites manual loads)",
-      "runStructuralAnalysis": "3D frame static linear analysis (K·u=F) → real internal forces M/V/N + per-member diagrams (informational — does not replace tributary design loads)"
+      "runStructuralAnalysis": "3D frame static linear analysis (K·u=F) → real internal forces M/V/N + per-member diagrams (informational — does not replace tributary design loads)",
+      "publishModel": "Sends this drawing’s 3D model to a property listing — with a state mark and a declared signatory"
     },
     "symbolPicker": {
       "title": "Symbol Picker",
@@ -7769,5 +7771,39 @@
       "s2": "2 u"
     },
     "exportTooltip": "Export to MP4"
+  },
+  "publishModel": {
+    "dialogTitle": "Publish 3D model",
+    "dialogDescription": "The model is assembled from the current drawing and stored on the property you pick. It is published together with the listing.",
+    "property": "Property",
+    "propertyPlaceholder": "Pick a property",
+    "noProperties": "No properties found in this building",
+    "scope": "Floors",
+    "scopes": {
+      "active": "Active floor",
+      "all-single": "Whole building — one model"
+    },
+    "state": "What the model shows",
+    "states": {
+      "as-built": "As built",
+      "proposal": "Proposal",
+      "divergent": "Diverges from the permit"
+    },
+    "signatory": "Study signatory",
+    "signatoryHint": "Declared, not verified. The contractor is not necessarily the engineer who made the study.",
+    "signatoryName": "Full name",
+    "signatoryDiscipline": "Discipline",
+    "studiedAt": "Study date",
+    "submit": "Publish",
+    "publishing": "Sending…",
+    "cancel": "Cancel",
+    "success": "The model was sent to the property",
+    "refusals": {
+      "no-geometry": "The selected range holds no geometry — pick another floor",
+      "unreadable-model": "The export is not readable as a model. Nothing was sent.",
+      "declaration-too-large": "The model declaration does not fit in the file metadata",
+      "rejected": "The server did not accept the model",
+      "network": "No connection to the server — try again"
+    }
   }
 }

@@ -320,6 +320,13 @@ export interface DrawingEventMap extends MepAutoDesignEventMap, BimEventMap, Top
   // ADR-505 — Open the Export («Εξαγωγή») dialog (ExportHost listens).
   // Emitted by the ribbon Output → «Εξαγωγή» action via wrappedHandleAction.
   'dxf:export-dialog-requested': Record<string, never>;
+  // ADR-845 Φ4.2β/Βήμα Γ — Άνοιγμα του χειριστηρίου **δημοσίευσης 3D μοντέλου σε ακίνητο**
+  // (ο `PublishModelHost` ακούει). Εκπέμπεται από την ενέργεια Output → «Δημοσίευση 3D…».
+  // ⚠️ **Ξεχωριστό σήμα από το `export-dialog-requested`, και είναι απόφαση**: η εξαγωγή ρωτά
+  //    *«τι μορφή και πού να το κατεβάσω;»*, η δημοσίευση ρωτά *«σε ποιο ακίνητο, με ποια
+  //    σήμανση και ποιον υπογράφοντα;»*. Δύο ερωτήσεις σε έναν διάλογο θα σήμαινε ότι κάθε
+  //    κατέβασμα ζητά υπογράφοντα — δηλαδή θα φόρτωνε τον έναν προορισμό με τους όρους του άλλου.
+  'dxf:publish-model-requested': Record<string, never>;
   // ADR-667 Φ1 — το τυπωμένο PDF απέκλινε από την οθόνη (π.χ. γέμισμα εικόνας → συμπαγές
   // χρώμα). Εκπέμπεται από τον `runPrint`/`runPrintSet` ΜΟΝΟ όταν υπάρχει πραγματική απώλεια·
   // πιστό PDF ⇒ καμία εκπομπή. Πριν από αυτό, η υποβάθμιση ήταν ΕΝΤΕΛΩΣ σιωπηλή.

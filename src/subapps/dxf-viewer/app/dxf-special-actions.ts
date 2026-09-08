@@ -175,6 +175,11 @@ export function dispatchDxfSpecialAction(action: string, deps: DxfSpecialActionD
     EventBus.emit('dxf:export-dialog-requested', {});
     return true;
   }
+  // ADR-845 Φ4.2β/Βήμα Γ: Open the publish-3D-model control (PublishModelHost listens)
+  if (action === 'open-publish-model-dialog') {
+    EventBus.emit('dxf:publish-model-requested', {});
+    return true;
+  }
   // ADR-651 Φάση Ε: Open engineer-stamp dialog (StampHost listens)
   if (action === 'open-stamp-dialog') {
     EventBus.emit('dxf:stamp-dialog-requested', {});

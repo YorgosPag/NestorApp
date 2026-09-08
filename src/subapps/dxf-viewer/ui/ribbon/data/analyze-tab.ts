@@ -166,6 +166,21 @@ export const EXPORT_PANEL: RibbonPanelDef = {
             shortcut: 'Ctrl+E',
           },
         },
+        {
+          // ADR-845 Φ4.2β/Βήμα Γ — **δίπλα** στην «Εξαγωγή», και είναι το σωστό σημείο: η ίδια
+          // συναρμολόγηση σκηνής, άλλος προορισμός. ⛔ ΟΧΙ μέσα στον διάλογο εξαγωγής — εκείνος
+          // ρωτά «τι μορφή;», αυτό ρωτά «σε ποιο ακίνητο και ποιος υπογράφει;».
+          type: 'simple',
+          size: 'large',
+          command: {
+            id: 'analyze.publishModel',
+            labelKey: 'ribbon.commands.publishModel',
+            icon: 'export-dxf',
+            commandKey: 'open-publish-model-dialog',
+            action: 'open-publish-model-dialog',
+            tooltipKey: 'ribbon.tooltips.publishModel',
+          },
+        },
       ],
     },
   ],
