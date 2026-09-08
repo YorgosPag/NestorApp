@@ -24,6 +24,10 @@
  *    με ένα φίλτρο που δεν φιλτράρει ποτέ)*.
  * ✅ **Κ3** — η αναμονή είναι **ειδική για τον διοικητικό άξονα**: ερώτημα **σημείου**
  *    δεν περιμένει την ιεραρχία, γιατί δεν τη χρειάζεται.
+ * ✅ **Κ4** *(Φ2.5)* — η **δεύτερη** πηγή αναμονής: τα **αποτυπώματα**. Ερώτημα σημείου
+ *    δεν χρωστά στην ιεραρχία, χρωστά όμως σε αυτά — και η αναμονή **δηλώνεται**.
+ * ✅ **Κ5** — παρονομαστής του Κ4: **χωρίς** γεωγραφικό ερώτημα δεν περιμένει τίποτα,
+ *    ώστε μια καθολική «περίμενε τα πάντα» να μην μπορεί να περάσει.
  *
  * @module components/mandate/__tests__/agency-directory-area-pending
  * @see ADR-846 · `AgencyDirectoryContent`
@@ -60,6 +64,21 @@ jest.mock('@/hooks/useAdministrativeHierarchy', () => ({
     getByLevel: () => [],
     searchOptions: () => [],
     getChildren: () => [],
+  }),
+}));
+
+/**
+ * 🔑 **Τα αποτυπώματα μοκάρονται ΦΟΡΤΩΜΕΝΑ από προεπιλογή** *(ADR-846 Φ2.5)*. Χωρίς
+ * αυτό, ο πραγματικός `useAdminFootprints` θα προσπαθούσε `fetch` μέσα σε jsdom, θα
+ * έμενε για πάντα «φορτώνει», και **κάθε** κριτήριο εδώ θα κοκκίνιζε για λόγο άσχετο με
+ * αυτό που φυλάει. Το Κ4 το γυρίζει επίτηδες σε `true`.
+ */
+const mockFootprints = { isLoading: false };
+
+jest.mock('@/hooks/useAdminFootprints', () => ({
+  useAdminFootprints: () => ({
+    isLoading: mockFootprints.isLoading,
+    footprintOf: () => null,
   }),
 }));
 
@@ -124,9 +143,14 @@ const DIRECTORY = (elBundle as unknown as {
   mandate: { directory: Record<string, string> };
 }).mandate.directory;
 
-function renderDirectory(search: string, hierarchyLoading: boolean): void {
+function renderDirectory(
+  search: string,
+  hierarchyLoading: boolean,
+  footprintsLoading = false,
+): void {
   mockSearch.value = search;
   mockHierarchy.isLoading = hierarchyLoading;
+  mockFootprints.isLoading = footprintsLoading;
   render(<AgencyDirectoryContent />);
 }
 
@@ -166,7 +190,36 @@ describe('ADR-846 Π7 — αργή ιεραρχία: όλοι ορατοί, κα
   //      ιεραρχία· μια καθολική «περίμενε» θα καθυστερούσε οθόνη χωρίς λόγο.
   // =========================================================================
   it('Κ3 — ερώτημα ΣΗΜΕΙΟΥ δεν περιμένει την ιεραρχία', () => {
-    renderDirectory('lat=40.5&lng=23.0&radius=20000', true);
+    renderDirectory('lat=40.5&lng=23.0&r=20', true);
+
+    expect(screen.queryByText(DIRECTORY.areaLoading)).not.toBeInTheDocument();
+  });
+
+  // =========================================================================
+  // 🔴 Κ4 (ADR-846 Φ2.5) — Η ΔΕΥΤΕΡΗ ΠΗΓΗ ΑΝΑΜΟΝΗΣ: ΤΑ ΑΠΟΤΥΠΩΜΑΤΑ.
+  //
+  //     Ερώτημα **σημείου** δεν χρωστά τίποτα στην ιεραρχία (Κ3) — χρωστά όμως στα
+  //     αποτυπώματα, γιατί μια **διοικητική δήλωση** κρίνεται απέναντί του μόνο με
+  //     γεωμετρία. ⚠️ Η απουσία τους ΔΕΝ θα έκοβε κανέναν *(δίνει `unknown`, που ο
+  //     κατάλογος κρατά)*, άρα το «σωστό» δεν επιβάλλει αναμονή· την επιβάλλει το
+  //     **ήθος**: μια λίστα που στενεύει μόνη της χωρίς ο επισκέπτης να αγγίξει
+  //     τίποτα διαβάζεται ως σφάλμα. Την αναμονή τη **δηλώνουμε**.
+  // =========================================================================
+  it('Κ4 — ερώτημα ΣΗΜΕΙΟΥ περιμένει τα ΑΠΟΤΥΠΩΜΑΤΑ, και το δηλώνει', () => {
+    renderDirectory('lat=40.5&lng=23.0&r=20', false, true);
+
+    expect(screen.getByText(DIRECTORY.areaLoading)).toBeInTheDocument();
+    expect(visibleNames()).toEqual(['Γραφείο ΑΛΦΑ', 'Γραφείο ΒΗΤΑ']);
+    expect(screen.queryByText(DIRECTORY.emptyAfterFilter)).not.toBeInTheDocument();
+  });
+
+  // =========================================================================
+  // Κ5 — ΠΑΡΟΝΟΜΑΣΤΗΣ ΤΟΥ Κ4: χωρίς ερώτημα, καμία αναμονή — ούτε για αποτυπώματα.
+  //      Μια καθολική «περίμενε τα πάντα» θα καθυστερούσε **κάθε** επίσκεψη στον
+  //      κατάλογο, και το Κ4 θα την είχε εγκρίνει.
+  // =========================================================================
+  it('Κ5 — χωρίς κανένα γεωγραφικό ερώτημα δεν περιμένει τίποτα', () => {
+    renderDirectory('', true, true);
 
     expect(screen.queryByText(DIRECTORY.areaLoading)).not.toBeInTheDocument();
   });
