@@ -14,6 +14,7 @@
 import { useCallback } from 'react';
 import type { ComboboxOption } from '@/components/ui/searchable-combobox';
 import { createLazyJsonSnapshot } from '@/lib/data/lazy-json-snapshot';
+import { emptyAdminPath, resolveAdminPath } from '@/lib/places/admin-path';
 import { useLazySnapshot } from '@/hooks/useLazySnapshot';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -38,6 +39,8 @@ interface RawEntity {
   p: string | null;
   /** level (1-8) */
   l: number;
+  /** κωδικός ΥΠΕΣ — **μόνο σε δήμους** (ADR-846 Φ4) */
+  y?: string;
   /** postalCode (settlements only) */
   pc?: string;
   /** article (settlements only) */
@@ -60,7 +63,23 @@ export interface AdminEntity {
   name: string;
   shortName: string;
   normalizedName: string;
+  /**
+   * Ο κωδικός **Καλλικράτη** — θεσιακός (`<Π.Ε.><σειρά>`) και **κλειδί γεωμετρίας**:
+   * με αυτόν ο `build-admin-footprints` ζητά πολύγωνο από το WFS.
+   */
   code: string;
+  /**
+   * Ο κωδικός **ΥΠΕΣ** *(`9001`–`9332`)* — **μόνο σε δήμους**, ADR-846 Φ4.
+   *
+   * 🔑 **Δεύτερη ταυτότητα με ΔΙΑΦΟΡΕΤΙΚΗ δουλειά, όχι εφεδρεία.** Ο Καλλικράτης είναι
+   * **θεσιακός**, άρα κάθε μεταρρύθμιση τον ακυρώνει: ο Κλεισθένης γέννησε επτά δήμους
+   * που **δεν έχουν** τέτοιο κωδικό, και το προηγούμενο script τους **επινόησε** —
+   * πατώντας πάνω σε τρεις υπαρκτούς. Ο κωδικός ΥΠΕΣ δεν είναι θεσιακός: ο Κλεισθένης
+   * πρόσθεσε `9326`–`9332` **χωρίς να πειράξει κανέναν** υπάρχοντα.
+   *
+   * ⚠️ **Απουσιάζει από το Άγιο Όρος** — αυτοδιοίκητο, δεν είναι δήμος.
+   */
+  ypesCode?: string;
   parentId: string | null;
   level: number;
   postalCode?: string;
@@ -81,16 +100,28 @@ export const ADMIN_LEVELS = {
 
 export type AdminLevel = (typeof ADMIN_LEVELS)[keyof typeof ADMIN_LEVELS];
 
-/** Labels for each level */
-export const ADMIN_LEVEL_LABELS: Record<number, string> = {
-  1: 'Γεωγραφική Ενότητα',
-  2: 'Αποκεντρωμένη Διοίκηση',
-  3: 'Περιφέρεια',
-  4: 'Περιφερειακή Ενότητα',
-  5: 'Δήμος',
-  6: 'Δημοτική Ενότητα',
-  7: 'Κοινότητα',
-  8: 'Οικισμός',
+/**
+ * **Πώς ΛΕΓΕΤΑΙ κάθε βαθμίδα** — κλειδιά i18n, όχι λέξεις.
+ *
+ * 🔴 **Ήταν οκτώ ωμά ελληνικά αλφαριθμητικά**, σε παραβίαση του N.11, και ήταν **δημόσια
+ * ορατά**: ο αγγλόφωνος επισκέπτης του `/pro` διάβαζε «Περιφερειακή Ενότητα» δίπλα σε
+ * μεταφρασμένο κείμενο. Καμία πύλη δεν το έπιανε — ο σαρωτής του N.11 ψάχνει
+ * `defaultValue:` και `toast()`, και αυτά ήταν **σκέτος πίνακας**.
+ *
+ * 🔑 **Πλήρως προσδιορισμένα (`addresses:…`) επίτηδες**: οι τρεις καταναλωτές ζουν σε
+ * **τρεις διαφορετικούς** χώρους ονομάτων *(`contacts`, `addresses`, και ο τρίτος σε
+ * κανέναν)*. Ένα σχετικό κλειδί θα έλυνε σε **άλλο** namespace ανά σημείο κλήσης —
+ * δηλαδή θα δούλευε στη μία οθόνη και θα τύπωνε το ωμό κλειδί στην άλλη.
+ */
+export const ADMIN_LEVEL_LABEL_KEYS: Record<number, string> = {
+  1: 'addresses:hierarchy.levels.majorGeo',
+  2: 'addresses:hierarchy.levels.decentAdmin',
+  3: 'addresses:hierarchy.levels.region',
+  4: 'addresses:hierarchy.levels.regionalUnit',
+  5: 'addresses:hierarchy.levels.municipality',
+  6: 'addresses:hierarchy.levels.municipalUnit',
+  7: 'addresses:hierarchy.levels.community',
+  8: 'addresses:hierarchy.levels.settlement',
 };
 
 /** Full resolved path from an entity up to the top level */
@@ -158,6 +189,7 @@ function mapRawToEntity(raw: RawEntity): AdminEntity {
     parentId: raw.p,
     level: raw.l,
   };
+  if (raw.y) entity.ypesCode = raw.y;
   if (raw.pc) entity.postalCode = raw.pc;
   if (raw.a) entity.article = raw.a;
   return entity;
@@ -280,46 +312,6 @@ export function lineageIdsOf(entityId: string): readonly string[] {
 //    2. Η απάντηση κάθε αναγνώστη εξαρτάται **μόνο** από τα ορίσματά του — άρα
 //       ελέγχεται χωρίς React, και η ταυτότητά του μέσα στο hook προκύπτει από
 //       **ένα** πράγμα: το στιγμιότυπο.
-
-/** Ποιο κλειδί του `AdminPath` γεμίζει κάθε βαθμίδα. */
-const LEVEL_TO_PATH_KEY: Record<number, keyof AdminPath> = {
-  1: 'majorGeo',
-  2: 'decentAdmin',
-  3: 'region',
-  4: 'regionalUnit',
-  5: 'municipality',
-  6: 'municipalUnit',
-  7: 'community',
-  8: 'settlement',
-};
-
-/** Κενή διαδρομή — «δεν ξέρω», με **όλα** τα κλειδιά παρόντα. */
-function emptyAdminPath(): AdminPath {
-  return {
-    majorGeo: null,
-    decentAdmin: null,
-    region: null,
-    regionalUnit: null,
-    municipality: null,
-    municipalUnit: null,
-    community: null,
-    settlement: null,
-  };
-}
-
-/** Ποια οντότητα σε **κάθε** βαθμίδα — δοχείο 8 θέσεων, για **διεύθυνση**. */
-function resolveAdminPath(snapshot: HierarchySnapshot, entityId: string): AdminPath {
-  const path = emptyAdminPath();
-  let current: AdminEntity | undefined = snapshot.entities.get(entityId);
-
-  while (current) {
-    const key = LEVEL_TO_PATH_KEY[current.level];
-    if (key) path[key] = current;
-    current = current.parentId ? snapshot.entities.get(current.parentId) : undefined;
-  }
-
-  return path;
-}
 
 /**
  * Ετικέτα αποσαφήνισης, ανεβαίνοντας τη γονική αλυσίδα.

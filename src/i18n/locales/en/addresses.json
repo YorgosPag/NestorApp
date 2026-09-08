@@ -138,7 +138,17 @@
     "country": "Country",
     "searchPlaceholder": "Type to search...",
     "settlementPlaceholder": "e.g. Thessaloniki, Marousi, Leptokarya...",
-    "countryValue": "Greece"
+    "countryValue": "Greece",
+    "levels": {
+      "majorGeo": "Geographic Unit",
+      "decentAdmin": "Decentralized Administration",
+      "region": "Region",
+      "regionalUnit": "Regional Unit",
+      "municipality": "Municipality",
+      "municipalUnit": "Municipal Unit",
+      "community": "Community",
+      "settlement": "Settlement"
+    }
   },
   "locations": {
     "title": "Locations & Addresses",

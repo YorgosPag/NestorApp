@@ -203,6 +203,13 @@
       ],
       "reason": "ADR-842 §7.6.8 — το κλειδί το παράγει η SSoT `completionFieldLabelKey(fieldKey, propertyType)`, γιατί για ΓΗ το `floorplan` λέγεται «Τοπογραφικό διάγραμμα» και όχι «Κάτοψη» (μετρημένο στην οθόνη). ΕΠΑΛΗΘΕΥΣΙΜΟ ΚΛΕΙΣΤΟ ΣΥΝΟΛΟ: η συνάρτηση επιστρέφει ΜΟΝΟ `completion.fields.<FIELD_KEY>` ή `completion.fields.land.<FIELD_KEY>` — και τα δύο κάτω από αυτό το πρόθεμα, με τα `FIELD_KEYS` κλειστά (17 τιμές). Το κλείσιμο το ΕΚΤΕΛΕΙ η ομάδα Λ του `constants/__tests__/property-type-coverage.test.ts`: κάθε είδος × κάθε πεδίο λύνεται σε κείμενο σε el ΚΑΙ en, αλλιώς κοκκινίζει."
     },
+    "src/components/mandate/AreaCombobox.tsx": {
+      "prefixes": [
+        "addresses:hierarchy.levels"
+      ],
+      "reason": "ADR-846 Φ4 (2026-09-08) — η ΜΟΝΗ δυναμική κλήση είναι `t(ADMIN_LEVEL_LABEL_KEYS[level])` (γρ. 121), και ο πίνακας ζει σε **ΑΛΛΟ** module (`hooks/useAdministrativeHierarchy` γρ. 115) — γι' αυτό ο τεμαχιστής δεν τον επιλύει μόνος του, σε αντίθεση με τα `MODE_KEYS`/`COVERAGE_RELATION_KEYS` που είναι εντός module. ΜΕΤΡΗΜΕΝΟ: οκτώ τιμές, ΟΛΕΣ κυριολεκτικές και ΟΛΕΣ κάτω από ΑΥΤΟ το πρόθεμα (`majorGeo` · `decentAdmin` · `region` · `regionalUnit` · `municipality` · `municipalUnit` · `community` · `settlement`) — οι οκτώ βαθμίδες του Καλλικράτη, κλειστό σύνολο εξ ορισμού του νόμου. 🔶 **ΕΔΩ ΤΟ ΠΡΟΘΕΜΑ ΕΙΝΑΙ ΥΠΟΔΕΝΤΡΟ ΚΑΙ ΟΧΙ ΑΚΡΙΒΗ ΚΛΕΙΔΙΑ, ΕΠΙΤΗΔΕΣ**: το `hierarchy.levels` περιέχει **ΑΚΡΙΒΩΣ** αυτά τα οκτώ και τίποτε άλλο, οπότε η απαρίθμηση θα ήταν οκτώ γραμμές που λένε ό,τι λέει μία — και θα σάπιζε αν κάποια βαθμίδα μετονομαστεί. ⚠️ **ΤΙ ΔΕΝ ΕΓΓΥΑΤΑΙ Ο ΜΕΤΑΓΛΩΤΤΙΣΤΗΣ, ΚΑΙ ΤΟ ΓΡΑΦΩ**: ο τύπος είναι `Record<number, string>` — **ΟΧΙ** union — άρα ένατη βαθμίδα **δεν** σπάει τη μεταγλώττιση, σε αντίθεση με τα δύο αδέρφια εγγραφές παρακάτω. Ο φρουρός είναι το `OFFERED_LEVELS` που τρέφει τον βρόχο: αν κάποιος προσθέσει βαθμίδα εκεί χωρίς κλειδί, η οθόνη θα βάψει ωμό κλειδί. Ξαναεπαλήθευσέ το αν το `ADMIN_LEVELS` μεγαλώσει.",
+      "$note": "Το κλειδί ήρθε από το ratchet «ADMIN_LEVEL_LABELS hardcoded ελληνικά» (καταγράφηκε 2026-09-08 στο pending-ratchet-work.md): οι ετικέτες ήταν γραμμένες κατευθείαν στα ελληνικά και ο τρίτος καταναλωτής τους ζει στον ΔΗΜΟΣΙΟ δίγλωσσο /pro."
+    },
     "src/components/mandate/CoverageAreaPicker.tsx": {
       "prefixes": [
         "property-market:mandate.showcase.coverageModeAreas",

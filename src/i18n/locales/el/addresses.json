@@ -138,7 +138,17 @@
     "country": "Χώρα",
     "searchPlaceholder": "Πληκτρολογήστε για αναζήτηση...",
     "settlementPlaceholder": "π.χ. Θεσσαλονίκη, Μαρούσι, Λεπτοκαρυά...",
-    "countryValue": "Ελλάδα"
+    "countryValue": "Ελλάδα",
+    "levels": {
+      "majorGeo": "Γεωγραφική Ενότητα",
+      "decentAdmin": "Αποκεντρωμένη Διοίκηση",
+      "region": "Περιφέρεια",
+      "regionalUnit": "Περιφερειακή Ενότητα",
+      "municipality": "Δήμος",
+      "municipalUnit": "Δημοτική Ενότητα",
+      "community": "Κοινότητα",
+      "settlement": "Οικισμός"
+    }
   },
   "locations": {
     "title": "Τοποθεσίες & Διευθύνσεις",

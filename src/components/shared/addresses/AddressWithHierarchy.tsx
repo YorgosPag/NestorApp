@@ -453,7 +453,7 @@ export function AddressWithHierarchy({
               return (
                 <fieldset key={field.level} className="space-y-1">
                   <label className={cn("text-xs font-medium", colors.text.muted)}>
-                    {field.label}
+                    {t(field.labelKey)}
                   </label>
                   <SearchableCombobox
                     value={currentName}

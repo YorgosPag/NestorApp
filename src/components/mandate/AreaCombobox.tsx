@@ -42,11 +42,13 @@
 
 import React from 'react';
 
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+
 import { SearchableCombobox } from '@/components/ui/searchable-combobox';
 import type { ComboboxOption } from '@/components/ui/searchable-combobox';
 import {
   ADMIN_LEVELS,
-  ADMIN_LEVEL_LABELS,
+  ADMIN_LEVEL_LABEL_KEYS,
   useAdministrativeHierarchy,
   type AdminLevel,
 } from '@/hooks/useAdministrativeHierarchy';
@@ -89,6 +91,7 @@ export function AreaCombobox({
   emptyMessage,
   disabled = false,
 }: AreaComboboxProps): React.ReactElement {
+  const { t } = useTranslation('addresses');
   const { isLoading, levelOptions } = useAdministrativeHierarchy();
 
   /**
@@ -115,12 +118,12 @@ export function AreaCombobox({
           // 🔑 **Το ΕΙΔΟΣ μπροστά, πάντα.** Χωρίς αυτό το «Θεσσαλονίκης» εμφανίζεται
           //    τρεις φορές ταυτόσημα, και τα τρία σημαίνουν **πολύ** διαφορετική
           //    εμβέλεια — ο άνθρωπος δεν θα ήξερε τι διάλεξε.
-          secondaryLabel: [ADMIN_LEVEL_LABELS[level], option.secondaryLabel]
+          secondaryLabel: [t(ADMIN_LEVEL_LABEL_KEYS[level]), option.secondaryLabel]
             .filter((part): part is string => part !== undefined && part !== '')
             .join(' · '),
         })),
       ),
-    [levelOptions],
+    [levelOptions, t],
   );
 
   return (

@@ -1,4 +1,18 @@
 {
+  "addresses": {
+    "hierarchy": {
+      "levels": {
+        "community": "Κοινότητα",
+        "decentAdmin": "Αποκεντρωμένη Διοίκηση",
+        "majorGeo": "Γεωγραφική Ενότητα",
+        "municipalUnit": "Δημοτική Ενότητα",
+        "municipality": "Δήμος",
+        "region": "Περιφέρεια",
+        "regionalUnit": "Περιφερειακή Ενότητα",
+        "settlement": "Οικισμός"
+      }
+    }
+  },
   "auth": {
     "brokerage": {
       "denyReason": {

@@ -10,7 +10,7 @@
 
 import type { ReactNode } from 'react';
 import {
-  ADMIN_LEVEL_LABELS,
+  ADMIN_LEVEL_LABEL_KEYS,
   type AdminPath,
   type AdminLevel,
 } from '@/hooks/useAdministrativeHierarchy';
@@ -109,12 +109,12 @@ export const HIERARCHY_FIELDS: ReadonlyArray<{
   level: AdminLevel;
   idField: keyof AddressWithHierarchyValue;
   nameField: keyof AddressWithHierarchyValue;
-  label: string;
+  labelKey: string;
   placeholderKey: string;
 }> = [
-  { level: 7, idField: 'communityId', nameField: 'communityName', label: ADMIN_LEVEL_LABELS[7], placeholderKey: 'form.communityPlaceholder' },
-  { level: 6, idField: 'municipalUnitId', nameField: 'municipalUnitName', label: ADMIN_LEVEL_LABELS[6], placeholderKey: 'form.municipalUnitPlaceholder' },
-  { level: 5, idField: 'municipalityId', nameField: 'municipalityName', label: ADMIN_LEVEL_LABELS[5], placeholderKey: 'form.municipalityPlaceholder' },
-  { level: 4, idField: 'regionalUnitId', nameField: 'regionalUnitName', label: ADMIN_LEVEL_LABELS[4], placeholderKey: 'form.regionalUnitPlaceholder' },
-  { level: 3, idField: 'regionId', nameField: 'regionName', label: ADMIN_LEVEL_LABELS[3], placeholderKey: 'form.regionHierarchyPlaceholder' },
+  { level: 7, idField: 'communityId', nameField: 'communityName', labelKey: ADMIN_LEVEL_LABEL_KEYS[7], placeholderKey: 'form.communityPlaceholder' },
+  { level: 6, idField: 'municipalUnitId', nameField: 'municipalUnitName', labelKey: ADMIN_LEVEL_LABEL_KEYS[6], placeholderKey: 'form.municipalUnitPlaceholder' },
+  { level: 5, idField: 'municipalityId', nameField: 'municipalityName', labelKey: ADMIN_LEVEL_LABEL_KEYS[5], placeholderKey: 'form.municipalityPlaceholder' },
+  { level: 4, idField: 'regionalUnitId', nameField: 'regionalUnitName', labelKey: ADMIN_LEVEL_LABEL_KEYS[4], placeholderKey: 'form.regionalUnitPlaceholder' },
+  { level: 3, idField: 'regionId', nameField: 'regionName', labelKey: ADMIN_LEVEL_LABEL_KEYS[3], placeholderKey: 'form.regionHierarchyPlaceholder' },
 ];

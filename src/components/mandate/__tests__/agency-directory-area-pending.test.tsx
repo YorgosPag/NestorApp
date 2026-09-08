@@ -53,7 +53,15 @@ jest.mock('@/hooks/useAdministrativeHierarchy', () => ({
     MAJOR_GEO: 1, DECENTRALIZED_ADMIN: 2, REGION: 3, REGIONAL_UNIT: 4,
     MUNICIPALITY: 5, MUNICIPAL_UNIT: 6, COMMUNITY: 7, SETTLEMENT: 8,
   },
-  ADMIN_LEVEL_LABELS: { 3: 'Περιφέρεια', 4: 'Περιφερειακή Ενότητα', 5: 'Δήμος', 6: 'Δημοτική Ενότητα', 7: 'Κοινότητα' },
+  // Κλειδιά i18n (ADR-846 Φ4) — το mock δίνει το ΣΧΗΜΑ, όχι λέξεις: η μετάφραση δεν
+  // είναι δουλειά αυτής της άγκυρας, και ωμά ελληνικά εδώ θα ξανάφερναν το χρέος N.11.
+  ADMIN_LEVEL_LABEL_KEYS: {
+    3: 'addresses:hierarchy.levels.region',
+    4: 'addresses:hierarchy.levels.regionalUnit',
+    5: 'addresses:hierarchy.levels.municipality',
+    6: 'addresses:hierarchy.levels.municipalUnit',
+    7: 'addresses:hierarchy.levels.community',
+  },
   lineageIdsOf: (id: string): readonly string[] =>
     mockHierarchy.isLoading ? [] : (mockLineage[id] ?? []),
   useAdministrativeHierarchy: () => ({
