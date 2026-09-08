@@ -76,8 +76,37 @@ export function overrideCells(
  * Canonical matrix for a `tenant_direct` pattern — companyId lives on the
  * document and is compared against the persona's companyId claim.
  *
- * 17 cells: super_admin + same-tenant allow across all ops, cross-tenant +
- * anonymous deny, external_user denied entirely (limited role scope).
+ * **25 κελιά από τα 35.** Τα 10 που λείπουν ΔΕΝ λείπουν από αμέλεια — λείπουν
+ * επειδή η πρόθεσή τους είναι **ανοιχτό ερώτημα**· δες το μπλοκ παρακάτω.
+ *
+ * 🔴 **ΔΙΟΡΘΩΣΗ 2026-09-08 (ADR-298 §8) — ΑΥΤΟ ΤΟ ΣΧΟΛΙΟ ΕΛΕΓΕ ΨΕΜΑΤΑ.**
+ * Μέχρι σήμερα έγραφε *«external_user denied entirely (limited role scope)»*.
+ * **Μετρήθηκε** — με τα ίδια τα κελιά, εκτελεσμένα στον emulator και στις **8**
+ * συλλογές που κληρονομούν αυτή τη matrix: ο `external_user` έχει **read + list
+ * + create ΠΑΝΤΟΥ** (και `update` στο `survey_records`). Ο ισχυρισμός ήταν
+ * ψευδής **από την πρώτη μέρα**, και έμεινε ψευδής επειδή **κανένα κελί δεν τον
+ * ρώτησε ΠΟΤΕ**. Η αιτία είναι δομική, όχι bug: ο `external_user` φέρει
+ * `companyId = SAME_TENANT_COMPANY_ID` (`personas.ts`) και τα `tenant_direct`
+ * σκέλη ελέγχουν **μόνο μισθωτή** (`belongsToCompany`), **ποτέ ρόλο**.
+ *
+ * ⚠️ **ΜΗΝ προσθέσεις τα κελιά του `external_user` «για να κλείσει η γραμμή».**
+ * Η ερώτηση δεν είναι «τι κάνει ο κανόνας» (μετρήθηκε) αλλά «**τι ΠΡΕΠΕΙ να
+ * κάνει**» — και είναι διεύρυνση/στένωση **παραγωγής**: ο `external_user` είναι
+ * ο **προεπιλεγμένος** ρόλος κάθε αυτο-εγγραφής (`bim-tiers.ts`), όπου η
+ * ανάγνωσή του είναι **σκόπιμη και φέρουσα**. Κελί με λάθος πρόθεση είναι
+ * χειρότερο από κελί που λείπει: **μοιάζει** επικυρωμένο.
+ *
+ * ### Τα 10 κελιά που λείπουν, και ΓΙΑΤΙ
+ * | πρόσωπο | πράξεις | μετρημένη πραγματικότητα | γιατί δεν μπαίνει |
+ * |---|---|---|---|
+ * | `external_user` | και οι 5 | read/list/create **allow** | ανοιχτή απόφαση προϊόντος |
+ * | `same_tenant_user` | create/update/delete | create **allow**, υπόλοιπα deny | αποκλίνει ανά συλλογή (δες `crmDirectMatrix`) |
+ *
+ * ### Τι ΜΠΗΚΕ σήμερα — και γιατί δεν χρειάστηκε καμία απόφαση
+ * Τα 8 κελιά `cross_tenant_user` × 5 και `anonymous` × create/update/delete.
+ * Δεν κωδικοποιούν πρόθεση που **μαντεύτηκε**: την ίδια πρόθεση δηλώνουν ήδη
+ * ρητά τα αδελφά τους κελιά (`cross_tenant_admin`, `anonymous` read/list) — και
+ * και τα 8 **μετρήθηκαν πράσινα** και στις 8 συλλογές πριν γραφτούν.
  */
 export function tenantDirectMatrix(): readonly CoverageCell[] {
   return [
@@ -100,9 +129,19 @@ export function tenantDirectMatrix(): readonly CoverageCell[] {
     cell('cross_tenant_admin', 'read', 'deny', 'cross_tenant'),
     cell('cross_tenant_admin', 'list', 'deny', 'cross_tenant'),
     cell('cross_tenant_admin', 'update', 'deny', 'cross_tenant'),
-    // anonymous: deny everything
+    // cross_tenant_user: η απομόνωση μισθωτή δεν εξαρτάται από ρόλο — ο απλός
+    // χρήστης ΞΕΝΟΥ μισθωτή κόβεται όπου κόβεται και ο διαχειριστής του.
+    cell('cross_tenant_user', 'read', 'deny', 'cross_tenant'),
+    cell('cross_tenant_user', 'list', 'deny', 'cross_tenant'),
+    cell('cross_tenant_user', 'create', 'deny', 'cross_tenant'),
+    cell('cross_tenant_user', 'update', 'deny', 'cross_tenant'),
+    cell('cross_tenant_user', 'delete', 'deny', 'cross_tenant'),
+    // anonymous: deny everything — ΟΛΕΣ οι πράξεις, όχι μόνο οι αναγνώσεις.
     cell('anonymous', 'read', 'deny', 'missing_claim'),
     cell('anonymous', 'list', 'deny', 'missing_claim'),
+    cell('anonymous', 'create', 'deny', 'missing_claim'),
+    cell('anonymous', 'update', 'deny', 'missing_claim'),
+    cell('anonymous', 'delete', 'deny', 'missing_claim'),
   ];
 }
 
