@@ -2,7 +2,7 @@
 
 /**
  * @fileoverview **Η ΠΡΑΞΗ ΤΟΥ ΣΗΜΑΤΟΣ, ΑΠΟ ΤΗΝ ΠΛΕΥΡΑ ΤΟΥ ΑΝΘΡΩΠΟΥ** (ADR-841 §7 Α21, Φάση 2).
- * @related app/api/agency-profile/mark/route · lib/agency/showcase-mark-input ·
+ * @related app/api/agency-profile/mark/route · lib/agency/showcase-mark-fidelity ·
  *   components/mandate/ShowcaseMarkField
  * @module hooks/mandate/useShowcaseMark
  *
@@ -32,6 +32,30 @@
  * βιτρίνα (`useAgencyShowcase` → Firestore subscription), που ενημερώνεται **μόνη της**
  * μόλις γραφτεί το έγγραφο. Μια τοπική κατάσταση εδώ θα ήταν **δεύτερη αλήθεια** — και
  * θα απέκλινε ακριβώς την ώρα που ο άνθρωπος κοιτά.
+ *
+ * ════════════════════════════════════════════════════════════════════════════
+ * 🔴 Α21.13 — Η ΠΡΟΕΙΔΟΠΟΙΗΣΗ ΠΟΙΟΤΗΤΑΣ ΕΦΥΓΕ ΑΠΟ ΕΔΩ, ΚΑΙ ΕΙΝΑΙ ΑΠΟΔΕΙΞΗ ΟΧΙ ΓΟΥΣΤΟ
+ * ════════════════════════════════════════════════════════════════════════════
+ *
+ * Ως την Α21.13 το βήμα 1 γεννούσε **και** κατάσταση `warned` *(«θα φανεί θολό»)*, με βάση
+ * τις διαστάσεις του **ΑΡΧΕΙΟΥ**. Από την **Α21.10** όμως το ράφι δημοσιεύει το **ΜΕΛΑΝΙ**:
+ * το λογότυπο κόβεται στο σώμα του, άρα `μελάνι ≤ αρχείο` **σε κάθε άξονα**.
+ *
+ * 🔑 **Και αυτή η ανισότητα κρίνει το ερώτημα, χωρίς γούστο**: μια προειδοποίηση πάνω στο
+ * αρχείο **δεν μπορεί ΠΟΤΕ** να πει κάτι που δεν θα έλεγε η προειδοποίηση πάνω στο μελάνι —
+ * μπορεί **μόνο να σωπάσει** όταν έπρεπε να μιλήσει. Δηλαδή ήταν **γνήσιο υποσύνολο**:
+ * δεύτερη φωνή που δεν πρόσθετε τίποτα και έβγαζε **σιωπή που διαβαζόταν ως έγκριση**.
+ *
+ * ⇒ **Το βήμα 1 κρατά ΜΟΝΟ την άρνηση** *(κάτω από τη μικρότερη βαθμίδα — φθηνό φίλτρο πριν
+ * από κάθε byte)*, και η ποιότητα λέγεται **από το δημοσιευμένο σήμα**, στο
+ * `ShowcaseMarkField`. Έτσι η προειδοποίηση **επιβιώνει της ανανέωσης σελίδας**: ο
+ * άνθρωπος που ανέβασε θολό σήμα τον περασμένο μήνα το μαθαίνει **σήμερα**, ενώ η παλιά
+ * φωτεινή ένδειξη έσβηνε με το που έφευγε από την οθόνη.
+ *
+ * ⚠️ **Η άρνηση παραμένει ΑΣΦΑΛΗΣ παρότι μετρά το αρχείο**: `μελάνι ≤ αρχείο` σημαίνει ότι
+ * αρχείο κάτω από τη βαθμίδα δίνει **σίγουρα** μελάνι κάτω από τη βαθμίδα. Ποτέ δεν
+ * απορρίπτει κάτι που θα ήταν εντάξει — μόνο δεν πιάνει τα πάντα, και το υπόλοιπο το λέει
+ * το δημοσιευμένο σήμα.
  */
 
 import { useCallback, useState } from 'react';
@@ -40,11 +64,7 @@ import { useAuth } from '@/auth/hooks/useAuth';
 import { PhotoUploadService } from '@/services/photo-upload.service';
 import { ENTITY_TYPES, FILE_DOMAINS, FILE_CATEGORIES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
-import {
-  judgeShowcaseMarkInput,
-  type ShowcaseMarkInputVerdict,
-  type ShowcaseMarkReach,
-} from '@/lib/agency/showcase-mark-input';
+import { judgeShowcaseMark } from '@/lib/agency/showcase-mark-fidelity';
 import type { ShowcaseMarkKind } from '@/lib/agency/showcase-mark-kind';
 import type { AgencyProfileRejection } from '@/services/mandate/agency-profile-verdict';
 
@@ -55,17 +75,15 @@ const ENDPOINT = '/api/agency-profile/mark' as const;
 /**
  * **Τι συμβαίνει τώρα με το σήμα** — ρητές καταστάσεις, **ποτέ** `boolean` + `string`.
  *
- * 🔑 Το `warned` είναι **ήσυχη** κατάσταση: το σήμα **μπήκε**, και υπάρχει κάτι να
- * ειπωθεί. Ενωμένο με τα σφάλματα, η οθόνη θα το ζωγράφιζε κόκκινο για μια πράξη που
- * **πέτυχε**.
+ * ⚠️ **ΚΑΜΙΑ κατάσταση «warned»** *(Α21.13)*: η ποιότητα του σήματος **δεν είναι γεγονός
+ * του ανεβάσματος** — είναι ιδιότητα του **δημοσιευμένου** σήματος, και τη λέει η οθόνη
+ * δίπλα του. Δες την κεφαλίδα για την ανισότητα που το αποδεικνύει.
  */
 export type ShowcaseMarkState =
   | { readonly state: 'idle' }
   | { readonly state: 'uploading' }
   | { readonly state: 'publishing' }
   | { readonly state: 'removing' }
-  /** Πέτυχε, αλλά η εικόνα δεν φτάνει για κάθε επιφάνεια. */
-  | { readonly state: 'warned'; readonly reach: ShowcaseMarkReach }
   /** ⛔ *«Διάλεξε άλλο αρχείο.»* — το αρχείο **δεν** ταξίδεψε ή απορρίφθηκε ονομαστικά. */
   | { readonly state: 'rejected'; readonly verdict: LocalRejection | AgencyProfileRejection }
   /** 🔴 *«Ξαναδοκίμασε το ίδιο.»* — δικό **μας** πρόβλημα, όχι δικό του. */
@@ -114,44 +132,47 @@ async function measure(file: File): Promise<{ width: number; height: number } | 
 }
 
 /**
- * **Μέτρησε και κρίνε** — το βήμα 1, ολόκληρο, **έξω από το hook**.
+ * **Μέτρησε και ΑΡΝΗΣΟΥ, αν πρέπει** — το βήμα 1, ολόκληρο, **έξω από το hook**.
  *
- * 🔑 Επιστρέφει είτε την **έτοιμη κατάσταση άρνησης** είτε το `verdict` που επιβιώνει ως
- * το τέλος *(η προειδοποίηση δεν χάνεται στην επιτυχία)*. Ο καλών δεν ξαναρωτά τίποτα.
+ * 🔑 Επιστρέφει την **έτοιμη κατάσταση άρνησης**, ή `null` όταν το αρχείο περνά. Ο καλών
+ * δεν ξαναρωτά τίποτα, και **δεν κουβαλά ετυμηγορία ως το τέλος**: από την **Α21.13** το
+ * μόνο που γεννιέται εδώ είναι το *«όχι»* — το *«θα φανεί θολό»* το λέει το **δημοσιευμένο**
+ * σήμα, δες την κεφαλίδα.
  */
-async function judgeFile(
+async function refuseFile(
   file: File,
-): Promise<
-  | { readonly rejected: ShowcaseMarkState; readonly tooSmall: ShowcaseMark['tooSmall'] }
-  | { readonly verdict: ShowcaseMarkInputVerdict }
-> {
+  kind: ShowcaseMarkKind,
+): Promise<{
+  readonly rejected: ShowcaseMarkState;
+  readonly tooSmall: ShowcaseMark['tooSmall'];
+} | null> {
   const dimensions = await measure(file);
   if (dimensions === null) {
     return { rejected: { state: 'rejected', verdict: 'mark-unreadable' }, tooSmall: null };
   }
 
-  const verdict = judgeShowcaseMarkInput(dimensions);
+  const verdict = judgeShowcaseMark(dimensions, kind);
   if (verdict.outcome === 'tooSmall') {
     return {
       rejected: { state: 'rejected', verdict: 'mark-too-small' },
-      tooSmall: { shortest: verdict.shortest, required: verdict.required },
+      tooSmall: { shortest: verdict.reach.shortest, required: verdict.required },
     };
   }
 
-  return { verdict };
+  return null;
 }
 
 /**
  * **Στείλε τη δήλωση στο σύνορο** και μετάφρασε την απάντηση σε κατάσταση.
  *
- * ⚠️ **Η προειδοποίηση περνά ΜΕΣΑ**, δεν προστίθεται μετά: η επιτυχία με `warned` και η
- * επιτυχία σκέτη είναι **δύο** αποτελέσματα της ίδιας κλήσης, και ο καλών δεν πρέπει να
- * θυμάται να τα ενώσει.
+ * 🔑 **ΜΙΑ επιτυχία, όχι δύο** *(Α21.13)*: ως την Α21.13 η συνάρτηση κουβαλούσε την
+ * ετυμηγορία του βήματος 1 για να ενώσει *«πέτυχε»* με *«αλλά θα φανεί θολό»*. Το δεύτερο
+ * δεν είναι αποτέλεσμα **αυτής της κλήσης** — είναι ιδιότητα του σήματος που μόλις
+ * γράφτηκε, και τη διαβάζει η οθόνη από το ίδιο το έγγραφο.
  */
 async function postMark(
   kind: ShowcaseMarkKind,
   privateStoragePath: string,
-  verdict: ShowcaseMarkInputVerdict,
 ): Promise<ShowcaseMarkState> {
   try {
     const response = await fetch(ENDPOINT, {
@@ -164,9 +185,7 @@ async function postMark(
     if (rejection !== null) return { state: 'rejected', verdict: rejection };
     if (!response.ok) return { state: 'failed', at: 'declare' };
 
-    return verdict.outcome === 'warned'
-      ? { state: 'warned', reach: verdict.reach }
-      : { state: 'idle' };
+    return { state: 'idle' };
   } catch {
     // Δίκτυο που δεν απάντησε — **όχι** άρνηση της πόρτας.
     return { state: 'failed', at: 'declare' };
@@ -284,11 +303,11 @@ export function useShowcaseMark(): ShowcaseMark {
     async (file: File, kind: ShowcaseMarkKind): Promise<void> => {
       setTooSmall(null);
 
-      // ── 1 · Η κρίση, ΠΡΙΝ από κάθε byte ────────────────────────────────
-      const judged = await judgeFile(file);
-      if ('rejected' in judged) {
-        setTooSmall(judged.tooSmall);
-        setState(judged.rejected);
+      // ── 1 · Η άρνηση, ΠΡΙΝ από κάθε byte ───────────────────────────────
+      const refusal = await refuseFile(file, kind);
+      if (refusal !== null) {
+        setTooSmall(refusal.tooSmall);
+        setState(refusal.rejected);
         return;
       }
 
@@ -308,7 +327,7 @@ export function useShowcaseMark(): ShowcaseMark {
 
       // ── 3 · Η δήλωση ───────────────────────────────────────────────────
       setState({ state: 'publishing' });
-      setState(await postMark(kind, storagePath, judged.verdict));
+      setState(await postMark(kind, storagePath));
     },
     [uploadToPrivate, companyId],
   );

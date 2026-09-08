@@ -1,6 +1,7 @@
 /**
  * @fileoverview **ΤΟ ΚΟΥΤΙ ΤΟΥ ΣΗΜΑΤΟΣ** — η απόφαση «τετράγωνο ή ζώνη;» (ADR-841 §7 Α21.9).
- * @related components/mandate/showcase-mark-box · ADR-777 §8.68
+ * @related components/mandate/showcase-mark-box · lib/agency/showcase-mark-surfaces ·
+ *   ADR-777 §8.68
  *
  * ────────────────────────────────────────────────────────────────────────────
  * 🔴 ΓΙΑΤΙ ΑΥΤΗ Η ΣΟΥΙΤΑ ΥΠΑΡΧΕΙ
@@ -18,13 +19,14 @@
 import fs from 'fs';
 import path from 'path';
 
+import { markBox, type ShowcaseMarkSize } from '../showcase-mark-box';
+// ⚠️ **Το «ποιο σχήμα;» μετακόμισε στον τομέα** *(Α21.13)*: το κατώφλι και το κατηγόρημα
+//    τα ρωτά πλέον **και** ο κριτής, οπότε δεν μπορούσαν να μείνουν στο αρχείο των κλάσεων.
 import {
   MARK_BAND_ASPECT_THRESHOLD,
-  markBox,
   marksBand,
   type MarkBoxSubject,
-  type ShowcaseMarkSize,
-} from '../showcase-mark-box';
+} from '@/lib/agency/showcase-mark-surfaces';
 
 /** Λογότυπο δοσμένης αναλογίας, με ύψος σταθερό στα 100 — η αναλογία είναι το θέμα. */
 function logo(aspect: number): MarkBoxSubject {

@@ -58,10 +58,9 @@ import {
   SHOWCASE_REJECTION_KEYS,
 } from '@/components/mandate/agency-showcase-labels';
 import { ShowcaseMarkPreview } from '@/components/mandate/ShowcaseMarkPreview';
+import { ShowcaseMarkFidelityNote } from '@/components/mandate/ShowcaseMarkFidelityNote';
 import { useShowcaseMark, type ShowcaseMarkState } from '@/hooks/mandate/useShowcaseMark';
-import type { ShowcaseMarkReach } from '@/lib/agency/showcase-mark-input';
 import { maskCrops } from '@/components/mandate/showcase-mark-frame';
-import { MARK_IDEAL_EDGE } from '@/lib/agency/showcase-mark-input';
 import {
   SHOWCASE_MARK_ALT_KEYS,
   SHOWCASE_MARK_KINDS,
@@ -205,6 +204,14 @@ function MarkEditor({
       <KindChoice kind={kind} onKind={onKind} disabled={chooser.busy} />
 
       <MarkChooser {...chooser} />
+
+      {/*
+        🏆 **Ο ΚΡΙΤΗΣ ΤΗΣ ΕΞΟΔΟΥ** *(Α21.13)* — μιλά για το **δημοσιευμένο** σήμα, όχι για
+        το αρχείο που μόλις διάλεξε ο άνθρωπος, και **επιβιώνει της ανανέωσης σελίδας**.
+        ⚠️ Κάτω από τον επιλογέα και **έξω** από τη γραμμή κατάστασης: άλλος χρόνος ζωής,
+        άλλη ερώτηση. Δες την κεφαλίδα του {@link ShowcaseMarkFidelityNote}.
+      */}
+      {chooser.published !== null && <ShowcaseMarkFidelityNote published={chooser.published} />}
 
       {/*
         🔴 **Η ΠΡΟΕΙΔΟΠΟΙΗΣΗ ΠΕΡΙΚΟΠΗΣ ΕΙΝΑΙ ΠΡΙΝ, ΟΧΙ ΜΕΤΑ.** Το κατηγόρημα ρωτά **το
@@ -408,46 +415,15 @@ function MarkStatus({
     );
   }
 
-  // 🔴 **ΤΟ «warned» ΔΕΝ ΕΙΝΑΙ ΣΦΑΛΜΑ**: η εικόνα **μπήκε**. Γι' αυτό `muted`, όχι
-  //    `destructive`, και `polite`, όχι `alert` — μια πράξη που πέτυχε δεν κοκκινίζει.
-  if (state.state === 'warned') {
-    return (
-      <p aria-live="polite" className="m-0 text-sm text-muted-foreground">
-        <BlurryReach reach={state.reach} />
-      </p>
-    );
-  }
-
+  // 🔴 **ΚΑΜΙΑ ΚΑΤΑΣΤΑΣΗ «warned» ΕΔΩ** *(Α21.13)*: η ποιότητα του σήματος δεν είναι
+  //    γεγονός του ανεβάσματος αλλά **ιδιότητα του δημοσιευμένου σήματος**, και τη λέει
+  //    το {@link ShowcaseMarkFidelityNote} δίπλα στην εικόνα. Ό,τι μένει εδώ είναι
+  //    **αστοχία** — και μόνο αυτή δικαιολογεί `role="alert"`.
   return (
     <p role="alert" className="m-0 text-sm text-destructive">
       <MarkFailure state={state} tooSmall={tooSmall} />
     </p>
   );
-}
-
-/**
- * **ΠΟΥ ΑΚΡΙΒΩΣ ΘΑ ΦΑΝΕΙ ΘΟΛΗ** — τρεις ζώνες, γιατί οι επιφάνειες είναι δύο.
- *
- * 🔴 **Η ΠΡΩΤΗ ΓΡΑΦΗ ΕΙΧΕ ΔΥΟ ΚΛΑΔΟΥΣ ΚΑΙ ΕΛΕΓΕ ΨΕΜΑΤΑ**, μετρημένο: με
- * `coversCard ? blurryPage : blurryEverywhere`, κάθε εικόνα **128-255px** άκουγε *«θολό
- * στη σελίδα»* ενώ η σελίδα **καλύπτεται**. Ίδιο σχήμα με το Ο-18: ισχυρισμός
- * αληθοφανής, λανθασμένος, σε πρόταση που κανείς δεν διασταυρώνει.
- *
- * 🔑 **Ο έλεγχος διαβάζει τα ΔΥΟ κατηγορήματα, ποτέ το ένα**: το `reach` απαντά χωριστά
- * *«καλύπτεται η κάρτα;»* και *«καλύπτεται η σελίδα;»* ακριβώς για να μη χρειάζεται
- * κανείς να μαντέψει το δεύτερο από το πρώτο.
- */
-function BlurryReach({ reach }: { readonly reach: ShowcaseMarkReach }): React.JSX.Element {
-  const { t } = useTranslation([SHOWCASE_NS]);
-
-  if (!reach.coversCard) {
-    return <>{t(SHOWCASE_MARK_KEYS.blurryEverywhere, { shortest: reach.shortest, ideal: MARK_IDEAL_EDGE })}</>;
-  }
-  if (!reach.coversPage) {
-    return <>{t(SHOWCASE_MARK_KEYS.blurryPage, { shortest: reach.shortest })}</>;
-  }
-  // ⚠️ **Καλύπτονται και οι δύο** — η προειδοποίηση αφορά μόνο **πολύ** πυκνές οθόνες.
-  return <>{t(SHOWCASE_MARK_KEYS.blurryDense, { shortest: reach.shortest, ideal: MARK_IDEAL_EDGE })}</>;
 }
 
 /**
