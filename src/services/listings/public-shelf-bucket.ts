@@ -49,6 +49,7 @@ import type { Bucket, File } from '@google-cloud/storage';
 
 import { GCS_PUBLIC_MEDIA_BUCKET } from '@/config/gcs-buckets';
 import { getAdminStorage } from '@/lib/firebaseAdmin';
+import type { Logger } from '@/lib/telemetry';
 import {
   PUBLIC_SHELF_CACHE_CONTROL,
   parsePublicShelfKey,
@@ -87,6 +88,62 @@ export interface ShelfScan {
   readonly files: readonly File[];
   /** Τα ονόματα του {@link files}, ως σύνολο — η ερώτηση *«υπάρχει ήδη;»* σε O(1). */
   readonly keys: ReadonlySet<string>;
+}
+
+/**
+ * **Η κενή αναφορά ενός ραφιού που ΑΠΕΤΥΧΕ.**
+ *
+ * 🏆 **`readonly never[]` ΚΑΙ ΟΧΙ ΓΕΝΙΚΟ, ΚΑΙ ΕΙΝΑΙ ΑΚΡΙΒΕΙΑ ΟΧΙ ΚΟΛΠΟ**: ένα ράφι που απέτυχε
+ * **δεν δημοσίευσε τίποτα**, και το «τίποτα» είναι `never[]` — που είναι αναθέσιμο σε **κάθε**
+ * πίνακα. Έτσι το **ίδιο** σχήμα ταιριάζει και στον `PublicShelfReport<M>` *(εικόνες)* και στον
+ * `PublicShelfModelReport` *(μοντέλα)*, χωρίς παράμετρο τύπου που θα έπρεπε να συμπεραστεί.
+ */
+export interface FailedShelfReport {
+  readonly outcome: 'failed';
+  readonly published: readonly never[];
+  readonly removed: number;
+  readonly rejected: number;
+}
+
+/**
+ * 🏆 **Η ΜΙΑ ΟΝΟΜΑΣΤΙΚΗ ΑΠΟΤΥΧΙΑ ΡΑΦΙΟΥ** — καταγραφή **και** κενή αναφορά, ως **μία** πράξη.
+ *
+ * 🔴 **ΓΕΝΝΗΘΗΚΕ ΑΠΟ ΤΟΝ ΑΥΤΟΕΛΕΓΧΟ ΤΟΥ N.18, ΚΑΙ ΤΟ ΓΡΑΦΩ ΓΙΑΤΙ ΕΙΝΑΙ ΤΟ ΜΑΘΗΜΑ**: το κεφάλι
+ * του μοντέλου γράφτηκε με **δικό του** αντίγραφο αυτών των τεσσάρων γραμμών — ακριβώς το
+ * *«sibling clone»* που η N.18 υπάρχει για να πιάνει, και το `jscpd:diff` το **μέτρησε**
+ * *(2 clones, 58 + 50 tokens)*. Το `ssot:discover` **δεν** θα το έβλεπε ποτέ: είναι
+ * name/regex-based, και τα δύο σκέλη έχουν **διαφορετικά ονόματα**.
+ *
+ * 🔑 **Ο καταγραφέας περνιέται, ΔΕΝ δημιουργείται εδώ**: κάθε κεφάλι κρατά το **δικό** του
+ * `createModuleLogger` *(`public-shelf` vs `public-shelf-model`)*, ώστε η γραμμή καταγραφής να
+ * εξακολουθεί να λέει **ΠΟΙΟ** ράφι απέτυχε. Ένας κοινός καταγραφέας εδώ θα ένωνε τα δύο σε ένα
+ * όνομα — δηλαδή θα «κεντρικοποιούσε» και την **πληροφορία**, όχι μόνο τον κώδικα.
+ *
+ * ⚠️ **Το μήνυμα και το πλαίσιο μένουν του καλούντος**, για τον ίδιο λόγο που το
+ * `assertNeverMaterial` δεν έγινε κεντρικό: *η αξία δεν είναι το `return`, είναι το **μήνυμα***.
+ */
+export function shelfFailure(
+  logger: Logger,
+  message: string,
+  context: Readonly<Record<string, unknown>>,
+  rejected: number,
+): FailedShelfReport {
+  logger.error(message, context);
+  return { outcome: 'failed', published: [], removed: 0, rejected };
+}
+
+/**
+ * **Ό,τι κρατάμε από μια εξαίρεση για την καταγραφή** — το μήνυμα, ποτέ το αντικείμενο.
+ *
+ * 🔑 Ζει **εδώ** και όχι σε ένα από τα δύο κεφάλια, για τον **ίδιο** λόγο με το
+ * {@link shelfFailure}: ήταν ήδη γραμμένο **τρεις** φορές αυτούσιο. Ένα βοήθημα που το
+ * διορθώνει σε ένα μόνο κεφάλι θα ήταν *δεύτερο δίδυμο ενώ διορθώνεις το πρώτο*.
+ *
+ * ⚠️ **Ποτέ `JSON.stringify(error)`**: ένα σφάλμα του Admin SDK κουβαλά ολόκληρο το αίτημα —
+ * δηλαδή **διαδρομές του ιδιωτικού κάδου** — και η καταγραφή δεν είναι ιδιωτικός χώρος.
+ */
+export function asLogMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 // ---------------------------------------------------------------------------

@@ -66,7 +66,13 @@ import {
   type RasterShelfKind,
 } from '@/services/upload/utils/public-shelf-kinds';
 
-import { deleteExtra, scanShelfPrefix, uploadMissing } from './public-shelf-bucket';
+import {
+  asLogMessage,
+  deleteExtra,
+  scanShelfPrefix,
+  shelfFailure,
+  uploadMissing,
+} from './public-shelf-bucket';
 import {
   cachedVariants,
   distinctByKey,
@@ -249,12 +255,12 @@ export async function reconcilePublicShelf<M>(
   // 🔑 Στη Φ4.2 αυτή η γραμμή είναι που θα **κοκκινίσει πρώτη** όταν εμφανιστεί είδος
   //    μοντέλου — και είναι το ζητούμενο: ο ψήστης μπαίνει **μαζί** με τη γραμμή του.
   if (!isRasterShelfKind(kind)) {
-    logger.error('Το δημόσιο ράφι ΔΕΝ δημοσιεύει μη-εικόνες — δεν υπάρχει ακόμη ψήστης', {
-      root: kind.root,
-      subjectId,
-      encoding: kind.encoding.kind,
-    });
-    return { outcome: 'failed', published: [], removed: 0, rejected: sources.length };
+    return shelfFailure(
+      logger,
+      'Το δημόσιο ράφι ΔΕΝ δημοσιεύει μη-εικόνες με ΑΥΤΟ το κεφάλι',
+      { root: kind.root, subjectId, encoding: kind.encoding.kind },
+      sources.length,
+    );
   }
 
   try {
@@ -288,11 +294,11 @@ export async function reconcilePublicShelf<M>(
       rejected: addressed.length - desired.length,
     };
   } catch (error) {
-    logger.error('Το δημόσιο ράφι ΔΕΝ συμφιλιώθηκε — μένει ΜΠΑΓΙΑΤΙΚΟ ως την επανασύνθεση', {
-      root: kind.root,
-      subjectId,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return { outcome: 'failed', published: [], removed: 0, rejected: 0 };
+    return shelfFailure(
+      logger,
+      'Το ράφι ΕΙΚΟΝΩΝ ΔΕΝ συμφιλιώθηκε — μένει ΜΠΑΓΙΑΤΙΚΟ ως την επανασύνθεση',
+      { root: kind.root, subjectId, error: asLogMessage(error) },
+      0,
+    );
   }
 }

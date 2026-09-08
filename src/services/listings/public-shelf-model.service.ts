@@ -66,9 +66,12 @@ import {
 } from '@/services/upload/utils/storage-path-public-shelf';
 
 import {
+  asLogMessage,
   deleteExtra,
   scanShelfPrefix,
+  shelfFailure,
   uploadMissing,
+  type ShelfScan,
   type ShelfWrite,
 } from './public-shelf-bucket';
 import {
@@ -257,45 +260,67 @@ async function bakeOne<M>(
   source: PublicShelfSource<M>,
   own: readonly File[],
 ): Promise<AddressedModel | null> {
+  const path = source.privateStoragePath;
+
   try {
-    const original = getAdminBucket().file(source.privateStoragePath);
+    const original = getAdminBucket().file(path);
     const [meta] = await original.getMetadata();
-    const sourceRef = sourceReference(source.privateStoragePath, String(meta.generation ?? ''));
-    const recipe = shelfRecipe(kind.encoding);
 
-    // 🔴 **ΠΡΙΝ από τη γρήγορη διαδρομή**, γιατί το `at` χρειάζεται και στα δύο σκέλη: ένα
-    //    μοντέλο που **δεν ξαναψήνεται** εξακολουθεί να χρειάζεται τη στιγμή του για το
-    //    `SourcedAttribute`. Χωρίς αυτό, η επαναδημοσίευση θα έγραφε **άλλη** στιγμή από την
-    //    πρώτη, για **ταυτόσημα** bytes.
-    const at = typeof meta.timeCreated === 'string' ? meta.timeCreated : null;
-    if (at === null) {
-      return refuse(subjectId, source.privateStoragePath, 'undated-source', 'no timeCreated');
-    }
+    const origin = originOf(kind, subjectId, path, meta.generation, meta.timeCreated);
+    if (origin === null) return refuse(subjectId, path, 'undated-source', 'no timeCreated');
 
-    const hit = cachedModel(own, sourceRef, recipe);
-    if (hit !== null) return { ...hit, at, upload: null };
+    const hit = cachedModel(own, origin.sourceRef, origin.recipe);
+    if (hit !== null) return { ...hit, at: origin.at, upload: null };
 
     const declaration = decodeModelDeclaration(meta.metadata?.[MODEL_DECLARATION_METADATA_KEY]);
     if (declaration === null) {
       // ⚠️ **Πρόωρη επιστροφή, ΟΧΙ εξαίρεση**: αυτή είναι ερώτηση **αυτού** του συνόρου, και
       //    μια εξαίρεση θα την ανάγκαζε να δανειστεί όνομα από το λεξιλόγιο του ψήστη.
-      return refuse(subjectId, source.privateStoragePath, 'missing-declaration', 'no readable declaration');
+      return refuse(subjectId, path, 'missing-declaration', 'no readable declaration');
     }
 
     const [raw] = await original.download();
     const baked = await bakeModel(raw, kind.encoding, declaration);
-    return toUpload(kind, { subjectId, sourceRef, recipe, at }, baked.bytes);
+    return toUpload(kind, origin, baked.bytes);
   } catch (error) {
     const failure: ModelSourceRefusal =
       error instanceof ModelBakeError ? error.failure : 'unreadable-source';
 
-    return refuse(
-      subjectId,
-      source.privateStoragePath,
-      failure,
-      error instanceof Error ? error.message : String(error),
-    );
+    return refuse(subjectId, path, failure, asLogMessage(error));
   }
+}
+
+/**
+ * **Ό,τι ταυτοποιεί το πρωτότυπο** — ή `null` όταν του λείπει η **στιγμή** του.
+ *
+ * 🔴 **ΥΠΟΛΟΓΙΖΕΤΑΙ ΠΡΙΝ ΤΗ ΓΡΗΓΟΡΗ ΔΙΑΔΡΟΜΗ**, και δεν είναι τάξη: το `at` χρειάζεται σε
+ * **αμφότερα** τα σκέλη. Ένα μοντέλο που **δεν ξαναψήνεται** εξακολουθεί να χρειάζεται τη
+ * στιγμή του για το `SourcedAttribute` — αλλιώς η επαναδημοσίευση θα έγραφε **άλλη** στιγμή
+ * από την πρώτη, για **ταυτόσημα** bytes.
+ *
+ * ⚠️ **Δέχεται `unknown` για τα δύο πεδία του παρόχου, επίτηδες**: ο τύπος των μεταδεδομένων
+ * του GCS αλλάζει ανάμεσα σε εκδόσεις *(`generation` είναι `string | number`)*, και ένας
+ * ισχυρισμός εδώ θα ήταν ακριβώς ο τρόπος που ένα `undefined` γίνεται σιωπηλά η συμβολοσειρά
+ * `"undefined"` **μέσα σε content-addressed μεταδεδομένο**.
+ *
+ * ⛔ **Απουσία `timeCreated` ⇒ ΑΡΝΗΣΗ, ποτέ ρολόι διακομιστή.** Ο μόνος διαθέσιμος μάντης θα
+ * ήταν ακριβώς εκείνος που το σκέλος της κάτοψης απορρίπτει γραπτώς.
+ */
+function originOf(
+  kind: ModelShelfKind<unknown>,
+  subjectId: string,
+  privateStoragePath: string,
+  generation: unknown,
+  timeCreated: unknown,
+): ModelOrigin | null {
+  if (typeof timeCreated !== 'string' || timeCreated.length === 0) return null;
+
+  return {
+    subjectId,
+    sourceRef: sourceReference(privateStoragePath, String(generation ?? '')),
+    recipe: shelfRecipe(kind.encoding),
+    at: timeCreated,
+  };
 }
 
 /**
@@ -354,6 +379,31 @@ function toUpload(
   };
 }
 
+/**
+ * **Το επιθυμητό σύνολο, εφαρμοσμένο στον κάδο** — ανέβασε ό,τι λείπει, σβήσε ό,τι περισσεύει.
+ *
+ * 🔑 **Οι δύο πλευρές μαζί, και με ΑΥΤΗ τη σειρά**: πρώτα το ανέβασμα, μετά το σβήσιμο. Ανάποδα
+ * θα υπήρχε παράθυρο όπου το πρόθεμα **δεν έχει ούτε το παλιό ούτε το νέο** — και το ράφι
+ * σερβίρει σε **ανώνυμο** επισκέπτη, που δεν έχει σε τι άλλο να πέσει.
+ *
+ * ⚠️ **Ο σβήστης δέχεται ΟΛΑ τα αρχεία του προθέματος** *(`scan.files`, όχι το `own`)*: αγγίζει
+ * μόνο ό,τι αναγνωρίζει, και η **αναγνώριση είναι η δουλειά του** *(άγκυρα Α-1ε)*. Ένα
+ * προ-φιλτραρισμένο σύνολο εδώ θα ήταν **δεύτερος** κριτής ταυτότητας κλειδιού.
+ */
+async function applyToBucket(
+  kind: ModelShelfKind<unknown>,
+  scan: ShelfScan,
+  desired: readonly AddressedModel[],
+): Promise<number> {
+  const desiredKeys = new Set(desired.map((model) => model.key));
+  const uploads = desired
+    .map((model) => model.upload)
+    .filter((upload): upload is ShelfWrite => upload !== null);
+
+  await uploadMissing(scan.bucket, uploads, scan.keys);
+  return deleteExtra(kind, scan.files, desiredKeys);
+}
+
 // ---------------------------------------------------------------------------
 // Η μία δημόσια είσοδος
 // ---------------------------------------------------------------------------
@@ -379,12 +429,12 @@ export async function reconcilePublicModelShelf<M>(
   sources: readonly PublicShelfSource<M>[],
 ): Promise<PublicShelfModelReport> {
   if (!isModelShelfKind(kind)) {
-    logger.error('Αυτό το κεφάλι δημοσιεύει ΜΟΝΟ μοντέλα — η γραμμή δεν είναι μοντέλου', {
-      root: kind.root,
-      subjectId,
-      encoding: kind.encoding.kind,
-    });
-    return { outcome: 'failed', published: [], removed: 0, rejected: sources.length };
+    return shelfFailure(
+      logger,
+      'Αυτό το κεφάλι δημοσιεύει ΜΟΝΟ μοντέλα — η γραμμή δεν είναι μοντέλου',
+      { root: kind.root, subjectId, encoding: kind.encoding.kind },
+      sources.length,
+    );
   }
 
   try {
@@ -394,14 +444,7 @@ export async function reconcilePublicModelShelf<M>(
       sources.map((source) => bakeOne(kind, subjectId, source, own)),
     );
     const desired = addressed.filter((model): model is AddressedModel => model !== null);
-
-    const desiredKeys = new Set(desired.map((model) => model.key));
-    const uploads = desired
-      .map((model) => model.upload)
-      .filter((upload): upload is ShelfWrite => upload !== null);
-
-    await uploadMissing(scan.bucket, uploads, scan.keys);
-    const removed = await deleteExtra(kind, scan.files, desiredKeys);
+    const removed = await applyToBucket(kind, scan, desired);
 
     return {
       outcome: 'reconciled',
@@ -410,11 +453,11 @@ export async function reconcilePublicModelShelf<M>(
       rejected: addressed.length - desired.length,
     };
   } catch (error) {
-    logger.error('Το ράφι ΜΟΝΤΕΛΩΝ ΔΕΝ συμφιλιώθηκε — μένει ΜΠΑΓΙΑΤΙΚΟ ως την επανασύνθεση', {
-      root: kind.root,
-      subjectId,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return { outcome: 'failed', published: [], removed: 0, rejected: 0 };
+    return shelfFailure(
+      logger,
+      'Το ράφι ΜΟΝΤΕΛΩΝ ΔΕΝ συμφιλιώθηκε — μένει ΜΠΑΓΙΑΤΙΚΟ ως την επανασύνθεση',
+      { root: kind.root, subjectId, error: asLogMessage(error) },
+      0,
+    );
   }
 }
