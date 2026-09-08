@@ -2505,125 +2505,95 @@ service cloud.firestore {
     }
 
     // =========================================================================
-    // 🎯 LEADS COLLECTION - ENTERPRISE TENANT ISOLATION (PR-1B)
+    // 🎯 CRM CORE — LEADS · OPPORTUNITIES · ACTIVITIES
     // =========================================================================
-    // 🏢 ENTERPRISE: CRM lead management with tenant isolation
-    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1B)
+    // 🏢 ENTERPRISE: CRM με απομόνωση tenant μέσω `companyId`
+    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 — PR-1B / PR-1D)
+    // 🔀 Merged:  2026-09-08 (ADR-841 §7 Α21.14.8) — ΕΝΑ μπλοκ ανά διαδρομή
+    //
+    // 🔴 Μέχρι σήμερα κάθε μία από τις τρεις είχε ΔΥΟ `match` μπλοκ, γεννημένα σε
+    //    δύο PR της ίδιας εκστρατείας. Το Firestore ΕΝΩΝΕΙ τα μπλοκ που ταιριάζουν
+    //    ⇒ το δεύτερο (PR-1D) δεν ίσχυσε ΠΟΤΕ. Τα κοινά κατηγορήματα ζουν πλέον
+    //    στους βοηθούς `crm*()` (βλ. «CRM MODULE — OWNER-AWARE …» παρακάτω στο
+    //    αρχείο)· εδώ μένει ΜΟΝΟ η πολιτική της κάθε συλλογής, ορατή με μια ματιά.
+    //
+    // ⚠️ Η ΑΣΥΜΜΕΤΡΙΑ ΕΙΝΑΙ ΣΚΟΠΙΜΗ, ΜΕΤΡΗΜΕΝΗ ΚΑΙ ΚΑΡΦΩΜΕΝΗ: ΜΟΝΟ το `leads`
+    //    δίνει πρόσβαση στον ανατεθειμένο. Έτσι ήταν και ΠΡΙΝ την ένωση — η ένωση
+    //    ΔΕΝ αλλάζει πρόσβαση παραγωγής, σε κανένα από τα 9 μετρημένα σενάρια.
+    //    🔓 ΑΝΟΙΧΤΟ ΕΡΩΤΗΜΑ (ADR-841 §7 Α21.14.8): κατά Salesforce/HubSpot/Zoho το
+    //    ίδιο θα έπρεπε να ισχύει και για `opportunities` / `activities` — και το
+    //    `Opportunity.assignedTo` είναι ΥΠΟΧΡΕΩΤΙΚΟ πεδίο (`src/types/crm.ts:37`),
+    //    δηλαδή ο ανατεθειμένος πωλητής ΔΕΝ μπορεί να ενημερώσει τη δική του
+    //    ευκαιρία. Είναι ΔΙΕΥΡΥΝΣΗ πρόσβασης παραγωγής, άρα ΞΕΧΩΡΙΣΤΗ απόφαση —
+    //    όχι λαθραία μέσα σε refactor. Καρφωμένο ως γεγονός στις τρεις σουίτες.
+
     match /leads/{leadId} {
-      // 📖 READ: Tenant-scoped
+      // 📖 READ: tenant-scoped· legacy fallback για δημιουργό Ή ανατεθειμένο.
       allow read: if isAuthenticated()
                   && (
                        isSuperAdminOnly()
-                       || (resource.data.keys().hasAny(['companyId'])
-                           && belongsToCompany(resource.data.companyId))
-                       // Legacy fallback: creator or assignee
-                       || (!resource.data.keys().hasAny(['companyId'])
-                           && (resource.data.createdBy == request.auth.uid
-                               || resource.data.assignedTo == request.auth.uid))
+                       || crmInTenant(resource.data)
+                       || (crmIsLegacy(resource.data)
+                           && (crmIsCreator(resource.data) || crmIsAssignee(resource.data)))
                      );
 
-      // ✍️ CREATE: companyId required
-      allow create: if isAuthenticated()
-                    && request.resource.data.companyId == getUserCompanyId();
+      // ✍️ CREATE: `companyId` του φορτίου == του καλούντος.
+      allow create: if crmCanCreate();
 
-      // 📝 UPDATE: Creator, assignee, or company admin
+      // 📝 UPDATE: + Ο ΑΝΑΤΕΘΕΙΜΕΝΟΣ — δουλεύει το lead που του δόθηκε.
       allow update: if isAuthenticated()
-                    && (
-                         resource.data.createdBy == request.auth.uid
-                         || resource.data.assignedTo == request.auth.uid
-                         || isCompanyAdminOfCompany(resource.data.companyId)
-                         || isSuperAdminOnly()
-                       )
-                    && (!resource.data.keys().hasAny(['companyId'])
-                        || request.resource.data.companyId == resource.data.companyId);
+                    && resource != null
+                    && (crmWriterIsPrivileged(resource.data)
+                        || (crmIsAssignee(resource.data) && crmNotForeignTenant(resource.data)))
+                    && crmCompanyIdUnchanged(resource.data);
 
-      // 🗑️ DELETE: Creator or company admin
+      // 🗑️ DELETE: ΟΧΙ ο ανατεθειμένος — η ανάθεση δίνει το δικαίωμα να το
+      //    δουλέψεις, όχι να το εξαφανίσεις.
       allow delete: if isAuthenticated()
-                    && (
-                         resource.data.createdBy == request.auth.uid
-                         || isCompanyAdminOfCompany(resource.data.companyId)
-                         || isSuperAdminOnly()
-                       );
+                    && resource != null
+                    && crmWriterIsPrivileged(resource.data);
     }
 
-    // =========================================================================
-    // 💼 OPPORTUNITIES COLLECTION - ENTERPRISE TENANT ISOLATION (PR-1B)
-    // =========================================================================
-    // 🏢 ENTERPRISE: CRM opportunity management with tenant isolation
-    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1B)
     match /opportunities/{opportunityId} {
-      // 📖 READ: Tenant-scoped
+      // 📖 READ: tenant-scoped· legacy fallback ΜΟΝΟ για δημιουργό (βλ. ⚠️ πιο πάνω).
       allow read: if isAuthenticated()
                   && (
                        isSuperAdminOnly()
-                       || (resource.data.keys().hasAny(['companyId'])
-                           && belongsToCompany(resource.data.companyId))
-                       // Legacy fallback: creator-only
-                       || (!resource.data.keys().hasAny(['companyId'])
-                           && resource.data.createdBy == request.auth.uid)
+                       || crmInTenant(resource.data)
+                       || (crmIsLegacy(resource.data) && crmIsCreator(resource.data))
                      );
 
-      // ✍️ CREATE: companyId required
-      allow create: if isAuthenticated()
-                    && request.resource.data.companyId == getUserCompanyId();
+      allow create: if crmCanCreate();
 
-      // 📝 UPDATE: Creator or company admin
       allow update: if isAuthenticated()
-                    && (
-                         resource.data.createdBy == request.auth.uid
-                         || isCompanyAdminOfCompany(resource.data.companyId)
-                         || isSuperAdminOnly()
-                       )
-                    && (!resource.data.keys().hasAny(['companyId'])
-                        || request.resource.data.companyId == resource.data.companyId);
+                    && resource != null
+                    && crmWriterIsPrivileged(resource.data)
+                    && crmCompanyIdUnchanged(resource.data);
 
-      // 🗑️ DELETE: Creator or company admin
       allow delete: if isAuthenticated()
-                    && (
-                         resource.data.createdBy == request.auth.uid
-                         || isCompanyAdminOfCompany(resource.data.companyId)
-                         || isSuperAdminOnly()
-                       );
+                    && resource != null
+                    && crmWriterIsPrivileged(resource.data);
     }
 
-    // =========================================================================
-    // 📋 ACTIVITIES COLLECTION - ENTERPRISE TENANT ISOLATION (PR-1B)
-    // =========================================================================
-    // 🏢 ENTERPRISE: CRM activity tracking with tenant isolation
-    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1B)
     match /activities/{activityId} {
-      // 📖 READ: Tenant-scoped
+      // 📖 READ: tenant-scoped· legacy fallback ΜΟΝΟ για δημιουργό (βλ. ⚠️ πιο πάνω).
       allow read: if isAuthenticated()
                   && (
                        isSuperAdminOnly()
-                       || (resource.data.keys().hasAny(['companyId'])
-                           && belongsToCompany(resource.data.companyId))
-                       // Legacy fallback: creator-only
-                       || (!resource.data.keys().hasAny(['companyId'])
-                           && resource.data.createdBy == request.auth.uid)
+                       || crmInTenant(resource.data)
+                       || (crmIsLegacy(resource.data) && crmIsCreator(resource.data))
                      );
 
-      // ✍️ CREATE: companyId required
-      allow create: if isAuthenticated()
-                    && request.resource.data.companyId == getUserCompanyId();
+      allow create: if crmCanCreate();
 
-      // 📝 UPDATE: Creator or company admin
       allow update: if isAuthenticated()
-                    && (
-                         resource.data.createdBy == request.auth.uid
-                         || isCompanyAdminOfCompany(resource.data.companyId)
-                         || isSuperAdminOnly()
-                       )
-                    && (!resource.data.keys().hasAny(['companyId'])
-                        || request.resource.data.companyId == resource.data.companyId);
+                    && resource != null
+                    && crmWriterIsPrivileged(resource.data)
+                    && crmCompanyIdUnchanged(resource.data);
 
-      // 🗑️ DELETE: Creator or company admin
       allow delete: if isAuthenticated()
-                    && (
-                         resource.data.createdBy == request.auth.uid
-                         || isCompanyAdminOfCompany(resource.data.companyId)
-                         || isSuperAdminOnly()
-                       );
+                    && resource != null
+                    && crmWriterIsPrivileged(resource.data);
     }
 
     // =========================================================================
@@ -3035,141 +3005,6 @@ service cloud.firestore {
     // 🏢 ENTERPRISE: Sections are company-scoped (linked to templates)
     // =========================================================================
     match /obligation-sections/{sectionId} {
-      // 📖 READ: Tenant-scoped
-      allow read: if isAuthenticated()
-                  && (
-                       isSuperAdminOnly()
-                       || (resource.data.keys().hasAny(['companyId'])
-                           && belongsToCompany(resource.data.companyId))
-                       // LEGACY FALLBACK: Creator-only
-                       || (!resource.data.keys().hasAny(['companyId'])
-                           && resource.data.keys().hasAny(['createdBy'])
-                           && resource.data.createdBy == request.auth.uid)
-                     );
-
-      // ✍️ CREATE: companyId required
-      allow create: if isAuthenticated()
-                    && resource == null
-                    && request.resource.data.companyId == getUserCompanyId();
-
-      // 📝 UPDATE: Creator or company admin, companyId immutable
-      allow update: if isAuthenticated()
-                    && resource != null
-                    && (
-                         resource.data.createdBy == request.auth.uid
-                         || isCompanyAdminOfCompany(resource.data.companyId)
-                         || isSuperAdminOnly()
-                       )
-                    && (!resource.data.keys().hasAny(['companyId'])
-                        || request.resource.data.companyId == resource.data.companyId);
-
-      // 🗑️ DELETE: Creator or company admin
-      allow delete: if isAuthenticated()
-                    && resource != null
-                    && (
-                         resource.data.createdBy == request.auth.uid
-                         || isCompanyAdminOfCompany(resource.data.companyId)
-                         || isSuperAdminOnly()
-                       );
-    }
-
-    // =========================================================================
-    // 💼 OPPORTUNITIES - ENTERPRISE TENANT ISOLATION (PR-1D FIX)
-    // =========================================================================
-    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1D)
-    // 🏢 ENTERPRISE: CRM sales pipeline with tenant isolation
-    // =========================================================================
-    match /opportunities/{opportunityId} {
-      // 📖 READ: Tenant-scoped
-      allow read: if isAuthenticated()
-                  && (
-                       isSuperAdminOnly()
-                       || (resource.data.keys().hasAny(['companyId'])
-                           && belongsToCompany(resource.data.companyId))
-                       // LEGACY FALLBACK: Creator-only
-                       || (!resource.data.keys().hasAny(['companyId'])
-                           && resource.data.keys().hasAny(['createdBy'])
-                           && resource.data.createdBy == request.auth.uid)
-                     );
-
-      // ✍️ CREATE: companyId required
-      allow create: if isAuthenticated()
-                    && resource == null
-                    && request.resource.data.companyId == getUserCompanyId();
-
-      // 📝 UPDATE: Creator or company admin, companyId immutable
-      allow update: if isAuthenticated()
-                    && resource != null
-                    && (
-                         resource.data.createdBy == request.auth.uid
-                         || isCompanyAdminOfCompany(resource.data.companyId)
-                         || isSuperAdminOnly()
-                       )
-                    && (!resource.data.keys().hasAny(['companyId'])
-                        || request.resource.data.companyId == resource.data.companyId);
-
-      // 🗑️ DELETE: Creator or company admin
-      allow delete: if isAuthenticated()
-                    && resource != null
-                    && (
-                         resource.data.createdBy == request.auth.uid
-                         || isCompanyAdminOfCompany(resource.data.companyId)
-                         || isSuperAdminOnly()
-                       );
-    }
-
-    // =========================================================================
-    // 👥 LEADS - ENTERPRISE TENANT ISOLATION (PR-1D FIX)
-    // =========================================================================
-    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1D)
-    // 🏢 ENTERPRISE: CRM lead management with tenant isolation
-    // =========================================================================
-    match /leads/{leadId} {
-      // 📖 READ: Tenant-scoped
-      allow read: if isAuthenticated()
-                  && (
-                       isSuperAdminOnly()
-                       || (resource.data.keys().hasAny(['companyId'])
-                           && belongsToCompany(resource.data.companyId))
-                       // LEGACY FALLBACK: Creator-only
-                       || (!resource.data.keys().hasAny(['companyId'])
-                           && resource.data.keys().hasAny(['createdBy'])
-                           && resource.data.createdBy == request.auth.uid)
-                     );
-
-      // ✍️ CREATE: companyId required
-      allow create: if isAuthenticated()
-                    && resource == null
-                    && request.resource.data.companyId == getUserCompanyId();
-
-      // 📝 UPDATE: Creator or company admin, companyId immutable
-      allow update: if isAuthenticated()
-                    && resource != null
-                    && (
-                         resource.data.createdBy == request.auth.uid
-                         || isCompanyAdminOfCompany(resource.data.companyId)
-                         || isSuperAdminOnly()
-                       )
-                    && (!resource.data.keys().hasAny(['companyId'])
-                        || request.resource.data.companyId == resource.data.companyId);
-
-      // 🗑️ DELETE: Creator or company admin
-      allow delete: if isAuthenticated()
-                    && resource != null
-                    && (
-                         resource.data.createdBy == request.auth.uid
-                         || isCompanyAdminOfCompany(resource.data.companyId)
-                         || isSuperAdminOnly()
-                       );
-    }
-
-    // =========================================================================
-    // 📆 ACTIVITIES - ENTERPRISE TENANT ISOLATION (PR-1D FIX)
-    // =========================================================================
-    // 📅 Updated: 2026-01-29 (Security Gate Phase 1 - PR-1D)
-    // 🏢 ENTERPRISE: CRM activity tracking with tenant isolation
-    // =========================================================================
-    match /activities/{activityId} {
       // 📖 READ: Tenant-scoped
       allow read: if isAuthenticated()
                   && (
@@ -5535,6 +5370,134 @@ service cloud.firestore {
     // Accounting: admin-only write for settings/config singletons
     function canWriteAccountingSingleton(companyId) {
       return isCompanyAdminOfCompany(companyId);
+    }
+
+    // =========================================================================
+    // 🎯 CRM MODULE — OWNER-AWARE TENANT ISOLATION HELPERS
+    // =========================================================================
+    // 📅 Added: 2026-09-08 (ADR-841 §7 Α21.14.8 — η ένωση των διπλών μπλοκ)
+    // 🏢 Χρήστες: leads · opportunities · activities
+    //
+    // 🔴 ΓΙΑΤΙ ΥΠΑΡΧΟΥΝ. Οι τρεις συλλογές είχαν η καθεμία ΔΥΟ `match` μπλοκ στην
+    //    ΙΔΙΑ διαδρομή (PR-1B και PR-1D, 2026-01-29). Στο Firestore το `allow`
+    //    είναι η ΕΝΩΣΗ όσων μπλοκ ταιριάζουν ⇒ το χαλαρότερο νικά σιωπηλά. Άρα η
+    //    αυστηροποίηση του PR-1D γράφτηκε, πέρασε review, μπήκε στο main — και
+    //    ΔΕΝ ΙΣΧΥΣΕ ΠΟΤΕ. Μετρημένο 2026-09-08 στον emulator, σε 9 σενάρια: η
+    //    ένωση ήταν ΑΚΡΙΒΩΣ το PR-1B, σε ΟΛΑ. Δεν ήταν ερμηνεία — ήταν μέτρηση.
+    //
+    // 🏆 ΠΟΙΟΣ ΕΙΝΑΙ «ΚΑΤΟΧΟΣ» — Η ΒΙΟΜΗΧΑΝΙΑ ΕΙΝΑΙ ΟΜΟΦΩΝΗ: ο ανατεθειμένος.
+    //    Salesforce: το `OwnerId` ενός Lead ΕΙΝΑΙ ο ανατεθειμένος — η ανάθεση
+    //    ΓΙΝΕΤΑΙ αλλάζοντας τον owner. HubSpot: «users set as the owner have owner
+    //    access to the record». Zoho: «individual contributors see their own
+    //    records». ⇒ Το `assignedTo` είναι ΔΙΚΑΙΩΜΑ· το `createdBy` είναι ΙΣΤΟΡΙΚΟ.
+    //
+    // 📊 ΤΙ ΑΚΡΙΒΩΣ ΑΛΛΑΞΕ Η ΕΝΩΣΗ — ΜΕΤΡΗΜΕΝΟ, ΟΧΙ ΕΚΤΙΜΩΜΕΝΟ.
+    //    756 μετρήσεις (3 συλλογές × 7 πρόσωπα × 10 σχήματα εγγράφου × 3 πράξεις,
+    //    + create/list/ghost), καθεμία σε ΚΑΘΑΡΟ κόσμο. Διαφορές: **3**, και οι
+    //    τρεις η ΙΔΙΑ — `super_admin` που διαγράφει έγγραφο που ΔΕΝ ΥΠΑΡΧΕΙ:
+    //    ALLOW → DENY. Είναι ΑΚΡΙΒΩΣ η αυστηροποίηση που έγραψε το PR-1D και δεν
+    //    ίσχυσε ποτέ, και χτυπά μόνο σε no-op (η διαγραφή ανύπαρκτου εγγράφου δεν
+    //    αλλάζει τίποτα). Καμία διαδρομή του κώδικα δεν διαγράφει «στα τυφλά»
+    //    αυτές τις συλλογές από πελάτη. Οι υπόλοιπες **753** μετρήσεις είναι
+    //    ταυτόσημες πριν/μετά.
+    //
+    // ⚠️ ΟΙ ΦΡΟΥΡΟΙ `keys().hasAny([...])` ΔΕΝ ΑΛΛΑΖΟΥΝ ΣΥΜΠΕΡΙΦΟΡΑ (0/756) —
+    //    αλλάζουν ΜΗΧΑΝΙΣΜΟ, και ΑΥΤΟ είναι το ζητούμενο. Χωρίς αυτούς, το
+    //    `resource.data.x` σε πεδίο που ΛΕΙΠΕΙ παράγει *σφάλμα αποτίμησης*, και η
+    //    άρνηση προκύπτει από το σφάλμα. Όμως το CEL ΑΠΟΡΡΟΦΑ σφάλματα όταν άλλο
+    //    σκέλος `||` είναι αληθές — ΜΕΤΡΗΜΕΝΟ εδώ: legacy έγγραφο ΧΩΡΙΣ `createdBy`
+    //    διαβάζεται σήμερα κανονικά, ακριβώς επειδή το σφάλμα απορροφήθηκε από το
+    //    σκέλος του `assignedTo`. Άρα «άρνηση από σφάλμα» δεν είναι εγγύηση — είναι
+    //    σύμπτωση, και ένα νέο σκέλος `||` αύριο την εξαφανίζει σιωπηλά. Ρητό
+    //    κατηγόρημα δεν απορροφάται.
+    //
+    // 🔁 ΠΩΣ ΤΟ ΞΑΝΑΜΕΤΡΑΣ: το `emulator.ts` δέχεται `FIRESTORE_RULES_FILE=<αρχείο>`
+    //    — τρέξε την ίδια σουίτα σε δύο εκδοχές των κανόνων και σύγκρινε. Αυτή η
+    //    ραφή είναι ο λόγος που η παραπάνω πρόταση είναι αριθμός και όχι γνώμη.
+
+    // CRM: το έγγραφο ανήκει σε tenant (έχει `companyId`) — και είναι ο δικός μου.
+    function crmInTenant(doc) {
+      return doc.keys().hasAny(['companyId']) && belongsToCompany(doc.companyId);
+    }
+
+    // CRM: έγγραφο ΠΡΙΝ τη μετανάστευση `companyId` — ο μόνος δρόμος χωρίς tenant.
+    function crmIsLegacy(doc) {
+      return !doc.keys().hasAny(['companyId']);
+    }
+
+    // CRM: ο καλών το δημιούργησε. ΙΣΤΟΡΙΚΟ — δεν συνεπάγεται ότι το δουλεύει.
+    function crmIsCreator(doc) {
+      return doc.keys().hasAny(['createdBy']) && doc.createdBy == request.auth.uid;
+    }
+
+    // CRM: ο καλών ΤΟ ΔΟΥΛΕΥΕΙ — ο «owner» της βιομηχανίας (Salesforce/HubSpot/Zoho).
+    function crmIsAssignee(doc) {
+      return doc.keys().hasAny(['assignedTo']) && doc.assignedTo == request.auth.uid;
+    }
+
+    // CRM: διαχειριστής της εταιρείας ΤΟΥ ΕΓΓΡΑΦΟΥ (όχι της δικής μου, αν διαφέρουν).
+    function crmIsCompanyAdmin(doc) {
+      return doc.keys().hasAny(['companyId']) && isCompanyAdminOfCompany(doc.companyId);
+    }
+
+    // CRM: το έγγραφο ΔΕΝ ανήκει σε ΞΕΝΟ tenant — είναι είτε δικό μας, είτε legacy
+    //      (πριν τη μετανάστευση `companyId`, χωρίς εταιρεία-ιδιοκτήτη).
+    //
+    // 🔴 ΤΟ ΚΕΝΟ ΠΟΥ ΚΛΕΙΝΕΙ, ΜΕΤΡΗΜΕΝΟ 2026-09-08 ΠΑΝΩ ΣΤΟ ΤΟΤΕ `main`:
+    //    ο έλεγχος tenant υπήρχε στο `read` και **ΕΛΕΙΠΕ** από `update`/`delete`.
+    //    Τα σκέλη `createdBy` / `assignedTo` δεν ρωτούσαν σε ΠΟΙΟΝ ανήκει το
+    //    έγγραφο — μόνο ποιος το έγραψε ή σε ποιον ανατέθηκε. Αποτέλεσμα:
+    //
+    //      χρήστης της company-A · έγγραφο της company-B που ΕΚΕΙΝΟΣ δημιούργησε
+    //      → read: DENY   ·   update: **ALLOW**   ·   delete: **ALLOW**
+    //
+    //    Και στις **τρεις** συλλογές, όχι μόνο στα `leads`. Δηλαδή **εγγραφή σε
+    //    έγγραφο που ΔΕΝ μπορείς να διαβάσεις**, πάνω από το σύνορο του tenant.
+    //
+    // 🔑 ΓΙΑΤΙ ΤΟ ΚΛΕΙΣΙΜΟ ΔΕΝ ΜΠΟΡΕΙ ΝΑ ΚΛΕΙΔΩΣΕΙ ΚΑΝΕΝΑΝ ΠΡΑΓΜΑΤΙΚΟ ΧΡΗΣΤΗ:
+    //    στις ίδιες μετρήσεις το `read` ήταν **DENY** σε ΚΑΘΕ μία από αυτές τις
+    //    περιπτώσεις. Καμία τίμια οθόνη δεν μπορεί να δείξει έγγραφο που δεν
+    //    διαβάζεται, άρα καμία τίμια ροή δεν μπορεί να το ενημερώσει. Η
+    //    δυνατότητα ήταν **απροσπέλαστη από νόμιμο πελάτη** — προσπελάσιμη μόνο
+    //    από κάποιον που φτιάχνει το αίτημα ο ίδιος.
+    //
+    // ⚠️ ΡΕΑΛΙΣΤΙΚΟ ΣΕΝΑΡΙΟ, ΟΧΙ ΘΕΩΡΗΤΙΚΟ: υπάλληλος αλλάζει εταιρεία. Το `uid`
+    //    του μένει το ίδιο, η αξίωση `companyId` αλλάζει. Κάθε lead / ευκαιρία /
+    //    δραστηριότητα που δημιούργησε στην ΠΑΛΙΑ εταιρεία παρέμενε γι' αυτόν
+    //    **εγγράψιμη και διαγράψιμη** — αόρατα, αφού δεν μπορούσε να τη διαβάσει.
+    //
+    // 🏆 ΕΙΝΑΙ ΤΟ ΔΟΓΜΑ ΤΟΥ ΙΔΙΟΥ ΑΡΧΕΙΟΥ: το `canWriteLegacyFloorplan()` δένει
+    //    ήδη τον γραφέα στο tenant του εγγράφου (`isBimWriter(resource.data.companyId)`).
+    //    Το CRM ήταν η εξαίρεση, όχι ο κανόνας.
+    function crmNotForeignTenant(doc) {
+      return crmIsLegacy(doc) || crmInTenant(doc);
+    }
+
+    // CRM: ποιος γράφει ΠΑΝΤΑ — δημιουργός, διαχειριστής εταιρείας, super admin.
+    //      Ο δημιουργός ΔΕΜΕΝΟΣ στο tenant του εγγράφου· ο διαχειριστής είναι ήδη
+    //      δεμένος (το `isCompanyAdminOfCompany` περνά από `belongsToCompany`).
+    //      ⚠️ Το σκέλος του ανατεθειμένου ΔΕΝ είναι εδώ ΕΠΙΤΗΔΕΣ: μπαίνει ρητά, ανά
+    //      συλλογή, ώστε η ασυμμετρία των τριών να είναι ΟΡΑΤΗ στο σημείο της
+    //      απόφασης — όχι κρυμμένη μέσα σε κοινό βοηθό.
+    function crmWriterIsPrivileged(doc) {
+      return isSuperAdminOnly()
+             || (crmIsCreator(doc) && crmNotForeignTenant(doc))
+             || crmIsCompanyAdmin(doc);
+    }
+
+    // CRM: το `companyId` δεν μετακινείται ΠΟΤΕ με ενημέρωση πελάτη.
+    //      (Τα legacy έγγραφα δεν έχουν το πεδίο — δεν υπάρχει τι να διατηρηθεί.)
+    function crmCompanyIdUnchanged(doc) {
+      return !doc.keys().hasAny(['companyId'])
+             || request.resource.data.companyId == doc.companyId;
+    }
+
+    // CRM: δημιουργία — το `companyId` του φορτίου ΠΡΕΠΕΙ να είναι του καλούντος.
+    //      Το `resource == null` είναι η προϋπόθεση της δημιουργίας, ρητά.
+    function crmCanCreate() {
+      return isAuthenticated()
+             && resource == null
+             && request.resource.data.companyId == getUserCompanyId();
     }
 
     // =========================================================================

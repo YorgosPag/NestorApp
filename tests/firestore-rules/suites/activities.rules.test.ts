@@ -21,6 +21,7 @@ import {
 import { getContext } from '../_harness/auth-contexts';
 import { assertCell, type AssertTarget } from '../_harness/assertions';
 import { seedActivity } from '../_harness/seed-helpers';
+import { describeCrmOwnerLeg } from '../_harness/crm-owner-contract';
 import { FIRESTORE_RULES_COVERAGE } from '../_registry/coverage-manifest';
 import { PERSONA_CLAIMS, SAME_TENANT_COMPANY_ID } from '../_registry/personas';
 import type { RulesTestEnvironment } from '@firebase/rules-unit-testing';
@@ -79,3 +80,11 @@ describe('activities.rules — tenant_direct (crmDirectMatrix)', () => {
     });
   }
 });
+
+/**
+ * Ό,τι ο πίνακας (πρόσωπο × πράξη) ΔΕΝ μπορεί να εκφράσει: μεταβάλλει το
+ * ΕΓΓΡΑΦΟ, όχι τον καλούντα. Το ίδιο συμβόλαιο τρέχει και στις τρεις CRM
+ * συλλογές — μία σημαία τις ξεχωρίζει. Δες `_harness/crm-owner-contract.ts`
+ * για το εύρημα που το γέννησε (ADR-841 §7 Α21.14.8).
+ */
+describeCrmOwnerLeg({ collection: 'activities', assigneeIsOwner: false });

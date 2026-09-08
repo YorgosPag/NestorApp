@@ -31,6 +31,12 @@
  *      so the matrix is iterated rather than hand-copied (drift prevention).
  *   7. Validation E — for every `tenant_direct` coverage entry, the first
  *      OR leg of the corresponding rule's allow-read must be `isSuperAdminOnly()`.
+ *   8. Validation F — no two top-level blocks may share a match PATH. Firestore
+ *      unions the `allow` of every matching block, so a second block silently
+ *      cancels the stricter one. Added 2026-09-08 (ADR-841 §7 Α21.14.8) after
+ *      `leads`/`opportunities`/`activities` each carried two blocks for 8 months
+ *      and the PR-1D security tightening never took effect. The sibling gate
+ *      CHECK 3.19 had this validation from the start; the Firestore side did not.
  *
  * The manifest carries NO line ranges, deliberately — see ADR-841 §7 Α21.14. Matching is
  * by IDENTITY (collection name), and the location of each rule block is GENERATED on
@@ -129,6 +135,62 @@ function log(msg) {
  */
 
 /**
+ * 🔑 **SSoT — ΕΝΑΣ περιπατητής top-level `const`.** Δύο parsers (manifest, bim-tiers)
+ * έκαναν το ίδιο: «διάτρεξε τα top-level `const`, ξεχώρισε με το ΟΝΟΜΑ, δώσε τον
+ * initializer». Το jscpd το μέτρησε ως κλώνο *(2026-09-08)* — ίδια δομή, άλλα ονόματα,
+ * ακριβώς το είδος που το `ssot:discover` (name/regex) δεν βλέπει ποτέ.
+ *
+ * @param {ts.SourceFile} sourceFile
+ * @param {Record<string, (init: ts.Expression | undefined) => void>} handlers
+ */
+function forEachTopLevelConst(sourceFile, handlers) {
+  ts.forEachChild(sourceFile, (node) => {
+    if (!ts.isVariableStatement(node)) return;
+    for (const decl of node.declarationList.declarations) {
+      if (!ts.isIdentifier(decl.name)) continue;
+      const handler = handlers[decl.name.text];
+      if (handler) handler(decl.initializer);
+    }
+  });
+}
+
+/**
+ * 🔑 **SSoT — ΕΝΑΣ περιπατητής `[{…}, …] as const`.** Καλεί το `onEntry` με χάρτη
+ * *όνομα ιδιότητας → κόμβος αρχικοποιητή*· ο καλών αποφασίζει τι τον ενδιαφέρει και
+ * πώς το διαβάζει. Το «ποιες ιδιότητες» ήταν η ΜΟΝΗ διαφορά των δύο αντιγράφων.
+ *
+ * @param {ts.Expression | undefined} init
+ * @param {(props: Record<string, ts.Expression>) => void} onEntry
+ */
+function forEachConstObjectEntry(init, onEntry) {
+  if (!init) return;
+  const arr = unwrapAsConst(init);
+  if (!arr || !ts.isArrayLiteralExpression(arr)) return;
+
+  for (const el of arr.elements) {
+    if (!ts.isObjectLiteralExpression(el)) continue;
+    /** @type {Record<string, ts.Expression>} */
+    const props = {};
+    for (const prop of el.properties) {
+      if (!ts.isPropertyAssignment(prop) || !ts.isIdentifier(prop.name)) continue;
+      props[prop.name.text] = prop.initializer;
+    }
+    onEntry(props);
+  }
+}
+
+/**
+ * Η τιμή μιας ιδιότητας ΜΟΝΟ αν είναι κυριολεκτική συμβολοσειρά — αλλιώς `null`.
+ * (Οι κατασκευαστές πίνακα ζουν σε κλήσεις συναρτήσεων και δεν διαβάζονται εδώ.)
+ *
+ * @param {ts.Expression | undefined} node
+ * @returns {string | null}
+ */
+function stringProp(node) {
+  return node && ts.isStringLiteral(node) ? node.text : null;
+}
+
+/**
  * @returns {ParsedManifest}
  */
 function parseManifest() {
@@ -145,17 +207,9 @@ function parseManifest() {
   /** @type {string[]} */
   const pending = [];
 
-  ts.forEachChild(sourceFile, (node) => {
-    if (!ts.isVariableStatement(node)) return;
-    for (const decl of node.declarationList.declarations) {
-      if (!ts.isIdentifier(decl.name)) continue;
-      const name = decl.name.text;
-      if (name === 'FIRESTORE_RULES_COVERAGE') {
-        extractCoverageArray(decl.initializer, coverage);
-      } else if (name === 'FIRESTORE_RULES_PENDING') {
-        extractPendingArray(decl.initializer, pending);
-      }
-    }
+  forEachTopLevelConst(sourceFile, {
+    FIRESTORE_RULES_COVERAGE: (init) => extractCoverageArray(init, coverage),
+    FIRESTORE_RULES_PENDING: (init) => extractPendingArray(init, pending),
   });
 
   return { coverage, pending };
@@ -171,29 +225,17 @@ function parseManifest() {
  * @param {ManifestEntry[]} out
  */
 function extractCoverageArray(init, out) {
-  if (!init) return;
-  const arr = unwrapAsConst(init);
-  if (!arr || !ts.isArrayLiteralExpression(arr)) return;
-
-  for (const el of arr.elements) {
-    if (!ts.isObjectLiteralExpression(el)) continue;
-    const entry = { collection: '', pattern: '', testFile: '' };
-    for (const prop of el.properties) {
-      if (!ts.isPropertyAssignment(prop) || !ts.isIdentifier(prop.name)) continue;
-      const key = prop.name.text;
-      if (key === 'collection' && ts.isStringLiteral(prop.initializer)) {
-        entry.collection = prop.initializer.text;
-      } else if (key === 'pattern' && ts.isStringLiteral(prop.initializer)) {
-        entry.pattern = prop.initializer.text;
-      } else if (key === 'testFile' && ts.isStringLiteral(prop.initializer)) {
-        entry.testFile = prop.initializer.text;
-      }
-      // ⛔ **Κανένα `rulesRange`** — αφαιρέθηκε στην Α21.14. Ήταν εύρος γραμμών που
-      //    διαβαζόταν εδώ και **δεν συγκρινόταν πουθενά**: 124/127 μετρήθηκαν λάθος (98%).
-      //    Η θέση παράγεται πλέον με `--map`, από το ίδιο το `firestore.rules`.
-    }
+  // ⛔ **Κανένα `rulesRange`** — αφαιρέθηκε στην Α21.14. Ήταν εύρος γραμμών που
+  //    διαβαζόταν εδώ και **δεν συγκρινόταν πουθενά**: 124/127 μετρήθηκαν λάθος (98%).
+  //    Η θέση παράγεται πλέον με `--map`, από το ίδιο το `firestore.rules`.
+  forEachConstObjectEntry(init, (props) => {
+    const entry = {
+      collection: stringProp(props.collection) ?? '',
+      pattern: stringProp(props.pattern) ?? '',
+      testFile: stringProp(props.testFile) ?? '',
+    };
     if (entry.collection && entry.testFile) out.push(entry);
-  }
+  });
 }
 
 /**
@@ -254,20 +296,11 @@ function parseBimTiers() {
   /** @type {string[]} */
   const legacy = [];
 
-  ts.forEachChild(sourceFile, (node) => {
-    if (!ts.isVariableStatement(node)) return;
-    for (const decl of node.declarationList.declarations) {
-      if (!ts.isIdentifier(decl.name)) continue;
-      const name = decl.name.text;
-      if (name === 'BIM_AUTHORING_COLLECTIONS') {
-        extractTierEntries(decl.initializer, authoring);
-      } else if (name === 'BIM_PRESENTATION_COLLECTIONS') {
-        extractTierEntries(decl.initializer, presentation);
-      } else if (name === 'LEGACY_FLOORPLAN_CONTAINERS') {
-        // Same shape as FIRESTORE_RULES_PENDING (a `[...] as const` string array).
-        extractPendingArray(decl.initializer, legacy);
-      }
-    }
+  forEachTopLevelConst(sourceFile, {
+    BIM_AUTHORING_COLLECTIONS: (init) => extractTierEntries(init, authoring),
+    BIM_PRESENTATION_COLLECTIONS: (init) => extractTierEntries(init, presentation),
+    // Same shape as FIRESTORE_RULES_PENDING (a `[...] as const` string array).
+    LEGACY_FLOORPLAN_CONTAINERS: (init) => extractPendingArray(init, legacy),
   });
 
   return { authoring, presentation, legacy };
@@ -280,29 +313,18 @@ function parseBimTiers() {
  * @param {BimTierEntry[]} out
  */
 function extractTierEntries(init, out) {
-  if (!init) return;
-  const arr = unwrapAsConst(init);
-  if (!arr || !ts.isArrayLiteralExpression(arr)) return;
-
-  for (const el of arr.elements) {
-    if (!ts.isObjectLiteralExpression(el)) continue;
-    let collection = '';
-    /** @type {string[] | null} */
-    let requiredKeys = null;
-    for (const prop of el.properties) {
-      if (!ts.isPropertyAssignment(prop) || !ts.isIdentifier(prop.name)) continue;
-      const key = prop.name.text;
-      if (key === 'collection' && ts.isStringLiteral(prop.initializer)) {
-        collection = prop.initializer.text;
-      } else if (key === 'requiredKeys') {
-        // Either an array of string literals, or the `null` keyword (legacy/raster).
-        requiredKeys = ts.isArrayLiteralExpression(prop.initializer)
-          ? prop.initializer.elements.filter(ts.isStringLiteral).map((s) => s.text)
-          : null;
-      }
-    }
-    if (collection) out.push({ collection, requiredKeys });
-  }
+  forEachConstObjectEntry(init, (props) => {
+    const collection = stringProp(props.collection);
+    if (!collection) return;
+    // `requiredKeys`: either an array of string literals, or the `null` keyword
+    // (legacy / raster tiers declare no required keys).
+    const rk = props.requiredKeys;
+    const requiredKeys =
+      rk && ts.isArrayLiteralExpression(rk)
+        ? rk.elements.filter(ts.isStringLiteral).map((n) => n.text)
+        : null;
+    out.push({ collection, requiredKeys });
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -331,6 +353,59 @@ function validateOrphans(manifest, blocks) {
       message: `match /${block.collection}/{id} has no manifest entry and is not pending`,
       location: `firestore.rules:${block.lineStart}`,
       hint: orphanHint(block.collection, block.lineStart, block.lineEnd),
+    });
+  }
+  return violations;
+}
+
+/**
+ * 🔴 **Validation F — ΜΙΑ ΔΙΑΔΡΟΜΗ, ΕΝΑ ΜΠΛΟΚ** *(ADR-841 §7 Α21.14.8)*
+ *
+ * Στο Firestore, όταν πολλά `match` ταιριάζουν στην ίδια διαδρομή, το `allow` είναι η
+ * **ΕΝΩΣΗ** τους: αρκεί **ένα** να επιτρέψει. Άρα δύο μπλοκ για την ίδια διαδρομή δεν
+ * είναι «διπλότυπο κώδικα» — είναι **σιωπηλή ακύρωση του αυστηρότερου**.
+ *
+ * 🔴 **ΤΟ ΠΕΡΙΣΤΑΤΙΚΟ ΠΟΥ ΤΗ ΓΕΝΝΗΣΕ**: `leads` / `opportunities` / `activities` είχαν η
+ * καθεμία **δύο** μπλοκ, από δύο PR της ίδιας εκστρατείας (2026-01-29). Η αυστηροποίηση
+ * του δεύτερου γράφτηκε, πέρασε review, μπήκε στο main — και **δεν ίσχυσε ΠΟΤΕ**, επειδή
+ * δίπλα της έμεινε το χαλαρότερο. Μετρημένο 2026-09-08: **8 μήνες** ανενεργή.
+ *
+ * ⚠️ **ΓΙΑΤΙ ΚΑΜΙΑ ΠΥΛΗ ΔΕΝ ΤΟ ΕΙΔΕ**: το CHECK 3.16 ρωτούσε *«είναι κάθε μπλοκ
+ * δηλωμένο;»* — και **και τα δύο** απαντούσαν «ναι» από την **ίδια** εγγραφή του
+ * manifest. Το αδελφό **CHECK 3.19** είχε **Validation F** ακριβώς γι' αυτό *(διπλό
+ * `@pathId` ⇒ BLOCK)*· η πλευρά του Firestore **δεν την είχε ποτέ**. Αυτή είναι.
+ *
+ * ⛔ **ZERO TOLERANCE, και ΜΟΝΟ τώρα**: μέχρι σήμερα θα μπλόκαρε **τρία υπάρχοντα**, γι'
+ * αυτό η Α21.14.8 την άφησε ratchet *(`rules-location-map.test.js`, ομάδα Γ)*. Τα τρία
+ * ενώθηκαν, ο μετρητής είναι **0**, και η μετατροπή σε φραγμό είναι η **τελευταία** πράξη
+ * — όπως ακριβώς προβλεπόταν.
+ *
+ * 🔑 **Η ερώτηση γίνεται στη ΔΙΑΔΡΟΜΗ, όχι στη συλλογή**: το `collection` δίνει **40%
+ * ψευδώς θετικά** στις υποσυλλογές *(`/rfqs/{id}/lines/{lineId}` vs `/rfqs/{id}`)* —
+ * δοκιμάστηκε και μετρήθηκε. Άγκυρα: `rules-location-map.test.js`, ομάδα Γ.
+ *
+ * @param {import('./_shared/firestore-rules-parser').RuleBlock[]} blocks
+ * @returns {Violation[]}
+ */
+function validateNoDuplicateMatchPaths(blocks) {
+  /** @type {Violation[]} */
+  const violations = [];
+  for (const path of findDuplicateMatchPaths(blocks)) {
+    const where = blocks.filter((b) => b.matchPath === path);
+    violations.push({
+      kind: 'duplicate_match_path',
+      message:
+        `match ${path} έχει ${where.length} μπλοκ — το allow είναι η ΕΝΩΣΗ τους, ` +
+        'άρα το χαλαρότερο νικά και το αυστηρότερο δεν ισχύει ΠΟΤΕ',
+      location: where.map((b) => `firestore.rules:${b.lineStart}`).join(' + '),
+      hint: [
+        '  → ΕΝΩΣΕ τα σε ΕΝΑ μπλοκ. ΜΗΝ σβήσεις απλώς το ένα: τα δύο συνήθως',
+        '     διαφέρουν σε ΑΝΕΞΑΡΤΗΤΟΥΣ άξονες και το καθένα έχει δίκιο στον δικό του.',
+        '  → ΠΡΙΝ σβήσεις οτιδήποτε, ΜΕΤΡΗΣΕ τη διαφορά — μην τη διαβάσεις:',
+        '     FIRESTORE_RULES_FILE=<παραλλαγή> npm run test:firestore-rules',
+        '     (το tests/firestore-rules/_harness/emulator.ts δέχεται τη μεταβλητή)',
+        '  → Πρότυπο: ADR-841 §7 Α21.14.8 + tests/.../_harness/crm-owner-contract.ts',
+      ].join('\n'),
     });
   }
   return violations;
@@ -795,8 +870,10 @@ function printLocationMap(blocks, manifest) {
   for (const line of rendered) log(line);
 
   // 🔴 **ΔΥΟ ΜΠΛΟΚ ΓΙΑ ΤΗΝ ΙΔΙΑ ΔΙΑΔΡΟΜΗ ΕΙΝΑΙ ΕΝΩΣΗ ΔΙΚΑΙΩΜΑΤΩΝ, ΟΧΙ ΔΙΠΛΟΤΥΠΟ.**
-  //    Το βρήκε η ίδια η προϋπόθεση της Α21.14 *(«είναι η ταυτότητα έγκυρο κλειδί;»)* και
-  //    δεν διορθώνεται εδώ: είναι αλλαγή σε **κανόνες παραγωγής**. Δες την εκκρεμότητα.
+  //    ⛔ Από 2026-09-08 (Α21.14.8) είναι **ΠΑΡΑΒΑΣΗ ΠΟΥ ΜΠΛΟΚΑΡΕΙ** — δες
+  //    `validateNoDuplicateMatchPaths()`. Ο χάρτης το δείχνει ακόμη εδώ γιατί το
+  //    `--map` τρέχει και **χωρίς** τους επικυρωτές: η εικόνα πρέπει να λέει την
+  //    αλήθεια ακόμη κι όταν κανείς δεν ρώτησε την πύλη.
   const duplicates = findDuplicateMatchPaths(blocks);
   if (duplicates.length > 0) {
     log('');
@@ -867,6 +944,7 @@ function main() {
     ...validateTestFilesExist(manifest),
     ...validateTestFileContract(manifest),
     ...validateRuleShape(manifest, blocks),
+    ...validateNoDuplicateMatchPaths(blocks),
     ...bimViolations,
   ];
 
