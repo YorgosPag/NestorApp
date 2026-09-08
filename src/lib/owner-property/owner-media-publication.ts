@@ -27,9 +27,10 @@ import {
   type PublicShelfSource,
 } from '@/services/upload/utils/storage-path-public-shelf';
 import {
+  MODEL_MATERIAL,
   PHOTO_MATERIAL,
   declaredFloorplanMaterial,
-  isFloorplanMaterial,
+  isPhotoMaterial,
   type ListingMaterial,
 } from '@/lib/listings/listing-material';
 import { promoteToFront } from '@/lib/ordering/declared-order';
@@ -64,11 +65,71 @@ export function publishedOwnerMedia(
  * 🔑 **Η κατεύθυνση της προεπιλογής είναι η ΣΗΜΕΡΙΝΗ ΣΥΜΠΕΡΙΦΟΡΑ, όχι προτίμηση**: τα
  * υπάρχοντα αρχεία είναι **ήδη** στη συλλογή. Προεπιλογή `'floorplan'` θα τα **έβγαζε**
  * σιωπηλά από αυτήν — αλλαγή σε δημοσιευμένη αγγελία που **κανείς άνθρωπος δεν ζήτησε**.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴🔴 `switch` ΚΑΙ ΟΧΙ ΤΕΡΝΑΡΙΟ — **Η ΔΕΥΤΕΡΗ ΠΟΡΤΑ** (ADR-845 Φ4.1)
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Ως τη Φ4.1 εδώ υπήρχε `item.kind === 'floorplan' ? … : PHOTO_MATERIAL` — **δυαδικό
+ * κατηγόρημα**, δηλαδή **ακριβώς η ίδια κλάση** με το σφάλμα του `withPublishedGallery`
+ * *(ADR-845 §2.2)*, σε αρχείο που **κανείς δεν είχε κοιτάξει**: το εύρημα της Φ4.1
+ * κατέγραφε **μία** πόρτα, και μετρήθηκαν **δύο**.
+ *
+ * 🔴 **ΚΑΙ ΕΙΝΑΙ ΠΡΟΣΒΑΣΙΜΗ ΑΠΟ ΤΟ ΣΥΡΜΑ**, όχι θεωρητική: το `kind` επικυρώνεται με
+ * `z.enum(LISTING_MATERIAL_KINDS)` *(`owner-property-draft-schema.ts` ·
+ * `owner-property-form-values.ts`)*, άρα **κάθε** νέα τιμή του λεξιλογίου γίνεται
+ * αυτομάτως δεκτή από το δίκτυο. Με το τερνάριο, δήλωση `kind:'model'` θα γινόταν
+ * `PHOTO_MATERIAL` — **μοντέλο ανακοινωμένο ως φωτογραφία**, σιωπηλά.
+ *
+ * 🔑 **Το `undefined` είναι ΡΗΤΟ σκέλος, όχι πτώση στο `default`.** Η απουσία δήλωσης
+ * είναι **γνωστή, τεκμηριωμένη κατάσταση** *(αρχεία προγενέστερα της ερώτησης)*, ενώ το
+ * `default` σημαίνει *«κανείς δεν απάντησε»*. Αν η προεπιλογή έπεφτε στο `default`, ο
+ * φρουρός θα **σιωπούσε** ακριβώς εκεί που οφείλει να μιλήσει.
  */
 export function ownerMediaMaterial(item: OwnerPropertyMedia): ListingMaterial {
-  return item.kind === 'floorplan'
-    ? declaredFloorplanMaterial(item.uploadedAt)
-    : PHOTO_MATERIAL;
+  const kind = item.kind;
+
+  switch (kind) {
+    case undefined:
+    case 'photo':
+      return PHOTO_MATERIAL;
+
+    case 'floorplan':
+      return declaredFloorplanMaterial(item.uploadedAt);
+
+    case 'model':
+      // 🔴 **ΠΟΤΕ ΦΩΤΟΓΡΑΦΙΑ** *(ADR-845 Φ4.1)*. Πριν από αυτόν τον κλάδο, μια δήλωση
+      //    `kind:'model'` που έφτανε από το σύρμα *(το `z.enum(LISTING_MATERIAL_KINDS)`
+      //    τη δέχεται **αυτομάτως** μόλις μεγάλωσε το λεξιλόγιο)* θα γινόταν
+      //    `PHOTO_MATERIAL` — **μοντέλο ανακοινωμένο ως φωτογραφία**, το Ο-20 ξανά.
+      // ⚠️ **ΔΗΛΩΜΕΝΟ ΟΡΙΟ, ΟΧΙ ΛΥΜΕΝΟ**: η οθόνη του κατόχου είναι ακόμη **δυαδική**
+      //    *(«είναι κάτοψη;»)*, άρα **κανείς άνθρωπος δεν μπορεί να το δηλώσει σήμερα**·
+      //    και αν τα bytes φτάσουν στο ράφι, ο raster ψήστης τα **απορρίπτει σιωπηλά**
+      //    όπως κάθε μη αναγνώσιμο αρχείο. Ονομασμένη άρνηση σε **εκείνο** το σύνορο
+      //    ανήκει στη **Φ4β** και είναι γραμμένη ως ανοιχτό στο ADR-845 §9 (Ο-5).
+      return MODEL_MATERIAL;
+
+    default:
+      return assertNeverOwnerMediaKind(kind);
+  }
+}
+
+/**
+ * **Ο ΦΡΟΥΡΟΣ ΤΗΣ ΔΗΛΩΣΗΣ ΤΟΥ ΑΝΘΡΩΠΟΥ** — τοπικός και **με όνομα**.
+ *
+ * ⚠️ **Ξεχωριστός από τον `assertNeverMaterial` της προβολής, επίτηδες**: εκείνος ρωτά
+ * *«σε ποιο κουτί της **δημόσιας αγγελίας** κάθεται;»*, αυτός *«σε **τι υλικό** μεταφράζεται
+ * η δήλωση του κατόχου;»*. **Δύο ερωτήσεις, δύο μηνύματα** — και το μήνυμα **είναι** ο
+ * μηχανισμός. Ένα κοινό βοήθημα θα έλεγε *«άγνωστη τιμή»* και στις δύο περιπτώσεις,
+ * δηλαδή θα αφαιρούσε ακριβώς την πληροφορία για την οποία υπάρχει. Ίδιο ιδίωμα με τα
+ * `assertNeverShape`/`assertNeverAccuracy` του `listing-map-shape`.
+ */
+function assertNeverOwnerMediaKind(kind: never): never {
+  throw new Error(
+    `ownerMediaMaterial: άγνωστη δήλωση είδους — ${JSON.stringify(kind)}. ` +
+      'Νέα τιμή στο LISTING_MATERIAL_KINDS χωρίς απάντηση στο «σε τι υλικό μεταφράζεται ' +
+      'η δήλωση του κατόχου;» (ADR-845 §2.2, άγκυρα Α-2).',
+  );
 }
 
 /**
@@ -77,11 +138,17 @@ export function ownerMediaMaterial(item: OwnerPropertyMedia): ListingMaterial {
  * 🔑 Υπάρχει ξεχωριστά από το {@link publishedOwnerMedia} επειδή *«τι φεύγει;»* και
  * *«τι μπαίνει στη ΣΥΛΛΟΓΗ;»* έπαψαν να είναι η ίδια ερώτηση τη στιγμή που η **Α17**
  * έδωσε στην κάτοψη δικό της πεδίο.
+ *
+ * 🔴 **ΡΩΤΑ ΚΑΤΑΦΑΤΙΚΑ, ΚΑΙ ΗΤΑΝ Η ΤΡΙΤΗ ΠΟΡΤΑ ΤΗΣ ΙΔΙΑΣ ΚΛΑΣΗΣ** *(ADR-845 Φ4.1)*.
+ * Ως τη Φ4.1 έγραφε `!isFloorplanMaterial(…)` — δηλαδή *«ό,τι δεν είναι κάτοψη»*, που με
+ * **δύο** τιμές συνέπιπτε με *«φωτογραφία»* και με **τρεις** παύει: ένα μοντέλο θα
+ * μετρούσε εδώ ως φωτογραφία και το {@link isLeadOwnerMedia} θα το σήμαινε **«1η»** στον
+ * κόσμο — ψέμα σε ακριβώς τον άνθρωπο που προσπαθεί να διαλέξει.
  */
 export function publishedOwnerPhotos(
   media: readonly OwnerPropertyMedia[],
 ): readonly OwnerPropertyMedia[] {
-  return publishedOwnerMedia(media).filter((item) => !isFloorplanMaterial(ownerMediaMaterial(item)));
+  return publishedOwnerMedia(media).filter((item) => isPhotoMaterial(ownerMediaMaterial(item)));
 }
 
 /**

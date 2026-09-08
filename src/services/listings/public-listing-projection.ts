@@ -53,14 +53,7 @@ import { projectLegality } from './legality-projection';
 import { OFFER_KINDS, type OfferKind } from '@/types/property-offers';
 import { offerKindsFromLegacyStatus } from '@/lib/offers/derive-commercial-status';
 import { normalizePropertyType } from '@/constants/property-type-aliases';
-import type {
-  ListingImage,
-  ListingImageSource,
-  PublicListing,
-  PublicListingStay,
-} from '@/types/public-listing';
-import { LISTING_MATERIAL_KEYS } from '@/lib/listings/listing-authorship';
-import { isFloorplanMaterial, type ListingMaterial } from '@/lib/listings/listing-material';
+import type { PublicListing, PublicListingStay } from '@/types/public-listing';
 import { projectListingAttributes } from './public-listing-attributes';
 // 🔑 **Η ΘΕΣΗ ΕΧΕΙ ΔΙΚΟ ΤΗΣ ΣΠΙΤΙ** — δες την κεφαλίδα του `public-listing-position.ts`
 //    για το γιατί δεν ήταν απλώς «κόψιμο για να περάσει το όριο των 500 γραμμών».
@@ -316,6 +309,14 @@ export function projectListingShape(
     //    ποτέ «δεν έχει κάτοψη». Τις δένει ο γραφέας με το {@link withPublishedGallery},
     //    στο **ίδιο** πέρασμα και από την **ίδια** αναφορά (ADR-841 §7 Α17.4).
     floorplans: [],
+    // 🔴 **ΚΑΙ ΤΟ `models: []` ΔΕΝ ΕΧΕΙ ΤΗΝ ΙΔΙΑ ΣΗΜΑΣΙΑ ΜΕ ΤΑ ΔΥΟ ΑΠΟ ΠΑΝΩ** — γράφεται
+    //    ρητά για να μη διαβαστεί ως τρίτο δίδυμο *(ADR-845 Φ4.1)*. Εκεί ο κενός πίνακας
+    //    λέει *«το ράφι δεν ρωτήθηκε ακόμη»* και ο γραφέας τον γεμίζει αμέσως μετά· εδώ
+    //    λέει *«**δεν υπάρχει ακόμη παραγωγός**»* — ο ψήστης γεννιέται στη **Φ4.2**, και
+    //    ως τότε το `withPublishedGallery` **δεν τον αγγίζει καν** (η είσοδός του είναι
+    //    raster από άκρη σε άκρη). Το κουτί μπαίνει **πριν** τον παραγωγό επίτηδες: έτσι
+    //    ο ψήστης θα έχει πού να γράψει χωρίς να αλλάξει σχήμα εγγράφου την ίδια μέρα.
+    models: [],
     // 🔴 **ΤΟ ΟΓΔΟΟ `as`, ΚΑΙ ΤΟ ΠΙΟ ΑΚΡΙΒΟ** (ADR-842 §7.6.12 / §8 #11): έγραφε
     //    `(property.type ?? 'apartment') as PropertyType` — **βάφτιζε διαμέρισμα ένα
     //    οικόπεδο** στη δημόσια αγγελία, και ο ισχυρισμός έκανε τον μεταγλωττιστή
@@ -367,83 +368,15 @@ export function projectListingShape(
 }
 
 // ---------------------------------------------------------------------------
-// Η ΣΥΝΔΕΣΗ ΤΩΝ ΠΑΡΑΓΩΓΩΝ — το manifest (ADR-841 §7 Α2.2)
+// Η ΣΥΝΔΕΣΗ ΤΩΝ ΠΑΡΑΓΩΓΩΝ — μετακόμισε (ADR-845 Φ4.1)
 // ---------------------------------------------------------------------------
 
 /**
- * **Μια δημοσιευμένη εικόνα, όπως τη μαθαίνει ο γραφέας από το ράφι.**
- *
- * ⚠️ **Δομικός τύπος και ΟΧΙ ο τύπος της υπηρεσίας**: το `public-shelf.service` σέρνει
- * `firebase-admin` και `sharp`, και αυτό το αρχείο δηλώνει ρητά ότι είναι **καθαρό**.
- * Η μία γραμμή μετάφρασης στον γραφέα είναι φθηνότερη από μια εξάρτηση που θα έκανε την
- * προβολή αδύνατη να δοκιμαστεί χωρίς κάδο.
+ * ⚠️ **ΕΠΑΝΕΞΑΓΩΓΗ, ίδια σύμβαση με το `public-listing-projection-types.ts`.** Η
+ * δρομολόγηση του υλικού *(«σε ποιο κουτί κάθεται;»)* έφυγε στο
+ * `./public-listing-gallery-projection`, όπου απέκτησε **πραγματικό** εξαντλητικό κλάδο
+ * *(ADR-845 §2.2 — ο προηγούμενος ήταν **δυαδικό κατηγόρημα**, δηλαδή δομικά ανίκανος να
+ * κοκκινίσει)*. Τα ονόματα μένουν εδώ ⇒ **κανένας καταναλωτής δεν άλλαξε γραμμή**.
  */
-export interface ProjectedShelfImage {
-  readonly url: string;
-  readonly width: number;
-  readonly height: number;
-  readonly sources: readonly ListingImageSource[];
-  /** **Τι είναι αυτό** — δες `PublicShelfImage.material` (ADR-841 §7 Α17.4). */
-  readonly material: ListingMaterial;
-}
-
-/**
- * **Η αγγελία με τη συλλογή της δεμένη** — η στιγμή που το έγγραφο γίνεται *manifest*.
- *
- * 🔑 **ΕΝΑΣ γραφέας του πεδίου, εδώ.** Ο πειρασμός ήταν ένα `{ ...listing, gallery }`
- * μέσα στον `writeListingProjection`, δίπλα στο `schemaVersion`. Αλλά το `schemaVersion`
- * είναι μεταδεδομένο **αποθήκευσης** *(κανείς επισκέπτης δεν το διαβάζει)*, ενώ η
- * συλλογή είναι **περιεχόμενο αγγελίας** — και το περιεχόμενο συντίθεται σε αυτό το
- * αρχείο, αλλιώς το κλειστό σχήμα θα είχε **δύο** τόπους σύνθεσης.
- *
- * 🔑 **Και το `altKey` μπαίνει ΕΔΩ, μία φορά**: είναι απόφαση **αποκάλυψης** *(τι λέμε
- * σε όποιον δεν βλέπει την εικόνα)*, όχι λεπτομέρεια απόδοσης. Δες
- * {@link LISTING_MATERIAL_KEYS} για το γιατί δεν είναι κενό και δεν περιγράφει.
- *
- * 🔴 **ΚΑΙ ΤΟ ΚΛΕΙΔΙ ΔΙΑΛΕΓΕΤΑΙ ΑΠΟ ΤΗΝ `authorship` ΤΗΣ ΙΔΙΑΣ ΑΓΓΕΛΙΑΣ** (Α15). Μέχρι
- * την **Α14** ήταν **σταθερά** — και ήταν σωστό, γιατί υπήρχε **ΕΝΑΣ** παραγωγός
- * συλλογής. Τη μέρα που το γραφείο απέκτησε συλλογή, η ίδια σταθερά έλεγε *«υλικό του
- * κατόχου»* σε **6 στις 7** αγγελίες. ⚠️ **Καμία νέα παράμετρος**: η `authorship` ήταν
- * **ήδη εδώ**, μέσα στο `listing` που αυτή η συνάρτηση δέχεται ολόκληρο.
- *
- * 🔑 **Ο ΛΟΓΟΣ ΠΟΥ Η ΕΠΙΛΟΓΗ ΓΙΝΕΤΑΙ ΤΗ ΣΤΙΓΜΗ ΤΗΣ ΠΡΟΒΟΛΗΣ**: το `galleryAlt` **παγώνει**
- * μέσα στο δημοσιευμένο έγγραφο, ενώ η ορατή σημείωση από κάτω υπολογίζεται στην
- * **απόδοση** από την `authorship` του **ίδιου** εγγράφου. Δύο χρόνοι, **μία** πηγή ⇒ οι
- * δύο προτάσεις **δεν μπορούν** να διαφωνήσουν χωρίς το έγγραφο να είναι ασυνεπές με τον
- * εαυτό του — πράγμα που η άγκυρα ρωτά ρητά.
- *
- * ⚠️ **Η σειρά ταξιδεύει αυτούσια** από τη συμφιλίωση, που την πήρε αυτούσια από την
- * επιλογή του κατόχου *(Α2.1)*. Καμία ταξινόμηση σε κανένα από τα τρία σημεία.
- */
-export function withPublishedGallery(
-  listing: PublicListing,
-  images: readonly ProjectedShelfImage[],
-): PublicListing {
-  const keys = LISTING_MATERIAL_KEYS[listing.authorship];
-
-  const toImage = (image: ProjectedShelfImage, altKey: string): ListingImage => ({
-    url: image.url,
-    width: image.width,
-    height: image.height,
-    altKey,
-    sources: image.sources,
-  });
-
-  return {
-    ...listing,
-    gallery: images
-      .filter((image) => !isFloorplanMaterial(image.material))
-      .map((image) => toImage(image, keys.galleryAlt)),
-    floorplans: images.flatMap((image) =>
-      isFloorplanMaterial(image.material)
-        ? [
-            {
-              provenance: 'declared' as const,
-              value: toImage(image, keys.floorplanAlt),
-              at: image.material.at,
-            },
-          ]
-        : [],
-    ),
-  };
-}
+export { withPublishedGallery } from './public-listing-gallery-projection';
+export type { ProjectedShelfImage } from './public-listing-gallery-projection';
