@@ -48,3 +48,54 @@ export function pointsToGeoJson(points: readonly GeoPoint[]): GeoJSON.Feature<Ge
     },
   };
 }
+
+/**
+ * **GeoJSON → ΔΑΚΤΥΛΙΟΙ** — η αντίστροφη κατεύθυνση του {@link outlineToGeoJson}, και
+ * ζει **εδώ** για τον ίδιο ακριβώς λόγο που ζει εκείνη: *«μία μετατροπή, ένα σημείο να
+ * κοιτάξεις»*. Το σχόλιο κεφαλίδας υπόσχεται ότι **αυτό** το αρχείο είναι το μόνο που
+ * αντιστρέφει το ζεύγος `[lng, lat]` — μια υπόσχεση που θα έσπαγε τη στιγμή που ένας
+ * γεννήτορας (ADR-846 Φ2.5) έγραφε τον δικό του αναγνώστη «επειδή τρέχει σε Node».
+ *
+ * 🔑 **Επιστρέφει ΠΙΝΑΚΑ δακτυλίων, ισοπεδωμένο.** Το GeoJSON κωδικοποιεί την ιεραρχία
+ * *«πρώτος δακτύλιος = εξωτερικός, οι υπόλοιποι = τρύπες»* μέσα στη **θέση** τους, και
+ * το `MultiPolygon` προσθέτει τρίτο επίπεδο για τα μέρη. Οι καταναλωτές αυτού του έργου
+ * ({@link geoRingsBoundingCircle}, {@link geoRingsInscribedRadius}) κρίνουν με
+ * **even–odd** — δηλαδή *«σε πόσους δακτυλίους είμαι μέσα;»* — και **δεν χρειάζονται**
+ * την ιεραρχία. Το να τη μεταφέραμε θα ήταν να ταξιδέψει δομή που κανείς δεν διαβάζει,
+ * και που ο επόμενος θα υπέθετε ότι κάποιος συντηρεί.
+ *
+ * ⚠️ **Αφαιρείται η επαναλαμβανόμενη τελευταία κορυφή.** Το GeoJSON **απαιτεί** κλειστό
+ * δακτύλιο· ο {@link GeoOutline} **απαγορεύει** την επανάληψη *(«το κλείσιμο είναι
+ * ιδιότητα του τύπου»)*. Χωρίς αυτή τη γραμμή, κάθε δακτύλιος θα κουβαλούσε ένα
+ * μηδενικού μήκους τμήμα και μια διπλή κορυφή — αόρατα σε κάθε έλεγχο πλήθους, και
+ * ακριβώς ο τύπος σκουπιδιού που εμφανίζεται πολύ αργότερα ως παράξενο εμβαδόν.
+ *
+ * ⚠️ **Απορρίπτονται σιωπηλά οι δακτύλιοι με < 3 κορυφές** μετά την αφαίρεση: δεν
+ * περικλείουν εμβαδόν, άρα δεν είναι σχήμα — και ο {@link isPointInGeoOutline} ήδη τους
+ * απαντά `false`. Η απόρριψη εδώ κρατά το «τίποτα» έξω από τους μετρητές αντί να το
+ * αφήσει να μοιάζει με δεδομένο.
+ */
+export function geoJsonRings(
+  geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon,
+): readonly GeoOutline[] {
+  const polygons: GeoJSON.Position[][][] =
+    geometry.type === 'Polygon' ? [geometry.coordinates] : geometry.coordinates;
+
+  const rings: GeoOutline[] = [];
+  for (const polygon of polygons) {
+    for (const ring of polygon) {
+      const outline = openRing(ring).map((position) => ({ lng: position[0], lat: position[1] }));
+      if (outline.length >= 3) rings.push(outline);
+    }
+  }
+
+  return rings;
+}
+
+/** Κόβει την επαναλαμβανόμενη τελευταία κορυφή του GeoJSON, αν υπάρχει. */
+function openRing(ring: readonly GeoJSON.Position[]): readonly GeoJSON.Position[] {
+  const first = ring[0];
+  const last = ring[ring.length - 1];
+  if (ring.length >= 2 && first[0] === last[0] && first[1] === last[1]) return ring.slice(0, -1);
+  return ring;
+}

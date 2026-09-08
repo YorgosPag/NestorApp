@@ -38,7 +38,12 @@
  */
 
 import type { GeoOutline, GeoPoint, GeoPolyline } from '@/types/geo/coordinates';
-import { fromLocalMetres, toLocalMetres, type LocalPoint } from './geo-local-frame';
+import {
+  distanceToLocalSegment,
+  fromLocalMetres,
+  toLocalMetres,
+  type LocalPoint,
+} from './geo-local-frame';
 
 /** Ποια πλευρά του άξονα — γεωμετρική **απάντηση** για ένα σημείο (όχι αίτημα). */
 export type PolylineSide = 'left' | 'right' | 'on';
@@ -90,21 +95,15 @@ function nearestSegment(point: LocalPoint, axis: readonly LocalPoint[]): Nearest
   for (let i = 0; i < axis.length - 1; i++) {
     const a = axis[i];
     const b = axis[i + 1];
-    const dx = b.x - a.x;
-    const dy = b.y - a.y;
-    const lengthSq = dx * dx + dy * dy;
 
-    // Το «σφίξιμο» στο [0,1] κρατά το κοντινότερο σημείο ΜΕΣΑ στο τμήμα (ADR-071:
-    // η ονομασμένη clamp01 ζει στο dxf-viewer και δεν εισάγεται από εδώ).
-    const rawT =
-      lengthSq === 0 ? 0 : ((point.x - a.x) * dx + (point.y - a.y) * dy) / lengthSq;
-    const t = Math.min(1, Math.max(0, rawT));
-    const closestX = a.x + t * dx;
-    const closestY = a.y + t * dy;
-    const distanceMetres = Math.hypot(point.x - closestX, point.y - closestY);
+    // ⚠️ Η **απόσταση** μετριέται από τον κοινό SSoT (`geo-local-frame`), όχι εδώ: το
+    // ίδιο «σφιγμένο στο τμήμα» ερώτημα το ρωτά και ο δακτύλιος για την εγγεγραμμένη
+    // ακτίνα του. Το **πρόσημο πλευράς** μένει εδώ γιατί είναι η ερώτηση *αυτού* του
+    // module — και υπολογίζεται **μόνο για τον νικητή**, όχι για κάθε τμήμα.
+    const distanceMetres = distanceToLocalSegment(point, a, b);
 
     if (distanceMetres < best.distanceMetres) {
-      const crossSign = dx * (point.y - a.y) - dy * (point.x - a.x);
+      const crossSign = (b.x - a.x) * (point.y - a.y) - (b.y - a.y) * (point.x - a.x);
       best = { distanceMetres, crossSign };
     }
   }
