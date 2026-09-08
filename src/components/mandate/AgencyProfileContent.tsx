@@ -71,10 +71,9 @@ import { lettermarkOf } from '@/lib/agency/showcase-mark';
 import { ShowcaseMarkView } from './ShowcaseMarkView';
 
 import { AGENCY_PUBLIC_NS, PROFILE_KEYS } from './agency-directory-labels';
-import { useAdministrativeHierarchy } from '@/hooks/useAdministrativeHierarchy';
-import { isRadiusCoverage } from '@/types/agency-coverage';
-import { isNationwide } from '@/types/agency-coverage';
 import { AGENCY_DIRECTORY_ROUTE } from './agency-directory-route';
+import { CoverageFact } from './AgencyCoverageFact';
+import { Fact } from './AgencyFact';
 
 /**
  * **Η διεύθυνση της φόρμας του Σ1** — γραμμένη **εδώ**, όπου ζει το κουμπί.
@@ -115,25 +114,6 @@ interface AgencyProfileContentProps {
    * `null`). Ίδιο ιδίωμα με την πόρτα δημοσίευσης: **ο πελάτης το δηλώνει**.
    */
   readonly alias: string;
-}
-
-/** Μία μικρή, ονομασμένη γραμμή «ετικέτα → τιμή» — τρεις καταναλωτές στη σελίδα. */
-function Fact({
-  label,
-  value,
-  hint,
-}: {
-  readonly label: string;
-  readonly value: string;
-  readonly hint?: string;
-}): React.JSX.Element {
-  return (
-    <div className="flex flex-col gap-0.5">
-      <dt className="m-0 text-sm font-medium text-foreground">{label}</dt>
-      <dd className="m-0 text-sm text-muted-foreground">{value}</dd>
-      {hint !== undefined ? <p className="m-0 text-xs text-muted-foreground">{hint}</p> : null}
-    </div>
-  );
 }
 
 /** Το «δεν υπάρχει βιτρίνα εδώ» **και** το «δεν μπόρεσα να ρωτήσω» — δύο τίτλοι, μία μορφή. */
@@ -179,52 +159,6 @@ function PlaceFact({ profile }: { readonly profile: PublicShowcase }): React.JSX
       : t(PROFILE_KEYS.placeUnknown);
 
   return <Fact label={t(PROFILE_KEYS.placeLabel)} value={value} />;
-}
-
-/**
- * **ΠΟΥ ΔΟΥΛΕΥΕΙ** — η δηλωμένη εμβέλεια, δίπλα στην έδρα και **ξεχωριστά από αυτήν**
- * *(ADR-846)*.
- *
- * 🔴 **Μέχρι σήμερα η σελίδα έλεγε «Περιοχή δραστηριότητας» δείχνοντας την ΕΔΡΑ.** Δεν
- * ήταν ανακρίβεια διατύπωσης: ήταν **υπόσχεση που το δεδομένο δεν μπορούσε να τηρήσει**,
- * και ο επισκέπτης έβγαζε συμπέρασμα για την εμβέλεια από μια διεύθυνση.
- *
- * ⚠️ **Τα ονόματα λύνονται ΤΩΡΑ** από την ιεραρχία — ποτέ αποθηκευμένα δίπλα στα ids
- * *(δες `types/agency-coverage.ts`)*. Όσο δεν έχει φορτώσει, η γραμμή λέει «δεν
- * δηλώθηκε» **μόνο** αν όντως δεν δηλώθηκε· αλλιώς περιμένει σιωπηλά τα ονόματα.
- */
-function CoverageFact({
-  coverage,
-}: {
-  readonly coverage: PublicShowcase['coverage'];
-}): React.JSX.Element {
-  const { t } = useTranslation([AGENCY_PUBLIC_NS]);
-  const { findById } = useAdministrativeHierarchy();
-
-  const value = ((): string => {
-    if (coverage === null) return t(PROFILE_KEYS.coverageUnknown);
-    if (isNationwide(coverage)) return t(PROFILE_KEYS.coverageNationwide);
-    // ═════════════════════════════════════════════════════════════════════════
-    // 🔴 **ΤΟ ΣΚΕΛΟΣ ΤΗΣ ΑΚΤΙΝΑΣ ΕΛΕΙΠΕ ΑΠΟ ΕΔΩ ΚΑΙ ΕΡΙΧΝΕ ΤΗ ΒΙΤΡΙΝΑ**
-    //    *(μετρημένο ζωντανά, 2026-09-08)*: `coverage.adminIds.map(…)` με δήλωση
-    //    κύκλου ⇒ `TypeError: Cannot read properties of undefined (reading 'map')`,
-    //    και **ολόκληρη η δημόσια σελίδα** έπεφτε σε οθόνη σφάλματος.
-    //
-    // ⚠️ **Δύο καταναλωτές, ΔΥΟ οθόνες**: το `AgencyCard` *(κατάλογος)* είχε
-    //    ενημερωθεί· αυτό εδώ *(βιτρίνα)* όχι. Η κλειστή ένωση **δεν** το έπιασε στη
-    //    μεταγλώττιση επειδή κανείς πράκτορας δεν τρέχει `tsc` (N.17) — το έπιασε
-    //    **μόνο** το άνοιγμα της σελίδας.
-    // ═════════════════════════════════════════════════════════════════════════
-    if (isRadiusCoverage(coverage)) {
-      return t(PROFILE_KEYS.coverageRadius, { km: coverage.circle.radiusKm });
-    }
-    const names = coverage.adminIds
-      .map((adminId) => findById(adminId)?.name)
-      .filter((name): name is string => name !== undefined);
-    return names.length === 0 ? t(PROFILE_KEYS.coverageUnknown) : names.join(' · ');
-  })();
-
-  return <Fact label={t(PROFILE_KEYS.coverageLabel)} value={value} />;
 }
 
 /**

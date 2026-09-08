@@ -82,6 +82,8 @@ export const DIRECTORY_KEYS = {
   coverageDeclared: `${D}.coverageDeclared`,
   /** **Η ακτίνα με λέξεις** — δες `types/agency-coverage.ts`, σκέλος 2 του σκεπτικού. */
   coverageDeclaredRadius: `${D}.coverageDeclaredRadius`,
+  /** **Το χαραγμένο σχήμα με λέξεις** (ADR-846 Φ3) — έκταση, όχι «σχήμα». */
+  coverageDeclaredOutline: `${D}.coverageDeclaredOutline`,
   gemi: `${D}.gemi`,
   open: `${D}.open`,
 } as const;
@@ -157,6 +159,12 @@ export const PROFILE_KEYS = {
    * label. Ένα κοινό κλειδί θα ανάγκαζε τη μία από τις δύο να διαβάζεται στραβά.
    */
   coverageRadius: `${P}.coverageRadius`,
+  /**
+   * ⚠️ **Χωριστό από το `DIRECTORY_KEYS.coverageDeclaredOutline`**, με τον ίδιο λόγο που
+   * είναι χωριστά τα `coverageRadius`: ο **κατάλογος** γράφει «Δηλώνει: …» δίπλα σε
+   * άλλες κάρτες, η **βιτρίνα** απαντά σε ετικέτα «Περιοχή δραστηριότητας».
+   */
+  coverageOutline: `${P}.coverageOutline`,
   publishedAt: `${P}.publishedAt`,
   requestCta: `${P}.requestCta`,
   requestHint: `${P}.requestHint`,

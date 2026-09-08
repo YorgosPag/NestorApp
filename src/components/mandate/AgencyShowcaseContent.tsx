@@ -46,10 +46,13 @@ import {
   type ShowcaseCredentialDraft,
 } from '@/components/mandate/ShowcaseCredentialField';
 import {
+  COVERAGE_OUTLINE_DEFECT_KEYS,
+  OUTLINE_DEFECT_NS,
   SHOWCASE_KEYS,
   SHOWCASE_NS,
   SHOWCASE_REJECTION_KEYS,
 } from '@/components/mandate/agency-showcase-labels';
+import { COVERAGE_MAX_OUTER_KM, COVERAGE_MAX_VERTICES } from '@/types/agency-coverage';
 import { ShowcaseMarkField } from '@/components/mandate/ShowcaseMarkField';
 import {
   BROKERAGE_DENY_NS,
@@ -122,7 +125,9 @@ function FailureMessage({ failure }: { readonly failure: ShowcaseFailure }): Rea
   //    η φωνή του **κριτή** (`auth:brokerage.denyReason.*`), όχι της βιτρίνας. Ένα
   //    αντίγραφο των τριών κειμένων στο `property-market` θα ήταν δεύτερο λεξιλόγιο
   //    για την ίδια πρόταση — και θα απέκλινε στην πρώτη διόρθωση διατύπωσης.
-  const { t } = useTranslation([SHOWCASE_NS, BROKERAGE_DENY_NS]);
+  // ⚠️ **Τρίτο namespace**: τα πέντε ελαττώματα **σχήματος** δείχνουν στα υπάρχοντα
+  //    κλειδιά της χάραξης — τα ίδια λόγια πριν και μετά την υποβολή.
+  const { t } = useTranslation([SHOWCASE_NS, BROKERAGE_DENY_NS, OUTLINE_DEFECT_NS]);
 
   if (failure.kind === 'rejected') {
     return <>{t(SHOWCASE_REJECTION_KEYS[failure.reason])}</>;
@@ -177,6 +182,22 @@ function FailureMessage({ failure }: { readonly failure: ShowcaseFailure }): Rea
   }
   if (failure.kind === 'coverage-radius-invalid') {
     return <>{t(SHOWCASE_KEYS.coverageRadiusInvalid)}</>;
+  }
+  // 🔑 **ΤΟ ΕΛΑΤΤΩΜΑ ΟΝΟΜΑΖΕΤΑΙ** (ADR-846 Φ3): το πολύγωνο έχει **πέντε** τρόπους να
+  //    μην περνά, με **διαφορετική θεραπεία** ο καθένας *(σβήσε κορυφές · χάραξε
+  //    μικρότερο · το σχήμα τέμνει τον εαυτό του)*. Ένα κοινό «ξαναχάραξε» θα ήταν ο
+  //    γρίφος που το `PLACE_CLAIM_DEFECTS` απαγορεύει ρητά.
+  //
+  // ⚠️ Ο πίνακας είναι **εξαντλητικός** — έκτο ελάττωμα δεν μεταγλωττίζεται χωρίς λόγια.
+  if (failure.kind === 'coverage-outline-invalid') {
+    return (
+      <>
+        {t(COVERAGE_OUTLINE_DEFECT_KEYS[failure.defect], {
+          max: COVERAGE_MAX_OUTER_KM,
+          maxVertices: COVERAGE_MAX_VERTICES,
+        })}
+      </>
+    );
   }
   if (failure.kind === 'place-not-found') {
     return <>{t(SHOWCASE_KEYS.placeNotFound)}</>;

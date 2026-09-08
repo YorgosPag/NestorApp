@@ -56,7 +56,13 @@ import { lettermarkOf } from '@/lib/agency/showcase-mark';
 import { ShowcaseMarkView } from './ShowcaseMarkView';
 import { lineageIdsOf, useAdministrativeHierarchy } from '@/hooks/useAdministrativeHierarchy';
 import { coverageRelation, type CoverageRelation } from '@/lib/agency/coverage-match';
-import { isNationwide, isRadiusCoverage, type ShowcaseWhere } from '@/types/agency-coverage';
+import {
+  isNationwide,
+  isOutlineCoverage,
+  isRadiusCoverage,
+  type ShowcaseWhere,
+} from '@/types/agency-coverage';
+import { coverageOutlineAreaKm2 } from '@/lib/agency/coverage-outline';
 import { useAdminFootprints } from '@/hooks/useAdminFootprints';
 
 interface AgencyCardProps {
@@ -267,6 +273,21 @@ function CoverageLine({
     return (
       <p className="m-0 text-sm text-muted-foreground">
         {t(DIRECTORY_KEYS.coverageDeclaredRadius, { km: coverage.circle.radiusKm })}
+      </p>
+    );
+  }
+
+  // 🔴 **ΤΟ ΤΕΤΑΡΤΟ ΣΚΕΛΟΣ ΓΡΑΦΕΤΑΙ ΕΔΩ ΚΑΙ ΣΤΗ ΒΙΤΡΙΝΑ, ΣΤΟ ΙΔΙΟ commit**
+  //    *(ADR-846 Φ3, §6.4 του handoff)*: στη Φάση 2 το `AgencyCard` ενημερώθηκε και το
+  //    `AgencyProfileContent` **όχι** — και το `coverage.adminIds.map(…)` παρακάτω
+  //    πέταξε `TypeError` που **έριξε ολόκληρη τη δημόσια σελίδα**. Η κλειστή ένωση δεν
+  //    το έπιασε στη μεταγλώττιση, γιατί κανείς πράκτορας δεν τρέχει `tsc` (N.17).
+  if (isOutlineCoverage(coverage)) {
+    return (
+      <p className="m-0 text-sm text-muted-foreground">
+        {t(DIRECTORY_KEYS.coverageDeclaredOutline, {
+          km2: coverageOutlineAreaKm2(coverage.outline),
+        })}
       </p>
     );
   }
