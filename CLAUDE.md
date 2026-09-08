@@ -307,7 +307,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 ### Pre-commit checks (summary):
 
 <!-- BEGIN GENERATED GATE INDEX — ΜΗΝ ΤΟ ΓΡΑΨΕΙΣ ΣΤΟ ΧΕΡΙ. Πηγή: docs/gates/3.NN.md · αναπαραγωγή: npm run gate-index:generate
-     fingerprint: sha256:4d25b19b6c52963c0ea4e256b100127d0a5acdf79165de59868d3cd2cfd51ddd -->
+     fingerprint: sha256:a449e7f2726427a8bbb59f966ed77755dbede228e56eb19df127a6f4040b2966 -->
 | CHECK | Goal | Mode | Baseline |
 |-------|------|------|----------|
 | **3.8** | **Missing i18n keys** (ADR-777) — `t('key')` **και** `t('ns:key')` χωρίς αντιστοιχία στα locales · 📘 `docs/gates/3.8.md` | RATCHET | `.i18n-missing-keys-baseline.json` |
@@ -319,7 +319,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 ενώ… · 📘 `docs/gates/3.13.md` | RATCHET | `.i18n-resolver-reachability-baseline.json` |
 | **3.14** | Audit Value Catalogs SSoT (ADR-195) · 📘 `docs/gates/3.14.md` | ZERO TOL | — |
 | **3.15** | Firestore Index Coverage (super-admin variant) · 📘 `docs/gates/3.15.md` | ZERO TOL on touch | — |
-| **3.16** | Firestore Rules Test Coverage (ADR-298) · 📘 `docs/gates/3.16.md` | ZERO TOL on touch | — |
+| **3.16** | **Firestore Rules Test Coverage** (ADR-298) — «καλύπτεται κάθε μπλοκ κανόνα από σουίτα — και δηλώνει η σουίτα **και τα 35 κελιά**, ή σιωπά για κάποια;» · `npm run test:rules-coverage-completeness` · 📘 `docs/gates/3.16.md` | ⛔ ZERO-TOL (A-G) + 🔴 RATCHET (G/Κ3) | `.firestore-rules-coverage-baseline.json` |
 | **3.17** | Entity Audit Coverage — writers call `EntityAuditService.recordChange()` · 📘 `docs/gates/3.17.md` | RATCHET | `.entity-audit-coverage-baseline.json` |
 | **3.22** | Dead-code Ratchet (knip + smart-skip + Layer 2 CI) · 📘 `docs/gates/3.22.md` | RATCHET | `.deadcode-baseline.json` |
 | **3.23** | Native HTML Tooltip — `title=` on HTML JSX elements (AST-based) · 📘 `docs/gates/3.23.md` | RATCHET | `.native-tooltip-baseline.json` |
@@ -370,6 +370,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 | **3.73** | **Πύλη λεξιλογίου τομέα** (ADR-812) — «είναι κάθε δήλωση που **απαριθμεί** το λεξιλόγιο **ΔΕΜΕΝΗ στη ρίζα του**;» · `npm run test:domain-vocabulary` · `SKIP_DOMAIN_VOCABULARY=1` · 📘 `docs/gates/3.73.md` | ⛔ ZERO TOL | — |
 | **3.74** | **Πύλη των συνόρων ανάγνωσης** (ADR-839 · ADR-842) — «διαβάζει κάποιος αποθηκευμένο έγγραφο **χωρίς να περάσει από το σύνορό του**;» · `npm run test:listing-read-boundary` · `SKIP_LISTING_READ_BOUNDARY=1` · 📘 `docs/gates/3.74.md` | ⛔ ZERO TOL | — |
 | **3.75** | **Πύλη του συνόρου του χάρτη** (ADR-777 §8.56) — «έρχεται αυτός ο χάρτης **μαζί με το στυλ του**, ή μόνο όταν τύχει;» · `npm run test:map-boundary` · `SKIP_MAP_BOUNDARY=1` · 📘 `docs/gates/3.75.md` | ⛔ ZERO TOL | — |
+| **3.76** | **Πύλη επιμέλειας του δημόσιου μοντέλου** (ADR-845) — «ποιος γεμίζει το `models[]` και ποιος το αδειάζει — και τους ρωτάει κανείς ΠΡΙΝ φύγει η αγγελία στο κοινό;» · `npm run test:listing-model-custody` · `SKIP_LISTING_MODEL_CUSTODY=1` · 📘 `docs/gates/3.76.md` | ⛔ ZERO TOL | — |
 
 **📘 Πλήρες ιστορικό ανά πύλη** (περιστατικά, μετρήσεις, «⚠️ ΜΗΝ», απορριφθείσες εναλλακτικές):
 `docs/gates/<αριθμός>.md` — ή `npm run gate:explain 3.63`.
@@ -383,8 +384,8 @@ Suggestion: Do /clear and give me the command again cleanly.
 φορές (N.12 · N.18 · CHECK 3.38). Στη γραμμή μένει ο **δείκτης**, και ο γεννήτορας
 επαληθεύει ότι **λύνεται**. Άνοιξε το JSON.
 
-📊 Πύλες που **τρέχουν**: **70** (εκτελεστής 62 + hook 19) ·
-γραμμές εδώ: **57** · αδήλωτες: **11** (εκστρατεία που τελειώνει στο μηδέν).
+📊 Πύλες που **τρέχουν**: **71** (εκτελεστής 63 + hook 20) ·
+γραμμές εδώ: **58** · αδήλωτες: **11** (εκστρατεία που τελειώνει στο μηδέν).
 *Αυτοί οι αριθμοί είναι **παραγόμενοι** — η προηγούμενη χειρόγραφη εκδοχή τους είχε ήδη*
 *αποκλίνει (έγραφε «48 γραμμές» και «61 πύλες»).*
 

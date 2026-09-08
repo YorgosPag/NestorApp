@@ -708,6 +708,21 @@ register_area "Theme Pairing Gate (CHECK 3.39)" \
     "scripts/__tests__/check-theme-pairing-ratchet\.test\.js" \
     "npm run test:theme-pairing"
 
+# CHECK 3.76 (ADR-845 §8, Φ4.3) — ΤΟ ΣΚΕΛΟΣ ΕΚΤΕΛΕΣΗΣ των αγκυρών Α-7/Α-8.
+# Το ΣΤΑΤΙΚΟ σκέλος (Φάση 1, `check-listing-model-custody.js`) ρωτά «υπάρχει ΔΕΥΤΕΡΟΣ
+# γραφέας;». ΕΔΩ ρωτιέται το ΑΛΛΟ ερώτημα: «κάνει ακόμη ο ΣΗΜΕΡΙΝΟΣ γραφέας αυτό που λέει;»
+# — και μόνο η εκτέλεση μπορεί να το απαντήσει. Ένας κανόνας με «ή» θα έμενε πράσινος πάνω
+# στο μισό ελάττωμα (ιδίωμα CHECK 3.41/3.65).
+# 🔴 ΓΙΑΤΙ ΤΩΡΑ: μέχρι τη Φ4.3 οι έντεκα άγκυρες του ADR-845 ζούσαν στο προεπιλεγμένο έργο
+# του jest — έτρεχαν ΜΟΝΟ σε σκέτο `npm test`, δηλαδή δεν φύλαγαν κανένα commit. Το ίδιο το
+# §8 το ομολογούσε: «καμία από τις έντεκα δεν είναι πύλη ακόμη».
+# ⚠️ Στη σκανδάλη μπαίνει ΚΑΙ ο ψήστης/προβολή, όχι μόνο ο γραφέας: η Α-7 ρωτά αν το URL
+# ΠΕΡΑΣΕ από τον ψήστη, άρα αλλαγή στον ψήστη αλλάζει την απάντηση.
+register_area "Listing model custody (CHECK 3.76)" \
+    "^src/services/listings/(public-listing-model-projection|publish-public-listing-shelf|publish-public-listing|public-shelf-model\.service|public-listing-model-writer)\.ts$" \
+    "src/services/listings/__tests__/(public-listing-model-writer|listing-shelf-withdrawal)\.test\.ts" \
+    "npx jest src/services/listings/__tests__/public-listing-model-writer.test.ts src/services/listings/__tests__/listing-shelf-withdrawal.test.ts"
+
 # CHECK 3.42 (ADR-773 §8) — η πύλη της ΠΕΜΠΤΗΣ αρχής χρώματος. Στη σκανδάλη μπαίνει ΚΑΙ το
 # `.ssot-registry.json`: η εμβέλεια της πύλης ΕΙΝΑΙ η allowlist του CHECK 3.26, οπότε μια
 # προσθήκη εκεί μεγαλώνει σιωπηλά αυτό που κρίνεται — και πρέπει να το δει η σουίτα.
