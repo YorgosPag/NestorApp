@@ -29,6 +29,19 @@ jest.mock('../public-shelf.service', () => ({
   reconcilePublicShelf: (...args: [unknown, string, readonly unknown[]]) => reconcilePublicShelf(...args),
 }));
 
+// 🔴 **ΤΟ ΔΕΥΤΕΡΟ ΚΕΦΑΛΙ ΜΟΚΑΡΕΤΑΙ ΜΑΖΙ ΜΕ ΤΟ ΠΡΩΤΟ** *(ADR-845 Φ4.2β)*. Από τη Φ4.2β ο
+//    ενορχηστρωτής καλεί **δύο** ράφια. Χωρίς αυτό η σουίτα φτάνει στο **αληθινό** κεφάλι
+//    μοντέλου, που σέρνει `firebase-admin` και χτυπά **πραγματικό GCS**
+//    *(«The specified bucket does not exist»)* — δίκτυο μέσα σε unit test: **+8s** και
+//    **ασταθές υπό φόρτο** *(μετρημένο: έπεσε σε παράλληλο τρέξιμο, πέρασε μόνο του)*.
+// 🔑 Αυτή η σουίτα ρωτά για τη διαδρομή των **ΕΙΚΟΝΩΝ**· το ράφι μοντέλων έχει δικές του
+//    άγκυρες *(`listing-shelf-withdrawal.test` · `public-shelf-model-bake.test`)*.
+jest.mock('../public-shelf-model.service', () => ({
+  reconcilePublicModelShelf: async () => ({
+    outcome: 'reconciled', published: [], removed: 0, rejected: 0,
+  }),
+}));
+
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { writeListingProjection } = require('../publish-public-listing') as
   typeof import('../publish-public-listing');

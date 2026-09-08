@@ -37,6 +37,15 @@ jest.mock('../public-shelf.service', () => ({
   reconcilePublicShelf: (...args: [unknown, string, readonly unknown[]]) => reconcilePublicShelf(...args),
 }));
 
+// 🔴 **ΤΟ ΔΕΥΤΕΡΟ ΚΕΦΑΛΙ ΜΟΚΑΡΕΤΑΙ ΜΑΖΙ ΜΕ ΤΟ ΠΡΩΤΟ** *(ADR-845 Φ4.2β)* — αλλιώς η σουίτα
+//    χτυπά **πραγματικό GCS** μέσω του αληθινού ραφιού μοντέλων. Δες το πλήρες σκεπτικό στο
+//    `publish-gallery-wiring.test`. Αυτή η σουίτα ρωτά για τη διαδρομή των **ΕΙΚΟΝΩΝ**.
+jest.mock('../public-shelf-model.service', () => ({
+  reconcilePublicModelShelf: async () => ({
+    outcome: 'reconciled', published: [], removed: 0, rejected: 0,
+  }),
+}));
+
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { republishListing } = require('../publish-public-listing') as
   typeof import('../publish-public-listing');
