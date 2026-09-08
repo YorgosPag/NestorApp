@@ -21,6 +21,7 @@
  */
 
 import {
+  isLeadOwnerMedia,
   publishedOwnerMediaSources,
   publishedOwnerPhotos,
   ownerMediaMaterial,
@@ -31,6 +32,8 @@ import type { ProjectedShelfImage } from '@/services/listings/public-listing-pro
 import { LISTING_MATERIAL_KEYS } from '@/lib/listings/listing-authorship';
 import {
   LISTING_FLOORPLAN_PROVENANCE_KEYS,
+  LISTING_MATERIAL_KINDS,
+  MODEL_MATERIAL,
   PHOTO_MATERIAL,
   declaredFloorplanMaterial,
 } from '@/lib/listings/listing-material';
@@ -216,10 +219,9 @@ describe('Κ3 — 🔴 Η ΔΗΛΩΣΗ ΤΑΞΙΔΕΥΕΙ ΑΠΟ ΤΗ ΦΟΡΜΑ
     // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: γύρνα το `isLeadOwnerMedia` σε `publishedOwnerMedia` ⇒
     //    κοκκινίζει. Η οθόνη του κατόχου θα σήμαινε «1η» μια κάτοψη που **δεν μπαίνει
     //    καν στη συλλογή** — το ίδιο ψέμα που η συνάρτηση γράφτηκε για να αποτρέψει.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { isLeadOwnerMedia } = require('@/lib/owner-property/owner-media-publication') as
-      typeof import('@/lib/owner-property/owner-media-publication');
-
+    // ⚠️ Ο τοπικός `require` έφυγε (ADR-845 Φ4.1): το `isLeadOwnerMedia` εισάγεται πλέον
+    //    στην κορυφή, γιατί το χρειάζεται **και** η άγκυρα Α-2. Δύο τρόποι εισαγωγής του
+    //    ίδιου ονόματος στο ίδιο αρχείο είναι δύο ευκαιρίες να δείχνουν αλλού.
     const media = [
       ownerFile({ storagePath: 'p/plan.jpg', kind: 'floorplan' }),
       ownerFile({ storagePath: 'p/photo.jpg' }),
@@ -288,5 +290,89 @@ describe('Κ5 — 🔴 Ο ΚΡΙΚΟΣ 8: τα ΠΑΛΙΑ έγγραφα δεν 
 
   it('🔴 Κ6 του ADR-839 — η έκδοση είναι ΠΛΗΘΟΣ ΚΡΙΚΩΝ + 1', () => {
     expect(PUBLIC_LISTING_SCHEMA_VERSION).toBe(LISTING_MIGRATIONS.length + 1);
+  });
+});
+
+// ===========================================================================
+describe('🏆 Α-2 — ΥΠΑΡΧΕΙ ΤΙΜΗ ΤΟΥ ΛΕΞΙΛΟΓΙΟΥ ΠΟΥ ΚΑΝΕΙΣ ΔΕΝ ΧΕΙΡΙΖΕΤΑΙ;', () => {
+  // 🔴 **Η ΑΓΚΥΡΑ ΤΟΥ ADR-845 §8 (Α-2), ΚΑΙ ΤΟ ΓΙΑΤΙ ΤΗΣ ΕΙΝΑΙ ΟΛΟΚΛΗΡΗ Η Φ4.1.**
+  //
+  // Το `listing-material.ts` **υποσχόταν γραπτώς** ότι *«ο εξαντλητικός κλάδος του
+  // `withPublishedGallery` θα σπάσει τη μεταγλώττιση»* — και το ADR-845 §2.2 το
+  // αντέγραψε ως **τεκμηριωμένο γεγονός**. Μετρήθηκε 2026-09-08: **ψευδές**. Υπήρχαν
+  // δύο περάσματα με **δυαδικό κατηγόρημα** (`!isFloorplanMaterial`), και μια **άρνηση
+  // είναι πάντα ολική** ⇒ τρίτη τιμή θα έμπαινε στη ΣΥΛΛΟΓΗ ως φωτογραφία, **σιωπηλά**.
+  //
+  // 🔑 **Η άγκυρα το ΕΠΑΛΗΘΕΥΕΙ αντί να το ελπίζει** — και ρωτά **και τους τρεις**
+  //    καταναλωτές που μετρήθηκαν, όχι μόνο εκείνον που κατέγραφε το εύρημα.
+  //
+  // ⚠️ **Καμία `as` πουθενά εδώ, και είναι το κριτήριο**: το `'model'` είναι **νόμιμη**
+  //    τιμή του λεξιλογίου, άρα η άγκυρα το περνά όπως θα το περνούσε το σύρμα. Άγκυρα
+  //    που χρειάζεται cast για να ρωτήσει, ρωτά κάτι που ο τύπος έχει ήδη απαγορεύσει.
+
+  it('🔴 ΚΑΘΕ τιμή του `LISTING_MATERIAL_KINDS` έχει σκέλος στο `ListingMaterial`', () => {
+    // Ο πίνακας είναι η πηγή· ο τύπος παράγεται. Αυτό κάνει το λεξιλόγιο **ορατό σε
+    // χρόνο εκτέλεσης**, ώστε μια μελλοντική χαλάρωση του τύπου να μη γίνει σιωπηλά.
+    expect([...LISTING_MATERIAL_KINDS]).toEqual(['photo', 'floorplan', 'model']);
+    expect(PHOTO_MATERIAL.kind).toBe('photo');
+    expect(MODEL_MATERIAL.kind).toBe('model');
+    expect(declaredFloorplanMaterial(UPLOADED_AT).kind).toBe('floorplan');
+  });
+
+  it('🔴 Ο ΠΡΩΤΟΣ ΚΑΤΑΝΑΛΩΤΗΣ — το μοντέλο ΔΕΝ γίνεται σιωπηλά φωτογραφία της συλλογής', () => {
+    // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: γύρνα τον `switch` σε `.filter(i => !isFloorplanMaterial(…))`
+    //    ⇒ αυτό γίνεται πράσινο **με το μοντέλο μέσα στο `gallery`**, δηλαδή ακριβώς το
+    //    Ο-20. Το `toThrow` είναι απάντηση, όχι παράλειψη: η είσοδος είναι raster από
+    //    άκρη σε άκρη (Α-1δ) και το `models[]` το γράφει ο ψήστης της Φ4.2.
+    const shelf: readonly ProjectedShelfImage[] = [
+      shelfImage('https://shelf/a.webp', { material: MODEL_MATERIAL }),
+    ];
+
+    expect(() => withPublishedGallery(listing(), shelf)).toThrow(/models\[\]|Φ4\.2/);
+  });
+
+  it('⛔ και το ΣΙΩΠΗΛΟ ΠΕΡΑΣΜΑ αποκλείεται: ούτε στη συλλογή, ούτε στις κατόψεις', () => {
+    // Η προηγούμενη άγκυρα θα περνούσε και με ένα `case 'model': break;` — που θα
+    // **έχανε** το μοντέλο χωρίς να το πει. Εδώ κρίνεται ότι η αστοχία είναι **ονομασμένη**.
+    let landed: PublicListing | null = null;
+    try {
+      landed = withPublishedGallery(listing(), [
+        shelfImage('https://shelf/a.webp', { material: MODEL_MATERIAL }),
+      ]);
+    } catch {
+      landed = null;
+    }
+
+    expect(landed).toBeNull();
+  });
+
+  it('🔴 Ο ΔΕΥΤΕΡΟΣ ΚΑΤΑΝΑΛΩΤΗΣ — η δήλωση «μοντέλο» ΔΕΝ γίνεται `PHOTO_MATERIAL`', () => {
+    // 🔴 **Η ΔΕΥΤΕΡΗ ΠΟΡΤΑ, ΠΟΥ ΤΟ ΕΥΡΗΜΑ ΔΕΝ ΚΑΤΕΓΡΑΦΕ** (ADR-845 §2.2). Είναι
+    //    προσβάσιμη από το **σύρμα**: το `z.enum(LISTING_MATERIAL_KINDS)` δέχεται κάθε
+    //    νέα τιμή αυτομάτως. **ΜΕΤΑΛΛΑΞΗ**: γύρνα το σε τερνάριο ⇒ κόκκινο.
+    expect(ownerMediaMaterial(ownerFile({ kind: 'model' }))).toEqual({ kind: 'model' });
+    // ⚠️ Και η προεπιλογή της απουσίας **δεν** αλλάζει: αρχεία προγενέστερα της ερώτησης.
+    expect(ownerMediaMaterial(ownerFile({}))).toEqual({ kind: 'photo' });
+  });
+
+  it('🔴 Ο ΤΡΙΤΟΣ ΚΑΤΑΝΑΛΩΤΗΣ — το μοντέλο ΔΕΝ μετράει ως φωτογραφία, ούτε γίνεται «1η»', () => {
+    // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: γύρνα το `isPhotoMaterial` σε `!isFloorplanMaterial` ⇒ και τα
+    //    δύο `expect` κοκκινίζουν. Με **δύο** τιμές τα δύο κριτήρια συνέπιπταν· με
+    //    **τρεις** το μοντέλο θα σημαινόταν «1η» στον κόσμο.
+    const media = [
+      ownerFile({ storagePath: 'p/model.glb', kind: 'model', published: true }),
+      ownerFile({ storagePath: 'p/photo.jpg', published: true }),
+    ];
+
+    expect(publishedOwnerPhotos(media).map((m) => m.storagePath)).toEqual(['p/photo.jpg']);
+    expect(isLeadOwnerMedia(media, 'p/model.glb')).toBe(false);
+    expect(isLeadOwnerMedia(media, 'p/photo.jpg')).toBe(true);
+  });
+
+  it('🔴 Ο ΚΡΙΚΟΣ 10 — έγγραφο χωρίς `models` ⇒ κενός πίνακας, ποτέ `undefined`', () => {
+    const upgraded = upgradeListingDocument({ id: 'x', gallery: [], schemaVersion: 7 });
+
+    expect(upgraded.models).toEqual([]);
+    expect(upgradeListingDocument(upgraded)).toEqual(upgraded);
   });
 });
