@@ -18,9 +18,11 @@ import {
   coverageMatches,
   coverageRelation,
   normalizeCoverageIds,
+  type CoverageResolvers,
   type LineageResolver,
 } from '../coverage-match';
-import type { DeclaredCoverage } from '@/types/agency-coverage';
+import type { AdministrativeCoverage, DeclaredCoverage, ShowcaseWhere } from '@/types/agency-coverage';
+import { NO_FOOTPRINTS } from '@/types/geo/admin-footprint';
 
 // =============================================================================
 // Η ΙΕΡΑΡΧΙΑ — από το ΠΡΑΓΜΑΤΙΚΟ αρχείο, με ένεση
@@ -60,7 +62,21 @@ const CENTRAL_MACEDONIA = 'region:112'; // ΠΕΡΙΦΕΡΕΙΑ ΚΕΝΤΡΙΚΗ
 const ATTICA = 'region:351'; // ΠΕΡΙΦΕΡΕΙΑ ΑΤΤΙΚΗΣ
 
 const NATIONWIDE: DeclaredCoverage = { nationwide: true };
-const declaring = (...adminIds: readonly string[]): DeclaredCoverage => ({ adminIds });
+const declaring = (...adminIds: readonly string[]): AdministrativeCoverage => ({ adminIds });
+
+/**
+ * **Το ερώτημα ως ερώτημα** *(Φάση 2)*: ο κριτής δέχεται πλέον ολόκληρο το
+ * {@link ShowcaseWhere}, γιατί ο επισκέπτης μπορεί να ρωτήσει **και με κύκλο**. Οι
+ * παρακάτω έλεγχοι μιλούν όλοι για το **διοικητικό** σκέλος και δεν άλλαξαν σε τίποτα
+ * άλλο πέρα από το περιτύλιγμα.
+ */
+const at = (adminId: string): ShowcaseWhere => ({ adminId });
+
+/** Η ιεραρχία με ένεση + **δηλωμένη άγνοια** γεωμετρίας — τα μεικτά κελιά έχουν δικό τους αρχείο. */
+const res = (lineage: typeof lineageOf): CoverageResolvers => ({
+  lineageOf: lineage,
+  footprintOf: NO_FOOTPRINTS,
+});
 
 // =============================================================================
 // 0. ΤΑ ΔΕΔΟΜΕΝΑ ΛΕΝΕ Ο,ΤΙ ΝΟΜΙΖΟΥΜΕ
@@ -95,46 +111,46 @@ describe('ADR-846 · οι ταυτότητες υπάρχουν πραγματι
 describe('ADR-846 · coverageRelation — τρεις τιμές, αμοιβαία αποκλειόμενες', () => {
   it('δήλωση ΕΥΡΥΤΕΡΗ από το ερώτημα ⇒ within (το πραγματικό σενάριο)', () => {
     // Ο μπετατζής δήλωσε «Χαλκιδική»· ο επισκέπτης ρωτά «Κασσάνδρα».
-    expect(coverageRelation(declaring(CHALKIDIKI), KASSANDRA, lineageOf)).toBe('within');
+    expect(coverageRelation(declaring(CHALKIDIKI), at(KASSANDRA), res(lineageOf))).toBe('within');
   });
 
   it('δήλωση ΣΤΕΝΟΤΕΡΗ από το ερώτημα ⇒ intersects (η κατεύθυνση που χανόταν)', () => {
     // Δήλωσε «Θέρμη»· ο επισκέπτης ρωτά χονδρικά «Κεντρική Μακεδονία». Τον θέλει.
-    expect(coverageRelation(declaring(THERMI), CENTRAL_MACEDONIA, lineageOf)).toBe('intersects');
+    expect(coverageRelation(declaring(THERMI), at(CENTRAL_MACEDONIA), res(lineageOf))).toBe('intersects');
   });
 
   it('ΤΑΥΤΟΣΗΜΑ ⇒ within, ποτέ intersects — οι κάδοι μένουν αμοιβαία αποκλειόμενοι', () => {
-    expect(coverageRelation(declaring(THERMI), THERMI, lineageOf)).toBe('within');
+    expect(coverageRelation(declaring(THERMI), at(THERMI), res(lineageOf))).toBe('within');
   });
 
   it('αδέλφια στο ίδιο επίπεδο ⇒ disjoint', () => {
-    expect(coverageRelation(declaring(THERMI), KASSANDRA, lineageOf)).toBe('disjoint');
+    expect(coverageRelation(declaring(THERMI), at(KASSANDRA), res(lineageOf))).toBe('disjoint');
   });
 
   it('άλλη περιφέρεια ⇒ disjoint', () => {
-    expect(coverageRelation(declaring(CENTRAL_MACEDONIA), ATTICA, lineageOf)).toBe('disjoint');
+    expect(coverageRelation(declaring(CENTRAL_MACEDONIA), at(ATTICA), res(lineageOf))).toBe('disjoint');
   });
 
   it('ΜΙΑ από πολλές δηλώσεις αρκεί', () => {
     const mixed = declaring(THERMI, CHALKIDIKI);
-    expect(coverageRelation(mixed, KASSANDRA, lineageOf)).toBe('within');
+    expect(coverageRelation(mixed, at(KASSANDRA), res(lineageOf))).toBe('within');
   });
 
   it('«όλη η Ελλάδα» ⇒ within για ΚΑΘΕ ερώτημα, χωρίς να αγγίξει την ιεραρχία', () => {
     const exploding: LineageResolver = () => {
       throw new Error('η ιεραρχία ΔΕΝ πρέπει να ερωτηθεί για nationwide');
     };
-    expect(coverageRelation(NATIONWIDE, KASSANDRA, exploding)).toBe('within');
-    expect(coverageRelation(NATIONWIDE, ATTICA, exploding)).toBe('within');
+    expect(coverageRelation(NATIONWIDE, at(KASSANDRA), res(exploding))).toBe('within');
+    expect(coverageRelation(NATIONWIDE, at(ATTICA), res(exploding))).toBe('within');
   });
 
   it('καμία δήλωση ⇒ disjoint — η σιωπή ΔΕΝ ανταμείβεται με καθολική ορατότητα', () => {
-    expect(coverageRelation(null, KASSANDRA, lineageOf)).toBe('disjoint');
+    expect(coverageRelation(null, at(KASSANDRA), res(lineageOf))).toBe('disjoint');
   });
 
   it('«δεν ξέρω» (κενή γενεαλογία) ⇒ disjoint, και ο καλών ΔΕΝ εφαρμόζει τον άξονα', () => {
     const unloaded: LineageResolver = () => [];
-    expect(coverageRelation(declaring(CHALKIDIKI), KASSANDRA, unloaded)).toBe('disjoint');
+    expect(coverageRelation(declaring(CHALKIDIKI), at(KASSANDRA), res(unloaded))).toBe('disjoint');
   });
 });
 
@@ -148,8 +164,8 @@ describe('ADR-846 · coverageMatches', () => {
       [null, ATTICA],
     ];
     for (const [coverage, queryId] of cases) {
-      const relation = coverageRelation(coverage, queryId, lineageOf);
-      expect(coverageMatches(coverage, queryId, lineageOf)).toBe(relation !== 'disjoint');
+      const relation = coverageRelation(coverage, at(queryId), res(lineageOf));
+      expect(coverageMatches(coverage, at(queryId), res(lineageOf))).toBe(relation !== 'disjoint');
     }
   });
 });
@@ -207,8 +223,8 @@ describe('ADR-846 · normalizeCoverageIds', () => {
     const raw = declaring(THERMI, CENTRAL_MACEDONIA);
     const normalized = declaring(...normalizeCoverageIds(raw.adminIds, lineageOf));
     for (const queryId of [THERMI, KASSANDRA, CHALKIDIKI, CENTRAL_MACEDONIA, ATTICA]) {
-      expect(coverageMatches(normalized, queryId, lineageOf)).toBe(
-        coverageMatches(raw, queryId, lineageOf),
+      expect(coverageMatches(normalized, at(queryId), res(lineageOf))).toBe(
+        coverageMatches(raw, at(queryId), res(lineageOf)),
       );
     }
   });

@@ -52,8 +52,18 @@
  * Η ιεραρχία μπαίνει με **ένεση** ({@link LineageResolver}), ποτέ με import hook.
  */
 
-import type { AreaRelation } from '@/lib/geo/geo-area';
-import { isNationwide, type DeclaredCoverage } from '@/types/agency-coverage';
+import { areaRelation, type AreaRelation } from '@/lib/geo/geo-area';
+import { distanceMeters } from '@/lib/geo/geo-distance';
+import {
+  isAdministrativeWhere,
+  isNationwide,
+  isRadiusCoverage,
+  type DeclaredCoverage,
+  type RadiusCoverage,
+  type ShowcaseWhere,
+} from '@/types/agency-coverage';
+import type { AdminFootprint, FootprintResolver } from '@/types/geo/admin-footprint';
+import type { GeoCircle } from '@/types/geo/coordinates';
 
 /**
  * **Η γραμμή μιας οντότητας προς τη ρίζα, ΜΕ ΤΟΝ ΕΑΥΤΟ ΤΗΣ ΜΕΣΑ.**
@@ -71,43 +81,133 @@ import { isNationwide, type DeclaredCoverage } from '@/types/agency-coverage';
 export type LineageResolver = (entityId: string) => readonly string[];
 
 /**
- * **Η σχέση της δήλωσης προς την περιοχή που ρώτησε ο επισκέπτης.**
+ * **ΤΕΤΑΡΤΗ ΤΙΜΗ: «ΔΕΝ ΞΕΡΩ» — ΚΑΙ ΗΤΑΝ ΠΡΟΒΛΕΨΗ ΑΥΤΟΥ ΤΟΥ ΑΡΧΕΙΟΥ** *(Φάση 2)*.
  *
- * @param coverage Τι δήλωσε ο επαγγελματίας. `null` = **δεν δήλωσε τίποτα**.
- * @param queryId Η διοικητική οντότητα που διάλεξε ο επισκέπτης.
- * @param lineageOf Η ιεραρχία, με ένεση.
+ * Το {@link coverageMatches} γράφτηκε στη Φάση 1 με ρητή αιτιολογία *«την ημέρα που
+ * προστεθεί τέταρτη τιμή, όλοι εκείνοι οι έλεγχοι θα ήταν σιωπηλά λάθος»*. Η μέρα ήρθε.
  *
- * ⚠️ **`null` δήλωση ⇒ `disjoint`, και ΔΕΝ είναι ποινή** — είναι η ίδια απόφαση με το
- * `showcase.position === null` του υπάρχοντος φίλτρου: ο άξονας ρωτά *«πού δουλεύεις;»*
- * και η βιτρίνα **δεν το λέει**. Η εναλλακτική *(«να εμφανίζεται παντού»)* θα έδινε σε
- * όποιον **δεν** δηλώνει **καθολική ορατότητα** — δηλαδή θα αντάμειβε τη σιωπή, ακριβώς
- * το αντίστροφο του κινήτρου που θέλουμε.
+ * 🔴 **Γιατί ΔΕΝ αρκεί το `disjoint` για το «δεν ξέρω», όπως αρκούσε στη Φάση 1.** Εκεί
+ * η άγνοια ήταν **καθολική** *(η ιεραρχία των 4 MB δεν είχε φορτώσει)* και ο **καλών**
+ * μπορούσε να μην εφαρμόσει καθόλου τον άξονα *(`areaPending`)*. Εδώ η άγνοια είναι
+ * **ανά ζεύγος**: αυτή η βιτρίνα δήλωσε ακτίνα, αυτό το ερώτημα είναι δήμος, και το
+ * αποτύπωμα του δήμου λείπει. Ο καλών **δεν έχει καθολική απάντηση** να δώσει.
+ *
+ * ⚠️ **Και το `unknown` ΔΕΝ κόβει** *(δες {@link coverageMatches})*: εξαφανίζοντας
+ * άνθρωπο επειδή **εμείς** δεν έχουμε δεδομένα, θα τιμωρούσαμε τη δήλωσή του για δικό
+ * μας κενό. Εμφανίζεται, με ετικέτα που **το λέει**.
  */
-export function coverageRelation(
-  coverage: DeclaredCoverage | null,
+export type CoverageRelation = AreaRelation | 'unknown';
+
+/**
+ * **Ό,τι χρειάζεται ο κριτής από τον έξω κόσμο** — ένα αντικείμενο, όχι δύο ορίσματα.
+ *
+ * 🔑 Δύο παράλληλες παράμετροι θα ήταν το σχήμα όπου ο τρίτος καλών περνά τη μία και
+ * ξεχνά την άλλη· με **ένα** αντικείμενο, η παράλειψη **δεν μεταγλωττίζεται**.
+ */
+export interface CoverageResolvers {
+  readonly lineageOf: LineageResolver;
+  readonly footprintOf: FootprintResolver;
+}
+
+/** Απόσταση δύο σημείων σε **χιλιόμετρα** — το ένα SSoT, μία διαίρεση. */
+function kilometresBetween(a: GeoCircle['center'], b: GeoCircle['center']): number {
+  return distanceMeters(a, b) / 1000;
+}
+
+/**
+ * **Αποδεδειγμένη επαφή** — και το `innerKm > 0` **δεν είναι μικροβελτίωση**.
+ *
+ * 🔴 Το `center` του αποτυπώματος **δεν υπόσχεται ότι είναι μέσα στο πολύγωνο**
+ * *(δήμος-αρχιπέλαγος, κοίλο σχήμα)*. Με `innerKm === 0` ο «εγγεγραμμένος κύκλος»
+ * είναι **σημείο που μπορεί να είναι έξω** — άρα ένα `d <= r` θα ήταν ισχυρισμός
+ * επαφής **χωρίς απόδειξη**, δηλαδή ακριβώς το ψέμα που όλο αυτό το σχήμα αποφεύγει.
+ */
+function touchesProven(gapKm: number, radiusKm: number, footprint: AdminFootprint): boolean {
+  return footprint.innerKm > 0 && gapKm <= radiusKm + footprint.innerKm;
+}
+
+/**
+ * **Δηλωμένη ΑΚΤΙΝΑ εναντίον ΔΙΟΙΚΗΤΙΚΟΥ ερωτήματος** — το ένα μεικτό κελί.
+ *
+ * Η σειρά των ελέγχων είναι η σειρά της βεβαιότητας: πρώτα ό,τι αποδεικνύεται πλήρως,
+ * μετά ό,τι αποδεικνύεται μερικώς, τελευταίο το «δεν ξέρω».
+ */
+function radiusOverArea(
+  declared: RadiusCoverage['circle'],
+  footprint: AdminFootprint | null,
+): CoverageRelation {
+  if (footprint === null) return 'unknown';
+
+  const gapKm = kilometresBetween(declared.center, footprint.center);
+
+  // πολύγωνο ⊆ εξωτερικός ⊆ δηλωμένος κύκλος
+  if (gapKm + footprint.outerKm <= declared.radiusKm) return 'within';
+  // κανένα κοινό σημείο με τον εξωτερικό ⇒ κανένα με το πολύγωνο
+  if (gapKm > declared.radiusKm + footprint.outerKm) return 'disjoint';
+  if (touchesProven(gapKm, declared.radiusKm, footprint)) return 'intersects';
+
+  return 'unknown';
+}
+
+/**
+ * **Δηλωμένες ΔΙΟΙΚΗΤΙΚΕΣ οντότητες εναντίον ΚΥΚΛΙΚΟΥ ερωτήματος** — το άλλο μεικτό κελί.
+ *
+ * ⚠️ **Η ένωση των δηλώσεων δεν υπολογίζεται, και δεν χρειάζεται**: αρκεί **μία**
+ * οντότητα να αποδείξει `within`, ή **μία** να αποδείξει επαφή. Το `disjoint` όμως
+ * απαιτεί **όλες** να το αποδείξουν — γι' αυτό το `unknown` επιβιώνει μέχρι το τέλος
+ * του βρόχου αντί να επιστρέψει νωρίς.
+ */
+function areasOverCircle(
+  adminIds: readonly string[],
+  query: GeoCircle,
+  footprintOf: FootprintResolver,
+): CoverageRelation {
+  let touches = false;
+  let uncertain = false;
+
+  for (const adminId of adminIds) {
+    const footprint = footprintOf(adminId);
+    if (footprint === null) {
+      uncertain = true;
+      continue;
+    }
+
+    const gapKm = kilometresBetween(query.center, footprint.center);
+
+    // ο κύκλος του επισκέπτη ⊆ εγγεγραμμένος ⊆ πολύγωνο ⇒ «σε καλύπτω ολόκληρο»
+    if (gapKm + query.radiusKm <= footprint.innerKm) return 'within';
+    if (touchesProven(gapKm, query.radiusKm, footprint)) {
+      touches = true;
+    } else if (gapKm <= query.radiusKm + footprint.outerKm) {
+      // αγγίζει τον εξωτερικό αλλά όχι τον εσωτερικό ⇒ **μπορεί** να τέμνει
+      uncertain = true;
+    }
+  }
+
+  if (touches) return 'intersects';
+  return uncertain ? 'unknown' : 'disjoint';
+}
+
+/** Το σκέλος της Φάσης 1, αυτούσιο — δήλωση και ερώτημα **και τα δύο** διοικητικά. */
+function areasOverArea(
+  adminIds: readonly string[],
   queryId: string,
   lineageOf: LineageResolver,
 ): AreaRelation {
-  if (coverage === null) return 'disjoint';
-
-  // 🔑 «Όλη η Ελλάδα» περιέχει **κάθε** περιοχή — καμία αναζήτηση στην ιεραρχία, και
-  //    καμία εξάρτηση από το αν έχει φορτώσει.
-  if (isNationwide(coverage)) return 'within';
-
   const queryLineage = lineageOf(queryId);
   // ⚠️ «Δεν ξέρω» ⇒ **δεν αποφασίζω**. Ο καλών (το φίλτρο) δεν εφαρμόζει τον άξονα.
   if (queryLineage.length === 0) return 'disjoint';
 
   // 1️⃣ Η δήλωση **περιέχει** την περιοχή του επισκέπτη — «σε καλύπτω ολόκληρο».
-  for (const declaredId of coverage.adminIds) {
+  for (const declaredId of adminIds) {
     if (queryLineage.includes(declaredId)) return 'within';
   }
 
   // 2️⃣ Η δήλωση **βρίσκεται μέσα** στην περιοχή του επισκέπτη — «καλύπτω μέρος σου».
   //    ⚠️ Ελέγχεται **δεύτερο**: αν τα δύο ταυτίζονται, η σωστή απάντηση είναι `within`,
-  //    και οι τρεις τιμές πρέπει να μένουν **αμοιβαία αποκλειόμενες** (κανόνας του
+  //    και οι τιμές πρέπει να μένουν **αμοιβαία αποκλειόμενες** (κανόνας του
   //    `geo-area.ts` — μία αγγελία σε **ακριβώς έναν** κάδο).
-  for (const declaredId of coverage.adminIds) {
+  for (const declaredId of adminIds) {
     if (lineageOf(declaredId).includes(queryId)) return 'intersects';
   }
 
@@ -115,17 +215,69 @@ export function coverageRelation(
 }
 
 /**
+ * **Η σχέση της δήλωσης προς την περιοχή που ρώτησε ο επισκέπτης.**
+ *
+ * @param coverage Τι δήλωσε ο επαγγελματίας. `null` = **δεν δήλωσε τίποτα**.
+ * @param where Τι ρώτησε ο επισκέπτης — διοικητική οντότητα **ή** κύκλος.
+ * @param resolvers Η ιεραρχία και τα αποτυπώματα, με **ένεση**.
+ *
+ * ⚠️ **`null` δήλωση ⇒ `disjoint`, και ΔΕΝ είναι ποινή** — είναι η ίδια απόφαση με το
+ * `showcase.position === null` του υπάρχοντος φίλτρου: ο άξονας ρωτά *«πού δουλεύεις;»*
+ * και η βιτρίνα **δεν το λέει**. Η εναλλακτική *(«να εμφανίζεται παντού»)* θα έδινε σε
+ * όποιον **δεν** δηλώνει **καθολική ορατότητα** — δηλαδή θα αντάμειβε τη σιωπή, ακριβώς
+ * το αντίστροφο του κινήτρου που θέλουμε.
+ *
+ * ═════════════════════════════════════════════════════════════════════════════
+ * 🔴🔴 **Η ΣΕΙΡΑ ΤΩΝ ΟΡΙΣΜΑΤΩΝ ΣΤΟ `areaRelation` ΕΙΝΑΙ ΑΝΤΙΣΤΡΟΦΗ ΤΗΣ ΔΙΑΙΣΘΗΣΗΣ**
+ *
+ * Ο πίνακας στην κορυφή αυτού του αρχείου έγραφε ότι το `within` του `geo-area.ts`
+ * σημαίνει *«το σχήμα του **ερωτήματος** μέσα στο σχήμα του **υποκειμένου**»*.
+ * **Είναι ανάποδα, μετρημένο στον κώδικα** *(`circleToCircle`: `gap + subjectM <= queryM`
+ * ⇒ **subject μέσα σε query**)*. Εκεί το `subject` είναι *«πού μπορεί να βρίσκεται το
+ * ακίνητο»* και το `query` *«πού κοιτάει ο άνθρωπος»*.
+ *
+ * ⇒ Για να σημαίνει `within` *«η δήλωση καλύπτει ΟΛΟ ό,τι ρώτησες»*, ο **κύκλος του
+ * επισκέπτη** μπαίνει ως `subject` και η **δήλωση** ως `query`. Η αφελής σειρά δίνει
+ * ετικέτα **αντεστραμμένη** — και οι δύο τιμές είναι νόμιμες, οπότε **τίποτα δεν
+ * σκάει**. Άγκυρα: `coverage-match.test.ts`, ομάδα «η σειρά των ορισμάτων».
+ * ═════════════════════════════════════════════════════════════════════════════
+ */
+export function coverageRelation(
+  coverage: DeclaredCoverage | null,
+  where: ShowcaseWhere,
+  resolvers: CoverageResolvers,
+): CoverageRelation {
+  if (coverage === null) return 'disjoint';
+
+  // 🔑 «Όλη η Ελλάδα» περιέχει **κάθε** περιοχή — καμία αναζήτηση σε ιεραρχία ή
+  //    γεωμετρία, και καμία εξάρτηση από το αν έχουν φορτώσει.
+  if (isNationwide(coverage)) return 'within';
+
+  if (isAdministrativeWhere(where)) {
+    return isRadiusCoverage(coverage)
+      ? radiusOverArea(coverage.circle, resolvers.footprintOf(where.adminId))
+      : areasOverArea(coverage.adminIds, where.adminId, resolvers.lineageOf);
+  }
+
+  return isRadiusCoverage(coverage)
+    ? areaRelation(where.circle, coverage.circle)
+    : areasOverCircle(coverage.adminIds, where.circle, resolvers.footprintOf);
+}
+
+/**
  * **Ταιριάζει;** — η δυαδική ερώτηση, γραμμένη **μία** φορά.
  *
- * 🔑 Υπάρχει ώστε κανένας καλών να μη γράψει `relation !== 'disjoint'` μόνος του: την
- * ημέρα που προστεθεί τέταρτη τιμή, όλοι εκείνοι οι έλεγχοι θα ήταν **σιωπηλά** λάθος.
+ * 🔑 Υπάρχει ώστε κανένας καλών να μη γράψει `relation !== 'disjoint'` μόνος του — και
+ * **η πρόβλεψη επαληθεύτηκε**: η Φάση 2 πρόσθεσε το `'unknown'`, και **επειδή** όλοι
+ * περνούν από εδώ, η σωστή συμπεριφορά *(«δεν ξέρω ⇒ ΔΕΝ κόβω»)* γράφτηκε σε **ένα**
+ * σημείο αντί να ξεχαστεί σε τρία.
  */
 export function coverageMatches(
   coverage: DeclaredCoverage | null,
-  queryId: string,
-  lineageOf: LineageResolver,
+  where: ShowcaseWhere,
+  resolvers: CoverageResolvers,
 ): boolean {
-  return coverageRelation(coverage, queryId, lineageOf) !== 'disjoint';
+  return coverageRelation(coverage, where, resolvers) !== 'disjoint';
 }
 
 /**
