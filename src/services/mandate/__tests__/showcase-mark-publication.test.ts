@@ -40,12 +40,22 @@ import {
 //    στο `public-shelf-service.test.ts`, και η Φάση 2 θα τον έκανε **τρίτο**.
 import { FakeShelfBucket } from '@/services/upload/__fixtures__/fake-shelf-bucket';
 
+// 🔑 **Ο ψεύτικος Firestore είναι ΚΙ ΑΥΤΟΣ ΚΟΙΝΟΣ** (N.18): η `FakeFirestore` ζει ήδη
+//    στο `services/places/__tests__` και τη χρησιμοποιεί ο κριτής της φορολογικής
+//    ταυτότητας. Δεύτερη υλοποίηση εδώ θα ήταν το κλασικό sibling clone.
+import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+
 const shelf = new FakeShelfBucket();
 const privateBucket = new FakeShelfBucket();
+const db = new FakeFirestore();
 
 jest.mock('@/lib/firebaseAdmin', () => ({
   getAdminStorage: () => ({ bucket: () => shelf }),
   getAdminBucket: () => privateBucket,
+  // 🔴 **Α21.12**: ο γραφέας καταγράφει πλέον **πού ήταν το πρωτότυπο**. Χωρίς αυτή τη
+  //    γραμμή η σουίτα θα έσκαγε σε `getAdminFirestore is not a function` — δηλαδή το
+  //    mock θα ήταν **στενότερο από τον κώδικα που δοκιμάζει**.
+  getAdminFirestore: () => db,
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -82,6 +92,10 @@ const shelfKeys = (): string[] => shelf.keys();
 beforeEach(() => {
   shelf.reset();
   privateBucket.reset();
+  // 🔴 **Α21.12**: ο ψεύτικος Firestore είναι αιχμαλωτισμένος στο `jest.mock`, άρα
+  //    **δεν** ξαναγεννιέται ανά test. Χωρίς μηδενισμό, η σημείωση του προηγούμενου
+  //    test κάνει το επόμενο να περνά ή να κόβει για **λάθος λόγο** — μετρημένο.
+  db.reset();
 });
 
 // ===========================================================================
@@ -308,5 +322,71 @@ describe('🔑 Κ5 — ΙΔΕΜΠΟΤΕΝΤΙΚΟΤΗΤΑ: ίδια δήλωση
     await publishShowcaseMark(COMPANY, { kind: 'logo', privateStoragePath: path });
 
     expect(shelfKeys().sort()).toEqual(first);
+  });
+});
+
+// ===========================================================================
+// Κ7 — Η ΣΗΜΕΙΩΣΗ ΤΗΣ ΠΡΟΕΛΕΥΣΗΣ (ADR-841 §7 Α21.12)
+// ===========================================================================
+
+describe('🏆 Κ7 — ΤΟ ΣΥΣΤΗΜΑ ΘΥΜΑΤΑΙ ΠΟΥ ΗΤΑΝ ΤΟ ΠΡΩΤΟΤΥΠΟ', () => {
+  const SOURCES = 'showcase_mark_sources';
+
+  it('🔴 μετά από ΕΠΙΤΥΧΗ δημοσίευση, η προέλευση καταγράφεται με κλειδί το companyId', async () => {
+    // 🔴 **Η ΜΕΤΑΛΛΑΞΗ**: βγάλε το `recordShowcaseMarkSource` από το
+    //    `publishShowcaseMark` ⇒ κοκκινίζει, και μαζί του πεθαίνει η δυνατότητα
+    //    μαζικής αναπαραγωγής.
+    const path = await putPrivateImage(COMPANY);
+
+    const outcome = await publishShowcaseMark(COMPANY, { kind: 'logo', privateStoragePath: path });
+    expect(outcome.kind).toBe('published');
+
+    const saved = await db.collection(SOURCES).doc(COMPANY).get();
+    expect(saved.exists).toBe(true);
+    expect(saved.data()).toMatchObject({
+      companyId: COMPANY,
+      kind: 'logo',
+      privateStoragePath: path,
+    });
+  });
+
+  it('🔴 ΞΕΝΟ μονοπάτι ΔΕΝ αφήνει σημείωση — ο φρουρός κατοχής προηγείται', async () => {
+    // Αλλιώς η επόμενη μαζική σάρωση θα διάβαζε μονοπάτι που **απορρίφθηκε** και θα
+    // προσπαθούσε να το δημοσιεύσει ξανά, για πάντα.
+    const foreign = await putPrivateImage(OTHER_COMPANY, 'file_xeno');
+
+    const outcome = await publishShowcaseMark(COMPANY, {
+      kind: 'logo',
+      privateStoragePath: foreign,
+    });
+
+    expect(outcome.kind).toBe('refused');
+    expect((await db.collection(SOURCES).doc(COMPANY).get()).exists).toBe(false);
+  });
+
+  it('🔴 η ΑΠΟΣΥΡΣΗ παίρνει τη σημείωση μαζί της — αλλιώς η σάρωση ΑΝΑΣΤΑΙΝΕΙ το σήμα', async () => {
+    // 🔑 Ίδια αρχή με το ράφι: «απόσυρση = το πρόθεμα αδειάζει». Σημείωση που επιβιώνει
+    //    θα ήταν **δεύτερη κατάσταση** δίπλα στην ύπαρξη του εγγράφου, ελεύθερη να
+    //    διαφωνήσει μαζί της — και η διαφωνία θα ξαναέφερνε στον κόσμο εικόνα που ο
+    //    άνθρωπος αφαίρεσε.
+    const path = await putPrivateImage(COMPANY);
+    await publishShowcaseMark(COMPANY, { kind: 'logo', privateStoragePath: path });
+    expect((await db.collection(SOURCES).doc(COMPANY).get()).exists).toBe(true);
+
+    await publishShowcaseMark(COMPANY, null);
+
+    expect((await db.collection(SOURCES).doc(COMPANY).get()).exists).toBe(false);
+  });
+
+  it('🔑 δεύτερη δήλωση ΑΝΤΙΚΑΘΙΣΤΑ, δεν προσθέτει — ΜΙΑ απάντηση ανά οργανισμό', async () => {
+    const first = await putPrivateImage(COMPANY, 'file_proto');
+    const second = await putPrivateImage(COMPANY, 'file_deutero');
+
+    await publishShowcaseMark(COMPANY, { kind: 'logo', privateStoragePath: first });
+    await publishShowcaseMark(COMPANY, { kind: 'portrait', privateStoragePath: second });
+
+    const all = db.all<{ privateStoragePath: string; kind: string }>(SOURCES);
+    expect(all).toHaveLength(1);
+    expect(all[0]).toMatchObject({ privateStoragePath: second, kind: 'portrait' });
   });
 });

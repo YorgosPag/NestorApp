@@ -31,6 +31,11 @@
  */
 
 import { createModuleLogger } from '@/lib/telemetry';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import {
+  forgetShowcaseMarkSource,
+  recordShowcaseMarkSource,
+} from '@/services/mandate/showcase-mark-source';
 import { reconcilePublicShelf } from '@/services/listings/public-shelf.service';
 import { SHOWCASE_SHELF } from '@/services/upload/utils/public-shelf-kinds';
 import type { PublicShelfSource } from '@/services/upload/utils/storage-path-public-shelf';
@@ -117,6 +122,10 @@ export async function publishShowcaseMark(
 ): Promise<ShowcaseMarkOutcome> {
   if (declaration === null) {
     await reconcilePublicShelf<ShowcaseMarkMaterial>(SHOWCASE_SHELF, companyId, []);
+    // 🔑 **Η απόσυρση παίρνει τη σημείωση μαζί της** (Α21.12): μια προέλευση που
+    //    επιβιώνει θα έκανε την επόμενη μαζική αναπαραγωγή να **αναστήσει** σήμα που ο
+    //    άνθρωπος αφαίρεσε. Ίδια αρχή με το ράφι — «απόσυρση = το πρόθεμα αδειάζει».
+    await forgetShowcaseMarkSource(getAdminFirestore(), companyId);
     return { kind: 'cleared' };
   }
 
@@ -142,6 +151,12 @@ export async function publishShowcaseMark(
     });
     return { kind: 'refused', reason: 'showcase-mark-unpublishable' };
   }
+
+  // 🔴 **ΜΕΤΑ την επιτυχία, ΠΟΤΕ πριν** (Α21.12): σημείωση για σήμα που τελικά δεν
+  //    δημοσιεύτηκε θα έστελνε τη μελλοντική σάρωση να ξαναπαράγει κάτι που **δεν
+  //    υπάρχει** — σιωπηλά, γιατί η αποτυχία θα φαινόταν ίδια με «δεν άλλαξε τίποτα».
+  // ⚠️ **Δεν πετά**: αποτυχία εδώ δεν ακυρώνει σήμα που ήδη δημοσιεύτηκε σωστά.
+  await recordShowcaseMarkSource(getAdminFirestore(), companyId, declaration);
 
   return {
     kind: 'published',

@@ -67,7 +67,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "b5339e97108c2eb5fd2bbf3bfdbf06a5b6e41a5817a0294c93ad53ecade0bb90",
+  "inputsSha256": "483b30697f95cd908aa262c6bf98eb10333a7002a4b8b6c1e0c35453fb0fdf5e",
   "languages": [
     "el"
   ],
@@ -484,7 +484,7 @@
     "src/services/mandate/mandate-invitation.service.ts": "2c8edb86c7dfd354abf11d71bc68bd54f6d595c968fd36188fa5cea0608e5b6a",
     "src/services/mandate/mandate-request-vocabulary.ts": "4d704e90135da7facf1f3fe55f9eb3801b21ca006ce61fa0a48227b77850eb5d",
     "src/services/mandate/showcase-mark-publication.ts": "a7efa19149e02c4a1adbd495b943e19f1b02e4b2befb5156297827a63275badb",
-    "src/services/mandate/showcase-mark-source.ts": "1068e1fdcf3576a0b1889f0a7c35e804a9ba833b482726c7a629d40d73851324",
+    "src/services/mandate/showcase-mark-source.ts": "90fb6146071cb3e2d18fcfad30607a9818502af6863f4cc4e5793d27a166c119",
     "src/services/onboarding/onboarding-types.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/services/owner-property/owner-property-publication.service.ts": "168f55b83dbfe7b98ea64106a2e414a7a9fc518290d62a872b12846268fd20aa",
     "src/services/owner-property/owner-property-write-result.ts": "f3242ab2df3c8e39c387a63ce6d9d25d986478d3d86bd9519e05a05cff7f55a5",

@@ -62,12 +62,23 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import type { ShowcaseAuthority } from '@/lib/auth/brokerage-authority';
 import type { ClassifiedOccupation } from '@/types/agency-profile';
 
+import { FakeFirestore } from '@/services/places/__tests__/fake-firestore';
+
 const shelf = new FakeShelfBucket();
 const privateBucket = new FakeShelfBucket();
+/** Οι σημειώσεις προέλευσης (Α21.12) — αυτή η σουίτα δεν τις κρίνει, τις **επιτρέπει**. */
+const markSources = new FakeFirestore();
 
 jest.mock('@/lib/firebaseAdmin', () => ({
   getAdminStorage: () => ({ bucket: () => shelf }),
   getAdminBucket: () => privateBucket,
+  // 🔴 **Α21.12** — ο γραφέας του σήματος καταγράφει πλέον **πού ήταν το πρωτότυπο**.
+  //    ⚠️ Και η αστοχία ήταν **σιωπηλή με τον χειρότερο τρόπο**: το `getAdminFirestore`
+  //    έλειπε από το mock, η εξαίρεση πιανόταν από τον `catch` του γραφέα, και η
+  //    δημοσίευση αναφερόταν ως **`failed`** — δηλαδή οι άγκυρες της επιβίωσης
+  //    κοκκίνιζαν για λόγο **άσχετο** με ό,τι ρωτούν. Το mock πρέπει να είναι **τόσο
+  //    πλατύ όσο ο κώδικας που δοκιμάζει**.
+  getAdminFirestore: () => markSources,
 }));
 
 // ⚠️ `require` **μετά** το mock: το `jest.mock` ανυψώνεται πάνω από κάθε `import`, αλλά ο
