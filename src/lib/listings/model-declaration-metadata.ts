@@ -95,7 +95,14 @@ export const MODEL_DECLARATION_MAX_BYTES = 4 * 1024;
  */
 export function encodeModelDeclaration(declaration: ModelPublicationDeclaration): string {
   const encoded = JSON.stringify(declaration);
-  const size = Buffer.byteLength(encoded, 'utf8');
+  // 🔴 **`TextEncoder`, ΟΧΙ `Buffer.byteLength` — ΚΑΙ ΕΙΝΑΙ ΟΡΘΟΤΗΤΑ, ΟΧΙ ΣΤΙΛ** *(Βήμα Γ)*.
+  //    Το `Buffer` είναι **καθολικό του Node**: το Next **δεν** το γεμίζει με polyfill στον
+  //    περιηγητή *(κανένα `buffer` στα `resolve.fallback`)*. Από το Βήμα Γ, ο **γραφέας αυτής
+  //    της δήλωσης είναι ο ΠΕΛΑΤΗΣ** — δηλαδή η γραμμή αυτή θα έσκαγε με `Buffer is not
+  //    defined` **μόνο στην παραγωγή**: το jsdom των tests έχει τα καθολικά του Node, άρα
+  //    **καμία σουίτα δεν θα το έβλεπε ποτέ**. Το `TextEncoder` δίνει το **ίδιο** μήκος σε
+  //    bytes UTF-8 και υπάρχει **και στις δύο** άκρες.
+  const size = new TextEncoder().encode(encoded).length;
 
   if (size > MODEL_DECLARATION_MAX_BYTES) {
     // ⚠️ Λατινικό κείμενο **επίτηδες**: είναι invariant προγραμματιστή, όχι μήνυμα προς
