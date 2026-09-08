@@ -24,6 +24,7 @@
 
 import type { AgencyProfileRejection } from '@/services/mandate/agency-profile-verdict';
 import type { ShowcaseMarkKind } from '@/lib/agency/showcase-mark-kind';
+import type { CoverageOutlineDefect } from '@/lib/agency/coverage-outline';
 
 /** Το namespace της βιτρίνας — **`property-market`**, το ίδιο με τον κατάλογο. */
 export const SHOWCASE_NS = 'property-market';
@@ -89,9 +90,14 @@ export const SHOWCASE_KEYS = {
   coverageAreaUnknown: `${K}.coverageAreaUnknown`,
   /** Ακτίνα εκτός του κλειστού καταλόγου — δεύτερη ζώνη, η οθόνη δεν την παράγει. */
   coverageRadiusInvalid: `${K}.coverageRadiusInvalid`,
-  /** Η ερώτηση του τρόπου δήλωσης: διοικητικές περιοχές ή ακτίνα; */
+  /** Η ερώτηση του τρόπου δήλωσης: διοικητικές περιοχές, ακτίνα ή χαραγμένο σχήμα; */
   coverageModeAreas: `${K}.coverageModeAreas`,
   coverageModeRadius: `${K}.coverageModeRadius`,
+  coverageModeOutline: `${K}.coverageModeOutline`,
+  /** Το χαραγμένο πολύγωνο (ADR-846 Φ3). */
+  coverageOutlineHint: `${K}.coverageOutlineHint`,
+  coverageOutlineMissing: `${K}.coverageOutlineMissing`,
+  coverageOutlineExtent: `${K}.coverageOutlineExtent`,
   /** Το χειριστήριο της απόστασης. */
   coverageRadiusLabel: `${K}.coverageRadiusLabel`,
   coverageRadiusOption: `${K}.coverageRadiusOption`,
@@ -100,6 +106,13 @@ export const SHOWCASE_KEYS = {
   coverageCenterMissing: `${K}.coverageCenterMissing`,
   coverageCenterUseHome: `${K}.coverageCenterUseHome`,
   coverageCenterSet: `${K}.coverageCenterSet`,
+  /**
+   * ⚠️ **ΤΑ ΔΥΟ ΤΑΒΑΝΙΑ ΤΟΥ ΠΟΛΥΓΩΝΟΥ ΕΧΟΥΝ ΔΙΚΑ ΤΟΥΣ ΛΟΓΙΑ** — δες
+   * {@link COVERAGE_OUTLINE_DEFECT_KEYS}: η θεραπεία τους διαφέρει *(σβήσε κορυφές ·
+   * χάραξε μικρότερο)*, και ένα κοινό «άκυρο σχήμα» θα ήταν γρίφος.
+   */
+  coverageOutlineTooManyVertices: `${K}.coverageOutlineTooManyVertices`,
+  coverageOutlineTooWide: `${K}.coverageOutlineTooWide`,
   noChannel: `${K}.noChannel`,
   publish: `${K}.publish`,
   publishing: `${K}.publishing`,
@@ -272,3 +285,31 @@ export const SHOWCASE_MARK_KIND_HINT_KEYS: Record<ShowcaseMarkKind, string> = {
   logo: `${K}.mark.kindLogoHint`,
   portrait: `${K}.mark.kindPortraitHint`,
 };
+
+/**
+ * **ΚΑΘΕ ΕΛΑΤΤΩΜΑ ΧΑΡΑΓΜΕΝΗΣ ΕΜΒΕΛΕΙΑΣ → ΤΑ ΛΟΓΙΑ ΤΟΥ** *(ADR-846 Φ3)*.
+ *
+ * 🔑 **`Record<CoverageOutlineDefect, …>` — ΕΞΑΝΤΛΗΤΙΚΟ ΕΠΙΤΗΔΕΣ**: έκτο ελάττωμα
+ * **δεν μεταγλωττίζεται** χωρίς κείμενο. Είναι το ίδιο ιδίωμα με το `ZOOM_FOR_STEP`
+ * της Φάσης 2 *(«πέμπτο βήμα δεν μεταγλωττίζεται χωρίς ζουμ»)*, εφαρμοσμένο στο i18n.
+ *
+ * 🏆 **ΤΑ ΠΕΝΤΕ ΤΟΥ ΣΧΗΜΑΤΟΣ ΔΕΙΧΝΟΥΝ ΣΤΑ ΥΠΑΡΧΟΝΤΑ ΚΛΕΙΔΙΑ**, στο `search-results` —
+ * τα **ίδια** που λέει ήδη το `OutlineDraftControls` όσο ο άνθρωπος χαράζει. Δεύτερη
+ * διατύπωση για το ίδιο πρόβλημα θα ήταν ο άνθρωπος να διαβάζει **άλλα λόγια** πριν και
+ * μετά την υποβολή. *(Το `search-results` είναι **εγγυημένο namespace του κελύφους**,
+ * άρα τα κλειδιά ταξιδεύουν ήδη — το route slice δεν μεγαλώνει.)*
+ *
+ * ⚠️ **Μόνο τα ΔΥΟ της εμβέλειας είναι καινούργια** — γιατί μόνο αυτά είναι δικά της.
+ */
+export const COVERAGE_OUTLINE_DEFECT_KEYS: Record<CoverageOutlineDefect, string> = {
+  'coverage-outline-too-many-vertices': SHOWCASE_KEYS.coverageOutlineTooManyVertices,
+  'coverage-outline-too-wide': SHOWCASE_KEYS.coverageOutlineTooWide,
+  'outline-too-few-vertices': 'search-results:place.defect.outline-too-few-vertices',
+  'outline-degenerate': 'search-results:place.defect.outline-degenerate',
+  'outline-self-intersecting': 'search-results:place.defect.outline-self-intersecting',
+  'outline-outside-served-area': 'search-results:place.defect.outline-outside-served-area',
+  'point-off-earth': 'search-results:place.defect.point-off-earth',
+};
+
+/** Το δεύτερο namespace που χρειάζεται ο {@link COVERAGE_OUTLINE_DEFECT_KEYS}. */
+export const OUTLINE_DEFECT_NS = 'search-results';

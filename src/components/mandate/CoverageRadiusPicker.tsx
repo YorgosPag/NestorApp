@@ -50,6 +50,7 @@ import {
 } from '@/components/ui/select';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { mapZoomForRadiusKm } from '@/lib/geo/geo-map-zoom';
 import { geoCircleOutline } from '@/lib/geo/geo-ring';
 import {
   COVERAGE_RADIUS_STEPS,
@@ -71,28 +72,17 @@ import { SHOWCASE_KEYS, SHOWCASE_NS } from './agency-showcase-labels';
 const DEFAULT_STEP: CoverageRadiusKm = 20;
 
 /**
- * **Πόσο κοντά ανοίγει ο χάρτης, ΑΝΑ ΒΗΜΑ** — και είναι **πίνακας**, όχι τύπος.
+ * **Το ύψος του χάρτη σε εικονοστοιχεία** — δεμένο με το `h-64` παρακάτω, **ονομαστικά**.
  *
- * 🔴 **Χωρίς αυτό, το σχήμα ζωγραφίζεται και δεν το βλέπει κανείς** *(μετρημένο στο
- * ζωντανό περπάτημα)*: το `PlaceMap` ανοίγει σε `BUILDING_ZOOM = 18` — επίπεδο κτιρίου —
- * όπου ένας κύκλος **10 χλμ** είναι ολόκληρος εκτός οθόνης. Δηλαδή το μισό επιχείρημα
- * που επέτρεψε την ακτίνα *(«παύει να είναι οπτικά αόρατη»)* **δεν πληρωνόταν**.
+ * 🔴 Εδώ ζούσε πίνακας `ZOOM_FOR_STEP` τεσσάρων τιμών. Η Φάση 3 έφερε δύο ακόμη
+ * καταναλωτές *(χαραγμένο πολύγωνο, δημόσια βιτρίνα)* όπου **δεν υπάρχουν τέσσερα
+ * μεγέθη**, οπότε ο πίνακας έγινε **η φόρμουλα από την οποία είχε προκύψει**
+ * *(`lib/geo/geo-map-zoom.ts`)* αντί να αποκτήσει τρίτο αντίγραφο.
  *
- * 📐 **Πώς προκύπτουν οι τιμές** *(γραμμένο, ώστε η επόμενη να μη μαντευτεί)*: στο
- * Web Mercator η κλίμακα είναι `156.543 · cos(φ) / 2^z` μέτρα ανά εικονοστοιχείο. Για
- * γεω-πλάτος Ελλάδας *(φ ≈ 40°)* και ύψος χάρτη **256 px** *(`h-64`)*, το να χωρέσει
- * διάμετρος `2R` δίνει `z = log₂(119.900 · 256 / 2R)`.
- *
- * ⚠️ **Δεμένο με το `h-64` παρακάτω.** Αν αλλάξει το ύψος, αυτές οι τιμές πρέπει να
- * ξαναϋπολογιστούν — γι' αυτό η φόρμουλα είναι εδώ και όχι σε σχόλιο αλλού.
- * 🔑 `Record<CoverageRadiusKm, …>`: **πέμπτο βήμα δεν μεταγλωττίζεται** χωρίς ζουμ.
+ * ⚠️ **Αν αλλάξει το `h-64`, αλλάζει ΕΔΩ** — και ο μεταγλωττιστής το ζητά, γιατί το
+ * ύψος είναι **όρισμα** της φόρμουλας, όχι σιωπηλή παραδοχή της.
  */
-const ZOOM_FOR_STEP: Record<CoverageRadiusKm, number> = {
-  10: 10.5,
-  20: 9.5,
-  30: 9,
-  50: 8.2,
-};
+const MAP_HEIGHT_PX = 256;
 
 /** Πού ανοίγει ο χάρτης όταν δεν υπάρχει ούτε κέντρο ούτε έδρα. */
 const FALLBACK_CENTRE: GeoPoint = {
@@ -186,7 +176,7 @@ export function CoverageRadiusPicker({
         pin={centre}
         outline={centre === null ? null : geoCircleOutline(centre, radiusKm * 1000)}
         heightClass="h-64"
-        initialZoom={ZOOM_FOR_STEP[radiusKm]}
+        initialZoom={mapZoomForRadiusKm(radiusKm, MAP_HEIGHT_PX)}
         disabled={disabled}
       />
 

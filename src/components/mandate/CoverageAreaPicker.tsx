@@ -40,10 +40,16 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { normalizeCoverageIds } from '@/lib/agency/coverage-match';
 import { lineageIdsOf, useAdministrativeHierarchy } from '@/hooks/useAdministrativeHierarchy';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { isNationwide, isRadiusCoverage, type DeclaredCoverage } from '@/types/agency-coverage';
+import {
+  isNationwide,
+  isOutlineCoverage,
+  isRadiusCoverage,
+  type DeclaredCoverage,
+} from '@/types/agency-coverage';
 import type { GeoPoint } from '@/types/geo/coordinates';
 
 import { AreaCombobox } from './AreaCombobox';
+import { CoverageOutlinePicker } from './CoverageOutlinePicker';
 import { CoverageRadiusPicker } from './CoverageRadiusPicker';
 import { SHOWCASE_KEYS, SHOWCASE_NS } from './agency-showcase-labels';
 
@@ -55,8 +61,23 @@ interface CoverageAreaPickerProps {
   readonly disabled?: boolean;
 }
 
-/** Οι δύο τρόποι να πει κανείς «πού δουλεύω», όταν δεν λέει «όλη η Ελλάδα». */
-type CoverageMode = 'areas' | 'radius';
+/**
+ * Οι **τρεις** τρόποι να πει κανείς «πού δουλεύω», όταν δεν λέει «όλη η Ελλάδα».
+ *
+ * 🔑 **Ραδιοπλήκτρα και όχι checkbox** *(δες παρακάτω)*: είναι αμοιβαία αποκλειόμενοι
+ * **στον τύπο** — κλειστή ένωση — και τρία checkbox θα επέτρεπαν στην οθόνη να εκφράσει
+ * κατάσταση που τα δεδομένα **δεν έχουν**.
+ */
+type CoverageMode = 'areas' | 'radius' | 'outline';
+
+/** Η σειρά που τα βλέπει ο άνθρωπος — από το **πιο αναγνώσιμο** προς το πιο ελεύθερο. */
+const COVERAGE_MODES: readonly CoverageMode[] = ['areas', 'radius', 'outline'];
+
+const MODE_KEYS: Record<CoverageMode, string> = {
+  areas: SHOWCASE_KEYS.coverageModeAreas,
+  radius: SHOWCASE_KEYS.coverageModeRadius,
+  outline: SHOWCASE_KEYS.coverageModeOutline,
+};
 
 /** Τι απορροφήθηκε μόλις τώρα — για να το **πει** η οθόνη, όχι να συμβεί σιωπηλά. */
 /**
@@ -99,10 +120,16 @@ export function CoverageAreaPicker({
   const [preferred, setPreferred] = React.useState<CoverageMode>('areas');
 
   const nationwide = value !== null && isNationwide(value);
-  const radius = value !== null && !isNationwide(value) && isRadiusCoverage(value) ? value : null;
-  const mode: CoverageMode = radius !== null ? 'radius' : preferred;
+  const declared = value !== null && !isNationwide(value) ? value : null;
+  const radius = declared !== null && isRadiusCoverage(declared) ? declared : null;
+  const outline = declared !== null && isOutlineCoverage(declared) ? declared : null;
+  // ⚠️ **Η ΔΗΛΩΣΗ ΥΠΕΡΙΣΧΥΕΙ ΤΗΣ ΠΡΟΤΙΜΗΣΗΣ ΜΟΛΙΣ ΥΠΑΡΞΕΙ** — δες το `preferred`.
+  const mode: CoverageMode =
+    radius !== null ? 'radius' : outline !== null ? 'outline' : preferred;
   const adminIds =
-    value !== null && !isNationwide(value) && !isRadiusCoverage(value) ? value.adminIds : [];
+    declared !== null && !isRadiusCoverage(declared) && !isOutlineCoverage(declared)
+      ? declared.adminIds
+      : [];
 
   /**
    * ⚠️ **Η αλλαγή τρόπου ΣΒΗΝΕΙ την προηγούμενη δήλωση** — ίδιος κανόνας με το
@@ -188,7 +215,7 @@ export function CoverageAreaPicker({
               αποκλειόμενοι στον **τύπο** (κλειστή ένωση), και δύο checkbox θα
               επέτρεπαν στην οθόνη να εκφράσει κατάσταση που τα δεδομένα δεν έχουν. */}
           <div role="radiogroup" className="flex flex-col gap-1">
-            {(['areas', 'radius'] as const).map((option) => (
+            {COVERAGE_MODES.map((option) => (
               <label key={option} className="flex items-center gap-2 text-sm text-foreground">
                 <input
                   type="radio"
@@ -197,11 +224,10 @@ export function CoverageAreaPicker({
                   disabled={disabled}
                   onChange={() => switchMode(option)}
                 />
-                {t(
-                  option === 'areas'
-                    ? SHOWCASE_KEYS.coverageModeAreas
-                    : SHOWCASE_KEYS.coverageModeRadius,
-                )}
+                {/* 🔑 **Πίνακας, όχι τριαδικό**: με `Record<CoverageMode, …>` ένας
+                    τέταρτος τρόπος **δεν μεταγλωττίζεται** χωρίς ετικέτα. Το παλιό
+                    `option === 'areas' ? … : …` θα έδειχνε σιωπηλά λάθος λέξη. */}
+                {t(MODE_KEYS[option])}
               </label>
             ))}
           </div>
@@ -211,6 +237,15 @@ export function CoverageAreaPicker({
       {!nationwide && mode === 'radius' && (
         <CoverageRadiusPicker
           value={radius}
+          home={home}
+          onChange={onChange}
+          disabled={disabled}
+        />
+      )}
+
+      {!nationwide && mode === 'outline' && (
+        <CoverageOutlinePicker
+          value={outline}
           home={home}
           onChange={onChange}
           disabled={disabled}

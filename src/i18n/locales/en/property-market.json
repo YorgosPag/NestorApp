@@ -796,7 +796,13 @@
       "publicView": "See public view",
       "copyLink": "Copy link",
       "linkCopied": "Link copied",
-      "publicViewHint": "This is how the world sees you. The link is ready for a card, a message or an email signature."
+      "publicViewHint": "This is how the world sees you. The link is ready for a card, a message or an email signature.",
+      "coverageModeOutline": "I draw the area on the map myself",
+      "coverageOutlineHint": "Click on the map to place vertices — three of them close the shape. What you draw is exactly what people will see.",
+      "coverageOutlineMissing": "You have not drawn a shape yet. Until you do, no area is declared.",
+      "coverageOutlineExtent": "Spans ~{spread} km (limit {max}) · {vertices} of {maxVertices} vertices",
+      "coverageOutlineTooManyVertices": "The shape has more than {maxVertices} vertices. Remove some — a drawn service area does not need that much detail.",
+      "coverageOutlineTooWide": "The shape spans more than {max} km. Draw a smaller area, or declare a municipality or region from the list — it also reads better."
     },
     "directory": {
       "title": "Professionals",
@@ -830,7 +836,8 @@
       "coverageUnknown": "May cover this area — we cannot tell for sure",
       "coverageDeclaredNationwide": "Declares: all of Greece",
       "coverageDeclared": "Declares: {areas}",
-      "coverageDeclaredRadius": "Declares: up to {km} km from a point they set"
+      "coverageDeclaredRadius": "Declares: up to {km} km from a point they set",
+      "coverageDeclaredOutline": "Declares: a drawn area of ~{km2} km²"
     },
     "credibility": {
       "occupationLabel": "Speciality",
@@ -880,7 +887,8 @@
       "listingsEmpty": "This agency has no published listings right now.",
       "listingsEmptyHint": "That does not mean it is not working — it means it has published nothing here. You can still ask it to take on your own property.",
       "listingsEmptyHintPro": "That does not mean it is not working — it means it has published nothing here. You can approach it directly.",
-      "listingsFailed": "We could not load its listings. The agency is there — please try again shortly."
+      "listingsFailed": "We could not load its listings. The agency is there — please try again shortly.",
+      "coverageOutline": "Drawn area of ~{km2} km²"
     },
     "request": {
       "title": "Request an assignment",
