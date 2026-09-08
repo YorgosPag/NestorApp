@@ -235,9 +235,19 @@ describe('🔴 Κ2β — ΟΙ ΔΥΟ ΡΙΖΕΣ ΔΕΝ ΜΠΟΡΟΥΝ ΝΑ ΤΑ�
   it('🏆 ΚΑΘΕ ταυτότητα γίνεται δεκτή από ΤΟ ΠΟΛΥ ΜΙΑ ρίζα — ποτέ και από τις δύο', () => {
     // Η δομική εγγύηση, δοκιμασμένη ως ΙΔΙΟΤΗΤΑ των φρουρών — όχι ως δύο χωριστά
     // παραδείγματα που αύριο μπορεί να αποκλίνουν.
+    //
+    // 🔴 **ΔΙΟΡΘΩΘΗΚΕ ΣΤΗ Φ4.2 (ADR-845): ΜΕΤΡΑΕΙ ΡΙΖΕΣ, ΟΠΩΣ ΛΕΕΙ Ο ΤΙΤΛΟΣ ΤΟΥ.** Ως τη
+    //    Φ4.1 μετρούσε **ΓΡΑΜΜΕΣ** — ταυτόσημο όσο κάθε ρίζα είχε ακριβώς μία γραμμή, και
+    //    **δεν είναι** από τη στιγμή που η ρίζα των αγγελιών έχει δύο *(εικόνες, μοντέλα)*.
+    //    Ο κίνδυνος που φυλάει ΔΕΝ ήταν ποτέ «δύο γραμμές δέχονται το ίδιο id» — είναι
+    //    **«η ταυτότητα του μισθωτή εμφανίζεται σε δημόσια διαδρομή αγγελίας»**, δηλαδή
+    //    ερώτηση για **ρίζες**. Η υλοποίηση είχε αποκλίνει από τον δικό της τίτλο.
     for (const candidate of ['comp_abc', 'ownp_1', 'prop_9', 'comp_', 'x', '..']) {
-      expect(PUBLIC_SHELF_KINDS.filter((kind) => kind.acceptsSubject(candidate)).length)
-        .toBeLessThanOrEqual(1);
+      const roots = new Set(
+        PUBLIC_SHELF_KINDS.filter((kind) => kind.acceptsSubject(candidate)).map((kind) => kind.root),
+      );
+
+      expect(roots.size).toBeLessThanOrEqual(1);
     }
   });
 
@@ -249,10 +259,25 @@ describe('🔴 Κ2β — ΟΙ ΔΥΟ ΡΙΖΕΣ ΔΕΝ ΜΠΟΡΟΥΝ ΝΑ ΤΑ�
     expect(parsePublicShelfKey(SHOWCASE_SHELF, listingKey)).toBeNull();
   });
 
-  it('οι ρίζες είναι διακριτές — αλλιώς το πρόθεμα θα έσβηνε ΞΕΝΑ bytes', () => {
-    expect(new Set(PUBLIC_SHELF_KINDS.map((kind) => kind.root)).size).toBe(
-      PUBLIC_SHELF_KINDS.length,
-    );
+  it('🔴 καμία γραμμή δεν μπορεί να διεκδικήσει ΤΟ ΙΔΙΟ ΚΛΕΙΔΙ με άλλη', () => {
+    // 🔴 **ΔΙΟΡΘΩΘΗΚΕ ΣΤΗ Φ4.2 (ADR-845), ΚΑΙ ΕΙΝΑΙ Η ΠΙΟ ΛΕΠΤΗ ΑΛΛΑΓΗ ΤΗΣ ΦΑΣΗΣ.**
+    //
+    // Ως τη Φ4.1 έλεγε *«οι ρίζες είναι διακριτές»* — και ήταν **σωστός μεσολαβητής** όσο
+    // κάθε ρίζα είχε μία γραμμή. Από τη Φ4.2 το `LISTING_SHELF` και το `LISTING_MODEL_SHELF`
+    // μοιράζονται ρίζα **επίτηδες**: είναι το υλικό της ΙΔΙΑΣ αγγελίας, και μια τέταρτη ρίζα
+    // θα ήταν δεύτερη θέση με δικό της κύκλο ζωής και δική της απόσυρση.
+    //
+    // ⚠️ **Ο ΚΙΝΔΥΝΟΣ ΟΜΩΣ ΕΙΝΑΙ ΠΡΑΓΜΑΤΙΚΟΣ ΚΑΙ ΔΕΝ ΕΞΑΦΑΝΙΖΕΤΑΙ**: ο γραφέας σαρώνει
+    //    πρόθεμα και **σβήνει ό,τι περισσεύει**. Άρα η ερώτηση δεν ήταν ποτέ *«ίδια ρίζα;»* —
+    //    ήταν **«μπορούν δύο γραμμές να γράψουν το ΙΔΙΟ κλειδί;»**. Το κλειδί είναι
+    //    `<ρίζα>/<ταυτότητα>/<hash>.<μορφή>`, οπότε το ζεύγος που πρέπει να είναι διακριτό
+    //    είναι **(ρίζα, μορφή)**. Δύο γραμμές με ίδια ρίζα ΚΑΙ ίδια μορφή θα έσβηναν η μία
+    //    τα bytes της άλλης — σιωπηλά, και μόνιμα.
+    //
+    // 🔑 Η **εκτέλεση** αυτής της εγγύησης πάνω σε πραγματικά κλειδιά ζει στην **Α-1ε**.
+    const claims = PUBLIC_SHELF_KINDS.map((kind) => `${kind.root}::${shelfExtension(kind.encoding)}`);
+
+    expect(new Set(claims).size).toBe(PUBLIC_SHELF_KINDS.length);
   });
 });
 
@@ -385,8 +410,17 @@ describe('🏆 Κ2δ — Η ΚΛΙΜΑΚΑ ΤΟΥ ΣΗΜΑΤΟΣ ΕΞΥΠΗΡΕ�
     expect(listingMax / markMax).toBeGreaterThanOrEqual(5);
   });
 
-  it('τα πλάτη κάθε είδους είναι ΑΥΞΟΝΤΑ — η προβολή διαβάζει το τελευταίο ως κανονικό', () => {
-    for (const kind of PUBLIC_SHELF_KINDS) {
+  it('τα πλάτη κάθε είδους ΕΙΚΟΝΑΣ είναι ΑΥΞΟΝΤΑ — η προβολή διαβάζει το τελευταίο ως κανονικό', () => {
+    // 🔴 **ΔΙΑΜΕΡΙΣΗ ΑΠΟ ΤΗ Φ4.2 (ADR-845)**: τα «πλάτη» είναι ιδιότητα της **εικόνας**.
+    //    Ως τη Φ4.1 ο βρόχος διέτρεχε ολόκληρο τον πίνακα και διάβαζε `kind.encoding.widths`
+    //    άνευ όρων — με τη γραμμή του μοντέλου αυτό είναι `undefined.length`, δηλαδή
+    //    κατάρρευση με μήνυμα που **δεν ονομάζει την αιτία**.
+    // ⚠️ Το φίλτρο **δεν αδυνατίζει** την άγκυρα: το πλήθος ελέγχεται από κάτω, αλλιώς ένα
+    //    κενό φίλτρο θα την έκανε μονίμως πράσινη χωρίς να ρωτά τίποτα.
+    const rasterKinds = PUBLIC_SHELF_KINDS.filter(isRasterShelfKind);
+    expect(rasterKinds.length).toBeGreaterThanOrEqual(2);
+
+    for (const kind of rasterKinds) {
       const widths = kind.encoding.widths;
       expect(widths.length).toBeGreaterThan(0);
       expect([...widths].sort((a, b) => a - b)).toEqual([...widths]);
@@ -681,37 +715,42 @@ describe('🏆 Α-1ε — ΟΙ ΔΥΟ ΓΡΑΜΜΕΣ ΤΗΣ ΙΔΙΑΣ ΑΓΓΕ�
   //    επιτρέπεται να ζει σε σχόλιο.
 
   const LISTING_ID = 'prop_coexist_1';
-  const PHOTO_KEY = buildPublicShelfKey(LISTING_SHELF, {
-    subjectId: LISTING_ID,
-    contentHash: HASH,
-    ext: 'webp',
-  });
-  const MODEL_KEY = buildPublicShelfKey(LISTING_MODEL_SHELF, {
-    subjectId: LISTING_ID,
-    contentHash: HASH,
-    ext: 'glb',
-  });
+
+  // ⚠️ **ΣΥΝΑΡΤΗΣΕΙΣ ΚΑΙ ΟΧΙ ΣΤΑΘΕΡΕΣ ΤΟΥ `describe`, ΚΑΙ ΤΟ ΕΔΕΙΞΕ ΜΕΤΑΛΛΑΞΗ.** Το σώμα
+  //    ενός `describe` τρέχει στη **συλλογή**: μια εξαίρεση εκεί ρίχνει **ΟΛΟΚΛΗΡΟ** το
+  //    αρχείο με `Tests: 0 total` — δηλαδή 65 άγκυρες σιωπούν και το μήνυμα δεν ονομάζει
+  //    καμία. Μετρημένο 2026-09-08: η μετάλλαξη «η μορφή του μοντέλου γίνεται `webp`»
+  //    έδωσε ακριβώς αυτό. Μια άγκυρα που **σκοτώνει τις γειτόνισσές της** όταν πέφτει
+  //    δεν είναι άγκυρα — είναι μοχλός.
+  const photoKey = (): string =>
+    buildPublicShelfKey(LISTING_SHELF, { subjectId: LISTING_ID, contentHash: HASH, ext: 'webp' });
+  const modelKey = (): string =>
+    buildPublicShelfKey(LISTING_MODEL_SHELF, {
+      subjectId: LISTING_ID,
+      contentHash: HASH,
+      ext: 'glb',
+    });
 
   it('🔴 τα δύο είδη γράφουν στο ΙΔΙΟ πρόθεμα — αλλιώς η άγκυρα δεν ρωτά τίποτα', () => {
     expect(publicShelfPrefix(LISTING_MODEL_SHELF, LISTING_ID)).toBe(
       publicShelfPrefix(LISTING_SHELF, LISTING_ID),
     );
-    expect(PHOTO_KEY).not.toBe(MODEL_KEY);
+    expect(photoKey()).not.toBe(modelKey());
   });
 
   it('🔴 η συμφιλίωση των ΕΙΚΟΝΩΝ δεν αναγνωρίζει το κλειδί του μοντέλου ⇒ δεν το σβήνει', () => {
-    expect(parsePublicShelfKey(LISTING_SHELF, MODEL_KEY)).toBeNull();
+    expect(parsePublicShelfKey(LISTING_SHELF, modelKey())).toBeNull();
   });
 
   it('🔴 και η συμφιλίωση των ΜΟΝΤΕΛΩΝ δεν αναγνωρίζει το κλειδί της φωτογραφίας', () => {
-    expect(parsePublicShelfKey(LISTING_MODEL_SHELF, PHOTO_KEY)).toBeNull();
+    expect(parsePublicShelfKey(LISTING_MODEL_SHELF, photoKey())).toBeNull();
   });
 
   it('καθένα αναγνωρίζει ΤΟ ΔΙΚΟ του — αλλιώς τα δύο από πάνω περνούν για λάθος λόγο', () => {
     // Χωρίς αυτό, ένα `parsePublicShelfKey` που γύριζε ΠΑΝΤΑ `null` θα έκανε τα δύο
     // προηγούμενα πράσινα ενώ ο γραφέας δεν θα καθάριζε ΤΙΠΟΤΑ, ποτέ.
-    expect(parsePublicShelfKey(LISTING_SHELF, PHOTO_KEY)).not.toBeNull();
-    expect(parsePublicShelfKey(LISTING_MODEL_SHELF, MODEL_KEY)).not.toBeNull();
+    expect(parsePublicShelfKey(LISTING_SHELF, photoKey())).not.toBeNull();
+    expect(parsePublicShelfKey(LISTING_MODEL_SHELF, modelKey())).not.toBeNull();
   });
 
   it('🔴 ο ΑΥΣΤΗΡΟΣ γραφέας πετά αν του ζητηθεί λάθος μορφή για το είδος του', () => {

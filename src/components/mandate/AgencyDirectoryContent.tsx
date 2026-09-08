@@ -84,10 +84,27 @@ import routeSlice from '@/i18n/generated/routes/pro.el.json';
 import { registerRouteSlice } from '@/i18n/route-slice';
 // ADR-827 §9.15 — η δημόσια διεύθυνση ζει σε ουδέτερο module: τη ρωτά και ο διακομιστής.
 import { agencyDirectoryHref } from './agency-directory-route';
+import { NO_FOOTPRINTS } from '@/types/geo/admin-footprint';
 
 registerRouteSlice(routeSlice);
 
 
+
+/**
+ * **Ό,τι ξέρει η οθόνη για τη γεωγραφία** — ένα αντικείμενο, σταθερής ταυτότητας.
+ *
+ * ⚠️ **`NO_FOOTPRINTS` = ΔΗΛΩΜΕΝΗ ΑΓΝΟΙΑ** *(ADR-846 Φάση 2)*: τα παράγωγα αποτυπώματα
+ * *(κέντρο + δύο ακτίνες ανά διοικητική οντότητα, από CC-BY πηγή)* **δεν έχουν παραχθεί
+ * ακόμη**. Μέχρι τότε τα δύο **μεικτά** κελιά του κριτή απαντούν `unknown`, ο κατάλογος
+ * **δεν κόβει κανέναν** γι' αυτό, και η κάρτα το **γράφει**.
+ *
+ * 🔑 Ορίζεται **έξω από το component** ώστε η ταυτότητά του να μην αλλάζει ανά render —
+ * είναι εξάρτηση του `useMemo` παρακάτω.
+ */
+const COVERAGE_RESOLVERS = {
+  lineageOf: lineageIdsOf,
+  footprintOf: NO_FOOTPRINTS,
+} as const;
 
 export function AgencyDirectoryContent(): React.JSX.Element {
   const { t, i18n } = useTranslation([AGENCY_PUBLIC_NS]);
@@ -163,7 +180,7 @@ export function AgencyDirectoryContent(): React.JSX.Element {
     () =>
       areaPending
         ? agencies
-        : applyShowcaseFilters(agencies, filters, lineageIdsOf),
+        : applyShowcaseFilters(agencies, filters, COVERAGE_RESOLVERS),
     [agencies, filters, areaPending],
   );
   const options = React.useMemo(() => occupationOptions(agencies, locale), [agencies, locale]);
@@ -251,11 +268,7 @@ export function AgencyDirectoryContent(): React.JSX.Element {
               <AgencyCard
                 key={profile.companyId}
                 profile={profile}
-                queryAreaId={
-                  filters.where !== null && isAdministrativeWhere(filters.where)
-                    ? filters.where.adminId
-                    : null
-                }
+                where={filters.where}
               />
             ))}
           </ul>

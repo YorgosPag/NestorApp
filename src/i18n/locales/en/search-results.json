@@ -145,6 +145,10 @@
         "ownerDeclared": "Floor plan — provided by the owner",
         "agency": "Floor plan — provided by the real-estate agency"
       },
+      "modelAlt": {
+        "ownerDeclared": "3D model — provided by the owner",
+        "agency": "3D model — provided by the real-estate agency"
+      },
       "floorplanProvenance": {
         "declared": "Declared — uploaded by a person",
         "measured": "Measured — computed from the drawing",

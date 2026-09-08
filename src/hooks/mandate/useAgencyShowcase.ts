@@ -97,6 +97,8 @@ export type ShowcaseFailure =
   | { readonly kind: 'place-not-found' }
   /** Δηλωμένη περιοχή εκτός ιεραρχίας ⇒ *«διάλεξέ την ξανά»* (ADR-846). */
   | { readonly kind: 'coverage-area-unknown' }
+  /** Ακτίνα εκτός του κλειστού καταλόγου ⇒ *«διάλεξε ξανά απόσταση»* (ADR-846 Φ2). */
+  | { readonly kind: 'coverage-radius-invalid' }
   /**
    * 🔴 **ΔΕΝ ΜΑΘΑΜΕ** *(ταξινομία ή τόπος)* ⇒ *«ξαναδοκίμασε, **μην αλλάξεις
    * τίποτα**»*. Ισοπεδωμένο με τα δύο παραπάνω, η δική **μας** βλάβη θα έστελνε
@@ -165,6 +167,10 @@ async function failureOf(response: Response): Promise<ShowcaseFailure | null> {
       return { kind: 'place-not-found' };
     case 'COVERAGE_AREA_UNKNOWN':
       return { kind: 'coverage-area-unknown' };
+    // ⚠️ **ΧΩΡΙΣΤΟ από το παραπάνω, και είναι θεραπεία**: «διάλεξε ξανά **περιοχή**»
+    //    στέλνει τον άνθρωπο σε λάθος χειριστήριο όταν το πρόβλημα είναι η **απόσταση**.
+    case 'COVERAGE_RADIUS_INVALID':
+      return { kind: 'coverage-radius-invalid' };
     // 🔑 **Δύο κωδικοί, ΜΙΑ θεραπεία** — και είναι σωστό να ενωθούν *εδώ*: ο
     //    άνθρωπος δεν χρειάζεται να ξέρει αν έπεσε η ταξινομία ή ο χάρτης· η
     //    πράξη του είναι η ίδια. Ό,τι δεν ενώνεται είναι *«διόρθωσε»* με

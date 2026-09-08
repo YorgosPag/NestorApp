@@ -175,6 +175,9 @@ function FailureMessage({ failure }: { readonly failure: ShowcaseFailure }): Rea
   if (failure.kind === 'coverage-area-unknown') {
     return <>{t(SHOWCASE_KEYS.coverageAreaUnknown)}</>;
   }
+  if (failure.kind === 'coverage-radius-invalid') {
+    return <>{t(SHOWCASE_KEYS.coverageRadiusInvalid)}</>;
+  }
   if (failure.kind === 'place-not-found') {
     return <>{t(SHOWCASE_KEYS.placeNotFound)}</>;
   }
@@ -261,7 +264,7 @@ export function AgencyShowcaseContent(): React.ReactElement {
       {/* ⚠️ **Ξεχωριστή ενότητα από την έδρα, επίτηδες.** Δίπλα-δίπλα θα διαβάζονταν ως
           «το ίδιο με άλλη ακρίβεια» — και είναι **διαφορετική ερώτηση**: η έδρα
           επαληθεύεται από τη γη, η εμβέλεια είναι πρόθεση που δηλώνει μόνος του. */}
-      <CoverageAreaPicker value={coverage} onChange={setCoverage} />
+      <CoverageAreaPicker value={coverage} onChange={setCoverage} home={published?.position ?? null} />
 
       {/*
         🏆 ADR-841 §7 Α21, Φάση 2 — ΤΟ ΣΗΜΑ, ΚΑΙ ΕΙΝΑΙ ΤΟ ΜΟΝΟ ΠΕΔΙΟ ΠΟΥ ΔΕΝ ΠΕΡΙΜΕΝΕΙ

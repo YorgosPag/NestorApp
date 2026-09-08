@@ -72,6 +72,7 @@ import { ShowcaseMarkView } from './ShowcaseMarkView';
 
 import { AGENCY_PUBLIC_NS, PROFILE_KEYS } from './agency-directory-labels';
 import { useAdministrativeHierarchy } from '@/hooks/useAdministrativeHierarchy';
+import { isRadiusCoverage } from '@/types/agency-coverage';
 import { isNationwide } from '@/types/agency-coverage';
 import { AGENCY_DIRECTORY_ROUTE } from './agency-directory-route';
 
@@ -203,6 +204,20 @@ function CoverageFact({
   const value = ((): string => {
     if (coverage === null) return t(PROFILE_KEYS.coverageUnknown);
     if (isNationwide(coverage)) return t(PROFILE_KEYS.coverageNationwide);
+    // ═════════════════════════════════════════════════════════════════════════
+    // 🔴 **ΤΟ ΣΚΕΛΟΣ ΤΗΣ ΑΚΤΙΝΑΣ ΕΛΕΙΠΕ ΑΠΟ ΕΔΩ ΚΑΙ ΕΡΙΧΝΕ ΤΗ ΒΙΤΡΙΝΑ**
+    //    *(μετρημένο ζωντανά, 2026-09-08)*: `coverage.adminIds.map(…)` με δήλωση
+    //    κύκλου ⇒ `TypeError: Cannot read properties of undefined (reading 'map')`,
+    //    και **ολόκληρη η δημόσια σελίδα** έπεφτε σε οθόνη σφάλματος.
+    //
+    // ⚠️ **Δύο καταναλωτές, ΔΥΟ οθόνες**: το `AgencyCard` *(κατάλογος)* είχε
+    //    ενημερωθεί· αυτό εδώ *(βιτρίνα)* όχι. Η κλειστή ένωση **δεν** το έπιασε στη
+    //    μεταγλώττιση επειδή κανείς πράκτορας δεν τρέχει `tsc` (N.17) — το έπιασε
+    //    **μόνο** το άνοιγμα της σελίδας.
+    // ═════════════════════════════════════════════════════════════════════════
+    if (isRadiusCoverage(coverage)) {
+      return t(PROFILE_KEYS.coverageRadius, { km: coverage.circle.radiusKm });
+    }
     const names = coverage.adminIds
       .map((adminId) => findById(adminId)?.name)
       .filter((name): name is string => name !== undefined);
