@@ -84,3 +84,33 @@ export async function seedMandateRequest(
     });
   });
 }
+
+/**
+ * **Η ΠΡΟΕΛΕΥΣΗ ΤΟΥ ΣΗΜΑΤΟΣ** — πού βρίσκεται το πρωτότυπο αρχείο (ADR-841 §7 Α21.12).
+ *
+ * 🔴 **ΤΟ ΕΓΓΡΑΦΟ ΣΠΕΡΝΕΤΑΙ ΜΕ ΤΟ `companyId` ΤΟΥ ΔΟΚΙΜΑΖΟΜΕΝΟΥ ΜΙΣΘΩΤΗ**, και είναι
+ * όλο το νόημα της άγκυρας: ο `denyAllMatrix` αρνείται σε όλους, οπότε το κελί
+ * `same_tenant_admin × read` περνά **ούτως ή άλλως**. Χωρίς έγγραφο που ανήκει **στον
+ * ίδιο**, η μετάλλαξη
+ *
+ *     allow read: if companyId == getUserCompanyId();
+ *
+ * — δηλαδή το «λογικό» χαλάρωμα *«μα είναι το ΔΙΚΟ του σήμα, γιατί να μην το δει;»* —
+ * **ΔΕΝ θα κοκκίνιζε**. Πράσινο που σημαίνει «κανείς δεν κοίταξε».
+ *
+ * ⚠️ Το `privateStoragePath` γράφεται **ρεαλιστικό** *(`companies/…/entities/…`)*: είναι
+ * ακριβώς το πράγμα που δεν επιτρέπεται να διαρρεύσει — η **εσωτερική δομή αποθήκευσης**.
+ */
+export async function seedShowcaseMarkSource(
+  env: RulesTestEnvironment,
+  companyId: string = SAME_TENANT_COMPANY_ID,
+): Promise<void> {
+  await withSeedContext(env, async (ctx) => {
+    await ctx.firestore().collection('showcase_mark_sources').doc(companyId).set({
+      companyId,
+      kind: 'logo',
+      privateStoragePath: `companies/${companyId}/entities/file_seed_0001/mark.png`,
+      recordedAt: '2026-09-08T08:00:00.000Z',
+    });
+  });
+}
