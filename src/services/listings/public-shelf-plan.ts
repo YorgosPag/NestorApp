@@ -41,6 +41,12 @@ import {
 } from '@/services/upload/utils/storage-path-public-shelf';
 import type { AnyRasterShelfKind } from '@/services/upload/utils/public-shelf-kinds';
 
+// ⚠️ **`import type`, και η καθαρότητα ΔΕΝ σπάει** — ίδια σύμβαση με το `File` από πάνω *(που
+//    σέρνει ολόκληρο το `@google-cloud/storage`)*: ο τύπος **σβήνεται** στη μεταγλώττιση, άρα
+//    κανένα `firebaseAdmin` δεν φτάνει ποτέ σε καταναλωτή αυτού του module. Ο τύπος ζει **δίπλα
+//    στη μηχανή που τον καταναλώνει**, όχι δίπλα σε αυτήν που τον γεμίζει.
+import type { ShelfWrite } from './public-shelf-bucket';
+
 // ---------------------------------------------------------------------------
 // Τύποι
 // ---------------------------------------------------------------------------
@@ -220,6 +226,35 @@ export function fullCacheHit(
   }
 
   return found;
+}
+
+/**
+ * 🏆 **ΤΑ ΔΟΜΗΜΕΝΑ ΠΕΔΙΑ ΤΟΥ RASTER, ΣΤΗ ΓΛΩΣΣΑ ΤΟΥ ΚΑΔΟΥ** — μία γραμμή μετάφρασης *(Φ4.2β)*.
+ *
+ * 🔑 **Ζει ΕΔΩ, δίπλα στον μοναδικό ΑΝΑΓΝΩΣΤΗ αυτών των ονομάτων** *({@link cachedVariants})*.
+ * Γραφέας και αναγνώστης των πέντε `META_*` είναι πλέον **γείτονες σε ένα αρχείο**: μια αλλαγή
+ * ονόματος που θα έσπαγε τη γρήγορη διαδρομή είναι **ορατή στην ίδια οθόνη**.
+ *
+ * 🔴 **ΚΑΙ ΓΙ' ΑΥΤΟ ΤΟ {@link PendingUpload} ΔΕΝ ΑΠΕΚΤΗΣΕ ΠΕΔΙΟ `metadata`**: θα ήταν **δύο
+ * αλήθειες για τον ίδιο αριθμό** *(το `width` και το `shelfPixelWidth`)*, ελεύθερες να
+ * αποκλίνουν — και το {@link toObject} διαβάζει το **δομημένο**. Μία πηγή, δύο προβολές.
+ *
+ * ⚠️ **Ίδιο ακριβώς ιδίωμα με το `toProjectedImage`** του `publish-public-listing-shelf`: μια
+ * γραμμή μετάφρασης στο σύνορο είναι φθηνότερη από έναν τύπο που ξέρει και τις δύο πλευρές.
+ */
+export function toShelfWrite(upload: PendingUpload): ShelfWrite {
+  return {
+    key: upload.key,
+    bytes: upload.bytes,
+    contentType: upload.contentType,
+    metadata: {
+      [META_SOURCE_REF]: upload.sourceRef,
+      [META_RECIPE]: upload.recipe,
+      [META_REQUESTED_WIDTHS]: upload.requestedWidths.join(','),
+      [META_PIXEL_WIDTH]: String(upload.width),
+      [META_PIXEL_HEIGHT]: String(upload.height),
+    },
+  };
 }
 
 /** Ένα αντικείμενο προς ανέβασμα, όπως θα το δει ο κόσμος. */

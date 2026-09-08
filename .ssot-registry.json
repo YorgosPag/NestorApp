@@ -304,7 +304,7 @@
         "src/services/floorplans/",
         "src/app/api/properties/",
         "functions/",
-        "src/services/listings/public-shelf.service.ts",
+        "src/services/listings/public-shelf-bucket.ts",
         "src/services/upload/utils/storage-path-public-shelf.ts"
       ],
       "tier": 2

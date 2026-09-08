@@ -54,37 +54,27 @@
  * βαθμίδα πιο κάτω.
  */
 
-import type { Bucket, File } from '@google-cloud/storage';
+import type { File } from '@google-cloud/storage';
 
-import { GCS_PUBLIC_MEDIA_BUCKET } from '@/config/gcs-buckets';
-import { getAdminBucket, getAdminStorage } from '@/lib/firebaseAdmin';
+import { getAdminBucket } from '@/lib/firebaseAdmin';
 import { createModuleLogger } from '@/lib/telemetry';
-import {
-  PUBLIC_SHELF_CACHE_CONTROL,
-  parsePublicShelfKey,
-  publicShelfPrefix,
-  type PublicShelfSource,
-} from '@/services/upload/utils/storage-path-public-shelf';
+import type { PublicShelfSource } from '@/services/upload/utils/storage-path-public-shelf';
 import {
   isRasterShelfKind,
   shelfRecipe,
-  type AnyPublicShelfKind,
   type PublicShelfKind,
   type RasterShelfKind,
 } from '@/services/upload/utils/public-shelf-kinds';
 
+import { deleteExtra, scanShelfPrefix, uploadMissing } from './public-shelf-bucket';
 import {
-  META_PIXEL_HEIGHT,
-  META_PIXEL_WIDTH,
-  META_RECIPE,
-  META_REQUESTED_WIDTHS,
-  META_SOURCE_REF,
   cachedVariants,
   distinctByKey,
   fullCacheHit,
   groupUploads,
   sourceReference,
   toObject,
+  toShelfWrite,
   type PendingUpload,
   type PublicShelfObject,
 } from './public-shelf-plan';
@@ -159,24 +149,6 @@ interface AddressedImage<M> {
 }
 
 // ---------------------------------------------------------------------------
-// Μεταδεδομένα του ραφιού — τα ονόματα γράφονται **μία** φορά
-// ---------------------------------------------------------------------------
-
-
-// ---------------------------------------------------------------------------
-// Πρόσβαση στον κάδο
-// ---------------------------------------------------------------------------
-
-/** Ο **ΜΟΝΟΣ** δείκτης προς τον δημόσιο κάδο σε όλο το δέντρο. */
-function shelfBucket(): Bucket {
-  return getAdminStorage().bucket(GCS_PUBLIC_MEDIA_BUCKET);
-}
-
-
-// ---------------------------------------------------------------------------
-// Η μνήμη του ραφιού — τι υπάρχει ήδη, και από ποιο πρωτότυπο
-
-// ---------------------------------------------------------------------------
 // Παραγωγή του επιθυμητού συνόλου
 // ---------------------------------------------------------------------------
 
@@ -233,75 +205,6 @@ async function addressOne<M>(
 }
 
 // ---------------------------------------------------------------------------
-// Οι δύο πλευρές της συμφιλίωσης
-// ---------------------------------------------------------------------------
-
-/**
- * Ανεβάζει ό,τι **λείπει**. Ό,τι υπάρχει ήδη **δεν ξαναγράφεται**.
- *
- * 🔑 Το «υπάρχει ήδη» είναι απάντηση **ανά byte**, όχι ανά χρόνο: ίδια bytes ⇒ ίδιο
- * κλειδί ⇒ **μηδέν** εγγραφή, μηδέν κόστος, μηδέν ακύρωση cache *(N.7.2 #3)*.
- *
- * ⚠️ Τα μεταδεδομένα **γράφονται μαζί με τα bytes**, ποτέ σε δεύτερη κλήση: ένα
- * αντικείμενο χωρίς `sourceRef` είναι αόρατο στη γρήγορη διαδρομή, και μια αποτυχία
- * ανάμεσα στις δύο κλήσεις θα άφηνε **μόνιμη** αποτυχία επαναχρησιμοποίησης.
- *
- * 🔴 **ΔΕΝ ΞΕΡΕΙ ΠΙΑ ΤΟ ΕΙΔΟΣ, ΚΑΙ ΕΙΝΑΙ ΔΙΟΡΘΩΣΗ ΟΧΙ ΑΠΛΟΠΟΙΗΣΗ** *(Α21.10)*. Ο
- * πίνακας `uploads` είναι **ισοπεδωμένος από ΠΟΛΛΕΣ πηγές** — και από την Α21.10 δύο
- * πηγές της **ίδιας** ρίζας μπορούν να έχουν **διαφορετική** συνταγή *(λογότυπο
- * τριμμένο, πορτρέτο άτριφτο)*. Ένας υπολογισμός εδώ θα έγραφε τη **μία** πάνω σε bytes
- * της **άλλης**, και επειδή η γρήγορη διαδρομή δεν αποκωδικοποιεί τίποτα, το ψέμα θα
- * ήταν **μόνιμο**: το άτριφτο πορτρέτο δεν θα ξαναπαραγόταν ποτέ.
- */
-async function uploadMissing(
-  bucket: Bucket,
-  uploads: readonly PendingUpload[],
-  existing: ReadonlySet<string>,
-): Promise<void> {
-  const missing = uploads.filter((upload) => !existing.has(upload.key));
-
-  await Promise.all(
-    missing.map((upload) =>
-      bucket.file(upload.key).save(upload.bytes, {
-        contentType: upload.contentType,
-        metadata: {
-          cacheControl: PUBLIC_SHELF_CACHE_CONTROL,
-          metadata: {
-            [META_SOURCE_REF]: upload.sourceRef,
-            [META_RECIPE]: upload.recipe,
-            [META_REQUESTED_WIDTHS]: upload.requestedWidths.join(','),
-            [META_PIXEL_WIDTH]: String(upload.width),
-            [META_PIXEL_HEIGHT]: String(upload.height),
-          },
-        },
-      }),
-    ),
-  );
-}
-
-/**
- * Σβήνει ό,τι **περισσεύει** μέσα στο πρόθεμα **αυτής** της αγγελίας.
- *
- * ⚠️ **Αγγίζει ΜΟΝΟ κλειδιά που αναγνωρίζει** ({@link parsePublicShelfKey}): ό,τι
- * βρεθεί εκεί και δεν είναι δικής μας μορφής **μένει**. Ο αυστηρός γραφέας απέναντι
- * στον ανεκτικό αναγνώστη — ένας σαρωτής που σβήνει ό,τι δεν καταλαβαίνει είναι ο
- * σαρωτής της 27/08 *(«θα έσβηνε την αγορά»)*.
- */
-async function deleteExtra(
-  kind: AnyPublicShelfKind,
-  bucket: Bucket,
-  existingFiles: readonly File[],
-  desired: ReadonlySet<string>,
-): Promise<number> {
-  const doomed = existingFiles.filter(
-    (file) => parsePublicShelfKey(kind, file.name) !== null && !desired.has(file.name),
-  );
-
-  await Promise.all(doomed.map((file) => file.delete({ ignoreNotFound: true })));
-  return doomed.length;
-}
-
-// ---------------------------------------------------------------------------
 // Η μία δημόσια είσοδος
 // ---------------------------------------------------------------------------
 
@@ -355,20 +258,24 @@ export async function reconcilePublicShelf<M>(
   }
 
   try {
-    const prefix = publicShelfPrefix(kind, subjectId);
-    const bucket = shelfBucket();
-
-    const [existingFiles] = await bucket.getFiles({ prefix });
+    const scan = await scanShelfPrefix(kind, subjectId);
     const addressed = await Promise.all(
-      sources.map((source) => addressOne(kind, subjectId, source, existingFiles)),
+      sources.map((source) => addressOne(kind, subjectId, source, scan.files)),
     );
     const desired = addressed.filter((image): image is AddressedImage<M> => image !== null);
 
     const desiredKeys = new Set(desired.flatMap((image) => image.variants.map((v) => v.key)));
-    const existingKeys = new Set(existingFiles.map((file) => file.name));
 
-    await uploadMissing(bucket, desired.flatMap((image) => image.uploads), existingKeys);
-    const removed = await deleteExtra(kind, bucket, existingFiles, desiredKeys);
+    // 🔑 **Η μετάφραση γίνεται ΕΔΩ, στο σύνορο** *(Φ4.2β)*: ο κάδος δέχεται
+    //    {@link ShelfWrite} — «κλειδί, bytes, τύπος, μεταδεδομένα» — και **δεν ξέρει** τι
+    //    είναι «πλάτος». Τα πέντε `META_*` γεννιούνται στο `toShelfWrite`, δίπλα στον
+    //    **μοναδικό αναγνώστη** τους *(`cachedVariants`)*.
+    await uploadMissing(
+      scan.bucket,
+      desired.flatMap((image) => image.uploads).map(toShelfWrite),
+      scan.keys,
+    );
+    const removed = await deleteExtra(kind, scan.files, desiredKeys);
 
     return {
       outcome: 'reconciled',
