@@ -52,9 +52,24 @@ interface CoverageAreaPickerProps {
 }
 
 /** Τι απορροφήθηκε μόλις τώρα — για να το **πει** η οθόνη, όχι να συμβεί σιωπηλά. */
+/**
+ * 🔴 **ΤΟ `count` ΔΕΝ ΕΙΝΑΙ ΔΙΑΚΟΣΜΗΤΙΚΟ** *(ζωντανό περπάτημα 2026-09-08)*: με δηλωμένα
+ * «ΔΗΜΟΣ ΘΕΡΜΗΣ» **και** «Π.Ε. ΧΑΛΚΙΔΙΚΗΣ», η προσθήκη της «ΠΕΡΙΦΕΡΕΙΑΣ ΚΕΝΤΡΙΚΗΣ
+ * ΜΑΚΕΔΟΝΙΑΣ» κατάπιε **δύο** — και το μήνυμα ονόμαζε **ένα** *(`swallowed[0]`)*.
+ * Δηλαδή ακριβώς η σιωπή που το σχόλιο του `add` ορκίζεται ότι αποφεύγει, μία γραμμή
+ * πιο κάτω.
+ *
+ * ⚠️ **Γιατί ΠΛΗΘΟΣ και όχι ΛΙΣΤΑ ΟΝΟΜΑΤΩΝ**: μια λίστα απαιτεί συνένωση με στίξη
+ * *(εισαγωγικά, «και»)* — δηλαδή **γλώσσα μέσα στον κώδικα**, που ο N.11 απαγορεύει και
+ * που σπάει σε κάθε νέα γλώσσα. Το πλήθος μπαίνει σε **ένα** κλειδί ICU με `plural` και
+ * είναι το ίδιο ιδίωμα που χρησιμοποιούν οι μεγάλοι *(«3 layers were merged»)*.
+ * Ο άνθρωπος βλέπει ούτως ή άλλως **ποια** chips έφυγαν· αυτό που δεν έβλεπε ήταν
+ * **πόσα**.
+ */
 interface Absorption {
   readonly narrow: string;
   readonly wide: string;
+  readonly count: number;
 }
 
 export function CoverageAreaPicker({
@@ -83,13 +98,19 @@ export function CoverageAreaPicker({
     //    πάτησε κάτι και **κάτι άλλο** συνέβη — σιωπή εδώ διαβάζεται ως σφάλμα.
     if (!next.includes(adminId)) {
       const swallower = adminIds.find((id) => lineageIdsOf(adminId).includes(id));
-      setAbsorption({ narrow: nameOf(adminId), wide: nameOf(swallower ?? adminId) });
+      // Ο νέος καταπίνεται από **έναν** πρόγονο — το πλήθος είναι εξ ορισμού 1.
+      setAbsorption({ narrow: nameOf(adminId), wide: nameOf(swallower ?? adminId), count: 1 });
     } else {
       const swallowed = adminIds.filter((id) => !next.includes(id));
       setAbsorption(
         swallowed.length === 0
           ? null
-          : { narrow: nameOf(swallowed[0]), wide: nameOf(adminId) },
+          : {
+              narrow: nameOf(swallowed[0]),
+              wide: nameOf(adminId),
+              // 🔑 **Πόσα έφυγαν, όχι πόσα χωρούσαν σε μία πρόταση.**
+              count: swallowed.length,
+            },
       );
     }
 

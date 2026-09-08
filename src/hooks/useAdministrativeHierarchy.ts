@@ -107,8 +107,45 @@ export interface AdminPath {
 // LAZY LOADING + CACHE
 // ============================================================================
 
-let cachedEntities: Map<string, AdminEntity> | null = null;
-let cachedByLevel: Map<number, AdminEntity[]> | null = null;
+/**
+ * **Τα φορτωμένα δεδομένα ως ΕΝΑ αμετάβλητο πράγμα** — και όχι δύο ανεξάρτητες
+ * μεταβλητές module.
+ *
+ * 🔴 **ΓΙΑΤΙ ΑΛΛΑΞΕ (ADR-846, ζωντανό περπάτημα 2026-09-08)**: όσο τα δεδομένα ζούσαν σε
+ * μεταβλητές module και οι αναγνώστες ήταν `useCallback(…, [])`, **η ταυτότητα των
+ * αναγνωστών ΕΛΕΓΕ ΨΕΜΑΤΑ**: δεν άλλαζε ποτέ, ενώ αυτό που διάβαζαν άλλαζε **μία φορά**
+ * — τη στιγμή που τελείωνε η φόρτωση. Κάθε καταναλωτής που έγραφε
+ * `useMemo(…, [levelOptions])` **πάγωνε στο κενό** για όλη τη ζωή της σελίδας.
+ *
+ * ⚠️ **Δεν ήταν θεωρητικό**: στη φόρμα της βιτρίνας *(`AreaCombobox`)* ο επιλογέας
+ * περιοχής **δεν εμφάνιζε ΚΑΜΙΑ** από τις 20.721 οντότητες σε πρώτο φόρτωμα, και έλεγε
+ * *«Καμία περιοχή δεν ταιριάζει»* — δηλαδή παρουσίαζε το **«δεν ξέρω»** ως **«δεν
+ * υπάρχει»**. Δύο από τους τρεις καταναλωτές είχαν θυμηθεί να βάλουν `isLoading` στη
+ * λίστα εξαρτήσεων· ο τρίτος όχι. Ένας κανόνας που **πρέπει να τον θυμάται κάθε σημείο
+ * κλήσης** δεν είναι κανόνας — είναι παγίδα με χρονοκαθυστέρηση.
+ *
+ * 🔑 **Η θεραπεία είναι δομική**: το στιγμιότυπο ταξιδεύει από `useState`, άρα η ταυτότητα
+ * κάθε αναγνώστη αλλάζει **ακριβώς όταν** αλλάζουν τα δεδομένα του. Οι καταναλωτές δεν
+ * χρειάζεται πια να ξέρουν τίποτα — και το `react-hooks/exhaustive-deps` μπορεί επιτέλους
+ * να επαληθεύσει τις λίστες, επειδή δεν είναι ψεύτικες.
+ */
+export interface HierarchySnapshot {
+  readonly entities: ReadonlyMap<string, AdminEntity>;
+  readonly byLevel: ReadonlyMap<number, readonly AdminEntity[]>;
+}
+
+/**
+ * **Η κατάσταση «ρώτησα και δεν έμαθα»** — διακριτή από το `null` *(«δεν ρώτησα ακόμη»)*.
+ *
+ * Γράφεται **μόνο** στην κατάσταση του component, **ποτέ** στο `cachedSnapshot`: έτσι μια
+ * επόμενη προσάρτηση ξαναδοκιμάζει, αντί να κληρονομήσει την αποτυχία για πάντα.
+ */
+const EMPTY_SNAPSHOT: HierarchySnapshot = {
+  entities: new Map<string, AdminEntity>(),
+  byLevel: new Map<number, readonly AdminEntity[]>(),
+};
+
+let cachedSnapshot: HierarchySnapshot | null = null;
 let loadingPromise: Promise<void> | null = null;
 
 function mapRawToEntity(raw: RawEntity): AdminEntity {
@@ -127,7 +164,7 @@ function mapRawToEntity(raw: RawEntity): AdminEntity {
 }
 
 async function loadHierarchy(): Promise<void> {
-  if (cachedEntities) return;
+  if (cachedSnapshot) return;
   if (loadingPromise) {
     await loadingPromise;
     return;
@@ -168,8 +205,7 @@ async function loadHierarchy(): Promise<void> {
         }
       }
 
-      cachedEntities = entityMap;
-      cachedByLevel = levelMap;
+      cachedSnapshot = { entities: entityMap, byLevel: levelMap };
     } catch (error) {
       // ⚠️ **Δεν γράφεται τίποτα στο cache** — ώστε μια επόμενη προσπάθεια να ξαναρωτήσει
       //    αντί να κληρονομήσει μισοφορτωμένη ιεραρχία.
@@ -224,18 +260,149 @@ function normalizeSearch(text: string): string {
  * δεν εκφράζεται από την πρώτη χωρίς να ξέρει ο καλών ποια κλειδιά είναι `null`.
  */
 export function lineageIdsOf(entityId: string): readonly string[] {
-  if (!cachedEntities) return [];
+  const entities = cachedSnapshot?.entities;
+  if (!entities) return [];
 
   const lineage: string[] = [];
-  let current: AdminEntity | undefined = cachedEntities.get(entityId);
+  let current: AdminEntity | undefined = entities.get(entityId);
   // 🔒 Φρουρός κύκλου: δεδομένα ΕΛΣΤΑΤ, αλλά ένας κύκλος parentId θα κρέμαγε την οθόνη
   //    αθόρυβα. Το βάθος είναι 8 — το 16 είναι διπλάσιο κάθε νόμιμης αλυσίδας.
   let guard = 16;
   while (current && guard-- > 0) {
     lineage.push(current.id);
-    current = current.parentId ? cachedEntities.get(current.parentId) : undefined;
+    current = current.parentId ? entities.get(current.parentId) : undefined;
   }
   return lineage;
+}
+
+// ============================================================================
+// ΑΝΑΓΝΩΣΤΕΣ — καθαροί, πάνω σε στιγμιότυπο (ADR-846)
+// ============================================================================
+//
+// 🔑 **Ζουν ΕΞΩ από το hook επίτηδες.** Δύο κέρδη, και τα δύο μετρήσιμα:
+//    1. Το σώμα του hook μένει **κάτω από 40 γραμμές** (N.7.1) αντί για ~110.
+//    2. Η απάντηση κάθε αναγνώστη εξαρτάται **μόνο** από τα ορίσματά του — άρα
+//       ελέγχεται χωρίς React, και η ταυτότητά του μέσα στο hook προκύπτει από
+//       **ένα** πράγμα: το στιγμιότυπο.
+
+/** Ποιο κλειδί του `AdminPath` γεμίζει κάθε βαθμίδα. */
+const LEVEL_TO_PATH_KEY: Record<number, keyof AdminPath> = {
+  1: 'majorGeo',
+  2: 'decentAdmin',
+  3: 'region',
+  4: 'regionalUnit',
+  5: 'municipality',
+  6: 'municipalUnit',
+  7: 'community',
+  8: 'settlement',
+};
+
+/** Κενή διαδρομή — «δεν ξέρω», με **όλα** τα κλειδιά παρόντα. */
+function emptyAdminPath(): AdminPath {
+  return {
+    majorGeo: null,
+    decentAdmin: null,
+    region: null,
+    regionalUnit: null,
+    municipality: null,
+    municipalUnit: null,
+    community: null,
+    settlement: null,
+  };
+}
+
+/** Ποια οντότητα σε **κάθε** βαθμίδα — δοχείο 8 θέσεων, για **διεύθυνση**. */
+function resolveAdminPath(snapshot: HierarchySnapshot, entityId: string): AdminPath {
+  const path = emptyAdminPath();
+  let current: AdminEntity | undefined = snapshot.entities.get(entityId);
+
+  while (current) {
+    const key = LEVEL_TO_PATH_KEY[current.level];
+    if (key) path[key] = current;
+    current = current.parentId ? snapshot.entities.get(current.parentId) : undefined;
+  }
+
+  return path;
+}
+
+/**
+ * Ετικέτα αποσαφήνισης, ανεβαίνοντας τη γονική αλυσίδα.
+ * π.χ. Οικισμός «Αγία Παρασκευή» → «Δ. Λέσβου, Π.Ε. Λέσβου»
+ * Ξεχωρίζει τους **1.369** ομώνυμους οικισμούς.
+ */
+function secondaryLabelOf(snapshot: HierarchySnapshot, entity: AdminEntity): string {
+  const parts: string[] = [];
+  let current: AdminEntity | undefined = entity.parentId
+    ? snapshot.entities.get(entity.parentId)
+    : undefined;
+
+  while (current) {
+    if (current.level === ADMIN_LEVELS.MUNICIPALITY) {
+      parts.push(`Δ. ${current.shortName || current.name}`);
+    } else if (current.level === ADMIN_LEVELS.REGIONAL_UNIT) {
+      parts.push(`Π.Ε. ${current.shortName || current.name}`);
+      break;
+    }
+    current = current.parentId ? snapshot.entities.get(current.parentId) : undefined;
+  }
+
+  if (entity.postalCode) parts.push(`ΤΚ ${entity.postalCode}`);
+
+  return parts.join(', ');
+}
+
+/** Ομώνυμα υπάρχουν από τον Δήμο και κάτω — μόνο εκεί κοστίζει η αποσαφήνιση. */
+function needsDisambiguation(level: number): boolean {
+  return level >= ADMIN_LEVELS.MUNICIPALITY;
+}
+
+function toOption(
+  snapshot: HierarchySnapshot,
+  entity: AdminEntity,
+  level: number,
+): ComboboxOption {
+  return {
+    value: entity.id,
+    label: entity.name,
+    secondaryLabel: needsDisambiguation(level) ? secondaryLabelOf(snapshot, entity) : undefined,
+  };
+}
+
+function entitiesAtLevel(snapshot: HierarchySnapshot, level: AdminLevel): AdminEntity[] {
+  return [...(snapshot.byLevel.get(level) ?? [])];
+}
+
+function childrenOf(snapshot: HierarchySnapshot, parentId: string): AdminEntity[] {
+  const children: AdminEntity[] = [];
+  snapshot.entities.forEach((entity) => {
+    if (entity.parentId === parentId) children.push(entity);
+  });
+  return children;
+}
+
+function searchAtLevel(
+  snapshot: HierarchySnapshot,
+  query: string,
+  level: AdminLevel,
+  maxResults: number,
+): ComboboxOption[] {
+  if (!query.trim()) return [];
+
+  const normalizedQuery = normalizeSearch(query);
+  const results: ComboboxOption[] = [];
+
+  for (const entity of snapshot.byLevel.get(level) ?? []) {
+    if (results.length >= maxResults) break;
+    if (normalizeSearch(entity.name).includes(normalizedQuery)) {
+      results.push(toOption(snapshot, entity, level));
+    }
+  }
+
+  return results;
+}
+
+function optionsAtLevel(snapshot: HierarchySnapshot, level: AdminLevel): ComboboxOption[] {
+  return (snapshot.byLevel.get(level) ?? []).map((entity) => toOption(snapshot, entity, level));
 }
 
 // ============================================================================
@@ -259,147 +426,64 @@ interface UseAdministrativeHierarchyReturn {
   levelOptions: (level: AdminLevel) => ComboboxOption[];
 }
 
+/**
+ * 🔑 **Η ταυτότητα ΚΑΘΕ αναγνώστη κρέμεται από το `snapshot`, και ΜΟΝΟ από αυτό.**
+ * Ένας καταναλωτής που γράφει `useMemo(…, [levelOptions])` είναι **σωστός εξ ορισμού**:
+ * όταν φτάσουν τα δεδομένα, η ταυτότητα αλλάζει και ο υπολογισμός ξαναγίνεται.
+ * ⛔ **ΜΗΝ** ξαναγυρίσεις τις εξαρτήσεις σε `[]` «για σταθερότητα» — αυτό ήταν ακριβώς
+ * το σφάλμα που άφηνε τον επιλογέα περιοχής **άδειο** σε πρώτο φόρτωμα (ADR-846).
+ */
 export function useAdministrativeHierarchy(): UseAdministrativeHierarchyReturn {
-  const [isLoading, setIsLoading] = useState(!cachedEntities);
+  const [snapshot, setSnapshot] = useState<HierarchySnapshot | null>(cachedSnapshot);
 
   useEffect(() => {
-    if (cachedEntities) {
-      setIsLoading(false);
-      return;
-    }
-    loadHierarchy().then(() => setIsLoading(false));
-  }, []);
-
-  const findById = useCallback((id: string): AdminEntity | undefined => {
-    return cachedEntities?.get(id);
-  }, []);
-
-  const resolvePath = useCallback((entityId: string): AdminPath => {
-    const path: AdminPath = {
-      majorGeo: null,
-      decentAdmin: null,
-      region: null,
-      regionalUnit: null,
-      municipality: null,
-      municipalUnit: null,
-      community: null,
-      settlement: null,
-    };
-
-    if (!cachedEntities) return path;
-
-    const LEVEL_TO_KEY: Record<number, keyof AdminPath> = {
-      1: 'majorGeo',
-      2: 'decentAdmin',
-      3: 'region',
-      4: 'regionalUnit',
-      5: 'municipality',
-      6: 'municipalUnit',
-      7: 'community',
-      8: 'settlement',
-    };
-
-    let current: AdminEntity | undefined = cachedEntities.get(entityId);
-    while (current) {
-      const key = LEVEL_TO_KEY[current.level];
-      if (key) {
-        path[key] = current;
-      }
-      current = current.parentId ? cachedEntities.get(current.parentId) : undefined;
-    }
-
-    return path;
-  }, []);
-
-  const getByLevel = useCallback((level: AdminLevel): AdminEntity[] => {
-    return cachedByLevel?.get(level) ?? [];
-  }, []);
-
-  const getChildren = useCallback((parentId: string): AdminEntity[] => {
-    if (!cachedEntities) return [];
-    const children: AdminEntity[] = [];
-    cachedEntities.forEach((entity) => {
-      if (entity.parentId === parentId) {
-        children.push(entity);
-      }
+    if (snapshot) return;
+    let alive = true;
+    // ⚠️ Αποτυχία ⇒ `EMPTY_SNAPSHOT`: η οθόνη σταματά να λέει «φορτώνω» και οι αναγνώστες
+    //    απαντούν «δεν ξέρω» με κενό. Το `cachedSnapshot` μένει `null`, ώστε η επόμενη
+    //    προσάρτηση να **ξαναρωτήσει**.
+    void loadHierarchy().then(() => {
+      if (alive) setSnapshot(cachedSnapshot ?? EMPTY_SNAPSHOT);
     });
-    return children;
-  }, []);
+    return () => {
+      alive = false;
+    };
+  }, [snapshot]);
 
-  /**
-   * Build a disambiguation label by walking up the parent chain.
-   * e.g. Settlement "Αγία Παρασκευή" → "Δ. Λέσβου, Π.Ε. Λέσβου"
-   * This helps users distinguish between 1,369 homonymous settlements.
-   */
-  const buildSecondaryLabel = useCallback((entity: AdminEntity): string => {
-    if (!cachedEntities) return '';
-    const parts: string[] = [];
-
-    // Walk up to find municipality (level 5) and regional unit (level 4)
-    let current: AdminEntity | undefined = entity.parentId
-      ? cachedEntities.get(entity.parentId)
-      : undefined;
-
-    while (current) {
-      if (current.level === 5) {
-        const name = current.shortName || current.name;
-        parts.push(`Δ. ${name}`);
-      } else if (current.level === 4) {
-        const name = current.shortName || current.name;
-        parts.push(`Π.Ε. ${name}`);
-        break;
-      }
-      current = current.parentId ? cachedEntities.get(current.parentId) : undefined;
-    }
-
-    if (entity.postalCode) {
-      parts.push(`ΤΚ ${entity.postalCode}`);
-    }
-
-    return parts.join(', ');
-  }, []);
-
-  const searchOptions = useCallback(
-    (query: string, level: AdminLevel, maxResults = 30): ComboboxOption[] => {
-      if (!cachedByLevel || !query.trim()) return [];
-      const entities = cachedByLevel.get(level);
-      if (!entities) return [];
-
-      const normalizedQuery = normalizeSearch(query);
-      const results: ComboboxOption[] = [];
-
-      const needsDisambiguation = level >= 5;
-      for (const entity of entities) {
-        if (results.length >= maxResults) break;
-        const normalizedEntityName = normalizeSearch(entity.name);
-        if (normalizedEntityName.includes(normalizedQuery)) {
-          results.push({
-            value: entity.id,
-            label: entity.name,
-            secondaryLabel: needsDisambiguation
-              ? buildSecondaryLabel(entity)
-              : undefined,
-          });
-        }
-      }
-      return results;
-    },
-    [buildSecondaryLabel],
+  const findById = useCallback(
+    (id: string): AdminEntity | undefined => snapshot?.entities.get(id),
+    [snapshot],
   );
 
-  const levelOptions = useCallback((level: AdminLevel): ComboboxOption[] => {
-    const entities = cachedByLevel?.get(level) ?? [];
-    // Only compute disambiguation for levels with potential homonyms (5+)
-    const needsDisambiguation = level >= 5;
-    return entities.map((e) => ({
-      value: e.id,
-      label: e.name,
-      secondaryLabel: needsDisambiguation ? buildSecondaryLabel(e) : undefined,
-    }));
-  }, [buildSecondaryLabel]);
+  const resolvePath = useCallback(
+    (entityId: string): AdminPath =>
+      snapshot ? resolveAdminPath(snapshot, entityId) : emptyAdminPath(),
+    [snapshot],
+  );
+
+  const getByLevel = useCallback(
+    (level: AdminLevel): AdminEntity[] => (snapshot ? entitiesAtLevel(snapshot, level) : []),
+    [snapshot],
+  );
+
+  const getChildren = useCallback(
+    (parentId: string): AdminEntity[] => (snapshot ? childrenOf(snapshot, parentId) : []),
+    [snapshot],
+  );
+
+  const searchOptions = useCallback(
+    (query: string, level: AdminLevel, maxResults = 30): ComboboxOption[] =>
+      snapshot ? searchAtLevel(snapshot, query, level, maxResults) : [],
+    [snapshot],
+  );
+
+  const levelOptions = useCallback(
+    (level: AdminLevel): ComboboxOption[] => (snapshot ? optionsAtLevel(snapshot, level) : []),
+    [snapshot],
+  );
 
   return {
-    isLoading,
+    isLoading: snapshot === null,
     findById,
     resolvePath,
     getByLevel,
