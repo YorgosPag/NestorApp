@@ -328,7 +328,7 @@ export function isSimpleGeoOutline(outline: GeoOutline): boolean {
  * ⚠️ **Οι τρύπες μετρούν κι αυτές** — και είναι αβλαβές: οι κορυφές μιας τρύπας είναι
  * ήδη **μέσα** στον εξωτερικό δακτύλιο, άρα δεν μπορούν να μεγαλώσουν την ακτίνα.
  * Μετακινούν ελαφρά το κεντροειδές, και το κέντρο δεν υπόσχεται τίποτα από μόνο του
- * (`AdminFootprint.center`) — η ορθότητα κρέμεται μόνο από τους δύο εγκλεισμούς.
+ * (`GeoFootprint.center`) — η ορθότητα κρέμεται μόνο από τους δύο εγκλεισμούς.
  *
  * @param rings — κάθε δακτύλιος του σχήματος: εξωτερικοί **και** τρύπες, όλων των μερών
  * @param distanceMetres — ο SSoT απόστασης, περασμένος από τον καλούντα (ίδιος λόγος
@@ -339,6 +339,65 @@ export function geoRingsBoundingCircle(
   distanceMetres: (a: GeoPoint, b: GeoPoint) => number,
 ): GeoCircle | null {
   return geoOutlineBoundingCircle(rings.flat(), distanceMetres);
+}
+
+/**
+ * **ΕΙΝΑΙ ΤΟ ΣΗΜΕΙΟ ΜΕΣΑ ΣΤΟ ΣΧΗΜΑ;** — με **περιττό πλήθος** δακτυλίων (even–odd).
+ *
+ * 🔑 **Εξήχθη από το {@link geoRingsInscribedRadius}** *(ADR-846 Φ3)*, όπου ζούσε ως
+ * βρόχος τριών γραμμών. Ο δεύτερος καλών — ο κριτής του χαραγμένου πολυγώνου — ρωτά
+ * **ακριβώς** αυτό, και μια δεύτερη γραφή του θα ήταν δίδυμο που το `ssot:discover`
+ * **δεν** θα έβλεπε *(άλλο όνομα, ίδιο σχήμα)* αλλά το jscpd ναι *(N.18 / CHECK 3.28)*.
+ *
+ * ⚠️ **Η τρύπα ακυρώνει τον εξωτερικό της** χωρίς αυτό το module να μάθει ποτέ ποιος
+ * δακτύλιος είναι τρύπα ποιανού — ιεραρχία που το GeoJSON **δηλώνει** αλλά που δεν
+ * χρειάζεται να ταξιδέψει ως εδώ.
+ */
+export function isPointInGeoRings(point: GeoPoint, rings: readonly GeoOutline[]): boolean {
+  let containing = 0;
+  for (const ring of rings) {
+    if (isPointInGeoOutline(point, ring)) containing += 1;
+  }
+  return containing % 2 === 1;
+}
+
+/**
+ * **ΑΠΟΣΤΑΣΗ ΠΡΟΣ ΤΗΝ ΠΛΗΣΙΕΣΤΕΡΗ ΑΚΜΗ** (μέτρα) — **χωρίς πρόσημο**, ίδια τιμή είτε
+ * το σημείο είναι μέσα είτε έξω. `Infinity` όταν **δεν υπάρχει ακμή** να μετρηθεί.
+ *
+ * 🔑 **Το «μέσα;» είναι ΧΩΡΙΣΤΗ ερώτηση** *({@link isPointInGeoRings})*, και η
+ * διάσπαση είναι ο λόγος που ο κριτής του χαραγμένου πολυγώνου δεν χρειάστηκε **καμία**
+ * νέα γεωμετρία: με «πόσο μακριά είναι το σύνορο;» **και** «είμαι μέσα;» απαντιούνται
+ * και τα **τρία** ερωτήματα *(περιέχει · τέμνει · ξένα)* χωρίς γκρίζα ζώνη — δες
+ * `lib/agency/coverage-match.ts`.
+ *
+ * 🔴 **ΠΡΟΣ ΑΚΜΗ, ΠΟΤΕ ΠΡΟΣ ΚΟΡΥΦΗ** — δες το σκεπτικό στο
+ * {@link geoRingsInscribedRadius}: η απόσταση προς την πλησιέστερη **κορυφή** είναι
+ * υπερεκτίμηση, και κάθε συμπέρασμα χτισμένο πάνω της θα ήταν ψεύτικο.
+ *
+ * ⚠️ **`Infinity` ΔΕΝ σημαίνει «μακριά»** — σημαίνει «κανείς δεν μέτρησε». Ο καλών
+ * που θα το συγκρίνει με ακτίνα παίρνει *«έξω»*, που είναι σωστό μόνο επειδή σχήμα
+ * χωρίς ακμές **δεν περιέχει τίποτα** *(ίδια σημασιολογία με το `< 3` κορυφές του
+ * {@link isPointInGeoOutline})*.
+ */
+export function geoRingsNearestEdgeMetres(
+  point: GeoPoint,
+  rings: readonly GeoOutline[],
+): number {
+  let nearestMetres = Infinity;
+  for (const ring of rings) {
+    if (ring.length < 3) continue;
+
+    // origin = το ίδιο το σημείο ⇒ είναι κυριολεκτικά η αρχή των αξόνων.
+    const local = toLocalMetres(ring, point);
+    for (let i = 0; i < local.length; i += 1) {
+      // Το `% length` κλείνει τον δακτύλιο: ο {@link GeoOutline} **δεν** επαναλαμβάνει
+      // την πρώτη κορυφή, άρα η τελευταία ακμή δεν υπάρχει στα δεδομένα — μόνο στον τύπο.
+      const metres = distanceToLocalSegment(ORIGIN, local[i], local[(i + 1) % local.length]);
+      if (metres < nearestMetres) nearestMetres = metres;
+    }
+  }
+  return nearestMetres;
 }
 
 /**
@@ -379,25 +438,9 @@ export function geoRingsBoundingCircle(
  *   υπολογιστεί, γιατί οι δύο κύκλοι είναι άχρηστοι αν δεν είναι ομόκεντροι
  */
 export function geoRingsInscribedRadius(rings: readonly GeoOutline[], center: GeoPoint): number {
-  let containing = 0;
-  for (const ring of rings) {
-    if (isPointInGeoOutline(center, ring)) containing += 1;
-  }
-  if (containing % 2 === 0) return 0;
+  if (!isPointInGeoRings(center, rings)) return 0;
 
-  let nearestMetres = Infinity;
-  for (const ring of rings) {
-    if (ring.length < 3) continue;
-
-    // origin = το ίδιο το κέντρο ⇒ το σημείο είναι κυριολεκτικά η αρχή των αξόνων.
-    const local = toLocalMetres(ring, center);
-    for (let i = 0; i < local.length; i += 1) {
-      // Το `% length` κλείνει τον δακτύλιο: ο {@link GeoOutline} **δεν** επαναλαμβάνει
-      // την πρώτη κορυφή, άρα η τελευταία ακμή δεν υπάρχει στα δεδομένα — μόνο στον τύπο.
-      const metres = distanceToLocalSegment(ORIGIN, local[i], local[(i + 1) % local.length]);
-      if (metres < nearestMetres) nearestMetres = metres;
-    }
-  }
+  const nearestMetres = geoRingsNearestEdgeMetres(center, rings);
 
   return Number.isFinite(nearestMetres) ? nearestMetres / 1000 : 0;
 }

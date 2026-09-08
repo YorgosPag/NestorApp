@@ -27,18 +27,18 @@
 
 import { createLazyJsonSnapshot } from '@/lib/data/lazy-json-snapshot';
 import { createModuleLogger } from '@/lib/telemetry';
-import type { AdminFootprint, FootprintResolver } from '@/types/geo/admin-footprint';
+import type { GeoFootprint, FootprintResolver } from '@/types/geo/admin-footprint';
 
 const logger = createModuleLogger('admin-footprints');
 
 /** `id` διοικητικής οντότητας → οι δύο κύκλοι της. */
-export type FootprintSnapshot = ReadonlyMap<string, AdminFootprint>;
+export type FootprintSnapshot = ReadonlyMap<string, GeoFootprint>;
 
 /**
  * **Η κατάσταση «ρώτησα και δεν έμαθα»** — ίδιο ιδίωμα με το `EMPTY_SNAPSHOT` της
  * ιεραρχίας. Κάθε αναζήτηση απαντά `undefined` ⇒ ο κριτής λέει `unknown`.
  */
-export const EMPTY_FOOTPRINTS: FootprintSnapshot = new Map<string, AdminFootprint>();
+export const EMPTY_FOOTPRINTS: FootprintSnapshot = new Map<string, GeoFootprint>();
 
 /**
  * Δέχεται **μόνο** γραμμή που είναι πραγματικά αποτύπωμα.
@@ -51,9 +51,9 @@ export const EMPTY_FOOTPRINTS: FootprintSnapshot = new Map<string, AdminFootprin
  * *αποδείξεις*: αν σπάσει, δεν παράγεται θόρυβος — παράγεται **λάθος απάντηση με
  * βεβαιότητα**. Μια γραμμή που δεν την τηρεί **απορρίπτεται** και γίνεται `unknown`.
  */
-function readFootprint(value: unknown): AdminFootprint | null {
+function readFootprint(value: unknown): GeoFootprint | null {
   if (typeof value !== 'object' || value === null) return null;
-  const row = value as Partial<AdminFootprint>;
+  const row = value as Partial<GeoFootprint>;
   const center = row.center;
 
   if (typeof center !== 'object' || center === null) return null;
@@ -85,7 +85,7 @@ export const ADMIN_FOOTPRINTS_SOURCE = createLazyJsonSnapshot<FootprintSnapshot>
       throw new TypeError('Τα αποτυπώματα δεν έχουν το αναμενόμενο σχήμα');
     }
 
-    const snapshot = new Map<string, AdminFootprint>();
+    const snapshot = new Map<string, GeoFootprint>();
     let rejected = 0;
     for (const [adminId, value] of Object.entries(rows)) {
       const footprint = readFootprint(value);

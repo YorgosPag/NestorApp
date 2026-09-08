@@ -29,7 +29,7 @@
 
 import { coverageMatches, coverageRelation, type CoverageResolvers } from '../coverage-match';
 import type { DeclaredCoverage, ShowcaseWhere } from '@/types/agency-coverage';
-import type { AdminFootprint } from '@/types/geo/admin-footprint';
+import type { GeoFootprint } from '@/types/geo/admin-footprint';
 
 // =============================================================================
 // ΤΟ ΣΚΗΝΙΚΟ — ένα σημείο, και αποστάσεις που ελέγχουμε εμείς
@@ -69,7 +69,7 @@ const explodingLineage = (): readonly string[] => {
   throw new Error('Το μεικτό κελί ΔΕΝ επιτρέπεται να ρωτήσει την ιεραρχία');
 };
 
-function withFootprints(table: Readonly<Record<string, AdminFootprint>>): CoverageResolvers {
+function withFootprints(table: Readonly<Record<string, GeoFootprint>>): CoverageResolvers {
   return {
     lineageOf: explodingLineage,
     footprintOf: (adminId) => table[adminId] ?? null,

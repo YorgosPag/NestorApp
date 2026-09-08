@@ -52,10 +52,9 @@ import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { distanceMeters } from '../src/lib/geo/geo-distance';
+import { ringsFootprint } from '../src/lib/geo/geo-footprint';
 import { geoJsonRings } from '../src/lib/geo/geo-geojson';
-import { geoRingsBoundingCircle, geoRingsInscribedRadius } from '../src/lib/geo/geo-ring';
-import type { AdminFootprint } from '../src/types/geo/admin-footprint';
+import type { GeoFootprint } from '../src/types/geo/admin-footprint';
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const CACHE_DIR = join(REPO_ROOT, 'node_modules', '.cache', 'admin-boundaries');
@@ -183,20 +182,22 @@ function buildIdIndex(rows: readonly HierarchyRow[]): {
  * θα κατέστρεφαν τη σχέση `εσωτερικός ⊆ σχήμα ⊆ εξωτερικός`, από την οποία κρέμεται
  * **κάθε** συμπέρασμα του κριτή.
  */
-function footprintOf(geometry: GeoJSON.Geometry | null): AdminFootprint | null {
+function footprintOf(geometry: GeoJSON.Geometry | null): GeoFootprint | null {
   if (geometry === null) return null;
   if (geometry.type !== 'Polygon' && geometry.type !== 'MultiPolygon') return null;
 
-  const rings = geoJsonRings(geometry);
-  if (rings.length === 0) return null;
-
-  const outer = geoRingsBoundingCircle(rings, distanceMeters);
-  if (outer === null) return null;
+  // 🔑 **Η κατασκευή έφυγε στο `lib/geo/geo-footprint.ts` (Φ3)** — ο γεννήτορας δεν
+  //    είναι πλέον ο μόνος που τη χρειάζεται *(το χαραγμένο πολύγωνο τη χρειάζεται
+  //    στον γραφέα ΚΑΙ στον αναγνώστη)*. Εδώ μένει **μόνο** ό,τι είναι δικό του: η
+  //    ανάγνωση GeoJSON και η **στρογγυλοποίηση για bytes**, που δεν αφορά κανέναν
+  //    καταναλωτή σε χρόνο εκτέλεσης.
+  const footprint = ringsFootprint(geoJsonRings(geometry));
+  if (footprint === null) return null;
 
   return {
-    center: round(outer.center),
-    outerKm: roundKm(outer.radiusKm),
-    innerKm: roundKm(geoRingsInscribedRadius(rings, outer.center)),
+    center: round(footprint.center),
+    outerKm: roundKm(footprint.outerKm),
+    innerKm: roundKm(footprint.innerKm),
   };
 }
 
@@ -217,7 +218,7 @@ function collectLayer(
   layer: string,
   index: ReadonlyMap<string, string>,
   ambiguous: ReadonlySet<string>,
-  into: Map<string, AdminFootprint>,
+  into: Map<string, GeoFootprint>,
 ): LayerReport {
   let written = 0;
   let unmatched = 0;
@@ -269,7 +270,7 @@ function collectLayer(
  * γεωμετρία και το αρχείο **δεν πρέπει να υπάρξει**: ο κριτής θα έβγαζε αποδείξεις από
  * μια σχέση που δεν ισχύει, δηλαδή θα έλεγε ψέματα **με βεβαιότητα**.
  */
-function assertContainment(footprints: ReadonlyMap<string, AdminFootprint>): void {
+function assertContainment(footprints: ReadonlyMap<string, GeoFootprint>): void {
   for (const [id, footprint] of footprints) {
     if (!(footprint.outerKm >= footprint.innerKm)) {
       throw new Error(`ΑΓΚΥΡΑ: ${id} έχει outerKm ${footprint.outerKm} < innerKm ${footprint.innerKm}`);
@@ -289,7 +290,7 @@ async function main(): Promise<void> {
     console.log(`⚠️  ${ambiguous.size} διφορούμενοι κωδικοί αγνοούνται: ${[...ambiguous].join(', ')}`);
   }
 
-  const footprints = new Map<string, AdminFootprint>();
+  const footprints = new Map<string, GeoFootprint>();
   const reports: LayerReport[] = [];
   for (const { layer, level } of LAYERS) {
     const collection = await loadLayer(layer);

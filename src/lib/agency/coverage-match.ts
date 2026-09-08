@@ -52,18 +52,20 @@
  * Η ιεραρχία μπαίνει με **ένεση** ({@link LineageResolver}), ποτέ με import hook.
  */
 
-import { areaRelation, type AreaRelation } from '@/lib/geo/geo-area';
+import type { AreaRelation } from '@/lib/geo/geo-area';
 import { distanceMeters } from '@/lib/geo/geo-distance';
+import { circleFootprint } from '@/lib/geo/geo-footprint';
+import { geoRingsNearestEdgeMetres, isPointInGeoRings } from '@/lib/geo/geo-ring';
 import {
   isAdministrativeWhere,
   isNationwide,
+  isOutlineCoverage,
   isRadiusCoverage,
   type DeclaredCoverage,
-  type RadiusCoverage,
   type ShowcaseWhere,
 } from '@/types/agency-coverage';
-import type { AdminFootprint, FootprintResolver } from '@/types/geo/admin-footprint';
-import type { GeoCircle } from '@/types/geo/coordinates';
+import type { GeoFootprint, FootprintResolver } from '@/types/geo/admin-footprint';
+import type { GeoOutline } from '@/types/geo/coordinates';
 
 /**
  * **Η γραμμή μιας οντότητας προς τη ρίζα, ΜΕ ΤΟΝ ΕΑΥΤΟ ΤΗΣ ΜΕΣΑ.**
@@ -109,57 +111,125 @@ export interface CoverageResolvers {
   readonly footprintOf: FootprintResolver;
 }
 
-/** Απόσταση δύο σημείων σε **χιλιόμετρα** — το ένα SSoT, μία διαίρεση. */
-function kilometresBetween(a: GeoCircle['center'], b: GeoCircle['center']): number {
-  return distanceMeters(a, b) / 1000;
-}
-
 /**
- * **Αποδεδειγμένη επαφή** — και το `innerKm > 0` **δεν είναι μικροβελτίωση**.
+ * 🏆 **ΤΟ ΕΝΑ ΚΕΛΙ ΠΟΥ ΕΓΙΝΕ ΟΛΑ ΤΑ ΚΕΛΙΑ** — δύο αποτυπώματα, τέσσερις απαντήσεις.
  *
- * 🔴 Το `center` του αποτυπώματος **δεν υπόσχεται ότι είναι μέσα στο πολύγωνο**
- * *(δήμος-αρχιπέλαγος, κοίλο σχήμα)*. Με `innerKm === 0` ο «εγγεγραμμένος κύκλος»
- * είναι **σημείο που μπορεί να είναι έξω** — άρα ένα `d <= r` θα ήταν ισχυρισμός
- * επαφής **χωρίς απόδειξη**, δηλαδή ακριβώς το ψέμα που όλο αυτό το σχήμα αποφεύγει.
- */
-function touchesProven(gapKm: number, radiusKm: number, footprint: AdminFootprint): boolean {
-  return footprint.innerKm > 0 && gapKm <= radiusKm + footprint.innerKm;
-}
-
-/**
- * **Δηλωμένη ΑΚΤΙΝΑ εναντίον ΔΙΟΙΚΗΤΙΚΟΥ ερωτήματος** — το ένα μεικτό κελί.
+ * ═════════════════════════════════════════════════════════════════════════════
+ * ΗΤΑΝ ΔΥΟ ΣΥΝΑΡΤΗΣΕΙΣ ΜΕ ΑΝΤΙΚΑΤΟΠΤΡΙΣΜΕΝΕΣ ΣΥΝΘΗΚΕΣ *(ADR-846 Φ3)*
  *
- * Η σειρά των ελέγχων είναι η σειρά της βεβαιότητας: πρώτα ό,τι αποδεικνύεται πλήρως,
- * μετά ό,τι αποδεικνύεται μερικώς, τελευταίο το «δεν ξέρω».
+ * Μέχρι τη Φάση 3 τα δύο «μεικτά» κελιά είχαν **χωριστό** κώδικα — `radiusOverArea`
+ * *(δήλωση κύκλος, ερώτημα περιοχή)* και το σώμα του `areasOverCircle` *(το ανάποδο)* —
+ * με τις **ίδιες** τρεις συγκρίσεις γραμμένες **καθρεφτισμένα**. Δύο τόποι όπου το
+ * ίδιο λάθος έπρεπε να αποφευχθεί δύο φορές.
+ *
+ * 🔑 **Η αναγωγή που τα ένωσε**: ένας κύκλος **είναι** αποτύπωμα με
+ * `innerKm === outerKm === radiusKm` *(`lib/geo/geo-footprint.ts`)*. Με αυτό, και τα
+ * δύο κελιά είναι **η ίδια ερώτηση**, και η ισοδυναμία επαληθεύτηκε **όρο προς όρο**
+ * πριν σβηστεί οτιδήποτε *(άγκυρα: `coverage-footprint-match.test.ts`)*.
+ *
+ * ═════════════════════════════════════════════════════════════════════════════
+ * ⚠️ **ΤΑ `innerKm > 0` ΔΕΝ ΕΙΝΑΙ ΜΙΚΡΟΒΕΛΤΙΩΣΕΙΣ**
+ *
+ * Το `center` ενός αποτυπώματος **δεν υπόσχεται ότι είναι μέσα στο σχήμα**
+ * *(δήμος-αρχιπέλαγος, κοίλο σχήμα)*. Με `innerKm === 0` ο «εγγεγραμμένος κύκλος» είναι
+ * **σημείο που μπορεί να είναι έξω** — άρα κάθε συμπέρασμα χτισμένο πάνω του θα ήταν
+ * ισχυρισμός **χωρίς απόδειξη**, δηλαδή ακριβώς το ψέμα που όλο αυτό το σχήμα αποφεύγει.
+ *
+ * ═════════════════════════════════════════════════════════════════════════════
+ * 🔴🔴 **ΤΑ ΟΡΙΣΜΑΤΑ ΛΕΓΟΝΤΑΙ `declared`/`asked` ΚΑΙ ΟΧΙ `subject`/`query` — ΕΠΙΤΗΔΕΣ**
+ *
+ * Το `areaRelation` του `lib/geo/geo-area.ts` δίνει `within` όταν **subject ⊆ query**·
+ * αυτή εδώ δίνει `within` όταν **asked ⊆ declared** — δηλαδή η **αντίθετη** φορά, γιατί
+ * εδώ το `within` σημαίνει *«η δήλωση καλύπτει ΟΛΟ ό,τι ρωτήθηκε»*.
+ *
+ * ⇒ Δύο συναρτήσεις με ορίσματα ονομασμένα `subject`/`query` και **αντίστροφη**
+ * σημασία θα ήταν η παγίδα του {@link coverageRelation} **διπλασιασμένη**: και οι δύο
+ * σειρές είναι νόμιμες, άρα η λάθος **δεν πετά τίποτα** — γράφει απλώς «μέρος» όπου
+ * έπρεπε «όλη». Με ονόματα που **λένε ποιος είναι ποιος**, η αντιστροφή δεν γράφεται.
+ * ═════════════════════════════════════════════════════════════════════════════
+ *
+ * @param declared **η δήλωση** — «πού δουλεύω»
+ * @param asked **το ερώτημα** — «πού ψάχνω»
  */
-function radiusOverArea(
-  declared: RadiusCoverage['circle'],
-  footprint: AdminFootprint | null,
-): CoverageRelation {
-  if (footprint === null) return 'unknown';
+export function footprintRelation(declared: GeoFootprint, asked: GeoFootprint): CoverageRelation {
+  const gapKm = distanceMeters(declared.center, asked.center) / 1000;
 
-  const gapKm = kilometresBetween(declared.center, footprint.center);
-
-  // πολύγωνο ⊆ εξωτερικός ⊆ δηλωμένος κύκλος
-  if (gapKm + footprint.outerKm <= declared.radiusKm) return 'within';
-  // κανένα κοινό σημείο με τον εξωτερικό ⇒ κανένα με το πολύγωνο
-  if (gapKm > declared.radiusKm + footprint.outerKm) return 'disjoint';
-  if (touchesProven(gapKm, declared.radiusKm, footprint)) return 'intersects';
+  // ερώτημα ⊆ εξωτερικός(ερωτήματος) ⊆ εγγεγραμμένος(δήλωσης) ⊆ δήλωση
+  if (declared.innerKm > 0 && gapKm + asked.outerKm <= declared.innerKm) return 'within';
+  // οι δύο εξωτερικοί δεν αγγίζονται ⇒ ούτε τα σχήματα μέσα τους
+  if (gapKm > declared.outerKm + asked.outerKm) return 'disjoint';
+  // οι δύο **εγγεγραμμένοι** τέμνονται ⇒ τα σχήματα **αποδεδειγμένα** τέμνονται
+  if (declared.innerKm > 0 && asked.innerKm > 0 && gapKm <= declared.innerKm + asked.innerKm) {
+    return 'intersects';
+  }
 
   return 'unknown';
 }
 
 /**
- * **Δηλωμένες ΔΙΟΙΚΗΤΙΚΕΣ οντότητες εναντίον ΚΥΚΛΙΚΟΥ ερωτήματος** — το άλλο μεικτό κελί.
+ * 🏆 **ΔΗΛΩΜΕΝΟ ΠΟΛΥΓΩΝΟ ΕΝΑΝΤΙΟΝ ΑΠΟΤΥΠΩΜΑΤΟΣ** — και **δεν είναι τέταρτο σκέλος
+ * λογικής**: είναι το ίδιο ερώτημα με το {@link footprintRelation}, με τη **δήλωση σε
+ * πλήρη ακρίβεια** αντί για δύο κύκλους.
+ *
+ * ═════════════════════════════════════════════════════════════════════════════
+ * 🔴 ΓΙΑΤΙ ΟΧΙ ΣΚΕΤΗ ΑΝΑΓΩΓΗ — **ΜΕΤΡΗΘΗΚΕ, ΔΕΝ ΥΠΟΤΕΘΗΚΕ** *(2026-09-08)*
+ *
+ * Η προφανής λύση ήταν *«ανάγαγε και το πολύγωνο σε δύο κύκλους και κάλεσε το
+ * {@link footprintRelation}»* — μηδέν νέα γεωμετρία. **Μετρήθηκε** πάνω σε **326
+ * πραγματικά ελληνικά σχήματα** αραιωμένα στις ~15 κορυφές *(= ό,τι χαράζει άνθρωπος)*
+ * εναντίον **10.432** κύκλων-ερωτημάτων:
+ *
+ * | | «δεν ξέρω» | λάθος ετικέτες |
+ * |---|---|---|
+ * | **σκέτη αναγωγή** *(2 κύκλοι)* | **23,2 %** — και **31,0 %** σε λεπτά/κοίλα σχήματα | **152** *(είπε «μέρος» ενώ ήταν «όλη»)* |
+ * | 🏆 **αυτή η συνάρτηση** | **0,0 %** | **0** |
+ *
+ * ⇒ Ένας στους τέσσερις επισκέπτες θα έβλεπε *«μπορεί να καλύπτει»* για δήλωση που
+ * **ξέρουμε ακριβώς**, επειδή το χαραγμένο σχήμα είναι **λεπτό και κοίλο** — δηλαδή
+ * ακριβώς επειδή ο άνθρωπος χάραξε κάτι συγκεκριμένο αντί να πει «ο δήμος μου».
+ *
+ * 🔑 **ΚΑΙ ΤΟ ΜΗΔΕΝ ΕΙΝΑΙ ΔΩΡΕΑΝ, ΟΧΙ ΕΞΥΠΝΟ**: όταν το ερώτημα είναι **κύκλος**, το
+ * αποτύπωμά του έχει `innerKm === outerKm`, οπότε οι τρεις έλεγχοι παρακάτω γίνονται
+ * **ακριβείς και εξαντλητικοί** — δεν μένει γκρίζα ζώνη να δηλωθεί. Όταν το ερώτημα
+ * είναι **διοικητική οντότητα** *(όπου έχουμε μόνο τους δύο κύκλους της, by design —
+ * τα 120 MB πολυγώνων δεν διανέμονται)*, το `unknown` επιβιώνει· **μετρημένο: 29,7 %
+ * αντί 38,8 %** της σκέτης αναγωγής, με **μηδέν** ψευδείς ισχυρισμούς.
+ *
+ * ⚠️ **Καμία νέα γεωμετρία δεν γράφτηκε** — τα δύο πρωτογενή *(«είμαι μέσα;» και «πόσο
+ * μακριά είναι το σύνορο;»)* **εξήχθησαν** από το `geoRingsInscribedRadius`, όπου ήδη ζούσαν.
+ */
+export function outlineOverFootprint(
+  declared: readonly GeoOutline[],
+  asked: GeoFootprint,
+): CoverageRelation {
+  const edgeKm = geoRingsNearestEdgeMetres(asked.center, declared) / 1000;
+  const centreInside = isPointInGeoRings(asked.center, declared);
+
+  // ολόκληρος ο **εξωτερικός** του ερωτήματος χωράει μέσα ⇒ «σε καλύπτω ολόκληρο»
+  if (centreInside && edgeKm >= asked.outerKm) return 'within';
+  // ούτε ο **εξωτερικός** δεν αγγίζει το σχήμα ⇒ ούτε το ερώτημα το αγγίζει
+  if (!centreInside && edgeKm > asked.outerKm) return 'disjoint';
+  // ο **εγγεγραμμένος** του ερωτήματος αγγίζει το σχήμα ⇒ αποδεδειγμένη επαφή
+  if (asked.innerKm > 0 && (centreInside || edgeKm <= asked.innerKm)) return 'intersects';
+
+  return 'unknown';
+}
+
+/**
+ * **Δηλωμένες ΔΙΟΙΚΗΤΙΚΕΣ οντότητες εναντίον ΚΥΚΛΙΚΟΥ ερωτήματος** — το μεικτό κελί
+ * όπου η **δήλωση είναι λίστα**, άρα χρειάζεται συσσώρευση.
  *
  * ⚠️ **Η ένωση των δηλώσεων δεν υπολογίζεται, και δεν χρειάζεται**: αρκεί **μία**
  * οντότητα να αποδείξει `within`, ή **μία** να αποδείξει επαφή. Το `disjoint` όμως
  * απαιτεί **όλες** να το αποδείξουν — γι' αυτό το `unknown` επιβιώνει μέχρι το τέλος
  * του βρόχου αντί να επιστρέψει νωρίς.
+ *
+ * 🔑 **Η κρίση ανά οντότητα έφυγε στο {@link footprintRelation}** — εδώ μένει **μόνο**
+ * η συσσώρευση, που είναι η μόνη πράξη που ανήκει πραγματικά σε αυτό το κελί.
  */
 function areasOverCircle(
   adminIds: readonly string[],
-  query: GeoCircle,
+  asked: GeoFootprint,
   footprintOf: FootprintResolver,
 ): CoverageRelation {
   let touches = false;
@@ -172,15 +242,17 @@ function areasOverCircle(
       continue;
     }
 
-    const gapKm = kilometresBetween(query.center, footprint.center);
-
-    // ο κύκλος του επισκέπτη ⊆ εγγεγραμμένος ⊆ πολύγωνο ⇒ «σε καλύπτω ολόκληρο»
-    if (gapKm + query.radiusKm <= footprint.innerKm) return 'within';
-    if (touchesProven(gapKm, query.radiusKm, footprint)) {
-      touches = true;
-    } else if (gapKm <= query.radiusKm + footprint.outerKm) {
-      // αγγίζει τον εξωτερικό αλλά όχι τον εσωτερικό ⇒ **μπορεί** να τέμνει
-      uncertain = true;
+    switch (footprintRelation(footprint, asked)) {
+      case 'within':
+        return 'within';
+      case 'intersects':
+        touches = true;
+        break;
+      case 'unknown':
+        uncertain = true;
+        break;
+      case 'disjoint':
+        break;
     }
   }
 
@@ -228,18 +300,21 @@ function areasOverArea(
  * το αντίστροφο του κινήτρου που θέλουμε.
  *
  * ═════════════════════════════════════════════════════════════════════════════
- * 🔴🔴 **Η ΣΕΙΡΑ ΤΩΝ ΟΡΙΣΜΑΤΩΝ ΣΤΟ `areaRelation` ΕΙΝΑΙ ΑΝΤΙΣΤΡΟΦΗ ΤΗΣ ΔΙΑΙΣΘΗΣΗΣ**
+ * 🔴🔴 **Η ΠΑΓΙΔΑ ΤΗΣ ΣΕΙΡΑΣ ΤΩΝ ΟΡΙΣΜΑΤΩΝ — ΚΑΙ ΓΙΑΤΙ ΔΕΝ ΥΠΑΡΧΕΙ ΠΛΕΟΝ ΕΔΩ**
  *
- * Ο πίνακας στην κορυφή αυτού του αρχείου έγραφε ότι το `within` του `geo-area.ts`
- * σημαίνει *«το σχήμα του **ερωτήματος** μέσα στο σχήμα του **υποκειμένου**»*.
- * **Είναι ανάποδα, μετρημένο στον κώδικα** *(`circleToCircle`: `gap + subjectM <= queryM`
- * ⇒ **subject μέσα σε query**)*. Εκεί το `subject` είναι *«πού μπορεί να βρίσκεται το
- * ακίνητο»* και το `query` *«πού κοιτάει ο άνθρωπος»*.
+ * Μέχρι τη Φάση 3 αυτή η συνάρτηση καλούσε `areaRelation(where.circle, coverage.circle)`
+ * — με τη **δήλωση δεύτερη**, που είναι αντίστροφο της διαίσθησης. Ο λόγος: το `within`
+ * του `geo-area.ts` σημαίνει **subject ⊆ query** *(μετρημένο στον κώδικα:
+ * `circleToCircle` ⇒ `gap + subjectM <= queryM`)*, όπου `subject` = *«πού μπορεί να
+ * βρίσκεται το ακίνητο»* και `query` = *«πού κοιτάει ο άνθρωπος»*.
  *
- * ⇒ Για να σημαίνει `within` *«η δήλωση καλύπτει ΟΛΟ ό,τι ρώτησες»*, ο **κύκλος του
- * επισκέπτη** μπαίνει ως `subject` και η **δήλωση** ως `query`. Η αφελής σειρά δίνει
- * ετικέτα **αντεστραμμένη** — και οι δύο τιμές είναι νόμιμες, οπότε **τίποτα δεν
- * σκάει**. Άγκυρα: `coverage-match.test.ts`, ομάδα «η σειρά των ορισμάτων».
+ * ⚠️ **Η λάθος σειρά δεν πετούσε τίποτα** — και οι δύο τιμές είναι νόμιμες, οπότε η
+ * κάρτα απλώς έγραφε «μέρος» όπου έπρεπε «όλη».
+ *
+ * 🏆 **Η Φάση 3 έβγαλε την παγίδα από τη ρίζα της**: κάθε κλήση περνά πλέον από
+ * {@link footprintRelation} / {@link outlineOverFootprint}, όπου τα ορίσματα λέγονται
+ * **`declared` και `asked`**. Δεν υπάρχει σειρά να θυμάται κανείς — υπάρχουν **ονόματα**.
+ * Άγκυρα: `coverage-match.test.ts`, ομάδα «η σειρά των ορισμάτων».
  * ═════════════════════════════════════════════════════════════════════════════
  */
 export function coverageRelation(
@@ -253,15 +328,28 @@ export function coverageRelation(
   //    γεωμετρία, και καμία εξάρτηση από το αν έχουν φορτώσει.
   if (isNationwide(coverage)) return 'within';
 
-  if (isAdministrativeWhere(where)) {
-    return isRadiusCoverage(coverage)
-      ? radiusOverArea(coverage.circle, resolvers.footprintOf(where.adminId))
-      : areasOverArea(coverage.adminIds, where.adminId, resolvers.lineageOf);
+  // 🏆 **ΤΟ ΕΡΩΤΗΜΑ ΓΙΝΕΤΑΙ ΑΠΟΤΥΠΩΜΑ ΜΙΑ ΦΟΡΑ, ΕΔΩ** — και οι δύο μορφές του
+  //    *(διοικητική οντότητα · κύκλος)* απαντούν πλέον στην ίδια ερώτηση. Το `null`
+  //    είναι **μόνο** «το αποτύπωμα της οντότητας δεν έχει φορτώσει / λείπει».
+  const query = isAdministrativeWhere(where)
+    ? resolvers.footprintOf(where.adminId)
+    : circleFootprint(where.circle);
+
+  if (isOutlineCoverage(coverage)) {
+    // ⚠️ Το `[outline]` είναι **ένας** δακτύλιος — δες `types/agency-coverage.ts`:
+    //    η δήλωση εμβέλειας δεν έχει τρύπες ούτε πολλαπλά μέρη, επίτηδες.
+    return query === null ? 'unknown' : outlineOverFootprint([coverage.outline], query);
   }
 
-  return isRadiusCoverage(coverage)
-    ? areaRelation(where.circle, coverage.circle)
-    : areasOverCircle(coverage.adminIds, where.circle, resolvers.footprintOf);
+  if (isRadiusCoverage(coverage)) {
+    return query === null ? 'unknown' : footprintRelation(circleFootprint(coverage.circle), query);
+  }
+
+  // Δηλωμένες **διοικητικές οντότητες**: όταν το ερώτημα είναι κι αυτό διοικητικό, η
+  // απάντηση βγαίνει από την **ιεραρχία** — κανένα αποτύπωμα, καμία γεωμετρία.
+  return isAdministrativeWhere(where)
+    ? areasOverArea(coverage.adminIds, where.adminId, resolvers.lineageOf)
+    : areasOverCircle(coverage.adminIds, circleFootprint(where.circle), resolvers.footprintOf);
 }
 
 /**
