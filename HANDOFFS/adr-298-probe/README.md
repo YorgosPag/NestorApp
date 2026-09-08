@@ -37,7 +37,7 @@
 
 **Β) Πόσα από τα λείποντα κελιά τα ΕΠΙΤΡΕΠΕΙ η πραγματικότητα** *(θέλει emulator)*
 
-    npx jest --config HANDOFFS/adr-298-probe/jest.probe.js --testPathPatterns "suites/(projects|contacts|messages|survey-records|leads|opportunities|activities|attendance-events)\.rules\.test"
+    npx jest --config HANDOFFS/adr-298-probe/jest.probe.js --testPathPatterns "suites/(projects|contacts|messages|survey-records|leads|opportunities|activities|attendance-events|admin-building-templates|analytics|communications|conversations|external-identities|layer-groups|layers|obligations|obligation-templates|obligation-transmittals|relationships|teams)\.rules\.test"
 
 Χωρίς `--testPathPatterns` τρέχει **και τις 127** — δεν το έχω μετρήσει, υπολόγισε
 ~1.100s και κοίτα πρώτα ελεύθερη μνήμη.
@@ -56,8 +56,12 @@ test **μέσα** στο `rootDir`, και το shim πρέπει να εισά�
 
 ## Μετρημένα 2026-09-08
 
-- Οικογένεια `tenant_direct`: **28/314 κόκκινα** — **όλα** «επιτρέπεται χωρίς ερώτηση».
-  24 από αυτά είναι `external_user` × read/list/create σε **όλες** τις 8 συλλογές.
+- Οικογένεια `tenant_direct`: **64/734 κόκκινα** — **όλα** «επιτρέπεται χωρίς ερώτηση».
+  **60 από αυτά** είναι `external_user` × read/list/create σε **20 από 20** συλλογές
+  (**καμία εξαίρεση** ⇒ δεν διαρρέουν «κάποιες συλλογές», διαρρέει **το πρότυπο**).
+- ⚠️ **Η ακτίνα είναι 20 σουίτες, όχι 8.** Το σχόλιο της `crmDirectMatrix()` έλεγε
+  «leads, opportunities, activities» ενώ οι καλούντες είναι **16**. Ρώτα το μητρώο:
+  `grep -n "crmDirectMatrix()" tests/firestore-rules/_registry/coverage-manifest.ts`.
 - Project-wide: **127** συλλογές, **2.953/4.445** κελιά ⇒ **1.492 (33,6%) αδήλωτα**.
   `cross_tenant_user` 543/635 και `external_user` 546/635 **αδήλωτοι** (~86%).
 - **17** συλλογές είναι στα **35/35** (`bim_authoring`, `bim_presentation`, `ownership`)

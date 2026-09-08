@@ -81,9 +81,10 @@ export function overrideCells(
  *
  * 🔴 **ΔΙΟΡΘΩΣΗ 2026-09-08 (ADR-298 §8) — ΑΥΤΟ ΤΟ ΣΧΟΛΙΟ ΕΛΕΓΕ ΨΕΜΑΤΑ.**
  * Μέχρι σήμερα έγραφε *«external_user denied entirely (limited role scope)»*.
- * **Μετρήθηκε** — με τα ίδια τα κελιά, εκτελεσμένα στον emulator και στις **8**
- * συλλογές που κληρονομούν αυτή τη matrix: ο `external_user` έχει **read + list
- * + create ΠΑΝΤΟΥ** (και `update` στο `survey_records`). Ο ισχυρισμός ήταν
+ * **Μετρήθηκε** — με τα ίδια τα κελιά, εκτελεσμένα στον emulator και στις **20**
+ * συλλογές που κληρονομούν αυτή τη matrix (η ακτίνα ΔΕΝ είναι 8 — δες παρακάτω): ο `external_user` έχει **read + list
+ * + create σε 60 από 60 κελιά — κάθε συλλογή, καμία εξαίρεση** (και `update`
+ * στο `survey_records`). Ο ισχυρισμός ήταν
  * ψευδής **από την πρώτη μέρα**, και έμεινε ψευδής επειδή **κανένα κελί δεν τον
  * ρώτησε ΠΟΤΕ**. Η αιτία είναι δομική, όχι bug: ο `external_user` φέρει
  * `companyId = SAME_TENANT_COMPANY_ID` (`personas.ts`) και τα `tenant_direct`
@@ -106,7 +107,7 @@ export function overrideCells(
  * Τα 8 κελιά `cross_tenant_user` × 5 και `anonymous` × create/update/delete.
  * Δεν κωδικοποιούν πρόθεση που **μαντεύτηκε**: την ίδια πρόθεση δηλώνουν ήδη
  * ρητά τα αδελφά τους κελιά (`cross_tenant_admin`, `anonymous` read/list) — και
- * και τα 8 **μετρήθηκαν πράσινα** και στις 8 συλλογές πριν γραφτούν.
+ * και τα 8 **μετρήθηκαν πράσινα** και στις **20** συλλογές πριν γραφτούν (**586 tests**).
  */
 export function tenantDirectMatrix(): readonly CoverageCell[] {
   return [
@@ -436,7 +437,11 @@ export function roleDualMatrix(): readonly CoverageCell[] {
  *     request.auth.uid`. Test contract: seed doc **must** carry
  *     `createdBy = PERSONA_CLAIMS.same_tenant_user.uid`.
  *
- * Collections: `leads`, `opportunities`, `activities`.
+ * 🔴 **ΜΗΝ πιστέψεις λίστα συλλογών γραμμένη σε σχόλιο — ρώτα το μητρώο.**
+ * Εδώ έγραφε *«`leads`, `opportunities`, `activities`»*· **μετρήθηκαν 16 καλούντες**
+ * (2026-09-08). Πάλιωσε σιωπηλά καθώς προστίθεντο συλλογές, και **παραλίγο να
+ * οδηγήσει σε επαλήθευση 8 αντί 20 σουιτών** στο ADR-298 Α21.15.
+ * Η ακτίνα: `grep -n "crmDirectMatrix()" coverage-manifest.ts`.
  * See ADR-298 §4 Phase B.3 (2026-04-13).
  */
 export function crmDirectMatrix(): readonly CoverageCell[] {
