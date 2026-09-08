@@ -8,7 +8,7 @@
  * - Filtered search by level (e.g. only municipalities, only settlements)
  *
  * Data source: ΕΛΣΤΑΤ / Καλλικράτης
- * @see src/data/administrative-hierarchy.json
+ * @see public/data/administrative-hierarchy.json — **η μία αυθεντία** (ADR-846 Φ4)
  */
 
 import { useCallback } from 'react';

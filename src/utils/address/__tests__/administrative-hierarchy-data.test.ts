@@ -28,7 +28,7 @@
  * γράψε **ποιο περιστατικό** θα είχε πιάσει· αλλιώς είναι θόρυβος.
  */
 
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { HIERARCHY_SOURCE, lineageIdsOf } from '@/hooks/useAdministrativeHierarchy';
@@ -37,8 +37,9 @@ import { HIERARCHY_SOURCE, lineageIdsOf } from '@/hooks/useAdministrativeHierarc
 // ΤΟ ΑΡΧΕΙΟ — ΑΠΟ ΤΟΝ ΔΙΣΚΟ, ΑΠΟ ΤΗ ΔΗΜΟΣΙΑ ΔΙΑΔΡΟΜΗ
 // =============================================================================
 
-const PUBLIC_PATH = join(process.cwd(), 'public', 'data', 'administrative-hierarchy.json');
-const BUNDLED_PATH = join(process.cwd(), 'src', 'data', 'administrative-hierarchy.json');
+const PUBLIC_DIR = join(process.cwd(), 'public', 'data');
+const BUNDLED_DIR = join(process.cwd(), 'src', 'data');
+const PUBLIC_PATH = join(PUBLIC_DIR, 'administrative-hierarchy.json');
 
 interface HierarchyRow {
   readonly id: string;
@@ -102,16 +103,27 @@ function summarize(bad: readonly HierarchyRow[]): string {
 // Κ0 — ΜΙΑ ΑΥΘΕΝΤΙΑ, ΟΧΙ ΔΥΟ
 // =============================================================================
 
-describe('Κ0 · η ιεραρχία έχει ΕΝΑΝ ιδιοκτήτη', () => {
+describe('Κ0 · κανένα δεδομένο δεν έχει δύο ιδιοκτήτες', () => {
   /**
-   * 🔴 Το αρχείο υπήρχε **δύο φορές** *(`src/data/` + `public/data/`, 4,17 MB το καθένα,
-   * ίδιο md5)*. Ο πελάτης διάβαζε το ένα, το script ενημέρωσης έγραφε στο **άλλο** —
-   * δηλαδή μια διόρθωση θα έφτανε στον διακομιστή και **ποτέ** στον φυλλομετρητή.
-   * Ακριβώς το σχήμα «δύο αυθεντίες που μια μέρα διαφωνούν».
+   * 🔴 **Η ΚΛΑΣΗ, ΟΧΙ ΤΟ ΔΕΙΓΜΑ.** Η ιεραρχία υπήρχε **δύο φορές** *(`src/data/` +
+   * `public/data/`, ίδιο md5, 4,17 MB το καθένα)*: ο πελάτης και ο διακομιστής διάβαζαν
+   * το δημόσιο, το script ενημέρωσης έγραφε στο **άλλο** — μια διόρθωση θα έφτανε στον
+   * έναν και **ποτέ** στον άλλο.
+   *
+   * ⚠️ **Και δεν ήταν μοναδικό**: το `public-services-registry.json` είχε **ακριβώς** το
+   * ίδιο δίδυμο *(840 KB ×2, ίδιο md5, μηδέν καταναλωτές στο `src/`)*. Γι' αυτό το
+   * κριτήριο ρωτά για **κάθε** αρχείο του `public/data/`, όχι για ένα με το όνομά του:
+   * ένα κριτήριο καρφωμένο στο δείγμα θα άφηνε το δεύτερο δίδυμο ζωντανό.
+   *
+   * 🔑 **Η γέννηση του διδύμου είναι καταγεγραμμένη**: commit `12f97cd8`
+   * *«fix(data): load administrative+service JSON via fetch from /public»* — αντέγραψε
+   * και τα δύο στο `public/`, και **ξέχασε να σβήσει** τα πρωτότυπα.
    */
-  it('υπάρχει ΑΚΡΙΒΩΣ ΕΝΑ administrative-hierarchy.json στο δέντρο', () => {
-    const copies = [PUBLIC_PATH, BUNDLED_PATH].filter((path) => existsSync(path));
-    expect(copies).toEqual([PUBLIC_PATH]);
+  it('κανένα αρχείο του `public/data/` δεν έχει δίδυμο στο `src/data/`', () => {
+    const twins = readdirSync(PUBLIC_DIR).filter((name) =>
+      existsSync(join(BUNDLED_DIR, name)),
+    );
+    expect(twins).toEqual([]);
   });
 });
 

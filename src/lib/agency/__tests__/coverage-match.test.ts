@@ -13,7 +13,9 @@
  * Με το παλιό μοντέλο «έδρα + ακτίνα επισκέπτη» ήταν **δομικά** αόρατος στην Κασσάνδρα.
  */
 
-import hierarchy from '@/data/administrative-hierarchy.json';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import {
   coverageMatches,
   coverageRelation,
@@ -33,9 +35,22 @@ interface RawEntity {
   readonly p: string | null;
 }
 
-const BY_ID = new Map<string, RawEntity>(
-  (hierarchy as { data: readonly RawEntity[] }).data.map((entity) => [entity.id, entity]),
-);
+/**
+ * 🔴 **ΔΙΑΒΑΖΕΤΑΙ ΑΠΟ ΤΟΝ ΔΙΣΚΟ, ΟΧΙ ΜΕ `import`** *(ADR-846 Φ4)*.
+ *
+ * Μέχρι τις 2026-09-08 εδώ έγραφε `import hierarchy from '@/data/…'` — και το αρχείο
+ * υπήρχε **δύο φορές** *(`src/data/` + `public/data/`, ίδιο md5, 4,17 MB το καθένα)*. Ο
+ * φυλλομετρητής και ο διακομιστής διάβαζαν το **δημόσιο**· αυτή η άγκυρα το **άλλο**.
+ * Δηλαδή η μόνη απόδειξη ότι ο κριτής δουλεύει με πραγματικές ταυτότητες κοιτούσε
+ * αντίγραφο που **κανείς δεν σερβίρει** — και θα έμενε πράσινη ενώ η παραγωγή έσπαγε.
+ */
+const HIERARCHY_PATH = join(process.cwd(), 'public', 'data', 'administrative-hierarchy.json');
+
+const hierarchy = JSON.parse(readFileSync(HIERARCHY_PATH, 'utf8')) as {
+  readonly data: readonly RawEntity[];
+};
+
+const BY_ID = new Map<string, RawEntity>(hierarchy.data.map((entity) => [entity.id, entity]));
 
 /**
  * ⚠️ **Ξαναγράφεται εδώ επίτηδες, και ΔΕΝ είναι κλώνος του `lineageIdsOf`**: εκείνο

@@ -4,7 +4,7 @@
  * Loads the registry JSON lazily on first use and provides
  * a search function that returns ComboboxOption[] for SearchableCombobox.
  *
- * @see src/data/public-services-registry.json
+ * @see public/data/public-services-registry.json — **η μία αυθεντία** (ADR-846 Φ4)
  */
 
 import { useState, useEffect, useMemo } from 'react';
