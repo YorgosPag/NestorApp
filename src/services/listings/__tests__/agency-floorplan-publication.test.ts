@@ -156,16 +156,19 @@ beforeEach(() => {
 // ============================================================================
 
 describe('Φ1 — Η ΚΑΤΟΨΗ ΦΤΑΝΕΙ ΣΤΟΝ ΚΑΝΟΝΑ', () => {
-  it('🔴 το ερώτημα ζητά ΚΑΙ ΤΟΥΣ ΔΥΟ ΚΑΔΟΥΣ — ποτέ μόνο `photos`', async () => {
+  it('🔴 το ερώτημα ζητά ΚΑΘΕ δημοσιεύσιμο κάδο — ποτέ μόνο `photos`', async () => {
     filesInCollection = [PHOTO];
 
     await republishListing(adminDb, LISTING, property(), resolveAgency);
 
+    // 🔴 **ΤΡΙΤΟΣ ΚΑΔΟΣ ΣΤΟ ΒΗΜΑ Γ (ADR-845, 2026-09-08)** — τα 3D μοντέλα. Η κυριολεκτική
+    //    λίστα μένει: αυτή η άγκυρα ρωτά *«δεν στένεψε το ερώτημα;»*, και μια σύγκριση με τη
+    //    σταθερά θα απαντούσε **πάντα ναι**.
     expect(askedFilters).toEqual([
       ['companyId', '==', COMPANY],
       ['entityType', '==', 'property'],
       ['entityId', '==', LISTING],
-      ['category', 'in', ['photos', 'floorplans']],
+      ['category', 'in', ['photos', 'floorplans', 'models']],
     ]);
   });
 

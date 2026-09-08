@@ -178,8 +178,15 @@ function mapRawToEntity(raw: RawEntity): AdminEntity {
  * του διακομιστή ή το HTML fallback του SPA δίνει `TypeError: … is not iterable` **μέσα
  * σε render**, και το δημόσιο `/pro` **εξαφανίζεται**. Πετώντας εδώ, η αποτυχία
  * γίνεται κανονική «δεν ξέρω».
+ *
+ * 🔑 **Εξάγεται για τον ίδιο λόγο που εξάγεται το `ADMIN_FOOTPRINTS_SOURCE`**: ο
+ * `lineageIdsOf` είναι **σύγχρονος** και διαβάζει module cache, άρα ο μόνος τρόπος να
+ * τον ελέγξει κανείς **όπως τρέχει** είναι να γεμίσει πρώτα το cache. Χωρίς αυτή την
+ * εξαγωγή, κάθε άγκυρα είναι υποχρεωμένη να **ξαναγράψει** τον περίπατο γενεαλογίας —
+ * δηλαδή να επαληθεύσει τη φαντασία της αντί για τον κώδικα (N.18). ⚠️ Καταναλωτής σε
+ * χρόνο εκτέλεσης παραμένει **ένας**: το {@link useAdministrativeHierarchy}.
  */
-const HIERARCHY_SOURCE = createLazyJsonSnapshot<HierarchySnapshot>({
+export const HIERARCHY_SOURCE = createLazyJsonSnapshot<HierarchySnapshot>({
   url: '/data/administrative-hierarchy.json',
   build: (payload) => {
     const rawData = payload as Partial<RawData>;
