@@ -717,7 +717,7 @@
       "coverageSearchEmpty": "No area matches what you typed",
       "coverageEmpty": "You have declared no area. People will find you by specialty, not by place.",
       "coverageRemove": "Remove: {area}",
-      "coverageAbsorbed": "“{narrow}” already lies inside “{wide}” — the wider one was kept.",
+      "coverageAbsorbed": "{count, plural, one {“{narrow}” already lies inside “{wide}” — the wider one was kept.} other {# areas you had declared already lie inside “{wide}” — the wider one was kept.}}",
       "coverageLoading": "Loading the administrative divisions…",
       "coverageAreaUnknown": "One of the areas you declared was not found. Please pick it again.",
       "noChannel": "The storefront publishes no phone number and no email. The only action it offers is a written request with a date and terms — as the law requires for a brokerage contract.",

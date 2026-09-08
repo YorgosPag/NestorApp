@@ -14,7 +14,7 @@
     "src/i18n/generated/routes/o__workspace__listings__mandates__new.el.json": "f727ff8f3fa190d5f9c785e785404aee2104a7ec2a032a6e9f00ba177f66ff4e",
     "src/i18n/generated/routes/o__workspace__listings__mandates__ownerPropertyId.el.json": "53b8a69df480afaffc315b57eec3b28be9037d68e77d1b96d7ee1b71b403c575",
     "src/i18n/generated/routes/o__workspace__listings__mandates__requests.el.json": "3b685808152db56cfc0ce4d50912bcd6166e986921ebb92e601cbef9936c0a0b",
-    "src/i18n/generated/routes/o__workspace__settings__agency-profile.el.json": "1820a2d1351ee5d17e0b69da3c760c09b5a76ae16aa65ce87f7f353f8c820d19",
+    "src/i18n/generated/routes/o__workspace__settings__agency-profile.el.json": "227cb6ed3d90c6552d1b61d358313152e488c9ab8d3547a6c57e838040aca58c",
     "src/i18n/generated/routes/o__workspace__settings__brokerage.el.json": "6f86c3b2066bbd272fac89cddb49471e3bb123f002bd7d1709b6d9d4ab4efe69",
     "src/i18n/generated/routes/offers.el.json": "d33193ccad2e87854ef1f4cd993b27c6d0818d32a425994f7b6dba2258ab95fc",
     "src/i18n/generated/routes/offers__mandate__new.el.json": "34f040b9e35404412ab9dfe647fb615b02f8a061336a7abc8b74ab4ac6e8ea50",
@@ -67,7 +67,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "34a42131e07adbaed5513014b22bc96c3aab79aab482430d19be585aa1067c69",
+  "inputsSha256": "b5339e97108c2eb5fd2bbf3bfdbf06a5b6e41a5817a0294c93ad53ecade0bb90",
   "languages": [
     "el"
   ],
@@ -381,7 +381,7 @@
     "src/lib/listings/listing-completion-slice.ts": "14b5ad11d6cb6385239118f18b4e9258c1d7d7a30894a29c7e5c6be81acf0210",
     "src/lib/listings/listing-families.ts": "a9b4a37a0c45edd65a61bdc5dcc13f177f9faf90b5271a77cb7bf67006a7d175",
     "src/lib/listings/listing-map-bounds.ts": "7512b3380a65661b2bac614afafc6cc34f8b8dfbd832a975c9fc7c72510cb86b",
-    "src/lib/listings/listing-material.ts": "421561f57bc164eafb924d7ffb9746a79a54833e82af60670078a7e7d513c1d3",
+    "src/lib/listings/listing-material.ts": "943ac8ded630ac66f4c0bb8a671281f281b9411292d6018242a073a4fd8c4810",
     "src/lib/listings/listing-price-markers.ts": "6277dc920fc28534417fa7534a3954c48f28d6c022d987457066e32904c7f6cf",
     "src/lib/listings/listing-results-order.ts": "0217f1fd78ddfca3269e68850087b572de49ec784c12633996ce09fc17322819",
     "src/lib/listings/listing-shape-keys.ts": "4434106cb898c44d3c147ffb8252babda539af9f1776f5244566cb73c7963126",
@@ -460,9 +460,10 @@
     "src/services/listings/listed-at-stamp.ts": "f4e194f22728b08d8e1327fdfc81706432daa875cd311299f4ba69f21d5d7ddd",
     "src/services/listings/listing-resolver.ts": "03ad90790d811f14ddb6d50e437bf825eb4f642786e7f99b40e5b143f7dd1014",
     "src/services/listings/public-listing-attributes.ts": "79ec9f80b660c026e2f07e14ee4d5c4dd366dc1ef51eab2a2ee4a2f214f0f7c0",
+    "src/services/listings/public-listing-gallery-projection.ts": "f0e143e5ea5580f58e6b9d0df1d65eb04e43cec83669e22a6a6b039990021e39",
     "src/services/listings/public-listing-position.ts": "5c0bf072f03972c3cb4d3ed6bbdd54b5aa43335f2741a9d8e19a7b8f4996bc9e",
     "src/services/listings/public-listing-projection-types.ts": "38a4eea96f44f73010765e93a8521eb5fb4f7d1c4e171d4f246a1c4e18491bce",
-    "src/services/listings/public-listing-projection.ts": "f67f0ded23826ffafac60f7093768baeef46235bd6a141cfe1b7e69c1df98d2c",
+    "src/services/listings/public-listing-projection.ts": "270de301cdaa28855060fd39f998a0e36adbb5768f2cd027e2ff9d776ac46ae0",
     "src/services/listings/public-shelf-border.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/services/listings/public-shelf-plan.ts": "2f12eac97dec9bb56701713bc339fa989a44f6b543a9f43b520f69bcd14f26f1",
     "src/services/listings/public-shelf-sanitise.ts": "e538e2900d910707c908c8fdd706c34e8cd504837c7630d5df1508176a82e28c",
@@ -482,7 +483,8 @@
     "src/services/mandate/mandate-inbox.service.ts": "9e777bad2116a4822d78a4e3162ccc3a8f0887b8b008074cc473a7633c423405",
     "src/services/mandate/mandate-invitation.service.ts": "2c8edb86c7dfd354abf11d71bc68bd54f6d595c968fd36188fa5cea0608e5b6a",
     "src/services/mandate/mandate-request-vocabulary.ts": "4d704e90135da7facf1f3fe55f9eb3801b21ca006ce61fa0a48227b77850eb5d",
-    "src/services/mandate/showcase-mark-publication.ts": "bb5cae5e4ee5261bc72cca2ef6f8a568334b04b3db4d17969bb2aaacfc0a9796",
+    "src/services/mandate/showcase-mark-publication.ts": "a7efa19149e02c4a1adbd495b943e19f1b02e4b2befb5156297827a63275badb",
+    "src/services/mandate/showcase-mark-source.ts": "1068e1fdcf3576a0b1889f0a7c35e804a9ba833b482726c7a629d40d73851324",
     "src/services/onboarding/onboarding-types.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/services/owner-property/owner-property-publication.service.ts": "168f55b83dbfe7b98ea64106a2e414a7a9fc518290d62a872b12846268fd20aa",
     "src/services/owner-property/owner-property-write-result.ts": "f3242ab2df3c8e39c387a63ce6d9d25d986478d3d86bd9519e05a05cff7f55a5",
@@ -4346,7 +4348,7 @@
     "src/lib/listings/listing-search-area.ts": "26b5ee20a65e6532e8d5dcefca46c541b4be34d0382ab1691c0b077184470547",
     "src/lib/listings/listing-showcase-order.ts": "0b419572fec4e0efd798b6ffdd15ac4385be8430ecc9785dd48e1ad550ea8556",
     "src/lib/listings/public-listing-from-document.ts": "e33b7e6e07bd55f364bbf3a6ae91981593417cd9a1d3dfea3b658bcb72b072f4",
-    "src/lib/listings/public-listing-schema.ts": "acbf4f968a5cc978fc3b41eaa135ea3570c7b46a5d1b1f503ca36237130f3a69",
+    "src/lib/listings/public-listing-schema.ts": "ffc67af3c6baf85031263eb284a40d030957ee4f0d69112ffce7651f0855dafa",
     "src/lib/location/location-provenance.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/media/media-mime.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/occupancy/occupancy-conflict.ts": "fce79b54f1996729dc9363d98711e50108304d4af0b7ae5f4650d5f4a76d3149",
@@ -4584,7 +4586,7 @@
     "matchedKeys": 171,
     "routeBoundaries": 0,
     "shellFiles": 587,
-    "sliceBytes": 394453
+    "sliceBytes": 394639
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
