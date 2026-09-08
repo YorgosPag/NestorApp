@@ -69,6 +69,7 @@ import type { PublicShowcase, ShowcaseCredential } from '@/types/agency-profile'
 import type { PlaceRef } from '@/types/geo/public-place';
 import type { DeclaredCoverage } from '@/types/agency-coverage';
 import { CoverageAreaPicker } from './CoverageAreaPicker';
+import { CoverageAgreementNotice } from './CoverageAgreementNotice';
 import { formatLongDate } from '@/lib/intl-formatting';
 // ⚠️ **Ο σύνδεσμος από το ΣΥΝΟΡΟ** (CHECK 3.61): το πρόθεμα χώρου το προσθέτει εκείνο.
 //    Ένα ωμό `next/link` εδώ θα έστελνε τον μεσίτη σε `/settings/brokerage` **χωρίς
@@ -286,6 +287,11 @@ export function AgencyShowcaseContent(): React.ReactElement {
           «το ίδιο με άλλη ακρίβεια» — και είναι **διαφορετική ερώτηση**: η έδρα
           επαληθεύεται από τη γη, η εμβέλεια είναι πρόθεση που δηλώνει μόνος του. */}
       <CoverageAreaPicker value={coverage} onChange={setCoverage} home={published?.position ?? null} />
+
+      {/* 🔴 **ΤΟ `terraform plan` ΤΗΣ ΔΗΛΩΣΗΣ** (ADR-846 §8.8, Φ5β) — αμέσως από κάτω,
+          γιατί αφορά **αυτό** που μόλις άλλαξε. Σιωπά όταν δεν έχει κάτι να πει: όχι
+          ακίνητα εκτός, ή — το συνηθέστερο σήμερα — **δεν ξέρουμε** πού είναι. */}
+      <CoverageAgreementNotice value={coverage} onChange={setCoverage} />
 
       {/*
         🏆 ADR-841 §7 Α21, Φάση 2 — ΤΟ ΣΗΜΑ, ΚΑΙ ΕΙΝΑΙ ΤΟ ΜΟΝΟ ΠΕΔΙΟ ΠΟΥ ΔΕΝ ΠΕΡΙΜΕΝΕΙ

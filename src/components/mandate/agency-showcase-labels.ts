@@ -88,6 +88,26 @@ export const SHOWCASE_KEYS = {
   coverageLoading: `${K}.coverageLoading`,
   /** Δηλωμένη περιοχή που δεν υπάρχει στην ιεραρχία ⇒ *«διάλεξέ την ξανά»*. */
   coverageAreaUnknown: `${K}.coverageAreaUnknown`,
+
+  // ── Η ΣΥΜΦΩΝΙΑ ΔΗΛΩΣΗΣ ↔ ΠΡΟΣΦΟΡΑΣ (ADR-846 Φάση 5β) ─────────────────────
+  /**
+   * 🔴 **Η ΔΗΜΟΣΙΕΥΣΗ ΗΤΑΝ ΣΙΩΠΗΛΑ ΚΑΤΑΣΤΡΟΦΙΚΗ.** Ο επαγγελματίας που δήλωνε
+   * εμβέλεια χωρίς τις περιοχές των **ήδη δημοσιευμένων** ακινήτων του
+   * εξαφανιζόταν από εκεί όπου αποδεδειγμένα δουλεύει — και **κανείς δεν του το
+   * έλεγε**. Αυτά τα κλειδιά είναι το `terraform plan` της δήλωσης: *τι θα
+   * αλλάξει, μετρημένο, **πριν** το «Δημοσίευση»*.
+   */
+  coverageAgreementTitle: `${K}.coverageAgreementTitle`,
+  /** ⚠️ **Δύο αριθμοί, ένα plural**: `{count}` τα εκτός, `{total}` τα συνολικά. */
+  coverageAgreementOutside: `${K}.coverageAgreementOutside`,
+  /** 🔑 *«Οι αγγελίες παραμένουν ορατές»* — η **μη**-συνέπεια λέγεται κι αυτή. */
+  coverageAgreementConsequence: `${K}.coverageAgreementConsequence`,
+  /** ⚠️ Υποκείμενο **εμείς**: *«δεν ξέρουμε»*, ποτέ *«δεν δήλωσες»*. */
+  coverageAgreementUnknown: `${K}.coverageAgreementUnknown`,
+  /** Η **μόνη** αυτόματη επιδιόρθωση που είναι υπολογίσιμη: μεγαλύτερο βήμα ακτίνας. */
+  coverageAgreementExtendRadius: `${K}.coverageAgreementExtendRadius`,
+  /** Όταν δεν υπάρχει υπολογίσιμη πρόταση — **ποτέ** μαντεψιά περιοχής. */
+  coverageAgreementNoAutoFix: `${K}.coverageAgreementNoAutoFix`,
   /** Ακτίνα εκτός του κλειστού καταλόγου — δεύτερη ζώνη, η οθόνη δεν την παράγει. */
   coverageRadiusInvalid: `${K}.coverageRadiusInvalid`,
   /** Η ερώτηση του τρόπου δήλωσης: διοικητικές περιοχές, ακτίνα ή χαραγμένο σχήμα; */

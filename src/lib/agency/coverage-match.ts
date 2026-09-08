@@ -65,7 +65,7 @@ import {
   type ShowcaseWhere,
 } from '@/types/agency-coverage';
 import type { GeoFootprint, FootprintResolver } from '@/types/geo/admin-footprint';
-import type { GeoOutline } from '@/types/geo/coordinates';
+import type { GeoCircle, GeoOutline } from '@/types/geo/coordinates';
 
 /**
  * **Η γραμμή μιας οντότητας προς τη ρίζα, ΜΕ ΤΟΝ ΕΑΥΤΟ ΤΗΣ ΜΕΣΑ.**
@@ -398,4 +398,43 @@ export function normalizeCoverageIds(
     const strictAncestors = lineageOf(id).filter((ancestorId) => ancestorId !== id);
     return !strictAncestors.some((ancestorId) => declared.has(ancestorId));
   });
+}
+
+
+/**
+ * **Η ΔΗΛΩΣΗ ΕΝΑΝΤΙΟΝ ΜΙΑΣ ΓΝΩΣΤΗΣ ΠΕΡΙΟΧΗΣ ΤΟΥ ΚΟΣΜΟΥ** — όχι ερώτημα επισκέπτη.
+ *
+ * ═════════════════════════════════════════════════════════════════════════════
+ * 🔴 ΓΙΑΤΙ ΞΕΧΩΡΙΣΤΟ ΟΝΟΜΑ ΓΙΑ ΤΡΕΙΣ ΓΡΑΜΜΕΣ ΠΟΥ ΔΕΝ ΚΑΝΟΥΝ ΤΙΠΟΤΑ ΝΕΟ
+ *
+ * Ο {@link coverageRelation} απαντά *«καλύπτει η δήλωση **αυτό που ρωτά ο
+ * επισκέπτης**;»* — και το `ShowcaseWhere` **το λέει στο όνομά του**. Από τη Φάση 5
+ * *(ADR-846 §8.8)* η ίδια μηχανή χρειάζεται για **άλλη** ερώτηση: *«πέφτει **αυτό το
+ * ακίνητο** μέσα στη δήλωση;»*. Το ακίνητο **δεν είναι επισκέπτης**, και ένα σκέτο
+ * `coverageRelation(coverage, { circle: area }, …)` στον καλούντα θα διάβαζε *«η αγγελία
+ * ψάχνει»* — δηλαδή ο τύπος θα ήταν σωστός και **η πρόταση ψέμα**.
+ *
+ * 🔑 **Ίδιο ιδίωμα με τα `declared`/`asked` του {@link footprintRelation}**: εκεί τα
+ * ονόματα εμποδίζουν την **αντιστροφή**· εδώ το όνομα εμποδίζει τη **σύγχυση ρόλου**.
+ * Καμία γραμμή λογικής δεν αντιγράφεται — αν αντιγραφόταν, θα ήταν το σχήμα ADR-749.
+ *
+ * ⚠️ **Το `radiusKm === 0` είναι ΝΟΜΙΜΟ εδώ, και είναι ο συνήθης κλάδος.** Το
+ * `LISTING_UNCERTAINTY_KM` δίνει **0** για `pin`/`outline` *(«ξέρουμε ακριβώς»)*, οπότε
+ * το αποτύπωμα γίνεται `inner === outer === 0`. Τότε το `intersects`
+ * **αυτο-αποκλείεται** — και οι δύο κλάδοι που το παράγουν απαιτούν `asked.innerKm > 0` —
+ * και αυτό είναι **σημασιολογικά σωστό**: ένα σημείο δεν τέμνει· είναι μέσα, έξω, ή
+ * άγνωστο. Ο τύπος **δεν χρειάστηκε νέα τιμή**, και αυτό είναι απόδειξη ότι η τετράδα
+ * της Φάσης 2 ήταν σωστή, όχι σύμπτωση.
+ * ═════════════════════════════════════════════════════════════════════════════
+ *
+ * @param coverage **η δήλωση** — «πού δουλεύω»
+ * @param area **η περιοχή του κόσμου** — π.χ. το `listingSearchArea` μιας αγγελίας,
+ *   δηλαδή *«πού μπορεί να βρίσκεται»* **μαζί με την αβεβαιότητά του**
+ */
+export function coverageOverCircle(
+  coverage: DeclaredCoverage | null,
+  area: GeoCircle,
+  resolvers: CoverageResolvers,
+): CoverageRelation {
+  return coverageRelation(coverage, { circle: area }, resolvers);
 }
