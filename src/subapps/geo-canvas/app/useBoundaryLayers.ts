@@ -8,6 +8,7 @@
 import { useState, useCallback } from 'react';
 import { GEO_COLORS } from '../config/color-config';
 import { generateLayerId } from '@/services/enterprise-id.service';
+import { cameraFlight } from '@/lib/geo/camera-motion';
 import type { MapInstance } from '../hooks/map/useMapInteractions';
 
 // ============================================================================
@@ -93,7 +94,9 @@ export function useBoundaryLayers(mapRef: React.RefObject<MapInstance | null>) {
     setTimeout(() => setSearchMarker(null), 30000);
 
     if (mapRef.current) {
-      mapRef.current.flyTo({ center: [lng, lat], zoom: 16, duration: 2000, essential: true });
+      // ♿ Το `essential: true` έφυγε: ακύρωνε ΡΗΤΑ το `prefers-reduced-motion` στις δύο
+      //    μακρύτερες κινήσεις της εφαρμογής. Δες `lib/geo/camera-motion.ts`.
+      mapRef.current.flyTo({ center: [lng, lat], zoom: 16, ...cameraFlight('travel') });
     }
   }, [mapRef]);
 
@@ -160,7 +163,7 @@ export function useBoundaryLayers(mapRef: React.RefObject<MapInstance | null>) {
         }
 
         if (center) {
-          mapRef.current.flyTo({ center, zoom, duration: 2000, essential: true });
+          mapRef.current.flyTo({ center, zoom, ...cameraFlight('travel') });
         }
       } catch (error) {
         console.warn('Failed to center map on boundary:', error);

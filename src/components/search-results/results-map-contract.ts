@@ -15,6 +15,7 @@
  * μια μέθοδο της βιβλιοθήκης. Συγχωνευμένα, το σύνορο θα κουβαλούσε σημασιολογία.
  */
 
+import { cameraFraming } from '@/lib/geo/camera-motion';
 import type { GeoBoundingBox } from '@/types/geo/coordinates';
 
 import type { MapAreaSource } from './results-map-area';
@@ -69,11 +70,42 @@ export function listingIdOf(event: MapPointerEvent): string | null {
   const id = event.features?.[0]?.properties?.id;
   return typeof id === 'string' ? id : null;
 }
-/** Πόσο κενό αφήνει κάθε καδράρισμα, και ως πού ζουμάρει. **Μία** απάντηση, τρεις καλούντες. */
-const FIT_OPTIONS = { padding: 64, maxZoom: 15, duration: 0 } as const;
+/**
+ * **Πώς καδράρει ο χάρτης των αποτελεσμάτων** — μία απάντηση, **τέσσερις** καλούντες.
+ *
+ * 🔑 **Οι τρεις σιωπηλοί αριθμοί έγιναν τρεις δηλωμένες απαντήσεις** *(ADR κίνησης
+ * κάμερας)*, και καμία τιμή δεν άλλαξε — άλλαξε **ποιος τις ξέρει**:
+ *
+ * | ερώτηση | απάντηση | τι σήμαινε ο αριθμός |
+ * |---|---|---|
+ * | είδε ο άνθρωπος από πού φεύγει; | **`arrive`** | `duration: 0` |
+ * | τι κάθεται στην άκρη του κάδρου; | **`label`** | `padding: 64` — ετικέτες τιμών |
+ * | τι ισχυρίζεται το κάδρο; | **`suggested`** | `maxZoom: 15` |
+ *
+ * 🔴 **Το `arrive` ΔΕΝ είναι «χωρίς κίνηση επειδή είναι φθηνότερο».** Και οι δύο στιγμές
+ * που καδράρουν εδώ είναι στιγμές όπου ο άνθρωπος **δεν είδε ποτέ** το «από»: το πρώτο
+ * βάψιμο με τα δεδομένα, και το άνοιγμα κοινοποιημένου συνδέσμου `?box=…`. Μια πτήση
+ * χωρίς «από» δεν επικοινωνεί τίποτα· εδώ θα ήταν **και χειρότερα**, γιατί το κάδρο
+ * ξαναϋπολογίζεται πάνω στην κίνηση του ίδιου του ανθρώπου ⇒ ορατό **τίναγμα**.
+ */
+const FIT_OPTIONS = cameraFraming('arrive', 'label', 'suggested');
 
 /**
- * Κάδραρε τον χάρτη σε ένα ορθογώνιο.
+ * Κάδραρε τον χάρτη σε ένα **έτοιμο** ορθογώνιο MapLibre `[[δ,ν],[α,β]]`.
+ *
+ * 🔑 **Υπάρχει επειδή το `ResultsMap` έγραφε `{ padding: 64, maxZoom: 15, duration: 0 }`
+ * ΔΥΟ ΦΟΡΕΣ inline** — ενώ το `FIT_OPTIONS` καθόταν σε **αυτό ακριβώς** το αρχείο,
+ * δίπλα του. Τρία σημεία που έπρεπε να συμφωνούν με το χέρι, χωρίς τίποτα να το ελέγχει.
+ */
+export function fitMapToBounds(
+  target: MapEventTarget,
+  bounds: [[number, number], [number, number]],
+): void {
+  target.fitBounds(bounds, FIT_OPTIONS);
+}
+
+/**
+ * Κάδραρε τον χάρτη σε μια **περιοχή του τομέα** (`GeoBoundingBox`).
  *
  * 🔑 **Υπάρχει επειδή οι καλούντες είναι ΤΡΕΙΣ** *(αρχικό καδράρισμα στα δεδομένα ·
  * καδράρισμα στη δηλωμένη περιοχή · η ίδια πράξη τη στιγμή που ετοιμάζεται ο χάρτης)*
@@ -86,11 +118,8 @@ const FIT_OPTIONS = { padding: 64, maxZoom: 15, duration: 0 } as const;
  * το ίδιο το σχήμα μπορεί να μην κάνει (Α5).
  */
 export function fitMapToArea(target: MapEventTarget, area: GeoBoundingBox): void {
-  target.fitBounds(
-    [
-      [area.west, area.south],
-      [area.east, area.north],
-    ],
-    FIT_OPTIONS
-  );
+  fitMapToBounds(target, [
+    [area.west, area.south],
+    [area.east, area.north],
+  ]);
 }

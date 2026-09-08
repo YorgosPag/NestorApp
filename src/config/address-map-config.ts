@@ -46,12 +46,6 @@ export const ADDRESS_MAP_CONFIG = {
   DEFAULT_ZOOM: 15,
 
   /**
-   * Maximum zoom level
-   * 18 = Building level (για detailed view)
-   */
-  DEFAULT_MAX_ZOOM: 18,
-
-  /**
    * Minimum zoom level
    * 10 = Neighborhood level (context view)
    */
@@ -77,19 +71,18 @@ export const ADDRESS_MAP_CONFIG = {
   },
 
   // ===========================================================================
-  // FIT BOUNDS CONFIGURATION
+  // ⛔ ΚΑΔΡΑΡΙΣΜΑ — ΔΕΝ ΖΕΙ ΠΙΑ ΕΔΩ
   // ===========================================================================
-
-  /**
-   * Padding when fitting bounds to markers
-   * Pattern: Google Maps fitBounds padding
-   */
-  FIT_BOUNDS_PADDING: {
-    top: 50,
-    bottom: 50,
-    left: 50,
-    right: 50
-  },
+  //
+  // 🔴 Τα `FIT_BOUNDS_PADDING: 50`, `DEFAULT_MAX_ZOOM: 18` και
+  //    `ANIMATION.FIT_BOUNDS: 1000` ήταν **η τρίτη από τρεις ανεξάρτητες
+  //    κεντρικοποιήσεις** που δεν γνωρίζονταν μεταξύ τους — καθεμιά «κεντρική» για τη
+  //    δική της οθόνη, και οι τρεις μαζί ο λόγος που ο ίδιος χάρτης πετούσε αλλού
+  //    900 ms και αλλού πηδούσε ακαριαία.
+  //
+  // ✅ Η μία αρχή είναι το **`@/lib/geo/camera-motion`**. Το `50` δεν είχε μέτρηση
+  //    πίσω του *(έγραφε «Pattern: Google Maps fitBounds padding»)*, ενώ το `18`
+  //    είχε — και **επιβίωσε ονομασμένο** ως `'confirmed'`.
 
   // ===========================================================================
   // ANIMATION SETTINGS
@@ -100,9 +93,6 @@ export const ADDRESS_MAP_CONFIG = {
    * Pattern: Material Design motion guidelines
    */
   ANIMATION: {
-    /** fitBounds animation duration (smooth, professional) */
-    FIT_BOUNDS: 1000,
-
     /** Marker highlight animation duration (quick, responsive) */
     MARKER_HIGHLIGHT: 300
   },

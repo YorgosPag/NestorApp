@@ -42,6 +42,7 @@ import type { GeoBoundingBox } from '@/types/geo/coordinates';
 import { readMapArea, sameMapArea } from './results-map-area';
 import {
   fitMapToArea,
+  fitMapToBounds,
   listingIdOf,
   type MapEventTarget,
   type MapMoveEvent,
@@ -281,11 +282,10 @@ export function ResultsMap({
     // ⚠️ Ο έλεγχος του κλειδώματος είναι **πρώτος**: δες {@link ResultsMapProps.searchArea}.
     if (!target || !bounds || searchAreaRef.current !== null) return;
 
-    // ⚠️ `padding` **υποχρεωτικό**: χωρίς αυτό μια πινέζα στην άκρη κάθεται πάνω στο
-    // σύνορο και μοιάζει κομμένη· και `maxZoom`, γιατί ΕΝΑ αποτέλεσμα δίνει ορθογώνιο
-    // μηδενικού εμβαδού — ο χάρτης θα ζουμάριζε σε επίπεδο δρόμου, ισχυρισμός
-    // ακρίβειας που το ίδιο το σχήμα μπορεί να μην κάνει.
-    target.fitBounds(bounds, { padding: 64, maxZoom: 15, duration: 0 });
+    // ⚠️ Το περιθώριο, το ταβάνι ζουμ και η ακαριαία άφιξη **δεν γράφονται εδώ**: ήταν
+    // αντιγραμμένα inline δύο φορές, δίπλα στο αρχείο που τα κρατούσε ήδη. Ο λόγος
+    // κάθε μιας είναι γραμμένος στο `fitMapToBounds`.
+    fitMapToBounds(target, bounds);
   }, [bounds]);
 
   /**
@@ -332,7 +332,7 @@ export function ResultsMap({
       framedAreaRef.current = readyArea;
       fitMapToArea(target, readyArea);
     } else if (readyBounds) {
-      target.fitBounds(readyBounds, { padding: 64, maxZoom: 15, duration: 0 });
+      fitMapToBounds(target, readyBounds);
     }
 
     /*

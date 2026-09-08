@@ -55,6 +55,8 @@ import type { ProjectAddress } from '@/types/project/addresses';
 import { getGeocodableAddresses } from '@/types/project/address-helpers';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { ADDRESS_MAP_CONFIG } from '@/config/address-map-config';
+import { cameraFlight } from '@/lib/geo/camera-motion';
+import { createUserLocationMarkerElement } from './user-location-marker';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { getStatusColor } from '@/lib/design-system';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -169,10 +171,21 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
 
     const map = mapRef.current;
 
+    /*
+      Ο άνθρωπος **κοιτούσε** τον χάρτη όταν πάτησε «Εντοπισμός»: υπάρχει «από», άρα
+      αξίζει πτήση. ⚠️ Η διάρκεια **δεν** γράφεται — ο van Wijk τη βγάζει από την
+      απόσταση, και εδώ η απόσταση είναι απρόβλεπτη εξ ορισμού *(ο άνθρωπος μπορεί να
+      είναι δίπλα ή σε άλλη ήπειρο)*. Τα παλιά `1000 ms` ήταν σταθερά **ακριβώς εκεί
+      που η σταθερά έχει το λιγότερο νόημα**.
+
+      🔑 Και το ζουμ έπαψε να είναι σκέτο `15`: το `DEFAULT_ZOOM` υπήρχε ήδη στο
+      `ADDRESS_MAP_CONFIG` με **μηδέν καταναλωτές**, ενώ δίπλα του γραφόταν ο ίδιος
+      αριθμός στο χέρι.
+    */
     map.flyTo({
       center: [userPosition.longitude, userPosition.latitude],
-      zoom: 15,
-      duration: 1000,
+      zoom: ADDRESS_MAP_CONFIG.DEFAULT_ZOOM,
+      ...cameraFlight('travel'),
     });
 
     if (userMarkerRef.current) {
@@ -180,23 +193,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
       userMarkerRef.current = null;
     }
 
-    const el = document.createElement('div');
-    el.className = 'user-location-marker';
-    // eslint-disable-next-line design-system/no-hardcoded-colors
-    el.innerHTML = `
-      <div style="position:relative;width:32px;height:32px;display:flex;align-items:center;justify-content:center">
-        <span style="position:absolute;inset:0;border-radius:50%;background:rgba(34,197,94,0.25);animation:ping 1.5s cubic-bezier(0,0,0.2,1) infinite"></span>
-        <span style="position:absolute;inset:4px;border-radius:50%;background:rgba(34,197,94,0.15)"></span>
-        <span style="width:14px;height:14px;border-radius:50%;background:#22c55e;border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.3);position:relative"></span>
-      </div>
-    `;
-
-    if (!document.getElementById('user-loc-keyframes')) {
-      const style = document.createElement('style');
-      style.id = 'user-loc-keyframes';
-      style.textContent = '@keyframes ping{75%,100%{transform:scale(2);opacity:0}}';
-      document.head.appendChild(style);
-    }
+    const el = createUserLocationMarkerElement();
 
     const marker = new MapLibreMarker({ element: el, anchor: 'center' })
       .setLngLat([userPosition.longitude, userPosition.latitude])

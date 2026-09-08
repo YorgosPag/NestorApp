@@ -58,14 +58,15 @@ import {
   EdgeIndicatorArrow,
 } from '@/components/shared/addresses/address-map-edge-indicator';
 import type { AddressMapCandidate } from '@/components/shared/addresses/address-map-candidates';
+import { cameraFraming } from '@/lib/geo/camera-motion';
 
 /**
- * Ζουμ πάνω από το οποίο το «δες τα όλα» δεν ανεβαίνει: **ένας** υποψήφιος δίνει
- * ορθογώνιο μηδενικού εμβαδού, και χωρίς όριο ο χάρτης θα ζουμάριζε σε επίπεδο δρόμου —
- * ισχυρισμός ακρίβειας που μια γεωκωδικοποιημένη πρόταση δεν μπορεί να στηρίξει.
+ * 🔑 **ΤΑ ΔΥΟ ΙΔΙΩΤΙΚΑ ΟΡΙΑ ΕΦΥΓΑΝ** *(`FIT_MAX_ZOOM = 15` · `FIT_PADDING_PX = 56`)*.
+ * Ο λόγος του πρώτου ήταν σωστός και **επιβίωσε ονομασμένος** *(`'suggested'`: ένας
+ * υποψήφιος δίνει ορθογώνιο μηδενικού εμβαδού, και μια γεωκωδικοποιημένη πρόταση δεν
+ * στηρίζει ισχυρισμό ακρίβειας κτιρίου)*. Το δεύτερο **δεν είχε γραμμένο λόγο** — και
+ * ήταν το τρίτο από τέσσερα διαφορετικά περιθώρια για την ίδια ερώτηση.
  */
-const FIT_MAX_ZOOM = 15;
-const FIT_PADDING_PX = 56;
 
 export interface AddressMapCandidateLayerProps {
   /** Οι γραμμές του καταλόγου, **στη σειρά που τις δείχνει το πάνελ**. */
@@ -353,7 +354,12 @@ export function AddressMapCandidateLayer({
     for (const candidate of candidates) bounds.extend([candidate.lng, candidate.lat]);
     if (anchor) bounds.extend([anchor.lng, anchor.lat]);
     if (bounds.isEmpty()) return;
-    mapRef.fitBounds(bounds, { padding: FIT_PADDING_PX, maxZoom: FIT_MAX_ZOOM });
+    /*
+      ⚠️ **Η ΜΟΝΗ ΚΛΗΣΗ ΤΗΣ ΕΦΑΡΜΟΓΗΣ ΠΟΥ ΤΟ ΕΚΑΝΕ ΣΩΣΤΑ — ΚΑΤΑ ΛΑΘΟΣ.** Δεν περνούσε
+      `duration`, άρα ήταν η **μόνη** που άφηνε τον van Wijk να δουλέψει. Τώρα το κάνει
+      **επειδή το λέει**: `'label'` γιατί στην άκρη κάθεται σήμα υποψηφίου, όχι πινέζα.
+    */
+    mapRef.fitBounds(bounds, cameraFraming('travel', 'label', 'suggested'));
   }, [mapRef, candidates, anchor]);
 
   if (candidates.length === 0) return null;

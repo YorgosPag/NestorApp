@@ -28,7 +28,7 @@ import {
   type GeocodingServiceResult,
 } from '@/lib/geocoding/geocoding-service';
 import type { MapInstance } from '@/subapps/geo-canvas/hooks/map/useMapInteractions';
-import { ADDRESS_MAP_CONFIG } from '@/config/address-map-config';
+import { cameraFraming, type CameraIntent } from '@/lib/geo/camera-motion';
 import { createModuleLogger } from '@/lib/telemetry';
 import {
   type GeocodingStatus,
@@ -315,7 +315,7 @@ export function useAddressMapGeocoding({
    * Zoom the map so every pin (geocoded + drag-pending + unrendered fallback)
    * is visible. Single source of truth for bounds composition.
    */
-  const runFitBounds = useCallback(() => {
+  const runFitBounds = useCallback((intent: CameraIntent) => {
     if (!mapRef.current || !mapReady) return;
     try {
       const bounds = new LngLatBounds();
@@ -331,11 +331,19 @@ export function useAddressMapGeocoding({
         }
       }
       if (bounds.isEmpty()) return;
-      mapRef.current.fitBounds(bounds, {
-        padding: ADDRESS_MAP_CONFIG.FIT_BOUNDS_PADDING,
-        maxZoom: ADDRESS_MAP_CONFIG.DEFAULT_MAX_ZOOM,
-        duration: ADDRESS_MAP_CONFIG.ANIMATION.FIT_BOUNDS,
-      });
+      /*
+        🔑 **ΤΟ ΜΟΝΟ ΣΗΜΕΙΟ ΤΗΣ ΕΦΑΡΜΟΓΗΣ ΜΕ ΔΥΟ ΠΡΟΘΕΣΕΙΣ ΣΤΗΝ ΙΔΙΑ ΣΥΝΑΡΤΗΣΗ**, και
+        γι' αυτό η πρόθεση **δίνεται από τον καλούντα**: η **πρώτη** προσαρμογή είναι
+        άφιξη *(ο άνθρωπος δεν είδε ποτέ την προεπιλεγμένη προβολή· μια πτήση από εκεί
+        δεν επικοινωνεί τίποτα)*, ενώ κάθε **επόμενη** — προστέθηκε ή σβήστηκε πινέζα —
+        είναι ταξίδι *(κοιτούσε ένα καδραρισμένο σύνολο και το μετακινήσαμε)*.
+
+        ⚠️ Το `'confirmed'` επιτρέπει ζουμ **κτιρίου** (18) και είναι η μοναδική οθόνη
+        που το δικαιούται: εδώ οι πινέζες είναι **αποθηκευμένες** διευθύνσεις, όχι
+        προτάσεις γεωκωδικοποιητή — γι' αυτό το ίδιο ταβάνι είναι `15` στους υποψηφίους.
+        Οι δύο τιμές έμοιαζαν με ασυνέπεια· είναι **δύο διαφορετικές δηλώσεις ακρίβειας**.
+      */
+      mapRef.current.fitBounds(bounds, cameraFraming(intent, 'pin', 'confirmed'));
     } catch (error) {
       logger.error('fitBounds failed:', { error });
     }
@@ -344,9 +352,14 @@ export function useAddressMapGeocoding({
   // Trigger 1 — View mode: auto-fit whenever the geocoded set changes. Skipped
   // in edit mode so a careful zoom-in + drag is not immediately reversed by
   // an auto-fit triggered by the new drag position or freshly geocoded entry.
+  const hasFittedViewRef = useRef(false);
   useEffect(() => {
-    if (draggableMarkers) return;
-    runFitBounds();
+    if (draggableMarkers) {
+      hasFittedViewRef.current = false;
+      return;
+    }
+    runFitBounds(hasFittedViewRef.current ? 'travel' : 'arrive');
+    hasFittedViewRef.current = true;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [geocodedAddresses, mapReady, draggableMarkers]);
 
@@ -372,7 +385,9 @@ export function useAddressMapGeocoding({
     lastGeocodedCountRef.current = geocodedCount;
     lastAddressCountRef.current = addressCount;
     if (lastEditFitRef.current && !countChanged) return;
-    runFitBounds();
+    // 🔑 Το `lastEditFitRef` απαντούσε **ήδη** «έχω καδράρει ξανά;» — δηλαδή «υπάρχει
+    //    ΑΠΟ;». Δεν χρειάστηκε νέα κατάσταση, μόνο να ερωτηθεί.
+    runFitBounds(lastEditFitRef.current ? 'travel' : 'arrive');
     lastEditFitRef.current = true;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draggableMarkers, mapReady, geocodedAddresses, addresses]);
