@@ -38,6 +38,7 @@ import {
 import { FILE_TYPE_CONFIG } from '@/config/file-upload-config';
 import { PUBLISHED_MEDIA_LIMIT } from '@/services/upload/utils/storage-path-public-shelf';
 import {
+  MODEL_MATERIAL,
   PHOTO_MATERIAL,
   declaredFloorplanMaterial,
   type ListingMaterial,
@@ -83,6 +84,19 @@ export type AgencyMediaCandidate = Pick<
 const DECODABLE_IMAGE_TYPES: readonly string[] = FILE_TYPE_CONFIG.image.mimeTypes;
 
 /**
+ * Οι μορφές που ο **ψήστης μοντέλου** μπορεί να παραλάβει *(ADR-845 Φ4.2β/Βήμα Γ)*.
+ *
+ * 🔴 **ΚΑΤΑΦΑΤΙΚΟΣ ΑΔΕΛΦΟΣ, ΠΟΤΕ ΑΡΝΗΣΗ ΤΟΥ {@link DECODABLE_IMAGE_TYPES}.** Ένα
+ * `!DECODABLE_IMAGE_TYPES.includes(...)` θα σήμαινε *«ό,τι δεν είναι εικόνα είναι μοντέλο»* —
+ * **άρνηση πάνω σε λεξιλόγιο που μεγαλώνει**, δηλαδή το γραμμένο σφάλμα της Φ4.1: την ημέρα
+ * που μπει τρίτο είδος υλικού, θα δημοσιευόταν **ως μοντέλο** χωρίς κανείς να το ζητήσει.
+ *
+ * 🔑 **Ίδια πηγή με τον αδελφό του**: `FILE_TYPE_CONFIG.model.mimeTypes`. Ό,τι επιτρέπεται να
+ * **ανέβει** ως μοντέλο είναι ακριβώς ό,τι μπορεί να **φύγει** ως μοντέλο — μία λίστα, ποτέ δύο.
+ */
+const DELIVERABLE_MODEL_TYPES: readonly string[] = FILE_TYPE_CONFIG.model.mimeTypes;
+
+/**
  * **Επιτρέπεται αυτό το αρχείο να φύγει από την εταιρεία;** — ο φρουρός #1.
  *
  * ⚠️ **`=== 'public'`, ποτέ «όχι εμπιστευτικό»**: το πεδίο είναι **προαιρετικό** και η
@@ -99,21 +113,53 @@ export function isPubliclyClassified(file: AgencyMediaCandidate): boolean {
  * **Μπορούν αυτά τα bytes να ΦΥΓΟΥΝ ως εικόνα αυτού του ακινήτου;** — ο φρουρός #2,
  * **χωρίς** το σκέλος της κατηγορίας.
  *
- * 🔴 **ΕΞΗΧΘΗ ΣΤΗΝ Α17.7, ΚΑΙ Η ΓΡΑΜΜΗ ΤΗΣ ΤΟΜΗΣ ΕΙΝΑΙ Η ΑΠΟΦΑΣΗ.** Εδώ ζει ό,τι ισχύει
- * **ανεξάρτητα** από το τι είδους υλικό είναι: κηδεμονία *(είναι ακινήτου;)*, ετοιμότητα,
- * ζωή, και **αποκωδικοποιήσιμη εικόνα**. Το *«τι είδους υλικό είναι;»* απαντιέται
- * **χωριστά** από κάθε οικογένεια — γιατί οι δύο οικογένειες το απαντούν **ανόμοια**, και
- * η ανομοιότητα είναι δικαιολογημένη *(Α17.7.4)*.
+ * 🔴 **ΕΞΗΧΘΗ ΣΤΗΝ Α17.7, ΚΑΙ Η ΓΡΑΜΜΗ ΤΗΣ ΤΟΜΗΣ ΕΙΝΑΙ Η ΑΠΟΦΑΣΗ.** Το υλικο-ανεξάρτητο
+ * μέρος *(κηδεμονία · ετοιμότητα · ζωή · μονοπάτι)* ζει στο {@link isDeliverableAgencyFile}·
+ * εδώ μένει **μόνο** το *«είναι αποκωδικοποιήσιμη εικόνα;»*. Το *«τι είδους υλικό είναι;»*
+ * απαντιέται **χωριστά** από κάθε οικογένεια — γιατί οι δύο οικογένειες το απαντούν
+ * **ανόμοια**, και η ανομοιότητα είναι δικαιολογημένη *(Α17.7.4)*.
  *
- * ⚠️ Το `lifecycleState` και το `isDeleted` είναι **δύο** πεδία για μία κατάσταση *(η
- * ζωντανή βάση έχει και τα δύο σε κάθε έγγραφο)*. Ελέγχονται **αμφότερα**: το ένα να
- * λείπει σε παλιό έγγραφο δεν επιτρέπεται να σημαίνει «δημοσίευσέ το».
+ * ⚠️ **Το συμβόλαιο ΔΕΝ άλλαξε στο Βήμα Γ** — ίδια υπογραφή, ίδια απάντηση για κάθε είσοδο.
+ * Άλλαξε **ποιος** κρατά τους τέσσερις κοινούς ελέγχους, ώστε ο αδελφός του μοντέλου να μην
+ * τους αντιγράψει.
  *
  * 🔑 **Ο έλεγχος MIME μένει εδώ και είναι ο λόγος που τα DXF δεν είναι θέμα**: μετρημένο
  * ζωντανά *(Α17.7.1)*, και οι κατόψεις της βάσης είναι `application/dxf` ⇒ **δεν μπαίνουν
  * σε `<img>`**, όσο κι αν κάποιος τις δηλώσει. Η δήλωση της Α17.7 **δεν** τις ξεκλειδώνει.
  */
 export function isDeliverableAgencyImage(file: AgencyMediaCandidate): boolean {
+  return isDeliverableAgencyFile(file) && DECODABLE_IMAGE_TYPES.includes(file.contentType);
+}
+
+/**
+ * **Μπορούν αυτά τα bytes να ΦΥΓΟΥΝ ως 3D μοντέλο αυτού του ακινήτου;** — ο αδελφός του
+ * {@link isDeliverableAgencyImage} *(ADR-845 Φ4.2β/Βήμα Γ, φράγμα Ο-9)*.
+ *
+ * 🔴 **ΚΑΤΑΦΑΤΙΚΟΣ**: ρωτά *«είναι μοντέλο;»*, **ποτέ** *«δεν είναι εικόνα;»*. Δες
+ * {@link DELIVERABLE_MODEL_TYPES} για το γιατί η άρνηση θα ήταν δομικά λάθος.
+ *
+ * ⚠️ **Δεν επαναλαμβάνει ΤΙΠΟΤΑ από τον αδελφό του**: κηδεμονία, ετοιμότητα, ζωή και
+ * μονοπάτι ζουν στο {@link isDeliverableAgencyFile}. Δύο σώματα που θα έλεγαν τους ίδιους
+ * τέσσερις ελέγχους θα ήταν **sibling clone** — ο N.18 τον έπιασε ήδη μία φορά σε αυτή τη
+ * φάση, και το `ssot:discover` **δεν** θα τον έβλεπε ποτέ *(διαφορετικά ονόματα)*.
+ */
+export function isDeliverableAgencyModel(file: AgencyMediaCandidate): boolean {
+  return isDeliverableAgencyFile(file) && DELIVERABLE_MODEL_TYPES.includes(file.contentType);
+}
+
+/**
+ * **Ό,τι ισχύει ΑΝΕΞΑΡΤΗΤΑ από το είδος του υλικού** — κηδεμονία · ετοιμότητα · ζωή · μονοπάτι.
+ *
+ * 🔑 **Η γραμμή της τομής μετακινήθηκε ΕΝΑ σκαλί, και είναι η ίδια απόφαση της Α17.7.** Ως το
+ * Βήμα Γ, ο έλεγχος MIME ζούσε **μέσα** στο *«παραδοτέο»*, επειδή υπήρχε **ένα** είδος bytes.
+ * Με δύο, το *«αποκωδικοποιήσιμη εικόνα»* έπαψε να είναι υλικο-ανεξάρτητο — και ό,τι έπαψε να
+ * είναι κοινό **βγαίνει από το κοινό**, αντί να αντιγραφεί.
+ *
+ * ⚠️ Το `lifecycleState` και το `isDeleted` είναι **δύο** πεδία για μία κατάσταση *(η ζωντανή
+ * βάση έχει και τα δύο σε κάθε έγγραφο)*. Ελέγχονται **αμφότερα**: το ένα να λείπει σε παλιό
+ * έγγραφο δεν επιτρέπεται να σημαίνει «δημοσίευσέ το».
+ */
+function isDeliverableAgencyFile(file: AgencyMediaCandidate): boolean {
   if (file.entityType !== 'property') return false;
   if (file.status !== FILE_STATUS.READY) return false;
   if (file.isDeleted === true) return false;
@@ -123,7 +169,6 @@ export function isDeliverableAgencyImage(file: AgencyMediaCandidate): boolean {
   ) {
     return false;
   }
-  if (!DECODABLE_IMAGE_TYPES.includes(file.contentType)) return false;
   return typeof file.storagePath === 'string' && file.storagePath.trim() !== '';
 }
 
@@ -142,7 +187,14 @@ export function isDeliverableAgencyImage(file: AgencyMediaCandidate): boolean {
  * ΦΩΤΟΓΡΑΦΙΑ  →  public + σχήμα + category === 'photos'                    ⇒ photo
  * ΚΑΤΟΨΗ      →  public + σχήμα + category === 'floorplans'
  *                            + ΟΝΟΜΑΣΤΙΚΗ ΔΗΛΩΣΗ + αναγνώσιμη στιγμή        ⇒ floorplan
+ * ΜΟΝΤΕΛΟ 3D  →  public + σχήμα + category === 'models'                    ⇒ model
  * ```
+ *
+ * ⚠️ **ΤΟ ΜΟΝΤΕΛΟ ΔΕΝ ΖΗΤΑΕΙ ΟΝΟΜΑΣΤΙΚΗ ΔΗΛΩΣΗ ΕΔΩ, ΚΑΙ ΔΕΝ ΕΙΝΑΙ ΧΑΛΑΡΩΣΗ.** Η κάτοψη τη
+ * χρειάζεται επειδή ζει στον **ίδιο** κάδο με σχέδια που κανείς δεν προόριζε για δημοσίευση
+ * *(Ο-21)*. Το μοντέλο έχει **δικό του** κάδο, στον οποίο μπαίνει **μόνο** μέσω μιας διαδρομής
+ * που **απαιτεί** σήμανση κατάστασης και υπογράφοντα *(Α-3 · Α-4)* πριν γραφτεί ένα byte —
+ * δηλαδή η ανθρώπινη πράξη έχει **ήδη** συμβεί, νωρίτερα και αυστηρότερα.
  *
  * 🔴 **Η ΛΕΥΚΗ ΛΙΣΤΑ ΔΕΝ ΧΑΛΑΡΩΣΕ — ΑΠΕΚΤΗΣΕ ΔΕΥΤΕΡΟ ΣΚΕΛΟΣ ΜΕ ΑΥΣΤΗΡΟΤΕΡΗ
  * ΑΠΑΙΤΗΣΗ.** Το Ο-21 προειδοποιούσε ρητά: *«ΜΗΝ λυθεί χαλαρώνοντας τη λευκή λίστα — θα
@@ -173,10 +225,41 @@ export function agencyMediaMaterial(
   declaredFloorplans: ReadonlySet<string>,
 ): ListingMaterial | null {
   if (!isPubliclyClassified(file)) return null;
-  if (!isDeliverableAgencyImage(file)) return null;
 
-  if (file.category === FILE_CATEGORIES.PHOTOS) return PHOTO_MATERIAL;
-  if (file.category !== FILE_CATEGORIES.FLOORPLANS) return null;
+  switch (file.category) {
+    case FILE_CATEGORIES.PHOTOS:
+      return isDeliverableAgencyImage(file) ? PHOTO_MATERIAL : null;
+
+    // ADR-845 Φ4.2β/Βήμα Γ — το δεύτερο σκέλος του φράγματος **Ο-9**. Ως εδώ, ένα μοντέλο
+    // **δεν είχε κατηγορία**: έπεφτε στο τελικό `null` και ο αγωγός δημοσίευσης — που
+    // ψήνει `{kind:'model'}` **σωστά** από τη Φ4.2α — δεν έβλεπε ποτέ πηγή.
+    case FILE_CATEGORIES.MODELS:
+      return isDeliverableAgencyModel(file) ? MODEL_MATERIAL : null;
+
+    case FILE_CATEGORIES.FLOORPLANS:
+      return declaredFloorplanOrNull(file, declaredFloorplans);
+
+    // 🔑 **Σιωπή, όχι `assertNever`**: το `FILE_CATEGORIES` απαριθμεί **ιδιωτικούς κάδους**
+    //    (τιμολόγια, συμβόλαια, άδειες), και τα περισσότερα **οφείλουν** να μη δημοσιεύονται.
+    //    Ένας εξαντλητικός φρουρός εδώ θα ζητούσε από κάθε νέο κάδο απάντηση σε ερώτηση που
+    //    δεν τον αφορά. Το λεξιλόγιο που **πρέπει** να απαντηθεί εξαντλητικά είναι το
+    //    `LISTING_MATERIAL_KINDS` — και το φυλά ήδη ο `partitionListingSources` (άγκυρα Α-2).
+    default:
+      return null;
+  }
+}
+
+/**
+ * Η κάτοψη: **παραδοτέα εικόνα + ονομαστική δήλωση + αναγνώσιμη στιγμή** — και τα τρία.
+ *
+ * ⚠️ Ξεχωριστό σώμα ώστε ο `switch` να μείνει **μία ερώτηση ανά κλάδο**· καμία απόφαση δεν
+ * μετακινήθηκε και καμία δεν προστέθηκε *(N.7.1: ≤40 γραμμές ανά συνάρτηση)*.
+ */
+function declaredFloorplanOrNull(
+  file: AgencyMediaCandidate,
+  declaredFloorplans: ReadonlySet<string>,
+): ListingMaterial | null {
+  if (!isDeliverableAgencyImage(file)) return null;
   if (!declaredFloorplans.has(file.id)) return null;
 
   const at = normalizeToISO(file.createdAt);

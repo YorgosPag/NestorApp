@@ -70,6 +70,13 @@ const logger = createModuleLogger('agency-media-reader');
 const PUBLISHABLE_CATEGORIES: readonly string[] = [
   FILE_CATEGORIES.PHOTOS,
   FILE_CATEGORIES.FLOORPLANS,
+  // 🔴 **ΤΟ ΤΡΙΤΟ ΣΚΕΛΟΣ ΤΟΥ ΦΡΑΓΜΑΤΟΣ Ο-9** *(ADR-845 Φ4.2β/Βήμα Γ)* — και **ήταν το πρώτο
+  //    στη σειρά εκτέλεσης**: χωρίς αυτή τη γραμμή το αρχείο **δεν κατεβαίνει καν**, οπότε οι
+  //    δύο φρουροί του `agency-media-publication` δεν εκτελούνται ποτέ. Ακριβώς το σχήμα της
+  //    Α17.7.1: *«ένας φρουρός που δεν εκτελείται ποτέ δεν είναι η αιτία»*.
+  // ✅ Ο κανόνας από πάνω τηρείται: το `MODELS` **έχει** σκέλος στο `agencyMediaMaterial`.
+  // 🔑 Τρεις τιμές ≪ όριο 10 του `in`, και **κανένα νέο ευρετήριο** — ίδιο σύνθετο.
+  FILE_CATEGORIES.MODELS,
 ];
 
 /**

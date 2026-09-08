@@ -28,6 +28,10 @@ export const CATEGORY_CAPTURE_CAPABILITIES: Record<FileCategory, CaptureSource[]
   invoices: ['upload', 'camera'], // Can photograph receipts
   audio: ['upload', 'microphone'], // Voice recordings
   drawings: ['upload', 'camera'], // Can photograph drawings
+  // ADR-845 Φ4.2β/Βήμα Γ — 🔑 **μόνο `upload`, και είναι ουσία**: ένα `.glb` **παράγεται** από
+  // τη μελέτη *(σκηνή → `serialiseGlb`)*, δεν **αποτυπώνεται**. Κάμερα/μικρόφωνο εδώ θα ήταν
+  // υπόσχεση για πράξη που δεν υπάρχει. Ίδια απάντηση με τις `floorplans`/`permits`.
+  models: ['upload'],
 } as const;
 
 // ============================================================================

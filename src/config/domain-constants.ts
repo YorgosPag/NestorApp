@@ -738,6 +738,8 @@ export const API_ROUTES = {
     LOAN: (propertyId: string) => `/api/properties/${propertyId}/payment-plan/loan` as const,
     LOANS: (propertyId: string) => `/api/properties/${propertyId}/payment-plan/loans` as const,
     CHEQUES: (propertyId: string) => `/api/properties/${propertyId}/cheques` as const,
+    /** ADR-845 Φ4.2β/Βήμα Γ — ανέβασμα 3D μοντέλου *(bytes + δήλωση, μία εγγραφή)*. */
+    MODEL: (propertyId: string) => `/api/properties/${propertyId}/model` as const,
     TRASH: '/api/properties/trash',
   },
 
