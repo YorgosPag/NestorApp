@@ -57,7 +57,7 @@ import { ShowcaseMarkView } from './ShowcaseMarkView';
 import { lineageIdsOf, useAdministrativeHierarchy } from '@/hooks/useAdministrativeHierarchy';
 import { coverageRelation, type CoverageRelation } from '@/lib/agency/coverage-match';
 import { isNationwide, isRadiusCoverage, type ShowcaseWhere } from '@/types/agency-coverage';
-import { NO_FOOTPRINTS } from '@/types/geo/admin-footprint';
+import { useAdminFootprints } from '@/hooks/useAdminFootprints';
 
 interface AgencyCardProps {
   readonly profile: PublicShowcase;
@@ -221,6 +221,10 @@ function CoverageLine({
 }): React.ReactElement | null {
   const { t } = useTranslation([AGENCY_PUBLIC_NS]);
   const { findById } = useAdministrativeHierarchy();
+  // 🔑 **Η κάρτα ζητά η ίδια τα αποτυπώματα** *(ADR-846 Φ2.5)*. Χωρίς αυτή τη γραμμή ο
+  //    κατάλογος θα φιλτράριζε σωστά αλλά η **ετικέτα** της κάρτας θα έμενε παγωμένη στο
+  //    «δεν μπορούμε να το κρίνουμε» — δηλαδή η οθόνη θα διαφωνούσε με τον εαυτό της.
+  const { footprintOf } = useAdminFootprints();
 
   if (coverage === null) return null;
 
@@ -231,14 +235,13 @@ function CoverageLine({
   // ⛔ **ΦΙΛΤΡΟ ΚΑΙ ΠΕΡΙΓΡΑΦΗ, ΠΟΤΕ ΣΕΙΡΑ**: το `within` ΔΕΝ ανεβάζει κανέναν πάνω από
   //    το `intersects` — θα ήταν κατάταξη παραγόμενη από δήλωση του ίδιου.
   if (where !== null) {
-    // ⚠️ **`NO_FOOTPRINTS` είναι ΔΗΛΩΣΗ ΑΓΝΟΙΑΣ, όχι παράλειψη** *(Φάση 2)*: το παράγωγο
-    //    αρχείο αποτυπωμάτων δεν έχει παραχθεί ακόμη *(η πηγή CC-BY δεν απαντούσε)*,
-    //    οπότε τα δύο **μεικτά** κελιά απαντούν `unknown` — και η οθόνη το **λέει**.
-    //    Όταν το αρχείο υπάρξει, ένα `grep NO_FOOTPRINTS` βρίσκει κάθε σημείο που
-    //    χρειάζεται σύνδεση. Καμία σιωπηλή λάθος ετικέτα στο μεταξύ.
+    // ✅ **Φ2.5 — τα αποτυπώματα ΥΠΑΡΧΟΥΝ** (`public/data/admin-footprints.json`). Όσο
+    //    δεν έχουν φορτώσει, ο `footprintOf` απαντά `null` ⇒ τα δύο **μεικτά** κελιά
+    //    λένε `unknown` ⇒ η κάρτα γράφει «μπορεί να καλύπτει». Καμία σιωπηλή λάθος
+    //    ετικέτα: η άγνοια είναι **προσωρινή και δηλωμένη**, ποτέ ψεύτικη βεβαιότητα.
     const relation = coverageRelation(coverage, where, {
       lineageOf: lineageIdsOf,
-      footprintOf: NO_FOOTPRINTS,
+      footprintOf,
     });
     if (relation !== 'disjoint') {
       return (

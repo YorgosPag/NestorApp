@@ -84,27 +84,12 @@ import routeSlice from '@/i18n/generated/routes/pro.el.json';
 import { registerRouteSlice } from '@/i18n/route-slice';
 // ADR-827 §9.15 — η δημόσια διεύθυνση ζει σε ουδέτερο module: τη ρωτά και ο διακομιστής.
 import { agencyDirectoryHref } from './agency-directory-route';
-import { NO_FOOTPRINTS } from '@/types/geo/admin-footprint';
+import { useAdminFootprints } from '@/hooks/useAdminFootprints';
 
 registerRouteSlice(routeSlice);
 
 
 
-/**
- * **Ό,τι ξέρει η οθόνη για τη γεωγραφία** — ένα αντικείμενο, σταθερής ταυτότητας.
- *
- * ⚠️ **`NO_FOOTPRINTS` = ΔΗΛΩΜΕΝΗ ΑΓΝΟΙΑ** *(ADR-846 Φάση 2)*: τα παράγωγα αποτυπώματα
- * *(κέντρο + δύο ακτίνες ανά διοικητική οντότητα, από CC-BY πηγή)* **δεν έχουν παραχθεί
- * ακόμη**. Μέχρι τότε τα δύο **μεικτά** κελιά του κριτή απαντούν `unknown`, ο κατάλογος
- * **δεν κόβει κανέναν** γι' αυτό, και η κάρτα το **γράφει**.
- *
- * 🔑 Ορίζεται **έξω από το component** ώστε η ταυτότητά του να μην αλλάζει ανά render —
- * είναι εξάρτηση του `useMemo` παρακάτω.
- */
-const COVERAGE_RESOLVERS = {
-  lineageOf: lineageIdsOf,
-  footprintOf: NO_FOOTPRINTS,
-} as const;
 
 export function AgencyDirectoryContent(): React.JSX.Element {
   const { t, i18n } = useTranslation([AGENCY_PUBLIC_NS]);
@@ -137,11 +122,17 @@ export function AgencyDirectoryContent(): React.JSX.Element {
   //    θα ήταν **σιωπηλή γεωγραφική κατάταξη** που κανείς δεν ζήτησε και κανείς δεν
   //    βλέπει — ακριβώς το σχήμα του «μοιάζει με αρχή» που ο Κ13 κυνηγά.
   //
-  // 🔴 **ΚΑΙ Ο ΔΙΟΙΚΗΤΙΚΟΣ ΑΞΟΝΑΣ ΔΕΝ ΠΑΡΑΓΕΙ ΚΕΝΤΡΟ — ΔΟΜΙΚΑ** (ADR-846). Δεν έχουμε
-  //    γεωμετρία διοικητικών ορίων, άρα το *«πού είναι το κέντρο του Δήμου Θέρμης;»*
-  //    **δεν έχει απάντηση** εδώ. Συνέπεια: όταν ο επισκέπτης ρωτά με περιοχή, η σειρά
-  //    είναι **ισότιμη**. Αυτό δεν είναι έλλειψη — είναι ο ασφαλέστερος συνδυασμός που
-  //    υπάρχει: **φίλτρο χωρίς καμία κατάταξη**.
+  // 🔴 **Ο ΔΙΟΙΚΗΤΙΚΟΣ ΑΞΟΝΑΣ ΔΕΝ ΠΑΡΑΓΕΙ ΚΕΝΤΡΟ — ΚΑΙ ΠΛΕΟΝ ΕΙΝΑΙ ΕΠΙΛΟΓΗ, ΟΧΙ ΑΝΑΓΚΗ.**
+  //    ⚠️ **Ήταν «δομικά αδύνατο» μέχρι τη Φ2.5** *(και το σχόλιο εδώ το έλεγε)*: δεν
+  //    υπήρχε γεωμετρία ορίων, άρα το *«πού είναι το κέντρο του Δήμου Θέρμης;»* **δεν
+  //    είχε απάντηση**. Τώρα έχει — το `AdminFootprint.center` είναι ακριβώς αυτό.
+  //
+  //    ⛔ **ΚΑΙ ΠΑΡ' ΟΛΑ ΑΥΤΑ ΔΕΝ ΧΡΗΣΙΜΟΠΟΙΕΙΤΑΙ ΓΙΑ ΣΕΙΡΑ**, σκόπιμα: το να ταξινομεί
+  //    ο κατάλογος «κατά απόσταση από το κέντρο του δήμου που ρώτησες» είναι **αλλαγή
+  //    προϊόντος** — και σε δήμο-αρχιπέλαγος το κεντροειδές μπορεί να πέφτει **στη
+  //    θάλασσα**, δηλαδή η κατάταξη θα ήταν αυθαίρετη ενώ θα **έμοιαζε** με αρχή (Κ13).
+  //    Όσο δεν το ζητά ο Giorgio, η σειρά για διοικητικό ερώτημα μένει **ισότιμη**:
+  //    φίλτρο χωρίς καμία κατάταξη.
   const near = whereCenter(filters.where);
   const { agencies, loading, error } = usePublicAgencies(near);
 
@@ -149,6 +140,21 @@ export function AgencyDirectoryContent(): React.JSX.Element {
   //    φύλλο** και δεν επιτρέπεται να εισάγει hook. Το `lineageIdsOf` διαβάζει το ίδιο
   //    module cache που γεμίζει ο `useAdministrativeHierarchy` παρακάτω.
   const { isLoading: hierarchyLoading } = useAdministrativeHierarchy();
+
+  // 🏆 **Φ2.5 — ΤΑ ΑΠΟΤΥΠΩΜΑΤΑ ΚΛΕΙΝΟΥΝ ΤΑ ΔΥΟ ΜΕΙΚΤΑ ΚΕΛΙΑ** *(ADR-846)*: δηλωμένη
+  //    **ακτίνα** εναντίον **διοικητικού** ερωτήματος, και διοικητική δήλωση εναντίον
+  //    **κυκλικού** ερωτήματος. Μέχρι τη Φ2 και τα δύο απαντούσαν πάντα `unknown`.
+  const { isLoading: footprintsLoading, footprintOf } = useAdminFootprints();
+
+  // 🔑 **Χτίζεται ΕΔΩ, όχι ως σταθερά module** — και αυτό είναι το μάθημα της §6.2:
+  //    η ταυτότητα του αντικειμένου πρέπει να αλλάξει **ακριβώς όταν** φτάσουν τα
+  //    δεδομένα, αλλιώς το `useMemo` παρακάτω παγώνει στο «δεν ξέρω» για όλη τη ζωή
+  //    της σελίδας. Το `footprintOf` το εγγυάται· το `lineageIdsOf` είναι module-level
+  //    και γι' αυτό ο διοικητικός άξονας χρειάζεται ακόμη το ρητό `areaPending`.
+  const coverageResolvers = React.useMemo(
+    () => ({ lineageOf: lineageIdsOf, footprintOf }),
+    [footprintOf],
+  );
 
   // 🔑 **Η ΔΙΕΥΘΥΝΣΗ ΕΙΝΑΙ Η ΚΑΤΑΣΤΑΣΗ.** Καμία δεύτερη πηγή: ένα `useState`
   //    δίπλα στη διεύθυνση θα ήταν δύο απαντήσεις στο *«τι φιλτράρει τώρα;»*,
@@ -175,13 +181,23 @@ export function AgencyDirectoryContent(): React.JSX.Element {
   //    απαντά `disjoint`, δηλαδή η οθόνη θα έλεγε *«κανείς δεν ταιριάζει»* — ψέμα, για
   //    τα πρώτα ms κάθε επίσκεψης. «Άγνωστο ≠ κενό» (N.12): δείχνουμε **όλους** και το
   //    **λέμε** (`areaLoading`), αντί να δείξουμε **κανέναν** σιωπηλά.
-  const areaPending = hierarchyLoading && filters.where !== null && isAdministrativeWhere(filters.where);
+  //
+  // ⚠️ **ΚΑΙ ΤΑ ΑΠΟΤΥΠΩΜΑΤΑ ΜΠΑΙΝΟΥΝ ΣΤΗΝ ΙΔΙΑ ΑΝΑΜΟΝΗ, ΓΙΑ ΑΛΛΟΝ ΛΟΓΟ** *(Φ2.5)*. Η
+  //    απουσία τους **δεν** κόβει κανέναν — δίνει `unknown`, που ο κατάλογος κρατά. Θα
+  //    ήταν λοιπόν *σωστό* να μην περιμένουμε. Θα ήταν όμως και **ανήσυχο**: ο
+  //    επισκέπτης θα έβλεπε μια λίστα να **στενεύει μόνη της** ένα δευτερόλεπτο αφότου
+  //    σταμάτησε να φορτώνει, χωρίς να έχει αγγίξει τίποτα. Προτιμάμε να το **πούμε**
+  //    (`areaLoading`) και μετά να δείξουμε **ένα** αποτέλεσμα — ίδιο ήθος με τον
+  //    διοικητικό άξονα, χωρίς να δανειστούμε τη δικαιολόγησή του.
+  const areaPending =
+    filters.where !== null &&
+    ((hierarchyLoading && isAdministrativeWhere(filters.where)) || footprintsLoading);
   const visible = React.useMemo(
     () =>
       areaPending
         ? agencies
-        : applyShowcaseFilters(agencies, filters, COVERAGE_RESOLVERS),
-    [agencies, filters, areaPending],
+        : applyShowcaseFilters(agencies, filters, coverageResolvers),
+    [agencies, filters, areaPending, coverageResolvers],
   );
   const options = React.useMemo(() => occupationOptions(agencies, locale), [agencies, locale]);
   const filtering = hasActiveFilters(filters);
