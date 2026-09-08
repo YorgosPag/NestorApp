@@ -28,7 +28,7 @@
     "src/i18n/generated/routes/terms.el.json": "481f837696b407553f56de16128778617a86f72cf7b27471d61cd5793cf7d288",
     "src/i18n/generated/routes/test-harness__listing-shapes.el.json": "0a342a84a1d24b4b7068e33a0e303cd6c22e437cc38be31b5a63e33c4089cd6b",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "02fc9adf8b6b2e3f3b09c43fc1628506635b1da49ccc20d8fd1db8cfc41cf7e4",
+    "src/i18n/generated/shell-slice.el.json": "3eb896fc1e3c97a7b1330d4e682b70b5a3035188335cfb657e502a165f53a040",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "boundaries": {
@@ -67,7 +67,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "d51441dacdae525e5f5fc12c201f8561911663b3f0981209dbc87898631421ab",
+  "inputsSha256": "cd9a7bed853e414e5606476faf88101c464cfc22bfbd2051e40f5d2a9b01109d",
   "languages": [
     "el"
   ],
@@ -172,7 +172,7 @@
     "src/components/geo/PlaceIdentityField.tsx": "3740a1f63363cd2633aebf91e15d5fa6076fd4f55d43f99f949934d961414e20",
     "src/components/geo/PlaceMap.tsx": "dc415a965187ce54daed61dc9f1d9ba481e5345659f62f14e9f48f039c6330f1",
     "src/components/geo/PlaceSummary.tsx": "ef3e533db3d9f8176b536c853eb77cd2cab121381a9d708bda870bd40bd9419b",
-    "src/components/geo/outline-draft.tsx": "40f39d0ad6f1b9ebf2ddb61b9a7487a1c2f0301604163f6437b785ce41d75b7d",
+    "src/components/geo/outline-draft.tsx": "522cf963ac96817fb386c275e724d2e3d2a6a12800749249759b7aa114bfc33e",
     "src/components/geo/use-focus-camera.ts": "164fb4314e980c7314b0ff22847cd44059e55ea44c07905f89b745f596caebc9",
     "src/components/listing-detail/ListingAttributeGroup.tsx": "314bc2a2263dc2b42092033482ffecf6211d71f90785f6d627260c28664eecff",
     "src/components/listing-detail/ListingAttributeList.tsx": "10458d7bdee7cc291b220f374b900293ef1e4add9f46c61930f8f171771cae31",
@@ -926,6 +926,7 @@
             "place.confirm",
             "place.created",
             "place.draw.area",
+            "place.draw.areaKm2",
             "place.draw.clear",
             "place.draw.undo",
             "place.draw.vertices",
@@ -1855,6 +1856,7 @@
             "place.confirm",
             "place.created",
             "place.draw.area",
+            "place.draw.areaKm2",
             "place.draw.clear",
             "place.draw.undo",
             "place.draw.vertices",
@@ -2180,6 +2182,7 @@
             "place.defect.outline-too-few-vertices",
             "place.defect.point-off-earth",
             "place.draw.area",
+            "place.draw.areaKm2",
             "place.draw.clear",
             "place.draw.undo",
             "place.draw.vertices",
@@ -2551,6 +2554,7 @@
             "place.confirm",
             "place.created",
             "place.draw.area",
+            "place.draw.areaKm2",
             "place.draw.clear",
             "place.draw.undo",
             "place.draw.vertices",
@@ -2811,6 +2815,7 @@
             "place.confirm",
             "place.created",
             "place.draw.area",
+            "place.draw.areaKm2",
             "place.draw.clear",
             "place.draw.undo",
             "place.draw.vertices",
@@ -4640,7 +4645,7 @@
     "matchedKeys": 174,
     "routeBoundaries": 0,
     "shellFiles": 599,
-    "sliceBytes": 397427
+    "sliceBytes": 397480
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

@@ -224,7 +224,8 @@
       "undo": "Undo vertex",
       "clear": "Clear",
       "tooFew": "At least three vertices are needed.",
-      "area": "Area: {sqm} m²"
+      "area": "Area: {sqm} m²",
+      "areaKm2": "Area: {km2} km²"
     },
     "target": {
       "legend": "What are you pointing at?",

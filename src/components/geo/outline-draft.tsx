@@ -30,7 +30,12 @@ import { Eraser, Undo2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { geoOutlineAreaSqm, isSimpleGeoOutline } from '@/lib/geo/geo-ring';
+import {
+  AREA_KM2_THRESHOLD_SQM,
+  areaSqmToKm2,
+  geoOutlineAreaSqm,
+  isSimpleGeoOutline,
+} from '@/lib/geo/geo-ring';
 import { MIN_OUTLINE_AREA_SQM } from '@/lib/places/place-claim-validation';
 import type { GeoOutline, GeoPoint } from '@/types/geo/coordinates';
 
@@ -104,9 +109,18 @@ export function OutlineDraftControls({ draft }: { draft: OutlineDraft }): React.
         {t('place.draw.vertices', { count: draft.vertices.length })}
       </span>
 
+      {/*
+        🔴 **Η ΜΟΝΑΔΑ ΑΚΟΛΟΥΘΕΙ ΤΗΝ ΚΛΙΜΑΚΑ** *(ADR-846 Φ3, ζωντανό περπάτημα)*: η ίδια
+        χειρονομία εξυπηρετεί **οικόπεδο** *(δεκάδες τ.μ.)* και **περιοχή εργασίας**
+        *(εκατοντάδες τ.χλμ.)*. Με μία μονάδα, η δεύτερη έγραφε «519802094 τ.μ.» —
+        σωστό και **αδιάβαστο**. Το κατώφλι και η στρογγυλοποίηση ζουν στο
+        `lib/geo/geo-ring.ts`, ώστε οι τρεις οθόνες να λένε **τον ίδιο** αριθμό.
+      */}
       {draft.defect === null && (
         <span className="text-sm text-muted-foreground">
-          {t('place.draw.area', { sqm: Math.round(draft.areaSqm) })}
+          {draft.areaSqm >= AREA_KM2_THRESHOLD_SQM
+            ? t('place.draw.areaKm2', { km2: areaSqmToKm2(draft.areaSqm) })
+            : t('place.draw.area', { sqm: Math.round(draft.areaSqm) })}
         </span>
       )}
 

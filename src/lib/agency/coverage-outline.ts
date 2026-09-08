@@ -36,7 +36,7 @@
  */
 
 import { ringsFootprint } from '@/lib/geo/geo-footprint';
-import { geoOutlineAreaSqm } from '@/lib/geo/geo-ring';
+import { areaSqmToKm2, geoOutlineAreaSqm } from '@/lib/geo/geo-ring';
 import { outlineDefect, type OutlineDefect } from '@/lib/places/place-claim-validation';
 import { COVERAGE_MAX_OUTER_KM, COVERAGE_MAX_VERTICES } from '@/types/agency-coverage';
 import type { GeoOutline, GeoPoint } from '@/types/geo/coordinates';
@@ -134,10 +134,10 @@ export function asCoverageOutline(raw: unknown): GeoOutline | null {
  * στην πρώτη αλλαγή στρογγυλοποίησης — και ο επισκέπτης θα έβλεπε **άλλο νούμερο** στην
  * κάρτα και άλλο στη βιτρίνα, για το ίδιο σχήμα.
  *
- * ⚠️ **Ένα δεκαδικό, πάντα**: μια γειτονιά είναι ~2 τ.χλμ. και ένα σκέτο
- * `Math.round` θα την έγραφε **«2»** ή, χειρότερα, **«0»** για μικρότερη — δηλαδή η
- * δήλωση του ανθρώπου θα φαινόταν ανύπαρκτη.
+ * ⚠️ **Η στρογγυλοποίηση ΔΕΝ γράφεται εδώ** — ζει στο {@link areaSqmToKm2}, μαζί με το
+ * κατώφλι που χρησιμοποιεί και το χειριστήριο χάραξης. Αυτή η συνάρτηση υπάρχει για να
+ * μη γράψουν οι **δύο** οθόνες τη σύνθεση `areaSqmToKm2(geoOutlineAreaSqm(…))` χωριστά.
  */
 export function coverageOutlineAreaKm2(outline: GeoOutline): number {
-  return Number((geoOutlineAreaSqm(outline) / 1_000_000).toFixed(1));
+  return areaSqmToKm2(geoOutlineAreaSqm(outline));
 }
