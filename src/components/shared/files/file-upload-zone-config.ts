@@ -83,6 +83,12 @@ export function detectFileType(mimeType: string): FileType {
   ) {
     return 'document';
   }
+  // ADR-845 Βήμα Γ — 🔑 **ρωτά το ίδιο το λεξιλόγιο**, δεν επαναλαμβάνει τη συμβολοσειρά:
+  //    ο τύπος MIME του μοντέλου δηλώνεται **μία** φορά, στο `FILE_TYPE_CONFIG.model`.
+  //    Χωρίς αυτό το σκέλος το `.glb` έπεφτε στο `any` = καμία επικύρωση καθόλου.
+  if (FILE_TYPE_CONFIG.model.mimeTypes.includes(mimeType)) {
+    return 'model';
+  }
   return 'any';
 }
 

@@ -245,6 +245,19 @@ export const FILE_CATEGORIES = {
   DRAWINGS: 'drawings',
   /** Permits and certifications */
   PERMITS: 'permits',
+  /**
+   * **3D μοντέλα (`.glb`)** — ADR-845 Φ4.2β/Βήμα Γ.
+   *
+   * 🔑 **Ξεχωριστό από το `DRAWINGS`, και δεν είναι προτίμηση**: το ερώτημα δημοσίευσης του
+   * γραφείου *(`agency-media.reader`)* ρωτά `where('category','in',…)`. Με κοινό κάδο, ένα
+   * `.dxf` και ένα `.glb` θα ήταν **η ίδια απάντηση σε δύο ερωτήσεις** — και ο αναγνώστης θα
+   * κατέβαζε σχέδια για να τα πετάξει.
+   *
+   * ⚠️ **Ο ΔΗΜΟΣΙΟΣ ΤΥΠΟΣ ΥΛΙΚΟΥ ΔΕΝ ΖΕΙ ΕΔΩ.** Αυτός είναι ο **ιδιωτικός κάδος αρχείων**·
+   * το *«τι υλικό είναι για τον κόσμο;»* το απαντά **αποκλειστικά** το `LISTING_MATERIAL_KINDS`
+   * *(`lib/listings/listing-material.ts`)*. Δύο λεξιλόγια, δύο ερωτήσεις, καμία αντιστοίχιση 1:1.
+   */
+  MODELS: 'models',
 } as const;
 
 export type FileCategory = typeof FILE_CATEGORIES[keyof typeof FILE_CATEGORIES];
@@ -346,6 +359,9 @@ export const TRASH_RETENTION_BY_CATEGORY: Record<FileCategory, number> = {
   [FILE_CATEGORIES.INVOICES]: 90,
   [FILE_CATEGORIES.CONTRACTS]: 90,
   [FILE_CATEGORIES.PERMITS]: 90,
+  // 🔑 90 = η ζώνη των **παραδοτέων μελέτης** (`DRAWINGS`/`FLOORPLANS`), όχι των φωτογραφιών:
+  //    ένα `.glb` παράγεται από την ίδια μελέτη και η ανάκτησή του κοστίζει το ίδιο.
+  [FILE_CATEGORIES.MODELS]: 90,
 };
 
 /**
@@ -364,6 +380,9 @@ export const ARCHIVE_RETENTION_BY_CATEGORY: Record<FileCategory, number> = {
   [FILE_CATEGORIES.VIDEOS]: 365 * 3,
   [FILE_CATEGORIES.DRAWINGS]: 365 * 10,
   [FILE_CATEGORIES.PERMITS]: 365 * 20,
+  // 🔑 10 χρόνια = **ίδια με τα `DRAWINGS`/`FLOORPLANS`**: το μοντέλο είναι η τρισδιάστατη
+  //    έκφραση της **ίδιας** μελέτης, με το ίδιο βάρος τεκμηρίωσης (ADR-845 §6.3, Ε-3).
+  [FILE_CATEGORIES.MODELS]: 365 * 10,
 };
 
 /**

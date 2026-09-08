@@ -13,7 +13,7 @@
 // TYPES & INTERFACES
 // ============================================================================
 
-export type FileType = 'image' | 'video' | 'pdf' | 'document' | 'any';
+export type FileType = 'image' | 'video' | 'pdf' | 'document' | 'model' | 'any';
 export type UploadPurpose = 'photo' | 'logo' | 'document' | 'floorplan' | 'avatar' | 'representative' | 'business-card';
 
 export interface FileTypeConfig {
@@ -60,6 +60,25 @@ export const FILE_TYPE_CONFIG: Record<FileType, FileTypeConfig> = {
     extensions: ['.pdf', '.doc', '.docx'],
     maxSize: 10 * 1024 * 1024, // 10MB
     errorMessage: 'Επιλέξτε αρχεία PDF, DOC ή DOCX'
+  },
+  /**
+   * **3D μοντέλο glTF-binary** — ADR-845 Φ4.2β/Βήμα Γ.
+   *
+   * 🔑 **Υπάρχει για να ΜΗΝ πέφτει το `.glb` στο `any`.** Ως σήμερα ένα `.glb` πέρναγε από το
+   * `detectFileType` ως `'any'`, δηλαδή **καμία** επικύρωση MIME/επέκτασης: ένα οτιδήποτε
+   * μετονομασμένο σε `.glb` γινόταν δεκτό. Η καταγραφή εδώ είναι **καταφατικό λεξιλόγιο**
+   * *(«τι δέχομαι»)*, ποτέ άρνηση — το μάθημα της Φ4.1.
+   *
+   * ⚠️ **`maxSize` = 50 MB, ΤΟ ΙΔΙΟ με το `any` που ίσχυε ήδη**: η προσθήκη αλλάζει **μόνο**
+   * το *τι* γίνεται δεκτό, **όχι** το πόσο — μηδέν αλλαγή συμπεριφοράς μεγέθους. Το
+   * πραγματικό ταβάνι της δημοσίευσης *(< 5 MB)* το επιβάλλει **μόνο** ο διακομιστής, **μετά**
+   * το meshopt *(ADR-845 §6.2.2: «ένα όριο στον πελάτη είναι ευχή»)*.
+   */
+  model: {
+    mimeTypes: ['model/gltf-binary'],
+    extensions: ['.glb'],
+    maxSize: 50 * 1024 * 1024, // 50MB — ίδιο με το `any`, βλ. παραπάνω
+    errorMessage: 'Επιλέξτε αρχείο 3D μοντέλου (GLB)'
   },
   any: {
     mimeTypes: [],
