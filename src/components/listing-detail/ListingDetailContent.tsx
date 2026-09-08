@@ -72,6 +72,7 @@ import { ListingLegality } from './ListingLegality';
 import { ListingOpenSubjects } from './ListingOpenSubjects';
 import { ListingGallery } from './ListingGallery';
 import { ListingFloorplans } from './ListingFloorplans';
+import { ListingModels } from './ListingModels';
 import { ListingAuthorshipLine } from '@/components/listings/ListingAuthorshipLine';
 import { FirstContactAction } from '@/components/contact/FirstContactAction';
 
@@ -251,6 +252,14 @@ function ListingDetailBody({
             της δεν ονομάζεται *(αντίθετα από τη συλλογή, που οφείλει να υπάρχει)*.
           */}
           <ListingFloorplans listing={listing} />
+          {/*
+            🔑 **ΜΕΤΑ ΤΗΝ ΚΑΤΟΨΗ, ΓΙΑ ΤΟΝ ΙΔΙΟ ΛΟΓΟ ΠΟΥ ΕΚΕΙΝΗ ΜΠΗΚΕ ΜΕΤΑ ΤΗ ΣΥΛΛΟΓΗ**
+            *(ADR-845 Φ4.3)*: η σειρά είναι **αύξουσας αφαίρεσης** — φωτογραφία *(τι είναι)*
+            → κάτοψη *(πώς είναι μοιρασμένο)* → μοντέλο *(πώς στέκει στον χώρο)*. Και
+            αποδίδει **τίποτα** όταν δεν υπάρχει μοντέλο: είναι **προαιρετικό**, άρα η
+            απουσία του δεν ονομάζεται.
+          */}
+          <ListingModels listing={listing} />
           <ListingPositionSection listing={listing} />
         </div>
 

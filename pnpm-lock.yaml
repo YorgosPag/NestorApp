@@ -43,6 +43,7 @@ overrides:
   form-data@4: ^4.0.6
   '@grpc/grpc-js': ^1.14.4
   sharp: ^0.35.3
+  three: ^0.170.0
   pdfjs-dist>canvas: '-'
   jsdom>canvas: '-'
   fast-xml-parser@4: ^4.5.7
@@ -95,6 +96,9 @@ importers:
       '@gltf-transform/functions':
         specifier: ^4.4.0
         version: 4.5.0(@types/node@20.19.27)
+      '@google/model-viewer':
+        specifier: 4.3.1
+        version: 4.3.1(three@0.170.0)
       '@napi-rs/canvas':
         specifier: ^0.1.86
         version: 0.1.86
@@ -1507,6 +1511,12 @@ packages:
     resolution: {integrity: sha512-r3ZwDMiz4nwW6R922Z1pwpePxyRwE5GdevYX63hRmAQUkUQJcBH/79EnQPDv5cOv1mFBgevdNWQfi3tie3dHrQ==}
     engines: {node: '>=14'}
 
+  '@google/model-viewer@4.3.1':
+    resolution: {integrity: sha512-GP+inXhAtY31E8rILVmByA6z8CZZjdlNajddppyI1/j1eIaSQiZcMRaUqTFe7+jv4mzRzwKIOiKBud0apiv+WQ==}
+    engines: {node: '>=6.0.0'}
+    peerDependencies:
+      three: ^0.170.0
+
   '@grpc/grpc-js@1.14.4':
     resolution: {integrity: sha512-k9Dj3DV/itK9D06Y8f190Qgop7/Ui+D0njFV3LHMPwPT75DpXLQohE9Wmz0QElrJnzsjB7KPWiKJbOl7IPDArQ==}
     engines: {node: '>=12.10.0'}
@@ -1921,6 +1931,12 @@ packages:
   '@js-sdsl/ordered-map@4.4.2':
     resolution: {integrity: sha512-iUKgm52T8HOE/makSxjqoWhe95ZJA1/G1sYsGev2JDKUSS14KAgg1LHb+Ba+IPow0xflbnSkOsZcO08C7w1gYw==}
 
+  '@lit-labs/ssr-dom-shim@1.6.0':
+    resolution: {integrity: sha512-VHb0ALPMTlgKjM6yIxxoQNnpKyUKLD04VzeQdsiXkMqkvYlAHxq9glGLmgbb889/1GsohSOAjvQYoiBppXFqrQ==}
+
+  '@lit/reactive-element@2.1.2':
+    resolution: {integrity: sha512-pbCDiVMnne1lYUIaYNN5wrwQXDtHaYtg7YEFPeW+hws6U47WeFvISGUWekPGKWOP1ygrs0ef0o1VJMk1exos5A==}
+
   '@mapbox/geojson-rewind@0.5.2':
     resolution: {integrity: sha512-tJaT+RbYGJYStt7wI3cq4Nl4SXxG8W7JDG5DMJu97V25RnbNg3QtQtf+KD+VLjNpWKYsRvXDNmNrBgEETr1ifA==}
     hasBin: true
@@ -1958,6 +1974,11 @@ packages:
 
   '@maplibre/vt-pbf@4.2.0':
     resolution: {integrity: sha512-bxrk/kQUwWXZgmqYgwOCnZCMONCRi3MJMqJdza4T3E4AeR5i+VyMnaJ8iDWtWxdfEAJRtrzIOeJtxZSy5mFrFA==}
+
+  '@monogrid/gainmap-js@3.4.0':
+    resolution: {integrity: sha512-2Z0FATFHaoYJ8b+Y4y4Hgfn3FRFwuU5zRrk+9dFWp4uGAdHGqVEdP7HP+gLA3X469KXHmfupJaUbKo1b/aDKIg==}
+    peerDependencies:
+      three: ^0.170.0
 
   '@napi-rs/canvas-android-arm64@0.1.80':
     resolution: {integrity: sha512-sk7xhN/MoXeuExlggf91pNziBxLPVUqF2CAVnB57KLG/pz7+U5TKG8eXdc3pm0d7Od0WreB6ZKLj37sX9muGOQ==}
@@ -6510,6 +6531,9 @@ packages:
   is-potential-custom-element-name@1.0.1:
     resolution: {integrity: sha512-bCYeRA2rVibKZd+s2625gGnGF/t7DSqDs4dP7CrLA1m7jKWz6pps0LpYLJN8Q64HtmPKJ1hrN3nzPNKFEKOUiQ==}
 
+  is-promise@2.2.2:
+    resolution: {integrity: sha512-+lP4/6lKUBfQjZ2pdxThZvLUAafmZb8OAxFb8XXtiQmS35INgr85hdOGoEs124ez1FCnZJt6jau/T+alh58QFQ==}
+
   is-reference@1.2.1:
     resolution: {integrity: sha512-U82MsXXiFIrjCK4otLT+o2NA2Cd2g5MLoOVXUZjIOhLurrRxpEXzI8O0KZHr3IjLvlAH1kTPYSuqer5T9ZVBKQ==}
 
@@ -6962,6 +6986,15 @@ packages:
 
   listenercount@1.0.1:
     resolution: {integrity: sha512-3mk/Zag0+IJxeDrxSgaDPy4zZ3w05PRZeJNnlWhzFz5OkX49J4krc+A8X2d2M69vGMBEX0uyl8M+W+8gH+kBqQ==}
+
+  lit-element@4.2.2:
+    resolution: {integrity: sha512-aFKhNToWxoyhkNDmWZwEva2SlQia+jfG0fjIWV//YeTaWrVnOxD89dPKfigCUspXFmjzOEUQpOkejH5Ly6sG0w==}
+
+  lit-html@3.3.3:
+    resolution: {integrity: sha512-el8M6jK2o3RXBnrSHX3ZKrsN8zEV63pSExTO1wYJz7QndGYZ8353e2a5PPX+qHe2aGayfnchQmkAojaWAREOIA==}
+
+  lit@3.3.3:
+    resolution: {integrity: sha512-fycuvZg/hkpozL00lm1pEJH5nN/lr9ZXd6mJI2HSN4+Bzc+LDNdEApJ6HFbPkdFNHLvOplIIuJvxkS4XUxqirw==}
 
   loader-runner@4.3.2:
     resolution: {integrity: sha512-DFEqQ3ihfS9blba08cLfYf1NRAIEm+dDjic073DRDc3/JspI/8wYmtDsHwd3+4hwvdxSK7PGaElfTmm0awWJ4w==}
@@ -7689,6 +7722,9 @@ packages:
   progress@2.0.3:
     resolution: {integrity: sha512-7PiHtLll5LdnKIMw100I+8xJXR5gW2QwWYkT6iJva0bXitZKa/XMrSbdmg3r2Xnaidz9Qumd0VPaMrZlF9V9sA==}
     engines: {node: '>=0.4.0'}
+
+  promise-worker-transferable@1.0.4:
+    resolution: {integrity: sha512-bN+0ehEnrXfxV2ZQvU2PetO0n4gqBD4ulq3MI1WOPLgr7/Mg9yRQkX5+0v1vagr74ZTsl7XtzlaYDo2EuCeYJw==}
 
   prompts@2.4.2:
     resolution: {integrity: sha512-NxNv/kLguCA7p3jE8oL2aEBsrJWgAakBpgmgK6lpPWV+WuOmY6r2/zbAVnP+T8bQlA0nzHXSJSJW0Hq7ylaD2Q==}
@@ -8579,14 +8615,14 @@ packages:
   three-gpu-pathtracer@0.0.21:
     resolution: {integrity: sha512-hg0l6AiyoWViNPrlJRRBZ6yG4xAT/lRBs5/H0oMpXXhip6A6O9ZetnPBhsE8rYRxGGS6bSC6DCIgoe+iFO3qAA==}
     peerDependencies:
-      three: '>=0.151.0'
+      three: ^0.170.0
       three-mesh-bvh: '>=0.7.4'
       xatlas-web: ^0.1.0
 
   three-mesh-bvh@0.7.4:
     resolution: {integrity: sha512-flxe0A4uflTPR6elgq/Y8VrLoljDNS899i422SxQcU3EtMj6o8z4kZRyqZqGWzR0qMf1InTZzY1/0xZl/rnvVw==}
     peerDependencies:
-      three: '>= 0.151.0'
+      three: ^0.170.0
 
   three@0.170.0:
     resolution: {integrity: sha512-FQK+LEpYc0fBD+J8g6oSEyyNzjp+Q7Ks1C568WWaoMRLW+TkNNWmenWeGgJjV105Gd+p/2ql1ZcjYvNiPZBhuQ==}
@@ -10224,6 +10260,12 @@ snapshots:
       - supports-color
     optional: true
 
+  '@google/model-viewer@4.3.1(three@0.170.0)':
+    dependencies:
+      '@monogrid/gainmap-js': 3.4.0(three@0.170.0)
+      lit: 3.3.3
+      three: 0.170.0
+
   '@grpc/grpc-js@1.14.4':
     dependencies:
       '@grpc/proto-loader': 0.8.0
@@ -10687,6 +10729,12 @@ snapshots:
 
   '@js-sdsl/ordered-map@4.4.2': {}
 
+  '@lit-labs/ssr-dom-shim@1.6.0': {}
+
+  '@lit/reactive-element@2.1.2':
+    dependencies:
+      '@lit-labs/ssr-dom-shim': 1.6.0
+
   '@mapbox/geojson-rewind@0.5.2':
     dependencies:
       get-stream: 6.0.1
@@ -10740,6 +10788,11 @@ snapshots:
       geojson-vt: 4.0.2
       pbf: 4.0.1
       supercluster: 8.0.1
+
+  '@monogrid/gainmap-js@3.4.0(three@0.170.0)':
+    dependencies:
+      promise-worker-transferable: 1.0.4
+      three: 0.170.0
 
   '@napi-rs/canvas-android-arm64@0.1.80':
     optional: true
@@ -13305,8 +13358,7 @@ snapshots:
 
   '@types/tough-cookie@4.0.5': {}
 
-  '@types/trusted-types@2.0.7':
-    optional: true
+  '@types/trusted-types@2.0.7': {}
 
   '@types/use-sync-external-store@0.0.6': {}
 
@@ -15565,6 +15617,8 @@ snapshots:
 
   is-potential-custom-element-name@1.0.1: {}
 
+  is-promise@2.2.2: {}
+
   is-reference@1.2.1:
     dependencies:
       '@types/estree': 1.0.8
@@ -16303,6 +16357,22 @@ snapshots:
   linkifyjs@4.3.2: {}
 
   listenercount@1.0.1: {}
+
+  lit-element@4.2.2:
+    dependencies:
+      '@lit-labs/ssr-dom-shim': 1.6.0
+      '@lit/reactive-element': 2.1.2
+      lit-html: 3.3.3
+
+  lit-html@3.3.3:
+    dependencies:
+      '@types/trusted-types': 2.0.7
+
+  lit@3.3.3:
+    dependencies:
+      '@lit/reactive-element': 2.1.2
+      lit-element: 4.2.2
+      lit-html: 3.3.3
 
   loader-runner@4.3.2: {}
 
@@ -17046,6 +17116,11 @@ snapshots:
   process-nextick-args@2.0.1: {}
 
   progress@2.0.3: {}
+
+  promise-worker-transferable@1.0.4:
+    dependencies:
+      is-promise: 2.2.2
+      lie: 3.3.0
 
   prompts@2.4.2:
     dependencies:
