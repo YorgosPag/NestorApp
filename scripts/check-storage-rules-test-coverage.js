@@ -13,7 +13,7 @@
  *      { pathId, matchPath, lineStart, lineEnd } via the shared identity-based
  *      parser (children of `match /b/{bucket}/o { ... }`).
  *   2. Parse coverage-manifest.ts via TypeScript AST → extract
- *      STORAGE_RULES_COVERAGE (pathId, pattern, testFile, rulesRange) and
+ *      STORAGE_RULES_COVERAGE (pathId, pattern, testFile) and
  *      STORAGE_RULES_PENDING (exact match-path string array).
  *   3. Validation A — every storage.rules match block must be accounted for
  *      by IDENTITY: its `@pathId` appears in STORAGE_RULES_COVERAGE, or its
@@ -29,14 +29,26 @@
  *      identity.
  *   8. Validation F — a duplicate `@pathId` across blocks is a violation.
  *
- * `rulesRange` in the manifest is now DOCUMENTATION ONLY. It is no longer read
- * by Validation A; a non-blocking `--verbose` warning is emitted if a range no
- * longer contains its block's parsed start line.
+ * `rulesRange` IS GONE (ADR-841 §7 Α21.14).
+ *
+ * 🔴 These three lines used to read: "`rulesRange` is now DOCUMENTATION ONLY … a
+ * non-blocking `--verbose` warning is emitted if a range no longer contains its block's
+ * parsed start line." **The warning was never written.** Nothing in this file ever read
+ * `entry.rulesRange` after parsing it — so the sentence described a guard that did not
+ * exist, next to a field nobody validated. Measured 2026-08-24: ALL 11 entries had
+ * drifted. Same field on the Firestore side, measured 2026-09-08: 124 of 127 wrong (98%),
+ * worst drift 1853 lines.
+ *
+ * The location is now GENERATED on demand (`--map`), from storage.rules itself — so there
+ * is no stored value left to rot. This mirrors the industry practice the project already
+ * follows for baselines: PHPStan states "No line numbers" as a deliberate trade-off, and
+ * ESLint bulk suppressions (v9.24+) store `{file: {rule: {count}}}` with no line at all.
  *
  * CLI:
  *   node scripts/check-storage-rules-test-coverage.js                # staged files
  *   node scripts/check-storage-rules-test-coverage.js --all          # full scan
  *   node scripts/check-storage-rules-test-coverage.js --verbose      # extra output
+ *   node scripts/check-storage-rules-test-coverage.js --map          # pathId → rules lines
  *   node scripts/check-storage-rules-test-coverage.js file1 file2    # explicit targets
  *
  * Exit codes:
@@ -58,6 +70,7 @@ const {
   parseStorageRules,
   findDuplicatePathIds,
 } = require('./_shared/storage-rules-parser');
+const { renderRulesLocationMap } = require('./_shared/rules-location-map');
 
 // ---------------------------------------------------------------------------
 // Paths
@@ -82,6 +95,8 @@ const flags = new Set(args.filter((a) => a.startsWith('--')));
 const targets = args.filter((a) => !a.startsWith('--'));
 const MODE_ALL = flags.has('--all');
 const VERBOSE = flags.has('--verbose');
+/** 🏆 Ο **παραγόμενος** δείκτης προς τους κανόνες — δες ADR-841 §7 Α21.14. */
+const MODE_MAP = flags.has('--map');
 
 // ---------------------------------------------------------------------------
 // Colors
@@ -124,7 +139,7 @@ function parseStorageRulesBlocks() {
 // ---------------------------------------------------------------------------
 
 /**
- * @typedef {{ pathId: string, pattern: string, testFile: string, rulesRange: [number, number] }} ManifestEntry
+ * @typedef {{ pathId: string, pattern: string, testFile: string }} ManifestEntry
  * @typedef {{ coverage: ManifestEntry[], pending: string[] }} ParsedManifest
  */
 
@@ -170,7 +185,7 @@ function parseManifest() {
 
 /**
  * Walk an array literal of object literals and extract (pathId, pattern,
- * testFile, rulesRange) from each entry.
+ * testFile) from each entry.
  *
  * @param {ts.Expression | undefined} init
  * @param {ManifestEntry[]} out
@@ -182,7 +197,7 @@ function extractCoverageArray(init, out) {
 
   for (const el of arr.elements) {
     if (!ts.isObjectLiteralExpression(el)) continue;
-    const entry = { pathId: '', pattern: '', testFile: '', rulesRange: [0, 0] };
+    const entry = { pathId: '', pattern: '', testFile: '' };
     for (const prop of el.properties) {
       if (!ts.isPropertyAssignment(prop) || !ts.isIdentifier(prop.name)) continue;
       const key = prop.name.text;
@@ -192,12 +207,10 @@ function extractCoverageArray(init, out) {
         entry.pattern = prop.initializer.text;
       } else if (key === 'testFile' && ts.isStringLiteral(prop.initializer)) {
         entry.testFile = prop.initializer.text;
-      } else if (key === 'rulesRange' && ts.isArrayLiteralExpression(prop.initializer)) {
-        const nums = prop.initializer.elements
-          .filter(ts.isNumericLiteral)
-          .map((n) => Number(n.text));
-        if (nums.length === 2) entry.rulesRange = [nums[0], nums[1]];
       }
+      // ⛔ **No `rulesRange`** — removed in Α21.14. See the header: the field was parsed
+      //    here and read nowhere, next to a comment promising a drift warning that was
+      //    never implemented. The location is generated by `--map` instead.
     }
     if (entry.pathId && entry.testFile) out.push(entry);
   }
@@ -253,8 +266,37 @@ function shouldRun(fileList) {
 // Main validation
 // ---------------------------------------------------------------------------
 
+/**
+ * 🏆 **Ο ΠΑΡΑΓΟΜΕΝΟΣ ΔΕΙΚΤΗΣ** — *«σε ποιες γραμμές ζει το path που καλύπτω;»*
+ *
+ * Αντικατέστησε το χειρόγραφο `rulesRange` *(ADR-841 §7 Α21.14)*. Δεν αποθηκεύεται
+ * τίποτα, άρα δεν υπάρχει τιμή να παλιώσει.
+ *
+ * ⚠️ **Η ταυτότητα είναι το `@pathId`**, όχι η γραμμή — όπως ακριβώς την όρισε το
+ * ADR-657 §3.3. Ένα block χωρίς annotation εμφανίζεται με τη διαδρομή του, γιατί αυτό
+ * **είναι** το εύρημα: το Validation E το μπλοκάρει ούτως ή άλλως.
+ *
+ * @param {ReturnType<typeof parseStorageRulesBlocks>} blocks
+ * @param {ParsedManifest} manifest
+ */
+function printLocationMap(blocks, manifest) {
+  const covered = blocks.filter((b) => b.pathId && manifest.pending.includes(b.matchPath));
+  const rendered = renderRulesLocationMap({
+    blocks: blocks.map((b) => ({
+      identity: b.pathId ?? `(χωρίς @pathId) ${b.matchPath}`,
+      lineStart: b.lineStart,
+      lineEnd: b.lineEnd,
+    })),
+    registered: [...manifest.coverage.map((e) => e.pathId), ...covered.map((b) => b.pathId)],
+    rulesFileName: 'storage.rules',
+    title: 'CHECK 3.19 — pathId → storage.rules (ΠΑΡΑΓΟΜΕΝΟ)',
+    colors: C,
+  });
+  for (const line of rendered) log(line);
+}
+
 function main() {
-  if (!shouldRun(targets)) {
+  if (!shouldRun(targets) && !MODE_MAP) {
     if (VERBOSE) log(`${C.dim}CHECK 3.19: no storage.rules or tests/storage-rules/ files staged — skip${C.reset}`);
     process.exit(0);
   }
@@ -279,6 +321,11 @@ function main() {
     violations.push(`coverage-manifest.ts parse error: ${e.message}`);
     printReport(violations);
     process.exit(1);
+  }
+
+  if (MODE_MAP) {
+    printLocationMap(blocks, manifest);
+    process.exit(0);
   }
 
   const { coverage, pending } = manifest;

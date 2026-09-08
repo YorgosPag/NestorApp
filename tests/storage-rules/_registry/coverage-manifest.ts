@@ -99,11 +99,21 @@ export interface StorageCoverageEntry {
   readonly pathId: string;
   /** Architectural pattern driving this path's rule logic. */
   readonly pattern: StoragePathPattern;
-  /**
-   * Line range [startLine, endLine] (1-indexed) of the match block in
-   * storage.rules. Allows CHECK 3.19 to pinpoint drift.
-   */
-  readonly rulesRange: readonly [number, number];
+  // -------------------------------------------------------------------------
+  // ⛔ ΕΔΩ ΖΟΥΣΕ ΤΟ `rulesRange` — ΑΦΑΙΡΕΘΗΚΕ, ΚΑΙ ΜΗΝ ΤΟ ΞΑΝΑΒΑΛΕΙΣ
+  // -------------------------------------------------------------------------
+  //
+  // 🔴 Η τεκμηρίωσή του έλεγε *«Allows CHECK 3.19 to pinpoint drift»* — και **ΔΕΝ ΙΣΧΥΕ**:
+  //    το CHECK 3.19 ταιριάζει κατά `@pathId` από το **ADR-657 §3.3**, και το εύρος το
+  //    πετούσε. Δίπλα, το ίδιο το manifest κατέγραφε *(2026-08-24)* ότι **ΚΑΝΕΝΟΣ** από τα
+  //    11 entries δεν έδειχνε πια σε γραμμή `match /`.
+  //
+  // 🔑 Το ADR-657 είχε ήδη αποφασίσει *«υποβιβάζεται σε τεκμηρίωση με soft warning»* —
+  //    **το soft warning δεν γράφτηκε ποτέ**, οπότε έμεινε μόνο ο υποβιβασμός. Η Α21.14
+  //    έκλεισε το κενό από την **άλλη** πλευρά: δεν υπάρχει τιμή να σαπίσει.
+  //
+  // ⇒ Ο δείκτης είναι πλέον **παραγόμενος**:
+  //    `node scripts/check-storage-rules-test-coverage.js --all --map`
   /**
    * Path to the test file relative to the project root.
    * CHECK 3.19 verifies this file exists and exports `COVERAGE`.
@@ -254,7 +264,6 @@ export const STORAGE_RULES_COVERAGE: readonly StorageCoverageEntry[] = [
   {
     pathId: 'canonical_with_project',
     pattern: 'company_scoped_with_project',
-    rulesRange: [172, 201],
     testFile: 'tests/storage-rules/suites/canonical-path-with-project.storage.test.ts',
     matrix: companyScopedMatrix(),
   },
@@ -266,7 +275,6 @@ export const STORAGE_RULES_COVERAGE: readonly StorageCoverageEntry[] = [
   {
     pathId: 'canonical_no_project',
     pattern: 'company_scoped_no_project',
-    rulesRange: [212, 229],
     testFile: 'tests/storage-rules/suites/canonical-path-no-project.storage.test.ts',
     matrix: companyScopedMatrix(),
   },
@@ -287,7 +295,6 @@ export const STORAGE_RULES_COVERAGE: readonly StorageCoverageEntry[] = [
   {
     pathId: 'topo_surfaces',
     pattern: 'company_scoped_authoring',
-    rulesRange: [417, 424],
     testFile: 'tests/storage-rules/suites/topo-surfaces.storage.test.ts',
     matrix: topoSurfacesAuthoringMatrix(),
   },
@@ -299,7 +306,6 @@ export const STORAGE_RULES_COVERAGE: readonly StorageCoverageEntry[] = [
   {
     pathId: 'cad',
     pattern: 'owner_based',
-    rulesRange: [409, 420],
     testFile: 'tests/storage-rules/suites/cad-files.storage.test.ts',
     matrix: [
       // owner (same_tenant_user uid == path userId)
@@ -328,7 +334,6 @@ export const STORAGE_RULES_COVERAGE: readonly StorageCoverageEntry[] = [
   {
     pathId: 'temp',
     pattern: 'owner_based_no_superadmin',
-    rulesRange: [429, 436],
     testFile: 'tests/storage-rules/suites/temp-uploads.storage.test.ts',
     matrix: [
       // owner (same_tenant_user uid == path userId)
@@ -361,7 +366,6 @@ export const STORAGE_RULES_COVERAGE: readonly StorageCoverageEntry[] = [
   {
     pathId: 'owner_property_media',
     pattern: 'owner_based_no_superadmin',
-    rulesRange: [469, 486],
     testFile: 'tests/storage-rules/suites/owner-property-media.storage.test.ts',
     matrix: [
       // ο κάτοχος (same_tenant_user uid == path userId)
@@ -387,7 +391,6 @@ export const STORAGE_RULES_COVERAGE: readonly StorageCoverageEntry[] = [
   {
     pathId: 'asset_packs',
     pattern: 'server_only_read_superadmin_curation',
-    rulesRange: [514, 522],
     testFile: 'tests/storage-rules/suites/asset-packs.storage.test.ts',
     matrix: [
       // super_admin: curation write/delete allowed — read STILL denied (server-only proxy).
@@ -427,7 +430,6 @@ export const STORAGE_RULES_COVERAGE: readonly StorageCoverageEntry[] = [
   {
     pathId: 'imported_meshes',
     pattern: 'company_scoped_with_project',
-    rulesRange: [526, 541],
     testFile: 'tests/storage-rules/suites/imported-meshes.storage.test.ts',
     matrix: companyScopedMatrix(),
   },
@@ -452,7 +454,6 @@ export const STORAGE_RULES_COVERAGE: readonly StorageCoverageEntry[] = [
   {
     pathId: 'bim_comment_attachments',
     pattern: 'company_scoped_with_project',
-    rulesRange: [363, 377],
     testFile: 'tests/storage-rules/suites/bim-comment-attachments.storage.test.ts',
     matrix: companyScopedMatrix(),
   },
@@ -477,7 +478,6 @@ export const STORAGE_RULES_COVERAGE: readonly StorageCoverageEntry[] = [
   {
     pathId: 'dxf_external_references',
     pattern: 'company_scoped_no_project',
-    rulesRange: [272, 296],
     testFile: 'tests/storage-rules/suites/dxf-external-references.storage.test.ts',
     matrix: companyScopedMatrix(),
   },
@@ -494,12 +494,6 @@ export const STORAGE_RULES_COVERAGE: readonly StorageCoverageEntry[] = [
   {
     pathId: 'user_avatars',
     pattern: 'authenticated_read_owner_write',
-    // ⚠️ ΜΕΤΡΗΜΕΝΟ 2026-08-24: το `rulesRange` **ΚΑΝΕΝΟΣ** από τα 11 entries δεν
-    // δείχνει πια σε γραμμή `match /` — έχουν αποκλίνει **όλα**, από παλιότερες
-    // εισαγωγές μπλοκ, και **καμία πύλη δεν το ρωτά** (το CHECK 3.19 ταιριάζει
-    // κατά `pathId`, όχι κατά γραμμή). Είναι «δεύτερη αλήθεια που σαπίζει
-    // σιωπηλά» — καταγράφεται εδώ ρητά. Αυτή η γραμμή είναι σωστή σήμερα.
-    rulesRange: [299, 305],
     testFile: 'tests/storage-rules/suites/user-avatars.storage.test.ts',
     matrix: personalAssetMatrix(),
   },

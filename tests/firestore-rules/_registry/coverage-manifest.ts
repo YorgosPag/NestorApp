@@ -132,8 +132,31 @@ export interface CollectionCoverage {
   readonly testFile: string;
   /** For `tenant_crossdoc` and field_allowlist patterns — parent docs that must be seeded first. */
   readonly seedDependencies?: readonly string[];
-  /** Rule block line range in firestore.rules (inclusive start, exclusive end). */
-  readonly rulesRange: readonly [number, number];
+
+  // -------------------------------------------------------------------------
+  // ⛔ ΕΔΩ ΖΟΥΣΕ ΤΟ `rulesRange` — ΑΦΑΙΡΕΘΗΚΕ, ΚΑΙ ΜΗΝ ΤΟ ΞΑΝΑΒΑΛΕΙΣ
+  // -------------------------------------------------------------------------
+  //
+  // 🔴 **Ήταν εύρος γραμμών του `firestore.rules` που ΚΑΝΕΙΣ δεν συνέκρινε ποτέ.** Το
+  //    CHECK 3.16 το διάβαζε με AST και το πετούσε· η αντιστοίχιση γίνεται —και γινόταν
+  //    πάντα— κατά **ΤΑΥΤΟΤΗΤΑ** (`collection` ↔ `match /<collection>/`).
+  //
+  // 📊 **Μετρημένο 2026-09-08**: **122 από τις 124** εγγραφές έδειχναν σε λάθος γραμμή,
+  //    με αποκλίσεις ως **+44** — το **98%**. Διορθώθηκαν όλες με το χέρι, και θα είχαν
+  //    ξαναπαλιώσει με την **πρώτη** γραμμή που θα έμπαινε πάνω τους.
+  //
+  // 🔴 **ΤΟ ΙΔΙΟ ΕΙΧΕ ΗΔΗ ΣΥΜΒΕΙ ΔΙΠΛΑ, ΚΑΙ ΕΙΧΕ ΚΡΙΘΕΙ** *(ADR-657 §3.3, storage)*:
+  //    *«κάθε γραμμή που προστίθεται ΠΑΝΩ από ένα block ξεκάρφωνε σιωπηλά όλα τα
+  //    επόμενα — έσπασε ήδη στο `964fd03e`»*. Εκεί η θεραπεία ήταν `// @pathId:`
+  //    annotation: **η ταυτότητα ταξιδεύει με τον κώδικα**.
+  //
+  // 🏆 **ΚΑΙ ΕΙΝΑΙ Η ΠΡΑΚΤΙΚΗ ΤΩΝ ΜΕΓΑΛΩΝ, ΕΠΑΛΗΘΕΥΜΕΝΗ**: το **PHPStan baseline**
+  //    δηλώνει ρητά *«No line numbers»* ως συνειδητή απόφαση, και το **ESLint bulk
+  //    suppressions** (v9.24+) αποθηκεύει `{αρχείο: {κανόνας: {count}}}` — **καμία
+  //    γραμμή**. Και τα δύο για τον ίδιο λόγο: οι γραμμές αλλάζουν, οι ταυτότητες όχι.
+  //
+  // ⇒ **Ο δείκτης δεν χάθηκε — έγινε ΠΑΡΑΓΟΜΕΝΟΣ**, άρα πάντα σωστός:
+  //    `node scripts/check-firestore-rules-test-coverage.js --all --map`
 }
 
 // ---------------------------------------------------------------------------
@@ -158,7 +181,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'public_lands',
     pattern: 'public_world',
     testFile: 'tests/firestore-rules/suites/public-lands.rules.test.ts',
-    rulesRange: [967, 971],
     matrix: publicWorldMatrix(),
   },
   {
@@ -166,7 +188,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'public_buildings',
     pattern: 'public_world',
     testFile: 'tests/firestore-rules/suites/public-buildings.rules.test.ts',
-    rulesRange: [972, 976],
     matrix: publicWorldMatrix(),
   },
   {
@@ -180,7 +201,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'public_listings',
     pattern: 'public_world',
     testFile: 'tests/firestore-rules/suites/public-listings.rules.test.ts',
-    rulesRange: [1002, 1006],
     matrix: publicWorldMatrix(),
   },
   {
@@ -197,7 +217,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'agency_profiles',
     pattern: 'public_world',
     testFile: 'tests/firestore-rules/suites/agency-profiles.rules.test.ts',
-    rulesRange: [1078, 1081],
     matrix: publicWorldMatrix(),
   },
   {
@@ -215,7 +234,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'mandate_requests',
     pattern: 'deny_all',
     testFile: 'tests/firestore-rules/suites/mandate-requests.rules.test.ts',
-    rulesRange: [1105, 1108],
     matrix: denyAllMatrix(),
   },
   {
@@ -241,7 +259,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'showcase_mark_sources',
     pattern: 'deny_all',
     testFile: 'tests/firestore-rules/suites/showcase-mark-sources.rules.test.ts',
-    rulesRange: [1102, 1105],
     matrix: denyAllMatrix(),
   },
   {
@@ -269,7 +286,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'first_contacts',
     pattern: 'deny_all',
     testFile: 'tests/firestore-rules/suites/first-contacts.rules.test.ts',
-    rulesRange: [1153, 1156],
     matrix: denyAllMatrix(),
   },
   {
@@ -289,7 +305,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'first_contact_invitations',
     pattern: 'deny_all',
     testFile: 'tests/firestore-rules/suites/first-contact-invitations.rules.test.ts',
-    rulesRange: [1179, 1182],
     matrix: denyAllMatrix(),
   },
   {
@@ -307,7 +322,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'property_demands',
     pattern: 'ownership',
     testFile: 'tests/firestore-rules/suites/property-demands.rules.test.ts',
-    rulesRange: [1032, 1043],
     matrix: authorOwnedMatrix(),
   },
   {
@@ -327,7 +341,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'owner_properties',
     pattern: 'ownership',
     testFile: 'tests/firestore-rules/suites/owner-properties.rules.test.ts',
-    rulesRange: [1074, 1079],
     matrix: overrideCells(authorOwnedMatrix(), [
       ...ALL_PERSONAS.filter((p) => p !== 'anonymous').flatMap((p) => [
         cell(p, 'create', 'deny', 'server_only'),
@@ -341,7 +354,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'projects',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/projects.rules.test.ts',
-    rulesRange: [37, 95],
     matrix: tenantDirectMatrix(),
   },
   {
@@ -350,7 +362,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'survey_records',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/survey-records.rules.test.ts',
-    rulesRange: [97, 161],
     matrix: overrideCells(tenantDirectMatrix(), [
       // (1) A plain tenant user authors and edits survey records — that is the
       // whole point of the card — but may NOT destroy one. A survey record is
@@ -372,7 +383,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'buildings',
     pattern: 'admin_write_only',
     testFile: 'tests/firestore-rules/suites/buildings.rules.test.ts',
-    rulesRange: [547, 582],
     matrix: adminWriteOnlyMatrix(),
     seedDependencies: ['projects'],
   },
@@ -380,21 +390,18 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'contacts',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/contacts.rules.test.ts',
-    rulesRange: [1400, 1505],
     matrix: tenantDirectMatrix(),
   },
   {
     collection: 'files',
     pattern: 'tenant_state_machine',
     testFile: 'tests/firestore-rules/suites/files.rules.test.ts',
-    rulesRange: [361, 502],
     matrix: tenantStateMachineMatrix(),
   },
   {
     collection: 'entity_audit_trail',
     pattern: 'immutable',
     testFile: 'tests/firestore-rules/suites/entity-audit-trail.rules.test.ts',
-    rulesRange: [2384, 2403],
     matrix: immutableMatrix(),
   },
   {
@@ -405,14 +412,12 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'address_corrections_log',
     pattern: 'admin_write_only',
     testFile: 'tests/firestore-rules/suites/address-corrections-log.rules.test.ts',
-    rulesRange: [2339, 2347],
     matrix: adminWriteOnlyMatrix(),
   },
   {
     collection: 'attendance_events',
     pattern: 'tenant_dual_path',
     testFile: 'tests/firestore-rules/suites/attendance-events.rules.test.ts',
-    rulesRange: [196, 232],
     matrix: attendanceEventMatrix(),
     // Dual-path reads can resolve via parent project, so we seed a project
     // for the crossdoc regression block. The canonical matrix doc carries
@@ -423,7 +428,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'attendance_qr_tokens',
     pattern: 'admin_write_only',
     testFile: 'tests/firestore-rules/suites/attendance-qr-tokens.rules.test.ts',
-    rulesRange: [240, 261],
     // QR tokens are admin-write-only: reads are tenant-scoped (dual path
     // like attendance_events), every client write denies. This matches the
     // canonical `adminWriteOnlyMatrix()` shape exactly. The dual read path
@@ -435,7 +439,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'messages',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/messages.rules.test.ts',
-    rulesRange: [1745, 1791],
     // The messages create rule (firestore.rules:1758) requires
     // `request.resource.data.companyId == getUserCompanyId()` and does NOT
     // include an `isSuperAdminOnly()` OR-leg — super admin therefore cannot
@@ -450,7 +453,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'leads',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/leads.rules.test.ts',
-    rulesRange: [1584, 1625],
     // Create rule has no isSuperAdminOnly() short-circuit — super_admin denied.
     // Seed doc carries createdBy = same_tenant_user.uid for update/delete leg.
     matrix: crmDirectMatrix(),
@@ -459,14 +461,12 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'opportunities',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/opportunities.rules.test.ts',
-    rulesRange: [1626, 1665],
     matrix: crmDirectMatrix(),
   },
   {
     collection: 'activities',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/activities.rules.test.ts',
-    rulesRange: [1666, 1705],
     matrix: crmDirectMatrix(),
   },
   // ── ADR-298 Phase B.6 — compliance tenant_direct (2026-04-13) ───────────
@@ -474,7 +474,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'obligations',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/obligations.rules.test.ts',
-    rulesRange: [1981, 2024],
     // Read: isSuperAdminOnly() || companyId direct || projectId crossdoc || legacy createdBy.
     // Create has no isSuperAdminOnly() short-circuit — super_admin denied (cross_tenant).
     // Update/delete: createdBy==uid || isCompanyAdminOfCompany || isSuperAdminOnly().
@@ -485,7 +484,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'obligation_transmittals',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/obligation-transmittals.rules.test.ts',
-    rulesRange: [2033, 2062],
     // Simpler read: isSuperAdminOnly() || companyId direct (no crossdoc, no legacy).
     // Create: no isSuperAdminOnly() short-circuit — super_admin denied (cross_tenant).
     // Update: strict companyId immutability (no optional hasAny guard).
@@ -496,7 +494,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'obligation_templates',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/obligation-templates.rules.test.ts',
-    rulesRange: [2069, 2107],
     // Read: isSuperAdminOnly() || companyId direct || legacy createdBy (no crossdoc).
     // Create: no isSuperAdminOnly() short-circuit — super_admin denied (cross_tenant).
     // Update/delete: createdBy==uid || isCompanyAdminOfCompany || isSuperAdminOnly().
@@ -508,7 +505,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'conversations',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/conversations.rules.test.ts',
-    rulesRange: [1706, 1753],
     // Create rule requires isValidConversationData (channel + status enum) and
     // has no isSuperAdminOnly short-circuit — super_admin denied (cross_tenant).
     // same_tenant_user has full CRUD: create via companyId match, update/delete
@@ -519,7 +515,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'external_identities',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/external-identities.rules.test.ts',
-    rulesRange: [1801, 1844],
     // No isValidConversationData on create/update. Same CRUD pattern as CRM
     // collections: super_admin denied on create (no isSuperAdminOnly short-circuit),
     // same_tenant_user full CRUD via companyId/createdBy paths.
@@ -530,7 +525,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'floors',
     pattern: 'admin_write_only',
     testFile: 'tests/firestore-rules/suites/floors.rules.test.ts',
-    rulesRange: [590, 618],
     matrix: adminWriteOnlyMatrix(),
     seedDependencies: ['projects', 'buildings'],
   },
@@ -538,7 +532,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'properties',
     pattern: 'admin_write_only',
     testFile: 'tests/firestore-rules/suites/properties.rules.test.ts',
-    rulesRange: [619, 664],
     // Delta from canonical admin_write_only: update is allowed for super_admin
     // (isSuperAdminOnly bypass) and for company admins of the project's company
     // (isCompanyAdminOfProject + isAllowedPropertyFieldUpdate + propertyStructuralFieldsUnchanged).
@@ -554,7 +547,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'storage_units',
     pattern: 'admin_write_only',
     testFile: 'tests/firestore-rules/suites/storage-units.rules.test.ts',
-    rulesRange: [665, 694],
     matrix: adminWriteOnlyMatrix(),
     seedDependencies: ['projects', 'buildings'],
   },
@@ -562,7 +554,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'parking_spots',
     pattern: 'admin_write_only',
     testFile: 'tests/firestore-rules/suites/parking-spots.rules.test.ts',
-    rulesRange: [695, 725],
     matrix: adminWriteOnlyMatrix(),
     seedDependencies: ['projects', 'buildings'],
   },
@@ -572,77 +563,66 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'accounting_bank_transactions',
     pattern: 'role_dual',
     testFile: 'tests/firestore-rules/suites/accounting-bank-transactions.rules.test.ts',
-    rulesRange: [3020, 3027],
     matrix: roleDualMatrix(),
   },
   {
     collection: 'accounting_bank_accounts',
     pattern: 'role_dual',
     testFile: 'tests/firestore-rules/suites/accounting-bank-accounts.rules.test.ts',
-    rulesRange: [3027, 3034],
     matrix: roleDualMatrix(),
   },
   {
     collection: 'accounting_fixed_assets',
     pattern: 'role_dual',
     testFile: 'tests/firestore-rules/suites/accounting-fixed-assets.rules.test.ts',
-    rulesRange: [3034, 3041],
     matrix: roleDualMatrix(),
   },
   {
     collection: 'accounting_depreciation_records',
     pattern: 'role_dual',
     testFile: 'tests/firestore-rules/suites/accounting-depreciation-records.rules.test.ts',
-    rulesRange: [3041, 3048],
     matrix: roleDualMatrix(),
   },
   {
     collection: 'accounting_expense_documents',
     pattern: 'role_dual',
     testFile: 'tests/firestore-rules/suites/accounting-expense-documents.rules.test.ts',
-    rulesRange: [3048, 3055],
     matrix: roleDualMatrix(),
   },
   {
     collection: 'accounting_import_batches',
     pattern: 'role_dual',
     testFile: 'tests/firestore-rules/suites/accounting-import-batches.rules.test.ts',
-    rulesRange: [3055, 3062],
     matrix: roleDualMatrix(),
   },
   {
     collection: 'accounting_tax_installments',
     pattern: 'role_dual',
     testFile: 'tests/firestore-rules/suites/accounting-tax-installments.rules.test.ts',
-    rulesRange: [3062, 3069],
     matrix: roleDualMatrix(),
   },
   {
     collection: 'accounting_apy_certificates',
     pattern: 'role_dual',
     testFile: 'tests/firestore-rules/suites/accounting-apy-certificates.rules.test.ts',
-    rulesRange: [3069, 3076],
     matrix: roleDualMatrix(),
   },
   {
     collection: 'accounting_custom_categories',
     pattern: 'role_dual',
     testFile: 'tests/firestore-rules/suites/accounting-custom-categories.rules.test.ts',
-    rulesRange: [3076, 3083],
     matrix: roleDualMatrix(),
   },
   {
     collection: 'accounting_matching_rules',
     pattern: 'role_dual',
     testFile: 'tests/firestore-rules/suites/accounting-matching-rules.rules.test.ts',
-    rulesRange: [3083, 3090],
     matrix: roleDualMatrix(),
   },
   {
     collection: 'accounting_efka_payments',
     pattern: 'role_dual',
     testFile: 'tests/firestore-rules/suites/accounting-efka-payments.rules.test.ts',
-    rulesRange: [3090, 3097],
     matrix: roleDualMatrix(),
   },
   // Pattern C: fiscal periods — Q8 SAP state-machine
@@ -650,7 +630,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'accounting_fiscal_periods',
     pattern: 'role_dual',
     testFile: 'tests/firestore-rules/suites/accounting-fiscal-periods.rules.test.ts',
-    rulesRange: [3111, 3132],
     // Fiscal period matrix: admin-only create, internal-user update with
     // state-machine guard, delete forbidden (business invariant).
     // See `fiscalPeriodMatrix()` in coverage-matrices.ts for full rationale.
@@ -661,14 +640,12 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'accounting_settings',
     pattern: 'role_dual',
     testFile: 'tests/firestore-rules/suites/accounting-settings.rules.test.ts',
-    rulesRange: [3132, 3146],
     matrix: accountingSingletonMatrix(),
   },
   {
     collection: 'accounting_efka_config',
     pattern: 'role_dual',
     testFile: 'tests/firestore-rules/suites/accounting-efka-config.rules.test.ts',
-    rulesRange: [3146, 3162],
     matrix: accountingSingletonMatrix(),
   },
   // Pattern E: server-only — deny all client access
@@ -676,7 +653,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'accounting_invoice_counters',
     pattern: 'deny_all',
     testFile: 'tests/firestore-rules/suites/accounting-invoice-counters.rules.test.ts',
-    rulesRange: [3162, 3169],
     // `allow read, write: if false` — no client reads or writes at all.
     // Stronger than `immutable` (which allows tenant-scoped reads).
     matrix: denyAllMatrix(),
@@ -686,7 +662,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'accounting_customer_balances',
     pattern: 'role_dual',
     testFile: 'tests/firestore-rules/suites/accounting-customer-balances.rules.test.ts',
-    rulesRange: [3169, 3178],
     matrix: accountingSystemCalcMatrix(),
   },
   // ── ADR-298 Phase B.2 — accounting ΚΦΔ (2026-04-13) ─────────────────────
@@ -694,21 +669,18 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'accounting_invoices',
     pattern: 'role_dual',
     testFile: 'tests/firestore-rules/suites/accounting-invoices.rules.test.ts',
-    rulesRange: [3013, 3019],
     matrix: roleDualMatrix(),
   },
   {
     collection: 'accounting_journal_entries',
     pattern: 'role_dual',
     testFile: 'tests/firestore-rules/suites/accounting-journal-entries.rules.test.ts',
-    rulesRange: [3006, 3012],
     matrix: roleDualMatrix(),
   },
   {
     collection: 'accounting_audit_log',
     pattern: 'role_dual',
     testFile: 'tests/firestore-rules/suites/accounting-audit-log.rules.test.ts',
-    rulesRange: [3099, 3108],
     // Q7 ΚΦΔ compliance: update/delete are `if false` — immutable for all personas.
     // Read + create follow the standard role_dual shape (canReadAccounting /
     // canCreateAccountingSystem + userId==uid; no isSuperAdminOnly short-circuit).
@@ -730,35 +702,30 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'config',
     pattern: 'system_global',
     testFile: 'tests/firestore-rules/suites/config.rules.test.ts',
-    rulesRange: [1579, 1583],
     matrix: systemGlobalMatrix(),
   },
   {
     collection: 'email_domain_policies',
     pattern: 'system_global',
     testFile: 'tests/firestore-rules/suites/email-domain-policies.rules.test.ts',
-    rulesRange: [1903, 1909],
     matrix: systemGlobalMatrix(),
   },
   {
     collection: 'country_security_policies',
     pattern: 'system_global',
     testFile: 'tests/firestore-rules/suites/country-security-policies.rules.test.ts',
-    rulesRange: [1910, 1916],
     matrix: systemGlobalMatrix(),
   },
   {
     collection: 'bot_configs',
     pattern: 'system_global',
     testFile: 'tests/firestore-rules/suites/bot-configs.rules.test.ts',
-    rulesRange: [2292, 2297],
     matrix: systemGlobalMatrix(),
   },
   {
     collection: 'system',
     pattern: 'system_global',
     testFile: 'tests/firestore-rules/suites/system.rules.test.ts',
-    rulesRange: [1563, 1572],
     // isCompanyAdmin() read (role-only, not tenant-bound), write=false
     matrix: systemAdminGlobalMatrix(),
   },
@@ -766,21 +733,18 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'navigation_companies',
     pattern: 'admin_write_only',
     testFile: 'tests/firestore-rules/suites/navigation-companies.rules.test.ts',
-    rulesRange: [733, 739],
     matrix: adminWriteOnlyMatrix(),
   },
   {
     collection: 'appointments',
     pattern: 'admin_write_only',
     testFile: 'tests/firestore-rules/suites/appointments.rules.test.ts',
-    rulesRange: [851, 868],
     matrix: adminWriteOnlyMatrix(),
   },
   {
     collection: 'counters',
     pattern: 'system_global',
     testFile: 'tests/firestore-rules/suites/counters.rules.test.ts',
-    rulesRange: [1922, 1928],
     // isAuthenticated() read+write — global increment counters
     matrix: countersMatrix(),
   },
@@ -788,7 +752,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'analytics',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/analytics.rules.test.ts',
-    rulesRange: [1934, 1967],
     // Create: companyId==getUserCompanyId() only, no isSuperAdminOnly() — super_admin denied
     matrix: crmDirectMatrix(),
   },
@@ -796,7 +759,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'communications',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/communications.rules.test.ts',
-    rulesRange: [1521, 1554],
     // Create: companyId==getUserCompanyId() only, no isSuperAdminOnly() — super_admin denied
     matrix: crmDirectMatrix(),
   },
@@ -804,7 +766,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'tasks',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/tasks.rules.test.ts',
-    rulesRange: [784, 837],
     // Create: isSuperAdminOnly() OR-leg present → super_admin allowed (delta from crmDirectMatrix)
     // Seed doc: createdBy=assignedTo=same_tenant_user.uid for update/delete paths
     matrix: tasksMatrix(),
@@ -819,21 +780,18 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'project_floorplans',
     pattern: 'bim_presentation',
     testFile: 'tests/firestore-rules/suites/project-floorplans.rules.test.ts',
-    rulesRange: [990, 1002],
     matrix: legacyFloorplanMatrix(),
   },
   {
     collection: 'building_floorplans',
     pattern: 'bim_presentation',
     testFile: 'tests/firestore-rules/suites/building-floorplans.rules.test.ts',
-    rulesRange: [1008, 1014],
     matrix: legacyFloorplanMatrix(),
   },
   {
     collection: 'floor_floorplans',
     pattern: 'bim_presentation',
     testFile: 'tests/firestore-rules/suites/floor-floorplans.rules.test.ts',
-    rulesRange: [1024, 1030],
     // ADR-657 removed the cross-tenant dev-fallback read leg; canReadLegacyFloorplan()
     // no-companyId leg now requires createdBy == uid. Canonical seed carries companyId.
     matrix: legacyFloorplanMatrix(),
@@ -842,21 +800,18 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'unit_floorplans',
     pattern: 'bim_presentation',
     testFile: 'tests/firestore-rules/suites/unit-floorplans.rules.test.ts',
-    rulesRange: [1036, 1042],
     matrix: legacyFloorplanMatrix(),
   },
   {
     collection: 'floorplans',
     pattern: 'bim_presentation',
     testFile: 'tests/firestore-rules/suites/floorplans.rules.test.ts',
-    rulesRange: [2445, 2451],
     matrix: legacyFloorplanMatrix(),
   },
   {
     collection: 'dxf_overlay_levels',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/dxf_overlay_levels.rules.test.ts',
-    rulesRange: [1051, 1098],
     // Items subcollection not tracked (nested subcollection — excluded from manifest).
     matrix: fileTenantFullMatrix(),
   },
@@ -864,21 +819,18 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'layers',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/layers.rules.test.ts',
-    rulesRange: [1193, 1226],
     matrix: crmDirectMatrix(),
   },
   {
     collection: 'layer_groups',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/layer-groups.rules.test.ts',
-    rulesRange: [2303, 2336],
     matrix: crmDirectMatrix(),
   },
   {
     collection: 'admin_building_templates',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/admin-building-templates.rules.test.ts',
-    rulesRange: [2419, 2454],
     // Legacy fallback on read for !companyId docs (creator-only) — not exercised
     // by canonical matrix (seed doc carries companyId).
     matrix: crmDirectMatrix(),
@@ -887,7 +839,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'cad_files',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/cad-files.rules.test.ts',
-    rulesRange: [332, 365],
     // Permissive write: create/update require only isAuthenticated() + fileName.
     // No companyId gate on write → cross_tenant_admin CAN create/update.
     // Read/delete: tenant-scoped (isSuperAdminOnly || belongsToCompany || legacy createdBy).
@@ -898,7 +849,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'file_audit_log',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/file-audit-log.rules.test.ts',
-    rulesRange: [2468, 2476],
     // Read gate: belongsToCompany only — NO isSuperAdminOnly bypass (super_admin denied).
     // Create allows super_admin (isSuperAdminOnly on create rule).
     // Update/delete: if false — immutable audit trail.
@@ -911,7 +861,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'file_shares',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/file-shares.rules.test.ts',
-    rulesRange: [2485, 2508],
     // Read: if true — public (anonymous allowed for share token validation pages).
     // Delete: createdBy==uid only — super_admin and admin denied.
     matrix: fileSharesMatrix(),
@@ -920,7 +869,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'photo_shares',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/photo-shares.rules.test.ts',
-    rulesRange: [2513, 2527],
     // Update: if false — immutable CRM share history records.
     // Delete: isSuperAdminOnly() only.
     matrix: photoSharesMatrix(),
@@ -929,7 +877,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'file_comments',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/file-comments.rules.test.ts',
-    rulesRange: [2535, 2548],
     // Read gate: belongsToCompany (no isSuperAdminOnly bypass) → super_admin denied.
     // Update: any same-tenant member (authorId must be preserved).
     // Delete: author only (authorId == request.auth.uid). Seed: authorId=same_tenant_user.uid.
@@ -939,7 +886,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'file_approvals',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/file-approvals.rules.test.ts',
-    rulesRange: [2555, 2576],
     // Delete: if false — approval records are immutable business artifacts.
     matrix: fileApprovalsMatrix(),
   },
@@ -947,7 +893,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'document_templates',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/document-templates.rules.test.ts',
-    rulesRange: [2583, 2610],
     // Full CRUD: isSuperAdminOnly || (companyId && belongsToCompany).
     // same_tenant_user has all operations (not just admin).
     matrix: fileTenantFullMatrix(),
@@ -956,7 +901,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'file_webhooks',
     pattern: 'deny_all',
     testFile: 'tests/firestore-rules/suites/file-webhooks.rules.test.ts',
-    rulesRange: [2617, 2620],
     // allow read, write: if false — Admin SDK only. Same shape as accounting_invoice_counters.
     matrix: denyAllMatrix(),
   },
@@ -964,7 +908,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'file_folders',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/file-folders.rules.test.ts',
-    rulesRange: [2627, 2654],
     // Full CRUD: isSuperAdminOnly || (companyId && belongsToCompany).
     matrix: fileTenantFullMatrix(),
   },
@@ -973,7 +916,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'boq_items',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/boq-items.rules.test.ts',
-    rulesRange: [2791, 2837],
     // Full CRUD: isSuperAdminOnly || belongsToCompany(companyId).
     // Delete gated on status in ['draft', 'submitted'] — seed with status='draft'.
     // Update immutable: buildingId, projectId, companyId must not change.
@@ -983,7 +925,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'boq_categories',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/boq-categories.rules.test.ts',
-    rulesRange: [2846, 2861],
     // Read-only: `allow create, update, delete: if false` — reserved for future admin UI.
     // Reads: isSuperAdminOnly || (companyId && belongsToCompany) || !companyId (system defaults).
     matrix: boqCategoriesMatrix(),
@@ -992,7 +933,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'brokerage_agreements',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/brokerage-agreements.rules.test.ts',
-    rulesRange: [2868, 2905],
     // Delete: createdBy==uid || isSuperAdminOnly (NO isCompanyAdminOfCompany).
     // same_tenant_admin can update (isCompanyAdminOfCompany) but NOT delete.
     // Seed doc: createdBy=same_tenant_user.uid.
@@ -1002,7 +942,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'commission_records',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/commission-records.rules.test.ts',
-    rulesRange: [2910, 2942],
     // Delete: isSuperAdminOnly ONLY. No createdBy leg — super_admin is the only
     // persona allowed to permanently delete a commission record.
     // Update: createdBy==uid || isCompanyAdminOfCompany || isSuperAdminOnly.
@@ -1012,7 +951,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'ownership_tables',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/ownership-tables.rules.test.ts',
-    rulesRange: [2950, 2977],
     // Delete: isSuperAdminOnly ONLY. Update: belongsToCompany (not createdBy).
     // Nested revisions subcollection excluded from top-level CHECK 3.16 scope.
     matrix: ownershipTablesMatrix(),
@@ -1022,7 +960,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'companies',
     pattern: 'ownership',
     testFile: 'tests/firestore-rules/suites/companies.rules.test.ts',
-    rulesRange: [518, 550],
     // Read: isSuperAdminOnly() || getUserCompanyId() == companyId (path variable, not field).
     // Write: if false — Admin SDK only (ADR-252 FR-C3).
     // List: same-tenant personas denied (path-var rule, unrestricted queries blocked).
@@ -1033,7 +970,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'security_roles',
     pattern: 'system_global',
     testFile: 'tests/firestore-rules/suites/security-roles.rules.test.ts',
-    rulesRange: [1309, 1312],
     // Read: isAuthenticated() — global, no tenant isolation (critical for login).
     // Write: if false — Admin SDK only.
     matrix: systemGlobalMatrix(),
@@ -1042,7 +978,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'users',
     pattern: 'ownership',
     testFile: 'tests/firestore-rules/suites/users.rules.test.ts',
-    rulesRange: [1319, 1361],
     // Read: uid==userId || (companyId && belongsToCompany) || isSuperAdminOnly (SPEC-259B).
     // Create/update: uid==userId || (companyId && isCompanyAdminOfCompany).
     // Delete: if false — user docs never client-deleted.
@@ -1053,7 +988,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'user_2fa_settings',
     pattern: 'ownership',
     testFile: 'tests/firestore-rules/suites/user-2fa-settings.rules.test.ts',
-    rulesRange: [1368, 1371],
     // Pure ownership: allow read, write: if isOwner(userId) = request.auth.uid == userId.
     // List + create: deny for all (path-var rule; harness fresh-docId constraint).
     // Own-uid create exercised in suite's dedicated regression block.
@@ -1063,7 +997,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'user_notification_settings',
     pattern: 'ownership',
     testFile: 'tests/firestore-rules/suites/user-notification-settings.rules.test.ts',
-    rulesRange: [1378, 1381],
     // Pure ownership: allow read, write: if isOwner(userId) = request.auth.uid == userId.
     // List + create: deny for all (path-var rule; harness fresh-docId constraint).
     // Own-uid create exercised in suite's dedicated regression block.
@@ -1073,7 +1006,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'workspaces',
     pattern: 'admin_write_only',
     testFile: 'tests/firestore-rules/suites/workspaces.rules.test.ts',
-    rulesRange: [1388, 1402],
     // Read: isSuperAdminOnly() || (companyId && belongsToCompany) (PR-1B, SPEC-259B).
     // Write: if false — Admin SDK only.
     matrix: adminWriteOnlyMatrix(),
@@ -1082,7 +1014,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'teams',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/teams.rules.test.ts',
-    rulesRange: [2678, 2712],
     // Create: companyId==getUserCompanyId() — no isSuperAdminOnly() short-circuit.
     // Update/delete: createdBy==uid || isCompanyAdminOfCompany || isSuperAdminOnly.
     // Seed doc carries createdBy=same_tenant_user.uid.
@@ -1092,7 +1023,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'positions',
     pattern: 'system_global',
     testFile: 'tests/firestore-rules/suites/positions.rules.test.ts',
-    rulesRange: [2719, 2722],
     // Read: isAuthenticated() — global, no tenant isolation.
     // Write: if false — Admin SDK only.
     matrix: systemGlobalMatrix(),
@@ -1102,7 +1032,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'contact_relationships',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/contact-relationships.rules.test.ts',
-    rulesRange: [103, 142],
     // Create: isAuthenticated() + required fields only — NO companyId gate.
     // Update/delete: createdBy==uid || isSuperAdminOnly. same_tenant_admin denied.
     // Seed: createdBy=same_tenant_user.uid, companyId=SAME_TENANT_COMPANY_ID.
@@ -1112,10 +1041,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'contact_links',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/contact-links.rules.test.ts',
-    // 169-242 since ADR-745 Φάση Β added the `resource == null` rationale block.
-    // ⚠️ `rulesRange` is parsed by CHECK 3.16 but never compared against
-    // firestore.rules, so a stale range fails nothing — keep it honest by hand.
-    rulesRange: [169, 242],
     // ADR-745 (2026-08-01): no longer shares contactRelationshipsMatrix(). The
     // pattern was declared `tenant_direct` while the tenant field was never
     // written — nominally tenant-scoped, structurally unreachable. Now real:
@@ -1126,9 +1051,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'title_block_bindings',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/title-block-bindings.rules.test.ts',
-    // ⚠️ `rulesRange` is parsed by CHECK 3.16 but never compared against
-    // firestore.rules, so a stale range fails nothing — keep it honest by hand.
-    rulesRange: [244, 335],
     // ADR-745 Φ3β (2026-08-05): per-cell provenance. Same tenant discipline as
     // contact_links, with two deliberate departures pinned by their own cells —
     // company-wide update (a colleague may supersede) and super-admin-only delete
@@ -1139,7 +1061,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'relationships',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/relationships.rules.test.ts',
-    rulesRange: [1860, 1897],
     // Create: companyId==getUserCompanyId() — no isSuperAdminOnly shortcut.
     // Update/delete: createdBy==uid || isCompanyAdminOfCompany || isSuperAdminOnly.
     // Seed: createdBy=same_tenant_user.uid.
@@ -1149,7 +1070,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'relationship_audit',
     pattern: 'system_global',
     testFile: 'tests/firestore-rules/suites/relationship-audit.rules.test.ts',
-    rulesRange: [2381, 2385],
     // Read: isAuthenticated() — any authenticated, no tenant isolation.
     // Write: if false — Admin SDK only.
     matrix: systemGlobalMatrix(),
@@ -1158,7 +1078,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'employment_records',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/employment-records.rules.test.ts',
-    rulesRange: [285, 324],
     // Read: tenant-scoped (companyId OR crossdoc projectId). Write: open authenticated
     // create/update (no companyId gate). Delete: if false.
     matrix: employmentRecordsMatrix(),
@@ -1167,7 +1086,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'notifications',
     pattern: 'ownership',
     testFile: 'tests/firestore-rules/suites/notifications.rules.test.ts',
-    rulesRange: [748, 769],
     // Read: userId==auth.uid — owner only. Update: owner + isValidNotificationUpdate.
     // Create/delete: if false — server-only.
     matrix: notificationsMatrix(),
@@ -1176,7 +1094,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'audit_logs',
     pattern: 'system_global',
     testFile: 'tests/firestore-rules/suites/audit-logs.rules.test.ts',
-    rulesRange: [2455, 2459],
     // Top-level audit_logs (NOT the companies/{id}/audit_logs subcollection).
     // Read: isAuthenticated() — global, no tenant isolation. Write: if false.
     matrix: systemGlobalMatrix(),
@@ -1185,7 +1102,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'system_audit_logs',
     pattern: 'system_global',
     testFile: 'tests/firestore-rules/suites/system-audit-logs.rules.test.ts',
-    rulesRange: [2655, 2659],
     // Read: isAuthenticated() — global, no tenant isolation. Write: if false.
     matrix: systemGlobalMatrix(),
   },
@@ -1193,7 +1109,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'audit_log',
     pattern: 'system_global',
     testFile: 'tests/firestore-rules/suites/audit-log.rules.test.ts',
-    rulesRange: [2667, 2671],
     // Cloud Functions purge trail. Read: isSuperAdminOnly() only. Write: if false.
     // Pattern system_global (not immutable) — Bug #1 check only applies to immutable.
     matrix: auditLogMatrix(),
@@ -1202,7 +1117,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'search_documents',
     pattern: 'admin_write_only',
     testFile: 'tests/firestore-rules/suites/search-documents.rules.test.ts',
-    rulesRange: [2742, 2758],
     // Read: isSuperAdminOnly() || belongsToCompany(tenantId) — uses tenantId field.
     // Write: if false — Cloud Functions / Admin SDK. Seed uses tenantId (not companyId).
     matrix: searchDocumentsMatrix(),
@@ -1211,7 +1125,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'voice_commands',
     pattern: 'ownership',
     testFile: 'tests/firestore-rules/suites/voice-commands.rules.test.ts',
-    rulesRange: [2770, 2781],
     // Read: userId==auth.uid — owner only. All writes: if false — server-only.
     matrix: voiceCommandsMatrix(),
   },
@@ -1227,7 +1140,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'floorplan_backgrounds',
     pattern: 'bim_presentation',
     testFile: 'tests/firestore-rules/suites/floorplan-backgrounds.rules.test.ts',
-    rulesRange: [1108, 1138],
     matrix: bimPresentationMatrix(),
   },
   {
@@ -1236,7 +1148,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'floorplan_overlays',
     pattern: 'bim_presentation',
     testFile: 'tests/firestore-rules/suites/floorplan-overlays.rules.test.ts',
-    rulesRange: [1162, 1247],
     matrix: bimPresentationMatrix(),
   },
   {
@@ -1250,7 +1161,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'floorplan_topo_surfaces',
     pattern: 'bim_authoring',
     testFile: 'tests/firestore-rules/suites/floorplan-topo-surfaces.rules.test.ts',
-    rulesRange: [3653, 3660],
     matrix: bimAuthoringMatrix(),
   },
   // ── ADR-657 — BIM tier canary suites (one per rule-shape variant) ─────────
@@ -1260,7 +1170,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'floorplan_walls',
     pattern: 'bim_presentation',
     testFile: 'tests/firestore-rules/suites/floorplan-walls.rules.test.ts',
-    rulesRange: [3569, 3575],
     matrix: bimPresentationMatrix(),
   },
   {
@@ -1268,7 +1177,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'floorplan_stairs',
     pattern: 'bim_presentation',
     testFile: 'tests/firestore-rules/suites/floorplan-stairs.rules.test.ts',
-    rulesRange: [3555, 3561],
     matrix: bimPresentationMatrix(),
   },
   {
@@ -1276,7 +1184,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'floorplan_grid_guides',
     pattern: 'bim_authoring',
     testFile: 'tests/firestore-rules/suites/floorplan-grid-guides.rules.test.ts',
-    rulesRange: [3641, 3648],
     matrix: bimAuthoringMatrix(),
   },
   {
@@ -1284,7 +1191,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'floorplan_foundations',
     pattern: 'bim_authoring',
     testFile: 'tests/firestore-rules/suites/floorplan-foundations.rules.test.ts',
-    rulesRange: [3631, 3638],
     matrix: bimAuthoringMatrix(),
   },
   {
@@ -1292,7 +1198,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'floorplan_hatches',
     pattern: 'bim_authoring',
     testFile: 'tests/firestore-rules/suites/floorplan-hatches.rules.test.ts',
-    rulesRange: [3813, 3820],
     matrix: bimAuthoringMatrix(),
   },
   {
@@ -1300,7 +1205,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'floorplan_symbols',
     pattern: 'bim_authoring',
     testFile: 'tests/firestore-rules/suites/floorplan-symbols.rules.test.ts',
-    rulesRange: [3694, 3701],
     matrix: bimAuthoringMatrix(),
   },
   {
@@ -1308,7 +1212,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'floorplan_mep_systems',
     pattern: 'bim_authoring',
     testFile: 'tests/firestore-rules/suites/floorplan-mep-systems.rules.test.ts',
-    rulesRange: [3785, 3792],
     matrix: bimAuthoringMatrix(),
   },
   {
@@ -1318,7 +1221,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'text_templates',
     pattern: 'tenant_admin_write',
     testFile: 'tests/firestore-rules/suites/text_templates.rules.test.ts',
-    rulesRange: [3904, 3941],
     matrix: textTemplateMatrix(),
   },
   {
@@ -1329,7 +1231,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'company_fonts',
     pattern: 'tenant_admin_write',
     testFile: 'tests/firestore-rules/suites/company_fonts.rules.test.ts',
-    rulesRange: [3847, 3885],
     matrix: textTemplateMatrix(),
   },
   {
@@ -1341,7 +1242,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'text_custom_dictionary',
     pattern: 'tenant_admin_write',
     testFile: 'tests/firestore-rules/suites/text_custom_dictionary.rules.test.ts',
-    rulesRange: [3944, 4007],
     matrix: textTemplateMatrix(),
   },
   {
@@ -1355,7 +1255,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'block_library',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/block-library.rules.test.ts',
-    rulesRange: [4461, 4488],
     matrix: blockLibraryMatrix(),
   },
   {
@@ -1367,7 +1266,6 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'asset_pack_config',
     pattern: 'deny_all',
     testFile: 'tests/firestore-rules/suites/asset-pack-config.rules.test.ts',
-    rulesRange: [2952, 2955],
     matrix: denyAllMatrix(),
   },
   // ─── OAUTH 2.1 AUTHORIZATION SERVER (ADR-738) ─────────────────────────────
@@ -1381,35 +1279,30 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'oauth_clients',
     pattern: 'deny_all',
     testFile: 'tests/firestore-rules/suites/oauth-clients.rules.test.ts',
-    rulesRange: [5164, 5167],
     matrix: denyAllMatrix(),
   },
   {
     collection: 'oauth_auth_requests',
     pattern: 'deny_all',
     testFile: 'tests/firestore-rules/suites/oauth-auth-requests.rules.test.ts',
-    rulesRange: [5168, 5171],
     matrix: denyAllMatrix(),
   },
   {
     collection: 'oauth_codes',
     pattern: 'deny_all',
     testFile: 'tests/firestore-rules/suites/oauth-codes.rules.test.ts',
-    rulesRange: [5172, 5175],
     matrix: denyAllMatrix(),
   },
   {
     collection: 'oauth_tokens',
     pattern: 'deny_all',
     testFile: 'tests/firestore-rules/suites/oauth-tokens.rules.test.ts',
-    rulesRange: [5176, 5179],
     matrix: denyAllMatrix(),
   },
   {
     collection: 'oauth_consents',
     pattern: 'deny_all',
     testFile: 'tests/firestore-rules/suites/oauth-consents.rules.test.ts',
-    rulesRange: [5180, 5183],
     matrix: denyAllMatrix(),
   },
   // ─── ΧΡΟΝΟΠΡΟΓΡΑΜΜΑΤΙΣΜΟΣ (ADR-740) ───────────────────────────────────────
@@ -1423,14 +1316,12 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'cron_job_state',
     pattern: 'deny_all',
     testFile: 'tests/firestore-rules/suites/cron-job-state.rules.test.ts',
-    rulesRange: [5194, 5196],
     matrix: denyAllMatrix(),
   },
   {
     collection: 'workspace_aliases',
     pattern: 'deny_all',
     testFile: 'tests/firestore-rules/suites/workspace-aliases.rules.test.ts',
-    rulesRange: [5792, 5794],
     matrix: denyAllMatrix(),
   },
 ] as const;

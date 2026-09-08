@@ -32,8 +32,17 @@
  *   7. Validation E — for every `tenant_direct` coverage entry, the first
  *      OR leg of the corresponding rule's allow-read must be `isSuperAdminOnly()`.
  *
+ * The manifest carries NO line ranges, deliberately — see ADR-841 §7 Α21.14. Matching is
+ * by IDENTITY (collection name), and the location of each rule block is GENERATED on
+ * demand via `--map`, so it can never go stale. The former `rulesRange` field was parsed
+ * and never compared; measured 2026-09-08, 124 of 127 entries pointed at the wrong line
+ * (98%), the worst by 1853 lines. Removing it follows the practice of the tools this repo
+ * already treats as the baseline standard: PHPStan states "No line numbers" as a
+ * deliberate trade-off, and ESLint bulk suppressions (v9.24+) store no line at all.
+ *
  * CLI:
  *   node scripts/check-firestore-rules-test-coverage.js                # staged (no targets)
+ *   node scripts/check-firestore-rules-test-coverage.js --map          # collection → rules lines
  *   node scripts/check-firestore-rules-test-coverage.js --all          # full scan
  *   node scripts/check-firestore-rules-test-coverage.js --verbose      # extra output
  *   node scripts/check-firestore-rules-test-coverage.js file1 file2    # explicit targets
@@ -55,8 +64,10 @@ const ts = require('typescript');
 
 const {
   parseFirestoreRules,
+  findDuplicateMatchPaths,
   validateSuperAdminShortCircuit,
 } = require('./_shared/firestore-rules-parser');
+const { renderRulesLocationMap } = require('./_shared/rules-location-map');
 
 // ---------------------------------------------------------------------------
 // Paths
@@ -88,6 +99,8 @@ const flags = new Set(args.filter((a) => a.startsWith('--')));
 const targets = args.filter((a) => !a.startsWith('--'));
 const MODE_ALL = flags.has('--all');
 const VERBOSE = flags.has('--verbose');
+/** 🏆 Ο **παραγόμενος** δείκτης προς τους κανόνες — δες ADR-841 §7 Α21.14. */
+const MODE_MAP = flags.has('--map');
 
 // ---------------------------------------------------------------------------
 // Colors
@@ -111,7 +124,7 @@ function log(msg) {
 // ---------------------------------------------------------------------------
 
 /**
- * @typedef {{ collection: string, pattern: string, testFile: string, rulesRange: [number, number] }} ManifestEntry
+ * @typedef {{ collection: string, pattern: string, testFile: string }} ManifestEntry
  * @typedef {{ coverage: ManifestEntry[], pending: string[] }} ParsedManifest
  */
 
@@ -150,7 +163,7 @@ function parseManifest() {
 
 /**
  * Walk an array literal of object literals and extract (collection, pattern,
- * testFile, rulesRange) from each entry. Anything that does not look like a
+ * testFile) from each entry. Anything that does not look like a
  * straightforward string/number literal is silently skipped — the matrix
  * builders live in function calls and are not parsed here.
  *
@@ -164,7 +177,7 @@ function extractCoverageArray(init, out) {
 
   for (const el of arr.elements) {
     if (!ts.isObjectLiteralExpression(el)) continue;
-    const entry = { collection: '', pattern: '', testFile: '', rulesRange: [0, 0] };
+    const entry = { collection: '', pattern: '', testFile: '' };
     for (const prop of el.properties) {
       if (!ts.isPropertyAssignment(prop) || !ts.isIdentifier(prop.name)) continue;
       const key = prop.name.text;
@@ -174,12 +187,10 @@ function extractCoverageArray(init, out) {
         entry.pattern = prop.initializer.text;
       } else if (key === 'testFile' && ts.isStringLiteral(prop.initializer)) {
         entry.testFile = prop.initializer.text;
-      } else if (key === 'rulesRange' && ts.isArrayLiteralExpression(prop.initializer)) {
-        const nums = prop.initializer.elements
-          .filter(ts.isNumericLiteral)
-          .map((n) => Number(n.text));
-        if (nums.length === 2) entry.rulesRange = [nums[0], nums[1]];
       }
+      // ⛔ **Κανένα `rulesRange`** — αφαιρέθηκε στην Α21.14. Ήταν εύρος γραμμών που
+      //    διαβαζόταν εδώ και **δεν συγκρινόταν πουθενά**: 124/127 μετρήθηκαν λάθος (98%).
+      //    Η θέση παράγεται πλέον με `--map`, από το ίδιο το `firestore.rules`.
     }
     if (entry.collection && entry.testFile) out.push(entry);
   }
@@ -763,6 +774,40 @@ function reportViolations(violations) {
   log(`  ${C.dim}→ Run: pnpm test:firestore-rules to execute the suite locally.${C.reset}`);
 }
 
+/**
+ * 🏆 **Ο ΠΑΡΑΓΟΜΕΝΟΣ ΔΕΙΚΤΗΣ** — *«σε ποιες γραμμές ζει ο κανόνας που καλύπτω;»*
+ *
+ * Αντικατέστησε το χειρόγραφο `rulesRange` του manifest *(ADR-841 §7 Α21.14)*. Δεν
+ * αποθηκεύεται τίποτα, άρα δεν υπάρχει τιμή να παλιώσει — και ο πίνακας λέει **και τις
+ * δύο** κατευθύνσεις, που ένα λάθος νούμερο δεν μπορούσε ποτέ να πει.
+ *
+ * @param {import('./_shared/firestore-rules-parser').RuleBlock[]} blocks
+ * @param {ParsedManifest} manifest
+ */
+function printLocationMap(blocks, manifest) {
+  const rendered = renderRulesLocationMap({
+    blocks: blocks.map((b) => ({ identity: b.collection, lineStart: b.lineStart, lineEnd: b.lineEnd })),
+    registered: [...manifest.coverage.map((e) => e.collection), ...manifest.pending],
+    rulesFileName: 'firestore.rules',
+    title: 'CHECK 3.16 — collection → firestore.rules (ΠΑΡΑΓΟΜΕΝΟ)',
+    colors: C,
+  });
+  for (const line of rendered) log(line);
+
+  // 🔴 **ΔΥΟ ΜΠΛΟΚ ΓΙΑ ΤΗΝ ΙΔΙΑ ΔΙΑΔΡΟΜΗ ΕΙΝΑΙ ΕΝΩΣΗ ΔΙΚΑΙΩΜΑΤΩΝ, ΟΧΙ ΔΙΠΛΟΤΥΠΟ.**
+  //    Το βρήκε η ίδια η προϋπόθεση της Α21.14 *(«είναι η ταυτότητα έγκυρο κλειδί;»)* και
+  //    δεν διορθώνεται εδώ: είναι αλλαγή σε **κανόνες παραγωγής**. Δες την εκκρεμότητα.
+  const duplicates = findDuplicateMatchPaths(blocks);
+  if (duplicates.length > 0) {
+    log('');
+    log(`${C.red}  ⚠ ΔΙΠΛΕΣ ΔΙΑΔΡΟΜΕΣ (το allow είναι η ΕΝΩΣΗ τους — το χαλαρότερο νικά):${C.reset}`);
+    for (const path of duplicates) {
+      const where = blocks.filter((b) => b.matchPath === path).map((b) => b.lineStart);
+      log(`${C.red}      ${path} → γραμμές ${where.join(', ')}${C.reset}`);
+    }
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
@@ -807,6 +852,11 @@ function main() {
     log(
       `${C.dim}  bim-tiers: ${tiers.authoring.length} authoring, ${tiers.presentation.length} presentation, ${tiers.legacy.length} legacy${C.reset}`,
     );
+  }
+
+  if (MODE_MAP) {
+    printLocationMap(blocks, manifest);
+    process.exit(0);
   }
 
   const bimViolations = validateBimTierConformance(blocks, tiers, rulesLines);

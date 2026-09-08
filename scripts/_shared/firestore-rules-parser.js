@@ -24,11 +24,24 @@
 /**
  * @typedef {{
  *   collection: string,
+ *   matchPath: string,
  *   lineStart: number,
  *   lineEnd: number,
  *   firstAllowReadExpression: string | null,
  *   firstAllowReadLeg: string | null,
  * }} RuleBlock
+ */
+
+/**
+ * 🔴 **ΓΙΑΤΙ ΠΡΟΣΤΕΘΗΚΕ ΤΟ `matchPath`** *(ADR-841 §7 Α21.14)*.
+ *
+ * Το `collection` κρατά **μόνο το πρώτο τμήμα** της διαδρομής, οπότε ένα μπλοκ
+ * υποσυλλογής *(`match /rfqs/{id}/lines/{lineId}`)* είναι **αδιάκριτο** από το μπλοκ του
+ * γονέα του. Για την κάλυψη αυτό είναι **σωστό** — η υποσυλλογή κληρονομεί τη σουίτα του
+ * γονέα. Για το ερώτημα *«υπάρχουν ΔΥΟ μπλοκ για την ΙΔΙΑ διαδρομή;»* είναι **λάθος**,
+ * και η διάκριση δεν ήταν εκφράσιμη μέχρι τώρα.
+ *
+ * ⚠️ **Καθαρά προσθετικό**: κανένας υπάρχων καταναλωτής δεν αλλάζει συμπεριφορά.
  */
 
 /**
@@ -65,6 +78,8 @@ function parseFirestoreRules(rulesContent) {
     if (!m) continue;
 
     const collection = m[1];
+    // 🔑 Ολόκληρη η διαδρομή, ως το άγκιστρο του σώματος — δες το σκεπτικό του `matchPath`.
+    const matchPath = lines[i].trim().replace(/^match\s+/, '').replace(/\s*\{\s*$/, '');
     const lineStart = i + 1;
     const lineEnd = findBlockEnd(lines, i);
     const body = lines.slice(i, lineEnd).join('\n');
@@ -75,6 +90,7 @@ function parseFirestoreRules(rulesContent) {
 
     blocks.push({
       collection,
+      matchPath,
       lineStart,
       lineEnd,
       firstAllowReadExpression: expr,
@@ -287,8 +303,41 @@ function stripComments(s) {
     .replace(/\/\/[^\n]*/g, '');
 }
 
+
+/**
+ * 🔴 **ΔΥΟ ΜΠΛΟΚ ΓΙΑ ΤΗΝ ΙΔΙΑ ΔΙΑΔΡΟΜΗ** — και γιατί δεν είναι καλλωπισμός
+ * *(ADR-841 §7 Α21.14 · καθρέφτης του `findDuplicatePathIds` του storage)*.
+ *
+ * Στους κανόνες του Firestore, όταν **περισσότερα** `match` ταιριάζουν στην ίδια διαδρομή,
+ * το `allow` είναι η **ΕΝΩΣΗ** τους: αρκεί **ένα** να επιτρέψει. Άρα δύο μπλοκ για την
+ * ίδια συλλογή σημαίνει ότι **το πιο χαλαρό νικά, σιωπηλά** — και μια αυστηροποίηση
+ * γραμμένη στο δεύτερο **δεν ισχύει ποτέ**.
+ *
+ * ⚠️ **Κρίνει τη ΔΙΑΔΡΟΜΗ, όχι τη συλλογή**: το `collection` κρατά μόνο το πρώτο τμήμα,
+ * οπότε ένα μπλοκ υποσυλλογής *(`/rfqs/{id}/lines/{lineId}`)* θα φαινόταν διπλότυπο του
+ * γονέα του. Μετρημένο: με κριτήριο τη συλλογή βγαίνουν **5** «διπλότυπα», εκ των οποίων
+ * **2 είναι υποσυλλογές** — δηλαδή **40% ψευδώς θετικά**. Με κριτήριο τη διαδρομή, **3**.
+ *
+ * @param {RuleBlock[]} blocks
+ * @returns {string[]} Οι διαδρομές που δηλώνονται πάνω από μία φορά, ταξινομημένες.
+ */
+function findDuplicateMatchPaths(blocks) {
+  /** @type {Map<string, number>} */
+  const counts = new Map();
+  for (const b of blocks) {
+    counts.set(b.matchPath, (counts.get(b.matchPath) || 0) + 1);
+  }
+
+  const dupes = [];
+  for (const [path, n] of counts) {
+    if (n > 1) dupes.push(path);
+  }
+  return dupes.sort();
+}
+
 module.exports = {
   parseFirestoreRules,
+  findDuplicateMatchPaths,
   isSuperAdminShortCircuit,
   validateSuperAdminShortCircuit,
   splitFirstOrLeg,
