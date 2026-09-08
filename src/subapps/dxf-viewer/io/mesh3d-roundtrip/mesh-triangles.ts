@@ -1,20 +1,41 @@
 /**
- * mesh-triangles — **ΕΝΑ SSoT** για την ερώτηση «δώσε μου τα τρίγωνα αυτού του mesh σε world space».
+ * mesh-triangles — **Ο ΠΡΟΣΑΡΜΟΓΕΑΣ ΤΟΥ THREE** πάνω στον κοινό πυρήνα γεωμετρίας.
  *
- * Γεννήθηκε από τη Φ3.1 (ADR-683 §10.2): ο υπολογισμός όγκου/στεγανότητας
- * (`./mesh-solid-measure`) ρωτά **ακριβώς το ίδιο** που ρωτούσε ήδη το fingerprint
- * (`./geometry-hash`) — κορυφές σε world space + διέλευση τριγώνων που καλύπτει indexed και
- * non-indexed γεωμετρία. Δύο αντίγραφα αυτού του βρόχου θα ήταν structural clone (N.18): ίδια
- * ερώτηση, διαφορετικό όνομα, και **σιωπηλή απόκλιση** την πρώτη φορά που κάποιος διορθώσει το ένα.
+ * Γεννήθηκε από τη Φ3.1 (ADR-683 §10.2) ως **ΕΝΑ SSoT** για την ερώτηση «δώσε μου τα τρίγωνα αυτού
+ * του mesh σε world space»: ο υπολογισμός όγκου/στεγανότητας (`./mesh-solid-measure`) ρωτούσε
+ * **ακριβώς το ίδιο** που ρωτούσε ήδη το fingerprint (`./geometry-hash`), και δύο αντίγραφα του
+ * βρόχου θα ήταν structural clone (N.18) — ίδια ερώτηση, διαφορετικό όνομα, **σιωπηλή απόκλιση**.
  *
- * Δεν προστίθεται συμπεριφορά εδώ — είναι καθαρή εξαγωγή του υπάρχοντος κώδικα του `geometry-hash`,
- * ώστε και οι δύο καταναλωτές να διαβάζουν τη γεωμετρία με τον **ίδιο** τρόπο.
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΤΙ ΑΛΛΑΞΕ ΣΤΗ Φ4.2 ΤΟΥ ADR-845 — ΚΑΙ ΤΙ **ΔΕΝ** ΑΛΛΑΞΕ
+ * ────────────────────────────────────────────────────────────────────────────
  *
- * @see ./geometry-hash — ο αρχικός ιδιοκτήτης (fingerprint A/C του §5)
- * @see ./mesh-solid-measure — ο δεύτερος καταναλωτής (όγκος/στεγανότητα, Φ3.1)
+ * Ο **υπολογισμός** έφυγε στο `@/lib/geometry/mesh3d/*`· εδώ έμεινε **μόνο η ανάγνωση του THREE**.
+ * Ο λόγος είναι η κλειστή λογιστική του ADR-845 §6.2.1: την ίδια ερώτηση πρέπει να την απαντά και
+ * ο **διακομιστής**, που ζει έξω από αυτό το subapp *(το root `tsconfig.json` το ΕΞΑΙΡΕΙ)* και δεν
+ * έχει καν `THREE.Mesh` στα χέρια του — έχει bytes GLB.
+ *
+ * 🔑 **Η μετακίνηση ήταν δυνατή επειδή αυτό το αρχείο υπήρχε.** Ολόκληρη η επαφή των μετρητών με το
+ * three ήταν οι **δύο** συναρτήσεις που ζουν εδώ. Ό,τι ήταν από κάτω ήταν ήδη καθαροί αριθμοί.
+ *
+ * ⚠️ **Καμία υπογραφή δεν άλλαξε** — {@link readWorldPositions}, {@link forEachTriangle} και
+ * {@link triangleArea} καλούνται ακριβώς όπως πριν από τους καταναλωτές τους
+ * *(`../../export/core/imported-mesh-faces`, `./geometry-hash`, `./mesh-solid-measure`)*.
+ *
+ * @see @/lib/geometry/mesh3d/triangle-soup — ο πυρήνας χωρίς ξενιστή, και το γιατί
+ * @see ./geometry-hash — fingerprint (περιτύλιγμα του πυρήνα)
+ * @see ./mesh-solid-measure — όγκος/στεγανότητα (περιτύλιγμα του πυρήνα)
  */
 
 import type * as THREE from 'three';
+
+import {
+  forEachTriangle as forEachSoupTriangleIndex,
+  type TriangleSoup,
+} from '@/lib/geometry/mesh3d/triangle-soup';
+
+export { triangleArea } from '@/lib/geometry/mesh3d/triangle-soup';
+export type { TriangleSoup } from '@/lib/geometry/mesh3d/triangle-soup';
 
 /**
  * Κορυφές σε world space. Η matrix θεωρείται affine (TRS δέντρο — πάντα αληθές για BIM σκηνές
@@ -44,8 +65,24 @@ export function readWorldPositions(mesh: THREE.Mesh): Float64Array | null {
 }
 
 /**
+ * Οι δείκτες τριγώνων ως απλός πίνακας, ή `null` για **non-indexed** γεωμετρία.
+ *
+ * ⚠️ **Διαβάζεται με `getX`, όχι με `.array`**: το `BufferAttribute` είναι η αυθεντία για το πώς
+ * ερμηνεύεται ο υποκείμενος buffer, και μια απευθείας ανάγνωση θα ήταν δεύτερη ερμηνεία —
+ * ελεύθερη να διαφωνήσει με την πρώτη τη μέρα που κάποιος αλλάξει τον τύπο του buffer.
+ */
+function readIndex(mesh: THREE.Mesh): Uint32Array | null {
+  const index = mesh.geometry.getIndex();
+  if (index === null) return null;
+
+  const out = new Uint32Array(index.count);
+  for (let i = 0; i < index.count; i += 1) out[i] = index.getX(i);
+  return out;
+}
+
+/**
  * Διέλευση όλων των τριγώνων. Καλύπτει indexed **και** non-indexed γεωμετρία — η διάκριση ζει
- * **μόνο** εδώ, ώστε κανένας καταναλωτής να μην την ξαναγράψει (και να μην την ξεχάσει).
+ * **μόνο** στον πυρήνα, ώστε κανένας καταναλωτής να μην την ξαναγράψει (και να μην την ξεχάσει).
  *
  * Επιστρέφει το πλήθος τριγώνων που επισκέφθηκε.
  */
@@ -54,31 +91,18 @@ export function forEachTriangle(
   vertexCount: number,
   visit: (ia: number, ib: number, ic: number) => void,
 ): number {
-  const index = mesh.geometry.getIndex();
-  const count = index !== null ? index.count : vertexCount;
-  const triangleCount = Math.floor(count / 3);
-
-  for (let t = 0; t < triangleCount; t += 1) {
-    const base = t * 3;
-    if (index !== null) {
-      visit(index.getX(base), index.getX(base + 1), index.getX(base + 2));
-    } else {
-      visit(base, base + 1, base + 2);
-    }
-  }
-  return triangleCount;
+  return forEachSoupTriangleIndex(readIndex(mesh), vertexCount, visit);
 }
 
-/** Εμβαδόν ενός τριγώνου από 3 δείκτες κορυφών (μισό μέτρο του εξωτερικού γινομένου). */
-export function triangleArea(p: Float64Array, ia: number, ib: number, ic: number): number {
-  const ax = p[ib * 3] - p[ia * 3];
-  const ay = p[ib * 3 + 1] - p[ia * 3 + 1];
-  const az = p[ib * 3 + 2] - p[ia * 3 + 2];
-  const bx = p[ic * 3] - p[ia * 3];
-  const by = p[ic * 3 + 1] - p[ia * 3 + 1];
-  const bz = p[ic * 3 + 2] - p[ia * 3 + 2];
-  const cx = ay * bz - az * by;
-  const cy = az * bx - ax * bz;
-  const cz = ax * by - ay * bx;
-  return Math.sqrt(cx * cx + cy * cy + cz * cz) / 2;
+/**
+ * 🏆 **Η ΜΙΑ ΜΕΤΑΦΡΑΣΗ THREE → ΠΥΡΗΝΑΣ** — ό,τι χρειάζεται κάθε μετρητής, σε μία πράξη.
+ *
+ * `null` όταν το mesh δεν έχει αξιοποιήσιμες κορυφές, με το **ίδιο** κριτήριο της
+ * {@link readWorldPositions}: το «άγνωστο» παραμένει μία απόφαση, όχι δύο.
+ */
+export function toTriangleSoup(mesh: THREE.Mesh): TriangleSoup | null {
+  const positions = readWorldPositions(mesh);
+  if (positions === null) return null;
+
+  return { positions, index: readIndex(mesh) };
 }
