@@ -187,7 +187,13 @@ describe('🏆 Α-7γ — ΤΟ `altKey` ΔΙΑΛΕΓΕΤΑΙ ΑΠΟ ΤΗΝ `auth
     const listing = withPublishedModels(built(), [shelfModel('a'.repeat(64))]);
     const altKey = listing.models[0].value.altKey;
 
-    expect(altKey).toMatch(/^search-results:detail\.media\.modelAlt\./);
+    // 🔴 **ΤΟ NAMESPACE ΑΛΛΑΞΕ ΣΤΗ Φ4.3, ΚΑΙ ΑΥΤΗ Η ΓΡΑΜΜΗ ΕΙΝΑΙ Ο ΛΟΓΟΣ ΠΟΥ ΗΤΑΝ ΑΣΦΑΛΕΣ**:
+    //    `search-results:detail.media.modelAlt.*` → `listing-detail:model.alt.*`. Το Ο-7 έλεγε
+    //    ότι δεν γίνεται *«γιατί τα `altKey` είναι παγωμένα σε δημοσιευμένα έγγραφα»* — και
+    //    **μετρήθηκε** ότι για αυτό το κλειδί δεν ίσχυε ακόμη: και τα 9 έγγραφα του
+    //    `public_listings` ήταν `schemaVersion` 6/8, δηλαδή **κανένα δεν είχε `models[]`**.
+    //    ⛔ Από εδώ και πέρα **ισχύει**: αλλαγή namespace απαιτεί μετανάστευση.
+    expect(altKey).toMatch(/^listing-detail:model\.alt\./);
     // Ένα ωμό ελληνικό κείμενο εδώ θα έφτανε **παγωμένο** σε δημοσιευμένο έγγραφο Firestore,
     // δηλαδή ανεπίστρεπτα — δες το Ο-7 για το κόστος της μετακόμισης τέτοιων κλειδιών.
     expect(altKey).not.toMatch(/[Ͱ-Ͽἀ-῿]/);

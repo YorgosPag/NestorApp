@@ -200,21 +200,48 @@ export interface ListingMaterialKeys {
    * αγοράζουν κάτι. Το ταβάνι ξανασφραγίστηκε **15.200 → 15.400** με **μετρημένο** why στο
    * `.i18n-shell-slice.json`, όχι με στρογγυλοποίηση.
    *
-   * ⚠️ **ΚΑΙ Η ΣΩΣΤΗ ΘΕΡΑΠΕΙΑ ΕΙΝΑΙ ΑΛΛΗ, ΟΝΟΜΑΣΜΕΝΗ ΩΣ Ο-7**: μετρημένο 2026-09-08 ότι το
-   * `detail.*` είναι **4.770 bytes = 31,6%** του namespace — η σελίδα **λεπτομέρειας**
-   * ταξιδεύει ολόκληρη μέσα στο κέλυφος **κάθε** σελίδας, για να εξυπηρετηθεί η σελίδα
-   * **αποτελεσμάτων**. Δεν λύνεται εδώ γιατί τα `altKey` είναι **παγωμένα σε δημοσιευμένα
-   * έγγραφα Firestore**: αλλαγή namespace τα αφήνει να δείχνουν σε **νεκρό κλειδί**.
+   * ✅ **ΚΑΙ Η ΘΕΡΑΠΕΙΑ ΤΟΥ Ο-7 ΕΓΙΝΕ ΕΔΩ, ΣΤΗ Φ4.3** *(2026-09-08)*. Ο λόγος που την
+   * ανέβαλλε ήταν *«τα `altKey` είναι **παγωμένα σε δημοσιευμένα έγγραφα Firestore**»* —
+   * **και μετρήθηκε ότι για ΑΥΤΟ το κλειδί δεν ίσχυε ΑΚΟΜΗ**: και τα **9** έγγραφα του
+   * `public_listings` ήταν `schemaVersion` **6/8**, δηλαδή **κανένα δεν είχε καν πεδίο
+   * `models[]`**, άρα **κανένα δεν ανέφερε το κλειδί**. Η μετακίνηση σε `listing-detail`
+   * κόστισε **μηδέν μετανάστευση** — και το παράθυρο έκλεινε τη στιγμή που θα δημοσιευόταν
+   * το πρώτο μοντέλο.
+   *
+   * 🔑 **ΓΙΑΤΙ ΑΚΡΙΒΩΣ ΤΟ `listing-detail`**: είναι δηλωμένο **lazy** *(`lazy-config.ts`,
+   * εκτός `CRITICAL_NAMESPACES`)*, **δεν** εμφανίζεται στο `shell-slice.el.json`, και το
+   * πληρώνει το **route slice** της `(light)/listing/[id]/page.tsx` — δηλαδή **η σελίδα που
+   * το χρησιμοποιεί**, όχι κάθε άλλη. Το `search-results` **δεν μπορούσε** να φύγει:
+   * πραγματικός καταναλωτής του είναι το `PublicSiteHeader` μέσα στο `(light)/layout.tsx`.
+   *
+   * ⛔ **ΤΟ ΚΛΕΙΔΙ ΤΑΞΙΔΕΥΕΙ ΩΣ ΤΙΜΗ ΣΕ ΑΠΟΘΗΚΕΥΜΕΝΟ ΕΓΓΡΑΦΟ** — από εδώ και πέρα κάθε
+   * αλλαγή namespace **απαιτεί μετανάστευση** των δημοσιευμένων `models[]`. Δεν είναι πια
+   * μετονομασία· είναι σχήμα.
    *
    * ⚠️ **Καμία παράμετρος θέσης** — ίδια απόφαση με το {@link floorplanAlt}: ένα μοντέλο
    * **δεν αριθμείται** στην οθόνη όπως οι φωτογραφίες. Ένα *«Μοντέλο 1 από 2»* θα ήταν
    * αριθμός που **καμία οθόνη δεν δείχνει**, αποθηκευμένος σε δημοσιευμένο έγγραφο.
    *
-   * ⛔ **ΚΑΙ ΠΑΛΙ ΚΑΝΕΝΑ `modelNote`.** Η ορατή σημείωση προέλευσης κάτω από το μοντέλο
-   * ανήκει στην **οθόνη** *(Φ4.3)*· ένα κλειδί εδώ σήμερα θα ήταν **δεύτερη φορά** η ίδια
-   * υπόσχεση χωρίς μηχανισμό, στην ίδια θέση, από την ίδια αιτία.
+   * ⚠️ **Καμία παράμετρος θέσης** — ίδια απόφαση με το {@link floorplanAlt}.
    */
   readonly modelAlt: string;
+
+  /**
+   * **Η ΟΡΑΤΗ ΣΗΜΕΙΩΣΗ ΚΑΤΩ ΑΠΟ ΤΟ ΜΟΝΤΕΛΟ** — *«τίνος υλικό είναι αυτό;»* (Φ4.3).
+   *
+   * 🔑 **Η ΑΝΑΒΟΛΗ ΤΟΥ ΗΤΑΝ ΓΡΑΜΜΕΝΗ ΕΔΩ ΚΑΙ ΤΗΡΗΘΗΚΕ**: μέχρι τη Φ4.2 αυτή η θέση έγραφε
+   * *«**ΚΑΙ ΠΑΛΙ ΚΑΝΕΝΑ `modelNote`** — ανήκει στην **οθόνη** (Φ4.3)»*, κατ' εφαρμογή του
+   * κανόνα *«υπόσχεση χωρίς μηχανισμό δεν αγοράζει bytes»*. **Η οθόνη υπάρχει τώρα**
+   * *(`ListingModels.tsx`)*, άρα το κλειδί αποδίδεται και τα bytes αγοράζουν κάτι.
+   *
+   * ⚠️ **ΔΕΝ αποθηκεύεται πουθενά** — αντίθετα από το {@link modelAlt}, που ταξιδεύει ως
+   * τιμή μέσα στο δημοσιευμένο έγγραφο. Ζει **μόνο** εδώ και το διαβάζει η οθόνη τη στιγμή
+   * της απόδοσης, ακριβώς όπως το {@link floorplanNote}.
+   *
+   * 🔴 **`modelNote`, ΠΟΤΕ `sourceNote`** — το μάθημα του Α17 αυτούσιο: το δεύτερο λέει
+   * *«οι **ΦΩΤΟΓΡΑΦΙΕΣ** είναι υλικό του κατόχου»* και τυπωνόταν **κάτω από κάτοψη**.
+   */
+  readonly modelNote: string;
 }
 
 /** Δες {@link ListingMaterialKeys} για το γιατί ο παρονομαστής είναι η **κλάση γνώσης**. */
@@ -224,13 +251,15 @@ export const LISTING_MATERIAL_KEYS: Readonly<Record<ListingAuthorship, ListingMa
     sourceNote: 'search-results:detail.media.sourceNote.ownerDeclared',
     floorplanAlt: 'search-results:detail.media.floorplanAlt.ownerDeclared',
     floorplanNote: 'search-results:detail.media.floorplanNote.ownerDeclared',
-    modelAlt: 'search-results:detail.media.modelAlt.ownerDeclared',
+    modelAlt: 'listing-detail:model.alt.ownerDeclared',
+    modelNote: 'listing-detail:model.note.ownerDeclared',
   },
   agency: {
     galleryAlt: 'search-results:detail.media.galleryAlt.agency',
     sourceNote: 'search-results:detail.media.sourceNote.agency',
     floorplanAlt: 'search-results:detail.media.floorplanAlt.agency',
     floorplanNote: 'search-results:detail.media.floorplanNote.agency',
-    modelAlt: 'search-results:detail.media.modelAlt.agency',
+    modelAlt: 'listing-detail:model.alt.agency',
+    modelNote: 'listing-detail:model.note.agency',
   },
 } as const;

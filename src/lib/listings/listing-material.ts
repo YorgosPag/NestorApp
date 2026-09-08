@@ -224,3 +224,29 @@ export const LISTING_FLOORPLAN_PROVENANCE_KEYS: Readonly<Record<AttributeProvena
   measured: 'search-results:detail.media.floorplanProvenance.measured',
   inferred: 'search-results:detail.media.floorplanProvenance.inferred',
 } as const;
+
+/**
+ * **Η ΠΡΟΕΛΕΥΣΗ ΤΟΥ ΜΟΝΤΕΛΟΥ, ΟΝΟΜΑΣΜΕΝΗ ΣΤΟΝ ΑΝΘΡΩΠΟ** (ADR-845 Φ4.3).
+ *
+ * 🏆 **ΑΥΤΗ Η ΓΡΑΜΜΗ ΕΙΝΑΙ ΤΟ ΣΗΜΕΙΟ ΟΠΟΥ ΞΕΠΕΡΝΑΜΕ ΤΟΥΣ ΜΕΓΑΛΟΥΣ** — το ίδιο επιχείρημα
+ * που είναι ήδη γραμμένο για την κάτοψη *(Α17.3)*, σε πεδίο όπου μετράει περισσότερο: η
+ * Zillow δείχνει τρισδιάστατη περιήγηση **χωρίς να λέει ποιος την έφτιαξε**, ούτε αν
+ * δείχνει το κτίριο **όπως χτίστηκε** ή **όπως προτάθηκε**. Εδώ το `measured` σημαίνει
+ * *«ψημένο από το BIM μας»* και το `declared` *«το ανέβασε ο μηχανικός του ιδιώτη»* — δύο
+ * πολύ διαφορετικές υποσχέσεις, και ο αγοραστής δικαιούται να ξέρει ποια βλέπει.
+ *
+ * ⚠️ **ΔΕΥΤΕΡΟΣ ΧΑΡΤΗΣ, ΟΧΙ ΕΠΑΝΑΧΡΗΣΙΜΟΠΟΙΗΣΗ ΤΟΥ ΠΡΩΤΟΥ**: το
+ * {@link LISTING_FLOORPLAN_PROVENANCE_KEYS} λέει *«**Μετρημένη** — υπολογισμένη από το
+ * σχέδιο»* για **raster εικόνα**. Ένα μοντέλο δεν *«υπολογίζεται»*, **παράγεται** — και μια
+ * κοινή συμβολοσειρά θα ανάγκαζε τη μία από τις δύο οθόνες να πει κάτι που δεν ισχύει.
+ * Ο **τύπος** μένει κοινός *(`AttributeProvenance`)*· μόνο η **διατύπωση** χωρίζει.
+ *
+ * ⚠️ **Namespace `listing-detail`, ΠΟΤΕ `search-results`** — δες το Ο-7 στο
+ * `listing-authorship.ts`: το `search-results` ταξιδεύει ολόκληρο στο κέλυφος **κάθε**
+ * σελίδας, ενώ αυτά τα κλειδιά τα διαβάζει **μία** σελίδα.
+ */
+export const LISTING_MODEL_PROVENANCE_KEYS: Readonly<Record<AttributeProvenance, string>> = {
+  declared: 'listing-detail:model.provenance.declared',
+  measured: 'listing-detail:model.provenance.measured',
+  inferred: 'listing-detail:model.provenance.inferred',
+} as const;
