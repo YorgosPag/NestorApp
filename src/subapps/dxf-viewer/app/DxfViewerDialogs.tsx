@@ -41,7 +41,7 @@ import {
   OpeningSchedulePdfHost, ThermalEnvelopeHost, BimScheduleHost, TopoRibbonHost, AdminLayerManagerPalette, ExternalReferencesPalette, ExternalReferencesAutoResolveHost, TitleBlockBindingPalette,
   ImportedMeshBoqHost,
   ImportedMeshMaterialMapHost,
-  DxfAiChatPanel, ColumnPerimeterConfirmDialog, GapCloseConfirmDialog, ColumnAdoptSizeDialog, ColumnBecomesWallDialog, ShearWallExtentDialog, SectionRelationshipDialog, ColumnBatchFillConfirmDialog, AutoDimensionOptionsDialog, DxfSymbolDetectConfirmDialog, ColumnPromoteConfirmDialog, HatchOverlapConfirmDialog, TableRangeOverwriteConfirmDialog, TableMergeDiscardConfirmDialog, TableXlsxOpenConfirmDialog, TableInsertFunctionDialog, TableFunctionArgumentsDialog, TableFormatCellsDialogHost, AutoFillListsDialogHost, TableSortDialogHost, PrintHost, ExportHost, StampHost, AiTitleBlockHost, RevisionsHost, TitleBlockLibraryDialogHost, ColumnDetailHost, FoundationDetailHost, BeamDetailHost,
+  DxfAiChatPanel, ColumnPerimeterConfirmDialog, GapCloseConfirmDialog, ColumnAdoptSizeDialog, ColumnBecomesWallDialog, ShearWallExtentDialog, SectionRelationshipDialog, ColumnBatchFillConfirmDialog, AutoDimensionOptionsDialog, DxfSymbolDetectConfirmDialog, ColumnPromoteConfirmDialog, HatchOverlapConfirmDialog, TableRangeOverwriteConfirmDialog, TableMergeDiscardConfirmDialog, TableXlsxOpenConfirmDialog, TableInsertFunctionDialog, TableFunctionArgumentsDialog, TableFormatCellsDialogHost, AutoFillListsDialogHost, TableSortDialogHost, PrintHost, ExportHost, PublishModelHost, StampHost, AiTitleBlockHost, RevisionsHost, TitleBlockLibraryDialogHost, ColumnDetailHost, FoundationDetailHost, BeamDetailHost,
   SlabDetailHost, FloorManagementDialogHost, MatchPropertiesDialogHost,
 } from './dxf-viewer-lazy-components';
 
@@ -282,6 +282,8 @@ export function DxfViewerDialogs(props: DxfViewerDialogsProps): React.JSX.Elemen
       <React.Suspense fallback={hiddenFallback}><TopoRibbonHost /></React.Suspense>
       {/* ADR-505 — Export («Εξαγωγή») dialog (opened via Analyze → Εξαγωγή). */}
       <React.Suspense fallback={hiddenFallback}><ExportHost projectId={projectId} buildingId={buildingId ?? undefined} /></React.Suspense>
+      {/* ADR-845 Φ4.2β/Βήμα Γ — δημοσίευση 3D μοντέλου (opened via Analyze → «Δημοσίευση 3D»). */}
+      <React.Suspense fallback={hiddenFallback}><PublishModelHost buildingId={buildingId ?? undefined} /></React.Suspense>
       {/* ADR-651 Φάση Ε — engineer-stamp dialog (opened via «Πινακίδα Σχεδίου» → «Σφραγίδα…»). */}
       <React.Suspense fallback={hiddenFallback}><StampHost /></React.Suspense>
 

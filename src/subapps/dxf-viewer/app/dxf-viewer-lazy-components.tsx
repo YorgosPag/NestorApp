@@ -30,6 +30,10 @@ export const PrintHost = React.lazy(() => import('./PrintHost').then(mod => ({ d
 export const TopoRibbonHost = React.lazy(() => import('./TopoRibbonHost').then(mod => ({ default: mod.TopoRibbonHost })));
 // ADR-505 — Export («Εξαγωγή») dialog host (DXF/IFC/PDF, scope-filtered, multi-floor)
 export const ExportHost = React.lazy(() => import('./ExportHost').then(mod => ({ default: mod.ExportHost })));
+// ADR-845 Φ4.2β/Βήμα Γ — χειριστήριο δημοσίευσης 3D μοντέλου σε αγγελία ακινήτου.
+// 🔑 **Τεμπέλικο επίτηδες**: κουβαλά τον αναγνώστη glTF (μέτρηση της δήλωσης) — κώδικας που
+//    δεν αφορά κανέναν μέχρι τη στιγμή που κάποιος πατά «Δημοσίευση 3D».
+export const PublishModelHost = React.lazy(() => import('./PublishModelHost').then(mod => ({ default: mod.PublishModelHost })));
 // ADR-651 Φάση Ε — διάλογος σφραγίδας μηχανικού (ανοίγει από το «Πινακίδα Σχεδίου» tab).
 export const StampHost = React.lazy(() => import('./StampHost').then(mod => ({ default: mod.StampHost })));
 // ADR-651 Φάση Δ — διάλογος «AI Πινακίδα» (ανοίγει από το «Πινακίδα Σχεδίου» tab).
