@@ -125,6 +125,26 @@ function pointDefect(point: GeoPoint): PlaceClaimDefect | null {
 // =============================================================================
 
 /**
+ * **Ό,τι μπορεί να πάει στραβά σε ΔΑΚΤΥΛΙΟ** — αυστηρό υποσύνολο του
+ * {@link PlaceClaimDefect}.
+ *
+ * 🔑 **`Extract` και όχι δεύτερη λίστα**: κάθε μέλος επαληθεύεται ότι **υπάρχει** στο
+ * `PLACE_CLAIM_DEFECTS`, οπότε ένα τυπογραφικό δεν μεταγλωττίζεται. Και η στένωση
+ * κερδίζει κάτι πραγματικό: ο δεύτερος καταναλωτής *(ADR-846 Φ3)* χτίζει **εξαντλητικό**
+ * πίνακα μηνυμάτων πάνω σε αυτόν τον τύπο — με το ευρύ `PlaceClaimDefect` θα ζητούσε
+ * κείμενα για `query-empty` και `point-outside-served-area`, που δακτύλιος **δεν
+ * παράγει ποτέ**.
+ */
+export type OutlineDefect = Extract<
+  PlaceClaimDefect,
+  | 'outline-too-few-vertices'
+  | 'point-off-earth'
+  | 'outline-outside-served-area'
+  | 'outline-degenerate'
+  | 'outline-self-intersecting'
+>;
+
+/**
  * ⚠️ **Η ΣΕΙΡΑ ΕΙΝΑΙ ΣΥΜΒΟΛΑΙΟ**, με τον ίδιο τρόπο που είναι στο `demandAnswerShape`
  * και στην ταξινόμηση του CHECK 3.47:
  *
@@ -136,7 +156,12 @@ function pointDefect(point: GeoPoint): PlaceClaimDefect | null {
  *    συνευθειακός, και οι συνευθειακές κορυφές δεν τέμνονται **γνησίως** ⇒ ο έλεγχος
  *    αυτοτομής θα τον έλεγε «απλό» και το ελάττωμα θα διέφευγε.
  */
-function outlineDefect(outline: GeoOutline): PlaceClaimDefect | null {
+export function outlineDefect(outline: GeoOutline): OutlineDefect | null {
+  // 🔑 **ΔΕΥΤΕΡΟΣ ΚΑΤΑΝΑΛΩΤΗΣ, ΓΙ' ΑΥΤΟ ΕΓΙΝΕ ΔΗΜΟΣΙΑ** *(ADR-846 Φ3)*: η **δηλωμένη
+  //    εμβέλεια** του επαγγελματία ρωτά **ακριβώς** το ίδιο *(«είναι αυτό σχήμα, πάνω
+  //    στη γη, μέσα στη χώρα;»)* πριν προσθέσει τα **δικά της** ταβάνια
+  //    *(`lib/agency/coverage-outline.ts`)*. Δεύτερη γραφή θα ήταν δίδυμο — και, χειρότερα,
+  //    θα απέκλινε στη σειρά των ελέγχων, που είναι **συμβόλαιο** (δες παραπάνω).
   if (outline.length < 3) return 'outline-too-few-vertices';
 
   for (const vertex of outline) {

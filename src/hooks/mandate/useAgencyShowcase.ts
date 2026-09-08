@@ -39,6 +39,7 @@ import { useAuth } from '@/auth/hooks/useAuth';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { readShowcase } from '@/lib/agency/showcase-read';
+import type { CoverageOutlineDefect } from '@/lib/agency/coverage-outline';
 import type { ShowcaseWireDeclaration } from '@/lib/agency/showcase-wire';
 import type { PublicShowcase } from '@/types/agency-profile';
 import {
@@ -99,6 +100,16 @@ export type ShowcaseFailure =
   | { readonly kind: 'coverage-area-unknown' }
   /** Ακτίνα εκτός του κλειστού καταλόγου ⇒ *«διάλεξε ξανά απόσταση»* (ADR-846 Φ2). */
   | { readonly kind: 'coverage-radius-invalid' }
+  /**
+   * Χαραγμένο πολύγωνο που δεν περνά ⇒ *«ξαναχάραξε»* (ADR-846 Φ3).
+   *
+   * 🔑 **ΤΟ `defect` ΤΑΞΙΔΕΥΕΙ, ΔΕΝ ΙΣΟΠΕΔΩΝΕΤΑΙ** — αντίθετα με κάθε άλλο σκέλος εδώ.
+   * *«Πάρα πολλές κορυφές»* και *«πολύ πλατύ»* έχουν **διαφορετική** θεραπεία *(σβήσε
+   * κορυφές · χάραξε μικρότερο)*, και ένα κοινό «ξαναχάραξε» θα ήταν ο γρίφος που το
+   * `PLACE_CLAIM_DEFECTS` ονομάζει ρητά: *«το σχήμα τέμνει τον εαυτό του» είναι οδηγία,
+   * «άκυρη είσοδος» όχι*.
+   */
+  | { readonly kind: 'coverage-outline-invalid'; readonly defect: CoverageOutlineDefect }
   /**
    * 🔴 **ΔΕΝ ΜΑΘΑΜΕ** *(ταξινομία ή τόπος)* ⇒ *«ξαναδοκίμασε, **μην αλλάξεις
    * τίποτα**»*. Ισοπεδωμένο με τα δύο παραπάνω, η δική **μας** βλάβη θα έστελνε
@@ -171,6 +182,10 @@ async function failureOf(response: Response): Promise<ShowcaseFailure | null> {
     //    στέλνει τον άνθρωπο σε λάθος χειριστήριο όταν το πρόβλημα είναι η **απόσταση**.
     case 'COVERAGE_RADIUS_INVALID':
       return { kind: 'coverage-radius-invalid' };
+    // ⚠️ **Και εδώ χωριστό, για τον ίδιο λόγο** — αλλά με το `defect` μαζί: το
+    //    πολύγωνο έχει **πέντε** τρόπους να μην περνά, ο κύκλος **έναν**.
+    case 'COVERAGE_OUTLINE_INVALID':
+      return { kind: 'coverage-outline-invalid', defect: body.defect };
     // 🔑 **Δύο κωδικοί, ΜΙΑ θεραπεία** — και είναι σωστό να ενωθούν *εδώ*: ο
     //    άνθρωπος δεν χρειάζεται να ξέρει αν έπεσε η ταξινομία ή ο χάρτης· η
     //    πράξη του είναι η ίδια. Ό,τι δεν ενώνεται είναι *«διόρθωσε»* με

@@ -3577,6 +3577,7 @@
       "directory": {
         "coverageDeclared": "Δηλώνει: {areas}",
         "coverageDeclaredNationwide": "Δηλώνει: όλη η Ελλάδα",
+        "coverageDeclaredOutline": "Δηλώνει: χαραγμένη περιοχή ~{km2} τ.χλμ.",
         "coverageDeclaredRadius": "Δηλώνει: έως {km} χλμ. από το σημείο που όρισε",
         "coverageIntersects": "Καλύπτει μέρος της περιοχής",
         "coverageUnknown": "Μπορεί να καλύπτει αυτή την περιοχή — δεν μπορούμε να το κρίνουμε με βεβαιότητα",

@@ -203,6 +203,14 @@
       ],
       "reason": "ADR-842 §7.6.8 — το κλειδί το παράγει η SSoT `completionFieldLabelKey(fieldKey, propertyType)`, γιατί για ΓΗ το `floorplan` λέγεται «Τοπογραφικό διάγραμμα» και όχι «Κάτοψη» (μετρημένο στην οθόνη). ΕΠΑΛΗΘΕΥΣΙΜΟ ΚΛΕΙΣΤΟ ΣΥΝΟΛΟ: η συνάρτηση επιστρέφει ΜΟΝΟ `completion.fields.<FIELD_KEY>` ή `completion.fields.land.<FIELD_KEY>` — και τα δύο κάτω από αυτό το πρόθεμα, με τα `FIELD_KEYS` κλειστά (17 τιμές). Το κλείσιμο το ΕΚΤΕΛΕΙ η ομάδα Λ του `constants/__tests__/property-type-coverage.test.ts`: κάθε είδος × κάθε πεδίο λύνεται σε κείμενο σε el ΚΑΙ en, αλλιώς κοκκινίζει."
     },
+    "src/components/mandate/CoverageAreaPicker.tsx": {
+      "prefixes": [
+        "property-market:mandate.showcase.coverageModeAreas",
+        "property-market:mandate.showcase.coverageModeRadius",
+        "property-market:mandate.showcase.coverageModeOutline"
+      ],
+      "reason": "ADR-846 Φ3 (2026-09-08) — η ΜΟΝΗ δυναμική κλήση είναι `t(MODE_KEYS[option])` (γρ. 230). ΕΠΑΛΗΘΕΥΣΙΜΟΣ ΙΣΧΥΡΙΣΜΟΣ: ο πίνακας (γρ. 76) είναι σταθερός στο ΙΔΙΟ module και τυπωμένος `Record<CoverageMode, string>` — ΟΧΙ Partial — με ΤΡΕΙΣ τιμές που δείχνουν σε τρία κυριολεκτικά κλειδιά του `SHOWCASE_KEYS` (`coverageModeAreas` · `coverageModeRadius` · `coverageModeOutline`), όλα κάτω από `mandate.showcase.` του ΙΔΙΟΥ namespace που η οθόνη κουβαλά ούτως ή άλλως. Τέταρτος τρόπος κάλυψης ΔΕΝ ΜΕΤΑΓΛΩΤΤΙΖΕΤΑΙ χωρίς ετικέτα — το γράφει και το σχόλιο δίπλα στην κλήση, και είναι ο λόγος που ο πίνακας αντικατέστησε το `option === 'areas' ? … : …` που θα έδειχνε σιωπηλά λάθος λέξη. Ίδιο επιχείρημα και ίδιο ιδίωμα με το `AgencyCard.tsx` παρακάτω. ⚠️ ΑΚΡΙΒΗ ΚΛΕΙΔΙΑ, ΟΧΙ ΥΠΟΔΕΝΤΡΟ: ένα σκέτο `mandate.showcase` θα έσερνε και τα 58 κλειδιά της φόρμας σε κάθε slice που φέρει τον επιλογέα — και ο επιλογέας είναι ΚΟΙΝΟΣ με τον δημόσιο `/pro`."
+    },
     "src/components/mandate/AgencyCard.tsx": {
       "prefixes": [
         "property-market:mandate.directory.coverageWithin",

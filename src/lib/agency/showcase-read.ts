@@ -51,6 +51,7 @@ import type {
   ShowcaseRead,
 } from '@/types/agency-profile';
 import type { ListingImage, ListingImageSource } from '@/types/public-listing';
+import { asCoverageOutline } from '@/lib/agency/coverage-outline';
 import { isShowcaseMarkKind } from '@/lib/agency/showcase-mark-kind';
 import { asCoverageRadiusKm, type RadiusCoverage } from '@/types/agency-coverage';
 import type { ProfessionalAttestation } from '@/types/professional-identity';
@@ -362,6 +363,21 @@ function readCoverage(raw: unknown): PublicShowcase['coverage'] {
   // ═══════════════════════════════════════════════════════════════════════════
   const circle = readCoverageCircle(source.circle);
   if (circle !== null) return { circle };
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 🔴 ΤΟ ΣΚΕΛΟΣ ΤΟΥ ΧΑΡΑΓΜΕΝΟΥ ΠΟΛΥΓΩΝΟΥ *(Φάση 3)* — ΓΡΑΦΤΗΚΕ **ΜΑΖΙ** ΜΕ ΤΟΝ ΓΡΑΦΕΑ
+  //
+  // ⚠️ Η Φάση 2 πρόσθεσε την ακτίνα σε **τέσσερα** σύνορα και ξέχασε **αυτό** — και η
+  //    βιτρίνα έλεγε «Δεν δηλώθηκε» αμέσως μετά τη δημοσίευση, με **πράσινο** τον
+  //    γραφέα. Το `coverage-round-trip.test.ts` υπάρχει ακριβώς γι' αυτό, και έχει
+  //    πλέον γραμμή για **κάθε** σκέλος της ένωσης.
+  //
+  // 🔑 **Ο ΙΔΙΟΣ κριτής με τον γραφέα** *(`asCoverageOutline`)*: ο δίσκος δεν είναι
+  //    αξιόπιστος, και ένα χειρόγραφο πολύγωνο 300 χλμ θα ανάσταινε την απαγόρευση #6
+  //    από την πίσω πόρτα — ακριβώς όπως ένα χειρόγραφο `radiusKm: 500`.
+  // ═══════════════════════════════════════════════════════════════════════════
+  const outline = asCoverageOutline(source.outline);
+  if (outline !== null) return { outline };
 
   const { adminIds } = source;
   if (!Array.isArray(adminIds)) return null;

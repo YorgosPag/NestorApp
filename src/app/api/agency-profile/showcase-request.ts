@@ -31,6 +31,7 @@ import type { ShowcaseDeniedResponse } from '@/lib/auth/brokerage-gate';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import type { ShowcaseWireDeclaration } from '@/lib/agency/showcase-wire';
 import { normalizeCoverageIds } from '@/lib/agency/coverage-match';
+import { coverageOutlineDefect, type CoverageOutlineDefect } from '@/lib/agency/coverage-outline';
 import { placeRefSchema } from '@/lib/geo/place-ref-schema';
 import { resolveAlias } from '@/lib/workspace/alias-registry';
 import { readOccupationClassification } from '@/services/esco/occupation-classification.reader';
@@ -44,6 +45,7 @@ import type { AgencyProfileRejection } from '@/services/mandate/agency-profile-v
 import {
   asCoverageRadiusKm,
   isNationwide,
+  isOutlineCoverage,
   isRadiusCoverage,
   type DeclaredCoverage,
 } from '@/types/agency-coverage';
@@ -130,6 +132,22 @@ export const publishSchema: z.ZodType<ShowcaseWireDeclaration> = z.object({
           radiusKm: z.number(),
         }),
       }),
+      /**
+       * **Το σκέλος του χαραγμένου πολυγώνου** *(ADR-846 Φάση 3)* — **μορφή** εδώ,
+       * **κρίση** στον {@link resolveCoverage}, ίδιο δόγμα με την ακτίνα από πάνω.
+       *
+       * ⚠️ **Το `max(1000)` ΔΕΝ είναι το ταβάνι** — το ταβάνι είναι **100**
+       * *(`COVERAGE_MAX_VERTICES`)* και επιβάλλεται **ονομαστικά** παρακάτω, ώστε ο
+       * άνθρωπος να μάθει *«πάρα πολλές κορυφές»* αντί για `MALFORMED_BODY`. Αυτό εδώ
+       * είναι **φρουρός πόρου**: ένα σώμα με 100.000 κορυφές δεν αξίζει ούτε ένα
+       * `parse`. Η απόσταση των δύο αριθμών είναι επίτηδες μεγάλη — καμία **ανθρώπινη**
+       * χάραξη δεν πέφτει ανάμεσά τους.
+       */
+      z.object({
+        outline: z
+          .array(z.object({ lat: z.number(), lng: z.number() }))
+          .max(1000),
+      }),
     ])
     .nullable()
     .optional(),
@@ -175,6 +193,16 @@ export type AgencyProfileWriteResponse =
    * επιβιώνει ενός `JSON.parse` *(δες `asCoverageRadiusKm`)*.
    */
   | { readonly error: 'COVERAGE_RADIUS_INVALID' }
+  /**
+   * Δηλωμένο **χαραγμένο πολύγωνο** που δεν είναι σχήμα, ή που ξεπερνά τα ταβάνια
+   * *(κορυφές · έκταση)* ⇒ **διόρθωσε** (422). Το `defect` **ονομάζει** το γιατί.
+   *
+   * ⚠️ **Η οθόνη ΜΠΟΡΕΙ να το παράγει** — σε αντίθεση με τον κύκλο. Ο άνθρωπος χαράζει
+   * ελεύθερα, άρα *«πολύ πλατύ»* είναι **αναμενόμενη** απάντηση, όχι δεύτερη ζώνη. Γι'
+   * αυτό η φόρμα καλεί **την ίδια** συνάρτηση και το λέει **πριν** την υποβολή
+   * *(`lib/agency/coverage-outline.ts`)* — εδώ είναι η **εγγύηση**, εκεί η ανάδραση.
+   */
+  | { readonly error: 'COVERAGE_OUTLINE_INVALID'; readonly defect: CoverageOutlineDefect }
   | ShowcaseDeniedResponse
   | { readonly error: 'WRITE_FAILED' };
 
@@ -333,6 +361,30 @@ export async function resolveCoverage(
     // ⚠️ **Ξαναχτίζεται από τα επαληθευμένα μέρη**, δεν περνά αυτούσιο: ό,τι δεν
     //    ελέγχθηκε δεν αποθηκεύεται *(και το `step` κουβαλά τον στενό τύπο)*.
     return { coverage: { circle: { center: { lat: center.lat, lng: center.lng }, radiusKm: step } } };
+  }
+
+  // ── ΤΟ ΧΑΡΑΓΜΕΝΟ ΠΟΛΥΓΩΝΟ: σχήμα + τα ΔΥΟ ταβάνια ────────────────────────────
+  //
+  // 🔴 **Ο ΕΛΕΓΧΟΣ ΕΙΝΑΙ Η ΙΔΙΑ ΣΥΝΑΡΤΗΣΗ ΠΟΥ ΤΡΕΧΕΙ Η ΦΟΡΜΑ ΚΑΙ Ο ΑΝΑΓΝΩΣΤΗΣ**
+  //    *(`lib/agency/coverage-outline.ts`)*. Τρεις καλούντες, **μία** κρίση: αλλιώς ο
+  //    άνθρωπος βλέπει πράσινο και τρώει άρνηση, ή ο δίσκος κρατά σχήμα που κανείς δεν
+  //    θα δεχόταν σήμερα. Το ταβάνι έκτασης *(περιγεγραμμένος ≤ 50 χλμ)* είναι **το
+  //    ανώτατο βήμα ακτίνας**, όχι νέος αριθμός — δες `types/agency-coverage.ts`.
+  if (isOutlineCoverage(coverage)) {
+    const defect = coverageOutlineDefect(coverage.outline);
+    if (defect !== null) {
+      return {
+        rejected: NextResponse.json(
+          { error: 'COVERAGE_OUTLINE_INVALID', defect } as const,
+          { status: 422 },
+        ),
+      };
+    }
+    // ⚠️ **Ξαναχτίζεται από τα επαληθευμένα μέρη** — ίδιο ιδίωμα με τον κύκλο: ό,τι
+    //    δεν ελέγχθηκε δεν αποθηκεύεται (ένα `{ lat, lng, note: '…' }` δεν περνά).
+    return {
+      coverage: { outline: coverage.outline.map(({ lat, lng }) => ({ lat, lng })) },
+    };
   }
 
   if (coverage.adminIds.length === 0) return { coverage: null };
