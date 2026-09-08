@@ -54,6 +54,7 @@ import { fileURLToPath } from 'node:url';
 
 import { ringsFootprint } from '../src/lib/geo/geo-footprint';
 import { geoJsonRings } from '../src/lib/geo/geo-geojson';
+import type { GeoOutline } from '../src/types/geo/coordinates';
 import type { GeoFootprint } from '../src/types/geo/admin-footprint';
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -94,6 +95,8 @@ interface HierarchyRow {
   readonly n: string;
   readonly c: string;
   readonly l: number;
+  /** Ο γονέας — τον χρειάζεται η **σύνθεση** αποτυπώματος από δημοτικές ενότητες (Φ4). */
+  readonly p: string | null;
 }
 
 /** Ό,τι κρατάμε από μια σάρωση ενός layer — για την αναφορά, όχι για το αρχείο. */
@@ -264,6 +267,83 @@ function collectLayer(
 }
 
 /**
+ * 🔴 **ΟΙ ΔΗΜΟΙ ΠΟΥ Η ΠΗΓΗ ΔΕΝ ΞΕΡΕΙ** — ADR-846 Φ4.
+ *
+ * Το layer `kallikratikoi_dimoi` έχει **326** πολύγωνα: είναι ο Καλλικράτης του 2011,
+ * και **τελείωσε εκεί**. Οι επτά δήμοι που γέννησε ο Κλεισθένης *(ν.4600/2019)* δεν
+ * υπάρχουν σε αυτό, και **δεν πρόκειται να υπάρξουν** — το geodata.gov.gr δεν έχει
+ * δημοσιεύσει όρια μετά-Κλεισθένη *(ελεγμένο 2026-09-08)*.
+ *
+ * 🔑 **Και όμως το έδαφός τους ΤΟ ΕΧΟΥΜΕ ΗΔΗ.** Ο νόμος δεν χάραξε νέα σύνορα: **μοίρασε
+ * δημοτικές ενότητες**, και το layer `dimotikes_enotites` τις έχει **όλες** — από την
+ * **ίδια** πηγή, με την **ίδια** άδεια CC-BY. Άρα το αποτύπωμα ενός νέου δήμου είναι
+ * ακριβώς το αποτύπωμα της **ένωσης των παιδιών του**, χωρίς νέα εξάρτηση και χωρίς
+ * καμία εικασία για το πού περνά μια γραμμή.
+ *
+ * ⚠️ **Τα δαχτυλίδια ΕΝΩΝΟΝΤΑΙ, δεν μέσο-ποιούνται**: ο `ringsFootprint` δέχεται
+ * **όλα** τα δαχτυλίδια μαζί, οπότε ο περικλείων κύκλος βγαίνει από το σύνολο και ο
+ * εγγεγραμμένος **περνιέται** από αυτόν — η σχέση `εσωτερικός ⊆ σχήμα ⊆ εξωτερικός`
+ * μένει ακέραιη. Δύο χωριστά αποτυπώματα μέσο-ποιημένα θα την έσπαγαν σιωπηλά.
+ */
+function composeFromMunicipalUnits(
+  rows: readonly HierarchyRow[],
+  units: GeoJSON.FeatureCollection,
+  into: Map<string, GeoFootprint>,
+): readonly string[] {
+  const ringsByCode = new Map<string, readonly GeoOutline[]>();
+  for (const feature of units.features) {
+    const code = String(feature.properties?.kalcode ?? '');
+    const { geometry } = feature;
+    if (geometry.type !== 'Polygon' && geometry.type !== 'MultiPolygon') continue;
+    ringsByCode.set(code, geoJsonRings(geometry));
+  }
+
+  const childCodes = new Map<string, string[]>();
+  for (const row of rows) {
+    if (row.l !== 6 || row.p === null) continue;
+    const siblings = childCodes.get(row.p);
+    if (siblings) siblings.push(row.c);
+    else childCodes.set(row.p, [row.c]);
+  }
+
+  const composed: string[] = [];
+  for (const row of rows) {
+    if (row.l !== 5 || into.has(row.id)) continue;
+    const rings = (childCodes.get(row.id) ?? []).flatMap((code) => ringsByCode.get(code) ?? []);
+    const footprint = rings.length === 0 ? null : ringsFootprint(rings);
+    if (footprint === null) continue;
+    into.set(row.id, {
+      center: round(footprint.center),
+      outerKm: roundKm(footprint.outerKm),
+      innerKm: roundKm(footprint.innerKm),
+    });
+    composed.push(`${row.n} ← ${childCodes.get(row.id)?.length} δημ. ενότητες`);
+  }
+  return composed;
+}
+
+/**
+ * **Ποιος δήμος μένει χωρίς έδαφος** — τυπώνεται ονομαστικά, ποτέ ως αριθμός.
+ *
+ * ⚠️ Ένας δήμος χωρίς αποτύπωμα είναι **αόρατος σε κάθε κυκλικό ερώτημα**: ο
+ * επαγγελματίας τον δηλώνει και ο κριτής απαντά `unknown` για πάντα. Δεν σκάει τίποτα —
+ * γι' αυτό πρέπει να **λέγεται**. Ένα πλήθος («λείπουν 8») δεν επιτρέπει σε κανέναν να
+ * καταλάβει αν το κενό είναι αναμενόμενο ή καινούριο.
+ */
+function reportMunicipalitiesWithoutFootprint(
+  rows: readonly HierarchyRow[],
+  footprints: ReadonlyMap<string, GeoFootprint>,
+): void {
+  const missing = rows.filter((row) => row.l === 5 && !footprints.has(row.id));
+  if (missing.length === 0) {
+    console.log('\n✅ ΚΑΘΕ δήμος έχει αποτύπωμα.');
+    return;
+  }
+  console.log(`\n⚠️  ${missing.length} δήμοι ΧΩΡΙΣ αποτύπωμα — αόρατοι σε κυκλικό ερώτημα:`);
+  for (const row of missing) console.log(`   • ${row.c} ${row.n}`);
+}
+
+/**
  * 🔒 **Η ΑΓΚΥΡΑ ΤΟΥ ΓΕΝΝΗΤΟΡΑ** — τρέχει **πριν** γραφτεί το αρχείο, ποτέ μετά.
  *
  * `outer >= inner` για **κάθε** γραμμή. Αν σπάσει, κάτι θεμελιώδες είναι λάθος στη
@@ -292,11 +372,22 @@ async function main(): Promise<void> {
 
   const footprints = new Map<string, GeoFootprint>();
   const reports: LayerReport[] = [];
+  let municipalUnits: GeoJSON.FeatureCollection | null = null;
   for (const { layer, level } of LAYERS) {
     const collection = await loadLayer(layer);
+    if (level === 6) municipalUnits = collection;
     reports.push(collectLayer(collection, level, layer, index, ambiguous, footprints));
   }
 
+  if (municipalUnits !== null) {
+    const composed = composeFromMunicipalUnits(hierarchy.data, municipalUnits, footprints);
+    if (composed.length > 0) {
+      console.log(`\n🧩 ${composed.length} δήμοι με ΣΥΝΘΕΤΟ αποτύπωμα (η πηγή τους δεν ξέρει):`);
+      for (const line of composed) console.log(`   • ${line}`);
+    }
+  }
+
+  reportMunicipalitiesWithoutFootprint(hierarchy.data, footprints);
   assertContainment(footprints);
 
   const payload = {
