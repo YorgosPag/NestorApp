@@ -103,8 +103,15 @@ const config = {
       statements: 0
     }
   },
+  // 🔴 **ΤΟ `.mjs` ΜΠΗΚΕ ΣΤΗ Φ4.2 (ADR-845), ΚΑΙ ΧΩΡΙΣ ΑΥΤΟ ΤΟ `transformIgnorePatterns`
+  //    ΕΙΝΑΙ ΑΝΕΝΕΡΓΟ ΓΙΑ ΤΕΤΟΙΑ ΠΑΚΕΤΑ.** Το παλιό `^.+\.(t|j)sx?$` **δεν πιάνει `.mjs`**,
+  //    οπότε ένα αρχείο `.mjs` δεν μετασχηματιζόταν **ό,τι κι αν έλεγε** το ignore list —
+  //    δηλαδή η ρύθμιση από κάτω έμοιαζε να δουλεύει και δεν μπορούσε.
+  //    Το βρήκε το `property-graph@4.1.0` (εξάρτηση του `@gltf-transform/core`): `"type":
+  //    "module"`, `exports.default: ./dist/index.mjs`, **κανένα** CJS build.
+  //    `m?[tj]s` = ts · js · mts · mjs — `[tj]sx` = tsx · jsx. Καμία επέκταση δεν χάθηκε.
   transform: {
-    '^.+\\.(t|j)sx?$': ['@swc/jest', {
+    '^.+\\.(m?[tj]s|[tj]sx)$': ['@swc/jest', {
       jsc: {
         parser: {
           syntax: 'typescript',
@@ -128,8 +135,19 @@ const config = {
   // (firebase-admin → jwks-rsa → jose). Any suite that imports a service
   // touching `@/lib/firebaseAdmin` died at parse time on jose's bare
   // `export {}` before reaching a single assertion. Same nesting rules.
+  // `meshoptimizer` και `property-graph` είναι ESM-only και τα σέρνει ο ψήστης μοντέλου
+  // (ADR-845 Φ4.2, `public-shelf-model-bake`). Ίδιο μονοπάτι με τα δύο από πάνω.
+  //
+  // 🔴 **ΤΟ `property-graph` ΕΙΝΑΙ ΤΟ ΜΗ-ΠΡΟΦΑΝΕΣ, ΚΑΙ ΤΟ ΒΡΗΚΕ ΜΟΝΟ Η ΕΚΤΕΛΕΣΗ.** Η
+    // πρώτη γραφή αυτού του σχολίου έλεγε *«τα `@gltf-transform/*` ΔΕΝ χρειάζονται εγγραφή:
+  // δηλώνουν `main: ./dist/index.cjs`, άρα φορτώνονται ως CommonJS — μετρημένο»*. Ο
+  // ισχυρισμός ήταν **αληθής για τα ίδια και ψευδής για το αποτέλεσμα**: το CJS build τους
+  // κάνει `require('property-graph')`, που είναι `"type": "module"` **χωρίς** CJS build ⇒
+  // `SyntaxError: Unexpected token 'export'` στη **συλλογή**, με `Tests: 0 total`.
+  // ⚠️ Δηλαδή: **η μέτρηση του πακέτου δεν είναι μέτρηση του γραφήματός του.** Ό,τι
+  // προστίθεται εδώ επαληθεύεται **τρέχοντας**, ποτέ διαβάζοντας `package.json`.
   transformIgnorePatterns: [
-    'node_modules/(?!(?:\\.pnpm/[^/]+/node_modules/)?(?:three|jose)/)'
+    'node_modules/(?!(?:\\.pnpm/[^/]+/node_modules/)?(?:three|jose|meshoptimizer|property-graph)/)'
   ],
   moduleDirectories: ['node_modules', '<rootDir>'],
   // 🔴 ΟΡΙΟ ΠΟΡΩΝ ΤΟΠΙΚΑ (2026-07-31) — ΜΗΝ το αφαιρέσεις.
