@@ -58,7 +58,12 @@
  */
 
 import type { ListingMaterial } from '@/lib/listings/listing-material';
-import type { AnyPublicShelfKind, RasterShelfEncoding, ShelfEncoding } from './public-shelf-kinds';
+import type { AnyPublicShelfKind } from './public-shelf-kinds';
+import type {
+  ModelShelfEncoding,
+  RasterShelfEncoding,
+  ShelfEncoding,
+} from './public-shelf-encoding';
 
 // ---------------------------------------------------------------------------
 // Σταθερές
@@ -144,12 +149,20 @@ export const PUBLIC_SHELF_MAX_CACHE_SECONDS = 86_400;
  * ⚠️ Κλειστό σύνολο επίτηδες: το ράφι σερβίρει σε **ανώνυμο**, οπότε κάθε νέα μορφή
  * είναι απόφαση (π.χ. SVG **ποτέ** — εκτελεί script στον περιηγητή του επισκέπτη).
  *
- * 🔴 **ΤΟ `glb` ΛΕΙΠΕΙ ΕΠΙΤΗΔΕΣ.** Μπαίνει στη **Φ4**, **μαζί** με τον ψήστη που το
- * παράγει *(καθαρισμός → meshopt, ADR-841 §7 Α3 ②③)*. Μια μορφή δηλωμένη εδώ χωρίς
- * καθαριστή που να την παράγει θα ήταν **υπόσχεση χωρίς μηχανισμό** — και θα άνοιγε
- * διαδρομή να δημοσιευτεί μοντέλο **ωμό**, με `companyId`, κόστη και BOQ μέσα του.
+ * ✅ **ΤΟ `glb` ΜΠΗΚΕ ΣΤΗ Φ4.2 — ΜΑΖΙ ΜΕ ΤΟΝ ΨΗΣΤΗ, ΟΠΩΣ ΤΟ ΟΡΙΖΕ Η ΓΡΑΜΜΗ ΠΟΥ ΗΤΑΝ ΕΔΩ.**
+ * Ως τη Φ4.1 έλειπε επίτηδες: *«μια μορφή δηλωμένη εδώ χωρίς καθαριστή που να την παράγει
+ * είναι **υπόσχεση χωρίς μηχανισμό** — και θα άνοιγε διαδρομή να δημοσιευτεί μοντέλο **ωμό**,
+ * με `companyId`, κόστη και BOQ μέσα του»*. Ο μηχανισμός υπάρχει
+ * *(`services/listings/public-shelf-model-bake`, ADR-841 §7 Α3 ②③)*, και η **Α-1γ** το φυλά
+ * **και προς τις δύο κατευθύνσεις**: καμία μορφή εδώ χωρίς γραμμή που την παράγει, καμία
+ * γραμμή που παράγει μορφή απούσα από εδώ.
+ *
+ * ⚠️ **SVG ΠΟΤΕ** — εκτελεί script στον περιηγητή του επισκέπτη. Η προσθήκη του `glb` **δεν**
+ * χαλαρώνει αυτόν τον κανόνα: ένα GLB **δεν είναι εκτελέσιμο**, και ό,τι θα μπορούσε να
+ * κρυφτεί μέσα του *(steganographic payload σε υφή)* **δεν επιβιώνει** το ξαναγράψιμο του
+ * ψήστη — ό,τι δεν ανήκει σε γνωστό `accessor`/`bufferView`/`image` χάνεται *(ADR-845 §6.2)*.
  */
-export const PUBLIC_SHELF_EXTENSIONS = ['webp'] as const;
+export const PUBLIC_SHELF_EXTENSIONS = ['webp', 'glb'] as const;
 
 export type PublicShelfExtension = (typeof PUBLIC_SHELF_EXTENSIONS)[number];
 
@@ -254,18 +267,36 @@ export function isPublicShelfExtension(value: string): value is PublicShelfExten
  * τον αναγνώστη σε `try/catch`, δηλαδή θα του άλλαζε το συμβόλαιο για χάρη του γραφέα.
  * Το `null` αφήνει **τον καθένα** να αποφασίσει τι σημαίνει «δεν ξέρω».
  *
- * ⚠️ **ΤΟ `'glb'` ΕΞΑΚΟΛΟΥΘΕΙ ΝΑ ΛΕΙΠΕΙ, ΚΑΙ ΤΩΡΑ ΤΟ ΦΥΛΑΕΙ ΑΓΚΥΡΑ.** Το `'model'`
- * επιστρέφει `null` — δηλαδή *«η μορφή θα δηλωθεί μαζί με τον ψήστη»*, που ως εδώ ήταν
- * **σχόλιο** στο {@link PUBLIC_SHELF_EXTENSIONS} και τώρα είναι **εκτελούμενο**.
+ * ✅ **ΤΟ `'glb'` ΗΡΘΕ ΣΤΗ Φ4.2 — ΜΑΖΙ ΜΕ ΤΟΝ ΨΗΣΤΗ, ΟΠΩΣ ΤΟ ΟΡΙΖΕ Ο ΟΡΟΣ.** Ως τη Φ4.1
+ * το `'model'` επιστρεφόταν `null`, δηλαδή *«η μορφή θα δηλωθεί μαζί με τον ψήστη»* — και
+ * ήταν ο **σωστός** φρουρός: μορφή χωρίς καθαριστή που να την παράγει θα άνοιγε διαδρομή να
+ * δημοσιευτεί μοντέλο **ωμό**, με `companyId`, κόστη και BOQ μέσα του. Ο ψήστης υπάρχει
+ * *(`services/listings/public-shelf-model-bake`)*, άρα το `null` θα ήταν πλέον **ψέμα**.
+ *
+ * 🔑 **Η ΣΥΝΑΡΤΗΣΗ ΕΞΑΚΟΛΟΥΘΕΙ ΝΑ ΜΠΟΡΕΙ ΝΑ ΠΕΙ `null`, ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ.** Ο φυσικός
+ * πειρασμός με **δύο** απαντημένα σκέλη είναι να γίνει ο τύπος επιστροφής σκέτος
+ * `PublicShelfExtension` — ⛔ **απορρίπτεται**: το `null` δεν σημαίνει *«raster ή μοντέλο;»*,
+ * σημαίνει *«είδος bytes που **κανείς δεν ψήνει ακόμη**»*, και η ένωση θα μεγαλώσει ξανά
+ * *(point-cloud, βίντεο)*. Ένας τύπος που δεν χωρά «δεν ξέρω» υποχρεώνει τον επόμενο να
+ * **μαντέψει** — ακριβώς το `extension: string` με προεπιλογή `'webp'` που το
+ * `public-shelf-encoding` απορρίπτει γραπτώς.
+ *
  * 🔑 **Οι υπερφορτώσεις ΔΕΝ είναι καλλωπισμός** *(N.2: ποτέ `as`)*: ο γραφέας, αφού
  * στενέψει στο σύνορό του, κρατά **raster** κωδικοποίηση — και τότε η απάντηση **δεν
  * μπορεί** να είναι `null`. Χωρίς την υπερφόρτωση, κάθε κλήση του θα κουβαλούσε χειρισμό
  * ενός `null` που είναι **αποδεδειγμένα αδύνατο** εκεί, δηλαδή νεκρό κλάδο σε ζεστό δρόμο.
+ * Από τη Φ4.2 υπάρχει και η **αδελφή** υπερφόρτωση για τον ψήστη μοντέλων.
  */
 export function shelfExtension(encoding: RasterShelfEncoding): PublicShelfExtension;
+export function shelfExtension(encoding: ModelShelfEncoding): PublicShelfExtension;
 export function shelfExtension(encoding: ShelfEncoding): PublicShelfExtension | null;
 export function shelfExtension(encoding: ShelfEncoding): PublicShelfExtension | null {
-  return encoding.kind === 'raster' ? 'webp' : null;
+  switch (encoding.kind) {
+    case 'raster':
+      return 'webp';
+    case 'model':
+      return 'glb';
+  }
 }
 
 // ---------------------------------------------------------------------------

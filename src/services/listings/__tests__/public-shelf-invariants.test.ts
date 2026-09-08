@@ -44,11 +44,13 @@ import {
 import {
   FRAMING_AS_GIVEN,
   FRAMING_INK_TIGHT,
+  LISTING_MODEL_SHELF,
   LISTING_SHELF,
   PUBLIC_SHELF_KINDS,
   SHOWCASE_SHELF,
   isPublicShelfListingId,
   isPublicShelfShowcaseId,
+  isModelShelfKind,
   isRasterShelfKind,
   shelfRecipe,
   type ModelShelfEncoding,
@@ -167,6 +169,13 @@ describe('Κ4 — ο γραφέας είναι ΑΥΣΤΗΡΟΣ, ο αναγνώ
     // 🔑 Ο κύκλος δοκιμάζεται σε ΟΛΟΝ τον πίνακα, όχι μόνο στην πρώτη γραμμή: ένα είδος
     //    που γράφει κλειδί το οποίο ο ΔΙΚΟΣ ΤΟΥ αναγνώστης δεν δέχεται θα ήταν ράφι που
     //    ΔΕΝ ΜΠΟΡΕΙ να αδειάσει — το `deleteExtra` αγγίζει μόνο ό,τι αναγνωρίζει.
+    //
+    // 🔴 **ΔΙΟΡΘΩΘΗΚΕ ΣΤΗ Φ4.2 (ADR-845): Η ΜΟΡΦΗ ΡΩΤΙΕΤΑΙ, ΔΕΝ ΚΑΡΦΩΝΕΤΑΙ.** Ως τη Φ4.1
+    //    αυτός ο βρόχος έγραφε `ext: 'webp'` **κυριολεκτικά** για κάθε γραμμή — αληθές όσο
+    //    κάθε γραμμή ήταν εικόνα, και **δομικά λάθος**: η άγκυρα ισχυριζόταν *«ο κύκλος
+    //    κλείνει σε κάθε είδος»* ενώ στην πραγματικότητα δοκίμαζε **μία** μορφή σε όλα.
+    //    Με τη γραμμή του μοντέλου ο αυστηρός γραφέας **πετά** — και σωστά.
+    //    ⇒ Ίδια κλάση με την Α-1δ, βρέθηκε **διαβάζοντας** τη σουίτα και όχι από αποτυχία.
     const subjectOf: Record<string, string> = {
       listings: 'prop_9',
       showcases: 'comp_9c7c1a50',
@@ -176,10 +185,17 @@ describe('Κ4 — ο γραφέας είναι ΑΥΣΤΗΡΟΣ, ο αναγνώ
       const subjectId = subjectOf[kind.root];
       expect(subjectId).toBeDefined();
 
-      const key = buildPublicShelfKey(kind, { subjectId, contentHash: HASH, ext: 'webp' });
+      // ⚠️ Η μορφή έρχεται από την **κωδικοποίηση αυτής της γραμμής**. Ένα `?? 'webp'` εδώ
+      //    θα ξαναγεννούσε ακριβώς το σφάλμα που η γραμμή διορθώνει.
+      const ext = shelfExtension(kind.encoding);
+      // ⚠️ `throw` και όχι `expect(...).not.toBeNull()`: το δεύτερο **δεν στενεύει τον
+      //    τύπο**, οπότε η επόμενη γραμμή θα χρειαζόταν `as` — που ο N.2 απαγορεύει.
+      if (ext === null) throw new Error(`Η γραμμή ${kind.root} δεν δηλώνει μορφή`);
 
-      expect(key).toBe(`${kind.root}/${subjectId}/${HASH}.webp`);
-      expect(parsePublicShelfKey(kind, key)).toEqual({ subjectId, contentHash: HASH, ext: 'webp' });
+      const key = buildPublicShelfKey(kind, { subjectId, contentHash: HASH, ext });
+
+      expect(key).toBe(`${kind.root}/${subjectId}/${HASH}.${ext}`);
+      expect(parsePublicShelfKey(kind, key)).toEqual({ subjectId, contentHash: HASH, ext });
     }
   });
 });
@@ -475,31 +491,59 @@ describe('🔑 ΤΟ ΟΡΙΟ ΤΗΣ ΒΙΤΡΙΝΑΣ ΕΙΝΑΙ ΤΟΥ ΡΑΦΙ�
  * `tsc`, μια εγγύηση **μόνο** σε χρόνο μεταγλώττισης θα ήταν ανεπαλήθευτη — δηλαδή
  * ακριβώς το *«0 = κανείς δεν κοίταξε»* των N.11/N.12.
  */
-const MODEL_ENCODING: ModelShelfEncoding = { kind: 'model' };
+const MODEL_ENCODING: ModelShelfEncoding = {
+  kind: 'model',
+  meshopt: 'high',
+  quantise: { position: 14, normal: 10, texcoord: 12 },
+};
 
 describe('🏆 Α-1 (ADR-845 §8) — Η ΣΥΝΤΑΓΗ ΔΕΝ ΓΡΑΦΕΙ `webp:` ΓΙΑ ΜΗ-ΕΙΚΟΝΑ', () => {
   // Η συνταγή δεν είναι σχόλιο: γίνεται ΜΕΤΑΔΕΔΟΜΕΝΟ που ταξιδεύει με τα bytes και
   // μέρος της απόφασης «υπάρχει ήδη;». Και το κλειδί είναι content-addressed — άρα μια
   // συνταγή που λέει ψέματα γίνεται ΜΟΝΙΜΗ ΔΙΕΥΘΥΝΣΗ που λέει ψέματα.
 
-  it('πετά αντί να μαντέψει — και το μήνυμα ονομάζει το είδος', () => {
-    expect(() => shelfRecipe(MODEL_ENCODING, FRAMING_AS_GIVEN)).toThrow(/model/);
+  // ⚠️ **Η ΕΡΩΤΗΣΗ ΕΙΝΑΙ Η ΙΔΙΑ, Η ΑΠΑΝΤΗΣΗ ΑΛΛΑΞΕ ΣΤΗ Φ4.2 — ΚΑΙ ΕΙΝΑΙ ΤΟ ΖΗΤΟΥΜΕΝΟ.**
+  //    Ως τη Φ4.1 η συνταγή του μοντέλου **πετούσε** *(«no baker produces it yet»)*, και η
+  //    άγκυρα το κλείδωνε. Τώρα υπάρχει ψήστης, άρα το `throw` θα ήταν το ψέμα. Ο φρουρός
+  //    δεν χαλαρώνει: μετακινείται από *«δεν γράφει τίποτα»* σε *«γράφει ΤΗ ΔΙΚΗ ΤΟΥ μορφή,
+  //    και ΠΟΤΕ `webp:`»* — που είναι το πράγμα που πάντα προστάτευε.
+
+  it('🔴 ΔΕΝ γράφει `webp:` για μη-εικόνα — η μετάλλαξη που πιάνει την επιστροφή στο άνευ όρων', () => {
+    expect(shelfRecipe(MODEL_ENCODING)).not.toMatch(/webp/);
   });
 
-  it('🔴 και ΔΕΝ γράφει `webp:` — η μετάλλαξη που πιάνει την επιστροφή στο άνευ όρων', () => {
-    let written: string | null = null;
-    try {
-      written = shelfRecipe(MODEL_ENCODING, FRAMING_AS_GIVEN);
-    } catch {
-      written = null;
-    }
+  it('γράφει τη ΔΙΚΗ του μορφή, και ονομάζει το είδος', () => {
+    expect(shelfRecipe(MODEL_ENCODING)).toMatch(/^glb:/);
+  });
 
-    expect(written).toBeNull();
+  it('🔴 η συνταγή του μοντέλου κουβαλά ΚΑΘΕ παράμετρο που αλλάζει τα bytes', () => {
+    // Η συνταγή είναι content-addressed μεταδεδομένο: παράμετρος που αλλάζει bytes και
+    // ΔΕΝ φαίνεται εδώ σημαίνει ότι δύο διαφορετικά αρχεία μοιράζονται ταυτότητα, και η
+    // γρήγορη διαδρομή (που δεν αποκωδικοποιεί ΤΙΠΟΤΑ) θα σερβίριζε το λάθος για πάντα.
+    const base = MODEL_ENCODING;
+
+    expect(shelfRecipe({ ...base, meshopt: 'medium' })).not.toBe(shelfRecipe(base));
+    expect(shelfRecipe({ ...base, quantise: { ...base.quantise, position: 12 } })).not.toBe(
+      shelfRecipe(base),
+    );
+    expect(shelfRecipe({ ...base, quantise: { ...base.quantise, normal: 8 } })).not.toBe(
+      shelfRecipe(base),
+    );
+    expect(shelfRecipe({ ...base, quantise: { ...base.quantise, texcoord: 10 } })).not.toBe(
+      shelfRecipe(base),
+    );
   });
 
   it('οι εικόνες μένουν ΑΝΕΠΑΦΕΣ — ο αυστηρότερος τύπος δεν άλλαξε καμία συνταγή', () => {
     expect(shelfRecipe(LISTING_SHELF.encoding, FRAMING_AS_GIVEN)).toMatch(/^webp:/);
     expect(shelfRecipe(SHOWCASE_SHELF.encoding, FRAMING_INK_TIGHT)).toMatch(/^webp:/);
+  });
+
+  it('🔴 και το ΠΛΑΙΣΙΩΜΑ δεν ταξιδεύει ΠΟΤΕ σε συνταγή μοντέλου', () => {
+    // Ένα μοντέλο δεν έχει «περιθώριο εικόνας». Μια συνταγή που έγραφε `:trim25` για GLB
+    // θα δήλωνε πράξη που ΔΕΝ ΕΚΤΕΛΕΙΤΑΙ ΠΟΤΕ — δηλαδή μεταδεδομένο που λέει ψέματα, και
+    // επειδή είναι content-addressed, ψέμα με μόνιμη διεύθυνση.
+    expect(shelfRecipe(MODEL_ENCODING)).not.toMatch(/trim/);
   });
 });
 
@@ -508,12 +552,25 @@ describe('🏆 Α-1β — Η ΜΟΡΦΗ ΔΗΛΩΝΕΤΑΙ ΜΑΖΙ ΜΕ ΤΟΝ 
   // ψήστη που το παράγει», γιατί μορφή χωρίς καθαριστή είναι υπόσχεση χωρίς μηχανισμό
   // — και θα άνοιγε διαδρομή να δημοσιευτεί μοντέλο ΩΜΟ. Ήταν σχόλιο· τώρα εκτελείται.
 
-  it('η μη-εικόνα δεν έχει μορφή — `null`, όχι προεπιλογή', () => {
-    expect(shelfExtension(MODEL_ENCODING)).toBeNull();
+  // ⚠️ **Η Φ4.2 ΕΦΕΡΕ ΤΟΝ ΨΗΣΤΗ, ΑΡΑ ΕΦΕΡΕ ΤΗ ΜΟΡΦΗ — ΜΑΖΙ, ΠΟΤΕ Η ΜΙΑ ΠΡΙΝ ΤΟΝ ΑΛΛΟΝ.**
+  //    Ως τη Φ4.1 και τα δύο πρώτα test ρωτούσαν *«λείπει ακόμη;»* και η απάντηση ήταν ναι.
+  //    Η ερώτηση που **προστάτευαν** δεν ήταν ποτέ *«λείπει;»* — ήταν *«υπάρχει μορφή που
+  //    κανείς δεν ψήνει;»*. Αυτή ζει τώρα ολόκληρη στην **Α-1γ**, εκτελούμενη και προς τις
+  //    δύο κατευθύνσεις.
+
+  it('η μορφή του μοντέλου είναι `glb` — ΔΗΛΩΜΕΝΗ, ποτέ μαντεμένη', () => {
+    expect(shelfExtension(MODEL_ENCODING)).toBe('glb');
   });
 
-  it('🔴 το `glb` ΔΕΝ σερβίρεται ακόμη από κανένα ράφι', () => {
-    expect(PUBLIC_SHELF_EXTENSIONS).not.toContain('glb');
+  it('🔴 το `glb` σερβίρεται πλέον, ΚΑΙ ΜΟΝΟ ΕΠΕΙΔΗ ΥΠΑΡΧΕΙ ΨΗΣΤΗΣ', () => {
+    expect(PUBLIC_SHELF_EXTENSIONS).toContain('glb');
+  });
+
+  it('🔴 και το σύνολο μένει ΚΛΕΙΣΤΟ — καμία μορφή δεν μπήκε λαθραία μαζί του', () => {
+    // Το ράφι σερβίρει σε ΑΝΩΝΥΜΟ. Κάθε μορφή είναι απόφαση με συνέπειες — π.χ. SVG ΠΟΤΕ,
+    // γιατί εκτελεί script στον περιηγητή του επισκέπτη. Χωρίς αυτή τη γραμμή, η προσθήκη
+    // του `glb` θα ήταν η στιγμή που «το σύνολο μεγαλώνει» παύει να προσέχεται.
+    expect([...PUBLIC_SHELF_EXTENSIONS].sort()).toEqual(['glb', 'webp']);
   });
 
   it('η εικόνα δίνει `webp` — αμετάβλητο', () => {
@@ -548,12 +605,45 @@ describe('🏆 Α-1δ — ΤΟ ΣΥΝΟΡΟ ΤΟΥ ΓΡΑΦΕΑ ΞΕΡΕΙ ΤΙ 
   // Ό,τι είναι πίσω από τον φρουρό είναι σχήματος raster από άκρη σε άκρη: η μνήμη
   // κλειδώνεται στο ΠΛΑΤΟΣ και η γρήγορη διαδρομή ρωτά «υπάρχουν ΟΛΑ τα πλάτη;».
   // Ένα μοντέλο δεν έχει αυτή την πληθυντικότητα — τα επίπεδα λεπτομέρειας ζουν ΜΕΣΑ
-  // στο αρχείο, γι' αυτό και το ADR-841 §6 λέει «το δημοσιευμένο GLB», στον ενικό.
+  // στο αρχείο (`MSFT_lod`), δηλαδή «ένα μοντέλο = ΕΝΑ ΑΡΧΕΙΟ».
+  // ⚠️ ΔΙΟΡΘΩΘΗΚΕ 2026-09-08 (ADR-845 Φ4.1): εδώ έγραφε «το ADR-841 §6 λέει «το δημοσιευμένο
+  //    GLB», στον ενικό». Η φράση ΔΕΝ ΥΠΑΡΧΕΙ στο ADR-841 (μετρημένο, 7.120 γρ.) — και το
+  //    «ένα ΑΡΧΕΙΟ ανά μοντέλο» δεν συνεπάγεται «ένα ΜΟΝΤΕΛΟ ανά αγγελία»: η Α11 δημοσιεύει
+  //    ΚΑΙ `as-built` ΚΑΙ `proposal`, γι' αυτό το δημόσιο σχήμα κρατά πίνακα `models[]`.
 
-  it('και τα δύο σημερινά είδη περνούν τον φρουρό', () => {
+  // 🔴 **ΑΠΟ ΤΗ Φ4.2 Ο ΠΙΝΑΚΑΣ ΔΕΝ ΕΙΝΑΙ ΟΜΟΙΟΓΕΝΗΣ, ΚΑΙ Η ΑΓΚΥΡΑ ΕΓΙΝΕ ΔΙΑΜΕΡΙΣΗ.**
+  //    Ως τη Φ4.1 έλεγε *«ΚΑΘΕ γραμμή περνά τον φρουρό του raster»* — αληθές όσο κάθε
+  //    γραμμή ήταν εικόνα, και **σιωπηλά ψευδές** την ημέρα που θα έμπαινε η πρώτη που δεν
+  //    είναι. Είναι **ακριβώς** η κλάση που μέτρησε η Φ4.1: *«ισχυρισμός πάνω σε λεξιλόγιο
+  //    που μεγαλώνει γίνεται σιωπηλά ψευδής κάθε φορά που προστίθεται τιμή»*.
+  //    ⇒ Η ερώτηση που **αξίζει** δεν ήταν ποτέ «είναι όλες raster;» αλλά **«ξέρει κάθε
+  //    γραμμή ΤΙ ΕΙΝΑΙ, και ξέρει ΑΚΡΙΒΩΣ ΕΝΑ πράγμα;»**.
+
+  it('🔴 κάθε γραμμή είναι raster **Ή** μοντέλο — ποτέ και τα δύο, ποτέ κανένα', () => {
     for (const kind of PUBLIC_SHELF_KINDS) {
-      expect(isRasterShelfKind(kind)).toBe(true);
+      const raster = isRasterShelfKind(kind);
+      const model = isModelShelfKind(kind);
+
+      // Αποκλειστική διάζευξη: μια γραμμή που απαντούσε «ναι» και στους δύο φρουρούς θα
+      // έφτανε ΚΑΙ στη μηχανή που μετρά πλάτη ΚΑΙ σε εκείνη που ψήνει γεωμετρία· μια που
+      // απαντούσε «όχι» και στους δύο θα ΔΙΑΦΗΜΙΖΟΤΑΝ στο ράφι χωρίς κανέναν να την ψήνει.
+      expect(raster !== model).toBe(true);
     }
+  });
+
+  it('🔴 και ο πίνακας περιέχει ΚΑΙ ΤΑ ΔΥΟ είδη — αλλιώς η διαμέριση είναι κενή υπόσχεση', () => {
+    // Χωρίς αυτό, το test από πάνω θα έμενε πράσινο σε πίνακα που έχασε τη γραμμή του
+    // μοντέλου — «πράσινο επειδή κανείς δεν κοίταξε», στην ακριβή του μορφή.
+    expect(PUBLIC_SHELF_KINDS.some((kind) => isRasterShelfKind(kind))).toBe(true);
+    expect(PUBLIC_SHELF_KINDS.some((kind) => isModelShelfKind(kind))).toBe(true);
+  });
+
+  it('🔴 οι δύο φρουροί ρωτούν την ΚΩΔΙΚΟΠΟΙΗΣΗ, ποτέ τη ρίζα — και το αποδεικνύει η ΙΔΙΑ ρίζα', () => {
+    // Το `LISTING_MODEL_SHELF` μοιράζεται ρίζα ΚΑΙ φρουρό ταυτότητας με το `LISTING_SHELF`.
+    // Ένα κριτήριο τύπου `kind.root === 'listings'` θα τα έλεγε ΚΑΙ ΤΑ ΔΥΟ raster.
+    expect(LISTING_MODEL_SHELF.root).toBe(LISTING_SHELF.root);
+    expect(isRasterShelfKind(LISTING_MODEL_SHELF)).toBe(false);
+    expect(isModelShelfKind(LISTING_MODEL_SHELF)).toBe(true);
   });
 
   it('🔴 ένα είδος μη-εικόνας ΔΕΝ τον περνά — αλλιώς φτάνει σε μηχανή που μετρά πλάτη', () => {
@@ -566,5 +656,75 @@ describe('🏆 Α-1δ — ΤΟ ΣΥΝΟΡΟ ΤΟΥ ΓΡΑΦΕΑ ΞΕΡΕΙ ΤΙ 
     expect(
       isRasterShelfKind({ ...LISTING_SHELF, encoding: MODEL_ENCODING }).valueOf(),
     ).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ADR-845 Φ4.2 — ΤΟ ΡΑΦΙ ΑΠΟΚΤΑ ΨΗΣΤΗ, ΚΑΙ ΔΥΟ ΕΙΔΗ ΜΟΙΡΑΖΟΝΤΑΙ ΠΡΟΘΕΜΑ
+// ---------------------------------------------------------------------------
+
+describe('🏆 Α-1ε — ΟΙ ΔΥΟ ΓΡΑΜΜΕΣ ΤΗΣ ΙΔΙΑΣ ΑΓΓΕΛΙΑΣ ΔΕΝ ΤΡΩΝΕ Η ΜΙΑ ΤΑ BYTES ΤΗΣ ΑΛΛΗΣ', () => {
+  // 🔴 ΓΙΑΤΙ ΥΠΑΡΧΕΙ ΑΥΤΗ Η ΑΓΚΥΡΑ, ΚΑΙ ΓΙΑΤΙ ΤΩΡΑ:
+  //
+  // Από τη Φ4.2 το `LISTING_SHELF` (εικόνες) και το `LISTING_MODEL_SHELF` (μοντέλα)
+  // μοιράζονται ΡΙΖΑ και ΤΑΥΤΟΤΗΤΑ ΥΠΟΚΕΙΜΕΝΟΥ, άρα και ΠΡΟΘΕΜΑ: `listings/<id>/`.
+  // Ο γραφέας σαρώνει το πρόθεμα και ΣΒΗΝΕΙ ό,τι περισσεύει (`deleteExtra`) — οπότε η
+  // συμφιλίωση των φωτογραφιών θα μπορούσε, θεωρητικά, να σβήσει το δημοσιευμένο `.glb`.
+  //
+  // ✅ Δεν μπορεί, και η εγγύηση είναι ΔΟΜΙΚΗ: το `deleteExtra` αγγίζει μόνο κλειδιά που
+  //    αναγνωρίζει το `parsePublicShelfKey(kind, …)`, κι εκείνο απαντά `null` όταν η
+  //    κατάληξη δεν είναι εκείνη ΑΥΤΟΥ του είδους.
+  //
+  // ⚠️ ΩΣ ΕΔΩ ΑΥΤΟ ΗΤΑΝ **ΣΧΟΛΙΟ**. Η Φ4.1 μέτρησε δύο ισχυρισμούς γραμμένους σε σχόλια
+  //    που ήταν ψευδείς επί μήνες, και ο ένας είχε περάσει αυτούσιος μέσα σε ADR ως
+  //    τεκμηριωμένο γεγονός. Ένας ισχυρισμός που ΚΡΑΤΑ ΔΗΜΟΣΙΕΥΜΕΝΑ BYTES ΖΩΝΤΑΝΑ δεν
+  //    επιτρέπεται να ζει σε σχόλιο.
+
+  const LISTING_ID = 'prop_coexist_1';
+  const PHOTO_KEY = buildPublicShelfKey(LISTING_SHELF, {
+    subjectId: LISTING_ID,
+    contentHash: HASH,
+    ext: 'webp',
+  });
+  const MODEL_KEY = buildPublicShelfKey(LISTING_MODEL_SHELF, {
+    subjectId: LISTING_ID,
+    contentHash: HASH,
+    ext: 'glb',
+  });
+
+  it('🔴 τα δύο είδη γράφουν στο ΙΔΙΟ πρόθεμα — αλλιώς η άγκυρα δεν ρωτά τίποτα', () => {
+    expect(publicShelfPrefix(LISTING_MODEL_SHELF, LISTING_ID)).toBe(
+      publicShelfPrefix(LISTING_SHELF, LISTING_ID),
+    );
+    expect(PHOTO_KEY).not.toBe(MODEL_KEY);
+  });
+
+  it('🔴 η συμφιλίωση των ΕΙΚΟΝΩΝ δεν αναγνωρίζει το κλειδί του μοντέλου ⇒ δεν το σβήνει', () => {
+    expect(parsePublicShelfKey(LISTING_SHELF, MODEL_KEY)).toBeNull();
+  });
+
+  it('🔴 και η συμφιλίωση των ΜΟΝΤΕΛΩΝ δεν αναγνωρίζει το κλειδί της φωτογραφίας', () => {
+    expect(parsePublicShelfKey(LISTING_MODEL_SHELF, PHOTO_KEY)).toBeNull();
+  });
+
+  it('καθένα αναγνωρίζει ΤΟ ΔΙΚΟ του — αλλιώς τα δύο από πάνω περνούν για λάθος λόγο', () => {
+    // Χωρίς αυτό, ένα `parsePublicShelfKey` που γύριζε ΠΑΝΤΑ `null` θα έκανε τα δύο
+    // προηγούμενα πράσινα ενώ ο γραφέας δεν θα καθάριζε ΤΙΠΟΤΑ, ποτέ.
+    expect(parsePublicShelfKey(LISTING_SHELF, PHOTO_KEY)).not.toBeNull();
+    expect(parsePublicShelfKey(LISTING_MODEL_SHELF, MODEL_KEY)).not.toBeNull();
+  });
+
+  it('🔴 ο ΑΥΣΤΗΡΟΣ γραφέας πετά αν του ζητηθεί λάθος μορφή για το είδος του', () => {
+    // Ο ανεκτικός αναγνώστης λέει `null`· ο γραφέας ΠΕΤΑ. Δύο συμβόλαια, μία ερώτηση.
+    expect(() =>
+      buildPublicShelfKey(LISTING_MODEL_SHELF, {
+        subjectId: LISTING_ID,
+        contentHash: HASH,
+        ext: 'webp',
+      }),
+    ).toThrow();
+    expect(() =>
+      buildPublicShelfKey(LISTING_SHELF, { subjectId: LISTING_ID, contentHash: HASH, ext: 'glb' }),
+    ).toThrow();
   });
 });
