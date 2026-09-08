@@ -34,7 +34,7 @@ import {
   type ListingPositionCandidate,
 } from './public-listing-projection';
 import { resolveListedAt } from './listed-at-stamp';
-import { reconcileShelfSafely, writeWithShelf } from './publish-public-listing-shelf';
+import { withdrawListingShelves, writeWithShelf } from './publish-public-listing-shelf';
 import { addressToPositionCandidate, type AddressLike } from './public-listing-position';
 import type { PlaceRef } from '@/types/geo/public-place';
 import type { PublicListing } from '@/types/public-listing';
@@ -317,12 +317,19 @@ export async function writeListingProjection(
       //    πάντα, και **κανείς δεν θα το μάθαινε** — δεν υπάρχει οθόνη που να τις
       //    δείχνει πια.
       //
+      // 🔴 **ΚΑΙ ΑΠΟ ΤΗ Φ4.2β ΤΑ ΡΑΦΙΑ ΕΙΝΑΙ ΔΥΟ** (ADR-845). Ως τότε εδώ καλούνταν το
+      //    `reconcileShelfSafely`, που άδειαζε **μόνο τις εικόνες** — δηλαδή κάθε
+      //    δημοσιευμένο `.glb` θα **επιβίωνε την απόσυρση**, ακριβώς η διαρροή που η
+      //    παράγραφος από πάνω υπάρχει για να αποτρέψει, μία γενιά αργότερα.
+      //    ⇒ Η {@link withdrawListingShelves} **απαριθμεί τον πίνακα ειδών**: δεν υπάρχει
+      //    δεύτερη γραμμή να ξεχαστεί, και τρίτο είδος καλύπτεται **αυτομάτως**.
+      //
       // 🔑 **Κενό σύνολο, όχι «σβήσε τα»**: είναι η ίδια πράξη με το `set()` από
       //    κάτω, με άλλη τιμή. Ο γραφέας δεν έχει δύο συμπεριφορές — έχει **μία**,
       //    και η απόσυρση είναι η περίπτωσή της όπου το επιθυμητό σύνολο είναι ∅.
       //    Γι' αυτό η **επαναφορά** (`lifecycle: 'listed'` ξανά) δουλεύει χωρίς
       //    τίποτε επιπλέον: ξαναπερνά από εδώ με μη-κενό σύνολο.
-      await reconcileShelfSafely(listingId, []);
+      await withdrawListingShelves(listingId);
       return 'withdrawn';
     }
 

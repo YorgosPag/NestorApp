@@ -14,6 +14,7 @@
   ],
   "scripts": {
     "build:tokens": "node scripts/build-design-tokens.js",
+    "build:admin-footprints": "node --max-old-space-size=6144 mcp-server/node_modules/tsx/dist/cli.mjs scripts/build-admin-footprints.ts",
     "dev": "cross-env NODE_OPTIONS=--max-old-space-size=4096 next dev --turbopack --port 3000",
     "dev:watch": "pnpm run build:tokens && concurrently -k -n next,tokens -c blue,yellow \"next dev --turbopack\" \"node scripts/build-design-tokens.js --watch\"",
     "dev:vercel": "pnpm run build:tokens && npx vercel dev",
