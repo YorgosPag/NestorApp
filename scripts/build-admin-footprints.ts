@@ -54,7 +54,8 @@ import { fileURLToPath } from 'node:url';
 
 import { ringsFootprint } from '../src/lib/geo/geo-footprint';
 import { geoJsonRings } from '../src/lib/geo/geo-geojson';
-import type { GeoOutline } from '../src/types/geo/coordinates';
+import { interiorCircleCover } from '../src/lib/geo/geo-interior-cover';
+import type { GeoCircle, GeoOutline } from '../src/types/geo/coordinates';
 import type { GeoFootprint } from '../src/types/geo/admin-footprint';
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -194,15 +195,56 @@ function footprintOf(geometry: GeoJSON.Geometry | null): GeoFootprint | null {
   //    στον γραφέα ΚΑΙ στον αναγνώστη)*. Εδώ μένει **μόνο** ό,τι είναι δικό του: η
   //    ανάγνωση GeoJSON και η **στρογγυλοποίηση για bytes**, που δεν αφορά κανέναν
   //    καταναλωτή σε χρόνο εκτέλεσης.
-  const footprint = ringsFootprint(geoJsonRings(geometry));
+  const rings = geoJsonRings(geometry);
+  const footprint = ringsFootprint(rings);
   if (footprint === null) return null;
 
   return {
     center: round(footprint.center),
     outerKm: roundKm(footprint.outerKm),
     innerKm: roundKm(footprint.innerKm),
+    ...interiorOf(rings),
   };
 }
+
+/**
+ * **ΤΟ ΕΣΩΤΕΡΙΚΟ ΚΑΛΥΜΜΑ — ΚΑΙ ΜΟΝΟ ΟΠΟΥ ΧΡΕΙΑΖΕΤΑΙ** *(ADR-846 §9 #11)*.
+ *
+ * 🔴 **Το πρόβλημα**: ο **ένας** εγγεγραμμένος κύκλος καταρρέει για μη-συμπαγή σχήματα
+ * — ΔΗΜΟΣ ΘΕΣΣΑΛΟΝΙΚΗΣ `innerKm = 0,123` σε `outerKm = 5,005`. Μετρημένο σε **7.440**
+ * αποτυπώματα: **1.431 (19,2%)** με λόγο `< 0,10`.
+ *
+ * ⚠️ **ΓΙΑΤΙ ΟΧΙ ΓΙΑ ΟΛΟΥΣ**: αυτό το αρχείο το κατεβάζει **κάθε ανώνυμος επισκέπτης**
+ * *(713 KB σήμερα)*. Ένα κάλυμμα παντού θα το φούσκωνε **χωρίς αντάλλαγμα** εκεί όπου
+ * ο ένας δίσκος ήδη απαντά. ⇒ Εκπέμπουμε `interior` **μόνο** όταν ο ένας δίσκος
+ * αφήνει την κάλυψη κάτω από το κατώφλι — **πληρώνουμε μόνο εκεί που είναι σπασμένο**.
+ *
+ * 🔑 Και όταν το εκπέμπουμε, ο **πρώτος** δίσκος είναι ο μέγιστος εγγεγραμμένος ⇒ το
+ * κάλυμμα είναι **υπερσύνολο** της σημερινής ικανότητας, ποτέ υποσύνολο.
+ */
+function interiorOf(rings: readonly GeoOutline[]): { interior?: GeoCircle[] } {
+  const cover = interiorCircleCover(rings);
+  if (cover.discs.length <= 1) return {};
+  if (cover.singleDiscCoverage >= INTERIOR_NEEDED_BELOW) return {};
+
+  return {
+    interior: cover.discs.map((disc) => ({
+      center: round(disc.center),
+      radiusKm: roundKm(disc.radiusKm),
+    })),
+  };
+}
+
+/**
+ * Κάτω από αυτό το κλάσμα, ο **ένας** δίσκος θεωρείται ανεπαρκής και γράφεται κάλυμμα.
+ *
+ * ⚠️ **Δεν είναι στρογγυλός αριθμός για την ομορφιά**: στο **0,60** ένα σχήμα όπου ο
+ * κύριος δίσκος πιάνει τα δύο τρίτα του εμβαδού θεωρείται «αρκετά συμπαγές». Η
+ * μετρημένη κατανομή *(διάμεσος λόγος `inner/outer`: κοινότητα 0,249 · δήμος 0,150 ·
+ * περιφέρεια 0,015)* λέει ότι το κατώφλι πιάνει **τα μεγάλα** επίπεδα, που είναι
+ * ακριβώς εκεί όπου το σφάλμα ήταν χειρότερο.
+ */
+const INTERIOR_NEEDED_BELOW = 0.6;
 
 /** 5 δεκαδικά ≈ **1,1 m** — κάτω από κάθε σφάλμα της ίδιας της πηγής στο 1:50.000. */
 function round(center: { lat: number; lng: number }): { lat: number; lng: number } {

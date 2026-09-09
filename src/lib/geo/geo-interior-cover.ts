@@ -115,11 +115,26 @@ export interface InteriorCoverOptions {
 }
 
 export const DEFAULT_INTERIOR_COVER: InteriorCoverOptions = {
-  maxDiscs: 8,
-  targetCoverage: 0.8,
+  maxDiscs: 16,
+  targetCoverage: 0.92,
   minDiscKm: 0.2,
   grid: DEFAULT_GRID,
 };
+
+/**
+ * **Ταβάνι ακμών για τη ΔΕΙΓΜΑΤΟΛΗΨΙΑ** — και **μόνο** για αυτήν.
+ *
+ * 🔴 **Το κόστος ήταν το πρόβλημα**: η ΠΕΡΙΦΕΡΕΙΑ ΚΕΝΤΡΙΚΗΣ ΜΑΚΕΔΟΝΙΑΣ έχει **46.544**
+ * κορυφές· `grid² × κορυφές × 2` = ~95 M πράξεις ⇒ **9 δευτερόλεπτα** για **ένα**
+ * σχήμα, μετρημένα. Επί 7.440 σχήματα, το build θα γινόταν ακατοίκητο.
+ *
+ * 🔑 **ΚΑΙ Η ΕΓΓΥΗΣΗ ΔΕΝ ΘΥΣΙΑΖΕΤΑΙ**: το αραιωμένο περίγραμμα χρησιμοποιείται **μόνο**
+ * για να *διαλέξει* πού να κοιτάξουμε. Η **ακτίνα κάθε δίσκου που εκπέμπεται**
+ * υπολογίζεται ξανά στο **πλήρες** περίγραμμα *(δες {@link exactDisc})*, άρα η απόδειξη
+ * «ο δίσκος είναι ολόκληρος μέσα» μένει **άθικτη**. Η αραίωση μπορεί να μας κάνει να
+ * διαλέξουμε **χειρότερο** κέντρο — ποτέ **λάθος** δίσκο.
+ */
+const SAMPLING_EDGE_BUDGET = 2500;
 
 /** Ένα υποψήφιο κέντρο, με τον **μέγιστο** δίσκο που χωράει εκεί. */
 interface Candidate {
@@ -128,6 +143,29 @@ interface Candidate {
   /** Βάρος εμβαδού: το `cos(φ)` διορθώνει τη σύγκλιση των μεσημβρινών. */
   readonly weight: number;
   covered: boolean;
+}
+
+/**
+ * Αραιώνει τα περιγράμματα κρατώντας **κάθε ν-οστή** κορυφή, ώστε το σύνολο των ακμών
+ * να μείνει κάτω από το {@link SAMPLING_EDGE_BUDGET}.
+ *
+ * ⚠️ **Δεν είναι Douglas-Peucker και δεν πρέπει να γίνει**: εδώ δεν μας νοιάζει η
+ * πιστότητα του σχήματος — μας νοιάζει **πού να κοιτάξουμε**. Ένα φθηνό, ομοιόμορφο
+ * αραίωμα δίνει την ίδια πληροφορία τοποθεσίας με κλάσμα του κόστους, και **καμία**
+ * απόφαση δεν κρέμεται από την ακρίβειά του.
+ */
+function thinRings(rings: readonly GeoOutline[]): readonly GeoOutline[] {
+  const total = rings.reduce((sum, ring) => sum + ring.length, 0);
+  if (total <= SAMPLING_EDGE_BUDGET) return rings;
+
+  const stride = Math.ceil(total / SAMPLING_EDGE_BUDGET);
+  const thinned: GeoOutline[] = [];
+  for (const ring of rings) {
+    const kept = ring.filter((_, index) => index % stride === 0);
+    // Κάτω από 3 κορυφές δεν είναι δακτύλιος — κράτα τον αυτούσιο αντί να τον χάσεις.
+    thinned.push(kept.length >= 3 ? kept : ring);
+  }
+  return thinned;
 }
 
 function boundingBox(rings: readonly GeoOutline[]): {
@@ -204,7 +242,10 @@ export function interiorCircleCover(
   rings: readonly GeoOutline[],
   options: InteriorCoverOptions = DEFAULT_INTERIOR_COVER,
 ): InteriorCover {
-  const candidates = sampleInterior(rings, options.grid);
+  // 🔑 Δειγματοληπτούμε στο **αραιωμένο** σχήμα (ταχύτητα)· μετράμε στο **πλήρες**
+  //    (εγγύηση). Δες {@link SAMPLING_EDGE_BUDGET}.
+  const coarse = thinRings(rings);
+  const candidates = sampleInterior(coarse, options.grid);
   if (candidates.length === 0) return EMPTY_COVER;
 
   const total = candidates.reduce((sum, c) => sum + c.weight, 0);
@@ -215,29 +256,84 @@ export function interiorCircleCover(
   let singleDiscCoverage = 0;
 
   while (discs.length < options.maxDiscs) {
-    let best: Candidate | null = null;
+    const pick = discs.length === 0
+      ? widestCandidate(candidates)
+      : mostRevealingCandidate(candidates);
+    if (pick === null) break;
+
+    // 🔒 **ΕΔΩ ΓΕΝΝΙΕΤΑΙ Η ΕΓΓΥΗΣΗ**: η ακτίνα ξαναμετριέται στο **πλήρες**
+    //    περίγραμμα. Ό,τι κι αν υποσχέθηκε το αραιωμένο, εκπέμπεται μόνο ό,τι
+    //    χωράει **στ' αλήθεια**.
+    const exactKm = geoRingsInscribedRadius(rings, pick.point);
+    pick.covered = true;
+    if (exactKm < options.minDiscKm) continue;
+
+    discs.push({ center: pick.point, radiusKm: exactKm });
+
     for (const candidate of candidates) {
       if (candidate.covered) continue;
-      if (best === null || candidate.radiusKm > best.radiusKm) best = candidate;
-    }
-    if (best === null || best.radiusKm < options.minDiscKm) break;
-
-    discs.push({ center: best.point, radiusKm: best.radiusKm });
-
-    for (const candidate of candidates) {
-      if (candidate.covered) continue;
-      const gapKm = distanceMeters(best.point, candidate.point) / METRES_PER_KM;
-      if (gapKm <= best.radiusKm) {
+      const gapKm = distanceMeters(pick.point, candidate.point) / METRES_PER_KM;
+      if (gapKm <= exactKm) {
         candidate.covered = true;
         coveredWeight += candidate.weight;
       }
     }
+    coveredWeight += pick.weight;
 
     if (discs.length === 1) singleDiscCoverage = coveredWeight / total;
     if (coveredWeight / total >= options.targetCoverage) break;
   }
 
-  return { discs, coverage: total > 0 ? coveredWeight / total : 0, singleDiscCoverage };
+  discs.sort((a, b) => b.radiusKm - a.radiusKm);
+  return { discs, coverage: coveredWeight / total, singleDiscCoverage };
+}
+
+/**
+ * Ο **μέγιστος εγγεγραμμένος** — ο πρώτος δίσκος, πάντα.
+ *
+ * 🔑 **Γιατί ο πρώτος διαλέγεται αλλιώς από τους υπόλοιπους**: αυτός είναι που κάνει
+ * το `k = 1` να **ταυτίζεται** με τη σημερινή συμπεριφορά *(το «pole of
+ * inaccessibility» που ήδη υπολογίζει το `geoRingsInscribedRadius`)*. Αν διαλεγόταν
+ * κι αυτός με κριτήριο «νέα κάλυψη», το κάλυμμα θα μπορούσε να είναι **χειρότερο**
+ * από τον έναν δίσκο για κάποια σχήματα — δηλαδή παλινδρόμηση.
+ */
+function widestCandidate(candidates: readonly Candidate[]): Candidate | null {
+  let best: Candidate | null = null;
+  for (const candidate of candidates) {
+    if (candidate.covered) continue;
+    if (best === null || candidate.radiusKm > best.radiusKm) best = candidate;
+  }
+  return best;
+}
+
+/**
+ * Ο δίσκος που **αποκαλύπτει το περισσότερο καινούργιο** — κλασικός άπληστος
+ * *set cover*.
+ *
+ * 🔴 **ΓΙΑΤΙ ΟΧΙ «ο μεγαλύτερος»**, που ήταν η πρώτη γραφή: ο μεγαλύτερος
+ * ακάλυπτος δίσκος βρίσκεται συνήθως **δίπλα** στον προηγούμενο *(τα πλατιά μέρη
+ * ενός σχήματος είναι γειτονικά)* και επικαλύπτεται μαζί του. **Μετρημένο στον ΔΗΜΟ
+ * ΘΕΣΣΑΛΟΝΙΚΗΣ**: με κριτήριο «ακτίνα» οι 8 δίσκοι έφταναν **68,4%**· το ακίνητο στη
+ * Σταυρούπολη έμενε **έξω**. Το «νέα κάλυψη» πάει τον επόμενο δίσκο εκεί όπου
+ * **λείπει** κάλυψη — δηλαδή στα άκρα, που είναι ακριβώς όπου ζουν οι συνοικίες.
+ */
+function mostRevealingCandidate(candidates: readonly Candidate[]): Candidate | null {
+  let best: Candidate | null = null;
+  let bestGain = 0;
+  for (const candidate of candidates) {
+    if (candidate.covered) continue;
+    let gain = 0;
+    for (const other of candidates) {
+      if (other.covered) continue;
+      const gapKm = distanceMeters(candidate.point, other.point) / METRES_PER_KM;
+      if (gapKm <= candidate.radiusKm) gain += other.weight;
+    }
+    if (best === null || gain > bestGain) {
+      best = candidate;
+      bestGain = gain;
+    }
+  }
+  return best;
 }
 
 /**
