@@ -55,6 +55,7 @@ export const SUPPORTED_NAMESPACES = [
   'search-filters',   // ADR-777 8.51 — ta xeiristiria tou «ti psaxno;» (grammi 4 + panel 6 omadon)
   'search-focus',     // ADR-777 — i ESTIASI panw sta apotelesmata («pigaine ekei», «des to»), oxi ta idia ta apotelesmata
   'listing-detail',   // ADR-842 F3 — dimosia othoni 3, MONO ta stoixeia tou akinitou
+  'model-freshness',  // ADR-845 O-25 — «isxyei akoma to dimosievmeno 3D;» (mono o katoxos)
   'short-stay',       // ADR-835 F3 — o xronos stin anazitisi (vraxyxronia diamoni)
   'property-market',  // ADR-777 8.38 — ζητηση + προσφορα + εντολη (ο,τι συντασσει ο ανθρωπος)
   'crm',

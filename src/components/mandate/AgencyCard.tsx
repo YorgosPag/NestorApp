@@ -64,7 +64,7 @@ import {
 } from '@/types/agency-coverage';
 import { coverageOutlineAreaKm2 } from '@/lib/agency/coverage-outline';
 import { useCoverageResolvers } from '@/hooks/useCoverageResolvers';
-import { presenceMatches } from '@/lib/agency/showcase-presence';
+import { presenceMatches, type PresenceEvidence } from '@/lib/agency/showcase-presence';
 
 interface AgencyCardProps {
   readonly profile: PublicShowcase;
@@ -177,7 +177,7 @@ export function AgencyCard({
             ⛔ **Καμία ετικέτα σχέσης εδώ** *(«καλύπτει όλη την περιοχή»)*: αυτή έχει
             νόημα **μόνο** όταν υπάρχει ερώτημα, και η κάρτα εμφανίζεται και χωρίς.
           */}
-          <CoverageLine coverage={profile.coverage} presence={profile.presence} where={where} />
+          <CoverageLine coverage={profile.coverage} evidence={profile} where={where} />
           <Link
             href={agencyProfileRoute(profile.alias)}
             className="mt-2 self-start text-sm font-medium text-foreground underline underline-offset-4"
@@ -221,7 +221,7 @@ const COVERAGE_RELATION_KEYS: Record<CoverageRelation, string> = {
  */
 function CoverageLine({
   coverage,
-  presence,
+  evidence,
   where,
 }: {
   readonly coverage: PublicShowcase['coverage'];
@@ -231,8 +231,13 @@ function CoverageLine({
    * ⚠️ **Ο ΙΔΙΟΣ κριτής με το φίλτρο** *(`presenceMatches`)*, όχι δεύτερη κρίση: η κάρτα
    * που έλεγε άλλα από τον λόγο που την έφερε εδώ θα ήταν **χειρότερη** από τη σιωπή του
    * Zillow — θα ήταν **λάθος** εξήγηση.
+   *
+   * 🔴 **ΖΕΥΓΟΣ, ΟΧΙ ΣΚΕΤΟ `presence`** *(§9 #13)*: οι δύο μαρτυρίες — γεωμετρική και
+   * διοικητική — ταξιδεύουν **μαζί**, ώστε η κάρτα να μην μπορεί να κρίνει με τη μισή
+   * απόδειξη ενώ το φίλτρο έκρινε με ολόκληρη. Το `PublicShowcase` το ικανοποιεί
+   * **δομικά**, οπότε ο καλών περνά το ίδιο το προφίλ.
    */
-  readonly presence: PublicShowcase['presence'];
+  readonly evidence: PresenceEvidence;
   readonly where: ShowcaseWhere | null;
 }): React.ReactElement | null {
   const { t } = useTranslation([AGENCY_PUBLIC_NS]);
@@ -255,7 +260,7 @@ function CoverageLine({
   //    ταξινομήσει είναι μεγαλύτερος εδώ απ' ό,τι στη δήλωση, γιατί ακούγεται
   //    **αξιοκρατικός** *(§8.8.8)*. Το πεδίο **δεν κουβαλά** πλήθος· ούτε η κάρτα.
   // ═══════════════════════════════════════════════════════════════════════════
-  if (where !== null && presenceMatches(presence, where, resolvers)) {
+  if (where !== null && presenceMatches(evidence, where, resolvers)) {
     return (
       <p className="m-0 text-sm text-muted-foreground">
         {t(coverage === null ? DIRECTORY_KEYS.coverageProvenOnly : DIRECTORY_KEYS.coverageProven)}

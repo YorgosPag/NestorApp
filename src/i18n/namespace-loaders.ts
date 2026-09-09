@@ -52,6 +52,9 @@ function getElLoader(namespace: Namespace): NamespaceLoader | null {
     case 'search-filters': return () => import('./locales/el/search-filters.json');
     case 'search-focus': return () => import('./locales/el/search-focus.json');
     case 'listing-detail': return () => import('./locales/el/listing-detail.json');
+    // ADR-845 Ο-25 — «ισχύει ακόμα το δημοσιευμένο 3Δ;». Lazy: το βλέπει ΜΟΝΟ ο κάτοχος,
+    // σε δύο οθόνες — ποτέ ο επισκέπτης, ποτέ το κέλυφος (το μάθημα του Ο-7).
+    case 'model-freshness': return () => import('./locales/el/model-freshness.json');
     case 'short-stay': return () => import('./locales/el/short-stay.json');
     case 'property-market': return () => import('./locales/el/property-market.json');
     case 'crm': return () => import('./locales/el/crm.json');
@@ -170,6 +173,9 @@ function getEnLoader(namespace: Namespace): NamespaceLoader | null {
     case 'search-filters': return () => import('./locales/en/search-filters.json');
     case 'search-focus': return () => import('./locales/en/search-focus.json');
     case 'listing-detail': return () => import('./locales/en/listing-detail.json');
+    // ADR-845 Ο-25 — «ισχύει ακόμα το δημοσιευμένο 3Δ;». Lazy: το βλέπει ΜΟΝΟ ο κάτοχος,
+    // σε δύο οθόνες — ποτέ ο επισκέπτης, ποτέ το κέλυφος (το μάθημα του Ο-7).
+    case 'model-freshness': return () => import('./locales/en/model-freshness.json');
     case 'short-stay': return () => import('./locales/en/short-stay.json');
     case 'property-market': return () => import('./locales/en/property-market.json');
     case 'crm': return () => import('./locales/en/crm.json');

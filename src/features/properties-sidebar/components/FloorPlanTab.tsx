@@ -15,6 +15,7 @@ import { EntityFilesManager } from '@/components/shared/files/EntityFilesManager
 import { ListingFloorplansPanel } from '@/components/listings/ListingFloorplansPanel';
 import { LevelTabStrip } from '@/features/property-details/components/PropertyFieldsReadOnly';
 import { useAuth } from '@/auth/contexts/AuthContext';
+import { PublishedModelFreshness } from '@/components/listings/PublishedModelFreshness';
 import { useCompanyId } from '@/hooks/useCompanyId';
 import { useCompanyDisplayName } from '@/hooks/useCompanyDisplayName';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -88,6 +89,13 @@ export function FloorPlanTab({ selectedProperty }: FloorPlanTabProps) {
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
+      {/* 🏆 ADR-845 Ο-25 — «ισχύει ακόμα το δημοσιευμένο 3Δ;». ΕΝΑ σώμα, δύο οθόνες: το ίδιο
+          component κάθεται και στον διάλογο «Δημοσίευση 3D» του viewer. Εδώ σε τόνο `badge`,
+          γιατί η **διόρθωση** ζει στον viewer — αυτή η οθόνη πληροφορεί, δεν δημοσιεύει. */}
+      <div className="px-2 pt-2">
+        <PublishedModelFreshness propertyId={selectedProperty?.id} companyId={companyId} />
+      </div>
+
       {/* Level sub-tabs for multi-level properties (ADR-236 Phase 3) */}
       {isMultiLevel && (
         <div className="px-2 pt-2 pb-1">

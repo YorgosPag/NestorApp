@@ -39,6 +39,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { PublishedModelFreshness } from '@/components/listings/PublishedModelFreshness';
+import { useCompanyId } from '@/hooks/useCompanyId';
 import { usePropertiesByBuilding } from '@/components/properties/shared/usePropertiesByBuilding';
 import { MODEL_STATE_MARKS } from '@/lib/listings/listing-model-declaration';
 import type { Property } from '@/types/property';
@@ -77,6 +79,10 @@ export function PublishModelDialog({
   collectDeps,
 }: PublishModelDialogProps): React.JSX.Element {
   const { t } = useTranslation('dxf-viewer-shell');
+  // 🔑 **Η κηδεμονία έρχεται από τη ΣΥΝΕΔΡΙΑ, όχι από την επιλογή** *(ADR-845 Ο-25)*: το
+  //    ερώτημα των αρχείων απαιτεί `companyId` για τους Firestore rules, και ένα που θα
+  //    ερχόταν από το επιλεγμένο ακίνητο θα ήταν ισχυρισμός της οθόνης.
+  const companyId = useCompanyId()?.companyId;
   const form = usePublishModelState();
   const { properties } = usePropertiesByBuilding(activeBuildingId, { enabled: open });
   const [busy, setBusy] = React.useState(false);
@@ -112,6 +118,16 @@ export function PublishModelDialog({
           <DialogTitle>{t('publishModel.dialogTitle')}</DialogTitle>
           <DialogDescription>{t('publishModel.dialogDescription')}</DialogDescription>
         </DialogHeader>
+
+        {/* 🏆 ADR-845 Ο-25 — ό,τι δείχνει και η καρτέλα του ακινήτου, με **το ίδιο** κείμενο.
+            Τόνος `alert`: εδώ η διόρθωση είναι ΕΝΑ κλικ, άρα η ένδειξη δικαιούται να μιλήσει
+            ολόκληρη. ⚠️ Σιωπά όταν δεν υπάρχει τίποτα να πει — μια «όλα καλά» ένδειξη πάνω
+            από τον καμβά είναι θόρυβος, και ο θόρυβος σκοτώνει την προσοχή. */}
+        <PublishedModelFreshness
+          propertyId={form.propertyId}
+          companyId={companyId}
+          tone="alert"
+        />
 
         <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label={t('publishModel.property')}>

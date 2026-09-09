@@ -346,6 +346,7 @@
     "knip-deps:check": "node scripts/check-knip-deps-ratchet.js --check",
     "knip-deps:baseline": "node scripts/check-knip-deps-ratchet.js --write-baseline",
     "validate:i18n-manifest": "node scripts/validate-i18n-manifest.js",
+    "test:camera-motion": "playwright test camera-motion --project=camera-motion --workers=1",
     "e2e:check": "node scripts/check-e2e-executability.js",
     "e2e:report": "node scripts/check-e2e-executability.js --verbose",
     "test:e2e-executability": "jest scripts/__tests__/check-e2e-executability.test.js --verbose",
