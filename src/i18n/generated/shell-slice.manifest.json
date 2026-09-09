@@ -22,7 +22,7 @@
     "src/i18n/generated/routes/offers__offerId.el.json": "76a391bb20d44725d4ebf7186650000b34022237f9325edce044519a994e02f5",
     "src/i18n/generated/routes/privacy-policy.el.json": "181e3b315e8ac63a3e927fa8bf073863b2aa706fd66a06f38d936dce70b0cee0",
     "src/i18n/generated/routes/pro.el.json": "3179b14914eddc8379aa6f8efe09d4b317be589b2f49910a04690250dab0bcb7",
-    "src/i18n/generated/routes/pro__alias.el.json": "c9b37be7ed66925411e91f676f4bd8fa11186745e72e1ec5e799398c02c1bad6",
+    "src/i18n/generated/routes/pro__alias.el.json": "cac938fe40ffa34e9c2e144934bed18167612172d66636b7747aed5c9d49f1fa",
     "src/i18n/generated/routes/profile.el.json": "43c8a394333d81866faca379735e1fd6f39b9a84bd8a055a72021dc82b1e7c86",
     "src/i18n/generated/routes/search__results.el.json": "3c5e0b117116dec8007cb6887457b0cab64dbca93e96484d5e7c5717e3790f40",
     "src/i18n/generated/routes/terms.el.json": "481f837696b407553f56de16128778617a86f72cf7b27471d61cd5793cf7d288",
@@ -67,7 +67,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "7ad778945eda6e327aa06d14222a0ee5480a5c4270d6266e8f1bee8a1d435749",
+  "inputsSha256": "028fefb1f6230a6202869ecd855d89ea2f8d0e16b62d6ebebaf07b433891da1e",
   "languages": [
     "el"
   ],
@@ -190,7 +190,7 @@
     "src/components/listing-detail/ListingPriceBlock.tsx": "a4e7d8d65c8215961d9d4f44d7318c7dc784c356c0b155055232d47d9adce8a7",
     "src/components/listing-detail/listing-attribute-value.ts": "2d7a0bded29eb6bfd3e4163f55ed5ee74c11ade0662f9f5d91057cab30eeadf2",
     "src/components/listing-detail/listing-model-stage-metrics.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
-    "src/components/mandate/AgencyCoverageFact.tsx": "6afa24133e4c18d2b08f4c71ab1305ccceef249a73793d210819858aa119c5c1",
+    "src/components/mandate/AgencyCoverageFact.tsx": "53859fbab342a8ba6a6d71798c3111853f4bb6d957b76daba70599b9f19d9905",
     "src/components/mandate/AgencyDirectoryContent.tsx": "b36dcda1d6ec962156e653be92a55156e1d1a2fa81a3850bc7e52aabaf3feb53",
     "src/components/mandate/AgencyDirectoryFilters.tsx": "7d3d790bfd9e2f1824d2f4898cc3a779552978e73cfffc72ac05d196b3510967",
     "src/components/mandate/AgencyFact.tsx": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
@@ -3027,6 +3027,7 @@
             "mandate.profile.absentLead",
             "mandate.profile.absentTitle",
             "mandate.profile.backToDirectory",
+            "mandate.profile.coverageAlsoOutside",
             "mandate.profile.coverageLabel",
             "mandate.profile.coverageNationwide",
             "mandate.profile.coverageOutline",
@@ -4688,7 +4689,7 @@
     "matchedKeys": 174,
     "routeBoundaries": 0,
     "shellFiles": 601,
-    "sliceBytes": 400727
+    "sliceBytes": 400845
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

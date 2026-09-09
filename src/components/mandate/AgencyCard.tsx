@@ -54,7 +54,7 @@ import { AGENCY_PUBLIC_NS, DIRECTORY_KEYS } from './agency-directory-labels';
 import { agencyProfileRoute } from './agency-directory-route';
 import { lettermarkOf } from '@/lib/agency/showcase-mark';
 import { ShowcaseMarkView } from './ShowcaseMarkView';
-import { lineageIdsOf, useAdministrativeHierarchy } from '@/hooks/useAdministrativeHierarchy';
+import { useAdministrativeHierarchy } from '@/hooks/useAdministrativeHierarchy';
 import { coverageRelation, type CoverageRelation } from '@/lib/agency/coverage-match';
 import {
   isNationwide,
@@ -63,7 +63,7 @@ import {
   type ShowcaseWhere,
 } from '@/types/agency-coverage';
 import { coverageOutlineAreaKm2 } from '@/lib/agency/coverage-outline';
-import { useAdminFootprints } from '@/hooks/useAdminFootprints';
+import { useCoverageResolvers } from '@/hooks/useCoverageResolvers';
 
 interface AgencyCardProps {
   readonly profile: PublicShowcase;
@@ -230,7 +230,7 @@ function CoverageLine({
   // 🔑 **Η κάρτα ζητά η ίδια τα αποτυπώματα** *(ADR-846 Φ2.5)*. Χωρίς αυτή τη γραμμή ο
   //    κατάλογος θα φιλτράριζε σωστά αλλά η **ετικέτα** της κάρτας θα έμενε παγωμένη στο
   //    «δεν μπορούμε να το κρίνουμε» — δηλαδή η οθόνη θα διαφωνούσε με τον εαυτό της.
-  const { footprintOf } = useAdminFootprints();
+  const { resolvers } = useCoverageResolvers();
 
   if (coverage === null) return null;
 
@@ -245,10 +245,7 @@ function CoverageLine({
     //    δεν έχουν φορτώσει, ο `footprintOf` απαντά `null` ⇒ τα δύο **μεικτά** κελιά
     //    λένε `unknown` ⇒ η κάρτα γράφει «μπορεί να καλύπτει». Καμία σιωπηλή λάθος
     //    ετικέτα: η άγνοια είναι **προσωρινή και δηλωμένη**, ποτέ ψεύτικη βεβαιότητα.
-    const relation = coverageRelation(coverage, where, {
-      lineageOf: lineageIdsOf,
-      footprintOf,
-    });
+    const relation = coverageRelation(coverage, where, resolvers);
     if (relation !== 'disjoint') {
       return (
         <p className="m-0 text-sm text-muted-foreground">

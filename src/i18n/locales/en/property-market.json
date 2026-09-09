@@ -894,7 +894,8 @@
       "listingsEmptyHint": "That does not mean it is not working — it means it has published nothing here. You can still ask it to take on your own property.",
       "listingsEmptyHintPro": "That does not mean it is not working — it means it has published nothing here. You can approach it directly.",
       "listingsFailed": "We could not load its listings. The agency is there — please try again shortly.",
-      "coverageOutline": "Drawn area of ~{km2} km²"
+      "coverageOutline": "Drawn area of ~{km2} km²",
+      "coverageAlsoOutside": "It also has properties outside this area."
     },
     "request": {
       "title": "Request an assignment",

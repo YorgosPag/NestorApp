@@ -62,7 +62,10 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { ListingCard } from '@/components/search-results/ListingCard';
 import { usePublicAgency } from '@/services/realtime/hooks/usePublicAgencies';
 import { CredibilityStatement } from './CredibilityStatement';
-import { usePublicAgencyListings } from '@/services/realtime/hooks/usePublicListings';
+import {
+  usePublicAgencyListings,
+  type PublicListingsState,
+} from '@/services/realtime/hooks/usePublicListings';
 import { usePublicPlace } from '@/services/realtime/hooks/usePublicPlace';
 import type { PublicShowcase } from '@/types/agency-profile';
 import { FirstContactAction } from '@/components/contact/FirstContactAction';
@@ -195,10 +198,19 @@ function PlaceFact({ profile }: { readonly profile: PublicShowcase }): React.JSX
  * ενημερώνεται μαζί.
  */
 function AgencyListings({
-  companyId,
+  state,
   canHoldMandate,
 }: {
-  readonly companyId: string;
+  /**
+   * 🔴 **Η ΑΝΑΓΝΩΣΗ ΓΙΝΕΤΑΙ ΜΙΑ ΦΟΡΑ, ΣΤΟΝ {@link ShowcaseView}** *(ADR-846 Φ5γ)*.
+   *
+   * Μέχρι τη Φ5γ αυτή η ενότητα ρωτούσε **η ίδια**, και ήταν σωστό: ήταν ο **μοναδικός**
+   * καταναλωτής. Πλέον η **γραμμή της εμβέλειας** κρίνει τις ίδιες αγγελίες *(«έχει και
+   * αλλού;»)*, και δύο `usePublicAgencyListings` στην ίδια σελίδα θα ήταν δύο
+   * `onSnapshot` για **ίδιο** ερώτημα — δύο συνδρομές που μπορούν να **αποκλίνουν**
+   * μεταξύ καρέ. Ίδιο ιδίωμα με το `acceptsMandate` *(§7 Α5: μία ερώτηση, μία φορά)*.
+   */
+  readonly state: PublicListingsState;
   /**
    * ⚠️ **Περνιέται, δεν ξαναρωτιέται** (ADR-841 §7 Α5): ο κριτής έχει ήδη τρέξει στη
    * σελίδα και τα credentials δεν ταξιδεύουν ως εδώ. Δεύτερη κλήση θα ήταν δεύτερη
@@ -207,7 +219,7 @@ function AgencyListings({
   readonly canHoldMandate: boolean;
 }): React.JSX.Element {
   const { t } = useTranslation([AGENCY_PUBLIC_NS]);
-  const { listings, loading, error } = usePublicAgencyListings(companyId);
+  const { listings, loading, error } = state;
 
   return (
     <section className="flex flex-col gap-3">
@@ -288,13 +300,42 @@ export function AgencyProfileContent({
     );
   }
 
-  const { showcase: profile } = lookup;
-  // 🔑 **ΜΙΑ ΕΡΩΤΗΣΗ, ΜΙΑ ΦΟΡΑ** (ADR-841 §7 Α5). Τρεις αποφάσεις της οθόνης κρέμονται
-  //    από αυτήν — κουμπί · «γιατί δεν έχει τηλέφωνο» · κενή λίστα — και οφείλουν να
-  //    λένε **την ίδια ιστορία**. Τρεις ξεχωριστές κλήσεις θα ήταν τρεις ευκαιρίες να
-  //    αποκλίνουν, και η οθόνη θα έδειχνε «δεν ασκεί μεσιτεία» δίπλα σε κουμπί
-  //    μεσιτείας.
+  // 🔴 **Η ΒΙΤΡΙΝΑ ΖΕΙ ΣΕ ΔΙΚΟ ΤΗΣ COMPONENT, ΚΑΙ ΕΙΝΑΙ ΚΑΝΟΝΑΣ ΤΟΥ REACT — ΟΧΙ ΓΟΥΣΤΟ**
+  //    *(ADR-846 Φ5γ)*. Οι τρεις έξοδοι παραπάνω είναι **πρόωρες**: κάθε hook γραμμένο
+  //    κάτω από αυτές θα καλούνταν **υπό συνθήκη**. Η Φ5γ χρειάζεται τις αγγελίες
+  //    **εδώ** — και η μόνη σωστή θέση για μια ανάγνωση που έχει νόημα **μόνο στην
+  //    κατάσταση «βρέθηκε»** είναι ένα component που υπάρχει **μόνο** σε εκείνη.
+  //
+  //    ⚠️ Η εναλλακτική *(κλήση με το `companyId` prop, πάνω από τις εξόδους)* θα άνοιγε
+  //    συνδρομή αγγελιών και για γραφείο που **έπαψε να δημοσιεύει** — ερώτημα για
+  //    οντότητα που η ίδια η σελίδα μόλις χαρακτήρισε **απούσα**.
+  return <ShowcaseView profile={lookup.showcase} alias={alias} />;
+}
+
+/**
+ * **Η ΒΙΤΡΙΝΑ ΠΟΥ ΒΡΕΘΗΚΕ** — και ο **ΜΟΝΑΔΙΚΟΣ** αναγνώστης των αγγελιών της.
+ *
+ * 🔑 **ΜΙΑ ΕΡΩΤΗΣΗ, ΜΙΑ ΦΟΡΑ** *(ADR-841 §7 Α5)*, τώρα για **δύο** ερωτήσεις:
+ *
+ * | Ερώτηση | Ποιος απαντά |
+ * |---|---|
+ * | *«ασκεί μεσιτεία;»* | `acceptsMandate` — **μία** κλήση, τρεις αποφάσεις κρέμονται |
+ * | *«τι έχει στην αγορά;»* | `usePublicAgencyListings` — **μία** κλήση, **δύο** καταναλωτές |
+ *
+ * ⚠️ Ο δεύτερος καταναλωτής είναι νέος *(Φ5γ)*: η **γραμμή της εμβέλειας** κρίνει τις
+ * ίδιες αγγελίες για να πει *«έχει επίσης ακίνητα εκτός αυτής της περιοχής»*. Αν τις
+ * ξαναδιάβαζε μόνη της, η γραμμή και η λίστα θα μπορούσαν να **λένε άλλα** στο ίδιο καρέ.
+ */
+function ShowcaseView({
+  profile,
+  alias,
+}: {
+  readonly profile: PublicShowcase;
+  readonly alias: string;
+}): React.JSX.Element {
+  const { t } = useTranslation([AGENCY_PUBLIC_NS]);
   const canHoldMandate = acceptsMandate(profile.credentials);
+  const listings = usePublicAgencyListings(profile.companyId);
 
   return (
     <ShellSurface as="main" measure="prose" className="gap-6">
@@ -342,7 +383,12 @@ export function AgencyProfileContent({
           <CredibilityStatement key={credential.occupation.escoUri} credential={credential} />
         ))}
         <PlaceFact profile={profile} />
-        <CoverageFact coverage={profile.coverage} />
+        {/*
+          🏆 **Φ5γ — Η ΓΡΑΜΜΗ ΔΕΧΕΤΑΙ ΤΙΣ ΑΓΓΕΛΙΕΣ, ΓΙΑΤΙ Η ΔΗΛΩΣΗ ΔΕΝ ΕΙΝΑΙ ΜΟΝΗ ΤΗΣ.**
+          Μέχρι σήμερα έλεγε *«Δηλώνει: Αττική»* ενώ από κάτω παρατίθενται ακίνητα στη
+          Θεσσαλονίκη — **ορατή αντίφαση, ασχολίαστη** *(ADR-846 §8.8.1 Β/Γ)*.
+        */}
+        <CoverageFact coverage={profile.coverage} listings={listings.listings} />
       </dl>
 
       <section className="flex flex-col gap-2">
@@ -405,7 +451,7 @@ export function AgencyProfileContent({
         μέσω του `profile.companyId`, που είναι η **ταυτότητα του ίδιου εγγράφου** που
         μόλις διαβάστηκε — όχι το prop, που μπορεί να είναι `null`.
       */}
-      <AgencyListings companyId={profile.companyId} canHoldMandate={canHoldMandate} />
+      <AgencyListings state={listings} canHoldMandate={canHoldMandate} />
 
       <nav>
         <Link

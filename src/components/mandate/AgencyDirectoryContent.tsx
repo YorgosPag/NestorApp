@@ -65,10 +65,7 @@ import {
   whereCenter,
   type ShowcaseFilters,
 } from '@/lib/agency/showcase-filter';
-import {
-  lineageIdsOf,
-  useAdministrativeHierarchy,
-} from '@/hooks/useAdministrativeHierarchy';
+import { useAdministrativeHierarchy } from '@/hooks/useAdministrativeHierarchy';
 // 🔴 **Ο ROUTER ΑΠΟ ΤΟ ΣΥΝΟΡΟ** (CHECK 3.61) — το `useSearchParams` δεν ζει εκεί
 //    και έρχεται ωμό, όπως και στην αδελφή δημόσια οθόνη `ListingDetailContent`.
 import { useSearchParams } from 'next/navigation';
@@ -84,7 +81,7 @@ import routeSlice from '@/i18n/generated/routes/pro.el.json';
 import { registerRouteSlice } from '@/i18n/route-slice';
 // ADR-827 §9.15 — η δημόσια διεύθυνση ζει σε ουδέτερο module: τη ρωτά και ο διακομιστής.
 import { agencyDirectoryHref } from './agency-directory-route';
-import { useAdminFootprints } from '@/hooks/useAdminFootprints';
+import { useCoverageResolvers } from '@/hooks/useCoverageResolvers';
 
 registerRouteSlice(routeSlice);
 
@@ -137,24 +134,20 @@ export function AgencyDirectoryContent(): React.JSX.Element {
   const { agencies, loading, error } = usePublicAgencies(near);
 
   // 🔑 **Η ΙΕΡΑΡΧΙΑ ΜΠΑΙΝΕΙ ΜΕ ΕΝΕΣΗ** (ADR-846): το `showcase-filter` είναι **καθαρό
-  //    φύλλο** και δεν επιτρέπεται να εισάγει hook. Το `lineageIdsOf` διαβάζει το ίδιο
-  //    module cache που γεμίζει ο `useAdministrativeHierarchy` παρακάτω.
+  //    φύλλο** και δεν επιτρέπεται να εισάγει hook. Ο {@link useCoverageResolvers}
+  //    παρακάτω δίνει τους δύο αναγνώστες· εδώ ρωτιέται **μόνο** η αναμονή, γιατί το
+  //    `lineageIdsOf` είναι module-level και η ταυτότητά του δεν αλλάζει όταν φτάσει.
   const { isLoading: hierarchyLoading } = useAdministrativeHierarchy();
 
   // 🏆 **Φ2.5 — ΤΑ ΑΠΟΤΥΠΩΜΑΤΑ ΚΛΕΙΝΟΥΝ ΤΑ ΔΥΟ ΜΕΙΚΤΑ ΚΕΛΙΑ** *(ADR-846)*: δηλωμένη
   //    **ακτίνα** εναντίον **διοικητικού** ερωτήματος, και διοικητική δήλωση εναντίον
   //    **κυκλικού** ερωτήματος. Μέχρι τη Φ2 και τα δύο απαντούσαν πάντα `unknown`.
-  const { isLoading: footprintsLoading, footprintOf } = useAdminFootprints();
-
-  // 🔑 **Χτίζεται ΕΔΩ, όχι ως σταθερά module** — και αυτό είναι το μάθημα της §6.2:
-  //    η ταυτότητα του αντικειμένου πρέπει να αλλάξει **ακριβώς όταν** φτάσουν τα
-  //    δεδομένα, αλλιώς το `useMemo` παρακάτω παγώνει στο «δεν ξέρω» για όλη τη ζωή
-  //    της σελίδας. Το `footprintOf` το εγγυάται· το `lineageIdsOf` είναι module-level
-  //    και γι' αυτό ο διοικητικός άξονας χρειάζεται ακόμη το ρητό `areaPending`.
-  const coverageResolvers = React.useMemo(
-    () => ({ lineageOf: lineageIdsOf, footprintOf }),
-    [footprintOf],
-  );
+  //
+  // 🔑 **Η ταυτότητα του αντικειμένου δεν χτίζεται πια εδώ** — το μάθημα της §6.2 *(η
+  //    ταυτότητα αλλάζει ακριβώς όταν φτάνουν τα δεδομένα, αλλιώς το `useMemo` παρακάτω
+  //    παγώνει στο «δεν ξέρω» για όλη τη ζωή της σελίδας)* ζει πλέον **μία φορά**, στον
+  //    {@link useCoverageResolvers}. Ήταν γραμμένο **κατά λέξη σε τρία σημεία**.
+  const { isLoading: footprintsLoading, resolvers: coverageResolvers } = useCoverageResolvers();
 
   // 🔑 **Η ΔΙΕΥΘΥΝΣΗ ΕΙΝΑΙ Η ΚΑΤΑΣΤΑΣΗ.** Καμία δεύτερη πηγή: ένα `useState`
   //    δίπλα στη διεύθυνση θα ήταν δύο απαντήσεις στο *«τι φιλτράρει τώρα;»*,
