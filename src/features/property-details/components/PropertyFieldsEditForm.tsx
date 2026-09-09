@@ -109,9 +109,17 @@ export function PropertyFieldsEditForm({
         >
           <Lock className={iconSizes.sm} />
           <AlertDescription className="text-xs">
+            {/*
+              🔴 **ΤΟ `ns` ΕΙΝΑΙ ΥΠΟΧΡΕΩΤΙΚΟ ΕΔΩ, ΚΑΙ ΤΟ ΠΛΗΡΩΣΑΜΕ ΜΕ ΩΜΟ ΚΛΕΙΔΙ ΣΤΗΝ ΟΘΟΝΗ**
+              *(2026-09-09, περπατημένο)*: το `t` έρχεται ως **prop**, άρα το ενεργό
+              namespace το ορίζει ο **καλών** — και ο στατικός σαρωτής (CHECK 3.8) δεν
+              μπορεί να το γνωρίζει, γι' αυτό το κενό πέρασε **αόρατο**. Και τα δύο κλειδιά
+              **δεν υπήρχαν καθόλου** στα locale· κάτω από το `fieldLocking` ζούσε **μόνο**
+              το `serverReject`. ⇒ Ρητό `ns`, όπως ήδη κάνει το `multiLevel` πιο κάτω.
+            */}
             {isSoldOrRented
-              ? t('fieldLocking.soldBanner')
-              : t('fieldLocking.reservedBanner')
+              ? t('fieldLocking.soldBanner', { ns: 'properties-detail' })
+              : t('fieldLocking.reservedBanner', { ns: 'properties-detail' })
             }
           </AlertDescription>
         </Alert>

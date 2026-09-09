@@ -80,7 +80,9 @@
     }
   },
   "fieldLocking": {
-    "serverReject": "This property contains locked fields that cannot be changed in its current commercial state."
+    "serverReject": "This property contains locked fields that cannot be changed in its current commercial state.",
+    "soldBanner": "Sold or rented — the commercial fields are locked and can no longer change.",
+    "reservedBanner": "Reserved — some fields stay locked while the reservation is active."
   },
   "entityCode": {
     "infoTitle": "Coding System",
