@@ -45,7 +45,11 @@ import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
 import { requirePropertyInTenantScope } from '@/lib/auth/tenant-isolation';
 import { getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { FILE_STATUS } from '@/config/domain-constants';
+import { ENTITY_TYPES, FILE_CATEGORIES, FILE_STATUS } from '@/config/domain-constants';
+import {
+  supersededByPublication,
+  type AgencyMediaCandidate,
+} from '@/services/listings/agency-media-publication';
 import { FILE_TYPE_CONFIG } from '@/config/file-upload-config';
 import {
   buildFinalizeFileRecordUpdate,
@@ -79,6 +83,24 @@ const MODEL_UPLOAD = FILE_TYPE_CONFIG.model;
 interface PropertyModelResponse {
   readonly fileId: string;
   readonly storagePath: string;
+  /**
+   * 🏆 **ΠΟΙΟΥΣ ΔΙΑΔΕΧΕΤΑΙ ΑΥΤΗ Η ΔΗΜΟΣΙΕΥΣΗ** — ταυτοποιητικά, ποτέ πράξη (ADR-845 Ο-27).
+   *
+   * 🔴 **Ο ΔΙΑΚΟΜΙΣΤΗΣ ΚΡΙΝΕΙ, Ο ΠΕΛΑΤΗΣ ΠΡΑΤΤΕΙ — ΚΑΙ ΤΟ ΕΠΙΒΑΛΛΕΙ ΤΟ ΦΡΑΓΜΑ.** Η **μία**
+   * πόρτα της απόσυρσης *(`supersedeFileRecord` → `moveToTrash`)* εισάγει `@/lib/firebase`,
+   * δηλαδή **client SDK**· αυτή η διαδρομή είναι `'server-only'`. Δεν συναντιούνται.
+   * ⛔ Ένα **admin δίδυμο** της πόρτας απορρίφθηκε ρητά: δεύτερη μηχανή για την ίδια ερώτηση
+   * *(N.18 · ADR-749)* — και η ίδια της η κεφαλίδα το απαγορεύει.
+   *
+   * ⚠️ **Η ΑΓΓΕΛΙΑ ΕΙΝΑΙ ΗΔΗ ΣΩΣΤΗ ΧΩΡΙΣ ΑΥΤΟ.** Το `currentPerIdentity` κρατά **παράγωγα**
+   * το νεότερο ανά ταυτότητα, άρα το κοινό δεν βλέπει ποτέ διπλότυπο — ούτε αν ο πελάτης
+   * πεθάνει σε αυτό ακριβώς το σημείο. Αυτό εδώ γράφει την **ιστορία** *(ISO 19650 §10.2: το
+   * superseded είναι **μη χρησιμοποιήσιμο, όχι ανύπαρκτο**, και ο διάδοχος **ευρέσιμος**)*.
+   *
+   * 🔑 **Κενός πίνακας = δεν διαδέχεται κανέναν** — πρώτη δημοσίευση αυτής της ταυτότητας.
+   * **Ποτέ** «δεν ξέρω».
+   */
+  readonly supersedes: readonly string[];
 }
 
 /**
@@ -134,15 +156,70 @@ async function handlePost(
     contentType: file.type,
     originalFilename: file.name,
     createdBy: ctx.uid,
+    declaration,
   });
+
+  // 🔑 **ΡΩΤΑΜΕ ΠΡΙΝ ΓΡΑΨΟΥΜΕ, ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ.** Μετά την εγγραφή, ο νεοφερμένος θα ήταν
+  //    μέσα στο αποτέλεσμα και θα έπρεπε να **εξαιρεθεί** — δηλαδή θα υπήρχε μια γραμμή που,
+  //    αν ξεχαστεί, κάνει το μοντέλο να **διαδεχθεί τον εαυτό του** και να πέσει στον κάδο
+  //    την ίδια στιγμή που δημοσιεύεται. *(Το `supersedeFileRecord` φυλάει ήδη την ταυτότητα,
+  //    αλλά μια εγγύηση που δεν χρειάζεται να ενεργοποιηθεί είναι καλύτερη από μία που
+  //    χρειάζεται.)*
+  const supersedes = await findSupersededModels(ctx.companyId, propertyId, recordBase);
 
   await writeModel({ fileId, storagePath, recordBase, file, declaration, createdBy: ctx.uid });
 
   logger.info('Μοντέλο ακινήτου ανέβηκε', {
-    fileId, propertyId, companyId: ctx.companyId, bytes: file.size, state: declaration.state,
+    fileId, propertyId, companyId: ctx.companyId, bytes: file.size,
+    state: declaration.state, scope: declaration.scope, supersedes: supersedes.length,
   });
 
-  return apiSuccess<PropertyModelResponse>({ fileId, storagePath });
+  return apiSuccess<PropertyModelResponse>({ fileId, storagePath, supersedes });
+}
+
+/**
+ * **Ποια ενεργά αρχεία δημοσιεύουν ΤΟ ΙΔΙΟ ΠΡΑΓΜΑ;** — η κρίση, ποτέ η πράξη (Ο-27).
+ *
+ * 🔑 **ΚΑΝΕΝΑ ΝΕΟ ΕΥΡΕΤΗΡΙΟ, ΚΑΙ ΤΟ ΦΙΛΤΡΟ ΤΑΥΤΟΤΗΤΑΣ ΜΕΝΕΙ ΣΤΗ ΜΝΗΜΗ.** Τα τέσσερα πεδία
+ * του ερωτήματος είναι **πρόθεμα** του υπάρχοντος σύνθετου
+ * `[companyId, entityType, entityId, category, isDeleted]` — του **ίδιου** που εξυπηρετεί τον
+ * αναγνώστη της δημοσίευσης. Ένα πέμπτο σκέλος `publicationIdentity` θα απαιτούσε **νέο**
+ * ευρετήριο για να διαλέξει ανάμεσα σε **λίγες** εγγραφές: ένα ακίνητο έχει μονοψήφιο αριθμό
+ * μοντέλων *(και το `PUBLISHED_MEDIA_LIMIT` το κρατά έτσι)*.
+ *
+ * 🔴 **Η ΙΣΟΤΗΤΑ ΤΑΥΤΟΤΗΤΑΣ ΔΕΝ ΓΡΑΦΕΤΑΙ ΕΔΩ** — τη ρωτά το `supersededByPublication`, το
+ * **ίδιο** σώμα που ζει δίπλα στην επιμέλεια της αγγελίας. Μια δεύτερη σύγκριση εδώ θα ήταν
+ * δύο απαντήσεις στο *«είναι αυτά τα δύο το ίδιο πράγμα;»*, ελεύθερες να αποκλίνουν — και η
+ * απόκλιση θα ήταν **αόρατη**: η αγγελία θα έδειχνε ένα, ο κάδος θα κρατούσε δύο ενεργά.
+ *
+ * ⚠️ **Δεν πετά ποτέ.** Η ιστορία δεν επιτρέπεται να ακυρώσει τη δημοσίευση: το κοινό είναι
+ * **ήδη** σωστό από την επιμέλεια, ό,τι κι αν πει αυτό το ερώτημα. Η αποτυχία **ονομάζεται**
+ * στο ημερολόγιο, ώστε η διαφορά «κανένας προκάτοχος» ⇄ «δεν κοιτάξαμε» να μένει ορατή.
+ */
+async function findSupersededModels(
+  companyId: string,
+  propertyId: string,
+  newcomer: FileRecordBase,
+): Promise<readonly string[]> {
+  try {
+    const snapshot = await getAdminFirestore()
+      .collection(COLLECTIONS.FILES)
+      .where('companyId', '==', companyId)
+      .where('entityType', '==', ENTITY_TYPES.PROPERTY)
+      .where('entityId', '==', propertyId)
+      .where('category', '==', FILE_CATEGORIES.MODELS)
+      .get();
+
+    return supersededByPublication(
+      snapshot.docs.map((doc) => ({ ...(doc.data() as AgencyMediaCandidate), id: doc.id })),
+      newcomer as AgencyMediaCandidate,
+    );
+  } catch (error) {
+    logger.warn('Οι προκάτοχοι του μοντέλου δεν διαβάστηκαν — η αγγελία μένει σωστή, η ιστορία όχι', {
+      propertyId, companyId, error: getErrorMessage(error),
+    });
+    return [];
+  }
 }
 
 /**

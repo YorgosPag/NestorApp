@@ -17,6 +17,7 @@
 
 import * as React from 'react';
 
+import { useAuth } from '@/auth/hooks/useAuth';
 import { hasSignatory, type ModelStateMark } from '@/lib/listings/listing-model-declaration';
 import type {
   ModelPublishRequest,
@@ -42,6 +43,11 @@ export interface PublishModelState {
 }
 
 export function usePublishModelState(): PublishModelState {
+  // 🔑 **Ο άνθρωπος διαβάζεται από τη ΣΥΝΕΔΡΙΑ, ποτέ από πεδίο φόρμας** (ADR-845 Ο-27): το
+  //    `actorUid` γράφει **ιστορία απόσυρσης** (ISO 19650), και μια τιμή που θα μπορούσε να
+  //    πληκτρολογηθεί θα ήταν υπογραφή τρίτου. Ίδιο ιδίωμα με το `config.userId` του
+  //    `StepUpload` — η αδελφή διαδρομή που κάνει την ίδια πράξη για τις κατόψεις (Ο-16).
+  const { user } = useAuth();
   const [propertyId, setPropertyId] = React.useState('');
   const [scope, setScope] = React.useState<ModelPublishScope>('active');
   const [state, setState] = React.useState<ModelStateMark>('as-built');
@@ -69,8 +75,17 @@ export function usePublishModelState(): PublishModelState {
     propertyId.trim() !== '' && hasSignatory(signatory) && studiedAt.trim() !== '';
 
   const buildRequest = React.useCallback(
-    (): ModelPublishRequest => ({ propertyId, scope, state, signatory }),
-    [propertyId, scope, state, signatory],
+    (): ModelPublishRequest => ({
+      propertyId,
+      scope,
+      state,
+      signatory,
+      // ⚠️ Κενό όταν λείπει η συνεδρία — **δεν** μπλοκάρει τη δημοσίευση: την άδεια την κρίνει
+      //    ο διακομιστής από το δικό του auth context. Χωρίς άνθρωπο, η **ιστορία** μένει
+      //    ανώνυμη· η **αγγελία** παραμένει σωστή από την επιμέλεια.
+      actorUid: user?.uid ?? '',
+    }),
+    [propertyId, scope, state, signatory, user?.uid],
   );
 
   return {

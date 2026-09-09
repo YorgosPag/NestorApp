@@ -36,10 +36,12 @@ import {
 } from '@/lib/listings/model-declaration-metadata';
 import type {
   ModelPublicationDeclaration,
+  ModelPublicationScope,
   ModelSignatory,
   ModelStateMark,
 } from '@/lib/listings/listing-model-declaration';
 import { measureModelBytes } from '@/services/listings/gltf-model-measure';
+import { FileRecordService } from '@/services/file-record.service';
 
 import { resolveExportFloors } from '../../export/core/export-floor-scope';
 import { exportFloorsToMesh3d } from '../../export/formats/mesh3d-export-adapter';
@@ -54,12 +56,49 @@ import type { ExportDeps, ExportFloorScope } from '../../export/types';
  */
 export type ModelPublishScope = Extract<ExportFloorScope, 'active' | 'all-single'>;
 
+/**
+ * 🏆 **Η ΜΕΤΑΦΡΑΣΗ ΣΤΟ ΣΥΝΟΡΟ** — από *«πώς συσκευάζεται»* σε *«τι καλύπτει»* (ADR-845 Ο-27).
+ *
+ * 🔴 **ΔΥΟ ΛΕΞΙΛΟΓΙΑ ΓΙΑ ΔΥΟ ΕΡΩΤΗΣΕΙΣ, ΚΑΙ ΕΙΝΑΙ ΤΟ ΙΔΙΟ ΕΠΙΧΕΙΡΗΜΑ ΜΕ ΤΗΝ Α11.** Το ADR
+ * ξεχωρίζει ήδη ρητά την **προέλευση** από τη **σήμανση**: *«δένοντάς τες, το ίδιο ακριβώς
+ * αρχείο θα άλλαζε βαθμίδα αξιοπιστίας επειδή κάποιος άλλαξε ετικέτα κατάστασης»*. Εδώ
+ * συμβαίνει το ίδιο: το `all-single` απαντά *«ένα αρχείο ή zip;»* — και το `all-zip` καλύπτει
+ * **ακριβώς το ίδιο** με άλλη συσκευασία. Ταυτότητα χτισμένη πάνω στη συσκευασία θα έλεγε ότι
+ * δύο μοντέλα του **ίδιου** κτιρίου είναι διαφορετικά πράγματα, επειδή διέφερε το **κουτί**.
+ *
+ * 🔑 **Εδώ και ΜΟΝΟ εδώ**: αυτό το αρχείο είναι η **μόνη** θέση που ξέρει και τα δύο
+ * λεξιλόγια — το `lib/listings/` δεν επιτρέπεται να δει τον εξαγωγέα *(είναι εκτός του root
+ * `tsconfig`: μια τέτοια εισαγωγή θα ήταν αόρατη σε κάθε πύλη πλην του CI — CHECK 3.29)*.
+ *
+ * ⚠️ **`Record` και όχι `switch`**: ο τύπος **δεν μεταγλωττίζεται** αν το `ModelPublishScope`
+ * αποκτήσει τρίτη τιμή χωρίς απάντηση εδώ. Ένας `switch` με `default` θα σιωπούσε.
+ */
+const PUBLICATION_SCOPE_OF: Record<ModelPublishScope, ModelPublicationScope> = {
+  active: 'active-floor',
+  'all-single': 'all-floors',
+};
+
 /** Ό,τι ζητά το χειριστήριο από τον άνθρωπο, πριν φύγει ένα byte. */
 export interface ModelPublishRequest {
   readonly propertyId: string;
   readonly scope: ModelPublishScope;
   readonly state: ModelStateMark;
   readonly signatory: ModelSignatory;
+  /**
+   * **Ποιος έκανε την αντικατάσταση** — για την **ιστορία**, ποτέ για την εξουσιοδότηση
+   * (ADR-845 Ο-27).
+   *
+   * 🔴 **ΔΕΝ ΕΙΝΑΙ ΙΣΧΥΡΙΣΜΟΣ ΤΑΥΤΟΤΗΤΑΣ, ΚΑΙ Η ΔΙΑΚΡΙΣΗ ΕΙΝΑΙ ΑΣΦΑΛΕΙΑ.** Την **άδεια** να
+   * ανέβει το μοντέλο την κρίνει ο διακομιστής από το **δικό του** auth context
+   * *(`ctx.uid`, `requirePropertyInTenantScope`)* — αυτό εδώ **δεν ταξιδεύει** στο POST.
+   * Χρησιμοποιείται **μόνο** στην πράξη απόσυρσης του πελάτη, που τρέχει με client SDK και
+   * υπόκειται στους Firestore rules του **ίδιου** ανθρώπου: ένα ψεύτικο uid εδώ θα έγραφε
+   * λάθος **όνομα σε ημερολόγιο**, ποτέ δεν θα άνοιγε πόρτα.
+   *
+   * ⚠️ Ίδιο ακριβώς ιδίωμα με το `config.userId` του `StepUpload.performUpload` — η αδελφή
+   * διαδρομή που κάνει την **ίδια** πράξη για τις κατόψεις *(Ο-16)*.
+   */
+  readonly actorUid: string;
 }
 
 /**
@@ -106,7 +145,7 @@ export async function publishModelToProperty(
     return { ok: false, refusal: 'declaration-too-large' };
   }
 
-  return sendModel(request.propertyId, bytes, encoded);
+  return sendModel(request.propertyId, bytes, encoded, request.actorUid);
 }
 
 /**
@@ -151,6 +190,11 @@ async function declareModel(
   try {
     return {
       state: request.state,
+      // 🔴 **ΤΟ ΕΥΡΟΣ ΤΑΞΙΔΕΥΕΙ ΤΩΡΑ** *(Ο-27)*: ως τις 2026-09-09 **επέλεγε ποια bytes
+      //    παράγονται** και μετά **εξατμιζόταν** — μετρημένο, δεν γραφόταν πουθενά. Δηλαδή το
+      //    ένα τρίτο της ταυτότητας του μοντέλου δεν υπήρχε, και δύο δημοσιεύσεις **άλλου**
+      //    εύρους ήταν αδιάκριτες. Μεταφράζεται εδώ, στο σύνορο των δύο λεξιλογίων.
+      scope: PUBLICATION_SCOPE_OF[request.scope],
       signatory: request.signatory,
       geometry: await measureModelBytes(bytes),
     };
@@ -164,6 +208,7 @@ async function sendModel(
   propertyId: string,
   bytes: Uint8Array,
   declaration: string,
+  actorUid: string,
 ): Promise<ModelPublishOutcome> {
   const body = new FormData();
   body.append('file', new Blob([bytes], { type: 'model/gltf-binary' }), `${propertyId}.glb`);
@@ -184,17 +229,95 @@ async function sendModel(
 
   const payload: unknown = await response.json().catch(() => null);
   const fileId = readFileId(payload);
-  return fileId === null
-    ? { ok: false, refusal: 'rejected' }
-    : { ok: true, fileId };
+  if (fileId === null) return { ok: false, refusal: 'rejected' };
+
+  await recordSuccession(readSupersedes(payload), fileId, actorUid);
+
+  return { ok: true, fileId };
+}
+
+/**
+ * 🌐 **Η ΙΣΤΟΡΙΑ, ΟΧΙ Η ΑΛΗΘΕΙΑ** — ISO 19650 §10.2 (ADR-845 Ο-27).
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΓΙΑΤΙ ΕΔΩ, ΣΤΟΝ ΠΕΛΑΤΗ, ΕΝΩ Η ΔΗΜΟΣΙΕΥΣΗ ΕΙΝΑΙ `'server-only'`
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Η **μία** πόρτα της απόσυρσης *(`supersedeFileRecord` → `moveToTrash`)* εισάγει
+ * `@/lib/firebase` — **client SDK**. Η πόρτα του ανεβάσματος είναι `'server-only'`.
+ * **Δεν συναντιούνται**, και ένα admin δίδυμο απορρίφθηκε ρητά: δεύτερη μηχανή για την ίδια
+ * ερώτηση *(N.18 · ADR-749)* — το απαγορεύει η ίδια της η κεφαλίδα.
+ *
+ * ⇒ **Ο διακομιστής κρίνει, ο πελάτης πράττει.** Ο κατάλογος έρχεται από την απάντηση: το
+ * *«ποιοι δημοσιεύουν το ίδιο πράγμα;»* το απαντά **ένα** σώμα *(`supersededByPublication`)*,
+ * το ίδιο που ζει δίπλα στην επιμέλεια της αγγελίας.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * ⚠️ ΓΙΑΤΙ Η ΑΠΟΤΥΧΙΑ ΕΔΩ **ΔΕΝ** ΑΚΥΡΩΝΕΙ ΤΗ ΔΗΜΟΣΙΕΥΣΗ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Η αγγελία είναι **ήδη σωστή** χωρίς αυτή τη γραμμή: το `currentPerIdentity` κρατά
+ * **παράγωγα** το νεότερο ανά ταυτότητα, σε **κάθε** πέρασμα. Ο κόσμος δεν βλέπει διπλότυπο
+ * ούτε αν ο περιηγητής κλείσει σε αυτό ακριβώς το σημείο.
+ *
+ * Αυτό που χάνεται σε αποτυχία είναι η **ιστορία**: το παλιό μένει `active` στον διαχειριστή
+ * αρχείων, δηλαδή ο κάτοχος βλέπει δύο και ο κόσμος ένα. Ενοχλητικό, **όχι λάθος** — και
+ * επισκευάσιμο με την επόμενη δημοσίευση, που θα το ξαναβρεί.
+ *
+ * 🔑 **Γι' αυτό ακριβώς επιτρέπεται να ζει σε δεύτερο βήμα.** Η γραμμένη ένσταση της διεξόδου
+ * Α *(«παράθυρο κούρσας»)* **εξέπνευσε** τη στιγμή που η ορθότητα έγινε παράγωγη: το παράθυρο
+ * υπάρχει ακόμη, αλλά **δεν χωρά τίποτα μέσα του**.
+ *
+ * ⚠️ **`allSettled`, ποτέ `all`**: μια αποτυχία στον έναν προκάτοχο δεν επιτρέπεται να κρύψει
+ * την επιτυχία στον άλλο. *(Στην πράξη είναι σχεδόν πάντα **ένας** — αλλά «σχεδόν πάντα» δεν
+ * είναι εγγύηση, και ο πληθυντικός δεν κοστίζει.)*
+ */
+async function recordSuccession(
+  supersedes: readonly string[],
+  fileId: string,
+  actorUid: string,
+): Promise<void> {
+  if (supersedes.length === 0) return;
+
+  await Promise.allSettled(
+    supersedes.map((previousFileId) =>
+      FileRecordService.supersedeFileRecord(previousFileId, fileId, actorUid),
+    ),
+  );
 }
 
 /** Ο διακομιστής υπόσχεται σχήμα· ο πελάτης το **ελέγχει**, δεν το ισχυρίζεται *(N.2)*. */
 function readFileId(payload: unknown): string | null {
-  if (typeof payload !== 'object' || payload === null) return null;
-  const data = (payload as { data?: unknown }).data;
-  if (typeof data !== 'object' || data === null) return null;
-
-  const fileId = (data as { fileId?: unknown }).fileId;
+  const fileId = readResponseField(payload, 'fileId');
   return typeof fileId === 'string' && fileId.length > 0 ? fileId : null;
+}
+
+/**
+ * **Ποιους διαδέχεται** — και `[]` για **κάθε** άλλη απάντηση.
+ *
+ * ⚠️ **Fail-closed προς την πράξη**: ένα σχήμα που δεν αναγνωρίζεται σημαίνει *«μην αποσύρεις
+ * τίποτα»*, ποτέ *«απόσυρε ό,τι βρεις»*. Η χειρότερη εκδοχή του λάθους εδώ είναι να ρίξει
+ * στον κάδο μοντέλο που **κανείς δεν αντικατέστησε**.
+ */
+function readSupersedes(payload: unknown): readonly string[] {
+  const raw = readResponseField(payload, 'supersedes');
+  if (!Array.isArray(raw)) return [];
+
+  const ids: readonly unknown[] = raw;
+  return ids.filter((id): id is string => typeof id === 'string' && id.length > 0);
+}
+
+/**
+ * Το `data.<πεδίο>` της τυποποιημένης απάντησης — **μία** ανάγνωση του φακέλου.
+ *
+ * 🔑 Εξήχθη μόλις εμφανίστηκε **δεύτερο** πεδίο: δύο σώματα που ξεδιπλώνουν το ίδιο
+ * `{ data: … }` είναι sibling clone — ακριβώς αυτό που πιάνει το CHECK 3.28 και **δεν** θα
+ * έβλεπε ποτέ το `ssot:discover` *(διαφορετικά ονόματα, N.18)*.
+ */
+function readResponseField(payload: unknown, field: string): unknown {
+  if (typeof payload !== 'object' || payload === null) return undefined;
+  const data = (payload as { data?: unknown }).data;
+  if (typeof data !== 'object' || data === null) return undefined;
+
+  return (data as Record<string, unknown>)[field];
 }
