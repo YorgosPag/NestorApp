@@ -16,12 +16,13 @@ import {
   agreementOf,
   coverageEvidenceOf,
   listingsOutsideCoverage,
+  nextRadiusCovering,
   verdictForListing,
 } from '../coverage-agreement';
 import { coverageMatches, coverageOverCircle, type CoverageResolvers } from '../coverage-match';
 import { listing } from '@/lib/demand/__tests__/demand-fixtures';
 import { NO_FOOTPRINTS } from '@/types/geo/admin-footprint';
-import type { DeclaredCoverage } from '@/types/agency-coverage';
+import { COVERAGE_RADIUS_STEPS, type DeclaredCoverage } from '@/types/agency-coverage';
 import type { ListingPosition, PublicListing } from '@/types/public-listing';
 
 const AT = '2026-09-08T00:00:00.000Z';
@@ -237,5 +238,53 @@ describe('Ζ — μηδέν δεύτερος κριτής (ADR-749)', () => {
       expect(coverageOverCircle(RADIUS_20KM, { center: point, radiusKm: 0 }, RESOLVERS))
         .not.toBe('unknown');
     }
+  });
+});
+
+// =============================================================================
+// Η — Η ΠΡΟΤΑΣΗ: κλειστό λεξιλόγιο, ΟΛΑ ή ΤΙΠΟΤΑ
+// =============================================================================
+
+describe('Η — η μόνη αυτόματη επιδιόρθωση, και τα όριά της', () => {
+  /** ~24 χλμ ανατολικά του `HOME`: έξω από τα 20, μέσα στα 30. */
+  const AT_24KM = { lat: 40.64, lng: 23.223 };
+
+  it('Η1 🔑 — προτείνει το ΕΠΟΜΕΝΟ ΒΗΜΑ που καλύπτει, ποτέ ακριβή αριθμό', () => {
+    const suggestion = nextRadiusCovering(RADIUS_20KM, [at(AT_24KM, 'p1')]);
+    // 24 χλμ ⇒ όχι 24, όχι 25: το επόμενο ΝΟΜΙΜΟ βήμα.
+    expect(suggestion).toBe(30);
+    expect(COVERAGE_RADIUS_STEPS).toContain(suggestion);
+  });
+
+  it('Η2 — καλύπτει το ΠΙΟ ΜΑΚΡΙΝΟ, όχι το πρώτο που βρήκε', () => {
+    const suggestion = nextRadiusCovering(RADIUS_20KM, [
+      at(AT_24KM, 'p1'),
+      at({ lat: 40.64, lng: 23.46 }, 'p2'), // ~44 χλμ
+    ]);
+    expect(suggestion).toBe(50);
+  });
+
+  it('Η3 🔴 — ΟΛΑ Ή ΤΙΠΟΤΑ: ένα ακίνητο εκτός εμβέλειας ⇒ null, ΟΧΙ μερική πρόταση', () => {
+    // Μετρημένο ζωντανά (2026-09-09): 6 ακίνητα σε 5 πόλεις ⇒ κανένα βήμα δεν φτάνει.
+    // Μια «μερική» πρόταση θα έδινε ψευδή αίσθηση λύσης — και θα έσπρωχνε σε ΛΑΘΟΣ
+    // εργαλείο: η ακτίνα δεν μοντελοποιεί διάσπαρτο χαρτοφυλάκιο.
+    const suggestion = nextRadiusCovering(RADIUS_20KM, [at(AT_24KM, 'p1'), at(FAR, 'p2')]);
+    expect(suggestion).toBeNull();
+  });
+
+  it('Η4 — δήλωση που ΔΕΝ είναι ακτίνα ⇒ null (καμία μαντεψιά περιοχής)', () => {
+    expect(nextRadiusCovering({ nationwide: true }, [at(FAR)])).toBeNull();
+    expect(nextRadiusCovering(null, [at(FAR)])).toBeNull();
+    expect(nextRadiusCovering({ adminIds: ['x'] }, [at(FAR)])).toBeNull();
+  });
+
+  it('Η5 — αγγελία ΧΩΡΙΣ θέση δεν επηρεάζει την πρόταση', () => {
+    expect(nextRadiusCovering(RADIUS_20KM, [at(AT_24KM, 'p1'), UNLOCATED])).toBe(30);
+  });
+
+  it('Η6 ⚠️ — κενή λίστα ⇒ το ΜΙΚΡΟΤΕΡΟ βήμα, και ο καλών δεν τη στέλνει ποτέ', () => {
+    // Δομικά: `neededKm = 0` ⇒ πρώτο βήμα. Ο καλών ρωτά ΜΟΝΟ όταν `outside > 0`,
+    // αλλά η συνάρτηση δεν σιωπά — απαντά ό,τι σημαίνει η είσοδός της.
+    expect(nextRadiusCovering(RADIUS_20KM, [])).toBe(COVERAGE_RADIUS_STEPS[0]);
   });
 });

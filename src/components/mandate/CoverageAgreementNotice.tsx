@@ -42,61 +42,28 @@ import React from 'react';
 
 import { useAuth } from '@/auth/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { lineageIdsOf } from '@/hooks/useAdministrativeHierarchy';
-import { useAdminFootprints } from '@/hooks/useAdminFootprints';
+import { useCoverageResolvers } from '@/hooks/useCoverageResolvers';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
   coverageEvidenceOf,
   listingsOutsideCoverage,
+  nextRadiusCovering,
   type CoverageEvidence,
 } from '@/lib/agency/coverage-agreement';
-import type { CoverageResolvers } from '@/lib/agency/coverage-match';
-import { distanceMeters } from '@/lib/geo/geo-distance';
 import { usePublicAgencyListings } from '@/services/realtime/hooks/usePublicListings';
 import {
-  COVERAGE_RADIUS_STEPS,
   isRadiusCoverage,
   type CoverageRadiusKm,
   type DeclaredCoverage,
 } from '@/types/agency-coverage';
-import type { PublicListing } from '@/types/public-listing';
 
 import { SHOWCASE_KEYS, SHOWCASE_NS } from './agency-showcase-labels';
-
-const METRES_PER_KM = 1000;
 
 interface CoverageAgreementNoticeProps {
   /** Η δήλωση **όπως τη γράφει αυτή τη στιγμή** ο άνθρωπος — όχι η δημοσιευμένη. */
   readonly value: DeclaredCoverage | null;
   /** Η ίδια δίοδος με τον `CoverageAreaPicker`: η πρόταση **γράφει το πεδίο**, δεν σώζει. */
   readonly onChange: (next: DeclaredCoverage | null) => void;
-}
-
-/**
- * **Το επόμενο βήμα ακτίνας που καλύπτει ΟΛΑ τα ξεμείναντα** — ή `null`.
- *
- * 🔑 **Κλειστό λεξιλόγιο, όχι αριθμητική.** Δεν υπολογίζει «την ακτίνα που χρειάζεται»
- * και δεν στρογγυλοποιεί: διαλέγει από τα **τέσσερα** επιτρεπτά βήματα
- * *(`COVERAGE_RADIUS_STEPS`)*. Ένα «πρότεινε 63 χλμ» θα ήταν **ασύντακτο** — και το ότι
- * είναι ασύντακτο, αντί για «απορριπτέο», είναι όλη η αξία εκείνου του τύπου.
- *
- * ⚠️ Επιστρέφει `null` όταν **κανένα** βήμα δεν φτάνει: τότε η οθόνη λέει *«πρόσθεσέ τες
- * μόνος σου»* αντί να προτείνει κάτι που **δεν λύνει** το πρόβλημα.
- */
-function nextRadiusCovering(
-  coverage: DeclaredCoverage | null,
-  outside: readonly PublicListing[],
-): CoverageRadiusKm | null {
-  if (coverage === null || !isRadiusCoverage(coverage)) return null;
-
-  let neededKm = 0;
-  for (const listing of outside) {
-    if (listing.position.kind !== 'known') continue;
-    const km = distanceMeters(coverage.circle.center, listing.position.point) / METRES_PER_KM;
-    neededKm = Math.max(neededKm, km);
-  }
-
-  return COVERAGE_RADIUS_STEPS.find((step) => step >= neededKm) ?? null;
 }
 
 /**
@@ -132,15 +99,10 @@ export function CoverageAgreementNotice({
 }: CoverageAgreementNoticeProps): React.ReactElement | null {
   const { user } = useAuth();
   const { listings, loading } = usePublicAgencyListings(user?.companyId ?? null);
-  const { footprintOf } = useAdminFootprints();
-
-  // ⚠️ Ο `footprintOf` είναι σταθερός ανά στιγμιότυπο δεδομένων (`useAdminFootprints`),
-  //    άρα αυτό το `useMemo` **δεν** ξαναγεννιέται σε κάθε καρέ — ίδιο ιδίωμα με το
-  //    `AgencyDirectoryContent`.
-  const resolvers = React.useMemo<CoverageResolvers>(
-    () => ({ lineageOf: lineageIdsOf, footprintOf }),
-    [footprintOf],
-  );
+  // 🔑 **Οι αναγνώστες έρχονται από τον SSoT** *(ADR-846 §8.8.14)*: η ταυτότητά τους
+  //    κρέμεται από το στιγμιότυπο των αποτυπωμάτων, ώστε τα `useMemo` παρακάτω να
+  //    ξαναγίνονται **ακριβώς όταν** φτάσουν τα δεδομένα — και όχι ποτέ.
+  const { resolvers } = useCoverageResolvers();
 
   const evidence = React.useMemo(
     () => coverageEvidenceOf(value, listings, resolvers),
