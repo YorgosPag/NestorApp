@@ -18,7 +18,7 @@
  */
 
 import * as React from 'react';
-import { render, renderHook } from '@testing-library/react';
+import { act, render, renderHook } from '@testing-library/react';
 import { SelectionBoundary } from '../SelectionBoundary';
 import {
   SelectionContext,
@@ -38,7 +38,7 @@ describe('SelectionBoundary — Κ1: χωρίς host provider', () => {
       wrapper: ({ children }) => <SelectionBoundary>{children}</SelectionBoundary>,
     });
 
-    result.current.select('entity-1', 'dxf-entity');
+    act(() => { result.current.select('entity-1', 'dxf-entity'); });
 
     expect(SelectedEntitiesStore.isSelected('entity-1')).toBe(true);
   });

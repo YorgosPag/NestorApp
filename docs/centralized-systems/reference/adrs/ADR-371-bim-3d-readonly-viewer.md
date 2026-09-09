@@ -83,6 +83,27 @@ ADR-370 παρέδωσε read-only 2D BIM render στο `/properties?view=floorp
 | `src/components/shared/files/media/floorplan-gallery-config.ts` | + `projectId?: string \| null` to `FloorplanGalleryProps` interface. |
 | `src/i18n/locales/{el,en}/bim3d.json` | No new keys — existing `modeToggle.*` reused. |
 
+### Session C — η αδήλωτη εξάρτηση επιλογής (2026-09-09)
+
+🔴 **Το περιστατικό**: στο `/o/<c>/properties?view=floorplan` η σελίδα έπεφτε με
+`useUniversalSelectionStable must be used within a SelectionSystem`. Η αλυσίδα:
+`Bim3DReadOnlyOverlay` → `BimViewport3D` → `useBim3DEditInteraction` (ADR-688 Φ3, γρ.305)
+**και** `useBim3DPlacementAndPickHooks` → `useBim3DEntityClipboard` (γρ.315) — **δύο**
+άνευ όρων κλήσεις που ΑΠΑΙΤΟΥΝ `SelectionContext`.
+
+⚠️ **Η κλάση, όχι το δείγμα**: ο **μόνος** `<SelectionSystem>` του δέντρου ζει στο
+`DxfViewerApp.tsx:73`. Άρα έσπαγε **κάθε** mount site εκτός `/dxf/viewer` — όχι μόνο το
+Properties overlay αλλά και το `Bim3DHarness` (`/test-harness/bim-3d`). Η εξάρτηση του
+viewport ζούσε σε **καλούντα δύο επίπεδα πιο πάνω**.
+
+| Path | Αλλαγή |
+|---|---|
+| `src/subapps/dxf-viewer/systems/selection/SelectionBoundary.tsx` | **NEW** — provider-if-missing boundary. Υπάρχει context → passthrough· λείπει → `<SelectionSystem>`. ⚠️ **ΠΟΤΕ πάντα provider**: ο `SelectedEntitiesStore` έχει **ΕΝΑΝ** legacy sink (`registerLegacySink`, `useSelectionSystemState.ts:63`)· φωλιασμένος δεύτερος αρπάζει τον sink του host και στο unmount τον μηδενίζει → σπάει τη ζωντανή επιλογή του `/dxf/viewer`. |
+| `src/subapps/dxf-viewer/bim-3d/viewport/BimViewport3D.tsx` | **ΛΕΠΤΟΣ wrapper (31 γρ.)** — `<SelectionBoundary><BimViewport3DInner {...props}/></SelectionBoundary>` + re-export `BimViewport3DProps`. Η εγγύηση ανήκει πλέον στο **ΙΔΙΟ** το component, όχι σε κάθε καλούντα. Δημόσια επιφάνεια (όνομα + path) **αμετάβλητη** και για τους 3 καταναλωτές. |
+| `src/subapps/dxf-viewer/bim-3d/viewport/BimViewport3DInner.tsx` | **NEW από `git mv`** — το πλήρες σώμα (499 γρ.), μόνη αλλαγή η μετονομασία της συνάρτησης. **Γιατί split**: το αρχείο ήταν στις **499/500** γραμμές (N.7.1) — ο wrapper δεν χώραγε. Ιδιος φάκελος → όλα τα relative imports ανέπαφα. |
+| `src/subapps/dxf-viewer/systems/selection/index.ts` | + `export { SelectionBoundary }`. |
+| `src/subapps/dxf-viewer/systems/selection/__tests__/selection-boundary.test.tsx` | **NEW άγκυρα** — Κ1 «χωρίς host provider ζει ο καταναλωτής;» + Κ2 «με host provider μένει **ΕΝΑΣ**;» (ταυτότητα context) + αντίστροφη άγκυρα (χωρίς boundary **πετάει**). Κάθε μια κοκκινίζει σε διαφορετική μετάλλαξη. |
+
 ---
 
 ## 4. Verification
@@ -125,3 +146,4 @@ ADR-370 παρέδωσε read-only 2D BIM render στο `/properties?view=floorp
 | 2026-05-20 | Initial skeleton (Session A). Props-driven refactor `BimViewport3D` + `useProjectHierarchyOptional()` hook. Backward-compat verified on /dxf/viewer call site (no props). |
 | 2026-05-20 | Session B complete. `visible` + `onClose` props added (Option C visibility override). `Bim3DReadOnlyOverlay` + `Bim3DToggleButton` new files. `FloorplanGallery` wired — local `show3D` state (Q1), toggle gated `isDxf && bimEntities.hasAny`, overlay in inline viewer. `FloorplanGalleryProps` + `projectId`. No new i18n keys. Status → IMPLEMENTED. |
 | 2026-05-21 | **BUG FIX — ViewCube edge/corner clicks crash 3D (canvas goes black)**. Root cause chain: (1) `snapToViewDirection()` / `goHome()` in `viewport-camera.ts` did NOT call `onInteractionStart` → `isInteracting` stayed `false` during animation. (2) `IdleDetector` (800ms threshold) fired `pathTracerRenderer.start()` during/after animation. (3) `renderSample()` had no try/catch → WebGL error from stale BVH state → RAF corruption → canvas black. Face clicks avoided crash because ortho camera causes `PathTracerRenderer.start()` to return early. **Three-layer fix**: (a) `snapToViewDirection` + `goHome` now call `onInteractionStart()` before animation + `onInteractionEnd()` in completion callback; (b) RAF loop in `ThreeJsSceneManager.startLoop()` checks `viewport.isAnimating` and cancels PathTracer during active animation; (c) `renderSample()` wrapped in try/catch → cancel + enter raster mode on error. Bonus fix: ViewCube `onPointerUp` + new `onCanvasClick` both call `e.stopPropagation()` to prevent click bubbling to outer div. **Files modified (3)**: `viewport/viewport-camera.ts`, `scene/ThreeJsSceneManager.ts`, `viewport/view-cube/view-cube.ts`. ✅ Google-level: YES — root-cause fix (interaction lifecycle complete), belt-and-suspenders (`isAnimating` guard + try/catch fallback), zero race conditions (callbacks fire synchronously in animation lifecycle), idempotent (cancel is no-op if PathTracer already inactive). |
+| 2026-09-09 | **BUG FIX — η αδήλωτη εξάρτηση επιλογής (Session C)**. Το `BimViewport3D` καλούσε άνευ όρων `useUniversalSelectionStable` σε **δύο** διαδρομές (edit-interaction γρ.305 · clipboard γρ.315) ενώ ο μόνος `<SelectionSystem>` ζει στο `DxfViewerApp` → **κάθε** mount site εκτός `/dxf/viewer` έριχνε τη σελίδα (Properties overlay **και** `Bim3DHarness`). Λύση: `SelectionBoundary` (provider-if-missing) μέσα στο ίδιο το `BimViewport3D` — η εξάρτηση εγγυάται από το component, όχι από τον καλούντα. Δεν φωλιάζει ποτέ δεύτερο provider (ενικός legacy sink). Για να χωρέσει ο wrapper: split 499γρ. → `BimViewport3DInner.tsx` (`git mv`) + λεπτό `BimViewport3D.tsx` (31γρ.), δημόσια επιφάνεια αμετάβλητη. **Files (5)**: `selection/SelectionBoundary.tsx` (NEW), `selection/index.ts`, `viewport/BimViewport3D.tsx`, `viewport/BimViewport3DInner.tsx` (NEW από mv), `selection/__tests__/selection-boundary.test.tsx` (NEW). ✅ Google-level: YES — λύνει την κλάση (κάθε μελλοντικό mount site), ιδεμποτικός, μία πηγή αλήθειας, μηδέν νέα συνδρομή ADR-040. |
