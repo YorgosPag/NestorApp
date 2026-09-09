@@ -49,7 +49,23 @@ describe('Α. cameraFlight — η πρόθεση γίνεται κίνηση', (
       🔑 Κανένα `toMatchObject` δεν πιάνει αυτό — μόνο ο τελεστής `in`.
     */
     expect('duration' in options).toBe(false);
-    expect(options).toEqual({ speed: expect.any(Number), maxDuration: expect.any(Number) });
+    expect(options).toEqual({ speed: expect.any(Number) });
+  });
+
+  it('⛔ «travel» ΔΕΝ φέρνει `maxDuration` — ΔΕΝ είναι φραγμός, είναι ΕΓΚΑΤΑΛΕΙΨΗ', () => {
+    /*
+      🔴 **ΑΥΤΟ ΤΟ TEST ΕΠΙΚΥΡΩΝΕ ΤΟ ΛΑΘΟΣ, ΜΕΧΡΙ ΠΟΥ ΤΟ ΜΑΤΙ ΚΟΙΤΑΞΕ** (2026-09-09).
+      Η πρώτη γραφή απαιτούσε `maxDuration: expect.any(Number)` — δηλαδή **απαιτούσε τη
+      βλάβη**. Η τεκμηρίωση τύπων του MapLibre λέει *«If duration exceeds maximum duration,
+      it resets to 0»*, και ο κώδικας το κάνει: κάθε πτήση πάνω από το όριο γίνεται
+      **ακαριαίο πήδημα**. Μετρημένο ζωντανά: 300 χλμ ⇒ **2 ms**, 700 χλμ ⇒ **1 ms**,
+      ζουμ 12→17 ⇒ **1 ms**.
+
+      🔑 Το μάθημα δεν είναι «πρόσεχε το maxDuration». Είναι ότι **μια άγκυρα γραμμένη από
+      τον ίδιο που έκανε την παραδοχή, κληρονομεί την παραδοχή** — και μένει πράσινη.
+    */
+    expect('maxDuration' in cameraFlight('travel')).toBe(false);
+    expect('maxDuration' in cameraFraming('travel', 'pin', 'area')).toBe(false);
   });
 
   it('«arrive» είναι ακαριαίο, και το λέει ρητά', () => {
@@ -64,12 +80,17 @@ describe('Α. cameraFlight — η πρόθεση γίνεται κίνηση', (
     expect(cameraFlight('arrive')).not.toEqual(cameraFlight('travel'));
   });
 
-  it('η ταχύτητα είναι θετική και το ταβάνι φράσσει όντως κάτι', () => {
+  it('η ταχύτητα μένει στο εύρος που ΜΕΤΡΗΘΗΚΕ ότι διαβάζεται ως κίνηση', () => {
     const travel = cameraFlight('travel');
     if ('duration' in travel) throw new Error('αδύνατο — δες την ένωση τύπων');
-    expect(travel.speed).toBeGreaterThan(0);
-    expect(travel.maxDuration).toBeGreaterThan(0);
-    expect(travel.maxDuration).toBeLessThanOrEqual(4000); // πάνω από αυτό ο άνθρωπος περιμένει
+    /*
+      Η ταχύτητα είναι η **μόνη** βαλβίδα, και το εύρος της είναι δεμένο σε **μέτρηση**:
+      με `1.2` οθόνες/δευτ. η κοντινή μετακίνηση βγήκε **884 ms** και η χειρότερη
+      πανελλαδική **3,8 s**. Κάτω από `0.5` η μακρινή ξεπερνά τα 9 s· πάνω από `3`
+      η κοντινή πέφτει κάτω από 350 ms και διαβάζεται ως τίναγμα.
+    */
+    expect(travel.speed).toBeGreaterThanOrEqual(0.5);
+    expect(travel.speed).toBeLessThanOrEqual(3);
   });
 });
 

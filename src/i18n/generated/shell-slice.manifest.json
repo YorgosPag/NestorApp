@@ -67,7 +67,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "eb2a1c07baf9cecfddb34460985031b2b57bd95e7a6500fcb69b572578146e1a",
+  "inputsSha256": "ecee89c4410b1407a7aa618bd80095d787f36989a604f9274c8a05efd023f027",
   "languages": [
     "el"
   ],
@@ -4364,7 +4364,7 @@
     "src/lib/a11y/use-reveal-highlighted-option.ts": "efdc1ebf014318f0affd720d75cfe2bd1d78ac84f1be41c67badacf797bd8318",
     "src/lib/agency/agency-directory-order.ts": "7e257b4d6636c9fe7901592c359b19de6101d9f2e49daee76d87891d105c4521",
     "src/lib/agency/agency-door.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
-    "src/lib/agency/coverage-match.ts": "d82bdb15c1e63e536d7cad203108415b8b861bea4659c97047b6d480c7366882",
+    "src/lib/agency/coverage-match.ts": "6b12a2248e1a57c08fa0fd7c088e84ee3ae5d30ccdafbc797599febe36401920",
     "src/lib/agency/coverage-outline.ts": "a42fd32c4f50d825919ab142ca525550ce1c00ff30298b5eb826a4e45da68c95",
     "src/lib/agency/showcase-filter.ts": "3e9e32d1edcbc6ac879681e0d9d5d63a3a3fd153ed5e52f12406bf3dabdae463",
     "src/lib/agency/showcase-mark-kind.ts": "b733c480bab8a4682cb81a3601e22cfc28c09f9718c296a71fb4820c752643b2",
@@ -4420,8 +4420,10 @@
     "src/lib/geo/geo-area.ts": "6dc5fff700e1f1fc56ee2c8d249bbca29c7b42f417b615ec7b8d69c8ca61191e",
     "src/lib/geo/geo-distance.ts": "e78fe737a138f0f2f1ed455d7bf2a979141bad15537cf76b3f64618685cffef3",
     "src/lib/geo/geo-footprint.ts": "631265aa4e623aeea3034ca8ed7c91b68600d22b0017f5bf056ccaff4a47a63a",
+    "src/lib/geo/geo-interior-cover.ts": "d15419e03dd45c3202ceb225781aa050c3e81e4ca61ea69ec98f924471044a11",
     "src/lib/geo/geo-local-frame.ts": "2f167dc263feae586e316ce5bb075f5fbd55797680cbdb4e9620170d6b51a878",
     "src/lib/geo/geo-ring.ts": "f6003ba3244ce1d46a77f7bc2fcfa47145e8529b8844a1771cce0965b152f3b6",
+    "src/lib/geo/geo-shape-relation.ts": "52b3fd6b91e33573a8b029ce033711ac2b4d4b13a8fbeaa3157ca06cfb6d07a6",
     "src/lib/geocoding/address-line-query.ts": "03eecca212491445794f7e5bf21f51bdadd1c5e607ee87ed3b75d4fe2ea73ab5",
     "src/lib/geocoding/geocoding-service.ts": "6a8aabb6d451e9ef7810fefefe3aef614032d7e2cfca35dbe2c1bfadfd09da91",
     "src/lib/geocoding/geocoding-types.ts": "e78fe737a138f0f2f1ed455d7bf2a979141bad15537cf76b3f64618685cffef3",
@@ -4692,7 +4694,7 @@
     "dynamicBoundaries": 18,
     "matchedKeys": 176,
     "routeBoundaries": 0,
-    "shellFiles": 602,
+    "shellFiles": 604,
     "sliceBytes": 401032
   },
   "unresolvableKeys": [
