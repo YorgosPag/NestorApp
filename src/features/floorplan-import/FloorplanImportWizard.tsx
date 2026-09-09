@@ -35,6 +35,8 @@ import { WizardProgress } from '@/subapps/dxf-viewer/ui/components/WizardProgres
 
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useFloorplanImportState } from './hooks/useFloorplanImportState';
+import type { FloorplanImportSelection } from './hooks/useFloorplanImportState';
+import type { FloorplanUploadConfig } from '@/hooks/useFloorplanUpload';
 import { StepEntitySelector } from './components/StepEntitySelector';
 import { StepPropertySelector } from './components/StepPropertySelector';
 import { StepUpload } from './components/StepUpload';
@@ -63,6 +65,26 @@ export interface WizardCompleteMeta {
   /** ADR-399: building context of the selection (set for floor/building/property
    *  selections) — needed so floor-plan levels carry buildingId for the floor-tab strip. */
   buildingId?: string;
+  /**
+   * 🔑 **ADR-845 Ο-19 — ο ΟΡΟΦΟΣ ΤΟΥ ΚΤΗΡΙΟΥ που διάλεξε ο άνθρωπος** (`flr_*`,
+   * IfcBuildingStorey), για **κάθε** επιλογή που πέρασε από το βήμα «Όροφος» —
+   * δηλαδή και για επιλογή **μονάδας**, όπου το `entityId` είναι το ακίνητο.
+   *
+   * ⚠️ **ΔΕΝ είναι το `selection.levelFloorId`**: εκείνο απαντά *«ποιο επίπεδο της
+   * πολυεπίπεδης μονάδας;»* (ADR-236) και είναι **άλλο πράγμα**.
+   *
+   * ## Γιατί προστέθηκε (μετρημένο 2026-09-09)
+   *
+   * Ο σωστός όροφος γραφόταν ήδη **στο αρχείο** (`uploadConfig.linkedTo`) και
+   * **πεταγόταν** στον δρόμο προς τον viewer: το `entityId` μιας επιλογής μονάδας
+   * είναι `prop_*`, οπότε ο `DxfSaveContext` έμενε **χωρίς** `floorId`, ο
+   * εισαγωγέας έπεφτε στο **ενεργό** επίπεδο και του έγραφε το **νέο** κτήριο
+   * αφήνοντας τον **παλιό** όροφο. Αποτέλεσμα: **3 στα 5** δεμένα επίπεδα δήλωναν
+   * κτήριο που δεν περιέχει τον όροφό τους — και, επειδή το `floorId` είναι το
+   * κλειδί εμβέλειας κάθε BIM οντότητας (ADR-420), **17 υποστυλώματα + 1 σκάλα**
+   * αποθηκεύτηκαν σε ορόφους ξένων κτηρίων.
+   */
+  floorId?: string;
   purpose: string;
   /** Human-readable entity label (e.g., "Κτήριο Α", "ΣΟΦΙΤΑ") for displayName generation */
   entityLabel?: string;
@@ -129,6 +151,37 @@ const STEP_SHORTCUT_CONFIG: Record<number, {
 // COMPONENT
 // =============================================================================
 
+
+/**
+ * **ΤΑ ΚΛΕΙΔΙΑ ΕΜΒΕΛΕΙΑΣ ΤΟΥ ΟΔΗΓΟΥ — ΜΙΑ ΓΡΑΦΗ** *(ADR-845 Ο-19)*.
+ *
+ * 🔴 **ΕΞΗΧΘΗ ΕΠΕΙΔΗ ΤΟ ΜΕΤΡΗΣΕ ΠΥΛΗ** *(CHECK 3.28 / jscpd)*: οι **δύο** διαδρομές του
+ * οδηγού — *«ανέβασε νέο»* και *«φόρτωσε αποθηκευμένο»* — έχτιζαν το **ίδιο**
+ * `WizardCompleteMeta` χωριστά.
+ *
+ * ⚠️ **Και δεν είναι υποθετικός ο κίνδυνος: ΕΧΕΙ ΗΔΗ ΣΥΜΒΕΙ.** Το ίδιο το σχόλιο της
+ * δεύτερης διαδρομής κατέγραφε ότι *«έχανε ΚΑΙ ΤΑ ΔΥΟ κλειδιά εμβέλειας — το ίδιο κλικ,
+ * δεύτερο μονοπάτι, ίδια σιωπή»*. Δύο αντίγραφα σημαίνουν ότι το **επόμενο** κλειδί
+ * εμβέλειας θα ξεχαστεί ξανά στη μία από τις δύο, και η αστοχία θα είναι πάλι **σιωπηλή**:
+ * κάτοψη προσαρτημένη σε λάθος κτήριο δεν βγάζει σφάλμα, βγάζει **λάθος όροφο**.
+ */
+function scopedWizardMeta(
+  cfg: FloorplanUploadConfig,
+  selection: FloorplanImportSelection,
+): WizardCompleteMeta {
+  return {
+    companyId: cfg.companyId,
+    projectId: cfg.projectId,
+    entityType: cfg.entityType as WizardCompleteMeta['entityType'],
+    entityId: cfg.entityId,
+    // ADR-399 · ADR-845 Ο-19: κτήριο και όροφος ταξιδεύουν ΜΑΖΙ — ποτέ το ένα χωρίς το άλλο.
+    buildingId: selection.buildingId ?? undefined,
+    floorId: selection.floorId ?? undefined,
+    purpose: cfg.purpose ?? '',
+    entityLabel: cfg.entityLabel,
+  };
+}
+
 export function FloorplanImportWizard({
   isOpen,
   onClose,
@@ -166,14 +219,7 @@ export function FloorplanImportWizard({
     const cfg = state.uploadConfig;
     if (cfg && onComplete) {
       const meta: WizardCompleteMeta = {
-        companyId: cfg.companyId,
-        projectId: cfg.projectId,
-        entityType: cfg.entityType as WizardCompleteMeta['entityType'],
-        entityId: cfg.entityId,
-        // ADR-399: carry the selected building so floor-plan levels get buildingId.
-        buildingId: state.selection.buildingId ?? undefined,
-        purpose: cfg.purpose ?? '',
-        entityLabel: cfg.entityLabel,
+        ...scopedWizardMeta(cfg, state.selection),
         fileId,
         format,
         userDrawingUnits,
@@ -191,7 +237,7 @@ export function FloorplanImportWizard({
         loadAllFloors,
       });
     }
-  }, [onComplete, state.uploadConfig, state.selection.buildingId, loadAllFloors]);
+  }, [onComplete, state.uploadConfig, state.selection.buildingId, state.selection.floorId, loadAllFloors]);
 
   const handleClose = useCallback(() => {
     state.reset();
@@ -205,14 +251,7 @@ export function FloorplanImportWizard({
   const handleConfirmLoad = useCallback(async () => {
     if (!selectedStorageFileId || !state.uploadConfig) return;
     const cfg = state.uploadConfig;
-    const meta: WizardCompleteMeta = {
-      companyId: cfg.companyId,
-      projectId: cfg.projectId,
-      entityType: cfg.entityType as WizardCompleteMeta['entityType'],
-      entityId: cfg.entityId,
-      purpose: cfg.purpose ?? '',
-      entityLabel: cfg.entityLabel,
-    };
+    const meta: WizardCompleteMeta = scopedWizardMeta(cfg, state.selection);
     setLoadingStorage(true);
     try {
       await onLoad?.(selectedStorageFileId, meta);
@@ -224,7 +263,10 @@ export function FloorplanImportWizard({
     } finally {
       setLoadingStorage(false);
     }
-  }, [selectedStorageFileId, state.uploadConfig, onLoad, handleClose, notifications, t]);
+  }, [
+    selectedStorageFileId, state.uploadConfig, state.selection.buildingId,
+    state.selection.floorId, onLoad, handleClose, notifications, t,
+  ]);
 
   const getSelectedId = (): string | null => {
     switch (state.step) {

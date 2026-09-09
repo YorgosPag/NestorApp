@@ -13,6 +13,9 @@ import type { Level, FloorplanType } from '../../systems/levels/config';
 import type { LevelContextUpdate } from '../../systems/levels/hooks/useLevelOperations';
 import type { LevelFloorResolver } from '../../systems/levels/level-floor-resolution';
 import { findOrCreateLevelForFloor } from '../../systems/levels/level-floor-resolution';
+// 🛡️ ADR-845 Ο-18/Ο-19 — η ΑΔΙΑΙΡΕΤΗ εμβέλεια: όροφος και κτήριο ταξιδεύουν μαζί ή
+// καθόλου. Ο ίδιος pure τύπος που ρωτά ο φρουρός.
+import { resolveLevelScopeAssignment, levelScopeFields } from '../../systems/levels/level-building-scope';
 import { ensureLevelsForBuilding } from '../../systems/levels/ensure-levels-for-building';
 import { useFloorsByBuilding } from '@/components/properties/shared/useFloorsByBuilding';
 import { FileRecordService } from '@/services/file-record.service';
@@ -106,14 +109,26 @@ export function useFloorplanImportComplete(deps: FloorplanImportCompleteDeps) {
       // sibling clone του `buildDxfImportSaveContext` που παρέλειπε το `userDrawingUnits`:
       // ο ίδιος wizard, δύο μονοπάτια, το ένα έχανε σιωπηλά τη ρητή επιλογή του μηχανικού.
       const saveContext: DxfSaveContext = buildDxfImportSaveContext(meta);
+      // 🛡️ ADR-845 Ο-19 — Η ΕΜΒΕΛΕΙΑ ΚΡΙΝΕΤΑΙ **ΜΙΑ ΦΟΡΑ**, ΩΣ ΕΝΑ ΠΡΑΓΜΑ.
+      // Πριν, ο όροφος και το κτήριο περνούσαν ως δύο ανεξάρτητα πεδία σε δύο κλήσεις,
+      // και όταν ο πρώτος έλειπε (επιλογή **μονάδας**: `entityId = prop_*`) το δεύτερο
+      // γραφόταν **μόνο του** — το επίπεδο αποκτούσε το ΝΕΟ κτήριο κρατώντας τον ΠΑΛΙΟ
+      // όροφο. Ο τύπος `LevelScopeAssignment` κάνει αυτή τη γραφή αδύνατη.
+      const scope = resolveLevelScopeAssignment({
+        floorId: saveContext.floorId,
+        // ADR-399: building comes from the selection (saveContext only carries
+        // buildingId for 'building' imports, not for 'floor').
+        buildingId: meta.buildingId ?? saveContext.buildingId,
+      });
+      const scopeFields = levelScopeFields(scope);
       // ADR-420 — resolve the Level that OWNS the selected floor (find-or-create
       // + switch), so the import targets that floor's own level rather than the
       // active level. Falls back to the active level for project/building imports.
       const targetLevelId = await findOrCreateLevelForFloor(
         { levels, addLevel, linkLevelToFloor },
         {
-          floorId: saveContext.floorId,
-          buildingId: meta.buildingId ?? saveContext.buildingId,
+          floorId: scope.kind === 'storey' ? scope.floorId : undefined,
+          buildingId: scopeFields.buildingId ?? undefined,
           entityLabel: meta.entityLabel,
           currentLevelId,
         },
@@ -126,16 +141,13 @@ export function useFloorplanImportComplete(deps: FloorplanImportCompleteDeps) {
             floorplanType,
             entityLabel: meta.entityLabel,
             projectId: meta.projectId,
-            floorId: saveContext.floorId,
-            // ADR-399: building comes from the selection (saveContext only carries
-            // buildingId for 'building' imports, not for 'floor').
-            buildingId: meta.buildingId ?? saveContext.buildingId,
+            ...scopeFields,
           });
         }
       }
       // ADR-448 Phase 3 — open a Level for every storey of the building when
       // requested (idempotent backfill).
-      const allFloorsBuilding = meta.buildingId ?? saveContext.buildingId;
+      const allFloorsBuilding = scopeFields.buildingId;
       if (meta.loadAllFloors && allFloorsBuilding) {
         triggerAllFloorsBackfill(allFloorsBuilding);
       }

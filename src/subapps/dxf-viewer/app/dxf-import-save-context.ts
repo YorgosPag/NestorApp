@@ -23,7 +23,16 @@ export function buildDxfImportSaveContext(meta: WizardCompleteMeta): DxfSaveCont
     // Το κενό `entityId` ΔΕΝ είναι ταυτότητα ορόφου: αν γραφτεί ως `floorId: ''`, τα
     // downstream `saveContext?.floorId ?? level?.floorId` σταματούν να πέφτουν στο fallback
     // (το `''` δεν είναι nullish). Παραλείπεται το κλειδί — ΕΝΑ σημείο, δύο καταναλωτές.
-    ...(meta.entityType === 'floor' && meta.entityId ? { floorId: meta.entityId } : {}),
+    //
+    // 🔑 **ADR-845 Ο-19**: ο **ρητός** όροφος της επιλογής προηγείται. Πριν, ο όροφος
+    // προέκυπτε ΜΟΝΟ όταν το ίδιο το `entityId` ήταν όροφος — δηλαδή μια επιλογή
+    // **μονάδας** (`entityId = prop_*`) έφτανε εδώ **χωρίς όροφο**, παρόλο που ο
+    // άνθρωπος τον είχε διαλέξει στο βήμα 4 και ο οδηγός τον έγραφε ήδη στο **αρχείο**.
+    ...(meta.floorId
+      ? { floorId: meta.floorId }
+      : meta.entityType === 'floor' && meta.entityId
+        ? { floorId: meta.entityId }
+        : {}),
     ...(meta.entityType === 'building' && meta.entityId ? { buildingId: meta.entityId } : {}),
     // Χωρίς cast: το `WizardCompleteMeta.entityType` και το `DxfSaveContext.entityType`
     // είναι πλέον ΤΟ ΙΔΙΟ `CadLinkableEntityType` — η μία λίστα του domain-constants.

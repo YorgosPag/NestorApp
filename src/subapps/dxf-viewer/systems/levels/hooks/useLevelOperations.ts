@@ -33,8 +33,15 @@ export interface LevelContextUpdate {
   /** Ανθρώπινη ετικέτα ορόφου — ΚΑΙ ο τίτλος του φύλλου στο σετ εκτύπωσης (ADR-651 §5.5). */
   entityLabel?: string | null;
   projectId?: string;
-  floorId?: string;
-  buildingId?: string;
+  /**
+   * 🛡️ **ADR-845 Ο-19** — `null` = *«αυτό το επίπεδο ΔΕΝ είναι όροφος»* (ρητός
+   * καθαρισμός), `undefined` = *«μην αγγίξεις»*. Ήταν **μόνο** `string`, οπότε η
+   * μοναδική διαθέσιμη «απουσία» ήταν η σιωπή — και μια σιωπή στον όροφο δίπλα σε
+   * γραφή στο κτήριο **είναι** η ασυνέπεια. Παράγονται από το
+   * {@link levelScopeFields}, ποτέ χειρόγραφα.
+   */
+  floorId?: string | null;
+  buildingId?: string | null;
   /** ADR-651 Φάση Ι: χειρόγραφος αριθμός φύλλου· `null` ⇒ αυτόματη αρίθμηση κατά θέση. */
   sheetNumberOverride?: string | null;
 }
@@ -365,8 +372,18 @@ export function useLevelOperations({
         if (enableFirestore) {
           await updateDxfLevelWithPolicy({ payload: { levelId, ...context } });
         } else {
+          // ADR-845 Ο-19 — στη μνήμη η «απουσία» γράφεται `undefined` (ο τύπος `Level`
+          // δεν έχει `null`), αλλά η ΠΡΟΘΕΣΗ μένει ίδια: ρητός καθαρισμός. Ίδια
+          // κανονικοποίηση με το `linkLevelToFloor` παραπάνω — ένα σχήμα, δύο γραφείς.
           setLevels(prev =>
-            prev.map(l => l.id === levelId ? { ...l, ...context } : l)
+            prev.map(l => l.id === levelId
+              ? {
+                  ...l,
+                  ...context,
+                  ...(context.floorId !== undefined ? { floorId: context.floorId ?? undefined } : {}),
+                  ...(context.buildingId !== undefined ? { buildingId: context.buildingId ?? undefined } : {}),
+                }
+              : l)
           );
         }
       } catch (err) {
