@@ -27,9 +27,13 @@
 import { FILE_CATEGORIES, type FileCategory } from '@/config/domain-constants';
 import { MODEL_MATERIAL } from '@/lib/listings/listing-material';
 
+import { buildPublishedModelFileRecord } from '@/lib/listings/model-file-record';
+import { buildFinalizeFileRecordUpdate } from '@/services/file-record';
+
 import {
   agencyMediaMaterial,
   isDeliverableAgencyModel,
+  publishedAgencyMediaSources,
   type AgencyMediaCandidate,
 } from '../agency-media-publication';
 import { PUBLISHABLE_CATEGORIES } from '../agency-media.reader';
@@ -102,5 +106,62 @@ describe('ADR-845 Ο-9 — το σύνορο του γραφείου μαθαί�
 
     // Και το μοντέλο είναι μέσα — αλλιώς τα Κ1-Κ3 θα ήταν πράσινα πάνω σε νεκρό δρόμο.
     expect(deliverable).toContain(FILE_CATEGORIES.MODELS);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Ο-13 — Η ΡΑΦΗ: ΤΟ ΕΓΓΡΑΦΟ ΠΟΥ **ΓΡΑΦΕΤΑΙ** ΦΤΑΝΕΙ ΣΤΟΝ ΑΝΑΓΝΩΣΤΗ;
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * **Το έγγραφο όπως ΠΡΟΣΓΕΙΩΝΕΤΑΙ**, παραγόμενο από τα **ίδια** σώματα που εκτελεί η πόρτα.
+ *
+ * 🔴 **ΚΑΝΕΝΑ ΠΕΔΙΟ ΓΡΑΜΜΕΝΟ ΜΕ ΤΟ ΧΕΡΙ, ΚΑΙ ΕΙΝΑΙ ΟΛΟΚΛΗΡΟ ΤΟ ΝΟΗΜΑ.** Ο `candidate()` από
+ * πάνω δηλώνει `classification: 'public'` **μόνος του** — γι' αυτό τα Κ1-Κ4 έμειναν πράσινα
+ * ενώ η παραγωγή έστελνε `models: []`. Εδώ το σχήμα το **παράγει ο γραφέας**: αν πάψει να
+ * ικανοποιεί τον αναγνώστη, αυτή η άγκυρα κοκκινίζει — η μόνη που μπορεί.
+ *
+ * ⚠️ **ΔΥΟ ΕΓΓΡΑΦΕΣ, ΟΠΩΣ ΣΤΗΝ ΠΑΡΑΓΩΓΗ**: το `set()` της αναμονής και το `update()` της
+ * ολοκλήρωσης. Και οι δύο ζητιούνται από τα **πραγματικά** σώματα, ποτέ με `status: 'ready'`
+ * γραμμένο εδώ — ένα ημιτελές ανέβασμα οφείλει να μένει αόρατο, και αυτό το κρίνει ο κώδικας.
+ */
+function landedModelRecord(): AgencyMediaCandidate {
+  const { recordBase, storagePath } = buildPublishedModelFileRecord({
+    companyId: COMPANY,
+    propertyId: LISTING,
+    contentType: MODEL_MIME,
+    originalFilename: `${LISTING}.glb`,
+    createdBy: 'WKBWEg3DSfcdSbLNJfzGEW3vkct1',
+  });
+
+  const finalized = buildFinalizeFileRecordUpdate({
+    sizeBytes: 122636,
+    downloadUrl: `/api/storage/file/${storagePath}`,
+  });
+
+  // Το `createdAt` το βάζει ο διακομιστής (`serverTimestamp`)· εδώ μια αναγνώσιμη στιγμή,
+  // γιατί το μοντέλο **δεν** την ρωτά για συμμετοχή — μόνο για ντετερμινιστική σειρά.
+  return { ...recordBase, ...finalized, createdAt: '2026-09-09T09:24:19.528Z' } as AgencyMediaCandidate;
+}
+
+describe('ADR-845 Ο-13 — το μοντέλο που ΑΝΕΒΗΚΕ φτάνει στον αναγνώστη', () => {
+  it('Κ5 — 🏆 Η ΠΗΓΗ ΔΕΝ ΕΙΝΑΙ ΚΕΝΗ: το ανεβασμένο μοντέλο ΦΕΥΓΕΙ, ως μοντέλο', () => {
+    // ⚠️ **ΜΙΑ** κλήση: ο γραφέας παράγει **νέο** ταυτοποιητικό σε κάθε πέρασμα, άρα δύο
+    //    κλήσεις θα έδιναν δύο μονοπάτια — και η άγκυρα θα κοκκίνιζε για λόγο δικό της.
+    const landed = landedModelRecord();
+    const sources = publishedAgencyMediaSources([landed]);
+
+    // 🔴 Η μέτρηση του Ο-13 ήταν ακριβώς αυτό το μήκος = 0, ΧΩΡΙΣ καμία άρνηση στο log:
+    //    ο ψήστης δεν κλήθηκε ποτέ, γιατί δεν του έφτασε πηγή να αρνηθεί.
+    expect(sources).toHaveLength(1);
+    expect(sources[0].material).toEqual(MODEL_MATERIAL);
+    expect(sources[0].privateStoragePath).toBe(landed.storagePath);
+  });
+
+  it('Κ6 — η ΕΞΟΥΣΙΟΔΟΤΗΣΗ γράφεται στη ΓΕΝΝΗΣΗ του εγγράφου, όχι σε δεύτερη πράξη', () => {
+    // ⚠️ Ονομάζει **γιατί** περνά το Κ5, ώστε μια μελλοντική αποτυχία να λέει τι έσπασε.
+    //    Η ανθρώπινη πράξη είναι ο διάλογος «Δημοσίευση 3D» — στόχος, σήμανση, υπογράφων.
+    //    Χωρίς αυτό το πεδίο, η πράξη συνέβαινε και **δεν άφηνε ίχνος** (Ο-13).
+    expect(landedModelRecord().classification).toBe('public');
   });
 });

@@ -25,6 +25,7 @@ import type {
   FileCategory,
   FileStatus,
   FileLifecycleState,
+  FileClassification,
 } from '@/config/domain-constants';
 import type { DocumentClassifyAnalysis } from '@/schemas/ai-analysis';
 // ADR-716 Φ5 — ΜΙΑ ονοματολογία μονάδων (SSoT: `utils/scene-units`). Type-only ⇒ το
@@ -152,6 +153,20 @@ export interface BuildPendingFileRecordInput {
 
   // Display name of uploader (denormalized at creation time)
   uploaderName?: string;
+
+  /**
+   * **Επιτρέπεται αυτό το αρχείο να φύγει από την εταιρεία;** (ADR-845 §9 Ο-13)
+   *
+   * 🔴 **ΓΡΑΦΕΤΑΙ ΜΟΝΟ ΟΤΑΝ Η ΑΝΘΡΩΠΙΝΗ ΠΡΑΞΗ ΕΧΕΙ ΗΔΗ ΣΥΜΒΕΙ.** Η απουσία σημαίνει
+   * **ιδιωτικό** — ποτέ «άγνωστο»: ο φρουρός της δημοσίευσης ρωτά `=== 'public'`, οπότε
+   * ό,τι δεν δηλώθηκε ρητά μένει μέσα στην εταιρεία. ⛔ Καμία προεπιλογή εδώ: μια
+   * προεπιλογή θα σήμαινε ότι ο πρώτος που ξεχνά να απαντήσει **δημοσιεύει**.
+   *
+   * ⚠️ Ως το Ο-13 το πεδίο **δεν μπορούσε καν να δηλωθεί στη γέννηση** — έμπαινε μόνο
+   * αργότερα, με ξεχωριστή πράξη στον διαχειριστή αρχείων. Μια διαδρομή που **είναι** η
+   * ίδια η πράξη δημοσίευσης δεν είχε πού να το πει, και η πράξη έμενε **χωρίς ίχνος**.
+   */
+  classification?: FileClassification;
 }
 
 /**
@@ -175,6 +190,9 @@ export interface FileRecordBase {
   lifecycleState?: FileLifecycleState;
   isDeleted?: boolean;
   createdBy: string;
+
+  // ADR-845 §9 Ο-13 — η εξουσιοδότηση εξόδου· απουσία = ιδιωτικό, ποτέ «άγνωστο».
+  classification?: FileClassification;
 
   // Entity linking — cross-entity file references
   linkedTo?: string[];
@@ -370,6 +388,11 @@ export function buildPendingFileRecordData(
   }
   if (input.uploaderName) {
     recordBase.uploaderName = input.uploaderName;
+  }
+  // ADR-845 §9 Ο-13 — γράφεται ΜΟΝΟ όταν ο καλών το δηλώνει ρητά. Η σιωπή είναι
+  // «ιδιωτικό» και το κρίνει ο φρουρός της δημοσίευσης, όχι μια προεπιλογή εδώ.
+  if (input.classification) {
+    recordBase.classification = input.classification;
   }
   // ADR-716 Φ5 — γράφεται ΜΟΝΟ όταν υπάρχει ρητή επιλογή· η απουσία σημαίνει
   // «αποφασίζει η σκάλα τεκμηρίων», όχι «άγνωστο».

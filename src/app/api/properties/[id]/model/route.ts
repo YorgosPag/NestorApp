@@ -45,18 +45,13 @@ import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
 import { requirePropertyInTenantScope } from '@/lib/auth/tenant-isolation';
 import { getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import {
-  ENTITY_TYPES,
-  FILE_CATEGORIES,
-  FILE_DOMAINS,
-  FILE_STATUS,
-} from '@/config/domain-constants';
+import { FILE_STATUS } from '@/config/domain-constants';
 import { FILE_TYPE_CONFIG } from '@/config/file-upload-config';
 import {
   buildFinalizeFileRecordUpdate,
-  buildPendingFileRecordData,
   type FileRecordBase,
 } from '@/services/file-record';
+import { buildPublishedModelFileRecord } from '@/lib/listings/model-file-record';
 import { uploadPublicFile } from '@/services/storage-admin/public-upload.service';
 import {
   MODEL_DECLARATION_METADATA_KEY,
@@ -80,9 +75,6 @@ export const dynamic = 'force-dynamic';
  * **φύγει** *(`DELIVERABLE_MODEL_TYPES` στο `agency-media-publication`)*, από την ίδια πηγή.
  */
 const MODEL_UPLOAD = FILE_TYPE_CONFIG.model;
-
-/** Η επέκταση της κανονικής διαδρομής — **χωρίς τελεία**, όπως τη θέλει το `buildStoragePath`. */
-const MODEL_EXT = 'glb';
 
 interface PropertyModelResponse {
   readonly fileId: string;
@@ -132,19 +124,16 @@ async function handlePost(
 
   const { file, declaration } = await readModelUpload(request);
 
-  const { fileId, storagePath, recordBase } = buildPendingFileRecordData({
+  // 🔴 **ΤΟ ΣΧΗΜΑ ΤΟΥ ΕΓΓΡΑΦΟΥ ΔΕΝ ΑΠΟΦΑΣΙΖΕΤΑΙ ΕΔΩ** *(ADR-845 §9 Ο-13)*. Η πόρτα κρίνει
+  //    κηδεμονία και σχήμα· το *«τι έγγραφο γεννιέται — και είναι εξουσιοδοτημένο να φύγει;»*
+  //    το απαντά **ένα** σώμα, το οποίο εκτελεί αυτούσιο και η άγκυρα της ραφής. Όσο η
+  //    απάντηση ζούσε **μόνο** εδώ, καμία δοκιμή δεν μπορούσε να τη ρωτήσει — και δεν τη ρώτησε.
+  const { fileId, storagePath, recordBase } = buildPublishedModelFileRecord({
     companyId: ctx.companyId,
-    entityType: ENTITY_TYPES.PROPERTY,
-    entityId: propertyId,
-    // 🔑 **`CONSTRUCTION`, όχι `SALES`**: το μοντέλο είναι **παραδοτέο της μελέτης** — φέρει
-    //    σήμανση κατάστασης και υπογράφοντα μηχανικό. Το ότι *καταλήγει* σε αγγελία δεν το
-    //    κάνει υλικό πώλησης, όπως δεν το κάνει ούτε την κάτοψη.
-    domain: FILE_DOMAINS.CONSTRUCTION,
-    category: FILE_CATEGORIES.MODELS,
+    propertyId,
     contentType: file.type,
     originalFilename: file.name,
     createdBy: ctx.uid,
-    ext: MODEL_EXT,
   });
 
   await writeModel({ fileId, storagePath, recordBase, file, declaration, createdBy: ctx.uid });
