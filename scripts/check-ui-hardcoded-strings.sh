@@ -100,7 +100,15 @@ for file in $FILES; do
     [[ ! -f "$file" ]] && continue
 
     # EXEMPT patterns (same as defaultValue hook + extras)
-    if echo "$file" | grep -qE '(/i18n/locales/|/__tests__/|\.test\.|\.spec\.|\.d\.ts$|\.config\.|\.stories\.|\.qa\.|^docs/|/docs/|^adrs/|/adrs/|^scripts/|/scripts/|/data/|/constants/|-definitions\.|-schema\.|\.mock\.|\.original\.|\.template\.)'; then
+    #
+    # /test-harness/ — ΠΕΔΙΟ ΕΦΑΡΜΟΓΗΣ, ΟΧΙ ΧΑΛΑΡΩΣΗ (2026-09-09). Ο N.11 λέει «ALL
+    # user-facing strings»: ένα harness ΔΕΝ είναι προϊόν — είναι όργανο μέτρησης που
+    # ανοίγει ο ίδιος ο προγραμματιστής, δίπλα στα ήδη εξαιρεμένα `/__tests__/`,
+    # `.spec.`, `/scripts/`. Το i18n του θα φούσκωνε route slices (CHECK 3.34) για
+    # οθόνη που κανένας πελάτης δεν βλέπει, σε γλώσσα που κανένας δεν ζητά.
+    # ⚠️ Η ΕΞΑΙΡΕΣΗ ΕΙΝΑΙ ΣΤΕΝΗ ΕΠΙΤΗΔΕΣ: πιάνει ΜΟΝΟ διαδρομές με `/test-harness/`.
+    # Οι σελίδες προϊόντος μένουν ακέραια υπό την πύλη.
+    if echo "$file" | grep -qE '(/i18n/locales/|/__tests__/|/test-harness/|\.test\.|\.spec\.|\.d\.ts$|\.config\.|\.stories\.|\.qa\.|^docs/|/docs/|^adrs/|/adrs/|^scripts/|/scripts/|/data/|/constants/|-definitions\.|-schema\.|\.mock\.|\.original\.|\.template\.)'; then
         continue
     fi
 

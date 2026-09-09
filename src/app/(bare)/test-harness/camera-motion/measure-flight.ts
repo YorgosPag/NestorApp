@@ -34,6 +34,8 @@ export interface FlyableMap {
   triggerRepaint: () => void;
   getZoom: () => number;
   getCenter: () => { lat: number; lng: number };
+  /** Χρειάζεται για να καταγραφεί **σε ποιο κάδρο** ισχύουν οι μετρήσεις. */
+  getCanvas: () => { clientWidth: number; clientHeight: number };
 }
 
 /** Βήμα δειγματοληψίας: 60 fps ονομαστικά — αρκετά πυκνό ώστε να φανεί η καμπύλη. */
@@ -42,7 +44,27 @@ const STEP_MS = 1000 / 60;
 /** Πάνω από αυτό σταματάμε: καμία υγιής πτήση δεν πλησιάζει, και δεν κρεμάμε τη σελίδα. */
 const CEILING_MS = 12_000;
 
-const nextFrame = () => new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+/**
+ * Πόσο περιμένουμε **πραγματικό** καρέ πριν προχωρήσουμε χωρίς αυτό.
+ *
+ * 🔴 **ΜΕΤΡΗΜΕΝΟ ΓΙΑΤΙ ΣΥΝΕΒΗ** (2026-09-09): με **κρυφή καρτέλα** ο Chrome σταματά
+ * εντελώς το `requestAnimationFrame`, και η πρώτη εκδοχή του δειγματολήπτη **κρέμασε για
+ * πάντα** — η σελίδα έγραφε «Μετράει…» επ' αόριστον.
+ */
+const FRAME_WAIT_MS = 250;
+
+/**
+ * Ένα καρέ — ή, αν ο περιηγητής δεν δίνει, **συνεχίζουμε χωρίς αυτό**.
+ *
+ * 🔑 **Η αστοχία γίνεται ΟΡΑΤΗ αντί για αιώνια.** Χωρίς πραγματικά καρέ ο χάρτης δεν
+ * προχωρά, τα δείγματα βγαίνουν ταυτόσημα, ο βρόχος τερματίζει νωρίς — και η μέτρηση
+ * φτάνει στην πύλη με **ελάχιστα καρέ**, όπου το κριτήριο Κ5 την **απορρίπτει**.
+ * Δηλαδή: ούτε κρέμασμα, ούτε ψεύτικος αριθμός — **απόρριψη**.
+ */
+const nextFrame = () => new Promise<void>(resolve => {
+  const timer = setTimeout(resolve, FRAME_WAIT_MS);
+  requestAnimationFrame(() => { clearTimeout(timer); resolve(); });
+});
 
 /** Το καρέ που βλέπει ο άνθρωπος αυτή τη στιγμή. */
 function sample(map: FlyableMap, ms: number): CameraSample {

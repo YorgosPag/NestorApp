@@ -307,7 +307,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 ### Pre-commit checks (summary):
 
 <!-- BEGIN GENERATED GATE INDEX — ΜΗΝ ΤΟ ΓΡΑΨΕΙΣ ΣΤΟ ΧΕΡΙ. Πηγή: docs/gates/3.NN.md · αναπαραγωγή: npm run gate-index:generate
-     fingerprint: sha256:a449e7f2726427a8bbb59f966ed77755dbede228e56eb19df127a6f4040b2966 -->
+     fingerprint: sha256:1604626d06a321eebad724a59f11898c5de40071d5c89eaa1271177cc0c20507 -->
 | CHECK | Goal | Mode | Baseline |
 |-------|------|------|----------|
 | **3.8** | **Missing i18n keys** (ADR-777) — `t('key')` **και** `t('ns:key')` χωρίς αντιστοιχία στα locales · 📘 `docs/gates/3.8.md` | RATCHET | `.i18n-missing-keys-baseline.json` |
@@ -371,6 +371,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 | **3.74** | **Πύλη των συνόρων ανάγνωσης** (ADR-839 · ADR-842) — «διαβάζει κάποιος αποθηκευμένο έγγραφο **χωρίς να περάσει από το σύνορό του**;» · `npm run test:listing-read-boundary` · `SKIP_LISTING_READ_BOUNDARY=1` · 📘 `docs/gates/3.74.md` | ⛔ ZERO TOL | — |
 | **3.75** | **Πύλη του συνόρου του χάρτη** (ADR-777 §8.56) — «έρχεται αυτός ο χάρτης **μαζί με το στυλ του**, ή μόνο όταν τύχει;» · `npm run test:map-boundary` · `SKIP_MAP_BOUNDARY=1` · 📘 `docs/gates/3.75.md` | ⛔ ZERO TOL | — |
 | **3.76** | **Πύλη επιμέλειας του δημόσιου μοντέλου** (ADR-845) — «ποιος γεμίζει το `models[]` και ποιος το αδειάζει — και τους ρωτάει κανείς ΠΡΙΝ φύγει η αγγελία στο κοινό;» · `npm run test:listing-model-custody` · `SKIP_LISTING_MODEL_CUSTODY=1` · 📘 `docs/gates/3.76.md` | ⛔ ZERO TOL | — |
+| **3.77** | **Πύλη κίνησης της κάμερας** (ADR-847) — «πέταξε ο χάρτης, ή πήδηξε; — η ερώτηση που καμία στατική ανάλυση δεν μπορεί να κάνει, και που δεκατρία ΠΡΑΣΙΝΑ tests δεν έκαναν» · `npm run test:camera-motion` · 📘 `docs/gates/3.77.md` | ⛔ ZERO TOL · μόνο CI (dev server + Chromium) | — |
 
 **📘 Πλήρες ιστορικό ανά πύλη** (περιστατικά, μετρήσεις, «⚠️ ΜΗΝ», απορριφθείσες εναλλακτικές):
 `docs/gates/<αριθμός>.md` — ή `npm run gate:explain 3.63`.
@@ -385,7 +386,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 επαληθεύει ότι **λύνεται**. Άνοιξε το JSON.
 
 📊 Πύλες που **τρέχουν**: **71** (εκτελεστής 63 + hook 20) ·
-γραμμές εδώ: **58** · αδήλωτες: **11** (εκστρατεία που τελειώνει στο μηδέν).
+γραμμές εδώ: **59** · αδήλωτες: **11** (εκστρατεία που τελειώνει στο μηδέν).
 *Αυτοί οι αριθμοί είναι **παραγόμενοι** — η προηγούμενη χειρόγραφη εκδοχή τους είχε ήδη*
 *αποκλίνει (έγραφε «48 γραμμές» και «61 πύλες»).*
 

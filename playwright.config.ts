@@ -3,6 +3,35 @@ import { defineConfig, devices } from '@playwright/test';
 const baseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000';
 
 /**
+ * 🔑 **ΤΑ SPEC ΠΟΥ ΕΧΟΥΝ ΔΙΚΟ ΤΟΥΣ PROJECT — ΜΙΑ ΦΟΡΑ, ΚΑΙ ΤΑ ΔΙΑΒΑΖΟΥΝ ΔΥΟ.**
+ *
+ * Ένα spec με **δικό του** project το έχει επειδή χρειάζεται συνθήκες που τα γενικά projects
+ * **δεν** δίνουν: swiftshader για WebGL, δικό του `timeout`, δικό του κάδρο, δικά του golden.
+ * Τα γενικά όμως (`chromium` · `firefox` · `webkit` · `Mobile *`) **δεν έχουν `testMatch`**,
+ * άρα σηκώνουν **ΚΑΘΕ** spec — και τα τρία παρακάτω **μαζί**.
+ *
+ * 🔴 **ΜΕΤΡΗΜΕΝΟ (2026-09-09), ΟΧΙ ΕΙΚΑΣΙΑ**: `playwright test camera-motion --list` έδινε
+ * **6 projects × 6 tests = 36**, όπου **30** έτρεχαν χωρίς τις σημαίες που κάνουν τη μέτρηση
+ * δυνατή. Ίδιο σχήμα μετρήθηκε και στο `bim-3d-visual-regression` *(6 projects για 1 test)* —
+ * δηλαδή **κανόνας του repo, όχι εξαίρεση**. Το κόστος δεν είναι μόνο runner-λεπτά: είναι
+ * **κόκκινα που δεν σημαίνουν τίποτα**, δηλαδή ο σιγουρότερος δρόμος για να μάθει ο αναγνώστης
+ * να αγνοεί τη σουίτα.
+ *
+ * ⚠️ **Η ΙΔΙΑ ΣΤΑΘΕΡΑ ΤΡΟΦΟΔΟΤΕΙ ΚΑΙ ΤΙΣ ΔΥΟ ΠΛΕΥΡΕΣ**, και αυτός είναι όλος ο λόγος που
+ * υπάρχει: το «αυτό το project **ΚΑΤΕΧΕΙ** το spec» (`testMatch`) και το «τα γενικά το
+ * **ΠΡΟΣΠΕΡΝΟΥΝ**» (`testIgnore`) γράφονταν αλλιώς **δύο φορές** — και θα απέκλιναν στην πρώτη
+ * μετονομασία, αφήνοντας ένα spec **ορφανό** ή **διπλό**, σιωπηλά (ADR-749).
+ */
+const DEDICATED_SPECS = {
+  visualDxf: '**/dxf-viewer/e2e/dxf-visual-regression.spec.ts',
+  visualBim3d: '**/dxf-viewer/e2e/bim-3d-visual-regression.spec.ts',
+  cameraMotion: '**/test-harness/camera-motion/camera-motion.e2e.spec.ts',
+} as const;
+
+/** Ό,τι ανήκει σε ειδικό project, ΔΕΝ ανήκει στα γενικά. Παράγεται — ποτέ δεύτερη λίστα. */
+const GENERIC_TEST_IGNORE = Object.values(DEDICATED_SPECS);
+
+/**
  * @see https://playwright.dev/docs/test-configuration
  */
 export default defineConfig({
@@ -34,22 +63,27 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+      testIgnore: GENERIC_TEST_IGNORE,
     },
     {
       name: 'firefox',
       use: { ...devices['Desktop Firefox'] },
+      testIgnore: GENERIC_TEST_IGNORE,
     },
     {
       name: 'webkit',
       use: { ...devices['Desktop Safari'] },
+      testIgnore: GENERIC_TEST_IGNORE,
     },
     {
       name: 'Mobile Chrome',
       use: { ...devices['Pixel 5'] },
+      testIgnore: GENERIC_TEST_IGNORE,
     },
     {
       name: 'Mobile Safari',
       use: { ...devices['iPhone 12'] },
+      testIgnore: GENERIC_TEST_IGNORE,
     },
     {
       name: 'visual-dxf',
@@ -65,9 +99,15 @@ export default defineConfig({
       // firefox/webkit/Mobile* δεν έχουν testMatch, άρα έτρεχαν κι αυτά τα 43 visual tests και
       // συγκρίνονταν με τα ΙΔΙΑ 40 golden (chromium/Windows) ⇒ 172 βέβαιες αποτυχίες, και σε
       // Linux runner αποτυγχάνει ακόμα και το chromium. Φρουρείται από CHECK 3.46 (ADR-775).
+      //
+      // ✅ 09/09: η ΡΙΖΑ εκείνου του περιστατικού έκλεισε — τα γενικά projects φέρουν πλέον
+      // `testIgnore: GENERIC_TEST_IGNORE`, οπότε δεν σηκώνουν ΚΑΘΟΛΟΥ spec που ανήκει σε
+      // ειδικό project. Το ρητό πρότυπο μένει: είναι η ΔΕΥΤΕΡΗ γραμμή άμυνας, και μόνο αυτή
+      // φυλάγεται από πύλη. Μια μέρα που κάποιος δώσει testMatch σε γενικό project, η ανοχή
+      // αυτή θα είναι ξανά ο λόγος που δεν χάθηκαν golden.
       snapshotPathTemplate:
         'src/subapps/dxf-viewer/e2e/__snapshots__/{testFilePath}/{arg}-{projectName}-{platform}{ext}',
-      testMatch: ['**/dxf-viewer/e2e/dxf-visual-regression.spec.ts'],
+      testMatch: [DEDICATED_SPECS.visualDxf],
       timeout: 120000,
     },
     {
@@ -92,13 +132,63 @@ export default defineConfig({
       // βλ. σχόλιο στο visual-dxf — ίδιος λόγος, ίδια πύλη (CHECK 3.46).
       snapshotPathTemplate:
         'src/subapps/dxf-viewer/e2e/__snapshots__/{testFilePath}/{arg}-{projectName}-{platform}{ext}',
-      testMatch: ['**/dxf-viewer/e2e/bim-3d-visual-regression.spec.ts'],
+      testMatch: [DEDICATED_SPECS.visualBim3d],
       timeout: 180000,
+    },
+    {
+      /*
+        ADR-847 §9 — η πύλη κίνησης κάμερας (CHECK 3.77). ΔΙΚΟ της project και όχι σκέτο
+        `chromium`, για ΔΥΟ λόγους που κανένας δεν είναι αισθητικός:
+
+        1. 🔴 **Το MapLibre ΕΙΝΑΙ WebGL.** Σε runner χωρίς GPU ο Chrome πέφτει στον SwiftShader,
+           και **από το Chrome 130** η πτώση αυτή είναι υπό κατάργηση: χωρίς το _ρητό_
+           `--enable-unsafe-swiftshader` το WebGL context προειδοποιεί σήμερα και χάνεται
+           αύριο (Chromium docs/gpu/swiftshader.md). Χάρτης που δεν κτίζεται = πύλη που
+           κοκκινίζει για λόγο άσχετο με την κίνηση — δηλαδή πύλη που δεν λέει τίποτα.
+           Έχει πληρωθεί ήδη μία φορά εδώ: δες `visual-bim-3d` παραπάνω, ίδια σημαίες.
+
+        2. ⚠️ **Το `timeout` του project είναι ΚΑΙ του `beforeAll`.** Η μέτρηση γίνεται ΜΙΑ φορά
+           στο `beforeAll` (πέντε πτήσεις, ~1.000 καρέ) και με λογισμική απόδοση το κάθε
+           καρέ κοστίζει πολλαπλάσια. Με τα προεπιλεγμένα 30s η πύλη θα κοκκίνιζε στο
+           CI για **ταχύτητα μηχανής**, τη στιγμή που το παγωμένο ρολόι φροντίζει ώστε οι
+           αριθμοί να ΜΗΝ εξαρτώνται από αυτήν. Αργό ≠ λάθος.
+
+        ⚠️ ΚΑΜΙΑ `snapshotPathTemplate`: η πύλη κρίνει **αριθμούς**, όχι εικόνες — άρα δεν
+        υπάρχει golden ούτε εξάρτηση από πλατφόρμα (CHECK 3.46 ομάδα Β: `golden-default`).
+      */
+      name: 'camera-motion',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 900 },
+        deviceScaleFactor: 1,
+        navigationTimeout: 120000,
+        launchOptions: {
+          args: [
+            '--use-gl=angle',
+            '--use-angle=swiftshader',
+            '--enable-unsafe-swiftshader',
+            '--ignore-gpu-blocklist',
+          ],
+        },
+      },
+      testMatch: [DEDICATED_SPECS.cameraMotion],
+      timeout: 300000,
     },
   ],
   webServer: {
     command: 'npm run dev:fast',
-    url: `${baseURL}/test-harness/dxf-canvas`,
+    /*
+      ⚠️ Η ΔΙΕΥΘΥΝΣΗ ΕΤΟΙΜΟΤΗΤΑΣ ΕΙΝΑΙ ΠΑΡΑΚΑΜΨΙΜΗ, ΚΑΙ ΔΕΝ ΕΙΝΑΙ ΚΑΠΡΙΤΣΙΟ.
+      Η προεπιλογή μένει **ακριβώς** ό,τι ήταν (`/test-harness/dxf-canvas`), αλλά μια
+      σουίτα που ΔΕΝ αγγίζει τον DXF viewer πληρώνει αλλιώς την **κρύα μεταγλώττισή** του
+      μόνο και μόνο για να απαντήσει «ο server σηκώθηκε;» — και, με
+      `reuseExistingServer`, ένας server που σηκώθηκε αλλού μοιάζει **κάτω** όσο η
+      διαδρομή αυτή μεταγλωττίζεται ακόμη, οπότε το Playwright ξεκινά **δεύτερο**.
+      Το CHECK 3.77 (`camera-motion-gate.yml`) προθερμαίνει τη ΔΙΚΗ του διαδρομή με
+      πραγματικό user-agent και τη δηλώνει εδώ — μηδέν διπλός server, μηδέν άσχετη
+      μεταγλώττιση, μηδέν εξάρτηση από εσωτερικά του Playwright.
+    */
+    url: process.env.PLAYWRIGHT_WEB_SERVER_URL || `${baseURL}/test-harness/dxf-canvas`,
     reuseExistingServer: true,
     timeout: 600 * 1000,
     stderr: 'pipe',

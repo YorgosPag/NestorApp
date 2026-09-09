@@ -42,5 +42,14 @@ export const CAMERA_HOPS: readonly CameraHop[] = [
   { id: 'zoomOnly', label: 'ίδιο σημείο · ζουμ 12→17 (μόνο ζουμ)',     center: [23.7616, 38.0160], zoom: 17, expectsArc: false },
 ] as const;
 
+/**
+ * **Το κάδρο στο οποίο ισχύουν οι μετρήσεις**, σε εικονοστοιχεία.
+ *
+ * 🔴 Δηλώνεται εδώ ώστε να το ξέρουν **και οι δύο** αναγνώστες: το CSS το καρφώνει, και
+ * η πύλη το **επαληθεύει**. Αν αποκλίνουν, οι αριθμοί συγκρίνονται με άλλες συνθήκες —
+ * σιωπηλά, και για πάντα.
+ */
+export const MEASUREMENT_FRAME = { width: 960, height: 352 } as const;
+
 /** Το `id` του `<script type="application/json">` από όπου διαβάζει το spec. */
 export const RESULTS_ELEMENT_ID = 'camera-motion-results';

@@ -17,6 +17,9 @@
   "ciOnlyGates": {
     "3.40": {
       "reason": "Πύλη αντίθεσης σε ΧΡΟΝΟ ΕΚΤΕΛΕΣΗΣ (ADR-770 Στρώμα 2β). ΔΕΝ τρέχει σε pre-commit ΕΠΙΤΗΔΕΣ, και ο λόγος είναι δομικός: χρειάζεται dev server + πραγματικό browser (Playwright) για να αφήσει τον browser να λύσει κάθε τιμή — δηλαδή δεκάδες δευτερόλεπτα και εγκατεστημένους browsers, που δεν έχουν θέση σε hook. Layer 2 = job στο υπάρχον ui-contrast-ratchet.yml. Το λέει ρητά και η ίδια η γραμμή του CLAUDE.md."
+    },
+    "3.77": {
+      "reason": "Πύλη κίνησης της κάμερας (ADR-847 §9-§10.8): «πέταξε ο χάρτης, ή πήδηξε;». ΔΕΝ τρέχει σε pre-commit ΕΠΙΤΗΔΕΣ, και ο λόγος είναι δομικός — ο ίδιος με το 3.40: χρειάζεται Next dev server + πραγματικό browser (Playwright/Chromium με ρητό swiftshader, γιατί το MapLibre ΕΙΝΑΙ WebGL) ώστε να πετάξει αληθινός χάρτης με παγωμένο ρολόι και να μετρηθεί διάρκεια + ΣΧΗΜΑ διαδρομής. Λεπτά, όχι δευτερόλεπτα, και εγκατεστημένοι browsers — δεν έχουν θέση σε hook. Layer 2 = .github/workflows/camera-motion-gate.yml (job flight· το job judgment τρέχει τη ΜΕΖΟΥΡΑ σε jest, χωρίς browser). Το κόστος εγκρίθηκε ρητά από τον Giorgio (2026-09-09) και το workflow είναι path-filtered."
     }
   }
 }

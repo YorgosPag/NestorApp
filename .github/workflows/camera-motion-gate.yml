@@ -1,0 +1,252 @@
+name: T2 🎥 Camera Motion Gate (CHECK 3.77)
+
+# =============================================================================
+# CHECK 3.77 — ADR-847 §10.8. «ΠΕΤΑΞΕ, Ή ΠΗΔΗΞΕ;»
+#
+# ΤΟ ΠΕΡΙΣΤΑΤΙΚΟ ΠΟΥ ΤΟ ΓΕΝΝΗΣΕ
+# ------------------------------
+# Στις 2026-09-09 έφυγε στην ιστορία (`3d0d715e`) κώδικας που έκανε **κάθε μακρινή πτήση
+# χάρτη ακαριαίο πήδημα**: `300 χλμ ⇒ 2 ms`, `700 χλμ ⇒ 1 ms`, `ζουμ 12→17 ⇒ 1 ms`.
+# **Δεκατρία tests ήταν πράσινα** — γιατί ρωτούσαν *«κλήθηκε το `flyTo`;»* και όχι
+# *«πέταξε;»*. Χειρότερα: η ίδια η άγκυρα **απαιτούσε ρητά** τη σπασμένη παράμετρο,
+# δηλαδή **επικύρωνε τη βλάβη**.
+#
+# ⚠️ ΚΑΜΙΑ ΣΤΑΤΙΚΗ ΑΝΑΛΥΣΗ ΔΕΝ ΜΠΟΡΕΙ ΝΑ ΤΟ ΔΕΙ. Η κλήση γίνεται. Οι τύποι κλείνουν. Το
+# κάδρο προσγειώνεται στο σωστό σημείο. Το μόνο που λείπει είναι **τα δευτερόλεπτα
+# ανάμεσα** — και αυτά υπάρχουν μόνο σε χάρτη που όντως πέταξε.
+#
+# ΤΙ ΤΡΕΧΕΙ ΕΔΩ, ΚΑΙ ΓΙΑΤΙ ΕΙΝΑΙ ΔΥΟ ΠΡΑΓΜΑΤΑ ΚΑΙ ΟΧΙ ΕΝΑ
+# --------------------------------------------------------
+#   · job `judgment` — **η κρίση**, καθαρή και ντετερμινιστική: `cameraTrajectory` /
+#     `didFly` / `readsAsJourney` πάνω σε **χειρόγραφες** διαδρομές (πτήση · πήδημα ·
+#     σύρσιμο). Χωρίς browser, χωρίς server: δευτερόλεπτα. Αν σπάσει η **μεζούρα**, το
+#     μαθαίνουμε εδώ, φθηνά, και δεν το ψάχνουμε μέσα σε αποτυχία playwright.
+#   · job `flight` — **η πτήση**: αληθινός MapLibre, οι αληθινές επιλογές της εφαρμογής
+#     (`cameraFlight('travel')`), παγωμένο ρολόι, **έξι κριτήρια**.
+#
+# Μια πύλη με «ή» ανάμεσά τους θα έμενε πράσινη πάνω στο μισό ελάττωμα: σωστή μεζούρα σε
+# χάρτη που δεν πέταξε, ή σωστή πτήση κριμένη με χαλασμένη μεζούρα.
+#
+# ΚΟΣΤΟΣ — ΕΓΚΡΙΘΗΚΕ ΡΗΤΑ, ΜΕ ΤΑ ΝΟΥΜΕΡΑ ΜΠΡΟΣΤΑ
+# -----------------------------------------------
+# Η ίδια η πύλη είναι **~30s** (μετρημένο τοπικά: 6 passed / 30s). Το **job** όμως πληρώνει
+# `pnpm install` **με** scripts + chromium + κρύα μεταγλώττιση turbopack: **λεπτά**, όχι
+# δευτερόλεπτα — ακριβώς όπως το αδελφό job `runtime-contrast` του `ui-contrast-ratchet.yml`.
+# Γι' αυτό είναι **path-filtered**: πληρώνεται μόνο όταν αγγίζεται κάτι που μπορεί να
+# αλλάξει την απάντηση.
+#
+# 🔶 ΔΗΛΩΜΕΝΟ ΟΡΙΟ (μην το ανακαλύψεις ξανά): η πύλη κρίνει **ΤΗΝ ΑΡΧΗ**, όχι κάθε σημείο
+# κλήσης. Ένας νέος καλών που παρακάμπτει το `cameraFlight()` δεν φαίνεται εδώ — αυτό το
+# φυλάνε οι άγκυρες jest του ADR-847 (`src/lib/geo/__tests__/camera-motion.test.ts`), που
+# τρέχουν στο job `judgment` παρακάτω. Δύο ερωτήματα, δύο φρουροί.
+#
+# ⚠️ ΚΑΝΕΝΑ `continue-on-error`. Δοκιμάστηκε αλλού και κόστισε: το `coverage-ratchet.yml`
+# κράτησε 11 tests κόκκινα στο main επί έξι commits (ADR-587 §6.1). Το tier αλλάζει το
+# **μέσο ειδοποίησης**, ποτέ την αυστηρότητα.
+# =============================================================================
+
+on:
+  pull_request:
+    paths:
+      # Η ΑΡΧΗ και Η ΚΡΙΣΗ — τα δύο αρχεία που ορίζουν «τι σημαίνει πτήση».
+      - 'src/lib/geo/camera-motion.ts'
+      - 'src/lib/geo/camera-trajectory.ts'
+      - 'src/lib/geo/__tests__/camera-motion.test.ts'
+      - 'src/lib/geo/__tests__/camera-trajectory.test.ts'
+      # ΤΟ ΣΥΝΟΡΟ ΤΟΥ ΧΑΡΤΗ — από εδώ περνά το παγωμένο ρολόι (`freezeMapClock`) και το
+      # ίδιο το `Map`. Αλλαγή εδώ αλλάζει τι μετριέται, χωρίς να αγγίξει την αρχή.
+      - 'src/lib/maps/**'
+      # ⚠️ `src/app/**/test-harness/…` ΚΑΙ ΟΧΙ `src/app/test-harness/…`: το harness ζει μέσα
+      # σε route group (`(bare)`), και ένα route group ΕΙΝΑΙ ΦΑΚΕΛΟΣ — δεν φαίνεται στο URL,
+      # φαίνεται όμως στο μονοπάτι. Το ίδιο glob είχε ήδη γραφτεί λάθος μία φορά στο
+      # `ui-contrast-ratchet.yml` και **δεν πυροδοτούσε ΠΟΤΕ** (ίδιο μάθημα με CHECK 3.52).
+      - 'src/app/**/test-harness/camera-motion/**'
+      # ΤΟ ΣΤΥΛ ΜΕ ΤΟ ΟΠΟΙΟ ΠΕΤΑΕΙ — το `OSM_MAP_STYLE` είναι είσοδος της μέτρησης.
+      - 'src/components/projects/ika/map-shared/**'
+      # ΟΙ ΔΥΟ ΠΟΡΤΕΣ ΠΟΥ ΚΛΕΙΝΟΥΝ ΤΟ HARNESS: 403 από τον bot-blocker, 404 από τον φρουρό
+      # έκθεσης. Και οι δύο κάνουν την πύλη κόκκινη για λόγο άσχετο με την κίνηση.
+      - 'src/middleware.ts'
+      - 'src/config/test-harness-access.ts'
+      # Η ΕΚΤΕΛΕΣΗ: το project `camera-motion` (swiftshader + timeout) και η εντολή.
+      - 'playwright.config.ts'
+      - 'package.json'
+      - '.github/workflows/camera-motion-gate.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/lib/geo/camera-motion.ts'
+      - 'src/lib/geo/camera-trajectory.ts'
+      - 'src/lib/geo/__tests__/camera-motion.test.ts'
+      - 'src/lib/geo/__tests__/camera-trajectory.test.ts'
+      - 'src/lib/maps/**'
+      - 'src/app/**/test-harness/camera-motion/**'
+      - 'src/components/projects/ika/map-shared/**'
+      - 'src/middleware.ts'
+      - 'src/config/test-harness-access.ts'
+      - 'playwright.config.ts'
+      - 'package.json'
+      - '.github/workflows/camera-motion-gate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: camera-motion-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # Η ΜΕΖΟΥΡΑ — καθαρή κρίση, χωρίς browser και χωρίς server. Δευτερόλεπτα.
+  # Τρέχει ΑΝΕΞΑΡΤΗΤΑ από την πτήση: αν η κρίση είναι χαλασμένη, το θέλουμε ονομασμένο εδώ
+  # και όχι κρυμμένο μέσα σε αποτυχία playwright που θα διαβαζόταν ως «ο χάρτης έφταιξε».
+  # ═══════════════════════════════════════════════════════════════════════════════
+  judgment:
+    name: 🧮 Η κρίση της τροχιάς (jest, χωρίς browser)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      # ⚠️ pnpm, ΠΟΤΕ `npm ci`: το repo δεν έχει καθόλου `package-lock.json` και το `engines`
+      # λέει κατά λέξη `"npm": "please-use-pnpm"` — ένα `npm ci` σκάει πριν φτάσει σε έλεγχο.
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      # `--ignore-scripts` όπως στο `e2e-executability.yml`: κανένα postinstall build δεν
+      # χρειάζεται για tests που δεν σηκώνουν την εφαρμογή.
+      - name: 📦 Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # 🔑 ΔΥΟ ΣΟΥΙΤΕΣ, ΚΑΙ ΕΙΝΑΙ ΟΙ ΔΥΟ ΜΙΣΕΣ ΤΗΣ ΙΔΙΑΣ ΑΠΟΔΕΙΞΗΣ:
+      #   · `camera-trajectory` — η ΜΕΖΟΥΡΑ ξεχωρίζει πτήση / πήδημα / σύρσιμο σε
+      #     χειρόγραφες διαδρομές. Χωρίς αυτό, τα έξι κριτήρια παρακάτω κρίνουν με άγνωστο
+      #     όργανο.
+      #   · `camera-motion` — η ΑΡΧΗ είναι μία και δεν ξανακαρφώνεται σταθερά (η άγκυρα
+      #     απαιτεί ρητά την ΑΠΟΥΣΙΑ του `maxDuration`, που ήταν η βλάβη του `3d0d715e`).
+      - name: 🧪 Άγκυρες ADR-847 — μεζούρα τροχιάς + η μία αρχή κίνησης
+        run: >
+          pnpm exec jest
+          src/lib/geo/__tests__/camera-trajectory.test.ts
+          src/lib/geo/__tests__/camera-motion.test.ts
+          --ci
+
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # Η ΠΤΗΣΗ — αληθινός MapLibre, αληθινές επιλογές, παγωμένο ρολόι.
+  #
+  # ⚠️ ΤΟ HARNESS ΕΙΝΑΙ DEV-ONLY (`isTestHarnessRouteEnabled` ⇒ 404 σε production build).
+  # Γι' αυτό τρέχει `next dev`, όχι `next build && next start` — ίδια απόφαση με το job
+  # `runtime-contrast` του `ui-contrast-ratchet.yml`.
+  # ═══════════════════════════════════════════════════════════════════════════════
+  flight:
+    name: 🎥 CHECK 3.77 — πέταξε, ή πήδηξε; (6 κριτήρια)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    # 🔴 ΨΕΥΤΙΚΑ ΔΙΑΠΙΣΤΕΥΤΗΡΙΑ, ΕΠΙΤΗΔΕΣ — μετρημένο στο αδελφό job, όχι εικασία: χωρίς
+    # `apiKey` το `getAuth(app)` πετά ΚΑΤΑ ΤΗΝ ΑΠΟΤΙΜΗΣΗ του module, μέσα από την αλυσίδα
+    # `global-error.tsx → ErrorBoundary → ErrorTracker → enterprise-api-client → lib/firebase`,
+    # και **κάθε** διαδρομή απαντά 500 — ακόμη και μία που δεν αγγίζει Firebase πουθενά.
+    #
+    # ⚠️ ΔΕΝ είναι μυστικά και ΔΕΝ πρέπει να γίνουν: η πύλη πετάει έναν χάρτη και μετράει
+    # δευτερόλεπτα — δεν διαβάζει, δεν γράφει και δεν αυθεντικοποιεί τίποτα. Το `getAuth`
+    # δεν κάνει δικτυακή κλήση· απαιτεί μόνο να ΥΠΑΡΧΕΙ κλειδί.
+    # ⚠️ ΜΗΝ «λύσεις» μελλοντικό κόκκινο βάζοντας εδώ secrets του παραγωγικού project.
+    env:
+      NEXT_PUBLIC_FIREBASE_API_KEY: ci-camera-motion-no-network
+      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ci.invalid
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: ci-camera-motion
+      NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ci-camera-motion.appspot.com
+      NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: '0'
+      NEXT_PUBLIC_FIREBASE_APP_ID: '1:0:web:0'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      # ⚠️ ΧΩΡΙΣ `--ignore-scripts` εδώ, αντίθετα από το job `judgment`: ο Next dev server
+      # πρέπει όντως να σηκωθεί, άρα χρειάζεται τα postinstall builds.
+      - name: 📦 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Μόνο chromium: το project `camera-motion` του `playwright.config.ts` είναι
+      # Desktop Chrome με ρητό swiftshader (το MapLibre ΕΙΝΑΙ WebGL, και από το Chrome 130
+      # η σιωπηλή πτώση σε SwiftShader καταργείται).
+      - name: 🌐 Install chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: 🚀 Start dev server
+        run: pnpm run dev > /tmp/dev-server.log 2>&1 &
+
+      # 🔑 Η ΑΝΑΜΟΝΗ ΕΙΝΑΙ ΓΙΑ ΤΗ ΣΥΓΚΕΚΡΙΜΕΝΗ ΔΙΑΔΡΟΜΗ, ΟΧΙ ΓΙΑ ΤΗ ΡΙΖΑ: «ο server απαντά»
+      # δεν σημαίνει «η διαδρομή μεταγλωττίστηκε» (turbopack: 60-190s κρύα, μετρημένο). Και
+      # έχει δεύτερο σκοπό: **προθερμαίνει** τη σελίδα, ώστε το `page.goto` του spec να μην
+      # πληρώσει τη μεταγλώττιση μέσα στο δικό του χρονόμετρο.
+      #
+      # ⚠️ ΥΠΟΧΡΕΩΤΙΚΟΣ ΠΡΑΓΜΑΤΙΚΟΣ USER-AGENT: το `src/middleware.ts` μπλοκάρει το
+      # `headlesschrome` με **403 χωρίς σώμα**, χωρίς εξαίρεση για development.
+      - name: ⏳ Wait for the harness route
+        run: |
+          UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36'
+          for i in $(seq 1 60); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' -A "$UA" \
+              http://localhost:3000/test-harness/camera-motion || echo 000)
+            [ "$code" = "200" ] && echo "harness έτοιμο μετά ${i}0s" && exit 0
+            sleep 10
+          done
+          echo "::error::το harness δεν απάντησε 200 σε 600s (τελευταίος κώδικας $code)"
+          tail -80 /tmp/dev-server.log
+          exit 1
+
+      # ⚠️ ΤΟ ΦΙΛΤΡΟ ΕΙΝΑΙ ΣΚΕΤΟ `camera-motion`, ΠΟΤΕ ΠΛΗΡΗΣ ΔΙΑΔΡΟΜΗ: το Playwright
+      # ερμηνεύει τα ορίσματα ως **regex πάνω στο μονοπάτι**, οπότε οι παρενθέσεις του
+      # route group `(bare)` γίνονται ομάδα σύλληψης και το αποτέλεσμα είναι
+      # «No tests found» — δηλαδή **πράσινο που σημαίνει «δεν έτρεξε τίποτα»**.
+      # Η εντολή ζει στο `package.json` (SSoT) και φυλάγεται από το CHECK 3.46 ομάδα Γ.
+      - name: 🎥 CHECK 3.77 — η πύλη κίνησης κάμερας
+        # ⚠️ `PLAYWRIGHT_WEB_SERVER_URL` = Η ΔΙΑΔΡΟΜΗ ΠΟΥ ΜΟΛΙΣ ΠΡΟΘΕΡΜΑΝΑΜΕ, και δεν είναι
+        # καλλωπισμός: με `reuseExistingServer: true` το Playwright ρωτά πρώτα «απαντά κάτι
+        # εδώ;». Η προεπιλογή δείχνει στο harness του DXF viewer — διαδρομή που ΔΕΝ αγγίζει
+        # αυτή η πύλη και που, όσο μεταγλωττίζεται κρύα, κάνει τον server μας να μοιάζει
+        # ΚΑΤΩ ⇒ το Playwright θα σήκωνε **δεύτερο** dev server. Δείχνοντας στη δική μας
+        # ζεστή διαδρομή, η απάντηση είναι άμεση και αληθινή.
+        env:
+          PLAYWRIGHT_WEB_SERVER_URL: http://localhost:3000/test-harness/camera-motion
+        run: pnpm run test:camera-motion
+
+      # Η αναφορά ανεβαίνει ΠΑΝΤΑ: όταν η πύλη κοκκινίσει, η εξήγηση είναι **οι αριθμοί**
+      # (διάρκεια · καμπύλη · καρέ · κάδρο) — χωρίς αυτούς η αιτιολόγηση θα ήταν εικασία.
+      - name: 📤 Upload playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: camera-motion-report
+          path: |
+            playwright-report/
+            reports/junit/playwright.xml
+          if-no-files-found: warn
+
+      # Ο λόγος που σηκώθηκε ο server μπορεί να είναι και ο λόγος που έπεσε η πύλη.
+      - name: 📤 Upload dev server log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: camera-motion-dev-server-log
+          path: /tmp/dev-server.log
+          if-no-files-found: warn
