@@ -1,0 +1,15 @@
+{
+  "stale": {
+    "badge": "The published 3D is older than the drawing",
+    "title": "The drawing changed after publication",
+    "body": "{count, plural, one {One drawing was saved} other {# drawings were saved}} again after the published model was produced. Visitors are seeing the previous form.",
+    "action": "Publish again"
+  },
+  "current": {
+    "badge": "The published 3D matches the drawing"
+  },
+  "unknown": {
+    "badge": "Unknown whether the published 3D still applies",
+    "body": "This model was published before provenance was recorded. Publishing again will answer it definitively."
+  }
+}

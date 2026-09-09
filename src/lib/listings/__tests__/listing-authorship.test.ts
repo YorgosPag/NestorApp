@@ -23,8 +23,10 @@ import {
   listingAuthorshipVoice,
   type ListingAuthorshipVoice,
 } from '../listing-authorship';
-import el from '@/i18n/locales/el/search-results.json';
-import en from '@/i18n/locales/en/search-results.json';
+import searchResultsEl from '@/i18n/locales/el/search-results.json';
+import searchResultsEn from '@/i18n/locales/en/search-results.json';
+import listingDetailEl from '@/i18n/locales/el/listing-detail.json';
+import listingDetailEn from '@/i18n/locales/en/listing-detail.json';
 import { LISTING_AUTHORSHIPS } from '@/types/public-listing';
 
 describe('Α — οι τρεις φωνές, από δύο πεδία', () => {
@@ -127,16 +129,36 @@ describe('Γ — ΤΟ ΥΛΙΚΟ ΕΧΕΙ ΠΡΟΕΛΕΥΣΗ, ΚΑΙ Η ΟΘΟΝ
     // Τα κλειδιά ταξιδεύουν ως **τιμές** — μπαίνουν στο δημοσιευμένο έγγραφο και
     // καταλήγουν αυτούσια σε `t()`. Το CHECK 3.8 βλέπει `t('κυριολεκτικό')`, άρα
     // **δεν βλέπει κανένα από αυτά**: ο μόνος φρουρός τους είναι εδώ.
-    const resolve = (bundle: unknown, key: string): unknown =>
-      key
-        .slice('search-results:'.length)
+    // 🔴 **ΤΟ NAMESPACE ΔΙΑΒΑΖΕΤΑΙ ΑΠΟ ΤΟ ΚΛΕΙΔΙ, ΠΟΤΕ ΔΕΝ ΥΠΟΤΙΘΕΤΑΙ** *(ADR-845 Ο-27)*.
+    //    Ως σήμερα αυτός ο έλεγχος έκοβε **σταθερά** `'search-results:'.length` και έψαχνε σε
+    //    **ένα** πακέτο — και η Φ4.3 μετακόμισε το `modelAlt` στο `listing-detail:`. Τα δύο
+    //    ονόματα έχουν **τυχαία ίδιο μήκος** (15 χαρακτήρες), οπότε το `slice` έβγαζε σωστό
+    //    φύλλο και το έψαχνε σε **λάθος** πακέτο: το test κοκκίνισε μόνο όταν κάποιος το
+    //    ξανάτρεξε, με μήνυμα `undefined` που δεν ονόμαζε τίποτα.
+    //    ⚠️ Πλέον ένα **άγνωστο** namespace είναι ρητή αποτυχία, όχι σιωπηλό `undefined`.
+    const BUNDLES: Record<string, { readonly el: unknown; readonly en: unknown }> = {
+      'search-results': { el: searchResultsEl, en: searchResultsEn },
+      'listing-detail': { el: listingDetailEl, en: listingDetailEn },
+    };
+
+    const resolve = (language: 'el' | 'en', key: string): unknown => {
+      const separator = key.indexOf(':');
+      const bundle = BUNDLES[key.slice(0, separator)];
+      expect(bundle).toBeDefined();
+
+      return key
+        .slice(separator + 1)
         .split('.')
-        .reduce<unknown>((node, segment) => (node as Record<string, unknown>)?.[segment], bundle);
+        .reduce<unknown>(
+          (node, segment) => (node as Record<string, unknown>)?.[segment],
+          bundle[language],
+        );
+    };
 
     for (const authorship of LISTING_AUTHORSHIPS) {
       for (const key of Object.values(LISTING_MATERIAL_KEYS[authorship])) {
-        const greek = resolve(el, key);
-        const english = resolve(en, key);
+        const greek = resolve('el', key);
+        const english = resolve('en', key);
 
         expect(typeof greek).toBe('string');
         expect(typeof english).toBe('string');
@@ -165,7 +187,10 @@ describe('Γ — ΤΟ ΥΛΙΚΟ ΕΧΕΙ ΠΡΟΕΛΕΥΣΗ, ΚΑΙ Η ΟΘΟΝ
     // Το `detail.media.ownerNote` **ονόμαζε** τον ιδιώτη κάτοχο της σημείωσης — δηλαδή
     // το ίδιο το λεξιλόγιο ξαναγεννούσε το λάθος. Αν επιστρέψει, κάποιος ξανάγραψε
     // σταθερή πρόταση για δύο κλάσεις.
-    for (const bundle of [el, en]) {
+    // ⚠️ **Μόνο το `search-results`**, και είναι σωστό: αυτός ο έλεγχος ρωτά αν το **παλιό,
+    //    ενικό σπίτι** άδειασε — και το παλιό σπίτι ήταν εκεί. Το `listing-detail` δεν είχε
+    //    ποτέ `detail.media`, οπότε μια αναφορά του εδώ θα ήταν ερώτηση χωρίς υποκείμενο.
+    for (const bundle of [searchResultsEl, searchResultsEn]) {
       const media = (bundle as { detail: { media: Record<string, unknown> } }).detail.media;
       expect(media.ownerNote).toBeUndefined();
       expect(typeof media.galleryAlt).toBe('object');

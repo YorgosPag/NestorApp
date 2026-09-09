@@ -45,15 +45,18 @@ import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
 import { requirePropertyInTenantScope } from '@/lib/auth/tenant-isolation';
 import { getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { ENTITY_TYPES, FILE_CATEGORIES, FILE_STATUS } from '@/config/domain-constants';
-import { type AgencyMediaCandidate } from '@/services/listings/agency-media-publication';
-import { supersededByPublication } from '@/services/listings/agency-media-selection';
+import { FILE_STATUS } from '@/config/domain-constants';
 import { FILE_TYPE_CONFIG } from '@/config/file-upload-config';
 import {
   buildFinalizeFileRecordUpdate,
   type FileRecordBase,
 } from '@/services/file-record';
 import { buildPublishedModelFileRecord } from '@/lib/listings/model-file-record';
+import {
+  findSupersededModels,
+  readModelSourceRevisions,
+  readSceneFileIds,
+} from './model-source-lookup';
 import { uploadPublicFile } from '@/services/storage-admin/public-upload.service';
 import {
   MODEL_DECLARATION_METADATA_KEY,
@@ -109,7 +112,11 @@ interface PropertyModelResponse {
  */
 async function readModelUpload(
   request: NextRequest,
-): Promise<{ file: File; declaration: ModelPublicationDeclaration }> {
+): Promise<{
+  file: File;
+  declaration: ModelPublicationDeclaration;
+  sceneFileIds: readonly string[];
+}> {
   const formData = await request.formData();
 
   const file = formData.get('file');
@@ -128,7 +135,11 @@ async function readModelUpload(
   //    δημοσίευσης. Ο ψήστης τον ξαναρωτά — ζώνη **και** τιράντες (N.7.2 #4).
   if (!hasSignatory(declaration.signatory)) throw new ApiError(400, 'MODEL_SIGNATORY_REQUIRED');
 
-  return { file, declaration };
+  // ⚠️ **ΚΑΜΙΑ ΑΡΝΗΣΗ ΓΙΑ ΤΟΝ ΚΑΤΑΛΟΓΟ ΣΧΕΔΙΩΝ** *(ADR-845 Ο-25)*, σε αντίθεση με τα τέσσερα
+  //    από πάνω: ένα σώμα που δεν τον φέρει σημαίνει *«δεν κατέγραψα προέλευση»* ⇒ η
+  //    παλαιότητα μένει `unknown`, που είναι **τίμιο**. Η καταγραφή δεν επιτρέπεται να
+  //    ακυρώσει τη δημοσίευση — ίδιος κανόνας με την ιστορία της διαδοχής *(Ο-27)*.
+  return { file, declaration, sceneFileIds: readSceneFileIds(formData.get('sceneFileIds')) };
 }
 
 async function handlePost(
@@ -142,12 +153,18 @@ async function handlePost(
 
   await requirePropertyInTenantScope({ ctx, propertyId, path: request.nextUrl.pathname });
 
-  const { file, declaration } = await readModelUpload(request);
+  const { file, declaration, sceneFileIds } = await readModelUpload(request);
 
   // 🔴 **ΤΟ ΣΧΗΜΑ ΤΟΥ ΕΓΓΡΑΦΟΥ ΔΕΝ ΑΠΟΦΑΣΙΖΕΤΑΙ ΕΔΩ** *(ADR-845 §9 Ο-13)*. Η πόρτα κρίνει
   //    κηδεμονία και σχήμα· το *«τι έγγραφο γεννιέται — και είναι εξουσιοδοτημένο να φύγει;»*
   //    το απαντά **ένα** σώμα, το οποίο εκτελεί αυτούσιο και η άγκυρα της ραφής. Όσο η
   //    απάντηση ζούσε **μόνο** εδώ, καμία δοκιμή δεν μπορούσε να τη ρωτήσει — και δεν τη ρώτησε.
+  // 🔑 **Ο ΠΕΛΑΤΗΣ ΕΙΠΕ *ΠΟΙΑ*, ΕΔΩ ΔΙΑΒΑΖΕΤΑΙ *ΣΕ ΠΟΙΟ REVISION*** *(ADR-845 Ο-25)*. Ίδια
+  //    ραφή με το `at`: ένα revision από τον πελάτη θα ήταν ισχυρισμός του καλούντος, και θα
+  //    μπορούσε να είναι μπαγιάτικο τη στιγμή που γράφεται.
+  const adminDb = getAdminFirestore();
+  const sourceRevisions = await readModelSourceRevisions(adminDb, ctx.companyId, sceneFileIds);
+
   const { fileId, storagePath, recordBase } = buildPublishedModelFileRecord({
     companyId: ctx.companyId,
     propertyId,
@@ -155,6 +172,7 @@ async function handlePost(
     originalFilename: file.name,
     createdBy: ctx.uid,
     declaration,
+    sourceRevisions,
   });
 
   // 🔑 **ΡΩΤΑΜΕ ΠΡΙΝ ΓΡΑΨΟΥΜΕ, ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ.** Μετά την εγγραφή, ο νεοφερμένος θα ήταν
@@ -163,61 +181,17 @@ async function handlePost(
   //    την ίδια στιγμή που δημοσιεύεται. *(Το `supersedeFileRecord` φυλάει ήδη την ταυτότητα,
   //    αλλά μια εγγύηση που δεν χρειάζεται να ενεργοποιηθεί είναι καλύτερη από μία που
   //    χρειάζεται.)*
-  const supersedes = await findSupersededModels(ctx.companyId, propertyId, recordBase);
+  const supersedes = await findSupersededModels(adminDb, ctx.companyId, propertyId, recordBase);
 
   await writeModel({ fileId, storagePath, recordBase, file, declaration, createdBy: ctx.uid });
 
   logger.info('Μοντέλο ακινήτου ανέβηκε', {
     fileId, propertyId, companyId: ctx.companyId, bytes: file.size,
     state: declaration.state, scope: declaration.scope, supersedes: supersedes.length,
+    sources: sourceRevisions.length,
   });
 
   return apiSuccess<PropertyModelResponse>({ fileId, storagePath, supersedes });
-}
-
-/**
- * **Ποια ενεργά αρχεία δημοσιεύουν ΤΟ ΙΔΙΟ ΠΡΑΓΜΑ;** — η κρίση, ποτέ η πράξη (Ο-27).
- *
- * 🔑 **ΚΑΝΕΝΑ ΝΕΟ ΕΥΡΕΤΗΡΙΟ, ΚΑΙ ΤΟ ΦΙΛΤΡΟ ΤΑΥΤΟΤΗΤΑΣ ΜΕΝΕΙ ΣΤΗ ΜΝΗΜΗ.** Τα τέσσερα πεδία
- * του ερωτήματος είναι **πρόθεμα** του υπάρχοντος σύνθετου
- * `[companyId, entityType, entityId, category, isDeleted]` — του **ίδιου** που εξυπηρετεί τον
- * αναγνώστη της δημοσίευσης. Ένα πέμπτο σκέλος `publicationIdentity` θα απαιτούσε **νέο**
- * ευρετήριο για να διαλέξει ανάμεσα σε **λίγες** εγγραφές: ένα ακίνητο έχει μονοψήφιο αριθμό
- * μοντέλων *(και το `PUBLISHED_MEDIA_LIMIT` το κρατά έτσι)*.
- *
- * 🔴 **Η ΙΣΟΤΗΤΑ ΤΑΥΤΟΤΗΤΑΣ ΔΕΝ ΓΡΑΦΕΤΑΙ ΕΔΩ** — τη ρωτά το `supersededByPublication`, το
- * **ίδιο** σώμα που ζει δίπλα στην επιμέλεια της αγγελίας. Μια δεύτερη σύγκριση εδώ θα ήταν
- * δύο απαντήσεις στο *«είναι αυτά τα δύο το ίδιο πράγμα;»*, ελεύθερες να αποκλίνουν — και η
- * απόκλιση θα ήταν **αόρατη**: η αγγελία θα έδειχνε ένα, ο κάδος θα κρατούσε δύο ενεργά.
- *
- * ⚠️ **Δεν πετά ποτέ.** Η ιστορία δεν επιτρέπεται να ακυρώσει τη δημοσίευση: το κοινό είναι
- * **ήδη** σωστό από την επιμέλεια, ό,τι κι αν πει αυτό το ερώτημα. Η αποτυχία **ονομάζεται**
- * στο ημερολόγιο, ώστε η διαφορά «κανένας προκάτοχος» ⇄ «δεν κοιτάξαμε» να μένει ορατή.
- */
-async function findSupersededModels(
-  companyId: string,
-  propertyId: string,
-  newcomer: FileRecordBase,
-): Promise<readonly string[]> {
-  try {
-    const snapshot = await getAdminFirestore()
-      .collection(COLLECTIONS.FILES)
-      .where('companyId', '==', companyId)
-      .where('entityType', '==', ENTITY_TYPES.PROPERTY)
-      .where('entityId', '==', propertyId)
-      .where('category', '==', FILE_CATEGORIES.MODELS)
-      .get();
-
-    return supersededByPublication(
-      snapshot.docs.map((doc) => ({ ...(doc.data() as AgencyMediaCandidate), id: doc.id })),
-      newcomer as AgencyMediaCandidate,
-    );
-  } catch (error) {
-    logger.warn('Οι προκάτοχοι του μοντέλου δεν διαβάστηκαν — η αγγελία μένει σωστή, η ιστορία όχι', {
-      propertyId, companyId, error: getErrorMessage(error),
-    });
-    return [];
-  }
 }
 
 /**

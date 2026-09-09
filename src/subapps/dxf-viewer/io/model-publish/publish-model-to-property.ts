@@ -43,7 +43,10 @@ import type {
 import { measureModelBytes } from '@/services/listings/gltf-model-measure';
 import { FileRecordService } from '@/services/file-record.service';
 
-import { resolveExportFloors } from '../../export/core/export-floor-scope';
+import {
+  resolveExportFloors,
+  type ResolvedExportFloor,
+} from '../../export/core/export-floor-scope';
 import { exportFloorsToMesh3d } from '../../export/formats/mesh3d-export-adapter';
 import type { ExportDeps, ExportFloorScope } from '../../export/types';
 
@@ -132,7 +135,13 @@ export async function publishModelToProperty(
   request: ModelPublishRequest,
   deps: ExportDeps,
 ): Promise<ModelPublishOutcome> {
-  const bytes = await buildModelBytes(request.scope, deps);
+  // 🔑 **ΤΑ ΙΔΙΑ ΕΠΙΠΕΔΑ, ΜΙΑ ΦΟΡΑ** *(ADR-845 Ο-25)*: ο κατάλογος των σχεδίων που θα
+  //    καταγραφούν πρέπει να είναι **ακριβώς** αυτός που παρήγαγε τα bytes. Δεύτερη κλήση του
+  //    `resolveExportFloors` θα ήταν δεύτερη απάντηση στο *«ποιοι όροφοι;»* — και θα μπορούσε
+  //    να δει **άλλη** σκηνή αν κάτι φορτώθηκε ανάμεσα στις δύο.
+  const floors = resolveExportFloors(deps.levelScenes, deps.activeLevelId, request.scope);
+
+  const bytes = await buildModelBytes(floors, request.scope, deps);
   if (bytes === null) return { ok: false, refusal: 'no-geometry' };
 
   const declaration = await declareModel(bytes, request);
@@ -145,7 +154,7 @@ export async function publishModelToProperty(
     return { ok: false, refusal: 'declaration-too-large' };
   }
 
-  return sendModel(request.propertyId, bytes, encoded, request.actorUid);
+  return sendModel(request.propertyId, bytes, encoded, request.actorUid, sceneFileIdsOf(floors));
 }
 
 /**
@@ -155,10 +164,10 @@ export async function publishModelToProperty(
  * δηλαδή το «τίποτα» είναι **δηλωμένη** απάντηση, όχι σφάλμα. Διαβάζεται εδώ ως τέτοιο.
  */
 async function buildModelBytes(
+  floors: readonly ResolvedExportFloor[],
   scope: ModelPublishScope,
   deps: ExportDeps,
 ): Promise<Uint8Array | null> {
-  const floors = resolveExportFloors(deps.levelScenes, deps.activeLevelId, scope);
   const stacked = scope === 'all-single';
 
   const out = await exportFloorsToMesh3d(floors, deps, {
@@ -175,6 +184,35 @@ async function buildModelBytes(
   if (glb === undefined) return null;
 
   return new Uint8Array(await glb.blob.arrayBuffer());
+}
+
+/**
+ * 🏆 **ΠΟΙΑ ΣΧΕΔΙΑ ΠΑΡΗΓΑΓΑΝ ΑΥΤΟ ΤΟ ΜΟΝΤΕΛΟ** — ταυτοποιητικά, **ποτέ εκδόσεις** (Ο-25).
+ *
+ * 🔴 **Ο ΠΕΛΑΤΗΣ ΛΕΕΙ *ΠΟΙΑ*, Ο ΔΙΑΚΟΜΙΣΤΗΣ ΓΡΑΦΕΙ *ΣΕ ΠΟΙΟ REVISION*.** Είναι η **ίδια** ραφή
+ * με το `at` του δημόσιου σχήματος *(`timeCreated` του αντικειμένου, ποτέ ρολόι πελάτη)*: ένα
+ * revision που θα ερχόταν από εδώ θα ήταν **ισχυρισμός του καλούντος**, και θα μπορούσε να
+ * είναι μπαγιάτικο **τη στιγμή που γράφεται** — ο πελάτης κρατά ένα στιγμιότυπο της σκηνής,
+ * όχι το ζωντανό έγγραφο.
+ *
+ * ⚠️ **Επίπεδο χωρίς `sceneFileId` απλώς παραλείπεται.** Συμβαίνει: ένα επίπεδο που δεν έχει
+ * ακόμη αποθηκευτεί δεν έχει αρχείο σκηνής. Το μοντέλο **δημοσιεύεται** — η καταγραφή είναι
+ * **μερική**, και μια μερική καταγραφή πιάνει λιγότερα, ποτέ λάθος: το `modelFreshness` ρωτά
+ * *«άλλαξε κάποιο από **αυτά**;»*, όχι *«είναι αυτά όλα;»*.
+ *
+ * 🔑 **Σύνολο, όχι πίνακας**: δύο επίπεδα **μπορούν** να δείχνουν στο ίδιο αρχείο *(το «sticky
+ * fileId» του ADR-399, καταγγελμένο στο `cross-floor-link`)* — και τότε ένα διπλότυπο θα
+ * πλήρωνε την ίδια ανάγνωση δύο φορές στον διακομιστή.
+ */
+function sceneFileIdsOf(floors: readonly ResolvedExportFloor[]): readonly string[] {
+  const ids = new Set<string>();
+
+  for (const floor of floors) {
+    const fileId = floor.level.sceneFileId;
+    if (typeof fileId === 'string' && fileId !== '') ids.add(fileId);
+  }
+
+  return [...ids];
 }
 
 /**
@@ -209,10 +247,16 @@ async function sendModel(
   bytes: Uint8Array,
   declaration: string,
   actorUid: string,
+  sceneFileIds: readonly string[],
 ): Promise<ModelPublishOutcome> {
   const body = new FormData();
   body.append('file', new Blob([bytes], { type: 'model/gltf-binary' }), `${propertyId}.glb`);
   body.append('declaration', declaration);
+  // 🔑 **ΞΕΧΩΡΙΣΤΟ ΠΕΔΙΟ, ΟΧΙ ΜΕΣΑ ΣΤΗ ΔΗΛΩΣΗ** *(Ο-25)*. Η δήλωση **ψήνεται στο artifact**
+  //    και ταξιδεύει με το αρχείο· τα `file_…` είναι **ιδιωτικά αναγνωριστικά** που το
+  //    `LISTING_MODEL_SOURCE_REF` απορρίπτει ονομαστικά για δημόσιο υλικό. Μπαίνουν στο ίδιο
+  //    multipart — καμία δεύτερη κλήση, καμία δεύτερη εγγραφή.
+  body.append('sceneFileIds', JSON.stringify(sceneFileIds));
 
   let response: Response;
   try {

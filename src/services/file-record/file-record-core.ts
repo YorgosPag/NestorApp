@@ -31,6 +31,9 @@ import type { DocumentClassifyAnalysis } from '@/schemas/ai-analysis';
 // ADR-716 Φ5 — ΜΙΑ ονοματολογία μονάδων (SSoT: `utils/scene-units`). Type-only ⇒ το
 // «NO SDK DEPENDENCIES» συμβόλαιο αυτού του module μένει άθικτο (μηδέν runtime import).
 import type { SceneUnits } from '@/subapps/dxf-viewer/utils/scene-units';
+// ADR-845 Ο-25 — δανεικός τύπος, ποτέ δεύτερη διατύπωση. Type-only ⇒ το «NO SDK
+// DEPENDENCIES» συμβόλαιο αυτού του module μένει άθικτο.
+import type { ModelSourceRevision } from '@/lib/listings/model-source-revisions';
 import {
   FILE_STATUS,
   FILE_LIFECYCLE_STATES,
@@ -178,6 +181,16 @@ export interface BuildPendingFileRecordInput {
    * αλλάξει τίποτα εδώ — ακριβώς το ιδίωμα του `classification` από πάνω.
    */
   publicationIdentity?: string;
+
+  /**
+   * **Από ποια έκδοση σχεδίου παρήχθη** (ADR-845 Ο-25) — δες
+   * {@link FileRecord.sourceRevisions} για ολόκληρο το σκεπτικό.
+   *
+   * ⚠️ **Ο τύπος είναι δανεικός, όχι ξαναγραμμένος**: μια δεύτερη διατύπωση του
+   * `{ fileId, revision }` εδώ θα ήταν δεύτερο σχήμα για το ίδιο πράγμα — και τα δύο θα
+   * μπορούσαν να αποκλίνουν χωρίς να το δει ο μεταγλωττιστής.
+   */
+  sourceRevisions?: readonly ModelSourceRevision[];
 }
 
 /**
@@ -208,6 +221,9 @@ export interface FileRecordBase {
   // ADR-845 Ο-27 — **ποιο πράγμα** δημοσιεύεται· απουσία = δεν συμμετέχει σε διαδοχή,
   // ποτέ «είναι το ίδιο με κάτι άλλο». Δες `FileRecord.publicationIdentity`.
   publicationIdentity?: string;
+
+  // ADR-845 Ο-25 — από ποια έκδοση σχεδίου παρήχθη· απουσία = «δεν ξέρω», ποτέ «ισχύει».
+  sourceRevisions?: readonly ModelSourceRevision[];
 
   // Entity linking — cross-entity file references
   linkedTo?: string[];
@@ -413,6 +429,11 @@ export function buildPendingFileRecordData(
   // σημαίνει «αυτό το αρχείο δεν συμμετέχει σε διαδοχή» — ποτέ «είναι το ίδιο με κάτι άλλο».
   if (input.publicationIdentity) {
     recordBase.publicationIdentity = input.publicationIdentity;
+  }
+  // ADR-845 Ο-25 — γράφεται ΜΟΝΟ όταν ο παραγωγός ξέρει από ποια σχέδια βγήκε. Κενός πίνακας
+  // δεν γράφεται: «δεν ξέρω» και «από κανένα σχέδιο» είναι δύο διαφορετικά πράγματα.
+  if (input.sourceRevisions && input.sourceRevisions.length > 0) {
+    recordBase.sourceRevisions = input.sourceRevisions;
   }
   // ADR-716 Φ5 — γράφεται ΜΟΝΟ όταν υπάρχει ρητή επιλογή· η απουσία σημαίνει
   // «αποφασίζει η σκάλα τεκμηρίων», όχι «άγνωστο».

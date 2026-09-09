@@ -42,6 +42,7 @@ import {
 } from '@/services/file-record';
 import type { ModelPublicationDeclaration } from './listing-model-declaration';
 import { modelPublicationIdentityKey } from './model-publication-identity';
+import type { ModelSourceRevision } from './model-source-revisions';
 
 /**
  * Η επέκταση της κανονικής διαδρομής — **χωρίς τελεία**, όπως τη θέλει το `buildStoragePath`.
@@ -69,6 +70,20 @@ export interface PublishedModelFileRequest {
    * διαφωνήσουν, γιατί δεν είναι δύο πράγματα.
    */
   readonly declaration: ModelPublicationDeclaration;
+  /**
+   * **Από ποια έκδοση σχεδίου παρήχθη** *(ADR-845 Ο-25)* — δες
+   * {@link FileRecord.sourceRevisions}.
+   *
+   * 🔴 **ΤΟ ΔΙΝΕΙ Ο ΔΙΑΚΟΜΙΣΤΗΣ, ΠΟΤΕ Ο ΠΕΛΑΤΗΣ.** Ο πελάτης λέει **ποια** αρχεία σκηνής
+   * συνέθεσαν το μοντέλο *(τα ξέρει: ο `Level` κουβαλά `sceneFileId`)*· το **σε ποιο
+   * revision** ήταν το διαβάζει η πόρτα από τα ίδια τα έγγραφα. Ίδια ραφή με το `at` του
+   * δημόσιου σχήματος: ένα revision από τον πελάτη θα ήταν **ισχυρισμός του καλούντος**.
+   *
+   * ⚠️ **Προαιρετικό, και είναι σκόπιμο**: αν η ανάγνωση των revisions αποτύχει, το μοντέλο
+   * **δημοσιεύεται** — απλώς η παλαιότητά του μένει `unknown`. Η καταγραφή δεν επιτρέπεται να
+   * ακυρώσει τη δημοσίευση, όπως δεν την ακυρώνει ούτε η ιστορία της διαδοχής *(Ο-27)*.
+   */
+  readonly sourceRevisions?: readonly ModelSourceRevision[];
 }
 
 /**
@@ -129,5 +144,6 @@ export function buildPublishedModelFileRecord(
       scope: request.declaration.scope,
       state: request.declaration.state,
     }),
+    sourceRevisions: request.sourceRevisions,
   });
 }

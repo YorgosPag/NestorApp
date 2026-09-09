@@ -32,6 +32,8 @@ import type { ModelPublicationDeclaration } from '../listing-model-declaration';
 function declaration(): ModelPublicationDeclaration {
   return {
     state: 'as-built',
+    // ADR-845 Ο-27 — το εύρος ταξιδεύει μαζί με τα bytes, όπως η σήμανση (Α11.2).
+    scope: 'active-floor',
     signatory: {
       name: 'Γιώργος Παγώνης',
       discipline: 'πολιτικός μηχανικός',
@@ -111,6 +113,17 @@ describe('🔴 Δ2 — ΤΙΠΟΤΑ ΔΕΝ ΠΕΡΝΑ ΜΕ ΠΡΟΕΠΙΛΟΓΗ'
   it('🔴 ΑΓΝΩΣΤΗ σήμανση κατάστασης ⇒ άρνηση — η Α11 έχει ΤΡΕΙΣ τιμές, όχι όποια σταλεί', () => {
     expect(decodeModelDeclaration(encodedWith((d) => { d.state = 'ό,τι να ναι'; }))).toBeNull();
     expect(decodeModelDeclaration(encodedWith((d) => { delete d.state; }))).toBeNull();
+  });
+
+  it('🔴 ΛΕΙΠΟΝ ή ΑΓΝΩΣΤΟ εύρος ⇒ άρνηση — ΚΑΜΙΑ σιωπηλή προεπιλογή (Ο-27)', () => {
+    // 🔴 **Η ΠΙΟ ΑΚΡΙΒΗ ΣΙΩΠΗ ΘΑ ΗΤΑΝ ΤΟ `?? 'active-floor'`.** Θα έκανε **κάθε** αντικείμενο
+    //    που δημοσιεύτηκε πριν από αυτή τη φάση να **ισχυρίζεται** εύρος που κανείς δεν
+    //    δήλωσε — και τότε ένα μοντέλο **ολόκληρου κτιρίου** θα συγχωνευόταν με ένα **ενός
+    //    ορόφου**, σιωπηλά και **μόνιμα**: η διεύθυνση στο ράφι είναι content-addressed.
+    //    Η δήλωση χωρίς εύρος **δεν είναι δήλωση** — ο ψήστης αρνείται ονομαστικά.
+    expect(decodeModelDeclaration(encodedWith((d) => { delete d.scope; }))).toBeNull();
+    expect(decodeModelDeclaration(encodedWith((d) => { d.scope = 'all-single'; }))).toBeNull();
+    expect(decodeModelDeclaration(encodedWith((d) => { d.scope = ''; }))).toBeNull();
   });
 
   it('🔴 ΛΕΙΠΩΝ υπογράφων ⇒ άρνηση — και τα τρία πεδία του είναι υποχρεωτικά (Α10)', () => {

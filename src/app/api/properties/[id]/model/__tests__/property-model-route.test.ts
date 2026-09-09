@@ -54,10 +54,47 @@ const trace: string[] = [];
 const setDoc = jest.fn(async () => { trace.push('set'); });
 const updateDoc = jest.fn(async () => { trace.push('update'); });
 
+/**
+ * 🔴 **ADR-845 Ο-27 — ΤΑ ΑΔΕΛΦΙΑ ΠΟΥ ΒΡΙΣΚΕΙ Η ΠΟΡΤΑ.** Το ερώτημα των προκατόχων είναι
+ * **αλυσίδα `where()`**: κάθε κρίκος επιστρέφει τον εαυτό του, και ο τελευταίος τα έγγραφα.
+ * ⚠️ Δηλωμένο ως **μεταβλητή** ώστε κάθε δοκιμή να ορίζει τι κάθεται ήδη στη βάση — αλλιώς η
+ * άγκυρα του `supersedes` θα δοκίμαζε **πάντα** το κενό, δηλαδή θα ήταν πράσινη και τυφλή.
+ */
+let siblings: readonly Record<string, unknown>[] = [];
+const queryGet = jest.fn(async () => {
+  trace.push('query');
+  return { docs: siblings.map((data) => ({ id: data.id as string, data: () => data })) };
+});
+
+/**
+ * 🔴 **ADR-845 Ο-25 — ΤΑ ΣΧΕΔΙΑ ΠΟΥ ΔΙΑΒΑΖΕΙ Η ΠΟΡΤΑ.** Το `getAll` **πρέπει** να υπάρχει στο
+ * ψεύτικο: χωρίς αυτό, η ανάγνωση των revisions πετά και πέφτει στο δικό της `catch` — και
+ * το σκέλος θα ήταν **πράσινο πάνω σε νεκρό δρόμο**, ακριβώς το μάθημα του Ο-13.
+ *
+ * ⚠️ **Επιστρέφει snapshots με `companyId`**, γιατί η ανάγνωση **ελέγχει κηδεμονία**: τα
+ * ταυτοποιητικά τα έδωσε ο πελάτης, και ένα ψεύτικο χωρίς μισθωτή θα δοκίμαζε άλλη διαδρομή
+ * από την πραγματική.
+ */
+let sceneFiles: Readonly<Record<string, Record<string, unknown>>> = {};
+const getAll = jest.fn(async (...refs: readonly { id: string }[]) => {
+  trace.push('getAll');
+  return refs.map((ref) => ({
+    id: ref.id,
+    data: () => sceneFiles[ref.id],
+  }));
+});
+
 jest.mock('@/lib/firebaseAdmin', () => ({
-  getAdminFirestore: () => ({
-    collection: () => ({ doc: () => ({ set: setDoc, update: updateDoc }) }),
-  }),
+  getAdminFirestore: () => {
+    const chain = { where: () => chain, get: queryGet };
+    return {
+      collection: () => ({
+        doc: (id: string) => ({ id, set: setDoc, update: updateDoc }),
+        where: chain.where,
+      }),
+      getAll: (...refs: readonly { id: string }[]) => getAll(...refs),
+    };
+  },
   FieldValue: { serverTimestamp: () => 'ts' },
 }));
 
@@ -81,6 +118,8 @@ const PROPERTY = 'prop_a0000009-7777-4aaa-8aaa-000000000009';
 function declaration(over: Record<string, unknown> = {}): string {
   return JSON.stringify({
     state: 'as-built',
+    // ADR-845 Ο-27 — το εύρος ταξιδεύει με τα bytes· χωρίς αυτό η δήλωση ΔΕΝ είναι δήλωση.
+    scope: 'active-floor',
     signatory: { name: 'Μ. Παπαδόπουλος', discipline: 'πολιτικός μηχανικός', studiedAt: '2026-03-01' },
     geometry: {
       meshCount: 1, triangleCount: 12, materialCount: 1, textureCount: 0, fingerprint: null,
@@ -89,10 +128,12 @@ function declaration(over: Record<string, unknown> = {}): string {
   });
 }
 
-function request(file: File, declared: string): unknown {
+function request(file: File, declared: string, sceneFileIds?: readonly string[]): unknown {
   const body = new FormData();
   body.append('file', file);
   body.append('declaration', declared);
+  // ADR-845 Ο-25 — ξεχωριστό πεδίο: τα `file_…` είναι ιδιωτικά και ΔΕΝ ψήνονται στο artifact.
+  if (sceneFileIds) body.append('sceneFileIds', JSON.stringify(sceneFileIds));
   return {
     url: `https://x/api/properties/${PROPERTY}/model`,
     nextUrl: { pathname: `/api/properties/${PROPERTY}/model` },
@@ -107,6 +148,10 @@ function glb(): File {
 describe('ADR-845 Βήμα Γ — η πόρτα του μοντέλου', () => {
   beforeEach(() => {
     trace.length = 0;
+    // ⚠️ **Καμία διαρροή αδελφών ανάμεσα σε δοκιμές** — αλλιώς το Κ7 θα κληρονομούσε τη βάση
+    //    του Κ6 και θα ήταν πράσινο για λόγο δικό του (ADR-845 Ο-27).
+    siblings = [];
+    sceneFiles = {};
     jest.clearAllMocks();
   });
 
@@ -160,6 +205,89 @@ describe('ADR-845 Βήμα Γ — η πόρτα του μοντέλου', () => 
 
     // 🔑 Ο αναγνώστης της δημοσίευσης φιλτράρει `status === READY`: ένα ημιτελές ανέβασμα
     //    οφείλει να είναι **αόρατο**, όχι επικίνδυνο. Η σειρά **είναι** ο μηχανισμός.
-    expect(trace).toEqual(['set', 'upload', 'update']);
+    //
+    // 🔴 **ΚΑΙ ΤΟ `query` ΠΡΟΗΓΕΙΤΑΙ, ΕΠΙΤΗΔΕΣ** *(ADR-845 Ο-27)*: οι προκάτοχοι ρωτιούνται
+    //    **πριν** γραφτεί το νέο έγγραφο. Μετά την εγγραφή, ο νεοφερμένος θα ήταν μέσα στο
+    //    αποτέλεσμα και θα έπρεπε να **εξαιρεθεί** — δηλαδή θα υπήρχε μια γραμμή που, αν
+    //    ξεχαστεί, κάνει το μοντέλο να **διαδεχθεί τον εαυτό του** και να πέσει στον κάδο την
+    //    ίδια στιγμή που δημοσιεύεται.
+    expect(trace).toEqual(['query', 'set', 'upload', 'update']);
+  });
+
+  it('🏆 Κ6 — Ο-27: η πόρτα ΛΕΕΙ ποιους διαδέχεται, και ΠΟΤΕ τον εαυτό της', async () => {
+    // Το ζωντανό γεγονός της 2026-09-09: ένα **ενεργό** μοντέλο ίδιας ταυτότητας κάθεται ήδη.
+    siblings = [{
+      id: 'file_51f3bb6d-b3a4-46ca-b541-cd1b80b941f0',
+      publicationIdentity: 'model/measured/active-floor/as-built',
+    }];
+
+    const response = await POST(
+      request(glb(), declaration()) as never, undefined as never, undefined as never,
+    );
+    const payload = await (response as unknown as Response).json();
+
+    // ⚠️ **Ο διακομιστής ΚΡΙΝΕΙ, δεν ΠΡΑΤΤΕΙ**: η μία πόρτα της απόσυρσης είναι client SDK,
+    //    και ένα admin δίδυμό της απορρίφθηκε ρητά *(N.18 · ADR-749)*.
+    expect(payload.data.supersedes).toEqual(['file_51f3bb6d-b3a4-46ca-b541-cd1b80b941f0']);
+    expect(payload.data.supersedes).not.toContain(payload.data.fileId);
+  });
+
+  it('🏆 Κ8 — Ο-25: η πόρτα ΓΡΑΦΕΙ σε ποιο revision ήταν τα σχέδια', async () => {
+    const scene = 'file_7cd206cc-9751-463b-b1dd-70fd1ffb8deb';
+    sceneFiles = { [scene]: { companyId: 'comp_alfa', revision: 5 } };
+
+    await POST(
+      request(glb(), declaration(), [scene]) as never, undefined as never, undefined as never,
+    );
+
+    // 🔴 **Η ΡΑΦΗ**: ο πελάτης έστειλε **μόνο** το ταυτοποιητικό· το `revision: 5` το διάβασε
+    //    ο διακομιστής από το ίδιο το έγγραφο. Ένα revision από τον πελάτη θα ήταν
+    //    **ισχυρισμός του καλούντος** — ίδιος κανόνας με το `at` του δημόσιου σχήματος.
+    expect(setDoc).toHaveBeenCalledWith(
+      expect.objectContaining({ sourceRevisions: [{ fileId: scene, revision: 5 }] }),
+    );
+  });
+
+  it('🔑 Κ9 — Ο-25: ΞΕΝΟ αρχείο ΔΕΝ καταγράφεται — η κηδεμονία ελέγχεται', async () => {
+    const foreign = 'file_ffff0000-1111-4222-8333-444455556666';
+    sceneFiles = { [foreign]: { companyId: 'comp_ΑΛΛΗ_ΕΤΑΙΡΕΙΑ', revision: 9 } };
+
+    await POST(
+      request(glb(), declaration(), [foreign]) as never, undefined as never, undefined as never,
+    );
+
+    // ⚠️ Τα ταυτοποιητικά τα έδωσε ο **πελάτης**: χωρίς τον έλεγχο, ένα κατασκευασμένο σώμα
+    //    θα διάβαζε `revision` αρχείου ξένης εταιρείας. Μικρή διαρροή, αλλά **διαρροή**.
+    expect(setDoc).toHaveBeenCalledWith(
+      expect.not.objectContaining({ sourceRevisions: expect.anything() }),
+    );
+  });
+
+  it('⚠️ Κ10 — Ο-25: ΧΩΡΙΣ κατάλογο σχεδίων το μοντέλο ΔΗΜΟΣΙΕΥΕΤΑΙ — απλώς χωρίς προέλευση', async () => {
+    // Η καταγραφή δεν επιτρέπεται να ακυρώσει την πράξη. Ίδιος κανόνας με την ιστορία της
+    // διαδοχής (Ο-27): η αγγελία είναι σωστή ούτως ή άλλως· χάνεται μόνο το «ισχύει ακόμα;».
+    const response = await POST(
+      request(glb(), declaration()) as never, undefined as never, undefined as never,
+    );
+    const payload = await (response as unknown as Response).json();
+
+    expect(payload.data.fileId).toEqual(expect.any(String));
+    expect(getAll).not.toHaveBeenCalled();
+  });
+
+  it('🔑 Κ7 — Ο-27: ΑΛΛΗ ταυτότητα ΔΕΝ διαδέχεται — ο πληθυντικός επιβιώνει', async () => {
+    // `proposal` δίπλα σε `as-built` είναι το γραμμένο «σήμερα vs μετά την ανακαίνιση» (Α11):
+    // **παραλλαγές**, όχι εκδοχές. Μια συγχώνευσή τους θα σκότωνε το χαρακτηριστικό.
+    siblings = [{
+      id: 'file_51f3bb6d-b3a4-46ca-b541-cd1b80b941f0',
+      publicationIdentity: 'model/measured/active-floor/proposal',
+    }];
+
+    const response = await POST(
+      request(glb(), declaration()) as never, undefined as never, undefined as never,
+    );
+    const payload = await (response as unknown as Response).json();
+
+    expect(payload.data.supersedes).toEqual([]);
   });
 });
