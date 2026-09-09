@@ -37,10 +37,14 @@ import 'server-only';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { presenceAdminIdsOf } from '@/lib/agency/presence-admin-ids';
 import { presenceFromListings } from '@/lib/agency/showcase-presence';
 import { publicListingFromDocument } from '@/lib/listings/public-listing-from-document';
 import { createModuleLogger } from '@/lib/telemetry';
+import { readAdminFootprints } from '@/services/places/admin-footprints.reader';
+import { readAdministrativeLineage } from '@/services/places/administrative-hierarchy.reader';
 import { MAX_PRESENCE_AREAS } from '@/types/agency-profile';
+import type { GeoCircle } from '@/types/geo/coordinates';
 import type { PublicListing } from '@/types/public-listing';
 
 const logger = createModuleLogger('mandate/showcase-presence');
@@ -148,11 +152,64 @@ export async function refreshShowcasePresence(
       });
     }
 
-    await ref.update({ presence });
+    // 🔴 **ΤΟ ΠΕΔΙΟ ΠΡΟΣΤΙΘΕΤΑΙ ΕΔΩ ΜΕ ΤΟ ΧΕΡΙ, ΚΑΙ ΚΑΝΕΙΣ ΔΕΝ ΤΟ ΕΠΙΒΑΛΛΕΙ.** Το
+    //    `update()` δέχεται **μερικό** αντικείμενο και **δεν** τυπίζεται έναντι του
+    //    `PublicShowcase` — δηλαδή μια παράλειψη εδώ **δεν είναι σφάλμα μεταγλώττισης**,
+    //    είναι πεδίο που μένει **μπαγιάτικο για πάντα**, με όλα τα σήματα πράσινα. Ίδιο
+    //    ακριβώς σχήμα με τον ρητό κατασκευαστή που πέταγε το `interior` *(§8.8.17)*.
+    //    Άγκυρα: `showcase-presence-admin-ids.test.ts`.
+    const presenceAdminIds = await resolvedAdminIds(presence, companyId);
+    await ref.update(
+      presenceAdminIds === null ? { presence } : { presence, presenceAdminIds },
+    );
   } catch (error) {
     logger.warn('Η αποδεδειγμένη παρουσία δεν ενημερώθηκε — η βιτρίνα μένει ΜΠΑΓΙΑΤΙΚΗ', {
       companyId,
       error: error instanceof Error ? error.message : String(error),
     });
   }
+}
+
+/**
+ * **Οι κύκλοι παρουσίας σε διοικητική γλώσσα** — ή `null` όταν **δεν μπορέσαμε να
+ * ρωτήσουμε** *(ADR-846 §9 #13)*.
+ *
+ * ═════════════════════════════════════════════════════════════════════════════
+ * 🔴 ΓΙΑΤΙ `null` ΚΑΙ ΟΧΙ `[]` — Η ΔΙΑΦΟΡΑ ΓΡΑΦΕΤΑΙ ΣΕ **ΔΗΜΟΣΙΟ** ΕΓΓΡΑΦΟ
+ * ═════════════════════════════════════════════════════════════════════════════
+ *
+ * Το `[]` σημαίνει **«καμία απόδειξη»** — γεγονός για τον **επαγγελματία**. Το «δεν
+ * διάβασα τα αποτυπώματα» είναι βλάβη **δική μας**. Αν τα δύο συγχέονταν, μια αποτυχία
+ * ανάγνωσης θα **έσβηνε** την αποδεδειγμένη παρουσία κάθε γραφείου που τυχαίνει να
+ * ξαναδημοσιεύσει όσο η βλάβη διαρκεί — σιωπηλά, μόνιμα, και **με όλα τα σήματα
+ * πράσινα**. Είναι **ακριβώς** το *«το `0` σημαίνει “κανείς δεν κοίταξε”»* του N.11/N.12,
+ * σε δεδομένα αντί για μετρήσεις.
+ *
+ * ⇒ Με `null` ο καλών **παραλείπει** το πεδίο από το `update()`: η προηγούμενη τιμή
+ * **επιβιώνει**. Μπαγιάτικη, αλλά **αληθινή** — και η επόμενη επιτυχημένη δημοσίευση τη
+ * διορθώνει.
+ *
+ * ⚠️ **Και οι δύο αναγνώστες ζητούνται ΜΑΖΙ** *(`Promise.all`)*: χωρίς **και** τα
+ * αποτυπώματα **και** την ιεραρχία δεν υπάρχει απάντηση — η γεωμετρία βρίσκει το
+ * βαθύτερο κελί, η ιεραρχία **επαληθεύει** ότι εξηγεί τα υπόλοιπα.
+ */
+async function resolvedAdminIds(
+  presence: readonly GeoCircle[],
+  companyId: string,
+): Promise<readonly string[] | null> {
+  const [footprints, lineageOf] = await Promise.all([
+    readAdminFootprints(),
+    readAdministrativeLineage(),
+  ]);
+
+  if (footprints === null || lineageOf === null) {
+    logger.error('Οι διοικητικές ταυτότητες παρουσίας ΔΕΝ υπολογίστηκαν — το πεδίο μένει ως είχε', {
+      companyId,
+      footprints: footprints === null ? 'άγνωστα' : 'εντάξει',
+      hierarchy: lineageOf === null ? 'άγνωστη' : 'εντάξει',
+    });
+    return null;
+  }
+
+  return presenceAdminIdsOf(presence, footprints, lineageOf);
 }

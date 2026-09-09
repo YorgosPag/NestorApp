@@ -258,6 +258,11 @@ export async function publishShowcase(
       //    **Ακριβώς** το περιστατικό του `mark` μία γραμμή πιο πάνω, δεύτερος
       //    καταναλωτής του ίδιου μαθήματος.
       const keptPresence = existing?.outcome === 'showcase' ? existing.showcase.presence : [];
+      // 🔑 **Ο ΙΔΙΟΣ ΚΑΝΟΝΑΣ ΓΙΑ ΤΟ ΔΙΟΙΚΗΤΙΚΟ ΤΟΥ ΚΑΤΟΠΤΡΟ** *(ADR-846 §9 #13)*: το
+      //    `presenceAdminIds` είναι **παράγωγο του ίδιου γραφέα**, όχι δήλωση ανθρώπου.
+      //    Χωρίς μεταφορά, μια αλλαγή επωνυμίας θα έσβηνε **και τη διοικητική** απόδειξη.
+      const keptPresenceAdminIds =
+        existing?.outcome === 'showcase' ? existing.showcase.presenceAdminIds : [];
 
       const showcase: PublicShowcase = {
         companyId,
@@ -272,6 +277,7 @@ export async function publishShowcase(
         //    μία αναπαράσταση της απουσίας, επιβαλλόμενη στο σημείο της γραφής.
         coverage: declaration.coverage ?? null,
         presence: keptPresence,
+        presenceAdminIds: keptPresenceAdminIds,
         mark: keptMark,
         publishedAt: nowISO(),
       };

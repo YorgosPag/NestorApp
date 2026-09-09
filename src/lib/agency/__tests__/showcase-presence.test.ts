@@ -18,7 +18,11 @@
  * ⚠️ **Τα fixtures είναι τα ΥΠΑΡΧΟΝΤΑ** *(`demand-fixtures.listing`)* — N.18.
  */
 
-import { presenceFromListings, presenceMatches } from '../showcase-presence';
+import {
+  presenceFromListings,
+  presenceMatches,
+  type PresenceEvidence,
+} from '../showcase-presence';
 import { verdictForListing } from '../coverage-agreement';
 import type { CoverageResolvers } from '../coverage-match';
 import { listing } from '@/lib/demand/__tests__/demand-fixtures';
@@ -139,10 +143,23 @@ describe('Θ — από τις αγγελίες στο σύνολο των πε�
 // Κ — Ο ΚΡΙΤΗΣ: `within` ΚΑΙ ΜΟΝΟ
 // =============================================================================
 
+/**
+ * **ΜΟΝΟ η γεωμετρική μαρτυρία** — δηλαδή η κατάσταση **κάθε** εγγράφου που γράφτηκε
+ * πριν τη §9 #13, και ο παρονομαστής όλης της ομάδας Κ.
+ *
+ * 🔑 Οι Κ1-Κ7 μετρούν το σκέλος που **δεν** άλλαξε: αν κάποιος τις «περνούσε» δίνοντας
+ * ταυτότητες, θα μετρούσαν **άλλη** διαδρομή και το γεωμετρικό σκέλος θα έμενε
+ * αφύλακτο. Το διοικητικό σκέλος έχει **δική** του ομάδα.
+ */
+const geometryOnly = (presence: readonly GeoCircle[]): PresenceEvidence => ({
+  presence,
+  presenceAdminIds: [],
+});
+
 describe('Κ 🏆 — η αβεβαιότητα ΔΕΝ διευρύνει την παρουσία', () => {
   it('Κ1 — ακριβής θέση μέσα στο ερώτημα ⇒ ΠΑΡΩΝ', () => {
     const presence = presenceFromListings([at(HOME)]);
-    expect(presenceMatches(presence, asking(HOME, 5), RESOLVERS)).toBe(true);
+    expect(presenceMatches(geometryOnly(presence), asking(HOME, 5), RESOLVERS)).toBe(true);
   });
 
   it('🔴 Κ2 — Η ΙΔΙΑ ΘΕΣΗ ΓΝΩΣΤΗ ΜΟΝΟ ΣΕ ΕΠΙΠΕΔΟ ΠΟΛΗΣ ⇒ ΟΧΙ, σε ΣΤΕΝΟ ερώτημα', () => {
@@ -150,14 +167,14 @@ describe('Κ 🏆 — η αβεβαιότητα ΔΕΝ διευρύνει την
     // κύκλος **δεν χωράει**. Δεν ξέρουμε αν το ακίνητο είναι εδώ ή 9 χλμ παραδίπλα.
     // 🔑 **Εδώ ξεπερνάμε το Zillow**, που συγκρίνει ΤΚ με ΤΚ και θα έλεγε «ναι».
     const presence = presenceFromListings([withAccuracy('center', HOME)]);
-    expect(presenceMatches(presence, asking(HOME, 5), RESOLVERS)).toBe(false);
+    expect(presenceMatches(geometryOnly(presence), asking(HOME, 5), RESOLVERS)).toBe(false);
   });
 
   it('🏆 Κ3 — Ο ΙΔΙΟΣ κύκλος σε ΑΡΚΕΤΑ ΕΥΡΥ ερώτημα ⇒ ΠΑΡΩΝ', () => {
     // Η χονδρική θέση είναι **επαρκής απόδειξη για χονδρικό ερώτημα**: η αβεβαιότητα
     // δεν πετιέται, **μετριέται**. Χωρίς αυτό, το Κ2 θα ήταν απλώς «να μην απαντάς ποτέ».
     const presence = presenceFromListings([withAccuracy('center', HOME)]);
-    expect(presenceMatches(presence, asking(HOME, 30), RESOLVERS)).toBe(true);
+    expect(presenceMatches(geometryOnly(presence), asking(HOME, 30), RESOLVERS)).toBe(true);
   });
 
   it('🔴🔴 Κ4 — Η ΑΣΥΜΜΕΤΡΙΑ ΜΕ ΤΗ Φ5α, ΣΤΟ ΙΔΙΟ ΖΕΥΓΟΣ', () => {
@@ -172,16 +189,16 @@ describe('Κ 🏆 — η αβεβαιότητα ΔΕΝ διευρύνει την
     const declared = { circle: { center: HOME, radiusKm: 5 } } as const;
 
     expect(verdictForListing(declared, vague, RESOLVERS)).toBe('indeterminate');
-    expect(presenceMatches(presenceFromListings([vague]), asking(HOME, 5), RESOLVERS)).toBe(false);
+    expect(presenceMatches(geometryOnly(presenceFromListings([vague])), asking(HOME, 5), RESOLVERS)).toBe(false);
   });
 
   it('Κ5 — μακρινό ακίνητο δεν αποδεικνύει τίποτα εδώ', () => {
     const presence = presenceFromListings([at(FAR)]);
-    expect(presenceMatches(presence, asking(HOME, 20), RESOLVERS)).toBe(false);
+    expect(presenceMatches(geometryOnly(presence), asking(HOME, 20), RESOLVERS)).toBe(false);
   });
 
   it('Κ6 — ΚΕΝΗ απόδειξη ⇒ ποτέ ναι (η σημερινή κατάσταση ΟΛΩΝ)', () => {
-    expect(presenceMatches([], asking(HOME, 50), RESOLVERS)).toBe(false);
+    expect(presenceMatches(geometryOnly([]), asking(HOME, 50), RESOLVERS)).toBe(false);
   });
 
   it('🔴 Κ7 — ΔΙΟΙΚΗΤΙΚΟ ερώτημα ΧΩΡΙΣ αποτύπωμα ⇒ ΟΧΙ, ποτέ «μάλλον»', () => {
@@ -189,6 +206,6 @@ describe('Κ 🏆 — η αβεβαιότητα ΔΕΝ διευρύνει την
     // `coverageMatches`, όπου «δεν ξέρω ⇒ ΔΕΝ κόβω» — και είναι σωστό και στα δύο,
     // γιατί η ένωση είναι fail-open από τη μεριά της δήλωσης: κανείς δεν χάνεται.
     const presence = presenceFromListings([at(HOME)]);
-    expect(presenceMatches(presence, { adminId: 'municipality:1303' }, RESOLVERS)).toBe(false);
+    expect(presenceMatches(geometryOnly(presence), { adminId: 'municipality:1303' }, RESOLVERS)).toBe(false);
   });
 });

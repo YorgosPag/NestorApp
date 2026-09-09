@@ -51,7 +51,7 @@ import { distanceMeters } from '@/lib/geo/geo-distance';
 import { isBoundingBox } from '@/lib/geo/geo-area';
 import { listingSearchArea } from '@/lib/listings/listing-map-shape';
 import { MAX_PRESENCE_AREAS } from '@/types/agency-profile';
-import type { ShowcaseWhere } from '@/types/agency-coverage';
+import { isAdministrativeWhere, type ShowcaseWhere } from '@/types/agency-coverage';
 import type { GeoCircle } from '@/types/geo/coordinates';
 import type { PublicListing } from '@/types/public-listing';
 
@@ -158,6 +158,20 @@ export function presenceFromListings(listings: readonly PublicListing[]): readon
 // ============================================================================
 
 /**
+ * **Οι ΔΥΟ μαρτυρίες της ίδιας απόδειξης** — γεωμετρική και διοικητική.
+ *
+ * 🔴 **ΖΕΥΓΟΣ, ΚΑΙ ΟΧΙ ΔΥΟ ΟΡΙΣΜΑΤΑ — ΕΠΙΤΗΔΕΣ.** Με δεύτερη παράμετρο
+ * `readonly string[]`, κάθε καλών θα μπορούσε να περάσει `[]` *(«δεν έχω πρόχειρες τις
+ * ταυτότητες»)* και ο κριτής θα σιωπούσε: **σωστό φίλτρο, μισή απάντηση**, χωρίς
+ * σφάλμα μεταγλώττισης. Ως **ζεύγος**, ο τύπος απαιτεί **και τα δύο** πεδία, και το
+ * `PublicShowcase` το ικανοποιεί **δομικά** — οι καλούντες περνούν το ίδιο το showcase.
+ */
+export interface PresenceEvidence {
+  readonly presence: readonly GeoCircle[];
+  readonly presenceAdminIds: readonly string[];
+}
+
+/**
  * **Έχει αποδεδειγμένα ακίνητο εκεί που ρωτά ο επισκέπτης;**
  *
  * ═════════════════════════════════════════════════════════════════════════════
@@ -186,11 +200,54 @@ export function presenceFromListings(listings: readonly PublicListing[]): readon
  * κάποιον. Εδώ η άγνοια δεν επιτρέπεται να **προσθέσει** κάποιον — και η ένωση είναι
  * **fail-open από τη μεριά της δήλωσης**, οπότε κανείς δεν χάνεται: το χειρότερο που
  * κάνει ένα `'unknown'` εδώ είναι να **μην προσθέσει** μια δεύτερη αιτία εμφάνισης.
+ *
+ * ═════════════════════════════════════════════════════════════════════════════
+ * 🏆 **ΔΥΟ ΔΙΑΔΡΟΜΕΣ, ΕΝΩΣΗ — ΚΑΙ Η ΕΝΩΣΗ ΜΕΝΕΙ ΣΥΝΤΗΡΗΤΙΚΗ** *(ADR-846 §9 #13)*
+ *
+ * Το γεωμετρικό σκέλος **δομικά δεν φτάνει** στα μεγάλα διοικητικά επίπεδα: το
+ * εσωτερικό κάλυμμα της ΠΕΡΙΦΕΡΕΙΑΣ δειγματοληπτεί σε πλέγμα **~9 χλμ** και δεν πιάνει
+ * ποτέ σημείο στην **ακτή** — μετρημένο, σε **κάθε** `k = 8…64`. Το λεξιλογικό σκέλος
+ * το λύνει **ακριβώς**, ρωτώντας την **εμφώλευση** αντί για τη γεωμετρία.
+ *
+ * 🔒 **Και οι δύο είναι ΟΡΘΕΣ ΑΠΟΔΕΙΞΕΙΣ** — η μία μέσω `interiorContainsCircle`
+ * *(υπο-προσέγγιση με απόδειξη)*, η άλλη μέσω ορισμού. Άρα το `∨` τους **δεν** μπορεί
+ * να παραγάγει ψευδώς θετικό· προσθέτει **μόνο** απαντήσεις που ήδη ίσχυαν και δεν
+ * μπορούσαμε να τις δούμε.
+ *
+ * ⚠️ **Γι' αυτό ΣΥΜΠΛΗΡΩΝΕΙ αντί να αντικαθιστά**: τα έγγραφα που γράφτηκαν **πριν** το
+ * `presenceAdminIds` έχουν κενό σύνολο και εξακολουθούν να απαντούν από τη γεωμετρία.
+ * **Καμία παλινδρόμηση δεν είναι δυνατή** — χωρίς επανεγγραφή δεδομένων.
+ * ═════════════════════════════════════════════════════════════════════════════
  */
 export function presenceMatches(
-  presence: readonly GeoCircle[],
+  evidence: PresenceEvidence,
   where: ShowcaseWhere,
   resolvers: CoverageResolvers,
 ): boolean {
-  return presence.some((area) => areaOverWhere(area, where, resolvers) === 'within');
+  // 🔑 **Το λεξιλογικό σκέλος ρωτιέται ΠΡΩΤΟ** — είναι `O(1)` και απαντά εκεί που το
+  //    γεωμετρικό **δομικά δεν μπορεί**: στα μεγάλα διοικητικά επίπεδα.
+  if (isAdministrativeWhere(where) && lineageCovers(evidence.presenceAdminIds, where.adminId, resolvers)) {
+    return true;
+  }
+  return evidence.presence.some((area) => areaOverWhere(area, where, resolvers) === 'within');
+}
+
+/**
+ * **Η εμφώλευση, ρωτημένη λεξιλογικά** — *«ανήκει το ερωτώμενο στη γενεαλογία κάποιας
+ * αποδεδειγμένης ταυτότητας;»*
+ *
+ * 🔑 **Ίδιο ιδίωμα με το `areasOverArea`** της **δηλωμένης** κάλυψης — αλλά **μόνο** το
+ * ένα του σκέλος. Εκεί υπάρχει και ο **αντίστροφος** έλεγχος *(η δήλωση είναι απόγονος
+ * του ερωτήματος ⇒ `intersects`)*· εδώ **απαγορεύεται**: το `intersects` δεν αποδεικνύει
+ * παρουσία, και το 5δ δέχεται **μόνο** `within` *(§8.8.15)*.
+ *
+ * ⚠️ **Κενή γενεαλογία = «δεν ξέρω» ⇒ ΟΧΙ.** Εδώ η άγνοια δεν επιτρέπεται να
+ * **προσθέσει** κάποιον — αντίθετα από τον κατάλογο, όπου δεν επιτρέπεται να **κόψει**.
+ */
+function lineageCovers(
+  presenceAdminIds: readonly string[],
+  askedId: string,
+  resolvers: CoverageResolvers,
+): boolean {
+  return presenceAdminIds.some((adminId) => resolvers.lineageOf(adminId).includes(askedId));
 }

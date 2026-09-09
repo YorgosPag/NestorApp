@@ -20,6 +20,7 @@ import {
   serializeShowcaseFilters,
   showcaseLocale,
 } from '../showcase-filter';
+import { showcaseFixture } from '../__fixtures__/showcase-fixture';
 import type { CoverageResolvers, LineageResolver } from '../coverage-match';
 import { NO_FOOTPRINTS } from '@/types/geo/admin-footprint';
 import type { DeclaredCoverage } from '@/types/agency-coverage';
@@ -57,19 +58,26 @@ function showcase(
   position: PublicShowcase['position'] = THESSALONIKI,
   presence: PublicShowcase['presence'] = [],
 ): PublicShowcase {
-  return {
+  // 🔴 **ΔΕΛΕΓΑΤΟ ΣΤΟ ΚΟΙΝΟ FIXTURE, ΟΧΙ ΔΕΥΤΕΡΟ ΩΜΟ LITERAL** *(N.0.2, 09/09)*.
+  //
+  // Εδώ ζούσε αντίγραφο **ολόκληρου** του `PublicShowcase` — και **έσπασε μετρημένα**
+  // τη μέρα που η §9 #13 πρόσθεσε το `presenceAdminIds`: επτά δοκιμές πέταξαν
+  // `Cannot read properties of undefined (reading 'some')`, ενώ η **παραγωγή ήταν
+  // μια χαρά** *(κάθε διαδρομή περνά από τον `readShowcase`, που γεμίζει το πεδίο)*.
+  // Δηλαδή ένα διπλότυπο **στα test** παρήγαγε κόκκινο που **δεν αντιστοιχούσε σε
+  // κανένα ελάττωμα** — ο χειρότερος θόρυβος, γιατί κοστίζει χρόνο σε λάθος σημείο.
+  //
+  // 🔑 **Κενή απόδειξη παραμένει ο ΣΩΣΤΟΣ παρονομαστής** *(ADR-846 Φ5δ)*: μετρημένο
+  //    **6 ακίνητα · 0 στον χάρτη** — και είναι ήδη η προεπιλογή του fixture.
+  return showcaseFixture({
     companyId,
     alias: companyId,
     displayName,
     credentials,
-    place: null,
     position,
-    coverage: null,
-    // ⚠️ **Κενή απόδειξη είναι ο ΣΩΣΤΟΣ παρονομαστής** *(ADR-846 Φ5δ)*: μετρημένο
-    //    **6 ακίνητα · 0 στον χάρτη**. Ο κατάλογος οφείλει να είναι σωστός **πρώτα** εδώ.
     presence,
     publishedAt: '2026-09-01T10:00:00.000Z',
-  };
+  });
 }
 
 /**

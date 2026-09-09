@@ -44,18 +44,20 @@
 
 import { occupationNeedsCapability } from '@/lib/professional/showcase-eligibility';
 import {
-  MAX_PRESENCE_AREAS,
   type ClassifiedOccupation,
   type DeclaredShowcaseMark,
   type PublicShowcase,
   type ShowcaseCredential,
   type ShowcaseRead,
 } from '@/types/agency-profile';
-import type { GeoCircle } from '@/types/geo/coordinates';
 import type { ListingImage, ListingImageSource } from '@/types/public-listing';
-import { asCoverageOutline } from '@/lib/agency/coverage-outline';
+import {
+  readCoverage,
+  readPosition,
+  readPresence,
+  readPresenceAdminIds,
+} from '@/lib/agency/showcase-read-geo';
 import { isShowcaseMarkKind } from '@/lib/agency/showcase-mark-kind';
-import { asCoverageRadiusKm, type RadiusCoverage } from '@/types/agency-coverage';
 import type { ProfessionalAttestation } from '@/types/professional-identity';
 import { isRegistryAuthority, isChapteredRegistry } from '@/constants/professional-registries';
 
@@ -219,6 +221,7 @@ export function readShowcase(raw: unknown, companyId: string): ShowcaseRead {
       position: readPosition(source.position),
       coverage: readCoverage(source.coverage),
       presence: readPresence(source.presence),
+      presenceAdminIds: readPresenceAdminIds(source.presenceAdminIds),
       mark: readMark(source.mark),
       publishedAt,
     } satisfies PublicShowcase,
@@ -314,143 +317,6 @@ function readPlace(raw: unknown): PublicShowcase['place'] {
   const source = raw as Record<string, unknown>;
   const landId = text(source.landId);
   return landId === null ? null : { landId, buildingId: text(source.buildingId) };
-}
-
-/**
- * `GeoPoint` ή `null`.
- *
- * ⚠️ **Το `{lat:0,lng:0}` ΔΕΝ φιλτράρεται εδώ** — και είναι σκόπιμο: ένα σημείο
- * στον Ατλαντικό είναι **έγκυρο** ζεύγος συντεταγμένων, και μια «έξυπνη»
- * απόρριψή του θα ήταν κανόνας τομέα κρυμμένος σε αναλυτή. Ο φρουρός είναι ο
- * **γραφέας**, που δεν το γράφει ποτέ.
- */
-function readPosition(raw: unknown): PublicShowcase['position'] {
-  if (typeof raw !== 'object' || raw === null) return null;
-  const source = raw as Record<string, unknown>;
-  const { lat, lng } = source;
-  return typeof lat === 'number' && Number.isFinite(lat) && typeof lng === 'number' && Number.isFinite(lng)
-    ? { lat, lng }
-    : null;
-}
-
-/**
- * **Η δηλωμένη εμβέλεια, ή `null`** *(ADR-846)*.
- *
- * ⚠️ **Καμία επαλήθευση ταυτοτήτων εδώ, επίτηδες.** Ο αναγνώστης δεν έχει την ιεραρχία
- * *(4,1 MB — θα τη φόρτωνε **κάθε** ανώνυμος επισκέπτης πριν δει την πρώτη κάρτα)*, και
- * δεν τη χρειάζεται: ταυτότητα που δεν υπάρχει **δεν ταιριάζει με κανένα ερώτημα** —
- * αποτυγχάνει **αθόρυβα και ακίνδυνα**, ποτέ ως ψευδώς θετικό. Ο κριτής της εγκυρότητας
- * είναι ο **γραφέας** *(`resolveCoverage`)*, ένας ανά ερώτημα *(ADR-749)*.
- *
- * 🔒 **Κενή λίστα ⇒ `null`**: ο δίσκος **δεν επιτρέπεται** να γεννήσει δεύτερη
- * αναπαράσταση της απουσίας, ακόμη κι αν κάποτε γράφτηκε από παλαιότερο δρόμο.
- */
-function readCoverage(raw: unknown): PublicShowcase['coverage'] {
-  if (typeof raw !== 'object' || raw === null) return null;
-  const source = raw as Record<string, unknown>;
-
-  if (source.nationwide === true) return { nationwide: true };
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // 🔴 ΤΟ ΣΚΕΛΟΣ ΤΗΣ ΑΚΤΙΝΑΣ — ΚΑΙ Η ΑΠΟΥΣΙΑ ΤΟΥ ΗΤΑΝ ΑΚΡΙΒΩΣ Η ΒΛΑΒΗ ΠΟΥ
-  //    ΠΕΡΙΓΡΑΦΕΙ Η ΕΠΙΚΕΦΑΛΙΔΑ ΤΟΥ `toStoredShowcase`, ΛΙΓΕΣ ΓΡΑΜΜΕΣ ΠΙΟ ΚΑΤΩ
-  //
-  // *«μια αλλαγή στον έναν και όχι στον άλλο θα έγραφε σχήμα που ο αναγνώστης
-  //   απορρίπτει — δηλαδή **βιτρίνα που εξαφανίζεται τη στιγμή που δημοσιεύεται**,
-  //   με πράσινο τον γραφέα»*.
-  //
-  // ⚠️ **Μετρημένο ζωντανά (2026-09-08)**: ο γραφέας δέχτηκε τον κύκλο, το Firestore
-  //    τον αποθήκευσε, και η βιτρίνα εμφάνισε **«Περιοχή δραστηριότητας: Δεν
-  //    δηλώθηκε»** — η δήλωση του ανθρώπου έσβησε στο **τελευταίο** βήμα, χωρίς
-  //    κανένα σφάλμα πουθενά. Καμία πύλη δεν το είδε· το είδε η οθόνη.
-  // ═══════════════════════════════════════════════════════════════════════════
-  const circle = readCoverageCircle(source.circle);
-  if (circle !== null) return { circle };
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // 🔴 ΤΟ ΣΚΕΛΟΣ ΤΟΥ ΧΑΡΑΓΜΕΝΟΥ ΠΟΛΥΓΩΝΟΥ *(Φάση 3)* — ΓΡΑΦΤΗΚΕ **ΜΑΖΙ** ΜΕ ΤΟΝ ΓΡΑΦΕΑ
-  //
-  // ⚠️ Η Φάση 2 πρόσθεσε την ακτίνα σε **τέσσερα** σύνορα και ξέχασε **αυτό** — και η
-  //    βιτρίνα έλεγε «Δεν δηλώθηκε» αμέσως μετά τη δημοσίευση, με **πράσινο** τον
-  //    γραφέα. Το `coverage-round-trip.test.ts` υπάρχει ακριβώς γι' αυτό, και έχει
-  //    πλέον γραμμή για **κάθε** σκέλος της ένωσης.
-  //
-  // 🔑 **Ο ΙΔΙΟΣ κριτής με τον γραφέα** *(`asCoverageOutline`)*: ο δίσκος δεν είναι
-  //    αξιόπιστος, και ένα χειρόγραφο πολύγωνο 300 χλμ θα ανάσταινε την απαγόρευση #6
-  //    από την πίσω πόρτα — ακριβώς όπως ένα χειρόγραφο `radiusKm: 500`.
-  // ═══════════════════════════════════════════════════════════════════════════
-  const outline = asCoverageOutline(source.outline);
-  if (outline !== null) return { outline };
-
-  const { adminIds } = source;
-  if (!Array.isArray(adminIds)) return null;
-  const ids = adminIds.filter((id): id is string => typeof id === 'string' && id !== '');
-  return ids.length === 0 ? null : { adminIds: ids };
-}
-
-/**
- * **Η ΑΠΟΔΕΔΕΙΓΜΕΝΗ ΠΑΡΟΥΣΙΑ ΑΠΟ ΤΟΝ ΔΙΣΚΟ** *(ADR-846 Φ5δ)* — παράγωγο, όχι δήλωση.
- *
- * 🔑 **Ανεκτικός αναγνώστης, αυστηρός γραφέας** — ίδιο ιδίωμα με το {@link readMark}: μια
- * γραμμή που δεν είναι κύκλος **δεν μαντεύεται**, **πέφτει**. Και η απουσία του πεδίου
- * δίνει `[]`, οπότε **κανένα παλιό έγγραφο δεν χρειάζεται μετανάστευση**: όσα γράφτηκαν
- * πριν τη Φ5δ απαντούν *«καμία απόδειξη»*, που είναι **ακριβώς** η αλήθεια γι' αυτά.
- *
- * 🔴 **ΤΟ ΤΑΒΑΝΙ ΕΠΙΒΑΛΛΕΤΑΙ ΚΑΙ ΕΔΩ, ΚΑΙ ΔΕΝ ΕΙΝΑΙ ΠΕΡΙΤΤΟ.** Ο γραφέας το τηρεί ήδη·
- * αυτό όμως προστατεύει το έγγραφο **τη στιγμή που γράφτηκε**, όχι το έγγραφο **που
- * έφτασε στον φυλλομετρητή**. Ανάμεσά τους υπάρχει χειροκίνητη επεξεργασία και λάθος
- * ανάπτυξη — και το `agency_profiles` το κατεβάζει **κάθε ανώνυμος επισκέπτης**, οπότε
- * ένας φουσκωμένος πίνακας εδώ πολλαπλασιάζεται με τον αριθμό των γραφείων. **Ίδιο
- * ακριβώς σκεπτικό με τον έλεγχο του `radiusKm`** λίγες γραμμές πιο κάτω.
- *
- * ⚠️ **`radiusKm === 0` είναι ΝΟΜΙΜΟ εδώ**, σε αντίθεση με το ερώτημα του επισκέπτη: το
- * `LISTING_UNCERTAINTY_KM` δίνει **0** για `pin`/`outline`, δηλαδή *«ξέρουμε ακριβώς»* —
- * η **ισχυρότερη** δυνατή απόδειξη, όχι εκφυλισμένη τιμή.
- */
-function readPresence(raw: unknown): readonly GeoCircle[] {
-  if (!Array.isArray(raw)) return [];
-
-  const areas: GeoCircle[] = [];
-  for (const row of raw) {
-    if (areas.length >= MAX_PRESENCE_AREAS) break;
-    if (typeof row !== 'object' || row === null) continue;
-
-    const { center, radiusKm } = row as Partial<GeoCircle>;
-    if (typeof center !== 'object' || center === null) continue;
-    if (!Number.isFinite(center.lat) || !Number.isFinite(center.lng)) continue;
-    if (typeof radiusKm !== 'number' || !Number.isFinite(radiusKm) || radiusKm < 0) continue;
-
-    areas.push({ center: { lat: center.lat, lng: center.lng }, radiusKm });
-  }
-
-  return areas;
-}
-
-/**
- * **Ο κύκλος από τον δίσκο** — και **ΕΔΩ** επαληθεύεται το βήμα, σε αντίθεση με τα
- * `adminIds`.
- *
- * 🔑 **Η ασυμμετρία είναι απόφαση, όχι αβλεψία.** Τα `adminIds` δεν ελέγχονται εδώ γιατί
- * ο έλεγχός τους απαιτεί την ιεραρχία των 4 MB *(βλ. επικεφαλίδα)* και η αποτυχία τους
- * είναι **ακίνδυνη**: ανύπαρκτη ταυτότητα δεν ταιριάζει με κανένα ερώτημα. Η ακτίνα
- * είναι το **αντίθετο**: ο έλεγχος κοστίζει **τέσσερις συγκρίσεις**, και η αποτυχία του
- * είναι **επικίνδυνη** — ένα χειρόγραφο `radiusKm: 500` στη βάση θα ανάσταινε ακριβώς
- * την απαγόρευση #6 *(«dial χωρίς ταβάνι»)*, παρακάμπτοντας και τον τύπο και τον γραφέα.
- *
- * ⚠️ **Ο τύπος δεν επιβιώνει ενός `JSON.parse`** — γι' αυτό το κλειστό σύνολο
- * επιβάλλεται **και εδώ**, από την ίδια συνάρτηση που το επιβάλλει στον γραφέα.
- */
-function readCoverageCircle(raw: unknown): RadiusCoverage['circle'] | null {
-  if (typeof raw !== 'object' || raw === null) return null;
-  const source = raw as Record<string, unknown>;
-
-  const center = readPosition(source.center);
-  if (center === null) return null;
-
-  const radiusKm = typeof source.radiusKm === 'number' ? asCoverageRadiusKm(source.radiusKm) : null;
-  if (radiusKm === null) return null;
-
-  return { center, radiusKm };
 }
 
 // =============================================================================
