@@ -53,10 +53,55 @@ import '@google/model-viewer/dist/model-viewer.min.js';
 
 import React from 'react';
 
+import { MESHOPT_DECODER_URL } from '@/config/vendored-public-assets';
+
 // ⛔ **ΑΠΟ ΕΔΩ, ΠΟΤΕ ΑΝΤΙΣΤΡΟΦΑ**: η σταθερά ζει σε αρχείο **χωρίς παρενέργειες**, γιατί τη
 //    χρειάζεται και η **άλλη** πλευρά του συνόρου `dynamic()`. Αν επιστρέψει εδώ, το σκαλί θα
 //    την εισάγει στατικά και το megabyte θα μπει στο ΚΥΡΙΟ πακέτο — δες την κεφαλίδα εκείνου.
 import { MODEL_STAGE_ASPECT_CLASS } from './listing-model-stage-metrics';
+
+/**
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴🔴 Ο-22 — ΧΩΡΙΣ ΑΥΤΕΣ ΤΙΣ ΔΥΟ ΓΡΑΜΜΕΣ **ΚΑΝΕΝΑ** ΜΟΝΤΕΛΟ ΜΑΣ ΔΕΝ ΑΝΟΙΓΕΙ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * **Μετρημένο ζωντανά (2026-09-09)**, με το CORS ήδη λυμένο και το `.glb` να κατεβαίνει:
+ *
+ * ```
+ * THREE.GLTFLoader: setMeshoptDecoder must be called before loading compressed files
+ * ```
+ *
+ * 🔑 **Η ΡΑΦΗ, ΟΧΙ ΤΟ ΑΚΡΟ**: ο ψήστης μας συμπιέζει **πάντα** με `EXT_meshopt_compression`
+ * *(`public-shelf-model-bake`, βήμα ④ «κβάντιση+meshopt» — μετρημένο **112.980 → 32.928 bytes**,
+ * −71%)*. Ο θεατής δεν είχε **ποτέ** αποκωδικοποιητή. Δύο άκρα, καθένα σωστό μόνο του, και η
+ * ραφή τους δεν ρωτήθηκε ποτέ — **ακριβώς** το σχήμα του Ο-13.
+ *
+ * 🔴 **ΚΑΙ ΤΟ `<model-viewer>` ΔΕΝ ΕΧΕΙ ΠΡΟΕΠΙΛΟΓΗ** *(μετρημένο μέσα στο 4.3.1: το bundle
+ * γράφει `c.meshoptDecoderLocation && Pg.setMeshoptDecoderLocation(…)`)*. Δηλαδή η σιωπή **δεν**
+ * σημαίνει «θα φορτώσει από CDN» — σημαίνει «**ποτέ**». Δομικό, όχι ρύθμιση περιβάλλοντος.
+ *
+ * ⚠️ **Ενίει ΚΛΑΣΙΚΟ `<script src>`** και περιμένει καθολικό `MeshoptDecoder`. Γι' αυτό το
+ * αντίγραφό μας είναι το **`.cjs`** *(UMD footer)* και όχι το `.mjs` — δες το μητρώο.
+ *
+ * ⚠️ **ΓΙΑΤΙ ΣΕ `useState` ΚΑΙ ΟΧΙ ΣΕ `useEffect`**: η ανάθεση πρέπει να έχει γίνει **πριν** το
+ * στοιχείο δει το `src`. Ένα `useEffect` τρέχει **μετά** το commit, δηλαδή αφού το
+ * `<model-viewer>` έχει ήδη ξεκινήσει τη φόρτωση — και η πρώτη προβολή θα αποτύγχανε, με τη
+ * δεύτερη να «διορθώνεται» μυστηριωδώς. Η αρχικοποίηση `useState` τρέχει **στο render**, μία
+ * φορά ανά προσάρτηση, πριν από κάθε DOM.
+ *
+ * ⛔ **Η διεύθυνση ΔΕΝ γράφεται εδώ ως λεκτικό** — έρχεται από το μητρώο που φυλάει η πύλη.
+ */
+function useMeshoptDecoderRegistered(): void {
+  React.useState(() => {
+    const element = customElements.get('model-viewer') as
+      | { meshoptDecoderLocation?: string }
+      | undefined;
+    if (element !== undefined && element.meshoptDecoderLocation !== MESHOPT_DECODER_URL) {
+      element.meshoptDecoderLocation = MESHOPT_DECODER_URL;
+    }
+    return null;
+  });
+}
 
 interface ListingModelCanvasProps {
   readonly src: string;
@@ -74,6 +119,7 @@ interface ListingModelCanvasProps {
  * αυτό το ADR κυνηγά από την πρώτη του γραμμή.
  */
 export default function ListingModelCanvas({ src, alt, onFailed }: ListingModelCanvasProps) {
+  useMeshoptDecoderRegistered();
   const ref = React.useRef<HTMLElement>(null);
 
   React.useEffect(() => {
