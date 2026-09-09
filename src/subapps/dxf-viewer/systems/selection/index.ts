@@ -77,3 +77,6 @@ export type { SelectionContextType, UniversalSelectionHook } from './SelectionSy
 
 // Re-export main system component for convenience
 export { SelectionSystem } from './SelectionSystem';
+// ADR-688 — provider-if-missing boundary για επιφάνειες που ΑΠΑΙΤΟΥΝ επιλογή
+// (BimViewport3D) και μπορούν να γίνουν mount εκτός του DxfViewerApp δέντρου.
+export { SelectionBoundary } from './SelectionBoundary';

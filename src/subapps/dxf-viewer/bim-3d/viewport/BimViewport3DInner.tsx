@@ -61,7 +61,7 @@ import { recordSchedulerFrame } from '../scene/bim3d-perf-diag'; // 🔬 ADR-549
 // ADR-400 §3D — persist/restore the 3D camera view (URL deep-link + localStorage) across reload + 2D↔3D toggle.
 import { attachCamera3DPersistence } from './camera3d-persistence-wiring';
 
-// ── BimViewport3D ─────────────────────────────────────────────────────────────
+// ── BimViewport3DInner ─────────────────────────────────────────────────────────────
 // ADR-040 micro-leaf compliant: subscribes to ViewMode3DStore (not high-freq),
 // renders ≤1 canvas element. Ownership: ThreeJsSceneManager handles Three.js.
 //
@@ -89,7 +89,7 @@ export interface BimViewport3DProps {
   onClose?: () => void;
 }
 
-export function BimViewport3D({ projectId: projectIdProp, readOnly = false, bimEntities, dxfScene, visible, onClose }: BimViewport3DProps = {}) {
+export function BimViewport3DInner({ projectId: projectIdProp, readOnly = false, bimEntities, dxfScene, visible, onClose }: BimViewport3DProps = {}) {
   const { t } = useTranslation('bim3d');
   const containerRef = useRef<HTMLDivElement>(null);
   const managerRef = useRef<ThreeJsSceneManager | null>(null);
