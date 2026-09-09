@@ -412,7 +412,21 @@ describe('Π — χειρόγραφα γεγονότα του πραγματικ
     expect(body.startsWith(`name: ${entry.name}\n`)).toBe(true);
   });
 
-  it('Π4 οι δηλωμένες εξαιρέσεις είναι ΑΚΡΙΒΩΣ τα 5 spec του Playwright (ADR-775 §11)', () => {
+  it('Π4 δηλωμένες εξαιρέσεις: **5 από τα 6** spec του Playwright — το έκτο ΤΡΕΧΕΙ (ADR-775 §11)', () => {
+    /*
+      🔴 **09/09/2026 — ΑΥΤΗ Η ΑΓΚΥΡΑ ΕΠΙΑΣΕ ΤΟ ΔΙΚΟ ΤΗΣ ΠΕΡΙΣΤΑΤΙΚΟ, ΚΑΙ ΓΙ' ΑΥΤΟ ΑΛΛΑΞΕ.**
+      Μέχρι τότε ΚΑΝΕΝΑ workflow δεν έτρεχε `playwright test`, οπότε «όλα τα spec του Playwright
+      είναι δηλωμένες εξαιρέσεις» ήταν αληθές. Το **CHECK 3.77** (ADR-847) το χάλασε — και η
+      δήλωση του `camera-motion` («κόστος ΜΗ εγκεκριμένο — απόφαση Giorgio») **έγινε ψέμα** τη
+      στιγμή που ο Giorgio ενέκρινε και το workflow γράφτηκε.
+
+      ⚠️ **ΤΟ ΕΠΙΚΙΝΔΥΝΟ ΔΕΝ ΗΤΑΝ Ο ΑΡΙΘΜΟΣ, ΗΤΑΝ Η ΣΕΙΡΑ ΚΡΙΣΗΣ**: το `classifyFile` προτιμά
+      το `exemptWhy` **πριν** κοιτάξει εκτελεστή ⇒ μια ξεχασμένη δήλωση κάνει τον ΠΡΑΓΜΑΤΙΚΟ
+      εκτελεστή **αόρατο**. Το αρχείο θα μετριόταν για πάντα ως «κανείς δεν το τρέχει» ενώ μια
+      πύλη το έτρεχε — το ακριβώς ανάποδο ψέμα από αυτό που κυνηγά το ADR-587.
+
+      ⇒ Η άγκυρα δεν λέει πια «τα 5». Λέει **γιατί** είναι 5: το έκτο **έχει εκτελεστή**.
+    */
     const declarations = JSON.parse(fs.readFileSync(path.join(PROJECT_ROOT, '.anchor-execution.json'), 'utf8'));
     expect(declarations.exempt.map((entry) => entry.file).sort()).toEqual([
       'src/components/contacts/e2e/contact-mutation-impact.e2e.spec.ts',
@@ -422,5 +436,26 @@ describe('Π — χειρόγραφα γεγονότα του πραγματικ
       'src/subapps/dxf-viewer/floorplan-background/components/__tests__/FloorplanBackgroundCanvas.e2e.spec.ts',
     ]);
     for (const entry of declarations.exempt) expect(entry.why.length).toBeGreaterThan(40);
+
+    // Το έκτο: ΟΧΙ εξαίρεση, ΚΑΙ όντως προσεγγίσιμο από workflow — και τα δύο, ποτέ ένα.
+    const sixth = 'src/app/(bare)/test-harness/camera-motion/camera-motion.e2e.spec.ts';
+    expect(declarations.exempt.map((entry) => entry.file)).not.toContain(sixth);
+
+    const census = buildExecutionCensus(PROJECT_ROOT);
+    const row = Object.values(census.byState).flat().find((entry) => entry.file === sixth);
+    // ⚠️ ΧΩΡΙΣ δεύτερο όρισμα: το `expect(τιμή, μήνυμα)` το δέχεται ο **Playwright**, ΟΧΙ ο
+    //    jest — εκεί πετά «Expect takes at most one argument» (μετρημένο, expect@30.2.0).
+    expect(row).toBeDefined();
+    /*
+      ⚠️ **ΔΥΟ ΙΣΧΥΡΙΣΜΟΙ, ΚΑΙ ΚΑΝΕΝΑΣ ΤΟΥΣ ΔΕΝ ΚΑΡΦΩΝΕΙ ΤΗ ΜΙΑ ΚΑΤΑΣΤΑΣΗ.**
+        (α) ΔΕΝ είναι παράβαση — δηλαδή δεν είναι `unexecuted` ούτε `non-blocking-only`.
+        (β) ο εκτελεστής **ονομάζεται**: η λεπτομέρεια δείχνει στο workflow που όντως το τρέχει.
+      Σήμερα η κατάσταση είναι `blocking-path-filtered` (το workflow έχει φίλτρο `paths:`),
+      αλλά **δεν καρφώνεται**: αν αύριο το φίλτρο φύγει, γίνεται `blocking-unconditional` —
+      **νόμιμη** αλλαγή που δεν πρέπει να κοκκινίζει άγκυρα. Αυτό που ΔΕΝ επιτρέπεται να
+      ξανασυμβεί είναι το αρχείο να ξαναγίνει «κανείς δεν το τρέχει» ή να ξαναδηλωθεί εξαίρεση.
+    */
+    expect(BLOCKING_FILE_STATES).not.toContain(row.state);
+    expect(row.detail).toContain('camera-motion-gate.yml');
   });
 });

@@ -15,7 +15,7 @@
     },
     {
       "file": "src/subapps/dxf-viewer/e2e/visual-cross-browser.spec.ts",
-      "why": "ADR-775 §11 δρόμος γ (και τα 7 projects, golden ανά project × πλατφόρμα): το κόστος είναι μετρημένο και ΜΗ εγκεκριμένο. Τα 5 γενικά projects δεν έχουν testMatch ⇒ ενεργοποίηση σήμερα δίνει ~172 βέβαιες αποτυχίες — απόφαση Giorgio."
+      "why": "ADR-775 §11 δρόμος γ (και τα 7 projects, golden ανά project × πλατφόρμα): το κόστος είναι μετρημένο και ΜΗ εγκεκριμένο. ⚠️ ΔΙΟΡΘΩΣΗ 09/09/2026: ο παλιός λόγος εδώ έγραφε «τα 5 γενικά projects δεν έχουν testMatch ⇒ ενεργοποίηση σήμερα δίνει ~172 βέβαιες αποτυχίες». Η ΡΙΖΑ ΑΥΤΗ ΕΚΛΕΙΣΕ (ADR-775 §11): τα γενικά φέρουν πλέον testIgnore και δεν σηκώνουν spec ειδικού project (μετρημένο --list: 405 → 155). Άρα ο ΑΡΙΘΜΟΣ δεν ισχύει πια — η ΑΠΟΦΑΣΗ όμως μένει ίδια και παραμένει του Giorgio, για λόγο που ΔΕΝ θεραπεύτηκε: αυτό το spec δεν έχει εκτελεστεί ΠΟΤΕ και δεν υπάρχουν golden ανά project × πλατφόρμα (δρόμος γ, μη εγκεκριμένο κόστος). ΜΗΝ ξαναγράψεις εδώ αριθμό χωρίς να τον μετρήσεις."
     },
     {
       "file": "src/subapps/dxf-viewer/floorplan-background/components/__tests__/FloorplanBackgroundCanvas.e2e.spec.ts",
@@ -24,10 +24,6 @@
     {
       "file": "src/components/contacts/e2e/contact-mutation-impact.e2e.spec.ts",
       "why": "ADR-775 §11 δρόμος α: δεν αγγίζει golden (χτίζει τις απαντήσεις με page.route), άρα είναι ο πρώτος υποψήφιος για ενεργοποίηση. Χρειάζεται ζωντανή εφαρμογή στον runner + εγκατεστημένους browsers (~10-20′), κόστος ΜΗ εγκεκριμένο — απόφαση Giorgio."
-    },
-    {
-      "file": "src/app/(bare)/test-harness/camera-motion/camera-motion.e2e.spec.ts",
-      "why": "ADR-847 · ADR-775 §11 δρόμος α: μετρά την ΠΤΗΣΗ της κάμερας στο ζωντανό harness (/test-harness/camera-motion) — πόσα άλματα και τι κόστος, γιατί «η κίνηση φαίνεται καλά» δεν είναι κριτήριο που κοκκινίζει. Δεν αγγίζει golden screenshots, άρα ανήκει στην ΙΔΙΑ κλάση με το contact-mutation-impact εδώ πάνω και θα ενεργοποιηθεί ΜΑΖΙ του. Χρειάζεται ζωντανή εφαρμογή στον runner + εγκατεστημένους browsers· κόστος ΜΗ εγκεκριμένο — απόφαση Giorgio. ⚠️ ΩΣ ΤΟΤΕ Η ΜΕΤΡΗΣΗ ΔΕΝ ΧΑΝΕΤΑΙ: η καθαρή αριθμητική της τροχιάς ζει στο `lib/geo/camera-trajectory` και ΤΗΝ ΤΡΕΧΕΙ jest (`camera-trajectory.test.ts`) — το e2e προσθέτει τον ΠΡΑΓΜΑΤΙΚΟ χάρτη, όχι το κριτήριο."
     }
   ]
 }
