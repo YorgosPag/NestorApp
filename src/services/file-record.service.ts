@@ -54,6 +54,7 @@ import { API_ROUTES } from '@/config/domain-constants';
 // 🏢 ENTERPRISE: SRP-compliant modules (ADR-065)
 import {
   moveToTrash,
+  supersedeFileRecord,
   restoreFromTrash,
   getTrashedFiles,
   getArchivedFiles,
@@ -300,6 +301,15 @@ export class FileRecordService {
 
   /** 🗑️ Move file to Trash (soft delete) — @see file-record-lifecycle.ts */
   static moveToTrash = moveToTrash;
+
+  /**
+   * 🔁 Αντικατάσταση αρχείου (ISO 19650 «superseded») — @see file-record-lifecycle.ts
+   *
+   * ⚠️ ΟΤΑΝ ένα αρχείο φεύγει επειδή **κάτι πήρε τη θέση του**, αυτή είναι η πόρτα —
+   * ΟΧΙ το `moveToTrash`. Ο κάδος λέει «χάθηκε»· εδώ τίποτα δεν χάθηκε, και οι
+   * συνδρομητές του `FILE_TRASHED` το χρειάζονται για να μη σβήσουν τον διάδοχο.
+   */
+  static supersedeFileRecord = supersedeFileRecord;
 
   /** ♻️ Restore file from Trash — @see file-record-lifecycle.ts */
   static restoreFromTrash = restoreFromTrash;

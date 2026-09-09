@@ -33,12 +33,19 @@ import {
 } from '@/config/domain-constants';
 import type { FileRecord } from '@/types/file-record';
 import { isFileRecord } from '@/types/file-record';
+// 🌐 ISO 19650 §10.2 — ΕΝΑ λεξιλόγιο καταστάσεων CDE (ADR-373). Type-only import: μηδέν
+// runtime εξάρτηση, αλλά το `satisfies` παρακάτω σπάει τη μεταγλώττιση αν η κατάσταση
+// φύγει ποτέ από τον κατάλογο — δεν είναι καρφωτή συμβολοσειρά, είναι δεμένη.
+import type { CdeState } from '@/config/iso19650-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import { RealtimeService } from '@/services/realtime';
 import { FileAuditService } from '@/services/file-audit.service';
 import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
 
 const logger = createModuleLogger('FILE_RECORD_LIFECYCLE');
+
+/** 🌐 ISO 19650 §10.2 — «Αντικαταστάθηκε». Δεμένη στον κατάλογο, όχι καρφωμένη. */
+const SUPERSEDED_CDE_STATE = 'SUPERSEDED' as const satisfies CdeState;
 
 // ============================================================================
 // HELPERS
@@ -131,11 +138,37 @@ async function queryLifecycleFiles(
 // ============================================================================
 
 /**
+ * Πρόθεση της αποχώρησης ενός αρχείου από την ενεργή ζωή.
+ *
+ * 🌐 ISO 19650 §10.2: «αντικαταστάθηκε» ({@link CDE_STATES}.SUPERSEDED) και «διαγράφηκε»
+ * είναι **δύο διαφορετικά γεγονότα**, όχι δύο ονόματα του ίδιου. Στο πρώτο υπάρχει
+ * διάδοχος και ο αναγνώστης οφείλει να τον βρει· στο δεύτερο δεν υπάρχει τίποτα.
+ */
+export interface MoveToTrashOptions {
+  /**
+   * Το αρχείο που **παίρνει τη θέση** αυτού. Παρόν ⇒ αντικατάσταση, όχι απώλεια.
+   * Ταξιδεύει ΚΑΙ στο έγγραφο ΚΑΙ στο `FILE_TRASHED` — δες
+   * {@link FileRecord.supersededByFileId} για το γιατί χρειάζονται και τα δύο.
+   */
+  readonly supersededByFileId?: string;
+}
+
+/**
  * 🗑️ Move file to Trash (soft delete)
  * @enterprise Replaces hard delete with 3-tier lifecycle
+ *
+ * ⚠️ Όταν το αρχείο φεύγει επειδή **αντικαταστάθηκε**, μην καλείς αυτή τη συνάρτηση με
+ * σκέτο options bag — κάλεσε το {@link supersedeFileRecord}, που **ονομάζει** την πρόθεση.
+ * Η ονομασία είναι η άμυνα: ένα `{ supersededByFileId }` που ξεχνιέται δεν φαίνεται σε
+ * code review, ένα `moveToTrash` στη θέση ενός `supersede` φαίνεται.
  */
-export async function moveToTrash(fileId: string, trashedBy: string): Promise<void> {
-  logger.info('Moving FileRecord to trash', { fileId, trashedBy });
+export async function moveToTrash(
+  fileId: string,
+  trashedBy: string,
+  options?: MoveToTrashOptions,
+): Promise<void> {
+  const supersededByFileId = options?.supersededByFileId;
+  logger.info('Moving FileRecord to trash', { fileId, trashedBy, supersededByFileId: supersededByFileId ?? null });
 
   const { docRef, data } = await loadFileDocOrThrow(fileId);
   const category = data.category as FileCategory;
@@ -154,6 +187,15 @@ export async function moveToTrash(fileId: string, trashedBy: string): Promise<vo
     deletedAt: serverTimestamp(),
     deletedBy: trashedBy,
     updatedAt: serverTimestamp(),
+    // 🌐 ISO 19650 — η διαδοχή γράφεται στο ΕΓΓΡΑΦΟ (μόνιμη καταγωγή), όχι μόνο στο
+    // γεγονός (εφήμερο). Το `cdeState` είναι το υπάρχον SSoT πεδίο του ADR-373.
+    ...(supersededByFileId
+      ? {
+          supersededByFileId,
+          supersededAt: serverTimestamp(),
+          cdeState: SUPERSEDED_CDE_STATE,
+        }
+      : {}),
   });
 
   logger.info('FileRecord moved to trash', {
@@ -169,10 +211,41 @@ export async function moveToTrash(fileId: string, trashedBy: string): Promise<vo
     displayName: (data.displayName as string | undefined) ?? undefined,
     entityId: (data.entityId as string | undefined) ?? undefined,
     entityType: (data.entityType as string | undefined) ?? undefined,
+    ...(supersededByFileId ? { supersededByFileId } : {}),
     timestamp: Date.now(),
   });
 
   safeFireAndForget(FileAuditService.log(fileId, 'delete', trashedBy), 'FileRecord.trashFile', { fileId });
+}
+
+/**
+ * 🔁 **Η ΜΙΑ πόρτα της αντικατάστασης** — «αυτό το αρχείο δεν χάθηκε· το πήρε η θέση του
+ * το `supersededByFileId`».
+ *
+ * 🌐 ISO 19650 §10.2: ένα superseded έγγραφο είναι **μη χρησιμοποιήσιμο**, ΟΧΙ ανύπαρκτο —
+ * και ο διάδοχός του πρέπει να είναι **ευρέσιμος**. Ίδιο lifecycle με τον κάδο (soft,
+ * ανακτήσιμο, ίδια πολιτική διατήρησης) — αλλά **δηλωμένη** πρόθεση, ώστε κανένας
+ * συνδρομητής να μη χρειαστεί να τη μαντέψει.
+ *
+ * 🔴 ΓΙΑΤΙ ΥΠΑΡΧΕΙ (ADR-845 Ο-16, μετρημένο 2026-09-09): η αντικατάσταση κάτοψης γραφόταν
+ * σε **δύο** σημεία ως σκέτο `moveToTrash` (`StepUpload.performUpload` +
+ * `useSceneState.linkSceneFileToLevel` — δίδυμα, N.18). Ο συνδρομητής
+ * `useLevelFloorplanSync` — φτιαγμένος για **εξωτερική** διαγραφή — δεν είχε τρόπο να
+ * ξεχωρίσει τα δύο και **καθάριζε τον καμβά που η ίδια η εισαγωγή μόλις είχε γεμίσει**.
+ * Ο γραφέας ήταν σωστός, ο αναγνώστης ήταν σωστός· **η ραφή τους δεν ήταν ποτέ ερώτηση**.
+ *
+ * @param previousFileId    Το αρχείο που αποσύρεται.
+ * @param supersededByFileId Ο διάδοχος που μόλις πήρε τη θέση του.
+ * @param actorUid          Ποιος έκανε την αντικατάσταση.
+ */
+export async function supersedeFileRecord(
+  previousFileId: string,
+  supersededByFileId: string,
+  actorUid: string,
+): Promise<void> {
+  // Ταυτότητα, όχι αντικατάσταση: το αρχείο δεν διαδέχεται τον εαυτό του.
+  if (previousFileId === supersededByFileId) return;
+  return moveToTrash(previousFileId, actorUid, { supersededByFileId });
 }
 
 /**

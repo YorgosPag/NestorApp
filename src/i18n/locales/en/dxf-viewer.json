@@ -1515,6 +1515,7 @@
   "scene": {
     "crossFloorLinkCleared": "The floorplan of «{floor}» was linked to a different floor and has been unlinked. Please re-import the DXF file.",
     "crossFloorSaveBlocked": "Save aborted: the floorplan file belongs to a different floor.",
-    "dxfWipeBlocked": "Save aborted: it would erase the entire DXF geometry of this floor."
+    "dxfWipeBlocked": "Save aborted: it would erase the entire DXF geometry of this floor.",
+    "floorplanDeletedExternally": "The floorplan of «{level}» was deleted. The canvas is empty because the file went to the trash — not because there is no drawing."
   }
 }

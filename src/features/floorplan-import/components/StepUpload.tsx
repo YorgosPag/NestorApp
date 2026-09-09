@@ -214,10 +214,19 @@ export function StepUpload({ config, onComplete }: StepUploadProps) {
       userDrawingUnits: explicitUnits,
     });
     if (result.success) {
-      // Trash legacy non-floor file if replacing (best-effort)
+      // 🔁 ADR-845 Ο-16 — ΑΝΤΙΚΑΤΑΣΤΑΣΗ, ΟΧΙ ΔΙΑΓΡΑΦΗ (ISO 19650 «superseded»).
+      // Ο δίδυμος αυτού του κλάδου ζει στο `useSceneState.linkSceneFileToLevel`: η ίδια
+      // αντικατάσταση δηλώνεται από δύο σημεία, και ΚΑΘΕ ένα που θα ξεχνούσε τον διάδοχο
+      // θα ξανάδειαζε τον καμβά. `result.fileId` = το αρχείο που μόλις πήρε τη θέση.
+      // Χωρίς `fileId` (δεν πρέπει να συμβαίνει σε επιτυχία) πέφτουμε στον σκέτο κάδο —
+      // fail-closed προς την παλιά, ορατή συμπεριφορά αντί για σιωπηλή παράλειψη.
       if (!floorId && existingFile) {
         try {
-          await FileRecordService.moveToTrash(existingFile.id, config.userId);
+          if (result.fileId) {
+            await FileRecordService.supersedeFileRecord(existingFile.id, result.fileId, config.userId);
+          } else {
+            await FileRecordService.moveToTrash(existingFile.id, config.userId);
+          }
         } catch {
           // non-blocking
         }

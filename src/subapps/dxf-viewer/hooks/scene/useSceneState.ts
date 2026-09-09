@@ -159,7 +159,13 @@ export function useSceneState() {
         if (!(resolvedFileRecordId && levelsSystem.linkSceneToLevel)) return;
         const prevFileId = levels.find((l) => l.id === targetLevelId)?.sceneFileId;
         if (prevFileId && prevFileId !== resolvedFileRecordId && user?.uid) {
-          void FileRecordService.moveToTrash(prevFileId, user.uid).catch(() => {
+          // 🔁 ADR-845 Ο-16 — ΑΝΤΙΚΑΤΑΣΤΑΣΗ, ΟΧΙ ΔΙΑΓΡΑΦΗ (ISO 19650 «superseded»).
+          // Σκέτο `moveToTrash` εδώ σήμαινε «η κάτοψη χάθηκε» — και ο συνδρομητής
+          // `useLevelFloorplanSync` έσβηνε τη σκηνή που το βήμα 2 του
+          // `commitImportedScene` μόλις είχε γράψει, λίγες γραμμές πριν. Ο διάδοχος
+          // δηλώνεται ΡΗΤΑ ώστε κανείς να μη χρειαστεί να τον μαντέψει από το
+          // (δομικά μπαγιάτικο) `levels` — δες `level-floorplan-loss.ts`.
+          void FileRecordService.supersedeFileRecord(prevFileId, resolvedFileRecordId, user.uid).catch(() => {
             /* non-blocking: already deleted by floor-wipe, or permission no-op */
           });
         }
