@@ -43,13 +43,15 @@
  */
 
 import { occupationNeedsCapability } from '@/lib/professional/showcase-eligibility';
-import type {
-  ClassifiedOccupation,
-  DeclaredShowcaseMark,
-  PublicShowcase,
-  ShowcaseCredential,
-  ShowcaseRead,
+import {
+  MAX_PRESENCE_AREAS,
+  type ClassifiedOccupation,
+  type DeclaredShowcaseMark,
+  type PublicShowcase,
+  type ShowcaseCredential,
+  type ShowcaseRead,
 } from '@/types/agency-profile';
+import type { GeoCircle } from '@/types/geo/coordinates';
 import type { ListingImage, ListingImageSource } from '@/types/public-listing';
 import { asCoverageOutline } from '@/lib/agency/coverage-outline';
 import { isShowcaseMarkKind } from '@/lib/agency/showcase-mark-kind';
@@ -216,6 +218,7 @@ export function readShowcase(raw: unknown, companyId: string): ShowcaseRead {
       place: readPlace(source.place),
       position: readPosition(source.position),
       coverage: readCoverage(source.coverage),
+      presence: readPresence(source.presence),
       mark: readMark(source.mark),
       publishedAt,
     } satisfies PublicShowcase,
@@ -383,6 +386,44 @@ function readCoverage(raw: unknown): PublicShowcase['coverage'] {
   if (!Array.isArray(adminIds)) return null;
   const ids = adminIds.filter((id): id is string => typeof id === 'string' && id !== '');
   return ids.length === 0 ? null : { adminIds: ids };
+}
+
+/**
+ * **Η ΑΠΟΔΕΔΕΙΓΜΕΝΗ ΠΑΡΟΥΣΙΑ ΑΠΟ ΤΟΝ ΔΙΣΚΟ** *(ADR-846 Φ5δ)* — παράγωγο, όχι δήλωση.
+ *
+ * 🔑 **Ανεκτικός αναγνώστης, αυστηρός γραφέας** — ίδιο ιδίωμα με το {@link readMark}: μια
+ * γραμμή που δεν είναι κύκλος **δεν μαντεύεται**, **πέφτει**. Και η απουσία του πεδίου
+ * δίνει `[]`, οπότε **κανένα παλιό έγγραφο δεν χρειάζεται μετανάστευση**: όσα γράφτηκαν
+ * πριν τη Φ5δ απαντούν *«καμία απόδειξη»*, που είναι **ακριβώς** η αλήθεια γι' αυτά.
+ *
+ * 🔴 **ΤΟ ΤΑΒΑΝΙ ΕΠΙΒΑΛΛΕΤΑΙ ΚΑΙ ΕΔΩ, ΚΑΙ ΔΕΝ ΕΙΝΑΙ ΠΕΡΙΤΤΟ.** Ο γραφέας το τηρεί ήδη·
+ * αυτό όμως προστατεύει το έγγραφο **τη στιγμή που γράφτηκε**, όχι το έγγραφο **που
+ * έφτασε στον φυλλομετρητή**. Ανάμεσά τους υπάρχει χειροκίνητη επεξεργασία και λάθος
+ * ανάπτυξη — και το `agency_profiles` το κατεβάζει **κάθε ανώνυμος επισκέπτης**, οπότε
+ * ένας φουσκωμένος πίνακας εδώ πολλαπλασιάζεται με τον αριθμό των γραφείων. **Ίδιο
+ * ακριβώς σκεπτικό με τον έλεγχο του `radiusKm`** λίγες γραμμές πιο κάτω.
+ *
+ * ⚠️ **`radiusKm === 0` είναι ΝΟΜΙΜΟ εδώ**, σε αντίθεση με το ερώτημα του επισκέπτη: το
+ * `LISTING_UNCERTAINTY_KM` δίνει **0** για `pin`/`outline`, δηλαδή *«ξέρουμε ακριβώς»* —
+ * η **ισχυρότερη** δυνατή απόδειξη, όχι εκφυλισμένη τιμή.
+ */
+function readPresence(raw: unknown): readonly GeoCircle[] {
+  if (!Array.isArray(raw)) return [];
+
+  const areas: GeoCircle[] = [];
+  for (const row of raw) {
+    if (areas.length >= MAX_PRESENCE_AREAS) break;
+    if (typeof row !== 'object' || row === null) continue;
+
+    const { center, radiusKm } = row as Partial<GeoCircle>;
+    if (typeof center !== 'object' || center === null) continue;
+    if (!Number.isFinite(center.lat) || !Number.isFinite(center.lng)) continue;
+    if (typeof radiusKm !== 'number' || !Number.isFinite(radiusKm) || radiusKm < 0) continue;
+
+    areas.push({ center: { lat: center.lat, lng: center.lng }, radiusKm });
+  }
+
+  return areas;
 }
 
 /**

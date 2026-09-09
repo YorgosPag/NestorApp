@@ -47,6 +47,8 @@ import {
   type AgencyMediaResolver,
 } from './agency-media.reader';
 import { agencyMediaDeclaration } from './agency-media-publication';
+// ADR-846 Φ5δ — η **απόδειξη παρουσίας** ξαναχτίζεται όποτε αλλάζει η προσφορά.
+import { refreshShowcasePresence } from '@/services/mandate/showcase-presence.service';
 
 const logger = createModuleLogger('publish-public-listing');
 
@@ -305,6 +307,20 @@ export async function writeListingProjection(
 ): Promise<PublishOutcome> {
   const ref = adminDb.collection(COLLECTIONS.PUBLIC_LISTINGS).doc(listingId);
 
+  // ── ADR-846 Φ5δ — Η ΠΡΟΣΦΟΡΑ ΑΛΛΑΞΕ, ΑΡΑ ΑΛΛΑΞΕ ΚΑΙ Η ΑΠΟΔΕΙΞΗ ──────────────
+  //
+  // 🔑 **Γραμμένο ΜΙΑ φορά, καλείται και στις ΔΥΟ κατευθύνσεις.** Η απόσυρση αλλάζει το
+  //    «πού έχει αποδεδειγμένα ακίνητο» **ακριβώς όσο** η δημοσίευση: γραφείο που
+  //    ξεπούλησε το τελευταίο του ακίνητο στη Λάρισα **παύει** να έχει απόδειξη εκεί, και
+  //    ένα `presence` που κρατά την παλιά περιοχή θα ήταν **ψευδής ισχυρισμός με
+  //    ημερομηνία λήξης**. Δύο ξεχωριστές κλήσεις θα ήταν δύο ευκαιρίες να ξεχαστεί η μία.
+  //
+  // ⚠️ **Το `property.agency` επιβιώνει ΚΑΙ στην απόσυρση**: το `buildPublicListing`
+  //    επιστρέφει `null` επειδή ο κύκλος ζωής δεν είναι πια «listed» — το **έγγραφο
+  //    πηγής** που κρατά την ταυτότητα του γραφείου είναι ολόκληρο εδώ.
+  const refreshPresence = (): Promise<void> =>
+    refreshShowcasePresence(adminDb, property.agency?.id ?? '');
+
   try {
     const listing = buildPublicListing({ ...property, id: listingId }, place, projectedAt);
 
@@ -329,7 +345,8 @@ export async function writeListingProjection(
       //    και η απόσυρση είναι η περίπτωσή της όπου το επιθυμητό σύνολο είναι ∅.
       //    Γι' αυτό η **επαναφορά** (`lifecycle: 'listed'` ξανά) δουλεύει χωρίς
       //    τίποτε επιπλέον: ξαναπερνά από εδώ με μη-κενό σύνολο.
-      await withdrawListingShelves(listingId);
+        await withdrawListingShelves(listingId);
+      await refreshPresence();
       return 'withdrawn';
     }
 
@@ -346,6 +363,7 @@ export async function writeListingProjection(
     //    όταν λείπει — άρα κάθε έγγραφο γραμμένο πριν από σήμερα έχει ήδη σωστή
     //    απάντηση χωρίς να το αγγίξει κανείς.
     await writeWithShelf(ref, listingId, listing, property.publishedMedia ?? []);
+    await refreshPresence();
 
     return 'published';
   } catch (error) {

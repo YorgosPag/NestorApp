@@ -3580,6 +3580,8 @@
         "coverageDeclaredOutline": "Δηλώνει: χαραγμένη περιοχή ~{km2} τ.χλμ.",
         "coverageDeclaredRadius": "Δηλώνει: έως {km} χλμ. από το σημείο που όρισε",
         "coverageIntersects": "Καλύπτει μέρος της περιοχής",
+        "coverageProven": "Έχει ακίνητο εδώ",
+        "coverageProvenOnly": "Δεν δηλώνει αυτή την περιοχή, αλλά έχει ακίνητο εδώ",
         "coverageUnknown": "Μπορεί να καλύπτει αυτή την περιοχή — δεν μπορούμε να το κρίνουμε με βεβαιότητα",
         "coverageWithin": "Καλύπτει όλη την περιοχή",
         "occupationAll": "Όλες οι ειδικότητες",

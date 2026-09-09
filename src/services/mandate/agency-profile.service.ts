@@ -243,6 +243,22 @@ export async function publishShowcase(
       const existing = snapshot.exists ? readShowcase(snapshot.data(), companyId) : null;
       const keptMark = existing?.outcome === 'showcase' ? existing.showcase.mark : null;
 
+      // ── ADR-846 Φ5δ — ΤΟ ΠΑΡΑΓΩΓΟ ΜΕΤΑΦΕΡΕΤΑΙ, ΔΕΝ ΞΑΝΑΫΠΟΛΟΓΙΖΕΤΑΙ ─────────
+      //
+      // 🔑 **Το `presence` εξαρτάται ΜΟΝΟ από τις αγγελίες — ποτέ από τη δήλωση.** Η
+      //    δήλωση λέει *«πού θέλω να με βρίσκουν»*· το `presence` λέει *«πού έχω
+      //    αποδεδειγμένα ακίνητο»*. Αλλάζοντας το πρώτο δεν αλλάζει το δεύτερο, άρα
+      //    ένας επανυπολογισμός εδώ θα ήταν **δεύτερος γραφέας** για δεδομένο που έχει
+      //    ήδη έναν (`showcase-presence.service.ts`) — το σχήμα ADR-749.
+      //
+      // 🔴 **ΚΑΙ Η ΜΕΤΑΦΟΡΑ ΕΙΝΑΙ ΥΠΟΧΡΕΩΤΙΚΗ, ΟΧΙ ΕΥΓΕΝΕΙΑ**: το `set` παρακάτω είναι
+      //    **χωρίς `merge`**, οπότε χωρίς αυτή τη γραμμή **κάθε αλλαγή επωνυμίας θα
+      //    έσβηνε σιωπηλά την απόδειξη** — και το γραφείο θα εξαφανιζόταν από τον
+      //    κατάλογο εκεί όπου δουλεύει, μέχρι την επόμενη δημοσίευση αγγελίας.
+      //    **Ακριβώς** το περιστατικό του `mark` μία γραμμή πιο πάνω, δεύτερος
+      //    καταναλωτής του ίδιου μαθήματος.
+      const keptPresence = existing?.outcome === 'showcase' ? existing.showcase.presence : [];
+
       const showcase: PublicShowcase = {
         companyId,
         alias: declaration.alias.trim(),
@@ -255,6 +271,7 @@ export async function publishShowcase(
         //    απαιτεί ήδη· αυτό εδώ φυλά τον **παλιό καλούντα** που δεν το ξέρει ακόμη —
         //    μία αναπαράσταση της απουσίας, επιβαλλόμενη στο σημείο της γραφής.
         coverage: declaration.coverage ?? null,
+        presence: keptPresence,
         mark: keptMark,
         publishedAt: nowISO(),
       };
