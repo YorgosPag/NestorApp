@@ -102,7 +102,7 @@ function buildLegacySlabBody(
   params: SlabEntity['params'],
 ): THREE.Mesh {
   const geo = extrudeAndRotate(shape, thicknessM);
-  ensureWorldUvs(geo); // ADR-413 — aoMap uv2 (ExtrudeGeometry auto-UVs in meters).
+  ensureWorldUvs(geo); // ADR-413 — world-meter UVs (ExtrudeGeometry auto-UVs). ΕΝΑ set — δες bim-uv-helpers.
   applySlabSlope(geo, params);
   return new THREE.Mesh(geo, getElementMaterial3D('slab'));
 }

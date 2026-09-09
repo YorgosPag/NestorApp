@@ -42,11 +42,15 @@ function uvOfFace(geo: THREE.BufferGeometry, axis: 'x' | 'y' | 'z', sign: 1 | -1
 }
 
 describe('setBoxWorldUvs — per-face world-meter UVs', () => {
-  it('writes uv + uv2 of the right length', () => {
+  it('writes ENA uv set of the right length — kai KANENA deutero', () => {
     const geo = new THREE.BoxGeometry(2, 0.2, 1);
     setBoxWorldUvs(geo);
     expect(geo.getAttribute('uv').count).toBe(geo.getAttribute('position').count);
-    expect(geo.getAttribute('uv2').count).toBe(geo.getAttribute('position').count);
+    // ⚠️ **ΕΝΑ set, και κανένα δεύτερο** (ADR-845 Ο-15): το `uv2` ήταν αντίγραφο που κανείς
+    //    δεν διάβαζε *(το `aoMap` λύνει στο channel 0 = `uv` από three r152)* και χαρτογραφούνταν
+    //    σε **TEXCOORD_2**, αφήνοντας τρύπα στο TEXCOORD_1 ⇒ **κάθε εξαγόμενο glTF άκυρο**.
+    expect(geo.getAttribute('uv1')).toBeUndefined();
+    expect(geo.getAttribute('uv2')).toBeUndefined();
   });
 
   it('uses world METERS (1 UV unit = 1 m), not normalized 0..1', () => {
@@ -94,11 +98,15 @@ describe('setBoxWorldUvs — per-face world-meter UVs', () => {
 });
 
 describe('setSlopeAlignedTileUvs — ADR-417 #5 slope-aligned roof tile UVs', () => {
-  it('writes uv + uv2 of the right length', () => {
+  it('writes ENA uv set of the right length — kai KANENA deutero', () => {
     const geo = slopedFaceGeo();
     setSlopeAlignedTileUvs(geo, { scaleU: 1, scaleV: 1 });
     expect(geo.getAttribute('uv').count).toBe(geo.getAttribute('position').count);
-    expect(geo.getAttribute('uv2').count).toBe(geo.getAttribute('position').count);
+    // ⚠️ **ΕΝΑ set, και κανένα δεύτερο** (ADR-845 Ο-15): το `uv2` ήταν αντίγραφο που κανείς
+    //    δεν διάβαζε *(το `aoMap` λύνει στο channel 0 = `uv` από three r152)* και χαρτογραφούνταν
+    //    σε **TEXCOORD_2**, αφήνοντας τρύπα στο TEXCOORD_1 ⇒ **κάθε εξαγόμενο glTF άκυρο**.
+    expect(geo.getAttribute('uv1')).toBeUndefined();
+    expect(geo.getAttribute('uv2')).toBeUndefined();
   });
 
   it('U = across-slope (along ridge): the two eave vertices share v, differ in u by 4m', () => {

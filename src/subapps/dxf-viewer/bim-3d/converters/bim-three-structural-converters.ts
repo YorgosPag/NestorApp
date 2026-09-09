@@ -105,7 +105,7 @@ function buildColumnCoreBody(
     return mesh;
   }
   const geo = extrudeAndRotate(shape, heightM);
-  ensureWorldUvs(geo); // ADR-413 — aoMap uv2 (ExtrudeGeometry auto-UVs in meters).
+  ensureWorldUvs(geo); // ADR-413 — world-meter UVs (ExtrudeGeometry auto-UVs). ΕΝΑ set — δες bim-uv-helpers.
   applyColumnTilt(geo, flatColumn.params); // ADR-404 — raking column shear. No-op flat.
   return new THREE.Mesh(geo, getElementMaterial3D('column'));
 }

@@ -110,7 +110,7 @@ export function buildRiserBox(
   const midXScene = (seg.start.x + seg.end.x) * 0.5;
   const midYScene = (seg.start.y + seg.end.y) * 0.5;
   const geo = new THREE.BoxGeometry(thicknessM, riseM, widthM);
-  ensureWorldUvs(geo); // ADR-413 — aoMap uv2 (BoxGeometry auto-UVs).
+  ensureWorldUvs(geo); // ADR-413 — world-meter UVs (BoxGeometry auto-UVs). ΕΝΑ set — δες bim-uv-helpers.
   const mesh = new THREE.Mesh(geo, mat);
   // Along-ascent seating: start from flush-behind-the-tread-edge (half thickness,
   // Giorgio 2026-07-21), then pull further BACK by the nosing overhang so the riser

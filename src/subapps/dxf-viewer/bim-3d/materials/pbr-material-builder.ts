@@ -117,7 +117,8 @@ export function applyTextureSet(def: PbrMaterialDef, set: LoadedTextureSet): THR
   mat.color.set(0xffffff);
   if (set.normalMap) mat.normalMap = set.normalMap;
   if (set.roughnessMap) mat.roughnessMap = set.roughnessMap;
-  // aoMap needs uv2 — the geometry layer ensures one; three ignores it gracefully
+  // ⚠️ aoMap διαβάζει `uv` (channel 0, η προεπιλογή) από three r152 — ΟΧΙ δεύτερο set.
+  // Το δεύτερο UV set αφαιρέθηκε 2026-09-09: έκανε ΚΑΘΕ εξαγόμενο glTF άκυρο (ADR-845 Ο-15).
   // when absent (ADR-413 contract).
   // aoMapIntensity < 1 because our gradient env has no bounce light; full
   // intensity (1.0) creates pitch-black crevices without a real HDRI fill.

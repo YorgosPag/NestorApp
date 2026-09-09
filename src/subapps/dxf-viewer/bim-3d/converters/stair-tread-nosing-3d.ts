@@ -123,7 +123,7 @@ export function buildTreadNosingMesh(
     depth: frame.width * sceneToM,
     bevelEnabled: false,
   });
-  ensureWorldUvs(geo); // ADR-413 — aoMap uv2.
+  ensureWorldUvs(geo); // ADR-413 — world-meter UVs. ΕΝΑ set — δες bim-uv-helpers.
 
   // Basis: local X → forward (u), local Y → up, local Z (extrude) → width (w).
   const dirU = new THREE.Vector3(frame.u.x, 0, -frame.u.y);

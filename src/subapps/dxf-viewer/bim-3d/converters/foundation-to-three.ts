@@ -102,7 +102,7 @@ export function foundationToMesh(
     mesh = buildFacedSolidBody(verts, thicknessM, fa ?? {}, baseMat);
   } else {
     const geo = extrudeAndRotate(shape, thicknessM);
-    ensureWorldUvs(geo); // ADR-413 — aoMap uv2 (ExtrudeGeometry auto-UVs in meters).
+    ensureWorldUvs(geo); // ADR-413 — world-meter UVs (ExtrudeGeometry auto-UVs). ΕΝΑ set — δες bim-uv-helpers.
     mesh = new THREE.Mesh(geo, baseMat);
   }
   if (!mesh) return null;

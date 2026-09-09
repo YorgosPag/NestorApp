@@ -210,7 +210,7 @@ function buildFlightWaist(
   const geo = new THREE.ExtrudeGeometry(shape, { depth: widthM, bevelEnabled: false });
   geo.applyMatrix4(new THREE.Matrix4().makeBasis(uh, up, zDir)); // local a/y/width → world
   geo.translate(origin.x, origin.y, origin.z);              // seat on the flight centreline
-  ensureWorldUvs(geo); // ADR-413 — aoMap uv2.
+  ensureWorldUvs(geo); // ADR-413 — world-meter UVs. ΕΝΑ set — δες bim-uv-helpers.
   return new THREE.Mesh(geo, mat);
 }
 

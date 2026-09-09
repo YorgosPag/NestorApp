@@ -86,17 +86,18 @@ describe('buildFacedPrism', () => {
 
   // ADR-679 Φ2b — box-projected world-meter UVs per face (setBoxWorldUvs), so a face
   // painted with a TEXTURED material tiles correctly instead of showing degenerate UVs.
-  it('carries box-projected uv + uv2 attributes matching the position count', () => {
+  it('carries ENA box-projected uv set matching the position count — kai KANENA deutero', () => {
     const { geometry } = buildFacedPrism(squareTopRing(), 0.2)!;
     const pos = geometry.getAttribute('position');
     const uv = geometry.getAttribute('uv');
-    const uv2 = geometry.getAttribute('uv2');
     expect(uv).toBeDefined();
-    expect(uv2).toBeDefined();
     expect(uv.itemSize).toBe(2);
-    expect(uv2.itemSize).toBe(2);
     expect(uv.count).toBe(pos.count);
-    expect(uv2.count).toBe(pos.count);
+    // ⚠️ **ΕΝΑ set, και κανένα δεύτερο** (ADR-845 Ο-15): το `uv2` ήταν αντίγραφο που κανείς
+    //    δεν διάβαζε *(το `aoMap` λύνει στο channel 0 = `uv` από three r152)* και χαρτογραφούνταν
+    //    σε **TEXCOORD_2**, αφήνοντας τρύπα στο TEXCOORD_1 ⇒ **κάθε εξαγόμενο glTF άκυρο**.
+    expect(geometry.getAttribute('uv1')).toBeUndefined();
+    expect(geometry.getAttribute('uv2')).toBeUndefined();
   });
 });
 

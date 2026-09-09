@@ -101,7 +101,7 @@ function addSlabLayerBand(
   if (!shape) return;
   pushHoles(shape, openings, sceneToM); // all layers share the slab footprint → same openings.
   const geo = extrudeAndRotate(shape, layerThicknessM);
-  ensureWorldUvs(geo); // ADR-413 — aoMap uv2 (ExtrudeGeometry auto-UVs in meters).
+  ensureWorldUvs(geo); // ADR-413 — world-meter UVs (ExtrudeGeometry auto-UVs). ΕΝΑ set — δες bim-uv-helpers.
   applySlabSlope(geo, slab.params); // plan-position shear → same plane for every band.
   const mesh = new THREE.Mesh(geo, getMaterial3D(layer.materialId));
   mesh.position.y = bottomY;

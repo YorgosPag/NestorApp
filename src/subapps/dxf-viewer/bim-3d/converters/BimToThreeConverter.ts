@@ -189,7 +189,7 @@ export function buildStraightWallWithOpenings(
     // floorY`: flat piece → zBotAM· wedge/prism → 0). No-op flat → byte-for-byte.
     // ΠΡΙΝ το mesh/edges ώστε τα attachEdgesProjection edges να ακολουθούν την κλίση.
     applyWallTilt(geo, wall.params, yOffset - floorY);
-    // ADR-413 — texture UVs: ExtrudeGeometry carries auto-UVs (copy → uv2 for aoMap);
+    // ADR-413 — texture UVs: ExtrudeGeometry carries auto-UVs (ΕΝΑ set — δες bim-uv-helpers);
     // custom wedge/prism/loft BufferGeometry has none → planar world-meter UVs.
     ensureWorldUvs(geo);
     const mesh = new THREE.Mesh(geo, mat);
@@ -329,7 +329,7 @@ function buildWallCoreBody(
   const shape = buildWallShape(outer, inner);
   if (!shape) return null;
   const geo = extrudeAndRotate(shape, heightM);
-  ensureWorldUvs(geo); // ADR-413 — aoMap uv2 (ExtrudeGeometry auto-UVs in meters).
+  ensureWorldUvs(geo); // ADR-413 — world-meter UVs (ExtrudeGeometry auto-UVs). ΕΝΑ set — δες bim-uv-helpers.
   applyWallTilt(geo, renderWall.params); // ADR-404 — battered wall shear. No-op flat.
   return new THREE.Mesh(geo, material);
 }
