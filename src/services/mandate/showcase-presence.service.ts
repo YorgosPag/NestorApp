@@ -46,6 +46,39 @@ import type { PublicListing } from '@/types/public-listing';
 const logger = createModuleLogger('mandate/showcase-presence');
 
 /**
+ * **ΟΙ ΖΩΝΤΑΝΕΣ ΑΓΓΕΛΙΕΣ ΕΝΟΣ ΓΡΑΦΕΙΟΥ** — φραγμένο ερώτημα, ποτέ σάρωση.
+ *
+ * 🔴 **ΥΠΟΧΡΕΩΤΙΚΟ ΣΥΝΟΡΟ (CHECK 3.74, zero-tolerance)**: κάθε έγγραφο περνά από
+ * {@link publicListingFromDocument} — τον **μοναδικό** επιτρεπόμενο ισχυρισμό
+ * `PublicListing` σε όλο το repo. Ένα `as PublicListing` εδώ θα έσπαγε την πύλη.
+ *
+ * ⚠️ **Έγγραφο που δεν περνά τον φρουρό ΠΕΦΤΕΙ σιωπηλά**, και είναι σωστό: μια αγγελία
+ * αδιάβαστη δεν αποδεικνύει τίποτα, και δεν επιτρέπεται να παγώσει την ενημέρωση των
+ * υπολοίπων. Η ίδια η αδιαβασιά μετριέται **αλλού** *(ο αναγνώστης καταγράφει)*.
+ */
+async function liveListingsOf(
+  adminDb: AdminFirestore,
+  companyId: string
+): Promise<readonly PublicListing[]> {
+  // tenant-scope-exempt: το `public_listings` είναι δημοσιευμένη προβολή
+  // (`unscopedCategory: 'published-projection'`), και το `agencyId` **δεν είναι
+  // ταυτότητα πελάτη**: είναι το κλειδί εγγράφου του `agency_profiles/{companyId}`,
+  // που ο κανόνας δίνει σε **ανώνυμο** (ADR-841 §7 Α1). Το φίλτρο είναι **στενότερο**
+  // από το αφιλτράριστο ερώτημα που ο ίδιος κανόνας ήδη επιτρέπει.
+  const snapshot = await adminDb
+    .collection(COLLECTIONS.PUBLIC_LISTINGS)
+    .where('agencyId', '==', companyId)
+    .get();
+
+  const listings: PublicListing[] = [];
+  for (const doc of snapshot.docs) {
+    const listing = publicListingFromDocument(doc.data(), doc.id);
+    if (listing !== null) listings.push(listing);
+  }
+  return listings;
+}
+
+/**
  * **Ξαναχτίζει το `presence` ΕΝΟΣ γραφείου από τις ζωντανές αγγελίες του.**
  *
  * 🔑 **Ιδεμποτής** *(N.7.2 #3)*: ίδιες αγγελίες ⇒ ίδιο σύνολο ⇒ ίδια γραφή. Δύο κλήσεις
@@ -101,24 +134,7 @@ export async function refreshShowcasePresence(
     const showcase = await ref.get();
     if (!showcase.exists) return;
 
-    // tenant-scope-exempt: το `public_listings` είναι δημοσιευμένη προβολή
-    // (`unscopedCategory: 'published-projection'`), και το `agencyId` **δεν είναι
-    // ταυτότητα πελάτη**: είναι το κλειδί εγγράφου του `agency_profiles/{companyId}`,
-    // που ο κανόνας δίνει σε **ανώνυμο** (ADR-841 §7 Α1). Το φίλτρο είναι **στενότερο**
-    // από το αφιλτράριστο ερώτημα που ο ίδιος κανόνας ήδη επιτρέπει.
-    const snapshot = await adminDb
-      .collection(COLLECTIONS.PUBLIC_LISTINGS)
-      .where('agencyId', '==', companyId)
-      .get();
-
-    const listings: PublicListing[] = [];
-    for (const doc of snapshot.docs) {
-      // 🔴 CHECK 3.74 — ο μοναδικός επιτρεπόμενος ισχυρισμός `PublicListing` ζει ΜΕΣΑ
-      //    στο `publicListingFromDocument`, ποτέ εδώ.
-      const listing = publicListingFromDocument(doc.data(), doc.id);
-      if (listing !== null) listings.push(listing);
-    }
-
+    const listings = await liveListingsOf(adminDb, companyId);
     const presence = presenceFromListings(listings);
 
     // ⚠️ **Η υπέρβαση του ταβανιού λέγεται.** Η συνέπεια είναι **ψευδώς αρνητικό** — το

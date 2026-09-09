@@ -25,7 +25,7 @@
  * δημόσιες αναγνώσεις σε 673 γραμμές, και αυτό είναι ανάλλοιωτο που φυλάει άγκυρα.
  */
 
-import type { Bucket } from '@google-cloud/storage';
+import type { Bucket, Cors } from '@google-cloud/storage';
 
 import { GCS_PUBLIC_MEDIA_BUCKET, GCS_PUBLIC_MEDIA_BUCKET_CONFIG } from '@/config/gcs-buckets';
 import { getAdminStorage } from '@/lib/firebaseAdmin';
@@ -81,13 +81,73 @@ const FORBIDDEN_PUBLIC_ROLES: readonly string[] = [
 /** Το «όλοι, ακόμη και χωρίς λογαριασμό» της Google. */
 const ALL_USERS = 'allUsers';
 
-/** Τι βρήκε ο έλεγχος — **παρατήρηση**, χωρίς καμία αλλαγή. */
+/** Το joker origin του CORS — «οποιοσδήποτε ιστότοπος». */
+const ANY_ORIGIN = '*';
+
+/**
+ * **Οι κεφαλίδες που ΧΩΡΙΣ αυτές ο φορτωτής glTF αποτυγχάνει** — το ελάχιστο, όχι η επιλογή μας.
+ *
+ * 🔑 Η {@link GCS_PUBLIC_MEDIA_BUCKET_CONFIG} μπορεί να δηλώνει **περισσότερες**· ο κριτής
+ * απαιτεί **αυτές**. Ο διαχωρισμός είναι σκόπιμος: εδώ ζει το **ανάλλοιωτο**, εκεί η
+ * **προτίμηση**. Αν κάποιος στενέψει τη διαμόρφωση, η άγκυρα το βρίσκει από **αυτή** τη λίστα.
+ *
+ * ⚠️ Το `Range` **δεν** είναι πρόνοια: ο `<model-viewer>` ζητά εύρη bytes, και η τεκμηρίωση
+ * της GCS απαιτεί κάθε `Access-Control-Request-Header` να έχει αντίστοιχο `responseHeader`.
+ */
+const REQUIRED_CORS_RESPONSE_HEADERS: readonly string[] = ['Content-Type', 'Range'];
+
+/**
+ * 🏆 **Ο ΚΡΙΤΗΣ ΤΟΥ Ο-21** — *«μπορεί ένας **browser** να διαβάσει αυτά τα bytes, ή μόνο ένα
+ * `curl`;»*. Καθαρός, χωρίς I/O: τον εκτελούν **και** η παρατήρηση **και** η άγκυρα.
+ *
+ * ⛔ **ΜΗΝ τον ξαναδιατυπώσεις στην άγκυρα.** Δεύτερη διατύπωση του *«τι μετράει ως
+ * αναγνώσιμο από browser»* σημαίνει ότι κάποια στιγμή η μία από τις δύο θα είναι η λάθος —
+ * το ίδιο μάθημα με το `hasSignatory` *(ADR-845 Α-4)* και το `isCrossFloorSceneLink`.
+ *
+ * Επιστρέφει `true` μόνο όταν **μία** εγγραφή δίνει, μαζί: `GET` · από **οποιοδήποτε**
+ * origin · με **όλες** τις {@link REQUIRED_CORS_RESPONSE_HEADERS}. Σκόπιμα **δεν** αρκεί η
+ * ένωση δύο εγγραφών: ο browser ταιριάζει **μία** εγγραφή, όχι το άθροισμά τους.
+ */
+export function isBrowserReadableCors(cors: readonly Cors[] | undefined | null): boolean {
+  return (cors ?? []).some(
+    (entry) =>
+      (entry.origin ?? []).includes(ANY_ORIGIN) &&
+      (entry.method ?? []).some((method) => method.toUpperCase() === 'GET') &&
+      REQUIRED_CORS_RESPONSE_HEADERS.every((required) =>
+        (entry.responseHeader ?? []).some(
+          (header) => header.toLowerCase() === required.toLowerCase(),
+        ),
+      ),
+  );
+}
+
+/** Η δηλωμένη πολιτική, ως **μεταβλητός** πίνακας — ο πελάτης της Google δεν δέχεται `readonly`. */
+function desiredCors(): Cors[] {
+  return GCS_PUBLIC_MEDIA_BUCKET_CONFIG.cors.map((entry) => ({
+    origin: [...entry.origin],
+    method: [...entry.method],
+    responseHeader: [...entry.responseHeader],
+    maxAgeSeconds: entry.maxAgeSeconds,
+  }));
+}
+
+/**
+ * Τι βρήκε ο έλεγχος — **παρατήρηση**, χωρίς καμία αλλαγή.
+ *
+ * 🔴 **ΤΟ `publiclyReadable` ΚΑΙ ΤΟ `browserReadable` ΕΙΝΑΙ ΔΥΟ ΕΡΩΤΗΣΕΙΣ, ΚΑΙ ΤΟ Ο-21 ΤΟ
+ * ΑΠΕΔΕΙΞΕ ΜΕ ΜΕΤΡΗΣΗ**: στις 2026-09-09 ο κάδος ήταν `publiclyReadable: true` *(HTTP 200 σε
+ * ανώνυμο `curl`)* και ταυτόχρονα **αόρατος σε κάθε επισκέπτη**. Ένα πεδίο για τα δύο θα
+ * συνέχιζε να λέει «δημόσιο» ενώ κανείς δεν βλέπει τίποτα.
+ */
 export interface PublicShelfBucketState {
   readonly bucketName: string;
   readonly exists: boolean;
   readonly location: string | null;
   readonly uniformAccess: boolean;
+  /** Κατεβαίνει με `curl`; — **IAM**. */
   readonly publiclyReadable: boolean;
+  /** Το διαβάζει **JS ιστοσελίδας**; — **CORS**. Ό,τι δεν βλέπει κανένας διακομιστής. */
+  readonly browserReadable: boolean;
 }
 
 function shelfBucket(): Bucket {
@@ -111,6 +171,7 @@ export async function inspectPublicShelfBucket(): Promise<PublicShelfBucketState
       location: null,
       uniformAccess: false,
       publiclyReadable: false,
+      browserReadable: false,
     };
   }
 
@@ -127,6 +188,7 @@ export async function inspectPublicShelfBucket(): Promise<PublicShelfBucketState
     location: metadata.location ?? null,
     uniformAccess: metadata.iamConfiguration?.uniformBucketLevelAccess?.enabled === true,
     publiclyReadable,
+    browserReadable: isBrowserReadableCors(metadata.cors),
   };
 }
 
@@ -208,17 +270,50 @@ async function reconcilePublicGrant(bucket: Bucket): Promise<boolean> {
 }
 
 /**
+ * 🏆 **Η ΘΕΡΑΠΕΙΑ ΤΟΥ Ο-21** — φέρνει το CORS στη δηλωμένη του κατάσταση.
+ *
+ * ⚠️ **Συμφιλίωση, όχι προσθήκη** — ίδιο ιδίωμα με το {@link reconcilePublicGrant} και για
+ * τον **ίδιο** μετρημένο λόγο: η πολιτική CORS δεν είναι λίστα που «συμπληρώνεται», είναι
+ * **αντικατάσταση**. Ο κριτής ρωτά την **τελική** κατάσταση, ώστε μια χειροκίνητη αλλαγή
+ * στην κονσόλα να διορθώνεται στην επόμενη εκτέλεση αντί να επιβιώνει δίπλα στη σωστή.
+ *
+ * 🔑 **Γράφει ΜΟΝΟ όταν χρειάζεται**: αν ο κριτής είναι ήδη ικανοποιημένος **και** η
+ * πολιτική είναι ήδη η δηλωμένη, δεν στέλνεται αίτημα. Χωρίς αυτό, κάθε προμήθεια θα
+ * ακύρωνε το preflight cache **κάθε** ανοιχτού browser χωρίς κανένα λόγο.
+ */
+async function reconcileCors(bucket: Bucket): Promise<boolean> {
+  const [metadata] = await bucket.getMetadata();
+  const desired = desiredCors();
+
+  const alreadyDeclared = JSON.stringify(metadata.cors ?? []) === JSON.stringify(desired);
+  if (alreadyDeclared && isBrowserReadableCors(metadata.cors)) return false;
+
+  await bucket.setCorsConfiguration(desired);
+
+  logger.warn('🔴 Το CORS του δημόσιου ραφιού συμφιλιώθηκε — ο browser μπορεί πλέον να διαβάσει', {
+    bucket: GCS_PUBLIC_MEDIA_BUCKET,
+    wasBrowserReadable: isBrowserReadableCors(metadata.cors),
+  });
+  return true;
+}
+
+/**
  * **Φέρε τον δημόσιο κάδο στη δηλωμένη του κατάσταση** — ιδεμπόταντ, ασφαλές να
  * ξανατρέξει.
  *
  * 🔴 **Πράξη με συνέπειες**: μετά από αυτό, κάθε byte μέσα στον κάδο είναι ορατό σε
  * ανώνυμο επισκέπτη. Καλείται από **προμήθεια**, ποτέ από διαδρομή αιτήματος.
+ *
+ * ⚠️ **ΤΡΕΙΣ πράξεις, όχι δύο** *(Ο-21)*: ύπαρξη · **IAM** *(κατεβαίνει με `curl`;)* ·
+ * **CORS** *(το διαβάζει ιστοσελίδα;)*. Οι δύο τελευταίες είναι **ανεξάρτητες** — ο κάδος
+ * ήταν επί μήνες η πρώτη χωρίς τη δεύτερη, και κανένας διακομιστής δεν μπορούσε να το δει.
  */
 export async function ensurePublicShelfBucket(): Promise<PublicShelfBucketState> {
   const bucket = shelfBucket();
 
   await createIfMissing(bucket);
   await reconcilePublicGrant(bucket);
+  await reconcileCors(bucket);
 
   return inspectPublicShelfBucket();
 }

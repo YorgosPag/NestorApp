@@ -62,7 +62,15 @@ export const GET = withSensitiveRateLimit(
   ),
 );
 
-/** **Πράξη** — δημιουργεί τον κάδο αν λείπει και χορηγεί `allUsers:objectViewer`. */
+/**
+ * **Πράξη** — δημιουργεί τον κάδο αν λείπει, χορηγεί `allUsers:legacyObjectReader` *(ανάγνωση
+ * **χωρίς** απαρίθμηση)* και συμφιλιώνει το **CORS** *(Ο-21: χωρίς αυτό ο κάδος κατεβαίνει με
+ * `curl` αλλά είναι **αόρατος σε κάθε browser**)*.
+ *
+ * ⚠️ **Το σχόλιο έλεγε `objectViewer` μέχρι τις 2026-09-09** — ρόλο που ο ίδιος ο παροχέας
+ * δηλώνει **ΑΠΑΓΟΡΕΥΜΕΝΟ** *(δίνει `objects.list` ⇒ ανώνυμο ευρετήριο όλου του ραφιού)*. Ο
+ * κώδικας ήταν σωστός· η **περιγραφή** της πόρτας διαφήμιζε το ελάττωμα που είχε ήδη διορθωθεί.
+ */
 export const POST = withSensitiveRateLimit(
   withAuth(
     async (_request: NextRequest, _ctx: AuthContext, _cache: PermissionCache) => handle(true),
