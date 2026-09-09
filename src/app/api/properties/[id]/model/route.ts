@@ -46,10 +46,8 @@ import { requirePropertyInTenantScope } from '@/lib/auth/tenant-isolation';
 import { getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { ENTITY_TYPES, FILE_CATEGORIES, FILE_STATUS } from '@/config/domain-constants';
-import {
-  supersededByPublication,
-  type AgencyMediaCandidate,
-} from '@/services/listings/agency-media-publication';
+import { type AgencyMediaCandidate } from '@/services/listings/agency-media-publication';
+import { supersededByPublication } from '@/services/listings/agency-media-selection';
 import { FILE_TYPE_CONFIG } from '@/config/file-upload-config';
 import {
   buildFinalizeFileRecordUpdate,

@@ -33,9 +33,9 @@ import { buildFinalizeFileRecordUpdate } from '@/services/file-record';
 import {
   agencyMediaMaterial,
   isDeliverableAgencyModel,
-  publishedAgencyMediaSources,
   type AgencyMediaCandidate,
 } from '../agency-media-publication';
+import { publishedAgencyMediaSources } from '../agency-media-selection';
 import { PUBLISHABLE_CATEGORIES } from '../agency-media.reader';
 
 const LISTING = 'prop_a0000009-7777-4aaa-8aaa-000000000009';
@@ -132,6 +132,20 @@ function landedModelRecord(): AgencyMediaCandidate {
     contentType: MODEL_MIME,
     originalFilename: `${LISTING}.glb`,
     createdBy: 'WKBWEg3DSfcdSbLNJfzGEW3vkct1',
+    // ADR-845 Ο-27 — από τη δήλωση **παράγεται** η ταυτότητα δημοσίευσης. Δίνεται ολόκληρη
+    // και όχι τρία σκέλη, ώστε ο γραφέας να μη μπορεί να διαφωνήσει με ό,τι ψήνεται στα bytes.
+    declaration: {
+      state: 'as-built',
+      scope: 'active-floor',
+      signatory: { name: 'Γ. Παγώνης', discipline: 'πολιτικός μηχανικός', studiedAt: '2026-09-01' },
+      geometry: {
+        meshCount: 3,
+        triangleCount: 12_480,
+        materialCount: 2,
+        textureCount: 0,
+        fingerprint: null,
+      },
+    },
   });
 
   const finalized = buildFinalizeFileRecordUpdate({

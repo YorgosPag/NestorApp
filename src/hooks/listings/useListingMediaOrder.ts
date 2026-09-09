@@ -33,10 +33,8 @@ import {
   type DeclaredFileIdsState,
 } from '@/hooks/listings/useDeclaredFileIds';
 import type { DeclaredFileIds } from '@/lib/listings/declared-file-ids';
-import {
-  orderedPublishableAgencyMedia,
-  type AgencyMediaCandidate,
-} from '@/services/listings/agency-media-publication';
+import { type AgencyMediaCandidate } from '@/services/listings/agency-media-publication';
+import { orderedPublishableAgencyMedia } from '@/services/listings/agency-media-selection';
 
 export interface ListingMediaOrderState<T extends AgencyMediaCandidate>
   extends Pick<DeclaredFileIdsState, 'declared' | 'saving' | 'failed'> {

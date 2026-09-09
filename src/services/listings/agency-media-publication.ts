@@ -36,7 +36,6 @@ import {
   FILE_STATUS,
 } from '@/config/domain-constants';
 import { FILE_TYPE_CONFIG } from '@/config/file-upload-config';
-import { PUBLISHED_MEDIA_LIMIT } from '@/services/upload/utils/storage-path-public-shelf';
 import {
   MODEL_MATERIAL,
   PHOTO_MATERIAL,
@@ -48,9 +47,7 @@ import {
   NO_DECLARED_FILE_IDS,
   type DeclaredFileIds,
 } from '@/lib/listings/declared-file-ids';
-import { orderByDeclaration } from '@/lib/ordering/declared-order';
 import type { FileRecord } from '@/types/file-record';
-import type { PublicShelfSource } from '@/services/upload/utils/storage-path-public-shelf';
 
 /**
  * **Το `FileRecord` όσο το χρειάζεται η απόφαση** — και ούτε πεδίο παραπάνω.
@@ -72,6 +69,8 @@ export type AgencyMediaCandidate = Pick<
   | 'createdAt'
   | 'lifecycleState'
   | 'isDeleted'
+  // ADR-845 Ο-27 — *«ποιο πράγμα δημοσιεύει;»*. Απόν ⇒ **ποτέ** συγχώνευση.
+  | 'publicationIdentity'
 >;
 
 /**
@@ -351,98 +350,4 @@ export function agencyMediaDeclaration(source: {
     order: declaredFileIds(source.publishedMediaOrder),
     floorplans: declaredFileIds(source.publishedFloorplans),
   };
-}
-
-/**
- * **Τα αρχεία που το γραφείο σήμανε δημόσια, σε σταθερή σειρά, κομμένα στο όριο.**
- *
- * 🔑 **Το όριο είναι ΤΟ ΙΔΙΟ με του ιδιώτη** (Α14.4): ο λόγος του είναι η **προσοχή του
- * επισκέπτη** *(Zillow 22–27)* — ιδιότητα εκείνου που **κοιτάζει**, όχι εκείνου που
- * ανέβασε. Δύο αριθμοί θα σήμαιναν ότι η ίδια βιτρίνα κουράζει διαφορετικά ανάλογα με
- * το ποιος δημοσίευσε.
- *
- * ⚠️ Ποτέ bytes και ποτέ URL — **μονοπάτι στον ιδιωτικό κάδο**, ίδιο συμβόλαιο με τον
- * ιδιώτη: ο γραφέας κατεβάζει το πρωτότυπο **ο ίδιος**, ώστε ο καθαρισμός EXIF/GPS να
- * μην μπορεί να παρακαμφθεί από τον καλούντα *(Α12.7)*.
- *
- * 🔑 **`PHOTO_MATERIAL` ΣΤΑΘΕΡΑ, ΚΑΙ ΕΙΝΑΙ ΑΠΟΔΕΙΞΗ — ΟΧΙ ΠΑΡΑΔΟΧΗ** (ADR-841 §7 Α17.4).
- * Ο φρουρός #2 έχει **ήδη** εγγυηθεί, δέκα γραμμές πιο πάνω, ότι μόνο
- * `category === 'photos'` φτάνει ως εδώ — δηλαδή το «είναι φωτογραφία;» **απαντήθηκε από
- * ανθρώπινη πράξη** (το σημείο εισόδου του ανεβάσματος), δεν υποτίθεται. ⚠️ Γι' αυτό μια
- * μελλοντική χαλάρωση της λευκής λίστας κατηγορίας **οφείλει** να αλλάξει και αυτή τη
- * γραμμή: είναι οι δύο άκρες του **ίδιου** ισχυρισμού, και η άγκυρα του Ο-20 τις ρωτά μαζί.
- *
- * ────────────────────────────────────────────────────────────────────────────
- * 🔴 Η ΣΕΙΡΑ ΕΧΕΙ **ΔΥΟ ΣΚΕΛΗ**, ΚΑΙ ΤΟ ΟΡΙΟ ΚΟΒΕΙ **ΜΕΤΑ** ΑΠΟ ΑΥΤΑ (Α14.7.3)
- * ────────────────────────────────────────────────────────────────────────────
- *
- *   1. ό,τι **δήλωσε** ο άνθρωπος του γραφείου, στη σειρά που το δήλωσε
- *   2. ό,τι **δεν** δήλωσε, στη ρητά ουδέτερη σειρά του
- *      {@link compareAgencyMediaForPublication}
- *
- * ⚠️ **Η σειρά του `slice` ΕΙΝΑΙ ΟΥΣΙΩΔΗΣ, όχι ύφος**: αν το `PUBLISHED_MEDIA_LIMIT`
- * έκοβε **πριν** την τακτοποίηση, μια φωτογραφία που ο άνθρωπος έβαλε **πρώτη** θα
- * μπορούσε να έχει ήδη πεταχτεί έξω — δηλαδή η πράξη του θα ήταν **αόρατη ακριβώς όταν
- * μετράει**. ⛔ Και το όριο μένει **ΕΝΑ** *(Α14.4)*: κανένα δεύτερο για τη δήλωση.
- *
- * ⚠️ **Η κενή δήλωση ΔΕΝ είναι ειδική περίπτωση** — η μηχανή επιστρέφει τότε ακριβώς τη
- * σειρά που έδινε αυτό το αρχείο πριν την Α14.7. Καμία υπάρχουσα αγγελία δεν αλλάζει
- * μέχρι να μιλήσει άνθρωπος.
- */
-export function publishedAgencyMediaSources(
-  files: readonly AgencyMediaCandidate[],
-  declaration: AgencyMediaDeclaration = NO_AGENCY_DECLARATION,
-): readonly PublicShelfSource[] {
-  const declaredFloorplans = new Set(declaration.floorplans);
-
-  return orderedPublishableAgencyMedia(files, declaration).flatMap((file) => {
-    const material = agencyMediaMaterial(file, declaredFloorplans);
-    // ⚠️ Το `null` είναι **αδύνατο** εδώ — το ίδιο ερώτημα έκανε το φιλτράρισμα μια
-    //    γραμμή πιο πάνω. Ο κλάδος υπάρχει για να **μη χρειαστεί `!`**: ένας ισχυρισμός
-    //    εδώ θα ήταν ακριβώς ο τρόπος με τον οποίο οι δύο άκρες αρχίζουν να αποκλίνουν.
-    return material === null ? [] : [{ privateStoragePath: file.storagePath, material }];
-  });
-}
-
-/**
- * **ΤΙ ΦΕΥΓΕΙ, ΜΕ ΠΟΙΑ ΣΕΙΡΑ — ΤΑ ΙΔΙΑ ΤΑ ΑΡΧΕΙΑ** (ADR-841 §7 Α14.7 · Α17.7).
- *
- * 🔴 **ΕΞΗΧΘΗ ΓΙΑ ΝΑ ΜΗΝ ΥΠΑΡΞΕΙ ΔΕΥΤΕΡΗ ΑΠΑΝΤΗΣΗ, ΚΑΙ ΤΟ ΣΧΗΜΑ ΕΙΝΑΙ ΓΡΑΜΜΕΝΟ ΑΠΟ
- * ΤΗΝ ΑΛΛΗ ΠΛΕΥΡΑ**: το `owner-media-publication` βάζει *«τι φεύγει;»* και *«τι βλέπει ο
- * κάτοχος;»* στο **ίδιο** module ακριβώς επειδή δύο `filter` σε δύο αρχεία θα ήταν *«δύο
- * απαντήσεις ελεύθερες να αποκλίνουν — και η απόκλιση θα ήταν **αόρατη**: η οθόνη θα
- * έλεγε “δημοσιεύονται 30” ενώ ο κόσμος θα έβλεπε 24»*. Το γραφείο απέκτησε οθόνη με την
- * Α14.7 ⇒ **ίδιος κίνδυνος, ίδια θεραπεία**.
- *
- * 🔑 **Γενικό στο `T`, ώστε η οθόνη να κρατά τα ΔΙΚΑ ΤΗΣ πεδία** *(μικρογραφία, όνομα)*
- * χωρίς δεύτερο πέρασμα αντιστοίχισης: ο κανόνας χρειάζεται μόνο το
- * {@link AgencyMediaCandidate}, ο καλών παίρνει πίσω **ό,τι έδωσε**.
- *
- * 🔴 **ΦΩΤΟΓΡΑΦΙΕΣ ΚΑΙ ΚΑΤΟΨΕΙΣ ΣΕ ΕΝΑ ΡΕΥΜΑ, ΜΕ ΕΝΑ ΟΡΙΟ — ΚΑΙ Ο ΙΔΙΩΤΗΣ ΤΟ ΕΙΧΕ
- * ΗΔΗ ΑΠΑΝΤΗΣΕΙ** (Α17.7.5). Το `publishedOwnerMedia` κόβει στο `PUBLISHED_MEDIA_LIMIT`
- * **πριν** χωρίσει φωτογραφίες από κατόψεις: ένα, **συνολικό** όριο. ⛔ Δεύτερο όριο για
- * κατόψεις θα ήταν ακριβώς ο δεύτερος αριθμός που απαγορεύει η **Α14.4**.
- *
- * ⚠️ **Και γι\' αυτό η πράξη σειράς οφείλει να ΠΡΟΗΓΕΙΤΑΙ**: με ένα συνολικό όριο, μια
- * κάτοψη μπορεί να **κοπεί** από φωτογραφίες που προηγούνται χρονικά. Η **Α14.7** έδωσε
- * τη λαβή — το `publishedMediaOrder` δέχεται **οποιαδήποτε** ταυτότητα, άρα και κάτοψης.
- *
- * ⚠️ **Το `PUBLISHED_MEDIA_LIMIT` κόβει ΕΔΩ, ΜΕΤΑ τη σειρά** — άρα η οθόνη δείχνει και
- * το κόψιμο: ένα αρχείο εκτός ορίου **δεν εμφανίζεται**, γιατί δεν φεύγει.
- */
-export function orderedPublishableAgencyMedia<T extends AgencyMediaCandidate>(
-  files: readonly T[],
-  declaration: AgencyMediaDeclaration = NO_AGENCY_DECLARATION,
-): readonly T[] {
-  const declaredFloorplans = new Set(declaration.floorplans);
-  const publishable = files.filter(
-    (file) => agencyMediaMaterial(file, declaredFloorplans) !== null,
-  );
-
-  return orderByDeclaration(
-    publishable,
-    (file) => file.id,
-    declaration.order,
-    compareAgencyMediaForPublication,
-  ).slice(0, PUBLISHED_MEDIA_LIMIT);
 }

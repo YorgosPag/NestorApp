@@ -48,8 +48,11 @@ jest.mock('../public-shelf-model.service', () => ({
 const { republishListing } = require('../publish-public-listing') as
   typeof import('../publish-public-listing');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { publishedAgencyMediaSources, agencyMediaMaterial, agencyMediaDeclaration } =
+const { agencyMediaMaterial, agencyMediaDeclaration } =
   require('../agency-media-publication') as typeof import('../agency-media-publication');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { publishedAgencyMediaSources } =
+  require('../agency-media-selection') as typeof import('../agency-media-selection');
 
 const LISTING = 'prop_a0000005-7777-4aaa-8aaa-000000000005';
 const COMPANY = 'comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757';

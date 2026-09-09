@@ -26,7 +26,7 @@ import {
   publishedOwnerPhotos,
   ownerMediaMaterial,
 } from '@/lib/owner-property/owner-media-publication';
-import { publishedAgencyMediaSources } from '@/services/listings/agency-media-publication';
+import { publishedAgencyMediaSources } from '@/services/listings/agency-media-selection';
 import { withPublishedGallery } from '@/services/listings/public-listing-projection';
 import type { ProjectedShelfImage } from '@/services/listings/public-listing-projection';
 import { LISTING_MATERIAL_KEYS } from '@/lib/listings/listing-authorship';

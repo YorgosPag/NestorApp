@@ -67,7 +67,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "ecee89c4410b1407a7aa618bd80095d787f36989a604f9274c8a05efd023f027",
+  "inputsSha256": "9d656eb76c7b07e71fe7d0ae0b9fc35511e6539a55f163825951e8df2d0ea48e",
   "languages": [
     "el"
   ],
@@ -470,8 +470,9 @@
     "src/services/error-tracker-types.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/services/esco-skill.service.ts": "60240828f5dd730470fda03be1874048792e14fe8fbc35392bd77e4b7fb265c5",
     "src/services/esco.service.ts": "73010dc0374302cdc1dbce078ecf567b9a6918ee67847cdf20b399111fea8655",
-    "src/services/listings/agency-media-publication.ts": "91a8e5ab6b44fcfddab8b71111c203f48c92addcf5dc247dcfaf4465deb4f935",
-    "src/services/listings/agency-media.reader.ts": "3a012e13782fbe808de9f5a4974613446974bf7bb59bdb12943405d4f2a46ead",
+    "src/services/listings/agency-media-publication.ts": "5e8570270a3fbcee8237f87f061031e37d7e06116821ccaa7f17f64d3df8ad30",
+    "src/services/listings/agency-media-selection.ts": "6d9d82c8664fb8ffbb4436a60d8d5e7c892aed275cc8f99626ea28c0526a6a12",
+    "src/services/listings/agency-media.reader.ts": "6e35737c2e5c185121de2d3e29f0c7b262e1eac3b549b97554c91bb33d6ee7e2",
     "src/services/listings/gltf-memory-io.ts": "d526bc6f738caa4b600421da8a708c7d4d627826d4e761fff28f484afc229287",
     "src/services/listings/gltf-model-measure.ts": "55f3a520f9523d8c098eb05208177527a8d7535e7ee333359f46479719418c8b",
     "src/services/listings/legality-projection.ts": "a88bc62c2d2e65a3eed1ab5215e12e0fab6e0155255d8649037e1b26e05efcd4",
@@ -4416,7 +4417,7 @@
     "src/lib/firestore-now.ts": "d458cf6b92bfd24efb82d099b7f3bff825a6d19eb381e464e47551d5746421be",
     "src/lib/firestore/converters/contact.converter.ts": "5460ed2389be30ed576545f1d1eee65569aeb77af54fb3c54084b640a8a16383",
     "src/lib/firestore/utils.ts": "af6d371b2ca638535e40bf36a5d686df2027d9a06f5415419d76de5b2fc84e33",
-    "src/lib/geo/admin-footprints.ts": "129dd89fd913b8200172b112e7e4cbef51274bd61f1d922493d2c7d88948c579",
+    "src/lib/geo/admin-footprints.ts": "1ab02b03c1616552e103401c30ea50926d605f7efb63db65584b35e823232392",
     "src/lib/geo/geo-area.ts": "6dc5fff700e1f1fc56ee2c8d249bbca29c7b42f417b615ec7b8d69c8ca61191e",
     "src/lib/geo/geo-distance.ts": "e78fe737a138f0f2f1ed455d7bf2a979141bad15537cf76b3f64618685cffef3",
     "src/lib/geo/geo-footprint.ts": "631265aa4e623aeea3034ca8ed7c91b68600d22b0017f5bf056ccaff4a47a63a",

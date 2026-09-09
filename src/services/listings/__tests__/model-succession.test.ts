@@ -81,11 +81,11 @@ import {
 } from '@/lib/listings/model-publication-identity';
 import { buildFinalizeFileRecordUpdate } from '@/services/file-record';
 
+import { type AgencyMediaCandidate } from '../agency-media-publication';
 import {
   orderedPublishableAgencyMedia,
   publishedAgencyMediaSources,
-  type AgencyMediaCandidate,
-} from '../agency-media-publication';
+} from '../agency-media-selection';
 
 const LISTING = 'prop_ef2eaebd-de24-4058-a76e-6f2ec389aff9';
 const COMPANY = 'comp_9c7c1a50-f370-466d-bdf7-aa7b2b2d7757';

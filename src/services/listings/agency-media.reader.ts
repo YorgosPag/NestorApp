@@ -38,10 +38,10 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { FILE_CATEGORIES } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 import {
-  publishedAgencyMediaSources,
   type AgencyMediaCandidate,
   type AgencyMediaDeclaration,
 } from './agency-media-publication';
+import { publishedAgencyMediaSources } from './agency-media-selection';
 import type { PublicShelfSource } from '@/services/upload/utils/storage-path-public-shelf';
 
 const logger = createModuleLogger('agency-media-reader');
