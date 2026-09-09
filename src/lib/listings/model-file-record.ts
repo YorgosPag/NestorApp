@@ -40,6 +40,8 @@ import {
   buildPendingFileRecordData,
   type BuildPendingFileRecordResult,
 } from '@/services/file-record';
+import type { ModelPublicationDeclaration } from './listing-model-declaration';
+import { modelPublicationIdentityKey } from './model-publication-identity';
 
 /**
  * Η επέκταση της κανονικής διαδρομής — **χωρίς τελεία**, όπως τη θέλει το `buildStoragePath`.
@@ -56,6 +58,17 @@ export interface PublishedModelFileRequest {
   readonly contentType: string;
   readonly originalFilename: string;
   readonly createdBy: string;
+  /**
+   * **Η δήλωση που ταξιδεύει δίπλα στα bytes** — από εδώ **παράγεται** η ταυτότητα (Ο-27).
+   *
+   * 🔴 **ΟΛΟΚΛΗΡΗ, ΟΧΙ ΤΡΙΑ ΣΚΕΛΗ.** Ο πειρασμός ήταν να δεχτεί
+   * `{ provenance, scope, state }` — δηλαδή **ήδη** την ταυτότητα. Θα ήταν δεύτερη ευκαιρία
+   * να αποκλίνει από ό,τι ψήνεται στο αρχείο: ο καλών θα μπορούσε να γράψει `as-built` εδώ
+   * και `proposal` στα custom metadata, και **καμία** πύλη δεν θα το έβλεπε. Με τη δήλωση
+   * ολόκληρη, η ταυτότητα είναι **συνάρτηση** εκείνου που ταξιδεύει — δεν μπορούν να
+   * διαφωνήσουν, γιατί δεν είναι δύο πράγματα.
+   */
+  readonly declaration: ModelPublicationDeclaration;
 }
 
 /**
@@ -103,5 +116,18 @@ export function buildPublishedModelFileRecord(
     createdBy: request.createdBy,
     ext: MODEL_FILE_EXT,
     classification: FILE_CLASSIFICATIONS.PUBLIC,
+    publicationIdentity: modelPublicationIdentityKey({
+      // 🔴 **`'measured'` ΣΤΑΘΕΡΑ ΕΔΩ, ΚΑΙ ΕΙΝΑΙ ΑΠΟΔΕΙΞΗ — ΟΧΙ ΠΑΡΑΔΟΧΗ.** **Αυτή** η πόρτα
+      //    είναι ο αγωγός του εργολάβου: τα bytes ψήνονται από τη σκηνή του DXF viewer, και το
+      //    `attribute-provenance` ορίζει το `measured` ως *«υπολογισμένο από DXF/BIM»*. Η ίδια
+      //    σταθερά γράφεται **ήδη** στο `withPublishedModels`, από την ίδια αιτία.
+      //    ⛔ **ΜΗΝ την κάνεις παράμετρο «για ευελιξία»**: το μοντέλο του αρχιτέκτονα ιδιώτη
+      //    (`declared`, Φ4β) θα έρθει από **άλλη πόρτα** με **δική της** ανθρώπινη πράξη — και
+      //    τότε η προέλευση θα είναι ιδιότητα **εκείνης**, όχι σημαία εδώ. Ίδιο επιχείρημα με
+      //    το `classification` από πάνω.
+      provenance: 'measured',
+      scope: request.declaration.scope,
+      state: request.declaration.state,
+    }),
   });
 }

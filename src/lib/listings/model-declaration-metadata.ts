@@ -53,6 +53,7 @@
 import type { GeometryFingerprint, Vec3M } from '@/lib/geometry/mesh3d/geometry-fingerprint';
 
 import {
+  isModelPublicationScope,
   isModelStateMark,
   type ModelGeometryLedger,
   type ModelPublicationDeclaration,
@@ -140,13 +141,21 @@ export function decodeModelDeclaration(raw: unknown): ModelPublicationDeclaratio
   //    διατηρείται αξιόπιστα. Ένα `const` κάνει τον έλεγχο **και** τη χρήση να μιλούν για την
   //    ίδια τιμή — που είναι ούτως ή άλλως αυτό που εννοούμε.
   const state = parsed.state;
+  const scope = parsed.scope;
   const signatory = readSignatory(parsed.signatory);
   const geometry = readLedger(parsed.geometry);
 
   if (signatory === null || geometry === null) return null;
   if (typeof state !== 'string' || !isModelStateMark(state)) return null;
+  // 🔴 **ΚΑΜΙΑ ΠΡΟΕΠΙΛΟΓΗ ΓΙΑ ΤΟ ΕΥΡΟΣ, ΚΑΙ ΕΙΝΑΙ Ο ΙΔΙΟΣ ΚΑΝΟΝΑΣ ΜΕ ΤΑ ΑΛΛΑ ΤΡΙΑ** *(Ο-27)*.
+  //    Ένα `?? 'active-floor'` εδώ θα έκανε **κάθε** παλιό αντικείμενο να ισχυρίζεται εύρος που
+  //    κανείς δεν δήλωσε — δηλαδή θα **συγχώνευε** μοντέλα ολόκληρου κτιρίου με μοντέλα ενός
+  //    ορόφου, σιωπηλά και μόνιμα *(η διεύθυνση είναι content-addressed)*. Η δήλωση χωρίς εύρος
+  //    **δεν είναι δήλωση**: ο ψήστης αρνείται ονομαστικά με `'missing-declaration'`, και τα δύο
+  //    ζωντανά μοντέλα της 2026-09-09 **οφείλουν** να ξαναδημοσιευτούν για να αποκτήσουν ένα.
+  if (typeof scope !== 'string' || !isModelPublicationScope(scope)) return null;
 
-  return { state, signatory, geometry };
+  return { state, scope, signatory, geometry };
 }
 
 // ---------------------------------------------------------------------------

@@ -167,6 +167,17 @@ export interface BuildPendingFileRecordInput {
    * ίδια η πράξη δημοσίευσης δεν είχε πού να το πει, και η πράξη έμενε **χωρίς ίχνος**.
    */
   classification?: FileClassification;
+
+  /**
+   * **Ποιο πράγμα δημοσιεύει αυτό το αρχείο;** (ADR-845 Ο-27) — δες
+   * {@link FileRecord.publicationIdentity} για ολόκληρο το σκεπτικό.
+   *
+   * ⚠️ **Το κείμενο είναι αδιαφανές ΕΔΩ, επίτηδες**: αυτός ο builder δεν ξέρει από μοντέλα.
+   * Η **παραγωγή** της τιμής ζει στον ειδικό γραφέα κάθε είδους *(για μοντέλα:
+   * `lib/listings/model-publication-identity`)*, ώστε ένα δεύτερο είδος να μη χρειαστεί να
+   * αλλάξει τίποτα εδώ — ακριβώς το ιδίωμα του `classification` από πάνω.
+   */
+  publicationIdentity?: string;
 }
 
 /**
@@ -193,6 +204,10 @@ export interface FileRecordBase {
 
   // ADR-845 §9 Ο-13 — η εξουσιοδότηση εξόδου· απουσία = ιδιωτικό, ποτέ «άγνωστο».
   classification?: FileClassification;
+
+  // ADR-845 Ο-27 — **ποιο πράγμα** δημοσιεύεται· απουσία = δεν συμμετέχει σε διαδοχή,
+  // ποτέ «είναι το ίδιο με κάτι άλλο». Δες `FileRecord.publicationIdentity`.
+  publicationIdentity?: string;
 
   // Entity linking — cross-entity file references
   linkedTo?: string[];
@@ -393,6 +408,11 @@ export function buildPendingFileRecordData(
   // «ιδιωτικό» και το κρίνει ο φρουρός της δημοσίευσης, όχι μια προεπιλογή εδώ.
   if (input.classification) {
     recordBase.classification = input.classification;
+  }
+  // ADR-845 Ο-27 — γράφεται ΜΟΝΟ όταν ο παραγωγός ξέρει **τι πράγμα** δημοσιεύει. Η σιωπή
+  // σημαίνει «αυτό το αρχείο δεν συμμετέχει σε διαδοχή» — ποτέ «είναι το ίδιο με κάτι άλλο».
+  if (input.publicationIdentity) {
+    recordBase.publicationIdentity = input.publicationIdentity;
   }
   // ADR-716 Φ5 — γράφεται ΜΟΝΟ όταν υπάρχει ρητή επιλογή· η απουσία σημαίνει
   // «αποφασίζει η σκάλα τεκμηρίων», όχι «άγνωστο».
