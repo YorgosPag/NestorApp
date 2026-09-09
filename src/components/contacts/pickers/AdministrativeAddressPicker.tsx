@@ -10,7 +10,7 @@
  *           Regional Unit > Region > Decentralized Admin > Major Geo Unit
  *
  * @see src/hooks/useAdministrativeHierarchy.ts
- * @see src/data/administrative-hierarchy.json
+ * @see public/data/administrative-hierarchy.json — **η μία αυθεντία** (ADR-846 Φ4)
  */
 
 import React, { useCallback, useMemo } from 'react';
@@ -20,7 +20,7 @@ import { SearchableCombobox } from '@/components/ui/searchable-combobox';
 import type { ComboboxOption } from '@/components/ui/searchable-combobox';
 import {
   useAdministrativeHierarchy,
-  ADMIN_LEVEL_LABELS,
+  ADMIN_LEVEL_LABEL_KEYS,
   type AdminPath,
   type AdminLevel,
 } from '@/hooks/useAdministrativeHierarchy';
@@ -121,16 +121,16 @@ const LEVEL_FIELDS: Array<{
   level: AdminLevel;
   idField: keyof AdministrativeAddress;
   nameField: keyof AdministrativeAddress;
-  label: string;
+  labelKey: string;
 }> = [
-  { level: 8, idField: 'settlementId', nameField: 'settlementName', label: ADMIN_LEVEL_LABELS[8] },
-  { level: 7, idField: 'communityId', nameField: 'communityName', label: ADMIN_LEVEL_LABELS[7] },
-  { level: 6, idField: 'municipalUnitId', nameField: 'municipalUnitName', label: ADMIN_LEVEL_LABELS[6] },
-  { level: 5, idField: 'municipalityId', nameField: 'municipalityName', label: ADMIN_LEVEL_LABELS[5] },
-  { level: 4, idField: 'regionalUnitId', nameField: 'regionalUnitName', label: ADMIN_LEVEL_LABELS[4] },
-  { level: 3, idField: 'regionId', nameField: 'regionName', label: ADMIN_LEVEL_LABELS[3] },
-  { level: 2, idField: 'decentAdminId', nameField: 'decentAdminName', label: ADMIN_LEVEL_LABELS[2] },
-  { level: 1, idField: 'majorGeoId', nameField: 'majorGeoName', label: ADMIN_LEVEL_LABELS[1] },
+  { level: 8, idField: 'settlementId', nameField: 'settlementName', labelKey: ADMIN_LEVEL_LABEL_KEYS[8] },
+  { level: 7, idField: 'communityId', nameField: 'communityName', labelKey: ADMIN_LEVEL_LABEL_KEYS[7] },
+  { level: 6, idField: 'municipalUnitId', nameField: 'municipalUnitName', labelKey: ADMIN_LEVEL_LABEL_KEYS[6] },
+  { level: 5, idField: 'municipalityId', nameField: 'municipalityName', labelKey: ADMIN_LEVEL_LABEL_KEYS[5] },
+  { level: 4, idField: 'regionalUnitId', nameField: 'regionalUnitName', labelKey: ADMIN_LEVEL_LABEL_KEYS[4] },
+  { level: 3, idField: 'regionId', nameField: 'regionName', labelKey: ADMIN_LEVEL_LABEL_KEYS[3] },
+  { level: 2, idField: 'decentAdminId', nameField: 'decentAdminName', labelKey: ADMIN_LEVEL_LABEL_KEYS[2] },
+  { level: 1, idField: 'majorGeoId', nameField: 'majorGeoName', labelKey: ADMIN_LEVEL_LABEL_KEYS[1] },
 ];
 
 // ============================================================================
@@ -144,7 +144,7 @@ export function AdministrativeAddressPicker({
   visibleLevels,
   showPostalCode = true,
 }: AdministrativeAddressPickerProps) {
-  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
+  const { t } = useTranslation(['contacts', 'addresses', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
   const colors = useSemanticColors();
   const { isLoading, resolvePath, levelOptions } =
     useAdministrativeHierarchy();
@@ -244,7 +244,7 @@ export function AdministrativeAddressPicker({
               className="space-y-1"
             >
               <label className={cn("text-xs font-medium", colors.text.muted)}>
-                {field.label}
+                {t(field.labelKey)}
               </label>
               <SearchableCombobox
                 value={currentName}
