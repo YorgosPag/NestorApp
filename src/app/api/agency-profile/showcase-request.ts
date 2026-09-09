@@ -30,7 +30,7 @@ import { z } from 'zod';
 import type { ShowcaseDeniedResponse } from '@/lib/auth/brokerage-gate';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import type { ShowcaseWireDeclaration } from '@/lib/agency/showcase-wire';
-import { normalizeCoverageIds } from '@/lib/agency/coverage-match';
+import { normalizeCoverageIds } from '@/lib/agency/coverage-absorption';
 import { coverageOutlineDefect, type CoverageOutlineDefect } from '@/lib/agency/coverage-outline';
 import { placeRefSchema } from '@/lib/geo/place-ref-schema';
 import { resolveAlias } from '@/lib/workspace/alias-registry';

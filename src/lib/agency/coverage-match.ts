@@ -317,6 +317,27 @@ function areasOverArea(
  * Άγκυρα: `coverage-match.test.ts`, ομάδα «η σειρά των ορισμάτων».
  * ═════════════════════════════════════════════════════════════════════════════
  */
+/**
+ * **ΤΟ ΕΡΩΤΗΜΑ ΤΟΥ ΕΠΙΣΚΕΠΤΗ ΩΣ ΑΠΟΤΥΠΩΜΑ** — και οι δύο μορφές του, μία απάντηση.
+ *
+ * 🔑 **Εξήχθη στη Φ5δ επειδή απέκτησε ΔΕΥΤΕΡΟ καλούντα** *({@link areaOverWhere})*. Όσο
+ * ζούσε ως τρεις γραμμές μέσα στον {@link coverageRelation}, ο δεύτερος **θα τις
+ * αντέγραφε** — και θα ήταν το σχήμα που ο **N.18** ονομάζει *«κεντρικοποιείς το Α,
+ * γράφεις Β ως δίδυμο»*, με το επιβαρυντικό ότι το δίδυμο θα γεννιόταν **στο ίδιο αρχείο**.
+ *
+ * ⚠️ **Το `null` σημαίνει ΜΟΝΟ «δεν ξέρω»** *(το αποτύπωμα της οντότητας δεν έχει φορτώσει,
+ * ή λείπει από το μητρώο)* — **ποτέ** «δεν ταιριάζει». Κάθε καλών οφείλει να το μεταφράσει
+ * σε `'unknown'`, όχι σε `'disjoint'`.
+ */
+export function askedFootprint(
+  where: ShowcaseWhere,
+  resolvers: CoverageResolvers,
+): GeoFootprint | null {
+  return isAdministrativeWhere(where)
+    ? resolvers.footprintOf(where.adminId)
+    : circleFootprint(where.circle);
+}
+
 export function coverageRelation(
   coverage: DeclaredCoverage | null,
   where: ShowcaseWhere,
@@ -328,12 +349,8 @@ export function coverageRelation(
   //    γεωμετρία, και καμία εξάρτηση από το αν έχουν φορτώσει.
   if (isNationwide(coverage)) return 'within';
 
-  // 🏆 **ΤΟ ΕΡΩΤΗΜΑ ΓΙΝΕΤΑΙ ΑΠΟΤΥΠΩΜΑ ΜΙΑ ΦΟΡΑ, ΕΔΩ** — και οι δύο μορφές του
-  //    *(διοικητική οντότητα · κύκλος)* απαντούν πλέον στην ίδια ερώτηση. Το `null`
-  //    είναι **μόνο** «το αποτύπωμα της οντότητας δεν έχει φορτώσει / λείπει».
-  const query = isAdministrativeWhere(where)
-    ? resolvers.footprintOf(where.adminId)
-    : circleFootprint(where.circle);
+  // 🏆 **ΤΟ ΕΡΩΤΗΜΑ ΓΙΝΕΤΑΙ ΑΠΟΤΥΠΩΜΑ ΜΙΑ ΦΟΡΑ** — δες {@link askedFootprint}.
+  const query = askedFootprint(where, resolvers);
 
   if (isOutlineCoverage(coverage)) {
     // ⚠️ Το `[outline]` είναι **ένας** δακτύλιος — δες `types/agency-coverage.ts`:
@@ -367,39 +384,6 @@ export function coverageMatches(
 ): boolean {
   return coverageRelation(coverage, where, resolvers) !== 'disjoint';
 }
-
-/**
- * **ΚΑΝΟΝΙΚΟΠΟΙΗΣΗ — Η ΔΗΛΩΣΗ ΧΩΡΙΣ ΤΑ ΠΕΡΙΤΤΑ ΤΗΣ.**
- *
- * Αφαιρεί (α) τα διπλότυπα και (β) κάθε ταυτότητα που έχει **γνήσιο πρόγονο** ήδη μέσα
- * στη δήλωση: *«Δήμος Θέρμης» + «Περιφέρεια Κεντρικής Μακεδονίας» ⇒ μένει η περιφέρεια*,
- * γιατί ο δήμος **δεν προσθέτει τίποτα** — ήδη καλύπτεται.
- *
- * 🏆 **Αυτό αντικαθιστά το πλαφόν**, και είναι η θέση όπου ξεπερνάμε το Google Business
- * Profile: εκεί οι περιοχές είναι **επίπεδες**, οπότε χρειάζεται αυθαίρετη οροφή *(20)*
- * και **ανιχνευτής spam**. Με ιεραρχία, η λίστα **συμπτύσσεται μόνη της**.
- *
- * ⚠️ **Ιδεμποτής** *(N.7.2 #3)*: `normalize(normalize(x)) === normalize(x)`.
- * ⚠️ **Διατηρεί τη σειρά** της πρώτης εμφάνισης — ο άνθρωπος βλέπει τη λίστα του με τη
- * σειρά που την έχτισε, όχι αναδιαταγμένη από μηχανή.
- * ⚠️ **Άγνωστη ταυτότητα** *(κενή γενεαλογία)* **διατηρείται**: ο κριτής της
- * εγκυρότητας είναι ο γραφέας *(`showcase-request.ts`)*, όχι αυτή η συνάρτηση — μια
- * σιωπηλή απόρριψη εδώ θα έσβηνε δήλωση ανθρώπου επειδή δεν είχε φορτώσει ένα αρχείο.
- */
-export function normalizeCoverageIds(
-  adminIds: readonly string[],
-  lineageOf: LineageResolver,
-): readonly string[] {
-  const unique = [...new Set(adminIds)];
-  const declared = new Set(unique);
-
-  return unique.filter((id) => {
-    // Η γενεαλογία **χωρίς τον εαυτό** = οι γνήσιοι πρόγονοι.
-    const strictAncestors = lineageOf(id).filter((ancestorId) => ancestorId !== id);
-    return !strictAncestors.some((ancestorId) => declared.has(ancestorId));
-  });
-}
-
 
 /**
  * **Η ΔΗΛΩΣΗ ΕΝΑΝΤΙΟΝ ΜΙΑΣ ΓΝΩΣΤΗΣ ΠΕΡΙΟΧΗΣ ΤΟΥ ΚΟΣΜΟΥ** — όχι ερώτημα επισκέπτη.
@@ -437,4 +421,50 @@ export function coverageOverCircle(
   resolvers: CoverageResolvers,
 ): CoverageRelation {
   return coverageRelation(coverage, { circle: area }, resolvers);
+}
+
+/**
+ * **ΜΙΑ ΓΝΩΣΤΗ ΠΕΡΙΟΧΗ ΤΟΥ ΚΟΣΜΟΥ ΕΝΑΝΤΙΟΝ ΤΟΥ ΕΡΩΤΗΜΑΤΟΣ ΤΟΥ ΕΠΙΣΚΕΠΤΗ** *(ADR-846 Φ5δ)*.
+ *
+ * ═════════════════════════════════════════════════════════════════════════════
+ * 🔑 ΤΡΕΙΣ ΕΡΩΤΗΣΕΙΣ, ΜΙΑ ΜΗΧΑΝΗ, ΤΡΙΑ ΟΝΟΜΑΤΑ — ΚΑΙ ΤΟ ΤΡΙΤΟ ΓΕΝΝΗΘΗΚΕ ΕΔΩ
+ * ═════════════════════════════════════════════════════════════════════════════
+ *
+ * | Συνάρτηση | Ρωτά |
+ * |---|---|
+ * | {@link coverageRelation} | *«καλύπτει **η δήλωση** αυτό που ρωτά ο επισκέπτης;»* |
+ * | {@link coverageOverCircle} | *«πέφτει **αυτό το ακίνητο** μέσα στη δήλωση;»* *(Φ5α)* |
+ * | **αυτή** | *«πέφτει **αυτό το ακίνητο** μέσα σε ό,τι ρωτά ο επισκέπτης;»* *(Φ5δ)* |
+ *
+ * Και οι τρεις καταλήγουν στον **ίδιο** {@link footprintRelation}. Ένα σκέτο
+ * `coverageRelation({ circle: area }, where, …)` στον καλούντα θα διάβαζε *«η αγγελία
+ * **δηλώνει** εμβέλεια»* — ο τύπος σωστός, **η πρόταση ψέμα**. Ίδιο ακριβώς σκεπτικό με
+ * τη γέννηση του {@link coverageOverCircle}, και με τα `declared`/`asked` του
+ * {@link footprintRelation}: τα ονόματα εμποδίζουν τη **σύγχυση ρόλου**.
+ *
+ * ═════════════════════════════════════════════════════════════════════════════
+ * 🔴 ΚΑΙ Η ΜΕΤΑΦΡΑΣΗ ΤΟΥ ΑΠΟΤΕΛΕΣΜΑΤΟΣ ΕΙΝΑΙ Η **ΤΡΙΤΗ** ΣΤΟ ΔΕΝΤΡΟ, ΚΑΙ Η ΑΥΣΤΗΡΟΤΕΡΗ
+ * ═════════════════════════════════════════════════════════════════════════════
+ *
+ * | Ερώτηση | `intersects` σημαίνει |
+ * |---|---|
+ * | *«υπάρχει επικάλυψη δήλωσης και ερωτήματος;»* — {@link coverageMatches} | ✅ **ναι, εμφανίσου** |
+ * | *«είναι αυτό το ακίνητο μέσα στη δήλωση;»* — `verdictForListing` *(Φ5α)* | 🔑 **δεν ξέρω** |
+ * | *«έχει **αποδεδειγμένα** ακίνητο εδώ;»* — `presenceMatches` *(Φ5δ)* | ⛔ **ΟΧΙ — δεν αποδεικνύεται** |
+ *
+ * ⚠️ **Η συνάρτηση επιστρέφει τη ΣΧΕΣΗ, όχι την κρίση** — τη μετάφραση την κάνει ο
+ * `showcase-presence.ts`, όπου ζει και το σκεπτικό της. Ένας κοινός μεταφραστής θα ήταν
+ * **λάθος στις δύο από τις τρεις**, σιωπηλά.
+ *
+ * @param area **η περιοχή της αγγελίας** — `listingSearchArea`, δηλαδή *«πού μπορεί να
+ *   βρίσκεται»* **μαζί με την αβεβαιότητά της**
+ * @param where **πού ψάχνει ο επισκέπτης**
+ */
+export function areaOverWhere(
+  area: GeoCircle,
+  where: ShowcaseWhere,
+  resolvers: CoverageResolvers,
+): CoverageRelation {
+  const asked = askedFootprint(where, resolvers);
+  return asked === null ? 'unknown' : footprintRelation(circleFootprint(area), asked);
 }

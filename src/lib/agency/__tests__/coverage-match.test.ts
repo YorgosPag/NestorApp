@@ -19,10 +19,12 @@ import { join } from 'node:path';
 import {
   coverageMatches,
   coverageRelation,
-  normalizeCoverageIds,
   type CoverageResolvers,
   type LineageResolver,
 } from '../coverage-match';
+// 🔑 **Η μηχανή της απορρόφησης μετακόμισε** στη Φ5δ *(N.7.1: το `coverage-match` έφτασε
+//    503/500)*. Οι άγκυρες μένουν **εδώ**: ρωτούν τη συμπεριφορά, όχι τη διεύθυνση.
+import { normalizeCoverageIds } from '../coverage-absorption';
 import type { AdministrativeCoverage, DeclaredCoverage, ShowcaseWhere } from '@/types/agency-coverage';
 import { NO_FOOTPRINTS } from '@/types/geo/admin-footprint';
 
