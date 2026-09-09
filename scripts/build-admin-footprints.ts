@@ -54,7 +54,7 @@ import { fileURLToPath } from 'node:url';
 
 import { ringsFootprint } from '../src/lib/geo/geo-footprint';
 import { geoJsonRings } from '../src/lib/geo/geo-geojson';
-import { interiorCircleCover } from '../src/lib/geo/geo-interior-cover';
+import { DEFAULT_INTERIOR_COVER, interiorCircleCover } from '../src/lib/geo/geo-interior-cover';
 import type { GeoCircle, GeoOutline } from '../src/types/geo/coordinates';
 import type { GeoFootprint } from '../src/types/geo/admin-footprint';
 
@@ -186,7 +186,7 @@ function buildIdIndex(rows: readonly HierarchyRow[]): {
  * θα κατέστρεφαν τη σχέση `εσωτερικός ⊆ σχήμα ⊆ εξωτερικός`, από την οποία κρέμεται
  * **κάθε** συμπέρασμα του κριτή.
  */
-function footprintOf(geometry: GeoJSON.Geometry | null): GeoFootprint | null {
+function footprintOf(geometry: GeoJSON.Geometry | null, level: number): GeoFootprint | null {
   if (geometry === null) return null;
   if (geometry.type !== 'Polygon' && geometry.type !== 'MultiPolygon') return null;
 
@@ -203,7 +203,7 @@ function footprintOf(geometry: GeoJSON.Geometry | null): GeoFootprint | null {
     center: round(footprint.center),
     outerKm: roundKm(footprint.outerKm),
     innerKm: roundKm(footprint.innerKm),
-    ...interiorOf(rings),
+    ...interiorOf(rings, level),
   };
 }
 
@@ -222,29 +222,77 @@ function footprintOf(geometry: GeoJSON.Geometry | null): GeoFootprint | null {
  * 🔑 Και όταν το εκπέμπουμε, ο **πρώτος** δίσκος είναι ο μέγιστος εγγεγραμμένος ⇒ το
  * κάλυμμα είναι **υπερσύνολο** της σημερινής ικανότητας, ποτέ υποσύνολο.
  */
-function interiorOf(rings: readonly GeoOutline[]): { interior?: GeoCircle[] } {
-  const cover = interiorCircleCover(rings);
+function interiorOf(rings: readonly GeoOutline[], level: number): { interior?: GeoCircle[] } {
+  const cover = interiorCircleCover(rings, {
+    ...DEFAULT_INTERIOR_COVER,
+    maxDiscs: DISC_BUDGET[level] ?? DEFAULT_INTERIOR_COVER.maxDiscs,
+  });
   if (cover.discs.length <= 1) return {};
   if (cover.singleDiscCoverage >= INTERIOR_NEEDED_BELOW) return {};
+  if (cover.coverage - cover.singleDiscCoverage < INTERIOR_MIN_GAIN) return {};
 
   return {
     interior: cover.discs.map((disc) => ({
-      center: round(disc.center),
-      radiusKm: roundKm(disc.radiusKm),
+      center: roundDisc(disc.center),
+      radiusKm: roundDiscKm(disc.radiusKm),
     })),
   };
 }
 
 /**
- * Κάτω από αυτό το κλάσμα, ο **ένας** δίσκος θεωρείται ανεπαρκής και γράφεται κάλυμμα.
+ * **ΠΡΟΫΠΟΛΟΓΙΣΜΟΣ ΔΙΣΚΩΝ ΑΝΑ ΕΠΙΠΕΔΟ** — και είναι **οικονομική**, όχι γεωμετρική
+ * απόφαση.
  *
- * ⚠️ **Δεν είναι στρογγυλός αριθμός για την ομορφιά**: στο **0,60** ένα σχήμα όπου ο
- * κύριος δίσκος πιάνει τα δύο τρίτα του εμβαδού θεωρείται «αρκετά συμπαγές». Η
- * μετρημένη κατανομή *(διάμεσος λόγος `inner/outer`: κοινότητα 0,249 · δήμος 0,150 ·
- * περιφέρεια 0,015)* λέει ότι το κατώφλι πιάνει **τα μεγάλα** επίπεδα, που είναι
- * ακριβώς εκεί όπου το σφάλμα ήταν χειρότερο.
+ * 🔴 **Μετρημένο (09/09)**: με ενιαίο ταβάνι 16 το αρχείο πήγε **697 → 5.988 KB ωμό**
+ * *(gzip **121 → 956 KB**)*, και το **77%** των δίσκων πήγε στο **επίπεδο 7**, τις
+ * **6.062 κοινότητες**. Το αρχείο το κατεβάζει **κάθε ανώνυμος επισκέπτης**.
+ *
+ * 🔑 **Η κατανομή ακολουθεί το πλήθος, αντίστροφα**: **14** περιφέρειες μπορούν να
+ * έχουν 24 δίσκους η καθεμιά και να κοστίσουν **τίποτα**· 6.062 κοινότητες δεν
+ * μπορούν. Και οι κοινότητες είναι **μικρές** — ο ένας δίσκος τους ήδη πιάνει
+ * μεγαλύτερο κλάσμα *(διάμεσος λόγος `inner/outer` **0,249**, ο υψηλότερος όλων)*.
  */
-const INTERIOR_NEEDED_BELOW = 0.6;
+const DISC_BUDGET: Readonly<Record<number, number>> = {
+  2: 24, // αποκεντρωμένες διοικήσεις — 8 οντότητες
+  3: 24, // περιφέρειες — 14
+  4: 20, // περιφερειακές ενότητες — 75
+  5: 16, // δήμοι — 333
+  6: 10, // δημοτικές ενότητες — 948
+  7: 6,  // δημοτικές/τοπικές κοινότητες — 6.062
+};
+
+/**
+ * 4 δεκαδικά ≈ **11 m** για το **κέντρο δίσκου**.
+ *
+ * ⚠️ **Χωριστό από το {@link round} των 5 δεκαδικών επίτηδες**: εκείνο στρογγυλοποιεί
+ * το κέντρο του **αποτυπώματος**, που είναι η αναφορά κάθε απόστασης. Εδώ μιλάμε για
+ * το κέντρο ενός δίσκου **ακτίνας ≥ 200 m** — 11 m είναι θόρυβος, και ο πληθυντικός
+ * πολλαπλασιάζει το κόστος επί **δεκάδες χιλιάδες**.
+ */
+function roundDisc(center: { lat: number; lng: number }): { lat: number; lng: number } {
+  return { lat: Number(center.lat.toFixed(4)), lng: Number(center.lng.toFixed(4)) };
+}
+
+/** 2 δεκαδικά = **10 m** ακτίνας. 🔒 Στρογγυλοποιεί **ΠΡΟΣ ΤΑ ΚΑΤΩ** — δες παρακάτω. */
+function roundDiscKm(kilometres: number): number {
+  // 🔒 **ΚΡΙΣΙΜΟ: ΠΟΤΕ ΠΡΟΣ ΤΑ ΠΑΝΩ.** Το `toFixed` στρογγυλοποιεί κανονικά, και μια
+  //    ακτίνα που **μεγάλωσε** κατά 5 m σπάει την απόδειξη «ο δίσκος είναι ολόκληρος
+  //    μέσα» — δηλαδή θα μπορούσε να γεννήσει **ψευδώς θετικό** ισχυρισμό παρουσίας.
+  //    Το `floor` κοστίζει έως 10 m κάλυψης· η εγγύηση δεν κοστίζει τίποτα.
+  return Math.floor(kilometres * 100) / 100;
+}
+
+/**
+ * Κάτω από αυτό το κλάσμα, ο **ένας** δίσκος θεωρείται ανεπαρκής.
+ *
+ * ⚠️ **Ήταν 0,6 και έπιανε 6.870 από 7.440 οντότητες (92%)** — δηλαδή δεν διέκρινε
+ * τίποτα. Στο **0,45** μένουν εκείνες όπου ο ένας δίσκος χάνει **πάνω από το μισό**
+ * του σχήματος.
+ */
+const INTERIOR_NEEDED_BELOW = 0.45;
+
+/** Και δεν γράφουμε κάλυμμα που **δεν βοηθά**: χωρίς αυτό, πληρώνουμε bytes για τίποτα. */
+const INTERIOR_MIN_GAIN = 0.2;
 
 /** 5 δεκαδικά ≈ **1,1 m** — κάτω από κάθε σφάλμα της ίδιας της πηγής στο 1:50.000. */
 function round(center: { lat: number; lng: number }): { lat: number; lng: number } {
@@ -285,7 +333,7 @@ function collectLayer(
       continue;
     }
 
-    const footprint = footprintOf(feature.geometry);
+    const footprint = footprintOf(feature.geometry, level);
     if (footprint === null) {
       degenerate += 1;
       continue;

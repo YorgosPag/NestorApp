@@ -142,7 +142,32 @@ interface Candidate {
   readonly radiusKm: number;
   /** Βάρος εμβαδού: το `cos(φ)` διορθώνει τη σύγκλιση των μεσημβρινών. */
   readonly weight: number;
+  /**
+   * **Επίπεδες συντεταγμένες σε μέτρα**, γύρω από το κέντρο του πλαισίου.
+   *
+   * 🔴 **ΓΙΑΤΙ ΥΠΑΡΧΟΥΝ**: ο άπληστος συγκρίνει **κάθε υποψήφιο με κάθε υποψήφιο**
+   * σε κάθε γύρο — `O(n²)` ανά δίσκο. Με ακριβή αποστασιομέτρηση *(τριγωνομετρία)*
+   * το αρχείο άγκυρας έκανε **185 δευτερόλεπτα**, μετρημένα. Σε τοπική κλίμακα η
+   * επίπεδη προσέγγιση είναι **ισοδύναμη για ταξινόμηση** και ασύγκριτα φθηνότερη.
+   *
+   * 🔒 **ΔΕΝ αγγίζει την εγγύηση**: χρησιμοποιείται **μόνο** για λογιστική κάλυψης
+   * *(ποιο δείγμα θεωρείται καλυμμένο)*. Η **ακτίνα** κάθε εκπεμπόμενου δίσκου
+   * βγαίνει από το {@link geoRingsInscribedRadius} στο **πλήρες** περίγραμμα, και ο
+   * έλεγχος σε **χρόνο εκτέλεσης** ({@link interiorContainsCircle}) μένει ακριβής.
+   */
+  readonly x: number;
+  readonly y: number;
   covered: boolean;
+}
+
+/** Μέτρα ανά μοίρα γεωγραφικού πλάτους — σταθερό με επαρκή ακρίβεια για λογιστική. */
+const METRES_PER_DEGREE = 111_320;
+
+function withinFast(a: Candidate, b: Candidate, radiusKm: number): boolean {
+  const dx = a.x - b.x;
+  const dy = a.y - b.y;
+  const limit = radiusKm * METRES_PER_KM;
+  return dx * dx + dy * dy <= limit * limit;
 }
 
 /**
@@ -209,7 +234,14 @@ function sampleInterior(rings: readonly GeoOutline[], grid: number): Candidate[]
       if (!isPointInGeoRings(point, rings)) continue;
       const radiusKm = geoRingsInscribedRadius(rings, point);
       if (radiusKm <= 0) continue;
-      candidates.push({ point, radiusKm, weight, covered: false });
+      candidates.push({
+        point,
+        radiusKm,
+        weight,
+        x: (point.lng - box.minLng) * METRES_PER_DEGREE * weight,
+        y: (point.lat - box.minLat) * METRES_PER_DEGREE,
+        covered: false,
+      });
     }
   }
   return candidates;
@@ -272,8 +304,7 @@ export function interiorCircleCover(
 
     for (const candidate of candidates) {
       if (candidate.covered) continue;
-      const gapKm = distanceMeters(pick.point, candidate.point) / METRES_PER_KM;
-      if (gapKm <= exactKm) {
+      if (withinFast(pick, candidate, exactKm)) {
         candidate.covered = true;
         coveredWeight += candidate.weight;
       }
@@ -325,8 +356,7 @@ function mostRevealingCandidate(candidates: readonly Candidate[]): Candidate | n
     let gain = 0;
     for (const other of candidates) {
       if (other.covered) continue;
-      const gapKm = distanceMeters(candidate.point, other.point) / METRES_PER_KM;
-      if (gapKm <= candidate.radiusKm) gain += other.weight;
+      if (withinFast(candidate, other, candidate.radiusKm)) gain += other.weight;
     }
     if (best === null || gain > bestGain) {
       best = candidate;
