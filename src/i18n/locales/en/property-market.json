@@ -840,6 +840,8 @@
       "coverageWithin": "Covers the whole area",
       "coverageIntersects": "Covers part of the area",
       "coverageUnknown": "May cover this area — we cannot tell for sure",
+      "coverageProven": "Has a property here",
+      "coverageProvenOnly": "Does not declare this area, but has a property here",
       "coverageDeclaredNationwide": "Declares: all of Greece",
       "coverageDeclared": "Declares: {areas}",
       "coverageDeclaredRadius": "Declares: up to {km} km from a point they set",

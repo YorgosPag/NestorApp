@@ -55,6 +55,7 @@ function showcase(
   displayName: string,
   credentials: readonly ShowcaseCredential[],
   position: PublicShowcase['position'] = THESSALONIKI,
+  presence: PublicShowcase['presence'] = [],
 ): PublicShowcase {
   return {
     companyId,
@@ -64,6 +65,9 @@ function showcase(
     place: null,
     position,
     coverage: null,
+    // ⚠️ **Κενή απόδειξη είναι ο ΣΩΣΤΟΣ παρονομαστής** *(ADR-846 Φ5δ)*: μετρημένο
+    //    **6 ακίνητα · 0 στον χάρτη**. Ο κατάλογος οφείλει να είναι σωστός **πρώτα** εδώ.
+    presence,
     publishedAt: '2026-09-01T10:00:00.000Z',
   };
 }
@@ -483,5 +487,75 @@ describe('ADR-846 — η διεύθυνση κουβαλά ΕΝΑ «πού»', (
         where: { circle: { center: { lat: 1, lng: 1 }, radiusKm: 5 } },
       }),
     ).toBe(true);
+  });
+});
+
+
+// =============================================================================
+// Π — Η ΕΝΩΣΗ ΤΗΣ ΦΑΣΗΣ 5δ: ΔΗΛΩΣΗ **Η** ΑΠΟΔΕΙΞΗ
+// =============================================================================
+//
+// 🔴 **ΤΟ ΕΛΑΤΤΩΜΑ**: ως τη Φ5δ η δήλωση ήταν **μοναδικός κριτής**, οπότε ο μεσίτης που
+//    δηλώνει εμβέλεια **χωρίς** τις περιοχές των ήδη δημοσιευμένων ακινήτων του
+//    **εξαφανιζόταν από εκεί όπου αποδεδειγμένα δουλεύει** — το ψευδώς αρνητικό του §1,
+//    προκαλούμενο από **την ίδια τη θεραπεία** *(ADR-846 §8.8.1, αποτέλεσμα Α)*.
+
+describe('ADR-846 Φ5δ — η ένωση: δηλωμένη εμβέλεια Ή αποδεδειγμένη παρουσία', () => {
+  const HERE = { lat: 40.64, lng: 22.94 };
+  /** Ερώτημα επισκέπτη: 5 χλμ γύρω από τη Θεσσαλονίκη. */
+  const ASKING = { circle: { center: HERE, radiusKm: 5 } } as const;
+  /** Απόδειξη **ακριβούς** θέσης εκεί — ό,τι παράγει το `presenceFromListings`. */
+  const PROVEN: PublicShowcase['presence'] = [{ center: HERE, radiusKm: 0 }];
+
+  function visible(profiles: readonly PublicShowcase[]): readonly string[] {
+    return applyShowcaseFilters(profiles, { occupation: null, where: ASKING }, NO_GEO).map(
+      (p) => p.companyId,
+    );
+  }
+
+  it('🔴 Π1 — ΤΟ ΕΥΡΗΜΑ: δήλωση ΜΑΚΡΙΑ + ακίνητο ΕΔΩ ⇒ ΕΜΦΑΝΙΖΕΤΑΙ', () => {
+    // Δηλώνει Αθήνα, έχει ακίνητο στη Θεσσαλονίκη. Πριν τη Φ5δ: **αόρατος**.
+    const declaresElsewhere: PublicShowcase = {
+      ...showcase('c_proven', 'Γραφείο', [BROKER], ATHENS, PROVEN),
+      coverage: { circle: { center: ATHENS, radiusKm: 10 } },
+    };
+
+    expect(visible([declaresElsewhere])).toEqual(['c_proven']);
+  });
+
+  it('Π2 — ο ΠΑΡΟΝΟΜΑΣΤΗΣ: ίδια δήλωση ΧΩΡΙΣ απόδειξη ⇒ ΔΕΝ εμφανίζεται', () => {
+    // 🔑 Χωρίς αυτό, ένα «πάντα ναι» θα άφηνε το Π1 πράσινο και θα κατέργει τον άξονα.
+    const declaresElsewhere: PublicShowcase = {
+      ...showcase('c_silent', 'Γραφείο', [BROKER], ATHENS),
+      coverage: { circle: { center: ATHENS, radiusKm: 10 } },
+    };
+
+    expect(visible([declaresElsewhere])).toEqual([]);
+  });
+
+  it('Π3 — απόδειξη ΧΩΡΙΣ καμία δήλωση ⇒ εμφανίζεται (η έδρα δεν το εμποδίζει)', () => {
+    // Έδρα Αθήνα, καμία δήλωση, ακίνητο στη Θεσσαλονίκη. Η **έδρα** θα τον έκοβε.
+    expect(visible([showcase('c_only_proof', 'Γραφείο', [BROKER], ATHENS, PROVEN)])).toEqual([
+      'c_only_proof',
+    ]);
+  });
+
+  it('Π4 — η δήλωση εξακολουθεί να αρκεί ΜΟΝΗ ΤΗΣ (καμία οπισθοδρόμηση)', () => {
+    const declaresHere: PublicShowcase = {
+      ...showcase('c_declared', 'Γραφείο', [BROKER], ATHENS),
+      coverage: { circle: { center: HERE, radiusKm: 20 } },
+    };
+
+    expect(visible([declaresHere])).toEqual(['c_declared']);
+  });
+
+  it('🔴 Π5 — ΑΒΕΒΑΙΗ απόδειξη ΔΕΝ αρκεί: ο κύκλος πρέπει να ΧΩΡΑΕΙ', () => {
+    // Ακίνητο γνωστό μόνο σε επίπεδο πόλης (±10 χλμ) απέναντι σε ερώτημα 5 χλμ.
+    // ⛔ Το Zillow θα έλεγε «ναι» (σύγκριση ΤΚ με ΤΚ). Εμείς λέμε **δεν αποδεικνύεται**.
+    const vague = showcase('c_vague', 'Γραφείο', [BROKER], ATHENS, [
+      { center: HERE, radiusKm: 10 },
+    ]);
+
+    expect(visible([vague])).toEqual([]);
   });
 });

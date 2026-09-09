@@ -34,6 +34,7 @@
 import { readShowcase, toStoredShowcase } from '../showcase-read';
 import { showcaseFixture } from '../__fixtures__/showcase-fixture';
 import type { DeclaredCoverage } from '@/types/agency-coverage';
+import { MAX_PRESENCE_AREAS } from '@/types/agency-profile';
 
 const COMPANY = 'comp_round_trip';
 
@@ -162,5 +163,63 @@ describe('ADR-846 · η εμβέλεια επιβιώνει της διαδρο�
     expect(readBack(storedWithCoverage({ circle: { center: CENTRE, radiusKm: 20 } }))).toEqual({
       circle: { center: CENTRE, radiusKm: 20 },
     });
+  });
+});
+
+
+// =============================================================================
+// Π — Η ΑΠΟΔΕΔΕΙΓΜΕΝΗ ΠΑΡΟΥΣΙΑ ΚΑΝΕΙ ΤΗΝ ΙΔΙΑ ΔΙΑΔΡΟΜΗ (ADR-846 Φ5δ)
+// =============================================================================
+//
+// ⚠️ **Ίδιο σχήμα βλάβης, νέο πεδίο**: το `presence` γράφεται από **άλλον** γραφέα
+//    (`showcase-presence.service.ts`) και διαβάζεται από τον **ίδιο** αναγνώστη. Ένας
+//    αναγνώστης που δεν το ξέρει θα το έσβηνε **σιωπηλά** σε κάθε ανάγνωση — και ο
+//    κατάλογος θα εξαφάνιζε γραφεία από εκεί όπου **αποδεδειγμένα** δουλεύουν, με
+//    **πράσινο** τον γραφέα. Ακριβώς το περιστατικό της επικεφαλίδας, μία φάση αργότερα.
+
+describe('ADR-846 Φ5δ — η απόδειξη επιβιώνει της διαδρομής προς τον δίσκο', () => {
+  const AREAS = [
+    { center: { lat: 40.64, lng: 22.94 }, radiusKm: 0 },
+    { center: { lat: 37.98, lng: 23.73 }, radiusKm: 10 },
+  ];
+
+  function presenceRoundTrip(presence: unknown): unknown {
+    const stored = { ...toStoredShowcase(showcaseFixture({ companyId: COMPANY })), presence };
+    const read = readShowcase(stored, COMPANY);
+    if (read.outcome !== 'showcase') throw new Error(`Περίμενα showcase, πήρα ${read.outcome}`);
+    return read.showcase.presence;
+  }
+
+  it('🔴 Π1 — κύκλοι γράφονται και ξαναδιαβάζονται ΤΑΥΤΟΣΗΜΟΙ', () => {
+    expect(presenceRoundTrip(AREAS)).toEqual(AREAS);
+  });
+
+  it('Π2 — απουσία πεδίου ⇒ κενό σύνολο, ΚΑΜΙΑ μετανάστευση παλιών εγγράφων', () => {
+    expect(presenceRoundTrip(undefined)).toEqual([]);
+  });
+
+  it('Π3 — σκουπίδια από τον δίσκο ΠΕΦΤΟΥΝ, δεν μαντεύονται', () => {
+    expect(
+      presenceRoundTrip([
+        { center: { lat: 'ΟΧΙ', lng: 22.94 }, radiusKm: 1 },
+        { center: { lat: 40.64, lng: 22.94 }, radiusKm: -5 },
+        { center: { lat: 40.64, lng: 22.94 } },
+        null,
+        'κύκλος',
+        AREAS[0],
+      ]),
+    ).toEqual([AREAS[0]]);
+  });
+
+  it('🔴 Π4 — ΤΟ ΤΑΒΑΝΙ ΕΠΙΒΑΛΛΕΤΑΙ ΚΑΙ ΣΤΗΝ ΑΝΑΓΝΩΣΗ, όχι μόνο στη γραφή', () => {
+    // ⚠️ Ο γραφέας το τηρεί ήδη — αλλά αυτό προστατεύει το έγγραφο **τη στιγμή που
+    //    γράφτηκε**, όχι εκείνο **που έφτασε στον φυλλομετρητή**. Και το
+    //    `agency_profiles` το κατεβάζει **κάθε ανώνυμος επισκέπτης**.
+    const bloated = Array.from({ length: 100 }, (_, i) => ({
+      center: { lat: 40 + i * 0.1, lng: 22 },
+      radiusKm: 1,
+    }));
+
+    expect(presenceRoundTrip(bloated)).toHaveLength(MAX_PRESENCE_AREAS);
   });
 });

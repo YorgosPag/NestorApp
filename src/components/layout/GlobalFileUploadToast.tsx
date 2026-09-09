@@ -24,6 +24,12 @@ export function GlobalFileUploadToast() {
     });
 
     const unsubTrash = RealtimeService.subscribe('FILE_TRASHED', (payload: FileTrashedPayload) => {
+      // 🔇 ADR-845 Ο-16 — ΑΝΤΙΚΑΤΑΣΤΑΣΗ ≠ ΔΙΑΓΡΑΦΗ. Όταν το αρχείο έφυγε επειδή κάτι πήρε
+      // τη θέση του, ο διάδοχός του έχει ΗΔΗ ανακοινωθεί από το `fileReady` παραπάνω.
+      // Δεύτερο μήνυμα εδώ έλεγε «μεταφέρθηκε στον κάδο» για το ΙΔΙΟ συμβάν: ο άνθρωπος
+      // έβλεπε δύο οθόνες να διαφωνούν («ανέβηκε επιτυχώς» + «στον κάδο») και μάντευε ότι
+      // κάτι πήγε στραβά. Ένα συμβάν, ένα μήνυμα — και το μήνυμα είναι η επιτυχία.
+      if (payload.supersededByFileId) return;
       if (payload.displayName) {
         fileNotifications.trash.movedToTrash(payload.displayName);
       }

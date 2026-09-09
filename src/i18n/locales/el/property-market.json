@@ -840,6 +840,8 @@
       "coverageWithin": "Καλύπτει όλη την περιοχή",
       "coverageIntersects": "Καλύπτει μέρος της περιοχής",
       "coverageUnknown": "Μπορεί να καλύπτει αυτή την περιοχή — δεν μπορούμε να το κρίνουμε με βεβαιότητα",
+      "coverageProven": "Έχει ακίνητο εδώ",
+      "coverageProvenOnly": "Δεν δηλώνει αυτή την περιοχή, αλλά έχει ακίνητο εδώ",
       "coverageDeclaredNationwide": "Δηλώνει: όλη η Ελλάδα",
       "coverageDeclared": "Δηλώνει: {areas}",
       "coverageDeclaredRadius": "Δηλώνει: έως {km} χλμ. από το σημείο που όρισε",

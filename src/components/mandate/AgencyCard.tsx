@@ -64,6 +64,7 @@ import {
 } from '@/types/agency-coverage';
 import { coverageOutlineAreaKm2 } from '@/lib/agency/coverage-outline';
 import { useCoverageResolvers } from '@/hooks/useCoverageResolvers';
+import { presenceMatches } from '@/lib/agency/showcase-presence';
 
 interface AgencyCardProps {
   readonly profile: PublicShowcase;
@@ -176,7 +177,7 @@ export function AgencyCard({
             ⛔ **Καμία ετικέτα σχέσης εδώ** *(«καλύπτει όλη την περιοχή»)*: αυτή έχει
             νόημα **μόνο** όταν υπάρχει ερώτημα, και η κάρτα εμφανίζεται και χωρίς.
           */}
-          <CoverageLine coverage={profile.coverage} where={where} />
+          <CoverageLine coverage={profile.coverage} presence={profile.presence} where={where} />
           <Link
             href={agencyProfileRoute(profile.alias)}
             className="mt-2 self-start text-sm font-medium text-foreground underline underline-offset-4"
@@ -220,9 +221,18 @@ const COVERAGE_RELATION_KEYS: Record<CoverageRelation, string> = {
  */
 function CoverageLine({
   coverage,
+  presence,
   where,
 }: {
   readonly coverage: PublicShowcase['coverage'];
+  /**
+   * 🏆 **ΓΙΑΤΙ ΕΜΦΑΝΙΣΤΗΚΕ** *(ADR-846 Φ5δ)* — η **δεύτερη** μαρτυρία.
+   *
+   * ⚠️ **Ο ΙΔΙΟΣ κριτής με το φίλτρο** *(`presenceMatches`)*, όχι δεύτερη κρίση: η κάρτα
+   * που έλεγε άλλα από τον λόγο που την έφερε εδώ θα ήταν **χειρότερη** από τη σιωπή του
+   * Zillow — θα ήταν **λάθος** εξήγηση.
+   */
+  readonly presence: PublicShowcase['presence'];
   readonly where: ShowcaseWhere | null;
 }): React.ReactElement | null {
   const { t } = useTranslation([AGENCY_PUBLIC_NS]);
@@ -231,6 +241,27 @@ function CoverageLine({
   //    κατάλογος θα φιλτράριζε σωστά αλλά η **ετικέτα** της κάρτας θα έμενε παγωμένη στο
   //    «δεν μπορούμε να το κρίνουμε» — δηλαδή η οθόνη θα διαφωνούσε με τον εαυτό της.
   const { resolvers } = useCoverageResolvers();
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 🏆 **Η ΑΠΟΔΕΙΞΗ ΜΙΛΑ ΠΡΩΤΗ, ΚΑΙ ΜΙΛΑ ΑΚΟΜΗ ΚΑΙ ΧΩΡΙΣ ΔΗΛΩΣΗ** *(Φ5δ)*.
+  //
+  // 🔴 Μέχρι τη Φ5δ αυτή η συνάρτηση επέστρεφε `null` για `coverage === null` — και μετά
+  //    την ένωση αυτό θα ήταν **ακριβώς η αδιαφάνεια του Zillow**: γραφείο που
+  //    εμφανίστηκε **μόνο** επειδή έχει εκεί ακίνητο θα ήταν **σιωπηλό**, και ο
+  //    επισκέπτης δεν θα μάθαινε ποτέ γιατί το βλέπει. Γι' αυτό ο έλεγχος μπήκε **πάνω**
+  //    από την πρόωρη έξοδο, όχι κάτω.
+  //
+  // ⛔ **Ποτέ αριθμός.** Το «3 ακίνητα εδώ» είναι όγκος αποθέματος — και ο πειρασμός να
+  //    ταξινομήσει είναι μεγαλύτερος εδώ απ' ό,τι στη δήλωση, γιατί ακούγεται
+  //    **αξιοκρατικός** *(§8.8.8)*. Το πεδίο **δεν κουβαλά** πλήθος· ούτε η κάρτα.
+  // ═══════════════════════════════════════════════════════════════════════════
+  if (where !== null && presenceMatches(presence, where, resolvers)) {
+    return (
+      <p className="m-0 text-sm text-muted-foreground">
+        {t(coverage === null ? DIRECTORY_KEYS.coverageProvenOnly : DIRECTORY_KEYS.coverageProven)}
+      </p>
+    );
+  }
 
   if (coverage === null) return null;
 
