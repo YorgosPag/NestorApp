@@ -126,12 +126,69 @@ export function resolveContactName(
 }
 
 /**
- * 🏢 ENTERPRISE: Type-safe photo purpose resolution
+ * **Ο σκοπός που γράφεται στο {@link FileRecord.purpose} — προεπιλογή, ΠΟΤΕ φίλτρο**
+ * *(ADR-841 §7 Α21.8)*.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΤΙ ΕΚΑΝΕ ΠΡΙΝ, ΚΑΙ ΓΙΑΤΙ ΗΤΑΝ ΛΑΘΟΣ — ΜΕΤΡΗΜΕΝΟ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Έλεγχε την τιμή έναντι του {@link PHOTO_PURPOSES} *(**τρεις** τιμές:
+ * `profile` · `id` · `other`)* και **σιωπηλά** επέστρεφε `PROFILE` για οτιδήποτε άλλο.
+ *
+ * 🔑 **Ο φρουρός φύλαγε ΛΑΘΟΣ ΣΥΝΟΛΟ.** Το πεδίο που γεμίζει είναι
+ * `FileRecord.purpose?: string` — **ανοιχτό**, και το γράφουν **έξι** διαφορετικά
+ * λεξιλόγια *(μετρημένα 09/09)*:
+ *
+ * | Λεξιλόγιο | Πού | Πλήθος | ξέρει `'logo'`; |
+ * |---|---|---|---|
+ * | `PHOTO_PURPOSES` | `config/domain-constants.ts` | 3 | **ΟΧΙ** |
+ * | `UPLOAD_PURPOSE` | `config/domain-constants.ts` | 5 | ναι |
+ * | `UploadPurpose` *(ομώνυμο!)* | `config/file-upload-config.ts` | 7 | ναι |
+ * | `PhotoUploadPurpose` | `photo-system/config/photos-tab-types.ts` | 6 | ναι |
+ * | `servicePurpose` | `api/upload/photo/route.ts` | 3 | ναι |
+ * | `UploadEntryPoint.purpose` | `config/upload-entry-points/` | **~180** *(`string`)* | ΟΧΙ |
+ *
+ * ⇒ **Πέντε στα έξι ξέρουν το `'logo'`· το μόνο που δεν το ήξερε ήταν αυτό που
+ * φύλαγε την πόρτα.** Και η γενική διαδρομή *(`useFileUpload` →
+ * `createPendingFileRecordWithPolicy`)* γράφει τις ~180 τιμές **ωμές**, χωρίς να
+ * περάσει από εδώ — άρα ο φρουρός δεν επέβαλλε καν συνέπεια: **μόνο** τη
+ * φωτογραφική πόρτα ξέπλενε.
+ *
+ * 🔴 **Το κόστος, μετρημένο σε πραγματικά δεδομένα**: το λογότυπο του γραφείου
+ * *(`wordmark-tight.png`)* αποθηκεύτηκε με `purpose: 'profile'` και
+ * `displayName: «Φωτογραφίες Προφίλ»` — δηλαδή **ως πορτρέτο φυσικού προσώπου**.
+ *
+ * ⚠️ **ΓΙΑΤΙ ΔΕΝ ΜΠΗΚΕ ΑΠΛΩΣ `LOGO: 'logo'` ΣΤΟ `PHOTO_PURPOSES`**: θα θεράπευε το
+ * **δείγμα** και θα άφηνε την **κλάση** — τα `photo` · `avatar` · `business-card` ·
+ * `document` · `floorplan` · `id-document` · `representative` και οι ~180 θα
+ * συνέχιζαν να ξεπλένονται. Και θα γεννούσε **έβδομη** παραλλαγή του ίδιου
+ * λεξιλογίου *(N.0.2)*.
+ *
+ * ✅ **Καμία επιφάνεια ασφαλείας**: το `purpose` **δεν** μπαίνει στο μονοπάτι του
+ * κάδου *(`buildStoragePath` δεν το δέχεται)* και **δεν** αναφέρεται πουθενά στο
+ * `storage.rules` — επαληθευμένο με grep.
+ *
+ * ⚠️ **Η ΣΥΝΕΠΕΙΑ ΠΟΥ ΠΡΕΠΕΙ ΝΑ ΞΕΡΕΙΣ**: ο σκοπός πλέον **επιβιώνει**, άρα
+ * *(α)* το `useFileDisplayName` ζητά `t('purposes.<σκοπός>')` — **κλειδί που λείπει
+ * δείχνει το ωμό string**· *(β)* το `buildPurposeFilter` συγκρίνει **ακριβώς**, άρα
+ * αρχείο με σκοπό `'logo'` δεν εμφανίζεται σε καρτέλα που ζητά `'profile'`.
+ *
+ * 🔒 **Η ΕΝΟΠΟΙΗΣΗ ΤΩΝ ΕΞΙ ΛΕΞΙΛΟΓΙΩΝ ΜΕΝΕΙ ΑΝΟΙΧΤΗ** — δες ADR-841 §7 Α21.8.
+ * Αυτή η συνάρτηση **σταματά την απώλεια**· δεν αποφασίζει ποιο είναι το ένα σύνολο.
+ *
+ * @param purpose ο σκοπός που **δήλωσε** ο καλών, ή `undefined`
+ * @returns τον **δηλωμένο** σκοπό· την προεπιλογή **μόνο** όταν δεν δηλώθηκε
  */
-export function resolvePhotoPurpose(purpose: string | undefined): PhotoPurpose {
-  const validPurposes = Object.values(PHOTO_PURPOSES);
-  if (purpose && validPurposes.includes(purpose as PhotoPurpose)) {
-    return purpose as PhotoPurpose;
-  }
-  return PHOTO_PURPOSES.PROFILE;
+export function resolvePhotoPurpose(purpose: string | undefined): string {
+  const declared = purpose?.trim() ?? '';
+  return declared === '' ? DEFAULT_PHOTO_PURPOSE : declared;
 }
+
+/**
+ * 🔑 **Η προεπιλογή ΟΦΕΙΛΕΙ να ανήκει στο κλειστό φωτογραφικό λεξιλόγιο.** Ο τύπος
+ * {@link PhotoPurpose} δεν φυλάει πια την **είσοδο** *(σωστά — δες παραπάνω)*, αλλά
+ * φυλάει ακόμη αυτό που έχει νόημα να φυλάει: ότι η τιμή που γράφουμε **εμείς**,
+ * όταν ο καλών δεν δήλωσε τίποτα, είναι αναγνωρισμένη — όχι επινοημένη.
+ */
+const DEFAULT_PHOTO_PURPOSE: PhotoPurpose = PHOTO_PURPOSES.PROFILE;

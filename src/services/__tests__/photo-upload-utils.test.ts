@@ -137,12 +137,57 @@ describe('resolvePhotoPurpose', () => {
     expect(resolvePhotoPurpose(undefined)).toBe('profile');
   });
 
-  it('defaults to "profile" for invalid purpose string', () => {
-    expect(resolvePhotoPurpose('invalid')).toBe('profile');
-  });
-
   it('defaults to "profile" for empty string', () => {
     expect(resolvePhotoPurpose('')).toBe('profile');
+  });
+
+  it('defaults to "profile" for whitespace-only input', () => {
+    expect(resolvePhotoPurpose('   ')).toBe('profile');
+  });
+
+  // ==========================================================================
+  // 🔴 ADR-841 §7 Α21.8 — Η ΣΥΜΠΕΡΙΦΟΡΑ ΠΟΥ **ΑΝΤΙΣΤΡΑΦΗΚΕ**, ΚΑΙ ΓΙΑΤΙ
+  // ==========================================================================
+  //
+  // Εδώ υπήρχε: `expect(resolvePhotoPurpose('invalid')).toBe('profile')` — δηλαδή
+  // η άγκυρα **κωδικοποιούσε** το σιωπηλό ξέπλυμα ως προδιαγραφή.
+  //
+  // 🔑 Δεν ήταν επικύρωση: το `FileRecord.purpose` είναι `string`, το γράφουν **έξι**
+  //    λεξιλόγια *(~180 τιμές μόνο από τα upload entry points)*, και η γενική
+  //    διαδρομή τις γράφει **ωμές** χωρίς να περάσει από εδώ. Ο «φρουρός» ξέπλενε
+  //    **μόνο** τη φωτογραφική πόρτα — και εκεί έχασε το `'logo'` του γραφείου, που
+  //    αποθηκεύτηκε **ως πορτρέτο φυσικού προσώπου** *(μετρημένο σε πραγματικά
+  //    δεδομένα: `wordmark-tight.png` → `purpose:'profile'`)*.
+  //
+  // ⚠️ Οι δύο άγκυρες ΗΤΑΝ ΑΝΤΙΦΑΤΙΚΕΣ: η `showcase-mark-purpose.test.ts` απαιτεί
+  //    ο δηλωμένος σκοπός να **επιβιώνει**· αυτή απαιτούσε να **ξεπλένεται**.
+  //    Δεν μπορούσαν να είναι και οι δύο πράσινες. Νίκησε αυτή που περιγράφει τι
+  //    **ΘΕΛΕΙ** ο ζωντανός καλών, όχι τι **ΕΚΑΝΕ** η υλοποίηση.
+  //
+  // ⛔ Η αντικατάσταση δοκιμάζει την **ΚΛΑΣΗ**, όχι το δείγμα `'logo'`: κάθε
+  //    δηλωμένος σκοπός, από **κάθε** πόρτα, επιβιώνει αυτούσιος.
+  describe('🔴 ο δηλωμένος σκοπός επιβιώνει — η ΚΛΑΣΗ, όχι το δείγμα', () => {
+    const DECLARED_ELSEWHERE = [
+      'logo',            // useShowcaseMark · UPLOAD_PURPOSE · file-upload-config
+      'representative',  // UPLOAD_PURPOSE · file-upload-config
+      'avatar',          // file-upload-config · PhotoUploadPurpose
+      'business-card',   // file-upload-config
+      'document',        // file-upload-config · PhotoUploadPurpose
+      'floorplan',       // file-upload-config · PhotoUploadPurpose
+      'photo',           // defaultUploadHandler fallback · META_PHOTO_PURPOSES
+      'id-document',     // UPLOAD_PURPOSE
+      'title-deed',      // UploadEntryPoint (~180)
+      'study-topographic',
+    ] as const;
+
+    it.each(DECLARED_ELSEWHERE)('«%s» επιβιώνει αυτούσιο', (declared) => {
+      expect(resolvePhotoPurpose(declared)).toBe(declared);
+    });
+
+    it('κανένας δηλωμένος σκοπός δεν καταλήγει «profile»', () => {
+      const washed = DECLARED_ELSEWHERE.filter((p) => resolvePhotoPurpose(p) === 'profile');
+      expect(washed).toEqual([]);
+    });
   });
 });
 

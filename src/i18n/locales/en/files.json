@@ -31,6 +31,7 @@
   },
   "purposes": {
     "profile": "Profile",
+    "logo": "Logo",
     "id": "ID",
     "tax": "Tax ID",
     "address": "Address",
