@@ -16,7 +16,10 @@ import { join } from 'node:path';
 
 import { coverageRelation } from '@/lib/agency/coverage-match';
 import { asCoverageRadiusKm } from '@/types/agency-coverage';
-import { ADMIN_FOOTPRINTS_SOURCE, footprintOf } from '../admin-footprints';
+import { ADMIN_FOOTPRINTS_SOURCE, footprintOf, readFootprint } from '../admin-footprints';
+import { footprintRelation } from '../geo-shape-relation';
+import { circleFootprint } from '../geo-footprint';
+import { distanceMeters } from '../geo-distance';
 import { lineageIdsOf } from '@/hooks/useAdministrativeHierarchy';
 
 const FOOTPRINTS_PATH = join(process.cwd(), 'public', 'data', 'admin-footprints.json');
@@ -179,5 +182,100 @@ describe('🏆 ΤΟ ΣΕΝΑΡΙΟ ΠΟΥ ΔΙΚΑΙΟΛΟΓΕΙ ΟΛΗ ΤΗ Φ�
       RESOLVERS,
     );
     expect(faraway).toBe('disjoint');
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// 🔴 ADR-846 §9 #11 — ΤΟ ΚΑΛΥΜΜΑ ΠΡΕΠΕΙ ΝΑ ΠΕΡΑΣΕΙ ΤΟ ΣΥΝΟΡΟ ΤΗΣ ΑΝΑΓΝΩΣΗΣ
+// ════════════════════════════════════════════════════════════════════════════
+//
+// **ΤΟ ΠΕΡΙΣΤΑΤΙΚΟ**: ο `readFootprint` κατασκεύαζε το αποτέλεσμα **ρητά**
+// (`return { center, outerKm, innerKm }`) και **πετούσε σιωπηλά** το `interior`.
+// Ο γεννήτορας παρήγαγε **1.050** καλύμματα / **12.794** δίσκους, οι άγκυρες της
+// μηχανής ήταν **πράσινες**, και η επαλήθευση end-to-end **πέρασε** — γιατί έτρεχε
+// σε `tsx`, **παρακάμπτοντας τον αναγνώστη**. Στην οθόνη **τίποτα δεν θα άλλαζε**.
+//
+// 🔑 Ένας **ρητός κατασκευαστής** είναι σιωπηλό φίλτρο: δεν σπάει, **παραλείπει**.
+//    Αυτές οι άγκυρες ρωτούν το μόνο ερώτημα που τον πιάνει: *«φτάνει η δουλειά
+//    ΜΕΧΡΙ ΤΟΝ ΚΑΤΑΝΑΛΩΤΗ;»* — μέσα από το **πραγματικό** αρχείο και τον
+//    **πραγματικό** αναγνώστη, ποτέ από πλαστά δεδομένα.
+describe('🔴 ADR-846 §9 #11 — το εσωτερικό κάλυμμα επιβιώνει της ανάγνωσης', () => {
+  const THESSALONIKI = { lat: 40.6306898, lng: 22.9468742 };
+
+  it('το `interior` ΦΤΑΝΕΙ στον καταναλωτή — δεν το τρώει ο αναγνώστης', () => {
+    const snapshot = ADMIN_FOOTPRINTS_SOURCE.peek();
+    expect(snapshot).not.toBeNull();
+    const withCover = [...snapshot!.values()].filter((f) => f.interior !== undefined);
+    expect(withCover.length).toBeGreaterThan(500);
+  });
+
+  it('🏆 ΔΗΜΟΣ ΘΕΣΣΑΛΟΝΙΚΗΣ: το ακίνητο του κέντρου κρίνεται `within` — το ζωντανό εύρημα', () => {
+    const footprint = footprintOf(idOf('ΔΗΜΟΣ ΘΕΣΣΑΛΟΝΙΚΗΣ'));
+    expect(footprint).not.toBeNull();
+    // Ο ένας δίσκος του `innerKm` είναι **123 m** — αδύνατο να φτάσει τα 530 m.
+    expect(footprint!.innerKm).toBeLessThan(0.3);
+    expect(footprint!.interior?.length ?? 0).toBeGreaterThan(1);
+
+    expect(
+      footprintRelation(footprint!, circleFootprint({ center: THESSALONIKI, radiusKm: 0 })),
+    ).toBe('within');
+  });
+
+  it('🔒 ΚΑΘΕ δίσκος του πραγματικού δέντρου χωρά στον περιγεγραμμένο του κύκλο', () => {
+    const snapshot = ADMIN_FOOTPRINTS_SOURCE.peek()!;
+    const offenders: string[] = [];
+    for (const [adminId, footprint] of snapshot) {
+      for (const disc of footprint.interior ?? []) {
+        const gapKm = distanceMeters(footprint.center, disc.center) / 1000;
+        if (gapKm + disc.radiusKm > footprint.outerKm + 0.05) offenders.push(adminId);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it('⚠️ οντότητα ΧΩΡΙΣ κάλυμμα μένει ακριβώς όπως ήταν — καμία παλινδρόμηση', () => {
+    const athens = footprintOf(idOf('ΔΗΜΟΣ ΑΘΗΝΑΙΩΝ'));
+    expect(athens).not.toBeNull();
+    expect(athens!.interior).toBeUndefined();
+    expect(
+      footprintRelation(athens!, circleFootprint({ center: { lat: 37.98098, lng: 23.7333 }, radiusKm: 0 })),
+    ).toBe('within');
+  });
+
+  // ⚠️ Οι δύο παρακάτω **εκτελούν** τον φρουρό με χαλασμένη είσοδο. Χωρίς αυτές ήταν
+  //    αδρανής: μετάλλαξη που τον καταργούσε άφηνε τη σουίτα **πράσινη**.
+  it('🔒 δίσκος που ΞΕΦΕΥΓΕΙ από τον περιγεγραμμένο απορρίπτεται — χαλασμένο αρχείο', () => {
+    const row = {
+      center: { lat: 40.0, lng: 22.0 },
+      outerKm: 5,
+      innerKm: 1,
+      interior: [
+        { center: { lat: 40.0, lng: 22.0 }, radiusKm: 2 },   // νόμιμος
+        { center: { lat: 40.0, lng: 22.0 }, radiusKm: 900 }, // αδύνατος
+      ],
+    };
+    const footprint = readFootprint(row);
+    expect(footprint?.interior).toHaveLength(1);
+    expect(footprint?.interior?.[0].radiusKm).toBe(2);
+  });
+
+  it('🔒 σκουπίδια στο `interior` δεν σπάνε τίποτα — πέφτουμε στον ΕΝΑ δίσκο', () => {
+    const footprint = readFootprint({
+      center: { lat: 40.0, lng: 22.0 },
+      outerKm: 5,
+      innerKm: 1,
+      // 🔑 Το τελευταίο έχει **έγκυρο κέντρο** επίτηδες: αλλιώς απορριπτόταν νωρίτερα
+      //    και ο έλεγχος ακτίνας έμενε **αδοκίμαστος** *(μετρημένο: μετάλλαξη που τον
+      //    αφαιρούσε άφηνε τη σουίτα πράσινη)*.
+      interior: [
+        null,
+        'χ',
+        { center: { lat: 'α' } },
+        { center: { lat: 40.0, lng: 22.0 }, radiusKm: -3 },
+      ],
+    });
+    expect(footprint).not.toBeNull();
+    expect(footprint!.interior).toBeUndefined();
+    expect(footprint!.innerKm).toBe(1);
   });
 });

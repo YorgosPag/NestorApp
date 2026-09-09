@@ -33,11 +33,15 @@ import 'server-only';
  * ⚠️ Διαβάζεται το **δημόσιο** αντίγραφο *(`public/data/`)* — το ίδιο αρχείο που
  * κατεβάζει ο περιηγητής. **Μία αυθεντία για τα δύο μονοπάτια**: αν αποκλίνανε, ο
  * επαγγελματίας θα δήλωνε περιοχή που ο διακομιστής θα απέρριπτε ως ανύπαρκτη.
+ *
+ * ⚠️ **Ο ΜΗΧΑΝΙΣΜΟΣ ΔΕΝ ΓΡΑΦΕΤΑΙ ΠΛΕΟΝ ΕΔΩ** *(ADR-846 §9 #13)*: το cache +
+ * single-flight + «η αποτυχία δεν κλειδώνει τη διεργασία» **εξήχθη** στο
+ * `lib/data/server-json-file.ts`, όταν η ίδια φάση χρειάστηκε **δεύτερο** αναγνώστη
+ * *(τα αποτυπώματα)*. Γραμμένος με το χέρι, θα ήταν sibling clone του **N.18** — με
+ * τις τέσσερις αποφάσεις να **αποκλίνουν σιωπηλά**.
  */
 
-import { readFile } from 'node:fs/promises';
-import path from 'node:path';
-
+import { createServerJsonFile } from '@/lib/data/server-json-file';
 import type { LineageResolver } from '@/lib/agency/coverage-match';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -50,42 +54,27 @@ interface RawEntity {
 }
 
 /** Το cache ζει όσο η διεργασία. Η ιεραρχία αλλάζει με διοικητική μεταρρύθμιση. */
-let cachedParents: Map<string, string | null> | null = null;
-let loading: Promise<Map<string, string | null> | null> | null = null;
-
-const HIERARCHY_PATH = path.join(
-  process.cwd(),
-  'public',
-  'data',
-  'administrative-hierarchy.json',
-);
-
-async function loadParents(): Promise<Map<string, string | null> | null> {
-  if (cachedParents) return cachedParents;
-  if (loading) return loading;
-
-  loading = (async () => {
-    try {
-      const raw = await readFile(HIERARCHY_PATH, 'utf8');
-      const parsed = JSON.parse(raw) as { data: readonly RawEntity[] };
-      const parents = new Map<string, string | null>();
-      for (const entity of parsed.data) parents.set(entity.id, entity.p);
-      cachedParents = parents;
-      return parents;
-    } catch (error) {
-      // ⚠️ **«Δεν μπόρεσα να ρωτήσω» ≠ «δεν υπάρχει»** (N.12). Ο καλών παίρνει `null`
-      //    και απαντά *«ξαναδοκίμασε»* (503), ποτέ *«διόρθωσε την επιλογή σου»* (422).
-      logger.error('Δεν διαβάστηκε η διοικητική ιεραρχία', {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      return null;
-    } finally {
-      loading = null;
+const HIERARCHY_FILE = createServerJsonFile<ReadonlyMap<string, string | null>>({
+  publicPath: ['data', 'administrative-hierarchy.json'],
+  build: (payload) => {
+    const parsed = payload as { data?: unknown };
+    // 🔑 **Ο έλεγχος σχήματος προστέθηκε με την εξαγωγή**: πριν, ένα μισογραμμένο
+    //    αρχείο περνούσε το `JSON.parse` και έσκαγε ως `not iterable` **αλλού**.
+    if (!Array.isArray(parsed.data)) {
+      throw new TypeError('Η διοικητική ιεραρχία δεν έχει το αναμενόμενο σχήμα');
     }
-  })();
-
-  return loading;
-}
+    const parents = new Map<string, string | null>();
+    for (const entity of parsed.data as readonly RawEntity[]) parents.set(entity.id, entity.p);
+    return parents;
+  },
+  onFailure: (error) => {
+    // ⚠️ **«Δεν μπόρεσα να ρωτήσω» ≠ «δεν υπάρχει»** (N.12). Ο καλών παίρνει `null`
+    //    και απαντά *«ξαναδοκίμασε»* (503), ποτέ *«διόρθωσε την επιλογή σου»* (422).
+    logger.error('Δεν διαβάστηκε η διοικητική ιεραρχία', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  },
+});
 
 /**
  * **Ο επιλυτής γενεαλογίας, από τη μεριά του διακομιστή** — ίδια σύμβαση με το
@@ -94,7 +83,7 @@ async function loadParents(): Promise<Map<string, string | null> | null> {
  * @returns `null` **μόνο** όταν η ιεραρχία δεν διαβάστηκε — βλάβη **δική μας**.
  */
 export async function readAdministrativeLineage(): Promise<LineageResolver | null> {
-  const parents = await loadParents();
+  const parents = await HIERARCHY_FILE.read();
   if (!parents) return null;
 
   return (entityId: string): readonly string[] => {
