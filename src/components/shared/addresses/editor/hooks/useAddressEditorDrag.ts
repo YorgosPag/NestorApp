@@ -21,6 +21,7 @@
 
 import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 'react';
 import type { GeoPoint } from '@/types/geo/coordinates';
+import { usePinDropGate } from '../../usePinDropGate';
 import type { CorrectionAction } from '@/services/geocoding/address-corrections-telemetry.service';
 import type { AddressEditorPlacementOptions, EditorPinDrop } from '../AddressEditor.types';
 import type { ResolvedAddressFields, UndoEntry } from '../types';
@@ -83,6 +84,7 @@ function commitDrag(
 
 export function useAddressEditorDrag(deps: UseAddressEditorDragDeps): AddressEditorDrag {
   const [pendingDrag, setPendingDrag] = useState<EditorPinDrop | null>(null);
+  const gate = usePinDropGate();
   /** Η τελευταία θέση που επιβεβαιώθηκε εδώ — `null` = η θέση της εγγραφής πριν τη φόρμα. */
   const lastPointRef = useRef<GeoPoint | null>(null);
   const depsRef = useRef(deps);
@@ -90,22 +92,30 @@ export function useAddressEditorDrag(deps: UseAddressEditorDragDeps): AddressEdi
     depsRef.current = deps;
   });
 
+  // 🔑 Β13: η ίδια χειρονομία φτάνει δύο φορές (`pending` → τελική) — κλεισμένη ΔΕΝ ξανανοίγει.
+  const queue = useCallback((drop: EditorPinDrop) => {
+    if (gate.admits(drop)) setPendingDrag(drop);
+  }, [gate]);
+
   const confirm = useCallback(() => {
     if (pendingDrag?.text.kind !== 'resolved') return;
     commitDrag(depsRef.current, lastPointRef, pendingDrag.point, pendingDrag.text.address);
+    gate.settle(pendingDrag);
     setPendingDrag(null);
-  }, [pendingDrag]);
+  }, [pendingDrag, gate]);
 
   const confirmPositionOnly = useCallback(() => {
     if (!pendingDrag) return;
     commitDrag(depsRef.current, lastPointRef, pendingDrag.point, null);
+    gate.settle(pendingDrag);
     setPendingDrag(null);
-  }, [pendingDrag]);
+  }, [pendingDrag, gate]);
 
   const cancel = useCallback(() => {
+    gate.settle(pendingDrag);
     setPendingDrag(null);
     depsRef.current.onCancel?.();
-  }, []);
+  }, [pendingDrag, gate]);
 
   const restorePoint = useCallback((entry: UndoEntry, direction: 'undo' | 'redo') => {
     const { placement } = depsRef.current;
@@ -117,7 +127,7 @@ export function useAddressEditorDrag(deps: UseAddressEditorDragDeps): AddressEdi
 
   return {
     pendingDrag,
-    queue: setPendingDrag,
+    queue,
     confirm,
     confirmPositionOnly: deps.placement ? confirmPositionOnly : undefined,
     cancel,

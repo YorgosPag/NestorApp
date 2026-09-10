@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import { Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -61,19 +62,27 @@ export function AddressDragConfirmDialog({
   // Όταν η «ενημέρωση» σβήνει δηλωμένη τιμή — ή δεν υπάρχει καν — το Enter από συνήθεια
   // πρέπει να πέφτει στην ασφαλή επιλογή.
   const focusPositionOnly = offerPositionOnly && (proposed === null || conflicts.some(isClearedField));
+  // 🔑 ADR-332 D27 Β13: `pending` = ο διάλογος ανοίγει ΑΜΕΣΩΣ (Google «Dropped pin») και η σύνοψη
+  //    εμφανίζεται όταν απαντήσει η μηχανή. «Μόνο η θέση» διαθέσιμο από την πρώτη στιγμή.
+  const pending = proposal.kind === 'pending';
   const description = proposal.kind === 'resolved'
     ? t('editor.dragConfirm.description')
-    : t(PIN_DROP_NO_TEXT_I18N_KEY[proposal.kind]);
+    : proposal.kind === 'pending'
+      ? t('editor.dragConfirm.pending')
+      : t(PIN_DROP_NO_TEXT_I18N_KEY[proposal.kind]);
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onCancel(); }}>
-      <DialogContent size="sm">
+      <DialogContent size="sm" aria-busy={pending}>
         <DialogHeader>
           <DialogTitle>{t('editor.dragConfirm.title')}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
+          <DialogDescription aria-live="polite" className={pending ? 'flex items-center gap-2' : undefined}>
+            {pending && <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" aria-hidden="true" />}
+            {description}
+          </DialogDescription>
         </DialogHeader>
 
-        {proposed === null && offerPositionOnly && (
+        {!pending && proposed === null && offerPositionOnly && (
           <p className="text-sm text-muted-foreground">{t('editor.dragConfirm.noText.keepPosition')}</p>
         )}
 

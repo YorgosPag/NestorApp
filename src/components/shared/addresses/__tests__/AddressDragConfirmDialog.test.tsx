@@ -92,6 +92,16 @@ describe('Δ — ο διάλογος συρσίματος λέει τι ΘΑ Γ�
     expect(screen.queryByText('editor.diff.cleared')).not.toBeInTheDocument();
     expect(screen.getByText(CONFIRM).closest('button')).toHaveFocus();
   });
+
+  it('Δ9 — Β9: «Greece» (βάση) ⇄ «Ελλάδα» (Nominatim) ΔΕΝ είναι αλλαγή ⇒ ο διάλογος δεν έχει τι να δείξει', () => {
+    // Ίδιο κείμενο με άλλη γραφή χώρας: μηδέν διαφορές ⇒ «Μόνο η θέση» ΔΕΝ προσφέρεται (Δ3).
+    renderDialog({
+      currentAddress: { ...DECLARED, country: 'Greece' },
+      proposal: resolved({ ...DECLARED, country: 'Ελλάδα' }),
+    });
+    expect(screen.queryByText(POSITION_ONLY)).not.toBeInTheDocument();
+    expect(screen.getByText(CONFIRM)).toBeInTheDocument();
+  });
 });
 
 describe('Δ — Βήμα Β: θέση ΧΩΡΙΣ κείμενο («Dropped pin»)', () => {
@@ -115,5 +125,15 @@ describe('Δ — Βήμα Β: θέση ΧΩΡΙΣ κείμενο («Dropped pin�
     expect(screen.queryByText(POSITION_ONLY)).not.toBeInTheDocument();
     expect(screen.queryByText(KEEP_POSITION)).not.toBeInTheDocument();
     expect(screen.getByText('editor.dragConfirm.cancel')).toBeInTheDocument();
+  });
+
+  it('Δ8 — Β13: `pending` ⇒ ο διάλογος λέει ότι ψάχνει · «Μόνο η θέση» με εστίαση · ΚΑΝΕΝΑ «Ναι, ενημέρωσε»', () => {
+    renderDialog({ proposal: { kind: 'pending' } });
+
+    expect(screen.getByText('editor.dragConfirm.pending')).toBeInTheDocument();
+    expect(screen.queryByText(CONFIRM)).not.toBeInTheDocument();
+    // Η εξήγηση «δεν βρέθηκε — κράτα τη θέση» ανήκει στις ΕΚΒΑΣΕΙΣ, όχι στην αναμονή.
+    expect(screen.queryByText(KEEP_POSITION)).not.toBeInTheDocument();
+    expect(screen.getByText(POSITION_ONLY).closest('button')).toHaveFocus();
   });
 });

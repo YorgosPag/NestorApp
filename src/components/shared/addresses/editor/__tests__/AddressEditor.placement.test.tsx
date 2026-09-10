@@ -46,7 +46,7 @@ const POSITION_ONLY = 'editor.dragConfirm.positionOnly';
 const CONFIRM = 'editor.dragConfirm.confirm';
 const CANCEL = 'editor.dragConfirm.cancel';
 
-const RESOLVED_DROP: EditorPinDrop = { point: DOOR, text: { kind: 'resolved', address: MACHINE_TEXT } };
+const RESOLVED_DROP: EditorPinDrop = { point: DOOR, gesture: 1, text: { kind: 'resolved', address: MACHINE_TEXT } };
 
 function renderWithDrop(drop: EditorPinDrop, withPlacement = true) {
   const ref = React.createRef<AddressEditorHandle>();
@@ -70,7 +70,7 @@ function renderWithDrop(drop: EditorPinDrop, withPlacement = true) {
     </TooltipProvider>,
   );
   act(() => { ref.current?.setPendingDrag(drop); });
-  return spies;
+  return { ...spies, ref };
 }
 
 beforeEach(() => {
@@ -126,7 +126,7 @@ describe('AddressEditor — «Άκυρο»: ΤΙΠΟΤΑ δεν τοποθετε
 
 describe('AddressEditor — θέση ΧΩΡΙΣ κείμενο (Β6) και καλών ΧΩΡΙΣ θέση', () => {
   it('404 ⇒ μόνο «Μόνο η θέση», και η θέση φτάνει στον γονιό', () => {
-    const spies = renderWithDrop({ point: DOOR, text: { kind: 'not-found' } });
+    const spies = renderWithDrop({ point: DOOR, gesture: 1, text: { kind: 'not-found' } });
 
     expect(screen.queryByText(CONFIRM)).not.toBeInTheDocument();
     fireEvent.click(screen.getByText(POSITION_ONLY));
@@ -140,5 +140,47 @@ describe('AddressEditor — θέση ΧΩΡΙΣ κείμενο (Β6) και κα
 
     expect(screen.queryByText(POSITION_ONLY)).not.toBeInTheDocument();
     expect(screen.getByText(CONFIRM)).toBeInTheDocument();
+  });
+});
+
+describe('AddressEditor — Β13: ο διάλογος ανοίγει ΑΜΕΣΩΣ, και κλεισμένη χειρονομία ΔΕΝ ξανανοίγει', () => {
+  const PENDING: EditorPinDrop = { point: DOOR, gesture: 7, text: { kind: 'pending' } };
+  const ANSWER: EditorPinDrop = { ...RESOLVED_DROP, gesture: 7 };
+
+  it('`pending` ⇒ «Μόνο η θέση» διαθέσιμο από την πρώτη στιγμή· «Ναι, ενημέρωσε» όχι ακόμα', () => {
+    renderWithDrop(PENDING);
+
+    expect(screen.getByText('editor.dragConfirm.pending')).toBeInTheDocument();
+    expect(screen.getByText(POSITION_ONLY)).toBeInTheDocument();
+    expect(screen.queryByText(CONFIRM)).not.toBeInTheDocument();
+  });
+
+  it('🔴 «Μόνο η θέση» πατήθηκε ενώ περίμενε ⇒ η καθυστερημένη απάντηση ΔΕΝ ξανανοίγει τον διάλογο', () => {
+    const spies = renderWithDrop(PENDING);
+    fireEvent.click(screen.getByText(POSITION_ONLY));
+
+    act(() => { spies.ref.current?.setPendingDrag(ANSWER); });
+
+    expect(screen.queryByText(CONFIRM)).not.toBeInTheDocument();
+    expect(screen.queryByText(POSITION_ONLY)).not.toBeInTheDocument();
+    expect(spies.onPlace).toHaveBeenCalledTimes(1);
+  });
+
+  it('ΠΑΡΟΝΟΜΑΣΤΗΣ: η απάντηση της ΑΝΟΙΧΤΗΣ χειρονομίας αντικαθιστά την αναμονή ⇒ «Ναι, ενημέρωσε»', () => {
+    const spies = renderWithDrop(PENDING);
+
+    act(() => { spies.ref.current?.setPendingDrag(ANSWER); });
+
+    expect(screen.getByText(CONFIRM)).toBeInTheDocument();
+    expect(screen.queryByText('editor.dragConfirm.pending')).not.toBeInTheDocument();
+  });
+
+  it('ΠΑΡΟΝΟΜΑΣΤΗΣ: μετά την ακύρωση, ΝΕΟΤΕΡΗ χειρονομία ανοίγει κανονικά', () => {
+    const spies = renderWithDrop(PENDING);
+    fireEvent.click(screen.getByText(CANCEL));
+
+    act(() => { spies.ref.current?.setPendingDrag({ ...PENDING, gesture: 8 }); });
+
+    expect(screen.getByText(POSITION_ONLY)).toBeInTheDocument();
   });
 });

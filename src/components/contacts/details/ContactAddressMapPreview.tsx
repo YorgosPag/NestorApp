@@ -187,6 +187,8 @@ export function ContactAddressMapPreview({
   const handleDragUpdate = useMemo(() => {
     if (!draggable || !onDragResolve) return undefined;
     return (drop: PinDrop, addressIndex: number) => {
+      // ADR-332 D27 Β13: η αναμονή δεν είναι έκβαση — οι επαφές περιμένουν την τελική (ως το Β-ΙΙ).
+      if (drop.text.kind === 'pending') return;
       if (drop.text.kind !== 'resolved') {
         onDragWithoutText?.(drop.text.kind);
         return;
