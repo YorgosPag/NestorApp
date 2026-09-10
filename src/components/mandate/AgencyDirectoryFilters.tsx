@@ -54,6 +54,7 @@ import {
   type OccupationOption,
   type ShowcaseFilters,
 } from '@/lib/agency/showcase-filter';
+import { whereVoiceParams, type ShowcaseWhereVoice } from '@/lib/agency/showcase-where-voice';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 /**
@@ -73,6 +74,17 @@ export interface AgencyDirectoryFiltersProps {
   readonly onChange: (filters: ShowcaseFilters) => void;
   /** `null` όταν **κανένας** άξονας δεν είναι ενεργός — το «Καθαρισμός» κρύβεται. */
   readonly onClear: (() => void) | null;
+  /**
+   * **Τι έχει να πει η οθόνη για τον άξονα του τόπου** — υπολογισμένο **μία φορά** από
+   * τον γονέα *(ADR-846 §9 #12)*.
+   *
+   * 🔑 **ΔΕΝ ΥΠΟΛΟΓΙΖΕΤΑΙ ΕΔΩ, ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ.** Η φωνή χρειάζεται **μέτρηση** — μια
+   * σάρωση 7.440 αποτυπωμάτων για το όνομα του τόπου *(`useCircleAnchorName`)* — και τη
+   * χρειάζονται **δύο** οθόνες: αυτό το χειριστήριο και το αφαιρούμενο σημάδι δίπλα στα
+   * αποτελέσματα. Δύο κλήσεις θα ήταν **δύο απαντήσεις στο ίδιο ερώτημα**, με δυνατότητα
+   * να αποκλίνουν σε κάθε μελλοντική αλλαγή. Μία μέτρηση, δύο παρουσιάσεις.
+   */
+  readonly whereVoice: ShowcaseWhereVoice;
 }
 
 export function AgencyDirectoryFilters({
@@ -81,6 +93,7 @@ export function AgencyDirectoryFilters({
   locale,
   onChange,
   onClear,
+  whereVoice,
 }: AgencyDirectoryFiltersProps): React.ReactElement {
   const { t } = useTranslation([AGENCY_PUBLIC_NS]);
 
@@ -130,7 +143,7 @@ export function AgencyDirectoryFilters({
         {t(DIRECTORY_KEYS.occupationScopeHint, { count: options.length })}
       </p>
 
-      <WhereControl filters={filters} onChange={onChange} />
+      <WhereControl filters={filters} onChange={onChange} voice={whereVoice} />
 
       {/* 🔑 **Φ4 — η αφαίρεση είναι ΜΙΑ ενέργεια.** Φίλτρο που δεν ξεκλειδώνει με
           ένα πάτημα είναι φίλτρο που ο άνθρωπος **δεν** θα δοκιμάσει. */}
@@ -174,9 +187,11 @@ export function AgencyDirectoryFilters({
 function WhereControl({
   filters,
   onChange,
+  voice,
 }: {
   readonly filters: ShowcaseFilters;
   readonly onChange: (filters: ShowcaseFilters) => void;
+  readonly voice: ShowcaseWhereVoice;
 }): React.ReactElement {
   const { t } = useTranslation([AGENCY_PUBLIC_NS]);
   const where = filters.where;
@@ -186,6 +201,15 @@ function WhereControl({
     <div className="flex flex-wrap items-end gap-4">
       <label className="flex flex-col gap-1 text-sm">
         <span className="font-medium text-foreground">{t(DIRECTORY_KEYS.placeFilterLabel)}</span>
+        {/*
+          ⚠️ **ΤΟ ΚΕΝΟ ΠΕΔΙΟ ΣΕ ΕΡΩΤΗΜΑ-ΚΥΚΛΟ ΕΙΝΑΙ ΣΩΣΤΟ, ΚΑΙ ΔΕΝ ΕΙΝΑΙ ΤΟ ΕΛΑΤΤΩΜΑ.**
+          Ο επιλογέας δέχεται **ταυτότητα του κλειστού λεξιλογίου** και τίποτε άλλο
+          *(`allowFreeText={false}`)*. Ένας κύκλος **δεν είναι** διοικητική οντότητα —
+          γράφοντας εκεί το μετρημένο όνομα θα λέγαμε στον άνθρωπο ότι έχει επιλέξει
+          **δήμο**, και το πρώτο του πάτημα «καθάρισε» θα έσβηνε κάτι που δεν διάλεξε.
+          ⇒ Το πεδίο μένει η **είσοδος** του διοικητικού άξονα· την **κατάσταση** τη λέει
+          ο υπαινιγμός από κάτω, και το αφαιρούμενο σημάδι δίπλα στα αποτελέσματα.
+        */}
         <AreaCombobox
           value={areaId}
           onValueChange={(adminId) =>
@@ -194,11 +218,7 @@ function WhereControl({
           placeholder={t(DIRECTORY_KEYS.areaSearchPlaceholder)}
           emptyMessage={t(DIRECTORY_KEYS.areaSearchEmpty)}
         />
-        {/* 🔑 **Ο ΑΞΟΝΑΣ ΟΝΟΜΑΖΕΤΑΙ ΚΑΙ ΣΤΙΣ ΔΥΟ ΚΑΤΑΣΤΑΣΕΙΣ.** Σιωπή θα άφηνε τον
-            επισκέπτη να νομίζει ότι φιλτράρει ενώ δεν φιλτράρει. */}
-        <span className="text-xs text-muted-foreground">
-          {areaId === '' ? t(DIRECTORY_KEYS.placeAll) : t(DIRECTORY_KEYS.areaHint)}
-        </span>
+        <WhereHint voice={voice} />
       </label>
 
       {where !== null && !isAdministrativeWhere(where) && (
@@ -227,5 +247,49 @@ function WhereControl({
         </label>
       )}
     </div>
+  );
+}
+
+/**
+ * **Ο ΑΞΟΝΑΣ ΤΟΥ ΤΟΠΟΥ ΟΝΟΜΑΖΕΤΑΙ ΣΕ ΚΑΘΕ ΚΑΤΑΣΤΑΣΗ** — τέσσερις, όχι δύο *(§9 #12)*.
+ *
+ * ═════════════════════════════════════════════════════════════════════════════
+ * 🔴 ΤΙ ΑΝΤΙΚΑΤΕΣΤΗΣΕ, ΚΑΙ ΓΙΑΤΙ ΗΤΑΝ **ΨΕΜΑ ΜΕ ΣΩΣΤΗ ΠΡΟΘΕΣΗ**
+ *
+ * ```tsx
+ * const areaId = where !== null && isAdministrativeWhere(where) ? where.adminId : '';
+ * {areaId === '' ? t(DIRECTORY_KEYS.placeAll) : t(DIRECTORY_KEYS.areaHint)}
+ * ```
+ *
+ * Το σχόλιο από πάνω έλεγε *«Ο ΑΞΟΝΑΣ ΟΝΟΜΑΖΕΤΑΙ ΚΑΙ ΣΤΙΣ ΔΥΟ ΚΑΤΑΣΤΑΣΕΙΣ. Σιωπή θα
+ * άφηνε τον επισκέπτη να νομίζει ότι φιλτράρει ενώ δεν φιλτράρει.»* — σωστή πρόθεση, και
+ * **μετρημένες δύο καταστάσεις εκεί που ήταν τρεις**. Το σκέλος `circle` έπεφτε στο `''`,
+ * δηλαδή **στον κάδο του «δεν φιλτράρω»**, και η βλάβη βγήκε **ακριβώς αντίστροφη** από
+ * τον φόβο του συγγραφέα: με `?lat=&lng=&r=5` η οθόνη έλεγε **«Όλη η Ελλάδα»** ενώ
+ * ταυτόχρονα έλεγε **«10 από 22»**.
+ * ═════════════════════════════════════════════════════════════════════════════
+ *
+ * 🔒 **Ο ΠΙΝΑΚΑΣ ΕΙΝΑΙ ΟΛΙΚΟΣ** — πέμπτο σκέλος στη `ShowcaseWhereVoice` **δεν
+ * μεταγλωττίζεται** μέχρι να αποκτήσει κείμενο. Ίδιο ιδίωμα με το
+ * `COVERAGE_RELATION_KEYS` και το `CREDIBILITY_NOTE_KEYS`: **η κλειστή ένωση μετράει,
+ * όχι ο άνθρωπος**.
+ *
+ * 🔑 **Ο πίνακας ζει στο ΙΔΙΟ module με το `t()`** — ο τεμαχιστής του CHECK 3.34 επιλύει
+ * `t(TABLE[x])` **μόνο** με πίνακα σταθερό στο ίδιο αρχείο. Ένα δυναμικό κλειδί εδώ θα
+ * έβγαινε *«unresolved dynamic t()»* και θα ήταν **αόρατο** στο CHECK 3.8.
+ */
+const WHERE_HINT_KEYS: Record<ShowcaseWhereVoice['kind'], string> = {
+  nationwide: DIRECTORY_KEYS.placeAll,
+  administrative: DIRECTORY_KEYS.areaHint,
+  circlePlain: DIRECTORY_KEYS.placeCircleHint,
+  circleAnchored: DIRECTORY_KEYS.placeCircleHintNamed,
+};
+
+function WhereHint({ voice }: { readonly voice: ShowcaseWhereVoice }): React.ReactElement {
+  const { t } = useTranslation([AGENCY_PUBLIC_NS]);
+  return (
+    <span className="text-xs text-muted-foreground">
+      {t(WHERE_HINT_KEYS[voice.kind], whereVoiceParams(voice))}
+    </span>
   );
 }

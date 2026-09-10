@@ -28,13 +28,20 @@
 import { createLazyJsonSnapshot } from '@/lib/data/lazy-json-snapshot';
 import { createModuleLogger } from '@/lib/telemetry';
 import { distanceMeters } from '@/lib/geo/geo-distance';
-import type { GeoFootprint, FootprintResolver } from '@/types/geo/admin-footprint';
+import type { GeoFootprint, FootprintResolver, FootprintSnapshot } from '@/types/geo/admin-footprint';
 import type { GeoCircle, GeoPoint } from '@/types/geo/coordinates';
 
 const logger = createModuleLogger('admin-footprints');
 
-/** `id` διοικητικής οντότητας → οι δύο κύκλοι της. */
-export type FootprintSnapshot = ReadonlyMap<string, GeoFootprint>;
+/**
+ * `id` διοικητικής οντότητας → οι δύο κύκλοι της.
+ *
+ * ⚠️ **Η ΔΗΛΩΣΗ ΕΦΥΓΕ ΣΤΟ `types/geo/admin-footprint.ts`** *(N.0.2, 2026-09-10)* — δίπλα
+ * στον αδελφό της `FootprintResolver`, όπου άνηκε εξ αρχής. Η επανεξαγωγή
+ * μένει **ώστε κανένας από τους 4 καταναλωτές να μην αγγιχτεί** — ίδιο ιδίωμα με το
+ * `showcase-filter.ts → ShowcaseWhere`: **μία** δήλωση, **δύο** πόρτες.
+ */
+export type { FootprintSnapshot };
 
 /**
  * **Η κατάσταση «ρώτησα και δεν έμαθα»** — ίδιο ιδίωμα με το `EMPTY_SNAPSHOT` της

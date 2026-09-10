@@ -21,7 +21,7 @@
     "src/i18n/generated/routes/offers__new.el.json": "d5e385604a50c5993d1debbe0e7d07fcf06f254ef5661b56d798b68deef2bb9e",
     "src/i18n/generated/routes/offers__offerId.el.json": "76a391bb20d44725d4ebf7186650000b34022237f9325edce044519a994e02f5",
     "src/i18n/generated/routes/privacy-policy.el.json": "181e3b315e8ac63a3e927fa8bf073863b2aa706fd66a06f38d936dce70b0cee0",
-    "src/i18n/generated/routes/pro.el.json": "3179b14914eddc8379aa6f8efe09d4b317be589b2f49910a04690250dab0bcb7",
+    "src/i18n/generated/routes/pro.el.json": "424bf8260b7ccd8fcd692f23a9b62d7c74460686e4555fd27b6a4cdc3302f926",
     "src/i18n/generated/routes/pro__alias.el.json": "cac938fe40ffa34e9c2e144934bed18167612172d66636b7747aed5c9d49f1fa",
     "src/i18n/generated/routes/profile.el.json": "43c8a394333d81866faca379735e1fd6f39b9a84bd8a055a72021dc82b1e7c86",
     "src/i18n/generated/routes/search__results.el.json": "3c5e0b117116dec8007cb6887457b0cab64dbca93e96484d5e7c5717e3790f40",
@@ -67,7 +67,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "adc136a31a314c83d9e5f9e691036d2c0dddf057848840d015eb33263ca42d95",
+  "inputsSha256": "c131dd48d39d865eb97923a3f66e5447b87debcea31ecece0b602aaaf4471f90",
   "languages": [
     "el"
   ],
@@ -191,8 +191,8 @@
     "src/components/listing-detail/listing-attribute-value.ts": "2d7a0bded29eb6bfd3e4163f55ed5ee74c11ade0662f9f5d91057cab30eeadf2",
     "src/components/listing-detail/listing-model-stage-metrics.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/components/mandate/AgencyCoverageFact.tsx": "53859fbab342a8ba6a6d71798c3111853f4bb6d957b76daba70599b9f19d9905",
-    "src/components/mandate/AgencyDirectoryContent.tsx": "b36dcda1d6ec962156e653be92a55156e1d1a2fa81a3850bc7e52aabaf3feb53",
-    "src/components/mandate/AgencyDirectoryFilters.tsx": "7d3d790bfd9e2f1824d2f4898cc3a779552978e73cfffc72ac05d196b3510967",
+    "src/components/mandate/AgencyDirectoryContent.tsx": "22be452a4a783fd599436a4bc21e80b65d0c724c0b0f58ddfde3e8329e52bce9",
+    "src/components/mandate/AgencyDirectoryFilters.tsx": "0c2aec66289f6b0dd1ca9e7312189804fd25f853ef67a427a99ce957465271cf",
     "src/components/mandate/AgencyFact.tsx": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
     "src/components/mandate/AgencyProfileContent.tsx": "3a9aa53091e5808be890ff23995e481cade3a4c9799940e4b6e9335ca0e9feb1",
     "src/components/mandate/AgencyShowcaseContent.tsx": "aa4041f8bfeced90a47f652c4d034769fd5f4c075511e8f1d7191e2b128d4e8e",
@@ -204,6 +204,7 @@
     "src/components/mandate/CoverageOutlineMap.tsx": "1527436a0f6fec85ce32fac4e892a30f26832ce2ded6ce746e63b1a7955f75b5",
     "src/components/mandate/CoverageOutlinePicker.tsx": "d5a4588d12fd3a9c46a31d8531b3c6c14d2d7b1c5840dac13ed1de1559a257d0",
     "src/components/mandate/CoverageRadiusPicker.tsx": "e7980160f4bf016c9874b80a1c72da57895b36caf09d612294687682de8ff2f0",
+    "src/components/mandate/DirectoryQueryState.tsx": "800d513f203125ce39a6e646027463c582d55e113c6864f58a13e7e302036df8",
     "src/components/mandate/MandateCatalogContent.tsx": "bd551b73a57e19fdc826c2050dbb089dbb8505f9cb50ab75705e34db883cecb1",
     "src/components/mandate/MandateConsentContent.tsx": "bf0f2ec82176e32030f54a520fd38da8ce24c0442c3e3d0e35cb85ec243bc9aa",
     "src/components/mandate/MandateConsentRefusal.tsx": "258b5946d453bc1ca234c18ea4f26130c99de13f7a7e649f2dd593f12eaa4441",
@@ -288,6 +289,7 @@
     "src/components/shared/pickers/use-linked-single-picker.ts": "668230ffadc7763783a3054c91f463374c85f8c56ae54f680fa8c38eaeb1185f",
     "src/components/ui/accordion.tsx": "5e870a0dbb03f0ecc4d1ac717b3eb0f2b470c5b9abfa85e511b92f90252c3cd4",
     "src/components/ui/alert.tsx": "97d4eb92aaed18eb820484c17385e7f8346c0e34ef0e7ee21b75c0e43c34ad13",
+    "src/components/ui/filter-chip.tsx": "78d2c99eb285a47b9fa1b1853929c8910bc0672380a82615b21568157b561d1d",
     "src/components/ui/hinted-field.tsx": "e5a4d5a6c36fdd881157f7c4e8346f786f0861e47905faaa7f12b0bc4e036942",
     "src/components/ui/progress.tsx": "f85a57d20cb778e85eebbb5c9cfa8704947d0928ba63a84aaa7437418295ea7e",
     "src/components/ui/radio-group.tsx": "54db38b89af9c2f6e869ab4a286f0d303bcf94bd4ff200fe2fe9680169bb1373",
@@ -331,6 +333,7 @@
     "src/hooks/media/useViewportClass.ts": "0769e01c621e8642ca805ff4fe8c5df5dd9b418d98bb86a71afbd7876e6cd336",
     "src/hooks/owner-property/useOwnerPropertyDraftMemory.ts": "df9a345e5c720a31c3b54184b10c3a38c219d1ffcb3adfc5e9a4bbde06c77292",
     "src/hooks/owner-property/useOwnerPropertyMedia.ts": "78217b2e2633d096137d135102eab0dae27aa1cb53bd8ad252325049267e1a4d",
+    "src/hooks/useCircleAnchorName.ts": "7009f2c80c485f802d1ef1485489aa34f54568c61093cedd6ea918b012571283",
     "src/hooks/useClickOutside.ts": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
     "src/hooks/useIdentityGatedResource.ts": "d8480fc3b8a36ca7256b30090f93ae814391c74076f4793f062e79f2a842047a",
     "src/i18n/route-slice.ts": "cef4139f7e7dae3606e6d8a153f72f3351646f4cb13c613e4e6560f991702459",
@@ -339,6 +342,7 @@
     "src/lib/agency/coverage-camera.ts": "eb9368e740c7bc5bdc817b2943812e09052f5e4e8ad7b562eaab82315693d100",
     "src/lib/agency/presence-admin-ids.ts": "632638cfcd887e103e2474c0cbeaa4208e41b60df35f19c94ebda19ecaf8ef5a",
     "src/lib/agency/showcase-mark-fidelity.ts": "0f1a4258ff802b4685ab6a52d7c23b979b36af73b00908b6fff45e5c0ca1b988",
+    "src/lib/agency/showcase-where-voice.ts": "ca8b1932e0665aa6a61849720ba51e82338574025611c859e8d920608ba4cb6b",
     "src/lib/agency/showcase-wire.ts": "3662835ecbd902cad43319ff2c4f85954617d6ccffe418551fdb0a78ab8927ca",
     "src/lib/api/ApiErrorHandler.ts": "ab8e762bf6fb0a023c30d70c365bc474fb346d512224bb6cd0e36d2e84da9040",
     "src/lib/api/admin-db.ts": "2ef3d2a30545ca7a2e8766c2555ed68daeb4ed7f2d30f3a922a964571b27ebb9",
@@ -2950,7 +2954,6 @@
             "mandate.credibility.note.registryAbsentYetDeclared",
             "mandate.credibility.note.registryExistsUndeclared",
             "mandate.credibility.note.registryUnexamined",
-            "mandate.directory.areaHint",
             "mandate.directory.areaLoading",
             "mandate.directory.areaSearchEmpty",
             "mandate.directory.areaSearchPlaceholder",
@@ -2976,11 +2979,12 @@
             "mandate.directory.occupationSearchEmpty",
             "mandate.directory.occupationSearchPlaceholder",
             "mandate.directory.open",
-            "mandate.directory.placeAll",
             "mandate.directory.placeFilterLabel",
+            "mandate.directory.queryStateLabel",
             "mandate.directory.radiusLabel",
             "mandate.directory.radiusOption",
             "mandate.directory.title",
+            "mandate.directory.whereChipRemove",
             "registries.barAssociation.abbreviation",
             "registries.barAssociation.name",
             "registries.gemi.abbreviation",
@@ -2995,9 +2999,15 @@
             "registries.tee.name"
           ],
           "prefixes": [
+            "mandate.directory.areaHint",
             "mandate.directory.coverageIntersects",
             "mandate.directory.coverageUnknown",
             "mandate.directory.coverageWithin",
+            "mandate.directory.placeAll",
+            "mandate.directory.placeCircleHint",
+            "mandate.directory.placeCircleHintNamed",
+            "mandate.directory.whereChipCircle",
+            "mandate.directory.whereChipCircleNamed",
             "mandate.mark"
           ],
           "whole": false
@@ -4702,7 +4712,7 @@
     "matchedKeys": 176,
     "routeBoundaries": 0,
     "shellFiles": 606,
-    "sliceBytes": 401032
+    "sliceBytes": 401714
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

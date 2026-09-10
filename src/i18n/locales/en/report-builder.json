@@ -97,7 +97,8 @@
   },
   "crossFilter": {
     "filtered": "Filtered: {field} = {value}",
-    "clear": "Clear filter"
+    "clear": "Clear filter",
+    "clearNamed": "Remove filter: {filter}"
   },
   "grandTotal": {
     "label": "Grand Total"

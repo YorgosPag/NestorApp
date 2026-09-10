@@ -13,13 +13,13 @@ import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from '@/lib/workspace/navigation';
 import { declaredHref } from '@/lib/workspace/route-worlds';
-import { AlertTriangle, Check, Clock, Link2, X } from 'lucide-react';
+import { AlertTriangle, Check, Clock, Link2 } from 'lucide-react';
 import { useState } from 'react';
 import { ReportTable, type ReportColumnDef } from '@/components/reports/core/ReportTable';
 import { ReportEmptyState } from '@/components/reports/core/ReportEmptyState';
 import { GroupedTreeGrid } from './GroupedTreeGrid';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { FilterChip } from '@/components/ui/filter-chip';
 import { cn } from '@/lib/utils';
 import { getStatusColor as dsGetStatusColor } from '@/lib/design-system';
 import type {
@@ -267,25 +267,33 @@ function TruncationBanner({
   );
 }
 
+/**
+ * 🔴 **ΤΟ ΣΧΗΜΑ ΕΦΥΓΕ ΣΤΟ `components/ui/filter-chip`** *(N.0.2, ADR-846 §9 #12)* — ήταν
+ * **ιδιωτικό** εδώ, και ο δημόσιος κατάλογος χρειάστηκε το ίδιο ακριβώς σημάδι. Η
+ * αντιγραφή θα ήταν το sibling clone που ο **N.18** ονομάζει· έφυγε **η υλοποίηση**,
+ * έμεινε **η διατύπωση** — που ανήκει εδώ, γιατί ζει σε άλλο namespace *(`report-builder`)*.
+ *
+ * ⚠️ **Και η εξαγωγή διόρθωσε ελάττωμα που ζούσε εδώ αδιάγνωστο**: ο στόχος του `×` ήταν
+ * **~16 px** *(`h-3 w-3` + `p-0.5`)*, κάτω από το **24×24** που ζητά το WCAG 2.2 SC 2.5.8.
+ *
+ * 🔑 **Το προσβάσιμο όνομα περιέχει πλέον ΤΟ ΟΡΑΤΟ ΚΕΙΜΕΝΟ** *(`clearNamed`)*: το σκέτο
+ * «Καθαρισμός φίλτρου» ήταν αρκετό με **ένα** σημάδι και θα γινόταν αμφίσημο με δύο.
+ */
 function CrossFilterChip({
   crossFilter, onClear,
 }: { crossFilter: ChartCrossFilter; onClear: () => void }) {
   const { t } = useTranslation('report-builder');
+  const label = t('crossFilter.filtered', {
+    field: crossFilter.fieldKey,
+    value: crossFilter.label,
+  });
   return (
     <div className="flex items-center gap-2">
-      <Badge variant="secondary" className="gap-1.5 pr-1">
-        <span className="text-xs">
-          {t('crossFilter.filtered', { field: crossFilter.fieldKey, value: crossFilter.label })}
-        </span>
-        <button
-          type="button"
-          onClick={onClear}
-          className="ml-1 rounded-full p-0.5 hover:bg-muted"
-          aria-label={t('crossFilter.clear')}
-        >
-          <X className="h-3 w-3" />
-        </button>
-      </Badge>
+      <FilterChip
+        label={label}
+        removeLabel={t('crossFilter.clearNamed', { filter: label })}
+        onRemove={onClear}
+      />
     </div>
   );
 }

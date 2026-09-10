@@ -36,7 +36,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 
-import elBundle from '@/i18n/locales/el/property-market.json';
 import { showcaseFixture } from '@/lib/agency/__fixtures__/showcase-fixture';
 
 /** Η γενεαλογία γίνεται γνωστή **μόνο** όταν σταματήσει η φόρτωση — όπως στην πραγματικότητα. */
@@ -87,6 +86,20 @@ jest.mock('@/hooks/useAdminFootprints', () => ({
   useAdminFootprints: () => ({
     isLoading: mockFootprints.isLoading,
     footprintOf: () => null,
+    // 🔴 **ΤΟ `entries` ΕΙΝΑΙ ΥΠΟΧΡΕΩΤΙΚΟ ΑΠΟ ΤΟ §9 #12, ΚΑΙ ΤΟ ΕΜΑΘΑΜΕ ΕΔΩ.** Το
+    //    `useCircleAnchorName` **σαρώνει** τον χάρτη· ένα mock χωρίς αυτό δίνει
+    //    `undefined`, και το `for…of` πετά `TypeError` που ρίχνει **ολόκληρη** τη δημόσια
+    //    σελίδα. Το Κ3 και το Κ4 περνούν ερώτημα-**κύκλο**, δηλαδή **εκτελούν** τη νέα
+    //    διαδρομή — γι' αυτό η αλλαγή υπογραφής **κοκκίνισε** εδώ αντί να φύγει σιωπηλά.
+    //    ⚠️ Ακριβώς το σχήμα της §7.1 *(η `presenceMatches` άλλαξε υπογραφή και **καμία**
+    //    από τις 277 δοκιμές δεν την εκτελούσε με ενεργό ερώτημα)* — αυτή τη φορά
+    //    πιάστηκε, επειδή **υπήρχε** άγκυρα που εκτελεί με `where !== null`.
+    //
+    // 🔑 **Κενός χάρτης, όχι γεμάτος**: η αγνωσία είναι η **προεπιλογή** αυτής της
+    //    σουίτας *(`footprintOf: () => null`)*, και ο κενός χάρτης τη διατηρεί ⇒ το
+    //    αγκυροβόλιο μένει `null` ⇒ η φωνή λέει το ουδέτερο κείμενο. Ό,τι κρίνεται εδώ
+    //    κρίνεται **χωρίς** γεωμετρία, όπως και πριν.
+    entries: new Map(),
   }),
 }));
 
@@ -123,33 +136,19 @@ jest.mock('@/services/realtime/hooks/usePublicAgencies', () => ({
   usePublicAgencies: () => ({ agencies: mockAgencies, loading: false, error: null }),
 }));
 
-// 🔑 **Πραγματικά κείμενα από το locale** — ένα `t = key => key` θα έκανε το Κ1 να
-//    ελέγχει λατινικά κλειδιά, δηλαδή πράσινο χωρίς νόημα.
+// 🔑 **Ο επιλύτης ζει ΜΙΑ φορά** *(N.18)* — δες `lib/agency/__fixtures__/el-translate`.
+//    Ήταν έτοιμος να γίνει τρίτο αντίγραφο, και το τρίτο αντίγραφο θα ήταν το μόνο που
+//    ξέρει ICU plural — δηλαδή τρεις άγκυρες με **τρεις** ορισμούς του «τι βλέπει ο χρήστης».
 jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: () => ({
     i18n: { language: 'el' },
-    t: (key: string, params?: Record<string, unknown>): string => {
-      const bundle: Record<string, unknown> = jest.requireActual(
-        '@/i18n/locales/el/property-market.json',
-      );
-      let node: unknown = bundle;
-      for (const segment of key.replace(/^property-market:/, '').split('.')) {
-        node = (node as Record<string, unknown> | undefined)?.[segment];
-      }
-      if (typeof node !== 'string') return key;
-      return Object.entries(params ?? {}).reduce(
-        (text, [name, replacement]) => text.replaceAll(`{${name}}`, String(replacement)),
-        node,
-      );
-    },
+    t: jest.requireActual('@/lib/agency/__fixtures__/el-translate').elTranslate,
   }),
 }));
 
 import { AgencyDirectoryContent } from '../AgencyDirectoryContent';
 
-const DIRECTORY = (elBundle as unknown as {
-  mandate: { directory: Record<string, string> };
-}).mandate.directory;
+import { EL_DIRECTORY as DIRECTORY } from '@/lib/agency/__fixtures__/el-translate';
 
 function renderDirectory(
   search: string,

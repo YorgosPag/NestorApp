@@ -845,7 +845,13 @@
       "coverageDeclaredNationwide": "Δηλώνει: όλη η Ελλάδα",
       "coverageDeclared": "Δηλώνει: {areas}",
       "coverageDeclaredRadius": "Δηλώνει: έως {km} χλμ. από το σημείο που όρισε",
-      "coverageDeclaredOutline": "Δηλώνει: χαραγμένη περιοχή ~{km2} τ.χλμ."
+      "coverageDeclaredOutline": "Δηλώνει: χαραγμένη περιοχή ~{km2} τ.χλμ.",
+      "placeCircleHint": "Δείχνει όσους δουλεύουν έως {km} χλμ. από το σημείο που ορίσατε — πρώτα οι πιο κοντινοί.",
+      "placeCircleHintNamed": "Το σημείο σας: {area}. Δείχνει όσους δουλεύουν έως {km} χλμ. γύρω του — πρώτα οι πιο κοντινοί.",
+      "whereChipCircle": "Έως {km} χλμ. από το σημείο σας",
+      "whereChipCircleNamed": "Έως {km} χλμ. από: {area}",
+      "whereChipRemove": "Αφαίρεση φίλτρου τόπου: {filter}",
+      "queryStateLabel": "Τι φιλτράρετε τώρα"
     },
     "credibility": {
       "occupationLabel": "Ειδικότητα",

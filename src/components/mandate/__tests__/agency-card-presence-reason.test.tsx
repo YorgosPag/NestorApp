@@ -80,7 +80,14 @@ jest.mock('@/hooks/useAdministrativeHierarchy', () => ({
  * **λεξιλογικά** — δηλαδή η άγκυρα μετρά τη θεραπεία, όχι τύχη.
  */
 jest.mock('@/hooks/useAdminFootprints', () => ({
-  useAdminFootprints: () => ({ isLoading: false, footprintOf: () => null }),
+  useAdminFootprints: () => ({
+    isLoading: false,
+    footprintOf: () => null,
+    // ⚠️ **Πλήρες σχήμα, ακόμη κι όταν αυτή η σουίτα δεν σαρώνει** *(§9 #12)*: mock που
+    //    υπο-δηλώνει τη διεπαφή είναι **παγίδα με ημερομηνία** — δουλεύει μέχρι ο πρώτος
+    //    καταναλωτής να ζητήσει το πεδίο που λείπει, και τότε σπάει **αλλού**.
+    entries: new Map(),
+  }),
 }));
 
 /** Γραφείο **χωρίς καμία δήλωση** — μόνο η απόδειξη μιλά. */

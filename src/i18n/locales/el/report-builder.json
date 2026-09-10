@@ -97,7 +97,8 @@
   },
   "crossFilter": {
     "filtered": "Φίλτρο: {field} = {value}",
-    "clear": "Καθαρισμός φίλτρου"
+    "clear": "Καθαρισμός φίλτρου",
+    "clearNamed": "Αφαίρεση φίλτρου: {filter}"
   },
   "grandTotal": {
     "label": "Γενικό Σύνολο"

@@ -845,7 +845,13 @@
       "coverageDeclaredNationwide": "Declares: all of Greece",
       "coverageDeclared": "Declares: {areas}",
       "coverageDeclaredRadius": "Declares: up to {km} km from a point they set",
-      "coverageDeclaredOutline": "Declares: a drawn area of ~{km2} km²"
+      "coverageDeclaredOutline": "Declares: a drawn area of ~{km2} km²",
+      "placeCircleHint": "Shows those who work within {km} km of the point you set — nearest first.",
+      "placeCircleHintNamed": "Your point: {area}. Shows those who work within {km} km around it — nearest first.",
+      "whereChipCircle": "Within {km} km of your point",
+      "whereChipCircleNamed": "Within {km} km of: {area}",
+      "whereChipRemove": "Remove place filter: {filter}",
+      "queryStateLabel": "What you are filtering now"
     },
     "credibility": {
       "occupationLabel": "Speciality",

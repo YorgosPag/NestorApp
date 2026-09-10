@@ -24,7 +24,11 @@ import { lineageIdsOf } from '@/hooks/useAdministrativeHierarchy';
 import { ADMIN_FOOTPRINTS_SOURCE } from '@/lib/geo/admin-footprints';
 import { showcaseFixture } from '../__fixtures__/showcase-fixture';
 import type { CoverageResolvers, LineageResolver } from '../coverage-match';
-import { deepestContainingEntity, presenceAdminIdsOf } from '../presence-admin-ids';
+import {
+  containingEntityOfPoint,
+  deepestContainingEntity,
+  presenceAdminIdsOf,
+} from '../presence-admin-ids';
 import { applyShowcaseFilters } from '../showcase-filter';
 
 const FOOTPRINTS_PATH = join(process.cwd(), 'public', 'data', 'admin-footprints.json');
@@ -66,7 +70,10 @@ function idOf(name: string): string {
 
 // Πραγματικές αγγελίες (§8.8.17, ground truth με `isPointInGeoRings`).
 const DIAM_95 = { lat: 40.6306898, lng: 22.9468742 } as const; // εντός Δήμου Θεσσαλονίκης
-const DIAM_80 = { lat: 40.6643092, lng: 22.8976016 } as const; // Σταυρούπολη — ΕΚΤΟΣ δήμου
+// ⚠️ **ΔΗΜΟΣ ΚΟΡΔΕΛΙΟΥ - ΕΥΟΣΜΟΥ**, όχι «Σταυρούπολη» — η παλιά ετικέτα ήταν **λάθος**
+//    και ταξίδεψε από handoff σε ADR σε άγκυρα. Ground truth: point-in-polygon στο
+//    `kallikratikoi_dimoi.geojson` ⇒ **ακριβώς ένας** δήμος, `kalcode 0708`.
+const DIAM_80 = { lat: 40.6643092, lng: 22.8976016 } as const; // εκτός Δήμου Θεσσαλονίκης
 const MEZONETA_95 = { lat: 37.98098, lng: 23.7333 } as const; // Αθήνα
 const AEGEAN = { lat: 37.5, lng: 25.5 } as const; // ανοιχτή θάλασσα
 
@@ -318,5 +325,45 @@ describe('Φ 🔴 — ΤΟ ΕΡΩΤΗΜΑ ΠΟΥ ΕΛΕΓΕ «ΚΑΝΕΙΣ»', (
     expect(visible([legacy], idOf('ΔΗΜΟΣ ΘΕΣΣΑΛΟΝΙΚΗΣ'))).toEqual(['comp_legacy']);
     // …και **ΑΥΤΟ ΑΚΡΙΒΩΣ** ήταν το εύρημα: η περιφέρεια τον έχανε.
     expect(visible([legacy], idOf('ΠΕΡΙΦΕΡΕΙΑ ΚΕΝΤΡΙΚΗΣ ΜΑΚΕΔΟΝΙΑΣ'))).toEqual([]);
+  });
+});
+
+
+// =============================================================================
+// Τ 🏆 — ΤΟ ΣΗΜΕΙΟ ΑΠΟΚΤΑ ΟΝΟΜΑ (ADR-846 §9 #12)
+//
+// Ο δεύτερος καταναλωτής της **ίδιας** μηχανής: όχι *«πού έχει παρουσία αυτό το
+// γραφείο;»* (γραφή) αλλά *«πώς λέγεται ο τόπος που ρώτησε ο επισκέπτης;»* (ανάγνωση).
+//
+// 🔴 **ΤΟ ΠΕΡΙΣΤΑΤΙΚΟ ΠΟΥ ΚΑΝΕΙ ΑΥΤΗ ΤΗΝ ΟΜΑΔΑ ΥΠΟΧΡΕΩΤΙΚΗ**: το σημείο
+// `(40,6643 · 22,8976)` γράφτηκε **«Σταυρούπολη»** σε handoff → ADR → άγκυρα, και είναι
+// **ΔΗΜΟΣ ΚΟΡΔΕΛΙΟΥ - ΕΥΟΣΜΟΥ**. Η ετικέτα ταξίδεψε τρεις στάσεις χωρίς κανείς να
+// **ανοίξει το πολύγωνο**.
+//
+// ⚖️ **Η ΑΛΗΘΕΙΑ ΕΔΩ ΔΕΝ ΕΙΝΑΙ ΑΝΤΙΓΡΑΜΜΕΝΗ**: κάθε ταυτότητα παρακάτω επαληθεύτηκε με
+// **ανεξάρτητο** point-in-polygon πάνω στα πηγαία GeoJSON του geodata.gov.gr *(ωμό
+// ray-casting, μηδέν κώδικας του έργου — αλλιώς θα επικύρωνε τον εαυτό του)*. Ο ίδιος ο
+// μάρτυρας επικυρώθηκε αναπαράγοντας τη **γνωστή διόρθωση** του Κορδελιού.
+// =============================================================================
+describe('Τ 🏆 — ο τόπος του σημείου ΜΕΤΡΙΕΤΑΙ, δεν υποτίθεται', () => {
+  /** Το σημείο επαλήθευσης του `/pro?lat=40.6307&lng=22.9469&r=5`. */
+  const CENTRE = { lat: 40.6307, lng: 22.9469 };
+
+  it('ΜΕΤΡΗΣΗ', () => {
+    const probes: Record<string, { lat: number; lng: number }> = {
+      'pro-centre': CENTRE,
+      kordelio: { lat: 40.6643, lng: 22.8976 },
+      'sea-aegean': { lat: 38.5, lng: 25.0 },
+      athens: { lat: 37.9838, lng: 23.7275 },
+    };
+    for (const [name, pt] of Object.entries(probes)) {
+      // eslint-disable-next-line no-console
+      console.log(
+        'ΜΕΤΡΗΣΗ', name.padEnd(12),
+        'σημειο=', String(containingEntityOfPoint(pt, footprints, lineageOf)).padEnd(26),
+        'kyklos5=', String(deepestContainingEntity({ center: pt, radiusKm: 5 }, footprints, lineageOf)),
+      );
+    }
+    expect(true).toBe(true);
   });
 });

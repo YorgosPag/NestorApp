@@ -82,6 +82,9 @@ import { registerRouteSlice } from '@/i18n/route-slice';
 // ADR-827 §9.15 — η δημόσια διεύθυνση ζει σε ουδέτερο module: τη ρωτά και ο διακομιστής.
 import { agencyDirectoryHref } from './agency-directory-route';
 import { useCoverageResolvers } from '@/hooks/useCoverageResolvers';
+import { useCircleAnchorName } from '@/hooks/useCircleAnchorName';
+import { showcaseWhereVoice } from '@/lib/agency/showcase-where-voice';
+import { DirectoryQueryState } from './DirectoryQueryState';
 
 registerRouteSlice(routeSlice);
 
@@ -195,6 +198,24 @@ export function AgencyDirectoryContent(): React.JSX.Element {
   const options = React.useMemo(() => occupationOptions(agencies, locale), [agencies, locale]);
   const filtering = hasActiveFilters(filters);
 
+  // 🏆 **ΤΟ ΣΗΜΕΙΟ ΑΠΟΚΤΑ ΟΝΟΜΑ — ΚΑΙ ΜΕΤΡΙΕΤΑΙ ΕΔΩ, ΜΙΑ ΦΟΡΑ** *(ADR-846 §9 #12)*.
+  //
+  // 🔑 **Δύο οθόνες ρωτούν το ίδιο**: ο υπαινιγμός κάτω από τον επιλογέα περιοχής και το
+  //    αφαιρούμενο σημάδι πάνω από τα αποτελέσματα. Δύο κλήσεις του hook θα ήταν **δύο
+  //    απαντήσεις στο ίδιο ερώτημα** — δουλεύουν σήμερα, αποκλίνουν αύριο. Η φωνή
+  //    υπολογίζεται **εδώ** και ταξιδεύει ως δεδομένο, ίδιο ιδίωμα με το `coverageResolvers`.
+  //
+  // ⚠️ **Καμία αναμονή γι' αυτό, επίτηδες**: όσο τα αποτυπώματα ή η ιεραρχία δεν έχουν
+  //    φτάσει, το αγκυροβόλιο είναι `null` ⇒ η φωνή λέει *«το σημείο που ορίσατε»*, που
+  //    είναι **αληθές σε κάθε στιγμή**. Το `areaPending` υπάρχει για το **φιλτράρισμα**,
+  //    όπου η αγνωσία θα άλλαζε το **αποτέλεσμα**· εδώ αλλάζει μόνο πόσο **ειδικά** το
+  //    λέμε. Μια δεύτερη αναμονή θα καθυστερούσε την οθόνη για **καλλωπισμό**.
+  const anchorName = useCircleAnchorName(filters.where);
+  const whereVoice = React.useMemo(
+    () => showcaseWhereVoice(filters.where, anchorName),
+    [filters.where, anchorName],
+  );
+
   return (
     <ShellSurface as="main" measure="wide" className="gap-6">
       <header className="flex flex-col gap-1">
@@ -216,6 +237,28 @@ export function AgencyDirectoryContent(): React.JSX.Element {
           locale={locale}
           onChange={apply}
           onClear={filtering ? () => apply(EMPTY_SHOWCASE_FILTERS) : null}
+          whereVoice={whereVoice}
+        />
+      )}
+
+      {/*
+        🔴 **Η ΚΑΤΑΣΤΑΣΗ ΤΟΥ ΕΡΩΤΗΜΑΤΟΣ ΑΝΕΒΗΚΕ ΠΑΝΩ ΑΠΟ ΤΟΥΣ ΚΛΑΔΟΥΣ** *(§9 #12)*, και
+        δεν είναι αναδιοργάνωση: ο μετρητής ζούσε **μέσα** στον κλάδο των αποτελεσμάτων,
+        άρα ο επισκέπτης που φιλτράρισε σε **μηδέν** έβλεπε *«Κανείς δεν ταιριάζει»*
+        **χωρίς παρονομαστή** — δηλαδή χωρίς το «από 22» που εξηγεί ότι φταίει η επιλογή
+        του, όχι ο κατάλογος. Το «7 από 34» της **Φ4** ίσχυε παντού **εκτός** από την
+        περίπτωση που το χρειαζόταν περισσότερο.
+
+        🔑 **Και είναι η προϋπόθεση της εστίασης**: η περιοχή **επιβιώνει** της αφαίρεσης
+        του σημαδιού, άρα υπάρχει γείτονας να δεχτεί την εστίαση. Δες `DirectoryQueryState`.
+      */}
+      {!loading && error === null && agencies.length > 0 && (
+        <DirectoryQueryState
+          voice={whereVoice}
+          shown={visible.length}
+          total={agencies.length}
+          filtering={filtering}
+          onClearWhere={() => apply({ ...filters, where: null })}
         />
       )}
 
@@ -259,19 +302,10 @@ export function AgencyDirectoryContent(): React.JSX.Element {
         </section>
       ) : (
         <section className="flex flex-col gap-3">
-          <p className="m-0 text-sm text-muted-foreground">
-            {/* 🔑 **Φ4 — «7 από 34», ποτέ σκέτο «7».** Ο αριθμός που λείπει είναι
-                ο **παρονομαστής**: χωρίς αυτόν ο επισκέπτης δεν ξέρει ότι
-                αφαίρεσε κάτι, και το φίλτρο γίνεται αόρατος περιορισμός. */}
-            {filtering
-              ? t(DIRECTORY_KEYS.countFiltered, {
-                  // ⚠️ **`shown`, ΟΧΙ `count`** — τα ονόματα των παραμέτρων ζουν στο
-                  //    locale, και ένα λάθος όνομα ζωγραφίζει **ωμό `{shown}`**.
-                  shown: visible.length,
-                  total: agencies.length,
-                })
-              : t(DIRECTORY_KEYS.count, { count: agencies.length })}
-          </p>
+          {/* 🔑 **Ο ΜΕΤΡΗΤΗΣ ΕΦΥΓΕ ΣΤΟ {@link DirectoryQueryState}** *(§9 #12)* — μαζί με
+              το αφαιρούμενο σημάδι, γιατί λένε **τα δύο μισά της ίδιας πρότασης**. Εκεί
+              απέκτησε και `role="status"`: η αλλαγή πλήθους **ανακοινώνεται** πλέον, αντί
+              να τυπώνεται σιωπηλά για όποιον τη βλέπει. */}
           <ul className="m-0 flex list-none flex-col gap-3 p-0">
             {visible.map((profile) => (
               <AgencyCard

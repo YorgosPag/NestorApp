@@ -97,7 +97,14 @@ const footprintMounts = { count: 0 };
 jest.mock('@/hooks/useAdminFootprints', () => ({
   useAdminFootprints: () => {
     footprintMounts.count += 1;
-    return { isLoading: false, footprintOf: () => null };
+    return {
+      isLoading: false,
+      footprintOf: () => null,
+      // ⚠️ **Πλήρες σχήμα, ακόμη κι όταν αυτή η σουίτα δεν σαρώνει** *(§9 #12)*: mock που
+      //    υπο-δηλώνει τη διεπαφή είναι **παγίδα με ημερομηνία** — δουλεύει μέχρι ο πρώτος
+      //    καταναλωτής να ζητήσει το πεδίο που λείπει, και τότε σπάει **αλλού**.
+      entries: new Map(),
+    };
   },
 }));
 
