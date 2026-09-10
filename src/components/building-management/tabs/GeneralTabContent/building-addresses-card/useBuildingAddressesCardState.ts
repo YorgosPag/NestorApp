@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ProjectAddress } from '@/types/project/addresses';
+import type { GeoPoint } from '@/types/geo/coordinates';
 import { extractLegacyFields } from '@/types/project/address-helpers';
+import { useFormPlacedPoint } from '@/components/shared/addresses/useFormPlacedPoint';
+import type { AddressEditorPlacementOptions } from '@/components/shared/addresses/editor';
+import type { AddressPositionDrift } from '@/lib/geocoding/address-position';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
@@ -38,6 +42,10 @@ interface UseBuildingAddressesCardStateResult {
   editorIndex: number | null;
   editorAddress: Partial<ProjectAddress> | null;
   editorDragAddress: Partial<ProjectAddress> | null;
+  /** ADR-332 D27 Βήμα Β — ο συντάκτης αποθηκεύει θέση («Μόνο η θέση» + αναίρεση πινέζας). */
+  editorPlacement: AddressEditorPlacementOptions;
+  /** Η θέση που επιβεβαίωσε άνθρωπος στον συντάκτη — `null` αν δεν έβαλε. */
+  editorPlacedPoint: GeoPoint | null;
   dialogProps: ConfirmDialogProps;
   isAddressSelected: (projectAddress: ProjectAddress) => boolean;
   openCreateEditor: () => void;
@@ -51,6 +59,10 @@ interface UseBuildingAddressesCardStateResult {
   setManualPrimaryAddress: (index: number) => Promise<void>;
   deleteManualAddress: (index: number) => Promise<void>;
   handleMarkerClick: (address: ProjectAddress) => void;
+  /** Φ2β — κρατημένες ανθρώπινες πινέζες που απέχουν από τη νέα τους διεύθυνση. */
+  positionAdvisories: readonly AddressPositionDrift[];
+  relocateAddress: (addressId: string) => Promise<void>;
+  keepAddressPin: (addressId: string) => void;
 }
 
 export function useBuildingAddressesCardState({
@@ -73,6 +85,14 @@ export function useBuildingAddressesCardState({
   const [editorIndex, setEditorIndex] = useState<number | null>(null);
   const [editorAddress, setEditorAddress] = useState<Partial<ProjectAddress> | null>(null);
   const [editorDragAddress, setEditorDragAddress] = useState<Partial<ProjectAddress> | null>(null);
+  /**
+   * 🔴 ADR-332 D27 Βήμα Β (Β3): ως τις 2026-09-10 το σύρσιμο κτιρίου **δεν αποθήκευε ποτέ**
+   * θέση — ο συντάκτης έδινε μόνο κείμενο. Η θέση ζει εδώ επειδή **εδώ γίνεται η αποθήκευση**:
+   * όποιος γράφει, κατέχει (ίδια απόφαση με το `useProjectLocations`).
+   */
+  const placed = useFormPlacedPoint();
+  const { reset: resetPlacedPoint } = placed;
+  const [positionAdvisories, setPositionAdvisories] = useState<readonly AddressPositionDrift[]>([]);
 
   const hasProject = Boolean(projectId);
   const selectedCount = localAddresses.length;
@@ -113,7 +133,10 @@ export function useBuildingAddressesCardState({
     };
   }, [projectId]);
 
-  const persistAddresses = useCallback(async (nextAddresses: ProjectAddress[]): Promise<boolean> => {
+  const persistAddresses = useCallback(async (
+    nextAddresses: ProjectAddress[],
+    relocateAddressIds: readonly string[] = [],
+  ): Promise<boolean> => {
     const legacyFields = extractLegacyFields(nextAddresses);
     const result = await updateBuildingWithPolicy({
       buildingId,
@@ -121,6 +144,7 @@ export function useBuildingAddressesCardState({
         addresses: nextAddresses,
         address: legacyFields.address,
         city: legacyFields.city,
+        ...(relocateAddressIds.length > 0 ? { relocateAddressIds: [...relocateAddressIds] } : {}),
       },
     });
 
@@ -129,9 +153,26 @@ export function useBuildingAddressesCardState({
       return false;
     }
 
-    setLocalAddresses(nextAddresses);
+    // ADR-332 D27 Βήμα Β (Β5): υιοθετείται ό,τι ΕΓΡΑΨΕ ο διακομιστής, όχι το αντίγραφο του πελάτη.
+    setLocalAddresses(result.addresses ?? nextAddresses);
+    setPositionAdvisories(result.positionAdvisories ?? []);
     return true;
   }, [buildingId, notifyError, t]);
+
+  /** Φ2β — «Μετακίνησε στη θέση της διεύθυνσης»: ρητή δήλωση `relocate` για ΑΥΤΗ τη διεύθυνση. */
+  const relocateAddress = useCallback(async (addressId: string) => {
+    setIsSaving(true);
+    try {
+      await persistAddresses(localAddresses, [addressId]);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [localAddresses, persistAddresses]);
+
+  /** Φ2β — «Κράτα την πινέζα»: η συμβουλή φεύγει, η πινέζα μένει. */
+  const keepAddressPin = useCallback((addressId: string) => {
+    setPositionAdvisories((prev) => prev.filter((a) => a.addressId !== addressId));
+  }, []);
 
   const isAddressSelected = useCallback((projectAddress: ProjectAddress): boolean => {
     return localAddresses.some((address) => address.id === projectAddress.id);
@@ -142,21 +183,24 @@ export function useBuildingAddressesCardState({
     setEditorIndex(null);
     setEditorAddress(null);
     setEditorDragAddress(null);
-  }, []);
+    resetPlacedPoint();
+  }, [resetPlacedPoint]);
 
   const openCreateEditor = useCallback(() => {
     setEditorMode('create');
     setEditorIndex(null);
     setEditorAddress(null);
     setEditorDragAddress(null);
-  }, []);
+    resetPlacedPoint();
+  }, [resetPlacedPoint]);
 
   const openEditEditor = useCallback((index: number) => {
     setEditorMode('edit');
     setEditorIndex(index);
     setEditorAddress(localAddresses[index] ? { ...localAddresses[index] } : null);
     setEditorDragAddress(null);
-  }, [localAddresses]);
+    resetPlacedPoint();
+  }, [localAddresses, resetPlacedPoint]);
 
   const saveEditor = useCallback(async () => {
     if (!editorAddress?.street || !editorAddress.city) {
@@ -166,8 +210,10 @@ export function useBuildingAddressesCardState({
 
     setIsSaving(true);
     try {
+      // Θέση ΜΟΝΟ αν την επιβεβαίωσε άνθρωπος — αλλιώς ο διακομιστής λύνει το κείμενο.
+      const draft = { ...editorAddress, ...placed.addressPatch };
       if (editorMode === 'create') {
-        const nextAddresses = [...localAddresses, createManualBuildingAddress(editorAddress, localAddresses.length)];
+        const nextAddresses = [...localAddresses, createManualBuildingAddress(draft, localAddresses.length)];
         const saved = await persistAddresses(nextAddresses);
         if (saved) {
           success(t('address.labels.addressAdded'));
@@ -184,7 +230,7 @@ export function useBuildingAddressesCardState({
         }
 
         const nextAddresses = localAddresses.map((address, index) =>
-          index === editorIndex ? updateManualBuildingAddress(originalAddress, editorAddress) : address
+          index === editorIndex ? updateManualBuildingAddress(originalAddress, draft) : address
         );
         const saved = await persistAddresses(nextAddresses);
         if (saved) {
@@ -195,7 +241,7 @@ export function useBuildingAddressesCardState({
     } finally {
       setIsSaving(false);
     }
-  }, [editorAddress, editorIndex, editorMode, localAddresses, notifyError, persistAddresses, resetEditor, success, t]);
+  }, [editorAddress, editorIndex, editorMode, localAddresses, notifyError, persistAddresses, placed.addressPatch, resetEditor, success, t]);
 
   const toggleProjectAddress = useCallback(async (projectAddress: ProjectAddress) => {
     setIsSaving(true);
@@ -274,6 +320,8 @@ export function useBuildingAddressesCardState({
     editorIndex,
     editorAddress,
     editorDragAddress,
+    editorPlacement: placed.placement,
+    editorPlacedPoint: placed.point,
     dialogProps,
     isAddressSelected,
     openCreateEditor,
@@ -287,12 +335,20 @@ export function useBuildingAddressesCardState({
     setManualPrimaryAddress,
     deleteManualAddress,
     handleMarkerClick,
+    positionAdvisories,
+    relocateAddress,
+    keepAddressPin,
   }), [
+    positionAdvisories,
+    relocateAddress,
+    keepAddressPin,
     dialogProps,
     editorAddress,
     editorDragAddress,
     editorIndex,
     editorMode,
+    placed.placement,
+    placed.point,
     handleMarkerClick,
     hasProject,
     isAddressSelected,

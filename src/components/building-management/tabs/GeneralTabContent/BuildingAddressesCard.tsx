@@ -36,6 +36,8 @@ export function BuildingAddressesCard(props: BuildingAddressesCardProps) {
     editorMode,
     editorIndex,
     editorDragAddress,
+    editorPlacement,
+    editorPlacedPoint,
     dialogProps,
     isAddressSelected,
     openCreateEditor,
@@ -49,6 +51,9 @@ export function BuildingAddressesCard(props: BuildingAddressesCardProps) {
     setManualPrimaryAddress,
     deleteManualAddress,
     handleMarkerClick,
+    positionAdvisories,
+    relocateAddress,
+    keepAddressPin,
   } = useBuildingAddressesCardState(props);
 
   const currentEditAddress = editorMode === 'edit' && editorIndex !== null
@@ -86,6 +91,8 @@ export function BuildingAddressesCard(props: BuildingAddressesCardProps) {
           projectAddresses={projectAddresses}
           externalValues={editorDragAddress}
           onExternalValuesChange={setEditorDragAddress}
+          placement={editorPlacement}
+          placedPoint={editorPlacedPoint}
           onChange={setEditorAddress}
           onCancel={cancelEditor}
           onSave={() => {
@@ -144,6 +151,10 @@ export function BuildingAddressesCard(props: BuildingAddressesCardProps) {
                 onSetPrimary={setManualPrimaryAddress}
                 onEdit={openEditEditor}
                 onDelete={deleteManualAddress}
+                positionAdvisories={positionAdvisories}
+                onRelocate={(addressId) => { void relocateAddress(addressId); }}
+                onKeepPin={keepAddressPin}
+                isSaving={isSaving}
               />
               <BuildingAddressesMapPane
                 addresses={localAddresses}

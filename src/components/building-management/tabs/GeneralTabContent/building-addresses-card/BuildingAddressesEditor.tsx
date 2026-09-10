@@ -6,7 +6,13 @@ import { SELECT_CLEAR_VALUE } from '@/config/domain-constants';
 import { AddressFormSection } from '@/components/shared/addresses/AddressFormSection';
 import { AddressMap } from '@/components/shared/addresses/AddressMap';
 import { AddressEditor } from '@/components/shared/addresses/editor';
-import type { AddressEditorHandle, ResolvedAddressFields } from '@/components/shared/addresses/editor';
+import type {
+  AddressEditorHandle,
+  AddressEditorPlacementOptions,
+  ResolvedAddressFields,
+} from '@/components/shared/addresses/editor';
+import { mapPinDropText, pendingPinAddress } from '@/components/shared/addresses/pin-drop';
+import type { GeoPoint } from '@/types/geo/coordinates';
 import type { AddressWithHierarchyValue } from '@/components/shared/addresses/AddressWithHierarchy';
 import {
   EMPTY_HIERARCHY,
@@ -44,11 +50,21 @@ interface BuildingAddressesEditorProps {
   externalValues?: Partial<ProjectAddress> | null;
   /** @deprecated Kept for BuildingAddressesCard backward compat; called after drag confirm. */
   onExternalValuesChange?: (address: Partial<ProjectAddress> | null) => void;
+  /**
+   * ADR-332 D27 Βήμα Β (Β3) — η θέση την κατέχει όποιος **αποθηκεύει**
+   * (`useBuildingAddressesCardState`). Χωρίς αυτή την ομάδα ο συντάκτης δεν υπόσχεται «Μόνο η θέση».
+   */
+  placement?: AddressEditorPlacementOptions;
+  /** Η θέση που θα αποθηκευτεί — ο χάρτης τη δείχνει (ό,τι βλέπεις = ό,τι γράφεται). */
+  placedPoint?: GeoPoint | null;
   onChange: (address: Partial<ProjectAddress> | null) => void;
   onCancel: () => void;
   onSave: () => void;
   isSaving: boolean;
 }
+
+/** Η νέα διεύθυνση κτιρίου στον χάρτη, πριν αποθηκευτεί. */
+const BUILDING_DRAFT_ADDRESS_ID = '__building_draft__';
 
 interface EditorPresentation {
   titleKey: string;
@@ -105,6 +121,8 @@ export function BuildingAddressesEditor({
   initialValues,
   projectAddresses,
   onExternalValuesChange,
+  placement,
+  placedPoint = null,
   onChange,
   onCancel,
   onSave,
@@ -126,6 +144,20 @@ export function BuildingAddressesEditor({
   const [isPrimary, setIsPrimary] = useState(initialValues?.isPrimary ?? false);
 
   const editorRef = useRef<AddressEditorHandle>(null);
+  // Ακύρωση / αναίρεση ⇒ η πινέζα του χάρτη επιστρέφει εκεί που δείχνει η φόρμα.
+  const [dragResetKey, setDragResetKey] = useState(0);
+  const handleUndoRedo = useCallback(() => setDragResetKey((n) => n + 1), []);
+
+  /**
+   * 🔑 Βήμα Β — ό,τι βλέπεις είναι ό,τι αποθηκεύεται: η πινέζα δείχνει τη θέση που **θα** γραφτεί.
+   * Στη δημιουργία, χωρίς αυτό, η εναλλακτική πινέζα του χάρτη γύριζε στο προεπιλεγμένο κέντρο.
+   */
+  const mapAddresses = useMemo<ProjectAddress[]>(() => {
+    if (initialValues) {
+      return [placedPoint ? { ...initialValues, coordinates: { lat: placedPoint.lat, lng: placedPoint.lng } } : initialValues];
+    }
+    return placedPoint ? [pendingPinAddress(placedPoint, BUILDING_DRAFT_ADDRESS_ID)] : [];
+  }, [initialValues, placedPoint]);
 
   /**
    * Πού να μετρηθεί το «κοντά»: **το έργο**, και αν εκείνο δεν έχει ακόμη θέση, η ήδη
@@ -225,6 +257,8 @@ export function BuildingAddressesEditor({
             value={resolvedValue}
             onChange={handleEditorChange}
             onDragApplied={handleDragApplied}
+            placement={placement}
+            onUndoRedo={handleUndoRedo}
             mode="edit"
             domain="building"
             suggestions={{ proximityAnchor }}
@@ -257,9 +291,10 @@ export function BuildingAddressesEditor({
 
         <aside className="lg:sticky lg:top-0 lg:self-start lg:h-[calc(100vh-12rem)]">
           <AddressMap
-            addresses={initialValues ? [initialValues] : []}
+            addresses={mapAddresses}
             draggableMarkers
-            onAddressDragUpdate={(dragAddr) => editorRef.current?.setPendingDrag(toResolvedFromAddr(dragAddr))}
+            dragResetKey={dragResetKey}
+            onAddressDragUpdate={(drop) => editorRef.current?.setPendingDrag(mapPinDropText(drop, toResolvedFromAddr))}
             heightPreset="viewerFullscreen"
             className="rounded-lg border shadow-sm !h-full"
           />

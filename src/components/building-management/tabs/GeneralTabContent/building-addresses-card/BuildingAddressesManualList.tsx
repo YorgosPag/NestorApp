@@ -9,12 +9,19 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { getBuildingAddressCardId } from './building-addresses-card-helpers';
+import { AddressPositionDriftNotice } from '@/components/shared/addresses/AddressPositionDriftNotice';
+import type { AddressPositionDrift } from '@/lib/geocoding/address-position';
 
 interface BuildingAddressesManualListProps {
   localAddresses: ProjectAddress[];
   onSetPrimary: (index: number) => Promise<void>;
   onEdit: (index: number) => void;
   onDelete: (index: number) => Promise<void>;
+  /** ADR-332 D27 Βήμα Β (Φ2β) — κρατημένες πινέζες που απέχουν από τη νέα τους διεύθυνση. */
+  positionAdvisories?: readonly AddressPositionDrift[];
+  onRelocate?: (addressId: string) => void;
+  onKeepPin?: (addressId: string) => void;
+  isSaving?: boolean;
 }
 
 export function BuildingAddressesManualList({
@@ -22,6 +29,10 @@ export function BuildingAddressesManualList({
   onSetPrimary,
   onEdit,
   onDelete,
+  positionAdvisories = [],
+  onRelocate,
+  onKeepPin,
+  isSaving = false,
 }: BuildingAddressesManualListProps) {
   const iconSizes = useIconSizes();
   const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
@@ -36,6 +47,17 @@ export function BuildingAddressesManualList({
           className="relative border rounded-lg p-2 hover:shadow-md transition-shadow"
         >
           <AddressCard address={address} />
+          {(() => {
+            const drift = positionAdvisories.find((advisory) => advisory.addressId === address.id);
+            return drift && onRelocate && onKeepPin ? (
+              <AddressPositionDriftNotice
+                distanceMetres={drift.distanceMetres}
+                busy={isSaving}
+                onRelocate={() => onRelocate(address.id)}
+                onKeep={() => onKeepPin(address.id)}
+              />
+            ) : null;
+          })()}
           <div className="absolute top-4 right-4 flex gap-2">
             {address.isPrimary ? (
               <Badge variant="default" className="flex items-center gap-1">

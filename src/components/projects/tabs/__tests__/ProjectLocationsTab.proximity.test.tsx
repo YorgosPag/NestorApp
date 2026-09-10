@@ -148,8 +148,10 @@ function locationsState(
     handleRequestDelete: jest.fn(),
     handleConfirmDelete: jest.fn(),
     handleAddressDragUpdate: jest.fn(),
-    handlePendingDragUpdate: jest.fn(),
     handleMarkerClick: jest.fn(),
+    positionAdvisories: [],
+    handleRelocateAddress: jest.fn(),
+    handleKeepAddressPin: jest.fn(),
     setDeleteDialogOpen: jest.fn(),
   } as unknown as ReturnType<typeof useProjectLocations>;
 }
