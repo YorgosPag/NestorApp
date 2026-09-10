@@ -154,6 +154,19 @@ export type GeocodingOutcome =
   | { kind: 'error'; reason: GeocodingFailureReason };
 
 /**
+ * Η **αντίστροφη** γεωκωδικοποίηση — ίδιο συμβόλαιο τριών εκβάσεων με το {@link GeocodingOutcome}.
+ *
+ * 🔴 ADR-332 D27 Βήμα Β (Β6): το `reverseGeocode` επέστρεφε `null` και για «εδώ δεν γράφει
+ * τίποτα» (404) και για «δεν ρώτησα» (timeout · 429 · σφάλμα). Ο διάλογος συρσίματος
+ * χρειάζεται τη διάκριση για να πει στον άνθρωπο **τι** συνέβη — και η θέση του χεριού
+ * κρατιέται και στις δύο.
+ */
+export type ReverseGeocodingOutcome =
+  | { kind: 'found'; result: ReverseGeocodingResult }
+  | { kind: 'not-found' }
+  | { kind: 'error'; reason: GeocodingFailureReason };
+
+/**
  * Πόσο ακριβής είναι μια γεωκωδικοποιημένη θέση — από την πιο ισχυρή στην πιο ασθενή.
  *
  * ⚠️ **Πίνακας πρώτα, τύπος παραγόμενος** (ADR-777 Α14, 2026-08-11): μέχρι τότε

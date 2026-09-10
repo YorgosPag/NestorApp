@@ -169,16 +169,24 @@ describe('Κ — ο κλειστός κανόνας της θέσης', () => {
       expect(calls).toHaveLength(1);
     });
 
-    it('Κ1ε — μπαγιάτικο `dragged` ΔΕΝ παγώνει τη διεύθυνση: κείμενο άλλαξε, σημείο ΙΔΙΟ ⇒ geocoded', async () => {
-      // Η δήλωση ζει στο αποθηκευμένο έγγραφο και ο πελάτης την ξαναστέλνει με `{...addr}`.
-      // Χωρίς αλλαγή σημείου δεν είναι σύρσιμο: η νέα διεύθυνση πρέπει να ξαναλυθεί.
+    it('Κ1ε — ΑΠΟΦΑΣΗ Φ2β: ανθρώπινη πινέζα + ΝΕΟ κείμενο ⇒ η πινέζα ΜΕΝΕΙ (`human-kept`), με ΜΕΤΡΗΜΕΝΗ απόκλιση', async () => {
+      // 🔄 Ως τις 2026-09-10 εδώ έγραφε «⇒ geocoded»: μια αλλαγή κειμένου έσβηνε σιωπηλά την πινέζα
+      // του ανθρώπου. Η απόφαση άλλαξε ΡΗΤΑ (ADR-332 D27 Βήμα Β, Φ2β — πρακτική Revit / Apple Maps /
+      // Salesforce Verified): η πινέζα μένει και η απόκλιση από τη νέα διεύθυνση ΜΕΤΡΙΕΤΑΙ. Το
+      // «ξαναλύσου» είναι πλέον ρητή δήλωση του ανθρώπου (`relocate`), όχι παρενέργεια — άγκυρες Η3/Η6.
       const { geocode, calls } = spyGeocoder(HIT_EXACT);
       const pinned: AddressLike = { ...EGNATIA, coordinates: DOOR, source: 'dragged' };
 
-      const { outcome } = await resolveAddressPosition(pinned, { ...pinned, street: 'Τσιμισκή' }, geocode, NOW);
+      const { outcome, position, drift } = await resolveAddressPosition(
+        pinned, { ...pinned, street: 'Τσιμισκή' }, geocode, NOW,
+      );
 
-      expect(outcome).toBe('geocoded');
+      expect(outcome).toBe('human-kept');
+      expect(position.coordinates).toEqual(DOOR);
+      // Ρωτήθηκε ΜΟΝΟ για μέτρηση — όσα αιτήματα και πριν.
       expect(calls).toHaveLength(1);
+      // Η πόρτα ↔ το σημείο της μηχανής ≈ 4,6 χλμ. — πέρα από κάθε αβεβαιότητα.
+      expect(drift?.distanceMetres).toBeGreaterThan(1_000);
     });
   });
 
