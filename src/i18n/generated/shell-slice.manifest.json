@@ -30,7 +30,7 @@
     "src/i18n/generated/routes/terms.el.json": "481f837696b407553f56de16128778617a86f72cf7b27471d61cd5793cf7d288",
     "src/i18n/generated/routes/test-harness__listing-shapes.el.json": "0a342a84a1d24b4b7068e33a0e303cd6c22e437cc38be31b5a63e33c4089cd6b",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "b756728ca41b1979941da6fbba799838d84f3ece684547a5d3882e352aac8b12",
+    "src/i18n/generated/shell-slice.el.json": "0d80b745cb28d115db6dfba7fe1f5b6c5f00f754385aeefedb87e8fb815b6a34",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "boundaries": {
@@ -69,7 +69,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "4a14b3368823b580f69790e7ed6f1df35dd122a8e56785012c62c8343a3c45e1",
+  "inputsSha256": "657da04c481c47b78b77af3c35dea8b3ba97ad9be7086e2fa97f86f71bc89756",
   "languages": [
     "el"
   ],
@@ -139,10 +139,10 @@
     "src/components/account/tax-identity-labels.ts": "6ef45577a4701ebce1c90bb24aeb4fb8fd75649b2b71c026855b0f17f90c8623",
     "src/components/completion/completion-bucket-classes.ts": "d046fc132098ac220f1084138d0b1f5ef9b1ce6f3f53070974a0b838ca3749e1",
     "src/components/contact/FirstContactAction.tsx": "78c9f06be3c3c5c1d85dbb3a47f69e46a96bcbe011c7e01f68cea70834eb09ba",
-    "src/components/contact/FirstContactOutcomeNotice.tsx": "978e787c1acf04e0042f2235e3e38e591dc4974b90c4305ae6d28ce485fcdcc7",
-    "src/components/contact/GuestContactContent.tsx": "2e2df64727f72187d6ca29c3ca38dad5a4b9054220ecec629fe1999980da434b",
+    "src/components/contact/FirstContactOutcomeNotice.tsx": "4a74c8b1f3bb40da4b4509ef99c16618b34bbe6a24a2d088964cf354db902282",
+    "src/components/contact/GuestContactContent.tsx": "707c4dffa3b34797f1b106889ad20c3b0e809b025b9c957320c0cb671095088a",
     "src/components/contact/first-contact-guest-labels.ts": "9f92670c40a92a00f7ac9f09df3c28c4a39c27ca557bbd4dff87999bb8ca3275",
-    "src/components/contact/first-contact-labels.ts": "97d44c8b410a72d2fb761a366f6919f70f6ef3d3e3ef59f2b36ce599f7403a60",
+    "src/components/contact/first-contact-labels.ts": "95c65bf70b3967eef83bad8f0e24d6a66ee9d971769e7a89d2edaec107c6e302",
     "src/components/contact/first-contact-namespace.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/components/contact/guest-contact-view.ts": "9c6556887a18913e499f7906634cc552f830257c5766e0154fbda9603a0c393f",
     "src/components/dashboard/DashboardHome.tsx": "2ebe4bd60f9048488e0343135ea19803ecb053a69141b3908a8ba150531e6e17",
@@ -1368,6 +1368,7 @@
             "userMenu.loggingOut",
             "userMenu.logout",
             "userMenu.menuLabel",
+            "userMenu.myContacts",
             "userMenu.noEmail"
           ],
           "prefixes": [],
@@ -1388,6 +1389,7 @@
             "userMenu.loggingOut",
             "userMenu.logout",
             "userMenu.menuLabel",
+            "userMenu.myContacts",
             "userMenu.noEmail",
             "userMenu.spaces.current",
             "userMenu.spaces.label"
@@ -1412,6 +1414,7 @@
             "userMenu.loggingOut",
             "userMenu.logout",
             "userMenu.menuLabel",
+            "userMenu.myContacts",
             "userMenu.noEmail"
           ],
           "prefixes": [],
@@ -1432,6 +1435,7 @@
             "userMenu.loggingOut",
             "userMenu.logout",
             "userMenu.menuLabel",
+            "userMenu.myContacts",
             "userMenu.noEmail"
           ],
           "prefixes": [],
@@ -1452,6 +1456,7 @@
             "userMenu.loggingOut",
             "userMenu.logout",
             "userMenu.menuLabel",
+            "userMenu.myContacts",
             "userMenu.noEmail"
           ],
           "prefixes": [],
@@ -1472,6 +1477,7 @@
             "userMenu.loggingOut",
             "userMenu.logout",
             "userMenu.menuLabel",
+            "userMenu.myContacts",
             "userMenu.noEmail"
           ],
           "prefixes": [],
@@ -1492,6 +1498,7 @@
             "userMenu.loggingOut",
             "userMenu.logout",
             "userMenu.menuLabel",
+            "userMenu.myContacts",
             "userMenu.noEmail"
           ],
           "prefixes": [],
@@ -1512,6 +1519,7 @@
             "userMenu.loggingOut",
             "userMenu.logout",
             "userMenu.menuLabel",
+            "userMenu.myContacts",
             "userMenu.noEmail"
           ],
           "prefixes": [],
@@ -1532,6 +1540,7 @@
             "userMenu.loggingOut",
             "userMenu.logout",
             "userMenu.menuLabel",
+            "userMenu.myContacts",
             "userMenu.noEmail"
           ],
           "prefixes": [],
@@ -1552,6 +1561,7 @@
             "userMenu.loggingOut",
             "userMenu.logout",
             "userMenu.menuLabel",
+            "userMenu.myContacts",
             "userMenu.noEmail"
           ],
           "prefixes": [],
@@ -4187,7 +4197,7 @@
     "src/components/header/help-button.tsx": "dc22b85d44c8a74a38cd8923d6bbd3b04e40ba775bc55cd5a2f22b51eb9ccb29",
     "src/components/header/language-switcher.tsx": "25414678713ac486b99364f5133bd21e3bfb54138c46a18443d29f2d39447ba1",
     "src/components/header/theme-toggle.tsx": "b3f84f46495466cb3891d4a6ecb9d61e61d90406dfd5aa91f9727b9b9d544038",
-    "src/components/header/user-menu.tsx": "af94888940845c97a62b7d0afc179ebfa85322ebdf9df2710ae5ce36822511d1",
+    "src/components/header/user-menu.tsx": "7dfcfecf3e750a948fa3be2012c934489e43a31974745e42f4505fe933111dc0",
     "src/components/header/voice-assistant-button.tsx": "c56a417da0fd30f53ba7046c5293b0f09395d03f3149675787f6d1ca109f9e05",
     "src/components/job/HiddenItemsBadge.tsx": "4a787cd073d257838351379574abe8e8dd222efca9c44e05fb0fdb3ff3e7b58d",
     "src/components/job/JobSuggestion.tsx": "d84189b720848db336ca46f0b48c1d6c52e03bef6544d2c8f268d3389490bc64",
@@ -4474,6 +4484,7 @@
     "src/lib/auth/workspace-from-path.ts": "a5025ff8ab2dbb6a3479ed1ccafc524d6d1806c101c51793acfa821a83eddf01",
     "src/lib/auth/workspace-membership.ts": "b06c7adf0b256107d583687a1856d2fb7716806189bac1f6c4716126475e7e89",
     "src/lib/contact/first-contact-limits.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
+    "src/lib/contact/first-contact-routes.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/criteria/criterion-vocabulary.ts": "fa71c8ecb83e12afbfc91234df5f2949108d7d55559ede9061d58dfbfaec34ca",
     "src/lib/criteria/listing-criteria-judge.ts": "3695da5cfd8a6867299fbfe1bf072ab178834679243921e4578f55e1414c1f84",
     "src/lib/criteria/listing-criteria-url.ts": "bbf9909549aac81c41500a0861bb2526a3c7c67ffd0f02189ad4142d381137b7",
@@ -4771,10 +4782,10 @@
   ],
   "stats": {
     "dynamicBoundaries": 18,
-    "matchedKeys": 176,
+    "matchedKeys": 177,
     "routeBoundaries": 0,
-    "shellFiles": 607,
-    "sliceBytes": 404334
+    "shellFiles": 608,
+    "sliceBytes": 404382
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
@@ -5474,6 +5485,7 @@
         "userMenu.loggingOut",
         "userMenu.logout",
         "userMenu.menuLabel",
+        "userMenu.myContacts",
         "userMenu.noEmail",
         "voiceAssistant.aiProcessing",
         "voiceAssistant.cancel",
@@ -5782,6 +5794,7 @@
         "userMenu.loggingOut",
         "userMenu.logout",
         "userMenu.menuLabel",
+        "userMenu.myContacts",
         "userMenu.noEmail",
         "userMenu.spaces.current",
         "userMenu.spaces.label",
@@ -6090,6 +6103,7 @@
         "userMenu.loggingOut",
         "userMenu.logout",
         "userMenu.menuLabel",
+        "userMenu.myContacts",
         "userMenu.noEmail",
         "voiceAssistant.aiProcessing",
         "voiceAssistant.cancel",
@@ -6395,6 +6409,7 @@
         "userMenu.loggingOut",
         "userMenu.logout",
         "userMenu.menuLabel",
+        "userMenu.myContacts",
         "userMenu.noEmail",
         "voiceAssistant.aiProcessing",
         "voiceAssistant.cancel",
@@ -6700,6 +6715,7 @@
         "userMenu.loggingOut",
         "userMenu.logout",
         "userMenu.menuLabel",
+        "userMenu.myContacts",
         "userMenu.noEmail",
         "voiceAssistant.aiProcessing",
         "voiceAssistant.cancel",
@@ -7010,6 +7026,7 @@
         "userMenu.loggingOut",
         "userMenu.logout",
         "userMenu.menuLabel",
+        "userMenu.myContacts",
         "userMenu.noEmail",
         "voiceAssistant.aiProcessing",
         "voiceAssistant.cancel",
@@ -7315,6 +7332,7 @@
         "userMenu.loggingOut",
         "userMenu.logout",
         "userMenu.menuLabel",
+        "userMenu.myContacts",
         "userMenu.noEmail",
         "voiceAssistant.aiProcessing",
         "voiceAssistant.cancel",
@@ -7631,6 +7649,7 @@
         "userMenu.loggingOut",
         "userMenu.logout",
         "userMenu.menuLabel",
+        "userMenu.myContacts",
         "userMenu.noEmail",
         "voiceAssistant.aiProcessing",
         "voiceAssistant.cancel",
@@ -7938,6 +7957,7 @@
         "userMenu.loggingOut",
         "userMenu.logout",
         "userMenu.menuLabel",
+        "userMenu.myContacts",
         "userMenu.noEmail",
         "voiceAssistant.aiProcessing",
         "voiceAssistant.cancel",
@@ -8243,6 +8263,7 @@
         "userMenu.loggingOut",
         "userMenu.logout",
         "userMenu.menuLabel",
+        "userMenu.myContacts",
         "userMenu.noEmail",
         "voiceAssistant.aiProcessing",
         "voiceAssistant.cancel",
