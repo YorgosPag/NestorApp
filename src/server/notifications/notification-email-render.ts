@@ -32,6 +32,10 @@
  */
 
 import type { HumanLanguage } from '@/i18n/languages';
+import {
+  emailScopeOf,
+  type EmailSubscriptionScope,
+} from '@/lib/notifications/email-subscription-scope';
 import { emailTextsFor, type EmailWording } from '@/server/comms/email-texts';
 // ⚠️ **Τοπικό αντίγραφο δεν επιτρέπεται** — το `escapeHtml` και τα χρώματα έρχονται από
 // το SSoT των προτύπων email. Υπάρχουν ήδη **δύο** υλοποιήσεις escape στο repo
@@ -49,11 +53,14 @@ import { BRAND, escapeHtml } from '@/services/email-templates/base-email-templat
  * σελίδα προτιμήσεων (για άνθρωπο) και ο στόχος του one-click (για το πρόγραμμα
  * email, RFC 8058). Οι δύο τελευταίες δείχνουν σε **διαφορετικά** σημεία επίτηδες:
  * η σελίδα **ρωτά**, το one-click **εκτελεί**.
+ *
+ * 📧 ADR-849 Α2 — και οι δύο παίρνουν **εμβέλεια**, που μπαίνει στην υπογραφή του token:
+ * για τη σελίδα = ποιοι τύποι μπαίνουν **μπροστά**· για το one-click = **τι** σταματά.
  */
 export interface EmailLinks {
   permalink(notificationId: string): string | null;
-  preferences(recipientId: string): string | null;
-  oneClickUnsubscribe(recipientId: string): string | null;
+  preferences(recipientId: string, scope: EmailSubscriptionScope): string | null;
+  oneClickUnsubscribe(recipientId: string, scope: EmailSubscriptionScope): string | null;
 }
 
 /** Κανένας σύνδεσμος — η συμπεριφορά πριν το ADR-848, και η προεπιλογή των tests. */
@@ -69,6 +76,18 @@ export interface RenderableMessage {
   readonly content: string;
   readonly notificationId?: string;
   readonly recipientId?: string;
+  /**
+   * 📧 ADR-849 — ο τύπος της ειδοποίησης (`metadata.eventType` της ουράς). Κρίνει την
+   * **εμβέλεια** του συνδέσμου διαχείρισης. Τύπος `string`: έρχεται από έγγραφο· παλιά
+   * έγγραφα δεν τον έχουν ⇒ εμβέλεια «όλα».
+   */
+  readonly eventType?: string;
+}
+
+/** ADR-849 — ένας σύνδεσμος διαχείρισης: **πού** πάει και **τι λέει**. */
+interface ManageLink {
+  readonly url: string;
+  readonly label: string;
 }
 
 const FONT = "-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
@@ -117,6 +136,34 @@ export function soleRecipientOf(members: readonly RenderableMessage[]): string |
   return members.every((member) => member.recipientId === first) ? first : null;
 }
 
+/**
+ * ADR-849 — ο σύνδεσμος διαχείρισης του **μεμονωμένου**: εμβέλεια = ο τύπος του, και η
+ * ετικέτα το λέει («Να μη λαμβάνω τέτοια email»). Χωρίς τύπο (παλιό έγγραφο) ⇒ ό,τι πριν.
+ */
+function soloManageLink(message: RenderableMessage, links: EmailLinks, wording: EmailWording): ManageLink | null {
+  if (!message.recipientId) return null;
+  const scope = emailScopeOf([message.eventType]);
+  const url = links.preferences(message.recipientId, scope);
+  if (url === null) return null;
+  return { url, label: scope.kind === 'types' ? wording.links.manageType : wording.links.manage };
+}
+
+/**
+ * ADR-849 — ο σύνδεσμος διαχείρισης της **σύνοψης**: η σελίδα ανοίγει με **τους τύπους
+ * της σύνοψης μπροστά**. Η ετικέτα μένει γενική — ονόματα τύπων μέσα στο email θα ήταν
+ * δεύτερο αντίγραφο των ετικετών της οθόνης (δόγμα `email-texts.ts`: ο server δεν διαβάζει locale).
+ */
+function digestManageLink(
+  members: readonly RenderableMessage[],
+  links: EmailLinks,
+  wording: EmailWording,
+): ManageLink | null {
+  const recipient = soleRecipientOf(members);
+  if (recipient === null) return null;
+  const url = links.preferences(recipient, emailScopeOf(members.map((member) => member.eventType)));
+  return url === null ? null : { url, label: wording.links.manage };
+}
+
 // =============================================================================
 // ΚΟΙΝΑ ΚΟΜΜΑΤΙΑ HTML
 // =============================================================================
@@ -134,13 +181,13 @@ function buttonHtml(url: string, label: string): string {
 }
 
 /** Το υποσέλιδο: ποιος στέλνει, γιατί, και πού σταματά. */
-function footerHtml(wording: EmailWording, manageUrl: string | null): string {
+function footerHtml(wording: EmailWording, manage: ManageLink | null): string {
   const style = `margin:8px 0 0;color:${BRAND.grayLight};font-family:${FONT};font-size:12px;line-height:1.5;`;
   const parts = [`<p style="${style}">${escapeHtml(wording.digest.footer)}</p>`];
-  if (manageUrl) {
+  if (manage) {
     parts.push(
       `<p style="${style}">${escapeHtml(wording.links.whyReceived)} ` +
-        `<a href="${escapeHtml(manageUrl)}" style="color:${BRAND.grayLight};text-decoration:underline;">${escapeHtml(wording.links.manage)}</a></p>`,
+        `<a href="${escapeHtml(manage.url)}" style="color:${BRAND.grayLight};text-decoration:underline;">${escapeHtml(manage.label)}</a></p>`,
     );
   }
   return parts.join('');
@@ -177,9 +224,9 @@ function bodyParagraphHtml(message: RenderableMessage): string {
 }
 
 /** Οι γραμμές του υποσέλιδου στο απλό κείμενο. Χωρίς σύνδεσμο ⇒ ό,τι έγραφε πάντα. */
-function footerTextLines(wording: EmailWording, manageUrl: string | null): string[] {
+function footerTextLines(wording: EmailWording, manage: ManageLink | null): string[] {
   const lines = ['—', wording.digest.footer];
-  if (manageUrl) lines.push(wording.links.whyReceived, `${wording.links.manage}: ${manageUrl}`);
+  if (manage) lines.push(wording.links.whyReceived, `${manage.label}: ${manage.url}`);
   return lines;
 }
 
@@ -214,8 +261,7 @@ export function renderDigestText(
     lines.push('');
   });
 
-  const recipient = soleRecipientOf(members);
-  lines.push(...footerTextLines(wording, recipient ? links.preferences(recipient) : null));
+  lines.push(...footerTextLines(wording, digestManageLink(members, links, wording)));
   return lines.join('\n');
 }
 
@@ -235,14 +281,13 @@ export function renderDigestHtml(
   const wording = emailTextsFor(language);
   const intro = wording.digest.intro(members.length);
   const items = members.map((member) => digestItemHtml(member, links)).join('');
-  const recipient = soleRecipientOf(members);
 
   return documentHtml({
     language,
     title: subject,
     preheader: intro,
     bodyHtml: `<p style="margin:0 0 16px;">${escapeHtml(intro)}</p><ol style="margin:0;padding-left:20px;">${items}</ol>`,
-    footer: footerHtml(wording, recipient ? links.preferences(recipient) : null),
+    footer: footerHtml(wording, digestManageLink(members, links, wording)),
   });
 }
 
@@ -256,14 +301,14 @@ export function renderSoloText(
   language: HumanLanguage,
   links: EmailLinks = NO_LINKS,
 ): string {
-  const url = permalinkOf(message, links);
-  const manageUrl = message.recipientId ? links.preferences(message.recipientId) : null;
-  if (!url && !manageUrl) return soloPlainBody(message);
-
   const wording = emailTextsFor(language);
+  const url = permalinkOf(message, links);
+  const manage = soloManageLink(message, links, wording);
+  if (!url && !manage) return soloPlainBody(message);
+
   const lines = [soloPlainBody(message)];
   if (url) lines.push('', `${wording.links.openPlain}: ${url}`);
-  lines.push('', ...footerTextLines(wording, manageUrl));
+  lines.push('', ...footerTextLines(wording, manage));
   return lines.join('\n');
 }
 
@@ -283,6 +328,6 @@ export function renderSoloHtml(
     title: subject,
     preheader: bodyAddsAnything(message) ? message.content : message.subject,
     bodyHtml: `${heading}${bodyParagraphHtml(message)}${url ? buttonHtml(url, wording.links.open) : ''}`,
-    footer: footerHtml(wording, message.recipientId ? links.preferences(message.recipientId) : null),
+    footer: footerHtml(wording, soloManageLink(message, links, wording)),
   });
 }

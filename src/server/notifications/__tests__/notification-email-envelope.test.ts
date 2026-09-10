@@ -12,6 +12,7 @@
 
 jest.mock('server-only', () => ({}));
 
+import { scopeField } from '@/lib/notifications/email-subscription-scope';
 import { planEmailDelivery, type PendingEmail } from '@/server/notifications/email-digest';
 import {
   digestHeaders,
@@ -97,5 +98,39 @@ describe('Β — κεφαλίδες: και οι δύο, ή καμία', () => {
     const digest = plan.find((entry) => entry.kind === 'digest');
     if (digest?.kind !== 'digest') throw new Error('Δεν σχηματίστηκε σύνοψη — η άγκυρα δεν κοίταξε τίποτα.');
     expect(digestHeaders(digest, LINKS)?.['List-Unsubscribe-Post']).toBe('List-Unsubscribe=One-Click');
+  });
+});
+
+describe('📧 Γ — ADR-849: η εμβέλεια των συνδέσμων', () => {
+  /** Σύνδεσμοι που **δείχνουν** την εμβέλεια — ώστε η άγκυρα να τη βλέπει στο URL. */
+  const SCOPED: EmailLinks = {
+    permalink: LINKS.permalink,
+    preferences: (uid, scope) => `${ORIGIN}/email/preferences/tok-${uid}-${scopeField(scope)}`,
+    oneClickUnsubscribe: (uid, scope) => `${ORIGIN}/api/notifications/email/subscription?t=tok-${uid}-${scopeField(scope)}`,
+  };
+  const MATCH = 'properties.demandListingMatch';
+
+  it('Γ1 🔑 — μεμονωμένο email τύπου: one-click ΜΟΝΟ του τύπου + «Να μη λαμβάνω τέτοια email»', () => {
+    const envelope = soloEnvelope(pending({ eventType: MATCH }), SCOPED);
+    expect(envelope.headers?.['List-Unsubscribe']).toBe(`<${ORIGIN}/api/notifications/email/subscription?t=tok-u1-${MATCH}>`);
+    expect(envelope.html).toContain(`${ORIGIN}/email/preferences/tok-u1-${MATCH}`);
+    expect(envelope.html).toContain('Να μη λαμβάνω τέτοια email');
+  });
+
+  it('Γ2 — χωρίς τύπο (έγγραφο πριν το ADR-849) ⇒ «όλα», ακριβώς όπως πριν', () => {
+    const envelope = soloEnvelope(pending(), SCOPED);
+    expect(envelope.headers?.['List-Unsubscribe']).toBe(`<${ORIGIN}/api/notifications/email/subscription?t=tok-u1-all>`);
+    expect(envelope.html).toContain('Διαχείριση ειδοποιήσεων email');
+  });
+
+  it('Γ3 🔑 — σύνοψη: one-click «όλα», αλλά η σελίδα ανοίγει με ΤΟΥΣ ΤΥΠΟΥΣ της σύνοψης μπροστά', () => {
+    const plan = planEmailDelivery(
+      [pending({ id: 'a', eventType: MATCH }), pending({ id: 'b', eventType: 'properties.mandateDecided' })],
+      SCOPED,
+    );
+    const digest = plan.find((entry) => entry.kind === 'digest');
+    if (digest?.kind !== 'digest') throw new Error('Δεν σχηματίστηκε σύνοψη — η άγκυρα δεν κοίταξε τίποτα.');
+    expect(digestHeaders(digest, SCOPED)?.['List-Unsubscribe']).toContain('tok-u1-all');
+    expect(digest.html).toContain(`tok-u1-${MATCH},properties.mandateDecided`);
   });
 });

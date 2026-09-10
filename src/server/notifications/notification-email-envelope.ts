@@ -17,7 +17,8 @@
  * ────────────────────────────────────────────────────────────────────────────
  * | Μήνυμα | `List-Unsubscribe` | Γιατί |
  * |---|---|---|
- * | Ειδοποίηση (μεμονωμένη ή σύνοψη) | ✅ | Η Google το ορίζει «subscription message»: ο παραλήπτης μπορεί να το σταματήσει |
+ * | Μεμονωμένη ειδοποίηση | ✅ **μόνο ο τύπος της** (ADR-849) | Google FAQ: το one-click αφαιρεί *«only from the mailing list associated with the message»* |
+ * | Σύνοψη | ✅ **όλα** (ADR-849 Δ2) | Περιέχει πολλούς τύπους· μια «διαγραφή» που αύριο φέρνει σύνοψη με άλλους τύπους θα έμοιαζε αποτυχημένη |
  * | **Επείγουσα** ειδοποίηση (ασφάλεια) | ❌ | Υποχρεωτική — καμία ρύθμιση δεν τη σταματά, άρα η υπόσχεση θα ήταν ψέμα |
  * | Ό,τι δεν είναι ειδοποίηση | ❌ | Δεν μας ανήκει ο φάκελός του: φεύγει **όπως έφευγε** |
  *
@@ -29,6 +30,11 @@ import 'server-only';
 
 import { resolveHumanLanguage } from '@/i18n/languages';
 import { publicUrl } from '@/lib/http/public-origin';
+import {
+  ALL_EMAILS,
+  emailScopeOf,
+  type EmailSubscriptionScope,
+} from '@/lib/notifications/email-subscription-scope';
 import {
   emailOneClickHref,
   emailPreferencesHref,
@@ -67,14 +73,19 @@ type DigestEntry = Extract<DeliveryPlanEntry, { kind: 'digest' }>;
  * **μόνο** ό,τι της ανήκει.
  */
 export function liveEmailLinks(): EmailLinks {
-  const withToken = (recipientId: string, href: (token: string) => string): string | null => {
-    const token = issueEmailSubscriptionToken(recipientId);
+  const withToken = (
+    recipientId: string,
+    scope: EmailSubscriptionScope,
+    href: (token: string) => string,
+  ): string | null => {
+    // ADR-849 — η εμβέλεια μπαίνει ΜΕΣΑ στην υπογραφή· καμία παράμετρος URL δεν τη μεγαλώνει.
+    const token = issueEmailSubscriptionToken(recipientId, scope);
     return token === null ? null : publicUrl(href(token));
   };
   return {
     permalink: (notificationId) => publicUrl(notificationPermalinkHref(notificationId)),
-    preferences: (recipientId) => withToken(recipientId, emailPreferencesHref),
-    oneClickUnsubscribe: (recipientId) => withToken(recipientId, emailOneClickHref),
+    preferences: (recipientId, scope) => withToken(recipientId, scope, emailPreferencesHref),
+    oneClickUnsubscribe: (recipientId, scope) => withToken(recipientId, scope, emailOneClickHref),
   };
 }
 
@@ -88,19 +99,26 @@ export function liveEmailLinks(): EmailLinks {
 export function subscriptionHeaders(
   recipientId: string | null | undefined,
   links: EmailLinks,
+  scope: EmailSubscriptionScope = ALL_EMAILS,
 ): Readonly<Record<string, string>> | undefined {
   if (!recipientId) return undefined;
-  const url = links.oneClickUnsubscribe(recipientId);
+  const url = links.oneClickUnsubscribe(recipientId, scope);
   if (url === null) return undefined;
   return { 'List-Unsubscribe': `<${url}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' };
 }
 
-/** Οι κεφαλίδες μιας σύνοψης — **μόνο** αν όλα τα μέλη ανήκουν στον ίδιο άνθρωπο. */
+/**
+ * Οι κεφαλίδες μιας σύνοψης — **μόνο** αν όλα τα μέλη ανήκουν στον ίδιο άνθρωπο.
+ *
+ * ⚠️ ADR-849 Δ2 — εμβέλεια **«όλα»**, επίτηδες: η σύνοψη ανακατεύει τύπους, και μια
+ * «Κατάργηση εγγραφής» που αύριο φέρνει σύνοψη με **άλλους** τύπους θα έμοιαζε αποτυχημένη
+ * — και η επόμενη κίνηση είναι «Αναφορά ως ανεπιθύμητο». Η επιλογή ανά τύπο ζει στη σελίδα.
+ */
 export function digestHeaders(
   entry: DigestEntry,
   links: EmailLinks,
 ): Readonly<Record<string, string>> | undefined {
-  return subscriptionHeaders(soleRecipientOf(entry.members), links);
+  return subscriptionHeaders(soleRecipientOf(entry.members), links, ALL_EMAILS);
 }
 
 /**
@@ -121,7 +139,10 @@ export function soloEnvelope(message: PendingEmail, links: EmailLinks = NO_LINKS
 
   const urgent = message.priority === MESSAGE_PRIORITIES.URGENT;
   const effective: EmailLinks = urgent ? { ...links, preferences: () => null } : links;
-  const headers = urgent ? undefined : subscriptionHeaders(message.recipientId, links);
+  // 📧 ADR-849 — το one-click του μεμονωμένου κόβει **μόνο τον τύπο του** (χωρίς τύπο ⇒ όλα).
+  const headers = urgent
+    ? undefined
+    : subscriptionHeaders(message.recipientId, links, emailScopeOf([message.eventType]));
 
   return {
     subject,

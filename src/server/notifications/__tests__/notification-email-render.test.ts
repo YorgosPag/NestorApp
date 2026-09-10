@@ -154,3 +154,27 @@ describe('Γ — κείμενο χρήστη και URL δεν σπάνε ποτ
     expect(renderSoloHtml(MATCH, 'el', 'x', LINKS)).not.toMatch(/<p[^>]*>\s*<\/p>/);
   });
 });
+
+// ============================================================================
+// Δ — ADR-849: Η ΕΤΙΚΕΤΑ ΤΟΥ ΣΥΝΔΕΣΜΟΥ ΑΚΟΛΟΥΘΕΙ ΤΗΝ ΕΜΒΕΛΕΙΑ
+// ============================================================================
+
+describe('📧 Δ — «Να μη λαμβάνω τέτοια email» ΜΟΝΟ όπου ο σύνδεσμος αφορά έναν τύπο', () => {
+  const typedMatch: RenderableMessage = { ...MATCH, eventType: 'properties.demandListingMatch' };
+
+  it('Δ1 — μεμονωμένο με τύπο: η ετικέτα του τύπου, σε HTML ΚΑΙ κείμενο', () => {
+    expect(renderSoloHtml(typedMatch, 'el', 'x', LINKS)).toContain('Να μη λαμβάνω τέτοια email');
+    expect(renderSoloText(typedMatch, 'en', LINKS)).toContain('Stop emails like this:');
+  });
+
+  it('Δ2 🔴 — υποχρεωτικός τύπος ⇒ ΠΟΤΕ «σταμάτα αυτά» (η γενική ετικέτα)', () => {
+    const security: RenderableMessage = { ...MATCH, eventType: 'security.newDeviceLogin' };
+    expect(renderSoloHtml(security, 'el', 'x', LINKS)).not.toContain('Να μη λαμβάνω τέτοια email');
+  });
+
+  it('Δ3 — η σύνοψη κρατά τη γενική ετικέτα — τα ονόματα τύπων τα δείχνει η σελίδα', () => {
+    const html = renderDigestHtml([typedMatch, { ...INTEREST, eventType: 'properties.demandInterest' }], 'el', 'x', LINKS);
+    expect(html).toContain('Διαχείριση ειδοποιήσεων email');
+    expect(html).not.toContain('Να μη λαμβάνω τέτοια email');
+  });
+});
