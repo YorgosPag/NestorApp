@@ -17,6 +17,7 @@ import type { ProjectAddress } from '@/types/project/addresses';
 import type { GeoPoint } from '@/types/geo/coordinates';
 import type { AddressEditorHandle } from '@/components/shared/addresses/editor';
 import { mapPinDropText, pendingPinAddress, type PinDrop } from '@/components/shared/addresses/pin-drop';
+import { usePinDropGate } from '@/components/shared/addresses/usePinDropGate';
 import { storedAddressToResolved } from '@/utils/address/administrative-hierarchy';
 
 /** Η πινέζα της φόρμας προσθήκης — δεν είναι διεύθυνση, είναι θέση σε αναμονή. */
@@ -39,11 +40,13 @@ interface MapModelInput {
   readonly editingIndex: number | null;
   readonly pendingDragCoords: GeoPoint | null;
   readonly editPlacedPoint: GeoPoint | null;
+  /** Ο τύπος που δείχνει η φόρμα προσθήκης — η πινέζα σε αναμονή γράφει τον ΙΔΙΟ. */
+  readonly addFormType: ProjectAddress['type'];
 }
 
 /** Τι ζωγραφίζει ο χάρτης, ποια πινέζα είναι «ενεργή», ποιες είναι κλειδωμένες. */
 export function useLocationsMapModel(input: MapModelInput) {
-  const { visibleAddresses, localAddresses, isAddFormOpen, editingIndex, pendingDragCoords, editPlacedPoint } = input;
+  const { visibleAddresses, localAddresses, isAddFormOpen, editingIndex, pendingDragCoords, editPlacedPoint, addFormType } = input;
   const editingId = editingIndex !== null ? localAddresses[editingIndex]?.id : undefined;
 
   // Η πινέζα που δουλεύεται στη φόρμα (amber + αναπήδηση).
@@ -63,9 +66,9 @@ export function useLocationsMapModel(input: MapModelInput) {
         : address,
     );
     return isAddFormOpen && pendingDragCoords
-      ? [...real, pendingPinAddress(pendingDragCoords, PENDING_ADDRESS_ID)]
+      ? [...real, pendingPinAddress(pendingDragCoords, PENDING_ADDRESS_ID, addFormType)]
       : real;
-  }, [visibleAddresses, editingId, editPlacedPoint, isAddFormOpen, pendingDragCoords]);
+  }, [visibleAddresses, editingId, editPlacedPoint, isAddFormOpen, pendingDragCoords, addFormType]);
 
   return { activeEditingAddressId, readOnlyAddressIds, mapAddresses };
 }
@@ -85,6 +88,8 @@ interface DragRoutingInput {
 export function useLocationsDragRouting(input: DragRoutingInput) {
   const { visibleAddresses, isAddFormOpen, editingIndex, addEditorRef, editEditorRef } = input;
   const [pendingViewDrag, setPendingViewDrag] = useState<PendingViewDrag | null>(null);
+  // Β13: ο διάλογος της ΠΡΟΒΟΛΗΣ έχει τον ίδιο φύλακα με του editor — κλεισμένη χειρονομία δεν ξανανοίγει.
+  const gate = usePinDropGate();
 
   const handleCombinedDragUpdate = useCallback((drop: PinDrop, index: number) => {
     const editorDrop = mapPinDropText(drop, (address) => storedAddressToResolved(address, 'projectAddress'));
@@ -96,10 +101,14 @@ export function useLocationsDragRouting(input: DragRoutingInput) {
       editEditorRef.current?.setPendingDrag(editorDrop);
       return;
     }
+    if (!gate.admits(drop)) return;
     setPendingViewDrag({ drop, originalIndex: visibleAddresses[index]?.originalIndex ?? index });
-  }, [isAddFormOpen, editingIndex, visibleAddresses, addEditorRef, editEditorRef]);
+  }, [isAddFormOpen, editingIndex, visibleAddresses, addEditorRef, editEditorRef, gate]);
 
-  const clearViewDrag = useCallback(() => setPendingViewDrag(null), []);
+  const clearViewDrag = useCallback(() => {
+    gate.settle(pendingViewDrag?.drop);
+    setPendingViewDrag(null);
+  }, [gate, pendingViewDrag]);
 
   return { pendingViewDrag, clearViewDrag, handleCombinedDragUpdate };
 }

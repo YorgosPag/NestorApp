@@ -179,6 +179,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
     editingIndex: loc.editingIndex,
     pendingDragCoords: loc.pendingDragCoords,
     editPlacedPoint: loc.editPlacedPoint,
+    addFormType: loc.addType,
   });
   /**
    * 🔴 **Ο ΔΕΣΜΟΣ ΚΑΤΑΛΟΓΟΥ ⇄ ΧΑΡΤΗ** — ADR-332 **D26**. Ως τις 05/09 ο κατάλογος

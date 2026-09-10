@@ -156,8 +156,8 @@ export function BuildingAddressesEditor({
     if (initialValues) {
       return [placedPoint ? { ...initialValues, coordinates: { lat: placedPoint.lat, lng: placedPoint.lng } } : initialValues];
     }
-    return placedPoint ? [pendingPinAddress(placedPoint, BUILDING_DRAFT_ADDRESS_ID)] : [];
-  }, [initialValues, placedPoint]);
+    return placedPoint ? [pendingPinAddress(placedPoint, BUILDING_DRAFT_ADDRESS_ID, type)] : [];
+  }, [initialValues, placedPoint, type]);
 
   /**
    * Πού να μετρηθεί το «κοντά»: **το έργο**, και αν εκείνο δεν έχει ακόμη θέση, η ήδη
@@ -173,7 +173,8 @@ export function BuildingAddressesEditor({
     () => hierarchyToResolvedAddress(hierarchy),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [(hierarchy as AddressWithHierarchyValue).street, (hierarchy as AddressWithHierarchyValue).number,
-     (hierarchy as AddressWithHierarchyValue).postalCode, (hierarchy as AddressWithHierarchyValue).settlementName],
+     (hierarchy as AddressWithHierarchyValue).postalCode, (hierarchy as AddressWithHierarchyValue).settlementName,
+     (hierarchy as AddressWithHierarchyValue).country],
   );
 
   const notifyParent = useCallback((h: Partial<AddressWithHierarchyValue>, t: ProjectAddressType, bs: BlockSideDirection | typeof SELECT_CLEAR_VALUE, lbl: string, prim: boolean) => {
