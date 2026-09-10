@@ -274,12 +274,14 @@
     "diff": {
       "title": "Changes Summary",
       "noChanges": "No changes",
+      "cleared": "will be cleared",
       "fieldsChanged": "{count} {count, plural, one {field changes} other {fields change}}"
     },
     "dragConfirm": {
       "title": "Confirm Location Change",
       "description": "The new pin position differs from the current address. Update the form?",
       "confirm": "Yes, update",
+      "positionOnly": "Position only — keep the address",
       "cancel": "Cancel",
       "newAddress": "New position",
       "currentAddress": "Current address"
@@ -315,6 +317,7 @@
   },
   "publicMap": {
     "label": "On the public map:",
-    "noneHint": "No position was found for this address. Fill in street and number, or drag the pin on the map."
+    "noneHint": "No position was found for this address. Fill in street and number, or drag the pin on the map.",
+    "refineHint": "For an exact location, drag the pin to the door and choose «Position only»."
   }
 }

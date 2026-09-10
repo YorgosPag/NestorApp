@@ -65,7 +65,7 @@
     "shape": {
       "outline": "Surveyed outline",
       "pin": "Exact address",
-      "pinWithRing": "Street without a number",
+      "pinWithRing": "On the street, not at the door",
       "shadedCircle": "Area / neighbourhood",
       "shadedCity": "City only — not an address",
       "none": "No declared location"
@@ -166,7 +166,7 @@
       "meaning": {
         "outline": "We hold the actual outline. What you see is surveyed, not inferred.",
         "pin": "Exact address — the pin points at the building.",
-        "pinWithRing": "We know the street, not the number. The property is somewhere along it.",
+        "pinWithRing": "The map found the street, not the door. The property is somewhere along it.",
         "shadedCircle": "We know the area, not the address. The shaded zone is not the property.",
         "shadedCity": "We only know the city. We shade the city instead of dropping a pin, because a pin here would be an address we do not have."
       },
