@@ -37,6 +37,7 @@ import { DeclaredOccupationBadge } from '@/components/header/DeclaredOccupationB
 import { MySpacesSection } from '@/components/header/MySpacesSection';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import {
+  Handshake,
   User,
   LogOut,
 } from 'lucide-react';
@@ -48,6 +49,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Centralized routes
 import { AUTH_ROUTES, resolveAccountRoute } from '@/lib/routes';
+import { MY_FIRST_CONTACTS_ROUTE } from '@/lib/contact/first-contact-routes';
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -201,6 +203,21 @@ export function UserMenu({ signedOut }: Readonly<{ signedOut?: React.ReactNode }
         <MySpacesSection />
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
+          <DropdownMenuItem
+            /* ADR-843 §10.19 — «ΟΙ ΕΠΑΦΕΣ ΜΟΥ». Μέχρι 2026-09-10 ΚΑΝΕΝΑ μενού δεν
+               οδηγούσε εκεί. Ζουν ΕΚΤΟΣ χώρου (η χωρητικότητα μετριέται ανά ΑΝΘΡΩΠΟ),
+               άρα ο ίδιος προορισμός για ιδιώτη ΚΑΙ υπάλληλο — ο `workspaceHref` τον
+               αφήνει άθικτο, και κανένας επιλυτής δεν χρειάζεται.
+               🔑 ΕΔΩ, ΚΑΙ ΟΧΙ ΩΣ ΠΟΡΤΑ ΤΟΥ `PublicSiteHeader`: εκείνες είναι ΠΡΟΘΕΣΕΙΣ
+               («Ζητώ» · «Προσφέρω») που βλέπει και ο ανώνυμος· αυτό είναι ΛΙΣΤΑ του
+               συνδεδεμένου — πρότυπο Zillow «Profile → Saved homes». Και αυτό το μενού
+               αποδίδεται και στους πέντε κόσμους (CHECK 3.72): μία ένθεση, παντού. */
+            onClick={() => router.push(MY_FIRST_CONTACTS_ROUTE)}
+            className={layout.cursorPointer}
+          >
+            <Handshake className={`${layout.buttonIconSpacing} ${iconSizes.sm}`} />
+            <span>{t('userMenu.myContacts')}</span>
+          </DropdownMenuItem>
           <DropdownMenuItem
             /* 🔴 **Ο ΠΡΟΟΡΙΣΜΟΣ ΚΡΙΝΕΤΑΙ, ΔΕΝ ΕΙΝΑΙ ΣΤΑΘΕΡΟΣ — και ήταν ΖΩΝΤΑΝΟ 404.**
                Έγραφε `ACCOUNT_ROUTES.root`, δηλαδή `/account`. Αυτό το μενού

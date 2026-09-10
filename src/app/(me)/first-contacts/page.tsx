@@ -1,5 +1,5 @@
 /**
- * **`/contacts` — «οι επαφές μου»** (ADR-843 §10).
+ * **`/first-contacts` — «οι επαφές μου»** (ADR-843 §10 · §10.19).
  *
  * Λεπτή σελίδα: όλη η ουσία ζει στο {@link MyContactsContent}, ίδιο ιδίωμα με το
  * `(me)/demands/page.tsx` → `MyDemandsContent`. Ο λόγος είναι ο **έλεγχος**: ένα
@@ -8,7 +8,10 @@
  * ⚠️ Το κέλυφος (ταυτότητα + `noindex` + κεφαλίδα) το δίνει το `(me)/layout.tsx` —
  * **ποτέ** φρουρός μέσα στη σελίδα (CHECK 3.52 · ADR-777 §8.12).
  *
- * @module app/(me)/contacts/page
+ * 🔴 Ζούσε στο `/contacts` και **έκλεβε** το τμήμα των επαφών του γραφείου — δες
+ * `lib/contact/first-contact-routes.ts` για τη μετρημένη βλάβη.
+ *
+ * @module app/(me)/first-contacts/page
  */
 
 import { MyContactsContent } from '@/components/contact/MyContactsContent';
