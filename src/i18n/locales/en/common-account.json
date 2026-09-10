@@ -155,7 +155,23 @@
         }
       },
       "timezone": "Time zone",
-      "timezoneDescription": "Quiet hours and delivery windows are interpreted in this time zone."
+      "timezoneDescription": "Quiet hours and delivery windows are interpreted in this time zone.",
+      "preferences": {
+        "columns": {
+          "type": "Notification type",
+          "notify": "Notify me",
+          "email": "Also by email"
+        },
+        "always": "Always",
+        "mandatoryNote": "Security notifications about your account are always sent, regardless of your settings.",
+        "emailsOffNote": "Emails are turned off. Your choices per type are kept for when you turn them back on.",
+        "emailsOffAction": "Go to the email setting"
+      },
+      "saveState": {
+        "saving": "Saving…",
+        "saved": "All changes saved"
+      },
+      "writeFailed": "Your change wasn't saved. Please try again."
     },
     "security": {
       "passwordTitle": "Password",
