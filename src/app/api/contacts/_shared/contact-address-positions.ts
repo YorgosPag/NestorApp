@@ -1,0 +1,108 @@
+/**
+ * Ο πυρήνας των διαδρομών θέσης επαφής — **λύνει, δεν γράφει** (ADR-332 D27 Βήμα Β-ΙΙ).
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * ΓΙΑΤΙ «RESOLVE-ONLY» ΚΑΙ ΟΧΙ ΕΓΓΡΑΦΗ ΑΠΟ ΤΟΝ ΔΙΑΚΟΜΙΣΤΗ
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Η επαφή γράφεται από τον **πελάτη** (`contacts.service` → `updateDoc`), με ολόκληρη την
+ * αλυσίδα της φόρμας (dirty diff, δικλείδα D20, CDC). Ο γραφέας θέσης όμως ζει στον
+ * **διακομιστή** — εκεί είναι επιβλητή η πολιτική 1 αιτήματος/δευτ. του Nominatim και εκεί
+ * λύνει ήδη τα έργα και τα κτίρια. Άρα ο διακομιστής **αποφασίζει** και ο πελάτης γράφει
+ * **μία** φορά: ένα `updateDoc`, μία εγγραφή CDC. Δεύτερη εγγραφή από εδώ θα έδινε δύο
+ * εκδοχές του ίδιου εγγράφου και δύο γραμμές ιστορικού για μία πράξη του ανθρώπου.
+ *
+ * Πρακτική: Salesforce Geocode Data Integration Rules (θέση σε create **και** update) ·
+ * Salesforce Maps Verified Location (η πινέζα του ανθρώπου επιβιώνει αλλαγής διεύθυνσης).
+ *
+ * ⚠️ **Ο ΙΔΙΟΣ γραφέας** (`resolveProjectAddressPositions` — το όνομα είναι ιστορικό, ο
+ * τύπος δομικός). Δεύτερη μηχανή θέσης για τις επαφές θα απέκλινε από την πρώτη.
+ *
+ * @module api/contacts/_shared/contact-address-positions
+ */
+
+import 'server-only';
+
+import { z } from 'zod';
+import { createModuleLogger } from '@/lib/telemetry';
+import { GEOCODING_ACCURACIES } from '@/lib/geocoding/geocoding-types';
+import { WRITTEN_ADDRESS_SOURCES } from '@/lib/geocoding/address-position';
+import { resolveProjectAddressPositions } from '@/services/listings/address-place-writeback';
+import { addressPositionFieldsSchema } from '@/types/project/address-schemas';
+import type { CompanyAddress } from '@/types/ContactFormTypes';
+import { pickStoredAddressPosition } from '@/utils/address/stored-address-position';
+import {
+  contactAddressPositionViews,
+  type ContactAddressPositionsResponse,
+} from '@/utils/contacts/contact-address-position-view';
+
+const logger = createModuleLogger('ContactAddressPositions');
+
+/** Πάνω όριο εγγραφών ανά αίτημα — η μηχανή ρωτιέται σειριακά (1 αίτημα/δευτ.). */
+export const CONTACT_ADDRESS_POSITIONS_LIMIT = 50;
+
+const identityText = z.string().max(300).optional();
+
+/**
+ * Η **όψη θέσης** στο σύνορο — αυστηρή (`strict`): ταξιδεύουν μόνο όψεις, ποτέ ολόκληρες
+ * εγγραφές, άρα δεν υπάρχει κείμενο ή ιεραρχία που θα μπορούσε να κοπεί.
+ *
+ * 🔑 Τα πεδία ταυτότητας είναι ακριβώς το `ADDRESS_IDENTITY_FIELDS` — η άγκυρα
+ * `contact-address-positions.test` κρατά τα δύο ίσα. `source` / `accuracy` στενεύουν με
+ * `z.enum` πάνω σε **πίνακες χρόνου εκτέλεσης**: οι επαφές δεν είχαν ποτέ θέση, άρα κάθε
+ * τιμή τους προέρχεται από τον γραφέα (σε αντίθεση με τα έργα, όπου το `z.string()` του
+ * `addressPositionFieldsSchema` προστατεύει παλιές τιμές).
+ */
+const contactAddressPositionViewSchema = z.object({
+  id: z.string().min(1).max(128),
+  street: identityText,
+  number: identityText,
+  city: identityText,
+  neighborhood: identityText,
+  postalCode: identityText,
+  municipality: identityText,
+  region: identityText,
+  regionalUnit: identityText,
+  country: identityText,
+  coordinates: addressPositionFieldsSchema.shape.coordinates,
+  verifiedAt: addressPositionFieldsSchema.shape.verifiedAt,
+  source: z.enum(WRITTEN_ADDRESS_SOURCES).optional(),
+  geocodingMetadata: z.object({
+    confidence: z.number(),
+    accuracy: z.enum(GEOCODING_ACCURACIES),
+    variantUsed: z.number(),
+    osmType: z.string().max(64).optional(),
+  }).optional(),
+}).strict();
+
+export const contactAddressPositionsRequestSchema = z.object({
+  addresses: z.array(contactAddressPositionViewSchema).min(1).max(CONTACT_ADDRESS_POSITIONS_LIMIT),
+  relocateAddressIds: z.array(z.string().min(1).max(128)).max(CONTACT_ADDRESS_POSITIONS_LIMIT).optional(),
+}).strict();
+
+export type ContactAddressPositionsBody = z.infer<typeof contactAddressPositionsRequestSchema>;
+
+/**
+ * Λύνει τη θέση κάθε εισερχόμενης εγγραφής απέναντι στις **αποθηκευμένες** — και
+ * επιστρέφει μόνο τις αποφάσεις, **χωρίς καμία εγγραφή**.
+ *
+ * @param storedAddresses Η αυθεντική λίστα όπως είναι στη βάση (`[]` για νέα επαφή).
+ */
+export async function resolveContactAddressPositions(
+  storedAddresses: readonly CompanyAddress[],
+  body: ContactAddressPositionsBody,
+): Promise<ContactAddressPositionsResponse> {
+  const { addresses, tally, drifts } = await resolveProjectAddressPositions(
+    contactAddressPositionViews(storedAddresses),
+    body.addresses,
+    Date.now(),
+    { relocateIds: new Set(body.relocateAddressIds ?? []) },
+  );
+
+  // Η λογιστική τυπώνεται **πάντα** — ένα «0» που δεν τυπώνεται διαβάζεται ως «δεν ελέγχθηκε».
+  logger.info('[Contacts/AddressPositions] Θέσεις διευθύνσεων', { ...tally, drifts: drifts.length });
+
+  return {
+    positions: addresses.map((address) => ({ id: address.id, ...pickStoredAddressPosition(address) })),
+    positionAdvisories: [...drifts],
+  };
+}

@@ -112,7 +112,7 @@ import type {
   ResolvedAddressPositions,
 } from './address-position-types';
 
-export { ADDRESS_IDENTITY_FIELDS } from './address-position-types';
+export { ADDRESS_IDENTITY_FIELDS, WRITTEN_ADDRESS_SOURCES } from './address-position-types';
 export type {
   AddressIdentityField,
   AddressLike,

@@ -144,8 +144,15 @@ export type AddressPositionOutcome =
   /** Δεν υπάρχει αρκετό κείμενο για να τεθεί ερώτημα (ούτε οδός ούτε πόλη). */
   | 'insufficient-address';
 
+/**
+ * Οι προελεύσεις που παράγει ο γραφέας — **πίνακας χρόνου εκτέλεσης**, ώστε ένα σύνορο (η
+ * διαδρομή θέσης των επαφών, ADR-332 D27 Β-ΙΙ) να στενεύει την είσοδο με `z.enum` αντί για cast.
+ * Ο τύπος **παράγεται** από τον πίνακα· δεν ξαναγράφεται.
+ */
+export const WRITTEN_ADDRESS_SOURCES = ['geocoded', 'dragged', 'manual'] as const;
+
 /** Η προέλευση όπως αποθηκεύεται — υποσύνολο του `AddressSourceType`, τα τρία που παράγει ο γραφέας. */
-export type WrittenAddressSource = 'geocoded' | 'dragged' | 'manual';
+export type WrittenAddressSource = (typeof WRITTEN_ADDRESS_SOURCES)[number];
 
 /**
  * Ό,τι πρέπει να γραφτεί στη διεύθυνση, **ολόκληρο**.
