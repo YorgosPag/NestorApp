@@ -118,6 +118,8 @@ export type AddressLike = {
 } & {
   readonly coordinates?: { readonly lat?: number | null; readonly lng?: number | null } | null;
   readonly geocodingMetadata?: AddressGeocodingMetadata | null;
+  /** Η **δήλωση** του πελάτη — `'dragged'` = «το σημείο το έβαλε άνθρωπος» (κανόνας 1). */
+  readonly source?: string | null;
 };
 
 /** Τα παγωμένα μεταδεδομένα ποιότητας — **το σχήμα του `ProjectAddress`, αυτούσιο**. */
@@ -311,8 +313,9 @@ function keepStored(stored: AddressLike | null): AddressPosition {
  *
  * Η σειρά των κανόνων **είναι συμβόλαιο**:
  *
- * 1. **Ο άνθρωπος πρώτα.** Αν το σημείο άλλαξε ενώ το κείμενο έμεινε ίδιο, κάποιος
- *    έσυρε την πινέζα. Καμία μηχανή δεν έχει λόγο να το αμφισβητήσει — και το
+ * 1. **Ο άνθρωπος πρώτα.** Αν το σημείο άλλαξε και είτε το κείμενο έμεινε ίδιο είτε
+ *    ο πελάτης **δηλώνει** `source: 'dragged'`, κάποιος έσυρε την πινέζα. Καμία μηχανή
+ *    δεν έχει λόγο να το αμφισβητήσει — και το
  *    `outranksForLocation` το επιβεβαιώνει ανεξάρτητα (`manual` 2 > `geocoded` 1).
  *    Αν κρινόταν δεύτερο, μια αλλαγή κειμένου **στην ίδια αποθήκευση** θα έσβηνε την
  *    πινέζα που μόλις τοποθέτησε άνθρωπος.
@@ -336,7 +339,10 @@ export async function resolveAddressPosition(
   const point = readPoint(incoming);
 
   // ── 1. Ο ΑΝΘΡΩΠΟΣ ────────────────────────────────────────────────────────
-  if (!identityMoved && pointChanged(stored, incoming) && point !== null) {
+  // 🔴 «Κείμενο ίδιο» ΔΕΝ αρκεί: το σύρσιμο ξαναγράφει οδό/αριθμό από την αντίστροφη
+  // γεωκωδικοποίηση, και χωρίς ρητή δήλωση ο κανόνας 3 έσβηνε την πινέζα (2026-09-10).
+  const declaredHuman = !identityMoved || incoming.source === 'dragged';
+  if (declaredHuman && pointChanged(stored, incoming) && point !== null) {
     return {
       outcome: 'human-pinned',
       position: { coordinates: point, geocodingMetadata: null, source: 'dragged', verifiedAt: now },

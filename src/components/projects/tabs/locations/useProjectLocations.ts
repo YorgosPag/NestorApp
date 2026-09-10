@@ -22,7 +22,13 @@ import {
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { updateProjectWithPolicy } from '@/services/projects/project-mutation-gateway';
 import { useProjectNotifications } from '@/hooks/notifications/useProjectNotifications';
-import { toHierarchyValue, fromHierarchyValue, EMPTY_HIERARCHY } from './location-converters';
+import {
+  toHierarchyValue,
+  fromHierarchyValue,
+  EMPTY_HIERARCHY,
+  applyDraggedPin,
+  type DragApplyMode,
+} from './location-converters';
 import { ADDRESS_TYPE_KEYS, isUniqueAddressType } from './address-constants';
 
 import { revealInScroll } from '@/lib/a11y/reveal-in-scroll';
@@ -405,26 +411,12 @@ export function useProjectLocations(project: Project) {
   // ---------------------------------------------------------------------------
   const handleAddressDragUpdate = async (
     addressData: Partial<PartialProjectAddress>,
-    addressIndex: number
+    addressIndex: number,
+    mode: DragApplyMode = 'adopt-address',
   ) => {
     if (addressIndex < 0 || addressIndex >= localAddresses.length) return;
     const newAddresses = localAddresses.map((addr, i) =>
-      i !== addressIndex ? addr : {
-        ...addr,
-        street: addressData.street ?? addr.street,
-        // House number must always reflect the new pin location. Replace
-        // unconditionally — if reverse geocoding returns no number for the
-        // dragged spot, clear the stale value rather than keep the old one.
-        number: addressData.number,
-        city: addressData.city ?? addr.city,
-        postalCode: addressData.postalCode ?? addr.postalCode,
-        coordinates: addressData.coordinates ?? addr.coordinates,
-        // Drag provides only reverse-geocoded coordinates — clear admin hierarchy
-        region: addressData.region ?? '',
-        regionalUnit: undefined,
-        municipality: undefined,
-        neighborhood: addressData.neighborhood ?? undefined,
-      }
+      i !== addressIndex ? addr : applyDraggedPin(addr, addressData, mode)
     );
     await persistAddresses(newAddresses, 'updated');
   };

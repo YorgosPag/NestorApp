@@ -123,6 +123,65 @@ describe('Κ — ο κλειστός κανόνας της θέσης', () => {
     expect(listingMapShape(candidate!)).toBe('pin');
   });
 
+  describe('Κ1γ-ε — σύρσιμο που ΞΑΝΑΓΡΑΦΕΙ το κείμενο (2026-09-10, «Σαμοθράκης 16»)', () => {
+    // 🔴 Το OSM ξέρει τη Σαμοθράκης, όχι τον αριθμό 16 ⇒ `interpolated`. Ο άνθρωπος σύρει
+    // την πινέζα στην πόρτα· η αντίστροφη γεωκωδικοποίηση δεν βρίσκει αριθμό ⇒ το
+    // `number` αδειάζει ⇒ το κείμενο ΑΛΛΑΞΕ. Ο παλιός κανόνας 1 («κείμενο ίδιο») δεν
+    // έπιανε, ο κανόνας 3 ξαναρωτούσε τη μηχανή και η πινέζα του ανθρώπου χανόταν.
+    const HIT_STREET: GeocodeHit = { lat: 40.6643, lng: 22.8976, accuracy: 'interpolated', confidence: 0.8, variantUsed: 1 };
+    const DOOR = { lat: 40.6651, lng: 22.8989 };
+    const stored: AddressLike = {
+      street: 'Σαμοθράκης',
+      number: '16',
+      city: 'Ελευθέριο-Κορδελιό',
+      postalCode: '56334',
+      coordinates: { lat: HIT_STREET.lat, lng: HIT_STREET.lng },
+      geocodingMetadata: { confidence: 0.8, accuracy: 'interpolated', variantUsed: 1 },
+      source: 'geocoded',
+    };
+    const draggedText: AddressLike = { ...stored, number: '', coordinates: DOOR };
+
+    it('Κ1γ — η ΡΗΤΗ δήλωση `dragged` κρατά την πινέζα του ανθρώπου ⇒ ακριβής πινέζα', async () => {
+      const { geocode, calls } = spyGeocoder(HIT_STREET);
+      const incoming: AddressLike = { ...draggedText, source: 'dragged' };
+
+      const { outcome, position } = await resolveAddressPosition(stored, incoming, geocode, NOW);
+
+      expect(outcome).toBe('human-pinned');
+      expect(position.coordinates).toEqual(DOOR);
+      expect(position.geocodingMetadata).toBeNull();
+      expect(calls).toHaveLength(0);
+      const candidate = addressToPositionCandidate(
+        { coordinates: position.coordinates, geocodingMetadata: position.geocodingMetadata },
+        AT
+      );
+      expect(listingMapShape(candidate!)).toBe('pin');
+    });
+
+    it('Κ1δ — ΠΑΡΟΝΟΜΑΣΤΗΣ: το ΙΔΙΟ σύρσιμο ΧΩΡΙΣ δήλωση ⇒ η μηχανή ξαναρωτιέται, το σημείο χάνεται', async () => {
+      const { geocode, calls } = spyGeocoder(HIT_STREET);
+
+      const { outcome, position } = await resolveAddressPosition(stored, draggedText, geocode, NOW);
+
+      // Αν αυτό ΚΑΙ το Κ1γ έδιναν το ίδιο, η δήλωση θα ήταν διακοσμητική.
+      expect(outcome).toBe('geocoded');
+      expect(position.coordinates).toEqual({ lat: HIT_STREET.lat, lng: HIT_STREET.lng });
+      expect(calls).toHaveLength(1);
+    });
+
+    it('Κ1ε — μπαγιάτικο `dragged` ΔΕΝ παγώνει τη διεύθυνση: κείμενο άλλαξε, σημείο ΙΔΙΟ ⇒ geocoded', async () => {
+      // Η δήλωση ζει στο αποθηκευμένο έγγραφο και ο πελάτης την ξαναστέλνει με `{...addr}`.
+      // Χωρίς αλλαγή σημείου δεν είναι σύρσιμο: η νέα διεύθυνση πρέπει να ξαναλυθεί.
+      const { geocode, calls } = spyGeocoder(HIT_EXACT);
+      const pinned: AddressLike = { ...EGNATIA, coordinates: DOOR, source: 'dragged' };
+
+      const { outcome } = await resolveAddressPosition(pinned, { ...pinned, street: 'Τσιμισκή' }, geocode, NOW);
+
+      expect(outcome).toBe('geocoded');
+      expect(calls).toHaveLength(1);
+    });
+  });
+
   it('Κ2 — ΤΙΠΟΤΑ δεν άλλαξε ⇒ η αποθηκευμένη θέση μένει ΑΥΤΟΥΣΙΑ, με τα μεταδεδομένα της', async () => {
     const { geocode, calls } = spyGeocoder(HIT_CITY);
     const stored: AddressLike = {
