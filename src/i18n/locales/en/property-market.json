@@ -502,7 +502,7 @@
       },
       "coverageReach": {
         "title": "Outside your declared areas",
-        "named": "{area} is not among the areas you have declared.",
+        "named": "It is not among the areas you have declared.",
         "unnamed": "This address is not within the areas you have declared.",
         "allowed": "The listing goes through as normal. It will appear in searches for its own area — your declaration does not hide it.",
         "why": "Your areas tell people where to look for you. If you work here too, add it.",
