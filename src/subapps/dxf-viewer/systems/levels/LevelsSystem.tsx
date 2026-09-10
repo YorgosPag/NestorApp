@@ -28,7 +28,7 @@ import { useLevelFloorplanOperations } from './hooks/useLevelFloorplanOperations
 import { useLevelFloorplanSync } from './hooks/useLevelFloorplanSync';
 import { useLevelImportWizardOps } from './hooks/useLevelImportWizardOps';
 import { useAuth } from '@/auth';
-import { readViewportFromUrl } from '../../services/viewport-persistence';
+import { readViewportFromUrl, readActiveBuildingFromUrl } from '../../services/viewport-persistence';
 // ADR-721 §6 — zero-React θύρα προς το ενεργό έγγραφο (ΕΝΑΣ γραφέας: αυτό το component).
 import { registerActiveDocument, unregisterActiveDocument } from './active-document-gateway';
 
@@ -114,6 +114,21 @@ function useLevelsSystemState({
   });
 
   // 🏢 ENTERPRISE: Real-time Firestore subscription for the levels collection
+  // 🛡️ ADR-845 §7.15 (Ο-18) — Η ΔΗΛΩΜΕΝΗ ΕΜΒΕΛΕΙΑ ΚΤΗΡΙΟΥ, ΔΙΑΒΑΣΜΕΝΗ ΜΙΑ ΦΟΡΑ.
+  //
+  // Η διεύθυνση είναι που **σπάει τον κύκλο**: για να ξέρεις ποιο κτήριο χρειάζεσαι
+  // τα επίπεδα, για να φορτώσεις τα επίπεδα χρειάζεσαι το κτήριο. Ένα δηλωμένο
+  // `?bldg=` απαντά **πριν** φτάσει το πρώτο snapshot· η απουσία του σημαίνει
+  // «καμία εμβέλεια», ποτέ «κενή εμβέλεια» (ADR-400 ιδίωμα, ίδιο με το `?lvl=`).
+  //
+  // ⚠️ Σκόπιμα **δεν** ακολουθεί το ενεργό επίπεδο: ένα φίλτρο που κυνηγά το
+  // ανοιχτό κτήριο κλειδώνει τον μηχανικό μέσα του (η λίστα αδειάζει από τα άλλα
+  // πριν προλάβει να μεταβεί). Το `useActiveBuildingId` γράφει τη λυμένη τιμή στη
+  // διεύθυνση, οπότε το **επόμενο** φόρτωμα ξέρει — χωρίς να παγιδεύει το τωρινό.
+  const [declaredBuildingId] = useState<string | null>(() =>
+    typeof window === 'undefined' ? null : readActiveBuildingFromUrl(),
+  );
+
   useLevelsFirestoreSync({
     enableFirestore,
     firestoreCollection,
@@ -121,6 +136,7 @@ function useLevelsSystemState({
     companyId,
     userId,
     isSuperAdmin,
+    activeBuildingId: declaredBuildingId,
     setLevels,
     setCurrentLevelId,
     setIsLoading,

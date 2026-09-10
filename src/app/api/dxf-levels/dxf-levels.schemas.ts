@@ -106,6 +106,12 @@ export const CreateDxfLevelSchema = z.object({
   isDefault: z.boolean().optional(),
   visible: z.boolean().optional(),
   floorId: z.string().min(1).max(128).optional(),
+  /**
+   * 🔑 **ADR-845 §7.15 (Ο-18)** — το κτήριο του ορόφου, **τη στιγμή της γέννησης**.
+   * Έλειπε: το επίπεδο γεννιόταν πάντα χωρίς κτήριο και το αποκτούσε με δεύτερο
+   * `PATCH`, δηλαδή υπήρχε **εκ σχεδιασμού** παράθυρο όπου η εμβέλεια ήταν μισή.
+   */
+  buildingId: z.string().min(1).max(128).optional(),
   sceneFileId: z.string().min(1).max(128).optional(),
   sceneFileName: z.string().max(300).optional(),
 });

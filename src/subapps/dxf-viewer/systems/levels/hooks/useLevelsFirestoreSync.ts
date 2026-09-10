@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef } from 'react';
-import { orderBy, type DocumentData } from 'firebase/firestore';
+import { orderBy, where, type DocumentData } from 'firebase/firestore';
 import { firestoreQueryService } from '@/services/firestore';
 import type { QueryResult } from '@/services/firestore';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -19,6 +19,18 @@ interface UseLevelsFirestoreSyncParams {
   userId: string | null | undefined;
   /** true when user has globalRole == 'super_admin' in their JWT */
   isSuperAdmin: boolean;
+  /**
+   * 🛡️ **ADR-845 §7.15 (Ο-18)** — η **δηλωμένη** εμβέλεια κτηρίου (`?bldg=`).
+   *
+   * `null` = **καμία** εμβέλεια ⇒ όλα τα επίπεδα του μισθωτή *(η παλιά
+   * συμπεριφορά· μετρημένα **6 επίπεδα, 4 κτήρια, 3 έργα, μία λίστα**)*.
+   *
+   * ⚠️ **Δηλωμένη, ΠΟΤΕ συναγόμενη**: αν φιλτράραμε με το κτήριο του **ανοιχτού**
+   * επιπέδου, ο μηχανικός δεν θα μπορούσε **ποτέ** να μεταβεί σε άλλο κτήριο — η
+   * λίστα θα είχε ήδη αδειάσει από τα υπόλοιπα. Το κτήριο αλλάζει όπως αλλάζει
+   * αρχείο στο Revit: **με άλλη διεύθυνση**, όχι με φίλτρο που αυτο-κλειδώνεται.
+   */
+  activeBuildingId?: string | null;
   setLevels: (levels: Level[]) => void;
   setCurrentLevelId: (levelId: string | null) => void;
   setIsLoading: (loading: boolean) => void;
@@ -45,6 +57,7 @@ export function useLevelsFirestoreSync({
   companyId,
   userId: creatorUid,
   isSuperAdmin,
+  activeBuildingId = null,
   setLevels,
   setCurrentLevelId,
   setIsLoading,
@@ -104,7 +117,13 @@ export function useLevelsFirestoreSync({
                 onLevelChange?.(nextLevel.id);
               }
             }
-          } else if (bootstrapStateRef.current === 'idle') {
+          } else if (bootstrapStateRef.current === 'idle' && !activeBuildingId) {
+            // 🛡️ ADR-845 §7.15 (Ο-18) — ΤΟ BOOTSTRAP ΔΕΝ ΤΡΕΧΕΙ ΠΙΣΩ ΑΠΟ ΦΙΛΤΡΟ.
+            // Υπάρχει για τον πρώτο χρήστη σε **κενό μισθωτή** (ADR-040 Φάση XXI).
+            // Με εμβέλεια κτηρίου, «κενό» σημαίνει «κτήριο που περιμένει κάτοψη» —
+            // και τα επίπεδα που θα γεννιόνταν εδώ δεν έχουν `buildingId`, άρα δεν
+            // θα φαίνονταν ΠΟΤΕ στο ίδιο ερώτημα: κάθε φόρτωμα θα γεννούσε
+            // καινούργια. Σιωπηλός πολλαπλασιαστής ορφανών (ADR-420).
             bootstrapStateRef.current = 'running';
             const defaultLevels = LevelOperations.createDefaultLevels();
             Promise.all(
@@ -136,9 +155,15 @@ export function useLevelsFirestoreSync({
         handleError(`Firestore error: ${err.message}`);
         setIsLoading(false);
       },
-      { constraints: [orderBy('order', 'asc')] }
+      {
+        constraints: activeBuildingId
+          ? [where('buildingId', '==', activeBuildingId), orderBy('order', 'asc')]
+          : [orderBy('order', 'asc')],
+      }
     );
 
     return () => unsubscribe();
-  }, [enableFirestore, firestoreCollection, companyId, creatorUid, isSuperAdmin, onLevelChange, handleError, setLevels, setCurrentLevelId, setIsLoading, setError]);
+    // ⚠️ Το `activeBuildingId` ΕΙΝΑΙ εξάρτηση: αλλαγή εμβέλειας πρέπει να ξαναστήσει
+    // τη συνδρομή, αλλιώς το ερώτημα θα έμενε κλειδωμένο στο πρώτο κτήριο.
+  }, [enableFirestore, firestoreCollection, companyId, creatorUid, isSuperAdmin, activeBuildingId, onLevelChange, handleError, setLevels, setCurrentLevelId, setIsLoading, setError]);
 }

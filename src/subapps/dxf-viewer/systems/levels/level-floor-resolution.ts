@@ -51,13 +51,50 @@ export async function findOrCreateLevelForFloor(
 }
 
 /**
- * SSoT — το **ενεργό buildingId** του viewer = το `buildingId` του πρώτου linked
- * level. Κάθε linked Level φέρει το ίδιο `buildingId` (ADR-237, link-time), οπότε
- * ο πρώτος αρκεί. Καταναλωτές: `LevelPanel` (φόρτωση floors) + Floor Management
- * modal (ADR-468). ΟΧΙ μέσω `useProjectHierarchy().selectedBuilding` (τυπικά null
- * στον viewer). Αντικαθιστά το διπλο-γραμμένο `levels.find(l => l.buildingId)`.
+ * SSoT — **ποιο είναι το ενεργό κτήριο του viewer;**
+ *
+ * ## 🔴 Ο ισχυρισμός που καταρρέει (ADR-845 §7.15, Ο-32)
+ *
+ * Αυτή η συνάρτηση επέστρεφε το `buildingId` του **πρώτου** linked level, με
+ * γραπτή αιτιολόγηση *«Κάθε linked Level φέρει το ίδιο `buildingId` (ADR-237,
+ * link-time), οπότε ο πρώτος αρκεί»*. **Μετρήθηκε ψευδής**: στα 5 δεμένα ζωντανά
+ * επίπεδα υπάρχουν **τρία διαφορετικά** κτήρια. Άρα οι δύο καταναλωτές — η
+ * **σειρά** των επιπέδων (`LevelPanel`) και το **modal «Διαχείριση Ορόφων»**
+ * (`DxfViewerDialogs`, ADR-468) — έπαιρναν τους ορόφους ενός **αυθαίρετου**
+ * κτηρίου, ανεξαρτήτως του τι είχε ανοιχτό ο μηχανικός.
+ *
+ * ## Τρία σκαλιά, με φθίνουσα βεβαιότητα
+ *
+ * 1. **Ανοιχτό** — το κτήριο του επιπέδου που δουλεύει **αυτή τη στιγμή** ο
+ *    μηχανικός. Ό,τι βλέπει είναι η ισχυρότερη δήλωση πρόθεσης που υπάρχει.
+ * 2. **Δηλωμένο** — από τη διεύθυνση (`?bldg=`). Ίδιο ιδίωμα με το `?lvl=` του
+ *    ADR-400 *(«the view lives in the URL as a shareable deep-link»)*: δίνει στο
+ *    πολυ-κτηριακό ό,τι το Revit πετυχαίνει μόνο με **χωριστά αρχεία**.
+ * 3. **Οποιοδήποτε** — legacy έσχατη λύση *(η παλιά συμπεριφορά)*, για δέντρα
+ *    ενός κτηρίου και για επίπεδα χωρίς δεσμό.
+ *
+ * ⚠️ **Γιατί το ανοιχτό προηγείται του δηλωμένου** *(και όχι το αντίστροφο, που
+ * ήταν η πρώτη γραφή)*: αν η διεύθυνση κέρδιζε πάντα, η εμβέλεια θα **κόλλαγε** —
+ * ο μηχανικός θα άλλαζε σε επίπεδο άλλου κτηρίου και το «ενεργό κτήριο» θα έμενε
+ * το παλιό, για πάντα. Η διεύθυνση είναι η φωνή του **bootstrap** *(τι να
+ * φορτωθεί πριν υπάρξει ανοιχτό επίπεδο, και τι κουβαλά ένα μοιρασμένο link)*,
+ * όχι βέτο πάνω στον άνθρωπο. Ο καλών **γράφει πίσω** τη λυμένη τιμή, ώστε η
+ * διεύθυνση να **μαθαίνει** αντί να διατάζει.
+ *
+ * ⚠️ Το `currentLevelId` είναι **υποχρεωτικό** εσκεμμένα: όσο ήταν απόν, η σωστή
+ * απάντηση εξαρτιόταν από το να θυμηθεί ο καλών να το δώσει — και **κανένας** από
+ * τους δύο δεν το θυμόταν. Ένα υποχρεωτικό όρισμα δεν ξεχνιέται.
+ *
+ * ΟΧΙ μέσω `useProjectHierarchy().selectedBuilding` (τυπικά null στον viewer).
  */
-export function resolveActiveBuildingId(levels: readonly Level[] | null | undefined): string | null {
+export function resolveActiveBuildingId(
+  levels: readonly Level[] | null | undefined,
+  currentLevelId: string | null | undefined,
+  declaredBuildingId: string | null | undefined,
+): string | null {
+  const active = currentLevelId ? levels?.find((l) => l.id === currentLevelId) : undefined;
+  if (active?.buildingId) return active.buildingId;
+  if (declaredBuildingId) return declaredBuildingId;
   return levels?.find((l) => l.buildingId)?.buildingId ?? null;
 }
 

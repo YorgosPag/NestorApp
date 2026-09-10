@@ -26,7 +26,7 @@ import {
 } from '../utils/storage-utils';
 
 /** Short URL query keys (kept terse so shared links stay compact). */
-const URL_KEYS = { scale: 's', offsetX: 'ox', offsetY: 'oy', level: 'lvl' } as const;
+const URL_KEYS = { scale: 's', offsetX: 'ox', offsetY: 'oy', level: 'lvl', building: 'bldg' } as const;
 
 /** Significant figures retained for the scale factor in URL/storage. */
 const SCALE_SIG_FIGS = 5;
@@ -147,6 +147,40 @@ export { currentSearchParams, replaceUrlSearchParams };
 /** Read viewport state from the current page URL. */
 export function readViewportFromUrl(): Partial<PersistedViewport> {
   return parseViewportFromParams(currentSearchParams());
+}
+
+// ─── Εμβέλεια κτηρίου (ADR-845 §7.15, Ο-18/Ο-32) ─────────────────────────────
+
+/**
+ * **Ποιο κτήριο δηλώνει η διεύθυνση;**
+ *
+ * Ίδιο ιδίωμα με το `lvl` από πάνω — *«the view lives in the URL as a shareable
+ * deep-link»* (ADR-400: Figma / Google Maps / Autodesk Forge) — αλλά **άλλο
+ * πράγμα**: το κτήριο δεν είναι κατάσταση κάμερας, είναι **εμβέλεια εγγράφου**.
+ * Γι' αυτό ζει έξω από το `applyViewportToParams`: ένα fit-to-view δεν επιτρέπεται
+ * ποτέ να σβήσει το κτήριο, όπως σβήνει νόμιμα το `lvl`.
+ *
+ * ⚠️ Το κλειδί μένει **εδώ** και όχι σε δεύτερο αρχείο: αυτό είναι το ΕΝΑ σημείο
+ * που ξέρει ποια κλειδιά κουβαλά η διεύθυνση του viewer.
+ */
+export function readActiveBuildingFromUrl(): string | null {
+  return currentSearchParams().get(URL_KEYS.building) || null;
+}
+
+/**
+ * Γράψε (ή σβήσε) το δηλωμένο κτήριο **χωρίς πλοήγηση** — `history.replaceState`,
+ * όπως όλη η υπόλοιπη κατάσταση της διεύθυνσης (ADR-040: μηδέν re-render).
+ *
+ * 🔑 Ο λόγος που υπάρχει ο γραφέας: μόλις η εμβέλεια γίνει **γνωστή** (από το
+ * ενεργό επίπεδο), η διεύθυνση τη **μαθαίνει** — άρα το link που θα μοιραστεί ο
+ * μηχανικός κουβαλά το κτήριο, χωρίς να χρειαστεί να το επιλέξει κανείς. Αυτό
+ * είναι που δίνει το «ένα μοντέλο ανά κτήριο» του Revit **χωρίς** χωριστά αρχεία.
+ */
+export function writeActiveBuildingToUrl(buildingId: string | null): void {
+  replaceUrlSearchParams((params) => {
+    if (buildingId) params.set(URL_KEYS.building, buildingId);
+    else params.delete(URL_KEYS.building);
+  });
 }
 
 /**

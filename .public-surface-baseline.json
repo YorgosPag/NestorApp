@@ -1,7 +1,7 @@
 {
   "adr": "ADR-796 (CHECK 3.62)",
   "note": "Δημόσια επιφάνεια του dxf-viewer, ΑΝΑ ΣΥΜΒΟΛΟ. Ratchet κατά ΤΑΥΤΟΤΗΤΑ: η ανταλλαγή μπλοκάρει.",
-  "generated": "2026-08-25",
+  "generated": "2026-09-09",
   "violations": [],
   "declarations": [
     "src/subapps/dxf-viewer/ai-assistant/dxf-openai-call.ts#ChatCompletionMessage",
@@ -304,6 +304,7 @@
     "src/subapps/dxf-viewer/systems/events/index.ts#EventBus",
     "src/subapps/dxf-viewer/systems/levels/config.ts#Level",
     "src/subapps/dxf-viewer/systems/levels/cross-floor-link.ts#isCrossFloorSceneLink",
+    "src/subapps/dxf-viewer/systems/levels/level-building-scope.ts#checkLevelBuildingScope",
     "src/subapps/dxf-viewer/systems/paint-census/paint-census-store.ts#getPaintCount",
     "src/subapps/dxf-viewer/systems/paint-census/use-has-painted.ts#useHasPainted",
     "src/subapps/dxf-viewer/systems/zoom/hooks/useZoom.ts#useZoom",

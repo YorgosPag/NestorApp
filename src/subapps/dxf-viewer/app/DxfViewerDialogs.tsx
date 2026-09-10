@@ -22,7 +22,7 @@ import React from 'react';
 import { USE_AI_DRAWING_ASSISTANT } from '../config/feature-flags';
 import { useLevels } from '../systems/levels';
 import { useSelectedEntityIds } from '../systems/selection';
-import { resolveActiveBuildingId } from '../systems/levels/level-floor-resolution';
+import { useActiveBuildingId } from '../systems/levels/hooks/useActiveBuildingId';
 import { EventBus } from '../systems/events/EventBus';
 import { buildDxfImportSaveContext } from './dxf-import-save-context';
 // ADR-652 M6 — «Δημιουργία Block» host (always-mounted outer reads the light request store;
@@ -86,9 +86,11 @@ export function DxfViewerDialogs(props: DxfViewerDialogsProps): React.JSX.Elemen
 
   const projectId = levelManager.saveContext?.projectId ?? undefined;
   const floorplanId = levelManager.fileRecordId ?? undefined;
-  // Ενεργό buildingId από τα levels (SSoT helper, ίδια πηγή με το LevelPanel) — για
-  // το Floor Management modal που ανοίγει την καρτέλα «Όροφοι» μέσα στον viewer.
-  const buildingId = resolveActiveBuildingId(levelManager.levels);
+  // Ενεργό buildingId (SSoT hook, ίδια πηγή με το LevelPanel) — για το Floor
+  // Management modal που ανοίγει την καρτέλα «Όροφοι» μέσα στον viewer.
+  // 🛡️ ADR-845 §7.15 (Ο-32): το modal άνοιγε τους ορόφους ενός **αυθαίρετου**
+  // κτηρίου — εκείνου του πρώτου επιπέδου — ανεξαρτήτως του τι ήταν ανοιχτό.
+  const buildingId = useActiveBuildingId(levelManager.levels, levelManager.currentLevelId);
 
   // ADR-526 — Tekton .tek import: ribbon action emits the event; we open a native
   // file picker and route the file through the SAME import path as DXF (level

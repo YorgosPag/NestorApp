@@ -24,6 +24,13 @@ import { safeParseBody } from '@/lib/validation/shared-schemas';
 // 🛡️ ADR-714 — ο ΙΔΙΟΣ pure κανόνας που επιβάλλει ο client (ADR-399). Dependency-free
 // (type-only imports), άρα ασφαλής για server bundle.
 import { isCrossFloorSceneLink } from '@/subapps/dxf-viewer/systems/levels/cross-floor-link';
+// 🛡️ ADR-845 §7.15 (Ο-18) — ο φρουρός εμβέλειας κτηρίου: ίδιο δόγμα με τον ADR-714
+// από πάνω, σε δικό του αρχείο ώστε ο handler να μείνει δρομολογητής (N.7.1).
+import {
+  assertLevelBuildingScope,
+  resolveEffectiveScope,
+  touchesScope,
+} from './_shared/level-scope-guards';
 import { dxfLevelResource } from './_shared/dxf-level-ownership';
 import { CreateDxfLevelSchema, UpdateDxfLevelSchema } from './dxf-levels.schemas';
 import type {
@@ -114,6 +121,11 @@ export async function handleListDxfLevels(
   try {
     const { searchParams } = new URL(request.url);
     const floorId = searchParams.get('floorId');
+    // 🛡️ ADR-845 §7.15 (Ο-18) — Η ΕΜΒΕΛΕΙΑ ΤΟΥ ΚΤΗΡΙΟΥ.
+    // Χωρίς αυτό η λίστα ήταν «όλα τα επίπεδα του μισθωτή»: μετρημένα **6 επίπεδα,
+    // 4 κτήρια, 3 έργα, μία λίστα**. Προαιρετικό εσκεμμένα — απουσία = η παλιά
+    // συμπεριφορά, ώστε κανένας υπάρχων καλών να μη χάσει σιωπηλά δεδομένα.
+    const buildingId = searchParams.get('buildingId');
     const isSuperAdmin = ctx.globalRole === 'super_admin';
 
     const db = getAdminFirestore();
@@ -121,6 +133,9 @@ export async function handleListDxfLevels(
 
     if (!isSuperAdmin) {
       query = query.where('companyId', '==', ctx.companyId);
+    }
+    if (buildingId) {
+      query = query.where('buildingId', '==', buildingId);
     }
     if (floorId) {
       query = query.where('floorId', '==', floorId);
@@ -135,6 +150,7 @@ export async function handleListDxfLevels(
     logger.info('[DxfLevels/List] Found levels', {
       count: levels.length,
       companyId: ctx.companyId,
+      buildingId: buildingId ?? 'all',
       floorId: floorId ?? 'all',
     });
 
@@ -177,19 +193,35 @@ export async function handleCreateDxfLevel(
       floorId: body.floorId ?? null,
     });
 
-    // Duplicate name check (per tenant)
+    // 🛡️ ADR-845 §7.15 (Ο-18) — ΤΟ ΟΝΟΜΑ ΟΡΟΦΟΥ ΕΙΝΑΙ ΜΟΝΑΔΙΚΟ ΜΕΣΑ ΣΤΟ ΚΤΗΡΙΟ ΤΟΥ.
+    // Ήταν **ανά tenant**, δηλαδή μόλις ένα κτήριο αποκτούσε «Ισόγειο», **κανένα
+    // άλλο κτήριο της εταιρείας δεν μπορούσε** — και το μήνυμα έλεγε «already exists
+    // for this tenant», που είναι ακριβώς λάθος κριτήριο. Στο IFC το
+    // `IfcBuildingStorey.Name` ζει **κάτω από** το `IfcBuilding`.
+    // ⚠️ Επίπεδο χωρίς κτήριο (γενική κάτοψη έργου) κρατά τον παλιό, ανά-tenant
+    // έλεγχο: δεν υπάρχει κτήριο να το περιορίσει.
     const db = getAdminFirestore();
-    const duplicateCheck = await db
+    let duplicateQuery = db
       .collection(COLLECTIONS.DXF_VIEWER_LEVELS)
       .where('companyId', '==', ctx.companyId)
-      .where('name', '==', body.name)
-      .select()
-      .limit(1)
-      .get();
+      .where('name', '==', body.name);
+    if (body.buildingId) {
+      duplicateQuery = duplicateQuery.where('buildingId', '==', body.buildingId);
+    }
+    const duplicateCheck = await duplicateQuery.select().limit(1).get();
 
     if (!duplicateCheck.empty) {
-      throw new ApiError(409, `DXF level "${body.name}" already exists for this tenant`);
+      throw new ApiError(
+        409,
+        body.buildingId
+          ? `DXF level "${body.name}" already exists in building ${body.buildingId}`
+          : `DXF level "${body.name}" already exists for this tenant`,
+      );
     }
+
+    // 🛡️ ADR-845 §7.15 — ένα επίπεδο δεν **γεννιέται** δηλώνοντας κτήριο ξένο προς
+    // τον όροφό του. Ο ίδιος φρουρός με το PATCH, στην ίδια μορφή.
+    await assertLevelBuildingScope({ floorId: body.floorId, buildingId: body.buildingId });
 
     // 🛡️ ADR-714 — ίδιος φρουρός και στη δημιουργία: ένα νέο επίπεδο δεν γεννιέται
     // δείχνοντας στο αρχείο άλλου ορόφου.
@@ -203,6 +235,11 @@ export async function handleCreateDxfLevel(
       isDefault: body.isDefault ?? false,
       visible: body.visible ?? true,
       floorId: body.floorId ?? null,
+      // 🔑 ADR-845 §7.15 — ΤΟ ΚΤΗΡΙΟ ΓΡΑΦΕΤΑΙ ΤΗ ΣΤΙΓΜΗ ΤΗΣ ΓΕΝΝΗΣΗΣ.
+      // Πριν, το `CreateDxfLevelSchema` **δεν είχε καν** `buildingId`: κάθε επίπεδο
+      // γεννιόταν χωρίς κτήριο και το αποκτούσε με **δεύτερο** PATCH
+      // (`linkLevelToFloor`) — δηλαδή ένα παράθυρο ασυνέπειας **εκ σχεδιασμού**.
+      buildingId: body.buildingId ?? null,
       sceneFileId: body.sceneFileId ?? null,
       sceneFileName: body.sceneFileName ?? null,
     };
@@ -306,6 +343,15 @@ export async function handleUpdateDxfLevel(
         body.sceneFileId,
         body.floorId !== undefined ? body.floorId : owned.data.floorId,
       );
+    }
+
+    // 🛡️ ADR-845 §7.15 (Ο-18) — Ο ΔΕΥΤΕΡΟΣ ΦΡΟΥΡΟΣ, ΕΝΑ ΕΠΙΠΕΔΟ ΨΗΛΟΤΕΡΑ.
+    // Ο από πάνω ρωτά «ανήκει το ΑΡΧΕΙΟ στον όροφο;»· αυτός «ανήκει ο ΟΡΟΦΟΣ στο
+    // κτήριο;». Κρίνεται το ζευγάρι **όπως θα είναι μετά** το PATCH, γιατί το ίδιο
+    // αίτημα μπορεί να μετακινεί **και τα δύο** — μια νόμιμη μετακίνηση σε άλλο
+    // κτήριο δεν πρέπει να μπλοκάρεται από την ενδιάμεση κατάσταση.
+    if (touchesScope(body)) {
+      await assertLevelBuildingScope(resolveEffectiveScope(body, owned.data));
     }
 
     const updates = buildLevelUpdates(body);

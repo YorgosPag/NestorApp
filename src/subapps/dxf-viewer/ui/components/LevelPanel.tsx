@@ -27,7 +27,7 @@ import { useLevels } from '../../systems/levels';
 import { commitImportedScene } from '../../systems/levels/commit-imported-scene';
 import { countSceneEntities } from '../../utils/scene-entity-count';
 import { orderLevelsForPanel } from '../../systems/levels/level-display-order';
-import { resolveActiveBuildingId } from '../../systems/levels/level-floor-resolution';
+import { useActiveBuildingId } from '../../systems/levels/hooks/useActiveBuildingId';
 import { useFloorsByBuilding } from '@/components/properties/shared/useFloorsByBuilding';
 import { useAllFloorsBackfill, useLevelDeletion, useFloorplanImportComplete } from './level-panel-hooks';
 import { useNotifications } from '../../../../providers/NotificationProvider';
@@ -122,7 +122,10 @@ export function LevelPanel({
   // own `buildingId` (every linked level carries it) — NOT via ProjectHierarchy's
   // `selectedBuilding`, which is driven by the properties navigator and is typically
   // unset inside the DXF viewer (root cause of «η σειρά δεν άλλαξε», 2026-06-16).
-  const buildingId = useMemo(() => resolveActiveBuildingId(levels), [levels]);
+  // 🛡️ ADR-845 §7.15 (Ο-32) — «το κτήριο του ΑΝΟΙΧΤΟΥ επιπέδου», όχι «του πρώτου».
+  // Το σχόλιο από πάνω υποσχόταν *«every linked level carries it»* — μετρήθηκε
+  // ψευδές: τρία διαφορετικά κτήρια στα 5 δεμένα ζωντανά επίπεδα.
+  const buildingId = useActiveBuildingId(levels, currentLevelId);
   const { floors: buildingFloors } = useFloorsByBuilding(buildingId, Boolean(buildingId));
   const orderedLevels = useMemo(() => {
     const byId = new Map(buildingFloors.map(f => [f.id, f]));
