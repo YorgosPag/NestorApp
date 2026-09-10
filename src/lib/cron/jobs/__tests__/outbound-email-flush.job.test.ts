@@ -35,12 +35,21 @@ jest.mock('@/lib/firebaseAdmin', () => ({
   getAdminFirestore: () => getAdminFirestore(),
 }));
 
+// 📧 ADR-849 — οι ρυθμίσεις που διαβάζει η πύλη της αποστολής. Προεπιλογή: κανένας
+// άνθρωπος γνωστός ⇒ κανένα μήνυμα δεν κρίνεται (οι παλιές άγκυρες μένουν ως είχαν).
+const loadSettingsMany = jest.fn();
+jest.mock('@/server/notifications/user-notification-settings-store', () => ({
+  loadUserNotificationSettingsMany: (...args: unknown[]) => loadSettingsMany(...args),
+}));
+
 // eslint-disable-next-line import/first -- τα mocks πρέπει να δηλωθούν πριν τα imports
 import {
   MAX_FLUSH_PER_RUN,
   flushReportBalances,
   runOutboundEmailFlush,
 } from '@/lib/cron/jobs/outbound-email-flush.job';
+// eslint-disable-next-line import/first -- τα mocks πρέπει να δηλωθούν πριν τα imports
+import { getDefaultNotificationSettings } from '@/services/user-notification-settings/user-notification-settings.types';
 
 const BEFORE_PIPELINE_COMMIT = 'e5d78a0b';
 
@@ -106,6 +115,7 @@ function email(overrides: Record<string, unknown> = {}): Record<string, unknown>
 beforeEach(() => {
   jest.clearAllMocks();
   sendEmail.mockResolvedValue({ success: true, messageId: 'ext_1' });
+  loadSettingsMany.mockResolvedValue(new Map());
 });
 
 // =============================================================================
@@ -268,14 +278,20 @@ describe('Λ — η λογιστική κλείνει, αλλιώς ουρλιά
   it('Λ2 — ο έλεγχος ισοζυγίου πιάνει ασυμφωνία', () => {
     expect(
       flushReportBalances({
-        sent: 1, retrying: 1, deadLettered: 1, considered: 3, truncated: false,
+        sent: 1, retrying: 1, deadLettered: 1, suppressed: 0, considered: 3, truncated: false,
       }),
     ).toBe(true);
     expect(
       flushReportBalances({
-        sent: 1, retrying: 0, deadLettered: 0, considered: 3, truncated: false,
+        sent: 1, retrying: 0, deadLettered: 0, suppressed: 0, considered: 3, truncated: false,
       }),
     ).toBe(false);
+    // 📧 ADR-849 — ο κάδος της σίγασης ΜΕΤΡΑ στο ισοζύγιο.
+    expect(
+      flushReportBalances({
+        sent: 1, retrying: 0, deadLettered: 0, suppressed: 2, considered: 3, truncated: false,
+      }),
+    ).toBe(true);
   });
 
   it('Λ3 — και οι ΕΠΤΑ κάδοι εκπέμπονται όταν η ουρά είναι ΑΔΕΙΑ', async () => {
@@ -284,7 +300,7 @@ describe('Λ — η λογιστική κλείνει, αλλιώς ουρλιά
     const result = await runOutboundEmailFlush();
 
     expect(Object.keys(result.metrics ?? {}).sort()).toEqual([
-      'considered', 'deadLettered', 'digested', 'emailsSent', 'retrying', 'sent', 'truncated',
+      'considered', 'deadLettered', 'digested', 'emailsSent', 'retrying', 'sent', 'suppressed', 'truncated',
     ]);
     expect(result.metrics?.considered).toBe(0);
   });
@@ -457,5 +473,64 @@ describe('Σ — η σύνοψη φεύγει ως ΕΝΑ email', () => {
 
     expect(doc.final().digestSize).toBe(2);
     expect(doc.final().digestOf).toBe('someone@example.com');
+  });
+});
+
+// =============================================================================
+// Ψ — ADR-849: Η ΘΕΛΗΣΗ ΤΟΥ ΑΝΘΡΩΠΟΥ ΤΗ ΣΤΙΓΜΗ ΤΗΣ ΑΠΟΣΤΟΛΗΣ
+// =============================================================================
+
+const LISTING_MATCH = 'properties.demandListingMatch';
+const MANDATE_DECIDED = 'properties.mandateDecided';
+
+/** Ειδοποίηση ΜΕ άνθρωπο και τύπο — όπως τη γράφει πλέον το σκέλος email. */
+function typedNotification(eventType: string, overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return email({
+    metadata: { category: 'notification', priority: 'normal', recipientId: 'u1', eventType },
+    ...overrides,
+  });
+}
+
+describe('📧 Ψ — ADR-849: η πύλη της αποστολής', () => {
+  it('Ψ1 🔴 — «Διακοπή» ΑΦΟΥ μπήκε στην ουρά ⇒ `cancelled` με λόγο, κανένα email', async () => {
+    loadSettingsMany.mockResolvedValue(
+      new Map([['u1', { ...getDefaultNotificationSettings('u1'), emailEnabled: false }]]),
+    );
+    const doc = queuedDoc('m1', typedNotification(MANDATE_DECIDED));
+    firestoreReturning([doc]);
+
+    const result = await runOutboundEmailFlush();
+
+    expect(sendEmail).not.toHaveBeenCalled();
+    expect(doc.final()).toMatchObject({ status: 'cancelled', suppressedReason: 'email-disabled' });
+    expect(result.metrics).toMatchObject({ suppressed: 1, sent: 0, considered: 1 });
+  });
+
+  it('Ψ2 🔑 — ο σιγασμένος τύπος βγαίνει από τη σύνοψη· ο άλλος φεύγει μόνος του', async () => {
+    const settings = getDefaultNotificationSettings('u1');
+    loadSettingsMany.mockResolvedValue(new Map([['u1', {
+      ...settings,
+      emailCategories: { ...settings.emailCategories, properties: { demandListingMatch: 'off' } },
+    }]]));
+    const match = queuedDoc('m1', typedNotification(LISTING_MATCH, { subject: 'Ταίριασμα' }));
+    const mandate = queuedDoc('m2', typedNotification(MANDATE_DECIDED, { subject: 'Εντολή' }));
+    firestoreReturning([match, mandate]);
+
+    const result = await runOutboundEmailFlush();
+
+    expect(sendEmail).toHaveBeenCalledTimes(1);
+    expect(match.final()).toMatchObject({ status: 'cancelled', suppressedReason: 'type-email-disabled' });
+    expect(mandate.final().status).toBe('sent');
+    expect(result.metrics).toMatchObject({ sent: 1, suppressed: 1, digested: 0, considered: 2 });
+  });
+
+  it('Ψ3 🔴 — αποτυχία ανάγνωσης ρυθμίσεων ⇒ ΤΙΠΟΤΑ δεν φεύγει, ΤΙΠΟΤΑ δεν γράφεται', async () => {
+    loadSettingsMany.mockRejectedValue(new Error('firestore down'));
+    const doc = queuedDoc('m1', typedNotification(MANDATE_DECIDED));
+    firestoreReturning([doc]);
+
+    await expect(runOutboundEmailFlush()).rejects.toThrow('firestore down');
+    expect(sendEmail).not.toHaveBeenCalled();
+    expect(doc.updates).toEqual([]);
   });
 });
