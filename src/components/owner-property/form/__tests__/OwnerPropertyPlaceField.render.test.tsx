@@ -26,7 +26,7 @@
  */
 
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { FormProvider, useForm } from 'react-hook-form';
 import '@testing-library/jest-dom';
 
@@ -49,12 +49,38 @@ jest.mock('../OwnerPropertyFields', () => ({
   OwnerPlaceAnswerField: () => <div data-testid="answer-field" />,
 }));
 
+/**
+ * 🔴 **ΤΟ ΥΠΟΚΑΤΑΣΤΑΤΟ ΚΡΙΝΕΙ ΤΗΝ ΑΠΟΔΟΣΗ — ΚΑΙ ΜΟΝΟ ΑΥΤΗΝ** *(ADR-846 §8.9)*.
+ *
+ * Το αληθινό `CoverageReachNotice` σέρνει **συνδρομή Firestore** *(η βιτρίνα)* και δύο
+ * τεμπέλικα JSON *(αποτυπώματα · ιεραρχία)*. Η ερώτηση εδώ όμως είναι **πριν** από
+ * όλα αυτά: ο φρουρός `{brokered && …}` κρίνεται σε χρόνο απόδοσης, **πάνω** από το
+ * `next/dynamic`, άρα ένα υποκατάστατο απαντά **ακριβώς** την ερώτηση που ρωτάμε.
+ *
+ * ⛔ **ΚΑΙ ΔΕΝ ΑΠΑΝΤΑ ΤΗΝ ΑΛΛΗ.** Στη Φάση 6 υπάρχουν **δύο** εγγυήσεις:
+ *
+ * | Εγγύηση | Ποιος τη φυλάει |
+ * |---|---|
+ * | **δεν ζωγραφίζεται** όταν `brokered={false}` | **αυτό εδώ** *(Κ2)* |
+ * | **δεν στέλνεται** στην κλειστότητα της σελίδας του ιδιώτη | **CHECK 3.34** *(μέγεθος)* |
+ *
+ * Η δεύτερη είναι ο λόγος που η εισαγωγή είναι `next/dynamic` *(18.964 > 18.370 bytes)*
+ * και **δεν** κρίνεται εδώ: με υποκατάστατο δεν υπάρχει chunk να μετρηθεί. Μια άγκυρα
+ * που υπονοούσε ότι καλύπτει και τις δύο θα ήταν **χειρότερη από καμία** — θα έδινε
+ * άδεια σε κάποιον να γυρίσει το `dynamic` σε στατική εισαγωγή «αφού είναι πράσινο».
+ */
+jest.mock('@/components/mandate/CoverageReachNotice', () => ({
+  CoverageReachNotice: () => <div data-testid="coverage-reach-notice" />,
+}));
+
 interface HarnessProps {
   readonly answer: 'declared' | 'declined';
+  /** Η προεπιλογή είναι **ο ιδιώτης** — ίδια με του ίδιου του component. */
+  readonly brokered?: boolean;
 }
 
 /** Η φόρμα είναι **προϋπόθεση** του πεδίου: χωρίς context το `useFormContext` πέφτει. */
-function Harness({ answer }: HarnessProps): React.ReactElement {
+function Harness({ answer, brokered = false }: HarnessProps): React.ReactElement {
   const form = useForm({
     defaultValues: {
       placeAnswer: answer,
@@ -66,9 +92,24 @@ function Harness({ answer }: HarnessProps): React.ReactElement {
   });
   return (
     <FormProvider {...form}>
-      <OwnerPropertyPlaceField />
+      <OwnerPropertyPlaceField brokered={brokered} />
     </FormProvider>
   );
+}
+
+/**
+ * **Δίνει στο `next/dynamic` την ευκαιρία του — και είναι ΠΡΟΫΠΟΘΕΣΗ της άρνησης.**
+ *
+ * 🔴 Χωρίς αυτό η Κ2/1 θα ήταν **πράσινη για λάθος λόγο**: το δυναμικό υποδέντρο είναι
+ * `null` στο πρώτο καρέ **ούτως ή άλλως**, οπότε ένα σκέτο `queryByTestId` αμέσως μετά
+ * το `render` θα έμενε πράσινο **ακόμη κι αν ο φρουρός είχε αφαιρεθεί**. Η ίδια
+ * αναμονή τρέχει **και** στον παρονομαστή, όπου αποδεδειγμένα **αρκεί** — άρα η απουσία
+ * μετά από αυτήν είναι απουσία, όχι βιασύνη.
+ */
+async function settleDynamicImport(): Promise<void> {
+  await act(async () => {
+    await Promise.resolve();
+  });
 }
 
 // =============================================================================
@@ -110,5 +151,56 @@ describe('Κ1 — το πεδίο θέσης φορτώνει και ζωγρα�
     expect(
       screen.queryByText(/placeHouseNumber/),
     ).toBeNull();
+  });
+});
+
+// =============================================================================
+// Κ2 — Ο ΦΡΟΥΡΟΣ ΤΟΥ ΑΚΡΟΑΤΗΡΙΟΥ: Η ΚΑΛΥΨΗ ΕΙΝΑΙ ΕΝΝΟΙΑ ΤΟΥ ΓΡΑΦΕΙΟΥ (ADR-846 §8.9)
+// =============================================================================
+
+describe('Κ2 — η προειδοποίηση κάλυψης ζωγραφίζεται μόνο για το γραφείο', () => {
+  /**
+   * 🔴 **Η ΕΓΓΥΗΣΗ ΠΟΥ ΕΩΣ ΣΗΜΕΡΑ ΕΙΧΕ ΜΟΝΟ ΧΕΙΡΟΚΙΝΗΤΗ ΜΑΡΤΥΡΙΑ.**
+   *
+   * Για τον ιδιώτη κάτοχο η ερώτηση *«είναι εκτός των περιοχών σου;»* **δεν έχει
+   * υποκείμενο** — δεν δηλώνει περιοχές δραστηριοποίησης. Η μόνη απόδειξη ήταν ένα
+   * ζωντανό περπάτημα *(2026-09-10: ίδια διεύθυνση, δύο οθόνες)*, δηλαδή **απόδειξη
+   * μιας στιγμής**, όχι φρουρός.
+   *
+   * ⛔ **ΜΕΤΑΛΛΑΞΗ, ΕΚΤΕΛΕΣΜΕΝΗ**: αφαίρεση του `brokered &&` στο
+   * `OwnerPropertyPlaceField` ⇒ **κόκκινο εδώ** *(«expected null, received element»)*.
+   */
+  it('σιωπά για τον ιδιώτη — brokered={false}, η προεπιλογή', async () => {
+    render(<Harness answer="declared" brokered={false} />);
+    await settleDynamicImport();
+
+    expect(screen.queryByTestId('coverage-reach-notice')).toBeNull();
+  });
+
+  /**
+   * 🔒 **Ο ΠΑΡΟΝΟΜΑΣΤΗΣ — ΧΩΡΙΣ ΑΥΤΟΝ Η ΑΓΚΥΡΑ ΕΙΝΑΙ ΚΕΝΗ.**
+   *
+   * Ένα υποκατάστατο που δεν αποδίδεται **ποτέ** *(λάθος διαδρομή στο `jest.mock`,
+   * μετονομασμένο `data-testid`, δυναμική εισαγωγή που δεν προλαβαίνει)* θα άφηνε το
+   * παραπάνω πράσινο **για λάθος λόγο**. Ίδιο μάθημα με τη **Γ3** του
+   * `coverage-reach.test.ts`: μια άρνηση αξίζει όσο η κατάφασή της.
+   */
+  it('ζωγραφίζει για το γραφείο — brokered', async () => {
+    render(<Harness answer="declared" brokered />);
+    await settleDynamicImport();
+
+    expect(screen.getByTestId('coverage-reach-notice')).toBeInTheDocument();
+  });
+
+  /**
+   * ⚠️ **Η ΑΡΝΗΣΗ ΤΟΠΟΥ ΥΠΕΡΙΣΧΥΕΙ ΤΟΥ ΑΚΡΟΑΤΗΡΙΟΥ.** Η προειδοποίηση κρίνει **τη
+   * διεύθυνση που μόλις επιβεβαιώθηκε**· όταν δεν δηλώθηκε καμία, ολόκληρο το υποδέντρο
+   * λείπει *(Α14 §17.2: «η φόρμα μικραίνει»)* — και μαζί του η ερώτηση.
+   */
+  it('σιωπά και για το γραφείο όταν ο άνθρωπος δεν δήλωσε θέση', async () => {
+    render(<Harness answer="declined" brokered />);
+    await settleDynamicImport();
+
+    expect(screen.queryByTestId('coverage-reach-notice')).toBeNull();
   });
 });
