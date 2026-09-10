@@ -15,6 +15,7 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { exceedsLimit } = require('./bash-length-guard.js');
 
 const LOCK = path.join(os.homedir(), '.claude', 'heavy-task.lock');
 /**
@@ -107,6 +108,12 @@ function main() {
   const input = readStdin();
   const cmd = (input.tool_input && input.tool_input.command) || '';
   const sid = input.session_id || 'unknown';
+
+  // 🔴 Εντολή πάνω από το όριο μήκους την ΑΡΝΕΙΤΑΙ το `bash-length-guard.js`. Τα hooks
+  // του ίδιου γεγονότος τρέχουν ΠΑΡΑΛΛΗΛΑ — δεν ξέρουμε ποιος προηγείται. Αν κλειδώναμε,
+  // η εντολή δεν θα έτρεχε ποτέ ⇒ ούτε το `release` (PostToolUse) ⇒ κλειδί όμηρος ως
+  // το `STALE_MINUTES`, και η ΑΛΛΗ συνεδρία μπλοκαρισμένη για δουλειά που δεν έγινε.
+  if (exceedsLimit(cmd)) return;
 
   if (!isHeavy(cmd)) return; // σιωπή: exit 0, καμία παρέμβαση
 

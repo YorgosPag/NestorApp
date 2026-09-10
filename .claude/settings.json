@@ -10,6 +10,11 @@
             "command": "node \"C:/Nestor_Pagonis/.claude/hooks/heavy-mutex.js\" acquire",
             "timeout": 10,
             "statusMessage": "Ελεγχος φρενου βαριων εργασιων..."
+          },
+          {
+            "type": "command",
+            "command": "node \"C:/Nestor_Pagonis/.claude/hooks/bash-length-guard.js\"",
+            "timeout": 10
           }
         ]
       }

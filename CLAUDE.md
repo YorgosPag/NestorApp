@@ -658,6 +658,17 @@ npm run jscpd:diff <τα staged src αρχεία σου>
 
 ---
 
+## 🚨 SOS. SOS. N.19 — ΠΕΡΙΕΧΟΜΕΝΟ ΑΡΧΕΙΟΥ ΜΕ `Write`, ΟΧΙ ΜΕΣΑ ΑΠΟ ΤΟ BASH
+
+Το εργαλείο Bash στα Windows **σπάει κάθε εντολή > ~7.000 χαρακτήρων** με ψευδές
+`unexpected EOF while looking for matching '` — **ΔΕΝ φταίνε ελληνικά ή απόστροφοι**
+(μετρημένο 2026-09-10 σε 45.253 εντολές: 163/165 πάνω από 8.000 έσπασαν· heredoc **μόνο με ψηφία** έσπασε ίδια).
+- Περιεχόμενο αρχείου / μεγάλο script → **`Write` με την πρώτη** (προσωρινό → scratchpad)· αλλαγή → `Edit`· μήνυμα commit → `Write` + `git commit -F`.
+- Φρένο: `.claude/hooks/bash-length-guard.js` αρνείται εντολή > 6.000 χαρακτήρων. Αποφάσισε **πριν** — αλλιώς το περιεχόμενο πληρώνεται **δύο φορές**.
+- 📘 `.claude-rules/feedback_write_tool_not_heredoc.md`
+
+---
+
 # HONESTY & TRANSPARENCY
 
 **100% honesty.** If you don't know, say "I don't know". Never mislead Giorgio.
