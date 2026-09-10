@@ -359,7 +359,11 @@ export function OwnerPropertyFormContent({
       <OwnerIdentityFields />
       <OwnerBasicsFields />
       <OwnerOffersField />
-      <OwnerPropertyPlaceField />
+      {/* 🔑 **Το ακροατήριο, ΠΑΡΑΓΩΓΟ — όχι δεύτερη ρύθμιση** (ADR-846 Φάση 6): η ίδια
+          `mandate` που κάνει αυτή τη φόρμα «του γραφείου» δύο γραμμές πιο πάνω, είναι
+          και ο λόγος που η δηλωμένη κάλυψη έχει υποκείμενο. Ανεξάρτητη σημαία εδώ θα
+          μπορούσε μια μέρα να λέει «γραφείο» εκεί που η φόρμα λέει «ιδιώτης». */}
+      <OwnerPropertyPlaceField brokered={mandate !== undefined} />
       <OwnerPropertyMediaField
         authorUserId={user?.uid ?? null}
         ownerPropertyId={draftId}

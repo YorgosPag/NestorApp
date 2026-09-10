@@ -60,7 +60,7 @@ import {
   type CoverageRadiusKm,
   type DeclaredCoverage,
 } from '@/types/agency-coverage';
-import type { PublicListing } from '@/types/public-listing';
+import type { ListingPosition, PublicListing } from '@/types/public-listing';
 
 // ============================================================================
 // ΟΙ ΤΕΣΣΕΡΙΣ ΚΑΤΑΣΤΑΣΕΙΣ — κλειστό σύνολο, με ΔΙΑΦΟΡΕΤΙΚΗ θεραπεία η καθεμία
@@ -136,12 +136,33 @@ export interface CoverageEvidence {
  */
 export type ListingCoverageVerdict = 'inside' | 'outside' | 'indeterminate';
 
-export function verdictForListing(
+/**
+ * **Η ΚΡΙΣΗ ΠΑΝΩ ΣΕ ΣΚΕΤΗ ΘΕΣΗ** — η ίδια ερώτηση, πριν υπάρξει αγγελία.
+ *
+ * ═════════════════════════════════════════════════════════════════════════════
+ * 🔑 **ΓΙΑΤΙ ΧΩΡΙΣΤΗΚΕ ΑΠΟ ΤΟ {@link verdictForListing}, ΚΑΙ ΓΙΑΤΙ ΔΕΝ ΕΙΝΑΙ ΚΛΩΝΟΣ**
+ *
+ * Το `verdictForListing` διάβαζε **ένα** πεδίο της αγγελίας — το `position`. Ο τύπος
+ * `PublicListing` ήταν, δηλαδή, **απαίτηση που η συνάρτηση δεν χρειαζόταν**: ένα σύνορο
+ * στενότερο από την ερώτηση.
+ *
+ * ⇒ Και το πλήρωσε η **φόρμα καταχώρισης** *(ADR-846 Φάση 6)*: εκεί ο μεσίτης γράφει
+ * διεύθυνση **που δεν έχει γίνει ακόμη αγγελία** — δεν υπάρχει `PublicListing` να
+ * περάσει, και δεν πρέπει να κατασκευαστεί ψεύτικο για να ικανοποιηθεί υπογραφή. Η
+ * εναλλακτική *(δεύτερη συνάρτηση που ξαναγράφει τις τρεις γραμμές)* θα ήταν **ακριβώς**
+ * το σχήμα ADR-749: δύο κριτές για την ίδια ερώτηση, που μια μέρα διαφωνούν σιωπηλά.
+ *
+ * ⚠️ **Η ΣΥΜΠΕΡΙΦΟΡΑ ΔΕΝ ΑΛΛΑΞΕ ΟΥΤΕ ΚΑΤΑ ΜΙΑ ΤΙΜΗ** — μόνο το σύνορο μετακινήθηκε
+ * προς τα έξω. Οι υπάρχουσες άγκυρες του `verdictForListing` κρίνουν πλέον **αυτήν** τη
+ * συνάρτηση μέσω του περιτυλίγματος, χωρίς να πειραχθεί γραμμή τους.
+ * ═════════════════════════════════════════════════════════════════════════════
+ */
+export function verdictForPosition(
   coverage: DeclaredCoverage | null,
-  listing: PublicListing,
+  position: ListingPosition,
   resolvers: CoverageResolvers,
 ): ListingCoverageVerdict {
-  const area = listingSearchArea(listing.position);
+  const area = listingSearchArea(position);
   if (area === null || isBoundingBox(area)) return 'indeterminate';
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -170,6 +191,22 @@ export function verdictForListing(
   if (relation === 'within') return 'inside';
   if (relation === 'disjoint') return 'outside';
   return 'indeterminate';
+}
+
+/**
+ * **Πού πέφτει αυτή η αγγελία σε σχέση με τη δήλωση;** — {@link verdictForPosition},
+ * ρωτημένο με το **μόνο** πεδίο που η κρίση διαβάζει.
+ *
+ * ⚠️ **Δεν προσθέτει κρίση, και δεν επιτρέπεται να αποκτήσει.** Την ημέρα που αυτό το
+ * σώμα μεγαλώσει, δύο καλούντες που σήμερα παίρνουν **την ίδια** απάντηση θα πάρουν
+ * διαφορετική — και ο ένας από τους δύο θα το μάθει από χρήστη.
+ */
+export function verdictForListing(
+  coverage: DeclaredCoverage | null,
+  listing: PublicListing,
+  resolvers: CoverageResolvers,
+): ListingCoverageVerdict {
+  return verdictForPosition(coverage, listing.position, resolvers);
 }
 
 // ============================================================================

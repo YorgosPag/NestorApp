@@ -75,6 +75,7 @@ import {
 } from "lucide-react";
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { createModuleLogger } from '@/lib/telemetry';
+import { AGENCY_SHOWCASE_ROUTE } from '@/lib/mandate/mandate-routes';
 import { AUTH_ROUTES } from '@/lib/routes';
 const logger = createModuleLogger('smart-navigation-factory');
 
@@ -758,7 +759,9 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
               //    μενού — και **ποτέ** πίσω από ρυθμίσεις οργανισμού.
               {
                 icon: Store,
-                href: '/settings/agency-profile',
+                // 🔑 **Η διεύθυνση από τον SSoT** *(N.0.2, Φάση 7)*: ήταν χειρόγραφη εδώ
+                //    και ετοιμαζόταν να γραφτεί δεύτερη φορά αλλού.
+                href: AGENCY_SHOWCASE_ROUTE,
                 smartConfig: {
                   priority: 'medium',
                   analyticsKey: 'nav_agency_showcase'

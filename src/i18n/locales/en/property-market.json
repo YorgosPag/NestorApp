@@ -499,6 +499,14 @@
       "placeHouseNumber": {
         "contradicted": "You entered \"{number}\", the map found \"{resolved}\". Check the number.",
         "unconfirmed": "Number \"{number}\" was recorded, but the map data does not confirm it — the position shows the street."
+      },
+      "coverageReach": {
+        "title": "Outside your declared areas",
+        "named": "{area} is not among the areas you have declared.",
+        "unnamed": "This address is not within the areas you have declared.",
+        "allowed": "The listing goes through as normal. It will appear in searches for its own area — your declaration does not hide it.",
+        "why": "Your areas tell people where to look for you. If you work here too, add it.",
+        "manage": "My areas"
       }
     },
     "draftMemory": {

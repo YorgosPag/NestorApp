@@ -34,6 +34,7 @@
  */
 
 import React from 'react';
+import dynamic from 'next/dynamic';
 import { useFormContext } from 'react-hook-form';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -42,13 +43,74 @@ import type { PlaceFocus } from '@/lib/geo/geocoding-focus';
 import { PlaceIdentityField } from '@/components/geo/PlaceIdentityField';
 import { FormFieldset } from '@/components/shared/forms/form-field-primitives';
 import type { OwnerPropertyFormValues } from '@/lib/owner-property/owner-property-form-values';
+import { addressToPositionCandidate } from '@/services/listings/public-listing-position';
+import type { ListingPosition } from '@/types/public-listing';
 
 import { OwnerPlaceAnswerField } from './OwnerPropertyFields';
 
 const NS = 'property-market';
 const K = `${NS}:offer`;
 
-export function OwnerPropertyPlaceField(): React.ReactElement {
+/**
+ * **Σφραγίδα-φρουρός: η θέση εδώ ΔΕΝ αποθηκεύεται, άρα δεν έχει «πότε».**
+ *
+ * 🔑 Το `addressToPositionCandidate` απαιτεί `locatedAt` γιατί οι **αποθηκευμένες**
+ * θέσεις το χρειάζονται *(ποια πηγή υπερισχύει)*. Εδώ η θέση ζει **όσο η οθόνη** και
+ * καταναλώνεται από **έναν** κριτή που διαβάζει μόνο `point` + `accuracy`.
+ *
+ * ⚠️ **Ονομασμένη σταθερά, ποτέ ωμό `new Date(0)` στη θέση κλήσης** *(ADR-716: «αριθμός
+ * με κρυμμένο νόημα»)*: ένα σκέτο `new Date(0).toISOString()` σε δύο σημεία διαβάζεται
+ * ως *«δεδομένο από το 1970»* — και το ίδιο ιδίωμα υπάρχει ήδη, ανώνυμο, στο
+ * `AddressPublicShapeBadge`.
+ */
+const EPHEMERAL_LOCATED_AT = new Date(0).toISOString();
+
+/**
+ * 🔴 **ΔΥΝΑΜΙΚΟ, ΚΑΙ ΤΟ ΕΠΙΒΑΛΕ ΜΕΤΡΗΣΗ — ΟΧΙ ΠΡΟΒΛΕΨΗ** *(ADR-846 Φάση 6 · CHECK 3.34)*.
+ *
+ * Με **στατική** εισαγωγή, η κλειστότητα της σελίδας **του ιδιώτη**
+ * *(`(me)/offers/[offerId]`)* πέρασε το ταβάνι της: **18.964 > 18.370 bytes**. Και η
+ * πύλη είχε δίκιο για τον σωστό λόγο — δεν ήταν αριθμός, ήταν **σημασία**: ο ιδιώτης
+ * που ανεβάζει το σπίτι του κατέβαζε τη βιτρίνα του γραφείου, τα διοικητικά
+ * αποτυπώματα και τον κριτή κάλυψης, για δυνατότητα που **δεν τον αφορά ποτέ**.
+ *
+ * ⚠️ **Ο φρουρός `brokered` ΔΕΝ αρκούσε**, και εκεί είναι το μάθημα: το `{brokered && …}`
+ * κρίνεται σε **χρόνο απόδοσης**, ενώ η στατική εισαγωγή δεσμεύεται σε **χρόνο
+ * μεταγλώττισης**. Ένα «δεν το ζωγραφίζω» **δεν** είναι «δεν το στέλνω».
+ *
+ * ⚠️ **`ssr: false` = ορθότητα, όχι βελτιστοποίηση**: το component ζει από συνδρομή
+ * Firestore *(η βιτρίνα)* και δύο τεμπέλικα στιγμιότυπα JSON *(αποτυπώματα · ιεραρχία)*.
+ * Στον διακομιστή **καμία** από τις τρεις πηγές δεν έχει απαντήσει, άρα η μόνη δυνατή
+ * απόδοση εκεί είναι **η σιωπή** — που θα ταξίδευε ως HTML για να αντικατασταθεί αμέσως.
+ *
+ * ⚠️ **Καμία εγγραφή route slice**: τα κλειδιά ζουν στο `property-market`, το **ίδιο**
+ * namespace που αυτή η φόρμα φορτώνει ήδη. Δεν υπάρχει ωμό κλειδί να προλάβει καρέ
+ * *(CHECK 3.51)* — και το component δεν αποδίδεται καθόλου πριν φορτώσει.
+ */
+const CoverageReachNotice = dynamic(
+  () => import('@/components/mandate/CoverageReachNotice').then((m) => m.CoverageReachNotice),
+  { ssr: false },
+);
+
+interface OwnerPropertyPlaceFieldProps {
+  /**
+   * 🔴 **ΤΟ ΑΚΡΟΑΤΗΡΙΟ, ΚΑΙ ΕΙΝΑΙ ΤΟ ΙΔΙΟ ΠΟΥ ΞΕΡΕΙ ΗΔΗ Η ΦΟΡΜΑ** *(§8.33)*.
+   *
+   * Το `OwnerPropertyFormContent` δέχεται ήδη `mandate?` — *«απών για τον ιδιώτη, παρών
+   * για το γραφείο»*. Αυτή η σημαία είναι **παράγωγό του**, όχι δεύτερη αυθεντία: μια
+   * ανεξάρτητη ρύθμιση εδώ θα μπορούσε μια μέρα να λέει «γραφείο» εκεί που η φόρμα λέει
+   * «ιδιώτης».
+   *
+   * ⚠️ **Γιατί χρειάζεται καθόλου**: η δηλωμένη κάλυψη είναι έννοια **του γραφείου**. Ο
+   * ιδιώτης που ανεβάζει το σπίτι του δεν έχει «περιοχές δραστηριοποίησης» — και η
+   * ανάγνωση της βιτρίνας θα ήταν, γι' αυτόν, **ερώτηση χωρίς υποκείμενο**.
+   */
+  readonly brokered?: boolean;
+}
+
+export function OwnerPropertyPlaceField({
+  brokered = false,
+}: OwnerPropertyPlaceFieldProps = {}): React.ReactElement {
   const { t } = useTranslation([NS]);
   const form = useFormContext<OwnerPropertyFormValues>();
   const inputId = React.useId();
@@ -131,6 +193,30 @@ export function OwnerPropertyPlaceField(): React.ReactElement {
     if (point === null || accuracy === null) return null;
     return { point, accuracy, extent: fresh?.extent };
   }, [point, accuracy, fresh]);
+
+  /**
+   * **Η ΘΕΣΗ ΜΕ ΤΟ ΛΕΞΙΛΟΓΙΟ ΤΗΣ ΑΓΓΕΛΙΑΣ** — για τον κριτή της κάλυψης *(ADR-846 Φάση 6)*.
+   *
+   * 🔑 **Η ΙΔΙΑ αλυσίδα που τρέχει ο διακομιστής**, όχι δεύτερη εκτίμηση — το ίδιο
+   * ιδίωμα, κατά λέξη, με το `AddressPublicShapeBadge`. Ένας δικός μας μεταφραστής
+   * *(«αν υπάρχει ακρίβεια ⇒ geocoded, αλλιώς manual»)* θα ήταν **τρίτη** υλοποίηση
+   * κανόνα που έχει ήδη γραφτεί μία φορά, και θα απέκλινε στη σιωπή.
+   *
+   * ⚠️ **`null` όσο δεν έχει λυθεί η διεύθυνση, ΚΑΙ ΕΙΝΑΙ Ο ΧΡΟΝΙΣΜΟΣ ΤΗΣ ΠΡΟΕΙΔΟΠΟΙΗΣΗΣ**:
+   * ο χειριστής του `placeQuery` σβήνει `placePoint` σε **κάθε** πλήκτρο, άρα δεν
+   * χρειάζεται χρονόμετρο ούτε `onBlur` — η *«μη πρόωρη επικύρωση»* της NN/g προκύπτει
+   * από το ίδιο το μοντέλο της φόρμας.
+   */
+  const position = React.useMemo<ListingPosition | null>(
+    () =>
+      point === null
+        ? null
+        : addressToPositionCandidate(
+            { coordinates: point, geocodingMetadata: accuracy === null ? null : { accuracy } },
+            EPHEMERAL_LOCATED_AT,
+          ),
+    [point, accuracy],
+  );
 
   return (
     <FormFieldset legend={t(`${K}.placeAnswer.label`)} help={t(`${K}.placeAnswer.help`)}>
@@ -246,6 +332,25 @@ export function OwnerPropertyPlaceField(): React.ReactElement {
           {state === 'error' && (
             <p className="text-sm text-foreground">{t(`${K}.form.placeFailed`)}</p>
           )}
+
+          {/*
+            🔴 **Η ΔΗΛΩΣΗ ΤΟΥ ΓΡΑΦΕΙΟΥ ΣΥΝΑΝΤΑ ΤΗ ΔΙΕΥΘΥΝΣΗ ΤΗΣ ΑΓΓΕΛΙΑΣ** (ADR-846 Φάση 6).
+
+            Μέχρι σήμερα η σύγκριση γινόταν **μόνο προς τα πίσω** — στη βιτρίνα, πάνω σε
+            **ήδη δημοσιευμένες** αγγελίες. Ο μεσίτης μάθαινε ότι η δήλωσή του δεν
+            συμφωνεί με τη δουλειά του σε **λάθος οθόνη** και σε **λάθος στιγμή**.
+
+            ⚠️ **Ο φρουρός `brokered` ΔΕΝ είναι βελτιστοποίηση**: για τον ιδιώτη κάτοχο
+            η ερώτηση *«είναι εκτός των περιοχών σου;»* **δεν έχει υποκείμενο** — δεν
+            δηλώνει περιοχές δραστηριοποίησης. Χωρίς αυτόν, το component θα σιωπούσε
+            ούτως ή άλλως (`coverage === null`), αλλά θα **ρωτούσε** — δηλαδή θα άνοιγε
+            συνδρομή στη βιτρίνα μιας εταιρείας από τον **προσωπικό** χώρο κάποιου.
+
+            🔑 **Η θέση του στο δέντρο ΕΙΝΑΙ το μήνυμα**: αμέσως κάτω από την
+            επιβεβαίωση της διεύθυνσης, γιατί αφορά **αυτό** που μόλις επιβεβαιώθηκε —
+            ίδια απόφαση με το `CoverageAgreementNotice` κάτω από τον επιλογέα περιοχής.
+          */}
+          {brokered && <CoverageReachNotice position={position} />}
 
           {/*
             🔴 **ΕΔΩ ΣΥΝΑΝΤΙΕΤΑΙ Η ΠΡΟΣΦΟΡΑ ΜΕ ΤΗ ΖΗΤΗΣΗ** (§14.5).
