@@ -1495,7 +1495,7 @@ this tenant»*, δηλαδή δηλώνει ρητά το λάθος κριτή�
 | `services/viewport-persistence.ts` | Το κλειδί `bldg` **δίπλα** στο `lvl` — έξω από το `applyViewportToParams`, ώστε ένα fit-to-view να μη σβήνει ποτέ την **εμβέλεια** |
 | `systems/levels/hooks/useLevelsFirestoreSync.ts` | `where('buildingId')` + **bootstrap σιωπά πίσω από φίλτρο** |
 | `systems/levels/LevelsSystem.tsx` · `LevelPanel.tsx` · `DxfViewerDialogs.tsx` | Οι καταναλωτές |
-| `firestore.indexes.json` | Δύο σύνθετα: `(companyId, buildingId, order)` και `(companyId, buildingId, name)` |
+| `firestore.indexes.json` | Τρία σύνθετα: `(companyId, buildingId, order)` · `(companyId, buildingId, name)` · **`(buildingId, order)`** — το τρίτο για τον super admin **χωρίς** επιλεγμένη εταιρεία, όπου το `firestoreQueryService` **δεν** βάζει `companyId` *(προστέθηκε 2026-09-10, βλ. §10)* |
 
 #### 🎯 Οι άγκυρες **Α-18 · Α-19 · Α-20** — και κοκκίνισαν **πριν**
 
@@ -1591,6 +1591,13 @@ this tenant»*, δηλαδή δηλώνει ρητά το λάθος κριτή�
 ## §10. Changelog
 
 
+
+### 2026-09-10 — **Οι δείκτες του Ο-18 ΔΕΝ είχαν ανέβει — και ο τρίτος έλειπε ΚΑΙ από το αρχείο**
+
+- 🔴 **Μετρημένο** *(`firestore.indexes.json` έναντι `firebase firestore:indexes`)*: αρχείο **435** / ζωντανά **433** — έλειπαν **ακριβώς** οι δύο του `5a8c6998`, ενώ ο κώδικας ήταν ήδη στο `origin/main` ⇒ Netcup. Η συνδρομή `where('buildingId') + orderBy('order')` του `useLevelsFirestoreSync` **απορρίπτεται** χωρίς δείκτη *(`FAILED_PRECONDITION`)* μόλις το ανοιχτό επίπεδο δηλώνει κτήριο.
+- 🔴 **Και δεύτερο κενό, αόρατο από το αρχείο**: super admin **χωρίς** επιλεγμένη εταιρεία ⇒ `buildTenantConstraints` επιστρέφει `[]` ⇒ το ερώτημα γίνεται σκέτο `(buildingId, order)` — δείκτης που **δεν υπήρχε ούτε στο αρχείο**, άρα δεν θα τον έφερνε κανένα deploy. ✅ Προστέθηκε.
+- 🔑 **Γιατί ξεφεύγει**: **κανένας** αυτοματισμός δεν ανεβάζει δείκτες — το `firestore-rules.yml` μόνο **ελέγχει**, και το push πάει στο **Netcup**, όχι στο Firebase. Κάθε νέος δείκτης = χειροκίνητο `firebase deploy --only firestore:indexes --project pagonis-87766`.
+- ✅ **Deploy έγινε 2026-09-10** *(`firebase deploy --only firestore:indexes`, με εντολή Giorgio)* — επαληθευμένο με **νέα** σύγκριση: αρχείο **436** = ζωντανά **436**, μηδέν διαφορά και προς τις δύο κατευθύνσεις. ⚠️ Deploy ≠ διαθέσιμος: ο δείκτης **χτίζεται** (`CREATING`) και το ερώτημα αποτυγχάνει μέχρι να γίνει `READY` *(`gcloud firestore indexes composite list`)*.
 
 ### 2026-09-10 — **Ο-18: η ΕΜΒΕΛΕΙΑ** *(§7.15, άγκυρες Α-18 · Α-19 · Α-20)*
 

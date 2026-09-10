@@ -171,6 +171,20 @@
       ]
     },
     {
+      "collectionGroup": "dxf_viewer_levels",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "buildingId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "order",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "search_documents",
       "queryScope": "COLLECTION",
       "fields": [
