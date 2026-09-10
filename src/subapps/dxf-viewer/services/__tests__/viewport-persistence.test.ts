@@ -17,6 +17,8 @@ import {
   readPersistedViewport,
   readPersistedLevelId,
   persistViewport,
+  readActiveBuildingFromUrl,
+  writeActiveBuildingToUrl,
 } from '../viewport-persistence';
 
 const T: ViewTransform = { scale: 2.5, offsetX: 120.7, offsetY: -340.2 };
@@ -88,6 +90,42 @@ describe('URL read/write (history.replaceState)', () => {
     window.history.replaceState({}, '', '/dxf/viewer?foo=bar');
     writeViewportToUrl(T, null);
     expect(new URLSearchParams(window.location.search).get('foo')).toBe('bar');
+  });
+});
+
+/**
+ * ADR-845 §7.15 — the building scope (`?bldg=`). Anchor for the 2026-09-10 crash
+ * `mutate is not a function`: the writer handed a `URLSearchParams` to
+ * `replaceUrlSearchParams`, which takes a MUTATOR. The subapp is outside the root
+ * tsconfig, so only an executed test can catch that shape of mistake here.
+ */
+describe('building scope (?bldg=)', () => {
+  it('writes the building without navigating, and reads it back', () => {
+    writeActiveBuildingToUrl('bldg-A');
+    expect(window.location.pathname).toBe('/dxf/viewer');
+    expect(readActiveBuildingFromUrl()).toBe('bldg-A');
+  });
+
+  it('keeps the viewport / level / camera keys already on the URL', () => {
+    window.history.replaceState({}, '', '/dxf/viewer?s=2&ox=1&oy=2&lvl=lvl-A&c3d=1%2C2');
+    writeActiveBuildingToUrl('bldg-A');
+    const params = new URLSearchParams(window.location.search);
+    expect(params.get('lvl')).toBe('lvl-A');
+    expect(params.get('c3d')).toBe('1,2');
+    expect(params.get('s')).toBe('2');
+  });
+
+  it('removes the key when the building is null', () => {
+    writeActiveBuildingToUrl('bldg-A');
+    writeActiveBuildingToUrl(null);
+    expect(readActiveBuildingFromUrl()).toBeNull();
+    expect(window.location.search).not.toContain('bldg');
+  });
+
+  it('survives a viewport write (fit-to-view never erases the building)', () => {
+    writeActiveBuildingToUrl('bldg-A');
+    writeViewportToUrl(T, null);
+    expect(readActiveBuildingFromUrl()).toBe('bldg-A');
   });
 });
 
