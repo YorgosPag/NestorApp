@@ -53,8 +53,34 @@ describe('Β — κατάσταση', () => {
   });
 });
 
+describe('📧 Τ — ADR-849: η αλλαγή `type`', () => {
+  it('Τ1 — δέχεται γνωστούς, μη υποχρεωτικούς τύπους με γνωστή κατάσταση', () => {
+    expect(
+      parseEmailSubscriptionChange({ kind: 'type', settings: ['properties.demandListingMatch'], mode: 'off' }),
+    ).toEqual({ kind: 'type', settings: ['properties.demandListingMatch'], mode: 'off' });
+  });
+
+  it.each([
+    ['υποχρεωτικό', { kind: 'type', settings: ['security.newDeviceLogin'], mode: 'off' }],
+    ['άγνωστο κλειδί', { kind: 'type', settings: ['properties.ghost'], mode: 'off' }],
+    ['prototype', { kind: 'type', settings: ['properties.__proto__'], mode: 'off' }],
+    ['κενή λίστα', { kind: 'type', settings: [], mode: 'off' }],
+    ['άγνωστη κατάσταση', { kind: 'type', settings: ['properties.demandListingMatch'], mode: 'maybe' }],
+    ['όχι λίστα', { kind: 'type', settings: 'properties.demandListingMatch', mode: 'off' }],
+  ])('🔴 απορρίπτει %s', (_label, raw) => {
+    expect(parseEmailSubscriptionChange(raw)).toBeNull();
+  });
+
+  it('Τ2 — η κατάσταση ΧΩΡΙΣ `mutedTypes` δεν είναι πλήρης κατάσταση', () => {
+    expect(parseSubscriptionState({ emailEnabled: true, emailFrequency: 'daily' })).toBeNull();
+    expect(
+      parseSubscriptionState({ emailEnabled: true, emailFrequency: 'daily', mutedTypes: ['properties.demandListingMatch'] }),
+    ).toEqual({ emailEnabled: true, emailFrequency: 'daily', mutedTypes: ['properties.demandListingMatch'] });
+  });
+});
+
 describe('Γ — η απάντηση όπως τη διαβάζει ο πελάτης', () => {
-  const state = { emailEnabled: false, emailFrequency: 'daily' };
+  const state = { emailEnabled: false, emailFrequency: 'daily', mutedTypes: [] };
 
   it('επιτυχία μόνο με ΔΥΟ έγκυρες καταστάσεις', () => {
     expect(parseSubscriptionResponse({ ok: true, previous: state, current: state })).toEqual({

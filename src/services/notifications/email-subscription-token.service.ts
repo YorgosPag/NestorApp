@@ -30,6 +30,12 @@
 
 import 'server-only';
 
+import {
+  ALL_EMAILS,
+  parseScopeField,
+  scopeField,
+  type EmailSubscriptionScope,
+} from '@/lib/notifications/email-subscription-scope';
 import { createModuleLogger } from '@/lib/telemetry';
 import { decodeSignedToken, encodeSignedToken, requireTokenSecret } from '@/lib/tokens/signed-token';
 
@@ -40,13 +46,19 @@ export const EMAIL_SUBSCRIPTION_SECRET_ENV = 'NOTIFICATION_EMAIL_SECRET';
 
 /** Ο σκοπός και η έκδοση του σχήματος — **μέσα** στην υπογραφή. */
 const PURPOSE = 'email-sub';
-const SCHEMA_VERSION = 'v1';
+/** ADR-848 — `[σκοπός, v1, uid]`. Γίνεται δεκτό **για πάντα**, ως εμβέλεια «όλα». */
+const SCHEMA_V1 = 'v1';
+/**
+ * ADR-849 Α2 — `[σκοπός, v2, uid, εμβέλεια]`. 🔑 Η εμβέλεια είναι **μέσα στην υπογραφή**:
+ * ένα token «μόνο ταιριάσματα» δεν γίνεται «όλα» αλλάζοντας ένα πεδίο — θα έσπαγε η υπογραφή.
+ */
+const SCHEMA_V2 = 'v2';
 
 /** Γιατί δεν δεχτήκαμε το token. `server-config` = λείπει το μυστικό **από εμάς**. */
 export type SubscriptionTokenRejection = 'invalid' | 'server-config';
 
 export type SubscriptionTokenVerdict =
-  | { readonly ok: true; readonly uid: string }
+  | { readonly ok: true; readonly uid: string; readonly scope: EmailSubscriptionScope }
   | { readonly ok: false; readonly reason: SubscriptionTokenRejection };
 
 /** Μία προειδοποίηση ανά διεργασία — ο αγωγός τρέχει κάθε 5′ και θα γέμιζε τα ίχνη. */
@@ -73,11 +85,14 @@ function secretOrNull(): string | null {
  * `null` και όταν η ταυτότητα περιέχει `:` (το `encodeSignedToken` αρνείται): ένα
  * token που δεν μπορεί να υπογραφεί σωστά δεν εκδίδεται **καθόλου**.
  */
-export function issueEmailSubscriptionToken(uid: string): string | null {
+export function issueEmailSubscriptionToken(
+  uid: string,
+  scope: EmailSubscriptionScope = ALL_EMAILS,
+): string | null {
   const secret = secretOrNull();
   if (secret === null || uid.length === 0) return null;
   try {
-    return encodeSignedToken(secret, [PURPOSE, SCHEMA_VERSION, uid]);
+    return encodeSignedToken(secret, [PURPOSE, SCHEMA_V2, uid, scopeField(scope)]);
   } catch {
     logger.error('Αδύνατη η υπογραφή εισιτηρίου διαγραφής', { data: { uid } });
     return null;
@@ -104,9 +119,15 @@ export function readEmailSubscriptionToken(token: string): SubscriptionTokenVerd
     return { ok: false, reason: verdict.reason === 'server-config' ? 'server-config' : 'invalid' };
   }
 
-  const [purpose, version, uid] = verdict.fields;
-  if (purpose !== PURPOSE || version !== SCHEMA_VERSION || !uid || verdict.fields.length !== 3) {
-    return { ok: false, reason: 'invalid' };
+  const [purpose, version, uid, field] = verdict.fields;
+  if (purpose !== PURPOSE || !uid) return { ok: false, reason: 'invalid' };
+
+  // ADR-848 — παλιό email: η διαγραφή του πρέπει να δουλεύει όσο ζει το email (χωρίς λήξη).
+  if (version === SCHEMA_V1 && verdict.fields.length === 3) {
+    return { ok: true, uid, scope: ALL_EMAILS };
   }
-  return { ok: true, uid };
+
+  // ADR-849 — άγνωστος ή υποχρεωτικός τύπος στην εμβέλεια ⇒ άκυρο, ποτέ «όλα» κατά μαντεψιά.
+  const scope = version === SCHEMA_V2 && verdict.fields.length === 4 && field ? parseScopeField(field) : null;
+  return scope === null ? { ok: false, reason: 'invalid' } : { ok: true, uid, scope };
 }
