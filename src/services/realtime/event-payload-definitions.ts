@@ -12,6 +12,8 @@
 
 import type { Project, ProjectStatus } from '@/types/project';
 import type { Building } from '@/types/building/contracts';
+import type { AddressInfo } from '@/types/contacts';
+import type { CompanyAddress } from '@/types/ContactFormTypes';
 
 // ============================================================================
 // BUILDING / PROJECT LINK PAYLOADS
@@ -92,6 +94,13 @@ export interface ContactUpdatedPayload {
     serviceName?: string;
     status?: string;
     isFavorite?: boolean;
+    /**
+     * ADR-332 D27 Β-ΙΙ (πρακτική Β5 των έργων) — το παράγωγο `addresses[]` **όπως γράφτηκε**,
+     * ώστε η λίστα να δείχνει τη θέση που αποφάσισε ο γραφέας (π.χ. «Μετακίνησε») χωρίς επαναφόρτωση.
+     */
+    addresses?: AddressInfo[];
+    /** Η αυθεντική λίστα όπως γράφτηκε (μόνο όταν η εγγραφή την περιείχε, μη κενή). */
+    companyAddresses?: CompanyAddress[];
   };
   timestamp: number;
 }

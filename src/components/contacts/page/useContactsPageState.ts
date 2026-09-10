@@ -4,7 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { Contact } from '@/types/contacts';
 import { getContactDisplayName } from '@/types/contacts';
-import { RealtimeService, type ContactUpdatedPayload } from '@/services/realtime';
+import { useContactUpdatedAdoption } from './useContactUpdatedAdoption';
 import { ContactsService } from '@/services/contacts.service';
 import type { ContactType } from '@/constants/contacts';
 import type { ContactFilterState } from '@/components/core/AdvancedFilters';
@@ -285,37 +285,9 @@ export function useContactsPageState() {
     };
   }, [refreshContacts]);
 
-  useEffect(() => {
-    const handleContactUpdate = (payload: ContactUpdatedPayload) => {
-      logger.info('Applying real-time update for contact', { contactId: payload.contactId });
-
-      const applyContactUpdates = <T extends Contact>(contact: T): T => {
-        const updates: Partial<T> = {} as Partial<T>;
-        if (payload.updates.firstName !== undefined) (updates as Record<string, unknown>).firstName = payload.updates.firstName;
-        if (payload.updates.lastName !== undefined) (updates as Record<string, unknown>).lastName = payload.updates.lastName;
-        if (payload.updates.companyName !== undefined) (updates as Record<string, unknown>).companyName = payload.updates.companyName;
-        if (payload.updates.serviceName !== undefined) (updates as Record<string, unknown>).serviceName = payload.updates.serviceName;
-        if (payload.updates.isFavorite !== undefined) (updates as Record<string, unknown>).isFavorite = payload.updates.isFavorite;
-        if (payload.updates.status !== undefined) {
-          (updates as Record<string, unknown>).status = payload.updates.status;
-        }
-        return { ...contact, ...updates };
-      };
-
-      // Μόνο η λίστα — η ανοιχτή επαφή είναι παράγωγό της, οπότε ενημερώνεται μαζί.
-      // Πριν το D21 χρειαζόταν δεύτερη, χειροκίνητη εγγραφή εδώ· ήταν ακριβώς το
-      // είδος του διπλού συγχρονισμού που το SSoT καταργεί.
-      setContacts(prev => prev.map(contact =>
-        contact.id === payload.contactId ? applyContactUpdates(contact) : contact,
-      ));
-    };
-
-    const unsubscribe = RealtimeService.subscribe('CONTACT_UPDATED', handleContactUpdate, {
-      checkPendingOnMount: false,
-    });
-
-    return unsubscribe;
-  }, []);
+  // Η λίστα υιοθετεί κάθε απήχηση `CONTACT_UPDATED` — και τις διευθύνσεις που γράφτηκαν
+  // (ADR-332 D27 Β-ΙΙ). Εξήχθη σε δικό του hook, με δική του άγκυρα.
+  useContactUpdatedAdoption(setContacts);
 
   useSelectedContactAvatarRefresh(selectedContact);
 
