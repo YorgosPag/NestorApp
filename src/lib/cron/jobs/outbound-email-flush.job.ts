@@ -53,7 +53,7 @@ import { Timestamp } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { createModuleLogger } from '@/lib/telemetry';
-import { brandedSubject, emailTextsFor } from '@/server/comms/email-texts';
+import { brandedSubject } from '@/server/comms/email-texts';
 import {
   sendThroughChain,
   type ChainOutcome,
@@ -64,12 +64,19 @@ import {
   planCoversEveryMessage,
   planEmailDelivery,
   type DeliveryPlanEntry,
-  type PendingEmail,
 } from '@/server/notifications/email-digest';
+import { gateQueuedEmails } from '@/server/notifications/email-send-gate';
 import { digestHeaders, liveEmailLinks, soloEnvelope } from '@/server/notifications/notification-email-envelope';
 import type { EmailLinks } from '@/server/notifications/notification-email-render';
-import { MESSAGE_CATEGORIES, MESSAGE_PRIORITIES } from '@/types/communications';
 import type { CronJobResult } from '@/types/cron-schedule';
+
+import {
+  asNumber,
+  asString,
+  markSuppressed,
+  toPendingEmail,
+  type FlushableDoc,
+} from './outbound-email-queue-doc';
 
 const logger = createModuleLogger('CronOutboundEmailFlush');
 
@@ -98,6 +105,11 @@ export interface FlushReport {
   readonly retrying: number;
   /** Εξάντλησε τις προσπάθειες ⇒ `failed` **με λόγο**, ώστε να είναι ευρέσιμο. */
   readonly deadLettered: number;
+  /**
+   * 📧 ADR-849 — ο άνθρωπος το σταμάτησε **αφού** μπήκε στην ουρά ⇒ `cancelled` με λόγο.
+   * Κάδος **του ισοζυγίου**: έγγραφο που δεν ανήκε πουθενά θα έσπαγε τη λογιστική.
+   */
+  readonly suppressed: number;
   /** Πόσα **έγγραφα** εξετάστηκαν. */
   readonly considered: number;
   /** Πόσα **email** έφυγαν πραγματικά προς τον πάροχο. **Εκτός ισοζυγίου.** */
@@ -116,61 +128,11 @@ export interface FlushReport {
  * θα ήταν αριθμητικά «σωστό» και σημασιολογικά κενό.
  */
 export function flushReportBalances(report: FlushReport): boolean {
-  return report.sent + report.retrying + report.deadLettered === report.considered;
+  return report.sent + report.retrying + report.deadLettered + report.suppressed === report.considered;
 }
 
-/** Το σχήμα ενός εξερχόμενου email στην ουρά, όπως το γράφει το `enqueueMessage`. */
-interface QueuedEmail {
-  readonly to?: unknown;
-  readonly subject?: unknown;
-  readonly content?: unknown;
-  readonly from?: unknown;
-  readonly attempts?: unknown;
-  readonly maxAttempts?: unknown;
-  /** `{ priority, category, ... }` — τα δύο πεδία που κρίνουν τη συνάθροιση. */
-  readonly metadata?: unknown;
-}
-
-function asNumber(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
-function asString(value: unknown): string | null {
-  return typeof value === 'string' && value.length > 0 ? value : null;
-}
-
-/**
- * Το `metadata` ενός εγγράφου ουράς, **αμυντικά**.
- *
- * ⚠️ Οι προεπιλογές δεν είναι διακοσμητικές. Έγγραφο χωρίς `priority` **δεν** είναι
- * επείγον (αλλιώς η απουσία πεδίου θα ακύρωνε τη συνάθροιση για όλους)· έγγραφο
- * χωρίς `category` **δεν** είναι ειδοποίηση (αλλιώς ξένα μηνύματα με δικό τους HTML
- * θα κατέληγαν μέσα σε σύνοψη και το πρότυπό τους θα πεταγόταν).
- */
-function queueMetadata(data: QueuedEmail): {
-  priority: string;
-  category: string;
-  language: string | undefined;
-  notificationId: string | undefined;
-  recipientId: string | undefined;
-} {
-  const raw = typeof data.metadata === 'object' && data.metadata !== null
-    ? (data.metadata as Record<string, unknown>)
-    : {};
-  return {
-    priority: asString(raw.priority) ?? MESSAGE_PRIORITIES.NORMAL,
-    category: asString(raw.category) ?? MESSAGE_CATEGORIES.TRANSACTIONAL,
-    // 🌐 §8.29 — **καμία προεπιλογή εδώ, επίτηδες.** Τα δύο από πάνω παίρνουν
-    // προεπιλογή γιατί κρίνουν *αν* συναθροίζεται το μήνυμα· η γλώσσα κρίνει *τι
-    // λέει*, και η στένωση ανήκει σε **ένα** σημείο (`resolveHumanLanguage` στον
-    // σχεδιαστή). Μια δεύτερη προεπιλογή εδώ θα ήταν σιωπηλή ευκαιρία απόκλισης:
-    // αρκεί κάποιος να τη γράψει `'en'` και ο αγωγός θα διαφωνούσε με τον σχεδιαστή.
-    language: asString(raw.language) ?? undefined,
-    // 🔗 ADR-848 — γεγονότα για τον φάκελο· απουσία (παλιά έγγραφα) ⇒ email όπως πριν.
-    notificationId: asString(raw.notificationId) ?? undefined,
-    recipientId: asString(raw.recipientId) ?? undefined,
-  };
-}
+// 🔗 ADR-849 — το σχήμα του εγγράφου της ουράς και η αμυντική ανάγνωσή του ζουν στο
+// `outbound-email-queue-doc.ts` (εξαγωγή κατά ευθύνη, N.7.1).
 
 /**
  * **Άδειασε την ουρά εξερχομένων email.**
@@ -206,7 +168,7 @@ export async function runOutboundEmailFlush(
   if (!flushReportBalances(report)) {
     throw new Error(
       `outbound-email-flush: ασυνεπής λογιστική — ${report.sent}+${report.retrying}+` +
-        `${report.deadLettered} ≠ ${report.considered}`,
+        `${report.deadLettered}+${report.suppressed} ≠ ${report.considered}`,
     );
   }
 
@@ -218,13 +180,15 @@ export async function runOutboundEmailFlush(
 
   return {
     summary:
-      `sent ${report.sent}, retrying ${report.retrying}, dead-lettered ${report.deadLettered} ` +
+      `sent ${report.sent}, retrying ${report.retrying}, dead-lettered ${report.deadLettered}, ` +
+      `suppressed ${report.suppressed} ` +
       `(considered ${report.considered}${report.truncated ? ', TRUNCATED' : ''}; ` +
       `${report.emailsSent} email, ${report.digested} σε σύνοψη)`,
     metrics: {
       sent: report.sent,
       retrying: report.retrying,
       deadLettered: report.deadLettered,
+      suppressed: report.suppressed,
       considered: report.considered,
       emailsSent: report.emailsSent,
       digested: report.digested,
@@ -245,21 +209,31 @@ async function executePlan(
   docs: readonly FlushableDoc[],
   considered: number,
 ): Promise<FlushReport> {
-  const pending = docs.map(toPendingEmail);
+  const byId = new Map(docs.map((doc) => [doc.id, doc]));
+  const tally: Tally = { sent: 0, retrying: 0, deadLettered: 0, suppressed: 0, emailsSent: 0, digested: 0 };
+
+  // 📧 ADR-849 — Η ΘΕΛΗΣΗ ΤΟΥ ΑΝΘΡΩΠΟΥ **ΤΩΡΑ**, όχι τη στιγμή της ουράς: «Διακοπή» στις
+  // 15:00 ⇒ καμία σύνοψη στις 20:00. Αποτυχία ανάγνωσης ρυθμίσεων ⇒ ρίχνει **πριν**
+  // αγγιχτεί οτιδήποτε, και όλα μένουν `pending` για το επόμενο πέρασμα.
+  const gate = await gateQueuedEmails(docs.map(toPendingEmail));
+  for (const { message, reason } of gate.suppressed) {
+    const doc = byId.get(message.id);
+    if (!doc) continue; // αδύνατο· αν συνέβαινε, το ισοζύγιο θα το κατήγγελλε
+    await markSuppressed(doc, reason);
+    tally.suppressed += 1;
+  }
+
   // 🔗 ADR-848 — οι σύνδεσμοι λύνονται ΜΙΑ φορά ανά πέρασμα, από το origin ΤΩΡΑ.
   const links = liveEmailLinks();
-  const plan = planEmailDelivery(pending, links);
+  const plan = planEmailDelivery(gate.deliverable, links);
 
   // 🔴 Μήνυμα εκτός πλάνου **δεν αποτυγχάνει** — μένει `pending` και ξαναδοκιμάζεται
   // αιώνια, χωρίς κανείς να το μάθει. Ο έλεγχος τρέχει **πριν** αγγιχτεί πάροχος.
-  if (!planCoversEveryMessage(plan, pending)) {
+  if (!planCoversEveryMessage(plan, gate.deliverable)) {
     throw new Error(
-      `outbound-email-flush: το πλάνο δεν καλύπτει και τα ${pending.length} μηνύματα`,
+      `outbound-email-flush: το πλάνο δεν καλύπτει και τα ${gate.deliverable.length} μηνύματα`,
     );
   }
-
-  const byId = new Map(docs.map((doc) => [doc.id, doc]));
-  const tally = { sent: 0, retrying: 0, deadLettered: 0, emailsSent: 0, digested: 0 };
 
   for (const entry of plan) {
     await runPlanEntry(chain, entry, byId, tally, links);
@@ -269,7 +243,14 @@ async function executePlan(
 }
 
 /** Ό,τι μετρά ένα πέρασμα, σε μεταβλητή μορφή. */
-type Tally = { sent: number; retrying: number; deadLettered: number; emailsSent: number; digested: number };
+type Tally = {
+  sent: number;
+  retrying: number;
+  deadLettered: number;
+  suppressed: number;
+  emailsSent: number;
+  digested: number;
+};
 
 /** Εκτελεί **μία** γραμμή του πλάνου και χρεώνει τους κάδους. */
 async function runPlanEntry(
@@ -303,36 +284,8 @@ function isDoc(doc: FlushableDoc | undefined): doc is FlushableDoc {
   return doc !== undefined;
 }
 
-/** Το έγγραφο ουράς στη μορφή που κρίνει ο σχεδιαστής συνάθροισης. */
-function toPendingEmail(doc: FlushableDoc): PendingEmail {
-  const data = doc.data() ?? {};
-  const meta = queueMetadata(data);
-  return {
-    id: doc.id,
-    to: asString(data.to) ?? '',
-    // 🌐 §8.29: ήταν σκληρογραμμένο `'Ειδοποίηση'`. Ακολουθεί τη γλώσσα του
-    // **ίδιου** του μηνύματος, όχι μια καθολική επιλογή.
-    subject: asString(data.subject) ?? emailTextsFor(meta.language).fallbackSubject,
-    content: asString(data.content) ?? '',
-    priority: meta.priority,
-    category: meta.category,
-    language: meta.language,
-    notificationId: meta.notificationId,
-    recipientId: meta.recipientId,
-  };
-}
-
 /** Τι απέγινε **ένα** μήνυμα. Ονομασμένο, ποτέ boolean. */
 type DeliveryOutcome = 'sent' | 'retrying' | 'dead-lettered';
-
-/** Τύπος αρκετά στενός ώστε να μη χρειάζεται το SDK ολόκληρο στα tests. */
-interface FlushableDoc {
-  readonly id: string;
-  data(): QueuedEmail | undefined;
-  readonly ref: {
-    update(data: Record<string, unknown>): Promise<unknown>;
-  };
-}
 
 /**
  * **Μία σύνοψη: ένα email, πολλά έγγραφα.**

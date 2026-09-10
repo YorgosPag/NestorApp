@@ -34,6 +34,7 @@ import {
 import type { EnqueueMessageParams } from '@/server/comms/orchestrator';
 import { queueNotificationEmail } from '@/server/notifications/notification-email-leg';
 import { loadUserNotificationSettings } from '@/server/notifications/user-notification-settings-store';
+import { categorySettingEnabled } from '@/services/user-notification-settings/notification-preference-policy';
 import {
   type UserNotificationSettings,
   getDefaultNotificationSettings,
@@ -114,12 +115,9 @@ function isNotificationAllowed(
     return { allowed: false, reason: `Category ${mapping.category} not found` };
   }
 
-  // Type-safe key access
-  type CategorySettings = typeof categorySettings;
-  const key = mapping.settingKey as keyof CategorySettings;
-  const settingValue = categorySettings[key];
-
-  if (typeof settingValue === 'boolean' && !settingValue && !mapping.isMandatory) {
+  // 🔗 ADR-849 — ο διακόπτης διαβάζεται από τη ΜΙΑ πολιτική, την ίδια που ρωτά και το
+  // email (τη στιγμή της ουράς ΚΑΙ της αποστολής). Ίδια σημασία: μόνο ρητό `false` κλείνει.
+  if (!categorySettingEnabled(settings, mapping) && !mapping.isMandatory) {
     return { allowed: false, reason: `${mapping.category}.${String(mapping.settingKey)} disabled` };
   }
 
@@ -270,6 +268,8 @@ export async function dispatchNotification(request: DispatchRequest): Promise<Di
   // **77 ειδοποιήσεις, μηδέν εξερχόμενα email.** Δες `notification-email-leg.ts`.
   const emailOutcome = await queueNotificationEmail({
     recipientId,
+    // 📧 ADR-849 — η σίγαση ανά τύπο κρίνεται στο σκέλος email, και ξανά στην αποστολή.
+    eventType,
     settings,
     isMandatory: mapping.isMandatory,
     subject: title,

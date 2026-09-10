@@ -139,6 +139,12 @@ export interface EnqueueMessageParams {
        * το token διαγραφής (RFC 8058) πρέπει να δείχνει σε ρυθμίσεις ανθρώπου.
        */
       recipientId?: string;
+      /**
+       * ADR-849 — ο **τύπος** της ειδοποίησης (`NotificationEventType`). Γεγονός, όχι
+       * απόφαση: η πύλη του αγωγού ξαναρωτά τις ρυθμίσεις **τη στιγμή της αποστολής**, και
+       * χωρίς τον τύπο θα έβλεπε μόνο τους καθολικούς διακόπτες.
+       */
+      eventType?: string;
     };
     telegram?: {
       chatId?: string;

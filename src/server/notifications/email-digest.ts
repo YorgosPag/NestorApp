@@ -93,6 +93,12 @@ export interface PendingEmail extends RenderableMessage {
    * {@link languageOf}.
    */
   readonly language?: string;
+  /**
+   * 📧 ADR-849 — `metadata.eventType`: ο τύπος της ειδοποίησης, για την πύλη της
+   * **αποστολής** (`email-send-gate.ts`). Τύπος `string` για τον ίδιο λόγο με το
+   * `language`: έρχεται από έγγραφο. Παλιά έγγραφα ⇒ λείπει ⇒ μόνο καθολικοί έλεγχοι.
+   */
+  readonly eventType?: string;
 }
 
 /** Γιατί αυτό το μήνυμα φεύγει μόνο του. **Ονομασμένο, ποτέ boolean.** */

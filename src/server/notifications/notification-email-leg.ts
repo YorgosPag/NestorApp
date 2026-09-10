@@ -40,7 +40,11 @@
  */
 
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { MESSAGE_PRIORITIES } from '@/config/notification-events';
+import {
+  EVENT_CATEGORY_MAP,
+  MESSAGE_PRIORITIES,
+  type NotificationEventType,
+} from '@/config/notification-events';
 import { resolveHumanLanguage } from '@/i18n/languages';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -98,6 +102,12 @@ export async function resolveRecipientEmail(recipientId: string): Promise<string
 /** Τι χρειάζεται το σκέλος email για να αποφασίσει και να στείλει. */
 export interface EmailLegRequest {
   readonly recipientId: string;
+  /**
+   * ADR-849 — ο **τύπος** της ειδοποίησης. Κρίνει τη σίγαση ανά τύπο **τώρα**, και
+   * ταξιδεύει στην ουρά ως γεγονός ώστε η πύλη του αγωγού να την ξανακρίνει τη στιγμή
+   * της αποστολής.
+   */
+  readonly eventType: NotificationEventType;
   readonly settings: UserNotificationSettings;
   readonly isMandatory: boolean;
   readonly subject: string;
@@ -126,10 +136,12 @@ export interface EmailLegRequest {
  */
 function emailEnvelopeFacts(
   request: EmailLegRequest,
-): { readonly recipientId: string; readonly notificationId?: string } {
+): { readonly recipientId: string; readonly eventType: string; readonly notificationId?: string } {
   return {
     // Η ουρά αλλιώς ξέρει μόνο **διευθύνσεις** — το token διαγραφής θέλει τον **χρήστη**.
     recipientId: request.recipientId,
+    // ADR-849 — χωρίς τον τύπο, η πύλη της αποστολής θα έβλεπε μόνο τους καθολικούς διακόπτες.
+    eventType: request.eventType,
     ...(request.notificationId ? { notificationId: request.notificationId } : {}),
   };
 }
@@ -148,6 +160,8 @@ export async function queueNotificationEmail(
   const decision = decideEmailDelivery(request.settings, {
     now: request.now ?? new Date(),
     isMandatory: request.isMandatory,
+    // 📧 ADR-849 — «όχι email για ταιριάσματα, ναι για εντολές»: ο διακόπτης ΤΟΥ τύπου.
+    setting: EVENT_CATEGORY_MAP[request.eventType],
   });
 
   if (decision.kind === 'suppressed') {
