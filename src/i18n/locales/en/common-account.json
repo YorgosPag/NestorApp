@@ -107,7 +107,9 @@
           "newLead": "New lead",
           "leadStatusChange": "Lead status change",
           "taskAssigned": "Task assigned",
-          "newCommunication": "New communication"
+          "newCommunication": "New communication",
+          "contactTrashed": "Contact moved to trash",
+          "contactPermanentlyDeleted": "Contact permanently deleted"
         },
         "properties": {
           "title": "Properties",
@@ -116,6 +118,7 @@
           "newProperty": "New property",
           "priceChange": "Price change",
           "viewingScheduled": "Viewing scheduled",
+          "newBuilding": "New building",
           "demandInterest": "Someone is looking for a property like mine",
           "demandListingMatch": "A listing matching my demand was published",
           "mandateDecided": "A client answered the mandate I sent them",
@@ -136,6 +139,19 @@
           "passwordChange": "Password change",
           "twoFactorChange": "2FA change",
           "suspiciousActivity": "Suspicious activity"
+        },
+        "procurement": {
+          "title": "Procurement",
+          "description": "Notifications about purchase orders, quotes and vendors",
+          "approvalNeeded": "Purchase order needs approval",
+          "poApproved": "Purchase order approved",
+          "poOverdue": "Purchase order overdue",
+          "quoteReceived": "New vendor quote",
+          "quoteDeadlineApproaching": "Quote deadline approaching",
+          "vendorDeclined": "Vendor declined the invitation",
+          "quoteEdited": "Vendor edited a quote",
+          "aiLowConfidence": "Quote scan needs review",
+          "vendorCreated": "New vendor from a quote scan"
         }
       },
       "timezone": "Time zone",

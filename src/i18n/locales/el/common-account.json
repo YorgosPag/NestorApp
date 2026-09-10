@@ -107,7 +107,9 @@
           "newLead": "Νέο lead",
           "leadStatusChange": "Αλλαγή κατάστασης lead",
           "taskAssigned": "Ανάθεση εργασίας",
-          "newCommunication": "Νέα επικοινωνία"
+          "newCommunication": "Νέα επικοινωνία",
+          "contactTrashed": "Επαφή μεταφέρθηκε στον κάδο",
+          "contactPermanentlyDeleted": "Επαφή διαγράφηκε οριστικά"
         },
         "properties": {
           "title": "Ακίνητα",
@@ -116,6 +118,7 @@
           "newProperty": "Νέο ακίνητο",
           "priceChange": "Αλλαγή τιμής",
           "viewingScheduled": "Προγραμματισμένη επίσκεψη",
+          "newBuilding": "Νέο κτίριο",
           "demandInterest": "Κάποιος ψάχνει ακίνητο σαν το δικό μου",
           "demandListingMatch": "Βγήκε αγγελία που ταιριάζει στη ζήτησή μου",
           "mandateDecided": "Ο πελάτης απάντησε στην εντολή που του έστειλα",
@@ -136,6 +139,19 @@
           "passwordChange": "Αλλαγή κωδικού",
           "twoFactorChange": "Αλλαγή 2FA",
           "suspiciousActivity": "Ύποπτη δραστηριότητα"
+        },
+        "procurement": {
+          "title": "Προμήθειες",
+          "description": "Ειδοποιήσεις για παραγγελίες, προσφορές και προμηθευτές",
+          "approvalNeeded": "Παραγγελία προς έγκριση",
+          "poApproved": "Παραγγελία εγκρίθηκε",
+          "poOverdue": "Καθυστερημένη παραγγελία",
+          "quoteReceived": "Νέα προσφορά προμηθευτή",
+          "quoteDeadlineApproaching": "Πλησιάζει η προθεσμία προσφορών",
+          "vendorDeclined": "Προμηθευτής αρνήθηκε την πρόσκληση",
+          "quoteEdited": "Προμηθευτής τροποποίησε προσφορά",
+          "aiLowConfidence": "Σάρωση προσφοράς θέλει έλεγχο",
+          "vendorCreated": "Νέος προμηθευτής από σάρωση προσφοράς"
         }
       },
       "timezone": "Ζώνη ώρας",
