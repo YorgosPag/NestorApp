@@ -110,6 +110,9 @@ jobs:
           NEXT_PUBLIC_COMPANY_EMAIL: georgios.pagonis@gmail.com
           NEXT_PUBLIC_COMPANY_PHONE: '6974050023'
           NEXT_PUBLIC_COMPANY_WEBSITE: https://nestorconstruct.gr
+          # ADR-848 §10 — ίδια τιμή με το `docker-build.yml`: το bundle που μετράμε οφείλει
+          # να είναι το bundle που στέλνουμε (το Next ψήνει τις `NEXT_PUBLIC_*` στο build).
+          NEXT_PUBLIC_APP_URL: https://nestorconstruct.gr
 
       - name: 📦 Bundle-size ratchet (seed or check)
         run: |

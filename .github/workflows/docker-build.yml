@@ -72,6 +72,12 @@ jobs:
           NEXT_PUBLIC_COMPANY_EMAIL: georgios.pagonis@gmail.com
           NEXT_PUBLIC_COMPANY_PHONE: '6974050023'
           NEXT_PUBLIC_COMPANY_WEBSITE: https://nestorconstruct.gr
+          # 🔴 ADR-848 §10 — Η ΔΙΕΥΘΥΝΣΗ ΜΑΣ, ΤΗ ΣΤΙΓΜΗ ΤΟΥ BUILD. Το Next «ψήνει» ΜΟΝΟ
+          # όσες `NEXT_PUBLIC_*` υπάρχουν εδώ (`next/dist/lib/static-env.js`: value != null).
+          # Χωρίς αυτή τη γραμμή ο SERVER τη διάβαζε από το Coolify στο runtime (σωστά),
+          # αλλά ο BROWSER δεν τη μάθαινε ποτέ ⇒ το QR της πινακίδας σχεδίων τύπωνε
+          # `nestor-app.vercel.app` (νεκρό, Vercel παγωμένο από 2026-05-09).
+          NEXT_PUBLIC_APP_URL: https://nestorconstruct.gr
 
       - name: Log in to GHCR
         uses: docker/login-action@v3

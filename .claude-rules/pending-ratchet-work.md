@@ -25,6 +25,21 @@
 > είναι πλέον **αδύνατη στο commit**. Οι 5 άγκυρες πράσινες.
 
 
+- 🔴 **10/09 — ΩΜΑ NUL BYTES ΣΕ 9 ΑΡΧΕΙΑ ΚΩΔΙΚΑ — ΚΑΙ Ο ΕΛΕΓΧΟΣ ΜΕ `grep` ΕΙΝΑΙ ΤΥΦΛΟΣ** *(βρέθηκε στο ADR-843 §10.19, όταν ένα handoff απέκτησε NUL και το `grep -c -P '\x00'` μέτρησε **0**)*
+
+  **Πού** (σάρωση node σε 20.053 αρχεία κειμένου): `scripts/lib/i18n-shell-slice/plan.js:62` ·
+  `scripts/lib/module-graph/parse-module.js:208,216` · `scripts/lib/shell-utilities/reach.js:176` ·
+  `src/subapps/dxf-viewer/bim-3d/converters/glyph-atlas.ts:149` · `…/bim-3d/viewport/snap/snap-3d-glyph-key.ts:25` ·
+  `…/bim/table/binding/table-bound-marks.ts:159` · `…/bim/table/table-cell-content.ts:213,218` ·
+  `…/systems/selection/candidate-named-identity.ts:108` · + παλιά `src/subapps/dxf-viewer/docs/analysis/duplicates/*.md`.
+  **Γιατί μετράει**: το git βλέπει το αρχείο ως **δυαδικό** (κανένα diff στο review), και μια regex με
+  ωμό NUL αλλάζει σημασία σιωπηλά. Πιθανότατα όλα γεννήθηκαν από `escape` που το εργαλείο `Write`/`Edit`
+  μετέτρεψε σε ωμό byte (ίδια παγίδα με ADR-848 §7) — **να κριθεί ανά αρχείο** αν ο NUL είναι σκόπιμος
+  διαχωριστής κλειδιού (τότε `String.fromCharCode(0)`) ή λάθος.
+  **Ανίχνευση που ΔΟΥΛΕΥΕΙ**: `git ls-files -co --exclude-standard | node -e "…s.includes(String.fromCharCode(0))…"`.
+  ⛔ Το `grep -c -P '\x00'` σε αυτό το μηχάνημα απαντά **0 πάνω σε αρχείο με NUL**.
+  🔒 **Ratchet που λείπει**: πύλη pre-commit «κανένα ωμό NUL σε staged αρχείο κειμένου» (κοστίζει ms).
+
 - 🔴 **10/09 — ΤΟ `jest-suite` ΤΟΥ CI ΑΠΟΤΥΓΧΑΝΕΙ ΣΕ ΚΑΘΕ ΕΚΤΕΛΕΣΗ ΤΟΥΛΑΧΙΣΤΟΝ ΑΠΟ 02/09** *(βρέθηκε στο **ADR-843 §10.19**, ψάχνοντας γιατί 5 κόκκινες άγκυρες δεν μπλόκαραν τίποτα έξι μέρες)*
 
   **Πού**: `gh run list --workflow jest-suite.yml` — **8/8** πρόσφατες εκτελέσεις `failure`
@@ -54,6 +69,15 @@
   ή `absoluteUrl(request, …)` όπου υπάρχει αίτημα· `null` ⇒ **ρητός** χειρισμός, ποτέ
   κατασκευασμένο domain. Ratchet: pattern `nestor-app\.vercel\.app` στο `.ssot-registry.json`.
   **Εκτίμηση**: >1h, 17 αρχεία, 5+ domains ⇒ N.8 (Plan Mode / Orchestrator — ερώτηση στον Giorgio).
+
+  🔑 **10/09 — ΤΟ ΕΥΡΗΜΑ ΑΛΛΑΞΕ ΤΗΝ ΠΡΟΤΕΡΑΙΟΤΗΤΑ** (ADR-848 changelog 10/09 γ): ο **server** έπαιρνε
+  σωστά τη διεύθυνση από το Coolify (runtime)· ο **browser όχι**, γιατί το `docker-build.yml` δεν όριζε
+  `NEXT_PUBLIC_APP_URL` ⇒ το QR της πινακίδας τύπωνε Vercel. ✅ **Η ρίζα διορθώθηκε** (μία γραμμή στο
+  build). Μένει **καθάρισμα**: σβήσιμο της νεκρής εφεδρείας + SSoT `public-origin.ts` + ratchet — **χωρίς
+  βιασύνη**, μετά το ADR-848 Α (σίγαση ανά τύπο). Το project στο Vercel **ΜΗΝ διαγραφεί** (κρατά το όνομα).
+  Επιπλέον ευρήματα: `PhotoSharePageContent` διαβάζει `NEXT_PUBLIC_BASE_URL` (**δεν ορίζεται πουθενά**) ·
+  `VendorInviteSection` → `?? ''` (μισός σύνδεσμος) · **τρεις** συναρτήσεις `getAppBaseUrl` + `publicBase()`
+  (guest route) + `pending-registration.ts:282` = διπλότυπα του `publicOrigin()`.
 
 - 🔴 **09/09 — ΤΡΙΤΟ ΑΝΤΙΓΡΑΦΟ ΤΗΣ ΤΕΜΠΕΛΙΚΗΣ ΦΟΡΤΩΣΗΣ, ΚΑΙ ΕΧΕΙ ΤΟ BUG ΠΟΥ ΤΟ ΠΡΩΤΟΤΥΠΟ ΘΕΡΑΠΕΥΣΕ** *(βρέθηκε στο **ADR-846 §9 #13**, ψάχνοντας SSoT για τη γενεαλογία)*
 

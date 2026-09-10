@@ -169,7 +169,9 @@ notification-email-render, notification-email-envelope, email-subscription, user
 ## 10. ΕΝΕΡΓΕΙΕΣ ΓΙΑ ΤΟΝ GIORGIO (Netcup)
 
 - **Νέο** `NOTIFICATION_EMAIL_SECRET` (π.χ. `openssl rand -hex 32`).
-- Επιβεβαίωση `NEXT_PUBLIC_APP_URL=https://nestorconstruct.gr`.
+- ~~Επιβεβαίωση `NEXT_PUBLIC_APP_URL=https://nestorconstruct.gr`.~~ ✅ **2026-09-10: μπήκε στο BUILD**
+  (`.github/workflows/docker-build.yml`). ⚠️ Ρύθμιση **μόνο** στο Coolify (runtime) **δεν αρκεί**: ο
+  server τη διαβάζει, ο **browser ποτέ** — το Next ψήνει μόνο όσες `NEXT_PUBLIC_*` υπάρχουν στο build.
 
 ---
 
@@ -195,3 +197,10 @@ notification-email-render, notification-email-envelope, email-subscription, user
   **μετέφερε** στο `workspace-destination.ts`. Κόκκινη χωρίς να έχει χαλάσει τίποτα· διορθώθηκε ώστε να
   ρωτά το δίχτυ **αν καλεί** τον επιλυτή και τον επιλυτή **αν ονομάζει και τους δύο κλάδους**. Βρέθηκε
   στο ADR-843 §10.19, που έκλεισε και το εύρημα `contacts` του §7.
+- **2026-09-10 (γ)** — 🔴 **Η διεύθυνσή μας έλειπε από το BUILD της παραγωγής.** Το `docker-build.yml`
+  όριζε 16 `NEXT_PUBLIC_*` αλλά **όχι** το `NEXT_PUBLIC_APP_URL`. Μετρημένο στον κώδικα του Next
+  (`next/dist/lib/static-env.js`): ψήνονται **μόνο** όσες υπάρχουν τη στιγμή του build (`value != null`).
+  ⇒ ο **server** τη διάβαζε από το Coolify στο runtime (σωστά — email/προσκλήσεις/QR παρουσιών εντάξει),
+  αλλά ο **browser ποτέ**: το QR της πινακίδας σχεδίων (DXF viewer, πελάτης) τύπωνε
+  `nestor-app.vercel.app`. ✅ Μία γραμμή στο build. Το σβήσιμο της εφεδρείας Vercel από τα ~20 αρχεία
+  μένει **καθάρισμα** (`.claude-rules/pending-ratchet-work.md`). 🔶 Δεν επαληθεύτηκε σε ζωντανό bundle.
