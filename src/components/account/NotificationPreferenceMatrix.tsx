@@ -20,6 +20,9 @@
  *   που **μεταφέρει εστίαση** στη ρύθμιση email — **δεν γράφει** τίποτα (καμία μαντεψιά συχνότητας).
  * - **Υπότιτλος στήλης = η συχνότητα** («Ημερήσια σύνοψη»): ο άνθρωπος ξέρει τι σημαίνει «ναι».
  * - Προσβασιμότητα: `<th scope>` + `aria-labelledby` (γραμμή + στήλη) ⇒ «Νέο lead, Και με email».
+ * - 🔴 **Variant `success`, ΠΟΤΕ `default`**: στο σκούρο θέμα το `--primary` = `--card` (CHECK 3.38) ⇒ ο
+ *   ανοιχτός διακόπτης `default` είναι **αόρατος** — μετρημένο στον browser: track `rgb(29,40,58)` ≡ κάρτα.
+ *   Ούτε `status`: ~60 κόκκινοι διακόπτες θα διαβάζονταν ως σφάλματα.
  *
  * @module components/account/NotificationPreferenceMatrix
  * @see ADR-849
@@ -106,6 +109,7 @@ function PreferenceRowView({ row, columns, context }: { row: PreferenceRow; colu
         {row.mandatory ? <LockedCell /> : (
           <Switch
             id={`${rowId}-notify`}
+            variant="success"
             aria-labelledby={`${rowId} ${columns.notify}`}
             checked={master}
             onCheckedChange={(checked) => context.onTypeEnabled(row.ref, checked)}
@@ -116,6 +120,7 @@ function PreferenceRowView({ row, columns, context }: { row: PreferenceRow; colu
         {row.mandatory ? <LockedCell /> : (
           <Switch
             id={`${rowId}-email`}
+            variant="success"
             aria-labelledby={`${rowId} ${columns.email}`}
             checked={emailModeFor(context.settings, row.ref) === 'on'}
             disabled={!master || !context.emailsOn}

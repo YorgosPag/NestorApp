@@ -72,6 +72,8 @@ function TypeRow({ row, idPrefix, muted, disabled, onToggle }: TypeRowProps) {
       <Label htmlFor={id} className="text-sm text-card-foreground">{t(row.labelKey)}</Label>
       <Switch
         id={id}
+        // ADR-849 Α3: `default` = αόρατο «ανοιχτό» στο σκούρο θέμα (`--primary` ≡ `--card`, CHECK 3.38).
+        variant="success"
         checked={!muted}
         disabled={disabled}
         onCheckedChange={(checked) => onToggle(row.path, checked ? 'on' : 'off')}
