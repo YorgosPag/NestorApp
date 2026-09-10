@@ -232,9 +232,25 @@ export async function reverseGeocodeDetailed(
     return { kind: 'found', result: data };
   } catch (error) {
     const reason = classifyThrown(error);
-    logger.error('Reverse geocoding API call failed', { error: String(error), data: { reason } });
+    logReverseFailure(error, reason, options.signal?.aborted === true);
     return { kind: 'error', reason };
   } finally {
     deadline.dispose();
+  }
+}
+
+/**
+ * 🔴 ADR-332 D27 Β13 (ζωντανή επαλήθευση): η ακύρωση από τον καλούντα (νεότερη χειρονομία ·
+ * αποπροσάρτηση) είναι **σχεδιασμένη** έκβαση, και η λήξη χρόνου είναι υποβάθμιση που η οθόνη ήδη
+ * λέει («δεν απάντησε»). Ως `error` γέμιζαν την κονσόλα και το overlay του Next με ψεύτικα «Issues».
+ * Σφάλμα μένει **μόνο** ό,τι δεν περιμέναμε.
+ */
+function logReverseFailure(error: unknown, reason: GeocodingFailureReason, cancelledByCaller: boolean): void {
+  if (cancelledByCaller) {
+    logger.info('Reverse geocoding cancelled by caller', { data: { reason } });
+  } else if (reason === 'timeout') {
+    logger.warn('Reverse geocoding timed out', { data: { reason } });
+  } else {
+    logger.error('Reverse geocoding API call failed', { error: String(error), data: { reason } });
   }
 }

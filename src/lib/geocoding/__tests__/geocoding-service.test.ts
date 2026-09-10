@@ -107,6 +107,31 @@ describe('reverseGeocodeDetailed — Β13: φραγμένη στον χρόνο,
     await expect(outcome).resolves.toEqual({ kind: 'error', reason: 'timeout' });
   });
 
+  it('🔴 ακύρωση από τον καλούντα και λήξη χρόνου ΔΕΝ γράφονται ως σφάλμα (ψεύτικα «Issues» στο overlay του Next)', async () => {
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    jest.useFakeTimers();
+    hangUntilAborted();
+
+    const caller = new AbortController();
+    const cancelled = reverseGeocodeDetailed(40.66, 22.89, { signal: caller.signal });
+    caller.abort();
+    await cancelled;
+
+    const expired = reverseGeocodeDetailed(40.66, 22.89);
+    await jest.advanceTimersByTimeAsync(LIMIT_MS + 100);
+    await expired;
+
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
+
+  it('ΠΑΡΟΝΟΜΑΣΤΗΣ: ό,τι ΔΕΝ περιμέναμε (δίκτυο) ΜΕΝΕΙ σφάλμα', async () => {
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    rejectWith(new TypeError('Failed to fetch'));
+
+    await expect(reverseGeocodeDetailed(40.66, 22.89)).resolves.toEqual({ kind: 'error', reason: 'network' });
+    expect(errorSpy).toHaveBeenCalled();
+  });
+
   it('503 του διακομιστή («ο πάροχος δεν απάντησε») ⇒ σφάλμα, ΟΧΙ «εδώ δεν γράφει τίποτα»', async () => {
     respondWith(503, { error: 'Address provider unavailable' });
 
