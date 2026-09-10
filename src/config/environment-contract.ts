@@ -178,4 +178,15 @@ export const ENVIRONMENT_CONTRACT: readonly EnvironmentRequirement[] = [
       'ποτέ ότι κάποιος τον πλησίασε. Δηλαδή σιωπηλή απώλεια κάθε επαφής από τον δρόμο.',
     consumer: 'src/services/contact/first-contact-invitation.service.ts',
   },
+  {
+    name: 'NOTIFICATION_EMAIL_SECRET',
+    severity: 'feature',
+    feature: 'Διαγραφή από τα email ειδοποιήσεων με ένα κλικ (ADR-848, RFC 8058)',
+    consequence:
+      'Τα email ειδοποιήσεων φεύγουν ΧΩΡΙΣ σύνδεσμο «Διαχείριση ειδοποιήσεων email» και ΧΩΡΙΣ ' +
+      'κεφαλίδα List-Unsubscribe. Ο άνθρωπος που θέλει να σταματήσουν δεν έχει τρόπο από το ' +
+      'ίδιο το email, πατά «Αναφορά ως ανεπιθύμητο», και το Gmail μετρά την αναφορά εναντίον ' +
+      'ΟΛΟΥ του domain. Οι σύνδεσμοι που έχουν ήδη σταλεί απαντούν «μη διαθέσιμο».',
+    consumer: 'src/services/notifications/email-subscription-token.service.ts',
+  },
 ] as const;

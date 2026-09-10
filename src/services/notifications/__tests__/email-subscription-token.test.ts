@@ -1,0 +1,88 @@
+/**
+ * @jest-environment node
+ *
+ * Άγκυρα — **ΤΟ ΕΙΣΙΤΗΡΙΟ ΤΗΣ ΔΙΑΓΡΑΦΗΣ** (ADR-848)
+ *
+ * Κάθε άρνηση εδώ είναι μια ζημιά που θα γινόταν χωρίς αυτήν: πλαστό token που
+ * καταργεί email ξένου · token άλλης πύλης που περνά για διαγραφή · ένα email που
+ * **δεν φεύγει** επειδή λείπει μεταβλητή περιβάλλοντος.
+ */
+
+jest.mock('server-only', () => ({}));
+
+import { encodeSignedToken } from '@/lib/tokens/signed-token';
+import {
+  EMAIL_SUBSCRIPTION_SECRET_ENV,
+  issueEmailSubscriptionToken,
+  readEmailSubscriptionToken,
+} from '@/services/notifications/email-subscription-token.service';
+
+const SECRET = 'test-secret-for-email-subscription';
+const ORIGINAL = process.env[EMAIL_SUBSCRIPTION_SECRET_ENV];
+
+beforeEach(() => {
+  process.env[EMAIL_SUBSCRIPTION_SECRET_ENV] = SECRET;
+});
+
+afterAll(() => {
+  if (ORIGINAL === undefined) delete process.env[EMAIL_SUBSCRIPTION_SECRET_ENV];
+  else process.env[EMAIL_SUBSCRIPTION_SECRET_ENV] = ORIGINAL;
+});
+
+function issued(uid: string): string {
+  const token = issueEmailSubscriptionToken(uid);
+  if (token === null) throw new Error('Δεν εκδόθηκε token — η άγκυρα δεν κοίταξε τίποτα.');
+  return token;
+}
+
+describe('Α — το σωστό token', () => {
+  it('Α1 — στρογγυλή διαδρομή: ό,τι εκδίδεται, διαβάζεται στον ίδιο χρήστη', () => {
+    expect(readEmailSubscriptionToken(issued('u1'))).toEqual({ ok: true, uid: 'u1' });
+  });
+
+  it('Α2 — base64url: ασφαλές μέσα σε διαδρομή και ερώτημα, χωρίς κωδικοποίηση', () => {
+    expect(issued('u1')).toMatch(/^[A-Za-z0-9_-]+$/);
+  });
+});
+
+describe('Β — κάθε πλαστογραφία απορρίπτεται ως «invalid»', () => {
+  it('Β1 — αλλοιωμένος χαρακτήρας', () => {
+    const token = issued('u1');
+    const tampered = `${token.slice(0, -2)}${token.endsWith('A') ? 'B' : 'A'}${token.slice(-1)}`;
+    expect(readEmailSubscriptionToken(tampered)).toEqual({ ok: false, reason: 'invalid' });
+  });
+
+  it('Β2 🔴 — υπογραφή του ΙΔΙΟΥ μυστικού για ΑΛΛΟ σκοπό δεν περνά', () => {
+    const otherPurpose = encodeSignedToken(SECRET, ['mandate', 'v1', 'u1']);
+    expect(readEmailSubscriptionToken(otherPurpose)).toEqual({ ok: false, reason: 'invalid' });
+  });
+
+  it('Β3 — token άλλου μυστικού', () => {
+    const token = issued('u1');
+    process.env[EMAIL_SUBSCRIPTION_SECRET_ENV] = 'another-secret';
+    expect(readEmailSubscriptionToken(token)).toEqual({ ok: false, reason: 'invalid' });
+  });
+
+  it('Β4 — σκουπίδια', () => {
+    expect(readEmailSubscriptionToken('')).toEqual({ ok: false, reason: 'invalid' });
+    expect(readEmailSubscriptionToken('not-a-token')).toEqual({ ok: false, reason: 'invalid' });
+  });
+});
+
+describe('Γ — χωρίς μυστικό: ΥΠΟΒΑΘΜΙΣΗ, ποτέ διακοπή αλληλογραφίας', () => {
+  it('Γ1 🔑 — η έκδοση επιστρέφει null (το email φεύγει χωρίς διαγραφή) — ΔΕΝ πετά', () => {
+    delete process.env[EMAIL_SUBSCRIPTION_SECRET_ENV];
+    expect(issueEmailSubscriptionToken('u1')).toBeNull();
+  });
+
+  it('Γ2 — η ανάγνωση λέει server-config: φταίμε εμείς, όχι ο σύνδεσμος', () => {
+    const token = issued('u1');
+    delete process.env[EMAIL_SUBSCRIPTION_SECRET_ENV];
+    expect(readEmailSubscriptionToken(token)).toEqual({ ok: false, reason: 'server-config' });
+  });
+
+  it('Γ3 — ταυτότητα με `:` δεν υπογράφεται καθόλου (δύο σύνολα πεδίων, ίδιο κείμενο)', () => {
+    expect(issueEmailSubscriptionToken('u:1')).toBeNull();
+    expect(issueEmailSubscriptionToken('')).toBeNull();
+  });
+});
