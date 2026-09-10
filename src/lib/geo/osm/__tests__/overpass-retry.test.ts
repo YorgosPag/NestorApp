@@ -23,6 +23,7 @@
 /* global describe, it, expect, beforeEach, afterEach, jest */
 
 import { runOverpassQueryStrict } from '../overpass-client';
+import { createDeadline } from '@/lib/async-utils';
 
 const ORIGINAL_FETCH = global.fetch;
 
@@ -157,5 +158,58 @@ describe('Κ3 — το `Retry-After` τιμάται, με ταβάνι', () => {
     await jest.advanceTimersByTimeAsync(3_100);
 
     expect((await promise).ok).toBe(true);
+  });
+});
+
+// =============================================================================
+// Κ4 — Η ΠΡΟΘΕΣΜΙΑ ΤΟΥ ΚΑΛΟΥΝΤΑ (ADR-332 D27 Β13)
+// =============================================================================
+
+describe('Κ4 — η επανάληψη χωρά ΜΟΝΟ στο υπόλοιπο της προθεσμίας', () => {
+  /**
+   * ⛔ ΜΕΤΑΛΛΑΞΗ: βγάλε τον έλεγχο «χωρά η αναμονή;» ⇒ **κόκκινο** — όχι στο πλήθος κλήσεων (τον
+   * επόμενο γύρο τον κόβει ο έλεγχος «ελάχιστη προσπάθεια»), αλλά στον **χρόνο**: η απάντηση
+   * καθυστερεί κατά τη μάταιη αναμονή. Μετρημένο: η πρώτη εκδοχή αυτής της άγκυρας μετρούσε
+   * μόνο κλήσεις, και η μετάλλαξη **επέζησε**.
+   */
+  it('🔴 αναμονή + τίμια προσπάθεια ΔΕΝ χωρούν ⇒ «δεν απάντησε» ΑΜΕΣΩΣ, χωρίς τη μάταιη αναμονή', async () => {
+    const fetchMock = respondWith({ status: 429, headers: { 'retry-after': '1' } }, { status: 200 });
+    const deadline = createDeadline(1_500);
+    let settled = false;
+
+    const promise = runOverpassQueryStrict('[out:json];out;', { deadline }).finally(() => { settled = true; });
+    // Το `retry-after: 1` ζητά 1″· μετά από αυτό θα έμεναν 0,5″, λιγότερα από μια τίμια προσπάθεια.
+    await jest.advanceTimersByTimeAsync(100);
+    expect(settled).toBe(true);
+
+    const outcome = await promise;
+    deadline.dispose();
+    expect(outcome.ok).toBe(false);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  /** ⛔ ΜΕΤΑΛΛΑΞΗ: βγάλε τον έλεγχο «ελάχιστη προσπάθεια» ⇒ **κόκκινο** (1 κλήση). */
+  it('🔴 σχεδόν ληγμένη προθεσμία ⇒ ΚΑΜΙΑ κλήση — όχι αίτημα που θα κοπεί πριν απαντήσει', async () => {
+    const fetchMock = respondWith({ status: 200 });
+    const deadline = createDeadline(500);
+
+    const outcome = await runOverpassQueryStrict('[out:json];out;', { deadline });
+    deadline.dispose();
+
+    expect(outcome.ok).toBe(false);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('ΠΑΡΟΝΟΜΑΣΤΗΣ: άνετη προθεσμία ⇒ η επανάληψη γίνεται κανονικά', async () => {
+    const fetchMock = respondWith({ status: 429, headers: { 'retry-after': '1' } }, { status: 200 });
+    const deadline = createDeadline(20_000);
+
+    const promise = runOverpassQueryStrict('[out:json];out;', { deadline });
+    await jest.runAllTimersAsync();
+    const outcome = await promise;
+    deadline.dispose();
+
+    expect(outcome.ok).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });

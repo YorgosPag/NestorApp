@@ -35,7 +35,7 @@
 
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
-import { sleep } from '@/lib/async-utils';
+import { sleep, type Deadline } from '@/lib/async-utils';
 import { calculateBackoffDelay } from '@/services/entity-linking/utils/retry';
 
 const logger = createModuleLogger('overpass-client');
@@ -52,8 +52,29 @@ const USER_AGENT = process.env.GEOCODING_USER_AGENT || 'NestorPagonisApp/1.0 (ge
  * **διακομιστή του Overpass** πότε να παρατήσει τη δουλειά, το `AbortSignal` λέει σε
  * **εμάς** πότε να πάψουμε να περιμένουμε. Αν έλειπε το πρώτο, ένα βαρύ ερώτημα θα
  * συνέχιζε να καίει πόρους **του κοινού διακομιστή** αφού εμείς έχουμε φύγει.
+ *
+ * 🔑 Με προθεσμία (ADR-332 D27 Β13) δίνεται το **υπόλοιπό** της: ο Overpass δεν χρειάζεται να
+ * δουλεύει για απάντηση που εμείς δεν θα περιμένουμε.
  */
-export const overpassQuerySeconds = (): number => Math.floor(OVERPASS_TIMEOUT_MS / 1000);
+export const overpassQuerySeconds = (budgetMs: number = OVERPASS_TIMEOUT_MS): number =>
+  Math.max(1, Math.floor(Math.min(budgetMs, OVERPASS_TIMEOUT_MS) / 1000));
+
+/** Επιλογές μιας κλήσης — σήμερα μόνο η προθεσμία του καλούντα. */
+export interface OverpassCallOptions {
+  /** Απόλυτη προθεσμία όλου του αιτήματος (ADR-332 D27 Β13). Χωρίς αυτήν: η σημερινή συμπεριφορά. */
+  readonly deadline?: Deadline;
+}
+
+/**
+ * Κάτω από αυτό, μια προσπάθεια **δεν** ξεκινά: ένα αίτημα που θα κοπεί πριν απαντήσει είναι
+ * φόρτος στον κοινό διακομιστή χωρίς κέρδος — η τίμια απάντηση είναι «δεν απάντησε».
+ */
+const MIN_ATTEMPT_MS = 1_000;
+
+/** Πόσο χρόνο δικαιούται **αυτή** η προσπάθεια: το χρονόμετρό μας, ή λιγότερο αν τελειώνει η προθεσμία. */
+function attemptBudgetMs(deadline: Deadline | undefined): number {
+  return deadline ? Math.min(OVERPASS_TIMEOUT_MS, deadline.remainingMs()) : OVERPASS_TIMEOUT_MS;
+}
 
 // =============================================================================
 // ΕΠΑΝΑΛΗΨΗ — γιατί «άλλοτε το εντοπίζει και άλλοτε όχι»
@@ -163,8 +184,11 @@ interface OverpassResponse {
  * §14.4, όπου «δεν απάντησε» δεν επιτρέπεται να διαβαστεί ως «δεν υπάρχει το κτίριο» —
  * ο καλών χρησιμοποιεί το {@link runOverpassQueryStrict}.
  */
-export async function runOverpassQuery(query: string): Promise<readonly OverpassElement[]> {
-  const outcome = await runOverpassQueryStrict(query);
+export async function runOverpassQuery(
+  query: string,
+  options: OverpassCallOptions = {},
+): Promise<readonly OverpassElement[]> {
+  const outcome = await runOverpassQueryStrict(query, options);
   return outcome.ok ? outcome.elements : [];
 }
 
@@ -179,12 +203,17 @@ export async function runOverpassQuery(query: string): Promise<readonly Overpass
  */
 export async function runOverpassQueryStrict(
   query: string,
+  options: OverpassCallOptions = {},
 ): Promise<
   | { readonly ok: true; readonly elements: readonly OverpassElement[] }
   | { readonly ok: false; readonly reason: 'unavailable' }
 > {
+  const { deadline } = options;
   for (let attempt = 1; attempt <= RETRY_ATTEMPTS; attempt += 1) {
-    const outcome = await attemptOverpass(query);
+    const budgetMs = attemptBudgetMs(deadline);
+    // 🔑 ADR-332 D27 Β13: χωρίς χρόνο για ΤΙΜΙΑ προσπάθεια, δεν ξεκινάμε.
+    if (budgetMs < MIN_ATTEMPT_MS) break;
+    const outcome = await attemptOverpass(query, budgetMs);
 
     if (outcome.kind === 'ok') return { ok: true, elements: outcome.elements };
 
@@ -194,6 +223,8 @@ export async function runOverpassQueryStrict(
     if (!outcome.retryable || attempt === RETRY_ATTEMPTS) break;
 
     const delay = retryDelayMs(outcome.response, attempt);
+    // Η αναμονή + μια τίμια προσπάθεια πρέπει να χωρούν στο υπόλοιπο — αλλιώς «δεν απάντησε» τώρα.
+    if (deadline && deadline.remainingMs() < delay + MIN_ATTEMPT_MS) break;
     logger.warn('Overpass — ξαναρωτάμε', {
       data: { attempt, of: RETRY_ATTEMPTS, delayMs: delay, status: outcome.status },
     });
@@ -212,6 +243,7 @@ export async function runOverpassQueryStrict(
  */
 async function attemptOverpass(
   query: string,
+  timeoutMs: number,
 ): Promise<
   | { readonly kind: 'ok'; readonly elements: readonly OverpassElement[] }
   | {
@@ -229,7 +261,7 @@ async function attemptOverpass(
         'User-Agent': USER_AGENT,
       },
       body: `data=${encodeURIComponent(query)}`,
-      signal: AbortSignal.timeout(OVERPASS_TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
     });
 
     if (!response.ok) {

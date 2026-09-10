@@ -59,3 +59,58 @@ export function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
     if (timer !== undefined) clearTimeout(timer);
   });
 }
+
+// ============================================================================
+// DEADLINE — ΜΙΑ προθεσμία για ΟΛΟ το δέντρο κλήσεων (ADR-332 D27 Β13)
+// ============================================================================
+
+/**
+ * Μια **απόλυτη** προθεσμία που μοιράζεται σε διαδοχικά στάδια.
+ *
+ * 🔑 Google SRE, *Addressing Cascading Failures*: *«rather than inventing a deadline when
+ * sending RPCs to backends, servers should employ deadline propagation»*. Κάθε στάδιο παίρνει
+ * **ό,τι απομένει** ({@link Deadline.remainingMs}), όχι δικό του σταθερό χρόνο.
+ *
+ * 🔴 Γιατί υπάρχει: η αντίστροφη γεωκωδικοποίηση έδινε 8″ στο Nominatim και μετά έως **τρία
+ * διαδοχικά** Overpass των έως τριών προσπαθειών × 6″ — ο διάλογος συρσίματος μετρήθηκε στα
+ * 24–38″. Άθροισμα σταθερών χρόνων δεν είναι προθεσμία.
+ */
+export interface Deadline {
+  /** Χιλιοστά που απομένουν — ποτέ αρνητικά. */
+  remainingMs(): number;
+  /** Ακυρώνεται στη λήξη — δίνεται σε `fetch`. */
+  readonly signal: AbortSignal;
+  /** Κλείνει το χρονόμετρο νωρίτερα. Αλλιώς κρατά ζωντανή τη διεργασία ως τη λήξη (βλ. `withTimeout`). */
+  dispose(): void;
+}
+
+export function createDeadline(ms: number): Deadline {
+  const endsAt = Date.now() + ms;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  return {
+    remainingMs: () => Math.max(0, endsAt - Date.now()),
+    signal: controller.signal,
+    dispose: () => clearTimeout(timer),
+  };
+}
+
+/**
+ * Ένα σήμα που ακυρώνεται μόλις ακυρωθεί **οποιοδήποτε** από τα δοσμένα (τα `undefined` αγνοούνται).
+ *
+ * ⚠️ Όχι `AbortSignal.any`: ήρθε μόλις το 2024 (Safari 17.4 · Firefox 124), και εδώ τρέχει σε
+ * περιηγητή πελάτη. Η ακύρωση γίνεται **χωρίς** αιτία, ώστε το `fetch` να απορρίπτει με
+ * `AbortError` — αυτό που ήδη ταξινομεί ο καλών.
+ */
+export function linkedAbortSignal(...signals: readonly (AbortSignal | undefined)[]): AbortSignal {
+  const controller = new AbortController();
+  for (const signal of signals) {
+    if (!signal) continue;
+    if (signal.aborted) {
+      controller.abort();
+      break;
+    }
+    signal.addEventListener('abort', () => controller.abort(), { once: true });
+  }
+  return controller.signal;
+}

@@ -14,6 +14,13 @@ interface GeocodingConfig {
   readonly BATCH_DELAY_MS: number;
   /** Address resolver timeout */
   readonly RESOLVER_TIMEOUT_MS: number;
+  /**
+   * **Μία** προθεσμία για όλη την αντίστροφη γεωκωδικοποίηση (Nominatim + Overpass) — ADR-332 D27
+   * Β13. Ο διακομιστής τη μοιράζει στα στάδια (deadline propagation)· ο πελάτης τη διαβάζει κι αυτός.
+   */
+  readonly REVERSE_BUDGET_MS: number;
+  /** Περιθώριο του πελάτη πάνω από το `REVERSE_BUDGET_MS` (δίκτυο · όριο ρυθμού · κρύα εκκίνηση). */
+  readonly REVERSE_CLIENT_GRACE_MS: number;
   /** Max results from Nominatim per query */
   readonly NOMINATIM_RESULT_LIMIT: string;
   /** Accept-Language header for Nominatim */
@@ -87,6 +94,8 @@ function getGeographicConfig(): GeographicConfig {
       NOMINATIM_DELAY_MS: parseInt(process.env.NEXT_PUBLIC_NOMINATIM_DELAY_MS || '1100', 10),
       BATCH_DELAY_MS: parseInt(process.env.NEXT_PUBLIC_GEOCODING_BATCH_DELAY_MS || '1200', 10),
       RESOLVER_TIMEOUT_MS: parseInt(process.env.NEXT_PUBLIC_GEOCODING_RESOLVER_TIMEOUT_MS || '5000', 10),
+      REVERSE_BUDGET_MS: parseInt(process.env.NEXT_PUBLIC_GEOCODING_REVERSE_BUDGET_MS || '9000', 10),
+      REVERSE_CLIENT_GRACE_MS: parseInt(process.env.NEXT_PUBLIC_GEOCODING_REVERSE_CLIENT_GRACE_MS || '3000', 10),
       /**
        * Πόσους υποψήφιους ζητάμε **ανά αίτημα** — όχι πόσα αιτήματα κάνουμε.
        *
