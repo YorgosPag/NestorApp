@@ -20,6 +20,7 @@ import { useTranslation } from 'react-i18next';
 import { useNotifications } from '@/providers/NotificationProvider';
 import type { ContactFormData, CompanyAddress } from '@/types/ContactFormTypes';
 import { getPrimaryAddressType, type ContactAddressType } from '@/types/contacts/address-types';
+import { COMPANY_ADDRESS_HIERARCHY_CLEARED } from './addresses-section-form-mapping';
 
 const UNDO_DURATION_MS = 5000;
 
@@ -47,6 +48,8 @@ const HQ_CLEARED_FIELDS = {
  * not forced back to `headquarters`.
  */
 function buildClearedHqEntry(primaryType: ContactAddressType, customLabel: string | undefined): CompanyAddress {
+  // ADR-332 D27 Β-ΙΙ: **νέα** εγγραφή — χωρίς `id` και χωρίς θέση. Ο «Καθαρισμός» σβήνει και
+  // την πινέζα· αλλιώς μια θέση χωρίς κείμενο θα μετρούσε ως περιεχόμενο (D20) και θα επιβίωνε.
   return {
     type: primaryType,
     customLabel: primaryType === 'other' ? customLabel : undefined,
@@ -54,15 +57,7 @@ function buildClearedHqEntry(primaryType: ContactAddressType, customLabel: strin
     number: '',
     postalCode: '',
     city: '',
-    settlementId: null,
-    communityName: '',
-    municipalUnitName: '',
-    municipalityName: '',
-    municipalityId: null,
-    regionalUnitName: '',
-    regionName: '',
-    decentAdminName: '',
-    majorGeoName: '',
+    ...COMPANY_ADDRESS_HIERARCHY_CLEARED,
   };
 }
 

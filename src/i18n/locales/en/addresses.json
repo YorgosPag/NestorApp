@@ -321,7 +321,8 @@
     "positionDrift": {
       "message": "The pin is {distance} away from where the new address is.",
       "relocate": "Move to the address position",
-      "keep": "Keep the pin"
+      "keep": "Keep the pin",
+      "relocateFailed": "The pin was not moved — the address service did not respond. Please try again."
     }
   },
   "publicMap": {

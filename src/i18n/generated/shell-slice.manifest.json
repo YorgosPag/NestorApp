@@ -69,7 +69,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "c40fcb7598856ab5c9d4b36d99ed97f0a068d6da3def4eb1e29b59ffaaa7263d",
+  "inputsSha256": "1752b7c4c94ea307cb934dc335429059d5831a5cadc6eebf37c8413be3dd28dd",
   "languages": [
     "el"
   ],
@@ -4693,7 +4693,7 @@
     "src/services/navigation-companies.service.ts": "64e4456e2edbfa8d895814e60fa572152b573b5ec3b19ce0303e2a623b28768e",
     "src/services/notificationService.ts": "53e0251636cfda81bc8fecd825e66923b20c7597ff5ea6fb8e0be7dbc75ed540",
     "src/services/realtime/RealtimeService.ts": "74041709a532b1af4b14add0a5a5909fd1424f201144b959073bdfedba6d9501",
-    "src/services/realtime/event-payload-definitions.ts": "78b9e40a30565f7fae74ac114948afbecd2b051de9bb667dc1035f0fbb0a312a",
+    "src/services/realtime/event-payload-definitions.ts": "15e218b64c48ab3d2f51713977c45f89fc4fc5964125407282f50e916b06fc37",
     "src/services/realtime/hooks/create-realtime-collection-hook.ts": "ef908c5f0c10c607f5053802cd7034724bf4720c8a96b0fe1412653f171658a1",
     "src/services/realtime/hooks/public-listings-query.ts": "cd0a891ecbf03f7d9fb895d24cde3f5af695ed1ee37d649f4bbf9d34e4088edd",
     "src/services/realtime/hooks/public-listings-source.ts": "be3708d38a35d48194e77024e66c46ee201157835e8c5c64b6693ab2647de2a1",
