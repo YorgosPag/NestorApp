@@ -69,7 +69,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "4cca91bc8cc215b499fa632422e35ccb05878646e78370ccb42ba265903c808f",
+  "inputsSha256": "4a14b3368823b580f69790e7ed6f1df35dd122a8e56785012c62c8343a3c45e1",
   "languages": [
     "el"
   ],
@@ -232,8 +232,8 @@
     "src/components/mandate/mandate-request-form-fields.tsx": "4b38a5e0f6d79b0104d3676088a84414c82f0941849927a387fbd7309ef3d186",
     "src/components/mandate/mandate-request-form-labels.ts": "8dfcae48fb4ab1c08310bc66150bb28fe0a6e50d98cc26cbca9aa1c1620c26ed",
     "src/components/mandate/offer-kind-labels.ts": "2462ab81199ebf51496c3936cd43391944141154b4b9db8f956fa8afa12a39cc",
-    "src/components/notifications/EmailPreferencesPanel.tsx": "a0ce7478f07c56d8bffc90308c8e15180781699dd6740b3518d6c55c805ac88e",
-    "src/components/notifications/NotificationPermalinkUnavailable.tsx": "068e4e4ffbdf33d53b7f341edc60eac1c18ac58c5628f77d78f8b3cfbb5d3716",
+    "src/components/notifications/EmailPreferencesPanel.tsx": "2e4c1bf25e1e47aced90365b2134e8625f8c34c07617bf98aba6a335c811d104",
+    "src/components/notifications/NotificationPermalinkUnavailable.tsx": "927d9d74450a5ed7d608ee72f0b88646551c6279f19e4e2a30225f50c5bf3cad",
     "src/components/owner-property/MyOwnerPropertiesContent.tsx": "5d6c9bd1aea0d87f47c292599456d2c09e758b404c90a8c5f2e24d166167116e",
     "src/components/owner-property/OwnerListingCompletion.tsx": "68f35f90e0a22585ca8064754c9c9f8665bbf60a76987b28b5b2c96c8f2b5a67",
     "src/components/owner-property/OwnerMandatePanel.tsx": "3ab662a71812f24311c61911b21599e0ee5f8645adf34e1745cf65778e548587",
