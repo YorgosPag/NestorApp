@@ -18,11 +18,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
-import { nowISO } from '@/lib/date-local';
+import { markNotificationsSeen } from '@/server/notifications/notification-read';
 
 const logger = createModuleLogger('NotificationsAckRoute');
 
@@ -57,51 +55,25 @@ const basePOST = async (request: NextRequest) => {
 
         logger.info('[Notifications/Ack] Marking notifications as read', { userId: ctx.uid, count: ids.length });
 
-        // CRITICAL: Ownership validation - fetch notifications to verify they belong to this user
-        const notificationsRef = getAdminFirestore().collection(COLLECTIONS.NOTIFICATIONS);
-        const notificationsSnapshot = await notificationsRef
-          .where('__name__', 'in', ids.slice(0, 10)) // Firestore 'in' query limit is 10
-          .get();
+        // 🔑 ADR-848 — ΕΝΑΣ συγγραφέας του «διαβάστηκε», κοινός με τον σύνδεσμο του email
+        // (`/n/{id}`). Ο έλεγχος ιδιοκτησίας γίνεται ΑΝΑ ΕΓΓΡΑΦΟ, μέσα στον συγγραφέα.
+        const requested = ids.filter((id: unknown): id is string => typeof id === 'string');
+        const { marked, refused } = await markNotificationsSeen(ctx.uid, requested);
 
-        // Validate ownership
-        const ownedIds: string[] = [];
-        const unauthorizedIds: string[] = [];
-
-        notificationsSnapshot.docs.forEach(doc => {
-          const data = doc.data();
-          if (data.userId === ctx.uid) {
-            ownedIds.push(doc.id);
-          } else {
-            unauthorizedIds.push(doc.id);
-          }
-        });
-
-        if (unauthorizedIds.length > 0) {
+        if (refused.length > 0) {
           logger.warn('[Notifications/Ack] Unauthorized attempt to ack notifications', {
             userId: ctx.uid,
-            unauthorizedIds
+            unauthorizedIds: refused
           });
         }
-
-        // Mark only owned notifications as read
-        if (ownedIds.length > 0) {
-          const batch = getAdminFirestore().batch();
-          ownedIds.forEach(id => {
-            const docRef = notificationsRef.doc(id);
-            batch.update(docRef, {
-              seen: true,
-              seenAt: nowISO()
-            });
-          });
-          await batch.commit();
-
-          logger.info('[Notifications/Ack] Marked notifications as read', { count: ownedIds.length });
+        if (marked.length > 0) {
+          logger.info('[Notifications/Ack] Marked notifications as read', { count: marked.length });
         }
 
         return NextResponse.json({
           success: true,
-          markedCount: ownedIds.length,
-          message: `Marked ${ownedIds.length} notification(s) as read`
+          markedCount: marked.length,
+          message: `Marked ${marked.length} notification(s) as read`
         });
       } catch (error) {
         logger.error('[Notifications/Ack] Error', {
