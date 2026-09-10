@@ -7,24 +7,53 @@
  * Defines types for user-controlled notification settings
  *
  * @module services/user-notification-settings/types
- * @enterprise ADR-025 - Notification Settings Centralization
+ * @see ADR-849 — το μοντέλο προτιμήσεων (τύπος × κανάλι). ⚠️ Εδώ έγραφε «ADR-025 -
+ *      Notification Settings Centralization»: **φάντασμα** — ο αριθμός ανήκει στο Property
+ *      Linking, και έγγραφο για το μοντέλο προτιμήσεων δεν υπήρξε ποτέ πριν το ADR-849.
  */
 
 import { DEFAULT_LANGUAGE, type HumanLanguage } from '@/i18n/languages';
+
+import {
+  emptyEmailCategories,
+  type EmailCategorySettings,
+} from './user-notification-settings.email-types';
 
 // ============================================================================
 // NOTIFICATION CATEGORY TYPES
 // ============================================================================
 
 /**
- * Available notification categories
+ * Available notification categories.
+ *
+ * 🔑 ADR-849 — **παράγεται** από τον {@link NotificationCategorySettingsMap}, όχι γραμμένο
+ * δεύτερη φορά: ήταν ξεχωριστή ένωση, δηλαδή δύο λίστες κατηγοριών ελεύθερες να αποκλίνουν.
  */
-export type NotificationCategory = 'crm' | 'properties' | 'tasks' | 'security' | 'procurement';
+export type NotificationCategory = keyof NotificationCategorySettingsMap;
 
 /**
  * Email frequency preferences
  */
 export type EmailFrequency = 'realtime' | 'daily' | 'weekly' | 'disabled';
+
+/**
+ * Οι τιμές του {@link EmailFrequency} σε χρόνο εκτέλεσης — ADR-849.
+ *
+ * ⚠️ **`Record<…, true>`, ΠΟΤΕ πίνακας με το χέρι**: ο μεταγλωττιστής απαιτεί κάθε τιμή.
+ * Ζούσε ιδιωτικά στο `email-subscription-contract.ts`· τον χρειάζεται πλέον και η
+ * συγχώνευση των ρυθμίσεων — δεύτερο αντίγραφο θα ήταν δεύτερη αλήθεια.
+ */
+const EMAIL_FREQUENCIES: Readonly<Record<EmailFrequency, true>> = {
+  realtime: true,
+  daily: true,
+  weekly: true,
+  disabled: true,
+};
+
+/** **Είναι αυτή η τιμή συχνότητα email;** Για δεδομένα που δεν ελέγξαμε (έγγραφο, αίτημα). */
+export function isEmailFrequency(value: unknown): value is EmailFrequency {
+  return typeof value === 'string' && Object.prototype.hasOwnProperty.call(EMAIL_FREQUENCIES, value);
+}
 
 /**
  * Η ζώνη ώρας όταν ο χρήστης δεν έχει δηλώσει δική του.
@@ -202,6 +231,23 @@ export interface SecurityNotificationSettings {
   suspiciousActivity: boolean;
 }
 
+/**
+ * 🗺️ ADR-849 — **κατηγορία → οι διακόπτες της**, με όνομα.
+ *
+ * Ήταν inline μέσα στο `UserNotificationSettings.categories`. Το {@link EmailCategorySettings}
+ * χρειάζεται τα **ίδια** κλειδιά· ένα δεύτερο inline αντίγραφο θα ήταν ελεύθερο να αποκλίνει.
+ */
+export interface NotificationCategorySettingsMap {
+  crm: CrmNotificationSettings;
+  properties: PropertiesNotificationSettings;
+  tasks: TasksNotificationSettings;
+  security: SecurityNotificationSettings;
+  procurement: ProcurementNotificationSettings;
+}
+
+// 📧 ADR-849 — ο τύπος «email ανά τύπο» (`EmailCategorySettings`) ζει στο
+// `user-notification-settings.email-types.ts` (N.7.1, κατά ευθύνη).
+
 // ============================================================================
 // MAIN SETTINGS INTERFACE
 // ============================================================================
@@ -228,14 +274,14 @@ export interface UserNotificationSettings {
   /** Push notifications enabled (browser) */
   pushEnabled: boolean;
 
-  /** Category-specific settings */
-  categories: {
-    crm: CrmNotificationSettings;
-    properties: PropertiesNotificationSettings;
-    tasks: TasksNotificationSettings;
-    security: SecurityNotificationSettings;
-    procurement: ProcurementNotificationSettings;
-  };
+  /** Category-specific settings — ο **κύριος** διακόπτης κάθε τύπου (κουδούνι + email). */
+  categories: NotificationCategorySettingsMap;
+
+  /**
+   * 📧 ADR-849 — **το email ανά τύπο**· μόνο στενεύει το `categories`.
+   * @see EmailCategorySettings
+   */
+  emailCategories: EmailCategorySettings;
 
   /** Quiet hours settings */
   quietHours: {
@@ -391,6 +437,7 @@ export function getDefaultNotificationSettings(userId: string): UserNotification
       security: { ...DEFAULT_SECURITY_SETTINGS },
       procurement: { ...DEFAULT_PROCUREMENT_SETTINGS },
     },
+    emailCategories: emptyEmailCategories(),
     quietHours: {
       enabled: false,
       startTime: '22:00',

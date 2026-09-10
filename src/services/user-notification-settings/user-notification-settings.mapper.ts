@@ -11,82 +11,32 @@
  * μετρητής — μετακινήθηκε **ολόκληρη η ευθύνη**. Ίδια κίνηση με το
  * `buildPublicListing` → `projectListingShape` του ADR-777 §8.22.
  *
- * 🔑 **Και οι δύο συναρτήσεις είναι ΚΑΘΑΡΕΣ**: καμία Firestore κλήση, κανένα
- * `this`, καμία κατάσταση. Γι' αυτό μπορούν να δοκιμαστούν **χωρίς** emulator —
- * κάτι που, όσο ζούσαν ως `private` μέθοδοι singleton, ήταν αδύνατο.
+ * 🔗 **ADR-849 — η ανάγνωση ΔΕΝ ζει πια εδώ.** Εδώ υπήρχε η **δεύτερη** συγχώνευση με
+ * τις προεπιλογές (ανά κλειδί), ενώ ο διακομιστής είχε **άλλη** (ρηχή). Και οι δύο
+ * αναθέτουν πλέον στο `user-notification-settings.merge.ts`.
  *
  * @module services/user-notification-settings/user-notification-settings.mapper
- * @see ADR-025 — Notification Settings Centralization
- * @see ADR-777 §8.28 (ζώνη ώρας) · §8.29 (γλώσσα παραλήπτη)
+ * @see ADR-849 — μοντέλο προτιμήσεων · ADR-777 §8.28 (ζώνη ώρας) · §8.29 (γλώσσα)
  */
 
 import { Timestamp } from 'firebase/firestore';
 
-import { resolveHumanLanguage } from '@/i18n/languages';
-import { normalizeToDate } from '@/lib/date-local';
 import { nowTimestamp } from '@/lib/firestore-now';
 
-import {
-  type UserNotificationSettings,
-  getDefaultNotificationSettings,
-} from './user-notification-settings.types';
+import { mergeNotificationSettings } from './user-notification-settings.merge';
+import { type UserNotificationSettings } from './user-notification-settings.types';
 
 /**
  * Έγγραφο Firestore → `UserNotificationSettings`.
  *
- * ⚠️ **Τα defaults από κάτω, το έγγραφο από πάνω** — και τα ένθετα αντικείμενα
- * θέλουν **δικό τους** merge: ένα σκέτο spread θα αντικαθιστούσε ολόκληρο το
- * `quietHours`, οπότε έγγραφο με μόνο `{ enabled: true }` θα έχανε τις ώρες του.
+ * ⚠️ **Τα defaults από κάτω, το έγγραφο από πάνω, ανά κλειδί** — μέσω της **μίας**
+ * συγχώνευσης που χρησιμοποιεί και ο διακομιστής (ADR-849).
  */
 export function transformSettingsFromFirestore(
   data: Record<string, unknown>,
   userId: string,
 ): UserNotificationSettings {
-  const defaults = getDefaultNotificationSettings(userId);
-  const categories = data.categories as Record<string, unknown> | undefined;
-
-  return {
-    userId,
-    globalEnabled: (data.globalEnabled as boolean) ?? defaults.globalEnabled,
-    inAppEnabled: (data.inAppEnabled as boolean) ?? defaults.inAppEnabled,
-    emailEnabled: (data.emailEnabled as boolean) ?? defaults.emailEnabled,
-    emailFrequency:
-      (data.emailFrequency as UserNotificationSettings['emailFrequency']) ??
-      defaults.emailFrequency,
-    pushEnabled: (data.pushEnabled as boolean) ?? defaults.pushEnabled,
-    categories: {
-      crm: { ...defaults.categories.crm, ...(categories?.crm as Record<string, boolean>) },
-      properties: {
-        ...defaults.categories.properties,
-        ...(categories?.properties as Record<string, boolean>),
-      },
-      tasks: { ...defaults.categories.tasks, ...(categories?.tasks as Record<string, boolean>) },
-      security: {
-        ...defaults.categories.security,
-        ...(categories?.security as Record<string, boolean>),
-      },
-      procurement: {
-        ...defaults.categories.procurement,
-        ...(categories?.procurement as Record<string, boolean>),
-      },
-    },
-    quietHours: {
-      ...defaults.quietHours,
-      ...((data.quietHours as Record<string, unknown>) ?? {}),
-    },
-    // ⚠️ Τα υπάρχοντα έγγραφα **δεν έχουν** το πεδίο (προστέθηκε στο §8.28). Το
-    // `??` τους δίνει την προεπιλογή χωρίς migration: κανένας δεν χάνει ρύθμιση
-    // και κανένας δεν αποκτά `undefined` που θα έριχνε το `Intl`.
-    timezone: (data.timezone as string) ?? defaults.timezone,
-    // 🌐 §8.29 — **`resolveHumanLanguage`, ΟΧΙ `?? defaults.language`.** Το `??`
-    // πιάνει μόνο το «λείπει»· εδώ το επικίνδυνο είναι το «υπάρχει και είναι
-    // λάθος»: `'pseudo'` από επιλογέα ανάπτυξης, ή `'el-GR'` από κάποιον που
-    // μπέρδεψε αυτό το πεδίο με το φάντασμα `notificationPreferences.locale`.
-    // Και τα δύο θα περνούσαν αυτούσια και θα κατέληγαν σε email.
-    language: resolveHumanLanguage(data.language),
-    createdAt: normalizeToDate(data.createdAt) ?? defaults.createdAt,
-    updatedAt: normalizeToDate(data.updatedAt) ?? defaults.updatedAt,
-  };
+  return mergeNotificationSettings(userId, data);
 }
 
 /**
@@ -106,6 +56,7 @@ export function transformSettingsToFirestore(
     emailFrequency: settings.emailFrequency,
     pushEnabled: settings.pushEnabled,
     categories: settings.categories,
+    emailCategories: settings.emailCategories,
     quietHours: settings.quietHours,
     timezone: settings.timezone,
     language: settings.language,

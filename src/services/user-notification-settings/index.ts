@@ -10,6 +10,7 @@
 
 // Types
 export * from './user-notification-settings.types';
+export * from './user-notification-settings.email-types';
 
 // Service
 export {

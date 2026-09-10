@@ -10,7 +10,10 @@
  * που προστίθεται συχνότητα. Εδώ δεν υπάρχει καμία εξάρτηση πέρα από τύπους.
  */
 
-import type { EmailFrequency } from '@/services/user-notification-settings/user-notification-settings.types';
+import {
+  isEmailFrequency,
+  type EmailFrequency,
+} from '@/services/user-notification-settings/user-notification-settings.types';
 
 /** Το κομμάτι των ρυθμίσεων που αφορά τα email — ό,τι βλέπει και αλλάζει η σελίδα. */
 export interface EmailSubscriptionState {
@@ -40,19 +43,8 @@ export type SubscriptionResponse =
     }
   | { readonly ok: false; readonly reason: SubscriptionFailure };
 
-/**
- * Οι τιμές του `EmailFrequency` σε χρόνο εκτέλεσης.
- *
- * ⚠️ **`Record<EmailFrequency, true>`, ΠΟΤΕ πίνακας γραμμένος με το χέρι**: ο
- * μεταγλωττιστής απαιτεί **κάθε** τιμή του τύπου. Μια πέμπτη συχνότητα χωρίς εγγραφή
- * εδώ δεν μεταγλωττίζεται — αντί να απορρίπτεται σιωπηλά στην «Αναίρεση».
- */
-const FREQUENCIES: Readonly<Record<EmailFrequency, true>> = {
-  realtime: true,
-  daily: true,
-  weekly: true,
-  disabled: true,
-};
+// 🔗 ADR-849 — ο κριτής συχνότητας (`isEmailFrequency`) μετακόμισε στον τύπο των ρυθμίσεων:
+// τον ζητά πλέον και η συγχώνευση με τις προεπιλογές. Ο πίνακας εδώ ήταν το μόνο αντίγραφο.
 
 const FAILURES: Readonly<Record<SubscriptionFailure, true>> = {
   'link-invalid': true,
@@ -75,7 +67,7 @@ export function parseSubscriptionState(raw: unknown): EmailSubscriptionState | n
   if (typeof raw !== 'object' || raw === null) return null;
   const emailEnabled: unknown = Reflect.get(raw, 'emailEnabled');
   const emailFrequency: unknown = Reflect.get(raw, 'emailFrequency');
-  if (typeof emailEnabled !== 'boolean' || !hasKey(FREQUENCIES, emailFrequency)) return null;
+  if (typeof emailEnabled !== 'boolean' || !isEmailFrequency(emailFrequency)) return null;
   return { emailEnabled, emailFrequency };
 }
 
