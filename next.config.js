@@ -207,33 +207,69 @@ const nextConfig = {
     // PRODUCTION-ONLY CONFIGURATIONS BELOW
     // =========================================================================
 
-    // [TEST-HARNESS] Replace heavy DxfCanvasHarness with empty stub in production.
-    // Prevents the entire DXF viewer tree from entering the production bundle.
-    // In dev (Turbopack), the real file is used normally — no impact on dev server.
+    // [TEST-HARNESS] Replace heavy harnesses with empty stubs in production.
+    // Prevents the entire DXF viewer / 3D tree from entering the production bundle.
+    // In dev (Turbopack), the real files are used normally — no impact on dev server.
     //
     // ⚠️ Ο ΚΛΕΙΔΙ ΕΝΟΣ webpack alias ΕΙΝΑΙ ΑΠΟΛΥΤΟ ΜΟΝΟΠΑΤΙ: αν δεν δείχνει σε
     // υπαρκτό αρχείο, ΔΕΝ ταιριάζει ποτέ και το stub ΔΕΝ εφαρμόζεται — σιωπηλά.
     // Συνέβη: το harness μετακόμισε στο route group `(bare)` (ADR-777 §8.12) και
-    // αυτές οι δύο γραμμές έμειναν στην παλιά διαδρομή ⇒ ΟΛΟ το DXF viewer tree
-    // έμπαινε στο production bundle με το σχόλιο από πάνω να λέει το αντίθετο
+    // οι γραμμές έμειναν στην παλιά διαδρομή ⇒ ΟΛΟ το DXF viewer tree έμπαινε στο
+    // production bundle με το σχόλιο από πάνω να λέει το αντίθετο
     // (μετρημένο: bundle 42,79 → 45,13 MB). Γι' αυτό η απουσία ΣΚΑΕΙ εδώ:
     // ένα alias που αστοχεί χωρίς να το πει είναι το «0 = κανείς δεν κοίταξε».
+    //
+    // 🔴 ΠΙΝΑΚΑΣ, ΟΧΙ ΤΡΙΑ ΑΝΤΙΓΡΑΦΑ (N.0.2 · CHECK 3.28) — ΚΑΙ ΤΟ ΚΕΝΟ ΚΟΣΤΙΣΕ
+    //    ΤΟ DEPLOY. Ως τις 2026-09-10 φρουρό είχε **μόνο** το `dxf-canvas`, ενώ
+    //    **τρία** harness σέρνουν το ίδιο δέντρο. Τα άλλα δύο έμπαιναν ολόκληρα
+    //    στην παραγωγή, και το κενό το κατήγγειλε το `dxf-perf` μόλις το ADR-845
+    //    (Φ4.2β) πρόσθεσε το `@gltf-transform/core` στον lazy γράφο του viewer:
+    //    `UnhandledSchemeError: node:fs` — δηλαδή **ΑΠΟΤΥΧΙΑ ΤΟΥ BUILD**, όχι
+    //    απλώς φουσκωμένο bundle. Το `nestorconstruct.gr` έμεινε στον κώδικα της
+    //    06/09 για δύο pushes.
+    //
+    // ⚠️ **Ο runtime `notFound()` του `page.tsx` ΔΕΝ κόβει τίποτα**: το `import`
+    //    είναι στατικό, άρα το webpack χτίζει το δέντρο ούτως ή άλλως. Ο φρουρός
+    //    της διαδρομής και ο φρουρός του bundle είναι **δύο** ερωτήσεις.
     const path = require('path');
     const fs = require('fs');
-    const harnessDir = path.resolve(__dirname, 'src/app/(bare)/test-harness/dxf-canvas');
-    const harnessSrc = path.join(harnessDir, 'DxfCanvasHarness.tsx');
-    const harnessStub = path.join(harnessDir, 'DxfCanvasHarness.prod.ts');
-    for (const target of [harnessSrc, harnessStub]) {
-      if (!fs.existsSync(target)) {
-        throw new Error(
-          `[TEST-HARNESS] Το alias του DxfCanvasHarness δείχνει σε ανύπαρκτο αρχείο:\n` +
-          `  ${target}\n` +
-          `Αν το harness μετακινήθηκε, ενημέρωσε ΕΔΩ τη διαδρομή. Χωρίς αυτό το alias ` +
-          `αστοχεί σιωπηλά και ολόκληρο το DXF viewer tree μπαίνει στο production bundle.`
-        );
+
+    // `enabled: true` ⇒ ΜΗΝ αντικαταστήσεις — το build ζήτησε ρητά αυτό το harness.
+    const harnessStubs = [
+      { dir: 'src/app/(bare)/test-harness/dxf-canvas', name: 'DxfCanvasHarness', enabled: false },
+      { dir: 'src/app/(app)/test-harness/bim-3d', name: 'Bim3DHarness', enabled: false },
+      // ⚠️ ADR-726 §13.5 — το κριτήριο Φ5 απαιτεί μέτρηση σε **production build**,
+      //    οπότε αυτό το harness ΠΡΕΠΕΙ να επιβιώνει όταν ζητηθεί ρητά. Ο διακόπτης
+      //    είναι ο **ίδιος** που διαβάζει το `isPerfHarnessRouteEnabled()`: δύο
+      //    απαντήσεις στο «υπάρχει αυτή η σελίδα;» θα έδιναν σελίδα που αποδίδεται
+      //    και component που επιστρέφει `null`.
+      {
+        dir: 'src/app/(app)/test-harness/dxf-perf',
+        name: 'DxfPerfHarness',
+        enabled: process.env.ENABLE_PERF_HARNESS === '1',
+      },
+    ];
+
+    for (const harness of harnessStubs) {
+      const harnessDir = path.resolve(__dirname, harness.dir);
+      const harnessSrc = path.join(harnessDir, `${harness.name}.tsx`);
+      const harnessStub = path.join(harnessDir, `${harness.name}.prod.ts`);
+
+      // 🔑 Ο έλεγχος τρέχει **και όταν `enabled`**: μια μετακίνηση αρχείου πρέπει να
+      //    καταγγέλλεται ανεξάρτητα από το αν εφαρμόζεται σήμερα το alias.
+      for (const target of [harnessSrc, harnessStub]) {
+        if (!fs.existsSync(target)) {
+          throw new Error(
+            `[TEST-HARNESS] Το alias του ${harness.name} δείχνει σε ανύπαρκτο αρχείο:\n` +
+            `  ${target}\n` +
+            `Αν το harness μετακινήθηκε, ενημέρωσε ΕΔΩ τη διαδρομή. Χωρίς αυτό το alias ` +
+            `αστοχεί σιωπηλά και ολόκληρο το δέντρο του harness μπαίνει στο production bundle.`
+          );
+        }
       }
+
+      if (!harness.enabled) config.resolve.alias[harnessSrc] = harnessStub;
     }
-    config.resolve.alias[harnessSrc] = harnessStub;
 
     // [COOLIFY] Sequential compilation to prevent OOM on VPS (8GB RAM).
     // Next.js spawns N workers (N = CPU count = 4 on Netcup VPS 1000 G12).
@@ -264,6 +300,47 @@ const nextConfig = {
     // reorder class/const declarations and cause TDZ violations in API routes.
     if (isServer) {
       config.optimization.concatenateModules = false;
+    }
+
+    // =========================================================================
+    // [ADR-845 §6.2] `node:fs` ΕΞΩ ΑΠΟ ΤΟ ΠΑΚΕΤΟ ΤΟΥ ΠΕΡΙΗΓΗΤΗ — ΧΕΙΡΟΥΡΓΙΚΑ
+    // =========================================================================
+    //
+    // 🔴 ΤΟ ΠΕΡΙΣΤΑΤΙΚΟ (2026-09-09, δύο pushes κόκκινα, παραγωγή παγωμένη στις 06/09):
+    //    `Module build failed: UnhandledSchemeError: Reading from "node:fs"`.
+    //    Αλυσίδα: `@gltf-transform/core` → `gltf-memory-io` → `gltf-model-measure`
+    //    → `publish-model-to-property` → `PublishModelDialog` → ο DXF viewer.
+    //
+    // 🔑 Ο viewer είναι **νόμιμα** στο πακέτο του περιηγητή (`/o/[workspace]/dxf/viewer`,
+    //    `lazyRoutes`, `preloadRoutes`) — δεν είναι διαρροή harness, είναι το προϊόν.
+    //    Και ο πελάτης **οφείλει** να μετρά τη γεωμετρία: η **κλειστή λογιστική** του
+    //    ADR-845 §6.2.1 θέλει **δύο ανεξάρτητους** αριθμούς (πελάτης δηλώνει, διακομιστής
+    //    ξαναμετρά· άγκυρα Α-6). Μεταφορά της μέτρησης στον διακομιστή θα «διόρθωνε» το
+    //    build **καταστρέφοντας** τον έλεγχο — θα έμενε ένας αριθμός και μια ταυτολογία.
+    //
+    // ⇒ Άρα το `@gltf-transform/core` **μένει**. Αυτό που φεύγει είναι ο **νεκρός** του
+    //   κλάδος: το `NodeIO`, που **ποτέ** δεν κατασκευάζεται εδώ (το `gltf-memory-io.ts`
+    //   χρησιμοποιεί `PlatformIO` με `readURI` που πάντα πετά — και είναι ΑΣΦΑΛΕΙΑ, §6.1).
+    //
+    // ⚠️ **ΤΟ `resolve.fallback` ΠΑΡΑΚΑΤΩ ΔΕΝ ΤΟ ΠΙΑΝΕΙ** (και έχει ήδη `fs: false`):
+    //    αιτήματα **με scheme** δεν περνούν από alias/fallback. **Ούτε** το
+    //    `NormalModuleReplacementPlugin` τα πιάνει — μετρημένο, το callback καλείται και
+    //    αγνοείται. Ο **μόνος** δρόμος είναι το `resolveForScheme`: το «πώς» και οι τρεις
+    //    μετρημένες παραλλαγές ζουν στο `scripts/webpack/gltf-node-scheme-plugin.js`.
+    //
+    // ⚠️ **ΔΕΜΕΝΟ ΣΤΟ `context`, ΠΟΤΕ ΚΑΘΟΛΙΚΟ `/^node:/`**: ένας καθολικός
+    //    αντικαταστάτης θα σιωπούσε **κάθε** μελλοντική διαρροή Node builtin στον
+    //    πελάτη — το κλασικό «0 = κανείς δεν κοίταξε» (N.11 · N.12). Οπουδήποτε έξω
+    //    από το `@gltf-transform`, το `node:fs` **οφείλει** να ρίχνει το build.
+    //
+    // ⚓ Άγκυρα: `scripts/__tests__/gltf-node-scheme-plugin.test.js` — **εκτελεί** webpack
+    //    και ελέγχει **και τις δύο** κατευθύνσεις (επιτρέπεται εδώ / σκάει αλλού).
+    if (!isServer) {
+      const {
+        GltfNodeSchemePlugin,
+      } = require('./scripts/webpack/gltf-node-scheme-plugin');
+
+      config.plugins.push(new GltfNodeSchemePlugin());
     }
 
     // [ENTERPRISE] pdf.js configuration for Next.js (production)

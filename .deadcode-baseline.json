@@ -1,8 +1,7 @@
 {
-  "generated": "2026-08-26T09:41:21.288Z",
+  "generated": "2026-09-10T00:00:00.000Z",
   "knipVersion": "6",
   "files": [
-    "src/app/(bare)/test-harness/dxf-canvas/DxfCanvasHarness.prod.ts",
     "src/components/contacts/pickers/AdministrativeAddressPicker.tsx",
     "src/components/properties/dialogs/PropertyDeletionGuardDialog.tsx",
     "src/hooks/useDebouncedCallback.ts",
@@ -16,5 +15,5 @@
     "src/subapps/procurement/services/trade-registry.ts",
     "src/test-utils/a11y.tsx"
   ],
-  "fileCount": 13
+  "fileCount": 12
 }

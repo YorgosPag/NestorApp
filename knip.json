@@ -13,6 +13,7 @@
         "src/app/**/default.tsx",
         "src/app/**/global-error.tsx",
         "src/app/api/**/*.ts",
+        "src/app/**/test-harness/**/*.prod.ts",
         "src/**/index.ts",
         "src/**/index.tsx",
         "src/middleware.ts",
