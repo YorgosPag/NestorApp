@@ -19,6 +19,7 @@
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { normalizeGreekText } from '@/services/ai-pipeline/shared/greek-text-utils';
 import { createModuleLogger } from '@/lib/telemetry';
+import { createDeadline, linkedAbortSignal } from '@/lib/async-utils';
 import type {
   StructuredGeocodingQuery,
   GeocodingServiceResult,
@@ -188,11 +189,23 @@ export async function geocodeAddress(
  * «nothing is written here» (404) and «I could not ask» (timeout · 429 · 500).
  * Its only caller (`handleDragEnd`) then dropped the gesture in **both** cases,
  * leaving a moved pin on screen that would never be saved.
+ *
+ * 🔴 ADR-332 D27 Β13: the `fetch` had **no signal** — a hung server meant a drag dialog that
+ * never opened. Now it is bounded by the server's own budget plus a grace period, and the
+ * caller may cancel it (a newer drag, an unmount). Expiry is `error: 'timeout'` ⇒ «Μόνο η θέση».
  */
+export interface ReverseGeocodeOptions {
+  /** Ο καλών ακυρώνει (νεότερη χειρονομία · αποπροσάρτηση). */
+  readonly signal?: AbortSignal;
+}
+
 export async function reverseGeocodeDetailed(
   lat: number,
   lng: number,
+  options: ReverseGeocodeOptions = {},
 ): Promise<ReverseGeocodingOutcome> {
+  const { REVERSE_BUDGET_MS, REVERSE_CLIENT_GRACE_MS } = GEOGRAPHIC_CONFIG.GEOCODING;
+  const deadline = createDeadline(REVERSE_BUDGET_MS + REVERSE_CLIENT_GRACE_MS);
   try {
     const params = new URLSearchParams({
       lat: lat.toString(),
@@ -201,6 +214,7 @@ export async function reverseGeocodeDetailed(
 
     const response = await fetch(
       `${GEOGRAPHIC_CONFIG.GEOCODING.API_ENDPOINT}/reverse?${params.toString()}`,
+      { signal: linkedAbortSignal(options.signal, deadline.signal) },
     );
 
     // 404 is the provider answering «no address at this point» — a real answer.
@@ -220,5 +234,7 @@ export async function reverseGeocodeDetailed(
     const reason = classifyThrown(error);
     logger.error('Reverse geocoding API call failed', { error: String(error), data: { reason } });
     return { kind: 'error', reason };
+  } finally {
+    deadline.dispose();
   }
 }

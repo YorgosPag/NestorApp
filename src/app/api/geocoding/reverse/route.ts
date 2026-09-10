@@ -6,9 +6,22 @@
  * Server-side reverse geocoding proxy that:
  * - Accepts lat/lon query parameters
  * - Calls Nominatim reverse API with proper User-Agent (TOS)
- * - Validates coordinates within Greek bounding box
+ * - Validates coordinates are finite and on the globe
  * - Returns structured address data for form population
  * - Rate limited: withHeavyRateLimit (10 req/min)
+ *
+ * ⚠️ ADR-332 D27 Β13 — εδώ έγραφε «Validates coordinates within Greek bounding box», και ο
+ * κώδικας **δεν το έκανε ποτέ**. Η υπόσχεση αφαιρέθηκε αντί να υλοποιηθεί: ο ίδιος χάρτης
+ * σέρνεται και για επαφές σε Κύπρο / Βουλγαρία (ADR-332 D12), που ένα ελληνικό πλαίσιο θα απέρριπτε.
+ *
+ * 🔑 **ΜΙΑ ΠΡΟΘΕΣΜΙΑ ΓΙΑ ΟΛΟ ΤΟ ΑΙΤΗΜΑ** (Β13 · Google SRE «deadline propagation»). Ως τις
+ * 2026-09-10 το Nominatim είχε 8″ και μετά έτρεχαν έως **τρία διαδοχικά** Overpass των έως τριών
+ * προσπαθειών × 6″ — μετρημένα 24–38″ στον διάλογο. Τώρα το αίτημα έχει **ένα** απόλυτο όριο
+ * (`GEOCODING.REVERSE_BUDGET_MS`) και κάθε στάδιο παίρνει **ό,τι απομένει**. Αν τελειώσει ο χρόνος
+ * πριν βρεθεί αριθμός, η απάντηση φεύγει **χωρίς** αριθμό — ίδιο με «το OSM δεν έχει αριθμό εδώ».
+ *
+ * 🔴 **Τρεις εκβάσεις, όχι δύο**: «ο πάροχος δεν απάντησε» έφευγε ως **404** («εδώ δεν γράφει
+ * τίποτα») και ο διάλογος έλεγε ψέματα στον άνθρωπο. Πλέον φεύγει ως **503**.
  *
  * @module app/api/geocoding/reverse/route
  * @see geographic-config.ts, geocoding-service.ts
@@ -19,6 +32,7 @@ import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { createDeadline, type Deadline } from '@/lib/async-utils';
 import { findNearestHouseNumber } from '@/lib/geocoding/overpass-housenumber';
 import { toCanonicalGreekPostalCode } from '@/utils/address/postal-code';
 import { cleanPlaceName } from '@/utils/address/place-name';
@@ -52,6 +66,14 @@ interface NominatimReverseResult {
   display_name: string;
   address: NominatimReverseAddress;
 }
+
+/** Τι είπε το Nominatim — **τρεις** εκβάσεις (ίδιο συμβόλαιο με το `geocodeWithVerdict`). */
+type NominatimLookup =
+  | { readonly kind: 'found'; readonly result: NominatimReverseResult }
+  /** Απάντησε: σε αυτό το σημείο δεν γράφει τίποτα. */
+  | { readonly kind: 'absent' }
+  /** Δεν απάντησε (λήξη · όριο ρυθμού · σφάλμα). */
+  | { readonly kind: 'unavailable' };
 
 interface ReverseGeocodingApiResponse {
   street: string;
@@ -101,30 +123,31 @@ function buildReverseUrl(lat: number, lon: number): string {
   return `${NOMINATIM_BASE_URL}/reverse?${searchParams.toString()}`;
 }
 
-async function fetchNominatimReverse(url: string): Promise<NominatimReverseResult | null> {
+async function fetchNominatimReverse(url: string, deadline: Deadline): Promise<NominatimLookup> {
   try {
     const response = await fetch(url, {
       headers: { 'User-Agent': USER_AGENT },
-      signal: AbortSignal.timeout(NOMINATIM_TIMEOUT_MS),
+      // Β13: το δικό του όριο, ή λιγότερο αν τελειώνει η προθεσμία του αιτήματος.
+      signal: AbortSignal.timeout(Math.min(NOMINATIM_TIMEOUT_MS, deadline.remainingMs())),
     });
 
     if (!response.ok) {
       logger.warn('Nominatim reverse non-OK response', { data: { status: response.status } });
-      return null;
+      return { kind: 'unavailable' };
     }
 
     const data: NominatimReverseResult = await response.json();
 
-    // Nominatim returns { error: "..." } for invalid queries
+    // Nominatim returns { error: "Unable to geocode" } — μια ΑΠΑΝΤΗΣΗ, όχι βλάβη.
     if (!data.address) {
       logger.warn('Nominatim reverse returned no address');
-      return null;
+      return { kind: 'absent' };
     }
 
-    return data;
+    return { kind: 'found', result: data };
   } catch (error) {
     logger.warn('Nominatim reverse fetch error', { error: getErrorMessage(error) });
-    return null;
+    return { kind: 'unavailable' };
   }
 }
 
@@ -141,7 +164,6 @@ function formatReverseResult(result: NominatimReverseResult): ReverseGeocodingAp
     street: addr.road ?? '',
     number: addr.house_number ?? '',
     // ADR-332 D27 Βήμα Β (Β7): ο ΕΝΑΣ κανόνας ονομάτων τόπου (`utils/address/place-name`).
-    // Εδώ ζούσε δηλωμένο «server-side duplicate» του `stripAdminPrefix` — και είχε αποκλίνει.
     city: cleanPlaceName(rawCity),
     neighborhood: cleanPlaceName(rawNeighborhood),
     // Κανονική μορφή στο σύνορο του παρόχου — το OSM Ελλάδας γράφει «546 24»
@@ -155,83 +177,84 @@ function formatReverseResult(result: NominatimReverseResult): ReverseGeocodingAp
   };
 }
 
+/**
+ * Συμπληρώνει τον αριθμό από το Overpass όταν λείπει — με **ό,τι απομένει** από την προθεσμία.
+ * OSM Greek coverage frequently omits `addr:housenumber`.
+ */
+async function fillHouseNumber(
+  formatted: ReverseGeocodingApiResponse,
+  lat: number,
+  lon: number,
+  deadline: Deadline,
+): Promise<{ nominatimNumber: string; overpassNumber: string | null }> {
+  const nominatimNumber = formatted.number;
+  const overpassNumber = nominatimNumber
+    ? null
+    : await findNearestHouseNumber(lat, lon, formatted.street, { deadline });
+  if (overpassNumber) formatted.number = overpassNumber;
+
+  logger.info('Reverse geocoding housenumber resolution', {
+    data: {
+      lat,
+      lon,
+      street: formatted.street,
+      nominatimNumber,
+      overpassNumber,
+      finalNumber: formatted.number,
+      remainingMs: deadline.remainingMs(),
+    },
+  });
+  return { nominatimNumber, overpassNumber };
+}
+
 // =============================================================================
 // ROUTE HANDLER
 // =============================================================================
 
+/** Η αντίστροφη γεωκωδικοποίηση **μέσα** σε μία προθεσμία. */
+async function reverseWithin(lat: number, lon: number, debug: boolean, deadline: Deadline): Promise<Response> {
+  logger.info('Reverse geocoding request', { data: { lat, lon } });
+
+  const lookup = await fetchNominatimReverse(buildReverseUrl(lat, lon), deadline);
+  if (lookup.kind === 'absent') {
+    return NextResponse.json({ error: 'No address found at this location' }, { status: 404 });
+  }
+  if (lookup.kind === 'unavailable') {
+    return NextResponse.json({ error: 'Address provider unavailable' }, { status: 503 });
+  }
+
+  const formatted = formatReverseResult(lookup.result);
+  const trace = await fillHouseNumber(formatted, lat, lon, deadline);
+
+  return NextResponse.json(
+    debug ? { ...formatted, _debug: { ...trace, street: formatted.street } } : formatted,
+  );
+}
+
 async function handleGet(request: NextRequest): Promise<Response> {
+  const { searchParams } = new URL(request.url);
+  const latStr = searchParams.get('lat');
+  const lonStr = searchParams.get('lon');
+
+  if (!latStr || !lonStr) {
+    return NextResponse.json({ error: 'Missing required parameters: lat, lon' }, { status: 400 });
+  }
+
+  const lat = parseFloat(latStr);
+  const lon = parseFloat(lonStr);
+
+  if (!isValidLatLon(lat, lon)) {
+    return NextResponse.json({ error: 'Invalid lat/lon values' }, { status: 400 });
+  }
+
+  const deadline = createDeadline(GEOCODING.REVERSE_BUDGET_MS);
   try {
-    const { searchParams } = new URL(request.url);
-    const latStr = searchParams.get('lat');
-    const lonStr = searchParams.get('lon');
-
-    if (!latStr || !lonStr) {
-      return NextResponse.json(
-        { error: 'Missing required parameters: lat, lon' },
-        { status: 400 }
-      );
-    }
-
-    const lat = parseFloat(latStr);
-    const lon = parseFloat(lonStr);
-
-    if (!isValidLatLon(lat, lon)) {
-      return NextResponse.json(
-        { error: 'Invalid lat/lon values' },
-        { status: 400 }
-      );
-    }
-
-    const url = buildReverseUrl(lat, lon);
-    logger.info('Reverse geocoding request', { data: { lat, lon } });
-
-    const result = await fetchNominatimReverse(url);
-
-    if (!result) {
-      return NextResponse.json(
-        { error: 'No address found at this location' },
-        { status: 404 }
-      );
-    }
-
-    const formatted = formatReverseResult(result);
-    const nominatimNumber = formatted.number;
-    let overpassNumber: string | null = null;
-    // OSM Greek coverage frequently omits `addr:housenumber`. Fallback query
-    // to Overpass for the nearest tagged building on the same road.
-    if (!formatted.number) {
-      overpassNumber = await findNearestHouseNumber(lat, lon, formatted.street);
-      if (overpassNumber) {
-        formatted.number = overpassNumber;
-      }
-    }
-
-    logger.info('Reverse geocoding housenumber resolution', {
-      data: {
-        lat,
-        lon,
-        street: formatted.street,
-        nominatimNumber,
-        overpassNumber,
-        finalNumber: formatted.number,
-      },
-    });
-
-    const debug = searchParams.get('debug') === '1';
-    if (debug) {
-      return NextResponse.json({
-        ...formatted,
-        _debug: { nominatimNumber, overpassNumber, street: formatted.street },
-      });
-    }
-
-    return NextResponse.json(formatted);
+    return await reverseWithin(lat, lon, searchParams.get('debug') === '1', deadline);
   } catch (error) {
     logger.error('Reverse geocoding API error', { error: getErrorMessage(error) });
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  } finally {
+    deadline.dispose();
   }
 }
 

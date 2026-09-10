@@ -3,15 +3,31 @@
  *
  * Nominatim reverse frequently omits `addr:housenumber` for Greek roads
  * (OSM data gap). This helper queries the public Overpass API for the
- * nearest building/node tagged with both `addr:street` matching our
- * resolved street name and `addr:housenumber`, within a small radius.
+ * nearest building/node tagged with `addr:housenumber`, preferring our
+ * resolved street name, within a small radius.
  *
  * Server-only. Nominatim contract already rate-limits the parent route,
  * so we only hit Overpass when `addr.house_number` is missing.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ADR-332 D27 Β13 — ΕΝΑ ΕΡΩΤΗΜΑ, ΟΧΙ ΤΡΙΑ ΔΙΑΔΟΧΙΚΑ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Ως τις 2026-09-10 οι τρεις βαθμίδες ήταν **τρία αιτήματα στη σειρά** (οδός+60 μ. → 60 μ. →
+ * 120 μ.), το καθένα με έως τρεις προσπάθειες — ο διάλογος συρσίματος μετρήθηκε στα 24–38″. Όμως
+ * το ερώτημα των 120 μ. χωρίς φίλτρο οδού **περιέχει** τα άλλα δύο. Τώρα ρωτάμε **μία** φορά και
+ * διαλέγουμε τη βαθμίδα στη μνήμη, με την ίδια σειρά. Είναι και πιο φιλικό στον κοινό Overpass
+ * (ODbL §13.4: μία ανθρώπινη χειρονομία = ένα αίτημα).
+ *
+ * ⚠️ **Δηλωμένη διαφορά**: στις δύο πρώτες βαθμίδες το «μέσα στα 60 μ.» κρίνεται πλέον με την
+ * απόσταση του **κέντρου** του στοιχείου — το ίδιο μέτρο με το οποίο ήδη γινόταν η κατάταξη. Πριν,
+ * το `around` του Overpass μετρούσε τη **γεωμετρία**: ένα μεγάλο κτίριο με άκρη στα 55 μ. και κέντρο
+ * στα 70 μ. έμπαινε στη βαθμίδα 2. Η βαθμίδα 3 (ο πλησιέστερος απ' όλους) είναι ταυτόσημη.
  */
 
 import { createModuleLogger } from '@/lib/telemetry';
 import { distanceMeters } from '@/lib/geo/geo-distance';
+import type { Deadline } from '@/lib/async-utils';
 import {
   overpassQuerySeconds,
   runOverpassQuery,
@@ -26,105 +42,92 @@ const logger = createModuleLogger('overpass-housenumber');
 const OVERPASS_RADIUS_METERS = parseInt(process.env.OVERPASS_RADIUS_METERS || '60', 10);
 const OVERPASS_FALLBACK_RADIUS_METERS = parseInt(process.env.OVERPASS_FALLBACK_RADIUS_METERS || '120', 10);
 
-// ⚠️ Η **απόσταση** δεν ζει πια εδώ: `@/lib/geo/geo-distance` (SSoT). Ήταν μία από
-// τέσσερις υλοποιήσεις με δύο ακτίνες Γης — και εδώ χρησιμοποιείται μόνο για να
-// **διαλέξει τον πλησιέστερο**, δηλαδή ομοιόμορφος συντελεστής κλίμακας: η επιλογή
-// είναι κατά λέξη η ίδια.
+// ⚠️ Η **απόσταση** δεν ζει εδώ: `@/lib/geo/geo-distance` (SSoT).
 
-function buildOverpassQuery(lat: number, lon: number, street: string | undefined, radius: number): string {
-  const streetFilter = street?.trim()
-    ? `["addr:street"="${street.replace(/"/g, '\\"')}"]`
-    : '';
+function buildOverpassQuery(lat: number, lon: number, radius: number, seconds: number): string {
   // Includes all three OSM shapes that can carry `addr:housenumber`:
   //   - node (a point tagged with the number, e.g. an entrance)
   //   - way (usually a building polygon — by far the densest source in Greek cities)
   //   - relation (multi-part buildings or addresses with multiple parts)
   // `out center tags` returns the geometric centroid for ways/relations so we can
-  // measure distance uniformly.
+  // measure distance uniformly — and the `addr:street` tag the first tier needs.
   return `
-    [out:json][timeout:${overpassQuerySeconds()}];
+    [out:json][timeout:${seconds}];
     (
-      node["addr:housenumber"]${streetFilter}(around:${radius},${lat},${lon});
-      way["addr:housenumber"]${streetFilter}(around:${radius},${lat},${lon});
-      relation["addr:housenumber"]${streetFilter}(around:${radius},${lat},${lon});
+      node["addr:housenumber"](around:${radius},${lat},${lon});
+      way["addr:housenumber"](around:${radius},${lat},${lon});
+      relation["addr:housenumber"](around:${radius},${lat},${lon});
     );
     out center tags;
   `.trim();
 }
 
-function pickNearest(
-  elements: readonly OverpassElement[],
-  lat: number,
-  lon: number,
-): string | null {
-  const withCoords = elements
-    .map(el => {
+interface NumberedCandidate {
+  readonly housenumber: string;
+  readonly street: string | undefined;
+  readonly distance: number;
+}
+
+/** Τα στοιχεία με αριθμό, με την απόστασή τους — **ταξινομημένα**, ο πλησιέστερος πρώτος. */
+function toCandidates(elements: readonly OverpassElement[], lat: number, lon: number): NumberedCandidate[] {
+  return elements
+    .map((el) => {
       const elLat = el.lat ?? el.center?.lat;
       const elLon = el.lon ?? el.center?.lon;
       const housenumber = el.tags?.['addr:housenumber'];
       if (elLat === undefined || elLon === undefined || !housenumber) return null;
       return {
         housenumber,
+        street: el.tags?.['addr:street'],
         distance: distanceMeters({ lat, lng: lon }, { lat: elLat, lng: elLon }),
       };
     })
-    .filter((e): e is { housenumber: string; distance: number } => e !== null)
+    .filter((e): e is NumberedCandidate => e !== null)
     .sort((a, b) => a.distance - b.distance);
-  return withCoords[0]?.housenumber ?? null;
 }
 
 /**
- * Look up the nearest OSM addr:housenumber to (lat, lon).
+ * Οι τρεις βαθμίδες, **με τη σειρά τους**:
+ *   1. ίδια οδός (ακριβής ισότητα, όπως έκανε το φίλτρο `["addr:street"=…]`) μέσα στα 60 μ.
+ *   2. οποιοσδήποτε αριθμός μέσα στα 60 μ. (τα κτίρια του OSM συχνά δεν έχουν `addr:street`)
+ *   3. ο πλησιέστερος απ' όλους (αστικά τετράγωνα, πινέζα λίγα μέτρα έξω από το κτίριο)
+ */
+function pickTier(candidates: readonly NumberedCandidate[], street: string | undefined) {
+  const sameStreet = street?.trim()
+    ? candidates.find((c) => c.distance <= OVERPASS_RADIUS_METERS && c.street === street)
+    : undefined;
+  if (sameStreet) return { tier: 1, candidate: sameStreet } as const;
+  const near = candidates.find((c) => c.distance <= OVERPASS_RADIUS_METERS);
+  if (near) return { tier: 2, candidate: near } as const;
+  return candidates[0] ? ({ tier: 3, candidate: candidates[0] } as const) : null;
+}
+
+/**
+ * Look up the nearest OSM addr:housenumber to (lat, lon) — **ένα** αίτημα.
  *
- * Three-pass strategy (widens the net progressively):
- *   1. Tight radius + `addr:street` filter — safest match.
- *   2. Same radius, no street filter — OSM housenumber tags on buildings
- *      frequently lack `addr:street` (the street is implied by position).
- *   3. Wider radius, no street filter — urban blocks where the dropped pin
- *      is a few meters off the nearest tagged building.
- *
- * Returns `null` only when all three passes are empty — callers must treat
- * that as "OSM genuinely has no number here, let the user type it".
+ * Returns `null` when nothing is tagged nearby **or** the provider did not answer within the
+ * deadline — callers must treat both as "let the user type it" (ο άνθρωπος κρατά τον αριθμό του).
  */
 export async function findNearestHouseNumber(
   lat: number,
   lon: number,
   street: string | undefined,
+  options: { readonly deadline?: Deadline } = {},
 ): Promise<string | null> {
-  // Pass 1 — tight radius + street filter
-  if (street?.trim()) {
-    const pass1 = await runOverpassQuery(
-      buildOverpassQuery(lat, lon, street, OVERPASS_RADIUS_METERS),
-    );
-    const hit1 = pickNearest(pass1, lat, lon);
-    if (hit1) {
-      logger.info('Overpass housenumber pass 1 hit', { data: { pass: 1, housenumber: hit1 } });
-      return hit1;
-    }
-  }
-
-  // Pass 2 — tight radius, no street filter (buildings often lack addr:street)
-  const pass2 = await runOverpassQuery(
-    buildOverpassQuery(lat, lon, undefined, OVERPASS_RADIUS_METERS),
+  const seconds = overpassQuerySeconds(options.deadline?.remainingMs());
+  const elements = await runOverpassQuery(
+    buildOverpassQuery(lat, lon, OVERPASS_FALLBACK_RADIUS_METERS, seconds),
+    options,
   );
-  const hit2 = pickNearest(pass2, lat, lon);
-  if (hit2) {
-    logger.info('Overpass housenumber pass 2 hit', { data: { pass: 2, housenumber: hit2 } });
-    return hit2;
+  const picked = pickTier(toCandidates(elements, lat, lon), street);
+  if (!picked) {
+    logger.info('Overpass housenumber: no match', {
+      data: { lat, lon, street, radius: OVERPASS_FALLBACK_RADIUS_METERS },
+    });
+    return null;
   }
-
-  // Pass 3 — wider radius, last resort
-  const pass3 = await runOverpassQuery(
-    buildOverpassQuery(lat, lon, undefined, OVERPASS_FALLBACK_RADIUS_METERS),
-  );
-  const hit3 = pickNearest(pass3, lat, lon);
-  if (hit3) {
-    logger.info('Overpass housenumber pass 3 hit', { data: { pass: 3, housenumber: hit3 } });
-    return hit3;
-  }
-
-  logger.info('Overpass housenumber: no match across 3 passes', {
-    data: { lat, lon, street, radius: OVERPASS_FALLBACK_RADIUS_METERS },
+  logger.info('Overpass housenumber hit', {
+    data: { tier: picked.tier, housenumber: picked.candidate.housenumber, distance: picked.candidate.distance },
   });
-  return null;
+  return picked.candidate.housenumber;
 }
