@@ -21,6 +21,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 import { redirectTo } from '@/lib/http/request-origin';
+import { EMAIL_SUBSCRIPTION_API } from '@/lib/notifications/email-subscription-routes';
 
 // ============================================================================
 // BOT & SCANNER DETECTION
@@ -195,11 +196,20 @@ export function middleware(request: NextRequest) {
   // αυτόν τον έλεγχο. Άνοιγμα του `/api/cron` συνολικά θα εξέθετε δημόσια endpoints
   // οριστικής διαγραφής με μόνη άμυνα το `CRON_SECRET`· δεν υπάρχει λόγος να γίνει.
   // (Το `oauth-cleanup` κρατά την ονομαστική εξαίρεση για χειροκίνητη δοκιμή — ADR-738 §10.)
+  //
+  // 🔴 ADR-848 — **και η διαγραφή ενός κλικ (RFC 8058)**. Το POST του «Κατάργηση
+  // εγγραφής» το στέλνει η **υποδομή** του Gmail/Outlook/Yahoo, όχι φυλλομετρητής, με
+  // user-agent που μπορεί να ταιριάξει σε BLOCKED_BOT_PATTERNS. Χωρίς την εξαίρεση: 403
+  // από το Edge, ο άνθρωπος πιστεύει ότι διαγράφηκε, τα email **συνεχίζουν** — και η
+  // επόμενη κίνησή του είναι «Αναφορά ως ανεπιθύμητο», μετρημένη εναντίον του domain.
+  // Δεν χαλαρώνει τίποτα: το endpoint δέχεται μόνο POST με υπογεγραμμένο token και έχει
+  // δικό του όριο ρυθμού (`WEBHOOK`).
   const isMachineEndpoint =
     pathname.startsWith('/api/communications/webhooks') ||
     pathname.startsWith('/api/mcp') ||
     pathname.startsWith('/api/oauth') ||
     pathname.startsWith('/api/cron/oauth-cleanup') ||
+    pathname.startsWith(EMAIL_SUBSCRIPTION_API) ||
     pathname.startsWith('/.well-known/oauth-');
 
   if (!isMachineEndpoint && userAgent) {

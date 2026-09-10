@@ -15,6 +15,7 @@
  */
 
 import { API_ROUTES } from '@/config/domain-constants';
+import { EMAIL_SUBSCRIPTION_API } from '@/lib/notifications/email-subscription-routes';
 import { getCurrentRuntimeEnvironment } from '@/config/environment-security-config';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -117,6 +118,9 @@ export const ENDPOINT_CATEGORY_MAPPINGS: Record<string, RateLimitCategory> = {
 
   // Webhook endpoints - WEBHOOK
   '/api/communications/webhooks': 'WEBHOOK',
+  // ADR-848 — η διαγραφή ενός κλικ (RFC 8058): δημόσια, την χτυπούν ΜΗΧΑΝΕΣ (Gmail ·
+  // Outlook), άρα δικός της κάδος — όχι ο ίδιος με την επικυρωμένη κίνηση CRUD.
+  [EMAIL_SUBSCRIPTION_API]: 'WEBHOOK',
 
   // Telegram - TELEGRAM
   '/api/communications/webhooks/telegram': 'TELEGRAM',
