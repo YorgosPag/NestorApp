@@ -9,38 +9,42 @@
  * περιέγραφε άλλο πράγμα από αυτό που γραφόταν. Εδώ το «νέο» **είναι** το αποτέλεσμα —
  * η ίδια συνάρτηση που γράφει, όχι πρόβλεψή της.
  *
+ * 🔑 Βήμα Β: δέχεται ολόκληρο το `PinDrop` — και σύρσιμο **χωρίς** κείμενο (404 / timeout),
+ * που ως τότε χανόταν πριν φτάσει εδώ. Τότε ο διάλογος προσφέρει μόνο «Μόνο η θέση».
+ *
  * @module components/projects/tabs/locations/ProjectViewDragConfirm
  */
 
 import { useMemo } from 'react';
-import type { PartialProjectAddress, ProjectAddress } from '@/types/project/addresses';
+import type { ProjectAddress } from '@/types/project/addresses';
 import { AddressDragConfirmDialog } from '@/components/shared/addresses/editor';
+import { mapPinDropText, type PinDrop } from '@/components/shared/addresses/pin-drop';
 import { storedAddressToResolved } from '@/utils/address/administrative-hierarchy';
 import { applyDraggedPin, type DragApplyMode } from './location-converters';
 
 export interface ProjectViewDragConfirmProps {
   /** Η διεύθυνση της συρμένης πινέζας· `undefined` αν χάθηκε στο μεταξύ. */
   readonly target: ProjectAddress | undefined;
-  readonly dragged: Partial<PartialProjectAddress>;
+  readonly drop: PinDrop;
   readonly onConfirm: (mode: DragApplyMode) => void;
   readonly onCancel: () => void;
 }
 
-export function ProjectViewDragConfirm({ target, dragged, onConfirm, onCancel }: ProjectViewDragConfirmProps) {
+export function ProjectViewDragConfirm({ target, drop, onConfirm, onCancel }: ProjectViewDragConfirmProps) {
   const current = useMemo(() => storedAddressToResolved(target ?? {}, 'projectAddress'), [target]);
-  const adopted = useMemo(
-    () => storedAddressToResolved(
+  const proposal = useMemo(
+    () => mapPinDropText(drop, (dragged) => storedAddressToResolved(
       target ? applyDraggedPin(target, dragged, 'adopt-address') : dragged,
       'projectAddress',
-    ),
-    [target, dragged],
+    )).text,
+    [target, drop],
   );
 
   return (
     <AddressDragConfirmDialog
       open
       currentAddress={current}
-      newAddress={adopted}
+      proposal={proposal}
       onConfirm={() => onConfirm('adopt-address')}
       onConfirmPositionOnly={() => onConfirm('position-only')}
       onCancel={onCancel}

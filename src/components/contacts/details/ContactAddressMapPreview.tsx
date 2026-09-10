@@ -5,7 +5,9 @@ import { useMemo, useRef } from 'react';
 import { AddressMap } from '@/components/shared/addresses/AddressMap';
 import { AddressUtils } from '@/config/address-config';
 import { createProjectAddress } from '@/types/project/address-helpers';
-import type { ProjectAddress, ProjectAddressType, PartialProjectAddress } from '@/types/project/addresses';
+import type { ProjectAddress, ProjectAddressType } from '@/types/project/addresses';
+import type { GeoPoint } from '@/types/geo/coordinates';
+import type { PinDrop, PinDropNoText } from '@/components/shared/addresses/pin-drop';
 import type { CompanyAddress } from '@/types/ContactFormTypes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -43,8 +45,14 @@ interface ContactAddressMapPreviewProps {
   heightPreset?: 'viewerCompact' | 'viewerStandard' | 'viewerExpanded' | 'viewerFullscreen';
   /** Enable draggable pin for address selection (edit mode) */
   draggable?: boolean;
-  /** Callback when user drags pin — provides resolved address data + address index */
-  onDragResolve?: (address: DragResolvedAddress, addressIndex: number) => void;
+  /** Callback when user drags pin — resolved address data + address index + the drop point. */
+  onDragResolve?: (address: DragResolvedAddress, addressIndex: number, point: GeoPoint) => void;
+  /**
+   * Σύρσιμο **χωρίς** κείμενο (404 / timeout). ADR-332 D27 Βήμα Β: οι επαφές **δεν αποθηκεύουν
+   * ακόμη θέση** (Β-ΙΙ), οπότε δεν υπάρχει τίποτα να εφαρμοστεί — ο γονιός οφείλει να επαναφέρει
+   * την πινέζα και να το πει στον άνθρωπο, αντί να μείνει μετακινημένη χωρίς να αποθηκεύεται.
+   */
+  onDragWithoutText?: (reason: PinDropNoText) => void;
   /** Additional CSS classes for map container */
   className?: string;
   /** Increment to clear map drag positions after undo/redo in the address editor. */
@@ -77,6 +85,7 @@ export function ContactAddressMapPreview({
   heightPreset,
   draggable = false,
   onDragResolve,
+  onDragWithoutText,
   className,
   dragResetKey,
 }: ContactAddressMapPreviewProps) {
@@ -177,7 +186,12 @@ export function ContactAddressMapPreview({
   // split is only a safety net for legacy callers that still concatenate.
   const handleDragUpdate = useMemo(() => {
     if (!draggable || !onDragResolve) return undefined;
-    return (data: Partial<PartialProjectAddress>, addressIndex: number) => {
+    return (drop: PinDrop, addressIndex: number) => {
+      if (drop.text.kind !== 'resolved') {
+        onDragWithoutText?.(drop.text.kind);
+        return;
+      }
+      const data = drop.text.address;
       let street = (data.street ?? '').trim();
       let number = (data.number ?? '').trim();
       if (!number && street) {
@@ -195,9 +209,9 @@ export function ContactAddressMapPreview({
         neighborhood: data.neighborhood ?? '',
         region: data.region ?? '',
         country: data.country ?? '',
-      }, addressIndex);
+      }, addressIndex, drop.point);
     };
-  }, [draggable, onDragResolve]);
+  }, [draggable, onDragResolve, onDragWithoutText]);
 
   // In draggable mode: always show map (even without addresses)
   if (combinedAddresses.length === 0 && !draggable) {

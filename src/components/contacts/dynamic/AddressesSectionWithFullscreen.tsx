@@ -21,6 +21,8 @@ import { AddressWithHierarchy } from '@/components/shared/addresses/AddressWithH
 import { SharedAddressActionCard } from '@/components/shared/addresses/SharedAddressActionCard';
 import { CompanyAddressesSection, type CompanyAddressesSectionHandle } from '@/components/contacts/dynamic/CompanyAddressesSection';
 import { ContactAddressMapPreview, type DragResolvedAddress } from '@/components/contacts/details/ContactAddressMapPreview';
+import { PIN_DROP_NO_TEXT_I18N_KEY, type PinDropNoText } from '@/components/shared/addresses/pin-drop';
+import type { GeoPoint } from '@/types/geo/coordinates';
 import type { CompanyAddress } from '@/types/ContactFormTypes';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { ProjectAddress } from '@/types/project/addresses';
@@ -189,6 +191,15 @@ export function AddressesSectionWithFullscreen({
     onDragMissingNumber: maybeWarnMissingNumber,
   });
 
+  /**
+   * ADR-332 D27 Βήμα Β — σύρσιμο χωρίς κείμενο. Οι επαφές δεν αποθηκεύουν ακόμη θέση (Β-ΙΙ):
+   * η πινέζα **επιστρέφει** (ό,τι βλέπεις = ό,τι αποθηκεύεται) και ο άνθρωπος μαθαίνει γιατί.
+   */
+  const handleDragWithoutText = useCallback((reason: PinDropNoText) => {
+    handleUndoRedo();
+    notify(tAddr(PIN_DROP_NO_TEXT_I18N_KEY[reason]), { type: 'info', duration: 6000 });
+  }, [handleUndoRedo, notify, tAddr]);
+
   const tAddrFn = useCallback((key: string) => tAddr(key) as string, [tAddr]);
   const hqTypeLabel = resolveContactAddressLabel(primaryType, primaryCustomLabel, tAddrFn);
 
@@ -336,7 +347,8 @@ export function AddressesSectionWithFullscreen({
           readOnlyExtraAddresses={derivedPinAddresses}
           draggable={isEditing}
           dragResetKey={undoRedoCount}
-          onDragResolve={isEditing && setFormData ? (addr: DragResolvedAddress, addressIndex: number) => {
+          onDragWithoutText={isEditing && setFormData ? handleDragWithoutText : undefined}
+          onDragResolve={isEditing && setFormData ? (addr: DragResolvedAddress, addressIndex: number, point: GeoPoint) => {
             // ADR-319: HQ is always index 0.
             // HQ drag → AddressEditor confirm dialog (ADR-332 Phase 6, replaces ADR-277 AlertDialog).
             // Branch drag → apply directly (no hierarchy to clear for branches).
@@ -346,14 +358,21 @@ export function AddressesSectionWithFullscreen({
               if (!hqEditorRef.current) {
                 flushSync(() => setIsEditingHQ(true));
               }
+              // Χωρίς `placement`: ο editor της επαφής ΔΕΝ προσφέρει «Μόνο η θέση» (Β-ΙΙ).
               hqEditorRef.current?.setPendingDrag({
-                street: addr.street,
-                number: addr.number,
-                postalCode: addr.postalCode,
-                city: addr.city,
-                neighborhood: addr.neighborhood,
-                region: addr.region,
-                country: addr.country,
+                point,
+                text: {
+                  kind: 'resolved',
+                  address: {
+                    street: addr.street,
+                    number: addr.number,
+                    postalCode: addr.postalCode,
+                    city: addr.city,
+                    neighborhood: addr.neighborhood,
+                    region: addr.region,
+                    country: addr.country,
+                  },
+                },
               });
             } else {
               applyDragResolve(addr, addressIndex);

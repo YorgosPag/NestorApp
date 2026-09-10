@@ -18,6 +18,7 @@
  */
 
 import { normalizeGreekText } from '@/services/ai-pipeline/shared/greek-text-utils';
+import { foldPlaceName } from '@/utils/address/place-name';
 import type { AddressFieldConflict, ResolvedAddressFields } from '../types';
 
 const COMPARABLE_FIELDS: ReadonlyArray<keyof ResolvedAddressFields> = [
@@ -33,7 +34,9 @@ const COMPARABLE_FIELDS: ReadonlyArray<keyof ResolvedAddressFields> = [
 
 function normalize(value: string | undefined): string {
   if (!value) return '';
-  return normalizeGreekText(value.trim()).toLowerCase();
+  // ADR-332 D27 Βήμα Β (Β7): «Ελευθέριο-Κορδελιό» και «Ελευθέριο Κορδελιό» είναι το ΙΔΙΟ όνομα —
+  // διαφέρει η γραφή. Χωρίς αυτό ο διάλογος συρσίματος έδειχνε «αλλαγή» μόνο για την παύλα.
+  return normalizeGreekText(foldPlaceName(value)).toLowerCase();
 }
 
 /** Ο κοινός πυρήνας: ΕΝΑ πέρασμα· το «τι μετρά ως διαφορά» είναι η μόνη παράμετρος. */

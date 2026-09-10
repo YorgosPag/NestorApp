@@ -14,11 +14,19 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { diffAddressReplacement, isClearedField } from '../helpers/diffAddressFields';
 import { AddressDiffSummary } from './AddressDiffSummary';
 import type { ResolvedAddressFields } from '../types';
+import { PIN_DROP_NO_TEXT_I18N_KEY, type PinDropText } from '../../pin-drop';
 
 export interface AddressDragConfirmDialogProps {
   open: boolean;
   currentAddress: ResolvedAddressFields;
-  newAddress: ResolvedAddressFields;
+  /**
+   * Τι προτείνει η μηχανή για το σημείο αφής.
+   *
+   * 🔑 ADR-332 D27 Βήμα Β: `not-found` / `unavailable` = **θέση χωρίς κείμενο** (η Google το
+   * λέει `ZERO_RESULTS` / «Dropped pin»). Τότε δεν υπάρχει τι να «ενημερωθεί» — μόνο θέση
+   * να κρατηθεί. Ως τις 2026-09-10 αυτή η περίπτωση δεν έφτανε **καν** εδώ: το σύρσιμο χανόταν.
+   */
+  proposal: PinDropText<ResolvedAddressFields>;
   onConfirm: () => void;
   onCancel: () => void;
   /**
@@ -34,28 +42,40 @@ export interface AddressDragConfirmDialogProps {
 export function AddressDragConfirmDialog({
   open,
   currentAddress,
-  newAddress,
+  proposal,
   onConfirm,
   onCancel,
   onConfirmPositionOnly,
 }: AddressDragConfirmDialogProps) {
   const { t } = useTranslation('addresses');
+  const proposed = proposal.kind === 'resolved' ? proposal.address : null;
 
   // Αντικατάσταση, όχι συμφιλίωση: το κενό στο νέο ΣΒΗΝΕΙ — και πρέπει να φαίνεται.
   const conflicts = useMemo(
-    () => diffAddressReplacement(currentAddress, newAddress),
-    [currentAddress, newAddress],
+    () => (proposed ? diffAddressReplacement(currentAddress, proposed) : []),
+    [currentAddress, proposed],
   );
-  // Όταν η «ενημέρωση» σβήνει δηλωμένη τιμή, το Enter από συνήθεια πρέπει να μην τη χάνει.
-  const focusPositionOnly = Boolean(onConfirmPositionOnly) && conflicts.some(isClearedField);
+  // Χωρίς κείμενο η «μόνο θέση» είναι η ΜΟΝΗ πράξη· με κείμενο, μόνο όταν αυτό διαφέρει
+  // (αλλιώς θα ήταν η ίδια πράξη με την «ενημέρωση»).
+  const offerPositionOnly = Boolean(onConfirmPositionOnly) && (proposed === null || conflicts.length > 0);
+  // Όταν η «ενημέρωση» σβήνει δηλωμένη τιμή — ή δεν υπάρχει καν — το Enter από συνήθεια
+  // πρέπει να πέφτει στην ασφαλή επιλογή.
+  const focusPositionOnly = offerPositionOnly && (proposed === null || conflicts.some(isClearedField));
+  const description = proposal.kind === 'resolved'
+    ? t('editor.dragConfirm.description')
+    : t(PIN_DROP_NO_TEXT_I18N_KEY[proposal.kind]);
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onCancel(); }}>
       <DialogContent size="sm">
         <DialogHeader>
           <DialogTitle>{t('editor.dragConfirm.title')}</DialogTitle>
-          <DialogDescription>{t('editor.dragConfirm.description')}</DialogDescription>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
+
+        {proposed === null && offerPositionOnly && (
+          <p className="text-sm text-muted-foreground">{t('editor.dragConfirm.noText.keepPosition')}</p>
+        )}
 
         {conflicts.length > 0 && (
           <AddressDiffSummary conflicts={conflicts} className="mt-1" />
@@ -65,14 +85,14 @@ export function AddressDragConfirmDialog({
           <Button variant="outline" onClick={onCancel}>
             {t('editor.dragConfirm.cancel')}
           </Button>
-          {/* Χωρίς αλλαγή κειμένου, «μόνο θέση» και «ενημέρωση» είναι η ίδια πράξη. Το
-              σβήσιμο ΜΕΤΡΑ πλέον ως αλλαγή (`diffAddressReplacement`, άγκυρα Δ1). */}
-          {onConfirmPositionOnly && conflicts.length > 0 && (
+          {offerPositionOnly && (
             <Button variant="secondary" autoFocus={focusPositionOnly} onClick={onConfirmPositionOnly}>
               {t('editor.dragConfirm.positionOnly')}
             </Button>
           )}
-          <Button autoFocus={!focusPositionOnly} onClick={onConfirm}>{t('editor.dragConfirm.confirm')}</Button>
+          {proposed !== null && (
+            <Button autoFocus={!focusPositionOnly} onClick={onConfirm}>{t('editor.dragConfirm.confirm')}</Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
