@@ -2,7 +2,7 @@
 
 /**
  * @fileoverview **ΟΙ ΠΡΟΤΙΜΗΣΕΙΣ EMAIL, ΧΩΡΙΣ ΣΥΝΔΕΣΗ** — «λιγότερα» ή «κανένα», με αναίρεση.
- * @related ADR-848 · app/api/notifications/email/subscription/route.ts
+ * @related ADR-848 · ADR-849 Α2 (email ανά τύπο) · app/api/notifications/email/subscription/route.ts
  * @module components/notifications/EmailPreferencesPanel
  *
  * ────────────────────────────────────────────────────────────────────────────
@@ -11,9 +11,10 @@
  * - **Χωρίς σύνδεση** (Google: η διαγραφή «must not require the recipient to log in»).
  * - **«Λιγότερα» δίπλα στο «κανένα»** (Medium · LinkedIn): μία σύνοψη την ημέρα αντί
  *   για διακοπή — ο άνθρωπος που ενοχλείται από τον **ρυθμό** δεν χάνεται ολόκληρος.
- * - **Αναίρεση που επαναφέρει ΑΚΡΙΒΩΣ** (Gmail): το endpoint επιστρέφει το
- *   `previous`, και η αναίρεση το στέλνει πίσω αυτούσιο — ποτέ «ξαναενεργοποίησε»
- *   που θα έχανε ένα `weekly`.
+ * - **Ανά τύπο** (ADR-849, LinkedIn/Zillow): «όχι ταιριάσματα, ναι εντολές» — στο
+ *   `EmailTypePreferences`, με τους τύπους του email που σε έφερε **μπροστά**.
+ * - **Αναίρεση που επαναφέρει ΑΚΡΙΒΩΣ — και ΜΟΝΟ ό,τι άλλαξε** (Gmail): καθολική αλλαγή ⇒
+ *   `restore` των καθολικών· αλλαγή τύπου ⇒ ο ίδιος τύπος στην προηγούμενη κατάσταση.
  *
  * ⚠️ **Το GET δεν αλλάζει τίποτα** — η σελίδα μόνο **δείχνει**· κάθε αλλαγή είναι
  * POST πίσω από κουμπί. Οι σαρωτές συνδέσμων ανοίγουν τη σελίδα χωρίς συνέπεια.
@@ -26,6 +27,7 @@
 import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { EmailTypePreferences, emailTypeRow } from '@/components/notifications/EmailTypePreferences';
 import { Button } from '@/components/ui/button';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 // 🧩 ADR-744 §15 (Φ4) — PER-ROUTE SLICE ΤΗΣ `/email/preferences/[token]`. Ψυχρή είσοδος
@@ -42,6 +44,7 @@ import {
   type SubscriptionResponse,
 } from '@/lib/notifications/email-subscription-contract';
 import { emailOneClickHref } from '@/lib/notifications/email-subscription-routes';
+import type { EmailTypeMode } from '@/services/user-notification-settings/user-notification-settings.email-types';
 
 registerRouteSlice(routeSlice);
 
@@ -49,7 +52,13 @@ const NS = 'auth';
 
 /** Ό,τι έλυσε ο διακομιστής — **τίποτα δεν ξαναρωτιέται από τον πελάτη**. */
 export type EmailPreferencesView =
-  | { readonly kind: 'ready'; readonly token: string; readonly state: EmailSubscriptionState }
+  | {
+      readonly kind: 'ready';
+      readonly token: string;
+      readonly state: EmailSubscriptionState;
+      /** ADR-849 — οι τύποι της εμβέλειας του token: μπαίνουν **μπροστά**. */
+      readonly focus: readonly string[];
+    }
   | { readonly kind: 'refused'; readonly reason: SubscriptionFailure };
 
 /** Ρητές φάσεις — ποτέ `isLoading` + `error` + `data` μαζί. */
@@ -58,8 +67,10 @@ type Phase =
   | { readonly kind: 'sending' }
   | {
       readonly kind: 'done';
-      readonly change: EmailSubscriptionChange['kind'];
+      readonly change: EmailSubscriptionChange;
       readonly previous: EmailSubscriptionState;
+      /** `false` όταν η ίδια η αλλαγή **ήταν** αναίρεση — καμία «αναίρεση της αναίρεσης». */
+      readonly undoable: boolean;
     }
   | { readonly kind: 'failed'; readonly reason: SubscriptionFailure };
 
@@ -73,10 +84,15 @@ const FAILURE_KEYS: Readonly<Record<SubscriptionFailure, string>> = {
   'write-failed': 'auth:emailPreferences.failure.writeFailed',
 };
 
-const DONE_KEYS: Readonly<Record<EmailSubscriptionChange['kind'], string>> = {
+const DONE_KEYS: Readonly<Record<Exclude<EmailSubscriptionChange['kind'], 'type'>, string>> = {
   unsubscribe: 'auth:emailPreferences.done.unsubscribe',
   daily: 'auth:emailPreferences.done.daily',
   restore: 'auth:emailPreferences.done.restore',
+};
+
+const TYPE_DONE_KEYS: Readonly<Record<EmailTypeMode, string>> = {
+  off: 'auth:emailPreferences.done.typeOff',
+  on: 'auth:emailPreferences.done.typeOn',
 };
 
 const FREQUENCY_KEYS: Readonly<Record<'realtime' | 'daily' | 'weekly', string>> = {
@@ -97,6 +113,22 @@ async function postChange(token: string, change: EmailSubscriptionChange): Promi
   } catch {
     return { ok: false, reason: 'service-unavailable' };
   }
+}
+
+/**
+ * **Η αναίρεση μιας αλλαγής — ΜΟΝΟ ό,τι άλλαξε** (ADR-849).
+ *
+ * Αλλαγή τύπου ⇒ ο ίδιος τύπος στην κατάσταση που είχε στο `previous`· καθολική ⇒ τα
+ * καθολικά του `previous`. Ποτέ ολόκληρη η λίστα τύπων: θα έσβηνε ό,τι άλλαξε στο μεταξύ
+ * η οθόνη ρυθμίσεων.
+ */
+function undoOf(change: EmailSubscriptionChange, previous: EmailSubscriptionState): EmailSubscriptionChange {
+  if (change.kind === 'type') {
+    const [first] = change.settings;
+    const mode: EmailTypeMode = first !== undefined && previous.mutedTypes.includes(first) ? 'off' : 'on';
+    return { kind: 'type', settings: change.settings, mode };
+  }
+  return { kind: 'restore', state: { emailEnabled: previous.emailEnabled, emailFrequency: previous.emailFrequency } };
 }
 
 function PanelShell({ title, children }: { title: string; children: React.ReactNode }) {
@@ -147,8 +179,16 @@ function Actions(props: {
   );
 }
 
+/** Το μήνυμα επιτυχίας — για τύπο, **ονομάζει** τον τύπο με την ετικέτα της οθόνης. */
+function DoneMessage({ change }: { change: EmailSubscriptionChange }) {
+  const { t } = useTranslation([NS, 'common-account']);
+  if (change.kind !== 'type') return <>{t(DONE_KEYS[change.kind])}</>;
+  const row = emailTypeRow(change.settings[0] ?? '');
+  return <>{t(TYPE_DONE_KEYS[change.mode], { type: row ? t(row.labelKey) : '' })}</>;
+}
+
 /** Το αποτέλεσμα της τελευταίας πράξης — ζωντανή περιοχή για τον αναγνώστη οθόνης. */
-function Outcome(props: { phase: Phase; onUndo: (previous: EmailSubscriptionState) => void }) {
+function Outcome(props: { phase: Phase; onUndo: (change: EmailSubscriptionChange) => void }) {
   const { t } = useTranslation([NS]);
   const { phase } = props;
 
@@ -162,9 +202,9 @@ function Outcome(props: { phase: Phase; onUndo: (previous: EmailSubscriptionStat
 
   return (
     <p role="status" className="flex flex-wrap items-center gap-2 text-sm text-card-foreground">
-      {t(DONE_KEYS[phase.change])}
-      {phase.change !== 'restore' && (
-        <Button variant="link" className="h-auto p-0" onClick={() => props.onUndo(phase.previous)}>
+      <DoneMessage change={phase.change} />
+      {phase.undoable && (
+        <Button variant="link" className="h-auto p-0" onClick={() => props.onUndo(undoOf(phase.change, phase.previous))}>
           {t('auth:emailPreferences.undo')}
         </Button>
       )}
@@ -172,13 +212,14 @@ function Outcome(props: { phase: Phase; onUndo: (previous: EmailSubscriptionStat
   );
 }
 
-function ReadyPanel({ token, initial }: { token: string; initial: EmailSubscriptionState }) {
+function ReadyPanel(props: { token: string; initial: EmailSubscriptionState; focus: readonly string[] }) {
   const { t } = useTranslation([NS]);
-  const [state, setState] = useState(initial);
+  const [state, setState] = useState(props.initial);
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' });
+  const { token } = props;
 
   const submit = useCallback(
-    async (change: EmailSubscriptionChange) => {
+    async (change: EmailSubscriptionChange, undoable = true) => {
       setPhase({ kind: 'sending' });
       const result = await postChange(token, change);
       if (!result.ok) {
@@ -186,16 +227,24 @@ function ReadyPanel({ token, initial }: { token: string; initial: EmailSubscript
         return;
       }
       setState(result.current);
-      setPhase({ kind: 'done', change: change.kind, previous: result.previous });
+      setPhase({ kind: 'done', change, previous: result.previous, undoable });
     },
     [token],
   );
+  const busy = phase.kind === 'sending';
 
   return (
     <PanelShell title={t('auth:emailPreferences.title')}>
       <StateLine state={state} />
-      <Actions state={state} busy={phase.kind === 'sending'} onChange={submit} />
-      <Outcome phase={phase} onUndo={(previous) => submit({ kind: 'restore', state: previous })} />
+      <Actions state={state} busy={busy} onChange={(change) => submit(change)} />
+      <Outcome phase={phase} onUndo={(change) => submit(change, false)} />
+      <EmailTypePreferences
+        mutedTypes={state.mutedTypes}
+        focus={props.focus}
+        emailsOn={emailsAreOn(state)}
+        busy={busy}
+        onToggle={(path, mode) => submit({ kind: 'type', settings: [path], mode })}
+      />
       <p className="text-xs text-muted-foreground">{t('auth:emailPreferences.mandatoryNote')}</p>
     </PanelShell>
   );
@@ -211,5 +260,5 @@ export function EmailPreferencesPanel({ view }: { view: EmailPreferencesView }):
       </PanelShell>
     );
   }
-  return <ReadyPanel token={view.token} initial={view.state} />;
+  return <ReadyPanel token={view.token} initial={view.state} focus={view.focus} />;
 }

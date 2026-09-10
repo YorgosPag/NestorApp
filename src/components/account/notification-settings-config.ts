@@ -6,12 +6,21 @@
  * Extracted from NotificationSettings.tsx to comply with the 500-line limit.
  * Contains: props interface, category config interface, and CATEGORY_CONFIGS.
  *
+ * 🔗 **ADR-849 Α2 — οι γραμμές ΔΕΝ ζουν πια εδώ.** Το `CATEGORY_CONFIGS` **παράγεται** από
+ * το κοινό μητρώο `config/notification-preference-rows.ts`, που διαβάζει και η σελίδα
+ * προτιμήσεων email. Εδώ μένει μόνο ό,τι ανήκει στην οθόνη: τα εικονίδια.
+ *
  * @module components/account/notification-settings-config
- * @enterprise ADR-025 - Notification Settings Centralization
+ * @see ADR-849 — το μοντέλο προτιμήσεων (το «ADR-025» που έγραφε εδώ ήταν φάντασμα)
  */
 
 import React from 'react';
-import { Users, Building2, CheckSquare, Shield } from 'lucide-react';
+import { Building2, CheckSquare, Package, Shield, Users } from 'lucide-react';
+
+import {
+  NOTIFICATION_PREFERENCE_GROUPS,
+  type NotificationPreferenceRow,
+} from '@/config/notification-preference-rows';
 import {
   UserNotificationSettings,
   NotificationCategory,
@@ -27,82 +36,33 @@ export interface NotificationSettingsProps {
 }
 
 export interface CategoryConfig {
-  id: NotificationCategory;
-  icon: React.ElementType;
-  titleKey: string;
-  descriptionKey: string;
-  settings: Array<{
-    key: string;
-    labelKey: string;
-  }>;
+  readonly id: NotificationCategory;
+  readonly icon: React.ElementType;
+  readonly titleKey: string;
+  readonly descriptionKey: string;
+  readonly settings: readonly NotificationPreferenceRow[];
 }
 
 // ============================================================================
 // CATEGORY CONFIGURATION
 // ============================================================================
 
-export const CATEGORY_CONFIGS: CategoryConfig[] = [
-  {
-    id: 'crm',
-    icon: Users,
-    titleKey: 'account.notificationSettings.categories.crm.title',
-    descriptionKey: 'account.notificationSettings.categories.crm.description',
-    settings: [
-      { key: 'newLead', labelKey: 'account.notificationSettings.categories.crm.newLead' },
-      { key: 'leadStatusChange', labelKey: 'account.notificationSettings.categories.crm.leadStatusChange' },
-      { key: 'taskAssigned', labelKey: 'account.notificationSettings.categories.crm.taskAssigned' },
-      { key: 'newCommunication', labelKey: 'account.notificationSettings.categories.crm.newCommunication' },
-    ],
-  },
-  {
-    id: 'properties',
-    icon: Building2,
-    titleKey: 'account.notificationSettings.categories.properties.title',
-    descriptionKey: 'account.notificationSettings.categories.properties.description',
-    settings: [
-      { key: 'statusChange', labelKey: 'account.notificationSettings.categories.properties.statusChange' },
-      { key: 'newProperty', labelKey: 'account.notificationSettings.categories.properties.newProperty' },
-      { key: 'priceChange', labelKey: 'account.notificationSettings.categories.properties.priceChange' },
-      { key: 'viewingScheduled', labelKey: 'account.notificationSettings.categories.properties.viewingScheduled' },
-      // ADR-777 Ε2 — ο διακόπτης του δολώματος (§12.6). Μια ειδοποίηση που δεν σβήνει
-      // είναι ενόχληση, όχι υπηρεσία· και χωρίς γραμμή **εδώ** ο διακόπτης θα υπήρχε
-      // στον τύπο και θα ήταν **απρόσιτος** — αδρανής φρουρός (ADR-749 §5).
-      { key: 'demandInterest', labelKey: 'account.notificationSettings.categories.properties.demandInterest' },
-      // ADR-777 §8.34 — «ο πελάτης απάντησε στην εντολή». Ίδιος λόγος με το από πάνω:
-      // διακόπτης χωρίς γραμμή εδώ είναι διακόπτης που **κανείς δεν μπορεί να γυρίσει**.
-      // ADR-777 — ο καθρέφτης του `demandInterest`: εκεί ειδοποιείται ο ιδιοκτήτης
-      // «πόσοι σε ψάχνουν», εδώ ο **ζητών** «βγήκε αυτό που ζητάς». Ίδιος λόγος με το
-      // από πάνω: χωρίς γραμμή εδώ, ο διακόπτης υπάρχει στον τύπο και είναι απρόσιτος.
-      { key: 'demandListingMatch', labelKey: 'account.notificationSettings.categories.properties.demandListingMatch' },
-      { key: 'mandateDecided', labelKey: 'account.notificationSettings.categories.properties.mandateDecided' },
-      // ADR-827 §9.21 — «το γραφείο απάντησε στο αίτημά σου». Ίδιος λόγος με τα δύο
-      // από πάνω: διακόπτης χωρίς γραμμή εδώ είναι διακόπτης που **κανείς δεν μπορεί
-      // να γυρίσει** (ADR-749 §5).
-      { key: 'mandateRequestAnswered', labelKey: 'account.notificationSettings.categories.properties.mandateRequestAnswered' },
-    ],
-  },
-  {
-    id: 'tasks',
-    icon: CheckSquare,
-    titleKey: 'account.notificationSettings.categories.tasks.title',
-    descriptionKey: 'account.notificationSettings.categories.tasks.description',
-    settings: [
-      { key: 'dueToday', labelKey: 'account.notificationSettings.categories.tasks.dueToday' },
-      { key: 'overdue', labelKey: 'account.notificationSettings.categories.tasks.overdue' },
-      { key: 'assigned', labelKey: 'account.notificationSettings.categories.tasks.assigned' },
-      { key: 'completed', labelKey: 'account.notificationSettings.categories.tasks.completed' },
-    ],
-  },
-  {
-    id: 'security',
-    icon: Shield,
-    titleKey: 'account.notificationSettings.categories.security.title',
-    descriptionKey: 'account.notificationSettings.categories.security.description',
-    settings: [
-      { key: 'newDeviceLogin', labelKey: 'account.notificationSettings.categories.security.newDeviceLogin' },
-      { key: 'passwordChange', labelKey: 'account.notificationSettings.categories.security.passwordChange' },
-      { key: 'twoFactorChange', labelKey: 'account.notificationSettings.categories.security.twoFactorChange' },
-      { key: 'suspiciousActivity', labelKey: 'account.notificationSettings.categories.security.suspiciousActivity' },
-    ],
-  },
-];
+/**
+ * Το εικονίδιο κάθε κατηγορίας. ⚠️ `Record`, όχι `Partial`: νέα κατηγορία στο μοντέλο
+ * χωρίς εικονίδιο **δεν μεταγλωττίζεται** — αντί να εμφανιστεί κενή στην οθόνη.
+ */
+const CATEGORY_ICONS: Readonly<Record<NotificationCategory, React.ElementType>> = {
+  crm: Users,
+  properties: Building2,
+  tasks: CheckSquare,
+  procurement: Package,
+  security: Shield,
+};
+
+export const CATEGORY_CONFIGS: readonly CategoryConfig[] = NOTIFICATION_PREFERENCE_GROUPS.map((group) => ({
+  id: group.category,
+  icon: CATEGORY_ICONS[group.category],
+  titleKey: group.titleKey,
+  descriptionKey: group.descriptionKey,
+  settings: group.settings,
+}));

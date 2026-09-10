@@ -20,6 +20,7 @@ import 'server-only';
 import type { Metadata } from 'next';
 
 import { EmailPreferencesPanel } from '@/components/notifications/EmailPreferencesPanel';
+import { scopeSettingPaths } from '@/lib/notifications/email-subscription-scope';
 import { decodeRouteParam } from '@/lib/routes/route-param';
 import { readEmailSubscriptionState } from '@/server/notifications/email-subscription';
 import { readEmailSubscriptionToken } from '@/services/notifications/email-subscription-token.service';
@@ -47,5 +48,8 @@ export default async function EmailPreferencesPage({
   }
 
   const state = await readEmailSubscriptionState(verdict.uid);
-  return <EmailPreferencesPanel view={{ kind: 'ready', token, state }} />;
+  // 📧 ADR-849 — οι τύποι του email που έφερε τον άνθρωπο εδώ (εμβέλεια **υπογεγραμμένη**
+  // στο token) μπαίνουν μπροστά. Εστίαση, όχι όριο: η σελίδα αλλάζει οποιονδήποτε τύπο.
+  const focus = scopeSettingPaths(verdict.scope);
+  return <EmailPreferencesPanel view={{ kind: 'ready', token, state, focus }} />;
 }
