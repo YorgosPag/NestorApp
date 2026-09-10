@@ -88,6 +88,15 @@ export function nextPinGesture(): number {
  * όχι ισχυρισμός** — την αποθηκευμένη προέλευση την αποφασίζει ο διακομιστής
  * (`lib/geocoding/address-position`, κανόνας 1).
  */
+/**
+ * Οι δύο επιβεβαιώσεις ενός συρσίματος — «Ναι, ενημέρωσε» ή «Μόνο η θέση».
+ *
+ * Ζει **εδώ**, δίπλα στο `humanPlacedPatch`, επειδή είναι λεξιλόγιο **του συρσίματος** και όχι
+ * ενός τομέα: ως το ADR-332 D27 Β-ΙΙ δηλωνόταν στο `location-converters` των έργων, και οι
+ * επαφές θα έπρεπε να εισάγουν από φάκελο έργων (το `location-converters` το επανεξάγει).
+ */
+export type DragApplyMode = 'adopt-address' | 'position-only';
+
 export interface HumanPlacedPatch {
   readonly coordinates: { lat: number; lng: number };
   readonly source: 'dragged';

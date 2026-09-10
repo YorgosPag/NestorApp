@@ -9,18 +9,18 @@
  * περιέγραφε άλλο πράγμα από αυτό που γραφόταν. Εδώ το «νέο» **είναι** το αποτέλεσμα —
  * η ίδια συνάρτηση που γράφει, όχι πρόβλεψή της.
  *
- * 🔑 Βήμα Β: δέχεται ολόκληρο το `PinDrop` — και σύρσιμο **χωρίς** κείμενο (404 / timeout),
- * που ως τότε χανόταν πριν φτάσει εδώ. Τότε ο διάλογος προσφέρει μόνο «Μόνο η θέση».
+ * Β-ΙΙ (2026-09-11): ο διάλογος εξήχθη στο κοινό `ViewDragConfirm` (τον χρειάζονται και οι
+ * επαφές)· εδώ μένει **μόνο** ό,τι είναι του έργου — η τρέχουσα διεύθυνση και το `toProposal`.
  *
  * @module components/projects/tabs/locations/ProjectViewDragConfirm
  */
 
-import { useMemo } from 'react';
-import type { ProjectAddress } from '@/types/project/addresses';
-import { AddressDragConfirmDialog } from '@/components/shared/addresses/editor';
-import { mapPinDropText, type PinDrop } from '@/components/shared/addresses/pin-drop';
+import { useCallback, useMemo } from 'react';
+import type { PartialProjectAddress, ProjectAddress } from '@/types/project/addresses';
+import type { DragApplyMode, PinDrop } from '@/components/shared/addresses/pin-drop';
+import { ViewDragConfirm } from '@/components/shared/addresses/ViewDragConfirm';
 import { storedAddressToResolved } from '@/utils/address/administrative-hierarchy';
-import { applyDraggedPin, type DragApplyMode } from './location-converters';
+import { applyDraggedPin } from './location-converters';
 
 export interface ProjectViewDragConfirmProps {
   /** Η διεύθυνση της συρμένης πινέζας· `undefined` αν χάθηκε στο μεταξύ. */
@@ -32,21 +32,20 @@ export interface ProjectViewDragConfirmProps {
 
 export function ProjectViewDragConfirm({ target, drop, onConfirm, onCancel }: ProjectViewDragConfirmProps) {
   const current = useMemo(() => storedAddressToResolved(target ?? {}, 'projectAddress'), [target]);
-  const proposal = useMemo(
-    () => mapPinDropText(drop, (dragged) => storedAddressToResolved(
+  const toProposal = useCallback(
+    (dragged: Partial<PartialProjectAddress>) => storedAddressToResolved(
       target ? applyDraggedPin(target, dragged, 'adopt-address') : dragged,
       'projectAddress',
-    )).text,
-    [target, drop],
+    ),
+    [target],
   );
 
   return (
-    <AddressDragConfirmDialog
-      open
+    <ViewDragConfirm
       currentAddress={current}
-      proposal={proposal}
-      onConfirm={() => onConfirm('adopt-address')}
-      onConfirmPositionOnly={() => onConfirm('position-only')}
+      drop={drop}
+      toProposal={toProposal}
+      onConfirm={onConfirm}
       onCancel={onCancel}
     />
   );

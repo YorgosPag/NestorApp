@@ -19,7 +19,7 @@
 import type { ProjectAddress, PartialProjectAddress } from '@/types/project/addresses';
 import type { AddressWithHierarchyValue } from '@/components/shared/addresses/AddressWithHierarchy';
 import { EMPTY_VALUE } from '@/components/shared/addresses/address-with-hierarchy-config';
-import { humanPlacedPatch, type PinDrop } from '@/components/shared/addresses/pin-drop';
+import { humanPlacedPatch, type DragApplyMode, type PinDrop } from '@/components/shared/addresses/pin-drop';
 import {
   projectAddressVocabulary,
   resolveCityFromHierarchy,
@@ -69,7 +69,9 @@ export function fromHierarchyValue(val: AddressWithHierarchyValue): Partial<Proj
  * - `adopt-address`: η θέση **και** το κείμενο της αντίστροφης γεωκωδικοποίησης.
  * - `position-only`: μόνο η θέση — το κείμενο που δήλωσε ο άνθρωπος **μένει**.
  */
-export type DragApplyMode = 'adopt-address' | 'position-only';
+// ADR-332 D27 Β-ΙΙ: ο τύπος ζει στο `pin-drop` (λεξιλόγιο του συρσίματος, όχι των έργων)·
+// επανεξάγεται εδώ ώστε οι υπάρχοντες καταναλωτές να μην αλλάξουν εισαγωγή.
+export type { DragApplyMode };
 
 /**
  * Εφαρμόζει σύρσιμο πινέζας — **και το δηλώνει** (`source: 'dragged'`).
