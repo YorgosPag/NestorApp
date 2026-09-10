@@ -116,10 +116,19 @@ describe('ADR-843 Κ9 — η οθόνη ΔΕΝ ξαναμετρά τη χωρη�
     fetchMock.mockResolvedValue({ kind: 'ready', view: { contacts: CONTACTS, capacity: CAPACITY } });
   });
 
+  /**
+   * **Οι γραμμές ΕΠΑΦΩΝ** — όχι κάθε `listitem` της σελίδας.
+   *
+   * ⚠️ ADR-843 §10.19: η σελίδα απέκτησε **καρτέλες** των δύο όψεων, σωστά ως `<li>`
+   * μέσα σε `<nav>`. Η μέτρηση «όλα τα `listitem`» έπαψε να είναι το πλήθος της λίστας —
+   * και θα **συμφωνούσε κατά σύμπτωση** με έναν δεύτερο μετρητή σε λάθος fixture.
+   */
+  const contactRows = () => screen.getAllByRole('listitem').filter((li) => li.closest('nav') === null);
+
   it('τυπώνει το `capacity.open` της ανάγνωσης, ΟΧΙ το πλήθος της λίστας', async () => {
     const { container } = render(<MyContactsContent />);
 
-    await waitFor(() => expect(screen.getAllByRole('listitem')).toHaveLength(LIST_OPEN));
+    await waitFor(() => expect(contactRows()).toHaveLength(LIST_OPEN));
 
     // 🔑 Η λίστα ΟΝΤΩΣ έχει 7 ανοιχτές — δηλαδή ένας δεύτερος μετρητής θα είχε
     //    διαφορετική, εξίσου «εύλογη» απάντηση διαθέσιμη στην ίδια απόδοση.
@@ -129,7 +138,7 @@ describe('ADR-843 Κ9 — η οθόνη ΔΕΝ ξαναμετρά τη χωρη�
 
   it('τυπώνει και το όριο από την ανάγνωση — Κ9: κανένα όριο δεν γεννιέται στην οθόνη', async () => {
     const { container } = render(<MyContactsContent />);
-    await waitFor(() => expect(screen.getAllByRole('listitem')).toHaveLength(LIST_OPEN));
+    await waitFor(() => expect(contactRows()).toHaveLength(LIST_OPEN));
 
     expect(container.textContent).toContain('capacity=5');
     expect(container.textContent).toContain('remaining=2');
