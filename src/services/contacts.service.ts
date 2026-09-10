@@ -20,6 +20,7 @@ import { EnterpriseContactSaver } from '@/utils/contacts/EnterpriseContactSaver'
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { DuplicatePreventionService } from './contacts/DuplicatePreventionService';
 import { sanitizeContactData, sanitizeContactForUpdate, validateContactData, type ContactDataRecord } from '@/utils/contactForm/utils/data-cleaning';
+import { flattenCustomFieldsForUpdate } from '@/utils/contacts/contact-update-paths';
 
 import { getCol, asDate } from '@/lib/firestore/utils';
 import { contactConverter } from '@/lib/firestore/converters/contact.converter';
@@ -329,7 +330,13 @@ export class ContactsService {
     // explicit user "clear" and are converted to Firestore deleteField() so the
     // stale value is actually removed (instead of being overwritten with ""
     // which bloated the document). Fields not in the payload are left alone.
-    const { cleanUpdates, fieldsToDelete } = sanitizeContactForUpdate(updates as ContactDataRecord);
+    //
+    // ADR-332 D27 Β-ΙΙ Φ0: το `customFields` γίνεται ΔΙΑΔΡΟΜΕΣ ΠΕΔΙΩΝ πριν τον καθαριστή.
+    // Ως χάρτης, το `updateDoc` τον ΑΝΤΙΚΑΘΙΣΤΟΥΣΕ — και με dirty diff μια αποθήκευση μόνο
+    // διευθύνσεων έσβηνε ΚΑΔ / ΓΕΜΗ / κεφάλαιο (άγκυρα `contacts-update-custom-fields`).
+    const { cleanUpdates, fieldsToDelete } = sanitizeContactForUpdate(
+      flattenCustomFieldsForUpdate(updates as ContactDataRecord),
+    );
     const updateData = { ...cleanUpdates, updatedAt: serverTimestamp() } as ContactUpdatePayload;
     for (const field of fieldsToDelete) {
       (updateData as Record<string, unknown>)[field] = deleteField();
