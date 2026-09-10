@@ -15,8 +15,17 @@
 
 import { renderHook, act } from '@testing-library/react';
 import type { ProjectAddress } from '@/types/project/addresses';
+import type { MapInstance } from '@/subapps/geo-canvas/hooks/map/useMapInteractions';
+import { cameraFraming } from '@/lib/geo/camera-motion';
 
-jest.mock('@/lib/maps/maplibre', () => ({ LngLatBounds: class {} }));
+/** Ελάχιστο `LngLatBounds` — αρκετό για να τρέξει το ΠΡΑΓΜΑΤΙΚΟ `runFitBounds` (Β14). */
+jest.mock('@/lib/maps/maplibre', () => ({
+  LngLatBounds: class {
+    private readonly points: unknown[] = [];
+    extend(point: unknown) { this.points.push(point); return this; }
+    isEmpty() { return this.points.length === 0; }
+  },
+}));
 jest.mock('@/lib/geocoding/geocoding-service', () => ({
   geocodeAddress: jest.fn(),
   reverseGeocodeDetailed: jest.fn(),
@@ -166,6 +175,51 @@ describe('Β10 — ένας κριτής θέσης: ο διακομιστής',
     expect(geocodeAddress).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('Β14 — ο χάρτης καδράρει ΚΑΙ όταν οι θέσεις έφτασαν πριν γίνει έτοιμος (ζωντανή επαλήθευση)', () => {
+  /** Σταθερή αναφορά — ο χάρτης είναι ελεγχόμενος. */
+  const SAVED = [address()];
+
+  function mountWithMap(draggableMarkers: boolean) {
+    const fitBounds = jest.fn();
+    const mapRef = { current: { fitBounds } as unknown as MapInstance };
+    const hook = renderHook(
+      ({ ready }: { ready: boolean }) =>
+        useAddressMapGeocoding({ addresses: SAVED, draggableMarkers, mapRef, mapReady: ready }),
+      { initialProps: { ready: false } },
+    );
+    return { fitBounds, ...hook };
+  }
+
+  it.each([
+    ['επεξεργασία (συρόμενες πινέζες)', true],
+    ['προβολή', false],
+  ])('🔴 %s: οι θέσεις ήρθαν ΠΡΙΝ το `mapReady` ⇒ καδράρισμα ΜΟΛΙΣ γίνει έτοιμος — ως ΑΦΙΞΗ', async (_mode, draggable) => {
+    const { fitBounds, rerender } = mountWithMap(draggable);
+    await settle();
+    expect(fitBounds).not.toHaveBeenCalled();
+
+    mountRerender(rerender, true);
+
+    expect(fitBounds).toHaveBeenCalledTimes(1);
+    // Ο άνθρωπος δεν είδε ποτέ την προεπιλεγμένη θέα: η πρώτη ΠΡΑΓΜΑΤΙΚΗ εικόνα είναι άφιξη, όχι πτήση
+    // (βλ. σχόλιο του `runFitBounds`). Το καδράρισμα που «δεν έγινε» δεν μετρά ως πρώτο.
+    expect(fitBounds.mock.calls[0]![1]).toEqual(cameraFraming('arrive', 'pin', 'confirmed'));
+  });
+
+  it('ΠΑΡΟΝΟΜΑΣΤΗΣ: μετά το πρώτο καδράρισμα, νέα απόδοση με ΙΔΙΟ πλήθος πινεζών ΔΕΝ ξανακαδράρει', async () => {
+    const { fitBounds, rerender } = mountWithMap(true);
+    await settle();
+    mountRerender(rerender, true);
+    mountRerender(rerender, true);
+
+    expect(fitBounds).toHaveBeenCalledTimes(1);
+  });
+});
+
+function mountRerender(rerender: (props: { ready: boolean }) => void, ready: boolean): void {
+  act(() => { rerender({ ready }); });
+}
 
 describe('displayedPosition — η σειρά είναι συμβόλαιο', () => {
   const MACHINE = { lat: 40.1, lng: 22.1 };

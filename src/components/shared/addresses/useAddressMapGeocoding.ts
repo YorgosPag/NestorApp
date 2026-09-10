@@ -238,9 +238,14 @@ export function useAddressMapGeocoding({
   /**
    * Zoom the map so every pin (geocoded + drag-pending + unrendered fallback)
    * is visible. Single source of truth for bounds composition.
+   *
+   * 🔴 ADR-332 D27 Β14 (ζωντανή επαλήθευση): επιστρέφει **αν καδράρισε**. Οι δύο σκανδάλες
+   * σημείωναν «καδράρισα» και όταν ο χάρτης **δεν ήταν έτοιμος** ⇒ θέσεις που έφταναν πριν το
+   * `mapReady` δεν καδραρίζονταν ποτέ, και ο χάρτης έμενε στο προεπιλεγμένο κέντρο (Αθήνα) ενώ η
+   * πινέζα ήταν στη Θεσσαλονίκη.
    */
-  const runFitBounds = useCallback((intent: CameraIntent) => {
-    if (!mapRef.current || !mapReady) return;
+  const runFitBounds = useCallback((intent: CameraIntent): boolean => {
+    if (!mapRef.current || !mapReady) return false;
     try {
       const bounds = new LngLatBounds();
       geocodedAddresses.forEach(result => bounds.extend([result.lng, result.lat]));
@@ -254,7 +259,7 @@ export function useAddressMapGeocoding({
           }
         }
       }
-      if (bounds.isEmpty()) return;
+      if (bounds.isEmpty()) return false;
       /*
         🔑 **ΤΟ ΜΟΝΟ ΣΗΜΕΙΟ ΤΗΣ ΕΦΑΡΜΟΓΗΣ ΜΕ ΔΥΟ ΠΡΟΘΕΣΕΙΣ ΣΤΗΝ ΙΔΙΑ ΣΥΝΑΡΤΗΣΗ**, και
         γι' αυτό η πρόθεση **δίνεται από τον καλούντα**: η **πρώτη** προσαρμογή είναι
@@ -268,8 +273,10 @@ export function useAddressMapGeocoding({
         Οι δύο τιμές έμοιαζαν με ασυνέπεια· είναι **δύο διαφορετικές δηλώσεις ακρίβειας**.
       */
       mapRef.current.fitBounds(bounds, cameraFraming(intent, 'pin', 'confirmed'));
+      return true;
     } catch (error) {
       logger.error('fitBounds failed:', { error });
+      return false;
     }
   }, [geocodedAddresses, mapReady, draggableMarkers, dragPositions, addresses]);
 
@@ -282,8 +289,8 @@ export function useAddressMapGeocoding({
       hasFittedViewRef.current = false;
       return;
     }
-    runFitBounds(hasFittedViewRef.current ? 'travel' : 'arrive');
-    hasFittedViewRef.current = true;
+    // Β14: «καδράρισα» ΜΟΝΟ αν έγινε — αλλιώς η άφιξη χάνεται όταν ο χάρτης δεν ήταν έτοιμος.
+    if (runFitBounds(hasFittedViewRef.current ? 'travel' : 'arrive')) hasFittedViewRef.current = true;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [geocodedAddresses, mapReady, draggableMarkers]);
 
@@ -306,12 +313,14 @@ export function useAddressMapGeocoding({
     const countChanged =
       geocodedCount !== lastGeocodedCountRef.current ||
       addressCount !== lastAddressCountRef.current;
-    lastGeocodedCountRef.current = geocodedCount;
-    lastAddressCountRef.current = addressCount;
     if (lastEditFitRef.current && !countChanged) return;
     // 🔑 Το `lastEditFitRef` απαντούσε **ήδη** «έχω καδράρει ξανά;» — δηλαδή «υπάρχει
     //    ΑΠΟ;». Δεν χρειάστηκε νέα κατάσταση, μόνο να ερωτηθεί.
-    runFitBounds(lastEditFitRef.current ? 'travel' : 'arrive');
+    // 🔴 Β14: τα πλήθη και η σημαία γράφονται ΜΟΝΟ αν το καδράρισμα έγινε — αλλιώς ένας χάρτης
+    //    που δεν ήταν έτοιμος «κατανάλωνε» την άφιξη και δεν καδράριζε ποτέ.
+    if (!runFitBounds(lastEditFitRef.current ? 'travel' : 'arrive')) return;
+    lastGeocodedCountRef.current = geocodedCount;
+    lastAddressCountRef.current = addressCount;
     lastEditFitRef.current = true;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draggableMarkers, mapReady, geocodedAddresses, addresses]);
