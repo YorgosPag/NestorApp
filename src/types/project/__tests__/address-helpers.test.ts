@@ -12,9 +12,31 @@ import {
   resolveBuildingAddresses,
   getBuildingPrimaryAddress,
   resolveBuildingPrimaryAddress,
+  extractLegacyFields,
 } from '../address-helpers';
 import type { ProjectAddress, BuildingAddressReference } from '../addresses';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
+
+describe('extractLegacyFields — το κάτοπτρο ΔΕΝ φέρει ποτέ διπλό ή αρχικό κενό (ADR-332 D27 Β11)', () => {
+  it('🔴 οδός «Σαμοθράκης␣» + «16» ⇒ «Σαμοθράκης 16» (ζωντανά γραφόταν «Σαμοθράκης␣␣16»)', () => {
+    expect(extractLegacyFields([{ street: 'Σαμοθράκης ', number: '16', city: ' Θεσσαλονίκη' }]))
+      .toEqual({ address: 'Σαμοθράκης 16', city: 'Θεσσαλονίκη' });
+  });
+
+  it('κύριο ή πρώτο — ο ΕΝΑΣ κανόνας (`primaryOrFirst`)', () => {
+    const addresses = [
+      { street: 'Εγνατίας', number: '1', city: 'Α', isPrimary: false },
+      { street: 'Τσιμισκή', number: '2', city: 'Β', isPrimary: true },
+    ];
+    expect(extractLegacyFields(addresses)).toEqual({ address: 'Τσιμισκή 2', city: 'Β' });
+    expect(extractLegacyFields([addresses[0]!])).toEqual({ address: 'Εγνατίας 1', city: 'Α' });
+  });
+
+  it('ΠΑΡΟΝΟΜΑΣΤΗΣ: χωρίς αριθμό ⇒ μόνο η οδός, χωρίς κενό στο τέλος · κενή λίστα ⇒ κενό κάτοπτρο', () => {
+    expect(extractLegacyFields([{ street: 'Σαμοθράκης', city: 'Θεσσαλονίκη' }]).address).toBe('Σαμοθράκης');
+    expect(extractLegacyFields([])).toEqual({ address: '', city: '' });
+  });
+});
 
 describe('Address Helpers (ADR-167)', () => {
   describe('getPrimaryAddress', () => {

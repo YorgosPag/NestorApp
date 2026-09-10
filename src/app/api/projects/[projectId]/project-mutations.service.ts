@@ -35,6 +35,7 @@ import {
   type ProjectAddressLike,
 } from '@/services/listings/address-place-writeback';
 import type { AddressPositionDrift } from '@/lib/geocoding/address-position';
+import { extractLegacyFields } from '@/types/project/address-helpers';
 import type {
   ProjectUpdateResponse,
   ProjectDeleteResponse,
@@ -81,6 +82,9 @@ async function resolveAddressesForWrite(
   );
 
   body['addresses'] = addresses;
+  // ADR-332 D27 Β11: το κάτοπτρο παράγεται από ό,τι ΓΡΑΦΕΤΑΙ — ό,τι έστειλε ο πελάτης αγνοείται
+  // (το έφτιαχνε από τη γραφή πριν το `trim` του συνόρου).
+  Object.assign(body, extractLegacyFields(addresses));
   // Η λογιστική τυπώνεται **πάντα**, ακόμη και όταν κάθε κάδος είναι μηδέν: ένα «0»
   // που δεν τυπώνεται διαβάζεται ως «δεν υπάρχει τέτοιος έλεγχος».
   logger.info('[Projects/Update] Θέσεις διευθύνσεων', { ...tally, drifts: drifts.length });

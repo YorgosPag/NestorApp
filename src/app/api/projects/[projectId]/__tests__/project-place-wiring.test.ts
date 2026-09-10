@@ -285,4 +285,24 @@ describe('Ψ — η απάντηση του PATCH λέει τι ΓΡΑΦΤΗΚΕ
     // ΠΑΡΟΝΟΜΑΣΤΗΣ: καμία απόκλιση όπου δεν κρατήθηκε ανθρώπινη πινέζα.
     expect('positionAdvisories' in data).toBe(false);
   });
+
+  it('Ψ4 — Β11: το κάτοπτρο `address`/`city` το παράγει ο διακομιστής από ό,τι ΓΡΑΦΕΙ — όχι ό,τι έστειλε ο πελάτης', async () => {
+    // Μετρημένο ζωντανά (ERGO TEST): οδός «Σαμοθράκης␣» ⇒ κάτοπτρο πελάτη «Σαμοθράκης␣␣16».
+    await patch({
+      addresses: [ADDRESS({ street: 'Σαμοθράκης ', number: '16' })],
+      address: 'Σαμοθράκης  16',
+      city: 'Αλλού',
+    });
+
+    expect((written?.addresses as Array<Record<string, unknown>>)[0]!.street).toBe('Σαμοθράκης');
+    expect(written?.address).toBe('Σαμοθράκης 16');
+    expect(written?.city).toBe('Θεσσαλονίκη');
+  });
+
+  it('Ψ5 — ΠΑΡΟΝΟΜΑΣΤΗΣ: αποθήκευση ΧΩΡΙΣ διευθύνσεις ⇒ ο διακομιστής ΔΕΝ επινοεί κάτοπτρο', async () => {
+    await patch({ name: 'Άλλο όνομα' });
+
+    expect(written && 'address' in written).toBe(false);
+    expect(written && 'city' in written).toBe(false);
+  });
 });

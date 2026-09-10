@@ -32,6 +32,7 @@ import {
   toCanonicalGreekPostalCode,
 } from '@/utils/address/postal-code';
 import { generateAddressId } from '@/services/enterprise-id.service';
+import { primaryOrFirst, type PrimaryFlagged } from '@/lib/primary-entry';
 
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('address-helpers');
@@ -318,30 +319,32 @@ export function migrateLegacyAddress(
   ];
 }
 
+/** Το **ελάχιστο** σχήμα που χρειάζεται το κάτοπτρο — δομικό, ώστε να το καλεί ο διακομιστής. */
+export interface LegacyMirrorSource extends PrimaryFlagged {
+  readonly street?: string | null;
+  readonly number?: string | null;
+  readonly city?: string | null;
+}
+
 /**
- * Extract legacy fields from new address array (for backward compatibility)
- * Enterprise pattern: Bidirectional compatibility
+ * Το **επίπεδο κάτοπτρο** `{ address, city }` της κύριας διεύθυνσης (παλιοί αναγνώστες).
  *
- * @param addresses - New address array
- * @returns Legacy { address, city } object
+ * 🔴 ADR-332 D27 Β11: το καλούσαν οι **πελάτες** πάνω στη γραφή **πριν** το `trim` του συνόρου,
+ * οπότε η βάση κρατούσε «Σαμοθράκης␣␣16» ενώ η διεύθυνση είχε ήδη «Σαμοθράκης». Πλέον το καλεί
+ * **μόνο** ο διακομιστής, πάνω σε ό,τι **γράφει** — ένας γραφέας για πηγή και παράγωγο.
+ * Τα μέρη κόβονται και τα κενά παραλείπονται: το κάτοπτρο δεν φέρει ποτέ διπλό ή αρχικό κενό.
  */
 export function extractLegacyFields(
-  addresses: ProjectAddress[]
+  addresses: readonly LegacyMirrorSource[]
 ): { address: string; city: string } {
-  const primary = getPrimaryAddress(addresses);
+  // «Κύριο ή πρώτο» λέγεται ΜΙΑ φορά (ADR-332 D24).
+  const primary = primaryOrFirst(addresses);
+  if (!primary) return { address: '', city: '' };
 
-  if (!primary) {
-    return { address: '', city: '' };
-  }
-
-  // Format legacy address: "Street Number"
-  const legacyAddress = primary.number
-    ? `${primary.street} ${primary.number}`
-    : primary.street;
-
+  const text = (part: string | null | undefined): string => (typeof part === 'string' ? part.trim() : '');
   return {
-    address: legacyAddress,
-    city: primary.city
+    address: [text(primary.street), text(primary.number)].filter((part) => part !== '').join(' '),
+    city: text(primary.city),
   };
 }
 

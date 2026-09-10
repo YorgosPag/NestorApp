@@ -18,7 +18,6 @@ import type { Project } from '@/types/project';
 import type { ProjectAddress } from '@/types/project/addresses';
 import {
   migrateLegacyAddress,
-  extractLegacyFields,
   createProjectAddress,
 } from '@/types/project/address-helpers';
 import { updateProjectWithPolicy } from '@/services/projects/project-mutation-gateway';
@@ -66,7 +65,6 @@ export function useProjectLocations(project: Project) {
     op: AddressOp,
     relocateAddressIds: readonly string[] = [],
   ) {
-    const legacy = extractLegacyFields(newAddresses);
     const fireSuccess = () => {
       switch (op) {
         case 'added': return projectNotifications.address.added();
@@ -90,9 +88,9 @@ export function useProjectLocations(project: Project) {
       const result = await updateProjectWithPolicy({
         projectId: project.id!,
         updates: {
+          // ADR-332 D27 Β11: το κάτοπτρο `address`/`city` το παράγει ο διακομιστής από ό,τι ΓΡΑΦΕΙ
+          // (`legacyAddressMirror`). Εδώ φτιαχνόταν από τη γραφή ΠΡΙΝ το `trim` του συνόρου.
           addresses: newAddresses,
-          address: legacy.address,
-          city: legacy.city,
           ...(relocateAddressIds.length > 0 ? { relocateAddressIds: [...relocateAddressIds] } : {}),
         },
       });

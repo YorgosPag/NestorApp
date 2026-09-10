@@ -31,6 +31,7 @@ import {
 } from '@/services/listings/address-place-writeback';
 import { verifyPlaceRef } from '@/services/places/public-place-read.service';
 import type { AddressPositionDrift } from '@/lib/geocoding/address-position';
+import { extractLegacyFields } from '@/types/project/address-helpers';
 import type { PlaceRef } from '@/types/geo/public-place';
 // 🔴 **Το σχήμα καλωδίου γράφεται ΜΙΑ φορά** — ήταν αντιγραμμένο εδώ και στον πελάτη,
 // και τα δύο αντίγραφα **είχαν ήδη αποκλίνει** (`addresses` · `category`). Το εντόπισε
@@ -233,6 +234,11 @@ export const PATCH = withStandardRateLimit(
             logger.info('[Buildings] Auto-geocoded lat/lon from primary address', { buildingId, ...primaryPoint });
           }
         }
+        // ADR-332 D27 Β11: το κάτοπτρο παράγεται από ό,τι ΓΡΑΦΕΤΑΙ (και για κενή λίστα) — ό,τι
+        // έστειλε ο πελάτης αγνοείται.
+        const mirror = extractLegacyFields(cleanUpdates.addresses as ProjectAddressLike[]);
+        cleanUpdates.address = mirror.address;
+        cleanUpdates.city = mirror.city;
       }
 
       logger.info('[Buildings] Updating building for tenant', { buildingId, companyId: ctx.companyId });

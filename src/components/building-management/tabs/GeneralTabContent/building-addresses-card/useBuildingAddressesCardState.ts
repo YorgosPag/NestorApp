@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ProjectAddress } from '@/types/project/addresses';
 import type { GeoPoint } from '@/types/geo/coordinates';
-import { extractLegacyFields } from '@/types/project/address-helpers';
 import { useFormPlacedPoint } from '@/components/shared/addresses/useFormPlacedPoint';
 import type { AddressEditorPlacementOptions } from '@/components/shared/addresses/editor';
 import type { AddressPositionDrift } from '@/lib/geocoding/address-position';
@@ -137,13 +136,11 @@ export function useBuildingAddressesCardState({
     nextAddresses: ProjectAddress[],
     relocateAddressIds: readonly string[] = [],
   ): Promise<boolean> => {
-    const legacyFields = extractLegacyFields(nextAddresses);
     const result = await updateBuildingWithPolicy({
       buildingId,
       updates: {
+        // ADR-332 D27 Β11: το κάτοπτρο `address`/`city` το παράγει ο διακομιστής (`legacyAddressMirror`).
         addresses: nextAddresses,
-        address: legacyFields.address,
-        city: legacyFields.city,
         ...(relocateAddressIds.length > 0 ? { relocateAddressIds: [...relocateAddressIds] } : {}),
       },
     });
