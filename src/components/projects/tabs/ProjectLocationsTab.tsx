@@ -29,7 +29,8 @@ import { FullscreenOverlay, FullscreenToggleButton } from '@/core/containers/Ful
 import { cn } from '@/lib/utils';
 import { LocationInlineForm } from './locations/LocationInlineForm';
 import { useProjectLocations } from './locations/useProjectLocations';
-import { AddressDragConfirmDialog } from '@/components/shared/addresses/editor';
+import type { DragApplyMode } from './locations/location-converters';
+import { ProjectViewDragConfirm } from './locations/ProjectViewDragConfirm';
 import type { AddressEditorHandle, ResolvedAddressFields } from '@/components/shared/addresses/editor';
 
 // =============================================================================
@@ -270,9 +271,9 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
     }
   }, [loc.isAddFormOpen, loc.editingIndex, visibleAddresses, loc.handlePendingDragUpdate]);
 
-  const handleViewDragConfirm = useCallback(async () => {
+  const handleViewDragConfirm = useCallback(async (mode: DragApplyMode) => {
     if (!pendingViewDrag) return;
-    await loc.handleAddressDragUpdate(pendingViewDrag.addressData, pendingViewDrag.originalIndex);
+    await loc.handleAddressDragUpdate(pendingViewDrag.addressData, pendingViewDrag.originalIndex, mode);
     setPendingViewDrag(null);
   }, [pendingViewDrag, loc.handleAddressDragUpdate]);
 
@@ -475,13 +476,10 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
 
       {/* View-mode drag confirm — fires when real pin dragged with no form open */}
       {pendingViewDrag !== null && (
-        <AddressDragConfirmDialog
-          open
-          currentAddress={toResolvedFields(
-            visibleAddresses.find(({ originalIndex }) => originalIndex === pendingViewDrag.originalIndex)?.address ?? {},
-          )}
-          newAddress={toResolvedFields(pendingViewDrag.addressData)}
-          onConfirm={() => { void handleViewDragConfirm(); }}
+        <ProjectViewDragConfirm
+          target={visibleAddresses.find(({ originalIndex }) => originalIndex === pendingViewDrag.originalIndex)?.address}
+          dragged={pendingViewDrag.addressData}
+          onConfirm={(mode) => { void handleViewDragConfirm(mode); }}
           onCancel={handleViewDragCancel}
         />
       )}

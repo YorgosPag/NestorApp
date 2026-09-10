@@ -36,9 +36,28 @@ function normalize(value: string | undefined): string {
   return normalizeGreekText(value.trim()).toLowerCase();
 }
 
-function isConflict(userValue: string | undefined, resolvedValue: string | undefined): boolean {
-  const user = normalize(userValue);
-  const resolved = normalize(resolvedValue);
+/** Ο κοινός πυρήνας: ΕΝΑ πέρασμα· το «τι μετρά ως διαφορά» είναι η μόνη παράμετρος. */
+function collectFieldDiffs(
+  before: ResolvedAddressFields,
+  after: ResolvedAddressFields,
+  counts: (before: string, after: string) => boolean,
+): AddressFieldConflict[] {
+  const diffs: AddressFieldConflict[] = [];
+  for (const field of COMPARABLE_FIELDS) {
+    const userValue = before[field];
+    const resolvedValue = after[field];
+    if (counts(normalize(userValue), normalize(resolvedValue))) {
+      diffs.push({
+        field,
+        userValue: (userValue ?? '').trim(),
+        resolvedValue: (resolvedValue ?? '').trim(),
+      });
+    }
+  }
+  return diffs;
+}
+
+function isConflict(user: string, resolved: string): boolean {
   if (user.length === 0 || resolved.length === 0) return false;
   return user !== resolved;
 }
@@ -52,19 +71,30 @@ export function diffAddressFields(
   userInput: ResolvedAddressFields,
   resolved: ResolvedAddressFields,
 ): AddressFieldConflict[] {
-  const conflicts: AddressFieldConflict[] = [];
-  for (const field of COMPARABLE_FIELDS) {
-    const userValue = userInput[field];
-    const resolvedValue = resolved[field];
-    if (isConflict(userValue, resolvedValue)) {
-      conflicts.push({
-        field,
-        userValue: (userValue ?? '').trim(),
-        resolvedValue: (resolvedValue ?? '').trim(),
-      });
-    }
-  }
-  return conflicts;
+  return collectFieldDiffs(userInput, resolved, isConflict);
+}
+
+/**
+ * **Τι αλλάζει αν το `next` ΑΝΤΙΚΑΤΑΣΤΗΣΕΙ το `current`** — προσθήκη, αλλαγή **και σβήσιμο**.
+ *
+ * ⚠️ **Άλλη ερώτηση από το {@link diffAddressFields}, όχι διόρθωσή του.** Στη συμφιλίωση το
+ * κενό σημαίνει «ο πάροχος δεν το είπε» και σωστά δεν είναι διαφορά. Σε **αντικατάσταση**
+ * (σύρσιμο πινέζας) το κενό σημαίνει «**θα σβηστεί**».
+ *
+ * 🔴 2026-09-10 (ADR-332 D27): ο διάλογος συρσίματος ρωτούσε την πρώτη ερώτηση ⇒
+ * «Σαμοθράκης 16 → Σαμοθράκης» έδειχνε **μηδέν** αλλαγές, και το «Ναι, ενημέρωσε» έσβηνε
+ * τον αριθμό **σιωπηλά**.
+ */
+export function diffAddressReplacement(
+  current: ResolvedAddressFields,
+  next: ResolvedAddressFields,
+): AddressFieldConflict[] {
+  return collectFieldDiffs(current, next, (before, after) => before !== after);
+}
+
+/** Σβήνει αυτή η αλλαγή τιμή που **υπήρχε**; */
+export function isClearedField(change: AddressFieldConflict): boolean {
+  return change.userValue.length > 0 && change.resolvedValue.length === 0;
 }
 
 /**

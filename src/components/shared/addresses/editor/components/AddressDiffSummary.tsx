@@ -4,6 +4,7 @@ import { ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { FIELD_LABEL_I18N_KEY } from '../helpers/fieldLabels';
+import { isClearedField } from '../helpers/diffAddressFields';
 import type { AddressFieldConflict } from '../types';
 
 export interface AddressDiffSummaryProps {
@@ -38,7 +39,14 @@ export function AddressDiffSummary({ conflicts, className }: AddressDiffSummaryP
                 {c.userValue || '—'}
               </span>
               <ArrowRight className="h-3 w-3 shrink-0 text-muted-foreground/50" aria-hidden="true" />
-              <span className="truncate font-medium text-foreground">{c.resolvedValue || '—'}</span>
+              {/* Σβήσιμο ≠ «άγνωστο»: το λέει με ΛΕΞΗ, όχι μόνο με χρώμα (WCAG 1.4.1). */}
+              {isClearedField(c) ? (
+                <span className="truncate font-medium text-[hsl(var(--text-warning))]">
+                  {t('editor.diff.cleared')}
+                </span>
+              ) : (
+                <span className="truncate font-medium text-foreground">{c.resolvedValue || '—'}</span>
+              )}
             </li>
           ))}
         </ul>

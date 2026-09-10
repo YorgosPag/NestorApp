@@ -2,7 +2,36 @@
  * Tests — diffAddressFields (ADR-332 Phase 1)
  */
 
-import { diffAddressFields, hasFieldConflicts } from '../helpers/diffAddressFields';
+import {
+  diffAddressFields,
+  diffAddressReplacement,
+  hasFieldConflicts,
+  isClearedField,
+} from '../helpers/diffAddressFields';
+
+describe('diffAddressReplacement — ΑΝΤΙΚΑΤΑΣΤΑΣΗ, όχι συμφιλίωση (ADR-332 D27)', () => {
+  const DECLARED = { street: 'Σαμοθράκης', number: '16', city: 'Ελευθέριο-Κορδελιό' };
+
+  it('ΣΒΗΣΙΜΟ μετρά: «16 → κενό» είναι αλλαγή, και χαρακτηρίζεται ως σβήσιμο', () => {
+    const out = diffAddressReplacement(DECLARED, { ...DECLARED, number: '' });
+    expect(out).toEqual([{ field: 'number', userValue: '16', resolvedValue: '' }]);
+    expect(isClearedField(out[0]!)).toBe(true);
+  });
+
+  it('ΠΑΡΟΝΟΜΑΣΤΗΣ: το ΙΔΙΟ ζεύγος στο diffAddressFields δίνει ΜΗΔΕΝ (γι\' αυτό ήταν σιωπηλό)', () => {
+    expect(diffAddressFields(DECLARED, { ...DECLARED, number: '' })).toEqual([]);
+  });
+
+  it('προσθήκη μετρά αλλά ΔΕΝ είναι σβήσιμο', () => {
+    const out = diffAddressReplacement({ city: 'Θεσσαλονίκη' }, { city: 'Θεσσαλονίκη', neighborhood: 'Ελευθέρια' });
+    expect(out.map((c) => c.field)).toEqual(['neighborhood']);
+    expect(isClearedField(out[0]!)).toBe(false);
+  });
+
+  it('ίδια τιμή με άλλα κεφαλαία/τόνους ΔΕΝ είναι αλλαγή', () => {
+    expect(diffAddressReplacement({ city: 'ΘΕΣΣΑΛΟΝΙΚΗ ' }, { city: 'Θεσσαλονίκη' })).toEqual([]);
+  });
+});
 
 describe('diffAddressFields', () => {
   it('returns empty when no fields differ', () => {
