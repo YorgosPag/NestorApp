@@ -24,8 +24,9 @@ import { AddressConfidenceMeter } from './components/AddressConfidenceMeter';
 import { AddressActivityLog } from './components/AddressActivityLog';
 import { AddressResolutionSlot } from './components/AddressResolutionSlot';
 import { AddressDragConfirmDialog } from './components/AddressDragConfirmDialog';
+import { useAddressEditorDrag, type DragCorrectionAction } from './hooks/useAddressEditorDrag';
 import { AddressEditorContext } from './AddressEditorContext';
-import type { AddressEditorProps, AddressEditorHandle } from './AddressEditor.types';
+import type { AddressEditorProps, AddressEditorHandle, EditorPinDrop } from './AddressEditor.types';
 import type {
   AddressEditorState,
   GeocodingApiResponse,
@@ -68,6 +69,7 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
     value,
     onChange,
     onDragApplied,
+    placement,
     onUndoRedo,
     mode = 'edit',
     formOptions,
@@ -80,7 +82,6 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
   const { t } = useTranslation('addresses');
   // Semi-controlled: internal form state; reset on value identity change.
   const [userInput, setUserInput] = useState<ResolvedAddressFields>(() => value);
-  const [pendingDrag, setPendingDrag] = useState<ResolvedAddressFields | null>(null);
   const [logCollapsed, setLogCollapsed] = useState(activityLogOpts?.collapsed ?? false);
   const [dismissedSuggestions, setDismissedSuggestions] = useState(false);
   const userInputRef = useRef(userInput);
@@ -116,6 +117,37 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
   });
   const reconciliation = useAddressReconciliation(userInput, resolvedFields);
   const undoHook = useAddressUndo();
+  const applyDragText = useCallback((next: ResolvedAddressFields) => {
+    setUserInput(next);
+    onChange(next);
+    editor.markStale();
+  }, [onChange, editor]);
+  const recordDrag = useCallback((action: DragCorrectionAction, finalAddress: ResolvedAddressFields) => {
+    const fieldActions: FieldActionsMap = {};
+    for (const k of Object.keys(finalAddress) as Array<keyof ResolvedAddressFields>) {
+      fieldActions[k] = action === 'used-drag' ? 'corrected-to-resolved' : 'kept';
+    }
+    void telemetryHook.flush(action, {
+      userInput: userInputRef.current,
+      nominatimResolved: resolvedFields,
+      confidence: currentResult?.confidence ?? 0,
+      variantUsed: currentResult?.source?.variantUsed ?? 1,
+      partialMatch: currentResult?.partialMatch ?? false,
+      fieldActions,
+      finalAddress,
+    });
+  }, [telemetryHook, resolvedFields, currentResult]);
+  // ADR-332 D27 Βήμα Β — το σύρσιμο κουβαλά ΘΕΣΗ, όχι μόνο κείμενο (βλ. `useAddressEditorDrag`).
+  const drag = useAddressEditorDrag({
+    userInputRef,
+    undo: undoHook,
+    applyText: applyDragText,
+    recordDrag,
+    onDragApplied,
+    placement,
+    onCancel: onUndoRedo,
+  });
+  const { restorePoint, queue: queueDrag } = drag;
   const handleFieldChange = useCallback(
     (field: keyof ResolvedAddressFields, val: string) => {
       if (!hasStartedEditRef.current) {
@@ -136,16 +168,18 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
     telemetryHook.markUndoOccurred();
     setUserInput(entry.before);
     onChange(entry.before);
+    restorePoint(entry, 'undo');
     onUndoRedo?.();
-  }, [undoHook, onChange, telemetryHook, onUndoRedo]);
+  }, [undoHook, onChange, telemetryHook, onUndoRedo, restorePoint]);
 
   const handleRedo = useCallback(() => {
     const entry = undoHook.redo();
     if (!entry) return;
     setUserInput(entry.after);
     onChange(entry.after);
+    restorePoint(entry, 'redo');
     onUndoRedo?.();
-  }, [undoHook, onChange, onUndoRedo]);
+  }, [undoHook, onChange, onUndoRedo, restorePoint]);
 
   const handleForceRegeocode = useCallback(() => {
     void editor.triggerGeocode();
@@ -222,8 +256,8 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
   );
 
   useImperativeHandle(ref, () => ({
-    setPendingDrag: (addr: ResolvedAddressFields) => setPendingDrag(addr),
-  }), []);
+    setPendingDrag: (drop: EditorPinDrop) => queueDrag(drop),
+  }), [queueDrag]);
 
   const handleSuggestionRetry = useCallback(
     (field: keyof ResolvedAddressFields) => {
@@ -233,33 +267,6 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
     [suggestions, editor],
   );
 
-  const handleDragConfirm = useCallback(() => {
-    if (!pendingDrag) return;
-    undoHook.push({
-      kind: 'drag-applied',
-      before: userInputRef.current,
-      after: pendingDrag,
-      i18nKey: 'addresses.editor.undo.dragApplied',
-    });
-    const dragFieldActions: FieldActionsMap = {};
-    for (const k of Object.keys(pendingDrag) as Array<keyof ResolvedAddressFields>) {
-      dragFieldActions[k] = 'corrected-to-resolved';
-    }
-    void telemetryHook.flush('used-drag', {
-      userInput: userInputRef.current,
-      nominatimResolved: resolvedFields,
-      confidence: currentResult?.confidence ?? 0,
-      variantUsed: currentResult?.source?.variantUsed ?? 1,
-      partialMatch: currentResult?.partialMatch ?? false,
-      fieldActions: dragFieldActions,
-      finalAddress: pendingDrag,
-    });
-    setUserInput(pendingDrag);
-    onChange(pendingDrag);
-    onDragApplied?.(pendingDrag);
-    editor.markStale();
-    setPendingDrag(null);
-  }, [pendingDrag, undoHook, onChange, onDragApplied, editor, telemetryHook, resolvedFields, currentResult]);
   const showReconciliation =
     editor.state.phase === 'conflict' || editor.state.phase === 'partial';
   // The FSM reaches these phases while the caret is still in a field, which is
@@ -448,14 +455,17 @@ export const AddressEditor = forwardRef<AddressEditorHandle, AddressEditorProps>
           />
         )}
 
-        {/* Drag confirm dialog */}
-        <AddressDragConfirmDialog
-          open={pendingDrag !== null}
-          currentAddress={userInput}
-          newAddress={pendingDrag ?? {}}
-          onConfirm={handleDragConfirm}
-          onCancel={() => { setPendingDrag(null); onUndoRedo?.(); }}
-        />
+        {/* Drag confirm dialog — ADR-332 D27 Βήμα Β: και θέση ΧΩΡΙΣ κείμενο */}
+        {drag.pendingDrag && (
+          <AddressDragConfirmDialog
+            open
+            currentAddress={userInput}
+            proposal={drag.pendingDrag.text}
+            onConfirm={drag.confirm}
+            onConfirmPositionOnly={drag.confirmPositionOnly}
+            onCancel={drag.cancel}
+          />
+        )}
 
         {!formOptions?.hideGrid && children}
       </div>

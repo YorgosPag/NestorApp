@@ -10,7 +10,12 @@
 
 export { AddressEditor } from './AddressEditor';
 export { AddressEditorContext, useAddressEditorContext } from './AddressEditorContext';
-export type { AddressEditorProps, AddressEditorHandle } from './AddressEditor.types';
+export type {
+  AddressEditorProps,
+  AddressEditorHandle,
+  AddressEditorPlacementOptions,
+  EditorPinDrop,
+} from './AddressEditor.types';
 export type { AddressEditorContextValue } from './AddressEditorContext';
 export { AddressFieldBadge } from './components/AddressFieldBadge';
 export { AddressSourceLabel } from './components/AddressSourceLabel';

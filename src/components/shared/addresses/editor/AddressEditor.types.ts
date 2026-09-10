@@ -10,6 +10,8 @@
  */
 
 import type { ReactNode } from 'react';
+import type { GeoPoint } from '@/types/geo/coordinates';
+import type { PinDrop } from '../pin-drop';
 import type {
   ResolvedAddressFields,
   AddressEditorMode,
@@ -21,10 +23,31 @@ import type {
   AddressEditorTelemetryOptions,
 } from './types';
 
+/** Σύρσιμο προς επιβεβαίωση — **πάντα** με σημείο, το κείμενο στο λεξιλόγιο του editor. */
+export type EditorPinDrop = PinDrop<ResolvedAddressFields>;
+
 /** Imperative handle exposed via `ref` on `<AddressEditor>`. */
 export interface AddressEditorHandle {
-  /** Queue an externally-resolved drag address for the confirm dialog. */
-  setPendingDrag(addr: ResolvedAddressFields): void;
+  /**
+   * Βάζει ένα σύρσιμο στον διάλογο επιβεβαίωσης.
+   *
+   * 🔴 ADR-332 D27 Βήμα Β: έπαιρνε **μόνο κείμενο** — η θέση του χεριού χανόταν **πριν** καν
+   * ανοίξει ο διάλογος, οπότε καμία φόρμα δεν μπορούσε να την αποθηκεύσει.
+   */
+  setPendingDrag(drop: EditorPinDrop): void;
+}
+
+/**
+ * Ο καλών **αποθηκεύει θέση** (ADR-332 D27 Βήμα Β).
+ *
+ * ⚠️ Χωρίς αυτή την ομάδα ο editor **δεν** προσφέρει «Μόνο η θέση»: μια υπόσχεση που ο
+ * καλών δεν μπορεί να τιμήσει είναι χειρότερη από την απουσία της (οι επαφές, ως το Β-ΙΙ).
+ */
+export interface AddressEditorPlacementOptions {
+  /** Ο άνθρωπος επιβεβαίωσε θέση — με ή χωρίς το κείμενο της μηχανής. */
+  onPlace: (point: GeoPoint) => void;
+  /** Αναίρεση / επανάληψη συρσίματος. `null` = η θέση που είχε η εγγραφή πριν ανοίξει η φόρμα. */
+  onRestore: (point: GeoPoint | null) => void;
 }
 
 export type {
@@ -60,6 +83,8 @@ export interface AddressEditorProps {
    * Use this to clear Greek hierarchy fields in the parent — drag data has no hierarchy.
    */
   onDragApplied?: (addr: ResolvedAddressFields) => void;
+  /** Ο καλών αποθηκεύει θέση ⇒ «Μόνο η θέση» + αναίρεση πινέζας (ADR-332 D27 Βήμα Β). */
+  placement?: AddressEditorPlacementOptions;
   /**
    * Called after every undo or redo action. Use to reset external state that
    * depends on the current address value (e.g. clear map drag-pin position).

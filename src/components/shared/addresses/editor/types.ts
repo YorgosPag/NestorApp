@@ -20,6 +20,7 @@ import type {
   ResolvedAddressFields,
   GeocodingReasoning,
 } from '@/lib/geocoding/geocoding-types';
+import type { GeoPoint } from '@/types/geo/coordinates';
 
 // Re-export geocoding-layer types so editor consumers import from one place.
 export type {
@@ -241,7 +242,19 @@ export type UndoOpKind =
   | 'bulk-correction'
   | 'suggestion-accepted'
   | 'drag-applied'
+  /** ADR-332 D27 Βήμα Β — «Μόνο η θέση»: αλλάζει ΜΟΝΟ το σημείο, το κείμενο μένει. */
+  | 'drag-position'
   | 'form-cleared';
+
+/**
+ * Η θέση πριν/μετά από ένα σύρσιμο — ώστε η αναίρεση να επαναφέρει και την **πινέζα**, όχι
+ * μόνο το κείμενο (ADR-332 D27 Βήμα Β). `before: null` = «η θέση που είχε η εγγραφή πριν
+ * ανοίξει η φόρμα» — ο γονιός την ξέρει, ο editor όχι.
+ */
+export interface UndoPointChange {
+  before: GeoPoint | null;
+  after: GeoPoint;
+}
 
 export interface UndoEntry {
   id: string;          // ULID
@@ -251,6 +264,8 @@ export interface UndoEntry {
   before: ResolvedAddressFields;
   /** Snapshot resulting from the operation. */
   after: ResolvedAddressFields;
+  /** Μόνο στα συρσίματα: η πινέζα πριν/μετά. */
+  point?: UndoPointChange;
   /** i18n description for UI label. */
   i18nKey: string;
   i18nParams?: Record<string, string | number>;

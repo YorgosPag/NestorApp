@@ -33,6 +33,7 @@ import type {
   ResolvedAddressFields,
   UndoEntry,
   UndoOpKind,
+  UndoPointChange,
 } from '../types';
 
 export const ADDRESS_UNDO_STORAGE_KEY = 'address-editor-undo-stack';
@@ -97,6 +98,8 @@ export interface PushUndoInput {
   after: ResolvedAddressFields;
   i18nKey: string;
   i18nParams?: Record<string, string | number>;
+  /** Μόνο στα συρσίματα — η αναίρεση επαναφέρει και την πινέζα (ADR-332 D27 Βήμα Β). */
+  point?: UndoPointChange;
 }
 
 export interface UseAddressUndoResult {
@@ -142,6 +145,7 @@ export function useAddressUndo(): UseAddressUndoResult {
         after: input.after,
         i18nKey: input.i18nKey,
         i18nParams: input.i18nParams,
+        ...(input.point ? { point: input.point } : {}),
       };
       commit({ undo: trim([...current.undo, entry]), redo: [] });
       return entry;
