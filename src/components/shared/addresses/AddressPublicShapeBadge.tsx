@@ -46,6 +46,7 @@ import { MapPin, MapPinOff } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { listingMapShape, type ListingMapShape } from '@/lib/listings/listing-map-shape';
+import { shapeHasHalo } from '@/lib/geo/geocoding-focus';
 import { addressToPositionCandidate } from '@/services/listings/public-listing-position';
 import type { AddressGeocodingMetadata } from '@/lib/geocoding/address-position';
 
@@ -126,6 +127,11 @@ export function AddressPublicShapeBadge({
           <p className="text-xs leading-snug text-muted-foreground">{t(meaningKey)}</p>
         ) : (
           <p className="text-xs leading-snug text-muted-foreground">{t('addresses:publicMap.noneHint')}</p>
+        )}
+        {/* Η ΘΕΡΑΠΕΙΑ και για κάθε σχήμα με επιφύλαξη, όχι μόνο για το `none` (2026-09-10):
+            αλλιώς ο επαγγελματίας διαβάζει «στον δρόμο, όχι στην πόρτα» χωρίς έξοδο. */}
+        {shapeHasHalo(shape) && (
+          <p className="text-xs leading-snug text-muted-foreground">{t('addresses:publicMap.refineHint')}</p>
         )}
       </div>
     </div>

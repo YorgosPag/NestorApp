@@ -457,7 +457,7 @@ export function useAddressMapGeocoding({
     try {
       const result = await reverseGeocode(lat, lng);
       if (result && onAddressDragUpdate) {
-        onAddressDragUpdate(reverseResultToAddress(result), addressIndex);
+        onAddressDragUpdate(reverseResultToAddress(result, { lng, lat }), addressIndex);
       } else if (!result) {
         logger.warn('Reverse geocoding returned no result', { data: { lat, lng } });
       }

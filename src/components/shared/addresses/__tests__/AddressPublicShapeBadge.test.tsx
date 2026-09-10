@@ -64,6 +64,18 @@ describe('Ο — η συνέπεια στην οθόνη του επαγγελμ
       />,
     );
     expect(screen.getByText('search-results:map.shape.pinWithRing')).toBeInTheDocument();
+    // Η θεραπεία: πώς γίνεται ακριβής πινέζα (2026-09-10, «Σαμοθράκης 16»).
+    expect(screen.getByText('addresses:publicMap.refineHint')).toBeInTheDocument();
+  });
+
+  it('Ο4β — ΠΑΡΟΝΟΜΑΣΤΗΣ: ακριβής πινέζα ⇒ ΚΑΜΙΑ υπόδειξη διόρθωσης (δεν υπάρχει τι να διορθωθεί)', () => {
+    render(
+      <AddressPublicShapeBadge
+        coordinates={POINT}
+        geocodingMetadata={{ confidence: 0.93, accuracy: 'exact', variantUsed: 2 }}
+      />,
+    );
+    expect(screen.queryByText('addresses:publicMap.refineHint')).not.toBeInTheDocument();
   });
 
   it('Ο5 — καμία θέση ⇒ το λέει ΡΗΤΑ και δίνει τη ΘΕΡΑΠΕΙΑ (Α5 §4.1: ποτέ σιωπηλή εξαφάνιση)', () => {

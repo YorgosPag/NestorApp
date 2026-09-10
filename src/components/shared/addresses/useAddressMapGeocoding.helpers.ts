@@ -22,9 +22,17 @@ import {
 /**
  * ADR-277: keep `street` and `number` separate so downstream consumers
  * (`handleDragUpdate`) don't have to re-split a pre-concatenated string.
+ *
+ * 🔴 ADR-332 D27 — the position is the **drop point**, never `result.lat/lng`.
+ * The reverse proxy returns the point of the OSM object Nominatim matched: for
+ * «Σαμοθράκης 16» that is the street way, **19.5 m** from the door where the
+ * human let go (measured 2026-09-10). Taking it stored the machine's point as
+ * `source: 'dragged'`. The reverse geocode answers «what is written here», not
+ * «where is it» — that answer belongs to the hand.
  */
 export function reverseResultToAddress(
   result: ReverseGeocodingResult,
+  dropPoint: DragPosition,
 ): Partial<PartialProjectAddress> {
   return {
     street: result.street,
@@ -34,7 +42,7 @@ export function reverseResultToAddress(
     postalCode: result.postalCode,
     region: result.region || undefined,
     country: result.country || GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY,
-    coordinates: { lat: result.lat, lng: result.lng },
+    coordinates: { lat: dropPoint.lat, lng: dropPoint.lng },
   };
 }
 
