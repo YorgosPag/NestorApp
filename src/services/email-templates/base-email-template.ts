@@ -8,6 +8,8 @@
 
 import 'server-only';
 
+import { publicOrigin } from '@/lib/http/public-origin';
+
 // ============================================================================
 // BRAND CONSTANTS
 // ============================================================================
@@ -390,9 +392,20 @@ function renderEmailProviderLinks(emailValue: string, linkStyle: string): string
 /** Brand colors — exported for specific templates to reference */
 export { BRAND };
 
-/** App base URL */
+/**
+ * Η δημόσια διεύθυνση για τα λογότυπα — από το **ΕΝΑ** SSoT (`publicOrigin`).
+ *
+ * 🔴 **Ήταν δεύτερος αναγνώστης του `NEXT_PUBLIC_APP_URL`, με εφεδρεία το
+ * `https://nestor-app.vercel.app`** — νεκρό domain από το πάγωμα του Vercel
+ * (2026-05-09). Χειρότερο από σπασμένη εικόνα: ένα **ελεύθερο** υποdomain τρίτου
+ * μπορεί να το διεκδικήσει οποιοσδήποτε, και τότε **ξένος** σερβίρει εικόνες μέσα
+ * στα email μας *(subdomain takeover)*.
+ *
+ * ⚠️ Χωρίς ρύθμιση επιστρέφει `''` ⇒ σχετική διαδρομή εικόνας, που το πρόγραμμα
+ * email απλώς δεν φορτώνει. Σπασμένη εικόνα από **εμάς**, ποτέ εικόνα από **άλλον**.
+ */
 function getAppBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_APP_URL?.trim() || 'https://nestor-app.vercel.app';
+  return publicOrigin() ?? '';
 }
 
 /** Escape HTML special chars to prevent XSS in dynamic content */

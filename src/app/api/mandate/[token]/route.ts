@@ -26,6 +26,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { decodeRouteParam } from '@/lib/routes/route-param';
 import {
   recordMandateDecision,
   type ConsentOutcome,
@@ -77,7 +78,8 @@ async function handler(
   context: { params: Promise<{ token: string }> },
 ): Promise<NextResponse<DecisionResponse>> {
   const { token: raw } = await context.params;
-  const token = decodeURIComponent(raw);
+  // ADR-848 — ωμό `decodeURIComponent` ⇒ 500 σε κομμένο σύνδεσμο· πλέον «άκυρος».
+  const token = decodeRouteParam(raw);
 
   const body: unknown = await request.json().catch(() => null);
   const decision = decisionFrom((body as { decision?: unknown } | null)?.decision);

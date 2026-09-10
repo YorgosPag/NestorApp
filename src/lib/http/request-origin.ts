@@ -72,11 +72,16 @@
  *
  * **Ο κανόνας επιλογής, σε μία γραμμή:** ό,τι μπαίνει σε **token ή metadata
  * document** ⇒ `getPublicBaseUrl()`. Ό,τι είναι **σύνδεσμος προς εμάς για άνθρωπο**
- * *(email · QR · PDF)* ⇒ {@link absoluteUrl}. **Ανακατεύθυνση** ⇒ {@link redirectTo},
- * που δεν ρωτά καν.
+ * *(email · QR · PDF)* ⇒ {@link absoluteUrl} — ή το `publicUrl` του
+ * `public-origin.ts` όταν **δεν υπάρχει αίτημα** *(cron · ουρά)*. **Ανακατεύθυνση** ⇒
+ * {@link redirectTo}, που δεν ρωτά καν.
  */
 
 import { NextResponse } from 'next/server';
+
+// 🔑 ADR-848 — ο κανόνας «env πρώτα, κόψε τις καθέτους» ζει ΜΙΑ φορά, σε αρχείο χωρίς
+// εξαρτήσεις, ώστε ο αποστολέας email (cron) να μην τραβά το `next/server`.
+import { joinOrigin, publicOrigin } from './public-origin';
 
 // ============================================================================
 // ΤΟ ΚΛΕΙΣΤΟ ΣΥΝΟΛΟ ΤΩΝ ΜΗ-ΔΗΜΟΣΙΩΝ HOSTS
@@ -127,15 +132,6 @@ interface RequestLike {
   readonly headers: Headers;
 }
 
-/** Καθαρίζει τη ρυθμισμένη τιμή· `null` αν δεν υπάρχει ή δεν είναι χρήσιμη. */
-function originFromEnv(): string | null {
-  const configured = process.env.NEXT_PUBLIC_APP_URL?.trim();
-  if (!configured) return null;
-
-  const withoutSlash = configured.replace(/\/+$/, '');
-  return withoutSlash.length > 0 ? withoutSlash : null;
-}
-
 /** Το origin όπως το **ισχυρίζεται ο πελάτης** — εφεδρεία, ποτέ αυθεντία. */
 function originFromHeaders(headers: Headers): string | null {
   const host = headers.get('x-forwarded-host') ?? headers.get('host');
@@ -158,7 +154,7 @@ function originFromHeaders(headers: Headers): string | null {
  * περιστατικού, όχι λύση του: επιστρέφει το `HOSTNAME` του container.
  */
 export function requestOrigin(request: RequestLike): string | null {
-  return originFromEnv() ?? originFromHeaders(request.headers);
+  return publicOrigin() ?? originFromHeaders(request.headers);
 }
 
 /**
@@ -189,9 +185,7 @@ export function requestOriginOrThrow(request: RequestLike): string {
  */
 export function absoluteUrl(request: RequestLike, path: string): string | null {
   const origin = requestOrigin(request);
-  if (origin === null) return null;
-
-  return path.startsWith('/') ? `${origin}${path}` : `${origin}/${path}`;
+  return origin === null ? null : joinOrigin(origin, path);
 }
 
 // ============================================================================

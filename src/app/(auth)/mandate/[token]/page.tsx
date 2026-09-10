@@ -34,6 +34,7 @@ import type { Metadata } from 'next';
 import { MandateConsentContent } from '@/components/mandate/MandateConsentContent';
 import { MandateConsentRefusal } from '@/components/mandate/MandateConsentRefusal';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { decodeRouteParam } from '@/lib/routes/route-param';
 import { readCompanyPublicName } from '@/services/company/company-public-name.reader';
 import {
   markMandateViewed,
@@ -52,7 +53,8 @@ export default async function MandateConsentPage({
   params: Promise<{ token: string }>;
 }): Promise<React.ReactElement> {
   const { token: raw } = await params;
-  const token = decodeURIComponent(raw);
+  // ADR-848 — ωμό `decodeURIComponent` ⇒ 500 σε κομμένο σύνδεσμο· πλέον «δεν ισχύει».
+  const token = decodeRouteParam(raw);
 
   const adminDb = getAdminFirestore();
   const lookup = await readMandateConsentRequest(adminDb, token);

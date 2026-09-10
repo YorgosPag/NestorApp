@@ -31,6 +31,7 @@
  * @see lib/http/request-origin
  */
 
+import { publicOrigin, publicUrl } from '../public-origin';
 import {
   absoluteUrl,
   isUnroutableHost,
@@ -326,5 +327,42 @@ describe('Ε — middleware: το δίχτυ των literal [placeholder] δεν
     const location = response?.headers.get('Location') ?? '';
     expect(location).toBe('/properties');
     expect(declaresAuthority(location)).toBe(false);
+  });
+});
+
+// ============================================================================
+// Ζ — Η ΔΙΕΥΘΥΝΣΗ ΧΩΡΙΣ ΑΙΤΗΜΑ (ADR-848)
+// ============================================================================
+
+/**
+ * 🔑 **Ο αποστολέας email τρέχει σε cron** — δεν υπάρχει κεφαλίδα να ρωτήσει. Αν το
+ * `publicOrigin` έπεφτε σιωπηλά σε `localhost`, κάθε σύνδεσμος μέσα σε email θα
+ * **έμοιαζε** έγκυρος και δεν θα άνοιγε ποτέ.
+ */
+describe('Ζ — publicOrigin / publicUrl: μόνο το env, και null αντί για μαντεψιά', () => {
+  it('διαβάζει το NEXT_PUBLIC_APP_URL, χωρίς τελικές καθέτους', () => {
+    process.env.NEXT_PUBLIC_APP_URL = 'https://nestorconstruct.gr//';
+    expect(publicOrigin()).toBe('https://nestorconstruct.gr');
+  });
+
+  it('null χωρίς ρύθμιση — ΠΟΤΕ localhost', () => {
+    expect(publicOrigin()).toBeNull();
+    expect(publicUrl('/n/abc')).toBeNull();
+  });
+
+  it('null με κενή ρύθμιση', () => {
+    process.env.NEXT_PUBLIC_APP_URL = '   ';
+    expect(publicOrigin()).toBeNull();
+  });
+
+  it('publicUrl βάζει ΜΙΑ κάθετο, είτε το path την έχει είτε όχι', () => {
+    process.env.NEXT_PUBLIC_APP_URL = 'https://nestorconstruct.gr';
+    expect(publicUrl('/n/abc')).toBe('https://nestorconstruct.gr/n/abc');
+    expect(publicUrl('n/abc')).toBe('https://nestorconstruct.gr/n/abc');
+  });
+
+  it('ίδιος κανόνας ένωσης με το absoluteUrl — ένας κανόνας, δύο καταναλωτές', () => {
+    process.env.NEXT_PUBLIC_APP_URL = 'https://nestorconstruct.gr';
+    expect(publicUrl('/x?y=1')).toBe(absoluteUrl(reqWith({}), '/x?y=1'));
   });
 });
