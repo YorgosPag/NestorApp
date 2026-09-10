@@ -65,6 +65,18 @@ interface ContactWithCustomFields {
  *   ADR-319 **δεν επιτρέπει** σε φυσικό πρόσωπο ή υπηρεσία — θα γέμιζε τη
  *   φόρμα με είδη εκτός του επιτρεπτού συνόλου του `AddressTypeSelector`.
  */
+/**
+ * Η **αυθεντική** λίστα από τα `customFields` — η πρώτη πηγή του reader, εκτεθειμένη ώστε
+ * και ο γραφέας θέσης (ADR-332 D27 Β-ΙΙ) να ρωτά το **ίδιο** «ποια είναι η λίστα;».
+ * `undefined` όταν λείπει ή είναι κενή.
+ */
+export function authoritativeContactAddresses(
+  customFields: { readonly companyAddresses?: unknown } | undefined,
+): CompanyAddress[] | undefined {
+  const stored = customFields?.companyAddresses;
+  return isNonEmptyArray(stored) ? (stored as CompanyAddress[]) : undefined;
+}
+
 export function resolveContactAddresses(
   contact: Contact,
   contactType: ContactType | undefined,
@@ -72,9 +84,9 @@ export function resolveContactAddresses(
   const record = contact as unknown as ContactWithCustomFields;
 
   // 1. Αυθεντική εγγραφή
-  const stored = record.customFields?.companyAddresses;
-  if (isNonEmptyArray(stored)) {
-    return stored as CompanyAddress[];
+  const stored = authoritativeContactAddresses(record.customFields);
+  if (stored) {
+    return stored;
   }
 
   // 2. Παλαιά top-level θέση

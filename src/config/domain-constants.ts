@@ -779,6 +779,10 @@ export const API_ROUTES = {
     IDENTITY_IMPACT_PREVIEW: (id: string) => `/api/contacts/${id}/identity-impact-preview` as const,
     COMPANY_IDENTITY_IMPACT_PREVIEW: (id: string) => `/api/contacts/${id}/company-identity-impact-preview` as const,
     SERVICE_IDENTITY_IMPACT_PREVIEW: (id: string) => `/api/contacts/${id}/service-identity-impact-preview` as const,
+    /** ADR-332 D27 Β-ΙΙ — λύνει τις θέσεις διευθύνσεων υπάρχουσας επαφής, **χωρίς εγγραφή**. */
+    ADDRESS_POSITIONS: (id: string) => `/api/contacts/${id}/address-positions` as const,
+    /** Η ίδια ερώτηση για **νέα** επαφή (δεν υπάρχει ακόμη έγγραφο). */
+    NEW_ADDRESS_POSITIONS: '/api/contacts/address-positions',
     RESTORE: (id: string) => `/api/contacts/${id}/restore` as const,
     PERMANENT_DELETE: (id: string) => `/api/contacts/${id}/permanent-delete` as const,
     CHANNELS: (contactId: string) => `/api/contacts/${contactId}/channels` as const,

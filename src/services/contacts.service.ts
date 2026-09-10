@@ -21,6 +21,8 @@ import type { ContactFormData } from '@/types/ContactFormTypes';
 import { DuplicatePreventionService } from './contacts/DuplicatePreventionService';
 import { sanitizeContactData, sanitizeContactForUpdate, validateContactData, type ContactDataRecord } from '@/utils/contactForm/utils/data-cleaning';
 import { flattenCustomFieldsForUpdate } from '@/utils/contacts/contact-update-paths';
+import { positionContactPayload, relocateContactAddressPayload } from './contact-address-positions.client';
+import { authoritativeContactAddresses } from '@/utils/contacts/contact-addresses-reader';
 
 import { getCol, asDate } from '@/lib/firestore/utils';
 import { contactConverter } from '@/lib/firestore/converters/contact.converter';
@@ -198,8 +200,10 @@ export class ContactsService {
 
     const colRef = getCol<Contact>(CONTACTS_COLLECTION, contactConverter);
     const id = generateContactId();
+    // ADR-332 D27 Β-ΙΙ: η θέση λύνεται ΠΡΙΝ την πρώτη εγγραφή (Salesforce: create ΚΑΙ update).
+    const positionedData = await positionContactPayload(sanitizedData, null);
     const createData: ContactFirestoreData = {
-      ...sanitizedData, id,
+      ...positionedData, id,
       companyId: userCompanyId,
       createdBy: currentUser.uid,
       createdAt: serverTimestamp(),
@@ -308,7 +312,8 @@ export class ContactsService {
     // Write only the diff. companyId is immutable per Firestore rules, so
     // skipping it in the diff is safe — existing doc keeps its value.
     const enterpriseDiff = EnterpriseContactSaver.convertToEnterpriseStructure(formData);
-    await this.updateContact(id, enterpriseDiff);
+    // ADR-332 D27 Β-ΙΙ: ο γραφέας θέσης αποφασίζει, και η απόφαση ταξιδεύει στην ΙΔΙΑ εγγραφή.
+    await this.updateContact(id, await positionContactPayload(enterpriseDiff, id));
 
     // ADR-249: Contact name cascade (fire-and-forget)
     const oldName = this.getDisplayName(existingContact);
@@ -318,6 +323,13 @@ export class ContactsService {
     }
 
     // Audit trail: covered by CDC Cloud Function (auditContactWrite) — ADR-195 Phase 2 cutover.
+  }
+
+  /** ADR-332 D27 Β-ΙΙ (Φ2β) — «Μετακίνησε»: ρητή δήλωση για ΜΙΑ διεύθυνση, ΜΙΑ εγγραφή. */
+  static async relocateAddressPin(id: string, addressId: string): Promise<void> {
+    const contact = await this.getContact(id);
+    if (!contact) throw new Error('Contact not found');
+    await this.updateContact(id, await relocateContactAddressPayload(contact, id, addressId));
   }
 
   // ==== UPDATE (core) ====
@@ -401,6 +413,8 @@ export class ContactsService {
         firstName: updates.firstName, lastName: updates.lastName,
         companyName: updates.companyName, serviceName: updates.serviceName,
         status: updates.status, isFavorite: updates.isFavorite,
+        // ADR-332 D27 Β-ΙΙ (πρακτική Β5): η απήχηση κουβαλά τις διευθύνσεις που ΓΡΑΦΤΗΚΑΝ.
+        addresses: updates.addresses, companyAddresses: authoritativeContactAddresses(updates.customFields),
       },
       timestamp: Date.now(),
     });
