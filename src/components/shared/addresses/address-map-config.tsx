@@ -195,22 +195,57 @@ interface DraggableMarkerPinProps {
   isEditing?: boolean;
 }
 
-/** SVG map pin component — used for both draggable and read-only markers */
+/**
+ * Γεωμετρία της πινέζας σε μονάδες viewBox. Η **μύτη** (`PIN_TIP_Y`) είναι το σημείο
+ * που δείχνει η πινέζα — και το viewBox **τελειώνει ακριβώς εκεί**.
+ */
+const PIN_VIEWBOX_WIDTH = 40;
+const PIN_TIP_Y = 45;
+
+/**
+ * SVG map pin component — used for both draggable and read-only markers.
+ *
+ * 🔑 **Η ΜΥΤΗ ΕΙΝΑΙ Η ΑΓΚΥΡΑ — ΕΚ ΚΑΤΑΣΚΕΥΗΣ** (ADR-332 D27 Β8). Ο `Marker` δένεται με
+ * `anchor="bottom"`, δηλαδή η μηχανή βάζει το σημείο στο **κάτω άκρο του κουτιού** αυτού του
+ * στοιχείου. Άρα το κουτί πρέπει να τελειώνει στη μύτη, και **τίποτα άλλο** να μη μετρά σε αυτό:
+ * - το viewBox κόβεται στη μύτη· η σκιά εδάφους ξεχειλίζει (`overflow="visible"`) κεντραρισμένη **πάνω της**
+ * - η ετικέτα είναι `absolute` (εκτός ροής) — πρακτική Google Maps: `Icon.anchor` ≠ `labelOrigin`
+ * - το `flex` μένει: μπλοκοποιεί το svg, αλλιώς το κενό της γραμμής βάσης μπαίνει κάτω από τη μύτη
+ * - ⛔ **καμία** κίνηση στο σώμα της πινέζας: η ένδειξη «επεξεργάζεσαι αυτή» είναι δακτύλιος **στο έδαφος**.
+ *
+ * ⚠️ **ΙΣΤΟΡΙΚΟ**: από 2026-03-07 η ετικέτα ήταν μέσα στη ροή ⇒ η μηχανή αγκύρωνε τη **βάση της
+ * ετικέτας**, ~28 px κάτω από τη μύτη (μετρημένο ζωντανά: ~6 μ. στο ζουμ 18, ~25 μ. στο 16), και
+ * το `animate-bounce` σήκωνε τη μύτη 25% πάνω από το σημείο τον περισσότερο χρόνο. Ό,τι έβλεπε ο
+ * άνθρωπος **δεν** ήταν ό,τι αποθηκευόταν. Φρουρός: `__tests__/map-pin-anchor.test.tsx`.
+ */
 export function DraggableMarkerPin({ isPrimary, pulsate, label, isEditing }: DraggableMarkerPinProps) {
   const size = isPrimary ? 40 : 32;
-  const viewBoxHeight = Math.round(size * 1.25);
+  const height = (size * PIN_TIP_Y) / PIN_VIEWBOX_WIDTH;
   const pinColors = isEditing ? EDITING_PIN_COLORS : isPrimary ? PIN_COLORS : BRANCH_PIN_COLORS;
   const shouldAnimate = pulsate || isEditing;
   return (
-    <figure className="flex flex-col items-center m-0">
+    <figure className="relative m-0 flex flex-col items-center">
       <svg
         width={size}
-        height={viewBoxHeight}
-        viewBox="0 0 40 50"
+        height={height}
+        viewBox={`0 0 ${PIN_VIEWBOX_WIDTH} ${PIN_TIP_Y}`}
+        overflow="visible"
         xmlns="http://www.w3.org/2000/svg"
-        className={`cursor-grab active:cursor-grabbing drop-shadow-md ${shouldAnimate ? 'animate-bounce' : ''}`}
+        className="cursor-grab active:cursor-grabbing drop-shadow-md"
       >
-        <ellipse cx="20" cy="47" rx="8" ry="3" fill={pinColors.shadow} />
+        {shouldAnimate && (
+          <circle
+            data-pin-ground-ring
+            cx="20"
+            cy={PIN_TIP_Y}
+            r="7"
+            fill="none"
+            stroke={pinColors.body}
+            strokeWidth="2"
+            className="origin-center [transform-box:fill-box] motion-safe:animate-ping"
+          />
+        )}
+        <ellipse cx="20" cy={PIN_TIP_Y} rx="8" ry="3" fill={pinColors.shadow} />
         <path
           d="M 20 0 C 11.163 0 4 7.163 4 16 C 4 25 20 45 20 45 C 20 45 36 25 36 16 C 36 7.163 28.837 0 20 0 Z"
           fill={pinColors.body}
@@ -221,7 +256,7 @@ export function DraggableMarkerPin({ isPrimary, pulsate, label, isEditing }: Dra
       </svg>
       {label && (
         <figcaption
-          className={`mt-0.5 text-[10px] font-semibold leading-none whitespace-nowrap rounded px-1 py-0.5 shadow-sm ${pinColors.labelClass}`}
+          className={`absolute left-1/2 top-full mt-0.5 -translate-x-1/2 text-[10px] font-semibold leading-none whitespace-nowrap rounded px-1 py-0.5 shadow-sm ${pinColors.labelClass}`}
         >
           {label}
         </figcaption>
