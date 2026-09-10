@@ -186,8 +186,17 @@ describe('Β — το θέμα σφραγίζεται μία φορά, από τ
       join(process.cwd(), 'src/lib/cron/jobs/outbound-email-flush.job.ts'),
       'utf8',
     );
-    // Δύο **κλήσεις**: `deliverOne` (μοναχικό) και `deliverDigest` (σύνοψη). Η
-    // εισαγωγή δεν μετράει — γράφεται χωρίς παρένθεση.
-    expect(sender.split('brandedSubject(').length - 1).toBe(2);
+    // 🔗 ADR-848 — ο φάκελος του ΜΟΝΑΧΙΚΟΥ (υπογραφή · σύνδεσμοι · κεφαλίδες) μετακόμισε
+    //    στο `notification-email-envelope.ts`. Η ερώτηση μένει ίδια — «σφραγίζονται ΚΑΙ
+    //    οι δύο διαδρομές;» — αλλά απαντιέται πλέον σε δύο αρχεία, ένα ανά διαδρομή.
+    const envelope = readFileSync(
+      join(process.cwd(), 'src/server/notifications/notification-email-envelope.ts'),
+      'utf8',
+    );
+    // Η εισαγωγή δεν μετράει — γράφεται χωρίς παρένθεση.
+    expect(sender.split('brandedSubject(').length - 1).toBe(1); // deliverDigest (σύνοψη)
+    expect(envelope.split('brandedSubject(').length - 1).toBe(1); // soloEnvelope (μοναχικό)
+    // …και ο αγωγός ΟΝΤΩΣ περνά το μοναχικό από τον φάκελο, όχι από δική του γραφή.
+    expect(sender).toContain('soloEnvelope(');
   });
 });

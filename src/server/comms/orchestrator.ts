@@ -129,6 +129,16 @@ export interface EnqueueMessageParams {
       from?: string;
       replyTo?: string;
       attachments?: EmailAttachment[];
+      /**
+       * ADR-848 — η ειδοποίηση που γέννησε το μήνυμα, **μόνο** όταν έχει προορισμό.
+       * Ο αποστολέας τη μετατρέπει σε μόνιμο σύνδεσμο `/n/{id}` τη στιγμή της αποστολής.
+       */
+      notificationId?: string;
+      /**
+       * ADR-848 — ο **χρήστης**-παραλήπτης. Η ουρά αλλιώς ξέρει μόνο τη διεύθυνση, και
+       * το token διαγραφής (RFC 8058) πρέπει να δείχνει σε ρυθμίσεις ανθρώπου.
+       */
+      recipientId?: string;
     };
     telegram?: {
       chatId?: string;

@@ -14,6 +14,8 @@ interface EmailJob {
   content: string;
   html?: string;
   from?: string;
+  /** Κεφαλίδες φακέλου, **ήδη ελεγμένες** (`safeHeaderEntries`). Γίνονται `h:<Όνομα>`. */
+  headers?: Readonly<Record<string, string>>;
   metadata?: {
     templateId?: string;
     category?: string;
@@ -95,6 +97,11 @@ export class EmailAdapter {
       formData.append('text', job.content);
       if (job.html) {
         formData.append('html', job.html);
+      }
+      // Το Mailgun δέχεται δικές μας κεφαλίδες ως `h:<Όνομα>`. Ένα `List-Unsubscribe`
+      // που δίνουμε εμείς **υπερισχύει** του δικού του (Mailgun help 203306610).
+      for (const [name, value] of Object.entries(job.headers ?? {})) {
+        formData.append(`h:${name}`, value);
       }
 
       const region = process.env.MAILGUN_REGION === 'eu' ? 'api.eu.mailgun.net' : 'api.mailgun.net';

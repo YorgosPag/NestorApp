@@ -66,6 +66,20 @@ export interface EmailWording {
     readonly intro: (count: number) => string;
     readonly footer: string;
   };
+  /** ADR-848 — τα λόγια των συνδέσμων του φακέλου. */
+  readonly links: {
+    /**
+     * Το κουμπί του μεμονωμένου email. **Περιγράφει τον προορισμό** (WebAIM) —
+     * ποτέ «πάτα εδώ»: ο αναγνώστης οθόνης διαβάζει τους συνδέσμους εκτός πλαισίου.
+     */
+    readonly open: string;
+    /** Το πρόθεμα του πλήρους URL στο **απλό κείμενο**. */
+    readonly openPlain: string;
+    /** «Γιατί το λαμβάνω;» — ακριβώς πάνω από τον σύνδεσμο διαχείρισης. */
+    readonly whyReceived: string;
+    /** Ο σύνδεσμος της σελίδας προτιμήσεων email (με token, **χωρίς** σύνδεση). */
+    readonly manage: string;
+  };
 }
 
 /**
@@ -88,6 +102,12 @@ const EMAIL_TEXTS: Readonly<Record<HumanLanguage, EmailWording>> = {
       intro: (count) => `Έχετε ${count} νέες ειδοποιήσεις:`,
       footer: 'Αυτό το μήνυμα στάλθηκε αυτόματα από το Nestor.',
     },
+    links: {
+      open: 'Άνοιγμα στον Νέστορα',
+      openPlain: 'Άνοιγμα',
+      whyReceived: 'Λαμβάνετε αυτό το email επειδή έχετε ενεργές τις ειδοποιήσεις email στον Νέστορα.',
+      manage: 'Διαχείριση ειδοποιήσεων email',
+    },
   },
   en: {
     fallbackSubject: 'Notification',
@@ -96,6 +116,12 @@ const EMAIL_TEXTS: Readonly<Record<HumanLanguage, EmailWording>> = {
       subject: (count) => `${count} new notifications`,
       intro: (count) => `You have ${count} new notifications:`,
       footer: 'This message was sent automatically by Nestor.',
+    },
+    links: {
+      open: 'Open in Nestor',
+      openPlain: 'Open',
+      whyReceived: 'You are receiving this email because email notifications are turned on in Nestor.',
+      manage: 'Manage email notifications',
     },
   },
 };
@@ -172,7 +198,10 @@ export function everyLanguageHasWording(): boolean {
       typeof wording.digest?.footer === 'string' &&
       wording.digest.footer.length > 0 &&
       typeof wording.digest.subject(2) === 'string' &&
-      typeof wording.digest.intro(2) === 'string'
+      typeof wording.digest.intro(2) === 'string' &&
+      // ADR-848 — ένα email με κουμπί χωρίς ετικέτα είναι χειρότερο από email χωρίς κουμπί.
+      [wording.links?.open, wording.links?.openPlain, wording.links?.whyReceived, wording.links?.manage]
+        .every((text) => typeof text === 'string' && text.length > 0)
     );
   });
 }

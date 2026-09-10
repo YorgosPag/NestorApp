@@ -67,6 +67,40 @@ export interface OutboundEmail {
   readonly text: string;
   readonly html?: string;
   readonly from?: string;
+  /**
+   * Κεφαλίδες του **φακέλου** — π.χ. `List-Unsubscribe` (RFC 8058, ADR-848).
+   *
+   * ⚠️ **Ανήκουν στο μήνυμα, όχι στον πάροχο.** Κάθε κρίκος **οφείλει** να τις
+   * περάσει: αν τις περνούσε μόνο ο ένας, μια σιωπηλή μετάπτωση θα άλλαζε τον
+   * φάκελο — και το «Κατάργηση εγγραφής» του Gmail θα εμφανιζόταν ή όχι ανάλογα με
+   * το ποιος πάροχος ήταν όρθιος εκείνη την ώρα.
+   */
+  readonly headers?: Readonly<Record<string, string>>;
+}
+
+/** Όνομα κεφαλίδας: γράμματα, ψηφία, παύλα — στενότερο από το RFC 5322, επίτηδες. */
+const HEADER_NAME = /^[A-Za-z0-9-]+$/;
+
+/**
+ * **Οι κεφαλίδες ενός μηνύματος, ελεγμένες για έγχυση.**
+ *
+ * 🔴 Μια τιμή με `\r\n` μέσα της **γράφει νέα κεφαλίδα** — κλασική έγχυση κεφαλίδων
+ * (π.χ. `Bcc:` που κανείς δεν έβαλε). Οι τιμές μας περιέχουν token και διεύθυνση,
+ * όχι κείμενο χρήστη· ο έλεγχος υπάρχει για να μη χρειαστεί ποτέ να το ξέρουμε.
+ *
+ * ⚠️ **ΠΕΤΑ, δεν καθαρίζει.** Μια άκυρη κεφαλίδα είναι λάθος προγραμματιστή, όχι
+ * δεδομένα προς διάσωση· το `attemptOne` τη μετατρέπει σε **ονομασμένη απόρριψη**.
+ */
+export function safeHeaderEntries(
+  headers: OutboundEmail['headers'],
+): ReadonlyArray<readonly [string, string]> {
+  if (!headers) return [];
+  return Object.entries(headers).map(([name, value]) => {
+    // Σφάλματα αναλλοίωτου για τον προγραμματιστή (δεν φτάνουν ποτέ σε οθόνη) ⇒ αγγλικά (N.11).
+    if (!HEADER_NAME.test(name)) throw new Error(`Invalid email header name: ${name}`);
+    if (/[\r\n]/.test(value)) throw new Error(`Email header value contains a line break: ${name}`);
+    return [name, value] as const;
+  });
 }
 
 /** Τι απάντησε **ένας** πάροχος. Ονομασμένο, ποτέ boolean. */

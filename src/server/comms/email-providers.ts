@@ -23,7 +23,12 @@
 import 'server-only';
 
 import { EmailAdapter } from '@/server/comms/email-adapter';
-import type { EmailProvider, OutboundEmail, ProviderAttempt } from '@/server/comms/email-provider-chain';
+import {
+  safeHeaderEntries,
+  type EmailProvider,
+  type OutboundEmail,
+  type ProviderAttempt,
+} from '@/server/comms/email-provider-chain';
 
 /** Το SDK του Resend, φορτωμένο **τεμπέλικα**. */
 type ResendSendResult = {
@@ -49,6 +54,9 @@ export function mailgunProvider(): EmailProvider {
     async send(message: OutboundEmail): Promise<ProviderAttempt> {
       if (!adapter) return { kind: 'rejected', error: 'mailgun: δεν είναι ρυθμισμένος' };
 
+      // ⚠️ Ο έλεγχος έγχυσης γίνεται **πριν** το δίκτυο — και στους δύο κρίκους.
+      const headers = Object.fromEntries(safeHeaderEntries(message.headers));
+
       const result = await adapter.sendEmail({
         id: `chain_${message.to}`,
         to: message.to,
@@ -56,6 +64,7 @@ export function mailgunProvider(): EmailProvider {
         content: message.text,
         html: message.html,
         from: message.from,
+        headers,
         attempts: 1,
         maxAttempts: 1,
       });
@@ -87,6 +96,7 @@ export function resendProvider(): EmailProvider {
     async send(message: OutboundEmail): Promise<ProviderAttempt> {
       if (!apiKey) return { kind: 'rejected', error: 'resend: δεν είναι ρυθμισμένος' };
 
+      const headers = safeHeaderEntries(message.headers);
       const { Resend } = await import('resend');
       const client = new Resend(apiKey);
 
@@ -96,6 +106,7 @@ export function resendProvider(): EmailProvider {
         subject: message.subject,
         text: message.text,
         ...(message.html ? { html: message.html } : {}),
+        ...(headers.length > 0 ? { headers: Object.fromEntries(headers) } : {}),
       })) as ResendSendResult;
 
       if (result.error) {
