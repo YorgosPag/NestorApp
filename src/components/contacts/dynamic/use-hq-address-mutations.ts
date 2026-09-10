@@ -11,24 +11,39 @@
  * η οθόνη δείχνει τη μία τιμή και η βάση κρατά την άλλη. Όσο αυτές οι γραφές ήταν
  * σκορπισμένες μέσα στο JSX, η αναλλοίωτη ήταν **συνήθεια**· εδώ είναι **δομή**.
  *
+ * 📍 **ADR-332 D27 Β-ΙΙ — η θέση.** Εδώ ζει και το `placement` του editor της έδρας («Μόνο η
+ * θέση», αναίρεση πινέζας) και η εφαρμογή **κάθε** επιβεβαιωμένου συρσίματος (έδρα **και**
+ * υποκαταστήματα). ⚠️ Κείμενο και θέση γράφονται σε **ΜΙΑ** κλήση `setFormData`: ο γονιός
+ * εφαρμόζει ακόμη και τις functional ενημερώσεις πάνω στο **κλειστό** `formData`, οπότε δύο
+ * διαδοχικές κλήσεις στον ίδιο κύκλο αλληλοσβήνονται — η δεύτερη οφείλει να κουβαλά και τα δύο.
+ *
  * ⚠️ **ADR-772** — καμία χειρόγραφη αντιστοίχιση διεύθυνσης ↔ διοικητικής ιεραρχίας
  * σε αυτό το αρχείο. Ό,τι διασχίζει λεξιλόγια περνά από το `projectAddressVocabulary`.
- * Ένα χειρόγραφο αντίστροφο εδώ θα ήταν το **πέμπτο** ιδιωτικό ζεύγος και θα έχανε
- * σιωπηλά όσα επίπεδα ξεχνούσε — ακριβώς το σφάλμα που έκλεισε το ADR-772.
  *
- * @enterprise ADR-772 · ADR-319 (θέση 0 = έδρα) · ADR-332 D20 · ADR-277 (drag reset)
+ * @enterprise ADR-772 · ADR-319 (θέση 0 = έδρα) · ADR-332 D20 · D27 Β-ΙΙ · ADR-277 (drag reset)
  */
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useRef } from 'react';
 import type { AddressWithHierarchyValue } from '@/components/shared/addresses/AddressWithHierarchy';
 import type { ResolvedAddressFields } from '@/components/shared/addresses/editor';
-import type { DragResolvedAddress } from '@/components/contacts/details/ContactAddressMapPreview';
+import type { AddressEditorPlacementOptions } from '@/components/shared/addresses/editor/AddressEditor.types';
+import type { DragResolvedAddress } from '@/components/contacts/details/contact-pin-drop';
+import type { GeoPoint } from '@/types/geo/coordinates';
+import type { StoredAddressPosition } from '@/types/address-position';
 import type { CompanyAddress, ContactFormData } from '@/types/ContactFormTypes';
 import type { ContactAddressType } from '@/types/contacts/address-types';
 import {
   projectAddressVocabulary,
   resolveCityFromHierarchy,
 } from '@/utils/address/administrative-hierarchy';
+import { pickStoredAddressPosition } from '@/utils/address/stored-address-position';
+import { applyContactAddressPosition } from '@/utils/contacts/contact-address-position-view';
 import { DRAG_RESOLVED_HIERARCHY_RESET } from './addresses-section-form-mapping';
+import {
+  applyDraggedToContactAddress,
+  contactAddressList,
+  withContactAddressAt,
+  withHumanPoint,
+} from './contact-address-drag';
 
 export interface HqAddressMutationsDeps {
   formData: ContactFormData;
@@ -36,76 +51,24 @@ export interface HqAddressMutationsDeps {
   /** Η λίστα που βλέπει η οθόνη — περιλαμβάνει τη **συνθετική** κενή έδρα (ADR-332 D20). */
   effectiveAddresses: CompanyAddress[];
   /**
-   * Καλείται όταν το reverse-geocoding δεν επέστρεψε αριθμό. Ζει **έξω** από το hook
-   * επειδή είναι παρουσίαση (άνοιγμα φόρμας + ειδοποίηση), όχι εγγραφή.
+   * Καλείται όταν το reverse-geocoding δεν επέστρεψε αριθμό **για την έδρα**. Ζει **έξω**
+   * από το hook επειδή είναι παρουσίαση (άνοιγμα φόρμας + ειδοποίηση), όχι εγγραφή.
    */
   onDragMissingNumber: (addr: DragResolvedAddress) => void;
 }
 
 export interface HqAddressMutations {
   handleHqChange: (addr: ResolvedAddressFields) => void;
-  applyDragResolve: (addr: DragResolvedAddress, addressIndex: number) => void;
+  /** Επιβεβαιωμένο σύρσιμο στη θέση `addressIndex`: κείμενο (`dragged`) και/ή σημείο — **μία** εγγραφή. */
+  applyConfirmedDrag: (dragged: DragResolvedAddress | null, addressIndex: number, point: GeoPoint | null) => void;
   handleHqDragApplied: (addr: ResolvedAddressFields) => void;
+  /** Δίνεται αυτούσιο στον editor της έδρας — ενεργοποιεί «Μόνο η θέση» και αναίρεση πινέζας. */
+  hqPlacement: AddressEditorPlacementOptions;
+  /** Κλείσιμο του editor της έδρας — ξεχνά σημείο και αφετηρία της συνεδρίας. */
+  resetHqPlacement: () => void;
   hqHierarchyValue: Partial<AddressWithHierarchyValue>;
   handleHqHierarchyChange: (addr: AddressWithHierarchyValue) => void;
   handlePrimaryTypeChange: (next: { type: ContactAddressType; customLabel?: string }) => void;
-}
-
-/**
- * Επαφή **χωρίς** λίστα υποκαταστημάτων: η έδρα ζει μόνο στα επίπεδα πεδία.
- *
- * ⚠️ Χωρίς αυτόν τον κλάδο η διαδρομή πολλαπλών διευθύνσεων θα μηδένιζε
- * `street`/`city` (το `updatedAddresses[0]` είναι `undefined`) και η πινέζα του
- * χάρτη θα εξαφανιζόταν μετά το σύρσιμο.
- */
-function applyDragToFlatFields(
-  formData: ContactFormData,
-  addr: DragResolvedAddress,
-): ContactFormData {
-  return {
-    ...formData,
-    street: addr.street,
-    streetNumber: addr.number,
-    postalCode: addr.postalCode,
-    city: addr.city,
-    settlement: addr.city,
-    neighborhood: addr.neighborhood,
-    ...DRAG_RESOLVED_HIERARCHY_RESET,
-  };
-}
-
-/**
- * Σύρσιμο πάνω σε συγκεκριμένη γραμμή της λίστας — και **ανα-συγχρονισμός** των
- * επίπεδων πεδίων από τη θέση 0 (ADR-319: η έδρα είναι πάντα το index 0).
- */
-function applyDragToBranch(
-  formData: ContactFormData,
-  addr: DragResolvedAddress,
-  addressIndex: number,
-): ContactFormData {
-  const existing = formData.companyAddresses ?? [];
-  const updatedAddresses = [...existing];
-  if (addressIndex >= 0 && addressIndex < updatedAddresses.length) {
-    updatedAddresses[addressIndex] = {
-      ...updatedAddresses[addressIndex],
-      street: addr.street,
-      number: addr.number,
-      postalCode: addr.postalCode,
-      city: addr.city,
-    };
-  }
-  const hq = updatedAddresses[0];
-  return {
-    ...formData,
-    companyAddresses: updatedAddresses,
-    street: hq?.street ?? '',
-    streetNumber: hq?.number ?? '',
-    postalCode: hq?.postalCode ?? '',
-    city: hq?.city ?? '',
-    settlement: hq?.city ?? '',
-    neighborhood: addr.neighborhood,
-    ...DRAG_RESOLVED_HIERARCHY_RESET,
-  };
 }
 
 /** Ενημέρωση της θέσης 0 από την ιεραρχία — το ένα από τα δύο δοχεία της έδρας. */
@@ -127,6 +90,79 @@ function hierarchyToHqBranch(
     region: addr.regionName,
     country: addr.country || undefined,
   };
+}
+
+/** Το κείμενο του editor → το λεξιλόγιο του συρσίματος επαφής. */
+function resolvedToDragged(addr: ResolvedAddressFields): DragResolvedAddress {
+  return {
+    street: addr.street ?? '',
+    number: addr.number ?? '',
+    postalCode: addr.postalCode ?? '',
+    city: addr.city ?? '',
+    // Το reverse-geocoding ΕΠΙΣΤΡΕΦΕΙ συνοικία· παλαιότερα σβηνόταν εδώ με
+    // σκέτο '' και η τιμή χανόταν σιωπηλά πριν καν φτάσει στο `formData`.
+    neighborhood: addr.neighborhood ?? '',
+    region: addr.region ?? '',
+    country: addr.country ?? '',
+  };
+}
+
+/**
+ * Η εγγραφή μετά το σύρσιμο, και τα επίπεδα πεδία της έδρας **μόνο** αν σύρθηκε η έδρα.
+ * Καθαρή συνάρτηση — βλ. `contact-address-drag` για το σφάλμα που διορθώνει.
+ */
+function confirmedDragState(
+  formData: ContactFormData,
+  dragged: DragResolvedAddress | null,
+  index: number,
+  point: GeoPoint | null,
+): ContactFormData | null {
+  const current = contactAddressList(formData)[index];
+  if (!current) return null;
+  if (!dragged) return point ? withContactAddressAt(formData, index, withHumanPoint(current, point)) : null;
+  const next = applyDraggedToContactAddress(current, dragged, point);
+  const written = withContactAddressAt(formData, index, next);
+  if (index !== 0) return written;
+  return { ...written, settlement: next.city, neighborhood: dragged.neighborhood, ...DRAG_RESOLVED_HIERARCHY_RESET };
+}
+
+/** Το `placement` του editor της έδρας: σημείο, αναίρεση, και η αφετηρία της συνεδρίας. */
+function useHqPlacement(
+  formData: ContactFormData,
+  setFormData: HqAddressMutationsDeps['setFormData'],
+  applyConfirmedDrag: HqAddressMutations['applyConfirmedDrag'],
+) {
+  const pointRef = useRef<GeoPoint | null>(null);
+  /** Η θέση της έδρας **πριν** την πρώτη τοποθέτηση — `null` = δεν καταγράφηκε ακόμη. */
+  const originRef = useRef<StoredAddressPosition | null>(null);
+
+  const onPlace = useCallback((point: GeoPoint) => {
+    if (originRef.current === null) {
+      originRef.current = pickStoredAddressPosition(contactAddressList(formData)[0]);
+    }
+    pointRef.current = point;
+    applyConfirmedDrag(null, 0, point);
+  }, [formData, applyConfirmedDrag]);
+
+  const onRestore = useCallback((point: GeoPoint | null) => {
+    if (point) {
+      onPlace(point);
+      return;
+    }
+    pointRef.current = null;
+    const origin = originRef.current;
+    if (!origin || !setFormData) return;
+    const hq = contactAddressList(formData)[0];
+    setFormData(withContactAddressAt(formData, 0, applyContactAddressPosition(hq, origin)));
+  }, [formData, setFormData, onPlace]);
+
+  const reset = useCallback(() => {
+    pointRef.current = null;
+    originRef.current = null;
+  }, []);
+
+  const placement = useMemo<AddressEditorPlacementOptions>(() => ({ onPlace, onRestore }), [onPlace, onRestore]);
+  return { placement, pointRef, reset };
 }
 
 export function useHqAddressMutations({
@@ -172,29 +208,27 @@ export function useHqAddressMutations({
     });
   }, [setFormData]);
 
-  const applyDragResolve = useCallback((addr: DragResolvedAddress, addressIndex: number) => {
+  const applyConfirmedDrag = useCallback((
+    dragged: DragResolvedAddress | null,
+    addressIndex: number,
+    point: GeoPoint | null,
+  ) => {
     if (!setFormData) return;
-    const hasBranchList = (formData.companyAddresses ?? []).length > 0;
-    setFormData(hasBranchList
-      ? applyDragToBranch(formData, addr, addressIndex)
-      : applyDragToFlatFields(formData, addr));
-    onDragMissingNumber(addr);
+    const next = confirmedDragState(formData, dragged, addressIndex, point);
+    if (!next) return;
+    setFormData(next);
+    if (dragged && addressIndex === 0) onDragMissingNumber(dragged);
   }, [formData, setFormData, onDragMissingNumber]);
 
-  /** Επιβεβαίωση συρσίματος στην έδρα — καθαρίζει την ιεραρχία (ADR-277). */
+  const hq = useHqPlacement(formData, setFormData, applyConfirmedDrag);
+
+  /**
+   * «Ναι, ενημέρωσε» στον editor της έδρας. Το `placement.onPlace` έχει ήδη τρέξει (σειρά του
+   * `commitDrag`), οπότε το σημείο είναι γνωστό — και ταξιδεύει μαζί με το κείμενο (ADR-277).
+   */
   const handleHqDragApplied = useCallback((addr: ResolvedAddressFields) => {
-    applyDragResolve({
-      street: addr.street ?? '',
-      number: addr.number ?? '',
-      postalCode: addr.postalCode ?? '',
-      city: addr.city ?? '',
-      // Το reverse-geocoding ΕΠΙΣΤΡΕΦΕΙ συνοικία· παλαιότερα σβηνόταν εδώ με
-      // σκέτο '' και η τιμή χανόταν σιωπηλά πριν καν φτάσει στο `formData`.
-      neighborhood: addr.neighborhood ?? '',
-      region: addr.region ?? '',
-      country: addr.country ?? '',
-    }, 0);
-  }, [applyDragResolve]);
+    applyConfirmedDrag(resolvedToDragged(addr), 0, hq.pointRef.current);
+  }, [applyConfirmedDrag, hq.pointRef]);
 
   /**
    * Η **ανάγνωση** της αντιστοίχισης — ήταν 15 γραμμές inline μέσα στο JSX, δηλαδή
@@ -260,8 +294,10 @@ export function useHqAddressMutations({
 
   return {
     handleHqChange,
-    applyDragResolve,
+    applyConfirmedDrag,
     handleHqDragApplied,
+    hqPlacement: hq.placement,
+    resetHqPlacement: hq.reset,
     hqHierarchyValue,
     handleHqHierarchyChange,
     handlePrimaryTypeChange,

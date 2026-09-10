@@ -12,9 +12,58 @@
  */
 
 import type { ResolvedAddressFields } from '@/components/shared/addresses/editor';
-import type { ContactFormData } from '@/types/ContactFormTypes';
+import type { CompanyAddress, ContactFormData } from '@/types/ContactFormTypes';
+import { getPrimaryAddressType } from '@/types/contacts/address-types';
 import { formatContactAddressLine } from '@/utils/address/address-line';
-import { storedAddressToResolved } from '@/utils/address/administrative-hierarchy';
+import { projectAddressVocabulary, storedAddressToResolved } from '@/utils/address/administrative-hierarchy';
+
+/**
+ * Η διοικητική ιεραρχία **μιας εγγραφής της λίστας**, καθαρισμένη — το αντίστοιχο του
+ * `DRAG_RESOLVED_HIERARCHY_RESET` στο λεξιλόγιο `companyAddress`.
+ *
+ * Τη χρειάζονται δύο πράξεις: ο «Καθαρισμός» της έδρας (`useClearCompanyHqAddress`, όπου ήταν
+ * γραμμένη inline) και το σύρσιμο με «Ναι, ενημέρωσε» (ADR-332 D27 Β-ΙΙ): νέα οδός από τη
+ * μηχανή με την παλιά ταυτότητα δήμου δίπλα της θα έδειχνε όνομα μιας περιοχής με ταυτότητα
+ * άλλης (ADR-277).
+ */
+export const COMPANY_ADDRESS_HIERARCHY_CLEARED = {
+  settlementId: null,
+  communityName: '',
+  municipalUnitName: '',
+  municipalityName: '',
+  municipalityId: null,
+  regionalUnitName: '',
+  regionName: '',
+  decentAdminName: '',
+  majorGeoName: '',
+} as const satisfies Partial<CompanyAddress>;
+
+/**
+ * Η έδρα των **επίπεδων πεδίων** ως εγγραφή της λίστας.
+ *
+ * 🔑 **Μία συνάρτηση, δύο χρήσεις** (ADR-332 D27 Β-ΙΙ): η συνθετική γραμμή έδρας της οθόνης
+ * (D20) **και** η υλοποίηση της λίστας όταν άνθρωπος τοποθετεί πρώτη φορά θέση σε επαφή που
+ * έχει μόνο επίπεδα πεδία. Η ιεραρχία περνά από τον πίνακα (ADR-772) — αλλιώς η πρώτη θέση θα
+ * έσβηνε τον δήμο της έδρας, αφού το παράγωγο `addresses[]` χτίζεται πλέον από τη λίστα.
+ */
+export function hqEntryFromFlatFields(formData: ContactFormData): CompanyAddress {
+  const hierarchy = projectAddressVocabulary(
+    formData as Readonly<Record<string, unknown>>,
+    'contactFlat',
+    'companyAddress',
+    { includePostal: true, clearedIdsAsNull: false },
+  ) as Partial<CompanyAddress>;
+  return {
+    ...hierarchy,
+    type: formData.primaryAddressType ?? getPrimaryAddressType(formData.type),
+    ...(formData.primaryAddressCustomLabel ? { customLabel: formData.primaryAddressCustomLabel } : {}),
+    street: formData.street ?? '',
+    number: formData.streetNumber ?? '',
+    postalCode: formData.postalCode ?? '',
+    city: formData.city ?? '',
+    ...(formData.hqAddressCountry ? { country: formData.hqAddressCountry } : {}),
+  };
+}
 
 export function formatHqStreetLine(formData: ContactFormData): string {
   return formatContactAddressLine({

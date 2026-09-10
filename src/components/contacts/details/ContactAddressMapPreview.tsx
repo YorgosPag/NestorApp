@@ -6,21 +6,11 @@ import { AddressMap } from '@/components/shared/addresses/AddressMap';
 import { AddressUtils } from '@/config/address-config';
 import { createProjectAddress } from '@/types/project/address-helpers';
 import type { ProjectAddress, ProjectAddressType } from '@/types/project/addresses';
-import type { GeoPoint } from '@/types/geo/coordinates';
-import type { PinDrop, PinDropNoText } from '@/components/shared/addresses/pin-drop';
+import { mapPinDropText, type PinDrop } from '@/components/shared/addresses/pin-drop';
 import type { CompanyAddress } from '@/types/ContactFormTypes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-
-/** Address data returned by draggable pin reverse geocoding */
-export interface DragResolvedAddress {
-  street: string;
-  number: string;
-  postalCode: string;
-  city: string;
-  neighborhood: string;
-  region: string;
-  country: string;
-}
+import { pickStoredAddressPosition } from '@/utils/address/stored-address-position';
+import { toContactDraggedAddress, type DragResolvedAddress } from './contact-pin-drop';
 
 interface ContactAddressMapPreviewProps {
   contactId?: string;
@@ -45,14 +35,12 @@ interface ContactAddressMapPreviewProps {
   heightPreset?: 'viewerCompact' | 'viewerStandard' | 'viewerExpanded' | 'viewerFullscreen';
   /** Enable draggable pin for address selection (edit mode) */
   draggable?: boolean;
-  /** Callback when user drags pin — resolved address data + address index + the drop point. */
-  onDragResolve?: (address: DragResolvedAddress, addressIndex: number, point: GeoPoint) => void;
   /**
-   * Σύρσιμο **χωρίς** κείμενο (404 / timeout). ADR-332 D27 Βήμα Β: οι επαφές **δεν αποθηκεύουν
-   * ακόμη θέση** (Β-ΙΙ), οπότε δεν υπάρχει τίποτα να εφαρμοστεί — ο γονιός οφείλει να επαναφέρει
-   * την πινέζα και να το πει στον άνθρωπο, αντί να μείνει μετακινημένη χωρίς να αποθηκεύεται.
+   * ADR-332 D27 Β-ΙΙ — **κάθε** σύρσιμο φτάνει στον γονιό, ολόκληρο: σημείο, χειρονομία και
+   * ό,τι είπε η μηχανή (`pending` → κείμενο · δεν βρέθηκε · δεν απάντησε). Ως τότε εδώ
+   * υπήρχαν δύο κανάλια, και το σημείο **πετιόταν** — γιατί οι επαφές δεν αποθήκευαν θέση.
    */
-  onDragWithoutText?: (reason: PinDropNoText) => void;
+  onPinDrop?: (drop: PinDrop<DragResolvedAddress>, addressIndex: number) => void;
   /** Additional CSS classes for map container */
   className?: string;
   /** Increment to clear map drag positions after undo/redo in the address editor. */
@@ -84,8 +72,7 @@ export function ContactAddressMapPreview({
   readOnlyExtraAddresses,
   heightPreset,
   draggable = false,
-  onDragResolve,
-  onDragWithoutText,
+  onPinDrop,
   className,
   dragResetKey,
 }: ContactAddressMapPreviewProps) {
@@ -121,7 +108,11 @@ export function ContactAddressMapPreview({
           const isPrimary = addr.type === 'headquarters' || addr.type === 'home';
           return createProjectAddress({
             ...defaults,
-            id: `${contactId || fallbackAddressIdRef.current}-${index}`,
+            // ADR-332 D27 Β-ΙΙ: η ΑΠΟΘΗΚΕΥΜΕΝΗ θέση — ο χάρτης την προτιμά από τη γεωκωδικοποίηση
+            // της οθόνης (`displayedPosition`), οπότε η πινέζα δεν «πηδά» μετά το σύρσιμο.
+            ...pickStoredAddressPosition(addr),
+            // Η πραγματική ταυτότητα, όπου υπάρχει — ο δείκτης αλλάζει όταν σβήνεται υποκατάστημα.
+            id: addr.id ?? `${contactId || fallbackAddressIdRef.current}-${index}`,
             street: addr.street.trim(),
             city: addr.city.trim(),
             number: addr.number.trim() || undefined,
@@ -180,40 +171,12 @@ export function ContactAddressMapPreview({
     [readOnlyExtraAddresses]
   );
 
-  // Map drag handler — converts ProjectAddress partial to DragResolvedAddress.
-  // `data.number` arrives separated from `data.street` (reverseResultToAddress
-  // preserves the Nominatim `addr.house_number` / `addr.road` split). The regex
-  // split is only a safety net for legacy callers that still concatenate.
+  // Το σύρσιμο φτάνει ΟΛΟΚΛΗΡΟ στον γονιό — μόνο το κείμενο μεταφράζεται στο λεξιλόγιο επαφής.
   const handleDragUpdate = useMemo(() => {
-    if (!draggable || !onDragResolve) return undefined;
-    return (drop: PinDrop, addressIndex: number) => {
-      // ADR-332 D27 Β13: η αναμονή δεν είναι έκβαση — οι επαφές περιμένουν την τελική (ως το Β-ΙΙ).
-      if (drop.text.kind === 'pending') return;
-      if (drop.text.kind !== 'resolved') {
-        onDragWithoutText?.(drop.text.kind);
-        return;
-      }
-      const data = drop.text.address;
-      let street = (data.street ?? '').trim();
-      let number = (data.number ?? '').trim();
-      if (!number && street) {
-        const parts = street.match(/^(.+?)\s+(\d+\S*)$/);
-        if (parts) {
-          street = parts[1];
-          number = parts[2];
-        }
-      }
-      onDragResolve({
-        street,
-        number,
-        postalCode: data.postalCode ?? '',
-        city: data.neighborhood || data.city || '',
-        neighborhood: data.neighborhood ?? '',
-        region: data.region ?? '',
-        country: data.country ?? '',
-      }, addressIndex, drop.point);
-    };
-  }, [draggable, onDragResolve, onDragWithoutText]);
+    if (!draggable || !onPinDrop) return undefined;
+    return (drop: PinDrop, addressIndex: number) =>
+      onPinDrop(mapPinDropText(drop, toContactDraggedAddress), addressIndex);
+  }, [draggable, onPinDrop]);
 
   // In draggable mode: always show map (even without addresses)
   if (combinedAddresses.length === 0 && !draggable) {
