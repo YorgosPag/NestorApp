@@ -30,6 +30,7 @@ import {
   type ProjectAddressLike,
 } from '@/services/listings/address-place-writeback';
 import { verifyPlaceRef } from '@/services/places/public-place-read.service';
+import type { AddressPositionDrift } from '@/lib/geocoding/address-position';
 import type { PlaceRef } from '@/types/geo/public-place';
 // 🔴 **Το σχήμα καλωδίου γράφεται ΜΙΑ φορά** — ήταν αντιγραμμένο εδώ και στον πελάτη,
 // και τα δύο αντίγραφα **είχαν ήδη αποκλίνει** (`addresses` · `category`). Το εντόπισε
@@ -63,13 +64,19 @@ const logger = createModuleLogger('BuildingUpdate');
 async function resolveBuildingAddresses(
   storedAddresses: readonly ProjectAddressLike[],
   incomingAddresses: readonly ProjectAddressLike[],
-): Promise<{ addresses: readonly ProjectAddressLike[]; primaryPoint: { lat: number; lng: number } | null }> {
-  const { addresses, tally } = await resolveProjectAddressPositions(
+  relocateIds: ReadonlySet<string>,
+): Promise<{
+  addresses: readonly ProjectAddressLike[];
+  primaryPoint: { lat: number; lng: number } | null;
+  drifts: readonly AddressPositionDrift[];
+}> {
+  const { addresses, tally, drifts } = await resolveProjectAddressPositions(
     storedAddresses,
     incomingAddresses,
     Date.now(),
+    { relocateIds },
   );
-  logger.info('[Buildings] Θέσεις διευθύνσεων', { ...tally });
+  logger.info('[Buildings] Θέσεις διευθύνσεων', { ...tally, drifts: drifts.length });
 
   // 🏆 ADR-332 **D24** — «κύριο ή πρώτο» λέγεται ΜΙΑ φορά. Ο μετασχηματισμός τύπου
   //    (`as { isPrimary?: boolean }`) έφυγε **μαζί** με το διπλότυπο: ήταν δείκτης ότι
@@ -80,7 +87,7 @@ async function resolveBuildingAddresses(
   const primaryPoint =
     typeof lat === 'number' && typeof lng === 'number' ? { lat, lng } : null;
 
-  return { addresses, primaryPoint };
+  return { addresses, primaryPoint, drifts };
 }
 
 // ============================================================================
@@ -124,6 +131,13 @@ interface BuildingUpdateResponse {
   buildingId: string;
   updated: boolean;
   _v?: number;
+  /**
+   * Οι διευθύνσεις **όπως τις έγραψε ο διακομιστής** — ADR-332 D27 Βήμα Β (Β5). Ίδιο συμβόλαιο
+   * με το `ProjectUpdateResponse.addresses`: ο πελάτης υιοθετεί την απάντηση, όχι το αντίγραφό του.
+   */
+  addresses?: ProjectAddressLike[];
+  /** Φ2β — κρατημένες ανθρώπινες πινέζες που **απέχουν** από τη νέα τους διεύθυνση. */
+  positionAdvisories?: AddressPositionDrift[];
 }
 
 // ============================================================================
@@ -188,6 +202,15 @@ export const PATCH = withStandardRateLimit(
         await assertPlaceRefResolvable(adminDb, cleanUpdates.placeRef as PlaceRef);
       }
 
+      // ADR-332 D27 Βήμα Β (Φ2β): η δήλωση μετακίνησης είναι ΑΙΤΗΜΑ, όχι πεδίο κτιρίου — φεύγει
+      // από το σώμα ΠΡΙΝ τη γραφή. Μόνο συμβολοσειρές: το σώμα εδώ δεν περνά από σχήμα Zod.
+      const relocateIds = new Set(
+        (Array.isArray(cleanUpdates.relocateAddressIds) ? cleanUpdates.relocateAddressIds : [])
+          .filter((value: unknown): value is string => typeof value === 'string'),
+      );
+      delete cleanUpdates.relocateAddressIds;
+      let positionAdvisories: readonly AddressPositionDrift[] = [];
+
       // **Η ΘΕΣΗ ΠΡΙΝ ΤΗ ΓΡΑΦΗ** (ADR-777 Α5) — σημείο **και** ακρίβεια, μαζί ή καθόλου.
       if (Array.isArray(cleanUpdates.addresses)) {
         if ((cleanUpdates.addresses as unknown[]).length === 0) {
@@ -197,11 +220,13 @@ export const PATCH = withStandardRateLimit(
           const stored = Array.isArray(buildingData?.addresses)
             ? (buildingData.addresses as ProjectAddressLike[])
             : [];
-          const { addresses, primaryPoint } = await resolveBuildingAddresses(
+          const { addresses, primaryPoint, drifts } = await resolveBuildingAddresses(
             stored,
             cleanUpdates.addresses as ProjectAddressLike[],
+            relocateIds,
           );
           cleanUpdates.addresses = addresses;
+          positionAdvisories = drifts;
           if (primaryPoint) {
             cleanUpdates.latitude = primaryPoint.lat;
             cleanUpdates.longitude = primaryPoint.lng;
@@ -270,8 +295,19 @@ export const PATCH = withStandardRateLimit(
         metadata: { reason: 'Building updated' },
       });
 
+      // ADR-332 D27 Βήμα Β (Β5): επιστρέφεται ό,τι ΓΡΑΦΤΗΚΕ — ο πελάτης το υιοθετεί.
+      const writtenAddresses = Array.isArray(cleanUpdates.addresses)
+        ? { addresses: cleanUpdates.addresses as ProjectAddressLike[] }
+        : {};
+
       return apiSuccess<BuildingUpdateResponse>(
-        { buildingId, updated: true, _v: versionResult.newVersion },
+        {
+          buildingId,
+          updated: true,
+          _v: versionResult.newVersion,
+          ...writtenAddresses,
+          ...(positionAdvisories.length > 0 ? { positionAdvisories: [...positionAdvisories] } : {}),
+        },
         'Building updated successfully'
       );
 

@@ -34,10 +34,12 @@ import {
   republishProjectListings,
   type ProjectAddressLike,
 } from '@/services/listings/address-place-writeback';
+import type { AddressPositionDrift } from '@/lib/geocoding/address-position';
 import type {
   ProjectUpdateResponse,
   ProjectDeleteResponse,
 } from './project-mutations.types';
+import type { ProjectAddress } from '@/types/project/addresses';
 
 const logger = createModuleLogger('ProjectRoute');
 
@@ -58,23 +60,31 @@ const logger = createModuleLogger('ProjectRoute');
 async function resolveAddressesForWrite(
   body: Record<string, unknown>,
   projectData: Record<string, unknown> | undefined,
-): Promise<void> {
-  if (!Array.isArray(body['addresses'])) return;
+): Promise<readonly AddressPositionDrift[]> {
+  // ADR-332 D27 Βήμα Β (Φ2β): η δήλωση μετακίνησης είναι ΑΙΤΗΜΑ, όχι πεδίο του έργου —
+  // φεύγει από το σώμα ΠΡΙΝ τη γραφή, αλλιώς θα γραφόταν στο έγγραφο.
+  const relocateIds = new Set(
+    Array.isArray(body['relocateAddressIds']) ? (body['relocateAddressIds'] as string[]) : [],
+  );
+  delete body['relocateAddressIds'];
+  if (!Array.isArray(body['addresses'])) return [];
 
   const stored = Array.isArray(projectData?.['addresses'])
     ? (projectData['addresses'] as ProjectAddressLike[])
     : [];
 
-  const { addresses, tally } = await resolveProjectAddressPositions(
+  const { addresses, tally, drifts } = await resolveProjectAddressPositions(
     stored,
     body['addresses'] as ProjectAddressLike[],
     Date.now(),
+    { relocateIds },
   );
 
   body['addresses'] = addresses;
   // Η λογιστική τυπώνεται **πάντα**, ακόμη και όταν κάθε κάδος είναι μηδέν: ένα «0»
   // που δεν τυπώνεται διαβάζεται ως «δεν υπάρχει τέτοιος έλεγχος».
-  logger.info('[Projects/Update] Θέσεις διευθύνσεων', { ...tally });
+  logger.info('[Projects/Update] Θέσεις διευθύνσεων', { ...tally, drifts: drifts.length });
+  return drifts;
 }
 
 export async function handleUpdateProject(
@@ -112,7 +122,7 @@ export async function handleUpdateProject(
   requireProjectAccess({ projectData, caller: ctx, projectId, action: 'update' });
 
   // 3β. **Η ΘΕΣΗ ΠΡΙΝ ΤΗ ΓΡΑΦΗ** (ADR-777 Α5) — δες `resolveAddressesForWrite`.
-  await resolveAddressesForWrite(body as Record<string, unknown>, projectData);
+  const positionAdvisories = await resolveAddressesForWrite(body as Record<string, unknown>, projectData);
 
   // 4. Build update payload (companyId is IMMUTABLE — ADR-232)
   const { companyId: _immutableCompanyId, ...safeBody } = body;
@@ -208,8 +218,19 @@ export async function handleUpdateProject(
 
   // ADR-029 Phase D: search_documents written by Cloud Function onProjectWrite.
 
+  // ADR-332 D27 Βήμα Β (Β5): επιστρέφεται ό,τι ΓΡΑΦΤΗΚΕ — ο πελάτης το υιοθετεί.
+  const writtenAddresses = Array.isArray(cleanData.addresses)
+    ? { addresses: cleanData.addresses as ProjectAddress[] }
+    : {};
+
   return apiSuccess<ProjectUpdateResponse>(
-    { projectId, updated: true, _v: versionResult.newVersion },
+    {
+      projectId,
+      updated: true,
+      _v: versionResult.newVersion,
+      ...writtenAddresses,
+      ...(positionAdvisories.length > 0 ? { positionAdvisories: [...positionAdvisories] } : {}),
+    },
     `Project updated successfully in ${duration}ms`
   );
 }

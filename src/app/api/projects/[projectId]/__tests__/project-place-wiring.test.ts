@@ -239,3 +239,50 @@ describe('Χ — διεύθυνση → θέση → επαναπροβολή', 
     listings.republishListingsForProject = original;
   });
 });
+
+/**
+ * Ψ — ADR-332 D27 Βήμα Β: ο πελάτης **υιοθετεί** την απάντηση (Β5) · η πινέζα του ανθρώπου
+ * **μένει** και μετριέται (Φ2β) · η δήλωση μετακίνησης είναι **αίτημα**, ποτέ δεδομένο.
+ */
+describe('Ψ — η απάντηση του PATCH λέει τι ΓΡΑΦΤΗΚΕ, και το αίτημα δεν γίνεται δεδομένο', () => {
+  /** Η πόρτα της Σαμοθράκης 16 — ~4,6 χλμ. από το σημείο του `HIT` (Εγνατίας). */
+  const DOOR = { lat: 40.6642462, lng: 22.8975146 };
+  const HUMAN = ADDRESS({ street: 'Σαμοθράκης', number: '16', coordinates: DOOR, source: 'dragged' });
+
+  async function patch(payload: Record<string, unknown>) {
+    const response = await handleUpdateProject(body(payload), caller(), 'prj_42');
+    return ((await response.json()) as { data: Record<string, unknown> }).data;
+  }
+
+  it('Ψ1 — `relocateAddressIds` ⇒ η μηχανή ρωτιέται για ΑΥΤΗ τη διεύθυνση, και η δήλωση ΔΕΝ γράφεται ΠΟΤΕ', async () => {
+    storedProject = { companyId: 'co_alpha', addresses: [HUMAN] };
+
+    await patch({ addresses: [HUMAN], relocateAddressIds: ['addr_1'] });
+
+    expect(geocoderCalls).toHaveLength(1);
+    expect(written && 'relocateAddressIds' in written).toBe(false);
+    const saved = (written?.addresses as Array<Record<string, unknown>>)[0]!;
+    expect(saved.coordinates).toEqual({ lat: 40.6401, lng: 22.9444 });
+    expect(saved.source).toBe('geocoded');
+  });
+
+  it('Ψ2 — νέο κείμενο πάνω σε ανθρώπινη πινέζα ⇒ η πινέζα ΜΕΝΕΙ και η απάντηση φέρει ΜΕΤΡΗΜΕΝΗ απόκλιση', async () => {
+    storedProject = { companyId: 'co_alpha', addresses: [HUMAN] };
+
+    const data = await patch({ addresses: [{ ...HUMAN, street: 'Εγνατίας', number: '147' }] });
+
+    const saved = (written?.addresses as Array<Record<string, unknown>>)[0]!;
+    expect(saved.coordinates).toEqual(DOOR);
+    const [advisory] = data.positionAdvisories as Array<{ addressId: string; distanceMetres: number }>;
+    expect(advisory.addressId).toBe('addr_1');
+    expect(advisory.distanceMetres).toBeGreaterThan(1_000);
+  });
+
+  it('Ψ3 — Β5: η απάντηση φέρει τις διευθύνσεις ΟΠΩΣ ΓΡΑΦΤΗΚΑΝ (αυτές υιοθετεί ο πελάτης)', async () => {
+    const data = await patch({ addresses: [ADDRESS()] });
+
+    expect(data.addresses).toEqual(written?.addresses);
+    // ΠΑΡΟΝΟΜΑΣΤΗΣ: καμία απόκλιση όπου δεν κρατήθηκε ανθρώπινη πινέζα.
+    expect('positionAdvisories' in data).toBe(false);
+  });
+});

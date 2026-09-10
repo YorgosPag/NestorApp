@@ -11,6 +11,8 @@ import { z } from 'zod';
 // από το `PROJECT_STATUSES` και λέει **ακριβώς** την ίδια αλήθεια με τον τύπο.
 import { isProjectStatus } from '@/constants/project-statuses';
 import type { ProjectStatus } from '@/types/project';
+import type { ProjectAddress } from '@/types/project/addresses';
+import type { AddressPositionDrift } from '@/lib/geocoding/address-position';
 import { projectAddressesSchema } from '@/types/project/address-schemas';
 // ADR-369 / ADR-650 M10 — 3-tier Revit reference (survey / base point / north).
 import {
@@ -32,6 +34,9 @@ export const ProjectUpdateSchema = z.object({
   address: z.string().max(500).optional(),
   city: z.string().max(200).optional(),
   addresses: projectAddressesSchema.optional(),
+  // ADR-332 D27 Βήμα Β (Φ2β) — ΑΙΤΗΜΑ «μετακίνησε την πινέζα στη θέση της διεύθυνσης», ανά ταυτότητα.
+  // Δεν αποθηκεύεται ποτέ: το `resolveAddressesForWrite` το αφαιρεί από το σώμα πριν τη γραφή.
+  relocateAddressIds: z.array(z.string().min(1).max(128)).max(50).optional(),
   // ADR-759 Φ3 — δηλωμένα ρητά, ΟΧΙ μέσω `.passthrough()`: το ζεύγος Ο.Τ./ΟΙΚ. είναι ο στόχος
   // δύο προτάσεων πινακίδας, και ένα πεδίο που περνά «επειδή δεν το κοιτάζει κανείς» δεν έχει
   // ούτε όριο μήκους ούτε ίχνος στο συμβόλαιο. (Το `buildingBlock` ήταν ήδη έτσι από το ADR-745.)
@@ -68,6 +73,20 @@ export interface ProjectUpdateResponse {
   projectId: string;
   updated: boolean;
   _v?: number;
+  /**
+   * Οι διευθύνσεις **όπως τις έγραψε ο διακομιστής** — μόνο όταν το αίτημα είχε `addresses`.
+   *
+   * 🔴 ADR-332 D27 Βήμα Β (Β5): ο γραφέας θέσης **αλλάζει** ό,τι έστειλε ο πελάτης (λύνει θέση,
+   * σβήνει `geocodingMetadata` σε ανθρώπινη πινέζα). Χωρίς αυτό ο πελάτης κρατούσε το δικό του
+   * αντίγραφο και η κάρτα έμενε μπαγιάτικη ως την επαναφόρτωση. Μοτίβο Apollo / Relay: μετά τη
+   * μετάλλαξη **υιοθετείται η απάντηση του διακομιστή**.
+   */
+  addresses?: ProjectAddress[];
+  /**
+   * Φ2β — κρατημένες ανθρώπινες πινέζες που **απέχουν** από τη θέση της νέας τους διεύθυνσης
+   * (μετρημένα μέτρα + όριο αβεβαιότητας). Ο άνθρωπος αποφασίζει· ο διακομιστής μόνο μετρά.
+   */
+  positionAdvisories?: AddressPositionDrift[];
 }
 
 export interface ProjectDeleteResponse {

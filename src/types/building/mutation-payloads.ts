@@ -57,6 +57,11 @@ export interface BuildingUpdatePayload {
   company?: string | null;
   /** 🏢 ENTERPRISE: Multi-address support (ADR-167) */
   addresses?: ProjectAddress[];
+  /**
+   * ADR-332 D27 Βήμα Β (Φ2β) — **αίτημα**, όχι πεδίο κτιρίου: «μετακίνησε την πινέζα αυτών των
+   * διευθύνσεων στη θέση της διεύθυνσής τους». Ο διακομιστής το αφαιρεί πριν τη γραφή.
+   */
+  relocateAddressIds?: string[];
   category?: 'mixed' | 'residential' | 'commercial' | 'industrial';
   /**
    * **ADR-777 §14.5** — ο δεσμός προς το **κοινό** κτίριο (επίπεδο Α).
