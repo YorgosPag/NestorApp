@@ -2,6 +2,35 @@ import { z } from 'zod';
 import { PROJECT_ADDRESS_TYPES, BLOCK_SIDE_DIRECTIONS } from '@/types/project/addresses';
 
 /**
+ * Τα πεδία **θέσης** (`StoredAddressPosition`) — ΕΝΑ σχήμα για έργα, κτίρια **και επαφές**
+ * (ADR-332 D27 Β-ΙΙ). Ως τότε ζούσαν inline στο `projectAddressSchema`· η διαδρομή θέσης των
+ * επαφών θα χρειαζόταν δεύτερο αντίγραφο, που θα απέκλινε σιωπηλά (N.18) — και η απόκλιση
+ * εκδηλώνεται ως **ξανά διαγραφή** του πεδίου.
+ *
+ * ⚠️ `z.string()` και ΟΧΙ `z.enum`: τα `AddressSourceType`/`GeocodingAccuracy` είναι ενώσεις
+ * **μόνο τύπων** στο `lib/geocoding/geocoding-types.ts` — δεν έχουν πίνακα χρόνου εκτέλεσης.
+ * Ένα `z.enum([...])` εδώ θα ήταν **δεύτερο αντίγραφο** του λεξιλογίου. Η αυθεντία μένει
+ * στους τύπους· η δουλειά του σχήματος είναι να **μην καταστρέφει**.
+ */
+export const addressPositionFieldsSchema = z.object({
+  coordinates: z.object({
+    lat: z.number(),
+    lng: z.number(),
+  }).optional(),
+  // ── ADR-332 Φ8: προέλευση & φρεσκάδα ────────────────────────────────────────
+  // Χωρίς δήλωση σβήνονταν σε κάθε PATCH, δηλαδή τα δύο badges δεν είχαν ποτέ δεδομένα.
+  // (Το ADR-745 §6.4 δήλωσε ακόμη και δικό του `source: 'titleblock'` — **αδύνατο να αποθηκευτεί**.)
+  source: z.string().max(64).optional(),
+  verifiedAt: z.number().optional(),
+  geocodingMetadata: z.object({
+    confidence: z.number(),
+    accuracy: z.string().max(64),
+    variantUsed: z.number(),
+    osmType: z.string().max(64).optional(),
+  }).optional(),
+});
+
+/**
  * ⚠️ **ΣΥΜΒΟΛΑΙΟ SSoT — ΣΙΩΠΗΛΗ ΑΠΩΛΕΙΑ (μετρημένη 2026-08-05, ADR-759 Φ3).**
  *
  * Αυτό είναι `z.object` και το Zod **ΠΕΤΑΕΙ κάθε κλειδί που δεν δηλώνεται εδώ**. Είναι το σχήμα
@@ -55,27 +84,8 @@ export const projectAddressSchema = z.object({
   regionId: z.string().nullable().optional(),
   decentAdminId: z.string().nullable().optional(),
   majorGeoId: z.string().nullable().optional(),
-  coordinates: z.object({
-    lat: z.number(),
-    lng: z.number(),
-  }).optional(),
-  // ── ADR-332 Φ8: προέλευση & φρεσκάδα ────────────────────────────────────────
-  // Χωρίς δήλωση σβήνονταν σε κάθε PATCH, δηλαδή τα δύο badges δεν είχαν ποτέ δεδομένα.
-  // (Το ADR-745 §6.4 δήλωσε ακόμη και δικό του `source: 'titleblock'` — **αδύνατο να αποθηκευτεί**.)
-  //
-  // ⚠️ `z.string()` και ΟΧΙ `z.enum`: τα `AddressSourceType`/`GeocodingAccuracy` είναι ενώσεις
-  // **μόνο τύπων** στο `lib/geocoding/geocoding-types.ts` — δεν έχουν πίνακα χρόνου εκτέλεσης.
-  // Ένα `z.enum([...])` εδώ θα ήταν **δεύτερο αντίγραφο** του λεξιλογίου (N.18) που θα απέκλινε
-  // σιωπηλά, και η απόκλιση θα εκδηλωνόταν ως **ξανά διαγραφή** του πεδίου. Η αυθεντία μένει
-  // στους τύπους· η δουλειά του σχήματος εδώ είναι να **μην καταστρέφει**.
-  source: z.string().max(64).optional(),
-  verifiedAt: z.number().optional(),
-  geocodingMetadata: z.object({
-    confidence: z.number(),
-    accuracy: z.string().max(64),
-    variantUsed: z.number(),
-    osmType: z.string().max(64).optional(),
-  }).optional(),
+  // Θέση + προέλευση + φρεσκάδα — το ΕΝΑ σχήμα θέσης (ADR-332 Φ8 · D27 Β-ΙΙ).
+  ...addressPositionFieldsSchema.shape,
   sortOrder: z.number().optional(),
 });
 

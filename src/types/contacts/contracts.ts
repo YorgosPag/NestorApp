@@ -1,5 +1,5 @@
 // Type definitions for contacts, decoupled from Firebase SDK.
-import type { AddressSourceType } from '@/lib/geocoding/geocoding-types';
+import type { StoredAddressPosition } from '@/types/address-position';
 import type { DeclaredOccupation } from '@/types/professional-identity';
 
 export type FirestoreishTimestamp = Date | { toDate: () => Date };
@@ -273,7 +273,14 @@ export interface PhoneInfo {
   extension?: string;
 }
 
-export interface AddressInfo {
+/**
+ * Το **παράγωγο** `addresses[]` (ADR-332 D15). ADR-332 D27 Β-ΙΙ: κουβαλά την ταυτότητα και
+ * ολόκληρη τη θέση της αυθεντικής εγγραφής (`CompanyAddress`) — ως τότε είχε `coordinates`
+ * με **0 γραφείς**, και χωρίς `geocodingMetadata` η ακρίβεια θα χανόταν στη μεταφορά.
+ */
+export interface AddressInfo extends StoredAddressPosition {
+  /** Η ταυτότητα της αυθεντικής εγγραφής — ώστε η ανακατασκευή από το παράγωγο να την κρατά. */
+  id?: string;
   street: string;
   number?: string;
   city: string;
@@ -283,10 +290,6 @@ export interface AddressInfo {
   type: 'home' | 'work' | 'billing' | 'shipping' | 'other';
   isPrimary: boolean;
   label?: string;
-  coordinates?: {
-    lat: number;
-    lng: number;
-  };
   // Administrative Hierarchy fields
   municipality?: string;
   municipalityId?: string | null;
@@ -304,9 +307,6 @@ export interface AddressInfo {
    * ώστε να υπάρχει ΕΝΑ λεξιλόγιο διευθύνσεων σε όλη την εφαρμογή.
    */
   neighborhood?: string;
-  // Address enrichment (ADR-332 Phase 10 — additive, retro-compatible)
-  source?: AddressSourceType;
-  verifiedAt?: number;
 }
 
 export interface WebsiteInfo {

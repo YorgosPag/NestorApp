@@ -20,10 +20,7 @@
  * @created 2026-02-02
  */
 
-import type {
-  AddressSourceType,
-  GeocodingAccuracy,
-} from '@/lib/geocoding/geocoding-types';
+import type { StoredAddressPosition } from '@/types/address-position';
 
 // =============================================================================
 // ADDRESS TYPES & ENUMS
@@ -97,7 +94,7 @@ export const PROJECT_ADDRESS_TYPES = [
  * Project address with full metadata
  * Supports Greek construction industry requirements
  */
-export interface ProjectAddress {
+export interface ProjectAddress extends StoredAddressPosition {
   /** Unique identifier */
   id: string;
 
@@ -198,37 +195,9 @@ export interface ProjectAddress {
   decentAdminId?: string | null;
   majorGeoId?: string | null;
 
-  // 🗺️ Geographic
-  /** GPS coordinates for mapping */
-  coordinates?: {
-    lat: number;
-    lng: number;
-  };
-
-  // 🔍 Provenance & verification (ADR-332 §3.10 / Phase 8)
-  /**
-   * How this address was acquired. Drives the `<AddressSourceLabel>` chip in
-   * read-only views and source attribution in correction telemetry.
-   * Optional — pre-Phase-8 records fall back to `'unknown'` at render time.
-   */
-  source?: AddressSourceType;
-  /**
-   * Unix-ms timestamp of the last successful geocoding / reverse-geocoding
-   * cycle for this record. Drives `<AddressFreshnessIndicator>` (never /
-   * fresh / recent / aging / stale).
-   */
-  verifiedAt?: number;
-  /**
-   * Frozen geocoding metadata captured at write time. Lets read-only surfaces
-   * show confidence + accuracy + the engine variant that produced this hit
-   * without re-querying Nominatim.
-   */
-  geocodingMetadata?: {
-    confidence: number;
-    accuracy: GeocodingAccuracy;
-    variantUsed: number;
-    osmType?: string;
-  };
+  // 🗺️ Geographic + 🔍 provenance & verification (ADR-332 §3.10 / Phase 8):
+  // `coordinates` · `source` · `verifiedAt` · `geocodingMetadata` — κληρονομούνται από το
+  // `StoredAddressPosition` (ADR-332 D27 Β-ΙΙ), τον ΕΝΑ τύπο θέσης για έργα, κτίρια και επαφές.
 
   // 📊 Ordering
   /** Sort order for display (lower = first) */

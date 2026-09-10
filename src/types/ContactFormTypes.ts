@@ -9,6 +9,7 @@ import type { PersonaType } from '@/types/contacts/personas';
 //    η γραμμή έφερνε 22 κλειδιά χωρίς namespace από `EnterprisePhotoUpload`.
 import type { PhotoSlot } from '@/components/ui/multiple-photos/photo-slot-types';
 import type { ContactAddressType } from '@/types/contacts/address-types';
+import type { StoredAddressPosition } from '@/types/address-position';
 
 export interface AddNewContactDialogProps {
   open: boolean;
@@ -100,9 +101,21 @@ export interface IndividualAddress
   type: IndividualAddressType;
 }
 
-/** Single company address entry */
+/**
+ * Single company address entry.
+ *
+ * ADR-332 D27 Β-ΙΙ: η **θέση** (`StoredAddressPosition`) και η σταθερή **ταυτότητα** (`id`)
+ * ζουν πλέον εδώ. Τη θέση την αποφασίζει ο **ένας** γραφέας του διακομιστή
+ * (`/api/contacts/…/address-positions`)· ο πελάτης την κουβαλά, δεν την κρίνει.
+ */
 export interface CompanyAddress
-  extends PostalAddressFields, GreekAdministrativeHierarchyFields {
+  extends PostalAddressFields, GreekAdministrativeHierarchyFields, StoredAddressPosition {
+  /**
+   * Σταθερή ταυτότητα της εγγραφής — ο γραφέας θέσης ταιριάζει αποθηκευμένη ⇄ εισερχόμενη
+   * **μόνο** με αυτό, ποτέ με τη θέση στον πίνακα. Προαιρετικό στον τύπο επειδή τα παλιά
+   * έγγραφα δεν το έχουν· δίνεται στην πρώτη αποθήκευση (`EnterpriseContactSaver`).
+   */
+  id?: string;
   /**
    * Address semantic type (ADR-319 SSoT: `ContactAddressType`).
    * Wider than the legacy `headquarters | branch` pair so individuals can

@@ -45,6 +45,9 @@ const FIXTURE_FILES = [
   'src/types/contacts.ts',
   'src/types/contacts/index.ts',
   'src/types/contacts/contracts.ts',
+  // ADR-332 D27 Β-ΙΙ: η ΚΟΙΝΗ βάση θέσης των τριών δοχείων (`extends StoredAddressPosition`).
+  // Χωρίς αυτήν ο σαρωτής βλέπει «ανεπίλυτο ειδικευτή» ⇒ unanalyzable-container ×3.
+  'src/types/address-position.ts',
 ];
 
 /**
