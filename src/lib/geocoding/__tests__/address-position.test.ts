@@ -17,9 +17,9 @@
  * Χωρίς τον παρονομαστή, το «βγάζει pin» θα μπορούσε να είναι πράσινο επειδή **δεν
  * υπήρξε ποτέ βλάβη**.
  *
- * ⚠️ Η **Κ7** συγκρίνει το `ADDRESS_IDENTITY_FIELDS` με το `ADDRESS_GEOCODING_FIELDS`
- * του επεξεργαστή διευθύνσεων. Είναι ο μόνος φρουρός που εμποδίζει τις **δύο λίστες**
- * να αποκλίνουν σιωπηλά — το σχήμα που στο CHECK 3.34 είχε αποκλίνει κατά **63**.
+ * ⚠️ Η **Κ7** (ισότητα με το `ADDRESS_GEOCODING_FIELDS` του πελάτη) **αφαιρέθηκε** 2026-09-10:
+ * η δίδυμη λίστα έφυγε μαζί με τον ανιχνευτή «Παλιές συντεταγμένες» (ADR-332 D27 Β10). Όπου
+ * δεν υπάρχει δεύτερη λίστα, δεν υπάρχει απόκλιση να φυλαχτεί.
  */
 
 import {
@@ -33,7 +33,6 @@ import {
   type AddressLike,
   type GeocodeHit,
 } from '../address-position';
-import { ADDRESS_GEOCODING_FIELDS } from '@/components/shared/addresses/address-map-config';
 import { addressToPositionCandidate } from '@/services/listings/public-listing-position';
 import { listingMapShape } from '@/lib/listings/listing-map-shape';
 
@@ -274,12 +273,6 @@ describe('Κ — ο κλειστός κανόνας της θέσης', () => {
 
     expect(outcome).toBe('insufficient-address');
     expect(calls).toHaveLength(0);
-  });
-
-  it('Κ7 — ΜΙΑ λίστα πεδίων ταυτότητας: συμφωνεί με το ADDRESS_GEOCODING_FIELDS του επεξεργαστή', () => {
-    // 🔴 Ο φρουρός των «δύο λιστών». Προσθήκη πεδίου εκεί ⇒ ΚΟΚΚΙΝΟ εδώ, αντί για
-    // σιωπηλή απόκλιση (CHECK 3.34: δύο λίστες namespace είχαν αποκλίνει κατά 63).
-    expect([...ADDRESS_IDENTITY_FIELDS].sort()).toEqual([...ADDRESS_GEOCODING_FIELDS].sort());
   });
 
   it('Κ8 — κενό, null και undefined είναι Η ΙΔΙΑ απουσία (αλλιώς κάθε αποθήκευση ρωτά)', async () => {

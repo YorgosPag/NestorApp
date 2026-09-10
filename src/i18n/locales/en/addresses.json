@@ -125,10 +125,7 @@
     "idle": "Add address fields for map",
     "loading": "Searching map…",
     "partial": "{count} of {total} on map",
-    "stale": "Stale coordinates on {count} address",
-    "stale_other": "Stale coordinates on {count} addresses",
     "error": "No address found",
-    "forceRegeocode": "Refresh map",
     "conflict": "Field conflicts",
     "suggestions": "Location suggestions"
   },
@@ -285,6 +282,7 @@
       "cancel": "Cancel",
       "newAddress": "New position",
       "currentAddress": "Current address",
+      "pending": "Looking up the address for this point… You can already keep just the position.",
       "noText": {
         "notFound": "No address was found at this point.",
         "unavailable": "The address service did not respond.",
