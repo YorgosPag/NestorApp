@@ -2254,6 +2254,22 @@ Google Maps. Σημείο = τομή της ακτίνας από την κάμ�
    `cleanNominatimName` κανονικοποιεί, το αποθηκευμένο όχι). Και η οδός του ERGO TEST είναι αποθηκευμένη
    ως `"Σαμοθράκης "` (κενό στο τέλος) ⇒ η κάρτα γράφει «Σαμοθράκης , 16».
 
+#### Βήμα Β — σύγκριση ADR ⇄ κώδικα, **πριν** από κώδικα *(2026-09-10, ανάγνωση κώδικα, όχι ζωντανό)*
+
+| # | Το ADR έλεγε | Ο κώδικας λέει |
+|---|---|---|
+| 2 | η επεξεργασία δεν κουβαλά συρμένες συντεταγμένες | ✅ επιβεβαιώνεται **και νωρίτερα**: το `ProjectLocationsTab` περνά στο `editEditorRef.setPendingDrag` το `toResolvedFields(...)` = **μόνο κείμενο**· η θέση χάνεται **πριν** από τον διάλογο, όχι μόνο στο `handleSaveEdit` |
+| 2β | — *(νέο)* | 🔴 **Φόρμα προσθήκης: το «Άκυρο» κρατά τη θέση.** Το `handleCombinedDragUpdate` καλεί `handlePendingDragUpdate({ coordinates })` **πριν** τον διάλογο ⇒ `pendingHasDragged = true` ⇒ το «Άκυρο» ισοδυναμεί σιωπηλά με «Μόνο η θέση» και η θέση **αποθηκεύεται** |
+| 2γ | `BuildingAddressesEditor` χωρίς «Μόνο η θέση» | ✅ και **χειρότερο**: `handleDragApplied` → `hierarchyToPartial` = μόνο κείμενο ⇒ το σύρσιμο κτιρίου **δεν αποθηκεύει ποτέ** θέση· ο χάρτης δείχνει μόνο το `initialValues` |
+| 4 | πιθανή αιτία: `{...addr}` κρατά `geocodingMetadata` | ✅ **επιβεβαιώνεται στον κώδικα**: το `PATCH /api/projects/[id]` απαντά `{ projectId, updated, _v }` — **χωρίς** τις διευθύνσεις που έγραψε ο διακομιστής· το `persistAddresses` κάνει `setLocalAddresses(newAddresses)` (το αντίγραφο του **πελάτη**) και το `RealtimeService.dispatch('PROJECT_UPDATED')` το διαδίδει και σε άλλες σελίδες. **Ίδιο** σχήμα στα κτίρια (`useBuildingAddressesCardState.persistAddresses`) |
+| 5 | το σύρσιμο χάνεται σιωπηλά | ✅ και παραβιάζει το «ό,τι βλέπεις αποθηκεύεται»: η πινέζα **μένει** στην οθόνη (`dragPositions`), ο γονιός **δεν μαθαίνει τίποτα** |
+| 6 | θόρυβος παύλας / κενού | ✅ το `normalize` του `diffAddressFields` = `normalizeGreekText` + `trim` + πεζά, **χωρίς** αναδίπλωση παύλας· το `projectAddressSchema` δεν κάνει `trim` |
+| Β4 *(handoff)* | «μάλλον το σύρσιμο επαφής χάνει τη θέση» | ⚠️ **Διόρθωση**: δεν υπάρχει θέση να χαθεί. Οι επαφές **δεν έχουν μοντέλο θέσης** (`CompanyAddress` χωρίς πεδίο — ήδη D25· το `AddressInfo.coordinates` έχει **0 γραφείς**)· και γράφονται από τον **πελάτη** (`contacts.service.updateContact` → `updateDoc`), όχι από διακομιστή ⇒ ο ένας γραφέας θέσης **δεν** τις αγγίζει. Η πινέζα ξαναγεωκωδικοποιεί το κείμενο ⇒ μετά το σύρσιμο **πηδά** στο σημείο της μηχανής |
+
+⚠️ **Όριο μεγέθους**: `useProjectLocations` 477 · `ProjectLocationsTab` 490 · `AddressEditor` 466 ·
+`useAddressMapGeocoding` 495 · `AddressMap` 496 · `address-position` 499 γραμμές ⇒ κάθε προσθήκη εκεί
+προϋποθέτει **εξαγωγή** (N.7.1).
+
 ### D10 — Phase split granularity
 **RESOLVED — 11 phases, 1 phase per session, handoff-driven**
 - Mandate Giorgio: clean context per session, no noise
