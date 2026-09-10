@@ -74,6 +74,7 @@ import {
   useAddressMapGeocoding,
   findReferencePosition,
 } from '@/components/shared/addresses/useAddressMapGeocoding';
+import { displayedPosition } from '@/components/shared/addresses/useAddressMapGeocoding.helpers';
 import { AddressMapStatusChip } from '@/components/shared/addresses/AddressMapStatusChip';
 
 // Re-exports for backward compatibility
@@ -131,8 +132,6 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
     dragPositions,
     isReverseGeocoding,
     hasEverRendered,
-    staleAddressIds,
-    forceRegeocodeAll,
     handleDragEnd,
     autoPanRafRef,
     autoPanDeltaRef,
@@ -331,15 +330,17 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
 
                   const isActiveEdit = activeEditingAddressId === addr.id;
 
-                  // ADR-318: read-only derived pins require real geocoded coords —
+                  // ADR-318: read-only derived pins require real coords —
                   // no fallback offset (they are not placeholders).
+                  // ADR-332 D27 Β12: ΙΔΙΟΣ κανόνας θέσης με τις συρόμενες (`displayedPosition`).
                   if (isReadOnly) {
-                    if (!geocoded) return null;
+                    const shown = displayedPosition(addr, undefined, geocoded);
+                    if (!shown) return null;
                     return (
                       <Marker
                         key={addr.id}
-                        longitude={geocoded.lng}
-                        latitude={geocoded.lat}
+                        longitude={shown.lng}
+                        latitude={shown.lat}
                         anchor="bottom"
                         onClick={() => handleMarkerClick(addr, index)}
                       >
@@ -351,10 +352,11 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
                     );
                   }
 
-                  const position = dragPos
-                    ?? (geocoded ? { lng: geocoded.lng, lat: geocoded.lat } : null)
+                  // 🔑 Β12: χειρονομία σε εξέλιξη → σημείο του γονιού → γεωκωδικοποίηση οθόνης.
+                  const shown = displayedPosition(addr, dragPos, geocoded);
+                  const position = shown
                     ?? { lng: refPos.lng - 0.003 * index, lat: refPos.lat + 0.003 * index };
-                  const hasData = !!(dragPos || geocoded);
+                  const hasData = shown !== null;
 
                   return (
                     <Marker
@@ -473,7 +475,7 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
         )}
 
         {/* Live status chip — Google-style real-time feedback (idle/loading/
-            partial/stale/error). Bottom-left avoids the InteractiveMap
+            partial/error). Bottom-left avoids the InteractiveMap
             top-right control cluster + the bottom-right "Locate me" button. */}
         {showGeocodingStatus && (
           <div className="absolute bottom-3 left-3 z-10">
@@ -481,8 +483,6 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
               status={geocodingStatus}
               geocodedCount={geocodedAddresses.size}
               geocodableTotal={getGeocodableAddresses(addresses).length}
-              staleCount={staleAddressIds.size}
-              onForceRegeocode={forceRegeocodeAll}
             />
           </div>
         )}

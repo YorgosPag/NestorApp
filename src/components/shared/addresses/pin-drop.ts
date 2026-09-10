@@ -25,16 +25,26 @@ import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { reverseGeocodeDetailed } from '@/lib/geocoding/geocoding-service';
 import { reverseResultToAddress } from './useAddressMapGeocoding.helpers';
 
-/** Τι είπε η μηχανή για το σημείο αφής. Τρεις εκβάσεις, καμία σιωπή. */
+/** Τι είπε η μηχανή για το σημείο αφής. Τρεις εκβάσεις και μία αναμονή, καμία σιωπή. */
 export type PinDropText<T> =
   | { readonly kind: 'resolved'; readonly address: T }
+  /**
+   * Ρωτήθηκε — η απάντηση **δεν ήρθε ακόμα** (ADR-332 D27 Β13). Google «Dropped pin»: το σημείο
+   * φαίνεται **αμέσως**, η διεύθυνση όταν έρθει. Ο διάλογος ανοίγει με «Μόνο η θέση» διαθέσιμο.
+   */
+  | { readonly kind: 'pending' }
   /** Ρωτήθηκε — σε αυτό το σημείο δεν γράφει τίποτα (404). */
   | { readonly kind: 'not-found' }
   /** Δεν μπόρεσε να ρωτηθεί (timeout · 429 · σφάλμα διακομιστή). */
   | { readonly kind: 'unavailable' };
 
-/** Οι εκβάσεις **χωρίς** κείμενο — ονομασμένες, ώστε όποιος τις δείχνει να τις απαριθμεί εξαντλητικά. */
-export type PinDropNoText = Exclude<PinDropText<unknown>['kind'], 'resolved'>;
+/**
+ * Οι εκβάσεις **χωρίς** κείμενο — ονομασμένες, ώστε όποιος τις δείχνει να τις απαριθμεί εξαντλητικά.
+ *
+ * ⚠️ **Ρητά, όχι `Exclude<…, 'resolved'>`**: το `pending` δεν είναι έκβαση, είναι αναμονή — με
+ * `Exclude` θα ζητούσε κλειδί «δεν βρέθηκε κείμενο» για κάτι που απλώς δεν έφτασε ακόμα.
+ */
+export type PinDropNoText = 'not-found' | 'unavailable';
 
 /**
  * Τι λέμε στον άνθρωπο για κάθε έκβαση χωρίς κείμενο (namespace `addresses`).
@@ -47,10 +57,27 @@ export const PIN_DROP_NO_TEXT_I18N_KEY: Readonly<Record<PinDropNoText, string>> 
   unavailable: 'editor.dragConfirm.noText.unavailable',
 };
 
-/** Ένα σύρσιμο: **πάντα** σημείο, και ό,τι είπε η μηχανή γι' αυτό. */
+/** Ένα σύρσιμο: **πάντα** σημείο, η ταυτότητα της χειρονομίας, και ό,τι είπε η μηχανή. */
 export interface PinDrop<T = Partial<PartialProjectAddress>> {
   readonly point: GeoPoint;
+  /**
+   * Ποια χειρονομία — η **ίδια** φτάνει δύο φορές (`pending` → τελική έκβαση). Με αυτήν ο παραλήπτης
+   * αγνοεί απάντηση για χειρονομία που **έκλεισε** ήδη (`usePinDropGate`).
+   */
+  readonly gesture: number;
   readonly text: PinDropText<T>;
+}
+
+let lastGesture = 0;
+
+/**
+ * Νέα ταυτότητα χειρονομίας — **μονότονη σε όλη τη σελίδα**, όχι ανά χάρτη: ο χάρτης και ο editor
+ * που τη λαμβάνει προσαρτώνται και αποπροσαρτώνται **χωριστά**, και ένας μετρητής ανά χάρτη θα
+ * ξανάρχιζε από το 1 κάτω από έναν φύλακα που θυμάται ήδη μεγαλύτερο αριθμό.
+ */
+export function nextPinGesture(): number {
+  lastGesture += 1;
+  return lastGesture;
 }
 
 /**
@@ -75,15 +102,18 @@ export function humanPlacedPatch(point: GeoPoint): HumanPlacedPatch {
  *
  * ⚠️ **ΔΕΝ είναι δεδομένο.** Υπάρχει ώστε ο `AddressMap` να ζωγραφίζει την πινέζα **εκεί που θα
  * αποθηκευτεί** (φόρμα προσθήκης έργου, νέα διεύθυνση κτιρίου). Ζει μία φορά: τη χρειάζονται δύο φόρμες.
+ *
+ * 🔑 Ο τύπος έρχεται **από τη φόρμα** (ADR-332 D27): η πινέζα έγραφε «Εργοτάξιο» ενώ η φόρμα
+ * έλεγε «Είσοδος» — η ετικέτα στον χάρτη διαφωνούσε με αυτό που θα αποθηκευόταν.
  */
-export function pendingPinAddress(point: GeoPoint, id: string): ProjectAddress {
+export function pendingPinAddress(point: GeoPoint, id: string, type: ProjectAddress['type']): ProjectAddress {
   return {
     id,
     street: '',
     city: '',
     postalCode: '',
     country: GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY,
-    type: 'site',
+    type,
     isPrimary: false,
     coordinates: { lat: point.lat, lng: point.lng },
   };
@@ -91,26 +121,29 @@ export function pendingPinAddress(point: GeoPoint, id: string): ProjectAddress {
 
 /** Μετασχηματίζει **μόνο** το κείμενο — το σημείο και οι εκβάσεις χωρίς κείμενο περνούν αυτούσια. */
 export function mapPinDropText<A, B>(drop: PinDrop<A>, toB: (address: A) => B): PinDrop<B> {
-  const { point, text } = drop;
-  if (text.kind !== 'resolved') return { point, text };
-  return { point, text: { kind: 'resolved', address: toB(text.address) } };
+  const { point, gesture, text } = drop;
+  if (text.kind !== 'resolved') return { point, gesture, text };
+  return { point, gesture, text: { kind: 'resolved', address: toB(text.address) } };
 }
 
 /**
  * Σημείο αφής → `PinDrop`. **Δεν πετά ποτέ**: το `reverseGeocodeDetailed` μεταφράζει κάθε
  * αποτυχία σε έκβαση, και ο χάρτης οφείλει να ειδοποιήσει τον γονιό **σε κάθε** περίπτωση.
+ *
+ * @param signal ακύρωση από τον καλούντα (νεότερη χειρονομία · αποπροσάρτηση) — Β13.
  */
-export async function resolvePinDrop(point: GeoPoint): Promise<PinDrop> {
-  const outcome = await reverseGeocodeDetailed(point.lat, point.lng);
+export async function resolvePinDrop(point: GeoPoint, gesture: number, signal?: AbortSignal): Promise<PinDrop> {
+  const outcome = await reverseGeocodeDetailed(point.lat, point.lng, { signal });
   switch (outcome.kind) {
     case 'found':
       return {
         point,
+        gesture,
         text: { kind: 'resolved', address: reverseResultToAddress(outcome.result, point) },
       };
     case 'not-found':
-      return { point, text: { kind: 'not-found' } };
+      return { point, gesture, text: { kind: 'not-found' } };
     case 'error':
-      return { point, text: { kind: 'unavailable' } };
+      return { point, gesture, text: { kind: 'unavailable' } };
   }
 }

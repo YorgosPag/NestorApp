@@ -26,7 +26,7 @@ import {
   geocodeAddress,
   type GeocodingServiceResult,
 } from '@/lib/geocoding/geocoding-service';
-import { resolvePinDrop, type PinDrop } from '@/components/shared/addresses/pin-drop';
+import { nextPinGesture, resolvePinDrop, type PinDrop } from '@/components/shared/addresses/pin-drop';
 import type { MapInstance } from '@/subapps/geo-canvas/hooks/map/useMapInteractions';
 import { cameraFraming, type CameraIntent } from '@/lib/geo/camera-motion';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -37,9 +37,9 @@ import {
 import {
   reverseResultToAddress,
   findReferencePosition,
-  snapshotFields,
-  fieldsEqual,
-  type AddressFieldsSnapshot,
+  storedPoint,
+  parentPointKey,
+  dropSupersededOverrides,
 } from '@/components/shared/addresses/useAddressMapGeocoding.helpers';
 
 // Re-export for backward compatibility — original module surface
@@ -69,10 +69,6 @@ interface UseAddressMapGeocodingReturn {
   dragPositions: Map<string, DragPosition>;
   isReverseGeocoding: boolean;
   hasEverRendered: boolean;
-  /** Address ids whose cached coords are stale (user edited a geocoding field). */
-  staleAddressIds: ReadonlySet<string>;
-  /** Bypass cached coords on next run for stale ids — Google-style "force refresh". */
-  forceRegeocodeAll: () => void;
   handleDragEnd: (
     event: { lngLat: { lng: number; lat: number } },
     addressId: string,
@@ -106,18 +102,6 @@ export function useAddressMapGeocoding({
   const [geocodingStatus, setGeocodingStatus] = useState<GeocodingStatus>('idle');
   const [dragPositions, setDragPositions] = useState<Map<string, DragPosition>>(new Map());
   const [isReverseGeocoding, setIsReverseGeocoding] = useState(false);
-  const [staleAddressIds, setStaleAddressIds] = useState<Set<string>>(new Set());
-
-  // Snapshot of geocoding-relevant fields per address from the previous render.
-  // Used to flag addresses as `stale` when the user edits a relevant field on
-  // an address that already carries cached `coordinates`.
-  const fieldsSnapshotRef = useRef<Map<string, AddressFieldsSnapshot>>(new Map());
-
-  // Force-regeocode trigger: set of ids that must bypass the cached-coordinates
-  // shortcut on the next geocoding run, plus a counter to re-trigger the effect
-  // even when `addresses` reference is unchanged.
-  const bypassCacheIdsRef = useRef<Set<string>>(new Set());
-  const [forceTick, setForceTick] = useState(0);
 
   // Track if map has ever rendered successfully (prevents unmount during re-geocoding)
   const hasEverRenderedRef = useRef(false);
@@ -127,56 +111,26 @@ export function useAddressMapGeocoding({
   }
 
   // ===========================================================================
-  // STALE DETECTION — Track field changes on addresses with cached coordinates
+  // CONTROLLED — τη θέση την αποφασίζει ο γονιός (ADR-332 D27 Β10 + Β12)
   // ===========================================================================
   //
-  // When an address already has `coordinates` (set from a previous geocoding
-  // run or by the user) and one of the geocoding-relevant fields changes,
-  // mark it as stale. The map keeps showing the OLD pin until the user hits
-  // the "force re-geocode" button — Google-style explicit feedback rather
-  // than silent ignore.
+  // 🔴 Β12: το `dragPositions` γέμιζε με **κάθε** γεωκωδικοποιημένη θέση και ανανεωνόταν «μόνο
+  //    όσα λείπουν» ⇒ μετά την αποθήκευση η πινέζα έμενε στο **πριν**, ενώ τα props είχαν ήδη
+  //    το **μετά** (μετρημένο ζωντανά).
+  // 🔴 Β10: εδώ ζούσε ανιχνευτής «Παλιές συντεταγμένες» + «Ανανέωση χάρτη». Πυροδοτούσε μόνο σε
+  //    διευθύνσεις με συντεταγμένες, δηλαδή **αποθηκευμένες**, που ο διακομιστής είχε ήδη κρίνει
+  //    (`lib/geocoding/address-position`) — και η «Ανανέωση» έδειχνε το σημείο της μηχανής πάνω
+  //    από την πινέζα του ανθρώπου. Η απόκλιση ζει ΜΟΝΟ στα `positionAdvisories` του διακομιστή.
+  //
+  // 🔑 Το `dragPositions` είναι πλέον **μόνο** η υπερίσχυση μιας χειρονομίας σε εξέλιξη — από την
+  //    αφή ως την απόφαση του γονιού. Μόλις ο γονιός δώσει **άλλο** σημείο για ένα id, σβήνει.
+  const parentPointsRef = useRef<ReadonlyMap<string, string>>(new Map());
   useEffect(() => {
-    const prevSnapshots = fieldsSnapshotRef.current;
-    const nextSnapshots = new Map<string, AddressFieldsSnapshot>();
-    const newlyStale = new Set<string>(staleAddressIds);
-
-    for (const addr of addresses) {
-      const snap = snapshotFields(addr);
-      nextSnapshots.set(addr.id, snap);
-
-      const prev = prevSnapshots.get(addr.id);
-      const hasCoords = !!(addr.coordinates?.lat && addr.coordinates?.lng);
-      if (prev && hasCoords && !fieldsEqual(prev, snap)) {
-        newlyStale.add(addr.id);
-      }
-    }
-
-    // Drop ids that no longer exist
-    const currentIds = new Set(addresses.map((a) => a.id));
-    for (const id of newlyStale) {
-      if (!currentIds.has(id)) newlyStale.delete(id);
-    }
-
-    fieldsSnapshotRef.current = nextSnapshots;
-
-    // Avoid infinite loops: only setState if Set actually changed
-    if (
-      newlyStale.size !== staleAddressIds.size ||
-      [...newlyStale].some((id) => !staleAddressIds.has(id))
-    ) {
-      setStaleAddressIds(newlyStale);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const previous = parentPointsRef.current;
+    const next = new Map(addresses.map((addr) => [addr.id, parentPointKey(addr)] as const));
+    parentPointsRef.current = next;
+    setDragPositions((current) => dropSupersededOverrides(current, previous, next));
   }, [addresses]);
-
-  // ===========================================================================
-  // FORCE RE-GEOCODE — User-triggered "refresh stale pins" action
-  // ===========================================================================
-  const forceRegeocodeAll = useCallback(() => {
-    if (staleAddressIds.size === 0) return;
-    bypassCacheIdsRef.current = new Set(staleAddressIds);
-    setForceTick((n) => n + 1);
-  }, [staleAddressIds]);
 
   // ===========================================================================
   // GEOCODING EFFECT
@@ -185,23 +139,17 @@ export function useAddressMapGeocoding({
   useEffect(() => {
     const timer = setTimeout(() => {
       const geocodeAllAddresses = async () => {
-        const bypassIds = bypassCacheIdsRef.current;
-
+        // ⚠️ Το `dragPositions` ΔΕΝ αγγίζεται εδώ: τον κύκλο ζωής του τον έχει ΜΟΝΟ το
+        //    «CONTROLLED» παραπάνω (ένας ιδιοκτήτης — Β12).
         if (addresses.length === 0) {
           setGeocodingStatus('idle');
           setGeocodedAddresses(new Map());
-          setDragPositions(new Map());
           return;
         }
 
         const currentIds = new Set(addresses.map(a => a.id));
         setGeocodedAddresses(prev => {
           const next = new Map<string, GeocodingServiceResult>();
-          prev.forEach((v, id) => { if (currentIds.has(id)) next.set(id, v); });
-          return next;
-        });
-        setDragPositions(prev => {
-          const next = new Map<string, DragPosition>();
           prev.forEach((v, id) => { if (currentIds.has(id)) next.set(id, v); });
           return next;
         });
@@ -214,7 +162,6 @@ export function useAddressMapGeocoding({
           if (geocodable.length === 0) {
             setGeocodingStatus('idle');
             setGeocodedAddresses(new Map());
-            setDragPositions(new Map());
             return;
           }
 
@@ -224,15 +171,12 @@ export function useAddressMapGeocoding({
           for (let i = 0; i < geocodable.length; i++) {
             const addr = geocodable[i];
             try {
-              // Use stored coordinates UNLESS this id is flagged for force re-geocode.
-              if (
-                addr.coordinates?.lat &&
-                addr.coordinates?.lng &&
-                !bypassIds.has(addr.id)
-              ) {
+              // Αποθηκευμένο σημείο ⇒ ΠΟΤΕ δεύτερη ερώτηση: τη θέση την έκρινε ο διακομιστής (Β10).
+              const stored = storedPoint(addr);
+              if (stored) {
                 geocodedMap.set(addr.id, {
-                  lat: addr.coordinates.lat,
-                  lng: addr.coordinates.lng,
+                  lat: stored.lat,
+                  lng: stored.lng,
                   accuracy: 'exact' as const,
                   confidence: 1,
                   displayName: [addr.street, addr.number, addr.city].filter(Boolean).join(' '),
@@ -256,16 +200,6 @@ export function useAddressMapGeocoding({
             }
           }
 
-          // Reset stale flags + bypass set for the ids we just refreshed
-          if (bypassIds.size > 0) {
-            setStaleAddressIds((prev) => {
-              const next = new Set(prev);
-              for (const id of bypassIds) next.delete(id);
-              return next;
-            });
-            bypassCacheIdsRef.current = new Set();
-          }
-
           setGeocodedAddresses(geocodedMap);
 
           logger.info('Geocoding complete', { data: {
@@ -283,19 +217,8 @@ export function useAddressMapGeocoding({
           }
 
           onGeocodingComplete?.(geocodedMap);
-
-          // For draggable mode: initialize drag positions from geocoded results
-          if (draggableMarkers && successCount > 0) {
-            setDragPositions(prev => {
-              const next = new Map(prev);
-              geocodedMap.forEach((result, id) => {
-                if (!next.has(id)) {
-                  next.set(id, { lng: result.lng, lat: result.lat });
-                }
-              });
-              return next;
-            });
-          }
+          // 🔴 Β12: εδώ το `dragPositions` αρχικοποιούνταν με ΚΑΘΕ θέση («μόνο όσα λείπουν») και δεν
+          //    ανανεωνόταν ποτέ. Δεν υπάρχει πια: ο χάρτης δείχνει ό,τι δίνει ο γονιός (`displayedPosition`).
         } catch (error) {
           logger.error('Geocoding failed:', { error });
           setGeocodingStatus('error');
@@ -306,7 +229,7 @@ export function useAddressMapGeocoding({
     }, 500);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [addresses, onGeocodingComplete, forceTick]);
+  }, [addresses, onGeocodingComplete]);
 
   // ===========================================================================
   // FIT BOUNDS — SSoT helper + two triggers
@@ -433,8 +356,12 @@ export function useAddressMapGeocoding({
   }, []);
 
   // ===========================================================================
-  // DRAG END — Reverse Geocode
+  // DRAG END — Reverse Geocode (ADR-332 D27 Β6 + Β13)
   // ===========================================================================
+
+  /** Η ερώτηση της τελευταίας χειρονομίας — νεότερη χειρονομία ή αποπροσάρτηση την ακυρώνει. */
+  const dropAbortRef = useRef<AbortController | null>(null);
+  useEffect(() => () => dropAbortRef.current?.abort(), []);
 
   const handleDragEnd = useCallback(async (
     event: { lngLat: { lng: number; lat: number } },
@@ -455,35 +382,38 @@ export function useAddressMapGeocoding({
       setIsReverseGeocoding(true);
     });
 
+    // 🔑 Β13: νεότερη χειρονομία ⇒ η ερώτηση της παλιότερης ακυρώνεται και ΔΕΝ παραδίδεται ποτέ.
+    dropAbortRef.current?.abort();
+    const controller = new AbortController();
+    dropAbortRef.current = controller;
+    const point = { lat, lng };
+    const gesture = nextPinGesture();
+    // Google «Dropped pin»: το σημείο ΑΜΕΣΩΣ — ο διάλογος ανοίγει με «Μόνο η θέση» πριν απαντήσει η μηχανή.
+    onAddressDragUpdate?.({ point, gesture, text: { kind: 'pending' } }, addressIndex);
+
     try {
-      // 🔴 ADR-332 D27 Βήμα Β (Β6): ο γονιός μαθαίνει ΠΑΝΤΑ το σημείο — με ή χωρίς κείμενο.
-      const drop = await resolvePinDrop({ lat, lng });
+      // 🔴 Β6: ο γονιός μαθαίνει ΠΑΝΤΑ το σημείο — με ή χωρίς κείμενο.
+      const drop = await resolvePinDrop(point, gesture, controller.signal);
+      if (controller.signal.aborted) return;
       if (drop.text.kind !== 'resolved') logger.warn('Position-only drop', { data: { lat, lng, outcome: drop.text.kind } });
       onAddressDragUpdate?.(drop, addressIndex);
     } catch (error) {
       logger.error('Drag update handler failed', { error: String(error) });
     } finally {
-      setIsReverseGeocoding(false);
+      // Μόνο η ΤΡΕΧΟΥΣΑ χειρονομία κλείνει τον δείκτη — μια ακυρωμένη δεν τον σβήνει από τη νεότερη.
+      if (dropAbortRef.current === controller) {
+        dropAbortRef.current = null;
+        setIsReverseGeocoding(false);
+      }
     }
   }, [onAddressDragUpdate, stopAutoPan]);
 
-  // Stale takes precedence over success/partial in the surfaced status, so the
-  // chip can prompt the user to refresh. Loading and error keep their priority.
-  const surfacedStatus: GeocodingStatus =
-    geocodingStatus === 'loading' || geocodingStatus === 'error'
-      ? geocodingStatus
-      : staleAddressIds.size > 0
-      ? 'stale'
-      : geocodingStatus;
-
   return {
     geocodedAddresses,
-    geocodingStatus: surfacedStatus,
+    geocodingStatus,
     dragPositions,
     isReverseGeocoding,
     hasEverRendered: hasEverRenderedRef.current,
-    staleAddressIds,
-    forceRegeocodeAll,
     handleDragEnd,
     autoPanRafRef,
     autoPanDeltaRef,
