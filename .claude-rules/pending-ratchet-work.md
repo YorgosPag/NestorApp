@@ -21,6 +21,37 @@
 > η μέτρηση χρειάστηκε **έγχυση**. Ξαναπερπάτησέ το στην πρώτη αγγελία `shaded-*`.
 
 
+- 🔴 **10/09 — `contacts` ΕΙΝΑΙ ΤΑΥΤΟΧΡΟΝΑ ΕΝΤΟΣ ΚΑΙ ΕΚΤΟΣ ΧΩΡΟΥ — 5 ΚΟΚΚΙΝΑ TESTS ΣΤΟ `HEAD`** *(βρέθηκε στο **ADR-848 Φ2**, τρέχοντας τις άγκυρες του `OUTSIDE_WORKSPACE`)*
+
+  **Πού**: `src/lib/workspace/workspace-scope.ts` (εγγραφή `contacts`, ADR-843 ΠΕ1/ΠΕ5) ·
+  `src/app/(me)/contacts/**` **ΚΑΙ** `src/app/(app)/o/[workspace]/contacts/**` · `src/app/(auth)/contact/[token]` (ADR-844) **χωρίς** εγγραφή `contact`.
+  **Κόκκινα**: `workspace-scope.test.ts` Ε1 · Ε1β · Ζ1 · Ζ4 και `route-catalogue-anchor.test.ts` Κ1
+  (`/o/<χώρος>/contacts` κρίνεται «εκτός» ⇒ το σύνορο **δεν βάζει πρόθεμα** στις επαφές του γραφείου·
+  `/contact/<token>` κρίνεται «εντός» ⇒ θα έπαιρνε πρόθεμα). Επαληθευμένο ότι υπάρχει **ήδη στο HEAD**
+  (`git show HEAD:…workspace-scope.ts` → `contacts:` στη γρ. 181) — **ΟΧΙ** από το ADR-848.
+  **Γιατί δεν διορθώθηκε επιτόπου**: ο κριτής απαντά **ανά κορυφαίο τμήμα**, και το `/contacts` δεν
+  μπορεί να είναι και τα δύο. Είναι **απόφαση** (μετονομασία του ιδιωτικού `/contacts` ή των επαφών
+  γραφείου), όχι διόρθωση — ανήκει στο ADR-843/844. Η προσθήκη `contact` (ADR-844) είναι μονολεκτική.
+
+- 🔴 **10/09 — ΝΕΚΡΟ `nestor-app.vercel.app` ΩΣ ΕΦΕΔΡΕΙΑ ΣΕ 17 ΑΡΧΕΙΑ — ΚΙΝΔΥΝΟΣ SUBDOMAIN TAKEOVER** *(βρέθηκε στο **ADR-848 Φ1**, διορθώνοντας το `base-email-template.ts`)*
+
+  **Πού**: `grep -rl "nestor-app\.vercel\.app" src` — μεταξύ άλλων `mandate-invitation.service.ts` ·
+  `onboarding-reminder.job.ts` · `lib/share-utils.ts` · `api/procurement/[poId]/share/route.ts` ·
+  `rfq-service.ts` · `vendor-invite-service.ts` · `api/attendance/qr/generate/route.ts` ·
+  `api/alerts/schedule-check/route.ts` · `sales-accounting/notification-helpers.ts` ·
+  `ShowcasePublicDoor.tsx` · `PhotoSharePageContent.tsx` · `usePhotoPreviewState.ts` ·
+  `social-platform-system/analytics-service.ts` · `core/configuration/index.ts` ·
+  `title-block-fingerprint.ts` (να κριθεί χωριστά — ίσως δεν είναι σύνδεσμος).
+
+  🔴 **Δεν είναι μόνο διπλότυπο (17 αναγνώστες του `NEXT_PUBLIC_APP_URL`) — είναι ΑΣΦΑΛΕΙΑ.** Το
+  Vercel είναι παγωμένο από 2026-05-09· αν το υποdomain ελευθερωθεί, **όποιος το διεκδικήσει**
+  παραλαμβάνει συνδέσμους από email, QR και κοινοποιήσεις μας — phishing με **δική μας** υπογραφή.
+
+  **Fix**: κάθε ανάγνωση → `publicOrigin()` / `publicUrl()` (`lib/http/request-origin.ts`, ADR-848)
+  ή `absoluteUrl(request, …)` όπου υπάρχει αίτημα· `null` ⇒ **ρητός** χειρισμός, ποτέ
+  κατασκευασμένο domain. Ratchet: pattern `nestor-app\.vercel\.app` στο `.ssot-registry.json`.
+  **Εκτίμηση**: >1h, 17 αρχεία, 5+ domains ⇒ N.8 (Plan Mode / Orchestrator — ερώτηση στον Giorgio).
+
 - 🔴 **09/09 — ΤΡΙΤΟ ΑΝΤΙΓΡΑΦΟ ΤΗΣ ΤΕΜΠΕΛΙΚΗΣ ΦΟΡΤΩΣΗΣ, ΚΑΙ ΕΧΕΙ ΤΟ BUG ΠΟΥ ΤΟ ΠΡΩΤΟΤΥΠΟ ΘΕΡΑΠΕΥΣΕ** *(βρέθηκε στο **ADR-846 §9 #13**, ψάχνοντας SSoT για τη γενεαλογία)*
 
   **Πού**: `src/components/shared/addresses/editor/helpers/hierarchyLookup.ts:101-119`
