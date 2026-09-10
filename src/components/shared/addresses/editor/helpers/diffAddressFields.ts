@@ -19,6 +19,7 @@
 
 import { normalizeGreekText } from '@/services/ai-pipeline/shared/greek-text-utils';
 import { foldPlaceName } from '@/utils/address/place-name';
+import { countryNameToCode } from '@/utils/address/country-codes';
 import type { AddressFieldConflict, ResolvedAddressFields } from '../types';
 
 const COMPARABLE_FIELDS: ReadonlyArray<keyof ResolvedAddressFields> = [
@@ -39,6 +40,21 @@ function normalize(value: string | undefined): string {
   return normalizeGreekText(foldPlaceName(value)).toLowerCase();
 }
 
+/**
+ * Η **ταυτότητα** μιας τιμής, όπως συγκρίνεται — ανά πεδίο.
+ *
+ * 🔴 ADR-332 D27 Β9: «Greece» (αποθηκευμένο `DEFAULT_COUNTRY`) και «Ελλάδα» (Nominatim με
+ * `accept-language: el`) είναι **η ίδια χώρα με άλλη γραφή**, και ο διάλογος συρσίματος
+ * τα έδειχνε ως αλλαγή. Η χώρα συγκρίνεται με το κλειδί ISO 3166-1 του ενός SSoT
+ * (`utils/address/country-codes`) — όπως το `short_name` της Google: το όνομα είναι προβολή.
+ * Άγνωστο όνομα ⇒ πέφτει στη σύγκριση κειμένου (καμία επινόηση ταυτότητας).
+ */
+function comparable(field: keyof ResolvedAddressFields, value: string | undefined): string {
+  const text = normalize(value);
+  if (field !== 'country' || text === '') return text;
+  return countryNameToCode(value) ?? text;
+}
+
 /** Ο κοινός πυρήνας: ΕΝΑ πέρασμα· το «τι μετρά ως διαφορά» είναι η μόνη παράμετρος. */
 function collectFieldDiffs(
   before: ResolvedAddressFields,
@@ -49,7 +65,7 @@ function collectFieldDiffs(
   for (const field of COMPARABLE_FIELDS) {
     const userValue = before[field];
     const resolvedValue = after[field];
-    if (counts(normalize(userValue), normalize(resolvedValue))) {
+    if (counts(comparable(field, userValue), comparable(field, resolvedValue))) {
       diffs.push({
         field,
         userValue: (userValue ?? '').trim(),

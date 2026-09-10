@@ -125,7 +125,7 @@ export const LocationInlineForm = forwardRef<AddressEditorHandle, LocationInline
     const resolvedValue = useMemo<ResolvedAddressFields>(
       () => hierarchyToResolvedAddress(hierarchy),
       // eslint-disable-next-line react-hooks/exhaustive-deps
-      [hierarchy.street, hierarchy.number, hierarchy.postalCode, hierarchy.settlementName, hierarchy.communityName, hierarchy.regionName],
+      [hierarchy.street, hierarchy.number, hierarchy.postalCode, hierarchy.settlementName, hierarchy.communityName, hierarchy.regionName, hierarchy.country],
     );
 
     // Geocoding correction / undo / suggestion → merge into hierarchy basic fields

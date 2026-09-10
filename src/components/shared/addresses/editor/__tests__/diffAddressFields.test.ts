@@ -33,6 +33,28 @@ describe('diffAddressReplacement — ΑΝΤΙΚΑΤΑΣΤΑΣΗ, όχι συμφ
   });
 });
 
+describe('Β9 — η χώρα συγκρίνεται ως ΤΑΥΤΟΤΗΤΑ (ISO 3166-1), όχι ως κείμενο (ADR-332 D27)', () => {
+  // Μετρημένο ζωντανά: αποθηκευμένο `DEFAULT_COUNTRY` «Greece» ⇄ Nominatim (`accept-language: el`) «Ελλάδα».
+  it('«Greece» ⇄ «Ελλάδα» ⇒ ΜΗΔΕΝ διαφορές — και στις δύο ερωτήσεις', () => {
+    expect(diffAddressReplacement({ country: 'Greece' }, { country: 'Ελλάδα' })).toEqual([]);
+    expect(diffAddressFields({ country: 'ΕΛΛΑΣ' }, { country: 'gr' })).toEqual([]);
+  });
+
+  it('ΠΑΡΟΝΟΜΑΣΤΗΣ: άλλη χώρα ΕΙΝΑΙ αλλαγή — ο κανόνας δεν τα κάνει όλα ίσα', () => {
+    expect(diffAddressReplacement({ country: 'Greece' }, { country: 'Βουλγαρία' }))
+      .toEqual([{ field: 'country', userValue: 'Greece', resolvedValue: 'Βουλγαρία' }]);
+  });
+
+  it('ΠΑΡΟΝΟΜΑΣΤΗΣ: άγνωστο όνομα πέφτει στη σύγκριση κειμένου — καμία επινοημένη ταυτότητα', () => {
+    expect(diffAddressReplacement({ country: 'Atlantis' }, { country: 'Ελλάδα' })).toHaveLength(1);
+    expect(diffAddressReplacement({ country: 'Atlantis' }, { country: 'ATLANTIS' })).toEqual([]);
+  });
+
+  it('ΠΑΡΟΝΟΜΑΣΤΗΣ: ο κανόνας ISO ισχύει ΜΟΝΟ στη χώρα — πόλη «gr» ≠ «Greece»', () => {
+    expect(diffAddressReplacement({ city: 'Greece' }, { city: 'gr' })).toHaveLength(1);
+  });
+});
+
 describe('diffAddressFields', () => {
   it('returns empty when no fields differ', () => {
     expect(

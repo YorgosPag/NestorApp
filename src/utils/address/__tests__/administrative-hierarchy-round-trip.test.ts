@@ -366,3 +366,13 @@ describe('ο κανόνας «οικισμός, αλλιώς Δήμος» — έ
     );
   });
 });
+
+describe('Β9 — η χώρα φτάνει στον editor (ADR-332 D27)', () => {
+  it('🔴 η χώρα της φόρμας ΠΕΡΝΑ — αλλιώς ο διάλογος συρσίματος έβλεπε «Χώρα — → Ελλάδα»', () => {
+    expect(hierarchyToResolvedAddress(FULL_FORM).country).toBe('Greece');
+  });
+
+  it('ΠΑΡΟΝΟΜΑΣΤΗΣ: κενή χώρα ⇒ απούσα, όχι «»', () => {
+    expect(hierarchyToResolvedAddress({ ...FULL_FORM, country: '' }).country).toBeUndefined();
+  });
+});

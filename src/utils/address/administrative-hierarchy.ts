@@ -228,5 +228,8 @@ export function hierarchyToResolvedAddress(
     city: resolveCityFromHierarchy(value) || undefined,
     neighborhood: value.communityName || undefined,
     region: value.regionName || undefined,
+    // 🔴 ADR-332 D27 Β9: η χώρα **χανόταν εδώ** ⇒ ο διάλογος συρσίματος έβλεπε «Χώρα — → Ελλάδα»
+    // σε κάθε σύρσιμο έργου/κτιρίου. Ο τύπος την κουβαλούσε· η μεταφορά όχι.
+    country: value.country || undefined,
   };
 }
