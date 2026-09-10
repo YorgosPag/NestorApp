@@ -48,21 +48,31 @@
  * @see server/notifications/email-delivery-window — «πότε», εδώ είναι το «μαζί;»
  */
 
-// ⚠️ **Τοπικό αντίγραφο δεν επιτρέπεται** — το `escapeHtml` έρχεται από το SSoT των
-// προτύπων email. Ήδη υπάρχουν **δύο** υλοποιήσεις στο repo (`email-templates` και
-// `telegram/admin/format`)· μια τρίτη θα ήταν η γνωστή απόκλιση.
 import { resolveHumanLanguage, type HumanLanguage } from '@/i18n/languages';
 import { emailTextsFor } from '@/server/comms/email-texts';
-import { escapeHtml } from '@/services/email-templates/base-email-template';
 import { MESSAGE_CATEGORIES, MESSAGE_PRIORITIES } from '@/types/communications';
+
+// 🔗 ADR-848 — η ΑΠΟΔΟΣΗ μετακόμισε σε δικό της module (κείμενο + HTML + σύνδεσμοι),
+// κοινό με το μεμονωμένο email. Εδώ μένει η ΑΠΟΦΑΣΗ «ποια φεύγουν μαζί».
+import {
+  NO_LINKS,
+  renderDigestHtml,
+  renderDigestText,
+  type EmailLinks,
+  type RenderableMessage,
+} from './notification-email-render';
 
 /**
  * Ένα ώριμο μήνυμα της ουράς, στη μορφή που χρειάζεται η **απόφαση** συνάθροισης.
  *
  * ⚠️ Σκόπιμα **δεν** είναι το έγγραφο Firestore: ο σχεδιαστής δεν επιτρέπεται να
  * αγγίξει `ref.update()`. Ο αγωγός ξαναβρίσκει τα έγγραφα από το {@link PendingEmail.id}.
+ *
+ * 🔗 ADR-848 — κληρονομεί από το `RenderableMessage` τα προαιρετικά `notificationId`
+ * (ο μόνιμος σύνδεσμος) και `recipientId` (το token διαγραφής). Παλιά έγγραφα της
+ * ουράς δεν τα έχουν ⇒ email **όπως πριν**, καμία migration.
  */
-export interface PendingEmail {
+export interface PendingEmail extends RenderableMessage {
   readonly id: string;
   /** Η **διεύθυνση** — όχι ταυτότητα χρήστη. Το κλειδί ομαδοποίησης. */
   readonly to: string;
@@ -179,6 +189,8 @@ function soloReasonOf(message: PendingEmail): Exclude<SoloReason, 'alone'> | nul
  */
 export function planEmailDelivery(
   messages: readonly PendingEmail[],
+  /** ADR-848 — πού δείχνουν οι σύνδεσμοι. **Ένεση**, ώστε ο σχεδιαστής να μένει καθαρός. */
+  links: EmailLinks = NO_LINKS,
 ): readonly DeliveryPlanEntry[] {
   const groups = new Map<string, { to: string; language: HumanLanguage; members: PendingEmail[] }>();
   const solos: DeliveryPlanEntry[] = [];
@@ -206,15 +218,15 @@ export function planEmailDelivery(
       plan.push({ kind: 'solo', message: members[0], reason: 'alone' });
       continue;
     }
-    const texts = emailTextsFor(language);
+    const subject = emailTextsFor(language).digest.subject(members.length);
     plan.push({
       kind: 'digest',
       to,
       language,
       members,
-      subject: texts.digest.subject(members.length),
-      content: digestText(members, language),
-      html: digestHtml(members, language),
+      subject,
+      content: renderDigestText(members, language, links),
+      html: renderDigestHtml(members, language, subject, links),
     });
   }
 
@@ -248,79 +260,8 @@ export function planCoversEveryMessage(
   return messages.every((message) => unique.has(message.id));
 }
 
-/**
- * **Λέει αυτό το σώμα κάτι που δεν λέει ήδη το θέμα;** (ADR-777 §8.54)
- *
- * ────────────────────────────────────────────────────────────────────────────
- * 🔴 Η ΕΡΩΤΗΣΗ ΗΤΑΝ ΛΑΘΟΣ, ΟΧΙ Η ΑΠΑΝΤΗΣΗ
- * ────────────────────────────────────────────────────────────────────────────
- *
- * Εδώ ρωτιόταν *«υπάρχει σώμα;»* (`content.trim().length > 0`) — και η απάντηση
- * ήταν **πάντα ναι**, επειδή ο orchestrator έγραφε `content: body ?? title`.
- * Ζωντανή μέτρηση 2026-09-05: σύνοψη **5** ειδοποιήσεων, **10** γραμμές.
- *
- * 🔑 **Δεύτερη άμυνα, όχι αντίγραφο της πρώτης** (N.7.2 #4). Η ρίζα διορθώθηκε στον
- * orchestrator, αλλά τα ήδη γραμμένα `pending` έγγραφα της ουράς κουβαλούν το
- * αντίγραφο **για πάντα** — καμία migration δεν τα αγγίζει, και θα ξαναφτάσουν στα
- * εισερχόμενα του ίδιου ανθρώπου. Και ανεξάρτητα από ιστορικό: ένα σώμα ταυτόσημο
- * με το θέμα **δεν προσθέτει πληροφορία**, όποιος κι αν το έγραψε.
- *
- * ⚠️ **Η σύγκριση γίνεται μετά από `trim()` και στα δύο.** Ένα «  Θέμα  » είναι το
- * θέμα με κενά, όχι νέα πληροφορία — και ο ίδιος `trim()` απαντά ήδη το «υπάρχει;».
- *
- * ⚠️ **ΕΝΑΣ κριτής, δύο καταναλωτές.** Η συνθήκη ήταν γραμμένη **δύο φορές**
- * ({@link digestText} · {@link digestHtml})· δύο αντίγραφα σημαίνουν ότι η επόμενη
- * διόρθωση θα έφτανε στο ένα, και η σύνοψη θα έλεγε **διαφορετικά πράγματα σε
- * κείμενο και σε HTML** — δηλαδή θα εξαρτιόταν από το πρόγραμμα του παραλήπτη.
- */
-function bodyAddsAnything(message: PendingEmail): boolean {
-  const body = message.content.trim();
-  return body.length > 0 && body !== message.subject.trim();
-}
-
-/** Το σώμα της σύνοψης σε **απλό κείμενο** — ο αναγνώστης χωρίς HTML. */
-function digestText(members: readonly PendingEmail[], language: HumanLanguage): string {
-  const texts = emailTextsFor(language);
-  const lines: string[] = [texts.digest.intro(members.length), ''];
-
-  members.forEach((member, index) => {
-    lines.push(`${index + 1}. ${member.subject}`);
-    if (bodyAddsAnything(member)) lines.push(`   ${member.content}`);
-    lines.push('');
-  });
-
-  lines.push('—', texts.digest.footer);
-  return lines.join('\n');
-}
-
-/**
- * Το σώμα της σύνοψης σε HTML.
- *
- * ⚠️ **Κάθε τιμή περνά από `escapeHtml`.** Τα θέματα και τα σώματα των ειδοποιήσεων
- * περιέχουν **ονόματα ακινήτων και ανθρώπων**, δηλαδή κείμενο που γράφει χρήστης.
- * Ένα `<` σε τίτλο ακινήτου θα έσπαγε το μήνυμα· ένα `<script>` θα ήταν χειρότερο.
- *
- * ⚠️ **Χωρίς `wrapInBrandedTemplate`, σκόπιμα.** Το επώνυμο πρότυπο ανήκει στις
- * κοινοποιήσεις προς **πελάτες**· η σύνοψη πάει σε **συνεργάτες**, μέσα από την
- * ίδια διαδρομή που ο `EmailAdapter` στέλνει και τις υπενθυμίσεις onboarding. Δύο
- * διαφορετικά πρότυπα για δύο διαφορετικά κοινά, όχι ένα από αμέλεια.
- */
-function digestHtml(members: readonly PendingEmail[], language: HumanLanguage): string {
-  const texts = emailTextsFor(language);
-  const items = members
-    .map((member) => {
-      const body = bodyAddsAnything(member)
-        ? `<p style="margin:4px 0 0;color:#555">${escapeHtml(member.content)}</p>`
-        : '';
-      return `<li style="margin-bottom:12px"><strong>${escapeHtml(member.subject)}</strong>${body}</li>`;
-    })
-    .join('\n');
-
-  return [
-    `<p>${escapeHtml(texts.digest.intro(members.length))}</p>`,
-    `<ol style="padding-left:20px">`,
-    items,
-    `</ol>`,
-    `<p style="color:#888;font-size:12px">${escapeHtml(texts.digest.footer)}</p>`,
-  ].join('\n');
-}
+// 🔗 ADR-848 — ο κριτής `bodyAddsAnything` (§8.54) και η απόδοση κειμένου/HTML της
+// σύνοψης ζουν πλέον στο `notification-email-render.ts`: ΕΝΑΣ κριτής για σύνοψη ΚΑΙ
+// μεμονωμένο email, ώστε η επόμενη διόρθωση να μη φτάσει μόνο στο ένα από τα δύο.
+// ⚠️ Και ΠΑΡΑΜΕΝΕΙ χωρίς `wrapInBrandedTemplate`, σκόπιμα: το επώνυμο πρότυπο ανήκει
+// στις κοινοποιήσεις προς **πελάτες**· οι ειδοποιήσεις πάνε σε **χρήστες** της εφαρμογής.

@@ -66,6 +66,8 @@ import {
   type DeliveryPlanEntry,
   type PendingEmail,
 } from '@/server/notifications/email-digest';
+import { digestHeaders, liveEmailLinks, soloEnvelope } from '@/server/notifications/notification-email-envelope';
+import type { EmailLinks } from '@/server/notifications/notification-email-render';
 import { MESSAGE_CATEGORIES, MESSAGE_PRIORITIES } from '@/types/communications';
 import type { CronJobResult } from '@/types/cron-schedule';
 
@@ -145,9 +147,13 @@ function asString(value: unknown): string | null {
  * χωρίς `category` **δεν** είναι ειδοποίηση (αλλιώς ξένα μηνύματα με δικό τους HTML
  * θα κατέληγαν μέσα σε σύνοψη και το πρότυπό τους θα πεταγόταν).
  */
-function queueMetadata(
-  data: QueuedEmail,
-): { priority: string; category: string; language: string | undefined } {
+function queueMetadata(data: QueuedEmail): {
+  priority: string;
+  category: string;
+  language: string | undefined;
+  notificationId: string | undefined;
+  recipientId: string | undefined;
+} {
   const raw = typeof data.metadata === 'object' && data.metadata !== null
     ? (data.metadata as Record<string, unknown>)
     : {};
@@ -160,6 +166,9 @@ function queueMetadata(
     // σχεδιαστή). Μια δεύτερη προεπιλογή εδώ θα ήταν σιωπηλή ευκαιρία απόκλισης:
     // αρκεί κάποιος να τη γράψει `'en'` και ο αγωγός θα διαφωνούσε με τον σχεδιαστή.
     language: asString(raw.language) ?? undefined,
+    // 🔗 ADR-848 — γεγονότα για τον φάκελο· απουσία (παλιά έγγραφα) ⇒ email όπως πριν.
+    notificationId: asString(raw.notificationId) ?? undefined,
+    recipientId: asString(raw.recipientId) ?? undefined,
   };
 }
 
@@ -237,7 +246,9 @@ async function executePlan(
   considered: number,
 ): Promise<FlushReport> {
   const pending = docs.map(toPendingEmail);
-  const plan = planEmailDelivery(pending);
+  // 🔗 ADR-848 — οι σύνδεσμοι λύνονται ΜΙΑ φορά ανά πέρασμα, από το origin ΤΩΡΑ.
+  const links = liveEmailLinks();
+  const plan = planEmailDelivery(pending, links);
 
   // 🔴 Μήνυμα εκτός πλάνου **δεν αποτυγχάνει** — μένει `pending` και ξαναδοκιμάζεται
   // αιώνια, χωρίς κανείς να το μάθει. Ο έλεγχος τρέχει **πριν** αγγιχτεί πάροχος.
@@ -251,7 +262,7 @@ async function executePlan(
   const tally = { sent: 0, retrying: 0, deadLettered: 0, emailsSent: 0, digested: 0 };
 
   for (const entry of plan) {
-    await runPlanEntry(chain, entry, byId, tally);
+    await runPlanEntry(chain, entry, byId, tally, links);
   }
 
   return { ...tally, considered, truncated: considered === MAX_FLUSH_PER_RUN };
@@ -266,13 +277,14 @@ async function runPlanEntry(
   entry: DeliveryPlanEntry,
   byId: ReadonlyMap<string, FlushableDoc>,
   tally: Tally,
+  links: EmailLinks,
 ): Promise<void> {
   const members = entry.kind === 'solo' ? [entry.message] : entry.members;
   const docs = members.map((member) => byId.get(member.id)).filter(isDoc);
 
   const outcomes = entry.kind === 'solo'
-    ? [await deliverOne(chain, docs[0])]
-    : await deliverDigest(chain, entry, docs);
+    ? [await deliverOne(chain, docs[0], links)]
+    : await deliverDigest(chain, entry, docs, links);
 
   // Ένα email έφυγε μόνο αν κάτι παραδόθηκε· οι δύο άλλες καταλήξεις δεν άγγιξαν
   // τον πάροχο επιτυχώς και δεν επιτρέπεται να μετρηθούν ως παράδοση.
@@ -305,6 +317,8 @@ function toPendingEmail(doc: FlushableDoc): PendingEmail {
     priority: meta.priority,
     category: meta.category,
     language: meta.language,
+    notificationId: meta.notificationId,
+    recipientId: meta.recipientId,
   };
 }
 
@@ -336,6 +350,7 @@ async function deliverDigest(
   chain: readonly EmailProvider[],
   entry: Extract<DeliveryPlanEntry, { kind: 'digest' }>,
   docs: readonly FlushableDoc[],
+  links: EmailLinks,
 ): Promise<readonly DeliveryOutcome[]> {
   if (!entry.to.includes('@')) {
     return Promise.all(docs.map((doc) => failInvalidAddress(doc)));
@@ -348,6 +363,8 @@ async function deliverDigest(
     await doc.ref.update({ attempts, lastAttemptAt: Timestamp.now() });
   }
 
+  // 🔗 ADR-848 — RFC 8058, μόνο αν όλα τα μέλη ανήκουν στον ΙΔΙΟ άνθρωπο.
+  const headers = digestHeaders(entry, links);
   const outcome = await sendThroughChain(chain, {
     to: entry.to,
     // 🔑 §8.54 — **μία** υπογραφή για ολόκληρη τη σύνοψη. Πριν, το «— ΝΕΣΤΩΡ»
@@ -355,6 +372,7 @@ async function deliverDigest(
     subject: brandedSubject(entry.language, entry.subject),
     text: entry.content,
     html: entry.html,
+    ...(headers ? { headers } : {}),
   });
 
   return Promise.all(
@@ -456,6 +474,7 @@ async function settleOne(
 async function deliverOne(
   chain: readonly EmailProvider[],
   doc: FlushableDoc,
+  links: EmailLinks,
 ): Promise<DeliveryOutcome> {
   const data = doc.data() ?? {};
   const attempts = asNumber(data.attempts, 0) + 1;
@@ -467,21 +486,12 @@ async function deliverOne(
 
   await doc.ref.update({ attempts, lastAttemptAt: Timestamp.now() });
 
-  const language = queueMetadata(data).language;
-  // 🌐 §8.29: **τρίτο** αντίγραφο της ίδιας ελληνικής εφεδρείας, τώρα από το SSoT.
-  const subject = asString(data.subject) ?? emailTextsFor(language).fallbackSubject;
-  const body = asString(data.content) ?? '';
-
+  // 🔑 §8.54 + ADR-848 — Ο ΦΑΚΕΛΟΣ σε ΕΝΑ σημείο (`notification-email-envelope`): υπογραφή
+  // θέματος · εφεδρεία «κενό σώμα ⇒ το θέμα» (όχι στην ουρά) · σύνδεσμοι · RFC 8058.
+  const envelope = soloEnvelope(toPendingEmail(doc), links);
   const outcome = await sendThroughChain(chain, {
     to,
-    // 🔑 §8.54 — η υπογραφή της μάρκας μπαίνει **εδώ**, όχι στους 4 παραγωγούς.
-    subject: brandedSubject(language, subject),
-    // 🔑 §8.54 — **Η ΕΦΕΔΡΕΙΑ ΖΕΙ ΕΔΩ, ΟΧΙ ΣΤΑ ΔΕΔΟΜΕΝΑ.** Ο orchestrator έγραφε
-    // `content: body ?? title` και **σφράγιζε** το αντίγραφο στην ουρά, όπου το
-    // διάβαζε **και** η σύνοψη — που δεν το ήθελε (10 γραμμές για 5 ειδοποιήσεις).
-    // Ένα μοναχικό email με κενό σώμα όμως διαβάζεται ως σπασμένο και κερδίζει
-    // φίλτρα ανεπιθύμητων· γι' αυτό η εφεδρεία μπαίνει **τη στιγμή που ρωτιέται**.
-    text: body.trim().length > 0 ? body : subject,
+    ...envelope,
     from: asString(data.from) ?? undefined,
   });
 

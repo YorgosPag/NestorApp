@@ -105,8 +105,33 @@ export interface EmailLegRequest {
   readonly dedupeKey: string;
   readonly entityId?: string;
   readonly entityType?: EnqueueMessageParams['entityType'];
+  /**
+   * ADR-848 — η ειδοποίηση που γέννησε το email, **μόνο** όταν έχει προορισμό.
+   * Γίνεται ο μόνιμος σύνδεσμος `/n/{id}` στον φάκελο· απουσία ⇒ email χωρίς κουμπί.
+   */
+  readonly notificationId?: string;
   /** Η στιγμή αναφοράς. Δίνεται, ώστε η απόφαση να είναι δοκιμάσιμη. */
   readonly now?: Date;
+}
+
+/**
+ * ADR-848 — τα γεγονότα που χρειάζεται ο **αποστολέας** για να φτιάξει τον φάκελο.
+ *
+ * 🔑 **Γεγονότα, ποτέ URL.** Ο σύνδεσμος χτίζεται τη στιγμή της αποστολής, από το
+ * δημόσιο origin **εκείνης** της στιγμής: ένα μήνυμα που περιμένει το παράθυρο των
+ * 20:00 δεν επιτρέπεται να κουβαλά διεύθυνση που ίσως έχει αλλάξει ως τότε.
+ *
+ * ⚠️ **Κανένα `undefined`**: η Firestore απορρίπτει ολόκληρη την εγγραφή για ένα
+ * `undefined` (`enqueue-no-undefined.test.ts`). Το προαιρετικό μπαίνει μόνο αν υπάρχει.
+ */
+function emailEnvelopeFacts(
+  request: EmailLegRequest,
+): { readonly recipientId: string; readonly notificationId?: string } {
+  return {
+    // Η ουρά αλλιώς ξέρει μόνο **διευθύνσεις** — το token διαγραφής θέλει τον **χρήστη**.
+    recipientId: request.recipientId,
+    ...(request.notificationId ? { notificationId: request.notificationId } : {}),
+  };
 }
 
 /**
@@ -160,6 +185,7 @@ export async function queueNotificationEmail(
     // βλέπει μόνο διευθύνσεις — γι' αυτό η γλώσσα ταξιδεύει **μαζί** με το μήνυμα
     // αντί να αναζητείται ξανά.
     language: resolveHumanLanguage(request.settings.language),
+    metadata: { email: emailEnvelopeFacts(request) },
   };
 
   const result = await enqueueMessage(params);

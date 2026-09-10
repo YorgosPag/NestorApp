@@ -33,6 +33,7 @@ import {
 // Comms domain imports from canonical source (SSoT)
 import type { EnqueueMessageParams } from '@/server/comms/orchestrator';
 import { queueNotificationEmail } from '@/server/notifications/notification-email-leg';
+import { loadUserNotificationSettings } from '@/server/notifications/user-notification-settings-store';
 import {
   type UserNotificationSettings,
   getDefaultNotificationSettings,
@@ -86,43 +87,9 @@ export interface DispatchResult {
 // ADR-017: deterministic notification doc ID → enterprise-id.service.ts SSoT
 const generateDedupeKey = generateNotificationDedupeId;
 
-/**
- * Load user notification settings from Firestore
- *
- * 🔴 **ΤΟ ΩΜΟ `as` ΗΤΑΝ ΨΕΜΑ ΠΡΟΣ ΤΟΝ ΜΕΤΑΓΛΩΤΤΙΣΤΗ** (διορθώθηκε §8.28). Το
- * `doc.data() as UserNotificationSettings` υπόσχεται ότι **κάθε** πεδίο του τύπου
- * υπάρχει στο έγγραφο. Δεν υπάρχει: τα έγγραφα γράφτηκαν σε διαφορετικές εποχές του
- * σχήματος, και κάθε νέο πεδίο έρχεται εδώ ως `undefined` **με τον τύπο να λέει ότι
- * δεν γίνεται**.
- *
- * Ήταν λανθάνον, όχι θεωρητικό: το `insideQuietHours` διαβάζει `quietHours.enabled`
- * — έγγραφο χωρίς `quietHours` θα έριχνε `TypeError` **μέσα στον αγωγό που παραδίδει
- * αλληλογραφία για όλους**.
- *
- * ⚠️ **Ο ίδιος ο service έχει ήδη τη σωστή απάντηση** (`transformFromFirestore`,
- * merge με defaults)· αυτή η διαδρομή την **παρέκαμπτε**. Εδώ γίνεται το ελάχιστο
- * ισοδύναμο, στον διακομιστή: τα defaults **από κάτω**, το έγγραφο **από πάνω**.
- */
-async function loadUserSettings(userId: string): Promise<UserNotificationSettings> {
-  const docRef = getAdminFirestore().collection(COLLECTIONS.USER_NOTIFICATION_SETTINGS).doc(userId);
-  const doc = await docRef.get();
-
-  const defaults = getDefaultNotificationSettings(userId);
-  if (!doc.exists) return defaults;
-
-  const stored = (doc.data() ?? {}) as Partial<UserNotificationSettings>;
-
-  return {
-    ...defaults,
-    ...stored,
-    // Τα ένθετα αντικείμενα θέλουν **δικό τους** merge: ένα `...stored` από πάνω
-    // αντικαθιστά ολόκληρο το `quietHours`, οπότε ένα έγγραφο που έχει μόνο
-    // `{ enabled: true }` θα έχανε τις ώρες του.
-    quietHours: { ...defaults.quietHours, ...(stored.quietHours ?? {}) },
-    categories: { ...defaults.categories, ...(stored.categories ?? {}) },
-    userId,
-  };
-}
+// 🔗 ADR-848 — η ανάγνωση των ρυθμίσεων (με το ένθετο merge του §8.28) μετακόμισε στο
+// `user-notification-settings-store.ts`: τη ζητούν πλέον ΚΑΙ η σελίδα προτιμήσεων
+// email ΚΑΙ ο συγγραφέας της διαγραφής. Ένας αναγνώστης, τρεις καταναλωτές.
 
 /**
  * Check if notification is allowed based on user settings
@@ -157,6 +124,18 @@ function isNotificationAllowed(
   }
 
   return { allowed: true };
+}
+
+/**
+ * ADR-848 — **Έχει η ειδοποίηση πού να πάει;**
+ *
+ * Η **ίδια** ερώτηση με το κουμπί «Προβολή» του κουδουνιού (`actions[0].url`,
+ * `NotificationDrawer`). Αν το email ρωτούσε κάτι άλλο, η ίδια ειδοποίηση θα είχε
+ * κουμπί στο ένα κανάλι και όχι στο άλλο.
+ */
+function hasDestination(actions: DispatchRequest['actions']): boolean {
+  const url = actions?.[0]?.url;
+  return typeof url === 'string' && url.length > 0;
 }
 
 // ============================================================================
@@ -204,7 +183,7 @@ export async function dispatchNotification(request: DispatchRequest): Promise<Di
   // 3. Load user settings
   let settings: UserNotificationSettings;
   try {
-    settings = await loadUserSettings(recipientId);
+    settings = await loadUserNotificationSettings(recipientId);
   } catch {
     // For mandatory notifications, use defaults on error
     if (mapping.isMandatory) {
@@ -312,6 +291,10 @@ export async function dispatchNotification(request: DispatchRequest): Promise<Di
     dedupeKey,
     entityId,
     entityType: entityType as EnqueueMessageParams['entityType'],
+    // 🔗 ADR-848 — ο μόνιμος σύνδεσμος (`/n/{id}`) ταξιδεύει **ΜΟΝΟ** όταν η ειδοποίηση
+    // έχει προορισμό: ένα κουμπί «Άνοιγμα» που οδηγεί στο «δεν είναι διαθέσιμη» είναι
+    // υπόσχεση που δεν τηρείται. Η ταυτότητα της ειδοποίησης ΕΙΝΑΙ το `dedupeKey`.
+    ...(hasDestination(actions) ? { notificationId: dedupeKey } : {}),
   });
 
   // Η ειδοποίηση **μέσα στην εφαρμογή** έχει ήδη γραφτεί επιτυχώς· ένα σπασμένο
