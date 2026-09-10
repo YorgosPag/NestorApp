@@ -22,6 +22,7 @@ import { NextRequest } from 'next/server';
 
 import * as route from '@/app/api/notifications/email/subscription/route';
 import { emailOneClickHref } from '@/lib/notifications/email-subscription-routes';
+import { emailScopeOf } from '@/lib/notifications/email-subscription-scope';
 import {
   EMAIL_SUBSCRIPTION_SECRET_ENV,
   issueEmailSubscriptionToken,
@@ -78,6 +79,21 @@ describe('Α — το πρόγραμμα email (RFC 8058)', () => {
   it('Α3 🔴 — ΚΑΝΕΝΑ GET: ο Next απαντά 405, ο σαρωτής δεν αλλάζει τίποτα', () => {
     expect('GET' in route).toBe(false);
   });
+
+  it('Α4 📧 — token με εμβέλεια ΤΥΠΟΥ (μεμονωμένο email) ⇒ κόβεται ΜΟΝΟ ο τύπος', async () => {
+    // Google FAQ: «only from the mailing list associated with the message».
+    const token = issueEmailSubscriptionToken('u1', emailScopeOf(['properties.demandListingMatch']));
+    if (token === null) throw new Error('Δεν εκδόθηκε token — η άγκυρα δεν κοίταξε τίποτα.');
+
+    const response = await route.POST(post(token, ONE_CLICK));
+
+    expect(response.status).toBe(200);
+    expect(mockApply).toHaveBeenCalledWith('u1', {
+      kind: 'type',
+      settings: ['properties.demandListingMatch'],
+      mode: 'off',
+    });
+  });
 });
 
 describe('Β — η σελίδα προτιμήσεων (JSON)', () => {
@@ -96,6 +112,23 @@ describe('Β — η σελίδα προτιμήσεων (JSON)', () => {
       post(tokenFor('u1'), { contentType: 'application/json', body: JSON.stringify({ change: { kind: 'daily' } }) }),
     );
     expect(await response.json()).toEqual({ ok: true, previous: STATE_ON, current: STATE_OFF });
+  });
+
+  it('Β3 📧 — διακόπτης τύπου από τη σελίδα: ελεγμένος, ό,τι κι αν λέει η εμβέλεια του token', async () => {
+    const change = { kind: 'type', settings: ['properties.mandateDecided'], mode: 'on' };
+    await route.POST(
+      post(tokenFor('u1'), { contentType: 'application/json', body: JSON.stringify({ change }) }),
+    );
+    expect(mockApply).toHaveBeenCalledWith('u1', change);
+  });
+
+  it('Β4 🔴 — διακόπτης ΥΠΟΧΡΕΩΤΙΚΟΥ τύπου ⇒ 400, καμία εγγραφή', async () => {
+    const change = { kind: 'type', settings: ['security.newDeviceLogin'], mode: 'off' };
+    const response = await route.POST(
+      post(tokenFor('u1'), { contentType: 'application/json', body: JSON.stringify({ change }) }),
+    );
+    expect(response.status).toBe(400);
+    expect(mockApply).not.toHaveBeenCalled();
   });
 });
 

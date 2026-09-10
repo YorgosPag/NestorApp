@@ -79,6 +79,12 @@ export interface EmailWording {
     readonly whyReceived: string;
     /** Ο σύνδεσμος της σελίδας προτιμήσεων email (με token, **χωρίς** σύνδεση). */
     readonly manage: string;
+    /**
+     * ADR-849 — ο ίδιος σύνδεσμος στο **μεμονωμένο** email ενός τύπου, που ανοίγει τη
+     * σελίδα με **αυτόν** τον τύπο μπροστά (LinkedIn/Zillow: «this type of email, only»).
+     * ⚠️ Δεν ονομάζει τον τύπο: τα ονόματα ζουν στα locale της οθόνης, όχι σε δεύτερο αντίγραφο εδώ.
+     */
+    readonly manageType: string;
   };
 }
 
@@ -107,6 +113,7 @@ const EMAIL_TEXTS: Readonly<Record<HumanLanguage, EmailWording>> = {
       openPlain: 'Άνοιγμα',
       whyReceived: 'Λαμβάνετε αυτό το email επειδή έχετε ενεργές τις ειδοποιήσεις email στον Νέστορα.',
       manage: 'Διαχείριση ειδοποιήσεων email',
+      manageType: 'Να μη λαμβάνω τέτοια email',
     },
   },
   en: {
@@ -122,6 +129,7 @@ const EMAIL_TEXTS: Readonly<Record<HumanLanguage, EmailWording>> = {
       openPlain: 'Open',
       whyReceived: 'You are receiving this email because email notifications are turned on in Nestor.',
       manage: 'Manage email notifications',
+      manageType: 'Stop emails like this',
     },
   },
 };
@@ -200,7 +208,13 @@ export function everyLanguageHasWording(): boolean {
       typeof wording.digest.subject(2) === 'string' &&
       typeof wording.digest.intro(2) === 'string' &&
       // ADR-848 — ένα email με κουμπί χωρίς ετικέτα είναι χειρότερο από email χωρίς κουμπί.
-      [wording.links?.open, wording.links?.openPlain, wording.links?.whyReceived, wording.links?.manage]
+      [
+        wording.links?.open,
+        wording.links?.openPlain,
+        wording.links?.whyReceived,
+        wording.links?.manage,
+        wording.links?.manageType,
+      ]
         .every((text) => typeof text === 'string' && text.length > 0)
     );
   });

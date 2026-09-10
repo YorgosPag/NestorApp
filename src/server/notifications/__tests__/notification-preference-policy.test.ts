@@ -13,6 +13,10 @@ import { decideEmailDelivery, emailSuppressionReason } from '@/server/notificati
 import {
   categorySettingEnabled,
   emailModeFor,
+  isMandatorySetting,
+  mutedEmailTypes,
+  parseSettingPath,
+  settingPathOf,
 } from '@/services/user-notification-settings/notification-preference-policy';
 import {
   getDefaultNotificationSettings,
@@ -113,5 +117,40 @@ describe('Δ — η απόφαση παράδοσης ρωτά την ίδια �
     expect(decideEmailDelivery(settings, { now, isMandatory: true, setting: NEW_DEVICE_LOGIN })).toEqual({
       kind: 'send-now',
     });
+  });
+});
+
+describe('📧 Ρ — ADR-849 Α2: η διαδρομή ενός διακόπτη', () => {
+  it('Ρ1 — στρογγυλή διαδρομή για κάθε διακόπτη του μητρώου συμβάντων', () => {
+    for (const mapping of Object.values(EVENT_CATEGORY_MAP)) {
+      expect(parseSettingPath(settingPathOf(mapping))).toEqual({
+        category: mapping.category,
+        settingKey: mapping.settingKey,
+      });
+    }
+  });
+
+  it.each(['properties', 'properties.', '.demandListingMatch', 'ghost.x', 'properties.__proto__', 42, null])(
+    '🔴 απορρίπτει %p',
+    (value) => {
+      expect(parseSettingPath(value)).toBeNull();
+    },
+  );
+
+  it('Ρ2 — υποχρεωτικοί = ακριβώς οι τέσσερις της ασφάλειας', () => {
+    expect(isMandatorySetting(NEW_DEVICE_LOGIN)).toBe(true);
+    expect(isMandatorySetting(LISTING_MATCH)).toBe(false);
+  });
+
+  it('Ρ3 — σιγασμένοι τύποι: μόνο το ρητό `off`, ταξινομημένοι', () => {
+    const settings = base();
+    const mixed: UserNotificationSettings = {
+      ...settings,
+      emailCategories: {
+        ...settings.emailCategories,
+        properties: { mandateDecided: 'off', demandListingMatch: 'off', demandInterest: 'on' },
+      },
+    };
+    expect(mutedEmailTypes(mixed)).toEqual(['properties.demandListingMatch', 'properties.mandateDecided']);
   });
 });

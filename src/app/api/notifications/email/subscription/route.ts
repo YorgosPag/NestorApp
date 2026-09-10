@@ -36,6 +36,10 @@ import {
   type SubscriptionResponse,
 } from '@/lib/notifications/email-subscription-contract';
 import { EMAIL_SUBSCRIPTION_TOKEN_PARAM } from '@/lib/notifications/email-subscription-routes';
+import {
+  scopeSettingPaths,
+  type EmailSubscriptionScope,
+} from '@/lib/notifications/email-subscription-scope';
 import { createModuleLogger } from '@/lib/telemetry';
 import { applyEmailSubscriptionChange } from '@/server/notifications/email-subscription';
 import { readEmailSubscriptionToken } from '@/services/notifications/email-subscription-token.service';
@@ -51,13 +55,30 @@ function fail(reason: SubscriptionFailure, status: number): NextResponse<Subscri
 }
 
 /**
+ * **Τι σημαίνει το one-click για ΑΥΤΟ το token** — ADR-849 Α2.
+ *
+ * 🏆 Google FAQ: το one-click αφαιρεί *«only from the mailing list associated with the
+ * message»*. Εμβέλεια «όλα» (σύνοψη, παλιά token v1) ⇒ διακοπή· εμβέλεια **τύπου**
+ * (μεμονωμένο email) ⇒ κόβεται **μόνο** αυτός ο τύπος. Η εμβέλεια έρχεται από την
+ * **υπογραφή**, ποτέ από το αίτημα.
+ */
+function oneClickChange(scope: EmailSubscriptionScope): EmailSubscriptionChange {
+  return scope.kind === 'all'
+    ? { kind: 'unsubscribe' }
+    : { kind: 'type', settings: scopeSettingPaths(scope), mode: 'off' };
+}
+
+/**
  * **Το αίτημα → αλλαγή.** JSON από τη σελίδα· φόρμα από το πρόγραμμα email.
  *
  * ⚠️ Το one-click αναγνωρίζεται **μόνο** από το ακριβές σώμα του RFC — ένα άδειο POST
  * **δεν** διαγράφει. Αλλιώς οποιοσδήποτε σαρωτής κάνει POST θα έκανε ό,τι απαγορεύουμε
  * στο GET.
  */
-async function changeFromRequest(request: NextRequest): Promise<EmailSubscriptionChange | null> {
+async function changeFromRequest(
+  request: NextRequest,
+  scope: EmailSubscriptionScope,
+): Promise<EmailSubscriptionChange | null> {
   const contentType = request.headers.get('content-type') ?? '';
 
   if (contentType.includes('application/json')) {
@@ -67,7 +88,7 @@ async function changeFromRequest(request: NextRequest): Promise<EmailSubscriptio
   }
 
   const form = await request.formData().catch(() => null);
-  return form?.get(ONE_CLICK_FIELD) === ONE_CLICK_VALUE ? { kind: 'unsubscribe' } : null;
+  return form?.get(ONE_CLICK_FIELD) === ONE_CLICK_VALUE ? oneClickChange(scope) : null;
 }
 
 async function handler(request: NextRequest): Promise<NextResponse<SubscriptionResponse>> {
@@ -82,7 +103,7 @@ async function handler(request: NextRequest): Promise<NextResponse<SubscriptionR
       : fail('link-invalid', 400);
   }
 
-  const change = await changeFromRequest(request);
+  const change = await changeFromRequest(request, verdict.scope);
   if (change === null) return fail('request-invalid', 400);
 
   try {
