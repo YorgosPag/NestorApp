@@ -2270,6 +2270,62 @@ Google Maps. Σημείο = τομή της ακτίνας από την κάμ�
 `useAddressMapGeocoding` 495 · `AddressMap` 496 · `address-position` 499 γραμμές ⇒ κάθε προσθήκη εκεί
 προϋποθέτει **εξαγωγή** (N.7.1).
 
+#### Βήμα Β — υλοποίηση, Β-Ι: έργα + κτίρια *(2026-09-10)*
+
+**Έρευνα — πηγές που διαβάστηκαν, όχι υποθέσεις:**
+- **Revit** Location: σύρσιμο πινέζας ⇒ lat/long στο πεδίο διεύθυνσης, «*Click Search to resolve the address*».
+- **Google Business Profile**: «*pin your business directly on the map*», όταν η διεύθυνση δεν βρίσκεται.
+- **HERE**: `position` = προβολή ≠ `access` = «*for instance the entrance*».
+- **INSPIRE Addresses**: 1..* θέσεις ανά διεύθυνση, «*exactly one … 'default' = 'true'*».
+- **Salesforce Maps** Verified Location: υπερισχύει της γεωκωδικοποίησης, και οι μαζικές ενέργειες ρωτούν πριν τη σβήσουν.
+- **Zoho CRM**: «*move a pin to adjust coordinates without changing the full address*».
+- **Apple Maps**: η πινέζα του σπιτιού διαφέρει από την κάρτα επαφής.
+- **Apollo**: η αισιόδοξη εκδοχή αντικαθίσταται από «*values returned from the server*».
+
+**Κανόνας:** το σύρσιμο δίνει **ΠΑΝΤΑ** θέση και **ΠΡΟΑΙΡΕΤΙΚΑ** κείμενο. Ό,τι βλέπεις, αυτό αποθηκεύεται. Την αποθηκευμένη προέλευση την αποφασίζει ο διακομιστής.
+
+| # | Διόρθωση | SSoT / πού |
+|---|---|---|
+| Β6 | σύρσιμο **χωρίς** κείμενο (404 / timeout / 429) φτάνει **πάντα** στον γονιό· ο διάλογος προσφέρει μόνο «Μόνο η θέση» | `shared/addresses/pin-drop.ts` (`PinDrop`, `resolvePinDrop`) · `reverseGeocodeDetailed` (3 εκβάσεις· αντικατέστησε το `reverseGeocode`) · `AddressDragConfirmDialog.proposal` |
+| Β1/Β2 | επεξεργασία έργου: «Μόνο η θέση» + η θέση **αποθηκεύεται** | `editor/hooks/useAddressEditorDrag` (εξαγωγή από τον `AddressEditor`, με αναίρεση πινέζας) · `AddressEditorPlacementOptions` · `useFormPlacedPoint` · `locations/useLocationFlows` |
+| Β1β | προσθήκη: το «Άκυρο» **δεν** αποθηκεύει πια θέση — θέση γράφεται **μόνο** με επιβεβαίωση | `useLocationFlows` · `locations/useLocationsMap` |
+| Β3 | κτίρια: η θέση αποθηκεύεται· ο χάρτης δείχνει την πινέζα της φόρμας· ακύρωση/αναίρεση την επαναφέρει | `useBuildingAddressesCardState` (κατέχει τη θέση — **αυτό** αποθηκεύει) · `BuildingAddressesEditor` |
+| Β5 | τα PATCH έργου/κτιρίου επιστρέφουν τις **γραμμένες** διευθύνσεις· ο πελάτης **υιοθετεί** αυτές, και το Realtime διαδίδει αυτές | `services/address-mutation-echo.ts` (`settleEntityUpdate`) |
+| Φ2β | η πινέζα του ανθρώπου **μένει** όταν αλλάζει αργότερα το κείμενο (`human-kept`)· απόκλιση πάνω από `max(αβεβαιότητα μηχανής, 50 μ.)` ⇒ μη-μπλοκαριστική ειδοποίηση «Μετακίνησε / Κράτα» | `lib/geocoding/address-position-rules` (`measureDrift` → `focusPresentation` + `distanceMeters`) · `HUMAN_PIN_DRIFT_FLOOR_METRES` · `relocateAddressIds` · `AddressPositionDriftNotice` |
+| Β7 | παύλα/κενά = **γραφή**, όχι όνομα· προθέματα **χωρίς τόνους**· `trim` στο σύνορο εγγραφής· η κάρτα χωρίς «Σαμοθράκης , 16» | `utils/address/place-name.ts` (αντικατέστησε το `cleanNominatimName` και το σώμα του `stripAdminPrefix`) · `withTrimmedIdentity` · `address-line` |
+
+**Ευρήματα στην πορεία (διορθώθηκαν, με άγκυρα που τα αποδεικνύει):**
+- 🔴 Το `keepStored` έγραφε `verifiedAt: null` ⇒ **κάθε** αποθήκευση που δεν άγγιζε τη θέση **έσβηνε** τη φρεσκάδα. Η άγκυρα Ζ ήταν **κόκκινη πάνω στον παλιό κώδικα** πριν τη διόρθωση.
+- 🔴 Το `building-services.updateBuilding` διάβαζε `response?.data?._v`, ενώ το `apiClient` ξετυλίγει ήδη το `{ success, data }`. Άρα η έκδοση κτιρίου (SPEC-256A) δεν έφτανε **ποτέ** στον καλούντα.
+- 🔴 Ο προσαρμογέας `geocodeAddress` πετούσε το `extent` της μηχανής.
+- 🔴 Δύο δίδυμα κανόνα προθεμάτων **είχαν αποκλίνει**: το ένα έπιανε μόνο κεφαλαία χωρίς τόνους, το άλλο μόνο πεζά με τόνους.
+- ✅ Το `address-position.ts` έπεσε από 499 σε 333 γραμμές, και το `resolveAddressPosition` σε ~20 (**Ανοιχτό 3**).
+
+**Απόκλιση από το εγκεκριμένο σχέδιο (δηλωμένη):** η δήλωση «μετακίνησε» ταξιδεύει ως `relocateAddressIds` σε επίπεδο **αιτήματος**, όχι ως `positionIntent` μέσα στη διεύθυνση. Έτσι το μοντέλο δεν αποκτά πεδίο που δεν αποθηκεύεται ποτέ, και η αφαίρεσή του πριν τη γραφή ζει σε **ένα** σημείο ανά διαδρομή (άγκυρα Ψ1).
+
+**Άγκυρες** (εκτελούν την πραγματική διαδρομή· mock μόνο στα σύνορα) **και μεταλλάξεις** (αριθμός κόκκινων tests):
+
+| Άγκυρα | Τι ελέγχει | Μετάλλαξη → κόκκινα |
+|---|---|---|
+| `drag-drop-point` | Β6 | Μ1 → 2 |
+| `AddressDragConfirmDialog` Δ6–Δ7 | διάλογος χωρίς κείμενο | — |
+| `AddressEditor.placement` | «Μόνο η θέση», «Άκυρο», αναίρεση πινέζας | — |
+| `useProjectLocations.human-placed-point` | Β1, Β1β, Β2, Β5, Φ2β πελάτη | Μ2 → 1 · Μ3 → 2 · Μ5 → 1 |
+| `building-addresses-placement` | Β3 | Μ4 → 2 |
+| `address-position-lifecycle` Ζ/Η/Β7 | φρεσκάδα, `human-kept`, απόκλιση, `trim` | Μ7 → 6 · Μ8 → 2 · Μ9 → 3 · Μ11 → 1 |
+| `project-place-wiring` Ψ1–Ψ3 | αίτημα που δεν γράφεται, απήχηση, απόκλιση | Μ6 → 1 |
+| `place-name` | κανόνας ονομάτων και καταναλωτές του | Μ10 → 1 · Μ12 → 1 |
+| `address-mutation-echo` | απήχηση και διάδοση | Μ13 → 2 |
+| `AddressPositionDriftNotice` | η ειδοποίηση | — |
+
+Η **Κ1ε** άλλαξε **ρητά**, από `geocoded` σε `human-kept`, με αναφορά σε αυτή την απόφαση. Παλινδρόμηση: **88 σουίτες, 1168 tests**. `jscpd:diff` καθαρό σε 31 αρχεία: αρχικά βρέθηκαν **3 κλώνοι**, και λύθηκαν με εξαγωγή, όχι με παράκαμψη.
+
+**Ανοιχτά — επόμενες συνεδρίες (απόφαση Giorgio):**
+- **Β-ΙΙ επαφές**: αποθηκευμένη θέση, ίδιος γραφέας, resolve-only διαδρομή, μία εγγραφή.
+- **Β-ΙΙΙ είσοδοι**: `accessPoints[]`, με το `coordinates` ως default σημείο.
+
+Σχέδιο: `HANDOFFS/2026-09-10_ADR-332-D27_vima-B-II_epafes_handoff.md`. ⚠️ Η **ζωντανή επαλήθευση του Β-Ι εκκρεμεί**, οπότε δεν γράφεται «επαληθεύτηκε».
+
 ### D10 — Phase split granularity
 **RESOLVED — 11 phases, 1 phase per session, handoff-driven**
 - Mandate Giorgio: clean context per session, no noise
