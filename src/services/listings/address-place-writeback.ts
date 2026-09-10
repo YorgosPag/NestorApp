@@ -46,7 +46,8 @@ import {
   resolveAddressPositions,
   type AddressGeocoder,
   type AddressLike,
-  type AddressPositionTally,
+  type ResolveAddressPositionsOptions,
+  type ResolvedAddressPositions,
 } from '@/lib/geocoding/address-position';
 import { republishListingsForProject } from './publish-public-listing';
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
@@ -76,6 +77,9 @@ const geocodeAddress: AddressGeocoder = async (query) => {
         confidence: verdict.result.confidence,
         variantUsed: verdict.result.source?.variantUsed,
         osmType: verdict.result.source?.osmType,
+        // ADR-332 D27 Βήμα Β (Φ2β): η έκταση ΠΕΤΙΟΤΑΝ εδώ — τώρα μετρά την αβεβαιότητα της
+        // μηχανής όταν κρίνεται αν μια κρατημένη ανθρώπινη πινέζα «απέχει» από τη νέα διεύθυνση.
+        ...(verdict.result.extent ? { extent: verdict.result.extent } : {}),
       };
     case 'absent':
       return null;
@@ -96,8 +100,9 @@ export async function resolveProjectAddressPositions<T extends ProjectAddressLik
   storedAddresses: readonly T[],
   incomingAddresses: readonly T[],
   now: number,
-): Promise<{ readonly addresses: readonly T[]; readonly tally: AddressPositionTally }> {
-  return resolveAddressPositions(storedAddresses, incomingAddresses, geocodeAddress, now);
+  options: ResolveAddressPositionsOptions = {},
+): Promise<ResolvedAddressPositions<T>> {
+  return resolveAddressPositions(storedAddresses, incomingAddresses, geocodeAddress, now, options);
 }
 
 /**

@@ -25,6 +25,7 @@ import type {
   GeocodingOutcome,
   GeocodingFailureReason,
   ReverseGeocodingResult,
+  ReverseGeocodingOutcome,
 } from '@/lib/geocoding/geocoding-types';
 
 const logger = createModuleLogger('geocoding-service');
@@ -39,6 +40,7 @@ export type {
   GeocodingOutcome,
   GeocodingFailureReason,
   ReverseGeocodingResult,
+  ReverseGeocodingOutcome,
 } from '@/lib/geocoding/geocoding-types';
 
 // =============================================================================
@@ -178,13 +180,19 @@ export async function geocodeAddress(
 }
 
 /**
- * Reverse geocode coordinates to a structured address. No caching — drag
- * positions are unique per gesture.
+ * Reverse geocode coordinates to a structured address — **three** outcomes, the
+ * same contract as {@link geocodeAddressDetailed}. No caching — drag positions
+ * are unique per gesture.
+ *
+ * 🔴 ADR-332 D27 Βήμα Β: this replaced `reverseGeocode`, whose `null` meant both
+ * «nothing is written here» (404) and «I could not ask» (timeout · 429 · 500).
+ * Its only caller (`handleDragEnd`) then dropped the gesture in **both** cases,
+ * leaving a moved pin on screen that would never be saved.
  */
-export async function reverseGeocode(
+export async function reverseGeocodeDetailed(
   lat: number,
   lng: number,
-): Promise<ReverseGeocodingResult | null> {
+): Promise<ReverseGeocodingOutcome> {
   try {
     const params = new URLSearchParams({
       lat: lat.toString(),
@@ -195,19 +203,22 @@ export async function reverseGeocode(
       `${GEOGRAPHIC_CONFIG.GEOCODING.API_ENDPOINT}/reverse?${params.toString()}`,
     );
 
+    // 404 is the provider answering «no address at this point» — a real answer.
     if (response.status === 404) {
-      return null;
+      return { kind: 'not-found' };
     }
 
     if (!response.ok) {
-      logger.warn('Reverse geocoding API error', { data: { status: response.status } });
-      return null;
+      const reason = classifyStatus(response.status);
+      logger.warn('Reverse geocoding API error', { data: { status: response.status, reason } });
+      return { kind: 'error', reason };
     }
 
     const data: ReverseGeocodingResult = await response.json();
-    return data;
+    return { kind: 'found', result: data };
   } catch (error) {
-    logger.error('Reverse geocoding API call failed', { error: String(error) });
-    return null;
+    const reason = classifyThrown(error);
+    logger.error('Reverse geocoding API call failed', { error: String(error), data: { reason } });
+    return { kind: 'error', reason };
   }
 }

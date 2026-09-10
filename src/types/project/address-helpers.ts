@@ -25,6 +25,7 @@ import type {
 import type { StructuredGeocodingQuery } from '@/lib/geocoding/geocoding-service';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { isGreekAddressCountry } from '@/utils/address/country-codes';
+import { stripGreekAdminPrefix } from '@/utils/address/place-name';
 import {
   formatGreekPostalCode,
   isValidGreekPostalCode,
@@ -586,15 +587,9 @@ export function hasCoordinates(address: ProjectAddress): boolean {
  */
 export function stripAdminPrefix(name: string | undefined): string | undefined {
   if (!name) return undefined;
-  return name
-    .replace(/^ΔΗΜΟΣ\s+/i, '')
-    .replace(/^ΔΗΜΟΤΙΚΗ\s+ΕΝΟΤΗΤΑ\s+/i, '')
-    .replace(/^ΔΗΜΟΤΙΚΗ\s+ΚΟΙΝΟΤΗΤΑ\s+/i, '')
-    .replace(/^ΤΟΠΙΚΗ\s+ΚΟΙΝΟΤΗΤΑ\s+/i, '')
-    .replace(/^ΠΕΡΙΦΕΡΕΙΑΚΗ\s+ΕΝΟΤΗΤΑ\s+/i, '')
-    .replace(/^ΠΕΡΙΦΕΡΕΙΑ\s+/i, '')
-    .replace(/^ΑΠΟΚΕΝΤΡΩΜΕΝΗ\s+ΔΙΟΙΚΗΣΗ\s+/i, '')
-    .trim() || undefined;
+  // ADR-332 D27 Βήμα Β (Β7): ο ΕΝΑΣ κανόνας, χωρίς τόνους. Η παλιά `/i` ταίριαζε το «ΔΗΜΟΣ»
+  // αλλά όχι το «Δήμος» με τόνο — και το δίδυμο του reverse route έκανε το αντίθετο.
+  return stripGreekAdminPrefix(name) || undefined;
 }
 
 export function formatAddressForGeocoding(address: ProjectAddress): StructuredGeocodingQuery {

@@ -21,6 +21,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { findNearestHouseNumber } from '@/lib/geocoding/overpass-housenumber';
 import { toCanonicalGreekPostalCode } from '@/utils/address/postal-code';
+import { cleanPlaceName } from '@/utils/address/place-name';
 
 const logger = createModuleLogger('reverse-geocoding-api');
 
@@ -127,27 +128,6 @@ async function fetchNominatimReverse(url: string): Promise<NominatimReverseResul
   }
 }
 
-/**
- * Strip Greek administrative prefixes from Nominatim results.
- * E.g. "Δημοτική Ενότητα Ελευθερίου Κορδελιού" → "Ελευθερίου Κορδελιού"
- * Server-side duplicate of address-helpers.stripAdminPrefix (cannot import client code).
- */
-function cleanNominatimName(name: string): string {
-  return name
-    // Strip admin prefixes
-    .replace(/^Δημοτική\s+Ενότητα\s+/i, '')
-    .replace(/^Δημοτική\s+Κοινότητα\s+/i, '')
-    .replace(/^Τοπική\s+Κοινότητα\s+/i, '')
-    .replace(/^Δήμος\s+/i, '')
-    .replace(/^Περιφερειακή\s+Ενότητα\s+/i, '')
-    .replace(/^Περιφέρεια\s+/i, '')
-    .replace(/^Αποκεντρωμένη\s+Διοίκηση\s+/i, '')
-    // Strip hyphens (Nominatim returns "Ελευθέριο-Κορδελιό" but hierarchy has "Ελευθέριο Κορδελιό")
-    .replace(/-/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
 function formatReverseResult(result: NominatimReverseResult): ReverseGeocodingApiResponse {
   const addr = result.address;
 
@@ -160,8 +140,10 @@ function formatReverseResult(result: NominatimReverseResult): ReverseGeocodingAp
   return {
     street: addr.road ?? '',
     number: addr.house_number ?? '',
-    city: cleanNominatimName(rawCity),
-    neighborhood: cleanNominatimName(rawNeighborhood),
+    // ADR-332 D27 Βήμα Β (Β7): ο ΕΝΑΣ κανόνας ονομάτων τόπου (`utils/address/place-name`).
+    // Εδώ ζούσε δηλωμένο «server-side duplicate» του `stripAdminPrefix` — και είχε αποκλίνει.
+    city: cleanPlaceName(rawCity),
+    neighborhood: cleanPlaceName(rawNeighborhood),
     // Κανονική μορφή στο σύνορο του παρόχου — το OSM Ελλάδας γράφει «546 24»
     // και η τιμή κατέληγε αυτούσια στη φόρμα και στη βάση (ADR-332 D16).
     postalCode: toCanonicalGreekPostalCode(addr.postcode),

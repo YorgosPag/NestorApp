@@ -44,5 +44,11 @@ export function formatContactAddressLine(parts: ContactAddressLineParts): string
     ? formatGreekPostalCode(parts.postalCode)
     : parts.postalCode;
 
-  return [parts.street, parts.number, parts.city, postalCode].filter(Boolean).join(', ');
+  // ADR-332 D27 Βήμα Β (Β7): τα κενά στα άκρα κόβονται ΕΔΩ — αποθηκευμένη οδός «Σαμοθράκης »
+  // έβγαζε «Σαμοθράκης , 16». Η γραφή καθαρίζεται πλέον και στο σύνορο εγγραφής, αλλά τα ήδη
+  // αποθηκευμένα δεδομένα διαβάζονται σωστά από τώρα, χωρίς μετάπτωση.
+  return [parts.street, parts.number, parts.city, postalCode]
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join(', ');
 }
