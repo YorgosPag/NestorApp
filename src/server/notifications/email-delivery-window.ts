@@ -70,6 +70,11 @@
  */
 
 import {
+  categorySettingEnabled,
+  emailModeFor,
+  type NotificationSettingRef,
+} from '@/services/user-notification-settings/notification-preference-policy';
+import {
   DEFAULT_NOTIFICATION_TIMEZONE,
   type UserNotificationSettings,
 } from '@/services/user-notification-settings/user-notification-settings.types';
@@ -129,8 +134,19 @@ export const WEEKLY_WINDOW_WEEKDAY = 1;
 /** Γιατί αναβλήθηκε. Ονομασμένο, ποτέ boolean. */
 export type DeferReason = 'quiet-hours' | 'daily-window' | 'weekly-window';
 
-/** Γιατί δεν φεύγει καθόλου. Ονομασμένο, ποτέ boolean. */
-export type SuppressReason = 'global-disabled' | 'email-disabled' | 'frequency-disabled';
+/**
+ * Γιατί δεν φεύγει καθόλου. Ονομασμένο, ποτέ boolean.
+ *
+ * ADR-849: `category-disabled` = ο άνθρωπος έκλεισε ολόκληρο τον τύπο (κουδούνι **και**
+ * email)· `type-email-disabled` = κράτησε τον τύπο, αλλά **όχι** με email. Δύο λόγοι, όχι
+ * ένας: το «ποιος από τους δύο διακόπτες» είναι η απάντηση στο «γιατί δεν μου ήρθε;».
+ */
+export type SuppressReason =
+  | 'global-disabled'
+  | 'email-disabled'
+  | 'frequency-disabled'
+  | 'category-disabled'
+  | 'type-email-disabled';
 
 /**
  * Η απόφαση.
@@ -325,6 +341,40 @@ export interface EmailDeliveryContext {
    * που θα αυτοχαρακτηριζόταν «επείγον» θα ακύρωνε την πολιτική για όλους.
    */
   readonly isMandatory: boolean;
+  /**
+   * 📧 ADR-849 — **ο διακόπτης του τύπου** (κατηγορία + κλειδί του `EVENT_CATEGORY_MAP`).
+   *
+   * ⚠️ **Προαιρετικό, και μένει προαιρετικό**: τα έγγραφα της ουράς που γράφτηκαν πριν το
+   * ADR-849 δεν ξέρουν τον τύπο τους. Απουσία ⇒ μόνο οι **καθολικοί** έλεγχοι — δηλαδή
+   * ακριβώς η συμπεριφορά πριν, ποτέ μαντεψιά.
+   */
+  readonly setting?: NotificationSettingRef;
+}
+
+/**
+ * **Επιτρέπεται καθόλου αυτό το email;** — `null` = ναι, αλλιώς **ο λόγος** που όχι.
+ *
+ * 🔑 ADR-849 — **ΜΙΑ απάντηση, δύο στιγμές.** Τη ρωτά το σκέλος email όταν γράφει στην
+ * ουρά **και** η πύλη του αγωγού (`email-send-gate.ts`) λίγο πριν φύγει το μήνυμα: ένας
+ * άνθρωπος που πατά «Διακοπή» στις 15:00 **δεν** παίρνει τη σύνοψη των 20:00. Αν οι δύο
+ * στιγμές ρωτούσαν διαφορετικές συναρτήσεις, θα διαφωνούσαν την πρώτη φορά που θα
+ * προστεθεί διακόπτης.
+ *
+ * Η σειρά είναι συμβόλαιο: **υποχρεωτικό ⇒ ποτέ σίγαση** → καθολικός → email → συχνότητα
+ * → κύριος διακόπτης του τύπου → email του τύπου.
+ */
+export function emailSuppressionReason(
+  settings: UserNotificationSettings,
+  context: Pick<EmailDeliveryContext, 'isMandatory' | 'setting'>,
+): SuppressReason | null {
+  if (context.isMandatory) return null;
+  if (!settings.globalEnabled) return 'global-disabled';
+  if (!settings.emailEnabled) return 'email-disabled';
+  if (settings.emailFrequency === 'disabled') return 'frequency-disabled';
+  if (!context.setting) return null;
+  if (!categorySettingEnabled(settings, context.setting)) return 'category-disabled';
+  if (emailModeFor(settings, context.setting) === 'off') return 'type-email-disabled';
+  return null;
 }
 
 /**
@@ -334,7 +384,8 @@ export interface EmailDeliveryContext {
  *
  * 1. **Υποχρεωτικό** ⇒ τώρα. Πριν από κάθε άλλον έλεγχο, γιατί ένα κρίσιμο
  *    μήνυμα δεν επιτρέπεται να σιωπήσει από ρύθμιση άνεσης.
- * 2. **Καθολικός / καναλιού διακόπτης** ⇒ σιωπή. Είναι **απόφαση ανθρώπου**.
+ * 2. **Διακόπτες ανθρώπου** ⇒ σιωπή ({@link emailSuppressionReason}): καθολικός, καναλιού,
+ *    συχνότητα `disabled` και —ADR-849— ο τύπος ή το email του τύπου.
  * 3. **Συχνότητα** ⇒ παράθυρο (ή τώρα, για `realtime`).
  * 4. **Ώρες ησυχίας** ⇒ **μετά** τη συχνότητα, γιατί εφαρμόζεται στη
  *    **στιγμή παράδοσης**, όχι στη στιγμή γέννησης. Ένα `daily` που θα έφτανε
@@ -349,14 +400,9 @@ export function decideEmailDelivery(
     return { kind: 'send-now' };
   }
 
-  if (!settings.globalEnabled) {
-    return { kind: 'suppressed', reason: 'global-disabled' };
-  }
-  if (!settings.emailEnabled) {
-    return { kind: 'suppressed', reason: 'email-disabled' };
-  }
-  if (settings.emailFrequency === 'disabled') {
-    return { kind: 'suppressed', reason: 'frequency-disabled' };
+  const suppressed = emailSuppressionReason(settings, context);
+  if (suppressed !== null) {
+    return { kind: 'suppressed', reason: suppressed };
   }
 
   // 🕐 §8.28 — **η ζώνη ΤΟΥ ΧΡΗΣΤΗ**, λυμένη μία φορά και περασμένη παντού. Άκυρη ή

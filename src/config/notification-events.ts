@@ -124,6 +124,16 @@ export const NOTIFICATION_EVENT_TYPES = {
 
 export type NotificationEventType = typeof NOTIFICATION_EVENT_TYPES[keyof typeof NOTIFICATION_EVENT_TYPES];
 
+/**
+ * **Είναι αυτή η τιμή γνωστός τύπος ειδοποίησης;** — ADR-849.
+ *
+ * Για δεδομένα που δεν ελέγξαμε: το `metadata.eventType` ενός εγγράφου της ουράς email
+ * γράφτηκε ίσως από παλαιότερη έκδοση του κώδικα, με τύπο που ίσως δεν υπάρχει πια.
+ */
+export function isNotificationEventType(value: unknown): value is NotificationEventType {
+  return typeof value === 'string' && Object.prototype.hasOwnProperty.call(EVENT_CATEGORY_MAP, value);
+}
+
 // ============================================================================
 // EVENT MAPPING - CATEGORY/SETTING LOOKUP
 // ============================================================================
