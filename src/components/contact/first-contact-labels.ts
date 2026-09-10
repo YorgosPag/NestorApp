@@ -25,6 +25,7 @@ import {
   FIRST_CONTACT_FORM_BLOCKERS,
   type FirstContactFormBlocker,
 } from '@/lib/contact/first-contact-form-values';
+import { MY_FIRST_CONTACTS_ROUTE } from '@/lib/contact/first-contact-routes';
 
 export { FIRST_CONTACT_NS } from './first-contact-namespace';
 
@@ -106,15 +107,17 @@ export interface RejectionRemedy {
   readonly labelKey: string;
 }
 
-/** Ο **ΕΝΑΣ** τόπος όπου γράφεται η διεύθυνση των επαφών του ιδιώτη. */
-export const MY_CONTACTS_ROUTE = '/contacts';
-
+/**
+ * ⚠️ **Η διεύθυνση ΔΕΝ γράφεται εδώ** — ζει στο `lib/contact/first-contact-routes.ts`
+ * (ADR-843 §10.19). Ζούσε ως `MY_CONTACTS_ROUTE = '/contacts'` σε αυτό το αρχείο
+ * **ετικετών**, και η λάθος θέση έκρυψε τη λάθος τιμή: το `/contacts` ανήκει στο γραφείο.
+ */
 export const REJECTION_REMEDY: Record<FirstContactRejection, RejectionRemedy | null> = {
   'target-absent': null,
   'target-not-live': null,
   'contact-own-target': null,
   'capacity-full': {
-    href: MY_CONTACTS_ROUTE,
+    href: MY_FIRST_CONTACTS_ROUTE,
     labelKey: 'property-market:contact.first.capacity-full-action',
   },
   'demand-absent': null,
@@ -253,6 +256,18 @@ export const INBOX_KEYS = {
   withdrawnNotice: 'property-market:contact.inbox.withdrawnNotice',
   targetListing: 'property-market:contact.inbox.targetListing',
   targetProfessional: 'property-market:contact.inbox.targetProfessional',
+} as const;
+
+/**
+ * **Οι δύο όψεις ως ζεύγος καρτελών** (ADR-843 §10.19 — πρότυπο LinkedIn Invitation Manager).
+ *
+ * 🔑 **ΚΑΜΙΑ ΝΕΑ ΕΤΙΚΕΤΑ ΚΑΡΤΕΛΑΣ**: οι καρτέλες λένε ό,τι λένε ήδη οι τίτλοι
+ * ({@link MINE_KEYS}`.title` · {@link INBOX_KEYS}`.title`). Δεύτερη διατύπωση της ίδιας
+ * όψης θα απέκλινε την πρώτη φορά που κάποιος διόρθωνε τη μία. Νέο είναι **μόνο** το
+ * όνομα της πλοήγησης, για τον αναγνώστη οθόνης.
+ */
+export const VIEWS_KEYS = {
+  label: 'property-market:contact.views.label',
 } as const;
 
 /**

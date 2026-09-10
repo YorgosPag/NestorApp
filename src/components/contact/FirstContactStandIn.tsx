@@ -42,9 +42,10 @@ import React from 'react';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Link } from '@/lib/workspace/navigation';
+import { MY_FIRST_CONTACTS_ROUTE } from '@/lib/contact/first-contact-routes';
 import type { ContactAdmissionAnswer } from '@/services/contact/first-contact.client';
 
-import { ACT_KEYS, FIRST_CONTACT_NS, MY_CONTACTS_ROUTE } from './first-contact-labels';
+import { ACT_KEYS, FIRST_CONTACT_NS } from './first-contact-labels';
 import { RefusedBody, type Translator } from './FirstContactOutcomeNotice';
 
 /**
@@ -142,7 +143,7 @@ function AlreadySentBody({ t }: { readonly t: Translator }): React.JSX.Element {
       <p className="m-0 font-medium">{t(ACT_KEYS.alreadySentTitle)}</p>
       <p className="m-0 text-muted-foreground">{t(ACT_KEYS.alreadySentLead)}</p>
       <Link
-        href={MY_CONTACTS_ROUTE}
+        href={MY_FIRST_CONTACTS_ROUTE}
         className="font-medium text-foreground underline underline-offset-4"
       >
         {t(ACT_KEYS.seeMine)}

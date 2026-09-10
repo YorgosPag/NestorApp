@@ -41,6 +41,7 @@ import {
 import type { FirstContactForSeeker } from '@/types/first-contact';
 
 import { FIRST_CONTACT_NS, MINE_KEYS } from './first-contact-labels';
+import { FirstContactViewsFrame } from './FirstContactViews';
 import { MyContactRow } from './MyContactRow';
 import { useIdentityGatedLoad } from './use-identity-gated-load';
 
@@ -109,32 +110,31 @@ export function MyContactsContent(): React.ReactElement {
 
   if (load.kind === 'loading') {
     return (
-      <main className="flex w-full flex-col gap-6">
+      <FirstContactViewsFrame current="mine">
         <PageLoadingState message={t(MINE_KEYS.loading)} layout="contained" />
-      </main>
+      </FirstContactViewsFrame>
     );
   }
 
   if (load.kind === 'failed') {
     return (
-      <main className="flex w-full flex-col gap-6">
+      <FirstContactViewsFrame current="mine">
         <PageErrorState
           title={t(MINE_KEYS.failed)}
           onRetry={reload}
           retryLabel={t(MINE_KEYS.retry)}
           layout="contained"
         />
-      </main>
+      </FirstContactViewsFrame>
     );
   }
 
   const { contacts, capacity } = load.view;
 
   return (
-    // ΚΑΝΕΝΑ `p-*`/`max-w-*`/`PageContainer` εδώ (ADR-797 · CHECK 3.63): σελίδα του
-    // `(me)` — το κενό, το μέτρο και το ύψος τα κατέχει το `ShellSurface` του
-    // `PrivateSpaceShell`. Ίδια σύμβαση με `MyDemandsContent`/`MyOwnerPropertiesContent`.
-    <main className="flex w-full flex-col gap-6">
+    // Το πλαίσιο της σελίδας (και η σύμβαση ADR-797 · CHECK 3.63) ζει στο
+    // `FirstContactViewsFrame` — μαζί με τις καρτέλες των δύο όψεων (ADR-843 §10.19).
+    <FirstContactViewsFrame current="mine">
       <MyContactsHeader capacity={capacity} />
 
       {contacts.length === 0 ? (
@@ -171,6 +171,6 @@ export function MyContactsContent(): React.ReactElement {
         variant="destructive"
         loading={withdraw.busyId !== null}
       />
-    </main>
+    </FirstContactViewsFrame>
   );
 }

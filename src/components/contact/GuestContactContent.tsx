@@ -51,9 +51,10 @@ import { Link } from '@/lib/workspace/navigation';
 import { AUTH_ROUTES } from '@/lib/routes/authRoutes';
 import { firstContactTargetHref } from '@/lib/contact/first-contact-target-href';
 import { searchLandingHref } from '@/lib/listings/listing-routes';
+import { MY_FIRST_CONTACTS_ROUTE } from '@/lib/contact/first-contact-routes';
 
 import type { GuestContactLinkView, GuestContactSetback } from './guest-contact-view';
-import { ACT_KEYS, FIRST_CONTACT_NS, MY_CONTACTS_ROUTE } from './first-contact-labels';
+import { ACT_KEYS, FIRST_CONTACT_NS } from './first-contact-labels';
 import { GUEST_KEYS, INVITATION_REFUSAL_KEYS, LINK_KEYS } from './first-contact-guest-labels';
 import { InvalidBody, RefusedBody } from './FirstContactOutcomeNotice';
 
@@ -170,7 +171,7 @@ function SignInStatus({ phase }: { readonly phase: SignInPhase }): React.JSX.Ele
   if (phase === 'signed-in') {
     return (
       <Link
-        href={MY_CONTACTS_ROUTE}
+        href={MY_FIRST_CONTACTS_ROUTE}
         className="font-medium text-foreground underline underline-offset-4"
       >
         {t(ACT_KEYS.seeMine)}

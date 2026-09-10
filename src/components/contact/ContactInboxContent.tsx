@@ -27,6 +27,7 @@ import {
 
 import { ContactInboxRow } from './ContactInboxRow';
 import { FIRST_CONTACT_NS, INBOX_KEYS } from './first-contact-labels';
+import { FirstContactViewsFrame } from './FirstContactViews';
 import { useIdentityGatedLoad } from './use-identity-gated-load';
 
 export function ContactInboxContent(): React.ReactElement {
@@ -35,32 +36,31 @@ export function ContactInboxContent(): React.ReactElement {
 
   if (load.kind === 'loading') {
     return (
-      <main className="flex w-full flex-col gap-6">
+      <FirstContactViewsFrame current="inbox">
         <PageLoadingState message={t(INBOX_KEYS.loading)} layout="contained" />
-      </main>
+      </FirstContactViewsFrame>
     );
   }
 
   if (load.kind === 'failed') {
     return (
-      <main className="flex w-full flex-col gap-6">
+      <FirstContactViewsFrame current="inbox">
         <PageErrorState
           title={t(INBOX_KEYS.failed)}
           onRetry={reload}
           retryLabel={t(INBOX_KEYS.retry)}
           layout="contained"
         />
-      </main>
+      </FirstContactViewsFrame>
     );
   }
 
   const { entries } = load;
 
   return (
-    // ΚΑΝΕΝΑ `p-*`/`max-w-*`/`PageContainer` εδώ (ADR-797 · CHECK 3.63) — ίδια σύμβαση
-    // με `MyContactsContent`/`MyDemandsContent`: το κενό/μέτρο/ύψος τα κατέχει το
-    // `ShellSurface` του `PrivateSpaceShell` (`(me)/layout.tsx`).
-    <main className="flex w-full flex-col gap-6">
+    // Το πλαίσιο της σελίδας (και η σύμβαση ADR-797 · CHECK 3.63) ζει στο
+    // `FirstContactViewsFrame` — μαζί με τις καρτέλες των δύο όψεων (ADR-843 §10.19).
+    <FirstContactViewsFrame current="inbox">
       <header className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold text-foreground">{t(INBOX_KEYS.title)}</h1>
         <p className="text-sm text-muted-foreground">{t(INBOX_KEYS.lead)}</p>
@@ -75,6 +75,6 @@ export function ContactInboxContent(): React.ReactElement {
           ))}
         </ul>
       )}
-    </main>
+    </FirstContactViewsFrame>
   );
 }

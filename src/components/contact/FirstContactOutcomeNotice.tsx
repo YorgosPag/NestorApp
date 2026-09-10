@@ -26,11 +26,11 @@ import {
   ACT_KEYS,
   FIRST_CONTACT_NS,
   INVARIANT_KEYS,
-  MY_CONTACTS_ROUTE,
   REJECTION_KEYS,
   REJECTION_REMEDY,
 } from './first-contact-labels';
 import { OPEN_CONTACT_CAPACITY } from '@/lib/contact/first-contact-limits';
+import { MY_FIRST_CONTACTS_ROUTE } from '@/lib/contact/first-contact-routes';
 
 export type Translator = ReturnType<typeof useTranslation>['t'];
 
@@ -112,7 +112,7 @@ function OpenedBody({
         {t(created ? ACT_KEYS.openedLead : ACT_KEYS.alreadyOpenLead)}
       </p>
       <Link
-        href={MY_CONTACTS_ROUTE}
+        href={MY_FIRST_CONTACTS_ROUTE}
         className="font-medium text-foreground underline underline-offset-4"
       >
         {t(ACT_KEYS.seeMine)}
