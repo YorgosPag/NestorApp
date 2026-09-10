@@ -17,16 +17,16 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { flushSync } from 'react-dom';
 import { LngLatBounds } from '@/lib/maps/maplibre';
 
-import type { ProjectAddress, PartialProjectAddress } from '@/types/project/addresses';
+import type { ProjectAddress } from '@/types/project/addresses';
 import {
   formatAddressForGeocoding,
   getGeocodableAddresses,
 } from '@/types/project/address-helpers';
 import {
   geocodeAddress,
-  reverseGeocode,
   type GeocodingServiceResult,
 } from '@/lib/geocoding/geocoding-service';
+import { resolvePinDrop, type PinDrop } from '@/components/shared/addresses/pin-drop';
 import type { MapInstance } from '@/subapps/geo-canvas/hooks/map/useMapInteractions';
 import { cameraFraming, type CameraIntent } from '@/lib/geo/camera-motion';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -57,7 +57,8 @@ interface UseAddressMapGeocodingParams {
   mapRef: React.RefObject<MapInstance | null>;
   mapReady: boolean;
   onGeocodingComplete?: (results: Map<string, GeocodingServiceResult>) => void;
-  onAddressDragUpdate?: (addressData: Partial<PartialProjectAddress>, addressIndex: number) => void;
+  /** ADR-332 D27 Βήμα Β — **πάντα** με σημείο αφής· το κείμενο είναι μία από τρεις εκβάσεις. */
+  onAddressDragUpdate?: (drop: PinDrop, addressIndex: number) => void;
   /** Increment to clear all drag positions and re-fit bounds (e.g. after undo/redo). */
   dragResetKey?: number;
 }
@@ -455,14 +456,12 @@ export function useAddressMapGeocoding({
     });
 
     try {
-      const result = await reverseGeocode(lat, lng);
-      if (result && onAddressDragUpdate) {
-        onAddressDragUpdate(reverseResultToAddress(result, { lng, lat }), addressIndex);
-      } else if (!result) {
-        logger.warn('Reverse geocoding returned no result', { data: { lat, lng } });
-      }
+      // 🔴 ADR-332 D27 Βήμα Β (Β6): ο γονιός μαθαίνει ΠΑΝΤΑ το σημείο — με ή χωρίς κείμενο.
+      const drop = await resolvePinDrop({ lat, lng });
+      if (drop.text.kind !== 'resolved') logger.warn('Position-only drop', { data: { lat, lng, outcome: drop.text.kind } });
+      onAddressDragUpdate?.(drop, addressIndex);
     } catch (error) {
-      logger.error('Reverse geocoding failed', { error: String(error) });
+      logger.error('Drag update handler failed', { error: String(error) });
     } finally {
       setIsReverseGeocoding(false);
     }

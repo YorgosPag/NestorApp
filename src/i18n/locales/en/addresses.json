@@ -284,7 +284,12 @@
       "positionOnly": "Position only — keep the address",
       "cancel": "Cancel",
       "newAddress": "New position",
-      "currentAddress": "Current address"
+      "currentAddress": "Current address",
+      "noText": {
+        "notFound": "No address was found at this point.",
+        "unavailable": "The address service did not respond.",
+        "keepPosition": "You can keep the position — the address stays as it is."
+      }
     },
     "fields": {
       "county": "County / Regional Unit"
@@ -312,7 +317,13 @@
       "bulkCorrection": "Bulk correction",
       "suggestionAccepted": "Suggestion accepted",
       "dragApplied": "Map position applied",
+      "dragPosition": "Pin moved (address unchanged)",
       "formCleared": "Form cleared"
+    },
+    "positionDrift": {
+      "message": "The pin is {distance} away from where the new address is.",
+      "relocate": "Move to the address position",
+      "keep": "Keep the pin"
     }
   },
   "publicMap": {
