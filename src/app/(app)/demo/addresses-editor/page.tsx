@@ -274,7 +274,7 @@ function DragConfirmDemo() {
       <AddressDragConfirmDialog
         open={open}
         currentAddress={MOCK_USER_INPUT}
-        newAddress={MOCK_RESOLVED}
+        proposal={{ kind: 'resolved', address: MOCK_RESOLVED }}
         onConfirm={() => { setResult('confirmed'); setOpen(false); }}
         onCancel={() => { setResult('cancelled'); setOpen(false); }}
       />
