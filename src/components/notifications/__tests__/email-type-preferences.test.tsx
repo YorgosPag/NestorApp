@@ -15,8 +15,9 @@ jest.mock('react-i18next', () => ({
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 
-import { EmailTypePreferences, emailTypeRow } from '@/components/notifications/EmailTypePreferences';
+import { EmailTypePreferences } from '@/components/notifications/EmailTypePreferences';
 import { NOTIFICATION_PREFERENCE_GROUPS } from '@/config/notification-preference-rows';
+import { preferenceRowOf } from '@/services/user-notification-settings/notification-preference-table';
 import authEl from '@/i18n/locales/el/auth.json';
 import authEn from '@/i18n/locales/en/auth.json';
 import commonAccountEl from '@/i18n/locales/el/common-account.json';
@@ -24,6 +25,8 @@ import commonAccountEn from '@/i18n/locales/en/common-account.json';
 import { getDefaultNotificationSettings } from '@/services/user-notification-settings/user-notification-settings.types';
 
 const MATCH = 'properties.demandListingMatch';
+/** ADR-849 Α3: το λεξιλόγιο των προτιμήσεων είναι κοινό με την οθόνη ρυθμίσεων. */
+const PREFS = 'common-account:account.notificationSettings.preferences';
 
 /** `'ns:a.b.c'` → η τιμή του `a.b.c` στο bundle — ή `undefined`. */
 function resolve(bundle: unknown, fullKey: string): unknown {
@@ -58,9 +61,13 @@ describe('Μ — το μητρώο γραμμών είναι ΠΛΗΡΕΣ', () =
   });
 
   it('Μ3 — τα νέα κλειδιά της σελίδας υπάρχουν και στις δύο γλώσσες', () => {
-    for (const key of ['title', 'focusTitle', 'allTitle', 'always', 'emailsOffNote']) {
+    for (const key of ['title', 'focusTitle', 'allTitle']) {
       expect(typeof resolve(authEl, `auth:emailPreferences.types.${key}`)).toBe('string');
       expect(typeof resolve(authEn, `auth:emailPreferences.types.${key}`)).toBe('string');
+    }
+    for (const key of ['always', 'emailsOffNote', 'mandatoryNote']) {
+      expect(typeof resolve(commonAccountEl, `${PREFS}.${key}`)).toBe('string');
+      expect(typeof resolve(commonAccountEn, `${PREFS}.${key}`)).toBe('string');
     }
   });
 });
@@ -95,7 +102,7 @@ describe('Δ — οι διακόπτες', () => {
   it('Δ3 🔴 — υποχρεωτικοί τύποι: «Πάντα», ΚΑΝΕΝΑΣ διακόπτης', () => {
     renderPrefs();
     expect(document.getElementById('all-security.newDeviceLogin')).toBeNull();
-    expect(screen.getAllByText('auth:emailPreferences.types.always')).toHaveLength(4);
+    expect(screen.getAllByText(`${PREFS}.always`)).toHaveLength(4);
   });
 
   it('Δ4 — email καθολικά κλειστά: διακόπτες απενεργοποιημένοι, τιμές ορατές, εξήγηση', () => {
@@ -103,7 +110,7 @@ describe('Δ — οι διακόπτες', () => {
     const toggle = switchById(`all-${MATCH}`);
     expect(toggle.hasAttribute('disabled')).toBe(true);
     expect(toggle.getAttribute('aria-checked')).toBe('false');
-    expect(screen.getByText('auth:emailPreferences.types.emailsOffNote')).toBeTruthy();
+    expect(screen.getByText(`${PREFS}.emailsOffNote`)).toBeTruthy();
   });
 
   it('Δ5 — χωρίς εμβέλεια: καμία ενότητα «αυτού του μηνύματος»', () => {
@@ -112,9 +119,9 @@ describe('Δ — οι διακόπτες', () => {
   });
 
   it('Δ6 — η γραμμή ενός διακόπτη: γνωστός ⇒ η ετικέτα του, άγνωστος ⇒ null', () => {
-    expect(emailTypeRow(MATCH)?.labelKey).toBe(
+    expect(preferenceRowOf(MATCH)?.labelKey).toBe(
       'common-account:account.notificationSettings.categories.properties.demandListingMatch',
     );
-    expect(emailTypeRow('properties.ghost')).toBeNull();
+    expect(preferenceRowOf('properties.ghost')).toBeNull();
   });
 });

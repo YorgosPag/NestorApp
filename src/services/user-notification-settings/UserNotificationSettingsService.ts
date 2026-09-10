@@ -14,7 +14,7 @@
  * - Real-time subscription support
  *
  * @module services/user-notification-settings/UserNotificationSettingsService
- * @enterprise ADR-025 - Notification Settings Centralization
+ * @see ADR-849 — το μοντέλο προτιμήσεων (το «ADR-025» που έγραφε εδώ ήταν φάντασμα)
  */
 
 import {
@@ -38,6 +38,13 @@ import {
   transformSettingsFromFirestore,
   transformSettingsToFirestore,
 } from './user-notification-settings.mapper';
+import type { EmailTypeMode } from './user-notification-settings.email-types';
+import {
+  isMandatorySetting,
+  parseSettingPath,
+  settingPathOf,
+  type NotificationSettingRef,
+} from './notification-preference-policy';
 import { COLLECTIONS } from '@/config/firestore-collections';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync (event bus)
 import { RealtimeService } from '@/services/realtime';
@@ -52,6 +59,20 @@ const logger = createModuleLogger('UserNotificationSettingsService');
 // ============================================================================
 
 const COLLECTION_NAME = COLLECTIONS.USER_NOTIFICATION_SETTINGS;
+
+/**
+ * **Ο διακόπτης που επιτρέπεται να γράψει ο πελάτης** — ADR-849 Α3.
+ *
+ * Άγνωστος (δεν υπάρχει στο μοντέλο) ή **υποχρεωτικός** ⇒ ρίχνει. Καμία επιφάνεια δεν προσφέρει
+ * «σταμάτα» για υποχρεωτικό τύπο (θα ήταν υπόσχεση που δεν τηρείται — η πολιτική τον στέλνει
+ * πάντα), άρα μια τέτοια κλήση είναι σφάλμα προγραμματιστή, όχι απόφαση ανθρώπου.
+ */
+function writableSettingRef(path: string): NotificationSettingRef {
+  const ref = parseSettingPath(path);
+  if (ref === null) throw new Error(`Unknown notification setting: ${path}`);
+  if (isMandatorySetting(ref)) throw new Error(`Mandatory notification setting is not writable: ${path}`);
+  return ref;
+}
 
 // ============================================================================
 // SERVICE CLASS
@@ -210,9 +231,11 @@ class UserNotificationSettingsService {
       throw new Error('UserNotificationSettingsService not initialized');
     }
 
+    const ref = writableSettingRef(`${update.category}.${update.setting}`);
+
     try {
       const docRef = doc(this.db, COLLECTION_NAME, userId);
-      const fieldPath = `categories.${update.category}.${update.setting}`;
+      const fieldPath = `categories.${settingPathOf(ref)}`;
 
       await updateDoc(docRef, {
         [fieldPath]: update.enabled,
@@ -222,6 +245,36 @@ class UserNotificationSettingsService {
       logger.info('Toggled category setting', { category: update.category, setting: update.setting, enabled: update.enabled });
     } catch (error) {
       logger.error('Error toggling setting', { error });
+      throw error;
+    }
+  }
+
+  /**
+   * 📧 **Το email ΕΝΟΣ τύπου** — `emailCategories.<κατ>.<κλειδί>` (ADR-849 Α3).
+   *
+   * Γράφει **μόνο** το ένθετο πεδίο (dotted path), όπως το `toggleCategorySetting`: οι υπόλοιποι
+   * τύποι μένουν ανέγγιχτοι. Ίδια τιμή δύο φορές = ίδιο αποτέλεσμα. Ο συγγραφέας του διακομιστή
+   * (`server/notifications/email-subscription.ts`) γράφει το **ίδιο** πεδίο από τη σελίδα token.
+   */
+  public async setEmailTypeMode(
+    userId: string,
+    ref: NotificationSettingRef,
+    mode: EmailTypeMode
+  ): Promise<void> {
+    if (!this.db) {
+      throw new Error('UserNotificationSettingsService not initialized');
+    }
+
+    const path = settingPathOf(writableSettingRef(settingPathOf(ref)));
+
+    try {
+      await updateDoc(doc(this.db, COLLECTION_NAME, userId), {
+        [`emailCategories.${path}`]: mode,
+        updatedAt: nowTimestamp(),
+      });
+      logger.info('Set email type mode', { setting: path, mode });
+    } catch (error) {
+      logger.error('Error setting email type mode', { error });
       throw error;
     }
   }

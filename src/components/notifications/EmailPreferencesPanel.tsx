@@ -27,7 +27,8 @@
 import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { EmailTypePreferences, emailTypeRow } from '@/components/notifications/EmailTypePreferences';
+import { EmailTypePreferences } from '@/components/notifications/EmailTypePreferences';
+import { preferenceRowOf } from '@/services/user-notification-settings/notification-preference-table';
 import { Button } from '@/components/ui/button';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 // 🧩 ADR-744 §15 (Φ4) — PER-ROUTE SLICE ΤΗΣ `/email/preferences/[token]`. Ψυχρή είσοδος
@@ -183,7 +184,7 @@ function Actions(props: {
 function DoneMessage({ change }: { change: EmailSubscriptionChange }) {
   const { t } = useTranslation([NS, 'common-account']);
   if (change.kind !== 'type') return <>{t(DONE_KEYS[change.kind])}</>;
-  const row = emailTypeRow(change.settings[0] ?? '');
+  const row = preferenceRowOf(change.settings[0] ?? '');
   return <>{t(TYPE_DONE_KEYS[change.mode], { type: row ? t(row.labelKey) : '' })}</>;
 }
 
@@ -213,7 +214,7 @@ function Outcome(props: { phase: Phase; onUndo: (change: EmailSubscriptionChange
 }
 
 function ReadyPanel(props: { token: string; initial: EmailSubscriptionState; focus: readonly string[] }) {
-  const { t } = useTranslation([NS]);
+  const { t } = useTranslation([NS, 'common-account']);
   const [state, setState] = useState(props.initial);
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' });
   const { token } = props;
@@ -245,7 +246,7 @@ function ReadyPanel(props: { token: string; initial: EmailSubscriptionState; foc
         busy={busy}
         onToggle={(path, mode) => submit({ kind: 'type', settings: [path], mode })}
       />
-      <p className="text-xs text-muted-foreground">{t('auth:emailPreferences.mandatoryNote')}</p>
+      <p className="text-xs text-muted-foreground">{t('common-account:account.notificationSettings.preferences.mandatoryNote')}</p>
     </PanelShell>
   );
 }
