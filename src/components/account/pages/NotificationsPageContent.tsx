@@ -10,7 +10,7 @@
  *
  * @module components/account/pages/NotificationsPageContent
  * @enterprise ADR-024 - Account Hub Centralization
- * @enterprise ADR-025 - Notification Settings Centralization
+ * @see ADR-849 — το μοντέλο προτιμήσεων (το «ADR-025» που έγραφε εδώ ήταν φάντασμα)
  * @performance ADR-294 Batch 4 — lazy-loaded via LazyRoutes
  */
 

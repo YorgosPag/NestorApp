@@ -3,12 +3,13 @@
  * NOTIFICATION SETTINGS — CONFIG & TYPES
  * =============================================================================
  *
- * Extracted from NotificationSettings.tsx to comply with the 500-line limit.
- * Contains: props interface, category config interface, and CATEGORY_CONFIGS.
+ * Ό,τι ανήκει **μόνο** στην οθόνη ρυθμίσεων: εικονίδια κατηγοριών, ετικέτες συχνότητας,
+ * ids των ελέγχων παράδοσης.
  *
- * 🔗 **ADR-849 Α2 — οι γραμμές ΔΕΝ ζουν πια εδώ.** Το `CATEGORY_CONFIGS` **παράγεται** από
- * το κοινό μητρώο `config/notification-preference-rows.ts`, που διαβάζει και η σελίδα
- * προτιμήσεων email. Εδώ μένει μόνο ό,τι ανήκει στην οθόνη: τα εικονίδια.
+ * 🔗 **ADR-849 — οι γραμμές ΔΕΝ ζουν εδώ.** Ποιοι διακόπτες φαίνονται, με ποια ετικέτα και αν είναι
+ * υποχρεωτικοί το λέει ο κοινός πίνακας `services/user-notification-settings/notification-preference-table`,
+ * που διαβάζει και η σελίδα προτιμήσεων email. Το παλιό `CATEGORY_CONFIGS` (γραμμές + εικονίδια)
+ * διαγράφηκε στην Α3: ο μόνος αναγνώστης του ήταν η οθόνη, που διαβάζει πλέον τον πίνακα.
  *
  * @module components/account/notification-settings-config
  * @see ADR-849 — το μοντέλο προτιμήσεων (το «ADR-025» που έγραφε εδώ ήταν φάντασμα)
@@ -18,12 +19,10 @@ import React from 'react';
 import { Building2, CheckSquare, Package, Shield, Users } from 'lucide-react';
 
 import {
-  NOTIFICATION_PREFERENCE_GROUPS,
-  type NotificationPreferenceRow,
-} from '@/config/notification-preference-rows';
-import {
-  UserNotificationSettings,
-  NotificationCategory,
+  isEmailFrequency,
+  type EmailFrequency,
+  type NotificationCategory,
+  type UserNotificationSettings,
 } from '@/services/user-notification-settings';
 
 // ============================================================================
@@ -35,23 +34,15 @@ export interface NotificationSettingsProps {
   onSettingsChange?: (settings: UserNotificationSettings) => void;
 }
 
-export interface CategoryConfig {
-  readonly id: NotificationCategory;
-  readonly icon: React.ElementType;
-  readonly titleKey: string;
-  readonly descriptionKey: string;
-  readonly settings: readonly NotificationPreferenceRow[];
-}
-
 // ============================================================================
-// CATEGORY CONFIGURATION
+// CATEGORY ICONS
 // ============================================================================
 
 /**
  * Το εικονίδιο κάθε κατηγορίας. ⚠️ `Record`, όχι `Partial`: νέα κατηγορία στο μοντέλο
  * χωρίς εικονίδιο **δεν μεταγλωττίζεται** — αντί να εμφανιστεί κενή στην οθόνη.
  */
-const CATEGORY_ICONS: Readonly<Record<NotificationCategory, React.ElementType>> = {
+export const CATEGORY_ICONS: Readonly<Record<NotificationCategory, React.ElementType>> = {
   crm: Users,
   properties: Building2,
   tasks: CheckSquare,
@@ -59,10 +50,40 @@ const CATEGORY_ICONS: Readonly<Record<NotificationCategory, React.ElementType>> 
   security: Shield,
 };
 
-export const CATEGORY_CONFIGS: readonly CategoryConfig[] = NOTIFICATION_PREFERENCE_GROUPS.map((group) => ({
-  id: group.category,
-  icon: CATEGORY_ICONS[group.category],
-  titleKey: group.titleKey,
-  descriptionKey: group.descriptionKey,
-  settings: group.settings,
-}));
+// ============================================================================
+// EMAIL FREQUENCY — ΕΝΑΣ πίνακας ετικετών (ADR-849 Α3)
+// ============================================================================
+
+/**
+ * Η ετικέτα κάθε συχνότητας. Τη διαβάζουν ο επιλογέας του τμήματος παράδοσης **και** ο
+ * υπότιτλος της στήλης email της μήτρας («Και με email · Ημερήσια σύνοψη»).
+ *
+ * ⚠️ **Πλήρη κλειδιά με namespace σε πίνακα**: ο γεννήτορας των slices (ADR-744) λύνει το
+ * `t(FREQUENCY_LABEL_KEYS[f])`· ένα `t(key)` από τοπική μεταβλητή θα ήταν ανεπίλυτο.
+ */
+export const FREQUENCY_LABEL_KEYS: Readonly<Record<EmailFrequency, string>> = {
+  realtime: 'common-account:account.notificationSettings.frequency.realtime',
+  daily: 'common-account:account.notificationSettings.frequency.daily',
+  weekly: 'common-account:account.notificationSettings.frequency.weekly',
+  disabled: 'common-account:account.notificationSettings.frequency.disabled',
+};
+
+/** Οι επιλογές του επιλογέα, με τη σειρά του πίνακα — χωρίς δεύτερη λίστα με το χέρι. */
+export const EMAIL_FREQUENCY_OPTIONS: readonly EmailFrequency[] =
+  Object.keys(FREQUENCY_LABEL_KEYS).filter(isEmailFrequency);
+
+// ============================================================================
+// DELIVERY CONTROL IDS
+// ============================================================================
+
+/**
+ * Τα ids των ελέγχων του τμήματος παράδοσης — ο στόχος του «Μετάβαση στη ρύθμιση email» της
+ * μήτρας (ADR-849 Δ8: μεταφέρει εστίαση, **δεν** γράφει). Ένα σημείο, ώστε μετονομασία στο
+ * τμήμα να μη σπάει σιωπηλά τον σύνδεσμο.
+ */
+export const DELIVERY_CONTROL_IDS = {
+  inApp: 'in-app',
+  email: 'email',
+  emailFrequency: 'email-frequency',
+  timezone: 'notification-timezone',
+} as const;

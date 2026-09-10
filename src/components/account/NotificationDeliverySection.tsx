@@ -11,13 +11,17 @@
  * ενώ ο γονέας απαντά «*για ποια πράγματα θέλω ειδοποίηση;*». Ένα κόψιμο στη
  * γραμμή 500 θα ήταν συμμόρφωση με τον κανόνα· αυτό είναι ο λόγος του κανόνα.
  *
+ * 🔗 **ADR-849 Α3**: κανένας έλεγχος δεν «παγώνει» όσο αποθηκεύεται άλλος (το `isSaving` έφυγε —
+ * οι εγγραφές περνούν από το `useNotificationSettingsWrites`)· οι ετικέτες συχνότητας και τα ids
+ * των ελέγχων ζουν **μία** φορά στο `notification-settings-config` (τα διαβάζει και η μήτρα).
+ *
  * @module components/account/NotificationDeliverySection
- * @see ADR-777 §8.28
+ * @see ADR-777 §8.28 · ADR-849
  */
 
 'use client';
 
-import { Mail, Smartphone } from 'lucide-react';
+import { Mail, Smartphone, type LucideIcon } from 'lucide-react';
 import React from 'react';
 
 import { Label } from '@/components/ui/label';
@@ -29,19 +33,16 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { useLayoutClasses } from '@/hooks/useLayoutClasses';
-import { useSemanticColors } from '@/hooks/useSemanticColors';
-import { useTypography } from '@/hooks/useTypography';
-import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { listSupportedTimeZones } from '@/lib/datetime/supported-timezones';
 import { cn } from '@/lib/utils';
-import type {
-  EmailFrequency,
-  UserNotificationSettings,
+import {
+  isEmailFrequency,
+  type EmailFrequency,
+  type UserNotificationSettings,
 } from '@/services/user-notification-settings/user-notification-settings.types';
+
+import { DELIVERY_CONTROL_IDS, EMAIL_FREQUENCY_OPTIONS, FREQUENCY_LABEL_KEYS } from './notification-settings-config';
+import { useNotificationSettingsUi } from './useNotificationSettingsUi';
 
 /**
  * Οι ζώνες ώρας του επιλογέα — **από τον runtime**, όχι από χειρόγραφη λίστα.
@@ -54,136 +55,136 @@ const TIME_ZONES = listSupportedTimeZones();
 
 export interface NotificationDeliverySectionProps {
   readonly settings: UserNotificationSettings;
-  readonly isSaving: boolean;
   readonly onInAppToggle: (enabled: boolean) => void;
   readonly onEmailToggle: (enabled: boolean) => void;
   readonly onEmailFrequencyChange: (frequency: EmailFrequency) => void;
   readonly onTimezoneChange: (timezone: string) => void;
 }
 
+interface ChannelRowProps {
+  readonly id: string;
+  readonly icon: LucideIcon;
+  readonly label: string;
+  readonly checked: boolean;
+  readonly disabled: boolean;
+  readonly onToggle: (enabled: boolean) => void;
+}
+
+function ChannelRow({ id, icon: Icon, label, checked, disabled, onToggle }: ChannelRowProps) {
+  const { colors, layout, iconSizes, typography } = useNotificationSettingsUi();
+  return (
+    <div className={cn(layout.flexCenterBetween, 'py-2')}>
+      <div className={layout.flexCenterGap2}>
+        <Icon className={cn(iconSizes.sm, colors.text.muted)} aria-hidden="true" />
+        <Label htmlFor={id} className={cn(typography.body.sm, colors.text.secondary)}>{label}</Label>
+      </div>
+      <Switch id={id} checked={checked} onCheckedChange={onToggle} disabled={disabled} variant="status" />
+    </div>
+  );
+}
+
+interface EmailSubSettingProps {
+  readonly controlId: string;
+  readonly label: string;
+  readonly description?: string;
+  readonly children: React.ReactNode;
+}
+
+/** Δευτερεύουσα ρύθμιση του email (με εσοχή κάτω από τον διακόπτη): ετικέτα αριστερά, έλεγχος δεξιά. */
+function EmailSubSetting({ controlId, label, description, children }: EmailSubSettingProps) {
+  const { colors, layout, typography } = useNotificationSettingsUi();
+  return (
+    <div className={cn(layout.flexCenterBetween, 'py-2', 'pl-8')}>
+      <div>
+        <Label htmlFor={controlId} className={cn(typography.body.sm, colors.text.secondary)}>{label}</Label>
+        {description !== undefined && <p className={cn(typography.body.xs, colors.text.muted)}>{description}</p>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function FrequencyPicker({ value, onChange }: { value: EmailFrequency; onChange: (frequency: EmailFrequency) => void }) {
+  const { t } = useNotificationSettingsUi();
+  return (
+    <EmailSubSetting controlId={DELIVERY_CONTROL_IDS.emailFrequency} label={t('account.notificationSettings.emailFrequency')}>
+      <Select value={value} onValueChange={(next) => { if (isEmailFrequency(next)) onChange(next); }}>
+        <SelectTrigger id={DELIVERY_CONTROL_IDS.emailFrequency} className="w-40">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {EMAIL_FREQUENCY_OPTIONS.map((frequency) => (
+            <SelectItem key={frequency} value={frequency}>
+              {t(FREQUENCY_LABEL_KEYS[frequency])}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </EmailSubSetting>
+  );
+}
+
+function TimezonePicker({ value, onChange }: { value: string; onChange: (timezone: string) => void }) {
+  const { t } = useNotificationSettingsUi();
+  return (
+    <EmailSubSetting
+      controlId={DELIVERY_CONTROL_IDS.timezone}
+      label={t('account.notificationSettings.timezone')}
+      description={t('account.notificationSettings.timezoneDescription')}
+    >
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger id={DELIVERY_CONTROL_IDS.timezone} className="w-56">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {TIME_ZONES.map((zone) => (
+            // ⚠️ Τα ονόματα ζωνών είναι **αναγνωριστικά IANA**, όχι κείμενο
+            // προς μετάφραση: το «Europe/Athens» είναι η ίδια η τιμή που
+            // αποθηκεύεται και που δέχεται το `Intl`. Μετάφρασή τους θα
+            // έσπαγε την αντιστοίχιση οθόνης ↔ αποθηκευμένης ρύθμισης.
+            <SelectItem key={zone} value={zone}>
+              {zone}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </EmailSubSetting>
+  );
+}
+
 export function NotificationDeliverySection({
   settings,
-  isSaving,
   onInAppToggle,
   onEmailToggle,
   onEmailFrequencyChange,
   onTimezoneChange,
 }: NotificationDeliverySectionProps): React.JSX.Element {
-  const { t } = useTranslation(COMMON_NAMESPACES);
-  const colors = useSemanticColors();
-  const borders = useBorderTokens();
-  const layout = useLayoutClasses();
-  const iconSizes = useIconSizes();
-  const typography = useTypography();
+  const { t, colors, layout, typography } = useNotificationSettingsUi();
+  const emailOptionsVisible = settings.emailEnabled && settings.globalEnabled;
 
   return (
-    <>
-  {/* Delivery Methods */}
-  <section className={layout.flexColGap4}>
-    <h3 className={cn(typography.label.sm, colors.text.primary)}>
-      {t('account.notificationSettings.deliveryMethods')}
-    </h3>
-
-    {/* In-App */}
-    <div className={cn(layout.flexCenterBetween, 'py-2')}>
-      <div className={layout.flexCenterGap2}>
-        <Smartphone className={cn(iconSizes.sm, colors.text.muted)} aria-hidden="true" />
-        <Label htmlFor="in-app" className={cn(typography.body.sm, colors.text.secondary)}>
-          {t('account.notificationSettings.inApp')}
-        </Label>
-      </div>
-      <Switch
-        id="in-app"
+    <section className={layout.flexColGap4}>
+      <h3 className={cn(typography.label.sm, colors.text.primary)}>
+        {t('account.notificationSettings.deliveryMethods')}
+      </h3>
+      <ChannelRow
+        id={DELIVERY_CONTROL_IDS.inApp}
+        icon={Smartphone}
+        label={t('account.notificationSettings.inApp')}
         checked={settings.inAppEnabled}
-        onCheckedChange={onInAppToggle}
-        disabled={!settings.globalEnabled || isSaving}
-        variant="status"
+        disabled={!settings.globalEnabled}
+        onToggle={onInAppToggle}
       />
-    </div>
-
-    {/* Email */}
-    <div className={cn(layout.flexCenterBetween, 'py-2')}>
-      <div className={layout.flexCenterGap2}>
-        <Mail className={cn(iconSizes.sm, colors.text.muted)} aria-hidden="true" />
-        <Label htmlFor="email" className={cn(typography.body.sm, colors.text.secondary)}>
-          {t('account.notificationSettings.email')}
-        </Label>
-      </div>
-      <Switch
-        id="email"
+      <ChannelRow
+        id={DELIVERY_CONTROL_IDS.email}
+        icon={Mail}
+        label={t('account.notificationSettings.email')}
         checked={settings.emailEnabled}
-        onCheckedChange={onEmailToggle}
-        disabled={!settings.globalEnabled || isSaving}
-        variant="status"
+        disabled={!settings.globalEnabled}
+        onToggle={onEmailToggle}
       />
-    </div>
-
-    {/* Email Frequency */}
-    {settings.emailEnabled && settings.globalEnabled && (
-      <div className={cn(layout.flexCenterBetween, 'py-2', 'pl-8')}>
-        <Label htmlFor="email-frequency" className={cn(typography.body.sm, colors.text.secondary)}>
-          {t('account.notificationSettings.emailFrequency')}
-        </Label>
-        <Select
-          value={settings.emailFrequency}
-          onValueChange={(value) => onEmailFrequencyChange(value as EmailFrequency)}
-          disabled={isSaving}
-        >
-          <SelectTrigger id="email-frequency" className="w-40">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="realtime">
-              {t('account.notificationSettings.frequency.realtime')}
-            </SelectItem>
-            <SelectItem value="daily">
-              {t('account.notificationSettings.frequency.daily')}
-            </SelectItem>
-            <SelectItem value="weekly">
-              {t('account.notificationSettings.frequency.weekly')}
-            </SelectItem>
-            <SelectItem value="disabled">
-              {t('account.notificationSettings.frequency.disabled')}
-            </SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-    )}
-
-    {/* Time zone — ADR-777 §8.28 */}
-    {settings.emailEnabled && settings.globalEnabled && (
-      <div className={cn(layout.flexCenterBetween, 'py-2', 'pl-8')}>
-        <div>
-          <Label htmlFor="notification-timezone" className={cn(typography.body.sm, colors.text.secondary)}>
-            {t('account.notificationSettings.timezone')}
-          </Label>
-          <p className={cn(typography.body.xs, colors.text.muted)}>
-            {t('account.notificationSettings.timezoneDescription')}
-          </p>
-        </div>
-        <Select
-          value={settings.timezone}
-          onValueChange={onTimezoneChange}
-          disabled={isSaving}
-        >
-          <SelectTrigger id="notification-timezone" className="w-56">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {TIME_ZONES.map((zone) => (
-              // ⚠️ Τα ονόματα ζωνών είναι **αναγνωριστικά IANA**, όχι κείμενο
-              // προς μετάφραση: το «Europe/Athens» είναι η ίδια η τιμή που
-              // αποθηκεύεται και που δέχεται το `Intl`. Μετάφρασή τους θα
-              // έσπαγε την αντιστοίχιση οθόνης ↔ αποθηκευμένης ρύθμισης.
-              <SelectItem key={zone} value={zone}>
-                {zone}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-    )}
-  </section>
-    </>
+      {emailOptionsVisible && <FrequencyPicker value={settings.emailFrequency} onChange={onEmailFrequencyChange} />}
+      {emailOptionsVisible && <TimezonePicker value={settings.timezone} onChange={onTimezoneChange} />}
+    </section>
   );
 }

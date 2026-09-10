@@ -2,387 +2,246 @@
 
 /**
  * =============================================================================
- * NOTIFICATION SETTINGS COMPONENT
+ * ΡΥΘΜΙΣΕΙΣ ΕΙΔΟΠΟΙΗΣΕΩΝ — η οθόνη του λογαριασμού
  * =============================================================================
  *
- * Enterprise Pattern: User notification preferences management
- * Features: Category toggles, email frequency, global controls
+ * «Για ποια πράγματα θέλω ειδοποίηση — και ποια από αυτά και με email;» (ADR-849 Α3).
+ *
+ * 🔑 **Καμία τοπική αλήθεια.** Οι τιμές έρχονται **μόνο** από τη συνδρομή στο έγγραφο. Μια εγγραφή
+ * φαίνεται αμέσως (latency compensation της Firestore) και, αν απορριφθεί, το SDK εκπέμπει snapshot με
+ * την **επαναφερμένη** τιμή — άρα η οθόνη δεν κρατά αντίγραφο που θα μπορούσε να αποκλίνει. Οι
+ * εγγραφές περνούν από **ένα** σημείο (`useNotificationSettingsWrites`)· κανένας έλεγχος δεν «παγώνει»
+ * όσο αποθηκεύεται άλλος.
  *
  * @module components/account/NotificationSettings
- * @enterprise ADR-025 - Notification Settings Centralization
+ * @see ADR-849 — το μοντέλο προτιμήσεων (το «ADR-025» που έγραφε εδώ ήταν φάντασμα)
  */
 
-import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
-import React, { useState, useEffect, useCallback } from 'react';
-import { createStaleCache } from '@/lib/stale-cache';
+import { AlertCircle, Bell, Moon } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+
+import { NotificationDeliverySection } from '@/components/account/NotificationDeliverySection';
+import { NotificationPreferenceMatrix } from '@/components/account/NotificationPreferenceMatrix';
 import {
-  Bell,
-  Moon,
-  AlertCircle,
-} from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
+  useNotificationSettingsWrites,
+  type NotificationSettingsWrites,
+  type SaveState,
+} from '@/components/account/useNotificationSettingsWrites';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils';
-import { useSemanticColors } from '@/hooks/useSemanticColors';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { useLayoutClasses } from '@/hooks/useLayoutClasses';
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { useTypography } from '@/hooks/useTypography';
+import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { db } from '@/lib/firebase';
+import { createStaleCache } from '@/lib/stale-cache';
+import { createModuleLogger } from '@/lib/telemetry';
+import { cn } from '@/lib/utils';
 import {
   userNotificationSettingsService,
-  UserNotificationSettings,
-  NotificationCategory,
-  EmailFrequency,
+  type UserNotificationSettings,
 } from '@/services/user-notification-settings';
-import { NotificationDeliverySection } from '@/components/account/NotificationDeliverySection';
-import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
-import {
-  NotificationSettingsProps,
-  CategoryConfig,
-  CATEGORY_CONFIGS,
-} from './notification-settings-config';
+
+import type { NotificationSettingsProps } from './notification-settings-config';
+import { useNotificationSettingsUi } from './useNotificationSettingsUi';
 
 const logger = createModuleLogger('NotificationSettings');
 
 const notificationSettingsCache = createStaleCache<UserNotificationSettings | null>('account-notification-settings');
 
-// Re-export types for backward compatibility
-export type { NotificationSettingsProps, CategoryConfig };
+export type { NotificationSettingsProps };
 
-// ============================================================================
-// COMPONENT
-// ============================================================================
+interface SettingsSubscription {
+  readonly settings: UserNotificationSettings | null;
+  readonly isLoading: boolean;
+  readonly error: string | null;
+}
 
-export function NotificationSettings({ userId, onSettingsChange }: NotificationSettingsProps) {
+interface SettingsSyncHandlers {
+  readonly onSettings: (settings: UserNotificationSettings) => void;
+  readonly onLoadError: () => void;
+}
+
+/**
+ * Αρχική ανάγνωση + ζωντανή συνδρομή· επιστρέφει το «σταμάτα».
+ *
+ * ⚠️ **Η αρχική ανάγνωση ΔΕΝ πατά πάνω σε snapshot.** Το `getSettings` (που δημιουργεί και το
+ * έγγραφο με τις προεπιλογές αν λείπει) μπορεί να επιστρέψει **μετά** από ένα snapshot που φέρνει
+ * ήδη νεότερη τιμή — π.χ. ένα γρήγορο κλικ. Αν την εφάρμοζε, η οθόνη θα έδειχνε την παλιά.
+ */
+function startSettingsSync(userId: string, handlers: SettingsSyncHandlers): () => void {
+  let active = true;
+  let snapshotSeen = false;
+  const deliver = (next: UserNotificationSettings): void => {
+    if (active) handlers.onSettings(next);
+  };
+  userNotificationSettingsService
+    .getSettings(userId)
+    .then((initial) => { if (!snapshotSeen) deliver(initial); })
+    .catch((err: unknown) => {
+      logger.error('Failed to load notification settings', { error: err });
+      if (active) handlers.onLoadError();
+    });
+  const unsubscribe = userNotificationSettingsService.subscribeToSettings(
+    userId,
+    (next) => { snapshotSeen = true; deliver(next); },
+    (err) => logger.error('Subscription error', { error: err }),
+  );
+  return () => { active = false; unsubscribe(); };
+}
+
+/**
+ * Οι ρυθμίσεις της οθόνης — από τη συνδρομή, με την κρυφή μνήμη για άμεση επανεμφάνιση.
+ * ⚠️ Ο `onSettingsChange` διαβάζεται από ref: ένα inline callback του γονέα θα ξανάνοιγε τη
+ * συνδρομή σε κάθε απόδοσή του.
+ */
+function useSettingsSubscription(
+  userId: string,
+  onSettingsChange: NotificationSettingsProps['onSettingsChange'],
+): SettingsSubscription {
   const { t } = useTranslation(COMMON_NAMESPACES);
-  const colors = useSemanticColors();
-  const borders = useBorderTokens();
-  const layout = useLayoutClasses();
-  const iconSizes = useIconSizes();
-  const typography = useTypography();
-
-  // State
-  const [settings, setSettings] = useState<UserNotificationSettings | null>(notificationSettingsCache.get(userId) ?? null);
+  const [settings, setSettings] = useState(notificationSettingsCache.get(userId) ?? null);
   const [isLoading, setIsLoading] = useState(!notificationSettingsCache.hasLoaded(userId));
   const [error, setError] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
+  const onChangeRef = useRef(onSettingsChange);
 
-  // Initialize service and load settings
   useEffect(() => {
-    if (!db) {
-      setError('Firebase not initialized');
-      setIsLoading(false);
-      return;
-    }
+    onChangeRef.current = onSettingsChange;
+  }, [onSettingsChange]);
 
+  useEffect(() => {
+    const failLoad = (): void => { setError(t('account.notificationSettings.loadError')); setIsLoading(false); };
+    if (!db) { failLoad(); return undefined; }
     userNotificationSettingsService.initialize(db);
-
-    const loadSettings = async () => {
-      try {
-        if (!notificationSettingsCache.hasLoaded(userId)) setIsLoading(true);
-        setError(null);
-        const userSettings = await userNotificationSettingsService.getSettings(userId);
-        notificationSettingsCache.set(userSettings, userId);
-        setSettings(userSettings);
-        onSettingsChange?.(userSettings);
-      } catch (err) {
-        logger.error('Failed to load notification settings', { error: err });
-        setError(t('account.notificationSettings.loadError'));
-      } finally {
+    setError(null);
+    return startSettingsSync(userId, {
+      onSettings: (next) => {
+        notificationSettingsCache.set(next, userId);
+        setSettings(next);
         setIsLoading(false);
-      }
-    };
-
-    loadSettings();
-
-    // Subscribe to real-time updates
-    const unsubscribe = userNotificationSettingsService.subscribeToSettings(
-      userId,
-      (updatedSettings) => {
-        setSettings(updatedSettings);
-        onSettingsChange?.(updatedSettings);
+        onChangeRef.current?.(next);
       },
-      (err) => {
-        logger.error('Subscription error', { error: err });
-      }
-    );
+      onLoadError: failLoad,
+    });
+  }, [userId, t]);
 
-    return () => {
-      unsubscribe();
-    };
-  }, [userId, onSettingsChange, t]);
+  return { settings, isLoading, error };
+}
 
-  // ==========================================================================
-  // HANDLERS
-  // ==========================================================================
-
-  const handleGlobalToggle = useCallback(
-    async (enabled: boolean) => {
-      if (!settings) return;
-      setIsSaving(true);
-      try {
-        await userNotificationSettingsService.toggleGlobal(userId, enabled);
-      } catch (err) {
-        logger.error('Failed to toggle global', { error: err });
-      } finally {
-        setIsSaving(false);
-      }
-    },
-    [userId, settings]
+function StatusCard({ message, failed }: { message: string; failed: boolean }) {
+  const { colors, borders, layout, iconSizes, typography } = useNotificationSettingsUi();
+  return (
+    <Card className={borders.getElementBorder('card', 'default')}>
+      <CardContent className={cn(layout.flexColGap4, layout.centerContent, layout.paddingY12)}>
+        {failed ? <AlertCircle className={cn(iconSizes.lg, colors.text.error)} aria-hidden="true" /> : <Spinner size="large" />}
+        <p role={failed ? 'alert' : 'status'} className={cn(typography.body.sm, failed ? colors.text.error : colors.text.muted)}>
+          {message}
+        </p>
+      </CardContent>
+    </Card>
   );
+}
 
-  const handleInAppToggle = useCallback(
-    async (enabled: boolean) => {
-      setIsSaving(true);
-      try {
-        await userNotificationSettingsService.toggleInApp(userId, enabled);
-      } catch (err) {
-        logger.error('Failed to toggle in-app', { error: err });
-      } finally {
-        setIsSaving(false);
-      }
-    },
-    [userId]
+/**
+ * «Αποθήκευση…» / «Όλες οι αλλαγές αποθηκεύτηκαν» — πρότυπο Google Docs.
+ * ⚠️ Το `role="status"` υπάρχει **πάντα** στο DOM: ζωντανή περιοχή που εμφανίζεται μαζί με το
+ * κείμενό της δεν ανακοινώνεται από τους αναγνώστες οθόνης.
+ */
+function SaveStatus({ state }: { state: SaveState }) {
+  const { t, colors, typography } = useNotificationSettingsUi();
+  return (
+    <p role="status" className={cn(typography.body.xs, colors.text.muted)}>
+      {state === 'saving' && t('common-account:account.notificationSettings.saveState.saving')}
+      {state === 'saved' && t('common-account:account.notificationSettings.saveState.saved')}
+    </p>
   );
+}
 
-  const handleEmailToggle = useCallback(
-    async (enabled: boolean) => {
-      setIsSaving(true);
-      try {
-        await userNotificationSettingsService.toggleEmail(userId, enabled);
-      } catch (err) {
-        logger.error('Failed to toggle email', { error: err });
-      } finally {
-        setIsSaving(false);
-      }
-    },
-    [userId]
-  );
-
-  const handleEmailFrequencyChange = useCallback(
-    async (frequency: EmailFrequency) => {
-      setIsSaving(true);
-      try {
-        await userNotificationSettingsService.setEmailFrequency(userId, frequency);
-      } catch (err) {
-        logger.error('Failed to set email frequency', { error: err });
-      } finally {
-        setIsSaving(false);
-      }
-    },
-    [userId]
-  );
-
-  /**
-   * 🕐 ADR-777 §8.28 — η ζώνη ώρας του χρήστη.
-   *
-   * Ερμηνεύει τις ώρες ησυχίας **και** τα παράθυρα παράδοσης. Πριν από αυτό, όλοι
-   * ερμηνεύονταν σε Ελλάδα.
-   */
-  const handleTimezoneChange = useCallback(
-    async (timezone: string) => {
-      setIsSaving(true);
-      try {
-        await userNotificationSettingsService.setTimezone(userId, timezone);
-      } catch (err) {
-        logger.error('Failed to set timezone', { error: err });
-      } finally {
-        setIsSaving(false);
-      }
-    },
-    [userId]
-  );
-
-  const handleCategorySettingToggle = useCallback(
-    async (category: NotificationCategory, setting: string, enabled: boolean) => {
-      setIsSaving(true);
-      try {
-        await userNotificationSettingsService.toggleCategorySetting(userId, {
-          category,
-          setting,
-          enabled,
-        });
-      } catch (err) {
-        logger.error('Failed to toggle category setting', { error: err });
-      } finally {
-        setIsSaving(false);
-      }
-    },
-    [userId]
-  );
-
-  // ==========================================================================
-  // RENDER HELPERS
-  // ==========================================================================
-
-  const renderCategorySection = (config: CategoryConfig) => {
-    if (!settings) return null;
-
-    const CategoryIcon = config.icon;
-    const categorySettings = settings.categories[config.id];
-
-    return (
-      <section
-        key={config.id}
-        className={cn(layout.flexColGap4, 'py-4 border-t border-border')}
-      >
-        <header className={layout.flexCenterGap2}>
-          <CategoryIcon className={cn(iconSizes.md, colors.text.primary)} aria-hidden="true" />
-          <div>
-            <h3 className={cn(typography.label.sm, colors.text.primary)}>
-              {t(config.titleKey)}
-            </h3>
-            <p className={cn(typography.body.sm, colors.text.muted)}>
-              {t(config.descriptionKey)}
-            </p>
-          </div>
-        </header>
-
-        <div className={cn(layout.flexColGap2, 'pl-8')}>
-          {config.settings.map((setting) => {
-            const isEnabled = categorySettings[setting.key as keyof typeof categorySettings];
-            return (
-              <div
-                key={setting.key}
-                className={cn(layout.flexCenterBetween, 'py-2')}
-              >
-                <Label
-                  htmlFor={`${config.id}-${setting.key}`}
-                  className={cn(typography.body.sm, colors.text.secondary, 'cursor-pointer')}
-                >
-                  {t(setting.labelKey)}
-                </Label>
-                <Switch
-                  id={`${config.id}-${setting.key}`}
-                  checked={isEnabled}
-                  onCheckedChange={(checked) =>
-                    handleCategorySettingToggle(config.id, setting.key, checked)
-                  }
-                  disabled={!settings.globalEnabled || isSaving}
-                  variant="status"
-                />
-              </div>
-            );
-          })}
-        </div>
-      </section>
-    );
-  };
-
-  // ==========================================================================
-  // LOADING STATE
-  // ==========================================================================
-
-  if (isLoading) {
-    return (
-      <Card className={borders.getElementBorder('card', 'default')}>
-        <CardContent className={cn(layout.flexColGap4, layout.centerContent, layout.paddingY12)}>
-          <Spinner size="large" />
-          <p className={cn(typography.body.sm, colors.text.muted)}>
-            {t('account.notificationSettings.loading')}
+function GlobalToggle({ enabled, onToggle }: { enabled: boolean; onToggle: (enabled: boolean) => void }) {
+  const { t, colors, borders, layout, iconSizes, typography } = useNotificationSettingsUi();
+  return (
+    <section className={cn(layout.flexCenterBetween, layout.padding4, borders.radiusClass.md, colors.bg.muted)}>
+      <div className={layout.flexCenterGap2}>
+        <Bell className={cn(iconSizes.md, colors.text.primary)} aria-hidden="true" />
+        <div>
+          <p id="global-notifications-label" className={cn(typography.label.sm, colors.text.primary)}>
+            {t('account.notificationSettings.globalToggle')}
           </p>
-        </CardContent>
-      </Card>
-    );
-  }
+          <p id="global-notifications-description" className={cn(typography.body.sm, colors.text.muted)}>
+            {t('account.notificationSettings.globalToggleDescription')}
+          </p>
+        </div>
+      </div>
+      <Switch
+        id="global-notifications"
+        aria-labelledby="global-notifications-label"
+        aria-describedby="global-notifications-description"
+        checked={enabled}
+        onCheckedChange={onToggle}
+        variant="status"
+      />
+    </section>
+  );
+}
 
-  // ==========================================================================
-  // ERROR STATE
-  // ==========================================================================
+function DisabledMessage() {
+  const { t, colors, layout, iconSizes, typography } = useNotificationSettingsUi();
+  return (
+    <figure role="status" className={cn(layout.flexColGap2, layout.centerContent, 'py-8', layout.textCenter)}>
+      <Moon className={cn(iconSizes.xl, colors.text.muted)} aria-hidden="true" />
+      <figcaption>
+        <p className={cn(typography.body.sm, colors.text.muted)}>
+          {t('account.notificationSettings.disabledMessage')}
+        </p>
+      </figcaption>
+    </figure>
+  );
+}
 
-  if (error) {
-    return (
-      <Card className={borders.getElementBorder('card', 'default')}>
-        <CardContent className={cn(layout.flexColGap4, layout.centerContent, layout.paddingY12)}>
-          <AlertCircle className={cn(iconSizes.lg, colors.text.error)} />
-          <p className={cn(typography.body.sm, colors.text.error)}>{error}</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (!settings) return null;
-
-  // ==========================================================================
-  // MAIN RENDER
-  // ==========================================================================
-
+function SettingsCard({ settings, writes }: { settings: UserNotificationSettings; writes: NotificationSettingsWrites }) {
+  const { t, borders, layout, iconSizes } = useNotificationSettingsUi();
   return (
     <Card className={borders.getElementBorder('card', 'default')}>
       <CardHeader>
         <CardTitle className={layout.flexCenterGap2}>
           <Bell className={iconSizes.md} aria-hidden="true" />
           {t('account.notificationSettings.title')}
-          {isSaving && (
-            <Spinner size="small" className="ml-2" />
-          )}
         </CardTitle>
         <CardDescription>{t('account.notificationSettings.description')}</CardDescription>
+        <SaveStatus state={writes.saveState} />
       </CardHeader>
-
       <CardContent className="flex flex-col gap-6">
-        {/* Global Toggle */}
-        <section className={cn(layout.flexCenterBetween, layout.padding4, borders.radiusClass.md, colors.bg.muted)}>
-          <div className={layout.flexCenterGap2}>
-            <Bell className={cn(iconSizes.md, colors.text.primary)} aria-hidden="true" />
-            <div>
-              <p className={cn(typography.label.sm, colors.text.primary)}>
-                {t('account.notificationSettings.globalToggle')}
-              </p>
-              <p className={cn(typography.body.sm, colors.text.muted)}>
-                {t('account.notificationSettings.globalToggleDescription')}
-              </p>
-            </div>
-          </div>
-          <Switch
-            id="global-notifications"
-            checked={settings.globalEnabled}
-            onCheckedChange={handleGlobalToggle}
-            disabled={isSaving}
-            variant="status"
-          />
-        </section>
-
-        {/* Delivery Methods — ADR-777 §8.28: εξήχθη σε δικό του component (N.7.1) */}
+        <GlobalToggle enabled={settings.globalEnabled} onToggle={writes.setGlobal} />
         <NotificationDeliverySection
           settings={settings}
-          isSaving={isSaving}
-          onInAppToggle={handleInAppToggle}
-          onEmailToggle={handleEmailToggle}
-          onEmailFrequencyChange={handleEmailFrequencyChange}
-          onTimezoneChange={handleTimezoneChange}
+          onInAppToggle={writes.setInApp}
+          onEmailToggle={writes.setEmail}
+          onEmailFrequencyChange={writes.setEmailFrequency}
+          onTimezoneChange={writes.setTimezone}
         />
-
-        {/* Category Sections */}
-        {settings.globalEnabled && CATEGORY_CONFIGS.map(renderCategorySection)}
-
-        {/* Disabled State Message */}
-        {!settings.globalEnabled && (
-          <figure
-            role="status"
-            className={cn(
-              layout.flexColGap2,
-              layout.centerContent,
-              'py-8',
-              layout.textCenter
-            )}
-          >
-            <Moon className={cn(iconSizes.xl, colors.text.muted)} aria-hidden="true" />
-            <figcaption>
-              <p className={cn(typography.body.sm, colors.text.muted)}>
-                {t('account.notificationSettings.disabledMessage')}
-              </p>
-            </figcaption>
-          </figure>
+        {settings.globalEnabled ? (
+          <NotificationPreferenceMatrix
+            settings={settings}
+            onTypeEnabled={writes.setTypeEnabled}
+            onTypeEmail={writes.setTypeEmail}
+          />
+        ) : (
+          <DisabledMessage />
         )}
       </CardContent>
     </Card>
   );
+}
+
+export function NotificationSettings({ userId, onSettingsChange }: NotificationSettingsProps) {
+  const { t } = useTranslation(COMMON_NAMESPACES);
+  const { settings, isLoading, error } = useSettingsSubscription(userId, onSettingsChange);
+  const writes = useNotificationSettingsWrites(userId);
+
+  if (isLoading) return <StatusCard message={t('account.notificationSettings.loading')} failed={false} />;
+  if (error) return <StatusCard message={error} failed />;
+  if (!settings) return null;
+  return <SettingsCard settings={settings} writes={writes} />;
 }
 
 export default NotificationSettings;
