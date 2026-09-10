@@ -19,6 +19,12 @@
  * |---|---|---|---|
  * | **Κ1** | σελίδα **εντός** εμβέλειας **χωρίς** πρόθεμα | μετακίνησέ την | 🔴 **RATCHET κατά ταυτότητα** |
  * | **Κ2** | **νέα** ή **ορφανή** δήλωση εξαίρεσης | δες την με μάτια ανθρώπου | ⛔ **κλειστό σύνολο** |
+ * | **Κ3** | τμήμα με **δύο ιδιοκτήτες** (έξω **και** μέσα στον χώρο) | μετονόμασε το ένα | ⛔ **zero-tol** |
+ *
+ * 🔴 **Ο Κ3 ΓΕΝΝΗΘΗΚΕ ΑΠΟ ΖΩΝΤΑΝΗ ΒΛΑΒΗ** (2026-09-04 → 09-10, ADR-843 §10.19): το
+ * `(me)/contacts` πήρε το τμήμα του CRM του γραφείου, και ο κριτής χρόνου εκτέλεσης —
+ * που απαντά **ανά τμήμα** — έβγαλε το CRM **εκτός χώρου**. Το Next.js δεν το βλέπει
+ * (τα URL διαφέρουν)· οι άγκυρες που το έπιασαν ζούσαν μόνο στο CI. Εδώ κοστίζει ms.
  *
  * Έχουν **διαφορετική θεραπεία**: το Κ1 λέει *«λείπει δουλειά»*, το Κ2 *«κάποιος
  * αφαίρεσε σελίδα από τον χώρο — γιατί;»*. Ένας κανόνας με «ή» θα έλεγε «κόκκινο»
@@ -55,7 +61,7 @@
 
 const path = require('path');
 const { PROJECT_ROOT, runSetRatchetCli } = require('./lib/ratchet-baseline');
-const { buildScope, SCOPE_FILE } = require('./lib/workspace-scope/scope');
+const { buildScope, routeSegmentCollisions, SCOPE_FILE } = require('./lib/workspace-scope/scope');
 
 const BASELINE_FILE = path.join(PROJECT_ROOT, '.workspace-scope-baseline.json');
 
@@ -66,15 +72,22 @@ const BASELINE_FILE = path.join(PROJECT_ROOT, '.workspace-scope-baseline.json');
  * 3.56): ένα «0» που δεν φαίνεται διαβάζεται ως *«δεν υπάρχει τέτοιος έλεγχος»*.
  */
 const STATES = Object.freeze({
+  COLLISION: 'segment-collision',
   ORPHAN: 'orphan-declaration',
   UNPREFIXED: 'unprefixed-in-scope',
   PREFIXED: 'prefixed',
   OUTSIDE: 'declared-outside',
 });
 
-const BLOCKING = Object.freeze([STATES.ORPHAN]);
+const BLOCKING = Object.freeze([STATES.COLLISION, STATES.ORPHAN]);
 const RATCHETED = Object.freeze([STATES.UNPREFIXED]);
-const ORDER = Object.freeze([STATES.ORPHAN, STATES.UNPREFIXED, STATES.PREFIXED, STATES.OUTSIDE]);
+const ORDER = Object.freeze([
+  STATES.COLLISION,
+  STATES.ORPHAN,
+  STATES.UNPREFIXED,
+  STATES.PREFIXED,
+  STATES.OUTSIDE,
+]);
 
 // =============================================================================
 // Η ΜΕΤΡΗΣΗ
@@ -93,6 +106,19 @@ function measure(_staged = [], root = PROJECT_ROOT) {
       state: STATES.ORPHAN,
       id: segment,
       detail: `δηλωμένη εξαίρεση για φάκελο που δεν υπάρχει στο (app) — σβήσε τη γραμμή από ${path.basename(SCOPE_FILE)}`,
+    });
+  }
+
+  // ── Κ3: τμήμα με ΔΥΟ ιδιοκτήτες ───────────────────────────────────────────
+  // Ο κριτής χρόνου εκτέλεσης απαντά ΑΝΑ ΤΜΗΜΑ, άρα ο ένας από τους δύο χάνει
+  // ΠΑΝΤΑ — και ποιος χάνει το αποφασίζει μια λέξη σε ένα κλειστό σύνολο, σιωπηλά.
+  for (const c of routeSegmentCollisions(root)) {
+    findings.push({
+      state: STATES.COLLISION,
+      id: c.segment,
+      detail:
+        `το «/${c.segment}» διεκδικείται ΚΑΙ έξω από τον χώρο (${c.outside.join(' · ')}) ` +
+        `ΚΑΙ μέσα του (${c.inside.join(' · ')}) — μετονόμασε το ένα (ADR-843 §10.19)`,
     });
   }
 
@@ -150,13 +176,14 @@ function measure(_staged = [], root = PROJECT_ROOT) {
 function buildPayload(m) {
   if (m.blocking.length) {
     throw new Error(
-      `CHECK 3.60: ΑΡΝΗΣΗ ΕΓΓΡΑΦΗΣ BASELINE — ${m.blocking.length} ορφανή/ές δήλωση/εις. ` +
-        'Οι ⛔ καταστάσεις ΔΕΝ κλειδώνονται· σβήσε τη νεκρή γραμμή αντί να τη θάψεις.',
+      `CHECK 3.60: ΑΡΝΗΣΗ ΕΓΓΡΑΦΗΣ BASELINE — ${m.blocking.length} ⛔ εύρημα/τα ` +
+        `(${[...new Set(m.blocking.map((f) => f.state))].join(' · ')}). ` +
+        'Οι ⛔ καταστάσεις ΔΕΝ κλειδώνονται· διόρθωσε την αιτία αντί να τη θάψεις.',
     );
   }
   return {
     _doc: 'CHECK 3.60 — ADR-787 §5.3 γ. violations = σελίδες εντός εμβέλειας ΧΩΡΙΣ πρόθεμα (Κ1) · declarations = κλειστό σύνολο εξαιρέσεων (Κ2).',
-    _warning: 'Ο Κ2 «orphan-declaration» είναι ZERO-TOLERANCE και ΔΕΝ μπαίνει ΠΟΤΕ εδώ.',
+    _warning: 'Οι Κ2 «orphan-declaration» και Κ3 «segment-collision» είναι ZERO-TOLERANCE και ΔΕΝ μπαίνουν ΠΟΤΕ εδώ.',
     _campaign: 'Ο αριθμός των violations ΔΕΝ είναι δείκτης υγείας — είναι «πόσες σελίδες δεν έχουν μετακινηθεί ΑΚΟΜΗ». Η εκστρατεία τελειώνει στο 0 (ADR-787 §5.3, Βήμα 3).',
     generatedAt: new Date().toISOString().slice(0, 10),
     violations: [...m.violationIds].sort(),
@@ -183,6 +210,11 @@ function printReport(m) {
   for (const segment of m.declarations) {
     const why = scope.outside.get(segment) ?? '';
     console.log(`     · ${segment.padEnd(18)} ${why.slice(0, 96)}${why.length > 96 ? '…' : ''}`);
+  }
+
+  if (ledger[STATES.COLLISION].length) {
+    console.log('\n   ⛔ τμήματα με ΔΥΟ ιδιοκτήτες:');
+    for (const f of ledger[STATES.COLLISION]) console.log(`     · ${f.detail}`);
   }
 
   if (ledger[STATES.UNPREFIXED].length) {

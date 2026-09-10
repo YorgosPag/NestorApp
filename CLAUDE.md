@@ -307,7 +307,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 ### Pre-commit checks (summary):
 
 <!-- BEGIN GENERATED GATE INDEX — ΜΗΝ ΤΟ ΓΡΑΨΕΙΣ ΣΤΟ ΧΕΡΙ. Πηγή: docs/gates/3.NN.md · αναπαραγωγή: npm run gate-index:generate
-     fingerprint: sha256:3c69b3ceb1383de4f3f5ab292cadb1dbba554e905ea52cf8d575071c4b04969d -->
+     fingerprint: sha256:a1857a6932f215eb4fea39d370c96075c0776e0fe0127861006881d967ba9935 -->
 | CHECK | Goal | Mode | Baseline |
 |-------|------|------|----------|
 | **3.8** | **Missing i18n keys** (ADR-777) — `t('key')` **και** `t('ns:key')` χωρίς αντιστοιχία στα locales · 📘 `docs/gates/3.8.md` | RATCHET | `.i18n-missing-keys-baseline.json` |
@@ -354,7 +354,7 @@ Suggestion: Do /clear and give me the command again cleanly.
 | **3.57** | **Πύλη ισοτιμίας production build** (ADR-788) — «χτίζει **κάθε** production build τον server που **στέλνεται**, ή απλώς κάτι που του μοιάζει;» · `npm run test:build-parity` · `SKIP_BUILD_PARITY=1` · 📘 `docs/gates/3.57.md` | ⛔ ZERO TOL | — |
 | **3.58** | **Πύλη της αρχής του χώρου** (ADR-787) — «ποιος αποφασίζει ότι επιτρέπεσαι σε **ΞΕΝΟ** χώρο, και **ρώτησε τον κριτή**;» · `npm run test:workspace-authority` · `SKIP_WORKSPACE_AUTHORITY=1` · 📘 `docs/gates/3.58.md` | ⛔ ZERO-TOL (Κ1+Κ2) + 🔴 RATCHET (Κ3) | `.workspace-authority-baseline.json` |
 | **3.59** | **Πύλη ενικού λεξιλογίου σημείου** (ADR-792) — «δηλώνεται κάθε όνομα του λεξιλογίου σε **ΑΚΡΙΒΩΣ ΕΝΑ** αρχείο, και είναι κάθε ρίζα **δηλωμένη με λόγο**;» · `npm run test:point-vocabulary` · `SKIP_POINT_VOCABULARY=1` · 📘 `docs/gates/3.59.md` | ⛔ ZERO-TOL (Κ1+Κ2) + 🔴 RATCHET (Κ3) | `.point-vocabulary-baseline.json` |
-| **3.60** | **Πύλη εμβέλειας χώρου** (ADR-787) — «ζει αυτή η σελίδα πίσω από το **πρόθεμα χώρου**, και αν όχι, το είπε κάποιος **με λόγο**;» · `npm run test:workspace-scope` · `SKIP_WORKSPACE_SCOPE=1` · 📘 `docs/gates/3.60.md` | 🔴 RATCHET (Κ1) + ⛔ ZERO-TOL (Κ2) | `.workspace-scope-baseline.json` |
+| **3.60** | **Πύλη εμβέλειας χώρου** (ADR-787) — «ζει αυτή η σελίδα πίσω από το **πρόθεμα χώρου**, και αν όχι, το είπε κάποιος **με λόγο**;» · `npm run test:workspace-scope` · `SKIP_WORKSPACE_SCOPE=1` · 📘 `docs/gates/3.60.md` | 🔴 RATCHET (Κ1) + ⛔ ZERO-TOL (Κ2+Κ3) | `.workspace-scope-baseline.json` |
 | **3.61** | **Πύλη του συνόρου πλοήγησης** (ADR-787) — «ζητά αυτό το αρχείο την πλοήγηση από το **ΣΥΝΟΡΟ** (`@/lib/workspace/navigation`), και αν όχι, το είπε κάποιος **με λόγο**;» · `npm run test:navigation-boundary` · `SKIP_NAVIGATION_BOUNDARY=1` · 📘 `docs/gates/3.61.md` | ⛔ ZERO TOL | — |
 | **3.62** | **Πύλη δημόσιας επιφάνειας** (ADR-796) — «ζητά κάποιος **από έξω** ένα σύμβολο του `dxf-viewer` που **κανείς δεν δήλωσε δημόσιο**;» · `npm run test:public-surface` · `SKIP_PUBLIC_SURFACE=1` · 📘 `docs/gates/3.62.md` | 🔴 RATCHET | `.public-surface-baseline.json` |
 | **3.63** | **Πύλη του διαδρόμου του κελύφους** (ADR-797) — «δηλώνει κάποιος κενό που **δεν του ανήκει**, και ξέρει κάποιος ποιες σελίδες βγήκαν από τον διάδρομο;» · `npm run test:shell-surface` · `SKIP_SHELL_SURFACE=1` · 📘 `docs/gates/3.63.md` | ⛔ ZERO-TOL (Κ1+Κ3+Κ4+Υ1+Υ2+Υ3+Υ5) + 🔴 RATCHET (Κ2+Κ5+Υ4) | `.shell-surface-baseline.json` |

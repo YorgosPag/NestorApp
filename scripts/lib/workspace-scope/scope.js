@@ -151,6 +151,102 @@ function shiftUrl(url, { prefix, outside, alias }) {
   return `/${prefix}/${alias}${url}`;
 }
 
+// =============================================================================
+// Κ3 — ΕΝΑ ΤΜΗΜΑ, ΕΝΑΣ ΙΔΙΟΚΤΗΤΗΣ (ADR-843 §10.19 · ADR-787)
+// =============================================================================
+
+const appDirOf = (root) => path.join(root, 'src', 'app');
+
+/** `(group)` — φάκελος οργάνωσης, **δεν** εμφανίζεται ποτέ στη διεύθυνση. */
+const isRouteGroup = (name) => /^\(.*\)$/.test(name);
+/** `[id]` · `[...rest]` · `[[...opt]]` — **σχήμα** διαδρομής, ποτέ κυριολεκτικό τμήμα. */
+const isDynamicSegment = (name) => name.startsWith('[');
+/** `_folder` — ιδιωτικός φάκελος του Next.js: **έξω από τις διαδρομές**. */
+const isPrivateFolder = (name) => name.startsWith('_');
+
+/**
+ * Τα **κυριολεκτικά** τμήματα διαδρομής ακριβώς κάτω από `dir`, με τους φακέλους που
+ * τα γεννούν (`Map<τμήμα, διαδρομές-φακέλων>`).
+ *
+ * ⚠️ **Κατεβαίνει ΜΕΣΑ στα route groups** αντί να τα μετρήσει: το `(me)/first-contacts`
+ * σερβίρει `/first-contacts`. Ίδια σύμβαση με την άγκυρα Ε1 του
+ * `src/lib/workspace/__tests__/workspace-scope.test.ts` — και ίδιο μάθημα με τη CHECK
+ * 3.52, που ήταν δομικά τυφλή στο `(light)` επειδή έκρινε `pathname`.
+ */
+function literalSegmentsUnder(dir, root = PROJECT_ROOT) {
+  const found = new Map();
+  if (!fs.existsSync(dir)) return found;
+
+  const walk = (current) => {
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const full = path.join(current, entry.name);
+      if (isRouteGroup(entry.name)) {
+        walk(full);
+        continue;
+      }
+      if (isDynamicSegment(entry.name) || isPrivateFolder(entry.name)) continue;
+      const homes = found.get(entry.name) ?? [];
+      homes.push(toPosix(path.relative(root, full)));
+      found.set(entry.name, homes);
+    }
+  };
+  walk(dir);
+  return found;
+}
+
+/**
+ * Ο φάκελος του **χώρου**: `(app)/<πρόθεμα>/<το ΕΝΑ δυναμικό τμήμα>` — `null` αν δεν
+ * υπάρχει ακόμη (μίνι-repo χωρίς χώρο).
+ *
+ * ⚠️ **Το όνομα της παραμέτρου ΔΕΝ γράφεται εδώ** (`[workspace]`): βρίσκεται από τον
+ * δίσκο, όπως το πρόθεμα από το TS SSoT. **Άρνηση** αν δεν είναι ακριβώς ένα — δύο
+ * δυναμικά τμήματα κάτω από το πρόθεμα θα σήμαιναν ότι δεν ξέρουμε **ποιο** είναι ο
+ * χώρος, και μια μαντεψιά θα έκανε την πύλη πράσινη πάνω σε λάθος δέντρο.
+ */
+function workspaceTreeOf(root = PROJECT_ROOT, prefix = readPrefix(root)) {
+  const prefixDir = path.join(appGroupOf(root), prefix);
+  if (!fs.existsSync(prefixDir)) return null;
+
+  const dynamic = fs
+    .readdirSync(prefixDir, { withFileTypes: true })
+    .filter((e) => e.isDirectory() && isDynamicSegment(e.name));
+  if (dynamic.length !== 1) {
+    throw new Error(
+      `CHECK 3.60: κάτω από το /${prefix} περιμένω ΑΚΡΙΒΩΣ ένα δυναμικό τμήμα (το ψευδώνυμο του χώρου) — ` +
+        `βρέθηκαν ${dynamic.length}. ΜΗΝ μαντέψεις ποιο είναι ο χώρος.`,
+    );
+  }
+  return path.join(prefixDir, dynamic[0].name);
+}
+
+/**
+ * **Τμήματα με ΔΥΟ ιδιοκτήτες** — κορυφαίο τμήμα **έξω** από τον χώρο που υπάρχει
+ * **και** ως παιδί του χώρου.
+ *
+ * 🔴 **ΓΙΑΤΙ ΥΠΑΡΧΕΙ — ΖΩΝΤΑΝΗ ΒΛΑΒΗ 2026-09-04 → 09-10**: το `(me)/contacts` πήρε το
+ * τμήμα των επαφών του **γραφείου** (`o/[workspace]/contacts`). Ο κριτής χρόνου
+ * εκτέλεσης (`isInsideWorkspace`) απαντά **ανά τμήμα**, άρα ένας από τους δύο χάνει
+ * **πάντα**: έχανε το γραφείο, και ο υπάλληλος έβλεπε τις ιδιωτικές του επαφές.
+ * ⚠️ **Το Next.js ΔΕΝ το πιάνει**: μπλοκάρει μόνο **ίδιο URL** σε δύο groups
+ * (`/contacts` ≠ `/o/x/contacts`). Οι πέντε άγκυρες που το έπιασαν ζούσαν μόνο στο CI,
+ * που ήταν ήδη μονίμως κόκκινο — **άγκυρα χωρίς πύλη είναι σχόλιο** (ADR-587 §6.1).
+ */
+function routeSegmentCollisions(root = PROJECT_ROOT) {
+  const tree = workspaceTreeOf(root);
+  if (tree === null) return [];
+
+  const inside = literalSegmentsUnder(tree, root);
+  const tops = literalSegmentsUnder(appDirOf(root), root);
+
+  const collisions = [];
+  for (const [segment, outsideHomes] of tops) {
+    if (!inside.has(segment)) continue;
+    collisions.push({ segment, outside: outsideHomes, inside: inside.get(segment) });
+  }
+  return collisions.sort((a, b) => a.segment.localeCompare(b.segment));
+}
+
 module.exports = {
   PROJECT_ROOT,
   SCOPE_FILE,
@@ -163,4 +259,7 @@ module.exports = {
   enumerateAppPages,
   buildScope,
   shiftUrl,
+  literalSegmentsUnder,
+  workspaceTreeOf,
+  routeSegmentCollisions,
 };

@@ -38,7 +38,12 @@ const DECLARED_OUTSIDE = Object.keys(
 /** Τα αρχεία-είσοδοι της πύλης, αντιγραμμένα **αυτούσια** από το repo. */
 const FIXTURE_FILES = ['.workspace-scope.json', 'src/lib/workspace/workspace-path.ts'];
 
-function miniRepo(edits = {}, pages = ['projects', 'contacts', 'admin', 'terms']) {
+/**
+ * @param pages σελίδες **κάτω από το `(app)`** (ό,τι κρίνουν οι Κ1/Κ2)
+ * @param appPages σελίδες **σχετικές με το `src/app`**, σε **οποιοδήποτε** group — ό,τι
+ *   χρειάζεται ο Κ3 για να δει και τους δύο κόσμους (π.χ. `(me)/projects`)
+ */
+function miniRepo(edits = {}, pages = ['projects', 'contacts', 'admin', 'terms'], appPages = []) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ws360-'));
 
   for (const rel of FIXTURE_FILES) {
@@ -53,13 +58,17 @@ function miniRepo(edits = {}, pages = ['projects', 'contacts', 'admin', 'terms']
     fs.writeFileSync(dest, source);
   }
 
-  for (const p of pages) {
-    const dest = path.join(root, 'src', 'app', '(app)', ...p.split('/'), 'page.tsx');
+  const writePage = (...segments) => {
+    const dest = path.join(root, 'src', 'app', ...segments, 'page.tsx');
     fs.mkdirSync(path.dirname(dest), { recursive: true });
     fs.writeFileSync(dest, 'export default function P(){return null}\n');
-  }
+  };
+  for (const p of pages) writePage('(app)', ...p.split('/'));
+  for (const p of appPages) writePage(...p.split('/'));
   return root;
 }
+
+const collisionsOf = (m) => m.findings.filter((f) => f.state === 'segment-collision');
 
 const byState = (m) => Object.fromEntries(Object.entries(m.ledger).map(([k, v]) => [k, v.length]));
 
@@ -141,6 +150,61 @@ describe('Κ — τα δύο κριτήρια', () => {
     for (const state of gate.BLOCKING) expect(m.ledger[state]).toEqual([]);
     // Ο παρονομαστής: ΚΑΤΙ κρίθηκε — αλλιώς το «0» θα σήμαινε «δεν κοίταξα».
     expect(m.findings.length).toBe(allDeclared.length + 1);
+  });
+});
+
+// =============================================================================
+// Σ — ΚΑΝΟΝΑΣ Κ3: ΕΝΑ ΤΜΗΜΑ, ΕΝΑΣ ΙΔΙΟΚΤΗΤΗΣ (ADR-843 §10.19)
+// =============================================================================
+
+describe('Σ — κανόνας Κ3: τμήμα με ΔΥΟ ιδιοκτήτες (segment-collision) ⛔', () => {
+  it('Σ1: παρονομαστής — το ΠΡΑΓΜΑΤΙΚΟ δέντρο έχει ΜΗΔΕΝ, και ο περίπατος ΒΛΕΠΕΙ και τους δύο κόσμους', () => {
+    expect(scope.routeSegmentCollisions()).toEqual([]);
+    // Χωρίς αυτό, το «0» θα μπορούσε να σημαίνει «δεν κοίταξα»: άδειος χώρος ή τυφλός περίπατος.
+    const tops = scope.literalSegmentsUnder(path.join(REPO_ROOT, 'src', 'app'), REPO_ROOT);
+    const inside = scope.literalSegmentsUnder(scope.workspaceTreeOf(REPO_ROOT), REPO_ROOT);
+    expect(tops.size).toBeGreaterThan(20);
+    expect(inside.size).toBeGreaterThan(20);
+    // Ο περίπατος ΚΑΤΕΒΑΙΝΕΙ στα groups: το `first-contacts` ζει στο `(me)`.
+    expect(tops.has('first-contacts')).toBe(true);
+    expect(inside.has('contacts')).toBe(true);
+  });
+
+  it('Σ2: 🔴 ΜΕΤΑΛΛΑΞΗ ΣΤΗΝ ΕΙΣΟΔΟ — ιδιωτική σελίδα με όνομα γραφείου ⇒ ΜΠΛΟΚ, με ΟΝΟΜΑ και τα ΔΥΟ σπίτια', () => {
+    // Το ακριβές σχήμα του περιστατικού `(me)/contacts` ↔ `o/[workspace]/contacts`.
+    const root = miniRepo({}, ['o/[workspace]/projects'], ['(me)/projects']);
+    const m = gate.measure([], root);
+    const hits = collisionsOf(m);
+    expect(hits.map((f) => f.id)).toEqual(['projects']);
+    expect(hits[0].detail).toContain('src/app/(me)/projects');
+    expect(hits[0].detail).toContain('src/app/(app)/o/[workspace]/projects');
+    expect(m.blocking).toEqual(expect.arrayContaining(hits));
+  });
+
+  it('Σ3: ο περίπατος κατεβαίνει σε ΕΜΦΩΛΕΥΜΕΝΑ groups — δεν κρύβεται κανείς πίσω από δεύτερη παρένθεση', () => {
+    const root = miniRepo({}, ['o/[workspace]/projects'], ['(me)/(nested)/projects']);
+    expect(collisionsOf(gate.measure([], root)).map((f) => f.id)).toEqual(['projects']);
+  });
+
+  it('Σ4: δυναμικά `[x]` και ιδιωτικοί `_x` φάκελοι ΔΕΝ είναι τμήματα — καμία ψευδής σύγκρουση', () => {
+    const root = miniRepo(
+      {},
+      ['o/[workspace]/_drafts/x', 'o/[workspace]/projects'],
+      ['(me)/_drafts/x', '(me)/[slug]', '(me)/offers'],
+    );
+    expect(collisionsOf(gate.measure([], root))).toEqual([]);
+  });
+
+  it('Σ5: 🔴 Η BASELINE ΑΡΝΕΙΤΑΙ ΝΑ ΚΛΕΙΔΩΣΕΙ ΣΥΓΚΡΟΥΣΗ', () => {
+    // Ίδιο δόγμα με τον Κ2: zero-tolerance που κλειδώνεται με ένα --write-baseline δεν είναι zero-tolerance.
+    const allDeclared = [...scope.readScope().keys()];
+    const root = miniRepo({}, [...allDeclared, 'o/[workspace]/projects'], ['(me)/projects']);
+    expect(() => gate.buildPayload(gate.measure([], root))).toThrow(/ΑΡΝΗΣΗ ΕΓΓΡΑΦΗΣ BASELINE/);
+  });
+
+  it('Σ6: fail-closed — ΔΥΟ δυναμικά τμήματα κάτω από το πρόθεμα ⇒ ΑΡΝΗΣΗ, όχι μαντεψιά', () => {
+    const root = miniRepo({}, ['o/[workspace]/projects', 'o/[other]/projects']);
+    expect(() => gate.measure([], root)).toThrow(/ΑΚΡΙΒΩΣ ένα δυναμικό τμήμα/);
   });
 });
 

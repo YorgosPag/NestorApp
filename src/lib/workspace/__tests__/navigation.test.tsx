@@ -261,9 +261,18 @@ describe('Λ — το σύνορο δεν αγγίζει ταυτότητα', ()
     //    αυθεντία (`workspace-segment.ts`), επειδή ο ωμός `companyId` δεν είχε
     //    καμία υποχρέωση να είναι διεύθυνση και έδινε 404 (ADR-819 §1.4).
     //    Άρα η σταθερά ζει πλέον **εκεί**, και εδώ ονομάζεται ο κλάδος.
-    expect(net).toContain("identity.scope === 'organization'");
-    expect(net).toContain("{ kind: 'personal' }");
+    //
+    // 🔴 ADR-848 — Ο ΚΛΑΔΟΣ ΜΕΤΑΚΟΜΙΣΕ ΤΡΙΤΗ ΦΟΡΑ, ΚΑΙ Η ΑΓΚΥΡΑ ΕΜΕΙΝΕ ΚΟΚΚΙΝΗ (ADR-843 §10.19).
+    //    Ο σύνδεσμος του email (`/n/{id}`) χρειάστηκε την ΙΔΙΑ απάντηση, οπότε η
+    //    διακλάδωση βγήκε σε ΕΝΑ module (`workspace-destination.ts`) που το δίχτυ ΚΑΛΕΙ.
+    //    Η άγκυρα κοίταζε ακόμη το δίχτυ ⇒ κόκκινη χωρίς να έχει χαλάσει τίποτα. Η
+    //    πρόθεση μένει ακέραιη: το δίχτυ ΚΑΛΕΙ τον επιλυτή, ο επιλυτής ονομάζει ΚΑΙ
+    //    ΤΟΥΣ ΔΥΟ κλάδους, και κάποιος όντως απαντά.
+    expect(net).toContain('workspaceDestinationFor');
+    const destination = readRepoCode('src/lib/workspace/workspace-destination.ts');
+    expect(destination).toContain("identity.scope === 'organization'");
+    expect(destination).toContain("{ kind: 'personal' }");
     // ⚠️ Και ο **παρονομαστής του παρονομαστή**: ότι κάποιος όντως απαντά.
-    expect(net).toContain('workspaceSegmentFor');
+    expect(destination).toContain('workspaceSegmentFor');
   });
 });
