@@ -5,7 +5,11 @@
  * Extracted from UnifiedContactTabbedSection inline renderer so that
  * useFullscreen hook has proper React lifecycle (not inside useMemo).
  *
- * @enterprise ADR-241 (Fullscreen centralization)
+ * 📍 ADR-332 D27 Β-ΙΙ: οι διευθύνσεις επαφής **κρατούν θέση**. Κάθε σύρσιμο περνά από διάλογο
+ * (έδρα → editor · υποκατάστημα → προβολή), «Μόνο η θέση» υπάρχει παντού, και η αποθηκευμένη
+ * πινέζα δεν «πηδά» στο σημείο της μηχανής.
+ *
+ * @enterprise ADR-241 (Fullscreen centralization) · ADR-332 D25 · D27 Β-ΙΙ
  */
 import React, { useState, useCallback, useRef, useMemo } from 'react';
 import { flushSync } from 'react-dom';
@@ -20,9 +24,9 @@ import { FullscreenOverlay, FullscreenToggleButton } from '@/core/containers/Ful
 import { AddressWithHierarchy } from '@/components/shared/addresses/AddressWithHierarchy';
 import { SharedAddressActionCard } from '@/components/shared/addresses/SharedAddressActionCard';
 import { CompanyAddressesSection, type CompanyAddressesSectionHandle } from '@/components/contacts/dynamic/CompanyAddressesSection';
-import { ContactAddressMapPreview, type DragResolvedAddress } from '@/components/contacts/details/ContactAddressMapPreview';
-import { PIN_DROP_NO_TEXT_I18N_KEY, type PinDropNoText } from '@/components/shared/addresses/pin-drop';
-import type { GeoPoint } from '@/types/geo/coordinates';
+import { ContactAddressMapPreview } from '@/components/contacts/details/ContactAddressMapPreview';
+import type { DragResolvedAddress } from '@/components/contacts/details/contact-pin-drop';
+import type { DragApplyMode } from '@/components/shared/addresses/pin-drop';
 import type { CompanyAddress } from '@/types/ContactFormTypes';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import type { ProjectAddress } from '@/types/project/addresses';
@@ -33,6 +37,7 @@ import { AddressTypeSelector } from '@/components/contacts/addresses/AddressType
 import { resolveContactAddressLabel } from '@/components/contacts/addresses/contactAddressLabel';
 import { getPrimaryAddressType, type ContactAddressType } from '@/types/contacts/address-types';
 import { pruneBlankContactAddresses } from '@/utils/contacts/contact-address-blankness';
+import { addressListCenter } from '@/utils/address/address-list-center';
 import { useNotifications } from '@/providers/NotificationProvider';
 
 interface AddressesSectionWithFullscreenProps {
@@ -45,10 +50,14 @@ interface AddressesSectionWithFullscreenProps {
 import {
   formatHqStreetLine,
   formDataToResolvedFields,
+  hqEntryFromFlatFields,
 } from './addresses-section-form-mapping';
 import { formatContactAddressLine } from '@/utils/address/address-line';
 // Ο ΕΝΑΣ ιδιοκτήτης της εγγραφής της έδρας — εξήχθη (N.7.1, ADR-772).
 import { useHqAddressMutations } from './use-hq-address-mutations';
+import { useContactAddressDragRouting } from './useContactAddressDragRouting';
+import { ContactViewDragConfirm } from './ContactViewDragConfirm';
+import { useContactDriftFooter } from './useContactDriftFooter';
 
 export function AddressesSectionWithFullscreen({
   formData,
@@ -94,11 +103,6 @@ export function AddressesSectionWithFullscreen({
       })),
     [derivedWorkAddresses, workTypeLabel]
   );
-
-  // Close inline form when global edit mode ends
-  React.useEffect(() => {
-    if (disabled) setIsEditingHQ(false);
-  }, [disabled]);
 
   // Stable resolved fields for the HQ AddressEditor (recomputed only when basic fields change).
   const hqResolvedFields = useMemo(
@@ -157,20 +161,14 @@ export function AddressesSectionWithFullscreen({
 
   const currentAddresses: CompanyAddress[] = formData.companyAddresses ?? [];
   /**
-   * ADR-332 D20 — η τελευταία γραμμή είναι **συνθετική**: υπάρχει μόνο για να έχει
-   * η οθόνη μια θέση έδρας όταν η επαφή δεν έχει καμία διεύθυνση ακόμη.
-   *
-   * ΔΕΝ είναι δεδομένο. Παλιότερα έρρεε αυτούσια στο `onChange` και γραφόταν στη
-   * βάση — αυτή είναι η αιτία της κενής έδρας που βρέθηκε στη δοκιμαστική «ALFA ΚΑΤΑΣΚΕΥΑΣΤΙΚΗ Α.Ε.».
-   * Κάθε σημείο που γράφει `companyAddresses` περνά πλέον από το
-   * `pruneBlankContactAddresses` (θετική αναλλοίωτη ADR-319: η θέση 0 μένει όσο
-   * υπάρχει έστω ένα υποκατάστημα).
+   * ADR-332 D20 — όταν η λίστα είναι κενή, η γραμμή έδρας είναι **συνθετική**: υπάρχει μόνο
+   * για να έχει η οθόνη θέση έδρας. ΔΕΝ είναι δεδομένο — κάθε σημείο που γράφει
+   * `companyAddresses` περνά από το `pruneBlankContactAddresses`. Β-ΙΙ: την ίδια εγγραφή
+   * (με ιεραρχία) υλοποιεί η πρώτη τοποθέτηση θέσης (`hqEntryFromFlatFields`).
    */
   const effectiveAddresses: CompanyAddress[] = currentAddresses.length > 0
     ? currentAddresses
-    : formData.street
-      ? [{ type: primaryType, customLabel: primaryCustomLabel, street: formData.street as string, number: (formData.streetNumber as string) ?? '', postalCode: (formData.postalCode as string) ?? '', city: (formData.city as string) ?? '' }]
-      : [{ type: primaryType, customLabel: primaryCustomLabel, street: '', number: '', postalCode: '', city: '' }];
+    : [hqEntryFromFlatFields(formData)];
 
   /**
    * Όλες οι γραφές της έδρας — **ένας** ιδιοκτήτης (N.7.1 / ADR-772).
@@ -179,8 +177,10 @@ export function AddressesSectionWithFullscreen({
    */
   const {
     handleHqChange,
-    applyDragResolve,
+    applyConfirmedDrag,
     handleHqDragApplied,
+    hqPlacement,
+    resetHqPlacement,
     hqHierarchyValue,
     handleHqHierarchyChange,
     handlePrimaryTypeChange,
@@ -191,14 +191,44 @@ export function AddressesSectionWithFullscreen({
     onDragMissingNumber: maybeWarnMissingNumber,
   });
 
-  /**
-   * ADR-332 D27 Βήμα Β — σύρσιμο χωρίς κείμενο. Οι επαφές δεν αποθηκεύουν ακόμη θέση (Β-ΙΙ):
-   * η πινέζα **επιστρέφει** (ό,τι βλέπεις = ό,τι αποθηκεύεται) και ο άνθρωπος μαθαίνει γιατί.
-   */
-  const handleDragWithoutText = useCallback((reason: PinDropNoText) => {
+  const closeHqEditor = useCallback(() => {
+    setIsEditingHQ(false);
+    resetHqPlacement();
+  }, [resetHqPlacement]);
+
+  // Close inline form when global edit mode ends
+  React.useEffect(() => {
+    if (disabled) closeHqEditor();
+  }, [disabled, closeHqEditor]);
+
+  /** Ο editor της έδρας πρέπει να υπάρχει **πριν** το `setPendingDrag` — άνοιγμα σύγχρονα. */
+  const openHqEditor = useCallback(() => {
+    flushSync(() => setIsEditingHQ(true));
+  }, []);
+
+  // ADR-332 D27 Β-ΙΙ: σύρσιμο → διάλογος → και ΜΟΝΟ μετά θέση (έδρα: editor · υποκατάστημα: προβολή).
+  const { pendingViewDrag, clearViewDrag, handlePinDrop } = useContactAddressDragRouting({
+    hqEditorRef,
+    openHqEditor,
+  });
+
+  const handleViewDragConfirm = useCallback((mode: DragApplyMode) => {
+    if (!pendingViewDrag) return;
+    const { drop, addressIndex } = pendingViewDrag;
+    const dragged = mode === 'adopt-address' && drop.text.kind === 'resolved' ? drop.text.address : null;
+    applyConfirmedDrag(dragged, addressIndex, drop.point);
+    clearViewDrag();
+  }, [pendingViewDrag, applyConfirmedDrag, clearViewDrag]);
+
+  const handleViewDragCancel = useCallback(() => {
+    clearViewDrag();
     handleUndoRedo();
-    notify(tAddr(PIN_DROP_NO_TEXT_I18N_KEY[reason]), { type: 'info', duration: 6000 });
-  }, [handleUndoRedo, notify, tAddr]);
+  }, [clearViewDrag, handleUndoRedo]);
+
+  // Φ2β — «Μετακίνησε / Κράτα», μόνο σε προβολή (βλ. `useContactDriftFooter`).
+  const renderDriftFooter = useContactDriftFooter(formData.id, !isEditing);
+  // ADR-332 D25 — το σημείο της επαφής ως αφετηρία εγγύτητας (ίδιο με τη φόρμα επεξεργασίας έργου).
+  const proximityAnchor = addressListCenter(effectiveAddresses);
 
   const tAddrFn = useCallback((key: string) => tAddr(key) as string, [tAddr]);
   const hqTypeLabel = resolveContactAddressLabel(primaryType, primaryCustomLabel, tAddrFn);
@@ -249,6 +279,7 @@ export function AddressesSectionWithFullscreen({
             onClear={clearHq}
             editLabel={tContacts('contacts-form:addressesSection.editAddress')}
             clearLabel={tContacts('contacts-form:addressesSection.clearAddress')}
+            footer={renderDriftFooter(effectiveAddresses[0])}
           />
         ) : (
           <div className="border-2 border-primary rounded-lg p-3 space-y-3" onKeyDown={handleHqKeyDown}>
@@ -267,6 +298,8 @@ export function AddressesSectionWithFullscreen({
               onChange={handleHqChange}
               onDragApplied={handleHqDragApplied}
               onUndoRedo={handleUndoRedo}
+              placement={hqPlacement}
+              suggestions={{ proximityAnchor }}
               mode="edit"
               domain="contact"
               formOptions={{ hideGrid: true, showNeighborhoodRegion: true }}
@@ -279,7 +312,7 @@ export function AddressesSectionWithFullscreen({
               />
             </AddressEditor>
             <div className="flex justify-end border-t pt-3">
-              <Button type="button" variant="outline" onClick={() => setIsEditingHQ(false)}>
+              <Button type="button" variant="outline" onClick={closeHqEditor}>
                 {tAddr('deleteDialog.cancel')}
               </Button>
             </div>
@@ -294,6 +327,7 @@ export function AddressesSectionWithFullscreen({
           addresses={effectiveAddresses}
           disabled={disabled}
           contactType={formData.type}
+          renderCardFooter={renderDriftFooter}
           onChange={(newAddresses) => {
             if (!setFormData) return;
             // ADR-332 D20: η συνθετική κενή έδρα δεν επιτρέπεται να γίνει δεδομένο.
@@ -347,39 +381,18 @@ export function AddressesSectionWithFullscreen({
           readOnlyExtraAddresses={derivedPinAddresses}
           draggable={isEditing}
           dragResetKey={undoRedoCount}
-          onDragWithoutText={isEditing && setFormData ? handleDragWithoutText : undefined}
-          onDragResolve={isEditing && setFormData ? (addr: DragResolvedAddress, addressIndex: number, point: GeoPoint) => {
-            // ADR-319: HQ is always index 0.
-            // HQ drag → AddressEditor confirm dialog (ADR-332 Phase 6, replaces ADR-277 AlertDialog).
-            // Branch drag → apply directly (no hierarchy to clear for branches).
-            if (addressIndex === 0) {
-              // Ensure AddressEditor is mounted before calling setPendingDrag.
-              // If isEditingHQ is false, the editor ref is null — open it synchronously.
-              if (!hqEditorRef.current) {
-                flushSync(() => setIsEditingHQ(true));
-              }
-              // Χωρίς `placement`: ο editor της επαφής ΔΕΝ προσφέρει «Μόνο η θέση» (Β-ΙΙ).
-              hqEditorRef.current?.setPendingDrag({
-                point,
-                text: {
-                  kind: 'resolved',
-                  address: {
-                    street: addr.street,
-                    number: addr.number,
-                    postalCode: addr.postalCode,
-                    city: addr.city,
-                    neighborhood: addr.neighborhood,
-                    region: addr.region,
-                    country: addr.country,
-                  },
-                },
-              });
-            } else {
-              applyDragResolve(addr, addressIndex);
-            }
-          } : undefined}
+          onPinDrop={isEditing && setFormData ? handlePinDrop : undefined}
         />
       </aside>
+
+      {pendingViewDrag !== null && (
+        <ContactViewDragConfirm
+          target={effectiveAddresses[pendingViewDrag.addressIndex]}
+          drop={pendingViewDrag.drop}
+          onConfirm={handleViewDragConfirm}
+          onCancel={handleViewDragCancel}
+        />
+      )}
     </FullscreenOverlay>
   );
 }

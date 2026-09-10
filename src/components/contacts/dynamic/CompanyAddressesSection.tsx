@@ -37,6 +37,7 @@ import { isBlankContactAddress } from '@/utils/contacts/contact-address-blanknes
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { AddressEditor } from '@/components/shared/addresses/editor';
 import type { ResolvedAddressFields } from '@/components/shared/addresses/editor';
+import { addressListCenter } from '@/utils/address/address-list-center';
 
 // ============================================================================
 // TYPES
@@ -53,6 +54,11 @@ interface CompanyAddressesSectionProps {
    * per-branch selector. Falls back to company semantics when omitted.
    */
   contactType?: ContactType;
+  /**
+   * ADR-332 D27 Β-ΙΙ — ό,τι αποδίδεται κάτω από την κάρτα ενός υποκαταστήματος (η ειδοποίηση
+   * απόκλισης κρατημένης πινέζας). Η απόφαση **τι** δείχνεται ζει στον γονιό.
+   */
+  renderCardFooter?: (address: CompanyAddress) => React.ReactNode;
 }
 
 export interface CompanyAddressesSectionHandle {
@@ -139,9 +145,11 @@ interface BranchEditorWrapperProps {
   branchVisualIndex: number;
   disabled: boolean;
   onUpdate: (idx: number, updated: CompanyAddress) => void;
+  /** ADR-332 D25 — το σημείο της επαφής (οι αδελφές διευθύνσεις), για την κατάταξη προτάσεων. */
+  proximityAnchor: ReturnType<typeof addressListCenter>;
 }
 
-function BranchEditorWrapper({ addr, branchVisualIndex, disabled, onUpdate }: BranchEditorWrapperProps) {
+function BranchEditorWrapper({ addr, branchVisualIndex, disabled, onUpdate, proximityAnchor }: BranchEditorWrapperProps) {
   const resolvedFields = React.useMemo(
     () => branchToResolvedFields(addr),
     // Only re-compute when basic fields change (keeps AddressEditor.value stable).
@@ -160,6 +168,7 @@ function BranchEditorWrapper({ addr, branchVisualIndex, disabled, onUpdate }: Br
     <AddressEditor
       value={resolvedFields}
       onChange={handleResolvedChange}
+      suggestions={{ proximityAnchor }}
       mode="edit"
       domain="contact"
       formOptions={{ hideGrid: true, showNeighborhoodRegion: true }}
@@ -185,6 +194,7 @@ export const CompanyAddressesSection = forwardRef<CompanyAddressesSectionHandle,
   hideAddButton = false,
   hideSectionTitle = false,
   contactType,
+  renderCardFooter,
 }, ref) {
   const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
   const { t: tAddr } = useTranslation('addresses');
@@ -210,6 +220,10 @@ export const CompanyAddressesSection = forwardRef<CompanyAddressesSectionHandle,
   }, [disabled]);
 
   const isEditing = !disabled;
+
+  // ADR-332 D25 · D27 Β-ΙΙ — οι διευθύνσεις επαφής ΕΧΟΥΝ πλέον θέση: η αφετηρία εγγύτητας είναι
+  // το σημείο της επαφής (κύρια με θέση, αλλιώς η πρώτη με θέση), ίδια με τη φόρμα επεξεργασίας έργου.
+  const proximityAnchor = addressListCenter(addresses);
 
   // ADR-319: HQ is always index 0 (positional invariant across contact types).
   const effectiveHqIndex = 0;
@@ -330,6 +344,7 @@ export const CompanyAddressesSection = forwardRef<CompanyAddressesSectionHandle,
                       branchVisualIndex={i}
                       disabled={disabled}
                       onUpdate={handleBranchUpdate}
+                      proximityAnchor={proximityAnchor}
                     />
                     <div className="flex justify-end border-t pt-3">
                       <Button
@@ -352,6 +367,7 @@ export const CompanyAddressesSection = forwardRef<CompanyAddressesSectionHandle,
                     onDelete={() => setBranchDeleteIndex(i)}
                     editLabel={t('contacts-form:addressesSection.editAddress')}
                     deleteLabel={t('contacts-form:addressesSection.removeAddress')}
+                    footer={renderCardFooter?.(addr)}
                   />
                 )}
                 {i < branches.length - 1 && <Separator />}
