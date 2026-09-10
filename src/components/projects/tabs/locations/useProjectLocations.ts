@@ -5,34 +5,35 @@
  *
  * Manages address CRUD, inline form state (add/edit), and persistence.
  *
+ * 🔑 ADR-332 D27 Βήμα Β: οι δύο φόρμες ζουν στο `useLocationFlows` (η καθεμιά με **δική της**
+ * ανθρώπινη θέση, `useFormPlacedPoint`). Εδώ μένουν η λίστα, η αποθήκευση και οι πράξεις
+ * πάνω σε κάρτες — και η **ίδια** διεπαφή προς τους καταναλωτές.
+ *
  * @module components/projects/tabs/locations/useProjectLocations
- * @enterprise ADR-167
+ * @enterprise ADR-167, ADR-332
  */
 
 import { useState, useCallback, useEffect } from 'react';
 import type { Project } from '@/types/project';
-import type { ProjectAddress, PartialProjectAddress, ProjectAddressType, BlockSideDirection } from '@/types/project/addresses';
-import type { AddressWithHierarchyValue } from '@/components/shared/addresses/AddressWithHierarchy';
-import { SELECT_CLEAR_VALUE } from '@/config/domain-constants';
+import type { ProjectAddress } from '@/types/project/addresses';
 import {
   migrateLegacyAddress,
   extractLegacyFields,
   createProjectAddress,
 } from '@/types/project/address-helpers';
-import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { updateProjectWithPolicy } from '@/services/projects/project-mutation-gateway';
 import { useProjectNotifications } from '@/hooks/notifications/useProjectNotifications';
-import {
-  toHierarchyValue,
-  fromHierarchyValue,
-  EMPTY_HIERARCHY,
-  applyDraggedPin,
-  type DragApplyMode,
-} from './location-converters';
-import { ADDRESS_TYPE_KEYS, isUniqueAddressType } from './address-constants';
+import type { PinDrop } from '@/components/shared/addresses/pin-drop';
+import type { AddressPositionDrift } from '@/lib/geocoding/address-position';
+import { applyPinDrop, type DragApplyMode } from './location-converters';
+import { useLocationAddFlow, useLocationEditFlow, type AddressOp } from './useLocationFlows';
 
 import { revealInScroll } from '@/lib/a11y/reveal-in-scroll';
-type AddressOp = 'added' | 'updated' | 'deleted' | 'cleared' | 'primaryUpdated';
+
+function initialAddresses(project: Project): ProjectAddress[] {
+  if (project.addresses) return project.addresses;
+  return project.address && project.city ? migrateLegacyAddress(project.address, project.city) : [];
+}
 
 // =============================================================================
 // HOOK
@@ -42,57 +43,29 @@ export function useProjectLocations(project: Project) {
   const projectNotifications = useProjectNotifications();
 
   // Derive addresses from project prop
-  const [localAddresses, setLocalAddresses] = useState<ProjectAddress[]>(() =>
-    project.addresses ||
-      (project.address && project.city
-        ? migrateLegacyAddress(project.address, project.city)
-        : [])
-  );
+  const [localAddresses, setLocalAddresses] = useState<ProjectAddress[]>(() => initialAddresses(project));
 
   // Sync when project changes (forceMount keeps component alive)
   useEffect(() => {
-    const addresses = project.addresses ||
-      (project.address && project.city
-        ? migrateLegacyAddress(project.address, project.city)
-        : []);
-    setLocalAddresses(addresses);
+    setLocalAddresses(initialAddresses(project));
   }, [project.id]);
 
   // UI state
   const [isSaving, setIsSaving] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTargetIndex, setDeleteTargetIndex] = useState<number | null>(null);
-
-  // Add form state
-  const [isAddFormOpen, setIsAddFormOpen] = useState(false);
-  const [addHierarchy, setAddHierarchy] = useState<Partial<AddressWithHierarchyValue>>({});
-  const [addType, setAddType] = useState<ProjectAddressType>('site');
-  const [addBlockSide, setAddBlockSide] = useState<BlockSideDirection | typeof SELECT_CLEAR_VALUE>(SELECT_CLEAR_VALUE);
-  const [addLabel, setAddLabel] = useState('');
-  const [addIsPrimary, setAddIsPrimary] = useState(false);
-  // Pending pin: position for the draggable preview marker shown while add form is open
-  const [pendingDragCoords, setPendingDragCoords] = useState<{ lat: number; lng: number } | null>(null);
-  // True only after the user actually drags the pending pin. Distinguishes "user
-  // chose this location" from "we placed the pin at a default reference position".
-  // Save uses pendingDragCoords ONLY when this flag is true; otherwise the typed
-  // address is geocoded by the map and the address is persisted without coords.
-  const [pendingHasDragged, setPendingHasDragged] = useState(false);
-
-  // Edit form state
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [editHierarchy, setEditHierarchy] = useState<Partial<AddressWithHierarchyValue>>({});
-  const [editType, setEditType] = useState<ProjectAddressType>('site');
-  const [editBlockSide, setEditBlockSide] = useState<BlockSideDirection | typeof SELECT_CLEAR_VALUE>(SELECT_CLEAR_VALUE);
-  const [editLabel, setEditLabel] = useState('');
-  const [editIsPrimary, setEditIsPrimary] = useState(false);
-
-  const isInlineFormActive = isAddFormOpen || editingIndex !== null;
+  /** Φ2β — κρατημένες ανθρώπινες πινέζες που απέχουν από τη νέα τους διεύθυνση (τελευταία αποθήκευση). */
+  const [positionAdvisories, setPositionAdvisories] = useState<readonly AddressPositionDrift[]>([]);
 
   // ---------------------------------------------------------------------------
   // PERSISTENCE HELPER
   // ---------------------------------------------------------------------------
 
-  async function persistAddresses(newAddresses: ProjectAddress[], op: AddressOp) {
+  async function persistAddresses(
+    newAddresses: ProjectAddress[],
+    op: AddressOp,
+    relocateAddressIds: readonly string[] = [],
+  ) {
     const legacy = extractLegacyFields(newAddresses);
     const fireSuccess = () => {
       switch (op) {
@@ -120,10 +93,15 @@ export function useProjectLocations(project: Project) {
           addresses: newAddresses,
           address: legacy.address,
           city: legacy.city,
+          ...(relocateAddressIds.length > 0 ? { relocateAddressIds: [...relocateAddressIds] } : {}),
         },
       });
       if (result.success) {
-        setLocalAddresses(newAddresses);
+        // 🔴 ADR-332 D27 Βήμα Β (Β5): υιοθετείται ό,τι ΕΓΡΑΨΕ ο διακομιστής (μοτίβο Apollo / Relay).
+        // Με το αντίγραφο του πελάτη η κάρτα έμενε «Στον δρόμο» ως την επαναφόρτωση — ο γραφέας
+        // θέσης είχε ήδη σβήσει το `geocodingMetadata` που κρατούσε εδώ το `{...addr}`.
+        setLocalAddresses(result.addresses ?? newAddresses);
+        setPositionAdvisories(result.positionAdvisories ?? []);
         fireSuccess();
         return true;
       }
@@ -134,6 +112,22 @@ export function useProjectLocations(project: Project) {
       return false;
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // FORMS — ADR-332 D27 Βήμα Β (βλ. `useLocationFlows`)
+  // ---------------------------------------------------------------------------
+
+  const flowDeps = {
+    localAddresses,
+    persistAddresses,
+    setIsSaving,
+    notify: {
+      cityRequired: () => { projectNotifications.address.cityRequired(); },
+      soleAddressMustBePrimary: () => { projectNotifications.address.soleAddressMustBePrimary(); },
+    },
+  };
+  const add = useLocationAddFlow(flowDeps);
+  const edit = useLocationEditFlow(flowDeps);
 
   // ---------------------------------------------------------------------------
   // SET PRIMARY
@@ -201,266 +195,93 @@ export function useProjectLocations(project: Project) {
   };
 
   // ---------------------------------------------------------------------------
-  // ADD FORM
+  // MAP DRAG (view mode) — σύρσιμο → διάλογος → αποθήκευση
   // ---------------------------------------------------------------------------
 
-  /** Open the add form and place the pending pin at a smart reference position. */
-  const handleOpenAddForm = useCallback(() => {
-    const withCoords = localAddresses.filter(a => a.coordinates?.lat && a.coordinates?.lng);
-    let pendingPos: { lat: number; lng: number };
-
-    if (withCoords.length === 0) {
-      pendingPos = {
-        lat: GEOGRAPHIC_CONFIG.DEFAULT_LATITUDE,
-        lng: GEOGRAPHIC_CONFIG.DEFAULT_LONGITUDE,
-      };
-    } else if (withCoords.length === 1) {
-      // ~150m north of the single existing pin
-      pendingPos = {
-        lat: withCoords[0].coordinates!.lat + 0.00135,
-        lng: withCoords[0].coordinates!.lng,
-      };
-    } else {
-      // Centroid of all existing pins (midpoint for 2, triangle center for 3, etc.)
-      const lat = withCoords.reduce((s, a) => s + a.coordinates!.lat, 0) / withCoords.length;
-      const lng = withCoords.reduce((s, a) => s + a.coordinates!.lng, 0) / withCoords.length;
-      pendingPos = { lat, lng };
-    }
-
-    // Suggest the first unused unique type as default. Ghost addresses are
-    // skipped so a cleared primary slot doesn't claim its type. Falls back to
-    // 'other' when every unique type is already used.
-    const usedUniqueTypes = new Set(
-      localAddresses
-        .filter(a => !((a.street ?? '') === '' && (a.city ?? '') === ''))
-        .map(a => a.type)
-        .filter(isUniqueAddressType),
-    );
-    const nextType = ADDRESS_TYPE_KEYS.find(
-      t => !isUniqueAddressType(t) || !usedUniqueTypes.has(t),
-    ) ?? 'other';
-    setAddType(nextType);
-
-    setPendingDragCoords(pendingPos);
-    setPendingHasDragged(false);
-    setIsAddFormOpen(true);
-  }, [localAddresses]);
-
-  /** Called when the pending pin is dragged — reverse-geocode result populates the form. */
-  const handlePendingDragUpdate = useCallback((addressData: Partial<PartialProjectAddress>) => {
-    if (addressData.coordinates) {
-      setPendingDragCoords(addressData.coordinates);
-      setPendingHasDragged(true);
-    }
-    setAddHierarchy(prev => ({
-      ...prev,
-      ...(addressData.street !== undefined && { street: addressData.street }),
-      ...(addressData.number !== undefined && { number: addressData.number }),
-      ...(addressData.city !== undefined && { settlementName: addressData.city }),
-      ...(addressData.postalCode !== undefined && { postalCode: addressData.postalCode }),
-      ...(addressData.region !== undefined && { regionName: addressData.region }),
-      ...(addressData.neighborhood !== undefined && { communityName: addressData.neighborhood }),
-    }));
-  }, []);
-
-  const handleCancelAdd = useCallback(() => {
-    setIsAddFormOpen(false);
-    setPendingDragCoords(null);
-    setPendingHasDragged(false);
-    setAddHierarchy({});
-    setAddType('site');
-    setAddBlockSide(SELECT_CLEAR_VALUE);
-    setAddLabel('');
-    setAddIsPrimary(false);
-  }, []);
-
-  /**
-   * 🔑 **ΤΟ ΣΗΜΕΙΟ ΠΟΥ ΤΟΠΟΘΕΤΗΣΕ Ο ΑΝΘΡΩΠΟΣ** — μία απάντηση, δύο καταναλωτές.
-   *
-   * Η διάκριση *«μαντεμένη πινέζα ή ανθρώπινη πράξη;»* ζούσε ήδη εδώ, ενσωματωμένη στην
-   * αποθήκευση *(«αλλιώς η διεύθυνση κολλάει στην προεπιλεγμένη θέση»)*. Όταν το ADR-332
-   * **D25** χρειάστηκε την **ίδια** διάκριση για την αφετηρία εγγύτητας, η εύκολη κίνηση
-   * ήταν να εκτεθεί το ωμό `pendingHasDragged` και να ξαναγίνει η σύνθεση απ' έξω. Δύο
-   * συνθέσεις της ίδιας ερώτησης **αποκλίνουν σιωπηλά**: η μία θα θυμόταν τον έλεγχο
-   * κενού και η άλλη όχι, και κανένα από τα δύο αποτελέσματα δεν θα φαινόταν λάθος.
-   *
-   * ⚠️ **`null` όσο η πινέζα κάθεται στη μαντεμένη θέση** — κεντροειδές, μετατόπιση
-   * 150 m, ή προεπιλεγμένο κέντρο Αθήνας. Καμία από αυτές δεν είναι δήλωση ανθρώπου.
-   */
-  const humanPlacedPoint = pendingHasDragged ? pendingDragCoords : null;
-
-  const handleSaveNewAddress = async () => {
-    const addressFields = fromHierarchyValue({ ...EMPTY_HIERARCHY, ...addHierarchy } as AddressWithHierarchyValue);
-    if (!addressFields.city) {
-      projectNotifications.address.cityRequired();
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      const isNewPrimary = localAddresses.length === 0 || addIsPrimary;
-      const newAddress = createProjectAddress({
-        ...addressFields,
-        city: addressFields.city,
-        type: addType,
-        isPrimary: isNewPrimary,
-        // Persist coordinates ONLY if user dragged the pending pin. If the pin
-        // sat at the default reference position (Athens / centroid), let the
-        // map geocode the typed street/city instead — otherwise the saved
-        // address gets stuck at the default location.
-        // 🔑 Η ίδια τιμή τρέφει και την αφετηρία εγγύτητας (D25) — μία απάντηση.
-        ...(humanPlacedPoint ? { coordinates: humanPlacedPoint } : {}),
-        ...(addBlockSide !== SELECT_CLEAR_VALUE ? { blockSide: addBlockSide as BlockSideDirection } : {}),
-        ...(addLabel ? { label: addLabel } : {}),
-      });
-
-      // Demote existing primaries if new address is primary (prevents "Exactly one primary" violation)
-      const baseAddresses = isNewPrimary
-        ? localAddresses.map(a => ({ ...a, isPrimary: false }))
-        : localAddresses;
-      const newAddresses = [...baseAddresses, newAddress];
-      const ok = await persistAddresses(newAddresses, 'added');
-      if (ok) handleCancelAdd();
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  // ---------------------------------------------------------------------------
-  // EDIT FORM
-  // ---------------------------------------------------------------------------
-
-  const handleStartEdit = (index: number) => {
-    const addr = localAddresses[index];
-    setEditingIndex(index);
-    setEditHierarchy(toHierarchyValue(addr));
-    setEditType(addr.type || 'site');
-    setEditBlockSide(addr.blockSide || SELECT_CLEAR_VALUE);
-    setEditLabel(addr.label || '');
-    setEditIsPrimary(addr.isPrimary ?? false);
-  };
-
-  const handleCancelEdit = useCallback(() => {
-    setEditingIndex(null);
-    setEditHierarchy({});
-    setEditType('site');
-    setEditBlockSide(SELECT_CLEAR_VALUE);
-    setEditLabel('');
-    setEditIsPrimary(false);
-  }, []);
-
-  const handleSaveEdit = async () => {
-    if (editingIndex === null) return;
-    const addressFields = fromHierarchyValue({ ...EMPTY_HIERARCHY, ...editHierarchy } as AddressWithHierarchyValue);
-    if (!addressFields.city) {
-      projectNotifications.address.cityRequired();
-      return;
-    }
-
-    // Guard: cannot un-mark primary when no other address exists to promote
-    const otherAddressExists = localAddresses.some((_, i) => i !== editingIndex);
-    if (!editIsPrimary && !otherAddressExists) {
-      projectNotifications.address.soleAddressMustBePrimary();
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      let newAddresses = localAddresses.map((addr, i) => {
-        if (i !== editingIndex) {
-          // Demote other primaries if edited address becomes primary
-          return editIsPrimary ? { ...addr, isPrimary: false } : addr;
-        }
-        const { blockSide: _bs, label: _lb, ...rest } = addr;
-        return {
-          ...rest,
-          ...addressFields,
-          city: addressFields.city!,
-          type: editType,
-          isPrimary: editIsPrimary,
-          ...(editBlockSide !== SELECT_CLEAR_VALUE ? { blockSide: editBlockSide as BlockSideDirection } : {}),
-          ...(editLabel ? { label: editLabel } : {}),
-        };
-      });
-
-      // Safety: if user un-marked the only primary, auto-promote first other address
-      if (!newAddresses.some(a => a.isPrimary) && newAddresses.length > 0) {
-        const promoteIdx = newAddresses.findIndex((_, i) => i !== editingIndex);
-        const target = promoteIdx >= 0 ? promoteIdx : 0;
-        newAddresses = newAddresses.map((a, i) => i === target ? { ...a, isPrimary: true } : a);
-      }
-
-      const ok = await persistAddresses(newAddresses, 'updated');
-      if (ok) handleCancelEdit();
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  // Intercepts primary-change for edit form: blocks unchecking when this is the sole address
-  const handleEditIsPrimaryChange = (val: boolean) => {
-    if (!val && localAddresses.length <= 1) {
-      projectNotifications.address.soleAddressMustBePrimary();
-      return;
-    }
-    setEditIsPrimary(val);
-  };
-
-  // ---------------------------------------------------------------------------
-  // MAP DRAG UPDATE — pin drag → reverse geocode → auto-save
-  // ---------------------------------------------------------------------------
+  /** ADR-332 D27 Βήμα Β: δέχεται **ολόκληρο** το σύρσιμο — και χωρίς κείμενο (⇒ μόνο θέση). */
   const handleAddressDragUpdate = async (
-    addressData: Partial<PartialProjectAddress>,
+    drop: PinDrop,
     addressIndex: number,
     mode: DragApplyMode = 'adopt-address',
   ) => {
     if (addressIndex < 0 || addressIndex >= localAddresses.length) return;
     const newAddresses = localAddresses.map((addr, i) =>
-      i !== addressIndex ? addr : applyDraggedPin(addr, addressData, mode)
+      i !== addressIndex ? addr : applyPinDrop(addr, drop, mode)
     );
     await persistAddresses(newAddresses, 'updated');
   };
 
+  // ---------------------------------------------------------------------------
+  // ΑΠΟΚΛΙΣΗ ΠΙΝΕΖΑΣ (Φ2β) — ο άνθρωπος αποφασίζει, ο διακομιστής μόνο μετρά
+  // ---------------------------------------------------------------------------
+
+  /** «Μετακίνησε στη θέση της διεύθυνσης» — ρητή δήλωση `relocate` για ΑΥΤΗ τη διεύθυνση. */
+  const handleRelocateAddress = async (addressId: string) => {
+    setIsSaving(true);
+    try {
+      await persistAddresses(localAddresses, 'updated', [addressId]);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  /** «Κράτα την πινέζα» — ο άνθρωπος ξέρει καλύτερα· η συμβουλή φεύγει, η πινέζα μένει. */
+  const handleKeepAddressPin = useCallback((addressId: string) => {
+    setPositionAdvisories((prev) => prev.filter((a) => a.addressId !== addressId));
+  }, []);
+
+  /**
+   * 🔑 **ΤΟ ΣΗΜΕΙΟ ΠΟΥ ΤΟΠΟΘΕΤΗΣΕ Ο ΑΝΘΡΩΠΟΣ** στη φόρμα προσθήκης — μία απάντηση, δύο
+   * καταναλωτές (αποθήκευση + αφετηρία εγγύτητας, ADR-332 D25).
+   *
+   * ⚠️ **`null` όσο η πινέζα κάθεται στη μαντεμένη θέση** — κεντροειδές, μετατόπιση 150 m, ή
+   * προεπιλεγμένο κέντρο Αθήνας — **και** όσο ο άνθρωπος δεν έχει επιβεβαιώσει το σύρσιμο στον
+   * διάλογο (Βήμα Β: το «Άκυρο» δεν αφήνει πια ίχνος).
+   */
+  const humanPlacedPoint = add.placed.point;
+
   return {
     localAddresses,
     isSaving,
-    isInlineFormActive,
+    isInlineFormActive: add.isOpen || edit.editingIndex !== null,
 
     // Add
-    isAddFormOpen,
-    handleOpenAddForm,
-    pendingDragCoords,
+    isAddFormOpen: add.isOpen,
+    handleOpenAddForm: add.open,
+    pendingDragCoords: add.pendingPin,
     humanPlacedPoint,
-    handlePendingDragUpdate,
-    addHierarchy,
-    setAddHierarchy,
-    addType,
-    setAddType,
-    addBlockSide,
-    setAddBlockSide,
-    addLabel,
-    setAddLabel,
-    addIsPrimary,
-    setAddIsPrimary,
-    handleSaveNewAddress,
-    handleCancelAdd,
+    addPlacement: add.placed.placement,
+    addHierarchy: add.form.hierarchy,
+    setAddHierarchy: add.form.setHierarchy,
+    addType: add.form.type,
+    setAddType: add.form.setType,
+    addBlockSide: add.form.blockSide,
+    setAddBlockSide: add.form.setBlockSide,
+    addLabel: add.form.label,
+    setAddLabel: add.form.setLabel,
+    addIsPrimary: add.form.isPrimary,
+    setAddIsPrimary: add.form.setIsPrimary,
+    handleSaveNewAddress: add.save,
+    handleCancelAdd: add.cancel,
 
     // Edit
-    editingIndex,
-    editHierarchy,
-    setEditHierarchy,
-    editType,
-    setEditType,
-    editBlockSide,
-    setEditBlockSide,
-    editLabel,
-    setEditLabel,
-    editIsPrimary,
-    setEditIsPrimary,
-    handleEditIsPrimaryChange,
-    handleStartEdit,
-    handleSaveEdit,
-    handleCancelEdit,
+    editingIndex: edit.editingIndex,
+    editPlacement: edit.placed.placement,
+    editPlacedPoint: edit.placed.point,
+    editHierarchy: edit.form.hierarchy,
+    setEditHierarchy: edit.form.setHierarchy,
+    editType: edit.form.type,
+    setEditType: edit.form.setType,
+    editBlockSide: edit.form.blockSide,
+    setEditBlockSide: edit.form.setBlockSide,
+    editLabel: edit.form.label,
+    setEditLabel: edit.form.setLabel,
+    editIsPrimary: edit.form.isPrimary,
+    setEditIsPrimary: edit.form.setIsPrimary,
+    handleEditIsPrimaryChange: edit.changeIsPrimary,
+    handleStartEdit: edit.start,
+    handleSaveEdit: edit.save,
+    handleCancelEdit: edit.cancel,
 
     // Actions
     handleSetPrimary,
@@ -470,8 +291,15 @@ export function useProjectLocations(project: Project) {
     handleConfirmDelete,
     handleAddressDragUpdate,
 
+    // Φ2β — απόκλιση κρατημένης πινέζας
+    positionAdvisories,
+    handleRelocateAddress,
+    handleKeepAddressPin,
+
     // Delete dialog
     deleteDialogOpen,
     setDeleteDialogOpen,
   };
 }
+
+export type ProjectLocationsState = ReturnType<typeof useProjectLocations>;

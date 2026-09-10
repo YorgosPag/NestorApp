@@ -19,6 +19,7 @@
 import type { ProjectAddress, PartialProjectAddress } from '@/types/project/addresses';
 import type { AddressWithHierarchyValue } from '@/components/shared/addresses/AddressWithHierarchy';
 import { EMPTY_VALUE } from '@/components/shared/addresses/address-with-hierarchy-config';
+import { humanPlacedPatch, type PinDrop } from '@/components/shared/addresses/pin-drop';
 import {
   projectAddressVocabulary,
   resolveCityFromHierarchy,
@@ -87,11 +88,11 @@ export function applyDraggedPin(
   dragged: Partial<PartialProjectAddress>,
   mode: DragApplyMode,
 ): ProjectAddress {
-  const pinned: ProjectAddress = {
-    ...addr,
-    coordinates: dragged.coordinates ?? addr.coordinates,
-    source: 'dragged',
-  };
+  const point = dragged.coordinates ?? addr.coordinates;
+  // Η δήλωση γράφεται σε ΕΝΑ σημείο για όλους τους γραφείς του πελάτη (`humanPlacedPatch`).
+  const pinned: ProjectAddress = point
+    ? { ...addr, ...humanPlacedPatch(point) }
+    : { ...addr, source: 'dragged' };
   if (mode === 'position-only') return pinned;
   return {
     ...pinned,
@@ -108,4 +109,18 @@ export function applyDraggedPin(
     municipality: undefined,
     neighborhood: dragged.neighborhood ?? undefined,
   };
+}
+
+/**
+ * Εφαρμόζει ένα **ολόκληρο** σύρσιμο (`PinDrop`) — και σύρσιμο **χωρίς** κείμενο (404 / timeout).
+ *
+ * 🔑 ADR-332 D27 Βήμα Β: χωρίς κείμενο η «υιοθέτηση διεύθυνσης» δεν έχει τι να υιοθετήσει ⇒
+ * γίνεται **μόνο θέση**. Ο διάλογος δεν την προσφέρει καν· εδώ είναι η δεύτερη ζώνη ασφαλείας,
+ * ώστε ένα λάθος στον καλούντα να μη σβήσει ποτέ τον αριθμό με κενό κείμενο.
+ */
+export function applyPinDrop(addr: ProjectAddress, drop: PinDrop, mode: DragApplyMode): ProjectAddress {
+  if (mode === 'adopt-address' && drop.text.kind === 'resolved') {
+    return applyDraggedPin(addr, drop.text.address, 'adopt-address');
+  }
+  return applyDraggedPin(addr, humanPlacedPatch(drop.point), 'position-only');
 }

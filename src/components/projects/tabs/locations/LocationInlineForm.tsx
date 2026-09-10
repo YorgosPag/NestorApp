@@ -14,6 +14,7 @@ import type { AddressWithHierarchyValue } from '@/components/shared/addresses/Ad
 import { AddressEditor } from '@/components/shared/addresses/editor';
 import type {
   AddressEditorHandle,
+  AddressEditorPlacementOptions,
   AddressEditorSuggestionOptions,
   ResolvedAddressFields,
 } from '@/components/shared/addresses/editor';
@@ -71,6 +72,11 @@ interface LocationInlineFormProps {
    * συμπεριφορά, όχι υποβάθμιση.
    */
   suggestions?: AddressEditorSuggestionOptions;
+  /**
+   * Η φόρμα **αποθηκεύει θέση** — «Μόνο η θέση» + αναίρεση πινέζας (ADR-332 D27 Βήμα Β).
+   * Την κατέχει ο γονιός (`useFormPlacedPoint`), γιατί εκείνος τη στέλνει στην αποθήκευση.
+   */
+  placement?: AddressEditorPlacementOptions;
 }
 
 // =============================================================================
@@ -106,6 +112,7 @@ export const LocationInlineForm = forwardRef<AddressEditorHandle, LocationInline
     tProjects,
     availableTypes,
     suggestions,
+    placement,
   }, ref) {
     const iconSizes = useIconSizes();
     const typography = useTypography();
@@ -191,6 +198,7 @@ export const LocationInlineForm = forwardRef<AddressEditorHandle, LocationInline
             value={resolvedValue}
             onChange={handleEditorChange}
             onDragApplied={handleDragApplied}
+            placement={placement}
             onUndoRedo={onUndoRedo}
             mode="edit"
             domain="project"

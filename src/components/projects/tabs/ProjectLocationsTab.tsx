@@ -3,9 +3,10 @@
 
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import type { Project } from '@/types/project';
-import type { ProjectAddress, PartialProjectAddress, ProjectAddressType } from '@/types/project/addresses';
+import type { ProjectAddressType } from '@/types/project/addresses';
 import { SharedAddressActionCard } from '@/components/shared/addresses/SharedAddressActionCard';
 import { AddressPublicShapeBadge } from '@/components/shared/addresses/AddressPublicShapeBadge';
+import { AddressPositionDriftNotice } from '@/components/shared/addresses/AddressPositionDriftNotice';
 import { ADDRESS_TYPE_KEYS, isUniqueAddressType } from './locations/address-constants';
 import { AddressMap } from '@/components/shared/addresses/AddressMap';
 import { AddressMapCandidateLayer } from '@/components/shared/addresses/AddressMapCandidateLayer';
@@ -23,30 +24,16 @@ import { useTypography } from '@/hooks/useTypography';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useFullscreen } from '@/hooks/useFullscreen';
-import { storedAddressToResolved } from '@/utils/address/administrative-hierarchy';
 import { resolveProximityAnchor } from '@/utils/address/proximity-anchor';
+import { formatContactAddressLine } from '@/utils/address/address-line';
 import { FullscreenOverlay, FullscreenToggleButton } from '@/core/containers/FullscreenOverlay';
 import { cn } from '@/lib/utils';
 import { LocationInlineForm } from './locations/LocationInlineForm';
 import { useProjectLocations } from './locations/useProjectLocations';
 import type { DragApplyMode } from './locations/location-converters';
 import { ProjectViewDragConfirm } from './locations/ProjectViewDragConfirm';
-import type { AddressEditorHandle, ResolvedAddressFields } from '@/components/shared/addresses/editor';
-
-// =============================================================================
-// HELPERS
-// =============================================================================
-
-// ADR-772 — ήταν το **τρίτο** από τέσσερα δίδυμα. Το `jscpd --diff` δεν το είδε ποτέ:
-// αυτό το αρχείο δεν ήταν στο diff που εξέτασε η πύλη.
-function toResolvedFields(addr: Partial<PartialProjectAddress>): ResolvedAddressFields {
-  return storedAddressToResolved(addr, 'projectAddress');
-}
-
-interface PendingViewDrag {
-  addressData: Partial<PartialProjectAddress>;
-  originalIndex: number;
-}
+import { useLocationsDragRouting, useLocationsMapModel } from './locations/useLocationsMap';
+import type { AddressEditorHandle } from '@/components/shared/addresses/editor';
 
 // =============================================================================
 // TYPES
@@ -81,7 +68,6 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
   // ADR-332 Phase 7: editor refs for drag → confirm dialog
   const addEditorRef = useRef<AddressEditorHandle>(null);
   const editEditorRef = useRef<AddressEditorHandle>(null);
-  const [pendingViewDrag, setPendingViewDrag] = useState<PendingViewDrag | null>(null);
   const [undoRedoCount, setUndoRedoCount] = useState(0);
   const handleUndoRedo = useCallback(() => setUndoRedoCount(n => n + 1), []);
 
@@ -142,10 +128,10 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
   );
 
   /*
-    ⛔ **Η ΦΟΡΜΑ ΕΠΕΞΕΡΓΑΣΙΑΣ ΔΕΝ ΠΑΙΡΝΕΙ ΤΗΝ ΠΙΝΕΖΑ, ΚΑΙ ΕΙΝΑΙ ΔΟΜΙΚΟ, ΟΧΙ ΤΥΧΑΙΟ.**
-    Η εκκρεμής πινέζα ανήκει **αποκλειστικά** στη ροή προσθήκης: στην επεξεργασία, το
-    σύρσιμο μιας υπαρκτής πινέζας πηγαίνει στο `editEditorRef.setPendingDrag` και περνά
-    από διάλογο επιβεβαίωσης — ο πίνακας δεν κρατά ποτέ εκείνο το σημείο.
+    ⛔ **Η ΦΟΡΜΑ ΕΠΕΞΕΡΓΑΣΙΑΣ ΔΕΝ ΠΑΙΡΝΕΙ ΤΗΝ ΠΙΝΕΖΑ ΤΗΣ ΠΡΟΣΘΗΚΗΣ, ΚΑΙ ΕΙΝΑΙ ΔΟΜΙΚΟ.**
+    Η εκκρεμής πινέζα ανήκει **αποκλειστικά** στη ροή προσθήκης. Από το ADR-332 D27 Βήμα Β
+    η επεξεργασία κρατά **δική της** ανθρώπινη θέση (`editPlacedPoint` — ίδιο hook, άλλο
+    όνομα), που **αποθηκεύεται** αλλά **δεν** τροφοδοτεί την αφετηρία: εκεί μένει η λίστα.
 
     Θα ήταν εύκολο να δοθεί **μία** αφετηρία και στις δύο φόρμες, βασισμένο στο ότι το
     `humanPlacedPoint` «τυχαίνει» να είναι `null` στην επεξεργασία *(η πινέζα καθαρίζεται
@@ -185,36 +171,15 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
     [usedUniqueTypes, editingType],
   );
 
-  // Pending address: draggable preview pin shown while the add form is open.
-  // Appended to the real (non-ghost) addresses so AddressMap renders it as a pulsating draggable marker.
-  const PENDING_ID = '__pending_new__';
-
-  // The address whose pin shows amber + bounce (the one currently in the form).
-  const activeEditingAddressId = useMemo<string | undefined>(() => {
-    if (loc.isAddFormOpen) return PENDING_ID;
-    if (loc.editingIndex !== null) return loc.localAddresses[loc.editingIndex]?.id;
-    return undefined;
-  }, [loc.isAddFormOpen, loc.editingIndex, loc.localAddresses]);
-
-  // When a form is open, freeze every pin except the one being worked on.
-  // Add form → only PENDING_ID is draggable; real pins are locked.
-  // Edit form → only the address being edited is draggable; others are locked.
-  // View mode (no form) → all draggable (existing view-drag + confirm flow).
-  const readOnlyAddressIds = useMemo<Set<string> | undefined>(() => {
-    if (loc.isAddFormOpen) {
-      return new Set(visibleAddresses.map(({ address }) => address.id));
-    }
-    if (loc.editingIndex !== null) {
-      const editingId = loc.localAddresses[loc.editingIndex]?.id;
-      if (!editingId) return undefined;
-      return new Set(
-        visibleAddresses
-          .filter(({ address }) => address.id !== editingId)
-          .map(({ address }) => address.id),
-      );
-    }
-    return undefined;
-  }, [loc.isAddFormOpen, loc.editingIndex, loc.localAddresses, visibleAddresses]);
+  // ADR-332 D27 Βήμα Β — ο χάρτης δείχνει ό,τι ΘΑ αποθηκευτεί (βλ. `useLocationsMap`).
+  const { activeEditingAddressId, readOnlyAddressIds, mapAddresses } = useLocationsMapModel({
+    visibleAddresses,
+    localAddresses: loc.localAddresses,
+    isAddFormOpen: loc.isAddFormOpen,
+    editingIndex: loc.editingIndex,
+    pendingDragCoords: loc.pendingDragCoords,
+    editPlacedPoint: loc.editPlacedPoint,
+  });
   /**
    * 🔴 **Ο ΔΕΣΜΟΣ ΚΑΤΑΛΟΓΟΥ ⇄ ΧΑΡΤΗ** — ADR-332 **D26**. Ως τις 05/09 ο κατάλογος
    * «Πιθανές Τοποθεσίες» έδειχνε πέντε αληθινές διευθύνσεις σε **292-318 χλμ** και **καμία
@@ -230,57 +195,31 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
   const addSuggestions = useSuggestionOptions(candidateBond, addFormAnchor);
   const editSuggestions = useSuggestionOptions(candidateBond, entityAnchor);
 
-  const mapAddresses = useMemo<ProjectAddress[]>(() => {
-    const real = visibleAddresses.map(({ address }) => address);
-    if (!loc.isAddFormOpen || !loc.pendingDragCoords) return real;
-    return [
-      ...real,
-      {
-        id: PENDING_ID,
-        street: '',
-        city: '',
-        postalCode: '',
-        country: 'Greece',
-        type: 'site' as const,
-        isPrimary: false,
-        coordinates: loc.pendingDragCoords,
-      },
-    ];
-  }, [loc.isAddFormOpen, loc.pendingDragCoords, visibleAddresses]);
+  // Φ2β — η απόκλιση κάθε κρατημένης πινέζας, ανά ταυτότητα διεύθυνσης.
+  const driftById = useMemo(
+    () => new Map(loc.positionAdvisories.map((advisory) => [advisory.addressId, advisory])),
+    [loc.positionAdvisories],
+  );
 
-  // ADR-332 Phase 7: drag → AddressDragConfirmDialog (no silent overwrite).
-  // Pending pin → update coords only + show add-form confirm dialog.
-  // Real pin + edit form open → show edit-form confirm dialog.
-  // Real pin + view mode → local confirm dialog via pendingViewDrag state.
-  const handleCombinedDragUpdate = useCallback(async (
-    addressData: Partial<PartialProjectAddress>,
-    index: number,
-  ) => {
-    const realCount = visibleAddresses.length;
-    if (loc.isAddFormOpen && index >= realCount) {
-      // Update pin position only (not form fields — confirmed by dialog)
-      loc.handlePendingDragUpdate({ coordinates: addressData.coordinates });
-      addEditorRef.current?.setPendingDrag(toResolvedFields(addressData));
-      return;
-    }
-    const originalIndex = visibleAddresses[index]?.originalIndex ?? index;
-    if (loc.editingIndex !== null) {
-      editEditorRef.current?.setPendingDrag(toResolvedFields(addressData));
-    } else {
-      setPendingViewDrag({ addressData, originalIndex });
-    }
-  }, [loc.isAddFormOpen, loc.editingIndex, visibleAddresses, loc.handlePendingDragUpdate]);
+  // ADR-332 Phase 7 + D27 Βήμα Β: σύρσιμο → διάλογος → και ΜΟΝΟ μετά θέση (βλ. `useLocationsMap`).
+  const { pendingViewDrag, clearViewDrag, handleCombinedDragUpdate } = useLocationsDragRouting({
+    visibleAddresses,
+    isAddFormOpen: loc.isAddFormOpen,
+    editingIndex: loc.editingIndex,
+    addEditorRef,
+    editEditorRef,
+  });
 
   const handleViewDragConfirm = useCallback(async (mode: DragApplyMode) => {
     if (!pendingViewDrag) return;
-    await loc.handleAddressDragUpdate(pendingViewDrag.addressData, pendingViewDrag.originalIndex, mode);
-    setPendingViewDrag(null);
-  }, [pendingViewDrag, loc.handleAddressDragUpdate]);
+    await loc.handleAddressDragUpdate(pendingViewDrag.drop, pendingViewDrag.originalIndex, mode);
+    clearViewDrag();
+  }, [pendingViewDrag, loc.handleAddressDragUpdate, clearViewDrag]);
 
   const handleViewDragCancel = useCallback(() => {
-    setPendingViewDrag(null);
+    clearViewDrag();
     setUndoRedoCount(n => n + 1);
-  }, []);
+  }, [clearViewDrag]);
 
   return (
     <FullscreenOverlay
@@ -327,6 +266,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
             tProjects={tProjects}
             availableTypes={availableTypesForAdd}
             suggestions={addSuggestions}
+            placement={loc.addPlacement}
           />
         )}
 
@@ -353,6 +293,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
             availableTypes={availableTypesForEdit}
             tProjects={tProjects}
             suggestions={editSuggestions}
+            placement={loc.editPlacement}
           />
         )}
 
@@ -373,9 +314,9 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
                   {t('locations.projectAddresses')} ({visibleAddresses.length})
                 </h3>
                 {visibleAddresses.map(({ address, originalIndex }) => {
-                  const streetLine = [address.street, address.number, address.city, address.postalCode]
-                    .filter(Boolean)
-                    .join(', ');
+                  // Β7 — ΕΝΑ SSoT γραμμής διεύθυνσης (Τ.Κ. ΕΛΤΑ, χωρίς ορφανά κόμματα).
+                  const streetLine = formatContactAddressLine(address);
+                  const drift = driftById.get(address.id);
                   const typeLabel = t(`types.${address.type}`);
                   const isPrimary = address.isPrimary;
 
@@ -413,10 +354,21 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
                         δει ο επισκέπτης — όχι μια συντεταγμένη που δεν μπορεί να κρίνει.
                       */
                       footer={
-                        <AddressPublicShapeBadge
-                          coordinates={address.coordinates ?? null}
-                          geocodingMetadata={address.geocodingMetadata ?? null}
-                        />
+                        <>
+                          <AddressPublicShapeBadge
+                            coordinates={address.coordinates ?? null}
+                            geocodingMetadata={address.geocodingMetadata ?? null}
+                          />
+                          {/* ADR-332 D27 Βήμα Β (Φ2β) — η πινέζα έμεινε· πόσο απέχει από τη νέα διεύθυνση; */}
+                          {drift && (
+                            <AddressPositionDriftNotice
+                              distanceMetres={drift.distanceMetres}
+                              busy={loc.isSaving}
+                              onRelocate={() => { void loc.handleRelocateAddress(address.id); }}
+                              onKeep={() => loc.handleKeepAddressPin(address.id)}
+                            />
+                          )}
+                        </>
                       }
                     />
                   );
@@ -478,7 +430,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
       {pendingViewDrag !== null && (
         <ProjectViewDragConfirm
           target={visibleAddresses.find(({ originalIndex }) => originalIndex === pendingViewDrag.originalIndex)?.address}
-          dragged={pendingViewDrag.addressData}
+          drop={pendingViewDrag.drop}
           onConfirm={(mode) => { void handleViewDragConfirm(mode); }}
           onCancel={handleViewDragCancel}
         />
