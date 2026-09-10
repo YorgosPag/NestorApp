@@ -5,6 +5,7 @@ import {
   updateProjectClient,
   type ProjectCreatePayload,
   type ProjectUpdatePayload,
+  type ProjectUpdateClientResult,
 } from '@/services/projects-client.service';
 
 interface GuardedProjectCreateInput {
@@ -46,6 +47,6 @@ export async function createProjectWithPolicy({
 export async function updateProjectWithPolicy({
   projectId,
   updates,
-}: GuardedProjectUpdateInput): Promise<{ success: boolean; error?: string; _v?: number }> {
+}: GuardedProjectUpdateInput): Promise<ProjectUpdateClientResult> {
   return updateProjectClient(projectId, updates);
 }

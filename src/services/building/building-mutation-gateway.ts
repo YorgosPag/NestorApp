@@ -7,6 +7,7 @@ import {
   getBuildingCodesByProject,
   type BuildingCreatePayload,
   type BuildingUpdatePayload,
+  type BuildingUpdateClientResult,
 } from '@/components/building-management/building-services';
 import { suggestNextBuildingCode } from '@/config/entity-code-config';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -45,7 +46,7 @@ export async function createBuildingWithCodeRetry(
 export async function updateBuildingWithPolicy({
   buildingId,
   updates,
-}: GuardedBuildingUpdateInput): Promise<{ success: boolean; error?: string; errorCode?: string; _v?: number }> {
+}: GuardedBuildingUpdateInput): Promise<BuildingUpdateClientResult> {
   return updateBuilding(buildingId, updates);
 }
 

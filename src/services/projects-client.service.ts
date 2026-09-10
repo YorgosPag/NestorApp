@@ -17,6 +17,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import type { Project, ProjectStatus } from '@/types/project';
 import type { LandownerEntry } from '@/types/ownership-table';
 import type { ProjectAddress } from '@/types/project/addresses';
+import { settleEntityUpdate, type ServerAddressEcho } from '@/services/address-mutation-echo';
 import type { ProjectBuildingCodePhase2 } from '@/types/project-building-code';
 import type { ProjectSurveyPoint, ProjectBasePoint } from '@/types/project-elevation.schemas';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync
@@ -101,6 +102,11 @@ export interface ProjectUpdatePayload extends ProjectPayloadSharedFields {
   name?: string;
   // 🏢 SPEC-256A: Optimistic versioning
   _v?: number;
+  /**
+   * ADR-332 D27 Βήμα Β (Φ2β) — **αίτημα**, όχι πεδίο έργου: «μετακίνησε την πινέζα αυτών των
+   * διευθύνσεων στη θέση της διεύθυνσής τους». Ο διακομιστής το αφαιρεί πριν τη γραφή.
+   */
+  relocateAddressIds?: string[];
   /** ADR-186 §8b: Phase 2 ΝΟΚ building-code form data */
   buildingCode?: ProjectBuildingCodePhase2 | null;
   /** ADR-376 Phase C.2 — Per-project Opening Tag Style override (DXF Viewer BIM). */
@@ -180,39 +186,39 @@ export async function createProject(
  *
  * @see src/app/api/projects/[projectId]/route.ts (PATCH handler)
  */
+/**
+ * Η απάντηση της ενημέρωσης έργου.
+ *
+ * `addresses` = οι διευθύνσεις **όπως τις έγραψε ο διακομιστής** (ADR-332 D27 Βήμα Β, Β5): ο
+ * γραφέας θέσης αλλάζει ό,τι στάλθηκε, οπότε ο πελάτης υιοθετεί **αυτές**, όχι το αντίγραφό του.
+ */
+export interface ProjectUpdateClientResult extends ServerAddressEcho {
+  success: boolean;
+  error?: string;
+  _v?: number;
+}
+
 export async function updateProjectClient(
   projectId: string,
   updates: ProjectUpdatePayload
-): Promise<{ success: boolean; error?: string; _v?: number }> {
+): Promise<ProjectUpdateClientResult> {
   try {
     logger.info('Updating project via API', { projectId });
 
     // 🏢 ENTERPRISE: Use centralized API client (automatic Bearer token)
     // 🔒 SECURITY: apiClient handles Firebase ID token injection
     // SPEC-256A: _v included in payload for optimistic versioning
-    const response = await apiClient.patch<{ _v?: number }>(
+    const response = await apiClient.patch<{ _v?: number } & ServerAddressEcho>(
       API_ROUTES.PROJECTS.BY_ID(projectId),
       updates
     );
 
     logger.info('Project updated successfully', { projectId });
 
-    // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-    // Dynamic dispatch: only include non-undefined fields to avoid overwriting existing values
-    const { _v: _versionField, ...fieldsToDispatch } = updates;
-    const dispatchUpdates: ProjectUpdatedPayload['updates'] = {};
-    for (const [key, value] of Object.entries(fieldsToDispatch)) {
-      if (value !== undefined) {
-        (dispatchUpdates as Record<string, unknown>)[key] = value;
-      }
-    }
-    RealtimeService.dispatch('PROJECT_UPDATED', {
-      projectId,
-      updates: dispatchUpdates,
-      timestamp: Date.now()
-    });
-
-    return { success: true, _v: response?._v };
+    // 🏢 Cross-page sync + απήχηση του διακομιστή, από το ΕΝΑ σημείο (ADR-332 D27 Βήμα Β).
+    return settleEntityUpdate(response, updates, (fields) => RealtimeService.dispatch('PROJECT_UPDATED', {
+      projectId, updates: fields as ProjectUpdatedPayload['updates'], timestamp: Date.now(),
+    }));
 
   } catch (error) {
     // SPEC-256A: Re-throw 409 conflicts so useVersionedSave can handle them

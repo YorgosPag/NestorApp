@@ -15,6 +15,7 @@ import { apiClient, ApiClientError } from '@/lib/api/enterprise-api-client';
 import { API_ROUTES } from '@/config/domain-constants';
 // 🏢 ENTERPRISE: Multi-address support (ADR-167)
 import type { ProjectAddress } from '@/types/project/addresses';
+import { settleEntityUpdate, type ServerAddressEcho } from '@/services/address-mutation-echo';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('BuildingServices');
@@ -77,39 +78,43 @@ export type { BuildingUpdatePayload, BuildingCreatePayload };
  *
  * @see src/app/api/buildings/route.ts (PATCH handler)
  */
+/**
+ * Η απάντηση της ενημέρωσης κτιρίου.
+ *
+ * `addresses` = οι διευθύνσεις **όπως τις έγραψε ο διακομιστής** (ADR-332 D27 Βήμα Β, Β5) — ο
+ * πελάτης υιοθετεί αυτές, όχι το αντίγραφό του. Ίδιο συμβόλαιο με το `ProjectUpdateClientResult`.
+ */
+export interface BuildingUpdateClientResult extends ServerAddressEcho {
+  success: boolean;
+  error?: string;
+  errorCode?: string;
+  _v?: number;
+}
+
 export async function updateBuilding(
   buildingId: string,
   updates: BuildingUpdatePayload & { _v?: number }
-): Promise<{ success: boolean; error?: string; errorCode?: string; _v?: number }> {
+): Promise<BuildingUpdateClientResult> {
   try {
     logger.info('Updating building via API', { buildingId });
 
     // 🏢 ENTERPRISE: Use centralized API client (automatic Bearer token)
     // 🔒 SECURITY: apiClient handles Firebase ID token injection
     // SPEC-256A: _v included in payload for optimistic versioning
-    const response = await apiClient.patch<{ data: { buildingId: string; updated: boolean; _v?: number } }>(
+    // 🔴 ADR-332 D27 Βήμα Β: ο τύπος έλεγε `{ data: {...} }`, ενώ το `apiClient` ΞΕΤΥΛΙΓΕΙ ήδη
+    // το `{ success, data }` (`parseResponseBody`). Άρα το `response?.data?._v` ήταν ΠΑΝΤΑ
+    // `undefined`: η έκδοση του κτιρίου (SPEC-256A) δεν έφτανε ποτέ στον καλούντα.
+    const response = await apiClient.patch<{ buildingId: string; updated: boolean; _v?: number } & ServerAddressEcho>(
       API_ROUTES.BUILDINGS.LIST,
       { buildingId, ...updates }
     );
 
     logger.info('Building updated successfully', { buildingId });
 
-    // 🏢 ENTERPRISE: Centralized Real-time Service (cross-page sync)
-    // Dispatch ALL changed fields so components update their local state
-    const { _v: _versionField, ...fieldsToDispatch } = updates;
-    const dispatchUpdates: BuildingUpdatedPayload['updates'] = {};
-    for (const [key, value] of Object.entries(fieldsToDispatch)) {
-      if (value !== undefined) {
-        (dispatchUpdates as Record<string, unknown>)[key] = value;
-      }
-    }
-    RealtimeService.dispatch('BUILDING_UPDATED', {
-      buildingId,
-      updates: dispatchUpdates,
-      timestamp: Date.now()
-    });
-
-    return { success: true, _v: response?.data?._v };
+    // 🏢 Cross-page sync + απήχηση του διακομιστή, από το ΕΝΑ σημείο (ADR-332 D27 Βήμα Β).
+    return settleEntityUpdate(response, updates, (fields) => RealtimeService.dispatch('BUILDING_UPDATED', {
+      buildingId, updates: fields as BuildingUpdatedPayload['updates'], timestamp: Date.now(),
+    }));
 
   } catch (error) {
     // SPEC-256A: Re-throw 409 conflicts so useVersionedSave can handle them

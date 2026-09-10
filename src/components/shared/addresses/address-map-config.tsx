@@ -16,7 +16,8 @@
 import React from 'react';
 import { colors } from '@/styles/design-tokens';
 import { getStatusColor } from '@/lib/design-system';
-import type { ProjectAddress, PartialProjectAddress } from '@/types/project/addresses';
+import type { ProjectAddress } from '@/types/project/addresses';
+import type { PinDrop } from '@/components/shared/addresses/pin-drop';
 import type { GeocodingServiceResult } from '@/lib/geocoding/geocoding-service';
 import type { AddressMapHeightPreset } from '@/config/address-map-config';
 
@@ -99,8 +100,11 @@ export interface AddressMapProps {
   /** Enable draggable markers (for add/edit mode) */
   draggableMarkers?: boolean;
 
-  /** Callback when user drags a marker — provides reverse-geocoded address data + address index */
-  onAddressDragUpdate?: (addressData: Partial<PartialProjectAddress>, addressIndex: number) => void;
+  /**
+   * Όταν ο άνθρωπος αφήνει μια πινέζα — **πάντα** με το σημείο αφής, και με το κείμενο της
+   * αντίστροφης γεωκωδικοποίησης όταν υπάρχει (ADR-332 D27 Βήμα Β · `PinDrop`).
+   */
+  onAddressDragUpdate?: (drop: PinDrop, addressIndex: number) => void;
 
   /**
    * IDs of addresses that must render as read-only pins even in draggable mode.
