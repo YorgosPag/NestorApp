@@ -1,4 +1,4 @@
-import type { AppHref } from '@/lib/workspace/route-worlds';
+import type { AppHref, WorkspaceHref } from '@/lib/workspace/route-worlds';
 import type { DeclaredOccupation } from '@/types/professional-identity';
 import type { PermissionId } from '@/lib/auth/types';
 
@@ -305,7 +305,12 @@ export type AuthFormMode = 'signin' | 'signup' | 'reset';
 export interface AuthFormProps {
   defaultMode?: AuthFormMode;
   onSuccess?: () => void;
-  redirectTo?: AppHref;
+  /**
+   * ADR-848 — `WorkspaceHref`, όχι `AppHref`: η επιστροφή του `?next=` είναι
+   * **συγκεκριμένη** διεύθυνση (`/n/abc`), ενώ το `AppHref` γράφει τις σελίδες με
+   * αγκύλες (`/n/[notificationId]`) και είναι δομικά ανίκανο να τη δεχτεί.
+   */
+  redirectTo?: WorkspaceHref;
 }
 
 /**

@@ -13,7 +13,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { AuthFormMode } from '../types/auth.types';
-import type { AppHref } from '@/lib/workspace/route-worlds';
+import type { WorkspaceHref } from '@/lib/workspace/route-worlds';
 // 🔴 ADR-660 §5.4 / ADR-817 — Ο ΕΝΑΣ ΕΠΙΛΥΤΗΣ ΠΡΟΣΓΕΙΩΣΗΣ.
 // ⚠️ ΜΗΝ γράψεις εδώ δικό σου `user.companyId ? … : …`: αυτή η απόφαση ζει σε ΕΝΑ
 //    σημείο επίτηδες, και το `landing.ts` είναι η αυθεντία της.
@@ -40,8 +40,11 @@ interface UseAuthFormStateOptions {
    * (`/dashboard`) στο `AuthForm` — δηλαδή **κάθε** σύνδεση προσγειωνόταν στον
    * **εταιρικό** χώρο, και ο πολίτης κατέληγε σε σελίδα που ζητά εταιρικά δεδομένα.
    * Η απουσία σημαίνει πλέον *«ρώτα τον επιλυτή»*, όχι *«πήγαινε στο dashboard»*.
+   *
+   * 🔑 ADR-848 — `WorkspaceHref`: η επιστροφή του `?next=` είναι **συγκεκριμένη**
+   * διεύθυνση (`/n/abc`), που το `AppHref` (σελίδες με αγκύλες) δεν χωρά.
    */
-  redirectTo?: AppHref;
+  redirectTo?: WorkspaceHref;
 }
 
 export function useAuthFormState({ defaultMode, onSuccess, redirectTo }: UseAuthFormStateOptions) {
@@ -93,7 +96,7 @@ export function useAuthFormState({ defaultMode, onSuccess, redirectTo }: UseAuth
    * ⚠️ Το `user ?? {}` **δεν** είναι αμυντικό θόρυβος: ο ανώνυμος έχει, εξ ορισμού,
    * ταυτότητα **χωρίς** οργανισμό — και ο επιλυτής απαντά ήδη σωστά γι' αυτόν.
    */
-  const landing: AppHref = redirectTo ?? resolvePostLoginRoute(user ?? {});
+  const landing: WorkspaceHref = redirectTo ?? resolvePostLoginRoute(user ?? {});
 
   // ── Effects ──
 
