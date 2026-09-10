@@ -43,6 +43,7 @@ import {
 } from '@/types/contacts/address-types';
 import { projectAddressVocabulary } from '@/utils/address/administrative-hierarchy';
 import type { FlatAddressFormFields } from '@/utils/address/administrative-hierarchy-vocabulary';
+import { pickStoredAddressPosition } from '@/utils/address/stored-address-position';
 
 /**
  * ⚠️ **ADR-772**: ο τύπος μετακόμισε δίπλα στον πίνακα που τον τυπώνει (είναι ένα από τα
@@ -173,6 +174,10 @@ export function buildAddressInfoListFromCompanyAddresses(
   companyAddresses: readonly CompanyAddress[],
 ): AddressInfo[] {
   return companyAddresses.map((ca, index) => ({
+    // ADR-332 D27 Β-ΙΙ: ταυτότητα + θέση περνούν στο παράγωγο — αλλιώς η ανακατασκευή από
+    // το `addresses[]` (τρίτη πηγή του reader) θα έχανε την πινέζα του ανθρώπου.
+    ...(ca.id ? { id: ca.id } : {}),
+    ...pickStoredAddressPosition(ca),
     street: ca.street,
     number: ca.number,
     city: ca.city,
@@ -210,6 +215,8 @@ export function buildCompanyAddressFromAddressInfo(
   const isSemanticSlug = !!label && isValidContactAddressType(label);
 
   return {
+    ...(addr.id ? { id: addr.id } : {}),
+    ...pickStoredAddressPosition(addr),
     type: isSemanticSlug ? label : (label ? 'other' : fallbackType),
     ...(label && !isSemanticSlug ? { customLabel: label } : {}),
     street: addr.street || '',

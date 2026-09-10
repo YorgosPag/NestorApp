@@ -45,6 +45,7 @@
 
 import type { AddressInfo } from '@/types/contacts';
 import type { CompanyAddress } from '@/types/ContactFormTypes';
+import { usablePoint } from '@/utils/address/address-list-center';
 
 /**
  * Κάθε μορφή διεύθυνσης επαφής που μπορεί να ρωτηθεί «είσαι κενή;».
@@ -110,6 +111,13 @@ const ADDRESS_CONTENT_FIELDS = [
  * @returns `true` μόνο όταν δεν υπάρχει καμία απολύτως τοποθεσιακή πληροφορία.
  */
 export function isBlankContactAddress(address: ContactAddressLike): boolean {
+  // ADR-332 D27 Β-ΙΙ — ρητή απόφαση πάνω στο D20: **θέση ΕΙΝΑΙ περιεχόμενο.** Ένα σημείο
+  // χωρίς κείμενο το γεννά μόνο άνθρωπος («Μόνο η θέση» όταν η μηχανή δεν βρήκε
+  // διεύθυνση) — είναι δήλωση «εδώ», όπως το Google «Dropped pin» και το Business Profile
+  // «pin your business on the map». Η μηχανή δεν δίνει ποτέ σημείο χωρίς κείμενο.
+  // Ο «Καθαρισμός» της έδρας φτιάχνει νέα εγγραφή **χωρίς** θέση, άρα κλαδεύεται κανονικά.
+  if (usablePoint(address.coordinates)) return false;
+
   const record = address as Record<string, unknown>;
 
   return ADDRESS_CONTENT_FIELDS.every(field => {

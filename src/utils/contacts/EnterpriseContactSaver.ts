@@ -11,8 +11,9 @@
 //
 // ============================================================================
 
-import type { ContactFormData } from '@/types/ContactFormTypes';
+import type { CompanyAddress, ContactFormData } from '@/types/ContactFormTypes';
 import type { Contact, AddressInfo, WebsiteInfo, PhoneInfo, EmailInfo, SocialMediaInfo } from '@/types/contacts';
+import { generateAddressId } from '@/services/enterprise-id.service';
 
 import { createModuleLogger } from '@/lib/telemetry';
 import { isNonEmptyArray } from '@/lib/type-guards';
@@ -32,6 +33,18 @@ const logger = createModuleLogger('EnterpriseContactSaver');
 // TYPES
 // ============================================================================
 
+/** Ό,τι χρειάζεται ένα payload για να υιοθετήσει τη λίστα του γραφέα θέσης (create **ή** update). */
+export interface ResolvableContactPayload {
+  customFields?: Readonly<Record<string, unknown>>;
+}
+
+/** Τα `customFields` με το **ένα** κλειδί που ο saver γνωρίζει τυπικά. */
+export interface EnterpriseCustomFields {
+  /** Η αυθεντική λίστα — κλαδεμένη (D20) και με ταυτότητες (D27 Β-ΙΙ). */
+  companyAddresses?: CompanyAddress[];
+  [key: string]: unknown;
+}
+
 export interface EnterpriseContactData {
   // Base contact data (unchanged)
   [key: string]: unknown;
@@ -47,7 +60,7 @@ export interface EnterpriseContactData {
    * Ένθετα πεδία Firestore. Εδώ ζει η **αυθεντική** λίστα διευθύνσεων
    * (`companyAddresses`) για κάθε είδος επαφής — ADR-332 D18.
    */
-  customFields?: Record<string, unknown>;
+  customFields?: EnterpriseCustomFields;
 
   // Remove flat fields - they should not be saved to database
   street?: never;
@@ -61,7 +74,40 @@ export interface EnterpriseContactData {
 // ENTERPRISE CONTACT SAVER
 // ============================================================================
 
+/**
+ * ADR-332 D27 Β-ΙΙ — κάθε εγγραφή φεύγει προς τη βάση **με ταυτότητα**.
+ *
+ * Ο γραφέας θέσης ταιριάζει αποθηκευμένη ⇄ εισερχόμενη **μόνο** με `id` (ποτέ με θέση στον
+ * πίνακα: διαγραφή υποκαταστήματος θα μετατόπιζε τις πινέζες σε ξένες διευθύνσεις). Τα
+ * παλιά έγγραφα αποκτούν ταυτότητα στην πρώτη αποθήκευση — ιδεμποτεντικά: ό,τι έχει, κρατά.
+ */
+function withContactAddressIds(addresses: readonly CompanyAddress[]): CompanyAddress[] {
+  return addresses.map((address) => (address.id ? address : { ...address, id: generateAddressId() }));
+}
+
 export class EnterpriseContactSaver {
+
+  /**
+   * Η λίστα που **αποφάσισε ο διακομιστής** (`/api/contacts/…/address-positions`) γίνεται
+   * αυθεντική εγγραφή **και** παράγωγο μαζί — ίδια πηγή, άρα δεν μπορούν να αποκλίνουν
+   * (ADR-332 D15). Ο πελάτης δεν ξανακρίνει τίποτα εδώ· απλώς υιοθετεί (πρακτική Apollo:
+   * «values returned from the server»).
+   */
+  static withResolvedAddresses<P extends ResolvableContactPayload>(
+    data: P,
+    resolved: readonly CompanyAddress[],
+  ): P {
+    const companyAddresses = [...resolved];
+    const patch = {
+      customFields: { ...(data.customFields ?? {}), companyAddresses },
+      ...(companyAddresses.length > 0
+        ? { addresses: buildAddressInfoListFromCompanyAddresses(companyAddresses) }
+        : {}),
+    };
+    // `Object.assign` και όχι spread: το αποτέλεσμα είναι `P & patch`, άρα **P** χωρίς cast —
+    // ο ίδιος βοηθός υπηρετεί και τη δημιουργία (`Contact`) και την ενημέρωση (diff).
+    return Object.assign({}, data, patch);
+  }
 
   /**
    * Convert flat form data to enterprise arrays structure
@@ -146,7 +192,7 @@ export class EnterpriseContactSaver {
     // for Firestore, because the read mapper (companyMapper.ts) reads from there.
     // ========================================================================
 
-    const customFields: Record<string, unknown> = {};
+    const customFields: EnterpriseCustomFields = {};
 
     // ADR-332 D18: η λίστα διευθύνσεων ανήκει σε ΚΑΘΕ είδος επαφής, όχι μόνο σε
     // εταιρείες. Όσο αυτό το μπλοκ ζούσε μέσα σε `if (type === 'company')`, οι
@@ -163,7 +209,8 @@ export class EnterpriseContactSaver {
       // στο παράγωγο θα άφηνε την κενή γραμμή στη φόρμα να ξαναγράφεται.
       // Παλαιά μολυσμένα έγγραφα (π.χ. η κενή έδρα της ALFA) καθαρίζουν έτσι
       // στο επόμενο save, χωρίς μετάπτωση.
-      const persistableAddresses = pruneBlankContactAddresses(contactAddresses);
+      // ADR-332 D27 Β-ΙΙ: ταυτότητα ΜΕΤΑ το κλάδεμα — μια κενή εγγραφή δεν χρειάζεται id.
+      const persistableAddresses = withContactAddressIds(pruneBlankContactAddresses(contactAddresses));
       customFields.companyAddresses = persistableAddresses;
 
       // Το `addresses[]` είναι ΠΑΡΑΓΩΓΟ της αυθεντικής λίστας (ADR-332 D15).

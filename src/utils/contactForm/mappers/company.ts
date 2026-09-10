@@ -100,8 +100,11 @@ export function mapCompanyFormData(formData: ContactFormData): MappedCompanyCont
       activityType: formData.activityType,
       // Multi-KAD activities array
       activities: formData.activities ?? [],
-      // Multi-address array
-      companyAddresses: formData.companyAddresses ?? [],
+      // Multi-address array — η λίστα **του saver** (κλαδεμένη, με ταυτότητες), όχι η ωμή
+      // της φόρμας. ADR-332 D27 Β-ΙΙ: εδώ γραφόταν το `formData.companyAddresses` αυτούσιο,
+      // οπότε η δημιουργία εταιρείας παρέκαμπτε **και** τη δικλείδα D20 **και** τα `id` —
+      // ενώ τα αδέλφια `individual.ts` / `service.ts` περνούσαν ήδη από το `enterpriseData`.
+      companyAddresses: enterpriseData.customFields?.companyAddresses ?? [],
       chamber: formData.chamber,
       capitalAmount: formData.capitalAmount,
       currency: formData.currency,
