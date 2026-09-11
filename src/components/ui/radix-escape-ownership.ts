@@ -26,19 +26,24 @@
  * — αλλά όχι ασήμαντα — **αυτό είναι το μόνο αρχείο του `components/ui` που φτάνει στο υποσύστημα
  * του viewer** γι' αυτό τον σκοπό· τα wrappers μένουν καθαρά.
  *
- * ⚠️ Μηδέν κόστος σε παραγωγή: η {@link noteLocalEscapeOwner} κάνει early-return όταν
- * `NODE_ENV === 'production'`, και επίσης όταν η σεντινέλα δεν είδε το συμβάν (δηλαδή όταν ο bus
- * δεν τρέχει καθόλου — κάθε σελίδα εκτός viewer).
+ * ⚠️ Κόστος: μία εγγραφή σε `WeakMap` ανά πάτημα Escape ({@link claimEscape}) — και σε παραγωγή, επίτηδες:
+ * η δήλωση δεν είναι πια μόνο διαγνωστικό, την διαβάζει και η στοίβα των επιφανειών (`escape-layers`), ώστε
+ * η πλήρης οθόνη να παραιτείται όταν ο Radix έκλεισε τη δική του στρώση (ADR-364 §10.15.γ).
  *
  * @see @/subapps/dxf-viewer/systems/escape-bus/escape-dev-audit — ο έλεγχος και η κατηγορία Κ3
  * @see ./__tests__/radix-escape-ownership.test.tsx — `Κ0` = η απόδειξη ζωής
  */
 
-import { noteLocalEscapeOwner } from '@/subapps/dxf-viewer/systems/escape-bus/escape-dev-audit';
+import { claimEscape } from '@/lib/a11y/escape-layers';
 
 /**
  * Συνθέτει τον handler `onEscapeKeyDown` ενός Radix `Content`: δηλώνει τον τοπικό ιδιοκτήτη και
  * **μετά** καλεί ό,τι πέρασε ο καλών.
+ *
+ * ADR-364 §10.15.γ — η δήλωση γράφεται στο **ΕΝΑ** SSoT ιδιοκτησίας Escape της εφαρμογής
+ * (`@/lib/a11y/escape-layers` → {@link claimEscape}), το ίδιο που γράφει και η στοίβα των επιφανειών. Ο έλεγχος του
+ * viewer το διαβάζει από εκεί. Ως 2026-09-11 έγραφε απευθείας στο `escape-dev-audit` του subapp — η μόνη εισαγωγή
+ * `components/ui → subapps/dxf-viewer` για αυτόν τον σκοπό· η φορά της εξάρτησης είναι πλέον η σωστή (subapp → lib).
  *
  * ⚠️ **Συνθέτει, δεν παρακάμπτει.** Ο καλών εξακολουθεί να μπορεί να καλέσει `preventDefault()`
  * και να **ακυρώσει το κλείσιμο** (άγκυρα `Κ4`) — η δήλωση είναι παρατήρηση, όχι απόφαση. Η σειρά
@@ -52,7 +57,7 @@ export function withRadixEscapeOwner(
   callerHandler?: (event: KeyboardEvent) => void,
 ): (event: KeyboardEvent) => void {
   return (event: KeyboardEvent): void => {
-    noteLocalEscapeOwner(event, ownerId);
+    claimEscape(event, ownerId);
     callerHandler?.(event);
   };
 }

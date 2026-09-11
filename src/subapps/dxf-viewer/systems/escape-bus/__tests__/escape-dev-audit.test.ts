@@ -16,9 +16,11 @@ import {
   __judgeForTests,
   __resetAuditForTests,
   installEscapeAuditSentinel,
+  noteBusDispatch,
   noteLocalEscapeOwner,
 } from '../escape-dev-audit';
 import type { EscapeHandler } from '../types';
+import { __resetEscapeLayersForTests, pushEscapeLayer } from '@/lib/a11y/escape-layers';
 
 type Phase = { capture: boolean };
 const CAPTURE: Phase = { capture: true };
@@ -179,5 +181,86 @@ describe('ADR-364 §10.15 — δηλωμένος τοπικός ιδιοκτήτ
     registerBusHandler(true);
     const e = fireEscape();
     expect(__judgeForTests(e)?.verdict).toBe('starved');
+  });
+});
+
+/**
+ * ADR-364 §10.15.γ — **ΑΟΠΛΟΣ bus ≠ ΛΙΜΟΚΤΟΝΗΜΕΝΟΣ bus** (ADR-780 §5quater.5 #8).
+ *
+ * 🔴 Μετρημένο ζωντανά 2026-09-11: η σεντινέλα εγκαθίσταται μόλις φορτωθεί το module του bus — και φορτώνεται
+ * και σε σελίδες **εκτός** viewer (Κτίρια: `GanttPortals` → `dxf-viewer/ui/color` → `eyedropper` → bus). Εκεί ο
+ * listener του bus **δεν μπαίνει ποτέ** (μπαίνει στην πρώτη εγγραφή), άρα κάθε Esc έβγαινε `starved` και τύπωνε
+ * `console.error` — το «1 Issue» του Next overlay — ακόμη και με δηλωμένο τοπικό ιδιοκτήτη.
+ * Ένας bus που δεν ακούει δεν λιμοκτονεί· απλώς **δεν είναι εδώ**. Και ο θόρυβος εκπαιδεύει στην αγνόηση, που
+ * είναι ακριβώς ο τρόπος με τον οποίο πεθαίνει ο Μηχ. 1.
+ */
+describe('UNARMED — η σεντινέλα χωρίς bus που ακούει', () => {
+  it('καμία εγγραφή στον bus ⇒ `unarmed`, όχι `starved`', () => {
+    const e = fireEscape();
+    const finding = __judgeForTests(e);
+    expect(finding?.verdict).toBe('unarmed');
+    expect(finding?.record.busArmed).toBe(false);
+  });
+
+  it('`unarmed` ΔΕΝ τυπώνει console.error — αλλά μένει στο ιστορικό του οργάνου', async () => {
+    // ⚠️ Οι αναφορές κρίνονται σε `setTimeout(0)` — τα προηγούμενα tests αφήνουν εκκρεμείς (STARVED / PREEMPTED).
+    // Αδειάζουν ΠΡΙΝ στηθεί ο κατάσκοπος, αλλιώς πιάνει ξένα πατήματα (μετρημένο: 7 κλήσεις, καμία δική μας).
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      fireEscape();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(spy).not.toHaveBeenCalled();
+      const audit = (window as unknown as { __escapeAudit?: { last: () => { verdict: string } | null } }).__escapeAudit;
+      expect(audit?.last()?.verdict).toBe('unarmed');
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('ο bus που ΚΛΗΘΗΚΕ άκουγε — δεν κρίνεται `unarmed` ακόμη κι αν η σημαία δεν το είδε', () => {
+    // Η κλήση είναι ισχυρότερη απόδειξη οπλισμού από τη σημαία: καλύπτει και κάθε δρόμο που δεν περνά από το
+    // `installListener` (π.χ. η προσομοίωση του bus στις άγκυρες των Radix wrappers).
+    const e = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+    document.body.dispatchEvent(e);
+    noteBusDispatch(e, { consumed: false, consumedBy: null }, false);
+    expect(__judgeForTests(e)?.record.busArmed).toBe(false);
+    expect(__judgeForTests(e)?.verdict).toBe('ok');
+  });
+
+  it('ΘΕΤΙΚΟ CONTROL: οπλισμένος bus που λιμοκτονεί ΕΞΑΚΟΛΟΥΘΕΙ να βγαίνει `starved`', () => {
+    addCompetitor((e) => e.stopImmediatePropagation());
+    registerBusHandler(true);
+    const e = fireEscape();
+    expect(__judgeForTests(e)?.record.busArmed).toBe(true);
+    expect(__judgeForTests(e)?.verdict).toBe('starved');
+  });
+
+  it('B2 — οπλισμένος bus που δεν διεκδικεί + στρώση της στοίβας που χειρίζεται ⇒ `ok`, με δηλωμένο ιδιοκτήτη', () => {
+    // Ο DXF σε πλήρη οθόνη: κανένα slot δεν καταναλώνει ⇒ η στοίβα (τελευταία λύση) βγάζει από την πλήρη οθόνη.
+    // Χωρίς τη δήλωσή της, ο έλεγχος θα την έκρινε `shadow-owner` (preventDefault χωρίς slot του bus).
+    registerBusHandler(false);
+    const release = pushEscapeLayer({ id: 'core/fullscreen-surface', onEscape: () => undefined });
+    try {
+      // ⚠️ Στο `body` και ΟΧΙ στο `window`: η στοίβα ακούει στο `document`, που ένα συμβάν με στόχο το ίδιο το
+      // `window` δεν διασχίζει ποτέ (ADR-364 §10.15.β — η παγίδα της πρώτης γραφής των αγκυρών Radix).
+      const e = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+      document.body.dispatchEvent(e);
+      const finding = __judgeForTests(e);
+      expect(e.defaultPrevented).toBe(true);
+      expect(finding?.record.consumedBy).toBeNull();
+      expect(finding?.record.localOwner).toBe('core/fullscreen-surface');
+      expect(finding?.verdict).toBe('ok');
+    } finally {
+      release();
+      __resetEscapeLayersForTests();
+    }
+  });
+
+  it('ο οπλισμός διαβάζεται ΤΗ ΣΤΙΓΜΗ του πατήματος: μετά το reset του bus ⇒ ξανά `unarmed`', () => {
+    registerBusHandler(false);
+    escapeBus.__resetForTests();
+    const e = fireEscape();
+    expect(__judgeForTests(e)?.verdict).toBe('unarmed');
   });
 });

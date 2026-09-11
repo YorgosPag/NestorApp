@@ -41,7 +41,7 @@
  * `predicate(document.activeElement)` + SSR guard. Ζει τώρα ως `isTextEntryFocused()`.
  */
 import { isTextEntryFocused } from '@/lib/a11y/keyboard-scope';
-import { installEscapeAuditSentinel, noteBusDispatch } from './escape-dev-audit';
+import { installEscapeAuditSentinel, noteBusDispatch, noteBusListenerArmed } from './escape-dev-audit';
 import type {
   EscapeBusInspection,
   EscapeDispatchResult,
@@ -152,10 +152,13 @@ function installListener(): void {
   };
   window.addEventListener('keydown', listener, { capture: true });
   registry.listenerInstalled = true;
+  // ADR-364 §10.15.γ — ο έλεγχος πρέπει να ξεχωρίζει «ο bus λιμοκτόνησε» από «ο bus δεν ακούει εδώ».
+  noteBusListenerArmed(true);
   registry.removeListener = () => {
     window.removeEventListener('keydown', listener, { capture: true });
     registry.listenerInstalled = false;
     registry.removeListener = null;
+    noteBusListenerArmed(false);
   };
 }
 

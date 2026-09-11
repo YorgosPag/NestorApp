@@ -34,6 +34,7 @@
  * μηχανισμοί είναι **συμπληρωματικοί, όχι εναλλακτικοί**.
  */
 
+import { claimEscape, escapeClaimOf } from '@/lib/a11y/escape-layers';
 import type { EscapeDispatchResult } from './types';
 
 const AUDIT_ENABLED = process.env.NODE_ENV !== 'production';
@@ -53,9 +54,18 @@ interface EscapeAuditRecord {
   localOwner: string | null;
   /** Πού βρισκόταν η εστίαση τη στιγμή του πατήματος (διαγνωστικό). */
   focusAt: string;
+  /**
+   * ADR-364 §10.15.γ — ήταν οπλισμένος ο listener του bus **τη στιγμή του πατήματος**; Διαβάζεται τότε και όχι
+   * στην κρίση: ο bus μπορεί να οπλιστεί ή να αφοπλιστεί ανάμεσα στο πάτημα και στο `setTimeout` της κρίσης.
+   */
+  busArmed: boolean;
 }
 
-export type EscapeAuditVerdict = 'ok' | 'starved' | 'preempted' | 'shadow-owner';
+/**
+ * ADR-364 §10.15.γ — `'unarmed'`: **ο bus δεν άκουγε** τη στιγμή του πατήματος. Δεν είναι παράβαση — είναι απουσία.
+ * Κρίνεται **πρώτο**: ένας bus που δεν ακούει δεν λιμοκτονεί και δεν προλαβαίνεται.
+ */
+export type EscapeAuditVerdict = 'ok' | 'unarmed' | 'starved' | 'preempted' | 'shadow-owner';
 
 /** Ένα εύρημα, όπως το επιστρέφει ο έλεγχος — εκτεθειμένο για τα tests. */
 export interface EscapeAuditFinding {
@@ -66,6 +76,28 @@ export interface EscapeAuditFinding {
 const records = new WeakMap<KeyboardEvent, EscapeAuditRecord>();
 let sentinelInstalled = false;
 let lastFinding: EscapeAuditFinding | null = null;
+
+/**
+ * ADR-364 §10.15.γ — **είναι οπλισμένος ο listener του bus;** Τον γράφει **μόνο** ο ίδιος ο bus
+ * ({@link noteBusListenerArmed}), στην εγκατάσταση και στην αφαίρεση του listener του.
+ *
+ * ── ΓΙΑΤΙ ΧΡΕΙΑΖΕΤΑΙ (μετρημένο ζωντανά 2026-09-11) ──
+ *
+ * Η σεντινέλα εγκαθίσταται σε **χρόνο import** του bus — και το module του bus φορτώνεται και σε σελίδες **εκτός**
+ * viewer (Κτίρια: `GanttPortals` → `dxf-viewer/ui/color` → `eyedropper` → bus). Ο listener όμως μπαίνει μόνο στην
+ * **πρώτη εγγραφή**, που εκεί δεν γίνεται ποτέ ⇒ κάθε Esc έβγαινε `starved` και τύπωνε `console.error` (το «1 Issue»
+ * του Next overlay), ακόμη και με δηλωμένο τοπικό ιδιοκτήτη.
+ *
+ * ⚠️ **Γιατί ΟΧΙ «εγκατάσταση της σεντινέλας τεμπέλικα, μαζί με τον bus»**: η σεντινέλα οφείλει να είναι η **πρώτη**
+ * στους window-capture listeners (αλλιώς δεν βλέπει τα πατήματα στα οποία λιμοκτονεί ο bus). Αυτό το εγγυάται μόνο ο
+ * χρόνος import. Καταγράφεται η **κατάσταση**, δεν μετακινείται ο φρουρός.
+ */
+let busListenerArmed = false;
+
+/** Καλείται **μόνο** από τον bus — `true` όταν εγκαθιστά τον listener του, `false` όταν τον αφαιρεί. */
+export function noteBusListenerArmed(armed: boolean): void {
+  busListenerArmed = armed;
+}
 
 function isBrowser(): boolean {
   return typeof window !== 'undefined' && typeof document !== 'undefined';
@@ -84,6 +116,14 @@ function describeFocus(): string {
  * `defaultPrevented` έχει την τελική του τιμή — αυτό είναι όλο το νόημα.
  */
 function judge(e: KeyboardEvent, rec: EscapeAuditRecord): EscapeAuditVerdict {
+  // ADR-364 §10.15.γ — ο ιδιοκτήτης διαβάζεται από το ΕΝΑ SSoT ιδιοκτησίας Escape (`@/lib/a11y/escape-layers`):
+  // εκεί δηλώνουν ο Radix (`withRadixEscapeOwner`), ο Κ3 (`noteLocalEscapeOwner`) και η στοίβα των επιφανειών.
+  // Στην κρίση και όχι στο πάτημα: οι δηλώσεις γίνονται ΚΑΤΑ τη διάδοση, μετά τη σεντινέλα.
+  rec.localOwner = rec.localOwner ?? escapeClaimOf(e);
+  // ADR-364 §10.15.γ — πρώτο: ένας bus που δεν ακούει δεν λιμοκτονεί, απλώς δεν είναι εδώ.
+  // ⚠️ «Άκουγε» αποδεικνύεται με ΔΥΟ τρόπους, και ο δεύτερος είναι ισχυρότερος: η σημαία οπλισμού τη στιγμή του
+  // πατήματος, Ή το ίδιο το γεγονός ότι ο bus ΚΛΗΘΗΚΕ για αυτό το πάτημα. Ένας bus που κλήθηκε, άκουγε.
+  if (!rec.busArmed && !rec.busDispatched) return 'unarmed';
   if (!rec.busDispatched) return 'starved';
   if (rec.preemptedAtEntry) return 'preempted';
   // ADR-364 §10.15 — δηλωμένος Κ3: ιδιοκτήτης εντός SSoT, απλώς όχι slot του bus.
@@ -93,6 +133,10 @@ function judge(e: KeyboardEvent, rec: EscapeAuditRecord): EscapeAuditVerdict {
 }
 
 const EXPLAIN: Readonly<Record<Exclude<EscapeAuditVerdict, 'ok'>, string>> = {
+  // Δεν τυπώνεται ποτέ (δες `report`) — γράφεται για όποιον διαβάζει το ιστορικό του `window.__escapeAudit`.
+  unarmed:
+    'Ο bus δεν άκουγε τη στιγμή του πατήματος (κανένα slot εγγεγραμμένο σε αυτή τη σελίδα). ' +
+    'Δεν είναι παράβαση — ο πίνακας ESC_PRIORITY απλώς δεν ισχύει εδώ.',
   starved:
     'Ο bus ΔΕΝ κλήθηκε καθόλου. Κάποιος window-capture listener εγγεγραμμένος ΠΡΙΝ ' +
     'από αυτόν κάλεσε stopImmediatePropagation(). Ο πίνακας ESC_PRIORITY είναι ' +
@@ -149,7 +193,9 @@ function report(finding: EscapeAuditFinding): void {
   const { verdict, record } = finding;
   auditHistory.push(finding);
   if (auditHistory.length > AUDIT_HISTORY_LIMIT) auditHistory.shift();
-  if (verdict === 'ok') return;
+  // ADR-364 §10.15.γ — ο αόπλος bus δεν είναι εύρημα: στο ιστορικό ναι, στην κονσόλα όχι. Θόρυβος που
+  // τυπώνεται σε κάθε Esc κάθε σελίδας εκτός viewer εκπαιδεύει στην αγνόηση — έτσι πεθαίνει ο Μηχ. 1.
+  if (verdict === 'ok' || verdict === 'unarmed') return;
   console.error(
     `[EscapeBus/audit] ${verdict.toUpperCase()} — ${EXPLAIN[verdict]}`,
     { focusAt: record.focusAt, consumedBy: describeOwner(record) },
@@ -180,10 +226,10 @@ function report(finding: EscapeAuditFinding): void {
  * @param id Σταθερό αναγνωριστικό ιδιοκτήτη, ίδια σύμβαση με τα `EscapeHandler.id`.
  */
 export function noteLocalEscapeOwner(e: KeyboardEvent, id: string): void {
-  if (!AUDIT_ENABLED) return;
-  const rec = records.get(e);
-  if (!rec) return; // Συνθετικό συμβάν ή ESC που η σεντινέλα δεν είδε.
-  rec.localOwner = id;
+  // ADR-364 §10.15.γ — η δήλωση ζει στο ΕΝΑ SSoT ιδιοκτησίας (`@/lib/a11y/escape-layers`), όχι σε ιδιωτικό χάρτη
+  // του ελέγχου: έτσι τη διαβάζουν και η στοίβα των επιφανειών και ο έλεγχος, και η φορά της εξάρτησης είναι
+  // subapp → lib. Η `judge` την επιλύει στην κρίση (`escapeClaimOf`).
+  claimEscape(e, id);
 }
 
 /**
@@ -211,6 +257,7 @@ function onSentinelKeyDown(e: KeyboardEvent): void {
     consumedBy: null,
     localOwner: null,
     focusAt: describeFocus(),
+    busArmed: busListenerArmed,
   };
   records.set(e, rec);
   // setTimeout, ΟΧΙ queueMicrotask: ο microtask checkpoint τρέχει ΑΝΑΜΕΣΑ στους
