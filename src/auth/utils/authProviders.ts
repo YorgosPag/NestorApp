@@ -92,6 +92,34 @@ export function canChangePassword(firebaseUser: FirebaseUser | null): boolean {
 }
 
 /**
+ * **Πώς αλλάζει το email αυτού του λογαριασμού;** — τρεις δρόμοι, κλειστό σύνολο.
+ *
+ * | Δρόμος | Ποιος | Τι γίνεται |
+ * |---|---|---|
+ * | `password` | έχει κωδικό | επαν-πιστοποίηση → σύνδεσμος στη **νέα** διεύθυνση |
+ * | `provider-managed` | **μόνο** εξωτερικός πάροχος (Google) | το email το διαχειρίζεται ο πάροχος — **πρώτα κωδικός** |
+ * | `needs-password` | **κανένας** πάροχος (πολίτης ADR-844) | **πρώτα κωδικός** |
+ *
+ * 🏆 **Πρότυπο Figma** *(Help: «Manage email address or password»)*: *«When you sign up
+ * via Google SSO, your email address … will be managed by Google»* — και ο δρόμος για
+ * να αλλάζει από την εφαρμογή είναι **ορισμός κωδικού**.
+ *
+ * 🔴 **Γιατί ΟΧΙ αλλαγή σε λογαριασμό μόνο-Google, ούτε «απλώς να δοκιμάσουμε»**:
+ * καταγεγραμμένο σφάλμα της Firebase (`firebase-android-sdk#4505`) — το
+ * `verifyBeforeUpdateEmail` σε τέτοιο λογαριασμό προσθέτει **δεύτερο** πάροχο
+ * `google.com` με την παλιά διεύθυνση, χωρίς τρόπο αποσύνδεσης.
+ *
+ * ⚠️ **Δεν υπάρχει επαν-πιστοποίηση χωρίς πάροχο**: ο πολίτης που γεννήθηκε από πρώτη
+ * επαφή μπήκε με custom token, και η Firebase ζητά *πρόσφατη σύνδεση* για αλλαγή email.
+ */
+export type EmailChangeRoute = 'password' | 'provider-managed' | 'needs-password';
+
+export function emailChangeRouteOf(providerIds: readonly string[]): EmailChangeRoute {
+  if (providerIds.includes('password')) return 'password';
+  return providerIds.length > 0 ? 'provider-managed' : 'needs-password';
+}
+
+/**
  * Check if user signed in with specific provider
  *
  * @param firebaseUser - The Firebase User object
