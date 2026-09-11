@@ -311,6 +311,11 @@ const FloatingPanelRoot: React.FC<FloatingPanelProps> = ({
         aria-labelledby={titleId}
         aria-describedby={ariaDescribedBy}
         data-testid={dataTestId}
+        // ADR-241 · ADR-711 — ΣΥΝΟΔΟΣ της πλήρους οθόνης: ό,τι ζωγραφίζεται ΠΑΝΩ από την επιφάνεια πρέπει και να
+        // πατιέται. Κάθε πλωτό πάνελ κάθεται ψηλότερα από την πλήρη οθόνη (π.χ. η παλέτα του DXF: 1050 > 1045),
+        // οπότε ένα αδρανές πλωτό πάνελ θα ήταν «κουμπί που δεν ακούει» — η παθολογία του ADR-724 §14.9. Το σήμα
+        // ζει ΕΔΩ, μία φορά, ώστε κανένα πάνελ να μη χρειάζεται να το θυμηθεί (`@/lib/a11y/inert-outside`).
+        data-fullscreen-companion=""
       >
         {children}
         {resizable && <FloatingPanelResizeHandles onStartResize={startResize} />}

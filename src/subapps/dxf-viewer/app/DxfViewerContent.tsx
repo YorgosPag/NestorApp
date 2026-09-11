@@ -397,7 +397,7 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
         onToggle={fullscreen.toggle}
         ariaLabel="DXF Viewer"
         className="flex flex-1 min-w-0"
-        fullscreenClassName="flex-row"
+        fullscreenClassName="flex flex-row"
       >
         <React.Suspense fallback={<div className={`flex-1 ${colors.bg.skeleton} ${PANEL_LAYOUT.ANIMATE.PULSE}`} />}>
           <MainContentSection

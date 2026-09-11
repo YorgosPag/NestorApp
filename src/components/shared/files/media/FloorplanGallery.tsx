@@ -155,13 +155,12 @@ export function FloorplanGallery({
     // intentional: only reset on index change, not on inlineZP reference changes
   }, [currentIndex]);
   // Keyboard navigation
+  // ⚠️ ADR-241 (2026-09-11): ΚΑΝΕΝΑΣ κλάδος Escape εδώ. Την πλήρη οθόνη της γκαλερί την κατέχει ο Radix
+  // `<Dialog>` (`onOpenChange` → `fullscreen.exit`). Ως τότε υπήρχαν ΤΡΕΙΣ ιδιοκτήτες για το ίδιο πάτημα —
+  // ο Radix, το `useFullscreen` και αυτός ο ωμός listener του `window` — και κανείς δεν ρωτούσε αν το πάτημα
+  // είχε ήδη καταναλωθεί από εσώτερη στρώση (π.χ. το εργαλείο μέτρησης μέσα στον διάλογο).
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape' && fullscreen.isFullscreen) {
-        event.preventDefault();
-        fullscreen.exit();
-        return;
-      }
       if (floorplanFiles.length <= 1) return;
       if (event.key === 'ArrowLeft') {
         event.preventDefault();
@@ -173,7 +172,7 @@ export function FloorplanGallery({
     }
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [goToPrevious, goToNext, floorplanFiles.length, fullscreen.isFullscreen, fullscreen.exit]);
+  }, [goToPrevious, goToNext, floorplanFiles.length]);
   // FULLSCREEN
   const handleOpenFullscreen = useCallback(() => {
     modalZP.resetAll();
