@@ -107,7 +107,17 @@ interface BaseEmailParams {
    * Default: false (other email templates keep the lean rendering).
    */
   enableContactProviderLinks?: boolean;
+  /**
+   * **Η γλώσσα του εγγράφου** (`<html lang>`) — προεπιλογή `el`, όπως ήταν καρφωμένο.
+   *
+   * 🔑 Δεν είναι διακοσμητικό (WCAG 3.1.1): ο αναγνώστης οθόνης διαλέγει φωνή από εδώ.
+   * Ένα αγγλικό email δηλωμένο `el` διαβάζεται με ελληνική προφορά (ADR-851).
+   */
+  lang?: string;
 }
+
+/** Η διαδρομή του λογότυπου της **εφαρμογής** (όχι της εταιρείας) — ένα σημείο, όλα τα email. */
+export const NESTOR_APP_LOGO_PATH = '/images/nestor-app-logo.jpg';
 
 /**
  * Wraps content in the branded Pagonis Energo email template.
@@ -134,13 +144,14 @@ export function wrapInBrandedTemplate(params: BaseEmailParams): string {
     companySocials,
     contactLabels,
     enableContactProviderLinks,
+    lang,
   } = params;
 
   const baseUrl = getAppBaseUrl();
   const companyLogoUrl = companyLogoUrlOverride && companyLogoUrlOverride.trim().length > 0
     ? companyLogoUrlOverride
     : `${baseUrl}/images/pagonis-energo-logo.png`;
-  const appLogoUrl = `${baseUrl}/images/nestor-app-logo.jpg`;
+  const appLogoUrl = `${baseUrl}${NESTOR_APP_LOGO_PATH}`;
   const appName = 'Nestor App';
 
   const phones: EmailContactPhone[] =
@@ -183,7 +194,7 @@ export function wrapInBrandedTemplate(params: BaseEmailParams): string {
   });
 
   return `<!DOCTYPE html>
-<html lang="el">
+<html lang="${escapeHtml(lang ?? 'el')}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
