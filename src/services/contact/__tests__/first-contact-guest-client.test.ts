@@ -127,6 +127,18 @@ describe('Β — η απόδειξη, και οι επτά εκβάσεις τη
     });
   });
 
+  it('🔐 Β1β — `customToken: null` (λογαριασμός με 2FA) περνά ΑΥΤΟΥΣΙΟ — ποτέ «κάτι πήγε στραβά»', async () => {
+    // ADR-844 §13: η πράξη **έγινε**· απλώς η απόδειξη email δεν δίνει συνεδρία.
+    postMock.mockResolvedValue({ contact: { id: 'fcon_1' }, created: true, customToken: null });
+
+    await expect(confirmGuestContact('fcin_1', '472913')).resolves.toEqual({
+      kind: 'opened',
+      contact: { id: 'fcon_1' },
+      created: true,
+      customToken: null,
+    });
+  });
+
   it('🔴 Β2 — ΚΑΘΕ ΕΝΑΣ από τους επτά λόγους άρνησης συνδέσμου ταξιδεύει ΟΝΟΜΑΣΤΙΚΑ', async () => {
     // 🔴 **`it.each` πάνω στο ΚΛΕΙΣΤΟ ΣΥΝΟΛΟ, όχι σε δείγμα**: ο όγδοος λόγος που θα
     //    προστεθεί αύριο μπαίνει σε αυτή την άγκυρα **χωρίς να το θυμηθεί κανείς**.

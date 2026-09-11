@@ -67,8 +67,11 @@ export type GuestContactLinkView =
        *
        * ⇒ Ο κάτοχος αυτού του HTML **είναι ήδη** ο κάτοχος του συνδέσμου. Δεν του
        * δίνουμε τίποτα που δεν είχε ήδη.
+       *
+       * 🔐 **`null` = ο λογαριασμός έχει δεύτερο παράγοντα** (ADR-844 §13): καμία
+       * συνεδρία με email μόνο — η οθόνη τον στέλνει στην κανονική σύνδεση.
        */
-      readonly customToken: string;
+      readonly customToken: string | null;
     }
   | (GuestContactExit & (
       | { readonly kind: 'link-refused'; readonly reason: FirstContactInvitationRefusal }

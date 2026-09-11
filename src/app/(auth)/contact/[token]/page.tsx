@@ -47,9 +47,12 @@
 import 'server-only';
 
 import type { Metadata } from 'next';
+import { cookies } from 'next/headers';
 
 import { GuestContactContent } from '@/components/contact/GuestContactContent';
 import type { GuestContactLinkView } from '@/components/contact/guest-contact-view';
+import { SESSION_COOKIE_CONFIG } from '@/lib/auth/security-policy';
+import { sessionHolderUid } from '@/lib/auth/token-credentials';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import {
   redeemGuestContactByLink,
@@ -113,7 +116,14 @@ export default async function GuestContactPage({
   //    γεννά ταυτότητα και γράφει την πράξη — όλα μέσα από τον **ΕΝΑΝ** γραφέα.
   //    ⚠️ Γι' αυτό η σελίδα είναι `force-dynamic` **και** `noindex`: ένας crawler που
   //    την άνοιγε θα **εξαργύρωνε** τον σύνδεσμο του ανθρώπου πριν από εκείνον.
-  const outcome = await redeemGuestContactByLink(getAdminFirestore(), token);
+  //
+  //    🔑 **Ποιος κρατά συνεδρία σε ΑΥΤΟΝ τον φυλλομετρητή** (ADR-844 §13): ένας
+  //    σύνδεσμος από email είναι πλοήγηση ανώτατου επιπέδου, άρα το `SameSite=Lax`
+  //    cookie **φτάνει**. Ρωτιέται μόνο αν βρεθεί ανεπιβεβαίωτος λογαριασμός.
+  const sessionCookie = (await cookies()).get(SESSION_COOKIE_CONFIG.NAME)?.value ?? null;
+  const outcome = await redeemGuestContactByLink(
+    getAdminFirestore(), token, () => sessionHolderUid(sessionCookie),
+  );
 
   return <GuestContactContent view={viewOf(outcome)} />;
 }

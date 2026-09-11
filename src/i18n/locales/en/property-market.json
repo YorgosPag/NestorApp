@@ -1137,6 +1137,7 @@
       "refusedTitle": "This link did not work",
       "signingIn": "Signing you in…",
       "signInFailed": "Your message went out. We could not sign you in automatically though — sign in with your email to see your contacts.",
+      "secondFactor": "Your message went out. Your account is protected with two-step verification, so we do not sign you in with email alone — sign in as usual to see your contacts.",
       "signIn": "Sign in",
       "backToListing": "Back to the listing",
       "backToSearch": "Search properties"

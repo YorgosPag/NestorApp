@@ -2,8 +2,8 @@
   "_meta": {
     "description": "i18n hardcoded UI strings baseline (JSX text, attrs, errors, toasts)",
     "generated": "2026-04-25T07:35:27Z",
-    "totalViolations": 25,
-    "totalFiles": 4,
+    "totalViolations": 28,
+    "totalFiles": 5,
     "rule": "Counts can only decrease. New files = zero tolerance.",
     "patterns": [
       "JSX text",
@@ -11,12 +11,13 @@
       "throw/alert/confirm",
       "toast calls"
     ],
-    "exceptions": "ADR-844 — ΓΡΑΜΜΕΝΗ ΕΞΑΙΡΕΣΗ, ΟΧΙ ΣΙΩΠΗΛΗ. Ο κανόνας λέει «νέα αρχεία = μηδενική ανοχή» και εδώ ΠΑΡΑΒΙΑΣΤΗΚΕ συνειδητά για ΕΝΑ αρχείο: το email-templates/first-contact-verification.ts. ΤΙ ΠΙΑΝΕΙ ΠΡΑΓΜΑΤΙΚΑ Ο ΑΝΙΧΝΕΥΤΗΣ: το pattern 1 είναι '>[^<>{}]*Greek[^<>{}]*<' και ταιριάζει σε '<strong>ένα βήμα</strong>' ΜΕΣΑ σε template literal email HTML — δεν υπάρχει JSX σε αυτό το αρχείο, ούτε αποδότης t(): όλο το email-templates/ είναι server-only ελληνικό HTML. ΤΟ ΠΡΟΗΓΟΥΜΕΝΟ ΕΙΝΑΙ ΤΑΥΤΟΣΗΜΟ ΚΑΙ ΜΕΤΡΗΜΕΝΟ: pending-registration-admin.ts:82 = 'Ένας νέος χρήστης <strong>αυτο-εγγράφηκε</strong>...', ήδη εδώ με 2. ΓΙΑΤΙ ΚΑΤΑΓΡΑΦΗ ΚΑΙ ΟΧΙ ΘΕΡΑΠΕΙΑ: η θεραπεία που θα έκανε την πύλη πράσινη είναι να φύγει το <strong> σε βοηθητική συνάρτηση — ίδιο παραγόμενο HTML, ίδιο αμετάφραστο ελληνικό κείμενο, ΚΡΥΜΜΕΝΟ από τον ανιχνευτή. Αυτό θα ήταν 'πράσινο επειδή κανείς δεν κοίταξε'. Η ΠΡΑΓΜΑΤΙΚΗ ΕΡΩΤΗΣΗ ΜΕΝΕΙ ΑΝΟΙΧΤΗ ΚΑΙ ΕΙΝΑΙ ΠΡΟΪΟΝΤΙΚΗ: μεταφράζονται τα email; Σήμερα ΟΧΙ, για ΚΑΝΕΝΑ από τα 17 πρότυπα. Όταν απαντηθεί, αυτές οι 4+2 γραμμές φεύγουν ΜΑΖΙ με τις άλλες ~40 ελληνικές γραμμές του ίδιου αρχείου που ο ανιχνευτής ΔΕΝ βλέπει καν."
+    "exceptions": "ADR-844 — ΓΡΑΜΜΕΝΗ ΕΞΑΙΡΕΣΗ, ΟΧΙ ΣΙΩΠΗΛΗ. Ο κανόνας λέει «νέα αρχεία = μηδενική ανοχή» και εδώ ΠΑΡΑΒΙΑΣΤΗΚΕ συνειδητά για ΕΝΑ αρχείο: το email-templates/first-contact-verification.ts. ΤΙ ΠΙΑΝΕΙ ΠΡΑΓΜΑΤΙΚΑ Ο ΑΝΙΧΝΕΥΤΗΣ: το pattern 1 είναι '>[^<>{}]*Greek[^<>{}]*<' και ταιριάζει σε '<strong>ένα βήμα</strong>' ΜΕΣΑ σε template literal email HTML — δεν υπάρχει JSX σε αυτό το αρχείο, ούτε αποδότης t(): όλο το email-templates/ είναι server-only ελληνικό HTML. ΤΟ ΠΡΟΗΓΟΥΜΕΝΟ ΕΙΝΑΙ ΤΑΥΤΟΣΗΜΟ ΚΑΙ ΜΕΤΡΗΜΕΝΟ: pending-registration-admin.ts:82 = 'Ένας νέος χρήστης <strong>αυτο-εγγράφηκε</strong>...', ήδη εδώ με 2. ΓΙΑΤΙ ΚΑΤΑΓΡΑΦΗ ΚΑΙ ΟΧΙ ΘΕΡΑΠΕΙΑ: η θεραπεία που θα έκανε την πύλη πράσινη είναι να φύγει το <strong> σε βοηθητική συνάρτηση — ίδιο παραγόμενο HTML, ίδιο αμετάφραστο ελληνικό κείμενο, ΚΡΥΜΜΕΝΟ από τον ανιχνευτή. Αυτό θα ήταν 'πράσινο επειδή κανείς δεν κοίταξε'. Η ΠΡΑΓΜΑΤΙΚΗ ΕΡΩΤΗΣΗ ΜΕΝΕΙ ΑΝΟΙΧΤΗ ΚΑΙ ΕΙΝΑΙ ΠΡΟΪΟΝΤΙΚΗ: μεταφράζονται τα email; Σήμερα ΟΧΙ, για ΚΑΝΕΝΑ από τα 17 πρότυπα. Όταν απαντηθεί, αυτές οι 4+2 γραμμές φεύγουν ΜΑΖΙ με τις άλλες ~40 ελληνικές γραμμές του ίδιου αρχείου που ο ανιχνευτής ΔΕΝ βλέπει καν. ║ ADR-844 §13 (2026-09-11) — ΔΕΥΤΕΡΟ ΑΡΧΕΙΟ, ΙΔΙΑ ΚΛΑΣΗ: email-templates/account-secured.ts (το email «ασφαλίσαμε τον λογαριασμό σας» μετά από διεκδίκηση γραμματοκιβωτίου) = 3. Οι γραμμές 61/73/74 είναι '<strong>…</strong>' μέσα σε ελληνικό email HTML — ούτε JSX, ούτε t(). Ίδιος λόγος καταγραφής αντί «θεραπείας»: η μετακίνηση του <strong> σε βοηθητική θα έκρυβε το ίδιο κείμενο από τον ανιχνευτή χωρίς να αλλάξει τίποτα. Φεύγει μαζί με τα άλλα όταν απαντηθεί η προϊοντική ερώτηση."
   },
   "files": {
     "src/lib/obligations/content.ts": 16,
     "src/services/sales-accounting/accounting-office-notify.ts": 3,
     "src/services/email-templates/pending-registration-admin.ts": 2,
-    "src/services/email-templates/first-contact-verification.ts": 4
+    "src/services/email-templates/first-contact-verification.ts": 4,
+    "src/services/email-templates/account-secured.ts": 3
   }
 }

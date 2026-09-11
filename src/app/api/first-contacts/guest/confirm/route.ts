@@ -30,6 +30,7 @@ import 'server-only';
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { readJsonBody } from '@/lib/api/json-body';
+import { extractSessionCookie, sessionHolderUid } from '@/lib/auth/token-credentials';
 import { nowISO } from '@/lib/date-local';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
@@ -44,8 +45,11 @@ type GuestConfirmResponse =
   | {
       readonly contact: FirstContactForSeeker;
       readonly created: boolean;
-      /** Για `signInWithCustomToken`. **Άνεση, όχι προϋπόθεση** — η πράξη έχει ήδη γραφτεί. */
-      readonly customToken: string;
+      /**
+       * Για `signInWithCustomToken`. **Άνεση, όχι προϋπόθεση** — η πράξη έχει ήδη γραφτεί.
+       * `null` = λογαριασμός με **δεύτερο παράγοντα** (ADR-844 §13).
+       */
+      readonly customToken: string | null;
     }
   | { readonly error: 'LINK_REFUSED'; readonly reason: FirstContactInvitationRefusal }
   | { readonly error: 'CONTACT_REFUSED'; readonly reason: FirstContactRejection }
@@ -57,8 +61,16 @@ async function confirmHandler(request: NextRequest): Promise<NextResponse<GuestC
   const parsed = await readJsonBody(request, guestConfirmBodySchema);
   if ('rejected' in parsed) return parsed.rejected;
 
+  // 🔑 **Το cookie ταξιδεύει ήδη** — ο `apiClient` καλεί same-origin χωρίς ρητό
+  //    `credentials`. Η πόρτα παραμένει **δημόσια**: ο κάτοχος ρωτιέται μόνο για να
+  //    ξεχωρίσει τον νόμιμο κάτοχο ανεπιβεβαίωτου λογαριασμού (ADR-844 §13), ποτέ για να
+  //    επιτρέψει ή να αρνηθεί.
   const outcome = await redeemGuestContactByCode(
-    getAdminFirestore(), parsed.data.invitationId, parsed.data.code, nowISO(),
+    getAdminFirestore(),
+    parsed.data.invitationId,
+    parsed.data.code,
+    () => sessionHolderUid(extractSessionCookie(request)),
+    nowISO(),
   );
 
   return respond(outcome);

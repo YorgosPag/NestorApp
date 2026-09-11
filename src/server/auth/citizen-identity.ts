@@ -73,6 +73,12 @@ import { setClaimsWithMirror } from '@/lib/auth/set-claims-with-mirror';
 import { isValidGlobalRole } from '@/lib/auth/types';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import {
+  mailboxProofMaySignIn,
+  settleProvenMailbox,
+  type ProvenMailboxAccount,
+  type SessionHolderProbe,
+} from './mailbox-proof-custody';
 
 const logger = createModuleLogger('CITIZEN_IDENTITY');
 
@@ -119,8 +125,12 @@ export type CitizenIdentityOutcome =
   | {
       readonly kind: 'ready';
       readonly uid: string;
-      /** Για `signInWithCustomToken` στον φυλλομετρητή. */
-      readonly customToken: string;
+      /**
+       * Για `signInWithCustomToken` στον φυλλομετρητή — ή **`null`** όταν ο λογαριασμός
+       * έχει **δεύτερο παράγοντα** (ADR-844 §13): η απόδειξη email **δεν** δίνει
+       * συνεδρία που θα παρέκαμπτε το MFA. Η πράξη γράφεται κανονικά.
+       */
+      readonly customToken: string | null;
       /** Γεννήθηκε **τώρα** ο λογαριασμός; Η οθόνη το λέει αλλιώς. */
       readonly born: boolean;
     }
@@ -130,14 +140,20 @@ export interface CitizenIdentityInput {
   /** **Επαληθευμένο** email. Ο καλών οφείλει να το έχει ήδη αποδείξει. */
   readonly email: string;
   readonly displayName: string;
+  /**
+   * **Ποιος κρατά συνεδρία στον φυλλομετρητή που αποδεικνύει** (ADR-844 §13).
+   *
+   * 🔴 Χωρίς αυτό, η απόδειξη **δεν** ξεχωρίζει τον νόμιμο κάτοχο ανεπιβεβαίωτου
+   * λογαριασμού από το θύμα προ-κατάληψης. Δες `mailbox-proof-custody.ts`.
+   */
+  readonly sessionHolder: SessionHolderProbe;
 }
 
 // =============================================================================
 // 1. Ο ΛΟΓΑΡΙΑΣΜΟΣ — βρες, αλλιώς γέννησε
 // =============================================================================
 
-interface ResolvedAccount {
-  readonly uid: string;
+interface ResolvedAccount extends ProvenMailboxAccount {
   readonly disabled: boolean;
   readonly customClaims: Record<string, unknown> | undefined;
   readonly born: boolean;
@@ -162,6 +178,11 @@ function isUserNotFound(error: unknown): boolean {
  *
  * ⚠️ Ο καλών **δεν** μαθαίνει αν ο λογαριασμός προϋπήρχε — δες το `born`, που
  * ταξιδεύει μόνο ως προς **τι λέει η οθόνη**, ποτέ ως προς το τι επιτρέπεται.
+ *
+ * 🔴 **`emailVerified` / πάροχοι / 2ος παράγοντας ΤΟΥ ΥΠΑΡΧΟΝΤΟΣ** (ADR-844 §13): το
+ * `getUserByEmail` βρίσκει **όποιον** γράφτηκε με αυτή τη διεύθυνση — **και** αυτόν που
+ * δεν την απέδειξε ποτέ. Αυτά τα τρία πεδία είναι όλη η διαφορά ανάμεσα σε «ο
+ * λογαριασμός σου» και «ο λογαριασμός κάποιου που έγραψε το email σου».
  */
 async function resolveAccount(input: CitizenIdentityInput): Promise<ResolvedAccount> {
   const auth = getAdminAuth();
@@ -172,6 +193,9 @@ async function resolveAccount(input: CitizenIdentityInput): Promise<ResolvedAcco
       uid: existing.uid,
       disabled: existing.disabled,
       customClaims: existing.customClaims,
+      emailVerified: existing.emailVerified,
+      providerIds: existing.providerData.map((provider) => provider.providerId),
+      secondFactorEnrolled: (existing.multiFactor?.enrolledFactors.length ?? 0) > 0,
       born: false,
     };
   } catch (error: unknown) {
@@ -184,7 +208,15 @@ async function resolveAccount(input: CitizenIdentityInput): Promise<ResolvedAcco
     displayName: input.displayName,
   });
 
-  return { uid: created.uid, disabled: false, customClaims: undefined, born: true };
+  return {
+    uid: created.uid,
+    disabled: false,
+    customClaims: undefined,
+    emailVerified: true,
+    providerIds: [],
+    secondFactorEnrolled: false,
+    born: true,
+  };
 }
 
 // =============================================================================
@@ -272,6 +304,24 @@ async function writeCitizenDocument(uid: string, input: CitizenIdentityInput): P
     );
 }
 
+/**
+ * **Το κλειδί της συνεδρίας — ή κανένα.**
+ *
+ * 🔐 **`null` για λογαριασμό με δεύτερο παράγοντα** (ADR-844 §13): το custom token δεν
+ * περνά από MFA, άρα θα έδινε συνεδρία με **έναν** παράγοντα. Η πράξη **έχει ήδη**
+ * γραφτεί από τον καλούντα ή θα γραφτεί — η σύνδεση ήταν πάντα **δώρο, όχι
+ * προϋπόθεση** (`first-contact-guest.service.ts`).
+ */
+async function sessionKeyFor(account: ResolvedAccount): Promise<string | null> {
+  if (!mailboxProofMaySignIn(account)) {
+    logger.info('Απόδειξη email σε λογαριασμό με 2ο παράγοντα — καμία συνεδρία', {
+      uid: account.uid,
+    });
+    return null;
+  }
+  return getAdminAuth().createCustomToken(account.uid);
+}
+
 // =============================================================================
 // 4. Η ΑΚΟΛΟΥΘΙΑ
 // =============================================================================
@@ -301,14 +351,28 @@ export async function ensureCitizenIdentity(
       return { kind: 'refused', reason: 'account-disabled' };
     }
 
+    // 🔴 **ΠΡΙΝ τα claims — η σειρά είναι συμβόλαιο** (ADR-844 §13): η εξουδετέρωση
+    //    ανεπιβεβαίωτου λογαριασμού (αφαίρεση κωδικού + ανάκληση) οφείλει να έχει γίνει
+    //    **πριν** ο λογαριασμός αποκτήσει ρόλο — αλλιώς ένα παλιό refresh token του
+    //    επιτιθέμενου θα έκοβε ID token **με** τον ρόλο.
+    await settleProvenMailbox(
+      account,
+      { email: input.email, recipientName: input.displayName },
+      input.sessionHolder,
+    );
+
     if (!alreadyHasIdentity(account.customClaims)) {
       const refusal = await grantCitizenClaims(account.uid, account.customClaims);
       if (refusal !== null) return { kind: 'refused', reason: refusal };
       await writeCitizenDocument(account.uid, input);
     }
 
-    const customToken = await getAdminAuth().createCustomToken(account.uid);
-    return { kind: 'ready', uid: account.uid, customToken, born: account.born };
+    return {
+      kind: 'ready',
+      uid: account.uid,
+      customToken: await sessionKeyFor(account),
+      born: account.born,
+    };
   } catch (error: unknown) {
     // 🔴 **«Δεν μάθαμε» ΠΟΤΕ ίδιο με «δεν επιτρέπεσαι»** (N.12). Ένα σφάλμα
     //    δικτύου προς τη Firebase δεν είναι απόφαση για τον άνθρωπο.

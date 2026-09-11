@@ -117,6 +117,18 @@ describe('Α — η σελίδα του συνδέσμου δεν είναι π�
     expect(exitLink()).toBeNull();
   });
 
+  it('🔐 Α0β — επιτυχία ΧΩΡΙΣ κλειδί (2FA): λέει ΓΙΑΤΙ και δίνει την κανονική σύνδεση — ποτέ «σας συνδέουμε…» για πάντα', () => {
+    // ADR-844 §13: το custom token δεν περνά από MFA, άρα **αρνηθήκαμε επίτηδες** — δεν
+    // είναι το `signInFailed` (αποτυχία). Χωρίς αρχική φάση, η οθόνη θα έμενε στο
+    // «σας συνδέουμε…» για σύνδεση που **δεν θα γίνει ποτέ**.
+    renderView({ kind: 'done', created: true, customToken: null });
+
+    expect(screen.getByText(LINK_KEYS.secondFactor)).toBeInTheDocument();
+    expect(screen.queryByText(LINK_KEYS.signingIn)).toBeNull();
+    expect(screen.queryByText(LINK_KEYS.signInFailed)).toBeNull();
+    expect(screen.getByRole('link', { name: LINK_KEYS.signIn })).toBeInTheDocument();
+  });
+
   it.each(SETBACK_KINDS)(
     '🔴 Α1 — «%s»: ο άνθρωπος έχει ΠΑΝΤΑ κάπου να πατήσει',
     (kind) => {

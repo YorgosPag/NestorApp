@@ -60,8 +60,14 @@ import { InvalidBody, RefusedBody } from './FirstContactOutcomeNotice';
 
 registerRouteSlice(routeSlice);
 
-/** Πού βρίσκεται η **υιοθέτηση** — ρητά, ποτέ `isLoading` + `error` μαζί (N.7.2 #3). */
-type SignInPhase = 'signing-in' | 'signed-in' | 'not-signed-in';
+/**
+ * Πού βρίσκεται η **υιοθέτηση** — ρητά, ποτέ `isLoading` + `error` μαζί (N.7.2 #3).
+ *
+ * 🔐 **`second-factor` ΔΕΝ είναι `not-signed-in`**: εκεί **αποτύχαμε**, εδώ
+ * **αρνηθήκαμε επίτηδες** (ADR-844 §13) — ο λογαριασμός έχει 2FA και το custom token δεν
+ * περνά από αυτό. Δύο διαφορετικές αλήθειες, δύο κείμενα.
+ */
+type SignInPhase = 'signing-in' | 'signed-in' | 'not-signed-in' | 'second-factor';
 
 export function GuestContactContent({
   view,
@@ -70,13 +76,17 @@ export function GuestContactContent({
 }): React.ReactElement {
   const { t } = useTranslation([FIRST_CONTACT_NS]);
   const layout = useLayoutClasses();
-  const [phase, setPhase] = React.useState<SignInPhase>('signing-in');
 
   // ⚠️ **Η εξάρτηση είναι το ΚΛΕΙΔΙ, όχι το `view`.** Το `view` έρχεται από Server
   //    Component και είναι **νέο αντικείμενο σε κάθε απόδοση**: με αυτό στις
   //    εξαρτήσεις, η σύνδεση θα ξανάτρεχε ατέρμονα με **ήδη εξαργυρωμένο** κλειδί.
   //    Ίδιο μάθημα με το `target.kind`/`target.listingId` του `FirstContactAction`.
   const customToken = view.kind === 'done' ? view.customToken : null;
+  // 🔑 **Επιτυχία χωρίς κλειδί = 2ος παράγοντας**, από την **πρώτη** απόδοση: αλλιώς η
+  //    οθόνη θα έλεγε «σας συνδέουμε…» για πάντα, για σύνδεση που **δεν θα γίνει ποτέ**.
+  const [phase, setPhase] = React.useState<SignInPhase>(
+    view.kind === 'done' && customToken === null ? 'second-factor' : 'signing-in',
+  );
 
   React.useEffect(() => {
     if (customToken === null) return;
@@ -179,9 +189,13 @@ function SignInStatus({ phase }: { readonly phase: SignInPhase }): React.JSX.Ele
     );
   }
 
+  // ⚠️ Δύο **ξεχωριστές** κλήσεις `t()`, όχι `t(cond ? A : B)`: ο στατικός τεμαχιστής
+  //    i18n (CHECK 3.34) βλέπει κάθε κλειδί **ονομαστικά**.
+  const lead = phase === 'second-factor' ? t(LINK_KEYS.secondFactor) : t(LINK_KEYS.signInFailed);
+
   return (
     <>
-      <p className="m-0 text-sm text-muted-foreground">{t(LINK_KEYS.signInFailed)}</p>
+      <p className="m-0 text-sm text-muted-foreground">{lead}</p>
       <Link
         href={AUTH_ROUTES.login}
         className="font-medium text-foreground underline underline-offset-4"

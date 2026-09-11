@@ -47,6 +47,12 @@ const AT = '2026-09-05T10:00:00.000Z';
 const DB = {} as AdminFirestore;
 
 /**
+ * Ο κάτοχος συνεδρίας (ADR-844 §13) — **μία** ταυτότητα συνάρτησης, ώστε η άγκυρα Σ10
+ * να ελέγχει ότι περνά **αυτούσιος**, όχι απλώς «κάτι».
+ */
+const HOLDER = jest.fn(async () => null);
+
+/**
  * Ο στόχος της δήλωσης — **μία** φορά, γιατί τον περιμένουν πλέον **πέντε** εκβάσεις.
  *
  * 🔑 Από την ημέρα που η άρνηση απέκτησε **διέξοδο** (ADR-844), το *«ποια αγγελία
@@ -90,20 +96,20 @@ describe('Σ — η σειρά και η μετάφραση', () => {
   it('🔑 Σ1 — Ο ΠΑΡΟΝΟΜΑΣΤΗΣ: σύνδεσμος → ταυτότητα → πράξη → κλειδί', async () => {
     claimByLinkMock.mockResolvedValue(claimed());
 
-    const outcome = await redeemGuestContactByLink(DB, 'token', AT);
+    const outcome = await redeemGuestContactByLink(DB, 'token', HOLDER, AT);
 
     expect(outcome).toEqual({
       kind: 'contacted', contact: { id: 'fcon_1' }, created: true, customToken: 'tok_custom',
     });
     expect(ensureCitizenIdentityMock).toHaveBeenCalledWith({
-      email: 'maria@example.com', displayName: 'Μαρία Δ.',
+      email: 'maria@example.com', displayName: 'Μαρία Δ.', sessionHolder: HOLDER,
     });
   });
 
   it('🔴 Σ2 — Η ΠΡΑΞΗ ΓΡΑΦΕΤΑΙ ΜΕ ΤΟ ΕΠΑΛΗΘΕΥΜΕΝΟ EMAIL, όχι με ό,τι πληκτρολογήθηκε', async () => {
     claimByLinkMock.mockResolvedValue(claimed('MARIA@Example.com '));
 
-    await redeemGuestContactByLink(DB, 'token', AT);
+    await redeemGuestContactByLink(DB, 'token', HOLDER, AT);
 
     const [, actor, declaration] = openFirstContactMock.mock.calls[0] as [
       unknown, { uid: string; companyId: string | null }, { disclosure: { email: string; phone: string } },
@@ -127,7 +133,7 @@ describe('Σ — η σειρά και η μετάφραση', () => {
       kind: 'refused', reason: 'expired', target: TARGET,
     });
 
-    const outcome = await redeemGuestContactByLink(DB, 'token', AT);
+    const outcome = await redeemGuestContactByLink(DB, 'token', HOLDER, AT);
 
     expect(outcome).toEqual({ kind: 'link-refused', reason: 'expired', target: TARGET });
     // 🔑 Ο ΠΑΡΟΝΟΜΑΣΤΗΣ της σειράς: τίποτα δεν τρέχει μετά από άκυρη απόδειξη.
@@ -139,7 +145,7 @@ describe('Σ — η σειρά και η μετάφραση', () => {
     claimByLinkMock.mockResolvedValue(claimed());
     ensureCitizenIdentityMock.mockResolvedValue({ kind: 'refused', reason: 'account-disabled' });
 
-    const outcome = await redeemGuestContactByLink(DB, 'token', AT);
+    const outcome = await redeemGuestContactByLink(DB, 'token', HOLDER, AT);
 
     expect(outcome).toEqual({
       kind: 'identity-refused', reason: 'account-disabled', target: TARGET,
@@ -150,7 +156,7 @@ describe('Σ — η σειρά και η μετάφραση', () => {
   it('Σ5 — ο κωδικός φτάνει στην ΙΔΙΑ κλειδαριά', async () => {
     claimByCodeMock.mockResolvedValue(claimed());
 
-    const outcome = await redeemGuestContactByCode(DB, 'fcin_1', '472913', AT);
+    const outcome = await redeemGuestContactByCode(DB, 'fcin_1', '472913', HOLDER, AT);
 
     expect(claimByCodeMock).toHaveBeenCalledWith(DB, 'fcin_1', '472913', AT);
     expect(outcome.kind).toBe('contacted');
@@ -160,7 +166,7 @@ describe('Σ — η σειρά και η μετάφραση', () => {
     claimByLinkMock.mockResolvedValue(claimed());
     openFirstContactMock.mockResolvedValue({ kind: 'rejected', reason: 'capacity-full' });
 
-    expect(await redeemGuestContactByLink(DB, 'token', AT)).toEqual({
+    expect(await redeemGuestContactByLink(DB, 'token', HOLDER, AT)).toEqual({
       kind: 'contact-refused', reason: 'capacity-full', target: TARGET,
     });
   });
@@ -169,7 +175,7 @@ describe('Σ — η σειρά και η μετάφραση', () => {
     claimByLinkMock.mockResolvedValue(claimed());
     openFirstContactMock.mockResolvedValue({ kind: 'unavailable' });
 
-    expect(await redeemGuestContactByLink(DB, 'token', AT))
+    expect(await redeemGuestContactByLink(DB, 'token', HOLDER, AT))
       .toEqual({ kind: 'unavailable', target: TARGET });
   });
 
@@ -177,8 +183,32 @@ describe('Σ — η σειρά και η μετάφραση', () => {
     claimByLinkMock.mockResolvedValue(claimed());
     openFirstContactMock.mockResolvedValue({ kind: 'unchanged', contact: { id: 'fcon_1' } });
 
-    expect(await redeemGuestContactByLink(DB, 'token', AT)).toEqual({
+    expect(await redeemGuestContactByLink(DB, 'token', HOLDER, AT)).toEqual({
       kind: 'contacted', contact: { id: 'fcon_1' }, created: false, customToken: 'tok_custom',
     });
+  });
+
+  it('🔐 Σ9 — λογαριασμός με 2ο παράγοντα: η πράξη ΓΡΑΦΕΤΑΙ, το κλειδί ταξιδεύει ως `null` (ADR-844 §13)', async () => {
+    claimByLinkMock.mockResolvedValue(claimed());
+    ensureCitizenIdentityMock.mockResolvedValue({
+      kind: 'ready', uid: 'uid_maria', customToken: null, born: false,
+    });
+
+    expect(await redeemGuestContactByLink(DB, 'token', HOLDER, AT)).toEqual({
+      kind: 'contacted', contact: { id: 'fcon_1' }, created: true, customToken: null,
+    });
+    // ⚠️ Η σύνδεση ήταν πάντα **δώρο, όχι προϋπόθεση**: η επαφή φεύγει κανονικά.
+    expect(openFirstContactMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('🔑 Σ10 — ο κάτοχος περνά ΑΥΤΟΥΣΙΟΣ και από τις δύο πόρτες — η υπηρεσία δεν τον ρωτά η ίδια', async () => {
+    // ⚠️ Κόστος: η ερώτηση κάνει `getUser`. Την κάνει **μόνο** η φύλαξη, και μόνο για
+    //    ανεπιβεβαίωτο λογαριασμό — ποτέ η ακολουθία «για σιγουριά».
+    claimByCodeMock.mockResolvedValue(claimed());
+
+    await redeemGuestContactByCode(DB, 'fcin_1', '472913', HOLDER, AT);
+
+    expect(ensureCitizenIdentityMock.mock.calls[0][0]).toMatchObject({ sessionHolder: HOLDER });
+    expect(HOLDER).not.toHaveBeenCalled();
   });
 });

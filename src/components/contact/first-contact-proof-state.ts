@@ -226,7 +226,10 @@ export function useResendCooldown(): { readonly secondsLeft: number; readonly re
 async function settle(outcome: GuestConfirmResult): Promise<OpenContactResult | null> {
   switch (outcome.kind) {
     case 'opened':
-      await adoptCitizenSession(outcome.customToken);
+      // 🔐 `null` = ο λογαριασμός έχει **δεύτερο παράγοντα** (ADR-844 §13): η πράξη
+      //    έγινε, αλλά η απόδειξη email **δεν** δίνει συνεδρία. Ο άνθρωπος συνδέεται από
+      //    την κανονική πόρτα, που θα του ζητήσει τον κωδικό 2FA.
+      if (outcome.customToken !== null) await adoptCitizenSession(outcome.customToken);
       return { kind: 'opened', contact: outcome.contact, created: outcome.created };
     case 'refused':
       return { kind: 'refused', reason: outcome.reason };

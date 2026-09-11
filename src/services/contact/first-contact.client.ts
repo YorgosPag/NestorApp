@@ -379,7 +379,8 @@ export type GuestConfirmResult =
       readonly kind: 'opened';
       readonly contact: FirstContactForSeeker;
       readonly created: boolean;
-      readonly customToken: string;
+      /** `null` = λογαριασμός με **δεύτερο παράγοντα**: καμία συνεδρία με email μόνο (ADR-844 §13). */
+      readonly customToken: string | null;
     }
   | { readonly kind: 'link-refused'; readonly reason: FirstContactInvitationRefusal }
   | { readonly kind: 'refused'; readonly reason: FirstContactRejection }
@@ -410,7 +411,7 @@ export async function confirmGuestContact(
     const body = await apiClient.post<{
       contact: FirstContactForSeeker;
       created: boolean;
-      customToken: string;
+      customToken: string | null;
     }>(`${GUEST_URL}/confirm`, { invitationId, code }, PUBLIC_CALL);
 
     return {

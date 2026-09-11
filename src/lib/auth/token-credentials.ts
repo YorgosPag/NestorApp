@@ -101,9 +101,15 @@ export async function verifyIdToken(token: string): Promise<DecodedIdToken | nul
  * Same pattern as admin-guards.ts verifySessionCookieToken().
  *
  * @param sessionCookie - Session cookie string
+ * @param options.checkRevoked - Ρώτα **και** αν ανακλήθηκε (ADR-844 §13). ⚠️ Κοστίζει
+ *   **ένα `getUser` ανά κλήση** (`verifyDecodedJWTNotRevokedOrDisabled` του firebase-admin)
+ *   — γι' αυτό η προεπιλογή μένει `false`, όπως ήταν, για κάθε διαδρομή του hot path.
  * @returns DecodedIdToken or null
  */
-export async function verifySessionCookie(sessionCookie: string): Promise<DecodedIdToken | null> {
+export async function verifySessionCookie(
+  sessionCookie: string,
+  options: { readonly checkRevoked?: boolean } = {},
+): Promise<DecodedIdToken | null> {
   try {
     if (!isFirebaseAdminAvailable()) {
       logger.info('[AUTH_CONTEXT] Cannot verify session cookie - Admin SDK not available');
@@ -111,9 +117,31 @@ export async function verifySessionCookie(sessionCookie: string): Promise<Decode
     }
 
     const auth = getAdminAuth();
-    return await auth.verifySessionCookie(sessionCookie, false);
+    return await auth.verifySessionCookie(sessionCookie, options.checkRevoked === true);
   } catch (error) {
     logger.info('[AUTH_CONTEXT] Session cookie verification failed:', { message: (error as Error).message });
     return null;
   }
+}
+
+/**
+ * **Ποιος κρατά αυτή τη συνεδρία — ΤΩΡΑ;** (ADR-844 §13) — ή `null`.
+ *
+ * 🔑 **Γιατί υπάρχει**: η απόδειξη γραμματοκιβωτίου ρωτά *«είναι ο αποδεικνύων ο ίδιος
+ * άνθρωπος που κρατά τον κωδικό αυτού του λογαριασμού;»*. Η μόνη τίμια απάντηση είναι
+ * **συνεδρία του ίδιου uid στον ίδιο φυλλομετρητή** — κωδικός **και** γραμματοκιβώτιο
+ * στο ίδιο χέρι.
+ *
+ * 🔴 **`checkRevoked: true`, ΚΑΙ ΕΙΝΑΙ ΟΛΟ ΤΟ ΝΟΗΜΑ.** Ένα cookie που **ανακλήθηκε** δεν
+ * αποδεικνύει τίποτα — αλλιώς ο επιτιθέμενος που μόλις αποσυνδέσαμε θα ξαναγινόταν
+ * «κάτοχος» με το παλιό του cookie. Το επιπλέον `getUser` πληρώνεται **μόνο** εδώ, σε
+ * διαδρομή που τρέχει μία φορά ανά πρόσκληση.
+ *
+ * ⚠️ **ΔΕΝ είναι τρίτος τρόπος πιστοποίησης** (δες κεφαλίδα): είναι το **ίδιο** cookie,
+ * με αυστηρότερη ερώτηση. Δεν ζητά claims — ένας ανεπιβεβαίωτος λογαριασμός **δεν έχει**.
+ */
+export async function sessionHolderUid(sessionCookie: string | null): Promise<string | null> {
+  if (sessionCookie === null || sessionCookie === '') return null;
+  const decoded = await verifySessionCookie(sessionCookie, { checkRevoked: true });
+  return decoded?.uid ?? null;
 }

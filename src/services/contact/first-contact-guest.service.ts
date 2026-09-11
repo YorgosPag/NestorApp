@@ -47,6 +47,7 @@ import {
   ensureCitizenIdentity,
   type CitizenIdentityRefusal,
 } from '@/server/auth/citizen-identity';
+import type { SessionHolderProbe } from '@/server/auth/mailbox-proof-custody';
 import {
   claimInvitationByCode,
   claimInvitationByLink,
@@ -105,8 +106,12 @@ export type GuestContactOutcome =
       readonly kind: 'contacted';
       readonly contact: FirstContactForSeeker;
       readonly created: boolean;
-      /** Το εφήμερο κλειδί για `signInWithCustomToken`. **Άνεση, όχι προϋπόθεση.** */
-      readonly customToken: string;
+      /**
+       * Το εφήμερο κλειδί για `signInWithCustomToken`. **Άνεση, όχι προϋπόθεση.**
+       * `null` = ο λογαριασμός έχει **δεύτερο παράγοντα** — καμία συνεδρία με email
+       * μόνο (ADR-844 §13). Η πράξη **έγινε**.
+       */
+      readonly customToken: string | null;
     }
   | {
       readonly kind: 'link-refused';
@@ -134,13 +139,19 @@ export type GuestContactOutcome =
 // 2. ΟΙ ΔΥΟ ΕΙΣΟΔΟΙ
 // =============================================================================
 
-/** **Πόρτα Α** — ο άνθρωπος πάτησε τον σύνδεσμο στο email του. */
+/**
+ * **Πόρτα Α** — ο άνθρωπος πάτησε τον σύνδεσμο στο email του.
+ *
+ * @param sessionHolder Ποιος κρατά συνεδρία στον φυλλομετρητή **που άνοιξε τον
+ *   σύνδεσμο** (ADR-844 §13). Ρωτιέται μόνο αν βρεθεί ανεπιβεβαίωτος λογαριασμός.
+ */
 export async function redeemGuestContactByLink(
   adminDb: AdminFirestore,
   token: string,
+  sessionHolder: SessionHolderProbe,
   at: string = clockNowISO(),
 ): Promise<GuestContactOutcome> {
-  return finish(adminDb, await claimInvitationByLink(adminDb, token, at), at);
+  return finish(adminDb, await claimInvitationByLink(adminDb, token, at), sessionHolder, at);
 }
 
 /** **Πόρτα Β** — ο άνθρωπος έγραψε τον εξαψήφιο κωδικό στην ανοιχτή του καρτέλα. */
@@ -148,9 +159,12 @@ export async function redeemGuestContactByCode(
   adminDb: AdminFirestore,
   invitationId: string,
   code: string,
+  sessionHolder: SessionHolderProbe,
   at: string = clockNowISO(),
 ): Promise<GuestContactOutcome> {
-  return finish(adminDb, await claimInvitationByCode(adminDb, invitationId, code, at), at);
+  return finish(
+    adminDb, await claimInvitationByCode(adminDb, invitationId, code, at), sessionHolder, at,
+  );
 }
 
 // =============================================================================
@@ -160,6 +174,7 @@ export async function redeemGuestContactByCode(
 async function finish(
   adminDb: AdminFirestore,
   claim: InvitationClaim,
+  sessionHolder: SessionHolderProbe,
   at: string,
 ): Promise<GuestContactOutcome> {
   if (claim.kind === 'refused') {
@@ -173,6 +188,7 @@ async function finish(
     // 🔑 **Το ΕΠΑΛΗΘΕΥΜΕΝΟ κανάλι, όχι ό,τι πληκτρολογήθηκε.** Δες {@link provenDeclaration}.
     email: claim.invitation.channelEmail,
     displayName: claim.invitation.declaration.disclosure.displayName,
+    sessionHolder,
   });
   if (identity.kind === 'refused') {
     return {
@@ -215,7 +231,7 @@ async function writeAct(
   adminDb: AdminFirestore,
   invitation: FirstContactInvitation,
   uid: string,
-  customToken: string,
+  customToken: string | null,
   at: string,
 ): Promise<GuestContactOutcome> {
   // ⚠️ **`companyId: null`, και δεν είναι παράλειψη**: ο πολίτης **δεν έχει**

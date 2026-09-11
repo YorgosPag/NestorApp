@@ -99,8 +99,10 @@ export function buildFirstContactVerificationEmail(
     : `<a href="${escapeHtml(href)}" style="color:#1a56db;text-decoration:underline;">`
       + `${escapeHtml(data.targetLabel)}</a>`;
 
+  // ⚠️ **Ωμό όνομα, ΟΧΙ `escapeHtml`**: το `buildGreeting` το διαφεύγει ήδη. Μέχρι
+  //    2026-09-11 διαφευγόταν **δύο** φορές — ο «Γιάννης & Μαρία» έβλεπε `&amp;amp;`.
   const greeting = buildGreeting(
-    escapeHtml(data.seekerName),
+    data.seekerName,
     `Λάβαμε το μήνυμά σας για ${targetHtml}. `
       + 'Μένει <strong>ένα βήμα</strong>: να επιβεβαιώσετε ότι αυτή η διεύθυνση email '
       + 'είναι δική σας. <strong>Μέχρι τότε ο ιδιοκτήτης δεν έχει ειδοποιηθεί.</strong>',

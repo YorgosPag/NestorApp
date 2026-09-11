@@ -131,6 +131,13 @@ export const LINK_KEYS = {
   refusedTitle: 'property-market:contact.link.refusedTitle',
   signingIn: 'property-market:contact.link.signingIn',
   signInFailed: 'property-market:contact.link.signInFailed',
+  /**
+   * 🔐 **Ο λογαριασμός έχει ΔΕΥΤΕΡΟ ΠΑΡΑΓΟΝΤΑ** (ADR-844 §13): η πράξη έγινε, αλλά η
+   * απόδειξη email **δεν** δίνει συνεδρία — το custom token δεν περνά από MFA. ⚠️ Δεν
+   * είναι το `signInFailed`: εκεί **αποτύχαμε**, εδώ **αρνηθήκαμε επίτηδες**, και ο
+   * άνθρωπος πρέπει να ξέρει ότι ο κανονικός δρόμος θα του ζητήσει τον κωδικό 2FA.
+   */
+  secondFactor: 'property-market:contact.link.secondFactor',
   signIn: 'property-market:contact.link.signIn',
   /**
    * 🔴 **ΤΑ ΔΥΟ ΚΕΙΜΕΝΑ ΤΗΣ ΔΙΕΞΟΔΟΥ** — χωρίς αυτά, **κάθε** άρνηση αυτής της
