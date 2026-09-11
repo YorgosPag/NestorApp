@@ -2,7 +2,8 @@ import 'server-only';
 
 /**
  * @fileoverview **ΤΙ ΚΑΝΕΙ ΜΙΑ ΑΠΟΔΕΙΞΗ ΓΡΑΜΜΑΤΟΚΙΒΩΤΙΟΥ ΣΕ ΛΟΓΑΡΙΑΣΜΟ ΠΟΥ ΥΠΑΡΧΕΙ ΗΔΗ** (ADR-844 §13).
- * @related server/auth/citizen-identity.ts (ο καλών) · lib/auth/token-credentials.ts (`sessionHolderUid`)
+ * @related server/auth/citizen-identity.ts (ο καλών) · lib/auth/token-credentials.ts (`sessionHolderUid`) ·
+ *          server/auth/account-reprovision.ts (η διεκδίκηση)
  * @module server/auth/mailbox-proof-custody
  *
  * ────────────────────────────────────────────────────────────────────────────
@@ -15,10 +16,11 @@ import 'server-only';
  * βρίσκει **τον λογαριασμό του επιτιθέμενου** — και χωρίς αυτό το αρχείο, η επαφή του
  * θύματος γραφόταν εκεί και το θύμα **συνδεόταν** εκεί. Ο επιτιθέμενος ξέρει τον κωδικό.
  *
- * Κλάση *Classic-Federated Merge* (Sudhodanan & Paverd, USENIX Security 2022).
+ * Κλάσεις *Classic-Federated Merge* · *Unexpired Email Change* · *Trojan Identifier*
+ * (Sudhodanan & Paverd, USENIX Security 2022).
  *
  * ────────────────────────────────────────────────────────────────────────────
- * 🏆 Ο ΚΑΝΟΝΑΣ ΕΙΝΑΙ ΤΗΣ FIREBASE — Η ΔΙΑΚΡΙΣΗ ΕΙΝΑΙ ΔΙΚΗ ΜΑΣ
+ * 🏆 Ο ΚΑΝΟΝΑΣ ΕΙΝΑΙ ΤΗΣ FIREBASE — Η ΔΙΑΚΡΙΣΗ ΚΑΙ Η ΠΛΗΡΟΤΗΤΑ ΕΙΝΑΙ ΔΙΚΕΣ ΜΑΣ
  * ────────────────────────────────────────────────────────────────────────────
  *
  * Firebase, email-link sign-in, κατά λέξη: *«any previous unverified mechanism of
@@ -32,15 +34,21 @@ import 'server-only';
  * |---|---|---|---|
  * | επιβεβαιωμένος | οποιοσδήποτε | `already-verified` | **τίποτα** — δύο αποδείξεις, ένας κάτοχος |
  * | ανεπιβεβαίωτος | συνεδρία του **ίδιου** uid | `verified-by-holder` | **μόνο** `emailVerified: true` |
- * | ανεπιβεβαίωτος | ανώνυμος / άλλος uid | `claimed` | αφαίρεση κωδικού → ανάκληση → επιβεβαίωση |
+ * | ανεπιβεβαίωτος | ανώνυμος / άλλος uid | `claimed` | **ο λογαριασμός ξαναχτίζεται από το μηδέν, ΙΔΙΟ uid** |
+ *
+ * 🔴 **ΓΙΑΤΙ «ΞΑΝΑΧΤΙΖΕΤΑΙ» ΚΑΙ ΟΧΙ «ΑΦΑΙΡΕΙΤΑΙ Ο ΚΩΔΙΚΟΣ» (2026-09-11, μετρημένο στην
+ * παραγωγή)**: η αφαίρεση κωδικού + ανάκληση άφηνε **δύο** πόρτες ανοιχτές — τον εκκρεμή
+ * κωδικό αλλαγής email του επιτιθέμενου **και** πάροχο Google που είχε δέσει ο ίδιος.
+ * Μόνο η διαγραφή/επαναδημιουργία τα κλείνει και τα δύο — δες τον πίνακα του
+ * `account-reprovision.ts`, και ⛔ **ΠΟΤΕ** ξανά στον emulator: απάντησε **ανάποδα**.
  *
  * 🔑 **Ο κάτοχος της συνεδρίας ΕΙΝΑΙ ο κάτοχος του κωδικού**: κωδικός και γραμματοκιβώτιο
  * στο **ίδιο** χέρι. Ο επιτιθέμενος κρατά τον κωδικό αλλά **δεν** φτάνει τον σύνδεσμο.
  *
  * ⚠️ **Ο νόμιμος χρήστης σε ΑΛΛΗ συσκευή** πέφτει στο `claimed` — ο διακομιστής **δεν**
- * μπορεί να τον ξεχωρίσει από το θύμα. Γι' αυτό το `claimed` **δεν** σβήνει τίποτα από
- * τον λογαριασμό *(uid, επαφές, στοιχεία μένουν)* και του στέλνει **έναν** σύνδεσμο
- * ορισμού νέου κωδικού. Κόστος για εκείνον: ένα κλικ. Κόστος για τον επιτιθέμενο: όλα.
+ * μπορεί να τον ξεχωρίσει από το θύμα. Γι' αυτό το `claimed` κρατά το **uid** (άρα επαφές,
+ * αγγελίες, στοιχεία) και του στέλνει **έναν** σύνδεσμο ορισμού νέου κωδικού. Κόστος για
+ * εκείνον: ένα κλικ. Κόστος για τον επιτιθέμενο: όλα.
  *
  * ────────────────────────────────────────────────────────────────────────────
  * 🔐 Ο ΔΕΥΤΕΡΟΣ ΠΑΡΑΓΟΝΤΑΣ — {@link mailboxProofMaySignIn}
@@ -61,18 +69,19 @@ import { createModuleLogger, sentryCaptureMessage } from '@/lib/telemetry';
 import { sendReplyViaMailgun } from '@/services/ai-pipeline/shared/mailgun-sender';
 import { buildAccountSecuredEmail } from '@/services/email-templates/account-secured';
 
+import { reprovisionAuthAccount } from './account-reprovision';
+import { ownedActionLink } from './auth-action-link';
+
 const logger = createModuleLogger('MAILBOX_PROOF_CUSTODY');
 
 // =============================================================================
 // 1. ΤΟ ΛΕΞΙΛΟΓΙΟ
 // =============================================================================
 
-/** Ό,τι χρειάζεται η κρίση από τον λογαριασμό — τέσσερα πεδία, όχι ολόκληρο το `UserRecord`. */
+/** Ό,τι χρειάζεται η κρίση από τον λογαριασμό — τρία πεδία, όχι ολόκληρο το `UserRecord`. */
 export interface ProvenMailboxAccount {
   readonly uid: string;
   readonly emailVerified: boolean;
-  /** Τα `providerId` του `providerData` — π.χ. `['password']`, `['google.com']`. */
-  readonly providerIds: readonly string[];
   /** Έχει εγγεγραμμένο **δεύτερο παράγοντα**; */
   readonly secondFactorEnrolled: boolean;
 }
@@ -93,8 +102,8 @@ export type MailboxProofVerdict = 'already-verified' | 'verified-by-holder' | 'c
 /** Τι έγινε — ώστε ο καλών και οι άγκυρες να το **μετρούν**, όχι να το υποθέτουν. */
 export interface MailboxCustodyReceipt {
   readonly verdict: MailboxProofVerdict;
-  /** Οι πάροχοι που **αφαιρέθηκαν**. Κενό εκτός `claimed`. */
-  readonly unlinkedProviders: readonly string[];
+  /** Κάθε τρόπος σύνδεσης που **δεν** επέζησε της διεκδίκησης. Κενό εκτός `claimed`. */
+  readonly removedProviders: readonly string[];
 }
 
 /** Η διεύθυνση που **αποδείχθηκε**, και πώς θέλει να τον λένε ο άνθρωπος. */
@@ -102,16 +111,6 @@ export interface ProvenMailbox {
   readonly email: string;
   readonly recipientName: string;
 }
-
-/**
- * **Οι πάροχοι που μπορεί να απέκτησε λογαριασμός ΧΩΡΙΣ να αποδείξει το γραμματοκιβώτιο.**
- *
- * ⚠️ **Μόνο ο κωδικός**: ο Google και κάθε αξιόπιστος πάροχος **είναι** απόδειξη email
- * (Firebase: *«trusted Identity Provider»*) — λογαριασμός με αυτόν είναι ήδη
- * `emailVerified` και δεν φτάνει ποτέ στη διεκδίκηση. Τηλέφωνο/ανώνυμη σύνδεση δεν
- * υπάρχουν στον κώδικα παραγωγής (ADR-844 §12.3).
- */
-const UNPROVEN_SIGN_IN_PROVIDERS: readonly string[] = ['password'];
 
 // =============================================================================
 // 2. Η ΚΡΙΣΗ — καθαρή, χωρίς I/O
@@ -151,9 +150,9 @@ export function mailboxProofMaySignIn(account: Pick<ProvenMailboxAccount, 'secon
  * @param account Ο λογαριασμός που βρέθηκε με `getUserByEmail`.
  * @param mailbox Η διεύθυνση που **αποδείχθηκε**.
  * @param sessionHolder Ρωτιέται **μόνο** για ανεπιβεβαίωτο λογαριασμό.
- * @throws Αν η Firebase δεν απαντήσει. ⚠️ **Σκόπιμα**: ο καλών μεταφράζει σε «δεν
- *   μάθαμε» και **δεν** γράφει την πράξη — καλύτερα καμία επαφή παρά επαφή σε
- *   λογαριασμό που **δεν** καταφέραμε να εξουδετερώσουμε.
+ * @throws Αν η Firebase δεν απαντήσει ή η επαναδημιουργία αρνηθεί. ⚠️ **Σκόπιμα**: ο
+ *   καλών μεταφράζει σε «δεν μάθαμε» και **δεν** γράφει την πράξη — καλύτερα καμία επαφή
+ *   παρά επαφή σε λογαριασμό που **δεν** καταφέραμε να εξουδετερώσουμε.
  *
  * ⚠️ **Ιδεμποτησία**: μετά από οποιαδήποτε ετυμηγορία ο λογαριασμός είναι
  * `emailVerified` ⇒ δεύτερη κλήση = `already-verified`, **μηδέν** γραφές.
@@ -163,57 +162,39 @@ export async function settleProvenMailbox(
   mailbox: ProvenMailbox,
   sessionHolder: SessionHolderProbe,
 ): Promise<MailboxCustodyReceipt> {
-  if (account.emailVerified) return { verdict: 'already-verified', unlinkedProviders: [] };
+  if (account.emailVerified) return { verdict: 'already-verified', removedProviders: [] };
 
   const verdict = mailboxProofVerdict(account, await sessionHolder());
   if (verdict === 'verified-by-holder') {
     // 🔑 **ΚΛΕΙΝΕΙ ΤΟ ADR-844 §12.6 #2**: ο ίδιος άνθρωπος, με κωδικό **και**
     //    γραμματοκιβώτιο. Καμία αφαίρεση, καμία αποσύνδεση — μόνο η αλήθεια.
     await getAdminAuth().updateUser(account.uid, { emailVerified: true });
-    return { verdict, unlinkedProviders: [] };
+    return { verdict, removedProviders: [] };
   }
 
   return claimAccount(account, mailbox);
 }
 
 /**
- * **Η διεκδίκηση.**
- *
- * 🔴 **Η ΣΕΙΡΑ ΕΙΝΑΙ ΣΥΜΒΟΛΑΙΟ — ΔΥΟ ΒΗΜΑΤΑ, ΔΥΟ ΛΟΓΟΙ:**
- *
- * 1. **Πρώτα αφαίρεση κωδικού, μετά ανάκληση.** Με την αντίστροφη σειρά, ο επιτιθέμενος
- *    θα συνδεόταν με τον κωδικό **ανάμεσα** στα δύο και θα κρατούσε συνεδρία γεννημένη
- *    **μετά** την ανάκληση — δηλαδή ανέπαφη.
- * 2. **Και τα δύο ΠΡΙΝ τα claims** (το εγγυάται ο καλών): κανένα παλιό refresh token δεν
- *    μπορεί πια να κόψει ID token που **κουβαλά** τον νέο ρόλο.
- *
- * ⚠️ `emailVerified` και `providersToUnlink` σε **μία** κλήση: ο κώδικας του firebase-admin
- * (12.7) δεν τα συγκρούει, και το `providersToUnlink` γίνεται `deleteProvider` στο REST.
+ * **Η διεκδίκηση** — ο λογαριασμός ξαναχτίζεται, **πριν** τα claims (το εγγυάται ο καλών):
+ * κανένα παλιό refresh token δεν επιζεί για να κόψει ID token που **κουβαλά** νέο ρόλο,
+ * γιατί ο λογαριασμός που το εξέδωσε **δεν υπάρχει πια**.
  */
 async function claimAccount(
   account: ProvenMailboxAccount,
   mailbox: ProvenMailbox,
 ): Promise<MailboxCustodyReceipt> {
-  const auth = getAdminAuth();
-  const unlinked = UNPROVEN_SIGN_IN_PROVIDERS.filter((id) => account.providerIds.includes(id));
-
-  await auth.updateUser(
-    account.uid,
-    unlinked.length > 0
-      ? { emailVerified: true, providersToUnlink: [...unlinked] }
-      : { emailVerified: true },
-  );
-  await auth.revokeRefreshTokens(account.uid);
+  const { removedProviders } = await reprovisionAuthAccount(account.uid, mailbox.email);
 
   // 🔑 **Γεγονός ασφαλείας, όχι απλή γραμμή ημερολογίου** — ίδιο κανάλι με το
   //    `access_denied` του audit-core. ⚠️ Μόνο uid: το email είναι προσωπικό δεδομένο.
   sentryCaptureMessage('Mailbox proof claimed an unverified account', 'warning', {
     tags: { component: 'mailbox-proof-custody' },
-    extra: { uid: account.uid, unlinkedProviders: unlinked },
+    extra: { uid: account.uid, removedProviders },
   });
 
-  if (unlinked.length > 0) await notifyAccountSecured(mailbox);
-  return { verdict: 'claimed', unlinkedProviders: unlinked };
+  if (removedProviders.length > 0) await notifyAccountSecured(mailbox);
+  return { verdict: 'claimed', removedProviders };
 }
 
 /**
@@ -223,12 +204,17 @@ async function claimAccount(
  * **ευγένεια** προς τον νόμιμο χρήστη που ίσως πάτησε από άλλη συσκευή. Η αποτυχία του
  * δεν δικαιολογεί να χαθεί η πράξη — γράφεται ως σφάλμα και προχωράμε.
  *
- * 🔑 Ο σύνδεσμος είναι **reset** της Firebase: το `confirmPasswordReset` ξαναδένει τον
- * πάροχο κωδικού σε λογαριασμό που δεν έχει — και απαιτεί το ίδιο γραμματοκιβώτιο.
+ * 🔑 Ο σύνδεσμος είναι **reset** της Firebase, ξαναχτισμένος στη **δική μας** διεύθυνση
+ * (`ownedActionLink`): το `confirmPasswordReset` ξαναδένει τον πάροχο κωδικού σε
+ * λογαριασμό που δεν έχει — και απαιτεί το ίδιο γραμματοκιβώτιο.
  */
 async function notifyAccountSecured(mailbox: ProvenMailbox): Promise<void> {
   try {
-    const setPasswordUrl = await getAdminAuth().generatePasswordResetLink(mailbox.email);
+    const setPasswordUrl = ownedActionLink(await getAdminAuth().generatePasswordResetLink(mailbox.email));
+    if (setPasswordUrl === null) {
+      logger.error('Το email «ασφαλίσαμε τον λογαριασμό» δεν στάλθηκε: δεν υπάρχει δημόσια διεύθυνση');
+      return;
+    }
     const { subject, html, text } = buildAccountSecuredEmail({
       recipientName: mailbox.recipientName,
       email: mailbox.email,

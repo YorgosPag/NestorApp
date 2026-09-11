@@ -2,16 +2,17 @@
  * @jest-environment node
  *
  * @fileoverview **Η ΑΚΟΛΟΥΘΙΑ ΤΗΣ ΤΑΥΤΟΤΗΤΑΣ ΤΟΥ ΠΟΛΙΤΗ** — με τη φύλαξη του ADR-844 §13 μέσα.
- * @related server/auth/citizen-identity.ts · server/auth/mailbox-proof-custody.ts
+ * @related server/auth/citizen-identity.ts · server/auth/mailbox-proof-custody.ts ·
+ *          server/auth/account-reprovision.ts
  *
  * ────────────────────────────────────────────────────────────────────────────
  * 🔑 ΓΙΑΤΙ Η ΦΥΛΑΞΗ ΕΙΝΑΙ ΑΛΗΘΙΝΗ ΕΔΩ ΚΑΙ ΟΧΙ ΠΛΑΣΤΗ
  * ────────────────────────────────────────────────────────────────────────────
  *
- * Το ερώτημα που δεν απαντά καμία σουίτα μεμονωμένα είναι **η σειρά ΑΝΑΜΕΣΑ στα δύο
- * αρχεία**: η εξουδετέρωση (αφαίρεση κωδικού + ανάκληση) οφείλει να έχει γίνει **πριν**
- * τα claims. Γι' αυτό η Firebase, τα claims και το έγγραφο γράφουν σε **ΕΝΑ** ημερολόγιο,
- * και η `mailbox-proof-custody` τρέχει **αυτούσια** πάνω τους.
+ * Το ερώτημα που δεν απαντά καμία σουίτα μεμονωμένα είναι **η σειρά ΑΝΑΜΕΣΑ στα
+ * αρχεία**: η εξουδετέρωση (επαναδημιουργία, ίδιο uid — §13.8) οφείλει να έχει γίνει
+ * **πριν** τα claims. Γι' αυτό η επαναδημιουργία, τα claims και το έγγραφο γράφουν σε
+ * **ΕΝΑ** ημερολόγιο, και η `mailbox-proof-custody` τρέχει **αυτούσια** πάνω τους.
  */
 
 jest.mock('server-only', () => ({}));
@@ -22,27 +23,41 @@ jest.mock('firebase-admin/firestore', () => ({
 
 const log: string[] = [];
 const getUserByEmailMock = jest.fn();
+const getUserMock = jest.fn();
 const createUserMock = jest.fn(async (..._args: unknown[]) => ({ uid: 'uid_born' }));
 const createCustomTokenMock = jest.fn(async (..._args: unknown[]) => {
   log.push('token');
   return 'tok_custom';
 });
 const updateUserMock = jest.fn(async (..._args: unknown[]) => { log.push('updateUser'); });
-const revokeMock = jest.fn(async (..._args: unknown[]) => { log.push('revoke'); });
 const docSetMock = jest.fn(async (..._args: unknown[]) => { log.push('doc'); });
 
 jest.mock('@/lib/firebaseAdmin', () => ({
   getAdminAuth: () => ({
     getUserByEmail: (...args: unknown[]) => getUserByEmailMock(...args),
+    getUser: (...args: unknown[]) => getUserMock(...args),
     createUser: (...args: unknown[]) => createUserMock(...args),
     createCustomToken: (...args: unknown[]) => createCustomTokenMock(...args),
     updateUser: (...args: unknown[]) => updateUserMock(...args),
-    revokeRefreshTokens: (...args: unknown[]) => revokeMock(...args),
-    generatePasswordResetLink: async () => 'https://auth.example/reset',
+    generatePasswordResetLink: async () => 'https://auth.example/__/auth/action?mode=resetPassword&oobCode=1',
   }),
   getAdminFirestore: () => ({
     collection: () => ({ doc: () => ({ set: (...args: unknown[]) => docSetMock(...args) }) }),
   }),
+}));
+
+const reprovisionMock = jest.fn(async (..._args: unknown[]) => {
+  log.push('reprovision');
+  return { removedProviders: ['password'] };
+});
+const resumeMock = jest.fn(async (..._args: unknown[]): Promise<string | null> => null);
+jest.mock('../account-reprovision', () => ({
+  reprovisionAuthAccount: (...args: unknown[]) => reprovisionMock(...args),
+  resumeInterruptedReprovision: (...args: unknown[]) => resumeMock(...args),
+}));
+
+jest.mock('../auth-action-link', () => ({
+  ownedActionLink: () => 'https://nestorconstruct.gr/auth/action?mode=resetPassword&oobCode=1',
 }));
 
 const setClaimsMock = jest.fn(async (..._args: unknown[]) => { log.push('claims'); });
@@ -62,6 +77,7 @@ jest.mock('@/services/ai-pipeline/shared/mailgun-sender', () => ({
 import { ensureCitizenIdentity } from '../citizen-identity';
 
 interface RecordSeed {
+  readonly uid?: string;
   readonly emailVerified?: boolean;
   readonly providers?: readonly string[];
   readonly mfa?: boolean;
@@ -72,7 +88,7 @@ interface RecordSeed {
 /** Ο λογαριασμός που «βρίσκει» το `getUserByEmail`. */
 function existing(seed: RecordSeed = {}) {
   return {
-    uid: 'uid_existing',
+    uid: seed.uid ?? 'uid_existing',
     disabled: seed.disabled ?? false,
     customClaims: seed.claims,
     emailVerified: seed.emailVerified ?? false,
@@ -95,7 +111,7 @@ beforeEach(() => {
 });
 
 describe('Τ — η φύλαξη ΜΕΣΑ στην ακολουθία', () => {
-  it('🔴 Τ1 — Η ΕΠΙΘΕΣΗ: αφαίρεση → ανάκληση → ΜΕΤΑ claims → κλειδί στο θύμα', async () => {
+  it('🔴 Τ1 — Η ΕΠΙΘΕΣΗ: επαναδημιουργία → ΜΕΤΑ claims → κλειδί στο θύμα', async () => {
     getUserByEmailMock.mockResolvedValue(existing());
     const { value } = input(null);
 
@@ -104,23 +120,20 @@ describe('Τ — η φύλαξη ΜΕΣΑ στην ακολουθία', () => {
     expect(outcome).toEqual({
       kind: 'ready', uid: 'uid_existing', customToken: 'tok_custom', born: false,
     });
-    // 🔴 **Η ΣΕΙΡΑ ΑΝΑΜΕΣΑ ΣΤΑ ΔΥΟ ΑΡΧΕΙΑ**: claims **πριν** την ανάκληση θα άφηναν το
+    // 🔴 **Η ΣΕΙΡΑ ΑΝΑΜΕΣΑ ΣΤΑ ΑΡΧΕΙΑ**: claims **πριν** την επαναδημιουργία θα άφηναν το
     //    παλιό refresh token του επιτιθέμενου να κόψει ID token **με** τον νέο ρόλο.
-    expect(log).toEqual(['updateUser', 'revoke', 'claims', 'doc', 'token']);
-    expect(updateUserMock).toHaveBeenCalledWith('uid_existing', {
-      emailVerified: true,
-      providersToUnlink: ['password'],
-    });
+    expect(log).toEqual(['reprovision', 'claims', 'doc', 'token']);
+    expect(reprovisionMock).toHaveBeenCalledWith('uid_existing', 'maria@example.com');
   });
 
-  it('🔑 Τ2 — Ο ΝΟΜΙΜΟΣ ΚΑΤΟΧΟΣ: μόνο επιβεβαίωση — ΚΑΜΙΑ ανάκληση, κωδικός ανέπαφος', async () => {
+  it('🔑 Τ2 — Ο ΝΟΜΙΜΟΣ ΚΑΤΟΧΟΣ: μόνο επιβεβαίωση — τίποτα δεν ξαναχτίζεται', async () => {
     getUserByEmailMock.mockResolvedValue(existing());
     const { value } = input('uid_existing');
 
     await ensureCitizenIdentity(value);
 
     expect(updateUserMock).toHaveBeenCalledWith('uid_existing', { emailVerified: true });
-    expect(revokeMock).not.toHaveBeenCalled();
+    expect(reprovisionMock).not.toHaveBeenCalled();
     expect(log).toEqual(['updateUser', 'claims', 'doc', 'token']);
   });
 
@@ -162,13 +175,14 @@ describe('Τ — η φύλαξη ΜΕΣΑ στην ακολουθία', () => {
     const outcome = await ensureCitizenIdentity(value);
 
     expect(outcome).toEqual({ kind: 'ready', uid: 'uid_born', customToken: 'tok_custom', born: true });
+    expect(resumeMock).toHaveBeenCalledWith('maria@example.com');
     expect(sessionHolder).not.toHaveBeenCalled();
     expect(updateUserMock).not.toHaveBeenCalled();
   });
 
   it('🔴 Τ7 — ΚΛΕΙΣΤΑ ΣΕ ΑΠΟΤΥΧΙΑ: αν η εξουδετέρωση δεν έγινε, ΚΑΝΕΝΑΣ ρόλος, ΚΑΝΕΝΑ κλειδί', async () => {
     getUserByEmailMock.mockResolvedValue(existing());
-    updateUserMock.mockRejectedValueOnce(new Error('auth/internal-error'));
+    reprovisionMock.mockRejectedValueOnce(new Error('auth/internal-error'));
     const { value } = input(null);
 
     expect(await ensureCitizenIdentity(value)).toEqual({
@@ -178,7 +192,7 @@ describe('Τ — η φύλαξη ΜΕΣΑ στην ακολουθία', () => {
     expect(createCustomTokenMock).not.toHaveBeenCalled();
   });
 
-  it('Τ8 — ανεπιβεβαίωτος ΜΕ ταυτότητα (π.χ. εγκεκριμένος από διαχειριστή): εξουδετερώνεται, ο ρόλος ΔΕΝ υποβαθμίζεται', async () => {
+  it('Τ8 — ανεπιβεβαίωτος ΜΕ ταυτότητα (π.χ. εγκεκριμένος από διαχειριστή): ξαναχτίζεται, ο ρόλος ΔΕΝ υποβαθμίζεται', async () => {
     getUserByEmailMock.mockResolvedValue(existing({
       claims: { globalRole: 'company_admin', companyId: 'comp_1' },
     }));
@@ -186,7 +200,20 @@ describe('Τ — η φύλαξη ΜΕΣΑ στην ακολουθία', () => {
 
     await ensureCitizenIdentity(value);
 
-    expect(log).toEqual(['updateUser', 'revoke', 'token']);
+    // Τα claims τα **επαναφέρει** η επαναδημιουργία (δική της άγκυρα Ρ3)· εδώ ΔΕΝ γράφονται νέα.
+    expect(log).toEqual(['reprovision', 'token']);
     expect(setClaimsMock).not.toHaveBeenCalled();
+  });
+
+  it('🔴 Τ9 — ΔΙΑΚΟΠΕΙΣΑ ΔΙΕΚΔΙΚΗΣΗ: «δεν βρέθηκε» + ημερολόγιο ⇒ ΙΔΙΟ uid, ΚΑΝΕΝΑΣ νέος λογαριασμός', async () => {
+    getUserByEmailMock.mockRejectedValue({ code: 'auth/user-not-found' });
+    resumeMock.mockResolvedValueOnce('uid_victim');
+    getUserMock.mockResolvedValue(existing({ uid: 'uid_victim', emailVerified: true, providers: [] }));
+    const { value } = input(null);
+
+    const outcome = await ensureCitizenIdentity(value);
+
+    expect(outcome).toEqual({ kind: 'ready', uid: 'uid_victim', customToken: 'tok_custom', born: false });
+    expect(createUserMock).not.toHaveBeenCalled();
   });
 });

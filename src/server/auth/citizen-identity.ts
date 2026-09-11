@@ -60,6 +60,7 @@ import 'server-only';
  * `lib/auth/set-claims-with-mirror`. Εδώ ζει **η ακολουθία**.
  */
 
+import type { UserRecord } from 'firebase-admin/auth';
 import { FieldValue as AdminFieldValue } from 'firebase-admin/firestore';
 
 import type { UserStatus } from '@/auth/types/auth.types';
@@ -79,6 +80,7 @@ import {
   type ProvenMailboxAccount,
   type SessionHolderProbe,
 } from './mailbox-proof-custody';
+import { resumeInterruptedReprovision } from './account-reprovision';
 
 const logger = createModuleLogger('CITIZEN_IDENTITY');
 
@@ -184,23 +186,32 @@ function isUserNotFound(error: unknown): boolean {
  * δεν την απέδειξε ποτέ. Αυτά τα τρία πεδία είναι όλη η διαφορά ανάμεσα σε «ο
  * λογαριασμός σου» και «ο λογαριασμός κάποιου που έγραψε το email σου».
  */
+function fromRecord(record: UserRecord): ResolvedAccount {
+  return {
+    uid: record.uid,
+    disabled: record.disabled,
+    customClaims: record.customClaims,
+    emailVerified: record.emailVerified,
+    secondFactorEnrolled: (record.multiFactor?.enrolledFactors.length ?? 0) > 0,
+    born: false,
+  };
+}
+
 async function resolveAccount(input: CitizenIdentityInput): Promise<ResolvedAccount> {
   const auth = getAdminAuth();
 
   try {
-    const existing = await auth.getUserByEmail(input.email);
-    return {
-      uid: existing.uid,
-      disabled: existing.disabled,
-      customClaims: existing.customClaims,
-      emailVerified: existing.emailVerified,
-      providerIds: existing.providerData.map((provider) => provider.providerId),
-      secondFactorEnrolled: (existing.multiFactor?.enrolledFactors.length ?? 0) > 0,
-      born: false,
-    };
+    return fromRecord(await auth.getUserByEmail(input.email));
   } catch (error: unknown) {
     if (!isUserNotFound(error)) throw error;
   }
+
+  // 🔴 **«Δεν βρέθηκε» ΜΠΟΡΕΙ ΝΑ ΣΗΜΑΙΝΕΙ «ΕΙΝΑΙ ΣΤΗ ΜΕΣΗ ΤΗΣ ΕΠΑΝΑΔΗΜΙΟΥΡΓΙΑΣ»** (ADR-844 §13.8):
+  //    αν μια διεκδίκηση διακόπηκε ανάμεσα σε διαγραφή και δημιουργία, το ημερολόγιο ξέρει
+  //    το uid. Χωρίς αυτή τη γραμμή θα γεννιόταν **νέος** λογαριασμός και τα δεδομένα του
+  //    παλιού θα έμεναν ορφανά — χωρίς κανένα σφάλμα πουθενά.
+  const resumedUid = await resumeInterruptedReprovision(input.email);
+  if (resumedUid !== null) return fromRecord(await auth.getUser(resumedUid));
 
   const created = await auth.createUser({
     email: input.email,
@@ -213,7 +224,6 @@ async function resolveAccount(input: CitizenIdentityInput): Promise<ResolvedAcco
     disabled: false,
     customClaims: undefined,
     emailVerified: true,
-    providerIds: [],
     secondFactorEnrolled: false,
     born: true,
   };
@@ -351,8 +361,8 @@ export async function ensureCitizenIdentity(
       return { kind: 'refused', reason: 'account-disabled' };
     }
 
-    // 🔴 **ΠΡΙΝ τα claims — η σειρά είναι συμβόλαιο** (ADR-844 §13): η εξουδετέρωση
-    //    ανεπιβεβαίωτου λογαριασμού (αφαίρεση κωδικού + ανάκληση) οφείλει να έχει γίνει
+    // 🔴 **ΠΡΙΝ τα claims — η σειρά είναι συμβόλαιο** (ADR-844 §13 · §13.8): η εξουδετέρωση
+    //    ανεπιβεβαίωτου λογαριασμού (επαναδημιουργία, ίδιο uid) οφείλει να έχει γίνει
     //    **πριν** ο λογαριασμός αποκτήσει ρόλο — αλλιώς ένα παλιό refresh token του
     //    επιτιθέμενου θα έκοβε ID token **με** τον ρόλο.
     await settleProvenMailbox(
