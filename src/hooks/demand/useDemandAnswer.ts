@@ -76,7 +76,14 @@ interface CompetitionResponse {
  * περάσει κάτι εκεί θα υπονοούσε ότι μπορεί να τις δει.
  */
 export function useDemandAnswer(demand: PropertyDemand | null): DemandAnswerState {
-  const { listings, loading, error } = usePublicListings();
+  // 🔴 **ΡΗΤΟ `null`, ΚΑΙ ΟΧΙ Η ΠΕΡΙΟΧΗ ΤΗΣ ΖΗΤΗΣΗΣ** (ADR-777 §8.65.13). Η κλήση ήταν
+  //    `usePublicListings()` χωρίς όρισμα: όταν το §8.65 έκανε το `near` υποχρεωτικό,
+  //    έφτανε `undefined` ⇒ `listingAreaKey` ⇒ `'south' in undefined` ⇒ **κάθε**
+  //    `/demands/[id]` έπεφτε στην παραγωγή.
+  // ⚠️ Η στένωση στον κύκλο της ζήτησης θα ήταν **σιωπηλή αλλαγή απάντησης**: το
+  //    `outside-radius` είναι «παραλίγο» **χωρίς όριο απόστασης**, και η παραχώρηση
+  //    `search-radius` μετρά ακριβώς όσα μένουν **έξω** από την ακτίνα.
+  const { listings, loading, error } = usePublicListings(null);
 
   return useMemo<DemandAnswerState>(() => {
     if (demand === null || loading) return { state: 'loading' };
