@@ -40,6 +40,8 @@ import {
   getDefaultNotificationSettings,
 } from '@/services/user-notification-settings/user-notification-settings.types';
 import type { Severity } from '@/types/notification';
+import type { WorkspaceRef } from '@/types/workspace-membership';
+import type { NotificationDestination } from '@/lib/notifications/notification-destination';
 import { generateNotificationDedupeId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -50,9 +52,9 @@ const logger = createModuleLogger('NotificationOrchestrator');
 // ============================================================================
 
 /**
- * Dispatch request
+ * Το περιεχόμενο μιας ειδοποίησης — ό,τι **δεν** είναι ο προορισμός της.
  */
-export interface DispatchRequest {
+export interface DispatchContent {
   eventType: NotificationEventType;
   recipientId: string;
   tenantId: string;
@@ -63,12 +65,27 @@ export interface DispatchRequest {
   eventId: string; // Required for idempotency
   entityId?: string;
   entityType?: NotificationEntityType;
-  actions?: Array<{ id: string; label: string; url?: string; destructive?: boolean }>;
   /** i18n key for client-side translation (falls back to title if missing) */
   titleKey?: string;
   /** i18n interpolation params for titleKey (e.g. { sender: "John" }) */
   titleParams?: Record<string, string>;
 }
+
+/**
+ * 🔴 **Ο ΠΡΟΟΡΙΣΜΟΣ ΤΑΞΙΔΕΥΕΙ ΜΟΝΟ ΜΑΖΙ ΜΕ ΤΟΝ ΧΩΡΟ ΤΟΥ** (ADR-849 §6δ Β1).
+ *
+ * Χωρίς `actions` ο χώρος είναι προαιρετικός (ετικέτα προέλευσης, ADR-787 Ε-3 §8)· με
+ * `actions` είναι **υποχρεωτικός** — αλλιώς το `/n/{id}` και το κουδούνι τον
+ * συμπλήρωναν από τον **θεατή**, και ο άνθρωπος σε δύο γραφεία άνοιγε το λάθος.
+ */
+export type DispatchDestination =
+  | { readonly actions?: undefined; readonly workspace?: WorkspaceRef }
+  | NotificationDestination;
+
+/**
+ * Dispatch request
+ */
+export type DispatchRequest = DispatchContent & DispatchDestination;
 
 /**
  * Dispatch result
@@ -162,6 +179,7 @@ export async function dispatchNotification(request: DispatchRequest): Promise<Di
     entityId,
     entityType,
     actions,
+    workspace,
   } = request;
 
   // 1. Get event mapping from central registry
@@ -230,6 +248,9 @@ export async function dispatchNotification(request: DispatchRequest): Promise<Di
       eventId,
       entityId: entityId ?? null,
       entityType: entityType ?? null,
+      // 🔑 ADR-849 Β1 — ο χώρος-στόχος, **δηλωμένος από τον παραγωγό**. Μέσα στο `meta`,
+      //    ποτέ `companyId` στην κορυφή: ετικέτα, όχι άξονας απομόνωσης (ADR-787 Ε-3 §8).
+      ...(workspace ? { workspace } : {}),
     },
   };
 

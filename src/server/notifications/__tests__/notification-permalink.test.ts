@@ -1,13 +1,14 @@
 /**
  * @jest-environment node
  *
- * Άγκυρα — **Ο ΜΟΝΙΜΟΣ ΣΥΝΔΕΣΜΟΣ `/n/{id}`** (ADR-848)
+ * Άγκυρα — **Ο ΜΟΝΙΜΟΣ ΣΥΝΔΕΣΜΟΣ `/n/{id}`** (ADR-848 · ADR-849 §6δ Β1)
  *
  * | # | ισχυρισμός | η μετάλλαξη που το σπάει |
  * |---|---|---|
  * | Α | ξένη ≡ ανύπαρκτη | ξεχωριστή απάντηση ⇒ απαρίθμηση ειδοποιήσεων |
  * | Β | ο προορισμός ξαναπερνά τον φρουρό | `actions[0].url` αυτούσιο ⇒ ανοιχτή ανακατεύθυνση από δεδομένα |
- * | Γ | «διαβάστηκε» μόνο για τον ιδιοκτήτη, και η αποτυχία του δεν κόβει την πλοήγηση | εγγραφή πριν τον έλεγχο ⇒ ο ξένος σημειώνει |
+ * | Γ | ο χώρος είναι του ΓΕΓΟΝΟΤΟΣ, όχι του θεατή | `workspaceDestinationFor` πάντα ⇒ «Το ακίνητο δεν βρέθηκε» |
+ * | Δ | το κανάλι γράφεται όπως ήρθε | σταθερό `'email'` ⇒ το κουδούνι μετριέται ως email |
  */
 
 jest.mock('server-only', () => ({}));
@@ -20,9 +21,19 @@ jest.mock('@/lib/firebaseAdmin', () => ({
   }),
 }));
 
-const mockDestination = jest.fn(async (_identity: unknown, path: string) => `/o/nikos${path}`);
+// 🔑 Αντικαθίσταται ΜΟΝΟ η λύση του ψευδωνύμου (ανάγνωση βάσης). Η μετάφραση χώρος →
+//    κάτοχος (`ownerOfWorkspace`) τρέχει η ΠΡΑΓΜΑΤΙΚΗ — αλλιώς η άγκυρα θα έκρινε δεύτερη
+//    εκδοχή της (παγίδα handoff §4).
+const mockViewerDestination = jest.fn(async (_identity: unknown, path: string) => `/o/nikos${path}`);
+const mockTargetDestination = jest.fn(
+  async (owner: { kind: string; companyId?: string }, path: string) =>
+    owner.kind === 'organization' ? `/o/alias-of-${owner.companyId}${path}` : `/o/me${path}`,
+);
 jest.mock('@/lib/workspace/workspace-destination', () => ({
-  workspaceDestinationFor: (identity: unknown, path: string) => mockDestination(identity, path),
+  ...jest.requireActual('@/lib/workspace/workspace-destination'),
+  workspaceDestinationFor: (identity: unknown, path: string) => mockViewerDestination(identity, path),
+  workspaceDestinationOf: (owner: { kind: string; companyId?: string }, path: string) =>
+    mockTargetDestination(owner, path),
 }));
 
 import type { SignedInPageIdentity } from '@/lib/workspace/workspace-destination';
@@ -47,7 +58,7 @@ beforeEach(() => {
 describe('Α — καθαρή κρίση', () => {
   it('Α1 — ΜΟΝΟ ο ιδιοκτήτης παίρνει προορισμό', () => {
     const data = { userId: 'u1', actions: [{ id: 'view', label: 'view', url: '/listings/abc' }] };
-    expect(permalinkDestination(data, 'u1')).toBe('/listings/abc');
+    expect(permalinkDestination(data, 'u1')).toEqual({ path: '/listings/abc', workspace: null });
     expect(permalinkDestination(data, 'u2')).toBeNull();
     expect(permalinkDestination(undefined, 'u1')).toBeNull();
   });
@@ -71,7 +82,7 @@ describe('Α — καθαρή κρίση', () => {
 });
 
 describe('Β — το κλικ', () => {
-  it('Β1 🔑 — δικό σου ⇒ «διαβάστηκε από email» + ο προορισμός ΜΕΣΑ στον χώρο σου', async () => {
+  it('Β1 🔑 — δικό σου, παλιό έγγραφο (χωρίς χώρο) ⇒ «διαβάστηκε» + ο χώρος ΤΟΥ ΘΕΑΤΗ', async () => {
     storedNotification({ userId: 'u1', actions: [{ url: '/listings/abc' }] });
 
     const verdict = await openNotificationPermalink('listing_match:u1:l1', OWNER);
@@ -89,7 +100,8 @@ describe('Β — το κλικ', () => {
       kind: 'redirect',
       to: '/offers/p1',
     });
-    expect(mockDestination).not.toHaveBeenCalled();
+    expect(mockViewerDestination).not.toHaveBeenCalled();
+    expect(mockTargetDestination).not.toHaveBeenCalled();
   });
 
   it('Β3 🔴 — ΞΕΝΗ ≡ ΑΝΥΠΑΡΚΤΗ, και καμία εγγραφή', async () => {
@@ -117,5 +129,72 @@ describe('Β — το κλικ', () => {
       kind: 'redirect',
       to: '/o/nikos/listings/abc',
     });
+  });
+});
+
+describe('🔴 Γ — ο χώρος είναι του ΓΕΓΟΝΟΤΟΣ, όχι του θεατή (ADR-849 §6δ Β1)', () => {
+  /** Το ζωντανό σύμπτωμα της 10/9: ακίνητο της εταιρείας-στόχου, θεατής με claim ΑΛΛΗΣ. */
+  const PROPERTY_OF_TARGET = {
+    userId: 'u1',
+    actions: [{ id: 'view', label: 'view', url: '/properties/prop_ef2' }],
+    meta: { workspace: { kind: 'org', companyId: 'comp_target' } },
+  };
+
+  it('Γ1 🔑 — δηλωμένος εταιρικός χώρος ⇒ το ψευδώνυμο ΤΟΥ ΣΤΟΧΟΥ, ΠΟΤΕ του claim', async () => {
+    storedNotification(PROPERTY_OF_TARGET);
+
+    const verdict = await openNotificationPermalink('demand:u1:prop_ef2', OWNER);
+
+    expect(verdict).toEqual({ kind: 'redirect', to: '/o/alias-of-comp_target/properties/prop_ef2' });
+    expect(mockTargetDestination).toHaveBeenCalledWith(
+      { kind: 'organization', companyId: 'comp_target' },
+      '/properties/prop_ef2',
+    );
+    expect(mockViewerDestination).not.toHaveBeenCalled();
+  });
+
+  it('Γ2 — δηλωμένος ιδιωτικός χώρος ΤΟΥ ΙΔΙΟΥ ⇒ `/o/me/…`', async () => {
+    storedNotification({ ...PROPERTY_OF_TARGET, meta: { workspace: { kind: 'personal', userId: 'u1' } } });
+
+    expect(await openNotificationPermalink('n:u1:x', OWNER)).toEqual({
+      kind: 'redirect',
+      to: '/o/me/properties/prop_ef2',
+    });
+  });
+
+  it.each([
+    ['ιδιωτικός χώρος ΑΛΛΟΥ', { kind: 'personal', userId: 'u2' }],
+    ['εταιρεία χωρίς ταυτότητα', { kind: 'org', companyId: '' }],
+    ['άγνωστο είδος', { kind: 'team', companyId: 'comp_target' }],
+    ['κείμενο αντί για ένωση', 'org:comp_target'],
+  ])('Γ3 🔴 — αλλοιωμένος χώρος (%s) ⇒ ΔΕΝ ανοίγει «κάπου»: πέφτει στην παλιά συμπεριφορά', async (_label, workspace) => {
+    storedNotification({ ...PROPERTY_OF_TARGET, meta: { workspace } });
+
+    expect(await openNotificationPermalink('n:u1:x', OWNER)).toEqual({
+      kind: 'redirect',
+      to: '/o/nikos/properties/prop_ef2',
+    });
+    expect(mockTargetDestination).not.toHaveBeenCalled();
+  });
+
+  it('Γ4 — προορισμός ΕΚΤΟΣ χώρου μένει αυτούσιος ακόμη κι όταν ο χώρος δηλώνεται', async () => {
+    storedNotification({ ...PROPERTY_OF_TARGET, actions: [{ url: '/listing/prop_ef2' }] });
+
+    expect(await openNotificationPermalink('n:u1:x', OWNER)).toEqual({
+      kind: 'redirect',
+      to: '/listing/prop_ef2',
+    });
+    expect(mockTargetDestination).not.toHaveBeenCalled();
+  });
+});
+
+describe('Δ — το κανάλι (ADR-849 Β1: το κουδούνι περνά από την ίδια πόρτα)', () => {
+  it('Δ1 — `inapp` γράφεται ως `inapp`, και ο προορισμός είναι ο ΙΔΙΟΣ', async () => {
+    storedNotification({ userId: 'u1', actions: [{ url: '/offers/p1' }] });
+
+    const verdict = await openNotificationPermalink('n:u1:p1', OWNER, 'inapp');
+
+    expect(verdict).toEqual({ kind: 'redirect', to: '/offers/p1' });
+    expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({ openedVia: 'inapp' }));
   });
 });

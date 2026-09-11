@@ -17,9 +17,38 @@
 export const NOTIFICATION_PERMALINK_SEGMENT = 'n' as const;
 
 /**
+ * **Από ποιο κανάλι πατήθηκε ο σύνδεσμος** (ADR-849 Β1).
+ *
+ * 🔑 Το κουδούνι περνά **από τον ίδιο** μόνιμο σύνδεσμο με το email — όπως το
+ * `app_redirect` του Slack είναι η **μία** πόρτα κάθε πελάτη του. Έτσι ο χώρος-στόχος
+ * λύνεται σε **ένα** σημείο, στον διακομιστή (το ψευδώνυμο το λύνει **μόνο** αυτός —
+ * άγκυρα `Λ2`). Το κανάλι είναι **μόνο ετικέτα** του «ανοίχτηκε από»: δεν αλλάζει ούτε
+ * τον προορισμό ούτε την άδεια.
+ */
+const PERMALINK_CHANNELS = ['email', 'inapp'] as const;
+export type PermalinkChannel = (typeof PERMALINK_CHANNELS)[number];
+
+/** Η παράμετρος του καναλιού. Το email **δεν** τη γράφει — κάθε σταλμένο email μένει ίδιο. */
+export const PERMALINK_CHANNEL_PARAM = 'via' as const;
+
+/**
  * `/n/<id>` — με `encodeURIComponent`, γιατί οι ταυτότητες ειδοποιήσεων είναι
  * `συμβάν:παραλήπτης:γεγονός` και τα `:` έρχονται από **δεδομένα**.
  */
-export function notificationPermalinkHref(notificationId: string): string {
-  return `/${NOTIFICATION_PERMALINK_SEGMENT}/${encodeURIComponent(notificationId)}`;
+export function notificationPermalinkHref(
+  notificationId: string,
+  channel: PermalinkChannel = 'email',
+): string {
+  const path = `/${NOTIFICATION_PERMALINK_SEGMENT}/${encodeURIComponent(notificationId)}`;
+  return channel === 'email' ? path : `${path}?${PERMALINK_CHANNEL_PARAM}=${channel}`;
+}
+
+/**
+ * Το κανάλι από την παράμετρο — ό,τι άγνωστο (ή λείπει) είναι `email`, το κανάλι του
+ * σκέτου συνδέσμου. Ετικέτα, όχι απόφαση: μια πλαστή τιμή αλλάζει μόνο το «ανοίχτηκε από».
+ */
+export function permalinkChannelOf(value: unknown): PermalinkChannel {
+  return (PERMALINK_CHANNELS as readonly unknown[]).includes(value)
+    ? (value as PermalinkChannel)
+    : 'email';
 }

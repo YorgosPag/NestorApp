@@ -27,7 +27,11 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 
 import { NotificationPermalinkUnavailable } from '@/components/notifications/NotificationPermalinkUnavailable';
-import { notificationPermalinkHref } from '@/lib/notifications/notification-permalink-route';
+import {
+  notificationPermalinkHref,
+  permalinkChannelOf,
+  PERMALINK_CHANNEL_PARAM,
+} from '@/lib/notifications/notification-permalink-route';
 import { decodeRouteParam } from '@/lib/routes/route-param';
 import { loginHref } from '@/lib/routes/return-path';
 import { readPageIdentity } from '@/server/auth/page-identity';
@@ -42,16 +46,21 @@ export const metadata: Metadata = {
 
 export default async function NotificationPermalinkPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ notificationId: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }): Promise<React.ReactElement> {
   const { notificationId: raw } = await params;
   const notificationId = decodeRouteParam(raw);
+  // 🔑 ADR-849 Β1 — από ποιο κανάλι ήρθε (email · κουδούνι). Ετικέτα του «ανοίχτηκε
+  //    από», όχι απόφαση: ούτε ο προορισμός ούτε η άδεια εξαρτώνται από αυτό.
+  const channel = permalinkChannelOf((await searchParams)[PERMALINK_CHANNEL_PARAM]);
 
   const identity = await readPageIdentity();
-  if (!identity.ok) redirect(loginHref(notificationPermalinkHref(notificationId)));
+  if (!identity.ok) redirect(loginHref(notificationPermalinkHref(notificationId, channel)));
 
-  const verdict = await openNotificationPermalink(notificationId, identity);
+  const verdict = await openNotificationPermalink(notificationId, identity, channel);
   if (verdict.kind === 'redirect') redirect(verdict.to);
 
   return <NotificationPermalinkUnavailable />;
