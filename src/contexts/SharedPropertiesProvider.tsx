@@ -16,8 +16,12 @@
 // 🎯 PRODUCTION: Debug disabled για καθαρότερα logs
 const DEBUG_SHARED_PROPERTIES_PROVIDER = false;
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo, useSyncExternalStore } from 'react';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
+import {
+  onSuperAdminActiveCompanyChange,
+  requestedWorkspaceKey,
+} from '@/services/firestore/super-admin-active-company';
 import { useAuth } from '@/auth/hooks/useAuth';
 import type { Property } from '@/types/property-viewer';
 import { dequal } from 'dequal';
@@ -108,6 +112,19 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
   const lastIsLoadingRef = useRef<boolean>(false);
   const lastErrorRef = useRef<string | null>(null);
 
+  /**
+   * 🔴 **ΑΓΝΩΣΤΟ ≠ ΚΕΝΟ ΣΤΗΝ ΑΛΛΑΓΗ ΧΩΡΟΥ** (ADR-849 Β1). Όταν αλλάζει ο χώρος που ζητείται
+   * (διεύθυνση · επιλογέας), ο κατάλογος που κρατάμε ανήκει στην **προηγούμενη** εταιρεία.
+   * Χωρίς αυτό το κλειδί στις εξαρτήσεις του ακροατή, η καρτέλα `/properties/[id]` θα
+   * έκρινε «δεν βρέθηκε» πάνω στον παλιό κατάλογο μέχρι να φτάσει το νέο στιγμιότυπο.
+   * Με αυτό, ο ακροατής ξαναστήνεται **και δηλώνει φόρτωση**.
+   */
+  const scopeKey = useSyncExternalStore(
+    onSuperAdminActiveCompanyChange,
+    requestedWorkspaceKey,
+    requestedWorkspaceKey,
+  );
+
   const forceDataRefresh = useCallback(() => {
     setRefreshKey(prev => prev + 1);
   }, []);
@@ -155,9 +172,13 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
     }
 
     setIsLoading(true);
+    // ⚠️ Ο φρουρός ισότητας πρέπει να ΞΕΡΕΙ ότι φορτώνουμε: αλλιώς, αν ο νέος κατάλογος
+    //    ήταν ίσος με τον παλιό, θα παρέλειπε το `setIsLoading(false)` και η καρτέλα θα
+    //    γύριζε για πάντα (λανθάνον και στο `forceDataRefresh`, πριν το Β1).
+    lastIsLoadingRef.current = true;
     setError(null);
 
-    logger.info('[SharedProperties] Setting up Firestore listener (activated)...');
+    logger.info('[SharedProperties] Setting up Firestore listener (activated)...', { scopeKey });
 
     // 🏢 ADR-214 (C.5.34): subscribe via firestoreQueryService SSoT.
     // companyId auto-injected via buildTenantConstraints.
@@ -252,7 +273,7 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
       unsubscribe();
       unsubscribeRef.current = null;
     };
-  }, [activated, refreshKey, authLoading, user?.companyId]);
+  }, [activated, refreshKey, authLoading, user?.companyId, scopeKey]);
 
   // 🚀 PERF: memoize context value — non-memoized object literal here was
   // poisoning every consumer of useSharedProperties (incl. useLiveOverlaysForLevel

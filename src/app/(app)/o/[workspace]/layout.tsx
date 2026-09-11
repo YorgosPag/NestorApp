@@ -48,10 +48,12 @@
 import type { ReactNode } from 'react';
 import { notFound, redirect } from 'next/navigation';
 
+import { WorkspaceScopeBridge } from '@/components/workspace/WorkspaceScopeBridge';
 import { resolveWorkspaceFromPath } from '@/lib/auth/workspace-from-path';
 import { readPageIdentity } from '@/server/auth/page-identity';
 import { workspacePath } from '@/lib/workspace/workspace-path';
 import { AUTH_ROUTES } from '@/lib/routes';
+import { orgWorkspace, personalWorkspace } from '@/types/workspace-membership';
 
 interface WorkspaceLayoutProps {
   readonly children: ReactNode;
@@ -93,7 +95,19 @@ export default async function WorkspaceLayout({ children, params }: WorkspaceLay
 
   switch (resolution.outcome) {
     case 'resolved':
-      return <>{children}</>;
+      // 🔑 ADR-849 Β1 — η απάντηση του κριτή φτάνει στον πελάτη. Μέχρι εδώ ο διακομιστής
+      //    ήξερε τον χώρο και ο πελάτης φιλτράριζε με τον επιλογέα ή με το claim.
+      return (
+        <WorkspaceScopeBridge
+          scope={
+            resolution.personal
+              ? personalWorkspace(identity.ctx.uid)
+              : orgWorkspace(resolution.companyId)
+          }
+        >
+          {children}
+        </WorkspaceScopeBridge>
+      );
 
     case 'unavailable':
       // ⛔ ΠΟΤΕ 404 εδώ. Δες τον πίνακα παραπάνω.
