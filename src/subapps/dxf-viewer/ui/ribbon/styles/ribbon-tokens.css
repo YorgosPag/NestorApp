@@ -407,6 +407,14 @@ html[data-dxf-header-hidden="true"] header.sticky.top-0 {
   border-right: 1px solid var(--ribbon-separator);
   min-width: 96px;
   flex-shrink: 0;
+  /*
+   * ADR-750 §21.10 · ADR-780 §5quater.5 #6 — το πάνελ κόβει ΜΟΝΟ ΤΟΥ.
+   * Ως τώρα το έκοβε κατά τύχη ο καθολικός `section { overflow-x: hidden }` του globals.css, που έκανε και τον
+   * κάθετο άξονα `auto` (μετρημένο: 110px ορατά έναντι 160/377/132 περιεχομένου — δηλαδή τα πάνελ ήταν και
+   * κρυφά δοχεία κύλισης με τη ρόδα). Με τον καθολικό κανόνα πλέον `clip`, η δήλωση ζει εδώ, στον ιδιοκτήτη.
+   * `clip` και όχι `hidden`: ribbon τύπου Revit — τα πάνελ δεν κυλούν· ό,τι δεν χωρά ανήκει στο flyout.
+   */
+  overflow: clip;
 }
 
 .dxf-ribbon-panel-body {

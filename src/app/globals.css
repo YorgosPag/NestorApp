@@ -1212,13 +1212,22 @@
   /* 🏢 ENTERPRISE FIX: Removed 'div' from selector - it was overriding
      Tailwind max-w-[...] classes and causing EntityListColumn to be full-width.
      @see local_4.log analysis for details */
-  .container,
-  [class*="container"],
-  header,
-  main,
-  section {
+  /*
+   * ADR-750 §21.10 · ADR-780 §5quater.5 #6 — `clip`, ΟΧΙ `hidden`, και μηδενική ειδικότητα.
+   *
+   * Με `overflow-x: hidden` η προδιαγραφή (CSS Overflow 3) κάνει τον ΑΛΛΟ άξονα `auto` ⇒ κάθε header / main /
+   * section της εφαρμογής γινόταν scroll container: (α) έκοβε τους absolute απογόνους του (το popup χρωμάτων,
+   * ψαλιδισμένο στο μηδέν — ADR-750 §21.10), (β) ως στοιχείο flex το ελάχιστο ύψος του γινόταν 0, οπότε
+   * συρρικνωνόταν ως το μηδέν σε στήλη που ξεχειλίζει (η κεφαλίδα της πλήρους οθόνης — ADR-332 D27 Ζ8, 36px → 0).
+   * Το `clip` κόβει οριζόντια όπως πριν, ΧΩΡΙΣ scroll container και χωρίς να αγγίζει τον κάθετο άξονα.
+   * Το `:where(...)` αφήνει κάθε ρητή utility `overflow-*` του ίδιου του στοιχείου να νικά.
+   * Μετρημένο εύρος πριν την αλλαγή: ό,τι κυλούσε ΜΟΝΟ χάρη σε αυτόν τον κανόνα δηλώνει πλέον ρητά το δικό του
+   * overflow (`.dxf-ribbon-panel`)· ο τυχαίος ένθετος scroller του Χρονοδιαγράμματος περνά στον σχεδιασμένο πρόγονο.
+   * Άγκυρα: src/app/__tests__/global-overflow-contract.test.ts
+   */
+  :where(.container, [class*="container"], header, main, section) {
     max-width: 100%;
-    overflow-x: hidden;
+    overflow-x: clip;
   }
 
   /* Mobile-specific fixes */
@@ -1226,13 +1235,20 @@
     /* Force all flex containers to wrap and constrain */
     .flex {
       max-width: 100% !important;
-      overflow-x: hidden !important;
     }
 
     /* Force all grid containers to fit viewport */
     .grid {
       max-width: 100% !important;
-      overflow-x: hidden !important;
+    }
+
+    /*
+     * Ίδια θεραπεία με τον κανόνα παραπάνω: `clip` (όχι scroll container) και ΧΩΡΙΣ `!important` μέσα σε
+     * `:where(...)` — το `overflow-x: hidden !important` ακύρωνε κάθε `overflow-x-auto` scroller στο κινητό
+     * (πίνακες, λωρίδες καρτελών), δηλαδή οριζόντια κύλιση που ο συγγραφέας είχε ζητήσει ρητά.
+     */
+    :where(.flex, .grid) {
+      overflow-x: clip;
     }
 
     /* Constrain all text elements */
