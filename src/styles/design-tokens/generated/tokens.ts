@@ -123,11 +123,13 @@ export interface DesignTokens {
   zIndex_geoPanelLayers: string;
   zIndex_geoPanelTools: string;
   zIndex_sticky: string;
+  zIndex_fullscreenSurface: string;
   zIndex_workspaceSidePanel: string;
   zIndex_banner: string;
   zIndex_overlay: string;
   zIndex_modal: string;
   zIndex_modalContent: string;
+  zIndex_transientStack: string;
   zIndex_viewerImportModal: string;
   zIndex_canvasSnap: string;
   zIndex_popover: string;
@@ -291,11 +293,13 @@ export const designTokens: DesignTokens = {
   zIndex_geoPanelLayers: 'var(--z-index-geo-panel-layers)',
   zIndex_geoPanelTools: 'var(--z-index-geo-panel-tools)',
   zIndex_sticky: 'var(--z-index-sticky)',
+  zIndex_fullscreenSurface: 'var(--z-index-fullscreen-surface)',
   zIndex_workspaceSidePanel: 'var(--z-index-workspace-side-panel)',
   zIndex_banner: 'var(--z-index-banner)',
   zIndex_overlay: 'var(--z-index-overlay)',
   zIndex_modal: 'var(--z-index-modal)',
   zIndex_modalContent: 'var(--z-index-modal-content)',
+  zIndex_transientStack: 'var(--z-index-transient-stack)',
   zIndex_viewerImportModal: 'var(--z-index-viewer-import-modal)',
   zIndex_canvasSnap: 'var(--z-index-canvas-snap)',
   zIndex_popover: 'var(--z-index-popover)',
@@ -363,6 +367,8 @@ export const zIndexScale = {
   geoPanelTools: 1030,
   /** Sticky headers, toolbars */
   sticky: 1040,
+  /** Pseudo-fullscreen surface of a panel (FullscreenOverlay) - a SURFACE, not a transient layer: covers the shell and its sticky chrome, stays below the floating DXF palette rendered outside it on purpose, and below the transient stack so every dialog opened from it is visible (ADR-780 Phase D) */
+  fullscreenSurface: 1045,
   /** Floating workspace side palette of the DXF viewer - above the toolbars it docks against */
   workspaceSidePanel: 1050,
   /** Notification banners */
@@ -373,6 +379,8 @@ export const zIndexScale = {
   modal: 1080,
   /** Card of a modal - one rung above its OWN backdrop, so DOM order never decides it */
   modalContent: 1090,
+  /** The ONE rung of the transient family of the shell (Radix Dialog/AlertDialog/Sheet/Popover/DropdownMenu/ContextMenu, portaled dropdowns): backdrop and card share it because they mount in the same portal; between members the most recently opened wins by portal order - the browser top-layer rule. Giving a member its own rung would put a dialog BEHIND the popover that opened it (ADR-780 Phase D) */
+  transientStack: 1095,
   /** DXF import surface - a modal opened over the standard modal rung */
   viewerImportModal: 1100,
   /** CAD snap indicator - reads the geometry under the cursor, so it clears the modal rung it is measured against */

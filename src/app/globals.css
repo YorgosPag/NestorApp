@@ -1448,26 +1448,23 @@ nextjs-portal,
   }
 }
 
-/* ✅ ENTERPRISE: Force high z-index for Radix Select Content using centralized system */
+/* Πλάτος του Radix Select Content.
+   ⛔ ADR-780 Φάση Δ: ΚΑΝΕΝΑ z-index εδώ. Η στρώση του Radix content την ορίζει ΜΟΝΟ ο wrapper του
+   `components/ui/*` (κλάση της κλίμακας). Εδώ ζούσε `z-index: var(--z-index-dropdown)` σε τρεις κανόνες:
+   ίδια ειδικότητα με την κλάση, γραμμένος ΑΡΓΟΤΕΡΑ στο cascade ⇒ νικούσε σιωπηλά και κάθε Select
+   άνοιγε στο 1000 αντί για το 1220 του `elevatedDropdown` — δηλαδή ΠΙΣΩ από κάθε διάλογο που θα
+   ανέβαινε στην κλίμακα. Το φυλάει η CHECK 3.50 (`shadow-authority`, zero-tol). */
 [data-radix-select-content] {
-  z-index: var(--z-index-dropdown);
   min-width: 320px !important;
   width: 320px !important;
   max-width: 400px !important;
 }
 
-/* ✅ ENTERPRISE: Extra high z-index for obligations page dropdowns using centralized system */
 /* Ensure project dropdown appears above labels in obligations/new page */
 [data-radix-select-content],
 .radix-select-content,
 [data-state="open"][data-radix-select-content] {
-  z-index: var(--z-index-dropdown);
   position: fixed !important;
-}
-
-/* ✅ ENTERPRISE: Extra protection for Select Portal containers */
-[data-radix-portal] {
-  z-index: var(--z-index-dropdown);
 }
 
 /* =============================================================
@@ -1610,10 +1607,10 @@ body > button[style*="fixed"][style*="bottom"],
   cursor: pointer !important;
 }
 
-/* ✅ ENTERPRISE: Force high z-index for Radix Popper wrapper */
-/* Force Popper wrapper to match trigger width (overrides inline max-content) */
+/* Force Popper wrapper to match trigger width (overrides inline max-content).
+   ⛔ ADR-780 Φάση Δ: ΚΑΝΕΝΑ z-index — το Radix αντιγράφει στο wrapper το z-index του content
+   (που ορίζει ο wrapper του `components/ui/*`). Δεύτερη δήλωση εδώ = δεύτερη αυθεντία. */
 [data-radix-popper-content-wrapper] {
-  z-index: var(--z-index-dropdown);
   min-width: var(--radix-select-trigger-width, auto) !important;
 }
 
@@ -1648,30 +1645,14 @@ body > button[style*="fixed"][style*="bottom"],
   background-color: hsl(var(--bg-selected)) !important;
 }
 
-/* ✅ ENTERPRISE: Use centralized modal z-index (NO HARDCODED VALUES) */
-[data-custom-relationship-select="true"] {
-  z-index: var(--z-index-dropdown);
-  position: fixed !important;
-}
-
-/* ✅ ENTERPRISE: Ensure no parent containers interfere with portal dropdowns */
-[data-custom-dropdown-portal="true"] {
-  z-index: var(--z-index-dropdown);
-  position: fixed !important;
-  isolation: isolate !important;
-  transform: none !important;
-  will-change: auto !important;
-}
+/* ADR-780 Φάση Δ: εδώ ζούσαν κανόνες z-index για `[data-custom-relationship-select]` και
+   `[data-custom-dropdown-portal]` — ΚΑΝΕΝΑ στοιχείο δεν φέρει αυτά τα χαρακτηριστικά (grep, 0 χρήσεις).
+   Νεκρή δεύτερη αυθεντία στρώσης: διαγράφηκε. Τα portaled dropdowns ζητούν τη στρώση τους από την
+   κλίμακα (`z-[var(--z-index-transient-stack)]`, π.χ. `layoutUtilities.dropdown.getDropdownClasses`). */
 
 /* Prevent any parent container stacking context from interfering */
 body {
   isolation: auto !important;
-}
-
-/* ✅ ENTERPRISE: Force portal dropdowns to always be on top using centralized system */
-[data-custom-relationship-select="true"],
-[data-custom-dropdown-portal="true"] {
-  z-index: var(--z-index-dropdown); /* 🏢 ENTERPRISE: From design-tokens.json */
 }
 
 /* =============================================================

@@ -126,11 +126,13 @@
   --z-index-geo-panel-layers: 1020;
   --z-index-geo-panel-tools: 1030;
   --z-index-sticky: 1040;
+  --z-index-fullscreen-surface: 1045;
   --z-index-workspace-side-panel: 1050;
   --z-index-banner: 1060;
   --z-index-overlay: 1070;
   --z-index-modal: 1080;
   --z-index-modal-content: 1090;
+  --z-index-transient-stack: 1095;
   --z-index-viewer-import-modal: 1100;
   --z-index-canvas-snap: 1110;
   --z-index-popover: 1120;

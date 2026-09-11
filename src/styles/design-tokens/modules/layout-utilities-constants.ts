@@ -128,25 +128,24 @@ export const layoutUtilities = {
   },
 
   // ✅ ENTERPRISE: Centralized dropdown positioning system (NO MORE INLINE STYLES)
-  // 🏢 Z-INDEX VALUES: Use CSS variables from design-tokens.json (--z-index-dropdown = 1000)
   dropdown: {
-    // CSS Variables-based positioning (NO inline styles)
-    // NOTE: z-index parameter kept for legacy compatibility but defaults to enterprise value
-    setCSSPositioning: (position: { top: number; left: number; width: number }, zIndexValue: number = 1000) => {
+    // CSS Variables-based positioning (NO inline styles).
+    // ⛔ ADR-780 Φάση Δ: ο βοηθός ΘΕΣΗΣ δεν κουβαλά ΣΤΡΩΣΗ. Έγραφε ωμό αριθμό (ο μόνος καλών: `75`)
+    // σε καθολική `--dropdown-z-index` στη ρίζα του εγγράφου — αόρατο στην κλίμακα και ΚΑΤΩ από την
+    // πλήρη οθόνη. Η στρώση έρχεται πλέον από την κλίμακα, στην κλάση του `getDropdownClasses`.
+    setCSSPositioning: (position: { top: number; left: number; width: number }) => {
       if (typeof document !== 'undefined') {
         const root = document.documentElement;
         root.style.setProperty('--dropdown-top', `${position.top}px`);
         root.style.setProperty('--dropdown-left', `${position.left}px`);
         root.style.setProperty('--dropdown-width', `${position.width}px`);
-        // 🏢 ENTERPRISE: Prefer CSS variable, fallback to parameter
-        root.style.setProperty('--dropdown-z-index', `${zIndexValue}`);
       }
     },
 
-    // CSS Classes που χρησιμοποιούν τα CSS variables
+    // CSS Classes που χρησιμοποιούν τα CSS variables — και η ΜΙΑ παροδική στρώση της κλίμακας
     getDropdownClasses: (theme: 'default' | 'dark' | 'modal' = 'default') => {
       const baseClasses = 'fixed pointer-events-auto';
-      const positionClasses = '[top:var(--dropdown-top)] [left:var(--dropdown-left)] [width:var(--dropdown-width)] [z-index:var(--dropdown-z-index)]';
+      const positionClasses = '[top:var(--dropdown-top)] [left:var(--dropdown-left)] [width:var(--dropdown-width)] z-[var(--z-index-transient-stack)]';
 
       const themeClasses = {
         default: 'bg-popover text-popover-foreground border border-border',

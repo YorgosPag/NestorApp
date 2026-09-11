@@ -583,6 +583,11 @@
       "type": "zIndex",
       "description": "Sticky headers, toolbars"
     },
+    "fullscreenSurface": {
+      "value": "1045",
+      "type": "zIndex",
+      "description": "Pseudo-fullscreen surface of a panel (FullscreenOverlay) - a SURFACE, not a transient layer: covers the shell and its sticky chrome, stays below the floating DXF palette rendered outside it on purpose, and below the transient stack so every dialog opened from it is visible (ADR-780 Phase D)"
+    },
     "workspaceSidePanel": {
       "value": "1050",
       "type": "zIndex",
@@ -607,6 +612,11 @@
       "value": "1090",
       "type": "zIndex",
       "description": "Card of a modal - one rung above its OWN backdrop, so DOM order never decides it"
+    },
+    "transientStack": {
+      "value": "1095",
+      "type": "zIndex",
+      "description": "The ONE rung of the transient family of the shell (Radix Dialog/AlertDialog/Sheet/Popover/DropdownMenu/ContextMenu, portaled dropdowns): backdrop and card share it because they mount in the same portal; between members the most recently opened wins by portal order - the browser top-layer rule. Giving a member its own rung would put a dialog BEHIND the popover that opened it (ADR-780 Phase D)"
     },
     "viewerImportModal": {
       "value": "1100",

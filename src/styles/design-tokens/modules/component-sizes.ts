@@ -98,7 +98,9 @@ export const componentSizes = {
       shadow: 'shadow-md',
       shadowElevated: 'shadow-lg',       // Sub-menus
       sideOffset: 4,                     // Radix numeric prop (px)
-      zIndex: 'z-50',                    // Standard dropdown layer
+      // ADR-780 Φάση Δ: το ΕΝΑ σκαλί της παροδικής οικογένειας (Dialog/Sheet/Popover/Menu) — ήταν
+      // ωμό `z-50`, κάτω από κάθε καθολική επιφάνεια (πλήρη οθόνη, πλωτές παλέτες).
+      zIndex: 'z-[var(--z-index-transient-stack)]',
       zIndexElevated: 'z-[var(--z-index-elevated-dropdown)]',        // Above FloatingPanel (ρόλος `toast`)
     },
 
