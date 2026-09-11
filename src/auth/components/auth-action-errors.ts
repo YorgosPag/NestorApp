@@ -34,6 +34,10 @@ const ACTION_ERROR_KEYS: Readonly<Record<string, string>> = Object.freeze({
   'auth/user-not-found': 'action.errors.userNotFound',
   'auth/weak-password': 'action.errors.weakPassword',
   'auth/network-request-failed': 'action.errors.networkError',
+  // ⚠️ Εδώ ΔΕΝ είναι απαρίθμηση λογαριασμών: ο άνθρωπος κρατά ήδη κωδικό ενέργειας για
+  //    **αυτή** τη διεύθυνση (αλλαγή email που ζήτησε ο ίδιος, και η διεύθυνση πιάστηκε
+  //    στο μεταξύ). Του οφείλουμε τον λόγο — αλλιώς θα ξαναδοκίμαζε τον ίδιο σύνδεσμο.
+  'auth/email-already-in-use': 'action.errors.emailInUse',
 });
 
 const GENERIC_ERROR_KEY = 'action.errors.generic';
