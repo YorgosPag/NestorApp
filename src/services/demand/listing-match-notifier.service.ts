@@ -49,6 +49,11 @@ import { matchDemand } from '@/lib/demand/demand-matching';
 // 🔑 **Ο ΥΠΑΡΧΩΝ helper, ποτέ χειρόγραφο `/listing/${id}`** — κουβαλά ήδη το
 //    `encodeURIComponent` και είναι το **ένα** σημείο που ξέρει τη διαδρομή.
 import { listingDetailHref } from '@/lib/listings/listing-routes';
+import {
+  viewDestination,
+  type NotificationDestination,
+} from '@/lib/notifications/notification-destination';
+import { personalWorkspace } from '@/types/workspace-membership';
 import { readLiveDemands } from '@/services/demand/live-demands.reader';
 import { readLivePublicListings } from '@/services/listings/live-public-listings.reader';
 import type { PublicListing } from '@/types/public-listing';
@@ -112,6 +117,21 @@ const EMAIL_SUBJECT = (listingTitle: string): string =>
     ? `Νέα αγγελία ταιριάζει στη ζήτησή σας: «${listingTitle}»`
     : 'Νέα αγγελία ταιριάζει στη ζήτησή σας';
 
+/**
+ * **Ο προορισμός ενός ταιριάσματος** (ADR-849 §6δ Β1) — η **δημόσια** αγγελία, με χώρο
+ * τον **ιδιωτικό** χώρο του ζητούντος: εκεί ζει η ζήτησή του (`PROPERTY_DEMANDS`,
+ * `mode: 'userId'`). Ο χώρος εδώ είναι **ετικέτα προέλευσης** — η δημόσια αγγελία
+ * ανοίγει εκτός χώρου.
+ *
+ * 🔑 Εξάγεται ώστε ο ανιχνευτής απόκλισης να ρωτά **αυτόν** τον κανόνα, όχι αντίγραφό του.
+ */
+export function listingMatchDestination(
+  listingId: string,
+  recipientId: string,
+): NotificationDestination {
+  return viewDestination(listingDetailHref(listingId), personalWorkspace(recipientId));
+}
+
 /** Ό,τι χρειάζεται **μία** ανακοίνωση ζεύγους (ζήτηση, αγγελία). */
 interface MatchAnnouncement {
   readonly demandId: string;
@@ -161,7 +181,7 @@ async function announceOneMatch(announcement: MatchAnnouncement): Promise<MatchO
     //    του `t('notifications.actions.view_email')` («Προβολή» / «View»). Το πεδίο είναι
     //    `min(1)` στο σχήμα, οπότε δίνεται **σταθερό αγγλικό αναγνωριστικό**, ποτέ
     //    ελληνικό κείμενο που θα υποσχόταν μετάφραση που δεν υπάρχει (N.11).
-    actions: [{ id: 'view', label: 'view', url: listingDetailHref(listing.id) }],
+    ...listingMatchDestination(listing.id, recipientId),
     source: {
       service: SOURCE_SERVICES.CRM,
       feature: 'demand-listing-match',

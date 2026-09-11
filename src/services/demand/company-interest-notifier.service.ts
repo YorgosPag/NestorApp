@@ -52,6 +52,7 @@ import {
 import { MAX_ANNOUNCE_PROPERTIES } from '@/services/demand/interest-notifier.service';
 import { readLiveDemands } from '@/services/demand/live-demands.reader';
 import { companyPropertyFactsOf } from '@/services/demand/place-interest.service';
+import { companyPropertyHolder } from '@/lib/places/place-detail-route';
 import type { PropertyDemand } from '@/types/property-demand';
 
 const logger = createModuleLogger('demand/company-interest-notifier');
@@ -76,6 +77,11 @@ interface ScannableCompanyProperty {
 export interface CompanyAnnouncementReport extends AnnouncementCounters {
   /** 🔴 Δεν υπάρχει `createdBy` ⇒ **δεν ξέρουμε ποιον να ειδοποιήσουμε**. */
   readonly unsigned: number;
+  /**
+   * 🔴 Δεν υπάρχει `companyId` ⇒ **δεν υπάρχει χώρος**, άρα ούτε πόρτα (ADR-849 Β1).
+   * Πριν, ο σύνδεσμος έφευγε χωρίς χώρο και ο θεατής τον άνοιγε στο **δικό του** γραφείο.
+   */
+  readonly unscoped: number;
 }
 
 /** Κλείνει το άθροισμα; Υπάρχει **για να αποτύχει θορυβωδώς**. */
@@ -85,7 +91,8 @@ export function companyReportBalances(report: CompanyAnnouncementReport): boolea
       report.alreadyKnown +
       report.noNews +
       report.optedOut +
-      report.unsigned ===
+      report.unsigned +
+      report.unscoped ===
     report.considered
   );
 }
@@ -118,14 +125,20 @@ export async function announceInterestToCompanyStaff(
   if (!companyReportBalances(report)) {
     throw new Error(
       `company-interest-notifier: ασυνεπής λογιστική — ${report.announced}+` +
-        `${report.alreadyKnown}+${report.noNews}+${report.optedOut}+${report.unsigned} ` +
-        `≠ ${report.considered}`,
+        `${report.alreadyKnown}+${report.noNews}+${report.optedOut}+${report.unsigned}+` +
+        `${report.unscoped} ≠ ${report.considered}`,
     );
   }
 
   if (report.unsigned > 0) {
     logger.warn('Ακίνητα ΧΩΡΙΣ υπογραφή — κανείς δεν ειδοποιήθηκε γι΄ αυτά', {
       data: { unsigned: String(report.unsigned) },
+    });
+  }
+
+  if (report.unscoped > 0) {
+    logger.warn('Ακίνητα γραφείου ΧΩΡΙΣ εταιρεία — καμία ειδοποίηση, δεν έχουν χώρο', {
+      data: { unscoped: String(report.unscoped) },
     });
   }
 
@@ -160,6 +173,7 @@ async function tallyCompanyAnnouncements(
   const tally = createAnnouncementTally();
   const moment = { nowIso, todayDate };
   let unsigned = 0;
+  let unscoped = 0;
 
   for (const property of properties) {
     // 🔴 **Η υπογραφή ελέγχεται ΠΡΙΝ από κάθε δουλειά.** Χωρίς παραλήπτη, το
@@ -171,6 +185,15 @@ async function tallyCompanyAnnouncements(
       continue;
     }
 
+    // 🔴 **ΚΑΙ Ο ΧΩΡΟΣ ΕΛΕΓΧΕΤΑΙ ΠΡΙΝ ΑΠΟ ΚΑΘΕ ΔΟΥΛΕΙΑ** (ADR-849 Β1). Ήταν
+    //    `tenantId: property.companyId ?? recipientId` — δηλαδή σύνδεσμος χωρίς χώρο, που
+    //    ο θεατής άνοιγε στο **δικό του** γραφείο. Χωρίς εταιρεία δεν υπάρχει πόρτα.
+    const holderId = companyPropertyHolder(property);
+    if (holderId === null) {
+      unscoped += 1;
+      continue;
+    }
+
     await announceIfNewsworthy(
       tally,
       {
@@ -179,7 +202,10 @@ async function tallyCompanyAnnouncements(
         recipientId,
         // Ο μισθωτής είναι η **εταιρεία** — σε αντίθεση με τον ιδιώτη, όπου ο
         // μισθωτής είναι ο ίδιος ο άνθρωπος (`tenant-config.ts`, mode `userId`).
-        tenantId: property.companyId ?? recipientId,
+        tenantId: holderId,
+        // 🔑 ADR-849 Β1 — η πόρτα ανοίγει στον χώρο της **εταιρείας του ακινήτου**,
+        //    όποιο γραφείο κι αν έχει επιλεγμένο αυτός που πατά τον σύνδεσμο.
+        holderId,
         // 🔴 **ΤΟ ΠΕΔΙΟ ΠΟΥ ΕΚΛΕΙΣΕ ΤΗΝ ΨΕΥΤΙΚΗ ΠΟΡΤΑ** (ADR-841 §7 Α18.9).
         //    Χωρίς αυτό, ο κοινός πυρήνας έστελνε τον επαγγελματία στο `/offers/<id>`
         //    — την οθόνη **του ιδιώτη** — και **6 στα 12** έγγραφα κατέληγαν σε
@@ -197,5 +223,6 @@ async function tallyCompanyAnnouncements(
   return {
     ...tally.snapshot(properties.length, MAX_ANNOUNCE_PROPERTIES),
     unsigned,
+    unscoped,
   };
 }

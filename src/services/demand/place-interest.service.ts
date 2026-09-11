@@ -39,6 +39,7 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { nowISO } from '@/lib/date-local';
 import { custodyOf, mayAdminister } from '@/lib/owner-property/listing-custody';
+import { companyPropertyHolder } from '@/lib/places/place-detail-route';
 import {
   projectListingShape,
   type PlaceKnowledge,
@@ -118,6 +119,40 @@ export async function lookupOwnedPlace(
   return company === null
     ? ABSENT
     : { kind: 'found', source: 'company-property', facts: company };
+}
+
+/**
+ * **Πού ζει αυτή η ταυτότητα, και ποιος κατέχει τον χώρο της** (ADR-849 §6δ Β2).
+ *
+ * ⛔ **ΔΕΝ ΕΙΝΑΙ ΕΞΟΥΣΙΟΔΟΤΗΣΗ.** Το «επιτρέπεται σε αυτόν;» το απαντά το
+ * {@link lookupOwnedPlace} (με θεατή). Εδώ δεν υπάρχει θεατής: ρωτά ο **ανιχνευτής
+ * απόκλισης προορισμών**, στον διακομιστή, για να ξαναχτίσει τον προορισμό μιας
+ * ειδοποίησης από το SSoT του παραγωγού — ποτέ από το πρόθεμα `ownp_`/`prop_`.
+ *
+ * 🔑 **Ίδια σειρά με τον εντοπισμό** («ο άνθρωπος πρώτα») και **ίδιος κάτοχος με τους
+ * σαρωτές**: `authorUserId` για τον ιδιώτη, {@link companyPropertyHolder} για το γραφείο.
+ */
+export type PlaceLocation =
+  | { readonly kind: 'found'; readonly source: PlaceSource; readonly holderId: string }
+  /** Ακίνητο γραφείου **χωρίς εταιρεία** — δεν έχει χώρο, άρα ούτε πόρτα. */
+  | { readonly kind: 'unscoped' }
+  | { readonly kind: 'absent' };
+
+export async function locatePlace(db: AdminFirestore, propertyId: string): Promise<PlaceLocation> {
+  const ownerSnap = await db.collection(COLLECTIONS.OWNER_PROPERTIES).doc(propertyId).get();
+  const owner = ownerPropertyFromDocument(ownerSnap.data(), propertyId);
+  if (owner !== null) {
+    return { kind: 'found', source: 'owner-property', holderId: owner.authorUserId };
+  }
+
+  const companySnap = await db.collection(COLLECTIONS.PROPERTIES).doc(propertyId).get();
+  const company = companySnap.data();
+  if (company === undefined) return { kind: 'absent' };
+
+  const holderId = companyPropertyHolder(company);
+  return holderId === null
+    ? { kind: 'unscoped' }
+    : { kind: 'found', source: 'company-property', holderId };
 }
 
 /** Το ακίνητο του **ιδιώτη** — η δήλωσή του **είναι** η γνώση του τόπου (Α14). */

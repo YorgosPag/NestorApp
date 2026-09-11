@@ -167,6 +167,35 @@ describe('Υ — ο παραλήπτης είναι αυτός που καταχ
     expect(announceOnePlace.mock.calls[0][0]).toMatchObject({ source: 'company-property' });
   });
 
+  /**
+   * 🔴 **ADR-849 §6δ Β1 — Ο ΧΩΡΟΣ ΤΗΣ ΠΟΡΤΑΣ ΕΙΝΑΙ Η ΕΤΑΙΡΕΙΑ ΤΟΥ ΑΚΙΝΗΤΟΥ.** Χωρίς αυτό,
+   * το `/n/{id}` και το κουδούνι έβαζαν τον χώρο του **θεατή** — ζωντανό σύμπτωμα 10/9:
+   * «Το ακίνητο δεν βρέθηκε» σε σύνδεσμο προς ακίνητο της ίδιας της εταιρείας.
+   */
+  it('Υ6 🔴 — ο σαρωτής ΔΗΛΩΝΕΙ τον κάτοχο του χώρου: την εταιρεία του ακινήτου', async () => {
+    withSeekers(3);
+    await announceInterestToCompanyStaff(dbReturning([property()]) as never);
+
+    expect(announceOnePlace.mock.calls[0][0]).toMatchObject({ holderId: 'comp_1', tenantId: 'comp_1' });
+  });
+
+  it.each([null, '', undefined])(
+    'Υ7 🔴 — ακίνητο ΧΩΡΙΣ εταιρεία (%p): καμία πόρτα, καμία δουλειά, και ΜΕΤΡΙΕΤΑΙ',
+    async (companyId) => {
+      // Πριν: `tenantId: companyId ?? recipientId` — σύνδεσμος χωρίς χώρο, που ο θεατής
+      // άνοιγε στο ΔΙΚΟ ΤΟΥ γραφείο. Χωρίς εταιρεία το `/properties/<id>` δεν ανοίγει πουθενά.
+      withSeekers(5);
+      const report = await announceInterestToCompanyStaff(
+        dbReturning([property({ companyId })]) as never,
+      );
+
+      expect(announceOnePlace).not.toHaveBeenCalled();
+      expect(companyPropertyFactsOf).not.toHaveBeenCalled();
+      expect(report.unscoped).toBe(1);
+      expect(companyReportBalances(report)).toBe(true);
+    },
+  );
+
   it('Υ3 🔴 — ΧΩΡΙΣ υπογραφή: δεν ειδοποιείται κανείς, και ΜΕΤΡΙΕΤΑΙ', async () => {
     // ⚠️ Η κρίσιμη άγκυρα. Ένα ακίνητο χωρίς `createdBy` δεν επιτρέπεται ούτε να
     // πάρει αυθαίρετο παραλήπτη ούτε να περάσει ως «καμία είδηση».
@@ -231,10 +260,12 @@ describe('Λ — η λογιστική κλείνει, αλλιώς ουρλιά
   it('Λ2 — ο έλεγχος ισοζυγίου πιάνει ασυμφωνία', () => {
     const base = {
       announced: 1, alreadyKnown: 0, noNews: 0, optedOut: 0,
-      unsigned: 0, considered: 1, truncated: false,
+      unsigned: 0, unscoped: 0, considered: 1, truncated: false,
     };
     expect(companyReportBalances(base)).toBe(true);
     expect(companyReportBalances({ ...base, considered: 5 })).toBe(false);
+    // Ο νέος κάδος ΜΕΤΡΑΕΙ στο άθροισμα — αλλιώς ένα ακίνητο χωρίς χώρο θα χανόταν σιωπηλά.
+    expect(companyReportBalances({ ...base, unscoped: 1, considered: 2 })).toBe(true);
   });
 
   it('Λ3 🔴 — ασυνεπής λογιστική ⇒ σφάλμα ΜΕ ΟΝΟΜΑ, όχι σιωπή', async () => {

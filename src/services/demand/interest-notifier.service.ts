@@ -54,7 +54,8 @@ import { dispatchNotification } from '@/server/notifications/notification-orches
 //    `encodeURIComponent` και είναι το **ένα** σημείο που ξέρει **ΠΟΙΑ ΚΑΤΟΧΗ ΑΝΟΙΓΕΙ
 //    ΠΟΙΑ ΠΟΡΤΑ** (ADR-841 §7 Α18.9). Μέχρι το Α18.9 εδώ καλούνταν κατευθείαν το
 //    `offerDetailHref` — η οθόνη **του ιδιώτη** — και **για τις δύο** οικογένειες.
-import { placeDetailHref } from '@/lib/places/place-detail-route';
+//    ADR-849 Β1: ο helper δίνει πλέον την πόρτα **ΚΑΙ τον χώρο της** μαζί (`placeDestination`).
+import { placeDestination } from '@/lib/places/place-detail-route';
 import type { PlaceSource } from './place-interest.service';
 import {
   announcementEventId,
@@ -168,6 +169,8 @@ async function tallyAnnouncements(
         //    (`owner_properties`). Δεν συνάγεται από το πρόθεμα `ownp_*` — αυτό θα
         //    ήταν παρατήρηση για κάτι που αυτός ο βρόχος ήδη **ξέρει**.
         source: 'owner-property',
+        // 🔑 ADR-849 Β1 — ο χώρος της πόρτας είναι ο **ιδιωτικός** χώρος του κατόχου.
+        holderId: property.authorUserId,
         facts: ownerPropertyFactsOf(property, nowIso),
       },
       demands,
@@ -202,6 +205,8 @@ export interface PlaceAnnouncement {
    * ταυτότητας (ADR-841 §7 Α18.9). Δηλώνεται από τον σαρωτή που διάβασε τη συλλογή.
    */
   readonly source: PlaceSource;
+  /** Ο κάτοχος του χώρου της πόρτας (ADR-849 Β1) — δες `AnnouncementCandidate.holderId`. */
+  readonly holderId: string;
   readonly band: AnnouncementBand;
   readonly count: number;
 }
@@ -255,6 +260,7 @@ export async function announceOnePlace(
     recipientId,
     tenantId,
     source: placeSource,
+    holderId,
     band,
     count,
   } = announcement;
@@ -298,9 +304,11 @@ export async function announceOnePlace(
     //    και το `/offers/<id>` τους απαντούσε *«δεν υπάρχει — ή δεν είναι δικό σου»*.
     //    Μετρημένο ζωντανά, ADR-841 §7 Α18.8 → Α18.9.
     //
-    // ⚠️ Το `label` δεν φτάνει σε οθόνη — ο drawer αποδίδει δικό του μεταφρασμένο
-    //    κείμενο. Σταθερό αναγνωριστικό, ποτέ ελληνικό (N.11).
-    actions: [{ id: 'view', label: 'view', url: placeDetailHref(placeSource, propertyId) }],
+    // 🔴 **ΚΑΙ Ο ΧΩΡΟΣ ΤΗΣ ΠΟΡΤΑΣ ΤΑΞΙΔΕΥΕΙ ΜΑΖΙ ΤΗΣ** (ADR-849 §6δ Β1). Ζωντανό σύμπτωμα
+    //    10/9: σύνδεσμος email → `/o/<ΑΛΛΟ γραφείο>/properties/<id>` ⇒ «δεν βρέθηκε»,
+    //    γιατί ο χώρος συμπληρωνόταν από τον **θεατή**. Πλέον ο σαρωτής δηλώνει τον
+    //    κάτοχο και το `placeDestination` δίνει πόρτα + χώρο από **ένα** σημείο.
+    ...placeDestination(placeSource, propertyId, holderId),
     source: { service: SOURCE_SERVICES.CRM, feature: 'demand-interest', env: getCurrentEnvironment() },
   });
 

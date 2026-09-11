@@ -113,6 +113,12 @@ describe('Ι — το κλειδί idempotency είναι το ζεύγος (ζ�
     expect(dispatchNotification.mock.calls[0][0].actions).toEqual([
       { id: 'view', label: 'view', url: listingDetailHref('l1') },
     ]);
+    // 🔑 ADR-849 Β1 — ο χώρος ταξιδεύει μαζί με τον προορισμό: ο ιδιωτικός χώρος του
+    //    ζητούντος, όπου ζει η ζήτησή του (ετικέτα προέλευσης· η αγγελία είναι δημόσια).
+    expect(dispatchNotification.mock.calls[0][0].workspace).toEqual({
+      kind: 'personal',
+      userId: 'usr_d1',
+    });
 
     // ── Πέρασμα 2: το ίδιο ζεύγος ξαναφαίνεται — ο orchestrator το ξέρει ήδη ──
     dispatchNotification.mockResolvedValueOnce({
