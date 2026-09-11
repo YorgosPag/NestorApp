@@ -21,7 +21,10 @@ import {
   getCurrentEnvironment,
 } from '@/config/notification-events';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { viewDestination } from '@/lib/notifications/notification-destination';
+import { ENTITY_ROUTES } from '@/lib/routes/entityRoutes';
 import type { PurchaseOrder } from '@/types/procurement';
+import { orgWorkspace } from '@/types/workspace-membership';
 
 const logger = createModuleLogger('PO_NOTIFICATIONS');
 
@@ -66,13 +69,11 @@ export async function notifyPOApproved(
       eventId: buildEventId('approved', po.id),
       entityId: po.id,
       entityType: NOTIFICATION_ENTITY_TYPES.PURCHASE_ORDER,
-      actions: [
-        {
-          id: 'view',
-          label: 'Προβολή PO',
-          url: `/procurement/${po.id}`,
-        },
-      ],
+      // 🔴 **ΤΡΙΑ ΕΛΑΤΤΩΜΑΤΑ ΣΕ ΜΙΑ ΕΝΕΡΓΕΙΑ** (ADR-849 §6δ Β1, 2026-09-11): η διαδρομή
+      //    ήταν γραμμένη με το χέρι (`/procurement/<id>`) και **δεν έχει σελίδα** — 404· η
+      //    ετικέτα ήταν ελληνική σε πεδίο που δεν φτάνει ποτέ σε οθόνη (N.11)· και ο χώρος
+      //    έλειπε. Κανένα δεν το έβλεπε πύλη: ο φρουρός κοιτούσε μόνο `*-notifier.service.ts`.
+      ...viewDestination(ENTITY_ROUTES.procurement.purchaseOrder(po.id), orgWorkspace(po.companyId)),
       // 🔴 **ΔΥΟ ΕΛΑΤΤΩΜΑΤΑ ΣΕ ΜΙΑ ΓΡΑΜΜΗ, ΚΑΙ ΤΑ ΒΡΗΚΕ ΠΥΛΗ** (ADR-841 §7 Α18.14,
       //    2026-09-05). Έγραφε `'procurement.notifications.poApproved'`:
       //

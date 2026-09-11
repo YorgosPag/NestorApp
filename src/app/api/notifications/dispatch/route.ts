@@ -153,6 +153,11 @@ async function handleDispatch(request: NextRequest, ctx: AuthContext): Promise<N
     }
 
     // Dispatch notification using centralized orchestrator
+    //
+    // ⚠️ ΔΕΝ ΠΑΙΡΝΕΙ `actions`, ΚΑΙ ΕΙΝΑΙ ΣΚΟΠΙΜΟ (ADR-849 §6δ Β1): ο παραλήπτης και ο
+    //    μισθωτής έρχονται από το **σώμα** ενός αιτήματος διαχειριστή πλατφόρμας. Ένας
+    //    προορισμός θα απαιτούσε **χώρο-στόχο** που το αίτημα δεν δηλώνει — και μαντεψιά
+    //    από το `tenantId` απαγορεύεται (`place-detail-route.ts`, ADR-749).
     const result = await dispatchNotification({
       eventType: NOTIFICATION_EVENT_TYPES.CRM_NEW_COMMUNICATION,
       recipientId: body.recipientId,

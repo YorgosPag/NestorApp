@@ -55,6 +55,23 @@ import { dispatchNotification } from '@/server/notifications/notification-orches
 // 🔑 **Ο ΥΠΑΡΧΩΝ helper, ποτέ χειρόγραφο `/offers/${id}`** — κουβαλά ήδη το
 //    `encodeURIComponent` και είναι το **ένα** σημείο που ξέρει τη διαδρομή.
 import { offerDetailHref } from '@/lib/owner-property/owner-property-routes';
+import {
+  viewDestination,
+  type NotificationDestination,
+} from '@/lib/notifications/notification-destination';
+import { personalWorkspace } from '@/types/workspace-membership';
+
+/**
+ * **Ο προορισμός της απάντησης** (ADR-849 §6δ Β1) — η καταχώρηση του ιδιώτη, στον
+ * **ιδιωτικό** του χώρο (ο παραλήπτης **είναι** ο `authorUserId`, δες το σχόλιο της
+ * κλήσης). Εξάγεται ώστε ο ανιχνευτής απόκλισης να ρωτά **αυτόν** τον κανόνα.
+ */
+export function mandateRequestDestination(
+  ownerPropertyId: string,
+  recipientUserId: string,
+): NotificationDestination {
+  return viewDestination(offerDetailHref(ownerPropertyId), personalWorkspace(recipientUserId));
+}
 import type { MandateRequestDecision } from '@/types/mandate-request';
 import { publicListingFromDocument } from '@/lib/listings/public-listing-from-document';
 
@@ -142,7 +159,7 @@ export async function announceMandateRequestAnswer(
       //
       // ⚠️ Το `label` δεν φτάνει σε οθόνη — ο drawer αποδίδει δικό του μεταφρασμένο
       //    κείμενο (`notifications.actions.view_email` → «Προβολή» / «View»).
-      actions: [{ id: 'view', label: 'view', url: offerDetailHref(answer.ownerPropertyId) }],
+      ...mandateRequestDestination(answer.ownerPropertyId, answer.recipientUserId),
       source: {
         service: SOURCE_SERVICES.PROPERTIES,
         feature: 'mandate-request-answer',

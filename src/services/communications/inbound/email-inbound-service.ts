@@ -20,6 +20,9 @@ import {
 } from '@/schemas/ai-analysis';
 import { generateGlobalMessageDocId } from '@/server/lib/id-generation';
 import { dispatchNotification } from '@/server/notifications/notification-orchestrator';
+import { viewDestination } from '@/lib/notifications/notification-destination';
+import { APP_ROUTES } from '@/lib/routes/appRoutes';
+import { orgWorkspace } from '@/types/workspace-membership';
 import {
   NOTIFICATION_EVENT_TYPES,
   SOURCE_SERVICES,
@@ -423,9 +426,9 @@ export async function processInboundEmail(input: InboundEmailInput): Promise<Inb
           eventId: messageDocId,
           entityId: contactId,
           entityType: NOTIFICATION_ENTITY_TYPES.CONTACT,
-          actions: [
-            { id: 'view_email', label: 'View', url: '/admin/ai-inbox' },
-          ],
+          // 🔑 ADR-849 Β1 — ο χώρος είναι της εταιρείας που **έλαβε** το email (ετικέτα
+          //    προέλευσης· η διαδρομή ζει εκτός χώρου). Διαδρομή από το SSoT, όχι κυριολεξία.
+          ...viewDestination(APP_ROUTES.aiInbox, orgWorkspace(routing.companyId!)),
         })
       )
     );

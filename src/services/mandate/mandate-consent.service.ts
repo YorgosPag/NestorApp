@@ -53,6 +53,7 @@ import {
 import { announceMandateDecision } from '@/services/mandate/mandate-decision-notifier.service';
 import { setOwnerPropertyMandate } from '@/services/owner-property/owner-property-write.service';
 import { ownerPropertyFromDocument } from '@/lib/owner-property/owner-property-from-document';
+import { custodyOf } from '@/lib/owner-property/listing-custody';
 import type { OwnerProperty } from '@/types/owner-property';
 import type { BrokeredListingMandate } from '@/types/owner-property-mandate';
 import { mandatesOf } from '@/types/owner-property-mandate';
@@ -351,6 +352,8 @@ export async function recordMandateDecision(
       clientContactId: current.clientContactId,
       recipientUserId: property.authorUserId,
       tenantId: property.authorCompanyId,
+      // 🔑 ADR-849 Β1 — ο χώρος του συνδέσμου = η θεματοφυλακή, από το **ένα** SSoT.
+      custody: custodyOf(property),
       previous,
       next: decision,
       decidedAt,

@@ -68,6 +68,11 @@ import { dispatchNotification } from '@/server/notifications/notification-orches
 //    `encodeURIComponent` και είναι το **ένα** σημείο που ξέρει τη διαδρομή (Κ2 της
 //    `notification-destination-custody`).
 import { mandateDetailHref } from '@/lib/mandate/mandate-routes';
+import {
+  viewDestination,
+  type NotificationDestination,
+} from '@/lib/notifications/notification-destination';
+import { custodyWorkspace, type ListingCustody } from '@/lib/owner-property/listing-custody';
 import type { Contact } from '@/types/contacts/contracts';
 import { getContactDisplayName, getPrimaryEmail } from '@/types/contacts/helpers';
 import type { MandateConfirmation } from '@/types/mandate';
@@ -83,9 +88,27 @@ export interface MandateDecisionEvent {
   readonly recipientUserId: string;
   /** Η εταιρεία του — ο **μισθωτής** της ειδοποίησης. */
   readonly tenantId: string | null;
+  /**
+   * **Η θεματοφυλακή της αγγελίας** (`custodyOf`) — ορίζει **σε ποιον χώρο ανοίγει** ο
+   * σύνδεσμος (ADR-849 §6δ Β1). Δηλώνεται από όποιον διάβασε την αγγελία, ποτέ από το
+   * `tenantId` (άλλο ερώτημα: ο μισθωτής).
+   */
+  readonly custody: ListingCustody;
   readonly previous: MandateConfirmation;
   readonly next: MandateConfirmation;
   readonly decidedAt: string;
+}
+
+/**
+ * **Ο προορισμός της απόφασης** — η εντολή, μέσα στον χώρο που **διαχειρίζεται** την
+ * αγγελία (ADR-849 §6δ Β1). Εξάγεται ώστε ο ανιχνευτής απόκλισης να ρωτά **αυτόν** τον
+ * κανόνα, όχι αντίγραφό του.
+ */
+export function mandateDecisionDestination(
+  ownerPropertyId: string,
+  custody: ListingCustody,
+): NotificationDestination {
+  return viewDestination(mandateDetailHref(ownerPropertyId), custodyWorkspace(custody));
 }
 
 /**
@@ -322,7 +345,10 @@ export async function announceMandateDecision(
       // ⚠️ **ΤΟ ΜΑΘΗΜΑ, ΚΑΙ ΤΩΝ ΔΥΟ ΦΟΡΩΝ**: *«ανοίγει;»* και *«είναι ο σωστός
       //    προορισμός;»* είναι **δύο** ερωτήσεις. Η πρώτη απαντιέται από τον κανόνα· η
       //    δεύτερη **μόνο** ρωτώντας τι θέλει να **κάνει** ο άνθρωπος μετά.
-      actions: [{ id: 'view', label: 'view', url: mandateDetailHref(event.ownerPropertyId) }],
+      //
+      // 🔴 **(3) ΚΑΙ Ο ΧΩΡΟΣ ΕΙΝΑΙ ΤΗΣ ΑΓΓΕΛΙΑΣ, ΟΧΙ ΤΟΥ ΘΕΑΤΗ** (ADR-849 §6δ Β1): χωρίς
+      //    δηλωμένο χώρο, το `/n/{id}` και το κουδούνι έβαζαν το γραφείο **του θεατή**.
+      ...mandateDecisionDestination(event.ownerPropertyId, event.custody),
       source: {
         service: SOURCE_SERVICES.PROPERTIES,
         feature: 'mandate-decision',

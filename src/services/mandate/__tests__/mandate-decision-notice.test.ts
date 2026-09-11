@@ -173,6 +173,17 @@ describe('🔴 Ε — «ο Κώστας απάντησε»', () => {
     expect(dispatched[0]?.titleKey).toBe('mandateDecision.confirmedTitle');
   });
 
+  it('🔴 Ε1γ — ADR-849 Β1: ο σύνδεσμος ανοίγει στον χώρο που ΔΙΑΧΕΙΡΙΖΕΤΑΙ την αγγελία', async () => {
+    // Μέσα από την ΠΡΑΓΜΑΤΙΚΗ διαδρομή: ο χώρος βγαίνει από το `custodyOf` της αγγελίας
+    // που διάβασε το `recordMandateDecision` — όχι από το `tenantId`, όχι από τον θεατή.
+    const link = issueMandateConsentLink(LISTING, CLIENT);
+    const db = world(link.nonce);
+
+    await recordMandateDecision(db, link.token, 'confirmed');
+
+    expect(dispatched[0]?.workspace).toEqual({ kind: 'org', companyId: 'comp_alfa' });
+  });
+
   it('🔴 Ε1β — ΤΟ ΟΝΟΜΑ ΤΟΥ ΠΕΛΑΤΗ ΦΤΑΝΕΙ ΣΤΗΝ ΕΙΔΟΠΟΙΗΣΗ, όχι το αναγνωριστικό', async () => {
     // 🔴 **ΚΕΝΟ ΠΟΥ ΜΕΤΡΗΘΗΚΕ 2026-08-31** (ADR-834 §6.5.δ): μετάλλαξη που έκανε τον
     //    ειδοποιητή να επιστρέφει **πάντα** το `clientContactId` **ΕΠΕΖΗΣΕ** — κανείς
@@ -254,6 +265,7 @@ describe('🔴 Ε — «ο Κώστας απάντησε»', () => {
       clientContactId: CLIENT,
       recipientUserId: 'user_maria',
       tenantId: 'comp_alfa',
+      custody: { kind: 'company', companyId: 'comp_alfa' },
       decidedAt: SAME_MS,
     } as const;
 
@@ -275,6 +287,7 @@ describe('🔴 Ε — «ο Κώστας απάντησε»', () => {
       clientContactId: CLIENT,
       recipientUserId: 'user_maria',
       tenantId: 'comp_alfa',
+      custody: { kind: 'company', companyId: 'comp_alfa' },
       decidedAt: '2026-08-21T10:00:00.000Z',
       previous: 'confirmed',
       next: 'confirmed',
