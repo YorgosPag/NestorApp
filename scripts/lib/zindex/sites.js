@@ -11,6 +11,11 @@
  * βλέπει έναν κανόνα. Πύλη που διαβάζει μόνο αρχεία `.css` είναι **δομικά τυφλή** στο
  * μισό πρόβλημα — και το χειρότερο ζει ακριβώς στο τυφλό μισό (`z-[99999]`).
  *
+ * 🔴 ΦΑΣΗ Δ (2026-09-11): ΚΑΙ Ο ΑΡΙΘΜΟΣ ΜΟΝΟΣ ΤΟΥ ΕΙΝΑΙ ΤΥΦΛΟΣ. Το `fixed inset-0 z-[60]` της πλήρους
+ * οθόνης και το `fixed … z-50` όλης της οικογένειας Radix ήταν «τοπικά» επειδή είναι < 1000 — ενώ
+ * είναι καθολικά από τη **δομή** τους. Και το ονομασμένο `z-50` του Tailwind δεν το έβλεπε κανένα
+ * μοτίβο. Δες `./structure` (ADR-780 Φάση Δ).
+ *
  * 🏆 ΠΟΥ ΞΕΠΕΡΝΑΜΕ ΤΑ ΕΡΓΑΛΕΙΑ ΤΩΝ ΜΕΓΑΛΩΝ (και τα τρία μετρημένα, όχι φιλόδοξα):
  *  1. **Ύπαρξη, όχι πρόθεμα.** Τα `z-index-token-enforcer`, `stylelint-scales`,
  *     `stylelint-z-index-value-constraint` κρίνουν αν η τιμή *μοιάζει* με token
@@ -22,6 +27,8 @@
  *  3. **Παράλληλο λεξιλόγιο.** Κανένα δεν ανιχνεύει μια **δεύτερη** κλίμακα που
  *     ξαναορίζει τα ίδια ονόματα ρόλων με άλλους αριθμούς — που ήταν εδώ η **ρίζα**
  *     (`--cp-z-tooltip: 10000` έναντι `--z-index-tooltip: 1800`).
+ *  4. **Δομή, όχι αριθμός, και μία αυθεντία ανά στοιχείο** (Φάση Δ): `fixed` + ωμό z < 1000 ⇒
+ *     καθολική στρώση χωρίς ρόλο· z-index σε `[data-radix-*]` ⇒ δεύτερη αυθεντία που νικά σιωπηλά.
  *
  * @module scripts/lib/zindex/sites
  */
@@ -32,6 +39,10 @@ const fs = require('fs');
 const path = require('path');
 
 const { GLOBAL_LAYER_FLOOR, CSS_VAR_PREFIX, KEYWORDS, indexByCssVar } = require('./scale');
+const {
+  namedUtilityRe, textDeclaresLayering, isTailwindClassValue,
+  tsSiteIsFixed, cssRuleOf, cssBlockIsFixed, isShadowAuthoritySelector,
+} = require('./structure');
 const { listCssFiles, stripCommentsKeepingLines, buildDefinitionIndex, RUNTIME_NAMESPACES }
   = require('../css-vars/custom-property-index');
 const { walkSourceFiles, isInsideComment } = require('../contrast/text-primary-sites');
@@ -44,9 +55,11 @@ const STATES = Object.freeze({
   KEYWORD: 'keyword',
   LOCAL_STACKING: 'local-stacking',
   RAW_LITERAL: 'raw-literal',
+  GLOBAL_BY_STRUCTURE: 'global-by-structure',
   UNKNOWN_TOKEN: 'unknown-token',
   PARALLEL_SCALE: 'parallel-scale',
   RESTRICTED_ROLE_MISUSE: 'restricted-role-misuse',
+  SHADOW_AUTHORITY: 'shadow-authority',
 });
 
 /** Οι καταστάσεις που **μπλοκάρουν** χωρίς baseline (ZERO-TOL). */
@@ -54,9 +67,15 @@ const ZERO_TOLERANCE = Object.freeze([
   STATES.UNKNOWN_TOKEN,
   STATES.PARALLEL_SCALE,
   STATES.RESTRICTED_ROLE_MISUSE,
+  STATES.SHADOW_AUTHORITY,
 ]);
-/** Η κατάσταση που κρατιέται σε **baseline** και μόνο μειώνεται (RATCHET). */
-const RATCHETED = Object.freeze([STATES.RAW_LITERAL]);
+/**
+ * Οι καταστάσεις που κρατιούνται σε **baseline** και μόνο μειώνονται (RATCHET).
+ * ⚠️ Το `global-by-structure` είναι RATCHET και όχι zero-tol: γεννήθηκε με ~50 ζωντανά σημεία
+ * (κυρίως διάλογοι/πάνελ του DXF σε `fixed … z-40/50/60`) που δουλεύουν — zero-tol θα ήταν μονίμως
+ * κόκκινο και θα παρακαμπτόταν (μάθημα CHECK 3.39). Boy Scout στο άγγιγμα.
+ */
+const RATCHETED = Object.freeze([STATES.RAW_LITERAL, STATES.GLOBAL_BY_STRUCTURE]);
 
 const SOURCE_EXT = new Set(['.ts', '.tsx']);
 const toPosix = (p) => p.split(path.sep).join('/');
@@ -111,24 +130,35 @@ function findParallelScaleDefs(css) {
 }
 
 // ---------------------------------------------------------------------------
-// ΔΙΑΛΕΚΤΟΙ 2 & 3 — Tailwind arbitrary + inline style, μέσα σε TS/TSX
+// ΔΙΑΛΕΚΤΟΙ 2 & 3 — Tailwind (arbitrary ΚΑΙ ονομασμένο) + inline style, μέσα σε TS/TSX
 // ---------------------------------------------------------------------------
 
-/** `z-[9999]` · `[z-index:var(--x)]` · `zIndex: 10000` · `zIndex: '2147483646'`. */
+const unquote = (s) => s.trim().replace(/^['"`]|['"`]$/g, '').trim();
+
+/**
+ * `z-[9999]` · `[z-index:var(--x)]` · `z-50` / `-z-10` / `z-auto` · `zIndex: 10000`.
+ * Κάθε μοτίβο δίνει την **ωμή τιμή** του σημείου με τον δικό του τρόπο (`raw`).
+ */
 const TS_PATTERNS = [
-  { dialect: 'tailwind', re: /\bz-\[([^\]]+)\]/g },
-  { dialect: 'tailwind', re: /\[z-index:([^\]]+)\]/g },
-  { dialect: 'inline', re: /\bzIndex\s*:\s*('[^']*'|"[^"]*"|`[^`]*`|[^,;}\n]+)/g },
+  { dialect: 'tailwind', re: () => /\bz-\[([^\]]+)\]/g, raw: (m) => unquote(m[1]) },
+  { dialect: 'tailwind', re: () => /\[z-index:([^\]]+)\]/g, raw: (m) => unquote(m[1]) },
+  { dialect: 'tailwind', re: namedUtilityRe, raw: (m) => (m[2] === 'auto' ? 'auto' : `${m[1]}${m[2]}`) },
+  { dialect: 'inline', re: () => /\bzIndex\s*:\s*('[^']*'|"[^"]*"|`[^`]*`|[^,;}\n]+)/g, raw: (m) => unquote(m[1]) },
 ];
 
 function findTsSites(text) {
   const out = [];
-  for (const { dialect, re } of TS_PATTERNS) {
-    re.lastIndex = 0;
+  for (const { dialect, re, raw } of TS_PATTERNS) {
+    const regex = re();
     let m;
-    while ((m = re.exec(text)) !== null) {
+    while ((m = regex.exec(text)) !== null) {
       if (isInsideComment(text, m.index)) continue;
-      out.push({ dialect, raw: m[1].trim().replace(/^['"`]|['"`]$/g, '').trim(), index: m.index });
+      const value = raw(m);
+      // Μία δήλωση = ένα σημείο: `zIndex: 'z-50'` το κρίνει η διάλεκτος Tailwind που βρίσκει την
+      // ΙΔΙΑ κλάση μέσα στη συμβολοσειρά (Κ17). Πριν τη Φάση Δ μετριόταν δύο φορές — ή, για το
+      // ονομασμένο utility, μία φορά και ψευδώς ✅ `scale-reference`.
+      if (dialect === 'inline' && isTailwindClassValue(value)) continue;
+      out.push({ dialect, raw: value, index: m.index, fixed: tsSiteIsFixed(text, m.index, dialect) });
     }
   }
   return out;
@@ -156,8 +186,9 @@ const isRuntimeNamespace = (name) => RUNTIME_NAMESPACES.some((ns) => name.starts
 const stripImportant = (value) => value.replace(/!\s*important\s*$/i, '').trim();
 
 /**
- * Η **μοναδική** συνάρτηση που αποδίδει κατάσταση. Καμία διαδρομή δεν επιστρέφει
- * `undefined`· ο τελικός κλάδος είναι ρητός.
+ * Η **μοναδική** συνάρτηση που αποδίδει κατάσταση **από την τιμή**. Καμία διαδρομή δεν
+ * επιστρέφει `undefined`· ο τελικός κλάδος είναι ρητός. (Η **δομή** κρίνεται μετά, στο
+ * `withStructure` — η τιμή δεν ξέρει πού ζει.)
  *
  * ⚠️ Η ΣΕΙΡΑ ΕΙΝΑΙ ΣΥΜΒΟΛΑΙΟ: το `var()` κρίνεται **πριν** ρωτηθεί αν είναι αριθμός,
  * γιατί ένα `var(--z-index-viewer-menu, 9999)` περιέχει **και** τα δύο — και η σωστή
@@ -195,6 +226,19 @@ function classify(raw, definedNames, byCssVar) {
   return { state: STATES.RAW_LITERAL, detail: `${n} — ζήτησέ το από την κλίμακα` };
 }
 
+/**
+ * 🔑 Η ΔΟΜΗ ΠΑΝΩ ΑΠΟ ΤΗΝ ΤΙΜΗ (Φάση Δ) — **επαναταξινόμηση, όχι προσθήκη**: ένα σημείο μένει ένα.
+ * Μόνο το `local-stacking` αλλάζει: ωμός αριθμός < 1000 που η **ίδια** δομή δηλώνει `fixed` είναι
+ * καθολική στρώση που δεν ζήτησε ρόλο. Token / αναφορά / ωμό ≥1000 μένουν ως έχουν.
+ */
+function withStructure(verdict, isFixed) {
+  if (verdict.state !== STATES.LOCAL_STACKING || !isFixed) return verdict;
+  return {
+    state: STATES.GLOBAL_BY_STRUCTURE,
+    detail: `${verdict.detail} σε position:fixed — καθολική στρώση από τη δομή· ζήτησέ τη από την κλίμακα`,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Η ΣΑΡΩΣΗ
 // ---------------------------------------------------------------------------
@@ -206,8 +250,18 @@ function scanCss(repoRoot, definedNames, byCssVar) {
     if (!fs.existsSync(full)) continue;
     const css = stripCommentsKeepingLines(fs.readFileSync(full, 'utf8'));
     for (const d of findCssDeclarations(css)) {
-      const { state, detail } = classify(d.raw, definedNames, byCssVar);
-      found.push({ file, line: lineOf(css, d.index), dialect: 'css', raw: d.raw, state, detail });
+      const { selector, block } = cssRuleOf(css, d.index);
+      const line = lineOf(css, d.index);
+      if (isShadowAuthoritySelector(selector)) {
+        found.push({
+          file, line, dialect: 'css', raw: d.raw, state: STATES.SHADOW_AUTHORITY,
+          detail: `z-index σε «${selector.slice(0, 60)}» — δεύτερη αυθεντία του Radix content· `
+            + 'τη στρώση την ορίζει ΜΟΝΟ ο wrapper του components/ui',
+        });
+        continue;
+      }
+      const { state, detail } = withStructure(classify(d.raw, definedNames, byCssVar), cssBlockIsFixed(block));
+      found.push({ file, line, dialect: 'css', raw: d.raw, state, detail });
     }
     for (const p of findParallelScaleDefs(css)) {
       found.push({
@@ -226,10 +280,10 @@ function scanSources(repoRoot, definedNames, byCssVar) {
   for (const full of walkSourceFiles(srcDir)) {
     if (!SOURCE_EXT.has(path.extname(full))) continue;
     const text = fs.readFileSync(full, 'utf8');
-    if (!text.includes('zIndex') && !text.includes('z-[') && !text.includes('z-index')) continue;
+    if (!textDeclaresLayering(text)) continue;
     const file = toPosix(path.relative(repoRoot, full));
     for (const s of findTsSites(text)) {
-      const { state, detail } = classify(s.raw, definedNames, byCssVar);
+      const { state, detail } = withStructure(classify(s.raw, definedNames, byCssVar), s.fixed);
       found.push({ file, line: lineOf(text, s.index), dialect: s.dialect, raw: s.raw, state, detail });
     }
   }
@@ -333,6 +387,7 @@ module.exports = {
   findTsSites,
   stripImportant,
   classify,
+  withStructure,
   scanCss,
   scanSources,
   findSymbolsInSrc,

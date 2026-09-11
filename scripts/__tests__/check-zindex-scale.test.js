@@ -66,7 +66,7 @@ const FIXTURE_FILES = [
   VARIABLES_CSS,                                                 // ο δείκτης ορισμών
   'src/app/globals.css',                                         // token · reference · local
   'src/subapps/dxf-viewer/ui/ribbon/styles/ribbon-tokens.css',   // 6 scale-token, 3 ρόλοι
-  'src/styles/design-tokens/modules/layout-utilities-constants.ts', // runtime · reference
+  'src/styles/design-tokens/modules/layout-utilities-constants.ts', // reference · token (runtime: Φάση Δ ⇒ 0)
   REGISTRY,                                                      // το μητρώο του συνόρου
   BOUNDARY,                                                      // το ίδιο το σύνορο
 ];
@@ -184,11 +184,16 @@ describe('Μ0 — το ζωντανό δέντρο και η βάση των μ�
     expect(m.disorder).toEqual([]);
   });
 
-  it('το μίνι-repo μετράει και τις τέσσερις μη-μηδενικές καταστάσεις (η βάση είναι χρήσιμη)', () => {
+  it('το μίνι-repo μετράει τις μη-μηδενικές καταστάσεις (η βάση είναι χρήσιμη)', () => {
     expect(BASE[STATES.SCALE_TOKEN]).toBeGreaterThan(0);
     expect(BASE[STATES.SCALE_REFERENCE]).toBeGreaterThan(0);
-    expect(BASE[STATES.RUNTIME_PROPERTY]).toBeGreaterThan(0);
     expect(BASE[STATES.LOCAL_STACKING]).toBeGreaterThan(0);
+    // ⚠️ ADR-780 Φάση Δ: ΜΗΔΕΝ πλέον. Το μοναδικό `runtime-property` ΟΛΟΥ του δέντρου ήταν το
+    // `[z-index:var(--dropdown-z-index)]` του `layoutUtilities.dropdown` — μια καθολική μεταβλητή
+    // στη ρίζα του εγγράφου που ο `EmployeeSelector` γέμιζε με ωμό `75` (αόρατο στην πύλη, και
+    // κάτω από την πλήρη οθόνη). Ο κάδος ΔΕΝ είναι νεκρός: το Μ9 τον ασκεί με μετάλλαξη — ίδιο
+    // πρότυπο με το `raw-literal` της Φάσης Γ παρακάτω.
+    expect(BASE[STATES.RUNTIME_PROPERTY]).toBe(0);
     // ⚠️ ADR-780 Φάση Γ: ΜΗΔΕΝ πλέον — κάθε επιφάνεια ζητά ρόλο. Ο κάδος ΔΕΝ είναι νεκρός,
     // και η διάκριση έχει σημασία: τα Μ1 (CSS) και Μ2 (Tailwind σε TS) τον ασκούν στις δύο
     // διαλέκτους, και το Μ10 αποδεικνύει ότι η θεραπευμένη γραφή του **ίδιου** σημείου δεν
@@ -899,5 +904,112 @@ describe('Δ — η ΔΙΑΤΑΞΗ είναι η ταυτότητα, όχι η �
     expect(ids[0]).toContain('πάνω-από:—');
     // Η μοναδικότητα δεν είναι διακοσμητική: ο συγκριτής του ratchet είναι **συνόλου**,
     // άρα δύο ταυτόσημες εγγραφές θα μετριόνταν ως μία και η λογιστική θα ψευδόταν.
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Φ.Δ — Η ΠΥΛΗ ΡΩΤΑ ΤΗ **ΔΟΜΗ**, ΟΧΙ ΤΟΝ ΑΡΙΘΜΟ (ADR-780 Φάση Δ · ADR-332 D27 Ζ3)
+//
+// 🔴 ΤΟ ΠΕΡΙΣΤΑΤΙΚΟ: `FullscreenOverlay` = `fixed inset-0 z-[60]` και όλη η οικογένεια Radix
+// `fixed … z-50`. Και τα δύο είναι **καθολικά** (fixed, portal στο body) — αλλά κάτω από το
+// κατώφλι, άρα «local-stacking» για την πύλη. Επιπλέον το ονομασμένο `z-50` του Tailwind δεν
+// το έβλεπε ΚΑΝΕΝΑ μοτίβο, και το `zIndex: 'z-50'` (string) έβγαινε ψευδώς ✅ `scale-reference`.
+// Και ένας κανόνας του `globals.css` σε `[data-radix-select-content]` νικούσε σιωπηλά την κλάση
+// του Select στο cascade (1220 → 1000). Το κατώφλι των 1000 ΔΕΝ αγγίζεται (§9.8)· η δομή είναι
+// **δεύτερο, ορθογώνιο** κριτήριο.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('Φ.Δ — η δομή κάνει μια στρώση καθολική', () => {
+  const probeTs = (line) => ({ [UTILS]: (s) => `${s}\n${line}\n` });
+
+  it('Μ14 — `fixed inset-0 z-50` ⇒ global-by-structure (ωμό, κάτω από το κατώφλι, ΑΛΛΑ fixed)', async () => {
+    const m = await run(probeTs("export const probe = 'fixed inset-0 z-50';"));
+    expect(delta(m.census)).toEqual({ [STATES.GLOBAL_BY_STRUCTURE]: 1 });
+  });
+
+  it('Μ15 — η ΘΕΡΑΠΕΙΑ του Μ14: ίδια δομή με ρόλο ⇒ scale-token', async () => {
+    const m = await run(probeTs("export const probe = 'fixed inset-0 z-[var(--z-index-modal)]';"));
+    expect(delta(m.census)).toEqual({ [STATES.SCALE_TOKEN]: 1 });
+  });
+
+  it('Μ16 — `absolute z-50` ⇒ local-stacking (το ονομασμένο utility ΜΕΤΡΙΕΤΑΙ, αλλά δεν είναι καθολικό)', async () => {
+    const m = await run(probeTs("export const probe = 'absolute z-50';"));
+    expect(delta(m.census)).toEqual({ [STATES.LOCAL_STACKING]: 1 });
+  });
+
+  it('Μ17 — `zIndex: \'z-50\'` (string κλάσης) ⇒ local-stacking, ΟΧΙ ψευδές scale-reference', async () => {
+    const m = await run(probeTs("export const probe = { zIndex: 'z-50' };"));
+    expect(delta(m.census)).toEqual({ [STATES.LOCAL_STACKING]: 1 });
+  });
+
+  it('Μ17β — inline αντικείμενο `{ position: \'fixed\', zIndex: 40 }` ⇒ global-by-structure', async () => {
+    const m = await run(probeTs("export const probe = { position: 'fixed', zIndex: 40 };"));
+    expect(delta(m.census)).toEqual({ [STATES.GLOBAL_BY_STRUCTURE]: 1 });
+  });
+
+  it('Μ17γ — CSS `position: fixed` στο ΙΔΙΟ block ⇒ global-by-structure (η τρίτη διάλεκτος)', async () => {
+    const m = await run({ [RIBBON]: appendCss('.zx-probe { position: fixed; z-index: 40; }') });
+    expect(delta(m.census)).toEqual({ [STATES.GLOBAL_BY_STRUCTURE]: 1 });
+  });
+
+  it('Μ18 — z-index σε `[data-radix-*]` ⇒ shadow-authority, και η πύλη ΠΕΤΑΕΙ (zero-tol)', async () => {
+    // Ο wrapper του `ui/*` είναι η ΜΟΝΗ αυθεντία του Radix content· ένας κανόνας με επιλογέα
+    // χαρακτηριστικού ίδιας ειδικότητας, γραμμένος αργότερα, τον νικά ΣΙΩΠΗΛΑ — ακόμα κι αν
+    // ζητά ρόλο της κλίμακας. Το token δεν σώζει: το πρόβλημα είναι ΔΥΟ αυθεντίες, όχι ωμός αριθμός.
+    const edits = { [RIBBON]: appendCss('[data-radix-zx] { z-index: var(--z-index-modal); }') };
+    await expect(run(edits)).rejects.toThrow(/μηδενικής ανοχής/);
+    const m = await run(edits, ['--report']);
+    expect(delta(m.census)).toEqual({ [STATES.SHADOW_AUTHORITY]: 1 });
+  });
+
+  it('Μ19 — το προφίλτρο πυροδοτεί σε αρχείο που γράφει ΜΟΝΟ `z-50`', () => {
+    // Χωρίς αυτό, η αλλαγή `z-[var(--…)]` → `z-50` σε ένα primitive θα περνούσε το hook
+    // με «καμία σταδιοποιημένη αλλαγή δηλώνει στρώση» — ακριβώς η οπισθοδρόμηση που φυλάμε.
+    expect(gate.textDeclaresLayering('className="fixed inset-0 z-50"')).toBe(true);
+    expect(gate.textDeclaresLayering('<p className="-z-10">')).toBe(true);
+    expect(gate.textDeclaresLayering('const pz = 50; const lazy = true;')).toBe(false);
+  });
+
+  it('Κ15 — `sticky` ΔΕΝ κρίνεται καθολικό (δηλωμένο όριο: καθολικό μόνο στο root context)', async () => {
+    // Το header του κελύφους είναι `sticky top-0 z-50` ΚΑΙ στο root context — αλλά ένα sticky
+    // μέσα σε scroll container είναι τοπικό, και στατικά δεν γίνεται να ξέρεις ποιο από τα δύο.
+    const m = await run(probeTs("export const probe = 'sticky top-0 z-50';"));
+    expect(delta(m.census)).toEqual({ [STATES.LOCAL_STACKING]: 1 });
+  });
+
+  it('Κ16 — `translate-z-10` ΔΕΝ είναι utility στρώσης (φραγμός ψευδώς θετικού)', async () => {
+    const m = await run(probeTs("export const probe = 'translate-z-10 foo-z-50';"));
+    expect(delta(m.census)).toEqual({});
+  });
+
+  it('Κ17 — `zIndex: \'z-[var(--ρόλος)]\'` μετριέται ΜΙΑ φορά (όχι inline ΚΑΙ Tailwind)', async () => {
+    // Μία δήλωση = ένα σημείο. Αλλιώς η κλειστή λογιστική διπλομετρά και ο παρονομαστής ψεύδεται.
+    const m = await run(probeTs("export const probe = { zIndex: 'z-[var(--z-index-modal)]' };"));
+    expect(delta(m.census)).toEqual({ [STATES.SCALE_TOKEN]: 1 });
+  });
+
+  it('Κ18 — οι δύο νέες καταστάσεις ανήκουν σε ΕΝΑΝ μηχανισμό η καθεμία', () => {
+    expect(RATCHETED).toContain(STATES.GLOBAL_BY_STRUCTURE);
+    expect(ZERO_TOLERANCE).toContain(STATES.SHADOW_AUTHORITY);
+    expect(ZERO_TOLERANCE).not.toContain(STATES.GLOBAL_BY_STRUCTURE);
+    expect(RATCHETED).not.toContain(STATES.SHADOW_AUTHORITY);
+  });
+
+  it('Π6 — το ΖΩΝΤΑΝΟ δέντρο δεν έχει καμία σκιώδη αυθεντία', async () => {
+    const m = await live();
+    expect(m.found.filter((f) => f.state === STATES.SHADOW_AUTHORITY)).toEqual([]);
+  });
+
+  it('Π7 — οι δύο ρόλοι της Φάσης Δ κάθονται εκεί που ορίστηκε (χειρόγραφο)', () => {
+    const byRole = Object.fromEntries(readScale(REPO_ROOT).map((r) => [r.role, r.value]));
+    // Η πλήρης οθόνη: πάνω από το κέλυφος (sticky), ΚΑΤΩ από την πλωτή παλέτα του DXF, που
+    // αποδίδεται σκόπιμα έξω από την πλήρη οθόνη για να αιωρείται πάνω της.
+    expect(byRole.fullscreenSurface).toBeGreaterThan(byRole.sticky);
+    expect(byRole.fullscreenSurface).toBeLessThan(byRole.workspaceSidePanel);
+    // Η οικογένεια: πάνω από κάθε επιφάνεια και από το maplibre pseudo-fullscreen (`modal`),
+    // κάτω από toast / tooltip / Select.
+    expect(byRole.transientStack).toBeGreaterThan(byRole.modalContent);
+    expect(byRole.transientStack).toBeLessThan(byRole.toast);
+    expect(byRole.transientStack).toBeLessThan(byRole.elevatedDropdown);
   });
 });

@@ -158,7 +158,9 @@ function buildPayload(m) {
       + 'ζώνη του), ΟΧΙ οι τιμές: αναδιάταξη ή μετακίνηση πάνω/κάτω από το κατώφλι μπλοκάρει, '
       + 'ενώ μια ΜΟΝΟΤΟΝΗ επαναρίθμηση περνά πράσινη — γιατί είναι αποδεδειγμένα μηδενικής '
       + 'οπτικής αλλαγής (δες scripts/lib/zindex/scale.js ▸ orderIdentities). '
-      + 'ΤΑ ZERO-TOLERANCE (unknown-token, parallel-scale) ΔΕΝ ΜΠΑΙΝΟΥΝ ΠΟΤΕ ΕΔΩ. '
+      + 'Φάση Δ: `global-by-structure` = ωμό z < 1000 σε position:fixed — καθολική στρώση από τη ΔΟΜΗ. '
+      + 'ΤΑ ZERO-TOLERANCE (unknown-token, parallel-scale, restricted-role-misuse, shadow-authority) '
+      + 'ΔΕΝ ΜΠΑΙΝΟΥΝ ΠΟΤΕ ΕΔΩ. '
       + 'ΤΟ ΠΛΗΘΟΣ ΔΕΝ ΕΙΝΑΙ ΔΕΙΚΤΗΣ ΥΓΕΙΑΣ — δες την κεφαλίδα του scripts/check-zindex-scale.js.',
     adr: ADR,
     check: CHECK,
@@ -297,8 +299,13 @@ function touchesForeignCensus(files, boundaryStylesheet) {
   });
 }
 
-/** Οι τρεις διάλεκτοι σε μορφή κειμένου — ό,τι δεν τις γράφει, δεν δηλώνει στρώση. */
-const LAYERING_MARKERS = ['z-index', 'zIndex', 'z-['];
+/**
+ * Οι διάλεκτοι σε μορφή κειμένου — ό,τι δεν τις γράφει, δεν δηλώνει στρώση.
+ * ⚠️ ADR-780 Φάση Δ: ήταν ΔΕΥΤΕΡΟ αντίγραφο της λίστας σημαδιών (το άλλο στον σαρωτή), και ΚΑΝΕΝΑ
+ * δεν ήξερε το ονομασμένο `z-50` ⇒ αλλαγή `z-[var(--…)]` → `z-50` σε primitive περνούσε το hook ως
+ * «καμία αλλαγή στρώσης». Πλέον ΕΝΑ προφίλτρο, στο `lib/zindex/structure`.
+ */
+const { textDeclaresLayering } = require('./lib/zindex/structure');
 
 /**
  * Αγγίζει κάτι από αυτά τη **στρώση**;
@@ -323,7 +330,7 @@ function touchesLayering(files) {
     const full = path.join(PROJECT_ROOT, rel);
     if (!fs.existsSync(full)) return true; // διαγραφή — δες παραπάνω
     const text = fs.readFileSync(full, 'utf8');
-    return LAYERING_MARKERS.some((marker) => text.includes(marker));
+    return textDeclaresLayering(text);
   });
 }
 
@@ -354,6 +361,7 @@ module.exports = {
   buildPayload,
   violationId,
   touchesLayering,
+  textDeclaresLayering,
   touchesForeignCensus,
   CHECK,
   ADR,
