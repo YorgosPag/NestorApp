@@ -718,6 +718,13 @@
       "success": "User approved successfully.",
       "error": "Failed to approve user."
     },
+    "deny": {
+      "title": "Deny request",
+      "description": "The user will be emailed that their request to access the company was not approved. Their personal space stays active.",
+      "confirm": "Deny request",
+      "success": "The request was denied.",
+      "error": "Failed to deny the request."
+    },
     "mfa": {
       "enabled": "MFA Enabled",
       "notEnabled": "MFA Not Enabled"
@@ -734,7 +741,8 @@
       "permissions": "Permissions",
       "activate": "Activate",
       "details": "Details",
-      "approve": "Approve"
+      "approve": "Approve",
+      "deny": "Deny"
     },
     "table": {
       "user": "User",
