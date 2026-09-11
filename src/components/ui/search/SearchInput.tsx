@@ -2,13 +2,13 @@
  * 🏢 ENTERPRISE Unified Search Input Component
  * Κεντρικοποιημένο search input που αντικαθιστά όλα τα διάσπαρτα implementations
  *
- * @version 1.0.0
+ * @version 1.1.0
  * @author Enterprise Team
  * @compliance CLAUDE.md Protocol - No any, no inline styles, centralized system
  *
  * FEATURES:
  * - 🎯 Backward compatible με όλα τα existing patterns
- * - 🚀 Configurable debouncing
+ * - 🚀 Configurable debouncing — ΜΙΑ κατεύθυνση ροής (`useSearchInputValue`, 2026-09-11)
  * - ♿ Full accessibility support
  * - 🎨 Consistent styling με centralized constants
  * - 🔧 Type-safe interfaces
@@ -17,7 +17,7 @@
 'use client';
 
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import { Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -25,6 +25,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { SearchInputProps } from './types';
 import { SEARCH_CONFIG, SEARCH_UI, DEBOUNCE_PRESETS } from './constants';
+import { useSearchInputValue } from './useSearchInputValue';
 import '@/lib/design-system';
 
 /**
@@ -49,8 +50,8 @@ export function SearchInput({
 }: SearchInputProps) {
   const { t } = useTranslation(COMMON_NAMESPACES);
   const iconSizes = useIconSizes();
-  // 🚀 Enterprise debouncing implementation
-  const [localValue, setLocalValue] = useState(value);
+  // 🔴 Ήταν δύο effects σε αντίθετες κατευθύνσεις ⇒ ατέρμονη ανταλλαγή τιμών (βλ. hook).
+  const { localValue, change, clear } = useSearchInputValue(value, onChange, debounceMs);
 
   /**
    * 🔴 ΗΤΑΝ `placeholder.includes('.') ? t(placeholder) : placeholder` — ΔΙΑΚΡΙΣΗ
@@ -74,35 +75,13 @@ export function SearchInput({
    */
   const resolvedPlaceholder = placeholder ?? t(SEARCH_CONFIG.placeholderDefaultKey);
 
-  // 📝 Debounced onChange handler
-  useEffect(() => {
-    if (!onChange) return; // 🛡️ Guard check - prevent crash when onChange is undefined
-
-    if (debounceMs === 0) {
-      // Instant mode - no debouncing
-      onChange(localValue);
-      return;
-    }
-
-    const handler = setTimeout(() => {
-      onChange(localValue);
-    }, debounceMs);
-
-    return () => clearTimeout(handler);
-  }, [localValue, onChange, debounceMs]);
-
-  // 🔄 Sync external value changes
-  useEffect(() => {
-    setLocalValue(value);
-  }, [value]);
-
-  // 🧹 Clear handler
+  // 🧹 Clear handler — ρητή πράξη: ο γονέας ενημερώνεται ΑΜΕΣΩΣ
   const handleClear = useCallback(() => {
-    setLocalValue('');
+    clear();
     onClear?.();
-  }, [onClear]);
+  }, [clear, onClear]);
 
-  // 📝 Input change handler
+  // 📝 Input change handler — η εκπομπή γίνεται ΑΠΟ ΤΟ ΣΥΜΒΑΝ, ποτέ από effect
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
 
@@ -111,8 +90,8 @@ export function SearchInput({
       return;
     }
 
-    setLocalValue(newValue);
-  }, [maxLength]);
+    change(newValue);
+  }, [change, maxLength]);
 
 
   // 🎨 Icon classes - consistent με existing implementations

@@ -4,7 +4,6 @@
   "files": [
     "src/components/contacts/pickers/AdministrativeAddressPicker.tsx",
     "src/components/properties/dialogs/PropertyDeletionGuardDialog.tsx",
-    "src/hooks/useDebouncedCallback.ts",
     "src/services/dxf-overlay-item-mutation-gateway.ts",
     "src/services/security/EnterpriseSecurityService.ts",
     "src/services/security/security-defaults.ts",
@@ -15,5 +14,5 @@
     "src/subapps/procurement/services/trade-registry.ts",
     "src/test-utils/a11y.tsx"
   ],
-  "fileCount": 12
+  "fileCount": 11
 }

@@ -30,6 +30,18 @@ import { SearchInput } from '@/components/ui/search';
 />
 ```
 
+#### 🔄 Ροή τιμής — ΜΙΑ κατεύθυνση (2026-09-11, `useSearchInputValue`)
+
+- Ο γονέας μαθαίνει την τιμή **μόνο από πράξη ανθρώπου**, τη στιγμή του συμβάντος: πληκτρολόγηση ⇒ με
+  `debounceMs` (σύγχρονα αν `0`) · καθαρισμός ⇒ **αμέσως**, και με debounce. **Ποτέ** από effect, **ποτέ**
+  στο mount, **ποτέ** επειδή άλλαξε η ταυτότητα του `onChange` (inline handlers είναι ασφαλείς).
+- Το `value` υιοθετείται **μόνο** όταν δεν είναι ηχώ της δικής μας εκπομπής — και τότε **ακυρώνει** την
+  εκκρεμή εκπομπή, ώστε να μην ξαναγραφτεί μπαγιάτικη.
+- 🔴 **Γιατί**: η παλιά υλοποίηση είχε δύο effects σε αντίθετες κατευθύνσεις (`local → onChange`,
+  `value → local`). Όταν αποκλίνουν στο ίδιο commit ανταλλάσσονται ατέρμονα — μετρήθηκε ζωντανά στις
+  επαφές: «ALF» ↔ «ALFA», «Maximum update depth exceeded» ~1/s, ώσπου πάγωσε ο renderer (ADR-332 D27 Β-ΙΙ).
+- Άγκυρα: `__tests__/search-input-flow.test.tsx` (Σ1–Σ9).
+
 **Features**:
 - ⚡ Configurable debouncing (0-600ms)
 - 🧹 Automatic clear button

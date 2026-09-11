@@ -43,11 +43,21 @@ Created top-level utility module:
 Created centralized hook for debouncing callback invocations (distinct from `useDebounce` which debounces values):
 
 ```typescript
+interface DebouncedCallback<Args extends unknown[]> {
+  (...args: Args): void;
+  cancel: () => void; // σταθερή αναφορά — 2026-09-11, προσθετικό
+}
+
 function useDebouncedCallback<Args extends unknown[]>(
   callback: (...args: Args) => void,
   delay: number
-): (...args: Args) => void
+): DebouncedCallback<Args>
 ```
+
+**`cancel()` (2026-09-11):** ακυρώνει την εκκρεμή κλήση. Χρειάστηκε για το `SearchInput`: μια εξωτερική
+αλλαγή τιμής πρέπει να **ακυρώνει** την εκκρεμή (μπαγιάτικη) εκπομπή, αλλιώς αυτή την ξαναγράφει πάνω στη
+νέα. Προσθετικό — οι υπάρχοντες καταναλωτές (`useDxfSettings`, 5 κλήσεις) το καλούν ως συνάρτηση, όπως πριν.
+Άγκυρα: `src/hooks/__tests__/useDebouncedCallback.test.ts` (Δ1–Δ4).
 
 ## Files Changed
 
@@ -82,3 +92,4 @@ function useDebouncedCallback<Args extends unknown[]>(
 | Date | Change |
 |------|--------|
 | 2026-03-12 | Initial implementation — 3 new files, 1 extended, 10 migrated |
+| 2026-09-11 | `useDebouncedCallback` + **`cancel()`** (προσθετικό, σταθερή αναφορά) και `useRef(undefined)` ρητά. Πρώτος νέος καταναλωτής: `useSearchInputValue` (μία κατεύθυνση ροής του `SearchInput` — εύρημα ζωντανής επαλήθευσης ADR-332 D27 Β-ΙΙ: ατέρμονη ανταλλαγή «ALF» ↔ «ALFA»). Νέα άγκυρα Δ1–Δ4· η μετάλλαξη `cancel() = no-op` ⇒ **6 κόκκινα**. |
