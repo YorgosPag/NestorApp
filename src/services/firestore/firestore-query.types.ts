@@ -17,17 +17,39 @@ import type { CollectionKey } from '@/config/firestore-collections';
 // AUTH CONTEXT
 // ============================================================================
 
+/**
+ * **Ποιον χώρο ΖΗΤΑ ο πελάτης αυτή τη στιγμή** — η ΜΙΑ απάντηση (ADR-787 §5.3 ζ · ADR-849 Β1).
+ *
+ * ⚠️ **Αίτημα, όχι άδεια.** Την άδεια τη δίνουν ο φύλακας του χώρου
+ * (`o/[workspace]/layout.tsx` → `decideMembership`) και τα `firestore.rules`.
+ *
+ * | κατάσταση | από πού | ερωτήματα εταιρείας |
+ * |---|---|---|
+ * | `org` | ο χώρος της **διεύθυνσης** (`/o/<εταιρεία>`)· ΜΟΝΟ εκτός `/o/`, ο επιλογέας του super-admin | φίλτρο σε αυτή την εταιρεία |
+ * | `personal` | `/o/me` | **καμία** εταιρεία ⇒ `MissingTenantError` (ADR-809) — **ποτέ** καθολική όψη |
+ * | `default` | δεν ζητήθηκε τίποτα | το claim (ή καθολική όψη για super-admin, ADR-354) |
+ *
+ * 🔴 **Γιατί υπάρχει**: μέχρι το ADR-849 Β1 ο πελάτης ρωτούσε **μόνο** τον επιλογέα του
+ * super-admin (`localStorage`) και **αγνοούσε τη διεύθυνση**. Μετρημένο ζωντανά: σύνδεσμος
+ * email προς `/o/<ΠΑΓΩΝΗΣ>/properties/<id>` έδειξε «δεν βρέθηκε», γιατί ο κατάλογος
+ * ακινήτων φορτώθηκε από **άλλη** εταιρεία (αυτή του επιλογέα).
+ */
+export type RequestedWorkspace =
+  | { readonly kind: 'org'; readonly companyId: string }
+  | { readonly kind: 'personal' }
+  | { readonly kind: 'default' };
+
 /** Tenant-aware authentication context extracted from Firebase custom claims */
 export interface TenantContext {
   readonly uid: string;
+  /** Η εταιρεία του **υπογεγραμμένου claim** — ποτέ επιλογή του πελάτη. */
   readonly companyId: string | null;
   readonly isSuperAdmin: boolean;
   /**
-   * When a super admin has picked a company via the global switcher (ADR-354),
-   * Firestore queries scope to this id instead of returning all tenants.
-   * Null for regular users or super admins without active selection.
+   * Ποιον χώρο ζητά ο πελάτης — βλ. {@link RequestedWorkspace}. Το **τι σημαίνει** για
+   * ένα ερώτημα το κρίνει **ένα** σημείο: `resolveEffectiveCompanyId`.
    */
-  readonly effectiveCompanyId: string | null;
+  readonly requested: RequestedWorkspace;
 }
 
 // ============================================================================

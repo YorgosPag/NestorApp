@@ -26,6 +26,7 @@ import { sleep, withTimeout } from '@/lib/async-utils';
 //    ψαλίδισμα σχολίων**: το όριο ζητά να φύγει ευθύνη.
 import { shouldRetry, calculateBackoff, buildUrl, fetchWithTimeout } from './api-client-transport';
 import { createModuleLogger } from '@/lib/telemetry';
+import { requestedCompanyScope } from '@/lib/api/company-scope-source';
 
 // Re-export all types for consumers
 export type {
@@ -93,7 +94,6 @@ export class EnterpriseApiClient {
   private static instance: EnterpriseApiClient;
   private currentUser: FirebaseUser | null = null;
   private tokenCache: { token: string; expiresAt: number } | null = null;
-  private superAdminCompanyId: string | null = null;
   /**
    * Η **αρχική** ετοιμότητα της ταυτότητας — απομνημονευμένη, **τεμπέλικα** δημιουργημένη.
    *
@@ -117,10 +117,6 @@ export class EnterpriseApiClient {
       EnterpriseApiClient.instance = new EnterpriseApiClient();
     }
     return EnterpriseApiClient.instance;
-  }
-
-  setSuperAdminCompanyId(id: string | null): void {
-    this.superAdminCompanyId = id;
   }
 
   private constructor() {
@@ -336,8 +332,12 @@ export class EnterpriseApiClient {
     if (!skipAuth) {
       const token = await this.getIdToken(forceTokenRefresh);
       headers['Authorization'] = `Bearer ${token}`;
-      if (this.superAdminCompanyId) {
-        headers['X-Super-Admin-Company-Id'] = this.superAdminCompanyId;
+      // ADR-849 Β1 — η κεφαλίδα ΡΩΤΑ τη μία απάντηση (βλ. `company-scope-source.ts`), για
+      // ΚΑΘΕ χρήστη σε οργανισμό: ο διακομιστής κρίνει με `decideMembership` (ίδια εταιρεία
+      // με το claim ⇒ μηδέν αναγνώσεις).
+      const requestedCompanyId = requestedCompanyScope();
+      if (requestedCompanyId) {
+        headers['X-Super-Admin-Company-Id'] = requestedCompanyId;
       }
     }
 

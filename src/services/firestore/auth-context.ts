@@ -11,7 +11,7 @@
 
 import { auth, waitForAuthReady } from '@/lib/firebase';
 import type { TenantContext } from './firestore-query.types';
-import { getSuperAdminActiveCompanyId } from './super-admin-active-company';
+import { getClientWorkspaceScope, requestedWorkspace } from './super-admin-active-company';
 
 /**
  * 🔑 **ΜΕΤΑΚΙΝΗΘΗΚΕ, ΔΕΝ ΔΙΠΛΑΣΙΑΣΤΗΚΕ (2026-08-28).** Ο ορισμός ζούσε εδώ· δεν έχει όμως
@@ -129,38 +129,55 @@ export async function requireAuthContext(): Promise<TenantContext> {
   const globalRole = tokenResult.claims?.globalRole as string | undefined;
   const isSuperAdmin = globalRole === 'super_admin';
 
-  if (!companyId && !isSuperAdmin) {
+  // 🔑 ADR-849 Β1: ο επιλογέας ανήκει ΜΟΝΟ στον super-admin. Τον κόβουμε εδώ ρητά,
+  //    αντί να στηριχτούμε στο ότι «μόνο ο super-admin τον γράφει» — ένα αναλλοίωτο που
+  //    φυλάσσεται σε άλλο αρχείο είναι κανόνας που ο επόμενος πρέπει να θυμάται.
+  const scope = getClientWorkspaceScope();
+  const requested = requestedWorkspace(isSuperAdmin ? scope : { ...scope, switcher: null });
+
+  // Χωρίς claim εταιρείας ο άνθρωπος είναι ο αυτόνομος επαγγελματίας (ADR-809) — ΕΚΤΟΣ
+  // αν η διεύθυνση ζητά οργανισμό: τότε ο φύλακας του χώρου **ήδη** έκρινε ότι είναι μέλος.
+  if (!companyId && !isSuperAdmin && requested.kind !== 'org') {
     throw new MissingTenantError();
   }
-
-  const effectiveCompanyId = isSuperAdmin
-    ? getSuperAdminActiveCompanyId()
-    : null;
 
   return {
     uid: currentUser.uid,
     companyId,
     isSuperAdmin,
-    effectiveCompanyId,
+    requested,
   };
 }
 
 /**
- * Resolves the effective companyId to filter client-side Firestore queries by.
+ * **Με ποια εταιρεία φιλτράρεται ένα ερώτημα του πελάτη** — το ΕΝΑ σημείο κρίσης.
  *
- * - Regular user → `ctx.companyId` (their tenant)
- * - Super admin WITH active switcher selection → `ctx.effectiveCompanyId`
- *   (impersonated tenant)
- * - Super admin WITHOUT switcher selection → `null` (cross-tenant view, the
- *   caller should skip the `where('companyId', ...)` constraint)
+ * | ζητείται (`ctx.requested`) | απάντηση |
+ * |---|---|
+ * | `org` — η διεύθυνση, ή (εκτός `/o/`) ο επιλογέας του super-admin | αυτή η εταιρεία |
+ * | `personal` — `/o/me` | **ρίχνει `MissingTenantError`** |
+ * | `default`, απλός χρήστης | το claim του |
+ * | `default`, super-admin | `null` ⇒ καθολική όψη (ADR-354 — μόνο εκτός `/o/`) |
+ *
+ * 🔴 **Ο ΙΔΙΩΤΙΚΟΣ ΧΩΡΟΣ ΡΙΧΝΕΙ — ΔΕΝ ΕΠΙΣΤΡΕΦΕΙ `null`.** Το `null` σημαίνει ήδη
+ * «καθολική όψη» για τον super-admin: ο super-admin στο `/o/me` θα έβλεπε **όλες τις
+ * εταιρείες**, και ο απλός χρήστης τα δεδομένα της **δικής του** — ενώ η διεύθυνση λέει
+ * «ιδιωτικό». Το `MissingTenantError` είναι η **ήδη σχεδιασμένη** κατάσταση του αυτόνομου
+ * επαγγελματία (ADR-807/809), που κάθε καταναλωτής χειρίζεται σιωπηλά και σωστά: στον
+ * ιδιωτικό του χώρο, **κάθε** άνθρωπος — και ο super-admin — είναι αυτός.
  *
  * ADR-356 SSOT: every custom service that does direct Firestore queries
  * outside `firestoreQueryService.subscribe` / `.getAll` MUST resolve its
- * tenant filter through this helper so the super-admin switcher (ADR-354)
- * is honored consistently. Without it, super-admin sessions read the
- * JWT-claim companyId and leak cross-tenant data.
+ * tenant filter through this helper, so the workspace in the URL (ADR-849 Β1)
+ * and the super-admin switcher (ADR-354) are honored consistently.
  */
 export function resolveEffectiveCompanyId(ctx: TenantContext): string | null {
-  if (ctx.isSuperAdmin) return ctx.effectiveCompanyId;
-  return ctx.companyId;
+  switch (ctx.requested.kind) {
+    case 'org':
+      return ctx.requested.companyId;
+    case 'personal':
+      throw new MissingTenantError();
+    case 'default':
+      return ctx.isSuperAdmin ? null : ctx.companyId;
+  }
 }

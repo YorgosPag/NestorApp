@@ -46,7 +46,7 @@ jest.mock('../auth-context', () => ({
     uid: 'u1',
     companyId: 'c1',
     isSuperAdmin: false,
-    effectiveCompanyId: 'c1',
+    requested: { kind: 'default' },
   })),
   waitForAuthReady: jest.fn(async () => true),
   resolveEffectiveCompanyId: jest.fn(() => 'c1'),
