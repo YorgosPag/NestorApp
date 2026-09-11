@@ -15,8 +15,9 @@
 
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useEffect, useState } from 'react';
-import { Mail, User as UserIcon, Building2, Briefcase } from 'lucide-react';
+import { User as UserIcon, Building2, Briefcase } from 'lucide-react';
 import { EscoOccupationPicker } from '@/components/shared/EscoOccupationPicker';
+import { AccountEmailField } from '@/components/account/email-change/AccountEmailField';
 import { VAT_FIELD_KEYS, vatIssueKey } from '@/components/account/tax-identity-labels';
 import { TaxIdentityField } from '@/components/account/TaxIdentityField';
 import type { DeclaredOccupation } from '@/types/professional-identity';
@@ -281,22 +282,13 @@ export function ProfilePageContent() {
             disabled={isLoading}
           />
 
-          <fieldset className={layout.flexColGap2}>
-            <Label htmlFor="email" className={layout.flexCenterGap2}>
-              <Mail className={iconSizes.xs} aria-hidden="true" />
-              {t('account.profile.email')}
-            </Label>
-            <Input
-              id="email"
-              value={user?.email || ''}
-              disabled
-              readOnly
-              className={colors.bg.muted}
-            />
-            <p className={cn(typography.body.xs, colors.text.muted)}>
-              {t('account.profile.emailHint')}
-            </p>
-          </fieldset>
+          {/*
+            📧 ADR-850 — ΕΔΩ ΕΛΕΓΕ «Το email δεν μπορεί να αλλάξει». Το πεδίο και ο δρόμος
+            αλλαγής του ζουν πλέον στο `AccountEmailField` — επαν-πιστοποίηση, σύνδεσμος
+            στη νέα διεύθυνση, και δρόμος ανά πάροχο (ο λογαριασμός Google δεν βλέπει κουμπί
+            που θα έσπαγε).
+          */}
+          <AccountEmailField email={user?.email ?? ''} />
 
           <fieldset className={layout.flexColGap2}>
             <Label htmlFor="role" className={layout.flexCenterGap2}>
