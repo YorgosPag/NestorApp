@@ -51,4 +51,18 @@ function loadEnvLocal() {
   return envVars;
 }
 
-module.exports = { loadEnvLocal };
+/**
+ * Φόρτωσε το `.env.local` **μέσα** στο `process.env` — χωρίς να σκεπάσεις ό,τι έχει ήδη
+ * δηλωθεί (η γραμμή εντολών και το CI κερδίζουν). Καλείται **πριν** από κάθε module της
+ * εφαρμογής που διαβάζει env κατά τη φόρτωση (π.χ. `publicOrigin()`).
+ *
+ * 🔑 ADR-851: ο βρόχος αυτός ήταν γραμμένος με το χέρι σε κάθε script — το CHECK 3.28
+ * τον έπιασε ως κλώνο τη στιγμή που γράφτηκε τρίτη φορά.
+ */
+function applyEnvLocal() {
+  for (const [key, value] of Object.entries(loadEnvLocal())) {
+    if (process.env[key] === undefined) process.env[key] = value;
+  }
+}
+
+module.exports = { loadEnvLocal, applyEnvLocal };

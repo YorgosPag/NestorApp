@@ -20,6 +20,7 @@ import { FieldValue, Timestamp, type Firestore } from 'firebase-admin/firestore'
 import { getFirestore } from 'firebase-admin/firestore';
 import { getAuth, type Auth } from 'firebase-admin/auth';
 import { getStorage, type Storage } from 'firebase-admin/storage';
+import { getApp } from 'firebase-admin/app';
 import type { Bucket } from '@google-cloud/storage';
 import { getCurrentRuntimeEnvironment } from '@/config/environment-security-config';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -155,6 +156,28 @@ export function getAdminBucket(): Bucket {
     );
   }
   return getAdminStorage().bucket(bucketName.trim());
+}
+
+/**
+ * **OAuth2 access token του διαπιστευτηρίου Admin** — για Google REST APIs που το SDK
+ * **δεν** τυλίγει (π.χ. Identity Toolkit Admin v2 `projects.getConfig`, ADR-851).
+ *
+ * 🔑 Ίδιο διαπιστευτήριο με κάθε άλλη κλήση Admin (αλυσίδα B64 → JSON → ADC): καμία
+ * δεύτερη ανάγνωση μυστικού, κανένα δεύτερο σημείο που ξέρει πού ζει το κλειδί.
+ * ⚠️ Το token **δεν** επιστρέφεται ποτέ σε πελάτη και **δεν** γράφεται σε log.
+ */
+export async function getAdminAccessToken(): Promise<{ accessToken: string; projectId: string }> {
+  ensureInitialized();
+  const credential = getApp().options.credential;
+  if (!credential || !_projectId) {
+    throw new FirebaseAdminInitError(
+      'Admin credential or project id unavailable for REST access',
+      _credentialSource,
+      getCurrentRuntimeEnvironment(),
+    );
+  }
+  const { access_token: accessToken } = await credential.getAccessToken();
+  return { accessToken, projectId: _projectId };
 }
 
 /**
