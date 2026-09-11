@@ -19,6 +19,16 @@
         "src/config/firestore-schema-map.ts"
       ]
     },
+    "public-origin": {
+      "ssotFile": "src/lib/http/public-origin.ts",
+      "description": "ADR-851 Φ5 — «ποια είναι η δημόσια διεύθυνσή μας;» έχει ΕΝΑ SSoT: publicOrigin()/publicUrl() (NEXT_PUBLIC_APP_URL, null όταν λείπει). Το NEXT_PUBLIC_BASE_URL δεν ορίζεται σε ΚΑΝΕΝΑ περιβάλλον (μετρημένο 2026-09-11: κανένα .env*, ούτε Coolify, ούτε docker-build) και τρεις αναγνώστες του έδιναν σχετικό/κενό σύνδεσμο σε email ή εφεδρεία στο νεκρό Vercel. Μηδέν αναγνώστες σήμερα — μηδενική ανοχή. Η υπόλοιπη οικογένεια (`NEXT_PUBLIC_APP_URL ?? 'https://nestor-app.vercel.app'`, ~17 αρχεία) ζει στο .claude-rules/pending-ratchet-work.md (08/09).",
+      "forbiddenPatterns": [
+        "NEXT_PUBLIC_BASE_URL"
+      ],
+      "allowlist": [
+        "src/lib/http/public-origin.ts"
+      ]
+    },
     "level-scene-manager-adapter": {
       "ssotFile": "src/subapps/dxf-viewer/systems/entity-creation/LevelSceneManagerAdapter.ts",
       "description": "ADR-527 — LevelSceneManagerAdapter must be constructed ONLY through the cached factory createLevelSceneManagerAdapter()/levelSceneManagerFor(). Direct `new LevelSceneManagerAdapter(...)` bypasses the singleton-per-(accessor,level) cache and reintroduces the N-adapter race (each instance had its own scene cache → stale reads). The factory is the single construction site — one long-lived adapter per level (Revit Document model). Migrate any `new` to createLevelSceneManagerAdapter(...) (identical args).",

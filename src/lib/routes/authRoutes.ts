@@ -64,6 +64,16 @@ export const AUTH_ROUTES = {
    * handoff της §5.3 ξ §7.
    */
   unauthorized: '/unauthorized',
+  /**
+   * **Ο χειριστής των συνδέσμων email της Firebase** — επαναφορά κωδικού, επιβεβαίωση,
+   * αλλαγή και ανάκτηση email (ADR-850 · ADR-851).
+   *
+   * 🔴 **Ονομάστηκε 2026-09-11 (ADR-851)**: η διαδρομή ζούσε μόνο ως φάκελος. Η Firebase
+   * έστελνε **κάθε** σύνδεσμό της στο `https://nestor-pagonis.vercel.app/auth/action`
+   * (ρύθμιση κονσόλας, 404 `DEPLOYMENT_NOT_FOUND`), χωρίς τίποτα στο repo να το ξέρει.
+   * Πλέον τη ρύθμιση την παράγει ο κώδικας από **αυτή** τη σταθερά + `publicUrl()`.
+   */
+  action: '/auth/action',
 } as const;
 
 /** Type for auth route keys */

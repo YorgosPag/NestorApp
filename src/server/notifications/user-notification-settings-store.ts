@@ -14,6 +14,7 @@
 import 'server-only';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { isHumanLanguage, type HumanLanguage } from '@/i18n/languages';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { mergeNotificationSettings } from '@/services/user-notification-settings/user-notification-settings.merge';
 import type { UserNotificationSettings } from '@/services/user-notification-settings/user-notification-settings.types';
@@ -31,6 +32,23 @@ import type { UserNotificationSettings } from '@/services/user-notification-sett
  */
 export function mergeStoredSettings(userId: string, stored: unknown): UserNotificationSettings {
   return mergeNotificationSettings(userId, stored);
+}
+
+/**
+ * **Η γλώσσα που ΔΗΛΩΣΕ ο χρήστης για τα email του — ή `null` αν δεν δήλωσε.** (ADR-851)
+ *
+ * ⚠️ **Όχι μέσα από το {@link loadUserNotificationSettings}**: εκείνο γεμίζει **προεπιλογή**
+ * (`el`) όταν λείπει το πεδίο, άρα δεν ξεχωρίζει «διάλεξε ελληνικά» από «δεν διάλεξε
+ * τίποτα». Για email ασφαλείας η διαφορά μετρά: χωρίς δήλωση, ο σωστός δεύτερος
+ * μάρτυρας είναι η γλώσσα της οθόνης **που μόλις ζήτησε** το μήνυμα.
+ */
+export async function loadDeclaredEmailLanguage(userId: string): Promise<HumanLanguage | null> {
+  const doc = await getAdminFirestore()
+    .collection(COLLECTIONS.USER_NOTIFICATION_SETTINGS)
+    .doc(userId)
+    .get();
+  const declared: unknown = doc.exists ? doc.get('language') : undefined;
+  return isHumanLanguage(declared) ? declared : null;
 }
 
 /** Οι ρυθμίσεις του χρήστη, από τη βάση, με τις προεπιλογές από κάτω. */

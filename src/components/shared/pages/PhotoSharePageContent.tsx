@@ -9,6 +9,7 @@
  */
 
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
+import { publicUrl } from '@/lib/http/public-origin';
 import React, { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
@@ -65,11 +66,15 @@ export function PhotoSharePageContent() {
       const existing = head.querySelectorAll('meta[property^="og:"]');
       existing.forEach(tag => tag.remove());
       // Add new
+      const shareUrl = publicUrl(`/share/photo/${id}`);
       const ogTags = [
         { property: 'og:title', content: photoData.title },
         { property: 'og:description', content: photoData.description },
         { property: 'og:image', content: photoData.url },
-        { property: 'og:url', content: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://nestor-app.vercel.app'}/share/photo/${id}` },
+        // ADR-851 Φ5 — από το ΕΝΑ SSoT. Ήταν `NEXT_PUBLIC_BASE_URL` (δεν ορίζεται πουθενά) με
+        // εφεδρεία το ΝΕΚΡΟ Vercel: κάθε κοινοποίηση δήλωνε ως κανονική διεύθυνση ένα υποdomain
+        // που μπορεί να διεκδικήσει τρίτος. Χωρίς διεύθυνση ⇒ ΚΑΝΕΝΑ `og:url`, ποτέ μαντεμένο.
+        ...(shareUrl === null ? [] : [{ property: 'og:url', content: shareUrl }]),
         { property: 'og:type', content: 'article' },
         { property: 'og:site_name', content: process.env.NEXT_PUBLIC_COMPANY_NAME || 'Nestor Construct' },
         { property: 'og:image:width', content: '1200' },

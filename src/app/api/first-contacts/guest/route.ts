@@ -39,6 +39,7 @@ import 'server-only';
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { readJsonBody } from '@/lib/api/json-body';
+import { publicOrigin, publicUrl } from '@/lib/http/public-origin';
 import { nowISO } from '@/lib/date-local';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withHeavyRateLimit } from '@/lib/middleware/with-rate-limit';
@@ -81,18 +82,15 @@ function maskEmail(email: string): string {
 }
 
 /**
- * Η ρίζα των δημόσιων διευθύνσεων.
+ * Ο σύνδεσμος επιβεβαίωσης — από το **ΕΝΑ** SSoT της δημόσιας διεύθυνσης (ADR-851 Φ5).
  *
- * ⚠️ Ίδια ανάγνωση με το `buildReviewUrl` του ADR-660 — **δύο** ονόματα επειδή τα
- * περιβάλλοντα διαφέρουν ιστορικά, και το κενό είναι **υπαρκτή** περίπτωση.
+ * 🔴 Εδώ ζούσε τοπικό `publicBase()` = `NEXT_PUBLIC_APP_URL ?? NEXT_PUBLIC_BASE_URL ?? ''` —
+ * δίδυμο του `publicOrigin()` με **άλλη** εφεδρεία, και με κενό string ως «απάντηση». Το
+ * `NEXT_PUBLIC_BASE_URL` **δεν ορίζεται σε κανένα περιβάλλον** (μετρημένο 2026-09-11) και
+ * το κενό έδινε **σχετικό** σύνδεσμο μέσα σε email — που δεν ανοίγει πουθενά.
  */
-function publicBase(): string {
-  const base = (process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXT_PUBLIC_BASE_URL ?? '').trim();
-  return base.replace(/\/+$/, '');
-}
-
-function confirmUrl(token: string): string {
-  return `${publicBase()}/contact/${token}`;
+function confirmUrl(token: string): string | null {
+  return publicUrl(`/contact/${token}`);
 }
 
 /** Τι πλησίασε, σε ανθρώπινη γλώσσα — **χωρίς καμία ανάγνωση**. */
@@ -122,7 +120,7 @@ function targetLabel(kind: 'listing' | 'professional'): string {
  */
 function targetHref(target: FirstContactTarget): string | null {
   const href = firstContactTargetHref(target);
-  return href === null ? null : `${publicBase()}${href}`;
+  return href === null ? null : publicUrl(href);
 }
 
 async function guestHandler(request: NextRequest): Promise<NextResponse<GuestContactResponse>> {
@@ -137,15 +135,27 @@ async function guestHandler(request: NextRequest): Promise<NextResponse<GuestCon
     return NextResponse.json({ error: 'EMAIL_REQUIRED' } as const, { status: 422 });
   }
 
+  // 🔴 **ΚΛΕΙΣΤΑ ΣΕ ΑΠΟΤΥΧΙΑ, ΚΑΙ ΠΡΙΝ ΤΗ ΓΡΑΦΗ** (ADR-851 Φ5): χωρίς δημόσια διεύθυνση ο
+  //    σύνδεσμος επιβεβαίωσης δεν μπορεί να υπάρξει. Μια πρόσκληση που γράφεται **χωρίς**
+  //    δρόμο παράδοσης είναι δεδομένα ανθρώπου σε συλλογή χωρίς σκοπό — καλύτερα καμία.
+  if (publicOrigin() === null) {
+    logger.error('Δεν υπάρχει δημόσια διεύθυνση — η πρόσκληση πρώτης επαφής δεν εκδόθηκε');
+    return NextResponse.json({ error: 'INVITE_NOT_SENT' } as const, { status: 503 });
+  }
+
   const issued = await issueFirstContactInvitation(
     getAdminFirestore(), declaration, email, nowISO(),
   );
+  const confirm = confirmUrl(issued.token);
+  if (confirm === null) {
+    return NextResponse.json({ error: 'INVITE_NOT_SENT' } as const, { status: 503 });
+  }
 
   const { subject, html, text } = buildFirstContactVerificationEmail({
     seekerName: declaration.disclosure.displayName.trim() || 'Καλησπέρα σας',
     targetLabel: targetLabel(declaration.target.kind),
     targetHref: targetHref(declaration.target),
-    confirmUrl: confirmUrl(issued.token),
+    confirmUrl: confirm,
     code: issued.code,
     lifetimeDays: LIFETIME_DAYS,
   });

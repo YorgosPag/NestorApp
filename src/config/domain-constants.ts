@@ -599,6 +599,12 @@ export const API_ROUTES = {
   AUTH: {
     SESSION: '/api/auth/session',
     MFA_ENROLL_COMPLETE: '/api/auth/mfa/enroll/complete',
+    /** ADR-851 — email επαναφοράς από το δικό μας mailer (δημόσιο, πάντα `202`). */
+    PASSWORD_RESET: '/api/auth/password-reset',
+    /** ADR-851 — email επιβεβαίωσης του ίδιου του καλούντα (ID token, χωρίς claims). */
+    EMAIL_VERIFICATION: '/api/auth/email-verification',
+    /** ADR-660 §6 — η κατάσταση του **δικού μου** αιτήματος ένταξης (ID token, χωρίς claims). */
+    WORKSPACE_ACCESS_STATE: '/api/auth/workspace-access-request',
   },
 
   // ── Admin ─────────────────────────────────────────────────────────────
@@ -609,6 +615,8 @@ export const API_ROUTES = {
     SEARCH_BACKFILL: '/api/admin/search-backfill',
     SEED_PARKING: '/api/admin/seed-parking',
     SET_USER_CLAIMS: '/api/admin/set-user-claims',
+    /** ADR-660 §6 — απόρριψη αιτήματος ένταξης (σώμα: `{ uid }`, περιορισμένη στον χώρο). */
+    WORKSPACE_ACCESS_REQUEST_DENY: '/api/admin/workspace-access-requests/deny',
     ROLE_MANAGEMENT: {
       USERS: '/api/admin/role-management/users',
       USER_STATUS: (uid: string) => `/api/admin/role-management/users/${uid}/status` as const,
