@@ -207,6 +207,12 @@ export const COLLECTIONS = {
    */
   FIRST_CONTACT_INVITATIONS:
     process.env.NEXT_PUBLIC_FIRST_CONTACT_INVITATIONS_COLLECTION || 'first_contact_invitations',
+  /** ADR-844 §13.8 — ημερολόγιο διεκδίκησης λογαριασμού (μόνο διακομιστής, deny-all). */
+  AUTH_REPROVISION_JOURNAL:
+    process.env.NEXT_PUBLIC_AUTH_REPROVISION_JOURNAL_COLLECTION || 'auth_reprovision_journal',
+  /** ADR-660 §6 — αιτήματα ένταξης σε χώρο εργασίας (γραφή μόνο διακομιστής). */
+  WORKSPACE_ACCESS_REQUESTS:
+    process.env.NEXT_PUBLIC_WORKSPACE_ACCESS_REQUESTS_COLLECTION || 'workspace_access_requests',
 
   FLOORS: process.env.NEXT_PUBLIC_FLOORS_COLLECTION || 'floors',
   /**

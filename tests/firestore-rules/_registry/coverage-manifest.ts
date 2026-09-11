@@ -323,6 +323,25 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     ...denyAllMatrix(),
   },
   {
+    // ADR-844 §13.8 — ΤΟ ΗΜΕΡΟΛΟΓΙΟ ΤΗΣ ΔΙΕΚΔΙΚΗΣΗΣ. **Τέταρτο `deny_all`, τέταρτος λόγος**:
+    // όχι ιδιωτικότητα, όχι αυθεντία γραφέα, όχι μυστικό — **ΕΠΙΛΟΓΗ ΤΑΥΤΟΤΗΤΑΣ**. Το
+    // έγγραφο λέει «το επόμενο uid αυτού του email είναι Χ». Όποιος το γράφει διαλέγει
+    // ποιος λογαριασμός θα πάρει ξένο γραμματοκιβώτιο.
+    collection: 'auth_reprovision_journal',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/auth-reprovision-journal.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
+    // ADR-660 §6 — ΤΟ ΑΙΤΗΜΑ ΕΝΤΑΞΗΣ. `deny_all` με λόγο **αυτο-έγκριση**: ο αιτών που
+    // γράφει `status: 'approved'` στο δικό του αίτημα θα έμπαινε σε ξένο χώρο χωρίς
+    // κανέναν να ρωτηθεί. Η λίστα και η κατάσταση περνούν από διαδρομές διακομιστή.
+    collection: 'workspace_access_requests',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/workspace-access-requests.rules.test.ts',
+    ...denyAllMatrix(),
+  },
+  {
     // ADR-777 Α9 — Η ΖΗΤΗΣΗ. **Το αντίθετο των τριών από πάνω.**
     //
     // 🔴 Οι τρεις προηγούμενες εγγραφές λένε `read: if true`. Αυτή είναι η μόνη
