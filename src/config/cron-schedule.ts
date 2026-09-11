@@ -50,6 +50,7 @@ import { runDemandListingMatchAnnounce } from '@/lib/cron/jobs/demand-listing-ma
 import { runOutboundEmailFlush } from '@/lib/cron/jobs/outbound-email-flush.job';
 import { runEmailIngestion } from '@/lib/cron/jobs/email-ingestion.job';
 import { runFilePurge } from '@/lib/cron/jobs/file-purge.job';
+import { runFirebaseAuthConfigDrift } from '@/lib/cron/jobs/firebase-auth-config-drift.job';
 import { runFirstContactInvitationExpiry } from '@/lib/cron/jobs/first-contact-invitation-expiry.job';
 import { runMandateExpiry } from '@/lib/cron/jobs/mandate-expiry.job';
 import { runOAuthCleanup } from '@/lib/cron/jobs/oauth-cleanup.job';
@@ -252,6 +253,22 @@ export const CRON_SCHEDULE: readonly CronJobDefinition[] = [
     maxRuntimeMinutes: 10,
     leaseMinutes: 15,
     run: runFirstContactInvitationExpiry,
+  },
+  {
+    slug: 'firebase-auth-config-drift',
+    path: '/api/cron/firebase-auth-config-drift',
+    description: 'Έλεγχος: συμφωνεί η ρύθμιση Firebase Auth της κονσόλας με το git; (ADR-851)',
+    enabled: true,
+    // 🔑 **Ημερήσια, και ο ρυθμός προκύπτει από το ΤΙ ΑΛΛΑΖΕΙ.** Η ρύθμιση αλλάζει μόνο
+    // με χέρι στην κονσόλα — σπάνια, αλλά σιωπηλά. Μία ματιά τη μέρα φράζει την αόρατη
+    // απόκλιση σε ≤24 ώρες (έναντι **μηνών** του περιστατικού Vercel), με **μία** κλήση.
+    // 04:15: μετά τις σαρώσεις του 03:30/03:45, μακριά από την κορυφή της ώρας (heartbeat).
+    schedule: '15 4 * * *',
+    timezone: CRON_TIMEZONE,
+    checkinMarginMinutes: 20,
+    maxRuntimeMinutes: 5,
+    leaseMinutes: 10,
+    run: runFirebaseAuthConfigDrift,
   },
   {
     slug: 'demand-interest-announce',
