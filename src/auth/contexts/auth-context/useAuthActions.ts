@@ -3,8 +3,6 @@ import {
   GoogleAuthProvider,
   createUserWithEmailAndPassword,
   getAdditionalUserInfo,
-  sendEmailVerification,
-  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut as firebaseSignOut,
@@ -24,11 +22,18 @@ import {
   type ProfileNames,
 } from '@/auth/utils/profile-names';
 import { getAuthErrorMessage } from './auth-context-errors';
+// ADR-851 — τα email λογαριασμού φεύγουν από τον δικό μας διακομιστή, στη γλώσσα της οθόνης.
+import { requestEmailVerificationMail, requestPasswordResetMail } from '@/auth/account-mail.client';
 
 const logger = createModuleLogger('AuthContextActions');
 
 interface UseAuthActionsParams {
   auth: Auth;
+  /**
+   * **Η γλώσσα της οθόνης, τη στιγμή της πράξης** (ADR-851) — getter, όχι στιγμιότυπο.
+   * ⚠️ Ο συνθέτης (`AuthContext`) την κατέχει· το hook **δεν** φορτώνει ολόκληρο το i18n.
+   */
+  currentLanguage: () => string;
   setUser: Dispatch<SetStateAction<FirebaseAuthUser | null>>;
   setLoading: Dispatch<SetStateAction<boolean>>;
   setError: Dispatch<SetStateAction<string | null>>;
@@ -118,6 +123,7 @@ function adoptProviderNames(credential: UserCredential): void {
 export function useAuthActions(params: UseAuthActionsParams) {
   const {
     auth,
+    currentLanguage,
     setUser,
     setLoading,
     setError,
@@ -245,7 +251,12 @@ export function useAuthActions(params: UseAuthActionsParams) {
         safeSetItem(`${STORAGE_KEYS.AUTH_GIVEN_NAME_PREFIX}${result.user.uid}`, givenName);
         safeSetItem(`${STORAGE_KEYS.AUTH_FAMILY_NAME_PREFIX}${result.user.uid}`, familyName);
         safeSetItem(`${STORAGE_KEYS.AUTH_PROFILE_COMPLETE_PREFIX}${result.user.uid}`, 'true');
-        await sendEmailVerification(result.user);
+        // ⚠️ Ο λογαριασμός ΕΧΕΙ ήδη γεννηθεί: αποτυχία του email δεν κάνει την εγγραφή
+        //    «αποτυχημένη» — αλλιώς ο άνθρωπος θα ξαναδοκίμαζε και θα έβλεπε «το email
+        //    χρησιμοποιείται ήδη» για λογαριασμό που μόλις έφτιαξε (ADR-851).
+        await requestEmailVerificationMail(currentLanguage()).catch((mailError: unknown) => {
+          logger.warn('[AuthContext] Verification email not sent after sign up', { error: mailError });
+        });
 
         // ADR-660: ΔΕΝ καλούμε πλέον το complete-registration εδώ. Το provisioning
         // (pending record + ειδοποίηση admin) γίνεται server-side από το universal
@@ -298,8 +309,8 @@ export function useAuthActions(params: UseAuthActionsParams) {
   const resetPassword = useCallback(async (email: string): Promise<void> => {
     try {
       setError(null);
-      logger.info('[AuthContext] Sending password reset to:', { email });
-      await sendPasswordResetEmail(auth, email);
+      logger.info('[AuthContext] Requesting password reset email');
+      await requestPasswordResetMail(email, currentLanguage());
       logger.info('[AuthContext] Password reset email sent successfully!');
     } catch (error) {
       logger.error('[AuthContext] Password reset failed', { error });
@@ -396,7 +407,7 @@ export function useAuthActions(params: UseAuthActionsParams) {
       }
 
       setError(null);
-      await sendEmailVerification(auth.currentUser);
+      await requestEmailVerificationMail(currentLanguage());
       logger.info('[AuthContext] Verification email sent');
     } catch (error) {
       handleError(error);

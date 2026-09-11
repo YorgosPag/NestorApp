@@ -52,6 +52,12 @@ jest.mock('@/lib/telemetry', () => ({
   createModuleLogger: () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }),
 }));
 
+// ADR-851 — τα email λογαριασμού πάνε από τον δικό μας διακομιστή· εδώ δεν ρωτιούνται.
+jest.mock('@/auth/account-mail.client', () => ({
+  requestEmailVerificationMail: jest.fn(async () => undefined),
+  requestPasswordResetMail: jest.fn(async () => undefined),
+}));
+
 import { useAuthActions } from '../useAuthActions';
 
 const UID = 'uid-1';
@@ -61,6 +67,7 @@ function setup(currentDisplayName: string | null) {
   const { result } = renderHook(() =>
     useAuthActions({
       auth: auth as never,
+      currentLanguage: () => 'el',
       setUser: jest.fn(),
       setLoading: jest.fn(),
       setError: jest.fn(),

@@ -29,6 +29,8 @@ import {
 } from './auth-context/auth-context-profile';
 import type { DeclaredOccupation } from '@/types/professional-identity';
 import { readPermissionsClaim } from '@/lib/auth/claim-permissions';
+import i18n from '@/i18n/config';
+import { bindAuthLanguage } from '@/auth/firebase-auth-language';
 import { useAuthActions } from './auth-context/useAuthActions';
 import { useClaimsRefresh } from './auth-context/use-claims-refresh';
 
@@ -141,6 +143,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const actions = useAuthActions({
     auth,
+    currentLanguage: () => i18n.language,
     setUser,
     setLoading,
     setError,
@@ -148,6 +151,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setMfaResolver,
     twoFactorService,
   });
+
+  // 🌐 ADR-851 — η γλώσσα των μηνυμάτων της ίδιας της Firebase ακολουθεί την οθόνη.
+  useEffect(() => bindAuthLanguage(auth, i18n), []);
 
   useEffect(() => {
     // ⛔ **ΤΟ `ensureDevUserProfile()` ΣΒΗΣΤΗΚΕ ΑΠΟ ΕΔΩ — 2026-08-27 (ADR-821 §2.6).**
