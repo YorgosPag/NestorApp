@@ -89,11 +89,9 @@ jest.mock('firebase/auth', () => ({
   }),
 }));
 
-let mockSuperAdminActiveCompany: string | null = null;
-jest.mock('@/services/firestore/super-admin-active-company', () => ({
-  getSuperAdminActiveCompanyId: () => mockSuperAdminActiveCompany,
-  onSuperAdminActiveCompanyChange: () => () => undefined,
-}));
+// ⚠️ ΤΟ STORE ΤΟΥ ΕΝΕΡΓΟΥ ΧΩΡΟΥ ΕΙΝΑΙ ΤΟ ΠΡΑΓΜΑΤΙΚΟ, ΟΧΙ MOCK (ADR-849 Β1): η κρίση
+//    «διεύθυνση ▸ επιλογέας ▸ claim» ζει στο `requestedWorkspace` του, και ένα mock θα
+//    δοκίμαζε μια δεύτερη, χειρόγραφη εκδοχή της — ακριβώς το σχήμα που έκρυψε το σφάλμα.
 
 jest.mock('@/lib/firestore/utils', () => ({
   getCol: jest.fn(() => ({ __collection: true })),
@@ -117,6 +115,11 @@ jest.mock('@/services/enterprise-id.service', () => ({
 
 // SUT — import AFTER mocks
 import { getAllContacts } from '../contacts-query.service';
+import {
+  setSuperAdminActiveCompanyId,
+  setUrlWorkspaceScope,
+} from '@/services/firestore/super-admin-active-company';
+import { orgWorkspace, personalWorkspace } from '@/types/workspace-membership';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -134,7 +137,8 @@ function tenantFilters(): WhereClause[] {
 beforeEach(() => {
   lastQueryConstraints = [];
   mockClaims = {};
-  mockSuperAdminActiveCompany = null;
+  setUrlWorkspaceScope(null);
+  setSuperAdminActiveCompanyId(null);
 });
 
 describe('getAllContacts — tenant scope (ADR-745)', () => {
@@ -172,7 +176,7 @@ describe('getAllContacts — tenant scope (ADR-745)', () => {
 
   it('super admin ΜΕ επιλογή switcher φιλτράρει στην ΕΠΙΛΕΓΜΕΝΗ εταιρεία, όχι στο claim του', async () => {
     mockClaims = { companyId: COMPANY_A, globalRole: 'super_admin' };
-    mockSuperAdminActiveCompany = COMPANY_B;
+    setSuperAdminActiveCompanyId(COMPANY_B);
 
     await getAllContacts();
 
@@ -183,7 +187,6 @@ describe('getAllContacts — tenant scope (ADR-745)', () => {
 
   it('super admin ΧΩΡΙΣ επιλογή δεν φιλτράρει (cross-tenant προβολή που ο κανόνας επιτρέπει)', async () => {
     mockClaims = { companyId: COMPANY_A, globalRole: 'super_admin' };
-    mockSuperAdminActiveCompany = null;
 
     await getAllContacts();
 
@@ -195,5 +198,74 @@ describe('getAllContacts — tenant scope (ADR-745)', () => {
 
     await expect(getAllContacts()).rejects.toThrow(/AUTHORIZATION_ERROR/);
     expect(lastQueryConstraints).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ADR-849 Β1 — Η ΔΙΕΥΘΥΝΣΗ ΕΙΝΑΙ Η ΑΡΧΗ. Μετρημένο ζωντανά: `/o/<ΠΑΓΩΝΗΣ>/properties/<id>`
+// έδειξε «δεν βρέθηκε», γιατί ο πελάτης φιλτράριζε με τον ΕΠΙΛΟΓΕΑ του super-admin.
+// ---------------------------------------------------------------------------
+
+describe('ADR-849 Β1 — ο χώρος της διεύθυνσης κρίνει το φίλτρο', () => {
+  it('Δ1 🔴 super admin: η ΔΙΕΥΘΥΝΣΗ νικά τον επιλογέα (η ζωντανή βλάβη)', async () => {
+    mockClaims = { companyId: COMPANY_A, globalRole: 'super_admin' };
+    setSuperAdminActiveCompanyId(COMPANY_B); // ο επιλογέας «θυμάται» άλλη εταιρεία
+    setUrlWorkspaceScope(orgWorkspace(COMPANY_A)); // η διεύθυνση λέει ΑΥΤΗ
+
+    await getAllContacts();
+
+    expect(tenantFilters()).toEqual([
+      { __kind: 'where', field: 'companyId', op: '==', value: COMPANY_A },
+    ]);
+  });
+
+  it('Δ2: απλός χρήστης σε χώρο της διεύθυνσης ⇒ φίλτρο στον χώρο (την άδεια την κρίνουν φύλακας + κανόνες)', async () => {
+    mockClaims = { companyId: COMPANY_A, globalRole: 'internal_user' };
+    setUrlWorkspaceScope(orgWorkspace(COMPANY_B));
+
+    await getAllContacts();
+
+    expect(tenantFilters()).toEqual([
+      { __kind: 'where', field: 'companyId', op: '==', value: COMPANY_B },
+    ]);
+  });
+
+  it('Δ3: ο επιλογέας ΔΕΝ ισχύει για απλό χρήστη, ακόμα κι αν κάποιος τον έγραψε', async () => {
+    mockClaims = { companyId: COMPANY_A, globalRole: 'internal_user' };
+    setSuperAdminActiveCompanyId(COMPANY_B);
+
+    await getAllContacts();
+
+    expect(tenantFilters()).toEqual([
+      { __kind: 'where', field: 'companyId', op: '==', value: COMPANY_A },
+    ]);
+  });
+
+  it('Δ4 🔴 ιδιωτικός χώρος, απλός χρήστης με εταιρεία ⇒ ΚΑΜΙΑ εταιρεία (ADR-809), όχι το claim του', async () => {
+    mockClaims = { companyId: COMPANY_A, globalRole: 'internal_user' };
+    setUrlWorkspaceScope(personalWorkspace('user_test'));
+
+    await expect(getAllContacts()).rejects.toThrow(/AUTHORIZATION_ERROR/);
+    expect(lastQueryConstraints).toEqual([]);
+  });
+
+  it('Δ5 🔴 ιδιωτικός χώρος, super admin ⇒ ΠΟΤΕ καθολική όψη (ούτε με επιλογέα)', async () => {
+    mockClaims = { companyId: COMPANY_A, globalRole: 'super_admin' };
+    setSuperAdminActiveCompanyId(COMPANY_B);
+    setUrlWorkspaceScope(personalWorkspace('user_test'));
+
+    await expect(getAllContacts()).rejects.toThrow(/AUTHORIZATION_ERROR/);
+    expect(lastQueryConstraints).toEqual([]);
+  });
+
+  it('Δ6: χωρίς claim εταιρείας, σε χώρο οργανισμού που έκρινε ο φύλακας ⇒ φίλτρο στον χώρο', async () => {
+    mockClaims = { globalRole: 'internal_user' };
+    setUrlWorkspaceScope(orgWorkspace(COMPANY_B));
+
+    await getAllContacts();
+
+    expect(tenantFilters()).toEqual([
+      { __kind: 'where', field: 'companyId', op: '==', value: COMPANY_B },
+    ]);
   });
 });

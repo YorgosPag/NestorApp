@@ -232,6 +232,51 @@ CHECK 3.55 ήταν πράσινο στο ίδιο commit — τυφλό σημ�
 
 ---
 
+## 6δ. Β1 — Ο ΣΥΝΔΕΣΜΟΣ «ΤΟ ΑΚΙΝΗΤΟ ΔΕΝ ΒΡΕΘΗΚΕ» *(2026-09-11)*
+
+**Σύμπτωμα (Giorgio, email της 10/9)**: γραμμή «1 άνθρωπος ψάχνει ακίνητο σαν το δικό σας» → `/n/<id>` →
+`/o/comp_9c7c…/properties/prop_ef2eaebd…` ⇒ «Το ακίνητο δεν βρέθηκε — …δεν ανήκει στην εταιρεία που έχετε επιλέξει».
+Αναπαράχθηκε ζωντανά (μόνιμο, όχι αναβόσβημα).
+
+**Ρίζα — ΔΕΝ ήταν της ειδοποίησης** (audit με `grep` + βάση):
+
+| Κρίκος | Εύρημα | |
+|---|---|---|
+| Ακίνητο | `properties/prop_ef2eaebd…`, `companyId = comp_9c7c…` (ίδιο id με τη δημόσια αγγελία) | ✅ |
+| Παραγωγός | `announceOnePlace` → `placeDetailHref('company-property')` → `/properties/<id>` | ✅ |
+| `/n/{id}` | `workspaceDestinationFor` → `/o/comp_9c7c…/…` | ✅ |
+| Φύλακας | `o/[workspace]/layout.tsx` επαλήθευσε τον χώρο | ✅ |
+| **Πελάτης** | `SharedPropertiesProvider` → `buildTenantConstraints` → client `resolveEffectiveCompanyId` ⇒ **επιλογέας** super-admin (`localStorage` = `comp_6d45abbc`, «Αποχετευτικά Έργα Ροή») | 🔴 |
+
+Η απόφαση υπήρχε (**ADR-787 §5.3 ζ**: «ο μεταφορέας γεμίζει από τη διεύθυνση») — δεν είχε υλοποιηθεί. Και η κλάση ήταν
+ευρύτερη: ο απλός χρήστης στο `/o/me` έβλεπε δεδομένα της εταιρείας του· ο super-admin στο `/o/me` = καθολική όψη.
+
+**Έρευνα (πηγές)**: Linear (`linear.app/<slug>`), Vercel (`vercel.com/<team>`, switch = νέο URL), Slack
+(`app.slack.com/client/<TEAM>`), Jira (cloudId στο path), Stripe (`acct_…`) ⇒ ο οργανισμός ζει στη **διεύθυνση**, ο
+επιλογέας **πλοηγεί**. React (react.dev, *You Might Not Need an Effect*): ό,τι υπολογίζεται στο render δεν θέλει Effect.
+GitHub Notifications (`subject.url` = αναφορά οντότητας) · Slack `app_redirect` (`team` = ρητός οργανισμός-στόχος).
+
+**Φάση Α — υλοποιημένη** (λεπτομέρειες: ADR-787 §9 γραμμή 2026-09-11 · ADR-354 changelog):
+
+| Κομμάτι | Πού |
+|---|---|
+| Η εμβέλεια του κριτή φτάνει στον πελάτη | `o/[workspace]/layout.tsx` → **`components/workspace/WorkspaceScopeBridge.tsx`** (`useLayoutEffect`) |
+| ΜΙΑ απάντηση «ποιον χώρο ζητώ» | `services/firestore/super-admin-active-company.ts` — `requestedWorkspace` (διεύθυνση ▸ επιλογέας εκτός `/o/` ▸ claim) |
+| Φίλτρο Firestore | client `resolveEffectiveCompanyId` — `personal` ⇒ `MissingTenantError` (ADR-809), ποτέ `null` |
+| Κεφαλίδα HTTP | **`lib/api/company-scope-source.ts`** — ο client **ρωτά** (ήταν πεδίο που έσπρωχνε ένα effect) |
+| Hooks / επιλογέας | `useCompanyId` · `SuperAdminCompanyContext` (παράγει) · `CompanySwitcher` (**πλοηγεί**) |
+| Αλλαγή χώρου | `SharedPropertiesProvider` ξαναστήνεται και δηλώνει φόρτωση · `subscribe` με **μετρητή γενιάς** (διαρροή ακροατή) |
+| Η καρτέλα | **`hooks/property-viewer-selection.ts`** — το ακίνητο της διαδρομής **παράγεται** στο ίδιο καρέ (ADR-777 §8.30.12) |
+
+**Φάση Β — επόμενη συνεδρία** (τα 14 έγγραφα `properties.demandInterest` μετρήθηκαν: 6 `ownp_*` ✅ · **5 `prop_*` με
+`/offers/prop_*`** 🔴 για όλους, από πριν το ADR-841 Α18.9 · 3 `prop_*` με `/properties/…` ✅ μετά την Α):
+- **Β1 — χώρος-στόχος από τον παραγωγό**: `/n/{id}` και κουδούνι βάζουν σήμερα τον χώρο του **θεατή** (claim), όχι του
+  γεγονότος ⇒ ο παραγωγός δηλώνει `WorkspaceRef` (Slack `team`), ποτέ συμπέρασμα από `tenantId`.
+- **Β2 — ανιχνευτής απόκλισης προορισμών** (`notifications:destination-drift`, ξηρό εξ ορισμού): ρωτά το SSoT του
+  παραγωγού (`placeDetailHref` + κατοχή από τη **συλλογή**) και διορθώνει τα 5 — **μόνο με έγκριση**.
+
+---
+
 ## 7. ΠΑΛΙΑ ΔΕΔΟΜΕΝΑ — ΚΑΘΕ ΑΠΟΥΣΙΑ ΣΒΗΝΕΙ ΜΟΝΟ Ο,ΤΙ ΤΗΣ ΑΝΗΚΕΙ
 
 | Λείπει | Αποτέλεσμα |
@@ -272,6 +317,9 @@ CHECK 3.55 ήταν πράσινο στο ίδιο commit — τυφλό σημ�
    εμβέλειας **των 2 τύπων**. 🔶 Εκκρεμεί: κεφαλίδες `List-Unsubscribe` (το API του Gmail δεν τις δίνει — «Εμφάνιση
    πρωτοτύπου»), περπάτημα σελίδας token, one-click. 🔶 Μικρό εύρημα: το κρυφό preheader επαναλαμβάνει την πρώτη γραμμή
    («Έχετε 2 νέες ειδοποιήσεις:» δύο φορές στην προεπισκόπηση του Gmail).
+   **Έλεγχος συνδέσμων (Giorgio, 10/9)**: #1 (νέα αγγελία → δημόσια αγγελία) ✅ · #2 (ζήτηση → καρτέλα ακινήτου) 🔴 «δεν
+   βρέθηκε» ⇒ ρίζα στον **πελάτη**, όχι στην ειδοποίηση — **§6δ, Φάση Α διορθωμένη** (εκκρεμεί deploy + ζωντανό κλικ) ·
+   Β2 κεφαλίδες · Β3 σελίδα token · Β4 one-click: ⏳.
 4. 🔶 **`List-Id` ανά λίστα** (σύσταση των Google subscription guidelines) — δεν μπήκε ακόμη. Το `List-Unsubscribe`
    ανά τύπο δουλεύει χωρίς αυτό· το `List-Id` βοηθά το πρόγραμμα email να **ονομάσει** τη λίστα.
 5. 🔶 **Σίγαση ανά ζήτηση** (Δ6, το «saved search» του Zillow) — εκτός εύρους, ονομασμένο.
@@ -326,3 +374,9 @@ CHECK 3.55 ήταν πράσινο στο ίδιο commit — τυφλό σημ�
   καρφωμένο σε `crm.newCommunication`)· **κανένα** script δεν εισήγαγε ακόμη `@/server/*` — env από το `loadEnvLocal`
   (`@next/env` απρόσιτο με pnpm). 20 tests · μετάλλαξη φρουρού υποχρεωτικού πιάστηκε · `jscpd:diff` 0 · ξηρό τρέξιμο στη
   ζωντανή βάση: 2 ειδοποιήσεις της 9/9, «αναβολή έως 11/9 20:00 (daily-window)». Μυστικό παραγωγής + deploy επαληθευμένα.
+- **2026-09-11 (ε)** — **Β1 Φάση Α** (§6δ): ο σύνδεσμος #2 του email έδειχνε «δεν βρέθηκε» επειδή ο **πελάτης** φιλτράριζε
+  με τον επιλογέα του super-admin αντί για τον χώρο της διεύθυνσης. Υλοποιήθηκε το ADR-787 §5.3 ζ (γέφυρα από τον φύλακα ·
+  μία απάντηση `requestedWorkspace` · κεφαλίδα που ρωτά · επιλογέας που πλοηγεί · ιδιωτικός χώρος ⇒ `MissingTenantError`)
+  + μετρητής γενιάς στο `subscribe` + καρτέλα που παράγει το ακίνητο. Έρευνα με πηγές (Linear · Vercel · Slack · Jira ·
+  Stripe · react.dev · GitHub · Slack `app_redirect`). 11 σουίτες / 101 tests · μεταλλάξεις · CHECK 3.58/3.61/3.34 ·
+  `jscpd:diff`. Φάση Β (χώρος-στόχος από τον παραγωγό + ανιχνευτής απόκλισης για τα 5 `/offers/prop_*`) ⇒ handoff.

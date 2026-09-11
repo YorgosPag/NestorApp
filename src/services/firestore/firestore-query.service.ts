@@ -26,9 +26,12 @@ import {
   documentId,
   onSnapshot,
   serverTimestamp,
+  type CollectionReference,
   type DocumentData,
   type DocumentSnapshot,
+  type Query,
   type QueryConstraint,
+  type QuerySnapshot,
   type Unsubscribe,
 } from 'firebase/firestore';
 
@@ -107,10 +110,132 @@ function buildTenantConstraints(
 
 // ADR-218: chunkArray imported from centralized @/lib/array-utils
 
+/** «Κανένας ακροατής» — ΕΝΑ όνομα αντί για έξι σκόρπια `() => {}` (CHECK 3.28). */
+const NOOP_UNSUBSCRIBE: Unsubscribe = (): void => undefined;
+
 /** Extract typed document data from a snapshot */
 function extractDoc<T>(snap: DocumentSnapshot): T | null {
   if (!snap.exists()) return null;
   return { id: snap.id, ...snap.data() } as T;
+}
+
+// 🔑 ΟΙ ΤΕΣΣΕΡΙΣ ΒΟΗΘΟΙ ΠΑΡΑΚΑΤΩ ΕΞΗΧΘΗΣΑΝ ΜΕ ΜΕΤΡΗΣΗ (CHECK 3.28, ADR-849 Β1): το
+//    `jscpd:diff` βρήκε ΤΡΕΙΣ προϋπάρχοντες κλώνους μέσα σε αυτό το αρχείο — η δόμηση του
+//    query (`getAll` ↔ `subscribe`), ο φρουρός ισότητας και ο χειριστής στιγμιότυπου
+//    (`subscribe` ↔ `subscribeSubcollection`). Τρία αντίγραφα του ίδιου φακέλου
+//    αποτελέσματος είναι τρία σημεία όπου ένα νέο πεδίο μπορεί να ξεχαστεί.
+
+/** Τα έγγραφα ενός στιγμιότυπου συλλογής, με το `id` τους. */
+function mapDocuments<T>(snapshot: QuerySnapshot): T[] {
+  return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as unknown as T));
+}
+
+/** Ο φάκελος αποτελέσματος — ΕΝΑΣ για ανάγνωση και για ακρόαση. */
+function toQueryResult<T>(snapshot: QuerySnapshot, documents: readonly T[]): QueryResult<T> {
+  return {
+    documents,
+    size: snapshot.size,
+    isEmpty: snapshot.empty,
+    lastDocument: snapshot.docs[snapshot.docs.length - 1] ?? null,
+  };
+}
+
+/** Το query: πρώτα τα `leading` (φίλτρο μισθωτή), μετά του καλούντα, τέλος το όριο. */
+function composeQuery(
+  ref: CollectionReference,
+  leading: readonly QueryConstraint[],
+  options: QueryOptions,
+): Query {
+  const constraints: QueryConstraint[] = [...leading, ...(options.constraints ?? [])];
+  if (options.maxResults) {
+    constraints.push(firestoreLimit(options.maxResults));
+  }
+  return constraints.length > 0 ? query(ref, ...constraints) : query(ref);
+}
+
+/**
+ * Ο χειριστής στιγμιότυπου συλλογής, με τον φρουρό ισότητας (ADR-361) — κοινός για
+ * `subscribe` και `subscribeSubcollection`. Το `slot` το κατέχει ο καλών, γιατί εκείνος
+ * ξέρει πότε μηδενίζεται (σε κάθε ανοικοδόμηση).
+ */
+function guardedCollectionListener<T extends DocumentData>(
+  slot: EqualitySlot<readonly T[]>,
+  options: SubscribeOptions<T>,
+  onData: (result: QueryResult<T>) => void,
+): (snapshot: QuerySnapshot) => void {
+  const equalityFn = options.equalityFn ?? defaultDocumentsEqual;
+  const guardEnabled = options.skipEqualityGuard !== true;
+  return snapshot => {
+    const documents = mapDocuments<T>(snapshot);
+    if (guardEnabled && slot.shouldSkip(documents, equalityFn)) {
+      return;
+    }
+    onData(toQueryResult(snapshot, documents));
+  };
+}
+
+/**
+ * **Ο ΕΝΑΣ ακροατής συλλογής** — για `subscribe` **και** `subscribeSubcollection`.
+ *
+ * Ήταν δύο χειρόγραφα αντίγραφα (CHECK 3.28), και μόνο το ένα ήξερε να ξαναστήνεται όταν
+ * αλλάζει ο χώρος. Τώρα η διαφορά τους είναι **δύο παράμετροι**: ποια φίλτρα μπαίνουν
+ * πρώτα (`leading`) και αν ο ακροατής ακολουθεί τον χώρο (`followScope`).
+ *
+ * 🔴 **Μετρητής γενιάς — μόνο η ΤΕΛΕΥΤΑΙΑ ανοικοδόμηση στήνει ακροατή** (ADR-849 Β1). Το
+ * `rebuild` περιμένει (`waitForAuthReady` · `requireAuthContext`). Δύο διαδοχικές
+ * ειδοποιήσεις — π.χ. μετάβαση `/o/A` → `/o/B`: «έξοδος από χώρο» και αμέσως «νέος χώρος»
+ * στο ίδιο commit — ξεκινούσαν **δύο** αναμονές· και οι δύο έστηναν `onSnapshot`, και ο
+ * πρώτος **δεν απεγγραφόταν ποτέ**. Διαρροή ακροατή = αναγνώσεις που πληρώνονται για πάντα.
+ */
+function subscribeToCollection<T extends DocumentData>(
+  ref: CollectionReference,
+  leading: (ctx: TenantContext) => readonly QueryConstraint[],
+  followScope: boolean,
+  onData: (result: QueryResult<T>) => void,
+  onError: (error: Error) => void,
+  options: SubscribeOptions<T>,
+): Unsubscribe {
+  // Return no-op unsubscribe when disabled — ΕΝΑΣ έλεγχος, όχι ένας ανά μέθοδο.
+  if (options.enabled === false) return NOOP_UNSUBSCRIBE;
+
+  let innerUnsub: Unsubscribe = NOOP_UNSUBSCRIBE;
+  let cancelled = false;
+  let generation = 0;
+
+  // ADR-361: content-equality guard. Reset on every rebuild so a tenant change
+  // does not suppress the first delivery of the new tenant.
+  const slot = new EqualitySlot<readonly T[]>();
+  const listener = guardedCollectionListener(slot, options, onData);
+
+  const rebuild = async (): Promise<void> => {
+    const mine = ++generation;
+    innerUnsub();
+    innerUnsub = NOOP_UNSUBSCRIBE;
+    slot.reset();
+    const stale = (): boolean => cancelled || mine !== generation;
+    if (stale()) return;
+    if (!(await waitForAuthReady())) return;
+    if (stale()) return;
+    const ctx = await requireAuthContext();
+    if (stale()) return;
+    innerUnsub = onSnapshot(composeQuery(ref, leading(ctx), options), listener, onError);
+  };
+
+  void rebuild().catch(onError);
+
+  // Rebuild when the requested workspace changes (URL · switcher, ADR-354 / ADR-849 Β1) —
+  // otherwise long-lived real-time listeners stay scoped to the previous tenant.
+  const unsubScope = followScope
+    ? onSuperAdminActiveCompanyChange(() => {
+        void rebuild().catch(onError);
+      })
+    : NOOP_UNSUBSCRIBE;
+
+  return () => {
+    cancelled = true;
+    innerUnsub();
+    unsubScope();
+  };
 }
 
 // ============================================================================
@@ -138,32 +263,11 @@ class FirestoreQueryService implements IFirestoreQueryService {
     options: QueryOptions = {}
   ): Promise<QueryResult<T>> {
     const ctx = await requireAuthContext();
-    const colName = resolveCollectionName(key);
-    const colRef = collection(db, colName);
-
-    const allConstraints: QueryConstraint[] = [
-      ...buildTenantConstraints(key, ctx, options.tenantOverride),
-      ...(options.constraints ?? []),
-    ];
-
-    if (options.maxResults) {
-      allConstraints.push(firestoreLimit(options.maxResults));
-    }
-
-    const q = allConstraints.length > 0
-      ? query(colRef, ...allConstraints)
-      : query(colRef);
+    const colRef = collection(db, resolveCollectionName(key));
+    const q = composeQuery(colRef, buildTenantConstraints(key, ctx, options.tenantOverride), options);
 
     const snapshot = await getDocs(q);
-    const documents = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as unknown as T));
-    const lastDocument = snapshot.docs[snapshot.docs.length - 1] ?? null;
-
-    return {
-      documents,
-      size: snapshot.size,
-      isEmpty: snapshot.empty,
-      lastDocument,
-    };
+    return toQueryResult(snapshot, mapDocuments<T>(snapshot));
   }
 
   // --- WRITE: Create -----------------------------------------------------------
@@ -243,76 +347,14 @@ class FirestoreQueryService implements IFirestoreQueryService {
     onError: (error: Error) => void,
     options: SubscribeOptions<T> = {}
   ): Unsubscribe {
-    if (options.enabled === false) {
-      // Return no-op unsubscribe when disabled
-      return () => { /* noop */ };
-    }
-
-    const colName = resolveCollectionName(key);
-    const colRef = collection(db, colName);
-
-    let innerUnsub: Unsubscribe = () => { /* noop */ };
-    let cancelled = false;
-
-    // ADR-361: content-equality guard. Reset on every rebuild so a switcher
-    // tenant change does not suppress the first delivery of the new tenant.
-    const slot = new EqualitySlot<readonly T[]>();
-    const equalityFn = options.equalityFn ?? defaultDocumentsEqual;
-    const guardEnabled = options.skipEqualityGuard !== true;
-
-    const rebuild = async () => {
-      innerUnsub();
-      slot.reset();
-      if (cancelled) return;
-      if (!(await waitForAuthReady())) return;
-      if (cancelled) return;
-      const ctx = await requireAuthContext();
-      if (cancelled) return;
-
-      const allConstraints: QueryConstraint[] = [
-        ...buildTenantConstraints(key, ctx, options.tenantOverride),
-        ...(options.constraints ?? []),
-      ];
-
-      if (options.maxResults) {
-        allConstraints.push(firestoreLimit(options.maxResults));
-      }
-
-      const q = allConstraints.length > 0
-        ? query(colRef, ...allConstraints)
-        : query(colRef);
-
-      innerUnsub = onSnapshot(q,
-        snapshot => {
-          const documents = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as unknown as T));
-          if (guardEnabled && slot.shouldSkip(documents, equalityFn)) {
-            return;
-          }
-          const lastDocument = snapshot.docs[snapshot.docs.length - 1] ?? null;
-          onData({
-            documents,
-            size: snapshot.size,
-            isEmpty: snapshot.empty,
-            lastDocument,
-          });
-        },
-        onError
-      );
-    };
-
-    void rebuild().catch(onError);
-
-    // Rebuild query when super admin switches company (ADR-354) — otherwise
-    // long-lived real-time listeners stay scoped to the previous tenant.
-    const unsubSwitcher = onSuperAdminActiveCompanyChange(() => {
-      void rebuild().catch(onError);
-    });
-
-    return () => {
-      cancelled = true;
-      innerUnsub();
-      unsubSwitcher();
-    };
+    return subscribeToCollection(
+      collection(db, resolveCollectionName(key)),
+      ctx => buildTenantConstraints(key, ctx, options.tenantOverride),
+      true,
+      onData,
+      onError,
+      options,
+    );
   }
 
   // --- SUBSCRIBE: Single Document -----------------------------------------------
@@ -325,13 +367,13 @@ class FirestoreQueryService implements IFirestoreQueryService {
     options: SubscribeDocOptions<T> = {}
   ): Unsubscribe {
     if (options.enabled === false) {
-      return () => { /* noop */ };
+      return NOOP_UNSUBSCRIBE;
     }
 
     const colName = resolveCollectionName(key);
     const docRef = doc(db, colName, docId);
 
-    let unsubscribe: Unsubscribe = () => { /* noop */ };
+    let unsubscribe: Unsubscribe = NOOP_UNSUBSCRIBE;
     let cancelled = false;
 
     // ADR-361: content-equality guard for single-document subscription.
@@ -373,61 +415,16 @@ class FirestoreQueryService implements IFirestoreQueryService {
     onError: (error: Error) => void,
     options: SubscribeOptions<T> = {}
   ): Unsubscribe {
-    if (options.enabled === false) {
-      return () => { /* noop */ };
-    }
-
-    const parentColName = resolveCollectionName(parentKey);
-    const subColRef = collection(db, parentColName, parentId, subcollectionName);
-
-    let unsubscribe: Unsubscribe = () => { /* noop */ };
-    let cancelled = false;
-
-    // ADR-361: content-equality guard for subcollection subscription.
-    const slot = new EqualitySlot<readonly T[]>();
-    const equalityFn = options.equalityFn ?? defaultDocumentsEqual;
-    const guardEnabled = options.skipEqualityGuard !== true;
-
-    void waitForAuthReady().then(hasUser => {
-      if (cancelled || !hasUser) return;
-      return requireAuthContext();
-    }).then(() => {
-      if (cancelled) return;
-
-      const allConstraints: QueryConstraint[] = [
-        ...(options.constraints ?? []),
-      ];
-
-      if (options.maxResults) {
-        allConstraints.push(firestoreLimit(options.maxResults));
-      }
-
-      const q = allConstraints.length > 0
-        ? query(subColRef, ...allConstraints)
-        : query(subColRef);
-
-      unsubscribe = onSnapshot(q,
-        snapshot => {
-          const documents = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as unknown as T));
-          if (guardEnabled && slot.shouldSkip(documents, equalityFn)) {
-            return;
-          }
-          const lastDocument = snapshot.docs[snapshot.docs.length - 1] ?? null;
-          onData({
-            documents,
-            size: snapshot.size,
-            isEmpty: snapshot.empty,
-            lastDocument,
-          });
-        },
-        onError
-      );
-    }).catch(onError);
-
-    return () => {
-      cancelled = true;
-      unsubscribe();
-    };
+    // Υποσυλλογή: τον μισθωτή τον φέρει ήδη ο γονέας (η διαδρομή του εγγράφου) ⇒ κανένα
+    // φίλτρο πρώτο, και καμία ανοικοδόμηση όταν αλλάζει ο χώρος — ίδια συμπεριφορά με πριν.
+    return subscribeToCollection(
+      collection(db, resolveCollectionName(parentKey), parentId, subcollectionName),
+      () => [],
+      false,
+      onData,
+      onError,
+      options,
+    );
   }
 
   // --- BATCH: Multiple IDs -----------------------------------------------------

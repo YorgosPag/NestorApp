@@ -109,10 +109,8 @@ jest.mock('firebase/auth', () => ({
   }),
 }));
 
-jest.mock('@/services/firestore/super-admin-active-company', () => ({
-  getSuperAdminActiveCompanyId: () => null,
-  onSuperAdminActiveCompanyChange: () => () => undefined,
-}));
+// Το store του ενεργού χώρου είναι το ΠΡΑΓΜΑΤΙΚΟ (καθαρό φύλλο, κενή αρχική κατάσταση ⇒
+// `default`): ένα mock θα ξανάγραφε χειρόγραφα την κρίση του — ADR-849 Β1.
 
 jest.mock('@/lib/firestore/utils', () => ({
   getCol: jest.fn(() => ({ __collection: true })),
