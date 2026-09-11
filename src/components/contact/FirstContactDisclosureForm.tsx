@@ -40,8 +40,15 @@ import {
   type FirstContactFormBlocker,
   type FirstContactFormValues,
 } from '@/lib/contact/first-contact-form-values';
+import type { FirstContactChannel } from '@/lib/contact/first-contact-channel';
 
-import { ACT_KEYS, FIRST_CONTACT_NS, FORM_BLOCKER_KEYS } from './first-contact-labels';
+import {
+  ACT_KEYS,
+  CHANNEL_EMAIL_HINT_KEYS,
+  CHANNEL_NOTICE_KEYS,
+  FIRST_CONTACT_NS,
+  FORM_BLOCKER_KEYS,
+} from './first-contact-labels';
 
 type FieldName = keyof FirstContactFormValues;
 
@@ -50,6 +57,15 @@ const FIELD_ORDER: readonly FieldName[] = ['name', 'email', 'phone'];
 export interface FirstContactDisclosureFormProps {
   readonly values: FirstContactFormValues;
   readonly onValuesChange: (values: FirstContactFormValues) => void;
+  /**
+   * **Από ποιο κανάλι θα φύγει η δήλωση** — η **ΙΔΙΑ** τιμή με την οποία ο διάλογος
+   * διαλέγει δρόμο (ADR-844 §12). ⛔ Η φόρμα **δεν** την υπολογίζει μόνη της: δεύτερος
+   * υπολογισμός θα ήταν δεύτερη απάντηση, και το κείμενο θα μπορούσε ξανά να πει άλλο
+   * από αυτό που γίνεται.
+   */
+  readonly channel: FirstContactChannel;
+  /** Το email είναι **δεμένο** στον λογαριασμό — `readOnly`, πρότυπο Airbnb/LinkedIn. */
+  readonly emailLocked: boolean;
   readonly sending: boolean;
   /** Καλείται **μόνο** όταν δεν υπάρχει εμπόδιο — η φόρμα δεν στέλνει ό,τι δεν στέκει. */
   readonly onSubmit: () => void;
@@ -59,6 +75,8 @@ export interface FirstContactDisclosureFormProps {
 export function FirstContactDisclosureForm({
   values,
   onValuesChange,
+  channel,
+  emailLocked,
   sending,
   onSubmit,
   onCancel,
@@ -120,27 +138,35 @@ export function FirstContactDisclosureForm({
         values={values}
         onValuesChange={onValuesChange}
         fieldId={fieldId}
+        channel={channel}
+        emailLocked={emailLocked}
         sending={sending}
         errorFor={errorFor}
         onTouched={markTouched}
       />
 
       {/*
-        🔴 **Η ΓΡΑΜΜΗ ΤΟΥ EDPB — ΠΡΙΝ ΤΟ ΚΟΥΜΠΙ, ΟΧΙ ΜΕΤΑ ΤΗΝ ΥΠΟΒΟΛΗ** (ADR-844 #1).
+        🔴 **ΤΙ ΘΑ ΣΥΜΒΕΙ — ΠΡΙΝ ΤΟ ΚΟΥΜΠΙ, ΚΑΙ ΑΝΑ ΚΑΝΑΛΙ** (ADR-844 #1 · §12).
 
-        Οι *Recommendations 2/2025* απαιτούν ρητή ενημέρωση για το **γιατί** γεννιέται
-        λογαριασμός. Μια ενημέρωση **μετά** την πράξη δεν είναι ενημέρωση, είναι
-        ανακοίνωση — και ο άνθρωπος δεν είχε την ευκαιρία να πει όχι.
+        Ως τις 2026-09-11 εδώ ζούσε **μία** γραμμή *(«σας στέλνουμε σύνδεσμο»)* για
+        **τέσσερις** συνέπειες — ψέμα για τον συνδεδεμένο με επιβεβαιωμένο email, για τον
+        οποίο η πράξη φεύγει αμέσως. Τώρα η γραμμή είναι του **καναλιού** που θα
+        χρησιμοποιηθεί, με την ίδια τιμή που διαλέγει τον δρόμο.
+
+        ⚖️ Για τον **ανώνυμο** είναι η γραμμή του EDPB *(Recommendations 2/2025)*: ρητή
+        ενημέρωση για το **γιατί** γεννιέται λογαριασμός, **πριν** την πράξη.
 
         ⚠️ **`<p>` μέσα στη φόρμα, ΟΧΙ tooltip / «μάθετε περισσότερα»**: ό,τι κρύβεται
-        πίσω από κλικ δεν μετρά ως ενημέρωση, και η μέτρηση του Baymard *(20-30% πτώση
-        όταν ζητείται λογαριασμός **πριν** την πράξη)* αφορά ακριβώς ανθρώπους που
-        **δεν** κατάλαβαν γιατί τους ζητήθηκε.
+        πίσω από κλικ δεν μετρά ως ενημέρωση *(Baymard: 20-30% πτώση όταν ο άνθρωπος
+        δεν κατάλαβε γιατί του ζητήθηκε λογαριασμός)*.
 
-        ⚠️ **ΔΕΝ είναι `role="alert"`**: τίποτα δεν συνέβη ακόμη. Ένα alert σε στατικό
-        κείμενο θα ανακοίνωνε γεγονός που δεν υπάρχει.
+        ⚠️ **ΔΕΝ είναι `role="alert"` ούτε `aria-live`**: τίποτα δεν συνέβη ακόμη, και το
+        κανάλι **δεν αλλάζει** όσο ο άνθρωπος πληκτρολογεί *(το email του συνδεδεμένου
+        είναι δεμένο)* — στατικό κείμενο, όπως ζητά το GOV.UK για υποδείξεις.
       */}
-      <p className="m-0 text-xs text-muted-foreground">{t(ACT_KEYS.accountNotice)}</p>
+      <p id={`${fieldId}-notice`} className="m-0 text-xs text-muted-foreground">
+        {t(CHANNEL_NOTICE_KEYS[channel])}
+      </p>
 
       <DialogFooter>
         <Button type="button" variant="ghost" onClick={onCancel} disabled={sending}>
@@ -152,8 +178,12 @@ export function FirstContactDisclosureForm({
           πάνω-κάτω ψάχνοντας τι το κρατά, και συχνά **δεν είναι καν εστιάσιμο** από
           πληκτρολόγιο. Το πάτημα με σφάλματα δείχνει **σύνοψη που εξηγεί**.
           ⚠️ Το `disabled` εδώ αφορά **μόνο** την ώρα που ταξιδεύει η δήλωση.
+
+          🔑 **`aria-describedby` → η σημείωση του καναλιού**: ο αναγνώστης οθόνης ακούει
+          τη συνέπεια **τη στιγμή της απόφασης** — όταν εστιάζει το κουμπί — και όχι μόνο
+          αν τύχει να διαβάσει την παράγραφο από πάνω.
         */}
-        <Button type="submit" disabled={sending}>
+        <Button type="submit" disabled={sending} aria-describedby={`${fieldId}-notice`}>
           {t(sending ? ACT_KEYS.submitting : ACT_KEYS.submit)}
         </Button>
       </DialogFooter>
@@ -165,6 +195,8 @@ interface DisclosureFieldsProps {
   readonly values: FirstContactFormValues;
   readonly onValuesChange: (values: FirstContactFormValues) => void;
   readonly fieldId: string;
+  readonly channel: FirstContactChannel;
+  readonly emailLocked: boolean;
   readonly sending: boolean;
   readonly errorFor: (field: FieldName) => string | undefined;
   readonly onTouched: (field: FieldName) => void;
@@ -189,6 +221,8 @@ function DisclosureFields({
   values,
   onValuesChange,
   fieldId,
+  channel,
+  emailLocked,
   sending,
   errorFor,
   onTouched,
@@ -215,15 +249,23 @@ function DisclosureFields({
         αποφασίστηκε ότι **κανένα ανεπαλήθευτο κανάλι** δεν φτάνει στον ιδιοκτήτη: το
         email είναι το κανάλι που **μπορούμε να αποδείξουμε**, και η απόδειξή του είναι
         η προϋπόθεση της πράξης.
+
+        🔴 **ΔΕΜΕΝΟ ΓΙΑ ΤΟΝ ΣΥΝΔΕΔΕΜΕΝΟ ΑΠΟ 2026-09-11 (ADR-844 §12, πρότυπο Airbnb/LinkedIn).**
+        Όσο ήταν ελεύθερο, μια αλλαγή του έγραφε την επαφή σε **άλλον** λογαριασμό και
+        **άλλαζε τη συνεδρία** μετά την επιβεβαίωση — χωρίς λέξη στην οθόνη.
+        ⚠️ `readOnly`, **ΟΧΙ** `disabled`: μένει εστιάσιμο, αντιγράψιμο, και ο αναγνώστης
+        οθόνης το διαβάζει μαζί με την υπόδειξη που λέει **γιατί** δεν αλλάζει. Χωρίς
+        επίθεμα «(απαιτείται)»: ό,τι δεν συμπληρώνεις δεν σου ζητιέται.
       */}
       <HintedField
         id={`${fieldId}-email`}
         label={t(ACT_KEYS.emailLabel)}
-        labelSuffix={t(ACT_KEYS.requiredSuffix)}
-        hint={t(ACT_KEYS.emailHint)}
+        labelSuffix={emailLocked ? undefined : t(ACT_KEYS.requiredSuffix)}
+        hint={t(CHANNEL_EMAIL_HINT_KEYS[channel])}
         type="email"
         autoComplete="email"
         value={values.email}
+        readOnly={emailLocked}
         disabled={sending}
         error={errorFor('email')}
         onBlur={() => onTouched('email')}

@@ -61,8 +61,7 @@ import {
 } from '@/components/ui/dialog';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useAuthOptional } from '@/auth/contexts/AuthContext';
-import type { FirebaseAuthUser } from '@/auth/types/auth.types';
-import { sameChannelEmail } from '@/lib/contact/channel-email';
+import { boundEmailOf, firstContactChannelOf } from '@/lib/contact/first-contact-channel';
 import {
   disclosureChannelOf,
   type FirstContactFormValues,
@@ -148,37 +147,6 @@ function initialValues(name: string | null, email: string | null): FirstContactF
   return { name: name ?? '', email: email ?? '', phone: '' };
 }
 
-/**
- * 🔴 **Ο ΕΝΑΣ ΦΡΟΥΡΟΣ ΤΟΥ ADR-844: «ΕΙΝΑΙ ΤΟ ΚΑΝΑΛΙ ΗΔΗ ΑΠΟΔΕΔΕΙΓΜΕΝΟ;»**
- *
- * Απαντά **ένα** πράγμα, και από αυτό κρέμονται δύο εντελώς διαφορετικοί δρόμοι:
- * ✅ ⇒ **η σημερινή διαδρομή, μηδέν αλλαγή** *(η πράξη φεύγει αμέσως)*·
- * ❌ ⇒ πρόσκληση, email, απόδειξη.
- *
- * **Τρεις όροι, και κανένας δεν περισσεύει:**
- *
- * | Όρος | Τι πιάνει |
- * |---|---|
- * | συνδεδεμένος | ο ανώνυμος **δεν έχει** τίποτα αποδεδειγμένο |
- * | `email === email λογαριασμού` | ο συνδεδεμένος που γράφει **άλλη** διεύθυνση — αυτήν **δεν** την αποδείξαμε ποτέ |
- * | `emailVerified` | ο λογαριασμός που **δεν πάτησε ποτέ** το δικό του email επιβεβαίωσης |
- *
- * ⛔ **ΜΗΝ αφαιρέσεις τον τρίτο «γιατί είναι συνδεδεμένος, άρα εντάξει».** Η σύνδεση
- * αποδεικνύει ότι κάποιος ξέρει τον **κωδικό**, όχι ότι διαβάζει το **γραμματοκιβώτιο**.
- * Ήταν ακριβώς η ανισότητα του ADR-844: το `first-contact-body.ts` δηλώνει
- * `email: z.string().max(320).nullable()` — **δεν ελέγχεται καν ως email** — και
- * **καμία** σύγκριση με το email του λογαριασμού δεν υπήρχε πουθενά στο `src/`. Ο
- * **ανώνυμος** θα ήταν ο μόνος με αποδεδειγμένα στοιχεία.
- *
- * ⚠️ Η σύγκριση περνά από το {@link sameChannelEmail} — τον **ίδιο** κανονικοποιητή που
- * χρησιμοποιεί ο διακομιστής. Μια ωμή `===` εδώ θα έστελνε περιττή πρόσκληση σε άνθρωπο
- * που απλώς έγραψε `Maria@` με κεφαλαίο.
- */
-function isChannelProven(user: FirebaseAuthUser | null, typedEmail: string): boolean {
-  if (user === null || !user.emailVerified) return false;
-  return sameChannelEmail(user.email, typedEmail);
-}
-
 /** Η δήλωση, **μία φορά** — και οι δύο δρόμοι στέλνουν το **ίδιο** σώμα. */
 function declarationOf(
   target: FirstContactTarget,
@@ -247,6 +215,25 @@ export function FirstContactDialog({
   }, [open, user?.displayName, user?.email]);
 
   /**
+   * 🔴 **ΤΟ ΔΕΜΕΝΟ EMAIL ΠΑΡΑΓΕΤΑΙ ΣΕ ΚΑΘΕ ΑΠΟΔΟΣΗ — ΔΕΝ ΑΝΤΙΓΡΑΦΕΤΑΙ** (ADR-844 §12).
+   *
+   * Η προσυμπλήρωση γράφει το email **μία** φορά, στην ακμή του ανοίγματος. Αν ο διάλογος
+   * άνοιξε **πριν** φτάσει η ταυτότητα (`user === null`), η τιμή έμενε κενή και ο
+   * άνθρωπος έγραφε ό,τι ήθελε — δηλαδή, ενδεχομένως, **ξένη** διεύθυνση, που μετά την
+   * επιβεβαίωση γράφει την επαφή σε **άλλον** λογαριασμό και **αλλάζει τη συνεδρία**.
+   * Παραγόμενη από τον λογαριασμό σε **κάθε** απόδοση, η τιμή δένεται τη στιγμή που ο
+   * λογαριασμός γίνεται γνωστός — χωρίς effect, χωρίς κούρσα.
+   *
+   * 🔑 **ΕΝΑ `channel`, ΔΥΟ ΚΑΤΑΝΑΛΩΤΕΣ**: το `handleSubmit` διαλέγει **δρόμο** και η φόρμα
+   * διαλέγει **κείμενο** από την ίδια τιμή της ίδιας απόδοσης
+   * *(`lib/contact/first-contact-channel.ts`)* — να διαφωνήσουν είναι αδύνατο.
+   */
+  const boundEmail = boundEmailOf(user);
+  const effective: FirstContactFormValues =
+    boundEmail === null ? values : { ...values, email: boundEmail };
+  const channel = firstContactChannelOf(user, effective.email);
+
+  /**
    * **Η διακλάδωση του ADR-844, και είναι η ΜΟΝΗ.**
    *
    * ⚠️ Η δήλωση χτίζεται **πριν** τον φρουρό: το σώμα είναι **ταυτόσημο** και στους δύο
@@ -256,9 +243,9 @@ export function FirstContactDialog({
    */
   async function handleSubmit(): Promise<void> {
     setState({ kind: 'sending' });
-    const declaration = declarationOf(target, demandId, values);
+    const declaration = declarationOf(target, demandId, effective);
 
-    if (isChannelProven(user, values.email)) {
+    if (channel === 'proven') {
       setState({ kind: 'done', result: await openFirstContactFromScreen(declaration) });
       return;
     }
@@ -274,7 +261,7 @@ export function FirstContactDialog({
    * `superseded` **μέσα** στην ίδια έκδοση — δηλαδή **μηδέν** νέα μηχανική εδώ, και
    * **ποτέ** δύο ζωντανοί σύνδεσμοι. Ο δρόμος υπήρχε ήδη· έλειπε το **κουμπί**.
    *
-   * ⚠️ **ΔΕΝ περνά από τον φρουρό `isChannelProven`, και σωστά**: αν το κανάλι ήταν
+   * ⚠️ **ΔΕΝ ξαναρωτά τον ταξινομητή καναλιού, και σωστά**: αν το κανάλι ήταν
    * αποδεδειγμένο, ο άνθρωπος **δεν θα ήταν** ποτέ σε αυτή την οθόνη. Ένας δεύτερος
    * έλεγχος εδώ θα ήταν κώδικας που δεν εκτελείται — δηλαδή κώδικας που κανείς δεν
    * μαθαίνει ότι χάλασε.
@@ -283,7 +270,7 @@ export function FirstContactDialog({
     if (state.kind !== 'awaiting') return;
 
     setState({ ...state, resending: true });
-    setState(stateOfInvite(await submitGuestContact(declarationOf(target, demandId, values))));
+    setState(stateOfInvite(await submitGuestContact(declarationOf(target, demandId, effective))));
   }
 
   function close(): void {
@@ -338,8 +325,10 @@ export function FirstContactDialog({
       case 'sending':
         return (
           <FirstContactDisclosureForm
-            values={values}
+            values={effective}
             onValuesChange={setValues}
+            channel={channel}
+            emailLocked={boundEmail !== null}
             sending={state.kind === 'sending'}
             onSubmit={handleSubmit}
             onCancel={close}

@@ -69,7 +69,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "1752b7c4c94ea307cb934dc335429059d5831a5cadc6eebf37c8413be3dd28dd",
+  "inputsSha256": "1ef2f20a2553c7ceaa2c1a7a039572cf4cd1e898a8159ebfcaf011a06de3e33e",
   "languages": [
     "el"
   ],
@@ -142,7 +142,7 @@
     "src/components/contact/FirstContactOutcomeNotice.tsx": "4a74c8b1f3bb40da4b4509ef99c16618b34bbe6a24a2d088964cf354db902282",
     "src/components/contact/GuestContactContent.tsx": "707c4dffa3b34797f1b106889ad20c3b0e809b025b9c957320c0cb671095088a",
     "src/components/contact/first-contact-guest-labels.ts": "9f92670c40a92a00f7ac9f09df3c28c4a39c27ca557bbd4dff87999bb8ca3275",
-    "src/components/contact/first-contact-labels.ts": "95c65bf70b3967eef83bad8f0e24d6a66ee9d971769e7a89d2edaec107c6e302",
+    "src/components/contact/first-contact-labels.ts": "3a241845bd79963beeaf065759d138f8e8071e9b2043fd122988022364e37ad2",
     "src/components/contact/first-contact-namespace.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/components/contact/guest-contact-view.ts": "9c6556887a18913e499f7906634cc552f830257c5766e0154fbda9603a0c393f",
     "src/components/dashboard/DashboardHome.tsx": "2ebe4bd60f9048488e0343135ea19803ecb053a69141b3908a8ba150531e6e17",
@@ -369,6 +369,7 @@
     "src/lib/auth/token-credentials.ts": "04ada53730e0be6f12abafcf1c22fbe14e11e4a05e082872e72697d417995402",
     "src/lib/contact/channel-email.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/contact/first-contact-capacity.ts": "dcf99f9e023a46bce73412d2b21bd080adaafd3d048ac8591bebfb143567ae27",
+    "src/lib/contact/first-contact-channel.ts": "bbe169e74e9e4e267bf00f58314196aab3a0904ddea6a10157a98835902b0516",
     "src/lib/contact/first-contact-form-values.ts": "a3137753e071b9b2b41729847c29a4b04f56c4f739cf57b71502b20dba3e862a",
     "src/lib/contact/first-contact-target-href.ts": "be395a4e52bcc15e90e16827c9b0072f602f45185a090157169cf4612ab245c1",
     "src/lib/contacts/primary-email.ts": "be062827144f613c7f73525068f4ec1de9bd81ff36b425dc69bc6b538c3a970c",

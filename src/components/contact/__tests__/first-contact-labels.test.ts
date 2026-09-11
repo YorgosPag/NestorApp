@@ -24,6 +24,8 @@ import en from '@/i18n/locales/en/property-market.json';
 
 import {
   ACT_KEYS,
+  CHANNEL_EMAIL_HINT_KEYS,
+  CHANNEL_NOTICE_KEYS,
   FORM_BLOCKER_KEYS,
   INBOX_KEYS,
   INVARIANT_KEYS,
@@ -41,6 +43,7 @@ import { FIRST_CONTACT_REJECTIONS } from '@/services/contact/first-contact-vocab
 import { FIRST_CONTACT_INVARIANTS } from '@/types/first-contact';
 import { FIRST_CONTACT_INVITATION_REFUSALS } from '@/types/first-contact-invitation';
 import { FIRST_CONTACT_FORM_BLOCKERS } from '@/lib/contact/first-contact-form-values';
+import { FIRST_CONTACT_CHANNELS } from '@/lib/contact/first-contact-channel';
 import { DEMAND_BLOCKERS } from '@/lib/demand/demand-match-vocabulary';
 
 type Bundle = Record<string, unknown>;
@@ -62,6 +65,10 @@ const TABLES: readonly (readonly [string, Readonly<Record<string, string>>])[] =
   ['INVARIANT_KEYS', INVARIANT_KEYS],
   ['FORM_BLOCKER_KEYS', FORM_BLOCKER_KEYS],
   ['ACT_KEYS', ACT_KEYS],
+  // 🔴 ADR-844 §12 — η γραμμή που λέει **τι θα συμβεί**. Ωμό κλειδί εδώ θα ήταν ο άνθρωπος
+  //    να πατά κουμπί **χωρίς να ξέρει** αν θα φύγει αμέσως ή θα περιμένει email.
+  ['CHANNEL_NOTICE_KEYS', CHANNEL_NOTICE_KEYS],
+  ['CHANNEL_EMAIL_HINT_KEYS', CHANNEL_EMAIL_HINT_KEYS],
   ['MINE_KEYS', MINE_KEYS],
   ['INBOX_KEYS', INBOX_KEYS],
   // 🔴 **ADR-844 — Η ΦΙΛΟΞΕΝΟΥΜΕΝΗ ΕΠΑΦΗ, ΚΑΙ ΕΔΩ ΤΟ ΩΜΟ ΚΛΕΙΔΙ ΕΙΝΑΙ ΧΕΙΡΟΤΕΡΟ.**
@@ -121,6 +128,9 @@ describe('🔴 Ρ — κάθε κείμενο της πρώτης επαφής �
     expect(
       FIRST_CONTACT_INVITATION_REFUSALS.filter((code) => !(code in INVITATION_REFUSAL_KEYS)),
     ).toEqual([]);
+    // 🔴 ADR-844 §12 — **κάθε** κανάλι έχει σημείωση **και** υπόδειξη.
+    expect(FIRST_CONTACT_CHANNELS.filter((code) => !(code in CHANNEL_NOTICE_KEYS))).toEqual([]);
+    expect(FIRST_CONTACT_CHANNELS.filter((code) => !(code in CHANNEL_EMAIL_HINT_KEYS))).toEqual([]);
   });
 
   it('🔑 Ρ4 — η άγκυρα ΠΙΑΝΕΙ πραγματικά: ανύπαρκτο κλειδί λείπει', () => {
@@ -201,6 +211,34 @@ describe('🔴 Τ — ΟΙ ΔΥΟ ΑΠΟΦΑΣΕΙΣ ΠΟΥ ΖΟΥΝ ΜΕΣΑ Σ
 
     const lies = ['διαγρ', 'σβήν', 'σβησ', 'delete', 'erase', 'wipe', 'remov'];
     expect(lies.filter((w) => words.includes(w))).toEqual([]);
+  });
+
+  /**
+   * 🔴 **ADR-844 §12 — ΤΟ ΚΕΙΜΕΝΟ ΛΕΕΙ ΑΥΤΟ ΠΟΥ ΓΙΝΕΤΑΙ.**
+   *
+   * Το γεγονός της 2026-09-11: ο συνδεδεμένος με επιβεβαιωμένο email διάβαζε *«σας
+   * στέλνουμε σύνδεσμο επιβεβαίωσης»* — και η πράξη έφευγε αμέσως, χωρίς email. Αυτές οι
+   * άγκυρες δεν εγκρίνουν διατύπωση· **απαγορεύουν το ψέμα** προς **και τις δύο** μεριές.
+   */
+  it.each(LANGUAGES)('⛔ Τ5 — %s: το `proven` ΔΕΝ υπόσχεται σύνδεσμο', (_lang, bundle) => {
+    for (const key of [CHANNEL_NOTICE_KEYS.proven, CHANNEL_EMAIL_HINT_KEYS.proven]) {
+      const words = String(wordsForKey(bundle as Bundle, key)).toLowerCase();
+      expect([key, ['σύνδεσμ', 'link'].filter((w) => words.includes(w))]).toEqual([key, []]);
+    }
+  });
+
+  it.each(LANGUAGES)('🔴 Τ6 — %s: κάθε κανάλι ΜΕ σύνδεσμο το λέει', (_lang, bundle) => {
+    for (const channel of ['unverified-account', 'guest', 'foreign-address'] as const) {
+      const words = String(wordsForKey(bundle as Bundle, CHANNEL_NOTICE_KEYS[channel])).toLowerCase();
+      expect([channel, ['σύνδεσμ', 'link'].some((w) => words.includes(w))]).toEqual([channel, true]);
+    }
+  });
+
+  it.each(LANGUAGES)('⚖️ Τ7 — %s: όπου μπορεί να ΓΕΝΝΗΘΕΙ λογαριασμός, το λέει (EDPB 2/2025)', (_lang, bundle) => {
+    for (const channel of ['guest', 'foreign-address'] as const) {
+      const words = String(wordsForKey(bundle as Bundle, CHANNEL_NOTICE_KEYS[channel])).toLowerCase();
+      expect([channel, ['λογαριασμ', 'account'].some((w) => words.includes(w))]).toEqual([channel, true]);
+    }
   });
 
   it('🔑 Τ4 — ο παρονομαστής: οι απαγορευμένες λέξεις ΘΑ πιάνονταν', () => {

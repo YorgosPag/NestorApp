@@ -26,6 +26,10 @@ import {
   type FirstContactFormBlocker,
 } from '@/lib/contact/first-contact-form-values';
 import { MY_FIRST_CONTACTS_ROUTE } from '@/lib/contact/first-contact-routes';
+import {
+  FIRST_CONTACT_CHANNELS,
+  type FirstContactChannel,
+} from '@/lib/contact/first-contact-channel';
 
 export { FIRST_CONTACT_NS } from './first-contact-namespace';
 
@@ -160,8 +164,6 @@ export const ACT_KEYS = {
   nameLabel: 'property-market:contact.first.nameLabel',
   emailLabel: 'property-market:contact.first.emailLabel',
   phoneLabel: 'property-market:contact.first.phoneLabel',
-  /** Η υπόδειξη του **email** — «εδώ πάει ο σύνδεσμος, αυτό θα δει ο άλλος» (ADR-844). */
-  emailHint: 'property-market:contact.first.emailHint',
   /**
    * Η υπόδειξη του **τηλεφώνου**. ⚠️ Το κλειδί κράτησε το παλιό του όνομα επίτηδες:
    * το κείμενο άλλαξε *(«άφησε έναν τρόπο»* ⇒ *«προαιρετικό»)*, αλλά η **θέση** του —
@@ -169,17 +171,6 @@ export const ACT_KEYS = {
    * δύο locales, τον τύπο i18n και την οθόνη, για **μηδέν** κέρδος αναγνωσιμότητας.
    */
   channelHint: 'property-market:contact.first.channelHint',
-  /**
-   * 🔴 **Η ΓΡΑΜΜΗ ΤΟΥ EDPB, ΚΑΙ ΔΕΝ ΕΙΝΑΙ ΨΙΛΑ ΓΡΑΜΜΑΤΑ** (ADR-844, απόφαση #1).
-   *
-   * Οι *Recommendations 2/2025* απαιτούν υποχρεωτικό λογαριασμό **μόνο** όταν είναι
-   * αντικειμενικά απαραίτητος, και ρητή ενημέρωση για το **γιατί**. Η αγγλόφωνη
-   * πρακτική λέγεται *«stealth account creation»*· στην ΕΕ δεν στέκει.
-   *
-   * ⚠️ **Μπαίνει ΠΡΙΝ το κουμπί, όχι μετά την υποβολή**: μια ενημέρωση που φτάνει
-   * αφού έγινε η πράξη δεν είναι ενημέρωση, είναι ανακοίνωση.
-   */
-  accountNotice: 'property-market:contact.first.accountNotice',
   submit: 'property-market:contact.first.submit',
   submitting: 'property-market:contact.first.submitting',
   cancel: 'property-market:contact.first.cancel',
@@ -197,6 +188,46 @@ export const ACT_KEYS = {
   requiredSuffix: 'property-market:contact.first.requiredSuffix',
   closeAfterDone: 'property-market:contact.first.closeAfterDone',
 } as const;
+
+/**
+ * **ΤΙ ΘΑ ΣΥΜΒΕΙ ΜΟΛΙΣ ΠΑΤΗΣΕΙ — ανά κανάλι** (ADR-844 §12). Η γραμμή **πριν** το κουμπί.
+ *
+ * 🔴 **ΑΝΤΙΚΑΤΕΣΤΗΣΕ ΤΟ ΕΝΙΑΙΟ `accountNotice`** (2026-09-11), που έλεγε *«σας στέλνουμε
+ * σύνδεσμο επιβεβαίωσης»* **και** στον συνδεδεμένο με επιβεβαιωμένο email — για τον οποίο
+ * η πράξη φεύγει αμέσως και **δεν στέλνεται τίποτα**. Ένα κείμενο για τέσσερις συνέπειες
+ * είναι ψέμα για τις τρεις.
+ *
+ * 🔑 **Η φόρμα διαλέγει γραμμή με την ΙΔΙΑ τιμή `channel` που διαλέγει τον δρόμο στον
+ * διάλογο** (`lib/contact/first-contact-channel.ts`) ⇒ κείμενο και πράξη **δεν μπορούν**
+ * να διαφωνήσουν. Πλήρες `Record`: πέμπτο κανάλι δεν μεταγλωττίζεται χωρίς κείμενο.
+ *
+ * ⚖️ **Το `guest` ΕΙΝΑΙ Η ΓΡΑΜΜΗ ΤΟΥ EDPB** (*Recommendations 2/2025*, ADR-844 απόφαση #1):
+ * υποχρεωτικός λογαριασμός μόνο όταν είναι αντικειμενικά απαραίτητος, και ρητή ενημέρωση
+ * για το **γιατί**, **πριν** το κουμπί — ενημέρωση μετά την πράξη είναι ανακοίνωση. Το ίδιο
+ * ισχύει για το `foreign-address`, που επίσης μπορεί να **γεννήσει** λογαριασμό. Άγκυρες
+ * αλήθειας στο `first-contact-labels.test.ts` απαιτούν να τον ονομάζουν.
+ */
+export const CHANNEL_NOTICE_KEYS: Record<FirstContactChannel, string> = {
+  proven: 'property-market:contact.first.channelNotice.proven',
+  'unverified-account': 'property-market:contact.first.channelNotice.unverified-account',
+  guest: 'property-market:contact.first.channelNotice.guest',
+  'foreign-address': 'property-market:contact.first.channelNotice.foreign-address',
+};
+
+/**
+ * **Η υπόδειξη του email, ανά κανάλι** — *«εδώ πάει ο σύνδεσμος»* **μόνο** όπου πάει.
+ *
+ * ⚠️ Αντικατέστησε το ενιαίο `emailHint` για τον ίδιο λόγο με τον {@link CHANNEL_NOTICE_KEYS}.
+ * Τα `guest` και `foreign-address` λένε **επίτηδες** το ίδιο: και στα δύο το πεδίο είναι
+ * ελεύθερο και ο σύνδεσμος πηγαίνει εκεί. Δύο γραμμές, γιατί είναι δύο **κανάλια** — ένα
+ * κοινό κλειδί θα έδενε δύο κείμενα που κάποια μέρα θα θέλουν να διαφέρουν.
+ */
+export const CHANNEL_EMAIL_HINT_KEYS: Record<FirstContactChannel, string> = {
+  proven: 'property-market:contact.first.channelEmailHint.proven',
+  'unverified-account': 'property-market:contact.first.channelEmailHint.unverified-account',
+  guest: 'property-market:contact.first.channelEmailHint.guest',
+  'foreign-address': 'property-market:contact.first.channelEmailHint.foreign-address',
+};
 
 /** **«Ποιους πλησίασα»** — και το υπόλοιπο χωρητικότητας. */
 export const MINE_KEYS = {
@@ -298,4 +329,5 @@ export const FIRST_CONTACT_LABEL_SOURCES = {
   rejections: FIRST_CONTACT_REJECTIONS,
   invariants: FIRST_CONTACT_INVARIANTS,
   formBlockers: FIRST_CONTACT_FORM_BLOCKERS,
+  channels: FIRST_CONTACT_CHANNELS,
 } as const;
