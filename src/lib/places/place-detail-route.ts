@@ -61,7 +61,16 @@
 //    λογαριασμού/προσγείωσης που κανείς εκεί δεν χρειάζεται (ιδίωμα CHECK 3.30).
 import { ENTITY_ROUTES } from '@/lib/routes/entityRoutes';
 import { offerDetailHref } from '@/lib/owner-property/owner-property-routes';
+import {
+  viewDestination,
+  type NotificationDestination,
+} from '@/lib/notifications/notification-destination';
 import type { PlaceSource } from '@/services/demand/place-interest.service';
+import {
+  orgWorkspace,
+  personalWorkspace,
+  type WorkspaceRef,
+} from '@/types/workspace-membership';
 
 /**
  * **Η πόρτα κάθε κατοχής** — και ο τύπος είναι ο φρουρός.
@@ -89,4 +98,46 @@ const PLACE_DETAIL_HREF: Record<PlaceSource, (id: string) => string> = {
  */
 export function placeDetailHref(source: PlaceSource, placeId: string): string {
   return PLACE_DETAIL_HREF[source](placeId);
+}
+
+/**
+ * **Σε ποιον χώρο ανοίγει αυτή η πόρτα** (ADR-849 §6δ Β1) — δεμένο στην **ίδια** ρίζα.
+ *
+ * Η καρτέλα του ιδιώτη ζει στον **ιδιωτικό** χώρο του κατόχου· η καρτέλα του γραφείου
+ * στον χώρο της **εταιρείας** του ακινήτου. Το `holderId` είναι η ταυτότητα αυτού που
+ * κατέχει τον χώρο (`authorUserId` ⇄ `companyId`) και το δηλώνει **όποιος διάβασε τη
+ * συλλογή** — ίδιο συμβόλαιο με την κατοχή.
+ *
+ * ⛔ **ΠΟΤΕ από το `tenantId` της ειδοποίησης**, ΠΟΤΕ από το claim του θεατή: και τα δύο
+ * απαντούν άλλο ερώτημα (δες την κεφαλίδα).
+ */
+const PLACE_WORKSPACE: Record<PlaceSource, (holderId: string) => WorkspaceRef> = {
+  'owner-property': personalWorkspace,
+  'company-property': orgWorkspace,
+};
+
+/**
+ * **Η εταιρεία ενός ακινήτου γραφείου** — `null` όταν λείπει ή είναι κενή.
+ *
+ * 🔴 **Ακίνητο γραφείου χωρίς εταιρεία ΔΕΝ έχει χώρο** — άρα ούτε πόρτα: το
+ * `/properties/<id>` ανοίγει μόνο μέσα στον χώρο της εταιρείας του. Ο σαρωτής το
+ * **μετρά** (`unscoped`) αντί να στείλει σύνδεσμο σε **οποιοδήποτε** γραφείο· ο
+ * ανιχνευτής απόκλισης το **αναφέρει**. Μία κρίση, δύο καταναλωτές.
+ */
+export function companyPropertyHolder(property: { readonly companyId?: unknown }): string | null {
+  const { companyId } = property;
+  return typeof companyId === 'string' && companyId.length > 0 ? companyId : null;
+}
+
+/**
+ * **Ο προορισμός της ειδοποίησης για τον κάτοχο** — η πόρτα **και** ο χώρος της, από
+ * **ένα** σημείο. Τον ρωτούν ο παραγωγός (`announceOnePlace`) **και** ο ανιχνευτής
+ * απόκλισης (`notifications:destination-drift`), ώστε οι δύο να μην μπορούν να διαφωνήσουν.
+ */
+export function placeDestination(
+  source: PlaceSource,
+  placeId: string,
+  holderId: string,
+): NotificationDestination {
+  return viewDestination(placeDetailHref(source, placeId), PLACE_WORKSPACE[source](holderId));
 }

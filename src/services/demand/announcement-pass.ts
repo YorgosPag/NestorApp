@@ -84,6 +84,16 @@ export interface AnnouncementCandidate {
    * συλλογή. Δες {@link module:lib/places/place-detail-route} για τις δύο πόρτες.
    */
   readonly source: PlaceSource;
+  /**
+   * **Ποιος κατέχει τον χώρο του ακινήτου** (ADR-849 §6δ Β1) — `authorUserId` για τον
+   * ιδιώτη, `companyId` για το γραφείο.
+   *
+   * 🔴 Μαζί με την κατοχή ορίζει **σε ποιον χώρο ανοίγει** ο σύνδεσμος. Χωρίς αυτό, το
+   * `/n/{id}` και το κουδούνι έβαζαν τον χώρο του **θεατή** — και ο άνθρωπος σε δύο
+   * γραφεία άνοιγε το λάθος. Δηλώνεται από τον σαρωτή, όπως η κατοχή· **ποτέ** από
+   * το `tenantId`.
+   */
+  readonly holderId: string;
   /** Τα γεγονότα, **ήδη χτισμένα** από το μονοπάτι που ξέρει πώς. */
   readonly facts: ListingMatchFacts;
 }
@@ -129,6 +139,7 @@ export async function announceIfNewsworthy(
       recipientId: candidate.recipientId,
       tenantId: candidate.tenantId,
       source: candidate.source,
+      holderId: candidate.holderId,
       band,
       count: interest.disclosure.count ?? 0,
     }),

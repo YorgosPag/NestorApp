@@ -47,6 +47,8 @@ const ANNOUNCEMENT = {
   tenantId: 'user_owner',
   // ADR-841 §7 Α18.9 — η κατοχή διαλέγει την πόρτα.
   source: 'owner-property',
+  // ADR-849 §6δ Β1 — ο κάτοχος του χώρου διαλέγει ΠΟΥ ανοίγει.
+  holderId: 'user_owner',
   band: 'few',
   count: 3,
 } as const;
@@ -62,6 +64,7 @@ const COMPANY_ANNOUNCEMENT = {
   propertyId: 'prop_a0000003-7777-4aaa-8aaa-000000000003',
   tenantId: 'comp_9c7c1a50',
   source: 'company-property',
+  holderId: 'comp_9c7c1a50',
 } as const;
 
 type Announcement = Parameters<typeof announceOnePlace>[0];
@@ -135,5 +138,44 @@ describe('Ζ — ο προορισμός ακολουθεί την ΚΑΤΟΧΗ,
     // Η ακριβής ψεύτικη πόρτα της Α18.8, γραμμένη ως **άρνηση**: εκεί κατέληγαν
     // **6 στα 12** έγγραφα, και η οθόνη απαντούσε «δεν είναι δικό σου».
     expect(url).not.toMatch(/^\/offers\//);
+  });
+});
+
+/**
+ * ============================================================================
+ * Χ — **Η ΠΟΡΤΑ ΤΑΞΙΔΕΥΕΙ ΜΑΖΙ ΜΕ ΤΟΝ ΧΩΡΟ ΤΗΣ** (ADR-849 §6δ Β1)
+ * ============================================================================
+ *
+ * 🔴 Ζωντανό σύμπτωμα 10/9: σύνδεσμος email → `/o/<ΑΛΛΟ γραφείο>/properties/<id>` ⇒
+ * «Το ακίνητο δεν βρέθηκε». Η πόρτα ήταν σωστή· ο **χώρος** συμπληρωνόταν από τον θεατή.
+ */
+describe('Χ — ο χώρος-στόχος, δηλωμένος από τον σαρωτή', () => {
+  it('Χ1 — κατοχή γραφείου ⇒ ο χώρος της εταιρείας του ακινήτου', async () => {
+    await announceOnePlace(COMPANY_ANNOUNCEMENT as Announcement);
+
+    expect(mockDispatchNotification.mock.calls[0][0].workspace).toEqual({
+      kind: 'org',
+      companyId: 'comp_9c7c1a50',
+    });
+  });
+
+  it('Χ2 — κατοχή ιδιώτη ⇒ ο ιδιωτικός χώρος του κατόχου', async () => {
+    await announceOnePlace(ANNOUNCEMENT as Announcement);
+
+    expect(mockDispatchNotification.mock.calls[0][0].workspace).toEqual({
+      kind: 'personal',
+      userId: 'user_owner',
+    });
+  });
+
+  it('Χ3 🔴 — ο χώρος ακολουθεί τον ΚΑΤΟΧΟ, ΠΟΤΕ τον μισθωτή (`tenantId`)', async () => {
+    // ⛔ `place-detail-route.ts`: το `tenantId` υπάρχει για άλλο λόγο. Εδώ διαφέρουν
+    //    επίτηδες — μια υλοποίηση που «δανείζεται» τον μισθωτή κοκκινίζει.
+    await announceOnePlace({ ...COMPANY_ANNOUNCEMENT, tenantId: 'comp_other' } as Announcement);
+
+    expect(mockDispatchNotification.mock.calls[0][0].workspace).toEqual({
+      kind: 'org',
+      companyId: 'comp_9c7c1a50',
+    });
   });
 });

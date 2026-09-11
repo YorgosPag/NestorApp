@@ -1,10 +1,10 @@
 /**
  * =============================================================================
- * ADR-841 §7 Α18 — **Η ΘΕΜΑΤΟΦΥΛΑΚΗ ΤΗΣ ΔΙΕΥΘΥΝΣΗΣ ΤΗΣ ΕΙΔΟΠΟΙΗΣΗΣ**
+ * ADR-841 §7 Α18 · ADR-849 §6δ Β1 — **Η ΘΕΜΑΤΟΦΥΛΑΚΗ ΤΗΣ ΔΙΕΥΘΥΝΣΗΣ ΤΗΣ ΕΙΔΟΠΟΙΗΣΗΣ**
  * =============================================================================
  *
- * Το ερώτημα: *«κάθε ειδοποίηση που φτιάχνουμε — ξέρει **πού οδηγεί**, ή αφήνει τον
- * άνθρωπο σε αδιέξοδο;»*
+ * Το ερώτημα: *«κάθε ειδοποίηση που φτιάχνουμε — ξέρει **πού οδηγεί** και **σε ποιον
+ * χώρο**, ή αφήνει τον άνθρωπο σε αδιέξοδο;»*
  *
  * ────────────────────────────────────────────────────────────────────────────
  * 🔴 ΓΙΑΤΙ ΑΥΤΗ Η ΑΓΚΥΡΑ ΔΙΑΒΑΖΕΙ **ΠΗΓΑΙΟ ΚΩΔΙΚΑ** ΚΑΙ ΟΧΙ ΣΥΜΠΕΡΙΦΟΡΑ
@@ -16,10 +16,15 @@
  * ανά υπηρεσία θα έπιανε τις **τρεις που διορθώθηκαν** και θα ήταν **τυφλή στην έκτη
  * που θα γραφτεί αύριο** — δηλαδή θα έλυνε το **δείγμα**, όχι την **κλάση**.
  *
- * 🔑 **ΚΑΙ ΤΟ HANDOFF ΕΙΧΕ ΗΔΗ ΤΟ ΛΑΘΟΣ ΠΛΗΘΟΣ**: έλεγε *«οι τρεις notifiers»*· η
- * μέτρηση βρήκε **πέντε** αρχεία `*-notifier.service.ts`, από τα οποία **τέσσερα**
- * καλούν `dispatchNotification`. Ακριβώς το μάθημα *«μέτρα ΚΑΙ ΤΟΝ ΑΔΕΛΦΟ»* που το
- * ADR-841 έχει ήδη πληρώσει μία φορά *(changelog 2026-09-03)*.
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 Η ΑΝΑΚΑΛΥΨΗ ΗΤΑΝ ΣΤΕΝΗ — ΚΑΙ ΕΚΡΥΒΕ 404 (ADR-849 §6δ Β1, 2026-09-11)
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Οι Κ1–Κ3 έκριναν **μόνο** αρχεία `*-notifier.service.ts`. Το
+ * `procurement/po-notification-service.ts` λέγεται αλλιώς — και έγραφε με το χέρι
+ * `/procurement/<id>`, διεύθυνση **χωρίς σελίδα**, με **ελληνική** ετικέτα. Πράσινο
+ * επειδή κανείς δεν κοίταξε. Πλέον η ανακάλυψη είναι **η ίδια η κλήση**
+ * (`dispatchNotification({`) — ίδιο ιδίωμα με το Κ0 της `notification-title-key-reach`.
  *
  * ⚠️ **ΔΕΝ αντικαθιστά τις άγκυρες συμπεριφοράς** — τις **συμπληρώνει**: εκείνες λένε
  * *«η διεύθυνση είναι η σωστή»*, αυτή λέει *«κανείς δεν ξέφυγε»*.
@@ -32,28 +37,47 @@ import path from 'node:path';
 // Η ΑΝΑΚΑΛΥΨΗ — από τον ΔΙΣΚΟ, ποτέ χειρόγραφη λίστα
 // =============================================================================
 
-const SERVICES_ROOT = path.join(process.cwd(), 'src', 'services');
+const SRC_ROOT = path.join(process.cwd(), 'src');
+const SERVICES_ROOT = path.join(SRC_ROOT, 'services');
 
-/**
- * 🔑 **Η λίστα παράγεται, δεν γράφεται.** Μια χειρόγραφη λίστα εδώ θα ήταν **δεύτερο
- * μητρώο** που παλιώνει σιωπηλά — ακριβώς το σχήμα που το `CLAUDE.md` έχει μετρήσει να
- * αποτυγχάνει τέσσερις φορές *(CHECK 3.34 · 3.37 · 3.49 · 3.57)*.
- */
-function notifierFiles(): readonly string[] {
+function sourceFiles(root: string): readonly string[] {
   const found: string[] = [];
   const walk = (dir: string): void => {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) {
-        if (entry.name !== '__tests__') walk(full);
-      } else if (entry.name.endsWith('-notifier.service.ts')) {
+        if (entry.name !== '__tests__' && entry.name !== 'node_modules') walk(full);
+      } else if (/\.tsx?$/.test(entry.name) && !/\.(test|spec)\.tsx?$/.test(entry.name)) {
         found.push(full);
       }
     }
   };
-  walk(SERVICES_ROOT);
+  walk(root);
   return found.sort();
 }
+
+/** ⛔ Ο ίδιος ο μηχανισμός (ορχηστρωτής, μόνιμος σύνδεσμος) δεν είναι παραγωγός. */
+function isMechanism(file: string): boolean {
+  const relative = path.relative(SRC_ROOT, file).split(path.sep).join('/');
+  return relative.startsWith('server/notifications/');
+}
+
+const ALL_SOURCES = sourceFiles(SRC_ROOT);
+const read = (file: string): string => fs.readFileSync(file, 'utf8');
+
+/**
+ * 🔑 **Κάθε αρχείο που καλεί τον ορχηστρωτή** — όχι όσα λέγονται `*-notifier`.
+ * Η λίστα **παράγεται**, δεν γράφεται (CHECK 3.34 · 3.37 · 3.49 · 3.57).
+ */
+const PRODUCERS = ALL_SOURCES.filter(
+  (file) => !isMechanism(file) && read(file).includes('dispatchNotification({'),
+);
+
+/** Οι σαρωτές ζήτησης — για τον κοινό πυρήνα (Κ4). */
+const NOTIFIERS = sourceFiles(SERVICES_ROOT).filter((file) => file.endsWith('-notifier.service.ts'));
+
+/** Ο ορισμός του βοηθού — εξαιρείται από την Κ2 (η υπογραφή του δεν είναι κλήση). */
+const DESTINATION_SSOT = path.join(SRC_ROOT, 'lib', 'notifications', 'notification-destination.ts');
 
 /**
  * **Ο δηλωμένος λόγος να ΜΗΝ έχει διεύθυνση** — και είναι επίτηδες μακρύς.
@@ -64,52 +88,65 @@ function notifierFiles(): readonly string[] {
  */
 const DECLARED_NO_DESTINATION = 'ΔΕΝ ΠΑΙΡΝΕΙ `actions`, ΚΑΙ ΕΙΝΑΙ';
 
-/** Καλεί τον ορχηστρωτή; Μόνο τότε μπορεί να παράγει κουμπί στον drawer. */
-function dispatches(source: string): boolean {
-  return source.includes('dispatchNotification({');
+/** Δηλώνει προορισμό: κυριολεκτικό `actions: [` ή βοηθό `...xxxDestination(`. */
+function declaresDestination(source: string): boolean {
+  return /\n\s*actions:\s*\[/.test(source) || /\.\.\.\s*\w+Destination\(/.test(source);
 }
 
-function feedsActions(source: string): boolean {
-  return /\n\s*actions:\s*\[/.test(source);
+const ACTION_BLOCKS = /\n\s*actions:\s*\[[^\]]*\]/g;
+
+/** Το πρώτο όρισμα κάθε κλήσης `viewDestination(` — **εκτός** από τον ορισμό της. */
+function viewDestinationArgs(source: string): readonly string[] {
+  return [...source.matchAll(/(function\s+)?viewDestination\(\s*([^,)]*)/g)]
+    .filter((m) => m[1] === undefined)
+    .map((m) => m[2].trim());
 }
+
+/** Η διαδρομή ζητείται από SSoT: βοηθός `…Href(` ή σταθερά μητρώου (`ENTITY_ROUTES.…`). */
+const ROUTE_FROM_SSOT = /^(\w+Href\(|[A-Z][A-Z_]*\.[\w.]+)/;
 
 // =============================================================================
 
 describe('ADR-841 §7 Α18 — καμία ειδοποίηση χωρίς δηλωμένο προορισμό', () => {
-  const files = notifierFiles();
-
-  it('Κ0 — η ανακάλυψη βρίσκει notifiers (αλλιώς η πύλη είναι πράσινη επειδή δεν κοίταξε)', () => {
-    // 🔴 **ΤΟ `0` ΣΗΜΑΙΝΕΙ «ΚΑΝΕΙΣ ΔΕΝ ΚΟΙΤΑΞΕ», ΟΧΙ «ΚΑΘΑΡΟ».** Χωρίς αυτή τη γραμμή,
-    //    μια μετονομασία φακέλου θα έκανε ολόκληρη τη σουίτα **μονίμως πράσινη** —
-    //    το ακριβές σχήμα που το `CLAUDE.md` καταγγέλλει στα CHECK 3.18 και 3.28.
-    expect(files.length).toBeGreaterThanOrEqual(4);
+  it('Κ0 — η ανακάλυψη βρίσκει παραγωγούς (αλλιώς η πύλη είναι πράσινη επειδή δεν κοίταξε)', () => {
+    // 🔴 **ΤΟ `0` ΣΗΜΑΙΝΕΙ «ΚΑΝΕΙΣ ΔΕΝ ΚΟΙΤΑΞΕ», ΟΧΙ «ΚΑΘΑΡΟ».** Μετρημένο 2026-09-11:
+    //    7 παραγωγοί (5 υπηρεσίες ζήτησης/εντολών + προμήθειες + εισερχόμενα email) και
+    //    ένα route. Και οι σαρωτές ζήτησης (Κ4) τουλάχιστον 4.
+    expect(PRODUCERS.length).toBeGreaterThanOrEqual(7);
+    expect(NOTIFIERS.length).toBeGreaterThanOrEqual(4);
+    // Ο παραγωγός που γέννησε τη διεύρυνση ΠΡΕΠΕΙ να είναι μέσα — αλλιώς η διεύρυνση είναι σχόλιο.
+    expect(PRODUCERS.some((file) => file.endsWith('po-notification-service.ts'))).toBe(true);
   });
 
-  it.each(notifierFiles().map((f) => [path.basename(f), f] as const))(
-    'Κ1 — %s: ή δίνει `actions`, ή δηλώνει ΓΡΑΠΤΩΣ γιατί όχι',
+  it.each(PRODUCERS.map((f) => [path.relative(SRC_ROOT, f), f] as const))(
+    'Κ1 — %s: ή δίνει προορισμό, ή δηλώνει ΓΡΑΠΤΩΣ γιατί όχι',
     (_name, file) => {
-      const source = fs.readFileSync(file, 'utf8');
-      if (!dispatches(source)) return; // δεν παράγει ειδοποίηση εντός εφαρμογής
-
-      const ok = feedsActions(source) || source.includes(DECLARED_NO_DESTINATION);
-      expect(ok).toBe(true);
+      const source = read(file);
+      expect(declaresDestination(source) || source.includes(DECLARED_NO_DESTINATION)).toBe(true);
     },
   );
 
   /**
-   * 🔴 **Η ΔΙΕΥΘΥΝΣΗ ΧΤΙΖΕΤΑΙ ΑΠΟ ΤΟΝ helper, ΠΟΤΕ ΜΕ ΤΟ ΧΕΡΙ.**
+   * 🔴 **Η ΔΙΕΥΘΥΝΣΗ ΧΤΙΖΕΤΑΙ ΑΠΟ ΤΟ SSoT, ΠΟΤΕ ΜΕ ΤΟ ΧΕΡΙ.**
    *
-   * Ένα χειρόγραφο `` `/listing/${id}` `` θα «δούλευε» σήμερα και θα **έχανε το
-   * `encodeURIComponent`** — δηλαδή θα αστοχούσε **σιωπηλά** σε ένα μόνο έγγραφο, το
-   * χειρότερο είδος σφάλματος γιατί μοιάζει με «δεν υπάρχει». Είναι το **ίδιο** λάθος
-   * που το `agency-directory-route.ts` έχει ήδη καταγράψει γραμμένο.
+   * Ένα χειρόγραφο `` `/procurement/${id}` `` «δούλευε» — και δεν υπήρχε σελίδα εκεί.
+   * Ένας βοηθός `…Href` κουβαλά το `encodeURIComponent` **και** ζει δίπλα στη διαδρομή
+   * που υπάρχει. Η κρίση πάει **σε κάθε κλήση** του `viewDestination`, όπου κι αν ζει.
    */
-  it.each(notifierFiles().map((f) => [path.basename(f), f] as const))(
-    'Κ2 — %s: καμία χειρόγραφη διαδρομή μέσα σε `actions`',
+  it('Κ2 🔴 — κάθε `viewDestination(` παίρνει τη διαδρομή από SSoT (και υπάρχουν κλήσεις)', () => {
+    const calls = ALL_SOURCES.filter((file) => file !== DESTINATION_SSOT)
+      .flatMap((file) => viewDestinationArgs(read(file)).map((arg) => [path.relative(SRC_ROOT, file), arg]));
+
+    expect(calls.length).toBeGreaterThanOrEqual(6);
+    // Το αρχείο ταξιδεύει μέσα στη σύγκριση, ώστε η αποτυχία να λέει ΠΟΙΟ ξέφυγε.
+    const offenders = calls.filter(([, arg]) => !ROUTE_FROM_SSOT.test(arg));
+    expect(offenders).toEqual([]);
+  });
+
+  it.each(PRODUCERS.map((f) => [path.relative(SRC_ROOT, f), f] as const))(
+    'Κ2β — %s: καμία χειρόγραφη διαδρομή μέσα σε κυριολεκτικό `actions`',
     (_name, file) => {
-      const source = fs.readFileSync(file, 'utf8');
-      const urls = [...source.matchAll(/\n\s*actions:\s*\[[^\]]*\]/g)].map((m) => m[0]);
-      for (const block of urls) {
+      for (const block of read(file).match(ACTION_BLOCKS) ?? []) {
         expect(block).toMatch(/url:\s*\w+Href\(/);
       }
     },
@@ -118,63 +155,61 @@ describe('ADR-841 §7 Α18 — καμία ειδοποίηση χωρίς δηλ
   /**
    * ⚠️ **Η ΕΤΙΚΕΤΑ ΔΕΝ ΦΤΑΝΕΙ ΠΟΤΕ ΣΕ ΟΘΟΝΗ — ΚΑΙ ΓΙ' ΑΥΤΟ ΔΕΝ ΕΙΝΑΙ ΕΛΛΗΝΙΚΗ.**
    *
-   * Μετρημένο: ο `NotificationDrawer` **αγνοεί** το `action.label` και αποδίδει το δικό
-   * του `t('notifications.actions.view_email')` *(→ «Προβολή» / «View»)*. Το πεδίο είναι
-   * `z.string().min(1)` στο σχήμα, οπότε **κάτι** πρέπει να μπει· ένα ελληνικό κείμενο
-   * εκεί θα ήταν **ψεύτικη υπόσχεση μετάφρασης** — string που κανείς δεν μπορεί να
-   * αλλάξει γλώσσα και **κανείς δεν διαβάζει** (N.11).
+   * Ο `NotificationDrawer` **αγνοεί** το `action.label` και αποδίδει δικό του
+   * μεταφρασμένο κείμενο. Ένα ελληνικό κείμενο εκεί θα ήταν **ψεύτικη υπόσχεση
+   * μετάφρασης** (N.11). Το `viewDestination` γράφει σταθερό `view` — εδώ κρίνονται
+   * οι κυριολεκτικοί πίνακες που απέμειναν.
    */
-  /**
-   * 🔴 **Ο ΠΡΟΟΡΙΣΜΟΣ ΔΕΝ ΕΙΝΑΙ ΕΝΑΣ — ΚΑΙ Ο ΚΟΙΝΟΣ ΠΥΡΗΝΑΣ ΔΕΝ ΜΠΟΡΕΙ ΝΑ ΤΟ ΞΕΡΕΙ**
-   * (ADR-841 §7 Α18.9).
-   *
-   * Το `announceIfNewsworthy` είναι **ένα** σώμα που εξυπηρετεί **δύο** σαρωτές, με
-   * **δύο** συλλογές και **δύο** οθόνες. Μέχρι το Α18.9 έστελνε και τους δύο στο
-   * `/offers/<id>` — τον κατάλογο **του ιδιώτη** — και **6 στα 12** μετρημένα
-   * έγγραφα κατέληγαν σε *«δεν υπάρχει ή δεν είναι δικό σου»*.
-   *
-   * 🔑 **Η κατοχή δεν συνάγεται· δηλώνεται από όποιον διάβασε τη συλλογή.** Ένας
-   * τρίτος σαρωτής που θα ξεχνούσε να τη δηλώσει δεν θα έσπαγε τίποτα ορατό — θα
-   * κληρονομούσε **σιωπηλά** την πόρτα του ιδιώτη. Γι' αυτό ρωτιέται εδώ, στη
-   * λίστα που **παράγεται από τον δίσκο**, και όχι σε άγκυρα ανά σαρωτή.
-   */
-  /**
-   * ⚠️ **Ο ΠΑΡΟΝΟΜΑΣΤΗΣ ΖΕΙ ΣΤΟ ΙΔΙΟ ΚΡΙΤΗΡΙΟ, ΕΠΙΤΗΔΕΣ.** Η πρώτη γραφή του Κ4
-   * έψαχνε το κλείσιμο του αντικειμένου με `\n {4}\},` — indentation που **δεν
-   * υπάρχει** σε κανέναν από τους δύο σαρωτές. Αποτέλεσμα: **μηδέν** κλήσεις
-   * βρέθηκαν, ο βρόχος δεν έτρεξε ποτέ, και το κριτήριο ήταν **πράσινο επειδή δεν
-   * κοίταξε**. Πιάστηκε πριν φύγει· μένει γραμμένο ώστε να μην ξαναγραφτεί έτσι.
-   */
-  it('Κ4 🔴 — κάθε κλήση του κοινού πυρήνα ΔΗΛΩΝΕΙ κατοχή (και υπάρχουν κλήσεις)', () => {
-    const found: string[] = [];
-
-    for (const file of files) {
-      const source = fs.readFileSync(file, 'utf8');
-      for (const match of source.matchAll(/announceIfNewsworthy\(/g)) {
-        // Παράθυρο αρκετά μεγάλο για το αντικείμενο υποψηφίου, αρκετά μικρό ώστε
-        // να μην «δανειστεί» το `source:` της επόμενης κλήσης.
-        found.push(source.slice(match.index, match.index + 1200));
-      }
-    }
-
-    // 🔴 Δύο σαρωτές, δύο κλήσεις. Ένα `0` εδώ σημαίνει «η ανακάλυψη έσπασε».
-    expect(found.length).toBeGreaterThanOrEqual(2);
-
-    for (const call of found) {
-      expect(call).toMatch(/\n\s+source: '[a-z-]+',/);
-    }
-  });
-
-  it.each(notifierFiles().map((f) => [path.basename(f), f] as const))(
+  it.each(PRODUCERS.map((f) => [path.relative(SRC_ROOT, f), f] as const))(
     'Κ3 — %s: καμία ελληνική ετικέτα μέσα σε `actions`',
     (_name, file) => {
-      const source = fs.readFileSync(file, 'utf8');
-      const blocks = [...source.matchAll(/\n\s*actions:\s*\[[^\]]*\]/g)].map((m) => m[0]);
-      for (const block of blocks) {
+      for (const block of read(file).match(ACTION_BLOCKS) ?? []) {
         const label = /label:\s*'([^']*)'/.exec(block);
         expect(label).not.toBeNull();
         expect(label?.[1] ?? '').not.toMatch(/[Ͱ-Ͽἀ-῿]/);
       }
+    },
+  );
+
+  /**
+   * 🔴 **Ο ΠΡΟΟΡΙΣΜΟΣ ΔΕΝ ΕΙΝΑΙ ΕΝΑΣ — ΚΑΙ Ο ΚΟΙΝΟΣ ΠΥΡΗΝΑΣ ΔΕΝ ΜΠΟΡΕΙ ΝΑ ΤΟ ΞΕΡΕΙ**
+   * (ADR-841 §7 Α18.9 · ADR-849 §6δ Β1).
+   *
+   * Το `announceIfNewsworthy` είναι **ένα** σώμα που εξυπηρετεί **δύο** σαρωτές. Η
+   * κατοχή (ποια πόρτα) **και** ο κάτοχος του χώρου (σε ποιον χώρο ανοίγει) δεν
+   * συνάγονται — **δηλώνονται** από όποιον διάβασε τη συλλογή.
+   *
+   * ⚠️ **Ο ΠΑΡΟΝΟΜΑΣΤΗΣ ΖΕΙ ΣΤΟ ΙΔΙΟ ΚΡΙΤΗΡΙΟ, ΕΠΙΤΗΔΕΣ.** Η πρώτη γραφή του Κ4 έψαχνε
+   * το κλείσιμο με indentation που **δεν υπάρχει** ⇒ μηδέν κλήσεις, πράσινο επειδή δεν
+   * κοίταξε. Πιάστηκε πριν φύγει· μένει γραμμένο ώστε να μην ξαναγραφτεί έτσι.
+   */
+  it('Κ4 🔴 — κάθε κλήση του κοινού πυρήνα ΔΗΛΩΝΕΙ κατοχή ΚΑΙ κάτοχο χώρου (και υπάρχουν κλήσεις)', () => {
+    const calls = NOTIFIERS.flatMap((file) => {
+      const source = read(file);
+      return [...source.matchAll(/announceIfNewsworthy\(/g)].map((m) =>
+        source.slice(m.index, m.index + 1600),
+      );
+    });
+
+    expect(calls.length).toBeGreaterThanOrEqual(2);
+    for (const call of calls) {
+      expect(call).toMatch(/\n\s+source: '[a-z-]+',/);
+      expect(call).toMatch(/\n\s+holderId[,:]/);
+    }
+  });
+
+  /**
+   * 🔴 **ADR-849 §6δ Β1 — ΚΑΝΕΝΑΣ ΠΡΟΟΡΙΣΜΟΣ ΧΩΡΙΣ ΧΩΡΟ.** Ο τύπος το επιβάλλει ήδη
+   * (`DispatchDestination`)· αυτή η γραμμή είναι η ζώνη ασφαλείας για ό,τι δεν περνά
+   * από έλεγχο τύπων πριν το commit. Κυριολεκτικό `actions: [` ⇒ `workspace:` στο ίδιο
+   * αρχείο· οι βοηθοί `…Destination(` το κουβαλούν από κατασκευής.
+   */
+  it.each(PRODUCERS.map((f) => [path.relative(SRC_ROOT, f), f] as const))(
+    'Κ5 — %s: κυριολεκτικές ενέργειες ⇒ δηλωμένος χώρος',
+    (_name, file) => {
+      const source = read(file);
+      if ((source.match(ACTION_BLOCKS) ?? []).length === 0) return;
+      expect(source).toMatch(/\n\s*workspace[,:]/);
     },
   );
 });

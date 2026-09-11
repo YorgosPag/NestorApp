@@ -71,6 +71,11 @@
  */
 
 import type { OwnerProperty } from '@/types/owner-property';
+import {
+  orgWorkspace,
+  personalWorkspace,
+  type WorkspaceRef,
+} from '@/types/workspace-membership';
 
 /**
  * **Ο χώρος στον οποίο ζει η αγγελία.** Δύο είδη, γιατί το προϊόν έχει δύο χώρους:
@@ -119,6 +124,19 @@ export function custodyOf(property: CustodyFields): ListingCustody {
   return property.authorCompanyId === null
     ? { kind: 'personal', userId: property.authorUserId }
     : { kind: 'company', companyId: property.authorCompanyId };
+}
+
+/**
+ * **Η θεματοφυλακή, ως χώρος της πλατφόρμας** — για όποιον χρειάζεται να **ανοίξει**
+ * κάτι μέσα της (π.χ. ο χώρος-στόχος μιας ειδοποίησης, ADR-849 §6δ Β1).
+ *
+ * ⚠️ Δύο λεξιλόγια για το ίδιο πράγμα (`'company'` εδώ, `'org'` στο `WorkspaceRef`)·
+ * η μετάφραση ζει **εδώ**, μία φορά, ώστε κανένας καταναλωτής να μην τη ξαναγράψει.
+ */
+export function custodyWorkspace(custody: ListingCustody): WorkspaceRef {
+  return custody.kind === 'company'
+    ? orgWorkspace(custody.companyId)
+    : personalWorkspace(custody.userId);
 }
 
 /**
