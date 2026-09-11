@@ -213,6 +213,20 @@ describe('Κ — άγκυρες κριτηρίου', () => {
     expect(S.scanReferences('βλ. §7', { ...opts, ownFamily: 'ADR-900' })).toHaveLength(1);
   });
 
+  /**
+   * 🔴 ΠΛΗΡΩΘΗΚΕ ΖΩΝΤΑΝΑ 2026-09-11: μέσα στο ADR-777 η γραμμή «(ADR-849 §6δ · ADR-787 §5.3 ζ)»
+   * γινόταν ενότητες 6 και 5.3 του ίδιου του ADR-777 (το 787/849 δεν είναι οικογένειες ⇒ το explicit δεν
+   * τα έπιανε ⇒ το internal πέρασμα κρατούσε το σκέτο `§`). Ψευδές prose-only που μπλόκαρε
+   * **κάθε** commit του δέντρου, αφού η πύλη διαβάζει τον δίσκο.
+   */
+  test('Κ13 — το `§` ενός δείκτη σε ADR ΕΚΤΟΣ οικογένειας δεν είναι αυτο-αναφορά', () => {
+    const opts = { file: 'x.md', familyIds: ['ADR-900'], ownFamily: 'ADR-900' };
+    expect(S.scanReferences('(ADR-849 §6δ · ADR-787 §5.3 ζ)', opts)).toEqual([]);
+    // το §7 μένει ΕΞΩ από το παράθυρο των 24 χαρακτήρων του ρητού δείκτη
+    const mixed = S.scanReferences('ADR-787 §5.3 — και πολύ πιο κάτω, σε άλλη πρόταση, §7', opts);
+    expect(mixed.map(r => `${r.family} §${r.section} ${r.form}`)).toEqual(['ADR-900 §7 internal']);
+  });
+
   test('Κ6 — φασική αναφορά είναι ΔΙΚΗ ΤΗΣ κατάσταση, όχι σιωπηλή παράλειψη', () => {
     const refs = S.scanReferences('ADR-900 Φ.Δ και ADR-900 Φάση Ε', { file: 'a.ts', familyIds: ['ADR-900'] });
     expect(refs.map(r => r.phase)).toEqual(['Δ', 'Ε']);

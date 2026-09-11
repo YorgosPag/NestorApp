@@ -151,6 +151,10 @@ function scanReferences(text, { file, familyIds, ownFamily = null }) {
   const explicitRe = new RegExp(`(${alt})[\\s,·]*§\\s*(${SECTION_ID})`, 'gu');
   const phaseRe = new RegExp(`(${alt})[\\s,·]*(?:Φ\\.|Φάση\\s*)(${PHASE_ID})`, 'gu');
   const internalRe = new RegExp(`§\\s*(${SECTION_ID})`, 'gu');
+  // 🔴 Δείκτης σε ADR **εκτός** οικογένειας (`ADR-787 §5.3`) δεν μετριέται — αλλά ούτε
+  // το `§` του είναι αυτο-αναφορά. Χωρίς αυτό, μέσα στο ADR-777 το «ADR-787 §5.3 ζ»
+  // γινόταν ενότητα 5.3 του ίδιου του ADR-777 και μπλόκαρε κάθε commit (2026-09-11).
+  const anyAdrRe = /ADR-\d+[\s,·]*§/gu;
 
   lines.forEach((line, i) => {
     const seen = new Set();
@@ -158,6 +162,7 @@ function scanReferences(text, { file, familyIds, ownFamily = null }) {
       seen.add(m.index);
       refs.push({ file, line: i + 1, family: m[1], section: m[2], form: 'explicit' });
     }
+    for (const m of line.matchAll(anyAdrRe)) seen.add(m.index);
     for (const m of line.matchAll(phaseRe)) {
       refs.push({ file, line: i + 1, family: m[1], phase: m[2], form: 'phase' });
     }
