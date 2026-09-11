@@ -5,6 +5,8 @@
 **Domain:** Infrastructure — Firebase Storage
 **Bucket:** `gs://pagonis-87766.firebasestorage.app`
 **Companion files:** `infrastructure/firebase-storage/cors.json`, `infrastructure/firebase-storage/README.md`
+**Αδελφό (2026-09-11):** ADR-851 — η ρύθμιση της **Firebase Auth** ως κώδικας, με **αυτόματο** ημερήσιο έλεγχο απόκλισης
+(εδώ η επαλήθευση είναι ακόμη χειροκίνητη).
 
 ---
 

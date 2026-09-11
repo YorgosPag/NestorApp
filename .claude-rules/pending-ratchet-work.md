@@ -37,16 +37,11 @@
   `dxf-viewer/config/modal-config.ts` (50/60/70/75/80/90, inline `style`) · `LayerStateDropdown` (4 διάλογοι μέσα σε
   popover που μένει ανοιχτό ⇒ πίσω του).
 
-- 🔶 **11/09 — ΔΙΔΥΜΟ ΤΗΣ «ΔΗΜΟΣΙΑΣ ΔΙΕΥΘΥΝΣΗΣ» ΜΕ ΑΛΛΟ FALLBACK** *(βρέθηκε στο ADR-844 §13.6 #3)*
-
-  **Πού**: `src/app/api/first-contacts/guest/route.ts` — τοπικό `publicBase()` =
-  `NEXT_PUBLIC_APP_URL ?? NEXT_PUBLIC_BASE_URL`, ενώ το SSoT `src/lib/http/public-origin.ts`
-  (`publicOrigin` / `publicUrl`) διαβάζει **μόνο** `NEXT_PUBLIC_APP_URL` και επιστρέφει `null` όταν λείπει.
-  Το σχόλιο του route αναφέρει και **τρίτη** ανάγνωση (`buildReviewUrl`, ADR-660).
-  **Γιατί ΔΕΝ διορθώθηκε επιτόπου**: η ενοποίηση **αλλάζει συμπεριφορά** — σε περιβάλλον με μόνο
-  `NEXT_PUBLIC_BASE_URL`, ο σύνδεσμος επιβεβαίωσης θα γινόταν **σχετικός/κενός**. Θέλει απόφαση:
-  (α) το SSoT μαθαίνει το fallback, ή (β) το `NEXT_PUBLIC_BASE_URL` αποσύρεται από τα περιβάλλοντα.
-  **Διόρθωση**: grep `NEXT_PUBLIC_BASE_URL` → ένα SSoT, όλοι οι αναγνώστες μέσω `publicUrl()`.
+> ✅ **11/09 — ΕΚΛΕΙΣΕ**: «δίδυμο της δημόσιας διεύθυνσης με άλλο fallback» (**ADR-851 Φ5**).
+> Μετρήθηκε ότι το `NEXT_PUBLIC_BASE_URL` **δεν ορίζεται σε κανένα περιβάλλον** ⇒ η ενοποίηση
+> **δεν** άλλαξε συμπεριφορά. `guest/route.ts` · `pending-registration.ts` · `PhotoSharePageContent.tsx`
+> → `publicUrl()`· η διαδρομή πρώτης επαφής αρνείται (503) **πριν** γράψει πρόσκληση χωρίς σύνδεσμο.
+> Ratchet: module `public-origin` στο `.ssot-registry.json` (μηδενική ανοχή).
 
 
 - 🔴 **10/09 — ΩΜΑ NUL BYTES ΣΕ 9 ΑΡΧΕΙΑ ΚΩΔΙΚΑ — ΚΑΙ Ο ΕΛΕΓΧΟΣ ΜΕ `grep` ΕΙΝΑΙ ΤΥΦΛΟΣ** *(βρέθηκε στο ADR-843 §10.19, όταν ένα handoff απέκτησε NUL και το `grep -c -P '\x00'` μέτρησε **0**)*
@@ -99,6 +94,8 @@
   `NEXT_PUBLIC_APP_URL` ⇒ το QR της πινακίδας τύπωνε Vercel. ✅ **Η ρίζα διορθώθηκε** (μία γραμμή στο
   build). Μένει **καθάρισμα**: σβήσιμο της νεκρής εφεδρείας + SSoT `public-origin.ts` + ratchet — **χωρίς
   βιασύνη**, μετά το ADR-848 Α (σίγαση ανά τύπο). Το project στο Vercel **ΜΗΝ διαγραφεί** (κρατά το όνομα).
+  ✅ *11/09 (ADR-851 Φ5)*: `PhotoSharePageContent` · guest `publicBase()` · `pending-registration.ts:282`
+  πέρασαν στο `publicUrl()`. Μένουν τα υπόλοιπα.
   Επιπλέον ευρήματα: `PhotoSharePageContent` διαβάζει `NEXT_PUBLIC_BASE_URL` (**δεν ορίζεται πουθενά**) ·
   `VendorInviteSection` → `?? ''` (μισός σύνδεσμος) · **τρεις** συναρτήσεις `getAppBaseUrl` + `publicBase()`
   (guest route) + `pending-registration.ts:282` = διπλότυπα του `publicOrigin()`.

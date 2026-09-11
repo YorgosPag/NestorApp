@@ -147,6 +147,13 @@ admin-approval μοντέλο των μεγάλων.
 
 ---
 
+- **2026-09-11** — 🔴 **§6 — ΤΟ ΑΙΤΗΜΑ ΕΝΤΑΞΗΣ ΕΓΙΝΕ ΟΝΤΟΤΗΤΑ.** Ο `pending` που απέδειξε email από δημόσια
+  αγγελία (ADR-844) γινόταν `citizen` και **χανόταν σιωπηλά** από τη λίστα εγκρίσεων (ίδιο πεδίο `status` για δύο
+  ερωτήματα — ADR-749)· και η λίστα διάβαζε `users where companyId == null` **χωρίς tenant scope**. ✅
+  `workspace_access_requests` (ντετερμινιστικό id, deny-all, AIP-216 / GitHub · Slack · Entra · Atlassian), έγκριση
+  που κλείνει το αίτημα, **απόρριψη** περιορισμένη στον χώρο εκ κατασκευής, email απόφασης στη γλώσσα του αιτούντα,
+  οθόνη αναμονής που ξέρει «απορρίφθηκε». Το `'pending'` έφυγε από το `USER_STATUSES` (0 έγγραφα, κανένας φρουρός).
+
 ## 5. Ο ΠΟΛΙΤΗΣ ΔΕΝ ΠΕΡΙΜΕΝΕΙ ΕΓΚΡΙΣΗ ΓΙΑ ΝΑ ΥΠΑΡΧΕΙ (2026-08-23)
 
 ### 5.1 Η ανατροπή: η έγκριση καθόταν στη ΛΑΘΟΣ πύλη
@@ -979,3 +986,65 @@ notification channel»*), και οι **δύο** διαδρομές που γρ�
   που την έκανε επικίνδυνη, **όχι** την ίδια. Είναι δουλειά της ταυτότητας (**ADR-787**), όχι του
   ADR-660, και το `assigned` ως αυστηρό no-op είναι η άμυνα που μένει *(τεκμηριωμένο στο SSoT)*.
 * **Το Ε2.ε του ADR-748 δεν έκλεισε** — μετακινήθηκε το **σημείο** αναθεώρησης, όχι το ερώτημα.
+
+## 6. ΤΟ ΑΙΤΗΜΑ ΕΝΤΑΞΗΣ ΕΙΝΑΙ ΟΝΤΟΤΗΤΑ, ΟΧΙ ΚΑΤΑΣΤΑΣΗ ΛΟΓΑΡΙΑΣΜΟΥ (2026-09-11)
+
+### 6.1 Το εύρημα (ADR-844 §13.6 #2)
+
+Το «περιμένει έγκριση για χώρο» ήταν `users/{uid}.status = 'pending'` — το **ίδιο** πεδίο που απαντά «τι ταυτότητα
+έχει». Ένας αυτο-εγγεγραμμένος σε αναμονή που απέδειξε το email του από δημόσια αγγελία πήρε `status: 'citizen'`
+(`writeCitizenDocument`, `merge`) και **το αίτημα εξαφανίστηκε** από τη λίστα του διαχειριστή. Δύο ερωτήματα, μία
+τιμή (ADR-749). Και η λίστα διάβαζε `users where companyId == null` **χωρίς tenant scope**: κάθε διαχειριστής έβλεπε
+**κάθε** χρήστη χωρίς οργανισμό της πλατφόρμας — και πολίτες που πλησίασαν **άλλες** εταιρείες.
+
+### 6.2 Τι κάνουν οι μεγάλοι (βεβαιότητα **υψηλή**)
+
+GitHub (organization membership request / invitation, λήξη 7 ημερών) · Slack (`invite_request`, approve/deny) ·
+Microsoft Entra (access package request: pending → approved/denied → delivered) · Atlassian (product access request·
+απορριφθέν δεν ξαναζητείται χωρίς διαχειριστή) — **πάντα ξεχωριστός πόρος** με δικό του κύκλο ζωής. Google AIP-216:
+κάθε πόρος έχει **τη δική του** κατάσταση.
+
+### 6.3 Η απόφαση
+
+| | Πριν | Μετά |
+|---|---|---|
+| «περιμένει έγκριση;» | `users.status = 'pending'` | `workspace_access_requests/{wacr_…}` — `pending · approved · denied · withdrawn` |
+| id | — | **ντετερμινιστικό** ανά (χώρος, πρόσωπο), v4 (`generateDeterministicV4Id`) ⇒ ιδεμποτικό χωρίς ερώτημα |
+| ποιος το ανοίγει | — | **μόνο** το `ensurePendingRegistration`, **μέσα** στο transaction του `users/{uid}` |
+| ειδοποίηση μία φορά | `users.pendingNotifiedAt` | `notifiedAt` **του αιτήματος** |
+| η απόδειξη του πολίτη | **έσβηνε** το αίτημα | το αίτημα **επιβιώνει** (ο πολίτης είναι αυστηρό no-op) |
+| λίστα διαχειριστή | όλοι οι χωρίς οργανισμό, όλης της πλατφόρμας | εκκρεμή αιτήματα **του `ctx.companyId`** |
+| έγκριση | claims | claims **+** κλείσιμο αιτήματος **+** email στον αιτούντα |
+| απόρριψη | **δεν υπήρχε** (έγκριση ή σιωπή) | `POST /api/admin/workspace-access-requests/deny` — σώμα **μόνο** `{uid}` ⇒ περιορισμένη στον χώρο **εκ κατασκευής**, δικαίωμα **ίδιο** με της έγκρισης (`users:users:manage`) |
+| ξανασύνδεση μετά από απόρριψη | — | **δεν** ξανανοίγει μόνο του (Atlassian) |
+| οθόνη αναμονής | «θα ειδοποιηθείτε» (υπόσχεση χωρίς φορέα) | ρωτά `GET /api/auth/workspace-access-request` ⇒ λέει «απορρίφθηκε» + δρόμος στον χώρο του |
+| `users.status` | `'pending'` για χρήστη χωρίς tenant | **`'active'`** (η ταυτότητα) · `'pending'` **βγήκε** από το `USER_STATUSES` · κανόνας δημιουργίας δέχεται μόνο `active` |
+
+🔒 Η συλλογή είναι **deny-all** για πελάτες (λίστα και κατάσταση μέσω διακομιστή): πελάτης που θα έγραφε `approved`
+στο δικό του αίτημα θα ενέκρινε τον εαυτό του. Άγκυρα στη σουίτα κανόνων.
+⚠️ **Μετρημένο πριν την αφαίρεση του `'pending'`**: 0 έγγραφα στην παραγωγή· **κανένας** κανόνας Firestore και
+**κανένας** φρουρός κώδικα δεν κρίνει πρόσβαση με το `users.status` — η αλλαγή σε `active` δεν ανοίγει τίποτα.
+
+### 6.4 Αρχεία
+
+Νέα: `src/types/workspace-access-request.ts` · `src/server/auth/{workspace-access-request,workspace-access-decision-notice}.ts` ·
+`src/app/api/admin/workspace-access-requests/deny/route.ts` · `src/app/api/auth/workspace-access-request/route.ts` ·
+`src/services/email-templates/workspace-access-decision-email.ts` · `role-management/components/DenyAccessRequestDialog.tsx`.
+Αλλάζουν: `pending-registration.ts` · `role-management/users/route.ts` · `set-user-claims/claims-handler.ts` · `UsersTab` ·
+`UserTable` · `role-management/types.ts` · `pending-approval/page.tsx` · `auth.types.ts` · `auth-context-profile.ts` ·
+`firestore.rules` · `enterprise-id-{prefixes,class,convenience}.ts` · `enterprise-id.service.ts` · `firestore-collections.ts` ·
+`domain-constants.ts` · locales `admin`/`auth` (el+en).
+
+### 6.5 Άγκυρες
+
+`workspace-access-request.test.ts` (Τ ταυτότητα v4 · Α άνοιγμα · Π μόνο `pending →` · Λ tenant scope) ·
+`pending-registration.test.ts` (**Π2β**: το αίτημα επιβιώνει του πολίτη · απορριφθέν δεν ξανανοίγει · Π3 `pending` εκτός
+λεξιλογίου) · `workspace-access-decision-email.test.ts` · rules `workspace-access-requests.rules.test.ts`.
+
+### 6.6 🔶 Τι ΔΕΝ έκλεισε
+
+* **Απόσυρση από τον ίδιο τον αιτούντα** (`withdrawn`): η κατάσταση υπάρχει στο λεξιλόγιο, η πράξη όχι ακόμη.
+* **Ρητό «ζητώ είσοδο»** για πολίτη που **δεν** αυτο-εγγράφηκε από το `/login`: σήμερα αίτημα ανοίγει μόνο η σύνδεση
+  χωρίς ταυτότητα πολίτη (σημασιολογία αμετάβλητη από το §5).
+* Το `isSyntheticIdentity` (ADR-822 §4.1) έχασε τον **μόνο** καταναλωτή του — η νέα λίστα δεν τον χρειάζεται (αιτήματα
+  ανοίγει μόνο πραγματική σύνδεση Firebase Auth). Μένει ως SSoT του ADR-822 για επόμενο καταναλωτή.
