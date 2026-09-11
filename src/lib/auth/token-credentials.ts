@@ -140,6 +140,20 @@ export async function verifySessionCookie(
  * ⚠️ **ΔΕΝ είναι τρίτος τρόπος πιστοποίησης** (δες κεφαλίδα): είναι το **ίδιο** cookie,
  * με αυστηρότερη ερώτηση. Δεν ζητά claims — ένας ανεπιβεβαίωτος λογαριασμός **δεν έχει**.
  */
+/**
+ * **Ποιος καλεί με έγκυρο ID token στο `Authorization`;** — ή `null`. (ADR-851 · ADR-660 §6)
+ *
+ * Για τις διαδρομές όπου ο καλών **δεν έχει** claims ακόμη (επιβεβαίωση email · κατάσταση
+ * αιτήματος ένταξης) και άρα το `withAuth` θα απαντούσε 401 **ακριβώς** στον πληθυσμό τους.
+ * ⚠️ **Πιστοποίηση, ΟΧΙ εξουσιοδότηση**: λέει μόνο «ποιος είναι» — τι επιτρέπεται το
+ * αποφασίζει ο καλών, και μόνο για **τον ίδιο** τον χρήστη.
+ */
+export async function verifiedBearerUid(request: NextRequest): Promise<string | null> {
+  const token = extractBearerToken(request);
+  if (token === null) return null;
+  return (await verifyIdToken(token))?.uid ?? null;
+}
+
 export async function sessionHolderUid(sessionCookie: string | null): Promise<string | null> {
   if (sessionCookie === null || sessionCookie === '') return null;
   const decoded = await verifySessionCookie(sessionCookie, { checkRevoked: true });
