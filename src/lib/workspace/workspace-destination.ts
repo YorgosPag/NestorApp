@@ -21,6 +21,7 @@
 import 'server-only';
 
 import type { PageIdentity } from '@/server/auth/page-identity';
+import type { WorkspaceRef } from '@/types/workspace-membership';
 
 import { workspacePath } from './workspace-path';
 import { workspaceSegmentFor, type WorkspaceOwner } from './workspace-segment';
@@ -42,7 +43,32 @@ export function workspaceOwnerOf(identity: SignedInPageIdentity): WorkspaceOwner
 }
 
 /**
+ * **Ο κάτοχος ενός χώρου που ζητήθηκε ρητά** — π.χ. ο χώρος-στόχος μιας ειδοποίησης.
+ *
+ * ⚠️ Ο ιδιωτικός χώρος **χάνει το `userId` επίτηδες**: το τμήμα του είναι πάντα το
+ * `me` του **συνδεδεμένου**. Ο καλών οφείλει να έχει ήδη κρίνει ότι ο ιδιωτικός χώρος
+ * είναι **δικός του** (`readDestinationWorkspace` το κάνει) — αλλιώς θα άνοιγε τον
+ * δικό του χώρο με ξένο αίτημα.
+ */
+export function ownerOfWorkspace(ref: WorkspaceRef): WorkspaceOwner {
+  return ref.kind === 'org'
+    ? { kind: 'organization', companyId: ref.companyId }
+    : { kind: 'personal' };
+}
+
+/**
  * **Η διαδρομή, μέσα στον χώρο του ανθρώπου** — `/listings/x` ⇒ `/o/<χώρος>/listings/x`.
+ */
+export async function workspaceDestinationFor(
+  identity: SignedInPageIdentity,
+  path: string,
+): Promise<string> {
+  return workspaceDestinationOf(workspaceOwnerOf(identity), path);
+}
+
+/**
+ * **Η διαδρομή, μέσα σε ΣΥΓΚΕΚΡΙΜΕΝΟ χώρο** — ο ίδιος κανόνας για τον χώρο του θεατή
+ * ({@link workspaceDestinationFor}) και για τον χώρο-στόχο μιας ειδοποίησης (ADR-849 Β1).
  *
  * Το ερώτημα της διαδρομής επιβιώνει αυτούσιο: το `workspacePath` προσθέτει πρόθεμα,
  * δεν ξαναγράφει την ουρά.
@@ -51,11 +77,8 @@ export function workspaceOwnerOf(identity: SignedInPageIdentity): WorkspaceOwner
  * «ο χώρος σου δεν έχει διεύθυνση» δεν επιτρέπεται να φορέσει τη στολή του «δεν
  * υπάρχει». Είναι **χαλασμένη παροχή** και οφείλει να **φανεί** στα ίχνη.
  */
-export async function workspaceDestinationFor(
-  identity: SignedInPageIdentity,
-  path: string,
-): Promise<string> {
-  const resolution = await workspaceSegmentFor(workspaceOwnerOf(identity));
+export async function workspaceDestinationOf(owner: WorkspaceOwner, path: string): Promise<string> {
+  const resolution = await workspaceSegmentFor(owner);
 
   if (resolution.outcome === 'unaddressable') {
     throw new Error(

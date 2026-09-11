@@ -59,4 +59,14 @@ export const ENTITY_ROUTES = {
     list: '/obligations',
     edit: (id: string) => typedHref(`/obligations/${id}/edit`),
   },
+  /**
+   * 🔴 **Η ΚΑΡΤΕΛΑ ΠΑΡΑΓΓΕΛΙΑΣ ΖΕΙ ΣΤΟ `/procurement/purchase-orders/:id`** (ADR-849 Β1).
+   * Η ειδοποίηση έγκρισης έγραφε με το χέρι `/procurement/<id>` — διεύθυνση **χωρίς
+   * σελίδα** (404), αόρατη σε κάθε πύλη γιατί ο φρουρός της κοιτούσε μόνο αρχεία
+   * `*-notifier.service.ts`.
+   */
+  procurement: {
+    purchaseOrder: (id: string) =>
+      typedHref(`/procurement/purchase-orders/${encodeURIComponent(id)}`),
+  },
 } as const;
