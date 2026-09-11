@@ -68,6 +68,15 @@ export function getEndpointCategory(path: string): RateLimitCategory {
 }
 
 /**
+ * **Όριο με ΔΙΚΟ του παράθυρο** — για «πράξεις ανά στόχο», όχι «αιτήματα ανά καλούντα»
+ * (ADR-851: email λογαριασμού ανά παραλήπτη). **Ίδιο** store (Upstash σε παραγωγή), καμία
+ * δεύτερη μηχανή· ο καλών φτιάχνει κλειδί **χωρίς** προσωπικά δεδομένα (κατακερματισμένο).
+ */
+export async function checkQuota(key: string, limit: number, windowMs: number): Promise<RateLimitCheckResult> {
+  return getRateLimitStore().check(key, limit, windowMs);
+}
+
+/**
  * Get the rate limit for a category.
  */
 export function getCategoryLimit(category: RateLimitCategory): number {

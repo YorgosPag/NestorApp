@@ -213,6 +213,16 @@ export function getCategoryLimit(category: RateLimitCategory): number {
 }
 
 /**
+ * **Email λογαριασμού ανά ΠΑΡΑΛΗΠΤΗ** (ADR-851) — όχι «αιτήματα ανά καλούντα».
+ *
+ * 🔴 Το όριο ανά IP (`SENSITIVE`) δεν φτάνει: με πολλές IP κάποιος πλημμυρίζει **ξένο** inbox
+ * με email επαναφοράς στο **δικό μας** όνομα. Η ίδια η Firebase περιορίζει ανά διεύθυνση·
+ * αφού τα στέλνουμε πλέον εμείς, το όριο το οφείλουμε εμείς. 3 ανά 15′ καλύπτει τον
+ * άνθρωπο που δεν βρήκε το πρώτο μήνυμα, και κόβει τον βρόχο.
+ */
+export const AUTH_MAIL_RECIPIENT_QUOTA = { limit: 3, windowMs: 15 * 60 * 1000 } as const;
+
+/**
  * Get category for an endpoint path.
  */
 export function getEndpointCategory(path: string): RateLimitCategory {
