@@ -1059,7 +1059,6 @@
       "nameLabel": "What they should call you",
       "emailLabel": "Email",
       "phoneLabel": "Phone",
-      "emailHint": "The confirmation link goes here, and this is what the other side sees.",
       "channelHint": "Optional. If you leave it, they can call you instead of writing.",
       "submit": "Send my details",
       "submitting": "Writing…",
@@ -1091,7 +1090,18 @@
       "optionalSuffix": "(optional)",
       "requiredSuffix": "(required)",
       "closeAfterDone": "Close",
-      "accountNotice": "When you send, we email you a confirmation link. The moment you follow it your message goes out and your account is created — so you can see your contacts and withdraw them whenever you want."
+      "channelNotice": {
+        "proven": "When you send, your details go out immediately. Your account email is already verified, so nothing else is needed from you. You will find the contact among your contacts and can withdraw it whenever you want.",
+        "unverified-account": "Your account email has not been verified yet. When you send, we email it a confirmation link; the moment you follow it, your message goes out.",
+        "guest": "When you send, we email you a confirmation link. The moment you follow it your message goes out and your account is created — so you can see your contacts and withdraw them whenever you want.",
+        "foreign-address": "When you send, we email a confirmation link to the address you typed. The moment you follow it, the message goes out from that address's account — created if it does not exist — and you are signed in to it."
+      },
+      "channelEmailHint": {
+        "proven": "Your account's verified email — this is what the other side sees.",
+        "unverified-account": "Your account email — the confirmation link goes here, and this is what the other side sees.",
+        "guest": "The confirmation link goes here, and this is what the other side sees.",
+        "foreign-address": "The confirmation link goes here, and this is what the other side sees."
+      }
     },
     "guest": {
       "title": "Check your email",
