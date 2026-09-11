@@ -31,7 +31,15 @@ import {
   getCurrentEnvironment,
   isNotificationEventType,
 } from '@/config/notification-events';
-import type { DispatchRequest } from '@/server/notifications/notification-orchestrator';
+import {
+  readDestinationWorkspace,
+  type DestinationAction,
+} from '@/lib/notifications/notification-destination';
+import type {
+  DispatchContent,
+  DispatchDestination,
+  DispatchRequest,
+} from '@/server/notifications/notification-orchestrator';
 
 /** Η ετικέτα μιας επανάληψης: μικρά λατινικά, ψηφία, παύλες — γίνεται μέρος ταυτότητας. */
 const REPLAY_TAG = /^[a-z0-9][a-z0-9-]{0,39}$/;
@@ -44,14 +52,24 @@ export type ReplayRejection =
   | 'missing-tenant'
   | 'missing-title'
   | 'missing-event-id'
-  | 'invalid-source';
+  | 'invalid-source'
+  /**
+   * Έχει προορισμό αλλά **όχι** χώρο-στόχο (έγγραφο πριν το ADR-849 Β1). Η επανάληψη
+   * **δεν μαντεύει** χώρο — θα ξανάγραφε το ελάττωμα που διορθώθηκε. Τον συμπληρώνει ο
+   * ανιχνευτής απόκλισης (`notifications:destination-drift`), από το SSoT του παραγωγού.
+   */
+  | 'missing-workspace';
+
+/** Το αίτημα χωρίς `eventId` — **ανά μέλος** της ένωσης, ώστε ο προορισμός να μείνει δεμένος με τον χώρο του. */
+type WithoutEventId<T> = T extends unknown ? Omit<T, 'eventId'> : never;
+export type ReplayRequest = WithoutEventId<DispatchRequest>;
 
 /** Μια ειδοποίηση έτοιμη για επανάληψη — όλα όσα χρειάζεται το αίτημα, εκτός από το `eventId`. */
 export interface ReplaySource {
   readonly notificationId: string;
   readonly recipientId: string;
   readonly originalEventId: string;
-  readonly request: Omit<DispatchRequest, 'eventId'>;
+  readonly request: ReplayRequest;
 }
 
 export type ReplayParse =
@@ -59,7 +77,7 @@ export type ReplayParse =
   | { readonly ok: false; readonly notificationId: string; readonly reason: ReplayRejection };
 
 type Fields = Readonly<Record<string, unknown>>;
-type Action = NonNullable<DispatchRequest['actions']>[number];
+type Action = DestinationAction;
 
 function fieldsOf(value: unknown): Fields {
   return typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Fields) : {};
@@ -93,12 +111,11 @@ function actionsOf(value: unknown): Action[] | undefined {
 }
 
 /** Τα προαιρετικά του αιτήματος — **μόνο** όσα υπάρχουν (η Firestore απορρίπτει `undefined`). */
-function optionalContentOf(doc: Fields, meta: Fields): Partial<DispatchRequest> {
+function optionalContentOf(doc: Fields, meta: Fields): Partial<DispatchContent> {
   const body = textOf(doc.body);
   const severity = oneOf(doc.severity, Object.values(NOTIFICATION_SEVERITIES));
   const entityId = textOf(meta.entityId);
   const entityType = oneOf(meta.entityType, Object.values(NOTIFICATION_ENTITY_TYPES));
-  const actions = actionsOf(doc.actions);
   const titleKey = textOf(doc.titleKey);
   const titleParams = stringRecordOf(doc.titleParams);
   return {
@@ -106,9 +123,21 @@ function optionalContentOf(doc: Fields, meta: Fields): Partial<DispatchRequest> 
     ...(severity ? { severity } : {}),
     ...(entityId ? { entityId } : {}),
     ...(entityType ? { entityType } : {}),
-    ...(actions ? { actions } : {}),
     ...(titleKey ? { titleKey, ...(titleParams ? { titleParams } : {}) } : {}),
   };
+}
+
+/**
+ * **Ο προορισμός του πρωτοτύπου — μαζί με τον χώρο του, ή τίποτα** (ADR-849 Β1).
+ *
+ * `null` ⇒ υπάρχουν ενέργειες αλλά ο χώρος λείπει (ή είναι αλλοιωμένος): ο καλών αρνείται
+ * με `missing-workspace` αντί να στείλει ειδοποίηση που θα άνοιγε στον χώρο του θεατή.
+ */
+function destinationOf(doc: Fields, meta: Fields, recipientId: string): DispatchDestination | null {
+  const actions = actionsOf(doc.actions);
+  if (!actions) return {};
+  const workspace = readDestinationWorkspace(meta.workspace, recipientId);
+  return workspace ? { actions, workspace } : null;
 }
 
 /**
@@ -136,15 +165,18 @@ export function parseReplaySource(notificationId: string, data: unknown): Replay
   if (!originalEventId) return reject('missing-event-id');
   const service = oneOf(origin.service, Object.values(SOURCE_SERVICES));
   if (!service) return reject('invalid-source');
+  const destination = destinationOf(doc, meta, recipientId);
+  if (destination === null) return reject('missing-workspace');
 
   const feature = textOf(origin.feature);
-  const request: Omit<DispatchRequest, 'eventId'> = {
+  const request: ReplayRequest = {
     eventType,
     recipientId,
     tenantId,
     title,
     source: { service, ...(feature ? { feature } : {}), env: getCurrentEnvironment() },
     ...optionalContentOf(doc, meta),
+    ...destination,
   };
   return { ok: true, source: { notificationId, recipientId, originalEventId, request } };
 }

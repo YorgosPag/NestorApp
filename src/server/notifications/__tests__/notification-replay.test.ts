@@ -31,6 +31,7 @@ const LISTING_MATCH_DOC = {
     eventId: 'dmnd_1:listing:prop_1',
     entityId: 'prop_1',
     entityType: null,
+    workspace: { kind: 'personal', userId: 'user_1' },
   },
 };
 
@@ -52,10 +53,36 @@ describe('parseReplaySource — ίδιο περιεχόμενο, ίδιος πα
       severity: 'info',
       entityId: 'prop_1',
       actions: [{ id: 'view', label: 'view', url: '/listing/prop_1' }],
+      workspace: { kind: 'personal', userId: 'user_1' },
       titleKey: 'demandListingMatch.notificationTitle',
       titleParams: { title: 'Διαμέρισμα 80 τ.μ.' },
       source: { service: 'crm', feature: 'demand-listing-match', env: getCurrentEnvironment() },
     });
+  });
+
+  /**
+   * 🔴 ADR-849 Β1 — **Η επανάληψη ΔΕΝ μαντεύει χώρο.** Έγγραφο με προορισμό αλλά χωρίς
+   * χώρο-στόχο (πριν το Β1) θα ξανάγραφε ακριβώς το ελάττωμα: ο σύνδεσμος θα άνοιγε
+   * στον χώρο του θεατή. Και ο ιδιωτικός χώρος **άλλου** ανθρώπου είναι αλλοίωση.
+   */
+  it.each([
+    ['χωρίς χώρο', { ...LISTING_MATCH_DOC.meta, workspace: undefined }],
+    ['ιδιωτικός χώρος ΑΛΛΟΥ', { ...LISTING_MATCH_DOC.meta, workspace: { kind: 'personal', userId: 'user_2' } }],
+    ['εταιρεία χωρίς ταυτότητα', { ...LISTING_MATCH_DOC.meta, workspace: { kind: 'org', companyId: '' } }],
+  ])('Β1 🔴 — %s ⇒ missing-workspace', (_label, meta) => {
+    expect(parseReplaySource('n_1', { ...LISTING_MATCH_DOC, meta })).toEqual({
+      ok: false,
+      notificationId: 'n_1',
+      reason: 'missing-workspace',
+    });
+  });
+
+  it('Β1 — χωρίς ενέργειες δεν χρειάζεται χώρος (καμία πόρτα, τίποτα να ανοίξει)', () => {
+    const { actions: _actions, ...withoutActions } = LISTING_MATCH_DOC;
+    const meta = { ...LISTING_MATCH_DOC.meta, workspace: undefined };
+    const { request } = parsedSource({ ...withoutActions, meta });
+    expect('actions' in request).toBe(false);
+    expect('workspace' in request).toBe(false);
   });
 
   it('δεν γράφει undefined/null: κενό σώμα και άγνωστη οντότητα απλώς λείπουν', () => {
@@ -115,7 +142,16 @@ describe('replayRecipientOf — ένας παραλήπτης ή κανένας'
   });
 
   it('δύο παραλήπτες ⇒ null (το script αρνείται)', () => {
-    const other = parsedSource({ ...LISTING_MATCH_DOC, userId: 'user_2' }, 'n_2');
+    // ⚠️ Ο χώρος ακολουθεί τον παραλήπτη: ιδιωτικός χώρος του user_1 σε ειδοποίηση του
+    //    user_2 είναι αλλοίωση (`missing-workspace`) — όχι δεύτερος παραλήπτης.
+    const other = parsedSource(
+      {
+        ...LISTING_MATCH_DOC,
+        userId: 'user_2',
+        meta: { ...LISTING_MATCH_DOC.meta, workspace: { kind: 'personal', userId: 'user_2' } },
+      },
+      'n_2',
+    );
     expect(replayRecipientOf([parsedSource(), other])).toBeNull();
   });
 

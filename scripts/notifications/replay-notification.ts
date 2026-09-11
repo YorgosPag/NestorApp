@@ -58,6 +58,8 @@ const REJECTION_TEXT: Readonly<Record<ReplayRejection, string>> = {
   'missing-title': 'χωρίς τίτλο',
   'missing-event-id': 'χωρίς ταυτότητα γεγονότος',
   'invalid-source': 'άγνωστη υπηρεσία προέλευσης',
+  'missing-workspace':
+    'έχει προορισμό χωρίς χώρο-στόχο (πριν το ADR-849 Β1) — τρέξε πρώτα `npm run notifications:destination-drift`',
 };
 
 function parseArgs(argv: readonly string[]): ReplayArgs {
