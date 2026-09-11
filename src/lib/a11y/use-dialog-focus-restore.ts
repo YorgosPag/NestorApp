@@ -31,9 +31,13 @@
  *
  * Όταν **υπάρχει** `<DialogTrigger>` το αποτέλεσμα είναι ταυτόσημο (ο opener ΕΙΝΑΙ ο
  * trigger) — μηδέν παλινδρόμηση για τα 31 αρχεία που τον έχουν.
+ *
+ * 📌 2026-09-11 (ADR-241): η κρίση «ποιος είναι ο opener / υπάρχει ακόμη;» ζει στο
+ * `./focus-return` — τη χρησιμοποιεί και η πλήρης οθόνη.
  */
 
 import * as React from 'react';
+import { canRestoreFocusTo, captureFocusOpener } from './focus-return';
 
 /** Οι δύο handlers που πρέπει να περαστούν στο Radix `Content`. */
 export interface DialogAutoFocusHandlers {
@@ -45,15 +49,6 @@ export interface DialogAutoFocusHandlers {
 export interface ConsumerAutoFocusHandlers {
   readonly onOpenAutoFocus?: (event: Event) => void;
   readonly onCloseAutoFocus?: (event: Event) => void;
-}
-
-function resolveOpener(): HTMLElement | null {
-  if (typeof document === 'undefined' || typeof HTMLElement === 'undefined') return null;
-  const active = document.activeElement;
-  if (!(active instanceof HTMLElement)) return null;
-  // `body` σημαίνει «κανείς δεν κρατούσε το focus» (π.χ. προγραμματικό άνοιγμα χωρίς
-  // κλικ). Επαναφορά εκεί δεν προσφέρει τίποτα — αφήνουμε τον Radix να αποφασίσει.
-  return active === document.body ? null : active;
 }
 
 export function useDialogFocusRestore(
@@ -68,7 +63,7 @@ export function useDialogFocusRestore(
       // εδώ το `activeElement` είναι ακόμη αυτός που άνοιξε τον διάλογο. Γι' αυτό η
       // καταγραφή γίνεται εδώ και ΟΧΙ σε render/effect του `Content`: η συνάρτηση του
       // `Content` τρέχει και με κλειστό διάλογο, οπότε θα κατέγραφε λάθος στοιχείο.
-      openerRef.current = resolveOpener();
+      openerRef.current = captureFocusOpener();
       onOpenAutoFocus?.(event);
     },
     [onOpenAutoFocus],
@@ -84,7 +79,7 @@ export function useDialogFocusRestore(
       openerRef.current = null;
       // Χάθηκε από το DOM (π.χ. ο διάλογος διέγραψε τη γραμμή που τον άνοιξε): δεν
       // κάνουμε `preventDefault`, ώστε να τρέξει η προεπιλεγμένη διαδρομή του Radix.
-      if (!opener || !opener.isConnected) return;
+      if (!canRestoreFocusTo(opener)) return;
 
       event.preventDefault();
       opener.focus();
