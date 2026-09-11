@@ -1,15 +1,24 @@
 'use client';
 
 /**
- * CompanySwitcher — ADR-340
+ * CompanySwitcher — ADR-340 · ADR-849 Β1
  *
- * Visible ONLY for super_admin users. Allows switching the active company
- * context for all CRM operations (events, contacts, projects).
+ * Visible ONLY for super_admin users.
+ *
+ * 🔑 **Μέσα σε χώρο, ο επιλογέας ΠΛΟΗΓΕΙ** (Linear · Vercel · Slack: ο οργανισμός ζει
+ * στη διεύθυνση). Μέχρι το ADR-849 Β1 άλλαζε **κρυφή** κατάσταση (`localStorage`) ενώ η
+ * διεύθυνση έμενε ίδια — η σελίδα `/o/<ΠΑΓΩΝΗΣ>/…` έδειχνε δεδομένα άλλης εταιρείας, και
+ * δύο καρτέλες δεν μπορούσαν να δείχνουν δύο εταιρείες. Εκτός χώρου (σελίδες
+ * διαχείρισης) αλλάζει την επιλογή, όπως πάντα.
  */
 
+import { useCallback } from 'react';
 import { Building2 } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSuperAdminCompany } from '@/contexts/SuperAdminCompanyContext';
+import { usePathname, useRouter, useWorkspaceAlias } from '@/lib/workspace/navigation';
+import { declaredHref } from '@/lib/workspace/route-worlds';
+import { workspacePath } from '@/lib/workspace/workspace-path';
 import {
   Select,
   SelectContent,
@@ -19,9 +28,56 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 
+/**
+ * Ο **τομέας** της σελίδας (`/properties/prop_x` → `/properties`).
+ *
+ * ⚠️ Οι ταυτότητες οντοτήτων πέφτουν επίτηδες: ανήκουν στην **παλιά** εταιρεία, και το
+ * `/o/<νέα>/properties/prop_x` θα έδειχνε «δεν βρέθηκε» — ακριβώς το σύμπτωμα του Β1.
+ */
+function sectionOf(pathname: string): string {
+  const first = pathname.split('/').find(Boolean);
+  return first ? `/${first}` : '/';
+}
+
+/** Τι κάνει η επιλογή μιας εταιρείας — **πλοήγηση** μέσα σε χώρο, αλλιώς επιλογή. */
+export type SwitchTarget =
+  | { readonly kind: 'navigate'; readonly href: string }
+  | { readonly kind: 'select' };
+
+/**
+ * Καθαρή απόφαση, ελέγξιμη χωρίς React/Radix.
+ *
+ * @param alias — ο χώρος της διεύθυνσης (`useWorkspaceAlias`), `null` εκτός `/o/`
+ * @param pathname — η διαδρομή **χωρίς** χώρο (`usePathname` του συνόρου)
+ */
+export function switchTarget(alias: string | null, pathname: string, companyId: string): SwitchTarget {
+  if (alias === null) return { kind: 'select' };
+  return { kind: 'navigate', href: workspacePath(companyId, sectionOf(pathname)) };
+}
+
 export function CompanySwitcher() {
   const { t } = useTranslation(['admin']);
   const { isSuperAdmin, activeCompanyId, companies, loading, setActiveCompanyId } = useSuperAdminCompany();
+  const alias = useWorkspaceAlias();
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const handleChange = useCallback(
+    (companyId: string) => {
+      const target = switchTarget(alias, pathname, companyId);
+      if (target.kind === 'select') {
+        setActiveCompanyId(companyId);
+        return;
+      }
+      router.push(
+        declaredHref(
+          'ADR-849 Β1 — ο επιλογέας πλοηγεί στον ίδιο τομέα της εταιρείας που διάλεξε ο άνθρωπος· η ταυτότητα έρχεται από επιλογή, όχι από μητρώο',
+          target.href,
+        ),
+      );
+    },
+    [alias, pathname, router, setActiveCompanyId],
+  );
 
   if (!isSuperAdmin || (!loading && companies.length <= 1)) return null;
 
@@ -30,7 +86,7 @@ export function CompanySwitcher() {
       <Building2 className="h-4 w-4 shrink-0 text-[hsl(var(--text-warning))]" />
       <Select
         value={activeCompanyId ?? ''}
-        onValueChange={setActiveCompanyId}
+        onValueChange={handleChange}
         disabled={loading || companies.length === 0}
       >
         <SelectTrigger
