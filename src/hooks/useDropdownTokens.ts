@@ -70,9 +70,9 @@ export interface DropdownTokens {
     readonly shadowElevated: string;
     /** Radix sideOffset prop (px): 4 */
     readonly sideOffset: number;
-    /** Standard z-index: z-50 */
+    /** The ONE transient rung (ADR-780 Φάση Δ): z-[var(--z-index-transient-stack)] */
     readonly zIndex: string;
-    /** Elevated z-index (above FloatingPanel): z-[2000] */
+    /** Elevated z-index (above FloatingPanel): z-[var(--z-index-elevated-dropdown)] */
     readonly zIndexElevated: string;
   };
 

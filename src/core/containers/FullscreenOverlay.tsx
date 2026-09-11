@@ -124,11 +124,13 @@ export function FullscreenOverlay({
     );
   }
 
-  // Fullscreen: render via portal to escape overflow-hidden ancestors
+  // Fullscreen: render via portal to escape overflow-hidden ancestors.
+  // ADR-780 Φάση Δ: ΕΠΙΦΑΝΕΙΑ με δικό της ρόλο, ΚΑΤΩ από την παροδική οικογένεια — ήταν ωμό `z-[60]`
+  // πάνω από το `z-50` των διαλόγων, οπότε κάθε διάλογος που άνοιγε από εδώ ήταν αόρατος (ADR-332 D27 Ζ3).
   const fullscreenContent = (
     <section
       className={cn(
-        'fixed inset-0 z-[60] flex flex-col overflow-y-auto',
+        'fixed inset-0 z-[var(--z-index-fullscreen-surface)] flex flex-col overflow-y-auto',
         colors.bg.primary,
         fullscreenClassName,
       )}

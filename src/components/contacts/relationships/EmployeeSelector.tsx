@@ -218,7 +218,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
         left: rect.left + window.scrollX,
         width: rect.width
       };
-      layoutUtilities.dropdown.setCSSPositioning(position, 75);
+      layoutUtilities.dropdown.setCSSPositioning(position);
       setDropdownPosition(position);
     }
   };
