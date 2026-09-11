@@ -17,6 +17,7 @@ import { useTranslation } from '@/i18n';
 import type { Notification, Severity, UserPreferences } from '@/types/notification';
 import { NotificationClient } from '@/api/notificationClient';
 import { notificationDisplayTitle } from '@/components/notifications/notification-display-title';
+import { drawerDestination, type DrawerDestination } from '@/components/notifications/drawer-destination';
 import { markNotificationsAsRead, dismissNotification } from '@/services/notificationService';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -177,26 +178,22 @@ export function NotificationDrawer() {
   };
 
   // ✅ ENTERPRISE: Notification action handler (CTAs)
-  const handleAction = async (notificationId: string, actionId: string, url?: string) => {
+  const handleAction = async (notificationId: string, actionId: string, destination: DrawerDestination) => {
     try {
-      // Navigate to the relevant page
-      if (url) {
-        if (url.startsWith('/')) {
-          // Internal URL: in-app navigation + close drawer
-          close();
-          // ΔΡΟΜΟΣ #3: το `url` έρχεται από αποθηκευμένη ενέργεια ειδοποίησης
-          // (δεδομένα Firestore) — ο μεταγλωττιστής δεν βλέπει τη βάση.
-          router.push(
-            declaredHref('Στόχος αποθηκευμένης ενέργειας ειδοποίησης — δεδομένα, όχι κώδικας.', url),
-          );
-        } else {
-          // External URL: open in new tab
-          window.open(url, '_blank', 'noopener,noreferrer');
-        }
+      if (destination.kind === 'external') {
+        window.open(destination.href, '_blank', 'noopener,noreferrer');
+      } else {
+        close();
+        // ΔΡΟΜΟΣ #3: ο μόνιμος σύνδεσμος `/n/{id}` (ADR-849 Β1) ή η ιστορική ευρετική —
+        // ο μεταγλωττιστής δεν βλέπει ποια ειδοποίηση θα πατηθεί.
+        router.push(
+          declaredHref('Μόνιμος σύνδεσμος ειδοποίησης — ο χώρος-στόχος λύνεται στον διακομιστή.', destination.href),
+        );
       }
 
-      // Call server to acknowledge action (non-blocking)
-      if (clientRef.current) {
+      // 🔑 ADR-849 Β1 — ο μόνιμος σύνδεσμος ΓΡΑΦΕΙ ο ίδιος το «ανοίχτηκε» (ένας συγγραφέας
+      //    για email και κουδούνι)· το `act` μένει μόνο για τους άλλους δύο δρόμους.
+      if (destination.kind !== 'permalink' && clientRef.current) {
         await clientRef.current.act({ id: notificationId, actionId });
       }
 
@@ -356,10 +353,8 @@ export function NotificationDrawer() {
                 //    **ποτέ** — και ο άνθρωπος έβλεπε το **παγωμένο** κείμενο της παραγωγής.
                 const displayTitle = notificationDisplayTitle(t, n);
 
-                // Derive navigation URL: actions → source.feature → title-based detection
-                const actionUrl = n.actions?.[0]?.url
-                  ?? (n.source?.feature === 'ai-inbox' ? '/admin/ai-inbox' : undefined)
-                  ?? (n.title?.toLowerCase().includes('message') ? '/admin/ai-inbox' : undefined);
+                // 🔑 ADR-849 Β1 — ο δρόμος του «Προβολή» (μόνιμος σύνδεσμος · εξωτερικός · ιστορικός).
+                const destination = drawerDestination(n);
 
                 // Card states — matches project management ListCard styling
                 const isSelected = selectedId === n.id;
@@ -413,11 +408,11 @@ export function NotificationDrawer() {
                     {/* Action buttons */}
                     <nav className="flex flex-wrap items-center gap-1.5 mt-2.5 pt-2 border-t border-border/40">
                       {/* Προβολή (View) — navigates to relevant page */}
-                      {actionUrl && (
+                      {destination && (
                         <Button
                           variant="default"
                           size="xs"
-                          onClick={(e) => { e.stopPropagation(); void handleAction(n.id, n.actions?.[0]?.id ?? 'view', actionUrl); }}
+                          onClick={(e) => { e.stopPropagation(); void handleAction(n.id, n.actions?.[0]?.id ?? 'view', destination); }}
                         >
                           <Eye className="h-3.5 w-3.5" />
                           {t('notifications.actions.view_email')}

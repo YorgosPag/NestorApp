@@ -24,6 +24,17 @@
 > (ADR-844) στο κλειστό σύνολο· **νέος κανόνας Κ3 ⛔ `segment-collision` στην CHECK 3.60** — η σύγκρουση
 > είναι πλέον **αδύνατη στο commit**. Οι 5 άγκυρες πράσινες.
 
+- 🔶 **11/09 — ΔΙΔΥΜΟ ΤΗΣ «ΔΗΜΟΣΙΑΣ ΔΙΕΥΘΥΝΣΗΣ» ΜΕ ΑΛΛΟ FALLBACK** *(βρέθηκε στο ADR-844 §13.6 #3)*
+
+  **Πού**: `src/app/api/first-contacts/guest/route.ts` — τοπικό `publicBase()` =
+  `NEXT_PUBLIC_APP_URL ?? NEXT_PUBLIC_BASE_URL`, ενώ το SSoT `src/lib/http/public-origin.ts`
+  (`publicOrigin` / `publicUrl`) διαβάζει **μόνο** `NEXT_PUBLIC_APP_URL` και επιστρέφει `null` όταν λείπει.
+  Το σχόλιο του route αναφέρει και **τρίτη** ανάγνωση (`buildReviewUrl`, ADR-660).
+  **Γιατί ΔΕΝ διορθώθηκε επιτόπου**: η ενοποίηση **αλλάζει συμπεριφορά** — σε περιβάλλον με μόνο
+  `NEXT_PUBLIC_BASE_URL`, ο σύνδεσμος επιβεβαίωσης θα γινόταν **σχετικός/κενός**. Θέλει απόφαση:
+  (α) το SSoT μαθαίνει το fallback, ή (β) το `NEXT_PUBLIC_BASE_URL` αποσύρεται από τα περιβάλλοντα.
+  **Διόρθωση**: grep `NEXT_PUBLIC_BASE_URL` → ένα SSoT, όλοι οι αναγνώστες μέσω `publicUrl()`.
+
 
 - 🔴 **10/09 — ΩΜΑ NUL BYTES ΣΕ 9 ΑΡΧΕΙΑ ΚΩΔΙΚΑ — ΚΑΙ Ο ΕΛΕΓΧΟΣ ΜΕ `grep` ΕΙΝΑΙ ΤΥΦΛΟΣ** *(βρέθηκε στο ADR-843 §10.19, όταν ένα handoff απέκτησε NUL και το `grep -c -P '\x00'` μέτρησε **0**)*
 
@@ -2907,6 +2918,36 @@
 ---
 
 ## Pending tasks (priority order)
+
+### 🔔 AccountNotice — μετάβαση του χειρόγραφου κουτιού ειδοποίησης (προτεραιότητα ΧΑΜΗΛΗ, 2026-09-11)
+
+- [ ] Το SSoT `src/components/account/AccountNotice.tsx` γεννήθηκε από κλώνο (CHECK 3.28, ADR-850) και
+  καλύπτει ήδη `email-change/*`. Το **ίδιο** κουτί ζει χειρόγραφο σε `pages/SecurityPageContent.tsx`
+  (×2, `message.type` success/error) · `pages/ProfilePageContent.tsx` (×1) · `TwoFactorEnrollment.tsx`
+  (×2, **με εικονίδιο** + `flexCenterGap2` ⇒ θέλει προαιρετικό `icon` στο API, όχι δεύτερο component).
+  ⚠️ Εκεί ο ρόλος ARIA γράφεται με το χέρι — στο SSoT **παράγεται** από τον τόνο.
+
+### 🧭 ADR-849 Β1 — παράπλευρα του χώρου-στόχου των ειδοποιήσεων (προτεραιότητα ΧΑΜΗΛΗ, 2026-09-11)
+
+- [ ] **Τέσσερα λεξιλόγια για «χώρος»** (μεγάλο, 4+ αρχεία, cross-cutting): `WorkspaceRef` (`'org'` ·
+  `types/workspace-membership.ts`) · `WorkspaceOwner` (`'organization'` · `lib/workspace/workspace-segment.ts`)
+  · `ListingCustody` (`'company'` · `lib/owner-property/listing-custody.ts`) · tenant scope (`'company'`).
+  Σήμερα οι μεταφράσεις ζουν **μία φορά η καθεμιά** (`ownerOfWorkspace` · `custodyWorkspace`) — ενοποίηση
+  του διακρίτη = απόφαση ADR-787, **όχι** σιωπηλό rename.
+- [ ] **`components/shared/audit/audit-timeline-entry.tsx:55-70`**: 7 χειρόγραφες διαδρομές οντοτήτων
+  χωρίς `encodeURIComponent` — και κάποιες ίσως **χωρίς σελίδα** (π.χ. `/contacts/${id}` ενώ οι επαφές
+  ανοίγουν με `?contactId=`). Θέλει έλεγχο «υπάρχει σελίδα;» ανά διαδρομή → `ENTITY_ROUTES`.
+- [ ] **`services/procurement/po-notification-service.ts`**: `eventId` με `Date.now()` ⇒ **όχι ιδεμποτές**
+  (ίδια έγκριση δύο φορές = δύο ειδοποιήσεις) · τίτλος/σώμα ελληνικά στον διακομιστή (ίδιο δηλωμένο κενό
+  με ADR-777 §8.22 #2).
+- [ ] **Διαδρομές πλοήγησης γραμμένες με το χέρι σε ρυθμίσεις μενού**: το `APP_ROUTES.aiInbox`
+  γεννήθηκε 2026-09-11, αλλά το `'/admin/ai-inbox'` μένει κυριολεξία σε `config/smart-navigation-factory.ts:551`
+  · `components/admin/layout/AdminSidebar.tsx:108` · `config/jobs-registry.ts:319` — **μέσα σε λίστες
+  όπου ΚΑΘΕ διαδρομή είναι κυριολεξία** (`'/crm'`, `'/admin/operator-inbox'`…). Μερική αλλαγή μίας
+  γραμμής θα έφτιαχνε ασυνέπεια· η κλάση θέλει μητρώο διαδρομών πλοήγησης.
+- [ ] **100 ειδοποιήσεις με εξωτερικό σύνδεσμο `http(s)` και χωρίς `meta.eventType`** (μετρημένο
+  2026-09-11, `notifications:destination-drift`) — ποιος τις γράφει; (seed / error-report;) Εκτός χώρου,
+  άρα ανεπηρέαστες από το Β1.
 
 ### 🔐 ADR-813 §8 — Η ΑΡΧΗ ΤΗΣ ΔΙΑΧΕΙΡΙΣΗΣ: έξι ανοιχτά (προτεραιότητα ΥΨΗΛΗ, 2026-08-26)
 
