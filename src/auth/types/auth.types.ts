@@ -195,7 +195,10 @@ export const USER_STATUSES = [
   'active',
   'inactive',
   'suspended',
-  'pending',
+  // ⛔ `'pending'` ΑΦΑΙΡΕΘΗΚΕ (ADR-660 §6, 2026-09-11): το «περιμένει έγκριση για χώρο» είναι
+  //    πλέον **οντότητα** (`workspace_access_requests`), όχι κατάσταση **λογαριασμού**. Ένα πεδίο
+  //    απαντούσε δύο ερωτήματα, και η απόδειξη email του πολίτη έσβηνε το δεύτερο. Μετρημένο:
+  //    0 έγγραφα στην παραγωγή, κανένας κανόνας ή φρουρός δεν το διάβαζε για πρόσβαση.
   /**
    * **Ο ΠΟΛΙΤΗΣ** — ταυτότητα **χωρίς οργανισμό**, γεννημένη από δημόσια πράξη
    * (ADR-844: ο άνθρωπος πλησίασε αγγελία και επαλήθευσε το email του).
@@ -263,7 +266,10 @@ export interface UserProfileDocument extends DeclaredOccupation {
   companyId: string | null;
   /** Global role from custom claims */
   globalRole: string | null;
-  /** Account status. `pending` = αυτο-εγγραφή που εκκρεμεί έγκριση admin (ADR-660). */
+  /**
+   * Account status — **της ταυτότητας**, όχι της πρόσβασης σε χώρο. Η εκκρεμής έγκριση για
+   * χώρο εργασίας ζει στο `workspace_access_requests` (ADR-660 §6).
+   */
   status: UserStatus;
   /** Email verification status */
   emailVerified: boolean;

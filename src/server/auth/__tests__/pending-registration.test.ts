@@ -53,13 +53,18 @@ import { REPO_ROOT, listRepoSourceFiles, readRepoCode } from '@/test-utils/read-
 /** Ένα doc του `users` collection όπως το επιστρέφει το where('companyId'==tenant). */
 interface UserSeed { uid: string; globalRole?: string; status?: string; email?: string }
 interface SetCall { data: Record<string, unknown>; options: unknown }
+/** Γραφή στο **αίτημα ένταξης** (ADR-660 §6) — `create` όταν ανοίγει, `update` για τη σφραγίδα. */
+interface RequestWrite { op: 'create' | 'update'; data: Record<string, unknown> }
 
 function makeFirestore(opts: {
   userDoc: Record<string, unknown> | null;
+  requestDoc?: Record<string, unknown> | null;
   tenantUsers: UserSeed[];
-}): { db: unknown; setCalls: SetCall[] } {
+}): { db: unknown; setCalls: SetCall[]; requestWrites: RequestWrite[] } {
   const setCalls: SetCall[] = [];
+  const requestWrites: RequestWrite[] = [];
   const userRef = { __kind: 'userRef' };
+  const requestRef = { __kind: 'requestRef', id: 'wacr_test' };
 
   const usersQuery = {
     where: () => usersQuery,
@@ -70,23 +75,25 @@ function makeFirestore(opts: {
   };
 
   const db = {
-    // Μόνο το USERS collection χρησιμοποιείται πλέον (userRef + admin query).
-    collection: (_name: string) => ({
-      doc: () => userRef,
-      where: () => usersQuery,
-    }),
+    collection: (name: string) => (name === COLLECTIONS.WORKSPACE_ACCESS_REQUESTS
+      ? { doc: () => requestRef }
+      : { doc: () => userRef, where: () => usersQuery }),
     runTransaction: async (cb: (tx: unknown) => Promise<unknown>) => {
       const tx = {
-        get: async () => ({ exists: opts.userDoc !== null, data: () => opts.userDoc }),
+        get: async (ref: unknown) => (ref === requestRef
+          ? { exists: Boolean(opts.requestDoc), data: () => opts.requestDoc ?? undefined }
+          : { exists: opts.userDoc !== null, data: () => opts.userDoc }),
         set: (_ref: unknown, data: Record<string, unknown>, options: unknown) => {
           setCalls.push({ data, options });
         },
+        create: (_ref: unknown, data: Record<string, unknown>) => { requestWrites.push({ op: 'create', data }); },
+        update: (_ref: unknown, data: Record<string, unknown>) => { requestWrites.push({ op: 'update', data }); },
       };
       return cb(tx);
     },
   };
 
-  return { db, setCalls };
+  return { db, setCalls, requestWrites };
 }
 
 const INPUT = { uid: 'uid_new', email: 'newuser@example.com', displayName: 'Νέος', authProvider: 'google.com' };
@@ -106,8 +113,8 @@ it('uses the USERS collection as the admin source', () => {
 // =============================================================================
 
 describe('ensurePendingRegistration', () => {
-  it('creates a pending record WITHOUT claims and notifies active admins (first time)', async () => {
-    const { db, setCalls } = makeFirestore({
+  it('opens an ACCESS REQUEST (ADR-660 §6), writes identity WITHOUT status/claims, notifies admins once', async () => {
+    const { db, setCalls, requestWrites } = makeFirestore({
       userDoc: null,
       tenantUsers: [
         { uid: 'admin1', globalRole: 'company_admin', status: 'active', email: 'admin@example.com' },
@@ -120,14 +127,16 @@ describe('ensurePendingRegistration', () => {
 
     expect(result).toEqual({ status: 'pending', notified: true });
     expect(setCalls).toHaveLength(1);
-    expect(setCalls[0].data).toMatchObject({
-      status: 'pending',
-      companyId: null,
-      globalRole: null,
-      pendingNotifiedAt: 'TS',
-      requestedAt: 'TS',
-      uid: 'uid_new',
-    });
+    expect(setCalls[0].data).toMatchObject({ companyId: null, globalRole: null, uid: 'uid_new' });
+    // 🔴 ADR-660 §6 — το «περιμένει έγκριση» ζει ΜΟΝΟ στο αίτημα. Άγκυρα ΑΠΟΥΣΙΑΣ.
+    expect(setCalls[0].data).not.toHaveProperty('status');
+    expect(setCalls[0].data).not.toHaveProperty('pendingNotifiedAt');
+    expect(requestWrites).toEqual([{
+      op: 'create',
+      data: expect.objectContaining({
+        companyId: 'comp_TEST', requesterUid: 'uid_new', status: 'pending', notifiedAt: 'TS', decidedBy: null,
+      }),
+    }]);
     // 🔴 ADR-660 (2026-08-23) — ΕΝΑ πεδίο κατάστασης, ΠΟΤΕ δύο.
     // Το `registrationStatus` ήταν δεύτερη αυθεντία για το ίδιο ερώτημα (ADR-749):
     // γραφόταν εδώ και δεν το διάβαζε **κανείς** — 0 αναγνώστες στο `src/`, 0
@@ -192,9 +201,9 @@ describe('ensurePendingRegistration', () => {
    * περιμένουν έγκριση *(απόκλιση από τις δύο μη-ατομικές διπλές εγγραφές που
    * ονομάζει το §5.13)*. Μόνο το ρητό `citizen` λέει «δεν περιμένει κανέναν».
    */
-  it('Π2 — έγγραφο με ρόλο αλλά ΧΩΡΙΣ την κατάσταση πολίτη μένει pending', async () => {
-    const { db, setCalls } = makeFirestore({
-      userDoc: { companyId: null, globalRole: 'external_user', status: 'pending' },
+  it('Π2 — έγγραφο με ρόλο αλλά ΧΩΡΙΣ την κατάσταση πολίτη ⇒ ανοίγει αίτημα', async () => {
+    const { db, setCalls, requestWrites } = makeFirestore({
+      userDoc: { companyId: null, globalRole: 'external_user' },
       tenantUsers: [{ uid: 'admin1', globalRole: 'company_admin', status: 'active', email: 'admin@example.com' }],
     });
     getAdminFirestoreMock.mockReturnValue(db);
@@ -203,6 +212,27 @@ describe('ensurePendingRegistration', () => {
 
     expect(result.status).toBe('pending');
     expect(setCalls).toHaveLength(1);
+    expect(requestWrites.map((write) => write.op)).toEqual(['create']);
+  });
+
+  /**
+   * 🔴 **Π2β — ΤΟ ΕΥΡΗΜΑ ADR-844 §13.6 #2: ΤΟ ΑΙΤΗΜΑ ΕΠΙΒΙΩΝΕΙ ΤΟΥ ΠΟΛΙΤΗ.**
+   *
+   * Ο αιτών απέδειξε email από δημόσια αγγελία ⇒ η ταυτότητά του έγινε `citizen`. Πριν,
+   * αυτό **έσβηνε** το αίτημα (ίδιο πεδίο). Τώρα η επόμενη σύνδεσή του **δεν αγγίζει**
+   * ούτε το έγγραφο ούτε το αίτημα — που μένει εκκρεμές στη λίστα του διαχειριστή.
+   */
+  it('Π2β — πολίτης με ΕΚΚΡΕΜΕΣ αίτημα: τίποτα δεν γράφεται, το αίτημα μένει ανέπαφο', async () => {
+    const { db, setCalls, requestWrites } = makeFirestore({
+      userDoc: { companyId: null, globalRole: 'external_user', status: CITIZEN_STATUS },
+      requestDoc: { status: 'pending', notifiedAt: 'TS_OLD', requesterUid: 'uid_new' },
+      tenantUsers: [{ uid: 'admin1', globalRole: 'company_admin', status: 'active', email: 'admin@example.com' }],
+    });
+    getAdminFirestoreMock.mockReturnValue(db);
+
+    expect(await ensurePendingRegistration(INPUT)).toEqual({ status: 'citizen', notified: false });
+    expect(setCalls).toHaveLength(0);
+    expect(requestWrites).toHaveLength(0);
   });
 
   /**
@@ -212,13 +242,15 @@ describe('ensurePendingRegistration', () => {
    * `status: 'disabled'` — **τιμή εκτός λεξιλογίου**. Εδώ η άγκυρα εκτελεί την
    * ίδια ερώτηση: ανήκει το `CITIZEN_STATUS` στο **ένα** λεξιλόγιο;
    */
-  it('Π3 — το CITIZEN_STATUS ανήκει στο λεξιλόγιο USER_STATUSES', () => {
+  it('Π3 — το CITIZEN_STATUS ανήκει στο λεξιλόγιο USER_STATUSES — και το `pending` ΟΧΙ πια (§6)', () => {
     expect(USER_STATUSES).toContain(CITIZEN_STATUS);
+    expect(USER_STATUSES).not.toContain('pending');
   });
 
-  it('does NOT re-notify when the user was already notified (notify-once)', async () => {
-    const { db, setCalls } = makeFirestore({
-      userDoc: { pendingNotifiedAt: 'TS_OLD', displayName: 'Ήδη', companyId: null },
+  it('does NOT re-notify when the request was already notified (notify-once, πάνω στο ΑΙΤΗΜΑ)', async () => {
+    const { db, setCalls, requestWrites } = makeFirestore({
+      userDoc: { displayName: 'Ήδη', companyId: null },
+      requestDoc: { status: 'pending', notifiedAt: 'TS_OLD', requesterUid: 'uid_new' },
       tenantUsers: [{ uid: 'admin1', globalRole: 'super_admin', status: 'active', email: 'admin@example.com' }],
     });
     getAdminFirestoreMock.mockReturnValue(db);
@@ -226,10 +258,22 @@ describe('ensurePendingRegistration', () => {
     const result = await ensurePendingRegistration(INPUT);
 
     expect(result).toEqual({ status: 'pending', notified: false });
-    // Το record ενημερώνεται, αλλά ΧΩΡΙΣ νέο pendingNotifiedAt / requestedAt.
     expect(setCalls).toHaveLength(1);
-    expect(setCalls[0].data).not.toHaveProperty('pendingNotifiedAt');
-    expect(setCalls[0].data).not.toHaveProperty('requestedAt');
+    expect(setCalls[0].data).not.toHaveProperty('createdAt');
+    expect(requestWrites).toHaveLength(0);
+    expect(sendReplyViaMailgunMock).not.toHaveBeenCalled();
+  });
+
+  it('🔑 ΑΠΟΡΡΙΦΘΕΝ αίτημα ΔΕΝ ξανανοίγει μόνο του σε κάθε σύνδεση — ούτε ειδοποιεί', async () => {
+    const { db, requestWrites } = makeFirestore({
+      userDoc: { companyId: null },
+      requestDoc: { status: 'denied', notifiedAt: 'TS_OLD', requesterUid: 'uid_new' },
+      tenantUsers: [{ uid: 'admin1', globalRole: 'company_admin', status: 'active', email: 'admin@example.com' }],
+    });
+    getAdminFirestoreMock.mockReturnValue(db);
+
+    expect(await ensurePendingRegistration(INPUT)).toEqual({ status: 'decided', notified: false });
+    expect(requestWrites).toHaveLength(0);
     expect(sendReplyViaMailgunMock).not.toHaveBeenCalled();
   });
 

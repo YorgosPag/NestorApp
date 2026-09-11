@@ -4,43 +4,39 @@
  * =============================================================================
  *
  * Αντικαθιστά την παλιά ανοιχτή αυτο-εγγραφή: αντί να χορηγεί αυτόματα tenant +
- * ρόλο `external_user` σε κάθε αυθεντικοποιημένο χρήστη, δημιουργεί μια εγγραφή
- * σε κατάσταση **pending** — ΧΩΡΙΣ custom claims, ΧΩΡΙΣ companyId, ΧΩΡΙΣ member
- * doc. Το fail-closed (ADR-657 §3.5) κόβει έτσι τον χρήστη μέχρι να τον εγκρίνει
- * ρητά ένας διαχειριστής μέσω της υπάρχουσας κονσόλας (set-user-claims).
+ * ρόλο `external_user` σε κάθε αυθεντικοποιημένο χρήστη, ανοίγει **αίτημα ένταξης**
+ * — ΧΩΡΙΣ custom claims, ΧΩΡΙΣ companyId, ΧΩΡΙΣ member doc. Το fail-closed
+ * (ADR-657 §3.5) κόβει έτσι τον χρήστη από τον χώρο μέχρι να τον εγκρίνει ρητά
+ * ένας διαχειριστής μέσω της υπάρχουσας κονσόλας (set-user-claims).
  *
  * Καλείται από **ΕΝΑ** σημείο: `POST /api/auth/session` — το universal login
  * chokepoint, που πυροδοτείται από το `onAuthStateChanged` για **κάθε** provider.
- * ⛔ **Και πλέον το «ΕΝΑ» είναι ΦΡΟΥΡΟΥΜΕΝΟ, όχι υποσχόμενο**: κλειστό σύνολο
- * καλούντων με υποχρεωτικό λόγο, που κοκκινίζει **και στις δύο** κατευθύνσεις
- * (άγκυρες `Χ1`·`Χ1β` στο `__tests__/pending-registration.test.ts`). Μέχρι
- * 2026-08-23 αυτές οι γραμμές έλεγαν «ΔΥΟ σημεία» και ήταν **λάθος** — *η
- * περιγραφή ήταν η απόκλιση*, το σχήμα των CHECK 3.34 / 3.57.
+ * ⛔ **Και το «ΕΝΑ» είναι ΦΡΟΥΡΟΥΜΕΝΟ, όχι υποσχόμενο**: κλειστό σύνολο καλούντων με
+ * υποχρεωτικό λόγο, που κοκκινίζει **και στις δύο** κατευθύνσεις (άγκυρες `Χ1`·`Χ1β`
+ * στο `__tests__/pending-registration.test.ts`). Το αποσυρμένο
+ * `POST /api/auth/complete-registration` (ADR-660 §5.13) δεν επανέρχεται (`Χ3`).
  *
- * 🔴 **ΔΙΟΡΘΩΣΗ 2026-08-23 (ADR-660).** Αυτές οι γραμμές έλεγαν «ΔΥΟ σημεία» και
- * ονόμαζαν και το `POST /api/auth/complete-registration`. Εκείνο ήταν **νεκρό ΚΑΙ
- * δομικά αδύνατο**: τυλιγμένο σε `withAuth`, επέστρεφε **401 ακριβώς στους χρήστες
- * που υπήρχε για να εξυπηρετήσει** (κανένα claim ⇒ `missing_claims`), και ο πελάτης
- * το είχε εγκαταλείψει ρητά (`useAuthActions.ts`).
- * ⚠️ Δηλαδή **η περιγραφή ήταν η απόκλιση** — το σχήμα των CHECK 3.34 / 3.57.
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ADR-660 §6 (2026-09-11) — ΤΟ ΑΙΤΗΜΑ ΕΓΙΝΕ ΟΝΤΟΤΗΤΑ
+ * ────────────────────────────────────────────────────────────────────────────
  *
- * ✅ **ΔΙΑΓΡΑΦΗΚΕ 2026-08-23 (ADR-660 §5.13).** Και ο λόγος δεν ήταν «δεν το καλεί
- * κανείς»: η απαρίθμηση **όλων** των δυνατών καλούντων έδωσε **401 · 401 · no-op ·
- * ΥΠΟΒΑΘΜΙΣΗ**. Ο **μόνος** κλάδος του που έγραφε κάτι ήταν εκείνος που περνά το
- * `withAuth` με **claim** αλλά βρίσκει έγγραφο **χωρίς** `companyId` — και τότε αυτή
- * η συνάρτηση γράφει `companyId: null, globalRole: null, status:'pending'` πάνω σε
- * **προβεβλημένο** χρήστη. Η απόκλιση claim↔έγγραφο είναι **ρητά ανεκτή** από δύο
- * μη-ατομικές διπλές εγγραφές (`set-user-claims` · `bootstrap-admin`), που την
- * αναφέρουν οι ίδιες ως `warning: 'Custom claims set but Firestore sync failed'`.
- * *Μετρημένο 2026-08-23: **0/4** χρήστες σε απόκλιση — λανθάνον, όχι ενεργό.*
+ * Μέχρι σήμερα το «περιμένει έγκριση» ήταν `users/{uid}.status = 'pending'` — δηλαδή το
+ * **ίδιο** πεδίο που απαντά και «τι ταυτότητα έχει». Όταν ο αιτών απέδειξε το email του
+ * από δημόσια αγγελία (ADR-844), η ταυτότητα έγινε `citizen` με `merge` και **το αίτημα
+ * εξαφανίστηκε σιωπηλά** από τη λίστα του διαχειριστή (ADR-844 §13.6 #2).
  *
- * ⚠️ **ΓΙ' ΑΥΤΟ ΤΟ `assigned` ΕΙΝΑΙ ΑΥΣΤΗΡΟ NO-OP ΚΑΙ ΔΕΝ ΕΠΙΤΡΕΠΕΤΑΙ ΝΑ ΧΑΛΑΡΩΣΕΙ.**
- * Είναι η **μοναδική** άμυνα απέναντι σε αυτή την υποβάθμιση, και ο έλεγχός του
- * κρίνει το **έγγραφο** — όχι το claim, που ο καλών ήδη απέδειξε ότι έχει.
+ * Πλέον: `workspace_access_requests/{id}` (`server/auth/workspace-access-request.ts`),
+ * ντετερμινιστικό id ανά (χώρος, πρόσωπο), ανοιγμένο **μέσα στο ίδιο transaction**. Το
+ * `users/{uid}` κρατά **μόνο ταυτότητα** — και το `'pending'` έφυγε από το λεξιλόγιο
+ * (`USER_STATUSES`): 0 έγγραφα στην παραγωγή (μετρημένο 2026-09-11), κανένας κανόνας ή
+ * φρουρός δεν το διάβαζε για πρόσβαση.
  *
- * Notify-once: η ειδοποίηση των admin γίνεται ΜΙΑ φορά ανά χρήστη, μέσω
- * transaction-guarded `pendingNotifiedAt` — zero race ακόμη κι αν τα δύο σημεία
- * τρέξουν ταυτόχρονα.
+ * ⚠️ **ΓΙ' ΑΥΤΟ ΤΟ `assigned` ΕΙΝΑΙ ΑΥΣΤΗΡΟ NO-OP ΚΑΙ ΔΕΝ ΕΠΙΤΡΕΠΕΤΑΙ ΝΑ ΧΑΛΑΡΩΣΕΙ**
+ * (ADR-660 §5.13): είναι η **μοναδική** άμυνα απέναντι στην υποβάθμιση προβεβλημένου
+ * χρήστη, και ο έλεγχός του κρίνει το **έγγραφο** — όχι το claim.
+ *
+ * Notify-once: η ειδοποίηση των admin γίνεται ΜΙΑ φορά ανά αίτημα, μέσω του
+ * transaction-guarded `notifiedAt` **του αιτήματος** — zero race.
  *
  * @module server/auth/pending-registration
  * @enterprise ADR-660 — Self-registration hardening (pending / admin-approval)
@@ -49,37 +45,42 @@
 
 import 'server-only';
 
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import type { DocumentReference, Transaction } from 'firebase-admin/firestore';
 import { FieldValue as AdminFieldValue } from 'firebase-admin/firestore';
+
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { getCompanyId } from '@/config/tenant';
+import { getErrorMessage } from '@/lib/error-utils';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { publicUrl } from '@/lib/http/public-origin';
+import { createModuleLogger } from '@/lib/telemetry';
+import { CITIZEN_STATUS } from '@/server/auth/citizen-identity';
+import { openAccessRequestInTx, readAccessRequestInTx } from '@/server/auth/workspace-access-request';
 import { sendReplyViaMailgun } from '@/services/ai-pipeline/shared/mailgun-sender';
 import { buildPendingRegistrationAdminEmail } from '@/services/email-templates/pending-registration-admin';
-import { CITIZEN_STATUS } from '@/server/auth/citizen-identity';
-import { createModuleLogger } from '@/lib/telemetry';
-import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('PENDING_REGISTRATION');
 
 const ADMIN_ROLES: readonly string[] = ['super_admin', 'company_admin'];
+
+/** Η κονσόλα έγκρισης (ADR-244) — ο σύνδεσμος της ειδοποίησης διαχειριστή. */
+const REVIEW_PATH = '/admin/role-management';
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
 /**
- * ⚠️ **ΤΡΕΙΣ ΚΑΤΑΣΤΑΣΕΙΣ, ΚΑΙ Η ΤΡΙΤΗ ΔΕΝ ΕΙΝΑΙ ΠΑΡΑΛΛΑΓΗ ΤΩΝ ΑΛΛΩΝ ΔΥΟ.**
+ * ⚠️ **ΤΕΣΣΕΡΙΣ ΚΑΤΑΣΤΑΣΕΙΣ, ΚΑΙ ΚΑΜΙΑ ΔΕΝ ΕΙΝΑΙ ΠΑΡΑΛΛΑΓΗ ΤΩΝ ΑΛΛΩΝ.**
  *
- * - `pending` — ζήτησε είσοδο σε **χώρο εργασίας** και **περιμένει άνθρωπο**.
+ * - `pending` — το αίτημα ένταξης **εκκρεμεί** (άνοιξε τώρα ή ήταν ήδη ανοιχτό).
  * - `assigned` — έχει ήδη μισθωτή· εδώ δεν γίνεται τίποτα.
- * - `citizen` — **δεν ζήτησε ποτέ χώρο εργασίας** (ADR-844). Ήρθε από δημόσια
- *   αγγελία, έχει ταυτότητα **χωρίς οργανισμό**, και **δεν περιμένει κανέναν**.
- *
- * 🔴 Το `citizen` **δεν** μπορούσε να μπει στο `assigned`: εκείνο σημαίνει *«έχει
- * tenant»*, που για τον πολίτη είναι **ψευδές**. Μια κοινή τιμή θα έκανε τους
- * δύο ισχυρισμούς έναν — το σχήμα του ADR-749.
+ * - `citizen` — **δεν ζήτησε ποτέ χώρο εργασίας** (ADR-844)· τίποτα δεν ανοίγει. ⚠️ Αν
+ *   είχε **ήδη** ανοιχτό αίτημα πριν γίνει πολίτης, αυτό **μένει** — δεν το αγγίζουμε.
+ * - `decided` — το αίτημα **απαντήθηκε** (εγκρίθηκε/απορρίφθηκε)· **δεν** ξανανοίγει
+ *   μόνο του σε κάθε σύνδεση (Atlassian: *«can't request access again»* χωρίς διαχειριστή).
  */
-export type PendingRegistrationStatus = 'pending' | 'assigned' | 'citizen';
+export type PendingRegistrationStatus = 'pending' | 'assigned' | 'citizen' | 'decided';
 
 export interface PendingRegistrationInput {
   uid: string;
@@ -89,10 +90,6 @@ export interface PendingRegistrationInput {
 }
 
 export interface PendingRegistrationResult {
-  /**
-   * `assigned` = έχει ήδη tenant (no-op) · `citizen` = ταυτότητα χωρίς οργανισμό,
-   * δεν περιμένει έγκριση (no-op, ADR-844) · `pending` = εκκρεμεί έγκριση.
-   */
   status: PendingRegistrationStatus;
   /** True μόνο όταν στάλθηκε (τώρα) ειδοποίηση προς διαχειριστές. */
   notified: boolean;
@@ -100,7 +97,7 @@ export interface PendingRegistrationResult {
 
 interface TransactionOutcome {
   kind: PendingRegistrationStatus;
-  /** True όταν αυτή η κλήση «κέρδισε» το πρώτο-notification stamp. */
+  /** True όταν αυτή η κλήση «κέρδισε» την πρώτη ειδοποίηση του αιτήματος. */
   firstNotification: boolean;
   displayName: string | null;
   authProvider: string | null;
@@ -111,87 +108,24 @@ interface TransactionOutcome {
 // =============================================================================
 
 /**
- * Εξασφαλίζει ότι ο χρήστης βρίσκεται σε κατάσταση pending (ή είναι ήδη
- * assigned). Idempotent + race-proof. Στέλνει admin notification το πολύ μία
- * φορά ανά χρήστη.
+ * Εξασφαλίζει ότι ο χρήστης χωρίς χώρο έχει **αίτημα ένταξης** (ή είναι ήδη assigned /
+ * πολίτης / αποφασισμένος). Idempotent + race-proof. Ειδοποίηση admin το πολύ μία φορά.
  */
 export async function ensurePendingRegistration(
   input: PendingRegistrationInput,
 ): Promise<PendingRegistrationResult> {
   const db = getAdminFirestore();
   const userRef = db.collection(COLLECTIONS.USERS).doc(input.uid);
+  const tenantCompanyId = getCompanyId();
 
-  const outcome = await db.runTransaction<TransactionOutcome>(async (tx) => {
-    const snap = await tx.get(userRef);
-    const data = snap.exists ? (snap.data() as Record<string, unknown>) : null;
+  const outcome = await db.runTransaction<TransactionOutcome>((tx) =>
+    registerInTransaction(tx, userRef, input, tenantCompanyId),
+  );
 
-    // Ήδη εγκεκριμένος (έχει tenant) — ΠΟΤΕ downgrade, no-op.
-    const companyId = data?.companyId;
-    if (typeof companyId === 'string' && companyId.length > 0) {
-      return { kind: 'assigned', firstNotification: false, displayName: null, authProvider: null };
-    }
-
-    // 🔴 **Ο ΠΟΛΙΤΗΣ — ΑΥΣΤΗΡΟ NO-OP, ΓΙΑ ΤΟΝ ΙΔΙΟ ΛΟΓΟ ΜΕ ΤΟ `assigned`** (ADR-844).
-    //
-    // Ο άνθρωπος που ήρθε από δημόσια αγγελία έχει **ταυτότητα χωρίς οργανισμό**:
-    // claim `globalRole: external_user`, **κανένα** `companyId`. Δηλαδή περνά τον
-    // πρώτο φρουρό (δεν έχει μισθωτή) και θα έπεφτε **ίσια** στη γραφή παρακάτω —
-    // που θα του έγραφε `globalRole: null, status: 'pending'`.
-    //
-    // ⚠️ **ΤΟ CLAIM ΔΕΝ ΘΑ ΑΓΓΙΖΟΤΑΝ, ΚΑΙ ΓΙ' ΑΥΤΟ ΑΚΡΙΒΩΣ ΕΙΝΑΙ ΣΟΒΑΡΟ**: θα
-    // έμενε `external_user` στο token και `null` στο έγγραφο — **ενεργή** απόκλιση
-    // claim↔εγγράφου, το ίδιο σχήμα που το §5.13 χαρακτηρίζει «ρητά ανεκτό» αλλά
-    // **μετρά 0/4 σήμερα**, δηλαδή λανθάνον. Θα το κάναμε ενεργό, σε **κάθε**
-    // σύνδεση **κάθε** πολίτη — και μαζί θα τον έβαζε στη λίστα «εκκρεμείς
-    // εγκρίσεις» ενός διαχειριστή που **δεν ζήτησε ποτέ** τίποτα να εγκρίνει.
-    //
-    // ⛔ Ο έλεγχος κρίνει το **έγγραφο**, ποτέ το claim — ίδια αρχή με τον
-    //    φρουρό του `assigned` από πάνω: το έγγραφο είναι αυτό που θα γραφόταν.
-    if (data?.status === CITIZEN_STATUS) {
-      return { kind: 'citizen', firstNotification: false, displayName: null, authProvider: null };
-    }
-
-    const alreadyNotified = Boolean(data?.pendingNotifiedAt);
-    const displayName = input.displayName ?? (data?.displayName as string | null) ?? null;
-    const authProvider = input.authProvider ?? (data?.authProvider as string | null) ?? 'unknown';
-
-    const writeData: Record<string, unknown> = {
-      email: input.email,
-      displayName,
-      companyId: null,
-      globalRole: null,
-      // ⚠️ ΕΝΑ πεδίο κατάστασης, ΠΟΤΕ δύο. Μέχρι 2026-08-23 γραφόταν δίπλα και
-      // `registrationStatus: 'pending'` — δεύτερη αυθεντία για το ΙΔΙΟ ερώτημα
-      // (ADR-749), με **μηδέν αναγνώστες** σε όλο το `src/` και **μηδέν έγγραφα**
-      // στη βάση που να το φέρουν. Αφαιρέθηκε· άγκυρα στο test του αρχείου.
-      status: 'pending',
-      authProvider,
-      updatedAt: AdminFieldValue.serverTimestamp(),
-    };
-    if (!snap.exists) {
-      writeData.uid = input.uid;
-      writeData.requestedAt = AdminFieldValue.serverTimestamp();
-      writeData.createdAt = AdminFieldValue.serverTimestamp();
-    }
-    if (!alreadyNotified) {
-      writeData.pendingNotifiedAt = AdminFieldValue.serverTimestamp();
-    }
-    tx.set(userRef, writeData, { merge: true });
-
-    return { kind: 'pending', firstNotification: !alreadyNotified, displayName, authProvider };
-  });
-
-  // ⚠️ **`!== 'pending'`, ΚΑΙ ΟΧΙ ΑΠΑΡΙΘΜΗΣΗ ΤΩΝ ΑΛΛΩΝ ΔΥΟ.** Η ειδοποίηση
-  //    διαχειριστή έχει νόημα **μόνο** για κάποιον που όντως περιμένει έγκριση.
-  //    Γραμμένο ως λίστα (`'assigned' || 'citizen'`), μια **τέταρτη** κατάσταση
-  //    αύριο θα έπεφτε σιωπηλά στη διαδρομή της ειδοποίησης — δηλαδή θα
-  //    ενοχλούσε άνθρωπο για κάτι που δεν του ζητήθηκε να κρίνει.
-  if (outcome.kind !== 'pending') {
-    return { status: outcome.kind, notified: false };
-  }
-  if (!outcome.firstNotification) {
-    return { status: 'pending', notified: false };
-  }
+  // ⚠️ **`!== 'pending'`, ΚΑΙ ΟΧΙ ΑΠΑΡΙΘΜΗΣΗ ΤΩΝ ΑΛΛΩΝ.** Μια πέμπτη κατάσταση αύριο θα
+  //    έπεφτε σιωπηλά στη διαδρομή της ειδοποίησης — δηλαδή θα ενοχλούσε άνθρωπο.
+  if (outcome.kind !== 'pending') return { status: outcome.kind, notified: false };
+  if (!outcome.firstNotification) return { status: 'pending', notified: false };
 
   const sent = await notifyAdminsOfPendingRegistration({
     pendingEmail: input.email,
@@ -203,6 +137,68 @@ export async function ensurePendingRegistration(
   });
 
   return { status: 'pending', notified: sent > 0 };
+}
+
+const NO_OP = { firstNotification: false, displayName: null, authProvider: null } as const;
+
+async function registerInTransaction(
+  tx: Transaction,
+  userRef: DocumentReference,
+  input: PendingRegistrationInput,
+  tenantCompanyId: string,
+): Promise<TransactionOutcome> {
+  const snap = await tx.get(userRef);
+  const data = snap.exists ? (snap.data() as Record<string, unknown>) : null;
+
+  // Ήδη εγκεκριμένος (έχει tenant) — ΠΟΤΕ downgrade, no-op.
+  const companyId = data?.companyId;
+  if (typeof companyId === 'string' && companyId.length > 0) return { kind: 'assigned', ...NO_OP };
+
+  // 🔴 **Ο ΠΟΛΙΤΗΣ — ΑΥΣΤΗΡΟ NO-OP** (ADR-844): δεν γράφουμε τίποτα — ούτε στο έγγραφο
+  //    (θα έσπαγε την ταυτότητά του) ούτε στο αίτημα (αν υπάρχει, **επιβιώνει** ανέπαφο).
+  if (data?.status === CITIZEN_STATUS) return { kind: 'citizen', ...NO_OP };
+
+  // 🔑 **ΟΛΕΣ οι αναγνώσεις ΠΡΙΝ από κάθε γραφή** — κανόνας των transactions της Firestore.
+  const request = await readAccessRequestInTx(tx, tenantCompanyId, input.uid);
+  const displayName = input.displayName ?? (data?.displayName as string | null) ?? null;
+  const authProvider = input.authProvider ?? (data?.authProvider as string | null) ?? 'unknown';
+
+  tx.set(userRef, identityWrite(input, snap.exists, displayName, authProvider), { merge: true });
+  const opened = openAccessRequestInTx(tx, request, {
+    companyId: tenantCompanyId, uid: input.uid, email: input.email, displayName, authProvider,
+  });
+
+  return {
+    kind: opened.status === 'pending' ? 'pending' : 'decided',
+    firstNotification: opened.firstNotification,
+    displayName,
+    authProvider,
+  };
+}
+
+/**
+ * Το `users/{uid}` — **μόνο ταυτότητα**. ⚠️ **ΚΑΝΕΝΑ `status`**: το «περιμένει έγκριση»
+ * ζει στο αίτημα (§6)· ένα `status` εδώ θα ήταν δεύτερη αυθεντία για το ίδιο ερώτημα.
+ */
+function identityWrite(
+  input: PendingRegistrationInput,
+  exists: boolean,
+  displayName: string | null,
+  authProvider: string | null,
+): Record<string, unknown> {
+  const write: Record<string, unknown> = {
+    email: input.email,
+    displayName,
+    companyId: null,
+    globalRole: null,
+    authProvider,
+    updatedAt: AdminFieldValue.serverTimestamp(),
+  };
+  if (!exists) {
+    write.uid = input.uid;
+    write.createdAt = AdminFieldValue.serverTimestamp();
+  }
+  return write;
 }
 
 // =============================================================================
@@ -226,7 +222,8 @@ async function notifyAdminsOfPendingRegistration(params: {
     pendingName: params.pendingName,
     authProvider: params.authProvider,
     requestedAt: new Date(),
-    reviewUrl: buildReviewUrl(),
+    // 🔑 Φ5 (ADR-851) — από το ΕΝΑ SSoT· χωρίς δημόσια διεύθυνση, email **χωρίς** σύνδεσμο.
+    reviewUrl: publicUrl(REVIEW_PATH) ?? '',
   });
 
   let sent = 0;
@@ -275,11 +272,4 @@ async function resolveAdminEmails(tenantCompanyId: string): Promise<string[]> {
     }
   }
   return Array.from(emails);
-}
-
-/** Πλήρες URL της κονσόλας διαχείρισης ρόλων (κενό αν δεν υπάρχει base URL). */
-function buildReviewUrl(): string {
-  const base = (process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXT_PUBLIC_BASE_URL ?? '').trim();
-  if (!base) return '';
-  return `${base.replace(/\/+$/, '')}/admin/role-management`;
 }

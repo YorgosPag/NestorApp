@@ -22,8 +22,8 @@ import { withAuth, logAuditEvent, isValidGlobalRole } from '@/lib/auth';
 import type { AuthContext, PermissionCache, GlobalRole } from '@/lib/auth';
 // 🎫 ADR-787 Κ-2 — η ΜΙΑ μετάφραση του εγγράφου μέλους χώρου.
 import { normalizeMembership } from '@/lib/auth/workspace-membership';
-// 🎫 ADR-822 §4.1 — η ΜΙΑ απάντηση στο «το δημιούργησε άνθρωπος;».
-import { isSyntheticIdentity } from '@/lib/auth/identity-provenance';
+// 🎫 ADR-660 §6 — τα αιτήματα ένταξης είναι οντότητα, με tenant scope.
+import { listPendingAccessRequests } from '@/server/auth/workspace-access-request';
 import type { WorkspaceMembership } from '@/types/workspace-membership';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getAdminAuth, getAdminFirestore } from '@/lib/firebaseAdmin';
@@ -158,74 +158,36 @@ export const GET = withSensitiveRateLimit(
           };
         });
 
-        // 5. Fetch unassigned users (companyId == null or missing) for admin to assign
-        const unassignedSnap = await db
-          .collection(COLLECTIONS.USERS)
-          .where('companyId', '==', null)
-          .limit(1000)
-          .get();
-
-        // Exclude synthetic users. They have no Firebase Auth identity, cannot
-        // be promoted to companyMembers, and listing them produces UI/API
-        // mismatches where PATCH role/status/permission-sets fails with 404
-        // "User not found in this company".
+        // 5. ADR-660 §6 — τα ΕΚΚΡΕΜΗ ΑΙΤΗΜΑΤΑ ΕΝΤΑΞΗΣ **αυτού** του χώρου.
         //
-        // ⚠️ ADR-822 §4.1 — ΤΟ ΚΑΤΗΓΟΡΗΜΑ ΕΦΥΓΕ ΑΠΟ ΕΔΩ, ΕΠΙΤΗΔΕΣ. Ήταν inline
-        //    σύγκριση με τη συμβολοσειρά 'development-bypass' — δηλαδή το ΜΟΝΟ
-        //    σημείο του δέντρου που ήξερε πώς αναγνωρίζεται μια ταυτότητα που
-        //    κανένας άνθρωπος δεν δημιούργησε. Ο επόμενος που θα χρειαζόταν την
-        //    ίδια απάντηση θα την ξανάγραφε ⇒ δύο λεξιλόγια (ADR-749).
-        //    Η απάντηση ζει τώρα στο `lib/auth/identity-provenance.ts`· εδώ
-        //    μένει η **χρήση** της.
-        //
-        // 🔴 ΚΑΙ Η ΠΡΟΤΑΣΗ «δεν έχουν ταυτότητα Firebase Auth» ΕΙΝΑΙ ΠΛΕΟΝ
-        //    ΜΕΤΡΗΜΕΝΗ, ΟΧΙ ΥΠΟΘΕΣΗ: 2026-08-27, ζωντανή βάση — `getUser`
-        //    και `getUserByEmail` για το `dev-admin` επέστρεψαν και τα δύο
-        //    «δεν υπάρχει», με θετικό μάρτυρα στο ίδιο τρέξιμο (ADR-822 §2.3).
-        const realUnassignedDocs = unassignedSnap.docs.filter((doc) =>
-          !isSyntheticIdentity(doc.data())
-        );
-
+        // 🔴 Ήταν `users where companyId == null` **ΧΩΡΙΣ tenant scope**: κάθε διαχειριστής
+        //    έβλεπε **κάθε** χρήστη χωρίς οργανισμό της πλατφόρμας — και πολίτες που
+        //    πλησίασαν **άλλες** εταιρείες (ADR-844). Και **έχανε** όποιον αιτούντα απέδειξε
+        //    το email του, επειδή η ταυτότητά του έγινε `citizen` (ADR-844 §13.6 #2).
+        //    Το αίτημα είναι πλέον **οντότητα** με δικό της κύκλο ζωής — αυτό ρωτάμε.
+        // ⚠️ Συνθετικές ταυτότητες (ADR-822) δεν ανοίγουν ποτέ αίτημα: το ανοίγει μόνο το
+        //    `POST /api/auth/session`, δηλαδή **πραγματική** σύνδεση Firebase Auth.
+        const pendingRequests = await listPendingAccessRequests(ctx.companyId);
         const unassignedUsers: CompanyUser[] = [];
-        if (realUnassignedDocs.length > 0) {
-          const unassignedUids = realUnassignedDocs.map((doc) => doc.id);
-          const unassignedIdentifiers = unassignedUids.map((uid) => ({ uid }));
+        if (pendingRequests.length > 0) {
+          const authResult = await auth.getUsers(pendingRequests.map((request) => ({ uid: request.requesterUid })));
+          const authRecords = new Map(authResult.users.map((record) => [record.uid, record]));
 
-          // Batch-fetch Firebase Auth records
-          const unassignedAuthResult = await auth.getUsers(unassignedIdentifiers);
-          const unassignedAuthMap = new Map<string, {
-            lastSignIn: string | null;
-            disabled: boolean;
-            mfaEnrolled: boolean;
-          }>();
-          for (const userRecord of unassignedAuthResult.users) {
-            unassignedAuthMap.set(userRecord.uid, {
-              lastSignIn: userRecord.metadata.lastSignInTime ?? null,
-              disabled: userRecord.disabled,
-              mfaEnrolled: (userRecord.multiFactor?.enrolledFactors?.length ?? 0) > 0,
-            });
-          }
-
-          // Build unassigned users list
-          for (const doc of realUnassignedDocs) {
-            const data = doc.data();
-            const authInfo = unassignedAuthMap.get(doc.id);
+          for (const request of pendingRequests) {
+            const record = authRecords.get(request.requesterUid);
             unassignedUsers.push({
-              uid: doc.id,
-              email: (data.email as string) ?? '',
-              displayName: (data.displayName as string | null) ?? null,
-              photoURL: (data.photoURL as string | null) ?? null,
-              globalRole: (data.globalRole as GlobalRole) ?? 'external_user',
-              // ADR-660: unassigned = αυτο-εγγραφή που εκκρεμεί έγκριση → 'pending'.
-              status: (data.status as 'active' | 'suspended' | 'pending') ?? 'pending',
-              joinedAt: data.createdAt
-                ? (data.createdAt as FirebaseFirestore.Timestamp).toDate?.()?.toISOString() ?? null
-                : null,
-              permissionSetIds: Array.isArray(data.permissionSetIds) ? (data.permissionSetIds as string[]) : [],
-              lastSignIn: authInfo?.lastSignIn ?? null,
-              disabled: authInfo?.disabled ?? false,
-              mfaEnrolled: authInfo?.mfaEnrolled ?? false,
-              companyId: null, // Unassigned
+              uid: request.requesterUid,
+              email: record?.email ?? request.requesterEmail,
+              displayName: record?.displayName ?? request.requesterName,
+              photoURL: record?.photoURL ?? null,
+              globalRole: 'external_user',
+              status: 'pending',
+              joinedAt: request.requestedAt,
+              permissionSetIds: [],
+              lastSignIn: record?.metadata.lastSignInTime ?? null,
+              disabled: record?.disabled ?? false,
+              mfaEnrolled: (record?.multiFactor?.enrolledFactors?.length ?? 0) > 0,
+              companyId: null,
             });
           }
         }

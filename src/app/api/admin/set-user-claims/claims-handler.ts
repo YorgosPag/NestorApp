@@ -15,6 +15,9 @@ import { ENTITY_TYPES } from '@/config/domain-constants';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
+// ADR-660 §6 — η έγκριση κλείνει το αίτημα ένταξης και το λέει στον αιτούντα.
+import { decideAccessRequest } from '@/server/auth/workspace-access-request';
+import { notifyAccessDecision } from '@/server/auth/workspace-access-decision-notice';
 
 import type { SetUserClaimsRequest, SetUserClaimsResponse } from './types';
 
@@ -133,6 +136,24 @@ async function syncFirestoreRecords(
   }
 
   return firestoreSuccess;
+}
+
+/**
+ * **Η έγκριση ΚΛΕΙΝΕΙ το αίτημα ένταξης** (ADR-660 §6) — αν υπήρχε.
+ *
+ * ⚠️ **Μη-μπλοκάρον, και με λόγο**: τα claims **έχουν ήδη** δοθεί — ο άνθρωπος έχει πρόσβαση.
+ * Αν το κλείσιμο αποτύχει, το αίτημα μένει «εκκρεμές» στη λίστα και μια δεύτερη έγκριση το
+ * κλείνει (ιδεμποτική). Η αντίθετη σειρά θα έκλεινε αίτημα για πρόσβαση που **δεν** δόθηκε.
+ */
+async function closeAccessRequestOnApproval(uid: string, companyId: string, decidedBy: string): Promise<void> {
+  try {
+    const outcome = await decideAccessRequest({ companyId, uid, decision: 'approved', decidedBy });
+    if (outcome.kind === 'decided') {
+      await notifyAccessDecision(outcome.request);
+    }
+  } catch (error) {
+    logger.warn('Access request not closed after approval (non-blocking)', { targetUid: uid, error: getErrorMessage(error) });
+  }
 }
 
 export async function handleSetUserClaims(
@@ -270,6 +291,7 @@ export async function handleSetUserClaims(
     }
 
     const firestoreSuccess = await syncFirestoreRecords(uid, companyId, globalRole, finalPermissions, firebaseUser, email, ctx.uid, ctx.email ?? null);
+    await closeAccessRequestOnApproval(uid, companyId, ctx.uid);
 
     const duration = Date.now() - startTime;
     logger.info('Claims update completed', { durationMs: duration, callerEmail: ctx.email, targetEmail: email, targetCompanyId: companyId, targetGlobalRole: globalRole });
