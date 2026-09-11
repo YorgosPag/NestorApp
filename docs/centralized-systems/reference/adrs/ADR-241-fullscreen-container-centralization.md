@@ -93,7 +93,16 @@ interface FullscreenOverlayProps {
 }
 ```
 
-- CSS `fixed inset-0 z-50` overlay via React Portal
+- CSS `fixed inset-0` overlay via React Portal — στρώση = ρόλος **`fullscreenSurface`** της κλίμακας (ADR-780 Φάση Δ):
+  **ΕΠΙΦΑΝΕΙΑ κάτω** από την παροδική οικογένεια (`transientStack`). ⚠️ Εδώ έγραφε «`z-50`» ενώ ο κώδικας είχε ωμό
+  `z-[60]` — **πάνω** από το `z-50` των διαλόγων, οπότε κάθε διάλογος που άνοιγε μέσα σε πλήρη οθόνη ήταν αόρατος
+  και το πρώτο κλικ τον ακύρωνε (ADR-332 D27 Ζ3). Τη σειρά την κλειδώνει το `components/ui/__tests__/layer-contract`.
+- ⚠️ **Δηλωμένο κενό**: δηλώνει `role="dialog" aria-modal` **χωρίς** παγίδα focus και **χωρίς** επαναφορά focus —
+  υπόσχεση στον αναγνώστη οθόνης που δεν τηρείται. Το Escape και το scroll lock **υπάρχουν**, στο `useFullscreen`
+  (`useEscapeKey` + `overflow-hidden` στο `body`). 🔴 **Μετρημένο ζωντανά 2026-09-11**: το Escape είναι ωμός listener
+  στο `document`, **εκτός** του bus ιδιοκτησίας πληκτρολογίου (ADR-364) ⇒ **ένα** Esc σε διάλογο ανοιγμένο μέσα σε
+  πλήρη οθόνη κλείνει **και** τον διάλογο **και** την πλήρη οθόνη (και στο DXF θα ανταγωνιζόταν την ακύρωση εργαλείου).
+  Χωριστό βήμα (απόφαση Giorgio 2026-09-11).
 - Children do NOT remount — state preserved
 - Ideal for: EntityFilesManager, canvas-based views
 
@@ -250,6 +259,7 @@ return (
 
 | Date | Change | Author |
 |------|--------|--------|
+| 2026-09-11 | **Στρώση από την κλίμακα (ADR-780 Φάση Δ)**: `FullscreenOverlay` ωμό `z-[60]` → ρόλος `fullscreenSurface` (1045), **κάτω** από την παροδική οικογένεια `transientStack` (1095). Διορθώνει την κλάση του ADR-332 D27 Ζ3: σε **κάθε** καταναλωτή (Addresses · Measurements · Ownership · Locations · Payments · Files · ScheduleDashboard · DXF) κάθε διάλογος/μενού που άνοιγε σε πλήρη οθόνη ήταν αόρατος. Άγκυρα `components/ui/__tests__/layer-contract` (Σ2). **Ζωντανά**: σύρσιμο έδρας σε πλήρη οθόνη ⇒ διάλογος ορατός (1095 > 1045), «Ακύρωση» και «Μόνο η θέση» ολοκληρώνονται, Select μέσα στην πλήρη οθόνη = 1220. Δηλωμένο κενό: παγίδα/επαναφορά focus + 🔴 **το Escape (ωμός listener του `useFullscreen`, εκτός ADR-364) κλείνει ΚΑΙ τον διάλογο ΚΑΙ την πλήρη οθόνη** (μετρημένο) — χωριστό βήμα. | Claude + Γιώργος |
 | 2026-03-18 | **Building tabs fullscreen**: AnalyticsTabContent + MeasurementsTabContent — `FullscreenOverlay` wrap + `FullscreenToggleButton` in header/actions area | Claude + Γιώργος |
 | 2026-03-18 | **DXF Viewer fullscreen**: Portal-based `FullscreenOverlay` wraps canvas area, toolbar toggle button (Maximize2/Minimize2), `isFullscreen` prop flow through 7 components, i18n keys (en+el), zero canvas remount | Claude + Γιώργος |
 | 2026-03-18 | **Milestones fullscreen**: Added `FullscreenOverlay` to `TimelineTabContent.tsx` milestones view — `useFullscreen` hook + fullscreen button in toolbar + overlay with OverallProgressCard, TimelineMilestones, CriticalPathCard, CompletionForecastCard | Claude + Γιώργος |

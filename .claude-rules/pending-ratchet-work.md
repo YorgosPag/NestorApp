@@ -24,6 +24,19 @@
 > (ADR-844) στο κλειστό σύνολο· **νέος κανόνας Κ3 ⛔ `segment-collision` στην CHECK 3.60** — η σύγκρουση
 > είναι πλέον **αδύνατη στο commit**. Οι 5 άγκυρες πράσινες.
 
+- 🔴 **11/09 — `global-by-structure` (CHECK 3.50, ADR-780 §5quater): ΚΑΘΟΛΙΚΕΣ ΣΤΡΩΣΕΙΣ ΧΩΡΙΣ ΡΟΛΟ**
+
+  **Πού**: `npm run zindex-scale:report` → «ΩΜΕΣ ΔΗΛΩΣΕΙΣ ανά αρχείο» (baseline `.zindex-scale-baseline.json` — **άνοιξε
+  το JSON**). Κυρίως διάλογοι/πάνελ του DXF σε `fixed … z-40/50/60/61` (FontManagerPanel · Materials/FrameProfiles
+  LibraryPanel · DimensionsTab · TextTemplate*/CustomDictionary* · FindReplace · SymbolPicker …) + `SmartActionFactory`,
+  `SendEmailModal`, `MobileDetailsSlideIn`, `skeletons`, `ui/sidebar`.
+  **Γιατί μετράει**: `fixed` + ωμό z < 1000 = καθολική στρώση που δεν ζήτησε ρόλο· οι διάλογοι του DXF σε `z-[60]`
+  αποδίδονται **έξω** από την πλήρη οθόνη DXF ⇒ κρύβονται κάτω της (ίδια κλάση με το Ζ3).
+  **Διόρθωση**: διάλογος/modal → `z-[var(--z-index-transient-stack)]` · πάνελ/επιφάνεια → ρόλος επιφάνειας · Boy
+  Scout στο άγγιγμα, ratchet μόνο κατεβαίνει. **Και** (ίδια οικογένεια, αόρατα στην πύλη): η ιδιωτική κλίμακα
+  `dxf-viewer/config/modal-config.ts` (50/60/70/75/80/90, inline `style`) · `LayerStateDropdown` (4 διάλογοι μέσα σε
+  popover που μένει ανοιχτό ⇒ πίσω του).
+
 - 🔶 **11/09 — ΔΙΔΥΜΟ ΤΗΣ «ΔΗΜΟΣΙΑΣ ΔΙΕΥΘΥΝΣΗΣ» ΜΕ ΑΛΛΟ FALLBACK** *(βρέθηκε στο ADR-844 §13.6 #3)*
 
   **Πού**: `src/app/api/first-contacts/guest/route.ts` — τοπικό `publicBase()` =
