@@ -10,6 +10,7 @@ import { tallyBy } from '@/utils/collection-utils';
 import type { Connection } from '@/types/connections';
 import type { FilterState, Property } from '@/types/property-viewer';
 import { DEFAULT_FILTERS } from '@/types/property-viewer';
+import { resolveViewedProperty } from './property-viewer-selection';
 
 const logger = createModuleLogger('usePropertiesViewerState');
 
@@ -146,22 +147,18 @@ export function usePropertiesViewerState(explicitPropertyId?: string | null) {
   const safeFilteredProperties = Array.isArray(filteredProperties) ? filteredProperties : [];
   const safeFloors = Array.isArray(floors) ? floors : [];
 
-  const selectedProperty = useMemo(() => {
-    const safeSelectedPropertyIds = Array.isArray(selectedPropertyIds) ? selectedPropertyIds : [];
-    if (safeSelectedPropertyIds.length !== 1) {
-      return null;
-    }
-
-    const property = safeProperties.find((item) => item.id === safeSelectedPropertyIds[0]);
-    if (property && property.soldTo && allContactIds.length > 0) {
-      return {
-        ...property,
-        buyerMismatch: !allContactIds.includes(property.soldTo),
-      };
-    }
-
-    return property ?? null;
-  }, [allContactIds, safeProperties, selectedPropertyIds]);
+  // 🔑 ADR-849 Β1 — ΠΑΡΑΓΕΤΑΙ στο ίδιο καρέ, δεν περιμένει το effect της επιλογής
+  //    παραπάνω (που μένει για τις καρτέλες/κάτοψη). Δες `property-viewer-selection.ts`.
+  const selectedProperty = useMemo(
+    () =>
+      resolveViewedProperty({
+        properties: safeProperties,
+        explicitPropertyId,
+        selectedPropertyIds: Array.isArray(selectedPropertyIds) ? selectedPropertyIds : [],
+        contactIds: allContactIds,
+      }),
+    [allContactIds, safeProperties, selectedPropertyIds, explicitPropertyId],
+  );
 
   const handleSelectProperty = (property: Property) => {
     if (setSelectedProperties) {
