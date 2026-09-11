@@ -48,6 +48,8 @@ interface UserTableProps {
   onSuspend: (user: CompanyUser) => void;
   onViewDetails: (user: CompanyUser) => void;
   onApprove: (user: CompanyUser) => void;
+  /** ADR-660 §6 — απόρριψη του αιτήματος ένταξης (η άλλη μισή απάντηση στην έγκριση). */
+  onDeny: (user: CompanyUser) => void;
 }
 
 // =============================================================================
@@ -115,6 +117,7 @@ export function UserTable({
   onSuspend,
   onViewDetails,
   onApprove,
+  onDeny,
 }: UserTableProps) {
   const { t } = useTranslation('admin');
   const colors = useSemanticColors();
@@ -278,13 +281,22 @@ export function UserTable({
                       // ADR-660: unassigned/pending → Έγκριση (set-user-claims).
                       // Οι υπόλοιπες ενέργειες (role/perms/suspend) απαιτούν member
                       // doc που ακόμη δεν υπάρχει, οπότε εδώ δείχνουμε μόνο Έγκριση.
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => onApprove(companyUser)}
-                      >
-                        {t('roleManagement.actions.approve')}
-                      </Button>
+                      <>
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => onApprove(companyUser)}
+                        >
+                          {t('roleManagement.actions.approve')}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onDeny(companyUser)}
+                        >
+                          {t('roleManagement.actions.deny')}
+                        </Button>
+                      </>
                     )}
                     {canEdit && !needsApproval && (
                       <>

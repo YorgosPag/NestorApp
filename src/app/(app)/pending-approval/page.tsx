@@ -42,12 +42,28 @@ import { useTranslation } from '@/i18n';
 import { Button } from '@/components/ui/button';
 import { PageLoadingState } from '@/core/states';
 import { AUTH_ROUTES, PRIVATE_SPACE_HOME, resolvePostLoginRoute } from '@/lib/routes';
+import { API_ROUTES } from '@/config/domain-constants';
+import { apiClient } from '@/lib/api/enterprise-api-client';
+import type { OwnWorkspaceAccessState } from '@/types/workspace-access-request';
 
 export default function PendingApprovalPage() {
   const { user, loading, signOut, refreshToken } = useAuth();
   const router = useRouter();
   const { t } = useTranslation('auth');
   const [checking, setChecking] = useState(false);
+  // 🎫 ADR-660 §6 — η οθόνη πλέον ΞΕΡΕΙ τι απέγινε το αίτημα. `null` = δεν μάθαμε ⇒ το
+  //    ουδέτερο κείμενο της αναμονής, ποτέ μαντεψιά «απορρίφθηκε».
+  const [accessState, setAccessState] = useState<OwnWorkspaceAccessState | null>(null);
+
+  useEffect(() => {
+    if (loading || !user || user.companyId) return;
+    let cancelled = false;
+    apiClient
+      .get<{ state: OwnWorkspaceAccessState }>(API_ROUTES.AUTH.WORKSPACE_ACCESS_STATE)
+      .then((response) => { if (!cancelled) setAccessState(response.state); })
+      .catch(() => { if (!cancelled) setAccessState(null); });
+    return () => { cancelled = true; };
+  }, [user, loading]);
 
   useEffect(() => {
     if (loading) return;
@@ -68,6 +84,8 @@ export default function PendingApprovalPage() {
     return <PageLoadingState icon={ShieldCheck} message={t('loading.checkingAccess')} layout="fullscreen" />;
   }
 
+  const denied = accessState === 'denied';
+
   const handleCheckAgain = async () => {
     setChecking(true);
     try {
@@ -85,7 +103,7 @@ export default function PendingApprovalPage() {
             <ShieldCheck className="h-7 w-7" aria-hidden="true" />
           </span>
           <h1 className="text-xl font-semibold tracking-tight">
-            {t('pendingApproval.title')}
+            {denied ? t('pendingApproval.deniedTitle') : t('pendingApproval.title')}
           </h1>
           <p className="text-sm text-muted-foreground">
             {t('pendingApproval.subtitle')}
@@ -93,7 +111,7 @@ export default function PendingApprovalPage() {
         </header>
 
         <p className="text-sm leading-relaxed text-muted-foreground">
-          {t('pendingApproval.body')}
+          {denied ? t('pendingApproval.deniedBody') : t('pendingApproval.body')}
         </p>
 
         <p className="rounded-md bg-muted/40 px-3 py-2 text-sm">
@@ -112,15 +130,18 @@ export default function PendingApprovalPage() {
               {t('pendingApproval.goToMySpace')}
             </Link>
           </Button>
-          <Button
-            variant="outline"
-            onClick={handleCheckAgain}
-            disabled={checking}
-            className="w-full"
-          >
-            <RefreshCw className={checking ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} aria-hidden="true" />
-            {t('pendingApproval.checkAgain')}
-          </Button>
+          {/* Απορρίφθηκε ⇒ δεν υπάρχει τίποτα να «ελεγχθεί ξανά»· το κουμπί θα ήταν υπόσχεση. */}
+          {!denied && (
+            <Button
+              variant="outline"
+              onClick={handleCheckAgain}
+              disabled={checking}
+              className="w-full"
+            >
+              <RefreshCw className={checking ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} aria-hidden="true" />
+              {t('pendingApproval.checkAgain')}
+            </Button>
+          )}
           <Button variant="ghost" onClick={() => void signOut()} className="w-full text-muted-foreground">
             <LogOut className="h-4 w-4" aria-hidden="true" />
             {t('pendingApproval.signOut')}

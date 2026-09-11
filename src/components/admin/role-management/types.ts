@@ -109,7 +109,7 @@ export const STATUS_BADGE_VARIANT: Record<'active' | 'suspended' | 'pending', Ba
 // DIALOG MODES
 // =============================================================================
 
-export type DialogMode = 'role' | 'permissions' | 'detail' | 'suspend' | 'approve' | null;
+export type DialogMode = 'role' | 'permissions' | 'detail' | 'suspend' | 'approve' | 'deny' | null;
 
 // =============================================================================
 // TAB TYPES

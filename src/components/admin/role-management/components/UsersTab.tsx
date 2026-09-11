@@ -40,6 +40,7 @@ import { RoleChangeDialog } from './RoleChangeDialog';
 import { PermissionSetManager } from './PermissionSetManager';
 import { UserDetailPanel } from './UserDetailPanel';
 import { ApproveUserDialog } from './ApproveUserDialog';
+import { DenyAccessRequestDialog } from './DenyAccessRequestDialog';
 
 import type {
   CompanyUser,
@@ -282,6 +283,7 @@ export function UsersTab({ canEdit }: UsersTabProps) {
         onSuspend={(u) => handleOpenDialog('suspend', u)}
         onViewDetails={(u) => handleOpenDialog('detail', u)}
         onApprove={(u) => handleOpenDialog('approve', u)}
+        onDeny={(u) => handleOpenDialog('deny', u)}
       />
 
       {/* Role change dialog */}
@@ -298,6 +300,16 @@ export function UsersTab({ canEdit }: UsersTabProps) {
       {/* Approve pending / unassigned user (ADR-660) */}
       {dialogMode === 'approve' && selectedUser && (
         <ApproveUserDialog
+          user={selectedUser}
+          open
+          onClose={handleCloseDialog}
+          onSuccess={handleDialogSuccess}
+        />
+      )}
+
+      {/* Deny access request (ADR-660 §6) */}
+      {dialogMode === 'deny' && selectedUser && (
+        <DenyAccessRequestDialog
           user={selectedUser}
           open
           onClose={handleCloseDialog}
