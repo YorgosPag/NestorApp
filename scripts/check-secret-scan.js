@@ -30,7 +30,7 @@ const YELLOW = '\x1b[1;33m';
 const NC     = '\x1b[0m';
 
 // Files to skip entirely
-const FILE_SKIP_RE = /(\.(png|jpg|ico|woff|lock)$|\.env\.(example|sample)|node_modules|scripts[\\/]git-hooks[\\/]|\.github[\\/]workflows[\\/]|docs[\\/]architecture-review[\\/]|(^|[\\/])\.gitleaks\.toml$|(^|[\\/])check-secret-scan\.js$)/;
+const FILE_SKIP_RE = /(\.(png|jpg|ico|woff|lock)$|\.env\.(example|sample)|node_modules|scripts[\\/]git-hooks[\\/]|\.github[\\/]workflows[\\/]|docs[\\/]architecture-review[\\/]|(^|[\\/])\.gitleaks\.toml$|(^|[\\/])check-secret-scan(\.test)?\.js$)/;
 
 // Line-level patterns
 // Το `(^|[^a-zA-Z0-9])` είναι όριο λέξης, όχι χαλάρωση: ένα πραγματικό κλειδί
@@ -39,7 +39,13 @@ const FILE_SKIP_RE = /(\.(png|jpg|ico|woff|lock)$|\.env\.(example|sample)|node_m
 // σε παραπομπή ADR. Ψευδώς θετικό blocking check = θόρυβος που εκπαιδεύει στο
 // να το προσπερνάς (ADR-738 βιβλιογραφία, 2026-07-31).
 const API_KEY_RE     = /(^|[^a-zA-Z0-9])(sk-[a-zA-Z0-9_-]{20,}|sk_live_[a-zA-Z0-9]{20,}|AIza[a-zA-Z0-9_-]{35}|ghp_[a-zA-Z0-9]{36}|xoxb-[a-zA-Z0-9-]+|AAAA[a-zA-Z0-9_-]{100,})/;
-const SECRET_RE      = /(password|secret|private_key|api_key)\s*[:=]\s*['"][^'"]{8,}['"]/i;
+const SECRET_RE      = /(password|secret|private_key|api_key)\s*[:=]\s*['"]([^'"]{8,})['"]/i;
+// 🔴 Η ΤΙΜΗ ΚΡΙΝΕΙ, ΟΧΙ ΜΟΝΟ ΤΟ ΟΝΟΜΑ (2026-09-11): το `resetPassword: 'action.titles.resetPassword'`
+// είναι κλειδί i18n, όχι κωδικός — και μπλόκαρε το ADR-850. Κλειδί = διαδρομή αναγνωριστικών με
+// τελείες, ΚΑΘΕ τμήμα ξεκινά με γράμμα, χωρίς κενά. Το όνομα ΔΕΝ χαλαρώνει (το `adminPassword:
+// '…'` πιάνεται ακόμη)· ούτε το `summer.2024` περνά (τμήμα που ξεκινά με ψηφίο). Ίδια λογική με
+// τα allowlists τιμών του gitleaks.
+const I18N_KEY_VALUE_RE = /^[a-z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*)+$/;
 const PRIVATE_KEY_RE = /BEGIN.*PRIVATE KEY/;
 const COMMENT_RE     = /^\s*(\/\/|\*|#)/;
 const ENV_SKIP_RE    = /(\.env|process\.env|example|placeholder|schema|type|interface|dummy|test|mock)/i;
@@ -56,9 +62,10 @@ function scanFile(filePath) {
     const line = lines[i];
     if (COMMENT_RE.test(line)) continue;
 
+    const secret = line.match(SECRET_RE);
     if (API_KEY_RE.test(line)) {
       violations.push(`  ❌ API key pattern in ${filePath}\n     ${i + 1}: ${line.trim().substring(0, 100)}`);
-    } else if (SECRET_RE.test(line) && !ENV_SKIP_RE.test(line)) {
+    } else if (secret && !ENV_SKIP_RE.test(line) && !I18N_KEY_VALUE_RE.test(secret[2])) {
       violations.push(`  ❌ Hardcoded secret in ${filePath}\n     ${i + 1}: ${line.trim().substring(0, 100)}`);
     } else if (PRIVATE_KEY_RE.test(line)) {
       violations.push(`  ❌ Private key in ${filePath}`);
@@ -68,27 +75,31 @@ function scanFile(filePath) {
   return violations;
 }
 
-const files = process.argv.slice(2).filter(Boolean);
-const allViolations = [];
+function main(files) {
+  const allViolations = [];
+  for (const file of files) {
+    if (!file || FILE_SKIP_RE.test(file.replace(/\\/g, '/'))) continue;
+    allViolations.push(...scanFile(file));
+  }
 
-for (const file of files) {
-  if (!file || FILE_SKIP_RE.test(file.replace(/\\/g, '/'))) continue;
-  allViolations.push(...scanFile(file));
+  if (allViolations.length === 0) {
+    console.log(`${GREEN}  ✅ Secret scan: clean${NC}`);
+    return 0;
+  }
+
+  console.log('');
+  console.log(`${RED}═══════════════════════════════════════════════════════════════${NC}`);
+  console.log(`${RED}  🚫 COMMIT BLOCKED — Potential secrets detected${NC}`);
+  console.log(`${RED}═══════════════════════════════════════════════════════════════${NC}`);
+  console.log('');
+  for (const v of allViolations) console.log(v);
+  console.log('');
+  console.log(`${YELLOW}  Move secrets to .env files or environment variables.${NC}`);
+  console.log(`${YELLOW}  If false positive, add to .gitignore or refactor.${NC}`);
+  console.log('');
+  return 1;
 }
 
-if (allViolations.length === 0) {
-  console.log(`${GREEN}  ✅ Secret scan: clean${NC}`);
-  process.exit(0);
-}
+module.exports = { scanFile };
 
-console.log('');
-console.log(`${RED}═══════════════════════════════════════════════════════════════${NC}`);
-console.log(`${RED}  🚫 COMMIT BLOCKED — Potential secrets detected${NC}`);
-console.log(`${RED}═══════════════════════════════════════════════════════════════${NC}`);
-console.log('');
-for (const v of allViolations) console.log(v);
-console.log('');
-console.log(`${YELLOW}  Move secrets to .env files or environment variables.${NC}`);
-console.log(`${YELLOW}  If false positive, add to .gitignore or refactor.${NC}`);
-console.log('');
-process.exit(1);
+if (require.main === module) process.exit(main(process.argv.slice(2).filter(Boolean)));
