@@ -1,72 +1,36 @@
 'use client';
 
-import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
-import React, { useEffect, useState } from 'react';
+import React, { useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Maximize2, Minimize2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { useIconSizes } from '@/hooks/useIconSizes';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
+import { FullscreenToggleButton } from './FullscreenToggleButton';
+import { useStableHost } from './fullscreen/use-stable-host';
+import { useFullscreenOpener, useFullscreenSurface } from './fullscreen/use-fullscreen-surface';
+
+export { FullscreenToggleButton } from './FullscreenToggleButton';
 
 // =============================================================================
-// 🏢 ENTERPRISE: FullscreenOverlay (ADR-241 — composition refactor)
+// 🏢 ENTERPRISE: FullscreenOverlay (ADR-241)
 // =============================================================================
 //
-// Single-responsibility: CSS fixed overlay via React Portal.
-// Children do NOT remount — ideal for EntityFilesManager, canvas views.
+// Μία ΕΠΙΦΑΝΕΙΑ πλήρους οθόνης που δεν ξαναχτίζει ποτέ τα παιδιά της.
 //
-// For dialog-based fullscreen, use <Dialog> + <DialogContent size="fullscreen">
-// directly (composition over abstraction).
+//  - Σταθερός ξενιστής (`useStableHost`): τα παιδιά αποδίδονται ΠΑΝΤΑ με portal στον ίδιο ξενιστή, και ο ξενιστής
+//    μετακινείται ανάμεσα στη θέση του μέσα στη σελίδα και στην επιφάνεια. 🔴 Ως 2026-09-11 το component επέστρεφε
+//    `<section>` ή `createPortal` — άλλη θέση στο δέντρο ⇒ remount σε κάθε εναλλαγή (μετρημένο: πεδίο «Ανάθεση»
+//    χαμένο στα Νομικά, 4/4 καμβάδες του DXF ξαναστημένοι), παρά το σχόλιο «Children are NOT remounted».
+//  - Συμπεριφορά επιφάνειας (`useFullscreenSurface`): ένα Esc = ένα πλαίσιο προς τα έξω, αδράνεια ό,τι είναι έξω,
+//    focus μέσα στην είσοδο και πίσω στον opener στην έξοδο, κλείδωμα κύλισης.
+//  - Η επιφάνεια μένει ΠΑΝΤΑ προσαρτημένη (`hidden` όταν δεν χρειάζεται): αν ξεπροσαρτιόταν στην έξοδο, το React θα
+//    την αφαιρούσε από το DOM ΠΡΙΝ τρέξουν οι layout effects, με τον ξενιστή μέσα της.
+//  - Στρώση = ρόλος `fullscreenSurface` της κλίμακας (ADR-780 Φάση Δ): κάτω από την παροδική οικογένεια, κάτω από
+//    την πλωτή παλέτα του DXF.
+//  - `role="dialog"` + ετικέτα, ΧΩΡΙΣ `aria-modal`: μια επιφάνεια με συνοδό έξω από αυτήν (η πλωτή παλέτα του DXF)
+//    δεν επιτρέπεται να δηλώνει ότι τα πάντα έξω είναι αδρανή — αυτό το επιβάλλει πραγματικά το `inert` (ADR-711).
 //
-// Usage:
-//  const fs = useFullscreen();
-//  <FullscreenOverlay isFullscreen={fs.isFullscreen} onToggle={fs.toggle}>
-//    {children}
-//  </FullscreenOverlay>
-// =============================================================================
-
-// =============================================================================
-// TOGGLE BUTTON (standalone, exported)
-// =============================================================================
-
-interface ToggleButtonProps {
-  isFullscreen: boolean;
-  onToggle: () => void;
-}
-
-export function FullscreenToggleButton({ isFullscreen, onToggle }: ToggleButtonProps) {
-  const iconSizes = useIconSizes();
-  const { t } = useTranslation(COMMON_NAMESPACES);
-
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onToggle}
-          aria-label={isFullscreen ? t('fullscreen.exit') : t('fullscreen.enter')}
-          aria-pressed={isFullscreen}
-        >
-          {isFullscreen
-            ? <Minimize2 className={iconSizes.sm} aria-hidden="true" />
-            : <Maximize2 className={iconSizes.sm} aria-hidden="true" />
-          }
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent>
-        {isFullscreen ? t('fullscreen.exitTooltip') : t('fullscreen.enterTooltip')}
-      </TooltipContent>
-    </Tooltip>
-  );
-}
-
-// =============================================================================
-// FULLSCREEN OVERLAY
+// Για πλήρη οθόνη βασισμένη σε διάλογο: `<Dialog>` + `<DialogContent size="fullscreen">` (composition).
 // =============================================================================
 
 export interface FullscreenOverlayProps {
@@ -86,18 +50,16 @@ export interface FullscreenOverlayProps {
   ariaLabel?: string;
 }
 
+/** Η επιφάνεια: σταθερή στήλη που γεμίζει το παράθυρο — κεφαλίδα που δεν συρρικνώνεται + σώμα που κυλά. */
+const SURFACE_CLASS = 'fixed inset-0 z-[var(--z-index-fullscreen-surface)] flex flex-col';
+
 /**
- * CSS fixed overlay that renders children via React Portal when fullscreen.
- * Children are NOT remounted — state is preserved across transitions.
- *
- * @example
- * ```tsx
- * const fs = useFullscreen();
- * <FullscreenOverlay isFullscreen={fs.isFullscreen} onToggle={fs.toggle}>
- *   <Card>...</Card>
- * </FullscreenOverlay>
- * ```
+ * Το σώμα της επιφάνειας = ο ξενιστής των παιδιών. **Block** (όχι flex) και ο ΜΟΝΟΣ scroll container: ποτέ δεν
+ * συρρικνώνει τα παιδιά του (η κεφαλίδα του Πίνακα Ελέγχου Χρονοδιαγράμματος μετρήθηκε ύψος 0 όταν η επιφάνεια ήταν
+ * η ίδια στήλη flex που κυλούσε — ADR-332 D27 Ζ8). Όποιος καταναλωτής θέλει διάταξη flex τη ζητά ρητά.
  */
+const SURFACE_BODY_CLASS = 'min-h-0 flex-1 overflow-y-auto';
+
 export function FullscreenOverlay({
   children,
   isFullscreen,
@@ -108,35 +70,26 @@ export function FullscreenOverlay({
   ariaLabel,
 }: FullscreenOverlayProps) {
   const colors = useSemanticColors();
+  // ⚠️ Σειρά δήλωσης = σειρά των layout effects: ο opener πριν μετακινηθεί ο ξενιστής, η επιφάνεια μετά.
+  const openerRef = useFullscreenOpener(isFullscreen);
+  const surfaceRef = useRef<HTMLElement | null>(null);
+  const { host, inlineSlotRef, surfaceSlotRef } = useStableHost({
+    isFullscreen,
+    inlineClassName: className ?? '',
+    fullscreenClassName: cn(SURFACE_BODY_CLASS, fullscreenClassName),
+    ariaLabel,
+  });
+  useFullscreenSurface({ isFullscreen, ready: host !== null, onExit: onToggle, surfaceRef, openerRef });
 
-  // Portal target — must be client-side only
-  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
-  useEffect(() => {
-    setPortalTarget(document.body);
-  }, []);
-
-  // Normal (non-fullscreen): render children inline
-  if (!isFullscreen) {
-    return (
-      <section className={className} aria-label={ariaLabel}>
-        {children}
-      </section>
-    );
-  }
-
-  // Fullscreen: render via portal to escape overflow-hidden ancestors.
-  // ADR-780 Φάση Δ: ΕΠΙΦΑΝΕΙΑ με δικό της ρόλο, ΚΑΤΩ από την παροδική οικογένεια — ήταν ωμό `z-[60]`
-  // πάνω από το `z-50` των διαλόγων, οπότε κάθε διάλογος που άνοιγε από εδώ ήταν αόρατος (ADR-332 D27 Ζ3).
-  const fullscreenContent = (
+  const surface = (
     <section
-      className={cn(
-        'fixed inset-0 z-[var(--z-index-fullscreen-surface)] flex flex-col overflow-y-auto',
-        colors.bg.primary,
-        fullscreenClassName,
-      )}
-      aria-label={ariaLabel}
+      ref={surfaceRef}
+      className={isFullscreen ? cn(SURFACE_CLASS, colors.bg.primary) : undefined}
+      hidden={!isFullscreen}
       role="dialog"
-      aria-modal
+      aria-label={ariaLabel}
+      tabIndex={-1}
+      data-fullscreen-surface=""
     >
       {headerContent && (
         <header className="flex items-center justify-between shrink-0 border-b px-2 py-2">
@@ -144,9 +97,15 @@ export function FullscreenOverlay({
           <FullscreenToggleButton isFullscreen onToggle={onToggle} />
         </header>
       )}
-      {children}
+      <div ref={surfaceSlotRef} className="contents" />
     </section>
   );
 
-  return portalTarget ? createPortal(fullscreenContent, portalTarget) : null;
+  return (
+    <>
+      <div ref={inlineSlotRef} className="contents" />
+      {host && createPortal(surface, document.body)}
+      {host && createPortal(children, host)}
+    </>
+  );
 }
