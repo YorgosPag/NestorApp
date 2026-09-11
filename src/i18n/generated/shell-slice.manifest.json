@@ -30,7 +30,7 @@
     "src/i18n/generated/routes/terms.el.json": "481f837696b407553f56de16128778617a86f72cf7b27471d61cd5793cf7d288",
     "src/i18n/generated/routes/test-harness__listing-shapes.el.json": "0a342a84a1d24b4b7068e33a0e303cd6c22e437cc38be31b5a63e33c4089cd6b",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "0d80b745cb28d115db6dfba7fe1f5b6c5f00f754385aeefedb87e8fb815b6a34",
+    "src/i18n/generated/shell-slice.el.json": "ebe827bdef7d78bd493ae01934fac6865f34b5a9994295dc95c77dc2c8b71b77",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "boundaries": {
@@ -69,7 +69,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "50abc14631fd23c66f6ea262dbc6df4f75c127c496c44f3777e82e9fa9200b09",
+  "inputsSha256": "9a17d6d04e2cbff8ed08e27743576e2ce49aec76deb9719bdb5e4798d2e1573b",
   "languages": [
     "el"
   ],
@@ -4268,6 +4268,7 @@
     "src/app/(light)/page.tsx": "5c172b3fe1ab0a4e69b4b635dbe8a4ff96f057cdb6a893599eae948a37a18a0c",
     "src/app/(me)/layout.tsx": "cf1eabbc3afc6f0b57cde6075635d8e58d54b4b0e8fe49645fe60f4c79dd27fa",
     "src/app/layout.tsx": "d90063411e742ed897b6d39da651eb17432953c843c455aed6ebca50163e9529",
+    "src/auth/account-mail.client.ts": "1f31d10c4f4fff667918d2cde6feb053399dd53f4ed3b751aca963eeeb7e189b",
     "src/auth/components/AuthScreenChrome.tsx": "9bb87577155e7391892741c916eedbb9b1decfce476115e33d8bd6f892a717c4",
     "src/auth/components/ProtectedRoute.tsx": "856ebd62823da579a2fbe9e0c4aae72c378d09f8ce044c6ff7c133d0e395c67c",
     "src/auth/contexts/AuthContext.tsx": "b60a6936fe4ee3773c05f17ba9402e37c38780399142f967e1296acbb0e8d467",
@@ -4276,7 +4277,7 @@
     "src/auth/contexts/auth-context/auth-context-profile.ts": "b3e612bd014234f64110351ce8351a40374453d54bd8c1d671ef58a25167d80f",
     "src/auth/contexts/auth-context/auth-context-session.ts": "aac08e3c64faabf41fc3689261fd2092b545a5e6d7debf720a05a3975c186046",
     "src/auth/contexts/auth-context/use-claims-refresh.ts": "fdd3f087107a109c452f8d6538de6c3e2588dae0290bddaf8bb0972c24de33f7",
-    "src/auth/contexts/auth-context/useAuthActions.ts": "7af53c464610f765211043da8c633ad7dd9ff7bdc9a1b092ccd4cf05508ebb35",
+    "src/auth/contexts/auth-context/useAuthActions.ts": "28644afad6d6d846e89c5a5236031d66bf262b0c189b71d86bbdb416ddbb339a",
     "src/auth/firebase-auth-language.ts": "66da0fe048471179d6ad9500e1df6b717b43b1cc5e7cea6811ec89c68c79285e",
     "src/auth/hooks/useAuth.ts": "2c3f64bad43714d2f7e5cabf304b8d8bb3cd1bf83f9c66774067fe65d10fec81",
     "src/auth/types/auth.types.ts": "95c71fbfc50da8bbae44a8509a13db12b6175c3dd960bb1b2e0187825e968204",
@@ -4420,7 +4421,7 @@
     "src/components/workspace/WorkspaceScopeBridge.tsx": "9aea46983a227313cc2e4585e4ff777802b74ab54d790059abb78a49c6a83e09",
     "src/config/department-codes.ts": "080cde48fb4e821e4271cfff63e36083c5088c33f582600903a112037d6c62c7",
     "src/config/dev-environment.ts": "214a23ba9e0e82045ec4e02b0b884b17d95dce0fa77557b0bc4cacfd962815fc",
-    "src/config/domain-constants.ts": "a7f6df4005d6c4904fcea5bde77b1ca6ff291b3814b50c69ce06a0f3009daadf",
+    "src/config/domain-constants.ts": "aea34a6d6513e54d936e54f6463ff6892d62cd9d45803f918b9c7db2fbbcd044",
     "src/config/environment-security-config.ts": "db97d066c18370afe6f0a3357f5832128a154c1ebeb90f46c7e7e4942bbc2d9a",
     "src/config/file-upload-config.ts": "f5b75beee185a556da25f27db09f4398fd6402c4c63da0d1b72d677d70052254",
     "src/config/firestore-collections.ts": "591aa47af654250c13eaf3c790e79550d4af840fd9c3370f39f98ae58b1bdba0",
@@ -4897,8 +4898,8 @@
     "dynamicBoundaries": 18,
     "matchedKeys": 177,
     "routeBoundaries": 0,
-    "shellFiles": 622,
-    "sliceBytes": 409028
+    "shellFiles": 623,
+    "sliceBytes": 409609
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

@@ -64,6 +64,8 @@ export {
   generatePipelineQueueId, generateVoiceCommandId, generateBrokerageId, generateMandateRequestId,
   generateFirstContactId,
   generateFirstContactInvitationId,
+  generateDeterministicAuthReprovisionJournalId,
+  generateDeterministicWorkspaceAccessRequestId,
   generateCommissionId, generatePaymentPlanId, generatePlanGroupId,
   generatePaymentRecordId, generateLoanId, generateChequeId, generatePhotoId,
   generateAttachmentId, generateFileId, generateDeterministicFileId, generateShareId, generateDispatchId, generatePendingId,

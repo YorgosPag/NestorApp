@@ -155,6 +155,11 @@ export const generateFirstContactId = () => enterpriseIdService.generateFirstCon
 // γράψει με το χέρι (N.6).
 export const generateFirstContactInvitationId = () =>
   enterpriseIdService.generateFirstContactInvitationId();
+// ADR-844 §13.8 · ADR-660 §6 — ντετερμινιστικές, και γι' αυτό περνούν τον v4 επικυρωτή.
+export const generateDeterministicAuthReprovisionJournalId = (normalizedEmail: string) =>
+  enterpriseIdService.generateDeterministicAuthReprovisionJournalId(normalizedEmail);
+export const generateDeterministicWorkspaceAccessRequestId = (companyId: string, uid: string) =>
+  enterpriseIdService.generateDeterministicWorkspaceAccessRequestId(companyId, uid);
 export const generateCommissionId = () => enterpriseIdService.generateCommissionId();
 
 // Payment Plan & Installments (ADR-234)

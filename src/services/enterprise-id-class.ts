@@ -149,8 +149,37 @@ export class EnterpriseIdService extends CompositeKeyIdGenerators {
     //
     // 🔑 Ξαναγράφεται **μόνο το nibble**, όχι δεύτερος κατακερματισμός: ίδιος
     // σπόρος ⇒ ίδιο id, και μηδέν διπλότυπη μηχανή (N.18).
+    return this.generateDeterministicV4Id(P.COMPANY, seed);
+  }
+
+  /**
+   * **Ντετερμινιστικό id που ΠΕΡΝΑ τον επικυρωτή του έργου** (v4 nibble) — ο κανόνας
+   * του {@link generateDeterministicCompanyId}, γραμμένος **μία** φορά (ADR-851).
+   *
+   * 🔴 Εξήχθη όταν χρειάστηκαν **δύο ακόμη** ντετερμινιστικές ταυτότητες που
+   * **επικυρώνονται** (η διεκδίκηση λογαριασμού · το αίτημα ένταξης, που ταξιδεύει σε
+   * διεύθυνση API). Με τον σκέτο {@link generateDeterministicId} θα ήταν v5 ⇒
+   * `isValidEnterpriseId` **`false`** ⇒ η διαδρομή θα απέρριπτε **δική μας** ταυτότητα.
+   */
+  protected generateDeterministicV4Id(prefix: EnterpriseIdPrefix, seed: string): string {
     const uuid = deterministicUuid(seed);
-    return `${P.COMPANY}_${uuid.slice(0, 14)}4${uuid.slice(15)}`;
+    return `${prefix}_${uuid.slice(0, 14)}4${uuid.slice(15)}`;
+  }
+
+  /**
+   * ADR-844 §13.8 — **το ημερολόγιο μιας διεκδίκησης λογαριασμού**, ένα ανά email.
+   * Ντετερμινιστικό επειδή η **συνέχιση** μιας διακοπείσας πράξης ξέρει μόνο το email.
+   */
+  generateDeterministicAuthReprovisionJournalId(normalizedEmail: string): string {
+    return this.generateDeterministicV4Id(P.AUTH_REPROVISION_JOURNAL, normalizedEmail);
+  }
+
+  /**
+   * ADR-660 §6 — **το αίτημα ένταξης** σε χώρο εργασίας, ένα ανά (χώρος, πρόσωπο).
+   * Ντετερμινιστικό ⇒ δύο συνδέσεις μαζί ανοίγουν **ένα** αίτημα, χωρίς ερώτημα.
+   */
+  generateDeterministicWorkspaceAccessRequestId(companyId: string, uid: string): string {
+    return this.generateDeterministicV4Id(P.WORKSPACE_ACCESS_REQUEST, `${companyId}:${uid}`);
   }
   generateProjectId(): string { return this.generateId(P.PROJECT).id; }
   generateBuildingId(): string { return this.generateId(P.BUILDING).id; }
