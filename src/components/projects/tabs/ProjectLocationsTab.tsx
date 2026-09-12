@@ -346,9 +346,7 @@ export function ProjectLocationsTab({ data: project }: ProjectLocationsTabProps)
                         είχαν **12 αναγνώστες και 0 γραφείς**. Τώρα τα γράφει ο ένας γραφέας
                         θέσης (`lib/geocoding/address-position.ts`), οπότε έχουν τι να πουν.
                       */
-                      source={address.source}
-                      verifiedAt={address.verifiedAt ?? null}
-                      hasCoordinates={Boolean(address.coordinates)}
+                      position={address}
                       /*
                         Η **συνέπεια**, δίπλα στη θεραπεία (Α5 §4.3: *«το γέμισμα της θέσης
                         είναι το δόλωμα, ποτέ το φράγμα»*). Ο επαγγελματίας βλέπει εδώ τι θα

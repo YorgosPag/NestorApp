@@ -10,6 +10,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import type { AddressLike } from '@/lib/geocoding/address-position';
 import {
   AddressSourceLabel,
   AddressFreshnessIndicator,
@@ -45,14 +46,18 @@ export interface SharedAddressActionCardProps {
   /** Override default i18n label for the primary chip. */
   primaryLabel?: string;
   /**
-   * Provenance of this address (ADR-332 §3.10 / Phase 8). When omitted the
-   * source enrichment row is hidden.
+   * **Η αποθηκευμένη θέση, ΟΛΟΚΛΗΡΗ** — προέλευση, φρεσκάδα, συντεταγμένες και η
+   * **απόδειξη** του ισχυρισμού ακρίβειας (ADR-332 §3.10 / Φ8 · D27 Ζ6). Απούσα ⇒ η σειρά
+   * εμπλουτισμού κρύβεται.
+   *
+   * 🔑 **Ένα prop και όχι τρία, και ο λόγος είναι μετρημένος.** Ως το Ζ6 η κάρτα δεχόταν
+   * `source` + `verifiedAt` + `hasCoordinates` **χωριστά**, δηλαδή κομμάτια του **ίδιου**
+   * πράγματος — και ο μόνος καταναλωτής που τα περνούσε ήταν η καρτέλα Τοποθεσιών του
+   * έργου· **οι επαφές περνούσαν μηδέν**, οπότε στην οθόνη όπου ζούσε το ζωντανό εύρημα του
+   * Ζ6 τα τρία badges **δεν ήταν καν στη σελίδα**. Με ολόκληρη τη θέση, μια «μισή» παράδοση
+   * παύει να είναι εκφράσιμη — ίδιο ιδίωμα με το `AddressPosition` του γραφέα.
    */
-  source?: AddressSourceType;
-  /** Unix-ms timestamp of last successful geocoding cycle. */
-  verifiedAt?: number | null;
-  /** Whether the address has stored map coordinates. */
-  hasCoordinates?: boolean;
+  position?: AddressLike;
   /**
    * Ό,τι θέλει να πει ο καταναλωτής **κάτω** από τη σειρά εμπλουτισμού.
    *
@@ -84,9 +89,7 @@ export function SharedAddressActionCard({
   clearLabel,
   setPrimaryLabel,
   primaryLabel,
-  source,
-  verifiedAt,
-  hasCoordinates,
+  position,
   footer,
 }: SharedAddressActionCardProps) {
   const { t } = useTranslation('addresses');
@@ -100,11 +103,13 @@ export function SharedAddressActionCard({
   const setPrimaryText = setPrimaryLabel ?? t('actionCard.setPrimary');
   const primaryText = primaryLabel ?? t('actionCard.primary');
 
-  const showEnrichment = source !== undefined || verifiedAt != null || hasCoordinates !== undefined;
-  const freshness = useMemo(
-    () => (verifiedAt !== undefined ? computeFreshness(verifiedAt) : null),
-    [verifiedAt],
-  );
+  const showEnrichment = position !== undefined;
+  const freshness = useMemo(() => (position ? computeFreshness(position) : null), [position]);
+  // Η προέλευση **συνάγεται όπως παντού**: ό,τι έγραψε ο γραφέας, αλλιώς «άγνωστη». Δεύτερο
+  // κριτήριο εδώ θα ήταν δεύτερη αλήθεια για την ίδια ερώτηση (ADR-749).
+  const source: AddressSourceType | undefined = position
+    ? ((position.source as AddressSourceType | null | undefined) ?? 'unknown')
+    : undefined;
 
   return (
     <article
@@ -213,7 +218,7 @@ export function SharedAddressActionCard({
         <div className="mt-2 pl-6 flex flex-wrap items-center gap-2">
           {source !== undefined && <AddressSourceLabel source={source} />}
           {freshness && <AddressFreshnessIndicator freshness={freshness} />}
-          {hasCoordinates !== undefined && <AddressCoordsBadge hasCoords={hasCoordinates} />}
+          {position && <AddressCoordsBadge hasCoords={Boolean(position.coordinates)} />}
         </div>
       )}
 

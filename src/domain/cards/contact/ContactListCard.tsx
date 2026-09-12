@@ -40,7 +40,7 @@ export function ContactListCard({ contact, ...interaction }: ContactListCardProp
     if (!primaryAddr?.source && primaryAddr?.verifiedAt == null) return null;
     return {
       source: primaryAddr.source,
-      freshness: computeFreshness(primaryAddr.verifiedAt ?? null),
+      freshness: computeFreshness(primaryAddr),
     };
   }, [contact.addresses]);
 

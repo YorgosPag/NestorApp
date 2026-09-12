@@ -61,7 +61,8 @@ export function AddressCard({ address, onEdit, className, hideEnrichment }: Addr
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
 
-  const freshness = useMemo(() => computeFreshness(address.verifiedAt), [address.verifiedAt]);
+  // Ζ6 — ολόκληρη η διεύθυνση: η φρεσκάδα απαντά ΚΑΙ «λύθηκε για αυτό το κείμενο;», όχι μόνο «πότε;».
+  const freshness = useMemo(() => computeFreshness(address), [address]);
   const hasCoords = !!address.coordinates;
   const sourceType = address.source ?? 'unknown';
 

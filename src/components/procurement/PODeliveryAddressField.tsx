@@ -107,7 +107,7 @@ export function PODeliveryAddressField({
   const hasOptions = availableTypes.length > 0;
 
   const freshness = useMemo(
-    () => (chosenAddress ? computeFreshness(chosenAddress.verifiedAt) : null),
+    () => (chosenAddress ? computeFreshness(chosenAddress) : null),
     [chosenAddress],
   );
 
