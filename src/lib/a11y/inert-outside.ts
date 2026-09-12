@@ -25,8 +25,22 @@
  * ⚠️ Το **γνώρισμα** `inert` και όχι η ιδιότητα: ταυτόσημο στον browser, και το jsdom το κρατά πιστά.
  */
 
-/** Ό,τι μένει ζωντανό δίπλα σε κάθε επιφάνεια: δηλωμένοι συνοδοί, ειδοποιήσεις, το dev overlay του Next. */
-export const INERT_COMPANION_SELECTOR = '[data-fullscreen-companion], [data-sonner-toaster], nextjs-portal';
+/**
+ * Ό,τι μένει ζωντανό δίπλα σε κάθε επιφάνεια: δηλωμένοι συνοδοί, ειδοποιήσεις, το dev overlay του Next.
+ *
+ * 🔴 **`body > [aria-live]` — η αρχή, όχι η λίστα** (μετρημένο ζωντανά, Chrome 152, 2026-09-12): το
+ * `[data-sonner-toaster]` **δεν αρκεί**. Το sonner αποδίδει έναν **κενό** `<section aria-live="polite">` στο `body` και
+ * γεννά το `<ol data-sonner-toaster>` **μέσα** του μόνο με την πρώτη ειδοποίηση — δηλαδή ο επιλογέας αστοχεί ακριβώς
+ * τη στιγμή της εισόδου, ο περιέκτης γίνεται `inert`, και κάθε ειδοποίηση που έρχεται μετά κληρονομεί την αδράνεια:
+ * απάτητη **και** εκτός δέντρου προσβασιμότητας, άρα ούτε ανακοινώνεται. Μια ζωντανή περιοχή σε επίπεδο `body` είναι
+ * καθολική επιφάνεια ανακοίνωσης — δεν είναι ποτέ «από πίσω».
+ *
+ * ⚠️ **Στενό επίτηδες**: μόνο **άμεσα παιδιά** του `body`, και μόνο `polite`/`assertive`. Το `aria-live` ζει πλήθος
+ * φορές **μέσα** σε περιεχόμενο σελίδας (φόρμες, δείκτες αυτόματης αποθήκευσης, μπάρες κριτηρίων) — αυτά **πρέπει** να
+ * σβήνουν, και το φυλάει άγκυρα (C5).
+ */
+export const INERT_COMPANION_SELECTOR =
+  '[data-fullscreen-companion], [data-sonner-toaster], nextjs-portal, body > [aria-live="polite"], body > [aria-live="assertive"]';
 
 const SKIPPED_TAGS: ReadonlySet<string> = new Set(['SCRIPT', 'STYLE', 'LINK', 'META', 'TEMPLATE', 'NOSCRIPT']);
 
