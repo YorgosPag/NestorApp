@@ -26,7 +26,7 @@ import {
   extractSearchableText,
   normalizeSearchText,
   generateSearchPrefixes,
-  removeUndefinedValues,
+  stripUndefinedDeepAnyObject,
 } from './search-index-config';
 import { resolveTenantId } from './tenant-resolver';
 import { declaredHref } from '@/lib/workspace/route-worlds';
@@ -208,7 +208,7 @@ export async function backfillEntityType(
       logger.info('[DRY-RUN] Would index', { title: searchDoc.title, searchDocId });
       stats.indexed++;
     } else {
-      const firestoreDoc = removeUndefinedValues(searchDoc as unknown as Record<string, unknown>);
+      const firestoreDoc = stripUndefinedDeepAnyObject(searchDoc as unknown as Record<string, unknown>);
       stats.indexed++;
 
       const writePromise = bulkWriter

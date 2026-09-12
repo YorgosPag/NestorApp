@@ -53,10 +53,37 @@ interface RecordChangeParams {
 // ============================================================================
 
 /**
- * Remove undefined values from object before Firestore write.
- * Firestore rejects `undefined` but accepts `null`.
+ * Καθαρίζει `undefined` **ΜΟΝΟ από τα κλειδιά κορυφής** πριν το write. Το Firestore
+ * απορρίπτει `undefined` αλλά δέχεται `null`.
+ *
+ * 🔴 **Η ΡΗΧΟΤΗΤΑ ΕΙΝΑΙ ΣΥΜΒΟΛΑΙΟ, ΟΧΙ ΠΑΡΑΛΕΙΨΗ — ADR-852 Φ3/§4.7.** Εφαρμόζεται στο
+ * top-level `entry`, άρα ο πίνακας `changes[]` περνά **αυτούσιος**: ένα `undefined`
+ * **μέσα** σε εγγραφή αλλαγής φτάνει στον Admin SDK και **ρίχνει το write**. Γι' αυτό το
+ * `descriptorChannels()` (`lib/audit/tracked-field-def.ts`) γράφει τα προαιρετικά κανάλια
+ * **μόνο** με conditional spread — ποτέ `quantity: undefined`.
+ *
+ * ⛔ **ΜΗΝ το κάνεις αναδρομικό** και **ΜΗΝ** το αντικαταστήσεις με το `stripUndefinedDeep`
+ * του `@/utils/firestore-sanitize`. Δύο ανεξάρτητοι λόγοι:
+ *   1. Αναδρομικό θα καθάριζε **μέσα** στο `changes[]` ⇒ το conditional spread θα φαινόταν
+ *      **περιττό** ⇒ κάποιος θα το «απλοποιούσε» ⇒ η παγίδα επιστρέφει **σιωπηλά**, σε
+ *      διαδρομή fire-and-forget όπου **κανείς δεν μαθαίνει** ότι το write έπεσε (ADR-436).
+ *   2. Το `stripUndefinedDeep` έχει ρητό φρουρό **μόνο** για `Date` και πίνακες· κάθε άλλο
+ *      `typeof === 'object'` το αναδρομεί ⇒ ένα **instance κλάσης** χωρίς own enumerable
+ *      properties — όπως ο `FieldValue.serverTimestamp()` sentinel — γίνεται `{}`. Είναι η
+ *      ίδια μηχανική με το περιστατικό **ADR-438** *(εκεί χάθηκαν `expiresAt` ΚΑΙ
+ *      `timestamp` για ~6 εβδομάδες, γιατί ο τότε καθαριστής δεν είχε φρουρό **ούτε** για
+ *      `Date`)*. ⚠️ Η διάκριση είναι μετρημένη, όχι εικασία: `Date` ✅ / sentinel ❌.
+ *
+ * 🔒 Και τα δύο τα φυλάει **ΕΚΤΕΛΩΝΤΑΣ** η άγκυρα
+ * `__tests__/entity-audit-write-shallow.test.ts` (Ε1 ταυτότητα αναφοράς · Ε3 το SSoT).
+ *
+ * ℹ️ Το `ignoreUndefinedProperties` **δεν ορίζεται πουθενά** σε αυτό το έργο (επαληθευμένο
+ * στο `@/lib/firebaseAdmin`: σκέτο `getFirestore()`, καμία `settings()`), και **ούτε
+ * πρέπει**: η σημασιολογία του διαφέρει **ανά μέθοδο write** (`set` · `set+merge` · `update`
+ * — googleapis/nodejs-firestore #1392 / #1580 / #1629), ενώ το έργο έχει **174-259**
+ * Firestore `.update()` σε **156** αρχεία χωρίς καμία άγκυρα γι' αυτό. Ρητός καθαριστής.
  */
-function removeUndefinedValues(obj: Record<string, unknown>): Record<string, unknown> {
+function stripUndefinedShallow(obj: Record<string, unknown>): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(obj)) {
     if (value !== undefined) {
@@ -156,7 +183,7 @@ export class EntityAuditService {
         params.performedByName,
       );
 
-      const entry = removeUndefinedValues({
+      const entry = stripUndefinedShallow({
         entityType: params.entityType,
         entityId: params.entityId,
         entityName: params.entityName ?? null,

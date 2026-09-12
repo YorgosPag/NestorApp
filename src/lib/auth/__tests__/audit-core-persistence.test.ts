@@ -1,7 +1,9 @@
 /**
- * Regression anchor — ADR-438 TTL fields must survive `removeUndefinedValues`.
+ * Regression anchor — ADR-438 TTL fields must survive `stripUndefinedDeepPlainOnly`.
  *
- * ΙΣΤΟΡΙΚΟ ΤΟΥ BUG: `removeUndefinedValues` αναδρομούσε σε ΚΑΘΕ `typeof value === 'object'`.
+ * ΙΣΤΟΡΙΚΟ ΤΟΥ BUG: ο καθαριστής (τότε `removeUndefinedValues`, μετονομασμένος στο ADR-852
+ * §4.7 γιατί ήταν **τριπλό ομώνυμο** με τρεις διαφορετικές εγγυήσεις) αναδρομούσε σε ΚΑΘΕ
+ * `typeof value === 'object'`.
  * Τα `Date` και τα `FieldValue.serverTimestamp()` sentinels δεν έχουν own enumerable
  * properties (`Object.entries(new Date())` === `[]`) — η αναδρομή τα μετέτρεπε σε `{}`,
  * και ο κλάδος «κενό αντικείμενο ⇒ πέτα το κλειδί» τα εξαφάνιζε εντελώς. Κάθε audit
@@ -13,7 +15,7 @@
  *
  * Το test εδώ περνάει ΑΠΟΚΛΕΙΣΤΙΚΑ από το PUBLIC API (`logAuditEvent`) — δοκιμάζει
  * το observable contract «το payload που φτάνει στο Firestore `.set()` έχει
- * `expiresAt`/`timestamp`», όχι την ιδιωτική `removeUndefinedValues`. Ένα refactor
+ * `expiresAt`/`timestamp`», όχι την ιδιωτική `stripUndefinedDeepPlainOnly`. Ένα refactor
  * που ξαναχαλάει τη recursion θα σκάσει εδώ, όχι μόνο σε ένα unit test του helper.
  */
 

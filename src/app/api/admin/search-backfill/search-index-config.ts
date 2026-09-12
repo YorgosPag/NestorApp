@@ -33,10 +33,24 @@ export function extractSearchableText(doc: Record<string, unknown>, config: Sear
 // =============================================================================
 
 /**
- * Remove undefined values recursively from object.
- * Firestore throws error on undefined values.
+ * Καθαρίζει `undefined` **αναδρομικά, σε ΚΑΘΕ αντικείμενο** (σκέτο ή όχι). Κλειδί του
+ * οποίου η αναδρομή δίνει κενό αντικείμενο πετιέται. Το Firestore απορρίπτει `undefined`.
+ *
+ * 🔴 **ΤΟ ΟΝΟΜΑ ΕΙΝΑΙ ΠΡΟΕΙΔΟΠΟΙΗΣΗ (ADR-852 §4.7).** Αυτό είναι **κατά λέξη** ο κώδικας
+ * που προκάλεσε το περιστατικό **ADR-438**: χωρίς φρουρό `isPlainObject`, ένα `Date` ή ένα
+ * `FieldValue.serverTimestamp()` γίνεται `{}` (`Object.entries(new Date())` === `[]`) και
+ * μετά **εξαφανίζεται** από τον κλάδο «κενό ⇒ πέτα το κλειδί».
+ *
+ * ✅ **Σήμερα είναι ΛΑΝΘΑΝΟΝ, μετρημένα**: ο **μόνος** καλών είναι το `backfill-engine.ts`,
+ * το `SearchDocumentInput` **δεν** έχει `Date`/`Timestamp`, και τα τρία `serverTimestamp()`
+ * sentinels προστίθενται **ΜΕΤΑ** αυτόν τον καθαριστή. Αν ποτέ φτάσει εδώ sentinel ή
+ * `Timestamp` από `doc.data()`, το λανθάνον γίνεται **ζωντανό**.
+ *
+ * ⛔ **ΜΗΝ προσθέσεις φρουρό εδώ χωρίς απόφαση**: θα το έκανε **ταυτόσημο** με το
+ * `stripUndefinedDeepPlainOnly` (`lib/auth/audit-core.ts`) ⇒ γνήσιο διπλότυπο που ζητά
+ * **ενοποίηση** — καταγεγραμμένο στο `.claude-rules/pending-ratchet-work.md`, όχι μπάλωμα.
  */
-export function removeUndefinedValues<T extends Record<string, unknown>>(obj: T): T {
+export function stripUndefinedDeepAnyObject<T extends Record<string, unknown>>(obj: T): T {
   const result: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(obj)) {
@@ -45,7 +59,7 @@ export function removeUndefinedValues<T extends Record<string, unknown>>(obj: T)
     }
 
     if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-      const cleaned = removeUndefinedValues(value as Record<string, unknown>);
+      const cleaned = stripUndefinedDeepAnyObject(value as Record<string, unknown>);
       if (Object.keys(cleaned).length > 0) {
         result[key] = cleaned;
       }

@@ -76,14 +76,26 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * Remove undefined values from object (Firestore compatibility).
- * Firestore throws error on undefined values. Recursively removes undefined
- * while preserving null values (which are valid).
+ * Καθαρίζει `undefined` **αναδρομικά, ΜΟΝΟ σε σκέτα αντικείμενα** (Firestore compatibility).
+ * Τα `null` διατηρούνται (είναι έγκυρα). Κλειδί του οποίου η αναδρομή δίνει **κενό**
+ * αντικείμενο πετιέται.
  *
- * Μη-plain αντικείμενα (Date, Timestamp, FieldValue sentinel, GeoPoint, DocumentReference)
- * περνούν **αυτούσια** στον Admin SDK, που ξέρει να τα σειριοποιήσει.
+ * 🔴 **Ο ΦΡΟΥΡΟΣ ΕΙΝΑΙ ΤΟ ΠΕΡΙΣΤΑΤΙΚΟ ADR-438, ΟΧΙ ΔΙΑΚΟΣΜΗΣΗ.** Μη-plain αντικείμενα
+ * (`Date`, `Timestamp`, `FieldValue` sentinel, `GeoPoint`, `DocumentReference`) περνούν
+ * **αυτούσια** στον Admin SDK, που ξέρει να τα σειριοποιήσει. Δες το `isPlainObject`
+ * παραπάνω για το τι **κοστίζει** η χαλάρωσή του.
+ *
+ * ⚠️ **ΤΡΙΑ ΟΜΩΝΥΜΑ ΕΓΙΝΑΝ ΤΡΙΑ ΟΝΟΜΑΤΑ (ADR-852 §4.7).** Αυτό **ΔΕΝ** είναι:
+ *   · το `stripUndefinedDeepAnyObject` (`api/admin/search-backfill/search-index-config.ts`),
+ *     που αναδρομεί σε **κάθε** object — δηλαδή κατά λέξη ο κώδικας **πριν** τη διόρθωση
+ *     του ADR-438· ίδιο ερώτημα, **άλλη** εγγύηση.
+ *   · το **ρηχό** `stripUndefinedShallow` (`services/entity-audit.service.ts`), όπου η
+ *     ρηχότητα είναι **συμβόλαιο** που κρατά το `changes[]` αυτούσιο.
+ *
+ * 🔒 Άγκυρα: `__tests__/audit-core-persistence.test.ts` — μέσα από το **public API**
+ * (`logAuditEvent`), όχι πάνω σε αυτή την ιδιωτική συνάρτηση.
  */
-function removeUndefinedValues<T extends Record<string, unknown>>(obj: T): Partial<T> {
+function stripUndefinedDeepPlainOnly<T extends Record<string, unknown>>(obj: T): Partial<T> {
   const result: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(obj)) {
@@ -92,7 +104,7 @@ function removeUndefinedValues<T extends Record<string, unknown>>(obj: T): Parti
     }
 
     if (isPlainObject(value)) {
-      const cleaned = removeUndefinedValues(value);
+      const cleaned = stripUndefinedDeepPlainOnly(value);
       if (Object.keys(cleaned).length > 0) {
         result[key] = cleaned;
       }
@@ -272,7 +284,7 @@ export async function logAuditEvent(
     newValue: options.newValue ?? null,
     timestamp: FieldValue.serverTimestamp(),
     expiresAt: computeAuditExpiry(action), // ADR-438: TTL auto-deletes after the tier's retention window
-    metadata: removeUndefinedValues({
+    metadata: stripUndefinedDeepPlainOnly({
       ipAddress: options.metadata?.ipAddress,
       userAgent: options.metadata?.userAgent,
       path: options.metadata?.path,
@@ -280,7 +292,7 @@ export async function logAuditEvent(
     }),
   };
 
-  const entry = removeUndefinedValues(rawEntry) as PersistableAuditEntry;
+  const entry = stripUndefinedDeepPlainOnly(rawEntry) as PersistableAuditEntry;
 
   if (!entry.metadata || Object.keys(entry.metadata).length === 0) {
     entry.metadata = {};
@@ -374,7 +386,7 @@ export async function logWebhookEvent(
     },
     timestamp: FieldValue.serverTimestamp(),
     expiresAt: computeAuditExpiry('webhook_received'), // ADR-438: TTL auto-deletes after retention window
-    metadata: removeUndefinedValues({
+    metadata: stripUndefinedDeepPlainOnly({
       ipAddress: metadata.ipAddress,
       userAgent: metadata.userAgent,
       path: metadata.path,
@@ -382,7 +394,7 @@ export async function logWebhookEvent(
     }),
   };
 
-  const entry = removeUndefinedValues(rawEntry) as PersistableAuditEntry;
+  const entry = stripUndefinedDeepPlainOnly(rawEntry) as PersistableAuditEntry;
 
   if (!entry.metadata || Object.keys(entry.metadata).length === 0) {
     entry.metadata = { reason: `Webhook event received from ${webhookSource}` };
