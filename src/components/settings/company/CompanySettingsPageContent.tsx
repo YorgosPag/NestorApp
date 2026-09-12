@@ -3,9 +3,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useAuth } from '@/hooks/useAuth';
-import { useSuperAdminCompany } from '@/contexts/SuperAdminCompanyContext';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { API_ROUTES } from '@/config/domain-constants';
+// 🔑 ADR-787 §5.3 ζ (όριο 1) — ΕΝΑΣ δρόμος προς το API, άρα ΕΝΑΣ συγγραφέας της δήλωσης
+//    χώρου. Εδώ ζούσε **δεύτερος**: χειροποίητο `getAuthHeaders` που έγραφε μόνος του την
+//    κεφαλίδα του super-admin (και **μόνο** για super-admin, οπότε ένα απλό μέλος πολλών
+//    γραφείων στο `/o/<Β>` έβλεπε το οργανόγραμμα της εταιρείας του **claim**).
+import { apiClient } from '@/lib/api/enterprise-api-client';
 import { CompanyInfoTab } from './CompanyInfoTab';
 import { TaxSettingsTab } from './TaxSettingsTab';
 import { OrgStructureTab } from './OrgStructureTab';
@@ -23,7 +27,6 @@ interface OrgStructureState {
 export function CompanySettingsPageContent() {
   const { t } = useTranslation('org-structure');
   const { user } = useAuth();
-  const { isSuperAdmin, activeCompanyId: superAdminCompanyId } = useSuperAdminCompany();
 
   const [state, setState] = useState<OrgStructureState>({
     orgStructure: null,
@@ -32,32 +35,19 @@ export function CompanySettingsPageContent() {
     error: null,
   });
 
-  const getAuthHeaders = useCallback(async (): Promise<HeadersInit> => {
-    const token = await user!.getIdToken();
-    const headers: Record<string, string> = {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    };
-    if (isSuperAdmin && superAdminCompanyId) {
-      headers['X-Super-Admin-Company-Id'] = superAdminCompanyId;
-    }
-    return headers;
-  }, [user, isSuperAdmin, superAdminCompanyId]);
-
   const fetchOrgStructure = useCallback(async () => {
     if (!user) return;
     setState((s) => ({ ...s, loading: true, error: null }));
     try {
-      const headers = await getAuthHeaders();
-      const res = await fetch(API_ROUTES.ORG_STRUCTURE, { headers });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as { orgStructure: OrgStructure | null };
+      const data = await apiClient.get<{ orgStructure: OrgStructure | null }>(
+        API_ROUTES.ORG_STRUCTURE,
+      );
       setState((s) => ({ ...s, orgStructure: data.orgStructure, loading: false }));
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'error';
       setState((s) => ({ ...s, error: msg, loading: false }));
     }
-  }, [user, getAuthHeaders]);
+  }, [user]);
 
   useEffect(() => {
     void fetchOrgStructure();
@@ -67,23 +57,20 @@ export function CompanySettingsPageContent() {
     if (!user) return;
     setState((s) => ({ ...s, saving: true, error: null }));
     try {
-      const headers = await getAuthHeaders();
-      const res = await fetch(API_ROUTES.ORG_STRUCTURE, {
-        method: 'PUT',
-        headers,
-        body: JSON.stringify(updated),
-      });
-      if (!res.ok) {
-        const body = (await res.json()) as { error?: string };
-        throw new Error(body.error ?? `HTTP ${res.status}`);
-      }
-      const data = (await res.json()) as { orgStructure: OrgStructure };
+      // 🔴 Ο ΠΑΛΙΟΣ ΚΩΔΙΚΑΣ ΔΙΑΒΑΖΕ ΤΟ ΣΩΜΑ **ΔΥΟ ΦΟΡΕΣ** (`res.json()` στον κλάδο
+      //    σφάλματος **και** μετά για τα δεδομένα): το stream καταναλώνεται **μία** φορά,
+      //    άρα κάθε αποτυχία έσκαγε με `body stream already read` αντί να δείξει τον λόγο
+      //    του διακομιστή. Ο `apiClient` κρατά το σώμα **μία** φορά (ADR-834 §6.5.ε).
+      const data = await apiClient.put<{ orgStructure: OrgStructure }>(
+        API_ROUTES.ORG_STRUCTURE,
+        updated,
+      );
       setState((s) => ({ ...s, orgStructure: data.orgStructure, saving: false }));
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'error';
       setState((s) => ({ ...s, error: msg, saving: false }));
     }
-  }, [user, getAuthHeaders]);
+  }, [user]);
 
   if (state.loading) {
     return (

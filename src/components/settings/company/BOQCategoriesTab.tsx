@@ -14,6 +14,14 @@ import { Spinner } from '@/components/ui/spinner';
 import { Plus, Pencil, Trash2, AlertCircle } from 'lucide-react';
 import { ATOE_MASTER_CATEGORIES } from '@/config/boq-categories';
 import { cn } from '@/lib/utils';
+// 🔑 ADR-787 §5.3 ζ (όριο 1) — ΕΝΑΣ δρόμος προς το API. Εδώ ζούσε ωμό `fetch` με
+//    χειροποίητο `getHeaders` που έστελνε **μόνο** `Authorization`: δηλαδή, σε αντίθεση με
+//    την αδελφή καρτέλα του **ίδιου** διαλόγου, δεν δήλωνε χώρο **ποτέ** — ίδια σελίδα,
+//    δύο συμπεριφορές. Ο `apiClient` δηλώνει τον χώρο σε κάθε αίτημα, από τη μία πηγή.
+import { apiClient } from '@/lib/api/enterprise-api-client';
+
+/** Η διαδρομή των υποκατηγοριών ΑΤΟΕ — **μία** γραφή για τα πέντε αιτήματα του αρχείου. */
+const BOQ_SUBCATEGORIES_ROUTE = '/api/settings/boq-subcategories';
 
 // ============================================================================
 // TYPES
@@ -200,25 +208,18 @@ export function BOQCategoriesTab() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<FormState | null>(null);
 
-  const getHeaders = useCallback(async (): Promise<HeadersInit> => {
-    const token = await user!.getIdToken();
-    return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
-  }, [user]);
-
   const fetchItems = useCallback(async () => {
     if (!user) return;
     setLoading(true);
     try {
-      const res = await fetch('/api/settings/boq-subcategories', { headers: await getHeaders() });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as { items: SubCategoryRecord[] };
+      const data = await apiClient.get<{ items: SubCategoryRecord[] }>(BOQ_SUBCATEGORIES_ROUTE);
       setItems(data.items);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'error');
     } finally {
       setLoading(false);
     }
-  }, [user, getHeaders]);
+  }, [user]);
 
   useEffect(() => { void fetchItems(); }, [fetchItems]);
 
@@ -237,48 +238,43 @@ export function BOQCategoriesTab() {
   const handleToggleActive = useCallback(async (item: SubCategoryRecord) => {
     setSaving(true);
     try {
-      await fetch('/api/settings/boq-subcategories', {
-        method: 'PATCH',
-        headers: await getHeaders(),
-        body: JSON.stringify({ id: item.id, isActive: !item.isActive }),
-      });
+      await apiClient.patch(BOQ_SUBCATEGORIES_ROUTE, { id: item.id, isActive: !item.isActive });
       setItems((prev) => prev.map((i) => i.id === item.id ? { ...i, isActive: !i.isActive } : i));
     } finally {
       setSaving(false);
     }
-  }, [getHeaders]);
+  }, []);
 
   const handleDelete = useCallback(async (id: string) => {
     setSaving(true);
     try {
-      await fetch(`/api/settings/boq-subcategories?id=${encodeURIComponent(id)}`, {
-        method: 'DELETE',
-        headers: await getHeaders(),
-      });
+      await apiClient.delete(`${BOQ_SUBCATEGORIES_ROUTE}?id=${encodeURIComponent(id)}`);
       setItems((prev) => prev.filter((i) => i.id !== id));
     } finally {
       setSaving(false);
     }
-  }, [getHeaders]);
+  }, []);
 
   const handleSave = useCallback(async () => {
     if (!form) return;
     setSaving(true);
     try {
       if (form.id) {
-        await fetch('/api/settings/boq-subcategories', {
-          method: 'PATCH',
-          headers: await getHeaders(),
-          body: JSON.stringify({ id: form.id, nameEL: form.nameEL, nameEN: form.nameEN, sortOrder: form.sortOrder }),
+        await apiClient.patch(BOQ_SUBCATEGORIES_ROUTE, {
+          id: form.id,
+          nameEL: form.nameEL,
+          nameEN: form.nameEN,
+          sortOrder: form.sortOrder,
         });
         setItems((prev) => prev.map((i) => i.id === form.id ? { ...i, nameEL: form.nameEL, nameEN: form.nameEN, sortOrder: form.sortOrder } : i));
       } else {
-        const res = await fetch('/api/settings/boq-subcategories', {
-          method: 'POST',
-          headers: await getHeaders(),
-          body: JSON.stringify({ parentCode: form.parentCode, code: form.code, nameEL: form.nameEL, nameEN: form.nameEN, sortOrder: form.sortOrder }),
+        const data = await apiClient.post<{ item: SubCategoryRecord }>(BOQ_SUBCATEGORIES_ROUTE, {
+          parentCode: form.parentCode,
+          code: form.code,
+          nameEL: form.nameEL,
+          nameEN: form.nameEN,
+          sortOrder: form.sortOrder,
         });
-        const data = (await res.json()) as { item: SubCategoryRecord };
         setItems((prev) => [...prev, data.item]);
       }
       setDialogOpen(false);
@@ -286,7 +282,7 @@ export function BOQCategoriesTab() {
     } finally {
       setSaving(false);
     }
-  }, [form, getHeaders]);
+  }, [form]);
 
   if (loading) {
     return (
