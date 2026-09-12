@@ -15,6 +15,7 @@ import { Resend } from 'resend';
 import { EmailAdapter } from '@/server/comms/email-adapter';
 import { getErrorMessage } from '@/lib/error-utils';
 import { createModuleLogger } from '@/lib/telemetry';
+import { PRODUCT_NAME } from '@/constants/product-identity';
 import { wrapInBrandedTemplate, escapeHtml, BRAND } from '@/services/email-templates/base-email-template';
 import type { ChannelDeliveryResult, MessageChannel, VendorInviteMessage } from './types';
 
@@ -23,7 +24,11 @@ const logger = createModuleLogger('VENDOR_PORTAL_EMAIL_CHANNEL');
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const MAILGUN_API_KEY = process.env.MAILGUN_API_KEY;
 const FROM_EMAIL = process.env.FROM_EMAIL || 'info@nestorconstruct.gr';
-const FROM_NAME = process.env.FROM_NAME || 'Nestor Construct';
+// 🔑 Εφεδρεία = η **πλατφόρμα** (ADR-857 Φ7) — δεδομένα ενοίκου όταν υπάρχουν, αλλιώς
+//    εμείς. Το «Nestor Construct» εφεύρισκε εταιρεία που δεν υπάρχει.
+// ⚠️ **ΤΡΙΤΗ ανεξάρτητη ανάγνωση** των ίδιων μεταβλητών (μαζί με `email.service.ts` και
+//    `server/comms/email-providers.ts`) — χρέος SSoT, δηλωμένο στο ADR-857 §7.
+const FROM_NAME = process.env.FROM_NAME || PRODUCT_NAME;
 
 const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
 const mailgunAdapter = MAILGUN_API_KEY ? new EmailAdapter() : null;

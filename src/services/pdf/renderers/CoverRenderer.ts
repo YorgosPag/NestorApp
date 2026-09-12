@@ -1,3 +1,4 @@
+import { PRODUCT_NAME } from '@/constants/product-identity';
 import type { ObligationApprovalEntry, ObligationDocument } from '@/types/obligations';
 import type { IPDFDoc, ICoverRenderer, Margins } from '../contracts';
 import { TextRenderer } from './TextRenderer';
@@ -121,7 +122,10 @@ export class CoverRenderer implements ICoverRenderer {
     doc.setFillColor(...COLORS.RED);
     doc.rect(margins.left, currentY - 5, contentWidth, 15, 'F');
 
-    const companyTitle = safe(document.companyDetails?.name) || safe(document.contractorCompany) || 'Nestor';
+    // 🔑 Εφεδρεία = η **πλατφόρμα** (ADR-857 Φ7). ⚠️ Απέκλινε από τον αδελφό του
+    //    (`HeaderFooterRenderer`): εκείνος συμβουλεύεται και το `NEXT_PUBLIC_COMPANY_NAME`,
+    //    αυτός **όχι**. Η ασυμφωνία μένει — δεν είναι ταυτότητα, είναι αλυσίδα ενοίκου.
+    const companyTitle = safe(document.companyDetails?.name) || safe(document.contractorCompany) || PRODUCT_NAME;
     currentY = this.textRenderer.addText({
       doc,
       text: companyTitle,

@@ -14,6 +14,8 @@
  * @see ADR-777 §8.26
  */
 import { getErrorMessage } from '@/lib/error-utils';
+import { PRODUCT_NAME } from '@/constants/product-identity';
+import { brandedSubject } from '@/server/comms/email-texts';
 import { EmailTemplatesService } from './email-templates.service';
 import { buildPhotoShareEmail } from './email-templates/photo-share';
 import { describeChain, sendThroughChain } from '@/server/comms/email-provider-chain';
@@ -22,7 +24,8 @@ import type { EmailTemplateType, EmailTemplateData } from '@/types/email-templat
 
 // Environment variables
 const FROM_EMAIL = process.env.FROM_EMAIL || 'info@nestorconstruct.gr';
-const FROM_NAME = process.env.FROM_NAME || 'Nestor Construct';
+// 🔑 Εφεδρεία = η **πλατφόρμα** (ADR-857 Φ7), όχι εφευρεμένη εταιρεία.
+const FROM_NAME = process.env.FROM_NAME || PRODUCT_NAME;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
 // New enterprise interface
@@ -129,7 +132,7 @@ export class EmailService {
           senderName: senderName || FROM_NAME,
           recipientEmail: recipients[0],
         });
-        subject = `${propertyTitle} — Nestor Construct`;
+        subject = brandedSubject(propertyTitle);
       } else {
         // Property share → existing templates (residential/commercial/premium)
         const template = EmailTemplatesService.getTemplate(templateType);
@@ -211,16 +214,28 @@ export class EmailService {
   /**
    * Generate email subject based on template type
    */
+  /**
+   * 🔴 **ΥΠΕΓΡΑΦΕ ΜΟΝΟ ΤΟΥ, ΜΕ ΑΛΛΟ ΟΝΟΜΑ** (ADR-857 Φ7). Και οι τέσσερις κλάδοι
+   * κολλούσαν **χειρόγραφα** `- Nestor Construct`, ενώ η εφαρμογή έχει **έναν** SSoT
+   * υπογραφέα (`brandedSubject`) με πέντε νόμιμους καλούντες. Ήταν η **έκτη**, κρυφή
+   * διαδρομή — και **ζωντανή**: φτάνει σε εισερχόμενα μέσω του property-share API.
+   *
+   * Το `brandedSubject` φέρνει μαζί και τον **φρουρό διπλής υπογραφής**: ένα θέμα που
+   * υπογράφει ήδη (με το σημερινό **ή οποιοδήποτε παλιό** όνομα) δεν ξαναϋπογράφεται.
+   *
+   * 🔶 Η **ελληνική πρόζα** εδώ παραμένει σκληρή — **προϋπάρχον** χρέος i18n, δηλωμένο
+   * στο ADR-857 §7· δεν επεκτείνεται σε αυτή την αλλαγή ταυτότητας.
+   */
   private static generateSubject(templateType: EmailTemplateType, propertyTitle: string): string {
     switch (templateType) {
       case 'residential':
-        return `🏠 Το Σπίτι των Ονείρων σας: ${propertyTitle} - Nestor Construct`;
+        return brandedSubject(`🏠 Το Σπίτι των Ονείρων σας: ${propertyTitle}`);
       case 'commercial':
-        return `🏢 Επαγγελματική Ευκαιρία: ${propertyTitle} - Nestor Construct`;
+        return brandedSubject(`🏢 Επαγγελματική Ευκαιρία: ${propertyTitle}`);
       case 'premium':
-        return `⭐ Premium Collection: ${propertyTitle} - Nestor Construct`;
+        return brandedSubject(`⭐ Premium Collection: ${propertyTitle}`);
       default:
-        return `🏠 Κοινοποίηση Ακινήτου: ${propertyTitle} - Nestor Construct`;
+        return brandedSubject(`🏠 Κοινοποίηση Ακινήτου: ${propertyTitle}`);
     }
   }
 

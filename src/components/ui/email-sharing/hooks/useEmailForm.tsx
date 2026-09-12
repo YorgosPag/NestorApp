@@ -22,6 +22,7 @@ import type {
 } from '../types';
 import type { EmailTemplateType } from '@/types/email-templates';
 import { DEFAULT_EMAIL_CONFIG, isValidEmail } from '../types';
+import { PRODUCT_NAME } from '@/constants/product-identity';
 
 // Hooks
 import { useEmailValidation } from './useEmailValidation';
@@ -292,7 +293,10 @@ export function useEmailForm(
       propertyTitle: shareData.title,
       propertyDescription: shareData.text,
       propertyUrl: shareData.url,
-      senderName: process.env.NEXT_PUBLIC_COMPANY_NAME || 'Nestor Construct'
+      // 🔑 Εφεδρεία = η **πλατφόρμα** (ADR-857 Φ7). Το `senderName` είναι **δεδομένα
+      //    ενοίκου** (κλάση Γ) και μένει· άλλαξε μόνο η τιμή για όταν **δεν υπάρχει
+      //    ένοικος να ονομάσεις** — έλεγε «Nestor Construct», εταιρεία ανύπαρκτη.
+      senderName: process.env.NEXT_PUBLIC_COMPANY_NAME || PRODUCT_NAME
     };
   }, [validateForm, actions, state.personalMessage, state.selectedTemplate]);
 

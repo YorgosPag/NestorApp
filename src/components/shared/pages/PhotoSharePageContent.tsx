@@ -10,6 +10,7 @@
 
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import { publicUrl } from '@/lib/http/public-origin';
+import { PRODUCT_NAME } from '@/constants/product-identity';
 import React, { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
@@ -76,7 +77,11 @@ export function PhotoSharePageContent() {
         // που μπορεί να διεκδικήσει τρίτος. Χωρίς διεύθυνση ⇒ ΚΑΝΕΝΑ `og:url`, ποτέ μαντεμένο.
         ...(shareUrl === null ? [] : [{ property: 'og:url', content: shareUrl }]),
         { property: 'og:type', content: 'article' },
-        { property: 'og:site_name', content: process.env.NEXT_PUBLIC_COMPANY_NAME || 'Nestor Construct' },
+        // ADR-857 Φ7 — **ίδια οικογένεια με το σχόλιο παραπάνω**: η εφεδρεία δήλωνε
+        // «Nestor Construct», εταιρεία που δεν αντιστοιχεί σε κανέναν ένοικο. Το
+        // `og:site_name` είναι **δεδομένα ενοίκου** (κλάση Γ) και μένει· αλλάζει μόνο
+        // η τιμή για όταν δεν υπάρχει ένοικος να ονομάσεις.
+        { property: 'og:site_name', content: process.env.NEXT_PUBLIC_COMPANY_NAME || PRODUCT_NAME },
         { property: 'og:image:width', content: '1200' },
         { property: 'og:image:height', content: '630' },
       ];

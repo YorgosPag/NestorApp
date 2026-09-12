@@ -1,3 +1,4 @@
+import { PRODUCT_NAME } from '@/constants/product-identity';
 import type { ObligationDocument } from '@/types/obligations';
 import type { PDFExportOptions, IPDFDoc, IHeaderFooterRenderer, Margins } from '../contracts';
 import { COLORS, LINE_WIDTHS, FONTS, FONT_SIZES, FONT_STYLES } from '../layout';
@@ -76,7 +77,10 @@ export class HeaderFooterRenderer implements IHeaderFooterRenderer {
     const pageInfo = `${PDF_LABELS.pagePrefix} ${pageNum} ${PDF_LABELS.pageConnector} ${totalPages}`;
     doc.text(pageInfo, pageWidth / 2, footerY, { align: 'center' });
 
-    const companyName = safeText(document.companyDetails?.name) || safeText(document.contractorCompany) || process.env.NEXT_PUBLIC_COMPANY_NAME || 'Nestor';
+    // 🔑 Τελευταία εφεδρεία = η **πλατφόρμα** (ADR-857 Φ7). Έλεγε σκέτο «Nestor» —
+    //    **πέμπτη** γραφή του ίδιου ουσιαστικού. Τα τρία πρώτα σκέλη είναι δεδομένα
+    //    ενοίκου και μένουν ως έχουν.
+    const companyName = safeText(document.companyDetails?.name) || safeText(document.contractorCompany) || process.env.NEXT_PUBLIC_COMPANY_NAME || PRODUCT_NAME;
     doc.text(companyName, margins.left, footerY, { align: 'left' });
 
     const footerText = safeText(options?.footerText) || PDF_LABELS.defaultFooter;

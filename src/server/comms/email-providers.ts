@@ -22,6 +22,7 @@
 
 import 'server-only';
 
+import { PRODUCT_NAME } from '@/constants/product-identity';
 import { EmailAdapter } from '@/server/comms/email-adapter';
 import {
   safeHeaderEntries,
@@ -120,7 +121,12 @@ export function resendProvider(): EmailProvider {
 /** Η διεύθυνση αποστολέα όταν ο καλών δεν ορίζει δική του. */
 function defaultFrom(): string {
   const email = process.env.FROM_EMAIL ?? 'info@nestorconstruct.gr';
-  const name = process.env.FROM_NAME ?? 'Nestor Construct';
+  // 🔑 **Η ΕΦΕΔΡΕΙΑ ΕΙΝΑΙ Η ΠΛΑΤΦΟΡΜΑ, ΟΧΙ ΕΦΕΥΡΕΜΕΝΗ ΕΤΑΙΡΕΙΑ** (ADR-857 Φ7).
+  //    Έλεγε «Nestor Construct» — όνομα που **δεν αντιστοιχεί σε κανέναν ένοικο**. Η
+  //    ταυτότητα αποστολέα είναι **ανά ένοικο** (BYOD + DKIM per tenant, τεκμηριωμένη
+  //    πρακτική πολυ-ενοικιακής παράδοσης), άρα το `FROM_NAME` είναι **δεδομένα
+  //    ενοίκου**· αυτή η γραμμή τρέχει **μόνο όταν δεν υπάρχει ένοικος να ονομάσεις**.
+  const name = process.env.FROM_NAME ?? PRODUCT_NAME;
   return `${name} <${email}>`;
 }
 
