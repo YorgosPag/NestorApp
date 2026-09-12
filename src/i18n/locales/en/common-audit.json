@@ -396,6 +396,7 @@
         "blockSide": "Block side",
         "floor": "Floor"
       }
-    }
+    },
+    "retiredFieldNotice": "This field no longer exists in the registry — showing the name recorded at the time of the change."
   }
 }

@@ -36,6 +36,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { ACTION_MAP } from "./activity-tab-config";
 import { formatFieldAwareValue, formatStorageUrl } from "./activity-tab-helpers";
 import { resolveAuditValue } from "./audit-value-resolver";
+// 🏢 ADR-852 Φ2 — ο περιγραφέας του πεδίου: ζωντανή ετικέτα + τίμιο στιγμιότυπο.
+// Καθαρές συναρτήσεις, εκτός React ⇒ η άγκυρα της Φ7 τις καρφώνει χωρίς render.
+import { resolveTrackedFieldDef, resolveFieldLabel } from "./audit-field-descriptor";
 
 // ============================================================================
 // ENTITY LINK MAPPING (for global view)
@@ -278,17 +281,19 @@ export function AuditTimelineEntry({
           <ul className="mt-1.5 space-y-1">
             {entry.changes.map((change, idx) => {
               const translateFieldValue = makeFieldTranslator(change.field);
-              const specificFieldKey = `audit.fields.${entry.entityType}.${change.field}`;
-              const genericFieldKey = `audit.fields.${change.field}`;
-              const resolvedSpecific = t(specificFieldKey);
-              const resolvedGeneric = t(genericFieldKey);
-              // t() may return objects when key resolves to a non-leaf node in i18next
-              const fieldLabel: string =
-                typeof resolvedSpecific === 'string' && resolvedSpecific !== specificFieldKey
-                  ? resolvedSpecific
-                  : typeof resolvedGeneric === 'string' && resolvedGeneric !== genericFieldKey
-                    ? resolvedGeneric
-                    : safeStr(change.label ?? (change.field as unknown));
+              // 🏢 ADR-852 Φ2 — ΔΙΠΛΟ ΚΑΝΑΛΙ. Η σειρά επίλυσης (labelKey → ειδική →
+              // γενική → στιγμιότυπο → ωμό) ζει στο `resolveFieldLabel`, ώστε να
+              // δοκιμάζεται χωρίς render. Τα δύο μεσαία βήματα είναι ΑΚΡΙΒΩΣ ό,τι
+              // έκανε αυτό το μπλοκ πριν ⇒ μηδέν παλινδρόμηση εκ κατασκευής.
+              const def = resolveTrackedFieldDef(entry.entityType, change.field);
+              const label = resolveFieldLabel({
+                entityType: entry.entityType,
+                field: change.field,
+                def,
+                storedLabel: change.label != null ? safeStr(change.label as unknown) : undefined,
+                translate: t,
+              });
+              const fieldLabel: string = label.text;
 
               // ── Collection-aware rendering (ADR-195 Phase 11) ──
               if (change.kind === 'collection' && change.op) {
@@ -352,7 +357,24 @@ export function AuditTimelineEntry({
                   key={`${change.field}-${idx}`}
                   className="rounded bg-muted/50 px-2.5 py-1 text-xs"
                 >
-                  <span className="font-medium">{fieldLabel}</span>
+                  {/* ADR-852 §3.1 — ένα ΣΤΙΓΜΙΟΤΥΠΟ δεν παρουσιάζεται ποτέ ως τρέχουσα
+                      αλήθεια: το μητρώο δεν ξέρει πια αυτό το πεδίο, και ο άνθρωπος
+                      πρέπει να μπορεί να το μάθει. Διακεκομμένη υπογράμμιση + tooltip
+                      (ποτέ native `title=` — CHECK 3.23). */}
+                  {label.isSnapshot ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="font-medium underline decoration-dotted underline-offset-2">
+                          {fieldLabel}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {safeStr(t("audit.retiredFieldNotice") as unknown)}
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <span className="font-medium">{fieldLabel}</span>
+                  )}
                   {": "}
                   <span
                     className={cn(
@@ -362,13 +384,13 @@ export function AuditTimelineEntry({
                   >
                     {change.oldValueLabel
                       ? safeStr(change.oldValueLabel as unknown)
-                      : formatFieldAwareValue(change.field, change.oldValue, translateFieldValue)}
+                      : formatFieldAwareValue(change.field, change.oldValue, translateFieldValue, def?.quantity)}
                   </span>
                   {" → "}
                   <span className="font-medium text-foreground">
                     {change.newValueLabel
                       ? safeStr(change.newValueLabel as unknown)
-                      : formatFieldAwareValue(change.field, change.newValue, translateFieldValue)}
+                      : formatFieldAwareValue(change.field, change.newValue, translateFieldValue, def?.quantity)}
                   </span>
                 </li>
               );

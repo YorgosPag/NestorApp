@@ -2574,6 +2574,11 @@
     }
   },
   "common-shared": {
+    "iconCountBadge": {
+      "items": "{count} στοιχεία",
+      "items_one": "{count} στοιχείο",
+      "items_other": "{count} στοιχεία"
+    },
     "personalMessage": {
       "charsRemaining": "{count} χαρακτήρες",
       "label": "Προσωπικό Μήνυμα",

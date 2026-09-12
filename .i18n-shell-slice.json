@@ -95,6 +95,12 @@
   },
   "$dynamicKeyPolicy": "Every entry below answers ONE unresolvable `t(...)` call site in a shell module. The generator REFUSES to emit a slice while any such call is unclassified — that refusal is the guarantee. Each `reason` states a fact measured on 2026-07-31, not an assumption; re-verify it when you touch the file.",
   "dynamicKeyPolicy": {
+    "src/core/badges/IconCountBadge.tsx": {
+      "keys": [
+        "common-shared:iconCountBadge.items"
+      ],
+      "reason": "ADR-854 — η ΜΟΝΗ δυναμική κλήση είναι `t(announceRef.key, { ns: announceRef.ns, count })` (γρ. 170), και το `announceRef` βγαίνει από τη `resolveAnnounceRef`: `announce === true` ⇒ το ΚΥΡΙΟΛΕΚΤΙΚΟ ζεύγος `DEFAULT_ANNOUNCE_NS='common-shared'` / `DEFAULT_ANNOUNCE_KEY='iconCountBadge.items'`, αλλιώς το `{ns,key}` του καλούντα. ΜΕΤΡΗΜΕΝΟ 2026-09-12 με grep σε ΟΛΟ το src/: **έξι** call sites (NotificationBell.enterprise · TelegramNotifications · CompactToolbarActions · header-custom-actions · QuoteDetailsHeader · ContactsHeader) και **και τα έξι** περνούν σκέτο `announce` ⇒ `true` ⇒ ο παρονομαστής σήμερα είναι **ΕΝΑ** κλειδί. Δηλώνεται ως `keys` και ΟΧΙ ως `prefixes` επίτηδες: το `copyPluralSiblings` σέρνει μόνο του τα `items_one`/`items_other` (υπάρχουν σε el+en, ICU `{count}`), ενώ πρόθεμα θα έσερνε υποδέντρο που κανείς δεν ζητά. 🔴 ΤΟ ΠΡΟΘΕΜΑ ΔΕΝ ΕΙΝΑΙ ΤΥΠΙΚΟΤΗΤΑ: το `common-shared` είναι **key-sliced** (shellNamespaces), όχι ολόκληρο — χωρίς αυτή τη γραμμή ο αναγνώστης οθόνης ακούει **ωμό κλειδί** αντί για «3 στοιχεία». ⚠️ Ο τύπος `IconCountBadgeAnnounce` ΕΠΙΤΡΕΠΕΙ `{ns,key}` δικό του: ο μεταγλωττιστής ΔΕΝ σε σταματά, άρα καλούντας που δίνει δικό του κλειδί πρέπει είτε να ζει σε namespace που ταξιδεύει ολόκληρο, είτε να πάρει γραμμή εδώ. Ξαναμέτρησε τα call sites αν αγγίξεις το `announce`."
+    },
     "src/components/notifications/notification-display-title.ts": {
       "prefixes": [
         "common:notifications.unknownSender",

@@ -11,6 +11,8 @@
 import { safeJsonParse } from "@/lib/json-utils";
 import { formatDate, formatRelativeTime } from "@/lib/intl-utils";
 import type { AuditAction, EntityAuditEntry } from "@/types/audit-trail";
+import type { QuantitySpec } from "@/constants/quantity-specs";
+import { formatQuantityValue } from "./audit-quantity-format";
 
 export interface Stats {
   total: number;
@@ -220,7 +222,20 @@ export function formatFieldAwareValue(
   field: string,
   value: string | number | boolean | null,
   translateValue?: (v: string) => string | undefined,
+  quantity?: QuantitySpec,
 ): string {
+  // 🏢 ADR-852 Φ2 — Η ΠΟΣΟΤΗΤΑ ΠΡΟΗΓΕΙΤΑΙ, ΚΑΙ ΜΟΝΟ ΟΤΑΝ ΕΙΝΑΙ ΔΗΛΩΜΕΝΗ.
+  //
+  // Ο περιγραφέας ξέρει κάτι που το όνομα του πεδίου δεν λέει: ότι το `749.99…` είναι
+  // μήκος αποθηκευμένο σε canonical mm. Όταν το δηλώνει, κερδίζει — είναι ρητή γνώση.
+  // Όταν δεν το δηλώνει, το `formatQuantityValue` γυρίζει `undefined` και η συνάρτηση
+  // συνεχίζει **ακριβώς** όπως πριν: μηδέν αλλαγή για κάθε υπάρχον πεδίο.
+  //
+  // ⚠️ ΠΑΝΩ από τους ειδικούς κανόνες `floor`/`area`/`areas`: εκείνοι μαντεύουν από το
+  // ΟΝΟΜΑ, αυτό διαβάζει τη ΔΗΛΩΣΗ. Δήλωση > μαντεψιά, πάντα.
+  const byQuantity = formatQuantityValue(quantity, value);
+  if (byQuantity !== undefined) return byQuantity;
+
   if (field === 'floor') {
     return formatFloorNumber(value) ?? formatDisplayValue(value, translateValue);
   }

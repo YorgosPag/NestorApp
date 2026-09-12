@@ -18,44 +18,24 @@
  */
 
 import type { AuditFieldChange, AuditSubChange } from '@/types/audit-trail';
+// ADR-852 §4 — το ΣΧΗΜΑ του πεδίου ζει δίπλα, σε δικό του αρχείο: αυτό εδώ είναι η
+// ΜΗΧΑΝΗ (συγκρίνει καταστάσεις), εκείνο είναι το ΣΧΗΜΑ (τι ξέρουμε για ένα πεδίο).
+// Επανεξάγεται αμέσως παρακάτω ⇒ καμία διαδρομή import δεν άλλαξε για κανέναν.
+import type { TrackedFieldDef } from './tracked-field-def';
 
 // ============================================================================
 // TRACKED FIELD DEFINITION (ADR-195 Phase 11 — SSoT discriminated union)
 // ============================================================================
 
 /**
- * Schema for one tracked field. The `kind` discriminator routes the diff
- * engine between scalar comparison and collection-aware reconciliation.
+ * Το σχήμα ενός tracked πεδίου **μετακόμισε** στο `./tracked-field-def.ts`
+ * (ADR-852 §4, 2026-09-12): εκεί ζει το **ΣΧΗΜΑ**, εδώ η **ΜΗΧΑΝΗ**.
  *
- * - `scalar` — single primitive (string/number/bool/null) or opaque object.
- *   Produces `oldValue → newValue` entries (legacy behavior).
- * - `collection` — array of items. The diff engine reconciles by `keyBy`
- *   and produces granular added/removed/modified entries.
- *
- * As of this commit, ALL fields are declared `scalar`. Array fields will be
- * flipped to `collection` together with the engine that understands them.
+ * Επανεξάγεται ώστε **καμία** διαδρομή import να μην αλλάξει — τα τέσσερα σημεία που
+ * γράφουν `from '@/lib/audit/audit-diff'` και οι ~60 καταναλωτές που περνούν από το
+ * `@/config/audit-tracked-fields` μένουν **ανέγγιχτοι**.
  */
-export type TrackedFieldDef =
-  | { readonly kind: 'scalar'; readonly label: string }
-  | {
-      readonly kind: 'collection';
-      readonly label: string;
-      /**
-       * Stable identity for collection items.
-       * - `'value'` — the element itself is the key (primitive arrays).
-       * - `string` — read this property from each item (e.g. `'id'`).
-       * - `readonly string[]` — composite key, joined by `|`.
-       */
-      readonly keyBy: 'value' | string | readonly string[];
-      /** Item fields concatenated to form the human display label. */
-      readonly labelFields?: readonly string[];
-      /** Separator between `labelFields` (default `' — '`). */
-      readonly labelSeparator?: string;
-      /** Sub-fields tracked for `op === 'modified'` entries. */
-      readonly trackSubFields?: readonly string[];
-      /** Optional human-readable label overrides per sub-field (used instead of i18n fallback). */
-      readonly subFieldLabels?: Readonly<Record<string, string>>;
-    };
+export type { TrackedFieldDef };
 
 /**
  * Convert a `TrackedFieldDef` map back to a plain `Record<string, string>`
@@ -163,6 +143,39 @@ export function serializeScalar(value: unknown): string | number | boolean | nul
   return JSON.stringify(sortKeys(value));
 }
 
+/**
+ * Η **ΜΙΑ** θέση όπου γεννιέται βαθμωτή εγγραφή αλλαγής.
+ *
+ * 🔴 **ΓΙΑΤΙ ΕΞΗΧΘΗ (N.18 · CHECK 3.28, 2026-09-12).** Το ίδιο οκτάγραμμο ζούσε
+ * **δύο φορές** σε αυτό το αρχείο — μία στο `diffTrackedFieldsLegacy` και μία στο
+ * `diffTrackedFields` — από το ADR-195 Φ11 και μετά. Ήταν **αόρατο**: το CHECK 3.28
+ * σαρώνει μόνο τα **σταδιοποιημένα** αρχεία, και κανείς δεν είχε ξαναγγίξει το
+ * `audit-diff.ts` από τότε. Δηλαδή «πράσινο επειδή κανείς δεν κοίταξε», το σχήμα που
+ * το `CLAUDE.md` ονομάζει ρητά στα N.11/N.12/N.18.
+ *
+ * 🔑 **ΚΑΙ ΕΙΝΑΙ Η ΘΕΣΗ ΠΟΥ ΧΡΕΙΑΖΕΤΑΙ Η Φ3.** Το διπλό κανάλι του ADR-852 §3.1
+ * προσθέτει `labelSnapshot`/`quantity`/`unit` σε **κάθε** βαθμωτή εγγραφή. Με δύο
+ * σώματα, η προσθήκη θα έπρεπε να γίνει δύο φορές — και το δεύτερο θα ξεχνιόταν,
+ * αφήνοντας τη μισή διαδρομή εγγραφής χωρίς περιγραφέα. Τώρα το conditional spread
+ * (ποτέ `quantity: undefined` — ο Admin SDK θα έσκαγε) έχει **ένα** σπίτι.
+ *
+ * ⚠️ Το `?? null` μένει **εδώ μέσα**: το `serializeScalar` ήδη επιστρέφει `null` για
+ * `undefined`, αλλά η ρητή μορφή κρατά τη συμπεριφορά **κατά λέξη** ίδια με τα δύο
+ * σώματα που αντικατέστησε — εξαγωγή, όχι ευκαιριακή αλλαγή σημασιολογίας.
+ */
+function pushScalarChange(
+  changes: AuditFieldChange[],
+  field: string,
+  oldValue: unknown,
+  newValue: unknown,
+  label: string,
+): void {
+  const oldStr = serializeScalar(oldValue ?? null);
+  const newStr = serializeScalar(newValue ?? null);
+  if (oldStr === newStr) return;
+  changes.push({ field, oldValue: oldStr, newValue: newStr, label });
+}
+
 // ============================================================================
 // LEGACY DIFF (Record<string, string> signature — current consumers)
 // ============================================================================
@@ -192,15 +205,7 @@ export function diffTrackedFieldsLegacy(
   for (const [field, label] of Object.entries(trackedFields)) {
     if (!(field in flatNew)) continue;
 
-    const oldValue = flatOld[field] ?? null;
-    const newValue = flatNew[field] ?? null;
-
-    const oldStr = serializeScalar(oldValue);
-    const newStr = serializeScalar(newValue);
-
-    if (oldStr !== newStr) {
-      changes.push({ field, oldValue: oldStr, newValue: newStr, label });
-    }
+    pushScalarChange(changes, field, flatOld[field], flatNew[field], label);
   }
 
   return changes;
@@ -459,13 +464,7 @@ export function diffTrackedFields(
       continue;
     }
 
-    const oldValue = flatOld[field] ?? null;
-    const newValue = flatNew[field] ?? null;
-    const oldStr = serializeScalar(oldValue);
-    const newStr = serializeScalar(newValue);
-    if (oldStr !== newStr) {
-      changes.push({ field, oldValue: oldStr, newValue: newStr, label: def.label });
-    }
+    pushScalarChange(changes, field, flatOld[field], flatNew[field], def.label);
   }
 
   return changes;
