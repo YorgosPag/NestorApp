@@ -376,4 +376,59 @@ describe('Address Schemas - Zod Invariants (ADR-167)', () => {
       expect(result.success).toBe(true);
     });
   });
+
+  /**
+   * ADR-332 D27 **Ζ6** — η **απόδειξη** του ισχυρισμού ακρίβειας επιβιώνει του PATCH.
+   *
+   * 🔴 Το `projectAddressSchema` είναι `z.object`: **πετάει κάθε αδήλωτο κλειδί**. Αν το
+   * `resolvedFor` δεν δηλωθεί, κάθε αποθήκευση έργου σβήνει την απόδειξη και ο ισχυρισμός
+   * `accuracy` ξαναγίνεται **ανέλεγκτος** — η ίδια σιωπηλή απώλεια που μετρήθηκε για το
+   * `municipalUnit` (ADR-759 Φ3) και για ολόκληρο το `geocodingMetadata` (Φ8).
+   */
+  describe('Ζ6 — η απόδειξη της θέσης δεν σβήνεται από το PATCH', () => {
+    const withProof = {
+      id: 'addr_1',
+      street: 'Εγνατία',
+      number: '102',
+      city: 'Θεσσαλονίκη',
+      postalCode: '54623',
+      country: 'Ελλάδα',
+      type: 'site',
+      isPrimary: true,
+      coordinates: { lat: 40.6345089, lng: 22.9464481 },
+      source: 'geocoded',
+      verifiedAt: 1_757_000_000_000,
+      geocodingMetadata: {
+        confidence: 0.85,
+        accuracy: 'exact',
+        variantUsed: 1,
+        resolvedFor: { street: 'Εγνατία', number: '102', city: 'Θεσσαλονίκη', postalCode: '54623' },
+        partialMatch: true,
+      },
+    };
+
+    it('Ζ6-Σ1 — `resolvedFor` ΚΑΙ `partialMatch` επιβιώνουν του `projectAddressSchema`', () => {
+      const parsed = projectAddressSchema.parse(withProof);
+
+      expect(parsed.geocodingMetadata?.resolvedFor).toEqual({
+        street: 'Εγνατία',
+        number: '102',
+        city: 'Θεσσαλονίκη',
+        postalCode: '54623',
+      });
+      expect(parsed.geocodingMetadata?.partialMatch).toBe(true);
+    });
+
+    it('Ζ6-Σ1β — παλιά εγγραφή ΧΩΡΙΣ απόδειξη περνά αναλλοίωτη (καμία αναδρομική απαίτηση)', () => {
+      const legacy = {
+        ...withProof,
+        geocodingMetadata: { confidence: 0.91, accuracy: 'exact', variantUsed: 1, osmType: 'way' },
+      };
+
+      const parsed = projectAddressSchema.parse(legacy);
+
+      expect(parsed.geocodingMetadata?.resolvedFor).toBeUndefined();
+      expect(parsed.geocodingMetadata?.osmType).toBe('way');
+    });
+  });
 });

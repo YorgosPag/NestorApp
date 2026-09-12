@@ -56,6 +56,7 @@ jest.mock('@/services/listings/publish-public-listing', () => ({
 
 import type { NextRequest } from 'next/server';
 import { ADDRESS_IDENTITY_FIELDS } from '@/lib/geocoding/address-position';
+import { contactAddressPositionsRequestSchema } from '../contact-address-positions';
 import { POST as positionsForContact } from '../../[contactId]/address-positions/route';
 import { POST as positionsForNewContact } from '../../address-positions/route';
 
@@ -149,5 +150,35 @@ describe('ADR-332 D27 Β-ΙΙ Φ2 — νέα επαφή', () => {
     }
     const foreign = await positionsForNewContact(request({ addresses: [{ id: 'a', municipalityName: 'x' }] }));
     expect((foreign as { status: number }).status).toBe(400);
+  });
+
+  /**
+   * ADR-332 D27 **Ζ6-Σ2** — η **απόδειξη** περνά το σύνορο και προς τις δύο κατευθύνσεις.
+   *
+   * 🔴 Η όψη είναι `.strict()`: ο πελάτης στέλνει πίσω την **αποθηκευμένη** θέση σε κάθε
+   * αποθήκευση. Αδήλωτο κλειδί μέσα στο `geocodingMetadata` κόβεται σιωπηλά ⇒ ο διακομιστής
+   * θα το έβλεπε ως «δεν υπήρξε ποτέ» και το `keepStored` θα το **έχανε σε κάθε save**.
+   */
+  it('Ζ6-Σ2 — η απόδειξη `resolvedFor` επιβιώνει του σχήματος του συνόρου', () => {
+    // ⚠️ Η άγκυρα χτυπά ΤΟ ΣΧΗΜΑ, όχι τον εκτελεστή. Μια πρώτη εκδοχή περνούσε τη διεύθυνση
+    // από το route για **νέα** επαφή: εκεί `stored === null` ⇒ ο γραφέας γεωκωδικοποιεί και
+    // **παράγει** νέο `resolvedFor`, που τύχαινε να ισούται με το σταλμένο ⇒ η άγκυρα ήταν
+    // πράσινη ακόμη και με το πεδίο σβησμένο από το σχήμα. Μετρημένο με μετάλλαξη.
+    const resolvedFor = { street: 'Εγνατία', number: '100', city: 'Θεσσαλονίκη' };
+
+    const parsed = contactAddressPositionsRequestSchema.parse({
+      addresses: [{
+        id: 'addr_hq',
+        street: 'Εγνατία',
+        number: '100',
+        city: 'Θεσσαλονίκη',
+        coordinates: HUMAN,
+        source: 'geocoded',
+        geocodingMetadata: { confidence: 0.91, accuracy: 'exact', variantUsed: 1, resolvedFor, partialMatch: true },
+      }],
+    });
+
+    expect(parsed.addresses[0].geocodingMetadata?.resolvedFor).toEqual(resolvedFor);
+    expect(parsed.addresses[0].geocodingMetadata?.partialMatch).toBe(true);
   });
 });

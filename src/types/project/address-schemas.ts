@@ -12,6 +12,38 @@ import { PROJECT_ADDRESS_TYPES, BLOCK_SIDE_DIRECTIONS } from '@/types/project/ad
  * Ένα `z.enum([...])` εδώ θα ήταν **δεύτερο αντίγραφο** του λεξιλογίου. Η αυθεντία μένει
  * στους τύπους· η δουλειά του σχήματος είναι να **μην καταστρέφει**.
  */
+/**
+ * **Η ΛΙΣΤΑ ΤΩΝ ΠΕΔΙΩΝ ΤΟΥ `geocodingMetadata` — ΕΝΑΣ ΙΔΙΟΚΤΗΤΗΣ** (N.12 · CHECK 3.28).
+ *
+ * 🔴 **Ήταν γραμμένη δύο φορές** *(εδώ και στο `api/contacts/_shared/contact-address-positions.ts`)*
+ * και το πρόσεξε η πύλη κλώνων τη στιγμή που η D27 Ζ6 πρόσθεσε `resolvedFor` + `partialMatch`
+ * — δηλαδή **και στα δύο** αντίγραφα, χειροκίνητα. Το επόμενο πεδίο θα έμπαινε στο ένα.
+ * Και η αστοχία δεν είναι θεωρητική: το Zod **πετάει** κάθε αδήλωτο κλειδί, άρα ένα ξεχασμένο
+ * πεδίο εκδηλώνεται ως **σιωπηλή διαγραφή σε κάθε αποθήκευση** *(ADR-759 Φ3 · Φ8)*.
+ *
+ * 🔑 **ΠΑΡΑΜΕΤΡΟΣ Ο ΕΛΕΓΚΤΗΣ, ΟΧΙ ΚΟΙΝΟ ΣΧΗΜΑ**: οι δύο πλευρές **διαφέρουν σκόπιμα** στο
+ * `accuracy` *(εδώ `z.string()` «να μην καταστρέφει»· στις επαφές `z.enum(GEOCODING_ACCURACIES)`
+ * γιατί εκεί η τιμή **γεννιέται** τώρα)*. Ένα κοινό σχήμα θα άλλαζε **συμπεριφορά** στη μία —
+ * θα έκανε αυστηρή μια διαδρομή PATCH που σήμερα **διασώζει** ό,τι βρει. Κοινή γίνεται η
+ * **απαρίθμηση**, που είναι και η μόνη που διπλογραφόταν.
+ */
+export function geocodingMetadataSchema<A extends z.ZodTypeAny>(accuracy: A) {
+  return z.object({
+    confidence: z.number(),
+    accuracy,
+    variantUsed: z.number(),
+    osmType: z.string().max(64).optional(),
+    // ── ADR-332 D27 Ζ6: η ΑΠΟΔΕΙΞΗ του ισχυρισμού ακρίβειας ────────────────────
+    // Χωρίς δήλωση εδώ, κάθε αποθήκευση θα έσβηνε την απόδειξη και ο ισχυρισμός θα
+    // ξαναγινόταν ανέλεγκτος — **ακριβώς** η βλάβη που το ADR-759 Φ3 μέτρησε για το
+    // `municipalUnit` και η Φ8 για το `geocodingMetadata` ολόκληρο.
+    // `z.record` και όχι απαρίθμηση πεδίων: η αυθεντία της λίστας είναι το
+    // `ADDRESS_IDENTITY_FIELDS` — δεύτερο αντίγραφο εδώ θα απέκλινε.
+    resolvedFor: z.record(z.string().max(64), z.string().max(300)).optional(),
+    partialMatch: z.boolean().optional(),
+  });
+}
+
 export const addressPositionFieldsSchema = z.object({
   coordinates: z.object({
     lat: z.number(),
@@ -22,12 +54,8 @@ export const addressPositionFieldsSchema = z.object({
   // (Το ADR-745 §6.4 δήλωσε ακόμη και δικό του `source: 'titleblock'` — **αδύνατο να αποθηκευτεί**.)
   source: z.string().max(64).optional(),
   verifiedAt: z.number().optional(),
-  geocodingMetadata: z.object({
-    confidence: z.number(),
-    accuracy: z.string().max(64),
-    variantUsed: z.number(),
-    osmType: z.string().max(64).optional(),
-  }).optional(),
+  // `z.string()` για το `accuracy`: εδώ το σχήμα **διασώζει** ό,τι βρει (δες κεφαλίδα).
+  geocodingMetadata: geocodingMetadataSchema(z.string().max(64)).optional(),
 });
 
 /**

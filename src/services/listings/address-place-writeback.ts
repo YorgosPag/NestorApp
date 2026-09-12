@@ -80,6 +80,10 @@ const geocodeAddress: AddressGeocoder = async (query) => {
         // ADR-332 D27 Βήμα Β (Φ2β): η έκταση ΠΕΤΙΟΤΑΝ εδώ — τώρα μετρά την αβεβαιότητα της
         // μηχανής όταν κρίνεται αν μια κρατημένη ανθρώπινη πινέζα «απέχει» από τη νέα διεύθυνση.
         ...(verdict.result.extent ? { extent: verdict.result.extent } : {}),
+        // ADR-332 D27 Ζ6 (σκέλος Β): **ΚΑΙ Η ΕΠΙΦΥΛΑΞΗ ΤΟΥ ΠΑΡΟΧΟΥ ΠΕΤΙΟΤΑΝ ΕΔΩ.** Ο editor
+        // την κατανάλωνε ζωντανά· το έγγραφο δεν την έμαθε ποτέ. Μετρημένο: «Εγνατία 102» με
+        // Τ.Κ. 54002 ⇒ `accuracy: 'exact'` **και** `partialMatch: true` (ο Τ.Κ. δεν ταίριαξε).
+        ...(verdict.result.partialMatch ? { partialMatch: true } : {}),
       };
     case 'absent':
       return null;

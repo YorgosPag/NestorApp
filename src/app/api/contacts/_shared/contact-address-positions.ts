@@ -29,7 +29,7 @@ import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { GEOCODING_ACCURACIES } from '@/lib/geocoding/geocoding-types';
 import { WRITTEN_ADDRESS_SOURCES } from '@/lib/geocoding/address-position';
 import { resolveProjectAddressPositions } from '@/services/listings/address-place-writeback';
-import { addressPositionFieldsSchema } from '@/types/project/address-schemas';
+import { addressPositionFieldsSchema, geocodingMetadataSchema } from '@/types/project/address-schemas';
 import type { CompanyAddress } from '@/types/ContactFormTypes';
 import { pickStoredAddressPosition } from '@/utils/address/stored-address-position';
 import {
@@ -69,12 +69,13 @@ const contactAddressPositionViewSchema = z.object({
   coordinates: addressPositionFieldsSchema.shape.coordinates,
   verifiedAt: addressPositionFieldsSchema.shape.verifiedAt,
   source: z.enum(WRITTEN_ADDRESS_SOURCES).optional(),
-  geocodingMetadata: z.object({
-    confidence: z.number(),
-    accuracy: z.enum(GEOCODING_ACCURACIES),
-    variantUsed: z.number(),
-    osmType: z.string().max(64).optional(),
-  }).optional(),
+  // ADR-332 D27 Ζ6 — η **απόδειξη** ταξιδεύει και στις δύο κατευθύνσεις: ο πελάτης στέλνει
+  // πίσω την αποθηκευμένη θέση, και αδήλωτο κλειδί εδώ **κόβεται σιωπηλά** ⇒ ο διακομιστής
+  // θα το έβλεπε ως «δεν υπήρξε ποτέ» και το `keepStored` θα το **έχανε σε κάθε αποθήκευση**.
+  // 🔑 Η απαρίθμηση των πεδίων ζει **σε ένα σημείο** (`geocodingMetadataSchema`, N.12)· εδώ
+  //    μένει μόνο η **αυστηρότητα** που αφορά αυτή τη διαδρομή: η τιμή **γεννιέται** τώρα,
+  //    άρα οφείλει να ανήκει στο λεξιλόγιο — σε αντίθεση με το PATCH έργου, που διασώζει.
+  geocodingMetadata: geocodingMetadataSchema(z.enum(GEOCODING_ACCURACIES)).optional(),
 }).strict();
 
 export const contactAddressPositionsRequestSchema = z.object({
