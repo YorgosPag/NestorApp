@@ -87,18 +87,42 @@ function parseArgs(argv) {
 // rules. Pure — the Jest suite drives it with a synthetic report. `summary.error`
 // (a depcruise self-error, e.g. tsconfig not found) is surfaced so a broken run
 // can never read as "0 violations".
+/**
+ * Σταθερή ταυτότητα μιας παραβίασης — **ADR-858 Δ2**.
+ *
+ * 🔴 ΓΙΑΤΙ: μέχρι τις 2026-09-12 το ratchet συνέκρινε **έναν αριθμό** (1299). Ένας κύκλος
+ * μπορούσε να **ανταλλαγεί** με άλλον και να περάσει — ακριβώς το ελάττωμα που το ADR-749
+ * διόρθωσε στο SSoT με σχήμα v2 ανά `(αρχείο, module)`. Και το κόστος δεν είναι θεωρητικό:
+ * ο κύκλος που έριξε την παραγωγή (`storage-utils → debug → … → storage-utils`) ήταν ένας
+ * από τους 1299, και ένας νέος σαν κι αυτόν θα περνούσε αθόρυβα όσο κάποιος άλλος έφευγε.
+ *
+ * 🔑 **ΠΕΡΙΣΤΡΟΦΙΚΑ ΑΜΕΤΑΒΛΗΤΗ**: ο ίδιος κύκλος μπορεί να αναφερθεί ξεκινώντας από
+ * οποιοδήποτε μέλος του (`A→B→C→A` ≡ `B→C→A→B`). Χωρίς κανονικοποίηση, μια αλλαγή στη
+ * σειρά σάρωσης θα εμφάνιζε **κάθε** κύκλο ως «νέο» — πύλη που ουρλιάζει σε κάθε commit
+ * είναι πύλη που απενεργοποιείται.
+ */
+function cycleIdentity(v) {
+  const nodes = (v.cycle || []).map((c) => (typeof c === 'string' ? c : c && c.name)).filter(Boolean);
+  if (nodes.length === 0) return `${v.rule && v.rule.name}|${v.from}→${v.to}`;
+  const pivot = nodes.indexOf([...nodes].sort()[0]);
+  const rotated = [...nodes.slice(pivot), ...nodes.slice(0, pivot)];
+  return `${v.rule && v.rule.name}|${rotated.join('→')}`;
+}
+
 function summarize(gate, report) {
   const summary = (report && report.summary) || {};
   const violations = summary.violations || [];
   const perRule = {};
+  const identities = new Set();
   let total = 0;
   for (const v of violations) {
     const name = v.rule && v.rule.name;
     if (!gate.ruleNames.includes(name)) continue;
     perRule[name] = (perRule[name] || 0) + 1;
+    identities.add(cycleIdentity(v));
     total++;
   }
-  return { total, perRule };
+  return { total, perRule, identities: [...identities].sort() };
 }
 
 // Heavy — full graph crawl. CI only (N.17). depcruise exits non-zero when it
@@ -151,6 +175,8 @@ function buildPayload(gateName, gate, counts) {
     gate: gateName,
     total: counts.total,
     perRule: counts.perRule,
+    // ADR-858 Δ2 — ταυτότητες, ώστε η ΑΝΤΑΛΛΑΓΗ παραβίασης να μπλοκάρει (όχι μόνο η άνοδος).
+    identities: counts.identities,
   };
 }
 
@@ -200,6 +226,28 @@ function runCheck(gateName, gate) {
     process.exit(1);
   }
 
+  // ── ADR-858 Δ2: ΤΑΥΤΟΤΗΤΑ ΠΡΙΝ ΤΟΝ ΑΡΙΘΜΟ ────────────────────────────────────────────
+  // Ένας ΝΕΟΣ κύκλος μπλοκάρει ακόμη κι αν το πλήθος έπεσε. Η αριθμητική σύγκριση από
+  // κάτω μένει ως δεύτερο δίχτυ (πιάνει άνοδο σε baseline χωρίς ταυτότητες).
+  if (Array.isArray(baseline.identities)) {
+    const diff = ratchet.compareSets(counts.identities, baseline.identities);
+    if (diff.added.length > 0) {
+      console.error(
+        `❌ ${gate.adr} FAIL — ${diff.added.length} ΝΕΑ παραβίαση(εις) "${gateName}" ` +
+        `(σύνολο ${baseline.total} → ${counts.total}: η ΑΝΤΑΛΛΑΓΗ δεν περνά, ADR-858 Δ2)`,
+      );
+      for (const id of diff.added.slice(0, 15)) console.error(`   🚫 ${id}`);
+      if (diff.added.length > 15) console.error(`   … και ${diff.added.length - 15} ακόμη`);
+      console.error('\n   Θεραπεία: σπάσε τον κύκλο — συνήθως ένα primitive εισάγει barrel.');
+      console.error('   ⚠️ Κύκλος γίνεται ΘΑΝΑΣΙΜΟΣ όταν κάποιος διαβάζει binding σε χρόνο');
+      console.error('      αξιολόγησης module (TDZ στην παραγωγή, 2026-09-12 — ADR-858).');
+      process.exit(1);
+    }
+  } else {
+    console.warn(`⚠️  ${gate.adr} — baseline χωρίς \`identities\`: μόνο αριθμητική σύγκριση.`);
+    console.warn('    Ξανασπείρε την (--write-baseline) για ratchet κατά ταυτότητα (ADR-858 Δ2).');
+  }
+
   if (!ratchet.isRegression({ current: counts.total, baseline: baseline.total, direction: 'down' })) {
     const cleaned = baseline.total - counts.total;
     const trend = cleaned > 0 ? ` (−${cleaned} vs baseline — reseed to lock)` : '';
@@ -234,6 +282,7 @@ module.exports = {
   getGate,
   parseArgs,
   summarize,
+  cycleIdentity,
   buildPayload,
   measure,
   getBaselineFile,

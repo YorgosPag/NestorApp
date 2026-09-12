@@ -78,7 +78,18 @@ module.exports = {
     enhancedResolveOptions: {
       exportsFields: ['exports'],
       conditionNames: ['import', 'require', 'node', 'default', 'types'],
-      extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
+      // 🔴 Η ΣΕΙΡΑ ΕΙΝΑΙ Η ΣΕΙΡΑ ΤΟΥ NEXT.JS — ΜΗΝ ΤΗΝ «ΤΑΚΤΟΠΟΙΗΣΕΙΣ» ΑΛΦΑΒΗΤΙΚΑ.
+      //
+      // Μέχρι τις 2026-09-12 έγραφε `['.js','.jsx','.ts','.tsx','.json']`, δηλαδή **`.ts` πριν
+      // `.tsx`** — ενώ το webpack του Next.js λύνει **`.tsx` πριν `.ts`**. Σε κάθε φάκελο με
+      // **και** `index.ts` **και** `index.tsx`, η πύλη ακολουθούσε ΤΟ ΑΛΛΟ αρχείο από αυτό που
+      // φορτώνει η παραγωγή: **ανέλυε γράφο που δεν εκτελείται ποτέ**.
+      //
+      // Κόστος, μετρημένο: ο κύκλος `storage-utils → debug/index.tsx → SnapDebugLogger →
+      // γεωμετρία → table-ink → table-surface-mode → storage-utils` ήταν **δομικά αόρατος**
+      // σε αυτή την πύλη, και έριξε την παραγωγή με TDZ `ReferenceError`.
+      // @see ADR-858 — Levelization & αρχή αξιολόγησης modules
+      extensions: ['.js', '.mjs', '.tsx', '.ts', '.jsx', '.json', '.wasm'],
     },
   },
 };
