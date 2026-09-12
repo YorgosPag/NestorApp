@@ -34,71 +34,57 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { createDeadline, type Deadline } from '@/lib/async-utils';
 import { findNearestHouseNumber } from '@/lib/geocoding/overpass-housenumber';
-import { toCanonicalGreekPostalCode } from '@/utils/address/postal-code';
-import { cleanPlaceName } from '@/utils/address/place-name';
+import {
+  ADMIN_ID_TRUSTED_VIA,
+  identifyWithin,
+  provedLevelsOfPlace,
+  resolveAdminChain,
+} from '@/lib/places/admin-identity';
+import { readAdminIdentitySources } from '@/services/places/administrative-hierarchy.reader';
+import { PATH_KEY_TO_LEVEL } from '@/lib/places/admin-path';
+// ⚠️ Ο **ίδιος** τύπος που διαβάζει ο πελάτης (`ReverseGeocodingResult.admin`) — ένα σχήμα
+//    και για τις δύο πλευρές του σύρματος, αλλιώς το συμβόλαιο αποκλίνει σιωπηλά (N.18).
+import type {
+  ProvedAdminLevel,
+  ReverseGeocodingResult,
+} from '@/lib/geocoding/geocoding-types';
 
 const logger = createModuleLogger('reverse-geocoding-api');
+
+/**
+ * Οι **δύο** βαθμίδες που αποθηκεύει το `companyAddress` — δες
+ * `administrative-hierarchy-vocabulary.ts`, όπου οι άλλες **έξι** είναι ρητά `NOT_STORED`.
+ *
+ * 🔑 **Από τον πίνακα, όχι με το χέρι**: δύο γυμνά `5` και `8` σε διαδρομή διακομιστή θα
+ * ήταν «αριθμοί με κρυμμένο νόημα», και θα απέκλιναν την ημέρα που άλλαζε η αυθεντία.
+ */
+const { GEOCODING } = GEOGRAPHIC_CONFIG;
+
+const ADMIN_LEVEL_MUNICIPALITY = PATH_KEY_TO_LEVEL.municipality;
+const ADMIN_LEVEL_SETTLEMENT = PATH_KEY_TO_LEVEL.settlement;
 
 // Vercel serverless timeout
 export const maxDuration = 15;
 
 // =============================================================================
-// TYPES
+// TYPES · ΛΕΞΙΛΟΓΙΟ ΚΑΙ ΠΕΛΑΤΗΣ ΤΟΥ ΠΑΡΟΧΟΥ
 // =============================================================================
-
-/** Nominatim reverse response address details */
-interface NominatimReverseAddress {
-  road?: string;
-  house_number?: string;
-  city?: string;
-  town?: string;
-  village?: string;
-  suburb?: string;
-  neighbourhood?: string;
-  postcode?: string;
-  state?: string;
-  country?: string;
-}
-
-interface NominatimReverseResult {
-  lat: string;
-  lon: string;
-  display_name: string;
-  address: NominatimReverseAddress;
-}
-
-/** Τι είπε το Nominatim — **τρεις** εκβάσεις (ίδιο συμβόλαιο με το `geocodeWithVerdict`). */
-type NominatimLookup =
-  | { readonly kind: 'found'; readonly result: NominatimReverseResult }
-  /** Απάντησε: σε αυτό το σημείο δεν γράφει τίποτα. */
-  | { readonly kind: 'absent' }
-  /** Δεν απάντησε (λήξη · όριο ρυθμού · σφάλμα). */
-  | { readonly kind: 'unavailable' };
-
-interface ReverseGeocodingApiResponse {
-  street: string;
-  number: string;
-  city: string;
-  neighborhood: string;
-  postalCode: string;
-  region: string;
-  country: string;
-  displayName: string;
-  lat: number;
-  lng: number;
-}
+//
+// 🔑 **ΜΕΤΑΚΟΜΙΣΑΝ ΣΤΟ `nominatim-reverse.ts`** (N.7.1 — CHECK 4: όριο διαδρομής API **300**
+//    γραμμές, το αρχείο είχε φτάσει **428**). Η τομή είναι σημασιολογική, όχι αριθμητική:
+//    εκεί ζει *«τι λέει ο πάροχος και πώς διαβάζεται»*, εδώ *«τι κάνει η διαδρομή με αυτό»*.
+import {
+  adminChainLabels,
+  buildReverseUrl,
+  fetchNominatimReverse,
+  formatReverseResult,
+  settlementLabelOf,
+  type NominatimReverseAddress,
+  type ReverseGeocodingApiResponse,
+} from './nominatim-reverse';
 
 // =============================================================================
-// CONFIGURATION
-// =============================================================================
-
-const NOMINATIM_BASE_URL = process.env.NOMINATIM_BASE_URL || 'https://nominatim.openstreetmap.org';
-const USER_AGENT = process.env.GEOCODING_USER_AGENT || 'NestorPagonisApp/1.0 (geocoding)';
-const NOMINATIM_TIMEOUT_MS = parseInt(process.env.GEOCODING_TIMEOUT_MS || '8000', 10);
-const { GEOCODING } = GEOGRAPHIC_CONFIG;
-
-// =============================================================================
-// VALIDATION
+// VALIDATION — μένει ΕΔΩ: κρίνει την ΕΙΣΟΔΟ ΤΗΣ ΔΙΑΔΡΟΜΗΣ, όχι την απάντηση του παρόχου.
 // =============================================================================
 
 function isValidLatLon(lat: number, lon: number): boolean {
@@ -107,75 +93,6 @@ function isValidLatLon(lat: number, lon: number): boolean {
   return true;
 }
 
-// =============================================================================
-// NOMINATIM REVERSE LOOKUP
-// =============================================================================
-
-function buildReverseUrl(lat: number, lon: number): string {
-  const searchParams = new URLSearchParams({
-    lat: lat.toString(),
-    lon: lon.toString(),
-    format: 'json',
-    addressdetails: '1',
-    'accept-language': GEOCODING.ACCEPT_LANGUAGE,
-  });
-
-  return `${NOMINATIM_BASE_URL}/reverse?${searchParams.toString()}`;
-}
-
-async function fetchNominatimReverse(url: string, deadline: Deadline): Promise<NominatimLookup> {
-  try {
-    const response = await fetch(url, {
-      headers: { 'User-Agent': USER_AGENT },
-      // Β13: το δικό του όριο, ή λιγότερο αν τελειώνει η προθεσμία του αιτήματος.
-      signal: AbortSignal.timeout(Math.min(NOMINATIM_TIMEOUT_MS, deadline.remainingMs())),
-    });
-
-    if (!response.ok) {
-      logger.warn('Nominatim reverse non-OK response', { data: { status: response.status } });
-      return { kind: 'unavailable' };
-    }
-
-    const data: NominatimReverseResult = await response.json();
-
-    // Nominatim returns { error: "Unable to geocode" } — μια ΑΠΑΝΤΗΣΗ, όχι βλάβη.
-    if (!data.address) {
-      logger.warn('Nominatim reverse returned no address');
-      return { kind: 'absent' };
-    }
-
-    return { kind: 'found', result: data };
-  } catch (error) {
-    logger.warn('Nominatim reverse fetch error', { error: getErrorMessage(error) });
-    return { kind: 'unavailable' };
-  }
-}
-
-function formatReverseResult(result: NominatimReverseResult): ReverseGeocodingApiResponse {
-  const addr = result.address;
-
-  // For Greek addresses, suburb = actual settlement (Ελευθέριο Κορδελιό)
-  // city/town = municipality level (Δήμος Κορδελιού-Ευόσμου)
-  // Prefer suburb > neighbourhood > village > town > city (most specific first)
-  const rawCity = addr.suburb ?? addr.neighbourhood ?? addr.village ?? addr.town ?? addr.city ?? '';
-  const rawNeighborhood = addr.suburb ?? addr.neighbourhood ?? '';
-
-  return {
-    street: addr.road ?? '',
-    number: addr.house_number ?? '',
-    // ADR-332 D27 Βήμα Β (Β7): ο ΕΝΑΣ κανόνας ονομάτων τόπου (`utils/address/place-name`).
-    city: cleanPlaceName(rawCity),
-    neighborhood: cleanPlaceName(rawNeighborhood),
-    // Κανονική μορφή στο σύνορο του παρόχου — το OSM Ελλάδας γράφει «546 24»
-    // και η τιμή κατέληγε αυτούσια στη φόρμα και στη βάση (ADR-332 D16).
-    postalCode: toCanonicalGreekPostalCode(addr.postcode),
-    region: addr.state ?? '',
-    country: addr.country ?? '',
-    displayName: result.display_name,
-    lat: parseFloat(result.lat),
-    lng: parseFloat(result.lon),
-  };
-}
 
 /**
  * Συμπληρώνει τον αριθμό από το Overpass όταν λείπει — με **ό,τι απομένει** από την προθεσμία.
@@ -224,11 +141,68 @@ async function reverseWithin(lat: number, lon: number, debug: boolean, deadline:
   }
 
   const formatted = formatReverseResult(lookup.result);
+  const admin = await provedAdminOf(lookup.result.address);
+  // 🔴 **Ζ2 — Η ΕΤΙΚΕΤΑ ΑΚΟΛΟΥΘΕΙ ΤΗΝ ΤΑΥΤΟΤΗΤΑ.** Όταν ο οικισμός **αποδείχθηκε**, η
+  //    «Πόλη» γίνεται το όνομα του **μητρώου** και όχι της μηχανής. Ο κανόνας δεν είναι
+  //    καλλωπισμός: το έργο απαγορεύει ρητά να αποκλίνουν ταυτότητα και ετικέτα
+  //    (`use-hq-address-mutations`: «όνομα από πηγή εκτός ιεραρχίας ⇒ σβήσε το id»). Εδώ
+  //    έχουμε id ⇒ οφείλουμε το **δικό μας** όνομα.
+  //    ⚠️ Το τίμημα, δηλωμένο: η ΕΛΣΤΑΤ γράφει «**Αθήναι**» εκεί που το OSM λέει «Αθήνα»
+  //    (2.678 ονόματα, 20,2%, σε αρχαΐζουσα μορφή). Προτιμάμε **συνεπή** ταυτότητα από
+  //    ευχάριστη ετικέτα — και ο άνθρωπος μπορεί να τη διορθώσει, οπότε το id σβήνει μόνο του.
+  const settlement = admin?.find((level) => level.level === ADMIN_LEVEL_SETTLEMENT);
+  if (settlement) formatted.city = settlement.name;
   const trace = await fillHouseNumber(formatted, lat, lon, deadline);
+  // ⚠️ `undefined` ⇒ το κλειδί **λείπει** από το JSON («δεν ρωτήθηκε»)· κενός πίνακας ⇒
+  //    «ρωτήθηκε, τίποτα». Η διαφορά είναι το συμβόλαιο του `admin` — μη την ισοπεδώσεις.
+  const body = admin === null ? formatted : { ...formatted, admin };
 
   return NextResponse.json(
-    debug ? { ...formatted, _debug: { ...trace, street: formatted.street } } : formatted,
+    debug ? { ...body, _debug: { ...trace, street: formatted.street } } : body,
   );
+}
+
+/**
+ * **Η ΙΕΡΑΡΧΙΑ ΠΟΥ ΑΠΟΔΕΙΚΝΥΕΤΑΙ ΑΠΟ ΤΗΝ ΑΛΥΣΙΔΑ** — και ο οικισμός **μέσα** στον δήμο της.
+ *
+ * @returns `null` όταν η ιεραρχία **δεν διαβάστηκε** *(βλάβη δική μας)*: ο πελάτης οφείλει
+ *   τότε να **μην αγγίξει** τα πεδία ταυτότητας. Κενός πίνακας = «ρωτήθηκε, τίποτα».
+ */
+async function provedAdminOf(
+  addr: NominatimReverseAddress,
+): Promise<readonly ProvedAdminLevel[] | null> {
+  const sources = await readAdminIdentitySources();
+  if (!sources) return null;
+
+  const { proved } = resolveAdminChain(adminChainLabels(addr), sources);
+  const levels = new Map(proved);
+
+  // 🔑 Ο οικισμός (βαθμίδα 8) απαντιέται **μόνο** μέσα στον αποδεδειγμένο δήμο — εκεί οι
+  //    41 ομώνυμες «Καλλιθέα» γίνονται μία (93,9% των ομωνύμων ζουν σε άλλον δήμο).
+  const municipality = levels.get(ADMIN_LEVEL_MUNICIPALITY);
+  const settlementLabel = settlementLabelOf(addr);
+  if (municipality && settlementLabel !== '') {
+    const verdict = identifyWithin(settlementLabel, ADMIN_LEVEL_SETTLEMENT, municipality.id, sources);
+    if (verdict.kind === 'identified' && ADMIN_ID_TRUSTED_VIA.includes(verdict.via)) {
+      // 🔴 **ΚΑΙ ΤΑ ΕΝΔΙΑΜΕΣΑ ΕΠΙΠΕΔΑ — ΤΟ ΒΡΗΚΕ Η ΖΩΝΤΑΝΗ ΜΕΤΡΗΣΗ.** Η αλυσίδα της
+      //    ετικέτας απέδειξε ως τον **δήμο**· ο οικισμός αποδείχθηκε **μετά**, μέσα σε
+      //    εκείνη την εμβέλεια. Άρα **L6 δημοτική ενότητα** και **L7 κοινότητα** είναι
+      //    **πρόγονοι αποδεδειγμένου οικισμού** ⇒ **αποδεδειγμένοι** — και γράφονταν
+      //    **κενοί** *(μετρημένο: ALFA → Σταυρούπολις έγραψε `municipalUnitName: ''` ενώ
+      //    το μητρώο ξέρει «ΔΗΜΟΤΙΚΗ ΕΝΟΤΗΤΑ ΣΤΑΥΡΟΥΠΟΛΕΩΣ»)*.
+      //    ⚠️ **Καμία σύγκρουση δυνατή**: η εμβέλεια **είναι** πρόγονος του οικισμού, άρα
+      //    η γενεαλογία του **περιέχει** ό,τι είχε αποδείξει η αλυσίδα.
+      for (const [level, place] of provedLevelsOfPlace(sources, verdict.entity)) {
+        levels.set(level, place);
+      }
+    }
+  }
+
+  return [...levels.values()].map((place) => ({
+    level: place.level,
+    id: place.id,
+    name: place.name,
+  }));
 }
 
 async function handleGet(request: NextRequest): Promise<Response> {
