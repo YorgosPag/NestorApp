@@ -6,7 +6,7 @@
  * @note Inline styles ΑΠΑΙΤΟΥΝΤΑΙ σε HTML emails — δεν ισχύει ο κανόνας N.3.
  * @note Οι ελληνικές συμβολοσειρές εδώ ΔΕΝ είναι i18n violation: τα server-side email
  *       templates φέρουν το κείμενό τους inline **by design** (βλ.
- *       `pending-registration-admin.ts`).
+ *       `workspace-access-decision-email.ts`).
  *
  * ────────────────────────────────────────────────────────────────────────────
  * 🔑 ΣΕ ΠΟΙΟΝ ΜΙΛΑ — ΔΥΟ ΑΝΘΡΩΠΟΥΣ ΜΕ ΤΟ ΙΔΙΟ ΚΕΙΜΕΝΟ

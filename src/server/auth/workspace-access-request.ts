@@ -1,28 +1,39 @@
 import 'server-only';
 
 /**
- * @fileoverview **Ο ΚΥΚΛΟΣ ΖΩΗΣ ΤΟΥ ΑΙΤΗΜΑΤΟΣ ΕΝΤΑΞΗΣ** — άνοιγμα, απόφαση, ανάγνωση (ADR-660 §6).
- * @related server/auth/pending-registration.ts (ο μόνος που ανοίγει) ·
- *          app/api/admin/set-user-claims (έγκριση) · app/api/admin/workspace-access-requests (απόρριψη)
+ * @fileoverview **Ο ΚΥΚΛΟΣ ΖΩΗΣ ΤΟΥ ΑΙΤΗΜΑΤΟΣ ΕΝΤΑΞΗΣ** — απόφαση και ανάγνωση (ADR-660 §6 · ADR-853 Α4).
+ * @related app/api/admin/set-user-claims (έγκριση) · app/api/admin/workspace-access-requests (απόρριψη) ·
+ *          app/api/auth/workspace-access-request (η κατάσταση του ίδιου του αιτούντα)
  * @module server/auth/workspace-access-request
  *
- * 🔑 **ΕΝΑ αίτημα ανά (χώρος, πρόσωπο), ντετερμινιστικό id** ⇒ δύο συνδέσεις ταυτόχρονα ανοίγουν
- * **ένα** — χωρίς ερώτημα, μέσα στο ίδιο transaction με το `users/{uid}` (N.7.2 #2-#3).
- *
- * 🔒 **ΜΟΝΟ `pending →`**: απόφαση πάνω σε ήδη αποφασισμένο αίτημα **δεν** το ξαναγράφει. Και
- * **απορριφθέν αίτημα δεν ξανανοίγει μόνο του** σε κάθε σύνδεση (Atlassian: *«once denied, the
- * user can't request access again»* χωρίς ενέργεια διαχειριστή) — αλλιώς κάθε είσοδος θα
- * ξαναενοχλούσε άνθρωπο που έχει ήδη απαντήσει.
+ * 🔒 **ΜΟΝΟ `pending →`**: απόφαση πάνω σε ήδη αποφασισμένο αίτημα **δεν** το ξαναγράφει.
  *
  * 🔒 Η συλλογή είναι **deny-all** για πελάτες: η λίστα του διαχειριστή **και** η κατάσταση του
  * αιτούντα περνούν από διαδρομές διακομιστή. Ελάχιστη επιφάνεια κανόνων.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * 🔴 ADR-853 Α4 — ΤΟ ΑΙΤΗΜΑ **ΠΑΓΩΣΕ**: ΚΑΝΕΙΣ ΔΕΝ ΤΟ ΑΝΟΙΓΕΙ ΠΙΑ
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Μέχρι σήμερα το άνοιγμα γινόταν **αυτόματα σε κάθε σύνδεση χωρίς χώρο**, προς
+ * την **σταθερή** εταιρεία του `getCompanyId()` — δηλαδή κανείς δεν αποφάσιζε ότι
+ * ο άνθρωπος ανήκει εκεί (περιστατικό 2026-09-11, ADR-853 §1). Η ένταξη σε ξένο
+ * χώρο ξεκινά πλέον **από τον χώρο**, με **πρόσκληση** (ADR-853 Α1).
+ *
+ * ⚠️ **ΓΙ' ΑΥΤΟ ΤΟ `openAccessRequestInTx` ΚΑΙ ΤΟ `readAccessRequestInTx` ΔΙΑΓΡΑΦΗΚΑΝ.**
+ * Δεν «έμειναν για μελλοντική χρήση»: μια εξαγόμενη συνάρτηση χωρίς καλούντα είναι
+ * **νεκρός κώδικας** (CHECK 3.22) — και, χειρότερα, **ανοιχτή πόρτα** που ο επόμενος
+ * θα καλούσε νομίζοντας ότι είναι ο δρόμος. Τα **υπάρχοντα** εκκρεμή αιτήματα
+ * κρίνονται κανονικά από τη λίστα και την απόφαση παρακάτω.
+ *
+ * 🔶 Το ρητό *«ζητώ είσοδο»* (ADR-660 §6.6) μένει **ανοιχτό με λόγο**: κανένα από τα
+ * έξι επαγγελματικά προϊόντα της έρευνας (GitHub · Autodesk · BIMcloud · Maxon ·
+ * Zillow · Idealista) δεν το έχει — ADR-853 Α1.
  */
 
 import {
   FieldValue as AdminFieldValue,
   type DocumentReference,
   type DocumentData,
-  type Transaction,
 } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -39,70 +50,13 @@ import {
 /** Όσα αιτήματα διαβάζει μια λίστα διαχειριστή — ο χώρος έχει λίγους αιτούντες· φραγμένο ρητά. */
 const PENDING_LIST_LIMIT = 500;
 
+/** Πόσα αιτήματα του **ίδιου ανθρώπου** διαβάζονται — ένας άνθρωπος δεν ζήτησε ποτέ 50 χώρους. */
+const OWN_REQUESTS_LIMIT = 50;
+
 function requestRef(companyId: string, uid: string): DocumentReference {
   return getAdminFirestore()
     .collection(COLLECTIONS.WORKSPACE_ACCESS_REQUESTS)
     .doc(generateDeterministicWorkspaceAccessRequestId(companyId, uid));
-}
-
-/** Ό,τι χρειάζεται το transaction από το υπάρχον αίτημα — διαβάζεται **πριν** από κάθε γραφή. */
-export interface AccessRequestSnapshot {
-  readonly ref: DocumentReference;
-  readonly status: WorkspaceAccessRequestStatus | null;
-  readonly notified: boolean;
-}
-
-export async function readAccessRequestInTx(tx: Transaction, companyId: string, uid: string): Promise<AccessRequestSnapshot> {
-  const ref = requestRef(companyId, uid);
-  const snap = await tx.get(ref);
-  const data = snap.exists ? snap.data() : undefined;
-  return {
-    ref,
-    status: isWorkspaceAccessRequestStatus(data?.status) ? data.status : null,
-    notified: Boolean(data?.notifiedAt),
-  };
-}
-
-export interface AccessRequestOpening {
-  readonly companyId: string;
-  readonly uid: string;
-  readonly email: string;
-  readonly displayName: string | null;
-  readonly authProvider: string | null;
-}
-
-/**
- * **Άνοιξε — ΜΟΝΟ αν δεν υπάρχει.** Εκκρεμές χωρίς ειδοποίηση παίρνει τη σφραγίδα της·
- * αποφασισμένο **μένει ως έχει**.
- *
- * @returns `firstNotification` = αυτή η κλήση κέρδισε την **πρώτη** ειδοποίηση διαχειριστή.
- */
-export function openAccessRequestInTx(
-  tx: Transaction,
-  snapshot: AccessRequestSnapshot,
-  opening: AccessRequestOpening,
-): { readonly status: WorkspaceAccessRequestStatus; readonly firstNotification: boolean } {
-  if (snapshot.status === null) {
-    tx.create(snapshot.ref, {
-      id: snapshot.ref.id,
-      companyId: opening.companyId,
-      requesterUid: opening.uid,
-      requesterEmail: opening.email,
-      requesterName: opening.displayName,
-      authProvider: opening.authProvider,
-      status: 'pending' satisfies WorkspaceAccessRequestStatus,
-      requestedAt: AdminFieldValue.serverTimestamp(),
-      notifiedAt: AdminFieldValue.serverTimestamp(),
-      decidedAt: null,
-      decidedBy: null,
-    });
-    return { status: 'pending', firstNotification: true };
-  }
-  if (snapshot.status === 'pending' && !snapshot.notified) {
-    tx.update(snapshot.ref, { notifiedAt: AdminFieldValue.serverTimestamp() });
-    return { status: 'pending', firstNotification: true };
-  }
-  return { status: snapshot.status, firstNotification: false };
 }
 
 export type AccessDecisionOutcome =
@@ -167,9 +121,56 @@ export async function listPendingAccessRequests(companyId: string): Promise<Work
   });
 }
 
-/** **Τι απέγινε το ΔΙΚΟ ΜΟΥ αίτημα;** — για την οθόνη αναμονής του αιτούντα. */
-export async function readOwnAccessState(companyId: string, uid: string): Promise<OwnWorkspaceAccessState> {
-  const snap = await requestRef(companyId, uid).get();
-  const status = snap.exists ? snap.get('status') : undefined;
-  return isWorkspaceAccessRequestStatus(status) ? status : 'none';
+/**
+ * **Η ΣΕΙΡΑ ΠΡΟΤΕΡΑΙΟΤΗΤΑΣ — γραμμένη, όχι υπονοούμενη.**
+ *
+ * Ένας άνθρωπος μπορεί να έχει αιτήματα σε **περισσότερους από έναν** χώρους. Η οθόνη
+ * αναμονής ρωτά **ένα** πράγμα (*«περιμένω;»*), οπότε κάποιος πρέπει να διαλέξει — και
+ * το να διαλέγει **σιωπηλά** το πρώτο έγγραφο που γύρισε η Firestore θα ήταν απάντηση
+ * που αλλάζει χωρίς να αλλάξει τίποτα.
+ *
+ * | # | κατάσταση | γιατί πρώτη |
+ * |---|---|---|
+ * | 1 | `pending` | **ζωντανή** ερώτηση — μόνο αυτή δικαιολογεί οθόνη αναμονής |
+ * | 2 | `approved` | κάποιος είπε **ναι**· αν τα claims δεν ήρθαν ακόμη, το λέμε σωστά |
+ * | 3 | `denied` | απαντήθηκε αρνητικά — ο άνθρωπος **δικαιούται** να το μάθει (Ε-2 §5: η άρνηση είναι **ειπωμένη**) |
+ * | 4 | `withdrawn` | το απέσυρε ο ίδιος |
+ * | 5 | `none` | δεν ζήτησε ποτέ |
+ *
+ * ⚠️ Εξάγεται **επίτηδες**: μια σειρά προτεραιότητας που δεν μπορεί να ελεγχθεί χωριστά
+ * θα ελεγχόταν μόνο μέσω Firestore — δηλαδή δεν θα ελεγχόταν.
+ */
+export function collapseOwnAccessStates(statuses: readonly unknown[]): OwnWorkspaceAccessState {
+  const known = statuses.filter(isWorkspaceAccessRequestStatus);
+  const order: readonly WorkspaceAccessRequestStatus[] = ['pending', 'approved', 'denied', 'withdrawn'];
+  return order.find((candidate) => known.includes(candidate)) ?? 'none';
+}
+
+/**
+ * **Τι απέγινε το ΔΙΚΟ ΜΟΥ αίτημα;** — για την οθόνη αναμονής του αιτούντα.
+ *
+ * 🔴 **ΔΕΝ δέχεται πια `companyId`** (ADR-853 Α4). Ο καλών του έδινε τη **σταθερή**
+ * εταιρεία, δηλαδή ρωτούσε *«τι απέγινε το αίτημά μου στην ΠΑΓΩΝΗΣ;»* για **κάθε**
+ * άνθρωπο της πλατφόρμας. Χωρίς σταθερή εταιρεία το ερώτημα **χάνει το υποκείμενό
+ * του** — και η θεραπεία **δεν** είναι να το στείλει ο πελάτης: θα ήταν τέταρτο,
+ * αναξιόπιστο κανάλι χώρου (CHECK 3.58, κλειστό σύνολο **τριών**).
+ *
+ * 🔓 **Γιατί είναι ΝΟΜΙΜΑ cross-tenant** (η δήλωση ζει στο σημείο χρήσης, παρακάτω):
+ * η ερώτηση **ΕΙΝΑΙ** *«τι ζήτησα **εγώ**, οπουδήποτε;»*. Ένα `where('companyId')` θα
+ * την έκανε *«τι ζήτησα εκεί που ξέρω ήδη;»* — δηλαδή θα **επανέφερε** ακριβώς τη
+ * σταθερή εταιρεία που αυτό το ADR αφαιρεί. Ο άξονας απομόνωσης είναι το
+ * `requesterUid`, που έρχεται από **υπογεγραμμένο** token και ποτέ από τον πελάτη·
+ * το ερώτημα δεν μπορεί να επιστρέψει αίτημα **άλλου** ανθρώπου. Ίδιο σχήμα και ίδιος
+ * λόγος με το `listMemberWorkspaces` (ADR-787 §5.1).
+ */
+export async function readOwnAccessState(uid: string): Promise<OwnWorkspaceAccessState> {
+  // tenant-scope-exempt: «τι ζήτησα ΕΓΩ, οπουδήποτε» — άξονας απομόνωσης το requesterUid
+  //   από υπογεγραμμένο token, ποτέ από τον πελάτη· ένα where('companyId') θα επανέφερε
+  //   τη σταθερή εταιρεία που αφαιρεί το ADR-853 Α4. Πλήρες σκεπτικό στο JSDoc παραπάνω.
+  const snap = await getAdminFirestore()
+    .collection(COLLECTIONS.WORKSPACE_ACCESS_REQUESTS)
+    .where('requesterUid', '==', uid)
+    .limit(OWN_REQUESTS_LIMIT)
+    .get();
+  return collapseOwnAccessStates(snap.docs.map((doc) => doc.get('status')));
 }

@@ -210,8 +210,8 @@ export const USER_STATUSES = [
    * - `active` σημαίνει *«ενεργό μέλος»*, που προϋποθέτει μισθωτή. Ο πολίτης
    *   **δεν έχει** `companyId`, εξ ορισμού (δες `CitizenClaimPayload`).
    *
-   * ⚠️ **Η ΤΙΜΗ ΔΙΑΒΑΖΕΤΑΙ ΟΝΟΜΑΣΤΙΚΑ** από τον `ensurePendingRegistration`
-   * (`server/auth/pending-registration.ts`) για να κάνει **αυστηρό no-op**.
+   * ⚠️ **Η ΤΙΜΗ ΔΙΑΒΑΖΕΤΑΙ ΟΝΟΜΑΣΤΙΚΑ** από τον `ensureIdentityRecord`
+   * (`server/auth/identity-record.ts`) για να κάνει **αυστηρό no-op**.
    * Χωρίς εκείνο το σκέλος, κάθε σύνδεση πολίτη θα του έγραφε `globalRole: null`
    * πάνω σε **έγκυρο** claim ⇒ ενεργή απόκλιση claim↔εγγράφου.
    *

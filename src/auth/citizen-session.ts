@@ -29,7 +29,7 @@
  * ```
  * signInWithCustomToken  →  onAuthStateChanged (AuthContext.tsx:168)
  *                        →  syncServerSession  →  POST /api/auth/session
- *                        →  ensurePendingRegistration  →  no-op για `citizen` (Β1)
+ *                        →  ensureIdentityRecord  →  no-op για `citizen` (Β1)
  * ```
  *
  * 🔑 Ο `AuthProvider` ζει στο **ριζικό** `app/layout.tsx`, που τυλίγει **όλα** τα route

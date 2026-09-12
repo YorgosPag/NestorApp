@@ -64,7 +64,7 @@ export async function syncUserProfileToFirestore(
     if (!userSnapshot.exists()) {
       // ADR-660 §6: η κατάσταση είναι της **ταυτότητας** — `active` για όλους. Το «περιμένει
       // έγκριση για χώρο» ζει στο αίτημα ένταξης (`workspace_access_requests`), που το ανοίγει
-      // ο διακομιστής (`ensurePendingRegistration`) — ποτέ ο πελάτης.
+      // ο διακομιστής (`ensureIdentityRecord`) — ποτέ ο πελάτης.
       const newProfile: UserProfileDocument = {
         uid: firebaseUser.uid,
         email: firebaseUser.email ?? '',

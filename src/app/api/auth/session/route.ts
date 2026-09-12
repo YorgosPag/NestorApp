@@ -20,7 +20,7 @@ import { SESSION_COOKIE_CONFIG, getSessionCookieDurationMs } from '@/lib/auth/se
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getErrorMessage } from '@/lib/error-utils';
 import { ensureCompanyDocument } from '@/services/company-document.service';
-import { ensurePendingRegistration } from '@/server/auth/pending-registration';
+import { ensureIdentityRecord } from '@/server/auth/identity-record';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('AuthSession');
@@ -130,17 +130,24 @@ const postHandler = async (request: NextRequest): Promise<NextResponse<SessionRe
         });
       });
     } else if (uid) {
-      // ADR-660: αυθεντικοποιημένος χρήστης ΧΩΡΙΣ tenant → universal login
-      // chokepoint. Δημιουργεί pending record + ειδοποιεί (μία φορά) τους admin.
-      // Fire-and-forget: δεν μπλοκάρει το session cookie. Το fail-closed
-      // (ADR-657 §3.5) κρατά τον χρήστη έξω μέχρι την έγκριση.
-      ensurePendingRegistration({
+      // ADR-853 Φ1: αυθεντικοποιημένος άνθρωπος ΧΩΡΙΣ χώρο → universal login
+      // chokepoint. Γράφει **μόνο ταυτότητα** — κανένα αίτημα, καμία ειδοποίηση.
+      //
+      // 🔴 Μέχρι τις 2026-09-11 εδώ άνοιγε **αίτημα ένταξης** προς τη ΣΤΑΘΕΡΗ
+      //    εταιρεία (`getCompanyId()`) και ειδοποιούσε τους διαχειριστές της —
+      //    δηλαδή κάθε νέος άνθρωπος αποδιδόταν σε γραφείο που **κανείς δεν
+      //    επέλεξε** (ADR-853 §1). Η ένταξη σε ξένο χώρο ξεκινά πλέον **από τον
+      //    χώρο**, με πρόσκληση (ADR-853 Α1)· ο ιδιωτικός χώρος υπάρχει ούτως ή
+      //    άλλως (ADR-787 Ε-3 §2), άρα ο άνθρωπος δεν περιμένει κανέναν.
+      //
+      // Fire-and-forget: δεν μπλοκάρει το session cookie.
+      ensureIdentityRecord({
         uid,
         email: (decodedToken.email as string | undefined) ?? '',
         displayName: (decodedToken.name as string | undefined) ?? null,
         authProvider: decodedToken.firebase?.sign_in_provider ?? null,
       }).catch((err: unknown) => {
-        logger.warn('[Session] Pending registration handling failed (non-blocking)', {
+        logger.warn('[Session] Identity record write failed (non-blocking)', {
           uid,
           error: getErrorMessage(err),
         });
