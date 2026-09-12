@@ -20,6 +20,7 @@ import { PendingRelationshipGuard } from '@/utils/pending-relationship-guard';
 import { openGalleryPhotoModal } from '@/core/modals';
 import { createModuleLogger } from '@/lib/telemetry';
 import { useGuardedContactMutation } from '@/hooks/useGuardedContactMutation';
+import { useInFlightAction } from '@/hooks/useInFlightAction';
 import { useContactPhotoHandlers } from '../useContactPhotoHandlers';
 import type { ContactDetailsProps } from './contact-details-types';
 import {
@@ -87,6 +88,8 @@ export function useContactDetailsController({
   const [optimisticPersonas, setOptimisticPersonas] = useState<OptimisticPersonaState | null>(null);
   const [savedPhotoURLs, setSavedPhotoURLs] = useState<{ logoURL?: string; photoURL?: string }>({});
   const [pendingSave, setPendingSave] = useState(false);
+  // ADR-332 D27 Ζ5 — «τρέχει τώρα»: φραγμός διπλού πατήματος + σημαία για το κουμπί (SSoT hook).
+  const { isRunning: isSaving, run: runSave } = useInFlightAction();
   // Το κλείσιμο της επεξεργασίας αποσυναρμολογεί τους inline editors και ο
   // πάνακας κονταίνει απότομα· ο DetailsContainer επαναφέρει τότε την κύλιση
   // ώστε να ξαναφανούν καρτέλες + επικεφαλίδα ενότητας (βλ. `scrollResetToken`).
@@ -268,7 +271,7 @@ export function useContactDetailsController({
     });
   }, [getEditedFormData]);
 
-  const handleSaveEdit = useCallback(async () => {
+  const performSaveEdit = useCallback(async () => {
     if (!contact?.id) {
       return;
     }
@@ -375,6 +378,15 @@ export function useContactDetailsController({
     }
   }, [contact, editedData, endEditSession, focusField, getEditedFormData, getValidationResult, contactNotifications, onContactUpdated, runExistingContactPartialFormUpdate]);
 
+  /**
+   * ADR-332 D27 Ζ5 — **μία αποθήκευση τη φορά, και το κουμπί το λέει.**
+   *
+   * Μετρημένο ζωντανά: η αποθήκευση κρατούσε **61,4″** με το κουμπί **ενεργό** και καμία ένδειξη ⇒ ο
+   * άνθρωπος ξαναπατούσε ⇒ **δεύτερη εγγραφή** στο ίδιο έγγραφο. Η σωστή συμπεριφορά υπήρχε ήδη στη
+   * φόρμα **δημιουργίας**· εδώ έλειπε. Πλέον και οι δύο διαβάζουν την **ίδια** αρχή.
+   */
+  const handleSaveEdit = useCallback(() => runSave(performSaveEdit), [runSave, performSaveEdit]);
+
   // 🏢 ENTERPRISE: Deferred save — auto-submit when pending uploads complete (Google-style)
   useEffect(() => {
     if (!pendingSave || !isEditing) return;
@@ -468,6 +480,8 @@ export function useContactDetailsController({
     handleUploadedLogoURL,
     handleUploadedPhotoURL,
     isEditing,
+    /** ADR-332 D27 Ζ5 — τρέχει αποθήκευση: δέσε το σε `disabled` **και** `aria-busy`. */
+    isSaving,
     isSubcollectionTab: SUBCOLLECTION_TABS.includes(activeTab),
     setActiveTab,
     setEditedData,

@@ -45,6 +45,7 @@ export function ContactDetails({
     handleUploadedLogoURL,
     handleUploadedPhotoURL,
     isEditing,
+    isSaving,
     isSubcollectionTab,
     setActiveTab,
     setEditedData,
@@ -79,6 +80,7 @@ export function ContactDetails({
               void handleSaveEdit();
             }}
             onCancelEdit={handleCancelEdit}
+            isSaving={isSaving}
             hideEditControls={readOnly || isSubcollectionTab}
             activePersonas={enhancedFormData.activePersonas as PersonaType[]}
             onPersonaToggle={readOnly ? undefined : handlePersonaToggle}
@@ -99,6 +101,7 @@ export function ContactDetails({
               void handleSaveEdit();
             }}
             onCancelEdit={handleCancelEdit}
+            isSaving={isSaving}
             hideEditControls={isSubcollectionTab}
           />
         )}

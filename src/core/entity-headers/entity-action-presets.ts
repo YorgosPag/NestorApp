@@ -53,15 +53,23 @@ const ENTITY_ACTION_PRESETS: Record<ActionType, EntityActionPreset> = {
 /**
  * Creates a standardized entity header action with consistent styling.
  *
+ * ⚠️ **Τα `overrides` ΠΕΡΙΛΑΜΒΑΝΟΥΝ πλέον `disabled` / `pending` / `pendingLabel`** (ADR-332 D27 Ζ5).
+ * Μέχρι τότε ο τύπος τα **απέκλειε**: ένας καλών που ήθελε να δηλώσει «τρέχει τώρα» **δεν μπορούσε**,
+ * κι έτσι κάθε κουμπί αυτής της οικογένειας έμενε πατήσιμο όσο η πράξη του εκτελούνταν. Μετρημένο
+ * ζωντανά στις επαφές: αποθήκευση **61,4″** με ενεργό κουμπί.
+ *
  * @example
  * createEntityAction('edit', t('header.edit'), onStartEdit)
  * createEntityAction('new', t('header.new'), onNew, { icon: UserPlus })
+ * createEntityAction('save', t('header.actions.save'), onSave, { pending: isSaving, pendingLabel: t('actions.save_loading') })
  */
 function createEntityAction(
   type: ActionType,
   label: string,
   onClick: () => void,
-  overrides?: Partial<Pick<EntityHeaderAction, 'icon' | 'className' | 'variant'>>
+  overrides?: Partial<
+    Pick<EntityHeaderAction, 'icon' | 'className' | 'variant' | 'disabled' | 'pending' | 'pendingLabel'>
+  >
 ): EntityHeaderAction {
   const preset = ENTITY_ACTION_PRESETS[type];
   return {
@@ -70,6 +78,9 @@ function createEntityAction(
     icon: overrides?.icon ?? preset.icon,
     className: overrides?.className ?? preset.className,
     ...(overrides?.variant ? { variant: overrides.variant } : {}),
+    ...(overrides?.disabled !== undefined ? { disabled: overrides.disabled } : {}),
+    ...(overrides?.pending !== undefined ? { pending: overrides.pending } : {}),
+    ...(overrides?.pendingLabel !== undefined ? { pendingLabel: overrides.pendingLabel } : {}),
   };
 }
 

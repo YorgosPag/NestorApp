@@ -10,6 +10,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Spinner } from '@/components/ui/spinner';
 import { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
@@ -36,6 +37,18 @@ export interface EntityHeaderAction {
   variant?: 'default' | 'outline' | 'ghost';
   className?: string;
   disabled?: boolean;
+  /**
+   * **Η ενέργεια τρέχει ΤΩΡΑ** (ADR-332 D27 Ζ5). Απενεργοποιεί το κουμπί, δηλώνει `aria-busy` και
+   * αντικαθιστά το εικονίδιο με δείκτη.
+   *
+   * 🔴 **Και τα τρία μαζί, όχι ένα από αυτά.** Το W3C (ARIA25) το γράφει ρητά για την «απασχολημένη»
+   * περιοχή: *«Forgetting to also disable interactive controls inside the busy region is a common
+   * mistake — sighted users still see and can click them»*. Μετρημένο ζωντανά στις επαφές: αποθήκευση
+   * **61,4″** με το κουμπί ενεργό ⇒ δεύτερο πάτημα ⇒ δεύτερη εγγραφή.
+   */
+  pending?: boolean;
+  /** Τι λέει όσο τρέχει (π.χ. «Αποθήκευση...»). Απών ⇒ μένει το `label`. */
+  pendingLabel?: string;
 }
 
 export interface EntityHeaderProps {
@@ -266,6 +279,8 @@ const EntityAction: React.FC<EntityHeaderAction> = ({
   variant = 'default',
   className,
   disabled,
+  pending,
+  pendingLabel,
 }) => {
   const iconSizes = useIconSizes();
   const spacing = useSpacingTokens();
@@ -275,11 +290,16 @@ const EntityAction: React.FC<EntityHeaderAction> = ({
       variant={variant}
       size="sm"
       onClick={onClick}
-      disabled={disabled}
+      disabled={disabled || pending}
+      aria-busy={pending}
       className={cn("h-8", spacing.padding.x.sm, className)}
     >
-      {Icon && <Icon className={`${iconSizes.sm} mr-2`} />}
-      {label}
+      {pending ? (
+        <Spinner size="small" color="inherit" className="mr-2" />
+      ) : (
+        Icon && <Icon className={`${iconSizes.sm} mr-2`} />
+      )}
+      {pending && pendingLabel ? pendingLabel : label}
     </Button>
   );
 };

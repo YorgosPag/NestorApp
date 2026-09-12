@@ -34,6 +34,8 @@ interface ContactDetailsHeaderProps {
   onStartEdit?: () => void;
   onSaveEdit?: () => void;
   onCancelEdit?: () => void;
+  /** ADR-332 D27 Ζ5 — τρέχει αποθήκευση: το κουμπί απενεργοποιείται και δηλώνει `aria-busy`. */
+  isSaving?: boolean;
   // 🏢 ENTERPRISE: Hide edit controls on subcollection tabs (banking, files, relationships)
   hideEditControls?: boolean;
   // 🎭 ADR-121: Role persona toggle chips (SAP Business Partner pattern)
@@ -49,12 +51,13 @@ export function ContactDetailsHeader({
   onStartEdit,
   onSaveEdit,
   onCancelEdit,
+  isSaving = false,
   hideEditControls = false,
   activePersonas,
   onPersonaToggle,
 }: ContactDetailsHeaderProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
-  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
+  const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships', 'common-actions']);
   const photoModal = useGlobalPhotoPreview();
   const { focus } = useContactEditFocus();
   const hasFocus = focus !== null;
@@ -133,48 +136,19 @@ export function ContactDetailsHeader({
       // Άνοιγμα με gallery navigation (βελάκια working!)
       openGalleryPhotoModal(photoModal, contact, photoIndex);
 
-    } else if (type === 'company') {
-      // 🎯 NEW: Gallery navigation για Company [logoURL, photoURL]
-      const _companyLogoURL = logoURL;
-      const _companyPhotoURL = photoURL; // Representative photo
-      const galleryPhotos = [logoURL, photoURL].filter(Boolean); // Remove null/undefined
-
-      // 🏢 ENTERPRISE: Type-safe photo filtering
-      const validPhotos = galleryPhotos.filter(isNonEmptyString);
+    } else if (type === 'company' || type === 'service') {
+      // Πλοήγηση συλλογής για εταιρεία/υπηρεσία: [logoURL, photoURL].
+      //
+      // ⚠️ **Ήταν ΔΥΟ ταυτόσημα σκέλη** (CHECK 3.28, 2026-09-12): το `company` και το `service` είχαν
+      // αντιγραμμένο τον ίδιο κώδικα λέξη προς λέξη, με μόνη διαφορά δύο μεταβλητές που **κανείς δεν
+      // διάβαζε** (`_companyLogoURL` / `_serviceLogoURL`). Δύο αντίγραφα = δύο σημεία να ξεχάσεις.
+      const validPhotos = [logoURL, photoURL].filter(isNonEmptyString);
       if (validPhotos.length > 1) {
-        // Multiple photos available - use gallery navigation
         const currentPhotoIndex = validPhotos.findIndex((url) => url === avatarImageUrl);
-        const photoIndex = currentPhotoIndex >= 0 ? currentPhotoIndex : 0;
-
-        // Create temporary contact with multiplePhotoURLs for gallery
         const galleryContact = { ...contact, multiplePhotoURLs: validPhotos } as Contact;
-        openGalleryPhotoModal(photoModal, galleryContact, photoIndex);
+        openGalleryPhotoModal(photoModal, galleryContact, currentPhotoIndex >= 0 ? currentPhotoIndex : 0);
       } else {
-        // Single photo fallback
-        const photoType = avatarImageUrl === logoURL ? 'logo' : 'avatar';
-        openContactAvatarModal(photoModal, contact, photoType);
-      }
-
-    } else if (type === 'service') {
-      // 🎯 NEW: Gallery navigation για Service [logoURL, photoURL]
-      const _serviceLogoURL = logoURL;
-      const _servicePhotoURL = photoURL; // Representative photo
-      const galleryPhotos = [logoURL, photoURL].filter(Boolean); // Remove null/undefined
-
-      // 🏢 ENTERPRISE: Type-safe photo filtering
-      const validPhotos = galleryPhotos.filter(isNonEmptyString);
-      if (validPhotos.length > 1) {
-        // Multiple photos available - use gallery navigation
-        const currentPhotoIndex = validPhotos.findIndex((url) => url === avatarImageUrl);
-        const photoIndex = currentPhotoIndex >= 0 ? currentPhotoIndex : 0;
-
-        // Create temporary contact with multiplePhotoURLs for gallery
-        const galleryContact = { ...contact, multiplePhotoURLs: validPhotos } as Contact;
-        openGalleryPhotoModal(photoModal, galleryContact, photoIndex);
-      } else {
-        // Single photo fallback
-        const photoType = avatarImageUrl === logoURL ? 'logo' : 'avatar';
-        openContactAvatarModal(photoModal, contact, photoType);
+        openContactAvatarModal(photoModal, contact, avatarImageUrl === logoURL ? 'logo' : 'avatar');
       }
 
     } else {
@@ -214,9 +188,17 @@ export function ContactDetailsHeader({
                   ] : []),
                   // 🏢 ENTERPRISE: Save/Cancel — hidden on subcollection tabs (e.g. Relationships)
                   // These tabs have their own save mechanism; showing contact Save causes confusion
+                  // ADR-332 D27 Ζ5 — όσο τρέχει η αποθήκευση το κουμπί το **λέει** και δεν ξαναπατιέται·
+                  // η «Ακύρωση» επίσης κλειδώνει: ακύρωση στη μέση μιας εγγραφής δεν ακυρώνει τίποτα,
+                  // απλώς μπερδεύει. Το κλειδί ετικέτας είναι το **υπάρχον** SSoT της δημιουργίας.
                   ...(isEditing && !hideEditControls ? [
-                    createEntityAction('save', t('header.actions.save'), () => onSaveEdit?.()),
-                    createEntityAction('cancel', t('header.actions.cancel'), () => onCancelEdit?.())
+                    createEntityAction('save', t('header.actions.save'), () => onSaveEdit?.(), {
+                      pending: isSaving,
+                      pendingLabel: t('common-actions:actions.save_loading'),
+                    }),
+                    createEntityAction('cancel', t('header.actions.cancel'), () => onCancelEdit?.(), {
+                      disabled: isSaving,
+                    })
                   ] : []),
                   // Delete — always visible
                   ...(onDeleteContact ? [

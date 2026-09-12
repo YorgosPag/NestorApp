@@ -58,6 +58,9 @@ export function SaveButton({
       form={form}
       onClick={onClick}
       disabled={disabled || loading}
+      // ADR-332 D27 Ζ5 — η απενεργοποίηση και ο δείκτης υπήρχαν· η **ανακοίνωση** έλειπε. Χωρίς
+      // `aria-busy` ο αναγνώστης οθόνης δεν μαθαίνει ποτέ ότι η πράξη τρέχει (W3C ARIA25).
+      aria-busy={loading}
       className={cn(BUTTON_STYLES.variants.save, className)}
     >
       {loading ? (
