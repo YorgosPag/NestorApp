@@ -179,6 +179,17 @@ export const ENVIRONMENT_CONTRACT: readonly EnvironmentRequirement[] = [
     consumer: 'src/services/contact/first-contact-invitation.service.ts',
   },
   {
+    name: 'WORKSPACE_INVITE_SECRET',
+    severity: 'feature',
+    feature: 'Προσκλήσεις σε χώρο εργασίας (ADR-853)',
+    consequence:
+      'Ο διαχειριστής προσκαλεί συνεργάτη, εκείνος λαμβάνει το email και ο σύνδεσμος '
+      + 'απαντά «άκυρος». Επειδή η ένταξη σε ξένο χώρο γίνεται ΜΟΝΟ με πρόσκληση (Α1), '
+      + 'ΚΑΝΕΝΑΣ νέος συνεργάτης δεν μπορεί να μπει στο γραφείο — και ο διαχειριστής '
+      + 'βλέπει την πρόσκληση «σταλμένη», άρα ψάχνει το λάθος στον παραλήπτη.',
+    consumer: 'src/server/auth/workspace-invitation.ts',
+  },
+  {
     name: 'NOTIFICATION_EMAIL_SECRET',
     severity: 'feature',
     feature: 'Διαγραφή από τα email ειδοποιήσεων με ένα κλικ (ADR-848, RFC 8058)',

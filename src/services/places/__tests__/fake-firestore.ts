@@ -233,7 +233,33 @@ export class FakeTransaction {
 
   constructor(private readonly db: FakeFirestore) {}
 
-  async get(ref: FakeDocRef): Promise<{ id: string; exists: boolean; data: () => Doc | undefined }> {
+  /**
+   * 🔴 **ΤΟ ΕΡΩΤΗΜΑ ΜΕΣΑ ΣΕ ΣΥΝΑΛΛΑΓΗ ΕΛΕΙΠΕ — ΟΓΔΟΗ ΕΜΦΑΝΙΣΗ ΤΟΥ ΣΧΗΜΑΤΟΣ** (ADR-853 Φ2).
+   *
+   * Το Admin SDK δέχεται **και ερώτημα** στο `transaction.get()`, και **δύο** υπηρεσίες
+   * παραγωγής το χρησιμοποιούν ήδη ως άμυνα σε race condition:
+   * `contact/first-contact.service.ts:202` και `ai-pipeline/pipeline-queue-service.ts:99`
+   * *(«prevents race condition where two concurrent calls could both pass a non-atomic
+   * query check»)*. Το ADR-853 §7.3 το απαιτεί ονομαστικά για την ιδεμποτησία της
+   * πρόσκλησης: **ένα ζωντανό ανά (χώρος, email)**.
+   *
+   * Χωρίς αυτόν τον κλάδο, ο πλαστός δεχόταν το ερώτημα, κατέγραφε την ανάγνωση ως
+   * `undefined/undefined` και έσκαγε στο `snapshot.data()` — δηλαδή **καμία** άγκυρα δεν
+   * μπορούσε να αγγίξει το ατομικό supersede.
+   *
+   * ⚠️ **ΔΗΛΩΜΕΝΟ ΟΡΙΟ — ΠΙΟ ΣΤΕΝΟ ΑΠΟ ΤΟ ΑΛΗΘΙΝΟ, ΚΑΙ ΔΕΝ ΠΡΟΣΠΟΙΕΙΤΑΙ ΤΟ ΑΝΤΙΘΕΤΟ.**
+   * Καταγράφονται τα έγγραφα που **επέστρεψε** το ερώτημα. Στο πραγματικό Firestore η
+   * συναλλαγή ακυρώνεται και όταν ένα **νέο** έγγραφο αρχίσει να ταιριάζει στο ερώτημα
+   * (phantom read) — αυτό εδώ **δεν** το πιάνει. Πιάνει τη μετάλλαξη *«κάποιος άλλαξε
+   * εγγραφή που είδα»*, που είναι το σενάριο των αγκυρών Τ3/Ι.
+   *
+   * ⚠️ **Ο ανταγωνιστής (`interfere`) χτυπά ΚΑΙ εδώ**, όπως και στην ανάγνωση αναφοράς:
+   * αλλιώς μια άγκυρα «δύο ταυτόχρονες εκδόσεις» θα δοκίμαζε τη σειριακή διαδρομή.
+   */
+  async get(ref: FakeQuery): Promise<{ docs: { id: string; data: () => Doc }[]; size: number }>;
+  async get(ref: FakeDocRef): Promise<{ id: string; exists: boolean; data: () => Doc | undefined }>;
+  async get(ref: FakeDocRef | FakeQuery): Promise<unknown> {
+    if (ref instanceof FakeQuery) return this.getByQuery(ref);
     const snapshot = await ref.get();
 
     // 🔴 **ΚΑΤΑΓΡΑΦΕΤΑΙ Ο,ΤΙ ΕΠΕΣΤΡΕΨΕ Η ΑΝΑΓΝΩΣΗ — ΟΧΙ Ο,ΤΙ ΛΕΕΙ Ο ΔΙΣΚΟΣ ΤΩΡΑ.**
@@ -249,18 +275,52 @@ export class FakeTransaction {
     );
 
     // 🔴 Ο ανταγωνιστής χτυπά **εδώ**: ανάμεσα στην ανάγνωση και στο commit.
-    if (!this.interfered && this.db.interfere !== null) {
-      this.interfered = true;
-      const strike = this.db.interfere;
-      this.db.interfere = null;
-      strike();
-    }
+    this.letCompetitorStrike();
 
     return snapshot;
   }
 
-  set(ref: FakeDocRef, doc: Doc): void {
-    this.writes.push(() => this.db.write(ref.collectionName, ref.id, doc));
+  /**
+   * Ο ανταγωνιστής, **μία φορά ανά συναλλαγή**.
+   *
+   * ⚠️ **Εξήχθη μόλις απέκτησε δεύτερο καλούντα** (ADR-853 Φ2 — η ανάγνωση ερωτήματος).
+   * Ήταν έξι γραμμές αντιγραμμένες αυτούσιες· το CHECK 3.28 **δεν** το έπιασε, επειδή το
+   * `.jscpdrc.json` μετρά από **50 tokens** και πάνω. Το «η πύλη δεν το είδε» δεν είναι
+   * «δεν υπάρχει» — είναι ακριβώς το σχήμα «`0` = κανείς δεν κοίταξε» (N.0.2).
+   */
+  private letCompetitorStrike(): void {
+    if (this.interfered || this.db.interfere === null) return;
+    this.interfered = true;
+    const strike = this.db.interfere;
+    this.db.interfere = null;
+    strike();
+  }
+
+  /** Η ανάγνωση ερωτήματος: καταγράφει **κάθε** έγγραφο που επέστρεψε. */
+  private async getByQuery(
+    query: FakeQuery,
+  ): Promise<{ docs: { id: string; data: () => Doc }[]; size: number }> {
+    const result = await query.get();
+
+    for (const doc of result.docs) {
+      this.reads.set(`${query.collectionName}/${doc.id}`, JSON.stringify(doc.data() ?? null));
+    }
+
+    // 🔴 Ο ανταγωνιστής χτυπά **εδώ** επίσης — ανάμεσα στην ανάγνωση και στο commit.
+    this.letCompetitorStrike();
+
+    return result;
+  }
+
+  /**
+   * ⚠️ **ΤΟ `options` ΠΡΟΣΤΕΘΗΚΕ (ADR-853 Φ3)** — το `FakeDocRef.set` το τιμούσε ήδη, η
+   * **συναλλαγή** όχι: κάθε `tx.set(ref, doc, { merge: true })` **αντικαθιστούσε**
+   * σιωπηλά. Είναι ακριβώς η βλάβη που περιγράφει το {@link FakeDocRef.set}, μία στρώση
+   * πιο μέσα — και ο γραφέας της ιδιότητας μέλους (`grantWorkspaceMembershipInTx`)
+   * βασίζεται στο merge για να **μη σβήνει** τα `permissionSetIds` της κονσόλας ρόλων.
+   */
+  set(ref: FakeDocRef, doc: Doc, options?: { readonly merge?: boolean }): void {
+    this.writes.push(() => void ref.set(doc, options));
   }
 
   update(ref: FakeDocRef, patch: Doc): void {
@@ -431,6 +491,15 @@ export class FakeQuery {
      * **επόμενη** ανάγνωση (των δημόσιων προβολών), όχι στο ερώτημα.
      */
     private readonly failing: () => boolean = () => false,
+    /**
+     * 🔑 **Η συλλογή ταξιδεύει και με το ΕΡΩΤΗΜΑ, όχι μόνο με την αναφορά** (ADR-853 Φ2).
+     *
+     * Ο ίδιος λόγος με το {@link FakeDocRef.collectionName}: η συναλλαγή χρειάζεται
+     * **σταθερό κλειδί** για να θυμάται τι διάβασε. Ένα ερώτημα μέσα σε συναλλαγή
+     * επιστρέφει **πολλά** έγγραφα, και το καθένα πρέπει να καταγραφεί χωριστά —
+     * αλλιώς ο έλεγχος φρεσκάδας δεν έχει τι να συγκρίνει.
+     */
+    public readonly collectionName: string = '',
   ) {}
 
   where(field: string, op: WhereClause['op'], value: unknown): FakeQuery {
@@ -439,11 +508,12 @@ export class FakeQuery {
       [...this.clauses, { field, op, value }],
       this.cap,
       this.failing,
+      this.collectionName,
     );
   }
 
   limit(n: number): FakeQuery {
-    return new FakeQuery(this.bucket, this.clauses, n, this.failing);
+    return new FakeQuery(this.bucket, this.clauses, n, this.failing, this.collectionName);
   }
 
   /**
@@ -475,7 +545,7 @@ export class FakeCollection extends FakeQuery {
     // ⚠️ **Συνάρτηση, όχι τιμή**: το `failReads` γυρίζει **μετά** τη δημιουργία της
     //    αναφοράς (`fake.failReads = true` στη μέση ενός test). Ένα στιγμιότυπο εδώ θα
     //    κρατούσε το `false` της κατασκευής και ο διακόπτης δεν θα έπιανε ποτέ.
-    super(docs, [], undefined, () => db.failReads);
+    super(docs, [], undefined, () => db.failReads, name);
   }
 
   doc(id: string): FakeDocRef {

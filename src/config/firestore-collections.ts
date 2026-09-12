@@ -213,6 +213,16 @@ export const COLLECTIONS = {
   /** ADR-660 §6 — αιτήματα ένταξης σε χώρο εργασίας (γραφή μόνο διακομιστής). */
   WORKSPACE_ACCESS_REQUESTS:
     process.env.NEXT_PUBLIC_WORKSPACE_ACCESS_REQUESTS_COLLECTION || 'workspace_access_requests',
+  /**
+   * ADR-853 §7.1 — **προσκλήσεις σε χώρο εργασίας** (deny-all: το έγγραφο κρατά ΜΥΣΤΙΚΟ).
+   *
+   * ⚠️ **Η ΑΝΤΙΘΕΤΗ ΚΑΤΕΥΘΥΝΣΗ ΑΠΟ ΤΗΝ ΑΠΟ ΠΑΝΩ.** Το `workspace_access_requests` πάει από
+   * τον **άνθρωπο** στον χώρο («θέλω να μπω»)· αυτό από τον **χώρο** στον άνθρωπο («σε
+   * θέλουμε μέσα»). Δύο συλλογές επειδή είναι δύο **ερωτήματα** — η έγκριση του ενός δεν
+   * είναι αποδοχή του άλλου.
+   */
+  WORKSPACE_INVITATIONS:
+    process.env.NEXT_PUBLIC_WORKSPACE_INVITATIONS_COLLECTION || 'workspace_invitations',
 
   FLOORS: process.env.NEXT_PUBLIC_FLOORS_COLLECTION || 'floors',
   /**

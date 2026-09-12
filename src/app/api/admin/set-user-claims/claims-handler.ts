@@ -10,9 +10,9 @@ import { getAdminAuth, getAdminFirestore } from '@/lib/firebaseAdmin';
 import { setClaimsWithMirror } from '@/lib/auth/set-claims-with-mirror';
 import { composeClaimPayload, checkClaimFits } from '@/lib/auth/claim-payload';
 import { FieldValue as AdminFieldValue } from 'firebase-admin/firestore';
-import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
-import { ENTITY_TYPES } from '@/config/domain-constants';
-import { EntityAuditService } from '@/services/entity-audit.service';
+import { COLLECTIONS } from '@/config/firestore-collections';
+// ADR-853 Φ3 — ο ΕΝΑΣ γραφέας της ιδιότητας μέλους (άγκυρα Μ2).
+import { grantWorkspaceMembership, recordMembershipGrantAudit } from '@/lib/workspace/grant-membership';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 // ADR-660 §6 — η έγκριση κλείνει το αίτημα ένταξης και το λέει στον αιτούντα.
@@ -114,26 +114,24 @@ async function syncFirestoreRecords(
     firestoreSuccess = false;
   }
 
-  try {
-    const memberRef = getAdminFirestore()
-      .collection(COLLECTIONS.COMPANIES).doc(companyId)
-      .collection(SUBCOLLECTIONS.WORKSPACE_MEMBERS).doc(uid);
-    await memberRef.set({
-      uid, globalRole, status: 'active',
-      joinedAt: AdminFieldValue.serverTimestamp(),
-      addedBy: callerUid, updatedAt: AdminFieldValue.serverTimestamp(),
-      permissionSetIds: [],
-    }, { merge: true });
-    logger.info('Created/updated company member record', { targetUid: uid, companyId });
-
-    await EntityAuditService.recordChange({
-      entityType: ENTITY_TYPES.COMPANY, entityId: companyId, entityName: null,
-      action: 'updated', changes: [{ field: 'members', oldValue: null, newValue: uid }],
-      performedBy: callerUid, performedByName: callerEmail, companyId,
-    }).catch((err) => logger.warn('EntityAudit failed (non-blocking)', { error: getErrorMessage(err) }));
-  } catch (error) {
-    logger.warn('Failed to update company member record (non-blocking)', { targetUid: uid, error: getErrorMessage(error) });
-  }
+  // 🔑 **Ο ΕΝΑΣ ΓΡΑΦΕΑΣ** (ADR-853 Φ3 · άγκυρα **Μ2**): η **έγκριση αιτήματος** και η
+  //    **αποδοχή πρόσκλησης** γράφουν μέλος από **την ίδια** συνάρτηση. Ήταν γραμμένο εδώ
+  //    inline, μη εξαγόμενο — και η αποδοχή θα γεννούσε τον **τέταρτο** γραφέα του «τι
+  //    σημαίνει μέλος αυτού του χώρου» (ADR-749, μετρημένο στο ADR-853 §2).
+  //
+  // 🔴 **ΤΟ `permissionSetIds: []` ΕΦΥΓΕ, ΚΑΙ ΕΙΝΑΙ ΔΙΟΡΘΩΣΗ — ΟΧΙ ΠΑΡΑΛΕΙΨΗ ΤΗΣ ΕΞΑΓΩΓΗΣ.**
+  //    Με `merge: true` μια **κενή** λίστα δεν μπορεί να **δώσει** τίποτα· μπορεί μόνο να
+  //    **σβήσει** τα σύνολα δικαιωμάτων που όρισε η κονσόλα ρόλων (ADR-244) — σε **κάθε**
+  //    ανάθεση ρόλου, σιωπηλά. Η **απουσία** του πεδίου διαβάζεται ούτως ή άλλως ως `[]`
+  //    από το `normalizeMembership`, οπότε η αφαίρεση κλείνει διαδρομή απώλειας δεδομένων
+  //    χωρίς να αλλάξει τίποτα άλλο.
+  //
+  // ⚠️ Παραμένει **μη μπλοκάρον**: τα claims έχουν ήδη δοθεί όταν φτάνουμε εδώ, οπότε
+  //    αποτυχία γραφής δεν επιτρέπεται να αναιρέσει πρόσβαση που **δόθηκε**.
+  await grantWorkspaceMembership({ uid, companyId, globalRole, grantedByUid: callerUid });
+  await recordMembershipGrantAudit({
+    uid, companyId, globalRole, grantedByUid: callerUid, grantedByName: callerEmail,
+  });
 
   return firestoreSuccess;
 }
