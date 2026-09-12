@@ -14,6 +14,7 @@
  */
 
 import type ExcelJS from 'exceljs';
+import { PRODUCT_NAME } from '@/constants/product-identity';
 import { designTokens } from '@/styles/design-tokens';
 import { triggerBlobDownload } from '@/services/gantt-export/gantt-export-utils';
 import { formatDateShort } from '@/lib/intl-utils';
@@ -332,7 +333,7 @@ function buildRawDataSheet(
 export async function exportReportToExcel(config: ReportExcelConfig): Promise<void> {
   const ExcelJSLib = (await import('exceljs')).default;
   const workbook = new ExcelJSLib.Workbook();
-  workbook.creator = 'Nestor Pagonis';
+  workbook.creator = PRODUCT_NAME;
   workbook.created = new Date();
 
   buildExecutiveSummarySheet(workbook, config);

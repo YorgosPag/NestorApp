@@ -12,7 +12,19 @@
 
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { formatDateShort } from '@/lib/intl-utils';
+import { PRODUCT_NAME } from '@/constants/product-identity';
+import {
+  MARGIN,
+  PRIMARY as PRIMARY_COLOR,
+  SLATE_200,
+  SLATE_400,
+  SLATE_500,
+  SLATE_800,
+  addReportPdfFooters,
+  drawReportHeading,
+  forceRobotoCell,
+  yAfterTable,
+} from './report-pdf-chrome';
 import type { TrafficLight } from './evm-calculator';
 
 // ============================================================================
@@ -64,12 +76,7 @@ export interface ReportPdfConfig {
 // CONSTANTS
 // ============================================================================
 
-const MARGIN = 14;
-const PRIMARY_COLOR: [number, number, number] = [59, 130, 246]; // blue-500
-const SLATE_800: [number, number, number] = [30, 41, 59];
-const SLATE_500: [number, number, number] = [71, 85, 105];
-const SLATE_400: [number, number, number] = [148, 163, 184];
-const SLATE_200: [number, number, number] = [226, 232, 240];
+// Η γεωμετρία και η παλέτα ζουν στο `report-pdf-chrome` — δες εκεί γιατί (CHECK 3.28).
 
 const HEALTH_COLORS: Record<TrafficLight, [number, number, number]> = {
   green: [34, 197, 94],
@@ -102,21 +109,7 @@ function drawReportHeader(
   }
 
   // Report title
-  pdf.setFont('Roboto', 'bold');
-  pdf.setFontSize(18);
-  pdf.setTextColor(...SLATE_800);
-  pdf.text(config.title, MARGIN, y);
-
-  // Report date (right-aligned)
-  pdf.setFont('Roboto', 'normal');
-  pdf.setFontSize(10);
-  pdf.setTextColor(...SLATE_500);
-  pdf.text(
-    `Ημ. Αναφοράς: ${formatDateShort(new Date())}`,
-    pageWidth - MARGIN,
-    y,
-    { align: 'right' },
-  );
+  drawReportHeading(pdf, config.title, y, pageWidth);
 
   // Subtitle
   if (config.subtitle) {
@@ -213,6 +206,41 @@ function drawKPICards(
   return y + rows * (boxHeight + gap) + 4;
 }
 
+/**
+ * **Χώρεσε την ενότητα — αλλιώς νέα σελίδα — και γράψε τον τίτλο της.**
+ *
+ * Οι δύο ερωτήσεις είναι **μία**: ένας τίτλος στο κάτω χείλος της σελίδας, με το σώμα του
+ * στην επόμενη, είναι χειρότερος από καθόλου τίτλο. Γι' αυτό ο έλεγχος χώρου και το γράψιμο
+ * του τίτλου **δεν χωρίζονται** — ο καλών δεν μπορεί να κάνει το ένα και να ξεχάσει το άλλο.
+ *
+ * 🧹 Εξήχθη 2026-09-12 (CHECK 3.28 — 11 γραμμές / 54 tokens σε **δύο** σημεία: γράφημα και
+ * πίνακας). Η **μόνη** διαφορά τους ήταν το `needed`: το γράφημα ξέρει το ύψος του, ο
+ * πίνακας κρατά 30mm για κεφαλίδα + πρώτες γραμμές.
+ *
+ * @param needed πόσο ύψος (mm) θέλει η ενότητα κάτω από τον τίτλο για να μην κοπεί
+ * @returns το `y` της **γραμμής του τίτλου** — πόσο κατεβαίνει μετά το αποφασίζει ο καλών
+ *          (το γράφημα αφήνει 5mm, ο πίνακας 4mm· διαφορά **παρουσίασης**, όχι λογικής)
+ */
+function beginSection(
+  pdf: jsPDF,
+  title: string,
+  y: number,
+  pageHeight: number,
+  needed: number,
+): number {
+  if (y + needed > pageHeight - 25) {
+    pdf.addPage();
+    pdf.setFont('Roboto', 'normal');
+    y = 20;
+  }
+
+  pdf.setFont('Roboto', 'bold');
+  pdf.setFontSize(10);
+  pdf.setTextColor(...SLATE_800);
+  pdf.text(title, MARGIN, y);
+  return y;
+}
+
 function drawChartImage(
   pdf: jsPDF,
   image: ReportPdfChartImage,
@@ -221,21 +249,9 @@ function drawChartImage(
   pageHeight: number,
 ): number {
   const contentWidth = pageWidth - 2 * MARGIN;
-
-  // Check page break
   const imgHeight = image.height ?? 80;
-  if (y + imgHeight + 12 > pageHeight - 25) {
-    pdf.addPage();
-    pdf.setFont('Roboto', 'normal');
-    y = 20;
-  }
 
-  // Chart title
-  pdf.setFont('Roboto', 'bold');
-  pdf.setFontSize(10);
-  pdf.setTextColor(...SLATE_800);
-  pdf.text(image.title, MARGIN, y);
-  y += 5;
+  y = beginSection(pdf, image.title, y, pageHeight, imgHeight + 12) + 5;
 
   // Chart image
   const imgWidth = image.width ?? contentWidth;
@@ -260,19 +276,8 @@ function drawTable(
   y: number,
   pageHeight: number,
 ): number {
-  // Check page break
-  if (y + 30 > pageHeight - 25) {
-    pdf.addPage();
-    pdf.setFont('Roboto', 'normal');
-    y = 20;
-  }
-
-  // Table title
-  pdf.setFont('Roboto', 'bold');
-  pdf.setFontSize(10);
-  pdf.setTextColor(...SLATE_800);
-  pdf.text(table.title, MARGIN, y);
-  y += 4;
+  // 30mm = κεφαλίδα + οι πρώτες γραμμές· λιγότερο και ο πίνακας ξεκινά για να κοπεί αμέσως.
+  y = beginSection(pdf, table.title, y, pageHeight, 30) + 4;
 
   const columnStyles: Record<number, { cellWidth?: number; halign?: 'left' | 'center' | 'right' }> = {};
   if (table.columnWidths) {
@@ -289,43 +294,19 @@ function drawTable(
     styles: { fontSize: 9, font: 'Roboto', cellPadding: 3 },
     headStyles: { fillColor: PRIMARY_COLOR, fontStyle: 'bold' },
     columnStyles,
-    didParseCell: (data) => {
-      data.cell.styles.font = 'Roboto';
-    },
+    didParseCell: forceRobotoCell,
   });
 
-  const finalY = (pdf as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY ?? y + 50;
-  return finalY + 8;
+  return yAfterTable(pdf, y, 50) + 8;
 }
 
+/** Το υποσέλιδο της μηχανής αναφορών — υπογράφει με **σκέτο** το όνομα του προϊόντος. */
 function addPageFooters(
   pdf: jsPDF,
   pageWidth: number,
   pageHeight: number,
 ): void {
-  const totalPages = pdf.getNumberOfPages();
-  const timestamp = new Date().toLocaleString('el-GR');
-
-  for (let i = 1; i <= totalPages; i++) {
-    pdf.setPage(i);
-    pdf.setFont('Roboto', 'normal');
-    pdf.setFontSize(7);
-    pdf.setTextColor(...SLATE_400);
-
-    // Left: page number
-    pdf.text(`Σελίδα ${i}/${totalPages}`, MARGIN, pageHeight - 8);
-
-    // Center: branding
-    pdf.text('Nestor App', pageWidth / 2, pageHeight - 8, { align: 'center' });
-
-    // Right: timestamp
-    pdf.text(timestamp, pageWidth - MARGIN, pageHeight - 8, { align: 'right' });
-
-    // Separator line above footer
-    pdf.setDrawColor(...SLATE_200);
-    pdf.setLineWidth(0.2);
-    pdf.line(MARGIN, pageHeight - 12, pageWidth - MARGIN, pageHeight - 12);
-  }
+  addReportPdfFooters(pdf, { pageWidth, pageHeight, centerLabel: PRODUCT_NAME });
 }
 
 // ============================================================================

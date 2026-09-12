@@ -93,6 +93,27 @@ export function buildFiltersText(
     .join(' · ');
 }
 
+/**
+ * **Ποιες στήλες ζήτησε ο χρήστης, με τον ορισμό τους — και με τη ΣΕΙΡΑ που τις ζήτησε.**
+ *
+ * ⚠️ Η σειρά είναι του `params.columns`, όχι του `domainDefinition.fields`: ο χρήστης
+ * αναδιατάσσει στήλες και η εξαγωγή οφείλει να τον ακολουθεί. Γι' αυτό γίνεται `map` πάνω
+ * στα **αιτήματα** και `find` στους ορισμούς — ποτέ το αντίστροφο.
+ *
+ * ⛔ Στήλη που δεν αντιστοιχεί σε πεδίο **πέφτει σιωπηλά**: το αποθηκευμένο layout μπορεί να
+ * κρατά στήλη που καταργήθηκε από τον τομέα, και μια εξαγωγή που σκάει γι' αυτό είναι
+ * χειρότερη από μια εξαγωγή με μία στήλη λιγότερη.
+ *
+ * 🧹 Ζούσε **ταυτόσημη** σε `builder-pdf-exporter.ts` και `builder-excel-exporter.ts`
+ * (CHECK 3.28, 2026-09-12). Το σπίτι της είναι εδώ: και οι δύο εξαγωγείς εισάγουν ήδη από
+ * αυτό το αρχείο, και η ερώτηση είναι για τις **παραμέτρους εξαγωγής**, όχι για τη μορφή.
+ */
+export function getFieldDefs(params: BuilderExportParams): FieldDefinition[] {
+  return params.columns
+    .map((key) => params.domainDefinition.fields.find((f) => f.key === key))
+    .filter((f): f is FieldDefinition => f !== undefined);
+}
+
 /** Generate domain-aware filename: Nestor_Units_Report_2026-03-29.pdf */
 export function buildExportFilename(
   domainId: BuilderDomainId,

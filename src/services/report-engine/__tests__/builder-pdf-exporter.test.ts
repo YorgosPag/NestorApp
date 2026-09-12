@@ -187,7 +187,7 @@ describe('Builder PDF Exporter — Layer 1 (Mock)', () => {
     expect(mockPdfInstance.setProperties).toHaveBeenCalledWith(
       expect.objectContaining({
         author: 'Γιώργος',
-        creator: 'Nestor Report Builder',
+        creator: 'Nestor App · Report Builder',
       }),
     );
   });

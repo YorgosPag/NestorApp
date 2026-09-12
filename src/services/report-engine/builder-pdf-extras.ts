@@ -6,16 +6,15 @@
  */
 
 import jsPDF from 'jspdf';
+import { productQualified } from '@/constants/product-identity';
+import { MARGIN, SLATE_200, SLATE_400, SLATE_800, addReportPdfFooters } from './report-pdf-chrome';
 import type { WatermarkMode } from './builder-export-types';
 
 // ============================================================================
 // CONSTANTS
 // ============================================================================
 
-const MARGIN = 14;
-const SLATE_800: [number, number, number] = [30, 41, 59];
-const SLATE_400: [number, number, number] = [148, 163, 184];
-const SLATE_200: [number, number, number] = [226, 232, 240];
+// Η γεωμετρία και η παλέτα ζουν στο `report-pdf-chrome` — δες εκεί γιατί (CHECK 3.28).
 
 // ============================================================================
 // WATERMARK
@@ -131,26 +130,15 @@ export function addBookmarks(
 // PAGE FOOTERS
 // ============================================================================
 
+/** Το υποσέλιδο του Report Builder — η **μόνη** του ιδιαιτερότητα είναι η υπογραφή. */
 export function addFooters(
   pdf: jsPDF,
   pageWidth: number,
   pageHeight: number,
 ): void {
-  const totalPages = pdf.getNumberOfPages();
-  const timestamp = new Date().toLocaleString('el-GR');
-
-  for (let i = 1; i <= totalPages; i++) {
-    pdf.setPage(i);
-    pdf.setFont('Roboto', 'normal');
-    pdf.setFontSize(7);
-    pdf.setTextColor(...SLATE_400);
-
-    pdf.text(`Σελίδα ${i}/${totalPages}`, MARGIN, pageHeight - 8);
-    pdf.text('Nestor Report Builder', pageWidth / 2, pageHeight - 8, { align: 'center' });
-    pdf.text(timestamp, pageWidth - MARGIN, pageHeight - 8, { align: 'right' });
-
-    pdf.setDrawColor(...SLATE_200);
-    pdf.setLineWidth(0.2);
-    pdf.line(MARGIN, pageHeight - 12, pageWidth - MARGIN, pageHeight - 12);
-  }
+  addReportPdfFooters(pdf, {
+    pageWidth,
+    pageHeight,
+    centerLabel: productQualified('Report Builder'),
+  });
 }

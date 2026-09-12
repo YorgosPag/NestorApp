@@ -11,26 +11,36 @@
 
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { productQualified } from '@/constants/product-identity';
 import { registerGreekFont } from '@/services/pdf/greek-font-loader';
 import { formatDateShort } from '@/lib/intl-utils';
 import type { BuilderExportParams } from './builder-export-types';
-import { buildFiltersText, buildExportFilename } from './builder-export-types';
+import { buildFiltersText, buildExportFilename, getFieldDefs } from './builder-export-types';
 import { drawWatermark, drawTableOfContents, addBookmarks, addFooters } from './builder-pdf-extras';
+import {
+  MARGIN,
+  PRIMARY,
+  SLATE_200,
+  SLATE_400,
+  SLATE_500,
+  SLATE_800,
+  drawReportHeading,
+  forceRobotoCell,
+  yAfterTable,
+} from './report-pdf-chrome';
 import type {
   GroupedRow,
   FieldDefinition,
 } from '@/config/report-builder/report-builder-types';
 
 // ============================================================================
-// CONSTANTS (match report-pdf-exporter.ts palette)
+// CONSTANTS
 // ============================================================================
+// ⚠️ Το περιθώριο και η παλέτα ΔΕΝ ζουν πια εδώ: αυτό το μπλοκ έγραφε «match
+//    report-pdf-exporter.ts palette» — δηλαδή ομολογούσε ότι είναι αντίγραφο και ζητούσε
+//    από άνθρωπο να συντηρεί τη συμφωνία. Τώρα είναι ΕΝΑ, στο `report-pdf-chrome`.
+//    Εδώ μένουν μόνο όσα είναι όντως **δικά** αυτού του εξαγωγέα.
 
-const MARGIN = 14;
-const PRIMARY: [number, number, number] = [59, 130, 246];
-const SLATE_800: [number, number, number] = [30, 41, 59];
-const SLATE_500: [number, number, number] = [71, 85, 105];
-const SLATE_400: [number, number, number] = [148, 163, 184];
-const SLATE_200: [number, number, number] = [226, 232, 240];
 const NAVY: [number, number, number] = [30, 58, 95];
 const GROUP_HEADER_BG: [number, number, number] = [241, 245, 249]; // slate-100
 const GROUP_FOOTER_BG: [number, number, number] = [248, 250, 252]; // slate-50
@@ -47,23 +57,7 @@ function drawHeader(
 ): number {
   let y = 20;
 
-  // Title
-  pdf.setFont('Roboto', 'bold');
-  pdf.setFontSize(18);
-  pdf.setTextColor(...SLATE_800);
-  const domainLabel = params.domainDefinition.labelKey;
-  pdf.text(domainLabel, MARGIN, y);
-
-  // Date (right-aligned)
-  pdf.setFont('Roboto', 'normal');
-  pdf.setFontSize(10);
-  pdf.setTextColor(...SLATE_500);
-  pdf.text(
-    `Ημ. Αναφοράς: ${formatDateShort(new Date())}`,
-    pageWidth - MARGIN,
-    y,
-    { align: 'right' },
-  );
+  drawReportHeading(pdf, params.domainDefinition.labelKey, y, pageWidth);
 
   // Filters line
   const filtersText = buildFiltersText(params.filters, params.domainDefinition);
@@ -167,12 +161,6 @@ function drawChart(
 // TABLE RENDERING
 // ============================================================================
 
-function getFieldDefs(params: BuilderExportParams): FieldDefinition[] {
-  return params.columns
-    .map((key) => params.domainDefinition.fields.find((f) => f.key === key))
-    .filter((f): f is FieldDefinition => f !== undefined);
-}
-
 function formatCellValue(
   value: unknown,
   field: FieldDefinition,
@@ -227,13 +215,52 @@ function drawFlatTable(
     styles: { fontSize: 8, font: 'Roboto', cellPadding: 2.5 },
     headStyles: { fillColor: NAVY, fontStyle: 'bold' },
     showHead: 'everyPage',
-    didParseCell: (data) => {
-      data.cell.styles.font = 'Roboto';
-    },
+    didParseCell: forceRobotoCell,
   });
 
-  const finalY = (pdf as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY ?? y + 50;
-  return finalY + 8;
+  return yAfterTable(pdf, y, 50) + 8;
+}
+
+/**
+ * Πόσο **στενεύει** και πόσο **ξεθωριάζει** ένας πίνακας λεπτομερειών ανά επίπεδο φωλιάς.
+ *
+ * 🧹 Οι δύο κλήσεις (L1 · L2) ήταν **δίδυμα 19 γραμμών** (CHECK 3.28, 2026-09-12) και η
+ * **μόνη** τους διαφορά ήταν αυτές οι τέσσερις τιμές. Ό,τι έμενε ίδιο — κεφαλίδες από τα
+ * πεδία, μορφοποίηση κελιών, `showHead`, `rowPageBreak`, η Roboto — ήταν ίδιο **επειδή
+ * πρέπει**, όχι κατά τύχη.
+ */
+interface DetailTableStyle {
+  /** Επιπλέον εσοχή (mm) από το αριστερό περιθώριο — η φωλιά **φαίνεται**. */
+  readonly indent: number;
+  readonly fontSize: number;
+  readonly cellPadding: number;
+  readonly headFill: [number, number, number];
+}
+
+/** Γράψε τις γραμμές λεπτομέρειας ενός ομίλου και επίστρεψε το νέο `y`. */
+function drawDetailRows(
+  pdf: jsPDF,
+  rows: readonly Record<string, unknown>[],
+  fields: readonly FieldDefinition[],
+  params: BuilderExportParams,
+  y: number,
+  style: DetailTableStyle,
+): number {
+  autoTable(pdf, {
+    head: [fields.map((f) => f.labelKey)],
+    body: rows.map((row) =>
+      fields.map((f) => formatCellValue(row[f.key], f, params.results.resolvedRefs)),
+    ),
+    startY: y,
+    margin: { left: MARGIN + style.indent, right: MARGIN },
+    styles: { fontSize: style.fontSize, font: 'Roboto', cellPadding: style.cellPadding },
+    headStyles: { fillColor: style.headFill, fontStyle: 'bold', fontSize: style.fontSize },
+    showHead: 'everyPage',
+    rowPageBreak: 'avoid',
+    didParseCell: forceRobotoCell,
+  });
+
+  return yAfterTable(pdf, y, 20);
 }
 
 function drawGroupedTable(
@@ -278,26 +305,12 @@ function drawGroupedTable(
     );
 
     if (detailRows.length > 0) {
-      const headers = fields.map((f) => f.labelKey);
-      const bodyRows = detailRows.map((row) =>
-        fields.map((f) => formatCellValue(row[f.key], f, params.results.resolvedRefs)),
-      );
-
-      autoTable(pdf, {
-        head: [headers],
-        body: bodyRows,
-        startY: y,
-        margin: { left: MARGIN, right: MARGIN },
-        styles: { fontSize: 7.5, font: 'Roboto', cellPadding: 2 },
-        headStyles: { fillColor: PRIMARY, fontStyle: 'bold', fontSize: 7.5 },
-        showHead: 'everyPage',
-        rowPageBreak: 'avoid',
-        didParseCell: (data) => {
-          data.cell.styles.font = 'Roboto';
-        },
+      y = drawDetailRows(pdf, detailRows, fields, params, y, {
+        indent: 0,
+        fontSize: 7.5,
+        cellPadding: 2,
+        headFill: PRIMARY,
       });
-
-      y = (pdf as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY ?? y + 20;
     }
 
     // Nested L2 groups
@@ -321,26 +334,12 @@ function drawGroupedTable(
         (c): c is Record<string, unknown> => !('groupKey' in c),
       );
       if (nestedDetails.length > 0) {
-        const headers = fields.map((f) => f.labelKey);
-        const bodyRows = nestedDetails.map((row) =>
-          fields.map((f) => formatCellValue(row[f.key], f, params.results.resolvedRefs)),
-        );
-
-        autoTable(pdf, {
-          head: [headers],
-          body: bodyRows,
-          startY: y,
-          margin: { left: MARGIN + 4, right: MARGIN },
-          styles: { fontSize: 7, font: 'Roboto', cellPadding: 1.5 },
-          headStyles: { fillColor: SLATE_500, fontStyle: 'bold', fontSize: 7 },
-          showHead: 'everyPage',
-          rowPageBreak: 'avoid',
-          didParseCell: (data) => {
-            data.cell.styles.font = 'Roboto';
-          },
+        y = drawDetailRows(pdf, nestedDetails, fields, params, y, {
+          indent: 4,
+          fontSize: 7,
+          cellPadding: 1.5,
+          headFill: SLATE_500,
         });
-
-        y = (pdf as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY ?? y + 20;
       }
     }
 
@@ -430,7 +429,7 @@ export async function exportBuilderToPdf(params: BuilderExportParams): Promise<v
     author: params.userName,
     subject: buildFiltersText(params.filters, params.domainDefinition),
     keywords: `${params.domain}, report, nestor`,
-    creator: 'Nestor Report Builder',
+    creator: productQualified('Report Builder'),
   });
 
   // 7. Watermark (after all content)

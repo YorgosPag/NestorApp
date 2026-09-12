@@ -7,6 +7,7 @@
  */
 
 import type ExcelJS from 'exceljs';
+import { PRODUCT_NAME } from '@/constants/product-identity';
 import type { SpendAnalyticsResult } from '@/services/procurement/aggregators/spendAnalyticsAggregator';
 
 const HEADER_FILL: ExcelJS.Fill = {
@@ -118,7 +119,7 @@ function buildBudgetVsActualSheet(wb: ExcelJS.Workbook, result: SpendAnalyticsRe
 export async function buildSpendAnalyticsWorkbook(result: SpendAnalyticsResult): Promise<Buffer> {
   const ExcelJSLib = (await import('exceljs')).default;
   const wb = new ExcelJSLib.Workbook();
-  wb.creator = 'Nestor App';
+  wb.creator = PRODUCT_NAME;
   wb.created = new Date();
   buildOverviewSheet(wb, result);
   buildByVendorSheet(wb, result);

@@ -15,6 +15,7 @@
  */
 
 import type ExcelJS from 'exceljs';
+import { productQualified } from '@/constants/product-identity';
 import { designTokens } from '@/styles/design-tokens';
 import { triggerBlobDownload } from '@/services/gantt-export/gantt-export-utils';
 // SSoT: δείκτης στήλης → γράμμα. Ζούσε εδώ ΚΑΙ στο `builder-excel-analysis.ts`,
@@ -24,7 +25,7 @@ import { columnLetter as colLetter } from '@/lib/spreadsheet/column-letter';
 import { getExcelFormat } from './builder-excel-number-format';
 import { formatDateShort } from '@/lib/intl-utils';
 import type { BuilderExportParams } from './builder-export-types';
-import { buildFiltersText, buildExportFilename } from './builder-export-types';
+import { buildFiltersText, buildExportFilename, getFieldDefs } from './builder-export-types';
 import { buildAnalysisSheet } from './builder-excel-analysis';
 import type {
   FieldDefinition,
@@ -68,12 +69,6 @@ const GROUP_FILL: ExcelJS.Fill = {
 // ============================================================================
 // HELPERS
 // ============================================================================
-
-function getFieldDefs(params: BuilderExportParams): FieldDefinition[] {
-  return params.columns
-    .map((key) => params.domainDefinition.fields.find((f) => f.key === key))
-    .filter((f): f is FieldDefinition => f !== undefined);
-}
 
 function getCellValue(
   row: Record<string, unknown>,
@@ -380,7 +375,9 @@ function buildRawSheet(
 export async function exportBuilderToExcel(params: BuilderExportParams): Promise<void> {
   const ExcelJSLib = (await import('exceljs')).default;
   const workbook = new ExcelJSLib.Workbook();
-  workbook.creator = params.userName || 'Nestor Report Builder';
+  // ⚠️ ADR-857 — **δεδομένα χρήστη πρώτα**, το προϊόν ως εφεδρεία. Ίδιο σχήμα με το
+  //    `companyName ?? appName` του `base-email-template.ts`: η δομή μένει, αλλάζει η εφεδρεία.
+  workbook.creator = params.userName || productQualified('Report Builder');
   workbook.created = new Date();
 
   const fields = getFieldDefs(params);
