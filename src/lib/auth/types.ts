@@ -3,7 +3,7 @@
  * @see docs/rfc/authorization-rbac.md
  */
 
-import type { MembershipVerdict } from "@/types/workspace-membership";
+import type { MembershipVerdict, RequestedWorkspace } from "@/types/workspace-membership";
 
 // =============================================================================
 // GLOBAL ROLES (Coarse-grained, stored in Custom Claims)
@@ -297,6 +297,29 @@ export interface AuthContext {
   membershipVerdict?: MembershipVerdict;
 
   /**
+   * **Ποιον χώρο ΔΗΛΩΣΕ το αίτημα** (ADR-787 §5.3 ζ όριο 1, 2026-09-12).
+   *
+   * 🔴 **Γιατί δεν αρκούσε το `superAdminOverride`**, και τι κόστισε: εκείνο είναι αληθές
+   * **μόνο** όταν ο δηλωμένος χώρος **διαφέρει** από το claim. Άρα ένας super-admin μέσα
+   * στο **δικό του** `/o/<εταιρεία>` έδινε `overridden: false`, και τα δόγματα λίστας το
+   * διάβαζαν ως «δεν ζήτησε τίποτα» ⇒ **καθολική όψη όλων των εταιρειών** κάτω από
+   * διεύθυνση που ονομάζει **μία**. Η ερώτηση που χρειάζονται δεν είναι *«άλλαξε
+   * εταιρεία;»* αλλά ***«ονόμασε κάποιος εταιρεία;»***.
+   *
+   * ⚠️ **Απουσία σημαίνει «το αίτημα δεν δήλωσε χώρο»** — δηλαδή ακριβώς η σημερινή
+   * συμπεριφορά (claim ή, για super-admin, καθολική όψη). Είναι **προαιρετικό επίτηδες**:
+   * υπάρχουν νόμιμοι κατασκευαστές context που δεν προέρχονται από αίτημα HTTP (ο
+   * κατασκευασμένος dev principal, οι εσωτερικές κλήσεις υπηρεσιών) και δεν έχουν
+   * **τίποτα** να δηλώσουν. ⛔ ΜΗΝ το κάνεις υποχρεωτικό «για αυστηρότητα»: θα ανάγκαζε
+   * αυτούς τους κατασκευαστές να **επινοήσουν** δήλωση, δηλαδή να πουν ψέματα.
+   *
+   * 🔑 Ο **ιδιωτικός** χώρος δεν φτάνει ποτέ σε διαδρομή με αυτό το πεδίο: τον αρνείται
+   * το `buildRequestContext` **πριν** τον handler (`workspace_personal`). Αν τον δεις εδώ,
+   * κάποιος έχει παρακάμψει το σύνορο.
+   */
+  requestedWorkspace?: RequestedWorkspace;
+
+  /**
    * Οι **ρητά δοσμένες** ικανότητες του claim (ADR-801 §2.8, Φάση 3γ).
    *
    * 🔴 **Γιατί δεν υπήρχε, και τι κόστισε**: το `CustomClaims.permissions`
@@ -343,7 +366,10 @@ export interface AuthContext {
  */
 export type PersonalIdentityContext = Omit<
   AuthContext,
-  'companyId' | 'superAdminOverride' | 'membershipVerdict'
+  // ⚠️ Το `requestedWorkspace` φεύγει **μαζί** τους, και για τον ίδιο λόγο: είναι η
+  //    απάντηση στο *«σε ποια ΕΤΑΙΡΕΙΑ ενεργώ;»*, ερώτηση που για τον άνθρωπο χωρίς
+  //    οργανισμό δεν έχει νόημα. Η δήλωσή του κρίνεται στο σύνορο, δεν ταξιδεύει μαζί του.
+  'companyId' | 'superAdminOverride' | 'membershipVerdict' | 'requestedWorkspace'
 >;
 
 /** Unauthenticated context with reason. */
@@ -362,13 +388,24 @@ export interface UnauthenticatedContext {
    * - `workspace_unavailable` — **δεν μπορέσαμε να ρωτήσουμε.**
    *   ⛔ ΜΗΝ το συγχωνεύσεις με το προηγούμενο: *άγνωστο ≠ κενό* (N.12 ·
    *   ADR-787 Ε-5 §4 #3). Το ένα λέει «όχι», το άλλο «δεν ξέρω».
+   * - `workspace_personal` — **δήλωσες τον ιδιωτικό σου χώρο σε διαδρομή που απαιτεί
+   *   εταιρεία** (ADR-787 §5.3 ζ όριο 1, 2026-09-12). Δεν είναι αποτυχία ταυτότητας και
+   *   **δεν είναι άρνηση**: είναι η **σχεδιασμένη κατάσταση** του ADR-809 («δεν ανήκεις
+   *   σε εταιρεία»), ειπωμένη στη γλώσσα του HTTP. Γι' αυτό βγαίνει με τον κωδικό
+   *   `MISSING_TENANT` — **την ίδια λέξη** με τον δρόμο της Firestore.
+   * - `workspace_malformed` — **δήλωσες κάτι που δεν καταλαβαίνω.**
+   *   ⛔ ΜΗΝ το ισοπεδώσεις σε «δεν δήλωσες»: το πρώτο είναι σφάλμα πελάτη (400), το
+   *   δεύτερο είναι η σημερινή, νόμιμη σιωπή. Η ισοπέδωση των δύο είναι το σχήμα του N.12
+   *   — και ήταν **ακριβώς** η ρίζα αυτού του ορίου.
    */
   reason:
     | "missing_token"
     | "invalid_token"
     | "missing_claims"
     | "workspace_forbidden"
-    | "workspace_unavailable";
+    | "workspace_unavailable"
+    | "workspace_personal"
+    | "workspace_malformed";
 }
 
 /** Union type for request context. */

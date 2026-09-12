@@ -267,23 +267,36 @@ export const OUTSIDE_WORKSPACE: Readonly<Record<string, string>> = {
  * ⚠️ **Το ερώτημα και το κενό απαντιούνται χωριστά**: η ρίζα `/` είναι η
  * **δημόσια** οθόνη αναζήτησης (ADR-777 §8.13) — όχι «άγνωστο», αλλά ρητά εκτός.
  */
-export function isInsideWorkspace(href: string): boolean {
-  if (!href.startsWith('/') || href.startsWith('//')) return false;
+/**
+ * **Το κορυφαίο τμήμα μιας εσωτερικής διαδρομής** — ή `undefined` για τη ρίζα και για
+ * ό,τι δεν είναι απόλυτη εσωτερική διαδρομή.
+ *
+ * 🔑 **Εξήχθη, δεν γράφτηκε** (2026-09-12, N.0.2): το ίδιο ερώτημα το κάνει πλέον και ο
+ * κριτής της επιφάνειας του ιδιωτικού χώρου ({@link module:lib/workspace/personal-workspace-surface}).
+ * Δύο γραφές του «ποιο είναι το πρώτο τμήμα;» θα απέκλιναν στην πρώτη περίπτωση με
+ * ερώτημα ή θραύσμα — και η μία θα **περνούσε κατά τύχη**.
+ *
+ * ⚠️ Το ερώτημα και το θραύσμα ΔΕΝ είναι τμήματα διαδρομής. Χωρίς αυτό, το
+ * `/contacts?filter=x` θα έδινε πρώτο τμήμα «contacts?filter=x» και δεν θα ταίριαζε
+ * **ΠΟΤΕ** με καμία εγγραφή — δηλαδή θα περνούσε ως «εντός» κατά τύχη, και το
+ * `/terms?x=1` θα έπαιρνε πρόθεμα.
+ */
+export function firstPathSegment(href: string): string | undefined {
+  if (!href.startsWith('/') || href.startsWith('//')) return undefined;
 
-  // ⚠️ Το ερώτημα και το θραύσμα ΔΕΝ είναι τμήματα διαδρομής. Χωρίς αυτό, το
-  //    `/contacts?filter=x` θα έδινε πρώτο τμήμα «contacts?filter=x» και δεν θα
-  //    ταίριαζε ΠΟΤΕ με καμία εγγραφή — δηλαδή θα περνούσε ως «εντός» κατά τύχη,
-  //    και το `/terms?x=1` θα έπαιρνε πρόθεμα.
   const path = href.split(/[?#]/, 1)[0];
+  return path.split('/').filter(Boolean)[0];
+}
 
+export function isInsideWorkspace(href: string): boolean {
   // ⚠️ ΕΔΩ ΥΠΗΡΧΕ ΔΕΥΤΕΡΟΣ ΦΡΟΥΡΟΣ (`if (hasWorkspacePrefix(path)) return false;`)
   //    ΚΑΙ ΗΤΑΝ ΝΕΚΡΟΣ — το έδειξε μετάλλαξη που **έμεινε πράσινη**: το ίδιο το
   //    `WORKSPACE_PATH_PREFIX` είναι εγγραφή του κλειστού συνόλου, άρα το
   //    `/o/nikos/…` απαντιόταν ήδη από την ΙΔΙΑ διαδρομή. Δύο μηχανισμοί για ένα
   //    ερώτημα (ADR-749), ο ένας αδύνατο να πυροδοτήσει (ADR-749 §5).
   //    Ο μηχανισμός είναι **το σύνολο**, και το κλειδώνει η άγκυρα Ζ5β.
-  const first = path.split('/').filter(Boolean)[0];
-  if (first === undefined) return false; // η ρίζα «/» — δημόσια, ρητά
+  const first = firstPathSegment(href);
+  if (first === undefined) return false; // η ρίζα «/» (ή μη-εσωτερική) — ρητά εκτός
 
   return !(first in OUTSIDE_WORKSPACE);
 }

@@ -22,6 +22,9 @@ import 'server-only';
 
 import { NextResponse } from 'next/server';
 
+// 🔑 ADR-787 §5.3 ζ (όριο 1) — ο κωδικός της σχεδιασμένης κατάστασης ζει στο **σύρμα**,
+//    ώστε ο πελάτης να διαβάζει την ίδια λέξη που γράφει εδώ ο διακομιστής.
+import { MISSING_TENANT_ERROR_CODE } from '@/lib/workspace/requested-workspace-wire';
 import type { PermissionId, GlobalRole } from './types';
 
 /**
@@ -63,6 +66,45 @@ export function createUnauthorizedResponse(reason: string): NextResponse<ErrorRe
         details: { reason },
       },
       { status: 503 },
+    );
+  }
+
+  // 🔴 Ο ΙΔΙΩΤΙΚΟΣ ΧΩΡΟΣ ΔΕΝ ΕΙΝΑΙ ΑΠΟΤΥΧΙΑ ΤΑΥΤΟΤΗΤΑΣ — ΚΑΙ ΓΙ' ΑΥΤΟ **ΟΧΙ 401**
+  //
+  // Δύο ανεξάρτητοι λόγοι, και ο δεύτερος είναι μετρημένη μηχανική:
+  //  1. **Σημασιολογία**: η ταυτότητα ισχύει μια χαρά. Αυτό που λείπει είναι **εταιρεία**,
+  //     και είναι η σχεδιασμένη κατάσταση του ADR-809 — όχι «ξανασυνδέσου».
+  //  2. **Ο πελάτης θα κυνηγούσε την ουρά του**: ο `enterprise-api-client` σε **κάθε** 401
+  //     ανανεώνει αναγκαστικά το token και **επαναλαμβάνει** το αίτημα. Ένα 401 εδώ θα
+  //     διπλασίαζε κάθε αίτημα του ιδιωτικού χώρου, για κατάσταση που **καμία** ανανέωση
+  //     token δεν αλλάζει.
+  //
+  // ⚠️ **403 και όχι 404**: δεν κρύβουμε ύπαρξη ξένου χώρου εδώ — ο άνθρωπος δήλωσε τον
+  //    **δικό του** ιδιωτικό χώρο. Δεν υπάρχει τίποτα να συγκαλυφθεί (αντίθετα με το
+  //    `workspace_forbidden`, Ε-5 §4 #1).
+  if (reason === 'workspace_personal') {
+    return NextResponse.json(
+      {
+        error: 'This route requires an organization workspace',
+        code: MISSING_TENANT_ERROR_CODE,
+        details: { reason },
+      },
+      { status: 403 },
+    );
+  }
+
+  // 🔴 **400: το λάθος είναι ΤΟΥ ΑΙΤΗΜΑΤΟΣ, όχι της ταυτότητας.** Κακοσχηματισμένη δήλωση
+  //    χώρου σημαίνει πελάτη που μιλά άλλη γραμματική — και fail-closed σημαίνει ότι το
+  //    λέμε, αντί να μαντέψουμε τι εννοούσε (OWASP: ποτέ επιστροφή σε ερώτημα χωρίς
+  //    εμβέλεια).
+  if (reason === 'workspace_malformed') {
+    return NextResponse.json(
+      {
+        error: 'Malformed workspace declaration',
+        code: 'WORKSPACE_MALFORMED',
+        details: { reason },
+      },
+      { status: 400 },
     );
   }
 

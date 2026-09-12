@@ -47,93 +47,20 @@ import {
   verifyIdToken,
   verifySessionCookie,
 } from '@/lib/auth/token-credentials';
-// 🎫 ADR-787 Κ-2 — ο ΕΝΑΣ απαντητής του «είναι μέλος;».
-// ⚠️ Το `isRoleBypass` έφυγε από εδώ επίτηδες: ο έλεγχος ρόλου έπαψε να είναι
-//    *η απόφαση* και έγινε **μία από τις επτά ετυμηγορίες** μέσα στον απαντητή
-//    (`platform-bypass`). Δεύτερος έλεγχος ρόλου εδώ θα ήταν δεύτερη αυθεντία.
-import { decideMembership } from '@/lib/auth/workspace-membership';
-import { isAllowed, orgWorkspace, type MembershipVerdict } from '@/types/workspace-membership';
+// 🎫 ADR-787 Κ-2 — το λεξιλόγιο του χώρου. Ο **κριτής** (`decideMembership`) και η
+//    ανάγνωση της κεφαλίδας ζουν στο `auth-context-workspace.ts` (βλ. παρακάτω)· εδώ
+//    μένει μόνο ο τύπος που ταξιδεύει ως δεδομένο μέχρι την πόρτα.
+import type { RequestedWorkspace } from '@/types/workspace-membership';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('auth-context');
 
-const SUPER_ADMIN_COMPANY_HEADER = 'x-super-admin-company-id';
-
-/**
- * Το αποτέλεσμα του *«σε ποιον χώρο ενεργεί αυτό το αίτημα;»*.
- *
- * ⚠️ Διακριτή ένωση, **όχι** `{ companyId, overridden }` με «ασφαλή» επιστροφή
- * στον χώρο του token σε περίπτωση άρνησης. Η σιωπηλή επιστροφή θα ήταν
- * ακριβώς η βλάβη που απέρριψε το **ADR-787 Ε-5 §7**: *«δύο καρτέλες μαλώνουν
- * σιωπηλά — αλλάζεις χώρο στη μία, η άλλη αρχίζει να **γράφει αλλού** χωρίς να
- * το πει»*. Σε εργαλείο όπου ανεβαίνουν **παραδόσεις μελετών**, αυτό είναι
- * λάθος φάκελος, και η **αρχή Α4 #3** λέει πού καταλήγει.
- * ⇒ Αίτημα που ονομάζει χώρο όπου δεν επιτρέπεσαι **δεν εξυπηρετείται αλλού·
- *   απορρίπτεται**.
- */
-type WorkspaceResolution =
-  | {
-      readonly ok: true;
-      readonly companyId: string;
-      readonly overridden: boolean;
-      readonly verdict: MembershipVerdict;
-    }
-  | { readonly ok: false; readonly reason: 'workspace_forbidden' | 'workspace_unavailable' };
-
-/**
- * 🔴 ΤΟ ΣΗΜΕΙΟ ΟΠΟΥ Ο ΔΙΑΚΟΜΙΣΤΗΣ ΑΠΟΦΑΣΙΖΕΙ (ADR-787 Κ-2 · Ε-5)
- *
- * Μέχρι 2026-08-22 αυτή η συνάρτηση ρωτούσε **τον ρόλο** (`isRoleBypass`) και
- * μετά δεχόταν **οποιαδήποτε** τιμή κεφαλίδας — δηλαδή *«ο πελάτης ζητά → ο
- * διακομιστής **επικυρώνει τον ρόλο**»*, όχι *«→ αποφασίζει»*. Ο έλεγχος
- * *«είναι μέλος;»* **δεν υπήρχε πουθενά στην πλατφόρμα** (ADR-787 §5.1 α #3).
- *
- * Πλέον ρωτά τον **έναν** απαντητή. Είναι το **μοναδικό** σημείο επέμβασης:
- * ζει μέσα στο `buildRequestContext`, που ζει μέσα στο `withAuth`, που
- * χρησιμοποιούν **352 αρχεία διαδρομών**.
- *
- * ⚠️ Η κεφαλίδα **δεν γενικεύεται** εδώ σε όλους τους ρόλους: το **Ε-5 §5**
- * αποφάσισε ότι ο μεταφορέας γίνεται η **διεύθυνση** (Φάση 3) — μια κεφαλίδα
- * είναι αόρατη, δεν στέλνεται σε σύνδεσμο, και δεν ξεχωρίζει δύο καρτέλες.
- * Άλλαξε **ποιος απαντά** πίσω της, όχι ποιος επιτρέπεται να ρωτήσει.
- */
-async function resolveEffectiveCompanyId(
-  request: NextRequest,
-  claims: CustomClaims,
-  uid: string,
-): Promise<WorkspaceResolution> {
-  const requestedId = request.headers.get(SUPER_ADMIN_COMPANY_HEADER);
-
-  // Κανένα αίτημα για άλλον χώρο ⇒ ο χώρος του υπογεγραμμένου token.
-  // ⚡ **Μηδέν αναγνώσεις** — η συνήθης περίπτωση κάθε αιτήματος (Ε-5 §2).
-  if (!requestedId || requestedId === claims.companyId) {
-    return { ok: true, companyId: claims.companyId, overridden: false, verdict: 'home' };
-  }
-
-  const decision = await decideMembership({
-    uid,
-    claimCompanyId: claims.companyId,
-    globalRole: claims.globalRole,
-    requested: orgWorkspace(requestedId),
-  });
-
-  if (isAllowed(decision.verdict)) {
-    logger.info('[AUTH_CONTEXT] Ενεργός χώρος διαφορετικός από το token — επιτράπηκε', {
-      uid, original: claims.companyId, requested: requestedId, verdict: decision.verdict,
-    });
-    return { ok: true, companyId: requestedId, overridden: true, verdict: decision.verdict };
-  }
-
-  // ⚠️ Η αιτία κρατιέται **στα ίχνη ακέραιη** (`not-a-member` vs `suspended` vs
-  //    `unknown`)· προς τα **έξω** φεύγει μόνο η αδιάκριτη μορφή της.
-  logger.warn('[AUTH_CONTEXT] Ενεργός χώρος διαφορετικός από το token — απορρίφθηκε', {
-    uid, original: claims.companyId, requested: requestedId, verdict: decision.verdict,
-  });
-
-  return {
-    ok: false,
-    reason: decision.verdict === 'unknown' ? 'workspace_unavailable' : 'workspace_forbidden',
-  };
-}
+// 🔑 ADR-787 §5.3 ζ — «πού ενεργεί;» είναι ΑΛΛΗ ευθύνη από «ποιος είναι;» και ζει σε δικό
+//    της αρχείο (N.7.1, εξαγωγή 2026-09-12 στις 500 γραμμές — καμία αλλαγή συμπεριφοράς).
+//    ⛔ ΜΗΝ ξαναγράψεις εδώ ανάγνωση κεφαλίδας: η σειρά νέα→αποσυρόμενη είναι συμβόλαιο.
+import {
+  readDeclaredWorkspace,
+  resolveEffectiveWorkspace,
+} from './auth-context-workspace';
 
 // =============================================================================
 // CONSTANTS
@@ -274,6 +201,24 @@ async function identityFromDecodedToken(
     return { ok: false, reason: 'missing_claims' };
   }
 
+  // ── ΒΗΜΑ 1β: Η ΔΗΛΩΣΗ ΤΟΥ ΧΩΡΟΥ ───────────────────────────────────────────
+  // 🔴 **ΚΑΚΟΣΧΗΜΑΤΙΣΜΕΝΗ ΔΗΛΩΣΗ ⇒ ΑΡΝΗΣΗ, ΠΟΤΕ ΠΡΟΕΠΙΛΟΓΗ** (OWASP multi-tenant:
+  //    *«Fail closed if the tenant context is missing or invalid; do not fall back to an
+  //    unscoped query»*). Μια τιμή που δεν καταλαβαίνουμε **δεν** επιτρέπεται να
+  //    διαβαστεί ως «δεν δήλωσε τίποτα»: αυτή ακριβώς η ισοπέδωση ήταν η βλάβη.
+  const reading = readDeclaredWorkspace(request);
+  if (reading.outcome === 'malformed') {
+    logger.warn('[AUTH_CONTEXT] DENY — κακοσχηματισμένη δήλωση χώρου', {
+      uid: decodedToken.uid,
+      detail: reading.detail,
+    });
+    return { ok: false, reason: 'workspace_malformed' };
+  }
+  // «Δεν δήλωσε» ⇒ `default`: **η ίδια** σημασιολογία που είχε πάντα η απουσία, τώρα με
+  // όνομα. Η μέτρηση της απουσίας ζει στο {@link readDeclaredWorkspace}.
+  const declared: RequestedWorkspace =
+    reading.outcome === 'declared' ? reading.requested : { kind: 'default' };
+
   const base: PersonalIdentityContext = {
     uid: decodedToken.uid,
     email: decodedToken.email || '',
@@ -293,7 +238,7 @@ async function identityFromDecodedToken(
     return { ok: true, scope: 'personal', ctx: base };
   }
 
-  const effective = await resolveEffectiveCompanyId(request, claims, decodedToken.uid);
+  const effective = await resolveEffectiveWorkspace(declared, claims, decodedToken.uid);
   if (!effective.ok) {
     return { ok: false, reason: effective.reason };
   }
@@ -306,6 +251,10 @@ async function identityFromDecodedToken(
       companyId: effective.companyId,
       superAdminOverride: effective.overridden,
       membershipVerdict: effective.verdict,
+      // 🔑 Η δήλωση **ταξιδεύει** μέχρι τη διαδρομή: εκεί απαντά το ερώτημα «ποιανού
+      //    γραμμές δικαιούμαι να δω;» χωρίς κανείς να ξαναδιαβάσει κεφαλίδα (ADR-356 ·
+      //    ADR-702 — δες `super-admin-scope.ts` και `tenant-scope.ts`).
+      requestedWorkspace: declared,
     },
   };
 }
@@ -404,6 +353,29 @@ export async function buildRequestContext(
   if (identity.scope === 'personal') {
     logger.warn('[AUTH_CONTEXT] DENY — missing companyId claim', { uid: identity.ctx.uid });
     return createUnauthenticatedContext('missing_claims');
+  }
+
+  // 🔴🔴 Ο ΙΔΙΩΤΙΚΟΣ ΧΩΡΟΣ ΔΕΝ ΕΧΕΙ ΕΤΑΙΡΕΙΑ — ΚΑΙ Η ΕΤΑΙΡΙΚΗ ΠΟΡΤΑ ΤΟ ΛΕΕΙ, ΑΝΤΙ ΝΑ
+  //    ΜΑΝΤΕΨΕΙ (ADR-787 §5.3 ζ όριο 1 · ADR-809)
+  //
+  // Μέχρι τις 2026-09-12 ο ιδιωτικός χώρος έφτανε εδώ **αόρατος**: ο πελάτης δεν έστελνε
+  // κεφαλίδα, ο διακομιστής διάβαζε την απουσία ως «κρίνε μόνος σου» και **προχωρούσε** —
+  // για super-admin σε **καθολική όψη** (`super-admin-global`, όλη η συλλογή), για απλό
+  // χρήστη στην εταιρεία του **claim**. Μετρημένο ζωντανά: `/o/me/projects` ⇒ «Έργα (7)».
+  //
+  // 🔑 **Η άρνηση είναι Η ΙΔΙΑ σχεδιασμένη κατάσταση με τον δρόμο της Firestore**: εκεί ο
+  //    `resolveEffectiveWorkspace` του πελάτη πετά `MissingTenantError` (ADR-809) και κάθε
+  //    καταναλωτής τη χειρίζεται **σιωπηλά και σωστά** ως άδειο αποτέλεσμα. Ο κωδικός
+  //    `MISSING_TENANT` του `api-denial` είναι **η ίδια λέξη** στο σύρμα, ώστε ο πελάτης να
+  //    μην χρειάζεται δεύτερο λεξιλόγιο για δεύτερη μεταφορά.
+  //
+  // ⚠️ **ΠΡΙΝ ΤΟΝ HANDLER, ΟΧΙ ΜΕΣΑ ΤΟΥ**: αν η κρίση ζούσε στη διαδρομή, θα χρειαζόταν
+  //    **σε 276 αρχεία**, και **μία** παράλειψη φτάνει. Εδώ είναι μία.
+  if (identity.ctx.requestedWorkspace?.kind === 'personal') {
+    logger.info('[AUTH_CONTEXT] DENY — ιδιωτικός χώρος σε εταιρική διαδρομή', {
+      uid: identity.ctx.uid,
+    });
+    return createUnauthenticatedContext('workspace_personal');
   }
 
   return identity.ctx;

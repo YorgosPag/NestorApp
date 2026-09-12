@@ -21,6 +21,10 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 import { redirectTo } from '@/lib/http/request-origin';
+// 🔑 ADR-787 §5.3 ζ (όριο 1) — το κλειστό σύνολο «τι προσφέρει ο ιδιωτικός χώρος» και η
+//    προσγείωσή του. Καθαρές σταθερές, μηδέν I/O: εκτελέσιμο στο Edge (το middleware
+//    δηλώνει ρητά «no Firestore/Firebase»).
+import { personalWorkspaceLanding } from '@/lib/workspace/personal-workspace-surface';
 import { EMAIL_SUBSCRIPTION_API } from '@/lib/notifications/email-subscription-routes';
 
 // ============================================================================
@@ -167,6 +171,33 @@ export function middleware(request: NextRequest) {
     //    `request.url` πίσω από τον proxy του Netcup φέρει το `HOSTNAME` του
     //    container (`0.0.0.0:3000`), όχι το `nestorconstruct.gr`.
     return redirectTo(parentPath, 307);
+  }
+
+  // ── 0β. Ο ΙΔΙΩΤΙΚΟΣ ΧΩΡΟΣ ΔΕΝ ΦΟΡΑ ΤΟ ΚΕΛΥΦΟΣ ΤΟΥ ΓΡΑΦΕΙΟΥ ──
+  //
+  // 🔴 ADR-787 §5.3 ζ (όριο 1): το `/o/me/<τομέας>` απέδιδε σελίδα γραφείου μέσα στον
+  //    **ιδιωτικό** χώρο — μετρημένο ζωντανά, το `/o/me/projects` έδειξε «Έργα (7)». Το
+  //    σύνορο του API αρνείται πλέον fail-closed, αλλά **66 αρχεία** του πελάτη καλούν ωμό
+  //    `fetch('/api/…')` χωρίς να δηλώνουν χώρο (Φάση Β) — άρα η σελίδα **δεν πρέπει να
+  //    ανοίξει καθόλου**. Η απόφαση ζει σε **ένα** σημείο, με κλειστό σύνολο εξαιρέσεων.
+  //
+  // ⚠️ **ΓΙΑΤΙ ΕΔΩ ΚΑΙ ΟΧΙ ΣΤΟ LAYOUT**: το `o/[workspace]/layout.tsx` **δεν γνωρίζει τη
+  //    διαδρομή** του αιτήματος (δηλωμένο όριο, ADR-848 §9 #3) — ξέρει μόνο το ψευδώνυμο.
+  //    Και ένα συστατικό πελάτη μέσα στο layout θα έβαζε **νέα οικογένεια κειμένου στο
+  //    κέλυφος**: ο γεννήτορας του CHECK 3.34 το μπλόκαρε, μετρημένα, ως «9 key-sliced
+  //    namespaces έναντι σφραγισμένων 8 — μόνο συρρικνώνεται», δηλαδή κόστος σε ~150
+  //    διαδρομές για οθόνη που σχεδόν κανείς δεν βλέπει.
+  //
+  // ⚠️ **307 και όχι 308**, ίδιος λόγος με το δίχτυ του §5.3 ιβ: ο προορισμός εξαρτάται από
+  //    το **ποιος** ρωτά (και το σύνολο αλλάζει), άρα cacheable μόνιμη ανακατεύθυνση θα
+  //    κλείδωνε την απάντηση στον φυλλομετρητή.
+  //
+  // ⛔ **ΔΕΝ κρίνεται εδώ καμία ιδιότητα μέλους** — δες τον γραμμένο λόγο στο
+  //    `personal-workspace-surface.ts`: το `me` δεν αντιστοιχεί σε εταιρεία, και η μόνη
+  //    απάντηση αυτού του κανόνα είναι **άρνηση**. Την ταυτότητα τη φυλά το layout.
+  const personalLanding = personalWorkspaceLanding(pathname);
+  if (personalLanding !== null) {
+    return redirectTo(personalLanding, 307);
   }
 
   // ── 1. Block vulnerability scanner paths (immediate 404) ──
