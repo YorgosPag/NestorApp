@@ -54,7 +54,7 @@ import {
   declineWorkspaceInvitation,
   type RedeemOutcome,
 } from '@/server/auth/workspace-invitation-redeem';
-import { isInvitableRole, type WorkspaceInvitationRefusal } from '@/types/workspace-invitation';
+import type { InvitableRole, WorkspaceInvitationRefusal } from '@/types/workspace-invitation';
 
 const logger = createModuleLogger('WORKSPACE_INVITATION_REDEEM');
 
@@ -105,11 +105,15 @@ async function readEmailVerified(uid: string): Promise<boolean> {
 async function activateWorkspaceIfHomeless(
   actor: ApiActor,
   companyId: string,
-  role: string,
+  role: InvitableRole,
 ): Promise<boolean> {
   if (actorWorkspace(actor) !== null) return false;
-  if (!isInvitableRole(role)) return false;
 
+  // ⚠️ **ΚΑΝΕΝΑΣ ΕΛΕΓΧΟΣ ΡΟΛΟΥ ΕΔΩ, ΕΠΙΤΗΔΕΣ.** Ο ρόλος φτάνει ως `InvitableRole` επειδή
+  //    η υπηρεσία τον **ξαναρώτησε μέσα στη συναλλαγή** (`isInvitableRole(stored.role)` ⇒
+  //    `invitation-corrupt`, άγκυρα Μ3). Ένας δεύτερος φρουρός εδώ **δεν θα μπορούσε να
+  //    πυροδοτήσει ποτέ** — δηλαδή θα ήταν ακριβώς ο αδρανής φρουρός του ADR-749 §5, που
+  //    δίνει ψεύτικη αίσθηση κάλυψης. Η εγγύηση είναι ο **έλεγχος εκεί**, όχι ο τύπος εδώ.
   try {
     const previousClaims = (await getAdminAuth().getUser(actor.ctx.uid)).customClaims ?? {};
     const payload = composeClaimPayload({ companyId, globalRole: role, previousClaims });
@@ -154,8 +158,21 @@ async function handler(request: NextRequest, actor: ApiActor): Promise<NextRespo
     uid: actor.ctx.uid,
     email: actor.ctx.email,
     emailVerified,
-    // 🔑 Ο χώρος του **claim** — `''` σημαίνει «κανένας», και είναι το ιδίωμα που ο κριτής
-    //    `decideMembership` δέχεται (ίδια τιμή με τις άγκυρες της Φ2 για τον πολίτη).
+    // 🔑 **ΤΟ `?? ''` ΕΙΝΑΙ ΣΩΣΤΟ ΕΔΩ — ΚΑΙ ΜΟΙΑΖΕΙ ΜΕ ΤΟ ΑΠΑΓΟΡΕΥΜΕΝΟ, ΓΙ' ΑΥΤΟ ΓΡΑΦΕΤΑΙ.**
+    //
+    // Το JSDoc του `actorWorkspace` απαγορεύει ρητά το `?? ''` — αλλά για **άλλο ερώτημα**:
+    // ο στόχος εκεί είναι ο `ListingActor` (CHECK 3.56), όπου κενή εταιρεία **δεν ταιριάζει
+    // με τίποτα — ούτε με κενή** (`hasTenant`), και σε ερώτημα Firestore γίνεται «κενός
+    // μισθωτής» (CHECK 3.35).
+    //
+    // Εδώ ο στόχος είναι το `MembershipQuery.claimCompanyId`, όπου το `''` έχει **ορισμένη
+    // σημασία**: *«ο άνθρωπος δεν δηλώνει εταιρεία»*. Είναι η **ίδια** τιμή που δίνει το
+    // `resolveWorkspaceFromPath` για τον ιδιωτικό χώρο, και το `o/[workspace]/layout.tsx`
+    // το γράφει ρητά: *«τρίτη ερμηνεία εδώ θα ήταν δεύτερη αλήθεια»* (ADR-749). Το
+    // `decideMembership` κρίνει **fail-closed** με `''` — ξένο γραφείο απορρίπτεται.
+    //
+    // ⛔ ΜΗΝ το «διορθώσεις» αφαιρώντας το `?? ''`: ο τύπος-στόχος είναι `string`, και ένα
+    //    `null` εδώ θα ήταν ο ίδιος κενός μισθωτής από την **άλλη** πόρτα.
     claimCompanyId: actorWorkspace(actor) ?? '',
     globalRole: actor.ctx.globalRole,
   };

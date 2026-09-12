@@ -48,6 +48,7 @@ import {
   type InvitableRole,
   type WorkspaceInvitation,
   type WorkspaceInvitationDocument,
+  type WorkspaceInvitationView,
 } from '@/types/workspace-invitation';
 
 const logger = createModuleLogger('workspace-invitation');
@@ -268,3 +269,96 @@ export async function revokeWorkspaceInvitation(input: {
 // ⛔ ΜΗΝ γράψεις `resendWorkspaceInvitation` που ενημερώνει `expiresAt` επί τόπου, και ΜΗΝ
 //    βάλεις εδώ εξαγόμενη σταθερά «σημαία» για να κρατήσει αυτό το σχόλιο: εξαγωγή χωρίς
 //    καλούντα είναι νεκρός κώδικας (CHECK 3.22) και, χειρότερα, μοιάζει με διακόπτη.
+
+// =============================================================================
+// 4. ΑΝΑΓΝΩΣΗ — «ποιες προσκλήσεις περιμένουν σε ΑΥΤΟΝ τον χώρο;»
+// =============================================================================
+
+/** Όσες διαβάζει η λίστα διαχειριστή — ίδιο φράγμα με τα αιτήματα ένταξης. */
+const INVITATION_LIST_LIMIT = 500;
+
+/**
+ * **Η όψη — και η κατάσταση ΠΑΡΑΓΕΤΑΙ, δεν αντιγράφεται.**
+ *
+ * 🔴 Μια `pending` με **περασμένη** ώρα ταξιδεύει ως `expired`. Κανείς δεν σκουπίζει τις
+ * ληγμένες σε πραγματικό χρόνο — γι' αυτό η εξαργύρωση ελέγχει τη λήξη **δύο** φορές
+ * (άγκυρα Τ2), και για τον **ίδιο** λόγο η λίστα δεν επιτρέπεται να λέει «σε αναμονή» για
+ * σύνδεσμο που **δεν δουλεύει**: ο διαχειριστής θα περίμενε άνθρωπο που δεν μπορεί πια να
+ * απαντήσει, και θα δίσταζε να ξαναστείλει.
+ *
+ * ⚠️ **Δεν γράφει τίποτα.** Η μετάβαση σε `expired` στη βάση θα ήταν γραφή μέσα σε
+ * **ανάγνωση** — δηλαδή μια λίστα θα άλλαζε τον κόσμο επειδή κάποιος την κοίταξε.
+ *
+ * @returns `null` για κακοσχηματισμένο έγγραφο — **σιωπηλή απόρριψη**, ίδιο ιδίωμα με το
+ *          `toView` των αιτημάτων ένταξης: μια λίστα δεν πέφτει επειδή ένα έγγραφο χάλασε.
+ */
+function toInvitationView(
+  id: string,
+  stored: WorkspaceInvitationDocument,
+  nowValue: string,
+): WorkspaceInvitationView | null {
+  // ⚠️ Ο ρόλος κρίνεται **με έλεγχο**, ποτέ με `as`: ο τύπος του εγγράφου τον δηλώνει
+  //    `string` επίτηδες (αλλοιωμένη τιμή δεν γίνεται σιωπηλά `globalRole` — δες τον τύπο).
+  if (!isInvitableRole(stored.role)) return null;
+  if (typeof stored.inviteeEmail !== 'string' || stored.inviteeEmail.length === 0) return null;
+
+  const stateOnDisk = readStoredInvitationState(stored.state);
+  const expired = stateOnDisk === 'pending' && Date.parse(stored.expiresAt) <= Date.parse(nowValue);
+
+  return {
+    id,
+    companyId: stored.companyId,
+    inviteeEmail: stored.inviteeEmail,
+    role: stored.role,
+    state: expired ? 'expired' : stateOnDisk,
+    invitedByUid: stored.invitedByUid,
+    createdAt: stored.createdAt,
+    expiresAt: stored.expiresAt,
+    openedAt: stored.openedAt,
+    resolvedAt: stored.resolvedAt,
+    resolvedByUid: stored.resolvedByUid,
+  };
+}
+
+/**
+ * **Οι ΖΩΝΤΑΝΕΣ προσκλήσεις αυτού του χώρου** — ποτέ άλλου.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * 🔑 ΓΙΑΤΙ ΜΟΝΟ ΟΙ `pending`, ΚΑΙ ΟΧΙ ΟΛΟ ΤΟ ΙΣΤΟΡΙΚΟ
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Η **αποδεκτή** πρόσκληση **ΕΙΝΑΙ μέλος**: εμφανίζεται ήδη στη λίστα χρηστών, από την
+ * ίδια απάντηση. Να ταξιδέψει **και** ως πρόσκληση σημαίνει **δύο γραμμές για έναν
+ * άνθρωπο** — ακριβώς το κατηγοριακό λάθος που αποφεύγει το §7.1 όταν αρνείται να την
+ * αποθηκεύσει ως `workspace_members` με `status: 'invited'`.
+ *
+ * Η **ανακλημένη** και η **αρνημένη** είναι **ιστορικό**, όχι εκκρεμότητα· ζουν στο ίχνος.
+ * Η **ληγμένη** επιστρέφεται (είναι `pending` στον δίσκο) — και **σωστά**: ο διαχειριστής
+ * πρέπει να τη δει για να αποφασίσει επαναποστολή.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * ⚠️ ΔΥΟ ΙΣΟΤΗΤΕΣ, ΚΑΜΙΑ ΔΙΑΤΑΞΗ — ΚΑΙ ΕΙΝΑΙ ΜΕΤΡΗΜΕΝΟ
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Εξυπηρετείται από συγχώνευση **μονοπεδιακών** ευρετηρίων, **χωρίς** δηλωμένο σύνθετο
+ * (ίδιο σκεπτικό με το `writeWithSupersede` παραπάνω· το `firestore.indexes.json` δεν έχει
+ * **καμία** εγγραφή ούτε για τα αιτήματα ένταξης, που ρωτούν ταυτόσημα). Ένα
+ * `orderBy('createdAt')` θα απαιτούσε σύνθετο ευρετήριο και **νέα δήλωση** (CHECK 3.15) για
+ * να ταξινομήσει δεκάδες έγγραφα — η οθόνη τα ταξινομεί στη μνήμη.
+ *
+ * ⚠️ Περιλαμβάνει `companyId`, άρα **δεν** ζητά γραμμένη εξαίρεση tenant-scope (CHECK 3.10).
+ */
+export async function listPendingWorkspaceInvitations(
+  companyId: string,
+  nowISOValue: string = clockNowISO(),
+): Promise<WorkspaceInvitationView[]> {
+  const snap = await getAdminFirestore()
+    .collection(COLLECTIONS.WORKSPACE_INVITATIONS)
+    .where('companyId', '==', companyId)
+    .where('state', '==', 'pending')
+    .limit(INVITATION_LIST_LIMIT)
+    .get();
+
+  return snap.docs.flatMap((doc) => {
+    const view = toInvitationView(doc.id, doc.data() as WorkspaceInvitationDocument, nowISOValue);
+    return view === null ? [] : [view];
+  });
+}
