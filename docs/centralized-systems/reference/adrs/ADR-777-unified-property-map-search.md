@@ -8567,7 +8567,7 @@ i18next και χωρίς εξάρτηση — και το **λεξιλόγιο*
 | Αρχείο | Αλλαγή |
 |---|---|
 | `server/comms/email-plural.ts` | **ΝΕΟ** — «ένας ή πολλοί;» με CLDR· `pluralize` · `declaredCategoriesMatchCldr` |
-| `server/comms/email-texts.ts` | **+`brand`** ανά γλώσσα · **+`brandedSubject()`** (αμετάβλητη) · ο φρουρός απαιτεί το `brand` |
+| `server/comms/email-texts.ts` | **+`brandedSubject()`** (αμετάβλητη). ⚠️ *Το `brand` **ανά γλώσσα** που πρόσθεσε αυτό το §, **διαγράφηκε** από το **ADR-857** (2026-09-12): ήταν δομή που επέτρεπε απόκλιση, και είχε αποκλίνει σε `ΝΕΣΤΩΡ`/`Nestor` ενώ το υποσέλιδο έλεγε `Nestor App`. Ρίζα πλέον: `constants/product-identity.ts`.* |
 | `server/notifications/notification-orchestrator.ts` | η εφεδρεία σώματος φεύγει — η ουρά κρατά την **αλήθεια** |
 | `server/notifications/email-digest.ts` | **+`bodyAddsAnything()`** — ένας κριτής για κείμενο **και** HTML |
 | `lib/cron/jobs/outbound-email-flush.job.ts` | η εφεδρεία σώματος **και** η υπογραφή μπαίνουν στην αποστολή, **δύο** διαδρομές |
