@@ -4,6 +4,13 @@
   "generated": "2026-08-25",
   "surface": [
     {
+      "file": "src/subapps/dxf-viewer/config/display-length-format.ts",
+      "symbols": [
+        "formatLengthForDisplay"
+      ],
+      "reason": "ADR-852 Φ2 — ΤΟ ΙΣΤΟΡΙΚΟ ΑΛΛΑΓΩΝ ΠΡΕΠΕΙ ΝΑ ΔΕΙΞΕΙ ΣΕ ΑΝΘΡΩΠΟ ΕΝΑΝ ΑΡΙΘΜΟ ΠΟΥ ΑΠΟΘΗΚΕΥΤΗΚΕ ΣΕ canonical mm (ADR-462). Χωρίς αυτόν τον formatter, το πεδίο `width` μιας κολόνας εμφανίζεται στη σελίδα /admin/audit-log ως «749.9999999999927» — ο αριθμός είναι σωστός, η παρουσίασή του είναι σκουπίδι. ⚠️ Ο formatter ΔΕΝ μετακόμισε έξω από το subapp ΕΠΙΤΗΔΕΣ: κρέμεται από `displayUnitState` + `config/units` + `FormatterRegistry`, δηλαδή είναι βαθύ σύμπλεγμα, και η μετακόμισή του θα ήταν ρίσκο δυσανάλογο του οφέλους — ενώ ένας ΔΕΥΤΕΡΟΣ formatter στη μεριά του audit θα ήταν ακριβώς ο διπλασιασμός που απαγορεύει ο N.18 (και που το ADR-749 τεκμηρίωσε ως «τέσσερις μηχανές, τρεις αριθμοί»). 🔑 ΕΝΑΣ καταναλωτής, ονομαστικά: `src/components/shared/audit/audit-quantity-format.ts` — και μόνο αυτός, ώστε η επιφάνεια να μένει ορατή με μια ματιά. Αν εκείνο το αρχείο πάψει να το ζητά, ΣΒΗΣΕ αυτή τη γραμμή (η πύλη θα την καταγγείλει ως orphan-declaration, και σωστά)."
+    },
+    {
       "file": "src/subapps/dxf-viewer/ai-assistant/dxf-openai-call.ts",
       "symbols": [
         "ChatCompletionMessage",

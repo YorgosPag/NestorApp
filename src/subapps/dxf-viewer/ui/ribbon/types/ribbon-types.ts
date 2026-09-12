@@ -49,65 +49,36 @@ export interface RibbonComboboxOption {
 }
 
 /**
- * ADR-677 Φάση 2β — WHAT QUANTITY a numeric combobox holds (Revit «parameter type»).
+ * ADR-677 Φάση 2β — **τι ποσότητα** κρατά ένα αριθμητικό combobox της κορδέλας.
  *
- * The ribbon's numeric fields are NOT all lengths: the same `literalNumberOptions`
- * ladder renders stair step COUNTS (16), wall tilt DEGREES (45), boiler efficiency
- * PERCENT (80) and door width MILLIMETRES (900). Only the last may be re-expressed in
- * the user's display unit — running the others through `toDisplay` would turn
- * «16 βαθμίδες» into «0.016».
+ * 🔀 **ADR-852 Φ1 — Η ΑΠΑΡΙΘΜΗΣΗ ΜΕΤΑΚΟΜΙΣΕ.** Η ρίζα του λεξιλογίου είναι πλέον το
+ * `@/constants/quantity-specs` *(τύπος `QuantitySpec`)*, επειδή το ερώτημα απέκτησε
+ * **δεύτερο** καταναλωτή **έξω** από την κορδέλα: το ιστορικό αλλαγών, που το ρωτούσε
+ * κι αυτό και έβγαζε `width: — → 749.9999999999927` — ο αριθμός δεν ήταν λάθος,
+ * **κανείς δεν είχε πει ότι είναι μήκος**.
  *
- * So each numeric field DECLARES its quantity, exactly as every Revit parameter
- * declares Length / Angle / Number / Slope / Piping Diameter and each gets its own
- * Project-Units rule. The declaration is EXPLICIT — never inferred from a variable
- * name (`WIDTH_MM_OPTIONS`) or a value range, both of which lie.
+ * Το όνομα `RibbonQuantityKind` **μένει** εδώ ως επανεξαγωγή, ώστε **καμία** υπάρχουσα
+ * διαδρομή import να μην αλλάξει — το ίδιο μοτίβο σταθερότητας διαδρομής που
+ * χρησιμοποίησε το ADR-677 §7.1 για τα `toDisp`/`fromDisp`.
  *
- * **Only `'model-length'` is converted.** Every other kind — including an ABSENT
- * declaration — renders and commits verbatim, exactly as before this phase. The
- * asymmetry is deliberate: a forgotten declaration leaves a field in mm (visible,
- * harmless, one-line fix), whereas a convert-by-default design would silently
- * corrupt counts. Completeness is enforced by the anchor test rather than by hope.
+ * Το **πλήρες σκεπτικό** ζει στη ρίζα: γιατί **μόνο** το `'model-length'` μετατρέπεται,
+ * γιατί η δήλωση είναι **ρητή** και ποτέ συμπερασματική, και γιατί η **απουσία**
+ * δήλωσης σημαίνει «δεν ξέρω» αντί για «μήκος».
  *
- * @see ../units/ribbon-display-unit.ts — the single conversion boundary
- * @see ../data/__tests__/ribbon-quantity-kind-coverage.test.ts — the anchor
+ * ⚠️ **ΜΗΝ ξαναγράψεις εδώ την απαρίθμηση** — ούτε ως υποσύνολο. Το **CHECK 3.73**
+ * μπλοκάρει κάθε σώμα που απαριθμεί το λεξιλόγιο χωρίς να αναφέρει τον τύπο της ρίζας,
+ * ώστε μια δέκατη πέμπτη ποσότητα να σπάει τη **μεταγλώττιση** αντί να ξεθωριάσει στην οθόνη.
+ *
+ * @see @/constants/quantity-specs — η ρίζα + όλο το σκεπτικό
+ * @see ../units/ribbon-display-unit.ts — το ΕΝΑ σύνορο μετατροπής
+ * @see ../data/__tests__/ribbon-quantity-kind-coverage.test.ts — η άγκυρα πληρότητας
  */
-export type RibbonQuantityKind =
-  /** Physical size of the BUILDING, stored in mm → re-expressed in the display unit. */
-  | 'model-length'
-  /**
-   * Millimetres ON THE PRINTED SHEET (ISO text height 2.5 mm, arrowhead 3.5 mm).
-   * A length, but a PAPER one: it must stay 2.5 mm whatever the project unit is —
-   * the same rule Revit applies to text/annotation sizes. NEVER converted.
-   */
-  | 'paper-length'
-  /** Screen pixels (tag font size, border width) — a graphic size, not a world size. */
-  | 'screen-px'
-  /** Degrees (rotation, tilt, chamfer angle, slope direction). */
-  | 'angle'
-  /** A whole tally: steps, storeys, rows, polygon sides, divisions. */
-  | 'count'
-  /** Percent (efficiency, slope %, jitter). */
-  | 'percent'
-  /** A pure factor: scale X/Y, width factor, linetype scale, tracking. */
-  | 'ratio'
-  /**
-   * NOMINAL catalogue size (DN15, DN80, DN110). The number names a product from a
-   * catalogue rather than measuring it — same reasoning that keeps a «900 mm» door
-   * preset written as 900 (ADR-677 §7.1). NEVER converted.
-   */
-  | 'nominal-diameter'
-  /** Thermal/electrical output (W). */
-  | 'power'
-  /** Pressure (bar). */
-  | 'pressure'
-  /** Temperature (°C). */
-  | 'temperature'
-  /** Capacity (litres). */
-  | 'volume'
-  /** Mass (kg). */
-  | 'mass'
-  /** Everything else with no unit at all: seeds, air-changes/h, dB(A), mg/kWh. */
-  | 'dimensionless';
+// ⚠️ ΔΥΟ γραμμές, όχι μία: ένα `export … from` **επαναξάγει** — ΔΕΝ δεσμεύει το όνομα
+//    εδώ μέσα, και το `RibbonNumericInputConfig` παρακάτω το χρησιμοποιεί τοπικά
+//    (CHECK 3.70 το έπιασε, 2026-09-12). Το alias μπαίνει στο **import**, ώστε η
+//    επανεξαγωγή να μένει το ίδιο δημόσιο όνομα που είχε πάντα το subapp.
+import type { QuantitySpec as RibbonQuantityKind } from '@/constants/quantity-specs';
+export type { RibbonQuantityKind };
 
 /**
  * ADR-345 §4.5 — Editable numeric combobox override (Revit type-to-enter).

@@ -1,7 +1,7 @@
 {
   "adr": "ADR-796 (CHECK 3.62)",
   "note": "Δημόσια επιφάνεια του dxf-viewer, ΑΝΑ ΣΥΜΒΟΛΟ. Ratchet κατά ΤΑΥΤΟΤΗΤΑ: η ανταλλαγή μπλοκάρει.",
-  "generated": "2026-09-09",
+  "generated": "2026-09-12",
   "violations": [],
   "declarations": [
     "src/subapps/dxf-viewer/ai-assistant/dxf-openai-call.ts#ChatCompletionMessage",
@@ -225,6 +225,7 @@
     "src/subapps/dxf-viewer/config/color-mapping.ts#commercialToPropertyStatus",
     "src/subapps/dxf-viewer/config/color-mapping.ts#getStatusColors",
     "src/subapps/dxf-viewer/config/color-math.ts#hexToRgba",
+    "src/subapps/dxf-viewer/config/display-length-format.ts#formatLengthForDisplay",
     "src/subapps/dxf-viewer/config/geometry-constants.ts#EMPTY_BOUNDS",
     "src/subapps/dxf-viewer/config/modal-select/core/options/encoding.ts#getBooleanOptions",
     "src/subapps/dxf-viewer/data/furniture-plan-catalog.ts#listFurniturePlanDefs",
