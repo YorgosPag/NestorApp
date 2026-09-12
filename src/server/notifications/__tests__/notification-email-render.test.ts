@@ -181,3 +181,63 @@ describe('📧 Δ — «Να μη λαμβάνω τέτοια email» ΜΟΝΟ �
     expect(html).not.toContain('Να μη λαμβάνω τέτοια email');
   });
 });
+
+// ============================================================================
+// Ε — ADR-849 Β4: Ο ΚΡΥΦΟΣ ΠΡΟΛΟΓΟΣ ΛΕΕΙ **ΠΟΙΕΣ**, ΟΧΙ **ΠΟΣΕΣ**
+// ============================================================================
+
+/**
+ * 🔴 **Το μετρημένο εύρημα (2026-09-10, στο Gmail)**: η προεπισκόπηση έδειχνε
+ * `2 νέες ειδοποιήσεις — Έχετε 2 νέες ειδοποιήσεις: Έχετε 2 νέες ειδοποιήσεις:` —
+ * **τρεις φορές η ίδια πληροφορία**, γιατί ο πρόλογος ήταν κυριολεκτικά το `intro`.
+ *
+ * ⚠️ **Η άγκυρα διαβάζει τον ΠΡΟΛΟΓΟ, όχι όλο το HTML.** Ένα `expect(html).toContain(τίτλος)`
+ * θα ήταν **μονίμως πράσινο**: οι τίτλοι υπάρχουν ούτως ή άλλως στο σώμα της σύνοψης.
+ */
+describe('📧 Ε — ο πρόλογος συμπληρώνει το θέμα, δεν το επαναλαμβάνει', () => {
+  /** Ο πρόλογος ζει σε κρυφό `div` στην κορυφή του εγγράφου — τον βγάζουμε αυτούσιο. */
+  function preheaderOf(html: string): string {
+    const match = html.match(/<div style="display:none;[^"]*">([\s\S]*?)<\/div>/);
+    return match?.[1] ?? '';
+  }
+
+  it('Ε1 🔴 — ΔΕΝ επαναλαμβάνει το «Έχετε N νέες ειδοποιήσεις» (το ακριβές εύρημα)', () => {
+    const preheader = preheaderOf(renderDigestHtml([MATCH, INTEREST], 'el', 'x', LINKS));
+
+    expect(preheader).not.toContain('Έχετε');
+    expect(preheader).not.toContain('νέες ειδοποιήσεις');
+  });
+
+  it('Ε2 — λέει ΠΟΙΕΣ: οι τίτλοι των ειδοποιήσεων, με ορατό διαχωριστή', () => {
+    const preheader = preheaderOf(renderDigestHtml([INTEREST, MATCH], 'el', 'x', LINKS));
+
+    expect(preheader).toContain('1 άνθρωπος ψάχνει ακίνητο');
+    expect(preheader).toContain(' · ');
+  });
+
+  it('Ε3 — ίδιο και στα αγγλικά: ο πρόλογος είναι ΔΕΔΟΜΕΝΑ, όχι λεξιλόγιο', () => {
+    // 🔑 Γι' αυτό δεν χρειάστηκε καμία νέα λέξη σε καμία γλώσσα.
+    const el = preheaderOf(renderDigestHtml([INTEREST, MATCH], 'el', 'x', LINKS));
+    const en = preheaderOf(renderDigestHtml([INTEREST, MATCH], 'en', 'x', LINKS));
+
+    expect(en).toBe(el);
+  });
+
+  it('Ε4 — κόβεται στα 90 και το ΔΗΛΩΝΕΙ με αποσιωπητικά (κανόνας Litmus 40-90)', () => {
+    const long: RenderableMessage = { ...MATCH, subject: 'Α'.repeat(200) };
+    const preheader = preheaderOf(renderDigestHtml([long, INTEREST], 'el', 'x', LINKS));
+
+    expect(preheader.length).toBeLessThanOrEqual(90);
+    expect(preheader.endsWith('…')).toBe(true);
+  });
+
+  it('Ε5 🔒 — κείμενο χρήστη περνά από escapeHtml ΚΑΙ μέσα στον πρόλογο', () => {
+    // Ο τίτλος γράφεται από άνθρωπο (όνομα ακινήτου). Ένα `<script>` στον κρυφό div
+    // είναι εξίσου εκτελέσιμο με ένα στο σώμα.
+    const nasty: RenderableMessage = { ...MATCH, subject: '<script>alert(1)</script>' };
+    const html = renderDigestHtml([nasty, INTEREST], 'el', 'x', LINKS);
+
+    expect(preheaderOf(html)).not.toContain('<script>');
+    expect(html).not.toContain('<script>alert(1)</script>');
+  });
+});
