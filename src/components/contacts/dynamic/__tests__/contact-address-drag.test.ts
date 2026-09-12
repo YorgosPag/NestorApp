@@ -13,6 +13,8 @@ import { act, renderHook } from '@testing-library/react';
 import type { CompanyAddress, ContactFormData } from '@/types/ContactFormTypes';
 import { initialFormData } from '@/types/ContactFormTypes';
 import { useHqAddressMutations } from '../use-hq-address-mutations';
+import { hqEntryFromFlatFields } from '../addresses-section-form-mapping';
+import { buildAddressInfoListFromCompanyAddresses } from '@/utils/contacts/address-info-builder';
 import { toContactDraggedAddress, type DragResolvedAddress } from '@/components/contacts/details/contact-pin-drop';
 
 const POINT = { lat: 40.6329, lng: 22.9480 };
@@ -121,6 +123,43 @@ describe('ADR-332 D27 Β-ΙΙ Φ4 — έδρα', () => {
     act(() => result.current.hqPlacement.onRestore(null));
 
     expect(last().companyAddresses![0].coordinates).toBeUndefined();
+  });
+});
+
+/**
+ * ΑΓΚΥΡΕΣ Ζ4α + Ζ4δ (ADR-332 D27 Φάση Α) — **η χώρα αποθηκεύεται ως ΚΩΔΙΚΑΣ, ποτέ ως ετικέτα.**
+ *
+ * 🔴 Μετρημένο ζωντανά 2026-09-12: μετά από «Ναι, ενημέρωσε» το υποκατάστημα κρατούσε
+ * `country: 'Ελλάδα'` — η ετικέτα που επιστρέφει ο Nominatim με `accept-language: el` — ενώ
+ * **όλες** οι άλλες εγγραφές του ίδιου εγγράφου είχαν `'GR'`. Το `DRAGGED` αυτού του αρχείου
+ * έγραφε ήδη «Ελλάδα» από τον Σεπτέμβριο και **κανένα test δεν ρωτούσε τι αποθηκεύεται**.
+ *
+ * Η αρχή (schema.org `addressCountry` · ISO 3166-1 alpha-2): **ο κωδικός είναι το σταθερό μισό,
+ * το όνομα το κινούμενο** — αποθηκεύεται ο κωδικός, το όνομα παράγεται στο render.
+ */
+describe('ADR-332 D27 Φάση Α — η χώρα είναι ΚΩΔΙΚΑΣ, όχι ετικέτα', () => {
+  it('Ζ4α — «Ναι, ενημέρωσε» με «Ελλάδα» από τη μηχανή ⇒ η εγγραφή κρατά ISO, ΟΧΙ την ετικέτα', () => {
+    const { result, last } = setup(form());
+    act(() => result.current.applyConfirmedDrag(DRAGGED, 1, POINT));
+
+    expect(last().companyAddresses![1].country).toBe('GR');
+  });
+
+  it('Ζ4α — άγνωστη χώρα ΔΕΝ χάνεται: μένει αυτούσια (καμία επινόηση ταυτότητας)', () => {
+    const { result, last } = setup(form());
+    act(() => result.current.applyConfirmedDrag({ ...DRAGGED, country: 'Ουτοπία' }, 1, POINT));
+
+    expect(last().companyAddresses![1].country).toBe('Ουτοπία');
+  });
+
+  it('Ζ4δ — νέα επαφή: η αυθεντική εγγραφή και το ΠΑΡΑΓΩΓΟ συμφωνούν στη χώρα', () => {
+    // Μετρημένο στο έγγραφο του Λ6: `companyAddresses[0].country` **έλειπε εντελώς** ενώ το
+    // παράγωγο `addresses[0]` έγραφε `'GR'` — δύο αποφάσεις για την κενή χώρα, σε δύο αρχεία.
+    const flat = form({ companyAddresses: [], hqAddressCountry: undefined });
+    const stored = hqEntryFromFlatFields(flat);
+    const derived = buildAddressInfoListFromCompanyAddresses([stored]);
+
+    expect(stored.country).toBe(derived[0].country);
   });
 });
 

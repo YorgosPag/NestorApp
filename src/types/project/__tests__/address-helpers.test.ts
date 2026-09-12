@@ -7,6 +7,7 @@
 import {
   getPrimaryAddress,
   formatAddressLine,
+  formatFullAddressLine,
   createProjectAddress,
   migrateLegacyAddress,
   resolveBuildingAddresses,
@@ -15,7 +16,7 @@ import {
   extractLegacyFields,
 } from '../address-helpers';
 import type { ProjectAddress, BuildingAddressReference } from '../addresses';
-import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
+import { DEFAULT_STORED_COUNTRY_CODE } from '@/utils/address/country-codes';
 
 describe('extractLegacyFields — το κάτοπτρο ΔΕΝ φέρει ποτέ διπλό ή αρχικό κενό (ADR-332 D27 Β11)', () => {
   it('🔴 οδός «Σαμοθράκης␣» + «16» ⇒ «Σαμοθράκης 16» (ζωντανά γραφόταν «Σαμοθράκης␣␣16»)', () => {
@@ -142,6 +143,31 @@ describe('Address Helpers (ADR-167)', () => {
     });
   });
 
+  /**
+   * ΑΓΚΥΡΑ — **ADR-332 D27 Φάση Α**: η «προεπιλεγμένη χώρα» κρίνεται σε **ταυτότητα**.
+   *
+   * 🔴 **Ζωντανό σφάλμα, όχι υποθετικό**: ο κανόνας «μη δείχνεις τη χώρα όταν είναι η
+   * προεπιλεγμένη» συνέκρινε **κείμενο** (`!== 'Greece'`), ενώ το σύρσιμο πινέζας αποθήκευε
+   * «Ελλάδα» (ετικέτα Nominatim με `accept-language: el`). Άρα **κάθε ελληνικό έργο με συρμένη
+   * πινέζα τύπωνε «…, Ελλάδα»** στη δημόσια βιτρίνα και στα PDF (`snapshot-field-builders`).
+   */
+  describe('formatFullAddressLine — η προεπιλεγμένη χώρα σιωπά σε ΚΑΘΕ γραφή της', () => {
+    const greek = (country: string): ProjectAddress => ({
+      id: 'addr_gr', street: 'Σαμοθράκης', number: '16', city: 'Θεσσαλονίκη',
+      postalCode: '54629', country, type: 'site', isPrimary: true,
+    });
+
+    it.each(['GR', 'Greece', 'Ελλάδα', 'ΕΛΛΑΣ'])('«%s» ⇒ ΔΕΝ εμφανίζεται', (country) => {
+      const line = formatFullAddressLine(greek(country));
+      expect(line).toBe('Σαμοθράκης 16, 546 29 Θεσσαλονίκη');
+      expect(line).not.toContain(country);
+    });
+
+    it('ξένη χώρα ΕΜΦΑΝΙΖΕΤΑΙ — η σιωπή αφορά μόνο την προεπιλογή', () => {
+      expect(formatFullAddressLine(greek('DE'))).toContain('DE');
+    });
+  });
+
   describe('createProjectAddress', () => {
     it('should create address with defaults from config', () => {
       const address = createProjectAddress({
@@ -195,22 +221,22 @@ describe('Address Helpers (ADR-167)', () => {
       expect(addresses[0].type).toBe('site');
       expect(addresses[0].isPrimary).toBe(true); // Legacy addresses are always primary
       expect(addresses[0].postalCode).toBe(''); // Empty for legacy
-      // Η χώρα έρχεται ΑΠΟ ΤΗ ΡΥΘΜΙΣΗ — αυτό ελέγχεται, όχι μια συγκεκριμένη τιμή.
+      // 🔑 **Η ΠΡΟΘΕΣΗ ΑΥΤΗΣ ΤΗΣ ΑΓΚΥΡΑΣ ΔΕΝ ΑΛΛΑΞΕ** — το λεξιλόγιο άλλαξε.
       //
-      // ΓΙΑΤΙ ΑΛΛΑΞΕ: το assertion έγραφε `'Ελλάδα'` στο χέρι, ενώ **κανένα**
-      // πραγματικό `.env` δεν ορίζει `NEXT_PUBLIC_DEFAULT_COUNTRY` (μόνο το
-      // `.env.example`, που δεν φορτώνεται ποτέ). Άρα σε dev, σε jest ΚΑΙ στην
-      // παραγωγή ίσχυε το fallback `'Greece'` — το test ήταν **μόνιμα κόκκινο,
-      // παντού**, όχι «περιβαλλοντικό». Το ζωντανό τεκμήριο: το
-      // `projects/proj_2497…addresses[0].country` είναι `"Greece"`.
+      // Έλεγε: «η μετάπτωση δεν επιτρέπεται να **καρφώνει δικό της λεξιλόγιο**
+      // παρακάμπτοντας τη ρύθμιση», και το επέβαλλε με `not.toBe('GR')` επειδή τότε το
+      // `'GR'` ΗΤΑΝ ξένο λεξιλόγιο (των επαφών) απέναντι στο `'Greece'` των έργων.
       //
-      // Η επιλογή λεξιλογίου χώρας (`GR` στις επαφές / `Greece` στα έργα /
-      // `gr` στο geocoding) είναι απόφαση προϊόντος με δική της μετάπτωση —
-      // δεν κρίνεται σιωπηλά από ένα assertion. Βλ. ADR-332 D17.
-      expect(addresses[0].country).toBe(GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY);
-      // Και το ουσιαστικό regression που ΠΡΕΠΕΙ να πιάνεται: η μετάπτωση δεν
-      // επιτρέπεται να καρφώνει δικό της λεξιλόγιο παρακάμπτοντας τη ρύθμιση.
-      expect(addresses[0].country).not.toBe('GR');
+      // **ADR-332 D27 Φάση Α**: τα τρία λεξιλόγια έγιναν **ένα** — αποθηκεύεται ISO 3166-1
+      // alpha-2 παντού (`schema.org/addressCountry`· η πρακτική που το έργο ήδη τηρούσε για
+      // το `birthCountry`), και το όνομα **παράγεται** στο render. Άρα το `'GR'` **έπαψε να
+      // είναι ξένο λεξιλόγιο** και έγινε η ΜΙΑ αυθεντία. Ο έλεγχος παραμένει ο ίδιος στην
+      // ουσία: **καμία χειρόγραφη τιμή, μόνο το SSoT.**
+      expect(addresses[0].country).toBe(DEFAULT_STORED_COUNTRY_CODE);
+      // Και το ουσιαστικό regression που ΠΡΕΠΕΙ να πιάνεται, τώρα με τη σωστή φορά: καμία
+      // **ετικέτα** δεν επιτρέπεται να καταλήξει σε αποθηκευμένη διεύθυνση.
+      expect(addresses[0].country).not.toBe('Greece');
+      expect(addresses[0].country).not.toBe('Ελλάδα');
     });
 
     it('should return empty array for empty legacy data', () => {

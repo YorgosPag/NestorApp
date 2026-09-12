@@ -29,6 +29,7 @@ import {
   isValidGreekPostalCode,
   toCanonicalGreekPostalCode,
 } from '@/utils/address/postal-code';
+import { DEFAULT_STORED_COUNTRY_CODE } from '@/utils/address/country-codes';
 import { ADMIN_LEVELS, type HierarchyLookup } from './hierarchyLookup';
 
 export interface PostalCodeAutoFillResult {
@@ -68,7 +69,9 @@ export function autoFillFromPostalCode(
       ...(pick(common, ADMIN_LEVELS.MUNICIPALITY) && { city: pick(common, ADMIN_LEVELS.MUNICIPALITY)!.name }),
       ...(pick(common, ADMIN_LEVELS.REGIONAL_UNIT) && { county: pick(common, ADMIN_LEVELS.REGIONAL_UNIT)!.name }),
       ...(pick(common, ADMIN_LEVELS.REGION) && { region: pick(common, ADMIN_LEVELS.REGION)!.name }),
-      country: 'Ελλάδα',
+      // Ένας ελληνικός Τ.Κ. **αποδεικνύει** ελληνική διεύθυνση — η τιμή είναι ταυτότητα, όχι
+      // ετικέτα (ADR-332 D27 Φάση Α). Εδώ ήταν ωμό «Ελλάδα», ένα ακόμη σημείο της ίδιας κλάσης.
+      country: DEFAULT_STORED_COUNTRY_CODE,
     },
   };
 }

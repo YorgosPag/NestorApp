@@ -25,6 +25,7 @@ import {
   resolveCityFromHierarchy,
   storedAddressToResolved,
 } from '@/utils/address/administrative-hierarchy';
+import { toStoredCountryCode } from '@/utils/address/country-codes';
 import { SharedAddressActionCard } from '@/components/shared/addresses/SharedAddressActionCard';
 import type { CompanyAddress } from '@/types/ContactFormTypes';
 import type { ContactType } from '@/types/contacts';
@@ -113,7 +114,7 @@ function fromHierarchyValue(existing: CompanyAddress, val: AddressWithHierarchyV
     postalCode: val.postalCode,
     city: resolveCityFromHierarchy(val),
     region: val.regionName,
-    country: val.country || undefined,
+    country: toStoredCountryCode(val.country),
   };
 }
 

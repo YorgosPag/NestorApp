@@ -15,6 +15,7 @@ import type { ResolvedAddressFields } from '@/components/shared/addresses/editor
 import type { CompanyAddress, ContactFormData } from '@/types/ContactFormTypes';
 import { getPrimaryAddressType } from '@/types/contacts/address-types';
 import { formatContactAddressLine } from '@/utils/address/address-line';
+import { DEFAULT_STORED_COUNTRY_CODE, toStoredCountryCode } from '@/utils/address/country-codes';
 import { projectAddressVocabulary, storedAddressToResolved } from '@/utils/address/administrative-hierarchy';
 
 /**
@@ -61,7 +62,11 @@ export function hqEntryFromFlatFields(formData: ContactFormData): CompanyAddress
     number: formData.streetNumber ?? '',
     postalCode: formData.postalCode ?? '',
     city: formData.city ?? '',
-    ...(formData.hqAddressCountry ? { country: formData.hqAddressCountry } : {}),
+    // 🔴 **Ζ4δ** (ADR-332 D27 Φάση Α): εδώ το πεδίο **παραλειπόταν** όταν η φόρμα δεν δήλωνε
+    // χώρα, ενώ το **παράγωγο** `addresses[]` έγραφε `'GR'` (`address-info-builder:185`) —
+    // δύο αποφάσεις για την κενή χώρα, σε δύο αρχεία, μέσα στο **ίδιο** έγγραφο. Μετρημένο
+    // ζωντανά στο Λ6. Η απόφαση ζει πλέον **μία φορά**, στο λεξιλόγιο χώρας.
+    country: toStoredCountryCode(formData.hqAddressCountry) ?? DEFAULT_STORED_COUNTRY_CODE,
   };
 }
 

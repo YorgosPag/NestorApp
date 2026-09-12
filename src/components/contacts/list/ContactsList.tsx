@@ -28,7 +28,7 @@ import type { ShareData } from '@/components/ui/email-sharing/EmailShareForm';
 import type { ContactShareMeta } from '@/types/sharing';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { formatPhoneDisplay } from '@/utils/contacts/formatPhoneDisplay';
-import { isGreekAddressCountry } from '@/utils/address/country-codes';
+import { DEFAULT_STORED_COUNTRY_CODE, isGreekAddressCountry } from '@/utils/address/country-codes';
 import { formatGreekPostalCode } from '@/utils/address/postal-code';
 // 🏢 ENTERPRISE: Centralized data exchange (SSoT - DataExportService/DataImportService)
 import { exportContacts } from '@/utils/contacts/contact-data-exchange';
@@ -221,7 +221,7 @@ export function ContactsList({
             postalCode: record.postalCode || '',
             region: record.region || '',
             municipality: record.municipality || '',
-            country: 'GR',
+            country: DEFAULT_STORED_COUNTRY_CODE,
             type: 'work',
             isPrimary: true,
           }];

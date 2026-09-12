@@ -42,6 +42,7 @@ import {
   type ContactAddressType,
 } from '@/types/contacts/address-types';
 import { projectAddressVocabulary } from '@/utils/address/administrative-hierarchy';
+import { DEFAULT_STORED_COUNTRY_CODE, toStoredCountryCode } from '@/utils/address/country-codes';
 import type { FlatAddressFormFields } from '@/utils/address/administrative-hierarchy-vocabulary';
 import { pickStoredAddressPosition } from '@/utils/address/stored-address-position';
 
@@ -57,14 +58,15 @@ export type { FlatAddressFormFields };
 // =============================================================================
 
 /**
- * Προεπιλεγμένη χώρα όταν η εγγραφή δεν δηλώνει καμία.
+ * ✅ **ΤΑ ΤΡΙΑ ΛΕΞΙΛΟΓΙΑ ΕΓΙΝΑΝ ΕΝΑ** (ADR-332 D27 Φάση Α).
  *
- * ⚠️ Το έργο έχει **τρία** λεξιλόγια χώρας: επαφές `'GR'`, έργα `'Greece'`,
- * `GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY_CODE = 'gr'`. Εδώ διατηρείται η τιμή που
- * ήδη υπάρχει στα δεδομένα των επαφών· η ενοποίηση των τριών είναι ξεχωριστή
- * απόφαση με δική της μετάπτωση και ΔΕΝ γίνεται σιωπηλά από εδώ.
+ * Εδώ έγραφε σταθερά `'GR'` με σχόλιο ότι *«το έργο έχει τρία λεξιλόγια χώρας — επαφές `'GR'`,
+ * έργα `'Greece'`, `DEFAULT_COUNTRY_CODE = 'gr'` — και η ενοποίηση είναι ξεχωριστή απόφαση»*.
+ * Η απόφαση πάρθηκε: **αποθηκεύεται ο κωδικός ISO 3166-1 alpha-2, εμφανίζεται παραγόμενο όνομα**
+ * (`schema.org/addressCountry`· η πρακτική που το έργο **ήδη** τηρούσε για το `birthCountry`).
+ * Η τιμή **δεν άλλαξε** για τις επαφές — άλλαξε ο **ιδιοκτήτης** της.
  */
-const CONTACT_ADDRESS_DEFAULT_COUNTRY = 'GR';
+const CONTACT_ADDRESS_DEFAULT_COUNTRY = DEFAULT_STORED_COUNTRY_CODE;
 
 // =============================================================================
 // ΠΡΟΒΟΛΗ ΙΕΡΑΡΧΙΑΣ — καταναλωτής του SSoT
@@ -182,7 +184,9 @@ export function buildAddressInfoListFromCompanyAddresses(
     number: ca.number,
     city: ca.city,
     postalCode: ca.postalCode,
-    country: ca.country?.trim() || CONTACT_ADDRESS_DEFAULT_COUNTRY,
+    // Η αποθηκευμένη εγγραφή μπορεί να κουβαλά **παλιά ετικέτα** («Ελλάδα»/«Greece») από πριν
+    // τη Φάση Α — το παράγωγο τη γράφει **κανονικοποιημένη**, χωρίς να απαιτείται μετάπτωση.
+    country: toStoredCountryCode(ca.country) ?? CONTACT_ADDRESS_DEFAULT_COUNTRY,
     type: toAddressInfoType(ca.type),
     // Θέση 0 = η έδρα (θετική αναλλοίωτη ADR-319), αλλά ρητός τύπος έδρας/κατοικίας
     // σε άλλη θέση μετράει επίσης — μια εσφαλμένα ταξινομημένη λίστα δεν πρέπει
@@ -213,6 +217,7 @@ export function buildCompanyAddressFromAddressInfo(
 ): CompanyAddress {
   const label = addr.label?.trim();
   const isSemanticSlug = !!label && isValidContactAddressType(label);
+  const country = toStoredCountryCode(addr.country);
 
   return {
     ...(addr.id ? { id: addr.id } : {}),
@@ -223,7 +228,7 @@ export function buildCompanyAddressFromAddressInfo(
     number: addr.number || '',
     postalCode: addr.postalCode || '',
     city: addr.city || '',
-    ...(addr.country?.trim() ? { country: addr.country } : {}),
+    ...(country ? { country } : {}),
     ...(projectHierarchyFrom(addr, 'companyAddress') as Partial<CompanyAddress>),
   };
 }

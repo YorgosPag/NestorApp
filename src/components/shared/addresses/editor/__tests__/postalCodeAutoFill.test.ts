@@ -9,6 +9,7 @@ import { autoFillFromPostalCode } from '../helpers/postalCodeAutoFill';
 // Ο επικυρωτής μετακόμισε στο SSoT Τ.Κ. (ADR-332 D16)· τα σενάρια μένουν εδώ
 // γιατί εδώ ελέγχεται η συμπεριφορά του `autoFillFromPostalCode` που τον καλεί.
 import { isValidGreekPostalCode } from '@/utils/address/postal-code';
+import { DEFAULT_STORED_COUNTRY_CODE } from '@/utils/address/country-codes';
 import { buildHierarchyLookup } from '../helpers/hierarchyLookup';
 import type { AdminEntity } from '@/hooks/useAdministrativeHierarchy';
 
@@ -113,7 +114,9 @@ describe('autoFillFromPostalCode', () => {
       city: 'Δήμος Θεσσαλονίκης',
       county: 'Π.Ε. Θεσσαλονίκης',
       region: 'Κεντρική Μακεδονία',
-      country: 'Ελλάδα',
+      // ADR-332 D27 Φάση Α: ένας ελληνικός Τ.Κ. **αποδεικνύει** ελληνική διεύθυνση, και η
+      // απόδειξη γράφεται ως **ταυτότητα** (ISO), όχι ως ετικέτα «Ελλάδα».
+      country: DEFAULT_STORED_COUNTRY_CODE,
     });
   });
 

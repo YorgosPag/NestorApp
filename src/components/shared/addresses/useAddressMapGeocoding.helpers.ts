@@ -13,7 +13,7 @@ import type {
   GeocodingServiceResult,
   ReverseGeocodingResult,
 } from '@/lib/geocoding/geocoding-service';
-import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
+import { DEFAULT_STORED_COUNTRY_CODE, toStoredCountryCode } from '@/utils/address/country-codes';
 import type { DragPosition } from '@/components/shared/addresses/address-map-config';
 
 /**
@@ -38,7 +38,10 @@ export function reverseResultToAddress(
     neighborhood: result.neighborhood || undefined,
     postalCode: result.postalCode,
     region: result.region || undefined,
-    country: result.country || GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY,
+    // 🔴 ADR-332 D27 **Ζ4α**: εδώ έμπαινε ωμή η ετικέτα του Nominatim («Ελλάδα» με
+    // `accept-language: el`) σε **κάθε** δοχείο — επαφές, έργα, κτίρια. Είναι το **ένα**
+    // σημείο όπου το κείμενο της μηχανής συναντά τα δεδομένα μας, άρα εδώ γίνεται κωδικός.
+    country: toStoredCountryCode(result.country) ?? DEFAULT_STORED_COUNTRY_CODE,
     coordinates: { lat: dropPoint.lat, lng: dropPoint.lng },
   };
 }

@@ -1664,15 +1664,21 @@
       "text": "Κείμενο"
     },
     "countries": {
+      "albania": "Αλβανία",
       "australia": "Αυστραλία",
+      "bulgaria": "Βουλγαρία",
       "canada": "Καναδάς",
       "cyprus": "Κύπρος",
       "france": "Γαλλία",
       "germany": "Γερμανία",
       "greece": "Ελλάδα",
       "italy": "Ιταλία",
+      "northMacedonia": "Βόρεια Μακεδονία",
       "other": "Άλλη",
+      "romania": "Ρουμανία",
+      "serbia": "Σερβία",
       "spain": "Ισπανία",
+      "turkey": "Τουρκία",
       "uk": "Ηνωμένο Βασίλειο",
       "usa": "ΗΠΑ"
     },

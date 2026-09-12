@@ -17,6 +17,7 @@ import type { GeoPoint } from '@/types/geo/coordinates';
 import type { CompanyAddress, ContactFormData } from '@/types/ContactFormTypes';
 import { humanPlacedPatch } from '@/components/shared/addresses/pin-drop';
 import { applyContactAddressPosition } from '@/utils/contacts/contact-address-position-view';
+import { toStoredCountryCode } from '@/utils/address/country-codes';
 import type { DragResolvedAddress } from '@/components/contacts/details/contact-pin-drop';
 import { COMPANY_ADDRESS_HIERARCHY_CLEARED, hqEntryFromFlatFields } from './addresses-section-form-mapping';
 
@@ -30,7 +31,18 @@ export function withHumanPoint(address: CompanyAddress, point: GeoPoint): Compan
 
 /**
  * «Ναι, ενημέρωσε» — το κείμενο της μηχανής **και** το σημείο, σε **μία** εγγραφή. Η ιεραρχία
- * της εγγραφής καθαρίζεται: η μηχανή δίνει ονόματα, όχι ταυτότητες ΕΛΣΤΑΤ (ADR-277).
+ * της εγγραφής καθαρίζεται: η μηχανή δίνει ονόματα, όχι ταυτότητες ΕΛΣΤΑΤ.
+ *
+ * 🔴 **Η χώρα περνά από το σύνορο ταυτότητας** (ADR-332 D27 **Ζ4α**, μετρημένο ζωντανά
+ * 2026-09-12): ως σήμερα γραφόταν **ωμή** η ετικέτα του Nominatim ⇒ το υποκατάστημα κρατούσε
+ * `country: 'Ελλάδα'` ενώ **όλες** οι άλλες εγγραφές του εγγράφου είχαν `'GR'`. Η σύγκριση
+ * περνούσε ήδη από το ίδιο SSoT (`diffAddressFields.comparable`)· **μόνο η γραφή δεν περνούσε**.
+ * Άγνωστη χώρα μένει αυτούσια — δες `toStoredCountryCode`.
+ *
+ * ⚠️ **Η αναφορά «ADR-277» έφυγε επίτηδες**: το ADR-277 είναι *impact guard* και καταγράφει τον
+ * μηδενισμό ως **ελάττωμα προς προειδοποίηση** («Map drag μηδενίζει διοικητική ιεραρχία
+ * σιωπηλά», §1 #3) — **δεν** τον θεσπίζει. Η φράση είχε αντιγραφεί σε τρία σχόλια και σε κάθε
+ * αντιγραφή αποκτούσε κύρος ADR που ποτέ δεν είχε.
  */
 export function applyDraggedToContactAddress(
   address: CompanyAddress,
@@ -47,7 +59,7 @@ export function applyDraggedToContactAddress(
     city: dragged.city,
     neighborhood: dragged.neighborhood,
     region: dragged.region,
-    country: dragged.country || address.country,
+    country: toStoredCountryCode(dragged.country) ?? toStoredCountryCode(address.country),
   };
 }
 

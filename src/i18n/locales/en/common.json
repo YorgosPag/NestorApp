@@ -425,6 +425,12 @@
     "uk": "United Kingdom",
     "australia": "Australia",
     "canada": "Canada",
+    "bulgaria": "Bulgaria",
+    "albania": "Albania",
+    "northMacedonia": "North Macedonia",
+    "romania": "Romania",
+    "turkey": "Turkey",
+    "serbia": "Serbia",
     "other": "Other"
   },
   "units": {

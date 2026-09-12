@@ -23,8 +23,11 @@ import type {
   ProjectAddressType
 } from './addresses';
 import type { StructuredGeocodingQuery } from '@/lib/geocoding/geocoding-service';
-import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
-import { isGreekAddressCountry } from '@/utils/address/country-codes';
+import {
+  DEFAULT_STORED_COUNTRY_CODE,
+  isGreekAddressCountry,
+  toStoredCountryCode,
+} from '@/utils/address/country-codes';
 import { stripGreekAdminPrefix } from '@/utils/address/place-name';
 import {
   formatGreekPostalCode,
@@ -146,7 +149,13 @@ export function formatFullAddressLine(address: ProjectAddress): string {
   }
 
   // Country (skip default — redundant for local prospects)
-  if (address.country && address.country !== GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY) {
+  //
+  // 🔴 **ADR-332 D27 Ζ4α — εδώ ήταν ΖΩΝΤΑΝΟ ΣΦΑΛΜΑ, όχι μόνο προετοιμασία.** Η σύγκριση ήταν
+  // **κειμενική** (`!== 'Greece'`), ενώ το σύρσιμο πινέζας αποθήκευε «Ελλάδα» (ετικέτα
+  // Nominatim). Άρα κάθε ελληνικό έργο με συρμένη πινέζα τύπωνε «…, **Ελλάδα**» σε δημόσια
+  // βιτρίνα και PDF — ακριβώς το «περιττό για τον ντόπιο» που ο κανόνας ήθελε να αποφύγει.
+  // Η σύγκριση γίνεται σε **ταυτότητα** (ISO), οπότε «Greece» / «Ελλάδα» / «GR» σιωπούν όλα.
+  if (address.country && !isGreekAddressCountry(address.country)) {
     parts.push(address.country);
   }
 
@@ -261,7 +270,7 @@ export function createProjectAddress(
     street: street || '',
     city,
     postalCode: postalCode || '',
-    country: country || GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY,
+    country: toStoredCountryCode(country) ?? DEFAULT_STORED_COUNTRY_CODE,
     type: type || 'site',
     isPrimary: isPrimary ?? false,
     sortOrder: sortOrder ?? 0,
@@ -311,7 +320,7 @@ export function migrateLegacyAddress(
       number,
       city,
       postalCode: '', // Unknown in legacy
-      country: GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY,
+      country: DEFAULT_STORED_COUNTRY_CODE,
       type: 'site',
       isPrimary: true,
       sortOrder: 0

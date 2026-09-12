@@ -7,6 +7,7 @@
  */
 
 import type { CompanyAddress, ContactFormData } from '@/types/ContactFormTypes';
+import { DEFAULT_STORED_COUNTRY_CODE } from '@/utils/address/country-codes';
 import {
   buildAddressInfoFromFlatFields,
   buildAddressInfoListFromCompanyAddresses,
@@ -83,11 +84,21 @@ describe('buildAddressInfoListFromCompanyAddresses', () => {
     expect(address).not.toHaveProperty('region');
   });
 
-  it('σέβεται την πραγματική χώρα αντί για σταθερό «GR»', () => {
+  it('σέβεται την πραγματική χώρα αντί για σταθερό «GR» — σε ΤΑΥΤΟΤΗΤΑ (ADR-332 D27 Φάση Α)', () => {
+    // Η πρόθεση της άγκυρας **δεν άλλαξε**: ξένη χώρα ΔΕΝ επιτρέπεται να καταπιεί η
+    // προεπιλογή. Άλλαξε το **λεξιλόγιο**: αποθηκεύεται ο κωδικός ISO, όχι η ετικέτα.
     const [foreign] = buildAddressInfoListFromCompanyAddresses([
       companyAddress({ country: 'Germany' }),
     ]);
-    expect(foreign.country).toBe('Germany');
+    expect(foreign.country).toBe('DE');
+    expect(foreign.country).not.toBe(DEFAULT_STORED_COUNTRY_CODE);
+  });
+
+  it('άγνωστη χώρα μένει ΑΥΤΟΥΣΙΑ — καμία επινόηση κωδικού, καμία απώλεια', () => {
+    const [exotic] = buildAddressInfoListFromCompanyAddresses([
+      companyAddress({ country: 'Ουτοπία' }),
+    ]);
+    expect(exotic.country).toBe('Ουτοπία');
   });
 
   it('πέφτει στο «GR» μόνο όταν δεν δηλώνεται χώρα', () => {

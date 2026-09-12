@@ -35,6 +35,7 @@ import {
   projectAddressVocabulary,
   resolveCityFromHierarchy,
 } from '@/utils/address/administrative-hierarchy';
+import { toStoredCountryCode } from '@/utils/address/country-codes';
 import { pickStoredAddressPosition } from '@/utils/address/stored-address-position';
 import { applyContactAddressPosition } from '@/utils/contacts/contact-address-position-view';
 import { DRAG_RESOLVED_HIERARCHY_RESET } from './addresses-section-form-mapping';
@@ -88,7 +89,7 @@ function hierarchyToHqBranch(
     postalCode: addr.postalCode,
     city,
     region: addr.regionName,
-    country: addr.country || undefined,
+    country: toStoredCountryCode(addr.country),
   };
 }
 
@@ -202,7 +203,9 @@ export function useHqAddressMutations({
         // δεν αντιστοιχεί πλέον στο εμφανιζόμενο όνομα. Ταυτότητα και ετικέτα
         // δεν επιτρέπεται να αποκλίνουν.
         ...(settlementRenamed ? { settlementId: null } : {}),
-        ...(addr.country !== undefined ? { hqAddressCountry: addr.country } : {}),
+        // Ο έλεγχος `!== undefined` ξεχωρίζει «ο editor εφάρμοσε το πεδίο» από «δεν το άγγιξε»·
+        // μέσα σε αυτόν, το κενό σημαίνει «ο άνθρωπος το καθάρισε» ⇒ `undefined` (ADR-332 Ζ4α).
+        ...(addr.country !== undefined ? { hqAddressCountry: toStoredCountryCode(addr.country) } : {}),
         ...(updatedAddresses.length > 0 ? { companyAddresses: updatedAddresses } : {}),
       };
     });
@@ -273,7 +276,7 @@ export function useHqAddressMutations({
       postalCode: addr.postalCode,
       city,
       // Η χώρα της έδρας ζει σε δικό της πεδίο, εκτός του λεξιλογίου επίπεδων πεδίων.
-      hqAddressCountry: addr.country || undefined,
+      hqAddressCountry: toStoredCountryCode(addr.country),
       companyAddresses: updatedAddresses,
     });
   }, [formData, setFormData, effectiveAddresses]);

@@ -21,7 +21,7 @@
 
 import type { GeoPoint } from '@/types/geo/coordinates';
 import type { PartialProjectAddress, ProjectAddress } from '@/types/project/addresses';
-import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
+import { DEFAULT_STORED_COUNTRY_CODE } from '@/utils/address/country-codes';
 import { reverseGeocodeDetailed } from '@/lib/geocoding/geocoding-service';
 import { reverseResultToAddress } from './useAddressMapGeocoding.helpers';
 
@@ -121,7 +121,7 @@ export function pendingPinAddress(point: GeoPoint, id: string, type: ProjectAddr
     street: '',
     city: '',
     postalCode: '',
-    country: GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY,
+    country: DEFAULT_STORED_COUNTRY_CODE,
     type,
     isPrimary: false,
     coordinates: { lat: point.lat, lng: point.lng },
