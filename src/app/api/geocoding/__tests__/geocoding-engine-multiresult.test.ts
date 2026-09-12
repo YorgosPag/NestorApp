@@ -15,6 +15,7 @@
 /* global describe, it, expect, beforeEach, afterEach, jest */
 
 import { geocode } from '../geocoding-engine';
+import { clearGeocodingCache } from '../geocoding-cache';
 
 // =============================================================================
 // FETCH MOCK HELPERS
@@ -65,6 +66,9 @@ function mockFetchSequence(...batches: NominatimMockResult[][]) {
 }
 
 beforeEach(() => {
+  // ADR-332 D27 Ζ5 — η μνήμη της μηχανής ζει στη **διεργασία**: χωρίς καθαρισμό, ο δεύτερος έλεγχος
+  // που ρωτά την ίδια διεύθυνση θα μετρούσε **μηδέν** κλήσεις και θα «περνούσε» για λάθος λόγο.
+  clearGeocodingCache();
   jest.useFakeTimers();
   // Speed-up: collapse the 1.2s NOMINATIM_DELAY_MS between variants
   jest.spyOn(global, 'setTimeout').mockImplementation(((fn: () => void) => {

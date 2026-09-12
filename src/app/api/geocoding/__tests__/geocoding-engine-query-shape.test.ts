@@ -19,6 +19,7 @@
 /* global describe, it, expect, beforeEach, afterEach, jest */
 
 import { geocode } from '../geocoding-engine';
+import { clearGeocodingCache } from '../geocoding-cache';
 
 // =============================================================================
 // MOCK HARNESS
@@ -65,6 +66,9 @@ function requestedUrls(fetchMock: jest.Mock): string[] {
 }
 
 beforeEach(() => {
+  // ADR-332 D27 Ζ5 — η μνήμη της μηχανής ζει στη διεργασία· χωρίς καθαρισμό ο επόμενος έλεγχος
+  // που ρωτά την ίδια διεύθυνση θα μετρούσε μηδέν κλήσεις και θα περνούσε για λάθος λόγο.
+  clearGeocodingCache();
   // Collapse the inter-variant courtesy delay so the suite stays fast.
   jest.spyOn(global, 'setTimeout').mockImplementation(((fn: () => void) => {
     fn();

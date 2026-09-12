@@ -20,6 +20,7 @@ import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { countryNameToCode } from '@/utils/address/country-codes';
+import { cachedGeocode } from './geocoding-cache';
 import type {
   GeocodingRequestBody,
   GeocodingApiResponse,
@@ -295,10 +296,20 @@ function finishWith(
  * Geocode a structured address using up to 8 Nominatim variants. Returns the
  * top result with up to 4 alternatives + per-field match matrix + attempts log.
  *
- * @returns null when ALL variants returned no results (true hard fail).
+ * 🔑 **Ρωτά τη μηχανή μόνο αν χρειάζεται** (ADR-332 D27 Ζ5): η πολιτική του Nominatim **απαιτεί** μνήμη
+ * (*«Results must be cached on your side»*), και επειδή η πληκτρολόγηση (`/api/geocoding`) και η αποθήκευση
+ * (`address-place-writeback`) καταλήγουν **και οι δύο** εδώ, η μνήμη στο σημείο αυτό τις εξυπηρετεί μαζί:
+ * ό,τι έλυσε ο συντάκτης όσο πληκτρολογούσε ο άνθρωπος, η αποθήκευση το βρίσκει **δωρεάν**.
+ *
+ * @returns `absent` όταν όλες οι παραλλαγές απάντησαν «δεν υπάρχει»· `unavailable` όταν καμία δεν απάντησε.
  */
 export async function geocodeWithVerdict(rawParams: GeocodingRequestBody): Promise<GeocodeVerdict> {
   const params = sanitizeQuery(rawParams);
+  return cachedGeocode(params, () => askNominatim(params));
+}
+
+/** Η πραγματική σκάλα των 8 παραλλαγών — εκτελείται **μόνο** σε αστοχία μνήμης. */
+async function askNominatim(params: GeocodingRequestBody): Promise<GeocodeVerdict> {
   const cc = countryNameToCode(params.country);
   const attempts: GeocodingAttempt[] = [];
 

@@ -19,6 +19,7 @@
 /* global describe, it, expect, beforeEach, afterEach, jest */
 
 import { geocode, geocodeWithVerdict } from '../geocoding-engine';
+import { clearGeocodingCache } from '../geocoding-cache';
 
 const ORIGINAL_FETCH = global.fetch;
 
@@ -50,6 +51,12 @@ function respondRateLimited(): void {
 const QUERY = { street: 'Εγνατίας', number: '147', city: 'Θεσσαλονίκη', country: 'Greece' };
 
 describe('Ε — η ετυμηγορία της μηχανής', () => {
+  // ADR-332 D27 Ζ5 — όλοι οι έλεγχοι εδώ ρωτούν **την ίδια** `QUERY`, και η μνήμη της μηχανής ζει στη
+  // διεργασία: χωρίς καθαρισμό ο δεύτερος θα έπαιρνε την ετυμηγορία του πρώτου χωρίς να ρωτήσει.
+  beforeEach(() => {
+    clearGeocodingCache();
+  });
+
   afterEach(() => {
     global.fetch = ORIGINAL_FETCH;
     jest.restoreAllMocks();

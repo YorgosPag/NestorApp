@@ -25,6 +25,7 @@
 /* global describe, it, expect, beforeEach, afterEach, jest */
 
 import { geocode } from '../geocoding-engine';
+import { clearGeocodingCache } from '../geocoding-cache';
 import { addressLineToQuery } from '@/lib/geocoding/address-line-query';
 
 // =============================================================================
@@ -54,6 +55,10 @@ function firstFreeformQuery(fetchMock: jest.Mock): string | null {
 }
 
 async function queryFor(body: Parameters<typeof geocode>[0]): Promise<string | null> {
+  // ADR-332 D27 Ζ5 — «τι θα ρωτούσε σε **κρύα** μηχανή». Η ταυτότητα που μετρά αυτή η σουίτα είναι
+  // ακριβώς ό,τι κάνει τα δύο σχήματα να μοιράζονται κλειδί μνήμης: χωρίς καθαρισμό, η δεύτερη κλήση
+  // θα έπαιρνε την απάντηση της πρώτης **χωρίς να ρωτήσει**, και δεν θα υπήρχε ερώτημα να συγκριθεί.
+  clearGeocodingCache();
   const fetchMock = mockFetchHit();
   global.fetch = fetchMock as unknown as typeof fetch;
   await geocode(body);
@@ -61,6 +66,9 @@ async function queryFor(body: Parameters<typeof geocode>[0]): Promise<string | n
 }
 
 beforeEach(() => {
+  // ADR-332 D27 Ζ5 — η μνήμη της μηχανής ζει στη διεργασία· χωρίς καθαρισμό ο επόμενος έλεγχος
+  // που ρωτά την ίδια διεύθυνση θα μετρούσε μηδέν κλήσεις και θα περνούσε για λάθος λόγο.
+  clearGeocodingCache();
   jest.spyOn(global, 'setTimeout').mockImplementation(((fn: () => void) => {
     fn();
     return 0 as unknown as ReturnType<typeof setTimeout>;

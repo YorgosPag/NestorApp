@@ -12,8 +12,38 @@ interface GeocodingConfig {
   readonly NOMINATIM_DELAY_MS: number;
   /** Delay between batch geocoding requests */
   readonly BATCH_DELAY_MS: number;
-  /** Address resolver timeout */
+  /**
+   * **Μία** προθεσμία για όλη την **ευθεία** επίλυση θέσεων μιας αποθήκευσης (ADR-332 D27 Ζ5) —
+   * κατοπτρικά του `REVERSE_BUDGET_MS` του Β13, με την ίδια σημασιολογία *deadline propagation*:
+   * κάθε διεύθυνση ρωτά το **υπόλοιπο** πριν ρωτήσει τη μηχανή, και όποια δεν χωρά παίρνει
+   * `budget-exhausted` — η θέση της **μένει**, η επόμενη αποθήκευση ξαναλύνει.
+   *
+   * ⚠️ Η σταθερά **υπήρχε και ήταν νεκρή** (κανείς δεν την καλούσε) μέχρι το Ζ5. Η τιμή ευθυγραμμίστηκε
+   * με το `REVERSE_BUDGET_MS`: **μία** γλώσσα προθεσμίας σε ευθεία και αντίστροφη.
+   */
   readonly RESOLVER_TIMEOUT_MS: number;
+  /** Περιθώριο του πελάτη πάνω από το `RESOLVER_TIMEOUT_MS` — ίδιος ρόλος με το `REVERSE_CLIENT_GRACE_MS`. */
+  readonly RESOLVER_CLIENT_GRACE_MS: number;
+  /**
+   * Το απόθεμα κάτω από το οποίο θυσιάζονται οι **συμβουλές** απόκλισης (ADR-332 D27 Ζ5).
+   *
+   * Μια απόκλιση είναι «καλό να ξέρεις»· μια **θέση** είναι το δεδομένο. Όταν απομένει λιγότερο από αυτό,
+   * η μέτρηση απόκλισης για μια ήδη καρφιτσωμένη διεύθυνση παραλείπεται, ώστε ο χρόνος να μείνει για
+   * διευθύνσεις που **δεν έχουν** θέση καθόλου.
+   */
+  readonly ADVISORY_RESERVE_MS: number;
+  /**
+   * Διάρκεια μνήμης για **επιτυχημένη** γεωκωδικοποίηση. Η πολιτική του Nominatim **απαιτεί** μνήμη
+   * (*«Results must be cached on your side»*)· η θέση μιας διεύθυνσης είναι πρακτικά στατική.
+   */
+  readonly CACHE_TTL_MS: number;
+  /**
+   * Διάρκεια **αρνητικής** μνήμης («ρωτήθηκε καθαρά και δεν υπάρχει») — πρότυπο DNS negative TTL.
+   * **Σύντομη επίτηδες**: χωρίς αυτήν μια διεύθυνση που δεν λύνεται πληρώνει και τις 8 παραλλαγές σε κάθε
+   * αποθήκευση· με μεγάλη διάρκεια, μια διεύθυνση που μόλις μπήκε στο OSM θα έμενε «ανύπαρκτη».
+   * ⚠️ Το `unavailable` δεν αποθηκεύεται **ποτέ** — δεν είναι γνώση.
+   */
+  readonly CACHE_ABSENT_TTL_MS: number;
   /**
    * **Μία** προθεσμία για όλη την αντίστροφη γεωκωδικοποίηση (Nominatim + Overpass) — ADR-332 D27
    * Β13. Ο διακομιστής τη μοιράζει στα στάδια (deadline propagation)· ο πελάτης τη διαβάζει κι αυτός.
@@ -93,7 +123,11 @@ function getGeographicConfig(): GeographicConfig {
     GEOCODING: {
       NOMINATIM_DELAY_MS: parseInt(process.env.NEXT_PUBLIC_NOMINATIM_DELAY_MS || '1100', 10),
       BATCH_DELAY_MS: parseInt(process.env.NEXT_PUBLIC_GEOCODING_BATCH_DELAY_MS || '1200', 10),
-      RESOLVER_TIMEOUT_MS: parseInt(process.env.NEXT_PUBLIC_GEOCODING_RESOLVER_TIMEOUT_MS || '5000', 10),
+      RESOLVER_TIMEOUT_MS: parseInt(process.env.NEXT_PUBLIC_GEOCODING_RESOLVER_TIMEOUT_MS || '9000', 10),
+      RESOLVER_CLIENT_GRACE_MS: parseInt(process.env.NEXT_PUBLIC_GEOCODING_RESOLVER_CLIENT_GRACE_MS || '3000', 10),
+      ADVISORY_RESERVE_MS: parseInt(process.env.NEXT_PUBLIC_GEOCODING_ADVISORY_RESERVE_MS || '3000', 10),
+      CACHE_TTL_MS: parseInt(process.env.NEXT_PUBLIC_GEOCODING_CACHE_TTL_MS || '86400000', 10),
+      CACHE_ABSENT_TTL_MS: parseInt(process.env.NEXT_PUBLIC_GEOCODING_CACHE_ABSENT_TTL_MS || '600000', 10),
       REVERSE_BUDGET_MS: parseInt(process.env.NEXT_PUBLIC_GEOCODING_REVERSE_BUDGET_MS || '9000', 10),
       REVERSE_CLIENT_GRACE_MS: parseInt(process.env.NEXT_PUBLIC_GEOCODING_REVERSE_CLIENT_GRACE_MS || '3000', 10),
       /**
