@@ -9,6 +9,7 @@
 
 import { FileText, Eye, EyeOff, MoreHorizontal } from 'lucide-react';
 import { EntityDetailsHeader, createEntityAction } from '@/core/entity-headers';
+import { IconCountBadge } from '@/core/badges';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
@@ -77,11 +78,10 @@ function SecondaryIcon({ action }: { action: QuoteHeaderSecondaryAction }) {
       <TooltipTrigger asChild>
         <Button variant="ghost" size="sm" onClick={action.onClick} disabled={action.disabled} className="relative h-8 w-8 p-0">
           <action.icon className="h-4 w-4" />
-          {action.badge != null && action.badge > 0 && (
-            <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-              {action.badge}
-            </span>
-          )}
+          {/* ADR-854: tone="count" — το μπλε εδώ ΔΕΝ ήταν σφάλμα (σημαίνει «πλήθος», όχι
+              «επείγον»)· σφάλμα ήταν το ωμό `bg-primary`, που δεν ελέγχθηκε ποτέ για
+              αντίθεση. Το `count` κρατά το μπλε με μετρημένο 5,20:1 στα δύο θέματα. */}
+          <IconCountBadge count={action.badge ?? 0} tone="count" announce />
         </Button>
       </TooltipTrigger>
       <TooltipContent>{action.tooltip}</TooltipContent>

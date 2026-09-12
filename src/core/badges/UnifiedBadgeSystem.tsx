@@ -247,6 +247,10 @@ export const withConditionalBadge = <T extends Record<string, unknown>>(
   const WrappedComponent = (props: T) => (
     <div className="relative">
       <Component {...props} />
+      {/* ⚠️ ADR-854: η θέση εδώ (-top-2 -right-2) ΔΙΑΦΕΡΕΙ ΣΚΟΠΙΜΑ από το SSoT του
+          IconCountBadge (-top-1 -end-1). Δεν είναι απόκλιση προς διόρθωση: αυτό είναι
+          **status badge** (λέει ΤΙ ΕΙΝΑΙ κάτι, με ετικέτα), όχι **μετρητής** (ΠΟΣΑ είναι).
+          Οι δύο θέλουν άλλο offset γιατί έχουν άλλο πλάτος. ΜΗΝ τα «ενοποιήσεις». */}
       {condition(props) && (
         <div className="absolute -top-2 -right-2">
           <UnifiedBadge

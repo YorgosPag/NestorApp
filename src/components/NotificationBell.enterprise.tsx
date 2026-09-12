@@ -70,6 +70,7 @@
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import { Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { IconCountBadge } from '@/core/badges';
 import { useNotificationDrawer } from '@/stores/notificationDrawer';
 import { useNotificationCenter } from '@/stores/notificationCenter';
 import { useFirestoreNotifications } from '@/hooks/useFirestoreNotifications';
@@ -109,11 +110,12 @@ export function NotificationBell() {
       className="relative"
     >
       <Bell className={iconSizes.sm} aria-hidden="true" />
-      {unread > 0 && (
-        <span className="absolute top-0 -right-0.5 bg-destructive text-destructive-foreground text-xs px-1.5 rounded-full min-w-[20px] h-5 flex items-center justify-center font-medium" aria-hidden="true">
-          {unread > 99 ? '99+' : unread}
-        </span>
-      )}
+      {/* ADR-854: ήταν ωμό `bg-destructive` — ΕΓΚΥΡΟ κατά ADR-770 §15 ως επιφάνεια
+          κουμπιού, αλλά εδώ είναι ΣΗΜΑ 10px: στο φωτεινό θέμα μετρήθηκε 3,59:1, κάτω
+          από το AA μικρού κειμένου. Το `urgent` δίνει 4,80:1 και στα δύο θέματα — και
+          είναι το ΙΔΙΟ κόκκινο με τον κάδο δίπλα, που ήταν το αρχικό παράπονο.
+          `live` επειδή ο μετρητής αλλάζει ενόσω η σελίδα είναι ανοιχτή. */}
+      <IconCountBadge count={unread} size="md" announce live />
     </Button>
   );
 }

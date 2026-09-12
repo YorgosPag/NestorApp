@@ -787,5 +787,10 @@
   },
   "poNotifications": {
     "poApproved": "Το PO {poNumber} εγκρίθηκε"
+  },
+  "iconCountBadge": {
+    "items": "{count} στοιχεία",
+    "items_one": "{count} στοιχείο",
+    "items_other": "{count} στοιχεία"
   }
 }

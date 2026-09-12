@@ -787,5 +787,10 @@
   },
   "poNotifications": {
     "poApproved": "PO {poNumber} has been approved"
+  },
+  "iconCountBadge": {
+    "items": "{count} items",
+    "items_one": "{count} item",
+    "items_other": "{count} items"
   }
 }

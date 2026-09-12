@@ -9,7 +9,7 @@ import '@/lib/design-system';
 
 import React from 'react';
 import { Users, Filter, Trash2 } from 'lucide-react';
-import { CommonBadge } from '@/core/badges';
+import { IconCountBadge } from '@/core/badges';
 import { PageHeader, LIST_GRID_VIEW_MODES, isListGridViewMode } from '@/core/headers';
 import type { ListGridViewMode } from '@/core/headers';
 import { INTERACTIVE_PATTERNS, TRANSITION_PRESETS } from '@/components/ui/effects';
@@ -88,14 +88,16 @@ export function ContactsHeader({
               title: showTrash ? t('trash.backToContacts') : t('trash.viewTrash'),
             },
               React.createElement(Trash2, { className: iconSizes.sm }),
-              trashCount > 0 && !showTrash
-                ? React.createElement(CommonBadge, {
+              // ADR-854: το «count > 0» ζει ΜΕΣΑ στο IconCountBadge — εδώ μένει μόνο η
+              // συνθήκη που είναι όντως δική μας (όταν βλέπεις ήδη τον κάδο, ο μετρητής
+              // δεν λέει τίποτα). Χρώμα/μέγεθος/θέση/cutoff δεν αποφασίζονται πια εδώ.
+              showTrash
+                ? null
+                : React.createElement(IconCountBadge, {
                     key: 'trash-badge',
-                    status: 'deleted',
-                    customLabel: String(trashCount),
-                    className: 'absolute -top-1 -right-1 h-4 min-w-[16px] text-[10px] px-1',
-                  })
-                : null,
+                    count: trashCount,
+                    announce: true,
+                  }),
             )
           ] : []),
           // Mobile filter toggle

@@ -32,9 +32,7 @@ import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effect
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-
-/** Πάνω από αυτό ο μετρητής του κάδου κόβεται σε «99+». */
-const TRASH_BADGE_MAX = 99;
+import { IconCountBadge } from '@/core/badges';
 
 interface HeaderFilterToggleProps {
   showFilters?: boolean;
@@ -98,11 +96,10 @@ function HeaderTrashToggle({
           aria-pressed={showTrash}
         >
           <Trash2 className={iconSizes.sm} />
-          {trashCount > 0 && (
-            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground leading-none">
-              {trashCount > TRASH_BADGE_MAX ? `${TRASH_BADGE_MAX}+` : trashCount}
-            </span>
-          )}
+          {/* ADR-854: το `w-4` εδώ ήταν ΣΤΑΘΕΡΟ πλάτος — έκοβε το ίδιο του το «99+».
+              Το IconCountBadge χρησιμοποιεί `min-w`, και η οροφή 99 ζει πλέον ως
+              προεπιλογή του SSoT (η τοπική σταθερά TRASH_BADGE_MAX διαγράφηκε). */}
+          <IconCountBadge count={trashCount} announce />
         </button>
       </TooltipTrigger>
       <TooltipContent>{tooltip}</TooltipContent>

@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { where, orderBy } from 'firebase/firestore';
 import { Bell, MessageCircle, User, Clock } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { IconCountBadge } from '@/core/badges';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -110,11 +111,11 @@ export function TelegramNotifications() {
             className={`relative p-2 ${colors.text.muted} ${HOVER_TEXT_EFFECTS.BLUE} ${HOVER_BACKGROUND_EFFECTS.BLUE_LIGHT} rounded-lg transition-colors`}
           >
             <MessageCircle className={iconSizes.lg} />
-            {unreadCount > 0 && (
-              <span className={`absolute -top-1 -right-1 ${colors.bg.danger} ${colors.text.inverted} text-xs rounded-full ${iconSizes.md} flex items-center justify-center`}>
-                {unreadCount > 9 ? '9+' : unreadCount}
-              </span>
-            )}
+            {/* 🔴 ADR-854 — ΟΡΑΤΗ ΑΛΛΑΓΗ. Το `colors.bg.danger` είναι ΑΛΙΑΣ του
+                `colors.bg.error` (ίδιο `--bg-error`): στο φωτεινό θέμα 1,02:1, αόρατο.
+                Επίσης το cutoff ήταν 9 — μοναδικό στην εφαρμογή· περνά στο SSoT (99),
+                ώστε «12 αδιάβαστα» να μη δείχνουν «9+». */}
+            <IconCountBadge count={unreadCount} announce live />
           </button>
         </TooltipTrigger>
         <TooltipContent>{t('telegram.title')}</TooltipContent>

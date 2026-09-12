@@ -24,6 +24,7 @@ import { translateFilterLabel } from '@/i18n/filter-label';
 import '@/lib/design-system';
 import React from 'react';
 import { Button } from '@/components/ui/button';
+import { IconCountBadge } from '@/core/badges';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/hooks/useSemanticColors';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
@@ -129,11 +130,13 @@ export function CompactToolbarActions({
                 <Button variant="ghost" size="sm" className={`${iconSizes.xl} p-0 relative`}
                   aria-label={getTooltip(config.tooltips.filters) || t('filters.title')}>
                   <Filter className={`${iconSizes.sm} ${getIconColor('filters')}`} />
-                  {activeFilters.length > 0 && (
-                    <span className={`absolute -top-1 -right-1 ${iconSizes.sm} ${colors.bg.error} ${colors.text.inverted} text-xs font-medium rounded-full flex items-center justify-center`}>
-                      {activeFilters.length}
-                    </span>
-                  )}
+                  {/* 🔴 ADR-854 — ΟΡΑΤΗ ΑΛΛΑΓΗ, ΟΧΙ ΑΠΛΟ REFACTOR. Ζητούσε `colors.bg.error`
+                      = `--bg-error` = red-50, δηλαδή ΥΠΟΒΑΘΡΟ πλαισίου σφάλματος, με λευκό
+                      μελάνι από πάνω: στο ΦΩΤΕΙΝΟ θέμα μετρήθηκε 1,02:1 — ο μετρητής ήταν
+                      κυριολεκτικά αόρατος. Κανείς δεν το είδε γιατί η ανάπτυξη γίνεται στο
+                      σκοτεινό θέμα, όπου το ίδιο token είναι 0 86% 15% και δείχνει μια χαρά.
+                      Είναι πλήθος ενεργών φίλτρων, όχι επείγον → tone="count". */}
+                  <IconCountBadge count={activeFilters.length} tone="count" announce />
                 </Button>
               </DropdownMenuTrigger>
             </TooltipTrigger>

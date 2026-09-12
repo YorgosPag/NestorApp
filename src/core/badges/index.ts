@@ -19,6 +19,23 @@ export {
   withConditionalBadge
 } from './UnifiedBadgeSystem';
 
+// ===== ICON COUNT BADGE (ADR-854) =====
+// SSoT για «αριθμητικός μετρητής πάνω σε εικονίδιο». Ξεχωριστό από τα status badges
+// παραπάνω: εκείνα λένε ΤΙ ΕΙΝΑΙ κάτι, αυτό λέει ΠΟΣΑ είναι.
+export {
+  IconCountBadge,
+  formatCount,
+  ICON_COUNT_BADGE_DEFAULT_MAX
+} from './IconCountBadge';
+
+export type {
+  IconCountBadgeProps,
+  IconCountBadgeTone,
+  IconCountBadgeSize,
+  IconCountBadgePlacement,
+  IconCountBadgeAnnounce
+} from './IconCountBadge';
+
 // ===== FACTORY CLASSES & FUNCTIONS =====
 export {
   BadgeFactory,
