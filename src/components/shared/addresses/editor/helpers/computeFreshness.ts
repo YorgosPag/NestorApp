@@ -68,7 +68,7 @@ export function computeFreshness(
   // Ζ6 — η **ταυτότητα** του κειμένου κρίνεται πριν από την ηλικία: μια θέση που λύθηκε για
   // άλλη διεύθυνση είναι μπαγιάτικη ό,τι ώρα κι αν επιβεβαιώθηκε.
   if (address && positionTextVerdict(address) === 'differs') {
-    return { verifiedAt, level: 'stale', staleReason: 'time-elapsed' };
+    return { verifiedAt, level: 'stale', staleReason: 'field-changed' };
   }
 
   if (verifiedAt === null) return { verifiedAt: null, level: 'never' };
