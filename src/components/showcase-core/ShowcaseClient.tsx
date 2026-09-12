@@ -212,7 +212,12 @@ export function ShowcaseClient<TPayload>({
             {t(config.stateKeys.downloadPdfLabel)}
           </a>
         )}
-        <ShowcaseFooter company={company} />
+        {/*
+          🔑 Το `locale` περνά **ρητά** (ADR-857 Φ4): το υποσέλιδο συνθέτει πλέον την
+          «Υλοποίηση από …» από την **ίδια** πηγή με το PDF, και η γλώσσα είναι ήδη
+          στενεμένη εδώ. Καμία δεύτερη στένωση μέσα στο παιδί.
+        */}
+        <ShowcaseFooter company={company} locale={locale} />
       </div>
     </main>
   );

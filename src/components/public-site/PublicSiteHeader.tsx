@@ -52,13 +52,17 @@ import React from 'react';
 import { Link } from '@/lib/workspace/navigation';
 import { ShellUtilities } from '@/core/containers/ShellUtilities';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { PRODUCT_NAME } from '@/constants/product-identity';
 import { AUTH_ROUTES } from '@/lib/routes';
 import { SEARCH_LANDING_ROUTE } from '@/lib/listings/listing-routes';
 import { MY_DEMANDS_ROUTE } from '@/lib/demand/demand-routes';
 import { MY_OFFERS_ROUTE, NEW_OFFER_ROUTE } from '@/lib/owner-property/owner-property-routes';
 
 export function PublicSiteHeader() {
-  const { t } = useTranslation(['search-results', 'property-market', 'search-results', 'search-results']);
+  // ⚠️ Το `'search-results'` ήταν γραμμένο **τρεις φορές** στον ίδιο πίνακα — ο i18next
+  //    φορτώνει ένα namespace μία φορά, άρα ήταν θόρυβος, όχι σφάλμα. Καθαρίστηκε
+  //    επιτόπου (Boy Scout, N.0.2) αφού το αρχείο ανοίχτηκε για την ADR-857 Φ4.
+  const { t } = useTranslation(['search-results', 'property-market']);
 
   return (
     <header className="w-full border-b border-border bg-card">
@@ -71,7 +75,15 @@ export function PublicSiteHeader() {
           className="text-base font-semibold tracking-tight text-foreground"
           aria-label={t('search-results:site.home')}
         >
-          {t('search-results:site.brand')}
+          {/*
+            🔴 **ΕΔΩ ΗΤΑΝ Η ΑΠΟΔΕΙΞΗ ΤΗΣ ΑΠΟΚΛΙΣΗΣ** (ADR-857 Φ4): το κλειδί
+            `search-results:site.brand` έλεγε **«Nestor»** — σκέτο — ενώ τα τρία αδέλφια
+            του έλεγαν «Nestor App». Ένα όνομα προϊόντος σε catalog μετάφρασης είναι
+            δομή που **επιτρέπει** απόκλιση, και αυτή εδώ **είχε ήδη συμβεί**, στη
+            **δημόσια** κεφαλίδα. ⚠️ Η διόρθωση αλλάζει **ορατό** κείμενο: «Nestor» →
+            «Nestor App». Καμία πύλη δεν πιάνει μετατόπιση κειμένου — δηλώνεται στο §7.
+          */}
+          {PRODUCT_NAME}
         </Link>
 
         <div className="flex items-center gap-2">

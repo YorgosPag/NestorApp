@@ -27,6 +27,7 @@ jest.mock('@/services/company/company-branding-resolver', () => ({
 }));
 
 import type { Firestore } from 'firebase-admin/firestore';
+import { PRODUCT_NAME } from '@/constants/product-identity';
 import {
   ShowcaseEntityNotFoundError,
   ShowcaseTenantMismatchError,
@@ -227,7 +228,11 @@ describe('label loaders after the ADR-701 catalog swap', () => {
     // reader actually reached `projectShowcase.specs` and did not silently
     // degrade to all-fallbacks.
     expect(labels.specs.areaUnit).toBe('τ.μ.');
-    expect(labels.chrome.poweredBy).toBe('Υλοποίηση από Nestor App');
+    // 🔑 Η ετικέτα συνθέτεται πλέον από τη **ρίζα** (ADR-857 Φ4) — η άγκυρα ρωτά ότι
+    //    η πρόζα **και** το όνομα έφτασαν μαζί, χωρίς να ξαναγράφει το όνομα εδώ.
+    // ⚠️ **Ακριβής** έλεγχος, ΠΟΤΕ `toContain`: το «Nestor» είναι **υποσυμβολοσειρά**
+    //    του «Nestor App», άρα ένας έλεγχος περιεκτικότητας θα ήταν ψευδώς πράσινος.
+    expect(labels.chrome.poweredBy).toBe(`Υλοποίηση από ${PRODUCT_NAME}`);
     expect(labels.chrome.photosTitle).toBe(labels.photos.title);
     expect(labels.chrome.floorplansTitle).toBe(labels.floorplans.title);
     expect(labels.email.ctaLabel).toBeTruthy();

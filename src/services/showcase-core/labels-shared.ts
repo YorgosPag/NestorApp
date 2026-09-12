@@ -16,6 +16,7 @@
  * @module services/showcase-core/labels-shared
  */
 
+import { PRODUCT_NAME } from '@/constants/product-identity';
 import type { EnumLocale } from '@/services/property-enum-labels/property-enum-labels.service';
 
 // =============================================================================
@@ -57,8 +58,23 @@ export interface ShowcaseEmailLabels {
 // Defaults
 // =============================================================================
 
+/**
+ * **Η ΜΙΑ πηγή της «Υλοποίηση από …» — για το PDF ΚΑΙ για τη σελίδα** (ADR-857 Φ4).
+ *
+ * 🔴 Η ίδια πρόταση ζούσε **δύο φορές**: εδώ (διαδρομή PDF) και ως κλειδί
+ * `showcase.brand.poweredBy` (διαδρομή React). Και τα **δύο** τα αποδίδει η **ίδια
+ * σελίδα** — ο σύνδεσμος «Λήψη PDF» κάθεται ακριβώς πάνω από το υποσέλιδο
+ * (`ShowcaseClient.tsx`) ⇒ ο άνθρωπος μπορούσε να δει **δύο διαφορετικά** ονόματα.
+ * Το κλειδί **διαγράφηκε**· το υποσέλιδο καλεί πλέον αυτή τη συνάρτηση.
+ *
+ * 🔑 **Η πρόζα κλίνεται, το όνομα ΟΧΙ.** Γι' αυτό το όνομα έρχεται από τη ρίζα και
+ * δεν ζει σε catalog μετάφρασης: τα ονόματα προϊόντων είναι «do not translate»
+ * (Mozilla l10n style guide · Microsoft: οι μεταφράσιμες συμβολοσειρές μένουν
+ * **χωριστά** από όσες δεν μεταφράζονται). Μια τρίτη γλώσσα αγγίζει **εδώ**, όπως
+ * και τα έξι αδέλφια αυτού του αρχείου.
+ */
 export function showcasePoweredByDefault(locale: EnumLocale): string {
-  return locale === 'el' ? 'Υλοποίηση από Nestor App' : 'Powered by Nestor App';
+  return locale === 'el' ? `Υλοποίηση από ${PRODUCT_NAME}` : `Powered by ${PRODUCT_NAME}`;
 }
 
 export function showcaseCtaLabelDefault(locale: EnumLocale): string {

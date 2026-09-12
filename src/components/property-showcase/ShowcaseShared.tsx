@@ -1,7 +1,9 @@
 'use client';
 
 import React from 'react';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { LEGAL_ENTITY_NAME } from '@/constants/product-identity';
+import { showcasePoweredByDefault } from '@/services/showcase-core/labels-shared';
+import type { EnumLocale } from '@/services/property-enum-labels/property-enum-labels.service';
 
 export function MessageScreen({
   icon, title, description,
@@ -17,10 +19,25 @@ export function MessageScreen({
   );
 }
 
+/**
+ * 🔴 **ΔΥΟ ΜΗΧΑΝΙΣΜΟΙ ΕΛΕΓΑΝ ΤΗΝ ΙΔΙΑ ΠΡΟΤΑΣΗ, ΣΤΗΝ ΙΔΙΑ ΣΕΛΙΔΑ** (ADR-857 Φ4).
+ *
+ * Το υποσέλιδο διάβαζε `t('showcase:brand.poweredBy')`· το **PDF** διάβαζε τη σκληρή
+ * δίγλωσση `showcasePoweredByDefault`. Και τα δύο εμφανίζονται **μαζί**: ο σύνδεσμος
+ * «Λήψη PDF» κάθεται ακριβώς πάνω από εδώ (`ShowcaseClient`). Δύο πηγές ⇒ ο άνθρωπος
+ * μπορούσε να δει **δύο διαφορετικά** ονόματα στην ίδια οθόνη.
+ *
+ * Πλέον **μία** πηγή για τις δύο επιφάνειες. Γι' αυτό το `locale` είναι **prop**: ο
+ * γονιός το έχει ήδη στενεμένο σε `'el' | 'en'` — μια δεύτερη στένωση εδώ θα ήταν
+ * **τέταρτο** αντίγραφο ενός `?:` που έχει **μετρημένα** αποκλίνει στο δέντρο.
+ */
 export function ShowcaseFooter({
   company,
-}: { company: { name: string; phone?: string; email?: string; website?: string } }) {
-  const { t } = useTranslation('showcase');
+  locale,
+}: {
+  company: { name: string; phone?: string; email?: string; website?: string };
+  locale: EnumLocale;
+}) {
   const contact = [company.phone, company.email, company.website].filter(Boolean).join(' · ');
   const year = new Date().getFullYear();
   return (
@@ -39,10 +56,17 @@ export function ShowcaseFooter({
           className="h-6 w-6 rounded bg-white/90 object-contain p-0.5"
           aria-hidden="true"
         />
-        <span className="font-semibold">{t('brand.poweredBy')}</span>
+        <span className="font-semibold">{showcasePoweredByDefault(locale)}</span>
       </div>
+      {/*
+        🔑 **ΤΟ `©` ΟΝΟΜΑΖΕΙ ΠΡΟΣΩΠΟ, ΟΧΙ ΠΡΟΪΟΝ** (ADR-857 Φ4, κλάση Β). Έγραφε
+        `t('showcase:brand.appName')` ⇒ «© 2026 **Nestor App**» — δηλαδή απέδιδε τα
+        πνευματικά δικαιώματα σε **λογισμικό**. Είναι **λάθος τύπου**, όχι στιλ: τα
+        δικαιώματα ανήκουν σε νομικό πρόσωπο, και γι' αυτό η ρίζα κρατά **δύο**
+        διαφορετικές τιμές που δεν είναι συνώνυμες.
+      */}
       <p className="text-[10px] text-[hsl(var(--showcase-muted-fg))]/70">
-        &copy; {year} {t('brand.appName')}
+        &copy; {year} {LEGAL_ENTITY_NAME}
       </p>
     </footer>
   );

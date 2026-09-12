@@ -4,14 +4,13 @@ import { useSidebar } from "@/components/ui/sidebar"
 import { cn } from "@/lib/utils"
 import LogoPagonis from "@/components/property-viewer/Logo_Pagonis"
 import { useEffect, useState } from "react"
-import { useTranslation } from "react-i18next"
+import { PRODUCT_NAME } from '@/constants/product-identity'
 import { TRANSITION_PRESETS } from '@/components/ui/effects'
 import '@/lib/design-system';
 
 export function SidebarLogo() {
   const { state } = useSidebar()
   const [isMounted, setIsMounted] = useState(false)
-  const { t } = useTranslation('navigation')
 
   useEffect(() => {
     setIsMounted(true)
@@ -38,8 +37,15 @@ export function SidebarLogo() {
         )}
       >
         {isMounted && (
+          {/*
+            🔴 **ΗΤΑΝ `t('navigation:user.name')` — ΚΑΙ ΤΟ ΚΛΕΙΔΙ ΖΟΥΣΕ ΣΕ ΛΑΘΟΣ ΣΠΙΤΙ**
+            (ADR-857 Φ4): κάτω από `user:`, δίπλα στα `user.title` και
+            `user@example.com`, δηλαδή έμοιαζε με **στοιχεία του συνδεδεμένου χρήστη**
+            ενώ η τιμή του ήταν σταθερά «Nestor App» σε **δύο** γλώσσες. Είναι το
+            σήμα του **προϊόντος** και έρχεται από τη ρίζα — άκλιτο, μη μεταφράσιμο.
+          */}
           <span className="text-base font-bold text-foreground whitespace-nowrap">
-            {t('user.name')}
+            {PRODUCT_NAME}
           </span>
         )}
       </div>

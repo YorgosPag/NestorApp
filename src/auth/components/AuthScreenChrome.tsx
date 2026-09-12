@@ -11,10 +11,15 @@
  * σε ένα δίδυμο που υπήρχε **από την πρώτη μέρα**.
  *
  * 🔴 ΚΑΙ ΤΑ ΤΡΙΑ ΑΝΤΙΓΡΑΦΑ ΕΙΧΑΝ ΗΔΗ ΑΠΟΚΛΙΝΕΙ, ΟΠΩΣ ΠΑΝΤΑ. Το
- * `AuthActionContent.tsx` έγραφε σωστά `{t('brand.name')}`· τα άλλα δύο είχαν
- * **σκληρό `"Nestor App"`** με `eslint-disable custom/no-hardcoded-strings` από
- * πάνω — δηλαδή δύο παραβιάσεις του N.11 που ζούσαν πίσω από σίγαση, ενώ ο
- * σωστός δρόμος υπήρχε στο διπλανό αρχείο. Η ενοποίηση σβήνει και τις δύο.
+ * `AuthActionContent.tsx` περνούσε από το i18n· τα άλλα δύο είχαν **σκληρό
+ * `"Nestor App"`** με `eslint-disable custom/no-hardcoded-strings` από πάνω —
+ * δηλαδή δύο παραβιάσεις του N.11 που ζούσαν πίσω από σίγαση, ενώ ο σωστός δρόμος
+ * υπήρχε στο διπλανό αρχείο. Η ενοποίηση σβήνει και τις δύο.
+ *
+ * ⚠️ **ΚΑΙ ΜΕΤΑ ΤΟ i18n ΕΠΑΨΕ ΝΑ ΕΙΝΑΙ Ο ΣΩΣΤΟΣ ΔΡΟΜΟΣ** (ADR-857 Φ4): το κλειδί
+ * `auth:brand.name` **διαγράφηκε**. Ένα όνομα προϊόντος σε catalog μετάφρασης είναι
+ * δομή που επιτρέπει απόκλιση — και το αδελφό `search-results:site.brand` **είχε
+ * αποκλίνει**. Το όνομα έρχεται πλέον από τη ρίζα `@/constants/product-identity`.
  *
  * ⚠️ **ΤΟ NAMESPACE ΔΗΛΩΝΕΤΑΙ ΕΔΩ, ΔΕΝ ΔΑΝΕΙΖΕΤΑΙ** (ADR-744 §18). Ένα component
  * που παίρνει το `t` ως prop δηλώνει **μηδέν** namespace, και τότε ο generator του
@@ -28,6 +33,7 @@
 'use client';
 
 import '@/lib/design-system';
+import { PRODUCT_NAME } from '@/constants/product-identity';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import LogoPagonis from '@/components/property-viewer/Logo_Pagonis';
 import { ShellUtilities } from '@/core/containers/ShellUtilities';
@@ -75,14 +81,23 @@ export function AuthBrandMark({ as = 'header' }: { readonly as?: 'header' | 'fra
   const colors = useSemanticColors();
   const typography = useTypography();
   const layout = useLayoutClasses();
-  const { t } = useTranslation('auth');
 
   const mark = (
     <>
       <figure className={layout.centerHorizontal}>
         <LogoPagonis className={`${iconSizes.xl4} ${colors.text.primary}`} />
       </figure>
-      <h1 className={`${typography.heading.lg} ${colors.text.primary}`}>{t('brand.name')}</h1>
+      {/*
+        🔑 **ΤΟ ΟΝΟΜΑ ΔΕΝ ΕΙΝΑΙ ΜΕΤΑΦΡΑΣΙΜΟ** (ADR-857 Φ4). Ήταν `t('auth:brand.name')`
+        — ένα κλειδί **ανά γλώσσα** για ουσιαστικό που είναι **άκλιτο και ίδιο** σε κάθε
+        γλώσσα, δηλαδή δομή που **επιτρέπει** απόκλιση. Και είχε ήδη αποκλίνει αλλού:
+        το αδελφό `search-results:site.brand` έλεγε «Nestor».
+
+        Τα ονόματα προϊόντων είναι «do not translate» (Mozilla l10n style guide), και οι
+        μεταφράσιμες συμβολοσειρές μένουν **χωριστά** από όσες δεν μεταφράζονται
+        (Microsoft globalization). Πλέον η απόκλιση είναι **αδύνατη**, όχι φυλασσόμενη.
+      */}
+      <h1 className={`${typography.heading.lg} ${colors.text.primary}`}>{PRODUCT_NAME}</h1>
     </>
   );
 
