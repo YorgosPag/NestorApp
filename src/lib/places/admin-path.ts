@@ -28,7 +28,17 @@ import type {
   HierarchySnapshot,
 } from '@/hooks/useAdministrativeHierarchy';
 
-/** Ποιο κλειδί του `AdminPath` γεμίζει κάθε βαθμίδα. */
+/**
+ * Ποιο κλειδί του `AdminPath` γεμίζει κάθε βαθμίδα.
+ *
+ * 🔑 **Είναι η ΜΙΑ αντιστοιχία «αριθμός βαθμίδας ↔ όνομα βαθμίδας»** *(ADR-332 D27 Φάση Β′)*, και
+ * τη χρειάζονται πλέον και **διαδρομές διακομιστή** — μέσω του {@link PATH_KEY_TO_LEVEL}. Το `ADMIN_LEVELS`
+ * του `useAdministrativeHierarchy` λέει το ίδιο, αλλά ζει σε module που **εισάγει React** —
+ * ένα API route δεν επιτρέπεται να το σύρει. Αυτό εδώ εισάγει **μόνο τύπους** από τον
+ * ξενιστή, άρα περνά καθαρά και στις δύο πλευρές.
+ * ⛔ **ΜΗΝ γράψεις δεύτερο πίνακα βαθμίδων** — θα ήταν ο κλώνος που ονομάζει ο N.18, και
+ * ακριβώς το σχήμα που το ADR-772 πλήρωσε με απώλεια δεδομένων.
+ */
 const LEVEL_TO_PATH_KEY: Record<number, keyof AdminPath> = {
   1: 'majorGeo',
   2: 'decentAdmin',
@@ -39,6 +49,11 @@ const LEVEL_TO_PATH_KEY: Record<number, keyof AdminPath> = {
   7: 'community',
   8: 'settlement',
 };
+
+/** Η **αντίστροφη** ανάγνωση: όνομα βαθμίδας → αριθμός, από τον **ίδιο** πίνακα. */
+export const PATH_KEY_TO_LEVEL: Readonly<Record<keyof AdminPath, number>> = Object.fromEntries(
+  Object.entries(LEVEL_TO_PATH_KEY).map(([level, key]) => [key, Number(level)]),
+) as Record<keyof AdminPath, number>;
 
 /** Κενή διαδρομή — «δεν ξέρω», με **όλα** τα κλειδιά παρόντα. */
 export function emptyAdminPath(): AdminPath {

@@ -1323,9 +1323,6 @@
     }
   },
   "auth": {
-    "brand": {
-      "name": "Nestor App"
-    },
     "loading": {
       "checkingAccess": "Έλεγχος πρόσβασης..."
     },
@@ -3547,7 +3544,6 @@
     },
     "user": {
       "email": "user@example.com",
-      "name": "Nestor App",
       "title": "Χρήστης"
     }
   },
@@ -3909,7 +3905,6 @@
       "moreMap": "Μεγαλύτερος χάρτης"
     },
     "site": {
-      "brand": "Nestor",
       "home": "Αρχική",
       "nav": "Κύρια πλοήγηση",
       "signIn": "Σύνδεση"

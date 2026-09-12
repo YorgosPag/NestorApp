@@ -30,7 +30,7 @@
     "src/i18n/generated/routes/terms.el.json": "481f837696b407553f56de16128778617a86f72cf7b27471d61cd5793cf7d288",
     "src/i18n/generated/routes/test-harness__listing-shapes.el.json": "0a342a84a1d24b4b7068e33a0e303cd6c22e437cc38be31b5a63e33c4089cd6b",
     "src/i18n/generated/routes/workspace__new.el.json": "66003c6d2319e32e6182a5efd1777723f5eb494396b60b757a07c995a17518a9",
-    "src/i18n/generated/shell-slice.el.json": "0ac1ee90e5c98ecd85daa03e2c2558dac1e2ff116a10949989f58543cce0d515",
+    "src/i18n/generated/shell-slice.el.json": "dca93c26a024795d0883c393b4aa016fea8fe62674c0090eee04d128b7d62030",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "boundaries": {
@@ -69,7 +69,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "6a8d306c866b3ee0df598926f7a7ad0c4ce172c896e43f617e168f03621ed820",
+  "inputsSha256": "5faa7275c52a3c3ec3294b042f739db56d138e665f50408f80281fec4a7a64d1",
   "languages": [
     "el"
   ],
@@ -461,6 +461,8 @@
     "src/lib/owner-property/owner-property-form-values.ts": "2815b27a704454e7d4d57a92493535ab9859deed709f9d74b80f1d8e3b8584f7",
     "src/lib/owner-property/owner-property-from-document.ts": "3a843402a86febb95d39d4472f551c3e6d476a6f0aed2166620d64a037793361",
     "src/lib/owner-property/owner-property-projection.ts": "5eea665514450d0f0474549617816cc7ddfa1cebb0a7d0bd2d4493dc49dc118f",
+    "src/lib/places/admin-identity.ts": "59a82c814985e68d9b0865a8299d7253a2b7b132e23692f3b35a8a133a162d5f",
+    "src/lib/places/admin-name-index.ts": "333c35bedda0057a8b0d1d076a002694e17c7c7087b0165b07afd2e6e3a31d53",
     "src/lib/primary-entry.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/professional/showcase-acts.ts": "4f304bf6b05d212961848933ccb6384ea0bb64d8496840ca8449ed7daabe69f0",
     "src/lib/property/property-completion-stance.ts": "e03d3e31e18bb9a51aa428bea0ff2bdc23dd6477be22e5460b10105f258cd343",
@@ -477,6 +479,7 @@
     "src/server/auth/auth-action-link.ts": "3bd06c0b7b2da10a8a15f0a4d3fe6209afdba1d2189616dda5db872dda71e8c9",
     "src/server/auth/citizen-identity.ts": "446401bcc8d6c967c2f663a43ebeb1eda963267cc75d90f48f48d49f9cf057a7",
     "src/server/auth/mailbox-proof-custody.ts": "6e7cb2b7e60df6a68186c112ac1103eb77b5302a78792f431402583bafe519e7",
+    "src/server/comms/email-provider-chain.ts": "a84ac1f610c34d880f438b3fa6d31adb502d76c652d675da69cc2d95ce6f4fe5",
     "src/server/comms/email-texts.ts": "13d0118d8622d4a1b60e25c2abc3fa64fd26f6dafc375548eda46e672294c414",
     "src/server/comms/orchestrator.ts": "3c544030adad04ccf05d648eab10ca6e1e637de7e0fe0ee75cc4075f9f958ff6",
     "src/server/notifications/email-delivery-window.ts": "0643f6c455c8ee15c9764af9d79354ac0ca6df7870edf4da6be1f6565aaaad8c",
@@ -488,7 +491,7 @@
     "src/server/notifications/user-notification-settings-store.ts": "f7b44fcca73e4bef37fda2eb93e50924bc8ff636a0abace1855ad06f8eb30fbc",
     "src/services/ErrorTracker.ts": "8614830a9e1282162a1356442226b61184fbc49af7adea1aa17b3d1e8076113e",
     "src/services/account/tax-identity.service.ts": "96596f0ee90dc75534ab6cab64bc756a4d46028c5a4c8b4530e94e765ccb71c6",
-    "src/services/ai-pipeline/shared/mailgun-sender.ts": "d1e70d64f317f744ddc5eb21cc3885b0892d9bc1fbc8bce6cdb6b0c67c4a53a8",
+    "src/services/ai-pipeline/shared/mailgun-sender.ts": "8aba18d26278bb1f80368c7a0d8f351e08fea82dff520a9d029176950f6aa006",
     "src/services/company/company-public-name.reader.ts": "edb8c2bc3045831f4ba77fffbaf686508497d5738f7f8d9f550c6374a0039f63",
     "src/services/contact/first-contact-admission.ts": "3306acd8e253fac1ab93b92fd7d040bbc9ed97ebc71e0edee867d37a0d2fc25f",
     "src/services/contact/first-contact-failure-readers.ts": "d76edd7c7a40dad06e01c4711d8c60512411b7e9589cad98b833c68c3e868c89",
@@ -558,7 +561,7 @@
     "src/services/photo-upload-types.ts": "4f98445503d1d8b5b42bb6c89c77fded730cc9a40ae88722d5994e7cde2200b1",
     "src/services/photo-upload.service.ts": "9c872ba8e7f6aec6cdc459bb0e8ac54ed4749ca24d4a99a26e2baf4ca0eff50d",
     "src/services/places/admin-footprints.reader.ts": "028aff32e86ae2ed46ddd019863c8b697d0c2cd435da9b421bf180d7f7de7475",
-    "src/services/places/administrative-hierarchy.reader.ts": "d017ceb25fcf4ef26321d069c2e7c3c5ad099ed7271034a450185c4c7ed5dbcb",
+    "src/services/places/administrative-hierarchy.reader.ts": "4653d7fc195f6e3003e53fc27efe5cfd6ccda67bb21ae17421bd1241a15a129f",
     "src/services/places/public-place-read.service.ts": "6cd71cfce1471cf63ae2dc08dcc81732a75e950d65c0c200bd97f87ffe1b884d",
     "src/services/profile/avatar-image.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/services/profile/avatar-render.ts": "a1fbb4a368bc6b8624ec723f78128f7d9d89080a747c64b0ac590cf35b386508",
@@ -623,6 +626,7 @@
     "src/types/owner-property.ts": "ee38aac1b99d0edc7aa952d4cfa186397e5c236035f43411698302f59d4da95f",
     "src/types/property-demand.ts": "0948f8195f70b8f584d8af14030a08d8cfa58034393e06a7729108ada0c829be",
     "src/types/stay-booking.ts": "69599ef2f7cf9390d7d78ec733071a54644d9c5818dcd6238d4d1d67ea68f156",
+    "src/utils/address/place-name.ts": "bf3bb21f6195403196c87747d90a3d3513fbc1e8b5f44ca2ed406d59d0f358ac",
     "src/utils/collection-utils.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/utils/file-validation.ts": "902823a7c5593c95d19097a7acc63837f94cb2c2df087c89ed77f08b52b9d582"
   },
@@ -1364,7 +1368,6 @@
       "wants": {
         "auth": {
           "keys": [
-            "brand.name",
             "form.accessibility.hidePassword",
             "form.accessibility.showPassword",
             "form.descriptions.reset",
@@ -4271,7 +4274,7 @@
     "src/app/(me)/layout.tsx": "cf1eabbc3afc6f0b57cde6075635d8e58d54b4b0e8fe49645fe60f4c79dd27fa",
     "src/app/layout.tsx": "d90063411e742ed897b6d39da651eb17432953c843c455aed6ebca50163e9529",
     "src/auth/account-mail.client.ts": "1f31d10c4f4fff667918d2cde6feb053399dd53f4ed3b751aca963eeeb7e189b",
-    "src/auth/components/AuthScreenChrome.tsx": "9bb87577155e7391892741c916eedbb9b1decfce476115e33d8bd6f892a717c4",
+    "src/auth/components/AuthScreenChrome.tsx": "af5374a2d172a8f9efcb85251a099c893b104b88d3a92d91d9365d030d33ccd9",
     "src/auth/components/ProtectedRoute.tsx": "856ebd62823da579a2fbe9e0c4aae72c378d09f8ce044c6ff7c133d0e395c67c",
     "src/auth/contexts/AuthContext.tsx": "b60a6936fe4ee3773c05f17ba9402e37c38780399142f967e1296acbb0e8d467",
     "src/auth/contexts/UserRoleContext.tsx": "a59baf9567821da7a2c787f7bfdf9b14581224dbd72f9ac1a4b2d09a3293036b",
@@ -4335,7 +4338,7 @@
     "src/components/projects/procurement/ProjectProcurementTabs.tsx": "9fc7a77d5fc8b542183887c10158877a46fcd55ca8cc23542e05bcdc1d9ae7c1",
     "src/components/property-viewer/Logo_Pagonis.tsx": "abe960984e1f408862eae2ad7eb305b93edb6ba4f7fdcf375ef29f992c3b98ce",
     "src/components/providers/I18nProvider.tsx": "bb82ce64bdb15f688d8d20467bde1357c6e5b71afb367cf015ade7f691d841f2",
-    "src/components/public-site/PublicSiteHeader.tsx": "3c0ac0bb4cfc886ac000d8bef6b37f426aabbf3d2ab866c893e76fce36e5ae1e",
+    "src/components/public-site/PublicSiteHeader.tsx": "2a9297d0c6dda6926b19e4bbf917d4f4e59474d56010a74bbf081a3b48cd253e",
     "src/components/search-results/ListingCard.tsx": "01ac93baf14f3ce74eb8dd414390e17b22b8f8bba2e6ac407a3b98b934d2ba70",
     "src/components/search-results/ListingCardGallery.tsx": "9ce2b0482be98b31e2dbf0badde65731bcc6df83c838abd51bd1b338b27dab5e",
     "src/components/search-results/use-gallery-scroller.ts": "9d193c05b10eb027cbb04b9766632d056b7342b0cb99b7e2a513e7c8c3ffbc81",
@@ -4353,7 +4356,7 @@
     "src/components/sharing/fields/PersonalMessageField.tsx": "b2334018eef4ba7c8a72b82cde1fba2a028420adedb587d2510d8993562a93a7",
     "src/components/sidebar/sidebar-badge.tsx": "269baa7a33c29e10d15ad0713ede7cb63b45b93c1b6b8a704767f782786ff258",
     "src/components/sidebar/sidebar-hidden-row.tsx": "f34d0930399338e834228f06f1fa210d3bd287d562898d5e740bd38e24db63a8",
-    "src/components/sidebar/sidebar-logo.tsx": "85b01702d19d6acbd0d3e3e770633aec28433a73902ec25dfd98b99643b03eff",
+    "src/components/sidebar/sidebar-logo.tsx": "2a2fca687bec279c979523ca38d32eb5986272f57a7d83387553143ed1a344c1",
     "src/components/sidebar/sidebar-menu-item.tsx": "012dd91764bb0d3d187dee9331804daaaf560d97c82fec1379a699936c10be35",
     "src/components/sidebar/sidebar-menu-section.tsx": "f35575e03fd8fe355bfaef36ed22e57435cad8a43d38515795db03e1e78af415",
     "src/components/sidebar/sidebar-reveal-banner.tsx": "dd752d43459552ac84f59bda594c368d84d6031182003c2dec47fe7030c0fa69",
@@ -4906,10 +4909,10 @@
   ],
   "stats": {
     "dynamicBoundaries": 18,
-    "matchedKeys": 178,
+    "matchedKeys": 177,
     "routeBoundaries": 0,
     "shellFiles": 631,
-    "sliceBytes": 410015
+    "sliceBytes": 409913
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
@@ -5332,7 +5335,6 @@
         "src/components/private-space/PrivateSpaceShell.tsx"
       ],
       "keys": [
-        "brand.name",
         "loading.checkingAccess",
         "navigation.settingsToolbar"
       ],
@@ -8496,7 +8498,6 @@
         "src/components/job/JobSuggestion.tsx",
         "src/components/shared/ModuleBreadcrumb.tsx",
         "src/components/sidebar/sidebar-hidden-row.tsx",
-        "src/components/sidebar/sidebar-logo.tsx",
         "src/components/sidebar/sidebar-menu-item.tsx",
         "src/components/sidebar/sidebar-reveal-banner.tsx"
       ],
@@ -8594,8 +8595,7 @@
         "pages.navigation",
         "roleManagement",
         "searchBackfill",
-        "setup",
-        "user.name"
+        "setup"
       ],
       "prefixes": [
         "accounting",
@@ -8731,7 +8731,6 @@
         "listing.priceMissing.rentPriceMissing",
         "listing.priceMissing.salePriceMissing",
         "listing.undeclaredOn",
-        "site.brand",
         "site.home",
         "site.nav",
         "site.signIn"

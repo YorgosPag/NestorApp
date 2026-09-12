@@ -120,6 +120,34 @@ function write(bag: AddressFieldBag, slot: Slot, value: string | null | undefine
  *   projectAddressVocabulary(addr, 'projectAddress', 'form')   // αποθήκευση → οθόνη
  *   projectAddressVocabulary(val,  'form', 'projectAddress')   // οθόνη → αποθήκευση
  */
+/**
+ * **Η ΜΙΑ ΜΗΧΑΝΗ ΤΩΝ ΟΚΤΩ ΕΠΙΠΕΔΩΝ** — η μεταχείριση της **έλλειψης** είναι η μόνη παράμετρος.
+ *
+ * 🔴 **Εξήχθη επειδή ο αυτοέλεγχος N.18 (CHECK 3.28) βρήκε δίδυμο**: η νέα
+ * {@link overwriteAdminHierarchy} είχε αντιγράψει αυτόν τον βρόχο *(7 γραμμές / 51 tokens)*.
+ * Είναι **ακριβώς** το σχήμα που ο κανόνας ονομάζει — «κεντρικοποιείς το Α, γράφεις το Β ως
+ * δίδυμο» — και το έπιασε το εργαλείο, όχι η προσοχή μου.
+ *
+ * @param missing `'skip'` = *«μετάφερε ό,τι υπάρχει»* (συγχώνευση)· `'clear'` = *«η ιεραρχία
+ *   ΕΙΝΑΙ αυτή»* (αντικατάσταση: κενό όνομα και `null` ταυτότητα **γράφονται**).
+ */
+function writeAdminLevels(
+  bag: AddressFieldBag,
+  source: Readonly<Record<string, unknown>>,
+  from: AddressVocabulary,
+  to: AddressVocabulary,
+  missing: 'skip' | 'clear',
+  clearedIdsAsNull: boolean,
+): void {
+  for (const level of ADMIN_LEVEL_KEYS) {
+    const binding = ADMIN_LEVEL_VOCABULARY[level];
+    const name = readName(source, binding[from].name);
+    const id = readId(source, binding[from].id, clearedIdsAsNull);
+    write(bag, binding[to].name, missing === 'clear' ? (name ?? '') : name);
+    write(bag, binding[to].id, missing === 'clear' ? (id ?? null) : id);
+  }
+}
+
 export function projectAddressVocabulary(
   source: Readonly<Record<string, unknown>>,
   from: AddressVocabulary,
@@ -128,11 +156,7 @@ export function projectAddressVocabulary(
 ): AddressFieldBag {
   const bag: AddressFieldBag = {};
 
-  for (const level of ADMIN_LEVEL_KEYS) {
-    const binding = ADMIN_LEVEL_VOCABULARY[level];
-    write(bag, binding[to].name, readName(source, binding[from].name));
-    write(bag, binding[to].id, readId(source, binding[from].id, options.clearedIdsAsNull));
-  }
+  writeAdminLevels(bag, source, from, to, 'skip', options.clearedIdsAsNull);
 
   // Ταξιδεύουν πάντα — η «Περιοχή / Συνοικία» δεν είναι ταχυδρομικό πεδίο.
   for (const field of ADJACENT_FIELD_KEYS) {
@@ -147,6 +171,43 @@ export function projectAddressVocabulary(
     }
   }
 
+  return bag;
+}
+
+/**
+ * **ΑΝΤΙΚΑΤΑΣΤΑΣΗ ολόκληρης της διοικητικής ιεραρχίας** — ό,τι λείπει **καθαρίζεται**.
+ *
+ * ═════════════════════════════════════════════════════════════════════════════
+ * 🔑 **ΑΛΛΗ ΕΡΩΤΗΣΗ ΑΠΟ ΤΟ {@link projectAddressVocabulary}, ΟΧΙ ΔΙΟΡΘΩΣΗ ΤΟΥ.**
+ *
+ * Εκείνο απαντά *«μετάφερε ό,τι **υπάρχει**»* και **παραλείπει τα κενά** — σωστό για
+ * συγχώνευση, και δηλωμένο στη σύμβασή του *(`readName` → `undefined` όταν η αλυσίδα είναι
+ * κενή, `write` → αγνοεί το `undefined`)*.
+ *
+ * Αυτό απαντά *«η ιεραρχία **ΕΙΝΑΙ** αυτή, γράψ' τη ΟΛΗ»*: κάθε όνομα γράφεται, **ακόμη και
+ * κενό**, και κάθε ταυτότητα γίνεται `null` όταν λείπει. Είναι η ερώτηση του **συρσίματος
+ * πινέζας** *(ADR-332 D27 Φάση Β′)*: το κείμενο αντικαταστάθηκε, άρα ό,τι δεν αποδείχθηκε
+ * για τη **νέα** διεύθυνση **δεν επιτρέπεται να επιβιώσει** από την παλιά — αλλιώς μένει
+ * όνομα μιας περιοχής με την ταυτότητα μιας άλλης *(ADR-277)*.
+ *
+ * 🔴 **Το χρειάστηκε μέτρηση**: η πρώτη μου εκδοχή της Φάσης Β′ χρησιμοποιούσε το
+ * `projectAddressVocabulary` και οι **τρεις** παλιές άγκυρες κοκκίνισαν — το
+ * `municipalityName` **επιβίωνε** ως «Κορδελιού-Ευόσμου» δίπλα σε διεύθυνση Θεσσαλονίκης.
+ * Η παράλειψη των κενών είναι **σωστή** εκεί και **λάθος** εδώ· γι' αυτό δύο συναρτήσεις.
+ *
+ * ⚠️ **ΜΟΝΟ τα οκτώ διοικητικά επίπεδα.** Τα ταχυδρομικά και το `neighborhood` τα γράφει ο
+ * καλών ρητά — εκείνα είναι **κείμενο της μηχανής**, όχι ταυτότητα, και έχουν δικό τους
+ * ιδιοκτήτη *(δες τον κανόνα του `region` στο `contact-address-drag`)*.
+ * ═════════════════════════════════════════════════════════════════════════════
+ */
+export function overwriteAdminHierarchy(
+  source: Readonly<Record<string, unknown>>,
+  from: AddressVocabulary,
+  to: AddressVocabulary,
+): AddressFieldBag {
+  const bag: AddressFieldBag = {};
+  // `'clear'`: **η απουσία είναι εντολή καθαρισμού**, όχι λόγος παράλειψης.
+  writeAdminLevels(bag, source, from, to, 'clear', true);
   return bag;
 }
 
