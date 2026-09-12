@@ -1,6 +1,6 @@
 /**
  * @fileoverview **ΑΓΚΥΡΕΣ: «ΠΟΙΟΝ ΧΩΡΟ ΖΗΤΑ Ο ΠΕΛΑΤΗΣ;» — ΜΙΑ ΑΠΑΝΤΗΣΗ** (ADR-849 Β1 · ADR-787 §5.3 ζ).
- * @related services/firestore/super-admin-active-company · lib/api/company-scope-source
+ * @related services/firestore/super-admin-active-company · lib/api/workspace-scope-source
  *
  * 🔴 Η ζωντανή βλάβη: σύνδεσμος email προς `/o/<ΠΑΓΩΝΗΣ>/properties/<id>` έδειξε «δεν
  * βρέθηκε», γιατί ο πελάτης ρωτούσε τον **επιλογέα** (`localStorage`) και όχι τη διεύθυνση.
@@ -17,7 +17,8 @@ import {
   setSuperAdminActiveCompanyId,
   setUrlWorkspaceScope,
 } from '../super-admin-active-company';
-import { requestedCompanyScope } from '@/lib/api/company-scope-source';
+import { requestedWorkspaceScope } from '@/lib/api/workspace-scope-source';
+import { serializeRequestedWorkspace } from '@/lib/workspace/requested-workspace-wire';
 import { orgWorkspace, personalWorkspace } from '@/types/workspace-membership';
 
 const A = 'comp_aaaa';
@@ -89,12 +90,34 @@ describe('το store — ισότητα κατά τιμή, σταθερό στι
 
 describe('η κεφαλίδα HTTP ρωτά την ΙΔΙΑ απάντηση', () => {
   it('Κ1: η υποδοχή του client επιστρέφει ό,τι λέει το `requestedWorkspace`', () => {
-    expect(requestedCompanyScope()).toBeNull();
+    expect(requestedWorkspaceScope()).toEqual({ kind: 'default' });
     setSuperAdminActiveCompanyId(B);
-    expect(requestedCompanyScope()).toBe(B);
+    expect(requestedWorkspaceScope()).toEqual({ kind: 'org', companyId: B });
     setUrlWorkspaceScope(orgWorkspace(A));
-    expect(requestedCompanyScope()).toBe(A);
+    expect(requestedWorkspaceScope()).toEqual({ kind: 'org', companyId: A });
+  });
+
+  /**
+   * 🔴 Η ΑΓΚΥΡΑ ΤΟΥ ΟΡΙΟΥ (1) — ADR-787 §5.3 ζ, 2026-09-12.
+   *
+   * Μέχρι σήμερα η υποδοχή επέστρεφε `string | null`, άρα ο **ιδιωτικός** χώρος και το
+   * «η διεύθυνση δεν ονομάζει χώρο» έδιναν **την ίδια** τιμή (`null`) ⇒ καμία κεφαλίδα ⇒
+   * ο διακομιστής έδινε καθολική όψη στον super-admin μέσα στο `/o/me`.
+   *
+   * ⚠️ Η μετάλλαξη που σκοτώνει: `requestedWorkspace()` να επιστρέφει `{kind:'default'}`
+   * για τον ιδιωτικό χώρο — τότε το σύρμα λέει `default` και ο διακομιστής **δεν** αρνείται.
+   */
+  it('Κ2 🔴 ο ιδιωτικός χώρος είναι ΡΗΤΗ δήλωση στο σύρμα, ΠΟΤΕ σιωπή', () => {
+    setSuperAdminActiveCompanyId(B);
     setUrlWorkspaceScope(personalWorkspace('uid_1'));
-    expect(requestedCompanyScope()).toBeNull();
+
+    expect(requestedWorkspaceScope()).toEqual({ kind: 'personal' });
+    expect(serializeRequestedWorkspace(requestedWorkspaceScope())).toBe('personal');
+  });
+
+  it('Κ3: κάθε κατάσταση φεύγει στο σύρμα με τη ΜΙΑ γραμματική', () => {
+    expect(serializeRequestedWorkspace(requestedWorkspaceScope())).toBe('default');
+    setUrlWorkspaceScope(orgWorkspace(A));
+    expect(serializeRequestedWorkspace(requestedWorkspaceScope())).toBe(`org:${A}`);
   });
 });

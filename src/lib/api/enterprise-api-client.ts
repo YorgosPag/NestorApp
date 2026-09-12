@@ -26,7 +26,11 @@ import { sleep, withTimeout } from '@/lib/async-utils';
 //    ψαλίδισμα σχολίων**: το όριο ζητά να φύγει ευθύνη.
 import { shouldRetry, calculateBackoff, buildUrl, fetchWithTimeout } from './api-client-transport';
 import { createModuleLogger } from '@/lib/telemetry';
-import { requestedCompanyScope } from '@/lib/api/company-scope-source';
+import { requestedWorkspaceScope } from '@/lib/api/workspace-scope-source';
+import {
+  REQUESTED_WORKSPACE_HEADER,
+  serializeRequestedWorkspace,
+} from '@/lib/workspace/requested-workspace-wire';
 
 // Re-export all types for consumers
 export type {
@@ -332,13 +336,23 @@ export class EnterpriseApiClient {
     if (!skipAuth) {
       const token = await this.getIdToken(forceTokenRefresh);
       headers['Authorization'] = `Bearer ${token}`;
-      // ADR-849 Β1 — η κεφαλίδα ΡΩΤΑ τη μία απάντηση (βλ. `company-scope-source.ts`), για
-      // ΚΑΘΕ χρήστη σε οργανισμό: ο διακομιστής κρίνει με `decideMembership` (ίδια εταιρεία
-      // με το claim ⇒ μηδέν αναγνώσεις).
-      const requestedCompanyId = requestedCompanyScope();
-      if (requestedCompanyId) {
-        headers['X-Super-Admin-Company-Id'] = requestedCompanyId;
-      }
+      // 🔴 ADR-787 §5.3 ζ (όριο 1) — **Η ΔΗΛΩΣΗ ΕΙΝΑΙ ΠΑΝΤΑ ΠΑΡΟΥΣΑ, ΚΑΙ ΓΙ' ΑΥΤΟ ΥΠΑΡΧΕΙ.**
+      //
+      // Μέχρι 2026-09-12 εδώ έμπαινε κεφαλίδα **μόνο όταν υπήρχε εταιρεία**, οπότε ο
+      // ιδιωτικός χώρος έφευγε στο σύρμα **ταυτόσημος** με το «δεν ονομάζει χώρο η
+      // διεύθυνση». Ο διακομιστής διάβαζε την απουσία ως «κρίνε μόνος σου» και για
+      // super-admin έδινε **καθολική όψη**: το `/o/me/projects` έδειξε 7 έργα (§9 (γ)).
+      //
+      // 🔑 Πρότυπο Google Drive (`corpora=user`): το «δικό μου» είναι **ρητή απαριθμημένη
+      //    τιμή**, όχι σιωπή. Η γραμματική ζει σε **ένα** αρχείο μαζί με τον αναλυτή του
+      //    διακομιστή, ώστε τα δύο άκρα να μην μπορούν να αποκλίνουν.
+      //
+      // ⚠️ **Καμία άδεια δεν ζητείται εδώ.** Η δήλωση είναι **αίτημα** (ADR-787 Ε-5): ο
+      //    διακομιστής κρίνει με `decideMembership` (ίδια εταιρεία με το claim ⇒ μηδέν
+      //    αναγνώσεις) και αρνείται fail-closed ό,τι δεν δικαιούται ο αιτών.
+      headers[REQUESTED_WORKSPACE_HEADER] = serializeRequestedWorkspace(
+        requestedWorkspaceScope(),
+      );
     }
 
     return headers;

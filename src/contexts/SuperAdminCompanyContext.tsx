@@ -54,7 +54,7 @@ const logger = createModuleLogger('SuperAdminCompanyContext');
 const STORAGE_KEY = 'super_admin_active_company_id';
 
 // 🔑 **Η ΚΕΦΑΛΙΔΑ HTTP ΔΕΝ ΤΡΟΦΟΔΟΤΕΙΤΑΙ ΠΙΑ ΑΠΟ ΕΔΩ** (ADR-849 Β1): τη ρωτά το ίδιο το
-//    store (`lib/api/company-scope-source`). Το παλιό effect εδώ έτρεχε **μετά** τα effects
+//    store (`lib/api/workspace-scope-source`). Το παλιό effect εδώ έτρεχε **μετά** τα effects
 //    των παιδιών, και κρατούσε αντίγραφο που έμενε πίσω από τη διεύθυνση.
 
 // ============================================================================

@@ -12,32 +12,15 @@ import type {
   Unsubscribe,
 } from 'firebase/firestore';
 import type { CollectionKey } from '@/config/firestore-collections';
+// 🔑 ADR-787 §5.3 ζ — το λεξιλόγιο του **αιτήματος χώρου** ζει στο λεξιλόγιο του χώρου
+//    (`types/workspace-membership`), γιατί από 2026-09-12 το διαβάζει **και** το σύρμα προς
+//    το API, δηλαδή το `lib/` — που δεν επιτρέπεται να εισάγει από το `services/`.
+//    ⛔ ΜΗΝ το ξαναγράψεις εδώ: δύο ορισμοί για ένα ερώτημα είναι το σχήμα του ADR-749.
+import type { RequestedWorkspace } from '@/types/workspace-membership';
 
 // ============================================================================
 // AUTH CONTEXT
 // ============================================================================
-
-/**
- * **Ποιον χώρο ΖΗΤΑ ο πελάτης αυτή τη στιγμή** — η ΜΙΑ απάντηση (ADR-787 §5.3 ζ · ADR-849 Β1).
- *
- * ⚠️ **Αίτημα, όχι άδεια.** Την άδεια τη δίνουν ο φύλακας του χώρου
- * (`o/[workspace]/layout.tsx` → `decideMembership`) και τα `firestore.rules`.
- *
- * | κατάσταση | από πού | ερωτήματα εταιρείας |
- * |---|---|---|
- * | `org` | ο χώρος της **διεύθυνσης** (`/o/<εταιρεία>`)· ΜΟΝΟ εκτός `/o/`, ο επιλογέας του super-admin | φίλτρο σε αυτή την εταιρεία |
- * | `personal` | `/o/me` | **καμία** εταιρεία ⇒ `MissingTenantError` (ADR-809) — **ποτέ** καθολική όψη |
- * | `default` | δεν ζητήθηκε τίποτα | το claim (ή καθολική όψη για super-admin, ADR-354) |
- *
- * 🔴 **Γιατί υπάρχει**: μέχρι το ADR-849 Β1 ο πελάτης ρωτούσε **μόνο** τον επιλογέα του
- * super-admin (`localStorage`) και **αγνοούσε τη διεύθυνση**. Μετρημένο ζωντανά: σύνδεσμος
- * email προς `/o/<ΠΑΓΩΝΗΣ>/properties/<id>` έδειξε «δεν βρέθηκε», γιατί ο κατάλογος
- * ακινήτων φορτώθηκε από **άλλη** εταιρεία (αυτή του επιλογέα).
- */
-export type RequestedWorkspace =
-  | { readonly kind: 'org'; readonly companyId: string }
-  | { readonly kind: 'personal' }
-  | { readonly kind: 'default' };
 
 /** Tenant-aware authentication context extracted from Firebase custom claims */
 export interface TenantContext {

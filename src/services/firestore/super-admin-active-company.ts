@@ -33,10 +33,10 @@
  * κλείσει ο μεταφορέας — δηλωμένο, όχι ξεχασμένο.
  */
 
-import { registerCompanyScopeSource } from '@/lib/api/company-scope-source';
+import { registerWorkspaceScopeSource } from '@/lib/api/workspace-scope-source';
 import { createExternalStore } from '@/lib/state/createExternalStore';
-import type { WorkspaceRef } from '@/types/workspace-membership';
-import type { RequestedWorkspace } from './firestore-query.types';
+import { serializeRequestedWorkspace } from '@/lib/workspace/requested-workspace-wire';
+import type { RequestedWorkspace, WorkspaceRef } from '@/types/workspace-membership';
 
 /** Οι δύο είσοδοι — **ποτέ** η απάντηση. Αυτή τη δίνει το {@link requestedWorkspace}. */
 export interface ClientWorkspaceScope {
@@ -107,10 +107,14 @@ export function requestedWorkspace(
 /**
  * Το ζητούμενο ως **πρωτογενές κλειδί** (`org:<id>` · `personal` · `default`) — σταθερό
  * `getSnapshot` για ακροατές που πρέπει να **ξαναστηθούν** όταν αλλάζει ο χώρος.
+ *
+ * 🔑 **Ο σειριοποιητής είναι ο ΙΔΙΟΣ με αυτόν του σύρματος** (2026-09-12): το κλειδί του
+ * ακροατή και η τιμή της κεφαλίδας απαντούν την **ίδια** ερώτηση *(«ποιον χώρο ζητάω;»)*.
+ * Δύο γραφές της ίδιας μορφής θα αποκλίνουν την πρώτη φορά που αλλάξει η μία — και η
+ * απόκλιση θα ήταν **αόρατη**, γιατί και οι δύο «δουλεύουν».
  */
 export function requestedWorkspaceKey(scope: ClientWorkspaceScope = store.get()): string {
-  const requested = requestedWorkspace(scope);
-  return requested.kind === 'org' ? `org:${requested.companyId}` : requested.kind;
+  return serializeRequestedWorkspace(requestedWorkspace(scope));
 }
 
 /** Η εταιρεία που **ζητείται ρητά** — `null` όταν δεν ζητείται καμία (ιδιωτικός ή τίποτα). */
@@ -128,7 +132,12 @@ export function onSuperAdminActiveCompanyChange(listener: () => void): () => voi
   return store.subscribe(listener);
 }
 
-// 🔑 Η κεφαλίδα HTTP ΡΩΤΑ αυτό το store — δεν της «σπρώχνει» αντίγραφο κανένα effect.
+// 🔑 Το σύρμα προς το API ΡΩΤΑ αυτό το store — δεν του «σπρώχνει» αντίγραφο κανένα effect.
 //    Εγγραφή στο import: αυτό το module το φορτώνουν το root layout (μέσω του
 //    `SuperAdminCompanyContext`) και ο φύλακας του χώρου, **πριν** από κάθε αίτημα.
-registerCompanyScopeSource(() => requestedCompanyId());
+//
+// 🔴 **ΟΛΟΚΛΗΡΗ Η ΑΠΑΝΤΗΣΗ, ΟΧΙ ΜΟΝΟ Η ΕΤΑΙΡΕΙΑ** (2026-09-12, ADR-787 §5.3 ζ όριο 1):
+//    μέχρι σήμερα εδώ περνούσε `requestedCompanyId()`, δηλαδή `null` **και** για τον
+//    ιδιωτικό χώρο **και** για το «δεν ονομάζει χώρο η διεύθυνση». Ο διακομιστής δεν
+//    μπορούσε να τα ξεχωρίσει και έδινε καθολική όψη στον super-admin μέσα στο `/o/me`.
+registerWorkspaceScopeSource(() => requestedWorkspace());

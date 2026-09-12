@@ -9,6 +9,8 @@
  * @see enterprise-api-client.ts (main client)
  */
 
+import { MISSING_TENANT_ERROR_CODE } from '@/lib/workspace/requested-workspace-wire';
+
 // =============================================================================
 // TYPES & INTERFACES
 // =============================================================================
@@ -47,6 +49,17 @@ export interface RequestContext {
 // =============================================================================
 // ERROR CLASSES
 // =============================================================================
+
+/**
+ * «Λέει αυτό το σώμα άρνησης ότι **δεν ανήκεις σε εταιρεία**;» — μία ερώτηση, ένα σημείο.
+ *
+ * ⚠️ `unknown` φρουρός και όχι cast: το σώμα έρχεται από το δίκτυο. Ένα `as Record<…>` θα
+ * δεχόταν και `null` και συμβολοσειρά, και θα έσκαγε στο `.code`.
+ */
+function declaresMissingTenant(body: unknown): boolean {
+  if (body === null || typeof body !== 'object') return false;
+  return (body as { code?: unknown }).code === MISSING_TENANT_ERROR_CODE;
+}
 
 export class ApiClientError extends Error {
   public readonly statusCode: number;
@@ -91,6 +104,32 @@ export class ApiClientError extends Error {
    */
   public readonly errorBody?: unknown;
 
+  /**
+   * 🔑 **ΤΟ BRAND ΤΗΣ ΣΧΕΔΙΑΣΜΕΝΗΣ ΚΑΤΑΣΤΑΣΗΣ «δεν ανήκεις σε εταιρεία»** — ADR-809 ·
+   * ADR-787 §5.3 ζ (όριο 1, 2026-09-12).
+   *
+   * ─────────────────────────────────────────────────────────────────────────
+   * ΓΙΑΤΙ ΤΟ ΦΟΡΑΕΙ **ΑΥΤΗ** Η ΚΛΑΣΗ, ΚΑΙ ΟΧΙ ΚΑΘΕ ΚΑΤΑΝΑΛΩΤΗΣ
+   * ─────────────────────────────────────────────────────────────────────────
+   * Ο ιδιωτικός χώρος είναι **σχεδιασμένη** κατάσταση, όχι βλάβη: στον δρόμο της
+   * Firestore πετά `MissingTenantError` και οι καταναλωτές δείχνουν **κενό, χωρίς
+   * κόκκινη γραμμή** (`routeTenantScopedError`). Από 2026-09-12 την ίδια κατάσταση
+   * απαντά και το **HTTP** (403 `MISSING_TENANT`).
+   *
+   * Ο κριτής `isMissingTenantError` (ADR-813) ρωτά **brand**, όχι `instanceof` — και
+   * ρωτά *«έχει αυτό το αντικείμενο `isMissingTenant === true`;»*. Άρα, φορώντας το
+   * brand **εδώ**, οι ~166 καταναλωτές του `apiClient` αποκτούν τη σωστή διάκριση
+   * *(σχεδιασμένο κενό έναντι βλάβης)* **χωρίς νέο λεξιλόγιο και χωρίς δεύτερο κριτή**.
+   *
+   * ⚠️ **Διαβάζει το `code` του σώματος, ΟΧΙ το status**: ένα 403 σημαίνει πολλά
+   * πράγματα (άρνηση δικαιώματος, ξένος χώρος) και **μόνο ένα** από αυτά είναι
+   * σχεδιασμένο κενό. Το status είναι μεταφορά· η **λέξη** είναι η σημασία.
+   *
+   * ⛔ ΜΗΝ το μετατρέψεις σε `true as const`: η κλάση περιγράφει **κάθε** σφάλμα του
+   * client, όχι μόνο αυτό.
+   */
+  public readonly isMissingTenant: boolean;
+
   constructor(
     message: string,
     statusCode: number,
@@ -108,6 +147,7 @@ export class ApiClientError extends Error {
     this.requestId = requestId;
     this.details = details;
     this.errorBody = errorBody;
+    this.isMissingTenant = declaresMissingTenant(errorBody);
 
     if (Error.captureStackTrace) {
       Error.captureStackTrace(this, ApiClientError);
