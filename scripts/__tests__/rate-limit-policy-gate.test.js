@@ -192,6 +192,43 @@ describe('Κ2 — η νεκρή γραμμή πίνακα', () => {
     expect(idsOf(v, STATES.AGREES)).toEqual(['/api/admin/x']);
   });
 
+  it('🔑 Κ2ε: δήλωση ≠ ΠΡΟΕΠΙΛΟΓΗ χωρίς γραμμή πίνακα ⇒ ΚΑΜΙΑ παραβίαση (ήταν 57/84 ψεύτικες)', () => {
+    // 🔴 **ΤΟ ΖΕΥΓΟΣ ΕΙΝΑΙ Η ΑΠΟΔΕΙΞΗ, ΚΑΙ ΓΙ' ΑΥΤΟ ΖΟΥΝ ΜΑΖΙ ΣΕ ΜΙΑ ΑΓΚΥΡΑ.**
+    //    Ίδια δήλωση (`HEAVY`), ίδια διαφορά από το επιβαλλόμενο, **αντίθετη** ετυμηγορία —
+    //    και το μόνο που αλλάζει είναι αν ο πίνακας **έχει γραμμή** για τη διεύθυνση.
+    //    Χωριστές άγκυρες θα μπορούσαν να είναι και οι δύο πράσινες με το κριτήριο
+    //    σπασμένο προς τη μία κατεύθυνση.
+    const v = verdictFor([
+      // `/api/elsewhere` — **κανένα** πρόθεμα του TABLE δεν ταιριάζει ⇒ fallback STANDARD.
+      route('/api/elsewhere', WITH_HEAVY),
+      // `/api/admin/x` — ταιριάζει γραμμή (SENSITIVE) ⇒ εκείνη **νεκρώνει**.
+      route('/api/admin/x', WITH_HEAVY),
+    ]);
+
+    expect({
+      overDefault: idsOf(v, STATES.DECLARED_OVER_DEFAULT),
+      shadowed: idsOf(v, STATES.SHADOWED),
+      violations: v.violationIds.length,
+    }).toEqual({
+      overDefault: ['/api/elsewhere'],
+      shadowed: ['/api/admin/x'],
+      violations: 1,
+    });
+  });
+
+  it('🔴 Κ2στ: η αθώωση είναι fail-closed — απογραφή ΧΩΡΙΣ `enforcedFrom` μετράει παραβίαση', () => {
+    // ⚠️ Η μετάλλαξη είναι στην **είσοδο**: route object παλιότερης μορφής, όπως θα
+    //    ερχόταν από απογραφή που δεν έμαθε ποτέ να απαντά «από πού». Αν το κριτήριο
+    //    αθώωνε το `undefined`, μια μισοαναβαθμισμένη μηχανή θα **έσβηνε** σιωπηλά και
+    //    τις 27 πραγματικές νεκρές γραμμές.
+    expect(classify({ kind: 'direct', declared: 'HEAVY', enforced: 'STANDARD' }))
+      .toBe(STATES.SHADOWED);
+
+    // Ο παρονομαστής: με το ρητό `'default'` **αθωώνεται**.
+    expect(classify({ kind: 'direct', declared: 'HEAVY', enforced: 'STANDARD', enforcedFrom: 'default' }))
+      .toBe(STATES.DECLARED_OVER_DEFAULT);
+  });
+
   it('🔴 Κ2δ: τα ΔΥΟ κριτήρια είναι ΑΝΕΞΑΡΤΗΤΑ — ποτέ ένα με «ή»', () => {
     // Η μία σιωπά, η άλλη αντιφάσκει: **δύο** παραβιάσεις, διαφορετικού είδους.
     const v = verdictFor([

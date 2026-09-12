@@ -479,9 +479,18 @@ if (!process.env.SKIP_SHELL_BOUNDARY && allFiles.length > 0)
 // κριτηρίου περνά χωρίς να δοκιμαστεί ποτέ — μάθημα 3.43 · 3.57 · 3.75).
 // Κόστος: ένα πέρασμα 449 `readFileSync` + 2 parse, μηδέν spawn ⇒ Φάση 1 δίπλα στα 3.33/3.34.
 if (!process.env.SKIP_RATE_LIMIT_POLICY) {
+  // 🔴 **Η ΜΗΧΑΝΗ ΠΟΥ ΚΡΙΝΕΤΑΙ ΕΛΕΙΠΕ ΑΠΟ ΤΗ ΣΚΑΝΔΑΛΗ** (διορθώθηκε 2026-09-12, ADR-855 Φ8).
+  //    Η λίστα είχε τις διαδρομές, τον πίνακα και τον κώδικα **της πύλης** — αλλά **όχι** το
+  //    `with-rate-limit.ts`/`rate-limiter.ts`, δηλαδή τον κώδικα που **επιβάλλει** το όριο.
+  //    ⇒ Αφαίρεση του τρίτου ορίσματος του `checkRateLimit` — **ακριβώς** το ελάττωμα Α1 που
+  //    γέννησε αυτό το ADR — θα περνούσε **χωρίς να τρέξει η πύλη**. Το σχόλιο παρακάτω
+  //    επικαλούνταν το μάθημα 3.43/3.57/3.75 και το εφάρμοζε **μισό**.
   const ratePolicyTriggers = allFiles.filter(f =>
     /^src\/app\/api\/.*route\.ts$/.test(f)
     || f === 'src/lib/middleware/rate-limit-config.ts'
+    || f === 'src/lib/middleware/with-rate-limit.ts'
+    || f === 'src/lib/middleware/rate-limiter.ts'
+    || f === 'src/lib/middleware/rate-limit-store.ts'
     || f.startsWith('scripts/lib/rate-limit-policy/')
     || f === 'scripts/check-rate-limit-policy.js');
   if (ratePolicyTriggers.length > 0)

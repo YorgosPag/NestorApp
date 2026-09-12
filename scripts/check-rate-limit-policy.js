@@ -47,6 +47,10 @@ const BASELINE_FILE = path.join(PROJECT_ROOT, '.rate-limit-policy-baseline.json'
 const MARK = {
   [STATES.UNDECLARED]: '🔴',
   [STATES.SHADOWED]: '🔴',
+  // ✅ Δηλώνει ρητά κάτι άλλο από την προεπιλογή, **χωρίς** γραμμή πίνακα να αντιφάσκει:
+  //    το κανονικό σχήμα μετά το ADR-855 Α1. Τυπώνεται ώστε να **φαίνεται** πόσες
+  //    διαδρομές στέκονται μόνες τους — ήταν 57 από τις 84 ψεύτικες «νεκρές γραμμές».
+  [STATES.DECLARED_OVER_DEFAULT]: '✅',
   [STATES.AGREES]: '✅',
   [STATES.VIA_FACTORY]: '✅',
 };
