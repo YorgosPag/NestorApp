@@ -20,6 +20,7 @@
  */
 
 import type { GeoPoint } from '@/types/geo/coordinates';
+import type { ProvedAdminLevel } from '@/lib/geocoding/geocoding-types';
 import type { PartialProjectAddress, ProjectAddress } from '@/types/project/addresses';
 import { DEFAULT_STORED_COUNTRY_CODE } from '@/utils/address/country-codes';
 import { reverseGeocodeDetailed } from '@/lib/geocoding/geocoding-service';
@@ -58,7 +59,24 @@ export const PIN_DROP_NO_TEXT_I18N_KEY: Readonly<Record<PinDropNoText, string>> 
 };
 
 /** Ένα σύρσιμο: **πάντα** σημείο, η ταυτότητα της χειρονομίας, και ό,τι είπε η μηχανή. */
-export interface PinDrop<T = Partial<PartialProjectAddress>> {
+/**
+ * **Το κείμενο της μηχανής για ένα σύρσιμο** — τα πεδία διεύθυνσης **και** ό,τι αποδείχθηκε.
+ *
+ * ═════════════════════════════════════════════════════════════════════════════
+ * 🔑 **ΓΙΑΤΙ ΤΟ `admin` ΔΕΝ ΜΠΗΚΕ ΣΤΟ `ProjectAddress`** *(ADR-332 D27 Φάση Β′)*
+ *
+ * Είναι **μεταβατική απόδειξη για ένα σημείο**, όχι πεδίο της διεύθυνσης: ζει από την
+ * απάντηση του διακομιστή ως τη στιγμή της εγγραφής, και **μετά παύει να υπάρχει** — ό,τι
+ * κρατιέται είναι οι **δύο ταυτότητες** που το δοχείο δηλώνει ότι κρατά *(ADR-772)*.
+ * Γραμμένο στον αποθηκευμένο τύπο, θα διέφευγε στο Firestore σε **κάθε** γραφή διεύθυνσης —
+ * η ίδια κλάση με το «σκουπίδια στο Firestore» που ονομάζει το `clearedIdsAsNull: false`.
+ * ═════════════════════════════════════════════════════════════════════════════
+ */
+export type DraggedAddressText = Partial<PartialProjectAddress> & {
+  readonly admin?: readonly ProvedAdminLevel[];
+};
+
+export interface PinDrop<T = DraggedAddressText> {
   readonly point: GeoPoint;
   /**
    * Ποια χειρονομία — η **ίδια** φτάνει δύο φορές (`pending` → τελική έκβαση). Με αυτήν ο παραλήπτης

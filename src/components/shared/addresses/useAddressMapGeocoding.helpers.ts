@@ -15,6 +15,7 @@ import type {
 } from '@/lib/geocoding/geocoding-service';
 import { DEFAULT_STORED_COUNTRY_CODE, toStoredCountryCode } from '@/utils/address/country-codes';
 import type { DragPosition } from '@/components/shared/addresses/address-map-config';
+import type { DraggedAddressText } from '@/components/shared/addresses/pin-drop';
 
 /**
  * ADR-277: keep `street` and `number` separate so downstream consumers
@@ -30,7 +31,7 @@ import type { DragPosition } from '@/components/shared/addresses/address-map-con
 export function reverseResultToAddress(
   result: ReverseGeocodingResult,
   dropPoint: DragPosition,
-): Partial<PartialProjectAddress> {
+): DraggedAddressText {
   return {
     street: result.street,
     number: result.number || undefined,
@@ -38,6 +39,14 @@ export function reverseResultToAddress(
     neighborhood: result.neighborhood || undefined,
     postalCode: result.postalCode,
     region: result.region || undefined,
+    // 🔴 **ADR-332 D27 Φάση Β′ — η ΤΑΥΤΟΤΗΤΑ περνά από εδώ, όπως και η χώρα.**
+    // Αυτό είναι **το ένα** σημείο όπου το κείμενο της μηχανής συναντά τα δεδομένα μας, και
+    // τροφοδοτεί **και τις τέσσερις** διαδρομές συρσίματος *(επαφή έδρα · επαφή υποκατάστημα ·
+    // έργα · κτίρια)*. Ό,τι δεν περάσει από εδώ, κάθε διαδρομή θα το ζητούσε **μόνη της** —
+    // δηλαδή τέσσερις φορές, με τέσσερις πιθανότητες να αποκλίνει.
+    // ⚠️ **Η παράλειψη είναι σημασία**: `undefined` ⇒ «δεν ρωτήθηκε» ⇒ ο γραφέας δεν αγγίζει
+    //    ταυτότητες· κενός πίνακας ⇒ «ρωτήθηκε, τίποτα» ⇒ ο γραφέας καθαρίζει *(N.12)*.
+    ...(result.admin !== undefined ? { admin: result.admin } : {}),
     // 🔴 ADR-332 D27 **Ζ4α**: εδώ έμπαινε ωμή η ετικέτα του Nominatim («Ελλάδα» με
     // `accept-language: el`) σε **κάθε** δοχείο — επαφές, έργα, κτίρια. Είναι το **ένα**
     // σημείο όπου το κείμενο της μηχανής συναντά τα δεδομένα μας, άρα εδώ γίνεται κωδικός.

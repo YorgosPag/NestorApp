@@ -19,8 +19,15 @@
 import type { ProjectAddress, PartialProjectAddress } from '@/types/project/addresses';
 import type { AddressWithHierarchyValue } from '@/components/shared/addresses/AddressWithHierarchy';
 import { EMPTY_VALUE } from '@/components/shared/addresses/address-with-hierarchy-config';
-import { humanPlacedPatch, type DragApplyMode, type PinDrop } from '@/components/shared/addresses/pin-drop';
 import {
+  humanPlacedPatch,
+  type DragApplyMode,
+  type DraggedAddressText,
+  type PinDrop,
+} from '@/components/shared/addresses/pin-drop';
+import { provedHierarchyValue } from '@/components/shared/addresses/address-hierarchy-field-ops';
+import {
+  overwriteAdminHierarchy,
   projectAddressVocabulary,
   resolveCityFromHierarchy,
 } from '@/utils/address/administrative-hierarchy';
@@ -87,7 +94,7 @@ export type { DragApplyMode };
  */
 export function applyDraggedPin(
   addr: ProjectAddress,
-  dragged: Partial<PartialProjectAddress>,
+  dragged: DraggedAddressText,
   mode: DragApplyMode,
 ): ProjectAddress {
   const point = dragged.coordinates ?? addr.coordinates;
@@ -105,12 +112,34 @@ export function applyDraggedPin(
     number: dragged.number,
     city: dragged.city ?? addr.city,
     postalCode: dragged.postalCode ?? addr.postalCode,
-    // Drag provides only reverse-geocoded coordinates — clear admin hierarchy
+    // 🔴 **ADR-332 D27 Φάση Β′ — ΕΔΩ ΕΓΡΑΦΕ `regionalUnit: undefined, municipality: undefined`**
+    //    με σχόλιο *«Drag provides only reverse-geocoded coordinates — clear admin hierarchy»*.
+    //    Ήταν **σωστό όσο δεν είχαμε ταυτότητες**: όνομα μιας περιοχής με ταυτότητα άλλης
+    //    είναι χειρότερο από κενό *(ADR-277)*. Τώρα ο διακομιστής **αποδεικνύει** τον δήμο
+    //    από τη διοικητική αλυσίδα του Nominatim *(μετρημένο: 14/14)*, οπότε ο μηδενισμός
+    //    γίνεται **υπό όρους**.
+    //    🔑 Το `projectAddress` κρατά **επτά** ταυτότητες — πολύ πλουσιότερο δοχείο από το
+    //    `companyAddress` (δύο). Ο πίνακας του ADR-772 δίνει σε **κάθε** δοχείο ό,τι μπορεί
+    //    να κρατήσει: κανένα χειρόγραφο υποσύνολο, καμία σιωπηλή απώλεια.
+    ...projectHierarchyPatch(dragged),
     region: dragged.region ?? '',
-    regionalUnit: undefined,
-    municipality: undefined,
     neighborhood: dragged.neighborhood ?? undefined,
   };
+}
+
+/**
+ * Η ιεραρχία μιας διεύθυνσης έργου μετά από σύρσιμο: **γράψε ό,τι αποδείχθηκε, καθάρισε ό,τι
+ * ΔΕΝ αποδείχθηκε**.
+ */
+function projectHierarchyPatch(dragged: DraggedAddressText): Partial<ProjectAddress> {
+  // ⚠️ **`?? []` — ίδια απόφαση με τις επαφές**: εδώ φτάνουμε μόνο σε `adopt-address`, δηλαδή
+  //    όταν το κείμενο αντικαθίσταται. Καμία απόδειξη ⇒ **καθάρισμα**, ποτέ κληρονομιά της
+  //    ταυτότητας της **προηγούμενης** διεύθυνσης (ADR-277).
+  return overwriteAdminHierarchy(
+    provedHierarchyValue(dragged.admin ?? []),
+    'form',
+    'projectAddress',
+  ) as Partial<ProjectAddress>;
 }
 
 /**

@@ -46,7 +46,12 @@ describe('applyDraggedPin — η δήλωση του συρσίματος', () =
   it('ΠΑΡΟΝΟΜΑΣΤΗΣ: adopt-address ⇒ ο αριθμός ΣΒΗΝΕΤΑΙ (γι\' αυτό ο διάλογος πρέπει να το λέει)', () => {
     const out = applyDraggedPin(DECLARED, REVERSE, 'adopt-address');
     expect(out.number).toBeUndefined();
-    expect(out.municipality).toBeUndefined();
+    // ⚠️ **ADR-332 D27 Φάση Β′ — εδώ ήταν `toBeUndefined()`.** Ο μηδενισμός γίνεται πλέον από
+    //    **τον πίνακα** (`overwriteAdminHierarchy`), που γράφει **κενό** αντί να παραλείπει —
+    //    και η παράλειψη ήταν ακριβώς το σφάλμα: άφηνε **μπαγιάτικο** δήμο δίπλα σε νέα οδό.
+    //    «Κενό» και «απόν» σημαίνουν το ίδιο για κάθε αναγνώστη (`readName` αγνοεί το κενό,
+    //    κάθε `||` αλυσίδα πέφτει), αλλά **μόνο** το κενό μπορεί να **σβήσει** προηγούμενη τιμή.
+    expect(out.municipality).toBe('');
     expect(out.street).toBe('Σαμοθράκης');
   });
 

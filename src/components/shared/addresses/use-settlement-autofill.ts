@@ -19,17 +19,25 @@
  * κρυμμένη στις υπόλοιπες, οπότε το ερώτημα δεν έχει υποκείμενο.
  */
 
-import { useCallback, useEffect, useRef } from 'react';
-
-import { useAdministrativeHierarchy } from '@/hooks/useAdministrativeHierarchy';
-import { geocodeAddress } from '@/lib/geocoding/geocoding-service';
-import { toCanonicalGreekPostalCode } from '@/utils/address/postal-code';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import {
-  PATH_TO_VALUE,
-  type AddressWithHierarchyValue,
-} from './address-with-hierarchy-config';
-import { stripGreekAdminPrefix } from './address-hierarchy-field-ops';
+  HIERARCHY_SOURCE,
+  lineageIdsOf,
+  useAdministrativeHierarchy,
+} from '@/hooks/useAdministrativeHierarchy';
+import { geocodeAddress } from '@/lib/geocoding/geocoding-service';
+import {
+  identifyExact,
+  identifyWithin,
+  type AdminIdentitySources,
+} from '@/lib/places/admin-identity';
+import { buildAdminNameIndex } from '@/lib/places/admin-name-index';
+import { toCanonicalGreekPostalCode } from '@/utils/address/postal-code';
+import { stripGreekAdminPrefix } from '@/utils/address/place-name';
+
+import { type AddressWithHierarchyValue } from './address-with-hierarchy-config';
+import { applyResolvedPath } from './address-hierarchy-field-ops';
 
 /** Πόσο περιμένουμε μετά το τελευταίο πλήκτρο πριν ρωτήσουμε τη μηχανή. */
 const AUTOFILL_DEBOUNCE_MS = 1500;
@@ -48,57 +56,28 @@ export interface SettlementAutoFillInput {
 }
 
 /**
- * Ονόματα που ταιριάζουν «αρκετά»: ακριβώς, ή με κοινό πρόθεμα ανά λέξη.
+ * ═════════════════════════════════════════════════════════════════════════════
+ * 🔴 **ΕΔΩ ΖΟΥΣΕ Ο ΑΝΤΙΣΤΟΙΧΙΣΤΗΣ, ΚΑΙ ΕΔΕΝΕ ΤΟ 33% ΤΩΝ ΟΝΟΜΑΤΩΝ ΛΑΘΟΣ.**
+ * ═════════════════════════════════════════════════════════════════════════════
  *
- * 🔑 **ΓΙΑΤΙ ΟΧΙ ΣΚΕΤΟ `includes`** (που κάνει το `searchOptions`): η γενική πτώση.
- * Το Nominatim επιστρέφει «Ελευθερίου» ενώ η βάση έχει «Ελευθέριο» — υποσυμβολοσειρά
- * **αποτυγχάνει**, κοινό πρόθεμα 5 χαρακτήρων πετυχαίνει.
- */
-function makeNameMatcher(target: string): (entityName: string) => boolean {
-  const normalize = (s: string): string =>
-    s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[-]/g, ' ').toLowerCase().trim();
-
-  const normalizedTarget = normalize(target);
-
-  return (entityName: string): boolean => {
-    const normalizedEntity = normalize(entityName);
-    if (normalizedEntity === normalizedTarget) return true;
-    if (normalizedTarget.length < 4) return false;
-
-    const targetWords = normalizedTarget.split(/\s+/);
-    const entityWords = normalizedEntity.split(/\s+/);
-    if (entityWords.length !== targetWords.length) return false;
-
-    return targetWords.every((word, i) => {
-      const prefixLen = Math.min(5, Math.min(word.length, entityWords[i].length));
-      return word.substring(0, prefixLen) === entityWords[i].substring(0, prefixLen);
-    });
-  };
-}
-
-/**
- * **Αποσαφήνιση με τον Τ.Κ. ΠΡΩΤΑ** — τρία σκαλιά, από το ακριβές στο ευρύ.
+ * Ήταν `makeNameMatcher` *(ακριβές **ή** κοινό πρόθεμα 5 χαρακτήρων)* + `findByPostalCode`,
+ * σαρωμένα με `settlements.find(...)` — δηλαδή σε **σειρά αρχείου**, όπου η **ακριβής**
+ * αντιστοίχιση **δεν είχε προτεραιότητα**. Μετρημένο στο πραγματικό μητρώο, 2026-09-12:
  *
- * Ο λόγος είναι ότι τα ονόματα οικισμών **επαναλαμβάνονται** σε όλη τη χώρα, ενώ ο
- * ταχυδρομικός κώδικας τα ξεχωρίζει: ακριβής Τ.Κ. ▸ ίδια ζώνη (3 ψηφία) ▸ ευρεία
- * ζώνη (2 ψηφία). Χωρίς αυτό, «Νέα Χώρα» θα έδενε στην πρώτη που θα τύχαινε.
+ * - **3.067 από 9.294** ονόματα *(**33,0%**)* έδεναν σε **ΑΛΛΟΝ** οικισμό.
+ * - Το χειρότερο δείγμα δεν το έσωζε **ούτε** ο Τ.Κ.: «Καλλιθέα» και «Καλλίστη» έχουν
+ *   **τον ίδιο** Τ.Κ. 69100 ⇒ διεύθυνση στην **Καλλιθέα Ροδόπης** αποθηκευόταν με δήμο
+ *   **ΚΟΜΟΤΗΝΗΣ**, και το όνομα στην οθόνη γινόταν σιωπηλά «Καλλίστη».
+ * - Και η αποσαφήνιση με Τ.Κ. έβλεπε μόνο **949 από τους 13.272** οικισμούς *(**7,2%**)*.
+ *
+ * 🔑 **Ο κανόνας ήταν σωστός στο ΚΙΝΗΤΡΟ** *(η γενική πτώση: «Ελευθερίου» ≠ «Ελευθέριο»)*
+ * **και επικίνδυνος στην ΕΚΤΕΛΕΣΗ**. Το κίνητρο ζει: ο πυρήνας κρατά ανοχή — αλλά **μόνο
+ * μέσα σε αποδεδειγμένη εμβέλεια**, όπου η αμφισημία μετρήθηκε **0,4%** αντί 18–27%.
+ *
+ * ⛔ **ΜΗΝ τον ξαναγράψεις εδώ.** Ο κριτής ζει στο `lib/places/admin-identity.ts`, είναι
+ * καθαρός, δέχεται εγχυόμενους αναγνώστες, και τρέχει **και** στον διακομιστή — όπου η
+ * αλυσίδα του Nominatim έχει ακόμη τα προθέματά της, δηλαδή **δηλωμένη βαθμίδα**.
  */
-function findByPostalCode(
-  settlements: readonly { id: string; name: string; postalCode?: string }[],
-  postalCode: string,
-  nameMatches: (name: string) => boolean,
-): { id: string; name: string } | null {
-  const zones = [postalCode, postalCode.substring(0, 3), postalCode.substring(0, 2)];
-
-  for (const zone of zones) {
-    const hit = settlements.find(
-      (e) =>
-        toCanonicalGreekPostalCode(e.postalCode ?? '').startsWith(zone) && nameMatches(e.name),
-    );
-    if (hit) return { id: hit.id, name: hit.name };
-  }
-  return null;
-}
 
 /**
  * Και οι δύο δρόμοι της αυτόματης συμπλήρωσης, σε ένα σημείο.
@@ -123,7 +102,27 @@ export function useSettlementAutoFill({
   disabled,
   isGreekAddress,
 }: SettlementAutoFillInput): { readonly cancelPendingAutoFill: () => void } {
-  const { isLoading, resolvePath, getByLevel } = useAdministrativeHierarchy();
+  const { isLoading, resolvePath, findById } = useAdministrativeHierarchy();
+
+  /**
+   * Οι **τρεις** αναγνώστες που ζητά ο κριτής, από τη μεριά του πελάτη.
+   *
+   * 🔑 **Η ταυτότητα κρέμεται από το `findById`, και ΜΟΝΟ από αυτό** — δηλαδή από το
+   * στιγμιότυπο *(ADR-846)*. Όταν φτάσουν τα 3,7 MB, η ταυτότητα αλλάζει και το ευρετήριο
+   * **ξαναχτίζεται**· ⛔ **ΜΗΝ** βάλεις `[]` «για σταθερότητα» — αυτό ήταν ακριβώς το
+   * σφάλμα που άφηνε τον επιλογέα περιοχής **άδειο** σε πρώτο φόρτωμα.
+   */
+  const sources = useMemo<AdminIdentitySources>(
+    () => ({
+      // ⚠️ **`peek()` και όχι όρισμα**, ίδιο ιδίωμα με το `lineageIdsOf`: το στιγμιότυπο
+      //    δεν εκτίθεται από το hook. Η **ορθότητα** έρχεται από τη λίστα εξαρτήσεων
+      //    παρακάτω — το `findById` αλλάζει ταυτότητα **ακριβώς όταν** φτάνουν τα δεδομένα.
+      index: buildAdminNameIndex(HIERARCHY_SOURCE.peek()?.entities.values() ?? []),
+      placeOf: findById,
+      lineageOf: lineageIdsOf,
+    }),
+    [findById],
+  );
 
   // ---------------------------------------------------------------------------
   // 🔴 ΑΜΥΝΑ ΕΝΑΝΤΙ STALE CLOSURES ΣΕ ΚΑΘΥΣΤΕΡΗΜΕΝΑ ΑΠΟΤΕΛΕΣΜΑΤΑ GEOCODING.
@@ -206,43 +205,44 @@ export function useSettlementAutoFill({
     isGreekAddress,
   ]);
 
-  // ── ΔΡΟΜΟΣ 2: όνομα χωρίς id (ήρθε από σύρσιμο πινέζας) → πλήρης ιεραρχία ──
+  // ── ΔΡΟΜΟΣ 2: όνομα χωρίς ταυτότητα (το έγραψε άνθρωπος, ή ήρθε από σύρσιμο) → ιεραρχία ──
   useEffect(() => {
     if (isLoading || !current.settlementName.trim() || current.settlementId || !isGreekAddress) {
       return;
     }
 
-    const cleanedName = stripGreekAdminPrefix(current.settlementName.trim()).replace(/-/g, ' ');
-    const nameMatches = makeNameMatcher(cleanedName);
-    const postalCode = toCanonicalGreekPostalCode(current.postalCode);
-    const settlements = getByLevel(SETTLEMENT_LEVEL);
+    // 🔑 **Αν υπάρχει ΑΠΟΔΕΔΕΙΓΜΕΝΟΣ δήμος, η ερώτηση γίνεται απαντήσιμη**: μέσα σε δήμο οι
+    //    41 ομώνυμες «Καλλιθέα» γίνονται μία (**93,9%** των ομωνύμων ζουν σε άλλον δήμο).
+    //    Χωρίς δήμο, η **μόνη** ασφαλής απάντηση είναι «ακριβές και μοναδικό στη χώρα».
+    // ⚠️ **ΔΥΝΑΤΟΤΗΤΑ ΠΟΥ ΑΦΑΙΡΕΘΗΚΕ ΕΠΙΤΗΔΕΣ, ΜΕ ΜΕΤΡΗΣΗ — ΜΗΝ ΤΗΝ «ΕΠΑΝΑΦΕΡΕΙΣ» ΩΜΑ.**
+    //    Εδώ γινόταν αποσαφήνιση με τον **Τ.Κ.** σε τρία σκαλιά. Έφυγε γιατί ήταν
+    //    **ενεργά επιβλαβής**: εφαρμοζόταν πάνω σε **ανεκτική** αντιστοίχιση ονόματος, και
+    //    «Καλλιθέα»/«Καλλίστη» έχουν **τον ίδιο** Τ.Κ. 69100 ⇒ διάλεγε τη λάθος. Και
+    //    κάλυπτε μόνο **949 από 13.272** οικισμούς (**7,2%**)· βοηθούσε σε **305 από 1.368**
+    //    ομάδες ομωνύμων.
+    //    ✅ Αν χρειαστεί ξανά, ο **ασφαλής** τρόπος είναι: αποσαφήνιση με Τ.Κ. **μόνο ανάμεσα
+    //    σε ΑΚΡΙΒΕΙΣ ομώνυμους** — απαιτεί `postalCode` στο `AdminPlace`. Δεν μπήκε τώρα
+    //    επειδή ο διακομιστής αποδεικνύει πλέον τον δήμο (μετρημένο 14/14), οπότε η διαδρομή
+    //    του συρσίματος έχει **σχεδόν πάντα** εμβέλεια — που είναι αυστηρά ισχυρότερη.
+    const label = current.settlementName.trim();
+    const verdict = current.municipalityId
+      ? identifyWithin(label, SETTLEMENT_LEVEL, current.municipalityId, sources)
+      : identifyExact(label, SETTLEMENT_LEVEL, sources, current.postalCode);
 
-    // Τ.Κ. πρώτα (τρία σκαλιά)· αν δεν υπάρχει ή δεν έδεσε, σκέτο όνομα.
-    const byPostal =
-      postalCode.length === 5 ? findByPostalCode(settlements, postalCode, nameMatches) : null;
-    const bestMatch =
-      byPostal ??
-      (() => {
-        const candidate = settlements.find((e) => nameMatches(e.name));
-        return candidate ? { id: candidate.id, name: candidate.name } : null;
-      })();
+    // ⚠️ **Μόνο `identified` γράφει.** `ambiguous` / `absent` / `unknown` αφήνουν την οθόνη
+    //    **ακριβώς** όπως την έγραψε ο άνθρωπος: το κείμενό του μένει, η ταυτότητα δεν
+    //    επινοείται, και τα οκτώ πεδία της φόρμας περιμένουν να αποσαφηνίσει.
+    if (verdict.kind !== 'identified') return;
 
-    if (!bestMatch) return;
-
-    const path = resolvePath(bestMatch.id);
     const updated = { ...current };
-    updated.settlementName = bestMatch.name;
-    for (const mapping of PATH_TO_VALUE) {
-      const entity = path[mapping.pathKey];
-      if (entity) {
-        (updated[mapping.idField] as string | null) = entity.id;
-        (updated[mapping.nameField] as string) = entity.name;
-      }
-    }
+    // Ταυτότητα και ετικέτα **δεν επιτρέπεται να αποκλίνουν** — έχουμε id, άρα το δικό μας όνομα.
+    updated.settlementName = verdict.entity.name;
+    applyResolvedPath(updated, resolvePath(verdict.entity.id));
     onChange(updated);
   }, [
     current.settlementName,
     current.settlementId,
+    current.municipalityId,
     current.postalCode,
     isLoading,
     isGreekAddress,
