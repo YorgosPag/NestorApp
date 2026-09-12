@@ -21,6 +21,7 @@
  */
 
 import type ExcelJS from 'exceljs';
+import { productQualified } from '@/constants/product-identity';
 import type {
   ExportableTable,
   ExportableTableSection,
@@ -37,7 +38,7 @@ import {
 } from './xlsx-workbook';
 
 /** Ό,τι γράφει ο δημιουργός στα μεταδεδομένα του βιβλίου αυτής της πόρτας. */
-const WORKBOOK_CREATOR = 'Nestor Pagonis · BIM Schedule';
+const WORKBOOK_CREATOR = productQualified('BIM Schedule');
 
 /**
  * Το όνομα του **μοναδικού** φύλλου της μονοπίνακης εξαγωγής.

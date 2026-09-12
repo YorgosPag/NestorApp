@@ -10,21 +10,21 @@
 
 import type ExcelJS from 'exceljs';
 import type { MilestoneExportOptions } from './types';
+import { PRODUCT_NAME } from '@/constants/product-identity';
 import { formatDateShort } from '@/lib/intl-utils';
-import { triggerBlobDownload } from '../gantt-export/gantt-export-utils';
+import {
+  EXCEL_HEADER_FILL as HEADER_FILL,
+  downloadWorkbook,
+  excelHeaderFont,
+} from '@/lib/export/excel-workbook';
 
 // ─── Styling Constants ───────────────────────────────────────────────────
+// ⚠️ Το γέμισμα και η γραμματοσειρά της κεφαλίδας ήταν γραμμένα εδώ ως **ωμά ARGB**
+//    (`FF3B82F6` / `FFFFFFFF`) — δηλαδή οι τιμές των `designTokens` αντιγραμμένες με το
+//    χέρι. Ταυτόσημες σήμερα (επαληθεύτηκε), αλλά μια αλλαγή του token δεν θα τις έβρισκε
+//    ποτέ. Τώρα έρχονται από το `lib/export/excel-workbook` (CHECK 3.28).
 
-const HEADER_FILL: ExcelJS.Fill = {
-  type: 'pattern',
-  pattern: 'solid',
-  fgColor: { argb: 'FF3B82F6' },
-};
-
-const HEADER_FONT: Partial<ExcelJS.Font> = {
-  bold: true,
-  color: { argb: 'FFFFFFFF' },
-};
+const HEADER_FONT: Partial<ExcelJS.Font> = excelHeaderFont();
 
 /** Status → ARGB fill colors for conditional cell coloring */
 const STATUS_FILL: Record<string, ExcelJS.Fill> = {
@@ -70,7 +70,7 @@ export async function exportMilestonesToExcel(options: MilestoneExportOptions): 
   const { milestones, buildingName, filename, companyName, projectName } = options;
   const ExcelJSLib = (await import('exceljs')).default;
   const workbook = new ExcelJSLib.Workbook();
-  workbook.creator = 'Nestor App';
+  workbook.creator = PRODUCT_NAME;
   workbook.created = new Date();
 
   // ─── Sheet 1: Ορόσημα ──────────────────────────────────────────────
@@ -165,9 +165,5 @@ export async function exportMilestonesToExcel(options: MilestoneExportOptions): 
 
   // ─── Download ──────────────────────────────────────────────────────
 
-  const buffer = await workbook.xlsx.writeBuffer();
-  const blob = new Blob([buffer], {
-    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  });
-  triggerBlobDownload(blob, filename);
+  await downloadWorkbook(workbook, filename);
 }

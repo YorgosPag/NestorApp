@@ -13,6 +13,7 @@
  */
 
 import jsPDF from 'jspdf';
+import { PRODUCT_NAME } from '@/constants/product-identity';
 import { formatDateShort } from '@/lib/intl-utils';
 import autoTable from 'jspdf-autotable';
 import type { MilestoneExportOptions, MilestoneExportRow } from './types';
@@ -393,7 +394,7 @@ function addPageFooters(pdf: jsPDF, pageWidth: number, pageHeight: number): void
     pdf.text(`Σελίδα ${i}/${totalPages}`, MARGIN, pageHeight - 8);
 
     // Center: branding
-    pdf.text('Nestor App', pageWidth / 2, pageHeight - 8, { align: 'center' });
+    pdf.text(PRODUCT_NAME, pageWidth / 2, pageHeight - 8, { align: 'center' });
 
     // Right: timestamp
     pdf.text(timestamp, pageWidth - MARGIN, pageHeight - 8, { align: 'right' });

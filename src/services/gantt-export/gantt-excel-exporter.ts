@@ -10,25 +10,17 @@
 
 import type ExcelJS from 'exceljs';
 import type { GanttExportOptions } from './types';
-import { designTokens } from '@/styles/design-tokens';
+import { PRODUCT_NAME } from '@/constants/product-identity';
 import { formatDateShort } from '@/lib/intl-utils';
-import { flattenTaskGroupsToRows, triggerBlobDownload } from './gantt-export-utils';
-const toExcelArgb = (hexColor: string): string => {
-  const normalized = hexColor.replace('#', '').toUpperCase();
-  return `FF${normalized}`;
-};
+import { flattenTaskGroupsToRows } from './gantt-export-utils';
+import {
+  EXCEL_HEADER_FILL as HEADER_FILL,
+  downloadWorkbook,
+  excelHeaderFont,
+} from '@/lib/export/excel-workbook';
 
-/** Header style — matches the app's primary brand color */
-const HEADER_FILL: ExcelJS.Fill = {
-  type: 'pattern',
-  pattern: 'solid',
-  fgColor: { argb: toExcelArgb(designTokens.colors.blue['500']) },
-};
-
-const HEADER_FONT: Partial<ExcelJS.Font> = {
-  bold: true,
-  color: { argb: toExcelArgb(designTokens.colors.background.primary) },
-};
+// Το ντύσιμο της κεφαλίδας ζει στο `lib/export/excel-workbook` — δες εκεί γιατί (CHECK 3.28).
+const HEADER_FONT: Partial<ExcelJS.Font> = excelHeaderFont();
 
 /**
  * Exports Gantt data as a styled Excel workbook (.xlsx).
@@ -37,7 +29,7 @@ export async function exportGanttToExcel(options: GanttExportOptions): Promise<v
   const { taskGroups, buildingName, filename } = options;
   const ExcelJSLib = (await import('exceljs')).default;
   const workbook = new ExcelJSLib.Workbook();
-  workbook.creator = 'Nestor Pagonis';
+  workbook.creator = PRODUCT_NAME;
   workbook.created = new Date();
 
   // ─── Sheet 1: Timeline ────────────────────────────────────────────
@@ -109,10 +101,6 @@ export async function exportGanttToExcel(options: GanttExportOptions): Promise<v
 
   // ─── Download ─────────────────────────────────────────────────────
 
-  const buffer = await workbook.xlsx.writeBuffer();
-  const blob = new Blob([buffer], {
-    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  });
-  triggerBlobDownload(blob, filename);
+  await downloadWorkbook(workbook, filename);
 }
 

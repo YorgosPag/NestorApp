@@ -36,6 +36,7 @@
  */
 
 import type ExcelJS from 'exceljs';
+import { productQualified } from '@/constants/product-identity';
 import { mmToExcelChars, mmToExcelPoints } from '@/lib/spreadsheet/excel-sheet-units';
 import {
   createXlsxWorkbook,
@@ -56,7 +57,7 @@ import { bookWithHome, type TableFormulaWorkbook } from '../formula/table-formul
 import { writeXlsxCell } from './table-cell-to-xlsx';
 
 /** Ό,τι γράφει ο δημιουργός στα μεταδεδομένα του βιβλίου αυτής της πόρτας. */
-const WORKBOOK_CREATOR = 'Nestor Pagonis · Πίνακας';
+const WORKBOOK_CREATOR = productQualified('Πίνακας');
 
 /** Κάθε κελί του πλέγματος, σε σειρά **γραμμή × στήλη** — δες την κεφαλίδα για το γιατί «κάθε». */
 function everyCellRef(model: PersistedTableModel): TableCellRef[] {

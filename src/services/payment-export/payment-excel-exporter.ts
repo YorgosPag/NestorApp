@@ -11,8 +11,14 @@
  */
 
 import type ExcelJS from 'exceljs';
+import { PRODUCT_NAME } from '@/constants/product-identity';
 import { designTokens } from '@/styles/design-tokens';
-import { triggerBlobDownload } from '@/services/gantt-export/gantt-export-utils';
+import {
+  EXCEL_HEADER_FILL as HEADER_FILL,
+  downloadWorkbook,
+  excelHeaderFont,
+  toExcelArgb,
+} from '@/lib/export/excel-workbook';
 import { formatDateShort } from '@/lib/intl-utils';
 import type { PaymentReportData } from '@/services/payment-export/types';
 import { nowISO } from '@/lib/date-local';
@@ -21,22 +27,8 @@ import { nowISO } from '@/lib/date-local';
 // STYLE HELPERS
 // =============================================================================
 
-const toExcelArgb = (hexColor: string): string => {
-  const normalized = hexColor.replace('#', '').toUpperCase();
-  return `FF${normalized}`;
-};
-
-const HEADER_FILL: ExcelJS.Fill = {
-  type: 'pattern',
-  pattern: 'solid',
-  fgColor: { argb: toExcelArgb(designTokens.colors.blue['500']) },
-};
-
-const HEADER_FONT: Partial<ExcelJS.Font> = {
-  bold: true,
-  color: { argb: toExcelArgb(designTokens.colors.background.primary) },
-  size: 11,
-};
+// Ο μετατροπέας ARGB και η κεφαλίδα ζουν στο `lib/export/excel-workbook` (CHECK 3.28).
+const HEADER_FONT: Partial<ExcelJS.Font> = excelHeaderFont(11);
 
 const OVERDUE_FILL: ExcelJS.Fill = {
   type: 'pattern',
@@ -222,20 +214,15 @@ function buildSummarySheet(workbook: ExcelJS.Workbook, data: PaymentReportData):
 export async function exportPaymentReportToExcel(data: PaymentReportData): Promise<void> {
   const ExcelJSLib = (await import('exceljs')).default;
   const workbook = new ExcelJSLib.Workbook();
-  workbook.creator = 'Nestor Pagonis';
+  workbook.creator = PRODUCT_NAME;
   workbook.created = new Date();
 
   buildDetailSheet(workbook, data);
   buildSummarySheet(workbook, data);
 
-  const buffer = await workbook.xlsx.writeBuffer();
-  const blob = new Blob([buffer], {
-    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  });
-
   const dateStr = nowISO().slice(0, 10);
   const safeProjectName = data.projectName.replace(/[^a-zA-Zα-ωΑ-Ω0-9\s-]/g, '').trim();
   const filename = `Πληρωμές_${safeProjectName}_${dateStr}.xlsx`;
 
-  triggerBlobDownload(blob, filename);
+  await downloadWorkbook(workbook, filename);
 }

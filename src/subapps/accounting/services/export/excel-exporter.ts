@@ -8,6 +8,7 @@
  */
 
 import type ExcelJS from 'exceljs';
+import { PRODUCT_NAME } from '@/constants/product-identity';
 import type { ReportType, ReportDataMap, ResolvedPeriods } from '../../types/reports';
 import { flattenReportForExport } from './report-table-adapter';
 import type { CellValue } from './report-table-adapter';
@@ -73,7 +74,7 @@ export async function exportReportExcel(
 
   const ExcelJSLib = (await import('exceljs')).default;
   const workbook = new ExcelJSLib.Workbook();
-  workbook.creator = 'Nestor App';
+  workbook.creator = PRODUCT_NAME;
   workbook.created = new Date();
 
   const worksheet = workbook.addWorksheet(title.slice(0, 31));
