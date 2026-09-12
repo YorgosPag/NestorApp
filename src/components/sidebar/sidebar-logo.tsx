@@ -36,14 +36,18 @@ export function SidebarLogo() {
           isExpanded ? "opacity-100 max-w-xs" : "opacity-0 max-w-0"
         )}
       >
+        {/*
+          🔴 **ΗΤΑΝ `t('navigation:user.name')` — ΚΑΙ ΤΟ ΚΛΕΙΔΙ ΖΟΥΣΕ ΣΕ ΛΑΘΟΣ ΣΠΙΤΙ**
+          (ADR-857 Φ4): κάτω από `user:`, δίπλα στα `user.title` και
+          `user@example.com`, δηλαδή έμοιαζε με **στοιχεία του συνδεδεμένου χρήστη**
+          ενώ η τιμή του ήταν σταθερά «Nestor App» σε **δύο** γλώσσες. Είναι το
+          σήμα του **προϊόντος** και έρχεται από τη ρίζα — άκλιτο, μη μεταφράσιμο.
+
+          ⚠️ Το σχόλιο ζει **έξω** από το `{isMounted && ( … )}`: μέσα στην παρένθεση ο
+          parser περιμένει **μία έκφραση**, και το `{` ξεκινά object literal ⇒
+          *«Expected '</', got 'className'»*. Αν χρειαστεί να μπει μέσα, θέλει fragment.
+        */}
         {isMounted && (
-          {/*
-            🔴 **ΗΤΑΝ `t('navigation:user.name')` — ΚΑΙ ΤΟ ΚΛΕΙΔΙ ΖΟΥΣΕ ΣΕ ΛΑΘΟΣ ΣΠΙΤΙ**
-            (ADR-857 Φ4): κάτω από `user:`, δίπλα στα `user.title` και
-            `user@example.com`, δηλαδή έμοιαζε με **στοιχεία του συνδεδεμένου χρήστη**
-            ενώ η τιμή του ήταν σταθερά «Nestor App» σε **δύο** γλώσσες. Είναι το
-            σήμα του **προϊόντος** και έρχεται από τη ρίζα — άκλιτο, μη μεταφράσιμο.
-          */}
           <span className="text-base font-bold text-foreground whitespace-nowrap">
             {PRODUCT_NAME}
           </span>
