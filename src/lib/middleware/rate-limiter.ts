@@ -88,21 +88,44 @@ export function getCategoryLimit(category: RateLimitCategory): number {
  *
  * @param identifier - User identifier (companyId:userId or hashed identifier)
  * @param endpointPath - API endpoint path
+ * @param declaredCategory - **Η βαθμίδα που ΔΗΛΩΣΕ η διαδρομή** (ADR-855 Α1). Όταν λείπει,
+ *   αποφασίζει ο πίνακας προθεμάτων, όπως πάντα.
  * @returns Rate limit check result
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΓΙΑΤΙ ΤΟ ΤΡΙΤΟ ΟΡΙΣΜΑ — ΤΟ ΠΕΡΙΣΤΑΤΙΚΟ (ADR-855, μετρημένο 2026-09-12)
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Μέχρι σήμερα η κατηγορία έβγαινε **αποκλειστικά** από το `endpointPath`. Το
+ * `WithRateLimitOptions.category` δηλωνόταν στον τύπο, το τεκμηρίωνε το PR-1C ως
+ * *«Override Auto-Detection»*, το περνούσαν και οι **επτά** wrappers — και **δεν έφτανε
+ * ποτέ εδώ**. Δηλαδή οι επτά ήταν η **ίδια** συνάρτηση με επτά ονόματα.
+ *
+ * Μετρημένο σε **449** διαδρομές: **89** δήλωναν άλλο από ό,τι επιβαλλόταν, και η απόκλιση
+ * ήταν **αμφίδρομη** — 65 χαλαρότερες *(`/api/auth/*`, `/api/oauth/*`, `vendor/quote/[token]`,
+ * `first-contacts/guest/confirm`, `attendance/qr/validate`: όλα δήλωναν 10 ή 20 και έτρεχαν
+ * **60**)* και **24 αυστηρότερες** *(οι 13 `/api/reports/*` ζητούσαν 60 και έπαιρναν **10**)*.
+ *
+ * ⚠️ **Η ΣΕΙΡΑ ΕΙΝΑΙ ΣΥΜΒΟΛΑΙΟ**: δήλωση ⇒ πίνακας ⇒ προεπιλογή. Ο πίνακας **δεν**
+ *    καταργείται — καλύπτει τις **77** σιωπηλές διαδρομές και τις χονδρικές πολιτικές
+ *    (`/api/admin/*`). Γίνεται **δεύτερη γραμμή**, όχι πρώτη.
  *
  * @example
  * ```typescript
- * const result = await checkRateLimit('company123:user456', '/api/projects/list');
- * if (!result.allowed) {
- *   return Response.json({ error: 'Rate limit exceeded' }, { status: 429 });
- * }
+ * // Η διαδρομή δήλωσε: η δήλωση κερδίζει.
+ * await checkRateLimit('company123:user456', '/api/reports/financial', 'STANDARD'); // 60
+ * // Καμία δήλωση: αποφασίζει ο πίνακας.
+ * await checkRateLimit('company123:user456', '/api/reports/financial');             // 10
  * ```
  */
 export async function checkRateLimit(
   identifier: string,
-  endpointPath: string
+  endpointPath: string,
+  declaredCategory?: RateLimitCategory
 ): Promise<RateLimitResult> {
-  const category = getCategory(endpointPath);
+  // ⚠️ `??` και ΠΟΤΕ `||`: μια βαθμίδα είναι πάντα μη-κενή συμβολοσειρά σήμερα, αλλά το `||`
+  //    θα έκανε κάθε μελλοντική «κενή» τιμή να πέφτει σιωπηλά στον πίνακα — δηλαδή θα
+  //    μετέτρεπε λάθος δήλωση σε **σιωπηλή** προεπιλογή, που είναι όλο το ελάττωμα ξανά.
+  const category = declaredCategory ?? getCategory(endpointPath);
   const limit = getLimit(category);
   const windowMs = RATE_LIMIT_CONFIG.WINDOW.MS;
 

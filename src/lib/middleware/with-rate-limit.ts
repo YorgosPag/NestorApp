@@ -210,7 +210,14 @@ export function withRateLimit<C = unknown>(
     // Check rate limit (async for Upstash)
     let result: RateLimitResult;
     try {
-      result = await checkRateLimit(identifier, endpointPath);
+      // 🔴 ADR-855 Α1 — **Η ΔΗΛΩΣΗ ΤΗΣ ΔΙΑΔΡΟΜΗΣ ΦΤΑΝΕΙ ΕΠΙΤΕΛΟΥΣ ΣΤΗ ΜΗΧΑΝΗ.**
+      //    Μέχρι σήμερα αυτή η γραμμή έγραφε `checkRateLimit(identifier, endpointPath)` και
+      //    το `options.category` — δηλωμένο στον τύπο (γρ. 74), τεκμηριωμένο από το PR-1C ως
+      //    «Override Auto-Detection», περασμένο από **και τους επτά** wrappers — **δεν
+      //    διαβαζόταν πουθενά**. Το διπλανό `options.getKey` (γρ. 197) δούλευε κανονικά:
+      //    ίδιο αντικείμενο επιλογών, το ένα πεδίο τιμώμενο και το άλλο αγνοημένο σιωπηλά.
+      //    ⚠️ Μετρημένο: **89 στις 449** διαδρομές έτρεχαν άλλο όριο από όσο δήλωναν.
+      result = await checkRateLimit(identifier, endpointPath, options.category);
     } catch (error) {
       // Log error but don't block the request
       logger.error('Check failed, allowing request', { error: String(error) });
